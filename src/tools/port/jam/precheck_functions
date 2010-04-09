@@ -246,7 +246,7 @@ check_for_cplusplus ()
 {
   check_for_availability c++  ||
   {
-    compose_msg c++ c++ c++ c++ c++ 
+    compose_msg gcc-c++ gcc-c++ c++ gcc-c++ gcc-c++ 
     return 1 
   }
   return 0
