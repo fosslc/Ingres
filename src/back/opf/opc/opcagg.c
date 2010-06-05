@@ -1929,6 +1929,10 @@ opc_iaggtarg_init(
 **	    SETTRUE in simple agg is pointless and screws up countstar
 **	    optimization, which is still relevant for partitioned tables.
 **	    (although maybe not for long.)
+**	13-May-2010 (kiria01) b123725
+**	    OLAP aggregates were getting their first datatype mapped to the
+**	    second when DB_ALL_TYPE was in use instead of the values just
+**	    being tested for nulls.
 [@history_template@]...
 */
 static VOID
@@ -2164,7 +2168,7 @@ opc_maggtarg_main(
 
 		    if (ops[2].opr_dt == DB_ALL_TYPE)
 		    {
-			ops[2].opr_dt = aop_resdom->pst_right->pst_left->
+			ops[2].opr_dt = aop_resdom->pst_right->pst_right->
 					    pst_sym.pst_dataval.db_datatype;
 		    }
 
