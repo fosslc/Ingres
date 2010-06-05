@@ -101,6 +101,8 @@
 ;	   Add new functions GCwinsock2_save and GCwinsock2_restore.
 ;	10-May-2010 (kschendel) b123712
 ;	    Added MHtrunc.
+;	18-May-2010 (drivi01)
+;	    Add CSadjust_i8counter.
 
 EXPORTS
 	iiBTand	@1				
@@ -1196,3 +1198,5 @@ EXPORTS
 	GCwinsock2_save	@1095			
 	GCwinsock2_restore @1096			
 	MHtrunc		@1097
+	IICSadjust_i8counter	@1098		
+

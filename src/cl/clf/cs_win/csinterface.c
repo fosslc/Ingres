@@ -2,7 +2,7 @@
 ** Copyright (c) 1987, 2004 Ingres Corporation
 **
 */
-
+#pragma intrinsic(_InterlockedCompareExchange64)
 #include    <compat.h>
 #include    <ci.h>
 #include    <cs.h>
@@ -65,6 +65,7 @@
 **   CSawait_lrregion()  - Await an exit from a LRR
 **   CSdump_statistics() - Dump CS statistics to Log File.
 **   CSget_cpid()	 - Obtain cross-process thread identity.
+**   CSadjust_i8counter() - Thread safe i8 counter adjustment.
 **
 **  History:
 **      15-jul-95 (emmag)
@@ -330,6 +331,10 @@
 **	06-Apr-2010 (drivi01)
 **	    Turn off optimization in this module to avoid
 **          segmentation violations on x64.
+**	18-May-2010 (drivi01)
+**	    Added CSadjust_i8counter function which
+**          will make calls to intrinsic InterlockedCompareExchange64
+**          function.
 */
 #ifdef WIN64
 #pragma optimize ("",off)
@@ -3723,3 +3728,47 @@ CSadjust_counter( i4 *pcounter, i4 adjustment )
 
     return newvalue;
 }
+
+/*
+** Name: CSadjust_i8counter() - Thread-safe counter adjustment.
+**
+** Description:
+**	This routine provides a means to accurately adjust an i8 counter
+**	which may possibly be undergoing simultaneous adjustment in
+**	another session, or in a Signal Handler, or AST, without
+**	protecting the counter with a mutex (if possible)
+**
+**	This is done, by taking advantage of the atomic compare and
+**	swap routine.   It will call an intrinsic function available
+**      in Visual Studio compiler which will increment the values.
+**	
+**	NOTE: This function is defined out to a compiler built-in in
+**	      csnormal.h on platforms which use GCC
+**
+** Inputs:
+**	pcounter	- Address of an i8 counter.
+**	adjustment	- Amount to adjust by.
+**
+** Outputs:
+**	None
+**
+** Returns:
+** 	Value counter assumed after callers update was applied.
+**
+** History:
+**	18-May-2010 (drivi01)
+**		Created.
+*/
+i8
+CSadjust_i8counter(i8 *pcounter, i8 adjustment)
+{
+	i8 oldvalue;
+	do
+	{
+		oldvalue = *pcounter;
+	}
+	while(_InterlockedCompareExchange64(pcounter, (oldvalue + adjustment), oldvalue) != oldvalue);
+
+	return (*pcounter);
+}
+

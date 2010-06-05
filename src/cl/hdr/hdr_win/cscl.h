@@ -491,6 +491,8 @@
 **	    Switch cs_mutex type from Win32 mutex to CRITICAL_SECTION
 **      28-Jan-2010 (horda03) Bug 121811
 **          As cs_diag() for Evidence Set port.
+**	18-May-2010 (drivi01)
+**	    Add CScas macro that calls InterlockedCompareExchange.
 **
 ******************************************************************************/
 
@@ -564,6 +566,7 @@ typedef struct _CS_CPID  CS_CPID;
 # define CScasptr( p, o, n )  ((o) != InterlockedCompareExchange64( (LONGLONG volatile *)p, (LONGLONG)n, (LONGLONG)o ))
 #endif  /* !NT_IA64 && !NT_AMD64 */
 # define CScas4( p, o, n )  ((o) != InterlockedCompareExchange( (LONG volatile *)p, (LONG)n, (LONG)o ))
+# define CScas( p, o, n )  ((o) != InterlockedCompareExchange( (LONG volatile *)p, (LONG)n, (LONG)o ))
 
 # define CS_SYNCH	HANDLE
 
