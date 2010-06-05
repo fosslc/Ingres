@@ -39,6 +39,7 @@
 #include    <dm0s.h>
 #include    <dmm.h>
 #include    <dudbms.h>
+#include    <cv.h>
 
 /**
 **
@@ -286,6 +287,8 @@
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs Init varchar lengths in core catalogs
 **          Use more readable variable names
+**	23-apr-2010 (wanfr01)
+**	    include cv.h for function definitions
 */
 
 /* core table ids */

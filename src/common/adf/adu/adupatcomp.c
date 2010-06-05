@@ -101,6 +101,8 @@
 **	    such with FNDLIT. Added logic to sence applicability of PAT_ENDLIT
 **      14-Jul-2009 (hanal04) Bug 122311
 **          Warning cleanup for Janitor's project.
+**	23-Apr-2010 (wanfr01) Bug 123139
+**	    Add cv.h for CVal definition
 **/
 
 #include <compat.h>
@@ -117,6 +119,7 @@
 #include <adulcol.h>
 #include <aduucol.h>
 #include <nm.h>
+#include <cv.h>
 
 #include "adupatexec.h"
 

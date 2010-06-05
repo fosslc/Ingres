@@ -27,6 +27,7 @@
 #include    <gcnint.h>
 #include    <gcm.h>
 #include    <gcu.h>
+#include    <cv.h>
 
 
 /*
@@ -215,6 +216,8 @@
 **         SIR 123296
 **         Add LSB option, writable files are stored under ADMIN, logs under
 **         LOG and read-only under FILES location.
+**	23-Apr-2010 (wanfr01) b123139
+**	   Add cv.h for CV function definitions
 */
 
 static VOID	gcn_rewrite( GCN_QUE_NAME * );
