@@ -6706,6 +6706,8 @@ opj_partvars(OPS_STATE *global)
 **	    Add flag to trigger sc930 tracing of query plans
 **	27-Aug-2007 (kschendel) SIR 122513
 **	    Set join-time partition pruning request bitmaps before opc.
+**      26-apr-2010 (huazh01)
+**          Disable parallel query processing on Ingres Star. (b123637)
 [@history_line@]...
 */
 VOID
@@ -6796,6 +6798,7 @@ opj_joinop(
     /* Call exchange node analyzer to parallelize the query. */
     if (((global->ops_cb->ops_override & PST_HINT_PARALLEL) ||
 	global->ops_cb->ops_alter.ops_parallel) &&
+        !(global->ops_cb->ops_smask & OPS_MDISTRIBUTED) &&
 	!(global->ops_cb->ops_override & PST_HINT_NOPARALLEL))
         opj_exchange(global);
 
