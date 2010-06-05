@@ -132,6 +132,8 @@ EXEC SQL INCLUDE <xf.sh>;
 **	    accurate infromation.
 **	    Also clear out the allocated buffer for column structure to avoid
 **	    false positives resulting from the residual garbage in the buffer.
+**      17-Feb-2010 (coomi01) b122954
+**          Port previous change for use with 65 catalogs and above.
 **/
 
 /* # define's */
@@ -200,6 +202,10 @@ static ADF_CB	*Adf_cb = NULL;
 **	    Get date_alias from the setting generated in FEadfcb
 **	14-nov-2008 (dougi)
 **	    Load identity column flags.
+**      17-Feb-2010 (coomi01) b122954
+**          Add security_audit_key column from iicolumns table to the query
+**          to ensure that audit_key field in the column structure reflects
+**          accurate infromation.
 */
 
 void
@@ -312,15 +318,17 @@ EXEC SQL END DECLARE SECTION;
 		    c.column_has_default,
 		    c.column_sequence, c.key_sequence, 
 		    c.column_system_maintained,
-		    c.column_collid
-	    INTO	:owner_name,
+		    c.column_collid,
+		    c.security_audit_key
+	    INTO    :owner_name,
 		    :cp->column_name, :datatype,
 		    :int_datatype, :int_ingtype,
 		    :scale, :extern_len, :intern_len,
 		    :cp->nulls, :cp->defaults,
 		    :default_value:null_ind, :cp->has_default, 
 		    :cp->col_seq, :cp->key_seq, :cp->sys_maint,
-		    :cp->collID
+		    :cp->collID,
+		    :cp->audit_key
 	    FROM iicolumns c, iitables t
 	    WHERE c.table_name = :table_name
 	    	    AND c.table_owner = t.table_owner
@@ -351,7 +359,8 @@ EXEC SQL END DECLARE SECTION;
 		    c.column_default_val,   -- user defaults in 6.5
 		    c.column_has_default,
 		    c.column_sequence, c.key_sequence, 
-		    c.column_system_maintained, -1
+		    c.column_system_maintained, -1,
+		    c.security_audit_key
 	    INTO	:owner_name,
 		    :cp->column_name, :datatype,
 		    :int_datatype, :int_ingtype,
@@ -359,7 +368,8 @@ EXEC SQL END DECLARE SECTION;
 		    :cp->nulls, :cp->defaults,
 		    :default_value:null_ind, :cp->has_default, 
 		    :cp->col_seq, :cp->key_seq, :cp->sys_maint,
-		    :cp->collID
+		    :cp->collID,
+		    :cp->audit_key
 	    FROM iicolumns c, iitables t
 	    WHERE c.table_name = :table_name
 	    	    AND c.table_owner = t.table_owner
@@ -389,7 +399,8 @@ EXEC SQL END DECLARE SECTION;
 		    c.column_nulls, c.column_defaults,
 		    '', '',		 -- no user defaults before 6.5
 		    c.column_sequence, c.key_sequence, 
-		    c.column_system_maintained, -1
+		    c.column_system_maintained, -1,
+		    'N'
 	    INTO	:owner_name,
 		    :cp->column_name, :datatype,
 		    :int_datatype, :int_ingtype,
@@ -397,7 +408,8 @@ EXEC SQL END DECLARE SECTION;
 		    :cp->nulls, :cp->defaults,
 		    :default_value, :cp->has_default,
 		    :cp->col_seq, :cp->key_seq, :cp->sys_maint,
-		    :cp->collID
+		    :cp->collID,
+		    :cp->audit_key
 	    FROM iicolumns c, iitables t
 	    WHERE c.table_name = :table_name
 	    	    AND c.table_owner = t.table_owner
@@ -479,7 +491,8 @@ EXEC SQL END DECLARE SECTION;
                 c.column_has_default,
                 c.column_sequence, c.key_sequence, 
                 c.column_system_maintained,
-                c.column_collid
+                c.column_collid,
+		c.security_audit_key
             INTO    :owner_name,
                 :cp->column_name, :datatype,
                 :int_datatype, :int_ingtype,
@@ -487,7 +500,8 @@ EXEC SQL END DECLARE SECTION;
                 :cp->nulls, :cp->defaults,
                 :default_value:null_ind, :cp->has_default, 
                 :cp->col_seq, :cp->key_seq, :cp->sys_maint,
-		:cp->collID
+                :cp->collID,
+		:cp->audit_key
             FROM iicolumns c, iitables t
             WHERE c.table_name = :table_name
                 AND c.table_owner = t.table_owner
@@ -519,7 +533,8 @@ EXEC SQL END DECLARE SECTION;
                 c.column_default_val,   -- user defaults in 6.5
                 c.column_has_default,
                 c.column_sequence, c.key_sequence, 
-                c.column_system_maintained, -1
+                c.column_system_maintained, -1,
+		c.security_audit_key
             INTO    :owner_name,
                 :cp->column_name, :datatype,
                 :int_datatype, :int_ingtype,
@@ -527,7 +542,8 @@ EXEC SQL END DECLARE SECTION;
                 :cp->nulls, :cp->defaults,
                 :default_value:null_ind, :cp->has_default, 
                 :cp->col_seq, :cp->key_seq, :cp->sys_maint,
-                :cp->collID
+                :cp->collID,
+		:cp->audit_key
             FROM iicolumns c, iitables t
             WHERE c.table_name = :table_name
                 AND c.table_owner = t.table_owner
@@ -558,15 +574,17 @@ EXEC SQL END DECLARE SECTION;
                 c.column_nulls, c.column_defaults,
                 '', '',         -- no user defaults before 6.5
                 c.column_sequence, c.key_sequence, 
-                c.column_system_maintained, -1
+                c.column_system_maintained, -1,
+		'N'
             INTO    :owner_name,
                 :cp->column_name, :datatype,
                 :int_datatype, :int_ingtype,
                 :scale, :extern_len, :intern_len,
                 :cp->nulls, :cp->defaults,
                 :default_value, :cp->has_default,
-                :cp->col_seq, :cp->key_seq, :cp->sys_maint,
-		:cp->collID
+                :cp->col_seq, :cp->key_seq, 
+		:cp->sys_maint, :cp->collID,
+		:cp->audit_key
             FROM iicolumns c, iitables t
             WHERE c.table_name = :table_name
                 AND c.table_owner = t.table_owner
