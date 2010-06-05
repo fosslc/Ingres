@@ -47,6 +47,8 @@ $!!         SIR 118402 - Modify to take out "Purge" and "Set File/version"
 $!!             statement(s) for CONFIG.DAT.
 $!!     15-Aug-2007 (Ralph Loen) SIR 118898
 $!!         Added symbol definition of iinethost.
+$!!     14-Jan-2010 (horda03) Bug 123153
+$!!         Upgrade all nodes in a clustered environment.
 $!------------------------------------------------------------------------	
 $!
 $ on control_c then goto EXIT_FAIL
@@ -54,19 +56,19 @@ $ on control_y then goto EXIT_FAIL
 $!
 $! Define symbols for programs called locally.
 $!
-$ iigenres	:= $ii_system:[ingres.utility]iigenres.exe
-$ iigetres	:= $ii_system:[ingres.utility]iigetres.exe
-$ iigetsyi	:= @ii_system:[ingres.utility]iigetsyi.com
-$ iiingloc      := $ii_system:[ingres.utility]iiingloc.exe
-$ iipmhost      := $ii_system:[ingres.utility]iipmhost.exe
-$ iinethost     := $ii_system:[ingres.utility]iinethost.exe
-$ iimaninf	:= $ii_system:[ingres.utility]iimaninf.exe
-$ iiresutl	:= $ii_system:[ingres.utility]iiresutl.exe
-$ iishowres	:= $ii_system:[ingres.bin]iishowres.exe
-$ iisetres	:= $ii_system:[ingres.utility]iisetres.exe
-$ iisulock	:= $ii_system:[ingres.utility]iisulock.exe
-$ iisyschk	:= @ii_system:[ingres.utility]iisyschk.com
-$ iivalres	:= $ii_system:[ingres.utility]iivalres.exe
+$ iigenres	:== $ii_system:[ingres.utility]iigenres.exe
+$ iigetres	:== $ii_system:[ingres.utility]iigetres.exe
+$ iigetsyi	:== @ii_system:[ingres.utility]iigetsyi.com
+$ iiingloc      :== $ii_system:[ingres.utility]iiingloc.exe
+$ iipmhost      :== $ii_system:[ingres.utility]iipmhost.exe
+$ iinethost     :== $ii_system:[ingres.utility]iinethost.exe
+$ iimaninf	:== $ii_system:[ingres.utility]iimaninf.exe
+$ iiresutl	:== $ii_system:[ingres.utility]iiresutl.exe
+$ iishowres	:== $ii_system:[ingres.bin]iishowres.exe
+$ iisetres	:== $ii_system:[ingres.utility]iisetres.exe
+$ iisulock	:== $ii_system:[ingres.utility]iisulock.exe
+$ iisyschk	:== @ii_system:[ingres.utility]iisyschk.com
+$ iivalres	:== $ii_system:[ingres.utility]iivalres.exe
 $!
 $! Other variables, macros and temporary files
 $!
@@ -74,7 +76,7 @@ $ iisulocked         = 0                               !Do we hold the setup loc
 $ ii_compatlib_def   = f$trnlnm("ii_compatlib","LNM$JOB") ! Current values
 $ ii_libqlib_def     = f$trnlnm("ii_libqlib","LNM$JOB")   !  for shared
 $ ii_framelib_def    = f$trnlnm("ii_framelib","LNM$JOB")  !   library definitions
-$ node_name	     = f$getsyi("NODENAME")
+$ node_name	     = f$edit(f$getsyi("NODENAME"), "lowercase")
 $ tmpfile            = "ii_system:[ingres]iisurms.''node_name'_tmp" !Temp file
 $ saved_message      = f$environment( "MESSAGE" )
 $ set_message_off    = "set message/nofacility/noidentification/noseverity/notext"
@@ -130,6 +132,9 @@ $ ivp_name= f$getjpi("","USERNAME")
 $ ivp_user = f$edit( ivp_name, "TRIM,LOWERCASE" ) 
 $!
 $ ing_user = f$edit( user_name, "TRIM,LOWERCASE" ) !Ingres version of username
+$
+$ script_id = "IISURMS"
+$ @II_SYSTEM:[ingres.utility]iishlib _iishlib_init "''script_id'"
 $!
 $! Make temporary definitions for shared library logicals to 
 $! be the unconcealed path of the library directory within ii_system
@@ -215,6 +220,11 @@ $ release_id = sub1 + sub2
 $ goto STRIPPER_1
 $!
 $ STRIPPERS_DONE:
+$
+$ get_nodes 'node_name
+$ if iishlib_err .ne. ii_status_ok then goto EXIT_FAIL
+$ nodes = iishlib_rv1
+$ cluster_mode = iishlib_rv2
 $!
 $! Check whether RMS Gateway is already set up.
 $!
@@ -227,7 +237,7 @@ $ if( ( rms_setup_status .nes. "" ) .and. ( rms_setup_status .eqs. "COMPLETE" ) 
 $ then
 $    echo ""
 $    echo "The ''version_string' version of the Ingres RMS Gateway has "
-$    echo "already been set up on local node ''node_name'."
+$    echo f$fao("already been set up on local node !AS.", f$edit(node_name, "upcase"))
 $    echo ""
 $    goto EXIT_OK 
 $ endif
@@ -250,7 +260,7 @@ $    say
 must be completed up before the Ingres RMS Gateway can be set up on
 this host:
 
-$    echo "     ''node_name'"
+$    echo f$fao("     !AS", f$edit(node_name, "upcase"))
 $    echo ""
 $    goto EXIT_FAIL
 $ endif
@@ -411,9 +421,16 @@ This procedure will set up the following release of the Ingres RMS Gateway:
 
 $ echo "	''version_string'"
 $ echo ""
-$ echo "to run on local host: 
-$ echo ""
-$ echo "	''node_name'"
+$ if (nodes .nes. node_name)
+$ then
+$    echo "to run on the following cluster hosts:"
+$    echo ""
+$    display_nodes "''nodes'"
+$ else
+$    echo "to run on local host: "
+$    echo ""
+$    echo f$fao("	!AS", f$edit(node_name, "upcase"))
+$ endif
 $ echo ""
 $ echo "This installation will be owned by:"
 $ echo ""
@@ -429,12 +446,22 @@ $    say
 Generating default configuration...
 
 $    on error then goto IIGENRES_FAILED
-$    iigenres 'node_name ii_system:[ingres.files]rms.rfm
+$    pan_cluster_cmd "''nodes'" iigenres "" " ii_system:[ingres.files]rms.rfm"
 $    set noon
-$    iisetres ii.'node_name.config.rms.'release_id "DEFAULTS"
+$    pan_cluster_cmd "''nodes'" iisetres "ii." ".config.rms.''release_id' ""DEFAULTS"""
 $!   an upgrade installation needs a larger  
 $!   stack size for rms
-$    iisetres ii.'node_name.rms.*.stack_size 131072
+$    pan_cluster_min_set "''nodes'" "ii." ".rms.*.stack_size" 131072
+$    pan_cluster_min_set "''nodes'" "ii." ".rms.*.vms_page_file" 2000000000
+$
+$!   The RMS DMCM must match the DBMS DMCM
+$    iigetres ii.'node_name.dbms.*.dmcm dmcm_status
+$    set_message_off
+$    dmcm_status = f$trnlnm( "dmcm_status" )
+$    deassign "rms_setup_status"
+$    set_message_on
+$
+$    pan_cluster_cmd "''nodes'" iisetres "ii." ".rms.*.dmcm ""''dmcm_status'"""
 $    goto IIGENRES_DONE
 $!
 $ IIGENRES_FAILED:
@@ -485,7 +512,7 @@ concurrently by the gateway.
 $   endif
 $   inquire ii_rms_fab_size "II_RMS_FAB_SIZE [''rms_fab_size']"
 $   if (ii_rms_fab_size .eqs. "") then ii_rms_fab_size = rms_fab_size
-$   iisetres ii.'node_name.rms.*.ii_rms_fab_size 'ii_rms_fab_size
+$   pan_cluster_cmd "''nodes'" iisetres "ii." ".rms.*.ii_rms_fab_size ''ii_rms_fab_size'"
 $!
 $   if ( rms_hash_size .eqs. "") then rms_hash_size = 7
 $   if (rms_help) 
@@ -499,7 +526,7 @@ II_RMS_FAB_SIZE.
 $   endif
 $   inquire ii_rms_hash_size "II_RMS_HASH_SIZE [''rms_hash_size']"
 $   if (ii_rms_hash_size .eqs. "") then ii_rms_hash_size = rms_hash_size
-$   iisetres ii.'node_name.rms.*.ii_rms_hash_size 'ii_rms_hash_size
+$   pan_cluster_cmd "''nodes'" iisetres "ii." ".rms.*.ii_rms_hash_size ''ii_rms_hash_size'"
 $!
 $   if ( rms_rrl .eqs. "") then rms_rrl = "OFF"
 $   rms_rrl = F$EDIT(rms_rrl, "UPCASE")
@@ -515,7 +542,7 @@ regardless if the record is locked by other sessions or applications.
 $   endif
 $   inquire ii_rms_rrl "II_RMS_RRL [''rms_rrl']"
 $   if (ii_rms_rrl .eqs. "") then ii_rms_rrl = rms_rrl
-$   iisetres ii.'node_name.rms.*.ii_rms_rrl 'ii_rms_rrl
+$   pan_cluster_cmd "''nodes'" iisetres "ii." ".rms.*.ii_rms_rrl ''ii_rms_rrl'"
 $!
 $   if ( rms_readonly .eqs. "") then rms_readonly = "OFF"
 $   rms_readonly = F$EDIT(rms_readonly, "UPCASE")
@@ -531,7 +558,7 @@ this is se to ON, all non-read activities are not allowed.
 $   endif
 $   inquire ii_rms_readonly "II_RMS_READONLY [''rms_readonly']"
 $   if (ii_rms_readonly .eqs. "") then ii_rms_readonly = rms_readonly
-$   iisetres ii.'node_name.rms.*.ii_rms_readonly 'ii_rms_readonly
+$   pan_cluster_cmd "''nodes'" iisetres "ii." ".rms.*.ii_rms_readonly ''ii_rms_readonly'"
 $!
 $   rms_buffer_rfa = F$EDIT(rms_buffer_rfa, "UPCASE")
 $   if( rms_buffer_rfa .eqs. "YES" ) then rms_buffer_rfa = "ON"
@@ -559,7 +586,7 @@ as "ON" with a positive logical definition of II_RMS_READONLY"
 $   endif
 $   inquire ii_rms_buffer_rfa "II_RMS_BUFFER_RFA [''rms_buffer_rfa']"
 $   if (ii_rms_buffer_rfa .eqs. "") then ii_rms_buffer_rfa = rms_buffer_rfa
-$   iisetres ii.'node_name.rms.*.ii_rms_buffer_rfa 'ii_rms_buffer_rfa
+$   pan_cluster_cmd "''nodes'" iisetres "ii." ".rms.*.ii_rms_buffer_rfa ''ii_rms_buffer_rfa'"
 $!
 $   if ( rms_close_file .eqs. "") then rms_close_file = "OFF"
 $   rms_close_file = F$EDIT(rms_close_file, "UPCASE")
@@ -584,7 +611,7 @@ termination of the last session accessing the file.
 $   endif
 $   inquire ii_rms_close_file "II_RMS_CLOSE_FILE [''rms_close_file']"
 $   if (ii_rms_close_file .eqs. "") then ii_rms_close_file = rms_close_file
-$   iisetres ii.'node_name.rms.*.ii_rms_close_file 'ii_rms_close_file
+$   pan_cluster_cmd "''nodes'" iisetres "ii." ".rms.*.ii_rms_close_file ''ii_rms_close_file'"
 $!
 $! end of exp_yn .eqs. "N"
 $ endif 
@@ -620,7 +647,7 @@ $ set noon
 $ say
 
 Updating configuration...
-$ iisetres ii.'node_name.rms.*.connect_limit 'user_limit 
+$ pan_cluster_cmd "''nodes'" iisetres "ii." ".rms.*.connect_limit ''user_limit'"
 $ default_users = 32
 $ on error then goto CONCURRENT_USERS_PROMPT
 $ iisyschk
@@ -645,7 +672,7 @@ Ingres RMS Gateway setup complete.
 Refer to the Ingres Installation Guide for information about 
 starting and using Ingres.
 
-$    iisetres ii.'node_name.config.rms.'release_id "COMPLETE" 
+$    pan_cluster_cmd "''nodes'" iisetres "ii." ".config.rms.''release_id' ""COMPLETE"""
 $ goto EXIT_OK
 $ EXIT_OK:
 $ status = SS$_NORMAL
@@ -686,6 +713,9 @@ $     deassign/job ii_framelib
 $ else
 $     define/job/nolog ii_framelib "''ii_framelib_def'"
 $ endif
+$
+$ cleanup "''script_id'"
+$
 $ set_message_on
 $!
 $ if f$search( "''tmpfile';*" .nes."" ) then -

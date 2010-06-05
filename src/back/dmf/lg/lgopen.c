@@ -198,6 +198,11 @@
 **          Use SIZE_TYPE to allow memory pools > 2Gig.
 **	09-Dec-2008 (jonj)
 **	    SIR 120874: use new form uleFormat, CL_CLEAR_ERR.
+**      14-Jan-2010 (horda03) Bug 123153
+**          Don't try to allocate buffers for node recovery
+**          when nodename specified if the lfb's lgh_size
+**          is 0. Prevents rcpconfig from initialising a
+**          TX log file on another node.
 */
 
 /*
@@ -452,7 +457,6 @@ CL_ERR_DESC	    *sys_err)
     register LFB	*lfb;
 
     CL_CLEAR_ERR(sys_err);
-
 
     if (flag & (LG_PRIMARY_ERASE | LG_DUAL_ERASE))
     {
@@ -1103,7 +1107,7 @@ CL_ERR_DESC	    *sys_err)
 	** header was validated.
 	*/
 
-	if (nodename != 0)
+	if ( (nodename != 0) && lfb->lfb_header.lgh_size)
 	{
 	    status = LG_allocate_buffers(lgd, lfb,
 				     lfb->lfb_header.lgh_size,

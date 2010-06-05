@@ -47,6 +47,8 @@ $!!     15-feb-2008 (Ralph Loen) Bug 119838
 $!!         If ii.'node_name.gcd.*.client_max is a negative integer,
 $!!         generate iiinitres on client_max to 64, so that the derived
 $!!         values are correctly calculated.
+$!!     14-Jan-2010 (horda03) Bug 123153
+$!!         Upgrade all nodes in a clustered environment.
 $!----------------------------------------------------------------------------
 $!
 $ on control_c then goto EXIT_FAIL
@@ -56,22 +58,21 @@ $ set noverify
 $!
 $! Define symbols for programs called locally.
 $!
-$ iigenres	:= $ii_system:[ingres.utility]iigenres.exe
-$ iigetres	:= $ii_system:[ingres.utility]iigetres.exe
-$ iigetsyi	:= @ii_system:[ingres.utility]iigetsyi.com
-$ iiingloc      := $ii_system:[ingres.utility]iiingloc.exe
-$ iiinitres     := $ii_system:[ingres.utility]iiinitres.exe
-$ iijdbcprop    := $ii_system:[ingres.bin]iijdbcprop.exe
-$ iipmhost      := $ii_system:[ingres.utility]iipmhost.exe
-$ iinethost     := $ii_system:[ingres.utility]iinethost.exe
-$ iimaninf	:= $ii_system:[ingres.utility]iimaninf.exe
-$ iiresutl	:= $ii_system:[ingres.utility]iiresutl.exe
-$ iisetres	:= $ii_system:[ingres.utility]iisetres.exe
-$ iisulock	:= $ii_system:[ingres.utility]iisulock.exe
-$ iivalres	:= $ii_system:[ingres.utility]iivalres.exe
-$ ingstart	:= $ii_system:[ingres.utility]ingstart.exe
-$ ingstop	:= @ii_system:[ingres.utility]ingstop.com
-$ iicpydas	:= $ii_system:[ingres.utility]iicpydas.exe
+$ iigenres	:== $ii_system:[ingres.utility]iigenres.exe
+$ iigetres	:== $ii_system:[ingres.utility]iigetres.exe
+$ iigetsyi	:== @ii_system:[ingres.utility]iigetsyi.com
+$ iiingloc      :== $ii_system:[ingres.utility]iiingloc.exe
+$ iiinitres     :== $ii_system:[ingres.utility]iiinitres.exe
+$ iipmhost      :== $ii_system:[ingres.utility]iipmhost.exe
+$ iinethost     :== $ii_system:[ingres.utility]iinethost.exe
+$ iimaninf	:== $ii_system:[ingres.utility]iimaninf.exe
+$ iiresutl	:== $ii_system:[ingres.utility]iiresutl.exe
+$ iisetres	:== $ii_system:[ingres.utility]iisetres.exe
+$ iisulock	:== $ii_system:[ingres.utility]iisulock.exe
+$ iivalres	:== $ii_system:[ingres.utility]iivalres.exe
+$ ingstart	:== $ii_system:[ingres.utility]ingstart.exe
+$ ingstop	:== @ii_system:[ingres.utility]ingstop.com
+$ iicpydas	:== $ii_system:[ingres.utility]iicpydas.exe
 $!
 $! Other variables, macros and temporary files
 $!
@@ -85,7 +86,7 @@ $ set_message_on     = "set message''saved_message'"
 $ SS$_NORMAL	     = 1
 $ SS$_ABORT	     = 44
 $ status	     = SS$_NORMAL
-$ node_name	     = f$getsyi("NODENAME")
+$ node_name	     = f$edit(f$getsyi("NODENAME"), "lowercase")
 $ tmpfile            = "ii_system:[ingres]iisunet.''node_name'_tmp" !Temp file
 $!
 $! Make temporary definitions for shared library logicals to 
@@ -108,6 +109,9 @@ $ define/nolog/process II_CONFIG    II_SYSTEM:[ingres.files]
 $!
 $  say		:= type sys$input
 $  echo		:= write sys$output 
+$!
+$ script_id = "IISUDAS"
+$ @II_SYSTEM:[ingres.utility]iishlib _iishlib_init "''script_id'"
 $!
 $ clustered	= f$getsyi( "CLUSTER_MEMBER" ) !Is this node clustered?
 $ user_uic	= f$user() !For RUN command (detached processes)
@@ -224,7 +228,7 @@ $    say
 
 The latest version of Ingres Data Access Server has already been set up to run on
 local
-$    echo "node ''node_name'."
+$    echo f$fao( "node !AS.", f$edit(node_name, "upcase"))
 $    echo ""
 $    status = SS$_NORMAL
 $    goto exit_ok1
@@ -237,17 +241,34 @@ $    deassign "ii_installation_value"
 $    if( ii_installation .eqs. "" ) then -
         ii_installation = f$trnlnm( "II_INSTALLATION", "LNM$JOB" )
 $ set_message_on
+$
+$    ! Get list of nodes to update
+$    get_nodes 'node_name
+$    if iishlib_err .ne. ii_status_ok then goto EXIT_FAIL
+$    nodes = iishlib_rv1
+$    cluster_mode = iishlib_rv2
+$
 $    say 
  
 This procedure will set up the following version of the Ingres 
 Data Access Server:
  
 $    echo "	''version_string'"
-$    say
+$
+$    if nodes .nes. node_name
+$    then
+$       say
+ 
+to run on the following cluster hosts:
+
+$       display_nodes "''nodes'"
+$    else
+$       say
  
 to run on local node:
  
-$    echo "	''node_name'"
+$       echo f$fao("	!AS", f$edit(node_name, "upcase"))
+$    endif
 $    say 
  
 
@@ -268,12 +289,8 @@ $!
 $! Check if Ingres JDBC Server is already set up.
 $!
 $    set_message_off
-$    iigetres ii.'node_name.ingstart.$.jdbc jdbc_startup_cnt
-$    jdbc_startup_cnt = f$trnlnm( "jdbc_startup_cnt" )
-$    deassign "jdbc_startup_cnt"
-$    iigetres ii.'node_name.ingstart.$.das das_startup_cnt
-$    das_startup_cnt = f$trnlnm( "das_startup_cnt" )
-$    deassign "das_startup_cnt"
+$    pan_cluster_iigetres "''script_id'" "''nodes'" "ii." ".ingstart.$.jdbc" jdbc_startup_cnt
+$    pan_cluster_iigetres "''script_id'" "''nodes'" "ii." ".ingstart.$.das"  das_startup_cnt
 $    set_message_on
 $!
 $    if( das_setup_status .nes. "DEFAULTS" )
@@ -287,20 +304,30 @@ $!
 $! In case this is an upgrade, and client_max is set to -1
 $! (the previous default), set to the new, positive, default value.
 $!
-$       iigetres ii.'node_name.gcd.*.client_max client_max
-$       client_max = f$trnlnm("client_max")
-$       if client_max .nes. ""
+$       pan_cluster_iigetres "''script_id'" "''nodes'" "ii." ".gcd.*.client_max" client_max
+$
+$       entry = 0
+$CLIENT_LOOP:
+$       node = f$element( entry, ",", nodes)
+$
+$       if node .nes. ","
 $       then
-$         deassign "client_max"
-$         client_max = f$integer(client_max)
-$         if client_max .lt. 0 
+$         if client_max_'node' .lt. 0 
 $         then 
 $           iiinitres client_max ii_system:[ingres.files]das.rfm
+$
+$           goto CLIENT_INIT
 $         endif
+$
+$         entry = entry + 1
+$
+$         goto CLIENT_LOOP
 $       endif
-$       iigenres 'node_name ii_system:[ingres.files]das.rfm 
+$
+$CLIENT_INIT:
+$       pan_cluster_cmd "''nodes'" iigenres "" " ii_system:[ingres.files]das.rfm"
 $       set noon
-$       iisetres ii.'node_name.config.gcd.'release_id "DEFAULTS"
+$       pan_cluster_cmd "''nodes'" iisetres "ii." ".config.gcd.''release_id' ""DEFAULTS"""
 $       goto IIGENRES_SERVER_DONE
 $!
 $       IIGENRES_SERVER_FAILED:
@@ -318,28 +345,28 @@ $       say
 Default configuration generated.
 $    endif
 $!
-$ iisetres ii.'node_name.gcd.*.async.port "" 
-$ iisetres ii.'node_name.gcd.*.sna_lu0.port "(none)" 
-$ iisetres ii.'node_name.gcd.*.sna_lu62.port "(none)" 
+$ pan_cluster_set_notdefined "''nodes'" "ii." ".gcd.*.async.port"    "" 
+$ pan_cluster_set_notdefined "''nodes'" "ii." ".gcd.*.sna_lu0.port"  "(none)" 
+$ pan_cluster_set_notdefined "''nodes'" "ii." ".gcd.*.sna_lu62.port" "(none)" 
 $ if ( ( "''ii_installation'" .eqs. "AA" ) .or. -
        ( "''ii_installation'" .eqs. "aa" ) .or. -
        ( "''ii_installation'" .eqs. ""   ) )
 $ then
-$	iisetres ii.'node_name.gcd.*.tcp_dec.port "II7"
-$	iisetres ii.'node_name.gcd.*.tcp_wol.port "II7"
-$	iisetres ii.'node_name.gcd.*.decnet.port "II_GCC_7"
-$ 	iisetres ii.'node_name.gcd.*.iso_oslan.port "OSLAN_II_7"
-$ 	iisetres ii.'node_name.gcd.*.iso_x25.port "X25_II_7"
-$ 	iisetres ii.'node_name.gcd.*.spx.port "''ii_installation'_7"
+$	pan_cluster_set_notdefined "''nodes'" "ii." ".gcd.*.tcp_dec.port"   "II7"
+$	pan_cluster_set_notdefined "''nodes'" "ii." ".gcd.*.tcp_wol.port"   "II7"
+$	pan_cluster_set_notdefined "''nodes'" "ii." ".gcd.*.decnet.port"    "II_GCC_7"
+$ 	pan_cluster_set_notdefined "''nodes'" "ii." ".gcd.*.iso_oslan.port" "OSLAN_II_7"
+$ 	pan_cluster_set_notdefined "''nodes'" "ii." ".gcd.*.iso_x25.port"   "X25_II_7"
+$ 	pan_cluster_set_notdefined "''nodes'" "ii." ".gcd.*.spx.port"       "''ii_installation'_7"
 $ else
-$	iisetres ii.'node_name.gcd.*.tcp_dec.port "''ii_installation'7"
-$	iisetres ii.'node_name.gcd.*.tcp_wol.port "''ii_installation'7"
-$	iisetres ii.'node_name.gcd.*.decnet.port "II_GCC''ii_installation'_7"
-$ 	iisetres ii.'node_name.gcd.*.iso_oslan.port "OSLAN_''ii_installation'_7"
-$ 	iisetres ii.'node_name.gcd.*.iso_x25.port "X25_''ii_installation'_7"
-$ 	iisetres ii.'node_name.gcd.*.spx.port "''ii_installation'_7"
+$	pan_cluster_set_notdefined "''nodes'" "ii." ".gcd.*.tcp_dec.port"   "''ii_installation'7"
+$	pan_cluster_set_notdefined "''nodes'" "ii." ".gcd.*.tcp_wol.port"   "''ii_installation'7"
+$	pan_cluster_set_notdefined "''nodes'" "ii." ".gcd.*.decnet.port"    "II_GCC''ii_installation'_7"
+$ 	pan_cluster_set_notdefined "''nodes'" "ii." ".gcd.*.iso_oslan.port" "OSLAN_''ii_installation'_7"
+$ 	pan_cluster_set_notdefined "''nodes'" "ii." ".gcd.*.iso_x25.port"   "X25_''ii_installation'_7"
+$ 	pan_cluster_set_notdefined "''nodes'" "ii." ".gcd.*.spx.port"       "''ii_installation'_7"
 $ endif
-$ iisetres ii.'node_name.config.gcd.'release_id "COMPLETE"
+$ pan_cluster_cmd "''nodes'" iisetres "ii." ".config.gcd.''release_id' ""COMPLETE"""
 $!
 $! Create Ingres JDBC driver properties file.
 $!
@@ -349,42 +376,64 @@ $   echo "Executing Ingres JDBC driver properties generator utility..."
 $   iijdbcprop -c
 $ endif
 $!
-$ if (jdbc_startup_cnt .nes "") .and. (jdbc_startup_cnt .nes. "0") .and. (das_startup_cnt .eqs. "")
+$ entry = 0
+$ set_nodes = ""
+$
+$JDBC_LOOP:
+$ node = f$element(entry, ",", nodes)
+$
+$ if node .nes. ","
 $ then
-$    say 
-
-Configuring Data Access Server from existing JDBC server and
-disabling JDBC Server startup..." 
-
-$ pipe IICPYDAS II.'node_name' >ii_system:[ingres.utility]copydas.tmp
-$ jdbc_copy = f$file_attributes ("ii_system:[ingres.utility]copydas.tmp", "EOF")
-$ delete/noconfirm ii_system:[ingres.utility]copydas.tmp;*
-$    if jdbc_copy
+$    jdbc_startup_cnt = jdbc_startup_cnt_'node'
+$    das_startup_cnt  = das_startup_cnt_'node'
+$
+$    if (jdbc_startup_cnt .nes "") .and. (jdbc_startup_cnt .nes. "0") .and. (das_startup_cnt .eqs. "")
 $    then
-$       iisetres ii.'node_name.ingstart.$.jdbc 0
-$	iisetres ii.'node_name.ingstart.$.gcd 'jdbc_startup_cnt
-$       say
+$       echo ""
+$       echo "Configuring Data Access Server from existing JDBC server and"
+$       echo "disabling JDBC Server startup on ''node'..." 
+$       echo ""
+$       pipe IICPYDAS II.'node' >ii_system:[ingres.utility]copydas.tmp
+$       jdbc_copy = f$file_attributes ("ii_system:[ingres.utility]copydas.tmp", "EOF")
+$       delete/noconfirm ii_system:[ingres.utility]copydas.tmp;*
+$       if jdbc_copy
+$       then
+$          set_nodes = set_nodes + ", ''node'"
+$
+$          iisetres ii.'node.ingstart.$.jdbc 0
+$	   iisetres ii.'node.ingstart.$.gcd 'jdbc_startup_cnt
+$
+$          say
 
 Configuration copied and start up count is 
-$       echo "	''jdbc_startup_cnt'"
-$	say
+$          echo "	''jdbc_startup_cnt'"
+$          say
 
-$    else
-$	say
+$       else
+$          set_nodes = set_nodes + ", ''node'"
+$       endif
+$    endif
+$
+$    entry = entry + 1
+$    goto JDBC_LOOP
+$ endif
+$
+$ if set_nodes .nes. ""
+$ then
+$    say
 
 Data Access Server has been successfully set up in this installation 
 with a startup count of 0. Please adjust the startup count and check 
 the listen address with the CBF utility.
 
-$    endif
-$ endif
-$ say
+$ else
+$    say
 
 Ingres Data Access Server has been successfully set up in this 
 installation. Please adjust the startup count and check the listen
 address with the CBF utility.
 
-
+$ endif
 $ status = SS$_NORMAL
 $ goto exit_ok1
 $!
@@ -396,6 +445,9 @@ $exit_ok1:
 $!
 $ on control_c then goto EXIT_FAIL
 $ on control_y then goto EXIT_FAIL
+$
+$ cleanup "''script_id'"
+$
 $ if iisulocked .and. f$search("ii_system:[ingres.files]config.lck;*").nes."" then - 
         delete/noconfirm ii_system:[ingres.files]config.lck;*
 $ set on

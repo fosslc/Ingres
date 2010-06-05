@@ -51,6 +51,9 @@ $!!         Remove the line "iisetres ii.node_name.star.*.stack_size 131072"
 $!!             as it does not set a correct parameter due to missing
 $!!             apostrophe before "node_name".  The parameter will set to
 $!!             a value calculated by STAR.CRS.
+$!!     14-Jan-2010 (horda03) Bug 123153
+$!!         Upgrade all nodes in a clustered environment.
+$!!
 $!----------------------------------------------------------------------------
 $!
 $ on control_c then goto EXIT_FAIL
@@ -60,20 +63,20 @@ $ set noverify
 $!
 $! Define symbols for programs called locally.
 $!
-$ iigenres	:= $ii_system:[ingres.utility]iigenres.exe
-$ iigetres	:= $ii_system:[ingres.utility]iigetres.exe
-$ iigetsyi      := @ii_system:[ingres.utility]iigetsyi.com
-$ iiingloc      := $ii_system:[ingres.utility]iiingloc.exe
-$ iipmhost      := $ii_system:[ingres.utility]iipmhost.exe
-$ iinethost     := $ii_system:[ingres.utility]iinethost.exe
-$ iimaninf	:= $ii_system:[ingres.utility]iimaninf.exe
-$ iircpseg	:= @ii_system:[ingres.utility]iircpseg.com
-$ iiresutl	:= $ii_system:[ingres.utility]iiresutl.exe
-$ iisetres	:= $ii_system:[ingres.utility]iisetres.exe
-$ iisulock	:= $ii_system:[ingres.utility]iisulock.exe
-$ iivalres	:= $ii_system:[ingres.utility]iivalres.exe
-$ ingstart	:= $ii_system:[ingres.utility]ingstart.exe
-$ ingstop	:= @ii_system:[ingres.utility]ingstop.com
+$ iigenres	:== $ii_system:[ingres.utility]iigenres.exe
+$ iigetres	:== $ii_system:[ingres.utility]iigetres.exe
+$ iigetsyi      :== @ii_system:[ingres.utility]iigetsyi.com
+$ iiingloc      :== $ii_system:[ingres.utility]iiingloc.exe
+$ iipmhost      :== $ii_system:[ingres.utility]iipmhost.exe
+$ iinethost     :== $ii_system:[ingres.utility]iinethost.exe
+$ iimaninf	:== $ii_system:[ingres.utility]iimaninf.exe
+$ iircpseg	:== @ii_system:[ingres.utility]iircpseg.com
+$ iiresutl	:== $ii_system:[ingres.utility]iiresutl.exe
+$ iisetres	:== $ii_system:[ingres.utility]iisetres.exe
+$ iisulock	:== $ii_system:[ingres.utility]iisulock.exe
+$ iivalres	:== $ii_system:[ingres.utility]iivalres.exe
+$ ingstart	:== $ii_system:[ingres.utility]ingstart.exe
+$ ingstop	:== @ii_system:[ingres.utility]ingstop.com
 $!
 $! Other variables, macros and temporary files
 $!
@@ -87,7 +90,7 @@ $ set_message_on     = "set message''saved_message'"
 $ SS$_NORMAL         = 1
 $ SS$_ABORT          = 44
 $ status             = SS$_NORMAL
-$ node_name	     = f$getsyi("NODENAME")
+$ node_name	     = f$edit(f$getsyi("NODENAME"), "lowercase")
 $ tmpfile            = "ii_system:[ingres]iisustar.''node_name'_tmp" !Temp file
 $!
 $  say		:= type sys$input
@@ -114,6 +117,9 @@ $    endif
 $
 $    user_name= f$getjpi("","USERNAME") !User running this procedure
 $ ENDIF
+$
+$ script_id = "IISUSTAR"
+$ @II_SYSTEM:[ingres.utility]iishlib _iishlib_init "''script_id'"
 $!
 $! Make temporary definitions for shared library logicals to 
 $! be the unconcealed path of the library directory within ii_system
@@ -211,10 +217,17 @@ $    say
 
 The latest version of Ingres Star Distributed DBMS has already been set up
 to run on local
-$    echo "node ''node_name'."
+$    echo f$fao("node !AS.", f$edit(node_name, "upcase"))
 $    echo ""
 $    goto EXIT_OK
 $ endif
+$
+$! Check if this is a cluster Ingres member.
+$!
+$ get_nodes 'node_name
+$ if iishlib_err .ne. ii_status_ok then goto EXIT_FAIL
+$ nodes = iishlib_rv1
+$ cluster_mode = iishlib_rv2
 $!
 $! Make sure that INGRES/DBMS and INGRES/Net are both set up. 
 $!
@@ -235,12 +248,22 @@ The setup procedures for the following version of Ingres DBMS and
 Ingres Networking:
  
 $    echo "	''version_string'"
-$    say
+$    if nodes .nes. node_name
+$    then
+$       say
+
+must be completed up before Ingres Star Distributed DBMS can be set up on
+these nodes:
+
+        display_nodes "''nodes'"
+$    else
+$       say
  
 must be completed up before Ingres Star Distributed DBMS can be set up on
 this host:
  
-$    echo "	''node_name'"
+$       echo f$fao("	!AS", f$edit(node_name, "upcase"))
+$    endif
 $    echo ""
 $    goto EXIT_FAIL
 $ endif
@@ -256,18 +279,27 @@ This procedure will set up the following version of the Ingres Star
 Distributed DBMS:
  
 $ echo "	''version_string'"
-$ say
+$ if nodes .nes. node_name
+$ then
+$    say
+
+to run on the following cluster hosts:
+
+$    display_nodes "''nodes'"
+$ else
+$    say
  
 to run on local host:
  
-$ echo "	''node_name'"
+$    echo f$fao("	!AS", f$edit(node_name, "upcase"))
+$ endif
 $ say 
  
 Generating default configuration...
 $ on error then goto IIGENRES_FAILED
-$ iigenres 'node_name
+$ pan_cluster_cmd "''nodes'" iigenres "" " ii_system:[ingres.files]star.rfm"
 $ set noon
-$ iisetres ii.'node_name.config.star.'release_id "COMPLETE" 
+$ pan_cluster_cmd "''nodes'" iisetres "ii." ".config.star.''release_id' ""COMPLETE"""
 $ goto IIGENRES_DONE
 $!
 $ IIGENRES_FAILED:
@@ -321,6 +353,8 @@ $ else
 $     define/job/nolog ii_framelib "''ii_framelib_def'"
 $ endif
 $ set_message_on
+$
+$ cleanup "''script_id'"
 $!
 $ if iisulocked  .and. f$search("ii_system:[ingres.files]config.lck;*").nes."" then -
 	delete/noconfirm ii_system:[ingres.files]config.lck;*

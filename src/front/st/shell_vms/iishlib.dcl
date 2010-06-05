@@ -94,6 +94,10 @@ $!!             in "_iiread_response" subroutine that was giving "File not opene
 $!!             by DCL" error as it was executing the next line that was trying
 $!!             to close the file that was not opened.  Also modifeid to call
 $!!             "check_response_write" with correct parameters.
+$!!     14-Jan-2010 (horda03) Bug 123153
+$!!             Add pan_cluster_cmd, pan_cluster_set_notdefined, 
+$!!             pan_cluster_min_set, pan_cluster_iigetres, get_nodes,
+$!!             display_nodes.
 $!!
 $! ------------------------------------------------------------------------
 $!
@@ -139,6 +143,8 @@ $    endif
 $ endif
 $ if "''p1'" .nes. "" 
 $ then 
+$    gosub check_for_quotes
+$
 $    call "''p1'" "''p2'" "''p3'" "''p4'" "''p5'" "''p6'" "''p7'" "''p8'"
 $    if 0'IISHLIB_DEBUG' .GT. 03 then call _box "err=''iishlib_err'" "1=''iishlib_rv1'"   -
 	"2=''iishlib_rv2'" "3=''iishlib_rv3'" "4=''iishlib_rv14'" "5=''iishlib_rv5'" -
@@ -150,6 +156,39 @@ $ if btz_ver_on then btz_ver_off = F$VERIFY(btz_ver_on)
 $! WRITE SYS$OUTPUT "btz_ver_on=''btz_ver_on'"
 $!
 $ exit 
+
+$check_for_quotes:
+$ param = 2
+$
+$check_fq_loop:
+$ if param .le. 8
+$ then
+$    val = P'param'
+$    par = ""
+$
+$val_loop:
+$    len = f$length( val )
+$    quote = f$locate( """", val)
+$
+$    if len .ne. quote
+$    then
+$       par = par + f$extract(0, quote+1, val) + """"
+$
+$       val = f$extract(quote+1, len, val)
+$
+$       goto val_loop
+$    endif
+$
+$    if par .nes. ""
+$    then
+$       P'param' = par + val
+$    endif
+$
+$    param = param + 1
+$    goto check_fq_loop
+$ endif
+$
+$ return
 $!
 $!------------------------------------------------------------------------
 $! Usage:
@@ -448,6 +487,12 @@ $   unlock_config_dat   :== 'callsh' _unlock_config_dat
 $   usage               :== 'callsh' _usage 
 $   validate_node_number  :== 'callsh' _validate_node_number
 $   selective_purge       :== 'callsh' _selective_purge_on_config
+$   pan_cluster_cmd       :== 'callsh' _pan_cluster_cmd
+$   pan_cluster_set_notdefined :== 'callsh' _pan_cluster_set_notdefined
+$   pan_cluster_min_set   :== 'callsh' _pan_cluster_min_set
+$   pan_cluster_iigetres  :== 'callsh' _pan_cluster_iigetres
+$   get_nodes             :== 'callsh' _get_nodes
+$   display_nodes         :== 'callsh' _display_nodes
 $!
 $   iishlib_'self'_ltime == ""
 $!
@@ -471,6 +516,8 @@ $   else
 $      iishlib_iisysdef == 0
 $   endif
 $   iisulock 		:== $II_SYSTEM:[INGRES.UTILITY]IISULOCK.EXE
+$
+$   'P1'_gbl_syms == ""
 $!
 $ exit 
 $!
@@ -530,6 +577,32 @@ $        delete/symbol/global rcpconfig
 $        delete/symbol/global rcpstat
 $    endif
 $    delete/symbol/global iisulock
+$
+$    if f$type('P1'_gbl_syms) .nes. ""
+$    then
+$       sym = 0
+$
+$       mess = f$environment( "message" )
+$       set message/notext/nosev/noid/nofac
+$
+$DEL_SYM:
+$       del_sym = f$element( sym, ",", 'P1'_gbl_syms)
+$
+$       if del_sym .nes. ","
+$       then
+$          sym = sym + 1
+$
+$          if del_sym .nes. ""
+$          then
+$             delete/sym/glob 'del_sym
+$          endif
+$
+$          goto DEL_SYM
+$       endif
+$
+$       delete/sym/glob 'P1'_gbl_syms
+$       set message 'mess'
+$    endif
 $!
 $ endif
 $!
@@ -2431,3 +2504,390 @@ $!
 $ ENDSUBROUTINE
 $!
 $!------------------------------------------------------------------------
+$!
+$!------------------------------------------------------------------------
+$!
+$! Subroutine:  _pan_cluster_cmd
+$!
+$! Usage:
+$! Invoke the specified command against all the nodes in the installation.
+$! The "node" is passed to the command. Here's some example
+$!
+$!      pan_cluster_cmd aaa,bbb A_CMD "first." ".second"
+$!            A_CMD first.aaa.second
+$!            A_CMD first.bbb.second
+$!
+$!      pan_cluster_cmd aaa,bbb A_CMD "first." ".second" 1
+$!            A_CMD first.aaa.second aaa
+$             A_CMD first.bbb.second bbb
+$!
+$! Input:
+$!	P1	Node list (comma separated)
+$!      P2      Command
+$!      P3      Pre node parameter info
+$!      P4      Post node parameter info
+$!      P5      Add node as parameter at end of cmd line
+$!
+$! Output:
+$!      None
+$!
+$!
+$! Side effects
+$!
+$!      None
+$!
+$!------------------------------------------------------------------------
+$!
+$ _pan_cluster_cmd: SUBROUTINE
+$!
+$ nodes     = P1
+$ cmd       = P2
+$ pre_node  = P3
+$ post_node = P4
+$ add_node  = P5
+$
+$ end_param = ""
+$
+$ entry = 0
+$
+$CMD_LOOP:
+$ node = f$element(entry, ",", nodes)
+$
+$ if (node .nes. ",")
+$ then
+$    if (add_node .nes. "")
+$    then
+$       end_param = node
+$    endif
+$
+$    'cmd' 'pre_node''node''post_node' 'end_param'
+$
+$    entry = entry + 1
+$
+$    goto CMD_LOOP
+$ endif
+$ exit 
+$!
+$ ENDSUBROUTINE
+$!
+$!------------------------------------------------------------------------
+$!
+$! Subroutine:  _pan_cluster_set_notdefined
+$!
+$! Usage:
+$! Set the config parameter on all nodes where not previously defined.
+$!
+$! Input:
+$!	P1	Node list (comma separated)
+$!      P2      Pre node parameter info
+$!      P3      Post node parameter info
+$!      P4      value to set
+$!
+$! Output:
+$!      None
+$!
+$!
+$! Side effects
+$!
+$!      Updates config.dat
+$!
+$!------------------------------------------------------------------------
+$!
+$ _pan_cluster_set_notdefined: SUBROUTINE
+$!
+$ nodes     = P1
+$ pre_node  = P2
+$ post_node = P3
+$ value     = P4
+$
+$ entry = 0
+$
+$CMD_LOOP:
+$ node = f$element(entry, ",", nodes)
+$
+$ if (node .nes. ",")
+$ then
+$    PIPE iigetres 'pre_node''node''post_node' res >NLA0: 2>NLA0:
+$    res = f$trnlnm( "res" )
+$    if res .eqs. ""
+$    then
+$       iisetres 'pre_node''node''post_node' "''value'"
+$    else
+$       deassign "res"
+$    endif
+$
+$    entry = entry + 1
+$
+$    goto CMD_LOOP
+$ endif
+$ exit 
+$!
+$ ENDSUBROUTINE
+$!
+$!------------------------------------------------------------------------
+$!
+$! Subroutine:  _pan_cluster_min_set
+$!
+$! Usage:
+$! Set the config parameter on all nodes where the value is less than
+$! the value specified.
+$!
+$! Input:
+$!	P1	Node list (comma separated)
+$!      P2      Pre node parameter info
+$!      P3      Post node parameter info
+$!      P4      value to set
+$!
+$! Output:
+$!      None
+$!
+$!
+$! Side effects
+$!
+$!      Updates config.dat
+$!
+$!------------------------------------------------------------------------
+$!
+$ _pan_cluster_min_set: SUBROUTINE
+$!
+$ nodes     = P1
+$ pre_node  = P2
+$ post_node = P3
+$ value     = P4
+$
+$ entry = 0
+$
+$CMD_LOOP:
+$ node = f$element(entry, ",", nodes)
+$
+$ if (node .nes. ",")
+$ then
+$    def_val = 0
+$    PIPE iigetres 'pre_node''node''post_node' res >NLA0: 2>NLA0:
+$    res = f$trnlnm( "res" )
+$    if res .eqs. ""
+$    then
+$       def_val = 1
+$    else
+$       deassign "res"
+$
+$       if res .lt. value
+$       then
+$          def_val = 1
+$       endif
+$    endif
+$
+$    if def_val
+$    then
+$       iisetres 'pre_node''node''post_node' 'value'
+$    endif
+$
+$    entry = entry + 1
+$
+$    goto CMD_LOOP
+$ endif
+$ exit 
+$!
+$ ENDSUBROUTINE
+$!
+$!------------------------------------------------------------------------
+$!
+$! Subroutine:  _pan_cluster_iigetres
+$!
+$! Usage:
+$! Get the config.dat values for each node. The varname
+$! provided is the name of the global variables to define.
+$! For example, if the nodes are "aaa,bbb" and the varname
+$! is my_var, then the symbols
+$!        my_var_aaa  and my_var_bbb will be defined.
+$!
+$! Input:
+$!      P1      Identity of the utility invoking script
+$!	P2	Node list (comma separated)
+$!      P3      Pre node parameter info
+$!      P4      Post node parameter info
+$!      P5      varname
+$!
+$! Output:
+$!      None
+$!
+$! Side effects
+$!
+$!      Defined global symbols
+$!
+$!------------------------------------------------------------------------
+$!
+$ _pan_cluster_iigetres: SUBROUTINE
+$!
+$ script_id = P1
+$ nodes     = P2
+$ pre_node  = P3
+$ post_node = P4
+$ varname   = P5
+$
+$ entry = 0
+$
+$CMD_LOOP:
+$ node = f$element(entry, ",", nodes)
+$
+$ if (node .nes. ",")
+$ then
+$    PIPE iigetres 'pre_node''node''post_node' res >NLA0: 2>NLA0:
+$    res = f$trnlnm( "res" )
+$    if res .nes. ""
+$    then
+$       deassign "res"
+$    endif
+$
+$    'varname'_'node' == res
+$
+$    'script_id'_gbl_syms == 'script_id'_gbl_syms + ",''varname'_''node'"
+$
+$    entry = entry + 1
+$
+$    goto CMD_LOOP
+$ endif
+$
+$ exit 
+$!
+$ ENDSUBROUTINE
+$!
+$!------------------------------------------------------------------------
+$!
+$! Subroutine:  _get_nodes
+$!
+$! Usage:
+$! Returns a list of nodes for the installation.
+$!
+$! Input:
+$!      P1 - Current node.
+$!
+$! Output:
+$!      iishlib_rv1 = list of nodes (comma separated)
+$!      iishlib_rv2 = cluster mode
+$!
+$!
+$! Side effects
+$!
+$!      None
+$!
+$!------------------------------------------------------------------------
+$!
+$ _get_nodes: SUBROUTINE
+$!
+$ iishlib_err == ii_status_ok
+$ cluster_mode = "OFF"
+$
+$ node = f$edit(P1, "lowercase")
+$
+$ iishlib_rv1 == node
+$
+$ pid = F$GETJPI("","PID")
+$
+$ tmpfile = "II_SYSTEM:[ingres]get_nodes.''pid'"
+$
+$ on control_y then goto abort
+$ on error     then goto abort
+$
+$ ! Get the installation node members
+$ SEARCH/NOWARN/OUT='tmpfile ii_system:[ingres.files]config.dat config.cluster_mode
+$
+$ open tmp 'tmpfile
+$CLUSTER_NODES:
+$ read/end_of_file=CLUSTER_NODES_DONE tmp record
+$ mode = f$edit(f$element( 1, ":", record), "upcase,collapse")
+$ c_node =  f$edit(f$element(1, ".", record), "lowercase")
+$ if mode .eqs. "ON"
+$ then
+$    if c_node .nes. node
+$    then
+$       iishlib_rv1 == iishlib_rv1 + ",''c_node'"
+$    endif
+$
+$    cluster_mode = mode
+$ endif
+$
+$ goto CLUSTER_NODES
+
+$abort:
+$ iishlib_err == ii_status_error
+$
+$CLUSTER_NODES_DONE:
+$ if f$trnlnm( "tmp" ) .nes. "" then close tmp
+$ if f$search( "''tmpfile'") .nes. "" then delete 'tmpfile;*
+$
+$ iishlib_rv2 == cluster_mode
+$
+$ exit 
+$!
+$ ENDSUBROUTINE
+$!
+$!------------------------------------------------------------------------
+$!
+$! Subroutine:  _display_nodes
+$!
+$! Usage:
+$! Outputs the node list in a tabulated form
+$!
+$! Input:
+$!      P1 - Node list
+$!
+$! Output:
+$!
+$!
+$! Side effects
+$!
+$!      None
+$!
+$!------------------------------------------------------------------------
+$!
+$ _display_nodes: SUBROUTINE
+$!
+$ nodes = P1
+$
+$ entry = 0
+$ sep = ""
+$ last_node = ""
+$ node_list = ""
+$NODE_LIST:
+$ node = f$edit(f$element(entry, ",", nodes), "UPCASE")
+$ if node .nes. ","
+$ then
+$    entry = entry + 1
+$
+$    node_list = node_list + sep
+$
+$    if f$length( node_list ) .gt. 40
+$    then
+$       echo "	''node_list'"
+$       node_list = ""
+$    endif
+$
+$    if (last_node .nes. "")
+$    then
+$       node_list = node_list + last_node
+$
+$       sep = ", "
+$    endif
+$
+$    last_node = node
+$
+$    goto NODE_LIST
+$ endif
+$
+$ node_list = node_list + " and "
+$
+$ if f$length( node_list ) .gt. 40
+$ then
+$    echo "	''node_list'"
+$    node_list = ""
+$ endif   
+$
+$ node_list = node_list + last_node
+$
+$ echo "	''node_list'"
+$
+$ exit 
+$!
+$ ENDSUBROUTINE
+$!

@@ -251,6 +251,8 @@ $!!         ii_gcn_lcl_vnode should be defined.
 $!!     07-Jan-2010 (horda03) Bug 119379
 $!!         Correct the grammar of the ingresdate/ansidate date alias
 $!!         setup.
+$!!     14-Jan-2010 (horda03) Bug 123153
+$!!         Upgrade all nodes in a clustered environment.
 $!!    
 $!------------------------------------------------------------------------	
 $!
@@ -259,37 +261,39 @@ $ on control_y then goto EXIT_FAIL
 $!
 $! Define symbols for programs called locally.
 $!
-$ createdb	:= $ii_system:[ingres.bin]createdb.exe
-$ iigenres	:= $ii_system:[ingres.utility]iigenres.exe
-$ iigetres	:= $ii_system:[ingres.utility]iigetres.exe
-$ iigetsyi	:= @ii_system:[ingres.utility]iigetsyi.com
-$ iigwstart	:= $ii_system:[ingres.bin]iigwstart.exe
-$ iigwstop	:= $ii_system:[ingres.utility]iigwstop.exe
-$ iiingloc      := $ii_system:[ingres.utility]iiingloc.exe
-$ iipmhost      := $ii_system:[ingres.utility]iipmhost.exe
-$ iinethost     := $ii_system:[ingres.utility]iinethost.exe
-$ iimaninf	:= $ii_system:[ingres.utility]iimaninf.exe
-$ iimklog	:= $ii_system:[ingres.utility]iimklog.exe
-$ iircpseg	:= @ii_system:[ingres.utility]iircpseg.com
-$ iiresutl	:= $ii_system:[ingres.utility]iiresutl.exe
-$ iirunacp	:= @ii_system:[ingres.utility]iirunacp.com
-$ iirundbms	:= $ii_system:[ingres.utility]iirundbms.exe
-$ iirungcc	:= @ii_system:[ingres.utility]iirungcc.com
-$ iirungcn	:= @ii_system:[ingres.utility]iirungcn.com
-$ iirungw	:= $ii_system:[ingres.utility]iirungw.exe
-$ iishowres	:= $ii_system:[ingres.bin]iishowres.exe
-$ iisetres	:= $ii_system:[ingres.utility]iisetres.exe
-$ iisulock	:= $ii_system:[ingres.utility]iisulock.exe
-$ iisyschk	:= @ii_system:[ingres.utility]iisyschk.com
-$ iivalres	:= $ii_system:[ingres.utility]iivalres.exe
-$ ingstart	:= $ii_system:[ingres.utility]ingstart.exe
-$ ingstop	:= @ii_system:[ingres.utility]ingstop.com
-$ rcpconfig	:= $ii_system:[ingres.bin]rcpconfig.exe
-$ rcpstat	:= $ii_system:[ingres.bin]rcpstat.exe
-$ rmcmdgen	:= $ii_system:[ingres.utility]rmcmdgen
-$ rmcmdrmv	:= $ii_system:[ingres.utility]rmcmdrmv
-$ sql		:= $ii_system:[ingres.bin]tm.exe -qSQL
-$ upgradedb	:= $ii_system:[ingres.bin]upgradedb.exe
+$ createdb	:== $ii_system:[ingres.bin]createdb.exe
+$ iigenres	:== $ii_system:[ingres.utility]iigenres.exe
+$ iigetres	:== $ii_system:[ingres.utility]iigetres.exe
+$ iigetsyi	:== @ii_system:[ingres.utility]iigetsyi.com
+$ iigwstart	:== $ii_system:[ingres.bin]iigwstart.exe
+$ iigwstop	:== $ii_system:[ingres.utility]iigwstop.exe
+$ iiinitres     :== $ii_system:[ingres.utility]iiinitres.exe
+$ iiingloc      :== $ii_system:[ingres.utility]iiingloc.exe
+$ iipmhost      :== $ii_system:[ingres.utility]iipmhost.exe
+$ iinethost     :== $ii_system:[ingres.utility]iinethost.exe
+$ iimaninf	:== $ii_system:[ingres.utility]iimaninf.exe
+$ iimklog	:== $ii_system:[ingres.utility]iimklog.exe
+$ iircpseg	:== @ii_system:[ingres.utility]iircpseg.com
+$ iiremres      :== $ii_system:[ingres.utility]iiremres.exe
+$ iiresutl	:== $ii_system:[ingres.utility]iiresutl.exe
+$ iirunacp	:== @ii_system:[ingres.utility]iirunacp.com
+$ iirundbms	:== $ii_system:[ingres.utility]iirundbms.exe
+$ iirungcc	:== @ii_system:[ingres.utility]iirungcc.com
+$ iirungcn	:== @ii_system:[ingres.utility]iirungcn.com
+$ iirungw	:== $ii_system:[ingres.utility]iirungw.exe
+$ iishowres	:== $ii_system:[ingres.bin]iishowres.exe
+$ iisetres	:== $ii_system:[ingres.utility]iisetres.exe
+$ iisulock	:== $ii_system:[ingres.utility]iisulock.exe
+$ iisyschk	:== @ii_system:[ingres.utility]iisyschk.com
+$ iivalres	:== $ii_system:[ingres.utility]iivalres.exe
+$ ingstart	:== $ii_system:[ingres.utility]ingstart.exe
+$ ingstop	:== @ii_system:[ingres.utility]ingstop.com
+$ rcpconfig	:== $ii_system:[ingres.bin]rcpconfig.exe
+$ rcpstat	:== $ii_system:[ingres.bin]rcpstat.exe
+$ rmcmdgen	:== $ii_system:[ingres.utility]rmcmdgen
+$ rmcmdrmv	:== $ii_system:[ingres.utility]rmcmdrmv
+$ sql		:== $ii_system:[ingres.bin]tm.exe -qSQL
+$ upgradedb	:== $ii_system:[ingres.bin]upgradedb.exe
 $!
 $! Other variables, macros and temporary files
 $!
@@ -303,7 +307,7 @@ $ iisulocked         = 0                               !Do we hold the setup loc
 $ ii_compatlib_def   = f$trnlnm("ii_compatlib","LNM$JOB") ! Current values
 $ ii_libqlib_def     = f$trnlnm("ii_libqlib","LNM$JOB")   !  for shared
 $ ii_framelib_def    = f$trnlnm("ii_framelib","LNM$JOB")  !   library definitions
-$ node_name	     = f$getsyi("NODENAME")
+$ node_name	     = f$edit(f$getsyi("NODENAME"), "lowercase")
 $ tmpfile            = "ii_system:[ingres]iisudbms.''node_name'_tmp"  !Temporary file
 $ saved_message      = f$environment( "MESSAGE" )
 $ set_message_off    = "set message/nofacility/noidentification/noseverity/notext"
@@ -311,7 +315,10 @@ $ set_message_on     = "set message''saved_message'"
 $ SS$_NORMAL	     = 1
 $ SS$_ABORT	     = 44
 $ status	     = SS$_NORMAL
-$ log_size_prompted  = 0
+$ upgrade_warning   == 0
+$ do_abort == 0
+$ default_log_file   = "ingres_log"
+$ default_dual_log   = "dual_log"
 $!
 $ say		:= type sys$input
 $ echo		:= write sys$output 
@@ -320,6 +327,9 @@ $ set noverify
 $ clustered	= f$getsyi( "CLUSTER_MEMBER" ) !Is this node clustered?
 $ user_uic	= f$user() !For RUN command (detached processes)
 $ user_name	= f$trnlnm( "II_SUINGRES_USER","LNM$JOB" ) !Installation owner
+$
+$ script_id = "IISUDBMS"
+$ @II_SYSTEM:[ingres.utility]iishlib _iishlib_init "''script_id'"
 $!
 $ IF "''user_name'".EQS.""
 $ THEN
@@ -480,84 +490,53 @@ $ if( ( dbms_setup_status .nes. "" ) .and. ( dbms_setup_status .eqs. "COMPLETE" 
 $ then
 $    echo ""
 $    echo "The ''version_string' version of Ingres DBMS has already been set up"
-$    echo "on local node ''node_name'."
+$    echo f$fao( "on local node !AS.", f$edit(node_name, "upcase"))
 $    echo ""
-$!
-$! Rename shared libraries in case this is a 2.0 upgrade of a 2.0 release. 
-$! Otherwise the new shared images will not get installed.
-$!
-$ iigetres ii.'node_name.lnm.ii_installation ii_installation_value
-$ set_message_off
-$!
-$ iigetres ii.*.lnm.ii_log_file ii_log_file_value
-$ temp_log_file = f$trnlnm("ii_log_file_value")
-$ iigetres ii.*.lnm.ii_dual_log ii_dual_log_value
-$ temp_dual_file = f$trnlnm("ii_dual_log_file")
-$ deassign "ii_log_file_value"
-$ deassign "ii_dual_log_file"
-$ if (temp_log_file .nes. "")
-$ then
-$   say "removing old definition of log file"
-$   iisetres ii.'node_name.rcp.log.log_file_1 "''temp_log_file'"
-$   iisetres ii.'node_name.rcp.log.log_file_name ingres_log
-$   iiremres ii.'node_name.lnm.ii_log_file
-$   iiremres ii.*.lnm.ii_log_file
-$ endif
-$ if (temp_dual_file .nes. "")
-$ then
-$   iisetres ii.'node_name.rcp.log.dual_log_1 "''temp_dual_file'"
-$   iisetres ii.'node_name.rcp.log.dual_log_name dual_log
-$   iiremres ii.'node_name.lnm.ii_dual_log
-$   iiremres ii.*.lnm.ii_dual_log
-$ endif
-$!
-$ ii_installation = f$trnlnm( "ii_installation_value" )
-$ deassign "ii_installation_value"
-$ if ("''ii_installation'".nes."")
-$ then
-$     copy ii_system:[ingres.library]clfelib.exe -
-           ii_system:[ingres.library]clfelib'ii_installation.exe -
-	   /prot=(s:rwed,o:rwed,g:rwed,w:re)
-$     iisetres ii.'node_name.lnm.ii_compatlib "ii_system:[ingres.library]clfelib''ii_installation'.exe" 
-$     purge/nolog ii_system:[ingres.library]clfelib'ii_installation.exe
-$!
-$     copy ii_system:[ingres.library]framefelib.exe -
-           ii_system:[ingres.library]framefelib'ii_installation.exe -
-	   /prot=(s:rwed,o:rwed,g:rwed,w:re)
-$     iisetres ii.'node_name.lnm.ii_framelib "ii_system:[ingres.library]framefelib''ii_installation'.exe" 
-$     purge/nolog ii_system:[ingres.library]framefelib'ii_installation.exe
-$!
-$     copy ii_system:[ingres.library]interpfelib.exe -
-           ii_system:[ingres.library]interpfelib'ii_installation.exe -
-	   /prot=(s:rwed,o:rwed,g:rwed,w:re)
-$     iisetres ii.'node_name.lnm.ii_interplib "ii_system:[ingres.library]interpfelib''ii_installation'.exe" 
-$     purge/nolog ii_system:[ingres.library]interpfelib'ii_installation.exe
-$!
-$     copy ii_system:[ingres.library]libqfelib.exe -
-           ii_system:[ingres.library]libqfelib'ii_installation.exe -
-	   /prot=(s:rwed,o:rwed,g:rwed,w:re)
-$     iisetres ii.'node_name.lnm.ii_libqlib "ii_system:[ingres.library]libqfelib''ii_installation'.exe" 
-$     purge/nolog ii_system:[ingres.library]libqfelib'ii_installation.exe
-$!
-$     copy ii_system:[ingres.library]apifelib.exe -
-            ii_system:[ingres.library]apifelib'ii_installation.exe -
-          /prot=(s:rwed,o:rwed,g:rwed,w:re)
-$     iisetres ii.'node_name.lnm.ii_apilib "ii_system:[ingres.library]apifelib''ii_installation'.exe"
-$     purge/nolog ii_system:[ingres.library]apifelib'ii_installation.exe
-$!
-$     copy ii_system:[ingres.library]iiuseradt.exe -
-           ii_system:[ingres.library]iiuseradt'ii_installation.exe -
-	   /prot=(s:rwed,o:rwed,g:rwed,w:re)
-$     iisetres ii.*.lnm.ii_useradt "ii_system:[ingres.library]iiuseradt''ii_installation'.exe" 
-$     purge/nolog ii_system:[ingres.library]iiuseradt'ii_installation.exe
-$!
-$     copy ii_system:[ingres.bin]dmfjsp.exe -
-           ii_system:[ingres.bin]dmfjsp'ii_installation.exe -
-	   /prot=(s:rwed,o:rwed,g:rwed,w:re)
-$     purge/nolog ii_system:[ingres.bin]dmfjsp'ii_installation.exe
-$ endif
+$
 $    goto EXIT_OK 
 $ endif
+$!
+$! Determine whether to configure as an Ingres cluster member
+$!
+$ get_nodes 'node_name
+$ if iishlib_err .ne. ii_status_ok then goto EXIT_FAIL
+$ nodes = iishlib_rv1
+$ cluster_mode = iishlib_rv2
+$
+$ if( cluster_mode .eqs. "" ) then -
+	iisetres ii.'node_name.config.cluster_mode "OFF"
+$
+$ if ( cluster_mode .eqs. "ON")
+$ then
+$    iigetres ii.'node_name'.config.cluster_mode mode
+$    iigetres ii.'node_name'.config.cluster.id   cluster_id_log
+$
+$    cluster_id = f$trnlnm( "cluster_id_log" )
+$
+$    if f$trnlnm( "mode" ) .eqs. "" .or. cluster_id .eqs. ""
+$    then
+$       echo ""
+$       echo f$fao("This node (!AS) is not part of the Clustered Ingres Installation.", f$edit( node_name, "upcase"))
+$       echo "To add this node to the Clustered Installation, use the utility IISUNODE"
+$       echo ""
+$       echo "If this utility is being run as part of an Installation upgrade, run the"
+$       echo "utility via the Ingres account on one of the nodes that forms the cluster."
+$       echo f$fao("IISUNODE can then be run (on this node) to add !AS to the Clustered", f$edit( node_name, "upcase"))
+$       echo "Ingres Installation.
+$       echo ""
+$       echo "Nodes in the cluster are;"
+$       echo ""
+$       display_nodes "''nodes'"
+$       echo ""
+$
+$       goto EXIT_OK
+$    endif
+$
+$    deassign "mode"
+$    deassign "cluster_id_log"
+$
+$ endif
+$ 
 $!
 $! Run IIJOBDEF.COM if it exists. 
 $!
@@ -633,22 +612,125 @@ $!
 $ iigetres ii.*.lnm.ii_log_file ii_log_file_value_old
 $ iigetres ii.*.lnm.ii_dual_log ii_dual_log_value_old
 $!
-$ iigetres ii.'node_name.lnm.ii_log_file ii_log_file_value
-$ iigetres ii.'node_name.lnm.ii_dual_log ii_dual_log_value
+$ pan_cluster_iigetres "''script_id'" "''nodes'" "ii." ".lnm.ii_log_file"       "ii_log_file"
+$ pan_cluster_iigetres "''script_id'" "''nodes'" "ii." ".lnm.ii_log_file_name"  "ii_log_file_name"
+$ pan_cluster_iigetres "''script_id'" "''nodes'" "ii." ".rcp.log.log_file_1"    "log_file_1"
+$ pan_cluster_iigetres "''script_id'" "''nodes'" "ii." ".rcp.log.log_file_name" "log_file_name"
+$ pan_cluster_iigetres "''script_id'" "''nodes'" "ii." ".lnm.ii_dual_log"       "ii_dual_log"
+$ pan_cluster_iigetres "''script_id'" "''nodes'" "ii." ".lnm.ii_dual_log_name"  "ii_dual_log_name"
+$ pan_cluster_iigetres "''script_id'" "''nodes'" "ii." ".rcp.log.dual_log_1"    "dual_log_1"
+$ pan_cluster_iigetres "''script_id'" "''nodes'" "ii." ".rcp.log.dual_log_name" "dual_log_name"
+$
 $ set_message_off
-$ ii_log_file = f$trnlnm( "ii_log_file_value" ) 
 $ ii_log_file_old = f$trnlnm( "ii_log_file_value_old" )
-$ ii_dual_log = f$trnlnm( "ii_dual_log_value" )
-$ ii_dual_file_old = f$trnlnm( "ii_log_file_value_old" )
-$ deassign "ii_log_file_value"
-$ deassign "ii_dual_log_value"
+$ ii_dual_log_old = f$trnlnm( "ii_dual_log_value_old" ) 
 $ deassign "ii_log_file_value_old"
 $ deassign "ii_dual_log_value_old"
-$ if( ii_log_file .eqs. "" .or. ii_log_file_old .eqs. "") then -
-        ii_log_file = f$trnlnm( "II_LOG_FILE", "LNM$JOB" )
-$ if( ii_dual_log .eqs. "" .or. ii_dual_log_old .eqs. "") then -
-        ii_dual_log = f$trnlnm( "II_DUAL_LOG", "LNM$JOB" )
 $ set_message_on
+$
+$ ! Get rid of the old LOG file entries
+$ if (ii_log_file_old .nes. "")
+$ then
+$    iiremres ii.*.lnm.ii_log_file
+$ else
+$    ii_log_file_old = f$trnlnm( "II_LOG_FILE", "LNM$JOB")
+$ endif
+$
+$ if (ii_dual_log_old .nes. "")
+$ then
+$    iiremres ii.*.lnm.ii_dual_log
+$ else
+$    ii_dual_log_old = f$trnlnm( "II_DUAL_LOG", "LNM$JOB")
+$ endif
+$
+$ entry = 0
+$
+$PURGE_OLD_LOG_DATA:
+$ c_node = f$element( entry, ",", nodes)
+$
+$ if (c_node .nes. ",")
+$ then
+$    entry = entry + 1
+$
+$    lg_file = ii_log_file_'c_node
+$
+$    if (lg_file .nes. "")
+$    then
+$       iiremres ii.'c_node.lnm.ii_log_file
+$
+$       if (log_file_1_'c_node .eqs. "")
+$       then
+$          log_file_1_'c_node = lg_file
+$
+$          iisetres ii.'c_node.rcp.log.log_file_1 "''lg_file'"
+$       endif
+$    else
+$       if (ii_log_file_old .nes. "")
+$       then
+$          if (log_file_1_'c_node .eqs. "")
+$          then
+$             log_file_1_'c_node = ii_log_file_old
+$
+$             iisetres ii.'c_node.rcp.log.log_file_1 "''ii_log_file_old'"
+$          endif
+$       endif
+$    endif
+$
+$    lg_file_name = ii_log_file_name_'c_node
+$
+$    if (lg_file_name .nes. "")
+$    then
+$       iiremres ii.'c_node.lnm.ii_log_file_name
+$    endif
+$
+$    if (log_file_name_'c_node .eqs. "")
+$    then
+$       log_file_name_'c_node = default_log_file
+$
+$       iisetres ii.'c_node.rcp.log.log_file_name "''default_log_file'"
+$    endif
+$
+$    lg_file = ii_dual_log_'c_node
+$
+$    if (lg_file .nes. "")
+$    then
+$       iiremres ii.'c_node.lnm.ii_dual_log
+$
+$       if (dual_file_1_'c_node .eqs. "")
+$       then
+$          dual_log_1_'c_node = lg_file
+$
+$          iisetres ii.'c_node.rcp.log.dual_log_1 "''lg_file'"
+$       endif
+$    else
+$       if (ii_dual_log_old .nes. "")
+$       then
+$          if (dual_log_1_'c_node .eqs. "")
+$          then
+$             dual_log_1_'c_node = ii_dual_log_old
+$
+$             iisetres ii.'c_node.rcp.log.dual_log_1 "''ii_dual_log_old'"
+$          endif
+$       endif
+$    endif
+$
+$    lg_file_name = ii_dual_log_name_'c_node
+$
+$    if (lg_file_name .nes. "")
+$    then
+$       iiremres ii.'c_node.lnm.ii_dual_log_name
+$    endif
+$
+$    if (dual_log_name_'c_node .eqs. "")
+$    then
+$       dual_log_name_'c_node = default_dual_log
+$
+$       iisetres ii.'c_node'.rcp.dual_log_name "''default_dual_log'"
+$    endif
+$
+$    goto PURGE_OLD_LOG_DATA
+$ endif
+$
 $!
 $! Confirm setup. 
 $!
@@ -664,9 +746,16 @@ This procedure will set up the following release of the Ingres DBMS:
 
 $ echo "	''version_string'"
 $ echo ""
-$ echo "to run on local ''vmscluster'node:"
-$ echo ""
-$ echo "	''node_name'"
+$ if (node_name .nes. nodes)
+$ then
+$    echo "to run on ''vmscluster'nodes:"
+$    echo ""
+$    display_nodes "''nodes'"
+$ else
+$    echo "to run on local ''vmscluster'node:"
+$    echo ""
+$    echo f$fao("	!AS", f$edit(node_name, "upcase"))
+$ endif
 $ echo ""
 $ echo "This installation will be owned by:"
 $ echo ""
@@ -809,7 +898,7 @@ $	endif
 $       if( answer .eqs. "" ) then goto CONFIRM_SETUP_4
 $       if( answer )
 $       then
-$          iisetres ii.'node_name.lnm.table.id "''lnm_table'"
+$          pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.table.id ""''lnm_table'"""
 $       else
 $          say
 *** The above component will not be installed ***
@@ -832,7 +921,7 @@ $       inquire/nopunc answer "Do you want to continue this procedure? (y/n) "
 $       if( answer .eqs. "" ) then goto CONFIRM_SYSTEM_SETUP
 $       if( answer )
 $       then
-$          iisetres ii.'node_name.lnm.table.id "LNM$SYSTEM"
+$          pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.table.id ""LNM$SYSTEM"""
 $       else
 $          say
 *** The above component will not be installed ***
@@ -863,7 +952,7 @@ $    endif
 $    if( answer .eqs. "" ) then goto CONFIRM_GROUP_SETUP
 $    if( answer )
 $    then
-$       iisetres ii.'node_name.lnm.table.id "LNM$GROUP"
+$       pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.table.id ""LNM$GROUP"""
 $    else
 $       say
 *** The above component will not be installed ***
@@ -885,21 +974,11 @@ $ deassign /job/exec ii_system
 $ define/exec/table='lnm_table/trans=concealed ii_system "''ii_system_value'"
 $ deassign "ii_system_value"
 $ set_message_on
-$!
-$! Determine whether to configure as an Ingres cluster member
-$! 
-$ iigetres ii.'node_name.config.cluster_mode cluster_mode
-$ cluster_mode = f$trnlnm( "cluster_mode" )	! previously set?
-$ if( cluster_mode .eqs. "" ) then -
-	iisetres ii.'node_name.config.cluster_mode "OFF"
-$ set_message_off
-$ deassign "cluster_mode"
-$ set_message_on
-$ if( clustered )
+$
+$ if (clustered) .and. ( cluster_mode .nes. "ON" )
 $ then
 $    !
-$          cluster_id = f$trnlnm("II_CLUSTER_ID")
-$          say
+$    say
 $DECK
 
 Since this node is in a VMScluster, you have the option of setting up
@@ -926,51 +1005,30 @@ stand-alone Ingres installation.
 
 $EOD
 $          !
-$             say
+$       say
 $DECK
 This procedure will set up the Ingres DBMS in stand-alone mode. 
 
 $EOD
-$             cluster_id_prompt = "FALSE"
-$ else
-$    cluster_id = ""
+$       cluster_id_prompt = "FALSE"
 $ endif
+$
+$ gosub get_cluster_details
 $! 
 $! Determine the correct batch queue to submit the startup procedure
 $!
-$ tque = f$getqui("DISPLAY_QUEUE","GENERIC_TARGET",iiqueue,"BATCH")
-$ if (clustered) .and. ("''tque'" .nes. "")
+$ entry=0
+$
+$BATCH_QUEUES:
+$ c_node = F$ELEMENT( entry, ",", nodes)
+$
+$ if (c_node .nes. ",")
 $ then
-$    tmp = 0
-$    QUEUE_FIND:
-$       iiqueue = F$ELEMENT(tmp,",",tque)
-$       if (("''iiqueue'".eqs."") .or. ("''iiqueue'".eqs.","))
-$       then 
-$           iiqueue = ""
-$           goto QUEUE_PROMPT
-$       endif
-$       tnode = f$getqui("DISPLAY_QUEUE","SCSNODE_NAME",iiqueue,"BATCH")
-$       if "''tnode'" .eqs. "''node_name'" then goto QUEUE_PROMPT       
-$       tmp = tmp + 1
-$       goto QUEUE_FIND
-$! 
-$    QUEUE_PROMPT:
-$    say
-
-A command procedure (IISTARTUP) is created for the automated start up of the
-installation at boot time.  Please specify the name of a batch execution queue
-to submit the startup script.  NOTE:   The execution queue must not be a 
-generic queue, and it must be located on the local node.
-
-$    tque = iiqueue
-$    if tque .eqs. "" then tque = "NO DEFAULT" 
-$    if EXPRESS then goto SKIP_INQ_5
-$    inquire answer "Please enter the name of a local batch queue [''tque']"
-$    if ("''answer'".eqs."") .and. ("''tque'".eqs."NO DEFAULT") -
-     then goto QUEUE_PROMPT
-$ SKIP_INQ_5:
-$    if ("''answer'".eqs."") then answer = tque
-$    iiqueue = answer
+$    entry = entry + 1
+$
+$    gosub Get_Not_Batch_Queue
+$
+$    goto BATCH_QUEUES
 $ endif
 $!
 $! Generate IISTARTUP.COM and IISTARTUP_NODENAME.COM
@@ -986,32 +1044,18 @@ $ write iistartup "$ iistartup1"
 $ close iistartup
 $ purge ii_system:[ingres]iistartup.com
 $!
-$ open/write iistartup1 ii_system:[ingres]iistartup_'node_name.com
-$ write iistartup1 "$!"
-$ write iistartup1 "$! When this script is called interactively (probably by iistartup.com) "
-$ write iistartup1 "$!     it submits itself for batch execution"
-$ write iistartup1 "$! Otherwise if it is a batch execution"
-$ write iistartup1 "$!     define logicals, symbols and then start the server processes"
-$ write iistartup1 "$!"
-$ write iistartup1 "$ if f$mode() .eqs. ""INTERACTIVE"" "
-$ write iistartup1 "$ then"
-$ write iistartup1 "$     logname = f$environment(""DEFAULT"")"
-$ write iistartup1 "$     submit/notify/noprint/nodelete/log='logname -"
-$ write iistartup1 "            /user=''user_name' /queue=''iiqueue' -"
-$ write iistartup1 "            ii_system:[ingres]iistartup_''node_name'.com"
-$ write iistartup1 "$ else"
-$ write iistartup1 "$     set process/privileges=(SYSNAM,GRPNAM)"
-$ if "''lnm_table'".eqs."LNM$SYSTEM"
+$ entry=0
+$
+$STARTUP_SCRIPT:
+$ c_node = F$ELEMENT( entry, ",", nodes)
+$
+$ if (c_node .nes. ",")
 $ then
-$ write iistartup1 "$     define/system/exec/trans=concealed ii_system ""''ii_system_value'"" "
-$ else
-$ write iistartup1 "$     define/group/exec/trans=concealed ii_system ""''ii_system_value'"" "
+$    entry = entry + 1
+$
+$    gosub Create_iistartup
+$    goto STARTUP_SCRIPT
 $ endif
-$ write iistartup1 "$     @ii_system:[ingres]ingsysdef.com"
-$ write iistartup1 "$     ingstart"
-$ write iistartup1 "$ endif"
-$ close iistartup1
-$ purge ii_system:[ingres]iistartup_'node_name.com
 $!
 $! Generate default DBMS configuration.
 $!
@@ -1021,14 +1065,20 @@ $    say
 
 Generating default configuration...
 $    on error then goto IIGENRES_FAILED
-$    iigenres 'node_name ii_system:[ingres.files]dbms.rfm
+$    pan_cluster_cmd "''nodes'" iigenres "" " ii_system:[ingres.files]dbms.rfm"
 $    set noon
-$    iisetres ii.'node_name.config.dbms.'release_id "DEFAULTS"
+$    pan_cluster_cmd "''nodes'" iisetres "ii." ".config.dbms.''release_id' ""DEFAULTS"""
 $!   an upgrade installation needs a larger buffer_count and 
 $!   stack size for dbms and recovery servers
-$    iisetres ii.'node_name.rcp.log.buffer_count 20
-$    iisetres ii.'node_name.dbms.*.stack_size 131072
-$    iisetres ii.'node_name.recovery.*.stack_size 131072
+$    call Perform_setres_min_CMD "ii." ".dbms.*.stack_size" 131072
+$    call Perform_setres_min_CMD "ii." ".dbms.*.vms_stack_size" 131072
+$    call Perform_setres_min_CMD "ii." ".dbms.*.vms_page_file" 2000000000
+$    call Perform_setres_min_CMD "ii." ".dbms.*.vms_working_set" 2048
+$    call Perform_setres_min_CMD "ii." ".rcp.log.buffer_count" 35
+$    call Perform_setres_min_CMD "ii." ".recovery.*.stack_size" 131072
+$    call Perform_setres_min_CMD "ii." ".recovery.*.vms_page_file" 2000000000
+$    call Perform_setres_min_CMD "ii." ".recovery.*.vms_stack_size" 131072
+$    call Perform_setres_min_CMD "ii." ".recovery.*.vms_working_set" 2048
 $    goto IIGENRES_DONE
 $!
 $ IIGENRES_FAILED:
@@ -1048,7 +1098,7 @@ $ IIGENRES_DONE:
 $!
 $! Set necessary privileges.
 $!
-$ iigetres ii.'node_name.ingstart.privileges privileges 
+$ iigetres ii.'node_name.ingstart.privileges privileges
 $ set_message_off
 $ privileges = f$trnlnm( "privileges" )
 $ deassign "privileges"
@@ -1072,6 +1122,7 @@ $!
 $ PRIVILEGED:
 $!
 $ set noon
+$
 $!
 $! Prompt for II_INSTALLATION if using GROUP level logicals .
 $!
@@ -1091,27 +1142,29 @@ $    !
 $    ! If the installation code has been setup on other members of
 $    ! a VMScluster, then use that value.
 $    !
-$    if (cluster_id.nes."" .and. cluster_sequence.gt.0) 
+$    if (cluster_id .nes. "")
 $    then
 $       !
 $       tmp = 0
 $       !
 $       II_INSTALLATION_CLUSTER_LOOP:
 $       !
-$       if (tmp .eq. cluster_sequence) then goto II_INSTALLATION_CLUSTER_LOOP_END
 $       sub1 = f$element(tmp, ",", cluster_nodelist)
-$       iigetres ii.'sub1.lnm.ii_installation ii_installation_value
-$       ii_installation = f$trnlnm( "ii_installation_value" )
-$       if( ii_installation .nes. "" )
+$       if ( sub1 .nes. ",")
 $       then
-$           deassign "ii_installation_value"
-$           iisetres ii.'node_name.lnm.ii_installation "''ii_installation'"
-$           echo "" 
-$           echo "II_INSTALLATION configured as ""''ii_installation'"""
-$           goto II_INSTALLATION_OK
+$          iigetres ii.'sub1.lnm.ii_installation ii_installation_value
+$          ii_installation = f$trnlnm( "ii_installation_value" )
+$          if( ii_installation .nes. "" )
+$          then
+$             deassign "ii_installation_value"
+$             pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.ii_installation ""''ii_installation'"""
+$             echo "" 
+$             echo "II_INSTALLATION configured as ""''ii_installation'"""
+$             goto II_INSTALLATION_OK
+$          endif
+$          tmp = tmp + 1
+$          goto II_INSTALLATION_CLUSTER_LOOP
 $       endif
-$       tmp = tmp + 1
-$       goto II_INSTALLATION_CLUSTER_LOOP
 $       !
 $       II_INSTALLATION_CLUSTER_LOOP_END:
 $       !
@@ -1159,7 +1212,7 @@ $ else
 $    echo "" 
 $    echo "II_INSTALLATION configured as ""''ii_installation'"""
 $ endif
-$ iisetres ii.'node_name.lnm.ii_installation "''ii_installation'"
+$ pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.ii_installation ""''ii_installation'"""
 $!
 $ II_INSTALLATION_OK:
 $!
@@ -1179,31 +1232,36 @@ $ then
 $     copy ii_system:[ingres.library]clfelib.exe -
            ii_system:[ingres.library]clfelib'ii_installation.exe -
 	   /prot=(s:rwed,o:rwed,g:rwed,w:re)
-$     iisetres ii.'node_name.lnm.ii_compatlib "ii_system:[ingres.library]clfelib''ii_installation'.exe" 
+$     pan_cluster_cmd "''nodes'" iisetres -
+                       "ii." ".lnm.ii_compatlib ""ii_system:[ingres.library]clfelib''ii_installation'.exe"""
 $     purge/nolog ii_system:[ingres.library]clfelib'ii_installation.exe
 $!
 $     copy ii_system:[ingres.library]framefelib.exe -
            ii_system:[ingres.library]framefelib'ii_installation.exe -
 	   /prot=(s:rwed,o:rwed,g:rwed,w:re)
-$     iisetres ii.'node_name.lnm.ii_framelib "ii_system:[ingres.library]framefelib''ii_installation'.exe" 
+$     pan_cluster_cmd "''nodes'" iisetres -
+                       "ii." ".lnm.ii_framelib ""ii_system:[ingres.library]framefelib''ii_installation'.exe"""
 $     purge/nolog ii_system:[ingres.library]framefelib'ii_installation.exe
 $!
 $     copy ii_system:[ingres.library]interpfelib.exe -
            ii_system:[ingres.library]interpfelib'ii_installation.exe -
 	   /prot=(s:rwed,o:rwed,g:rwed,w:re)
-$     iisetres ii.'node_name.lnm.ii_interplib "ii_system:[ingres.library]interpfelib''ii_installation'.exe" 
+$     pan_cluster_cmd "''nodes'" iisetres -
+                       "ii." ".lnm.ii_interplib ""ii_system:[ingres.library]interpfelib''ii_installation'.exe"""
 $     purge/nolog ii_system:[ingres.library]interpfelib'ii_installation.exe
 $!
 $     copy ii_system:[ingres.library]libqfelib.exe -
            ii_system:[ingres.library]libqfelib'ii_installation.exe -
 	   /prot=(s:rwed,o:rwed,g:rwed,w:re)
-$     iisetres ii.'node_name.lnm.ii_libqlib "ii_system:[ingres.library]libqfelib''ii_installation'.exe" 
+$     pan_cluster_cmd "''nodes'" iisetres -
+                       "ii." ".lnm.ii_libqlib ""ii_system:[ingres.library]libqfelib''ii_installation'.exe"""
 $     purge/nolog ii_system:[ingres.library]libqfelib'ii_installation.exe
 $!
 $     copy ii_system:[ingres.library]apifelib.exe -
             ii_system:[ingres.library]apifelib'ii_installation.exe -
           /prot=(s:rwed,o:rwed,g:rwed,w:re)
-$     iisetres ii.'node_name.lnm.ii_apilib "ii_system:[ingres.library]apifelib''ii_installation'.exe"
+$     pan_cluster_cmd "''nodes'" iisetres -
+                       "ii." ".lnm.ii_apilib ""ii_system:[ingres.library]apifelib''ii_installation'.exe"""
 $     purge/nolog ii_system:[ingres.library]apifelib'ii_installation.exe
 $!
 $     copy ii_system:[ingres.library]iiuseradt.exe -
@@ -1223,20 +1281,9 @@ $! entry.
 $ if ("''ii_installation'".nes."")
 $ then
 $     temp_str = "ii_gcn" + ii_installation + "_lcl_vnode"
-$     iisetres ii.'node_name.lnm.'temp_str 'node_name
+$     pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.''temp_str'" NODENAME
 $ else
-$     iisetres ii.'node_name.lnm.ii_gcn_lcl_vnode 'node_name
-$ endif
-$!
-$! Now make sure that we use the correct version of II_DUAL_LOG, II_DUAL_LOG_NAME
-$!
-$ if ("''ii_installation'".nes."")
-$ then
-$     ii_dual_log_inst = "ii_dual" + ii_installation + "_log"
-$     ii_dual_log_name_inst = "ii_dual" + ii_installation + "_log_name"
-$ else
-$     ii_dual_log_inst = "ii_dual_log"
-$     ii_dual_log_name_inst = "ii_dual_log_name"
+$     pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.ii_gcn_lcl_vnode" NODENAME
 $ endif
 $!
 $! Before we instigate use of new images, make sure any installed images of the
@@ -1270,8 +1317,8 @@ $ endif
 $!
 $ if( ( ii_database .eqs. "" ) .or. ( ii_checkpoint .eqs. "" ) -
      .or. ( ii_journal .eqs. "" ) .or. ( ii_dump .eqs. "" ) -
-     .or. ( ii_work .eqs. "" ) .or. ( ii_log_file .eqs. "" ) -
-     .or. ( ii_dual_log .eqs. "" ) )
+     .or. ( ii_work .eqs. "" ) .or. ( log_file_1_'node_name' .eqs. "" ) -
+     .or. ( dual_log_1_'node_name' .eqs. "" ) )
 $ then
 $    say
 
@@ -1537,12 +1584,24 @@ $ iisetres ii.*.lnm.ii_work "''ii_work'"
 $!
 $! Transaction log file configuration. 
 $!
-$ disable_dual_log = "FALSE"
-$ if( ( ii_log_file .eqs. "" ) .or. ( ii_dual_log .eqs. "" ) )
+$ tx_log_entry = 0
+$ disp_tx_log_help = 1
+$
+$TX_CONF:
+$ tx_node = f$element( tx_log_entry, ",", nodes)
+$
+$ if tx_node .nes. ","
 $ then
-$    if( location_help .and. location_ok )
+$    tx_log_entry = tx_log_entry + 1
+$
+$    disable_dual_log_'tx_node = "FALSE"
+$
+$    if( ( log_file_1_'tx_node' .eqs. "" ) .or. ( dual_log_1_'tx_node' .eqs. "" ) )
 $    then
-$       say
+$       if( location_help .and. location_ok .and. disp_tx_log_help)
+$       then
+$          disp_tx_log_help = 0
+$          say
 
 Ingres Transaction Log Locations
 --------------------------------
@@ -1563,139 +1622,220 @@ although you should only do so if the location you intend to use
 for your primary transaction log file has built-in fault tolerance
 (e.g. a fault-tolerant disk array or "mirrored" disk sub-system).
 
-$       inquire/nopunc junk "Press RETURN to continue:" 
-$    endif
+$          inquire/nopunc junk "Press RETURN to continue:" 
+$       endif
 $   !
-$     CONFIRM_DUAL_LOGGING:
+$       CONFIRM_DUAL_LOGGING:
 $   !
-$    echo ""
-$    if EXPRESS 
-$    then
-$	disable_dual_log = 1
-$	goto SKIP_INQ_8
+$      echo ""
+$      if EXPRESS 
+$      then
+$         disable_dual_log_'tx_node' = 1
+$         goto TX_CONF
+$      endif
+$      if (cluster_id .nes. "")
+$      then
+$         add_text = f$fao(" on !AS ", f$edit(tx_node, "upcase"))
+$      else
+$         add_text = ""
+$      endif
+$      inquire/nopunc disable_dual_log "Do you want to disable the backup transaction log ''add_text'? (y/n) "
+$      if( disable_dual_log .eqs. "" ) then goto CONFIRM_DUAL_LOGGING 
+$      disable_dual_log_'tx_node' = disable_dual_log
 $    endif
-$    inquire/nopunc disable_dual_log "Do you want to disable the backup transaction log? (y/n) "
-$    if( disable_dual_log .eqs. "" ) then goto CONFIRM_DUAL_LOGGING 
+$
+$    goto TX_CONF
 $ endif
-$ SKIP_INQ_8:
-$ if( ( ii_log_file .eqs. "" ) .or. ( ii_dual_log .eqs. "" ) )
+$
+$ tx_log_entry = 0
+$ display_tx_def_size = 1
+$
+$TX_SIZE:
+$ tx_node = f$element( tx_log_entry, ",", nodes)
+$
+$ if tx_node .nes. ","
 $ then
-$ !
-$ ! Display transaction log size.
-$ !
-$       iigetres ii.'node_name.rcp.file.kbytes log_kbytes_value 
+$    tx_log_entry = tx_log_entry + 1
+$
+$    if ( log_file_1_'tx_node' .eqs. "" )
+$    then
+$    !
+$    ! Display transaction log size.
+$    !
+$       iigetres ii.'tx_node.rcp.file.kbytes log_kbytes_value 
 $	set_message_off
 $	log_kbytes = f$trnlnm( "log_kbytes_value" )
 $	deassign "log_kbytes_value"
 $	set_message_on
 $       log_mb = (log_kbytes/1024)
-$       log_blocks = log_mb * 2048
+$       log_blocks == log_mb * 2048
 $!
-$       iigetres ii.*.lnm.ii_log_file_name ii_log_file_name_value
-$       set_message_off
-$       ii_log_file_name = f$trnlnm( "ii_log_file_name_value" )
-$       deassign "ii_log_file_name_value"
-$       if( ii_log_file_name .eqs. "" ) then ii_log_file_name = "ingres_log.l01"
-$       logfile = "''ii_log_file'[ingres.log]''ii_log_file_name'"
-$       if cluster_id .nes. "" then logfile = logfile + "_" + node_name
+$       log_file_name = log_file_name_'tx_node
+$       log_path = log_file_1_'tx_node
+$       if( log_file_name .eqs. "" ) then log_file_name = "''default_log_file'"
+$       logfile = "''log_path'[ingres.log]''log_file_name'.l01"
+$       if cluster_id .nes. ""
+$       then
+$          logfile = logfile + "_" + node_name
+$       endif
+$
 $       if( f$search( "''logfile'" ) .eqs. "" )
 $ !        LOG file does not exist - display the log file message 
 $ !        and prompt for size change
 $       then 
 $          set_message_on
-$          say
+$          if display_tx_def_size
+$          then
+$             display_tx_def_size = 0
+$             say
 
 You must verify that the location(s) you intend to select for the 
 Ingres transaction log(s) have sufficient disk space.  The default 
 transaction log size for Ingres is:
 
-$          echo "   ''log_blocks' blocks (''log_mb'MB)"
-$	   if EXPRESS then goto II_LOG_FILE_PROMPT1
-$          gosub II_SELECT_LOG_SIZE
-$          inquire/nopunc junk "Press RETURN to continue:" 
+$             echo "   ''log_blocks' blocks (''log_mb'MB)"
+$          endif
+$	   if EXPRESS then goto TX_SIZE
+$          call II_SELECT_LOG_SIZE "''tx_node'" 'log_kbytes
+$          if (do_abort) then goto EXIT_FAIL
 $       endif
-$       ii_log_file_name = ""
-$       logfile = ""
 $       set_message_on
+$    endif
+$
+$    goto TX_SIZE
 $ endif
 $!
 $! Configure II_LOG_FILE
 $!
 $ II_LOG_FILE_PROMPT1:
 $!
-$ if( ii_log_file .eqs. "" )
+$ tx_log_entry = 0
+$ display_cluster_msg = 1
+$
+$TX_PRIM_LOC:
+$ tx_node = f$element( tx_log_entry, ",", nodes)
+$
+$ if tx_node .nes. ","
 $ then
-$    if( cluster_id .nes. "" )
+$    tx_log_entry = tx_log_entry + 1
+$
+$    II_BAD_LOG_DEFINED:
+$
+$    if( log_file_1_'tx_node .eqs. "" )
 $    then
-$       say
+$       if( cluster_id .nes. "" ) 
+$       then
+$          if (display_cluster_msg)
+$          then
+$             display_cluster_msg = 0
+$             say
 
 Since you are creating an Ingres DBMS installation for VMS clusters,
 the location(s) you specify for the Ingres transaction log(s) must be
 on a cluster-mounted device.
+$          endif
+$
+$          add_text = f$fao(" on !AS", f$edit(tx_node, "upcase"))
+$       else
+$          add_text = ""
+$       endif
+$   !
+$       II_LOG_FILE_PROMPT2:
+$   !
+$       if( location_ok ) then echo ""
+$       echo "Please enter a location for the primary Ingres transaction log''add_text'."
+$       inquire location_root "II_LOG_FILE"
+$       if( location_root .eqs. "" ) then goto II_LOG_FILE_PROMPT2
+$
+$       location_dir = "log"
+$       gosub VERIFY_LOCATION
+$       if( .not. location_ok ) then goto II_LOG_FILE_PROMPT2
+$       ii_log_file = location_root
+$       iisetres ii.'tx_node.rcp.log.log_file_1 "''ii_log_file'"
+$       iisetres ii.'tx_node.rcp.log.log_file_name 'default_log_file'
+$    else
+$       echo "" 
+$
+$       if ( cluster_id .eqs. "" )
+$       then
+$          location_root = log_file_1_'tx_node
+$          echo "II_LOG_FILE configured as ""''location_root'"""
+$       else
+$          location_root = log_file_1_'tx_node
+$          echo "II_LOG_FILE (''tx_node') configured as ""''location_root'"""
+$       endif
+$       location_dir = "log"
+$       gosub VERIFY_LOCATION
+$       if( .not. location_ok )
+$       then
+$          log_file_1_'tx_node = ""
+$
+$          goto II_BAD_LOG_DEFINED
+$       endif
 $    endif
-$   !
-$    II_LOG_FILE_PROMPT2:
-$   !
-$    if( location_ok ) then echo ""
-$    echo "Please enter a location for the primary Ingres transaction log."
-$    inquire location_root "II_LOG_FILE"
-$    if( location_root .eqs. "" ) then goto II_LOG_FILE_PROMPT2
-$    say
-
-Configuring primary transaction log location...
-$ else
-$    echo "" 
-$    echo "II_LOG_FILE configured as ""''ii_log_file'"""
-$    location_root = ii_log_file
+$
+$    goto TX_PRIM_LOC
 $ endif
-$ location_dir = "log"
-$ gosub VERIFY_LOCATION
-$ if( .not. location_ok ) then goto II_LOG_FILE_PROMPT1 
-$ ii_log_file = location_root
-$ iisetres ii.'node_name.rcp.log.log_file_1 "''ii_log_file'"
-$ iisetres ii.'node_name.rcp.log.log_file_name ingres_log
 $!
 $! Configure II_DUAL_LOG
 $!
 $ II_DUAL_LOG_PROMPT1:
 $!
-$ iisetres ii.'node_name'.rcp.log.dual_log_name dual_log
-$ if( ( ii_dual_log .eqs. "" ) .and. ( .not. disable_dual_log ) )
+$ tx_log_entry = 0
+$
+$TX_DUAL_LOC:
+$ tx_node = f$element( tx_log_entry, ",", nodes)
+$
+$ if tx_node .nes. ","
 $ then
-$    if( cluster_id .nes. "" )
+$    tx_log_entry = tx_log_entry + 1
+$
+$    if( ( dual_log_1_'tx_node .eqs. "" ) .and. ( .not. disable_dual_log_'tx_node' ) )
 $    then
-$       say
+$       if( cluster_id .nes. "" ) 
+$       then
+$          if (display_cluster_msg)
+$          then
+$             display_cluster_msg = 0
+$             say
 
 Since you are creating an Ingres DBMS installation for VMS clusters,
 the location(s) you specify for the Ingres transaction log(s) must be
 on a cluster-mounted device.
+$          endif
+$
+$          add_text = f$fao(" on !AS", f$edit(tx_node, "upcase"))
+$       else
+$          add_text = ""
+$       endif
+$       !
+$       II_DUAL_LOG_PROMPT2:
+$       !
+$       if( location_ok ) then echo ""
+$       echo "Please enter a location for the backup transaction log''add_text'."
+$       inquire location_root "II_DUAL_LOG"
+$       if( location_root .eqs. "" ) then goto II_DUAL_LOG_PROMPT2
+$       gosub VERIFY_LOCATION
+$       if( .not. location_ok ) then goto II_LOG_FILE_PROMPT2
+$       ii_log_file = location_root
+$       iisetres ii.'tx_node.rcp.log.dual_log_1 "''ii_log_file'"
+$    else
+$       if (.not. disable_dual_log_'tx_node' )
+$       then
+$          echo "" 
+$
+$          if ( cluster_id .eqs. "" )
+$          then
+$             location_root = dual_log_1_'tx_node
+$             echo "II_DUAL_LOG configured as ""''location_root'"""
+$          else
+$             location_root = log_file_1_'tx_node
+$             echo "II_DUAL_LOG (''tx_node') configured as ""''location_root'"""
+$          endif
+$       endif
 $    endif
-$   !
-$    II_DUAL_LOG_PROMPT2:
-$   !
-$    if( location_ok ) then echo ""
-$    echo "Please enter a location for the backup transaction log."
-$    inquire location_root "II_DUAL_LOG"
-$    if( location_root .eqs. "" ) then goto II_DUAL_LOG_PROMPT2
-$    say
-
-Configuring backup transaction log location...
-$ else
-$    if( .not. disable_dual_log )
-$    then
-$       echo "" 
-$       echo "II_DUAL_LOG configured as ""''ii_dual_log'"""
-$       location_root = ii_dual_log
-$    endif
-$ endif
-$ if( .not. disable_dual_log )
-$ then
-$    location_dir = "log"
-$    gosub VERIFY_LOCATION
-$    if( .not. location_ok ) then goto II_DUAL_LOG_PROMPT1 
-$    ii_dual_log = location_root
-$    iisetres ii.'node_name.rcp.log.dual_log_1 "''ii_dual_log'"
-$    iisetres ii.'node_name.rcp.log.dual_log_name dual_log
+$
+$    goto TX_DUAL_LOC
 $ endif
 $ goto LOCATIONS_DONE
 $!
@@ -1773,43 +1913,6 @@ $ return
 $!
 $ LOCATIONS_DONE:
 $!
-$! Configure II_LOG_FILE_NAME.
-$!
-$ iigetres ii.*.lnm.ii_log_file_name ii_log_file_name_value
-$ set_message_off
-$ ii_log_file_name = f$trnlnm( "ii_log_file_name_value" )
-$ deassign "ii_log_file_name_value"
-$ set_message_on
-$ if( ii_log_file_name .eqs. "" )
-$ then
-$    if( cluster_id .nes. "" )
-$    then
-$       ii_log_file_name = "ingres_log.l01"
-$    else
-$       ii_log_file_name = "ingres_log.l01"
-$    endif
-$ endif
-$!
-$! Configure II_DUAL_LOG_NAME if II_DUAL_LOG defined.
-$!
-$ if( ii_dual_log .nes. "" )
-$ then
-$    iigetres ii.*.lnm.'ii_dual_log_name_inst ii_dual_log_name_value
-$    set_message_off
-$    ii_dual_log_name = f$trnlnm( "ii_dual_log_name_value" )
-$    deassign "ii_dual_log_name_value"
-$    set_message_on
-$    if( ii_dual_log_name .eqs. "" )
-$    then
-$       if( cluster_id .nes. "" )
-$       then
-$          ii_dual_log_name = "dual_log.l01"
-$       else
-$          ii_dual_log_name = "dual_log.l01"
-$       endif
-$    endif
-$ endif
-$!
 $! Issue warning about USERS. file being obsolete
 $!
 $ set_message_off
@@ -1823,13 +1926,21 @@ $ set_message_on
 $!
 $! Give SYSTEM and installation owner all Ingres privileges 
 $!
-$ iisetres ii.'node_name.privileges.user.'ing_user -
-     "SERVER_CONTROL,NET_ADMIN,MONITOR,TRUSTED"
-$ iisetres ii.'node_name.privileges.user.system -
-     "SERVER_CONTROL,NET_ADMIN,MONITOR,TRUSTED"
-$ if ("''ing_user'" .nes. "''ivp_user'") then -
-	iisetres ii.'node_name.privileges.user.'ivp_user - 
-	"SERVER_CONTROL,NET_ADMIN,MONITOR,TRUSTED"
+$ entry = 0
+$
+$INGRES_PRIVS:
+$ c_node = f$element(entry, ",", nodes)
+$
+$ if (c_node .nes. ",")
+$ then
+$    c_user = ing_user_'c_node
+$
+$    gosub Set_User_Priv
+$
+$    entry = entry + 1
+$
+$    goto INGRES_PRIVS
+$ endif
 $!
 $! Configure II_TIMEZONE_NAME
 $!
@@ -1853,19 +1964,21 @@ $       tmp = 0
 $       !
 $       II_TIMEZONE_CLUSTER_LOOP:
 $       !
-$       if (tmp .eq. cluster_sequence) then goto II_TIMEZONE_CLUSTER_LOOP_END
 $       sub1 = f$element(tmp, ",", cluster_nodelist)
-$       iigetres ii.'sub1.lnm.ii_timezone_name ii_timezone_name_value
-$       ii_timezone_name = f$trnlnm( "ii_timezone_name_value" )
-$       if( ii_timezone_name .nes. "" )
+$       if (sub1 .nes. ",")
 $       then
-$           deassign "ii_timezone_name_value"
-$           echo "" 
-$           echo "II_TIMEZONE_NAME configured as ''ii_timezone_name'."
-$           goto II_TIMEZONE_OK
+$          iigetres ii.'sub1.lnm.ii_timezone_name ii_timezone_name_value
+$          ii_timezone_name = f$trnlnm( "ii_timezone_name_value" )
+$          if( ii_timezone_name .nes. "" )
+$          then
+$              deassign "ii_timezone_name_value"
+$              echo "" 
+$              echo "II_TIMEZONE_NAME configured as ''ii_timezone_name'."
+$              goto II_TIMEZONE_OK
+$          endif
+$          tmp = tmp + 1
+$          goto II_TIMEZONE_CLUSTER_LOOP
 $       endif
-$       tmp = tmp + 1
-$       goto II_TIMEZONE_CLUSTER_LOOP
 $       !
 $       II_TIMEZONE_CLUSTER_LOOP_END:
 $       !
@@ -1944,7 +2057,8 @@ $    echo ""
 $    echo "II_TIMEZONE_NAME configured as ''ii_timezone_name'."
 $ endif
 $ II_TIMEZONE_OK:
-$ iisetres ii.'node_name.lnm.ii_timezone_name "''ii_timezone_name'"
+$
+$ pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.ii_timezone_name ""''ii_timezone_name'"""
 $!
 $! Configure II_CHARSETxx
 $!
@@ -1968,19 +2082,21 @@ $       tmp = 0
 $       !
 $       II_CHARSET_CLUSTER_LOOP:
 $       !
-$       if (tmp .eq. cluster_sequence) then goto II_CHARSET_CLUSTER_LOOP_END
 $       sub1 = f$element(tmp, ",", cluster_nodelist)
-$       iigetres ii.'sub1.lnm.ii_charset'ii_installation ii_charset_value
-$       ii_charset = f$trnlnm( "ii_charset_value" )
-$       if( ii_charset .nes. "" )
+$       if (sub1 .nes. ",")
 $       then
-$           deassign "ii_charset_value"
-$           echo "" 
-$           echo "II_CHARSET''ii_installation' configured as ''ii_charset'."
-$           goto II_CHARSET_OK
+$          iigetres ii.'sub1.lnm.ii_charset'ii_installation ii_charset_value
+$          ii_charset = f$trnlnm( "ii_charset_value" )
+$          if( ii_charset .nes. "" )
+$          then
+$             deassign "ii_charset_value"
+$             echo "" 
+$             echo "II_CHARSET''ii_installation' configured as ''ii_charset'."
+$             goto II_CHARSET_OK
+$          endif
+$          tmp = tmp + 1
+$          goto II_CHARSET_CLUSTER_LOOP
 $       endif
-$       tmp = tmp + 1
-$       goto II_CHARSET_CLUSTER_LOOP
 $       !
 $       II_CHARSET_CLUSTER_LOOP_END:
 $       !
@@ -2040,13 +2156,35 @@ $    echo ""
 $    echo "II_CHARSET''ii_installation' configured as ''ii_charset'."
 $ endif
 $ II_CHARSET_OK:
-$ iisetres ii.'node_name.lnm.ii_charset'ii_installation "''ii_charset'"
+$ pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.ii_charset''ii_installation' ""''ii_charset'"""
 $!
 $! Create memory directory if it doesn't exist. 
 $!
 $ set_message_off
 $ if( f$search( "ii_system:[ingres.files]memory.dir") .eqs. "" ) then -
 $    create/directory ii_system:[ingres.files.memory]
+$ if (cluster_id .nes. "")
+$ then
+$    entry = 0
+$
+$CREATE_FILES_MEM:
+$    c_node = f$element( entry, ",", nodes)
+$
+$    if (c_node .nes. ",")
+$    then
+$       entry = entry + 1
+$
+$       if (f$search( "ii_system:[ingres.files.memory]''c_node'.dir") .eqs. "")
+$       then
+$          ! Need to create the cluster node's memory area.
+$
+$          create/dir ii_system:[ingres.files.memory.'c_node]
+$       endif
+$
+$       goto CREATE_FILES_MEM
+$    endif
+$ endif
+$
 $ set_message_on
 $!
 $! Prompt for concurrent users. 
@@ -2072,9 +2210,10 @@ $ set noon
 $ say
 
 Updating configuration...
-$ iisetres ii.'node_name.dbms.*.connect_limit 'user_limit 
+$ pan_cluster_cmd "''nodes'" iisetres "ii." ".dbms.*.connect_limit ''user_limit'"
 $ default_users = 32
 $ on error then goto CONCURRENT_USERS_PROMPT
+$
 $!###
 $!### HANDLE SYSCHECK FAILURE
 $!###
@@ -2084,143 +2223,25 @@ $ set noon
 $!
 $! Make sure ingstart invokes image installation
 $!
-$ iisetres ii.'node_name.ingstart.*.begin "@ii_system:[ingres.utility]iishare"
+$ pan_cluster_cmd "''nodes'" iisetres "ii." ".ingstart.*.begin ""@ii_system:[ingres.utility]iishare"""
 $!
 $! Create or erase the primary transaction log.
 $!
-$ logfile = "''ii_log_file'[ingres.log]''ii_log_file_name'"
-$ if cluster_id .nes. "" then logfile = logfile + "_" + node_name
-$ set_message_off
-$ if( f$search( "''logfile'" ) .nes. "" )
-$ then 
-$       set_message_on
-$       echo "A primary transaction log already exists"
-$       if( "''p1'" .eqs. "-NOERASE" .or. "''p1'" .eqs. "-noerase" )
-$       then
-$          echo ""
-$          echo "The primary transaction log will not be erased, at your request."
-$          echo ""
-$          goto II_CREATE_BACKUP_LOG
-$       else
-$          log_blocks = f$file_attributes( "''logfile'", "ALQ" )
-$          log_kbytes = log_blocks / 2
-$	   log_mb = log_kbytes / 1024
-$ 	   echo ""
-$          echo "The existing transaction log size is:"
-$          echo "	''log_blocks' blocks (''log_mb'MB) "
-$          echo "Please note, if you change the transaction log size, the existing log"
-$          echo "file(s) will be deleted before the new one(s) are created."
-$          gosub II_SELECT_LOG_SIZE
-$          if (new_log_kbytes .EQ. log_kbytes)
-$          then 
-$		 if( f$search( "''ii_database'[ingres.data]iidbdb.dir" ) .nes. "" )
-$		 then
-$		    say
-
-Because you are upgrading your installation, the transaction log records 
-will be erased and the log file(s) will be re-formatted for this version.
-$		 endif
-$                on error then goto IIMKLOG_FAILED
-$		 if cluster_id.nes."" then -
-		    define/user ii_log_file_name -
-		    "''ii_log_file_name'"
-$                iimklog -erase
-$                set noon
-$                goto II_CREATE_BACKUP_LOG
-$          else 
-$                delfile = logfile + ";*"
-$                DELETE 'delfile
-$                echo ""
-$                echo "The existing primary transaction log is deleted"
-$                echo ""
-$          endif
-$       endif
+$ entry = 0
+$
+$Primary_TX_log:
+$ c_node = f$element(entry, ",", nodes)
+$
+$ if (c_node .nes. ",")
+$ then
+$    call SET_UP_TX_LOG_FILES 'c_node'
+$
+$    if do_abort then goto EXIT_FAIL
+$
+$    entry = entry + 1
+$
+$    goto Primary_TX_log
 $ endif
-$    set_message_on
-$    echo "The new Ingres transaction log will now be created."
-$    on error then goto IIMKLOG_FAILED
-$    if cluster_id.nes."" then -
-	define/user ii_log_file_name "''ii_log_file_name'"
-$    iimklog
-$    set noon
-$!
-$! Create or erase the backup primary transaction log.
-$!
-$ II_CREATE_BACKUP_LOG:
-$ if( ii_dual_log .eqs. "" ) then goto RCPCONFIG
-$ logfile = "''ii_dual_log'[ingres.log]''ii_dual_log_name'"
-$ if cluster_id .nes. "" then logfile = logfile + "_" + node_name
-$ set_message_off
-$ if( f$search( "''logfile'" ) .nes. "" )
-$ then 
-$    set_message_on
-$    echo "A backup transaction log already exists."
-$    if( "''p1'" .eqs. "-NOERASE" .or. "''p1'" .eqs. "-noerase" )
-$    then
-$       echo ""
-$       echo "The backup transaction log will not be erased, at your request."
-$       echo ""
-$       goto RCPCONFIG
-$    else
-$          if (new_log_kbytes .EQ. log_kbytes)
-$          then 
-$                on error then goto IIMKLOG_FAILED
-$		 if cluster_id.nes."" then -
-		    define/user 'ii_dual_log_name_inst -
-		    "''ii_dual_log_name'"
-$	         iimklog -erase -dual
-$                set noon
-$                goto RCPCONFIG
-$          else 
-$                delfile = logfile + ";*"
-$                DELETE 'delfile
-$                echo ""
-$                echo "The existing backup transaction log is deleted"
-$                echo ""
-$          endif
-$    endif
-$ endif
-$    set_message_on
-$    echo "The new backup transaction log will now be created."
-$    on error then goto IIMKLOG_FAILED
-$    if cluster_id.nes."" then -
-	define/user 'ii_dual_log_name_inst "''ii_dual_log_name'"
-$    iimklog -dual
-$    set noon
-$ goto RCPCONFIG
-$!
-$ IIMKLOG_FAILED:
-$!
-$ say
-Correct the problem described above and re-run this program.
-
-$!
-$ goto EXIT_FAIL
-$!
-$ RCPCONFIG:
-$!
-$ say
-Formatting transaction log file(s)...
-
-$ on error then goto RCPCONFIG_FAILED
-$ define /user ii_dbms_config ii_system:[ingres.files]
-$ define /user sys$output 'tmpfile
-$ rcpconfig -init
-$ set noon
-$ delete/noconfirm 'tmpfile;*
-$ goto DATE_TYPE_ALIAS
-$!
-$ RCPCONFIG_FAILED:
-$!
-$ set noon
-$ type 'tmpfile 
-$ delete/noconfirm 'tmpfile;* 
-$ say
-
-Unable to format the transaction log file.  You must correct the problem
-and re-run this set up procedure.
-
-$ goto EXIT_FAIL
 $!
 $!
 $ DATE_TYPE_ALIAS:
@@ -2231,7 +2252,7 @@ $ deassign   "default_date_alias"
 $ if "''default_date_alias'" .nes. "" 
 $ then
 $     echo " "
-$     echo "For current configuratiuon, the date data type associates to ''default_date_alias' "
+$     echo "For current configuration, the date data type associates to ''default_date_alias' "
 $     echo " "
 $ else
 $     default_date_alias = "ingresdate"
@@ -2287,7 +2308,7 @@ $ say
 $ goto DATE_ALIAS_LOOP
 $!
 $ DATE_ALIAS_EXIT:
-$ iisetres ii.'node_name'.dbms.*.date_type_alias   'ii_date_alias' 
+$ pan_cluster_cmd "''nodes'" iisetres "ii." ".dbms.*.date_type_alias   ''ii_date_alias'" 
 $ goto RCPCONFIG_DONE
 $!
 $!
@@ -2295,39 +2316,13 @@ $ RCPCONFIG_DONE:
 $!
 $! We're all done when this is an additional cluster node
 $!
-$ if (cluster_id.nes."" .and. cluster_sequence.gt.0) 
-$ then 
-$    tmp = 0
-$    !
-$    II_CLUSTER_DONE_LOOP:
-$    !
-$    if (tmp .eq. cluster_sequence) then goto II_CLUSTER_DONE_LOOP_END
-$    sub1 = f$element(tmp, ",", cluster_nodelist)
-$    if (f$edit(node_name,"UPCASE") .nes. f$edit(sub1,"UPCASE") )
-$    then
-$        say
-Ingres DBMS setup complete for this VMScluster node.
-
-Refer to the Ingres Installation Guide for information about 
-starting and using Ingres.
-
-$	 
-$        iisetres ii.'node_name.config.dbms.'release_id "COMPLETE"
-$        goto EXIT_OK
-$    endif
-$    tmp = tmp + 1
-$    goto II_CLUSTER_DONE_LOOP
-$    !
-$    II_CLUSTER_DONE_LOOP_END:
-$    !
-$ endif
 $!
 $    iigetres ii.'node_name.ingstart.*.rmcmd rmcmd_servers
 $    set_message_off
 $    rmcmd_servers = f$trnlnm( "rmcmd_servers" )
 $    deassign "rmcmd_servers"
 $    set_message_on
-$    if (( rmcmd_servers .nes. "" )  .and. ( rmcmd_servers .ges. 0))
+$    if (( rmcmd_servers .nes. "" )  .and. ( rmcmd_servers .gt. 0))
 $    then
 $       rmcmd_setup = "TRUE"
 $	iisetres ii.'node_name.ingstart.*.rmcmd 0
@@ -2360,17 +2355,21 @@ $    delete/noconfirm ii_system:[ingres]runsv.com;*
 $    delete/noconfirm ii_system:[ingres.files]rcpconfig.dat;* 
 $    delete/noconfirm ii_system:[ingres.utility]iisymboldef.com;* 
 $    set_message_on
+$
+$    ! As this is an upgrade need to ensure the correct privileges are defined
+$    PIPE IIINITRES vms_privileges >nla0:
+$    PIPE IIINITRES privileges >nla0:
 $!
 $    if f$search("ii_system:[ingres.utility]slutil.exe") .nes. "" 
 $    ! If slutil.exe is installed then this installation is B1,
 $    ! so don't upgrade now, do it later in iisues.com
-$	then
+$    then
 $        say
 This is a B1 installation. II_SYSTEM:[ingres.utility]iisues.com must be run
 to upgrade existing databases.
 
 $	 goto FINISH_SETUP
-$      endif
+$    endif
 $    say
 
 Before you can access the existing databases in this installation, they
@@ -2411,9 +2410,12 @@ $! If Star servers have previously been setup, disable them while upgrading
 $! IIDBDB.  Restart Star if all databases are to be upgraded (67384)
 $!
 $    iigetres ii.'node_name.ingstart.*.star star_servers
+$    iigetres ii.'node_name.ingstart.*.rms  rms_servers
 $    set_message_off
 $    star_servers = f$trnlnm( "star_servers" )
 $    deassign "star_servers"
+$    rms_servers = f$trnlnm( "rms_servers" )
+$    deassign "rms_servers"
 $    set_message_on
 $    if (( star_servers .nes. "" )  .and. ( star_servers .gt. 0))
 $    then
@@ -2422,9 +2424,21 @@ $	iisetres ii.'node_name.ingstart.*.star 0
 $    else
 $       star_setup = "FALSE"
 $    endif
+$    if (( rms_servers .nes. "" )  .and. ( rms_servers .gt. 0))
+$    then
+$       rms_setup = "TRUE"
+$       iisetres ii.'node_name.ingstart.*.rms 0
+$    else
+$       rms_setup = "FALSE"
+$    endif
 $    on error then goto INGSTART_FAILED
 $    ingstart
 $    on error then goto UPGRADEDB_FAILED
+$
+$    if rms_setup
+$    then
+$       iisetres ii.'node_name.ingstart.*.rms 'rms_servers
+$    endif
 $    if ( .not. star_setup )
 $    then
 $	if( upgrade_all )
@@ -2530,55 +2544,56 @@ resolve this problem.
 $    goto SHUTDOWN_SERVER1
 $!
 $ UPGRADE_CHECKPOINT_DONE:
-$ on error then continue
+$    on error then continue
 $!
-$ create_imadb = 0
-$ if f$search("II_SYSTEM:[ingres.utility]rmcmdgen.exe") .nes. ""
-$ then
-$   if .not. upgrade_all
-$   then
-$	say
+$    create_imadb = 0
+$    if f$search("II_SYSTEM:[ingres.utility]rmcmdgen.exe") .nes. ""
+$    then
+$         say
 
 Upgrading imadb...
 
 $	upgradedb imadb
-$	UPG20 = ""
-$	set_message_off
-$	search II_CONFIG:config.dat "config.dbms.ii20" /exact /out='tmpfile
-$	set_message_on
-$	open tmp 'tmpfile
-$	read /end=NO_UPG20 tmp line
-$	line = f$edit(line, "collapse")
-$	UPG20 = f$extract(f$locate(":", line), 255, line)
+$
+$      if .not. upgrade_all
+$      then
+$	  UPG20 = ""
+$         set_message_off
+$	  search II_CONFIG:config.dat "config.dbms.ii20" /exact /out='tmpfile
+$	  set_message_on
+$	  open tmp 'tmpfile
+$	  read /end=NO_UPG20 tmp line
+$	  line = f$edit(line, "collapse")
+$	  UPG20 = f$extract(f$locate(":", line), 255, line)
 $NO_UPG20:
-$	close tmp
-$	delete 'tmpfile;*
-$	if UPG20 .nes. ""
-$	then
-$	    say
+$	  close tmp
+$	  delete 'tmpfile;*
+$	  if UPG20 .nes. ""
+$	  then
+$	     say
 
 Removing VDBA catalogs from iidbdb...
 
-$	    rmcmdrmv "-u''ing_user'" -diidbdb
-$	else
-$	    rmcmdrmv
-$	endif
-$   endif
-$   if (f$search( "''ii_database'[ingres.data]imadb.dir") .eqs. "")
-$   then
-$	createdb -fnofeclients "-u$ingres" imadb
-$	create_imadb = 1
-$   endif
-$   sql "-u$ingres" imadb <II_SYSTEM:[ingres.vdba]makimav.sql >II_SYSTEM:[ingres.vdba]makimav.out
-$   say
+$	     rmcmdrmv "-u''ing_user'" -diidbdb
+$	  else
+$	     rmcmdrmv
+$	  endif
+$      endif
+$      if (f$search( "''ii_database'[ingres.data]imadb.dir") .eqs. "")
+$      then
+$         createdb -fnofeclients "-u$ingres" imadb
+$	  create_imadb = 1
+$      endif
+$      sql "-u$ingres" imadb <II_SYSTEM:[ingres.vdba]makimav.sql >II_SYSTEM:[ingres.vdba]makimav.out
+$      say
 
 Initializing imadb for rmcmd...
 
-$   if .not. create_imadb
-$   then rmcmdrmv
-$   endif
+$      if .not. create_imadb
+$      then rmcmdrmv
+$      endif
 $
-$   type sys$input /out=ii_system:[ingres]rmcmdcmd.get_owner
+$      type sys$input /out=ii_system:[ingres]rmcmdcmd.get_owner
 declare global temporary table session.remotecmd_owner as
 select relowner
 from iirelation
@@ -2588,22 +2603,22 @@ on commit preserve rows with norecovery;
 
 copy session.remotecmd_owner(relowner = char(50))
 into 'ii_system:[ingres]rmcmdcmd.owner'\g
-$   sql -s imadb <ii_system:[ingres]rmcmdcmd.get_owner >nla0:
+$      sql -s imadb <ii_system:[ingres]rmcmdcmd.get_owner >nla0:
 $
-$   open/read tmp ii_system:[ingres]rmcmdcmd.owner
+$      open/read tmp ii_system:[ingres]rmcmdcmd.owner
 $RMCMD_OWNER:
-$   read/end=NOMORE_OWNER tmp line
+$      read/end=NOMORE_OWNER tmp line
 $
-$   owner = F$EDIT(line, "TRIM")
-$   rmcmdrmv "-u''owner'"
-$   goto RMCMD_OWNER
+$      owner = F$EDIT(line, "TRIM")
+$      rmcmdrmv "-u''owner'"
+$      goto RMCMD_OWNER
 
 $NOMORE_OWNER:
-$   close tmp
-$   delete ii_system:[ingres]rmcmdcmd.get_owner;*,ii_system:[ingres]rmcmdcmd.owner;*
+$      close tmp
+$      delete ii_system:[ingres]rmcmdcmd.get_owner;*,ii_system:[ingres]rmcmdcmd.owner;*
 $
-$   rmcmdgen
-$ endif
+$      rmcmdgen
+$    endif
 $!
 $ SHUTDOWN_SERVER1:
 $    echo "Shutting down the Ingres server..."
@@ -2616,11 +2631,11 @@ Ingres DBMS setup complete.
 Refer to the Ingres Installation Guide for information about 
 starting and using Ingres.
 
-$    if (( rmcmd_servers .nes. "" )  .and. ( rmcmd_servers .ges. 0))
+$    if (( rmcmd_servers .nes. "" )  .and. ( rmcmd_servers .gt. 0))
 $    then
 $	iisetres ii.'node_name.ingstart.*.rmcmd 1
 $    endif
-$    iisetres ii.'node_name.config.dbms.'release_id "COMPLETE" 
+$    pan_cluster_cmd "''nodes'" iisetres "ii." ".config.dbms.''release_id' ""COMPLETE""" 
 $ else
 $    ! prompt whether to support ANSI/ISO entry-level SQL-92
 $    say
@@ -2716,11 +2731,11 @@ Refer to the Ingres Installation Guide for information about
 starting and using Ingres.
 
 $ FINISH_SETUP:
-$    if (( rmcmd_servers .nes. "" )  .and. ( rmcmd_servers .ges. 0))
+$    if (( rmcmd_servers .nes. "" )  .and. ( rmcmd_servers .gt. 0))
 $    then
 $	iisetres ii.'node_name.ingstart.*.rmcmd 1
 $    endif
-$    iisetres ii.'node_name.config.dbms.'release_id "COMPLETE"
+$    pan_cluster_cmd "''nodes'" iisetres "ii." ".config.dbms.''release_id' ""COMPLETE"""
 $ endif 
 $ goto EXIT_OK
 $!
@@ -2782,6 +2797,21 @@ $!
 $! Restore previous values of shared library definitions
 $!
 $ set_message_off
+$ entry = 0
+$LOG_PROMPT_LOG:
+$ node = f$element( entry, ",", nodes)
+$
+$ if node .nes. ","
+$ then
+$    entry = entry + 1
+$
+$    if f$trnlnm( "log_size_prompted_''node'") .nes. ""
+$    then
+$       deassign "log_size_prompted_''node'"
+$    endif
+$
+$    goto LOG_PROMPT_LOG
+$ endif
 $ if "''ii_compatlib_def'".eqs."" 
 $ then
 $     deassign/job ii_compatlib
@@ -2800,6 +2830,12 @@ $     deassign/job ii_framelib
 $ else
 $     define/job/nolog ii_framelib "''ii_framelib_def'"
 $ endif
+$
+$ cleanup "''script_id'"
+$
+$ delete/sym/global upgrade_warning
+$ delete/sym/global do_abort
+$
 $ set_message_on
 $!
 $ if f$search( "''tmpfile';*" .nes."" ) then -
@@ -2810,47 +2846,503 @@ $!
 $ set on
 $ exit 'status'
 $!   
-$ II_SELECT_LOG_SIZE:    !sub-routine
+$ II_SELECT_LOG_SIZE: subroutine
+$
+$  node       = P1
+$  log_kbytes = 'P2
+$
+$  log_node = f$edit( node, "lowercase" )
 $!
-$  if log_size_prompted then return
-$  echo ""
+$  if f$trnlnm( "log_size_prompted_''log_node'") .nes. "" then exit
 $  if EXPRESS 
 $  then
 $     answer = "FALSE"
 $  else
 $     inquire/nopunc answer "Do you want to change transaction log size? (y/n) "
+$     echo ""
 $  endif
 $  if( answer .eqs. "" ) then goto II_SELECT_LOG_SIZE
-$  log_size_prompted = 1
+$  define/nolog "log_size_prompted_''log_node'" 1
 $  if( .not. answer )
 $  then
-$     new_log_kbytes = log_kbytes
+$     new_log_kbytes_'node == log_kbytes
 $     ! If the answer is 'n', save the size anyway, since it could represent
 $     ! a pre-existing transaction log
-$     iisetres ii.'node_name.rcp.file.kbytes 'new_log_kbytes
-$     RETURN
+$     iisetres ii.'node.rcp.file.kbytes 'log_kbytes
+$     EXIT
 $  endif 
+$
+$  min_blocks = 65536
+$  min_mb = (min_blocks /2) / 1024  !VMS block = 512 bytes
+$
 $ II_LOG_FILE_SIZE1:
-$  log_blocks = 0
+$  log_blocks == 0
+$
 $  echo ""
-$  echo "Please enter transaction log(s) size in VMS blocks for this "
-$  inquire log_blocks "installation.  The minimum logfile size is 65536 Blocks (32MB). "
-$  if (f$type(log_blocks).nes."INTEGER") then goto II_LOG_FILE_SIZE1
-$  log_kbytes = log_blocks / 2
+$  echo "Please enter transaction log(s) size on ''node' in VMS blocks for this "
+$  inquire blocks "installation.  The minimum logfile size is ''min_blocks' Blocks (''min_mb'MB). "
+$  if (f$type(blocks).nes."INTEGER") then goto II_LOG_FILE_SIZE1
+$  if 'blocks .lt. min_blocks then goto II_LOG_FILE_SIZE1
+$  log_kbytes = blocks / 2
 $  log_mb = log_kbytes / 1024
 $  tempi = log_mb /8
 $  if ((tempi * 8) .ne. log_mb)
 $  then
 $    log_mb = tempi * 8
 $    log_kbytes = log_mb * 1024
-$    log_blocks = log_kbytes * 2
+$    blocks = log_kbytes * 2
 $  endif
-$  new_log_kbytes = log_mb * 1024
+$  new_log_kbytes_'node == log_kbytes
+$  log_blocks == blocks
 $  echo ""
 $  echo "The new transaction log size will be:"
 $  echo "	''log_blocks' blocks (''log_mb'MB)"
 $  inquire log_answ "Is this correct? (y/n) "
 $  if (log_answ .eqs. "n") .or. (log_answ .eqs. "N") then goto II_LOG_FILE_SIZE1
-$  iisetres ii.'node_name.rcp.file.kbytes 'new_log_kbytes
-$  RETURN
+$  iisetres ii.'node.rcp.file.kbytes 'log_kbytes
+$endsubroutine
 $  ! end of sub-routine
+
+$Get_Not_Batch_Queue:
+$
+$ iigetres ii.'c_node.config.start_queue use_queue
+$ use_queue = f$trnlnm( "use_queue" )
+$ set_message_off
+$ deassign "use_queue"
+$ set_message_on
+$ if (use_queue .nes. "")
+$ then
+$    iiqueue_'c_node' = use_queue
+$    return
+$ endif
+$
+$ tque = f$getqui("DISPLAY_QUEUE","GENERIC_TARGET",iiqueue,"BATCH")
+$ if (clustered) .and. ("''tque'" .nes. "")
+$ then
+$    tmp = 0
+$    answer = ""
+$    QUEUE_FIND:
+$       iiqueue = F$ELEMENT(tmp,",",tque)
+$       if (("''iiqueue'".eqs."") .or. ("''iiqueue'".eqs.","))
+$       then 
+$           iiqueue = ""
+$           goto QUEUE_PROMPT
+$       endif
+$       tnode = f$getqui("DISPLAY_QUEUE","SCSNODE_NAME",iiqueue,"BATCH")
+$       if "''tnode'" .eqs. "''c_node'" then goto QUEUE_PROMPT
+$       tmp = tmp + 1
+$       goto QUEUE_FIND
+$! 
+$    QUEUE_PROMPT:
+$    say
+
+A command procedure (IISTARTUP) is created for the automated start up of the
+installation at boot time.  Please specify the name of a batch execution queue
+to submit the startup script.  NOTE:   The execution queue must not be a 
+generic queue, and it must be located on the local node.
+
+$    tque = iiqueue
+$    if tque .eqs. "" then tque = "NO DEFAULT" 
+$    if EXPRESS then goto SKIP_INQ_5
+$    if c_node .eqs. node_name
+$    then
+$       inquire answer "Please enter the name of a local batch queue [''tque']"
+$    else
+$       inquire answer "Please enter the name of a local batch queue on ''c_node' [''tque']"
+$    endif
+$    if ("''answer'".eqs."") .and. ("''tque'".eqs."NO DEFAULT") -
+     then goto QUEUE_PROMPT
+$ SKIP_INQ_5:
+$    if ("''answer'".eqs."") then answer = tque
+$    if ("''answer'".eqs."NO DEFAULT" then answer = "SYS$BATCH"
+$    iiqueue = answer
+$ endif
+$
+$ iisetres ii.'c_node.config.start_queue "''iiqueue'"
+$
+$ iiqueue_'c_node = iiqueue
+$
+$ return
+
+$Create_iistartup:
+$
+$ iiqueue = iiqueue_'c_node'
+$ s_user  = ing_user_'c_node
+$
+$ open/write iistartup1 ii_system:[ingres]iistartup_'c_node.com
+$ write iistartup1 "$!"
+$ write iistartup1 "$! When this script is called interactively (probably by iistartup.com) "
+$ write iistartup1 "$!     it submits itself for batch execution"
+$ write iistartup1 "$! Otherwise if it is a batch execution"
+$ write iistartup1 "$!     define logicals, symbols and then start the server processes"
+$ write iistartup1 "$!"
+$ write iistartup1 "$ if f$mode() .eqs. ""INTERACTIVE"" "
+$ write iistartup1 "$ then"
+$ write iistartup1 "$     logname = f$environment(""DEFAULT"")"
+$ write iistartup1 "$     submit/notify/noprint/nodelete/log='logname -"
+$ write iistartup1 "            /user=''s_user' /queue=''iiqueue' -"
+$ write iistartup1 "            ii_system:[ingres]iistartup_''c_node'.com"
+$ write iistartup1 "$ else"
+$ write iistartup1 "$     set process/privileges=(SYSNAM,GRPNAM)"
+$ if "''lnm_table'".eqs."LNM$SYSTEM"
+$ then
+$    write iistartup1 "$     define/system/exec/trans=concealed ii_system ""''ii_system_value'"" "
+$ else
+$    write iistartup1 "$     define/group/exec/trans=concealed ii_system ""''ii_system_value'"" "
+$ endif
+$ write iistartup1 "$     @ii_system:[ingres]ingsysdef.com"
+$ write iistartup1 "$     ingstart"
+$ write iistartup1 "$ endif"
+$ close iistartup1
+$ purge ii_system:[ingres]iistartup_'c_node.com
+$
+$ return
+
+$Perform_setres_min_CMD: subroutine
+$
+$   pre_node  = P1
+$   post_node = P2
+$   min_value = P3
+$
+$   entry = 0
+$
+$CMD_LOOP:
+$   c_node = f$element(entry, ",", nodes)
+$
+$   if (c_node .nes. ",")
+$   then
+$      iigetres 'pre_node''c_node''post_node' res
+$      cur_val = f$trnlnm( "res" )
+$      set_message_off
+$      deassign "res"
+$      set_message_on
+$      if (cur_val .eqs. "")
+$      then
+$         set_val = 1
+$      else
+$         if ('cur_val .lt. 'min_value)
+$         then
+$            set_val = 1
+$         else
+$            set_val = 0
+$         endif
+$      endif
+$
+$      if (set_val .eq. 1)
+$      then
+$         iisetres 'pre_node''c_node''post_node' 'min_value
+$      endif
+$
+$      entry = entry + 1
+$
+$      goto CMD_LOOP
+$   endif
+$
+$endsubroutine
+
+$get_cluster_details:
+$
+$ entry = 0
+$
+$CLUSTER_DETAILS:
+$ c_node = f$element(entry, ",", nodes)
+$
+$ if (c_node .nes. ",")
+$ then
+$    iigetres ii.'c_node.*.*.vms_uic vms_uic
+$    set_message_off
+$    vms_uic = f$trnlnm( "vms_uic" ) - "[" - "]"
+$    deassign "vms_uic"
+$    set_message_on
+$    if (vms_uic .eqs. "")
+$    then
+$       s_user = ing_user
+$    else
+$       s_user = f$element( 1, ",", vms_uic)
+$       if (s_user .eqs. ",") then s_user = vms_uic
+$    endif
+$    ing_user_'c_node = s_user
+$
+$    entry = entry + 1
+$
+$    goto CLUSTER_DETAILS
+$ endif
+$
+$ RETURN
+
+$ Set_User_Priv:
+$
+$ iisetres ii.'c_node.privileges.user.'c_user -
+     "SERVER_CONTROL,NET_ADMIN,MONITOR,TRUSTED"
+$ iisetres ii.'c_node.privileges.user.system -
+     "SERVER_CONTROL,NET_ADMIN,MONITOR,TRUSTED"
+$ if ("''ing_user'" .nes. "''ivp_user'") then -
+	iisetres ii.'c_node.privileges.user.'ivp_user - 
+	"SERVER_CONTROL,NET_ADMIN,MONITOR,TRUSTED"
+$
+$ return
+
+
+$SET_UP_TX_LOG_FILES: subroutine
+$
+$ use_node = P1
+$
+$ log_path = log_file_1_'use_node
+$ iigetres ii.'use_node'.rcp.log.log_file_name log_file_name
+$ set_message_off
+$ log_file_name = f$trnlnm( "log_file_name" )
+$ deassign "log_file_name"
+$ set_message_on
+$
+$ if ii_log_file_name_'use_node .nes. ""
+$ THEN
+$    if ii_log_file_name_'use_node .nes. log_file_name
+$    then
+$       ! If the old log file exists and it has an
+$       ! old format name, must delete the file now
+$       ! as there's no guarantee that the file name
+$       ! can have the log part number added.
+$
+$       lg_file = ii_log_file_name_'use_node
+$       lg_path = ii_log_file_'use_node
+$
+$       call Delete_File "''ii_log_file_old'[ingres.log]*.system*"
+$       call Delete_File "''ii_log_file_old'[ingres.log]''lg_file'"
+$       call Delete_File "''lg_path'[ingres.log]*.system*"
+$       call Delete_File "''lg_path'[ingres.log]''lg_file'"
+$    endif
+$ endif
+$
+$ logfile = "''log_path'[ingres.log]''log_file_name'.l01"
+$ if cluster_id .nes. ""
+$ then
+$    call Delete_Non_Cluster_Logs ii.'use_node.rcp.log.log_file_ 'log_file_name'
+$
+$    logfile = logfile + "_" + use_node
+$    node_param = "-node ''use_node'"
+$ else
+$    node_param = ""
+$ endif
+$ delete_bkup_log = 0
+$ set_message_off
+$ if( f$search( "''logfile'" ) .nes. "" )
+$ then 
+$       set_message_on
+$       echo "A primary transaction log already exists for ''use_node'"
+$       if( "''p1'" .eqs. "-NOERASE" .or. "''p1'" .eqs. "-noerase" )
+$       then
+$          echo ""
+$          echo "The primary transaction log will not be erased, at your request."
+$          echo ""
+$          goto II_CREATE_BACKUP_LOG
+$       else
+$          iigetres ii.'use_node'.rcp.log.log_file_parts log_file_parts
+$          log_file_parts = f$trnlnm( "log_file_parts")
+$          set_message_off
+$          deassign "log_file_parts"
+$          set_message_on
+$          log_blocks == f$file_attributes( "''logfile'", "ALQ" ) * log_file_parts
+$          log_kbytes = log_blocks / 2
+$	   log_mb = log_kbytes / 1024
+$ 	   echo ""
+$          if (cluster_id .nes. "")
+$          then
+$             echo "The existing transaction log size on ''use_node' is:"
+$          else
+$             echo "The existing transaction log size is:"
+$          endif
+$          echo "	''log_blocks' blocks (''log_mb'MB) "
+$          echo " "
+$          if .not. upgrade_warning
+$          then
+$             echo "Please note, if you change the transaction log size, the existing log"
+$             echo "file(s) will be deleted before the new one(s) are created."
+$          endif
+$          call II_SELECT_LOG_SIZE "''use_node'" 'log_kbytes
+$          if (do_abort) then exit
+$          if (new_log_kbytes_'use_node .EQ. log_kbytes)
+$          then 
+$		 if( f$search( "''ii_database'[ingres.data]iidbdb.dir" ) .nes. "" )
+$		 then
+$                   if .not. upgrade_warning
+$                   then
+$                      upgrade_warning == 1
+$		       say
+
+Because you are upgrading your installation, the transaction log records 
+will be erased and the log file(s) will be re-formatted for this version.
+
+$                   endif
+$		 endif
+$                on error then goto IIMKLOG_FAILED
+$                iimklog -erase 'node_param
+$                set noon
+$                goto II_CREATE_BACKUP_LOG
+$          else
+$                delete_bkup_log = 1
+$                log_kbytes = new_log_kbytes_'use_node 
+$                delfile = logfile + ";*"
+$                DELETE 'delfile
+$                echo ""
+$                echo "The existing primary transaction log is deleted"
+$                echo ""
+$                iisetres ii.'use_node'.rcp.file.kbytes 'log_kbytes
+$          endif
+$       endif
+$ endif
+$
+$ set_message_on
+$ echo "The new Ingres transaction log will now be created."
+$
+$ on error then goto IIMKLOG_FAILED
+$ iimklog 'node_param
+$ set noon
+$!
+$! Create or erase the backup primary transaction log.
+$!
+$ II_CREATE_BACKUP_LOG:
+$ iigetres ii.'use_node'.rcp.log.dual_log_1 log_path
+$ set_message_off
+$ log_path = f$trnlnm( "log_path" )
+$ deassign "log_path"
+$ set_message_on
+$ if( log_path .eqs. "" ) then goto RCPCONFIG
+$ iigetres ii.'use_node'.rcp.log.dual_log_name log_file_name
+$ set_message_off
+$ log_file_name = f$trnlnm( "log_file_name" )
+$ deassign "log_file_name"
+$ set_message_on
+$
+$ if ii_dual_log_name_'use_node .nes. ""
+$ THEN
+$    if ii_dual_log_name_'use_node .nes. log_file_name
+$    then
+$       ! If the old log file exists and it has an
+$       ! old format name, must delete the file now
+$       ! as there's no guarantee that the file name
+$       ! can have the log part number added.
+$
+$       lg_file = ii_dual_log_name_'use_node
+$       lg_path = ii_dual_log_'use_node
+$
+$       call Delete_File "''ii_dual_log_old'[ingres.log]*.system*"
+$       call Delete_File "''ii_dual_log_old'[ingres.log]''lg_file'"
+$       call Delete_File "''lg_path'[ingres.log]*.system*"
+$       call Delete_File "''lg_path'[ingres.log]''lg_file'""
+$    endif
+$ endif
+$
+$ logfile = "''log_path'[ingres.log]''log_file_name'.l01"
+$ if cluster_id .nes. ""
+$ then
+$    call Delete_Non_Cluster_Logs ii.'use_node.rcp.log.dual_log_ 'log_file_name'
+$
+$    logfile = logfile + "_" + use_node
+$ endif
+$ set_message_off
+$ if( f$search( "''logfile'" ) .nes. "" )
+$ then 
+$    set_message_on
+$    echo "A backup transaction log already exists for ''use_node'"
+$    if( "''p1'" .eqs. "-NOERASE" .or. "''p1'" .eqs. "-noerase" )
+$    then
+$       echo ""
+$       echo "The backup transaction log will not be erased, at your request."
+$       echo ""
+$       goto RCPCONFIG
+$    else
+$          if ( .NOT. delete_bkup_log)
+$          then 
+$                on error then goto IIMKLOG_FAILED
+$	         iimklog -erase -dual 'node_param
+$                set noon
+$                goto RCPCONFIG
+$          else 
+$                delfile = logfile + ";*"
+$                DELETE 'delfile
+$                echo ""
+$                echo "The existing backup transaction log is deleted"
+$                echo ""
+$          endif
+$    endif
+$ endif
+$
+$ set_message_on
+$ echo "The new backup transaction log will now be created."
+$ on error then goto IIMKLOG_FAILED
+$ iimklog -dual 'node_param
+$ set noon
+$ goto RCPCONFIG
+$!
+$ IIMKLOG_FAILED:
+$!
+$ say
+Correct the problem described above and re-run this program.
+
+$!
+$ do_abort == 1
+$ exit
+$!
+$ RCPCONFIG:
+$!
+$ echo "Formatting transaction log file(s) on ''use_node'..."
+$ echo ""
+$ on error then goto RCPCONFIG_FAILED
+$ define /user ii_dbms_config ii_system:[ingres.files]
+$ define /user sys$output 'tmpfile
+$ rcpconfig -init 'node_param
+$ set noon
+$ delete/noconfirm 'tmpfile;*
+$ exit
+$!
+$ RCPCONFIG_FAILED:
+$!
+$ set noon
+$ type 'tmpfile 
+$ delete/noconfirm 'tmpfile;* 
+$ say
+
+Unable to format the transaction log file.  You must correct the problem
+and re-run this set up procedure.
+
+$ do_abort == 1
+$
+$ exit
+$
+$endsubroutine
+
+$Delete_File: subroutine
+$
+$   del_file = P1
+$
+$   if f$search( "''del_file'") .nes. ""
+$   then
+$      delete/nolog 'del_file';*
+$   endif
+$
+$endsubroutine
+
+$Delete_Non_Cluster_Logs: subroutine
+$
+$ loc_string = P1
+$ log_name   = P2
+$
+$ loc_no = 1
+$
+$DELETE_LOOP:
+$ iigetres 'loc_string''loc_no' log_area
+$
+$ if f$trnlnm( "log_area" ) .nes. ""
+$ then
+$    log_file = f$fao( "log_area:[ingres.log]!AS.l!2ZL", log_name, loc_no)
+$
+$    if f$search( "''log_file'") .nes. "" then delete 'log_file';
+$
+$    loc_no = loc_no + 1
+$
+$    deassign "log_area"
+$
+$    goto DELETE_LOOP
+$ endif
+$
+$ endsubroutine

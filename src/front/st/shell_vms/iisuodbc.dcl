@@ -55,6 +55,8 @@ $!!      iisunet or iisudbms has not been invoked.  Completed treatment of
 $!!      iisulock.
 $!!     11-nov-2008 (upake01) Bug 121214
 $!!         Support "express" installation.
+$!!     14-Jan-2010 (horda03) Bug 123153
+$!!         Upgrade all nodes in a clustered environment.
 $!----------------------------------------------------------------------------
 $!
 $ on control_c then goto EXIT_FAIL
@@ -64,18 +66,18 @@ $! set noverify
 $!
 $! Define symbols for programs called locally.
 $!
-$ iigenres	:= $ii_system:[ingres.utility]iigenres.exe
-$ iigetres	:= $ii_system:[ingres.utility]iigetres.exe
-$ iigetsyi	:= @ii_system:[ingres.utility]iigetsyi.com
-$ iiingloc      := $ii_system:[ingres.utility]iiingloc.exe
-$ iijobdef      := $ii_system:[ingres.utility]iijobdef.exe
-$ iipmhost      := $ii_system:[ingres.utility]iipmhost.exe
-$ iimaninf	:= $ii_system:[ingres.utility]iimaninf.exe
-$ iiresutl	:= $ii_system:[ingres.utility]iiresutl.exe
-$ iisetres	:= $ii_system:[ingres.utility]iisetres.exe
-$ iisulock	:= $ii_system:[ingres.utility]iisulock.exe
-$ iivalres	:= $ii_system:[ingres.utility]iivalres.exe
-$ iiodbcinst	:= $ii_system:[ingres.utility]iiodbcinst.exe
+$ iigenres	:== $ii_system:[ingres.utility]iigenres.exe
+$ iigetres	:== $ii_system:[ingres.utility]iigetres.exe
+$ iigetsyi	:== @ii_system:[ingres.utility]iigetsyi.com
+$ iiingloc      :== $ii_system:[ingres.utility]iiingloc.exe
+$ iijobdef      :== $ii_system:[ingres.utility]iijobdef.exe
+$ iipmhost      :== $ii_system:[ingres.utility]iipmhost.exe
+$ iimaninf	:== $ii_system:[ingres.utility]iimaninf.exe
+$ iiresutl	:== $ii_system:[ingres.utility]iiresutl.exe
+$ iisetres	:== $ii_system:[ingres.utility]iisetres.exe
+$ iisulock	:== $ii_system:[ingres.utility]iisulock.exe
+$ iivalres	:== $ii_system:[ingres.utility]iivalres.exe
+$ iiodbcinst	:== $ii_system:[ingres.utility]iiodbcinst.exe
 $!
 $! Other variables, macros and temporary files
 $!
@@ -92,7 +94,7 @@ $ set_message_on     = "set message''saved_message'"
 $ SS$_NORMAL	     = 1
 $ SS$_ABORT	     = 44
 $ status	     = SS$_NORMAL
-$ node_name	     = f$getsyi("NODENAME")
+$ node_name	     = f$edit(f$getsyi("NODENAME"), "lowercase")
 $ tmpfile            = "ii_system:[ingres]iisuodbc.''node_name'_tmp" !Temp file
 $!
 $! Make temporary definitions for shared library logicals to 
@@ -131,6 +133,9 @@ $ ivp_user = f$edit( ivp_name, "TRIM,LOWERCASE" )
 $!
 $ ing_user = f$edit( user_name, "TRIM,LOWERCASE" ) !Ingres version of username
 $!
+$ script_id = "IISUODBC"
+$ @II_SYSTEM:[ingres.utility]iishlib _iishlib_init "''script_id'"
+$
 $ set noon
 $!
 $! Get compressed release ID.
@@ -187,6 +192,13 @@ $ goto STRIPPER_1
 $!
 $ STRIPPERS_DONE:
 $!
+$! Check if this is a cluster Ingres member.
+$!
+$ get_nodes 'node_name
+$ if iishlib_err .ne. ii_status_ok then goto EXIT_FAIL
+$ nodes = iishlib_rv1
+$ cluster_mode = iishlib_rv2
+$
 $ set_message_off
 $ iigetres ii.'node_name.lnm.ii_installation ii_installation_value
 $ ii_installation = f$trnlnm( "ii_installation_value" )
@@ -195,7 +207,7 @@ $ then
 $   ii_installation = f$trnlnm( "II_INSTALLATION", "LNM$JOB" )
 $   if (ii_installation .nes. "")
 $   then
-$      iisetres ii.'node_name.lnm.ii_installation 'ii_installation
+$      pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.ii_installation ''ii_installation'"
 $   endif
 $ else
 $   deassign "ii_installation_value"
@@ -230,24 +242,34 @@ $       say
  
 must be completed up before the Ingres ODBC Driver can be set up on this node:
  
-$       echo "  ''node_name'"
+$       echo f$fao("  !AS", f$edit(node_name, "upcase"))
 $       echo ""
 $       goto EXIT_FAIL
-$ set_message_off
+$       set_message_off
 $ endif
 $!
 $ set_message_on
-$    say 
+$ say 
  
 This procedure will set up the following version of Ingres ODBC Server:
  
-$    echo "	''version_string'"
+$ echo "	''version_string'"
+$
+$ if (nodes .nes. node_name)
+$ then
+$    say
+
+to run on the following cluster hosts:
+
+$    display_nodes "''nodes'"
+$ else
 $    say
  
 to run on local node:
  
-$    echo "	''node_name'"
-$    say 
+$    echo f$fao("	!AS", f$edit(node_name, "upcase"))
+$ endif
+$ say 
  
 
 $!
@@ -356,21 +378,21 @@ $ define/user sys$input sys$command
 $ iiodbcinst 'pathFlag' 'readOnlyFlag'
 $ if (readOnlyFlag .eqs. "-R")
 $ then
-$   iisetres ii.'node_name.odbc.module_name "ODBCROFELIB''ii_installation.EXE"
+$   pan_cluster_cmd "''nodes'" iisetres "ii." ".odbc.module_name ""ODBCROFELIB''ii_installation.EXE"""
 $ else
-$   iisetres ii.'node_name.odbc.module_name "ODBCFELIB''ii_installation.EXE"
+$   pan_cluster_cmd "''nodes'" iisetres "ii." ".odbc.module_name ""ODBCFELIB''ii_installation.EXE"""
 $ endif
 $ @ii_system:[ingres.utility]iishare delete
-$ iisetres ii.'node_name.lnm.ii_odbcrolib -
-          "II_SYSTEM:[INGRES.LIBRARY]ODBCROFELIB''ii_installation.EXE"
-$ iisetres ii.'node_name.lnm.ii_odbclib -
-          "II_SYSTEM:[INGRES.LIBRARY]ODBCFELIB''ii_installation.EXE"
-$ iisetres ii.'node_name.odbc.cli_module_name -
-          "ODBCCLIFELIB''ii_installation.EXE"
-$ iisetres ii.'node_name.lnm.ii_odbc_clilib -
-          "II_SYSTEM:[INGRES.LIBRARY]ODBCCLIFELIB''ii_installation.EXE"
-$ iisetres ii.'node_name.odbc.trace_module_name -
-          "ODBCTRACEFELIB''ii_installation.EXE"
+$ pan_cluster_cmd "''nodes'" iisetres -
+              "ii." ".lnm.ii_odbcrolib ""II_SYSTEM:[INGRES.LIBRARY]ODBCROFELIB''ii_installation'.EXE"""
+$ pan_cluster_cmd "''nodes'" iisetres -
+              "ii." ".lnm.ii_odbclib ""II_SYSTEM:[INGRES.LIBRARY]ODBCFELIB''ii_installation'.EXE"""
+$ pan_cluster_cmd "''nodes'" iisetres -
+              "ii." ".odbc.cli_module_name ""ODBCCLIFELIB''ii_installation'.EXE"""
+$ pan_cluster_cmd "''nodes'" iisetres -
+              "ii." ".lnm.ii_odbc_clilib ""II_SYSTEM:[INGRES.LIBRARY]ODBCCLIFELIB''ii_installation'.EXE"""
+$ pan_cluster_cmd "''nodes'" iisetres -
+              "ii." ".odbc.trace_module_name ""ODBCTRACEFELIB''ii_installation.EXE"""
 $ @ii_system:[ingres.utility]iishare add
 $!
 $! Exit with success or error.
@@ -398,31 +420,32 @@ $ if iisulocked .and. f$search("ii_system:[ingres.files]config.lck;*").nes.""
 $ then
 $   delete/noconfirm ii_system:[ingres.files]config.lck;*
 $ endif
+$
+$ cleanup "''script_id'"
 $ exit 'status'
 $!
 $!
 $!
 $ BATCH_INSTALL:
-$ iisetres ii.'node_name.odbc.module_name ODBCFELIB'ii_installation.EXE
-$ iisetres ii.'node_name.odbc.cli_module_name -
-        ODBCCLIFELIB'ii_installation.EXE
-$ iisetres ii.'node_name.lnm.ii_odbclib -
-        II_SYSTEM:[INGRES.LIBRARY]ODBCFELIB'ii_installation.EXE
-$ iisetres ii.'node_name.lnm.ii_odbc_clilib -
-        II_SYSTEM:[INGRES.LIBRARY]ODBCCLIFELIB'ii_installation.EXE
-$ iisetres ii.'node_name.odbc.trace_module_name "ODBCTRACEFELIB.EXE"
-$ copy II_SYSTEM:[INGRES.LIBRARY]ODBCCLIFELIB.exe -
+$    pan_cluster_cmd "''nodes'" iisetres "ii." ".odbc.module_name ODBCFELIB''ii_installation'.EXE"
+$    pan_cluster_cmd "''nodes'" iisetres "ii." ".odbc.cli_module_name ODBCCLIFELIB''ii_installation'.EXE"
+$    pan_cluster_cmd "''nodes'" iisetres -
+                 "ii." ".lnm.ii_odbclib II_SYSTEM:[INGRES.LIBRARY]ODBCFELIB''ii_installation'.EXE"
+$    pan_cluster_cmd "''nodes'" iisetres -
+                 "ii." ".lnm.ii_odbc_clilib II_SYSTEM:[INGRES.LIBRARY]ODBCCLIFELIB''ii_installation'.EXE"
+$    pan_cluster_cmd "''nodes'" iisetres "ii." ".odbc.trace_module_name ""ODBCTRACEFELIB.EXE"""
+$    copy II_SYSTEM:[INGRES.LIBRARY]ODBCCLIFELIB.exe -
                  II_SYSTEM:[INGRES.LIBRARY]ODBCCLIFELIB'II_INSTALLATION.EXE-
                  /prot=(s:rwed,o:rwed,g:rwed,w:re)
-$ purge II_SYSTEM:[INGRES.LIBRARY]ODBCCLIFELIB'II_INSTALLATION.EXE
-$ copy II_SYSTEM:[INGRES.LIBRARY]ODBCFELIB.exe -
+$    purge II_SYSTEM:[INGRES.LIBRARY]ODBCCLIFELIB'II_INSTALLATION.EXE
+$    copy II_SYSTEM:[INGRES.LIBRARY]ODBCFELIB.exe -
                  II_SYSTEM:[INGRES.LIBRARY]ODBCFELIB'II_INSTALLATION.EXE-
                  /prot=(s:rwed,o:rwed,g:rwed,w:re)
-$ purge II_SYSTEM:[INGRES.LIBRARY]ODBCFELIB'II_INSTALLATION.EXE
-$ copy II_SYSTEM:[INGRES.LIBRARY]ODBCROFELIB.exe -
+$    purge II_SYSTEM:[INGRES.LIBRARY]ODBCFELIB'II_INSTALLATION.EXE
+$    copy II_SYSTEM:[INGRES.LIBRARY]ODBCROFELIB.exe -
                  II_SYSTEM:[INGRES.LIBRARY]ODBCROFELIB'II_INSTALLATION.EXE-
                  /prot=(s:rwed,o:rwed,g:rwed,w:re)
-$ purge II_SYSTEM:[INGRES.LIBRARY]ODBCROFELIB'II_INSTALLATION.EXE
-$ iiodbcinst -batch
-$ return
+$    purge II_SYSTEM:[INGRES.LIBRARY]ODBCROFELIB'II_INSTALLATION.EXE
+$    iiodbcinst -batch
+$    return
 $!

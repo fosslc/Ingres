@@ -54,6 +54,8 @@ $!!         SIR 118402 - Modify to take out "Purge" and "Set File/version"
 $!!             statement(s) for CONFIG.DAT.
 $!!     15-Aug-2007 (Ralph Loen) SIR 118898
 $!!         Added symbol definition of iinethost.
+$!!     14-Jan-2010 (horda03) Bug 123153
+$!!         Upgrade all nodes in a clustered environment.
 $!----------------------------------------------------------------------------
 $!
 $ on control_c then goto EXIT_FAIL
@@ -63,19 +65,19 @@ $ set noverify
 $!
 $! Define symbols for programs called locally.
 $!
-$ iigenres	:= $ii_system:[ingres.utility]iigenres.exe
-$ iigetres	:= $ii_system:[ingres.utility]iigetres.exe
-$ iigetsyi	:= @ii_system:[ingres.utility]iigetsyi.com
-$ iiingloc	:= $ii_system:[ingres.utility]iiingloc.exe
-$ iipmhost      := $ii_system:[ingres.utility]iipmhost.exe
-$ iinethost     := $ii_system:[ingres.utility]iinethost.exe
-$ iimaninf	:= $ii_system:[ingres.utility]iimaninf.exe
-$ iiresutl	:= $ii_system:[ingres.utility]iiresutl.exe
-$ iisetres	:= $ii_system:[ingres.utility]iisetres.exe
-$ iisulock	:= $ii_system:[ingres.utility]iisulock.exe
-$ iivalres	:= $ii_system:[ingres.utility]iivalres.exe
-$ ingstart	:= $ii_system:[ingres.utility]ingstart.exe
-$ ingstop	:= @ii_system:[ingres.utility]iisdall.com
+$ iigenres	:== $ii_system:[ingres.utility]iigenres.exe
+$ iigetres	:== $ii_system:[ingres.utility]iigetres.exe
+$ iigetsyi	:== @ii_system:[ingres.utility]iigetsyi.com
+$ iiingloc	:== $ii_system:[ingres.utility]iiingloc.exe
+$ iipmhost      :== $ii_system:[ingres.utility]iipmhost.exe
+$ iinethost     :== $ii_system:[ingres.utility]iinethost.exe
+$ iimaninf	:== $ii_system:[ingres.utility]iimaninf.exe
+$ iiresutl	:== $ii_system:[ingres.utility]iiresutl.exe
+$ iisetres	:== $ii_system:[ingres.utility]iisetres.exe
+$ iisulock	:== $ii_system:[ingres.utility]iisulock.exe
+$ iivalres	:== $ii_system:[ingres.utility]iivalres.exe
+$ ingstart	:== $ii_system:[ingres.utility]ingstart.exe
+$ ingstop	:== @ii_system:[ingres.utility]iisdall.com
 $!
 $! Other variables, macros and temporary files
 $!
@@ -105,6 +107,9 @@ $ define/nolog/process II_CONFIG    II_SYSTEM:[ingres.files]
 $!
 $  say		:= type sys$input
 $  echo		:= write sys$output 
+$!
+$ script_id = "IISUBR"
+$ @II_SYSTEM:[ingres.utility]iishlib _iishlib_init "''script_id'"
 $!
 $ clustered	= f$getsyi( "CLUSTER_MEMBER" ) !Is this node clustered?
 $ user_uic	= f$user() !For RUN command (detached processes)
@@ -248,7 +253,7 @@ $    say
 
 The latest version of Ingres Protocol Bridge has already been set up to run on
 local
-$    echo "node ''node_name'."
+$    echo f$fao("node !AS.", f$edit(node_name, "upcase"))
 $    echo ""
 $    goto EXIT_OK
 $ endif
@@ -287,6 +292,9 @@ $     deassign/job ii_framelib
 $ else
 $     define/job/nolog ii_framelib "''ii_framelib_def'"
 $ endif
+$
+$ cleanup "''script_id'"
+$
 $ set_message_on
 $!
 $ if f$search( "''tmpfile'" ) then -
@@ -298,6 +306,13 @@ $ set on
 $ exit 'status'
 $!
 $ CONTINUE:
+$
+$   ! Get list of nodes to update
+$   get_nodes 'node_name
+$   if iishlib_err .ne. ii_status_ok then goto EXIT_FAIL
+$   nodes = iishlib_rv1
+$   cluster_mode = iishlib_rv2
+$   
 $   set_message_off
 $   ! configuring Ingres Protocol Bridge on a server
 $   iigetres ii.'node_name.lnm.ii_installation ii_installation_value
@@ -311,11 +326,20 @@ $   say
 This procedure will set up the following version of Ingres Protocol Bridge:
  
 $    echo "	''version_string'"
-$    say
+$    if nodes .nes. node_name
+$    then
+$       say
+ 
+to run on the following cluster hosts:
+ 
+$       display_nodes "''nodes'"
+$    else
+$       say
  
 to run on local node:
  
-$    echo "	''node_name'"
+$       echo f$fao("	!AS.", f$edit(node_name, "upcase"))
+$    endif
 $    say 
  
 $!
@@ -343,10 +367,10 @@ $       ! generate default configuration resources
 $       say 
  
 Generating default configuration...
-$       on error then goto IIGENRES_BRIDGE_FAILED
-$       iigenres 'node_name ii_system:[ingres.files]bridge.rfm 
+$       on error then goto =IIGENRES_BRIDGE_FAILED
+$       pan_cluster_cmd "''nodes'" iigenres "" " ii_system:[ingres.files]bridge.rfm"
 $       set noon
-$       iisetres ii.'node_name.config.bridge.'release_id "DEFAULTS"
+$       pan_cluster_cmd "''nodes'" iisetres "ii." ".config.bridge.''release_id' ""DEFAULTS"""
 $       goto IIGENRES_BRIDGE_DONE
 $!
 $       IIGENRES_BRIDGE_FAILED:
@@ -378,30 +402,30 @@ $! Configure bridge server listen addresses.
 $!
 $ say 
 Configuring bridge server listen addresses...
-$ iisetres ii.'node_name.gcb.*.async.port ""
-$ iisetres ii.'node_name.gcb.*.iso_oslan.port "OSLAN_''ii_installation'"
-$ iisetres ii.'node_name.gcb.*.iso_x25.port "X25_''ii_installation'"
-$ iisetres ii.'node_name.gcb.*.sna_lu0.port "(none)"
-$ iisetres ii.'node_name.gcb.*.sna_lu62.port "(none)"
-$ iisetres ii.'node_name.gcb.*.spx.port "''ii_installation'"
+$ pan_cluster_set_notdefined "''nodes'" "ii." ".gcb.*.async.port"     ""
+$ pan_cluster_set_notdefined "''nodes'" "ii." ".gcb.*.iso_oslan.port" "OSLAN_''ii_installation'"
+$ pan_cluster_set_notdefined "''nodes'" "ii." ".gcb.*.iso_x25.port"   "X25_''ii_installation'"
+$ pan_cluster_set_notdefined "''nodes'" "ii." ".gcb.*.sna_lu0.port"   "(none)"
+$ pan_cluster_set_notdefined "''nodes'" "ii." ".gcb.*.sna_lu62.port"  "(none)"
+$ pan_cluster_set_notdefined "''nodes'" "ii." ".gcb.*.spx.port"       "''ii_installation'"
 $ !FIXME - This hack fixes bug #65312 by forcing the correct listen
 $ !listen addresses into config.dat for system-level installations.
 $ if ( ( "''ii_installation'" .eqs. "AA" ) .or. -
        ( "''ii_installation'" .eqs. "aa" ) .or. -
        ( "''ii_installation'" .eqs. ""   ) )
 $ then
-$       iisetres ii.'node_name.gcb.*.tcp_dec.port "II0"
-$       iisetres ii.'node_name.gcb.*.tcp_wol.port "II0"
-$       iisetres ii.'node_name.gcb.*.decnet.port "II_GCB_0"
+$       pan_cluster_set_notdefined "''nodes'" "ii." ".gcb.*.tcp_dec.port" "II0"
+$       pan_cluster_set_notdefined "''nodes'" "ii." ".gcb.*.tcp_wol.port" "II0"
+$       pan_cluster_set_notdefined "''nodes'" "ii." ".gcb.*.decnet.port"  "II_GCB_0"
 $ else
-$       iisetres ii.'node_name.gcb.*.tcp_dec.port "''ii_installation'0"
-$       iisetres ii.'node_name.gcb.*.tcp_wol.port "''ii_installation'0"
-$       iisetres ii.'node_name.gcb.*.decnet.port "II_GCB''ii_installation'_0"
+$       pan_cluster_set_notdefined "''nodes'" "ii." ".gcb.*.tcp_dec.port" "''ii_installation'0"
+$       pan_cluster_set_notdefined "''nodes'" "ii." ".gcb.*.tcp_wol.port" "''ii_installation'0"
+$       pan_cluster_set_notdefined "''nodes'" "ii." ".gcb.*.decnet.port"  "II_GCB''ii_installation'_0"
 $ endif
 $!
 $! Make sure ingstart invokes image installation
 $!
-$ iisetres ii.'node_name.ingstart.*.begin "@ii_system:[ingres.utility]iishare"
+$ pan_cluster_cmd "''nodes'" iisetres "ii." ".ingstart.*.begin ""@ii_system:[ingres.utility]iishare"""
 $!
 $! Say goodbye
 $ say
@@ -416,6 +440,6 @@ You can now use the "ingstart" command to start your Ingres server.
 Refer to the Ingres Installation Guide for more information about
 starting and using Ingres.
 
-$ iisetres ii.'node_name.config.bridge.'release_id "COMPLETE"
+$ pan_cluster_cmd "''nodes'" iisetres "ii." ".config.bridge.''release_id' ""COMPLETE"""
 $!
 $ goto EXIT_OK

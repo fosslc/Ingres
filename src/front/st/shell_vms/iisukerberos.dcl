@@ -68,6 +68,8 @@ $!!      in case of an upgrade.
 $!!	18-mar-2009 (joea)
 $!!	    Test for existence of {dbms|star|rms}.rfm before calling initres
 $!!	    on them.
+$!!     14-Jan-2010 (horda03) Bug 123153
+$!!         Upgrade all nodes in a clustered environment.
 $!
 $!  PROGRAM = iisukerberos
 $!
@@ -81,19 +83,20 @@ $ set noverify
 $!
 $! Define symbols for programs called locally.
 $!
-$ iigenres      := $II_system:[ingres.utility]iigenres.exe
-$ iigetres      := $II_system:[ingres.utility]iigetres.exe
-$ iigetsyi      := @ii_system:[ingres.utility]iigetsyi.com
-$ iijobdef      := $II_system:[ingres.utility]iijobdef.exe
-$ iiingloc      := $II_system:[ingres.utility]iiingloc.exe
-$ iiinitres     := $ii_system:[ingres.utility]iiinitres.exe
-$ iipmhost      := $II_system:[ingres.utility]iipmhost.exe
-$ iinethost     := $II_system:[ingres.utility]iinethost.exe
-$ iimaninf      := $II_system:[ingres.utility]iimaninf.exe
-$ iiresutl      := $II_system:[ingres.utility]iiresutl.exe
-$ iisetres      := $II_system:[ingres.utility]iisetres.exe
-$ iivalres      := $II_system:[ingres.utility]iivalres.exe
-$ iisulock      := $II_system:[ingres.utility]iisulock.exe
+$ iigenres      :== $II_system:[ingres.utility]iigenres.exe
+$ iigetres      :== $II_system:[ingres.utility]iigetres.exe
+$ iigetsyi      :== @ii_system:[ingres.utility]iigetsyi.com
+$ iijobdef      :== $II_system:[ingres.utility]iijobdef.exe
+$ iiingloc      :== $II_system:[ingres.utility]iiingloc.exe
+$ iiinitres     :== $ii_system:[ingres.utility]iiinitres.exe
+$ iipmhost      :== $II_system:[ingres.utility]iipmhost.exe
+$ iinethost     :== $II_system:[ingres.utility]iinethost.exe
+$ iimaninf      :== $II_system:[ingres.utility]iimaninf.exe
+$ iiresutl      :== $II_system:[ingres.utility]iiresutl.exe
+$ iisetres      :== $II_system:[ingres.utility]iisetres.exe
+$ iivalres      :== $II_system:[ingres.utility]iivalres.exe
+$ iisulock      :== $II_system:[ingres.utility]iisulock.exe
+$
 $ iisulocked         = 0                             !Do we hold the setup lock?
 $ saved_message      = f$environment( "MESSAGE" )    ! save message settings
 $ set_message_off    = "set message/nofacility/noidentification/noseverity/notext"
@@ -101,7 +104,7 @@ $ set_message_on     = "set message''saved_message'"
 $ SS$_NORMAL	     = 1
 $ SS$_ABORT	     = 44
 $ status	     = SS$_NORMAL
-$ node_name	     = f$getsyi("NODENAME")
+$ node_name	     = f$edit(f$getsyi("NODENAME"), "lowercase")
 $ tmpfile            = "ii_system:[ingres]iisukerberos.''node_name'_tmp" !Temp file
 $ ii_compatlib_def   = f$trnlnm("ii_compatlib","LNM$JOB") 
 $ ii_libqlib_def     = f$trnlnm("ii_libqlib","LNM$JOB")   
@@ -135,6 +138,10 @@ $ say		:= type sys$input
 $ echo		:= write sys$output 
 $ user_name     = f$trnlnm( "II_SUINGRES_USER","LNM$JOB" ) !Installation owner
 $ user_uic	= f$user() !For RUN command (detached processes)
+$
+$ script_id = "IISUKERBEROS"
+$ @II_SYSTEM:[ingres.utility]iishlib _iishlib_init "''script_id'"
+$
 $ iinethost 'tmpfile
 $ open iinethostout 'tmpfile
 $ read iinethostout full_host_name
@@ -157,6 +164,8 @@ $ on control_c then goto EXIT_FAIL
 $ on control_y then goto EXIT_FAIL
 $ if iisulocked  .and. f$search("ii_system:[ingres.files]config.lck;*").nes."" then -
         delete/noconf/nolog ii_system:[ingres.files]config.lck;*
+$
+$ cleanup "''script_id'"
 $ exit 'status'
 $ START:
 $ IF "''user_name'".EQS.""
@@ -171,72 +180,80 @@ $       say
     | Administrator account.                                  |
      ---------------------------------------------------------
 $
-$ goto EXIT_FAIL
-$ endif
-$ user_name= f$getjpi("","USERNAME") !User running this procedure
+$       goto EXIT_FAIL
+$     endif
+$     user_name= f$getjpi("","USERNAME") !User running this procedure
 $ ENDIF
+$
+$ ! Get list of nodes to update
+$ get_nodes 'node_name
+$ if iishlib_err .ne. ii_status_ok then goto EXIT_FAIL
+$ nodes = iishlib_rv1
+$ cluster_mode = iishlib_rv2
+$
 $ ivp_name= f$getjpi("","USERNAME")
 $ ivp_user = f$edit( ivp_name, "TRIM,LOWERCASE" )
 $ ing_user = f$edit( user_name, "TRIM,LOWERCASE" ) !Ingres version of username
 $ if ( "''p1'" .eqs. "-RMPKG" )
 $ then
-$ copy ii_system:[ingres.files]config.dat ii_system:[ingres.files]config.tmp
-$ on error then copy ii_system:[ingres.files]config.tmp -
-      ii_system:[ingres.files]config.dat
-$ search ii_system:[ingres.files]config.dat "gcf.mech.kerberos"/match=nor, -
-       "kerberos_driver"/match=nor, "gss$rtl32.exe"/match=nor, -
-       "krb$rtl32.exe"/match=nor, "ii_kerberoslib"/match=nor -
-       /output=ii_system:[ingres.files]config.new
-$ if (f$search("ii_system:[ingres.files]config.new") .nes. "") 
-$ then 
-$     copy ii_system:[ingres.files]config.new -
+$    copy ii_system:[ingres.files]config.dat ii_system:[ingres.files]config.tmp
+$    on error then copy ii_system:[ingres.files]config.tmp -
+         ii_system:[ingres.files]config.dat
+$    search ii_system:[ingres.files]config.dat "gcf.mech.kerberos"/match=nor, -
+         "kerberos_driver"/match=nor, "gss$rtl32.exe"/match=nor, -
+         "krb$rtl32.exe"/match=nor, "ii_kerberoslib"/match=nor -
+          /output=ii_system:[ingres.files]config.new
+$    if (f$search("ii_system:[ingres.files]config.new") .nes. "") 
+$    then 
+$       copy ii_system:[ingres.files]config.new -
             ii_system:[ingres.files]config.dat
-$ iisetres ii.'node_name.gcf.mechanisms ""
-$ iisetres ii.'node_name.gcf.remote_mechanism "none"
-$ iisetres ii.'node_name.gcn.mechanisms ""
-$ iisetres ii.'node_name.gcn.remote_mechanism "none"
-$ iisetres ii.'node_name.gcc.*.mechanisms ""
-$ else
-$     say
+$       pan_cluster_cmd "''nodes'" iisetres "ii." ".gcf.mechanisms """""
+$       pan_cluster_cmd "''nodes'" iisetres "ii." ".gcf.remote_mechanism ""none"""
+$       pan_cluster_cmd "''nodes'" iisetres "ii." ".gcn.mechanisms """""
+$       pan_cluster_cmd "''nodes'" iisetres "ii." ".gcn.remote_mechanism ""none"""
+$       pan_cluster_cmd "''nodes'" iisetres "ii." ".gcc.*.mechanisms """""
+$    else
+$       say
     There was a problem rewriting the configuration file 
     II_SYSTEM:[INGRES.FILES]CONFIG.DAT.  Please check that the
     file exists, is readable, and that the logical II_SYSTEM is
     defined.
-$ goto EXIT_FAIL
-$ endif
-$ set noon
-$ del/nol ii_system:[ingres.files]config.tmp;*,config.new;*
-$ say
+$       goto EXIT_FAIL
+$    endif
+$    set noon
+$    del/nol ii_system:[ingres.files]config.tmp;*,config.new;*
+$    say
 
   Ingres Kerberos Driver has been removed.
   
 $ CONFIRM_REM:
-$ if f$file_attributes( "SYS$LIBRARY:GSS$RTL32.EXE", "KNOWN") .eqs. "TRUE" -
-  .and. f$file_attributes( "SYS$LIBRARY:KRB$RTL32.EXE", "KNOWN") .eqs. "TRUE"
-$ then
-$ echo "Do you wish to de-install the libraries SYS$LIBRARY:GSS$RTL32.EXE"
-$ inquire/nopunc answer  "and SYS$LIBRARY:KRB$RTL32.EXE at this time? "
-$ if( answer .eqs. "" ) then goto CONFIRM_REM
-$   if ( answer .eqs. "Y")
-$   then
-$     set_message_off
-$     install remove SYS$LIBRARY:GSS$RTL32.EXE
-$     install remove SYS$LIBRARY:KRB$RTL32.EXE
-$     echo "SYS$LIBRARY:GSS$RTL32.EXE and SYS$LIBRARY:KRB$RTL32.EXE were "
-$     echo "successfully removed."
-$     set_message_on
-$   endif
-$ endif
-$ goto EXIT_OK
+$    if f$file_attributes( "SYS$LIBRARY:GSS$RTL32.EXE", "KNOWN") .eqs. "TRUE" -
+        .and. f$file_attributes( "SYS$LIBRARY:KRB$RTL32.EXE", "KNOWN") .eqs. "TRUE"
+$    then
+$      echo "Do you wish to de-install the libraries SYS$LIBRARY:GSS$RTL32.EXE"
+$      inquire/nopunc answer  "and SYS$LIBRARY:KRB$RTL32.EXE at this time? "
+$      if( answer .eqs. "" ) then goto CONFIRM_REM
+$      if ( answer .eqs. "Y")
+$      then
+$        set_message_off
+$        install remove SYS$LIBRARY:GSS$RTL32.EXE
+$        install remove SYS$LIBRARY:KRB$RTL32.EXE
+$        echo "SYS$LIBRARY:GSS$RTL32.EXE and SYS$LIBRARY:KRB$RTL32.EXE were "
+$        echo "successfully removed."
+$        set_message_on
+$      endif
+$    endif
+$    status = SS$_NORMAL
+$    goto EXIT_OK
 $ else
-$ echo "Setting up the Ingres Kerberos Driver..."
+$    echo "Setting up the Ingres Kerberos Driver..."
 $!
 $! Lock the configuration file. 
 $!
-$ on error then goto EXIT_FAIL
-$ iisulock "Ingres Kerberos setup"
-$ iisulocked = 1
-$ set noon
+$    on error then goto EXIT_FAIL
+$    iisulock "Ingres Kerberos setup"
+$    iisulocked = 1
+$    set noon
 $!
 $! Get compressed release ID.
 $!
@@ -291,7 +308,23 @@ $ release_id = sub1 + sub2
 $ goto STRIPPER_1
 $!
 $ STRIPPERS_DONE:
-
+$!
+$! Check if Ingres Kerberos Driver is already set up.
+$!
+$ set_message_off
+$ iigetres ii.'node_name.config.kerberos_driver.'release_id kerb_setup_status
+$ kerb_setup_status = f$trnlnm( "kerb_setup_status" )
+$ deassign "kerb_setup_status"
+$ set_message_on
+$ if( ( kerb_setup_status .nes. "" ) .and. -
+     ( kerb_setup_status .eqs. "COMPLETE" ) )
+$ then
+$ echo ""
+$ echo "The latest version of Ingres Kerberos Driver has already been set up"
+$ echo f$fao("to run on local node !AS.", f$edit( node_name, "upcase"))
+$ echo ""
+$ goto EXIT_FAIL
+$ endif
 $ krb_root = f$trnlnm( "KRB$ROOT" )
 $ if (krb_root .eqs. "")
 $ then
@@ -332,11 +365,21 @@ $       say
 The setup procedure for the following version of the Ingres DBMS or IngresNet:
  
 $       echo "  ''version_string'"
-$       say
+$
+$       if nodes .nes. node_name
+$       then
+$          say
+
+must be completed up before the Ingres Kerberos Driver can be set up on these nodes:
+
+           display_nodes "''nodes'"
+$       else
+$          say
  
 must be completed up before the Ingres Kerberos Driver can be set up on this node:
  
-$       echo "  ''node_name'"
+$          echo f$fao( "  !AS", f$edit(node_name, "upcase"))
+$       endif
 $       echo ""
 $       goto EXIT_FAIL
 $ endif
@@ -358,11 +401,21 @@ $    say
 This procedure will set up the following version of Ingres Kerberos Driver:
  
 $    echo "	''version_string'"
-$    say
+$
+$    if nodes .nes. node_name
+$    then
+$       say
+ 
+to run on the following cluster hosts:
+
+$       display_nodes "''nodes'"
+$    else
+$       say
  
 to run on local node:
  
-$    echo "	''full_host_name'"
+$       echo f$fao( "	!AS", f$edit(full_host_name, "upcase"))
+$    endif
 $    say 
  
 $ inquire/nopunc answer "Do you wish to continue this setup procedure? [y] "
@@ -407,15 +460,16 @@ $!
 $! Generate default configuration resources in case iisukerberos was
 $! previously called with the "-rmpkg" qualifier.
 $!
-echo ""
-echo "Generating default configuration..."
+$ echo ""
+$ echo "Generating default configuration..."
 $ on error then goto GENRES_FAILED	
-$ iigenres 'node_name ii_system:[ingres.files]net.rfm 
-$ iisetres ii.'node_name.gcn.mechanisms ""
-$ iisetres ii.'node_name.gcc.*.mechanisms ""
-$ iisetres ii.'node_name.lnm.ii_kerberoslib -
-"ii_system:[ingres.library]libgcskrb''ii_installation'.exe"
-$ iisetres ii.'node_name.gcf.mech.kerberos.module "gcskrb''ii_installation'"
+$ pan_cluster_cmd "''nodes'" iigenres "" " ii_system:[ingres.files]net.rfm"
+$ pan_cluster_cmd "''nodes'" iisetres "ii." ".gcn.mechanisms """""
+$ pan_cluster_cmd "''nodes'" iisetres "ii." ".gcc.*.mechanisms """""
+$ pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.ii_kerberoslib ""ii_system:[ingres.library]libgcskrb''ii_installation'.exe"""
+$ pan_cluster_cmd "''nodes'" iisetres "ii." ".gcf.mech.kerberos.module ""gcskrb''ii_installation'"""
+$ pan_cluster_cmd "''nodes'" iisetres "ii." ".config.kerberos_driver.''release_id' ""COMPLETE"""
+$!
 $! Initialize DBMS server mechanisms to "none" if not already initialized
 $! in iigenres.
 $ if f$search("II_SYSTEM:[ingres.files]dbms.rfm") .nes. ""
@@ -444,6 +498,7 @@ $ purge/nol II_SYSTEM:[INGRES.LIBRARY]LIBGCSKRB'ii_installation.exe
 $ @ii_system:[ingres.utility]iishare add
 $ goto GENRES_OK
 $ GENRES_FAILED:
+$ pan_cluster_cmd "''nodes'" iisetres "ii." ".config.kerberos_driver.''release_id' ""DEFAULTS"""
 $ say
 An error occurred while generating the default configuration.
 
@@ -501,7 +556,7 @@ $ echo "Select 'a' to add client-level Kerberos authentication,"
 $ inquire/nopunc resp "Select 'r' to remove client-level Kerberos authentication: "
 $ if resp .eqs. "A" 
 $ then 
-$   iisetres ii.'node_name.gcf.mechanisms "kerberos"
+$   pan_cluster_cmd "''nodes'" iisetres "ii." ".gcf.mechanisms ""kerberos"""
 $ say
 
 Client Kerberos configuration has been added.
@@ -515,7 +570,7 @@ authentication.
 $ endif
 $ if resp .eqs. "R" 
 $ then 
-$   iisetres ii.'node_name.gcf.mechanisms ""
+$   pan_cluster_cmd "''nodes'" iisetres "ii." ".gcf.mechanisms """""
 $   echo ""
 $   echo "Client Kerberos authentication has been removed."
 $   echo ""
@@ -539,16 +594,16 @@ $ echo "Select 'a' to add Name Server Kerberos authentication,"
 $ inquire/nopunc resp "Select 'r' to remove Name Server Kerberos authentication: "
 $ if resp .eqs. "A" 
 $ then 
-$   iisetres ii.'node_name.gcn.mechanisms "kerberos"
-$   iisetres ii.'node_name.gcn.remote_mechanism "kerberos"
+$   pan_cluster_cmd "''nodes'" iisetres "ii." ".gcn.mechanisms ""kerberos"""
+$   pan_cluster_cmd "''nodes'" iisetres "ii." ".gcn.remote_mechanism ""kerberos"""
 $   echo ""
 $   echo "Kerberos authentication has been added to the Name Server on ''full_host_name'"
 $   echo ""
 $ endif
 $ if resp .eqs. "R" 
 $ then 
-$   iisetres ii.'node_name.gcn.mechanisms ""
-$   iisetres ii.'node_name.gcn.remote_mechanism "none"
+$   pan_cluster_cmd "''nodes'" iisetres "ii." ".gcn.mechanisms """""
+$   pan_cluster_cmd "''nodes'" iisetres "ii." ".gcn.remote_mechanism ""none"""
 $   echo ""
 $   echo "Kerberos authentication has been removed from the Name Server on ''full_host_name'"
 $   echo ""
@@ -573,9 +628,9 @@ $ echo "Select 'a' to add standard Kerberos authentication,"
 $ inquire/nopunc resp "Select 'r' to remove standard Kerberos authentication: "
 $ if resp .eqs. "A" 
 $ then 
-$   iisetres ii.'node_name.gcf.mechanisms "kerberos"
-$   iisetres ii.'node_name.gcn.mechanisms "kerberos"
-$   iisetres ii.'node_name.gcn.remote_mechanism "kerberos"
+$   pan_cluster_cmd "''nodes'" iisetres "ii." ".gcf.mechanisms ""kerberos"""
+$   pan_cluster_cmd "''nodes'" iisetres "ii." ".gcn.mechanisms ""kerberos"""
+$   pan_cluster_cmd "''nodes'" iisetres "ii." ".gcn.remote_mechanism ""kerberos"""
 $ say
 
 Standard Kerberos authentication has been added.
@@ -589,9 +644,9 @@ authentication.
 $ endif
 $ if resp .eqs. "R" 
 $ then 
-$   iisetres ii.'node_name.gcf.mechanisms ""
-$   iisetres ii.'node_name.gcn.mechanisms ""
-$   iisetres ii.'node_name.gcn.remote_mechanism "none"
+$   pan_cluster_cmd "''nodes'" iisetres "ii." ".gcf.mechanisms """""
+$   pan_cluster_cmd "''nodes'" iisetres "ii." ".gcn.mechanisms """""
+$   pan_cluster_cmd "''nodes'" iisetres "ii." ".gcn.remote_mechanism ""none"""
 $   echo ""
 $   echo "Standard Kerberos authentication has been removed."
 $   echo ""

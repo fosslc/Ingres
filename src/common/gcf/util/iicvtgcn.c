@@ -23,6 +23,9 @@
 **	    conditions under which a new record length would actually
 **	    be used are highly unlikely to happen, so simply abort
 **	    processing if non-standard record length is found.
+**     14-Jan-2010 (horda03) Bug 123153
+**         Allow optinal parameter of node name (for use in setting
+**         up cluster installations.
 */
 
 #include    <compat.h>
@@ -39,7 +42,7 @@
 #include    <gcn.h>
 #include    <gcnint.h>
 
-main()
+main(int argc, char **argv)
 {
     STATUS status = OK;
     GCN_DB_RECORD buf;
@@ -53,8 +56,13 @@ main()
     i2 i;
     bool srcOpened=FALSE;
     bool dstOpened=FALSE;
-   
-    GChostname( hostname, sizeof( hostname ) );
+
+    if (argc == 2)
+    {
+       STcopy( argv [1], hostname);
+    }
+    else
+       GChostname( hostname, sizeof( hostname ) );
 
     for ( i = 0; i < 2; i++ )
     {  

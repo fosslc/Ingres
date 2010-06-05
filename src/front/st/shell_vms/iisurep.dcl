@@ -39,6 +39,8 @@ $!!         SIR 118402 - Modify to take out "Purge" and "Set File/version"
 $!!             statement(s) for CONFIG.DAT.
 $!!	17-oct-2007 (abbjo03)
 $!!	    DD_EVPROP is no longer needed.
+$!!     14-Jan-2010 (horda03) Bug 123153
+$!!         Upgrade all nodes in a clustered environment.
 $!
 $!----------------------------------------------------------------------------
 $!
@@ -49,12 +51,13 @@ $ set noverify
 $!
 $! Define symbols for programs called locally.
 $!
-$ iigetres      := $ii_system:[ingres.utility]iigetres.exe
-$ iiingloc      := $ii_system:[ingres.utility]iiingloc.exe
-$ iipmhost      := $ii_system:[ingres.utility]iipmhost.exe
-$ iimaninf	:= $ii_system:[ingres.utility]iimaninf.exe
-$ iisetres      := $ii_system:[ingres.utility]iisetres.exe
-$ iisulock      := $ii_system:[ingres.utility]iisulock.exe
+$ iigetres      :== $ii_system:[ingres.utility]iigetres.exe
+$ iiingloc      :== $ii_system:[ingres.utility]iiingloc.exe
+$ iipmhost      :== $ii_system:[ingres.utility]iipmhost.exe
+$ iimaninf	:== $ii_system:[ingres.utility]iimaninf.exe
+$ iiresutl      :== $ii_system:[ingres.utility]iiresutl.exe
+$ iisetres      :== $ii_system:[ingres.utility]iisetres.exe
+$ iisulock      :== $ii_system:[ingres.utility]iisulock.exe
 $!
 $! Other variables, macros and temporary files
 $!
@@ -68,8 +71,12 @@ $ set_message_on     = "set message''saved_message'"
 $ SS$_NORMAL         = 1
 $ SS$_ABORT          = 44
 $ status             = SS$_NORMAL
-$ node_name	     = f$getsyi("NODENAME")
+$ node_name	     = f$edit(f$getsyi("NODENAME"), "lowercase")
 $ tmpfile            = "ii_system:[ingres]iisurep.''node_name'_tmp" !Temp file
+$
+$ script_id = "IISUREP"
+$ @II_SYSTEM:[ingres.utility]iishlib _iishlib_init "''script_id'"
+$
 $!
 $  say          := type sys$input
 $  echo         := write sys$output 
@@ -134,17 +141,33 @@ $ read iioutput version_string
 $ close iioutput
 $ delete 'tmpfile;*
 $!
+$! Determine whether to configure as an Ingres cluster member
+$!
+$ get_nodes 'node_name
+$ if iishlib_err .ne. ii_status_ok then goto EXIT_FAIL
+$ nodes = iishlib_rv1
+$ cluster_mode = iishlib_rv2
+$
 $ say 
  
 This procedure will set up the following version of Ingres
 Replicator:
  
 $ echo "	''version_string'"
-$ say
+$ if (nodes .nes. node_name)
+$ then
+$    say
+
+to run on the following cluster hosts:
+
+$    display_nodes "''nodes'"
+$ else
+$    say
  
 to run on local host:
  
-$ echo "	''node_name'"
+$    echo f$fao("	!AS", f$edit(node_name, "upcase"))
+$ endif
 $ say 
  
 Generating default configuration...
@@ -175,8 +198,8 @@ $ endif
 $!
 $! Configure DBMS Replication parameters 
 $!
-$ iisetres ii.'node_name.dbms.*.rep_qman_threads 1
-$ iisetres ii.'node_name.dbms.*.rep_txq_size 50
+$ pan_cluster_set_notdefined "''nodes'" "ii." ".dbms.*.rep_qman_threads" 1
+$ pan_cluster_set_notdefined "''nodes'" "ii." ".dbms.*.rep_txq_size"     50
 $!
 $ EXIT_OK:
 $    say
@@ -221,4 +244,5 @@ $ if iisulocked  .and. f$search("ii_system:[ingres.files]config.lck;*").nes."" t
 	delete/noconfirm ii_system:[ingres.files]config.lck;*
 $!
 $ set on
+$ cleanup "''script_id'"
 $ exit 'status'

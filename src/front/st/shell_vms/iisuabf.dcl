@@ -41,6 +41,8 @@ $!!	    Remove double quotes from II_CONFIG process level definition.
 $!!	16-jul-2007 (upake01)
 $!!         SIR 118402 - Modify to take out "Purge" and "Set File/version"
 $!!             statement(s) for CONFIG.DAT.
+$!!     14-Jan-2010 (horda03) Bug 123153
+$!!         Upgrade all nodes in a clustered environment.
 $!----------------------------------------------------------------------------
 $!
 $ on control_c then goto EXIT_FAIL
@@ -50,12 +52,12 @@ $ set noverify
 $!
 $! Define symbols for programs called locally.
 $!
-$ iiingloc      := $ii_system:[ingres.utility]iiingloc.exe
-$ iipmhost      := $ii_system:[ingres.utility]iipmhost.exe
-$ iigetres      := $ii_system:[ingres.utility]iigetres.exe
-$ iimaninf	:= $ii_system:[ingres.utility]iimaninf.exe
-$ iisetres      := $ii_system:[ingres.utility]iisetres.exe
-$ iisulock      := $ii_system:[ingres.utility]iisulock.exe
+$ iiingloc      :== $ii_system:[ingres.utility]iiingloc.exe
+$ iipmhost      :== $ii_system:[ingres.utility]iipmhost.exe
+$ iigetres      :== $ii_system:[ingres.utility]iigetres.exe
+$ iimaninf	:== $ii_system:[ingres.utility]iimaninf.exe
+$ iisetres      :== $ii_system:[ingres.utility]iisetres.exe
+$ iisulock      :== $ii_system:[ingres.utility]iisulock.exe
 $!
 $! Other variables, macros and temporary files
 $!
@@ -69,8 +71,11 @@ $ set_message_on     = "set message''saved_message'"
 $ SS$_NORMAL         = 1
 $ SS$_ABORT          = 44
 $ status             = SS$_NORMAL
-$ node_name          = f$getsyi("NODENAME")
+$ node_name          = f$edit(f$getsyi("NODENAME"), "lowercase")
 $ tmpfile            = "ii_system:[ingres]iisuabf.''node_name'_tmp"
+$
+$ script_id = "IISUABF"
+$ @II_SYSTEM:[ingres.utility]iishlib _iishlib_init "''script_id'"
 $!
 $  say          := type sys$input
 $  echo         := write sys$output 
@@ -125,6 +130,13 @@ $ iisulock "Ingres Application-By-Forms setup"
 $ iisulocked = 1
 $ set noon
 $ on error then goto EXIT_FAIL
+$
+$! Check if this is a cluster Ingres member.
+$!
+$ get_nodes 'node_name
+$ if iishlib_err .ne. ii_status_ok then goto EXIT_FAIL
+$ nodes = iishlib_rv1
+$ cluster_mode = iishlib_rv2
 $!
 $! Get ABF version string
 $!
@@ -142,11 +154,21 @@ This procedure will set up the following version of Ingres
 Application-By-Forms:
  
 $ echo "	''version_string'"
-$ say
+$
+$ if nodes .nes. node_name
+$ then
+$    say
+ 
+to run on the following cluster hosts:
+ 
+$    display_nodes "''nodes'"
+$ else
+$    say
  
 to run on local host:
  
-$ echo "	''node_name'"
+$    echo f$fao("	!AS.", f$edit(node_name, "upcase"))
+$ endif
 $ say 
  
 Generating default configuration...
@@ -159,10 +181,11 @@ $ if f$search("ii_system:[ingres]abf.dir").eqs."" -
   then create/directory ii_system:[ingres.abf]
 $ set file/protection=(s:rwed,o:rwed,g:rwe,w:rwe)/owner='user_uic -
   ii_system:[ingres]abf.dir
+$
 $!
 $! Create the ING_ABFDIR logical name
 $!
-$ iisetres ii.'node_name.lnm.ing_abfdir "II_SYSTEM:[INGRES.ABF]"
+$ pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.ing_abfdir ""II_SYSTEM:[INGRES.ABF]"""
 $!
 $ EXIT_OK:
 $ status = SS$_NORMAL
@@ -196,6 +219,9 @@ $     deassign/job ii_framelib
 $ else
 $     define/job/nolog ii_framelib "''ii_framelib_def'"
 $ endif
+$
+$ cleanup "''script_id'"
+$
 $ set_message_on
 $!
 $ if iisulocked  .and. f$search("ii_system:[ingres.files]config.lck;*").nes."" then -

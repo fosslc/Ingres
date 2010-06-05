@@ -51,6 +51,8 @@ $!!         SIR 118402 - Modify to take out "Purge" and "Set File/version"
 $!!             statement(s) for CONFIG.DAT.
 $!!     15-Aug-2007 (Ralph Loen) SIR 118898
 $!!         Added symbol definition of iinethost.
+$!!     14-Jan-2010 (horda03)
+$!!         Upgrade all nodes in a clustered environment.
 $!----------------------------------------------------------------------------
 $!
 $ on control_c then goto EXIT_FAIL
@@ -60,20 +62,20 @@ $ set noverify
 $!
 $! Define symbols for programs called locally.
 $!
-$ iigenres	:= $ii_system:[ingres.utility]iigenres.exe
-$ iigetres	:= $ii_system:[ingres.utility]iigetres.exe
-$ iigetsyi      := @ii_system:[ingres.utility]iigetsyi.com
-$ iiingloc      := $ii_system:[ingres.utility]iiingloc.exe
-$ iipmhost      := $ii_system:[ingres.utility]iipmhost.exe
-$ iinethost     := $ii_system:[ingres.utility]iinethost.exe
-$ iimaninf	:= $ii_system:[ingres.utility]iimaninf.exe
-$ iircpseg	:= @ii_system:[ingres.utility]iircpseg.com
-$ iiresutl	:= $ii_system:[ingres.utility]iiresutl.exe
-$ iisetres	:= $ii_system:[ingres.utility]iisetres.exe
-$ iisulock	:= $ii_system:[ingres.utility]iisulock.exe
-$ iivalres	:= $ii_system:[ingres.utility]iivalres.exe
-$ ingstart	:= $ii_system:[ingres.utility]ingstart.exe
-$ ingstop	:= @ii_system:[ingres.utility]iisdall.com
+$ iigenres	:== $ii_system:[ingres.utility]iigenres.exe
+$ iigetres	:== $ii_system:[ingres.utility]iigetres.exe
+$ iigetsyi      :== @ii_system:[ingres.utility]iigetsyi.com
+$ iiingloc      :== $ii_system:[ingres.utility]iiingloc.exe
+$ iipmhost      :== $ii_system:[ingres.utility]iipmhost.exe
+$ iinethost     :== $ii_system:[ingres.utility]iinethost.exe
+$ iimaninf	:== $ii_system:[ingres.utility]iimaninf.exe
+$ iircpseg	:== @ii_system:[ingres.utility]iircpseg.com
+$ iiresutl	:== $ii_system:[ingres.utility]iiresutl.exe
+$ iisetres	:== $ii_system:[ingres.utility]iisetres.exe
+$ iisulock	:== $ii_system:[ingres.utility]iisulock.exe
+$ iivalres	:== $ii_system:[ingres.utility]iivalres.exe
+$ ingstart	:== $ii_system:[ingres.utility]ingstart.exe
+$ ingstop	:== @ii_system:[ingres.utility]iisdall.com
 $!
 $! Other variables, macros and temporary files
 $!
@@ -87,11 +89,14 @@ $ set_message_on     = "set message''saved_message'"
 $ SS$_NORMAL         = 1
 $ SS$_ABORT          = 44
 $ status             = SS$_NORMAL
-$ node_name	     = f$getsyi("NODENAME")
+$ node_name	     = f$edit(f$getsyi("NODENAME"), "lowercase")
 $ tmpfile            = "ii_system:[ingres]iisuc2.''node_name'_tmp" !Temp file
 $!
 $  say		:= type sys$input
 $  echo		:= write sys$output 
+$!
+$ script_id = "IISUC2"
+$ @II_SYSTEM:[ingres.utility]iishlib _iishlib_init "''script_id'"
 $!
 $ clustered	= f$getsyi( "CLUSTER_MEMBER" ) !Is this node clustered?
 $ user_uic	= f$user() !For RUN command (detached processes)
@@ -211,7 +216,7 @@ $    say
 
 The latest version of Ingres C2 Security Auditing has already been set up
 to run on local
-$    echo "node ''node_name'."
+$    echo f$fao("node !AS.", f$edit(node_name, "upcase"))
 $    echo ""
 $    goto EXIT_OK
 $ endif
@@ -234,7 +239,7 @@ $    say
  
 must be completed up before security auditing can be set up on this host:
  
-$    echo "	''node_name'"
+$    echo f$fao("	!AS", f$edit(node_name, "upcase"))
 $    echo ""
 $    goto EXIT_FAIL
 $ endif
@@ -244,11 +249,27 @@ $ iigetres ii.'node_name.lnm.ii_installation ii_installation_value
 $ ii_installation = f$trnlnm( "ii_installation_value" )
 $ deassign "ii_installation_value"
 $ set_message_on
-$ say 
+$! Check if this is a cluster Ingres member.
+$!
+$ get_nodes 'node_name
+$ if iishlib_err .ne. ii_status_ok then goto EXIT_FAIL
+$ nodes = iishlib_rv1
+$ cluster_mode = iishlib_rv2
+$
+$ if nodes .nes. node_name
+$ then
+$    say
+ 
+This procedure will set up Ingres Security Auditing for cluster hosts:
+ 
+$    display_nodes "''nodes'"
+$ else
+$    say 
  
 This procedure will set up Ingres Security Auditing for local host:
  
-$ echo "	''node_name'"
+$    echo f$fao("	!AS", f$edit(node_name, "upcase"))
+$ endif
 $ echo ""
 $!
 $    CONFIRM_SETUP:
@@ -262,14 +283,15 @@ $    say
 $!
 $    goto EXIT_OK
 $ endif
+$
 $!
 $ say 
  
 Generating default security auditing configuration...
 $ on error then goto IIGENRES_FAILED
-$ iigenres 'node_name ii_system:[ingres.files]secure.rfm
+$ pan_cluster_cmd "''nodes'" iigenres "" " ii_system:[ingres.files]secure.rfm"
 $ set noon
-$ iisetres ii.'node_name.config.c2.'release_id "COMPLETE" 
+$ pan_cluster_cmd "''nodes'" iisetres "ii" ".config.c2.''release_id' ""COMPLETE"""
 $ goto IIGENRES_DONE
 $!
 $ IIGENRES_FAILED:
@@ -317,6 +339,9 @@ $     deassign/job ii_framelib
 $ else
 $     define/job/nolog ii_framelib "''ii_framelib_def'"
 $ endif
+$
+$ cleanup "''script_id'"
+$
 $ set_message_on
 $!
 $ if iisulocked  .and. f$search("ii_system:[ingres.files]config.lck;*").nes."" then -

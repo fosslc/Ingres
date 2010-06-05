@@ -128,6 +128,8 @@ $!!         For charset, if the installation id is defined, set it accordingly.
 $!!     16-Jul-2009 (horda03) Bug 122285
 $!!         gcn_lcl_vnode is defined on SYSTEM level installations.
 $!!         ii_gcn_lcl_vnode should be defined.
+$!!     14-Jan-2010 (horda03) Bug 123153
+$!!         Upgrade all nodes in a clustered environment.
 $!----------------------------------------------------------------------------
 $!
 $ on control_c then goto EXIT_FAIL
@@ -137,21 +139,21 @@ $ set noverify
 $!
 $! Define symbols for programs called locally.
 $!
-$ iigenres	:= $ii_system:[ingres.utility]iigenres.exe
-$ iigetres	:= $ii_system:[ingres.utility]iigetres.exe
-$ iigetsyi	:= @ii_system:[ingres.utility]iigetsyi.com
-$ iijobdef	:= $ii_system:[ingres.utility]iijobdef.exe
-$ iiingloc      := $ii_system:[ingres.utility]iiingloc.exe
-$ iipmhost      := $ii_system:[ingres.utility]iipmhost.exe
-$ iinethost     := $ii_system:[ingres.utility]iinethost.exe
-$ iimaninf	:= $ii_system:[ingres.utility]iimaninf.exe
-$ iiresutl	:= $ii_system:[ingres.utility]iiresutl.exe
-$ iisetres	:= $ii_system:[ingres.utility]iisetres.exe
-$ iisulock	:= $ii_system:[ingres.utility]iisulock.exe
-$ iivalres	:= $ii_system:[ingres.utility]iivalres.exe
-$ ingstart	:= $ii_system:[ingres.utility]ingstart.exe
-$ ingstop	:= @ii_system:[ingres.utility]ingstop.com
-$ iicvtgcn      := $ii_system:[ingres.utility]iicvtgcn.exe
+$ iigenres	:== $ii_system:[ingres.utility]iigenres.exe
+$ iigetres	:== $ii_system:[ingres.utility]iigetres.exe
+$ iigetsyi	:== @ii_system:[ingres.utility]iigetsyi.com
+$ iijobdef	:== $ii_system:[ingres.utility]iijobdef.exe
+$ iiingloc      :== $ii_system:[ingres.utility]iiingloc.exe
+$ iipmhost      :== $ii_system:[ingres.utility]iipmhost.exe
+$ iinethost     :== $ii_system:[ingres.utility]iinethost.exe
+$ iimaninf	:== $ii_system:[ingres.utility]iimaninf.exe
+$ iiresutl	:== $ii_system:[ingres.utility]iiresutl.exe
+$ iisetres	:== $ii_system:[ingres.utility]iisetres.exe
+$ iisulock	:== $ii_system:[ingres.utility]iisulock.exe
+$ iivalres	:== $ii_system:[ingres.utility]iivalres.exe
+$ ingstart	:== $ii_system:[ingres.utility]ingstart.exe
+$ ingstop	:== @ii_system:[ingres.utility]ingstop.com
+$ iicvtgcn      :== $ii_system:[ingres.utility]iicvtgcn.exe
 $!
 $! Other variables, macros and temporary files
 $!
@@ -168,7 +170,7 @@ $ set_message_on     = "set message''saved_message'"
 $ SS$_NORMAL	     = 1
 $ SS$_ABORT	     = 44
 $ status	     = SS$_NORMAL
-$ node_name	     = f$getsyi("NODENAME")
+$ node_name	     = f$edit(f$getsyi("NODENAME"), "lowercase")
 $ tmpfile            = "ii_system:[ingres]iisunet.''node_name'_tmp" !Temp file
 $!
 $! Make temporary definitions for shared library logicals to 
@@ -217,6 +219,9 @@ $ ivp_name= f$getjpi("","USERNAME")
 $ ivp_user = f$edit( ivp_name, "TRIM,LOWERCASE" )
 $!
 $ ing_user = f$edit( user_name, "TRIM,LOWERCASE" ) !Ingres version of username
+$
+$ script_id = "IISUNET"
+$ @II_SYSTEM:[ingres.utility]iishlib _iishlib_init "''script_id'"
 $!
 $! See if user wants express setup
 $!
@@ -330,10 +335,18 @@ $    say
 
 The latest version of Ingres Networking has already been set up to run on
 local
-$    echo "node ''node_name'."
+$    echo f$fao("node !AS.", f$edit(node_name, "upcase"))
 $    echo ""
 $    goto EXIT_OK
 $ endif
+$
+$! Check if this is a cluster Ingres member.
+$!
+$ get_nodes 'node_name
+$ if iishlib_err .ne. ii_status_ok then goto EXIT_FAIL
+$ nodes = iishlib_rv1
+$ cluster_mode = iishlib_rv2
+$
 $!
 $! The following will determine what type of installation (Server or
 $! client) we are dealing with. 
@@ -353,11 +366,20 @@ $       say
 The setup procedure for the following version of the Ingres DBMS:
  
 $       echo "	''version_string'"
-$       say
+$       if nodes .nes. node_name
+$       then
+$          say
+
+must be completed up before Ingres Networking can be set up on these nodes:
+
+           display_nodes "''nodes'"
+$       else
+$          say
  
 must be completed up before Ingres Networking can be set up on this node:
  
-$       echo "	''node_name'"
+$          echo f$fao("	!AS", f$edit(node_name, "upcase"))
+$       endif
 $       echo ""
 $       goto EXIT_FAIL
 $    endif
@@ -370,7 +392,7 @@ $    then
 $        ii_installation = f$trnlnm( "II_INSTALLATION", "LNM$JOB" )
 $	 if (ii_installation .nes. "")
 $	 then
-$          iisetres ii.'node_name.lnm.ii_installation 'ii_installation
+          pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.ii_installation ''ii_installation'"
 $	 endif
 $    endif
 $    set_message_on
@@ -379,11 +401,21 @@ $    say
 This procedure will set up the following version of Ingres Networking:
  
 $    echo "	''version_string'"
-$    say
+$
+$    if nodes .nes. node_name
+$    then
+$       say
+
+to run on the following cluster hosts:
+
+$       display_nodes "''nodes'"
+$    else
+$       say
  
 to run on local node:
  
-$    echo "	''node_name'"
+$       echo f$fao("	!AS", f$edit(node_name, "upcase"))
+$    endif
 $    say 
  
 The Ingres DBMS has been set up on this node; therefore, this installation
@@ -419,10 +451,10 @@ $       say
  
 Generating default configuration...
 $       on error then goto IIGENRES_SERVER_FAILED
-$       iigenres 'node_name ii_system:[ingres.files]net.rfm 
-$       iicvtgcn
+$       pan_cluster_cmd "''nodes'" iigenres "" " ii_system:[ingres.files]net.rfm"
+$       pan_cluster_cmd "''nodes'" iicvtgcn "" ""
 $       set noon
-$       iisetres ii.'node_name.config.net.'release_id "DEFAULTS"
+$       pan_cluster_cmd "''nodes'" iisetres "ii." ".config.net.''release_id' ""DEFAULTS"""
 $       goto IIGENRES_SERVER_DONE
 $!
 $       IIGENRES_SERVER_FAILED:
@@ -450,19 +482,20 @@ $       echo "II_INSTALLATION configured as ''ii_installation'."
 $!
 $       copy ii_system:[ingres.library]clfelib.exe -
                  ii_system:[ingres.library]clfelib'ii_installation.exe
-$       iisetres ii.'node_name.lnm.ii_compatlib "ii_system:[ingres.library]clfelib''ii_installation'.exe"
+$       pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.ii_compatlib ""ii_system:[ingres.library]clfelib''ii_installation'.exe"""
 $       copy ii_system:[ingres.library]framefelib.exe -
                  ii_system:[ingres.library]framefelib'ii_installation.exe
-$       iisetres ii.'node_name.lnm.ii_framelib "ii_system:[ingres.library]framefelib''ii_installation'.exe" 
+$       pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.ii_framelib ""ii_system:[ingres.library]framefelib''ii_installation'.exe"""
 $       copy ii_system:[ingres.library]interpfelib.exe -
                  ii_system:[ingres.library]interpfelib'ii_installation.exe
-$       iisetres ii.'node_name.lnm.ii_interplib "ii_system:[ingres.library]interpfelib''ii_installation'.exe" 
+$       pan_cluster_cmd "''nodes'" iisetres -
+                       "ii." ".lnm.ii_interplib ""ii_system:[ingres.library]interpfelib''ii_installation'.exe""" 
 $       copy ii_system:[ingres.library]libqfelib.exe -
                  ii_system:[ingres.library]libqfelib'ii_installation.exe
-$       iisetres ii.'node_name.lnm.ii_libqlib "ii_system:[ingres.library]libqfelib''ii_installation'.exe" 
+$       pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.ii_libqlib ""ii_system:[ingres.library]libqfelib''ii_installation'.exe"""
 $       copy ii_system:[ingres.library]apifelib.exe -
 	         ii_system:[ingres.library]apifelib'ii_installation.exe
-$       iisetres ii.'node_name.lnm.ii_apilib "ii_system:[ingres.library]apifelib''ii_installation'.exe"
+$       pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.ii_apilib ""ii_system:[ingres.library]apifelib''ii_installation'.exe"""
 $       define/nolog/job ii_compatlib ii_system:[ingres.library]clfelib'ii_installation.exe
 $       define/nolog/job ii_libqlib ii_system:[ingres.library]libqfelib'ii_installation.exe
 $       define/nolog/job ii_framelib ii_system:[ingres.library]framefelib'ii_installation.exe
@@ -487,7 +520,7 @@ $    say
 
 to run on local node:
  
-$    echo "	''node_name'"
+$    echo f$fao("	!AS", f$edit(node_name, "upcase"))
 $    say 
 
 This procedure sets up an Ingres "client" installation which lets you
@@ -549,22 +582,19 @@ $       say
  
 Generating default configuration...
 $       on error then goto IIGENRES_CLIENT_FAILED
-$       iigenres 'node_name ii_system:[ingres.files]net.rfm 
-$       iicvtgcn
-$ set_message_on
+$       pan_cluster_cmd "''nodes'" iigenres "" " ii_system:[ingres.files]net.rfm"
+$       pan_cluster_cmd "''nodes'" iicvtgcn "" ""
+$       set_message_on
 $!
 $! Give SYSTEM and installation owner all Ingres privileges 
 $!
-$ iisetres ii.'node_name.privileges.user.'ing_user -
-     "SERVER_CONTROL,NET_ADMIN,MONITOR,TRUSTED"
-$ iisetres ii.'node_name.privileges.user.system -
-     "SERVER_CONTROL,NET_ADMIN,MONITOR,TRUSTED"
-$ if ("''ing_user'" .nes. "''ivp_user'") then -
-        iisetres ii.'node_name.privileges.user.'ivp_user - 
-        "SERVER_CONTROL,NET_ADMIN,MONITOR,TRUSTED"
+$       pan_cluster_cmd "''nodes'" iisetres "ii." ".privileges.user.''ing_user' ""SERVER_CONTROL,NET_ADMIN,MONITOR,TRUSTED"""
+$       pan_cluster_cmd "''nodes'" iisetres "ii." ".privileges.user.system ""SERVER_CONTROL,NET_ADMIN,MONITOR,TRUSTED"""
+$       if ("''ing_user'" .nes. "''ivp_user'") then -
+           pan_cluster_cmd "''nodes'" iisetres "ii." ".privileges.user.''ivp_user' ""SERVER_CONTROL,NET_ADMIN,MONITOR,TRUSTED"""
 $!
 $       set noon
-$       iisetres ii.'node_name.config.net.'release_id "DEFAULTS"
+$       pan_cluster_cmd "''nodes'" iisetres "ii." ".config.net.''release_id' ""DEFAULTS"""
 $       goto IIGENRES_CLIENT_DONE
 $!
 $       IIGENRES_CLIENT_FAILED:
@@ -667,7 +697,7 @@ $          inquire/nopunc answer "Do you wish to continue this setup procedure? 
 $          if( answer .eqs. "" ) then goto CONFIRM_SETUP_4
 $          if( answer )
 $          then
-$             iisetres ii.'node_name.lnm.table.id "''lnm_table'"
+$             pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.table.id ""''lnm_table'"""
 $          else
 $             say
 *** The above component will not be installed ***
@@ -690,7 +720,7 @@ $          inquire/nopunc answer "Do you wish to continue this setup procedure? 
 $          if( answer .eqs. "" ) then goto CONFIRM_SYSTEM_SETUP
 $          if( answer )
 $          then
-$             iisetres ii.'node_name.lnm.table.id "LNM$SYSTEM"
+$             pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.table.id ""LNM$SYSTEM"""
 $          else
 $             say
 *** The above component will not be installed ***
@@ -716,7 +746,7 @@ $       inquire/nopunc answer "Do you want to continue this procedure? (y/n) "
 $       if( answer .eqs. "" ) then goto CONFIRM_GROUP_SETUP
 $       if( answer )
 $       then
-$          iisetres ii.'node_name.lnm.table.id "LNM$GROUP"
+$          pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.table.id ""LNM$GROUP"""
 $       else
 $          say
 *** The above component will not be installed ***
@@ -725,7 +755,7 @@ $       endif
 $       lnm_table = "LNM$GROUP"
 $    endif
 $    !
-$     LNM_TABLE_CONFIRMED:
+$    LNM_TABLE_CONFIRMED:
 $    !
 $    ! Define II_SYSTEM in the correct logical table.
 $    !
@@ -750,7 +780,7 @@ $    then
 $       ii_installation = f$trnlnm( "II_INSTALLATION", "LNM$JOB" )
 $	if (ii_installation .nes. "")
 $	then
-$          iisetres ii.'node_name.lnm.ii_installation 'ii_installation
+$          pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.ii_installation ''ii_installation'"
 $	endif
 $    endif
 $    set_message_on
@@ -796,33 +826,34 @@ You have entered an invalid installation code.
 
 $          goto II_INSTALLATION_PROMPT
 $       endif
-$       iisetres ii.'node_name.lnm.ii_installation "''ii_installation'"
+$       pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.ii_installation ""''ii_installation'"""
 $	@ii_system:[ingres.utility]iishare delete
 $!
 $!  Create unique shared libraries for this installation
 $!
 $       copy ii_system:[ingres.library]clfelib.exe -
            ii_system:[ingres.library]clfelib'ii_installation.exe
-$       iisetres ii.'node_name.lnm.ii_compatlib "ii_system:[ingres.library]clfelib''ii_installation'.exe" 
+$       pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.ii_compatlib ""ii_system:[ingres.library]clfelib''ii_installation'.exe"""
 $       purge/nolog ii_system:[ingres.library]clfelib'ii_installation.exe
 $!
 $       copy ii_system:[ingres.library]framefelib.exe -
              ii_system:[ingres.library]framefelib'ii_installation.exe
-$       iisetres ii.'node_name.lnm.ii_framelib "ii_system:[ingres.library]framefelib''ii_installation'.exe" 
+$       pan_cluster_cmd "''nodes'" iisetres "ii." "lnm.ii_framelib ""ii_system:[ingres.library]framefelib''ii_installation'.exe"""
 $       purge/nolog ii_system:[ingres.library]framefelib'ii_installation.exe
 $!
 $       copy ii_system:[ingres.library]interpfelib.exe -
              ii_system:[ingres.library]interpfelib'ii_installation.exe
-$       iisetres ii.'node_name.lnm.ii_interplib "ii_system:[ingres.library]interpfelib''ii_installation'.exe" 
+$       pan_cluster_cmd "''nodes'" iisetres -
+                        "ii." ".lnm.ii_interplib ""ii_system:[ingres.library]interpfelib''ii_installation'.exe"""
 $       purge/nolog ii_system:[ingres.library]interpfelib'ii_installation.exe
 $!
 $       copy ii_system:[ingres.library]libqfelib.exe -
              ii_system:[ingres.library]libqfelib'ii_installation.exe
-$       iisetres ii.'node_name.lnm.ii_libqlib "ii_system:[ingres.library]libqfelib''ii_installation'.exe" 
+$       pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.ii_libqlib ""ii_system:[ingres.library]libqfelib''ii_installation'.exe"""
 $       purge/nolog ii_system:[ingres.library]libqfelib'ii_installation.exe
 $       copy ii_system:[ingres.library]apifelib.exe -
               ii_system:[ingres.library]apifelib'ii_installation.exe
-$       iisetres ii.'node_name.lnm.ii_apilib "ii_system:[ingres.library]apifelib''ii_installation'.exe"
+$       pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.ii_apilib ""ii_system:[ingres.library]apifelib''ii_installation'.exe"""
 $       purge/nolog ii_system:[ingres.library]apifelib'ii_installation.exe
 $       !
 $       ! Define unique shared library logicals for this installation.
@@ -852,26 +883,31 @@ $       	echo ""
 $       	echo "II_INSTALLATION configured as ""''ii_installation'"""
 $       	copy ii_system:[ingres.library]clfelib.exe -
         	   ii_system:[ingres.library]clfelib'ii_installation.exe
-$       	iisetres ii.'node_name.lnm.ii_compatlib "ii_system:[ingres.library]clfelib''ii_installation'.exe" 
+$       	pan_cluster_cmd "''nodes'" iisetres -
+                     "ii." ".lnm.ii_compatlib ""ii_system:[ingres.library]clfelib''ii_installation'.exe"""
 $       	purge/nolog ii_system:[ingres.library]clfelib'ii_installation.exe
 $!	
 $       	copy ii_system:[ingres.library]framefelib.exe -
         	     ii_system:[ingres.library]framefelib'ii_installation.exe
-$       	iisetres ii.'node_name.lnm.ii_framelib "ii_system:[ingres.library]framefelib''ii_installation'.exe" 
+$       	pan_cluster_cmd "''nodes'" iisetres -
+                            "ii." ".lnm.ii_framelib ""ii_system:[ingres.library]framefelib''ii_installation'.exe"""
 $       	purge/nolog ii_system:[ingres.library]framefelib'ii_installation.exe
 $!
 $		copy ii_system:[ingres.library]interpfelib.exe -
  	            ii_system:[ingres.library]interpfelib'ii_installation.exe
-$		iisetres ii.'node_name.lnm.ii_interplib "ii_system:[ingres.library]interpfelib''ii_installation'.exe" 
+$		pan_cluster_cmd "''nodes'" iisetres -
+                         "ii." ".lnm.ii_interplib ""ii_system:[ingres.library]interpfelib''ii_installation'.exe""
 $		purge/nolog ii_system:[ingres.library]interpfelib'ii_installation.exe
 $!
 $		copy ii_system:[ingres.library]libqfelib.exe -
  	            ii_system:[ingres.library]libqfelib'ii_installation.exe
-$		iisetres ii.'node_name.lnm.ii_libqlib "ii_system:[ingres.library]libqfelib''ii_installation'.exe" 
+$		pan_cluster_cmd "''nodes'" iisetres -
+                        "ii." ".lnm.ii_libqlib ""ii_system:[ingres.library]libqfelib''ii_installation'.exe"""
 $		purge/nolog ii_system:[ingres.library]libqfelib'ii_installation.exe
 $		copy ii_system:[ingres.library]apifelib.exe -
         	      ii_system:[ingres.library]apifelib'ii_installation.exe
-$		iisetres ii.'node_name.lnm.ii_apilib "ii_system:[ingres.library]apifelib''ii_installation'.exe"
+$		pan_cluster_cmd "''nodes'" iisetres -
+                           "ii." ".lnm.ii_apilib ""ii_system:[ingres.library]apifelib''ii_installation'.exe"""
 $		purge/nolog ii_system:[ingres.library]apifelib'ii_installation.exe
 $	       !
 $	       ! Define unique shared library logicals for this installation.
@@ -889,27 +925,27 @@ $!
 $!
 $! II_GCNxx_LCL_VNODE must be defined at startup time, insert appropriate
 $! entry.
-$ if ("''ii_installation'".nes."")
-$ then
-$     temp_str = "ii_gcn" + ii_installation + "_lcl_vnode"
-$     iisetres ii.'node_name.lnm.'temp_str 'node_name
-$ else
-$     iisetres ii.'node_name.lnm.ii_gcn_lcl_vnode 'node_name
-$ endif
+$    if ("''ii_installation'".nes."")
+$    then
+$        temp_str = "ii_gcn" + ii_installation + "_lcl_vnode"
+$        pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.''temp_str'"  1
+$    else
+$        pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.ii_gcn_lcl_vnode" 1
+$    endif
 $!
 $! Configure II_CHARSETxx
 $!
-$ iigetres ii.'node_name.lnm.ii_charset'ii_installation ii_charset_value
-$ set_message_off
-$ ii_charset = f$trnlnm( "ii_charset_value" )
-$ deassign "ii_charset_value"
-$ if( ii_charset .eqs. "" ) then -
-     ii_charset = f$trnlnm( "II_CHARSET''ii_installation'", "LNM$JOB" )
-$ set_message_on
-$ if( ii_charset .eqs. "" )
-$ then
-$    if EXPRESS then goto CHARSET_PROMPT
-$    say
+$    iigetres ii.'node_name.lnm.ii_charset'ii_installation ii_charset_value
+$    set_message_off
+$    ii_charset = f$trnlnm( "ii_charset_value" )
+$    deassign "ii_charset_value"
+$    if( ii_charset .eqs. "" ) then -
+        ii_charset = f$trnlnm( "II_CHARSET''ii_installation'", "LNM$JOB" )
+$    set_message_on
+$    if( ii_charset .eqs. "" )
+$    then
+$       if EXPRESS then goto CHARSET_PROMPT
+$       say
 
 Ingres supports different character sets.  You must now enter the
 character set you want to use with this Ingres installation.
@@ -918,58 +954,58 @@ IMPORTANT NOTE: You will be unable to change character sets once you
 make your selection.  If you are unsure of which character set to use,
 exit this program and refer to the Ingres Installation Guide.
 
-$    iivalres -v ii.*.setup.ii_charset BOGUS_CHARSET
+$       iivalres -v ii.*.setup.ii_charset BOGUS_CHARSET
 $!
-$ CHARSET_PROMPT:
+$       CHARSET_PROMPT:
 $!
-$    set noon
-$    iigetres ii.'node_name.setup.ii_charset default_charset
-$    default_charset = f$trnlnm( "default_charset" )
-$    deassign "default_charset"
-$    if EXPRESS
-$    then
-$       ii_charset = default_charset
-$       goto SKIP_INQ_D
-$    endif
-$    inquire/nopunc ii_charset "Please enter a valid character set [''default_charset'] "
-$    if( ii_charset .eqs. "" ) then -
-        ii_charset = default_charset
-$    on error then goto CHARSET_PROMPT
-$ SKIP_INQ_D:
-$    iivalres -v ii.*.setup.ii_charset 'ii_charset
-$    set noon
-$    iigetres ii.*.setup.charset.'ii_charset charset_text
-$    charset_text = f$trnlnm( "charset_text" )
-$    deassign "charset_text"
-$    if EXPRESS then goto II_CHARSET_OK
-$    say
+$       set noon
+$       iigetres ii.'node_name.setup.ii_charset default_charset
+$       default_charset = f$trnlnm( "default_charset" )
+$       deassign "default_charset"
+$       if EXPRESS
+$       then
+$          ii_charset = default_charset
+$          goto SKIP_INQ_D
+$       endif
+$       inquire/nopunc ii_charset "Please enter a valid character set [''default_charset'] "
+$       if( ii_charset .eqs. "" ) then -
+           ii_charset = default_charset
+$       on error then goto CHARSET_PROMPT
+$       SKIP_INQ_D:
+$       iivalres -v ii.*.setup.ii_charset 'ii_charset
+$       set noon
+$       iigetres ii.*.setup.charset.'ii_charset charset_text
+$       charset_text = f$trnlnm( "charset_text" )
+$       deassign "charset_text"
+$       if EXPRESS then goto II_CHARSET_OK
+$       say
 
 The character set you have selected is:
 
-$    echo "     ''ii_charset' (''charset_text')"
-$    echo ""
-$    !
-$     CONFIRM_CHARSET:
-$    !
-$    if EXPRESS then goto II_CHARSET_OK
-$    inquire/nopunc answer "Is this the character set you want to use? (y/n) "
-$    if( answer .eqs. "" ) then goto CONFIRM_CHARSET
-$    if( .not. answer )
-$    then
-$       iivalres -v ii.*.setup.ii_charset BOGUS_CHARSET
-$       goto CHARSET_PROMPT
+$       echo "     ''ii_charset' (''charset_text')"
+$       echo ""
+$       !
+$        CONFIRM_CHARSET:
+$       !
+$       if EXPRESS then goto II_CHARSET_OK
+$       inquire/nopunc answer "Is this the character set you want to use? (y/n) "
+$       if( answer .eqs. "" ) then goto CONFIRM_CHARSET
+$       if( .not. answer )
+$       then
+$          iivalres -v ii.*.setup.ii_charset BOGUS_CHARSET
+$          goto CHARSET_PROMPT
+$       endif
+$    else
+$       echo ""
+$       echo "II_CHARSET''ii_installation' configured as ''ii_charset'."
 $    endif
-$ else
-$    echo ""
-$    echo "II_CHARSET''ii_installation' configured as ''ii_charset'."
-$ endif
-$ II_CHARSET_OK:
-$ if ("''ii_installation'".nes."")
-$ then
-$    iisetres ii.'node_name.lnm.ii_charset'ii_installation "''ii_charset'"
-$ else
-$    iisetres ii.'node_name.lnm.ii_charset "''ii_charset'"
-$ endif
+$    II_CHARSET_OK:
+$    if ("''ii_installation'".nes."")
+$    then
+$       pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.ii_charset''ii_installation' ""''ii_charset'"""
+$    else
+$       pan_cluster_cmd "''nodes'" iisetres "ii." ".node_name.lnm.ii_charset ""''ii_charset'"""
+$    endif
 $    !
 $    ! Configure II_TIMEZONE_NAME
 $    !
@@ -1059,30 +1095,49 @@ $    else
 $       echo "" 
 $       echo "II_TIMEZONE_NAME configured as ''ii_timezone_name'."
 $    endif
-$    iisetres ii.'node_name.lnm.ii_timezone_name "''ii_timezone_name'"
-$    !
-$    REMOTE_SERVER_PROMPT:
-$    !
-$    echo ""
-$    echo "Enter the vnode name of the INGRES server node"
-$    inquire server_node "you wish to access [''node_name'_SERVER]"
-$    !
-$    ! ### PING REMOTE HOST IF POSSIBLE
-$    !
-$    CONFIRM_REMOTE_SERVER:
-$    !
-$    inquire/nopunc answer "Have you entered the correct node name? (y/n) " 
-$    if( answer .eqs. "" ) then goto CONFIRM_REMOTE_SERVER
-$    if answer
+$    pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.ii_timezone_name ""''ii_timezone_name'"""
+$
+$    iigetres ii.'node_name.gcn.remote_vnode remote_vnode
+$    set_message_off
+$    remove_vnode =  f$trnlnm( "remote_vnode")
+$    deassign "remote_vnode"
+$
+$    if (remote_vnode .nes. "")
 $    then
-$       goto REMOTE_SERVER_PROMPT_DONE
+$       entry = 0
+$       !
+$       REMOTE_SERVER_PROMPT:
+$       !
+$       node = f$element( entry, ",", nodes)
+$
+$       if (node .nes. ",")
+$       then
+$          disp_node = f$edit(node, "upcase")
+$          echo ""
+$          echo "Enter the vnode name of the INGRES server node"
+$          if (node_name .nes. nodes)
+$          then
+$             inquire server_node "you wish to access from ''disp_node' [''disp_node'_SERVER]"
+$          else
+$             inquire server_node "you wish to access [''disp_node'_SERVER]"
+$          endif
+$          !
+$          ! ### PING REMOTE HOST IF POSSIBLE
+$          !
+$          CONFIRM_REMOTE_SERVER:
+$          !
+$          inquire/nopunc answer "Have you entered the correct node name? (y/n) " 
+$          if( answer .eqs. "" ) then goto CONFIRM_REMOTE_SERVER
+$          if answer
+$          then
+$             if server_node .eqs."" then server_node = "''node'_server"
+$             pan_cluster_cmd "''nodes'" iisetres "ii." ".gcn.remote_vnode ''server_node'"
+$
+$             entry = entry + 1
+$             goto REMOTE_SERVER_PROMPT
+$          endif
+$       endif
 $    endif
-$    goto REMOTE_SERVER_PROMPT
-$    !
-$    REMOTE_SERVER_PROMPT_DONE:
-$    !
-$    if server_node .eqs."" then server_node = "''node_name'_server"
-$    iisetres ii.'node_name.gcn.remote_vnode 'server_node 
 $ endif
 $!
 $! Configure Net server listen addresses.
@@ -1090,30 +1145,30 @@ $!
 $ say 
 
 Configuring Net server listen addresses...
-$ iisetres ii.'node_name.gcc.*.async.port "" 
-$ iisetres ii.'node_name.gcc.*.iso_oslan.port "OSLAN_''ii_installation'"
-$ iisetres ii.'node_name.gcc.*.iso_x25.port "X25_''ii_installation'"
-$ iisetres ii.'node_name.gcc.*.sna_lu0.port "(none)" 
-$ iisetres ii.'node_name.gcc.*.sna_lu62.port "(none)" 
-$ iisetres ii.'node_name.gcc.*.spx.port 'ii_installation
+$ pan_cluster_set_notdefined "''nodes'" "ii." ".gcc.*.async.port"     "" 
+$ pan_cluster_set_notdefined "''nodes'" "ii." ".gcc.*.iso_oslan.port" "OSLAN_''ii_installation'"
+$ pan_cluster_set_notdefined "''nodes'" "ii." ".gcc.*.iso_x25.port"   "X25_''ii_installation'"
+$ pan_cluster_set_notdefined "''nodes'" "ii." ".gcc.*.sna_lu0.port"   "(none)" 
+$ pan_cluster_set_notdefined "''nodes'" "ii." ".gcc.*.sna_lu62.port"  "(none)" 
+$ pan_cluster_set_notdefined "''nodes'" "ii." ".gcc.*.spx.port"       'ii_installation
 $ !FIXME - This hack fixes bug #65312 by forcing the correct listen
 $ !listen addresses into config.dat for system-level installations.
 $ if ( ( "''ii_installation'" .eqs. "AA" ) .or. -
        ( "''ii_installation'" .eqs. "aa" ) .or. -
        ( "''ii_installation'" .eqs. ""   ) )
 $ then
-$	iisetres ii.'node_name.gcc.*.tcp_dec.port "II"
-$	iisetres ii.'node_name.gcc.*.tcp_wol.port "II"
-$	iisetres ii.'node_name.gcc.*.decnet.port "II_GCC"
+$	pan_cluster_set_notdefined "''nodes'" "ii." ".gcc.*.tcp_dec.port" "II"
+$	pan_cluster_set_notdefined "''nodes'" "ii." ".gcc.*.tcp_wol.port" "II"
+$	pan_cluster_set_notdefined "''nodes'" "ii." ".gcc.*.decnet.port"  "II_GCC"
 $ else
-$	iisetres ii.'node_name.gcc.*.tcp_dec.port 'ii_installation
-$	iisetres ii.'node_name.gcc.*.tcp_wol.port 'ii_installation
-$	iisetres ii.'node_name.gcc.*.decnet.port "II_GCC''ii_installation'"
+$	pan_cluster_set_notdefined "''nodes'" "ii." ".gcc.*.tcp_dec.port" 'ii_installation
+$	pan_cluster_set_notdefined "''nodes'" "ii." ".gcc.*.tcp_wol.port" 'ii_installation
+$	pan_cluster_set_notdefined "''nodes'" "ii." ".gcc.*.decnet.port"  "II_GCC''ii_installation'"
 $ endif
 $!
 $! Make sure ingstart invokes image installation
 $!
-$ iisetres ii.'node_name.ingstart.*.begin "@ii_system:[ingres.utility]iishare"
+$ pan_cluster_cmd "''nodes'" iisetres "ii." ".ingstart.*.begin ""@ii_system:[ingres.utility]iishare"""
 $!
 $! ### 
 $! ### FINISH ME 
@@ -1219,7 +1274,7 @@ you have not already done so, please execute the command procedure
 Refer to the Ingres Installation Guide for more information about 
 starting and using Ingres.
 
-$ iisetres ii.'node_name.config.net.'release_id "COMPLETE"
+$ pan_cluster_cmd "''nodes'" iisetres "ii." ".config.net.''release_id' ""COMPLETE"""
 $!
 $ EXIT_OK:
 $ status = SS$_NORMAL
@@ -1235,7 +1290,9 @@ $!
 $! Restore previous values of shared library definitions
 $!
 $ set_message_off
-$ set 
+$
+$ cleanup "''script_id'"
+$
 $ if "''ii_compatlib_def'".eqs."" 
 $ then
 $     deassign/job ii_compatlib

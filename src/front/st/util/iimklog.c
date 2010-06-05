@@ -105,6 +105,10 @@
 **	    result in error if elevation is required.
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Hybrid add-on symbol changed, fix here.
+**      14-Jan-2010 (horda03) Bug 123153
+**          Allow iimklog to be used to create TX log files on any node
+**          in a clustered Ingres installation (whether the cluster be
+**          NUMA or otherwise).
 */
 
 /*
@@ -269,7 +273,7 @@ char **argv;
     */
     ELEVATION_REQUIRED();
 
-    if ( OK != CXget_context( &argc, argv, CX_NSC_STD_NUMA, 
+    if ( OK != CXget_context( &argc, argv, CX_NSC_STD_CLUSTER, 
 			      node_name_buf, CX_MAX_NODE_NAME_LEN + 1 ) )
     {
 	ERROR( bad_usage );
