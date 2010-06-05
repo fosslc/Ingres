@@ -6,7 +6,7 @@ SubDir ING_SRC front abf osl ;
 
 IISUBSYS front abf osl ;
 
-
+IISetCMPORTS oscktype.c keyword.c : PORTIMP ;
 IILIBRARY OSLLIB : osrecord.sc osfrdecl.sc oskeyw.roc scan.c
 	ostree.c ostmpall.c ostlist.c ossymnd.c ossymlab.c ossymchk.c
 	ossym.c ossubsys.c osstrsem.c ossrt.c osrep.c osreffrm.c

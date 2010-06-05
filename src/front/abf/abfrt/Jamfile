@@ -25,6 +25,7 @@ File $(INGMSG)$(DFS)abhvigmu.hlp : abhvigmu.hlp ;
 File $(INGMSG)$(DFS)abrtlkql.hlp : abrtlkql.hlp ;
 File $(INGMSG)$(DFS)abrtlkup.hlp : abrtlkup.hlp ;
 
+IISetCMPORTS abrtutil.qsc g4utils.c : PORTIMP ;
 IILIBRARY ABFRTLIB : abrtskey.sc abrtseqv.sc abfexc.sc
 	scrollto.qsc inidb.qsc abrtvig.qsc abrtutil.qsc abrtstk.qsc
 	abrtrw.qsc abrtqry.qsc abrtqbf.qsc abrtpred.qsc abrtnqry.qsc

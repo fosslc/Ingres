@@ -103,6 +103,7 @@ File $(INGMSG)$(DFS)vfvalex.hlp : vfvalex.hlp ;
 File $(INGMSG)$(DFS)vfvalid.hlp : vfvalid.hlp ;
 File $(INGMSG)$(DFS)vfvisadj.hlp : vfvisadj.hlp ;
 
+IISetCMPORTS vfcat.qsc qbfmap.qsc getfrmnm.qsc writefrm.qsc : PORTREF ;
 IILIBRARY VIFREDLIB : writefrm.qsc vifred.qsc vfinittb.qsc
 	vffrmatr.qsc vfedtrim.qsc vfedbox.qsc vfcrtfrm.qsc vfcat.qsc
 	valerr.qsc tfcreate.qsc rbf.qsc qbfmap.qsc getrel.qsc

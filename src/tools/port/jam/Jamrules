@@ -1377,6 +1377,11 @@
 #       22-apr-2010 (maspa05) Bug 122651
 #           The above problem occurred because of a switch on the full grist
 #           filename. Changed this to just the directory - a more general fix.
+#	26-Apr-2010 (drivi01) Bug #123633
+#	    Add a new rule IISetCMPORTS that is able to set IMPORT_DLL_DATA
+#	    or REFERENCE_IN_DLL flags on individual files. The rule should be
+#	    called from Jamfiles/MANIFEST files and eliminates the need
+#	    for file specific cases in a switch statement in IILIBRARY.
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -2314,7 +2319,7 @@ rule IIBINEXE
 				case *common*gcf*gcd*		: CMPORTS = $(PORTIMP) ;
 				case *common*gcf*gcc*		: CMPORTS = $(PORTIMP) ;
 				case *back*ascf*ascd*		: CMPORTS = $(PORTREF) ;
-			        	case *front*misc*impxml*	: CMPORTS = $(PORTIMP) ;
+			        case *front*misc*impxml*	: CMPORTS = $(PORTIMP) ;
 				case *dbutil*duf*		: CMPORTS = $(PORTIMP) ;
 				case *front*dict*dictutil*	: CMPORTS = $(PORTIMP) ;
 				case *front*st*ipm*		: CMPORTS = $(PORTIMP) ;
@@ -3959,7 +3964,8 @@ rule IILIBRARY
 		for _o in $(>)	
 		{
 			_g = [ FGristFiles $(_o:S=$(SUFOBJ)) ] ;
-
+			if $($(_g)) != TRUE
+			{
 			switch $(_g:G)
 			{
 			case *front*st*enterprise_dll_win*	: CMPORTS = $(PORTIMP) ;
@@ -3968,57 +3974,45 @@ rule IILIBRARY
 			case *dbutil*duf*duc* 	   : CMPORTS = $(PORTIMP) ;
 
 			case *common*aif*ait*	   : CMPORTS = $(PORTIMP) ;
- 			case *common*aif*demo*     : CMPORTS = $(PORTIMP) ;	
+ 			case *common*aif*demo*     : CMPORTS = $(PORTIMP) ;
 			case *common*odbc*driver*  : CMPORTS = $(PORTIMP) ;
 			case *common*odbc*manager*  : CMPORTS = $(PORTIMP) ;
-			case *common*gcf*gcn*gcnsreg*		: CMPORTS = $(PORTREF) ; 
-			case *common*gcf*gcn* 	   : CMPORTS = $(PORTIMP) ; 
-			case *common*gcf*gcd* 	   : CMPORTS = $(PORTIMP) ; 
-			case *common*gcf*gcc* 	   : CMPORTS = $(PORTIMP) ; 
-			case *common*ddf*	   : CMPORTS = $(PORTIMP) ; 
+			case *common*gcf*gcn*gcnsreg*		: CMPORTS = $(PORTREF) ;
+			case *common*gcf*gcn* 	   : CMPORTS = $(PORTIMP) ;
+			case *common*gcf*gcd* 	   : CMPORTS = $(PORTIMP) ;
+			case *common*gcf*gcc* 	   : CMPORTS = $(PORTIMP) ;
+			case *common*ddf*	   : CMPORTS = $(PORTIMP) ;
 			case *common*		   : CMPORTS = $(PORTREF) ;
 
-			case *back*psf*yacc*	   : CMPORTS = $(PORTIMP) ;		
+			case *back*psf*yacc*	   : CMPORTS = $(PORTIMP) ;	
 			case *back*		   : CMPORTS = $(PORTREF) ;
 		
 			case *front*embed*equel*   : CMPORTS = $(PORTREF) ;
 			case *front*embed*libq*	   : CMPORTS = $(PORTREF) ;
 			case *front*embed*ada*	   : CMPORTS = $(PORTIMP) ;
 			case *front*embed*fortran* : CMPORTS = $(PORTIMP) ;
-			case *front*abf*quel*quelkw*  : CMPORTS = $(PORTIMP) ;
 			case *front*abf*quel*	   : CMPORTS = $(PORTREF) ;
 			case *front*abf*impexp*	   : CMPORTS = $(PORTIMP) ;
-			case *front*abf*osl*oscktype* : CMPORTS = $(PORTIMP) ;
-			case *front*abf*osl*keyword*  : CMPORTS = $(PORTIMP) ;
 			case *front*abf*osl*	   : CMPORTS = $(PORTREF) ;
-			case *front*abf*abfrt*util* : CMPORTS = $(PORTIMP) ;
-			case *front*abf*sql*sql*   : CMPORTS = $(PORTREF) ;
 			case *front*embed*copy*	   : CMPORTS = $(PORTREF) ;
 			case *front*embed*c*	   : CMPORTS = $(PORTIMP) ; 
 			case *front*embed* 	   : CMPORTS = $(PORTREF) ; 
 			case *front*frontcl*	   : CMPORTS = $(PORTREF) ;
 			case *front*tm*qr*	   : CMPORTS = $(PORTREF) ;
-			case *front*utils*	   : CMPORTS = $(PORTREF) ; 
+			case *front*utils*	   : CMPORTS = $(PORTREF) ;
 			case *front*frame*compfrm* : CMPORTS = $(PORTIMP) ;
 			case *front*frame*	   : CMPORTS = $(PORTREF) ;
-			case *front*report*copyrep*crwrtrep*  	: CMPORTS = $(PORTREF) ;
-			case *front*report*rbf*rfcat*		: CMPORTS = $(PORTREF) ;
-			case *front*report*rbf*rfwrite*		: CMPORTS = $(PORTREF) ;
-			case *front*report*rbf*rfgtfrms*	: CMPORTS = $(PORTREF) ;
-			case *front*report*sreport*sapprprt*	: CMPORTS = $(PORTREF) ;
-			case *front*vifred*vifred*vfcat*	: CMPORTS = $(PORTREF) ;
-			case *front*vifred*vifred*qbfmap*	: CMPORTS = $(PORTREF) ;
-			case *front*vifred*vifred*getfrmnm*	: CMPORTS = $(PORTREF) ;
-			case *front*vifred*vifred*writefrm*	: CMPORTS = $(PORTREF) ;
 			case *gateway*  : CMPORTS = $(PORTIMP) ;
 			case *			   : CMPORTS = $(PORTIMP) ;
 				
+			}
 			}
 			switch $(_o:S)
 			{
 			case *cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) $(WCHART) ;
 			case * : CCFLAGS on $(_g) += $(CMPORTS) ;
 			}
+			CMPORTS = "" ;
 		}
 
 
@@ -4316,6 +4310,29 @@ rule IIL1OPTIM
               }
             }
        }
+}
+
+rule IISetCMPORTS
+{ 
+     if $(NT)
+     {
+	local _o = [ FGristFiles $(<) ] ;
+	for i in $(_o:S=$(SUFOBJ))
+	{
+	     CCFLAGS on $(i:S=$(SUFOBJ)) += $($(>)) ;
+	     $(i:S=$(SUFOBJ)) = TRUE  ;
+			
+	}
+	if $(VERSHB)
+	{
+	     local _o64 = [ FGristFiles $(SUFHB)$(DFS)$(<) ] ;
+	     for i in $(o64:S=$(SUFOBJ)
+	     {
+	        CCFLAGS on $(i:S=$(SUFOBJ)) += $($(>)) ;
+		$(i:S=$(SUFOBJ)) = TRUE  ;
+	     }
+	}
+     }
 }
 
 rule IICCFLAGS

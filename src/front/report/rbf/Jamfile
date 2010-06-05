@@ -91,6 +91,7 @@ File $(INGMSG)$(DFS)rfstyles.hlp : rfstyles.hlp ;
 File $(INGMSG)$(DFS)rfund.hlp : rfund.hlp ;
 File $(INGMSG)$(DFS)rfwidrep.hlp : rfwidrep.hlp ;
 
+IISetCMPORTS rfcat.qsc rfwrite.qsc rfgtfrms.qsc : PORTREF ;
 IILIBRARY RBFLIB : rfwrite.qsc rfsave.qsc rfropt.qsc rfrbf.qsc
 	rfmrhead.qsc rflayout.qsc rfindopt.qsc rfgtfrms.qsc
 	rfedtlay.qsc rfedit.qsc rfdisp.qsc rfcopt.qsc rfcat.qsc

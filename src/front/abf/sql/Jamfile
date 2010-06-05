@@ -13,5 +13,6 @@ IINEEDLIBS oslsql :  SQLLIB OSLLIB CODEGENLIB ILGLIB
 IINEEDLIBSW oslsql : SHEMBEDLIB SHADFLIB ;
 IIUNDEFS oslsql : II_copyright malloc ;
 
+IISetCMPORTS sql.sy : PORTREF ;
 IILIBRARY SQLLIB : sql.sy sqlkw.roc ;
 

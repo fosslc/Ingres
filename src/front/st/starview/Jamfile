@@ -9,7 +9,7 @@ SubDir ING_SRC front st starview ;
 
 IISUBSYS front st starview ;
 
-
+IISetCMPORTS dutmain.sc : PORTIMP ;
 IIBINEXE starview : dutmain.sc ;
 IINEEDLIBS starview : STARVIEWLIB SHEMBEDLIB SHQLIB SHFRAMELIB SHCOMPATLIB ;
 IIUNDEFS starview : IIeqiqio ;
