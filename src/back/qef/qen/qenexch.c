@@ -81,7 +81,8 @@ static DB_STATUS qen_exchange_serial(
 		i4 function );
 static void qen_dsh_fixup(
 		QEE_DSH *dsh, 
-		QEN_NODE *node);
+		QEN_NODE *node, 
+		QEN_EXCH *exch);
 
 /*{
 ** Name: QEN_EXCHANGE	- exchange node processing
@@ -2235,6 +2236,8 @@ DB_ERROR	*error)
 
 	    /* The Child code will set the mat addr to the CUT cell */
 
+            qen_dsh_fixup(ChildDSH, node->node_qen.qen_exch.exch_out,
+                          &node->node_qen.qen_exch);
 
 	    /* That's it for 1:1 */
 	    break;
@@ -2692,7 +2695,8 @@ DB_ERROR	*error)
 		/* 
 		** Fix up the data segment addresses in the ChildDSH.
 		*/
-		qen_dsh_fixup(ChildDSH, node->node_qen.qen_exch.exch_out);
+		qen_dsh_fixup(ChildDSH, node->node_qen.qen_exch.exch_out,
+                              &node->node_qen.qen_exch);
 	    }
 	}
 	else
@@ -2928,6 +2932,7 @@ i4		    function )
 **
 **	dsh	- pointer to the cloned dsh
 **	node	- pointer to the outer node below the exchange node
+**	exch	- Pointer to the originating EXCH node.
 **
 ** Outputs: 
 **					
@@ -2941,10 +2946,13 @@ i4		    function )
 ** History:
 **	06-Oct-09 (smeke01) b122346
 **	    Created based on qee_resolve_xaddrs.
+**      23-Apr-2010 (hanal04) bug 123557
+**          When updating QE_QP action nodes only update the current thread's
+**          actions.
 */
 static
 void
-qen_dsh_fixup(QEE_DSH *dsh, QEN_NODE *node)
+qen_dsh_fixup(QEE_DSH *dsh, QEN_NODE *node, QEN_EXCH *exch)
 {
 
     QEN_NODE *outer, *inner;	/* Subnode pointers */
@@ -3053,26 +3061,30 @@ qen_dsh_fixup(QEE_DSH *dsh, QEN_NODE *node)
     /* Recursively do left, right subtrees */
 
     if (outer != NULL)
-	qen_dsh_fixup(dsh, outer);
+	qen_dsh_fixup(dsh, outer, exch);
 
     if (inner != NULL)
-	qen_dsh_fixup(dsh, inner);
+	qen_dsh_fixup(dsh, inner, exch);
 
     if (node->qen_type == QE_QP)
     {
 	QEF_AHD *act;
+        i4	i;
 
 	/* Special casing for QP nodes.  Caller wants us to resolve the
 	** addresses in the sub-plan underneath the QP.  Thanks to the
 	** distinction between nodes and action headers, this has to be
 	** handled specially.
 	*/
-	for (act = node->node_qen.qen_qp.qp_act;
+	for (act = node->node_qen.qen_qp.qp_act, i = 1;
 	     act != NULL;
-	     act = act->ahd_next)
+	     act = act->ahd_next, i++)
 	{
-	    if (act->ahd_flags & QEA_NODEACT)
-		qen_dsh_fixup(dsh, act->qhd_obj.qhd_qep.ahd_qep);
+            if ( ( (exch->exch_flag & EXCH_UNION) == 0 ||
+                   (dsh->dsh_threadno == i) )
+                 &&
+                 (act->ahd_flags & QEA_NODEACT) )
+		qen_dsh_fixup(dsh, act->qhd_obj.qhd_qep.ahd_qep, exch);
 	}
     }
 
