@@ -1494,6 +1494,8 @@ GLOBALREF SC_MAIN_CB *Sc_main_cb; /* server control block */
 **	    Make this table ever so slightly less stupid by incorporating
 **	    the PSY call op-code, so we can table drive all the bazillions
 **	    of little psy-call's.
+**	15-apr-2010 (dougi) BUG 121220
+**	    Add "psitional parm" flag to QEF structures for nameless proc parms.
 */
 typedef struct _SQNCR_TBL
 {
@@ -12287,6 +12289,9 @@ scs_input(SCD_SCB *scb,
 		    && !ult_check_macro(&Sc_main_cb->sc_trace_vector, SCT_NOBYREF,
 					NULL,NULL))?
 						QEF_IS_OUTPUT : 0;
+			/* Name-less parm must be positional. */
+			if (qup->parm_nlen == 0)
+			    qup->parm_flags |= QEF_IS_POSPARM;
 
 
                         /* keep old gpm for use with SC930/printqry output */
@@ -15394,6 +15399,9 @@ scs_fdbp_data(SCD_SCB	  *scb,
 		    && !ult_check_macro(&Sc_main_cb->sc_trace_vector, SCT_NOBYREF,
 				       NULL,NULL))?
 						QEF_IS_OUTPUT : 0;
+	    /* Name-less parm must be positional. */
+	    if (qup->parm_nlen == 0)
+		qup->parm_flags |= QEF_IS_POSPARM;
 
 	    if (qup->parm_dbv.db_length <= qry_size)
 	    {
