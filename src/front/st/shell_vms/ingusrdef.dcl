@@ -40,6 +40,10 @@ $!!	25-jan-2005 (abbjo03)
 $!!	    Remove Vision tutorial.
 $!!     12-oct-2007 (Ralph Loen) Bug 119296
 $!!         Rename iiodbcadmn to iiodbcadmin.
+$!!	26-Apr-2010 (hanje04)
+$!!	    SIR 123608
+$!!	    Make ii_system:[ingres.utility]ingres invoke SQL session instead of
+$!!	    QUEL
 $!!
 $ iijobdef := $ii_system:[ingres.utility]iijobdef.exe
 $ saved_message_format = f$environment( "MESSAGE" ) ! save message format
@@ -98,7 +102,7 @@ $ iiimport      :== "$ii_system:[ingres.bin]iiimport.exe"
 $ imageapp	:== "$ii_system:[ingres.bin]iiabf.exe imageapp"
 $ impxml 	:== "$ii_system:[ingres.bin]impxml.exe"
 $ ingmenu	:== "$ii_system:[ingres.bin]ingmenu.exe"
-$ ingres	:== "$ii_system:[ingres.bin]tm.exe -qQUEL"
+$ ingres	:== "$ii_system:[ingres.bin]tm.exe -qSQL"
 $ iquel		:== "$ii_system:[ingres.bin]itm.exe"
 $ isql		:== "$ii_system:[ingres.bin]itm.exe -sql"
 $ modifyfe	:== "$ii_system:[ingres.bin]modifyfe.exe"
