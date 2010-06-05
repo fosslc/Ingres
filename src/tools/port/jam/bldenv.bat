@@ -90,6 +90,13 @@ REM	07-Apr-2010 (drivi01)
 REM	     Add routines for setting up environment on x64.
 REM	     Use cygwin shell for the build instead of MKS shell.  MKS shell
 REM	     gets an error.
+REM     14-may-2010 (maspa05)
+REM          New versions of flex (>=2.5.31) require the --nounistd flag to 
+REM          work correctly on Windows. Earlier versions (typically 2.5.4) will 
+REM          fail with an unrecognised flag. Store the flag in %FLEX_FLAG%
+REM          which is then appended to FLEX by Jamdefs.
+REM          If FLEX_FLAG is already set then use that value, otherwise set
+REM          it based on the detected version of flex.
 REM
 
 :TRUNK_LOOP
@@ -160,7 +167,7 @@ if "%CAZIPXP%"=="" SET CAZIPXP=%ING_ROOT%\cazipxp
 if not exist "%CAZIPXP%" echo %CAZIPXP% does not exist& SET CAZIPXP=& goto CAZIPXP
 
 REM Check if Cygwin is installed
-if "%USE_CYGWIN%"=="TRUE" goto SHELL_SET
+if "%USE_CYGWIN%"=="TRUE" goto FLEX_SET
 SET USE_CYGWIN=
 which cygpath.exe > nul: 2>&1
 if errorlevel 1 goto CHK_UNXLOC
@@ -176,12 +183,25 @@ which ls.exe | cygpath -am -f- | sed "s:/:\\:g" | sed "s:\\ls.exe::g" >> settmp.
 :CALLSETTMP
 call settmp.bat
 rm settmp.bat
-goto SHELL_SET
+goto FLEX_SET
 
 :GET_UNXLOC
 SET /P MKSLOC=Root location of the UNIX tools: 
 if not exist "%MKSLOC%\ls.exe" echo This location does not contain the appropriate set of UNIX tools.& goto GET_UNXLOC
 SET PATH=%WindowsSdkDir%\bin;%MKSLOC%;%PATH%
+
+:FLEX_SET
+REM if FLEX_FLAG is not set then set according to version of flex 
+if NOT "%FLEX_FLAG%"=="" goto SHELL_SET
+SET FLEX_FLAG=--nounistd
+printf "SET FLEXVER=" > settmp.bat
+flex --version | cut -d. -f3 >> settmp.bat
+call settmp.bat
+rm settmp.bat
+REM note the following line end in FLEX_FLAG={space} - this is important as it
+REM sets an empty string rather than unset the variable
+if %FLEXVER% LSS 31 SET FLEX_FLAG= 
+SET FLEXVER=
 
 :SHELL_SET
 @echo on

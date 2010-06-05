@@ -140,7 +140,13 @@
 #	    Correct build problem caused by previous change. 
 #	    Don't eliminate WCHART.  Make /Zc:wchar_t- the default for xerces
 #	    2.7 and make the default unset for all newer xerces versions.
-#
+#       15-May-2010 (maspa05)
+#           Set FLEX to include FLEX_FLAG which for later versions (>=2.5.31)
+#           of flex should be --nounistd and earlier ones should be an empty
+#           string. 
+#           Default to --nounistd for cygwin but no flag for MKS based on
+#           current versions of flex in both.
+#           Can be overriden by setting FLEX_FLAG in environment
 #
 #VARS
 #
@@ -194,11 +200,11 @@ CD		= "cd /d" ;
 CP		= "cp -f" ;
 RM		= "rm -f" ;
 CHMOD		= chmod ;
-FLEX		= flex ;
 if $(USE_CYGWIN)
 {
-    FLEX	= flex --nounistd ;
+   FLEX_FLAG       ?=  --nounistd ;
 }
+FLEX		= flex $(FLEX_FLAG) ;
 LEX 		= flex ;
 AWK		= $(AWK_CMD) ;
 REBASE		= rebase ;

@@ -33,6 +33,13 @@
 #	    Eliminated need for -DKRB5_SYSTYPES__
 #	15-Oct-2008 (whiro01)
 #	    Added /nologo to linker flags; took off /PDB:none and /WARN.
+#       15-May-2010 (maspa05)
+#           Set FLEX to include FLEX_FLAG which for later versions (>=2.5.31)
+#           of flex should be --nounistd and earlier ones should be an empty
+#           string. 
+#           Default to --nounistd for cygwin but no flag for MKS based on
+#           current versions of flex in both.
+#           Can be overriden by setting FLEX_FLAG in environment
 
 # Tell Jamdefs that this include worked:
 JAMDEFS_INCLUDED = true ;
@@ -74,7 +81,11 @@ CD		= "cd /d" ;
 CP		= "cp -f" ;
 RM		= "rm -f" ;
 CHMOD		= chmod ;
-FLEX		= flex ;
+if $(USE_CYGWIN)
+{
+   FLEX_FLAG       ?=  --nounistd ;
+}
+FLEX		= flex $(FLEX_FLAG) ;
 LEX 		= flex ;
 AWK		= $(AWK_CMD) ;
 REBASE		= rebase ;
