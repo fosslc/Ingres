@@ -3,6 +3,7 @@
 #include <lo.h>
 #include <si.h>
 #include <st.h>
+#include <cv.h>
 
 #include <sepdefs.h>
 #include <edit.h>
@@ -73,6 +74,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
                           
 GLOBALREF    FILE_TOKENS  *list1 ;

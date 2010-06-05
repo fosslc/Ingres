@@ -13,6 +13,7 @@
 #include <st.h>
 #include <tc.h>
 #include <te.h>
+#include <cv.h>
 #include <termdr.h>
 
 #define sepostcl_c
@@ -187,6 +188,8 @@
 **	    replace nat and longnat with i4
 **      05-Sep-2000 (hanch04)
 **          replace nat and longnat with i4
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 
 /*

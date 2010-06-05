@@ -10,6 +10,7 @@
 #include <lo.h>
 #include <me.h>
 #include <termdr.h>
+#include <cv.h>
 
 #define sepparm_c
 
@@ -84,6 +85,8 @@
 **      26-Sep-2006 (hanal04)
 **          Implement Bob Bonchik's for environment variables that have no
 **          value. Now they get a space.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Optimizations for single byte
 */
 
 /*
