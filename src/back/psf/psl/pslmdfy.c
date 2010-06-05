@@ -184,6 +184,10 @@
 **	28-May-2009 (kschendel) b122118
 **	    Catch bogus index modifies (eg truncated) sooner.
 **	    Table drive single-keyword with-clause actions.
+**	09-Apr-2010 (frima01) SIR 122739
+**	    In psl_md3_modstorage change DMU char to the with-option
+**	    form of unique_scope to facilitate distinguishing catalog
+**	    only modifies from table structure changes.
 [@history_template@]...
 */
 
@@ -1103,8 +1107,10 @@ psl_md3_modstorage(
 
     if (entr->char_id == DMU_TO_STATEMENT_LEVEL_UNIQUE)
     {
-	/* "MODIFY ... TO ... UNIQUE UNIQUE_SCOPE = STATEMENT ... - skip
+	/* "MODIFY ... TO ... UNIQUE UNIQUE_SCOPE = STATEMENT ... - change
+	** the DMU char to the with-option form of unique_scope and move
 	** to next entry. */
+	entr->char_id = DMU_STATEMENT_LEVEL_UNIQUE;
 	dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
 	entr = (DMU_CHAR_ENTRY *) ((char *)entr + sizeof(DMU_CHAR_ENTRY));
     }
