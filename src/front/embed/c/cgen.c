@@ -1714,6 +1714,9 @@ register i4     args;
 **      28-Apr-2010 (coomi01) b123643
 **          The dimension string may be an expression, must bracket it
 **          to ensure proper evaluation.
+**	13-May-2010 (gupsh01)
+**	    When the buffer size is declared using a #define, nvarchar struct
+**	    length calculated for passing to IIgetdomio may be incorrect.
 */
 
 i4
@@ -1868,7 +1871,8 @@ register i4	arg;
 #ifdef	PMFE
 	    gen__obj( TRUE, "(long)");
 #endif
-	    if (dattyp == T_WCHAR)
+	    if ((dattyp == T_WCHAR) ||
+	        (dattyp == T_NVCH))
 	    {
 		gen__obj(TRUE, ERx("(("));
 		gen__obj(TRUE, dimstr);
