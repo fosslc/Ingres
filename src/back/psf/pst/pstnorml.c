@@ -2410,6 +2410,8 @@ pst_qtree_dot1(
 **	18-Mar-2010 (kiria01) b123438
 **	    Add support for rngvars to be dumped & tables to be
 **	    named.
+**	21-Apr-2010 (kiria01) b123618
+**	    Avoid directly accessing location content.
 */
 
 void
@@ -2440,10 +2442,15 @@ pst_qtree_dot(
         return;
     }
 
-    SIfprintf(fd, "digraph qtree{fontname=\"Courier\";fontsize=10;"
+    {
+	char dummy[LO_NM_LEN], name[LO_NM_LEN];
+	LOdetail(&loc, dummy, dummy, name, dummy, dummy);
+
+	SIfprintf(fd, "digraph qtree{fontname=\"Courier\";fontsize=10;"
 		"ordering=out;labelloc=t;labeljust=l;label=\"%s\";\n"
 		"node[fontname=\"Courier\",fontsize=10,shape=record];\n"
-		"edge[fontname=\"Courier\",fontsize=10];\n", loc.fname);
+		"edge[fontname=\"Courier\",fontsize=10];\n", name);
+    }
 
     MEfill(sizeof (adfcb), 0, &adfcb); 
     adfcb.adf_outarg.ad_f4width = 11;/* min field width for f4 */

@@ -188,6 +188,13 @@ psl_project_corr_vars (
 ** History:
 **	02-Nov-2009 (kiria01) 
 **	    Created to flatten 1 full tree at a time.
+**	22-Apr-2010 (kiria01) b123618
+**	    Aggregate restrictions were being moved from the AGHEAD to
+**	    derived table root regardless of need. However, if the
+**	    happened to be a join between tables referenced in the AGHEAD
+**	    then the aggregate could see more rows than it should. The
+**	    AGHEAD qualifier is now treated with psl_float_vars to make
+**	    sure that only the required floating happens.
 */
 
 static DB_STATUS
@@ -582,7 +589,6 @@ psl_flatten1(
 		PST_QNODE *residue = subsel->pst_left;
 		PST_QNODE **agheadp = NULL;
 		PST_J_ID joinid = PST_NOJOIN;
-		PST_QNODE *qual = NULL;
 		bool has_DISTINCT = subsel->pst_sym.pst_value.pst_s_root.pst_dups == PST_NODUPS;
 
 		PST_STK_INIT(norm_stk, cb);
@@ -681,7 +687,6 @@ psl_flatten1(
 				(char *)&subsel->pst_sym.pst_value.pst_s_root.pst_tvrm) &&
 				!(psl_find_node(residue->pst_right, NULL, PST_AGHEAD)))
 		    {
-			PST_QNODE *qual = NULL;
 			do
 			{
 			    /* No aggregation on result - we will insert an aggregation on
@@ -942,12 +947,8 @@ psl_flatten1(
 			    yyvarsp->rng_vars[resrange->pss_rgno] = resrange;
 			}
 
-			/* Retarget any HAVING vars */
-			psl_retarget_vars(cb, subsel->pst_right, subsel, resrange);
-
-			qual = NULL;
 			/* If has_DISTINCT then the next loop is a no-ops as there
-			** will not be an aggregates and no BYHEAD to build */
+			** will not be any aggregates and no BYHEAD to build */
 			while (psl_find_nodep(&residue->pst_right, &agheadp, PST_AGHEAD))
 			{
 			    PST_QNODE *byhead = NULL;
@@ -1008,28 +1009,15 @@ psl_flatten1(
 				    return E_DB_ERROR;
 				}
 			    }
-			    /* Renaming qual var nodes to refer to drtab */
-			    psl_retarget_vars(cb, aghead->pst_right, subsel, resrange);
-
-			    if (!qual)
-				qual = aghead->pst_right;
-			    else if (aghead->pst_right &&
-				    aghead->pst_right->pst_sym.pst_type != PST_QLEND)
-			    {
-				PST_STK_CMP cmpctx;
-				PST_STK_CMP_INIT(cmpctx, cb, yyvarsp->rng_vars);
-				if (pst_qtree_compare(&cmpctx, &qual, &aghead->pst_right, FALSE))
-				{
-				    psl_bugbp(/**/); /* FIXME - should not happen as aggs should be
-						  ** sourced from same */
-				}
-			    }
-			    /* Terminate the AGH qual or nasty things happen later.... */
-			    if (status = pst_node(cb, &cb->pss_ostream, NULL, NULL,
-					PST_QLEND, NULL, 0, 0, 0, 0, (DB_ANYTYPE *)NULL,
-					&aghead->pst_right, &psq_cb->psq_error, (i4) 0))
+			    /* Float non-local factors from the aggregate - will not leave
+			    ** AGH qual unterminated */
+			    if (status = psl_float_factors(cb, psq_cb, aghead, subsel))
 				return status;
 			}
+			/* Retarget any HAVING vars or qual var nodes just added
+			** to refer to drtab */
+			psl_retarget_vars(cb, subsel->pst_right, subsel, resrange);
+
 
 			/* We need to retarget the inner rels for joinid in rng_vars. */
 			if ((joinid = subsel->pst_sym.pst_value.pst_s_root.pst_ss_joinid) != PST_NOJOIN)
@@ -1129,10 +1117,6 @@ psl_flatten1(
 			    /* Force the rescan */
 			    agheadp = NULL;
 			}
-			/* Add all the qual to subsel qual */
-			if (status = psy_apql(cb, &cb->pss_ostream, qual, subsel,
-				    &psq_cb->psq_error))
-			    return status;
 			
 			/* Retarget any naked VARs in the residue */
 			psl_retarget_vars(cb, residue, subsel, resrange);
@@ -1272,7 +1256,7 @@ psl_flatten1(
 			}
 		    }
 		}
-		else
+		else if (rt_node)
 		{
 		    /*
 		    **           ROOT                         ROOT
