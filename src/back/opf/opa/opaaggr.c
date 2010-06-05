@@ -473,6 +473,11 @@ opa_rename(
 **	24-jan-07 (hayke02)
 **	    Avoid variable substitution if covar or localvar are the outer var
 **	    in an outer join. This change fixes bug 117304.
+**      25-mar-2010 (huazh01)
+**          don't do variable substitution if subquery contains
+**          corelated variable aggregage OPS_COAGG. It can be optimized
+**          better in opa_push()/opa_suck() if opa_varsub() does not
+**          modify its query tree. (b119735)
 [@history_template@]...
 */
 static VOID
@@ -500,6 +505,11 @@ opa_varsub(
 
 	/* b116202 */
         if (subquery->ops_root->pst_sym.pst_value.pst_s_root.pst_mask1 & PST_6HAVING)
+            continue; 
+
+        /* b119735 */
+        if (subquery->ops_sqtype == OPS_FAGG &&
+            subquery->ops_mask & OPS_COAGG)
             continue; 
 
 	/* ensure the no more than 1 correlated variables exist in the by list, otherwise
