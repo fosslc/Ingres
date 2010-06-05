@@ -102,6 +102,8 @@ LIBRARY = IMPDMFLIBDATA
 **	28-apr-2010 (miket) SIR 122403
 **	    Change relenckey from char to byte, maybe not critical to do
 **	    but better represents the nature of the stored data.
+**      29-Apr-2010 
+**          Create core catalogs having long ids with compression=(data)
 */
 
 /* dmmcre.c */
@@ -133,7 +135,11 @@ LIBRARY = IMPDMFLIBDATA
 #define DUMMY_ATTRIBUTE_NUMBER  -1
 #define DUMMY_TUPLE_COUNT       -1
 
-#define reldef(tabid, relid, relwid, relkeys, relidxcount, relstat, relstat2, relmin)\
+/*
+** NOTE there is code in dmverep/dmveput/dmvedel that assumes 
+** that reltid is first column in reltid
+*/
+#define reldef(tabid, relid, relwid, relkeys, relidxcount, relstat, relstat2, relmin, relcomptype)\
     tabid, /* reltid,reltidx */\
     {relid},\
     {"$ingres"},\
@@ -168,7 +174,7 @@ LIBRARY = IMPDMFLIBDATA
     DM_TBL_DEFAULT_FHDR_PAGENO, /* relfhdr */\
     DM_TBL_DEFAULT_ALLOCATION, /* relallocation */\
     DM_TBL_DEFAULT_EXTEND, /* relextend */\
-    TCB_C_NONE, /*relcomptype */\
+    relcomptype,\
     TCB_PG_V1, /* relpgtype */\
     relstat2, /* relstat2 */\
     { ' ' }, /* relfree1 */\
@@ -186,24 +192,29 @@ LIBRARY = IMPDMFLIBDATA
     { ' ' } /* relfree */
 
 #define CORE_RELSTAT (TCB_CATALOG | TCB_NOUPDT | TCB_CONCUR | TCB_PROALL | TCB_SECURE | TCB_DUPLICATES)
-GLOBALDEF DMP_RELATION DM_core_relations[] =
+#define REL_RELSTAT (CORE_RELSTAT | TCB_COMPRESSED)
+#define RIDX_RELSTAT (CORE_RELSTAT | TCB_COMPRESSED)
+#define ATT_RELSTAT (CORE_RELSTAT | TCB_COMPRESSED)
+#define IND_RELSTAT (CORE_RELSTAT)
+
+GLOBALDEF DMP_RELATION DM_core_relations[DM_CORE_REL_CNT] =
 {
     {
-	/* reltid, relid, relwid, relkeys, relidxcount, relstat, relmin */
-	reldef(REL_TAB_ID, "iirelation", sizeof(DMP_RELATION), 1, 1, CORE_RELSTAT | TCB_IDXD, TCB2_PHYSLOCK_CONCUR, 16)
+        /* reltid,relid,relwid,relkeys,relidxcount,relstat,relmin,relcomptype */
+	reldef(REL_TAB_ID, "iirelation", sizeof(DMP_RELATION), 1, 1, REL_RELSTAT | TCB_IDXD, TCB2_PHYSLOCK_CONCUR, 16, TCB_C_STANDARD)
     },
     {
-	reldef(RIDX_TAB_ID, "iirel_idx", sizeof(DMP_RINDEX), 2, 0, CORE_RELSTAT | TCB_INDEX, TCB2_PHYSLOCK_CONCUR, 8)
+	reldef(RIDX_TAB_ID, "iirel_idx", sizeof(DMP_RINDEX), 2, 0, RIDX_RELSTAT | TCB_INDEX, TCB2_PHYSLOCK_CONCUR, 8, TCB_C_STANDARD)
     },
     {
-	reldef(ATT_TAB_ID, "iiattribute", sizeof(DMP_ATTRIBUTE), 2, 0, CORE_RELSTAT, TCB2_PHYSLOCK_CONCUR, 32)
+	reldef(ATT_TAB_ID, "iiattribute", sizeof(DMP_ATTRIBUTE), 2, 0, ATT_RELSTAT, TCB2_PHYSLOCK_CONCUR, 32, TCB_C_STANDARD)
     },
     {
-	reldef(IND_TAB_ID, "iiindex", DMP_INDEX_SIZE, 1, 0, CORE_RELSTAT, TCB2_PHYSLOCK_CONCUR, 8)
+	reldef(IND_TAB_ID, "iiindex", DMP_INDEX_SIZE, 1, 0, IND_RELSTAT, TCB2_PHYSLOCK_CONCUR, 8, TCB_C_NONE)
     },
 };
 
-GLOBALDEF DMP_RELATION DM_ucore_relations[4];
+GLOBALDEF DMP_RELATION DM_ucore_relations[DM_CORE_REL_CNT];
 
 
 
@@ -225,7 +236,7 @@ tabid, DUMMY_ATTRIBUTE_NUMBER, 0, name, offset, len, iskey, 0, {DB_DEF_ID_0}, 0,
 
 GLOBALDEF DMP_ATTRIBUTE DM_core_attributes[] =
 {
-    /* NOTE!!! if you add/delete entries, adjust sizeof DM_ucore_attributes */
+    /* tabid, attname, offset, len, iskey */
     { attdef_int(REL_TAB_ID, "reltid", REL_OFFSET(reltid.db_tab_base), 4, 1) },
     { attdef_int(REL_TAB_ID, "reltidx", REL_OFFSET(reltid.db_tab_index), 4, 0) },
     { attdef_cha(REL_TAB_ID, "relid", REL_OFFSET(relid), DB_TAB_MAXNAME, 0) },
@@ -376,7 +387,9 @@ GLOBALDEF DMP_ATTRIBUTE DM_core_attributes[] =
 #endif /* NOT_UNTIL_CLUSTERED_INDEXES */
 };
 
-GLOBALDEF DMP_ATTRIBUTE DM_ucore_attributes[114];
+#define CORE_ATT_COUNT (sizeof(DM_core_attributes)/ sizeof(DMP_ATTRIBUTE))
+GLOBALDEF i4 DM_core_att_cnt = CORE_ATT_COUNT; 
+GLOBALDEF DMP_ATTRIBUTE DM_ucore_attributes[CORE_ATT_COUNT];
 
 
 /*
@@ -384,7 +397,7 @@ GLOBALDEF DMP_ATTRIBUTE DM_ucore_attributes[114];
 **  core system tables.
 */
 
-GLOBALDEF DMP_RINDEX core_rindex[] =
+GLOBALDEF DMP_RINDEX DM_core_rindex[DM_CORE_RINDEX_CNT] =
 {
     { "iirelation", "$ingres", 0 },
     { "iirel_idx", "$ingres", 1 },
@@ -392,31 +405,7 @@ GLOBALDEF DMP_RINDEX core_rindex[] =
     { "iiindex", "$ingres", 3 }
 };
 
-GLOBALDEF DMP_RINDEX ucore_rindex[4];
-
-/*
-** Number of elements in DM_core_relations
-*/
-GLOBALDEF i4 DM_sizeof_core_rel = sizeof(DM_core_relations)/
-                                        sizeof(DMP_RELATION);
-
-/*
-** Number of elements in DM_core_attributes
-** 27-aug-1996 (wilan06)
-**      added
-*/
-GLOBALDEF i4 DM_sizeof_core_attr = sizeof(DM_core_attributes)/
-                                   sizeof(DMP_ATTRIBUTE);
-GLOBALDEF i4 DM_sizeof_ucore_attr = sizeof(DM_ucore_attributes)/
-                                   sizeof(DMP_ATTRIBUTE);
-
-
-/*
-** Number of elements in core_rindex structure
-** 27-aug-1996 (wilan06)
-**      added
-*/
-GLOBALDEF i4 DM_sizeof_core_rindex = sizeof(core_rindex)/sizeof(DMP_RINDEX);
+GLOBALDEF DMP_RINDEX DM_ucore_rindex[DM_CORE_RINDEX_CNT];
 
 /*
 **  This table contains the initialized IIINDEX records for the
@@ -424,19 +413,16 @@ GLOBALDEF i4 DM_sizeof_core_rindex = sizeof(core_rindex)/sizeof(DMP_RINDEX);
 */
 
 
-GLOBALDEF DMP_INDEX core_index[] =
+GLOBALDEF DMP_INDEX DM_core_index[] =
 {
     {
         DM_B_RIDX_TAB_ID, DM_I_RIDX_TAB_ID, 0, { 3, 4 }
     }
 };
 
+#define CORE_INDEX_COUNT (sizeof(DM_core_index)/ sizeof(DMP_INDEX))
+GLOBALDEF i4 DM_core_index_cnt = CORE_INDEX_COUNT;
+GLOBALDEF DMP_INDEX DM_ucore_index[CORE_INDEX_COUNT];
 
-/*
-** Number of elements in core_index array
-** 27-aug-1996 (wilan06)
-**      added
-*/
-GLOBALDEF i4 DM_sizeof_core_index = sizeof(core_index)/ DMP_INDEX_SIZE;
 
 

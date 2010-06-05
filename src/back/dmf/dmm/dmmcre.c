@@ -28,7 +28,9 @@
 #include    <dml.h>
 #include    <dmp.h>
 #include    <dmpp.h>
+#include    <dmppn.h>
 #include    <dm1c.h>
+#include    <dm1cn.h>
 #include    <dm1p.h>
 #include    <dm2t.h>
 #include    <dm2f.h>
@@ -291,6 +293,8 @@
 **          Use more readable variable names
 **	23-apr-2010 (wanfr01)
 **	    include cv.h for function definitions
+**      29-Apr-2010 
+**          Create core catalogs having long ids with compression=(data)
 */
 
 /* core table ids */
@@ -341,16 +345,12 @@ static DB_STATUS 	create_db(
 
 static DB_STATUS 	build_file(
 				    DB_DB_NAME		*db_name,
-				    DB_TAB_NAME		*table_name,
-				    DB_LOC_NAME		*location_name,
+				    i4			db_service,
+				    DMP_RELATION	*rel,
+				    DMP_ROWACCESS	*rac,
 				    DM_PATH		*path_name,
-				    i4		path_length,
-				    i4			page_type,
-				    i4			page_size,
-				    DB_TAB_ID		*table_id,
+				    i4			path_length,
 				    char		*records,
-				    i4		record_size,
-				    i4		record_count,
 				    DB_ERROR		*dberr);
 
 	
@@ -474,69 +474,42 @@ static DB_STATUS 	dmm_setup_tables_relfhdr(
 **	    B56095.  Initialize config file jnl_first_jnl_seq entry.
 */
 
-/*
-**  This table contains the initialized IIRELATION records for the
-**  core system tables.  At server startup, we space pad names to
-**  DB_MAXNAME positions and fill in the number of attributes per relation.
-*/
 
+/*
+** DM_core_relations contains IIRELATION records for core catalogs.
+** DM_ucore_relations contains IIRELATION records with upper-case identifiers.
+** At server startup we space pad names to DB_MAXNAME positions
+** and fill in number of attributes per relation.
+*/
 GLOBALREF DMP_RELATION DM_core_relations[];
-
-/*
-** Number of elements in DM_core structures
-*/
-GLOBALREF i4 DM_sizeof_core_rel;
-GLOBALREF i4 DM_sizeof_core_attr;
-GLOBALREF i4 DM_sizeof_ucore_attr;
-GLOBALREF i4 DM_sizeof_core_rindex;
-GLOBALREF i4 DM_sizeof_core_index;
-
-/*
-**  This table is the same as DM_core_relations, except it contains
-**  upper-cased identifier fields for databases with upper-cased
-**  regular identifiers.
-*/
 GLOBALREF DMP_RELATION DM_ucore_relations[];
 
-
 /*
-**  This table contains the initialized IIATTRIBUTE records for the
-**  core system tables.
+** DM_core_attributes contains IIATTRIBUTE records for core catalogs.
+** DM_ucore_attributes contains IIATTRIBUTE records with upper-case identifiers.
+** At server startup we space pad names to DB_MAXNAME positions
 */
-
 GLOBALREF DMP_ATTRIBUTE DM_core_attributes[];
-
-/*
-**  This table is the same as DM_core_attributes, except it contains
-**  upper-cased identifier fields for databases with upper-cased
-**  regular identifiers.
-*/
 GLOBALREF DMP_ATTRIBUTE DM_ucore_attributes[];
-
-
-/*
-**  This table contains the initialized Relation index records for the
-**  core system tables.
-*/
-
-GLOBALREF DMP_RINDEX core_rindex[];
+GLOBALREF i4 DM_core_att_cnt;
 
 /*
-**  This table is the same as core_rindex, except it contains
-**  upper-cased identifier fields for databases with upper-cased
-**  regular identifiers.
+**  DM_core_rindex contains IIREL_IDX records for core catalogs.
+**  DM_ucore_rindex contains IIREL_IDX records with upper-case identifiers.
+**  At server startup we space pad names to DB_MAXNAME positions
 */
-GLOBALREF DMP_RINDEX ucore_rindex[];
+GLOBALREF DMP_RINDEX DM_core_rindex[];
+GLOBALREF DMP_RINDEX DM_ucore_rindex[];
 
 /*
-**  This table contains the initialized IIINDEX records for the
-**  core system tables.
+**  DM_core_index contains IIINDEX records for core catalogs.
+**  There is no upper-case version because IIINDEX does not have identifiers.
 */
+GLOBALREF DMP_INDEX DM_core_index[];
+GLOBALREF DMP_INDEX DM_uore_index[];
+GLOBALREF i4 DM_core_index_cnt;
 
 
-GLOBALREF DMP_INDEX core_index[];
-
-
 /*
 ** Name: dmm_create		- create the CONFIG file for a database
 **
@@ -1043,8 +1016,22 @@ DB_ERROR	*dberr)
 
     DMP_RELATION    *lcl_relations	= DM_core_relations;
     DMP_ATTRIBUTE   *lcl_attributes	= DM_core_attributes;
-    DMP_RINDEX	    *lcl_rindex		= core_rindex;
+    DMP_RINDEX	    *lcl_rindex		= DM_core_rindex;
     DML_SCB	    *scb;
+#define MAX_CORE_ATTS 75
+    i4		    i, j, k;
+    DB_ATTS	    db_atts[MAX_CORE_ATTS];
+    DB_ATTS	    *db_att_ptrs[MAX_CORE_ATTS];
+    i4		    cmpcontrol_size;
+    char	    cmpcontrol_buf[MAX_CORE_ATTS * 3 * sizeof(DM1CN_CMPCONTROL)];
+    DMP_ROWACCESS   rac;
+    DMP_RELATION    *rel;
+    DMP_ATTRIBUTE   *att;
+    char	    *records;
+    i4		    record_count;
+    DMP_RELATION    tmp_relations[DM_CORE_REL_CNT];
+    i4		    data_pages;
+    i4		    tperpage;
 
     /*	Compute length of database name. */
 
@@ -1077,7 +1064,7 @@ DB_ERROR	*dberr)
     {
 	lcl_relations	= DM_ucore_relations;
 	lcl_attributes	= DM_ucore_attributes;
-	lcl_rindex	= ucore_rindex;
+	lcl_rindex	= DM_ucore_rindex;
     }
 
     status = DIdircreate(&di_context, device_name->name, device_length,
@@ -1208,30 +1195,83 @@ DB_ERROR	*dberr)
     if (db_access & DU_RDONLY)
     	return status;
 
-    /*	Create core relations. */
+    /*
+    ** Fix all iirelation tuples before we build iirelation
+    ** Do this here so we calculate relfhdr once 
+    ** build_file() allocates (rel->relfhdr - 1) data pages
+    ** This eliminates any need to fix up the rel->relhdr after loading rows
+    */
+    for (rel = &tmp_relations[0], i = 0; i < DM_CORE_REL_CNT; rel++, i++)
+    {
+	*rel = lcl_relations[i];
+	tperpage = DMPP_TPERPAGE_MACRO(page_type, page_size, rel->relwid);
+	data_pages = (rel->reltups / tperpage) + 1;
+	rel->relpgtype = page_type;
+	rel->relpgsize = page_size;
+	rel->relloc = *location_name;
+	rel->relfhdr = data_pages + 1;
+    }
 
-    dbstatus = build_file(db_name, &lcl_relations[0].relid,
-	location_name, path_name, path_length, page_type, page_size, 
-	&lcl_relations[0].reltid, (char *)lcl_relations, sizeof(DMP_RELATION),
-	DM_sizeof_core_rel, dberr);
-    if (dbstatus == E_DB_OK)
-	dbstatus = build_file(db_name, 
-	    &lcl_relations[1].relid, location_name, path_name, path_length,
-	    page_type, page_size, &lcl_relations[1].reltid, (char *)lcl_rindex, 
-	    sizeof(DMP_RINDEX),
-	    DM_sizeof_core_rindex, dberr); 
-    if (dbstatus == E_DB_OK)
-	dbstatus = build_file(db_name, 
-	    &lcl_relations[2].relid, location_name, path_name, path_length,
-	    page_type, page_size, &lcl_relations[2].reltid, (char *)lcl_attributes, 
-	    sizeof(DMP_ATTRIBUTE), 
-	    DM_sizeof_core_attr, dberr);
-    if (dbstatus == E_DB_OK)
-	dbstatus = build_file(db_name,  
-	    &DM_core_relations[3].relid, location_name, path_name, path_length,
-	    page_type, page_size,
-            &DM_core_relations[3].reltid, (char *)core_index, DMP_INDEX_SIZE,
-            DM_sizeof_core_index, dberr);
+    /* reset lcl_relations to the iirelation tups we fixed */
+    lcl_relations = &tmp_relations[0];
+
+    /*	Create core relations. */
+    for ( rel = lcl_relations, i = 0; i < DM_CORE_REL_CNT; rel++, i++)
+    {
+	if (rel->reltid.db_tab_base == DM_B_RELATION_TAB_ID &&
+		rel->reltid.db_tab_index == DM_I_RELATION_TAB_ID)
+	    records = (char *)lcl_relations; /* the reltups we FIXED */
+	else if (rel->reltid.db_tab_base == DM_B_RIDX_TAB_ID &&
+		rel->reltid.db_tab_index == DM_I_RIDX_TAB_ID)
+	    records = (char *)lcl_rindex;
+	else if (rel->reltid.db_tab_base == DM_B_ATTRIBUTE_TAB_ID)
+	    records = (char *)lcl_attributes;
+	else
+	    records = (char *)DM_core_index;
+
+	/* Build DB_ATTS for the core catalog we are loading */
+	MEfill(sizeof(db_atts), 0, &db_atts);
+	MEfill(sizeof(rac), 0, &rac);
+	rac.att_ptrs = &db_att_ptrs[0];
+	rac.att_count = rel->relatts;
+	rac.compression_type = rel->relcomptype;
+	cmpcontrol_size = dm1c_cmpcontrol_size(rel->relcomptype,
+		rel->relatts, rel->relversion);
+	cmpcontrol_size = DB_ALIGN_MACRO(cmpcontrol_size);
+	rac.control_count = cmpcontrol_size;
+	rac.cmp_control = cmpcontrol_buf;
+	if (rac.control_count > sizeof(cmpcontrol_buf))
+	{
+	    /* stack buffer isn't big enough */
+	    SETDBERR(dberr, 0, E_DM011B_ERROR_DB_CREATE);
+	    return (E_DB_ERROR);
+	}
+
+	for (att = DM_core_attributes, j = 0, k = 0; 
+		j < DM_core_att_cnt; j++, att++)
+	{
+	    if (att->attrelid.db_tab_base == rel->reltid.db_tab_base &&
+		    att->attrelid.db_tab_index == rel->reltid.db_tab_index)
+	    {
+		/* init DB_ATTS fields used by compression routines */
+		db_att_ptrs[k] = &db_atts[k];
+		db_atts[k].length = att->attfml;
+		db_atts[k].type = att->attfmt;
+		db_atts[k].precision = att->attfmp;
+		k++;
+	    }
+	}
+	dbstatus = dm1c_rowaccess_setup(&rac);
+	if (dbstatus != E_DB_OK)
+	    break;
+
+	dbstatus = build_file(db_name, db_service, rel, &rac,
+	    path_name, path_length, records, dberr);
+
+	if (dbstatus)
+	    break;
+    }
+
     if (dbstatus == E_DB_OK)
 	return (dbstatus);
 
@@ -1251,16 +1291,13 @@ DB_ERROR	*dberr)
 **
 ** Inputs:
 **      db_name                         Pointer to database name.
-**      table_name                      Pointer to table name
-**      location_name                   Pointer to Location of the table.
+**      db_service
+**      rel				relation tuple for catalog to build
+**	rac				DMP_ROWACCESS
 **      path_name                       Pointer to physical path.
 **      path_length                     length of physical path.
-**      page_type			page type
-**      page_size                       page size
-**      table_id                        Pointer to table id.
 **      records                         Pointer to tuples to put in table.
-**      record_size                     Length of tuples.
-**      record_count                    Number of tuples.
+**
 ** Outputs:
 **      err_code                        Pointer to an area to return
 **
@@ -1326,20 +1363,16 @@ DB_ERROR	*dberr)
 static DB_STATUS
 build_file(
 DB_DB_NAME	*db_name,
-DB_TAB_NAME	*table_name,
-DB_LOC_NAME	*location_name,
+i4		db_service,
+DMP_RELATION	*rel,
+DMP_ROWACCESS	*rac,
 DM_PATH		*path_name,
 i4		path_length,
-i4		page_type,
-i4		page_size,
-DB_TAB_ID	*table_id,
 char		*records,
-i4		record_size,
-i4		record_count,
 DB_ERROR	*dberr)
 {
     char	*r = records;
-    i4	count = record_count;
+    i4	count = rel->reltups;
     DM_PAGENO	page_number = 0;
     i4	write_count;
     i4	file_open = 0;
@@ -1350,21 +1383,30 @@ DB_ERROR	*dberr)
     DM_FILE	file_name;
     CL_ERR_DESC	sys_err;
     i4	lerr_code;
-    char	tuple[DB_MAXTUP];
+#define 	MAX_CORE_TUP_SIZE 2048
+    char	tuple[MAX_CORE_TUP_SIZE];
+    char	ctuple[MAX_CORE_TUP_SIZE];
+    char	*rec;
     DM_PAGENO   fhdr_pageno;
     i4	pages_allocated = 0;
     DMPP_ACC_PLV        *local_plv;
-    DMP_RELATION	*relrecord;
     i4		*err_code = &dberr->err_code;
- 
+    i4		rec_len;
+    i4		page_size = rel->relpgsize;
+    i4		page_type = rel->relpgtype;
+    DB_LOC_NAME	*location_name = &rel->relloc;
+    i4		record_count = rel->reltups;
+
     do
     {
         /*
 	** Get a local set of default accessors to work with 
+	** Make sure the stack buffer is big enough for the core tuple
 	*/
 	dm1c_get_plv(page_type, &local_plv);
 
-	if ((pagep = (DMPP_PAGE *)dm0m_pgalloc(page_size)) == 0)
+	if ((pagep = (DMPP_PAGE *)dm0m_pgalloc(page_size)) == 0 ||
+		MAX_CORE_TUP_SIZE < rel->relwid)
 	{
 	    SETDBERR(dberr, 0, E_DM9425_MEMORY_ALLOCATE);
 	    status = E_DB_ERROR;
@@ -1381,7 +1423,7 @@ DB_ERROR	*dberr)
 	/*
 	** Work out the tables filename
 	*/
-        dm2f_filename(DM2F_TAB, table_id, 0, 0, 0, &file_name);
+        dm2f_filename(DM2F_TAB, &rel->reltid, 0, 0, 0, &file_name);
 
         /*
 	** Create file for relation. 
@@ -1410,7 +1452,7 @@ DB_ERROR	*dberr)
             uleFormat( NULL, E_DM9004_BAD_FILE_OPEN, &sys_err, ULE_LOG, 
 			NULL, NULL, 0, NULL, &lerr_code, 4,
 			sizeof(DB_DB_NAME), db_name,
-			sizeof(DB_TAB_NAME), table_name,
+			sizeof(DB_TAB_NAME), rel->relid.db_tab_name,
 			path_length, path_name->name,
 			sizeof(file_name), &file_name);
 	    break;
@@ -1418,34 +1460,48 @@ DB_ERROR	*dberr)
 
 	file_open++;
 
-	for (r = records; --count >= 0; r += record_size)
+	for (r = records; 
+		--count >= 0 || page_number < rel->relfhdr; 
+			r += rel->relwid)
 	{
-	    /*
-	    **	Add real location name to iirelation records.
-	    **  Check base AND index id
-	    */
+	    if (count >= 0)
+	    {
+		MEcopy(r, rel->relwid, tuple);
 
-	    MEcopy(r, record_size, tuple);
-	    if (table_id->db_tab_base == DM_B_RELATION_TAB_ID &&
-		table_id->db_tab_index == DM_I_RELATION_TAB_ID)
-		((DMP_RELATION *)tuple)->relloc = *location_name;
+		if (db_service & DU_NAME_UPPER)
+		{
+		    /* upper case semantics for char columns */
+		    /* FIX ME FIXME */
+		}
 
-	    relrecord=(DMP_RELATION*)tuple;
-
-	    relrecord->relpgtype = page_type;
-	    relrecord->relpgsize = page_size;
+		rec = tuple;
+		rec_len = rel->relwid;
+		if (rel->relstat & TCB_COMPRESSED)
+		{
+		    rec = ctuple;
+		    status = (*rac->dmpp_compress)(rac, tuple, rec_len, 
+			    ctuple, &rec_len);
+		    if ( status )
+		    {
+			SETDBERR(dberr, 0, E_DM9381_DM2R_PUT_RECORD);
+			break;
+		    }
+		}
+	    }
 
             /* 
 	    ** While more data and space in page.
 	    */
-            while ((db_status =
+            while ( (count >= 0 & (db_status =
                      (*local_plv->dmpp_load)(page_type, page_size, pagep,
-			    tuple, record_size,
-			    DM1C_LOAD_NORMAL, 0, 0, (u_i2)0, (DMPP_SEG_HDR *)0))
-                        != E_DB_OK || count == 0)
+			rec, rec_len,
+			DM1C_LOAD_NORMAL, 0, 0, (u_i2)0, (DMPP_SEG_HDR *)0))
+                        != E_DB_OK) || 
+			(count <= 0 && page_number < rel->relfhdr)) 
 	    {
 		/*
 		** Current page is full
+		** or we're need to alloc another data page up to relfhdr
 		*/
 
 		/*
@@ -1458,14 +1514,14 @@ DB_ERROR	*dberr)
 				(i4 *)&page_number, &sys_err);
 		    if ( status != OK )
 		    {
-	                uleFormat( NULL, status, &sys_err, ULE_LOG,NULL,NULL,0,NULL,
-				    &lerr_code,0);
+	                uleFormat( NULL, status, &sys_err, ULE_LOG,
+				NULL,NULL,0,NULL, &lerr_code,0);
 			uleFormat( NULL, E_DM9000_BAD_FILE_ALLOCATE, &sys_err, 
-				    ULE_LOG, NULL, NULL, 0, NULL, &lerr_code, 4,
-				    sizeof(DB_DB_NAME), db_name,
-				    sizeof(DB_TAB_NAME), table_name,
-				    path_length, path_name->name,
-				    sizeof(file_name), &file_name);
+				ULE_LOG, NULL, NULL, 0, NULL, &lerr_code, 4,
+				sizeof(DB_DB_NAME), db_name,
+				sizeof(DB_TAB_NAME), rel->relid.db_tab_name,
+				path_length, path_name->name,
+				sizeof(file_name), &file_name);
 		        break;
 		    }
 
@@ -1496,15 +1552,15 @@ DB_ERROR	*dberr)
 		if (status != OK)
 		{
 		    uleFormat(NULL, status, &sys_err, ULE_LOG,NULL,NULL,0,NULL,
-		    		&lerr_code,0);
+			    &lerr_code,0);
 		    uleFormat( NULL, E_DM9006_BAD_FILE_WRITE, &sys_err, ULE_LOG, 
-				NULL, (char *)NULL, (i4)0, (i4 *)NULL, 
-				&lerr_code, 5,
-				sizeof(DB_DB_NAME), db_name,
-				sizeof(DB_TAB_NAME), table_name,
-				path_length, path_name->name,
-				sizeof(file_name), &file_name,
-				0, page_number);
+			    NULL, (char *)NULL, (i4)0, (i4 *)NULL, 
+			    &lerr_code, 5,
+			    sizeof(DB_DB_NAME), db_name,
+			    sizeof(DB_TAB_NAME), rel->relid.db_tab_name,
+			    path_length, path_name->name,
+			    sizeof(file_name), &file_name,
+			    0, page_number);
 		    break;
 		}
 
@@ -1528,7 +1584,7 @@ DB_ERROR	*dberr)
 	    ** to disc, or if we have run out of data to load then
 	    ** exit
 	    */
-	    if ( (status != OK) || ( count == 0 ) )
+	    if ( (status != OK) || ( count <= 0 && page_number == rel->relfhdr))
 		break;
 
 	} /* for */
@@ -1545,37 +1601,21 @@ DB_ERROR	*dberr)
 	db_status = dmm_add_SMS( &di_context, location_name,
 				 path_name, path_length, page_type, page_size,
 				 &file_name, &page_number,
-				 table_name, db_name,
+				 &rel->relid, db_name,
 				 &fhdr_pageno, &pages_allocated,
 				 local_plv, dberr);
 	if ( db_status != E_DB_OK )
 	    break;
 
-	/*
-	** If we have not placed the fhdr at the default location then
-	** go and update the iirelation.relfhdr field.
-	*/
-	if ( fhdr_pageno != DM_TBL_DEFAULT_FHDR_PAGENO)
+	/* Make sure we have placed the fhdr where we thought we would */
+	if ( fhdr_pageno != rel->relfhdr)
 	{
-	    db_status = dmm_setup_tables_relfhdr(
-			table_id, fhdr_pageno,
-			path_name, path_length, page_type, page_size,
-			local_plv, table_name, db_name, dberr);
-	    if ( db_status != E_DB_OK )
-	    {
-		/*
-		** Issue a message indicating the table we have failed
-		** to build
-		*/
-                uleFormat( NULL, E_DM9004_BAD_FILE_OPEN, &sys_err, ULE_LOG, 
-			NULL, NULL, 0, NULL, &lerr_code, 4,
-			sizeof(DB_DB_NAME), db_name,
-			sizeof(DB_TAB_NAME), table_name,
-			path_length, path_name->name,
-			sizeof(file_name), &file_name);
-		break;
-	    }
-
+	    /*  create_db() didn't calculate relfhdr correctly */
+	    TRdisplay("relid %~t fhdr_pageno %d relfdhr %d\n",
+		10, rel->relid.db_tab_name, fhdr_pageno, rel->relfhdr);
+	    SETDBERR(dberr, 0, E_DM011B_ERROR_DB_CREATE);
+	    status = E_DB_ERROR;
+	    break;
 	}
 
 	/*
@@ -1592,7 +1632,7 @@ DB_ERROR	*dberr)
             uleFormat( NULL, E_DM9000_BAD_FILE_ALLOCATE, &sys_err, ULE_LOG, 
 			NULL, NULL, 0, NULL, &lerr_code, 4,
 			sizeof(DB_DB_NAME), db_name,
-			sizeof(DB_TAB_NAME), table_name,
+			sizeof(DB_TAB_NAME), rel->relid.db_tab_name,
 			path_length, path_name->name,
 			sizeof(file_name), &file_name);
             uleFormat(NULL, E_DM92CE_DM2F_GUARANTEE_ERR, &sys_err, ULE_LOG, NULL, 
@@ -1611,7 +1651,7 @@ DB_ERROR	*dberr)
             uleFormat( NULL, E_DM9008_BAD_FILE_FLUSH, &sys_err, ULE_LOG, 
 			NULL, NULL, 0, NULL, &lerr_code, 4,
 			sizeof(DB_DB_NAME), db_name,
-			sizeof(DB_TAB_NAME), table_name,
+			sizeof(DB_TAB_NAME), rel->relid.db_tab_name,
 			path_length, path_name->name,
 			sizeof(file_name), &file_name);
 	    break;
@@ -1629,7 +1669,7 @@ DB_ERROR	*dberr)
             uleFormat( NULL, E_DM9001_BAD_FILE_CLOSE, &sys_err, ULE_LOG, 
 			NULL, NULL, 0, NULL, &lerr_code, 4,
 			sizeof(DB_DB_NAME), db_name,
-			sizeof(DB_TAB_NAME), table_name,
+			sizeof(DB_TAB_NAME), rel->relid.db_tab_name,
 			path_length, path_name->name,
 			sizeof(file_name), &file_name);
 	    break;
@@ -1660,7 +1700,7 @@ DB_ERROR	*dberr)
             uleFormat( NULL, E_DM9001_BAD_FILE_CLOSE, &sys_err, ULE_LOG, 
 			NULL, NULL, 0, NULL, &lerr_code, 4,
 			sizeof(DB_DB_NAME), db_name,
-			sizeof(DB_TAB_NAME), table_name,
+			sizeof(DB_TAB_NAME), rel->relid.db_tab_name,
 			path_length, path_name->name,
 			sizeof(file_name), &file_name);
 	}
@@ -1679,7 +1719,7 @@ DB_ERROR	*dberr)
     uleFormat(NULL, E_DM9058_BAD_FILE_BUILD, &sys_err, ULE_LOG, NULL, NULL, 0, NULL,
 	err_code, 4,
 	sizeof(DB_DB_NAME), db_name,
-	sizeof(DB_TAB_NAME), table_name,
+	sizeof(DB_TAB_NAME), rel->relid.db_tab_name,
 	path_length, path_name->name,
 	sizeof(file_name), &file_name);
 
@@ -1856,330 +1896,6 @@ dmm_add_SMS(
 }
 
 /*{
-** Name: dmm_setup_tables_relfhdr  -  Sets a tables relfhdr to the specified
-**			              value in iirelation.
-**
-** Description:
-**	This routine is called if the tables FHDR has been written
-**	in the non-default location. Currently only iiattribute
-**	will cause this routine to be called as it is the only
-**	core table, ( iirelation, iirel_idx, iiattribute and iiindex)
-**	which is greater the DM_TBL_DEFAULT_FHDR_PAGENO pages in size.
-**	It will open the iirelation table and read the tables iirelation
-**	tuple entry, fix up the iirelation.fhdr field and write the
-**	tupel back. Once finsihed it will close iirelation.
-**
-** Inputs:
-**	table_id			Identifies table we updating.
-**	fhdr_pageno			Page number of the FHDR.
-**      path_name                       Pointer to physical path.
-**      path_length                     length of physical path.
-**      page_type			page type
-**      page_size                       page size
-**	tab_name			Table name, used for error messages.
-**	dbname				DB name, used for error handling.
-** Outputs:
-**      err_code                        Pointer to an area to return
-**
-**      Returns:
-**
-**          E_DB_OK
-**          E_DB_ERROR.
-**      Exceptions:
-**          none
-**
-** Side Effects:
-**          None.
-** History:
-**      29-August-1992 (rmuth)
-**         Created.
-**	09-oct-1992 (jnash)
-**	   Reduced logging project.  Use PG_SYSCAT page accessors.
-**	25-may-1992 (robf)
-**	   Fixed error handling problem when failed status (e.g. on DIwrite)
-**	   would be lost when calling DIclose. Now preserve error status
-**	   Removed excess error traceback, was causing message to be logged
-**	   twice.
-**	14-Jan-1993 (rmuth)
-**	   Improve error handling, b
-**	06-mar-1996 (stial01 for bryanp)
-**	    Call dmpp_get rather than dmpp_get_offset. Also, allow for
-**	    iirelation records to be unaligned on the page; copy to aligned
-**	    storage if need be.
-**	06-may-1996 (nanpr01)
-**	    Change the page header access as macro for New Page Format
-**	    project.
-**	20-may-1996 (ramra01)
-**	    Added DMPP_TUPLE_INFO to get accessor routine
-**      03-june-1996 (stial01)
-**          Use DMPP_INIT_TUPLE_INFO_MACRO to init DMPP_TUPLE_INFO
-**      28-may-1998 (stial01)
-**          dmm_setup_tables_relfhdr() Support VPS system catalogs.
-**	15-Jan-2010 (jonj)
-**	    SIR 121619 MVCC: prototype changes for dmpp_get
-*/
-static DB_STATUS 
-dmm_setup_tables_relfhdr(
-    DB_TAB_ID	 *table_id,
-    i4	 fhdr_pageno,
-    DM_PATH	 *path_name,
-    i4	 path_length,
-    i4		page_type,
-    i4		page_size,
-    DMPP_ACC_PLV *plv,
-    DB_TAB_NAME	 *tab_name,
-    DB_DB_NAME	 *dbname,
-    DB_ERROR	 *dberr )
-{
-    DM_FILE	 iirel_filename;
-    DI_IO	 iirel_di_io;
-    DB_TAB_ID	 iirel_tab_id;
-    DMPP_PAGE	 *iirel_pagep = (DMPP_PAGE *)0;
-    DMP_RELATION tmp_relation;
-    DMP_RELATION *iirel_record;
-    PTR		 rec_ptr;
-    CL_ERR_DESC	 sys_err;
-    STATUS	 status;
-    i4	 page_no, read_count, write_count, offset;
-    i2		 line;
-    DM_TID	 tid;
-    i4	 record_size;
-    bool	 tuple_found=FALSE, opened_iirel=FALSE, iirel_eof=FALSE;
-    i4	 lerr_code;
-    i4		 *err_code = &dberr->err_code;
- 
-    do
-    {
-	/* 
-	** Open the iirelation table 
-	*/
-	iirel_tab_id.db_tab_base  = DM_B_RELATION_TAB_ID;
-	iirel_tab_id.db_tab_index = DM_I_RELATION_TAB_ID;
-
-	dm2f_filename(DM2F_TAB, &iirel_tab_id, 0,0,0, &iirel_filename);
-
-	status = DIopen( &iirel_di_io, 
-			(char *)path_name, path_length, 
-			iirel_filename.name, sizeof(iirel_filename),
-			page_size,
-			DI_IO_WRITE,
-			DI_SYNC_MASK,
-			&sys_err );
-	if ( status != OK )
-	{
-	    uleFormat(NULL, status, &sys_err, ULE_LOG,NULL,NULL,0,NULL,
-	    		&lerr_code,0);
-            uleFormat(NULL, E_DM9004_BAD_FILE_OPEN, &sys_err, ULE_LOG, NULL, 
-		   NULL, 0, NULL, &lerr_code, 4,
-		   sizeof(DB_DB_NAME), dbname,
-		   10, "iirelation",
-		   path_length, path_name->name,
-	           sizeof(iirel_filename), iirel_filename.name);
-	    break;
-	}
-
-	opened_iirel = TRUE;
-
-	if ((iirel_pagep = 
-		(DMPP_PAGE *)dm0m_pgalloc(page_size)) == 0)
-	{
-	    SETDBERR(dberr, 0, E_DM9425_MEMORY_ALLOCATE);
-	    status = E_DB_ERROR;
-	}
-
-	/*
-	** Find the tuple for this table in iirelation so
-	** that we can update the relfhdr field.
-	*/
-	page_no     = 0;
-	read_count  = 1;
-	while ( tuple_found == FALSE && iirel_eof == FALSE )
-	{
-	    status = DIread(
-			&iirel_di_io,
-			&read_count,
-			page_no,
-			(char *)iirel_pagep,
-			&sys_err );
-
-	    if ( status != OK )
-	    {
-		uleFormat(NULL, status, &sys_err, ULE_LOG,NULL,NULL,0,NULL,
-			    &lerr_code,0);
-		uleFormat(NULL, E_DM9005_BAD_FILE_READ, &sys_err, ULE_LOG, NULL,
-		   (char *)NULL, (i4)0, (i4 *)NULL, &lerr_code, 5,
-		   sizeof(DB_DB_NAME), dbname,
-		   10, "iirelation",
-		   path_length, path_name->name,
-		   sizeof(iirel_filename), iirel_filename.name,
-		   0, page_no);
-
-		break;
-	    }
-
-	    /*
-	    ** See if tuple is on this page
-	    */
-	    line = -1;
-	    tid.tid_tid.tid_page = page_no;
-	    record_size = sizeof(DMP_RELATION);
-
-	    while ( (u_i2)++line < 
-		(u_i2) DMPP_VPT_GET_PAGE_NEXT_LINE_MACRO(page_type, iirel_pagep)
-			&& tuple_found == FALSE )
-	    {
-		tid.tid_tid.tid_line = line;
-		status = (*plv->dmpp_get)(page_type, page_size, iirel_pagep,
-		    &tid, &record_size, (char **)&iirel_record, 
-		    NULL, NULL, NULL, (DMPP_SEG_HDR *)0);
-
-		/* 
-		** If line is empty , goto next entry
-		*/
-		if ( status )
-		    continue;
-
-		rec_ptr = (PTR) iirel_record;
-		if (ME_ALIGN_MACRO(iirel_record, 4) != (PTR) iirel_record)
-		{
-		    MEcopy(iirel_record, sizeof(tmp_relation), &tmp_relation);
-		    iirel_record = &tmp_relation;
-		}
-
-		/* 
-		** Is this the one we want
-		*/
-		if (iirel_record->reltid.db_tab_base == table_id->db_tab_base &&
-		    iirel_record->reltid.db_tab_index == table_id->db_tab_index
-		   )
-		{
-		    tuple_found = TRUE;
-		}
-
-	    }
-
-	    /*
-	    ** Setup next page to read, these tables are
-	    ** currently one bucket hash tables, so all
-	    ** subsequent pages are overflow pages.
-	    */
-	    page_no = DMPP_VPT_GET_PAGE_OVFL_MACRO(page_type, iirel_pagep);
-
-	    /*
-	    ** if the next page is zero then at end of table.
-	    */
-	    if ( page_no == 0 )
-		iirel_eof = TRUE;
-		    
-	}
-
-	/*
-	** If tuple not found or an error reading iirelation then
-	** exit.
-	*/
-	if (( tuple_found == FALSE ) || ( status != OK ))
-	    break;
-
-	/*
-	** Update the relfhdr field and replace in the iirelation
-	** page.
-	*/
-	iirel_record->relfhdr = (u_i4)fhdr_pageno;
-	if (rec_ptr != (PTR) iirel_record)
-	    MEcopy(iirel_record, sizeof(DMP_RELATION), rec_ptr);
-
-	/* 
-	** Write back the updated iirelation record
-	*/
-	write_count = 1;
-	status = DIwrite(
-		    &iirel_di_io,
-		    &write_count,
-		    (i4)DMPP_VPT_GET_PAGE_PAGE_MACRO(page_type, iirel_pagep),
-		    (char *)iirel_pagep,
-		    &sys_err);
-
-	if ( status != OK )
-	{
-	    uleFormat(NULL, status, &sys_err, ULE_LOG,NULL,NULL,0,NULL,
-			&lerr_code,0);
-	    uleFormat(NULL, E_DM9006_BAD_FILE_WRITE, &sys_err, ULE_LOG, NULL,
-		   (char *)NULL, (i4)0, (i4 *)NULL, &lerr_code, 5,
-		   sizeof(DB_DB_NAME), dbname,
-		   10, "iirelation",
-		   path_length, path_name->name,
-		   sizeof(iirel_filename), iirel_filename.name,
-		   0, DMPP_VPT_GET_PAGE_PAGE_MACRO(page_type, iirel_pagep));
-	    break;
-	}
-
-	/*
-	** Close the iirelation
-	*/
-	opened_iirel = FALSE;
-	status = DIclose( &iirel_di_io, &sys_err );
-	if ( status != OK )
-	{
-	    uleFormat(NULL, status, &sys_err, ULE_LOG,NULL,NULL,0,NULL,
-			&lerr_code,0);
-	    uleFormat( NULL, E_DM9001_BAD_FILE_CLOSE, &sys_err, ULE_LOG, NULL,
-			(char *)NULL, (i4)0, (i4 *)NULL, &lerr_code, 4,
-			sizeof(DB_DB_NAME), dbname,
-			10, "iirelation",
-			path_length, path_name->name,
-			sizeof(iirel_filename), iirel_filename.name);
-	    break;
-	}
-
-	if (iirel_pagep)
-	    dm0m_pgdealloc((char **)&iirel_pagep);
-
-	return( E_DB_OK );
-
-    } while ( FALSE );
-
-    /*
-    ** Error occured
-    */
-    if (iirel_pagep)
-	dm0m_pgdealloc((char **)&iirel_pagep);
-
-    /*
-    ** If iirelation still open then close it
-    */
-    if ( opened_iirel == TRUE )
-    {
-	STATUS    lstatus;
-	lstatus = DIclose( &iirel_di_io, &sys_err );
-	if ( lstatus != OK )
-	{
-	    uleFormat(NULL, lstatus, &sys_err, ULE_LOG,NULL,NULL,0,NULL,
-			&lerr_code,0);
-	    uleFormat( NULL, E_DM9001_BAD_FILE_CLOSE, &sys_err, ULE_LOG, NULL,
-			(char *)NULL, (i4)0, (i4 *)NULL, &lerr_code, 4,
-			sizeof(DB_DB_NAME), dbname,
-			10, "iirelation",
-			path_length, path_name->name,
-			sizeof(iirel_filename), iirel_filename.name);
-	}
-    }
-    if ( status == OK && tuple_found == TRUE )
-	return( E_DB_OK );
-    else
-    {
-	SETDBERR(dberr, 0, E_DM92FC_DMM_SETUP_TBL_RELFHDR);
-    }
-
-    uleFormat( NULL, E_DM92FC_DMM_SETUP_TBL_RELFHDR, (CL_ERR_DESC *)NULL, 
-	    ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL, 
-	    err_code, 1, 0, fhdr_pageno);
-
-    SETDBERR(dberr, 0, E_DM011B_ERROR_DB_CREATE);
-    return( E_DB_ERROR );
-
-}
-
-/*{
 ** Name: dmm_init_catalog_templates - initialize templates for core catalogs
 **
 **
@@ -2283,20 +1999,10 @@ dmm_init_catalog_templates( )
     struct		catalogStats iiindexStats = { 0, 0 };
     struct		catalogStats	*catalogStats;
 
-    tuplesInIIRELATION = DM_sizeof_core_rel;
-    tuplesInIIATTRIBUTE = DM_sizeof_core_attr;
-    tuplesInIIRELIDX = DM_sizeof_core_rindex;
-    tuplesInIIINDEX = DM_sizeof_core_index;
-    if (DM_sizeof_core_attr != DM_sizeof_ucore_attr)
-    {
-	/*
-	** INTERNAL ERROR:
-	** When you add an attribute to DM_core_attribures, 
-	** you need to increase size of DM_ucore_attributes
-	*/
-	return (E_DB_ERROR);
-    }
-
+    tuplesInIIRELATION = DM_CORE_REL_CNT;
+    tuplesInIIRELIDX = DM_CORE_RINDEX_CNT;
+    tuplesInIIATTRIBUTE = DM_core_att_cnt;
+    tuplesInIIINDEX = DM_core_index_cnt;
 
     for ( ; ; )	/* code block to break out of */
     {
@@ -2362,10 +2068,8 @@ dmm_init_catalog_templates( )
 	    att->attencwid = 0;
 	    u_att->attencwid = 0;
 
-	    MEfill(sizeof(att->attfree), 0,
-		    att->attfree);
-	    MEfill(sizeof(u_att->attfree), 0,
-		    u_att->attfree);
+	    MEfill(sizeof(att->attfree), 0, att->attfree);
+	    MEfill(sizeof(u_att->attfree), 0, u_att->attfree);
 
 	    /* pad the attribute  name */
 	    STmove( att->attname.db_att_name, ' ',
@@ -2458,10 +2162,8 @@ dmm_init_catalog_templates( )
 		break;
 	    }
 
-	    MEfill(sizeof(rel->relfree), 0,
-		    rel->relfree);
-	    MEfill(sizeof(u_rel->relfree), 0,
-		    u_rel->relfree);
+	    MEfill(sizeof(rel->relfree), 0, rel->relfree);
+	    MEfill(sizeof(u_rel->relfree), 0, u_rel->relfree);
 
 	    /* Fill in the relcreate field */
 
@@ -2501,8 +2203,8 @@ dmm_init_catalog_templates( )
       ** in IIRELIDX.
       */
 
-      for (	ridx = core_rindex,
-		u_ridx = ucore_rindex, i = 0;
+      for (	ridx = DM_core_rindex,
+		u_ridx = DM_ucore_rindex, i = 0;
 		i < tuplesInIIRELIDX;
 		ridx++,
 		u_ridx++, i++

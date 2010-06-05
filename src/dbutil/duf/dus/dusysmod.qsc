@@ -151,6 +151,8 @@ EXEC SQL include sqlca;
 **      07-oct-2009 (stegr01)
 **          Start the AST dispatcher thread here so we don't hang on
 **          Posix threaded Itanium OpenVMS
+**      29-Apr-2010 (stial01)
+**          modify with compression=(data) if the catalog contains long ids.
 **/
 /*
 NEEDLIBS =      DBUTILLIB SHQLIB ULFLIB COMPATLIB 
@@ -1170,8 +1172,14 @@ DU_ERROR	    *dus_errcb;
     char	**cp_arr;
     DUU_CATDEF	*catdef_p;
     char        *where;
-    char        modbuf[256];
+    char	modwith[100];
+    char        modbuf[300];
     i4		i,j;
+EXEC SQL BEGIN DECLARE SECTION;
+	i4	long_id_cnt;
+	char	*relid;
+	i4	dbmaxname=DB_MAXNAME;
+EXEC SQL END DECLARE SECTION;
 
     /*	Modify syntax:
     **	    modify tablename | indexname to storage_structure [unique]
@@ -1195,10 +1203,7 @@ DU_ERROR	    *dus_errcb;
 	    /* There's a set of catalog definitions missing. */
 	    continue;
 
-	for (catdef_p = Dus_allcat_defs[i];
-	     catdef_p->du_relname; 
-	     catdef_p++
-	    )
+	for (catdef_p = Dus_allcat_defs[i]; catdef_p->du_relname; catdef_p++)
 	{
 	    if (catdef_p->du_exists
 		&& (all_cats || catdef_p->du_requested)
@@ -1214,18 +1219,52 @@ DU_ERROR	    *dus_errcb;
 			return(dus_errcb->du_status);
 
 		    if (page_size != 0)
+			STprintf(modwith, "page_size=%d\n",page_size);
+		    else
+			modwith[0] = '\0';
+
+		    /* modify with compression=(data) long ids in catalog */
+		    /* compression can only be specified once */
+		    relid = catdef_p->du_relname;
+		    if (!STstrindex(catdef_p->du_modify, "compression", 0,TRUE)
+		     && !STstrindex(catdef_p->du_modify, "chash", 0,TRUE)
+		     && !STstrindex(catdef_p->du_modify, "cheap", 0,TRUE)
+		     && !STstrindex(catdef_p->du_modify, "cbtree", 0,TRUE))
 		    {
-			cp = &modbuf[0];
-			if (STstrindex(catdef_p->du_modify, "where", 0, TRUE)
-			    || STstrindex(catdef_p->du_modify, "with", 0, TRUE))
-			    cp = STprintf(cp, "%s ,page_size=%d",
-					catdef_p->du_modify, page_size);
-			else
-			    cp = STprintf(cp, "%s with page_size=%d",
-					catdef_p->du_modify, page_size);
+			relid = catdef_p->du_relname;
+			/* compress long name keys */
+			EXEC SQL select count(attid) into :long_id_cnt 
+			from iiattribute,iirelation
+			where attfrml >= :dbmaxname and 
+			reltid = attrelid and reltidx = attrelidx and
+			relid = :relid;
+			if (long_id_cnt)
+			{
+			    if (modwith[0] == '\0')
+				STprintf(modwith, "compression=(data)");
+			    else
+				STcat(modwith, ",compression=(data)");
+			}
 		    }
 
+		    STprintf(modbuf, "%s", catdef_p->du_modify);
+		    if (modwith[0])
+		    {
+			if (!STstrindex(catdef_p->du_modify, "where", 0, TRUE)
+			  && !STstrindex(catdef_p->du_modify, "with", 0, TRUE))
+			    STcat(modbuf, " with ");
+			else
+			    STcat(modbuf, ", ");
+			STcat(modbuf, modwith);
+		    }
+
+#ifdef xDEBUG
+		    SIprintf("%s\n", modbuf);
+#endif
+
+		    cp = modbuf;
 ##		    IIstatement cp
+
 		}
 		if (catdef_p->du_index_cnt > 0)
 		{
@@ -1263,20 +1302,20 @@ DU_ERROR	    *dus_errcb;
 STATUS
 dus_validate_pagesize(page_size)
 {
-    exec sql begin declare section;
+    EXEC SQL BEGIN DECLARE SECTION;
 	char	dbmsinfo_2k[32];
 	char	dbmsinfo_4k[32];
 	char	dbmsinfo_8k[32];
 	char	dbmsinfo_16k[32];
 	char	dbmsinfo_32k[32];
 	char	dbmsinfo_64k[32];
-    exec sql end declare section;
+    EXEC SQL END DECLARE SECTION;
 
     /* page size zero, means no page size change requested */
     if (page_size == 0)
 	return (E_DU_OK);
 
-    exec sql select dbmsinfo('page_size_2k'), dbmsinfo('page_size_4k'),
+    EXEC SQL  select dbmsinfo('page_size_2k'), dbmsinfo('page_size_4k'),
     dbmsinfo('page_size_8k'), dbmsinfo('page_size_16k'),
     dbmsinfo('page_size_32k'), dbmsinfo('page_size_64k') into
     :dbmsinfo_2k, :dbmsinfo_4k, :dbmsinfo_8k, :dbmsinfo_16k, 

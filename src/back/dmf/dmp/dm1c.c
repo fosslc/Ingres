@@ -240,6 +240,8 @@
 **	14-Apr-2010 (kschendel) SIR 123485
 **	    Changes to LOB handling, using new short-term coupon structure
 **	    and blob query context (BQCB).
+**      29-Apr-2010 (stial01)
+**          Do not create V1 catalogs (they might use data compression)
 */
 
 
@@ -576,9 +578,12 @@ dm1c_getpgtype(
     {
 	/*
 	** DM1C_CREATE_DEFAULT, DM1C_CREATE_CORE comes here
+	** No more V1 catalogs!
 	*/ 
 	if (page_size == DM_COMPAT_PGSIZE && (config_pgtypes & SVCB_CONFIG_V1) &&
-			(create_flags & DM1C_CREATE_CLUSTERED) == 0)
+			(create_flags & DM1C_CREATE_CLUSTERED) == 0 &&
+			(create_flags & DM1C_CREATE_CATALOG) == 0 &&
+			(create_flags & DM1C_CREATE_CORE) == 0)
 	    *page_type = TCB_PG_V1;
 	else if ((config_pgtypes & SVCB_CONFIG_V7) &&
 	    (create_flags & DM1C_CREATE_CORE) == 0 &&

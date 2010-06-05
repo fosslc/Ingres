@@ -65,6 +65,8 @@ NO_OPTIM=dr6_us5 pym_us5
 #include    <lo.h>
 #include    <rep.h>
 #include    <scf.h>
+#include    <dmmcb.h>
+#include    <dmm.h>
 
 /**
 **
@@ -767,6 +769,8 @@ NO_OPTIM=dr6_us5 pym_us5
 **      14-Apr-2010 (hanal04) SIR 123574
 **          Check if the DB was created with the new -m flag (DU_MUSTLOG
 **          set in dsc_dbaccess). If so, set DCB_S_MUST_LOG in the dcb_status.
+**      29-Apr-2010 (stial01)
+**          Globals renamed
 */
 
 /*
@@ -1087,7 +1091,6 @@ static VOID upgrade_core_reltup(
 **  bootstrap to open the system tables during a database open.
 */
 
-GLOBALREF i4 DM_sizeof_core_rel;
 GLOBALREF DMP_RELATION DM_core_relations[];
 GLOBALREF DMP_ATTRIBUTE DM_core_attributes[];	/* Normal (lower) case */
 GLOBALREF DMP_ATTRIBUTE DM_ucore_attributes[];	/* Uppercase */
@@ -10118,7 +10121,7 @@ dm2d_convert_preV9_iirel (
 		/* IIINDEX's iirelation needs relwid, relatts updated */
 		if ( new_iirel.reltid.db_tab_base == DM_B_INDEX_TAB_ID )
 		{
-		    for ( i = 0; i < DM_sizeof_core_rel; i++ )
+		    for ( i = 0; i < DM_CORE_REL_CNT; i++ )
 		    {
 			if ( DM_core_relations[i].reltid.db_tab_base ==
 				DM_B_INDEX_TAB_ID &&
@@ -10711,7 +10714,7 @@ dm2d_convert_preV9_iiatt(
 		*/
  
 		j = 0;
-		for (k = 0; k < DM_sizeof_core_rel; k++)
+		for (k = 0; k < DM_CORE_REL_CNT; k++)
 		{
 		    j += DM_core_relations[k].relatts;
 		}
@@ -13154,7 +13157,7 @@ i4		dsc_status)
 		/* Rather than hard code the number of columns in
 		** iiattribute, find it in the core-relations array.
 		*/
-		for (n = 0; n < DM_sizeof_core_rel; ++n)
+		for (n = 0; n < DM_CORE_REL_CNT; ++n)
 		{
 		    if ((DM_core_relations[n].reltid.db_tab_base ==
 					    DM_B_ATTRIBUTE_TAB_ID) &&
@@ -13312,12 +13315,12 @@ DMP_RELATION *core)
     DMP_RELATION *dm_core;
 
     for (j = 0, dm_core = &DM_core_relations[0]; 
-			j < DM_sizeof_core_rel; j++, dm_core++)
+			j < DM_CORE_REL_CNT; j++, dm_core++)
         if (dm_core->reltid.db_tab_base == core->reltid.db_tab_base
         && dm_core->reltid.db_tab_index == core->reltid.db_tab_index)
 	break;
 
-    if (j > DM_sizeof_core_rel)
+    if (j > DM_CORE_REL_CNT)
 	TRdisplay("Upgrade CORE Can't find %~t in DM_core\n",
 		sizeof(core->relid), core->relid.db_tab_name);
     else

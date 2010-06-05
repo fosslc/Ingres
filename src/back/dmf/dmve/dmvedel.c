@@ -261,6 +261,8 @@
 **	    Replace DMPP_PAGE* with DMP_PINFO* as needed.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs, move consistency check to dmveutil
+**      29-Apr-2010 (stial01)
+**          Use new routintes to compare rows in iirelation, iisequence
 */
 
 
@@ -672,7 +674,6 @@ DMP_PINFO	    *pinfo)
     DM_TID		temp_tid;
     DB_STATUS		status = E_DB_OK;
     i4		record_size;
-    i4		compare_size;
     i4		page_type = log_rec->del_pg_type;
     char		*record;
     char		*log_row;
@@ -685,6 +686,8 @@ DMP_PINFO	    *pinfo)
     DMPP_ACC_PLV	*plv = dmve->dmve_plv;
     LG_LRI		lri;
     DMPP_PAGE		*page = pinfo->page;
+    bool		rowsdif;
+    DMP_TCB		*t;
 
     CLRDBERR(&dmve->dmve_error);
  
@@ -775,16 +778,25 @@ DMP_PINFO	    *pinfo)
     (*plv->dmpp_reclen)(page_type, log_rec->del_page_size, page,
 			(i4)log_rec->del_tid.tid_tid.tid_line, &record_size);
 
-    compare_size = record_size;
-    if (log_rec->del_tbl_id.db_tab_base == DM_1_RELATION_KEY)
-	compare_size = DB_TAB_MAXNAME + 16;
+    if (log_rec->del_tbl_id.db_tab_base == DM_B_RELATION_TAB_ID &&
+	    log_rec->del_tbl_id.db_tab_index == DM_I_RELATION_TAB_ID)
+    {
+	rowsdif = dmve_iirel_cmp(dmve, log_row, log_rec->del_rec_size,
+				    record, record_size);
+    }
     else if (log_rec->del_tbl_id.db_tab_base == DM_B_SEQ_TAB_ID)
-	compare_size = DB_SEQ_MAXNAME + 16;
+    {
+	rowsdif =dmve_iiseq_cmp(dmve, log_rec->del_comptype,
+		    log_row, log_rec->del_rec_size, record, record_size);
+    }
+    else if (log_rec->del_rec_size != record_size ||
+	    MEcmp((PTR)log_row, (PTR)record, record_size) != 0)
+	rowsdif = TRUE;
     else
-	compare_size = record_size;
+	rowsdif = FALSE;
 
-    if ((log_rec->del_rec_size != record_size) ||
-	(MEcmp((PTR)log_row, (PTR)record, compare_size) != 0))
+    if (rowsdif)
+
     {
         if (!(dmve->dmve_action == DMVE_DO) ||
 	    !(log_rec->del_header.flags & DM0L_NONJNL_TAB) ||
@@ -876,12 +888,26 @@ DMP_PINFO	    *pinfo)
 	**    when the ET is processed to issue a warning that the table 
 	**    has been dropped by recovery.
 	*/
-	if ((log_rec->del_tbl_id.db_tab_base == DM_1_RELATION_KEY) &&
-	    (log_rec->del_tbl_id.db_tab_index == 0))
+	if ((log_rec->del_tbl_id.db_tab_base == DM_B_RELATION_TAB_ID) &&
+	    (log_rec->del_tbl_id.db_tab_index == DM_I_RELATION_TAB_ID))
 	{
-	    /* Extract user table id from iirelation row */
-	    relrow = (DMP_RELATION *) log_row;
+	    DMP_RELATION    reltup;
+	    i4		    size;
 
+	    /* The tcb for iirelation will always have DMP_ROWACCESS  */
+	    t = (DMP_TCB *)((char *)tabio - CL_OFFSETOF(DMP_TCB, tcb_table_io));
+
+	    status = (*t->tcb_data_rac.dmpp_uncompress)(&t->tcb_data_rac, 
+		    log_row, (char *)&reltup, sizeof(DMP_RELATION), &size,
+		    NULL, 0, (ADF_CB *)NULL);
+	    if (status)
+	    {
+		SETDBERR(&dmve->dmve_error, 0, E_DM961E_DMVE_REDEL);
+		return (E_DB_ERROR);
+	    }
+	    relrow = &reltup;
+
+	    /* Extract user table id from iirelation row */
 	    MEcopy((PTR)&relrow->reltid, sizeof(DB_TAB_ID), (PTR)&reltid);
 	    STRUCT_ASSIGN_MACRO(reltid, action->rfp_act_usertabid);
 	    MEcopy((PTR)&relrow->relid, sizeof(DB_TAB_NAME),

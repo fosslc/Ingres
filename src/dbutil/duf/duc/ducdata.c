@@ -64,6 +64,8 @@
 **          from upgradedb and verifydb
 **     22-apr-2010 (stial01)
 **          Use DB_EXTFMT_SIZE for register table newcolname IS 'ext_format'
+**     29-Apr-2010 (stial01)
+**          modify with compression=(data) all catalogs with long ids.
 */
 
 /* ducommon.qsc */
@@ -120,7 +122,7 @@ GLOBALDEF DUC_CATDEF Duc_catdef[] =
 "iirelation",
 0, /* number of columns, MUST create/upgrade core catalog in back end */
 NULL, /* create stmt: MUST create/upgrade core catalog in back end */
-"MODIFY iirelation to hash",
+"MODIFY iirelation to hash with compression",
 NULL, /* index 1 - no need to specify... iirel_idx gets created by sysmod */
 NULL  /* index 2 */
 },
@@ -129,7 +131,7 @@ sizeof(DB_ATTS),
 "iiattribute",
 0, /* number of columns, MUST create/upgrade core catalog in back end */
 NULL, /* create stmt: MUST create/upgrade core catalog in back end */
-"MODIFY iiattribute to hash",
+"MODIFY iiattribute to hash with compression",
 NULL, /* index 1 */
 NULL  /* index 2 */
 },
@@ -351,7 +353,7 @@ NULL  /* index 2 */
 " attname char(##DB_MAXNAME##) not null,"
 " auditname char(##DB_EXTFMT_SIZE##) not null)"
 " with noduplicates",
-"MODIFY iigw06_attribute to hash on reltid, reltidx",
+"MODIFY iigw06_attribute to hash on reltid, reltidx with compression",
 NULL, /* index 1 */
 NULL  /* index 2 */
 },
@@ -393,7 +395,7 @@ NULL  /* index 2 */
 "iiintegrity",
 52, /* number of columns */
 NULL, /* MUST create with QUEL in duc_quel_create() */
-"MODIFY iiintegrity to hash on inttabbase, inttabidx where minpages = 8",
+"MODIFY iiintegrity to hash on inttabbase, inttabidx where minpages = 8, compression",
 "CREATE INDEX iiintegrityidx on iiintegrity "
 " (consschema_id1, consschema_id2, consname) "
 " with structure = hash, minpages = 32",
@@ -426,8 +428,8 @@ sizeof(DB_IIPARTNAME),
 " levelno smallint not null not default,"
 " partseq smallint not null default 0,"
 " partname char(##DB_MAXNAME##) not null default ' ')",
-"MODIFY iipartname to btree unique on mastid, mastidx, levelno, partseq"
-" with fillfactor = 100",
+"MODIFY iipartname to btree unique on mastid, mastidx, levelno, partseq "
+" with fillfactor = 100, compression = (data)",
 NULL, /* index 1 */
 NULL  /* index 2 */
 },
@@ -528,7 +530,7 @@ sizeof(DB_PROCEDURE),
 " dbp_est_rows integer not null default 0,"
 " dbp_est_cost integer not null default 0)",
 "MODIFY iiprocedure to btree unique on dbp_name, dbp_owner"
-" with fillfactor = 100",
+" with fillfactor = 100, compression = (data)",
 "CREATE INDEX iixprocedure on iiprocedure (dbp_id, dbp_idx)"
 " with structure = btree",
 NULL  /* index 2 */
@@ -554,7 +556,7 @@ sizeof(DB_PROCEDURE_PARAMETER),
 " pp_pad smallint not null)"
 " with duplicates",
 "MODIFY iiprocedure_parameter to hash on pp_procid1, pp_procid2"
-" with minpages = 32",
+" with minpages = 32, compression = (data)",
 NULL, /* index 1 */
 NULL  /* index 2 */
 },
@@ -565,7 +567,7 @@ sizeof(DB_PROTECTION),
 "iiprotect",
 62, /* number of columns */
 NULL, /* MUST create with QUEL in duc_quel_create() */
-"MODIFY iiprotect to btree on protabbase, protabidx with fillfactor=100",
+"MODIFY iiprotect to btree on protabbase, protabidx with fillfactor=100, compression = (data)",
 NULL, /* index 1 */
 NULL  /* index 2 */
 },
@@ -666,7 +668,7 @@ sizeof(DB_IIRULE),
 " rule_pad smallint not null default 0,"
 " rule_free char(8) not null default ' ')"
 " with noduplicates",
-"MODIFY iirule TO HASH on rule_tabbase, rule_tabidx with minpages = 32",
+"MODIFY iirule TO CHASH on rule_tabbase, rule_tabidx with minpages = 32",
 "CREATE INDEX iiruleidx ON iirule (rule_id1, rule_id2)"
 " WITH STRUCTURE = HASH, MINPAGES = 32",
 "CREATE UNIQUE INDEX iiruleidx1 ON iirule (rule_owner, rule_name)"
@@ -717,7 +719,7 @@ sizeof(DB_SECALARM),
 " alarm_id2 integer not null default 0,"
 " alarm_reserve char(32) not null default ' ')"
 " with noduplicates",
-"MODIFY  iisecalarm to chash on obj_type, obj_id1, obj_id2 with minpages=32",
+"MODIFY  iisecalarm to hash on obj_type, obj_id1, obj_id2 with minpages=32, compression",
 NULL, /* index 1 */
 NULL  /* index 2 */
 },
@@ -768,7 +770,7 @@ sizeof(DB_IISEQUENCE),
 " seq_flag integer not null default 0,"
 " seq_free char(8) not null default ' ')"
 " with noduplicates",
-"MODIFY iisequence to hash on seq_name, seq_owner with minpages = 30",
+"MODIFY iisequence to hash on seq_name, seq_owner with minpages = 30, compression",
 NULL, /* index 1 */
 NULL  /* index 2 */
 },
@@ -810,7 +812,7 @@ sizeof(DB_IISYNONYM),
 " synid integer not null,"
 " synidx integer not null)"
 " with duplicates",
-"MODIFY iisynonym to hash unique on synonym_name, synonym_owner",
+"MODIFY iisynonym to hash unique on synonym_name, synonym_owner with compression",
 "CREATE INDEX iixsynonym  on iisynonym (syntabbase, syntabidx)"
 " with structure = btree",
 NULL  /* index 2 */
@@ -1156,7 +1158,7 @@ NULL  /* index 2 */
 " column_name char(##DB_MAXNAME##) not null default ' ',"
 " key_sequence smallint not null default 0)"
 " with noduplicates",
-"MODIFY iidd_alt_columns to hash on table_name, table_owner",
+"MODIFY iidd_alt_columns to hash on table_name, table_owner with compression",
 NULL, /* index 1 */
 NULL, /* index 2 */
 },
@@ -1179,7 +1181,7 @@ NULL, /* index 2 */
 " sort_direction char(8) not null default ' ',"
 " column_ingdatatype smallint not null default 0)"
 " with noduplicates",
-"MODIFY iidd_columns to hash on table_name, table_owner",
+"MODIFY iidd_columns to hash on table_name, table_owner with compression",
 NULL, /* index 1 */
 NULL, /* index 2 */
 },
@@ -1274,7 +1276,7 @@ NULL
 " column_sequence integer not null default 0)"
 " with noduplicates",
 "MODIFY iidd_ddb_ldb_columns to hash on"
-" object_base, object_index, column_sequence",
+" object_base, object_index, column_sequence with compression",
 NULL,
 NULL
 },
@@ -1357,7 +1359,7 @@ NULL
 " to_expire char(8) not null default ' ',"
 " expire_date char(25) not null default ' ')"
 " with noduplicates",
-"MODIFY iidd_ddb_objects to hash on object_name, object_owner",
+"MODIFY iidd_ddb_objects to hash on object_name, object_owner with compression",
 NULL,
 NULL,
 },
@@ -1379,7 +1381,7 @@ NULL,
 " columns_mapped char(8) not null default ' ',"
 " ldb_id integer not null default 0)"
 " with noduplicates",
-"MODIFY iidd_ddb_tableinfo to hash on object_base, object_index",
+"MODIFY iidd_ddb_tableinfo to hash on object_base, object_index with compression",
 NULL,
 NULL
 },
@@ -1414,7 +1416,7 @@ NULL
 " text_sequence smallint not null default 0,"
 " text_segment char(228) not null default ' ')"
 " with noduplicates",
-"MODIFY iidd_histograms to hash on table_name, table_owner, column_name",
+"MODIFY iidd_histograms to hash on table_name, table_owner, column_name with compression",
 NULL,
 NULL
 },
@@ -1430,7 +1432,7 @@ NULL
 " key_sequence smallint not null default 0,"
 " sort_direction char(8) not null default ' ')"
 " with noduplicates",
-"MODIFY iidd_index_columns to hash on index_name, index_owner",
+"MODIFY iidd_index_columns to hash on index_name, index_owner with compression",
 NULL,
 NULL
 },
@@ -1450,7 +1452,7 @@ NULL
 " unique_rule char(8) not null default ' ',"
 " index_pagesize integer not null default 0)"
 " with noduplicates",
-"MODIFY iidd_indexes to hash on index_name, index_owner",
+"MODIFY iidd_indexes to hash on index_name, index_owner with compression",
 NULL,
 NULL
 },
@@ -1467,7 +1469,7 @@ NULL
 " text_sequence smallint not null default 0,"
 " text_segment text(240) not null default ' ')"
 " with noduplicates",
-"MODIFY iidd_integrities to hash on table_name, table_owner",
+"MODIFY iidd_integrities to hash on table_name, table_owner with compression",
 NULL,
 NULL
 },
@@ -1482,7 +1484,7 @@ NULL
 " loc_sequence smallint not null default 0,"
 " location_name char(##DB_LOC_MAXNAME##) not null default ' ')"
 " with noduplicates",
-"MODIFY iidd_multi_locations to hash on table_name, table_owner",
+"MODIFY iidd_multi_locations to hash on table_name, table_owner with compression",
 NULL,
 NULL
 },
@@ -1501,7 +1503,7 @@ NULL
 " text_sequence smallint not null default 0,"
 " text_segment text(240) not null default ' ')"
 " with noduplicates",
-"MODIFY iidd_permits to hash on object_name, object_owner",
+"MODIFY iidd_permits to hash on object_name, object_owner with compression",
 NULL,
 NULL
 },
@@ -1523,7 +1525,7 @@ NULL
 " dbp_pad char(12) not null default ' ',"
 " procedure_type char(8) not null default ' ')"
 " with noduplicates",
-"MODIFY iidd_procedure to hash on dbp_name, dbp_owner",
+"MODIFY iidd_procedure to hash on dbp_name, dbp_owner with compression",
 NULL,
 NULL
 },
@@ -1540,7 +1542,7 @@ NULL
 " text_sequence integer not null default 0,"
 " text_segment varchar(240) not null default ' ')"
 " with noduplicates",
-"MODIFY iidd_procedures to heap",
+"MODIFY iidd_procedures to cheap",
 NULL,
 NULL
 },
@@ -1558,7 +1560,7 @@ NULL
 " text_sequence integer not null default 0,"
 " text_segment varchar(240) not null default ' ')"
 " with noduplicates",
-"MODIFY iidd_registrations to hash on object_name, object_owner",
+"MODIFY iidd_registrations to hash on object_name, object_owner with compression",
 NULL,
 NULL
 },
@@ -1582,7 +1584,7 @@ NULL
 " stat_version char(8) not null default ' ',"
 " hist_data_length smallint not null default 0)"
 " with noduplicates",
-"MODIFY iidd_stats to hash on table_name, table_owner",
+"MODIFY iidd_stats to hash on table_name, table_owner with compression",
 NULL,
 NULL
 },
@@ -1634,7 +1636,7 @@ NULL
 " table_relversion smallint not null default 0,"
 " table_reltotwid integer not null default 0)"
 " with noduplicates",
-"MODIFY iidd_tables to hash on table_name, table_owner",
+"MODIFY iidd_tables to hash on table_name, table_owner with compression",
 NULL,
 NULL
 },
@@ -1651,7 +1653,7 @@ NULL
 " text_sequence integer not null default 0,"
 " text_segment varchar(256) not null default ' ')"
 " with noduplicates",
-"MODIFY iidd_views to hash on table_name, table_owner, text_sequence",
+"MODIFY iidd_views to hash on table_name, table_owner, text_sequence with compression",
 NULL,
 NULL
 },

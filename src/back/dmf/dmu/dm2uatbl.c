@@ -150,6 +150,10 @@
 **	    Disable ALTER TABLE for encrypted tables for now.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      29-Apr-2010 (stial01)
+**          iiattribute is compressed, Init ALL fields in attrrecord before put.
+**          Define keybufs for each table catalog we position into.
+**          
 **/
 
 /*
@@ -375,7 +379,9 @@ DB_ERROR	*dberr)
     DB_STATUS           status;
     DB_STATUS           local_status;
     DB_TAB_ID           table_id;
-    DM2R_KEY_DESC       key_desc[2];
+    DM2R_KEY_DESC       rel_key_desc[2];
+    DM2R_KEY_DESC       att_key_desc[2];
+    DM2R_KEY_DESC       idx_key_desc[2];
     DM_TID              reltid;
     DM_TID              attrtid;
     DML_SCB             *scb;
@@ -628,15 +634,25 @@ DB_ERROR	*dberr)
 
             table_id.db_tab_base = tbl_id->db_tab_base;
             table_id.db_tab_index = tbl_id->db_tab_index;
-            key_desc[0].attr_operator = DM2R_EQ;
-            key_desc[0].attr_number = DM_1_RELATION_KEY;
-            key_desc[0].attr_value = (char *) &table_id.db_tab_base;
-            key_desc[1].attr_operator = DM2R_EQ;
-            key_desc[1].attr_number = DM_2_ATTRIBUTE_KEY;
-            key_desc[1].attr_value = (char *) &table_id.db_tab_index;
+            rel_key_desc[0].attr_operator = DM2R_EQ;
+            rel_key_desc[0].attr_number = DM_1_RELATION_KEY;
+            rel_key_desc[0].attr_value = (char *) &table_id.db_tab_base;
 
+            att_key_desc[0].attr_operator = DM2R_EQ;
+            att_key_desc[0].attr_number = DM_1_ATTRIBUTE_KEY;
+            att_key_desc[0].attr_value = (char *) &table_id.db_tab_base;
+            att_key_desc[1].attr_operator = DM2R_EQ;
+            att_key_desc[1].attr_number = DM_2_ATTRIBUTE_KEY;
+            att_key_desc[1].attr_value = (char *) &table_id.db_tab_index;
 
-            status = dm2r_position(rel_rcb, DM2R_QUAL, key_desc, (i4)1,
+            idx_key_desc[0].attr_operator = DM2R_EQ;
+            idx_key_desc[0].attr_number = DM_1_INDEX_KEY;
+            idx_key_desc[0].attr_value = (char *) &table_id.db_tab_base;
+            idx_key_desc[1].attr_operator = DM2R_EQ;
+            idx_key_desc[1].attr_number = DM_2_INDEX_KEY;
+            idx_key_desc[1].attr_value = (char *) &table_id.db_tab_index;
+
+            status = dm2r_position(rel_rcb, DM2R_QUAL, rel_key_desc, (i4)1,
                                    (DM_TID *)0, dberr);
             if (status != E_DB_OK)
                 break;
@@ -670,7 +686,7 @@ DB_ERROR	*dberr)
 
             if (operation == DMU_C_ADD_ALTER)
             {
-               status = dm2r_position(attr_rcb, DM2R_QUAL, key_desc, (i4)2,
+               status = dm2r_position(attr_rcb, DM2R_QUAL, att_key_desc, (i4)2,
                                       (DM_TID *)0,
 				       dberr);
 
@@ -701,8 +717,17 @@ DB_ERROR	*dberr)
                       continue;
                    }
 
+		   /*
+		   ** Init ALL fields of new att record
+		   ** Do NOT assume that at the end of dm2r_get calls
+		   ** that it contains an attribute for this table
+		   ** (attrrecord buf was used by dm2r_get to uncompress
+		   ** rows before comparing the key we gave
+		   */
+		   MEfill(sizeof(attrrecord), 0, (char *)&attrrecord); 
                    if (status == E_DB_ERROR && dberr->err_code == E_DM0055_NONEXT)
                    {
+                      attrrecord.attrelid = table_id;
                       attrrecord.attid = ++hold_attid;
                       attrrecord.attxtra = 0;
                       attrrecord.attoff = relrecord.relwid;
@@ -814,7 +839,7 @@ DB_ERROR	*dberr)
 		     break;
 	       }
 
-               status = dm2r_position(attr_rcb, DM2R_QUAL, key_desc, (i4)2,
+               status = dm2r_position(attr_rcb, DM2R_QUAL, att_key_desc, (i4)2,
                                       (DM_TID *)0,
 				       dberr);
 
@@ -1030,7 +1055,7 @@ DB_ERROR	*dberr)
 	       
 
 	      /* Get the iiattribute record */
-	      status = dm2r_position(attr_rcb, DM2R_QUAL, key_desc, (i4)2,
+	      status = dm2r_position(attr_rcb, DM2R_QUAL, att_key_desc, (i4)2,
                                       (DM_TID *)0,
                                        dberr);
               if (status != E_DB_OK)
@@ -1169,7 +1194,7 @@ DB_ERROR	*dberr)
 		  if (status != E_DB_OK)
 		      break;
 
-		  status = dm2r_position(idx_rcb, DM2R_QUAL, key_desc, (i4)1, 
+		  status = dm2r_position(idx_rcb, DM2R_QUAL, idx_key_desc, (i4)1, 
 			      (DM_TID *)0, dberr);
 
 		  if (status != E_DB_OK)
@@ -1252,7 +1277,7 @@ DB_ERROR	*dberr)
               }
 
 	      /* Get the iiattribute record */
-	      status = dm2r_position(attr_rcb, DM2R_QUAL, key_desc, (i4)2,
+	      status = dm2r_position(attr_rcb, DM2R_QUAL, att_key_desc, (i4)2,
                                       (DM_TID *)0, dberr);
               if (status != E_DB_OK)
                   break;
@@ -1477,7 +1502,7 @@ DB_ERROR	*dberr)
 	    ** iidistcol att_number values. */
 	    if (parttab && operation != DMU_C_ALTCOL_ALTER)
 	    {
-		status = pt_adddrop_adjust(xcb, dcb, rel_rcb, &key_desc[0], 
+		status = pt_adddrop_adjust(xcb, dcb, rel_rcb, &rel_key_desc[0], 
 			&relrecord, db_lockmode, dropped_col_attid, dberr);
 		if (status != E_DB_OK)
 		    break;

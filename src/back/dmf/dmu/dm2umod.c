@@ -700,6 +700,8 @@ NO_OPTIM=dr6_us5 i64_aix
 **	    Add support for column encryption.
 **	13-Apr-2010 (kschendel) SIR 123485
 **	    Open tables "no coupon" to avoid BQCB, coupon processing stuff.
+**      29-Apr-2010 (stial01)
+**          dm2u_sysmod iirelation, iirel_idx, iiattribute with compression
 **/
 
 /*
@@ -2290,6 +2292,11 @@ DB_ERROR        *dberr)
 	    break;
 	}
 
+	if (t->tcb_rel.relstat & TCB_CONCUR)
+	{
+	    mcb->mcb_compressed = t->tcb_rel.relcomptype;
+	}
+
 	/* 
 	** Cannot specify the relation index for a modify
         ** command, it is automatically done when you specify
@@ -2307,7 +2314,8 @@ DB_ERROR        *dberr)
             && ((scb->scb_oq_next->odcb_lk_mode != ODCB_X)
 		|| t->tcb_rel.relstat & TCB_INDEX
                 || (mcb->mcb_structure != TCB_HASH)
-                || (mcb->mcb_compressed != TCB_C_NONE)
+		|| ((t->tcb_rel.relstat & TCB_CONCUR) &&
+			(mcb->mcb_compressed != t->tcb_rel.relcomptype))
 		|| (mcb->mcb_mod_options2 & 
 			(DM2U_2_READONLY | DM2U_2_NOREADONLY |
 			 DM2U_2_LOG_INCONSISTENT | DM2U_2_LOG_CONSISTENT |
@@ -5123,7 +5131,7 @@ DB_ERROR	*dberr)
     DM2U_MOD_CB		local_mcb, *mcb = &local_mcb;
     STATUS		cl_stat;
     i4			NumAtts;
-    DMP_MISC		*AttMem;
+    DMP_MISC		*AttMem = NULL;
     DMF_ATTR_ENTRY 	**AttList;
     DMF_ATTR_ENTRY	*AttEntry;
     DMF_ATTR_ENTRY     *AttlPtr;
@@ -5206,7 +5214,9 @@ DB_ERROR	*dberr)
 	unique = (t->tcb_rel.relstat & TCB_UNIQUE) != 0;
 	merge = FALSE;
 	truncate = 0;
-	compressed = 0;
+	if (compressed)
+	    setrelstat |= TCB_COMPRESSED;
+
 	dm0l_jnlflag = (journal ? DM0L_JOURNAL : 0);
 	
 	if (journal)
@@ -5414,7 +5424,6 @@ DB_ERROR	*dberr)
 	    kcount = t->tcb_rel.relkeys;
 	    merge = 0;
 	    truncate = 0;
-	    compressed = 0;
 	    unique = 0;
 	
 	    for (i=0; i < t->tcb_keys; i++)

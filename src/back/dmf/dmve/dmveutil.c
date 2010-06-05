@@ -163,6 +163,8 @@
 **	    Use get-plv instead of getaccessors.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      29-Apr-2010 (stial01)
+**          Added new routines for iirelation/iisequence recovery        
 **/
 
 /*
@@ -3752,4 +3754,161 @@ DMVE_CB		*dmve)
     }
 
     return;
+}
+
+
+/*{
+** Name: dmve_iirel_cmp - Compare iirelation records before undo/redo recovery
+**
+** Description: Compare logged iirelation row to the one we are about to update
+**      Compare reltid only, since iirelation is periodically updated
+**      withoug logging.
+**
+** Inputs:
+**	dmve_cb
+**      rec1			iirelation row (compressed)
+**      rec2			iirelation row (compressed)
+**
+** Outputs:
+**	    none
+**
+**
+** History:
+**	29-Apr-2010 (stial01)
+**          Created.
+*/
+bool
+dmve_iirel_cmp(
+DMVE_CB		*dmve,
+char		*rec1,
+i4		size1,
+char		*rec2,
+i4		size2)
+{
+    DMP_TABLE_IO	*tbio;
+    DMP_TCB		*t;
+    DMP_RELATION	*rel1;
+    DMP_RELATION	*rel2;
+    DMP_RELATION	reltup1;
+    DMP_RELATION	reltup2;
+
+    tbio = dmve->dmve_tbio;
+
+    /* The TCB for iirelation will always have DMP_ROWACCESS init */
+    t = (DMP_TCB *)((char *)tbio - CL_OFFSETOF(DMP_TCB, tcb_table_io));
+
+    /* This routine assumes reltid is first column in iirelation */
+    if (CL_OFFSETOF( DMP_RELATION, reltid ) != 0)
+	return (FALSE);
+
+    /*
+    ** Since iirelation uses data compression, compare_size=sizeof(DB_TAB_ID)
+    ** (relid will be compressed, and it is redundant to compare that also)
+    ** We could uncompress the row here, but since we only need to look
+    ** at reltid,reltidx at the start of the row we won't bother
+    */
+    rel1 = (DMP_RELATION *)rec1;
+    rel2 = (DMP_RELATION *)rec2;
+
+#ifdef xDEBUG
+    TRdisplay("CONSISTENCY CHECK iirel (%d,%d), (%d,%d)\n",
+	rel1->reltid.db_tab_base, rel1->reltid.db_tab_index,
+	rel2->reltid.db_tab_base, rel2->reltid.db_tab_index);
+#endif
+
+    if (rel1->reltid.db_tab_base != rel2->reltid.db_tab_base ||
+	    rel1->reltid.db_tab_index != rel2->reltid.db_tab_index)
+	return (TRUE);
+    else
+	return (FALSE);
+
+}
+
+
+/*{
+** Name: dmve_iiseq_cmp - Compare iisequence records before undo/redo recovery
+**
+** Description: Compare logged iisequence row to the one we are about to update
+**      Compare sequence name only, since iisequence is periodically updated
+**      withoug logging.
+**
+** Inputs:
+**	dmve_cb
+**      comptype		compression type
+**      rec1			iisequence row (might be compressed)
+**      size1
+**      rec2			iisequence row (might be compressed)
+**      size2
+**
+** Outputs:
+**	    none
+**
+**
+** History:
+**	29-Apr-2010 (stial01)
+**          Created.
+*/
+bool
+dmve_iiseq_cmp(
+DMVE_CB		*dmve,
+i2		comptype,
+char		*rec1,
+i4		size1,
+char		*rec2,
+i4		size2)
+{
+    DMP_TABLE_IO	*tbio = NULL;
+    DMP_TCB		*t;
+    DB_IISEQUENCE	*seq1;
+    DB_IISEQUENCE	*seq2;
+    i2			name_len1;
+    i2			name_len2;
+    i4			compare_size;
+
+    tbio = dmve->dmve_tbio;
+    /* This might be partial tcb (no attribute information) */
+    t = (DMP_TCB *)((char *)tbio - CL_OFFSETOF(DMP_TCB, tcb_table_io));
+
+    /* This routine assumes dbs_name is first column in iisequence */
+    if (CL_OFFSETOF( DB_IISEQUENCE, dbs_name ) != 0)
+	return (FALSE);
+
+    seq1 = (DB_IISEQUENCE *)rec1;
+    seq2 = (DB_IISEQUENCE *)rec2;
+    if (comptype == TCB_C_NONE)
+    {
+	if (size1 != size2
+		|| MEcmp(&seq1->dbs_name, &seq1->dbs_name, DB_SEQ_MAXNAME)
+		|| MEcmp(&seq1->dbs_owner, &seq1->dbs_owner, DB_OWN_MAXNAME))
+	    return (TRUE);
+	else
+	    return (FALSE);
+    }
+
+    /*
+    ** If iisequence uses data compression, extract the 2 byte length
+    ** and compare the compressed sequence name
+    ** For iisequence rows is valid to compare the compressed lengths
+    ** (non-char fields are not compressed, and char fields should not change)
+    */
+    MEcopy(rec1, sizeof(name_len1), (char *)&name_len1);
+    MEcopy(rec2, sizeof(name_len2), (char *)&name_len2);
+    compare_size = name_len1 + sizeof(name_len1);
+
+#ifdef xDEBUG
+    TRdisplay("CONSISTENCY CHECK: iiseq size1 %d size2 %d name_len %d %~t %~t\n",
+	size1, size2, name_len1, 
+	name_len1, rec1 + DB_CNTSIZE, name_len2, rec2 + DB_CNTSIZE);
+#endif
+
+    /* Make sure this looks like a valid DB_IISEQUENCE record */
+    if (name_len1 > DB_SEQ_MAXNAME || name_len2 > DB_SEQ_MAXNAME)
+	return (TRUE);
+
+    if (size1 != size2 || name_len1 != name_len2 ||
+	MEcmp(rec1, rec2, compare_size))
+	return (TRUE);
+    else
+	return (FALSE);
+
 }

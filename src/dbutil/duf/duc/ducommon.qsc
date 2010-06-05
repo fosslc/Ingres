@@ -387,6 +387,8 @@ EXEC SQL include SQLCA;
 **          Also, iitree.treetree should be varbyte (not varchar)
 **     22-apr-2010 (stial01)
 **          Use DB_EXTFMT_SIZE for register table newcolname IS 'ext_format'
+**     29-Apr-2010 (stial01)
+**          duc_modify_catalog() check for sql error
 */
 
 
@@ -6246,18 +6248,27 @@ duc_modify_catalog(char *catalog)
     {
 	qry = catdef->modify;
 	exec sql execute immediate :qry;
+	if (sqlca.sqlcode < 0)
+	    /* Error shouldn't happen, but this should be msg-ized! */
+	    SIprintf("SQL ERROR %d for %s\n", sqlca.sqlcode, qry);
     }
    
     if (catdef->index1)
     {
-       qry = catdef->index1;
-       exec sql execute immediate :qry;
+	qry = catdef->index1;
+	exec sql execute immediate :qry;
+	if (sqlca.sqlcode < 0)
+	    /* Error shouldn't happen, but this should be msg-ized! */
+	    SIprintf("SQL ERROR %d for %s\n", sqlca.sqlcode, qry);
     }
 
     if (catdef->index2)
     {
-       qry = catdef->index2;
-       exec sql execute immediate :qry;
+	qry = catdef->index2;
+	exec sql execute immediate :qry;
+	if (sqlca.sqlcode < 0)
+	    /* Error shouldn't happen, but this should be msg-ized! */
+	    SIprintf("SQL ERROR %d for %s\n", sqlca.sqlcode, qry);
     }
 
     return;

@@ -559,6 +559,8 @@
 **	    SIR 121619 MVCC: Reinstated dm1r_crowlk_access().
 **	01-apr-2010 (toumi01) SIR 122403
 **	    Add decryption call.
+**      29-Apr-2010 (stial01)
+**          dm1r_lock_value() set dberr if LOCK_QUOTA_EXCEEDED
 */
 
 /*
@@ -5622,6 +5624,7 @@ DB_ERROR        *dberr)
     {
 	uleFormat(dberr, E_DM004B_LOCK_QUOTA_EXCEEDED, &sys_err, ULE_LOG, NULL,
 		    (char *)NULL, (i4)0, (i4 *)NULL, err_code, 0);
+	SETDBERR(dberr, 0, E_DM004B_LOCK_QUOTA_EXCEEDED);
 	msgid = I_SX2739_LOCK_LIMIT;
     }
     else if (cl_status == LK_DEADLOCK)

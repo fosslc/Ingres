@@ -205,6 +205,8 @@
 **	    Replace DMPP_PAGE* with DMP_PINFO* as needed.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs, move consistency check to dmveutil
+**      29-Apr-2010 (stial01)
+**          Use new routintes to compare rows in iirelation, iisequence
 */
 
 static DB_STATUS	dmv_reput(
@@ -802,7 +804,6 @@ DMP_PINFO	    *pinfo)
     char		*log_row;
     char		*record = NULL;
     i4		record_size;
-    i4		compare_size;
     i4		flags;
     i4		reclaim_space;
     i4		update_mode;
@@ -811,6 +812,7 @@ DMP_PINFO	    *pinfo)
     DMPP_ACC_PLV	*plv = dmve->dmve_plv;
     LG_LRI		lri;
     DMPP_PAGE		*page = pinfo->page;
+    bool		rowsdif;
 
     CLRDBERR(&dmve->dmve_error);
  
@@ -879,6 +881,7 @@ DMP_PINFO	    *pinfo)
     ** row since iirelation is periodically updated without logging the
     ** changes. IISEQUENCE tuples are also updated without logging, so
     ** treat them the same way.
+    **
     */
     (*plv->dmpp_reclen)(page_type, log_rec->put_page_size, page,
 		(i4)log_rec->put_tid.tid_tid.tid_line, &record_size);
@@ -889,15 +892,24 @@ DMP_PINFO	    *pinfo)
     */
     if (log_rec->put_rec_size)
     {
-	if (log_rec->put_tbl_id.db_tab_base == DM_1_RELATION_KEY)
-	    compare_size = DB_TAB_MAXNAME + 16;
+	if (log_rec->put_tbl_id.db_tab_base == DM_B_RELATION_TAB_ID &&
+		log_rec->put_tbl_id.db_tab_index == DM_I_RELATION_TAB_ID)
+	{
+	    rowsdif = dmve_iirel_cmp(dmve, log_row, log_rec->put_rec_size,
+					record, record_size);
+	}
 	else if (log_rec->put_tbl_id.db_tab_base == DM_B_SEQ_TAB_ID)
-	    compare_size = DB_SEQ_MAXNAME + 16;
+	{
+	    rowsdif =dmve_iiseq_cmp(dmve, log_rec->put_comptype,
+			log_row, log_rec->put_rec_size, record, record_size);
+	}
+	else if (log_rec->put_rec_size != record_size ||
+		MEcmp((PTR)log_row, (PTR)record, record_size) != 0)
+	    rowsdif = TRUE;
 	else
-	    compare_size = record_size;
+	    rowsdif = FALSE;
 
-	if ((log_rec->put_rec_size != record_size) ||
-	    (MEcmp((PTR)log_row, (PTR)record, compare_size) != 0))
+	if (rowsdif)
 	{
 	    uleFormat(NULL, E_DM966C_DMVE_TUPLE_MISMATCH, (CL_ERR_DESC *)NULL, ULE_LOG,
 		NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 8, 

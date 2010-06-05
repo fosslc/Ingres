@@ -120,6 +120,8 @@
 **          Changed dmve_bid_check prototype, added ADF_CB to DMVE_CB.
 **      14-oct-2009 (stial01)
 **          Prototype and structure changes for dmve page fix/unfix
+**      29-Apr-2009 (stial01)
+**          Added prototypes for dmve_iirel_cmp, dmve_iiseq_cmp
 **/
 
 
@@ -677,3 +679,18 @@ DM_TID		    *log_tid,
 char		    *log_key,
 i4		    log_key_size,
 DM_TID		    *bidp);
+
+FUNC_EXTERN bool dmve_iirel_cmp(
+DMVE_CB		*dmve,
+char		*rec1,
+i4		size1,
+char		*rec2,
+i4		size2);
+
+FUNC_EXTERN bool dmve_iiseq_cmp(
+DMVE_CB		*dmve,
+i2		comptype,
+char		*rec1,
+i4		size1,
+char		*rec2,
+i4		size2);

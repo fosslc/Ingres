@@ -271,6 +271,8 @@
 **	    Replace DMPP_PAGE* with DMP_PINFO* as needed.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs, move consistency check to dmveutil
+**      29-Apr-2010 (stial01)
+**          Use new routintes to compare rows in iirelation, iisequence
 */
 
 static DB_STATUS	dmv_rerep(
@@ -824,7 +826,6 @@ char	    	    *new_row_buf)
     DMPP_PAGE	    	*newrow_page;
     DB_STATUS		status = E_DB_OK;
     i4		record_size;
-    i4		compare_size;
     i4		page_type = log_rec->rep_pg_type;
     char		*record;
     char		*old_row;
@@ -845,6 +846,8 @@ char	    	    *new_row_buf)
     DMPP_ACC_PLV	*plv = dmve->dmve_plv;
     DMPP_PAGE		*old_page = NULL;
     DMPP_PAGE		*new_page = NULL;
+    bool		rowsdif;
+    DMP_TCB		*t;
 
     CLRDBERR(&dmve->dmve_error);
 
@@ -992,15 +995,24 @@ char	    	    *new_row_buf)
 	/*
 	** Compare the logged old row with the one on the page.
 	*/
-	if (log_rec->rep_tbl_id.db_tab_base == DM_1_RELATION_KEY)
-	    compare_size = DB_TAB_MAXNAME + 16;
+	if (log_rec->rep_tbl_id.db_tab_base == DM_B_RELATION_TAB_ID &&
+		log_rec->rep_tbl_id.db_tab_index == DM_I_RELATION_TAB_ID)
+	{
+	    rowsdif = dmve_iirel_cmp(dmve, old_row, log_rec->rep_orec_size,
+			record, record_size);
+	}
 	else if (log_rec->rep_tbl_id.db_tab_base == DM_B_SEQ_TAB_ID)
-	    compare_size = DB_SEQ_MAXNAME + 16;
-	else
-	    compare_size = record_size;
+	{
+	    rowsdif = dmve_iiseq_cmp(dmve, log_rec->rep_comptype,
+			old_row, log_rec->rep_orec_size, record, record_size);
+	}
+	else if (log_rec->rep_orec_size != record_size ||
+		MEcmp((PTR)old_row, (PTR)record, record_size) != 0)
+	    rowsdif = TRUE;
+	else 
+	    rowsdif = FALSE;
 
-	if ((log_rec->rep_orec_size != record_size) ||
-	    (MEcmp((PTR)old_row, (PTR)record, compare_size) != 0))
+	if (rowsdif)
 	{
 	    uleFormat(NULL, E_DM966C_DMVE_TUPLE_MISMATCH, (CL_ERR_DESC *)NULL, ULE_LOG,
 		NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 8, 
@@ -1093,13 +1105,52 @@ char	    	    *new_row_buf)
     */
     if ((dmve->dmve_action == DMVE_DO) &&
 	(log_rec->rep_header.flags & DM0L_NONJNL_TAB) &&
-	(log_rec->rep_tbl_id.db_tab_base == DM_1_RELATION_KEY) &&
-	(log_rec->rep_tbl_id.db_tab_index == 0))
+	(log_rec->rep_tbl_id.db_tab_base == DM_B_RELATION_TAB_ID) &&
+	(log_rec->rep_tbl_id.db_tab_index == DM_I_RELATION_TAB_ID))
     {
-	DMP_RELATION	*old_rel = (DMP_RELATION *)old_row;
-	DMP_RELATION	*new_rel = (DMP_RELATION *)new_row;
+	DMP_RELATION	oreltup;
+	DMP_RELATION	nreltup;
+	DMP_RELATION	curtup;
+	i4		old_size;
+	i4		new_size;
+	i4		cur_size;
+	char		creltup[sizeof(DMP_RELATION)+50]; /* compress expand*/
+	DMP_RELATION	*old_rel;
+	DMP_RELATION	*new_rel;
 	i4		old_relstat, new_relstat;
 	i2		old_idxcount, new_idxcount;
+
+	/* The tcb for iirelation will always have DMP_ROWACCESS  */
+	t = (DMP_TCB *)((char *)tabio - CL_OFFSETOF(DMP_TCB, tcb_table_io));
+
+	status = (*t->tcb_data_rac.dmpp_uncompress)(&t->tcb_data_rac, 
+		old_row, (char *)&oreltup, sizeof(DMP_RELATION), &old_size,
+		NULL, 0, (ADF_CB *)NULL);
+	old_rel = &oreltup;
+	if (status)
+	{
+	    SETDBERR(&dmve->dmve_error, 0, E_DM9637_REDO_REP);
+	    return(E_DB_ERROR);
+	}
+
+	status = (*t->tcb_data_rac.dmpp_uncompress)(&t->tcb_data_rac, 
+		new_row, (char *)&nreltup, sizeof(DMP_RELATION), &new_size,
+		NULL, 0, (ADF_CB *)NULL);
+	new_rel = &nreltup;
+	if (status)
+	{
+	    SETDBERR(&dmve->dmve_error, 0, E_DM9637_REDO_REP);
+	    return(E_DB_ERROR);
+	}
+
+	status = (*t->tcb_data_rac.dmpp_uncompress)(&t->tcb_data_rac, 
+		record, (char *)&curtup, sizeof(DMP_RELATION), &cur_size,
+		NULL, 0, (ADF_CB *)NULL);
+	if (status)
+	{
+	    SETDBERR(&dmve->dmve_error, 0, E_DM9637_REDO_REP);
+	    return(E_DB_ERROR);
+	}
 
 	/*
 	** Extract values from (possibly non-aligned) log rows.
@@ -1140,8 +1191,8 @@ char	    	    *new_row_buf)
 		    break;
 
 		if ((action->rfp_act_action == RFP_DELETE) &&
-		    (action->rfp_act_tabid.db_tab_base == DM_1_RELATION_KEY) &&
-		    (action->rfp_act_tabid.db_tab_index == 0) &&
+		    (action->rfp_act_tabid.db_tab_base == DM_B_RELATION_TAB_ID) &&
+		    (action->rfp_act_tabid.db_tab_index == DM_I_RELATION_TAB_ID) &&
 		    (action->rfp_act_usertabid.db_tab_base == 
 							reltid.db_tab_base) &&
 		    (action->rfp_act_index_drop))
@@ -1165,7 +1216,7 @@ char	    	    *new_row_buf)
 	** Form new row to replace from the old row - masking in the changes
 	** that we want to roll forward.
 	*/
-	MEcopy((PTR) record, sizeof(temprow), (PTR) &temprow);
+	MEcopy((PTR) &curtup, sizeof(temprow), (PTR) &temprow);
 	MEcopy((PTR) &new_rel->relstamp12, sizeof(temprow.relstamp12),
 	    (PTR) &temprow.relstamp12);
 	I4ASSIGN_MACRO(new_rel->relqid1, temprow.relqid1);
@@ -1190,7 +1241,14 @@ char	    	    *new_row_buf)
 	    }
 	}
 
-	new_row = (char *)&temprow;  
+	status = (*t->tcb_data_rac.dmpp_compress)(&t->tcb_data_rac, 
+		(char *)&temprow, sizeof(DMP_RELATION), creltup, &new_size);
+	new_row = creltup;  
+	if (status)
+	{
+	    SETDBERR(&dmve->dmve_error, 0, E_DM9637_REDO_REP);
+	    return(E_DB_ERROR);
+	}
     }
 
     /*
@@ -1397,7 +1455,6 @@ char	    	    *new_row_buf)
     DMPP_PAGE	    	*newrow_page;
     DB_STATUS		status = E_DB_OK;
     i4		record_size;
-    i4		compare_size;
     i4		flags;
     i4		page_type = log_rec->rep_pg_type;
     char		*record;
@@ -1425,6 +1482,8 @@ char	    	    *new_row_buf)
     DMPP_PAGE		*old_page = NULL;
     DMPP_PAGE		*new_page = NULL;
     DB_TRAN_ID		row_tran_id;
+    bool		rowsdif;
+    DMP_TCB		*t;
 
     CLRDBERR(&dmve->dmve_error);
 
@@ -1539,8 +1598,8 @@ char	    	    *new_row_buf)
 	    &record, NULL, NULL, NULL, NULL);
 	if (status != E_DB_OK)
 	{
-	    if ((log_rec->rep_tbl_id.db_tab_base == DM_1_RELATION_KEY) &&
-		(log_rec->rep_tbl_id.db_tab_index == 0) &&
+	    if ((log_rec->rep_tbl_id.db_tab_base == DM_B_RELATION_TAB_ID) &&
+		(log_rec->rep_tbl_id.db_tab_index == DM_I_RELATION_TAB_ID) &&
 		(log_rec->rep_header.flags & DM0L_NONJNL_TAB)) 
             {
                 return (E_DB_OK);
@@ -1611,15 +1670,24 @@ char	    	    *new_row_buf)
     */
     if (newrow_page && log_rec->rep_nrec_size)
     {
-	if (log_rec->rep_tbl_id.db_tab_base == DM_1_RELATION_KEY)
-	    compare_size = DB_TAB_MAXNAME + 16;
+	if (log_rec->rep_tbl_id.db_tab_base == DM_B_RELATION_TAB_ID &&
+		log_rec->rep_tbl_id.db_tab_index == DM_I_RELATION_TAB_ID)
+	{
+	    rowsdif = dmve_iirel_cmp(dmve, new_row, log_rec->rep_nrec_size,
+					record, record_size);
+	}
 	else if (log_rec->rep_tbl_id.db_tab_base == DM_B_SEQ_TAB_ID)
-	    compare_size = DB_SEQ_MAXNAME + 16;
+	{
+	    rowsdif =dmve_iiseq_cmp(dmve, log_rec->rep_comptype,
+		    new_row, log_rec->rep_nrec_size, record, record_size);
+	}
+	else if (log_rec->rep_nrec_size != record_size ||
+		MEcmp((PTR)new_row, (PTR)record, record_size) != 0)
+	    rowsdif = TRUE;
 	else
-	    compare_size = record_size;
+	    rowsdif = FALSE;
 
-	if ((log_rec->rep_nrec_size != record_size) ||
-	    (MEcmp((PTR)new_row, (PTR)record, compare_size) != 0))
+	if (rowsdif)
 	{
 	    uleFormat(NULL, E_DM966C_DMVE_TUPLE_MISMATCH, (CL_ERR_DESC *)NULL, 
 		ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL, 
@@ -1693,16 +1761,43 @@ char	    	    *new_row_buf)
     */
     if ((dmve->dmve_action == DMVE_DO) &&
 	(log_rec->rep_header.flags & DM0L_NONJNL_TAB) &&
-	(log_rec->rep_tbl_id.db_tab_base == DM_1_RELATION_KEY) &&
-	(log_rec->rep_tbl_id.db_tab_index == 0))
+	(log_rec->rep_tbl_id.db_tab_base == DM_B_RELATION_TAB_ID) &&
+	(log_rec->rep_tbl_id.db_tab_index == DM_I_RELATION_TAB_ID))
     {
-	DMP_RELATION	*old_rel = (DMP_RELATION *)old_row;
+	char		creltup[sizeof(DMP_RELATION)+50]; /* compress expand*/
+	DMP_RELATION	*old_rel;
+	DMP_RELATION	oreltup;
+	DMP_RELATION	curtup;
+	i4		old_size;
+	i4		cur_size;
+
+	/* The tcb for iirelation will always have DMP_ROWACCESS  */
+	t = (DMP_TCB *)((char *)tabio - CL_OFFSETOF(DMP_TCB, tcb_table_io));
+
+	status = (*t->tcb_data_rac.dmpp_uncompress)(&t->tcb_data_rac, 
+		old_row, (char *)&oreltup, sizeof(DMP_RELATION), &old_size,
+		NULL, 0, (ADF_CB *)NULL);
+	if (status)
+	{
+	    SETDBERR(&dmve->dmve_error, 0, E_DM9636_UNDO_REP);
+	    return(E_DB_ERROR);
+	}
+	old_rel = &oreltup;
+
+	status = (*t->tcb_data_rac.dmpp_uncompress)(&t->tcb_data_rac, 
+		record, (char *)&curtup, sizeof(DMP_RELATION), &cur_size,
+		NULL, 0, (ADF_CB *)NULL);
+	if (status)
+	{
+	    SETDBERR(&dmve->dmve_error, 0, E_DM9637_REDO_REP);
+	    return(E_DB_ERROR);
+	}
 
 	/*
 	** Form new row to replace from the old row - masking in the changes
 	** that we want to roll forward.
 	*/
-	MEcopy((PTR) record, sizeof(temprow), (PTR) &temprow);
+	MEcopy((PTR) &curtup, sizeof(temprow), (PTR) &temprow);
 	MEcopy((PTR) &old_rel->relstamp12, sizeof(temprow.relstamp12),
 	    (PTR) &temprow.relstamp12);
 	I4ASSIGN_MACRO(old_rel->relqid1, temprow.relqid1);
@@ -1723,7 +1818,14 @@ char	    	    *new_row_buf)
 		temprow.relstat |= TCB_IDXD;
 	}
 
-	old_row = (char *)&temprow;
+	status = (*t->tcb_data_rac.dmpp_compress)(&t->tcb_data_rac, 
+		(char *)&temprow, sizeof(DMP_RELATION), creltup, &old_size);
+	old_row = creltup;  
+	if (status)
+	{
+	    SETDBERR(&dmve->dmve_error, 0, E_DM9636_UNDO_REP);
+	    return(E_DB_ERROR);
+	}
     }
 
 

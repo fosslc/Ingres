@@ -35,7 +35,17 @@
 **	05-Nov-2008 (jonj)
 **	    SIR 120874 Change function prototypes to pass DB_ERROR *dberr
 **	    instead of i4 *err_code.
+**      29-Apr-2010 (stial01)
+**          Added DM_CORE_REL_CNT, DM_CORE_RINDEX_CNT
 **/
+
+/*
+** DM_CORE_REL_CNT The number of core catalogs initialized in dmm routines
+** DM_CORE_RINDEX_CNT The number of core catalogs initialized in dmm routines
+** iirelation,iirel_idx,iiattribute, iiindex
+*/
+#define DM_CORE_REL_CNT	4
+#define DM_CORE_RINDEX_CNT DM_CORE_REL_CNT
 
 FUNC_EXTERN DB_STATUS	dmm_alter(DMM_CB *dmm_cb);
 FUNC_EXTERN DB_STATUS	dmm_create(DMM_CB *dmm_cb);
