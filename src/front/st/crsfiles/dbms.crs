@@ -680,6 +680,13 @@ ii.$.recovery.$.log_writer:	IF ( ii.$.rcp.log.log_file_parts == 1)
 				ENDIF, MIN = 0;
 ii.$.recovery.$.mechanisms:	"none";
 ii.$.recovery.$.name_service:	ON;
+ii.$.recovery.$.offline_error_action:	"continue_ignore_db",
+					VALID = { "continue_ignore_db", 
+					"continue_ignore_table", 
+					"stop" };
+ii.$.recovery.$.online_error_action:	"continue_ignore_db",
+					VALID = { "continue_ignore_db", 
+					"stop" };
 ii.$.recovery.$.stack_size:	128K, MIN = 128K;
 #ifdef NT_GENERIC
 ii.$.recovery.$.image_name:     "dmfrcp";

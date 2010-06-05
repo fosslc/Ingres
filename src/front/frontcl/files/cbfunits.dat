@@ -303,6 +303,8 @@ ii.*.*.*.psf_vch_prec:                  boolean
 *.*.ice.html_home:			'full directory path'
 *.*.ice.server_name:			'HTTP server name'
 *.*.recovery.*.cp_timer:		'seconds'
+*.*.recovery.*.offline_error_action:	'string'
+*.*.recovery.*.online_error_action:	'string'
 *.*.rcp.dmf_cache_size:		'buffers'
 *.*.rcp.dmf_cache_size4k:		'buffers'
 *.*.rcp.dmf_cache_size8k:		'buffers'

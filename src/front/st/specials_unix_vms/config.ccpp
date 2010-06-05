@@ -215,6 +215,8 @@
 **	    Rmeove dbmsmtpl.hlp.
 **	30-apr-2010 (stephenb)
 **		Add dbmscpop.hlp
+**      07-May-2010 (stial01) (SIR 122205)
+**          Add offline_error_action, online_error_action help
 */
 
 PART   config
@@ -487,6 +489,8 @@ PART   config
       FILE rcplgkml.hlp
       FILE rcpresli.hlp
       FILE reccptim.hlp
+      FILE recoffline.hlp
+      FILE reconline.hlp
       FILE seclevel.hlp
       FILE secome.hlp
       FILE secpaswd.hlp

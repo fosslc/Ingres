@@ -82,6 +82,8 @@
 #	Remove dbmsmtpl.hlp.
 #	30-apr-2010 (stephenb)
 #	    Add dbmscpop.hlp
+#    07-May-2010 (stial01) SIR 122205
+#	Add recoffline.hlp, reconline.hlp
 
 SubDir ING_SRC front st config ;
 
@@ -468,6 +470,8 @@ File $(INGMSG)$(DFS)gwtrace_init.hlp : gwtrace_init.hlp ;
 File $(INGMSG)$(DFS)gwtypecast_strlen.hlp : gwtypecast_strlen.hlp ;
 File $(INGMSG)$(DFS)dbmspqpa.hlp : dbmspqpa.hlp ;
 File $(INGMSG)$(DFS)dbmsdseg.hlp : dbmsdseg.hlp ;
+File $(INGMSG)$(DFS)recoffline.hlp : recoffline.hlp ;
+File $(INGMSG)$(DFS)reconline.hlp : reconline.hlp ;
 
 IILIBRARY CONFIGLIB : crparse.yf txlogs.sc startup.sc
 	secmechs.sc netprots.sc generic.sc dblist.sc mllist.sc crscan.c cr.c ;

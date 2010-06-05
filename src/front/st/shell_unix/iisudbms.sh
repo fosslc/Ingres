@@ -671,6 +671,9 @@
 ##          SIR 123296
 ##          Call createdb explicity as /usr/bin/createdb had to be removed
 ##          to prevent conflicts for LSB builds.
+##	07-May-2010 (stial01) SIR 122205
+##          Added offline_error_action, online_error_action
+##
 ##	    
 #----------------------------------------------------------------------------
 . iisysdep
@@ -1435,6 +1438,15 @@ update_parameters()
     for param in readbackward_blocks readforward_blocks
     do
 	x=`iigetres "ii.$CONFIG_HOST.rcp.log.$param"`
+	if [ -z "$x" ] ; then
+	    $DOIT iiinitres $param $II_CONFIG/dbms.rfm
+	fi
+    done
+
+    ## offline_error_action, online_error_action added at 10.0 for SIR 122205
+    for param in offline_error_action online_error_action
+    do
+	x=`iigetres "ii.$CONFIG_HOST.recovery.*.$param"`
 	if [ -z "$x" ] ; then
 	    $DOIT iiinitres $param $II_CONFIG/dbms.rfm
 	fi

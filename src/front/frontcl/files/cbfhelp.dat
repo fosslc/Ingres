@@ -238,6 +238,12 @@ rms.connect_limit.title:		'RMS Gateway Connection Limit'
 recovery.cp_timer.file:			reccptim.hlp
 recovery.cp_timer.title:		'Recovery Consistency Point Timer'
 
+recovery.offline_error_action.file:	recoffline.hlp
+recovery.offline_error_action.title:	'Recovery Offline Error Action'
+
+recovery.online_error_action.file:	reconline.hlp
+recovery.online_error_action.title:	'Recovery Online Error Action'
+
 *.cpu_statistics.file:			dbmscpus.hlp
 dbms.cpu_statistics.title:		'DBMS CPU Statistics'
 star.cpu_statistics.title:		'Star CPU Statistics'
