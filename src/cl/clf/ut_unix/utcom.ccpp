@@ -172,6 +172,9 @@
 	23-Sep-2009 (frima01) SIR 122138
 	    Removed obsolete hp8_us5 and hp3_us5 platform strings and
 	    unsupported -m64 flag from i64.lnx.
+	19-Apr-2010 (hweho01)
+	    For Solaris/Sparc, use the different options by checking  
+	    compiler version/flags at runtime, avoid annoying warnings.  
 
 # endif
 
@@ -201,18 +204,38 @@
 # endif /* hp */
 
 
-/* For Solaris, mkdefault.sh defines CCSUN32/64 symbols for arch.
+/* For Solaris, use different options by checking the available compiler flags. 
 ** Older Sun compilers need -xarch and don't understand -m32/64.
 ** Newer compilers (studio 12 and later) understand both, but issue
 ** annoying "deprecated" warnings when -xarch seen.
 */
 #if defined(sparc_sol)
+# define CFLAGS -c -w -O
+# define FFLAGS -c
 # if defined(BUILD_ARCH32)
-# define CFLAGS -c -w -O CCSUN32
-# define FFLAGS -c -xarch=v8plus
+# define BLD_C_SPARC if CCOMPLR -flags 2>&1 | grep '^-m32' >/dev/null 2>&1 ; \
+	then CCOMPLR -m32 CFLAGS DFLAGS %F %N.c ; \
+	else CCOMPLR -xarch=v8plus CFLAGS DFLAGS %F %N.c ;  fi
+# define BLD_CPP_SPARC if CPP -flags 2>&1 | grep '^-m32' >/dev/null 2>&1 ; \
+	then CPP -m32 CFLAGS DFLAGS %F %N.cc ; \
+	else CPP -xarch=v8plus CFLAGS DFLAGS %F %N.cc ; fi
+# define BLD_FOR_SPARC if FORTRAN -flags 2>&1 | grep '^-m32' >/dev/null 2>&1 ; \
+	then FORTRAN -m32 FFLAGS DFLAGS %F %N.f ; \
+	elif FORTRAN -flags 2>&1 | grep '^-xarch=v8plus' >/dev/null 2>&1 ; \
+	then FORTRAN -xarch=v8plus FFLAGS DFLAGS %F %N.f ; \
+	else FORTRAN FFLAGS DFLAGS %F %N.f ; fi
 # else
-# define CFLAGS -c -w -O CCSUN64
-# define FFLAGS -c -xarch=v9
+# define BLD_C_SPARC if CCOMPLR -flags 2>&1 | grep '^-m64' >/dev/null 2>&1 ; \
+	then CCOMPLR -m64 CFLAGS DFLAGS %F %N.c ; \
+	else CCOMPLR -xarch=v9 CFLAGS DFLAGS %F %N.c ;  fi
+# define BLD_CPP_SPARC if CPP -flags 2>&1 | grep '^-m64' >/dev/null 2>&1 ; \
+	then CPP -m64 CFLAGS DFLAGS %F %N.cc ; \
+	else CPP -xarch=v9 CFLAGS DFLAGS %F %N.cc ; fi
+# define BLD_FOR_SPARC if FORTRAN -flags 2>&1 | grep '^-m64' >/dev/null 2>&1 ; \
+	then FORTRAN -m64 FFLAGS DFLAGS %F %N.f ; \
+	elif FORTRAN -flags 2>&1 | grep '^-xarch=v9' >/dev/null 2>&1 ; \
+	then FORTRAN -xarch=v9 FFLAGS DFLAGS %F %N.f ; \
+	else FORTRAN FFLAGS DFLAGS %F %N.f ; fi
 # endif
 #endif
 
@@ -300,39 +323,79 @@
 
 qc
 	cd `expr %I : '\(.*\)/' \| .`; %Eeqc -A %N.qc
+#if defined(sparc_sol)
+	cd `expr %I : '\(.*\)/' \| .`; BLD_C_SPARC
+# else
 	cd `expr %I : '\(.*\)/' \| .`; CCOMPLR CFLAGS %N.c
+# endif
 	if [ %I.o != %O ];then mv %I.o %O;fi
 	rm %I.c
 sc
 	cd `expr %I : '\(.*\)/' \| .`; %Eesqlc %N.sc
+#if defined(sparc_sol)
+	cd `expr %I : '\(.*\)/' \| .`; BLD_C_SPARC
+# else
 	cd `expr %I : '\(.*\)/' \| .`; CCOMPLR CFLAGS %N.c
+# endif
 	if [ %I.o != %O ];then mv %I.o %O;fi
 	rm %I.c
 cc
+#if defined(sparc_sol)
+	cd `expr %I : '\(.*\)/' \| .`; BLD_CPP_SPARC
+# else
 	cd `expr %I : '\(.*\)/' \| .`; CPP CFLAGS DFLAGS %F %N.cc
+# endif
 	if [ %I.o != %O ];then mv %I.o %O;fi
 c
+#if defined(sparc_sol)
+	cd `expr %I : '\(.*\)/' \| .`; BLD_C_SPARC
+# else
 	cd `expr %I : '\(.*\)/' \| .`; CCOMPLR CFLAGS DFLAGS %F %N.c
+# endif
 	if [ %I.o != %O ];then mv %I.o %O;fi
 qf
 	cd `expr %I : '\(.*\)/' \| .`; %Eeqf %N.qf
+#if defined(sparc_sol)
+	cd `expr %I : '\(.*\)/' \| .`; BLD_FOR_SPARC
+# else
 	cd `expr %I : '\(.*\)/' \| .`; FORTRAN FFLAGS %N.f
+# endif
 	if [ %I.o != %O ];then mv %I.o %O;fi
 	rm %I.f
 sf
 	cd `expr %I : '\(.*\)/' \| .`; %Eesqlf %N.sf
+#if defined(sparc_sol)
+	cd `expr %I : '\(.*\)/' \| .`; BLD_FOR_SPARC
+# else
 	cd `expr %I : '\(.*\)/' \| .`; FORTRAN FFLAGS %N.f
+# endif
 	if [ %I.o != %O ];then mv %I.o %O;fi
 	rm %I.f
 f
+#if defined(sparc_sol)
+	cd `expr %I : '\(.*\)/' \| .`; BLD_FOR_SPARC
+# else
 	cd `expr %I : '\(.*\)/' \| .`; FORTRAN FFLAGS %N.f
+# endif
 	if [ %I.o != %O ];then mv %I.o %O;fi
 for
+#if defined(sparc_sol)
+	cd `expr %I : '\(.*\)/' \| .`; BLD_FOR_SPARC
+# else
 	cd `expr %I : '\(.*\)/' \| .`; FORTRAN FFLAGS %N.f
+# endif
 	if [ %I.o != %O ];then mv %I.o %O;fi
 F
+#if defined(sparc_sol)
+	cd `expr %I : '\(.*\)/' \| .`; BLD_FOR_SPARC
+# else
 	cd `expr %I : '\(.*\)/' \| .`; FORTRAN FFLAGS %N.f
+# endif
 	if [ %I.o != %O ];then mv %I.o %O;fi
 FOR
+#if defined(sparc_sol)
+	cd `expr %I : '\(.*\)/' \| .`; BLD_FOR_SPARC
+# else
 	cd `expr %I : '\(.*\)/' \| .`; FORTRAN FFLAGS %N.f
+# endif
 	if [ %I.o != %O ];then mv %I.o %O;fi

@@ -689,7 +689,11 @@
 ##	07-Dec-2009 (frima01) SIR 122138
 ##	    Removed setting of SLSFX since it relied on shlibinfo which
 ##	    isn't included anymore.
-##		
+##	19-Apr-2010 (hweho01)
+##	    For Solaris/Sparc, check the available compiler flags,
+##	    then specify the option accordingly. Avoid the annoying 
+##	    'deprecated' warnings.
+##
 ##
 #-------------------------------------------------------------------------
 
@@ -1668,6 +1672,34 @@ case $vers in
       echo UDT_LIB_IS_STATIC_ARCHIVE=false
       ;;
 esac
+
+# For Solaris/Sparc platform, need to check the flags of installed   
+# compiler at runtime. The older versions need -xarch=v8plus/v9 and don't
+# understand -m32/64; and the newer ones (Studio 12 and later) can take  
+# both, but generate annoying warnings for option -xarch.
+if [ "$vers" = "su4_us5"  -o "$vers" = "su9_us5" ] ; then
+echo " "
+echo "# If Studio 12 or later version is used, use options -m32/-m64, " 
+echo "# avoid annoying 'deprecated' warnings to -xarch=v8plus/-xarch=v9."
+echo "if \$CC -flags 2>&1 | grep '^-m32' >/dev/null 2>&1 ; then"	
+  echo "if [ -n \"\$CCLDMACH32_NEW\" ] ; then "
+    echo "CCLDMACH32=\$CCLDMACH32_NEW"  
+    echo "CCLDMACH64=\$CCLDMACH64_NEW"
+    echo "CCMACH32=\$CCMACH32_NEW"  
+    echo "CCMACH64=\$CCMACH64_NEW"
+    echo "if [ \"\$build_arch\" = \"32+64\" -o \"\$build_arch\" = \"32\" ] " 
+    echo "then"
+    echo "CCLDMACH=\$CCLDMACH32"
+    echo "CCMACH=\$CCMACH32"
+    echo "fi"
+    echo "if [ \"\$build_arch\" = \"64+32\" -o \"\$build_arch\" = \"64\" ] " 
+    echo "then"
+    echo "CCLDMACH=\$CCLDMACH64"
+    echo "CCMACH=\$CCMACH64"
+    echo "fi"
+  echo "fi"
+echo "fi"
+fi
 
 #-------------------------------------------------------------------------
 chmod 755 $sysdep

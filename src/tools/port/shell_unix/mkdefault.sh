@@ -756,6 +756,9 @@
 ##	    Neeed for 64bit builds
 ##	23-Sept-2009 (frima01) SIR 122138
 ##	    Correct CCLDMACH64, XTERMLIB and ldlibpath64 for i64.lnx.
+##	19-Apr-2010 (hweho01)
+##	    For Solaris/Sparc, prepare runtime compiler and linker 
+##	    settings with flags that are introduced in Studio 12.
 
 TMP=/tmp/libc.nm
 trap 'rm -f $TMP' 0 1 2 13 15
@@ -1100,12 +1103,18 @@ case $vers in
    sui_us5) 
 	    suncc32='-xarch=v8plus'
 	    suncc64='-xarch=v9'
-	    # FIXME!  test only works for Studio 12.  We may have to wait
-	    # for 13 to see whether Sun goes with 5.10 or ???
 	    # -m32/-m64 should be used for Studio 12 and later.
-	    if cc -V 2>&1 | grep ' 5.9 ' >/dev/null 2>&1 ; then
+	    [ -z "$CC" ] &&  CC=cc
+	    if $CC -flags 2>&1 | grep '^-m32' >/dev/null 2>&1 ; then
 		suncc32='-m32'
 		suncc64='-m64'
+	    else
+		OLD_FLAG_AT_BUILD=TRUE
+		suncc32_new='-m32'
+		suncc64_new='-m64'
+		# Prepare the setting with new flag.
+                echo "CCMACH32_NEW = -DBUILD_ARCH32 $suncc32_new -DSVR4 -D_SVID_GETTOD -mt"
+                echo "CCMACH64_NEW = -DBUILD_ARCH64 $suncc64_new -DSVR4 -D_SVID_GETTOD -mt"
 	    fi
 	    if [ -n "$conf_W4GL" ] ; then
                 echo "CCMACH = -xCC -DSVR4 -D_SVID_GETTOD -mt"
@@ -1113,7 +1122,7 @@ case $vers in
                 echo "CCMACH32 = -DBUILD_ARCH32 $suncc32 -DSVR4 -D_SVID_GETTOD -mt"
                 echo "CCMACH64 = -DBUILD_ARCH64 $suncc64 -DSVR4 -D_SVID_GETTOD -mt"
 		# also #define these so that ccpp'ed things can get them,
-		# e.g. utcom.def, utld.def.
+		# e.g. utld.def.
 		echo "#define CCSUN32 $suncc32"
 		echo "#define CCSUN64 $suncc64"
             fi
@@ -1243,6 +1252,11 @@ case $vers in
    su9_us5|\
    su4_us5) echo "CCLDMACH32 = $suncc32 -mt"
             echo "CCLDMACH64 = $suncc64 -mt"
+            # Prepare the linker settings with new flag. 
+            if [ -n "$OLD_FLAG_AT_BUILD" ] ; then
+              echo "CCLDMACH32_NEW = $suncc32_new -mt"
+              echo "CCLDMACH64_NEW = $suncc64_new -mt"
+            fi
             ;;
    a64_sol) echo "CCLDMACH32 = $suncc32 -mt"
             echo "CCLDMACH64 = $suncc64 -mt"
