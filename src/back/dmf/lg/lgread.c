@@ -144,6 +144,9 @@ NO_OPTIM = r64_us5
 **	    SIR 121619 MVCC: Add ability to "read" from log buffers, bulk read
 **	    I/O for any reader that supplies a large enough context block pool
 **	    (see also LGposition, dm0l_allocate).
+**	08-Apr-2010 (jonj)
+**	    SIR 121619 MVCC: Change lgc_bufid from i4 to *i4. "lgc_bufid != NULL"
+**	    means it was requested; *lgc_bufid = 0 means couldn't do it.
 */
 static STATUS	LG_read(LG_ID *lx_id, LGC *lgc, i4  *channel,
 			i4 *retry, i4  *disable,
@@ -258,18 +261,18 @@ CL_ERR_DESC	    *sys_err)
     ** It means look for the LGA in LBB[bufid] first, then
     ** the page pool, then resort to a read I/O.
     */
-    if ( bufid && *bufid > 0 && *bufid <= lgc->lgc_bufcnt &&
-         lgc->lgc_position == LG_P_LGA && lgc->lgc_direction == LG_D_PREVIOUS )
+    if ( (lgc->lgc_bufid = bufid) )
     {
-	/* Copy bufid to lgc */
-	lgc->lgc_bufid = *bufid;
-
-	/* "lga" is the record we want to read */
-	lgc->lgc_lga = *lga;
-	lgc->lgc_offset = lgc->lgc_lga.la_offset;
+	if ( *lgc->lgc_bufid > 0 && *lgc->lgc_bufid <= lgc->lgc_bufcnt &&
+             lgc->lgc_position == LG_P_LGA && lgc->lgc_direction == LG_D_PREVIOUS )
+	{
+	    /* "lga" is the record we want to read */
+	    lgc->lgc_lga = *lga;
+	    lgc->lgc_offset = lgc->lgc_lga.la_offset;
+	}
+	else
+	    *lgc->lgc_bufid = 0;
     }
-    else 
-        lgc->lgc_bufid = 0;
 
     /* No physical I/O, yet */
     lgc->lgc_readio = 0;
@@ -421,8 +424,8 @@ CL_ERR_DESC	    *sys_err)
 		** to previous log buffer. If that's 0,
 		** wrap to the last buffer.
 		*/
-		if ( lgc->lgc_bufid && --lgc->lgc_bufid == 0 )
-		    lgc->lgc_bufid = lgc->lgc_bufcnt;
+		if ( lgc->lgc_bufid && --(*lgc->lgc_bufid) == 0 )
+		    *lgc->lgc_bufid = lgc->lgc_bufcnt;
 	    }
 	    
 	    status = map_page(lx_id, lgc, sys_err);
@@ -701,8 +704,8 @@ CL_ERR_DESC	    *sys_err)
 		** to previous log buffer. If that's 0,
 		** wrap to the last buffer.
 		*/
-		if ( lgc->lgc_bufid && --lgc->lgc_bufid == 0 )
-		    lgc->lgc_bufid = lgc->lgc_bufcnt;
+		if ( lgc->lgc_bufid && --(*lgc->lgc_bufid) == 0 )
+		    *lgc->lgc_bufid = lgc->lgc_bufcnt;
 	    }
 
 	    /*	Map the new page. */
@@ -748,7 +751,7 @@ CL_ERR_DESC	    *sys_err)
 **	lgc				The log context, with
 **	    lgc_buffer			    the last known block
 **	    lgc_lga			    the log block to read
-**	    lgc_bufid			    if not zero, look first in that
+**	    *lgc_bufid			    if not zero, look first in that
 **					    log buffer
 **	    lgc_curblock		The current block in the block pool
 **					0-n
@@ -1046,14 +1049,14 @@ CL_ERR_DESC	    *sys_err)
     }
 
     /* Look in the log buffers, if so inclined */
-    if ( lgc->lgc_bufid )
+    if ( lgc->lgc_bufid && *lgc->lgc_bufid )
     {
 	/*
 	** If the buffer matches sequence+block, then
 	** copy the buffer contents to the LGC.
 	*/
 	lbb = (LBB*)(((char*)LGK_PTR_FROM_OFFSET(lfb->lfb_first_lbb)) +
-		((lgc->lgc_bufid-1) * sizeof(LBB)));
+		((*lgc->lgc_bufid-1) * sizeof(LBB)));
 
 	if ( lbb->lbb_lga.la_sequence == lga->la_sequence &&
 	     lbb->lbb_lga.la_block == lga->la_block )
@@ -1132,7 +1135,7 @@ CL_ERR_DESC	    *sys_err)
     if ( lgc->lgc_bufid )
     {
 	/* Not found in any buffer or block pool, I/O needed */
-	lgc->lgc_bufid = 0;
+	*lgc->lgc_bufid = 0;
 
 	/* If we must, force the log before trying the read */
 	if ( LGA_GT(lga, &lfb->lfb_forced_lga) )
@@ -1440,7 +1443,7 @@ CL_ERR_DESC	    *sys_err)
 	** and if not "read" from the log buffers.
 	*/
 
-	if ( lgc->lgc_position != LG_P_PAGE && !lgc->lgc_bufid )
+	if ( lgc->lgc_position != LG_P_PAGE && (!lgc->lgc_bufid || !*lgc->lgc_bufid) )
 	{
 	    if (LGchk_sum((PTR)lgc->lgc_buffer, lgc->lgc_size) != 
 					lgc->lgc_buffer->lbh_checksum)

@@ -177,6 +177,8 @@ NO_OPTIM = r64_us5
 **	    Archiver, or any other client that reads the log, with the intent
 **	    of reducing the interference on the physical log file between
 **	    log writers and log readers.
+**	08-Apr-2010 (jonj)
+**	    SIR 121619 MVCC: Change lgc_bufid from i4 to *i4.
 */
 STATUS
 LGposition(
@@ -423,7 +425,7 @@ CL_ERR_DESC	*sys_err)
     /* Number of LBB's in this configuration */
     context->lgc_bufcnt = lfb->lfb_buf_cnt;
     /* bufid may be supplied by LGread */
-    context->lgc_bufid = 0;
+    context->lgc_bufid = NULL;
 
     context->lgc_min = 1;
     context->lgc_max = lfb->lfb_header.lgh_count - 1;

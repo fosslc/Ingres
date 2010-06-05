@@ -759,6 +759,8 @@ struct _LBH
 **	    lgc_blocks, lgc_numblocks, lgc_curblock, lgc_readblocks,
 **	    lgc_firstblock for bulk reads,
 **	    lgc_readio count of physical I/O done.
+**	08-Apr-2010 (jonj)
+**	    SIR 121619 MVCC: Change lgc_bufid from i4 to *i4.
 */
 struct _LGC
 {
@@ -776,7 +778,7 @@ struct _LGC
     i4		    lgc_direction;	/* Read direction. */
     i4		    lgc_position;	/* Read position. */
     LG_LA	    lgc_lga;		/* Next lga address. */
-    i4		    lgc_bufid;		/* Next lga buffer id */
+    i4		    *lgc_bufid;		/* Next lga buffer id */
     i4		    lgc_readio;		/* Count of physical I/O reads */
     i4		    lgc_bufcnt;		/* Number of LBB buffers */
     LG_LA	    lgc_current_lga;	/* Address of current record. */

@@ -18494,6 +18494,8 @@ i4		lock_list)
 	dm0p_munlock(&b->buf_mutex);
 
 	dm0p_mlock(SEM_EXCL, &RootBuf->buf_mutex);
+	dm0p_mlock(SEM_EXCL, &b->buf_mutex);
+
 	if ( b->buf_cr_next != BUF_ENDLIST )
 	    buf_array[b->buf_cr_next].buf_cr_prev = b->buf_cr_prev;
 	else
@@ -18504,9 +18506,8 @@ i4		lock_list)
 	    RootBuf->buf_cr_next = b->buf_cr_next;
 	dm0p_munlock(&RootBuf->buf_mutex);
 
-	/* Remutex CR buffer, update "save_sts" */
-	dm0p_mlock(SEM_EXCL, &b->buf_mutex);
 	b->buf_cr_next = b->buf_cr_prev = b->buf_cr_root = BUF_ENDLIST;
+	/* buf_sts now includes BUF_WBUSY */
 	save_sts = b->buf_sts;
     }
 
@@ -29992,6 +29993,10 @@ DB_ERROR 	*dberr)
 **	14-Nov-2007 (jonj)
 **	    If lock request returns LK_NOTHELD, cache page is no longer
 **	    protected by a SV_PAGE lock, toss it from the cache.
+**	08-Apr-2010 (jonj)
+**	    SIR 121619 MVCC: Maintain Root->CR list integrity when tossing
+**	    Root; one or more of Root's CR pages may be simultaneously
+**	    being tossed while Root is being tossed.
 */
 static DB_STATUS
 complete_f_p(
@@ -30483,6 +30488,7 @@ DB_ERROR *dberr)
 		        buf_array[b->buf_cr_prev].buf_cr_next = b->buf_cr_next;
 		    else
 		        RootBuf->buf_cr_next = b->buf_cr_next;
+			    
 		    /* Done with Root */
 		    dm0p_munlock(&RootBuf->buf_mutex);
 
@@ -30512,17 +30518,20 @@ DB_ERROR *dberr)
 		    lbm_stats->bs_roottoss[b->buf_type]++;
 		    bm->bm_stats.bs_roottoss[b->buf_type]++;
 
-		    while ( b->buf_cr_next != BUF_ENDLIST )
+		    next_buf = b->buf_cr_next;
+
+		    while ( next_buf != BUF_ENDLIST )
 		    {
-			CRbuf = &buf_array[b->buf_cr_next];
+			CRbuf = &buf_array[next_buf];
 			dm0p_mlock(SEM_EXCL, &CRbuf->buf_mutex);
 
 			/*
-			** If CRbuf is busy being tossed by another thread,
-			** unmutex Root, wait for the CR toss,
+			** If CRbuf is busy being tossed 
+			** or reclaimed by another thread,
+			** unmutex Root, wait for the CR,
 			** remutex Root and try again.
 			*/
-			if ( CRbuf->buf_sts & BUF_WBUSY )
+			if ( CRbuf->buf_sts & BUF_BUSY )
 			{
 			    CRbuf->buf_sts |= BUF_IOWAIT;
 
@@ -30545,6 +30554,13 @@ DB_ERROR *dberr)
 			{
 			    /* Remove CR buffer from Root's list, toss it */
 			    b->buf_cr_next = CRbuf->buf_cr_next;
+			    /*
+			    ** Point next's previous to ENDLIST to maintain
+			    ** integrity of Root->CR list.
+			    */
+			    if ( b->buf_cr_next != BUF_ENDLIST )
+			        buf_array[b->buf_cr_next].buf_cr_prev = BUF_ENDLIST;
+
 			    CRbuf->buf_cr_next = CRbuf->buf_cr_prev =
 				CRbuf->buf_cr_root = BUF_ENDLIST;
 
@@ -30557,6 +30573,7 @@ DB_ERROR *dberr)
 			    /* invalidate_page() releases buf_mutex */
 			    invalidate_page(CRbuf, lock_list);
 			}
+			next_buf = b->buf_cr_next;
 		    }
 		    b->buf_cr_prev = BUF_ENDLIST;
 		}
@@ -32617,6 +32634,8 @@ DB_ERROR	*dberr)
 			dm0p_mlock(SEM_EXCL, &RootBuf->buf_mutex);
 		    }
 		}
+		else
+		    dm0p_munlock(&b->buf_mutex);
 
 		continue;
 	    }
@@ -32972,6 +32991,9 @@ DB_ERROR	*dberr)
 **	18-Mar-2010 (jonj)
 **	    Untangle ReadFromLog, ReadFromJnl initial settings, one or the
 **	    other must be TRUE;
+**	09-Apr-2010 (jonj)
+**	    Check status == E_DB_OK before setting UndoComplete lest we loose
+**	    track of, for example, a dmve error.
 */
 static DB_STATUS
 make_consistent(
@@ -33695,9 +33717,10 @@ DB_ERROR	*dberr)
 	    **	  uncommitted changes that occurred before the DB
 	    **	  was opened.
 	    */
-	    if ( LSN_LTE(&record->lsn, &crib->crib_low_lsn) ||
+	    if ( status == E_DB_OK &&
+	        (LSN_LTE(&record->lsn, &crib->crib_low_lsn) ||
 		 LSN_LTE(&CRhdr->prev_lsn, &crib->crib_low_lsn) ||
-		 LGA_LT(&CRhdr->prev_lga, &db.db_first_la) )
+		 LGA_LT(&CRhdr->prev_lga, &db.db_first_la)) )
 	    {
 		UndoComplete = TRUE;
 
