@@ -100,6 +100,9 @@
 **          Replace numeric array references for the default attributes array
 **          with pre-defined constants, i.e., defAttr[0] is not
 **          defAttr[INFO_ATTR_DRIVER_FILE_NAME].
+**   28-Apr-2010 (Ralph Loen) 
+**          In getDefaultInfo(), mispelled libiiodbcdriver.1.SLSFX and 
+**          libiiodbcdriverro.1.SLSFX.
 **  
 */
 
@@ -1305,13 +1308,16 @@ char **getDefaultInfo()
     if (ii_installation == NULL)
         STcopy("ODBCFEROLIB.EXE", defAttr[INFO_ATTR_RONLY_DRV_FNAME]);
     else
-        STprintf(defAttr[INFO_ATTR_RONLY_DRV_FNAME], "ODBCFELIB%s.EXE", 
+        STprintf(defAttr[INFO_ATTR_RONLY_DRV_FNAME], "ODBCFEROLIB%s.EXE", 
             ii_installation);
 #else
     defAttr[INFO_ATTR_DRIVER_FILE_NAME] = MEreqmem(0, STlength("libiiodbcdriver.1.") + STlength(SLSFX) + 1, TRUE, NULL);
-    STprintf(defAttr[INFO_ATTR_DRIVER_FILE_NAME], "libiiodbdriver.1.%s", SLSFX);
-    defAttr[INFO_ATTR_RONLY_DRV_FNAME] = MEreqmem(0, STlength("libiiodbcdriverro.1.") + STlength(SLSFX) + 1, TRUE, NULL);
-    STprintf(defAttr[INFO_ATTR_RONLY_DRV_FNAME], "libiiodbdriverro.1.%s", SLSFX);
+    STprintf(defAttr[INFO_ATTR_DRIVER_FILE_NAME], "libiiodbcdriver.1.%s", 
+        SLSFX);
+    defAttr[INFO_ATTR_RONLY_DRV_FNAME] = MEreqmem(0, 
+        STlength("libiiodbcdriverro.1.") + STlength(SLSFX) + 1, TRUE, NULL);
+    STprintf(defAttr[INFO_ATTR_RONLY_DRV_FNAME], 
+        "libiiodbcdriverro.1.%s", SLSFX);
 #endif /* defined(hpb_us5) || defined(hp2_us5) || defined(i64_hpu) */
     defAttr[INFO_ATTR_DRIVER_NAME] = STalloc("Ingres");
 
