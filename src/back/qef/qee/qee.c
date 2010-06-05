@@ -773,6 +773,9 @@ qee_cleanup(
 **	    unconditionally.  Leaving a dangling adf-constants pointer
 **	    can lead to trashing random control blocks if the dangling
 **	    pointer gets used, and SEGV's result.
+**	17-Feb-2010 (thaju02) b123338
+**	    For remote update/delete DSH for-loop may spin forever, 
+**	    set next.
 */
 DB_STATUS 
 qee_destroy(
@@ -851,7 +854,7 @@ qee_destroy(
 	** current DSH.
 	*/
 	for (next = dsh->dsh_aqp_dsh; next->dsh_dep_dsh != dsh; 
-	    next->dsh_dep_dsh)
+	    next = next->dsh_dep_dsh)
 	{
 	    /* do nothing */;
 	}
@@ -1414,6 +1417,9 @@ qee_destroy(
 **	5-Aug-2009 (kschendel) SIR 122512
 **	    Datallegro hash changes: init new fields, keep "keep over reset"
 **	    flags for hashops.
+**	17-Feb-2010 (thaju02) b123338
+**	    For repeat query, initialize dsh_stack, dsh_exeimm and 
+**	    dsh_depth_act.
 */
 DB_STATUS
 qee_fetch(
@@ -1628,10 +1634,7 @@ qee_fetch(
 	ndsh->dsh_qp_handle = qsf_rcb->qsf_obj_id.qso_handle;
 	ndsh->dsh_qp_status = DSH_QP_LOCKED;
 	ndsh->dsh_shd = (QEN_SHD **)NULL;
-	ndsh->dsh_stack = NULL;
-	ndsh->dsh_exeimm = NULL;
 	ndsh->dsh_usr_params = NULL;
-	ndsh->dsh_depth_act = 0;
 	ndsh->dsh_kor_nor = (QEN_NOR **)NULL;
 	ndsh->dsh_resources = (QEE_RESOURCE *) NULL;
 	ndsh->dsh_streamid = ulm.ulm_streamid;
@@ -1734,6 +1737,10 @@ qee_fetch(
     ndsh->dsh_positioned = FALSE;
     ndsh->dsh_qefcb = qefcb;
     ndsh->dsh_sid = qefcb->qef_ses_id;
+
+    ndsh->dsh_stack = NULL;
+    ndsh->dsh_exeimm = NULL;
+    ndsh->dsh_depth_act = 0;
 
     /* ADF CB is the session's.
     ** FIXME this is probably wrong in a parallel query environment,
