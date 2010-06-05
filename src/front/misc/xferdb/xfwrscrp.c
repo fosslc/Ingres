@@ -331,6 +331,8 @@ FUNC_EXTERN char	*IIUGdmlStr();
 **          Star DBs do not have iirelation present. Do not call
 **          xf_dbreplicated() if we are a Star DB, instead set db_replicated
 **          to FALSE.
+**	04-May-2010 (thaju02) Bug 123674
+**	    Drop view stmts generated for selected views.
 */
 void
 xfcrscript(char *owner, char *progname, char *dbaname, bool portable, 
@@ -539,7 +541,7 @@ xfcrscript(char *owner, char *progname, char *dbaname, bool portable,
     if ((output_flags & XF_PROCEDURE_ONLY) && (output_flags & XF_DROP_INCLUDE))
 	xfdrop_procs();
 
-    if ((output_flags & XF_VIEW_ONLY) && (output_flags & XF_DROP_INCLUDE))
+    if ((output_flags & XF_DROP_INCLUDE))
 	xfdrop_views();
 
     /*

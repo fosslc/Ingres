@@ -108,6 +108,8 @@ EXEC SQL INCLUDE <xf.sh>;
 **          Use DB_MAXNAME for database objects.
 **      12-Jan-2009 (coomi01) Bug 123136
 **          Add reltid parameter to writeview;
+**	04-May-2010 (thaju02) Bug 123674
+**	    In xfdrop_views(), generate drop stmt for selected views.
 **/
 
 /* # define's */
@@ -615,7 +617,8 @@ xfdrop_views()
 
     EXEC SQL BEGIN;
     {
-	if (!xf_is_cat(table_name))
+	xfread_id(table_name);
+	if (xfselected(table_name) && !xf_is_cat(table_name))
 	{
 	    xfread_id(&table_name[0]);
 	    xfread_id(&table_owner[0]);
