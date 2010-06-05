@@ -3042,6 +3042,9 @@ CInstallation::CleanSharedMemory()
 **	    settings as opposed to dbms.crs settings.
 **	08-Mar-2010 (thaju02)
 **	    Remove max_tuple_length.
+**	12-May-2010 (drivi01)
+**          Add two new parameters on the upgrade offline_error_action
+**          and online_error_action.
 */
 BOOL
 CInstallation::SetConfigDat()
@@ -3094,6 +3097,17 @@ CInstallation::SetConfigDat()
     if (bLogFileExist)
     {
 	CString	temp2, temp3, ConfigKey2;
+
+
+	/* 
+	** New parameters for release 10.0
+	*/
+	cmd.Format("offline_error_action \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("online_error_action \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
 
 	/*
 	** Brand new parameters for this release.
