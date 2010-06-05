@@ -209,6 +209,8 @@
 **          Add support for LSB builds, server binaries live under
 **          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
 **          libraries under /usr/lib/ingres and config under /usr/share/ingres
+**      16-Apr-2010 (hanal04) Code Sprint SIR 122168 Ticket 387
+**          Add dbmsmlst.hlp to the distribution.
 */
 
 PART   config
@@ -312,6 +314,7 @@ PART   config
       FILE dbmsltsc.hlp
       FILE dbmsltut.hlp
       FILE dbmsmdep.hlp
+      FILE dbmsmlst.hlp
       FILE dbmsmtpl.hlp
       FILE dbmsname.hlp
       FILE dbmsnrst.hlp
