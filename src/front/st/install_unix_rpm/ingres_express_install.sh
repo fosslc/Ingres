@@ -17,6 +17,7 @@
 #	2	Invalid Installation ID
 #	3	Invalid installation path
 #	5	Installation failed
+#	10	Invalid argument
 #
 #	Also see platform specific routines
 #
@@ -141,6 +142,10 @@
 ##      20-Oct-2008 (hweho01)
 ##          Remove ice from the package list, so it will not be installed
 ##          by running this script.
+##	28-Apr-2010 (hanje04)
+##	    Bug 123648
+##	    Add support for installing as a user other than 'ingres' for tar
+##	    based installs.
 
 #
 # Multi-platform whoami
@@ -171,10 +176,14 @@ usage()
 {
     cat << EOF
 usage:
-$self [-tar] [-respfile filename] [Installation ID] [Install dir]
+$self [-respfile filename] [-user username] [-tar]
+	 [Installation ID] [Install dir]
 
-	-tar		- Install from ingres.tar instead of RPMs. (Linux Only)
 	-respfile	- Use 'filename' as response file when running setup
+	-user username	- Install as 'user' instead of ingres, username must
+			  exist.  (Non-RPM only)
+	-tar		- Install from ingres.tar instead of RPMs if both are
+			  present. (Linux Only)
 	Installation ID - 2 character string where the first character must be
 			  and UPPER CASE letter and the second character must
 			  be an UPPPER CASE letter or a number from 0-9
@@ -462,7 +471,7 @@ endif
 !
     fi
 
-chown ingres $II_SYSTEM/ingres/.ing${II_INSTALLATION}sh $II_SYSTEM/ingres/.ing${II_INSTALLATION}csh
+chown $ingusr $II_SYSTEM/ingres/.ing${II_INSTALLATION}sh $II_SYSTEM/ingres/.ing${II_INSTALLATION}csh
 
 } # genenv
 
@@ -476,7 +485,7 @@ chown ingres $II_SYSTEM/ingres/.ing${II_INSTALLATION}sh $II_SYSTEM/ingres/.ing${
 #
 #    Exit Status:
 #       6       Cannot locate tar binary or archive
-#	7	ingres user doesn't exist
+#	7	$ingusr user doesn't exist
 #	8	Cannot create II_SYSTEM
 #	9	ingbuild failed
 #
@@ -511,41 +520,41 @@ then
     PATH=$II_SYSTEM/ingres/bin:$II_SYSTEM/ingres/utility:$PATH
     export PATH
 
-# Check ingres user exists
-    su ingres -c "exit 0" ||
+# Check $ingusr user exists
+    su $ingusr -c "exit 0" ||
     {
 	cat << EOF
-An "ingres" system user must be created before the installation can proceed
+User "$ingusr" must exist before the installation can proceed
 
 EOF
 	exit 7
     }
 
-# Need to make sure II_SYSTEM is readable by user ingres. If it isn't we
+# Need to make sure II_SYSTEM is readable by user $ingusr. If it isn't we
 # abort the install.
     [ -d "$II_SYSTEM" ] &&
     {
-	if su ingres -c "sh -c 'test ! -r \"$II_SYSTEM\" ' " ; then
+	if su $ingusr -c "sh -c 'test ! -r \"$II_SYSTEM\" ' " ; then
 	    rc=7
 	    cat << !
-Specified location for II_SYSTEM is not readable by user ingres
+Specified location for II_SYSTEM is not readable by user $ingusr
 
         II_SYSTEM=$II_SYSTEM
 
-II_SYSTEM must be readable by user ingres for the installation to proceed.
+II_SYSTEM must be readable by user $ingusr for the installation to proceed.
 !
 	    exit $rc
 	fi
 
-	if su ingres -c "sh -c 'test ! -x \"$II_SYSTEM\" ' " ; then
+	if su $ingusr -c "sh -c 'test ! -x \"$II_SYSTEM\" ' " ; then
 	    rc=7
 	    cat << !
-User ingres does NOT have execute permission for the location specified
+User $ingusr does NOT have execute permission for the location specified
 for II_SYSTEM.
 
         II_SYSTEM=$II_SYSTEM
 
-User ingres must have execute permission in II_SYSTEM for installation
+User $ingusr must have execute permission in II_SYSTEM for installation
 to continue.
 !
 	    exit $rc
@@ -565,7 +574,7 @@ EOF
     echo "Creating $II_SYSTEM..."
     umask 22
     mkdir -p $II_SYSTEM/ingres && \
-    chown ingres $II_SYSTEM/ingres || 
+    chown $ingusr $II_SYSTEM/ingres || 
     {
 	cat << EOF
 Failed to create II_SYSTEM:
@@ -579,13 +588,13 @@ EOF
 # Generate environment setup scripts
     genenv
 
-# Call self again, as ingres to perform the rest of the installation
+# Call self again, as $ingusr to perform the rest of the installation
     doinstall=true
     export doinstall
     if $force_tar ; then
-        su ingres -c "sh $0 -tar $II_INSTALLATION $instloc $respflag" || exit $? 
+        su $ingusr -c "sh $0 -tar $II_INSTALLATION $instloc $respflag" || exit $? 
     else
-        su ingres -c "sh $0 $II_INSTALLATION $instloc $respflag" || exit $?
+        su $ingusr -c "sh $0 $II_INSTALLATION $instloc $respflag" || exit $?
     fi
 
 # Build password validation program if we can
@@ -611,11 +620,11 @@ EOF
 	chmod 4755 $II_SYSTEM/ingres/bin/ingvalidpw
     }
 
-    homedir=`awk -F: '$1 == "ingres" { print $6 }' /etc/passwd`
+    homedir=`awk -F: -v user=$ingusr '$1 == user { print $6 }' /etc/passwd`
     [ -d "$homedir" ] && [ -w "$homedir" ] ||
     {
 	cat << EOF
-The home directory for the user ingres:
+The home directory for the user $ingusr:
 
         $homedir
 
@@ -629,7 +638,7 @@ EOF
     }
 # Copy it to home directory if we can
     [ "$homedir" != "$II_SYSTEM/ingres" ] && \
-	su ingres -c "cp -f $II_SYSTEM/ingres/.ing*sh $homedir"
+	su $ingusr -c "cp -f $II_SYSTEM/ingres/.ing*sh $homedir"
 
 else # dosetup=true 
 # Setup environment
@@ -779,6 +788,7 @@ inst_id=II
 userespfile=false
 respflag=""
 force_tar=false
+ingusr=ingres
 ## Check installation ID if given
 while [ "$1" ]
 do
@@ -810,6 +820,15 @@ do
 		    }
 		    respflag="$1 $2"
 		    shift;shift
+		    ;;
+	      -user)
+		    if [ "$rpmpkg" = "true" ] || [ ! "$2" ] ; then
+			echo "Error: $1 $2 invalid argument"
+			usage
+			exit 10
+		    fi
+		    ingusr=$2
+		    shift ; shift
 		    ;;
 		*/*)
 		    # Installation location

@@ -206,6 +206,11 @@
 ##	    which still leaves it defined and this causes problems for
 ##	    rpmbuild which flags an empty LD_RUN_PATH variable and a 
 ##	    security risk.
+##	28-Apr-2010 (hanje04)
+##	    Bug 123648
+##	    Don't chown symbol.tbl as we don't always install as 'ingres'.
+##	    Add check before running ingprenv as the file should already exist
+##	    and doing so won't change the ownership.
 ##
 #  PROGRAM = (PROG0PRFX)mkvalidpw
 #******************************************************************************
@@ -237,6 +242,19 @@ if [ ! -r $SRC/ingvalidpw.c ]
 then
 	echo "Cannot find $SRC/ingvalidpw.c, exiting .."
 	exit 255
+fi
+
+II_CONFIG=`ingprenv $(PROG3PRFX)_CONFIG`
+if [ ! -r "$(PRODLOC)/(PROD2NAME)/files/symbol.tbl" ] &&
+    [ -z "$(PROG3PRFX)_ADMIN" -o ! -r "$(PROG3PRFX)_ADMIN/symbol.tbl" ] &&
+    [ -z "$(PROG3PRFX)_CONFIG" -o ! -r "$(PROG3PRFX)_CONFIG/symbol.tbl" ]
+then
+    cat << EOF
+Cannot locate symbol.tbl, ensure environment is set
+and product has been setup.
+
+EOF
+    exit 255
 fi
 
 # If the operating system is HP-UX 10.00-10.20, verify whether or not
@@ -346,9 +364,8 @@ chmod 4755 $BIN/(PROG2PRFX)validpw
 # Remove ingvalidpw to avoid upgrade problems depositing shipped executable
 rm -f $SRC/(PROG2PRFX)validpw
 
-# Add entry to symbol table and insure that symbol table owned by ingres
+# Add entry to symbol table
 $BIN/(PROG2PRFX)setenv (PROG3PRFX)_SHADOW_PWD $(PRODLOC)/(PROD2NAME)/bin/(PROG2PRFX)validpw
-chown ingres $(PRODLOC)/(PROD2NAME)/files/symbol.tbl
 
 echo "Executable successfully installed."
 exit 0
