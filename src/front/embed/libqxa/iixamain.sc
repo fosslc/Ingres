@@ -27,6 +27,7 @@
 # include       <me.h>
 # include       <iixashm.h>
 # include	<tm.h>
+# include	<cv.h>
 
 GLOBALDEF   IITUX_LCB             IItux_lcb = {0,0,0,0};
 
@@ -283,6 +284,8 @@ GLOBALDEF   IITUX_LCB             IItux_lcb = {0,0,0,0};
 **             is added into output_trace_header routine, and a new   
 **             routine IIformat_64_xa_xid is used for formatting in 64bit
 **             mode exclusively.  
+**	 4-Feb-2010 (wanfr01) Bug 123139
+**	        Need to include cv.h for function definitions
 */
 
 /* Global data structures */
