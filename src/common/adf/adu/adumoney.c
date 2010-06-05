@@ -164,7 +164,9 @@ static	i4	    dum1;	/* Dummy to give to ult_check_macro() */
 static	i4	    dum2;	/* Dummy to give to ult_check_macro() */
 
 /* Convert numbers to a double */
-static	f8	    ad0_makedbl(DB_DATA_VALUE   *num_dv);  
+static	STATUS	    ad0_makedbl(ADF_CB          *adf_scb,
+                                DB_DATA_VALUE   *num_dv,
+                                f8              *money);
 
 /*
 [@#defines_of_other_constants@]
@@ -627,6 +629,9 @@ DB_DATA_VALUE	    *mny_dv2)
 **	    Converted for new ADF error handling.
 **	10-jun-87 (thurston)
 **	    Fixed this routine to return an f8; it had been returning a money.
+**      10-May-2010 (horda03) B123704
+**          Changed ad0_makedbl() interface to handle strings being passed to
+**          Mul/Div code.
 */
 
 DB_STATUS
@@ -636,27 +641,32 @@ DB_DATA_VALUE   *dv1,
 DB_DATA_VALUE   *dv2,
 DB_DATA_VALUE   *rdv)
 {
+    DB_STATUS       status;
     f8		    dd_num;
     f8		    dd_mny;
 
 
-    dd_num = ad0_makedbl(dv1);
-    dd_mny = ((AD_MONEYNTRNL *) dv2->db_data)->mny_cents / 100.0;
+    status = ad0_makedbl(adf_scb, dv1, &dd_num);
 
-    if (dd_mny == 0.0)
+    if (!status)
     {
-	EXsignal(EXMNYDIV, 0);
-	/* if the exception is returned from, a zero answer on divide by zero
-	** seems reasonable.
-	*/
-	*(f8 *)rdv->db_data = 0.0;
-    }
-    else
-    {
-	*(f8 *) rdv->db_data = dd_num / dd_mny;
+       dd_mny = ((AD_MONEYNTRNL *) dv2->db_data)->mny_cents / 100.0;
+
+       if (dd_mny == 0.0)
+       {
+	   EXsignal(EXMNYDIV, 0);
+	   /* if the exception is returned from, a zero answer on divide by zero
+	   ** seems reasonable.
+	   */
+	   *(f8 *)rdv->db_data = 0.0;
+       }
+       else
+       {
+	   *(f8 *) rdv->db_data = dd_num / dd_mny;
+       }
     }
     
-    return (E_DB_OK);
+    return (status);
 }
 
 
@@ -735,6 +745,9 @@ DB_DATA_VALUE   *rdv)
 **	    is handled differently.
 **      14-sep-1993 (stevet)
 **          Added support for DB_DEC_TYPE.
+**      10-May-2010 (horda03) B123704
+**          Changed ad0_makedbl() interface to handle strings being passed to
+**          Mul/Div code. Both parametrs could be non-MONEY types.
 */
 
 DB_STATUS
@@ -745,22 +758,43 @@ DB_DATA_VALUE   *dv2,
 DB_DATA_VALUE   *rdv)
 {
     DB_STATUS	    db_stat;
-    f8		    dd;
+    f8		    mny_1;
+    f8		    mny_2;
 
 
-    if ((dv2->db_datatype == DB_FLT_TYPE) || 
-	(dv2->db_datatype == DB_INT_TYPE) || 
-	(dv2->db_datatype == DB_DEC_TYPE))
+    if (dv1->db_datatype == DB_MNY_TYPE)
     {
-        dd = ad0_makedbl(dv2);
+        mny_1 = ((AD_MONEYNTRNL *) dv1->db_data)->mny_cents;
     }
     else
     {
-	dd = ((AD_MONEYNTRNL *) dv2->db_data)->mny_cents;
-	dd /= 100.0;	/* Make dd represent amount in $'s, like a float will */
+        db_stat = ad0_makedbl(adf_scb, dv1, &mny_1);
+
+        if (db_stat)
+        {
+           return db_stat;
+        }
+
+        mny_1 *= 100.0;
     }
 
-    if (dd == 0.0)
+    if (dv2->db_datatype == DB_MNY_TYPE)
+    {
+	mny_2 = ((AD_MONEYNTRNL *) dv2->db_data)->mny_cents;
+    }
+    else
+    {
+        db_stat = ad0_makedbl(adf_scb, dv2, &mny_2);
+
+        if (db_stat)
+        {
+           return db_stat;
+        }
+
+        mny_2 *= 100.0;
+    }
+
+    if (mny_2 == 0.0)
     {
 	EXsignal(EXMNYDIV, 0);
 	/* if the exception is returned from, a zero answer on divide by zero
@@ -771,8 +805,7 @@ DB_DATA_VALUE   *rdv)
     }
     else
     {
-	((AD_MONEYNTRNL *) rdv->db_data)->mny_cents =
-	    ((AD_MONEYNTRNL *) dv1->db_data)->mny_cents / dd;
+	((AD_MONEYNTRNL *) rdv->db_data)->mny_cents = mny_1 / mny_2 * 100.0;
 
 	db_stat = adu_11mny_round(adf_scb, (AD_MONEYNTRNL *) rdv->db_data);
     }
@@ -1269,6 +1302,9 @@ DB_DATA_VALUE	*hg_dv)
 **	    Rewrote for Jupiter.
 **      27-jul-86 (ericj)
 **	    Converted for new ADF error handling.
+**      10-May-2010 (horda03) B123704
+**          Changed ad0_makedbl() interface to handle strings being passed to
+**          Mul/Div code.
 */
 
 DB_STATUS
@@ -1278,6 +1314,7 @@ DB_DATA_VALUE   *dv1,
 DB_DATA_VALUE   *dv2,
 DB_DATA_VALUE   *rdv)
 {
+    DB_STATUS       status;
     f8		    dv1_f8;
     f8		    dv2_f8;
 
@@ -1285,7 +1322,15 @@ DB_DATA_VALUE   *rdv)
     /* if dv1 is not a money type, convert to a f8 before multiplying */
     if (dv1->db_datatype != DB_MNY_TYPE)
     {
-        dv1_f8 = ad0_makedbl(dv1) * 100.0;
+        status = ad0_makedbl(adf_scb, dv1, &dv1_f8);
+
+        if (status)
+        {
+            return status;
+        }
+
+        dv1_f8 *= 100.0;
+
 #       ifdef xDEBUG
         if (ult_check_macro(&Adf_globs->Adf_trvect, ADF_002_MNYFI_TRACE,
 			    &dum1, &dum2))
@@ -1302,7 +1347,14 @@ DB_DATA_VALUE   *rdv)
     /* if dv2 is not a money type, convert to a f8 before multiplying */
     if (dv2->db_datatype != DB_MNY_TYPE)
     {
-        dv2_f8 = ad0_makedbl(dv2) * 100.0;
+        status = ad0_makedbl(adf_scb, dv2, &dv2_f8);
+
+        if (status)
+        {
+            return status;
+        }
+
+        dv2_f8 *= 100.0;
 
 #       ifdef xDEBUG
         if (ult_check_macro(&Adf_globs->Adf_trvect, ADF_002_MNYFI_TRACE,
@@ -1391,6 +1443,9 @@ DB_DATA_VALUE   *rdv)
 **	    before this check, resulting in a floating point overflow fault.
 **	14-jul-89 (jrb)
 **	    Extended for decimal datatype.
+**      10-May-2010 (horda03) B123704
+**          Changed ad0_makedbl() interface to handle strings being passed to
+**          Mul/Div code.
 */
 
 DB_STATUS
@@ -1399,10 +1454,16 @@ ADF_CB		*adf_scb,
 DB_DATA_VALUE	*num_dv,
 DB_DATA_VALUE	*mny_dv)
 {
+    DB_STATUS       status;
     f8		    dollars;
 
 
-    dollars = ad0_makedbl(num_dv);
+    status = ad0_makedbl(adf_scb, num_dv, &dollars);
+
+    if (status)
+    {
+        return status;
+    }
 
     /*
     ** Now, check for money overflow ... do it here in case dollars * 100.00
@@ -2121,7 +2182,7 @@ DB_DATA_VALUE	*str_dv)
 
 
 /*{
-** Name: ad0_makedbl() - Convert number (f4, f8, dec, i1, i2, or i4) to a f8.
+** Name: ad0_makedbl() - Convert number (string, f4, f8, dec, i1, i2, or i4) to a f8.
 **
 ** Description:
 **	  This routine converts a number, an f, dec, or an i, to an f8.  It
@@ -2158,6 +2219,9 @@ DB_DATA_VALUE	*str_dv)
 **		.ad_emsglen		The length, in bytes, of the resulting
 **					formatted error message.
 **		.adf_errmsgp		Pointer to the formatted error message.
+**
+**      money                           Double coerced from input value.
+**
 **	Returns:
 **	      The following DB_STATUS codes may be returned:
 **	    E_DB_OK, E_DB_WARN, E_DB_ERROR, E_DB_SEVERE, E_DB_FATAL
@@ -2166,9 +2230,6 @@ DB_DATA_VALUE	*str_dv)
 **	    can look in the field adf_scb.adf_errcb.ad_errcode to determine
 **	    the ADF error code.  The following is a list of possible ADF error
 **	    codes that can be returned by this routine:
-**
-**					A double that has been coerced from
-**					the original input number.
 **
 ** History:
 **	20-may-86 (ericj)
@@ -2179,23 +2240,27 @@ DB_DATA_VALUE	*str_dv)
 **	    Added decimal support.
 **	12-apr-04 (inkdo01)
 **	    Added support for BIGINT (i8).
+**      10-May-2010 (horda03) b123704
+**          Convert string data types.
 */
 
-static	f8
+static	DB_STATUS
 ad0_makedbl(
-DB_DATA_VALUE   *num_dv)
+ADF_CB          *adf_scb,
+DB_DATA_VALUE   *num_dv,
+f8              *money)
 {
-    f8	    d;
+    DB_STATUS status = E_DB_OK;
 
     if (num_dv->db_datatype == DB_FLT_TYPE)
     {
         if  (num_dv->db_length == 4)
         {
-            d = *(f4 *) num_dv->db_data;
+            *money = *(f4 *) num_dv->db_data;
         }
         else
         {
-            d = *(f8 *) num_dv->db_data;
+            *money = *(f8 *) num_dv->db_data;
         }
     }
     else if (num_dv->db_datatype == DB_DEC_TYPE)
@@ -2203,32 +2268,45 @@ DB_DATA_VALUE   *num_dv)
 	CVpkf(	(PTR)num_dv->db_data,
 		    (i4)DB_P_DECODE_MACRO(num_dv->db_prec),
 		    (i4)DB_S_DECODE_MACRO(num_dv->db_prec),
-		    &d);
+		    money);
     }
     else if (num_dv->db_datatype == DB_INT_TYPE)
     {
         switch(num_dv->db_length)
         {
             case 1:
-                d = (i4) I1_CHECK_MACRO(*(i1 *) num_dv->db_data);
+                *money = (i4) I1_CHECK_MACRO(*(i1 *) num_dv->db_data);
                 break;
             case 2:
-                d = (i4) (*(i2 *) num_dv->db_data);
+                *money = (i4) (*(i2 *) num_dv->db_data);
                 break;
             case 4:
-                d = *(i4 *) num_dv->db_data;
+                *money = *(i4 *) num_dv->db_data;
                 break;
             case 8:
-                d = *(i8 *) num_dv->db_data;
+                *money = *(i8 *) num_dv->db_data;
                 break;
         }
     }
+    else /* must be a string type */
+    {
+        DB_DATA_VALUE mny_dv;
 
+        mny_dv.db_data = (PTR) money;
+
+        if ( !(status = adu_2strtomny( adf_scb, num_dv, &mny_dv )) )
+        {
+           /* Value returned in cents, need it in whole currency units
+           ** with fractional parts.
+           */
+           *money /= 100.0;
+        }
+    }
 
 #   ifdef xDEBUG
     if (ult_check_macro(&Adf_globs->Adf_trvect,ADF_002_MNYFI_TRACE,&dum1,&dum2))
         TRdisplay("ad0_makedbl: converted to f8, d=%24.6f\n", d);
 #   endif
 
-    return (d);
+    return (status);
 }

@@ -409,6 +409,13 @@
 **	    Add ADFI_1464_AES_DECRYPT_VARBYTE and ADFI_1465_AES_ENCRYPT_VARBYTE.
 **	10-May-2010 (kschendel) b123712
 **	    FI's for floating trunc, ceil, floor.
+**      10-May-2010 (horda03) B123704
+**          Added ADFI_1466_MONEY_DIV_VARCHAR, ADFI_1467_VARCHAR_DIV_MONEY
+**          ADFI_1468_MONEY_MUL_VARCHAR and ADFI_1469_VARCHAR_MUL_MONEY
+**          to prevent a money string ('$1.0') being converted to a
+**          'string' / 'string' (char and c) add
+**       13-May-2010 (horda03) B123704
+**          Removed ADFI_1470_VARCHAR_DIV_VARCHAR and ADFI_1471_VARCHAR_MUL_VARCHAR
 **/
 
 
@@ -1748,4 +1755,8 @@
 #define ADFI_1463_SINGLETON_ALL		(ADI_FI_ID)1463 /* all := singleton(all) */
 #define ADFI_1464_AES_DECRYPT_VARBYTE   (ADI_FI_ID)1464 /* decrypt varbyte */
 #define ADFI_1465_AES_ENCRYPT_VARBYTE   (ADI_FI_ID)1465 /* encrypt varbyte */
+#define ADFI_1466_MONEY_DIV_VARCHAR	(ADI_FI_ID)1466 /* money / varchar */
+#define ADFI_1467_VARCHAR_DIV_MONEY	(ADI_FI_ID)1467 /* varchar / money */
+#define ADFI_1468_MONEY_MUL_VARCHAR	(ADI_FI_ID)1468 /* money * varchar */
+#define ADFI_1469_VARCHAR_MUL_MONEY	(ADI_FI_ID)1469 /* varchar * money */
 

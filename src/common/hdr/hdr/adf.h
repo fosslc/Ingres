@@ -2847,6 +2847,9 @@ typedef	    i2	    ADI_FI_ID;
 **	    support renaming ADI_F4096_LEGACY to ADI_F4096_SQL_CLOAKED and
 **	    adding ADI_F8192_QUEL_CLOAKED. This allows us to add or 'remove'
 **	    FI_DEFNs from without destablising Quel in the process.
+**      13-May-2010 (horda03) B123704
+**          Added ADI_F65536_PAR1MATCH and ADI_F131072_PAR2MATCH. This required
+**          changing adi_fiflags to an i4.
 */
 
 typedef struct
@@ -2873,7 +2876,7 @@ typedef struct
 #define                 ADI_COERCION	    6
 #define                 ADI_COPY_COERCION   7
 
-    u_i2		    adi_fiflags;	/* Function instance flags.  The
+    u_i4	    adi_fiflags;	/* Function instance flags.  The
 					** following bits have meaning:
 					*/
 #define                 ADI_F0_NOFIFLAGS    0	/* No flags set. */
@@ -2975,6 +2978,12 @@ typedef struct
 #define			ADI_F32768_IFNULL 32768/* Specifies that a function is ifnull
 					**Or an ifnull equivelant.
 					*/
+#define                 ADI_F65536_PAR1MATCH 65536 /* Parameter 1 must match
+                                        ** function's 1st parameter type.
+                                        */
+#define                 ADI_F131072_PAR2MATCH 131072 /* Parameter 2 must match
+                                        ** function's 2nd parameter type.
+                                        */
     ADI_OP_ID       adi_fiopid;         /* Operator id for this f.i.
 					*/
     ADI_LENSPEC     adi_lenspec;        /* Method for computing result length.

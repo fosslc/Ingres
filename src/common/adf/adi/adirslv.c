@@ -132,6 +132,11 @@
 **          The order of the IFNULL functions have been arranged so that
 **          they follow the order listed in the SQL Guide, so once a 
 **          function has been found for one of the datatypes provided, use it.
+**      13-may-2010 (horda03) B123704
+**          Only consider functions flags with ADI_F65536_PAR1MATCH if
+**          the FI's 1st parameter type matches the 1st parameter type supplied.
+**          Similarly, if ADI_F131072_PAR2MATCH only consider functions if
+**          the 2nd paramter type matches.
 [@history_template@]...
 **/
 
@@ -420,6 +425,9 @@ static const char opnames[] = ADI_OPS_MACRO;
 **          member and the other is a string (for ifnull). Note, the
 **          string length for DATE coercion into a string is now calculated
 **          the the DATE type - was hardcoded to 25.
+**      13-may-2010 (horda03) B123704
+**          Don't consider functions where the parameter types must match.
+**          That is when ADI_F65536_PAR1MATCH or ADI_F131072_PAR2MATCH set.
 */
 
 # ifdef ADF_BUILD_WITH_PROTOS
@@ -586,6 +594,14 @@ bool		varchar_precedence;
 		(curr_fi->adi_dt[0] != curr_fi->adi_dt[1] ||
 			curr_fi->adi_dt[0] == DB_ALL_TYPE))
 	    continue;
+
+        if ( ( (curr_fi->adi_fiflags & ADI_F65536_PAR1MATCH) &&
+               (curr_fi->adi_dt[0] != idts [0])                ) ||
+             ( (curr_fi->adi_fiflags & ADI_F131072_PAR2MATCH) &&
+               (curr_fi->adi_dt[1] != idts [1])                )   )
+        {
+            continue;
+        }
 
 	/* now find the number of coercions necessary to use this fi */
 	curr_coerces = 0;

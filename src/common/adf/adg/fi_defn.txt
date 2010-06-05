@@ -464,6 +464,20 @@
 #	   OCTET_LENGTH
 #	10-May-2010 (kschendel) b123712
 #	    Add FI's for float ceil, floor, trunc.
+#       10-May-2010 (horda03) B123704
+#           MONEY MUL/DIV 'string' (e.g. '$1.0') fails with E_US100F (a
+#           string coersion error). Add ADFI_1466_MONEY_DIV_VARCHAR,
+#           ADFI_1467_VARCHAR_MUL_MONEY,  ADFI_1468_MONEY_DIV_VARCHAR and
+#           ADFI_1469_VARCHAR_MUL_MONEY so that the FI instance doesn't
+#           operators with string vs string added ADFI_1470_VARCHAR_DIV_VARCHAR
+#           and ADFI_1471_VARCHAR_MUL_VARCHAR.
+#       13-May-2010 (horda03) B123704
+#           Removed ADFI_1470_VARCHAR_DIV_VARCHAR and ADFI_1471_VARCHAR_MUL_VARCHAR
+#           E_AD2063 need an alternate way. Really only want to select the
+#           FI 1466 thru 1469 when one of the data type is money and the other
+#           is a string, so these FI have either ADI_F65536_PAR1MATCH or
+#           ADI_F131072_PAR2MATCH flag set, meaning that they will only be
+#           considered if the appropriate parameter is MONEY.
 
 group ADI_COMPARISON
 
@@ -2250,6 +2264,24 @@ group ADI_OPERATOR
 	    operands DB_FLT_TYPE DB_DTE_TYPE
 	    routine adu_date_mul
 
+	fi ADFI_1468_MONEY_MUL_VARCHAR
+	    description money  :  money * varchar
+	    flags ADI_F65536_PAR1MATCH
+	    lenspec ADI_FIXED 8
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_MNY_TYPE
+	    operands DB_MNY_TYPE DB_VCH_TYPE
+	    routine adu_10mny_multu
+
+	fi ADFI_1469_VARCHAR_MUL_MONEY
+	    description money  :  varchar * money
+	    flags ADI_F131072_PAR2MATCH
+	    lenspec ADI_FIXED 8
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_MNY_TYPE
+	    operands DB_VCH_TYPE DB_MNY_TYPE 
+	    routine adu_10mny_multu
+
     operator ADI_POW_OP
 
 	fi ADFI_073_F_POW_F
@@ -2773,6 +2805,24 @@ group ADI_OPERATOR
 	    result DB_FLT_TYPE
 	    operands DB_DTE_TYPE DB_DTE_TYPE
 	    routine adu_date_div
+
+	fi ADFI_1466_MONEY_DIV_VARCHAR
+	    description money  :  money / varchar
+	    flags ADI_F65536_PAR1MATCH
+	    lenspec ADI_FIXED 8
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_MNY_TYPE
+	    operands DB_MNY_TYPE DB_VCH_TYPE
+	    routine adu_8mny_divu
+
+	fi ADFI_1467_VARCHAR_DIV_MONEY
+	    description money  :  varchar / money
+	    flags ADI_F131072_PAR2MATCH
+	    lenspec ADI_FIXED 8
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_MNY_TYPE
+	    operands DB_VCH_TYPE DB_MNY_TYPE 
+	    routine adu_8mny_divu
 
     operator ADI_PLUS_OP
 
