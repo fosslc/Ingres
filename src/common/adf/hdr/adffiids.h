@@ -407,6 +407,8 @@
 **          documented behaviour. 
 **	25-Mar-2010 (toumi01) SIR 122403
 **	    Add ADFI_1464_AES_DECRYPT_VARBYTE and ADFI_1465_AES_ENCRYPT_VARBYTE.
+**	10-May-2010 (kschendel) b123712
+**	    FI's for floating trunc, ceil, floor.
 **/
 
 
@@ -1257,6 +1259,15 @@
 #define ADFI_891_CHAREXTRACT_TEXT_I   (ADI_FI_ID)891 /* charextract(text,i) */
 #define ADFI_892_CHAREXTRACT_CHAR_I   (ADI_FI_ID)892 /* charextract(char,i) */
 #define ADFI_893_CHAREXTRACT_VARCHAR_I (ADI_FI_ID)893 /* charextract(varchar,i) */
+					/* 894 notused */
+					/* 895 notused */
+					/* 896 notused */
+					/* 897 notused */
+					/* 898 notused */
+					/* 899 notused */
+#define ADFI_900_FLTTRUNC	      (ADI_FI_ID)900 /* trunc(f,i) */
+#define ADFI_901_FLTCEIL	      (ADI_FI_ID)901 /* ceil(f) */
+#define ADFI_902_FLTFLOOR	      (ADI_FI_ID)902 /* floor(f) */
 
 #define ADFI_954_SESSION_PRIV 		(ADI_FI_ID)954 /* session_priv(char) */
 #define ADFI_955_IITBLSTAT 		(ADI_FI_ID)955 /* iitblstat(int) */

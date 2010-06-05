@@ -22,7 +22,8 @@
 **
 **  Description:
 **        This file contains functions which are used to convert various
-**	datatypes to decimal
+**	datatypes to decimal.  It also contains some float analogs of
+**	a few decimal functions.
 **
 **	This file includes:
 **
@@ -51,6 +52,8 @@
 **	    replace nat and longnat with i4
 **      15-Dec-2009 (coomi01) b122767
 **          Add clfloat header
+**	10-May-2010 (kschendel) b123712
+**	    Add floating trunc, ceil, floor.
 **/
 
 
@@ -685,6 +688,149 @@ DB_DATA_VALUE	    *rdv)
 
 
 /*{
+** Name: adu_flttrunc	- Perform trunc() function on floating point values.
+**
+** Inputs:
+**	adf_scb				Pointer to an ADF session control block.
+**	    .adf_errcb			ADF_ERROR struct.
+**		.ad_ebuflen		The length, in bytes, of the buffer
+**					pointed to by ad_errmsgp.
+**		.ad_errmsgp		Pointer to a buffer to put formatted
+**					error message in, if necessary.
+**      dv1                             Ptr to DB_DATA_VALUE to be trunced.
+**	    .db_datatype		Type of data to be trunced (must be 
+**					float).
+**	    .db_length			Length of data to be trunced.
+**	    .db_data			Ptr to actual data to be trunced.
+**      dv2				Ptr to DB_DATA_VALUE of integer constant
+**					truncing factor.
+**	    .db_datatype		Must be DB_INT_TYPE
+**	    .db_length			Length of integer parameter.
+**	    .db_data			Ptr to integer parameter.
+**	rdv				Ptr to DB_DATA_VALUE to hold resulting
+**					float value.
+**	    .db_length			The length of the result type.
+**
+** Outputs:
+**	adf_scb				Pointer to an ADF session control block.
+**	    .adf_errcb			ADF_ERROR struct.  If an
+**					error occurs the following fields will
+**					be set.  NOTE: if .ad_ebuflen = 0 or
+**					.ad_errmsgp = NULL, no error message
+**					will be formatted.
+**		.ad_errcode		ADF error code for the error.
+**		.ad_errclass		Signifies the ADF error class.
+**		.ad_usererr		If .ad_errclass is ADF_USER_ERROR,
+**					this field is set to the corresponding
+**					user error which will either map to
+**					an ADF error code or a user-error code.
+**		.ad_emsglen		The length, in bytes, of the resulting
+**					formatted error message.
+**		.adf_errmsgp		Pointer to the formatted error message.
+**	rdv
+**	    .db_data			Ptr to resulting float value.
+**
+** History:
+**	10-May-2010 (kschendel) b123712
+**            Created.
+*/
+DB_STATUS
+adu_flttrunc(
+ADF_CB		    *adf_scb,
+DB_DATA_VALUE	    *dv1,
+DB_DATA_VALUE	    *dv2,
+DB_DATA_VALUE	    *rdv)
+{
+    f8 result = 0.0;
+    f8 target;
+    i4 rfact;
+
+    /* 1st param should be a float and 2nd param an integer;  
+    ** if they weren't, it should have been caught before this point
+    */
+    if ( (dv2->db_datatype != DB_INT_TYPE) || 
+	 (dv1->db_datatype != DB_FLT_TYPE) ||
+	 (rdv->db_datatype != DB_FLT_TYPE)
+	)
+	return(adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "flttrunc types"));
+    
+    /* Load float value into a double (f8) */
+    switch (dv1->db_length) 
+    {
+	case 8:
+	    target = *(f8 *)dv1->db_data;
+	    break;
+
+	case 4:
+	    target = (f8)(*(f4 *)dv1->db_data);
+	    break;
+
+	default:
+	    return(adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "flttrunc flt len"));
+	    break;
+    }
+
+    /* Load trunc position. */
+    switch (dv2->db_length) 
+    {
+	case 1:
+	    rfact = *((i1 *)dv2->db_data);
+	    break;
+
+	case 2:
+	    rfact = *((i2 *)dv2->db_data);
+	    break;
+
+	case 4:
+	    rfact = *((i4 *)dv2->db_data);
+	    break;
+
+	case 8:
+	    rfact = *((i8 *)dv2->db_data);
+	    break;
+	
+	default:
+	    return(adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "flttrunc int len"));
+	    break;
+    }
+
+    /*
+    ** Do the lowlevel work 
+    */
+    result = MHtrunc(target,rfact);
+
+    /* 
+    ** Return a result
+    */
+    switch (rdv->db_length) 
+    {
+	case 8:
+	    *(f8 *)rdv->db_data = result;
+	    break;
+
+	case 4:
+	{
+	    /* Check when converting back from F8 to F4 */
+	    if ((result >= FLT_MAX) || (result <= FLT_MIN))
+	    {	    
+		*(f4 *)rdv->db_data = 0.0;
+		EXsignal(EXFLTOVF, 0);
+	    }
+	    else	    
+		*(f4 *)rdv->db_data = (f4)result;
+	}
+	break;
+
+	default:
+	    return(adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "flttrunc result len"));
+	    break;
+    }
+
+    return(E_DB_OK);
+} /* adu_flttrunc */
+
+
+/*{
 ** Name: adu_decceil()	- Perform ceiling() function on decimal values.
 **
 ** Inputs:
@@ -854,6 +1000,126 @@ DB_DATA_VALUE	    *rdv)
 
 
 /*{
+** Name: adu_fltceil()	- Perform ceiling() function on float values.
+**
+** Inputs:
+**	adf_scb				Pointer to an ADF session control block.
+**	    .adf_errcb			ADF_ERROR struct.
+**		.ad_ebuflen		The length, in bytes, of the buffer
+**					pointed to by ad_errmsgp.
+**		.ad_errmsgp		Pointer to a buffer to put formatted
+**					error message in, if necessary.
+**      dv1                             Ptr to DB_DATA_VALUE to be ceilinged.
+**	    .db_datatype		Type of data to be ceilinged (must be 
+**					float).
+**	    .db_length			Length of data to be ceilinged.
+**	    .db_data			Ptr to actual data to be ceilinged.
+**	rdv				Ptr to DB_DATA_VALUE to hold resulting
+**					float value.
+**	    .db_length			The length of the result type.
+**
+** Outputs:
+**	adf_scb				Pointer to an ADF session control block.
+**	    .adf_errcb			ADF_ERROR struct.  If an
+**					error occurs the following fields will
+**					be set.  NOTE: if .ad_ebuflen = 0 or
+**					.ad_errmsgp = NULL, no error message
+**					will be formatted.
+**		.ad_errcode		ADF error code for the error.
+**		.ad_errclass		Signifies the ADF error class.
+**		.ad_usererr		If .ad_errclass is ADF_USER_ERROR,
+**					this field is set to the corresponding
+**					user error which will either map to
+**					an ADF error code or a user-error code.
+**		.ad_emsglen		The length, in bytes, of the resulting
+**					formatted error message.
+**		.adf_errmsgp		Pointer to the formatted error message.
+**	rdv
+**	    .db_data			Ptr to resulting decimal value.
+**
+**	Returns:
+**	      The following DB_STATUS codes may be returned:
+**	    E_DB_OK, E_DB_WARN, E_DB_ERROR, E_DB_SEVERE, E_DB_FATAL
+**
+**	      If a DB_STATUS code other than E_DB_OK is returned, the caller
+**	    can look in the field adf_scb.adf_errcb.ad_errcode to determine
+**	    the ADF error code.
+**
+**  History:
+**	10-May-2010 (kschendel) b123712
+**	    Add floating ceil.
+*/
+DB_STATUS
+adu_fltceil(
+ADF_CB		    *adf_scb,
+DB_DATA_VALUE	    *dv1,
+DB_DATA_VALUE	    *rdv)
+{
+    f8	input, result;
+
+    /* 1st param should be a float.
+    ** if it isn't, it should have been caught before this point
+    */
+    if ( (dv1->db_datatype != DB_FLT_TYPE) ||
+	 (rdv->db_datatype != DB_FLT_TYPE)
+	)
+	return(adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "fltceil type"));
+    
+    /* Load float value into a double (f8) */
+    switch (dv1->db_length) 
+    {
+	case 8:
+	    input = *(f8 *)dv1->db_data;
+	    break;
+
+	case 4:
+	    input = (f8)(*(f4 *)dv1->db_data);
+	    break;
+
+	default:
+	    return(adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "fltceil len"));
+	    break;
+    }
+
+
+    /*
+    ** Do the lowlevel work, use a C99 / posix.1-2001 function.
+    */
+    result = ceil(input);
+
+    /* 
+    ** Return a result
+    */
+    switch (rdv->db_length) 
+    {
+	case 8:
+	    *(f8 *)rdv->db_data = result;
+	    break;
+
+	case 4:
+	{
+	    /* Check when converting back from F8 to F4 */
+	    if ((result >= FLT_MAX) || (result <= FLT_MIN))
+	    {	    
+		*(f4 *)rdv->db_data = 0.0;
+		EXsignal(EXFLTOVF, 0);
+	    }
+	    else	    
+		*(f4 *)rdv->db_data = (f4)result;
+	}
+	break;
+
+	default:
+	    return(adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "fltceil result len"));
+	    break;
+    }
+
+    return(E_DB_OK);
+
+} /* adu_fltceil */
+
+
+/*{
 ** Name: adu_decfloor()	- Perform floor() function on decimal values.
 **
 ** Inputs:
@@ -1020,6 +1286,127 @@ DB_DATA_VALUE	    *rdv)
 
 }
 
+
+/*{
+** Name: adu_fltfloor()	- Perform floor() function on float values.
+**
+** Inputs:
+**	adf_scb				Pointer to an ADF session control block.
+**	    .adf_errcb			ADF_ERROR struct.
+**		.ad_ebuflen		The length, in bytes, of the buffer
+**					pointed to by ad_errmsgp.
+**		.ad_errmsgp		Pointer to a buffer to put formatted
+**					error message in, if necessary.
+**      dv1                             Ptr to DB_DATA_VALUE to be floor'ed.
+**	    .db_datatype		Type of data to be floor'ed (must be 
+**					float).
+**	    .db_length			Length of data to be floor'ed.
+**	    .db_data			Ptr to actual data to be floor'ed.
+**	rdv				Ptr to DB_DATA_VALUE to hold resulting
+**					float value.
+**	    .db_length			The length of the result type.
+**
+** Outputs:
+**	adf_scb				Pointer to an ADF session control block.
+**	    .adf_errcb			ADF_ERROR struct.  If an
+**					error occurs the following fields will
+**					be set.  NOTE: if .ad_ebuflen = 0 or
+**					.ad_errmsgp = NULL, no error message
+**					will be formatted.
+**		.ad_errcode		ADF error code for the error.
+**		.ad_errclass		Signifies the ADF error class.
+**		.ad_usererr		If .ad_errclass is ADF_USER_ERROR,
+**					this field is set to the corresponding
+**					user error which will either map to
+**					an ADF error code or a user-error code.
+**		.ad_emsglen		The length, in bytes, of the resulting
+**					formatted error message.
+**		.adf_errmsgp		Pointer to the formatted error message.
+**	rdv
+**	    .db_data			Ptr to resulting decimal value.
+**
+**	Returns:
+**	      The following DB_STATUS codes may be returned:
+**	    E_DB_OK, E_DB_WARN, E_DB_ERROR, E_DB_SEVERE, E_DB_FATAL
+**
+**	      If a DB_STATUS code other than E_DB_OK is returned, the caller
+**	    can look in the field adf_scb.adf_errcb.ad_errcode to determine
+**	    the ADF error code.
+**
+**  History:
+**	10-May-2010 (kschendel) b123712
+**	    Add floating floor.
+*/
+DB_STATUS
+adu_fltfloor(
+ADF_CB		    *adf_scb,
+DB_DATA_VALUE	    *dv1,
+DB_DATA_VALUE	    *rdv)
+{
+    f8	input, result;
+
+    /* 1st param should be a float.
+    ** if it isn't, it should have been caught before this point
+    */
+    if ( (dv1->db_datatype != DB_FLT_TYPE) ||
+	 (rdv->db_datatype != DB_FLT_TYPE)
+	)
+	return(adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "fltfloor type"));
+    
+    /* Load float value into a double (f8) */
+    switch (dv1->db_length) 
+    {
+	case 8:
+	    input = *(f8 *)dv1->db_data;
+	    break;
+
+	case 4:
+	    input = (f8)(*(f4 *)dv1->db_data);
+	    break;
+
+	default:
+	    return(adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "fltfloor len"));
+	    break;
+    }
+
+
+    /*
+    ** Do the lowlevel work, use a C99 / posix.1-2001 function.
+    */
+    result = floor(input);
+
+    /* 
+    ** Return a result
+    */
+    switch (rdv->db_length) 
+    {
+	case 8:
+	    *(f8 *)rdv->db_data = result;
+	    break;
+
+	case 4:
+	{
+	    /* Check when converting back from F8 to F4 */
+	    if ((result >= FLT_MAX) || (result <= FLT_MIN))
+	    {	    
+		*(f4 *)rdv->db_data = 0.0;
+		EXsignal(EXFLTOVF, 0);
+	    }
+	    else	    
+		*(f4 *)rdv->db_data = (f4)result;
+	}
+	break;
+
+	default:
+	    return(adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "fltfloor result len"));
+	    break;
+    }
+
+    return(E_DB_OK);
+
+} /* adu_fltfloor */
+
+
 /*{
 ** Name: adu_decprec() - Determine best precision and scale for a string.
 **

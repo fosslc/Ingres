@@ -99,6 +99,8 @@
 ;	13-Apr-2010 (Bruce Lunsford) Sir 122679
 ;	   Remove deleted function GCwinsock2_get_thread.
 ;	   Add new functions GCwinsock2_save and GCwinsock2_restore.
+;	10-May-2010 (kschendel) b123712
+;	    Added MHtrunc.
 
 EXPORTS
 	iiBTand	@1				
@@ -1193,3 +1195,4 @@ EXPORTS
 	IISTrindex_SB	@1094
 	GCwinsock2_save	@1095			
 	GCwinsock2_restore @1096			
+	MHtrunc		@1097

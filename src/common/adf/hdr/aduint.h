@@ -174,6 +174,8 @@
 **          Add adu_fltround prototype
 **	14-apr-2010 (toumi01) SIR 122403
 **	    Add adu_aesdecrypt and adu_aesencrypt.
+**	10-May-2010 (kschendel) b123712
+**	    Added float trunc, ceil, floor.
 */
 
 
@@ -377,11 +379,20 @@ FUNC_EXTERN ADU_NORM2_FUNC adu_fltround;    /* Routine to compute round()
 FUNC_EXTERN ADU_NORM1_FUNC adu_decceil;     /* Routine to compute ceiling()
 					    ** on decimal operand.
 					    */
+FUNC_EXTERN ADU_NORM1_FUNC adu_fltceil;     /* Routine to compute ceiling()
+					    ** on float operand.
+					    */
 FUNC_EXTERN ADU_NORM1_FUNC adu_decfloor;    /* Routine to compute floor()
 					    ** on decimal operand.
 					    */
+FUNC_EXTERN ADU_NORM1_FUNC adu_fltfloor;    /* Routine to compute floor()
+					    ** on float operand.
+					    */
 FUNC_EXTERN ADU_NORM2_FUNC adu_dectrunc;    /* Routine to compute trunc()
 					    ** on decimal operand.
+					    */
+FUNC_EXTERN ADU_NORM2_FUNC adu_flttrunc;    /* Routine to compute trunc()
+					    ** on float operand.
 					    */
 FUNC_EXTERN ADU_NORM1_FUNC adu_chr;         /* Routine to compute chr()
 					    ** on integer operand.

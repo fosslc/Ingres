@@ -462,6 +462,8 @@
 #	04-May-2010 (kiria01) b123678
 #	    Add missing routines for Unicode CHARACTER_LENGTH and
 #	   OCTET_LENGTH
+#	10-May-2010 (kschendel) b123712
+#	    Add FI's for float ceil, floor, trunc.
 
 group ADI_COMPARISON
 
@@ -8259,7 +8261,7 @@ group ADI_NORM_FUNC
 	    routine adu_decround
 
 	fi ADFI_1456_FLTROUND
-	    description dec  :  round(flt, i)
+	    description flt  :  round(flt, i)
 	    lenspec ADI_O1
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_FLT_TYPE
@@ -8276,6 +8278,14 @@ group ADI_NORM_FUNC
 	    operands DB_DEC_TYPE DB_INT_TYPE
 	    routine adu_dectrunc
 
+	fi ADFI_900_FLTTRUNC
+	    description flt  :  trunc[ate](flt, i)
+	    lenspec ADI_O1
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_FLT_TYPE
+	    operands DB_FLT_TYPE DB_INT_TYPE
+	    routine adu_flttrunc
+
     operator ADI_CEIL_OP
 
 	fi ADFI_1285_DECCEIL
@@ -8286,6 +8296,14 @@ group ADI_NORM_FUNC
 	    operands DB_DEC_TYPE
 	    routine adu_decceil
 
+	fi ADFI_901_FLTCEIL
+	    description flt  :  ceil[ing](flt)
+	    lenspec ADI_O1
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_FLT_TYPE
+	    operands DB_FLT_TYPE
+	    routine adu_fltceil
+
     operator ADI_FLOOR_OP
 
 	fi ADFI_1286_DECFLOOR
@@ -8295,6 +8313,14 @@ group ADI_NORM_FUNC
 	    result DB_DEC_TYPE
 	    operands DB_DEC_TYPE
 	    routine adu_decfloor
+
+	fi ADFI_902_FLTFLOOR
+	    description flt  :  floor(flt)
+	    lenspec ADI_O1
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_FLT_TYPE
+	    operands DB_FLT_TYPE
+	    routine adu_fltfloor
 
     operator ADI_CHR_OP
 

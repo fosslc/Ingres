@@ -38,6 +38,8 @@
 **	    Add MHlog10().
 **       04-Nov-2009 (coomi01) b122767
 **          Add MHround()
+**	10-May-2010 (kschendel) b123712
+**	    Add MHtrunc().
 **/
 FUNC_EXTERN f8      MHround(
 #ifdef CL_PROTOTYPED
@@ -186,6 +188,8 @@ FUNC_EXTERN f8      MHtan(
 	f8	    x
 #endif
 );
+
+FUNC_EXTERN f8 MHtrunc(f8 x, i4 pos);
 
 
 /* FIXME system specific ? */

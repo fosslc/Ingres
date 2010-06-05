@@ -61,6 +61,11 @@ typedef union
 ** History:
 **       04-Nov-2009 (coomi01) b122767
 **            Created.
+**	10-May-2010 (kschendel) b123712
+**	    Fix off-by-one error checking the position against digits.
+**	    Position goes negative to the left, digits to the right, but
+**	    they agree at zero (units position).  If -position > digits,
+**	    the rounded result is zero.
 */
 f8
 MHround(f8 inputValue, i4 position)
@@ -109,11 +114,11 @@ MHround(f8 inputValue, i4 position)
     ** when the second 'position' parameter is attempting to 
     ** the floating point precision range.
     */
-    if ( position < 1-digCnt )
+    if ( -position > digCnt )
     {
 	return 0.0;
     } 
-    else if (position > 23-digCnt)
+    else if (-position < digCnt-23)
     {
 	return inputValue;
     }
@@ -187,6 +192,11 @@ MHround(f8 inputValue, i4 position)
 
     /* We now have the number near unity, and we are to round
     ** away the part immediately after the decimal point
+    **
+    ** Although the below code appears to work fine, even better
+    ** might be a simple call to the standard round(shiftedValue)
+    ** function.  If you have any trouble with the bit-twiddling
+    ** here, try that as a fix.  :-)
     */
 
     /* 
@@ -313,4 +323,182 @@ MHround(f8 inputValue, i4 position)
     */
     return result;
 }
+
+
+/*{
+** Name: mhtrunc  - A utility routine to perform a SQL style
+**                  trunc of double. Not quite the same as
+**                  C99 trunc() for we have a second parameter
+**                  to specify which digit we want to truncate at.
+**
+** Input:
+**          inputValue : The double to be truncated
+**
+**          position   : An integer index,
+**                          if +ve the position after the decimal point
+**                          if -ve the position prior to the decimal point
+** History:
+**	10-May-2010 (kschendel) b123712
+**	    Create to ensure floats get truncated properly.
+*/
+f8
+MHtrunc(f8 inputValue, i4 position)
+{
+    fpEndianDataType data;
+    i4           exponent;
+    i4             digCnt;
+    f8           tenShift;
+    u_i8              sig;
+    bool         negTrunc;
+    f8       shiftedValue;
+    f8              after;
+    f8             result;
+
+#ifndef IEEE_FLOAT /* in bzarch.h */
+    PROBLEM : If we are not using IEEE floats the algorithm below will fail.
+#endif
+
+    data.floatValue = inputValue;
+    exponent = ((data.parts.topBits >> 20) & EXPMASK);
+    digCnt = information[exponent].digits;
+
+    if (1 == information[exponent].boundryPresent)
+    {
+	/*
+	** Need to be more careful
+	*/
+	data.parts.topBits &= SIGNIG_MASK;
+	data.parts.topBits |= (BIAS << 20);
+	sig = data.bitValue;
+
+	if ( sig >= information[exponent].sig )
+	    digCnt += 1;
+
+	/* Restore data */
+	data.floatValue = inputValue;
+    }
+
+    /*
+    ** We may now look to see if we can optimize the request
+    ** when the second 'position' parameter is attempting to
+    ** the floating point precision range.
+    ** For truncate, if -position >= digits, it's all truncated away.
+    */
+    if ( -position >= digCnt )
+    {
+	return 0.0;
+    }
+    else if (-position < digCnt-23)
+    {
+	return inputValue;
+    }
+
+    /* If we get here we must do the calculation in detail */
+    /* To do this we first slide the float towards unity   */
+
+    /*
+    ** Flag negative position
+    */
+    negTrunc = FALSE;
+    if ( position < 0 )
+    {
+	/* Invert */
+	negTrunc  = TRUE;
+	position = -position;
+    }
+
+    /*
+    ** Calculate Ten's Shift for the slide
+    */
+    if (position < MHMAX_P10TAB)
+    {
+	/*
+	** Quick lookup of 10^position
+	*/
+	tenShift = MHpowerTenTab[position];
+    }
+    else
+    {
+	/*
+	** Shifting out-of-range would cause an overflow
+	*/
+	EXsignal(EXFLTOVF, 0);
+	return 0.0;
+    }
+
+    if ( negTrunc )
+    {
+	/*
+	** Bring d-point into range
+	*/
+	shiftedValue = inputValue / tenShift;
+
+        /*
+	** Check F8 Underflow
+	*/
+	if ( abs(shiftedValue) <= DBL_UNDERFLOW )
+	{
+	    EXsignal(EXFLTOVF, 0);
+	    return 0.0;
+	}
+    }
+    else
+    {
+	/*
+	** Bring d-point into range
+	** ~ Reverse procedure to stuff above.
+	*/
+	shiftedValue = inputValue * tenShift;
+
+        /*
+	** Check F8 Overflow
+	*/
+	if ( abs(shiftedValue) >= DBL_OVERFLOW )
+	{
+	    EXsignal(EXFLTOVF, 0);
+	    return 0.0;
+	}
+    }
+
+    /* The input is now aligned as if position were specified as zero,
+    ** so we can use the standard C library trunc on it now.
+    */
+
+    after = trunc(shiftedValue);
+
+    if ( negTrunc )
+    {
+	if ( abs(after) <= DBL_UNDERFLOW )
+	{
+	    EXsignal(EXFLTOVF, 0);
+	    return 0.0;
+	}
+
+	/*
+	** Now shift d-point back to original position
+	*/
+	result = tenShift * after;
+    }
+    else
+    {
+        /*
+	** Check F8 Overflow
+	*/
+	if ( abs(after) >= DBL_OVERFLOW )
+	{
+	    EXsignal(EXFLTOVF, 0);
+	    return 0.0;
+	}
+
+	/*
+	** Now shift d-point back to original position
+	*/
+	result = after / tenShift;
+    }
+
+    /*
+    ** Done.
+    */
+    return result;
+} /* MHtrunc */
 

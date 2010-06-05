@@ -124,6 +124,8 @@
 ;	    Add for encryption: adu_aesdecrypt adu_aesencrypt
 ;	    adu_rijndaelSetupEncrypt adu_rijndaelSetupDecrypt
 ;	    adu_rijndaelEncrypt adu_rijndaelDecrypt
+;	10-May-2010 (kschendel) b123712
+;	    Add floating trunc, ceil, floor.
 
 EXPORTS
 adb_breakpoint		@1				
@@ -653,3 +655,6 @@ adu_rijndaelSetupEncrypt @535
 adu_rijndaelSetupDecrypt @536
 adu_rijndaelEncrypt	@537
 adu_rijndaelDecrypt	@538
+adu_flttrunc		@539
+adu_fltceil		@540
+adu_fltfloor		@541
