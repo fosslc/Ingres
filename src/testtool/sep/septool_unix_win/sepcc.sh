@@ -70,6 +70,9 @@
 ##	10-Apr-2009 (frima01)
 ##		Add flags to compile 32 respectively 64 bit object code.
 ##		Therefore removed separate i64.hpu and usl.us5 compile commands.
+##      20-Apr-2010 (hanal04) Bug 123603
+##              Add CCPICFLAG to the compiler flags to avoid errors
+##              if the target is subsequently included in a shared library.
 ##
 
 CMD=sepcc
@@ -202,7 +205,7 @@ done
 
 # evaluate object code type to compile
 
-cc_sw="$CCMACH"
+cc_sw="$CCMACH $CCPICFLAG"
 
 if [ -n "${CCFLAGS}" ]
 then
