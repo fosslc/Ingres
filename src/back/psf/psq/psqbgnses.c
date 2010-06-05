@@ -360,6 +360,8 @@
 **	    for defaulting SET CARDINALITY_CHECK
 **      November 2009 (stephenb)
 **          Batch execution; initilization of new fields.
+**	04-may-2010 (miket) SIR 122403
+**	    Init new sess_cb->pss_stmt_flags2.
 */
 DB_STATUS
 psq_bgn_session(
@@ -678,7 +680,7 @@ psq_bgn_session(
     /*
     **	so session reset all bit flags
     */
-    sess_cb->pss_stmt_flags =
+    sess_cb->pss_stmt_flags = sess_cb->pss_stmt_flags2 =
 	sess_cb->pss_dbp_flags = sess_cb->pss_ses_flag = 0L;
     sess_cb->pss_flattening_flags = 0;
 

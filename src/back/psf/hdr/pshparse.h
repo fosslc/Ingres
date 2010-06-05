@@ -1796,6 +1796,9 @@ typedef struct _PSS_DECVAR PSS_DECVAR;  /* forward declaration */
 **	    creation of this session has been logged.
 **	03-Dec-2009 (kiria01) SIR 121883
 **	    Added .pss_stk_freelist to session block to aid stack memory reuse. 
+**	04-may-2010 (miket) SIR 122403
+**	    Add 32 more session-level flags: pss_stmt_flags2.
+**	    Add flags PSS_2_ENCRYPTION and PSS_2_PASSPHRASE.
 */
 typedef struct _PSS_SESBLK
 {
@@ -2289,6 +2292,11 @@ ULT_VECTOR_MACRO(PSS_TBITS, PSS_TVAO) pss_trace;
 #define		PSS_KEYSET		0x80000000L
 					/* This is a keyset scrollable cursor
 					*/
+    i4	pss_stmt_flags2;		/* yet more statement-level flags */
+#define		PSS_2_ENCRYPTION	0x0001L
+					/* table-level ENCRYPTION= parsed */
+#define		PSS_2_PASSPHRASE	0x0002L
+					/* table-level PASSPHRASE= parsed */
 i4		    pss_flattening_flags;
 
 					/*

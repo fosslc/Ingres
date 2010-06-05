@@ -585,6 +585,8 @@ psq_parseqry(
 **          next and makes it hard to isolate problems.
 **       5-Oct-2008 (hanal04) Bug 120702
 **        Added initialization for sess_cb->pss_audit.
+**	04-may-2010 (miket) SIR 122403
+**	    Init new sess_cb->pss_stmt_flags2.
 */
 DB_STATUS
 psq_cbinit(
@@ -595,7 +597,7 @@ psq_cbinit(
 
     psq_cb->psq_error.err_code= E_PS0000_OK;		/* No errors */
     psq_cb->psq_mode = 0;				/* No query mode */
-    sess_cb->pss_stmt_flags = 0L;
+    sess_cb->pss_stmt_flags = sess_cb->pss_stmt_flags2 = 0L;
     sess_cb->pss_audit = NULL;
     sess_cb->pss_flattening_flags = 0;
     sess_cb->pss_symblk = sess_cb->pss_symtab;		/* No scanner symtab */

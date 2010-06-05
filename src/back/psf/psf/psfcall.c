@@ -320,6 +320,8 @@ psf_svr_handle(
 **	    Re-type call to use the proper struct pointer.
 **	12-Mar-2010 (thaju02) Bug 123440
 **	    Add PSQ_GET_SESS_INFO to return session cache_dynamic setting.
+**	04-may-2010 (miket) SIR 122403
+**	    Init new sess_cb->pss_stmt_flags2.
 */
 DB_STATUS
 psq_call(
@@ -444,7 +446,8 @@ psq_call(
 
     case PSQ_PARSEQRY:
 	/* start out with all bits turned off */
-	sess_cb->pss_stmt_flags = sess_cb->pss_dbp_flags = 0L;
+	sess_cb->pss_stmt_flags = sess_cb->pss_stmt_flags2 =
+	    sess_cb->pss_dbp_flags = 0L;
 	sess_cb->pss_flattening_flags = 0;
 	if (psq_cb->psq_ret_flag & PSQ_FINISH_COPY)
 	    sess_cb->pss_last_sname[0] = EOS;
@@ -522,7 +525,8 @@ psq_call(
 
 	/* PSF retry */
 	/* start out with all bits turned off */
-	sess_cb->pss_stmt_flags = sess_cb->pss_dbp_flags = 0L;
+	sess_cb->pss_stmt_flags = sess_cb->pss_stmt_flags2 =
+	    sess_cb->pss_dbp_flags = 0L;
 	sess_cb->pss_flattening_flags = 0;
 
 	/* Initialize distributed statement flags */

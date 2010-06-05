@@ -141,6 +141,10 @@ SQLSTATE_MAPPING_REQUIRED
 **	    Add message E_PS0C85_ENCRYPT_INVALID for encryption. Also
 **	    modify E_PS03A7_QUOTED_WITH_CLAUSE to include mention of new
 **	    PASSPHRASE syntax.
+**	04-may-2010 (miket) SIR 122403
+**	    Add messages for encryption syntax errors:
+**	    E_PS0C86_ENCRYPT_NOTABLVL, E_PS0C87_ENCRYPT_NOCOLS,
+**	    E_PS0C88_ENCRYPT_NOPASS
 */
 
 
@@ -5843,6 +5847,61 @@ E_PS0C85_ENCRYPT_INVALID:SS42000_SYN_OR_ACCESS_ERR
 **	Peripheral data type encryption must be handled in a manner other
 **	than using transparent column encryption, e.g. using functions
 **	such as aes_encrypt in application code.
+*/
+E_PS0C86_ENCRYPT_NOTABLVL:SS42000_SYN_OR_ACCESS_ERR
+"Invalid encryption specification for table %0c.\
+\nOne or more columns were marked as encrypted, but no table-level\
+ encryption information was specified."
+/*%
+** Parameters:
+**	%0c - table name
+**
+** Explanation:
+**	The user specified ENCRYPT for one or more columns, but no
+**	table-level ENCRYPTION= specification was found.
+**
+** System Status:
+**	The query is aborted.
+**
+** Recommendation:
+**	Supply the missing information.
+*/
+E_PS0C87_ENCRYPT_NOCOLS:SS42000_SYN_OR_ACCESS_ERR
+"Invalid encryption specification for table %0c.\
+\nEncryption was specified for the table, but the table contains\
+ no encrypted columns."
+/*%
+** Parameters:
+**	%0c - table name
+**
+** Explanation:
+**	The user specified ENCRYPTION= at the table level, but no
+**	columns were marked as encrypted.
+**
+** System Status:
+**	The query is aborted.
+**
+** Recommendation:
+**	Mark one or more columns as encrypted, or drop the encryption
+**	specification for the table.
+*/
+E_PS0C88_ENCRYPT_NOPASS:SS42000_SYN_OR_ACCESS_ERR
+"Invalid encryption specification for table %0c.\
+\nEncryption was specified for the table, but the required\
+ passphrase was not provided."
+/*%
+** Parameters:
+**	%0c - table name
+**
+** Explanation:
+**	The user specified ENCRYPTION= at the table level, but no
+**	PASSPHRASE= was specified.
+**
+** System Status:
+**	The query is aborted.
+**
+** Recommendation:
+**	Supply the missing passphrase.
 */
 E_PS0C90_MUSTBE_CONST_INT:SS42000_SYN_OR_ACCESS_ERR
 "The second argument to the char(), varchar(), ascii() and text() conversion\

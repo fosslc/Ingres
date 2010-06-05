@@ -541,6 +541,8 @@ static char * psl_seckey_attr_name(
 **	    Alter incorrect comment.
 **	16-may-2007 (dougi)
 **	    Add support for autostruct with options.
+**	04-may-2010 (miket) SIR 122403
+**	    Check for anatomically incorrect encryption specifications.
 */
 DB_STATUS
 psl_ct1_create_table(
@@ -556,6 +558,7 @@ psl_ct1_create_table(
     register DMF_ATTR_ENTRY	**attrs;
     register i4		length;
     bool			logical_key_specified = FALSE;
+    bool			encrypted_columns = FALSE;
     DMU_CHAR_ENTRY		*chr;
     PST_STATEMENT	        *stmt_list;
     DB_STATUS			status;
@@ -588,6 +591,10 @@ psl_ct1_create_table(
     }
 
     /* check for tuple too wide */
+    /* we must have checked for tuple width here at some point, but now
+    ** we make a pass through the attributes checking things like attribute
+    ** level flag settings, saving info we will need later in this function
+    */
     for (colno = 0, length = 0,
 	 attrs = (DMF_ATTR_ENTRY **) dmu_cb->dmu_attr_array.ptr_address;
 
@@ -603,6 +610,8 @@ psl_ct1_create_table(
 	{
 	    logical_key_specified = TRUE;
 	}
+	if ((*attrs)->attr_encflags & ATT_ENCRYPT)
+	    encrypted_columns = TRUE;
     }
 
     if (colno < num_cols)
@@ -691,6 +700,42 @@ psl_ct1_create_table(
 
 	psq_cb->psq_mode = PSQ_DISTCREATE;
     }
+
+    /* sanity check encryption */
+    /* encrypted columns but no record-level encryption specified */
+    if (encrypted_columns  &&
+	!(sess_cb->pss_stmt_flags2 & PSS_2_ENCRYPTION))
+    {
+	(void) psf_error(E_PS0C86_ENCRYPT_NOTABLVL, 0L, PSF_USERERR,
+		&err_code, err_blk, 1,
+		psf_trmwhite(DB_TAB_MAXNAME,
+			dmu_cb->dmu_table_name.db_tab_name),
+		dmu_cb->dmu_table_name.db_tab_name);
+	return(E_DB_ERROR);
+    }
+    /* record-level encryption specified but no encrypted columns */
+    if (!encrypted_columns &&
+	(sess_cb->pss_stmt_flags2 & PSS_2_ENCRYPTION))
+    {
+	(void) psf_error(E_PS0C87_ENCRYPT_NOCOLS, 0L, PSF_USERERR,
+		&err_code, err_blk, 1,
+		psf_trmwhite(DB_TAB_MAXNAME,
+			dmu_cb->dmu_table_name.db_tab_name),
+		dmu_cb->dmu_table_name.db_tab_name);
+	return(E_DB_ERROR);
+    }
+    /* ENCRYPTION= specified but no PASSPHRASE= */
+    if ((sess_cb->pss_stmt_flags2 & PSS_2_ENCRYPTION) &&
+	!(sess_cb->pss_stmt_flags2 & PSS_2_PASSPHRASE))
+    {
+	(void) psf_error(E_PS0C88_ENCRYPT_NOPASS, 0L, PSF_USERERR,
+		&err_code, err_blk, 1,
+		psf_trmwhite(DB_TAB_MAXNAME,
+			dmu_cb->dmu_table_name.db_tab_name),
+		dmu_cb->dmu_table_name.db_tab_name);
+	return(E_DB_ERROR);
+    }
+    /* PASSPHRASE= specified but no ENCRYPTION= is checked in psl_nm_eq_nm */
 
 #ifdef	xDEBUG
     {
@@ -2199,6 +2244,9 @@ psl_ct3_crwith(
 **	    Add special structure "clustered" (Btree under the covers).
 **	22-Mar-2010 (toumi01) SIR 122403
 **	    Process WITH ENCRYPTION=<spec>, PASSPHRASE=<secret>
+**	04-may-2010 (miket) SIR 122403
+**	    Set PSS_2_ENCRYPTION and PSS_2_PASSPHRASE for later syntax
+**	    checking.
 */
 DB_STATUS
 psl_nm_eq_nm(
@@ -2549,6 +2597,7 @@ psl_nm_eq_nm(
 			     (i4) STlength(value), value);
 	    return (E_DB_ERROR);
 	}
+	sess_cb->pss_stmt_flags2 |= PSS_2_ENCRYPTION;
     }  /* end if encryption */
     else 
 	if (STcasecmp(name, ERx("passphrase")) == 0)
@@ -2624,6 +2673,7 @@ psl_nm_eq_nm(
 		return (E_DB_ERROR);
 	    }
 	}
+	sess_cb->pss_stmt_flags2 |= PSS_2_PASSPHRASE;
 
     }  /* end if passphrase */
     else 

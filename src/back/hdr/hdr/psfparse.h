@@ -680,6 +680,10 @@
 **	    PSQ_SESS_NOCACHEDYN.
 **	21-apr-2010 (toumi01) SIR 122403
 **	    Add E_PS0C85_ENCRYPT_INVALID.
+**	04-may-2010 (miket) SIR 122403
+**	    Add for more thorough syntax error reporting:
+**	    E_PS0C86_ENCRYPT_NOTABLVL, E_PS0C87_ENCRYPT_NOCOLS,
+**	    E_PS0C88_ENCRYPT_NOPASS
 **/
 
 /*
@@ -1661,6 +1665,9 @@
 						*/
 #define E_PS0C84_TERNARY_FUNC  (E_PS_DT + 0x84L)
 #define E_PS0C85_ENCRYPT_INVALID  (E_PS_DT + 0x85L)
+#define E_PS0C86_ENCRYPT_NOTABLVL (E_PS_DT + 0x86L)
+#define E_PS0C87_ENCRYPT_NOCOLS   (E_PS_DT + 0x87L)
+#define E_PS0C88_ENCRYPT_NOPASS   (E_PS_DT + 0x88L)
 
 /*
 **     Errors having to do with parsing string functions 

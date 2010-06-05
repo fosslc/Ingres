@@ -6204,6 +6204,8 @@ dbp_stat_exit:
 **          Use new PSS_PARSING_GRANT flag to indicate to the parser that
 **          the 'RECREATE' has no input set because it is run via a grant
 **          statement
+**	04-may-2010 (miket) SIR 122403
+**	    Init new sess_cb->pss_stmt_flags2.
 */
 DB_STATUS
 psy_dbp_priv_check(
@@ -6439,7 +6441,7 @@ owned by the current user to determine whether it is %t\n>>>\n---",
 	STlength(active_or_grantable), active_or_grantable);
     }
 
-    sess_cb->pss_stmt_flags = 0L;
+    sess_cb->pss_stmt_flags = sess_cb->pss_stmt_flags2 = 0L;
 
     sess_cb->pss_flattening_flags = 0;
 
