@@ -1333,6 +1333,11 @@ i4                 *ade_needed;
 **	01-Nov-2009 (kiria01) b122822
 **	    Added support for ADE_COMPAREN & ADE_NCOMPAREN instructions
 **	    for big IN lists.
+**      17-dec-2009 (huazh01) 
+**          at the end of the while loop, don't update offset_accumulator 
+**          if it is either ADE_COMPAREN or ADE_NCOMPAREN. oprP[] won't 
+**          be set up, and random values of oprP[] may cause segv. 
+**          (b123074)
 **       8-Mar-2010 (hanal04) Bug 122974
 **          Removed nfc_flag from adu_nvchr_fromutf8() and adu_unorm().
 **          A standard interface is expected by fcn lookup / execute
@@ -6460,8 +6465,11 @@ strCompare:
 	{
 	    break;
 	}
-	
-	if (is_fancy && f->ins_nops > 0 && oprP[0]->opr_base == lbase)
+
+        if (is_fancy && f->ins_nops > 0 && 
+            f->ins_icode != ADE_COMPAREN  &&
+            f->ins_icode != ADE_NCOMPAREN && 
+            oprP[0]->opr_base == lbase)
 	{
 	    offset_accumulator += element_length;
 	}
