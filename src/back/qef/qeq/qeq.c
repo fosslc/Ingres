@@ -6044,6 +6044,9 @@ QEF_RCB		*qef_rcb )
 **	    Minor corrections to qef_error parameter lists.
 **	28-feb-04 (inkdo01)
 **	    Change parms to DSH from RCB (for thread safety).
+**	09-apr-10 (smeke01) b123554
+**	    Corrected typo for MAXPAGE that had adh_cost_estimate instead of
+**	    ahd_page_estimate.
 */
 DB_STATUS
 qeq_chk_resource(
@@ -6203,7 +6206,7 @@ QEF_AHD		*action )
 	    break;
 	}
 	if (qef_cb->qef_fl_dbpriv & DBPR_QPAGE_LIMIT &&
-	    qef_cb->qef_page_limit < action->qhd_obj.qhd_qep.ahd_cost_estimate)
+	    qef_cb->qef_page_limit < action->qhd_obj.qhd_qep.ahd_page_estimate)
 	{
 	    if ( Qef_s_cb->qef_state & QEF_S_C2SECURE )
 	    {
