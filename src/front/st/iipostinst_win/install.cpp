@@ -3040,6 +3040,8 @@ CInstallation::CleanSharedMemory()
 **	13-Aug-2009 (drivi01)
 **	    Updated date_alias for new installs to rely on installer
 **	    settings as opposed to dbms.crs settings.
+**	08-Mar-2010 (thaju02)
+**	    Remove max_tuple_length.
 */
 BOOL
 CInstallation::SetConfigDat()
@@ -3418,9 +3420,6 @@ CInstallation::SetConfigDat()
 	    cmd.Format("ii.%s.dbms.*.cursor_limit 256", m_computerName);
 	    Exec(m_installPath + "\\ingres\\utility\\iisetres.exe", cmd, FALSE);
 
-	    cmd.Format("ii.%s.dbms.*.max_tuple_length 4096", m_computerName);
-	    Exec(m_installPath + "\\ingres\\utility\\iisetres.exe", cmd, FALSE);
-
 	    cmd.Format( "ii.%s.icesvr.*.default_database fortunoff",
 			m_computerName );
 	    Exec(m_installPath + "\\ingres\\utility\\iisetres.exe", cmd, FALSE);
@@ -3540,9 +3539,6 @@ CInstallation::SetConfigDat()
 	    
 		cmd.Format( "ii.%s.dbms.private.*.cache.p32k_status ON",
 			(LPCSTR)m_computerName );
-	    Exec(m_installPath + "\\ingres\\utility\\iisetres.exe", cmd, FALSE);
-	    
-	    cmd.Format("ii.%s.dbms.*.max_tuple_length 0", m_computerName);
 	    Exec(m_installPath + "\\ingres\\utility\\iisetres.exe", cmd, FALSE);
 	}
 
