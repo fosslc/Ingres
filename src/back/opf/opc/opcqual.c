@@ -6870,6 +6870,9 @@ opc_expranal(
 **	    Don't optimize away multiple executions of random(), uuid().
 **	10-sep-2008 (gupsh01)
 **	    Don't optimize unorm operator.
+**	26-Apr-2010 (kschendel) b123636
+**	    + (concat) isn't commutative if it's string concatenation.
+**	    Don't optimize blobs, see comments inline.
 */
 
 static bool
@@ -6888,6 +6891,9 @@ opc_exprsrch(
     PST_QNODE	*leftop, *rightop;
     ADI_OP_ID	opno;
     DB_ATT_ID	attrid;
+    DB_DT_ID	dt;
+    i4		dtbits;
+    DB_STATUS	status;
     bool	dummy, comm;
 
 
@@ -6941,10 +6947,36 @@ opc_exprsrch(
 	/* Don't optimize for Unorm operation */
 	if (opno == ADI_UNORM_OP )
 	    return(FALSE);
+
+	/* Don't optimize blobs.  Re-use of blob temps can get DMF
+	** into trouble, especially if the query is INSERT.
+	** (DMF assumes that it can dispose of a blob temporary after it's
+	** done inserting it into a row.)  The whole question of blob
+	** temporary lifetime needs to be dealt with before this restriction
+	** be eliminated.
+	*/
+	dt = abs(nodep->pst_sym.pst_dataval.db_datatype);
+	status = adi_dtinfo(subquery->ops_global->ops_adfcb, dt, &dtbits);
+	if (status != E_DB_OK || dtbits & AD_PERIPHERAL)
+	    return (FALSE);
+
 	/* Now we're getting somewhere. Compare operand types. */
-	if (opno == ADI_ADD_OP || opno == ADI_MUL_OP)
+	comm = FALSE;		/* Probably not commutative */
+	if (opno == ADI_MUL_OP)
 	    comm = TRUE;
-	else comm = FALSE;	/* set commutativity of expr */
+	else if (opno == ADI_ADD_OP)
+	{
+	    comm = TRUE;
+	    /* String add is concatenation, which is NOT commutative.
+	    ** If dtfamily weren't meaningless except for dates we could use
+	    ** it here!  oh well.
+	    */
+	    if (dt == DB_CHR_TYPE || dt == DB_CHA_TYPE
+	      || dt == DB_TXT_TYPE || dt == DB_VCH_TYPE
+	      || dt == DB_BYTE_TYPE || dt == DB_VBYTE_TYPE
+	      || dt == DB_NCHR_TYPE || dt == DB_NVCHR_TYPE)
+		comm = FALSE;
+	}
 
 	if (!((leftop = nodep->pst_left)->pst_sym.pst_type ==
 		srchp->pst_left->pst_sym.pst_type && 
