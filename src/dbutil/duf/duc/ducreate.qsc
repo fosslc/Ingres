@@ -4650,6 +4650,8 @@ duc_xlate_username(
 ** 	    Added duc_rdonly_flag to support readonly databases.
 **	21-feb-05 (inkdo01)
 **	    Belatedly init duc_national_flag and duc_unicode_nfc.
+**      19-Apr-20010 (hanal04) SIR 123574
+**          Initialilise duc_mustlog_flag.
 */
 DU_STATUS
 duc_init(duc_modes, duc_dbenv, duc_errcb)
@@ -4672,6 +4674,7 @@ DU_ERROR		*duc_errcb;
     duc_modes->duc_private_flag	= FALSE;
     duc_modes->duc_dbloc_flag	= FALSE;
     duc_modes->duc_rdonly_flag	= FALSE;
+    duc_modes->duc_mustlog_flag = FALSE;
     duc_modes->duc_jnlloc_flag	= FALSE;
     duc_modes->duc_ckploc_flag	= FALSE;
     duc_modes->duc_sortloc_flag	= FALSE;
