@@ -320,6 +320,9 @@
 **	12-Feb-2010 (shust01)
 **	    Changed text for license acceptance.  Also only accept 'y', 'yes', 
 **	    'n' or 'no' for valid answers for acceptance. b123285.
+**	20-Apr-2010 (frima01) B 123610
+**	    Set II_ADMIN to II_SYSTEM/ingres/install cause it is needed
+**	    to launch the front end part of ingbuild.
 */
 
 /*
@@ -504,6 +507,11 @@ main(i4 argc, char *argv[])
     i4		tempnat;
     CL_ERR_DESC clerrdesc;
     bool	install;
+
+    char admin_env[MAX_LOC + 1];
+    STcpy(admin_env,getenv( SystemLocationVariable ));
+    STcat(admin_env,"/ingres/install");
+    IPCLsetEnv( ERx( "II_ADMIN" ), admin_env, TRUE );
 
     /*
     ** Load PM resource values from the standard location.
