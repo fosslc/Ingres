@@ -345,6 +345,9 @@
 **         first connection attempt, attempt connections on subsequent 
 **         attempts, remember prior connection specifications, and mark
 **         optional connection attributes with an asterisk.
+**     26-Apr-2010 (Ralph Loen) SIR 123641
+**         In SQLBrowseConnect(), replace list of hard-coded driver names
+**         with "Ingres XX", where XX is the value of II_INSTALLATION.
 ** 
 */
 
@@ -458,7 +461,6 @@ static const CHAR ERR_TITLE[] = "SQLDriverConnect Error";
 static LPCSTR ServerClass[] = KEY_SERVERCLASSES;
 /* {"Ingres", "DCOM (Datacom)", "IDMS", "DB2", "IMS", "VSAM", "RDB (Rdb/VMS)", 
 "STAR", "RMS", "Oracle", "Informix", "Sybase", ..., NULL} */
-static LPCSTR DriverName[] = KEY_DRIVERNAMES;
 
 /*
 **  Ini file connect options:
@@ -1285,6 +1287,7 @@ SQLRETURN SQL_API SQLBrowseConnect_InternalCall(
     BOOL        UIDFound= *pdbc->szUID ? TRUE : FALSE;
     BOOL        DBMS_PwdFound= *pdbc->szDBMS_PWD ? TRUE : FALSE;
     UWORD       badKeywordCount=0;
+    char        *ii_installation = NULL;
     RETCODE rc;
     i4          i;
  
@@ -1506,23 +1509,25 @@ SQLRETURN SQL_API SQLBrowseConnect_InternalCall(
     **         doesn't care what the driver name is.
     ** Since the Driver attribute allows the driver to be loaded
     ** in a non-CLI envinronment, the driver name is inferred.  
-    ** Pick any driver name other than the generic "Ingres" from 
-    ** the list of driver names, and fill szDriver, but don't bother
-    ** to put the driver name in the returned string.
+    ** The driver name specific to this driver is "Ingres XX", where
+    ** XX is the value of II_INSTALLATION.  The generic "Ingres" driver
+    ** name may or may not refer to this installation.  Fill pdbc->szDriver
+    ** with "Ingres XX".  It is not necessary to return the driver name, 
+    ** since otherwise this routine would not be called.
     */
     if (!DriverFound)
     {
-        i = 0;
-        while(DriverName[i] != NULL)
-        {
-            if (STbcompare (DriverName[i], 0, "Ingres", 0, TRUE))
-            {
-                STcopy(DriverName[i], pdbc->szDriver);
-                DriverFound = TRUE;
-                break;
-            }
-            i++;
-        }
+        NMgtAt("II_INSTALLATION",&ii_installation);
+#ifdef VMS
+        /*
+        ** On VMS, system-level installations have no definition for 
+        ** II_INSTALLATION.  The default designator is AA.
+        */
+        if (!ii_installation) 
+            ii_installation = STalloc("AA");
+#endif /* VMS */
+        STprintf(pdbc->szDriver, "Ingres %s", ii_installation);
+        DriverFound = TRUE;
     }
 
     if (!ServerTypeFound)
@@ -1622,12 +1627,13 @@ SQLRETURN SQL_API SQLBrowseConnect_InternalCall(
         STcat(pdbc->bcOutStr, pdbc->szDSN);
         STcat(pdbc->bcOutStr, ";");
     }
-	else if (DriverFound)
-	{
+    else if (DriverFound)
+    {
         STcopy(DRIVER, pdbc->bcOutStr);
-		STcat(pdbc->bcOutStr, pdbc->szDriver);
-		STcat(pdbc->bcOutStr, ";");
-	}
+        STcat(pdbc->bcOutStr, "{");
+        STcat(pdbc->bcOutStr, pdbc->szDriver);
+        STcat(pdbc->bcOutStr, "};");
+    }
     if (ServerTypeFound)
     {
         STcat(pdbc->bcOutStr, SERVERTYPE);
@@ -1691,6 +1697,7 @@ SQLRETURN SQL_API SQLBrowseConnect_InternalCall(
         STcat(pdbc->bcOutStr, ";");
     }
 
+    *szConnStrOut = '\0';
     UnlockDbc (pdbc);
     rc = SQLDriverConnect_InternalCall(
             hdbc,

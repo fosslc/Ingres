@@ -4,11 +4,17 @@
 # History:
 #	26-jan-2005 (abbjo03)
 #	    Remap to config_unix_vms until we submit mid-level Jamfiles.
+#       29-Apr-2010 (Ralph Loen) SIR 123641
+#           Add macro definition SLSFX for util.c.
 
 SubDir ING_SRC common odbc config_unix_vms ;
 
 IISUBSYS common odbc config_unix_vms ;
 
+if $(UNIX)
+{
+    CCFLAGS on <$(SOURCE_GRIST)>util$(SUFOBJ) += '-DSLSFX=\"$(SLSFX)\"' ;
+}
 
 IIUTILEXE iiodbcinst : iiodbcinst.c ;
 IINEEDLIBS iiodbcinst : ODBCCFGLIB APILIB COMPATLIB CUFLIB

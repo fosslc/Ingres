@@ -130,6 +130,8 @@
 **   08-Feb-2010 (Ralph Loen) Bug 123175
 **      Removed "Fetch entire long data columns", which is supported in
 **      earlier code lines only.
+**   29-Apr-2010 (Ralph Loen) SIR 123641
+**      Replaced defAttr[0] with defAttr[INFO_ATTR_DRIVER_FILE_NAME].
 */
 /*
 PROGRAM = (PROG1PRFX)odbcadmin
@@ -1356,7 +1358,7 @@ void dsn_config_form(char *dsnname, char *drvname, PTR dsnH,
                             STcat(fullPath,SYSTEM_LOCATION_SUBDIRECTORY);
                             STcat(fullPath,"/lib/");
 # endif /* VMS */
-                            STcat(fullPath,defAttr[0]);
+                            STcat(fullPath,defAttr[INFO_ATTR_DRIVER_FILE_NAME]);
 			    STcopy(fullPath,attrList[j]->value);
                         }
                         else                        

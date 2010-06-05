@@ -52,6 +52,9 @@
 **          Add support for LSB builds, server binaries live under
 **          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
 **          libraries under /usr/lib/ingres and config under /usr/share/ingres
+**      29-Apr-2010 (Ralph Loen) SIR 123641
+**          Remove ocfginfo.dat, as the ODBC configuration API no longer 
+**          requires this file.
 */
 
 PART  odbc
@@ -115,17 +118,6 @@ PART  odbc
    BUILD_DIR (ING_BUILD)!utility
       SCRIPT SETUP (PROG1PRFX)suodbc
       EXECUTABLE (PROG1PRFX)odbcinst
-/*
-** ingres!install
-*/
-
-#ifndef conf_LSB_BUILD
-    DIRECTORY (PROD2NAME)!install
-#endif
-
-   BUILD_DIR (ING_BUILD)!manifest
-      FILE ocfginfo.dat
-
 /*
 ** ingres!files
 */

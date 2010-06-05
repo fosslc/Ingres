@@ -4,6 +4,8 @@
 # History:
 #	02-dec-2004 (abbjo03)
 #	    Use DFS as directory-file separator for portability.
+#       29-Apr-2010 (Ralph Loen) SIR 123641
+#           Remove obsolete ocfginfo.dat.
 
 SubDir ING_SRC common odbc hdr ;
 
@@ -12,8 +14,6 @@ IISUBSYS common odbc hdr ;
 
 if ! $(NT)
 {
-IICCPPFILE $(INGMANIFEST)$(DFS)ocfginfo.dat : ocfginfo.ccpp ;
-
 IIHDRCCPP sql.h : sql.ccpp ;
 IIFILE sql.h : <common!odbc!hdr>sql.h ;
 

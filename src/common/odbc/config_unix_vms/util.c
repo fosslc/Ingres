@@ -90,10 +90,17 @@
 **          to DRV_STR_TRACE_FILE (Trace File).
 **   17-Nov-2008 (Ralph Loen) SIR 121228
 **          Add DSN_ATTR_INGRESDATE to default dsnAttributes table.
-**    28-Apr-2009 (Ralph Loen) SIR 122007
-**         Add support for "StringTruncation" ODBC configuration attribute.
-**         If set to Y, string truncation errors are reported.  If set to
-**         N (default), strings are truncated silently.
+**   28-Apr-2009 (Ralph Loen) SIR 122007
+**          Add support for "StringTruncation" ODBC configuration attribute.
+**          If set to Y, string truncation errors are reported.  If set to
+**          N (default), strings are truncated silently.
+**   27-Apr-2010 (Ralph Loen) SIR 123641
+**          Remove reliance on ocfginfo.dat getDefaultInfo().  The alternate 
+**          driver name is now "Ingres XX", where XX is the installation code. 
+**          Replace numeric array references for the default attributes array
+**          with pre-defined constants, i.e., defAttr[0] is not
+**          defAttr[INFO_ATTR_DRIVER_FILE_NAME].
+**  
 */
 
 GLOBALDEF i2 driverManager=MGR_VALUE_UNIX_ODBC;
@@ -720,13 +727,13 @@ STATUS addDataSources ( OCFG_CB *ocfg_cb, char *dsnName )
 		    */
 		    else 
 		    {
-                        if ( !STbcompare(defAttr[2], 0,
+                        if ( !STbcompare(defAttr[INFO_ATTR_DRIVER_NAME], 0,
                                 data->data_value, 0, TRUE ) )
                         {
                                 is_linked = TRUE; 
 			        break;
 			}
-                        if ( !STbcompare(defAttr[3], 0,
+                        if ( !STbcompare(defAttr[INFO_ATTR_ALT_DRIVER_NAME], 0,
                                 data->data_value, 0, TRUE ) )
                         {
                                 is_linked = TRUE; 
@@ -1275,128 +1282,54 @@ STATUS rewriteINI( OCFG_CB *ocfg_cb )
 char **getDefaultInfo()
 {
     char *dirPath;
-    char fullPath[OCFG_MAX_STRLEN];
-    char buf[OCFG_MAX_STRLEN];           
-    FILE *pfile;
-    LOCATION loc;
     static char *defAttr[4];
     static bool attrDefined = FALSE;
     i4 i;
-    char *p;
-    char Token[OCFG_MAX_STRLEN], *pToken = &Token[0];
-    BOOL hasDFN=FALSE, hasRODFN=FALSE, hasDN=FALSE, hasADN=FALSE;
+    char *ii_installation;
   
     if (attrDefined)
         return (char **)defAttr;
 
-    /*
-    ** Get the path of the ocfginfo.dat file and create the asscociated string.
-    */
-    NMgtAt(SYSTEM_LOCATION_VARIABLE,&dirPath);  /* usually II_SYSTEM */
-    if (dirPath != NULL && *dirPath)
-        STlcopy(dirPath,fullPath,sizeof(fullPath)-20-1);
+    NMgtAt("II_INSTALLATION",&ii_installation);
+
+#ifdef VMS
+    defAttr[INFO_ATTR_DRIVER_FILE_NAME] = (char *)MEreqmem( (u_i2) 0,
+        (u_i4)16, TRUE, (STATUS *) NULL);
+    if (ii_installation == NULL)
+        STcopy("ODBCFELIB.EXE", defAttr[INFO_ATTR_DRIVER_FILE_NAME]);
     else
-        return (NULL);
-# ifdef VMS
-    STcat(fullPath,"[");
-    STcat(fullPath,SYSTEM_LOCATION_SUBDIRECTORY);
-    STcat(fullPath,".install]");
-    STcat(fullPath,INFO_STR_FILE_NAME);
-# else
-    STcat(fullPath,"/");
-    STcat(fullPath,SYSTEM_LOCATION_SUBDIRECTORY);  /* usually "ingres"  */
-    STcat(fullPath,"/install/");
-    STcat(fullPath,INFO_STR_FILE_NAME);
-# endif /* ifdef VMS */
+        STprintf(defAttr[INFO_ATTR_DRIVER_FILE_NAME], "ODBCFELIB%s.EXE", 
+            ii_installation);
+    defAttr[INFO_ATTR_RONLY_DRV_FNAME] = (char *)MEreqmem( (u_i2) 0,
+        (u_i4)18, TRUE, (STATUS *) NULL);
+    if (ii_installation == NULL)
+        STcopy("ODBCFEROLIB.EXE", defAttr[INFO_ATTR_RONLY_DRV_FNAME]);
+    else
+        STprintf(defAttr[INFO_ATTR_RONLY_DRV_FNAME], "ODBCFELIB%s.EXE", 
+            ii_installation);
+#else
+    defAttr[INFO_ATTR_DRIVER_FILE_NAME] = MEreqmem(0, STlength("libiiodbcdriver.1.") + STlength(SLSFX) + 1, TRUE, NULL);
+    STprintf(defAttr[INFO_ATTR_DRIVER_FILE_NAME], "libiiodbdriver.1.%s", SLSFX);
+    defAttr[INFO_ATTR_RONLY_DRV_FNAME] = MEreqmem(0, STlength("libiiodbcdriverro.1.") + STlength(SLSFX) + 1, TRUE, NULL);
+    STprintf(defAttr[INFO_ATTR_RONLY_DRV_FNAME], "libiiodbdriverro.1.%s", SLSFX);
+#endif /* defined(hpb_us5) || defined(hp2_us5) || defined(i64_hpu) */
+    defAttr[INFO_ATTR_DRIVER_NAME] = STalloc("Ingres");
 
-    if ( LOfroms(PATH & FILENAME, fullPath, &loc) != OK )
-       return NULL;
-
-    if (SIfopen(&loc, "r", (i4)SI_TXT, OCFG_MAX_STRLEN, &pfile) != OK)
-        return NULL;
-
-    while (SIgetrec (buf, (i4)sizeof(buf), pfile) == OK)
+/*
+** System VMS installation take a default II_INSTALLATION value of AA.
+*/
+#ifdef VMS
+    if (ii_installation == NULL)
     {
-        p = skipSpaces (buf);   /* skip whitespace */
-        p = getFileToken(p, pToken, FALSE); /* get entry keyword */
-        if (*pToken == EOS)      /* if missing entry keyword */
-            continue;            /* then skip the record     */
-        p = skipSpaces (p);  /* skip leading whitespace   */
-        if (CMcmpcase(p,ERx("=")) != 0)
-        {
-            continue; /* if missing '=' in key = val, skip record */
-        }
+       ii_installation = STalloc("AA");
+    }
+#endif
 
-        /*
-        ** Check for "DriverFileName".
-        */
-	if ( !STbcompare( pToken, 0, INFO_STR_DRIVER_FILE_NAME, 0, TRUE ))  
-        {
-	    CMnext(p);   /* skip the '='              */
-	    p = getFileToken(p, pToken, FALSE); /* get entry value */
-            if (*pToken == EOS)      /* if missing entry keyword */
-                continue;            /* then skip the record     */
-	    defAttr[INFO_ATTR_DRIVER_FILE_NAME] = STalloc(pToken);
-            hasDFN = TRUE;
-        }
-
-        /*
-        ** Check for "ReadOnlyDriverFileName".
-        */
-	if ( !STbcompare(pToken, 0, INFO_STR_RONLY_DRV_FNAME, 0, TRUE ) )
-        {
-	    CMnext(p);   /* skip the '='              */
-	    p = getFileToken(p, pToken, FALSE); /* get entry value */
-            if (*pToken == EOS)      /* if missing entry keyword */
-                continue;            /* then skip the record     */
-	    defAttr[INFO_ATTR_RONLY_DRV_FNAME] = STalloc(pToken);
-            hasRODFN = TRUE;
-        }
-
-        /*
-        ** Check for "DriverName".
-        */
-	if ( !STbcompare(pToken, 0, INFO_STR_DRIVER_NAME, 0, TRUE ) )
-        {
-	    CMnext(p);   /* skip the '='              */
-	    p = getFileToken(p, pToken, FALSE); /* get entry value */
-            if (*pToken == EOS)      /* if missing entry keyword */
-                continue;            /* then skip the record     */
-	    defAttr[INFO_ATTR_DRIVER_NAME] = STalloc(pToken);
-            hasDN = TRUE;
-        }
-
-        /*
-        ** Check for "AltDriverName".
-        */
-	if ( !STbcompare(pToken, 0, INFO_STR_ALT_DRIVER_NAME, 0, TRUE ) )
-        {
-	    CMnext(p);   /* skip the '='              */
-	    p = getFileToken(p, pToken, FALSE); /* get entry value */
-            if (*pToken == EOS)      /* if missing entry keyword */
-                continue;            /* then skip the record     */
-	    defAttr[INFO_ATTR_ALT_DRIVER_NAME] = STalloc(pToken);
-            hasADN = TRUE;
-        }
-    }   /* end while loop processing entries */
-
-    /*
-    ** Mark missing ocfginfo.dat entries.
-    */
-    if (!hasDFN)
-        defAttr[INFO_ATTR_DRIVER_FILE_NAME] = 
-	    STalloc("(missing driver file name)");
-    else if (!hasRODFN)
-        defAttr[INFO_ATTR_RONLY_DRV_FNAME] = 
-	    STalloc("(missing read only driver file name)");
-    else if (!hasDN)
-        defAttr[INFO_ATTR_DRIVER_NAME] = 
-	    STalloc("(missing driver name)");
-    else if (!hasADN)
-        defAttr[INFO_ATTR_ALT_DRIVER_NAME] = 
-	    STalloc("(missing alternate driver name)");
-    else 
-        attrDefined = TRUE;
+   defAttr[INFO_ATTR_ALT_DRIVER_NAME] = (char *)MEreqmem( (u_i2) 0, 
+        (u_i4)10, TRUE, (STATUS *) NULL);
+    STprintf(defAttr[INFO_ATTR_ALT_DRIVER_NAME], "Ingres %s", ii_installation);
+   
+    attrDefined = TRUE;
 
     return (char **)defAttr;
 }

@@ -74,6 +74,8 @@
 **       Rename Ingres driver name as "Ingres 10.0".
 **   29-Jan-2010 (Ralph Loen) Bug 123175
 **       Add KEY_SENDDATETIMEASINGRESDATE.
+**   29-Apr-2010 (Ralph Loen) SIR 123641
+**       Remove obsolete KEY_DRIVERNAMES.
 */
 
 #ifndef _INC_IDMSEINI
@@ -206,8 +208,6 @@
     "RDB (Rdb/VMS)", "STAR", "RMS", "Oracle", "Informix", \
     "Sybase", "MSSQL (MS SQL Server)", "VANT (CA-Vantage)", "DB2UDB", NULL }
 
-#define KEY_DRIVERNAMES { \
-    "Ingres", "Ingres 10.0", NULL}
 #ifndef SYSTEM_LOCATION_VARIABLE   /* normally defined in gl.h */
 # define SYSTEM_LOCATION_VARIABLE      "II_SYSTEM"
 # define SYSTEM_LOCATION_SUBDIRECTORY  "ingres"

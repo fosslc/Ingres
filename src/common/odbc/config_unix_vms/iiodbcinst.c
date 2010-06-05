@@ -56,6 +56,15 @@
 **          Use STstrindex() to find .EXE in the file image rather than a
 **          series of calls to STindex().  Don't check for an 
 **          ii_installation value of "AA".
+**   27-Apr-2010 (Ralph Loen) SIR 123641
+**          Remove reliance on ocfginfo.dat getDefaultInfo().  The alternate
+**          driver name is now "Ingres XX", where XX is the installation code.
+**          Replaced numeric array descriptions with the associated constants
+**          for the default attribute array.  Thus, defAttr[0] becomes
+**          defAttr[INFO_ATTR_DRIVER_FILE_NAME], etc.  VMS no longer needs
+**          to get the II_INSTALLATION logical to append to the file names;
+**          this is now done in getDefaultInfo(). 
+**          Remove prompt for custom driver name.  This is no longer necessary.
 */
 
 /*
@@ -214,30 +223,17 @@ main (int argc, char **argv)
     STcat(driverPath,SYSTEM_LOCATION_SUBDIRECTORY);  /* usually "ingres"  */
     STcat(driverPath,".library]");
     if ( isReadOnly )
-        STcat(driverPath,defAttr[1]);
+        STcat(driverPath,defAttr[INFO_ATTR_RONLY_DRV_FNAME]);
     else
-        STcat(driverPath,defAttr[0]);
-    /*
-    ** Shared libraries on VMS get the installation code appended to the 
-    ** file name for non-system installations.
-    */
-    NMgtAt("II_INSTALLATION",&ii_installation); 
-    if (ii_installation != NULL && *ii_installation)
-    {
-        p = STstrindex (driverPath, ".EXE", 0, TRUE );
-        STlcopy(ii_installation, p, 2);
-        CMnext(p);
-        CMnext(p);
-        STlcopy(".EXE", p, 4);
-    }
+        STcat(driverPath,defAttr[INFO_ATTR_DRIVER_FILE_NAME]);
 # else
     STcat(driverPath,"/");
     STcat(driverPath,SYSTEM_LOCATION_SUBDIRECTORY);  /* usually "ingres"  */
     STcat(driverPath,"/lib/");
     if ( isReadOnly )
-        STcat(driverPath,defAttr[1]);
+        STcat(driverPath,defAttr[INFO_ATTR_RONLY_DRV_FNAME]);
     else
-        STcat(driverPath,defAttr[0]);
+        STcat(driverPath,defAttr[INFO_ATTR_DRIVER_FILE_NAME]);
 # endif /* ifdef VMS */
     STcopy(driverPath,drvList[0]->value);
     /*
@@ -253,8 +249,8 @@ main (int argc, char **argv)
     }
     if (rmPkg)
     {
-        delConfigEntry( drvH, defAttr[2], &status );
-        delConfigEntry( drvH, defAttr[3], &status );
+        delConfigEntry( drvH, defAttr[INFO_ATTR_DRIVER_NAME], &status );
+        delConfigEntry( drvH, defAttr[INFO_ATTR_ALT_DRIVER_NAME], &status );
         closeConfig(drvH, &status);
         PCexit(OK);
     }
@@ -293,15 +289,17 @@ main (int argc, char **argv)
         def_or_alt = FALSE;
 	if (!has_default)
 	{
-            has_default = STbcompare( list[i], 0, defAttr[2], 0, TRUE ) 
-                == 0 ? TRUE : FALSE;
+            has_default = STbcompare( list[i], 0, 
+                defAttr[INFO_ATTR_DRIVER_NAME], 0, TRUE ) 
+                   == 0 ? TRUE : FALSE;
             if (has_default)
                 def_or_alt = TRUE; 
         }
         if (!has_alt)
         {
-            has_alt = STbcompare( list[i], 0, defAttr[3], 0, 
-                TRUE ) == 0 ? TRUE : FALSE;
+            has_alt = STbcompare( list[i], 0, 
+                defAttr[INFO_ATTR_ALT_DRIVER_NAME], 0, 
+                   TRUE ) == 0 ? TRUE : FALSE;
             if (has_alt)
                 def_or_alt = TRUE; 
         }
@@ -359,44 +357,9 @@ main (int argc, char **argv)
             } 
         } /* if (!batch) && !has_default */
     } /* for (count... */
-    if ((!batch) && has_default && has_alt)
-    {
-        STprintf(prompt,
-     "\tWould you like to enter your own alternate name\n\tfor the driver? (Yes/No)");
-        if ( line_get( prompt, "", FALSE, line ) == EOF )
-        {
-            SIprintf("ODBC driver installation safely aborted\n");
-            PCexit(OK);
-        }
-        STzapblank(line,line);
-        if ( line[0] == 'y' || line [0] == 'Y' )
-        {
-            STprintf(prompt, "Please enter the custom driver name");
-            if ( line_get( prompt, "", FALSE, custName ) == EOF )
-            {
-                SIprintf( "ODBC driver installation safely aborted\n");
-                PCexit(OK);
-            }
-            STzapblank(custName,custName);
-	    if (!STlength(custName) || !CMprint(custName))
-	    {
-	        SIprintf("Invalid name syntax\n");
-	    }
-    	    else
-	    {
-                setConfigEntry( drvH, custName, drvCount, drvList, &status );
-                if (status != OK)
-                {
-                    STprintf(etxt,"Could not write driver entry.\n");
-                    display_err(etxt,status);
-                    PCexit(FAIL);
-                }
-            }
-	}
-    } /* if (!batch) */
     if (!has_default) 
     {
-        setConfigEntry( drvH, defAttr[2], drvCount,
+        setConfigEntry( drvH, defAttr[INFO_ATTR_DRIVER_NAME], drvCount,
 	    drvList, &status );
         if (status != OK)
         {
@@ -407,7 +370,7 @@ main (int argc, char **argv)
     }
     if (!has_alt) 
     {
-        setConfigEntry( drvH, defAttr[3], drvCount,
+        setConfigEntry( drvH, defAttr[INFO_ATTR_ALT_DRIVER_NAME], drvCount,
 	    drvList, &status );
         if (status != OK)
         {
