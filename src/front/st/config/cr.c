@@ -341,6 +341,8 @@
 **         SIR 123296
 **         Add LSB option, writable files are stored under ADMIN, logs under
 **         LOG and read-only under FILES location.
+**	02-Apr-2010 (thaju02) Bug 122528
+**	    Added check_cache_name() to validate cache_name value.
 */
 
 /* NO_OPTIM = ris_us5 sgi_us5 i64_aix */
@@ -407,6 +409,7 @@ void scan_cache_params(char *, char *, char *, char *, char *, char *,
 			FILE *, bool);
 static void special_rules(char *, char *, FILE *, i4, char *, char *);
 static char * get_cache_name(char *host, char *instance);
+bool check_cache_name(char *value);
 
 # define CRF_FPRINT( FP, F_MSG, ARG ) \
         { \
@@ -1369,6 +1372,15 @@ CRvalidate( char *name, char *value, char **constraint, FILE *output )
 
 			/* the lack of a "break" here is intentional */
 		case CR_STRING:		
+			if ((len == 5) && 
+			    !STcompare(PMmGetElem(pm_context, 4, name),
+				ERx("cache_name")) &&
+			    (check_cache_name(value) == FAIL))
+			{
+			    CRFPRINT( output, ERget(S_ST0408_invalid_cache_name));
+			    return(FAIL);
+			}
+			
 			/*
 			** check for VALID set member violation - this
 			** applies to both CR_STRING and CR_INTEGER types,
@@ -3582,3 +3594,25 @@ special_rules(char *host, char *instance, FILE *output,
 	    (void)CRsetPMval( resource, value, output, tee_stdout, FALSE );
     }
 } /* special_rules */
+
+bool
+check_cache_name(char   *value)
+{
+    char        *p;
+
+    p = value;
+
+    if ((*p == EOS))
+        return(FAIL);
+
+    if (!CMalpha(p))
+        return(FAIL);
+
+    for (CMnext(p); *p != EOS; CMnext(p))
+    {
+        if (CMoper(p) || CMwhite(p))
+            return(FAIL);
+    }
+    return(OK);
+}
+

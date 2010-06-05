@@ -418,6 +418,8 @@
 **	    Added S_ST045B_protected_cpi_prompt & S_ST045C_protected_cpi_small.
 **	10-Dec-2009 (bonro01)
 **	    Enable the license prompt yet again (fourth time).
+**	02-Apr-2010 (thaju02) Bug 123528
+**	    Added S_ST0408_invalid_cache_name.
 */
 
 # define        _ST_CLASS       212
@@ -1593,6 +1595,9 @@ S_ST0406_value_not_boolean
 "\nThe value of this setting must be ON or OFF.\n\n"
 
 S_ST0407_edit_listen_menu	"EditListen"
+
+S_ST0408_invalid_cache_name
+"\n The cache_name value specified is invalid.\n The cache_name value:\n    - can not contain operators (eg. ! @ # $)\n    - can not contain whitespace\n    - first character must be alphabetic\n\n"
 
 S_ST0410_crs_syntax_error
 "\nSyntax error at line %d of %s\n\n"
