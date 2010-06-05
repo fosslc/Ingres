@@ -457,7 +457,9 @@
 #           documented behaviour.
 #       0l-apr-2010 (stial01)
 #           Changes for Long IDs
-
+#	04-May-2010 (kiria01) b123678
+#	    Add missing routines for Unicode CHARACTER_LENGTH and
+#	   OCTET_LENGTH
 
 group ADI_COMPARISON
 
@@ -7632,6 +7634,7 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_INT_TYPE
 	    operands DB_NCHR_TYPE
+	    routine adu_nvchr_length
 
 	fi ADFI_857_CHLEN_NVCHAR
 	    description i  :  char_length(nvarchar)
@@ -7639,6 +7642,7 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_INT_TYPE
 	    operands DB_NVCHR_TYPE
+	    routine adu_nvchr_length
 
     operator ADI_OCLEN_OP
 
@@ -7712,6 +7716,7 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_INT_TYPE
 	    operands DB_NCHR_TYPE
+	    routine adu_23octetlength
 
 	fi ADFI_867_OCLEN_NVCHAR
 	    description i  :  octet_length(nvarchar)
@@ -7719,6 +7724,7 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_INT_TYPE
 	    operands DB_NVCHR_TYPE
+	    routine adu_23octetlength
 
     operator ADI_BLEN_OP
 
