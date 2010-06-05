@@ -1104,6 +1104,9 @@ i4	signum;
 **          the negative timein values only if we use select().
 **          Note that the negative value comes from:
 **          timein = CL_poll_ptr->timer.expire - CL_poll_ptr->timer.now;
+**	05-Mar-2008 (thaju02)
+**	    Long-standing session may hang in poll(). Negative timein
+**	    calculated, overriding zero timeout. (B120065)
 */
 
 STATUS
@@ -1200,6 +1203,17 @@ i4	*timeout;
 
 	if( timein == -1 || CL_poll_ptr->timer.expire - CL_poll_ptr->timer.now < timein )
         {
+# ifdef USE_POLL
+	    if ((timein >= 0) && ((CL_poll_ptr->timer.expire - 
+				CL_poll_ptr->timer.now) < 0))
+		TRdisplay("iiCLpoll: timeout=%d override calcd timein=%d \
+  expire=%d   now=%d\n",
+			timein,
+			(CL_poll_ptr->timer.expire - CL_poll_ptr->timer.now),
+			CL_poll_ptr->timer.expire,
+			CL_poll_ptr->timer.now);
+	    else
+# endif  /* USE_POLL */
 	    timein = CL_poll_ptr->timer.expire - CL_poll_ptr->timer.now;
             
         }
