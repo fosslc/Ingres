@@ -39,13 +39,22 @@ else
 
       #echo "Applying patch"
       patch -p0 < ${PatchFile}
-
-      # Commit, with the same commit message
-      git commit -a -F ${CommitMessage}
+      
+      if [ $? != 0 ]
+      then
+        echo "ERROR: patch failed for ${CurrentRev}"
+        echo "Cannot continue. Exiting"
+        exit 1
+      fi
 
       # Add the revision number to the log
       echo "${CurrentRev}" >> ${RevLog}
 
+      # Commit, with the same commit message
+      git commit -a -F ${CommitMessage}
+
     done
   fi
 fi
+
+exit 0
