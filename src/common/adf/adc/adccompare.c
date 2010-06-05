@@ -201,6 +201,8 @@
 **	    causing problems on some compilers.
 **	14-apr-10 (smeke01) b123572
 **	    Allow comparison between nullable and non-nullable values.
+**	16-apr-10 (smeke01) b123577
+**	    Allow comparison between char and varchar type values.
 */
 
 # ifdef ADF_BUILD_WITH_PROTOS
@@ -224,7 +226,16 @@ i4                  *adc_cmp_result;
     i4			bdtv;
 
     if (bdt1 != bdt2)
-	return(adu_error(adf_scb, E_AD3001_DTS_NOT_SAME, 0));
+    {
+	/*
+	** Mostly the functions adc_compare() calls don't want differing datatypes,
+	** but there are some that can handle them: adu_varcharcmp() can handle
+	** comparisons between varchar & char.
+	*/
+	if ( !( (bdt1 == DB_CHA_TYPE || bdt1 == DB_VCH_TYPE ) &&
+		(bdt2 == DB_CHA_TYPE || bdt2 == DB_VCH_TYPE ) ) )
+	    return(adu_error(adf_scb, E_AD3001_DTS_NOT_SAME, 0));
+    }
 
     bdtv = ADI_DT_MAP_MACRO(bdt1);
     
