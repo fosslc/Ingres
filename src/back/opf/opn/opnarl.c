@@ -1537,6 +1537,10 @@ opl_cartprodcheck(
 **	    satisfied by the variables associated with this node.  opn_eqm
 **	    is set up in opn_jmaps, called only after this function returns
 **	    that the fragment is acceptable.
+**      16-apr-2010 (huazh01)
+**          if using greedy enumeration, reject plan if oj's bothmaps does
+**          not cover all oj attribute. (b123082)
+[@history_line@]...
 */
 bool
 opn_jintersect(
@@ -2340,6 +2344,21 @@ opn_jintersect(
 			if (ojid_at_node != OPL_NOOUTER)
 			    return(FALSE);  /* cannot evaluate 2 outer join
 				    ** ID's at the same node */
+
+                        /* b123082:
+                        ** if using greedy enumeration, reject the plan if 
+                        ** 'bothmaps' does not cover all oj attributes. if we
+                        ** allow it and when we join this plan with another table 
+                        ** or another plan, at that time, lbase->opl_ojt[ojid]'s 
+                        ** innerchildp will be current [innerchildp + outerchildp],
+                        ** which is 'bothmaps'. We could get E_OP04C0 after 
+                        ** opl_ojverify() rejects such combination.
+                        */
+                        if (subquery->ops_mask & OPS_LAENUM &&
+                            !opl_ojverify(subquery, outerp->opl_ojattr, 
+                                 &bothmaps, outerp))
+                           return (FALSE);
+    
 			ojid_at_node = ojid;
 		    }
 		    else
