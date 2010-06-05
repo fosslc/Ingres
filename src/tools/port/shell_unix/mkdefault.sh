@@ -763,6 +763,9 @@
 ##	    SIR 123296
 ##	    Add support for 64bit LSB builds by using LIB_TGT to define
 ##	    the location for library files apropriately
+##	6-May-2010 (kschendel)
+##	    Change above to use a syntax that Solaris's shell likes, so
+##	    that it doesn't end up with lib64.
 
 TMP=/tmp/libc.nm
 trap 'rm -f $TMP' 0 1 2 13 15
@@ -1909,7 +1912,7 @@ if [ -n "$build_arch" ] ; then
 fi
 
 # Define LIB_BLD and LIB_TGT needed for CCPP
-if $conf_LSB_BUILD && [ "$build_arch" = 64 -o "$build_arch" = '32+64' ]
+if [ -n "$conf_LSB_BUILD" -a \( "$build_arch" = 64 -o "$build_arch" = '32+64' \) ]
 then
     echo "#define LIB_BLD lib"
     echo "#define LIB_TGT lib64"
