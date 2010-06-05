@@ -167,6 +167,9 @@
 **      17-dec-2009 (coomi01) b123066
 **          Reduce the output of cursor re-positioning sequences where direct
 **          substring output is more efficient.
+**      12-feb-2010 (huazh01)
+**          For double byte installation on HP terminal, output display 
+**          attribute if it is not the same as previous one.  (b123288)
 **      16-feb-2010 (coomi01) b123294
 **          Further reduction in cursor re-positioning sequences. This time
 **          looking for those which apparently jump onto themselves. Rather
@@ -2232,6 +2235,19 @@ i4	wy;
 # endif /* TRACING */
 			if (CMGETDBL)
 			{
+
+
+                        if (XS && pda != *nda)
+                        {
+                           TDsmvcur(ly, lx, y, wx + invc_wx);
+                           ly = y;
+                           lx = wx + invc_wx;
+                           fonts = (ndaval = *nda) & _LINEMASK;
+                           da = ndaval & _DAMASK;
+                           color = ndaval & _COLORMASK;
+
+                           TDdaout(fonts, da, color);
+                        }
 
 			while (!CMcmpcase(nsp,csp) && *nda == *cda && wx < lch)
 			{
