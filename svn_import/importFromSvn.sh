@@ -44,7 +44,7 @@ else
       git commit -a -F ${CommitMessage}
 
       # Add the revision number to the log
-      echo "${CurrentRev} >> ${RevLog}
+      echo "${CurrentRev}" >> ${RevLog}
 
     done
   fi

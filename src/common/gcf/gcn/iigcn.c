@@ -424,6 +424,10 @@ static	STATUS	gcn_ip_auth( GCS_IP_PARM * );
 **          gca_cb used during registration.
 **	 4-Sep-09 (gordy)
 **	    Use dynamic storage for remote mechanism and registry info.
+**      08-Apr-10 (ashco01) Bug: 123551 
+**          Added E_GC0173_GCN_HOSTNAME_MISMATCH informational message to
+**          report difference between local hostname and config.dat
+**          '.local_vnode' value. 
 */	
 
 i4
@@ -437,6 +441,8 @@ char 	**argv;
     char		*env = 0;
     char		name[MAX_LOC+CM_MAXATTRNAME];
     GCA_PARMLIST	parms;
+    char                lvn_value[GCN_TYP_MAX_LEN], *buf;
+    ER_ARGUMENT         earg[2];
 
 #ifdef LNX
     PCsetpgrp();
@@ -664,8 +670,32 @@ char 	**argv;
     ** Call erinit again to put listen address in with hostname.
     ** Announce startup.
     */
+
     gcu_erinit( IIGCn_static.hostname, "IIGCN", IIGCn_static.listen_addr );
     gcu_erlog( 0, 1, E_GC0151_GCN_STARTUP, NULL, 0, NULL );
+
+    /* Log informational message if IIGCn_static.hostname and cbf .local_vnode param 
+    ** values differ.
+    */
+    
+    if ( PMget( "!.local_vnode",  &buf) != OK )
+    {
+        /* Param not found */	
+        STncpy( lvn_value, "N/A", GCN_TYP_MAX_LEN );
+    }
+    else
+        STncpy( lvn_value, buf, GCN_TYP_MAX_LEN );
+
+    /* compare them */
+    if ( STcompare( IIGCn_static.hostname, lvn_value ) != 0) 
+    {
+        /* Mismatch - Log informational message */
+        earg[0].er_value = ERx(IIGCn_static.hostname);
+        earg[0].er_size = STlength( earg[0].er_value );
+        earg[1].er_value = ERx(lvn_value );
+        earg[1].er_size = STlength( earg[1].er_value );
+        gcu_erlog( 0, 1, E_GC0173_GCN_HOSTNAME_MISMATCH, NULL, 2, (PTR)earg );
+    }
 
     /*
     ** Post initial GCA_LISTEN.  If a thread is started with
@@ -681,6 +711,7 @@ char 	**argv;
     ** Shutdown 
     */
     IIgcs_call( GCS_OP_TERM, GCS_NO_MECH, NULL );
+
 
     gcn_deregister();
 

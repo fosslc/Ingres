@@ -261,6 +261,10 @@ SQLSTATE_MAPPING_REQUIRED
 **
 **	 3-Aug-09 (gordy)
 **	    Added E_GC011F_GCN_BAD_RECFMT.
+**      08-Apr-10 (ashco01) Bug: 123551 
+**          Added E_GC0173_GCN_HOSTNAME_MISMATCH informational message to
+**          report difference between local hostname and config.dat
+**          '.local_vnode' value. 
 */
 
 #define _GC_CLASS 12
@@ -580,6 +584,10 @@ E_GC0171_GCN_PASSWORD_LEN:SS50000_MISC_ERRORS
 "The password length exceeded the limit supported by the server."
 E_GC0172_GCN_PARTNER_LEN:SS50000_MISC_ERRORS
 "The partner/target length exceeded the limit supported by the server."
+E_GC0173_GCN_HOSTNAME_MISMATCH:SS50000_MISC_ERRORS
+"The local hostname: '%0c' and the value of the config.dat ii.<host>.gcn.local_vnode
+parameter: '%1c' do not match. This may be because II_HOSTNAME has been
+set. Please check your configuration."
 
 /*
 ** GCS errors

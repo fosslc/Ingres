@@ -146,6 +146,10 @@
 **	24-Nov-2009 (frima01) Bug 122490
 **	    Added IIgcn_check and gcn_seterr_func prototypes from
 **	    gcninit.h in order to include them in front end modules.
+**      08-Apr-10 (ashco01) Bug: 123551
+**          Added E_GC0173_GCN_HOSTNAME_MISMATCH informational message to
+**          report difference between local hostname and config.dat
+**          '.local_vnode' value. 
 **/
 
 #ifndef GCN_INCLUDED
@@ -272,6 +276,7 @@ IIGCn_call( i4 service_code, GCN_CALL_PARMS *params );
 # define	E_GC0170_GCN_USERNAME_LEN	(STATUS) (E_GCF_MASK + 0x0170)
 # define	E_GC0171_GCN_PASSWORD_LEN	(STATUS) (E_GCF_MASK + 0x0171)
 # define	E_GC0172_GCN_PARTNER_LEN	(STATUS) (E_GCF_MASK + 0x0172)
+# define	E_GC0173_GCN_HOSTNAME_MISMATCH	(STATUS) (E_GCF_MASK + 0x0173)
 
 
 /*
