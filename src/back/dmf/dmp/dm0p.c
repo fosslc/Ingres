@@ -2650,6 +2650,9 @@ static VOID dm0p_page_lock_mode(
 **	    E_DM0112_RESOURCE_QUOTA_EXCEEDED rather than E_DM930A_DM0P_ALLOCATE.
 **	    Initialize sys_err jic otherwise unused. Fix up TRdisplay of
 **	    very large cache sizes as long decimal.
+**	27-Apr-2010 (thaju02) Bug 123590
+**	    With large group count, group buffer semaphore name may exceed
+**	    CS_SEM_NAME_LEN and trash another local var (eg. bmseg[0]).
 */
 
 #if ME_MPAGESIZE > 4096
@@ -4401,7 +4404,7 @@ DB_ERROR            *dberr)
 		    buffer[i].buf_page_tranid.db_high_tran = 0;
 		    buffer[i].buf_page_tranid.db_low_tran = 0;
 		    if (dm0p_minit(&buffer[i].buf_mutex,
-			    STprintf(sem_name, "BM group (%d.%d) buf %d", pgsize, j, i),
+			    STprintf(sem_name, "BM gbuf (%d.%d.%d)", pgsize, j, i),
 			    sem_type))
 			return(E_DB_FATAL);
 		    i++;
