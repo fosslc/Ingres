@@ -189,6 +189,8 @@
 **          dmdprentries() eliminated rcb dependency
 **          dmd_print_key eliminated page_type arg. Its not needed and
 **          wasn't passed correctly from outside this file
+**      10-May-2010 (stial01)
+**          dmd_prindex() print clean count
 */
 
 
@@ -500,6 +502,7 @@ i4      indent)
     LG_LSN		page_lsn;
     u_i2		page_lg_id;
     u_i4		page_stat;
+    u_i4		clean_count;
     DM_PAGENO		page_number;
 
     page_stat = DM1B_VPT_GET_PAGE_STAT_MACRO(t->tcb_rel.relpgtype, b);
@@ -507,6 +510,7 @@ i4      indent)
     DM1B_VPT_GET_PAGE_LOG_ADDR_MACRO(t->tcb_rel.relpgtype, b, page_lsn);
     page_lg_id = DM1B_VPT_GET_PAGE_LG_ID_MACRO(t->tcb_rel.relpgtype, b);
     page_number = DM1B_VPT_GET_PAGE_PAGE_MACRO(t->tcb_rel.relpgtype, b); 
+    clean_count = DM1B_VPT_GET_BT_CLEAN_COUNT_MACRO(t->tcb_rel.relpgtype, b);
 	
     if ( page_stat & DMPP_INDEX )
     {
@@ -526,7 +530,7 @@ i4      indent)
         s = TRdisplay("%#* Page:%d\t stat %v\n", indent * 4,
 	    page_number,
 	    PAGE_STAT, page_stat);
-        s = TRdisplay("%#*  Data page is:%d\t Next page is:%d\t Ovfl page is:%d\n",   
+        s = TRdisplay("%#* Data page is:%d\t Next page is:%d\t Ovfl page is:%d\n",   
             indent * 4, 
 	    DM1B_VPT_GET_BT_DATA_MACRO(t->tcb_rel.relpgtype, b), 
 	    DM1B_VPT_GET_BT_NEXTPAGE_MACRO(t->tcb_rel.relpgtype, b), 
@@ -540,12 +544,10 @@ i4      indent)
 	return;
     }
 
-    TRdisplay("%#* tran %x%x lsn (%x,%x) lg_id %d\n", indent * 4,
-    		page_tran_id.db_high_tran,
-    		page_tran_id.db_low_tran,
-		page_lsn.lsn_high,
-		page_lsn.lsn_low,
-		page_lg_id);
+    TRdisplay("%#* tran %x%x lsn (%x,%x) lg_id %d cc %d\n", indent * 4,
+    		page_tran_id.db_high_tran, page_tran_id.db_low_tran,
+		page_lsn.lsn_high, page_lsn.lsn_low,
+		page_lg_id, clean_count);
 
     /* Index/leaf/overflow */
     TRdisplay("    %d:children.\n", 

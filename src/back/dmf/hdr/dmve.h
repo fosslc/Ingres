@@ -120,8 +120,10 @@
 **          Changed dmve_bid_check prototype, added ADF_CB to DMVE_CB.
 **      14-oct-2009 (stial01)
 **          Prototype and structure changes for dmve page fix/unfix
-**      29-Apr-2009 (stial01)
+**      29-Apr-2010 (stial01)
 **          Added prototypes for dmve_iirel_cmp, dmve_iiseq_cmp
+**      10-May-2010 (stial01)
+**          Added dmve_bid_check_error
 **/
 
 
@@ -134,6 +136,7 @@ typedef struct	_DMVE_CB		DMVE_CB;
 typedef struct	_DMVE_FIX_HISTORY	DMVE_FIX_HISTORY;
 typedef struct	_RFP_REC_ACTION		RFP_REC_ACTION;
 typedef struct	_RFP_OCTX		RFP_OCTX;
+typedef struct	_DMVE_BT_ATTS		DMVE_BT_ATTS;
 
 
 
@@ -167,6 +170,44 @@ struct _DMVE_FIX_HISTORY
     DM_PAGENO		page_number;
     i4			fix_action;
     LK_LKID		page_lockid;
+};
+
+
+
+/*}
+** Name:  DMVE_BT_ATTS - DMVE attribute information
+**
+** Description: DMVE attribute information
+**        This may point to attribute information in the tcb
+**        or if we have a partial tcb this may point to attribute information
+**        constructed from attribute information on the leaf page.
+**
+** History:
+**      10-May-2010 (stial01)
+**          Moved from dmvebtpt.c
+*/
+struct _DMVE_BT_ATTS
+{
+    /* fields in DMVE_BT_ATTS correspond so similarly named field in DMP_TCB */
+
+    i4		    bt_keys;		/* Number of attributes in key. */
+    i4		    bt_klen;		/* Length of key in bytes, sort of;
+					** in btree, length of leaf entry
+					** including any non-key bytes.
+					*/
+    DB_ATTS         **bt_leafkeys;	/* Array of LEAF key attribute ptrs */
+    DMP_ROWACCESS   bt_leaf_rac;	/* Row-accessor for LEAF entry */
+    i4		    bt_kperleaf;	/* Max btree entries per LEAF */
+					/* The length of a LEAF is bt_klen */
+
+    i4		    bt_rngklen;		/* LEAF range klen */
+    DB_ATTS	    **bt_rngkeys;	/* LEAF range keys */
+    DMP_ROWACCESS   bt_rng_rac;		/* Row-accessor for LEAF range entry */
+    char	    bt_temp[2048];	/* temp buffer, used for att array,
+					** att pointer arrays, compression
+					** control arrays.  If arrays don't
+					** fit, will dm0m-allocate instead.
+					*/
 };
 
 
@@ -561,6 +602,17 @@ FUNC_EXTERN DB_STATUS	dmve_bid_check(
 			DMP_TABLE_IO        **tbio,
 			DM_TID		    *found_bid,
 			DMP_PINFO           **pinfoP);
+
+FUNC_EXTERN DB_STATUS	dmve_bid_check_error(
+			DMVE_CB             *dmve,
+			DMP_TCB             *t,
+			DMVE_BT_ATTS	    *btatts,
+			i4		    opflag,
+			DM_TID		    *log_bid,
+			DM_TID		    *log_tid,
+			char		    *logkey_ptr,
+			i4		    log_key_size,
+			DMPP_PAGE	    *page);
 
 FUNC_EXTERN DB_STATUS 	dmve_rtput(
 			DMVE_CB		*dmve_cb);

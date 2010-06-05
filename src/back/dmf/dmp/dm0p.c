@@ -1846,6 +1846,8 @@ NO_OPTIM=dr6_us5 i64_aix
 **          Changes for Long IDs
 **      15-apr-2010 (stial01)
 **          Init mvcc trace fields in DMVE_CB
+**      10-may-2010 (stial01)
+**          minor change to mvcc history trace
 **/
 
 
@@ -33451,9 +33453,9 @@ DB_ERROR	*dberr)
 	{
 	    record = (DM0L_HEADER*)dmve.dmve_log_rec;
 
-	    trace_cnt++;
 	    MEcopy(record, MVCC_REC_SIZE, 
 		trace_rec + ((trace_cnt % MVCC_REC_MAX) * MVCC_REC_SIZE));
+	    trace_cnt++;
 
 	    /* Sanity check the log record */
 	    if ( !(record->flags & DM0L_CR_HEADER)

@@ -159,6 +159,8 @@
 **	    SIR 121619 MVCC: Replace DMPP_PAGE* with DMP_PINFO* where needed.
 **	23-Feb-2010 (stial01)
 **          join() pass rcb to dm1cxclean
+**	10-May-2010 (stial01)
+**          Init DMP_PINFO with DMP_PINIT
 **/
 
 
@@ -578,7 +580,7 @@ stitch(
 
     CLRDBERR(dberr);
 
-    currentPinfo.page = NULL;
+    DMP_PINIT(&currentPinfo);
 
     
     parentPinfo = *parPinfo;
@@ -622,7 +624,7 @@ stitch(
 		break;
 	}
 	parentPinfo = currentPinfo;
-	currentPinfo.page = NULL;
+	DMP_PINIT(&currentPinfo);
         pos = savepos; 
     }
 
@@ -754,8 +756,8 @@ join(
     parpage = parentPinfo->page;
     curpage = currentPinfo->page;
 
-    dataPinfo.page = NULL;
-    siblingPinfo.page = NULL;
+    DMP_PINIT(&dataPinfo);
+    DMP_PINIT(&siblingPinfo);
 
     if ( (DM1B_VPT_GET_PAGE_STAT_MACRO(tbio->tbio_page_type, curpage) && DMPP_LEAF) 
 	&& (tbio->tbio_page_type != TCB_PG_V1))
@@ -1109,8 +1111,8 @@ join_ovfl(
     currentPinfo = *parentPinfo;
     current = parent = parentPinfo->page;
 
-    siblingPinfo.page = NULL;
-    dataPinfo.page = NULL;
+    DMP_PINIT(&siblingPinfo);
+    DMP_PINIT(&dataPinfo);
 
     /*	Continue while overflow pages are still available for this leaf. */
 

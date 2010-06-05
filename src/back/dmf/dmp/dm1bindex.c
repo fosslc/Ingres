@@ -557,6 +557,8 @@
 **          dm1bxclean() pass rcb to dm1cxclean
 **	15-Apr-2010 (stial01)
 **          dm1bxdelete() More validation of entry to be deleted
+**	10-May-2010 (stial01)
+**          Init DMP_PINFO with DMP_PINIT
 **/
 
 /*
@@ -3222,7 +3224,7 @@ dm1bxnewroot(
 
     CLRDBERR(dberr);
 
-    newrootPinfo.page = NULL;
+    DMP_PINIT(&newrootPinfo);
 
     /*
     ** Note: root is already exclusively locked by caller.
@@ -4402,8 +4404,8 @@ dm1bxsplit(
 
     CLRDBERR(dberr);
 
-    siblingPinfo.page = NULL;
-    dataPinfo.page = NULL;
+    DMP_PINIT(&siblingPinfo);
+    DMP_PINIT(&dataPinfo);
 
     parpage = parentPinfo->page;
     curpage = currentPinfo->page;
@@ -6102,7 +6104,7 @@ DB_ERROR	*dberr)
     }
 
     ovfl = ovflPinfo->page;
-    prevPinfo.page = NULL;
+    DMP_PINIT(&prevPinfo);
 
     for (;;)
     {
@@ -7518,7 +7520,7 @@ update_overflow_chain(
 
     lfpage = lfPinfo->page;
 
-    ovflPinfo.page = NULL;
+    DMP_PINIT(&ovflPinfo);
 
     /*
     ** Get the range values on the leaf page that we will be propogating
@@ -7896,7 +7898,7 @@ get_dup_key(
 	return (E_DB_ERROR);
     }
 
-    tempPinfo.page = NULL;
+    DMP_PINIT(&tempPinfo);
 
     while (leafpage != NULL)
     {

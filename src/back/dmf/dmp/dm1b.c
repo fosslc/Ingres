@@ -784,6 +784,8 @@
 **	    Add decryption calls.
 **	15-Apr-2010 (stial01)
 **          reposition for RCB_P_FETCH, should not reposition to deleted entry
+**	10-May-2010 (stial01)
+**          Init DMP_PINFO with DMP_PINIT, minor changes to TRdisplays
 */
 
 
@@ -7314,9 +7316,9 @@ btree_search(
 
     CLRDBERR(dberr);
 
-    *parent = NULL;
-    *save_sprig = NULL;
-    *current = NULL;
+    DMP_PINIT(&sprigPinfo);
+    DMP_PINIT(&parentPinfo);
+    DMP_PINIT(&currentPinfo);
 
     /*
     ** Key provided is leaf OR index key
@@ -7577,7 +7579,7 @@ btree_search(
 	    ** Now advance to the next level and iterate back again.
 	    */
 	    parentPinfo = currentPinfo;
-	    currentPinfo.page = NULL;
+	    DMP_PINIT(&currentPinfo);
 
 	} while (!(DM1B_VPT_GET_PAGE_STAT_MACRO(t->tcb_rel.relpgtype, *parent) & 
 	    DMPP_LEAF));
@@ -8278,7 +8280,7 @@ dm1badupcheck(
     localbid.tid_i4 = bid->tid_i4;
     localtid.tid_i4 = tid->tid_i4;
 
-    dataPinfo.page = NULL;
+    DMP_PINIT(&dataPinfo);
 
     /* Save leaf page number in case have to refix. */
     savepageno = DM1B_VPT_GET_PAGE_PAGE_MACRO(t->tcb_rel.relpgtype, *leaf);
@@ -9680,9 +9682,8 @@ findpage(
 
     leaf = &leafPinfo->page;
     data = &dataPinfo->page;
+    DMP_PINIT(&newdataPinfo);
     newdata = &newdataPinfo.page;
-
-    *newdata = NULL;
 
     /*
     ** On entry, leafpage is the correct leaf for findpage
@@ -10087,7 +10088,7 @@ findpage(
 	if (s != E_DB_OK)
 	    break;
 	*dataPinfo = newdataPinfo;
-	newdataPinfo.page = NULL;
+	DMP_PINIT(&newdataPinfo);
 
 	/* 
 	** If row locking, we have X lock on new data page, we can
@@ -10555,8 +10556,8 @@ DB_ERROR	*dberr)
     CLRDBERR(dberr);
 
     leaf = &leafPinfo->page;
+    DMP_PINIT(&ovflPinfo);
     ovfl = &ovflPinfo.page;
-    *ovfl = NULL;
 
     if (!t->tcb_dups_on_ovfl)
     {
@@ -11759,44 +11760,41 @@ btree_reposition(
 
     if (s != E_DB_OK || !key_found) 
     {
-	i4 tmp;
-
-	MEcopy(key_ptr,4,&tmp);
-	TRdisplay("btree_reposition ERROR pop %d bid (%d,%d) status %d (%x)\n",
-	    pop, bid->tid_tid.tid_page, bid->tid_tid.tid_line, s, tmp);
-	TRdisplay("btree_reposition savepos bid (%d,%d) tid (%d,%d)\n",
+	TRdisplay("DM1B-REPOS pop %d tran %x Bid:(%d,%d) status %d \n"
+	    "\t    POS Bid:(%d,%d) Tid:(%d,%d) LSN=(%x,%x)\n"
+	    "\t    POS cc %d nextleaf %d page_stat %x %v\n",
+	    pop, r->rcb_tran_id.db_low_tran,
+	    bid->tid_tid.tid_page, bid->tid_tid.tid_line, s,
 	    savepos->bid.tid_tid.tid_page, savepos->bid.tid_tid.tid_line,
-	    savepos->tidp.tid_tid.tid_page, savepos->tidp.tid_tid.tid_line);
-	TRdisplay("btree_reposition savepos cc %d page_stat %x nextleaf %d\n",
-	    savepos->clean_count, savepos->page_stat, savepos->nextleaf);
-	TRdisplay("btree_reposition savepos lsn %x %x\n",
-	    savepos->lsn.lsn_low, savepos->lsn.lsn_high);
-	if (crow_locking(r))
-	{
-	     /* Is RootPageIsInconsistent?  */
-	    TRdisplay("btree_reposition crib lsn %x %x constr %d opcode %d\n",
-		r->rcb_crib_ptr->crib_low_lsn.lsn_low,
-		r->rcb_crib_ptr->crib_low_lsn.lsn_high,
-		(r->rcb_state & RCB_CONSTRAINT),
-		r->rcb_dmr_opcode);
-	}
+	    savepos->tidp.tid_tid.tid_page, savepos->tidp.tid_tid.tid_line,
+	    savepos->lsn.lsn_low, savepos->lsn.lsn_high,
+	    savepos->clean_count, savepos->nextleaf,
+	    savepos->page_stat, PAGE_STAT, savepos->page_stat);
 
+	TRdisplay("DM1B-REPOS ");
         dmd_prkey(r, key_ptr, DM1B_PLEAF, (DB_ATTS**)NULL, (i4)0, (i4)0);
 
 	if ( leafPinfo->page )
 	{
-	    TRdisplay("LEAF %d has page_stat %x cc %d lsn %x %x CRPAGE %d\n",
-		DM1B_VPT_GET_PAGE_PAGE_MACRO(t->tcb_rel.relpgtype, *leaf),
-		DM1B_VPT_GET_PAGE_STAT_MACRO(t->tcb_rel.relpgtype, *leaf),
-		DM1B_VPT_GET_BT_CLEAN_COUNT_MACRO(t->tcb_rel.relpgtype,*leaf),
-		DM1B_VPT_GET_LOG_ADDR_LOW_MACRO(t->tcb_rel.relpgtype, *leaf),
-		DM1B_VPT_GET_LOG_ADDR_HIGH_MACRO(t->tcb_rel.relpgtype, *leaf),
-	        DMPP_VPT_IS_CR_PAGE(t->tcb_rel.relpgtype, *leaf));
-
-	    dmdprbrange(r, *leaf);
+	    /* dmd_prindex prints page header, range entries, kids */
 	    dmd_prindex(r, *leaf, (i4)0);
 	    dm0pUnlockBuf(r, leafPinfo);
 	    dm0p_unfix_page(r, DM0P_UNFIX, leafPinfo, dberr);
+	}
+
+	if (crow_locking(r))
+	{
+	    LG_CRIB	*crib = r->rcb_crib_ptr;
+
+	    TRdisplay("DM1B-REPOS CRIB: tran %x bos_tran %x lsn %x commit %x\n"
+		"\t       bos_lsn %x seq %d lg_low %d lg_high %d\n",
+		r->rcb_tran_id.db_low_tran,
+		crib->crib_bos_tranid,
+		crib->crib_low_lsn.lsn_low,
+		crib->crib_last_commit.lsn_low,
+		crib->crib_bos_lsn.lsn_low,
+		crib->crib_sequence,
+		crib->crib_lgid_low, crib->crib_lgid_high);
 	}
 
 	SETDBERR(dberr, 0, E_DM93F6_BAD_REPOSITION);

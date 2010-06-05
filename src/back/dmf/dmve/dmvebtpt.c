@@ -307,37 +307,14 @@
 **          Changes for Long IDs, move consistency check to dmveutil
 **      15-Apr-2010 (stial01)
 **          Added diagnostics for dmve_bid_check failures
+**      10-May-2010 (stial01)
+**          dmve_bid_check() if re-inserting key we are positioned on, no
+**          restrictions on dm1cxclean. Added dmve_bid_check_error.
 */
 
 /*
 ** Forward Declarations
 */
-typedef struct _DMVE_BT_ATTS DMVE_BT_ATTS;
-
-struct _DMVE_BT_ATTS
-{
-    /* fields in DMVE_BT_ATTS correspond so similarly named field in DMP_TCB */
-
-    i4		    bt_keys;		/* Number of attributes in key. */
-    i4		    bt_klen;		/* Length of key in bytes, sort of;
-					** in btree, length of leaf entry
-					** including any non-key bytes.
-					*/
-    DB_ATTS         **bt_leafkeys;	/* Array of LEAF key attribute ptrs */
-    DMP_ROWACCESS   bt_leaf_rac;	/* Row-accessor for LEAF entry */
-    i4		    bt_kperleaf;	/* Max btree entries per LEAF */
-					/* The length of a LEAF is bt_klen */
-
-    i4		    bt_rngklen;		/* LEAF range klen */
-    DB_ATTS	    **bt_rngkeys;	/* LEAF range keys */
-    DMP_ROWACCESS   bt_rng_rac;		/* Row-accessor for LEAF range entry */
-    char	    bt_temp[2048];	/* temp buffer, used for att array,
-					** att pointer arrays, compression
-					** control arrays.  If arrays don't
-					** fit, will dm0m-allocate instead.
-					*/
-};
-
 static DB_STATUS	dmv_rebtree_put(
 				DMVE_CB             *dmve,
 				DMP_TABLE_IO	    *tabio,
@@ -1530,6 +1507,7 @@ DMP_PINFO	    **pinfoP)
     DB_STATUS           local_status;
     i4             	local_error;
     bool                have_leaf;
+    i4                  compare;
     i4                  lcompare;
     i4                  rcompare;
     i4             	mode;
@@ -1554,6 +1532,8 @@ DMP_PINFO	    **pinfoP)
     DMP_PINFO		*pinfo = *pinfoP;
     DMPP_PAGE		**page = &pinfo->page;
     DMP_RCB		*rcb;
+    DMP_POS_INFO	*getpos;
+    DMP_RCB		*rcb_cc;
 
     CLRDBERR(&dmve->dmve_error);
 
@@ -1591,9 +1571,15 @@ DMP_PINFO	    **pinfoP)
     STRUCT_ASSIGN_MACRO(t->tcb_rel.relid, table_name);
     STRUCT_ASSIGN_MACRO(t->tcb_rel.relowner, table_owner);
     if (dmve->dmve_flags & DMVE_MVCC)
+    {
 	rcb = dmve->dmve_rcb;
+	getpos = &rcb->rcb_pos_info[RCB_P_GET];
+    }
     else
+    {
 	rcb = NULL;
+	getpos = NULL;
+    }
 
     if ((t->tcb_status & TCB_PARTIAL) == 0)
     {
@@ -1809,10 +1795,23 @@ DMP_PINFO	    **pinfoP)
 		(i4)100, btatts.bt_kperleaf, log_key_size + 
 		DM1B_VPT_GET_BT_TIDSZ_MACRO(log_pgtype, *page)) == FALSE)
 	{
+	    rcb_cc = rcb;
+	    if ((dmve->dmve_flags & DMVE_MVCC) && rcb &&
+		DM1B_POSITION_VALID_MACRO(rcb, RCB_P_GET) && 
+		getpos->tidp.tid_i4 == log_tid->tid_i4)
+	    {
+		status = adt_kkcmp(&dmve->dmve_adf_cb, 
+			btatts.bt_keys, btatts.bt_leafkeys, 
+			logkey_ptr, rcb->rcb_repos_key_ptr, &compare);
+		/* if re-inserting SAME key, no restrictions on dm1cxclean */
+		if (compare == DM1B_SAME)
+		    rcb_cc = NULL;
+	    }
+
 	    dmveMutex(dmve, pinfo);
 
 	    status = dm1cxclean(log_pgtype, log_pgsize, *page,
-		    ix_compressed, update_mode, rcb);
+		    ix_compressed, update_mode, rcb_cc);
 
 	    dmveUnMutex(dmve, pinfo);
 
@@ -1962,64 +1961,10 @@ DMP_PINFO	    **pinfoP)
 
     if (status != E_DB_OK)
     {
-	i4		lgid = 0;
-	i4		i;
-	DMP_POS_INFO    *pos;
-	char		*prevrec;
+	DB_STATUS	tmp_status;
 
-        if (dmve->dmve_flags & DMVE_MVCC)
-	{
-	    lgid = rcb->rcb_crib_ptr->crib_lgid_low;
-	    pos = &rcb->rcb_pos_info[RCB_P_GET];
-	    if (DM1B_POSITION_VALID_MACRO(rcb, RCB_P_GET))
-	    {
-		/* Print key we are positioned on since it can't be cleaned */
-		TRdisplay("GETPOS leaf %d,%d TID %d,%d lsn %x %x cc %d stat %x next %d\n",
-		    pos->bid.tid_tid.tid_page, pos->bid.tid_tid.tid_line,
-		    pos->tidp.tid_tid.tid_page, pos->tidp.tid_tid.tid_line,
-		    pos->lsn.lsn_low, pos->lsn.lsn_high,
-		    pos->clean_count, pos->page_stat, pos->nextleaf);
-		TRdisplay("RCB lowtid %d,%d\n", 
-		    rcb->rcb_lowtid.tid_tid.tid_page,
-		    rcb->rcb_lowtid.tid_tid.tid_line);
-		dmd_print_key(rcb->rcb_repos_key_ptr, btatts.bt_leafkeys, 0,
-		     btatts.bt_keys, &dmve->dmve_adf_cb);
-	    }
-	}
-	TRdisplay("BTREE undo %d %x error for tran %x %x lgid %d\n", 
-	    log_hdr->type, log_hdr->flags,
-	    dmve->dmve_tran_id.db_low_tran, dmve->dmve_tran_id.db_high_tran,
-	    lgid);
-	dmd_print_key(logkey_ptr, btatts.bt_leafkeys, 0,
-	     btatts.bt_keys, &dmve->dmve_adf_cb);
-	if (*page)
-	{
-	    TRdisplay("LEAF %d has page_stat %x cc %d lsn %x %x CRPAGE %d kids %d\n",
-		DM1B_VPT_GET_PAGE_PAGE_MACRO(log_pgtype, *page),
-		DM1B_VPT_GET_PAGE_STAT_MACRO(log_pgtype, *page),
-		DM1B_VPT_GET_BT_CLEAN_COUNT_MACRO(log_pgtype,*page),
-		DM1B_VPT_GET_LOG_ADDR_LOW_MACRO(log_pgtype, *page),
-		DM1B_VPT_GET_LOG_ADDR_HIGH_MACRO(log_pgtype, *page),
-		DMPP_VPT_IS_CR_PAGE(log_pgtype, *page),
-		DM1B_VPT_GET_BT_KIDS_MACRO(log_pgtype, *page));
-
-	    dmd_print_brange(log_pgtype, log_pgsize,
-		&btatts.bt_rng_rac, btatts.bt_rngklen, 
-		btatts.bt_keys, &dmve->dmve_adf_cb, *page);
-	    dmdprentries(log_pgtype, log_pgsize,
-		&btatts.bt_leaf_rac, btatts.bt_klen, 
-		btatts.bt_keys, &dmve->dmve_adf_cb, *page);
-	    if (dmve->dmve_flags & DMVE_MVCC)
-	    {
-		for (i = 0, prevrec = dmve->dmve_prev_rec; 
-		    i < *dmve->dmve_prev_cnt; 
-			i++, prevrec += dmve->dmve_prev_size)
-		{
-		    TRdisplay("Make consistent previous undo to this page:\n");
-		    dmd_log(TRUE, prevrec,  ((DM0L_HEADER *)prevrec)->length);
-		}
-	    }
-	}
+	tmp_status = dmve_bid_check_error(dmve, t, &btatts, opflag,
+		log_bid, log_tid, logkey_ptr, log_key_size, *page);
     }
 
     if (misc_buffer)
@@ -2948,4 +2893,142 @@ i4		    log_cmp_type)
 
     if (misc_buffer)
 	dm0m_deallocate((DM_OBJECT **)&misc_buffer);
+}
+
+
+/*{
+** Name: dmve_bid_check_error - Called when there is a bid check error
+**
+** Description: Trdisplay diagnostics when there is a bid check error
+**
+** Inputs:
+**      dmve				Pointer to dmve control block.
+**      t				tcb
+**      btatts				att info
+**	log_bid				Original Bid of key:
+**					  - if put undo, bid of key to delete
+**					  - if del undo, bid at which to insert
+**					  - if free undo, bid of previous page
+**	log_tid				Tid of data page row
+**	logkey_ptr			Key value
+**	log_key_size			Key length
+**
+**	Returns:
+**	    E_DB_OK
+** History:
+**      10-May-2010 (stial01)
+**          Created from code in dmve_bid_check
+*/
+DB_STATUS
+dmve_bid_check_error(
+DMVE_CB             *dmve,
+DMP_TCB		    *t,
+DMVE_BT_ATTS	    *btatts,
+i4             	    opflag,
+DM_TID		    *log_bid,
+DM_TID		    *log_tid,
+char		    *logkey_ptr,
+i4		    log_key_size,
+DMPP_PAGE	    *page)
+{
+    DMP_DCB		*dcb = dmve->dmve_dcb_ptr;
+    DM0L_HEADER		*log_hdr = (DM0L_HEADER *)dmve->dmve_log_rec;
+    i4			log_pgtype = t->tcb_rel.relpgtype;
+    i4			log_pgsize = t->tcb_rel.relpgsize;
+    DMP_RCB		*rcb = NULL;
+    i4			i;
+    DMP_POS_INFO	*getpos = NULL;
+    char		*prevrec;
+    char		line_buf[132];
+    char		tmprec[1024];
+    LG_CRIB		*crib;
+
+    /* Print the log record we were processing */
+    TRdisplay("DMVE-REPOS Log Record: \n");
+    dmd_log(TRUE, (PTR)log_hdr, log_hdr->length);
+
+    /* Print the logged key (uncompressed already) */
+    TRdisplay("DMVE-REPOS Logged ");
+    dmd_print_key(logkey_ptr, btatts->bt_leafkeys, 0,
+	 btatts->bt_keys, &dmve->dmve_adf_cb);
+
+    /* Print leaf page */
+    if (page)
+    {
+	DB_TRAN_ID		page_tran_id;
+	LG_LSN			page_lsn;
+	u_i2			page_lg_id;
+	u_i4			page_stat;
+	DM_PAGENO		page_number;
+
+	page_stat = DM1B_VPT_GET_PAGE_STAT_MACRO(log_pgtype, page);
+	page_tran_id = DM1B_VPT_GET_PAGE_TRAN_ID_MACRO(log_pgtype, page);
+	DM1B_VPT_GET_PAGE_LOG_ADDR_MACRO(log_pgtype, page, page_lsn);
+	page_lg_id = DM1B_VPT_GET_PAGE_LG_ID_MACRO(log_pgtype, page);
+	page_number = DM1B_VPT_GET_PAGE_PAGE_MACRO(log_pgtype, page); 
+
+        TRdisplay("DMVE-REPOS Page %d stat %x %v\n"
+	    "\t Page tran %x,%x LSN=(%x,%x) lg_id %d cc %d\n"
+	    "\t Page children %d\n", 
+	    page_number, page_stat, PAGE_STAT, page_stat,
+	    page_tran_id.db_high_tran, page_tran_id.db_low_tran,
+	    page_lsn.lsn_high, page_lsn.lsn_low, (i4)page_lg_id,
+	    DM1B_VPT_GET_BT_CLEAN_COUNT_MACRO(log_pgtype,page),
+	    DM1B_VPT_GET_BT_KIDS_MACRO(log_pgtype, page)); 
+
+	dmd_print_brange(log_pgtype, log_pgsize,
+	    &btatts->bt_rng_rac, btatts->bt_rngklen, 
+	    btatts->bt_keys, &dmve->dmve_adf_cb, page);
+
+	dmdprentries(log_pgtype, log_pgsize,
+	    &btatts->bt_leaf_rac, btatts->bt_klen, 
+	    btatts->bt_keys, &dmve->dmve_adf_cb, page);
+    }
+
+    if (dmve->dmve_flags & DMVE_MVCC)
+    {
+	rcb = dmve->dmve_rcb;
+	crib = rcb->rcb_crib_ptr;
+	getpos = &rcb->rcb_pos_info[RCB_P_GET];
+
+	if (DM1B_POSITION_VALID_MACRO(rcb, RCB_P_GET))
+	{
+	    /* Print key we are positioned on since it can't be cleaned */
+	    TRdisplay("DMVE-REPOS GETPOS Bid:(%d,%d) Tid:(%d,%d) LSN=(%x,%x)\n"
+		"\t    cc %d next %d stat %x %v \n",
+		getpos->bid.tid_tid.tid_page, getpos->bid.tid_tid.tid_line,
+		getpos->tidp.tid_tid.tid_page, getpos->tidp.tid_tid.tid_line,
+		getpos->lsn.lsn_low, getpos->lsn.lsn_high,
+		getpos->clean_count, getpos->nextleaf, 
+		getpos->page_stat, PAGE_STAT, getpos->page_stat);
+	    TRdisplay("DMVE-REPOS GETPOS"); 
+	    dmd_print_key(rcb->rcb_repos_key_ptr, btatts->bt_leafkeys, 0,
+		 btatts->bt_keys, &dmve->dmve_adf_cb);
+	}
+
+	TRdisplay("DMVE-REPOS CRIB: tran %x bos_tran %x lsn %x commit %x\n"
+	    "\t       bos_lsn %x seq %d lg_low %d lg_high %d\n",
+	    rcb->rcb_tran_id.db_low_tran,
+	    crib->crib_bos_tranid,
+	    crib->crib_low_lsn.lsn_low,
+	    crib->crib_last_commit.lsn_low,
+	    crib->crib_bos_lsn.lsn_low,
+	    crib->crib_sequence,
+	    crib->crib_lgid_low,
+	    crib->crib_lgid_high);
+
+	/* Print MVCC undo history for this leaf */
+	TRdisplay("DMVE-REPOS MVCC undo to this page %d\n", *dmve->dmve_prev_cnt);
+	for (i = 0, prevrec = dmve->dmve_prev_rec; 
+	    i < *dmve->dmve_prev_cnt; 
+		i++, prevrec += dmve->dmve_prev_size)
+	{
+	    /* We don't really have entire prevrec */
+	    MEmove(dmve->dmve_prev_size, prevrec, 0, 
+		sizeof(tmprec), (PTR)&tmprec);
+	    dmd_log(FALSE, tmprec, ((DM0L_HEADER *)tmprec)->length);
+	}
+    }
+
+    return (E_DB_OK);
 }
