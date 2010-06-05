@@ -675,6 +675,9 @@
 **	    Re-type psq_call to use the proper struct pointer.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	12-Mar-2010 (thaju02) Bug 123440
+**	    Added defines PSQ_GET_SESS_INFO, PSQ_SESS_CACHEDYN, 
+**	    PSQ_SESS_NOCACHEDYN.
 **/
 
 /*
@@ -1923,6 +1926,7 @@
 #define         PSQ_OPRESLV         20  /* Resolve op nodes */
 #define		PSQ_COPYBUF	    22  /* fill out copy buffer for 
 					** insert to copy optimization*/
+#define		PSQ_GET_SESS_INFO   23
 
 /*
 ** These are also used as PSF opcodes, but are really from the list of statement
@@ -3031,6 +3035,9 @@ typedef struct _PSQ_CB
 					*/
 #define		PSQ_CONTINUE_COPY		0x0010L
 #define		PSQ_FINISH_COPY			0x0020L
+
+#define		PSQ_SESS_CACHEDYN	0x0040L
+#define		PSQ_SESS_NOCACHEDYN	0x0080L
 
 #define		PSQ_ON_USRERR_NOROLL		0x0100L
 					/*

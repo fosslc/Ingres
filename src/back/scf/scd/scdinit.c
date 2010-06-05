@@ -4245,6 +4245,7 @@ Deadlock Detector,Sampler,Sort,Factotum", i,
 **          However, this change will prevent spurious error and will
 **          generate the savepoint name if psl_us11_set_nonkw_roll_svpt() is
 **          updated.
+**	12-Mar-2010 (thaju02) Bug 123440
 */
 DB_STATUS
 scd_dbinfo_fcn(ADF_DBMSINFO *dbi,
@@ -4270,6 +4271,7 @@ scd_dbinfo_fcn(ADF_DBMSINFO *dbi,
     char	*info_str;
     char	tempid[17];
     char	tranid[33];
+    PSQ_CB	psq_cb;
 
     status = E_DB_OK;
     CLRDBERR(error);
@@ -4393,10 +4395,21 @@ scd_dbinfo_fcn(ADF_DBMSINFO *dbi,
 	    break;
 
 	case SC_DB_CACHEDYN:
-	    if (Sc_main_cb->sc_csrflags & SC_CACHEDYN)
+	    /*
+	    ** check if set session [no]cache_dynamic issued;
+	    ** overrides server-wide setting 
+	    */
+	    psq_cb.psq_type = PSQCB_CB;
+	    psq_cb.psq_length = sizeof(psq_cb);
+	    psq_cb.psq_ascii_id = PSQCB_ASCII_ID;
+	    psq_cb.psq_owner = (PTR) DB_SCF_ID;
+	    psq_cb.psq_sessid = scb->cs_scb.cs_self;
+	    psq_cb.psq_ret_flag = 0;
+	    status = psq_call(PSQ_GET_SESS_INFO, &psq_cb, 0);
+	    if ( ((Sc_main_cb->sc_csrflags & SC_CACHEDYN) &&
+                 !(psq_cb.psq_ret_flag & PSQ_SESS_NOCACHEDYN)) ||
+		 (psq_cb.psq_ret_flag & PSQ_SESS_CACHEDYN) )
 		((char *)dvr->db_data)[0] = 'Y';
-	    else if (Sc_main_cb->sc_csrflags & SC_NO_CACHEDYN)
-		((char *)dvr->db_data)[0] = 'N';
 	    else ((char *)dvr->db_data)[0] = 'N';
 	    break;
 

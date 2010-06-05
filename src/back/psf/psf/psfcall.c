@@ -318,6 +318,8 @@ psf_svr_handle(
 **     	    Batch processing: set flags around parsequery; add PSQ_COPYBUF.
 **	30-Mar-2010 (kschendel) SIR 123485
 **	    Re-type call to use the proper struct pointer.
+**	12-Mar-2010 (thaju02) Bug 123440
+**	    Add PSQ_GET_SESS_INFO to return session cache_dynamic setting.
 */
 DB_STATUS
 psq_call(
@@ -733,6 +735,16 @@ psq_call(
 	break;
     }
 	    
+    case PSQ_GET_SESS_INFO:
+    {
+	if (sess_cb->pss_ses_flag & PSS_CACHEDYN)
+	    psq_cb->psq_ret_flag = PSQ_SESS_CACHEDYN;
+	else if (sess_cb->pss_ses_flag & PSS_NO_CACHEDYN)
+	    psq_cb->psq_ret_flag = PSQ_SESS_NOCACHEDYN;	
+	ret_val = E_DB_OK;
+	break;
+    }
+
     default:
 	ret_val = E_DB_SEVERE;
 	if (psq_cb != (PSQ_CB *) NULL)
