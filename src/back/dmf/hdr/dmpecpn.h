@@ -137,6 +137,9 @@
 **	    Redo the short-term part (again), this time to pass base ID, attr
 **	    ID, and flags.  The new blob query CB (BQCB) will supply the
 **	    necessary query lifetime context.  More redoing of the doc.
+**	27-Apr-2010 (kschendel)
+**	    Fix above to conditionalize the coupon fill.  Some compilers
+**	    don't understand zero-size arrays.
 */
 
 /* *** Important definition note: ***
@@ -168,13 +171,19 @@ typedef struct _DMPE_COUPON
 #define DMPE_CPN_TEMP		0x0004	/* Set if data is in a holding temp */
 
     /* Fill (if necessary) to size of ADP_COUPON */
-    /* Compiler note:  the size of this array may evaluate to zero.
-    ** If that causes your compiler to complain, the best fix is to
-    ** put a #if !defined(your_platform_string) around this.
+    /* IMPORTANT: this list of conditionals has to match the one
+    ** in common adp.h. Unfortunately some compilers don't allow
+    ** zero length arrays, so the fill can only be defined for
+    ** platforms with an i4[6] ADP_COUPON.
     */
+
+#if defined(axp_osf) || defined(ris_u64) || defined(i64_win) ||  \
+    defined(i64_hp2) || defined(i64_lnx) || defined(axp_lnx) ||  \
+    defined(a64_win)
     char    cpn_fill[sizeof (ADP_COUPON) - 
 		(sizeof(DB_TAB_LOGKEY_INTERNAL) + sizeof(i4) + sizeof(i4)
 		 + sizeof(i2) + sizeof(u_i2)) ];
+#endif
 }   DMPE_COUPON;
 
 
