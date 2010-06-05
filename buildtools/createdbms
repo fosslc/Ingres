@@ -20,6 +20,10 @@
 ##	    they are now set in the build environment.
 ##	24-Mar-2010 (frima01)
 ##	    Removed function keyword - not supported on all systems.
+##	15-Apr-2010 (bonro01)
+##	    Move set_env.sh call and use set -- to clear $1 parm before
+##	    calling the set_env.sh script so that createdbms parms
+##	    are not passed to sourced scripts.
 
 usage()
 {
@@ -102,23 +106,6 @@ then
 fi
 export BUILDTOOLS
 
-if [ -f ${BUILDTOOLS}/set_env.sh ]
-then
-  . ${BUILDTOOLS}/set_env.sh
-else
-  echo "Error, I cannot find the set_env.sh script"
-  echo "This is required to use createdbms"
-  echo "Please run createdbms from the root directory of the Ingres source"
-  exit 1
-fi
-
-# Verify ING_ROOT was set, should be by the set_env.sh call above.
-if [ -z "$ING_ROOT" ]
-then
-    echo "ING_ROOT must be set to run this script"
-    exit 1
-fi
-
 unames=`uname -s`
 unamem=`uname -m`
 
@@ -141,6 +128,27 @@ then
 fi
 
 export II_INSTALLATION
+
+# Clear $1 argument parms so that they are not passed
+# to sourced scripts.
+set --
+
+if [ -f ${BUILDTOOLS}/set_env.sh ]
+then
+  . ${BUILDTOOLS}/set_env.sh
+else
+  echo "Error, I cannot find the set_env.sh script"
+  echo "This is required to use createdbms"
+  echo "Please run createdbms from the root directory of the Ingres source"
+  exit 1
+fi
+
+# Verify ING_ROOT was set, should be by the set_env.sh call above.
+if [ -z "$ING_ROOT" ]
+then
+    echo "ING_ROOT must be set to run this script"
+    exit 1
+fi
 
 # Create version information to find the appropriate tar file to install from.
 if [ ! -f $ING_ROOT/build/version.rel ]
