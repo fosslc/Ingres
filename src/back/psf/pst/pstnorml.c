@@ -2067,6 +2067,8 @@ pst_qtree_size(
 **	    Added further dump information.
 **	25-Mar-2010 (kiria01) b123535
 **	    Escaped the awkward dot characters and clarified the links.
+**	09-Apr-2010 (kiria01) b123555
+**	    Output the vno with the table name incase of ambiguity.
 */
 
 static void
@@ -2259,7 +2261,7 @@ pst_qtree_dot1(
 				sizeof(rngvar->pss_rgname),t);
 			    t[sizeof(rngvar->pss_rgname)] = 0;
 			    STtrmwhite(t);
-			    SIfprintf(fd, "%s", t);
+			    SIfprintf(fd, "%s,%d", t, v->pst_s_var.pst_vno);
 			    break;
 			}
 			rngvar = NULL;

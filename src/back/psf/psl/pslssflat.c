@@ -86,6 +86,9 @@
 **	    This has required a finer scope tracking of WHERE clause scope.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	09-Apr-2010 (kiria01) b123555
+**	    Propagate the from list bitmaps from the elided subselects to
+**	    their parents.
 */
 
 
@@ -1226,6 +1229,14 @@ psl_flatten1(
 				}
 			    }
 			} while (psl_find_nodep(&residue->pst_right, &agheadp, PST_AGHEAD));
+			/* Propagate FROM list to containing subquery if it had none */
+			if (rt_node && !rt_node->pst_sym.pst_value.pst_s_root.pst_tvrc)
+			{
+			    rt_node->pst_sym.pst_value.pst_s_root.pst_tvrm =
+				    subsel->pst_sym.pst_value.pst_s_root.pst_tvrm;
+			    rt_node->pst_sym.pst_value.pst_s_root.pst_tvrc =
+				    subsel->pst_sym.pst_value.pst_s_root.pst_tvrc;
+			}
 			/* Drop the SUBSEL */
 			*nodep = subsel->pst_left->pst_right;
 		    }
