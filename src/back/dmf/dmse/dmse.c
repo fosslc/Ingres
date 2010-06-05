@@ -354,6 +354,9 @@ NO_OPTIM = ris_u64 i64_aix r64_us5 rs4_us5
 **	    some sort of scaling config parameter here.)  It's not
 **	    unreasonable to use 8 Mb (per sort thread) for sorting >100 Mb
 **	    worth of stuff!
+**      19-mar-2010 (joea)
+**          In dmse_begin_serial, ensure the parallel sort buffers are properly
+**          aligned.
 **/
 
 /*
@@ -1170,7 +1173,7 @@ DB_ERROR           *dberr)
     
     /*	Allocate the buffer for the run-creation phase. */
 
-    status = dm0m_allocate(memory + sizeof(DMP_MISC), 
+    status = dm0m_allocate(memory + sizeof(DMP_MISC) + sizeof(ALIGN_RESTRICT), 
                              (i4)0, (i4)MISC_CB,
 			     (i4)MISC_ASCII_ID, (char *)s, 
                              (DM_OBJECT **)&s->srt_misc, dberr);
@@ -1197,8 +1200,8 @@ DB_ERROR           *dberr)
 					/* it's all heap space */
 	s->srt_o_buffer = NULL;
 	s->srt_last_record = svcb->svcb_stnthreads;
-	s->srt_record = (char *)s->srt_heap + sizeof(i4 *) *
-				(s->srt_last_record + 1);
+	s->srt_record = (char *)ME_ALIGN_MACRO(s->srt_heap + sizeof(i4 *) *
+			(s->srt_last_record + 1), sizeof(ALIGN_RESTRICT));
 					/* point past the ptr array */
 
 	heap = &s->srt_heap[1];
