@@ -13538,6 +13538,10 @@ DB_ERROR	*dberr)
 **          The only call to update_rel() drops the mutex around
 **          the sys cat update but we are safe to take and release it
 **          to verify the TCB on a GET error.
+**	02-Apr-2010 (thaju02) Bug 122261
+**	    In determining whether to invalidate tcb, the comparision of
+**	    tcb relpages to iirel relpages should be '>' rather than '<'.
+**	    Added relpages delta constant check.
 */
 static DB_STATUS
 update_rel(
@@ -13653,7 +13657,8 @@ DB_ERROR	    *dberr)
 	         && !(*InvalidateTCB)
                  && dcb->dcb_served == DCB_MULTIPLE
 		 && !(dcb->dcb_status & (DCB_S_RECOVER | DCB_S_ROLLFORWARD))
-                 && ( (2 * t->tcb_rel.relpages + 5) < relrecord.relpages ) )
+                 && ((abs(t->tcb_rel.relpages - relrecord.relpages) > 25000) ||
+                  ((2 * t->tcb_rel.relpages + 5) > relrecord.relpages)) )
             {
                *InvalidateTCB = TRUE;
             }
