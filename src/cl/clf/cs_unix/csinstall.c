@@ -212,6 +212,8 @@ static	VOID	remsem();
 **	    be truncated.
 **	20-Jun-2009 (kschendel) SIR 122138
 **	    Hybrid add-on symbol changed, fix here.
+**	08-Jan-2010 (thaju02) Bug 123336
+**	    Add svr_slots configuration param.
 */
 
 main(argc, argv)
@@ -315,7 +317,13 @@ char	*argv[];
     }
 
     if (nserv == 0)
-	nserv = MAXSERVERS/4;
+    {
+	PTR	svrslots;
+	if (PMget("ii.*.config.svr_slots", &svrslots) == OK)
+	    CVan(svrslots, &nserv);
+	else
+	    nserv = MAXSERVERS/4;
+    }
 
     /*
     ** Bug 121111
