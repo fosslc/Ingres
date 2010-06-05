@@ -98,6 +98,8 @@
 **          jsp_get_case() use DB_DBCAPABITLITIES instead of local struct
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      14-May-2010 (stial01)
+**          More Changes for Long IDs
 */
 
 /*
@@ -174,8 +176,8 @@ DMF_JSX		*jsx)
     i4		loc_status;
     i4		loc_err;
     i4		i;
-    char		dbcap_name[DB_TAB_MAXNAME]; /* iidbcapabilities */
-    char		dollar_ingres_name[DB_MAXNAME];
+    DB_TAB_NAME		dbcap_name; /* iidbcapabilities */
+    DB_OWN_NAME		dollar_ingres;
     char		*cptr;
     DB_DBCAPABILITIES	iidbc; /* iidbcapabilities structure */
 
@@ -223,17 +225,17 @@ DMF_JSX		*jsx)
 	*/
 	for (;;)
 	{
-	    MEmove(sizeof(DU_DBA_DBDB) - 1, DU_DBA_DBDB, ' ', DB_MAXNAME, 
-		dollar_ingres_name);
+	    MEmove(sizeof(DU_DBA_DBDB) - 1, DU_DBA_DBDB, ' ', 
+		sizeof(DB_OWN_NAME), dollar_ingres.db_own_name);
 	    MEmove(sizeof(LOWER_DBCAP_NAME) - 1, LOWER_DBCAP_NAME, ' ', 
-		DB_TAB_MAXNAME, dbcap_name);
+		sizeof(DB_TAB_NAME), dbcap_name.db_tab_name);
 
 	    key_desc[0].attr_operator = DM2R_EQ;
 	    key_desc[0].attr_number = DM_1_RELIDX_KEY;
-	    key_desc[0].attr_value = dbcap_name;
+	    key_desc[0].attr_value = dbcap_name.db_tab_name;
 	    key_desc[1].attr_operator = DM2R_EQ;
 	    key_desc[1].attr_number = DM_2_RELIDX_KEY;
-	    key_desc[1].attr_value = dollar_ingres_name;
+	    key_desc[1].attr_value = dollar_ingres.db_own_name;
 
 	    /* 
 	    ** Retrieve records with this key, should find one with
@@ -259,10 +261,10 @@ DMF_JSX		*jsx)
 	    if (jsx->jsx_dberr.err_code == E_DM0055_NONEXT)
 	    {
 		MEmove(sizeof(UPPER_DBCAP_NAME) - 1, UPPER_DBCAP_NAME, ' ', 
-		    DB_TAB_MAXNAME, dbcap_name);
+		    sizeof(DB_TAB_NAME), dbcap_name.db_tab_name);
 
-	        cptr = dollar_ingres_name;
-		for (i = 0; i < DB_OWN_MAXNAME; i++)
+	        cptr = dollar_ingres.db_own_name;
+		for (i = 0; i < sizeof(DB_OWN_NAME); i++)
 		{
 		    CMtoupper(cptr, cptr);
 		    CMnext(cptr);

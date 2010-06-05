@@ -780,6 +780,8 @@ NO_OPTIM=dr6_us5 pym_us5
 **	    where the 2.6 dmp-relation was used in error, trashed the stack.
 **	    Delete unused clustered-index catalog updating code that
 **	    used the old style updaters.
+**      14-May-2010 (stial01)
+**          upgrade_iirel_row() init relattnametot
 */
 
 /*
@@ -12294,6 +12296,7 @@ DM0C_CNF	*cnf)
 	    rel_v9.reltotdatawid = rel_v8.reltotwid;
 	    rel_v9.relencflags = 0;
 	    rel_v9.relencver = 0;
+	    rel_v9.relattnametot = old_rel_v8->relatts * DB_OLDMAXNAME_32;
 	    MEfill (sizeof(rel_v9.relenckey), (u_char)0, rel_v9.relenckey);
 	    MEfill (sizeof(rel_v9.relfree), (u_char)0, rel_v9.relfree);
 

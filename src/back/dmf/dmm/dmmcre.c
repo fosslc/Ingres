@@ -297,6 +297,9 @@
 **          Create core catalogs having long ids with compression=(data)
 **	06-May-2010
 **	    Remove unsued variable which was a typo
+**      14-May-2010 (stial01)
+**          dmm_init_catalog_templates, init relattnametot, init attDefaultID
+**          add consistency checks, more error internal handling
 */
 
 /* core table ids */
@@ -1975,6 +1978,7 @@ struct	catalogStats
 {
 	i2	columnCount;
 	i4	tupleWidth;
+	i4	colnametot;
 };
 
 
@@ -1994,11 +1998,13 @@ dmm_init_catalog_templates( )
     i4			tupleCount;
     STATUS		status = E_DB_OK;
     i4			i;
-    struct		catalogStats iirelationStats = { 0, 0 };
-    struct		catalogStats iirelidxStats = { 0, 0 };
-    struct		catalogStats iiattributeStats = { 0, 0 };
-    struct		catalogStats iiindexStats = { 0, 0 };
+    struct		catalogStats iirelationStats = { 0, 0, 0 };
+    struct		catalogStats iirelidxStats = { 0, 0, 0 };
+    struct		catalogStats iiattributeStats = { 0, 0, 0};
+    struct		catalogStats iiindexStats = { 0, 0, 0 };
     struct		catalogStats	*catalogStats;
+    DB_ERROR		local_dberr;
+    i4			local_err_code;
 
     tuplesInIIRELATION = DM_CORE_REL_CNT;
     tuplesInIIRELIDX = DM_CORE_RINDEX_CNT;
@@ -2021,9 +2027,6 @@ dmm_init_catalog_templates( )
 		u_att++, i++
 	  )
       {
-	    STRUCT_ASSIGN_MACRO(*att, *u_att);
-	    CVupper(u_att->attname.db_att_name);
-
 	    if ( SAME_TABLE( att->attrelid, IIRELATION_TABLE ) )
 		catalogStats = &iirelationStats;
 	    else if ( SAME_TABLE( att->attrelid, IIREL_IDX_TABLE ) )
@@ -2034,48 +2037,64 @@ dmm_init_catalog_templates( )
 		catalogStats = &iiindexStats;
 	    else
 	    {
+		SETDBERR(&local_dberr, 0, E_DM004A_INTERNAL_ERROR);
 		status = E_DB_FATAL;
 		break;
 	    }
 
 	    if ( catalogStats->tupleWidth != att->attoff )
 	    {
+		SETDBERR(&local_dberr, 0, E_DM004A_INTERNAL_ERROR);
 		status = E_DB_FATAL;
 		break;
 	    }
 
 	    catalogStats->columnCount++;
 	    catalogStats->tupleWidth += att->attfml;
+	    catalogStats->colnametot += STlength(att->attname.db_att_name);
 	    att->attid = catalogStats->columnCount;
-	    u_att->attid = catalogStats->columnCount;
 	    att->attintl_id = catalogStats->columnCount;
-	    u_att->attintl_id = catalogStats->columnCount;
 	    att->attver_added = 0;
-	    u_att->attver_added = 0;
 	    att->attver_dropped = 0;
-	    u_att->attver_dropped = 0;
 	    att->attval_from = 0;
-	    u_att->attval_from = 0;
 	    att->attver_altcol = 0;
-	    u_att->attver_altcol = 0;
 	    att->attcollID = -1;
-	    u_att->attcollID = -1;
 	    att->attgeomtype = -1;
-	    u_att->attgeomtype = -1;
 	    att->attsrid = -1;
-	    u_att->attsrid = -1;
 	    att->attencflags = 0;
-	    u_att->attencflags = 0;
 	    att->attencwid = 0;
-	    u_att->attencwid = 0;
-
 	    MEfill(sizeof(att->attfree), 0, att->attfree);
-	    MEfill(sizeof(u_att->attfree), 0, u_att->attfree);
+	    if (att->attfmt == ATT_CHA)
+	    {
+		att->attDefaultID.db_tab_base = DB_DEF_ID_BLANK;
+		att->attDefaultID.db_tab_index = 0;
+	    }
+	    else 
+	    {
+		att->attDefaultID.db_tab_base = DB_DEF_ID_0;
+		att->attDefaultID.db_tab_index = 0;
+	    }
 
-	    /* pad the attribute  name */
+	    if ( SAME_TABLE( att->attrelid, IIRELATION_TABLE ) &&
+		(att->attid == DM_RELID_FIELD_NO 
+			&& STcompare(att->attname.db_att_name, "relid"))
+		|| (att->attid == DM_RELOWNER_FIELD_NO 
+			&& STcompare(att->attname.db_att_name, "relowner") ))
+	    {
+		SETDBERR(&local_dberr, 0, E_DM004A_INTERNAL_ERROR);
+		status = E_DB_FATAL;
+		break;
+	    }
+
+	    /* AFTER initializing attribute record, copy to u_att */
+	    STRUCT_ASSIGN_MACRO(*att, *u_att);
+	    CVupper(u_att->attname.db_att_name);
+
+	    /* pad the attribute name, do this last */
 	    STmove( att->attname.db_att_name, ' ',
 		    sizeof( att->attname.db_att_name ),
 		    att->attname.db_att_name );
+
 	    STmove( u_att->attname.db_att_name, ' ',
 		    sizeof( u_att->attname.db_att_name ),
 		    u_att->attname.db_att_name );
@@ -2093,6 +2112,7 @@ dmm_init_catalog_templates( )
 	    iiindexStats.tupleWidth > sizeof(DMP_INDEX) ||
 	    iirelidxStats.tupleWidth != sizeof(DMP_RINDEX))
       {
+	SETDBERR(&local_dberr, 0, E_DM004A_INTERNAL_ERROR);
 	status = E_DB_FATAL;
 	break;
       }
@@ -2125,11 +2145,6 @@ dmm_init_catalog_templates( )
 	    u_rel++, i++
 	  )
       {
-	    STRUCT_ASSIGN_MACRO(*rel, *u_rel);
-	    CVupper(u_rel->relid.db_tab_name);
-	    CVupper(u_rel->relowner.db_own_name);
-	    CVupper(u_rel->relloc.db_loc_name);
-
 	    if ( SAME_TABLE( rel->reltid, IIRELATION_TABLE ) )
 	    {
 		catalogStats = &iirelationStats;
@@ -2152,31 +2167,33 @@ dmm_init_catalog_templates( )
 	    }
 	    else
 	    {
+		SETDBERR(&local_dberr, 0, E_DM004A_INTERNAL_ERROR);
 		status = E_DB_FATAL;
 		break;
 	    }
 
-	    if (rel->relwid != catalogStats->tupleWidth ||
-		u_rel->relwid != catalogStats->tupleWidth)
+	    if (rel->relwid != catalogStats->tupleWidth)
 	    {
+		SETDBERR(&local_dberr, 0, E_DM004A_INTERNAL_ERROR);
 		status = E_DB_FATAL;
 		break;
 	    }
 
 	    MEfill(sizeof(rel->relfree), 0, rel->relfree);
-	    MEfill(sizeof(u_rel->relfree), 0, u_rel->relfree);
 
 	    /* Fill in the relcreate field */
-
 	    rel->relcreate = TMsecs();
-	    u_rel->relcreate = rel->relcreate;
 	    rel->relatts = catalogStats->columnCount;
-	    u_rel->relatts = catalogStats->columnCount;
+	    rel->relattnametot = catalogStats->colnametot;
 	    rel->reltups = tupleCount;
-	    u_rel->reltups = tupleCount;
+
+	    /* AFTER initializing iirelation record, copy to u_rel */
+	    STRUCT_ASSIGN_MACRO(*rel, *u_rel);
+	    CVupper(u_rel->relid.db_tab_name);
+	    CVupper(u_rel->relowner.db_own_name);
+	    CVupper(u_rel->relloc.db_loc_name);
 
 	    /* space pad the character strings */
-
 	    STmove( rel->relid.db_tab_name, ' ',
 		    sizeof( rel->relid.db_tab_name ),
 		    rel->relid.db_tab_name );
@@ -2232,6 +2249,13 @@ dmm_init_catalog_templates( )
 
       break;
     }	/* end of code block */
+
+    if (status)
+    {
+	uleFormat(&local_dberr, 0, (CL_ERR_DESC *)NULL,
+		   ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
+		   &local_err_code, 0);
+    }
 
     return( status );
 }

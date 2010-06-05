@@ -209,6 +209,8 @@
 **	    Use new form sc0ePut().
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      14-may-2010 (stial01)
+**          Consistency check for scfa_text_length
 **/
 
 /* External and Forward declarations */
@@ -1160,9 +1162,18 @@ sce_raise( SCF_CB  *scfcb, SCD_SCB *scb )
 	event->ev_ldata = sizeof(DB_DATE);
 	MEcopy((PTR)aparm->scfa_when, sizeof(DB_DATE),
 	       (PTR)(event->ev_name + sizeof(DB_ALERT_NAME)));
+
 	/* Add on any user text values */
 	if (aparm->scfa_text_length > 0)
 	{
+	    if (aparm->scfa_text_length > SCEV_BLOCK_MAX)
+	    {
+		/* Internal error...increase SCEV_BLOCK_MAX in sceshare.h */
+		sc0e_0_put(E_SC0207_UNEXPECTED_ERROR, 0);
+		SETDBERR(&scfcb->scf_error, 0, E_SC0207_UNEXPECTED_ERROR);
+		return (E_DB_ERROR);
+	    }
+
 	    event->ev_ldata += aparm->scfa_text_length;
 	    MEcopy((PTR)aparm->scfa_user_text, aparm->scfa_text_length,
 	       (PTR)(event->ev_name + sizeof(DB_ALERT_NAME) + sizeof(DB_DATE)));

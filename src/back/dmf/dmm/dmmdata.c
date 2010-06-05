@@ -114,6 +114,9 @@ LIBRARY = IMPDMFLIBDATA
 **	    next to relstat to make correct i8 bus alignment, move relid,
 **	    relowner, and relloc to the end of the table to avoid offset
 **	    issues with compression.
+**      14-May-2010 (stial01)
+**          Add relattnametot to iirelation, move attname to end of iiattribute
+**          Clean up attdef macro, define relextra,attexta as byte
 */
 
 /* dmmcre.c */
@@ -127,10 +130,10 @@ LIBRARY = IMPDMFLIBDATA
 
 #define NOT_AN_INDEX            0
 
-#define REL_TAB_ID   { DM_B_RELATION_TAB_ID, DM_I_RELATION_TAB_ID }
-#define RIDX_TAB_ID  { DM_B_RIDX_TAB_ID, DM_I_RIDX_TAB_ID  }
-#define ATT_TAB_ID   { DM_B_ATTRIBUTE_TAB_ID, DM_I_ATTRIBUTE_TAB_ID}
-#define IND_TAB_ID { DM_B_INDEX_TAB_ID, DM_I_INDEX_TAB_ID }
+#define REL_TABID   { DM_B_RELATION_TAB_ID, DM_I_RELATION_TAB_ID }
+#define RIDX_TABID  { DM_B_RIDX_TAB_ID, DM_I_RIDX_TAB_ID  }
+#define ATT_TABID   { DM_B_ATTRIBUTE_TAB_ID, DM_I_ATTRIBUTE_TAB_ID}
+#define IND_TABID { DM_B_INDEX_TAB_ID, DM_I_INDEX_TAB_ID }
 
 /* covers for CL_OFFSETOF */
 
@@ -141,9 +144,12 @@ LIBRARY = IMPDMFLIBDATA
 
 /* uninitialized fields should identify themselves to the developer */
 
-#define DUMMY_ATTRIBUTE_COUNT   -1
-#define DUMMY_ATTRIBUTE_NUMBER  -1
-#define DUMMY_TUPLE_COUNT       -1
+#define DUMMY_RELATTS	-1
+#define DUMMY_RELTUPS	-1
+#define DUMMY_RELNAMESZ	-1
+#define DUMMY_ATTID	-1
+#define DUMMY_RELTUPS	-1
+#define DUMMY_DEFID	{0,0}
 
 /*
 ** NOTE there is code in dmverep/dmveput/dmvedel that assumes 
@@ -154,16 +160,17 @@ LIBRARY = IMPDMFLIBDATA
 ** the database is opened. If you move either of these
 ** fields or add new fields in front of them (more likely),
 ** remember to update the definitions.
+** DUMMY fields are initialized in dmm_init_catalog_templates()
 */
-#define reldef(tabid, relid, relwid, relkeys, relidxcount, relstat, relstat2, relmin, relcomptype)\
+#define reldef(tabid, relid, relwid, relkeys, relidxcount, relstat, relmin, relcomptype)\
     tabid, /* reltid,reltidx */\
-    DUMMY_ATTRIBUTE_COUNT,\
+    DUMMY_RELATTS,\
     0, /* reltcpri */\
     relkeys,\
     TCB_HASH, /* relspec */\
     relstat,\
-    relstat2, /* relstat2 */\
-    DUMMY_TUPLE_COUNT,\
+    TCB2_PHYSLOCK_CONCUR, /* relstat2 */\
+    DUMMY_RELTUPS,\
     1, /* relpages */\
     1, /* relprim */\
     1, /* relmain */\
@@ -196,6 +203,7 @@ LIBRARY = IMPDMFLIBDATA
     relwid, /* reltotwid */\
     relwid, /* reldatawid */\
     relwid, /* reltotdatawid */\
+    DUMMY_RELNAMESZ, /* relattnametot */\
     0, /* relnparts */\
     0, /* relnpartlevels */\
     0, /* relencflags */\
@@ -207,8 +215,8 @@ LIBRARY = IMPDMFLIBDATA
     {relid}
  
 #define CORE_RELSTAT (TCB_CATALOG | TCB_NOUPDT | TCB_CONCUR | TCB_PROALL | TCB_SECURE | TCB_DUPLICATES)
-#define REL_RELSTAT (CORE_RELSTAT | TCB_COMPRESSED)
-#define RIDX_RELSTAT (CORE_RELSTAT | TCB_COMPRESSED)
+#define REL_RELSTAT (CORE_RELSTAT | TCB_COMPRESSED | TCB_IDXD)
+#define RIDX_RELSTAT (CORE_RELSTAT | TCB_COMPRESSED | TCB_INDEX)
 #define ATT_RELSTAT (CORE_RELSTAT | TCB_COMPRESSED)
 #define IND_RELSTAT (CORE_RELSTAT)
 
@@ -216,16 +224,16 @@ GLOBALDEF DMP_RELATION DM_core_relations[DM_CORE_REL_CNT] =
 {
     {
         /* reltid,relid,relwid,relkeys,relidxcount,relstat,relmin,relcomptype */
-	reldef(REL_TAB_ID, "iirelation", sizeof(DMP_RELATION), 1, 1, REL_RELSTAT | TCB_IDXD, TCB2_PHYSLOCK_CONCUR, 16, TCB_C_STANDARD)
+	reldef(REL_TABID, "iirelation", sizeof(DMP_RELATION), 1, 1, REL_RELSTAT, 16, TCB_C_STANDARD)
     },
     {
-	reldef(RIDX_TAB_ID, "iirel_idx", sizeof(DMP_RINDEX), 2, 0, RIDX_RELSTAT | TCB_INDEX, TCB2_PHYSLOCK_CONCUR, 8, TCB_C_STANDARD)
+	reldef(RIDX_TABID, "iirel_idx", sizeof(DMP_RINDEX), 2, 0, RIDX_RELSTAT,  8, TCB_C_STANDARD)
     },
     {
-	reldef(ATT_TAB_ID, "iiattribute", sizeof(DMP_ATTRIBUTE), 2, 0, ATT_RELSTAT, TCB2_PHYSLOCK_CONCUR, 32, TCB_C_STANDARD)
+	reldef(ATT_TABID, "iiattribute", sizeof(DMP_ATTRIBUTE), 2, 0, ATT_RELSTAT, 32, TCB_C_STANDARD)
     },
     {
-	reldef(IND_TAB_ID, "iiindex", DMP_INDEX_SIZE, 1, 0, IND_RELSTAT, TCB2_PHYSLOCK_CONCUR, 8, TCB_C_NONE)
+	reldef(IND_TABID, "iiindex", DMP_INDEX_SIZE, 1, 0, IND_RELSTAT, 8, TCB_C_NONE)
     },
 };
 
@@ -236,168 +244,182 @@ GLOBALDEF DMP_RELATION DM_ucore_relations[DM_CORE_REL_CNT];
 /*
 **  This table contains the initialized IIATTRIBUTE records for the
 **  core system tables.
+**  DUMMY fields are initialized in dmm_init_catalog_templates()
 */
-#define attdef_int(tabid, name, offset, len, iskey)\
- tabid, DUMMY_ATTRIBUTE_NUMBER, 0, name, offset, len, iskey, 0, {DB_DEF_ID_0}, 0, 0,0,0, ATT_INT, 0,0,0,0,0,0,0, {' '}
-
-#define attdef_cha(tabid, name, offset, len, iskey)\
-tabid, DUMMY_ATTRIBUTE_NUMBER, 0, name, offset, len, iskey, 0, {DB_DEF_ID_BLANK}, 0, 0,0,0, ATT_CHA, 0,0,0,0,0,0,0, {' '}
-
-#define attdef_byte(tabid, name, offset, len, iskey)\
-tabid, DUMMY_ATTRIBUTE_NUMBER, 0, name, offset, len, iskey, 0, {DB_DEF_ID_BLANK}, 0, 0,0,0, ATT_BYTE, 0,0,0,0,0,0,0, {' '}
-
-#define attdef_free(tabid, name, offset, len, iskey)\
-tabid, DUMMY_ATTRIBUTE_NUMBER, 0, name, offset, len, iskey, 0, {DB_DEF_ID_0}, 0, 0,0,0, ATT_CHA, 0,0,0,0,0,0,0, {' '}
+#define attdef(tabid, type, name, offset, len, kdom)\
+ tabid,/* attrelid, attrelidx */ \
+ DUMMY_ATTID, /* attid */ \
+ 0, /* attxtra */ \
+ offset, /* attoff */ \
+ len, /* attfrml */ \
+ kdom, /* attkdom */ \
+ 0, /* attflag */ \
+ DUMMY_DEFID, /* attdefid1, attdefid2 */ \
+ 0, /* attintl_id */ \
+ 0, /* attver_added */ \
+ 0, /* attver_dropped */ \
+ 0, /* attval_from */ \
+ type, /* attfrmt */ \
+ 0, /* attfrmp */ \
+ 0, /* attver_altcol */\
+ 0, /* attcollID */ \
+ 0, /* attsrid */ \
+ 0, /* attgeomtype */ \
+ 0, /* attencflags */ \
+ 0, /* attencwid */ \
+ {0},/* attfree */ \
+ name /* attname */
 
 GLOBALDEF DMP_ATTRIBUTE DM_core_attributes[] =
 {
     /* tabid, attname, offset, len, iskey */
-    { attdef_int(REL_TAB_ID, "reltid", REL_OFFSET(reltid.db_tab_base), 4, 1) },
-    { attdef_int(REL_TAB_ID, "reltidx", REL_OFFSET(reltid.db_tab_index), 4, 0) },
-    { attdef_int(REL_TAB_ID, "relatts", REL_OFFSET(relatts), 2, 0) },
-    { attdef_int(REL_TAB_ID, "reltcpri", REL_OFFSET(reltcpri), 2, 0) },
-    { attdef_int(REL_TAB_ID, "relkeys", REL_OFFSET(relkeys), 2, 0) },
-    { attdef_int(REL_TAB_ID, "relspec", REL_OFFSET(relspec), 2, 0) },
-    { attdef_int(REL_TAB_ID, "relstat", REL_OFFSET(relstat), 4, 0) },
-    { attdef_int(REL_TAB_ID, "relstat2", REL_OFFSET(relstat2), 4, 0) },
-    { attdef_int(REL_TAB_ID, "reltups", REL_OFFSET(reltups), 8, 0) },
-    { attdef_int(REL_TAB_ID, "relpages", REL_OFFSET(relpages), 8, 0) },
-    { attdef_int(REL_TAB_ID, "relprim", REL_OFFSET(relprim), 4, 0) },
-    { attdef_int(REL_TAB_ID, "relmain", REL_OFFSET(relmain), 4, 0) },
-    { attdef_int(REL_TAB_ID, "relsave", REL_OFFSET(relsave), 4, 0) },
-    { attdef_int(REL_TAB_ID, "relstamp1", REL_OFFSET(relstamp12.db_tab_high_time), 4, 0) },
-    { attdef_int(REL_TAB_ID, "relstamp2", REL_OFFSET(relstamp12.db_tab_low_time), 4, 0) },
-    { attdef_int(REL_TAB_ID, "relcmptlvl", REL_OFFSET(relcmptlvl), 4, 0) },
-    { attdef_int(REL_TAB_ID, "relcreate", REL_OFFSET(relcreate), 4, 0) },
-    { attdef_int(REL_TAB_ID, "relqid1", REL_OFFSET(relqid1), 4, 0) },
-    { attdef_int(REL_TAB_ID, "relqid2", REL_OFFSET(relqid2), 4, 0) },
-    { attdef_int(REL_TAB_ID, "relmoddate", REL_OFFSET(relmoddate), 4, 0) },
-    { attdef_int(REL_TAB_ID, "relidxcount", REL_OFFSET(relidxcount), 2, 0) },
-    { attdef_int(REL_TAB_ID, "relifill", REL_OFFSET(relifill), 2, 0) },
-    { attdef_int(REL_TAB_ID, "reldfill", REL_OFFSET(reldfill), 2, 0) },
-    { attdef_int(REL_TAB_ID, "rellfill", REL_OFFSET(rellfill), 2, 0) },
-    { attdef_int(REL_TAB_ID, "relmin", REL_OFFSET(relmin), 4, 0) },
-    { attdef_int(REL_TAB_ID, "relmax", REL_OFFSET(relmax), 4, 0) },
-    { attdef_int(REL_TAB_ID, "relpgsize", REL_OFFSET(relpgsize), 4, 0) },
-    { attdef_int(REL_TAB_ID, "relgwid", REL_OFFSET(relgwid), 2, 0) },
-    { attdef_int(REL_TAB_ID, "relgwother", REL_OFFSET(relgwother), 2, 0) },
-    { attdef_int(REL_TAB_ID, "relhigh_logkey", REL_OFFSET(relhigh_logkey), 4, 0) },
-    { attdef_int(REL_TAB_ID, "rellow_logkey", REL_OFFSET(rellow_logkey), 4, 0) },
-    { attdef_int(REL_TAB_ID, "relfhdr", REL_OFFSET(relfhdr), 4, 0) },
-    { attdef_int(REL_TAB_ID, "relallocation", REL_OFFSET(relallocation), 4, 0) },
-    { attdef_int(REL_TAB_ID, "relextend", REL_OFFSET(relextend), 4, 0) },
-    { attdef_int(REL_TAB_ID, "relcomptype", REL_OFFSET(relcomptype), 2, 0) },
-    { attdef_int(REL_TAB_ID, "relpgtype", REL_OFFSET(relpgtype), 2, 0) },
-    { attdef_int(REL_TAB_ID, "relloccount", REL_OFFSET(relloccount), 2, 0) },
-    { attdef_int(REL_TAB_ID, "relversion", REL_OFFSET(relversion), 2, 0) },
-    { attdef_int(REL_TAB_ID, "relwid", REL_OFFSET(relwid), 4, 0) },
-    { attdef_int(REL_TAB_ID, "reltotwid", REL_OFFSET(reltotwid), 4, 0) },
-    { attdef_int(REL_TAB_ID, "reldatawid", REL_OFFSET(reldatawid), 4, 0) },
-    { attdef_int(REL_TAB_ID, "reltotdatawid", REL_OFFSET(reltotdatawid), 4, 0) },
-    { attdef_int(REL_TAB_ID, "relnparts", REL_OFFSET(relnparts), 2, 0) },
-    { attdef_int(REL_TAB_ID, "relnpartlevels", REL_OFFSET(relnpartlevels), 2, 0) },
-    { attdef_int(REL_TAB_ID, "relencflags", REL_OFFSET(relencflags), 2, 0) },
-    { attdef_int(REL_TAB_ID, "relencver", REL_OFFSET(relencver), 2, 0) },
-    { attdef_byte(REL_TAB_ID, "relenckey", REL_OFFSET(relenckey), 64, 0) },
-    { attdef_free(REL_TAB_ID, "relfree", REL_OFFSET(relfree), 20, 0) },
-    { attdef_cha(REL_TAB_ID, "relloc", REL_OFFSET(relloc), DB_LOC_MAXNAME, 0) },
-    { attdef_cha(REL_TAB_ID, "relowner", REL_OFFSET(relowner), DB_OWN_MAXNAME, 0) },
-    { attdef_cha(REL_TAB_ID, "relid", REL_OFFSET(relid), DB_TAB_MAXNAME, 0) },
-    { attdef_cha(RIDX_TAB_ID, "relid", RIDX_OFFSET(relname), DB_TAB_MAXNAME, 1) },
-    { attdef_cha(RIDX_TAB_ID, "relowner", RIDX_OFFSET(relowner), DB_OWN_MAXNAME, 2) },
-    { attdef_int(RIDX_TAB_ID, "tidp", RIDX_OFFSET(tidp), 4, 0) },
-    { attdef_int(ATT_TAB_ID, "attrelid", ATT_OFFSET(attrelid.db_tab_base), 4, 1) },
-    { attdef_int(ATT_TAB_ID, "attrelidx", ATT_OFFSET(attrelid.db_tab_index), 4, 2) },
-    { attdef_int(ATT_TAB_ID, "attid", ATT_OFFSET(attid), 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attxtra", ATT_OFFSET(attxtra), 2, 0) },
-    { attdef_cha(ATT_TAB_ID, "attname", ATT_OFFSET(attname), DB_ATT_MAXNAME, 0) },
-    { attdef_int(ATT_TAB_ID, "attoff", ATT_OFFSET(attoff), 4, 0) },
-    { attdef_int(ATT_TAB_ID, "attfrml", ATT_OFFSET(attfml), 4, 0) },
-    { attdef_int(ATT_TAB_ID, "attkdom", ATT_OFFSET(attkey), 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attflag", ATT_OFFSET(attflag), 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attdefid1", ATT_OFFSET(attDefaultID.db_tab_base), 4, 0) },
-    { attdef_int(ATT_TAB_ID, "attdefid2", ATT_OFFSET(attDefaultID.db_tab_index), 4, 0) },
-    { attdef_int(ATT_TAB_ID, "attintl_id", ATT_OFFSET(attintl_id), 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attver_added", ATT_OFFSET(attver_added), 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attver_dropped", ATT_OFFSET(attver_dropped), 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attval_from", ATT_OFFSET(attval_from), 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attfrmt", ATT_OFFSET(attfmt), 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attfrmp", ATT_OFFSET(attfmp), 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attver_altcol", ATT_OFFSET(attver_altcol), 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attcollid", ATT_OFFSET(attcollID), 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attsrid", ATT_OFFSET(attsrid), 4, 0) },
-    { attdef_int(ATT_TAB_ID, "attgeomtype", ATT_OFFSET(attgeomtype), 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attencflags", ATT_OFFSET(attencflags), 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attencwid", ATT_OFFSET(attencwid), 4, 0) },
-    { attdef_free(ATT_TAB_ID, "attfree", ATT_OFFSET(attfree), 4, 0) },
-    { attdef_int(IND_TAB_ID, "baseid", IND_OFFSET(baseid), 4, 1) },
-    { attdef_int(IND_TAB_ID, "indexid", IND_OFFSET(indexid), 4, 0) },
-    { attdef_int(IND_TAB_ID, "sequence", IND_OFFSET(sequence), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom1", IND_OFFSET(idom[0]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom2", IND_OFFSET(idom[1]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom3", IND_OFFSET(idom[2]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom4", IND_OFFSET(idom[3]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom5", IND_OFFSET(idom[4]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom6", IND_OFFSET(idom[5]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom7", IND_OFFSET(idom[6]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom8", IND_OFFSET(idom[7]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom9", IND_OFFSET(idom[8]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom10", IND_OFFSET(idom[9]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom11", IND_OFFSET(idom[10]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom12", IND_OFFSET(idom[11]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom13", IND_OFFSET(idom[12]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom14", IND_OFFSET(idom[13]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom15", IND_OFFSET(idom[14]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom16", IND_OFFSET(idom[15]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom17", IND_OFFSET(idom[16]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom18", IND_OFFSET(idom[17]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom19", IND_OFFSET(idom[18]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom20", IND_OFFSET(idom[19]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom21", IND_OFFSET(idom[20]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom22", IND_OFFSET(idom[21]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom23", IND_OFFSET(idom[22]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom24", IND_OFFSET(idom[23]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom25", IND_OFFSET(idom[24]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom26", IND_OFFSET(idom[25]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom27", IND_OFFSET(idom[26]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom28", IND_OFFSET(idom[27]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom29", IND_OFFSET(idom[28]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom30", IND_OFFSET(idom[29]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom31", IND_OFFSET(idom[30]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom32", IND_OFFSET(idom[31]), 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "reltid", REL_OFFSET(reltid.db_tab_base), 4, 1) },
+    { attdef(REL_TABID, ATT_INT, "reltidx", REL_OFFSET(reltid.db_tab_index), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relatts", REL_OFFSET(relatts), 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "reltcpri", REL_OFFSET(reltcpri), 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relkeys", REL_OFFSET(relkeys), 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relspec", REL_OFFSET(relspec), 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relstat", REL_OFFSET(relstat), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relstat2", REL_OFFSET(relstat2), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "reltups", REL_OFFSET(reltups), 8, 0) },
+    { attdef(REL_TABID, ATT_INT, "relpages", REL_OFFSET(relpages), 8, 0) },
+    { attdef(REL_TABID, ATT_INT, "relprim", REL_OFFSET(relprim), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relmain", REL_OFFSET(relmain), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relsave", REL_OFFSET(relsave), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relstamp1", REL_OFFSET(relstamp12.db_tab_high_time), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relstamp2", REL_OFFSET(relstamp12.db_tab_low_time), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relcmptlvl", REL_OFFSET(relcmptlvl), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relcreate", REL_OFFSET(relcreate), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relqid1", REL_OFFSET(relqid1), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relqid2", REL_OFFSET(relqid2), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relmoddate", REL_OFFSET(relmoddate), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relidxcount", REL_OFFSET(relidxcount), 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relifill", REL_OFFSET(relifill), 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "reldfill", REL_OFFSET(reldfill), 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "rellfill", REL_OFFSET(rellfill), 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relmin", REL_OFFSET(relmin), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relmax", REL_OFFSET(relmax), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relpgsize", REL_OFFSET(relpgsize), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relgwid", REL_OFFSET(relgwid), 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relgwother", REL_OFFSET(relgwother), 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relhigh_logkey", REL_OFFSET(relhigh_logkey), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "rellow_logkey", REL_OFFSET(rellow_logkey), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relfhdr", REL_OFFSET(relfhdr), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relallocation", REL_OFFSET(relallocation), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relextend", REL_OFFSET(relextend), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relcomptype", REL_OFFSET(relcomptype), 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relpgtype", REL_OFFSET(relpgtype), 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relloccount", REL_OFFSET(relloccount), 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relversion", REL_OFFSET(relversion), 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relwid", REL_OFFSET(relwid), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "reltotwid", REL_OFFSET(reltotwid), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "reldatawid", REL_OFFSET(reldatawid), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "reltotdatawid", REL_OFFSET(reltotdatawid), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relattnametot", REL_OFFSET(relattnametot), 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relnparts", REL_OFFSET(relnparts), 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relnpartlevels", REL_OFFSET(relnpartlevels), 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relencflags", REL_OFFSET(relencflags), 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relencver", REL_OFFSET(relencver), 2, 0) },
+    { attdef(REL_TABID, ATT_BYTE, "relenckey", REL_OFFSET(relenckey), 64, 0) },
+    { attdef(REL_TABID, ATT_BYTE, "relfree", REL_OFFSET(relfree), 16, 0) },
+    { attdef(REL_TABID, ATT_CHA, "relloc", REL_OFFSET(relloc), DB_LOC_MAXNAME, 0) },
+    { attdef(REL_TABID, ATT_CHA, "relowner", REL_OFFSET(relowner), DB_OWN_MAXNAME, 0) },
+    { attdef(REL_TABID, ATT_CHA, "relid", REL_OFFSET(relid), DB_TAB_MAXNAME, 0) },
+    { attdef(RIDX_TABID, ATT_CHA, "relid", RIDX_OFFSET(relname), DB_TAB_MAXNAME, 1) },
+    { attdef(RIDX_TABID, ATT_CHA, "relowner", RIDX_OFFSET(relowner), DB_OWN_MAXNAME, 2) },
+    { attdef(RIDX_TABID, ATT_INT, "tidp", RIDX_OFFSET(tidp), 4, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attrelid", ATT_OFFSET(attrelid.db_tab_base), 4, 1) },
+    { attdef(ATT_TABID, ATT_INT, "attrelidx", ATT_OFFSET(attrelid.db_tab_index), 4, 2) },
+    { attdef(ATT_TABID, ATT_INT, "attid", ATT_OFFSET(attid), 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attxtra", ATT_OFFSET(attxtra), 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attoff", ATT_OFFSET(attoff), 4, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attfrml", ATT_OFFSET(attfml), 4, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attkdom", ATT_OFFSET(attkey), 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attflag", ATT_OFFSET(attflag), 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attdefid1", ATT_OFFSET(attDefaultID.db_tab_base), 4, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attdefid2", ATT_OFFSET(attDefaultID.db_tab_index), 4, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attintl_id", ATT_OFFSET(attintl_id), 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attver_added", ATT_OFFSET(attver_added), 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attver_dropped", ATT_OFFSET(attver_dropped), 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attval_from", ATT_OFFSET(attval_from), 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attfrmt", ATT_OFFSET(attfmt), 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attfrmp", ATT_OFFSET(attfmp), 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attver_altcol", ATT_OFFSET(attver_altcol), 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attcollid", ATT_OFFSET(attcollID), 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attsrid", ATT_OFFSET(attsrid), 4, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attgeomtype", ATT_OFFSET(attgeomtype), 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attencflags", ATT_OFFSET(attencflags), 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attencwid", ATT_OFFSET(attencwid), 4, 0) },
+    { attdef(ATT_TABID, ATT_BYTE, "attfree", ATT_OFFSET(attfree), 4, 0) },
+    { attdef(ATT_TABID, ATT_CHA, "attname", ATT_OFFSET(attname), DB_ATT_MAXNAME, 0) },
+    { attdef(IND_TABID, ATT_INT, "baseid", IND_OFFSET(baseid), 4, 1) },
+    { attdef(IND_TABID, ATT_INT, "indexid", IND_OFFSET(indexid), 4, 0) },
+    { attdef(IND_TABID, ATT_INT, "sequence", IND_OFFSET(sequence), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom1", IND_OFFSET(idom[0]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom2", IND_OFFSET(idom[1]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom3", IND_OFFSET(idom[2]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom4", IND_OFFSET(idom[3]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom5", IND_OFFSET(idom[4]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom6", IND_OFFSET(idom[5]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom7", IND_OFFSET(idom[6]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom8", IND_OFFSET(idom[7]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom9", IND_OFFSET(idom[8]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom10", IND_OFFSET(idom[9]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom11", IND_OFFSET(idom[10]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom12", IND_OFFSET(idom[11]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom13", IND_OFFSET(idom[12]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom14", IND_OFFSET(idom[13]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom15", IND_OFFSET(idom[14]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom16", IND_OFFSET(idom[15]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom17", IND_OFFSET(idom[16]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom18", IND_OFFSET(idom[17]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom19", IND_OFFSET(idom[18]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom20", IND_OFFSET(idom[19]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom21", IND_OFFSET(idom[20]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom22", IND_OFFSET(idom[21]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom23", IND_OFFSET(idom[22]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom24", IND_OFFSET(idom[23]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom25", IND_OFFSET(idom[24]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom26", IND_OFFSET(idom[25]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom27", IND_OFFSET(idom[26]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom28", IND_OFFSET(idom[27]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom29", IND_OFFSET(idom[28]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom30", IND_OFFSET(idom[29]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom31", IND_OFFSET(idom[30]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom32", IND_OFFSET(idom[31]), 2, 0) },
 #ifdef NOT_UNTIL_CLUSTERED_INDEXES
-    { attdef_int(IND_TAB_ID, "idom33", IND_OFFSET(idom[32]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom34", IND_OFFSET(idom[33]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom35", IND_OFFSET(idom[34]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom36", IND_OFFSET(idom[35]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom37", IND_OFFSET(idom[36]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom38", IND_OFFSET(idom[37]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom39", IND_OFFSET(idom[38]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom40", IND_OFFSET(idom[39]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom41", IND_OFFSET(idom[40]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom42", IND_OFFSET(idom[41]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom43", IND_OFFSET(idom[42]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom44", IND_OFFSET(idom[43]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom45", IND_OFFSET(idom[44]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom46", IND_OFFSET(idom[45]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom47", IND_OFFSET(idom[46]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom48", IND_OFFSET(idom[47]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom49", IND_OFFSET(idom[48]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom50", IND_OFFSET(idom[49]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom51", IND_OFFSET(idom[50]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom52", IND_OFFSET(idom[51]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom53", IND_OFFSET(idom[52]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom54", IND_OFFSET(idom[53]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom55", IND_OFFSET(idom[54]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom56", IND_OFFSET(idom[55]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom57", IND_OFFSET(idom[56]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom58", IND_OFFSET(idom[57]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom59", IND_OFFSET(idom[58]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom60", IND_OFFSET(idom[59]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom61", IND_OFFSET(idom[60]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom62", IND_OFFSET(idom[61]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom63", IND_OFFSET(idom[62]), 2, 0) },
-    { attdef_int(IND_TAB_ID, "idom64", IND_OFFSET(idom[63]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom33", IND_OFFSET(idom[32]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom34", IND_OFFSET(idom[33]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom35", IND_OFFSET(idom[34]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom36", IND_OFFSET(idom[35]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom37", IND_OFFSET(idom[36]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom38", IND_OFFSET(idom[37]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom39", IND_OFFSET(idom[38]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom40", IND_OFFSET(idom[39]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom41", IND_OFFSET(idom[40]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom42", IND_OFFSET(idom[41]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom43", IND_OFFSET(idom[42]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom44", IND_OFFSET(idom[43]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom45", IND_OFFSET(idom[44]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom46", IND_OFFSET(idom[45]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom47", IND_OFFSET(idom[46]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom48", IND_OFFSET(idom[47]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom49", IND_OFFSET(idom[48]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom50", IND_OFFSET(idom[49]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom51", IND_OFFSET(idom[50]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom52", IND_OFFSET(idom[51]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom53", IND_OFFSET(idom[52]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom54", IND_OFFSET(idom[53]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom55", IND_OFFSET(idom[54]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom56", IND_OFFSET(idom[55]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom57", IND_OFFSET(idom[56]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom58", IND_OFFSET(idom[57]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom59", IND_OFFSET(idom[58]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom60", IND_OFFSET(idom[59]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom61", IND_OFFSET(idom[60]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom62", IND_OFFSET(idom[61]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom63", IND_OFFSET(idom[62]), 2, 0) },
+    { attdef(IND_TABID, ATT_INT, "idom64", IND_OFFSET(idom[63]), 2, 0) },
 #endif /* NOT_UNTIL_CLUSTERED_INDEXES */
 };
 
@@ -460,90 +482,91 @@ GLOBALDEF i4 DM_core_index_cnt = CORE_INDEX_COUNT;
 **
 ** And finally, since these are FROZEN, all lengths are defined in terms
 ** of the final V9 values, rather than using DB_TAB_MAXNAME etc.
+** (DSCV9 -> aka Ingres 10.0)
 */
 
-GLOBALDEF DMP_ATTRIBUTE DM_frozen_V9_attributes[] =
+GLOBALDEF DMP_ATTRIBUTE DM_frozen_DSCV9_attributes[] =
 {
-    /* tabid, attname, offset, len, iskey */
-    { attdef_int(REL_TAB_ID, "reltid", -1, 4, 1) },
-    { attdef_int(REL_TAB_ID, "reltidx", -1, 4, 0) },
-    { attdef_cha(REL_TAB_ID, "relid", -1, 256, 0) },
-    { attdef_cha(REL_TAB_ID, "relowner", -1, 32, 0) },
-    { attdef_int(REL_TAB_ID, "relatts", -1, 2, 0) },
-    { attdef_int(REL_TAB_ID, "reltcpri", -1, 2, 0) },
-    { attdef_int(REL_TAB_ID, "relkeys", -1, 2, 0) },
-    { attdef_int(REL_TAB_ID, "relspec", -1, 2, 0) },
-    { attdef_int(REL_TAB_ID, "relstat", -1, 4, 0) },
-    { attdef_int(REL_TAB_ID, "reltups", -1, 4, 0) },
-    { attdef_int(REL_TAB_ID, "relpages", -1, 4, 0) },
-    { attdef_int(REL_TAB_ID, "relprim", -1, 4, 0) },
-    { attdef_int(REL_TAB_ID, "relmain", -1, 4, 0) },
-    { attdef_int(REL_TAB_ID, "relsave", -1, 4, 0) },
-    { attdef_int(REL_TAB_ID, "relstamp1", -1, 4, 0) },
-    { attdef_int(REL_TAB_ID, "relstamp2", -1, 4, 0) },
-    { attdef_cha(REL_TAB_ID, "relloc", -1, 32, 0) },
-    { attdef_int(REL_TAB_ID, "relcmptlvl", -1, 4, 0) },
-    { attdef_int(REL_TAB_ID, "relcreate", -1, 4, 0) },
-    { attdef_int(REL_TAB_ID, "relqid1", -1, 4, 0) },
-    { attdef_int(REL_TAB_ID, "relqid2", -1, 4, 0) },
-    { attdef_int(REL_TAB_ID, "relmoddate", -1, 4, 0) },
-    { attdef_int(REL_TAB_ID, "relidxcount", -1, 2, 0) },
-    { attdef_int(REL_TAB_ID, "relifill", -1, 2, 0) },
-    { attdef_int(REL_TAB_ID, "reldfill", -1, 2, 0) },
-    { attdef_int(REL_TAB_ID, "rellfill", -1, 2, 0) },
-    { attdef_int(REL_TAB_ID, "relmin", -1, 4, 0) },
-    { attdef_int(REL_TAB_ID, "relmax", -1, 4, 0) },
-    { attdef_int(REL_TAB_ID, "relpgsize", -1, 4, 0) },
-    { attdef_int(REL_TAB_ID, "relgwid", -1, 2, 0) },
-    { attdef_int(REL_TAB_ID, "relgwother", -1, 2, 0) },
-    { attdef_int(REL_TAB_ID, "relhigh_logkey", -1, 4, 0) },
-    { attdef_int(REL_TAB_ID, "rellow_logkey", -1, 4, 0) },
-    { attdef_int(REL_TAB_ID, "relfhdr", -1, 4, 0) },
-    { attdef_int(REL_TAB_ID, "relallocation", -1, 4, 0) },
-    { attdef_int(REL_TAB_ID, "relextend", -1, 4, 0) },
-    { attdef_int(REL_TAB_ID, "relcomptype", -1, 2, 0) },
-    { attdef_int(REL_TAB_ID, "relpgtype", -1, 2, 0) },
-    { attdef_int(REL_TAB_ID, "relstat2", -1, 4, 0) },
-    { attdef_free(REL_TAB_ID, "relfree1", -1, 8, 0) },
-    { attdef_int(REL_TAB_ID, "relloccount", -1, 2, 0) },
-    { attdef_int(REL_TAB_ID, "relversion", -1, 2, 0) },
-    { attdef_int(REL_TAB_ID, "relwid", -1, 4, 0) },
-    { attdef_int(REL_TAB_ID, "reltotwid", -1, 4, 0) },
-    { attdef_int(REL_TAB_ID, "reldatawid", -1, 4, 0) },
-    { attdef_int(REL_TAB_ID, "reltotdatawid", -1, 4, 0) },
-    { attdef_int(REL_TAB_ID, "relnparts", -1, 2, 0) },
-    { attdef_int(REL_TAB_ID, "relnpartlevels", -1, 2, 0) },
-    { attdef_int(REL_TAB_ID, "relencflags", -1, 2, 0) },
-    { attdef_int(REL_TAB_ID, "relencver", -1, 2, 0) },
-    { attdef_byte(REL_TAB_ID, "relenckey", -1, 64, 0) },
-    { attdef_free(REL_TAB_ID, "relfree", -1, 12, 0) },
-    { attdef_cha(RIDX_TAB_ID, "relid", -1, 256, 1) },
-    { attdef_cha(RIDX_TAB_ID, "relowner", -1, 32, 2) },
-    { attdef_int(RIDX_TAB_ID, "tidp", -1, 4, 0) },
-    { attdef_int(ATT_TAB_ID, "attrelid", -1, 4, 1) },
-    { attdef_int(ATT_TAB_ID, "attrelidx", -1, 4, 2) },
-    { attdef_int(ATT_TAB_ID, "attid", -1, 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attxtra", -1, 2, 0) },
-    { attdef_cha(ATT_TAB_ID, "attname", -1, 256, 0) },
-    { attdef_int(ATT_TAB_ID, "attoff", -1, 4, 0) },
-    { attdef_int(ATT_TAB_ID, "attfrml", -1, 4, 0) },
-    { attdef_int(ATT_TAB_ID, "attkdom", -1, 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attflag", -1, 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attdefid1", -1, 4, 0) },
-    { attdef_int(ATT_TAB_ID, "attdefid2", -1, 4, 0) },
-    { attdef_int(ATT_TAB_ID, "attintl_id", -1, 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attver_added", -1, 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attver_dropped", -1, 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attval_from", -1, 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attfrmt", -1, 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attfrmp", -1, 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attver_altcol", -1, 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attcollid", -1, 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attsrid", -1, 4, 0) },
-    { attdef_int(ATT_TAB_ID, "attgeomtype", -1, 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attencflags", -1, 2, 0) },
-    { attdef_int(ATT_TAB_ID, "attencwid", -1, 4, 0) },
-    { attdef_free(ATT_TAB_ID, "attfree", -1, 4, 0) },
+    /* tabid, type, attname, offset, len, iskey */
+    { attdef(REL_TABID, ATT_INT, "reltid", -1, 4, 1) },
+    { attdef(REL_TABID, ATT_INT, "reltidx", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relatts", -1, 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "reltcpri", -1, 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relkeys", -1, 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relspec", -1, 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relstat", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relstat2", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "reltups", -1, 8, 0) },
+    { attdef(REL_TABID, ATT_INT, "relpages", -1, 8, 0) },
+    { attdef(REL_TABID, ATT_INT, "relprim", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relmain", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relsave", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relstamp1", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relstamp2", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relcmptlvl", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relcreate", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relqid1", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relqid2", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relmoddate", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relidxcount", -1, 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relifill", -1, 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "reldfill", -1, 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "rellfill", -1, 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relmin", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relmax", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relpgsize", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relgwid", -1, 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relgwother", -1, 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relhigh_logkey", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "rellow_logkey", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relfhdr", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relallocation", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relextend", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relcomptype", -1, 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relpgtype", -1, 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relloccount", -1, 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relversion", -1, 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relwid", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "reltotwid", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "reldatawid", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "reltotdatawid", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relattnametot", -1, 4, 0) },
+    { attdef(REL_TABID, ATT_INT, "relnparts", -1, 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relnpartlevels", -1, 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relencflags", -1, 2, 0) },
+    { attdef(REL_TABID, ATT_INT, "relencver", -1, 2, 0) },
+    { attdef(REL_TABID, ATT_BYTE, "relenckey", -1, 64, 0) },
+    { attdef(REL_TABID, ATT_BYTE, "relfree", -1, 16, 0) },
+    { attdef(REL_TABID, ATT_CHA, "relloc", -1, 32, 0) },
+    { attdef(REL_TABID, ATT_CHA, "relowner", -1, 32, 0) },
+    { attdef(REL_TABID, ATT_CHA, "relid", -1, 256, 0) },
+    { attdef(RIDX_TABID, ATT_CHA, "relid", -1, 256, 1) },
+    { attdef(RIDX_TABID, ATT_CHA, "relowner", -1, 32, 2) },
+    { attdef(RIDX_TABID, ATT_INT, "tidp", -1, 4, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attrelid", -1, 4, 1) },
+    { attdef(ATT_TABID, ATT_INT, "attrelidx", -1, 4, 2) },
+    { attdef(ATT_TABID, ATT_INT, "attid", -1, 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attxtra", -1, 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attoff", -1, 4, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attfrml", -1, 4, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attkdom", -1, 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attflag", -1, 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attdefid1", -1, 4, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attdefid2", -1, 4, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attintl_id", -1, 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attver_added", -1, 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attver_dropped", -1, 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attval_from", -1, 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attfrmt", -1, 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attfrmp", -1, 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attver_altcol", -1, 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attcollid", -1, 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attsrid", -1, 4, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attgeomtype", -1, 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attencflags", -1, 2, 0) },
+    { attdef(ATT_TABID, ATT_INT, "attencwid", -1, 4, 0) },
+    { attdef(ATT_TABID, ATT_BYTE, "attfree", -1, 4, 0) },
+    { attdef(ATT_TABID, ATT_CHA, "attname", -1, 256, 0) },
 };
 
-GLOBALDEF i4 DM_frozen_V9_att_cnt = sizeof(DM_frozen_V9_attributes) / sizeof(DMP_ATTRIBUTE); 
+GLOBALDEF i4 DM_frozen_DSCV9_att_cnt = sizeof(DM_frozen_DSCV9_attributes) / sizeof(DMP_ATTRIBUTE); 

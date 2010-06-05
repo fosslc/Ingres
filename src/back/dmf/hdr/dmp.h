@@ -525,6 +525,8 @@
 **          dmt_set_lock_values also. You'll also need to update/add to 
 **          dub_mandflags in dubdata.c which is the list of tables with 
 **          mandatory flags
+**      14-May-2010 (stial01)
+**          Added relattnametot to iirelation
 */
 
 /*
@@ -3212,11 +3214,6 @@ struct _DMP_TCB
     i4		    tcb_atts_size;
     i4		    tcb_atts_used;
 
-    DMP_MISC	    *tcb_atts_o_misc;
-    PTR		    tcb_atts_o_names;
-    i4		    tcb_atts_o_size;
-    i4		    tcb_atts_o_used;
-
     DMP_ROWACCESS   tcb_data_rac;	    /* Row access info for base data
 					    ** row;  including att pointer
 					    ** array and number of atts
@@ -3850,6 +3847,7 @@ SESSION_TEMP,BSWAP"
      i4              reltotwid;             /* Tot Width in bytes of table record.*/
      i4              reldatawid;	    /* Width in bytes of data.*/
      i4              reltotdatawid;         /* Tot Width in bytes of data.*/
+     i4              relattnametot;		    /* Size of column names */
      u_i2	     relnparts;		    /* Total physical partitions, zero
 					    ** (not 1) for unpartitioned tables
 					    ** Overloaded to mean physical
@@ -3875,7 +3873,7 @@ SESSION_TEMP,BSWAP"
 ** an even multiple of 8 in size you should adjust relfree appropriately
 ** (also see hard-coded definitions in dmmdata.c)
 */
-     char	     relfree[20];	    /* Reserved for future use. */
+     char	     relfree[16];	    /* Reserved for future use. */
      DB_LOC_NAME     relloc;                /* ingres location of a table. */
      DB_OWN_NAME     relowner;              /* Table owner. */
      DB_TAB_NAME     relid;                 /* Table name. */

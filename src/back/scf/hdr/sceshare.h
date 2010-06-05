@@ -40,16 +40,27 @@
 **	    replace nat and longnat with i4
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      14-May-2010 (stial01)
+**          Increase SCEV_BLOCK_MAX for Long IDs
 **/
 
 /*
 ** Maximum length for all event data.  Must include at least event name
 ** (DB_ALERT_NAME), date (DB_DATE) and varying length user data.  Note that
 ** the date is only part of alerters and need not be in all-purpose events.
+**
+** Generally (scfa_text_length) is limited to DB_EVDATA_MAX (256)
+** but rdf event data can be bigger:
+**    rdfinvalid.c rdf_inv_alert()->scf_call()->sce_raise()
+** where scfa_text_length = RDF_SCE_DATASIZE ... sizeof(PID)+sizeof(RDR_RB)
+**
+** We don't have access to RDF structures here .. but make sure 
+** SCEV_BLOCK_MAX includes sizeof big fields in RDR_RB
+**
 */
 #define	    SCEV_NAME_MAX	sizeof(DB_ALERT_NAME)
 
-#define	    SCEV_BLOCK_MAX	(640 + DB_EVENT_MAXNAME) /* max event data */
+#define	    SCEV_BLOCK_MAX	(640 + DB_EVENT_MAXNAME + DB_OWN_MAXNAME + DB_OBJ_MAXNAME) /* max event data */
 
 /*}
 ** Name: SCEV_EVENT - For communicating with the cross-server event subsystem.

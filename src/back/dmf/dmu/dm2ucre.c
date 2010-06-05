@@ -439,6 +439,8 @@
 **      10-Feb-2010 (maspa05) b122651
 **          Added TCB2_PHYSLOCK_CONCUR to iidevices and iisequence as this is 
 **          how we check for the need for physical locks now
+**      14-May-2010 (stial01)
+**          Alloc/maintain exact size of column names (iirelation.relattnametot)
 **/
 
 /*
@@ -1063,6 +1065,9 @@ DB_ERROR	    *errcb)
     u_char		*dmu_enc_passphrase;
     u_char		*dmu_enc_aeskey;
     u_i2		dmu_enc_aeskeylen;
+    i4			alen;
+    i4			attnmsz;
+    char		*cp;
 
     /* List of all the system catalogs with fixed table ID numbers.
     ** Any ii-table excluding blob etabs and user partitions that
@@ -2165,6 +2170,13 @@ DB_ERROR	    *errcb)
 	    } /* ! nofile-create */
 	} /* any locations */
 
+	for (i = 0, attnmsz = 0; i < attr_count; i++)
+	{
+	    for (alen = DB_ATT_MAXNAME;  
+		attr_entry[i]->attr_name.db_att_name[alen-1] == ' ' 
+			&& alen >= 1; alen--);
+	    attnmsz += alen;
+	}
 
 	/*
 	** Build IIRELATION row for the new table being created.
@@ -2187,6 +2199,7 @@ DB_ERROR	    *errcb)
 	}
 	MEcopy((PTR)owner, sizeof(DB_OWN_NAME), (PTR)&relrecord.relowner);
 	relrecord.relatts = attr_count;
+	relrecord.relattnametot = attnmsz;
 	relrecord.relwid = ntab_width;
 	relrecord.reltotwid = ntab_width;	        
 	relrecord.reldatawid = ntab_data_width;	        

@@ -379,6 +379,8 @@
 **          Fix the for loop condition for the attnmstr initialization
 **	13-may-2010 (miket) SIR 122403
 **	    Fix net-change logic for width for ALTER TABLE.
+**      14-May-2010 (stial01)
+**          Alloc/maintain exact size of column names (iirelation.relattnametot)
 **/
 
 /*{
@@ -3266,6 +3268,8 @@ DB_ERROR	*dberr)
     DB_TAB_TIMESTAMP	timestamp;
     DM_OBJECT		*locs_mem;
     i4			error;
+    i4			alen;
+    i4			attnmsz = 0;
 
     CLRDBERR(dberr);
 
@@ -3319,6 +3323,13 @@ DB_ERROR	*dberr)
 	** Everything is set now, build a relation record for the
 	** temporary table index.
 	*/
+	for ( i = 1; i <= AttCount; i++)
+	{
+	    for (alen = DB_ATT_MAXNAME;  
+		AttList[i-1]->attr_name.db_att_name[alen-1] == ' ' 
+			&& alen >= 1; alen--);
+	    attnmsz += alen;
+	}
 
 	MEcopy((char*)idx->indxcb_index_name, sizeof(DB_TAB_NAME), 
 		(char*)&relrecord.relid);
@@ -3332,6 +3343,7 @@ DB_ERROR	*dberr)
 	relrecord.relloccount = idx->indxcb_l_count;
 
 	relrecord.relatts = AttCount;
+	relrecord.relattnametot = attnmsz;
 	relrecord.relwid = m->mx_width;	        
 	relrecord.reltotwid = m->mx_width;	        
 	relrecord.reldatawid = m->mx_width;	        

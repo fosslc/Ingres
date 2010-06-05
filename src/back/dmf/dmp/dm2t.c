@@ -1057,6 +1057,8 @@ NO_OPTIM=dr6_us5
 **          but not rollback. 
 **          Change tests for TCB_CONCUR (for locking) to TCB2_PHYSLOCK_CONCUR
 **          as all TCB_CONCUR now have TCB2_PHYSLOCK_CONCUR as well
+**      14-May-2010 (stial01)
+**          Alloc/maintain exact size of column names (iirelation.relattnametot)
 */
 
 GLOBALREF	DMC_CRYPT	*Dmc_crypt;
@@ -5304,8 +5306,6 @@ DB_ERROR	*dberr)
 
 	    dm0s_mrelease(&it->tcb_et_mutex);
 	    dm0s_mrelease(&it->tcb_mutex);
-	    if (it->tcb_atts_o_misc)
-		dm0m_deallocate((DM_OBJECT **)&it->tcb_atts_o_misc);
 	    dm0m_deallocate((DM_OBJECT **)&it);
 	}
 	if (status != E_DB_OK)
@@ -5391,8 +5391,6 @@ DB_ERROR	*dberr)
 	dm0s_mrelease(&t->tcb_et_mutex);
 	dm0s_mrelease(&t->tcb_mutex);
 	/* deallocate and obliterate caller's TCB pointer */
-	if (t->tcb_atts_o_misc)
-	    dm0m_deallocate((DM_OBJECT **)&t->tcb_atts_o_misc);
 	dm0m_deallocate((DM_OBJECT **)tcb);
 	/* Return with hash mutex still locked */
 	return (E_DB_OK);
@@ -6771,6 +6769,15 @@ bool		    from_online_modify)
 	else
 	    BaseTCB = (DMP_TCB*)NULL;
 
+	relation->relattnametot = 0;
+	for ( i = 0; i < attr_count; i++)
+	{
+	    for (alen = DB_ATT_MAXNAME;  
+		attr_array[i]->attr_name.db_att_name[alen-1] == ' ' 
+			&& alen >= 1; alen--);
+	    relation->relattnametot += alen;
+	}
+
 	reclaimed = FALSE;
 	for (;;)
 	{
@@ -6909,25 +6916,11 @@ bool		    from_online_modify)
 	    t->tcb_atts_ptr[i].encflags = 0;
 	    t->tcb_atts_ptr[i].encwid = 0;
 
-	    /* see if we need more space for attribute name */
+	    /* make sure we have space for attribute name */
 	    if (t->tcb_atts_used + alen + 1 > t->tcb_atts_size)
 	    {
-		i4	attnmsz;
-#ifdef xDEBUG
-TRdisplay("Alloc overflow name buf for %~t\n", 
-DB_TAB_MAXNAME, t->tcb_rel.relid.db_tab_name);
-#endif
-
-		attnmsz = ((attr_count - i) + 1) * sizeof(DB_ATT_STR);
-		status = dm0m_allocate( sizeof(DMP_MISC) + attnmsz,
-		    (i4)DM0M_LONGTERM, (i4)MISC_CB, (i4)MISC_ASCII_ID,
-		    (char *)t, (DM_OBJECT **)&t->tcb_atts_o_misc, dberr);
-		if (status != E_DB_OK)
-		    break;
-	        t->tcb_atts_o_names = (char*)t->tcb_atts_o_misc + 
-			sizeof(DMP_MISC);
-	        t->tcb_atts_o_size = attnmsz;
-		nextattname = t->tcb_atts_o_names;
+		SETDBERR(dberr, 0, E_DM0075_BAD_ATTRIBUTE_ENTRY);
+		break;
 	    }
 
 	    a->attnmlen = alen;
@@ -7319,8 +7312,6 @@ DB_TAB_MAXNAME, t->tcb_rel.relid.db_tab_name);
 	/* TCB mutexes must be destroyed */
 	dm0s_mrelease(&t->tcb_mutex);
 	dm0s_mrelease(&t->tcb_et_mutex);
-	if (t->tcb_atts_o_misc)
-	    dm0m_deallocate((DM_OBJECT **)&t->tcb_atts_o_misc);
 	dm0m_deallocate((DM_OBJECT **)&t);
     }
     return (E_DB_ERROR);
@@ -9380,8 +9371,6 @@ DB_ERROR	*dberr)
 	/* TCB mutexes must be destroyed */
 	dm0s_mrelease(&tcb->tcb_mutex);
 	dm0s_mrelease(&tcb->tcb_et_mutex);
-	if (tcb->tcb_atts_o_misc)
-	    dm0m_deallocate((DM_OBJECT **)&tcb->tcb_atts_o_misc);
 	dm0m_deallocate((DM_OBJECT **)&tcb);
     }
 
@@ -11178,8 +11167,6 @@ DB_ERROR	*dberr)
 		    /* TCB mutexes must be destroyed */
 		    dm0s_mrelease(&tcb_ptr->tcb_mutex);
 		    dm0s_mrelease(&tcb_ptr->tcb_et_mutex);
-		    if (tcb->tcb_atts_o_misc)
-			dm0m_deallocate((DM_OBJECT **)&tcb->tcb_atts_o_misc);
 		    dm0m_deallocate((DM_OBJECT **)&tcb_ptr);
 		}
 	    }
@@ -11508,8 +11495,6 @@ DB_ERROR	*dberr)
 	if (dummy_tcb->tcb_status & TCB_WAIT)
 	    dm0s_erelease(lock_id, DM0S_TCBWAIT_EVENT,
 		dummy_tcb->tcb_unique_id);
-	if (dummy_tcb->tcb_atts_o_misc)
-	    dm0m_deallocate((DM_OBJECT **)&dummy_tcb->tcb_atts_o_misc);
 	dm0m_deallocate((DM_OBJECT **)&dummy_tcb);
 
 	/*
@@ -11696,8 +11681,6 @@ DB_ERROR	*dberr)
 
 	dm0s_mrelease(&tcb->tcb_et_mutex);
 	dm0s_mrelease(&tcb->tcb_mutex);
-	if (tcb->tcb_atts_o_misc)
-	    dm0m_deallocate((DM_OBJECT **)&tcb->tcb_atts_o_misc);
 	dm0m_deallocate((DM_OBJECT **)&tcb);
     }
 
@@ -11731,8 +11714,6 @@ DB_ERROR	*dberr)
 	if (dummy_tcb->tcb_status & TCB_WAIT)
 	    dm0s_erelease(lock_id, DM0S_TCBWAIT_EVENT,
 		dummy_tcb->tcb_unique_id);
-	if (dummy_tcb->tcb_atts_o_misc)
-	    dm0m_deallocate((DM_OBJECT **)&dummy_tcb->tcb_atts_o_misc);
 	dm0m_deallocate((DM_OBJECT **)&dummy_tcb);
     }
 
@@ -12525,25 +12506,11 @@ DB_ERROR	*dberr)
 		attribute.attname.db_att_name[alen-1] == ' ' && alen >= 1; 
 			alen--);
 
-	    /* see if we need more space for attribute name */
+	    /* make sure we have space for attribute name */
 	    if (t->tcb_atts_used + alen + 1 > t->tcb_atts_size)
 	    {
-		i4	attnmsz;
-#ifdef xDEBUG
-TRdisplay("Alloc overflow name buf for %~t\n", 
-DB_TAB_MAXNAME, t->tcb_rel.relid.db_tab_name);
-#endif
-
-		attnmsz = ((t->tcb_rel.relatts - att_count) + 1) * sizeof(DB_ATT_STR);
-		status = dm0m_allocate( sizeof(DMP_MISC) + attnmsz,
-		    (i4)DM0M_LONGTERM, (i4)MISC_CB, (i4)MISC_ASCII_ID,
-		    (char *)t, (DM_OBJECT **)&t->tcb_atts_o_misc, dberr);
-		if (status != E_DB_OK)
-		    break;
-	        t->tcb_atts_o_names = (char*)t->tcb_atts_o_misc + 
-			sizeof(DMP_MISC);
-	        t->tcb_atts_o_size = attnmsz;
-		nextattname = t->tcb_atts_o_names;
+		SETDBERR(dberr, 0, E_DM0075_BAD_ATTRIBUTE_ENTRY);
+		break;
 	    }
 
 	    a->attnmlen = alen;
@@ -13358,8 +13325,6 @@ DB_ERROR	*dberr)
 		    /* TCB mutexes must be destroyed */
 		    dm0s_mrelease(&t->tcb_mutex);
 		    dm0s_mrelease(&t->tcb_et_mutex);
-		    if (t->tcb_atts_o_misc)
-			dm0m_deallocate((DM_OBJECT **)&t->tcb_atts_o_misc);
 		    dm0m_deallocate((DM_OBJECT **)&t);
 		}
 	    }
@@ -15622,7 +15587,6 @@ DB_ERROR	*dberr)
     bool                blobs = FALSE;
     char		*cptr;
     DB_ATTS		*a;
-    i4			avg_nmsz;
 
     /*
     ** Compute the sizes of all the extensions to the TCB.
@@ -15640,14 +15604,22 @@ DB_ERROR	*dberr)
 	    {
 		atts_size      = (rel->relatts + 1) * sizeof(DB_ATTS);
 
-		if (rel->relstat & TCB_CONCUR)
-		    avg_nmsz = 16; /* MUST be big enough, no overflow */
-		else if (rel->relstat & TCB_CATALOG)
-		    avg_nmsz = 24; 
+		/* attribute name size plus null for each attribute */
+		if (rel->relattnametot <= 0)
+		{
+		    TRdisplay("dm2t_alloc_tcb %~t FIXING %d \n", DB_TAB_MAXNAME,
+			rel->relid.db_tab_name, rel->relattnametot);
+		    attnmsz = rel->relatts * DB_ATT_MAXNAME;
+		}
 		else
-		    avg_nmsz = 32; /* might not be big enough */
+		{
+		    attnmsz = rel->relattnametot + rel->relatts; 
+		}
 
-		attnmsz = (rel->relatts + 1) * avg_nmsz;
+		/* Always make sure attnmsz is enough for core catalogs */
+		if ((rel->relstat & TCB_CONCUR) && attnmsz <  24*rel->relatts)
+		    attnmsz = 24 * rel->relatts;
+
 		attnmsz = DB_ALIGN_MACRO(attnmsz);
 
 		data_atts_size = (rel->relatts * sizeof(DB_ATTS *));
@@ -15866,10 +15838,6 @@ DB_ERROR	*dberr)
     t->tcb_rngklen = 0;
 
     t->tcb_atts_used = 0;
-    t->tcb_atts_o_misc = NULL;
-    t->tcb_atts_o_names = NULL;
-    t->tcb_atts_o_size = 0;
-    t->tcb_atts_o_used = 0;
 
     if (data_cmpcontrol_size)
     {

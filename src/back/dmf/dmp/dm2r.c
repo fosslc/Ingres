@@ -981,6 +981,8 @@ NO_OPTIM=dr6_us5 i64_aix
 **      10-Feb-2010 (maspa05) bug 122651, trac 442
 **          Changed test for iisequence for physical locking to a more
 **          generic one using a new relstat2 flag, TCB2_PHYSLOCK_CONCUR
+**      14-May-2010 (stial01)
+**          More changes for Long IDs
 */
 
 static DB_STATUS BuildRtreeRecord(
@@ -5457,7 +5459,7 @@ dm2r_put(
 	    (*r->rcb_xcb_ptr->xcb_scb_ptr->scb_dbxlate & CUI_ID_REG_U) ? 
 	    DD_INPUT_QUEUE_U : DD_INPUT_QUEUE, DD_INPUT_QUEUE_SIZE) == 0) &&
 	(STskipblank(t->tcb_rel.relid.db_tab_name + DD_INPUT_QUEUE_SIZE, 
-	    DB_MAXNAME - DD_INPUT_QUEUE_SIZE)) == NULL)
+	    sizeof(DB_TAB_NAME) - DD_INPUT_QUEUE_SIZE)) == NULL)
     {
 	MEcopy(record + 2, sizeof(r->rcb_xcb_ptr->xcb_rep_remote_tx), 
 			(char *)&r->rcb_xcb_ptr->xcb_rep_remote_tx);
@@ -6307,7 +6309,7 @@ DB_ERROR	    *dberr )
 		    DD_INPUT_QUEUE_U : DD_INPUT_QUEUE,
 		    DD_INPUT_QUEUE_SIZE) == 0) &&
 		(STskipblank(t->tcb_rel.relid.db_tab_name + DD_INPUT_QUEUE_SIZE, 
-		    DB_MAXNAME - DD_INPUT_QUEUE_SIZE)) == NULL)
+		    sizeof(DB_TAB_NAME) - DD_INPUT_QUEUE_SIZE)) == NULL)
 	{
 	    /*
 	    ** user is updating the input queue, set up input_q value

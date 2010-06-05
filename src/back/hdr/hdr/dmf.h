@@ -345,6 +345,8 @@
 **          Added E_DM016B_LOCK_INTR_FA
 **	15-feb-2010 (toumi01)
 **	    Add attribute fields and messages for column encryption.
+**      14-May-2010 (stial01)
+**          Make attname the last col in iiattribute (DM_COLUMN)
 [@history_template@]...
 **/
 
@@ -1701,7 +1703,6 @@ struct _DM_COLUMN
 					    ** field will vary from gateway to
 					    ** gateway.
 					    */
-     DB_ATT_NAME     attname;               /* Attribute name. */
      i4              attoff;                /* Offset in bytes of attribute
                                             ** in record. */
      i4              attfml;                /* Length in bytes. */
@@ -1783,6 +1784,7 @@ struct _DM_COLUMN
 #define		ATT_ENCRYPT_CRC		0x0004	/* verifying CRC added */
      i4		     attencwid;		    /* encrypted net width */
      char	     attfree[4];	    /*   F R E E   S P A C E   */
+     DB_ATT_NAME     attname;               /* Attribute name. */
 };
 
 /*}

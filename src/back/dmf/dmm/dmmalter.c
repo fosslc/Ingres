@@ -93,6 +93,8 @@
 **	10-Dec-2008 (jonj)
 **	    SIR 120874: Remove last vestiges of CL_SYS_ERR,
 **	    old form uleFormat.
+**      14-May-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -219,7 +221,7 @@ DMM_CB    *dmm_cb)
     i4	    		*err_code = &dmm->error.err_code;
     char	    	*physical_name;
     char	    	location_buffer[132];
-    char	    	db_buffer[DB_MAXNAME+1];
+    char	    	db_buffer[sizeof(DB_DB_NAME)+1];
     LOCATION	    	cl_loc;
     CL_ERR_DESC	    	sys_err;
     DI_IO	    	di_context;
@@ -270,8 +272,8 @@ DMM_CB    *dmm_cb)
 	dmm->dmm_db_location.data_in_size,
 	location_buffer);
     location_buffer[dmm->dmm_db_location.data_in_size] = 0;
-    MEcopy((PTR)&dmm->dmm_db_name, sizeof(dmm->dmm_db_name), db_buffer);
-    db_buffer[sizeof(dmm->dmm_db_name)] = 0;
+    MEcopy(dmm->dmm_db_name.db_db_name, sizeof(DB_DB_NAME), db_buffer);
+    db_buffer[sizeof(DB_DB_NAME)] = 0;
     STtrmwhite(db_buffer);
     db_length = STlength(db_buffer);
     LOingpath(location_buffer, db_buffer, LO_DB, &cl_loc);
@@ -489,7 +491,7 @@ DMM_CB    *dmm_cb)
     i4		    local_error;
     char	    *physical_name;
     char	    location_buffer[132];
-    char	    db_buffer[DB_MAXNAME+1];
+    char	    db_buffer[sizeof(DB_DB_NAME)+1];
     LOCATION	    cl_loc;
     CL_ERR_DESC	    sys_err;
     DI_IO	    di_context;
@@ -542,8 +544,8 @@ DMM_CB    *dmm_cb)
 	dmm->dmm_db_location.data_in_size,
 	location_buffer);
     location_buffer[dmm->dmm_db_location.data_in_size] = 0;
-    MEcopy((PTR)&dmm->dmm_db_name, sizeof(dmm->dmm_db_name), db_buffer);
-    db_buffer[sizeof(dmm->dmm_db_name)] = 0;
+    MEcopy(dmm->dmm_db_name.db_db_name, sizeof(DB_DB_NAME), db_buffer);
+    db_buffer[sizeof(DB_DB_NAME)] = 0;
     STtrmwhite(db_buffer);
     db_length = STlength(db_buffer);
     LOingpath(location_buffer, db_buffer, LO_DB, &cl_loc);

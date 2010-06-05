@@ -157,6 +157,8 @@
 **         Fixed previous (bad) integration to head rev.
 **	13-may-2010 (miket) SIR 122403
 **	    Fix net-change logic for width for ALTER TABLE.
+**      14-May-2010 (stial01)
+**          Alloc/maintain exact size of column names (iirelation.relattnametot)
 **          
 **/
 
@@ -373,8 +375,8 @@ DB_ERROR	*dberr)
     DMP_RCB             *attr_rcb = (DMP_RCB *) 0;
     DMP_TCB             *t;
     DMP_RELATION        relrecord;
-    DMP_ATTRIBUTE       attrrecord;
-    DMP_ATTRIBUTE	attrrecord_tmp;
+    DMP_ATTRIBUTE       att_rec;
+    DMP_ATTRIBUTE	att_rec_tmp;
     i4             i;
     DB_TAB_TIMESTAMP    timestamp;
     i4             error;
@@ -421,6 +423,7 @@ DB_ERROR	*dberr)
     DM_TID		idxtid;
     DB_TAB_ID		idx_tabid;
     i4			max;
+    i4			nsz;
     DB_ERROR		local_dberr;
     DB_ATT_NAME		tmpattnm;
 
@@ -700,23 +703,23 @@ DB_ERROR	*dberr)
                for (;;)
                {
                    status = dm2r_get(attr_rcb, &attrtid, DM2R_GETNEXT,
-                                     (char *)&attrrecord, dberr);
+                                     (char *)&att_rec, dberr);
 
                    if (status == E_DB_OK)
                    {
 
-                      if ((attrrecord.attrelid.db_tab_base ==
+                      if ((att_rec.attrelid.db_tab_base ==
 		     				 table_id.db_tab_base) &&
-                    	  (attrrecord.attrelid.db_tab_index ==
+                    	  (att_rec.attrelid.db_tab_index ==
 			 			 table_id.db_tab_index))
 		      {
 
-		          if (attrrecord.attintl_id > hold_attintl_id)
-			     hold_attintl_id = attrrecord.attintl_id;
+		          if (att_rec.attintl_id > hold_attintl_id)
+			     hold_attintl_id = att_rec.attintl_id;
 
-		          if ((attrrecord.attid > hold_attid) &&
-                              (!attrrecord.attver_dropped))
-                             hold_attid = attrrecord.attid;
+		          if ((att_rec.attid > hold_attid) &&
+                              (!att_rec.attver_dropped))
+                             hold_attid = att_rec.attid;
 		      }
                       continue;
                    }
@@ -725,40 +728,40 @@ DB_ERROR	*dberr)
 		   ** Init ALL fields of new att record
 		   ** Do NOT assume that at the end of dm2r_get calls
 		   ** that it contains an attribute for this table
-		   ** (attrrecord buf was used by dm2r_get to uncompress
+		   ** (att_rec buf was used by dm2r_get to uncompress
 		   ** rows before comparing the key we gave
 		   */
-		   MEfill(sizeof(attrrecord), 0, (char *)&attrrecord); 
+		   MEfill(sizeof(att_rec), 0, (char *)&att_rec); 
                    if (status == E_DB_ERROR && dberr->err_code == E_DM0055_NONEXT)
                    {
-                      attrrecord.attrelid = table_id;
-                      attrrecord.attid = ++hold_attid;
-                      attrrecord.attxtra = 0;
-                      attrrecord.attoff = relrecord.relwid;
-                      attrrecord.attfmt = attr_entry[0]->attr_type;
-                      attrrecord.attfml = attr_entry[0]->attr_size;
-                      attrrecord.attfmp = attr_entry[0]->attr_precision;
-                      attrrecord.attkey = 0;
-                      attrrecord.attflag = attr_entry[0]->attr_flags_mask;
+                      att_rec.attrelid = table_id;
+                      att_rec.attid = ++hold_attid;
+                      att_rec.attxtra = 0;
+                      att_rec.attoff = relrecord.relwid;
+                      att_rec.attfmt = attr_entry[0]->attr_type;
+                      att_rec.attfml = attr_entry[0]->attr_size;
+                      att_rec.attfmp = attr_entry[0]->attr_precision;
+                      att_rec.attkey = 0;
+                      att_rec.attflag = attr_entry[0]->attr_flags_mask;
                       COPY_DEFAULT_ID( attr_entry[0]->attr_defaultID,
-                                      attrrecord.attDefaultID );
+                                      att_rec.attDefaultID );
                       STRUCT_ASSIGN_MACRO(attr_entry[0]->attr_name,
-                                             attrrecord.attname);
-                      attrrecord.attintl_id = ++hold_attintl_id;
-                      attrrecord.attver_added = (relrecord.relversion + 1);
-                      attrrecord.attver_dropped = 0;
-                      attrrecord.attver_altcol = 0;
-                      attrrecord.attval_from = 0;
-                      attrrecord.attcollID = attr_entry[0]->attr_collID;
-                      attrrecord.attgeomtype = attr_entry[0]->attr_geomtype;
-                      attrrecord.attsrid = attr_entry[0]->attr_srid;
-                      attrrecord.attencflags = attr_entry[0]->attr_encflags;
-                      attrrecord.attencwid = attr_entry[0]->attr_encwid;
-                      MEfill(sizeof(attrrecord.attfree), 0,
-                             (PTR)&attrrecord.attfree);
+                                             att_rec.attname);
+                      att_rec.attintl_id = ++hold_attintl_id;
+                      att_rec.attver_added = (relrecord.relversion + 1);
+                      att_rec.attver_dropped = 0;
+                      att_rec.attver_altcol = 0;
+                      att_rec.attval_from = 0;
+                      att_rec.attcollID = attr_entry[0]->attr_collID;
+                      att_rec.attgeomtype = attr_entry[0]->attr_geomtype;
+                      att_rec.attsrid = attr_entry[0]->attr_srid;
+                      att_rec.attencflags = attr_entry[0]->attr_encflags;
+                      att_rec.attencwid = attr_entry[0]->attr_encwid;
+                      MEfill(sizeof(att_rec.attfree), 0,
+                             (PTR)&att_rec.attfree);
 
                       status = dm2r_put(attr_rcb, DM2R_DUPLICATES,
-                                        (char *)&attrrecord, dberr);
+                                        (char *)&att_rec, dberr);
 
                       if (status != E_DB_OK)
                       {
@@ -781,11 +784,16 @@ DB_ERROR	*dberr)
 
                 }   /* end of for (;;) */
 
+		for (nsz = DB_ATT_MAXNAME;  
+		    att_rec_tmp.attname.db_att_name[nsz-1] == ' '
+			    && nsz >= 1; nsz--);
+
                 relrecord.relatts++;
-                relrecord.relwid += attrrecord.attfml;
-		relrecord.reltotwid += attrrecord.attfml;
-		relrecord.reldatawid += attrrecord.attfml;
-		relrecord.reltotdatawid += attrrecord.attfml;
+                relrecord.relwid += att_rec.attfml;
+		relrecord.reltotwid += att_rec.attfml;
+		relrecord.reldatawid += att_rec.attfml;
+		relrecord.reltotdatawid += att_rec.attfml;
+                relrecord.relattnametot += nsz;
 
 		/* If we added a peripheral column, create the etab */
 		status = adi_dtinfo(&adf_scb, attr_entry[0]->attr_type, 
@@ -803,7 +811,7 @@ DB_ERROR	*dberr)
 			    0, /* page_size determined in dmpe */
 			    t->tcb_table_io.tbio_location_array,
 			    t->tcb_table_io.tbio_loc_count,
-			    attrrecord.attid, attrrecord.attfmt, 
+			    att_rec.attid, att_rec.attfmt, 
 			    &etab_record, dberr);
 		    
 		    if (status != E_DB_OK)
@@ -855,25 +863,25 @@ DB_ERROR	*dberr)
                for (;;)
                {
                    status = dm2r_get(attr_rcb, &attrtid, DM2R_GETNEXT,
-                                     (char *)&attrrecord, dberr);
+                                     (char *)&att_rec, dberr);
 
 		   if (status == E_DB_OK) 
 		   {
-                      if (attrrecord.attrelid.db_tab_base ==
+                      if (att_rec.attrelid.db_tab_base ==
 		     				 table_id.db_tab_base &&
-                          attrrecord.attrelid.db_tab_index ==
+                          att_rec.attrelid.db_tab_index ==
 			 			 table_id.db_tab_index &&  
-			  attrrecord.attver_dropped == 0)
+			  att_rec.attver_dropped == 0)
 		      {
-			  if (attrrecord.attintl_id == dropped_col_intlid)
+			  if (att_rec.attintl_id == dropped_col_intlid)
 			  {
-		             attrrecord.attver_dropped =
+		             att_rec.attver_dropped =
 			    			 (relrecord.relversion + 1);
-		      	     relrecord.relwid -= attrrecord.attfml;
-		      	     relrecord.reldatawid -= attrrecord.attfml;
+		      	     relrecord.relwid -= att_rec.attfml;
+		      	     relrecord.reldatawid -= att_rec.attfml;
 
             	      	     status = dm2r_replace(attr_rcb, &attrtid,
-			    		  DM2R_BYPOSITION, (char *)&attrrecord,
+			    		  DM2R_BYPOSITION, (char *)&att_rec,
 					  (char *)0, dberr);
 
             	      	     if (status != E_DB_OK)
@@ -884,14 +892,14 @@ DB_ERROR	*dberr)
 				SETDBERR(&log_err, 0, E_DM9026_REL_UPDATE_ERR);
                 	        break;
             	      	     }
-			     dropped_col_attid = attrrecord.attid;
+			     dropped_col_attid = att_rec.attid;
 			  }
-			  else if (attrrecord.attintl_id > dropped_col_intlid)
+			  else if (att_rec.attintl_id > dropped_col_intlid)
 			  {
-		      	     attrrecord.attoff -= dropped_col_size;
-			     attrrecord.attid--;
+		      	     att_rec.attoff -= dropped_col_size;
+			     att_rec.attid--;
             	             status = dm2r_replace(attr_rcb, &attrtid,
-				          DM2R_BYPOSITION, (char *)&attrrecord,
+				          DM2R_BYPOSITION, (char *)&att_rec,
 					  (char *)0, dberr);
 
             	             if (status != E_DB_OK)
@@ -1032,7 +1040,7 @@ DB_ERROR	*dberr)
 			}
 		    }
 		     
-                    attrrecord.attver_added = (relrecord.relversion + 1);
+                    att_rec.attver_added = (relrecord.relversion + 1);
                     altcol_col_intlid = t->tcb_atts_ptr[i].intl_id;
                     altcol_col_size = t->tcb_atts_ptr[i].length;
                     break;
@@ -1079,21 +1087,21 @@ DB_ERROR	*dberr)
               {
 	          /* Get the iiattribute record */
                   status = dm2r_get(attr_rcb, &attrtid, DM2R_GETNEXT,
-                                     (char *)&attrrecord, dberr);
+                                     (char *)&att_rec, dberr);
 
                   if (status == E_DB_OK)
                   {
-                    if ((attrrecord.attrelid.db_tab_base == table_id.db_tab_base) &&
-                        (attrrecord.attrelid.db_tab_index == table_id.db_tab_index))
+                    if ((att_rec.attrelid.db_tab_base == table_id.db_tab_base) &&
+                        (att_rec.attrelid.db_tab_index == table_id.db_tab_index))
 		    { 
-                        if (attrrecord.attintl_id == altcol_col_intlid)
+                        if (att_rec.attintl_id == altcol_col_intlid)
                         {
-                            attrrecord.attver_dropped = relrecord.relversion + 1;
-                            attrrecord.attver_altcol = relrecord.relversion + 1;
+                            att_rec.attver_dropped = relrecord.relversion + 1;
+                            att_rec.attver_altcol = relrecord.relversion + 1;
 
 
                             status = dm2r_replace(attr_rcb, &attrtid,
-                                          DM2R_BYPOSITION, (char *)&attrrecord,
+                                          DM2R_BYPOSITION, (char *)&att_rec,
                                           (char *)0, dberr);
                             if (status != E_DB_OK)
                             {
@@ -1105,37 +1113,38 @@ DB_ERROR	*dberr)
                             }
 
                             /* here we will append the record */
-			    STRUCT_ASSIGN_MACRO(attrrecord.attrelid, 
-						attrrecord_tmp.attrelid);
-                            attrrecord_tmp.attid = attrrecord.attid;
-                            attrrecord_tmp.attxtra = attrrecord.attxtra;
+			    STRUCT_ASSIGN_MACRO(att_rec.attrelid, 
+						att_rec_tmp.attrelid);
+                            att_rec_tmp.attid = att_rec.attid;
+                            att_rec_tmp.attxtra = att_rec.attxtra;
 			    STRUCT_ASSIGN_MACRO(attr_entry[0]->attr_name,
-                                        attrrecord_tmp.attname);
-                            attrrecord_tmp.attoff = attrrecord.attoff;
-                            attrrecord_tmp.attfmt = attr_entry[0]->attr_type;
-                            attrrecord_tmp.attfml = attr_entry[0]->attr_size;
-                            attrrecord_tmp.attfmp = attr_entry[0]->attr_precision;
-                            attrrecord_tmp.attkey = attrrecord.attkey; 
-                            attrrecord_tmp.attflag = attr_entry[0]->attr_flags_mask;
+                                        att_rec_tmp.attname);
+                            att_rec_tmp.attoff = att_rec.attoff;
+                            att_rec_tmp.attfmt = attr_entry[0]->attr_type;
+                            att_rec_tmp.attfml = attr_entry[0]->attr_size;
+                            att_rec_tmp.attfmp = attr_entry[0]->attr_precision;
+                            att_rec_tmp.attkey = att_rec.attkey; 
+                            att_rec_tmp.attflag = attr_entry[0]->attr_flags_mask;
                             COPY_DEFAULT_ID( attr_entry[0]->attr_defaultID,
-                                        attrrecord_tmp.attDefaultID );
-                            attrrecord_tmp.attintl_id = attrrecord.attintl_id + 1;
-                            attrrecord_tmp.attver_added = relrecord.relversion + 1;
-				/* attrrecord.attver_added; */
-                            attrrecord_tmp.attver_dropped = 0; 
-                            attrrecord_tmp.attval_from = attrrecord.attval_from; 
-                            attrrecord_tmp.attver_altcol = 0;
-                            attrrecord_tmp.attcollID = 
+                                        att_rec_tmp.attDefaultID );
+                            att_rec_tmp.attintl_id = att_rec.attintl_id + 1;
+                            att_rec_tmp.attver_added = relrecord.relversion + 1;
+				/* att_rec.attver_added; */
+                            att_rec_tmp.attver_dropped = 0; 
+                            att_rec_tmp.attval_from = att_rec.attval_from; 
+                            att_rec_tmp.attver_altcol = 0;
+                            att_rec_tmp.attcollID = 
 					attr_entry[0]->attr_collID;
-                            attrrecord_tmp.attgeomtype = attr_entry[0]->attr_geomtype;
-                            attrrecord_tmp.attsrid = attr_entry[0]->attr_srid;
-                            attrrecord_tmp.attencflags = attr_entry[0]->attr_encflags;
-                            attrrecord_tmp.attencwid = attr_entry[0]->attr_encwid;
-                            MEfill(sizeof(attrrecord_tmp.attfree), 0, 
-					(PTR)&attrrecord_tmp.attfree);
+                            att_rec_tmp.attgeomtype = attr_entry[0]->attr_geomtype;
+                            att_rec_tmp.attsrid = attr_entry[0]->attr_srid;
+                            att_rec_tmp.attencflags = attr_entry[0]->attr_encflags;
+                            att_rec_tmp.attencwid = attr_entry[0]->attr_encwid;
+
+                            MEfill(sizeof(att_rec_tmp.attfree), 0, 
+					(PTR)&att_rec_tmp.attfree);
 
                             status = dm2r_put(attr_rcb, DM2R_DUPLICATES,
-                                          (char *)&attrrecord_tmp, dberr);
+                                          (char *)&att_rec_tmp, dberr);
                             if (status != E_DB_OK)
                             {
                                uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG,
@@ -1144,26 +1153,32 @@ DB_ERROR	*dberr)
 			       SETDBERR(&log_err, 0, E_DM9028_ATTR_UPDATE_ERR);
                                break;
                             }
+
+			    for (nsz = DB_ATT_MAXNAME;  
+				att_rec_tmp.attname.db_att_name[nsz-1] == ' '
+					&& nsz >= 1; nsz--);
+
                             relrecord.relwid += sizediff;
                 	    relrecord.relatts++;
                             relrecord.reltotwid += sizediff;
                             relrecord.reldatawid += sizediff;
                             relrecord.reltotdatawid += sizediff;
+			    relrecord.relattnametot += nsz;
 			    column_altered = TRUE;
 		        }
-		        else if (attrrecord.attintl_id > altcol_col_intlid)
+		        else if (att_rec.attintl_id > altcol_col_intlid)
                         {
 			  if ((column_altered == TRUE ) && 
-			      (attrrecord.attintl_id == altcol_col_intlid + 1) &&
-                              (MEcmp((PTR)&attrrecord.attname,
+			      (att_rec.attintl_id == altcol_col_intlid + 1) &&
+                              (MEcmp((PTR)&att_rec.attname,
                                 (PTR)&attr_entry[0]->attr_name,
                                 sizeof(DB_ATT_NAME) ) == 0))
 			    continue;
 			    
-                          attrrecord.attoff += sizediff;
-                          attrrecord.attintl_id++;
+                          att_rec.attoff += sizediff;
+                          att_rec.attintl_id++;
                           status = dm2r_replace(attr_rcb, &attrtid,
-                                          DM2R_BYPOSITION, (char *)&attrrecord,
+                                          DM2R_BYPOSITION, (char *)&att_rec,
                                           (char *)0, dberr);
 
                            if (status != E_DB_OK)
@@ -1295,27 +1310,27 @@ DB_ERROR	*dberr)
               {
 	          /* Get the iiattribute record */
                   status = dm2r_get(attr_rcb, &attrtid, DM2R_GETNEXT,
-                                     (char *)&attrrecord, dberr);
+                                     (char *)&att_rec, dberr);
 
                   if (status == E_DB_OK)
                   {
-                    if ((attrrecord.attrelid.db_tab_base == table_id.db_tab_base) &&
-                        (attrrecord.attrelid.db_tab_index == table_id.db_tab_index) 
+                    if ((att_rec.attrelid.db_tab_base == table_id.db_tab_base) &&
+                        (att_rec.attrelid.db_tab_index == table_id.db_tab_index) 
 			)
 		    { 
 			if (MEcmp((PTR) &(attr_entry[0]->attr_name.db_att_name), 
-					(PTR) &(attrrecord.attname), 
+					(PTR) &(att_rec.attname), 
 					sizeof(DB_ATT_NAME)) == 0 )
 			{
 			    /* Copy everything from old record to new record, 
 			    ** except substitue the name to new column name. 
 			    */
 			    
-                            MEcopy((PTR)&attrrecord, sizeof(DMP_ATTRIBUTE), (PTR)&attrrecord_tmp);
+                            MEcopy((PTR)&att_rec, sizeof(DMP_ATTRIBUTE), (PTR)&att_rec_tmp);
                             STRUCT_ASSIGN_MACRO(attr_entry[1]->attr_name,
-                                        attrrecord_tmp.attname);
+                                        att_rec_tmp.attname);
                             status = dm2r_replace(attr_rcb, &attrtid,
-                                          DM2R_BYPOSITION, (char *)&attrrecord_tmp,
+                                          DM2R_BYPOSITION, (char *)&att_rec_tmp,
                                           (char *)0, dberr);
                             if (status != E_DB_OK)
                             {
@@ -1379,23 +1394,23 @@ DB_ERROR	*dberr)
 		   {
 	             /* Get the iiattribute record for this index */
                       status = dm2r_get(attr_rcb, &attrtid, DM2R_GETNEXT,
-                                     (char *)&attrrecord, dberr);
+                                     (char *)&att_rec, dberr);
                       if (status == E_DB_OK)
                       {
-                        if ((attrrecord.attrelid.db_tab_base == table_id.db_tab_base) &&
-                            (attrrecord.attrelid.db_tab_index == it->tcb_rel.reltid.db_tab_index) 
+                        if ((att_rec.attrelid.db_tab_base == table_id.db_tab_base) &&
+                            (att_rec.attrelid.db_tab_index == it->tcb_rel.reltid.db_tab_index) 
 			    )
 		        { 
 			  if (MEcmp((PTR) &(attr_entry[0]->attr_name.db_att_name), 
-					(PTR) &(attrrecord.attname), 
+					(PTR) &(att_rec.attname), 
 					sizeof(DB_ATT_NAME)) == 0 )
 			  {
 			    /* substitue the column name. */
-                            MEcopy((PTR)&attrrecord, sizeof(DMP_ATTRIBUTE), (PTR)&attrrecord_tmp);
+                            MEcopy((PTR)&att_rec, sizeof(DMP_ATTRIBUTE), (PTR)&att_rec_tmp);
                             STRUCT_ASSIGN_MACRO(attr_entry[1]->attr_name,
-                                        attrrecord_tmp.attname);
+                                        att_rec_tmp.attname);
                             status = dm2r_replace(attr_rcb, &attrtid,
-                                          DM2R_BYPOSITION, (char *)&attrrecord_tmp,
+                                          DM2R_BYPOSITION, (char *)&att_rec_tmp,
                                           (char *)0, dberr);
                             if (status != E_DB_OK)
                             {

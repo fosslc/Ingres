@@ -21,6 +21,7 @@
 
 EXEC SQL INCLUDE sqlda;
 EXEC SQL INCLUDE <tbldef.sh>;
+typedef char    DCOLNAME[DB_MAXNAME*2+3]; /* delimited column name */  
 
 /**
 ** Name:	crrepkey.sc - create replication keys
@@ -80,6 +81,9 @@ EXEC SQL INCLUDE <tbldef.sh>;
 **	    replace nat and longnat with i4
 **      06-nov-2009 (joea)
 **          Add test for "boolean" in create_replication_keys.
+**      14-may-2010 (stial01)
+**          Don't alloc DB_MAX_COLS delimited column names on stack
+**          Use DB_IITYPE_LEN for datatype
 **/
 
 # define	MAX_SIZE		6000
@@ -162,8 +166,8 @@ bool	queue_flag)
 	char	wc[MAX_SIZE];
 	char	key_cols[MAX_SIZE];
 	char	tmp_table[DB_MAXNAME+1];
-	char	column_name[DB_MAX_COLS][DB_MAXNAME*2+3];
-	char	column_datatype[DB_MAX_COLS][DB_MAXNAME+1];
+	DCOLNAME *column_name = NULL;
+	char	column_datatype[DB_MAX_COLS][DB_IITYPE_LEN+1];
 	i4	column_length[DB_MAX_COLS];
 	i4	approx_rows;
 	i4	rows_processed = 0;
@@ -205,6 +209,11 @@ bool	queue_flag)
 	
     for (;;)
 	{
+		column_name = (DCOLNAME *)MEreqmem (0, 
+			(DB_MAX_COLS+1) * sizeof(*column_name), 0, &stat);
+		if (stat)
+		  break;
+
 		nch_val = (wchar_t **)MEreqmem (0, 
 				(sizeof(wchar_t *) * DB_MAX_COLS), 0, &stat);
 		if (stat)
@@ -1197,6 +1206,9 @@ bool	queue_flag)
 	if (nvch_val)
 	  MEfree (nvch_val);
 	
+	if (column_name)
+	  MEfree (column_name);
+
 	return (OK);
 }
 
