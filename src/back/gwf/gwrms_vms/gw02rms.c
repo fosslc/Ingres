@@ -26,6 +26,7 @@
 #include    <descrip.h>
 #include    "gwrms.h"
 #include    "gwrmsdt.h"
+#include    <cv.h>
 
 /*
 ** Name: GW02RMS.C	- internal support functions for the RMS Gateway
@@ -109,6 +110,8 @@
 **	    from RMS GW code as the use is no longer allowed
 **	24-feb-2005 (abbjo03)
 **	    Remove include of obsolete gwxit.h.
+**	12-feb-2010 (abbjo03, wanfr01) Bug 123139
+**	    cv.h needs to be added for function definitions
 */
 
 /*

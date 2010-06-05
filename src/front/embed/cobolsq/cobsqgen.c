@@ -9,6 +9,7 @@
 # include	<lo.h>
 # include	<nm.h>
 # include 	<cm.h>
+# include 	<cv.h>
 # include	<equel.h>
 # include	<eqesql.h>
 # include	<eqsym.h>		/* eqgen.h needs SYM */
@@ -92,6 +93,8 @@
 **	    replace nat and longnat with i4
 **	6-Jun-2006 (kschendel)
 **	    Added describe input.
+**	12-feb-2010 (abbjo03, wanfr01) Bug 123139
+**	    cv.h needs to be added for function definitions
 */
 
 static bool	gen_sqdeclared = FALSE;

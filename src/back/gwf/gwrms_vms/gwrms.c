@@ -37,6 +37,7 @@
 #include    "gwrms.h"
 #include    "gwrmsdt.h"
 #include    <pm.h>
+#include    <cv.h>
 
 /**
 ** Name: GWRMS.C	- Exit package for the RMS Gateway
@@ -271,6 +272,8 @@
 **	    Replace II_VMS_ITEM_LIST_3 by ILE3.
 **	24-Oct-2008 (jonj)
 **	    Replace ule_doformat with ule_format.
+**	12-feb-2010 (abbjo03, wanfr01) Bug 123139
+**	    cv.h needs to be added for function definitions
 **/
 
 

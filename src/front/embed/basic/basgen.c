@@ -16,6 +16,7 @@ NO_OPTIM = vax_vms
 # include	<nm.h>
 # include	<gl.h>
 # include	<sl.h>
+# include	<cv.h>
 # include	<iicommon.h>
 # include	<eqrun.h>
 # include	<equel.h>
@@ -160,6 +161,8 @@ NO_OPTIM = vax_vms
 **	    from VMS CL as the use is no longer allowed
 **	20-jul-2007 (toumi01)
 **	    add IIcsRetScroll and IIcsOpenScroll for scrollable cursors
+**	12-feb-2010 (abbjo03, wanfr01) Bug 123139
+**	    cv.h needs to be added for function definitions
 */
 
 

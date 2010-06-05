@@ -8,6 +8,7 @@
 # include	<st.h>
 # include	<lo.h>
 # include	<nm.h>
+# include	<cv.h>
 # include	<equel.h>
 # include	<eqesql.h>
 # include	<eqsym.h>		/* eqgen.h need SYM */
@@ -66,6 +67,8 @@
 **	    from VMS CL as the use is no longer allowed
 **	6-Jun-2006 (kschendel)
 **	    Added IIsqDescInput.
+**	12-feb-2010 (abbjo03, wanfr01) Bug 123139
+**	    cv.h needs to be added for function definitions
 */
 
 static bool	gen_sqdeclared = FALSE;

@@ -10,6 +10,7 @@
 # include	<iicommon.h>
 # include	<fe.h>
 # include	<ci.h>
+# include	<cv.h>
 
 
 /**
@@ -26,6 +27,8 @@
 **		Moved from abf.c
 **      11-Jun-2004 (hanch04)
 **          Removed reference to CI for the open source release.
+**	12-feb-2010 (abbjo03, wanfr01) Bug 123139
+**	    cv.h needs to be added for function definitions
 **/
 
 GLOBALDEF i2	osNewVersion;
