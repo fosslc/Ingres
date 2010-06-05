@@ -1077,6 +1077,8 @@ dm1c_pdelete(
 **          bug 120329.
 **	14-Apr-2010 (kschendel) SIR 123485
 **	    Fill in new short-term coupon info.
+**	28-Apr-2010 (kschendel) SIR 123485
+**	    Coupon in record is unaligned, use macros.
 */
 DB_STATUS
 dm1c_pget(
@@ -1089,6 +1091,7 @@ dm1c_pget(
     DMPE_BQCB		*bqcb;
     DMPE_BQCB_ATT	*bqcb_att;
     DMPE_COUPON		*cpn;
+    i2			flags, att_id;
     i4			i;
 
     CLRDBERR(dberr);
@@ -1109,14 +1112,18 @@ dm1c_pget(
 	{
 	    /* Fill in some short-term coupon stuff so that an eventual redeem
 	    ** (possibly in a different thread) can use proper access modes.
+	    ** Note: these are potentially unaligned accesses directly in
+	    ** the table row.
 	    */
 	    cpn = (DMPE_COUPON *) &((ADP_PERIPHERAL *) &record[lob_att->offset])
 					->per_value.val_coupon;
-	    cpn->cpn_base_id = rcb->rcb_tcb_ptr->tcb_rel.reltid.db_tab_base;
-	    cpn->cpn_att_id = bqcb_att->bqcb_att_id;
-	    cpn->cpn_flags = 0;
+	    I4ASSIGN_MACRO(rcb->rcb_tcb_ptr->tcb_rel.reltid.db_tab_base, cpn->cpn_base_id);
+	    att_id = bqcb_att->bqcb_att_id;	/* I2ASSIGN_MACRO is touchy */
+	    I2ASSIGN_MACRO(att_id, cpn->cpn_att_id);
+	    flags = 0;
 	    if (lob_att->geomtype != -1)
-		cpn->cpn_flags |= DMPE_CPN_CHECK_SRID;
+		flags |= DMPE_CPN_CHECK_SRID;
+	    I2ASSIGN_MACRO(flags, cpn->cpn_flags);
 	}
 	++bqcb_att;
     } while (--i > 0);
