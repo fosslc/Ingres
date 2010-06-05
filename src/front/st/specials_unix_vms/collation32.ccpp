@@ -13,6 +13,9 @@
 **	    Added specialcasing.txt file.
 **	31-aug-2007 (gupsh01)
 **	    Added unicode_french collation.
+**      15-Apr-2010 (hanal04) SIR 121823
+**          Added udefault5.uce to avoid unexpected duplicate errors seen
+**          when using the outdated udefault.uce. See KB Doc 417763.
 */
 
 PART   collation32
@@ -33,6 +36,8 @@ PART   collation32
       FILE spanish.dsc
       FILE udefault.uce
       FILE udefault
+      FILE udefault5.uce
+      FILE udefault5
       FILE unicode_french.uce
       FILE unicode_french
       FILE udata.ucd
