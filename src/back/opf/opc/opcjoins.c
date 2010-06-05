@@ -1251,6 +1251,9 @@ opc_fsmjoin_build(
 **	    is table procedure with parm dependencies on current outers.
 **	25-sept-2008 (dougi)
 **	    Don't use hold file for TPROC joins.
+**	13-May-2010 (kiria01) b123721
+**	    Revert to using hold for with TPROC if right or full outer joins
+**	    implied.
 */
 VOID
 opc_cpjoin_build(
@@ -1290,7 +1293,9 @@ opc_cpjoin_build(
 	&jn->sjn_inner, &iceq, tceq);
 
     /* Fill in the hold file info */
-    if (co->opo_tprocjoin)
+    if (co->opo_tprocjoin &&
+	!(co->opo_variant.opo_local->opo_type == OPL_FULLJOIN ||
+	  co->opo_variant.opo_local->opo_type == OPL_RIGHTJOIN))
 	jn->sjn_hfile = -1;		/* no hold for TPROC joins */
     else
 	opc_pthold(global, &jn->sjn_hfile);
