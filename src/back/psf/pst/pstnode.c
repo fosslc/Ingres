@@ -315,6 +315,10 @@ i4 Psf_nfoldbexpr = 0;
 **          Only fold out a SUBTREE if the subtree does not contain any
 **          VAR nodes. If the subtree contains VAR nodes these could be
 **          correlated, and dropping the SUBTREE could cause E_OP0A91.
+**      05-May-2010 (horda03) b123686
+**          Preventing a fold of a Subtree may cause Bug 123455. Allow
+**          the fold to continue as the E_OP0A91 error has been handled
+**          elsewhere.
 */
 DB_STATUS
 pst_node(
@@ -591,17 +595,10 @@ pst_node(
 	break;
     }
 
-    /* If folded_node set, then need to verify that the subtree being elided
-    ** does not contain a VAR node. If it does, then can't do the fold.
-    */
+    /* If folded_node set then nothing more to do. */
     if (folded_node)
     {
-       if (! psl_find_node( folded_node, NULL, PST_VAR) )
-       {
-          /* No VAR_NODEs in folded sub-tree so allow fold. */
-
-          return E_DB_OK;
-       }
+       return E_DB_OK;
     }
     
     if (!(flags & PSS_TYPERES_ONLY))
