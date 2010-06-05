@@ -1389,6 +1389,8 @@
 #	    Add back WCHART variable yet again because it was incorrectly
 #	    removed by the previous change.  This is needed to support older
 #	    Xerces library versions.
+#       27-Nov-2008 (horda03)
+#           Ensure the SIG directory exists when building IISIGEXE's.
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -2505,6 +2507,9 @@ rule IIICEBINEXE
 
 rule IISIGEXE	 	
 {
+    local _s = [ FGristFiles $(>) ] ;
+    local _t = [ FAppendSuffix $(<[1]) : $(SUFEXE) ] ;
+
     if $(VMS)
     {
         VMS_LOT $(<) : $(>) ;
@@ -2515,7 +2520,14 @@ rule IISIGEXE
         Clean clean :  $(ING_BUILD)[DEBUG]$(<:S=.map) $(ING_BUILD)[DEBUG]$(<:S=.stb)
                        $(ING_BUILD)[DEBUG]$(<:S=.dsf) ;
     }
+
     Main $(<[1]) : $(>) ;
+
+    Depends shell : $(_t) ;
+    Depends $(_t) : $(_s) ;
+    MakeLocate $(_t) : [ FDirName $(INGSIG) $(<[2]) ] ;
+    Clean clean : $(_t) ;
+
     LOCATE on $(<[1]:S=$(SUFEXE)) = [ FDirName $(INGSIG) $(<[2]) ] ;
     for _p in $(>)
     {
