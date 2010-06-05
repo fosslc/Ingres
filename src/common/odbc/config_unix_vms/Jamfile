@@ -6,15 +6,17 @@
 #	    Remap to config_unix_vms until we submit mid-level Jamfiles.
 #       29-Apr-2010 (Ralph Loen) SIR 123641
 #           Add macro definition SLSFX for util.c.
+#	06-May-2010 (bonro01) SIR 123641
+#	    Previous change broke build for Hybrid platforms.
+#	    A separate CCFLAGS definition is required for the hybrid
+#	    version of the object.  And CCFLAGS modifications MUST be
+#	    placed after the IILIBRARY rule because most rules can
+#	    completely override the CCFLAGS setting and therefore
+#	    modifications to those flags must be after the rule.
 
 SubDir ING_SRC common odbc config_unix_vms ;
 
 IISUBSYS common odbc config_unix_vms ;
-
-if $(UNIX)
-{
-    CCFLAGS on <$(SOURCE_GRIST)>util$(SUFOBJ) += '-DSLSFX=\"$(SLSFX)\"' ;
-}
 
 IIUTILEXE iiodbcinst : iiodbcinst.c ;
 IINEEDLIBS iiodbcinst : ODBCCFGLIB APILIB COMPATLIB CUFLIB
@@ -22,3 +24,11 @@ IINEEDLIBS iiodbcinst : ODBCCFGLIB APILIB COMPATLIB CUFLIB
 
 IILIBRARY ODBCCFGLIB : util.c config.c ;
 
+if $(UNIX)
+{
+    CCFLAGS on <$(SOURCE_GRIST)>util$(SUFOBJ) += '-DSLSFX=\"$(SLSFX)\"' ;
+if $(VERSHB)
+{
+    CCFLAGS on <$(SOURCE_GRIST)>$(SUFHB)$(DFS)util$(SUFOBJ) += '-DSLSFX=\"$(SLSFX)\"' ;
+}
+}
