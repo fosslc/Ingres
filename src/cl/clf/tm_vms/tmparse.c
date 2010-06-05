@@ -16,6 +16,7 @@
 #include    <tm.h>
 #include    <tmtz.h>
 #include    "tmlocal.h"
+#include    <cv.h>
 
 /**
 **
@@ -54,6 +55,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	12-feb-2010 (abbjo03, wanfr01) Bug 123139
+**	    cv.h needs to be added for function definitions
 */
 /* # defines */
 #ifdef VMS

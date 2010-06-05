@@ -15,6 +15,7 @@
 #include <descrip>
 #include <limits.h>
 #include "dlint.h"
+#include <cv.h>
 
 /*
 ** DL -- the dynamic loading module ("it came from `DY'")
@@ -100,6 +101,8 @@
 **	11-nov-2008 (joea)
 **	    Use CL_CLEAR_ERR to initialize CL_ERR_DESC.  This CL is prototyped
 **	    so no need to keep CL_PROTOTYPED sections.
+**	12-feb-2010 (abbjo03, wanfr01) Bug 123139
+**	    cv.h needs to be added for function definitions
 */
 
 #define DLMOD_LOGNAME   ERx("DLM")

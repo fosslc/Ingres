@@ -10,6 +10,7 @@
 # include	<me.h>
 # include	<st.h>
 # include       <tr.h>
+# include	<cv.h>
 # include	<gcccl.h>
 # include	<gcatrace.h>
 /*
@@ -165,6 +166,8 @@ struct sockchar
 **          flag when listening, so that the server can listen upon restart 
 **          if sockets remain from the previous server instance.  Remove
 **          GLOBALREF GCC_lsn_chan.
+**	12-feb-2010 (abbjo03, wanfr01) Bug 123139
+**	    cv.h needs to be added for function definitions
 */
 
 typedef long VMS_STATUS;

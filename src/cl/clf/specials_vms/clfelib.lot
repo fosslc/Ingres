@@ -129,6 +129,9 @@
 !           Add STxcompare.
 !       01-Dec-2009 (coomi01) b122980
 !           Add MHround
+!	12-feb-2010 (abbjo03,wanfr01) b123139
+!	    Need to add/remove relevant functions for VMS compilation
+!	    
 !       11-dec-2009 (joea)
 !           Change STxcompare to IISTxcompare.
 !       08-jan-2010 (joea)
@@ -155,9 +158,9 @@ SYMBOL_VECTOR=(SIflush=PROCEDURE,-
                EXSETUP=PROCEDURE,-
                EXUNSAVE_HANDLER=PROCEDURE,-
                PCexit=PROCEDURE,-
-               IISTtrmwhite=PROCEDURE,-
+               SPARE, -			! IISTtrmwhite
                CVla=PROCEDURE,-
-               CVal=PROCEDURE,-
+               SPARE, -			! CVal
                IISTcat=PROCEDURE,-
                NMgtat=PROCEDURE,-
                LOfstfile=PROCEDURE,-
@@ -172,9 +175,9 @@ SYMBOL_VECTOR=(SIflush=PROCEDURE,-
                IIcompatmain=PROCEDURE,-
                TEcmdwrite=PROCEDURE,-
                CVan=PROCEDURE,-
-               CVupper=PROCEDURE,-
-               CVlower=PROCEDURE,-
-               IISTscompare=PROCEDURE,-
+               SPARE, -			! CVupper
+               SPARE, -			! CVlower
+               SPARE, -			! IISTscompare
                MEalloc=PROCEDURE,-
                MHrand=PROCEDURE,-
                MHsrand=PROCEDURE,-
@@ -185,9 +188,9 @@ SYMBOL_VECTOR=(SIflush=PROCEDURE,-
                TRdisplay=PROCEDURE,-
                TRset_file=PROCEDURE,-
                IIMEadvise=PROCEDURE,-
-               IISTbcompare=PROCEDURE,-
-               IISTindex=PROCEDURE,-
-               IISTrindex=PROCEDURE,-
+               SPARE, -			! IISTbcompare
+               SPARE, -			! IISTindex
+               SPARE, -			! IISTrindex
                IIBTCOUNT=PROCEDURE,-
                IIBTHIGH=PROCEDURE,-
                IIBTNEXT=PROCEDURE,-
@@ -312,13 +315,13 @@ SYMBOL_VECTOR=(LOCREATE=PROCEDURE,-
                SPARE, -			! SIunbuf
                SIWRITE=PROCEDURE,-
 	       IISTALLOC=PROCEDURE,-
-               IISTGETWORDS=PROCEDURE,-
+               SPARE, -			! IISTGETWORDS
                IISTMOVE=PROCEDURE,-
                IISTNLENGTH=PROCEDURE,-
                IISTPOLYCAT=PROCEDURE,-
                IISTSKIPBLANK=PROCEDURE,-
                IISTTALLOC=PROCEDURE,-
-               IISTZAPBLANK=PROCEDURE,-
+               SPARE, -			! IISTZAPBLANK
                TCCLOSE=PROCEDURE,-
                TCFLUSH=PROCEDURE,-
                TCGETC=PROCEDURE,-
@@ -489,7 +492,7 @@ SYMBOL_VECTOR=(MUi_semaphore=PROCEDURE,-
 	       IIDLPREPARE_LOC=PROCEDURE,-
 	       ERLOG=PROCEDURE,-
 	       HSH_CRC32=PROCEDURE, -
-	       IISTSTRINDEX=PROCEDURE, -
+	       SPARE, -			! IISTSTRINDEX
 	       GCshut=PROCEDURE,-
                GCsync=PROCEDURE,-
                CVFCVT=PROCEDURE,-
@@ -518,7 +521,7 @@ SYMBOL_VECTOR=(MUi_semaphore=PROCEDURE,-
 		MHi4sub=PROCEDURE, -
 		MHi4mul=PROCEDURE, -
 		MHi4div=PROCEDURE, -
-		IISTrstrindex=PROCEDURE, -
+		SPARE, -			! IISTrstrindex
 		EXchkintr=PROCEDURE, -
 		CVula=PROCEDURE, -
                CXCLUSTER_CONFIGURED=PROCEDURE, -
@@ -533,7 +536,7 @@ SYMBOL_VECTOR=(MUi_semaphore=PROCEDURE,-
 	       CXSET_CONTEXT=PROCEDURE)
 SYMBOL_VECTOR=(MOptrout=PROCEDURE, -
 		CM_getcharset=PROCEDURE, -
-		CVal8=PROCEDURE, -
+		SPARE, -			! CVal8
 		CVla8=PROCEDURE, -
 		CVpkl8=PROCEDURE, -
 		CVl8pk=PROCEDURE, -
@@ -579,7 +582,9 @@ SYMBOL_VECTOR=(MOptrout=PROCEDURE, -
 		CMischarset_doublebyte=PROCEDURE, -
 		CMischarset_utf8=PROCEDURE, -
 		CM_isLegalUTF8Sequence=PROCEDURE, -
-                IISTtrmnwhite=PROCEDURE, -
+                SPARE, -		! IISTtrmnwhite
+		CV_fvp=DATA, -
+		ST_fvp=DATA -
                 IISTxcompare=PROCEDURE, -
 		MHround=PROCEDURE, -
 		CM_isDBL=DATA)

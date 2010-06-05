@@ -10,6 +10,7 @@
 #include	<me.h>
 #include	<st.h>
 #include	<starlet.h>
+#include	<cv.h>
 
 /*NMgetenv - return a pointer to the value of a logical name.
 **
@@ -51,9 +52,9 @@
 **	    Changes to use VMS headers provided by HP.
 **	09-oct-2008 (stegr01/joea)
 **	    Replace II_VMS_ITEM_LIST_3 by ILE3.
+**	12-feb-2010 (abbjo03, wanfr01) Bug 123139
+**	    cv.h shoudl be used for function definitions
 */
-
-FUNC_EXTERN VOID CVupper();	
 
 typedef struct dsc$descriptor STR_DESC;
 
