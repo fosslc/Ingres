@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Specialized;
 using System.IO;
 using Ingres.Utility;
 
@@ -145,6 +146,8 @@ namespace Ingres.ProviderInternals
 	**	    Support empty date strings.
 	**	 3-Mar-10 (thoda04)  SIR 123368
 	**	    Added support for IngresType.IngresDate parameter data type.
+	**	12-Apr-10 (thoda04)  SIR 123585
+	**	    Add named parameter marker support.
 	*/
 
 
@@ -274,6 +277,11 @@ namespace Ingres.ProviderInternals
 	{
 
 		protected ParamSet	paramSet;
+		/// <summary>
+		/// A collection of parameter markers and their optional
+		/// parameter names gleaned from the SQL statement text.
+		/// </summary>
+		public StringCollection parameterMarkers;
 
 		private String    query_text = null;
 	//	private AdvanQPMD prepQPMD   = null;
@@ -354,7 +362,7 @@ namespace Ingres.ProviderInternals
 			try
 			{
 				SqlParse sql = new SqlParse( query, conn );
-				query_text = sql.parseSQL( parse_escapes );
+				query_text = sql.parseSQL( parse_escapes, parameterMarkers );
 				qry_concur = sql.getConcurrency();
 			}
 			catch( SqlEx ex )
@@ -409,6 +417,7 @@ namespace Ingres.ProviderInternals
 			base( conn, rs_type, rs_concur, rs_hold )
 		{
 			paramSet = new ParamSet(conn);
+			parameterMarkers = new StringCollection();
 			return;
 		} // AdvanPrep
 

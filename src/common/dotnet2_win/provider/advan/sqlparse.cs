@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Specialized;
 using System.Text;
 using Ingres.Utility;
 
@@ -84,6 +85,8 @@ namespace Ingres.ProviderInternals
 	**	    Added SendIngresDates support to send ingresdate functions
 	**	    and literals rather than ANSI functions and literals
 	**	    for escaped functions.
+	**	12-apr-10 (thoda04)  SIR 123585
+	**	    Add named parameter marker support.
 	*/
 
 
@@ -974,10 +977,18 @@ namespace Ingres.ProviderInternals
 		*/
 
 		public String
-			parseSQL( bool escapes )
+			parseSQL(bool escapes)
+		{
+			return parseSQL(escapes, null);
+		}
+
+
+		public String
+			parseSQL(bool escapes, StringCollection parameterMarkers)
 		{
 			StringBuilder    buff = null;
-			int		    token, tkn_beg, tkn_end, start;
+			int    token, tkn_beg, tkn_end, start;
+			String parameterMarker;
 
 			if ( query_type == UNKNOWN )  getQueryType();
 			start = token_beg = token_end = 0;
@@ -1140,7 +1151,19 @@ namespace Ingres.ProviderInternals
 							token_beg = token_end = start;
 						}
 						break;
-				}
+
+					case P_QMARK:
+						parameterMarker =
+							new String(text, token_beg, token_end - token_beg);
+						ValidateParameterMarker(parameterMarker, parameterMarkers);
+						if (parameterMarkers != null)
+							parameterMarkers.Add(parameterMarker);
+
+						buff = append_text( text, txt_len, start, token_beg, buff );
+						buff.Append('?');
+						start = token_end;
+						break;
+				}  // end switch( token )
 
 			/*
 			** Update the original query text only if an
@@ -2253,12 +2276,26 @@ namespace Ingres.ProviderInternals
 				case '(' :	type = P_LPAREN;    break;
 				case ')' :	type = P_RPAREN;    break;
 				case ',' :	type = P_COMMA;	    break;
-				case '?' :	type = P_QMARK;	    break;
 				case '=' :	type = P_EQUAL;	    break;
 				case '+' :	type = P_PLUS;	    break;
 				case '-' :	type = P_MINUS;	    break;
 				case '.' :	type = P_PERIOD;    break;
 				case '}' :	type = P_RBRACE;    break;
+
+				case '@':  // if "@myparm"  or ":1"
+				case ':':  //    process as named pararmeter
+					if (token_end < txt_len &&
+						isIdentAlphaNumOrSpec(text[token_end]))
+						goto case '?';
+					else goto default;  // standalone "@" or ":" is not a parm
+
+				case '?': type = P_QMARK;
+					for (; token_end < txt_len; token_end++)
+					{
+						if (!isIdentAlphaNumOrSpec(text[token_end]))
+							break;
+					}
+					break;
 
 				case '{' :
 					if ( ! esc )
@@ -2545,6 +2582,68 @@ namespace Ingres.ProviderInternals
 				ch == '$'  ||  ch == '@'  ||  ch == '#' );
 		} // isIdentChar
 
+
+		/// <summary>
+		/// Return true if character is alphabetic, numeric, $, @, _, or #.
+		/// </summary>
+		/// <param name="ch"></param>
+		/// <returns></returns>
+		private static bool
+			isIdentAlphaNumOrSpec( char ch )
+		{
+			return( Char.IsLetterOrDigit( ch )  || isIdentChar( ch ) );
+		} // isIdentChar
+
+
+		/// <summary>
+		/// Validate the parameter marker for consistency
+		/// against the other parameter markers in the list.
+		/// </summary>
+		/// <param name="parameterMarker"></param>
+		/// <param name="parameterMarkers"></param>
+		private void ValidateParameterMarker(
+			String            parameterMarker,
+			StringCollection  parameterMarkers)
+		{
+			String parameterMarker0;
+			Char   parameterMarker0Char;
+			int    parameterMarker0Length;
+
+			// only allow the singleton '?' character
+			//for an unnamed parameter marker
+			if (parameterMarker.Length == 1 &&
+				parameterMarker[0] != '?')
+				throw new SqlEx(
+					"Invalid initial parameter marker " +
+					"character for \"" +
+					parameterMarker[0] + "\".");
+
+			if (parameterMarkers == null  ||
+				parameterMarkers.Count <= 1)
+				return;
+
+			// use the first parameter marker in the list as the touchstone
+			parameterMarker0      = parameterMarkers[0];  // 1st marker
+			parameterMarker0Char  = parameterMarker0[0];  // 1st char
+			parameterMarker0Length= parameterMarker0.Length;
+
+			if (parameterMarker0Char != parameterMarker[0])
+				throw new SqlEx(
+					"Invalid parameter marker format for \"" +
+					parameterMarker + "\".  " +
+					"Expecting parameter marker to begin with " +
+					"'" + parameterMarker0Char + "' character.");
+
+			if ((parameterMarker0Length  > 1  && // if named, all must be
+				 parameterMarker.Length == 1)    ||
+				(parameterMarker0Length == 1  && // if unnamed, all must be
+				 parameterMarker.Length  > 1))
+				throw new SqlEx(
+					"Invalid parameter marker format for \"" +
+					parameterMarker + "\".  " +
+					"If one parameter is named then all " +
+					"parameter markers must be named.");
+		}  // end ValidateParameterMarker()
 
 	} // class SqlParse
 

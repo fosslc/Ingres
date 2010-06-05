@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2002, 2007 Ingres Corporation. All Rights Reserved.
+** Copyright (c) 2002, 2010 Ingres Corporation. All Rights Reserved.
 */
 
 #define DBCOMMAND_ENABLED
@@ -44,11 +44,14 @@
 	**	    If CommandText changes, discard old statement prep and force re-Prepare.
 	**	10-Oct-07 (thoda04) Bug 119268
 	**	    If CommandText==String.Empty, don't sever connection to server.
+	**	12-apr-10 (thoda04) SIR 123585
+	**	    Add named parameter marker support.
 	*/
 
 using System;
 using System.ComponentModel;
 using System.Collections;
+using System.Collections.Specialized;
 using System.Data;
 using System.Reflection;
 
@@ -747,11 +750,37 @@ public sealed class IngresCommand :
 		}
 		catch( SqlEx ex )  { throw ex.createProviderException(); }
 
-		// if parameter list present then build up ParamSet
+		// if parameter list present then build up ParamSet.
+
+		// default the parameter list to the 
+		// existing command.Parameters collection.
+		IngresParameterCollection parameters = Parameters;
 		if (paramCount > 0)
 		{
+			// if named parameter markers are being used
+			// rebuild the parameter list in the order of the markers.
+			StringCollection  parameterMarkers = advanPrep.parameterMarkers;
+
+			if (parameterMarkers.Count > 0 &&       // rebuild if "?myparm",
+				parameterMarkers[0].Length > 1)     // but not if "?"
+			{
+				parameters = new IngresParameterCollection();
+				foreach (String parameterMarker in parameterMarkers)
+				{
+					if (Parameters.Contains(parameterMarker) == false)
+						throw new SqlEx(
+							"Named parameter marker \"" +
+							parameterMarker + "\" " +
+							"was not found in the IngresCommand.Parameters " +
+							"collection.");
+					IngresParameter parm = Parameters[parameterMarker];
+					parameters.Add(parm.Clone());
+				}
+			}
+
+
 			int paramIndex = -1;
-			foreach(IngresParameter parm in Parameters)
+			foreach(IngresParameter parm in parameters)
 			{
 				paramIndex++;
 				// if Output or ReturnValue parm then there is no value yet.
