@@ -197,6 +197,8 @@ MHround(f8 inputValue, i4 position)
     ** might be a simple call to the standard round(shiftedValue)
     ** function.  If you have any trouble with the bit-twiddling
     ** here, try that as a fix.  :-)
+    ** (although, make sure all relevant platforms have a round()!
+    ** in particular, Windows likes to omit standard C-library functions.)
     */
 
     /* 
@@ -340,6 +342,9 @@ MHround(f8 inputValue, i4 position)
 ** History:
 **	10-May-2010 (kschendel) b123712
 **	    Create to ensure floats get truncated properly.
+**	11-May-2010 (kschendel)
+**	    Arrgh, Solaris 8 doesn't have trunc(), nor does Windows.
+**	    It's only 2010.  Integerize instead.
 */
 f8
 MHtrunc(f8 inputValue, i4 position)
@@ -462,9 +467,16 @@ MHtrunc(f8 inputValue, i4 position)
 
     /* The input is now aligned as if position were specified as zero,
     ** so we can use the standard C library trunc on it now.
+    ** Actually, we can't, neither Windows nor old Solaris versions
+    ** seem to have trunc()?   If the value is larger than an i8, it's
+    ** safe to assume that there are no decimal places anyway.  Otherwise,
+    ** integerise and re-float to truncate.
     */
 
-    after = trunc(shiftedValue);
+    if (shiftedValue > (f8)MAXI8 || shiftedValue < (f8)MINI8)
+	after = shiftedValue;
+    else
+	after = (f8)( (i8) shiftedValue);
 
     if ( negTrunc )
     {
