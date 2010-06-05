@@ -2906,6 +2906,8 @@ opa_hashagg(OPS_STATE *global)
 ** History:
 **	18-april-2008 (dougi)
 **	    Written for table procedure support.
+**	20-apr-2010 (dougi) BUG 123604
+**	    Fix dumb coding error.
 */
 
 static bool
@@ -2933,7 +2935,7 @@ opa_tproc_check(
 
     /* Loop again - this time calling opa_tproc_parmanal() to perform 
     ** the cycle check. */
-    for (i = 0; i < (global->ops_rangetab.opv_gv & oksofar); i++)
+    for (i = 0; i < global->ops_rangetab.opv_gv && oksofar; i++)
      if (global->ops_rangetab.opv_base->opv_grv[i] &&
 	global->ops_rangetab.opv_base->opv_grv[i]->opv_gmask & OPV_TPROC)
      {
