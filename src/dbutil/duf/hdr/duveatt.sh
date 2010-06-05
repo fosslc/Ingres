@@ -21,7 +21,9 @@
 	 attcollid	smallint not null,
 	 attsrid	integer not null,
 	 attgeomtype	smallint not null,
-	 attfree	char(10) not null);
+	 attencflags	smallint not null,
+	 attencwid	integer not null,
+	 attfree	char(4) not null);
 
   struct att_tbl_ {
 	i4	attrelid;
@@ -45,5 +47,7 @@
 	i2	attcollid;
 	i4	attsrid;
 	i2	attgeomtype;
-	char	attfree[11];
+	u_i2	attencflags;
+	i4	attencwid;
+	char	attfree[4];
   } att_tbl;

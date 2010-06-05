@@ -2971,6 +2971,8 @@ DMP_RELATION	iirelation;
 **	    want to give an error. Same is true for width.
 **	11-jan-04 (inkdo01)
 **	    Exclude physical partition iirelation rows from iiattribute tests.
+**	29-apr-2010 (miket) SIR 122403
+**	    Fix verification of encrypted tables.
 [@history_template@]...
 */
 
@@ -2986,7 +2988,9 @@ DMP_RELATION	iirelation ;
 	i2	attid;
 	i2	attver_dropped;
 	i4 agg;
+	i4 encagg;
 	i2	null_agg=0;
+	i2	null_encagg=0;
 	u_i4	tid,tidx;
     exec sql end declare section;
     
@@ -3105,10 +3109,19 @@ DMP_RELATION	iirelation ;
 
 	exec sql repeated select sum(attfrml) into :agg:null_agg
 	    from iiattribute
-	    where attrelid = :tid and attrelidx = :tidx;
+	    where attrelid = :tid and attrelidx = :tidx
+	    and attencflags = 0;
+	
+	exec sql repeated select sum(attencwid) into :encagg:null_encagg
+	    from iiattribute
+	    where attrelid = :tid and attrelidx = :tidx
+	    and attencflags != 0;
 	
 	if (null_agg)	/* adjust agg if no tuples found to make aggregate */
 	    agg = 0;
+	if (null_encagg)/* adjust encagg if no tuples found to make aggregate */
+	    encagg = 0;
+	agg += encagg;	/* sum the unencrypted and encrypt widths */
 
 	if ((agg != iirelation.relwid) &&
 	    ((iirelation.relstat2 & TCB2_ALTERED) == 0) &&

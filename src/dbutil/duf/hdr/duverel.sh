@@ -44,9 +44,14 @@
 	 relversion	smallint not null,
 	 relwid	integer not null,
 	 reltotwid	integer not null,
+	 reldatawid	integer not null,
+	 reltotdatawid	integer not null,
 	 relnparts	smallint not null,
 	 relnpartlevels	smallint not null,
-	 relfree	char(8) not null);
+	 relencflags	smallint not null,
+	 relencver	smallint not null,
+	 relenckey	char(64) not null,
+	 relfree	char(12) not null);
 
   struct rel_tbl_ {
 	i4	reltid;
@@ -93,7 +98,12 @@
 	i2	relversion;
 	i4	relwid;
 	i4	reltotwid;
+	i4	reldatawid;
+	i4	reltotdatawid;
 	i2	relnparts;
 	i2	relnpartlevels;
-	char	relfree[9];
+	u_i2	relencflags;
+	i2	relencver;
+	u_char	relenckey[64];
+	char	relfree[12];
   } rel_tbl;
