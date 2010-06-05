@@ -3490,6 +3490,8 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **          here, it is done in pst_node().
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	14-Apr-2010 (smeke01) b123572
+**	    Improve error message handling for the call to adc_compare.
 */
 %{
 
@@ -34475,10 +34477,22 @@ predicate:		select_expr comparison select_expr
 		    ** Insertion biased to the usual pre-ordered data. */
 		    while (*t)
 		    {
-			if (status = adc_compare(cb->pss_adfcb,
+			status = adc_compare(cb->pss_adfcb,
 				&valnode->pss_expr->pst_sym.pst_dataval,
-				&(*t)->pst_sym.pst_dataval, &cmp))
-			    return status;
+				&(*t)->pst_sym.pst_dataval, &cmp);
+
+			if (status)
+			{
+			    i4		err_code;
+			    DB_ERROR	*err_blk = &psq_cb->psq_error;
+			    ADF_CB	*adf_scb = (ADF_CB*) cb->pss_adfcb;
+
+			    (VOID) psf_error(E_PS0C05_BAD_ADF_STATUS,
+				adf_scb->adf_errcb.ad_errcode, PSF_INTERR, &err_code,
+				err_blk, 0);
+			    return (E_DB_ERROR);
+			}
+
 			if (cmp <= 0)
 			    break;
 			t = &(*t)->pst_left;

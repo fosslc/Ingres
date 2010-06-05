@@ -199,6 +199,8 @@
 **	22-mar-91 (jrb)
 **	    Put comment markers around "xDEBUG" after #endif's.  This was
 **	    causing problems on some compilers.
+**	14-apr-10 (smeke01) b123572
+**	    Allow comparison between nullable and non-nullable values.
 */
 
 # ifdef ADF_BUILD_WITH_PROTOS
@@ -221,9 +223,9 @@ i4                  *adc_cmp_result;
     i4			bdt2 = abs((i4) adc_dv2->db_datatype);
     i4			bdtv;
 
-
-    if (adc_dv1->db_datatype != adc_dv2->db_datatype)
+    if (bdt1 != bdt2)
 	return(adu_error(adf_scb, E_AD3001_DTS_NOT_SAME, 0));
+
     bdtv = ADI_DT_MAP_MACRO(bdt1);
     
     if (    bdtv <= 0 || bdtv > ADI_MXDTS
@@ -248,16 +250,22 @@ i4                  *adc_cmp_result;
     }
 #endif	/* xDEBUG */
 
-    if (adc_dv1->db_datatype > 0)		/* non-nullable */
+    if (adc_dv1->db_datatype > 0 && adc_dv2->db_datatype > 0)		/* both non-nullable */
     {
 	return((*Adf_globs->Adi_dtptrs[ADI_DT_MAP_MACRO(bdt1)]->
 		    adi_dt_com_vect.adp_compare_addr)
 			(adf_scb, adc_dv1, adc_dv2, adc_cmp_result));
     }
-    else
+    else /* one or both nullable */
     {
-	bool		d1_isnull = ADI_ISNULL_MACRO(adc_dv1);
-	bool		d2_isnull = ADI_ISNULL_MACRO(adc_dv2);
+	bool		d1_isnull = FALSE;
+	bool		d2_isnull = FALSE;
+
+	if (adc_dv1->db_datatype < 0)
+	    d1_isnull = ADI_ISNULL_MACRO(adc_dv1);
+
+	if (adc_dv2->db_datatype < 0)
+	    d2_isnull = ADI_ISNULL_MACRO(adc_dv2);
 
 	if (!d1_isnull  && !d2_isnull)
 	{
@@ -268,8 +276,12 @@ i4                  *adc_cmp_result;
 	    STRUCT_ASSIGN_MACRO(*adc_dv2, tmp_dv2);
 	    tmp_dv1.db_datatype = bdt1;
 	    tmp_dv2.db_datatype = bdt2;
-	    tmp_dv1.db_length--;
-	    tmp_dv2.db_length--;
+
+	    if (adc_dv1->db_datatype < 0)
+		tmp_dv1.db_length--;
+
+	    if (adc_dv2->db_datatype < 0)
+		tmp_dv2.db_length--;
 
 	    return((*Adf_globs->Adi_dtptrs[ADI_DT_MAP_MACRO(bdt1)]->
 			adi_dt_com_vect.adp_compare_addr)
