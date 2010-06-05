@@ -5213,6 +5213,8 @@ QEE_DSH	    *dsh
 ** History:
 **	16-Feb-2006 (kschendel)
 **	    Extract from qeq-cleanup.
+**	11-May-2010 (kschendel)
+**	    OPC now only sets NODEACT when there's really something there.
 */
 
 void
@@ -5227,9 +5229,9 @@ qeq_close_dsh_nodes(QEE_DSH *dsh)
 	 action != NULL;
 	 action = action->ahd_next)
     {
-	if ( action->ahd_flags & QEA_NODEACT &&
-	    (node = action->qhd_obj.qhd_qep.ahd_qep) != NULL )
+	if ( action->ahd_flags & QEA_NODEACT )
 	{
+	    node = action->qhd_obj.qhd_qep.ahd_qep;
 	    (void)(*node->qen_func)(node, rcb, dsh, FUNC_CLOSE);
 	}
     }

@@ -248,6 +248,8 @@
 **	    since nobody else will do it.
 **	17-Nov-2009 (kschendel) SIR 122890
 **	    Load now done by qea-put.
+**	11-May-2010 (kschendel)
+**	    NODEACT flag now guarantees that there's really a QP underneath.
 */
 DB_STATUS
 qen_qp(
@@ -309,20 +311,17 @@ i4		function)
 	    if (act != NULL && act->ahd_flags & QEA_NODEACT)
 	    {
 		node = act->qhd_obj.qhd_qep.ahd_qep;
-		if (node != (QEN_NODE *) NULL)
-		{
-		    status = (*node->qen_func)(node, rcb, dsh, FUNC_CLOSE);
-		    if (status != E_DB_OK)
-			return(status);
-		}
-		/* Close hashagg too if that is the action. */
-		if (act->ahd_atype == QEA_HAGGF)
-		{
-		    QEN_HASH_AGGREGATE	*haptr = 
+		status = (*node->qen_func)(node, rcb, dsh, FUNC_CLOSE);
+		if (status != E_DB_OK)
+		    return(status);
+	    }
+	    /* Close hashagg too if that is the action. */
+	    if (act->ahd_atype == QEA_HAGGF)
+	    {
+		QEN_HASH_AGGREGATE	*haptr = 
 			dsh->dsh_hashagg[act->qhd_obj.qhd_qep.u1.s2.ahd_agcbix];
 
-		    (void) qea_haggf_closeall(haptr);
-		}
+		(void) qea_haggf_closeall(haptr);
 	    }
 	}
 	else for (act = node->node_qen.qen_qp.qp_act; act != NULL;
@@ -331,12 +330,9 @@ i4		function)
 	    if (act->ahd_flags & QEA_NODEACT)
 	    {
 		node = act->qhd_obj.qhd_qep.ahd_qep;
-		if (node != (QEN_NODE *) NULL)
-		{
-		    status = (*node->qen_func)(node, rcb, dsh, FUNC_CLOSE);
-		    if (status != E_DB_OK)
-			return(status);
-		}
+		status = (*node->qen_func)(node, rcb, dsh, FUNC_CLOSE);
+		if (status != E_DB_OK)
+		    return(status);
 	    }
 	    /* Close hashagg too if that is the action. */
 	    if (act->ahd_atype == QEA_HAGGF)

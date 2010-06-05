@@ -1,7 +1,7 @@
 #!/bin/sh
 
 URL="http://code.ingres.com/ingres/main"
-SVNLatest=`svn info http://code.ingres.com/ingres/main | grep "Last Changed Rev:" | awk '{print $4}'`
+SVNLatest=`svn info ${URL} | grep "Last Changed Rev:" | awk '{print $4}'`
 RevLog="svn_import/imported_revisions.txt"
 GitLatest=`tail -1 ${RevLog}`
 NOW=`date +"%h%d-%Y-%H%M"`
@@ -31,8 +31,6 @@ else
       CommitMessage="${CurrentRev}.message"
       # Generate a patchfile from svn
       svn diff -r${PreviousRev}:${CurrentRev} ${URL} > ${PatchFile}
-
-      # TODO: Check if the patch affects techpub or tst
 
       # Grab the commit message
       svn log -r${PreviousRev}:${CurrentRev} ${URL} > ${CommitMessage}

@@ -995,6 +995,10 @@ opc_ahd_build(
 **	    larger than adu_maxstring.
 **      12-aug-2009 (stial01)
 **          Moved KEYSET initialization before setting up Resultsetcol(s)
+**	11-May-2010 (kschendel)
+**	    Don't set NODEACT flag unless there's really a QP underneath.
+**	    The flag is meant as a shortcut for "this action has a sub-plan";
+**	    it defeats the purpose if one has to test ahd_qep for NULL too.
 */
 static QEF_AHD *
 opc_qepahd(
@@ -1493,7 +1497,8 @@ opc_qepahd(
 	}
     }
     ahd->qhd_obj.qhd_qep.ahd_qep = cnode.opc_qennode;
-    ahd->ahd_flags |= QEA_NODEACT;	/* flag act hdr as owning NODE */
+    if (cnode.opc_qennode != NULL)
+	ahd->ahd_flags |= QEA_NODEACT;	/* flag act hdr as owning NODE */
     ahd->qhd_obj.qhd_qep.ahd_postfix = sq->ops_compile.opc_bgpostfix;
 
     opc_adend(global, &sq->ops_compile.opc_mkey);
