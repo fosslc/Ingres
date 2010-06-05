@@ -99,6 +99,9 @@
 --#         Added ii.$.star.$.mechanisms with a default value of "none".
 --#	22-Jun-2009 (kschendel) SIR 122138
 --#	    Update hybrid symbols.
+--#	08-Mar-2010 (thaju02)
+--#	    Remove max_tuple_length.
+--#
 
 ii.$.ingstart.$.star:		1;
 
@@ -118,7 +121,6 @@ ii.$.star.$.connect_limit:	10, MIN = 2;
 ii.$.star.$.cpu_statistics:	OFF;
 ii.$.star.$.cursor_limit:	16;
 ii.$.star.$.distributed_recovery: ON;
-ii.$.star.$.max_tuple_length:	2008, MIN = 0, MAX = 32767;
 ii.$.star.$.mechanisms:         "none";
 # ifndef VMS
 ii.$.star.$.image_name:		"iistar";

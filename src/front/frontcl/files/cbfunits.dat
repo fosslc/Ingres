@@ -134,7 +134,6 @@ ii.*.*.*.psf_vch_prec:                  boolean
 *.*.*.*.unix_priority:			priority
 *.*.*.*.session_check_interval:	seconds
 *.*.*.*.stack_caching:			boolean
-*.*.*.*.max_tuple_length:		bytes
 *.*.*.*.dmcm:                   	boolean
 *.*.*.*.ulm_chunk_size:			bytes
 *.*.dbms.*.ambig_replace_64compat:     boolean

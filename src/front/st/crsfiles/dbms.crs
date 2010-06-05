@@ -603,6 +603,8 @@
 --#	03-Mar-2010 (jonj)
 --#	    SIR 121619 MVCC: blob support. Change default etab_page_size
 --#	    from 2048 to 8192
+--#	08-Mar-2010 (thaju02)
+--#	    Remove max_tuple_length.
 --#	24-Mar-2010 (hanje04)
 --#	    SIR 123296
 --#	    Default locations need to writable for LSB builds, set them here
@@ -816,7 +818,6 @@ ii.$.dbms.$.log_esc_lpr_sc:   OFF;
 ii.$.dbms.$.log_esc_lpr_ut:   OFF;
 ii.$.dbms.$.log_esc_lpt_sc:   OFF;
 ii.$.dbms.$.log_esc_lpt_ut:   OFF;
-ii.$.dbms.$.max_tuple_length:	2008, MIN = 0, MAX = 32767;
 ii.$.dbms.$.mechanisms:       "none";
 ii.$.dbms.$.mustlog_db_list:	"";	
 ii.$.dbms.$.name_service: 	ON;

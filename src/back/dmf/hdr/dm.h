@@ -1388,6 +1388,8 @@ typedef CS_SEMAPHORE	DM_MUTEX;
 **	    SIR 121619 MVCC: add svcb_xid_array_size, svcb_xid_array_ptr,
 **	    svcb_xid_lg_id_max, rc_retry stat, svcb_last_tranid,
 **	    SVCB_CONFIG_V6, SVCB_CONFIG_V7
+**	08-Mar-2010 (thaju02)
+**	    svcb_maxtuplen is obsolete; not used.
 */
 struct _DM_SVCB
 {
@@ -1575,7 +1577,7 @@ BATCHMODE,IOMASTER,READAHEAD,MT,AFFINITY,NO_REP,ULOCKS"
 #define SVCB_CONFIG_V7		0x40
     SIZE_TYPE      svcb_etab_tmpsz;        /* Default etab temps page size */
     SIZE_TYPE      svcb_etab_pgsize;       /* Default etab page size */
-    i4		svcb_maxtuplen;         /* Maximum tuple length */
+    i4		svcb_maxtuplen;         /* Maximum tuple length (not used) */
     i4		svcb_blob_etab_struct;  /* Default blob etab structure */
     double	svcb_scanfactor[DM_MAX_CACHE]; /* Multi-block IO cost factor */
     i4		svcb_dop;		/* Degree of parallelism */

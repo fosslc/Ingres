@@ -36,6 +36,8 @@
 --#	    Turn 8k cache on so that the iidbdb can be accessed.
 --#	20-Jul-2009 (thaju02) B122325
 --#	    Added SIZETYPE constraint for dmf_memory.
+--#	08-Mar-2010 (thaju02)
+--#	    Remove max_tuple_length.
 
 ii.*.config.server_host:	`iipmhost`;
 
@@ -43,7 +45,6 @@ ii.*.config.server_host:	`iipmhost`;
 ii.$.ingstart.$.rms:		1;
 
 -- rms resources 
-ii.$.rms.$.max_tuple_length:	2008, MIN = 0, MAX = 32660;
 ii.$.rms.$.default_page_size:	2048, POWER2, MIN = 2048, MAX = 32767;
 ii.$.rms.$.blob_etab_page_size: 2048, VALID={32768,16384,8192,4096,2048,0};
 ii.$.rms.$.blob_etab_structure: "BTREE", VALID={ "BTREE", "HASH", "ISAM" };

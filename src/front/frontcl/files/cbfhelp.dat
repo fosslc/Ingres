@@ -200,10 +200,6 @@ rms.blob_etab_structure.title:         'Default Blob Etab Structure Configuratio
 dbms.ambig_replace_64compat.file:	dbmsambi.hlp
 dbms.ambig_replace_64compat.title:	'DBMS Ambiguous Replace 6.4 Compatibility'
 
-*.max_tuple_length.file:		dbmsmtpl.hlp
-dbms.max_tuple_length.title:		'Max. Row Length Configuration'
-rms.max_tuple_length.title:		'Max. Row Length Configuration'
-
 *.active_limit.file:			dbmsalim.hlp
 dbms.active_limit.title:		'DBMS Active Connection Limit'
 recovery.active_limit.title:		'Recovery Active Connection Limit'

@@ -28,6 +28,8 @@
 ##	30-Nov-2005 (hanje04)
 ##	    Use head -1 instead of cat to read version.rel to
 ##	    stop patch ID's being printed when present.
+##	08-Mar-2010 (thaju02)
+##	    Remove max_tuple_length.
 ##
 #  PROGRAM = iisumdb
 #
@@ -203,9 +205,6 @@ config_mdb()
     ##  $DOIT iisetres ii.$CONFIG_HOST.dbms.shared.p64k.*.dmf_cache_size 175
     ##  $DOIT iisetres ii.$CONFIG_HOST.dbms.private.p64k.*.dmf_group_count 20
     ##  $DOIT iisetres ii.$CONFIG_HOST.dbms.shared.p64k.*.dmf_group_count 20
-
-    # Set max_tuple_length to unlimited
-    $DOIT iisetres ii.$CONFIG_HOST.max_tuple_length 0
 
     # Check log file is big enough
     LOG_KBYTES=`iigetres ii.${CONFIG_HOST}.rcp.file.kbytes` 

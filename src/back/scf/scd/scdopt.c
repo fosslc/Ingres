@@ -359,6 +359,8 @@ NO_OPTIM=dr6_us5
 **          Pick up opf_pq_dop and change the default to 0 (OFF). This
 **          allows those that want to use parallel query to use it as
 **          documented.
+**	08-Mar-2010 (thaju02)
+**	    Remove max_tuple_length.
 */
 
 /*
@@ -555,7 +557,6 @@ struct _SCD_OPT {
 # define        SCO_32K_SCANFACTOR          150
 # define        SCO_64K_SCANFACTOR          151
 
-#define         SCO_MAXTUPLEN               152
 #define		SCO_4K_STATUS		    153
 #define		SCO_8K_STATUS		    154
 #define		SCO_16K_STATUS		    155
@@ -738,7 +739,6 @@ static SCD_OPT scd_opttab[] =
     SCO_INT_SORT_SIZE,		'o',	'3',	"!.dmf_int_sort_size",
     SCO_DTCB_LIMIT,		'o',    '3',    "!.dmf_tcb_limit",
     SCO_DOP,			'o',	' ',	"!.degree_of_parallelism",
-    SCO_MAXTUPLEN,              'o',    ' ',    "!.max_tuple_length",
     SCO_DMF_PAD_BYTES,		'o',	' ',	"!.dmf_pad_bytes",
     SCO_EVENTS,			'o',	'3',	"!.event_limit",
     SCO_EVENT_PRIORITY,         'o',    '3',    "!.event_priority",
@@ -1561,11 +1561,6 @@ scd_options(
 		    dca++->char_value = DMC_C_TABLE;
 		else /* default is page */
 		    dca++->char_value = DMC_C_PAGE;
-		break;
-
-	    case SCO_MAXTUPLEN:
-		dca->char_id = DMC_C_MAXTUPLEN;
-		dca++->char_value = scd_value;
 		break;
 
 	    case SCO_DEF_PAGE_SIZE:

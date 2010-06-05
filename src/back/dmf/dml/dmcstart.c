@@ -855,6 +855,8 @@ static STATUS dmcm_lkinit(
 **	    SIR 121619 MVCC: LGshow(LG_S_XID_ARRAY) to extract info about
 **	    LG xid array into svcb_xid_array_ptr, _size, _lg_id_max.
 **	    Add page types V6, V7
+**	08-Mar-2010 (thaju02)
+**	    Removed max_tuple_length.
 */
 
 DB_STATUS
@@ -928,7 +930,6 @@ DMC_CB    *dmc_cb)
     i4		c_mwrite_blocks = DM_MWRITE_PAGES;
     double		c_scanfactor[DM_MAX_CACHE];
     i4		c_int_sort_size = 150000;
-    i4             maxtuplen = 0;
     DB_STATUS		status = E_DB_ERROR;
     i4		err_code;
     STATUS		stat;
@@ -1446,10 +1447,6 @@ DB_VPT_SIZEOF_TUPLE_HDR(TCB_PG_V4), DMPP_VPT_SIZEOF_TUPLE_HDR_MACRO(TCB_PG_V4));
 		    c_writebehind[5] = 0;
 		    continue;
 
-		case DMC_C_MAXTUPLEN:
-		    maxtuplen = chr[i].char_value;
-		    continue;
-
 		case DMC_C_REP_QSIZE:
 		    c_rep_qsize = chr[i].char_value;
 		    continue;
@@ -1751,22 +1748,6 @@ DB_VPT_SIZEOF_TUPLE_HDR(TCB_PG_V4), DMPP_VPT_SIZEOF_TUPLE_HDR_MACRO(TCB_PG_V4));
 	    TRdisplay("DMF: This is a cluster installation.\n");
 #endif
 	
-	/* 
-	** Given increased page sizes, the maximum tuple size is configurable
-	** to allow the user to reduce per session memory requirements
-	** 
-	** For the recovery server, the maxreclen is not configurable
-	** so the maximum depends on the page size
-	*/
-	if (dmc->dmc_flags_mask & DMC_RECOVERY)
-	    svcb->svcb_maxtuplen = 0; /* depends on page size */
-	else if (maxtuplen && maxtuplen > 0 && maxtuplen <= DM_TUPLEN_MAX_V5)
-	    svcb->svcb_maxtuplen = maxtuplen;
-	else if (maxtuplen > DM_TUPLEN_MAX_V5)
-	    svcb->svcb_maxtuplen = DM_TUPLEN_MAX_V5;
-	else
-	    svcb->svcb_maxtuplen = 0; /* depends on page size */
-
 	/* TRdisplay maximum btree leaf entry length */
 
 	/* Assume the largest leaf will store no atts (Clustered), and have a 4-byte key */

@@ -343,6 +343,8 @@
 **         LOG and read-only under FILES location.
 **	02-Apr-2010 (thaju02) Bug 122528
 **	    Added check_cache_name() to validate cache_name value.
+**	08-Mar-2010 (thaju02)
+**	    Modified CRsetPMval(); remove max_tuple_length.
 */
 
 /* NO_OPTIM = ris_us5 sgi_us5 i64_aix */
@@ -2776,27 +2778,6 @@ CRsetPMval( char *name, char *value, FILE *output, bool print_stdout, bool repor
                 	CRFPRINT( output, temp);
                     }
 		}
-	    }
-	}
-
-        /*
-	** Special case for max_tuple_length parameter
-	** if decreasing max_tuple_length and owner is dbms
-	**	then notify user of possible negative effect on star.
-	*/
-	if (PMmNumElem(pm_context, name) == 5 &&
-	    !STcompare(owner,ERx("dbms")) &&
-	    !STcompare(PMmGetElem(pm_context, 4, name),ERx("max_tuple_length")))
-	{
-	    CVal(orig_val, &old_intval);
-	    CVal(value, &new_intval);
-	    if (new_intval < old_intval)	
-	    {
-		/*
-		** print out warning
-		*/
-		STprintf(warnmsg, ERget( S_ST0639_max_tuple_warn ));
-		warn = STalloc (warnmsg);
 	    }
 	}
 
