@@ -6,6 +6,7 @@
 #include <psldef.h>
 #include <er.h>
 #include <st.h>
+#include <cv.h>
 
 #include <logicals.h>
 
@@ -31,6 +32,8 @@
 **	    Use OS headers provided by HP.
 **	09-oct-2008 (stegr01/joea)
 **	    Replace II_VMS_ITEM_LIST_3 by ILE3.
+**	12-feb-2010 (abbjo03, wanfr01) Bug 123139
+**	    cv.h needs to be added for function definitions
 */
 
     $DESCRIPTOR(tabledesc,ERx("SEP_TABLE")) ;
