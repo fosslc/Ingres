@@ -191,6 +191,9 @@ static void qen_dsh_fixup(
 **	    For 'select first n' queries, parent should signal a warning 
 **	    not an error status to any children, so that they close without
 **	    raising spurious errors to the frontend.
+**      18-Mar-2010 (huazh01)
+**          Signal E_DB_WARN if dsh->dsh_error.err_code contains
+**          no error. (b123375)
 */
 
 DB_STATUS
@@ -587,7 +590,8 @@ i4		    function )
 		    ** call FUNC_CLOSE on their query plan fragments without raising spurious  
 		    ** errors.
 		    */
-		    if (dsh->dsh_error.err_code == E_QE0015_NO_MORE_ROWS)
+                    if (!dsh->dsh_error.err_code ||
+                         dsh->dsh_error.err_code == E_QE0015_NO_MORE_ROWS)
 		    {
 			if (exch_cb->trace)
 			    TRdisplay("%@ %p %2d %s %s signalling E_DB_WARN status\n", 
@@ -1191,6 +1195,17 @@ i4		    function )
 **	    Fix bogus elapsed-time addition, use max.  Use adjust-counter
 **	    for updating shared counters, not perfect but might avoid some
 **	    threading conflicts.
+**      18-Mar-2010 (huazh01)
+**          a) Do not send CUT signal to parent thread if child
+**          thread get E_DM0065_USER_INTR error, which can
+**          only come from parent thread.
+**          b) Allows parent thread to signal E_DB_WARN to child
+**          thread if dsh contains no error, which in turn allows
+**          cut_attach_buf() to return E_DB_WARN in stead of
+**          E_DB_ERROR. A E_DB_WARN status will prevent child
+**          thread re-sends the E_DB_ERROR back to parent.
+**          Otherwise, query will fail with E_US1264.
+**          (b123375)
 **/
 DB_STATUS
 qen_exchange_child(SCF_FTX *ftxcb)
@@ -1273,15 +1288,22 @@ qen_exchange_child(SCF_FTX *ftxcb)
 	CommRcb->cut_buf_use = CUT_BUF_READ;
 
 	/* Attach to COMM first, then DATA */
-	if ( cut_attach_buf(CommRcb, &error) ||
-	     cut_attach_buf(DataRcb, &error) )
+	if ( status = cut_attach_buf(CommRcb, &error) )
 	{
 	    /* Error already logged by CUT */
-	    status = E_DB_ERROR;
 	    if ( error.err_code != E_CU0204_ASYNC_STATUS )
 		error.err_code = 0;
 	    break;
 	}
+
+        if ( status = cut_attach_buf(DataRcb, &error) )
+        {
+            /* Error already logged by CUT */
+            if ( error.err_code != E_CU0204_ASYNC_STATUS )
+                error.err_code = 0;
+            break;
+        }
+
 
 	/* This thread needs to share the transaction context, because
 	** LG and LK are going to do things like fetch the current
@@ -1337,7 +1359,8 @@ qen_exchange_child(SCF_FTX *ftxcb)
 	{
 	    error.err_code = dsh->dsh_error.err_code;
 	    /* Force CUT signal status notification */
-	    dsh->dsh_error.err_code = 0;
+            if (error.err_code != E_DM0065_USER_INTR)
+	       dsh->dsh_error.err_code = 0;
 	    break;
 	}
 	if (exch_cb->trace)
