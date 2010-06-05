@@ -3580,24 +3580,12 @@ opc_target(
 	    {
 		rd_list[rd_max] = resdom;
 		rd_max += 1;
-#if 0
-		targ_offset += resdom->pst_sym.pst_dataval.db_length;
-#endif
 	    }
 	}
-#if 0
-	for (resdom = root; 
-	     resdom != NULL && resdom->pst_sym.pst_type != PST_TREE;
-	     resdom = resdom->pst_left)
-#endif
 	for (rd_max -= 1;
 	     rd_max >= 0;
 	     rd_max -= 1)
 	{
-#if 0
-	    if (!(resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsflags&PST_RS_PRINT))
-		continue;
-#endif
 
 	    resdom = rd_list[rd_max];
 	    rsno = resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsno;
@@ -3657,9 +3645,6 @@ opc_target(
 	    ops[0].opr_collID = ops[1].opr_collID = tsoffsets[rsno].opc_tcollID;
 	    ops[1].opr_offset = tsoffsets[rsno].opc_toffset;
 
-#if 0
-	    targ_offset -= resdom->pst_sym.pst_dataval.db_length;
-#endif
 	    ops[0].opr_offset = targ_offset;
 
 	    ops[0].opr_base = cadf.opc_out_base;
@@ -6447,6 +6432,10 @@ opc_lvar_row(
 **	8-june-05 (inkdo01)
 **	    Can't share sequence descriptors if one is for nextval and the
 **	    other is for currval (bug 114646).
+**	30-Apr-2010 (kiria01) b123665
+**	    Attach the sequence to the correct subquery - instead of using
+**	    ops_osubquery use global->ops_cstate.opc_subqry otherwise the
+**	    wrong ahd_seq is updated.
 */
 static VOID
 opc_seq_setup(
@@ -6458,14 +6447,16 @@ opc_seq_setup(
 	i4		*localbuf)
 
 {
+    /* standard variables to shorten line length */
+    OPS_SUBQUERY	*subqry = global->ops_cstate.opc_subqry;
+    QEF_AHD		*ahd = subqry->ops_compile.opc_ahd;
     QEF_SEQUENCE	*wseqp;
     QEF_SEQ_LINK	*linkp;
     PST_SEQOP_NODE	*nodep = &root->pst_sym.pst_value.pst_s_seqop;
     i4			dshrow;
 
     /* First look for the desired sequence in the current action header. */
-    for (linkp = global->ops_subquery->ops_compile.opc_ahd->
-		qhd_obj.qhd_qep.ahd_seq; linkp; linkp = linkp->qs_ahdnext)
+    for (linkp = ahd->qhd_obj.qhd_qep.ahd_seq; linkp; linkp = linkp->qs_ahdnext)
     {
 	wseqp = linkp->qs_qsptr;
 	if (MEcmp((PTR)&wseqp->qs_seqname, (PTR)&nodep->pst_seqname, 
@@ -6516,10 +6507,8 @@ opc_seq_setup(
 	
 	linkp = (QEF_SEQ_LINK *) opu_qsfmem(global, sizeof(QEF_SEQ_LINK));
 	linkp->qs_qsptr = wseqp;
-	linkp->qs_ahdnext = global->ops_subquery->ops_compile.opc_ahd->
-				qhd_obj.qhd_qep.ahd_seq;
-	global->ops_subquery->ops_compile.opc_ahd->qhd_obj.qhd_qep.ahd_seq =
-				linkp;
+	linkp->qs_ahdnext = ahd->qhd_obj.qhd_qep.ahd_seq;
+	ahd->qhd_obj.qhd_qep.ahd_seq = linkp;
 	return;
     }
 
@@ -6534,17 +6523,14 @@ opc_seq_setup(
 	/* Tedious but necessary - currval's must follow nextval's. */
 	QEF_SEQ_LINK	**linkpp;
 
-	for (linkpp = &global->ops_subquery->ops_compile.opc_ahd->
-		qhd_obj.qhd_qep.ahd_seq; *linkpp; 
+	for (linkpp = &ahd->qhd_obj.qhd_qep.ahd_seq; *linkpp; 
 		linkpp = &(*linkpp)->qs_ahdnext);
 	(*linkpp) = linkp;
     }
     else
     {
-	linkp->qs_ahdnext = global->ops_subquery->ops_compile.opc_ahd->
-				qhd_obj.qhd_qep.ahd_seq;
-	global->ops_subquery->ops_compile.opc_ahd->qhd_obj.qhd_qep.ahd_seq =
-				linkp;
+	linkp->qs_ahdnext = ahd->qhd_obj.qhd_qep.ahd_seq;
+	ahd->qhd_obj.qhd_qep.ahd_seq = linkp;
     }
     wseqp->qs_qpnext = global->ops_cstate.opc_qp->qp_sequences;
     global->ops_cstate.opc_qp->qp_sequences = wseqp;
