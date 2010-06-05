@@ -1711,6 +1711,9 @@ register i4     args;
 **	    buffer.
 **	20-mar-2001 (abbjo03)
 **	    Correct the length output for T_WCHAR and T_NVCH variables.
+**      28-Apr-2010 (coomi01) b123643
+**          The dimension string may be an expression, must bracket it
+**          to ensure proper evaluation.
 */
 
 i4
@@ -1867,8 +1870,9 @@ register i4	arg;
 #endif
 	    if (dattyp == T_WCHAR)
 	    {
-		gen__obj(TRUE, ERx("("));
+		gen__obj(TRUE, ERx("(("));
 		gen__obj(TRUE, dimstr);
+		gen__obj(TRUE, ERx(")"));
 		gen__obj(TRUE, ERx("*"));  
 		gen__int(sizeof(wchar_t));
 		gen__obj(TRUE, ERx(")"));
