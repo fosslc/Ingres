@@ -531,6 +531,8 @@ opc_tsort_build(
 **	    Sortlist entries are sorts, not resdom's!  Worked by accident.
 **      09-Jun-2009 (coomi01) b121805,b117256
 **          Supress SEQOP code generation.
+**      11-May-2010 (coomi01) b123652
+**          Adjust number of attributes present downwards on a SEQOP skip.
 **
 [@history_template@]...
 */
@@ -563,7 +565,10 @@ opc_tscatts(
 	)
     {
  	if (resdom->pst_right && (resdom->pst_right->pst_sym.pst_type == PST_SEQOP))
+	{
+            *pacount -= 1;              /* Bug 123652, One less attribute now present */
  	    continue;			/* skip sequences */
+	}
 
 	rsno = resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsno;
 
