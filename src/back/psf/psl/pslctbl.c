@@ -428,6 +428,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      15-apr-2010 (stial01)
+**          Fixed length used when copying name
 */
 
 /* static functions and constants declaration */
@@ -4711,8 +4713,7 @@ psl_ct8_cr_lst_elem(
 	    dmdata_ptr = &yyvarsp->part_locs;
 
 	/* See if there is space for 1 more */
-	if (dmdata_ptr->data_in_size/sizeof(DB_LOC_NAME) >=
-	    DM_LOC_MAX)
+	if (dmdata_ptr->data_in_size/sizeof(DB_LOC_NAME) >= DM_LOC_MAX)
 	{
 	    /* Too many locations */
 	    (VOID) psf_error(2115L, 0L, PSF_USERERR,
@@ -5498,8 +5499,7 @@ psl_ct10_crt_tbl_kwd(
 
 	ldb_tab_info = ddl_info->qed_d6_tab_info_p;
 	
-	MEfill(sizeof (DD_TAB_NAME), (u_char) ' ',
-	       (PTR) ldb_tab_info->dd_t2_tab_owner);
+	MEfill(sizeof(DD_OWN_NAME), ' ', (PTR) ldb_tab_info->dd_t2_tab_owner);
 	ldb_tab_info->dd_t3_tab_type =
 				  ddl_info->qed_d8_obj_type = DD_2OBJ_TABLE;
 	ldb_tab_info->dd_t6_mapped_b = FALSE;
@@ -8289,8 +8289,8 @@ psl_ct21s_cons_name(
 	/* copy constraint name into constraint info block
 	** and record that name was specified
 	*/
-	STmove(cons_name, ' ', 
-	       sizeof(DB_TAB_NAME), cons->pss_cons_name.db_constraint_name);
+	STmove(cons_name, ' ', DB_CONS_MAXNAME,
+	    cons->pss_cons_name.db_constraint_name);
 	
 	cons->pss_cons_type |= PSS_CONS_NAME_SPEC;
     }
