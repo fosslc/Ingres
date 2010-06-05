@@ -153,6 +153,8 @@
 **      29-Apr-2010 (stial01)
 **          iiattribute is compressed, Init ALL fields in attrrecord before put.
 **          Define keybufs for each table catalog we position into.
+**      29-Apr-2010 (stial01)
+**         Fixed previous (bad) integration to head rev.
 **          
 **/
 
@@ -1357,12 +1359,12 @@ DB_ERROR	*dberr)
 
 		if (found)
 		{ 
-                   key_desc[1].attr_operator = DM2R_EQ;
-                   key_desc[1].attr_number = DM_2_ATTRIBUTE_KEY;
-                   key_desc[1].attr_value = (char *) &it->tcb_rel.reltid.db_tab_index;
+                   att_key_desc[1].attr_operator = DM2R_EQ;
+                   att_key_desc[1].attr_number = DM_2_ATTRIBUTE_KEY;
+                   att_key_desc[1].attr_value = (char *) &it->tcb_rel.reltid.db_tab_index;
 
-	           status = dm2r_position(attr_rcb, DM2R_QUAL, key_desc, (i4)2,
-                                      (DM_TID *)0, dberr);
+	           status = dm2r_position(attr_rcb, DM2R_QUAL, att_key_desc, 
+				(i4)2, (DM_TID *)0, dberr);
                    if (status != E_DB_OK)
                      break;
 
