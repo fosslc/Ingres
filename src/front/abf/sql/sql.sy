@@ -189,6 +189,12 @@
 **	18-Jun-2009 (kiria01) b122185
 **	    Handle WHEN in create_secalarm that used to be dealt
 **	    with as a checked ID.
+**      21-Apr-2010 (coomi01) b123611
+**          Use DMLexpr in group_list production. 
+**          From the 9.3 SQL Reference manual, page 684 we are 
+**          allowed to place integer valued functions here.
+**          DMLexpr itself allows the original qual_column_ref
+**          as an item.
 */
 
 /* %L Configuration begin */
@@ -1201,11 +1207,11 @@ group_clause:	GROUP BY group_list
 /*
 ** Name:	group_list -	Column-Name List for GROUP BY clause.
 */
-group_list:	qual_column_ref
+group_list:	DMLexpr
 		{
 			$$ = $1;
 		}
-	|	group_list ',' qual_column_ref
+	|	group_list ',' DMLexpr
 		{
 			u_ptr[0].u_nodep = $1;
 			u_ptr[1].u_nodep = $3;
