@@ -9,6 +9,7 @@
 #include <st.h>
 #include <er.h>
 #include <cs.h>	    /* Needed for "erloc.h" */
+#include <cv.h>
 #include "erloc_v3.h"
 #ifdef  VMS
 #include <fab.h>
@@ -488,6 +489,8 @@ NEEDLIBS =	COMPATLIB MALLOCLIB
 **	    replace %ld with %d for old nat and long nat variables.
 **	13-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 [@history_template@]...
 */
 

@@ -256,6 +256,8 @@ static ENTRY charsets[]=
 **	    Set double-byte attribute
 **	11-apr-2007 (gupsh01)
 **	    Set UTF8 attribute.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Reset function pointers after determining character set
 **
 */
 
@@ -309,7 +311,9 @@ CL_ERR_DESC *err;
 	    }
 	}
 	CM_isDBL = charsets[i].isdouble;
-		 
+
+	STinit();
+	CVinit();		 
 
 #ifdef VMS
 

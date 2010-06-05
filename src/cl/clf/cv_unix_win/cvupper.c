@@ -90,9 +90,11 @@
 **	    Changed str++ to CMnext(str) for doublebyte character support.
 **	11-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Optimizations for single byte
 */
 VOID
-CVupper(string)
+CVupper_DB(string)
 register char	*string;
 
 {
@@ -107,6 +109,29 @@ register char	*string;
 				CMtoupper(string, string);
 			}
 			CMnext(string);
+		}
+	}
+
+	return;
+}
+
+
+VOID
+CVupper_SB(string)
+register char	*string;
+
+{
+	if (string != NULL)
+	{
+		/* make sure you got at least a ptr */
+
+		while (*string != NULL)
+		{
+			if (CMlower_SB(string))
+			{
+				CMtoupper_SB(string, string);
+			}
+			CMnext_SB(string);
 		}
 	}
 

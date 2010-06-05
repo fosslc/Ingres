@@ -20,6 +20,7 @@
 #include    <ex.h>
 #include    <cs.h>
 #include    <cx.h>
+#include    <cv.h>
 #include    <csev.h>
 #include    <cssminfo.h>
 #include    <csinternal.h>
@@ -245,6 +246,8 @@
 **	    Change alloc_pages, size to SIZE_TYPE.
 **	21-Aug-2009 (kschendel) 121804
 **	    Include cslocal.h, meprivate.h for routine declarations.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 
 

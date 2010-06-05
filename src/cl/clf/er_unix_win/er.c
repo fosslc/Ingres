@@ -40,6 +40,7 @@
 #ifdef	xCL_074_WRITEV_READV_EXISTS
 #include    <sys/uio.h>
 #endif
+#include    <cv.h>
 
 /**
 **
@@ -162,6 +163,8 @@
 **         SIR 123296
 **         Add LSB option, writable files are stored under ADMIN, logs under
 **         LOG and read-only under FILES location.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for CVal definition.
 **/
 
 /*

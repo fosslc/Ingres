@@ -7,6 +7,7 @@
 #include	<stdio.h>
 #include	<pc.h>
 #include	<st.h>
+#include	<cv.h>
 
 /**
 ** histo
@@ -40,6 +41,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 **/
 
 #define	HISTO_SIZE	1024		/* default histo size */

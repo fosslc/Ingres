@@ -90,9 +90,11 @@
 **              Changed to use CL_PROTOTYPED
 **	11-aug-93 (ed)
 **	    unconditional prototypes
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Optimizations for single byte
 */
 i4
-STbcompare(
+STbcompare_DB(
 	const char	*a,
 	i4	al,
 	const char	*b,
@@ -135,6 +137,66 @@ STbcompare(
 		CMbytedec(length,ap);	/* one less character to compare (double or single byte) */
 		CMnext(ap);
 		CMnext(bp);
+	}
+
+	/*
+	** assert:  result != 0 ==> length > 0
+	**
+	**	In this case (the only one of interest since result == 0 ==> match,)
+	**	a special condition may hold:  One of the strings has reached EOS,
+	**  (*ap == EOS OR *bp == EOS,) and a prefix comparison was in effect,
+	**  (al != 0 OR bl != 0.)   If this is true, the strings are equal.
+	*/
+	return ( result != 0 &&
+				(( *ap != EOS && *bp != EOS ) || ( al == 0 && bl == 0 ))
+			) ? result : 0;
+}
+
+
+i4
+STbcompare_SB(
+	const char	*a,
+	i4	al,
+	const char	*b,
+	i4	bl,
+	i4	nc)
+{
+	const char	*ap = a;
+	const char	*bp = b;
+	register i4	length;		/* in characters, not bytes */
+	register i4	result = 0;
+
+	/*
+	** If both input lengths are non-positive, then make the length very
+	** large so the loop below will run until the strings do not match or
+	** an EOS is found in one of the strings.  Otherwise, make the length
+	** the non-zero minimum of the input lengths.
+	*/
+
+	if ( al > 0 && ( bl <= 0 || al < bl ) )
+		length = al;
+	else if ( bl > 0 )
+		length = bl;
+	else
+		length = MAXI2;	/* max. `nat' on all machines */
+
+	/*
+	** Compare strings lexically with value in 'result' until finished.
+	** Note that if either string reaches EOS (but not both), then 'result'
+	** is non-zero.  So, the only time EOS terminates the loop is when
+	** both strings reach EOS with 'result' being zero as a consequence
+	** (and of course, 'length' is positive.)
+	**
+	**	assert (length > 0)
+	*/
+
+	while ( length > 0 &&
+			(result = (nc ? CMcmpnocase_SB(ap, bp) : CMcmpcase_SB(ap, bp))) == 0 &&
+				*ap != EOS )
+	{
+		CMbytedec_SB(length,ap);	/* one less character to compare (double or single byte) */
+		CMnext_SB(ap);
+		CMnext_SB(bp);
 	}
 
 	/*

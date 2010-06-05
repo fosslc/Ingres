@@ -6,6 +6,7 @@
 #include    <cs.h>
 #include    <gl.h>
 #include    <me.h>
+#include    <cv.h>
 
 /**
 ** Name: CVGLOBAL.C - Global variables for CV.
@@ -49,6 +50,8 @@ LIBRARY = IMPCOMPATLIBDATA
 **	03-jun-1996 (canor01)
 **	    modified thread-local storage for use with operating-system
 **	    threads.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Added CV_fvp
 **/
 
 /* externs */
@@ -59,3 +62,7 @@ GLOBALDEF i4	cv_errno = 0;	/* error status - set by exception
 # ifdef OS_THREADS_USED
 GLOBALDEF	ME_TLS_KEY	cv_errno_key;
 # endif /* OS_THREADS_USED */
+
+GLOBALDEF CV_FUNCTIONS CV_fvp = { CVal_DB, CVal8_DB, CVlower_DB, CVupper_DB };
+
+

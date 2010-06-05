@@ -62,10 +62,12 @@
 **	    replace nat and longnat with i4
 **	16-Dec-2008 (kiria01) b121410
 **	    Reduce work done in the loop from utf8
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Optimizations for single byte
 **/
 
 size_t
-STtrmwhite(
+STtrmwhite_DB(
 	char	*string)
 {
 	register char *p = string;
@@ -85,6 +87,33 @@ STtrmwhite(
 		}
 		else
 			CMnext(p);
+	}
+	if (nw != p)
+		*nw = EOS;
+	return nw - string;
+}
+
+size_t
+STtrmwhite_SB(
+	char	*string)
+{
+	register char *p = string;
+	register char *nw = p;
+
+	/*
+	** after the loop, nw points to the first character beyond
+	** the last non-white character.  Done this way because you
+	** can't reverse scan a string with CM efficiently
+	*/
+	while (*p != EOS)
+	{
+		if (!CMwhite_SB(p))
+		{
+			CMnext_SB(p);
+			nw = p;
+		}
+		else
+			CMnext_SB(p);
 	}
 	if (nw != p)
 		*nw = EOS;

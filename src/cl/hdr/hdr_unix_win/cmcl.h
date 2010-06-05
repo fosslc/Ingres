@@ -176,6 +176,8 @@
 **	 2-Dec-2009 (wanfr01) Bug 122994
 **	    Add CMGETDBL variable and use it to bypass Doublebyte checks if
 **	    you are running a platform that has no doublebyte characters
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte versions of the CM macros
 */
 
 /*
@@ -436,6 +438,7 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 # endif
 
 # define CMGETATTR(s)	((CMGETUTF8 && CM_UTF8MULTI(s)) ? (cmu_getutf8property((u_char *)(s), (i4)CMUTF8cnt(s))) : (CMGETATTRTAB[CM_DEREF(s)])) 
+# define CMGETATTR_SB(s)	(CMGETATTRTAB[CM_DEREF(s)]) 
 
 # define CMGETCASE(s)	CMGETCASETAB[CM_DEREF(s)]
 
@@ -548,6 +551,7 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 /* Allow optimizer to cut out redundant DOUBLEBYTE code */
 # define CMdbl1st(str)	(FALSE)
 # endif
+# define CMdbl1st_SB(str)	(FALSE)
 
 
 
@@ -580,9 +584,14 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 ** History:
 **	18-sep-86 (yamamoto)
 **		first written
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Optimize code for single byte character sets
 */
-# define CMnmstart(nm)	((CMGETATTR(nm) & CM_A_NMSTART) ? \
-	(CMdbl1st(nm) ? (cmdbl2nd((nm)+1) && !cmdblspace(nm)) : TRUE) : FALSE)
+
+# define CMnmstart(nm)	((CMGETDBL)? ((CMGETATTR(nm) & CM_A_NMSTART) ? \
+	(CMdbl1st(nm) ? (cmdbl2nd((nm)+1) && !cmdblspace(nm)) : TRUE) : FALSE) : \
+	(CMGETATTR_SB(nm) & CM_A_NMSTART))
+# define CMnmstart_SB(nm)	(CMGETATTR_SB(nm) & CM_A_NMSTART)
 
 
 /*{
@@ -613,10 +622,14 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 ** History:
 **	18-sep-86 (yamamoto)
 **		first written
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Optimize code for single byte character sets
 */
 
-# define CMnmchar(nm)	((CMGETATTR(nm) & (CM_A_NMSTART|CM_A_NMCHAR)) ? \
-	(CMdbl1st(nm) ? (cmdbl2nd((nm)+1) && !cmdblspace(nm)) : TRUE) : FALSE)
+# define CMnmchar(nm)	((CMGETDBL)? ((CMGETATTR(nm) & (CM_A_NMSTART|CM_A_NMCHAR)) ? \
+	(CMdbl1st(nm) ? (cmdbl2nd((nm)+1) && !cmdblspace(nm)) : TRUE) : FALSE) : \
+	(CMGETATTR_SB(nm) & (CM_A_NMSTART|CM_A_NMCHAR)))
+# define CMnmchar_SB(nm)	(CMGETATTR_SB(nm) & (CM_A_NMSTART|CM_A_NMCHAR))
 
 
 /*{
@@ -648,11 +661,14 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 **		first written
 **	03-Dec-2009 (wanfr01) Bug 122994
 **	    Optimize code for single byte character sets
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Further Optimize code for single byte character sets
 */
 
 # define CMprint(str)	((CMGETDBL)? (CMdbl1st(str) ? cmdbl2nd((str)+1) : \
 	(CMGETATTR(str) & (CM_A_PRINT|CM_A_ALPHA|CM_A_DIGIT))) : \
-	(CMGETATTR(str) & (CM_A_PRINT|CM_A_ALPHA|CM_A_DIGIT))) 
+	(CMGETATTR_SB(str) & (CM_A_PRINT|CM_A_ALPHA|CM_A_DIGIT))) 
+# define CMprint_SB(str)	(CMGETATTR_SB(str) & (CM_A_PRINT|CM_A_ALPHA|CM_A_DIGIT)) 
 
 
 
@@ -683,9 +699,12 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 ** History:
 **	18-sep-86 (yamamoto)
 **		first written
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte version
 */
 
 # define CMdigit(str)	(CMGETATTR(str) & CM_A_DIGIT)
+# define CMdigit_SB(str)	(CMGETATTR_SB(str) & CM_A_DIGIT)
 
 
 /*{
@@ -715,9 +734,12 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 ** History:
 **	18-sep-86 (yamamoto)
 **		first written
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte version
 */
 
 # define CMcntrl(str)	(CMGETATTR(str) & CM_A_CONTROL)
+# define CMcntrl_SB(str)	(CMGETATTR_SB(str) & CM_A_CONTROL)
 
 
 /*{
@@ -748,13 +770,17 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 ** History:
 **	18-sep-86 (yamamoto)
 **		first written
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte version
 */
 
 # define CMlower(str)	(CMGETATTR(str) & CM_A_LOWER)
+# define CMlower_SB(str)	(CMGETATTR_SB(str) & CM_A_LOWER)
 
 /*	define local macros	*/
 
 # define cmtoupper(str)	(CMlower(str) ? CMGETCASE(str) : CM_DEREF(str))
+# define cmtoupper_sb(str)	(CMlower_SB(str) ? CMGETCASE(str) : CM_DEREF(str))
 
 
 /*{
@@ -785,13 +811,17 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 ** History:
 **	18-sep-86 (yamamoto)
 **		first written
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte version
 */
 
 # define CMupper(str)	(CMGETATTR(str) & CM_A_UPPER)
+# define CMupper_SB(str)	(CMGETATTR_SB(str) & CM_A_UPPER)
 
 /*	define local macros	*/
 
 # define cmtolower(str)	(CMupper(str) ? CMGETCASE(str) : CM_DEREF(str))
+# define cmtolower_sb(str)	(CMupper_SB(str) ? CMGETCASE(str) : CM_DEREF(str))
 
 /*{
 ** Name:	CMwhite	- check white space
@@ -829,9 +859,12 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 **	03-Dec-2009 (wanfr01) Bug 122994
 **	    Optimize code for single byte character sets
 **	    Note this undoes the prior change so the code is easier to read.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte version
 */
 
 # define CMwhite(str) ((CMGETDBL)? ((CMGETUTF8 && CM_UTF8MULTI(str)) ? ((CMGETATTR(str)&CM_A_SPACE) ? TRUE : FALSE) : ((CM_AttrTab[*(str)&0377] & CM_A_SPACE) || cmdblspace(str))) : (CM_AttrTab[*(str)&0377] & CM_A_SPACE))
+# define CMwhite_SB(str) (CM_AttrTab[*(str)&0377] & CM_A_SPACE)
 
 /*{
 ** Name:	CMspace	- check a space or double byte space
@@ -864,9 +897,12 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 **		first written
 **	03-Dec-2009 (wanfr01) Bug 122994
 **	    Optimize code for single byte character sets
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte version
 */
 
 # define CMspace(str)	(*(str) == ' ' || ((CMGETDBL) && cmdblspace(str)))
+# define CMspace_SB(str)	(*(str) == ' ')
 
 
 /*{
@@ -898,9 +934,12 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 **	02/87 (jhw) -- Written.
 **	23-feb-1987 (yamamoto)
 **		written using _HEX.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte version
 */
 
 # define CMhex(str)	(CMGETATTR(str) & CM_A_HEX)
+# define CMhex_SB(str)	(CMGETATTR_SB(str) & CM_A_HEX)
 
 
 /*{
@@ -944,9 +983,12 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 **	10-feb-1987 (neil)	- written.
 **	23-feb-1987 (yamamoto)
 **		written using _OPER.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte version
 */
 
 # define CMoper(str)	(CMGETATTR(str) & CM_A_OPER)
+# define CMoper_SB(str)	(CMGETATTR_SB(str) & CM_A_OPER)
 
 
 /*{
@@ -1013,12 +1055,15 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 **	    produce unpredictable results.
 **	11-apr-2007 (gupsh01)
 **	    Add support for UTF8. 
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte version
 */
 # ifdef	DOUBLEBYTE
 # define CMcpychar(src, dst) ( (CMbytecnt(src) == 1) ? (*(dst) = *(src)) :( (CMbytecnt(src) == 2) ?( (*((dst)+1) = *((src)+1)),(*(dst) = *(src))) :( (CMbytecnt(src) == 3) ? ( (*((dst)+2) = *((src)+2)),(*((dst)+1) = *((src)+1)),(*(dst) = *(src))) : ( (CMbytecnt(src) == 4) ? ( (*((dst)+3) = *((src)+3)),(*((dst)+2) = *((src)+2)), (*((dst)+1) = *((src)+1)),(*(dst) = *(src)) ) : 0))))
 # else
 # define CMcpychar(src, dst)	(*(dst) = *(src))
 # endif
+# define CMcpychar_SB(src, dst) (*(dst) = *(src)) 
 
 
 /*{
@@ -1057,12 +1102,15 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 ** History:
 **	18-sep-86 (yamamoto)
 **		first written
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte version
 */
 # ifdef	DOUBLEBYTE
 # define CMcpyinc(src,dst) ((CMbytecnt(src) == 1) ? (*(dst)++ = *(src)++) : ((CMbytecnt(src) == 2) ? (*(dst)++ = *(src)++, *(dst)++ = *(src)++) : ( (CMbytecnt(src) == 3) ? (*(dst)++ = *(src)++, *(dst)++ = *(src)++, *(dst)++ = *(src)++) : ((CMbytecnt(src) == 4) ? (*(dst)++ = *(src)++, *(dst)++ = *(src)++, *(dst)++ = *(src)++, *(dst)++ = *(src)++) : 0 )))) 
 # else
 # define CMcpyinc(src, dst)	(*(dst)++ = *(src)++)
 # endif
+# define CMcpyinc_SB(src,dst) (*(dst)++ = *(src)++) 
 
 
 /*{
@@ -1101,12 +1149,15 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 **		first written
 **	03-Dec-2009 (wanfr01) Bug 122994
 **	    Optimize code for single byte character sets
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte version
 */
 # ifdef	DOUBLEBYTE
-# define CMtolower(src, dst) ((CMGETDBL)? ((CMGETUTF8 && CM_UTF8MULTI(src)) ? (cmu_getutf8_tolower((u_char *)src, CMUTF8cnt(src), (u_char *)dst, 0)) : (CMdbl1st(src) ? (*(dst) = *(src), *((dst)+1) = *((src)+1)) : (*(dst) = cmtolower(src)))) : (*(dst) = cmtolower(src)))
+# define CMtolower(src, dst) ((CMGETDBL)? ((CMGETUTF8 && CM_UTF8MULTI(src)) ? (cmu_getutf8_tolower((u_char *)src, CMUTF8cnt(src), (u_char *)dst, 0)) : (CMdbl1st(src) ? (*(dst) = *(src), *((dst)+1) = *((src)+1)) : (*(dst) = cmtolower(src)))) : (*(dst) = cmtolower_sb(src)))
 # else
 # define CMtolower(src, dst)	(*(dst) = cmtolower(src))
 # endif
+# define CMtolower_SB(src, dst)	(*(dst) = cmtolower_sb(src))
 
 
 /*{
@@ -1145,14 +1196,17 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 **		first written
 **	03-Dec-2009 (wanfr01) Bug 122994
 **	    Optimize code for single byte character sets
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte version
 */
 
 
 # ifdef	DOUBLEBYTE
-# define CMtoupper(src, dst) ((CMGETDBL)? ((CMGETUTF8 && CM_UTF8MULTI(src)) ? (cmu_getutf8_toupper((u_char *)src, CMUTF8cnt(src), (u_char *)dst, 0)) : (CMdbl1st(src) ? (*(dst) = *(src), *((dst)+1) = *((src)+1)) : (*(dst) = cmtoupper(src)))) : (*(dst) = cmtoupper(src)))
+# define CMtoupper(src, dst) ((CMGETDBL)? ((CMGETUTF8 && CM_UTF8MULTI(src)) ? (cmu_getutf8_toupper((u_char *)src, CMUTF8cnt(src), (u_char *)dst, 0)) : (CMdbl1st(src) ? (*(dst) = *(src), *((dst)+1) = *((src)+1)) : (*(dst) = cmtoupper(src)))) : (*(dst) = cmtoupper_sb(src)))
 # else
 # define CMtoupper(src, dst)	(*(dst) = cmtoupper(src))
 # endif
+# define CMtoupper_SB(src, dst) (*(dst) = cmtoupper_sb(src))
 
 
 /*{
@@ -1194,13 +1248,16 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 **		Added support for UTF8.
 **	03-Dec-2009 (wanfr01) Bug 122994
 **	    Optimize code for single byte character sets
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte version
 */
 
 # ifdef	DOUBLEBYTE
 # define CMbyteinc(count, str)	((CMGETDBL)? ((CMGETUTF8) ? (count += CMUTF8cnt(str)) : (CMdbl1st(str) ? (count) += 2 : ++(count))) : (++count))
 # else
-# define CMbyteinc(count, str)	((CMGETUTF8) ? (count += CMUTF8cnt(str)) : (++(count)))
+# define CMbyteinc(count, str)	(++count)
 # endif
+# define CMbyteinc_SB(count, str)	(++count)
 
 
 /*{
@@ -1242,13 +1299,16 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 **		Added support for UTF8.
 **	03-Dec-2009 (wanfr01) Bug 122994
 **	    Optimize code for single byte character sets
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte version
 */
 
 # ifdef	DOUBLEBYTE
 # define CMbytedec(count, str)	((CMGETDBL)? ((CMGETUTF8) ? (count -= CMUTF8cnt(str)) : (CMdbl1st(str) ? (count) -= 2 : --(count))) : (--(count)))
 # else
-# define CMbytedec(count, str)	((CMGETUTF8) ? (count -= CMUTF8cnt(str)) : (--(count)))
+# define CMbytedec(count, str)	(--(count))
 # endif
+# define CMbytedec_SB(count, str)	(--(count))
 
 
 /*{
@@ -1280,13 +1340,16 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 **		Added support for UTF8.
 **	03-Dec-2009 (wanfr01) Bug 122994
 **	    Optimize code for single byte character sets
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte version
 */
  
 # ifdef DOUBLEBYTE
 # define CMbytecnt(ptr)	((CMGETDBL)? ((CMGETUTF8) ? (CMUTF8cnt(ptr)) : (CMdbl1st(ptr) ? 2 : 1)) : 1)
 # else
-# define CMbytecnt(ptr)	((CMGETUTF8) ? (CMUTF8cnt(ptr)) : (1))
+# define CMbytecnt(ptr)	1
 # endif
+# define CMbytecnt_SB(ptr)	1
 
 
 /*{
@@ -1330,13 +1393,16 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 **		Added support for UTF8.
 **	03-Dec-2009 (wanfr01) Bug 122994
 **	    Optimize code for single byte character sets
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte version
 */
 
 # ifdef	DOUBLEBYTE
 # define CMnext(str)	((CMGETDBL)? ((CMGETUTF8) ? ((str) += (CMUTF8cnt(str))) : ((CMdbl1st(str)) ? ((str) += 2) : (++(str)))) : (++str))
 # else
-# define CMnext(str)	((CMGETUTF8) ? ((str) += CMUTF8cnt(str)) : (++(str)))
+# define CMnext(str)	(++(str))
 # endif
+# define CMnext_SB(str)	(++(str))
 
 
 /*{
@@ -1395,13 +1461,16 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 **	    Fixed the start point to this routine.
 **	03-Dec-2009 (wanfr01) Bug 122994
 **	    Optimize code for single byte character sets
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte version
 */
 #define CMuprev(str, startpos) ((str) -= (cmupct((u_char *)(str), (u_char *)startpos))) 
 # ifdef	DOUBLEBYTE
 # define CMprev(str, startpos)	((CMGETDBL) ?  ((CMGETUTF8) ?  (CMuprev(str, startpos)) : ((cmkcheck((u_char *)((str)-1), (u_char *)startpos) == CM_A_DBL2) ? (str) -= 2 : --(str))) : (--(str)))
 # else
-# define CMprev(str, startpos)	((CMGETUTF8) ? (CMuprev(str, startpos)) : (--(str)))
+# define CMprev(str, startpos)	(--(str))
 # endif
+# define CMprev_SB(str, startpos)	(--(str))
 
 
 /*{
@@ -1440,6 +1509,8 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 **		first written
 **	03-Dec-2009 (wanfr01) Bug 122994
 **	    Optimize code for single byte character sets
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte version
 */
 
 # ifdef	DOUBLEBYTE
@@ -1449,6 +1520,7 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 # else
 # define CMcmpnocase(str1, str2)	((i4)(cmtolower(str1)) - (i4)(cmtolower(str2)))
 # endif
+# define CMcmpnocase_SB(str1, str2)	((i4)(cmtolower_sb(str1)) - (i4)(cmtolower_sb(str2)))
 
 
 /*{
@@ -1486,6 +1558,8 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 **		first written
 **	03-Dec-2009 (wanfr01) Bug 122994
 **	    Optimize code for single byte character sets
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte version
 */
 
 # ifdef	DOUBLEBYTE
@@ -1497,6 +1571,7 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 # else
 # define CMcmpcase(str1, str2)	((i4)(CM_DEREF(str1)) - (i4)(CM_DEREF(str2)))
 # endif
+# define CMcmpcase_SB(str1, str2)	((i4)(CM_DEREF(str1)) - (i4)(CM_DEREF(str2)))
 
 /*{
 **  Name: CMcopy - Copy character data from source to destination.
@@ -1546,6 +1621,8 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 **	    MEcopy size is no longer i2.
 **	03-Dec-2009 (wanfr01) Bug 122994
 **	    Optimize code for single byte character sets
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte version
 */
 
 #ifdef	DOUBLEBYTE
@@ -1555,6 +1632,8 @@ FUNC_EXTERN i4 *CMgetUTF8Bytes(
 #  define   CMcopy(source, copy_len, dest)				    \
 	((CMGETDBL)? (cmicopy((source), (copy_len), (dest))) : 		/* Uses for loop */ \
     (MEcopy((PTR)(source), (copy_len), (PTR)(dest)),copy_len))
+#  define   CMcopy_SB(source, copy_len, dest)				    \
+    (MEcopy((PTR)(source), (copy_len), (PTR)(dest)),copy_len)
 #else
 #ifndef MECOPY_VAR_MACRO
 # include <me.h>
@@ -1602,8 +1681,11 @@ typedef struct
 ** History:
 **      25-jun-2002 (fanra01)
 **          Created.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte version
 */
 # define CMhost(str)	(CMGETATTR(str) & CM_A_HOST)
+# define CMhost_SB(str)	(CMGETATTR_SB(str) & CM_A_HOST)
 
 /*
 ** Name: CMuser
@@ -1622,8 +1704,11 @@ typedef struct
 ** History:
 **      25-jun-2002 (fanra01)
 **          Created.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte version
 */
 # define CMuser(str)    (CMGETATTR(str) & CM_A_USER)
+# define CMuser_SB(str)    (CMGETATTR_SB(str) & CM_A_USER)
 
 /*
 ** Name: CMpath
@@ -1642,8 +1727,11 @@ typedef struct
 ** History:
 **      25-jun-2002 (fanra01)
 **          Created.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte version
 */
 # define CMpath(str) (CMGETATTR(str) & CM_A_PATH)
+# define CMpath_SB(str) (CMGETATTR_SB(str) & CM_A_PATH)
 
 /*
 ** Name: CMpathctrl
@@ -1664,8 +1752,11 @@ typedef struct
 ** History:
 **      25-jun-2002 (fanra01)
 **          Created.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Create single byte version
 */
 # define CMpathctrl(str) (CMGETATTR(str) & CM_A_PATHCTRL)
+# define CMpathctrl_SB(str) (CMGETATTR_SB(str) & CM_A_PATHCTRL)
 # endif /* NT_GENERIC */
 
 /*

@@ -29,6 +29,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Optimizations for single byte
 */
 
 # include	<compat.h>
@@ -37,7 +39,7 @@
 # include	<st.h>
 
 size_t
-STzapblank(
+STzapblank_DB(
 	register char	*string,
 	register char	*buffer)
 {
@@ -52,6 +54,30 @@ STzapblank(
 			break;
 		CMcpychar(string,buffer);
 		buffer += (clen = CMbytecnt(buffer));
+		string += clen;
+		len += clen;
+	}
+	*buffer = EOS;
+	return (len);
+}
+
+
+size_t
+STzapblank_SB(
+	register char	*string,
+	register char	*buffer)
+{
+	register size_t	len = 0;
+	register size_t	clen;
+
+	for (;;)
+	{
+		while (CMwhite_SB(string))
+			CMnext_SB(string);
+		if (*string == EOS)
+			break;
+		CMcpychar_SB(string,buffer);
+		buffer += (clen = CMbytecnt_SB(buffer));
 		string += clen;
 		len += clen;
 	}

@@ -52,6 +52,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Optimizations for single byte
 */
 
 
@@ -84,8 +86,10 @@ STxcompare(
 	if (bl == 0)
 		bl = MAXI2;
 
-	while (ret_val == -2)
+	if (CMGETDBL)
 	{
+	    while (ret_val == -2)
+	    {
 		/* supress blanks in both strings */
 
 		if (sb)
@@ -132,6 +136,59 @@ STxcompare(
 			bl -= CMbytecnt(bp);
 			CMnext(bp);
 		}
+	    }
+	}
+	else
+	{
+	    while (ret_val == -2)
+	    {
+		/* supress blanks in both strings */
+
+		if (sb)
+		{
+			while (al > 0 && CMspace_SB(ap))
+			{
+				al -= CMbytecnt_SB(ap);
+				CMnext_SB(ap);
+			}
+
+			while (bl > 0 && CMspace_SB(bp))
+			{
+				bl -= CMbytecnt_SB(bp);
+				CMnext_SB(bp);
+			}
+		}
+
+
+		if (al <= 0)
+			ap = (unsigned char *) "";
+
+		if (bl <= 0)
+			bp = (unsigned char *) "";
+
+		/* do inequality tests */
+
+		if (ic)
+			cmp = CMcmpnocase_SB(ap,bp);
+		else
+			cmp = CMcmpcase_SB(ap,bp);
+
+		if (cmp < 0)
+			ret_val = -1;
+		else if (cmp > 0)
+			ret_val = 1;
+		else if (*ap == '\0')
+			ret_val = 0;
+		else
+		{
+			/* go on to the next character */
+
+			al -= CMbytecnt_SB(ap);
+			CMnext_SB(ap);
+			bl -= CMbytecnt_SB(bp);
+			CMnext_SB(bp);
+		}
+	    }
 	}
 
 	return(ret_val);

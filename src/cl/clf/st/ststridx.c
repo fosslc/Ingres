@@ -41,10 +41,12 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Optimizations for single byte
 */
 
 char*
-STstrindex (
+STstrindex_DB (
             const char*       str,
             const char*       findStr,
             size_t         len,
@@ -96,6 +98,70 @@ STstrindex (
                 break;
             }
             CMnext (sp);
+            len--;
+        }
+    }
+    else
+    {
+        ret = (char *)str;
+    }
+    return ret;
+}
+
+
+char*
+STstrindex_SB (
+            const char*       str,
+            const char*       findStr,
+            size_t         len,
+            i4         nc)
+{
+    char*       ret = NULL;
+    const char*       sp = str;
+    const char*       s1;
+    const char*       s2;
+    size_t         l;
+    
+    if (findStr && str)
+    {
+        if (len <= 0)
+        {
+            len = STlength (str);
+        }
+        while (len)
+        {
+            /*
+            ** search forward while the chars are the same and not past the
+            ** end
+            */
+            l = len;
+            s1 = sp;
+            s2 = findStr;
+            if (nc)
+            {
+                while (l && *s2 && !CMcmpnocase_SB(s1,s2))
+                {
+                    CMnext_SB (s1);
+                    CMnext_SB (s2);
+                    l--;
+                }
+            }
+            else
+            {
+                while (l && *s2 && !CMcmpcase_SB(s1,s2))
+                {
+                    CMnext_SB (s1);
+                    CMnext_SB (s2);
+                    l--;
+                }
+            }
+            /* If we reached the end of the search string, we have a match */
+            if (!*s2)
+            {
+                ret = (char *)sp;
+                break;
+            }
+            CMnext_SB (sp);
             len--;
         }
     }

@@ -139,12 +139,33 @@
 **	    in i4 mode for the first 9 digits.
 */
 STATUS
-CVal(char *str, i4 *result)
+CVal_DB(char *str, i4 *result)
 {
     i8 val8;
     STATUS sts;
 
-    sts = CVal8(str, &val8);
+    sts = CVal8_DB(str, &val8);
+    if (sts != OK)
+	return (sts);
+
+    if (val8 > MAXI4 || val8 < MINI4LL)
+    {
+	/* underflow / overflow */
+	return (val8 < 0) ? CV_UNDERFLOW : CV_OVERFLOW;
+    }
+
+    *result = (i4) val8;
+    return OK;
+}
+
+
+STATUS
+CVal_SB(char *str, i4 *result)
+{
+    i8 val8;
+    STATUS sts;
+
+    sts = CVal8_SB(str, &val8);
     if (sts != OK)
 	return (sts);
 
@@ -196,6 +217,8 @@ CVal(char *str, i4 *result)
 **	    Rewritten to avoid use of strtoll etc. which needs
 **	    errno to report range errors. This is needed to
 **	    correct handling of MAXI8 and MINI8 boundary conditions.
+**      13-Jan-2010 (wanfr01) Bug 123139
+**          Optimizations for single byte
 **	9-Feb-2010 (kschendel) SIR 123275
 **	    Performance tweaking:
 **	    - eliminate use of CMdigit in the conversion loops;  we're
@@ -204,7 +227,7 @@ CVal(char *str, i4 *result)
 **	      Only switch to i8 if the number is larger than 9 digits.
 */
 STATUS
-CVal8(char *str, i8 *result)
+CVal8_DB(char *str, i8 *result)
 {
     register u_char *p = (u_char *) str; /* Pointer to current char */
     i4 negative = FALSE;	/* Flag to indicate the sign */
@@ -267,6 +290,83 @@ CVal8(char *str, i8 *result)
     /* ... or trailing spaces */
     while (CMspace(p))
         CMnext(p);
+
+    if (*p)
+	return CV_SYNTAX;
+
+    if (negative)
+        *result = -(i8)val8;
+    else
+        *result = (i8)val8;
+
+    return OK;
+}
+
+
+STATUS
+CVal8_SB(char *str, i8 *result)
+{
+    register u_char *p = (u_char *) str; /* Pointer to current char */
+    i4 negative = FALSE;	/* Flag to indicate the sign */
+    i4 i;
+    register u_i4 digit;
+    register u_i4 val4 = 0;
+    u_i8 val8;			/* Holds the integer being formed */
+
+    /* Skip leading blanks */
+    while (CMspace_SB(p))
+        CMnext_SB(p);
+
+    /* Check for sign */
+    switch (*p)
+    {
+    case '-':
+	negative = TRUE;
+	/*FALLTHROUGH*/
+    case '+':
+	CMnext_SB(p);
+        /* Skip any whitespace after sign */
+	while (CMspace_SB(p))
+	    CMnext_SB(p);
+    }
+
+    /* Run the digit loop for either 9 digits, or a non-digit, whichever
+    ** happens first.  9 digits will fit in an i4 without overflow.
+    */
+    i = 9;
+    for (;;)
+    {
+	digit = *p;
+	if (digit < '0' || digit > '9')
+	    break;
+	val4 = val4 * 10 + digit - '0';
+	++p;
+	if (--i == 0) break;
+    }
+    val8 = (u_i8) val4;
+    if (CMdigit_SB(p))
+    {
+	/* broke out of i4 loop, finish up with i8 and overflow testing. */
+	do
+	{
+	    digit = *p++ - '0';
+
+	    /* check for overflow - note that in 2s complement the
+	    ** magnitude of -MAX will be one greater than +MAX
+	    */
+	    if (val8 > MAXI8/10 ||
+		    val8 == MAXI8/10 && digit > (MAXI8%10)+negative)
+	    {
+		/* underflow / overflow */
+		return negative ? CV_UNDERFLOW : CV_OVERFLOW;
+	    }
+	    val8 = val8 * 10 + digit;
+	} while (*p >= '0' && *p <= '9');
+    }
+
+    /* ... or trailing spaces */
+    while (CMspace_SB(p))
+        CMnext_SB(p);
 
     if (*p)
 	return CV_SYNTAX;

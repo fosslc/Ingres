@@ -22,6 +22,7 @@
 # include	<sys/label.h>
 # include	<errno.h>
 # endif
+# include	<cv.h>
 
 /*
 NO_OPTIM = sgi_us5
@@ -205,6 +206,8 @@ NO_OPTIM = sgi_us5
 **	    Add explicit case for FILE for LSB builds and use the generic 
 **	    default. Other wise SUBDIR returns values under $II_CONFIG and
 **	    not $II_SYSTEM
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Optimizations for single byte
 **/
 
 /* # defines */

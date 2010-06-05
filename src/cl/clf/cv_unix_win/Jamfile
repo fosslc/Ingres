@@ -27,6 +27,7 @@ IILIBRARY COMPATLIB : cvupper.c
 	cvlx.c
 	cvlower.c
 	cvla.c
+	cvinit.c 
 	cvgcc.c
 	cvfcvt.c
 	cvfa.c

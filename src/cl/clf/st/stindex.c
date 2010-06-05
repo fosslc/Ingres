@@ -58,10 +58,12 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Optimizations for single byte
 */
 
 char *
-STindex(
+STindex_DB(
 	const char	*str,
 	const char	*mstr,
 	size_t	len)
@@ -79,6 +81,30 @@ STindex(
 
 		CMbytedec(len, str);
 		CMnext(str);
+	}
+
+	return (NULL);
+}
+
+char *
+STindex_SB(
+	const char	*str,
+	const char	*mstr,
+	size_t	len)
+{
+	if (str == NULL || mstr == NULL)
+		return (NULL);
+
+	if (len <= 0)
+		len = 32767;
+
+	while (len > 0 && *str != '\0')
+	{
+		if (CMcmpcase_SB(str, mstr) == 0)
+			return ((char *)str);
+
+		CMbytedec_SB(len, str);
+		CMnext_SB(str);
 	}
 
 	return (NULL);

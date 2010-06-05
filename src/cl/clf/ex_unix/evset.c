@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <tr.h>
+#include <cv.h>
 
 
 #define EVSET_MAX_ID 999
@@ -59,6 +60,8 @@
 **	    Safe env variable handling.
 **	23-Sep-2005 (hanje04)
 **	    Fix prototype of handle to match function.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for CVal definition.
 [@history_template@]...
 */
 

@@ -9,6 +9,7 @@
 # include	<clconfig.h>
 # include	<st.h>
 # include	<me.h>
+# include	<cv.h>
 
 # include       <diracc.h>
 # include       <handy.h> 
@@ -118,6 +119,8 @@
 **          which contain the prototype of iiCLgethostbyname()
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 
 

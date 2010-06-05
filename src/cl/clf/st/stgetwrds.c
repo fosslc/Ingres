@@ -27,6 +27,8 @@
 **              Changed to use CL_PROTOTYPED
 **	11-aug-93 (ed)
 **	    unconditional prototypes
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Optimizations for single byte
 **
 **Copyright (c) 2004 Ingres Corporation
 */
@@ -40,7 +42,7 @@
 # include	<st.h>
 
 VOID
-STgetwords(
+STgetwords_DB(
 	register char	*string,
 	i4		*wordcount,
 	register char	**wordarray)
@@ -88,6 +90,64 @@ STgetwords(
 		CMnext(string);
 		while(CMwhite(string))
 			CMnext(string);
+		if (*string == EOS)
+			break;
+	}
+	if (count < *wordcount)
+		org[count] = NULL;
+	*wordcount = count;
+}
+
+
+VOID
+STgetwords_SB(
+	register char	*string,
+	i4		*wordcount,
+	register char	**wordarray)
+{
+	register i4	count = 0;
+	char	**org;
+
+	while(CMwhite_SB(string))
+		CMnext_SB(string);
+
+	org = wordarray;
+
+	while (count < *wordcount)
+	{
+		switch (*string)
+		{
+		  case EOS:
+			break;
+		  case '\'':
+			string++;
+			*wordarray++ = string;
+			++count;
+			while (*string != '\'' && *string != '\0')
+				CMnext_SB(string);
+			break;
+
+		  case '\"':
+			string++;
+			*wordarray++ = string;
+			++count;
+			while (*string != '\"' && *string != '\0')
+				CMnext_SB(string);
+			break;
+
+		  default:
+			*wordarray++ = string;
+			++count;
+			while (!CMwhite_SB(string) && *string != '\0')
+				CMnext_SB(string);
+			break;
+		}
+		if (*string == EOS)
+			break;
+		*string = EOS;
+		CMnext_SB(string);
+		while(CMwhite_SB(string))
+			CMnext_SB(string);
 		if (*string == EOS)
 			break;
 	}

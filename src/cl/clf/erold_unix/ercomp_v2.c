@@ -31,6 +31,8 @@
 **          Make sure me.h is included.  Use SIZE_TYPE for lengths.
 **	13-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 [@history_template@]...
 */
 
@@ -41,6 +43,7 @@
 #include <me.h>
 #include <si.h>
 #include <st.h>
+#include <cv.h>
 /*
  Don't #include <er.h>
 */

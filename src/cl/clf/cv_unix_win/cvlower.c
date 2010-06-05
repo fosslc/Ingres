@@ -90,9 +90,11 @@
 **          Updated to meet jupiter coding standards.
 **	13-dec-88 (jrb)
 **	    Changed str++ to CMnext(str) for doublebyte character support.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Optimizations for single byte
 */
 VOID
-CVlower(string)
+CVlower_DB(string)
 char	*string;
 {
 	register char	*sp = string;
@@ -113,6 +115,35 @@ char	*string;
 			CMtolower(sp, sp);
 
 			CMnext(sp);
+		}
+	}
+
+	return;
+}
+
+
+VOID
+CVlower_SB(string)
+char	*string;
+{
+	register char	*sp = string;
+
+
+	if (sp != NULL)
+	{
+		/* make sure you got at least a ptr */
+
+		while (*sp != NULL)
+		{
+			/*
+				split assignment and increment as
+					order of evaluation is not
+					guaranteed by C.
+			*/
+
+			CMtolower_SB(sp, sp);
+
+			CMnext_SB(sp);
 		}
 	}
 

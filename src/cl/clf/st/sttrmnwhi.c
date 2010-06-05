@@ -34,10 +34,12 @@
 **	16-Dec-2008 (kiria01) b121410
 **	    Reduce work done in the loop and guard against
 **	    writing beyond the buffer end.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Optimizations for single byte
 **/
 
 size_t
-STtrmnwhite(
+STtrmnwhite_DB(
 	char	*string,
 	size_t    max_len)
 {
@@ -59,6 +61,40 @@ STtrmnwhite(
 		}
 		else
 			CMnext(p);
+	}
+
+	{
+		register size_t nwl = nw - string;
+		if (nwl < max_len)
+			*nw = EOS;
+		return nwl;
+	}
+}
+
+
+size_t
+STtrmnwhite_SB(
+	char	*string,
+	size_t    max_len)
+{
+	register char *p = string;
+	register char *nw = p;
+	register char *end = p + max_len;
+
+	/*
+	** after the loop, nw points to the first character beyond
+	** the last non-white character.  Done this way because you
+	** can't reverse scan a string with CM efficiently
+	*/
+	while (p < end && *p != EOS)
+	{
+		if (!CMwhite_SB(p))
+		{
+			CMnext_SB(p);
+			nw = p;
+		}
+		else
+			CMnext_SB(p);
 	}
 
 	{
