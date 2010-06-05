@@ -3525,6 +3525,14 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	    production).
 **	19-Apr-2010 (gupsh01) SIR 123444 
 **	    Added support for Alter table rename table/columnn. 
+**	27-Apr-2010 (kiria01) b123640
+**	    If a scalar sub-query is present in a derived table definition the
+**	    parser yyvars stack is pushed incorrectly. The push should only
+**	    occur for the tables initial SELECT keyword and be popped at the
+**	    tables alias. If a subquery is present in a derived tables target
+**	    list or its WHERE clause or the joins ON clause, then the push was
+**	    made in error. An extra check is made to assert that a SELECT in the
+**	    FROM list is not in one of the other contexts.
 */
 %{
 
@@ -29917,12 +29925,16 @@ select:			SELECT
 	PSS_J_QUAL	       *join_qual;
 	DB_STATUS              status;
 
-	if ($Yin_from_clause)
+	if ($Yin_from_clause &&
+		!BTtest($Yqual_depth, $Yin_join_search))
 	{
 	    /* 
 	    ** We are in a from-clause, and now we've seen a SELECT, so this is
 	    ** a derived table. We need to push the state of the outer statement 
 	    ** and get new state variables for the derived table/inner select. 
+	    ** The extra test for in_join_search will ensure that the SELECT
+	    ** truely is part of a derived table definition and not a subselect
+	    ** in a derived tables definition!
 	    */
 	    $Ysave_pss_rsdmno[cb->pss_qualdepth] = cb->pss_rsdmno;
 	    $Ysave_psq_mode = psq_cb->psq_mode;
