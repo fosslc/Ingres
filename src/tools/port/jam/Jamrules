@@ -1395,6 +1395,10 @@
 #	    SIR 123609
 #	    Fix actions IIRemRCComments for VMS so it can be used to process
 #	    dayfile.dst
+#	28-Apr-2010 (hanje04)
+#	    SIR 123609
+#	    Fix actions IIRemRCComments for Windows.
+#
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -9125,10 +9129,7 @@ actions quietly IISedShellVMS
 
 actions IIRemRCComments
 {
-$(PIPE) $(AWK) "
-    /^##[ \t]/ || /^##$/ { next }
-    { print }
-" $(>) > $(<)
+    $(PIPE) $(SED) -e "/^##/d" < $(>) > $(<)
 }
 
 actions quietly SEDSHW
