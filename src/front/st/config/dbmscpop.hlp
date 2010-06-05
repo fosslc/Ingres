@@ -1,0 +1,17 @@
+/#-- Copyright (c) 2010 Ingres Corporation
+  The batch_copy_optim resource determines whether a copy optimization
+  is used when executing batched inserts. This optimization is only effective
+  for prepared inserts submitted to the DBMS in a batch (in Java this is
+  activated with the addBatch and executeBatch methods on prepared 
+  statements).This optimization converts insert statements into a "COPY"
+  operation internally in the DBMS; the result is that the batch may run 
+  significantly faster. The optimization is faster only for larger batch 
+  sizes; very small batches (of less than 50) may actually run more 
+  slowly. This value may be over-ridden on a per-session basis using the
+  "SET [NO]BATCH_COPY_OPTIM" statement.
+
+  Valid values :
+        ON		Optimization is used unless over-ridden by the session
+        OFF     Optimization is not used unless over-ridden by the session
+		
+  Default value: ON
