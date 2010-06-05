@@ -29,6 +29,8 @@
 **          Add support for LSB builds, server binaries live under
 **          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
 **          libraries under /usr/lib/ingres and config under /usr/share/ingres
+**	14-apr-2010 (stephenb)
+**		Add new files for app dev 202 and 401 (OpenROAD updates)
 */
 
 /*
@@ -55,6 +57,7 @@ PART  upgradefe
       EXECUTABLE ad103uin
       EXECUTABLE ad104uin
       EXECUTABLE ad105uin
+      EXECUTABLE ad202uin
       EXECUTABLE ad301fin
       EXECUTABLE cor02fin
       EXECUTABLE cor02uin
@@ -86,11 +89,18 @@ PART  upgradefe
       FILE ad201min.mfy
       FILE ad201mgw.mfy 
       FILE ad201cin.cre
+      FILE ad202min.mfy
+      FILE ad202mgw.mfy 
+      FILE ad202cin.cre
       FILE w4gl1.cli
       FILE w4gl2.cli
+      FILE w4gl3.cli
       FILE ad301cin.cre
       FILE ad301mgw.mfy
       FILE ad301min.mfy
+      FILE ad401cin.cre
+      FILE ad401mgw.mfy
+      FILE ad401min.mfy
       FILE c6101cin.cre
       FILE c6101mgw.mfy
       FILE c6101min.mfy

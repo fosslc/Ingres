@@ -184,6 +184,9 @@ static bool		Print_trace = FALSE;
 **		cut and paste: second catalog to check for is
 **		ii_objects, not ii_dict_modules, and the sense of
 **		the test is if present, not if absent.
+**	14-apr-2010 (stephenb)
+**		Add special case processing for APPLICATION_DEVELOPMENT_4
+**		which can only be installed in a Unicode enabled database.
 */
 STATUS
 installallmodules(noupgrade, maxcoreversion)
@@ -194,6 +197,9 @@ i4	maxcoreversion;
     CLIENTDESC	*thisclient;
     bool	scanflag;
     bool	atleastonefailed;
+    EXEC SQL BEGIN DECLARE SECTION;
+	char	unicode_status[32];
+    EXEC SQL END DECLARE SECTION;
 
     /* Core must exist before going further (it contains ii_dict_modules) */
     if (cat_exists(ERx("ii_dict_modules"), "") != OK)
@@ -430,6 +436,18 @@ i4	maxcoreversion;
 	      index++)
 	    {
 		thismodule = thisclient->supmods[index];
+		/* 
+		** special case: APPLICATION_DEVELOPMENT_4 can only be 
+		** installed in a unicode enabled database because it
+		** contains an nvarchar data-type
+		*/
+		if (STbcompare(thismodule->modname, STlength(thismodule->modname),
+			    "APPLICATION_DEVELOPMENT_4", 25, TRUE ) == 0)
+		{
+		    EXEC SQL SELECT DBMSINFO('UNICODE_LEVEL') INTO :unicode_status;
+		    if (STbcompare(unicode_status, 1, "0", 1, TRUE) == 0)
+			continue;
+		}
 		if (installmodule(thismodule) != OK)
 		    goodinstall = FALSE;
 	    }
