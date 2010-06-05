@@ -20,6 +20,8 @@ static const u_char Key_string[] = {
 ** History:
 **	18-Mar-2010 (kiria01) b123438
 **	    Created for sanity sake.
+**	19-Mar-2010 (gupsh01) SIR 123444
+**	    Added rename keyword.
 */
                   /* Keywords of length 0, and other non-existent lengths */
 /* 0 */           0,
@@ -150,6 +152,7 @@ static const u_char Key_string[] = {
                  83, 'p', 'u', 'b', 'l', 'i', 'c', 0,
                 165, 'r', 'a', 'w', 'p', 'c', 't', 0,
                 103, 'r', 'e', 'm', 'o', 'v', 'e', 0,
+                216, 'r', 'e', 'n', 'a', 'm', 'e', 0,
                 106, 'r', 'e', 'p', 'e', 'a', 't', 0,
                 156, 'r', 'e', 's', 'u', 'l', 't', 0,
                  42, 'r', 'e', 't', 'u', 'r', 'n', 0,
@@ -161,9 +164,9 @@ static const u_char Key_string[] = {
                  43, 'u', 'n', 'i', 'q', 'u', 'e', 0,
                  62, 'u', 'p', 'd', 'a', 't', 'e', 0,
                  85, 'v', 'a', 'l', 'u', 'e', 's', 0,
-/* 846 */         0,
+/* 854 */         0,
                   /* Keywords of length 7 */
-/* 847 */        86, 'b', 'e', 't', 'w', 'e', 'e', 'n', 0,
+/* 855 */        86, 'b', 'e', 't', 'w', 'e', 'e', 'n', 0,
                 126, 'c', 'a', 's', 'c', 'a', 'd', 'e', 0,
                 186, 'c', 'o', 'l', 'l', 'a', 't', 'e', 0,
                 118, 'c', 'o', 'm', 'm', 'e', 'n', 't', 0,
@@ -188,9 +191,9 @@ static const u_char Key_string[] = {
                 207, 's', 'i', 'm', 'i', 'l', 'a', 'r', 0,
                 214, 'u', 'n', 'k', 'n', 'o', 'w', 'n', 0,
                 192, 'w', 'i', 't', 'h', 'o', 'u', 't', 0,
-/* 1072 */        0,
+/* 1080 */        0,
                   /* Keywords of length 8 */
-/* 1073 */      115, 'c', 'a', 'l', 'l', 'p', 'r', 'o', 'c', 0,
+/* 1081 */      115, 'c', 'a', 'l', 'l', 'p', 'r', 'o', 'c', 0,
                 185, 'c', 'o', 'a', 'l', 'e', 's', 'c', 'e', 0,
                  90, 'c', 'o', 'n', 't', 'i', 'n', 'u', 'e', 0,
                  91, 'd', 'e', 's', 'c', 'r', 'i', 'b', 'e', 0,
@@ -207,9 +210,9 @@ static const u_char Key_string[] = {
                 106, 'r', 'e', 'p', 'e', 'a', 't', 'e', 'd', 0,
                 127, 'r', 'e', 's', 't', 'r', 'i', 'c', 't', 0,
                  93, 'r', 'o', 'l', 'l', 'b', 'a', 'c', 'k', 0,
-/* 1243 */        0,
+/* 1251 */        0,
                   /* Keywords of length 9 */
-/* 1244 */      204, 'b', 'e', 'g', 'i', 'n', 'n', 'i', 'n', 'g', 0,
+/* 1252 */      204, 'b', 'e', 'g', 'i', 'n', 'n', 'i', 'n', 'g', 0,
                 145, 'c', 'o', 'm', 'm', 'i', 't', 't', 'e', 'd', 0,
                 141, 'c', 'o', 'p', 'y', '_', 'f', 'r', 'o', 'm', 0,
                 142, 'c', 'o', 'p', 'y', '_', 'i', 'n', 't', 'o', 0,
@@ -227,9 +230,9 @@ static const u_char Key_string[] = {
                 161, 's', 'u', 'b', 's', 't', 'r', 'i', 'n', 'g', 0,
                 187, 's', 'y', 'm', 'm', 'e', 't', 'r', 'i', 'c', 0,
                 119, 't', 'e', 'm', 'p', 'o', 'r', 'a', 'r', 'y', 0,
-/* 1442 */        0,
+/* 1450 */        0,
                   /* Keywords of length 10 */
-/* 1443 */      188, 'a', 's', 'y', 'm', 'm', 'e', 't', 'r', 'i', 'c', 0,
+/* 1451 */      188, 'a', 's', 'y', 'm', 'm', 'e', 't', 'r', 'i', 'c', 0,
                 134, 'c', 'o', 'n', 's', 't', 'r', 'a', 'i', 'n', 't', 0,
                 205, 'c', 'o', 'n', 't', 'a', 'i', 'n', 'i', 'n', 'g', 0,
                 198, 'l', 'o', 'c', 'a', 'l', '_', 't', 'i', 'm', 'e', 0,
@@ -239,35 +242,35 @@ static const u_char Key_string[] = {
                  95, 'p', 'r', 'i', 'v', 'i', 'l', 'e', 'g', 'e', 's', 0,
                 133, 'r', 'e', 'f', 'e', 'r', 'e', 'n', 'c', 'e', 's', 0,
                 147, 'r', 'e', 'p', 'e', 'a', 't', 'a', 'b', 'l', 'e', 0,
-/* 1563 */        0,
+/* 1571 */        0,
                   /* Keywords of length 11 */
-/* 1564 */      104,'r','e','f','e','r','e','n','c','i','n','g',0,
+/* 1572 */      104,'r','e','f','e','r','e','n','c','i','n','g',0,
                 137,'s','y','s','t','e','m','_','u','s','e','r',0,
                 148,'u','n','c','o','m','m','i','t','t','e','d',0,
-/* 1603 */        0,
+/* 1611 */        0,
                   /* Keywords of length 12 */
-/* 1604 */      195,'c','u','r','r','e','n','t','_','d','a','t','e',0,
+/* 1612 */      195,'c','u','r','r','e','n','t','_','d','a','t','e',0,
                 196,'c','u','r','r','e','n','t','_','t','i','m','e',0,
                 135,'c','u','r','r','e','n','t','_','u','s','e','r',0,
                 138,'i','n','i','t','i','a','l','_','u','s','e','r',0,
                 149,'s','e','r','i','a','l','i','z','a','b','l','e',0,
                 139,'s','e','s','s','i','o','n','_','u','s','e','r',0,
-/* 1688 */        0,
+/* 1696 */        0,
                   /* Keywords of length 13 */
-/* 1689 */       98,'a','u','t','h','o','r','i','z','a','t','i','o','n',0,
-/* 1704 */        0,
+/* 1697 */       98,'a','u','t','h','o','r','i','z','a','t','i','o','n',0,
+/* 1712 */        0,
                   /* Leywords of length 14 */
-/* 1705 */      209,'a','u','t','o','_','i','n','c','r','e','m','e','n','t',0,
-/* 1721 */        0,
+/* 1713 */      209,'a','u','t','o','_','i','n','c','r','e','m','e','n','t',0,
+/* 1729 */        0,
                   /* Keywords of length 15 */
-/* 1722 */      199,'l','o','c','a','l','_','t','i','m','e','s','t','a','m','p',0,
-/* 1739 */        0,
+/* 1730 */      199,'l','o','c','a','l','_','t','i','m','e','s','t','a','m','p',0,
+/* 1747 */        0,
                   /* Keywords of length 17 */
-/* 1740 */      197,'c','u','r','r','e','n','t','_','t','i','m','e','s','t','a',
+/* 1748 */      197,'c','u','r','r','e','n','t','_','t','i','m','e','s','t','a',
                     'm','p',0,
                 154,'s','y','s','t','e','m','_','m','a','i','n','t','a','i','n',
                     'e','d',0,
-/* 1778 */        0
+/* 1786 */        0
                   };
 
 /*
@@ -284,17 +287,17 @@ static const u_char *Key_index[] = {
 		&Key_string[ 136],	/* Keywords of length  4 */
 		&Key_string[ 311],	/* Keywords of length  5 */
 		&Key_string[ 550],	/* Keywords of length  6 */
-		&Key_string[ 847],	/* Keywords of length  7 */
-		&Key_string[1073],	/* Keywords of length  8 */
-		&Key_string[1244],	/* Keywords of length  9 */
-		&Key_string[1443],	/* Keywords of length 10 */
-		&Key_string[1564],	/* Keywords of length 11 */
-		&Key_string[1604],	/* Keywords of length 12 */
-		&Key_string[1689],	/* Keywords of length 13 */
-		&Key_string[1705],	/* Keywords of length 14 */
-		&Key_string[1722],	/* Keywords of length 15 */
+		&Key_string[ 855],	/* Keywords of length  7 */
+		&Key_string[1081],	/* Keywords of length  8 */
+		&Key_string[1252],	/* Keywords of length  9 */
+		&Key_string[1451],	/* Keywords of length 10 */
+		&Key_string[1572],	/* Keywords of length 11 */
+		&Key_string[1612],	/* Keywords of length 12 */
+		&Key_string[1697],	/* Keywords of length 13 */
+		&Key_string[1713],	/* Keywords of length 14 */
+		&Key_string[1730],	/* Keywords of length 15 */
 		&Key_string[   0],	/* Keywords of length 16 */
-		&Key_string[1740],	/* Keywords of length 17 */
+		&Key_string[1748],	/* Keywords of length 17 */
 		&Key_string[   0],	/* Keywords of length 18 */
 		&Key_string[   0],	/* Keywords of length 19 */
 		&Key_string[   0],	/* Keywords of length 20 */

@@ -252,6 +252,8 @@
 **	    check for the modify command has been overridden by the user.
 **	6-Jul-2006 (kschendel)
 **	    Comment update.
+**	18-Mar-2010 (gupsh01) SIR 123444
+**	    Added dmu_newtab_name to support Alter table rename operation.
 */
 typedef struct _DMU_CB
 {
@@ -341,6 +343,8 @@ typedef struct _DMU_CB
     DM_DATA         dmu_char_array;         /* Array of characteristics. */
     DM_DATA         dmu_conf_array;         /* Array of configuration 
                                             ** variables. */
+    DB_TAB_NAME     dmu_newtab_name;	    /* New table name for Rename 
+					    ** operation. */
     i4         dmu_gw_id;              /* Gateway id */
 #define	    DMGW_NONE       0
 #define	    DMGW_VSAM       1
@@ -482,6 +486,9 @@ typedef struct _DMU_CB
 **	    Added DMU_C_ALTCOL_ALTER for alter table alter column support.
 **	25-Apr-2006 (jenjo02)
 **	    Add DMU_CLUSTERED for Clustered (Btree) primary table.
+**	30-Mar-2009 (gupsh01, dougi)
+**	    Added DMU_C_ALTCOL_RENAME for alter table rename tables/column 
+**	    support.
 */
 typedef struct _DMU_CHAR_ENTRY
 {
@@ -564,6 +571,8 @@ typedef struct _DMU_CHAR_ENTRY
 #define			DMU_C_DROP_ALTER    4L 
 #define			DMU_C_HIGH	    5L
 #define			DMU_C_ALTCOL_ALTER  6L
+#define			DMU_C_ALTTBL_RENAME 7L
+#define			DMU_C_ALTCOL_RENAME 8L
 }   DMU_CHAR_ENTRY;
 
 /*}

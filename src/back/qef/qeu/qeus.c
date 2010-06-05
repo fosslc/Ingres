@@ -1061,7 +1061,8 @@ static i4 createTblErrXlate(
 **	    than that of the first dmu block. 
 **      15-Feb-2010 (hanal04) Bug 123292
 **          Initialise qef_rcb.error.
-**
+**	12-Apr-2010 (gupsh01) SIR 123444
+**	    Added support for alter table rename table/column.
 */
 DB_STATUS
 qeu_dbu(
@@ -1116,7 +1117,12 @@ i4		caller )
     i4		    full_partdef_size;	/* Size of same */
     i4		    val_1, val_2;
     bool	    dmu_atbl_altcol  = FALSE;
+    bool	    dmu_atbl_rentab  = FALSE;
+    bool	    dmu_atbl_rencol  = FALSE;
     i4		    dummy1, dummy2;
+    DMF_ATTR_ENTRY	**dmu_attr;
+    char		column_name[DB_ATT_MAXNAME +1];
+
 
     *row_count = -1;	    /* initialize to illegal value */
 
@@ -1379,6 +1385,10 @@ ddb_refresh:
 				(char_entry[i].char_value == DMU_C_DROP_ALTER);
 			dmu_atbl_altcol =
 				(char_entry[i].char_value == DMU_C_ALTCOL_ALTER);
+			dmu_atbl_rencol =
+				(char_entry[i].char_value == DMU_C_ALTCOL_RENAME);
+			dmu_atbl_rentab =
+				(char_entry[i].char_value == DMU_C_ALTTBL_RENAME);
                         break;
 
 		   case DMU_CASCADE:
@@ -1945,6 +1955,129 @@ ddb_refresh:
                 }
             }
 
+	   /* If renaming a table or a column then validate 
+	   ** the dependent objects on this table 
+	   */
+            if (dmu_atbl_rencol || dmu_atbl_rentab)
+	    {
+                i4               error;
+	        QEUQ_CB          qeuq_cb;
+                DMT_TBL_ENTRY    dmt_tbl_entry;
+                DMT_SHW_CB       dmt_show;
+
+                /* Format the DMT_SHOW request block */
+                dmt_show.type = DMT_SH_CB;
+                dmt_show.length = sizeof(DMT_SHW_CB);
+                dmt_show.dmt_char_array.data_in_size = 0;
+                dmt_show.dmt_char_array.data_out_size  = 0;
+                STRUCT_ASSIGN_MACRO(dmu_ptr->dmu_tbl_id, dmt_show.dmt_tab_id);
+                dmt_show.dmt_flags_mask = DMT_M_TABLE;
+                dmt_show.dmt_db_id      = qeu_cb->qeu_db_id;
+                dmt_show.dmt_session_id = qeu_cb->qeu_d_id;
+                dmt_show.dmt_table.data_address = (PTR) &dmt_tbl_entry;
+                dmt_show.dmt_table.data_in_size = sizeof(DMT_TBL_ENTRY);
+                dmt_show.dmt_char_array.data_address = (PTR)NULL;
+                dmt_show.dmt_char_array.data_in_size = 0;
+                dmt_show.dmt_char_array.data_out_size  = 0;
+                status = dmf_call(DMT_SHOW, &dmt_show);
+
+                if (status != E_DB_OK &&
+                    dmt_show.error.err_code != E_DM0114_FILE_NOT_FOUND)
+                {
+                    err = dmt_show.error.err_code;
+                    goto exit;
+                }
+
+		status = E_DB_OK;
+
+                qeuq_cb.qeuq_next = qeuq_cb.qeuq_prev = 0;
+                qeuq_cb.qeuq_length = sizeof (qeuq_cb);
+                qeuq_cb.qeuq_type = QEUQCB_CB;
+                qeuq_cb.qeuq_owner = (PTR)DB_QEF_ID;
+                qeuq_cb.qeuq_ascii_id = QEUQCB_ASCII_ID;
+                qeuq_cb.qeuq_db_id = qeu_cb->qeu_db_id;
+                qeuq_cb.qeuq_d_id = qeu_cb->qeu_d_id;
+                qeuq_cb.qeuq_eflag = qeu_cb->qeu_eflag;
+                qeuq_cb.qeuq_rtbl = &dmu_ptr->dmu_tbl_id;
+                qeuq_cb.qeuq_status_mask = dmt_tbl_entry.tbl_status_mask;
+                qeuq_cb.qeuq_qid.db_qry_high_time =
+                    qeuq_cb.qeuq_qid.db_qry_low_time = 0;
+
+		if (!memoryStreamOpened)
+                {
+                    /* get a memory stream in which to build DMU_CBs */
+                    STRUCT_ASSIGN_MACRO(Qef_s_cb->qef_d_ulmcb, ulm);
+                    if ((status = qec_mopen(&ulm)) != E_DB_OK)
+                    {
+                        err = ulm.ulm_error.err_code;
+                        goto exit;
+                    }
+                    memoryStreamOpened = TRUE;
+                }
+
+		if (dmu_atbl_rencol)
+                {
+                    dmu_attr = (DMF_ATTR_ENTRY **)
+                                  dmu_ptr->dmu_attr_array.ptr_address;
+                    MEcopy(dmu_attr[1]->attr_name.db_att_name, DB_ATT_MAXNAME, column_name);
+                    column_name[DB_ATT_MAXNAME] = 0;
+
+                    qeuq_cb.qeuq_ano = dmu_attr[0]->attr_size;
+                    qeuq_cb.qeuq_aid = dmu_attr[0]->attr_type;
+                    qeuq_cb.qeuq_flag_mask |= QEU_RENAME_COLUMN;
+
+		    ret_stat  = qeu_renameValidate( qef_cb, &qeuq_cb, &ulm, error_block, 
+				&dmt_tbl_entry, TRUE, dmu_attr); 
+                }
+		else
+		{
+		    ret_stat  = qeu_renameValidate( qef_cb, &qeuq_cb, 
+				&ulm, error_block, &dmt_tbl_entry, FALSE, NULL); 
+		}
+
+		if (ret_stat)
+		{
+		   err = error_block->err_code;
+		   if (err == E_QE016C_RENAME_TAB_HAS_OBJS)
+		   {
+		       qef_error( E_QE016C_RENAME_TAB_HAS_OBJS,
+                                  0L, status, &error, error_block, 2,
+                                  qec_trimwhite(DB_TAB_MAXNAME,
+                                           (char *) &dmt_tbl_entry.tbl_name.db_tab_name ),
+                                  (char *)&dmt_tbl_entry.tbl_name.db_tab_name,
+                                  qec_trimwhite(DB_OWN_MAXNAME,
+                                           (char *) &dmt_tbl_entry.tbl_owner.db_own_name ),
+                                  (char *)&dmt_tbl_entry.tbl_owner.db_own_name );
+		   }
+		   else if (err == E_QE0181_RENAME_COL_HAS_OBJS)
+	 	   {
+		       qef_error ( E_QE0181_RENAME_COL_HAS_OBJS,
+                                  0L, status, &error, error_block, 3,
+				  qec_trimwhite(DB_ATT_MAXNAME, (char *) &column_name), 
+				  	   (char *)&column_name,
+                                  qec_trimwhite(DB_TAB_MAXNAME,
+                                           (char *) &dmt_tbl_entry.tbl_name.db_tab_name ),
+                                  (char *)&dmt_tbl_entry.tbl_name.db_tab_name,
+                                  qec_trimwhite(DB_OWN_MAXNAME,
+                                           (char *) &dmt_tbl_entry.tbl_owner.db_own_name ),
+                                  (char *)&dmt_tbl_entry.tbl_owner.db_own_name );
+		   }
+		   else
+                   {
+		       qef_error( err,
+                                  0L, status, &error, error_block, 2,
+                                  qec_trimwhite(DB_TAB_MAXNAME,
+                                           (char *) &dmt_tbl_entry.tbl_name.db_tab_name ),
+                                  (char *)&dmt_tbl_entry.tbl_name.db_tab_name,
+                                  qec_trimwhite(DB_OWN_MAXNAME,
+                                           (char *) &dmt_tbl_entry.tbl_owner.db_own_name ),
+                                  (char *)&dmt_tbl_entry.tbl_owner.db_own_name );
+		   }
+                   err = E_QE0025_USER_ERROR;
+		   goto exit;
+		}
+	    }
+
 	    /* 
 	    ** The 'rules' for rebuilding persistent indexes as part of a modify operation are:
 	    ** 
@@ -2317,10 +2450,10 @@ ddb_refresh:
 			case E_DM0183_CANT_MOD_TEMP_TABLE:
  				qeu_cb->error.err_code = errcode; 
  				break;
-case E_DM0200_MOD_TEMP_TABLE_KEY:
-qeu_cb->error.err_code = errcode;
-break;
-case E_DM006A_TRAN_ACCESS_CONFLICT:
+			case E_DM0200_MOD_TEMP_TABLE_KEY:
+				qeu_cb->error.err_code = errcode;
+				break;
+			case E_DM006A_TRAN_ACCESS_CONFLICT:
  				qeu_cb->error.err_code = errcode; 
  				break;
 			case E_DM0065_USER_INTR:

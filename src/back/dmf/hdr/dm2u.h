@@ -210,6 +210,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**	18-Mar-2010 (gupsh01) SIR 123444
+**	    Pass the new table name to dm2u_atable. 
 */
 
 /*
@@ -709,6 +711,7 @@ FUNC_EXTERN DB_STATUS	dm2u_atable(
 		i4         db_lockmode,
 		DB_TAB_NAME	*tab_name,
 		DB_OWN_NAME	*tab_owner,
+		DB_TAB_NAME	*newtab_name,
 		DB_ERROR	*dberr);
 FUNC_EXTERN STATUS dm2u_raw_device_lock(
 		DMP_DCB             *dcb,

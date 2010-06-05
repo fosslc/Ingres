@@ -225,6 +225,8 @@
 **	    Add overriding, system and value for identity columns.
 **      10-nov-2009 (joea)
 **          Add tokens for FALSE, TRUE and UNKNOWN.
+**	12-Apr-2010 (gupsh01)
+**	    Add tokens for RENAME to support RENAME table/column syntax.
 */
 /* %T header end */
 
@@ -417,6 +419,7 @@ GLOBALDEF KEY_ELM	 tok_keytab[] =
 	"relative",		tRELATIVE,
 	"relocate",		tRELOCATE,
 	"remove",		tREMOVE,
+	"rename",		tRENAME,
 	"repeat",		tREPEAT,
 	"repeatable",		tREPEATABLE,
 	"repeated",		tREPEAT,
@@ -626,6 +629,7 @@ GLOBALDEF ESC_1DBLKEY tok_1st_doubk[] = {
 	"register",		60,			    60,
 	"remote",		71,			    72,
 	"remove",		61,			    61,
+	"rename",		92,			    92,
 	"send",			70,			    70,
 	"set",			64,			    67,
 	"setrow",		68,			    68,
@@ -728,6 +732,7 @@ GLOBALDEF ESC_2DBLKEY tok_2nd_doubk[] = {
 /* 89 */	"ending",	tNOTENDING,	"not ending",
 /* 90 */	"like",		tNOTLIKE,	"not like",
 /* 91 */	"similar",	tSIMILAR,	"not similar",
+/* 92 */	"table",	tREN_TABLE,	"rename table",
 };
 
 /*

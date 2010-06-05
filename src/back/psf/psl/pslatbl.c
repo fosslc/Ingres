@@ -48,12 +48,15 @@
 **	    psl_alt_tbl		- actions for alt_tbl (make sure table exists)
 **	    psl_d_cons		- semantic action for ALTER TABLE DROP
 **				  CONSTRAINT
+**	    psl_alt_tbl_rename	- actions for ALTER TABLE RENAME TO.
 **	    psl_alt_tbl_col	- actions for ALTER TABLE ADD/DROP COLUMN,
 **				  alloc. and populate QEU and DMU ctl blks.
 **	    psl_alt_tbl_col_add	- actions for ALTER TABLE ADD COLUMN, check
 **				  col does not exist, null/default values etc.
 **	    psl_alt_tbl_col_drop- actions for ALTER TABLE DROP COLUMN, check
 **				  that col exists.
+**	    psl_alt_tbl_rename - actions for ALTER TABLE RENAME.
+**	    psl_alt_tbl_col_rename- actions for ALTER TABLE RENAME COLUMN.
 **
 **  History:
 **      28-nov-92 (rblumer)    
@@ -627,7 +630,8 @@ psl_d_cons(
 
 /*
 ** Name: psl_alt_tbl_col  - allocate and populate the DMU control block for
-** 			    use by ALTER TABLE ADD / DROP COLUMN.
+** 			    use by ALTER TABLE ADD / DROP COLUMN / RENAME 
+**			    TABLE/COLUMN.
 **
 ** Description:	    
 **	
@@ -655,6 +659,8 @@ psl_d_cons(
 **	    Set nparts in the new dmu cb.
 **	17-Nov-2009 (kschendel) SIR 122890
 **	    resjour values expanded, fix here.
+**	30-Mar-2009 (inkdo01, gupsh01)
+**	    Add support for "rename column"
 */
 DB_STATUS
 psl_alt_tbl_col(
@@ -702,11 +708,15 @@ psl_alt_tbl_col(
 
     if ((psq_cb->psq_mode == PSQ_ATBL_ADD_COLUMN) || 
         (psq_cb->psq_mode == PSQ_ATBL_ALTER_COLUMN))
-
        status = pst_crt_tbl_stmt(sess_cb, PSQ_CREATE, DMU_ALTER_TABLE,
     			         &psq_cb->psq_error);
+    else if (psq_cb->psq_mode == PSQ_ATBL_RENAME_TABLE)
+       status = pst_rename_stmt(sess_cb, PSQ_ATBL_RENAME_TABLE, DMU_ALTER_TABLE,
+    			         &psq_cb->psq_error);
+    else if (psq_cb->psq_mode == PSQ_ATBL_RENAME_COLUMN)
+       status = pst_rename_stmt(sess_cb, PSQ_ATBL_RENAME_COLUMN, DMU_ALTER_TABLE,
+    			         &psq_cb->psq_error);
     else
-
        status = psl_qeucb(sess_cb, DMU_ALTER_TABLE, &psq_cb->psq_error);
 
     if (status != E_DB_OK)
@@ -743,19 +753,29 @@ psl_alt_tbl_col(
     /* default for session table recovery is False */
     sess_cb->pss_restab.pst_recovery = FALSE;
 
-    /* allocate attribute entry.  Only 1 required as ALTER TABLE ADD/DROP
-    ** COLUMN only supports altering one column per statement.
+    /* allocate attribute entry.  Only 1 (or 2 for RENAME COLUMN) required 
+    ** as ALTER TABLE ADD/DROP COLUMN only supports altering one column 
+    ** per statement. Not needed for alter table rename to ... statements.
     */
 
-    status = psf_malloc(sess_cb, &sess_cb->pss_ostream, sizeof(DMF_ATTR_ENTRY *),
+    if (psq_cb->psq_mode != PSQ_ATBL_RENAME_TABLE)
+    {
+      status = psf_malloc(sess_cb, &sess_cb->pss_ostream, 
+			sizeof(DMF_ATTR_ENTRY *) * 2,
 			(PTR *) &dmu_cb->dmu_attr_array.ptr_address,
 			err_blk);
-
-    if (DB_FAILURE_MACRO(status))
+      if (DB_FAILURE_MACRO(status))
        return (status);
 
     dmu_cb->dmu_attr_array.ptr_in_count = 0;
     dmu_cb->dmu_attr_array.ptr_size = sizeof(DMF_ATTR_ENTRY);
+
+    }
+    else
+    {
+      dmu_cb->dmu_attr_array.ptr_in_count = 0;
+      dmu_cb->dmu_attr_array.ptr_size = 0;
+    }
 
     status = psf_malloc(sess_cb, &sess_cb->pss_ostream, (sizeof(DMU_CHAR_ENTRY) * 2),
 			(PTR *) &dmu_cb->dmu_char_array.data_address,
@@ -771,6 +791,10 @@ psl_alt_tbl_col(
        chr->char_value = DMU_C_DROP_ALTER;
     if (psq_cb->psq_mode == PSQ_ATBL_ALTER_COLUMN)
        chr->char_value = DMU_C_ALTCOL_ALTER;
+    if (psq_cb->psq_mode == PSQ_ATBL_RENAME_TABLE)
+       chr->char_value = DMU_C_ALTTBL_RENAME;
+    if (psq_cb->psq_mode == PSQ_ATBL_RENAME_COLUMN)
+       chr->char_value = DMU_C_ALTCOL_RENAME;
     chr++;
     chr->char_id = DMU_CASCADE;
     chr->char_value = DMU_C_OFF;
@@ -1110,6 +1134,241 @@ psl_alt_tbl_col_add(
        if (DB_FAILURE_MACRO(status))
 	   return(status);
     }
+
+    psq_cb->psq_mode = PSQ_ALTERTABLE;
+
+    /* Invalidate base table information from RDF cache */
+    pst_rdfcb_init(&rdf_cb, sess_cb);
+    STRUCT_ASSIGN_MACRO(sess_cb->pss_resrng->pss_tabid,
+   			 rdf_cb.rdf_rb.rdr_tabid);
+    rdf_cb.rdf_info_blk = sess_cb->pss_resrng->pss_rdrinfo;
+    rdf_cb.caller_ref = &sess_cb->pss_resrng->pss_rdrinfo;
+
+    status = rdf_call(RDF_INVALIDATE, (PTR) &rdf_cb);
+    if (DB_FAILURE_MACRO(status))
+       (VOID) psf_rdf_error(RDF_INVALIDATE, &rdf_cb.rdf_error, err_blk);
+
+    return (status);
+}
+
+/*
+** Name: psl_alt_tbl_col_rename - populate attribute entry in array 
+**				for column to be renamed and the new 
+**				column name.                             
+**
+** Description:	    
+**      Builds a DMU_UTILITY_CB describing the column to be renamed.
+**
+**              alt_tbl RENAME COLUMN newcolname typedesc
+**
+** Inputs:
+**	sess_cb		    ptr to PSF session CB
+**	    pss_distrib	      tells whether this is a distributed thread or not
+**	    pss_auxrng	      passed to rngent functions
+**	    pss_user	      name of current user
+**	    pss_ses_flag      holds PSS_CATUPD flag
+**	    pss_lineno	      used for error messages
+**	psq_cb		    PSF request CB
+**	    psq_mode	      query mode
+**	attname		    Name of the attribute to be renamed.
+**	newattname	    New name of the attribute.
+**
+** Outputs:
+**	dmu_cb 		    ptr to DMU session CB
+**	                      pointed to thru qeu_cb->qeu_d_cb    
+**
+** Returns:
+**	E_DB_{OK, ERROR}
+**
+** History:
+**	10-apr-2010 (gupsh01)
+**	    Created.  
+*/
+DB_STATUS
+psl_alt_tbl_col_rename(
+	             PSS_SESBLK    *sess_cb,
+	             PSQ_CB        *psq_cb,
+		     DB_ATT_NAME   attname,
+		     DB_ATT_NAME   *newattname)
+{
+    DB_STATUS	status;
+    DB_ERROR	*err_blk = &psq_cb->psq_error;
+    QEU_CB	*qeu_cb;	
+    DMU_CB	*dmu_cb;
+    DMF_ATTR_ENTRY **dmu_attr;
+    DMU_CHAR_ENTRY *chr;
+    DMT_ATT_ENTRY  *dmt_attr;
+    DMT_ATT_ENTRY  *newdmt_attr;
+    PST_STATEMENT  *stmt_list;
+    PST_CREATE_INTEGRITY *cr_integ;
+    DB_COLUMN_BITMAP *integ_cols;
+    RDF_CB	rdf_cb;
+    i4		err_code;
+    PST_PROCEDURE 	*proc_node; 
+    PST_STATEMENT  	*rename_stmt; 
+    PST_RENAME		*pst_rename; 
+    DB_ATT_ID		att_id;
+    
+    qeu_cb = (QEU_CB *) sess_cb->pss_object;
+    dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
+    dmu_attr = (DMF_ATTR_ENTRY **) dmu_cb->dmu_attr_array.ptr_address;
+
+    dmt_attr = pst_coldesc(sess_cb->pss_resrng, &attname);
+
+    if (dmt_attr == (DMT_ATT_ENTRY *) NULL)
+    {
+       	/* Column to be renamed does not exist */ 
+	(VOID) psf_error(2100L, 0L, PSF_USERERR, &err_code, 
+       			&psq_cb->psq_error, 4,
+			(i4)sizeof(sess_cb->pss_lineno), 
+			&sess_cb->pss_lineno,
+			psf_trmwhite(sizeof(DB_TAB_NAME),
+				(char *) &sess_cb->pss_resrng->pss_tabname),
+			(char *) &sess_cb->pss_resrng->pss_tabname,
+			psf_trmwhite(sizeof(DB_OWN_NAME),
+				    (char *) &sess_cb->pss_resrng->pss_ownname),
+			(char *) &sess_cb->pss_resrng->pss_ownname,
+			psf_trmwhite(sizeof(DB_ATT_NAME), (char *) &attname),
+			(char *) &attname);
+
+	return (E_DB_ERROR);
+    }
+
+    newdmt_attr = pst_coldesc(sess_cb->pss_resrng, newattname);
+
+    if ( newdmt_attr != (DMT_ATT_ENTRY *) NULL ) 
+    {
+       /* Column with the same name already exists */
+       (VOID) psf_error(2032L, 0L, PSF_USERERR, &err_code,
+			&psq_cb->psq_error, 2,
+                        sizeof( "ALTER TABLE"), "ALTER TABLE",
+			psf_trmwhite(sizeof(DB_ATT_NAME), (char *)newattname),
+			(char *) newattname);
+
+       return (E_DB_ERROR);
+    }
+
+    /* Verify column isn't used for partitioning. */
+    status = psl_atbl_partcheck(sess_cb, psq_cb, dmt_attr);
+    if (status != E_DB_OK)
+        return (status);
+
+    /* NOW Init the dummy attribute for passing the new column name.*/
+    DMF_ATTR_ENTRY	*attr0 = dmu_attr[0];
+    DMF_ATTR_ENTRY 	*attr1 = dmu_attr[1];
+
+    /* Copy the name of the attribute. */
+    MEcopy(newattname->db_att_name, (u_i4)DB_ATT_MAXNAME, attr1->attr_name.db_att_name);
+
+    attr1->attr_type = attr0->attr_type = dmt_attr->att_type;     
+    attr1->attr_size = attr0->attr_size = dmt_attr->att_number;     
+    attr1->attr_precision = attr0->attr_precision = dmt_attr->att_prec;   
+    attr1->attr_flags_mask = attr0->attr_flags_mask = dmt_attr->att_flags;     
+    attr1->attr_defaultTuple = attr0->attr_defaultTuple = NULL;
+    attr1->attr_seqTuple = attr0->attr_seqTuple = NULL;   
+    attr1->attr_collID = attr0->attr_collID = dmt_attr->att_collID; 
+    attr1->attr_srid   = attr0->attr_srid = dmt_attr->att_srid;    
+    attr1->attr_geomtype = attr0->attr_geomtype = dmt_attr->att_geomtype; 
+
+    proc_node = (PST_PROCEDURE *) sess_cb->pss_qsf_rcb.qsf_root;
+    rename_stmt = proc_node->pst_stmts;
+    pst_rename = &rename_stmt->pst_specific.pst_rename;
+
+    att_id.db_att_id = dmt_attr->att_intlid;
+
+    STRUCT_ASSIGN_MACRO(att_id, 	pst_rename->pst_rnm_col_id);
+    STRUCT_ASSIGN_MACRO(attname, 	pst_rename->pst_rnm_old_colname);
+    STRUCT_ASSIGN_MACRO(*newattname, 	pst_rename->pst_rnm_new_colname);
+    STRUCT_ASSIGN_MACRO(attname, 	pst_rename->pst_rnm_old_colname);
+    STRUCT_ASSIGN_MACRO(*newattname, 	pst_rename->pst_rnm_new_colname);
+
+    STRUCT_ASSIGN_MACRO(sess_cb->pss_user, pst_rename->pst_rnm_owner);
+    STRUCT_ASSIGN_MACRO(sess_cb->pss_resrng->pss_tabname, pst_rename->pst_rnm_old_tabname);
+    STRUCT_ASSIGN_MACRO(sess_cb->pss_resrng->pss_tabname, pst_rename->pst_rnm_new_tabname);
+
+    (*dmu_attr)->attr_defaultTuple = NULL;
+    (*dmu_attr)->attr_seqTuple = NULL;
+    psq_cb->psq_mode = PSQ_ALTERTABLE;
+
+    /* Invalidate base table information from RDF cache */
+    pst_rdfcb_init(&rdf_cb, sess_cb);
+    STRUCT_ASSIGN_MACRO(sess_cb->pss_resrng->pss_tabid,
+   			 rdf_cb.rdf_rb.rdr_tabid);
+    rdf_cb.rdf_info_blk = sess_cb->pss_resrng->pss_rdrinfo;
+    rdf_cb.caller_ref = &sess_cb->pss_resrng->pss_rdrinfo;
+
+    status = rdf_call(RDF_INVALIDATE, (PTR) &rdf_cb);
+    if (DB_FAILURE_MACRO(status))
+       (VOID) psf_rdf_error(RDF_INVALIDATE, &rdf_cb.rdf_error, err_blk);
+
+    return (status);
+}
+
+/*
+** Name: psl_alt_tbl_rename - handles rename table action.
+**
+** Description:	    
+**	Populate the new table name in the DMU_CB control block and the
+**	PST_RENAME statement.
+**
+**		alt_tbl RENAME TO obj_spec
+**		rename_tbl TO obj_spec
+**
+** Inputs:
+**	sess_cb		    ptr to PSF session CB
+**	    pss_lineno	      used for error messages
+**	    
+**	psq_cb		    PSF request CB
+**	newTabName	    New name of the table.
+**
+** Outputs:
+**	dmu_cb 		    ptr to DMU session CB
+**	                      pointed to thru qeu_cb->qeu_d_cb    
+**
+** Returns:
+**	E_DB_{OK, ERROR}
+**
+** History:
+**	10-apr-2010 (gupsh01) SIR 123444
+**	    Created.  
+*/
+DB_STATUS
+psl_alt_tbl_rename(
+	             PSS_SESBLK    *sess_cb,
+	             PSQ_CB        *psq_cb,
+		     PSS_OBJ_NAME  *newTabName)
+{
+    DB_STATUS		status;
+    DB_ERROR		*err_blk = &psq_cb->psq_error;
+    QEU_CB		*qeu_cb;	
+    DMU_CB		*dmu_cb;
+    DMU_CHAR_ENTRY 	*chr;
+    RDF_CB		rdf_cb;
+    i4			err_code;
+    PST_PROCEDURE 	*proc_node; 
+    PST_STATEMENT  	*rename_stmt; 
+    PST_RENAME		*pst_rename; 
+
+    proc_node = (PST_PROCEDURE *) sess_cb->pss_qsf_rcb.qsf_root;
+    rename_stmt = proc_node->pst_stmts;
+    pst_rename = &rename_stmt->pst_specific.pst_rename;
+
+    qeu_cb = (QEU_CB *) sess_cb->pss_object;
+    dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
+
+
+    if ((psq_cb->psq_mode != PSQ_ATBL_RENAME_TABLE) &&
+    	(pst_rename->pst_rnm_type != PST_ATBL_RENAME_TABLE))
+    {
+	return (E_DB_ERROR); 	/* not the right mode for this routine */
+    }
+
+    STRUCT_ASSIGN_MACRO(sess_cb->pss_user, pst_rename->pst_rnm_owner);
+    STRUCT_ASSIGN_MACRO(newTabName->pss_obj_name, pst_rename->pst_rnm_new_tabname);
+    STRUCT_ASSIGN_MACRO(sess_cb->pss_resrng->pss_tabname, pst_rename->pst_rnm_old_tabname);
+
+    /* Fill the new table name in the DMU control block */
+    STRUCT_ASSIGN_MACRO(newTabName->pss_obj_name, dmu_cb->dmu_newtab_name);
 
     psq_cb->psq_mode = PSQ_ALTERTABLE;
 

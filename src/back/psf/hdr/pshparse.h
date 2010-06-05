@@ -548,6 +548,8 @@
 **	    Clarified PST_DESCEND_MARK and exported psl_ss_flatten.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	06-Apr-2010 (gupsh01) SIR 123444
+**	    Added support for ALTER TABLE ..RENAME TABLE/COLUMN.
 */
 
 /*
@@ -5943,6 +5945,17 @@ psl_alt_tbl_col_add(
 	            PSS_CONS  	  *cons_list,
 		    i4		  altopt);
 FUNC_EXTERN DB_STATUS
+psl_alt_tbl_col_rename(
+                    PSS_SESBLK    *sess_cb,
+                    PSQ_CB        *psq_cb,
+                    DB_ATT_NAME   attname,
+                    DB_ATT_NAME   *newname);
+FUNC_EXTERN DB_STATUS
+psl_alt_tbl_rename(
+                     PSS_SESBLK    *sess_cb,
+                     PSQ_CB        *psq_cb,
+                     PSS_OBJ_NAME  *newname);
+FUNC_EXTERN DB_STATUS
 psl_verify_cons(
 		PSS_SESBLK	*sess_cb,
 		PSQ_CB		*psq_cb,
@@ -7413,6 +7426,12 @@ pst_windup(
 	PST_QNODE          *reslist);
 FUNC_EXTERN DB_STATUS
 pst_crt_tbl_stmt(
+		 PSS_SESBLK *sess_cb, 
+		 i4  qmode,
+		 i4 operation, 
+		 DB_ERROR *err_blk);
+FUNC_EXTERN DB_STATUS
+pst_rename_stmt(
 		 PSS_SESBLK *sess_cb, 
 		 i4  qmode,
 		 i4 operation, 

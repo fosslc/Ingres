@@ -13,6 +13,8 @@
 ** History:
 **	18-Mar-2010 (kiria01) b123438
 **	    Created for sanity sake.
+**	19-Mar-2010 (gupsh01) SIR 123444
+**	    Added rename keyword.
 */
 
 /* Keywords of length 0, and other non-existent lengths */
@@ -139,6 +141,7 @@
  83 public
 165 rawpct
 103 remove
+216 rename
 106 repeat
 156 result
  42 return

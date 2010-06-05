@@ -190,6 +190,7 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 #define NOCASE_SUBSEL
 %}
 
+
 /**
 **
 **  Name: PSLSGRAM.YI - The grammar for SQL.
@@ -3503,6 +3504,8 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	    the addition of $Yin_from_clause handling into the UPDATE version
 **	    of from (existing from_u production, and new from_word_u 
 **	    production).
+**	19-Apr-2010 (gupsh01) SIR 123444 
+**	    Added support for Alter table rename table/columnn. 
 */
 %{
 
@@ -4192,7 +4195,7 @@ psl_mk_const_similar(
 
 %token		    REGISTER REGISTEREVENT
 
-%token              RELOCATE REMOVE REMOVEEVENT REPEAT REPEATABLE
+%token              RELOCATE REMOVE REMOVEEVENT RENAME REPEAT REPEATABLE
  
 %token              REPLACE RESTRICT RESULTROW RETURN RESTART REVOKE
 
@@ -4584,7 +4587,7 @@ psl_mk_const_similar(
 %type 	<psl_trtype>  ras_ev_value def_value cdbp_retrow_spec1 tproc_arg_list
 %type 	<psl_trtype>  seq_operator ansi_seqop oracle_seqop
 %type	<psl_qttype>  cdbp_dml1stmt query delete insert update repeat_query
-%type	<psl_rngtype> integtbl permtbl set_stat_tbl from_item alt_tbl
+%type	<psl_rngtype> integtbl permtbl set_stat_tbl from_item alt_tbl rename_tbl
 %type	<psl_tytype>  inoverride alt_tbl_alter_col_opts
 %type	<psl_dbval>   cast_type number seq_type part_const_stringish
 %type   <psl_dbval>   bool_const
@@ -4727,6 +4730,7 @@ stmt:		    abort
 	  |	    reg_distr_tv
 	  |	    rollback
 	  |	    relocate
+	  |	    rename
 	  |	    revoke
 	  |	    register_event	
 	  |	    remove_event
@@ -10055,7 +10059,7 @@ tbl_refcon:	    FOREIGNKEY cons_colspec REFERENCES obj_spec cons_colspec
     {   
 	DB_STATUS	status;
 	PSS_CONS	*cons;
-	
+
 #ifdef	xDEBUG
 	psl_debug();
 #endif
@@ -11585,8 +11589,77 @@ alter_table:		alt_tbl ADD tbl_constraint
         if (DB_FAILURE_MACRO(status))
             return(status);
     }
-;
+        |               alt_tbl_rename_col newcolname TO newcolname
+    {
+        DB_ATT_NAME             oldname;
+        DB_ATT_NAME             newname;
+        DB_STATUS               status;
  
+        STmove($2, ' ', sizeof(DB_ATT_NAME), (char *) &oldname);
+        STmove($4, ' ', sizeof(DB_ATT_NAME), (char *) &newname);
+ 
+        status = psl_alt_tbl_col_rename(cb, psq_cb, oldname, &newname);
+          if (DB_FAILURE_MACRO(status))
+              return(status);
+    }
+        |               alt_tbl RENAME TO obj_spec 
+    {
+        DB_STATUS               status;
+        PSS_OBJ_NAME		newname; 
+        PSS_OBJ_NAME		oldname; 
+        PSS_RNGTAB              *rngtable;
+    	i4          		err_code;
+    	i4			tbls_to_lookup = (PSS_USRTBL | PSS_DBATBL | PSS_INGTBL);
+	i4			scope = 0;
+	PSS_RNGTAB          	*resrange;
+        i4                  	rngvar_info;
+
+	psq_cb->psq_mode = PSQ_ATBL_RENAME_TABLE;
+
+	/* If SQL and
+	** not a dbproc variable and
+	** PSS_GTT_SYNTAX_SHORTCUT is ON for the session
+	** search for session tables as well as user / dba / ingres
+	*/
+	if (cb->pss_lang == DB_SQL &&
+	    (cb->pss_dbp_flags & PSS_SET_INPUT_PARAM) == 0 &&
+	    cb->pss_ses_flag & PSS_GTT_SYNTAX_SHORTCUT)
+	    tbls_to_lookup |= PSS_SESTBL;
+
+	STmove((char *)$4, ' ', sizeof(PSS_OBJ_NAME), (char *)&newname);
+
+	/* Validate the new table name */
+	status = psl0_rngent(&cb->pss_auxrng, -1, "", &$4->pss_obj_name, cb,
+                FALSE, &resrange, psq_cb->psq_mode, &psq_cb->psq_error,
+		tbls_to_lookup, &rngvar_info, 0);
+	if (DB_SUCCESS_MACRO(status) && ! (resrange))
+	{
+	    /* allocate and populate the DMU_CB control block */
+	    status = psl_alt_tbl_col(cb, psq_cb);
+	    if (DB_FAILURE_MACRO(status))
+		return(status);
+
+	    /* If new table name table wasn't found, then we are good.
+	    ** Pass the new name to the table rename operation 
+	    */
+	    status = psl_alt_tbl_rename(cb, psq_cb, (PSS_OBJ_NAME *)&newname);
+	}
+	else
+        {
+            (VOID) psf_error(9365L, 0L, PSF_USERERR, &err_code, &psq_cb->psq_error, 2,
+                 psf_trmwhite(sizeof(DB_TAB_NAME),
+                       (char *) &cb->pss_resrng->pss_tabname.db_tab_name),
+               (char *)&cb->pss_resrng->pss_tabname.db_tab_name,
+                 psf_trmwhite(sizeof(DB_TAB_NAME), (char *) &newname.pss_obj_name),
+               (char *)&newname.pss_obj_name);
+            status = E_DB_ERROR;
+        }
+
+        if (DB_FAILURE_MACRO(status))
+              return(status);
+     }
+;
+
 alt_tbl_add_col:  	alt_tbl add_col_kwd
     {
 	DB_STATUS	       status;
@@ -11637,6 +11710,20 @@ alt_tbl_alter_col_opts:	typedesc
     }
 ;
 
+alt_tbl_rename_col:     alt_tbl rename_col_kwd 
+    {
+        DB_STATUS       status;
+
+        psq_cb->psq_mode = PSQ_ATBL_RENAME_COLUMN;
+
+        /* allocate and populate the DMU_CB control block */
+        status = psl_alt_tbl_col (cb, psq_cb);
+
+        if (DB_FAILURE_MACRO(status))
+            return (status);
+    }
+;
+
 alt_tbl:		alt_tbl_kwd obj_spec
     {
 	DB_STATUS  status;
@@ -11677,6 +11764,14 @@ alter_col_kwd:          ALTER COLUMN
                         ALTER
 ;
 
+rename_col_kwd:		RENAME COLUMN
+		|
+			RENAME
+;
+rename_tbl_kwd:		RENAME TABLE 
+		|
+			RENAME
+;
 
 create_view:		viewclause newcolspec 
     {
@@ -19641,6 +19736,7 @@ ex_imdte_stmts:	    abort
 	  |	    revoke
 	  |	    rollback
 	  |	    relocate
+	  |	    rename
 	  |	    reg_gateway_tab	/* REGISTER TABLE AS IMPORT */
 	  |	    register_event	/* IMMEDIATE REGISTER DBEVENT */
 	  |	    remove_event	/* IMMEDIATE REMOVE DBEVENT */
@@ -27340,6 +27436,7 @@ prepare_stmt_list:  alter_role
 	  |         reg_gateway_idx
 	  |         reg_gateway_tab
 	  |	    relocate
+	  |	    rename
 	  |	    revoke
 	  |	    rollback
 	  |	    register_event	/* PREPARE REGISTER DBEVENT */
@@ -38385,6 +38482,79 @@ relocate:          RELOCATE obj_spec TO NAME
 		return (status);
 	    }
 	}
+    }
+;
+
+rename:          rename_tbl TO obj_spec 
+    {
+	i4             err_code, err_num = 0L;
+	DB_STATUS	    status;
+	i4		    rngvar_info;
+	DMU_CB		    *dmu_cb;
+	PSS_RNGTAB	    *resrange;
+	bool		    audit_err = FALSE;
+        PSS_OBJ_NAME	    newname; 
+    	i4		    tbls_to_lookup = (PSS_USRTBL | PSS_DBATBL | PSS_INGTBL);
+
+        STmove((char *)$3, ' ', sizeof(PSS_OBJ_NAME), (char *)&newname);
+	psq_cb->psq_mode = PSQ_ATBL_RENAME_TABLE; 
+
+	/* If SQL and
+	** not a dbproc variable and
+	** PSS_GTT_SYNTAX_SHORTCUT is ON for the session
+	** search for session tables as well as user / dba / ingres
+	*/
+	if (cb->pss_lang == DB_SQL &&
+	        (cb->pss_dbp_flags & PSS_SET_INPUT_PARAM) == 0 &&
+	        cb->pss_ses_flag & PSS_GTT_SYNTAX_SHORTCUT)
+	        tbls_to_lookup |= PSS_SESTBL;
+
+        /* Validate the new table name */
+	status = psl0_rngent(&cb->pss_auxrng, -1, "", &$3->pss_obj_name, cb,
+                    FALSE, &resrange, psq_cb->psq_mode, &psq_cb->psq_error,
+		    tbls_to_lookup, &rngvar_info, 0);
+	if (DB_SUCCESS_MACRO(status) && ! (resrange))
+	{
+	    /* allocate and populate the DMU_CB control block */
+	    status = psl_alt_tbl_col(cb, psq_cb);
+	    if (DB_FAILURE_MACRO(status))
+		return(status);
+
+	    /* If new table name table wasn't found, then we are good.
+	    ** Pass the new name to the table rename operation 
+	    */
+	    status = psl_alt_tbl_rename(cb, psq_cb, (PSS_OBJ_NAME *)&newname);
+	}
+	else
+        {
+            (VOID) psf_error(9365L, 0L, PSF_USERERR, &err_code, &psq_cb->psq_error, 2,
+                 psf_trmwhite(sizeof(DB_TAB_NAME),
+                       (char *) &cb->pss_resrng->pss_tabname.db_tab_name),
+               (char *)&cb->pss_resrng->pss_tabname.db_tab_name,
+                 psf_trmwhite(sizeof(DB_TAB_NAME), (char *) &newname.pss_obj_name),
+               (char *)&newname.pss_obj_name);
+            status = E_DB_ERROR;
+        }
+
+        if (DB_FAILURE_MACRO(status))
+              return(status);
+    }
+;
+
+rename_tbl:          rename_tbl_kwd obj_spec
+    {
+        DB_STATUS  status;
+        PSS_RNGTAB *rngvar;
+
+        /* verify that table exists, and put its info into cb->pss_usrrng
+         */
+	psq_cb->psq_mode = PSQ_ALTERTABLE;
+        status = psl_alt_tbl(cb, psq_cb, $2, &rngvar);
+
+        if (DB_FAILURE_MACRO(status))
+            return(status);
+
+        $$ = rngvar;
     }
 ;
 

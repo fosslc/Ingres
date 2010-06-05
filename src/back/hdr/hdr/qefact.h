@@ -1029,6 +1029,46 @@ typedef	struct	_QEF_DDL_STATEMENT
     PTR		ahd_qeuqCB;	/* QEUQ_CB describing DDL statement */
 } QEF_DDL_STATEMENT;
 
+
+/*}
+** Name: QEF_RENAME_STATEMENT - Descriptor for RENAME statement
+**
+** Description:
+[@comment_line@]...
+**
+** History:
+**	18-Mar-2010 (gupsh01) SIR 123444
+**	    Added for rename table/columns.
+**
+*/
+typedef	struct	_QEF_RENAME_STATEMENT
+{
+    PTR			qrnm_ahd_qeuCB;		/* QEU_CB describing DDL statement */
+    PTR			qrnm_ahd_qeuqCB;	/* QEUQ_CB describing DDL statement */
+    DB_TAB_ID           qrnm_tab_id;		/* Table id for table being renamed */
+    DB_OWN_NAME         qrnm_owner;		/* owner of tab constraint applies to */
+    i4			qrnm_type;		/* Type of rename operation */ 
+#define			QEF_RENAME_TABLE_TYPE	0x0001
+#define			QEF_RENAME_COLUMN_TYPE	0x0002
+    DB_TAB_NAME         qrnm_old_tabname;	/* Original table name renamed */
+    DB_TAB_NAME         qrnm_new_tabname;	/* new table name, if table rename op */
+    DB_ATT_ID		qrnm_col_id;		/* Column id,   if column rename */	
+    DB_ATT_NAME		qrnm_old_colname;	/* Column name, if column rename*/
+    DB_ATT_NAME		qrnm_new_colname;	/* New column name, if column rename */
+    DB_TAB_ID           qrnm_ctemp_tab_id;	/* Table id for temporary table to 
+						** execute dependent action */
+    i4			qrnm_ulm_rcb;		/* DSH row holding the ulm_rcb that
+						** describes a memory stream which
+						** persists over the execute immediate
+						** actions for creating supportive
+						** rules and procedures */
+    i4			qrnm_state;	   	/* State of the next rename action */
+#define			QEF_RENAME_INIT		0x0001	/* Initial state setting up of temp table */ 
+#define			QEF_RENAME_CALLBACK 	0x0002  /* Callback to execute query text */
+#define			QEF_RENAME_CLEANUP 	0x0003  /* Cleanup */
+   i4			qrnm_pstInfo;			/* PST_INFO for qef callback call */
+} QEF_RENAME_STATEMENT;
+
 /*}
 ** Name: QEF_CREATE_INTEGRITY_STATEMENT - describe a create integrity statement
 **
@@ -2243,6 +2283,8 @@ struct _QEF_RELATED_OBJECT
 **	    diagnostics.
 **	19-Apr-2007 (kschendel) b122118
 **	    Remove ahd-keys, nothing used it.
+8*	18-Mar-2010 (gupsh01) SIR 123444 
+**	    Added support for Alter table rename table/column. 
 */
 struct _QEF_AHD
 {
@@ -2317,6 +2359,7 @@ struct _QEF_AHD
 	QEA_HAGGF =		41,	/* Same as QEA_RAGGF, except it 
 					** assumes no input ordering and 
 					** groups input rows by hashing */
+	QEA_RENAME_STATEMENT =  42,	/* takes QEF_RENAME_STATEMENT */
 
 	QEA_D0_NIL =		100,	/* base for all STAR action types, NOT
 					** a real action type */
@@ -2416,6 +2459,7 @@ struct _QEF_AHD
 	QEF_CREATE_INTEGRITY_STATEMENT	qhd_createIntegrity;
 	QEF_CREATE_VIEW			qhd_create_view;
 	QEF_DROP_INTEGRITY		qhd_drop_integrity;
+	QEF_RENAME_STATEMENT		qhd_rename;
 
 	QEQ_D1_QRY  qhd_d1_qry;		/* (+Titan) a subquery */
 	QEQ_D2_GET  qhd_d2_get;		/* (+Titan) a get action */

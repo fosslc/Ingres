@@ -264,6 +264,8 @@
 **	    new style dmf-level row qualification.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	19-Apr-2010 (gupsh01) SIR 123444
+**	    Added support for rename table /columns.
 **/
 
 /*	definitions needed by the static function declarations	*/
@@ -10925,4 +10927,228 @@ makeObjectName(
     unpaddedLength = cus_trmwhite( ( u_i4 ) DB_MAXNAME, nameSeed );
     MEcopy( ( PTR ) nameSeed, ( u_i2 ) DB_MAXNAME, ( PTR ) targetName );
     targetName[ unpaddedLength ] = postfixCharacter;
+}
+
+/* Name: qea_renameExecute - Execute postprocessing for rename operation.
+**
+** Description:
+**	This routine will execute the post-processing for the rename operation 
+**	on the tables and columns. 
+**	After fixing iirelation/iiattribute catalogs we need to fix the query text
+**	for any supported grants. This routine will call the appropriate modules
+**	to make this possible. 
+**
+** History:
+**	19-Mar-2010 (gupsh01) SIR 123444
+**	    Written.
+*/
+DB_STATUS
+qea_renameExecute(
+    QEF_AHD		*qea_act,
+    QEF_RCB		*qef_rcb,
+    QEE_DSH		*dsh )
+{
+    QEF_CB		*qef_cb = dsh->dsh_qefcb;
+    QEF_RENAME_STATEMENT *details = &(qea_act->qhd_obj.qhd_rename);
+    DB_STATUS		status = E_DB_OK;
+    DB_STATUS		securityStatus = E_DB_OK;
+    i4			error;
+    i4			renameType;
+    dsh->dsh_error.err_code = E_QE0000_OK;
+
+    /* Check if we have a good request */
+    if ( (details->qrnm_type != QEF_RENAME_TABLE_TYPE) &&  
+         (details->qrnm_type != QEF_RENAME_COLUMN_TYPE))
+    {
+	status = E_DB_ERROR;
+	error = E_QE1996_BAD_ACTION;
+	qef_error( error, 0L, status, &error, &dsh->dsh_error, 0 );
+    	return( status );
+    }
+
+    /* Get Database id */
+    qef_cb->qef_dbid = qef_rcb->qef_db_id;
+
+    for ( ; ; )		/* code block to break out of */
+    {
+        QEUQ_CB             qeuq_cb;
+        DB_QMODE            obj_type;
+	DMT_SHW_CB          dmt_show;
+	DMU_CB		    dmu_cb, *dmu_ptr = &dmu_cb;
+	DMT_TBL_ENTRY       dmt_tbl_entry;
+	DB_TAB_NAME	    old_name;
+	DB_TAB_NAME         new_name;
+	QSF_RCB             qsf_rcb;
+	bool                qsf_obj = FALSE;    /* TRUE if holding QSF object */
+	bool                dmu_atbl_rename_col = FALSE;
+	bool                dmu_atbl_rename_tab = FALSE;
+	DMU_CHAR_ENTRY 	    *char_entry;
+	i4		    char_count;
+	DB_TEXT_STRING      *out_txt = (DB_TEXT_STRING *) NULL;
+    	DB_TEXT_STRING      **result;
+	QEU_CB		    *qeu_cb =  ( QEU_CB * ) qea_act->qhd_obj.
+							qhd_rename.qrnm_ahd_qeuCB;
+	int		    opcode = qeu_cb->qeu_d_op;
+	i4		    iter;
+	i4                  err = E_QE0000_OK;
+
+	result = &out_txt;
+	MEfill(sizeof(old_name), 0, (PTR)&old_name);
+	MEfill(sizeof(new_name), 0, (PTR)&new_name);
+
+ 	/* get control block from QSF */
+    	if (qeu_cb->qeu_d_cb == 0)
+    	{
+            qsf_rcb.qsf_next = 0;
+            qsf_rcb.qsf_prev = 0;
+            qsf_rcb.qsf_length = sizeof(QSF_RCB);
+            qsf_rcb.qsf_type = QSFRB_CB;
+            qsf_rcb.qsf_owner = (PTR)DB_QEF_ID;
+            qsf_rcb.qsf_ascii_id = QSFRB_ASCII_ID;
+            qsf_rcb.qsf_sid = qef_cb->qef_ses_id;
+	    qsf_rcb.qsf_lk_state = QSO_SHLOCK;
+	    if (qeu_cb->qeu_qso)
+	    {
+		qsf_rcb.qsf_obj_id.qso_handle = qeu_cb->qeu_qso;
+            	/* access QSF by handle */
+            	if (status = qsf_call(QSO_LOCK, &qsf_rcb))
+            	{
+		    qef_rcb->error.err_code = qsf_rcb.qsf_error.err_code;
+		    return (status);
+            	}
+	    }
+            else
+            {
+		/* get object by name */
+		qsf_rcb.qsf_obj_id.qso_type = QSO_QP_OBJ;
+		MEcopy((PTR)&qeu_cb->qeu_qp, sizeof (DB_CURSOR_ID),
+                		(PTR) qsf_rcb.qsf_obj_id.qso_name);
+            	if (status = qsf_call(QSO_GETHANDLE, &qsf_rcb))
+            	{
+		    qef_rcb->error.err_code = qsf_rcb.qsf_error.err_code;
+		    return (status);
+            	}
+            }
+            qsf_obj = TRUE; /* we have successfully claimed the object */
+            /*
+            ** QP is locked now
+            ** we copy the structure because it is a shared object and
+            ** we cannot write on it.
+            */
+            STRUCT_ASSIGN_MACRO(*((DMU_CB *) qsf_rcb.qsf_root), dmu_cb);
+	}
+    	else
+    	{
+	    /*
+            ** We cannot write on the DMU_CB because it may be a read-only
+            ** object to this routine.
+            */
+	    STRUCT_ASSIGN_MACRO(*((DMU_CB *) qeu_cb->qeu_d_cb), dmu_cb);
+    	}
+
+	/* get base table's name */
+        dmt_show.type = DMT_SH_CB;
+        dmt_show.length = sizeof(DMT_SHW_CB);
+        dmt_show.dmt_session_id = qeu_cb->qeu_d_id;
+        dmt_show.dmt_db_id = qeu_cb->qeu_db_id;
+        dmt_show.dmt_char_array.data_in_size = 0;
+        dmt_show.dmt_char_array.data_out_size  = 0;
+        dmt_show.dmt_tab_id.db_tab_base = dmu_ptr->dmu_tbl_id.db_tab_base;
+        dmt_show.dmt_tab_id.db_tab_index = 0;
+        dmt_show.dmt_flags_mask = DMT_M_TABLE;
+        dmt_show.dmt_table.data_address = (PTR) &dmt_tbl_entry;
+        dmt_show.dmt_table.data_in_size = sizeof(DMT_TBL_ENTRY);
+        dmt_show.dmt_char_array.data_address = (PTR)NULL;
+        dmt_show.dmt_char_array.data_in_size = 0;
+        dmt_show.dmt_char_array.data_out_size  = 0;
+
+        status =  dmf_call(DMT_SHOW, &dmt_show);
+        if (status != E_DB_OK)
+	{
+               err = dmt_show.error.err_code;
+	       qef_error( error, 0L, status, &error, &dsh->dsh_error, 0 );   
+	       return (status);
+	}
+
+        qeuq_cb.qeuq_next = qeuq_cb.qeuq_prev   = 0;
+        qeuq_cb.qeuq_length = sizeof (qeuq_cb);
+        qeuq_cb.qeuq_type           = QEUQCB_CB;
+        qeuq_cb.qeuq_owner          = (PTR)DB_QEF_ID;
+        qeuq_cb.qeuq_ascii_id       = QEUQCB_ASCII_ID;
+        qeuq_cb.qeuq_db_id          = qeu_cb->qeu_db_id;
+        qeuq_cb.qeuq_d_id           = qeu_cb->qeu_d_id;
+        qeuq_cb.qeuq_eflag          = qeu_cb->qeu_eflag;
+        qeuq_cb.qeuq_rtbl           = &dmu_ptr->dmu_tbl_id;
+        qeuq_cb.qeuq_status_mask    = dmt_tbl_entry.tbl_status_mask;
+        qeuq_cb.qeuq_qid.db_qry_high_time = qeuq_cb.qeuq_qid.db_qry_low_time = 0;
+        qeuq_cb.qeuq_flag_mask	    = 0; 
+	qeuq_cb.qeuq_flag_mask |= QEU_FORCE_QP_INVALIDATION;
+        qeuq_cb.qeuq_keydropped	    = FALSE;
+        qeuq_cb.qeuq_keypos	    = 0;
+        qeuq_cb.qeuq_keyattid	    = 0;
+        qeuq_cb.qeuq_rtbl	    = &dmu_cb.dmu_tbl_id;
+
+	/* Make sure this is a table */
+        if ((dmt_tbl_entry.tbl_status_mask & DMT_VIEW)
+            || (dmt_tbl_entry.tbl_status_mask & DMT_IDX))
+	{
+	    /* Error rename operation is not allowed on a view or a table.
+	    ** If we receive a view or index then something is not right.
+	    */
+	    status = E_DB_ERROR;
+	    error = E_QE1996_BAD_ACTION;
+	    qef_error( error, 0L, status, &error, &dsh->dsh_error, 0 );
+	}
+        else
+            obj_type = (DB_QMODE) DB_TABLE;
+
+        /* Find out the mode for rename operation */
+	if ( (opcode == DMU_ALTER_TABLE) &&
+        	(char_entry = (DMU_CHAR_ENTRY*) dmu_ptr->dmu_char_array.data_address) &&
+               	(char_count = dmu_ptr->dmu_char_array.data_in_size / sizeof(DMU_CHAR_ENTRY) ) )
+        {
+            for (iter = 0; iter < char_count; iter++)
+            {
+                if (char_entry[iter].char_id == DMU_ALTER_TYPE)
+                {
+                       dmu_atbl_rename_col = (char_entry[iter].char_value == DMU_C_ALTCOL_RENAME);
+                       dmu_atbl_rename_tab = (char_entry[iter].char_value == DMU_C_ALTTBL_RENAME);
+                       break;
+                }
+            }
+        }
+	if (dmu_atbl_rename_tab)
+       	{
+            STmove(dmu_ptr->dmu_table_name.db_tab_name, '\0', 
+				sizeof(old_name.db_tab_name), (PTR)&old_name.db_tab_name);
+            STmove(dmu_ptr->dmu_newtab_name.db_tab_name, '\0', 
+				sizeof(old_name.db_tab_name), (PTR)&new_name.db_tab_name);
+	    qeuq_cb.qeuq_flag_mask |= QEU_RENAME_TABLE;
+        }
+	else if (dmu_atbl_rename_col)
+	    qeuq_cb.qeuq_flag_mask |= QEU_RENAME_COLUMN;
+	else
+	{
+	    /* We should be doing rename return with error */
+	    status = E_DB_ERROR;
+	    error = E_QE1996_BAD_ACTION;
+	    qef_error( error, 0L, status, &error, &dsh->dsh_error, 0 );
+	}
+
+	/* Propagate the new object name to the query text for grants */
+	status = qeu_rename_grants (qef_rcb->qef_cb, &qeuq_cb, &new_name);
+
+	/* delete the QSF object */
+	if (qeu_cb->qeu_d_cb == 0 && qsf_obj)
+    	{
+            if (status = qsf_call(QSO_DESTROY, &qsf_rcb))
+            {
+		qef_rcb->error.err_code = qsf_rcb.qsf_error.err_code;
+		return (status);
+	    }
+	}
+	break;
+    }	
+
+    return( status );
 }

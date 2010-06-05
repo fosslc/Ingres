@@ -254,6 +254,128 @@ pst_crt_tbl_stmt(PSS_SESBLK *sess_cb,
 
 }  /* end pst_crt_tbl_stmt */
  
+/*
+** Name: pst_rename_stmt - allocate a PST_RENAME statement node
+**
+** Description:
+**	This routine opens a memory stream, allocates PST_RENAME statement node, 
+**	allocate QEU_CB and initialize its header, and puts QEU_CB into the
+**	PST_CREATE_TABLE node.  It will then allocate a PST_PROCEDURE node to head
+**	the query tree, put the RENAME node into it, and place the PST_PROCEDURE 
+**	node at the root of the QSF object.
+** 
+** Input:
+**	sess_cb			PSF session CB
+**	    pss_ostream		memory stream from which PST_CREATE_TABLE node
+**				will be allocated
+**	    pss_dbid		database id for this session
+**	    pss_sessid		session id
+**	qmode			query mode of the statement (STMT.pst_node)
+**	operation		opcode to store in QEU_CB (in PST_CREATE_TABLE)
+**
+** Output:
+**	sess_cb
+**	    pss_object		will contain address of the newly allocated
+**				PST_CREATE_TABLE node
+**	err_blk			filled in if an error occured.
+**
+** Returns:
+**	E_DB_{OK, ERROR}
+**
+** Side effects:
+**	Opens a memory stream, allocates memory and sets root of QSF object
+**      to point to that memory (a PST_RENAME statement node).
+**
+** History:
+**
+**	19-mar-2010 (gupsh01)
+**	    Added.
+*/
+DB_STATUS
+pst_rename_stmt(PSS_SESBLK *sess_cb, 
+		 i4  qmode,
+		 i4 operation, 
+		 DB_ERROR *err_blk)
+{
+    DB_STATUS	     status;
+    i4	     	     err_code;
+    PST_STATEMENT    *stmt;
+    PST_RENAME	     *ren_node;
+    QEU_CB	     *qeu_cb;
+    
+    status = psf_mopen(sess_cb, QSO_QP_OBJ, &sess_cb->pss_ostream, err_blk);
+    if (DB_FAILURE_MACRO(status))
+	return (status);
+
+    status = psf_malloc(sess_cb, &sess_cb->pss_ostream, 
+			sizeof(PST_STATEMENT), (PTR *) &stmt, err_blk);
+    if (DB_FAILURE_MACRO(status))
+	return (status);
+
+    /* initialize the statement node */
+    MEfill(sizeof(PST_STATEMENT), (u_char) 0, (PTR) stmt);
+
+    stmt->pst_mode = qmode;
+    stmt->pst_type = PST_RENAME_TYPE;
+
+    ren_node = &(stmt->pst_specific.pst_rename);
+    
+    switch (qmode) 
+    {
+    case PSQ_ATBL_RENAME_TABLE:
+	ren_node->pst_rnm_type = PST_ATBL_RENAME_TABLE;
+	break;
+
+    case PSQ_ATBL_RENAME_COLUMN:
+	ren_node->pst_rnm_type = PST_ATBL_RENAME_COLUMN;
+	break;
+
+    default:
+	(VOID) psf_error(E_PS0002_INTERNAL_ERROR, 0L, 
+			 PSF_INTERR, &err_code, err_blk, 0);
+	return (E_DB_ERROR);
+    }
+    
+    /* allocate the QEU control block */
+    status = psf_malloc(sess_cb, &sess_cb->pss_ostream, 
+			sizeof(QEU_CB), (PTR *) &qeu_cb, err_blk);
+    if (DB_FAILURE_MACRO(status))
+	return (status);
+
+    ren_node->pst_rnm_QEUCB = qeu_cb;
+
+    /* zero fill QEU_CB */
+    MEfill(sizeof(QEU_CB), (u_char) 0, (PTR) qeu_cb);
+    
+    /* Fill in the control block header 
+     */
+    qeu_cb->qeu_length	    = sizeof(QEU_CB);
+    qeu_cb->qeu_type	    = QEUCB_CB;
+    qeu_cb->qeu_owner	    = (PTR)DB_PSF_ID;
+    qeu_cb->qeu_ascii_id    = QEUCB_ASCII_ID;
+    qeu_cb->qeu_db_id	    = sess_cb->pss_dbid;
+    qeu_cb->qeu_d_id	    = sess_cb->pss_sessid;
+    qeu_cb->qeu_eflag	    = QEF_EXTERNAL;
+    qeu_cb->qeu_mask	    = 0;
+
+    /* Give QEF the opcode */
+    qeu_cb->qeu_d_op	= operation;
+
+    /* the rest of the CREATE productions assume that 
+    ** pss_object points to the qeu_cb, so set that up
+    */
+    sess_cb->pss_object = (PTR) qeu_cb;
+    
+    /* allocate the proc header for the query tree
+    ** and set the root of the QSF object to the head of the tree
+    */
+    status = pst_ddl_header(sess_cb, stmt, err_blk);
+
+    if (DB_FAILURE_MACRO(status))
+	return(status);
+    
+    return(E_DB_OK);
+}
 
 /*
 ** Name: pst_ddl_header -  allocate a procedure node to complete the query tree;

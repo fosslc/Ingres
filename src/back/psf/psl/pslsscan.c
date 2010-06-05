@@ -503,6 +503,8 @@
 **	    pslscanprep.awk.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	19-Apr-2010 (gupsh01) SIR 123444
+**	    Added support for RENAME table.
 **/
 
 /*
@@ -1361,6 +1363,7 @@ static const KEYINFO                Key_info[] = {
 /* 213 */              { TRUECONST,         0,  0,      (SECONDARY *)NULL },
 /* 214 */              { UNKNCONST,         0,  0,      (SECONDARY *)NULL },
 /* 215 */	       { SINGLETON,	    0,	0,	(SECONDARY *)NULL },
+/* 216 */	       { RENAME,    PSL_GOVAL,	0,	(SECONDARY *)NULL }
 };
 
 /* Alternate keyword lists for inside WITH parsing (specifically, when

@@ -112,6 +112,8 @@ SQLSTATE_MAPPING_REQUIRED
 **          Add QE0310 for table procedure.
 **      21-Jan-2009 (horda03) Bug 121519
 **            Add E_QE00AA_ERROR_CREATING_TABLE.
+**	19-Mar-2010 (gupsh01) SIR 123444
+**	    Add E_QE016C_RENAME_TAB_HAS_OBJS for rename tables.
 */
 
 
@@ -1317,6 +1319,321 @@ has one or more dependent objects which would become abandoned."
 **
 ** Recommendation:
 **	Correct the statement and reenter.
+*/
+E_QE016C_RENAME_TAB_HAS_OBJS:SS42000_SYN_OR_ACCESS_ERR
+"Rename of table %0c owned by %1c, or its columns is not permitted as 
+one or more objects eg procedures, views, or non grant compatible permits
+depend on it. Check the error log (errlog.log) for details."
+/*%
+** Parameters:
+**	%0c - Table name
+**	%1c - Owner name
+**
+** Explanation:
+**	Rename operation on a table is not allowed if it has a 
+**	dependent views, procedures, rules, security alarm, 
+**	constraint or non grant compatible permits on it. 
+**
+** System Status:
+**	The current statement is aborted; the program continues.
+**
+** Recommendation:
+**	To rename the table, drop the dependent objects prior 
+**	to rename and recreate the objects after rename.  
+*/
+E_QE016D_RENAME_TAB_HAS_PROC:SS42000_SYN_OR_ACCESS_ERR
+"Rename of table %0c owned by %1c, or its columns is not permitted as
+procedure %2c depends on it."
+/*%
+** Parameters:
+**	%0c - Table name
+**	%1c - Owner name
+**	%2c - Procedure name
+**
+** Explanation:
+**	Rename operation on a table is not allowed if it has a 
+**	dependent view, procedures, rules, security alarm, 
+**	constraint or non grant compatible permits on it. 
+**
+** System Status:
+**	The current statement is aborted; the program continues.
+**
+** Recommendation:
+**	To rename the table, drop the dependent objects prior 
+**	to rename and recreate the objects after rename.  
+*/
+E_QE016E_RENAME_TAB_HAS_VIEW:SS42000_SYN_OR_ACCESS_ERR
+"Rename of table %0c owned by %1c, or its columns is not permitted as
+view %2c depends on it."
+/*%
+** Parameters:
+**	%0c - Table name
+**	%1c - Owner name
+**	%2c - View name
+**
+** Explanation:
+**	Rename operation on a table is not allowed if it has a 
+**	dependent view, procedures, rules, security alarm, 
+**	constraint or non grant compatible permits on it. 
+**
+** System Status:
+**	The current statement is aborted; the program continues.
+**
+** Recommendation:
+**	To rename the table, drop the dependent objects prior 
+**	to rename and recreate the objects after rename.  
+*/
+E_QE016F_RENAME_TAB_HAS_RULE:SS42000_SYN_OR_ACCESS_ERR
+"Rename of table %0c owned by %1c, or its columns is not permitted as
+rule %2c depends on it."
+/*%
+** Parameters:
+**	%0c - Table name
+**	%1c - Owner name
+**	%2c - View name
+**
+** Explanation:
+**	Rename operation on a table is not allowed if it has a 
+**	dependent view, procedures, rules, security alarm, 
+**	constraint or non grant compatible permits on it. 
+**
+** System Status:
+**	The current statement is aborted; the program continues.
+**
+** Recommendation:
+**	To rename the table, drop the dependent objects prior 
+**	to rename and recreate the objects after rename.  
+*/
+E_QE0170_RENAME_TAB_HAS_NGPERM:SS42000_SYN_OR_ACCESS_ERR
+"Rename of table %0c owned by %1c, or its columns is not permitted as
+permit %2d defined on it is non grant compatible."
+/*%
+** Parameters:
+**	%0c - Table name
+**	%1c - Owner name
+**	%2d - Permit number
+**
+** Explanation:
+**	Rename operation on a table is not allowed if it has a 
+**	dependent view, procedures, rules, security alarm, 
+**	constraint or non grant compatible permits on it. 
+**
+** System Status:
+**	The current statement is aborted; the program continues.
+**
+** Recommendation:
+**	To rename the table, drop the dependent objects prior 
+**	to rename and recreate the objects after rename.  
+*/
+E_QE0171_RENAME_TAB_HAS_CONS:SS42000_SYN_OR_ACCESS_ERR
+"Rename of table %0c owned by %1c, or its columns is not permitted as
+it has constraint %2c defined on it."
+/*%
+** Parameters:
+**	%0c - Table name
+**	%1c - Owner name
+**
+** Explanation:
+**	Rename operation on a table is not allowed if it has a 
+**	dependent view, procedures, rules, security alarm, 
+**	constraint or non grant compatible permits on it. 
+**
+** System Status:
+**	The current statement is aborted; the program continues.
+**
+** Recommendation:
+**	To rename the table, drop the dependent objects prior 
+**	to rename and recreate the objects after rename.  
+*/
+E_QE0172_RENAME_TAB_HAS_SECALARM:SS42000_SYN_OR_ACCESS_ERR
+"Rename of table %0c owned by %1c, or its columns is not permitted as
+it has security alarm %2c defined on it."
+/*%
+** Parameters:
+**	%0c - Table name
+**	%1c - Owner name
+**	%2c - Security alarm name
+**
+** Explanation:
+**	Rename operation on a table is not allowed if it has a 
+**	dependent view, procedures, rules, security alarm, 
+**	constraint or non grant compatible permits on it. 
+**
+** System Status:
+**	The current statement is aborted; the program continues.
+**
+** Recommendation:
+**	To rename the table, drop the dependent objects prior 
+**	to rename and recreate the objects after rename.  
+*/
+E_QE0173_RENAME_TAB_IS_CATALOG:SS42000_SYN_OR_ACCESS_ERR
+"Rename of table %0c owned by %1c, or its columns is not permitted as
+it is a system catalog."
+/*%
+** Parameters:
+**	%0c - Table name
+**	%1c - Owner name
+**
+** Explanation:
+**	Rename operation on a table is not allowed if it has a 
+**	is a core or extended system catalog.
+**
+** System Status:
+**	The current statement is aborted; the program continues.
+**
+** Recommendation:
+**	Cannot rename the system or extended system catalog.
+*/
+E_QE0174_RENAME_TAB_IS_SYSGEN:SS42000_SYN_OR_ACCESS_ERR
+"Rename of table %0c owned by %1c, or its columns is not permitted as
+it is a system generated or system maintained table."
+/*%
+** Parameters:
+**	%0c - Table name
+**	%1c - Owner name
+**
+** Explanation:
+**	Rename operation on a table is not allowed if it
+**	is a system generated or a system maintained table.
+**
+** System Status:
+**	The current statement is aborted; the program continues.
+**
+** Recommendation:
+**	Cannot rename a system generated or maintained table.
+*/
+E_QE0175_RENAME_TAB_IS_ETAB:SS42000_SYN_OR_ACCESS_ERR
+"Rename of table %0c owned by %1c, or its columns is not permitted as
+it is a blob extension table."
+/*%
+** Parameters:
+**	%0c - Table name
+**	%1c - Owner name
+**
+** Explanation:
+**	Rename operation on a table is not allowed if it
+**	is a extention table created for blob.
+**
+** System Status:
+**	The current statement is aborted; the program continues.
+**
+** Recommendation:
+**	Cannot rename the internal blob etab tables.
+*/
+E_QE0176_RENAME_TAB_IS_GATEWAY:SS42000_SYN_OR_ACCESS_ERR
+"Rename of table %0c owned by %1c, or its columns is not permitted as
+it is a Gateway table."
+/*%
+** Parameters:
+**	%0c - Table name
+**	%1c - Owner name
+**
+** Explanation:
+**	Rename operation on a table is not allowed if it
+**	is a Gateway table. 
+**
+** System Status:
+**	The current statement is aborted; the program continues.
+**
+** Recommendation:
+**	Cannot rename the Gateway tables. 
+*/
+E_QE0177_RENAME_TAB_IS_PARTITION:SS42000_SYN_OR_ACCESS_ERR
+"Rename of table %0c owned by %1c, or its columns is not permitted as
+it is a partion table."
+/*%
+** Parameters:
+**	%0c - Table name
+**	%1c - Owner name
+**
+** Explanation:
+**	Rename operation on a table is not allowed if it
+**	is a partition. 
+**
+** System Status:
+**	The current statement is aborted; the program continues.
+**
+** Recommendation:
+**	Cannot rename the table or column. 
+*/
+E_QE0178_RENAME_TAB_IS_INCONSIST:SS42000_SYN_OR_ACCESS_ERR
+"Rename of table %0c owned by %1c, or its columns is not permitted as
+it is inconsistent."
+/*%
+** Parameters:
+**	%0c - Table name
+**	%1c - Owner name
+**
+** Explanation:
+**	Rename operation on a table is not allowed if it
+**	is inconsistent. 
+**
+** System Status:
+**	The current statement is aborted; the program continues.
+**
+** Recommendation:
+**	Cannot rename the table or column.
+*/
+E_QE0179_RENAME_TAB_IS_READONLY:SS42000_SYN_OR_ACCESS_ERR
+"Rename of table %0c owned by %1c, or its columns is not permitted as
+it is a read only table."
+/*%
+** Parameters:
+**	%0c - Table name
+**	%1c - Owner name
+**
+** Explanation:
+**	Rename operation on a table is not allowed if it
+**	is a read only table.
+**
+** System Status:
+**	The current statement is aborted; the program continues.
+**
+** Recommendation:
+**	Cannot rename the table or column.
+*/
+E_QE0180_RENAME_TAB_HAS_INTEGRITY:SS42000_SYN_OR_ACCESS_ERR
+"Rename of table %0c owned by %1c, or its columns is not permitted as
+it has integrity %2d defined on it."
+/*%
+** Parameters:
+**	%0c - Table name
+**	%1c - Owner name
+**	%2d - Integrity number
+**
+** Explanation:
+**	Rename operation on a table is not allowed if it has a 
+**	dependent view, procedures, rules, security alarm, 
+**	constraints, integrity or non grant compatible permits on it. 
+**
+** System Status:
+**	The current statement is aborted; the program continues.
+**
+** Recommendation:
+**	To rename the table, drop the dependent objects prior 
+**	to rename and recreate the objects after rename.  
+*/
+E_QE0181_RENAME_COL_HAS_OBJS:SS42000_SYN_OR_ACCESS_ERR
+"Rename of column %0c for table %1c owned by %2c, is not permitted as 
+one or more objects eg procedures, views, or non grant compatible permits
+depend on it. Check the error log (errlog.log) for details."
+/*%
+** Parameters:
+**	%0c - Column name
+**	%1c - Table name
+**	%2c - Owner name
+**
+** Explanation:
+**	Rename operation on a table column is not allowed if it has a 
+**	dependent views, procedures, rules, security alarm, 
+**	constraint or non grant compatible permits on it. 
+**
+** System Status:
+**	The current statement is aborted; the program continues.
+**
+** Recommendation:
+**	To rename the column, drop the dependent objects prior 
+**	to rename and recreate the objects after rename.  
 */
 E_QE0199_CALL_ALLOC:SS50003_EXHAUSTED_RESOURCE
 "Failed attempt to nest procedure (rule) '%0c' (%1c) at query depth %2d

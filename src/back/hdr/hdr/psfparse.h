@@ -2500,6 +2500,8 @@ typedef struct _PST_OBJDEP
 **	    Add fields and flags for batch processing optimizations
 **      15-feb-2010 (maspa05) b123293
 **          Added psq_server_class so SC930 can output server class
+**	18-Mar-2010 (gupsh01, dougi) SIR 123444
+**	    Add defines for Alter table rename table/column.
 */
 typedef enum psq_mode_enum {
 #define PSQ_MODES_MACRO \
@@ -2692,6 +2694,8 @@ _DEFINE(PSQ_GCA_XA_PREPARE,    186,"PSQ_GCA_XA_PREPARE")\
 _DEFINE(PSQ_GCA_XA_COMMIT,     187,"PSQ_GCA_XA_COMMIT")\
 _DEFINE(PSQ_GCA_XA_ROLLBACK,   188,"PSQ_GCA_XA_ROLLBACK")\
 _DEFINE(PSQ_FREELOCATOR,       189,"FREE LOCATOR")\
+_DEFINE(PSQ_ATBL_RENAME_COLUMN,190,"PSQ_ATBL_RENAME_COLUMN")\
+_DEFINE(PSQ_ATBL_RENAME_TABLE, 191,"PSQ_ATBL_RENAME_TABLE")\
 _ENDDEFINE
 #define _DEFINE(n,v,x) n=v,
 #define _ENDDEFINE PSQ_MODE_MAX
@@ -6354,21 +6358,49 @@ typedef	struct	_PST_COL_ID
 **	    is not included by all includers of THIS header file.
 **	22-jul-96 (ramra01)
 **	    Alter table Add/Drop column create table flags.
+**	15-oct-2009 (gupsh01)
+**	    Fix define values. 
 */
 typedef	struct	_PST_CREATE_TABLE
 {
     i4	pst_createTableFlags;
-#define	PST_CRT_TABLE   	0x01	 /* creating a base table */
-#define	PST_CRT_INDEX		0x02	 /* creating a secondary index */
-#define	PST_ATBL_ADD_COLUMN 	0x03 	 /* alter table add column */
-#define	PST_ATBL_DROP_COLUMN  	0x04  	 /* alter table drop column */
-#define	PST_ATBL_ALTER_COLUMN  	0x04  	 /* alter table alter column */
-                                 /* may eventually allow temp tables,etc */
+#define	PST_CRT_TABLE   	1L	 /* creating a base table */
+#define	PST_CRT_INDEX		2L	 /* creating a secondary index */
+#define	PST_ATBL_ADD_COLUMN 	3L 	 /* alter table add column */
+#define	PST_ATBL_DROP_COLUMN  	4L  	 /* alter table drop column */
+#define       PST_ATBL_ALTER_COLUMN   5L     /* alter table alter column */
+                                  /* may eventually allow temp tables,etc */
+
     i4	pst_autostruct;		/* flag field for auto structure options */
 				/* Flags defined in PST_RESTAB */
     struct _QEU_CB	*pst_createTableQEUCB;	 
 				 /* the DMU_CB in this QEUCB describes table */
 }	PST_CREATE_TABLE;
+
+/*
+** Name: PST_RENAME
+**
+**	This is a descriptor for ALTER TABLE RENAME .... type of statements. 
+** History:
+**	18-Mar-2010 (gupsh01) SIR 123444
+**	    Created.
+*/
+typedef	struct	_PST_RENAME
+{
+    struct _QEU_CB	*pst_rnm_QEUCB;	 
+				 /* the DMU_CB in this QEUCB describes table */
+    PTR                 pst_rnm_qeuqCB; /* QEUQ_CB describing DDL statement */
+    DB_TAB_ID           pst_rnm_tab_id;     /* Table id for table being renamed */
+    DB_OWN_NAME         pst_rnm_owner;      /* owner of tab constraint applies to */
+    i4			pst_rnm_type;
+#define	PST_ATBL_RENAME_TABLE	0x01  	 /* alter table rename table */
+#define	PST_ATBL_RENAME_COLUMN  0x02  	 /* alter table rename column */
+    DB_TAB_NAME         pst_rnm_old_tabname;  /* Original table name renamed */
+    DB_TAB_NAME         pst_rnm_new_tabname;  /* new table name, if table rename op */
+    DB_ATT_ID           pst_rnm_col_id;       /* Column id,   if column rename */
+    DB_ATT_NAME         pst_rnm_old_colname;  /* Column name, if column rename*/
+    DB_ATT_NAME         pst_rnm_new_colname;  /* New column name, if column rename */
+}	PST_RENAME;
 
 /*
 **  Name: PST_TEXT_STORAGE
@@ -7025,6 +7057,8 @@ typedef struct _PST_STATEMENT
        /* implies PST_CREATE_SCHEMA structure */
 #define PST_CREATE_VIEW_TYPE    ( PST_FIRST_DDL_STATEMENT_TYPE + 8 )
 	/* implies PST_CREATE_VIEW structure */
+#define PST_RENAME_TYPE    ( PST_FIRST_DDL_STATEMENT_TYPE + 9 )
+	/* implies rename processing */
 
 	/* Pst_specific holds the statement specific information */
     union
@@ -7051,6 +7085,7 @@ typedef struct _PST_STATEMENT
 	PST_EXEC_IMM            pst_execImm;
         PST_CREATE_SCHEMA       pst_createSchema;
 	PST_CREATE_VIEW         pst_create_view;
+	PST_RENAME	        pst_rename;
     } pst_specific;
 
     i4		pst_lineno;	/* Line number of the statement */

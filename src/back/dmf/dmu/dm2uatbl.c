@@ -334,6 +334,8 @@ static DB_STATUS    pt_adddrop_adjust(
 **	    Initialise ADF_CB structure
 **	29-Sept-2009 (troal01)
 **		Add support for geospatial
+**	30-Dec-2009 (gupsh01, dougi)
+**	    Add alter table rename tables and columns support.
 */
 
 DB_STATUS
@@ -348,6 +350,7 @@ i4		relstat2,
 i4		db_lockmode,
 DB_TAB_NAME	*tab_name,
 DB_OWN_NAME	*tab_owner,
+DB_TAB_NAME	*newtab_name,
 DB_ERROR	*dberr)
 {
     DMP_RCB             *r = (DMP_RCB *)0;
@@ -1202,6 +1205,103 @@ DB_ERROR	*dberr)
 		  }
 	      }
 	    }
+	    else if ( operation == DMU_C_ALTCOL_RENAME ) /* ALTER TABLE RENAME COLUMN */
+	    {
+	      for (i = 1; i <= t->tcb_rel.relatts; i++)
+              {
+		  MEmove(t->tcb_atts_ptr[i].attnmlen,
+                    t->tcb_atts_ptr[i].attnmstr,
+                    ' ', DB_ATT_MAXNAME, tmpattnm.db_att_name);
+
+                  if (t->tcb_atts_ptr[i].ver_altcol == 0 &&
+                      t->tcb_atts_ptr[i].ver_dropped == 0 &&
+                       MEcmp(tmpattnm.db_att_name,
+                                (PTR)&attr_entry[0]->attr_name,
+                                sizeof(DB_ATT_NAME) ) == 0)
+                  {
+                    break;
+                  }
+              }
+
+              if (i > t->tcb_rel.relatts)
+              {
+	          /* Requesting alter of a non existing column */
+		  SETDBERR(&log_err, 0, E_DM002A_BAD_PARAMETER);
+                  status = E_DB_ERROR;
+                  break;
+              }
+
+	      /* Get the iiattribute record */
+	      status = dm2r_position(attr_rcb, DM2R_QUAL, key_desc, (i4)2,
+                                      (DM_TID *)0, dberr);
+              if (status != E_DB_OK)
+                  break;
+
+	      for (;;)
+
+              {
+	          /* Get the iiattribute record */
+                  status = dm2r_get(attr_rcb, &attrtid, DM2R_GETNEXT,
+                                     (char *)&attrrecord, dberr);
+
+                  if (status == E_DB_OK)
+                  {
+                    if ((attrrecord.attrelid.db_tab_base == table_id.db_tab_base) &&
+                        (attrrecord.attrelid.db_tab_index == table_id.db_tab_index) 
+			)
+		    { 
+			if (MEcmp((PTR) &(attr_entry[0]->attr_name.db_att_name), 
+					(PTR) &(attrrecord.attname), 
+					sizeof(DB_ATT_NAME)) == 0 )
+			{
+			    /* Copy everything from old record to new record, 
+			    ** except substitue the name to new column name. 
+			    */
+			    
+                            MEcopy((PTR)&attrrecord, sizeof(DMP_ATTRIBUTE), (PTR)&attrrecord_tmp);
+                            STRUCT_ASSIGN_MACRO(attr_entry[1]->attr_name,
+                                        attrrecord_tmp.attname);
+                            status = dm2r_replace(attr_rcb, &attrtid,
+                                          DM2R_BYPOSITION, (char *)&attrrecord_tmp,
+                                          (char *)0, dberr);
+                            if (status != E_DB_OK)
+                            {
+                               uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG,
+                                           NULL, (char *)NULL, (i4)0,
+                                           (i4 *)NULL, &local_error, 0);
+			       SETDBERR(&log_err, 0, E_DM9028_ATTR_UPDATE_ERR);
+                               break;
+                            }
+		            error = 0;
+			    status = E_DB_OK;
+			} /* Attribute found */
+		    } 
+		  }
+		  else
+                  {
+		      if (dberr->err_code == E_DM0055_NONEXT)
+                      {
+                          status = E_DB_OK;
+                          CLRDBERR(dberr);
+                      }
+                      break;
+                  }
+	      } /* end for ;; */
+	    }
+	    else if ( operation == DMU_C_ALTTBL_RENAME ) /* ALTER TABLE RENAME TO ... */
+	    {
+		/* Table rename operation, replace the table name with tnew table name */
+	        if (newtab_name)
+		{
+		  STmove((char *)&newtab_name->db_tab_name[0], ' ',
+                        sizeof (newtab_name->db_tab_name), (char *)(&((relrecord.relid).db_tab_name[0])));
+		}
+		else 
+		{
+			SETDBERR(dberr, 0, E_DM002A_BAD_PARAMETER);
+	       		status = E_DB_ERROR;
+		}
+	    }
 	    else
 	    {
 	       SETDBERR(dberr, 0, E_DM002A_BAD_PARAMETER);
@@ -1213,7 +1313,11 @@ DB_ERROR	*dberr)
 
             TMget_stamp((TM_STAMP *)&relrecord.relstamp12);
 	    relrecord.relmoddate = TMsecs();
-            relrecord.relversion++;
+
+	    if ((operation != DMU_C_ALTTBL_RENAME) &&
+		(operation != DMU_C_ALTCOL_RENAME))
+                relrecord.relversion++;
+
 	    relrecord.relstat2  |= (TCB2_ALTERED |TCB2_TBL_RECOVERY_DISALLOWED);
             if (has_extensions)
 	    {

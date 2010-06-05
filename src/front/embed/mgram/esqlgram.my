@@ -810,6 +810,8 @@ static bool   set_role=FALSE;
 **       25-Jan-2010 (frima01) B123172
 **          Split up sql_cast to allow the cast command to be written in the
 **          generated file, cause it was erroneously omitted so far.
+**	 28-Mar-2010 (gupsh01) B123444
+**	    Added Alter table rename table/column .. and rename parsing.
 **
 ** Rules to apply when writing new grammar parts:
 **
@@ -884,7 +886,7 @@ static bool   set_role=FALSE;
 	tUNCOMMITTED	tCOMMITTED	tREPEATABLE
 	tSERIALIZABLE	tREAD		tPARTITION
 	tWITHOUT	tWITHCASE	tWOCASE
-        tFALSE          tTRUE           tUNKNOWN
+        tFALSE          tTRUE           tUNKNOWN	tRENAME
 
 /* Special embedded SQL keywords (directives, cursors, control flow etc.) */
 %token	tCALL		tCLOSE		tCONNECT	tCONTINUE
@@ -979,7 +981,7 @@ static bool   set_role=FALSE;
 	tDBMS_PASSWORD
 	tREAD_ONLY	tREAD_WRITE	tISO_LEVEL	tSET_TRANS
 	tEACH_ROW	tEACH_STATEMENT
-	tWTIME		tWLOCAL		tWOTIME
+	tWTIME		tWLOCAL		tWOTIME		tREN_TABLE
     /*
     ** Not currently used
     **	tDROP_INTEGRITY tDROP_PERMIT	tDROP_TABLE	tDROP_LNKTEMP
@@ -1513,6 +1515,7 @@ sql_statement:	abort
 	|	register_ind
 	|	relocate
 	|	remove
+	|	rename_tbl
 	|	revoke
 	|	rollback
 	|	rule_create
@@ -1739,9 +1742,11 @@ alt_seq:	tALT_SEQUENCE
 **			| ADD table_constraint [WITH with_clause]
 **			| DROP columnname [CASCADE]
 **			| DROP CONSTRAINT constraint_name
+**			| RENAME TO table
+**			| RENAME columnname TO columnname 
 -* Note that ALTER TABLE is a double reserved word.
 */
-alter_table:	alt_tbl_key owner_tbl add_drop_col
+alter_table:	alt_tbl_key owner_tbl add_drop_col_rename
 		{
 		    if (eq->eq_flags & EQ_COMMON)
 			er_write( E_EQ0504_OPEN_WARN, 
@@ -1756,10 +1761,13 @@ alt_tbl_key:	tALT_TABLE
 		    gr_mechanism( GR_EQSTMT, GR_sSQL, $1.s, NULL );
 		}
 ;
-add_drop_col:	sql_add crcol_spec
+add_drop_col_rename:	sql_add crcol_spec
 	|	sql_add tbl_constraint_def cons_with1
 	|	sql_drop sql_id alt_drop_opt
 	|	sql_drop constr_name_def res_cas
+	|	sql_rename sql_id ren_to sql_id 
+	|	sql_rename tCOLUMN owner_tbl ren_to owner_tbl 
+	|	sql_rename ren_to owner_tbl 
 ;
 alt_drop_opt:	/* Empty */
 	|	tCASCADE
@@ -1771,7 +1779,11 @@ alt_drop_opt:	/* Empty */
 		    db_key( ERx("restrict") );
 		}
 ;
-
+ren_to:		tTO
+	{
+		    db_key($1.s);
+	}
+;
 /*
 +* Statement:	EXEC SQL ALTER USER [user_name] 
 **		[ADD PRIVILEGES ( priv {,priv})  |
@@ -7378,6 +7390,30 @@ remove_obj:	/* Empty */
 ;
 
 /*
++* EXEC SQL RENAME [TABLE] objname TO newname
+*/
+rename_tbl:    ren_tbl_key owner_tbl ren_tbl_options
+                {
+                    if (eq->eq_flags & EQ_COMMON)
+                        er_write( E_EQ0504_OPEN_WARN,
+                                    EQ_WARN, 1, ERx("RENAME TABLE"));
+                    if (eq->eq_flags & EQ_FIPS)
+                        er_write( E_EQ0505_FIPS_STATMT,
+                                        EQ_WARN, 1, ERx("RENAME TABLE"));
+                }
+;
+ren_tbl_key:    tRENAME
+		{
+                    gr_mechanism( GR_EQSTMT, GR_sSQL, $1.s, NULL );
+		}
+	|	tREN_TABLE
+                {
+                    gr_mechanism( GR_EQSTMT, GR_sSQL, $1.s, NULL );
+                }
+;
+ren_tbl_options: 	ren_to owner_tbl 
+;
+/*
 +* EXEC SQL ROLLBACK [WORK] [TO savepointname | integer]
 */
 
@@ -8368,6 +8404,11 @@ sql_without:	tWITHOUT
 		}
 ;
 sql_collate:	tCOLLATE
+		{
+		    db_key( $1.s );
+		}
+;
+sql_rename:	tRENAME
 		{
 		    db_key( $1.s );
 		}

@@ -243,6 +243,8 @@
 **	    Merge put and load into put.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	12-Apr-2010 (gupsh01) SIR 123444
+**	    Added support for ALTER TABLE RENAME table/columns.
 */
 
 /*	QEC functions	*/
@@ -2800,6 +2802,28 @@ qeu_d_check_conix(
 	bool            temp_tbl, 
         i4              *error,
         bool            *found_one);
+
+FUNC_EXTERN DB_STATUS
+qea_renameExecute(
+    QEF_AHD             *qea_act,
+    QEF_RCB             *qef_rcb,
+    QEE_DSH             *dsh );
+
+FUNC_EXTERN DB_STATUS
+qeu_renameValidate(
+QEF_CB          *qef_cb,
+QEUQ_CB         *qeuq_cb,
+ULM_RCB         *ulm,
+DB_ERROR        *error_block,
+DMT_TBL_ENTRY   *table_entry,
+bool            isColumnRename,
+DMF_ATTR_ENTRY  **dmf_attr);
+
+FUNC_EXTERN DB_STATUS
+qeu_rename_grants(
+QEF_CB          *qef_cb,
+QEUQ_CB         *qeuq_cb,
+DB_TAB_NAME     *newName);
 
 FUNC_EXTERN DB_STATUS
 qeu_dstat(

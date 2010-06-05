@@ -817,6 +817,8 @@ opc_iqp_init(
 **	    Add support for "before" triggers.
 **	18-dec-2007 (dougi)
 **	    Support offset/first "n" parameters.
+**	18-mar-2010 (gupsh01) SIR 123444
+**	    Added support for alter table ...rename table/column.
 */
 VOID
 opc_cqp_continue(
@@ -1113,6 +1115,12 @@ opc_cqp_continue(
 				/* note need to save RCB in DSH */
 	break;
 
+     case PST_RENAME_TYPE:
+	opc_allocateIDrow( global, &dummyRow );
+	opc_renameAHD( global, global->ops_statement, dummyRow, &new_ahd );
+	qp->qp_status |= QEQP_EXEIMM_RCB;
+				/* note need to save RCB in DSH */
+	break;
     case PST_CREATE_VIEW_TYPE:
 	/* do not allocate the ID row for STAR views */
 	if (global->ops_cb->ops_smask & OPS_MDISTRIBUTED)

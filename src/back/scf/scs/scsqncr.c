@@ -1496,6 +1496,8 @@ GLOBALREF SC_MAIN_CB *Sc_main_cb; /* server control block */
 **	    of little psy-call's.
 **	15-apr-2010 (dougi) BUG 121220
 **	    Add "psitional parm" flag to QEF structures for nameless proc parms.
+**	19-Apr-2009 (gupsh01) SIR 123444
+**	    Added support for rename table/column.
 */
 typedef struct _SQNCR_TBL
 {
@@ -1705,6 +1707,8 @@ static  const SQNCR_TBL   sqncr_tbl[] = {
 /* PSQ_GCA_XA_COMMIT */		{0,0},
 /* PSQ_GCA_XA_ROLLBACK */	{0,0},
 /* PSQ_FREELOCATOR */		{SQ_PSF_MASK, 0},
+/* PSQ_ATBL_RENAME_COLUMN */	{SQ_PSF_MASK | SQ_OPF_MASK, 0},
+/* PSQ_ATBL_RENAME_TABLE */	{SQ_PSF_MASK | SQ_OPF_MASK, 0},
 	{0,0}
 };
 static char execproc_syntax[] = "execute procedure ";
@@ -2597,10 +2601,15 @@ static char execproc_syntax2[] = " = session.";
 **	30-Mar-2010 (kschendel) SIR 123485
 **	    Chop another 150 lines by table-driving most PSY calls.
 **	    Clean out routine locals a little bit.
+<<<< THEIR VERSION
 **	30-mar-2010 (stephenb)
 **	    re-add QSF cleanup for batch processing; we need to
 **	    clean out the query stuff for every query, not just at
 **	    the end of the batch, otherwise we loose track.
+====
+**	19-Mar-2009 (gupsh01) SIR 123444
+**	    Added support for rename table/column.
+>>>> YOUR VERSION
 */
 DB_STATUS
 scs_sequencer(i4 op_code,
@@ -5797,6 +5806,8 @@ scs_sequencer(i4 op_code,
 	    case PSQ_CREATE_SCHEMA: /* CREATE SCHEMA */
 	    case PSQ_ALTERTABLE:
 	    case PSQ_ATBL_ADD_COLUMN:
+	    case PSQ_ATBL_RENAME_TABLE:
+	    case PSQ_ATBL_RENAME_COLUMN:
 
 		qe_ccb = sscb->sscb_qeccb;
 		/* Do not reset any CB fields if internal resources allocated */

@@ -156,6 +156,9 @@
 **	02-Apr-2010 (jonj)
 **	    SIR 121619 MVCC: Map DM0028_UNABLE_TO_MAKE_CONSISTENT
 **	    to US125A, already reported by dm0p.
+**	19-Mar-2010 (gupsh01) SIR 123444
+**	    Added error E_QE016C_RENAME_TAB_HAS_OBJS for alter table 
+**	    rename support. 
 */
 
 /* Jam hints
@@ -499,6 +502,22 @@ GLOBALDEF const QEF_ERR_MAP Qef_err_map[] =
     0L,				    E_QE0169_UNKNOWN_OBJTYPE_IN_DROP, -1,   1,
     0L,				    E_QE016A_NOT_DROPPABLE_CONS,    -1,     0,
     0L,				    E_QE016B_COLUMN_HAS_OBJECTS,    -1,     0,
+    0L,				    E_QE016C_RENAME_TAB_HAS_OBJS,   9373,     1,
+    0L,				    E_QE016D_RENAME_TAB_HAS_PROC,   0,     1,
+    0L,				    E_QE016E_RENAME_TAB_HAS_VIEW,   0,     1,
+    0L,				    E_QE016F_RENAME_TAB_HAS_RULE,   0,     1,
+    0L,				    E_QE0170_RENAME_TAB_HAS_NGPERM, 0,     1,
+    0L,				    E_QE0171_RENAME_TAB_HAS_CONS,   0,     1,
+    0L,				    E_QE0172_RENAME_TAB_HAS_SECALARM, 0,    1,
+    0L,				    E_QE0173_RENAME_TAB_IS_CATALOG,   9366,     0,
+    0L,				    E_QE0174_RENAME_TAB_IS_SYSGEN,   9367,     0,
+    0L,				    E_QE0175_RENAME_TAB_IS_ETAB,   9368,     0,
+    0L,				    E_QE0176_RENAME_TAB_IS_GATEWAY,   9369,     0,
+    0L,				    E_QE0177_RENAME_TAB_IS_PARTITION,   9370,     0,
+    0L,				    E_QE0178_RENAME_TAB_IS_INCONSIST,   9371,     0,
+    0L,				    E_QE0179_RENAME_TAB_IS_READONLY,   9372,     0,
+    0L,				    E_QE0180_RENAME_TAB_HAS_INTEGRITY,   0,     1,
+    0L,				    E_QE0181_RENAME_COL_HAS_OBJS,   9374,     1,
     0L,				    E_QE0199_CALL_ALLOC,	    -1,     0,
     0L,				    E_QE019A_EVENT_MESSAGE,	    -1,     0,
 E_DM0126_ERROR_WRITING_SECAUDIT,    E_QE019C_SEC_WRITE_ERROR,       -1,     1,

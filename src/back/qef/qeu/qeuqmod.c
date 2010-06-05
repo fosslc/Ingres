@@ -91,6 +91,7 @@
 **			      dependent id.
 **	    qeu_priv_revoke - revoke privileges
 **	    qeu_v_col_drop  - fix any column dependencies in iitree 
+**          qeu_rename_grants - Fix query text for dependent grants after rename.
 **
 **
 **  History:
@@ -424,6 +425,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	12-Apr-2010 (gupsh01) SIR 123444
+**	    Added qeu_rename_grants to support alter table rename table/columns.
 **/
 
 FUNC_EXTERN char	    *STskipblank();
@@ -714,7 +717,7 @@ qeu_destr_dbp_qp(
 	DB_DBP_NAME	*dbp_name,
 	DB_ERROR	*err_blk);
 
-static DB_STATUS
+DB_STATUS
 qeu_v_finddependency(
 	ULM_RCB		*ulm,
 	QEF_CB		*qef_cb,
@@ -31413,7 +31416,7 @@ qeu_v_col_drop(
 **          Modified the behaviour so that we drop out at the first sign of
 **          a dependency on the drop column.
 */
-static DB_STATUS
+DB_STATUS
 qeu_v_finddependency(
         ULM_RCB         *ulm,
         QEF_CB          *qef_cb,
@@ -32199,4 +32202,484 @@ bool		    *rep_depobj)
 	if (qnode->pst_right != NULL)
 	    fixtree(qnode->pst_right, irngtab, col_attno, rep_depobj);
 	return;
+}
+
+/* Name: qeu_rename_grants - Process protection query text after rename operation. 
+**
+** Description: 
+**	This routine will fix the query text stored in iiqrytext for all grants
+**	on the renamed table/column.  It will replace the iiqrytext tuples for 
+**	with new query text tuples, referring to the new object names.
+**		       
+** Inputs:
+**      qef_cb                  qef session control block
+**      qeuq_cb
+**          .qeuq_eflag         designate error handling semantics
+**                              for user errors.
+**              QEF_INTERNAL    return error code.
+**              QEF_EXTERNAL    send message to user.
+**          .qeuq_rtbl          id of table
+**          .qeuq_flag_mask     bits of information
+**              QEU_FORCE_QP_INVALIDATION
+**                              force invalidation of QPs which may be
+**                              affected by destruction of specified object and
+**                              any objects that depend on it
+**          .qeuq_flag_mask     useful bits of information
+**              QEU_RENAME_TABLE  renaming a table.
+**              QEU_RENAME_COLUMN rename is specific to a column
+**          .qeuq_db_id         database id
+**          .qeuq_d_id          dmf session id
+**          .qeuq_ano           column attr number for rename column.
+**	newName			New table or column name.
+**
+** Outputs:
+**      qeuq_cb
+**          .error.err_code     one of the following
+**                              E_QE0002_INTERNAL_ERROR
+**                              E_QE0017_BAD_CB
+**                              E_QE0018_BAD_PARAM_IN_CB
+**                              E_QE0022_ABORTED
+**                              E_QE0023_INVALID_QUERY
+**      Returns:
+**          E_DB_{OK, WARN, ERROR, FATAL}
+**      Exceptions:
+**          none
+**
+** History:
+**	19-Mar-2010 (gupsh01)
+**	    Created.
+*/
+DB_STATUS
+qeu_rename_grants(
+QEF_CB          *qef_cb,
+QEUQ_CB	    	*qeuq_cb,
+DB_TAB_NAME	*newName
+)
+{
+    GLOBALREF QEF_S_CB *Qef_s_cb;
+    DB_IIQRYTEXT    *qtuple;
+    DB_IITREE	    *ttuple;
+    DB_PROTECTION   *ptuple;
+    DB_STATUS	    status, local_status;
+    i4	    	    error;
+    bool	    transtarted = FALSE;	    
+    bool	    tbl_opened = FALSE;
+    bool	    qtext_opened = FALSE;
+    bool	    prot_opened = FALSE;
+    i4		    i;
+    i4		    txt_mode = DB_PROT;
+    QEU_CB	    tranqeu;
+    QEU_CB	    pqeu;
+    QEU_CB	    qqeu;
+    QEU_CB	    tqeu;
+    QEU_QUAL_PARAMS qparams;
+    DMT_CB	    dmt_cb;
+    ULM_RCB         ulm;
+    QEF_DATA	    pqef_data;
+    QEF_DATA	    qqef_data;
+    QEF_DATA	    tqef_data;
+    DMT_CHAR_ENTRY  char_array[4];
+    DMR_ATTR_ENTRY  pkey_array[3];
+    DMR_ATTR_ENTRY  *pkey_ptr_array[3];
+    DMR_ATTR_ENTRY  qkey_array[3];
+    DMR_ATTR_ENTRY  *qkey_ptr_array[3];
+    DMR_ATTR_ENTRY  tkey_array[3];
+    DMR_ATTR_ENTRY  *tkey_ptr_array[3];
+    bool	    err_already_reported = FALSE;
+    i4		    exit_loop, exit_loop2;
+
+    if ( ((qeuq_cb->qeuq_flag_mask & QEU_RENAME_TABLE) == 0) &&
+         ((qeuq_cb->qeuq_flag_mask & QEU_RENAME_COLUMN) == 0))
+    {
+	/* "Bad state of control block */
+	error = E_QE0017_BAD_CB;
+	status = E_DB_ERROR;
+	return (status);
+    }
+
+    /* Initialize various keys */    
+    for (i=0; i< 3; i++)
+    {
+	pkey_ptr_array[i] = &pkey_array[i];
+	qkey_ptr_array[i] = &qkey_array[i];
+	tkey_ptr_array[i] = &tkey_array[i];
+    }
+
+    STRUCT_ASSIGN_MACRO(Qef_s_cb->qef_d_ulmcb, ulm);
+    ulm.ulm_streamid = (PTR)NULL;
+
+    for (exit_loop = FALSE; !exit_loop; )
+    { /* MAIN LOOP to Exit out of in Error */
+
+	/* Check the control block. */
+	error = E_QE0017_BAD_CB;
+	status = E_DB_ERROR;
+	if (qeuq_cb->qeuq_type != QEUQCB_CB ||
+	    qeuq_cb->qeuq_length != sizeof(QEUQ_CB))	
+	    break;
+
+	/* 
+	** Check to see if a transaction is in progress,
+	** if so, set transtarted flag to FALSE, otherwise
+	** set it to TRUE after beginning a transaction.
+	** If we started a transaction them we will abort
+	** it if an error occurs, otherwise we will just
+	** return the error and let the caller abort it.
+	*/
+
+	if (qef_cb->qef_stat == QEF_NOTRAN)
+	{
+	    tranqeu.qeu_type = QEUCB_CB;
+	    tranqeu.qeu_length = sizeof(QEUCB_CB);
+	    tranqeu.qeu_db_id = qeuq_cb->qeuq_db_id;
+	    tranqeu.qeu_d_id = qeuq_cb->qeuq_d_id;
+	    tranqeu.qeu_flag = 0;
+	    tranqeu.qeu_mask = 0;
+	    status = qeu_btran(qef_cb, &tranqeu);
+	    if (status != E_DB_OK)
+	    {	
+		error = tranqeu.error.err_code;
+		break;	
+	    }	    
+	    transtarted = TRUE;
+	}
+	/* escalate the transaction to MST */
+	if (qef_cb->qef_auto == QEF_OFF)
+	    qef_cb->qef_stat = QEF_MSTRAN;
+
+	/* Get a memory stream for reading catalog tuples. */
+	for (exit_loop2 = FALSE; !exit_loop2; ) 	/* to break out of */
+	{
+	    /* Open stream and allocate list in one action */
+	    ulm.ulm_flags = ULM_PRIVATE_STREAM | ULM_OPEN_AND_PALLOC;
+	    ulm.ulm_psize = sizeof(DB_PROTECTION);
+
+	    if ((status = qec_mopen(&ulm)) != E_DB_OK)
+		break;
+
+	    ptuple = (DB_PROTECTION*) ulm.ulm_pptr;
+
+	    ulm.ulm_psize = sizeof(DB_IIQRYTEXT);
+	    if ((status = qec_malloc(&ulm)) != E_DB_OK)
+	    {
+		ulm_closestream(&ulm);
+		break;
+	    }
+	    qtuple = (DB_IIQRYTEXT*) ulm.ulm_pptr;
+
+	    ulm.ulm_psize = sizeof(DB_IITREE);
+	    if ((status = qec_malloc(&ulm)) != E_DB_OK)
+	    {
+		ulm_closestream(&ulm);
+		break;
+	    }
+	    ttuple = (DB_IITREE*) ulm.ulm_pptr;
+
+	    exit_loop2 = TRUE;
+	}
+	if (status != E_DB_OK)
+	{
+	    error = E_QE001E_NO_MEM;
+	    break;
+	}
+
+	error = E_QE0000_OK;
+    
+	/* Open the iiqrytext and iiprotect system catalog */
+
+	pqeu.qeu_type = QEUCB_CB;
+	pqeu.qeu_length = sizeof(QEUCB_CB);
+	pqeu.qeu_db_id = qeuq_cb->qeuq_db_id;
+	pqeu.qeu_lk_mode = DMT_IX;
+	pqeu.qeu_flag = DMT_U_DIRECT;
+	pqeu.qeu_access_mode = DMT_A_WRITE;
+	pqeu.qeu_mask = 0;
+	pqeu.qeu_f_qual = 0;
+	pqeu.qeu_f_qarg = 0;
+		
+	STRUCT_ASSIGN_MACRO(pqeu, qqeu);
+	STRUCT_ASSIGN_MACRO(pqeu, tqeu);
+
+	pqeu.qeu_tab_id.db_tab_base  = DM_B_PROTECT_TAB_ID;
+	pqeu.qeu_tab_id.db_tab_index  = DM_I_PROTECT_TAB_ID;
+	status = qeu_open(qef_cb, &pqeu);
+	if (status != E_DB_OK)
+	{
+	    error = pqeu.error.err_code;
+	    break;
+	}
+	prot_opened = TRUE;
+	qqeu.qeu_tab_id.db_tab_base = DM_B_QRYTEXT_TAB_ID;
+	qqeu.qeu_tab_id.db_tab_index = 0L;
+	status = qeu_open(qef_cb, &qqeu);
+	if (status != E_DB_OK)
+	{
+	    error = qqeu.error.err_code;
+	    break;
+	}
+	qtext_opened = TRUE;
+	tqeu.qeu_tab_id.db_tab_base  = DM_B_TREE_TAB_ID;
+	tqeu.qeu_tab_id.db_tab_index  = DM_I_TREE_TAB_ID;
+	status = qeu_open(qef_cb, &tqeu);
+	if (status != E_DB_OK)
+	{
+	    error = tqeu.error.err_code;
+	    break;
+	}
+	tbl_opened = TRUE;
+	pqeu.qeu_count = 1;
+	pqeu.qeu_tup_length = sizeof(DB_PROTECTION);
+	pqeu.qeu_output = &pqef_data;
+	pqeu.qeu_input = &pqef_data;
+	pqef_data.dt_next = 0;
+	pqef_data.dt_size = sizeof(DB_PROTECTION);
+	pqef_data.dt_data = (PTR) ptuple;
+
+	    
+	qqeu.qeu_count = 1;
+	qqeu.qeu_tup_length = sizeof(DB_IIQRYTEXT);
+	qqeu.qeu_output = &qqef_data;
+	qqef_data.dt_next = 0;
+	qqef_data.dt_size = sizeof(DB_IIQRYTEXT);
+	qqef_data.dt_data = (PTR) qtuple;
+
+	/* 
+	** Position Protect table and get all
+	** protections matching the specified table
+	** id.  For each of these find the associated 
+	** query text and fix them.
+	** Note we already know that there are no tree
+	** tuple as non grant permits are not supported.
+	*/	
+
+	pqeu.qeu_getnext = QEU_REPO;
+	pqeu.qeu_klen = 2;       
+	pqeu.qeu_key = pkey_ptr_array;
+	pkey_ptr_array[0]->attr_number = DM_1_PROTECT_KEY;
+	pkey_ptr_array[0]->attr_operator = DMR_OP_EQ;
+	pkey_ptr_array[0]->attr_value = (char*) 
+				&qeuq_cb->qeuq_rtbl->db_tab_base;
+	pkey_ptr_array[1]->attr_number = DM_2_PROTECT_KEY;
+	pkey_ptr_array[1]->attr_operator = DMR_OP_EQ;
+	pkey_ptr_array[1]->attr_value = (char*) 
+				 &qeuq_cb->qeuq_rtbl->db_tab_index;
+	
+	pqeu.qeu_qual = 0;
+	pqeu.qeu_qarg = 0;
+     
+	for(;;)	    /* loop for all protection tuples for this table */
+	{
+	    status = qeu_get(qef_cb, &pqeu);
+	    if (status != E_DB_OK)
+	    {
+		error = pqeu.error.err_code;
+		if (error == E_QE0015_NO_MORE_ROWS)
+		{
+			/* We are done with grants */
+			error = E_QE0000_OK;
+			status = E_DB_OK;
+		}
+		break;
+	    }
+	    pqeu.qeu_getnext = QEU_NOREPO;
+	    pqeu.qeu_klen = 0;
+
+	    /* We only want to fix query text for permits for a table 
+	    ** Only rename of table or its columns is supported in Ingres 10
+	    */
+	    if (ptuple->dbp_obtype != DBOB_TABLE)
+	        continue;	
+
+	    /* We only support rename of grants created with grant statement */
+            if (!(ptuple->dbp_flags & DBP_GRANT_PERM))
+	    {
+		qef_error( E_QE0170_RENAME_TAB_HAS_NGPERM,
+                           0L, status, &error, &qeuq_cb->error, 3,
+                           qec_trimwhite(DB_TAB_MAXNAME,
+                               (char *)&ptuple->dbp_obname.db_tab_name),
+                           &ptuple->dbp_obname.db_tab_name,
+                           qec_trimwhite(DB_OWN_MAXNAME, (char *)&ptuple->dbp_obown.db_own_name),
+                           &ptuple->dbp_obown.db_own_name, 
+			   sizeof(ptuple->dbp_permno), &ptuple->dbp_permno);
+		error = E_QE0170_RENAME_TAB_HAS_NGPERM; 
+    	        err_already_reported = TRUE;
+		status = E_DB_ERROR;
+		break;
+	    }
+
+	    if (qeuq_cb->qeuq_flag_mask & QEU_RENAME_TABLE)
+	    {
+	        /* Replace the table name in the protection tuple with new table name */
+	        MEcopy(newName->db_tab_name, sizeof(ptuple->dbp_obname.db_tab_name), 
+				ptuple->dbp_obname.db_tab_name);
+	    }
+	
+	    /* 
+            ** Now delete IIQRYTEXT tuples using query id associated with 
+	    ** this protection and mode (DB_PROT).
+	    */
+
+	    qqeu.qeu_klen = 3;       
+	    qqeu.qeu_key = qkey_ptr_array;
+
+	    qkey_ptr_array[0]->attr_number = DM_1_QRYTEXT_KEY;
+	    qkey_ptr_array[0]->attr_operator = DMR_OP_EQ;
+	    qkey_ptr_array[0]->attr_value = (char*) 
+				&ptuple->dbp_txtid.db_qry_high_time;
+
+	    qkey_ptr_array[1]->attr_number = DM_2_QRYTEXT_KEY;
+	    qkey_ptr_array[1]->attr_operator = DMR_OP_EQ;
+	    qkey_ptr_array[1]->attr_value = (char*) 
+				&ptuple->dbp_txtid.db_qry_low_time;
+
+	    qkey_ptr_array[2]->attr_number = DM_3_QRYTEXT_KEY;
+	    qkey_ptr_array[2]->attr_operator = DMR_OP_EQ;
+	    qkey_ptr_array[2]->attr_value = (char*) &txt_mode;
+        
+	    qqeu.qeu_qual = 0;
+	    qqeu.qeu_qarg = 0;
+	    qqeu.qeu_f_qual = 0;
+	    qqeu.qeu_f_qarg = 0;
+            qqeu.qeu_tup_length = sizeof(DB_IIQRYTEXT);
+
+	    status = qeu_delete(qef_cb, &qqeu);
+	    if (status != E_DB_OK)
+	    {
+		error = qqeu.error.err_code;
+		break;
+	    }
+
+            /*
+            ** First call qeu_replace() to replace IIPROTECT tuple
+            */
+            status = qeu_replace(qef_cb, &pqeu);
+            if (status != E_DB_OK)
+            {
+                error = pqeu.error.err_code;
+                break;
+            }
+            /*
+            ** and finally, call qeu_construct_perm_text() to
+            ** reconstruct text of the permit based on the permit tuple
+            */
+            status = qeu_construct_perm_text(qeuq_cb, qef_cb, &qqeu,
+                        &ulm, ptuple, FALSE, (QEF_DATA **) NULL, &error);
+            if (status != E_DB_OK)
+                break;
+	}
+	if (status != E_DB_OK)
+	    break;
+
+	/* Close off all the tables. */
+	status = qeu_close(qef_cb, &qqeu);    
+	if (status != E_DB_OK)
+	{
+	    error = qqeu.error.err_code;
+	    break;
+	}
+	qtext_opened = FALSE;
+	status = qeu_close(qef_cb, &pqeu);    
+	if (status != E_DB_OK)
+	{
+	    error = pqeu.error.err_code;
+	    break;
+	}
+	prot_opened = FALSE;
+	status = qeu_close(qef_cb, &tqeu);    
+	if (status != E_DB_OK)
+	{
+	    error = tqeu.error.err_code;
+	    break;
+	}
+	tbl_opened = FALSE;
+
+	/* 
+        ** Close the input stream created for the protection tuples.
+        */
+
+	ulm_closestream(&ulm);
+
+	error = E_QE0000_OK;
+	exit_loop = TRUE;
+    } /* end for */
+
+    if (status == E_DB_OK)
+    {	
+	if (transtarted)
+	{
+	    status = qeu_etran(qef_cb, &tranqeu);
+	    if (status != E_DB_OK)
+	    {	
+		(VOID) qef_error(tranqeu.error.err_code, 0L, status, &error,
+		    &qeuq_cb->error, 0);
+                return (status);
+	    }
+	}
+	qeuq_cb->error.err_code = E_QE0000_OK;
+	return (E_DB_OK);
+    }
+
+    /* call qef_error to handle error messages */
+
+    if (!err_already_reported)
+	(VOID) qef_error(error, 0L, status, &error, &qeuq_cb->error, 0);
+    
+    /* Close off all the tables. */
+
+    local_status = E_DB_OK;
+
+    /* Close off all the tables. */
+
+    if (qtext_opened)
+    {
+	local_status = qeu_close(qef_cb, &qqeu);    
+	if (local_status != E_DB_OK)
+	{
+	    (VOID) qef_error(qqeu.error.err_code, 0L, local_status, 
+			&error, &qeuq_cb->error, 0);
+	    if (local_status > status)
+		status = local_status;
+	}
+    }
+
+    if (prot_opened)
+    {
+	local_status = qeu_close(qef_cb, &pqeu);    
+	if (local_status != E_DB_OK)
+	{
+	    (VOID) qef_error(pqeu.error.err_code, 0L, local_status, 
+			&error, &qeuq_cb->error, 0);
+	    if (local_status > status)
+		status = local_status;
+	}
+    }
+
+    if (tbl_opened)
+    {
+	local_status = qeu_close(qef_cb, &tqeu);    
+	if (local_status != E_DB_OK)
+	{
+	    (VOID) qef_error(tqeu.error.err_code, 0L, local_status, 
+			&error, &qeuq_cb->error, 0);
+	    if (local_status > status)
+		status = local_status;
+	}
+    }
+
+    if (ulm.ulm_streamid != (PTR)NULL)
+    {
+	(VOID) ulm_closestream(&ulm);
+    }
+    if (transtarted)
+    {
+	local_status = qeu_atran(qef_cb, &tranqeu);
+	if (local_status != E_DB_OK)
+	{
+	    (VOID) qef_error(tranqeu.error.err_code, 0L, local_status, 
+			&error, &qeuq_cb->error, 0);
+	    if (local_status > status)
+		status = local_status;
+	}
+    }
+    return (status);
 }

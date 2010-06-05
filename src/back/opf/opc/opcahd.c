@@ -7271,6 +7271,102 @@ opc_createTableAHD(
     global->ops_cstate.opc_qp->qp_ahd_cnt += 1;
 
 } /* opc_createTableAHD */
+
+/*{
+** Name: opc_renameTableAHD - Build action header for an RENAME TABLE statement.
+**
+** Description:
+**	This routine coordinates the building of an action header for an
+**	RENAME TABLE statement.
+**
+** Inputs:
+**	global	    		Global control block for compilation.
+**	IDrow			DSH row in which to stuff table id.
+**
+**
+** Outputs:
+**	new_ahd	    		Address in which to place the new AHD.
+**	Returns:
+**	    VOID
+**	Exceptions:
+**	    None
+**
+** Side Effects:
+**	 None - statement memory allocation is done upon return to caller.
+**
+** History:
+**	18-mar-2010 (gupsh01) SIR 123444
+**	    Written for ALTER TABLE ..RENAME support.
+*/
+VOID
+opc_renameAHD(
+		OPS_STATE	*global,
+		PST_STATEMENT	*pst_statement,
+		i4		IDrow,
+		QEF_AHD		**new_ahd)
+{
+    QEF_AHD		*ahd;
+    PST_RENAME		*psfDetails = &pst_statement->pst_specific.pst_rename;
+    QEU_CB		*renameQEUCB;
+    QEF_RENAME_STATEMENT *qefDetails;
+
+    renameQEUCB = ( QEU_CB * ) global->ops_statement->pst_specific.pst_rename.pst_rnm_QEUCB;
+
+    /* Allocate the action header */
+    ahd = *new_ahd = (QEF_AHD *)opu_qsfmem(global, sizeof(QEF_AHD) -
+			    sizeof(ahd->qhd_obj) + sizeof(QEF_RENAME_STATEMENT));
+
+    if (global->ops_cstate.opc_topahd == NULL)		/* Top of QEP */
+	global->ops_cstate.opc_topahd = ahd;
+    if (global->ops_cstate.opc_firstahd == NULL)	/* First of QP */
+	global->ops_cstate.opc_firstahd = ahd;
+
+    /* Fill in the action boiler plate stuff */
+    ahd->ahd_next = ahd->ahd_prev = ahd;
+    ahd->ahd_length = sizeof(QEF_AHD) -
+			    sizeof(ahd->qhd_obj) + sizeof(QEF_RENAME_STATEMENT);
+    ahd->ahd_type = QEAHD_CB;
+    ahd->ahd_ascii_id = QEAHD_ASCII_ID;
+    ahd->ahd_valid = NULL;
+    ahd->ahd_atype = QEA_RENAME_STATEMENT;   /* Lets set specific flags for rename */
+
+    /* other objects we might we interested in */
+    ahd->ahd_ID = IDrow;	/* DSH row to stick our table id in */
+    ahd->ahd_relatedObjects = ( QEF_RELATED_OBJECT * ) NULL;
+
+    qefDetails = &ahd->qhd_obj.qhd_rename;
+
+    /* Copy the various fields now */
+    STRUCT_ASSIGN_MACRO( psfDetails->pst_rnm_qeuqCB, qefDetails->qrnm_ahd_qeuqCB);
+    STRUCT_ASSIGN_MACRO( psfDetails->pst_rnm_tab_id, qefDetails->qrnm_tab_id);
+    STRUCT_ASSIGN_MACRO( psfDetails->pst_rnm_owner, qefDetails->qrnm_owner);
+    STRUCT_ASSIGN_MACRO( psfDetails->pst_rnm_old_tabname, qefDetails->qrnm_old_tabname);
+
+    /* copy the qeu_cb out of the parser's QSF object into the compiler's */
+    allocate_and_copy_QEUCB( global, renameQEUCB,
+	( QEU_CB ** ) &ahd->qhd_obj.qhd_rename.qrnm_ahd_qeuCB );
+
+    qefDetails->qrnm_type = psfDetails->pst_rnm_type;
+    qefDetails->qrnm_state = QEF_RENAME_INIT;
+
+    if (qefDetails->qrnm_type == PST_ATBL_RENAME_COLUMN)
+    {
+      STRUCT_ASSIGN_MACRO( psfDetails->pst_rnm_col_id, qefDetails->qrnm_col_id);
+      STRUCT_ASSIGN_MACRO( psfDetails->pst_rnm_old_colname, qefDetails->qrnm_old_colname);
+      STRUCT_ASSIGN_MACRO( psfDetails->pst_rnm_new_colname, qefDetails->qrnm_new_colname);
+    }
+    else
+      STRUCT_ASSIGN_MACRO( psfDetails->pst_rnm_new_tabname, qefDetails->qrnm_new_tabname);
+
+    opc_ptrow(global, &qefDetails->qrnm_ulm_rcb, sizeof( ULM_RCB ) );
+    opc_ptrow(global, &qefDetails->qrnm_state, sizeof(i4) );
+    opc_ptrow(global, &qefDetails->qrnm_pstInfo, sizeof( PST_INFO ) );
+
+    /* Mark in the qp header that there is another action */
+    global->ops_cstate.opc_qp->qp_ahd_cnt += 1;
+
+}
+ /* opc_renameAHD*/
 
 /*{
 ** Name: opc_createIntegrityAHD - Build action for CREATE INTEGRITY statement.

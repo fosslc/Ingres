@@ -227,6 +227,9 @@ struct _QEUQ_DDB_CB
 **		qeuq_flag_mask. Will be set during QEU_DROP_COLUMN 
 **		processing to check if dependent referential constraint 
 **		has been dropped previously.
+**	22-Nov-2009 (gupsh01) SIR 123444
+**	    Added flags for alter table rename table/column: QEU_RENAME_TABLE
+**	    and QEU_RENAME_COLUMN.
 [@history_line@]...
 */
 struct _QEUQ_CB
@@ -356,6 +359,14 @@ struct _QEUQ_CB
 				** constraint dependencies.
 				*/
 #define QEU_DEP_CONS_DROPPED	0x2000L
+				/* Indicates that we are doing a rename table
+				** operation 
+				*/
+#define QEU_RENAME_TABLE	0x4000L
+				/* Indicates that we are doing a rename column 
+				** operation 
+				*/
+#define QEU_RENAME_COLUMN	0x8000L
 
     DB_QRY_ID    qeuq_qid;      /* query id of view or id of procedure */
     i4           qeuq_permit_mask;

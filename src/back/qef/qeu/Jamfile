@@ -8,7 +8,7 @@ IISUBSYS back qef qeu ;
 
 
 IILIBRARY QEFLIB : qeuuser.c qeut.c qeusyn.c
-	qeuseq.c qeusec.c qeus.c qeurule.c qeurprv.c qeuqmod.c
+	qeuseq.c qeusec.c qeus.c qeurule.c qeurprv.c qeuqmod.c qeurenm.c
 	qeuq.c qeuprof.c qeuloc.c qeugroup.c qeuevent.c qeudschm.c 
 	qeuddb.c qeudbpriv.c qeudbacc.c qeucopy.c qeucomm.c qeuaudit.c
 	qeuaplid.c qeualarm.c qeu2dv.c qeu1cv.c ;

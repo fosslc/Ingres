@@ -1987,6 +1987,8 @@ QEF_RCB		*qef_rcb )
 **	15-Jan-2010 (jonj)
 **	    In QEA_CALLPROC, check ahd_flags & QEF_CP_CONSTRAINT; not all
 **	    procedures that are constraints have parameters.
+**	19-Mar-2010 (gupsh01) SIR 123444
+**	    Added support for rename table/columns.
 */
 
 DB_STATUS
@@ -2714,7 +2716,6 @@ i4		mode )
 
 	if (dsh->dsh_depth_act == 0 && act_state == DSH_CT_INITIAL &&
 	    act->ahd_atype != QEA_INVOKE_RULE &&
-
 	    ( act->ahd_atype != QEA_CREATE_INTEGRITY ||
 	      ( (integrityDetails->qci_flags & QCI_SAVE_ROWCOUNT) == 0 )) 
 	)
@@ -3214,10 +3215,10 @@ i4		mode )
 		}
 
                 if (  qef_rcb->error.err_code  == E_QE0025_USER_ERROR )
-                 {
+                {
                     qef_rcb->error.err_code = E_QE0122_ALREADY_REPORTED;
                     break;
-                 }
+                }
 		
 		if (  qef_rcb->error.err_code  == E_DM006A_TRAN_ACCESS_CONFLICT )
 			break;
@@ -3226,6 +3227,49 @@ i4		mode )
 
 		}
 		break;
+	    case QEA_RENAME_STATEMENT:
+	    {
+		i4	caller;
+		DB_TAB_ID table_id;
+
+		QEU_CB *qeu_cb =
+			(QEU_CB *) act->qhd_obj.qhd_DDLstatement.ahd_qeuCB;
+
+    		caller = (qeu_cb->qeu_d_op ==
+    			  DMU_ALTER_TABLE ? QEF_EXTERNAL : QEF_INTERNAL);
+	
+		/* Execute the rename operation now */
+    		status = qeu_dbu( qef_rcb->qef_cb,
+    			( QEU_CB * ) act->qhd_obj.qhd_rename.qrnm_ahd_qeuCB,
+    			1, &table_id,
+    			&qef_rcb->qef_rowcount, &qef_rcb->error, caller );
+    
+    		dshcopy = FALSE;
+		dsh->dsh_qef_rowcount = -1;
+                qef_rcb->qef_rowcount = -1; /* this eliminates the spurious
+                                            ** "(0 rows)" diagnostic. */
+    
+		if (  qef_rcb->error.err_code  == E_QE0025_USER_ERROR )
+		{
+		    qef_rcb->error.err_code = E_QE0122_ALREADY_REPORTED;
+		    break;
+		}
+    		
+		if (  qef_rcb->error.err_code  == E_DM006A_TRAN_ACCESS_CONFLICT )
+		    break;
+    
+		qef_rcb->error.err_code=qeu_cb->error.err_code;
+
+    	        /* Now process the dependent objects (grants)
+     		** on the table, if we were successful. 
+		*/
+		if (status == E_DB_OK)
+		{
+		    status = qea_renameExecute( act, qef_rcb, dsh );
+		    qeq_dshtorcb(qef_rcb, dsh);
+		}
+	    }
+	    break;
 
 	    case QEA_CREATE_INTEGRITY:
                 /* need to restore the mode beause this routine may be
@@ -3274,7 +3318,6 @@ i4		mode )
                       continue;
 		   }
 		}
-
 		break;
 
 	    case QEA_CREATE_VIEW:

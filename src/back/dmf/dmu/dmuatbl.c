@@ -218,6 +218,8 @@
 **	    interrupt handling.
 **	17-Apr-2008 (kibro01) b120276
 **	    Initialise ADF_CB structure
+**	18-Mar-2010 (gupsh01, dougi) SIR 123444
+**	    Add support for Rename table/columns.
 */
 
 DB_STATUS
@@ -234,6 +236,7 @@ dmu_atable(DMU_CB    *dmu_cb)
     DB_OWN_NAME		table_owner;
     DB_TAB_NAME		table_name;
     u_i4		relstat2 = 0;
+    DB_TAB_NAME		newtable_name;
     i4		i;
     i4		mask;
     i4		char_count, attr_count;
@@ -255,6 +258,7 @@ dmu_atable(DMU_CB    *dmu_cb)
     status = E_DB_ERROR;
     table_owner = dmu->dmu_owner;
     table_name = dmu->dmu_table_name;
+    newtable_name = dmu->dmu_newtab_name;
     for (;;)
     {
 	/* dmu_flags_mask may be set to DMU_VGRANT_OK */
@@ -346,6 +350,8 @@ dmu_atable(DMU_CB    *dmu_cb)
 		    operation = (char_entry[i].char_value);
 		    if (operation != DMU_C_ADD_ALTER &&
 			operation != DMU_C_DROP_ALTER &&
+			operation != DMU_C_ALTCOL_RENAME &&
+			operation != DMU_C_ALTTBL_RENAME &&
 			operation != DMU_C_ALTCOL_ALTER)
 		    {
 			SETDBERR(&dmu->error, i, E_DM006D_BAD_OPERATION_CODE);
@@ -374,13 +380,15 @@ dmu_atable(DMU_CB    *dmu_cb)
 
 	/* Check the attribute values. */
 
-	if (dmu->dmu_attr_array.ptr_address && 
-	    (dmu->dmu_attr_array.ptr_size == sizeof(DMF_ATTR_ENTRY))
-	    )
+	if (operation != DMU_C_ALTTBL_RENAME)
 	{
+	  if (dmu->dmu_attr_array.ptr_address && 
+	      (dmu->dmu_attr_array.ptr_size == sizeof(DMF_ATTR_ENTRY))
+	     )
+	  {
 	    attr_entry = (DMF_ATTR_ENTRY**) dmu->dmu_attr_array.ptr_address;
 	    attr_count = dmu->dmu_attr_array.ptr_in_count;
-	    if (attr_count != 1)
+	    if ((attr_count != 1) && (operation != DMU_C_ALTCOL_RENAME))
 	    {
 		SETDBERR(&dmu->error, attr_count, E_DM002A_BAD_PARAMETER);
 	       break;
@@ -436,12 +444,15 @@ dmu_atable(DMU_CB    *dmu_cb)
 		   break;
 	       }
 	    }
-	}
-	else
-	{
+	  }
+	  else
+	  {
 	     SETDBERR(&dmu->error, 0, E_DM002A_BAD_PARAMETER);
 	     break;
+	  }
 	}
+	else 
+	    attr_entry = 0; /* Set attr_entry to null for rename table */
 
     	/*
     	** If this is the first write operation for this transaction,
@@ -463,8 +474,9 @@ dmu_atable(DMU_CB    *dmu_cb)
 
     	status = dm2u_atable(odcb->odcb_dcb_ptr, xcb,
 			     &dmu->dmu_tbl_id, operation, cascade, 
-			     attr_entry, relstat2,
-			     db_lockmode, &table_name, &table_owner, &dmu->error);
+			     (DMF_ATTR_ENTRY **)attr_entry, relstat2,
+			     db_lockmode, &table_name,
+			     &table_owner, &newtable_name, &dmu->error);
 
     	/*
     	**  Audit alteration of Table 
