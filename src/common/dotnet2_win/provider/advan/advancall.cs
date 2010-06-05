@@ -95,6 +95,8 @@ namespace Ingres.ProviderInternals
 	**	    OUT procedure parameter support.
 	**	15-Sep-06 (gordy)
 	**	    Support empty date strings using alternate storage format.
+	**	29-Apr-10 (gordy, ported by thoda04)  SIR 123659
+	**	    Utilize DB proc positional parameters when supported by server.
 	*/
 
 
@@ -132,13 +134,12 @@ namespace Ingres.ProviderInternals
 	**	cases, the procedure result parameter must be handled as a special 
 	**	case prior to mapping.
 	**
-	**	Ingres requires all parameters to be named.  In 3.0 parameter
-	**	names may be obtained three ways: SQL text (driver extension), set
-	**	and register methods (dynamic parameters only) and DBMS meta-data.
-	**	If the SQL text includes unnamed non-dynamic parameters, meta-data 
-	**      names must be loaded since there is no other source for these names
-	**	and the assignment of parameter names is dependent on the order 
-	**	declared.  
+	**	Ingres originally required all parameters to be named and added
+	**	support for positional (unnamed) parameters at API level 6.
+	**	If the SQL text includes unnamed non-dynamic parameters,
+	**	meta-data names must be loaded since there is no other
+	**	source for these names and the assignment of parameter
+	**	names is dependent on the order declared.
 	**
 	**	When only unnamed dynamic parameters are present in the SQL text,
 	**	the loading of meta-data names is deferred since the names may be
@@ -148,10 +149,12 @@ namespace Ingres.ProviderInternals
 	**	dynamic parameters, findParams() will search the procedure info
 	**	to map parameter names to the parameter set.  Otherwise, the
 	**	parameter set will be searched and an unset parameter selected
-	**	if the parameter name had not been previously assigned.  If the
-	**	ordinal index versions of the set/register methods are used, meta-
-	**	data names will need to be loaded and assigned to the parameter
-	**	set prior to executing the procedure.  This is done in exec().
+	**	if the parameter name had not been previously assigned.  
+	**
+	**	If the ordinal index versions of the set/register methods are used, 
+	**	meta-data names will need to be loaded and assigned to the parameter
+	**	set prior to executing the procedure if positional parameters are
+	**	not supported by the server.  This is done in checkParams().
 	**
 	**	In summary, the handling of parameter names is as follows:
 	**
@@ -170,7 +173,8 @@ namespace Ingres.ProviderInternals
 	**	o  Finally, prior to execution, meta-data names are loaded and copied 
 	**	   (in checkParams()) to the param-set if not done in any prior step.
 	**	   Note that this implies all parameters are dynamic and register/set
-	**	   was done by ordinal.
+	**	   was done by ordinal.  Also note that this step is skipped if the
+	**	   server supports positional (unnamed) database procedure parameters.
 	**	o  Clearing the parameters clears the names from the param-set
 	**	   (may be restored in initParameters()) but not loaded names.
 	**
@@ -3645,6 +3649,9 @@ namespace Ingres.ProviderInternals
 		** History:
 		**	 6-Jun-03 (gordy)
 		**	    Extracted from exec().
+		**	29-Apr-10 (gordy, ported by thoda04)
+		**	    Don't load parameter names when positional parameters are
+		**	    supported (API level 6).
 		*/
 
 		private void
@@ -3671,8 +3678,11 @@ namespace Ingres.ProviderInternals
 			** assigned in findParam() (access type NAME).  When ordinal
 			** indexes are used to access the parameters, it is possible
 			** that parameter names have not yet been loaded/assigned.
+			** Parameter names must be loaded if positional parameters
+			** are not supported by the server.
 			*/
-			if ( access_type == ORDINAL  &&  ! procInfo.paramNamesLoaded() )
+			if (access_type == ORDINAL && !procInfo.paramNamesLoaded()  &&
+			    conn.db_protocol_level < DBMS_API_PROTO_6 )
 			{
 				procInfo.loadParamNames();
 
