@@ -268,6 +268,8 @@
 **	    SIR 120874 Modified to use new DB_ERROR based uleFormat 
 **	28-Nov-2008 (jonj)
 **	    SIR 120874: dm2t_? functions converted to DB_ERROR *
+**      28-apr-2010 (kschendel)
+**          dmt_open() Init BQCB in rep_arch_rcb
 **/
 
 /*
@@ -1331,6 +1333,12 @@ DMT_CB   *dmt_cb)
 	    status = dmpe_find_or_create_bqcb(r, &dmt->error);
 	    if (status != E_DB_OK)
 		break;
+	    /*
+	    ** The archive table may contain a blob col 
+	    ** The shadow table only has non-blob cols in the replication key
+	    */
+	    if (r->rep_arch_rcb)
+		r->rep_arch_rcb->rcb_bqcb_ptr = r->rcb_bqcb_ptr;
 	}
 	/* Set LOB flags into RCB, BQCB */
 	if (dmt->dmt_flags_mask & DMT_MANUAL_ENDOFROW)

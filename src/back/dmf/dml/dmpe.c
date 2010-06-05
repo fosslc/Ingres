@@ -522,6 +522,8 @@
 **	    more efficiently.
 **	    Get rid of adc_isnull, use inline check.
 **	    Fix "table too large" (DM0138) when bulk-loading etabs. (b120497)
+**      28-Apr-2010 (stial01)
+**          dmpe_buffered_put() Allocate LONGTERM memory for rcb_bulk_misc
 **/
 
 /*
@@ -7068,10 +7070,11 @@ DMR_CB		*dmr_cb)
 
 	    size = sizeof(DMP_MISC) + t->tcb_rel.relpgsize;
 	    /*
-	    ** Ask for short-term memory (default for MISC_CB), since
-	    ** rcb_bulk_misc is deallocated when the RCB is released.
+	    ** The allocation for rcb_bulk_misc should be LONGTERM (same as RCB)
+	    ** (Explicitly request DM0M_LONGTERM because the default
+	    ** for MISC_CB is short term 
 	    */
-	    status = dm0m_allocate( size, DM0M_ZERO,
+	    status = dm0m_allocate( size, DM0M_ZERO | DM0M_LONGTERM,
 			    (i4) MISC_CB,
 			    (i4) MISC_ASCII_ID, (char *) 0,
 			    (DM_OBJECT **) &r->rcb_bulk_misc, &dmr_cb->error);
