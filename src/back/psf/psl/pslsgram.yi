@@ -3461,6 +3461,20 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	    in pst_adresdom incorrectly setting the rsno field.
 **	    Dispense with use of pss_tlist - instead use tlist_stack as the former
 **	    is updated with every resdom created!
+**      22-feb-2010 (huazh01)
+**      1) constant folding statements that gets evaluated to TRUE on
+**      an IF statement:
+**      when setting up the pss_link, need to loop to the end of original
+**      pss_link instead of just setting pss_link to the end of THEN list.
+**      We could be in a nested IF statement. Without going to the end of
+**      the pss_link, we could lose statments included in the parent IF
+**      statement.
+**      2) constant folding statements that gets evaluated to FALSE on
+**      an IF statement:
+**      look up from the head of the list until we found the parent of
+**      the current block, set parent's pst_link to the ELSE branch,
+**      then assign the current statement to the ELSE branch.
+**      This fixes b122643.
 **      12-feb-2010 (joea)
 **          Back out use of UNKNCONST in inexpr and update_item productions.
 **	01-Mar-2010 (kiria01) b123356
@@ -13955,6 +13969,10 @@ cdbp_ifstmt:	    cdbp_ifkwd boolean_expr cdbp_thenkwd
 		    $Ydbpinfo->pss_link = $$;
 		    while (next = $Ydbpinfo->pss_link->pst_next)
 			$Ydbpinfo->pss_link = next;
+
+                    while (next = $Ydbpinfo->pss_link->pst_link)
+                        $Ydbpinfo->pss_link = next;
+
 		    continue; /* any more? */
 		}
 		/* else NULL body to return - drop to common handling */
@@ -13963,7 +13981,15 @@ cdbp_ifstmt:	    cdbp_ifkwd boolean_expr cdbp_thenkwd
 	    {
 		/* Copy the ELSE branch head block over the IF thereby leaving
 		** predecessor ptrs already correct. */
-		*$$ = *$$->pst_specific.pst_if.pst_false;
+
+                next = $Ydbpinfo->pss_head_stmt;
+
+                while (next->pst_link && next->pst_link != $$)
+                    next = next->pst_link;
+
+                next->pst_link = $$->pst_specific.pst_if.pst_false;
+                $$ = $$->pst_specific.pst_if.pst_false;
+
 		/* pss_link is already pointing to end of ELSE list :-) */
 		continue; /* any more? */
 	    }
@@ -52646,6 +52672,10 @@ psl_elsekwd(
 **	    finish processing of the whole IF statement.  Accordingly, here we
 **	    will keep popping off the stack descriptions of statements until
 **	    that associated with the IF statement is reached
+**      2-22-2010 (huazh01)
+**          set pst_true / pst_flase to NULL if if_action / else_action is
+**          a PST_STATEMENT_REMOVED. Constant folding could make a
+**          statement becomes PST_STATEMENT_REMOVED. (b122643)
 */
 VOID
 psl_ifstmt(
@@ -52658,8 +52688,10 @@ psl_ifstmt(
     PSS_IFSTMT      *pss_if;
     
     if_node->pst_specific.pst_if.pst_condition = condition;
-    if_node->pst_specific.pst_if.pst_true = if_action;
-    if_node->pst_specific.pst_if.pst_false = else_action;
+    if_node->pst_specific.pst_if.pst_true =
+       (if_action == PST_STATEMENT_REMOVED) ? (PST_STATEMENT *)NULL : if_action;
+    if_node->pst_specific.pst_if.pst_false =
+       (else_action== PST_STATEMENT_REMOVED) ? (PST_STATEMENT *)NULL : else_action;
 
     /*
     ** Pop descriptions of statements until that of the IF statement is reached
