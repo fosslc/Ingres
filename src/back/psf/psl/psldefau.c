@@ -2101,6 +2101,10 @@ psl_make_default_node(
 **	10-Oct-2008 (kibro01) b121034
 **	    Ensure we don't run off the end of the RESDOM list if the rsno is
 **	    lower than any of the columns actually specified.
+**	18-May-2010 (kiria01) b123442
+**	    Force psl_mk_const_similar to generate coercion to cleanly 
+**	    enable correct datatype to be represented when substituting
+**	    default values.
 */
 DB_STATUS
 psl_check_defaults(
@@ -2252,7 +2256,6 @@ psl_check_defaults(
 	
 	{
 	    DB_DATA_VALUE dbv;
-	    bool handled;
 	    /* Try to cast to column type */
 	    dbv.db_data = NULL;
 	    dbv.db_length = att->att_width;
@@ -2260,7 +2263,7 @@ psl_check_defaults(
 	    dbv.db_prec = att->att_prec;
 	    dbv.db_collID = att->att_collID;
 	    status = psl_mk_const_similar(sess_cb, &sess_cb->pss_ostream,
-			&dbv, &defnode, err_blk, &handled);
+			&dbv, &defnode, err_blk, NULL);
 	    if (DB_FAILURE_MACRO(status))
 		return(status);
 	}

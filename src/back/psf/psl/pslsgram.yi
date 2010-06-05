@@ -43697,7 +43697,6 @@ update_item:		col_spec2 EQUAL select_expr
 
 	{
 	    DB_DATA_VALUE dbv;
-	    bool handled;
 	    /* Try to cast to column type */
 	    dbv.db_data = NULL;
 	    dbv.db_length = coldesc->att_width;
@@ -43705,7 +43704,7 @@ update_item:		col_spec2 EQUAL select_expr
 	    dbv.db_prec = coldesc->att_prec;
 	    dbv.db_collID = coldesc->att_collID;
 	    status = psl_mk_const_similar(cb, &cb->pss_ostream, &dbv,
-				&constnode, &psq_cb->psq_error, &handled);
+				&constnode, &psq_cb->psq_error, NULL);
 	    if (DB_FAILURE_MACRO(status))
 		return(status);
 	}
@@ -59318,8 +59317,10 @@ psl_patcomp(
 **	adf_scd			ADF DB
 **	templ			Addresss of key node
 **	cst			Address of pointer to the constant
+**	handled			Address of bool information result.
+**				If passed as NULL, the coercion operator
+**				will be left intact to force result type.
 **	
-**
 ** Output:
 **	cst			Address of pointer to the constant
 **				may be updated if sucessful change.
@@ -59343,6 +59344,10 @@ psl_patcomp(
 **	02-May-2010: (kiria01) b123672
 **	    Split length check from datatype to avoid the inevitable but
 **	    overlooked clash between BYTE(64) and I8 etc!
+**	18-May-2010 (kiria01) b123442
+**	    Allow the retension of parse tree when requested such as when
+**	    inserting defaults back into parse tree for integrity processing.
+**	    (Any call following psl_make_default_node)
 */
 
 DB_STATUS
@@ -59356,12 +59361,14 @@ psl_mk_const_similar(
 {
     DB_STATUS status = E_DB_OK;
     DB_DATA_VALUE cdv = (*cst)->pst_sym.pst_dataval;
-    *handled = FALSE;
+    if (handled)
+	*handled = FALSE;
     
     if ((*cst)->pst_sym.pst_type == PST_CONST &&
-	(*cst)->pst_sym.pst_value.pst_s_cnst.pst_tparmtype == PST_USER &&
-	(*cst)->pst_sym.pst_value.pst_s_cnst.pst_parm_no == 0 &&
-	cdv.db_data)
+	(!handled ||
+	    (*cst)->pst_sym.pst_value.pst_s_cnst.pst_tparmtype == PST_USER &&
+	    (*cst)->pst_sym.pst_value.pst_s_cnst.pst_parm_no == 0 &&
+	    cdv.db_data))
     {
 	DB_DATA_VALUE ndv = *templ;
 	PST_OP_NODE op;
@@ -59377,14 +59384,16 @@ psl_mk_const_similar(
 	    cdv.db_datatype = -cdv.db_datatype;
 	    cdv.db_length--;
 	    /* If this is a NULL - leave as is */
-	    if (((u_char*)cdv.db_data)[cdv.db_length] == ADF_NVL_BIT)
+	    if (cdv.db_data &&
+		((u_char*)cdv.db_data)[cdv.db_length] == ADF_NVL_BIT)
 		return status;
 	}
 	if (ndv.db_datatype == cdv.db_datatype &&
 	    ndv.db_length == cdv.db_length &&
 	    ndv.db_prec == cdv.db_prec)
 	{
-	    *handled = TRUE;
+	    if (handled)
+		*handled = TRUE;
 	    return status;
 	}
 	op.pst_opmeta = PST_NOMETA;
@@ -59447,12 +59456,13 @@ psl_mk_const_similar(
 	    if (ndv.db_datatype == cdv.db_datatype &&
 		ndv.db_prec == cdv.db_prec)
 	    {
-		*handled = TRUE;
+		if (handled)
+		    *handled = TRUE;
 		return status;
 	    }
 	    status = adi_castid(sess_cb->pss_adfcb, &op.pst_opno, &ndv);
 	}
-	if (!status && ndv.db_datatype == DB_INT_TYPE)
+	if (!status && handled && ndv.db_datatype == DB_INT_TYPE)
 	{
 	    /* Extra check for integer. Normal string coercion to int
 	    ** will stop at the decimal point without error. We use 'is integer'
@@ -59468,14 +59478,16 @@ psl_mk_const_similar(
 			(char *)&op, sizeof(op), ndv.db_datatype, ndv.db_prec, ndv.db_length,
 			(DB_ANYTYPE *)NULL, &res_node, err_blk, 0) &&
 	    res_node &&
-	    res_node->pst_sym.pst_type == PST_CONST)
+	    (res_node->pst_sym.pst_type == PST_CONST ||
+		!handled))
 	{
 	    /* We successfully converted the constant to the
 	    ** reqested type and now we need to redo the resolve
 	    ** for the new datatype.
 	    */
 	    *cst = res_node;
-	    *handled = TRUE;
+	    if (handled)
+		*handled = TRUE;
 	}
     }
     return status;

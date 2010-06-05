@@ -2705,6 +2705,8 @@ DB_DATA_VALUE	    *rdv)
 **	17-Mar-2009 (kiria01) SIR121788
 **	    Add missing LNLOC support and let adu_lvch_move
 **	    couponify the locators.
+**	18-May-2010 (kiria01) b123442
+**	    Added missing DB_LTXT_TYPE.
 */
 
 DB_STATUS
@@ -2725,6 +2727,7 @@ DB_DATA_VALUE	    *rdv)
       case DB_BYTE_TYPE:
       case DB_VCH_TYPE:
       case DB_VBYTE_TYPE:
+      case DB_LTXT_TYPE:
 	return (adu_1strtostr(adf_scb, dv1, rdv));
 	break;
 

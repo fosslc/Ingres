@@ -510,6 +510,10 @@ psy_varset(
 **          CONST to the VAR's datatype. This stops the substitution from
 **          breaking ADE_COMPAREN & ADE_NCOMPAREN processing if the
 **          VAR was part of an IN LIST. 
+**	18-May-2010 (kiria01) b123442
+**	    Force psl_mk_const_similar to generate coercion to cleanly 
+**	    enable correct datatype to be represented when substituting
+**	    default values.
 */
 DB_STATUS
 psy_subsvars(
@@ -760,7 +764,6 @@ psy_subsvars(
 		    */
 		    else if (vmode == PSQ_APPEND)
 		    {
-			bool handled;
 			status = psl_make_default_node(cb, dup_rb->pss_mstream, resvar,
 						       t->pst_sym.pst_value
 							     .pst_s_var.pst_atno.db_att_id,
@@ -773,7 +776,7 @@ psy_subsvars(
 			/* Try to cast to column type */
 			status = psl_mk_const_similar(cb, dup_rb->pss_mstream,
 						&t->pst_sym.pst_dataval,
-						&v, dup_rb->pss_err_blk, &handled);
+						&v, dup_rb->pss_err_blk, NULL);
 			if (DB_FAILURE_MACRO(status))
 			    return(status);
 
