@@ -338,6 +338,9 @@ extern u_i4  SGN$GL_KSTACKPAG;
 **          In memstk_allock, report when a memory allocation error occurs.
 **          In thread_end, return status instead of using lib$stop when an
 **          error occurs.
+**      28-apr-2010 (joea)
+**          Replace the stack allocation scheme for KPS threads by a modified
+**          version of the one used for internal threads.
 **/
 
 /*
@@ -363,6 +366,7 @@ EXsigarr_sys_report( i4 *sigarr,	/* Report errors, call fr VMS hndlr */
 		    char *buffer );
 
 #ifdef KPS_THREADS
+static CS_SCB *new_scb;
 static i4 kpb_alloc(i4 *bufsiz, KPB_PPQ kpb);
 static i4 memstk_alloc(KPB_PQ kpb, i4 stack_pages);
 static i4 thread_end(KPB_PQ kpb, i4 status);
@@ -473,18 +477,6 @@ GLOBALDEF const char event_state_mask_names[] = EVENT_STATE_MASKS ;
 #endif/*OS_THREADS_USED*/
 #undef _DEFINE
 #undef _DEFINESEND
-
-/*
-**	Items for an Alpha sys$getsyi runtime call to obtain the memory page size
-**	for this system.
-*/
-i2		cpu_pagesize;
-unsigned short	cpu_pagesize_len;
-ILE3	itmlst[2] = 
-{
-		{4, SYI$_PAGE_SIZE, &cpu_pagesize, &cpu_pagesize_len},
-		{0, 0, 0, 0}
-};
 
 
 /*{
@@ -1417,69 +1409,23 @@ CS_SCB             *scb)
     i4             status;
     CS_STK_CB		*stk_hdr;
     char		*region[2];
-    i4		size;
+    i4 size = Cs_srv_block.cs_stksize;
     i4			pages;
     PTR			addr;
     CL_ERR_DESC		sys_err;
-
+    i4 pagelets;
+    i4 alloc_pages;
+#ifdef KPS_THREADS
+    i4 flags = KP$M_VEST | KP$M_SAVE_FP;
+#endif
 	/* Alpha-style CS_jmp_start address */
     PDSCDEF		*proc_desc = (PDSCDEF *)CS_jmp_start;
 
-    size = Cs_srv_block.cs_stksize;
-	
-#ifdef KPS_THREADS
-    /*
-    ** For KPS threading we always allocate a new stack on thread exit,
-    ** the thread's stack will always be deallocated.
-    ** we needn't fill in any of the stack header stuff
-    ** since we won't need any internal knowledge of the stack
-    ** other that we can't get from the KPB
-    ** We have allocated 8 longwords to the user parameter area although
-    ** we currently only use the first longword as a flag if the flag is
-    ** TRUE we have called exe$kp_end - otherwise it's FALSE
-    */
-    {
-        /* should assert here that ME_MPAGESIZE == 512 */
-        i4 pagelets = (size + ME_MPAGESIZE - 1) / ME_MPAGESIZE
-                      + 1 + MMG$GL_PAGE_SIZE / ME_MPAGESIZE;
-        i4 flags = KP$M_VEST | KP$M_SAVE_FP;
-#ifdef i64_vms
-        flags |= KP$M_SET_STACK_LIMITS;
-#endif
-
-        status = exe$kp_user_alloc_kpb(
-                    (KPB **)&scb->kpb,      /* where to store the KPB address */
-                    flags,                  /* flags */
-                    32,                     /* parameter area size */
-                    kpb_alloc,              /* KPB allocation routine */
-                    pagelets * VA$C_PAGELET_SIZE,   /* stack size in bytes */
-                    memstk_alloc,           /* memory stack alloc routine */
-                    KPB$K_MIN_IO_STACK * 4, /* RSE stack size in bytes */
-                    exe$kp_alloc_rse_stack_p2, /* No RSE stack alloc rtn reqd */
-                    (void (*)())thread_end);   /* rtn called at thread end */
-        if (!(status & STS$M_SUCCESS))
-        {
-            char buf[ER_MAX_LEN];
-            i4 msg_lang = 0;
-            i4 msg_len;
-            CL_ERR_DESC error;
-
-            ERlangcode(NULL, &msg_lang);
-            ERslookup(E_CL25F5_KPB_ALLOC_ERROR, NULL, ER_TIMESTAMP, NULL,
-                  buf, sizeof(buf), msg_lang, &msg_len, &error, 0, NULL);
-            ERsend(ER_ERROR_MSG, buf, STlength(buf), &error);
-            return E_CL25F5_KPB_ALLOC_ERROR;
-        }
-
-        /*
-        ** get the parameter area pointer
-        ** we use the first longword as a backlink to our owner SCB
-        ** When exe$kp_end is called (and hence our user thread_end function)
-        ** we'll need the SCB address to cache the stack(s)
-        */
-        *(CS_SCB **)scb->kpb->kpb$ps_prm_ptr = scb;
-    }
-#else
+    pagelets = (size + ME_MPAGESIZE - 1) / ME_MPAGESIZE
+                   + 1 + MMG$GL_PAGE_SIZE / ME_MPAGESIZE;
+    alloc_pages = max((pagelets * ME_MPAGESIZE) / MMG$GL_PAGE_SIZE,
+                      SGN$GL_KSTACKPAG);
+    pagelets = alloc_pages * MMG$GL_PAGE_SIZE / ME_MPAGESIZE;
     /* NOTE: This search is protected must be protected via a semaphore	    */
     /* outside of this routine.  No provision internally is made.  This is  */
     /* normally done with the admin thread active semaphore */
@@ -1523,19 +1469,9 @@ CS_SCB             *scb)
 #endif
     if (stk_hdr == Cs_srv_block.cs_stk_list)
     {
-	/* We need to allocate a new stack.  On Alpha, part of doing this 
-	** calculation is getting the memory page size for this system.
-	*/
-	IOSB iosb;
-
-	status = sys$getsyiw(EFN$C_ENF, 0, 0, &itmlst, &iosb, 0, 0);
-	if (status & 1)
-	    status = iosb.iosb$w_status;
-	if ((status & 1) == 0)
-		return(status);
-	status = MEget_pages(ME_MZERO_MASK|ME_USE_P1_SPACE,
-	    (size+ME_MPAGESIZE-1)/ME_MPAGESIZE + 1 + cpu_pagesize/ME_MPAGESIZE, 
-		0, &addr, &pages, &sys_err);
+	/* We need to allocate a new stack */
+	status = MEget_pages(ME_MZERO_MASK | ME_USE_P1_SPACE, pagelets,
+                             0, &addr, &pages, &sys_err);
 	if (status)
 	    return(status);
 	/* change guard pages to be writable only in supervisor mode */
@@ -1547,15 +1483,11 @@ CS_SCB             *scb)
 	if ((status & 1) == 0)
 	    return(status);
 	/*  Use all the pages that were actually allocated. */
-	stk_hdr = (CS_STK_CB *) ((char *) addr + (pages * ME_MPAGESIZE) - 512);
-	stk_hdr->cs_begin = addr;
-	stk_hdr->cs_end = (char *) stk_hdr + 511;
+	stk_hdr = (CS_STK_CB *)((char *)addr + (pages - 1) * ME_MPAGESIZE);
+	stk_hdr->cs_begin = retmem.va_range$ps_end_va;
+	stk_hdr->cs_end = (char *)stk_hdr + ME_MPAGESIZE - 1;
 	stk_hdr->cs_size = pages * ME_MPAGESIZE; 
-	/*
-	**	On Alpha, the stack must start out octaword aligned.  (Subtract 128
-	**	rather than the previously subtracted 4.)
-	*/
-	stk_hdr->cs_orig_sp = (PTR) ((char *) stk_hdr - 128);
+	stk_hdr->cs_orig_sp = (PTR)(char *)stk_hdr;
 
 	/* Now that the stack header is filled in, lets add it to the list  */
 	/* of known stacks.  It is added to the end of the list as the	    */
@@ -1569,12 +1501,10 @@ CS_SCB             *scb)
     }
     scb->cs_stk_area = (char *) stk_hdr;
     stk_hdr->cs_used = (CS_SID)scb->cs_self;
-    scb->cs_stk_size = size;
+    scb->cs_stk_size = stk_hdr->cs_size;
  
     scb->cs_registers[CS_ALF_SP] = (i8)stk_hdr->cs_orig_sp;
     scb->cs_registers[CS_ALF_FP] = Cs_cactus_fp;
-#endif
-
     scb->cs_registers[CS_ALF_AI] = 0;
     scb->cs_registers[CS_ALF_PV] = (i8)proc_desc;
     scb->cs_registers[CS_ALF_RA] = proc_desc->pdsc$q_entry;
@@ -1592,6 +1522,43 @@ CS_SCB             *scb)
     ** regains control.
     */
     scb->cs_exsp = Cs_save_exsp;
+
+#ifdef KPS_THREADS
+    new_scb = scb;
+    /*
+    ** For KPS threading we allocate a longword to the user parameter area.
+    ** It is used to store a pointer to the owner SCB.
+    */
+#ifdef i64_vms
+    flags |= KP$M_SET_STACK_LIMITS;
+#endif
+    status = exe$kp_user_alloc_kpb(
+                (KPB **)&scb->kpb,         /* where to store the KPB address */
+                flags,                     /* flags */
+                32,                        /* parameter area size */
+                kpb_alloc,                 /* KPB allocation routine */
+                pagelets * ME_MPAGESIZE,   /* stack size in bytes */
+                memstk_alloc,              /* memory stack alloc routine */
+                KPB$K_MIN_IO_STACK * 4,    /* RSE stack size in bytes */
+                exe$kp_alloc_rse_stack_p2, /* No RSE stack alloc rtn reqd */
+                (void (*)())thread_end);   /* rtn called at thread end */
+    if (!(status & STS$M_SUCCESS))
+    {
+        char buf[ER_MAX_LEN];
+        i4 msg_lang = 0;
+        i4 msg_len;
+        CL_ERR_DESC error;
+
+        ERlangcode(NULL, &msg_lang);
+        ERslookup(E_CL25F5_KPB_ALLOC_ERROR, NULL, ER_TIMESTAMP, NULL,
+                  buf, sizeof(buf), msg_lang, &msg_len, &error, 0, NULL);
+        ERsend(ER_ERROR_MSG, buf, STlength(buf), &error);
+        return E_CL25F5_KPB_ALLOC_ERROR;
+    }
+
+    /* Store a backlink to our owner SCB in the KPB user parameter area */
+    *(CS_SCB **)scb->kpb->kpb$ps_prm_ptr = scb;
+#endif
 
 # ifdef xDEBUG
     TRdisplay( "Starting SCB %p using SP: %p, FP: %p\n",
@@ -1617,74 +1584,12 @@ kpb_alloc(i4 *bufsiz, KPB_PPQ kpb)
 static i4
 memstk_alloc(KPB_PQ kpb, i4 stack_pages)
 {
-    i4 status;
-    i4 local_pages;
-    i4 alloc_pages;
-    u_i4 ret_prot;
-    uint64 return_length;
-    uint64 ret_len;
-    uint64 region_length;
-    uint64 create_length;
-    VOID_PQ va;
-    VOID_PQ ret_va;
-    VOID_PQ create_va;
-    GENERIC_64 region_id;
-
-    /*
-    ** these stack pages are expressed in units of CPU h/w pages
-    ** On an Alpha this will typically be 8 Kbytes per page
-    */
-    alloc_pages = max(stack_pages, SGN$GL_KSTACKPAG);
-    
-    /* 
-    ** allow for 2 guard pages - one at the top and 1 at the bottom of
-    ** the stack
-    */
-    local_pages = alloc_pages + 2;
-    region_length = $sys_pages_to_bytes(local_pages);
-    
-    /* First, create a region in P1 space */
-    status = sys$create_region_64(region_length, VA$C_REGION_UCREATE_UOWN,
-                                  VA$M_P1_SPACE, &region_id, &ret_va, &ret_len);
-    if (!(status & STS$M_SUCCESS))
-    {
-        char buf[ER_MAX_LEN];
-        i4 msg_lang = 0;
-        i4 msg_len;
-        CL_ERR_DESC error;
-        ER_ARGUMENT er_arg;
-
-        er_arg.er_size = sizeof(region_length);
-        er_arg.er_value = &region_length;
-        ERlangcode(NULL, &msg_lang);
-        ERslookup(E_CL25F6_MEM_STK_ALLOC_ERROR, NULL, ER_TIMESTAMP, NULL,
-                  buf, sizeof(buf), msg_lang, &msg_len, &error, 1, &er_arg);
-        ERsend(ER_ERROR_MSG, buf, STlength(buf), &error);
-        return status;
-    }
-    
-    /* the mapped pages will not include the 2 guard pages */
-    create_length = $sys_pages_to_bytes(alloc_pages);
-    create_va = (CHAR_PQ) ret_va + MMG$GL_PAGE_SIZE;
-    status = sys$cretva_64(&region_id, create_va, create_length, PSL$C_USER,
-                           VA$M_NO_OVERMAP, &va, &return_length);
-    if (status & STS$M_SUCCESS)
-    {
-        /*
-        ** Succesfully created address space so store the stack start
-        ** address. Remember that we grow downwards.
-        */
-        kpb->kpb$q_mem_region_id = region_id.gen64$q_quadword;
-        kpb->kpb$is_stack_size = create_length;
-        kpb->kpb$pq_stack_base = (CHAR_PQ) va + kpb->kpb$is_stack_size;
-    }
-    else
-    {
-        sys$delete_region_64 (&region_id, PSL$C_USER, &ret_va, &ret_len);
-        kpb->kpb$q_mem_region_id = 0;
-    }
-
-    return status;
+    new_scb->kpb = kpb;
+    /* kpb$is_stack_size should not include the guard page(s) */
+    kpb->kpb$is_stack_size = new_scb->cs_stk_size - MMG$GL_PAGE_SIZE
+                             - ME_MPAGESIZE;
+    kpb->kpb$pq_stack_base = new_scb->cs_registers[CS_ALF_SP];
+    return SS$_NORMAL;
 }
 
 static i4
@@ -1694,9 +1599,6 @@ thread_end(KPB_PQ kpb, i4 status)
     i4 bufsiz = kpb->kpb$iw_size;
     u_i4* bufadr = (u_i4 *)kpb;
     i4 asts_enabled = (sys$setast(0) != SS$_WASCLR);
-
-    /* get back our thread's SCB address */
-    CS_SCB* scb = *(CS_SCB **)kpb->kpb$ps_prm_ptr;
 
     /* Deallocate the stack(s). Let the system rtn(s) do it for us. */
 #ifdef i64_vms
@@ -1708,20 +1610,19 @@ thread_end(KPB_PQ kpb, i4 status)
         return sts;
     }
 #endif
-    sts = exe$kp_dealloc_mem_stack_user(kpb);
+
+    /* deallocate the KPB */
+    sts = lib$free_vm(&bufsiz, &bufadr); 
     if (!(sts & STS$M_SUCCESS))
     {
         if (asts_enabled)
             sys$setast(1);
         return sts;
     }
- 
-    /* deallocate the KPB */
-    sts = lib$free_vm(&bufsiz, &bufadr); 
     if (asts_enabled)
         sys$setast(1);
 
-    return sts;
+    return SS$_NORMAL;
 }
 #endif
 
@@ -2369,17 +2270,8 @@ CS_SCB		*scb;
     if ( scb->cs_cs_mask & CS_CLEANUP_MASK )
         CSterminate(CS_CLOSE, NULL);
 
-#ifdef KPS_THREADS
-    /*
-    ** Stack and KPB deallocation occurs in the thread_end() function
-    ** called by exe$kp_end() - either explicitly or implicitly at thread
-    ** end.
-    */
-    status = (*Cs_srv_block.cs_scbdealloc)(scb);
-#else
     status = CS_deal_stack((CS_STK_CB *) scb->cs_stk_area);
     status = (*Cs_srv_block.cs_scbdealloc)(scb);
-#endif
 
     return(status);
 }
