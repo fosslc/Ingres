@@ -330,9 +330,12 @@
 **         support IIAPI_BOOL_TYPE.
 **     21-Apr-2010 (Ralph Loen) Bug 123614
 **         Replaced direct read the GCN database files with new functions
-**         BuildVnodeList(), buildVnodeQueue() and hasVnode().  Note that
+**         BuildVnodeList(), BuildVnodeQueue() and hasVnode().  Note that
 **         the code for the new routines is identical to their counterparts 
 **         in wnt!common!odbc!config confgdsn.c.
+**     22-Apr-2010 (Ralph Loen) Bug 123614
+**         Moved BuildVnodeList(), BuildVnodeQueue() and hasVnode() to reside
+**         within NT_GENERIC precompiler definition.
 ** 
 */
 
@@ -381,6 +384,10 @@ static RETCODE             ConDriverInfo (LPDBC);
 static void                ConDriverName (LPDBC);
 #ifdef NT_GENERIC
 static VOID    HideOrShowRole(HWND hDlg, char *szServerType);
+static BOOL BuildVnodeList(HWND hDlg, II_PTR envHndl);
+static VOID BuildVnodeQueue( II_PTR connHandle, II_PTR tranHandle,
+    char *queryText, BOOL global );
+static BOOL hasVnode( II_PTR connHandle, II_PTR tranHandle, char *queryText );
 #endif
 #ifndef NT_GENERIC
 char *getAltPath();
@@ -388,10 +395,6 @@ char * getFileEntry(char *p, char * szToken, bool ignoreBracket);
 #endif
 static void         TranslatePWD(char * name, char * pwd);
 static VOID concatBrowseString(char *inputString, char *attr);
-static BOOL BuildVnodeList(HWND hDlg, II_PTR envHndl);
-static VOID BuildVnodeQueue( II_PTR connHandle, II_PTR tranHandle,
-    char *queryText, BOOL global );
-static BOOL hasVnode( II_PTR connHandle, II_PTR tranHandle, char *queryText );
 
 typedef struct
 {
@@ -3155,6 +3158,410 @@ static VOID HideOrShowRole(HWND hDlg, char *szServerTypeParm)
 
     return;
 }
+
+/*
+** Name:        BuildVnodeQueue - Build vnode queue.
+**
+** Description: 
+**              Builds an internal queue of global and private node names
+**              from the result set of a Name Server API query.
+**
+** Inputs:      
+**              connHandle - API connection handle.
+**              tranHandle - API transaction handle.
+**              queryText - Name Server query.
+**              global - Private or global vnode.
+**
+** Outputs:     
+**              None.
+**
+** Returns:     
+**              
+**              Void.
+**
+** Exceptions:  
+**              N/A
+**
+** Side Effects:  
+**
+**              Inserts queue elements into the global vnod2 queue headed
+**              by vnode_q.
+**
+** History:
+**    22-Feb-2010 (Ralph Loen) Bug 123318
+**      Created.
+*/
+static VOID BuildVnodeQueue( II_PTR connHandle, II_PTR tranHandle, 
+    char *queryText, BOOL global )
+{
+    II_PTR              stmtHandle;
+    IIAPI_QUERYPARM     queryParm;
+    static IIAPI_GETDESCRPARM  getDescrParm;
+    IIAPI_GETCOLPARM    getColParm;
+    IIAPI_CLOSEPARM     closeParm;
+    IIAPI_WAITPARM      waitParm = { -1 };
+    IIAPI_DATAVALUE     DataBuffer[ 5 ];
+    char                var[5][GCA_MAXNAME+1];
+    short               i, len;
+    VNODE_LIST          *vnode_list;
+
+    /*
+    **  Execute 'show' statement.
+    */
+    queryParm.qy_genParm.gp_callback = NULL;
+    queryParm.qy_genParm.gp_closure = NULL;
+    queryParm.qy_connHandle = connHandle;
+    queryParm.qy_queryType = IIAPI_QT_QUERY;
+    queryParm.qy_queryText = queryText;
+    queryParm.qy_parameters = FALSE;
+    queryParm.qy_tranHandle = tranHandle;
+    queryParm.qy_stmtHandle = NULL;
+
+    IIapi_query( &queryParm );
+
+    while( queryParm.qy_genParm.gp_completed == FALSE )
+      IIapi_wait( &waitParm );
+
+    stmtHandle = queryParm.qy_stmtHandle;
+
+    /*
+    **  Get result row descriptors.
+    */
+    getDescrParm.gd_genParm.gp_callback = NULL;
+    getDescrParm.gd_genParm.gp_closure = NULL;
+    getDescrParm.gd_stmtHandle = stmtHandle;
+    getDescrParm.gd_descriptorCount = 0;
+    getDescrParm.gd_descriptor = NULL;
+
+    IIapi_getDescriptor( &getDescrParm );
+
+    while( getDescrParm.gd_genParm.gp_completed == FALSE )
+        IIapi_wait( &waitParm );
+    
+    /*
+    **  Retrieve result rows.
+    */
+    getColParm.gc_genParm.gp_callback = NULL;
+    getColParm.gc_genParm.gp_closure = NULL;
+    getColParm.gc_rowCount = 1;
+    getColParm.gc_columnCount = getDescrParm.gd_descriptorCount;
+    getColParm.gc_columnData = DataBuffer;
+    getColParm.gc_stmtHandle = stmtHandle;
+    getColParm.gc_moreSegments = 0;
+
+    for( i = 0; i < getDescrParm.gd_descriptorCount; i++ )
+        getColParm.gc_columnData[i].dv_value = var[i];
+    
+    /*
+    ** Add a queue entry for each vnode name found in the GCN database.
+    */
+    while (TRUE)
+    {
+        IIapi_getColumns( &getColParm );
+    
+        while( getColParm.gc_genParm.gp_completed == FALSE )
+            IIapi_wait( &waitParm );
+    
+        if ( getColParm.gc_genParm.gp_status != IIAPI_ST_SUCCESS )
+            break;
+    
+        MEcopy( (PTR)&var[1], 2, (PTR)&len);
+        var[1][ len + 2 ] = '\0';
+        vnode_list = (VNODE_LIST *)MEreqmem(0,sizeof(VNODE_LIST),0,NULL);
+        STcopy((char *)&var[1][2], vnode_list->vnode);
+        CVupper(vnode_list->vnode);
+        vnode_list->hasUserName = FALSE;
+        if (global)
+            vnode_list->global = TRUE;
+        else
+            vnode_list->global = FALSE;
+    
+        QUinsert((QUEUE *)vnode_list, &vnode_qhead);
+    }
+
+    /*
+    **  Close query.
+    */
+    closeParm.cl_genParm.gp_callback = NULL;
+    closeParm.cl_genParm.gp_closure = NULL;
+    closeParm.cl_stmtHandle = stmtHandle;
+
+    IIapi_close( &closeParm );
+
+    while( closeParm.cl_genParm.gp_completed == FALSE )
+        IIapi_wait( &waitParm );
+}
+/*
+** Name:        hasVnode
+**
+** Description: 
+**              Executes the GCN API select query and returns
+**              TRUE if at least one row is found.
+**
+** Inputs:      
+**              connHandle - API connection handle.
+**              tranHandle - API transaction handle.
+**              queryText - Name Server query.
+**
+** Outputs:     
+**              None.
+**
+** Returns:     
+**              
+**              TRUE  - a row is found.
+**              FALSE - no rows are found.
+**
+** Exceptions:  
+**              N/A
+**
+** Side Effects:  
+**              None.
+**
+** History:
+**    22-Feb-2010 (Ralph Loen) Bug 123318
+**      Created.
+*/
+static BOOL hasVnode( II_PTR connHandle, II_PTR tranHandle, char *queryText )
+{
+    II_PTR              stmtHandle;
+    IIAPI_QUERYPARM     queryParm;
+    static IIAPI_GETDESCRPARM  getDescrParm;
+    IIAPI_GETCOLPARM    getColParm;
+    IIAPI_CLOSEPARM     closeParm;
+    IIAPI_WAITPARM      waitParm = { -1 };
+    IIAPI_DATAVALUE     DataBuffer[ 4 ];
+    char                var[4][GCA_MAXNAME+1];
+    BOOL                hasLogin = FALSE;
+    int                 i;
+
+    /*
+    **  Execute 'show' statement.
+    */
+    queryParm.qy_genParm.gp_callback = NULL;
+    queryParm.qy_genParm.gp_closure = NULL;
+    queryParm.qy_connHandle = connHandle;
+    queryParm.qy_queryType = IIAPI_QT_QUERY;
+    queryParm.qy_queryText = queryText;
+    queryParm.qy_parameters = FALSE;
+    queryParm.qy_tranHandle = tranHandle;
+    queryParm.qy_stmtHandle = NULL;
+
+    IIapi_query( &queryParm );
+
+    while( queryParm.qy_genParm.gp_completed == FALSE )
+      IIapi_wait( &waitParm );
+
+    stmtHandle = queryParm.qy_stmtHandle;
+
+    /*
+    **  Get result row descriptors.
+    */
+    getDescrParm.gd_genParm.gp_callback = NULL;
+    getDescrParm.gd_genParm.gp_closure = NULL;
+    getDescrParm.gd_stmtHandle = stmtHandle;
+    getDescrParm.gd_descriptorCount = 0;
+    getDescrParm.gd_descriptor = NULL;
+
+    IIapi_getDescriptor( &getDescrParm );
+
+    while( getDescrParm.gd_genParm.gp_completed == FALSE )
+        IIapi_wait( &waitParm );
+    
+    /*
+    **  Retrieve result rows.
+    */
+    getColParm.gc_genParm.gp_callback = NULL;
+    getColParm.gc_genParm.gp_closure = NULL;
+    getColParm.gc_rowCount = 1;
+    getColParm.gc_columnCount = getDescrParm.gd_descriptorCount;
+    getColParm.gc_columnData = DataBuffer;
+    getColParm.gc_stmtHandle = stmtHandle;
+    getColParm.gc_moreSegments = 0;
+
+    for( i = 0; i < getDescrParm.gd_descriptorCount; i++ )
+        getColParm.gc_columnData[i].dv_value = var[i];
+    
+    IIapi_getColumns( &getColParm );
+
+    while( getColParm.gc_genParm.gp_completed == FALSE )
+        IIapi_wait( &waitParm );
+
+    if ( getColParm.gc_genParm.gp_status == IIAPI_ST_SUCCESS )
+        hasLogin = TRUE;
+
+    /*
+    **  Close query.
+    */
+    closeParm.cl_genParm.gp_callback = NULL;
+    closeParm.cl_genParm.gp_closure = NULL;
+    closeParm.cl_stmtHandle = stmtHandle;
+
+    IIapi_close( &closeParm );
+
+    while( closeParm.cl_genParm.gp_completed == FALSE )
+        IIapi_wait( &waitParm );
+    
+    return hasLogin;
+}
+
+/*
+** Name:        BuildVnodeList
+**
+** Description: 
+**              Connects to the GCN via API and invokes other functions to
+**              create an internal queue of vnode names.
+**
+** Inputs:      
+**              hDlg - Handle to the current window.
+**
+** Outputs:     
+**              None.
+**
+** Returns:     
+**              
+**              TRUE  - a connection to the GCN was successful.
+**              FALSE - a connectio nto the GCN was unsuccessful.
+**
+** Exceptions:  
+**              Displays error window if a connection to the GCN cannot be made.
+**
+** Side Effects:  
+**              Initializes and terminates the API.  Initializes vnode queue.
+**
+** History:
+**    22-Feb-2010 (Ralph Loen) Bug 123318
+**      Created.
+*/
+static BOOL BuildVnodeList(HWND hDlg, II_PTR envHndl)
+{
+    II_PTR            connHandle = (II_PTR)NULL;
+    II_PTR            tranHandle = (II_PTR)NULL;
+    IIAPI_CONNPARM    connParm;
+    IIAPI_AUTOPARM    autoparm;
+    IIAPI_WAITPARM    waitParm = { -1 };
+    IIAPI_DISCONNPARM disconnParm;
+    char  queryText[100];
+    char showGcText[] = "show global connection * * * * ";
+    char showPcText[] = "show private connection * * * * ";
+    char showGlFmt[] = "show global login %s";
+    char showPlFmt[] = "show private login %s";
+    char showGkFmt[] = "show global attribute %s " \
+        "authentication_mechanism kerberos";
+    char showPkFmt[] = "show private attribute %s " \
+        "authentication_mechanism kerberos";
+    VNODE_LIST *vnode_list;
+    QUEUE *q;
+
+    vnode_list = (VNODE_LIST *)MEreqmem(0,sizeof(VNODE_LIST),0,NULL);
+    STcopy("(LOCAL)", vnode_list->vnode);
+    vnode_list->hasUserName = TRUE;
+
+    QUinsert((QUEUE *)vnode_list, &vnode_qhead);
+
+    connParm.co_genParm.gp_callback = NULL;
+    connParm.co_genParm.gp_closure = NULL;
+    connParm.co_target =  NULL;
+    connParm.co_type   =  IIAPI_CT_NS;
+    connParm.co_connHandle = envHndl;
+    connParm.co_tranHandle = NULL;
+    connParm.co_username = NULL;
+    connParm.co_password = NULL;
+    connParm.co_timeout = -1;
+    
+    /*
+    ** Connect to the local GCN.
+    */
+    IIapi_connect( &connParm );
+    
+    while( connParm.co_genParm.gp_completed == FALSE )
+        IIapi_wait( &waitParm );
+
+    /*
+    ** Display error message if the GCN is unavailable.  If the user
+    ** clicks on the CANCEL button, return FALSE to the callser.
+    */
+    if (connParm.co_genParm.gp_status != IIAPI_ST_SUCCESS)
+    {
+        MessageBox(hDlg,
+            "Could not connect to Name Server.\nThe vnode list will not " \
+            "be visible.\n\nPlease start your Ingres installation.", 
+            "Name Server Connection Error", MB_OK | MB_ICONSTOP);
+        return FALSE;
+    }
+    
+    connHandle = connParm.co_connHandle;
+    tranHandle = connParm.co_tranHandle;
+
+    autoparm.ac_genParm.gp_callback = NULL;
+    autoparm.ac_genParm.gp_closure  = NULL;
+    autoparm.ac_connHandle = connHandle;
+    autoparm.ac_tranHandle = NULL;
+
+    IIapi_autocommit( &autoparm );
+
+    while( autoparm.ac_genParm.gp_completed == FALSE )
+       IIapi_wait( &waitParm );
+
+    tranHandle = autoparm.ac_tranHandle;
+    
+    BuildVnodeQueue(connHandle, tranHandle, showGcText, TRUE);
+    
+    BuildVnodeQueue(connHandle, tranHandle, showPcText, FALSE);
+    
+    for (q = vnode_qhead.q_prev; q != &vnode_qhead; 
+        q = q->q_prev)
+    {
+        vnode_list = (VNODE_LIST *)q;
+        /*
+        ** If the vnode has no entry in the login database,
+        ** check the attributes for Kerberos authentication.
+        ** If there is a Kerberos entry, or if the vnode has
+        ** a login attribute, mark hasUserName as TRUE so that
+        ** the "Prompt UID/PWD" box is automatically checked.
+        */
+        if (vnode_list->global)
+        {
+            STprintf(queryText, showGlFmt, vnode_list->vnode);
+            if (hasVnode(connHandle, tranHandle, queryText))
+                vnode_list->hasUserName = TRUE;
+            else
+            {
+                STprintf(queryText, showGkFmt, vnode_list->vnode);
+                if (hasVnode(connHandle, tranHandle, queryText))
+                    vnode_list->hasUserName = TRUE;
+            }
+        }
+        else
+        {
+            STprintf(queryText, showPlFmt, vnode_list->vnode);
+            if (hasVnode(connHandle, tranHandle, queryText))
+                vnode_list->hasUserName = TRUE;
+            else
+            {
+                STprintf(queryText, showPkFmt, vnode_list->vnode);
+                if (hasVnode(connHandle, tranHandle, queryText))
+                    vnode_list->hasUserName = TRUE;
+            }
+        }
+    }
+
+    /*
+    ** All done.  Disconnect.  The queue will be freed upon 
+    ** exit of this window.
+    */
+    disconnParm.dc_genParm.gp_callback = NULL;
+    disconnParm.dc_genParm.gp_closure = NULL;
+    disconnParm.dc_connHandle = connHandle;
+
+    IIapi_disconnect( &disconnParm );
+
+    while( disconnParm.dc_genParm.gp_completed == FALSE )
+        IIapi_wait( &waitParm );
+
+    connHandle = NULL;
+
+    return TRUE;
+}
 #endif /* NT_GENERIC */
 
 #ifndef NT_GENERIC
@@ -3722,408 +4129,4 @@ void getDriverVersion  ( char *version )
 {
     STcopy(VER_FILEVERSION_STR, version);
     return;
-}
-
-/*
-** Name:        BuildVnodeQueue - Build vnode queue.
-**
-** Description: 
-**              Builds an internal queue of global and private node names
-**              from the result set of a Name Server API query.
-**
-** Inputs:      
-**              connHandle - API connection handle.
-**              tranHandle - API transaction handle.
-**              queryText - Name Server query.
-**              global - Private or global vnode.
-**
-** Outputs:     
-**              None.
-**
-** Returns:     
-**              
-**              Void.
-**
-** Exceptions:  
-**              N/A
-**
-** Side Effects:  
-**
-**              Inserts queue elements into the global vnod2 queue headed
-**              by vnode_q.
-**
-** History:
-**    22-Feb-2010 (Ralph Loen) Bug 123318
-**      Created.
-*/
-static VOID BuildVnodeQueue( II_PTR connHandle, II_PTR tranHandle, 
-    char *queryText, BOOL global )
-{
-    II_PTR              stmtHandle;
-    IIAPI_QUERYPARM     queryParm;
-    static IIAPI_GETDESCRPARM  getDescrParm;
-    IIAPI_GETCOLPARM    getColParm;
-    IIAPI_CLOSEPARM     closeParm;
-    IIAPI_WAITPARM      waitParm = { -1 };
-    IIAPI_DATAVALUE     DataBuffer[ 5 ];
-    char                var[5][GCA_MAXNAME+1];
-    short               i, len;
-    VNODE_LIST          *vnode_list;
-
-    /*
-    **  Execute 'show' statement.
-    */
-    queryParm.qy_genParm.gp_callback = NULL;
-    queryParm.qy_genParm.gp_closure = NULL;
-    queryParm.qy_connHandle = connHandle;
-    queryParm.qy_queryType = IIAPI_QT_QUERY;
-    queryParm.qy_queryText = queryText;
-    queryParm.qy_parameters = FALSE;
-    queryParm.qy_tranHandle = tranHandle;
-    queryParm.qy_stmtHandle = NULL;
-
-    IIapi_query( &queryParm );
-
-    while( queryParm.qy_genParm.gp_completed == FALSE )
-      IIapi_wait( &waitParm );
-
-    stmtHandle = queryParm.qy_stmtHandle;
-
-    /*
-    **  Get result row descriptors.
-    */
-    getDescrParm.gd_genParm.gp_callback = NULL;
-    getDescrParm.gd_genParm.gp_closure = NULL;
-    getDescrParm.gd_stmtHandle = stmtHandle;
-    getDescrParm.gd_descriptorCount = 0;
-    getDescrParm.gd_descriptor = NULL;
-
-    IIapi_getDescriptor( &getDescrParm );
-
-    while( getDescrParm.gd_genParm.gp_completed == FALSE )
-        IIapi_wait( &waitParm );
-    
-    /*
-    **  Retrieve result rows.
-    */
-    getColParm.gc_genParm.gp_callback = NULL;
-    getColParm.gc_genParm.gp_closure = NULL;
-    getColParm.gc_rowCount = 1;
-    getColParm.gc_columnCount = getDescrParm.gd_descriptorCount;
-    getColParm.gc_columnData = DataBuffer;
-    getColParm.gc_stmtHandle = stmtHandle;
-    getColParm.gc_moreSegments = 0;
-
-    for( i = 0; i < getDescrParm.gd_descriptorCount; i++ )
-        getColParm.gc_columnData[i].dv_value = var[i];
-    
-    /*
-    ** Add a queue entry for each vnode name found in the GCN database.
-    */
-    while (TRUE)
-    {
-        IIapi_getColumns( &getColParm );
-    
-        while( getColParm.gc_genParm.gp_completed == FALSE )
-            IIapi_wait( &waitParm );
-    
-        if ( getColParm.gc_genParm.gp_status != IIAPI_ST_SUCCESS )
-            break;
-    
-        MEcopy( (PTR)&var[1], 2, (PTR)&len);
-        var[1][ len + 2 ] = '\0';
-        vnode_list = (VNODE_LIST *)MEreqmem(0,sizeof(VNODE_LIST),0,NULL);
-        STcopy((char *)&var[1][2], vnode_list->vnode);
-        CVupper(vnode_list->vnode);
-        vnode_list->hasUserName = FALSE;
-        if (global)
-            vnode_list->global = TRUE;
-        else
-            vnode_list->global = FALSE;
-    
-        QUinsert((QUEUE *)vnode_list, &vnode_qhead);
-    }
-
-    /*
-    **  Close query.
-    */
-    closeParm.cl_genParm.gp_callback = NULL;
-    closeParm.cl_genParm.gp_closure = NULL;
-    closeParm.cl_stmtHandle = stmtHandle;
-
-    IIapi_close( &closeParm );
-
-    while( closeParm.cl_genParm.gp_completed == FALSE )
-        IIapi_wait( &waitParm );
-}
-/*
-** Name:        hasVnode
-**
-** Description: 
-**              Executes the GCN API select query and returns
-**              TRUE if at least one row is found.
-**
-** Inputs:      
-**              connHandle - API connection handle.
-**              tranHandle - API transaction handle.
-**              queryText - Name Server query.
-**
-** Outputs:     
-**              None.
-**
-** Returns:     
-**              
-**              TRUE  - a row is found.
-**              FALSE - no rows are found.
-**
-** Exceptions:  
-**              N/A
-**
-** Side Effects:  
-**              None.
-**
-** History:
-**    22-Feb-2010 (Ralph Loen) Bug 123318
-**      Created.
-*/
-static BOOL hasVnode( II_PTR connHandle, II_PTR tranHandle, char *queryText )
-{
-    II_PTR              stmtHandle;
-    IIAPI_QUERYPARM     queryParm;
-    static IIAPI_GETDESCRPARM  getDescrParm;
-    IIAPI_GETCOLPARM    getColParm;
-    IIAPI_CLOSEPARM     closeParm;
-    IIAPI_WAITPARM      waitParm = { -1 };
-    IIAPI_DATAVALUE     DataBuffer[ 4 ];
-    char                var[4][GCA_MAXNAME+1];
-    BOOL                hasLogin = FALSE;
-    int                 i;
-
-    /*
-    **  Execute 'show' statement.
-    */
-    queryParm.qy_genParm.gp_callback = NULL;
-    queryParm.qy_genParm.gp_closure = NULL;
-    queryParm.qy_connHandle = connHandle;
-    queryParm.qy_queryType = IIAPI_QT_QUERY;
-    queryParm.qy_queryText = queryText;
-    queryParm.qy_parameters = FALSE;
-    queryParm.qy_tranHandle = tranHandle;
-    queryParm.qy_stmtHandle = NULL;
-
-    IIapi_query( &queryParm );
-
-    while( queryParm.qy_genParm.gp_completed == FALSE )
-      IIapi_wait( &waitParm );
-
-    stmtHandle = queryParm.qy_stmtHandle;
-
-    /*
-    **  Get result row descriptors.
-    */
-    getDescrParm.gd_genParm.gp_callback = NULL;
-    getDescrParm.gd_genParm.gp_closure = NULL;
-    getDescrParm.gd_stmtHandle = stmtHandle;
-    getDescrParm.gd_descriptorCount = 0;
-    getDescrParm.gd_descriptor = NULL;
-
-    IIapi_getDescriptor( &getDescrParm );
-
-    while( getDescrParm.gd_genParm.gp_completed == FALSE )
-        IIapi_wait( &waitParm );
-    
-    /*
-    **  Retrieve result rows.
-    */
-    getColParm.gc_genParm.gp_callback = NULL;
-    getColParm.gc_genParm.gp_closure = NULL;
-    getColParm.gc_rowCount = 1;
-    getColParm.gc_columnCount = getDescrParm.gd_descriptorCount;
-    getColParm.gc_columnData = DataBuffer;
-    getColParm.gc_stmtHandle = stmtHandle;
-    getColParm.gc_moreSegments = 0;
-
-    for( i = 0; i < getDescrParm.gd_descriptorCount; i++ )
-        getColParm.gc_columnData[i].dv_value = var[i];
-    
-    IIapi_getColumns( &getColParm );
-
-    while( getColParm.gc_genParm.gp_completed == FALSE )
-        IIapi_wait( &waitParm );
-
-    if ( getColParm.gc_genParm.gp_status == IIAPI_ST_SUCCESS )
-        hasLogin = TRUE;
-
-    /*
-    **  Close query.
-    */
-    closeParm.cl_genParm.gp_callback = NULL;
-    closeParm.cl_genParm.gp_closure = NULL;
-    closeParm.cl_stmtHandle = stmtHandle;
-
-    IIapi_close( &closeParm );
-
-    while( closeParm.cl_genParm.gp_completed == FALSE )
-        IIapi_wait( &waitParm );
-    
-    return hasLogin;
-}
-
-/*
-** Name:        BuildVnodeList
-**
-** Description: 
-**              Connects to the GCN via API and invokes other functions to
-**              create an internal queue of vnode names.
-**
-** Inputs:      
-**              hDlg - Handle to the current window.
-**
-** Outputs:     
-**              None.
-**
-** Returns:     
-**              
-**              TRUE  - a connection to the GCN was successful.
-**              FALSE - a connectio nto the GCN was unsuccessful.
-**
-** Exceptions:  
-**              Displays error window if a connection to the GCN cannot be made.
-**
-** Side Effects:  
-**              Initializes and terminates the API.  Initializes vnode queue.
-**
-** History:
-**    22-Feb-2010 (Ralph Loen) Bug 123318
-**      Created.
-*/
-static BOOL BuildVnodeList(HWND hDlg, II_PTR envHndl)
-{
-    II_PTR            connHandle = (II_PTR)NULL;
-    II_PTR            tranHandle = (II_PTR)NULL;
-    IIAPI_CONNPARM    connParm;
-    IIAPI_AUTOPARM    autoparm;
-    IIAPI_WAITPARM    waitParm = { -1 };
-    IIAPI_DISCONNPARM disconnParm;
-    char  queryText[100];
-    char showGcText[] = "show global connection * * * * ";
-    char showPcText[] = "show private connection * * * * ";
-    char showGlFmt[] = "show global login %s";
-    char showPlFmt[] = "show private login %s";
-    char showGkFmt[] = "show global attribute %s " \
-        "authentication_mechanism kerberos";
-    char showPkFmt[] = "show private attribute %s " \
-        "authentication_mechanism kerberos";
-    VNODE_LIST *vnode_list;
-    QUEUE *q;
-
-    vnode_list = (VNODE_LIST *)MEreqmem(0,sizeof(VNODE_LIST),0,NULL);
-    STcopy("(LOCAL)", vnode_list->vnode);
-    vnode_list->hasUserName = TRUE;
-
-    QUinsert((QUEUE *)vnode_list, &vnode_qhead);
-
-    connParm.co_genParm.gp_callback = NULL;
-    connParm.co_genParm.gp_closure = NULL;
-    connParm.co_target =  NULL;
-    connParm.co_type   =  IIAPI_CT_NS;
-    connParm.co_connHandle = envHndl;
-    connParm.co_tranHandle = NULL;
-    connParm.co_username = NULL;
-    connParm.co_password = NULL;
-    connParm.co_timeout = -1;
-    
-    /*
-    ** Connect to the local GCN.
-    */
-    IIapi_connect( &connParm );
-    
-    while( connParm.co_genParm.gp_completed == FALSE )
-        IIapi_wait( &waitParm );
-
-    /*
-    ** Display error message if the GCN is unavailable.  If the user
-    ** clicks on the CANCEL button, return FALSE to the callser.
-    */
-    if (connParm.co_genParm.gp_status != IIAPI_ST_SUCCESS)
-    {
-        MessageBox(hDlg,
-            "Could not connect to Name Server.\nThe vnode list will not " \
-            "be visible.\n\nPlease start your Ingres installation.", 
-            "Name Server Connection Error", MB_OK | MB_ICONSTOP);
-        return FALSE;
-    }
-    
-    connHandle = connParm.co_connHandle;
-    tranHandle = connParm.co_tranHandle;
-
-    autoparm.ac_genParm.gp_callback = NULL;
-    autoparm.ac_genParm.gp_closure  = NULL;
-    autoparm.ac_connHandle = connHandle;
-    autoparm.ac_tranHandle = NULL;
-
-    IIapi_autocommit( &autoparm );
-
-    while( autoparm.ac_genParm.gp_completed == FALSE )
-       IIapi_wait( &waitParm );
-
-    tranHandle = autoparm.ac_tranHandle;
-    
-    BuildVnodeQueue(connHandle, tranHandle, showGcText, TRUE);
-    
-    BuildVnodeQueue(connHandle, tranHandle, showPcText, FALSE);
-    
-    for (q = vnode_qhead.q_prev; q != &vnode_qhead; 
-        q = q->q_prev)
-    {
-        vnode_list = (VNODE_LIST *)q;
-        /*
-        ** If the vnode has no entry in the login database,
-        ** check the attributes for Kerberos authentication.
-        ** If there is a Kerberos entry, or if the vnode has
-        ** a login attribute, mark hasUserName as TRUE so that
-        ** the "Prompt UID/PWD" box is automatically checked.
-        */
-        if (vnode_list->global)
-        {
-            STprintf(queryText, showGlFmt, vnode_list->vnode);
-            if (hasVnode(connHandle, tranHandle, queryText))
-                vnode_list->hasUserName = TRUE;
-            else
-            {
-                STprintf(queryText, showGkFmt, vnode_list->vnode);
-                if (hasVnode(connHandle, tranHandle, queryText))
-                    vnode_list->hasUserName = TRUE;
-            }
-        }
-        else
-        {
-            STprintf(queryText, showPlFmt, vnode_list->vnode);
-            if (hasVnode(connHandle, tranHandle, queryText))
-                vnode_list->hasUserName = TRUE;
-            else
-            {
-                STprintf(queryText, showPkFmt, vnode_list->vnode);
-                if (hasVnode(connHandle, tranHandle, queryText))
-                    vnode_list->hasUserName = TRUE;
-            }
-        }
-    }
-
-    /*
-    ** All done.  Disconnect.  The queue will be freed upon 
-    ** exit of this window.
-    */
-    disconnParm.dc_genParm.gp_callback = NULL;
-    disconnParm.dc_genParm.gp_closure = NULL;
-    disconnParm.dc_connHandle = connHandle;
-
-    IIapi_disconnect( &disconnParm );
-
-    while( disconnParm.dc_genParm.gp_completed == FALSE )
-        IIapi_wait( &waitParm );
-
-    connHandle = NULL;
-
-    return TRUE;
 }
