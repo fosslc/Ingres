@@ -349,6 +349,9 @@
 **         Add function definition odbc_hexdump().
 **     22-Apr-2010 (Ralph Loen) Bug 123614
 **         Remove unused IIGetPrivateProfileString().
+**     23-Apr-2010 (Ralph Loen) Bug 123629
+**         Added tDBC attributes browseConnectCalled and bcOutStr.  Added
+**         SQLSTATE SQL_01S00.
 */
 #ifndef _INC_IDMSODBC
 #define _INC_IDMSODBC
@@ -504,6 +507,7 @@ SQLINTEGER  INSTAPI SQLGetPrivateProfileString( LPCSTR, LPCSTR, LPCSTR,
 #define SQL_HY007       46
 #define SQL_01S07       47
 #define SQL_HY107       48
+#define SQL_01S00       49
 
 /*
 **  Make return code type equivalent for ODBC 2.1 and 2.5
@@ -1147,6 +1151,8 @@ typedef struct tDBC
 
     DWORD       dwDTCRMCookie;          /* MTS/DTC resource mgr cookie */
     CHAR        szDecimal[2];
+    BOOL        bcConnectCalled;
+    CHAR        *bcOutStr;
 }
  DBC;
 

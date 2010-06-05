@@ -134,6 +134,8 @@
 **    09-Mar-2010 (Ralph Loen) Bug 123392
 **          Add F_OD0171_IDS_ERR_NULL_PTR and SQLSTATE HY009 to the
 **          error table in ErrState().
+**     23-Apr-2010 (Ralph Loen) Bug 123629
+**          Add SQLSTATE SQL_01S00.
 */
 
 /*
@@ -1492,6 +1494,7 @@ RETCODE ErrState (UINT err, LPVOID lpv, ...)
     {
         SQL_01000, "01000", 0,
         SQL_01004, "01004", F_OD0072_IDS_ERR_TRUNCATION,
+        SQL_01S00, "01S00", F_OD0163_IDS_ERR_KEYWORD,
         SQL_01S02, "01S02", F_OD0057_IDS_ERR_OPTION_CHANGE,
         SQL_01S05, "01S05", F_OD0030_IDS_ERR_CANCEL_FREE,
         SQL_01S07, "01S07", F_OD0167_IDS_ERR_FRAC_TRUNC,

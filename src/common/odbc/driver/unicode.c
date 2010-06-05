@@ -190,6 +190,9 @@
 **          In ExecDirectOrPrepareW(), if the query string is greater than
 **          32K UCS2 or 16K UCS4 characters, convert to multi-byte in
 **          segments.
+**     23-Apr-2010 (Ralph Loen) Bug 123629
+**          In SQLBrowseConnectW(), don't invoke ResetDbc() if
+**          bcConnectCalled is set in the connection handle.
 */
 
 /*
@@ -1164,7 +1167,6 @@ static SQLRETURN SQL_API ExecDirectOrPrepareW(
     RETCODE    rc = SQL_SUCCESS;
     SQLINTEGER     cbWideSqlStrOrig=cbWideSqlStr; /*   save the original count */
     char       workbuffer[EXEC_DIRECT_UNICODE_WORKBUFFER_SIZE];
-    SQLWCHAR   saveWChar;
     SQLWCHAR   *pWSqlStr = szWideSqlStr;
 
     if (!LockStmt (pstmt)) return SQL_INVALID_HANDLE;
@@ -1995,7 +1997,8 @@ SQLRETURN SQL_API SQLBrowseConnectW(
     if (!LockDbc (pdbc)) return SQL_INVALID_HANDLE;
 
     ErrResetDbc (pdbc);
-    ResetDbc (pdbc);
+    if (!pdbc->bcConnectCalled)
+        ResetDbc (pdbc);
 
     rc = ConvertWCharToChar(pdbc,
                         szWideConnStrIn, cbWideConnStrIn,  /* source */

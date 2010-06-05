@@ -340,6 +340,11 @@
 **         Prior changes for Bug 123614 inadvertently deleted the 
 **         FileDoesExist() function for non-Windows.  Added FileDoesExist()
 **         for non-Windows.  Remove unused IIGetPrivateProfileString().
+**     23-Apr-2010 (Ralph Loen) Bug 123629
+**         Tightened up code for SQLBrowseConnect_InternalCall(): recognize
+**         first connection attempt, attempt connections on subsequent 
+**         attempts, remember prior connection specifications, and mark
+**         optional connection attributes with an asterisk.
 ** 
 */
 
@@ -399,7 +404,7 @@ char *getAltPath();
 char * getFileEntry(char *p, char * szToken, bool ignoreBracket);
 #endif
 static void         TranslatePWD(char * name, char * pwd);
-static VOID concatBrowseString(char *inputString, char *attr);
+static VOID concatBrowseString(char *inputString, char *attr, BOOL optional);
 
 typedef struct
 {
@@ -1233,6 +1238,11 @@ RETCODE SQL_API SQLDisconnect(
 ** History: 
 **    03-jul-06 (loera01)
 **      Created.
+**    23-Apr-2010 (Ralph Loen) Bug 123629
+**      Tightened up code: recognize first connection attempt, attempt 
+**      connections on subsequent attempts, remember prior connection 
+**      specifications, and mark optional connection attributes with an 
+**      asterisk.
 */ 
 
 SQLRETURN SQL_API SQLBrowseConnect(
@@ -1261,31 +1271,39 @@ SQLRETURN SQL_API SQLBrowseConnect_InternalCall(
 {
     LPDBC       pdbc  = (LPDBC)hdbc;
     CHAR     *  p;
-    UWORD       cb;
-    char        rgbWork[800];
-    BOOL        DSNFound=FALSE;
-    BOOL        ServerTypeFound=FALSE;
-    BOOL        ServerNameFound=FALSE;
-    BOOL        DriverFound=FALSE;
-    BOOL        DatabaseFound=FALSE;
-    BOOL        RoleFound=FALSE;
-    BOOL        GroupFound=FALSE; 
-    BOOL        RPwdFound=FALSE; 
-    BOOL        PWDFound=FALSE;
-    BOOL        UIDFound=FALSE;
-    BOOL        DBMS_PwdFound=FALSE;
-    RETCODE rc = SQL_NEED_DATA, rc2;
+    UWORD       cb = (cbConnStrIn == SQL_NTS) ? STlength ((char*)szConnStrIn) : 
+                cbConnStrIn;
+    BOOL        DSNFound= *pdbc->szDSN ? TRUE : FALSE;
+    BOOL        ServerTypeFound= *pdbc->szSERVERTYPE ? TRUE : FALSE;
+    BOOL        VnodeFound= *pdbc->szVNODE ? TRUE : FALSE;
+    BOOL        DriverFound= *pdbc->szDriver ? TRUE : FALSE;
+    BOOL        DatabaseFound= *pdbc->szDATABASE ? TRUE : FALSE;
+    BOOL        RoleFound= *pdbc->szRoleName ? TRUE : FALSE;
+    BOOL        GroupFound= *pdbc->szGroup ? TRUE : FALSE; 
+    BOOL        RPwdFound= *pdbc->szRolePWD ? TRUE : FALSE; 
+    BOOL        PWDFound= *pdbc->szPWD ? TRUE : FALSE;
+    BOOL        UIDFound= *pdbc->szUID ? TRUE : FALSE;
+    BOOL        DBMS_PwdFound= *pdbc->szDBMS_PWD ? TRUE : FALSE;
+    UWORD       badKeywordCount=0;
+    RETCODE rc;
     i4          i;
-
+ 
     if (!LockDbc (pdbc)) return SQL_INVALID_HANDLE;
 
     if (IItrace.fTrace >= ODBC_EX_TRACE)
-        TraceOdbc (SQL_API_SQLBROWSECONNECT, hdbc, szConnStrIn, cbConnStrIn, szConnStrOut,
-            cbConnStrOutMax, pcbConnStrOut);
+        TraceOdbc (SQL_API_SQLBROWSECONNECT, hdbc, szConnStrIn, cbConnStrIn, 
+            szConnStrOut, cbConnStrOutMax, pcbConnStrOut);
 
     ErrResetDbc (pdbc);        /* clear any errors on DBC */
-    ResetDbc (pdbc);
-    
+
+    if (!pdbc->bcConnectCalled)
+    {
+        ResetDbc (pdbc);
+        pdbc->bcOutStr = MEreqmem(0, cbConnStrOutMax + 1, TRUE, NULL);
+    }	
+    else
+        *pdbc->bcOutStr = '\0';
+
     /*
     **  Extract connect info from connect string, if any:
     */
@@ -1294,18 +1312,18 @@ SQLRETURN SQL_API SQLBrowseConnect_InternalCall(
         /*
         **  Copy connect string into a work area for strtok:
         */
-        cb = (UWORD)((cbConnStrIn == SQL_NTS) ? STlength ((char*)szConnStrIn) 
-                                              : cbConnStrIn);
-        if (cb < sizeof rgbWork)
-            p = rgbWork;
-        else
+        if (cb > cbConnStrOutMax)
         {
             rc = ErrState (SQL_HY001, pdbc, F_OD0015_IDS_WORKAREA);
+            MEfree((PTR)pdbc->bcOutStr);
+            pdbc->bcOutStr = NULL;
+            pdbc->bcConnectCalled = FALSE;
             UnlockDbc (pdbc);
             return rc;
         }
-        MEcopy (szConnStrIn, cb, p); /* copy conn string into work area */
-        p[cb] = '\0';                /* null term the work area */
+        p = szConnStrIn;
+        p[cb] = '\0';
+
         /*
         **  Parse connect string parms:
         */
@@ -1313,156 +1331,382 @@ SQLRETURN SQL_API SQLBrowseConnect_InternalCall(
 
         while (p)
         {
-            if (STbcompare (p, (i4)STlength(p), (char *) DSN, 
-                sizeof(DSN) - 1, TRUE) == 0)
-                DSNFound=TRUE;
+            if (STbcompare (p, (i4)STlength(p), (char *)DRIVER, 
+                sizeof DRIVER - 1, TRUE) == 0 &&
+                ! *pdbc->szDriver)
+            {
+                pdbc->fStatus |= DBC_DRIVER;
+                if (STindex(p, "{", 0) != NULL)
+                    STlcopy (p + sizeof DRIVER, pdbc->szDriver, 
+                        sizeof pdbc->szDriver - 1);
+                else
+                    STlcopy (p + (sizeof DRIVER - 1), pdbc->szDriver, 
+                        sizeof pdbc->szDriver - 1);
+
+                if ((p = STindex (pdbc->szDriver, "}", 0)) != NULL)
+                   *p = EOS;
+                DriverFound = TRUE;
+            }
+            else
+            if (STbcompare (p, (i4)STlength(p), (char *) DSN, sizeof DSN - 1, 
+                TRUE) == 0 && ! *pdbc->szDSN)
+            {
+                STlcopy (p + sizeof DSN - 1, pdbc->szDSN, 
+                    sizeof pdbc->szDSN - 1);
+                DSNFound = TRUE;
+                pdbc->cbDSN = STlength(pdbc->szDSN);
+            }
             else
             if (STbcompare (p, (i4)STlength(p), (char *) DATASOURCENAME, 
-                sizeof(DATASOURCENAME) - 1, TRUE)== 0)
-                DSNFound=TRUE;
+                sizeof DATASOURCENAME - 1, TRUE) == 0 &&
+                    ! *pdbc->szDSN)
+            {
+                STlcopy (p + sizeof DATASOURCENAME - 1, pdbc->szDSN, sizeof 
+                    pdbc->szDSN - 1);
+                DSNFound = TRUE;
+                pdbc->cbDSN = STlength(pdbc->szDSN);
+            }
             else
-            if (STbcompare (p, (i4)STlength(p), (char *) SERVERTYPE, 
-                sizeof(SERVERTYPE) - 1, TRUE) == 0)
-               ServerTypeFound=TRUE;
+            if (STbcompare (p, (i4)STlength(p), (char *) SERVERTYPE, sizeof 
+                    SERVERTYPE - 1, TRUE) == 0 && ! *pdbc->szSERVERTYPE)
+            {
+                STlcopy (p + sizeof SERVERTYPE - 1, pdbc->szSERVERTYPE, 
+                    sizeof pdbc->szSERVERTYPE - 1);
+                CVupper(pdbc->szSERVERTYPE);
+                ServerTypeFound=TRUE;
+            }
             else
             if (STbcompare (p, (i4)STlength(p), (char *) SERVERNAME, 
-                sizeof(SERVERNAME) - 1, TRUE) == 0)
-                ServerNameFound=TRUE;
+                sizeof SERVERNAME - 1, TRUE) == 0 && ! *pdbc->szVNODE)
+            {
+                STlcopy (p + sizeof SERVERNAME - 1, pdbc->szVNODE, 
+                    sizeof pdbc->szVNODE - 1);
+                VnodeFound = TRUE;
+            }
             else
             if (STbcompare (p, (i4)STlength(p), (char *) VNODE, 
-                sizeof(VNODE) - 1, TRUE) == 0)
-                ServerNameFound=TRUE;
+                sizeof VNODE - 1, TRUE) == 0 && ! *pdbc->szVNODE)
+            {
+                STlcopy (p + sizeof VNODE - 1, pdbc->szVNODE, 
+                    sizeof pdbc->szVNODE - 1);
+                VnodeFound = TRUE;
+            }
             else
             if (STbcompare (p, (i4)STlength(p), (char *) SRVR, 
-                sizeof(SRVR) - 1, TRUE) == 0)
-                ServerNameFound=TRUE;
-            else
-            if (STbcompare (p, (i4)STlength(p), (char *) DATABASE, 
-                sizeof(DATABASE) - 1, TRUE) == 0)
-                DatabaseFound=TRUE;
-            else
-            if (STbcompare (p, (i4)STlength(p), (char *) DB1, 
-                sizeof(DB1) - 1, TRUE) == 0)
-                DatabaseFound=TRUE;
-            else
-            if (STbcompare (p, (i4)STlength(p), (char *) UID, 
-                sizeof(UID) - 1, TRUE) == 0)
-                UIDFound=TRUE;
+                    sizeof SRVR - 1, TRUE) == 0 && ! *pdbc->szVNODE)
+            {
+                STlcopy (p + sizeof SRVR - 1, pdbc->szVNODE, 
+                    sizeof pdbc->szVNODE - 1);
+                VnodeFound = TRUE;
+            }
             else
             if (STbcompare (p, (i4)STlength(p), (char *) PWD, 
-                sizeof(PWD) - 1, TRUE) == 0)
-                PWDFound=TRUE;
+                sizeof PWD - 1, TRUE) == 0 && !*pdbc->szPWD)
+            {
+                STlcopy (p + sizeof PWD - 1, pdbc->szPWD, 
+                    sizeof pdbc->szPWD - 1);
+                PWDFound = TRUE;
+                pdbc->cbPWD = STlength(pdbc->szPWD);
+            }
             else
-            if (STbcompare (p, (i4)STlength(p), (char *) DRIVER, 
-                sizeof(DRIVER) - 1, TRUE) == 0)
-                DriverFound=TRUE;
+            if (STbcompare (p, (i4)STlength(p), (char *) UID, 
+                sizeof UID - 1, TRUE) == 0 && ! *pdbc->szUID)
+            {
+                STlcopy (p + sizeof UID - 1, pdbc->szUID, 
+                    sizeof pdbc->szUID - 1);
+                UIDFound = TRUE;
+                pdbc->cbUID = STlength(pdbc->szUID);
+            }
+            else
+            if (STbcompare (p, (i4)STlength(p), (char *) 
+                LOGONID, sizeof LOGONID - 1, TRUE) == 0 && 
+                    !*pdbc->szUID)
+            {
+                STlcopy (p + sizeof LOGONID - 1, pdbc->szUID, 
+                    sizeof pdbc->szUID - 1);
+                UIDFound = TRUE;
+                pdbc->cbUID = STlength(pdbc->szUID);
+            }
+            else
+            if (STbcompare (p, (i4)STlength(p), (char *) DATABASE, 
+                sizeof DATABASE - 1, TRUE) == 0 && ! *pdbc->szDATABASE) 
+            {
+                STlcopy (p + sizeof DATABASE - 1, pdbc->szDATABASE, 
+                    sizeof pdbc->szDATABASE - 1);
+                DatabaseFound = TRUE;
+            }
+            else
+            if (STbcompare (p, (i4)STlength(p), (char *) DB1, 
+                sizeof DB1 - 1, TRUE) == 0 && ! *pdbc->szDATABASE)
+            {
+                STlcopy (p + sizeof DB1 - 1, pdbc->szDATABASE, 
+                    sizeof pdbc->szDATABASE - 1);
+                DatabaseFound = TRUE;
+            }
             else
             if (STbcompare (p, (i4)STlength(p), (char *) ROLENAME, 
-                sizeof(ROLENAME) - 1, TRUE) == 0)
+                sizeof ROLENAME - 1, TRUE) == 0 && ! *pdbc->szRoleName)
             {
+                STlcopy (p + sizeof ROLENAME - 1, pdbc->szRoleName, 
+                    sizeof pdbc->szRoleName - 1);
                 RoleFound = TRUE; 
+                pdbc->cbRoleName = STlength(pdbc->szRoleName);
             }
             else
             if (STbcompare (p, (i4)STlength(p), (char *) ROLEPWD, 
-                sizeof(ROLEPWD) - 1, TRUE) == 0)
+                sizeof ROLEPWD - 1, TRUE) == 0  && ! *pdbc->szRolePWD)
             {
+                STlcopy (p + sizeof ROLEPWD - 1, pdbc->szRolePWD, 
+                    sizeof pdbc->szRolePWD - 1);
                 RPwdFound = TRUE; 
+                pdbc->cbRoleName = STlength(pdbc->szRolePWD);
             }
             else
             if (STbcompare (p, (i4)STlength(p), (char *)GROUP, 
-                sizeof(GROUP) - 1, TRUE) == 0)
+                sizeof GROUP - 1, TRUE) == 0  && ! *pdbc->szGroup)
             {
+                STlcopy (p + sizeof GROUP - 1, pdbc->szGroup, 
+                    sizeof pdbc->szGroup - 1);
                 GroupFound = TRUE; 
+                pdbc->cbGroup = STlength(pdbc->szGroup);
             }
             else
             if (STbcompare (p, (i4)STlength(p), (char *) DBMS_PWD, 
-                sizeof(DBMS_PWD) - 1, TRUE) == 0)
+                sizeof DBMS_PWD - 1, TRUE) == 0 && ! *pdbc->szDBMS_PWD)
+            {
+                STlcopy (p + sizeof DBMS_PWD - 1, pdbc->szDBMS_PWD, 
+                    sizeof pdbc->szDBMS_PWD - 1);
                 DBMS_PwdFound=TRUE;
-            
+                pdbc->cbDBMS_PWD = STlength(pdbc->szDBMS_PWD);
+            }
+            else
+			{
+				if (STindex (p, "=", 0))
+                    badKeywordCount++;           
+			}
+
             p = strtok (NULL, ";");
         }
     }
+    else
+    {
+        rc = ErrState (SQL_HY001, pdbc, F_OD0015_IDS_WORKAREA);
+        MEfree((PTR)pdbc->bcOutStr);
+        pdbc->bcOutStr = NULL;
+        pdbc->bcConnectCalled = FALSE;
+        UnlockDbc (pdbc);
+        return rc;
+    }
 
-    MEcopy (szConnStrIn, cb, rgbWork); /* copy conn string into work area */
-    rgbWork[cb] = '\0';                /* null term the work area */
-    p = &rgbWork[cb -1];
-    while (CMwhite(p)) CMprev(p, &rgbWork[STlength(rgbWork)]);
-    if (*p != ';')
-        STcat(rgbWork, ";");
+    /*
+    ** DriverFound can only be set FALSE at this point if:
+    **     1.  The DSN attribute was specified.
+    **     2.  SQLBrowseConnect() is driven by the CLI.  The CLI
+    **         loads the driver from %II_SYSTEM%\ingres\lib and
+    **         doesn't care what the driver name is.
+    ** Since the Driver attribute allows the driver to be loaded
+    ** in a non-CLI envinronment, the driver name is inferred.  
+    ** Pick any driver name other than the generic "Ingres" from 
+    ** the list of driver names, and fill szDriver, but don't bother
+    ** to put the driver name in the returned string.
+    */
+    if (!DriverFound)
+    {
+        i = 0;
+        while(DriverName[i] != NULL)
+        {
+            if (STbcompare (DriverName[i], 0, "Ingres", 0, TRUE))
+            {
+                STcopy(DriverName[i], pdbc->szDriver);
+                DriverFound = TRUE;
+                break;
+            }
+            i++;
+        }
+    }
+
+    if (!ServerTypeFound)
+    {
+        if (DSNFound)
+            STcat(pdbc->bcOutStr, "*");
+        STcat(pdbc->bcOutStr,SERVERTYPE);
+        STcat(pdbc->bcOutStr,"{");
+        i = 0;
+        while(ServerClass[i] != NULL)
+        {
+            STcat(pdbc->bcOutStr, ServerClass[i]);
+            STcat(pdbc->bcOutStr, ",");
+            i++;
+        }
+        p = &pdbc->bcOutStr[STlength(pdbc->bcOutStr)-1];
+        *p = '}';
+        STcat(pdbc->bcOutStr, ";");
+    }
+    if (!VnodeFound)
+    {
+        if (DSNFound)
+            STcat(pdbc->bcOutStr, "*");
+        STcat(pdbc->bcOutStr,SERVERNAME);
+        STcat(pdbc->bcOutStr,"[(LOCAL) || ?],");
+    }
+    if (!DatabaseFound)
+        concatBrowseString(pdbc->bcOutStr, (char *)DATABASE, 
+            DSNFound ? TRUE : FALSE);
+    if (!UIDFound)
+        concatBrowseString(pdbc->bcOutStr, (char *)UID, TRUE);
+    if (!PWDFound)
+        concatBrowseString(pdbc->bcOutStr, (char *)PWD, TRUE);
+    if (!RoleFound )
+        concatBrowseString(pdbc->bcOutStr, (char *)ROLENAME, TRUE);
+    if (!RPwdFound )
+        concatBrowseString(pdbc->bcOutStr, (char *)ROLEPWD, TRUE);
+    if (!GroupFound )
+        concatBrowseString(pdbc->bcOutStr, (char *)GROUP, TRUE);
+    if (!DBMS_PwdFound)
+        concatBrowseString(pdbc->bcOutStr, (char *)DBMS_PWD, TRUE);
+    
+    rc = GetChar (NULL, pdbc->bcOutStr, szConnStrOut, 
+        cbConnStrOutMax, pcbConnStrOut);
+
+    /*
+    ** Always return without connecting on the first iteration of
+    ** SQLBrowseConnect().
+    */
+    if (!pdbc->bcConnectCalled)
+    {
+        pdbc->bcConnectCalled = TRUE;
+        UnlockDbc(pdbc);
+        return (SQL_NEED_DATA);
+    }
+
+    /*
+    ** If not first iteration, check if minimum connection attributes
+    ** are specified.  Valid minimum attributes are:
+    **
+    **     1.  DSN without other attributes.
+    **     2.  Driver, ServerType, ServerName (vnode) and Database.
+    **
+    ** If insufficient connection attributes specified, return without
+    ** attempting a connection.
+    **  
+    */
+    if (!DriverFound || !VnodeFound || !ServerTypeFound || !DatabaseFound)
+    {
+        if (!DSNFound)
+        {
+            ErrState (SQL_01S00, pdbc, F_OD0163_IDS_ERR_KEYWORD);
+            UnlockDbc(pdbc);
+            return (SQL_NEED_DATA);
+        }
+    }
+
+    /*
+    ** Unrecognized attributes are a non-fatal error.
+    */
+    if (badKeywordCount)
+    {
+        ErrState (SQL_01S00, pdbc, F_OD0163_IDS_ERR_KEYWORD);
+        UnlockDbc(pdbc);
+        return (SQL_NEED_DATA);
+    }
+
+    /*
+    ** Now that sufficient attributes have been specified, assemble
+    ** the connection string for SQLDriverConnect() and attempt a 
+    ** connection.
+    */
 
     if (DSNFound)
     {
-        if (!ServerTypeFound)
-        {
-            STcat(rgbWork,SERVERTYPE);
-            STcat(rgbWork,"{");
-            i = 0;
-            while(ServerClass[i] != NULL)
-            {
-                STcat(rgbWork, ServerClass[i]);
-                STcat(rgbWork, ",");
-                i++;
-            }
-            p = &rgbWork[STlength(rgbWork)-1];
-            *p = '}';
-            STcat(rgbWork, ";");
-        }
-        if (!ServerNameFound)
-            concatBrowseString(rgbWork, (char *)SERVERNAME);
-        if (!DatabaseFound)
-            concatBrowseString(rgbWork, (char *)DATABASE);
-        if (!UIDFound)
-            concatBrowseString(rgbWork, (char *)UID);
-        if (!PWDFound)
-            concatBrowseString(rgbWork, (char *)PWD);
-        if (!DriverFound)
-        {
-            STcat(rgbWork,DRIVER);
-            STcat(rgbWork,"{");
-            i = 0;
-            while(DriverName[i] != NULL)
-            {
-                STcat(rgbWork, DriverName[i]);
-                STcat(rgbWork, ",");
-                i++;
-            }
-            p = &rgbWork[STlength(rgbWork)-1];
-            *p = '}';
-            STcat(rgbWork, ";");
-        }
-        if (!RoleFound )
-            concatBrowseString(rgbWork, (char *)ROLENAME);
-        if (!RPwdFound )
-            concatBrowseString(rgbWork, (char *)ROLEPWD);
-        if (!GroupFound )
-            concatBrowseString(rgbWork, (char *)GROUP);
-        if (!DBMS_PwdFound)
-            concatBrowseString(rgbWork, (char *)DBMS_PWD);
-        if (!(DSNFound && ServerTypeFound && ServerNameFound && DriverFound 
-            && DatabaseFound && RoleFound && GroupFound && RPwdFound && 
-            PWDFound && UIDFound && DBMS_PwdFound))
-        {
-            rc2 = GetChar (NULL, rgbWork, (CHAR*)szConnStrOut, cbConnStrOutMax, 
-                pcbConnStrOut);
-            if (rc2 == SQL_SUCCESS_WITH_INFO)
-            {
-                ErrState (SQL_01004, pdbc);
-                if (rc == SQL_SUCCESS) rc = rc2;
-            }
-            UnlockDbc (pdbc);
-            return rc;
-        }
+        STcopy(DSN, pdbc->bcOutStr);
+        STcat(pdbc->bcOutStr, pdbc->szDSN);
+        STcat(pdbc->bcOutStr, ";");
     }
+	else if (DriverFound)
+	{
+        STcopy(DRIVER, pdbc->bcOutStr);
+		STcat(pdbc->bcOutStr, pdbc->szDriver);
+		STcat(pdbc->bcOutStr, ";");
+	}
+    if (ServerTypeFound)
+    {
+        STcat(pdbc->bcOutStr, SERVERTYPE);
+        STcat(pdbc->bcOutStr, pdbc->szSERVERTYPE);
+        STcat(pdbc->bcOutStr, ";");
+    }
+
+    if (VnodeFound) 
+    {
+        STcat(pdbc->bcOutStr, SERVERNAME);
+        STcat(pdbc->bcOutStr, pdbc->szVNODE);
+        STcat(pdbc->bcOutStr, ";");
+    }
+
+    if (DatabaseFound)
+    {
+        STcat(pdbc->bcOutStr, DATABASE);
+        STcat(pdbc->bcOutStr, pdbc->szDATABASE);
+        STcat(pdbc->bcOutStr, ";");
+    }
+
+    if (UIDFound)
+    {
+        STcat(pdbc->bcOutStr, UID);
+        STcat(pdbc->bcOutStr, pdbc->szUID);
+        STcat(pdbc->bcOutStr, ";");
+    }
+
+    if (PWDFound)
+    {
+        STcat(pdbc->bcOutStr, PWD);
+        STcat(pdbc->bcOutStr, pdbc->szPWD);
+        STcat(pdbc->bcOutStr, ";");
+    }
+
+    if (GroupFound)
+    {
+        STcat(pdbc->bcOutStr, GROUP);
+        STcat(pdbc->bcOutStr, pdbc->szGroup);
+        STcat(pdbc->bcOutStr, ";");
+    }
+
+    if (RoleFound)
+    {
+        STcat(pdbc->bcOutStr, ROLENAME);
+        STcat(pdbc->bcOutStr, pdbc->szRoleName);
+        STcat(pdbc->bcOutStr, ";");
+    }
+
+    if (RPwdFound)
+    {
+        STcat(pdbc->bcOutStr, ROLEPWD);
+        STcat(pdbc->bcOutStr, pdbc->szRolePWD);
+        STcat(pdbc->bcOutStr, ";");
+    }
+
+    if (DBMS_PwdFound)
+    {
+        STcat(pdbc->bcOutStr, DBMS_PWD);
+        STcat(pdbc->bcOutStr, pdbc->szDBMS_PWD);
+        STcat(pdbc->bcOutStr, ";");
+    }
+
     UnlockDbc (pdbc);
     rc = SQLDriverConnect_InternalCall(
-                hdbc,
-                NULL,
-                szConnStrIn,
-                cbConnStrIn,
-                szConnStrOut,
-                cbConnStrOutMax,
-                pcbConnStrOut,
-                SQL_DRIVER_NOPROMPT);
+            hdbc,
+            NULL,
+            pdbc->bcOutStr,
+            STlength(pdbc->bcOutStr),
+            szConnStrOut,
+            cbConnStrOutMax,
+            pcbConnStrOut,
+            SQL_DRIVER_NOPROMPT);
+
+    LockDbc (pdbc);
+    MEfree((PTR)pdbc->bcOutStr);
+    pdbc->bcOutStr = NULL;
+    pdbc->bcConnectCalled = FALSE;
+    UnlockDbc(pdbc);
     return rc;
 }
 
@@ -1576,194 +1820,263 @@ RETCODE SQL_API SQLDriverConnect_InternalCall(
 
         while (p)
         {
-            if (STbcompare (p, (i4)STlength(p), (char *)DRIVER, sizeof DRIVER - 1, TRUE) == 0 &&
+            if (STbcompare (p, (i4)STlength(p), (char *)DRIVER, 
+                sizeof DRIVER - 1, TRUE) == 0 &&
                 !*pdbc->szDriver && !*pdbc->szDSN)
             {
                 pdbc->fStatus |= DBC_DRIVER;
-                STlcopy (p + sizeof DRIVER, pdbc->szDriver, sizeof pdbc->szDriver - 1);
-                if ((p = STindex (pdbc->szDriver, "}", 0)) != NULL) 
+                if (STindex(p, "{", 0) != NULL)
+                    STlcopy (p + sizeof DRIVER, pdbc->szDriver, 
+                        sizeof pdbc->szDriver - 1);
+                else
+                    STlcopy (p + (sizeof DRIVER - 1), pdbc->szDriver, 
+                        sizeof pdbc->szDriver - 1);
+
+                if ((p = STindex (pdbc->szDriver, "}", 0)) != NULL)
                    *p = EOS;
             }
             else
-            if (STbcompare (p, (i4)STlength(p), (char *) DSN, sizeof DSN - 1, TRUE) == 0 &&
-                !*pdbc->szDSN && !*pdbc->szDriver)
-                STlcopy (p + sizeof DSN - 1, pdbc->szDSN, sizeof pdbc->szDSN - 1);
+            if (STbcompare (p, (i4)STlength(p), (char *) DSN, sizeof DSN - 1, 
+                TRUE) == 0 && !*pdbc->szDSN && !*pdbc->szDriver)
+                STlcopy (p + sizeof DSN - 1, pdbc->szDSN, 
+                    sizeof pdbc->szDSN - 1);
             else
-            if (STbcompare (p, (i4)STlength(p), (char *) DATASOURCENAME, sizeof DATASOURCENAME - 1, TRUE) == 0 &&
-                !*pdbc->szDSN && !*pdbc->szDriver)
-                STlcopy (p + sizeof DATASOURCENAME - 1, pdbc->szDSN, sizeof pdbc->szDSN - 1);
+            if (STbcompare (p, (i4)STlength(p), (char *) DATASOURCENAME, 
+                sizeof DATASOURCENAME - 1, TRUE) == 0 &&
+                    !*pdbc->szDSN && !*pdbc->szDriver)
+                STlcopy (p + sizeof DATASOURCENAME - 1, pdbc->szDSN, sizeof 
+                    pdbc->szDSN - 1);
             else
-            if (STbcompare (p, (i4)STlength(p), (char *) SERVERTYPE, sizeof SERVERTYPE - 1, TRUE) == 0 && !*pdbc->szSERVERTYPE)
-               {STlcopy (p + sizeof SERVERTYPE - 1, pdbc->szSERVERTYPE, sizeof pdbc->szSERVERTYPE - 1);
+            if (STbcompare (p, (i4)STlength(p), (char *) SERVERTYPE, sizeof 
+                    SERVERTYPE - 1, TRUE) == 0 && !*pdbc->szSERVERTYPE)
+            {
+                STlcopy (p + sizeof SERVERTYPE - 1, pdbc->szSERVERTYPE, 
+                    sizeof pdbc->szSERVERTYPE - 1);
                 CVupper(pdbc->szSERVERTYPE);
                 SrvrTypeFound=TRUE;
-               }
+            }
             else
-            if (STbcompare (p, (i4)STlength(p), (char *) SERVERNAME, sizeof SERVERNAME - 1, TRUE) == 0 && !*pdbc->szVNODE)
-                STlcopy (p + sizeof SERVERNAME - 1, pdbc->szVNODE, sizeof pdbc->szVNODE - 1);
+            if (STbcompare (p, (i4)STlength(p), (char *) SERVERNAME, 
+                sizeof SERVERNAME - 1, TRUE) == 0 && !*pdbc->szVNODE)
+                    STlcopy (p + sizeof SERVERNAME - 1, pdbc->szVNODE, 
+                        sizeof pdbc->szVNODE - 1);
             else
-            if (STbcompare (p, (i4)STlength(p), (char *) VNODE, sizeof VNODE - 1, TRUE) == 0 && !*pdbc->szVNODE)
-                STlcopy (p + sizeof VNODE - 1, pdbc->szVNODE, sizeof pdbc->szVNODE - 1);
+            if (STbcompare (p, (i4)STlength(p), (char *) VNODE, 
+                sizeof VNODE - 1, TRUE) == 0 && !*pdbc->szVNODE)
+                STlcopy (p + sizeof VNODE - 1, pdbc->szVNODE, 
+                    sizeof pdbc->szVNODE - 1);
             else
-			if (STbcompare (p, (i4)STlength(p), (char *) SRVR, sizeof SRVR - 1, TRUE) == 0 && !*pdbc->szVNODE)
-                STlcopy (p + sizeof SRVR - 1, pdbc->szVNODE, sizeof pdbc->szVNODE - 1);
+            if (STbcompare (p, (i4)STlength(p), (char *) SRVR, 
+                    sizeof SRVR - 1, TRUE) == 0 && !*pdbc->szVNODE)
+                STlcopy (p + sizeof SRVR - 1, pdbc->szVNODE, 
+                    sizeof pdbc->szVNODE - 1);
             else
-            if (STbcompare (p, (i4)STlength(p), (char *) PWD, sizeof PWD - 1, TRUE) == 0 && !*pdbc->szPWD)
-                STlcopy (p + sizeof PWD - 1, pdbc->szPWD, sizeof pdbc->szPWD - 1);
+            if (STbcompare (p, (i4)STlength(p), (char *) PWD, 
+                sizeof PWD - 1, TRUE) == 0 && !*pdbc->szPWD)
+                    STlcopy (p + sizeof PWD - 1, pdbc->szPWD, 
+                        sizeof pdbc->szPWD - 1);
             else
-            if (STbcompare (p, (i4)STlength(p), (char *) DBMS_PWD, sizeof DBMS_PWD - 1, TRUE) == 0 && !*pdbc->szDBMS_PWD)
-                STlcopy (p + sizeof DBMS_PWD - 1, pdbc->szDBMS_PWD, sizeof pdbc->szDBMS_PWD - 1);
+            if (STbcompare (p, (i4)STlength(p), (char *) DBMS_PWD, 
+                sizeof DBMS_PWD - 1, TRUE) == 0 && !*pdbc->szDBMS_PWD)
+                STlcopy (p + sizeof DBMS_PWD - 1, pdbc->szDBMS_PWD, 
+                    sizeof pdbc->szDBMS_PWD - 1);
             else
-            if (STbcompare (p, (i4)STlength(p), (char *) TIME, sizeof TIME - 1,TRUE) == 0 && !*pdbc->szTIME)
-                STlcopy (p + sizeof TIME - 1, pdbc->szTIME, sizeof pdbc->szTIME - 1);
+            if (STbcompare (p, (i4)STlength(p), (char *) TIME, 
+                sizeof TIME - 1,TRUE) == 0 && !*pdbc->szTIME)
+                STlcopy (p + sizeof TIME - 1, pdbc->szTIME, 
+                    sizeof pdbc->szTIME - 1);
             else
-            if (STbcompare (p, (i4)STlength(p), (char *) UID, sizeof UID - 1, TRUE) == 0 && !*pdbc->szUID)
-                STlcopy (p + sizeof UID - 1, pdbc->szUID, sizeof pdbc->szUID - 1);
-			else
-			if (STbcompare (p, (i4)STlength(p), (char *) LOGONID, sizeof LOGONID - 1, TRUE) == 0 && !*pdbc->szUID)
-                STlcopy (p + sizeof LOGONID - 1, pdbc->szUID, sizeof pdbc->szUID - 1);
-			else
-			if (STbcompare (p, (i4)STlength(p), (char *) DATABASE, sizeof DATABASE - 1, TRUE) == 0 && !*pdbc->szDATABASE)
-                STlcopy (p + sizeof DATABASE - 1, pdbc->szDATABASE, sizeof pdbc->szDATABASE - 1);
-			else
-			if (STbcompare (p, (i4)STlength(p), (char *) DB1, sizeof DB1 - 1, TRUE) == 0 && !*pdbc->szDATABASE)
-                STlcopy (p + sizeof DB1 - 1, pdbc->szDATABASE, sizeof pdbc->szDATABASE - 1);
-			else
- 			if (STbcompare (p, (i4)STlength(p), (char *) ROLENAME, sizeof ROLENAME - 1, TRUE) == 0 && !*pdbc->szRoleName)
-			{
-                 STlcopy (p + sizeof ROLENAME - 1, pdbc->szRoleName, sizeof pdbc->szRoleName - 1);
-				RoleFound = TRUE; /*Role has been found in the connection string */
-			}
-			else
-			if (STbcompare (p, (i4)STlength(p), (char *) ROLEPWD, sizeof ROLEPWD - 1, TRUE) == 0 && !*pdbc->szRolePWD)
-			{	
-                STlcopy (p + sizeof ROLEPWD - 1, pdbc->szRolePWD, sizeof pdbc->szRolePWD - 1);
+            if (STbcompare (p, (i4)STlength(p), (char *) UID, 
+                sizeof UID - 1, TRUE) == 0 && !*pdbc->szUID)
+                STlcopy (p + sizeof UID - 1, pdbc->szUID, 
+                    sizeof pdbc->szUID - 1);
+            else
+            if (STbcompare (p, (i4)STlength(p), (char *) 
+                LOGONID, sizeof LOGONID - 1, TRUE) == 0 && 
+                    !*pdbc->szUID)
+                STlcopy (p + sizeof LOGONID - 1, pdbc->szUID, 
+                    sizeof pdbc->szUID - 1);
+            else
+            if (STbcompare (p, (i4)STlength(p), (char *) DATABASE, 
+                sizeof DATABASE - 1, TRUE) == 0 && !*pdbc->szDATABASE)
+                STlcopy (p + sizeof DATABASE - 1, pdbc->szDATABASE, 
+                    sizeof pdbc->szDATABASE - 1);
+            else
+            if (STbcompare (p, (i4)STlength(p), (char *) DB1, 
+                sizeof DB1 - 1, TRUE) == 0 && !*pdbc->szDATABASE)
+                STlcopy (p + sizeof DB1 - 1, pdbc->szDATABASE, 
+                    sizeof pdbc->szDATABASE - 1);
+            else
+            if (STbcompare (p, (i4)STlength(p), (char *) ROLENAME, 
+                sizeof ROLENAME - 1, TRUE) == 0 && !*pdbc->szRoleName)
+            {
+                STlcopy (p + sizeof ROLENAME - 1, pdbc->szRoleName, 
+                    sizeof pdbc->szRoleName - 1);
+                RoleFound = TRUE; /*Role has been found in the 
+                                    connection string */
+            }
+            else
+            if (STbcompare (p, (i4)STlength(p), (char *) ROLEPWD, 
+                sizeof ROLEPWD - 1, TRUE) == 0 && !*pdbc->szRolePWD)
+            {	
+                STlcopy (p + sizeof ROLEPWD - 1, pdbc->szRolePWD, 
+                    sizeof pdbc->szRolePWD - 1);
                 pdbc->cbRolePWD  = (UWORD)STlength (pdbc->szRolePWD);
-				RPwdFound = TRUE; /*Role PWD has been found in the connection string */
-			}
-			else
-			if (STbcompare (p, (i4)STlength(p), (char *)GROUP, sizeof GROUP - 1, TRUE) == 0     && !*pdbc->szGroup)
-                        {
-                             STlcopy (p + sizeof GROUP - 1,pdbc->szGroup, sizeof pdbc->szGroup - 1);
-                             pdbc->cbGroup  = STlength (pdbc->szGroup);
-			     GroupFound = TRUE; /* Group ID has been found in the connection string */
-                        }
-			else  /* support the undocumented Intersolv format -G options */
-			if (STbcompare (p, (i4)STlength(p), (char *) OPTSG, sizeof OPTSG - 1, TRUE) == 0    && !*pdbc->szGroup)
-                STlcopy (p + sizeof OPTSG - 1, pdbc->szGroup, sizeof pdbc->szGroup - 1);
-			else
-			if (STbcompare (p, (i4)STlength(p), (char *) OPTIONSG, sizeof OPTIONSG - 1, TRUE) == 0  && !*pdbc->szGroup)
-                STlcopy (p + sizeof OPTIONSG - 1, pdbc->szGroup, sizeof pdbc->szGroup - 1);
-			else
-			if (STbcompare (p, (i4)STlength(p), (char *) BLANKDATE, sizeof BLANKDATE - 1, TRUE) == 0  &&
-			    !(pdbc->fOptionsSet & OPT_BLANKDATEisNULL))
-			   {  pdbc->fOptionsSet|= OPT_BLANKDATEisNULL;
-			      q = p + sizeof BLANKDATE - 1;
-			      if (STbcompare (q, 4, "NULL", 4, TRUE) == 0)
-			         pdbc->fOptions |= OPT_BLANKDATEisNULL;
-			   }
-			else
-			if (STbcompare (p, (i4)STlength(p), (char *) DATE1582, sizeof DATE1582 - 1, TRUE) == 0  &&
-			    !(pdbc->fOptionsSet & OPT_DATE1582isNULL))
-			   {  pdbc->fOptionsSet|= OPT_DATE1582isNULL;
-			      q = p + sizeof DATE1582 - 1;
-			      if (STbcompare (q, 4, "NULL", 4, TRUE) == 0)
-			         pdbc->fOptions |= OPT_DATE1582isNULL;
-			   }
-			else
-			if (STbcompare (p, (i4)STlength(p), (char *) CATCONNECT, sizeof CATCONNECT - 1, TRUE) == 0  &&
-			    !(pdbc->fOptionsSet & OPT_CATCONNECT))
-			   {  pdbc->fOptionsSet|= OPT_CATCONNECT;
-			      q = p + sizeof CATCONNECT - 1;
-			      if (*q == 'Y'  ||  *q == 'y')
-			         pdbc->fOptions |= OPT_CATCONNECT;
-			   }
-			else
-			if (STbcompare (p, (i4)STlength(p), (char *) SELECTLOOPS, sizeof SELECTLOOPS - 1, TRUE) == 0  &&
-			    !(pdbc->fOptionsSet & OPT_CURSOR_LOOP))
-			   {  pdbc->fOptionsSet|= OPT_CURSOR_LOOP;
-			      q = p + sizeof SELECTLOOPS - 1;
-			      if (*q == 'N'  ||  *q == 'n')
-			         pdbc->fOptions |= OPT_CURSOR_LOOP;
-			   }
-			else
-			if (STbcompare (p, (i4)STlength(p), (char *) NUMOVERFLOW, sizeof NUMOVERFLOW - 1, TRUE) == 0  &&
-			    !(pdbc->fOptionsSet & OPT_NUMOVERFLOW))
-			   {  pdbc->fOptionsSet|= OPT_NUMOVERFLOW;
-			      q = p + sizeof NUMOVERFLOW - 1;
-			      if (*q == 'I'  ||  *q == 'i')
-			         pdbc->fOptions |= OPT_NUMOVERFLOW;
-			   }
-			else
-			if (STbcompare (p, (i4)STlength(p), (char *) STRINGTRUNCATION, sizeof STRINGTRUNCATION - 1, TRUE) == 0  &&
-			    !(pdbc->fOptionsSet & OPT_STRINGTRUNCATION))
-                        {  
-                            pdbc->fOptionsSet|= OPT_STRINGTRUNCATION;
-			    q = p + sizeof STRINGTRUNCATION - 1;
-			    if (*q == 'Y'  ||  *q == 'y')
-			    pdbc->fOptions |= OPT_STRINGTRUNCATION;
-                        }
-			else
-			if (STbcompare (p, (i4)STlength(p), (char *) SENDDATETIMEASINGRESDATE, sizeof SENDDATETIMEASINGRESDATE - 1, TRUE) == 0  &&
-			    !(pdbc->fOptionsSet & OPT_INGRESDATE))
-                        {  
-                            pdbc->fOptionsSet|= OPT_INGRESDATE;
-			    q = p + sizeof SENDDATETIMEASINGRESDATE - 1;
-			    if (*q == 'Y'  ||  *q == 'y')
-                                pdbc->fOptions |= OPT_INGRESDATE;
-                        }
-			else
-			if (STbcompare (p, (i4)STlength(p), (char *) CATSCHEMANULL, sizeof CATSCHEMANULL - 1, TRUE) == 0  &&
-			    !(pdbc->fOptionsSet & OPT_CATSCHEMA_IS_NULL))
-			   {  pdbc->fOptionsSet|= OPT_CATSCHEMA_IS_NULL;
-			      q = p + sizeof CATSCHEMANULL - 1;
-			      if (*q == 'Y'  ||  *q == 'y')
-			         pdbc->fOptions |= OPT_CATSCHEMA_IS_NULL;
-			   }
-		    else
-			if (STbcompare (p, (i4)STlength(p), (char *) CONVERTINT8TOINT4, sizeof CONVERTINT8TOINT4 - 1, TRUE) == 0  &&
-			    !(pdbc->fOptionsSet & OPT_CONVERTINT8TOINT4))
-			   {  pdbc->fOptionsSet|= OPT_CONVERTINT8TOINT4;
-			      q = p + sizeof CONVERTINT8TOINT4 - 1;
-			      if (*q == 'Y'  ||  *q == 'y')
-			         pdbc->fOptions |= OPT_CONVERTINT8TOINT4;
-			   }
-
-		    else
-			if (STbcompare (p, (i4)STlength(p), (char *) DISABLEUNDERSCORE, sizeof DISABLEUNDERSCORE - 1, TRUE) == 0  &&
-			    !(pdbc->fOptionsSet & OPT_DISABLEUNDERSCORE))
-			   {  pdbc->fOptionsSet|= OPT_DISABLEUNDERSCORE;
-			      q = p + sizeof DISABLEUNDERSCORE - 1;
-			      if (*q == 'Y'  ||  *q == 'y')
-			         pdbc->fOptions |= OPT_DISABLEUNDERSCORE;
-			   }
-
-		    else
-			if (STbcompare (p, (i4)STlength(p), (char *) ALLOWUPDATE, sizeof ALLOWUPDATE - 1, TRUE) == 0  &&
-			    !(pdbc->fOptionsSet & OPT_ALLOWUPDATE))
-			   {  pdbc->fOptionsSet|= OPT_ALLOWUPDATE;
-			      q = p + sizeof ALLOWUPDATE - 1;
-			      if (*q == 'Y'  ||  *q == 'y')
-			         pdbc->fOptions |= OPT_ALLOWUPDATE;
-			   }
-
-		    else
-			if (STbcompare (p, (i4)STlength(p), (char *) DEFAULTTOCHAR, sizeof DEFAULTTOCHAR - 1, TRUE) == 0  &&
-			    !(pdbc->fOptionsSet & OPT_DEFAULTTOCHAR))
-			   {  pdbc->fOptionsSet|= OPT_DEFAULTTOCHAR;
-			      q = p + sizeof DEFAULTTOCHAR - 1;
-			      if (*q == 'Y'  ||  *q == 'y')
-			         pdbc->fOptions |= OPT_DEFAULTTOCHAR;
-			   }
-		    else
-			if (STbcompare (p, (i4)STlength(p), (char *) SUPPORTIIDECIMAL, sizeof SUPPORTIIDECIMAL - 1, TRUE) == 0  &&
-			    !(pdbc->fOptionsSet & OPT_DECIMALPT))
-			   {  
-                  pdbc->fOptionsSet |= OPT_DECIMALPT;
-			      q = p + sizeof SUPPORTIIDECIMAL - 1;
-			      if (*q == 'Y'  ||  *q == 'y')
-			         pdbc->fOptions |= OPT_DECIMALPT;
-			   }
+                RPwdFound = TRUE; /* Role PWD has been found in 
+                                    the connection string */
+            }
+            else
+            if (STbcompare (p, (i4)STlength(p), (char *)GROUP, 
+                sizeof GROUP - 1, TRUE) == 0     && !*pdbc->szGroup)
+            {
+                STlcopy (p + sizeof GROUP - 1,pdbc->szGroup, 
+                    sizeof pdbc->szGroup - 1);
+                pdbc->cbGroup  = STlength (pdbc->szGroup);
+                GroupFound = TRUE; /* Group ID has been found in 
+                                    the connection string */
+            }
+            else  /* support the undocumented Intersolv format -G options */
+            if (STbcompare (p, (i4)STlength(p), (char *) OPTSG, 
+                sizeof OPTSG - 1, TRUE) == 0    && !*pdbc->szGroup)
+                STlcopy (p + sizeof OPTSG - 1, pdbc->szGroup, 
+                    sizeof pdbc->szGroup - 1);
+            else
+            if (STbcompare (p, (i4)STlength(p), (char *) OPTIONSG, 
+                sizeof OPTIONSG - 1, TRUE) == 0  && !*pdbc->szGroup)
+                STlcopy (p + sizeof OPTIONSG - 1, pdbc->szGroup, 
+                    sizeof pdbc->szGroup - 1);
+            else
+            if (STbcompare (p, (i4)STlength(p), (char *) BLANKDATE, 
+                sizeof BLANKDATE - 1, TRUE) == 0  &&
+                    !(pdbc->fOptionsSet & OPT_BLANKDATEisNULL))
+            {  
+                pdbc->fOptionsSet|= OPT_BLANKDATEisNULL;
+                q = p + sizeof BLANKDATE - 1;
+                if (STbcompare (q, 4, "NULL", 4, TRUE) == 0)
+                    pdbc->fOptions |= OPT_BLANKDATEisNULL;
+            }
+            else
+            if (STbcompare (p, (i4)STlength(p), (char *) DATE1582, 
+                sizeof DATE1582 - 1, TRUE) == 0  &&
+                    !(pdbc->fOptionsSet & OPT_DATE1582isNULL))
+            {  
+                pdbc->fOptionsSet|= OPT_DATE1582isNULL;
+                q = p + sizeof DATE1582 - 1;
+                if (STbcompare (q, 4, "NULL", 4, TRUE) == 0)
+                    pdbc->fOptions |= OPT_DATE1582isNULL;
+            }
+            else
+            if (STbcompare (p, (i4)STlength(p), (char *) CATCONNECT, 
+                sizeof CATCONNECT - 1, TRUE) == 0  &&
+                    !(pdbc->fOptionsSet & OPT_CATCONNECT))
+            {  
+                pdbc->fOptionsSet|= OPT_CATCONNECT;
+                q = p + sizeof CATCONNECT - 1;
+                if (*q == 'Y'  ||  *q == 'y')
+                    pdbc->fOptions |= OPT_CATCONNECT;
+            }
+            else
+            if (STbcompare (p, (i4)STlength(p), (char *) SELECTLOOPS, 
+                sizeof SELECTLOOPS - 1, TRUE) == 0  &&
+                    !(pdbc->fOptionsSet & OPT_CURSOR_LOOP))
+            {  
+                pdbc->fOptionsSet|= OPT_CURSOR_LOOP;
+                q = p + sizeof SELECTLOOPS - 1;
+                if (*q == 'N'  ||  *q == 'n')
+                    pdbc->fOptions |= OPT_CURSOR_LOOP;
+            }
+            else
+            if (STbcompare (p, (i4)STlength(p), (char *) NUMOVERFLOW, 
+                sizeof NUMOVERFLOW - 1, TRUE) == 0  &&
+                !(pdbc->fOptionsSet & OPT_NUMOVERFLOW))
+            {  
+                pdbc->fOptionsSet|= OPT_NUMOVERFLOW;
+                q = p + sizeof NUMOVERFLOW - 1;
+                if (*q == 'I'  ||  *q == 'i')
+                    pdbc->fOptions |= OPT_NUMOVERFLOW;
+            }
+            else
+            if (STbcompare (p, (i4)STlength(p), 
+                (char *) STRINGTRUNCATION, sizeof STRINGTRUNCATION - 1, 
+                    TRUE) == 0  &&
+                        !(pdbc->fOptionsSet & OPT_STRINGTRUNCATION))
+            {  
+                pdbc->fOptionsSet|= OPT_STRINGTRUNCATION;
+                q = p + sizeof STRINGTRUNCATION - 1;
+                if (*q == 'Y'  ||  *q == 'y')
+                    pdbc->fOptions |= OPT_STRINGTRUNCATION;
+            }
+            else
+            if (STbcompare (p, (i4)STlength(p), (char *) 
+                SENDDATETIMEASINGRESDATE, sizeof SENDDATETIMEASINGRESDATE - 1, 
+                    TRUE) == 0  &&
+                        !(pdbc->fOptionsSet & OPT_INGRESDATE))
+            {  
+                pdbc->fOptionsSet|= OPT_INGRESDATE;
+                q = p + sizeof SENDDATETIMEASINGRESDATE - 1;
+                if (*q == 'Y'  ||  *q == 'y')
+                    pdbc->fOptions |= OPT_INGRESDATE;
+            }
+            else
+            if (STbcompare (p, (i4)STlength(p), (char *) CATSCHEMANULL, 
+                    sizeof CATSCHEMANULL - 1, TRUE) == 0  &&
+                        !(pdbc->fOptionsSet & OPT_CATSCHEMA_IS_NULL))
+            {  
+                pdbc->fOptionsSet|= OPT_CATSCHEMA_IS_NULL;
+                q = p + sizeof CATSCHEMANULL - 1;
+                  if (*q == 'Y'  ||  *q == 'y')
+                     pdbc->fOptions |= OPT_CATSCHEMA_IS_NULL;
+            }
+            else
+            if (STbcompare (p, (i4)STlength(p), (char *) CONVERTINT8TOINT4, 
+                sizeof CONVERTINT8TOINT4 - 1, TRUE) == 0  &&
+                !(pdbc->fOptionsSet & OPT_CONVERTINT8TOINT4))
+            {  
+                pdbc->fOptionsSet|= OPT_CONVERTINT8TOINT4;
+                q = p + sizeof CONVERTINT8TOINT4 - 1;
+                if (*q == 'Y'  ||  *q == 'y')
+                    pdbc->fOptions |= OPT_CONVERTINT8TOINT4;
+            }
+            else
+            if (STbcompare (p, (i4)STlength(p), (char *) DISABLEUNDERSCORE, 
+                sizeof DISABLEUNDERSCORE - 1, TRUE) == 0  &&
+                !(pdbc->fOptionsSet & OPT_DISABLEUNDERSCORE))
+            {  
+                pdbc->fOptionsSet|= OPT_DISABLEUNDERSCORE;
+                q = p + sizeof DISABLEUNDERSCORE - 1;
+                if (*q == 'Y'  ||  *q == 'y')
+                    pdbc->fOptions |= OPT_DISABLEUNDERSCORE;
+            }
+            else
+            if (STbcompare (p, (i4)STlength(p), (char *) ALLOWUPDATE, 
+                sizeof ALLOWUPDATE - 1, TRUE) == 0  &&
+                    !(pdbc->fOptionsSet & OPT_ALLOWUPDATE))
+            {  
+                pdbc->fOptionsSet|= OPT_ALLOWUPDATE;
+                q = p + sizeof ALLOWUPDATE - 1;
+                if (*q == 'Y'  ||  *q == 'y')
+                    pdbc->fOptions |= OPT_ALLOWUPDATE;
+            }
+            else
+            if (STbcompare (p, (i4)STlength(p), (char *) DEFAULTTOCHAR, 
+                sizeof DEFAULTTOCHAR - 1, TRUE) == 0  &&
+                    !(pdbc->fOptionsSet & OPT_DEFAULTTOCHAR))
+            {  
+               pdbc->fOptionsSet|= OPT_DEFAULTTOCHAR;
+                q = p + sizeof DEFAULTTOCHAR - 1;
+                if (*q == 'Y'  ||  *q == 'y')
+                pdbc->fOptions |= OPT_DEFAULTTOCHAR;
+            }
+            else
+            if (STbcompare (p, (i4)STlength(p), (char *) SUPPORTIIDECIMAL, 
+                sizeof SUPPORTIIDECIMAL - 1, TRUE) == 0  &&
+                    !(pdbc->fOptionsSet & OPT_DECIMALPT))
+            {  
+                pdbc->fOptionsSet |= OPT_DECIMALPT;
+                q = p + sizeof SUPPORTIIDECIMAL - 1;
+                if (*q == 'Y'  ||  *q == 'y')
+                    pdbc->fOptions |= OPT_DECIMALPT;
+            }
 
             p = strtok (NULL, ";");
         }
@@ -1771,8 +2084,8 @@ RETCODE SQL_API SQLDriverConnect_InternalCall(
     }
 
 	if (!SrvrTypeFound)
-			SQLGetPrivateProfileString (pdbc->szDSN,"ServerType","",pdbc->szSERVERTYPE, 
-			                   sizeof(pdbc->szSERVERTYPE),ODBC_INI);
+            SQLGetPrivateProfileString (pdbc->szDSN,"ServerType","",
+                pdbc->szSERVERTYPE, sizeof(pdbc->szSERVERTYPE),ODBC_INI);
 	if (!RoleFound)
 			SQLGetPrivateProfileString (pdbc->szDSN,"RoleName","",pdbc->szRoleName, 
 			                   sizeof(pdbc->szRoleName),ODBC_INI);
@@ -2342,6 +2655,12 @@ RETCODE AllocConnect(LPENV  penv, LPDBC  *ppdbc)
     ** if this exists in iidbcapabilities.
     */
     pdbc->max_decprec = 31;
+
+    /*
+    ** Indicate that SQLBrowseConnect() has not yet been called.
+    */
+    pdbc->bcConnectCalled = FALSE;
+    pdbc->bcOutStr = NULL;
 
     return (SQL_SUCCESS);
 }
@@ -3007,6 +3326,8 @@ VOID ResetDbc (LPDBC pdbc)
     MEfill (sizeof pdbc->szRoleName, 0, pdbc->szRoleName);
     MEfill (sizeof pdbc->szRolePWD, 0, pdbc->szRolePWD);
     MEfill (sizeof pdbc->szGroup,   0, pdbc->szGroup);
+    pdbc->bcConnectCalled = FALSE;
+    pdbc->bcOutStr = NULL;
     return;
 }
 
@@ -4079,10 +4400,19 @@ char * getFileEntry(char *p, char * szToken, bool ignoreBracket)
     return(p);
 }
 #endif /*not NT_GENERIC */
-static VOID concatBrowseString(char *inputString, char *attr)
+static VOID concatBrowseString(char *inputString, char *attr, BOOL optional)
 {
-    STcat(inputString, attr);
-    STcat(inputString, "?;");
+    u_i2 len = STlength(inputString);
+
+    if (optional)
+    {
+        inputString[len] = '*';
+        len++;
+    }
+    MEcopy(attr, STlength(attr), &inputString[len]);
+	len += STlength(attr);
+    MEcopy("?;\0", 3, &inputString[len]);
+
 }
 
 /*
