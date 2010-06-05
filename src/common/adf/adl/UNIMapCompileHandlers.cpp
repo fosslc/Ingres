@@ -57,6 +57,8 @@
 **	   quiet compiler warnings.
 **	   Also add version specific definitions of parser funtions to
 **	   allow building against Xerces 2.x and 3.x
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Need to add 'extern C' since ST_fvp is defined in a c file.
 */
 /*
  * The Apache Software License, Version 1.1
@@ -123,6 +125,9 @@ using namespace std;
 #else
 #include <iostream.h>
 #endif
+
+extern "C" 
+{
 # include <compat.h>
 # include <cv.h>
 # include <er.h>
@@ -141,6 +146,7 @@ using namespace std;
 # ifdef max
 # undef max
 # endif /*max*/
+}
 
 #include <xercesc/util/XMLUni.hpp>
 #include <xercesc/util/XMLUniDefs.hpp>

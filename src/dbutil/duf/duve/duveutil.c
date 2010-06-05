@@ -19,6 +19,7 @@
 #include    <duve.h>
 #include    <dudbms.h>
 #include    <cui.h>	
+#include    <cv.h>
 
 /**
 **
@@ -87,6 +88,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 **/
 
 

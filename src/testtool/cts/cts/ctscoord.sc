@@ -37,6 +37,8 @@ NEEDLIBS = CTSLIB LIBINGRES
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 EXEC SQL INCLUDE SQLCA;
 EXEC SQL INCLUDE SQLDA;
@@ -49,6 +51,7 @@ EXEC SQL INCLUDE SQLDA;
 # include       <si.h>
 # include       <st.h>
 # include	"trl.h"
+# include	<cv.h>
 
 # define	ERR_DESTROY	5202
 # define	ERR_RETINTO	2135

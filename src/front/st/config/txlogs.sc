@@ -208,6 +208,8 @@
 **          when calling LOexist().
 **      30-Mar-2010 (hanal04) Bug 123491
 **          Renamed "Insert" menu option to "AddLocation".
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 
 # include	<compat.h>
@@ -246,6 +248,7 @@
 # include	<cv.h>
 # include	"cr.h"
 # include	"config.h"
+# include	<cv.h>
 
 # define TX_MIN_LOG_FILE_MB 32
 

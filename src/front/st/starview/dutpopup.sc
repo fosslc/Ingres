@@ -13,6 +13,7 @@
 #include    <pc.h>
 EXEC SQL INCLUDE 'dut.sh';
 EXEC SQL INCLUDE SQLCA;
+#include    <cv.h>
 
 #include    "duustrings.h"
 
@@ -93,6 +94,8 @@ EXEC SQL INCLUDE SQLCA;
 **	24-Nov-2009 (frima01) Bug 122490
 **	    Added include of cv.h and pc.h plus function return types
 **	    to eliminate gcc 4.3 warnings.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 **/
 
 

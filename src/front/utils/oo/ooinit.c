@@ -19,6 +19,7 @@
 # include	"ooldef.h"
 #include	<ooproc.h>
 #include	"eroo.h"
+# include	<cv.h>
 
 /**
 ** Name:	ooinit.c -	Object Manager Initialization Module.
@@ -79,6 +80,8 @@
 **          environment variable II_OO_TABLE_SIZE has been added, and if
 **          defined greater than OOTABLESIZE, the new value will be used.
 **          (45781)
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 **/
 
 /* History:

@@ -91,6 +91,8 @@
 **         SIR 123296
 **         Add LSB option, writable files are stored under ADMIN, logs under
 **         LOG and read-only under FILES location.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 
 /*
@@ -120,6 +122,7 @@ DEST =		utility
 # include <erst.h>
 # include <cv.h>
 # include "cr.h"
+# include <cv.h>
 
 GLOBALDEF char		change_log_buf[ MAX_LOC + 1 ];	
 GLOBALDEF FILE          *change_log_fp;

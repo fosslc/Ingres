@@ -18,6 +18,7 @@
 # include	<ug.h>
 # include	<cv.h>
 # include	<er.h>
+# include	<cv.h>
 
 /*
 **   R_P_AGG - set up the TCMD and ACC structures for an aggregate, after
@@ -146,6 +147,8 @@
 **	24-Feb-2010 (frima01) Bug 122490
 **	    Update return types and add header files as neccessary
 **	    to eliminate gcc 4.3 warnings.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 
 

@@ -23,6 +23,7 @@
 # include	<frsctblk.h>
 # include	"eruf.h"
 # include	<ex.h>
+# include	<cv.h>
 
 /**
 ** Name:	ufdisply.c -	Output Browser Control Module.
@@ -103,6 +104,8 @@
 **	    Replace xxx_FILE constants by SI_xxx.
 **	26-Aug-2009 (kschendel) b121804
 **	    Redo prototype for gcc 4.3.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 #define BFRSIZE 8192
 

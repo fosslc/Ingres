@@ -9,6 +9,7 @@
 # include <id.h>
 # include <gc.h>
 # include <st.h>
+# include <cv.h>
 
 # include <iicommon.h>
 # include <gcn.h>
@@ -56,6 +57,8 @@
 **	    max length for current user ID.
 **	25-Mar-10 (gordy)
 **	    Enhanced parameter memory block handling.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 
 /*

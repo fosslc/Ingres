@@ -27,6 +27,8 @@
 **        axp_osf.
 **	18-Aug-2009 (drivi01)
 **	  Cleanup precedence warnings in effort to port ot Visual Studio 2008.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 **
 **
 NEEDLIBS = CTSLIB LIBINGRES 
@@ -40,6 +42,7 @@ EXEC SQL INCLUDE SQLCA;
 # include       <si.h>
 # include       <st.h>
 # include       "trl.h"
+# include	<cv.h>
 
 EXEC SQL BEGIN DECLARE SECTION;
 # define	ERR_DEADLOCK	4700	

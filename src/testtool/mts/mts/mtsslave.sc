@@ -28,6 +28,9 @@
 ** 	add variable levels of tracing information, traceflag>1 for debugging
 ** 	move comments for readability
 **
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
+**
 ** slave_sync: 
 **	Increase sleep waiting for start table to 60 reps * 60000
 ** 	Add PCsleep(5000) to "do while" deadlock loops
@@ -70,6 +73,8 @@
 **     Add code to check for Star connections. In this case we need to unset
 **     ddl concurrency to prevent hangs (bug 100282). Note: this change
 **     can be removed when the bug is fixed.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 
 /* ming hints 
@@ -89,6 +94,7 @@ exec sql include sqlca;
 # include       <lo.h>
 # include       <pc.h>
 # include       "trl.h"
+# include	<cv.h>
 
 GLOBALDEF 	i4	traceflag;  	/*flag to set trace on/off */
 

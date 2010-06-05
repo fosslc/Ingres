@@ -24,6 +24,7 @@
 
 #include	<cs.h>
 #include	<dm.h>
+#include	<cv.h>
 
     exec sql include SQLCA;	/* Embedded SQL Communications Area */
 
@@ -132,6 +133,8 @@
 **	18-Aug-2009 (drivi01)
 **	    Cleanup precedence warning in effort to port to Visual
 **	    Studio 2008.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 [@history_template@]...
 **/
 

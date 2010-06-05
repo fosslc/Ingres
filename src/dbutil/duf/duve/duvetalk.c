@@ -13,6 +13,7 @@
 #include	<si.h>
 #include	<st.h>
 #include	<nm.h>
+#include	<cv.h>
 
 #include	<duerr.h>
 
@@ -75,6 +76,8 @@
 **         SIR 123296
 **         Add LSB option, writable files are stored under ADMIN, logs under
 **         LOG and read-only under FILES location.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 **/
 
 /*

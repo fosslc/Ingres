@@ -42,6 +42,8 @@
 **              Add me header for MEcopy.
 **      22-sep-2000 (mcgem01)
 **              More nat and longnat to i4 changes.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 **
 **
 NEEDLIBS = LIBINGRES
@@ -54,6 +56,7 @@ NEEDLIBS = LIBINGRES
 #include        <pc.h>
 #include        <st.h>
 #include        <me.h>
+#include	<cv.h>
 
 main(argc, argv)
 int	    argc;

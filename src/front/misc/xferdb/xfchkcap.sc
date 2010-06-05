@@ -20,6 +20,7 @@
 EXEC SQL INCLUDE <ui.sh>;
 EXEC SQL INCLUDE <xf.sh>;
 # include	"erxf.h"
+# include	<cv.h>
 
 /*
 ** Fool MING, which doesn't know about EXEC SQL INCLUDE
@@ -77,6 +78,8 @@ EXEC SQL INCLUDE <xf.sh>;
 **          Use DB_MAXNAME for database objects.
 **	26-Aug-2009 (kschendel) 121804
 **	    Need ui.h to satisfy gcc 4.3.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 **/
 
 

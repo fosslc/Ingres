@@ -24,6 +24,7 @@
 #include	<dmf.h>
 #include	<dmp.h>
 #include        <dudbms.h>
+#include	<cv.h>
 
     exec sql include SQLCA;	/* Embedded SQL Communications Area */
 
@@ -106,6 +107,8 @@
 **	    Need to include adf.h now.
 **	13-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 
 

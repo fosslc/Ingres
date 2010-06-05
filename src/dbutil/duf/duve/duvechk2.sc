@@ -26,6 +26,7 @@
 #include	<dm.h>
 #include	<dmf.h>
 #include	<dmp.h>
+#include	<cv.h>
 
     exec sql include SQLCA;	/* Embedded SQL Communications Area */
 
@@ -222,6 +223,8 @@
 **	    Compiler warning fixes.
 **      12-oct-2009 (joea)
 **          Add cases for DB_DEF_ID_FALSE/TRUE in ckdefault.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 **/
 
 

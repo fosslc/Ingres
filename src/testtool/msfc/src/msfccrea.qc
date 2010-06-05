@@ -33,6 +33,8 @@
 **              Get rid of "trigraph replaced warning"
 **	22-sep-2000 (mcgem01)
 **		More nat and longnat to i4 changes.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 **
 **
 NEEDLIBS = LIBINGRES
@@ -44,6 +46,7 @@ NEEDLIBS = LIBINGRES
 #include	<pc.h>
 #include	<si.h>
 #include	<st.h>
+#include	<cv.h>
 
 #define		ARRAY_SIZE	100
 

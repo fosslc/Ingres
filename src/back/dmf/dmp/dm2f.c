@@ -11,6 +11,7 @@ NO_OPTIM=dr6_us5 pym_us5
 #include    <me.h>
 #include    <pc.h>
 #include    <st.h>
+#include    <cv.h>
 #include    <iicommon.h>
 #include    <dbdbms.h>
 #include    <lg.h>
@@ -309,6 +310,8 @@ NO_OPTIM=dr6_us5 pym_us5
 **          0x4643C824.
 **	24-May-2009 (kiria01) b122051
 **	    Limit filename length in sem formatting to avoid overrun.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 **/
 
 /*

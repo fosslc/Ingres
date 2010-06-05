@@ -10,6 +10,7 @@
 # include	<usererror.h>
 # include	<cui.h>
 # include	<st.h>
+# include	<cv.h>
 
 /*
 ** Name:	cuid.c		- Routines for manipulating identifiers
@@ -61,6 +62,8 @@
 **	    replace nat and longnat with i4
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 
 /*

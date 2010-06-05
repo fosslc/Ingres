@@ -119,6 +119,8 @@
 **         SIR 123296
 **         Add LSB option, writable files are stored under ADMIN, logs under
 **         LOG and read-only under FILES location.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 
 #ifndef NT_GENERIC
@@ -148,6 +150,7 @@
 # include <util.h>
 # include <cr.h>
 # include <pmutil.h>
+# include <cv.h>
 
 static LOCATION	mutex_loc;
 static char	mutex_locbuf[ MAX_LOC+ 1 ];

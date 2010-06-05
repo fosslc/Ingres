@@ -15,6 +15,7 @@
 #include <mo.h>
 #include <st.h>
 #include <tr.h>
+#include <cv.h>
 
 #include <iicommon.h>
 #include <gca.h>
@@ -51,6 +52,8 @@
 ** History:
 **	 9-10-2003 (wansh01) 
 **	    Created.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 
 static PTR  gcadm_alloc( u_i4 );

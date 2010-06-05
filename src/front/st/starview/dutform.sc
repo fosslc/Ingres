@@ -12,6 +12,7 @@
 #include    <ut.h>
 #include    <cv.h>
 #include    <pc.h>
+#include    <cv.h>
 
 #include    "duustrings.h"
 
@@ -109,6 +110,8 @@ EXEC SQL INCLUDE SQLCA;
 **	24-Nov-2009 (frima01) Bug 122490
 **	    Added include of cv.h and pc.h and added some return types
 **	    to eliminate gcc 4.3 warnings.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 **/
 
 DUT_STATUS dut_ff2_1ldblist(), dut_ff2_2load_ldb(), dut_ff2_3test_node(),

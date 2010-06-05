@@ -153,6 +153,8 @@
 **	    Compiler warning fixes.
 **	25-Aug-2009 (kschendel) 121804
 **	    Need ooproc.h to satisfy gcc 4.3.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Remove function definitions already in st.h
 **/
 
 GLOBALREF OO_OBJECT	**iiOOtable;
@@ -162,7 +164,6 @@ VOID IIOOforget();
 OOID fetchNew();
 OOID OOextend();
 OOID detailref();
-char *STindex();
 char *STalloc();
 
 static OOID fetchObject();

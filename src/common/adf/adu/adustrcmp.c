@@ -311,11 +311,12 @@ static DB_STATUS ad0_lklmatch(ADF_CB  *adf_scb,
 /* special hack for Bug #54559 - the BAAN bug (kirke) */
 
 # ifdef DOUBLEBYTE
-# define CMcmpcaselen(str1, endstr1, str2, endstr2) cmicmpcaselen(str1, endstr1, str2, endstr2)
+# define CMcmpcaselen(str1, endstr1, str2, endstr2) ((CMGETDBL)? cmicmpcaselen(str1, endstr1, str2, endstr2) : ((i4)(CM_DEREF(str1)) - (i4)(CM_DEREF(str2))))
 # else
 /* same as CMcmpcase() */
 # define CMcmpcaselen(str1, endstr1, str2, endstr2) CMcmpcase(str1, str2)
 # endif
+# define CMcmpcaselen_SB(str1, endstr1, str2, endstr2) CMcmpcase_SB(str1, str2)
 
 i4
 cmicmpcaselen(str1, endstr1, str2, endstr2)
@@ -538,6 +539,8 @@ i4		    *rcmp)
 **	    Added local collation support.
 **	27-Jun-89 (anton)
 **	    Moved local collation routines to ADU from CL
+**      13-Jan-2010 (wanfr01) Bug 123139
+**          Optimizations for single byte
 */
 
 DB_STATUS
@@ -567,6 +570,8 @@ i4		*rcmp)
     }
     else
     {
+	if (CMGETDBL)
+	{
 	while (p1 < endp1  &&  p2 < endp2)
 	{
 	    if (i = CMcmpcaselen(p1, endp1, p2, endp2))
@@ -576,6 +581,20 @@ i4		*rcmp)
 	    }
 	    CMnext(p1);
 	    CMnext(p2);
+	}
+	}
+	else
+	{
+	while (p1 < endp1  &&  p2 < endp2)
+	{
+	    if (i = CMcmpcaselen_SB(p1, endp1, p2, endp2))
+	    {
+		*rcmp = i;
+		return (E_DB_OK);
+	    }
+	    CMnext_SB(p1);
+	    CMnext_SB(p2);
+	}
 	}
 	
 	*rcmp = (  ((DB_TEXT_STRING *)tdv1->db_data)->db_t_count
@@ -1873,12 +1892,26 @@ i4		*rcmp)
         {
             /* Terminate at DP */
             *frac++ = '\0';
-	    /* Skip zeros */
-            while (*frac == '0')
-                CMnext(frac);
-	    /* Skip trailing spaces */
-            while (CMspace(frac))
-                CMnext(frac);
+
+	    if (CMGETDBL)
+	    {
+	    	/* Skip zeros */
+                while (*frac == '0')
+               	    CMnext(frac);
+	    	/* Skip trailing spaces */
+            	while (CMspace(frac))
+                    CMnext(frac);
+	    }
+	    else
+	    {
+	    	/* Skip zeros */
+            	while (*frac == '0')
+                    CMnext_SB(frac);
+	    	/* Skip trailing spaces */
+            	while (CMspace_SB(frac))
+                    CMnext_SB(frac);
+	    }
+
             /* We must be at end of string otherwise not integral */
             if (*frac)
                 return E_AD0000_OK;
@@ -1953,6 +1986,8 @@ i4		*rcmp)
 **  History:
 **	26-Dec-2007 (kiria0) SIR119658
 **	    Allow for checking data for decimal compatibility.
+**      13-Jan-2010 (wanfr01) Bug 123139
+**          Optimizations for single byte
 */
 
 DB_STATUS
@@ -2044,18 +2079,38 @@ i4		*rcmp)
     temp[length] = EOS;
     p = temp;
     /* Lose leading spaces */
-    while (CMspace(p))
-	CMnext(p);
-    if (*p == '-' || *p == '+')
+
+    if (CMGETDBL)
     {
-	/* Skip sign and any associated spaces */
-	CMnext(p);
-	while (CMspace(p))
+        while (CMspace(p))
+	    CMnext(p);
+        if (*p == '-' || *p == '+')
+        {
+	    /* Skip sign and any associated spaces */
+	    CMnext(p);
+	    while (CMspace(p))
+	        CMnext(p);
+        }
+        /* Skip any leading zeros */
+        while (*p == '0')
 	    CMnext(p);
     }
-    /* Skip any leading zeros */
-    while (*p == '0')
-	CMnext(p);
+    else
+    {
+        while (CMspace_SB(p))
+	    CMnext_SB(p);
+        if (*p == '-' || *p == '+')
+    	{
+	    /* Skip sign and any associated spaces */
+	    CMnext_SB(p);
+	    while (CMspace_SB(p))
+	    	CMnext_SB(p);
+    	}
+    	/* Skip any leading zeros */
+    	while (*p == '0')
+	    CMnext_SB(p);
+    }
+
     exp = STchr(p, 'e');
     if (exp == NULL)
 	exp = STchr(p, 'E');

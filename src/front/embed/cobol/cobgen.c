@@ -301,6 +301,8 @@ NO_OPTIM = vax_vms rs4_us5
 **	    set G_FUNC for IIcsRetScroll for MF COBOL IIX function.
 **	16-mar-2010 (frima01) BUG 123109
 **	    Increase char buffer in gc_cvla to hold larger query IDs.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Removed redundant includes that are in st.h
 **	    
 */
 
@@ -3415,8 +3417,6 @@ register char	*s;
 	      && *t2 != '*' && *t2 != '\\' && *t2 != 'D')
 	     
 	{
-	    FUNC_EXTERN char *STrindex();
-
 	    dot = STrindex(s, ERx("."), 0);
 	    /*
 	    ** If the dot is just before the newline then this is a period.

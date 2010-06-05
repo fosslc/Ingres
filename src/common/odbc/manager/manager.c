@@ -9,6 +9,7 @@
 #include <st.h>
 #include <tr.h>
 #include <qu.h>
+#include <cv.h>
 #include <sql.h>                    /* ODBC Core definitions */
 #include <sqlext.h>                 /* ODBC extensions */
 #include <sqlstate.h>
@@ -53,6 +54,8 @@
 **      Cleaned up #ifndef NT_GENERIC.
 **   23-Mar-2009 (Ralph Loen) Bug 121838
 **      Moved SQLGetFunctions() to info.c.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */ 
 
 IIODBC_STATE IIodbc_state[] =

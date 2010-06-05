@@ -12,6 +12,7 @@
 # include	<iicommon.h>
 #include	<fe.h>
 #include	<ug.h>
+#include	<cv.h>
 ##include	<abclass.qsh>
 /*
 #include	<abclass.h>
@@ -94,6 +95,8 @@
 **                      Fix the memory access violation error in   
 **                      IIABgrGtRole() routine by setting char. pointer
 **                      rol to a local static buffer space.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 **                      
 */
 

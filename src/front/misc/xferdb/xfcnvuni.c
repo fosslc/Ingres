@@ -20,6 +20,7 @@
 # include	<xf.h>
 # include       <uigdata.h>
 # include	"erxf.h"
+# include	<cv.h>
 
 /* GLOBALDEF's */
 GLOBALDEF       PTR     Col_list = NULL; 	/* The list of columns specified 
@@ -52,6 +53,8 @@ GLOBALREF	PTR	Obj_list;
 **	    Created.
 **      28-jan-2009 (stial01)
 **          Use DB_MAXNAME for database objects.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 
 /*Name:	writealtcol - routine to write the alter table alter column statements.

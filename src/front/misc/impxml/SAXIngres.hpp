@@ -25,8 +25,12 @@
 **	28-Aug-2009 (kschendel) b121804
 **	    Remove (incorrect) afe_cancoerce definition, and others
 **	    now properly defined in afe.h.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Add extern "C" to include CV/ST globals from C files
 */
 
+extern "C" 
+{
 # include       <compat.h>
 # include       <pc.h>
 # include       <cv.h>
@@ -46,6 +50,7 @@
 # include       <adf.h>
 # include       <afe.h>
 # include       <xf.h>
+}
 
 /* Prototypes for the functions */
 

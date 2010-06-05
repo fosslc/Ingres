@@ -18,6 +18,7 @@
 #include    <cs.h>
 #include    <lk.h>
 #include    <st.h>
+#include    <cv.h>
 #include    <dudbms.h>
 #include    <dusdb.h>
 #include    <duenv.h>
@@ -79,6 +80,8 @@
 **      05-Jan-2004 (nansa02)
 **          To fix bug(113662) Added a break statement,to break out of the loop
 **          once all the client names are read. 
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 **/
 
 GLOBALREF char  iiduNoFeClients[]; /* special client name*/

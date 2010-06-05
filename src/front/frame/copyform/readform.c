@@ -27,6 +27,7 @@
 # include	<cm.h>
 # include	"ercf.h"
 # include	<cf.h>
+# include	<cv.h>
 
 /**
 ** Name:	readform.c - Read a copyform file and return a FRAME pointer
@@ -62,6 +63,8 @@
 **	    replace nat and longnat with i4
 **      06-feb-2009 (stial01)
 **          Define copyform record buffer with size COPYFORM_MAX_REC
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 **/
 
 

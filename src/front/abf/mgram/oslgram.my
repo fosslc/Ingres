@@ -14,6 +14,7 @@
 #include	<er.h>
 #include	<gl.h>
 #include	<sl.h>
+#include	<cv.h>
 #include	<iicommon.h>
 #include	<adf.h>
 #ifndef ADE_CHK_TYPE
@@ -382,6 +383,8 @@ NO_OPTIM = ris_us5 rs4_us5 i64_aix
 **          length values when executing IICGslpSetRndGen().
 **	24-Aug-2009 (kschendel) 121804
 **	    Some definitions now in oslconf.h, delete here.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 
 

@@ -14,6 +14,7 @@
 # include	<graf.h>
 # include	<dvect.h>
 # include	"ergt.h"
+# include	<cv.h>
 
 extern GR_FRAME *G_frame;
 
@@ -59,6 +60,8 @@ static char	*Normpfx = ERx("%%G: ");
 **	  dmp_scline(), dmp_pie(), dmp_leg(), dmp_trield(), dmp_axes(),
 **	  dmp_farr(), dmp_iarr() & dmp_sarr() to prevent compiler
 **        errors with GCC 4.0 due to conflict with implicit declaration.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 
 /*

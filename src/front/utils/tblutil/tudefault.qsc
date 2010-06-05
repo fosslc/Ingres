@@ -20,6 +20,7 @@
 ##include       "tutblinf.qsh"
 #include        <lo.h>
 #include        <uf.h>
+#include	<cv.h>
 
 typedef struct TU_DEFSTRUCT {
 	i4	dkey;
@@ -97,6 +98,8 @@ i4		IITUadAddDefault( char *default_value );
 **	    Compiler warning fixes.
 **	24-Aug-2009 (kschendel) 121804
 **	    Update some of the function declarations to fix gcc 4.3 problems.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 **/
 
 /*

@@ -37,6 +37,7 @@
 #include	<stdprmpt.h>
 #include	<gca.h>
 #include	<gcn.h>
+#include	<cv.h>
 
 /*
 **  Name: iiodbcadmin -- network configuration maintenance program
@@ -121,6 +122,8 @@
 **     Add support for OPT_FETCHWHOLELOB configuration parameter.  If set,
 **     each invocation of SQLFetch() fetches the entire blob, instead of
 **     the first segment.
+**   13-Jan-2010 (wanfr01) Bug 123139
+**     Include cv.h for function defintions
 **   29-Jan-2010 (Ralph Loen) Bug 123175
 **      Rename advanced attribute "Coerce to Ingres date syntax" to
 **      "Send date/time as Ingres date".

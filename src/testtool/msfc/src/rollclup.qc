@@ -30,6 +30,8 @@
 **              Added include of st.h so compiler could find STprintf().
 **      17-feb-1994 (donj)
 **              Get rid of "trigraph replaced warning"
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 **
 **
 NEEDLIBS = LIBINGRES
@@ -40,6 +42,7 @@ NEEDLIBS = LIBINGRES
 #include        <st.h>
 #include        <tr.h>
 #include        <pc.h>
+#include	<cv.h>
 
 main(argc, argv)
 int	    argc;

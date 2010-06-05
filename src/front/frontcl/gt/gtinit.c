@@ -20,6 +20,7 @@
 # include       <iicommon.h>
 # include       <fe.h>
 # include       <ug.h>
+# include	<cv.h>
 
 /**
 ** Name:    gtinit.c -		Graphics System Initialize Module (interactive)
@@ -74,6 +75,8 @@
 **	  with implicit declaration.
 **	24-Aug-2009 (kschendel) 121804
 **	    Update some of the function declarations to fix gcc 4.3 problems.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 **/
 
 extern GR_FRAME *G_frame;	/* Graphics frame structure (set) */

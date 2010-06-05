@@ -25,6 +25,8 @@
 **              common version (xx.h) for compiling.
 **      17-feb-1994 (donj)
 **              Get rid of "trigraph replaced warning"
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 **
 **
 NEEDLIBS = LIBINGRES
@@ -35,6 +37,7 @@ NEEDLIBS = LIBINGRES
 #include	<tr.h>
 #include	<pc.h>
 #include	<st.h>
+#include	<cv.h>
 
 main(argc, argv)
 int	    argc;

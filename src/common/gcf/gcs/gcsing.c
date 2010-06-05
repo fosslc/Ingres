@@ -12,6 +12,7 @@
 #include <st.h>
 #include <tm.h>
 #include <qu.h>
+#include <cv.h>
 
 #include <iicommon.h>
 #include <gca.h>
@@ -103,6 +104,8 @@
 **	    Include qu.h to avoid compile errors.
 **	21-Jul-09 (gordy)
 **	    Remove string length restrictions.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 
 

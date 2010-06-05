@@ -21,6 +21,8 @@
 **	05-apr-06 (drivi01) on behalf of toumi01.
 **	    Port change to Windows by simplifying call to LOinfo to return
 **	    only the basic file type.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
  
 /* The scheduler will be running as the ingres SYSTEM administrator but any
@@ -147,6 +149,7 @@ exec sql include sqlca;
 # include	<tr.h>
 # include	<si.h>
 # include	<ut.h>
+# include	<cv.h>
  
 /* sqlca.sqlcode codes */
 #define	ZERO_ROWS	100

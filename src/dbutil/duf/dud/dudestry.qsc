@@ -28,6 +28,7 @@
 #include    <st.h>
 #include    <pm.h>
 #include    <cui.h>
+#include    <cv.h>
 
 ##include   <dustar.qsh>
 
@@ -157,6 +158,8 @@ EXEC SQL include SQLCA;
 ** 	    an error if the remote server has a different version.
 **      11-dec-2008 (stial01)
 **          Fix incompatible version message.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 **/
 
 /*

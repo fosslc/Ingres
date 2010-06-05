@@ -8,6 +8,7 @@
 # include	<ex.h>
 # include	<cv.h>
 # include	<pc.h>
+# include	<cv.h>
 
 /*
 ** EQMERGE - Equel grammar and token table merger.
@@ -61,6 +62,8 @@
 **	    replace nat and longnat with i4
 **      10-Sep-2009 (frima01) 122490
 **          Add include of cv.h and pc.h.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function definitions.
 */
 
 /* Commands with "/* %L " , ie: "/* %L tokens " */

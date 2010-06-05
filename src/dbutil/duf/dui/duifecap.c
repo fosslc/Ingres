@@ -17,6 +17,7 @@
 #include	<iicommon.h>
 #include	<dbdbms.h>
 #include	<duerr.h>
+#include	<cv.h>
 
 /**
 **
@@ -43,6 +44,8 @@
 **	    replace nat and longnat with i4
 **      11-Jun-2004 (hanch04)
 **          Removed reference to CI for the open source release.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 
 static STATUS bldLoc();

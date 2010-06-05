@@ -51,6 +51,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 
 /* ming hints 
@@ -70,6 +72,7 @@ exec sql include sqlca;
 # include       <pc.h>
 # include       <st.h>
 # include       "trl.h"
+# include	<cv.h>
 
 /* 
 ** traceflag is a variable that is set by the user when he/she desires to see

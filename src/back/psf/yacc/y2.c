@@ -7,6 +7,7 @@
 #include    <lo.h>
 #include    <si.h>
 #include    <st.h>
+#include    <cv.h>
 
 #include "dextern.h"
 
@@ -49,6 +50,8 @@
 **	    The -l option should not be a toggle.
 **      16-dec-2008 (joea)
 **          Replace READONLY/WSCREADONLY by const.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 
 # define IDENTIFIER 257

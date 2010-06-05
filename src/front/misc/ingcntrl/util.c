@@ -16,6 +16,7 @@
 #include	<erug.h>
 #include	"eric.h"
 #include	"global.h"
+#include 	<cv.h>
 
 /**
 ** Name:    util.c -	AccessDB Utilities Module.
@@ -61,6 +62,8 @@
 **	15-Oct-2001 (jenjo02)
 **	    Removed create_loc_area(). Functionality is now performed
 **	    within the Server rather than locally.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 
 /*{

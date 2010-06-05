@@ -15,6 +15,7 @@
 # include	<iisqlca.h>
 # include       <iilibq.h>
 # include       <erlq.h>
+# include	<cv.h>
 
 /*
 ** Name: iiadfcb.c - Set up multiple ADF control blocks for LIBQ
@@ -54,6 +55,8 @@
 **	    replace nat and longnat with i4
 **	aug-2009 (stephenb)
 **		Prototyping front-ends
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 
 static		ADF_CB	*adf_cb = NULL;

@@ -18,6 +18,7 @@
 # include <rpu.h>
 # include <targtype.h>
 # include "errm.h"
+# include <cv.h>
 
 /**
 ** Name:	repdbcfg.sc - configure Replicator databases
@@ -49,6 +50,8 @@
 **	29-Sep-2004 (drivi01)
 **	    Updated NEEDLIBS to link dynamic library SHQLIB and SHFRAMELIB
 **	    to replace its static libraries.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 **/
 
 /*

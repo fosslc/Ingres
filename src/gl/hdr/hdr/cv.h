@@ -65,6 +65,39 @@
 **	    Added CVula8().
 */
 
+
+/*
+** Define pointer-vector array for CV functions which
+** have single byte or multi byte variants
+*/
+struct  _CV_FUNCTIONS {
+    STATUS  (*IICVal)(
+	    char    *a, 
+	    i4 *i);
+    STATUS  (*IICVal8)(
+	    char    *a, 
+	    i8 *i);
+    VOID    (*IICVlower)(
+	    char	*string);
+    VOID    (*IICVupper)(
+	    char	*string);
+};
+
+typedef struct  _CV_FUNCTIONS   CV_FUNCTIONS;
+
+# if defined(NT_GENERIC) && defined(IMPORT_DLL_DATA)
+GLOBALDLLREF       CV_FUNCTIONS    CV_fvp;
+#else
+GLOBALREF       CV_FUNCTIONS    CV_fvp;
+#endif
+
+
+
+#define CVal	CV_fvp.IICVal
+#define CVal8	CV_fvp.IICVal8
+#define CVlower	CV_fvp.IICVlower
+#define CVupper	CV_fvp.IICVupper
+
 FUNC_EXTERN STATUS  CVaf(
 #ifdef CL_PROTOTYPED
 	    char    *str, 
@@ -72,6 +105,7 @@ FUNC_EXTERN STATUS  CVaf(
 	    f8	    *val
 #endif
 );
+
 FUNC_EXTERN STATUS  CVahxl(
 #ifdef CL_PROTOTYPED
 	    char    *str,
@@ -84,18 +118,40 @@ FUNC_EXTERN STATUS  CVuahxl(
 	    u_i4    *result
 #endif
 );
-FUNC_EXTERN STATUS  CVal(
+
+
+FUNC_EXTERN STATUS  CVal_DB(
 #ifdef CL_PROTOTYPED
 	    char    *a, 
 	    i4 *i
 #endif
 );
-FUNC_EXTERN STATUS  CVal8(
+
+
+FUNC_EXTERN STATUS  CVal_SB(
+#ifdef CL_PROTOTYPED
+	    char    *a, 
+	    i4 *i
+#endif
+);
+
+
+FUNC_EXTERN STATUS  CVal8_DB(
 #ifdef CL_PROTOTYPED
 	    char    *a, 
 	    i8 *i
 #endif
 );
+
+
+FUNC_EXTERN STATUS  CVal8_SB(
+#ifdef CL_PROTOTYPED
+	    char    *a, 
+	    i8 *i
+#endif
+);
+
+
 FUNC_EXTERN STATUS  CVan(
 #ifdef CL_PROTOTYPED
 	    char    *string, 
@@ -154,11 +210,19 @@ FUNC_EXTERN void    CVula8(
 	    u_i8	i,
 	    char	*a);
 
-FUNC_EXTERN VOID    CVlower(
+
+FUNC_EXTERN VOID    CVlower_DB(
 #ifdef CL_PROTOTYPED
 	    char	*string
 #endif
 );
+
+FUNC_EXTERN VOID    CVlower_SB(
+#ifdef CL_PROTOTYPED
+	    char	*string
+#endif
+);
+
 
 FUNC_EXTERN VOID    CVlx(
 #ifdef CL_PROTOTYPED
@@ -195,11 +259,19 @@ FUNC_EXTERN STATUS  CVpka(
 #endif
 );
 
-FUNC_EXTERN VOID    CVupper(
+
+FUNC_EXTERN VOID    CVupper_DB(
 #ifdef CL_PROTOTYPED
 	    char	*string
 #endif
 );
+
+FUNC_EXTERN VOID    CVupper_SB(
+#ifdef CL_PROTOTYPED
+	    char	*string
+#endif
+);
+
 
 /* Convert decimal to decimal */
 FUNC_EXTERN STATUS  CVpkpk(
@@ -304,8 +376,6 @@ FUNC_EXTERN void CVptra( PTR ptr, char *string );
 FUNC_EXTERN void CVptrax( PTR ptr, char *string );
 
 FUNC_EXTERN STATUS CVrxl( char *str, i4 *num ); 
-
-FUNC_EXTERN STATUS CVal8( char *str, i8 *result);
 
 #if defined(axp_osf) || defined(ris_u64) || defined(LP64) || defined(axp_lnx)
 

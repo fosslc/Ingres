@@ -24,6 +24,7 @@
 #include    <lg.h>
 #include    <lk.h>
 #include    <cx.h>
+#include    <cv.h>
 #include    <lgdef.h>
 #include    <lgdstat.h>
 #include    <lgkdef.h>
@@ -203,6 +204,8 @@
 **          when nodename specified if the lfb's lgh_size
 **          is 0. Prevents rcpconfig from initialising a
 **          TX log file on another node.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 
 /*

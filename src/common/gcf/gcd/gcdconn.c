@@ -14,6 +14,7 @@
 #include <gcdint.h>
 #include <gcdapi.h>
 #include <gcdmsg.h>
+#include <cv.h>
 
 /*
 ** Name: gcdconn.c
@@ -92,6 +93,8 @@
 **	    Client limit is now checked at GCC level.
 **	25-Mar-10 (gordy)
 **	    Initial connection handle now stored in API parms.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */	
 
 #define	CONN_XID	0

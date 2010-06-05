@@ -64,7 +64,83 @@
 [@history_template@]...
 **/
 
+/*
+** Define pointer-vector array for ST functions which
+** have single byte or multi byte variants
+*/
+struct	_ST_FUNCTIONS {
+    i4 (*IISTbcompare)(
+	const char	*a,
+	i4		a_length,
+	const char	*b,
+	i4		b_length,
+	i4		ignrcase);
+    VOID (*IISTgetwords)(
+	char	*string,
+	i4	*count,
+	char	**wordarray);
+    char *(*IISTindex)(
+	const char	*str,
+	const char	*mstr,
+	size_t	len);
+    char *(*IISTrindex)(
+	const char	*str,
+	const char	*mstr,
+	size_t	len);
+    char *(*IISTrstrindex)(
+	const char	*str,
+	const char	*mstr,
+	size_t	len,
+        i4     nc);
+    STATUS (*IISTscompare)(
+        const char      *ap,
+        size_t  a_len,  
+        const char      *bp,
+        size_t  b_len);
+    char *(*IISTstrindex)(
+	const char	*str,
+	const char	*mstr,
+	size_t	len,
+        i4     nc);
+    size_t (*IISTtrmnwhite)(
+	char	*string,
+        size_t	max_len);
+    size_t (*IISTtrmwhite)(
+	char	*string);
+    size_t (*IISTzapblank)(
+	char	*string,
+	char	*buffer);
+};
+
+typedef struct  _ST_FUNCTIONS   ST_FUNCTIONS;
+# if defined(NT_GENERIC) && defined(IMPORT_DLL_DATA)
+GLOBALDLLREF       ST_FUNCTIONS    ST_fvp;
+# else
+GLOBALREF       ST_FUNCTIONS    ST_fvp;
+#endif
+
+
+#define STbcompare	ST_fvp.IISTbcompare
+#define STgetwords	ST_fvp.IISTgetwords
+#define STindex		ST_fvp.IISTindex
+#define STrindex	ST_fvp.IISTrindex
+#define STrstrindex	ST_fvp.IISTrstrindex
+
+#define STscompare	ST_fvp.IISTscompare
+#define STstrindex	ST_fvp.IISTstrindex
+#define STtrmnwhite	ST_fvp.IISTtrmnwhite
+#define STtrmwhite	ST_fvp.IISTtrmwhite
+#define STzapblank	ST_fvp.IISTzapblank
+
 #define STDOUT_MAXBUFSIZ	2048
+
+
+#ifndef STinit
+#define STinit IISTinit
+FUNC_EXTERN void STinit(
+);
+#endif
+
 
 #ifndef STalloc
 #define STalloc IISTalloc
@@ -73,9 +149,9 @@ FUNC_EXTERN char * STalloc(
 );
 #endif
 
-#ifndef STbcompare
-#define STbcompare IISTbcompare
-FUNC_EXTERN i4 STbcompare(
+#ifndef STbcompare_DB
+#define STbcompare_DB IISTbcompare_DB
+FUNC_EXTERN i4 STbcompare_DB(
 	const char	*a,
 	i4		a_length,
 	const char	*b,
@@ -84,24 +160,53 @@ FUNC_EXTERN i4 STbcompare(
 );
 #endif
 
-#ifndef STgetwords
-#define STgetwords IISTgetwords
-FUNC_EXTERN VOID STgetwords(
+#ifndef STbcompare_SB
+#define STbcompare_SB IISTbcompare_SB
+FUNC_EXTERN i4 STbcompare_SB(
+	const char	*a,
+	i4		a_length,
+	const char	*b,
+	i4		b_length,
+	i4		ignrcase
+);
+#endif
+
+#ifndef STgetwords_DB
+#define STgetwords_DB IISTgetwords_DB
+FUNC_EXTERN VOID STgetwords_DB(
 	char	*string,
 	i4	*count,
 	char	**wordarray
 );
 #endif
  
-#ifndef STindex
-#define STindex IISTindex
-FUNC_EXTERN char * STindex(
+#ifndef STgetwords_SB
+#define STgetwords_SB IISTgetwords_SB
+FUNC_EXTERN VOID STgetwords_SB(
+	char	*string,
+	i4	*count,
+	char	**wordarray
+);
+#endif
+
+#ifndef STindex_DB
+#define STindex_DB IISTindex_DB
+FUNC_EXTERN char * STindex_DB(
 	const char	*str,
 	const char	*mstr,
 	size_t	len
 );
 #endif
  
+#ifndef STindex_SB
+#define STindex_SB IISTindex_SB
+FUNC_EXTERN char * STindex_SB(
+	const char	*str,
+	const char	*mstr,
+	size_t	len
+);
+#endif
+
 #ifndef STlcopy
 FUNC_EXTERN size_t STlcopy(
         const char    *source,
@@ -165,18 +270,29 @@ FUNC_EXTERN char * STprintf(
 );
 #endif
 
-#ifndef STrindex
-#define STrindex IISTrindex
-FUNC_EXTERN char * STrindex(
+
+#ifndef STrindex_DB
+#define STrindex_DB IISTrindex_DB
+FUNC_EXTERN char * STrindex_DB(
 	const char	*str,
 	const char	*mstr,
 	size_t	len
 );
 #endif
 
-#ifndef STrstrindex
-#define STrstrindex IISTrstrindex
-FUNC_EXTERN char * STrstrindex(
+#ifndef STrindex_SB
+#define STrindex_SB IISTrindex_SB
+FUNC_EXTERN char * STrindex_SB(
+	const char	*str,
+	const char	*mstr,
+	size_t	len
+);
+#endif
+
+
+#ifndef STrstrindex_DB
+#define STrstrindex_DB IISTrstrindex_DB
+FUNC_EXTERN char * STrstrindex_DB(
 	const char	*str,
 	const char	*mstr,
 	size_t	len,
@@ -184,9 +300,30 @@ FUNC_EXTERN char * STrstrindex(
 );
 #endif
  
-#ifndef STscompare
-#define STscompare IISTscompare
-FUNC_EXTERN i4 STscompare(
+#ifndef STrstrindex_SB
+#define STrstrindex_SB IISTrstrindex_SB
+FUNC_EXTERN char * STrstrindex_SB(
+	const char	*str,
+	const char	*mstr,
+	size_t	len,
+        i4     nc
+);
+#endif
+
+ 
+#ifndef STscompare_SB
+#define STscompare_SB IISTscompare_SB
+FUNC_EXTERN i4 STscompare_SB(
+	const char	*pa_ptr,
+	size_t	a_len,
+	const char	*pb_ptr,
+	size_t	b_len
+);
+#endif
+ 
+#ifndef STscompare_DB
+#define STscompare_DB IISTscompare_DB
+FUNC_EXTERN i4 STscompare_DB(
 	const char	*pa_ptr,
 	size_t	a_len,
 	const char	*pb_ptr,
@@ -202,15 +339,27 @@ FUNC_EXTERN char	* STskipblank (
 );
 #endif
 
-#ifndef STstrindex
-#define STstrindex IISTstrindex
-FUNC_EXTERN char * STstrindex(
+
+#ifndef STstrindex_DB
+#define STstrindex_DB IISTstrindex_DB
+FUNC_EXTERN char * STstrindex_DB(
 	const char	*str,
 	const char	*mstr,
 	size_t	len,
         i4     nc
 );
 #endif
+
+#ifndef STstrindex_SB
+#define STstrindex_SB IISTstrindex_SB
+FUNC_EXTERN char * STstrindex_SB(
+	const char	*str,
+	const char	*mstr,
+	size_t	len,
+        i4     nc
+);
+#endif
+
 
 #ifndef STtalloc
 #define	STtalloc IISTtalloc
@@ -219,25 +368,50 @@ FUNC_EXTERN char	* STtalloc(
 	const char	*string
 );
 #endif
+
  
-#ifndef STtrmwhite
-#define STtrmwhite IISTtrmwhite
-FUNC_EXTERN size_t STtrmwhite(
+#ifndef STtrmwhite_DB
+#define STtrmwhite_DB IISTtrmwhite_DB
+FUNC_EXTERN size_t STtrmwhite_DB(
 	char	*string
 );
 #endif
 
-#ifndef STtrmnwhite
-#define STtrmnwhite IISTtrmnwhite
-FUNC_EXTERN size_t STtrmnwhite(
+#ifndef STtrmwhite_SB
+#define STtrmwhite_SB IISTtrmwhite_SB
+FUNC_EXTERN size_t STtrmwhite_SB(
+	char	*string
+);
+#endif
+
+
+#ifndef STtrmnwhite_DB
+#define STtrmnwhite_DB IISTtrmnwhite_DB
+FUNC_EXTERN size_t STtrmnwhite_DB(
 	char	*string,
         size_t	max_len
 );
 #endif
+
+#ifndef STtrmnwhite_SB
+#define STtrmnwhite_SB IISTtrmnwhite_SB
+FUNC_EXTERN size_t STtrmnwhite_SB(
+	char	*string,
+        size_t	max_len
+);
+#endif
+
  
-#ifndef STzapblank
-#define STzapblank IISTzapblank
-FUNC_EXTERN size_t STzapblank(
+#ifndef STzapblank_DB
+#define STzapblank_DB IISTzapblank_DB
+FUNC_EXTERN size_t STzapblank_DB(
+	char	*string,
+	char	*buffer
+);
+#endif
+#ifndef STzapblank_SB
+#define STzapblank_SB IISTzapblank_SB
+FUNC_EXTERN size_t STzapblank_SB(
 	char	*string,
 	char	*buffer
 );
@@ -255,4 +429,6 @@ FUNC_EXTERN i4 STxcompare(
 );
 #endif
 
+
 # endif /* ! ST_HDR_INCLUDED */
+
