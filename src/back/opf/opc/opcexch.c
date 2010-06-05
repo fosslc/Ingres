@@ -101,7 +101,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
-[@history_template@]...
+**	19-May-2010 (kschendel) b123565
+**	    oj_ijFlagsFile is a hold, not a row, fix in a couple places.
 **/
 
 /*
@@ -926,7 +927,7 @@ opc_exnodearrcnt(
 	    if (ojinfop->oj_tidHoldFile >= 0)
 		arrcnts[IX_HLD]++;
 	    if (ojinfop->oj_ijFlagsFile >= 0)
-		arrcnts[IX_ROW]++;
+		arrcnts[IX_HLD]++;
 	    if (ojinfop->oj_innerJoinedTIDs)
 		arrcnts[IX_TTAB]++;
 	    if (ojinfop->oj_oqual != (QEN_ADF *) NULL)
@@ -1252,7 +1253,7 @@ opc_exnodearrset(
 	    if (ojinfop->oj_tidHoldFile >= 0)
 		array1[arrcnts[IX_HLD]++] = ojinfop->oj_tidHoldFile;
 	    if (ojinfop->oj_ijFlagsFile >= 0)
-		array1[arrcnts[IX_ROW]++] = ojinfop->oj_ijFlagsFile;
+		array1[arrcnts[IX_HLD]++] = ojinfop->oj_ijFlagsFile;
 	    if (ojinfop->oj_innerJoinedTIDs)
 		array1[arrcnts[IX_TTAB]++] = ojinfop->oj_innerJoinedTIDs->
 			ttb_tempTableIndex;
