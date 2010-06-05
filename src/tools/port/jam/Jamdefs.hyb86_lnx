@@ -87,6 +87,9 @@
 #	28-Mar-2010 (hanje04)
 #	    SIR 123296
 #	    Remove debug flags, should not have been submitted.
+#	20-apr-2010 (stephenb)
+#	    Add compile flag -march=i486, otherwise gcc assumes the antiquated
+#	    386 architecture which does not contain support for atomic built-ins
 #
 
 # Tell Jamdefs that this include worked:
@@ -109,7 +112,7 @@ CD      = "cd" ;
 CC      default = "cc" ;
 CCDEBUG = "-g" ;
 CPP     default = "/lib/cpp" ;
-CCMACH32 = -DBUILD_ARCH32 -m32 -fsigned-char -fno-strength-reduce -D_REENTRANT -DLINUX -D_GNU_SOURCE -DXLIB_ILLEGAL_ACCESS -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE ;
+CCMACH32 = -DBUILD_ARCH32 -m32 -march=i486 -fsigned-char -fno-strength-reduce -D_REENTRANT -DLINUX -D_GNU_SOURCE -DXLIB_ILLEGAL_ACCESS -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE ;
 CCMACH64 = -DBUILD_ARCH64 -m64 -fsigned-char -fno-strength-reduce -fno-omit-frame-pointer -Wno-write-strings -D_REENTRANT -DLINUX -D_GNU_SOURCE -DXLIB_ILLEGAL_ACCESS ;
 
 # The -rdynamic here is probably not needed, but doesn't hurt.

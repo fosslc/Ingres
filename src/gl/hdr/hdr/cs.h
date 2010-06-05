@@ -124,14 +124,31 @@
 **      18-mar-2009 (stegr01)
 **          define CS_MEMBAR_MACRO for IA64 and ALpha VMS
 **          define CS_LOCK_LONG and CS_UNLOCK_LONG for IA64 and Alpha VMS
+**      20-apr-2010 (stephenb)
+**          define CSadjust_i8counter. CSadjust_counter is defined twice
+**          remove one of them.
 **/
 
 /* Adjust counter */
+#ifndef CSadjust_counter
+/* not already defined in csnormal, we need a real function */
 #define CSadjust_counter IICSadjust_counter
+#define NEED_CSADJUST_COUNTER_FUNCTION
 FUNC_EXTERN i4 CSadjust_counter(
             i4          *pcounter,
             i4           adjustment
 );
+#endif
+
+#ifndef CSadjust_i8counter
+/* not already defined in csnormal, we need a real function */
+#define CSadjust_i8counter IICSadjust_i8counter
+#define NEED_CSADJUST_I8COUNTER_FUNCION
+FUNC_EXTERN i8 CSadjust_i8counter( 
+	    i8 *pcounter, 
+	    i8 adjustment 
+);
+#endif
 
 /* lock sem */
 #define CSp_semaphore IICSp_semaphore
@@ -453,8 +470,7 @@ FUNC_EXTERN     VOID CSnoresnow(
 #define CSdump_stack IICSdump_stack
 FUNC_EXTERN VOID CSdump_stack( void );
 
-#define CSadjust_counter IICSadjust_counter
-FUNC_EXTERN i4 CSadjust_counter( i4 *pcounter, i4 adjustment );
+
 
 #define CScancelCheck IICScancelCheck
 FUNC_EXTERN void CScancelCheck(CS_SID sid);

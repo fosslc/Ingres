@@ -148,6 +148,7 @@ NO_OPTIM = dr6_us5 ibm_lnx int_lnx int_rpl i64_aix
 **	    CSswitch()	- poll for thread switch
 **	    CSget_cpid() - Obtain cross-process thread identity.
 **	    CSadjust_counter() - Thread-safe counter adjustment.
+**	    CSadjust_i8counter() - Thread safe i8 counter adjustment.
 **
 **          CSnoresnow() - Clear EDONE bit of the current session.
 **
@@ -845,6 +846,8 @@ NO_OPTIM = dr6_us5 ibm_lnx int_lnx int_rpl i64_aix
 **	    MOlongout/MOulongout now take i8/u_i8 parameter.
 **      10-Feb-2010 (smeke01) b123249
 **          Changed MOintget to MOuintget for unsigned integer values.
+**      20-apr-2010 (stephenb)
+**          add new function CSadjust_i8counter.
 **/
 
 /*
@@ -6930,6 +6933,7 @@ CS_is_mt()
 **	    Use synch-lock instead of CSp,v so that we can init the
 **	    utility mutex real early.
 */
+#ifdef NEED_CSADJUST_COUNTER_FUNCTION /* might be defined in csnormal */
 i4
 CSadjust_counter( i4 *pcounter, i4 adjustment )
 {
@@ -6950,6 +6954,69 @@ CSadjust_counter( i4 *pcounter, i4 adjustment )
 #endif
     return newvalue;
 } /* CSadjust_counter */
+#endif
+
+/*
+** Name: CSadjust_i8counter() - Thread-safe counter adjustment.
+**
+** Description:
+**	This routine provides a means to accurately adjust an i8 counter
+**	which may possibly be undergoing simultaneous adjustment in
+**	another session, or in a Signal Handler, or AST, without
+**	protecting the counter with a mutex (if possible)
+**
+**	This is done, by taking advantage of the atomic compare and
+**	swap routine.   We first calculate the new value based on
+**	a "dirty" read of the existing value.  We then use
+**	CScas8() to attempt to update the counter.
+**	If the counter results had changed before our update is applied,
+**	update is canceled, and a new "new" value must be calculated
+**	based on the new "old" value returned.  Even under very heavy
+**	contention, the caller will eventually get to update the counter
+**	before someone else gets in to this tight loop.
+**
+**	This routime will work properly under both INTERNAL (Ingres)
+**	and OS threads.
+**	
+**	NOTE: This function is defined out to a compiler built-in in
+**	      csnormal.h on platforms which use GCC
+**
+** Inputs:
+**	pcounter	- Address of an i8 counter.
+**	adjustment	- Amount to adjust by.
+**
+** Outputs:
+**	None
+**
+** Returns:
+** 	Value counter assumed after callers update was applied.
+**
+** History:
+**	20-apr-2010 (stephenb)
+**		Created from above CSadjust_counter
+*/
+#ifdef NEED_CSADJUST_I8COUNTER_FUNCTION /* might be defined in csnormal */
+i8
+CSadjust_i8counter( i8 *pcounter, i8 adjustment )
+{
+    i8		oldvalue, newvalue;
+
+#if defined(conf_CAS8_ENABLED)
+    do
+    {
+	oldvalue = *pcounter;
+	newvalue = oldvalue + adjustment;
+    } while ( CScas8( pcounter, oldvalue, newvalue ) );
+#elif defined(OS_THREADS_USED)
+    CS_synch_lock(&Cs_utility_sem);
+    newvalue = (*pcounter += adjustment );
+    CS_synch_unlock(&Cs_utility_sem);
+#else
+    newvalue = (*pcounter += adjustment );
+#endif
+    return newvalue;
+} /* CSadjust_i8counter */
+#endif
 
 
 #ifdef PERF_TEST

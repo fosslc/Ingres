@@ -987,6 +987,10 @@ static int pthread_create_detached = 1;
 **	    Some void prototypes for gcc 4.3.
 **      21-jan-2010 (joea)
 **          Add KP Services block pointer to CS_SCB for VMS.
+**      20-apr-2010 (stephenb)
+**          Add defines for CScas8() and CSadjust_i8counter. Re-define
+**          CSadjust_counter() and CScas() to built-ins on GCC platforms
+**          that have them.
 */
 
 
@@ -3089,7 +3093,48 @@ FUNC_EXTERN i4 CS_tas(CS_ASET *);
 	# error: must define an atomic clear
 # endif
 
-#if defined(conf_CAS_ENABLED)
+/*
+** Atomic operations on i8 variables
+*/
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 1)
+/* 
+** GCC style atomic built-ins are available so use them.
+** Assumes that __GNUC__ is defined only on platforms
+** that us GCC (makes sense).
+** Note that this over-rides conf_CAS8_ENABLED and will simply use
+** the built-ins to define CScas8.
+**
+** if CSadjust_i8counter is not defined here for your platform
+** then the function in csinterface.c will be used
+*/
+# define CSadjust_i8counter(a, b)	__sync_add_and_fetch(a, b)
+# define CScas8(a, b, c)		__sync_bool_compare_and_swap(a, b, c)
+# elif defined (conf_CAS8_ENABLED)
+/*
+** There are currently no platforms which define conf_CAS8_ENABLED which
+** are not already covered in the above section. If you add a platform
+** then place your platform string here and define your function (see
+** conf_CAS_ENABLED section below for examples), and relegate the build error
+** to a #else
+*/
+# error "BUILD ERROR: Need to provide i8 Compare & Swap Routines"
+# endif /* conf_CAS8_ENABLED */
+
+/*
+** Atomic operations on i4 variables
+*/
+
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 1)
+/* 
+** GCC style atomic built-ins are available so use them
+** Note that this over-rides conf_CAS_ENABLED and will simply use
+** the built-ins to define CScas.
+*/
+# define CSadjust_counter(a, b)		__sync_add_and_fetch(a, b)
+# define CScas(a, b, c)			__sync_bool_compare_and_swap(a, b, c)
+# define CScas4(a, b, c)		__sync_bool_compare_and_swap(a, b, c)
+# define CScasptr(a, b, c)		__sync_bool_compare_and_swap(a, b, c)
+# elif defined(conf_CAS_ENABLED)
 
 /*}
 ** Name: Atomic Compare and swap routines.
