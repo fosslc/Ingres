@@ -159,6 +159,7 @@ opc_lsahd_build(
 
 VOID	    opc_qtqnatts();
 
+static void opc_set_resettable(QEN_NODE *node, bool resettable);
 
 /*
 **  Defines of other constants.
@@ -548,7 +549,9 @@ opc_ran_build(
 **          Type cast the values in the conditional tests involving dissimilar
 **	    types like float and MAXI4. The lack of these casts caused
 **	    floating point exceptions on a certain machine.
-[@history_template@]...
+**	16-May-2010 (kschendel) b123565
+**	    For "top" actions, re-walk the generated query plan and set
+**	    the node-is-resettable flag on each node, as needed.
 */
 VOID
 opc_lsahd_build(
@@ -654,12 +657,24 @@ opc_lsahd_build(
 	    }
 	    
  	    global->ops_cstate.opc_subqry = union_sq;
-	    if (is_top_ahd == TRUE)
+	    if (is_top_ahd)
 	    {
 		global->ops_cstate.opc_topahd = NULL;
 	    }
 
 	    opc_ahd_build(global, &ahd, &proj_ahd);
+
+	    /* Run thru the action(s) just made and do post-processing */
+	    if (is_top_ahd)
+	    {
+		QEF_AHD *action = ahd;
+		do
+		{
+		    if (action->ahd_flags & QEA_NODEACT)
+			opc_set_resettable(action->qhd_obj.qhd_qep.ahd_qep, FALSE);
+		    action = action->ahd_next;
+		} while (action != ahd);
+	    }
 
 	    if (ahd_list == NULL)
 	    {
@@ -810,3 +825,112 @@ opc_qfatt_search(
     }
 
 }
+
+/*
+** Name: opc_set_resettable - Set "resettable" flag in plan nodes
+**
+** Description:
+**	Query nodes below an exchange want to know if they are in a
+**	resettable plan fragment (meaning, resettable during one
+**	instantiation / execution of the plan;  any plan is resettable
+**	the first time through, if it's repeated.)  Parallel query
+**	child threads that are not resettable can exit as soon as
+**	they have generated rows.  Resettable child threads have to
+**	wait around until told that they aren't needed any more.
+**	(We may find other uses for the resettable indicator too,
+**	so it's set for all plans, parallel or not.)
+**
+**	A sub-plan is resettable if it's the inner of a CPJOIN,
+**	PSMJOIN, or SEJOIN.
+**
+** Inputs:
+**	node			Top of sub-plan to mark
+**	resettable		TRUE if node itself is resettable
+**
+** Outputs:
+**	None
+**	(sets QEN_PQ_RESET flag where needed)
+**
+** History:
+**	16-May-2010 (kschendel) b123565
+**	    Written to fix various obscure parallel query bugs that occur
+**	    when an EXCH manages to get generated way down inside a
+**	    resettable sub-plan.
+*/
+
+static void
+opc_set_resettable(QEN_NODE *node, bool resettable)
+{
+    QEF_AHD *act;
+    QEN_NODE *inner, *outer;
+
+    /* Loop on outer, recurse on inner / only - helps reduce recursion depth */
+    do
+    {
+	if (resettable)
+	    node->qen_flags |= QEN_PQ_RESET;
+
+	switch (node->qen_type)
+	{
+	    case QE_CPJOIN:
+	    case QE_ISJOIN:
+		opc_set_resettable(node->node_qen.qen_sjoin.sjn_inner, TRUE);
+		outer = node->node_qen.qen_sjoin.sjn_out;
+		break;
+
+	    case QE_SEJOIN:
+		opc_set_resettable(node->node_qen.qen_sejoin.sejn_inner, TRUE);
+		outer = node->node_qen.qen_sejoin.sejn_out;
+		break;
+
+	    case QE_FSMJOIN:
+		opc_set_resettable(node->node_qen.qen_sjoin.sjn_inner, resettable);
+		outer = node->node_qen.qen_sjoin.sjn_out;
+		break;
+
+	    case QE_HJOIN:
+		opc_set_resettable(node->node_qen.qen_hjoin.hjn_inner, resettable);
+		outer = node->node_qen.qen_hjoin.hjn_out;
+		break;
+
+	    case QE_KJOIN:
+		outer = node->node_qen.qen_kjoin.kjoin_out;
+		break;
+
+	    case QE_TJOIN:
+		outer = node->node_qen.qen_tjoin.tjoin_out;
+		break;
+
+	    case QE_SORT:
+		outer = node->node_qen.qen_sort.sort_out;
+		break;
+
+	    case QE_TSORT:
+		outer = node->node_qen.qen_tsort.tsort_out;
+		break;
+
+	    case QE_EXCHANGE:
+		outer = node->node_qen.qen_exch.exch_out;
+		break;
+
+	    case QE_QP:
+		/* Apply resettable to all actions under the QP */
+		act = node->node_qen.qen_qp.qp_act;
+		while (act != NULL)
+		{
+		    if (act->ahd_flags & QEA_NODEACT)
+			opc_set_resettable(act->qhd_obj.qhd_qep.ahd_qep, resettable);
+		    act = act->ahd_next;
+		}
+		/* Nothing else under QP */
+		return;
+
+	    default:
+		/* orig, tproc, anything else with nothing under it */
+		return;
+	} /* switch */
+
+	node = outer;
+    } while (node != NULL);
+
+} /* opc_set_resettable */

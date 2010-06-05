@@ -1,3 +1,7 @@
+/*
+** Copyright (c) 2010 Ingres Corporation
+*/
+
 #include    <compat.h>
 #include    <gl.h>
 #include    <cs.h>
@@ -110,6 +114,9 @@
 **	    Extract qee hash reservation into its own file.
 **	15-Oct-2009 (kschendel) SIR 122512
 **	    VMS needs cs.h or it doesn't compile.
+**	14-May-2010 (kschendel) b123565
+**	    qen-nthreads is now zero except under an exchange, make
+**	    the necessary minor adjustments here.
 */
 
 /* Reservation state information structure.
@@ -656,7 +663,7 @@ qee_hash_add(QEE_DSH *dsh, QEF_AHD *act, QEN_NODE *node,
 	    return;
 
 	default:
-	    /* Orig, exch -- don't go below these. */
+	    /* Orig, exch, tproc -- don't go below these. */
 	    return;
     } /* switch */
 
@@ -761,7 +768,7 @@ qee_hash_add(QEE_DSH *dsh, QEF_AHD *act, QEN_NODE *node,
 **	The comments will use the word THIS to mean specifically:
 **	- num = zero, if the current hash-op has been reserved already;
 **	- num = qen_nthreads, if the current hash-op is NOT reserved yet
-**	  (note that qen_nthreads is typically 1 except under a 1:N
+**	  (note that qen_nthreads is typically 0/1 except under a 1:N
 **	  non-union EXCH, which in turn is always to be found over
 **	  a partition compatible plan fragment.)
 **	- size = this hashop's reservation (may be zero if not done yet)
@@ -999,9 +1006,11 @@ qee_hash_concurrency(QEE_DSH *dsh, QEF_AHD *act, QEN_NODE *node,
 	    */
 	    hbase = dsh->dsh_hash[node->node_qen.qen_hjoin.hjn_hash];
 	    this = node->qen_nthreads;
+	    if (this == 0)
+		this = 1;		/* Not under an exch, use 1 */
+	    this_size = hbase->hsh_msize * this;
 	    if (hbase->hsh_msize != 0)
 		this = 0;		/* Don't count if already reserved */
-	    this_size = hbase->hsh_msize * node->qen_nthreads;
 	    if (part_compat)
 	    {
 		/* Partition compatible join style */
@@ -1355,7 +1364,7 @@ qee_hash_concurrency(QEE_DSH *dsh, QEF_AHD *act, QEN_NODE *node,
 	    return;
 
 	default:
-	    /* Orig's, exch's - stop there.  We stop at exch because
+	    /* Orig's, exch's, tproc's - stop there.  We stop at exch because
 	    ** independent child threads are evaluated separately.
 	    ** Pass back zero.
 	    */
@@ -1489,7 +1498,7 @@ qee_hash_findexch( QEN_NODE *node, HASHRES_STATE **cur_statep)
 	}
 
 	default:
-	    /* orig, probably */
+	    /* orig or tproc, probably */
 	    return;
     } /* switch */
 
@@ -1792,6 +1801,8 @@ qee_hashInit(
     ix = hbase->hsh_concur_num;
     if (ix == 0)
 	ix = hnode->qen_nthreads;  /* Might not be set if qee direct call */
+    if (ix == 0)
+	ix = 1;			/* not under parallel query */
     availmax = (session_limit - hbase->hsh_concur_size) / ix;
     if (hbase->hsh_orig_slice == 0)
 	hbase->hsh_orig_slice = availmax;

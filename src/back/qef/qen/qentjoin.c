@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -103,6 +103,8 @@
 **	    thanks to the parallel query changes.)
 **	30-Jun-2009 (kschendel) SIR 122138
 **	    Missing include of me.h, sparc build failed.
+**	11-May-2010 (kschendel) b123565
+**	    Rename dsh-root to dsh-parent.
 **/
 
 /*	static functions	*/
@@ -431,7 +433,7 @@ newouter:
     {
 	partno = 0;
 
-	if ( dmr_cb->dmr_access_id == NULL && dsh != dsh->dsh_root )
+	if ( dmr_cb->dmr_access_id == NULL && dsh != dsh->dsh_parent )
 	{
 	    /* Call qeq_part_open() to open Child's DMR_CB. */
 	    status = qeq_part_open(rcb, dsh,

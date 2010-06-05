@@ -544,6 +544,12 @@ GLOBALREF i4  csp_debug;
 **	    only connected session; we hold the SHARED llb's
 **	    llb_mutex, so new connections can't arise while we're
 **	    doing the releases.
+**	12-May-2010 (kschendel) b123565
+**	    If lock not-found, don't look at MULTITHREAD to decide whether
+**	    to try again with the LLB mutex.  A simultaneous connect may
+**	    have converted our LLB to shared, but if we're looking at a
+**	    stale llb status, we'll never get as far as checking for the
+**	    conversion-to-shared.
 */
 STATUS
 LKrelease(
@@ -792,9 +798,11 @@ CL_ERR_DESC	    *sys_err)
 			next_lkbq = lkbq->lkbq_next;
 		    }
 		}
-		/* Not found. Try again with llb_mutex */
-		if ( lkb == NULL && llb_mutexed == FALSE && 
-		     !(llb->llb_status & LLB_MULTITHREAD) )
+		/* Not found. Try again with llb_mutex (even if not marked
+		** MULTITHREAD -- another thread's connect while we were
+		** searching might have confused the issue entirely.)
+		*/
+		if ( lkb == NULL && llb_mutexed == FALSE)
 		{
 		    if ( MutexStatus = LK_mutex(SEM_EXCL, &llb->llb_mutex) )
 			return(MutexStatus);

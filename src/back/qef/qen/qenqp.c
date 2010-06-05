@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -106,7 +106,6 @@
 **          EXCH threads will not be created if QE71 is set. Skip
 **          parallel union processing if we are not going to create
 **          the parallel threads.
-[@history_template@]...
 **/
 
 
@@ -250,6 +249,9 @@
 **	    Load now done by qea-put.
 **	11-May-2010 (kschendel)
 **	    NODEACT flag now guarantees that there's really a QP underneath.
+**	14-May-2010 (kschendel) b123565
+**	    Validation was split into two;  QP nodes only need the
+**	    subplan-init part.
 */
 DB_STATUS
 qen_qp(
@@ -494,10 +496,17 @@ i4		function)
 	    qen_status->node_u.node_join.node_inner_status = QEN0_INITIAL;
 	    break;
 	}
+	dsh->dsh_act_ptr = act;		/* Record where we are */
 
 	old_output = (PTR) dsh->dsh_qef_output;
 	dsh->dsh_qef_output = &qef_data;
-	status = qeq_validate(rcb, dsh, act, function, (bool)TRUE);
+
+	/* Initialize the sub-plan starting with this action.  For
+	** parallel union, this is "our thread's" action.  For the
+	** normal case, we'll init each action as we get to it.
+	*/
+	status = qeq_subplan_init(rcb, dsh, act, NULL, NULL);
+	/* status checked below... */
 
         /* bug: 117169, enable FUNC_RESET so that qen_orig() can
         ** make a qen_position() call. 
@@ -510,7 +519,12 @@ i4		function)
 	dsh->dsh_qef_output = (QEF_DATA *) old_output;
 	if (status)
 	{
-	    if (dsh->dsh_error.err_code == E_QE0015_NO_MORE_ROWS)   
+	    /* "no more rows" is not really the end if there are more
+	    ** actions, or the last action wasn't a get-type action.
+	    ** But it IS the end, for our thread, if parallel union.
+	    */
+	    if (dsh->dsh_error.err_code == E_QE0015_NO_MORE_ROWS
+	      && (node->node_qen.qen_qp.qp_flag & QP_PARALLEL_UNION) == 0)
 	    {
 		if(act->ahd_next != (QEF_AHD *)NULL
 		   ||
@@ -530,7 +544,6 @@ i4		function)
 	    goto exit;
 	}
 	first_time = TRUE;
-	act = dsh->dsh_act_ptr;	/* dsh_act_ptr is now set by qeq_validate */
 
 	switch (act->ahd_atype)
 	{

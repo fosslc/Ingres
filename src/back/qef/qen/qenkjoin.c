@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -137,6 +137,8 @@
 **	    Implement partition qualification on the inner, finally.
 **	11-Apr-2008 (kschendel)
 **	    Use utility for setting DMF qualification.
+**	11-May-2010 (kschendel) b123565
+**	    Rename dsh-root to dsh-parent.
 **/
 
 
@@ -402,7 +404,7 @@ i4		    function )
 
 		dmr_cb = (DMR_CB *) cbs[node->node_qen.qen_kjoin.kjoin_get];
 
-		if ( dmr_cb->dmr_access_id == NULL && dsh != dsh->dsh_root )
+		if ( dmr_cb->dmr_access_id == NULL && dsh != dsh->dsh_parent )
 		{
 		    /*
 		    ** Then this is a Child thread that needs
@@ -924,7 +926,7 @@ kjoin_inner(QEF_RCB *rcb, QEE_DSH *dsh,
 	partno = 0;		/* In case of building a tid */
 	dmr = (DMR_CB *) cbs[node->node_qen.qen_kjoin.kjoin_get];
 
-	if ( dmr->dmr_access_id == NULL && dsh != dsh->dsh_root )
+	if ( dmr->dmr_access_id == NULL && dsh != dsh->dsh_parent )
 	{
 	    /*
 	    ** Then this is a Child thread that needs

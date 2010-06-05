@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2008 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -141,6 +141,9 @@ QEE_DSH  *top_dsh);
 **	    Use slightly faster/more convenient dsh test for qe90, and
 **	    remove pointless error returns from cost begin/end.  Minor
 **	    streamlining.
+**	16-May-2010 (kschendel) b123565
+**	    Don't set qef-dsh, might be parallel query, and not needed.
+**	    The qef-cb needs to point to the main thread DSH.
 **/
 
 DB_STATUS
@@ -165,40 +168,34 @@ i4		function)
     /* Initialize dsh for tproc at the first execution */
     if (function & (TOP_OPEN | MID_OPEN))
     {
-      DB_CURSOR_ID  tproc_qp_id;
+	DB_CURSOR_ID	tproc_qp_id;
+	QEF_RCB		tproc_rcb;
 
-      /* Save caller's QP cursor ID */
-      MEcopy((PTR)&rcb->qef_qp,
+	tproc_rcb = *rcb;
+
+	/* Get tproc QP cursor ID for tproc dsh allocation */
+	MEcopy((PTR)tproc_node.tproc_qpidptr,
              sizeof(DB_CURSOR_ID),
-             (PTR)&tproc_qp_id);
+             (PTR)&tproc_rcb.qef_qp);
 
-      /* Get tproc QP cursor ID for tproc dsh allocation */
-      MEcopy((PTR)tproc_node.tproc_qpidptr,
-             sizeof(DB_CURSOR_ID),
-             (PTR)&rcb->qef_qp);
+	/* Setting qef_qso_handle to 0 will trigger
+	* the use of qef_qp to get the tproc Qp instead of
+	* the top QP.
+	*/
+	tproc_rcb.qef_qso_handle = 0;
 
-      /* Setting qef_qso_handle to 0 will trigger
-       * the use of qef_qp to get the tproc Qp instead of
-       * the top QP.
-       */
-      rcb->qef_qso_handle = 0;
+	/* Allocate tproc dsh */
+	status = qeq_dsh(&tproc_rcb, 0, &tproc_dsh, (bool)FALSE,
+		(i4)-1, (bool)TRUE);
+	if (status != E_DB_OK)
+	    return status;
 
-      /* Allocate tproc dsh */
-      if (status = qeq_dsh(rcb, 0, &tproc_dsh, (bool)FALSE,
-          (i4)-1, (bool)TRUE))
-          return status;
+	qen_status->node_u.node_tproc.node_tproc_dsh = tproc_dsh;
 
-      /* Restore caller's QP cursor ID */
-      MEcopy((PTR)&tproc_qp_id,
-             sizeof(DB_CURSOR_ID),
-             (PTR)&rcb->qef_qp);
+	tproc_dsh->dsh_act_ptr = tproc_dsh->dsh_qp_ptr->qp_ahd;
 
-      qen_status->node_u.node_tproc.node_tproc_dsh = tproc_dsh;
-
-      tproc_dsh->dsh_act_ptr = tproc_dsh->dsh_qp_ptr->qp_ahd;
-
-      if (function & MID_OPEN)
-          return status;
+	if (function & MID_OPEN)
+	    return status;
     }
     else if (function & FUNC_CLOSE)
     {
@@ -253,15 +250,19 @@ i4		function)
                 return status; 
             }
         }
+	/* ***** FIXME not good enough, need to pass reset to actions.
+	** and needs to start over at the first action.
+	** and non-reset really ought to take up where we left off from
+	** the most recent return-row rather than always starting over.
+	** tproc in general doesn't traverse actions quite right,
+	** it mostly works, but not always.
+	*/
     }
 
     /* Process the actions for this tproc */
     first_act = tproc_dsh->dsh_act_ptr;
-    rcb->qef_cb->qef_dsh = (PTR)tproc_dsh;
 
     status = qen_tproc_exec_act(first_act, rcb, node, dsh, tproc_dsh);
-
-    rcb->qef_cb->qef_dsh = (PTR)dsh;
 
     if (dsh->dsh_qp_stats)
     {
@@ -340,6 +341,10 @@ i4		function)
 **      20-Oct-2009 (gefei01)
 **         Fixed bug 122719. Don't return QEN4_NO_MORE_ROWS
 **         for aggregation in singleton SELECT.
+**	14-May-2010 (kschendel) b123565
+**	    Validate is now split into two pieces, call each one.
+**	    Pass DSH to ret-row, else it will pick up the wrong one during
+**	    parallel query.
 */
 static DB_STATUS
 qen_tproc_exec_act(
@@ -387,20 +392,25 @@ QEE_DSH   *dsh)
          * are executing a for (select) loop in a procedure, we only 
          * validate the select GET on entry to the loop (so as not to
          * reposition the query for each iteration).
+	 * FIXME this is still goofy, revalidates on each returned row
+	 * because tproc starts over from the beginning each call.
+	 * Teach tproc to track its state better!
          */
         if (act_state == DSH_CT_INITIAL &&
             (prevfor || act->ahd_atype != QEA_GET ||
-             !(act->qhd_obj.qhd_qep.ahd_qepflag & AHD_FORGET)) &&
-             (status = qeq_validate(qef_rcb, dsh, act,
-                                (i4)NO_FUNC, (bool)TRUE))
-           )
-        {
+             !(act->qhd_obj.qhd_qep.ahd_qepflag & AHD_FORGET)) )
+	{
+	    status = qeq_topact_validate(qef_rcb, dsh, act, TRUE);
+	    if (status == E_DB_OK)
+		status = qeq_subplan_init(qef_rcb, dsh, act, NULL, NULL);
 
-           qeq_dshtorcb(qef_rcb, dsh);
-	   qef_error(qef_rcb->error.err_code, 0L, status, &err,
-		     &qef_rcb->error, 0);
-
-           break;
+	    if (status != E_DB_OK)
+	    {
+		qeq_dshtorcb(qef_rcb, dsh);
+		qef_error(qef_rcb->error.err_code, 0L, status, &err,
+			&qef_rcb->error, 0);
+		break;
+	    }
         }
 
         /* Don't allow for-loop get's to restart query on each iteration */
@@ -482,7 +492,7 @@ QEE_DSH   *dsh)
 
                      dsh->dsh_qef_output = &qef_data;
 
-                     status = qea_retrow(act, qef_rcb,
+                     status = qea_retrow(act, qef_rcb, dsh,
                                          (act_reset) ? FUNC_RESET : NO_FUNC);
 
                      if (status != E_DB_OK)

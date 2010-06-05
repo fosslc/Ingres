@@ -751,6 +751,8 @@ i4		**iierrorno);
 **	    Add calls to copy from DSH to RCB for || query thread safety.
 **      27-Feb-2009 (gefei01)
 **          Support cursor select for table procedure.
+**	14-May-2010 (kschendel) b123565
+**	    Split validation into two parts, fix here.
 */
 DB_STATUS
 qeq_open(
@@ -836,8 +838,9 @@ QEF_RCB		    *qef_rcb )
 	    }
 
 	    /* validate the action */
-	    status = qeq_validate(qef_rcb, dsh, act, 
-				(i4) NO_FUNC, (bool)TRUE);
+	    status = qeq_topact_validate(qef_rcb, dsh, act, TRUE);
+	    if (status == E_DB_OK)
+		status = qeq_subplan_init(qef_rcb, dsh, act, NULL, NULL);
 	    qeq_dshtorcb(qef_rcb, dsh);
 	    if (status != E_DB_OK)
 	    {
@@ -1192,6 +1195,8 @@ QEF_RCB		    *qef_rcb )
 **	    in cursor processing.
 **	16-july-2007 (dougi)
 **	    Don't set DONE_1STFETCH if we scrolled to BEFORE.
+**	14-May-2010 (kschendel) b123565
+**	    Split validation into two parts, fix here.
 */
 DB_STATUS
 qeq_fetch(
@@ -1344,13 +1349,14 @@ QEF_RCB		*qef_rcb )
     ask_rowcount -= qef_rcb->qef_rowcount;	/* Decrease by # so far */
     tot_rowcount = qef_rcb->qef_rowcount;	/* Got this # so far */
 
-    act = dsh->dsh_act_ptr->ahd_next;
+    /* Start with the next action, process actions until we get a row */
 
-    /* process each action */
+    act = dsh->dsh_act_ptr->ahd_next;
     while (act != (QEF_AHD *)NULL)
     {
-	status = qeq_validate(qef_rcb, dsh, act,
-				(i4) NO_FUNC, (bool)TRUE);
+	status = qeq_topact_validate(qef_rcb, dsh, act, TRUE);
+	if (status == E_DB_OK)
+	    status = qeq_subplan_init(qef_rcb, dsh, act, NULL, NULL);
 	qeq_dshtorcb(qef_rcb, dsh);
 	if (status != E_DB_OK)		
 	{
@@ -1989,6 +1995,8 @@ QEF_RCB		*qef_rcb )
 **	    procedures that are constraints have parameters.
 **	19-Mar-2010 (gupsh01) SIR 123444
 **	    Added support for rename table/columns.
+**	14-May-2010 (kschendel) b123565
+**	    Validation split into two parts now, fix here.
 */
 
 DB_STATUS
@@ -2609,95 +2617,99 @@ i4		mode )
 	*/
 	else if (act_state == DSH_CT_INITIAL &&
 	    (prevfor || act->ahd_atype != QEA_GET || 
-		!(act->qhd_obj.qhd_qep.ahd_qepflag & AHD_FORGET)) &&
-	    (status = qeq_validate(qef_rcb, dsh, act,
-				(i4) NO_FUNC, (bool)TRUE))
-	    )
+		!(act->qhd_obj.qhd_qep.ahd_qepflag & AHD_FORGET)) )
 	{
-	    /*
-	    ** If no more rows (because of constant qual that evaluated to
-	    ** FALSE) and the action isn't GET or is GET and we're inside
-	    ** a DBP then continue with next action.  If the no more rows
-	    ** and GET and we're not in a DBP then stop the loop - we know
-	    ** the query will fail.  Also handle invalid queries & other
-	    ** errors reported in qeq_validate.
-	    **
-	    ** Note: that this does not handle UNION SELECT cases outside
-	    ** of DBP's where one of the SELECT qualifications is a constant
-	    ** qualification that yields FALSE.
-	    */
-
-            if (dsh->dsh_error.err_code == E_QE0119_LOAD_QP ||
-                dsh->dsh_error.err_code == E_QE030F_LOAD_TPROC_QP)
-               qeq_dshtorcb(qef_rcb, dsh);
-
-            if (qef_rcb->error.err_code == E_QE0119_LOAD_QP ||
-                qef_rcb->error.err_code == E_QE030F_LOAD_TPROC_QP)
-            {
-                /* The QP must be compiled, return to SCF */
-                return (status);
-            }
-
-	    qeq_dshtorcb(qef_rcb, dsh);
-	    if (qef_rcb->error.err_code == E_QE1004_TABLE_NOT_OPENED)
+	    status = qeq_topact_validate(qef_rcb, dsh, act, TRUE);
+	    if (status == E_DB_OK)
+		status = qeq_subplan_init(qef_rcb, dsh, act, NULL, NULL);
+	    if (status != E_DB_OK)
 	    {
 		/*
-		** B103150
-		** validate succeeded but table could not be opened 
-		** with the required lockmode because of lock timeout
-		** In this case we want the action to fail, not the validate
-		** so that we will abort the procedure and continue processing
-		** the next action. (B103150)
+		** If no more rows (because of constant qual that evaluated to
+		** FALSE) and the action isn't GET or is GET and we're inside
+		** a DBP then continue with next action.  If the no more rows
+		** and GET and we're not in a DBP then stop the loop - we know
+		** the query will fail.  Also handle invalid queries & other
+		** errors reported in qeq_validate.
+		**
+		** Note: that this does not handle UNION SELECT cases outside
+		** of DBP's where one of the SELECT qualifications is a constant
+		** qualification that yields FALSE.
 		*/
-		qef_rcb->error.err_code = E_DM004D_LOCK_TIMER_EXPIRED;
-	    }
 
-	    else if (qef_rcb->error.err_code == E_QE0015_NO_MORE_ROWS)
-	    {
-		if (act->ahd_atype != QEA_GET || qp->qp_qmode == QEQP_EXEDBP)
-		{
-		    qef_rcb->error.err_code = E_QE0000_OK;
-		    status = E_DB_OK;
-		    act = act->ahd_next;
-		    prevfor = FALSE;
-		    if (iirowcount != (i4 *)NULL)
-			*iirowcount = (i4) (qef_rcb->qef_rowcount);
-		    continue;
-		}
-		else	/* Action type must be GET and we're not in a DBP */
-		{
-		    /* Leave warning status and error code alone & stop loop */
-		    break;
-		}
-	    }
-	    else if ((qef_rcb->error.err_code == E_QE0023_INVALID_QUERY) ||
-		     (qef_rcb->error.err_code == E_QE0301_TBL_SIZE_CHANGE))
-	    {
-	        /* decrement the count of open query/cursor so that
-	        ** qeq_cleanup can do the right thing */
-	        if (qef_cb->qef_open_count > 0)
-		    --qef_cb->qef_open_count;
-		if ((tmp_dsh = dsh->dsh_stack) != NULL)
-		{
-		    qef_rcb->qef_context_cnt--;
-		    qef_rcb->qef_intstate |= QEF_DBPROC_QP;
-		}
-		status = qeq_cleanup(qef_rcb, status, TRUE);
-		qef_cb->qef_dsh = (PTR)tmp_dsh;
-		return (status);
-	    }
-	    else	/* Some other error - abort QP */
-	    {
-		qef_error(qef_rcb->error.err_code, 0L, status, &err,
-		          &qef_rcb->error, 0);
+		if (dsh->dsh_error.err_code == E_QE0119_LOAD_QP ||
+		    dsh->dsh_error.err_code == E_QE030F_LOAD_TPROC_QP)
+		   qeq_dshtorcb(qef_rcb, dsh);
 
-		/* We must do cleanup for any errors that happen during 
-		** initialization.  This includes backing out transactions
-		** in the case of deadlock.  So drop through to error
-		** handling following the switch below. (bug #32320)
-		*/
+		if (qef_rcb->error.err_code == E_QE0119_LOAD_QP ||
+		    qef_rcb->error.err_code == E_QE030F_LOAD_TPROC_QP)
+		{
+		    /* The QP must be compiled, return to SCF */
+		    return (status);
+		}
+
+		qeq_dshtorcb(qef_rcb, dsh);
+		if (qef_rcb->error.err_code == E_QE1004_TABLE_NOT_OPENED)
+		{
+		    /*
+		    ** B103150
+		    ** validate succeeded but table could not be opened 
+		    ** with the required lockmode because of lock timeout
+		    ** In this case we want the action to fail, not the validate
+		    ** so that we will abort the procedure and continue processing
+		    ** the next action. (B103150)
+		    */
+		    qef_rcb->error.err_code = E_DM004D_LOCK_TIMER_EXPIRED;
+		}
+
+		else if (qef_rcb->error.err_code == E_QE0015_NO_MORE_ROWS)
+		{
+		    if (act->ahd_atype != QEA_GET || qp->qp_qmode == QEQP_EXEDBP)
+		    {
+			qef_rcb->error.err_code = E_QE0000_OK;
+			status = E_DB_OK;
+			act = act->ahd_next;
+			prevfor = FALSE;
+			if (iirowcount != (i4 *)NULL)
+			    *iirowcount = (i4) (qef_rcb->qef_rowcount);
+			continue;
+		    }
+		    else	/* Action type must be GET and we're not in a DBP */
+		    {
+			/* Leave warning status and error code alone & stop loop */
+			break;
+		    }
+		}
+		else if ((qef_rcb->error.err_code == E_QE0023_INVALID_QUERY) ||
+			 (qef_rcb->error.err_code == E_QE0301_TBL_SIZE_CHANGE))
+		{
+		    /* decrement the count of open query/cursor so that
+		    ** qeq_cleanup can do the right thing */
+		    if (qef_cb->qef_open_count > 0)
+			--qef_cb->qef_open_count;
+		    if ((tmp_dsh = dsh->dsh_stack) != NULL)
+		    {
+			qef_rcb->qef_context_cnt--;
+			qef_rcb->qef_intstate |= QEF_DBPROC_QP;
+		    }
+		    status = qeq_cleanup(qef_rcb, status, TRUE);
+		    qef_cb->qef_dsh = (PTR)tmp_dsh;
+		    return (status);
+		}
+		else	/* Some other error - abort QP */
+		{
+		    qef_error(qef_rcb->error.err_code, 0L, status, &err,
+			      &qef_rcb->error, 0);
+
+		    /* We must do cleanup for any errors that happen during 
+		    ** initialization.  This includes backing out transactions
+		    ** in the case of deadlock.  So drop through to error
+		    ** handling following the switch below. (bug #32320)
+		    */
+		}
 	    }
-	}
+	} /* if validate needed */
+
 	/* The following effectively resets the row count for every action. */
 	/* If we are processing a rule action list, we want to remember	    */
 	/* the current row count. Since the rule action lists are	    */
@@ -2827,7 +2839,7 @@ i4		mode )
 		break;
 
 	    case QEA_RETROW:
-		status = qea_retrow(act, qef_rcb, 
+		status = qea_retrow(act, qef_rcb, dsh,
 				(act_reset) ? FUNC_RESET : NO_FUNC);
 		qeq_dshtorcb(qef_rcb, dsh);
 		dshcopy = FALSE;
@@ -3727,8 +3739,8 @@ i4		mode )
 			first_act = qp->qp_ahd;
 			
 		/* reopen and validate the tables */
-		if (status = qeq_validate(qef_rcb, dsh, first_act, 
-					    (i4)NO_FUNC, (bool)FALSE))
+		status = qeq_topact_validate(qef_rcb, dsh, first_act, FALSE);
+		if (status != E_DB_OK)
 		{
 		    qef_rcb->error.err_code = dsh->dsh_error.err_code;
 		    if (qef_rcb->error.err_code == E_QE1004_TABLE_NOT_OPENED) 
@@ -4355,6 +4367,7 @@ qeq_dsh(
     ** available for detection of the condition. BTW, attempts to explicitly
     ** call a SET OF proc with a scalar parm list (instead of a global temp
     ** table) get caught in OPF (opc). Only rules have to be checked here. */
+
     if (qp->qp_setInput != NULL && !is_set_input)
     {
 	qef_cb->qef_dsh = (PTR)NULL;

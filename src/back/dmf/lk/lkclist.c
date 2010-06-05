@@ -855,6 +855,9 @@ CL_ERR_DESC		*sys_err)
 **	    project.
 **	12-Aug-2004 (jenjo02)
 **	    Move LKB/RSB stash to SHARED list.
+**	17-May-2010 (kschendel) SIR 123565
+**	    When converting to SHARED, don't mark status as SHARED until the
+**	    very end, because that's what other bits of LK look at (unmutexed).
 */
 STATUS
 LKconnect(
@@ -943,8 +946,9 @@ CL_ERR_DESC		*sys_err)
 	sllb->llb_status |= (LLB_SHARED | LLB_MULTITHREAD);
 	sllb->llb_status &= 
 	    ~(LLB_WAITING | LLB_EWAIT | LLB_ESET | LLB_EDONE);
-	cllb->llb_status |= (LLB_PARENT_SHARED | LLB_NONPROTECT);
-	cllb->llb_status &= ~LLB_MULTITHREAD;
+	/* Caller's LLB is not flagged until everything else is done.
+	** Other parts of LK look at llb-status unmutexed.
+	*/
 	cllb->llb_shared_llb = LGK_OFFSET_FROM_PTR(sllb);
 
 	/*
@@ -1122,6 +1126,8 @@ CL_ERR_DESC		*sys_err)
 	    /* Change ownership of LKB to sllb */
 	    lkbq->lkbq_llb = LGK_OFFSET_FROM_PTR(sllb);
 	}
+	cllb->llb_status |= (LLB_PARENT_SHARED | LLB_NONPROTECT);
+	cllb->llb_status &= ~LLB_MULTITHREAD;
 	/* Conversion of cllb is complete */
 	(VOID)LK_unmutex(&cllb->llb_mutex);
 

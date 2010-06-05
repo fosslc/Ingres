@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004 Ingres Corporation
+** Copyright (c) 2010 Ingres Corporation
 ** 
 **
 */
@@ -59,7 +59,7 @@ static char MsgChild  [ ] = "EXCH ERROR: Child";
 static char *NodeType[] =
 {
 "TJOIN","KJOIN","ORIG","FSMJOIN","ISJOIN","CPJOIN","SORT",
-"TSORT","QP","SEJOIN","ORIGAGG","HJOIN","EXCHANGE"
+"TSORT","QP","SEJOIN","ORIGAGG","HJOIN","EXCHANGE","TPROC"
 };
 
 #define EXCH_NOCOMMAND	0 /* no command */
@@ -79,6 +79,7 @@ static DB_STATUS qen_exchange_serial(
 		QEF_RCB *rcb,
 		QEE_DSH *dsh,
 		i4 function );
+
 static void qen_dsh_fixup(
 		QEE_DSH *dsh, 
 		QEN_NODE *node, 
@@ -195,6 +196,10 @@ static void qen_dsh_fixup(
 **      18-Mar-2010 (huazh01)
 **          Signal E_DB_WARN if dsh->dsh_error.err_code contains
 **          no error. (b123375)
+**	11-May-2010 (kschendel) b123565
+**	    Snapshot the parent DSH, not the root DSH.  If we're a 1:1
+**	    exch under a 1:N parallel union, parent and root are different
+*	    (and parent is the correct one).
 */
 
 DB_STATUS
@@ -285,7 +290,7 @@ i4		    function )
 	    ** buffer on each OPEN.
 	    */
 
-	    if ( dsh != dsh->dsh_root || exch_cb->child_data == NULL )
+	    if ( dsh != dsh->dsh_parent || exch_cb->child_data == NULL )
 	    {
 		STRUCT_ASSIGN_MACRO(Qef_s_cb->qef_d_ulmcb, ulm_rcb);
 		ulm_rcb.ulm_psize = sizeof(QEE_DSH) +
@@ -320,8 +325,8 @@ i4		    function )
 	    */
 	    exch_cb->dsh = (char*)exch_cb->child_data + 
 			    (exch->exch_ccount * sizeof(CHILD_DATA));
-	    /* Snapshot the root DSH for the Kids */
-	    MEcopy((PTR)dsh->dsh_root, sizeof(QEE_DSH), exch_cb->dsh);
+	    /* Snapshot the parent DSH for the Kids */
+	    MEcopy((PTR)dsh->dsh_parent, sizeof(QEE_DSH), exch_cb->dsh);
 
 	    if (exch_cb->trace)
 		TRdisplay("%@ %p %2d %s %s Starting %d children for function %v\n",
@@ -824,16 +829,16 @@ i4		    function )
 
     exch_cb->eat_reset = FALSE;
 
+    /* Check for cancel, context switch if not MT */
+    CScancelCheck(dsh->dsh_sid);
+    if (QEF_CHECK_FOR_INTERRUPT(qef_cb, dsh) == E_DB_ERROR)
+	return (E_DB_ERROR);
+
     /* If the trace point qe90 is turned on then gather cpu and dio stats */
     if (dsh->dsh_qp_stats)
     {
 	qen_bcost_begin(dsh, &timerstat, qen_status);
     }
-
-    /* Check for cancel, context switch if not MT */
-    CScancelCheck(dsh->dsh_sid);
-    if (QEF_CHECK_FOR_INTERRUPT(qef_cb, dsh) == E_DB_ERROR)
-	return (E_DB_ERROR);
 
     /*
     ** Row production:
@@ -952,6 +957,9 @@ i4		    function )
 
 		dsh->dsh_error.err_code = error.err_code;
 
+		if (dsh->dsh_qp_stats)
+		    qen_ecost_end(dsh, &timerstat, qen_status);
+
 		/* If not from a kid, cut_read_buf failed */
 		if ( error.err_code != E_CU0204_ASYNC_STATUS )
 		{
@@ -961,7 +969,7 @@ i4		    function )
 		    
 		    if ( exch_cb->trace )
 		    {
-			TRdisplay("%@ %p %2d %s %s: cut_signal_status status = %d :d\n", 
+			TRdisplay("%@ %p %2d %s %s: cut_signal_status status = %d %d\n", 
 				    exch_cb->parent_sid, NodeNum, OutNode, DbgParent,
 				    status, __LINE__);
 		    }
@@ -1019,90 +1027,87 @@ i4		    function )
 	* if the status was okay then return the data in the row buffer
 	*/
 	if ( CurChild->status == E_DB_OK )
+	    break;		/* Break out to finish up row returning */
+
+	/*
+	** Non-zero BuffHdr->status ends this Child's
+	** participation.
+	*/
+	if ( exch_cb->trace )
+	    TRdisplay("%@ %p %2d %s %s child%d status=%d err=%x rows %d\n",
+		exch_cb->parent_sid, NodeNum, OutNode, DbgParent, 
+		CurChild->threadno, CurChild->status,
+		dsh->dsh_error.err_code, CurChild->row_count);
+
+	/* Set the worst status thus far */
+	if (CurChild->status > exch_cb->high_status)
 	{
-	    /*
-	    ** If using a GLOBAL base array, we need only
-	    ** to plunk a pointer to the row within the
-	    ** cell, otherwise we'll need to copy the
-	    ** row from the cell to the row buffer.
-	    **
-	    ** Note that in the GLOBAL case, we can't release
-	    ** the cells, because QEF hasn't yet extracted
-	    ** the cell data. We do the release at the
-	    ** top of this big loop.
-	    */
-	    if ( qp->qp_status & QEQP_GLOBAL_BASEARRAY )
-		dsh->dsh_row[node->qen_row] = 
-			(PTR)BuffHdr + sizeof(BUFF_HDR);
-	    else
-	    {
-		MEcopy((PTR)BuffHdr + sizeof(BUFF_HDR),
-		    qp->qp_row_len[node->qen_row],
-		    dsh->dsh_row[node->qen_row]);
-
-		/*
-		** If last cell, release the cells 
-		** for re-use by the writer..
-		*/
-		if ( CurChild->cells_remaining == 1 )
-		    (void) cut_read_complete(DataRcb, &error);
-	    }
-
-	    /* Count another row for the kid and query */
-	    CurChild->row_count++;
-	    qen_status->node_rcount++;
-
-	    /* print tracing information DO NOT xDEBUG THIS */
-	    if ( node->qen_prow != NULL &&
-		(ult_check_macro(&qef_cb->qef_trace, 100+NodeNum,
-				&val1, &val2) ||
-		ult_check_macro(&qef_cb->qef_trace, 99,
-				&val1, &val2)) )
-	    {
-		(void)qen_print_row(node, rcb, dsh);
-	    }
-	    /* Break to return row to QEF */
-	    break;
+	    exch_cb->high_status = BuffHdr->status;
+	    exch_cb->high_err_code = BuffHdr->err_code;
 	}
-	else
+	
+	/* If last child, return the worst status */
+	if ( --exch_cb->cchild_running == 0 )
 	{
-	    /*
-	    ** Non-zero BuffHdr->status ends this Child's
-	    ** participation.
-	    */
-	    if ( exch_cb->trace )
-		TRdisplay("%@ %p %2d %s %s child%d status=%d err=%x rows %d\n",
-		    exch_cb->parent_sid, NodeNum, OutNode, DbgParent, 
-		    CurChild->threadno, CurChild->status,
-		    dsh->dsh_error.err_code, CurChild->row_count);
-
-	    /* Set the worst status thus far */
-	    if (CurChild->status > exch_cb->high_status)
+	    if (dsh->dsh_qp_stats)
 	    {
-		exch_cb->high_status = BuffHdr->status;
-		exch_cb->high_err_code = BuffHdr->err_code;
+		qen_ecost_end(dsh, &timerstat, qen_status);
 	    }
-	    
-	    /* If last child, return the worst status */
-	    if ( --exch_cb->cchild_running == 0 )
-	    {
-		if (dsh->dsh_qp_stats)
-		{
-		    qen_ecost_end(dsh, &timerstat, qen_status);
-		}
-		if (exch_cb->trace)
-		    TRdisplay("%@ %p %2d %s %s LAST child: status = %d err_code = %x rows %d\n",
-			exch_cb->parent_sid, NodeNum, OutNode, DbgParent,
-			exch_cb->high_status, exch_cb->high_err_code,
-			qen_status->node_rcount);
+	    if (exch_cb->trace)
+		TRdisplay("%@ %p %2d %s %s LAST child: status = %d err_code = %x rows %d\n",
+		    exch_cb->parent_sid, NodeNum, OutNode, DbgParent,
+		    exch_cb->high_status, exch_cb->high_err_code,
+		    qen_status->node_rcount);
 
-		dsh->dsh_error.err_code = exch_cb->high_err_code;
-		return(exch_cb->high_status);
-	    }
-	    /* Done with this Child, loop back to pick another */
-	    KidsWithNoCells = 0;
-	    continue;
+	    dsh->dsh_error.err_code = exch_cb->high_err_code;
+	    return(exch_cb->high_status);
 	}
+	/* Done with this Child, loop back to pick another */
+	KidsWithNoCells = 0;
+    } /* for */
+
+    /* The loop only breaks out to return a row. */
+
+    /*
+    ** If using a GLOBAL base array, we need only
+    ** to plunk a pointer to the row within the
+    ** cell, otherwise we'll need to copy the
+    ** row from the cell to the row buffer.
+    **
+    ** Note that in the GLOBAL case, we can't release
+    ** the cells, because QEF hasn't yet extracted
+    ** the cell data. We do the release at the
+    ** top of this big loop.
+    */
+    if ( qp->qp_status & QEQP_GLOBAL_BASEARRAY )
+	dsh->dsh_row[node->qen_row] = 
+		(PTR)BuffHdr + sizeof(BUFF_HDR);
+    else
+    {
+	MEcopy((PTR)BuffHdr + sizeof(BUFF_HDR),
+	    qp->qp_row_len[node->qen_row],
+	    dsh->dsh_row[node->qen_row]);
+
+	/*
+	** If last cell, release the cells 
+	** for re-use by the writer..
+	*/
+	if ( CurChild->cells_remaining == 1 )
+	    (void) cut_read_complete(DataRcb, &error);
+    }
+
+    /* Count another row for the kid and query */
+    CurChild->row_count++;
+    qen_status->node_rcount++;
+
+    /* print tracing information DO NOT xDEBUG THIS */
+    if ( node->qen_prow != NULL &&
+	(ult_check_macro(&qef_cb->qef_trace, 100+NodeNum,
+			&val1, &val2) ||
+	ult_check_macro(&qef_cb->qef_trace, 99,
+			&val1, &val2)) )
+    {
+	(void)qen_print_row(node, rcb, dsh);
     }
 
     /* If the trace point qe90 is turned on capture stats snapshot */
@@ -1111,12 +1116,7 @@ i4		    function )
 	qen_ecost_end(dsh, &timerstat, qen_status);
     }
 
-    /*
-     * the child status tells us how the query is going and exchange should
-     * be transparent to the rest of the query process, so just pass back
-     * whatever we got without editorial comment
-     */
-    return(CurChild->status);
+    return(E_DB_OK);
 
 }
 
@@ -1128,6 +1128,19 @@ i4		    function )
 **	Execute the tree below the exchange node, storing data in a
 **	CUT buffer for asynchronous processing by the parent half of
 **	the exchange node.
+**
+**	Unlike most QP node handlers, the exchange child does not
+**	return an E_DB_WARN / QE0015 status pair to signal "no more
+**	rows".  Instead, each row through CUT has a header that transmits
+**	the status and error code for that row.  If the child runs out
+**	of rows, in addition to sending a WARN/QE0015 row header through
+**	CUT, one of two things can happen:  a) the child exits with NO
+**	error status, or b) the child waits for instructions from the
+**	exchange parent.  (B) is used when the child is resettable, i.e.
+**	on the inner of a CPJOIN, PSM JOIN, or SEJOIN.
+**
+**	A thread (CUT) error status is only used if the parent is to be
+**	notified as soon as possible, and the query will be aborting.
 **
 **  History:    
 **	8-jan-04 (toumi01)
@@ -1207,6 +1220,14 @@ i4		    function )
 **          thread re-sends the E_DB_ERROR back to parent.
 **          Otherwise, query will fail with E_US1264.
 **          (b123375)
+**	14-May-2010 (kschendel) b123565
+**	    Run subplan initializer after our child thread DSH context is
+**	    built, so that VIRGIN segments and such can be done in our
+**	    context.
+**	    Our DSH is cloned from the parent thread, not necessarily the
+**	    root thread;  rename RootXxx to ParentXxx
+**	    Don't return QE0015 as a cut signal status, return "ok" at
+**	    child exit unless something really went wrong.
 **/
 DB_STATUS
 qen_exchange_child(SCF_FTX *ftxcb)
@@ -1217,11 +1238,11 @@ qen_exchange_child(SCF_FTX *ftxcb)
     QEN_NODE	*node = exch_cb->node;
     QEN_EXCH	*exch = &node->node_qen.qen_exch;
     QEF_RCB	*rcb = exch_cb->rcb;
-    QEE_DSH	*RootDSH = exch_cb->dsh;/* The Root DSH */
+    QEE_DSH	*ParentDSH = exch_cb->dsh;/* The Parent's DSH (snapshot) */
     QEE_DSH	*dsh = NULL;		/* Our scrambled copy of it */
-    QEN_STATUS	*QenStatus, *RootStatus;
-    QEF_CB	*qef_cb = RootDSH->dsh_qefcb;
-    QEF_QP_CB	*qp = RootDSH->dsh_qp_ptr;
+    QEN_STATUS	*QenStatus, *ParentStatus;
+    QEF_CB	*qef_cb = ParentDSH->dsh_qefcb;
+    QEF_QP_CB	*qp = ParentDSH->dsh_qp_ptr;
     ADE_EXCB	*ade_excb;
     QEN_NODE	*out_node = exch->exch_out;
     ULM_RCB	ulm;
@@ -1328,6 +1349,13 @@ qen_exchange_child(SCF_FTX *ftxcb)
 	/* Set transaction context in DSH */
 	dsh->dsh_dmt_id = tran_id;
 
+	/* Run the "sub-plan init" on the part of the plan under this
+	** exchange, using the child context.
+	*/
+	status = qeq_subplan_init(rcb, dsh, NULL, node, NULL);
+	if (status != E_DB_OK)
+	    break;
+
 	/* There's always a materializer CX */
 	ade_excb = (ADE_EXCB*) dsh->dsh_cbs[exch->exch_mat->qen_pos];
 	ade_excb->excb_seg = ADE_SMAIN;
@@ -1344,7 +1372,7 @@ qen_exchange_child(SCF_FTX *ftxcb)
 	else
 	{
 	    ade_excb->excb_bases[ADE_GLOBALBASE] = NULL;
-	    MatRow = &ade_excb->excb_bases[9];
+	    MatRow = &ade_excb->excb_bases[node->qen_row];
 	}
 
 	/*
@@ -1505,8 +1533,14 @@ qen_exchange_child(SCF_FTX *ftxcb)
 			    dsh->dsh_error.err_code, MatRows);
 
 	    if ( node->qen_flags & QEN_PQ_RESET &&
+		 call_status == E_DB_WARN &&
 		 dsh->dsh_error.err_code == E_QE0015_NO_MORE_ROWS )
 	    {
+		/* Clear status in case we iterate, probably not needed, but
+		** be tidy.
+		*/
+		call_status = E_DB_OK;
+		dsh->dsh_error.err_code = E_QE0000_OK;
 		/*
 		 * wait for a command from the parent thread
 		 */
@@ -1557,6 +1591,12 @@ qen_exchange_child(SCF_FTX *ftxcb)
 	    }
 
 	    /* Copy the DSH error code, terminate the thread */
+	    if (call_status == E_DB_WARN && dsh->dsh_error.err_code == E_QE0015_NO_MORE_ROWS)
+	    {
+		/* End the thread with an OK cut status if no more rows */
+		call_status = E_DB_OK;
+		dsh->dsh_error.err_code = E_QE0000_OK;
+	    }
 	    error.err_code = dsh->dsh_error.err_code;
 	    break;
 	}
@@ -1584,7 +1624,7 @@ qen_exchange_child(SCF_FTX *ftxcb)
 	{
 	    if ( exch_cb->trace )
 	    {
-		TRdisplay("%@ %p %s%d: cut_signal_status status = %d :d\n",
+		TRdisplay("%@ %p %s%d: cut_signal_status status = %d %d\n",
 			    my_sid, MsgChild, my_threadno, status,
 			    __LINE__);
 	    }
@@ -1627,28 +1667,28 @@ qen_exchange_child(SCF_FTX *ftxcb)
 		{
 		    if ( i != node->qen_num &&
 		         dsh->dsh_xaddrs[i] &&
-		         RootDSH->dsh_xaddrs[i] )
+		         ParentDSH->dsh_xaddrs[i] )
 		    {
 			QenStatus = dsh->dsh_xaddrs[i]->qex_status;
-			RootStatus = RootDSH->dsh_xaddrs[i]->qex_status;
-			if (QenStatus != RootStatus)
+			ParentStatus = ParentDSH->dsh_xaddrs[i]->qex_status;
+			if (QenStatus != ParentStatus)
 			{
 			    /* Fortunately these are all i4's */
-			    CSadjust_counter(&RootStatus->node_nbcost,
+			    CSadjust_counter(&ParentStatus->node_nbcost,
 					QenStatus->node_nbcost);
-			    CSadjust_counter(&RootStatus->node_necost,
+			    CSadjust_counter(&ParentStatus->node_necost,
 					QenStatus->node_necost);
-			    CSadjust_counter(&RootStatus->node_cpu,
+			    CSadjust_counter(&ParentStatus->node_cpu,
 					QenStatus->node_cpu);
-			    CSadjust_counter(&RootStatus->node_dio,
+			    CSadjust_counter(&ParentStatus->node_dio,
 					QenStatus->node_dio);
-			    CSadjust_counter(&RootStatus->node_rcount,
+			    CSadjust_counter(&ParentStatus->node_rcount,
 					QenStatus->node_rcount);
-			    CSadjust_counter(&RootStatus->node_pcount,
+			    CSadjust_counter(&ParentStatus->node_pcount,
 					QenStatus->node_pcount);
 			    /* ET gets max, not sum! */
-			    if (QenStatus->node_wc > RootStatus->node_wc)
-				RootStatus->node_wc = QenStatus->node_wc;
+			    if (QenStatus->node_wc > ParentStatus->node_wc)
+				ParentStatus->node_wc = QenStatus->node_wc;
 			}
 		    }
 		}
@@ -1732,23 +1772,12 @@ qen_exchange_child(SCF_FTX *ftxcb)
 		{
 		    if ( dsh->dsh_shd[i] && dsh->dsh_shd[i]->shd_streamid )
 		    {
-			/* This bit never seems to be set */
-			if ( dsh->dsh_shd[i]->shd_options & SHD1_DSH_POOL )
-			{
-			    /* stream comes from dsh pool */
-			    STRUCT_ASSIGN_MACRO(Qef_s_cb->qef_d_ulmcb, ulm);
-			    ulm.ulm_streamid_p = &dsh->dsh_shd[i]->shd_streamid;
-			    (void) ulm_closestream(&ulm);
-			}
-			else
-			{
-			    /* stream comes from sort pool */
-			    STRUCT_ASSIGN_MACRO(Qef_s_cb->qef_s_ulmcb, ulm);
-			    ulm.ulm_streamid_p = &dsh->dsh_shd[i]->shd_streamid;
-			    (void) ulm_closestream(&ulm);
-			    /* Hmm, this isn't thread-safe... */
-			    qef_cb->qef_s_used -= dsh->dsh_shd[i]->shd_size;
-			}
+			/* stream comes from sort pool */
+			STRUCT_ASSIGN_MACRO(Qef_s_cb->qef_s_ulmcb, ulm);
+			ulm.ulm_streamid_p = &dsh->dsh_shd[i]->shd_streamid;
+			(void) ulm_closestream(&ulm);
+			/* Hmm, this isn't thread-safe... */
+			qef_cb->qef_s_used -= dsh->dsh_shd[i]->shd_size;
 		    }
 		}
 	    }
@@ -1787,9 +1816,24 @@ qen_exchange_child(SCF_FTX *ftxcb)
 		    }
 		}
 	    }
+
+	    /* Drop our copy of any VLT areas */
+	    if (dsh->dsh_vlt != (QEE_VLT *)NULL)
+	    {
+		for (i = 0; i < qp->qp_pcx_cnt; i++)
+		{
+		    if (dsh->dsh_vlt[i].vlt_streamid != (PTR)NULL)
+		    {
+			ulm.ulm_streamid_p = &dsh->dsh_vlt[i].vlt_streamid;
+			(void) ulm_closestream(&ulm);
+		    }
+		    /* Don't worry about cleanup, DSH is going away soon */
+		}
+	    }
+
 	    /* Restore ulm_rcb to ref DSH */
 	    STRUCT_ASSIGN_MACRO(Qef_s_cb->qef_d_ulmcb, ulm);
-	}
+	} /* if 1:n */
 
 	/* Finally, destroy this thread's DSH's memory stream.
 	** (Same thing as qstreamid.)
@@ -1803,11 +1847,14 @@ qen_exchange_child(SCF_FTX *ftxcb)
     ** we'll merely detach from it.
     */
     if ( tran_id )
-	(void) qet_disconnect(rcb, &tran_id, &error);
+    {
+	DB_ERROR local_error;
+	(void) qet_disconnect(rcb, &tran_id, &local_error);
+    }
 
     if (exch_cb->trace)
-	TRdisplay("%@ %p %2d %s %s%d: has left the building\n", 
-			my_sid, NodeNum, OutNode, DbgChild, my_threadno);
+	TRdisplay("%@ %p %2d %s %s%d: is leaving the building, erc %d\n", 
+			my_sid, NodeNum, OutNode, DbgChild, my_threadno,error.err_code);
     
     /*
     ** Lastly, detach from CUT. If the parent is waiting for us to
@@ -1835,6 +1882,27 @@ qen_exchange_child(SCF_FTX *ftxcb)
 **
 **	The Parent's DSH must be handled in a read-only fashion
 **	as multiple Kids may be making their copies concurrently.
+**
+**	A 1:1 exchange can (mostly) use the same control blocks as
+**	the parent, since in theory there is no execution overlap
+**	between parent and child except at the exch itself.  The child
+**	gets its own copy of the dsh_row pointer array (but not the row
+**	buffers, they are still shared), and its own copy of selected
+**	DMR/DMT CB's since tables will have to be re-opened in the child
+**	thread transaction context.
+**
+**	A 1:N exchange is a lot fancier, since multiple child threads will
+**	be executing the same subplan.  Just about every kind of writable
+**	control block has to be cloned and duplicated per-thread.
+**
+**	NOTE / FIXME: a 1:N parallel union is handled like a 1:N plan
+**	at the moment.  This is unnecessary work, since the only place
+**	that the multiple threads of the parallel union actually overlap
+**	is at the QP node (immediately below the exch).  Below the QP,
+**	each thread selects exactly one action, and there's no more
+**	overlap.  Doing the full 1:N thing wastes memory and time.
+**	With enough analysis in opc to identify the QP-node things that
+**	need fully cloned, parallel union could switch to mostly-1:1.
 **
 ** Inputs:
 **	threadno			This kid's sequential
@@ -1940,8 +2008,14 @@ qen_exchange_child(SCF_FTX *ftxcb)
 **	06-Oct-2009 (smeke01) b122346
 **	    Added call to qen_dsh_fixup.
 **      05-Feb-2010 (huazh01)
-**          Add codes so that RootDSH and ChildDSH don't share one
+**          Add codes so that ParentDSH and ChildDSH don't share one
 **          key attribute array. (b123064)
+**	12-May-2010 (kschendel) b123565
+**	    Fix up sort/hold initialization: null out hold unget buffer,
+**	    reset shd_row (it points to a dsh_row), zero out other shd stuff.
+**	    Our DSH is cloned from the parent thread, not necessarily the
+**	    root thread;  rename RootXxx to ParentXxx
+**	    Reallocate dsh_vlt area if 1:n exch needs it.
 */
 
 DB_STATUS
@@ -1953,7 +2027,7 @@ DB_ERROR	*error)
 
 {
     QEF_QP_CB	*qp;
-    QEE_DSH	*RootDSH, *ChildDSH;
+    QEE_DSH	*ParentDSH, *ChildDSH;
     QEF_RCB	*rcb = exch_cb->rcb;
     QEN_NODE	*node = exch_cb->node;
     ULM_RCB	ulm;
@@ -1979,17 +2053,19 @@ DB_ERROR	*error)
     DMR_ATTR_ENTRY **srcAttr, **destAttr;
     i4          objSize;
 
-    /* Extract Root DSH from EXCH_CB */
-    RootDSH = exch_cb->dsh;
-    qp = RootDSH->dsh_qp_ptr;
+    /* Extract Parent DSH from EXCH_CB */
+    ParentDSH = exch_cb->dsh;
+    qp = ParentDSH->dsh_qp_ptr;
 
 
-    /* Make a copy of the Root DSH for this Kid. Root contents are copied
+    /* Make a copy of the Parent DSH for this Kid. Parent contents are copied
     ** to the child. For children numbered > 1, various fields (ptrs and
     ** structures) are re-allocated to give the child distinct copies for
     ** the sake of thread safety. If there is only one child (a 1:1 exchange)
     ** this isn't necessary since plan initialization performed the needed
-    ** allocations. */
+    ** allocations.  (The parent and child execute different parts of the
+    ** query plan, and don't overlap.)
+    *
 
     /* Nothing here, yet */
     *newdshp = NULL;
@@ -2092,6 +2168,8 @@ DB_ERROR	*error)
 	i += DB_ALIGN_MACRO((exix->exch_dmt_cnt + exix->exch_ttab_cnt
 		+ exix->exch_hld_cnt) * sizeof(DMT_CB));
 	i += DB_ALIGN_MACRO(exix->exch_dmh_cnt * sizeof(DMH_CB));
+	if (qp->qp_pcx_cnt > 0)
+	    i += DB_ALIGN_MACRO(qp->qp_pcx_cnt * sizeof(QEE_VLT));
 	ulm.ulm_psize += i;
     }
     ulm.ulm_psize += DB_ALIGN_MACRO(np * sizeof(PTR));
@@ -2109,10 +2187,11 @@ DB_ERROR	*error)
 
 	/* Copy contents of root DSH, then overlay as needed. */
 	ChildDSH = (QEE_DSH *)ulm.ulm_pptr;
-	MEcopy((PTR)RootDSH, sizeof(QEE_DSH), (PTR) ChildDSH);
+	MEcopy((PTR)ParentDSH, sizeof(QEE_DSH), (PTR) ChildDSH);
 	ChildDSH->dsh_streamid = ulm.ulm_streamid;
 	/* Set dsh_handle to dsh_streamid */
 	ChildDSH->dsh_handle = ChildDSH->dsh_streamid;
+	ChildDSH->dsh_parent = ParentDSH;
 
 	/* Set up query-time stream ID.  Since this is a dynamically
 	** created DSH that will go away at end-of-query, we can use
@@ -2139,7 +2218,7 @@ DB_ERROR	*error)
 
 	ChildDSH->dsh_row = (PTR*) ptrs;
 	ptrs = ptrs + qp->qp_row_cnt * sizeof(PTR);
-	MEcopy((PTR)RootDSH->dsh_row, qp->qp_row_cnt * sizeof(PTR),
+	MEcopy((PTR)ParentDSH->dsh_row, qp->qp_row_cnt * sizeof(PTR),
 			(PTR)ChildDSH->dsh_row);
 
 	/* The Child will set the pointer to the Mat buffer */
@@ -2148,7 +2227,7 @@ DB_ERROR	*error)
 	/* After the dsh_row pointer array comes the dsh_cbs */
 	ChildDSH->dsh_cbs = (PTR *) ptrs;
 	ptrs = ptrs + qp->qp_cb_cnt * sizeof(PTR);
-	MEcopy((PTR)RootDSH->dsh_cbs, qp->qp_cb_cnt * sizeof(PTR), (PTR)ChildDSH->dsh_cbs);
+	MEcopy((PTR)ParentDSH->dsh_cbs, qp->qp_cb_cnt * sizeof(PTR), (PTR)ChildDSH->dsh_cbs);
 	
 	/* 1:1 plan ? */
 	if ( exch->exch_ccount == 1 )
@@ -2170,7 +2249,10 @@ DB_ERROR	*error)
 
 
 	    /* Loop over ADE_EXCB structure entries in array (if
-	    ** global base arrays are in effect). */
+	    ** global base arrays are in effect).
+	    ** Although sub-plan init will run, it may not always do
+	    ** the "qeq-ade" stuff, make sure globalbase is reset.
+	    */
 	    if (qp->qp_status & QEQP_GLOBAL_BASEARRAY)
 	    {
 		ax = 0;	/* offset in 2nd index array of ADE_EXCB ixes */
@@ -2179,7 +2261,7 @@ DB_ERROR	*error)
 	        {
 		    j = exix->exch_array2[ax];
 
-		    Dexcbp = (ADE_EXCB *)RootDSH->dsh_cbs[j];
+		    Dexcbp = (ADE_EXCB *)ParentDSH->dsh_cbs[j];
 		    Dexcbp->excb_bases[ADE_GLOBALBASE] = (PTR)ChildDSH->dsh_row;
 	        }
 	    }
@@ -2198,7 +2280,7 @@ DB_ERROR	*error)
 	    {
 		j = exix->exch_array2[ax];
 		ChildDSH->dsh_cbs[j] = (PTR)dmt;
-		MEcopy((PTR)RootDSH->dsh_cbs[j],
+		MEcopy((PTR)ParentDSH->dsh_cbs[j],
 			    sizeof(DMT_CB), (PTR)dmt);
 	    }
 	    /* Now back off and do the dmr-cb's. */
@@ -2212,7 +2294,7 @@ DB_ERROR	*error)
 	    {
 		j = exix->exch_array2[ax];
 		ChildDSH->dsh_cbs[j] = (PTR)dmr;
-		MEcopy((PTR)RootDSH->dsh_cbs[j],
+		MEcopy((PTR)ParentDSH->dsh_cbs[j],
 			    sizeof(DMR_CB), (PTR)dmr);
 		/*
 		** If already opened and a regular table,
@@ -2236,8 +2318,7 @@ DB_ERROR	*error)
 
 	    /* The Child code will set the mat addr to the CUT cell */
 
-            qen_dsh_fixup(ChildDSH, node->node_qen.qen_exch.exch_out,
-                          &node->node_qen.qen_exch);
+            qen_dsh_fixup(ChildDSH, node->node_qen.qen_exch.exch_out, exch);
 
 	    /* That's it for 1:1 */
 	    break;
@@ -2249,6 +2330,7 @@ DB_ERROR	*error)
 	** of most of these entities are required for each thread executing
 	** a plan fragment. */
 
+	ChildDSH->dsh_vlt = NULL;	/* Will set below if needed */
 
 	/* "ax" indexes exch_array1 */
 	ax = 0;
@@ -2270,13 +2352,15 @@ DB_ERROR	*error)
 		    break;
 		ChildDSH->dsh_row[j] = ulm.ulm_pptr;
 
-		/* If this is the temp buffer, copy from root, else
-		** just fill with 0's. */
-		if (j == ADE_IBASE)
-		    MEcopy(RootDSH->dsh_row[j], qp->qp_row_len[j],
+		/* Copy row from parent.  Although this may only be necessary
+		** for the TEMP row, since we'll run subplan-init to do
+		** VIRGIN code for everything in the child, this still seems
+		** like the safest thing to do.  (There is the occasional
+		** obscure dsh-row usage, just look at qeaddl;  while none
+		** of that should ever run in a child thread, who knows...)
+		*/
+		MEcopy(ParentDSH->dsh_row[j], qp->qp_row_len[j],
 				ChildDSH->dsh_row[j]);
-		else 
-		    MEfill(qp->qp_row_len[j], 0, ChildDSH->dsh_row[j]);
 	    }
 
 	}	/* end of row buffer allocations */
@@ -2294,7 +2378,7 @@ DB_ERROR	*error)
 		j = exix->exch_array1[ax];
 
 		/* The hash we'll copy */
-		Dhptr = RootDSH->dsh_hash[j];
+		Dhptr = ParentDSH->dsh_hash[j];
 		
 		ulm.ulm_psize = sizeof (QEN_HASH_BASE);
 		
@@ -2328,6 +2412,10 @@ DB_ERROR	*error)
 		    hptr->hsh_pcount * sizeof(QEN_HASH_PART),
 		    (PTR)hptr->hsh_toplink->hsl_partition);
 					/* copy partition array */
+		/* hsh_brptr, hsh_prptr will be fixed when MID_OPEN reaches
+		** the hash join node.
+		** hsh_dmhcb is fixed up later.
+		*/
 
 	    }	/* end of hash structure allocations */
 	}
@@ -2347,7 +2435,7 @@ DB_ERROR	*error)
 		j = exix->exch_array1[ax];
 
 		/* The hashagg we'll copy */
-		Dhaptr = RootDSH->dsh_hashagg[j];
+		Dhaptr = ParentDSH->dsh_hashagg[j];
 
 		ulm.ulm_psize = sizeof (QEN_HASH_AGGREGATE);
 		rowsz = Dhaptr->hshag_obufsz;
@@ -2361,6 +2449,7 @@ DB_ERROR	*error)
 		MEcopy((PTR)Dhaptr, sizeof(QEN_HASH_AGGREGATE), (PTR)haptr);
 		/* HAGG streams always come from sort pool, not DSH */
 		haptr->hshag_streamid = NULL;
+		haptr->hshag_flags &= HASHAG_KEEP_OVER_RESET;
 		/* Format structures unique to this QEN_HASH_AGGREGATE. */
 		haptr->hshag_workrow = (PTR)haptr + sizeof(QEN_HASH_AGGREGATE);
 		haptr->hshag_currlink = haptr->hshag_toplink = 
@@ -2371,6 +2460,7 @@ DB_ERROR	*error)
 		    haptr->hshag_pcount * sizeof(QEN_HASH_PART),
 		    (PTR)haptr->hshag_toplink->hsl_partition);
 					/* copy partition array */
+		/* hshag_dmhcb gets fixed up later */
 	    }
 	}	/* end of hash aggregate structure allocations */
 	else 
@@ -2396,7 +2486,7 @@ DB_ERROR	*error)
 	    ** all qen_status ptrs are filled in (fixes SEGV
 	    ** in qeq_validate in || unions);
 	    */
-	    MEcopy((PTR)RootDSH->dsh_xaddrs, qp->qp_stat_cnt * sizeof(PTR),
+	    MEcopy((PTR)ParentDSH->dsh_xaddrs, qp->qp_stat_cnt * sizeof(PTR),
 		   (PTR)ChildDSH->dsh_xaddrs);
 	    MEfill(exix->exch_stat_cnt * sizeof(QEN_STATUS), 0, qen_status);
 	    MEfill(exix->exch_stat_cnt * sizeof(QEE_XADDRS), 0, xaddrs);
@@ -2443,7 +2533,7 @@ DB_ERROR	*error)
 
 		ChildDSH->dsh_tempTables[j] = tt;
 
-		Dtt = RootDSH->dsh_tempTables[j];
+		Dtt = ParentDSH->dsh_tempTables[j];
 
 		MEcopy((PTR)Dtt, sizeof(QEE_TEMP_TABLE), (PTR)tt);
 
@@ -2484,10 +2574,12 @@ DB_ERROR	*error)
 	    {
 		j = exix->exch_array1[ax];
 
-		Dhold = RootDSH->dsh_hold[j];
+		Dhold = ParentDSH->dsh_hold[j];
 		
 		ChildDSH->dsh_hold[j] = hold;
 		MEcopy((PTR)Dhold, sizeof(QEN_HOLD), (PTR)hold);
+		hold->unget_status = 0;
+		hold->unget_buffer = NULL;
 
 		MEcopy((PTR)Dhold->hold_dmr_cb, sizeof(DMR_CB), (PTR)dmr);
 		hold->hold_dmr_cb = dmr;
@@ -2511,6 +2603,8 @@ DB_ERROR	*error)
 	
 	if ( shdCnt && status == E_DB_OK )
 	{
+	    QEN_SHD *parent_shd;
+
 	    ChildDSH->dsh_shd = (QEN_SHD**)ptrs;
 	    ptrs += shdCnt * sizeof(PTR);
 
@@ -2524,11 +2618,16 @@ DB_ERROR	*error)
 	    {
 		j = exix->exch_array1[ax];
 		ChildDSH->dsh_shd[j] = shd;
+		parent_shd = ParentDSH->dsh_shd[j];
 
-		MEcopy((PTR)RootDSH->dsh_shd[j],
-			sizeof(QEN_SHD), (PTR)shd);
-		/* SHD streams always come from sort pool, not DSH */
-		shd->shd_streamid = NULL;
+		/* Most of the SHD gets zeroed... */
+		MEfill(sizeof(QEN_SHD), 0, (PTR) shd);
+		/* Copy over static things from parent's copy */
+		shd->shd_node = parent_shd->shd_node;
+		shd->shd_row_no = parent_shd->shd_row_no;
+		/* Reset DSH row pointer, row width */
+		shd->shd_row = ChildDSH->dsh_row[shd->shd_row_no];
+		shd->shd_width = ChildDSH->dsh_qp_ptr->qp_row_len[shd->shd_row_no];
 	    }
 
 	    /* Next come SHDs for HOLDs, if any */
@@ -2544,10 +2643,16 @@ DB_ERROR	*error)
 		j = exix->exch_array1[hold_ax] + qp->qp_sort_cnt;
 
 		ChildDSH->dsh_shd[j] = shd;
-		MEcopy((PTR)RootDSH->dsh_shd[j],
-			sizeof (QEN_SHD), (PTR)shd);
-		/* SHD streams always come from sort pool, not DSH */
-		shd->shd_streamid = NULL;
+		parent_shd = ParentDSH->dsh_shd[j];
+
+		/* Most of the SHD gets zeroed... */
+		MEfill(sizeof(QEN_SHD), 0, (PTR) shd);
+		/* Copy over static things from parent's copy */
+		shd->shd_node = parent_shd->shd_node;
+		shd->shd_row_no = parent_shd->shd_row_no;
+		/* Reset DSH row pointer, row width */
+		shd->shd_row = ChildDSH->dsh_row[shd->shd_row_no];
+		shd->shd_width = ChildDSH->dsh_qp_ptr->qp_row_len[shd->shd_row_no];
 	    }
 	}	/* end of sort hold structure allocations */
 	else 
@@ -2562,7 +2667,7 @@ DB_ERROR	*error)
 	    ** Bug b116479.  
 	    ** Copy across the array of QEN_NOR pointers to the ChildDSH. 
 	    */
-	    MEcopy((PTR)RootDSH->dsh_kor_nor, qp->qp_kor_cnt * sizeof(PTR), (PTR)ChildDSH->dsh_kor_nor);
+	    MEcopy((PTR)ParentDSH->dsh_kor_nor, qp->qp_kor_cnt * sizeof(PTR), (PTR)ChildDSH->dsh_kor_nor);
 
 	    ptrs += qp->qp_kor_cnt * sizeof(PTR);
 	}
@@ -2582,9 +2687,11 @@ DB_ERROR	*error)
 	    /* Loop over ADE_EXCB structure entries in array. */
 	    for ( i = 0; i < exix->exch_cx_cnt; i++, ax++ )
 	    {
+		QEN_BASE *qen_base;
+
 		j = exix->exch_array2[ax];
 
-		Dexcbp = (ADE_EXCB *)RootDSH->dsh_cbs[j];
+		Dexcbp = (ADE_EXCB *)ParentDSH->dsh_cbs[j];
 		qen_adf = (QEN_ADF *)Dexcbp->excb_bases[ADE_QENADF];
 		/* Allocate ADE_EXCB structure + CX base array. */
 		ulm.ulm_psize = sizeof (ADE_EXCB) + (qen_adf->qen_sz_base +
@@ -2594,113 +2701,128 @@ DB_ERROR	*error)
 
 		ChildDSH->dsh_cbs[j] = ulm.ulm_pptr;
 		excbp = (ADE_EXCB *) ulm.ulm_pptr;
-		MEcopy((PTR)Dexcbp,
-		    ulm.ulm_psize, (PTR)excbp);
+		MEcopy((PTR)Dexcbp, ulm.ulm_psize, (PTR)excbp);
 
-		/* If used, set pointer to global base array. */
-		if ( qp->qp_status & QEQP_GLOBAL_BASEARRAY )
-		    excbp->excb_bases[ADE_GLOBALBASE] = (PTR)ChildDSH->dsh_row;
-		else
-		    excbp->excb_bases[ADE_GLOBALBASE] = NULL;
+		/* Fix some base array entries that are set by qee,
+		** rather than qeq (we'll rerun the qeq init but not qee).
+		** Also fix GLOBALBASE since qeq-ade might not do anything
+		** if there's no virgin or param for the CX.
+		*/
 
-		/* Copy QEN_ROW base entries from updated dsh_row array. */
-		for (ix = 0; ix < qen_adf->qen_sz_base; ix++)
-		  if (qen_adf->qen_base[ix].qen_array == QEN_ROW)
-		    excbp->excb_bases[ADE_ZBASE+ix] = ChildDSH->dsh_row[qen_adf->
-				    qen_base[ix].qen_index];
+		if (qp->qp_status & QEQP_GLOBAL_BASEARRAY)
+		    excbp->excb_bases[ADE_GLOBALBASE] = (PTR) ChildDSH->dsh_row;
+		qen_base = qen_adf->qen_base;
+		for (ix = 0; ix < qen_adf->qen_sz_base; ix++, qen_base++)
+		{
+		    if (qen_base->qen_array == QEN_ROW)
+			excbp->excb_bases[ADE_ZBASE+ix] = ChildDSH->dsh_row[qen_base->qen_index];
+		    /* **** FIXME WHAT ABOUT QEN_KEY?  qee_ade sets it to
+		    ** dsh_key, which is not cloned.  Does it have to be?
+		    ** Does the dsh_key contents change during subplan init?
+		    */
+		}
 	    }	/* end of ADE_EXCB structure allocations */
 
-	    if ( status == E_DB_OK )
+	    if ( status != E_DB_OK )
+		break;
+
+	    /* Remaining DMR_CB structures. */
+	    for ( i = 0; i < exix->exch_dmr_cnt; i++, ax++, dmr++ )
 	    {
+		j = exix->exch_array2[ax];
+		ChildDSH->dsh_cbs[j] = (PTR)dmr;
+		MEcopy((PTR)ParentDSH->dsh_cbs[j],
+			    sizeof(DMR_CB), (PTR)dmr);
+		dmr->dmr_access_id = NULL;
 
-		/* Remaining DMR_CB structures. */
-		for ( i = 0; i < exix->exch_dmr_cnt; i++, ax++, dmr++ )
-		{
-		    j = exix->exch_array2[ax];
-		    ChildDSH->dsh_cbs[j] = (PTR)dmr;
-		    MEcopy((PTR)RootDSH->dsh_cbs[j],
-				sizeof(DMR_CB), (PTR)dmr);
-		    dmr->dmr_access_id = NULL;
-
-                    /* b123064:
-                    ** the key attr array, which is used to qualify records,
-                    ** can't be shared between root and child thread(s).
-                    ** it could cause wrong result problem.
-                    */
-                    if (dmr->dmr_attr_desc.ptr_in_count)
-                    {
-                       srcDmr = (DMR_CB *)RootDSH->dsh_cbs[j];
-
-                       objSize = DB_ALIGN_MACRO(dmr->dmr_attr_desc.ptr_size); 
-                       ulm.ulm_psize =
-                           dmr->dmr_attr_desc.ptr_in_count * objSize +
-                           sizeof(PTR) * dmr->dmr_attr_desc.ptr_in_count + 
-                           DB_ALIGN_SZ;
-
-                       if (status = qec_malloc(&ulm))
-                       {
-                          break;
-                       }
-
-                       ptrs = (PTR)ME_ALIGN_MACRO(ulm.ulm_pptr, DB_ALIGN_SZ);
-                       dmr->dmr_attr_desc.ptr_address = ptrs;
-
-                       srcAttr = (DMR_ATTR_ENTRY**)srcDmr->dmr_attr_desc.ptr_address;
-                       destAttr= (DMR_ATTR_ENTRY**)dmr->dmr_attr_desc.ptr_address;
-
-                       ptrs += dmr->dmr_attr_desc.ptr_in_count * sizeof(PTR);
-
-                       for (h = 0; h < dmr->dmr_attr_desc.ptr_in_count; h++)
-                       {
-
-                         destAttr[h] = (DMR_ATTR_ENTRY*)ptrs;
-                         MEcopy( srcAttr[h], 
-                                 dmr->dmr_attr_desc.ptr_size,
-                                 ptrs);
-                         ptrs = (PTR)ME_ALIGN_MACRO(ptrs + objSize, DB_ALIGN_SZ);
-
-                       }
-                    }
-                    
-		}
-
-		/* Remaining DMT_CB structures. */
-
-		for ( i = 0; i < exix->exch_dmt_cnt; i++, ax++, dmt++ )
-		{
-		    j = exix->exch_array2[ax];
-		    ChildDSH->dsh_cbs[j] = (PTR)dmt;
-		    MEcopy((PTR)RootDSH->dsh_cbs[j],
-				sizeof(DMT_CB), (PTR)dmt);
-		    dmt->dmt_record_access_id = NULL;
-		}
-
-		/* DMH_CB structures at the very end. */
-		dmh = (DMH_CB*) Mem;
-
-		for ( i = 0; i < exix->exch_dmh_cnt; i++, ax++, dmh++ )
-		{
-		    j = exix->exch_array2[ax];
-		    ChildDSH->dsh_cbs[j] = (PTR)dmh;
-		    MEcopy((PTR)RootDSH->dsh_cbs[j],
-				sizeof(DMH_CB), (PTR)dmh);
-		}
-
-		/* Fill in ADE_EXCB addresses in XADDR structures,
-		** starting with the exch node itself.  Resolve through
-		** any QP nodes we might find.
+		/* b123064:
+		** the key attr array, which is used to qualify records,
+		** can't be shared between root and child thread(s).
+		** it could cause wrong result problem.
 		*/
-		qee_resolve_xaddrs(ChildDSH, node, TRUE);
-	
-		/* 
-		** Fix up the data segment addresses in the ChildDSH.
-		*/
-		qen_dsh_fixup(ChildDSH, node->node_qen.qen_exch.exch_out,
-                              &node->node_qen.qen_exch);
+		if (dmr->dmr_attr_desc.ptr_in_count)
+		{
+		   srcDmr = (DMR_CB *)ParentDSH->dsh_cbs[j];
+
+		   objSize = DB_ALIGN_MACRO(dmr->dmr_attr_desc.ptr_size); 
+		   ulm.ulm_psize =
+		       dmr->dmr_attr_desc.ptr_in_count * objSize +
+		       sizeof(PTR) * dmr->dmr_attr_desc.ptr_in_count + 
+		       DB_ALIGN_SZ;
+
+		   if (status = qec_malloc(&ulm))
+		   {
+		      break;
+		   }
+
+		   ptrs = (PTR)ME_ALIGN_MACRO(ulm.ulm_pptr, DB_ALIGN_SZ);
+		   dmr->dmr_attr_desc.ptr_address = ptrs;
+
+		   srcAttr = (DMR_ATTR_ENTRY**)srcDmr->dmr_attr_desc.ptr_address;
+		   destAttr= (DMR_ATTR_ENTRY**)dmr->dmr_attr_desc.ptr_address;
+
+		   ptrs += dmr->dmr_attr_desc.ptr_in_count * sizeof(PTR);
+
+		   for (h = 0; h < dmr->dmr_attr_desc.ptr_in_count; h++)
+		   {
+
+		     destAttr[h] = (DMR_ATTR_ENTRY*)ptrs;
+		     MEcopy( srcAttr[h], 
+			     dmr->dmr_attr_desc.ptr_size,
+			     ptrs);
+		     ptrs = (PTR)ME_ALIGN_MACRO(ptrs + objSize, DB_ALIGN_SZ);
+
+		   }
+		}
+		
+	    }
+
+	    /* Remaining DMT_CB structures. */
+
+	    for ( i = 0; i < exix->exch_dmt_cnt; i++, ax++, dmt++ )
+	    {
+		j = exix->exch_array2[ax];
+		ChildDSH->dsh_cbs[j] = (PTR)dmt;
+		MEcopy((PTR)ParentDSH->dsh_cbs[j],
+			    sizeof(DMT_CB), (PTR)dmt);
+		dmt->dmt_record_access_id = NULL;
+	    }
+
+	    /* DMH_CB structures */
+	    dmh = (DMH_CB*) Mem;
+	    Mem += DB_ALIGN_MACRO(exix->exch_dmh_cnt * sizeof(DMH_CB));
+
+	    for ( i = 0; i < exix->exch_dmh_cnt; i++, ax++, dmh++ )
+	    {
+		j = exix->exch_array2[ax];
+		ChildDSH->dsh_cbs[j] = (PTR)dmh;
+		MEcopy((PTR)ParentDSH->dsh_cbs[j],
+			    sizeof(DMH_CB), (PTR)dmh);
 	    }
 	}
 	else
 	    ChildDSH->dsh_cbs = (PTR*)NULL;
+
+	/* If there are VLUP/VLT descriptors, allocate them, subplan init
+	** will fill them out and allocate scratch space
+	*/
+	if (qp->qp_pcx_cnt > 0)
+	{
+	    ChildDSH->dsh_vlt = (QEE_VLT *) Mem;
+	    MEfill(qp->qp_pcx_cnt * sizeof(QEE_VLT), 0, Mem);
+	    Mem += DB_ALIGN_MACRO(qp->qp_pcx_cnt * sizeof(QEE_VLT));
+	}
+
+	/* Fill in ADE_EXCB addresses in XADDR structures,
+	** starting with the exch node itself.  Resolve through
+	** any QP nodes we might find.
+	*/
+	qee_resolve_xaddrs(ChildDSH, node, exch);
+
+	/* 
+	** Fix up the data segment addresses in the ChildDSH.
+	*/
+	qen_dsh_fixup(ChildDSH, node->node_qen.qen_exch.exch_out, exch);
 
     } while (0);
 
@@ -2750,6 +2872,10 @@ DB_ERROR	*error)
 ** History:
 **	24-Sep-09 (smeke01) b122635
 **	    Created based on qen_exchange.
+**	13-May-2010 (kschendel) b123565
+**	    Fix X-integration, bcost begin/end are void in main.
+**	    Run subplan init, since it stops at an exchange even when the
+**	    exchange is disabled via trace point.
 */
 static
 DB_STATUS
@@ -2793,6 +2919,9 @@ i4		    function )
 	 * flag that we have opened this node
 	 */
 	qen_status->node_status_flags |= QEN1_NODE_OPEN;
+
+	/* Initialize the query plan under the exchange node */
+	status = qeq_subplan_init(rcb, dsh, NULL, node, NULL);
 
 	/*
 	 * now we go back so that other query processing can proceed -
@@ -2856,13 +2985,9 @@ i4		    function )
     }
 
     /* If the trace point qe90 is turned on then gather cpu and dio stats */
-    if (ult_check_macro(&qef_cb->qef_trace, 90, &val1, &val2))
+    if (dsh->dsh_qp_stats)
     {
 	qen_bcost_begin(dsh, &timerstat, qen_status);
-	if (DB_FAILURE_MACRO(status))
-	{
-	    return(status);
-	}
     }
 
     /* Check for cancel, context switch if not MT */
@@ -2892,13 +3017,9 @@ i4		    function )
     }
 
     /* If the trace point qe90 is turned on capture stats snapshot */
-    if (ult_check_macro(&qef_cb->qef_trace, 90, &val1, &val2))
+    if (dsh->dsh_qp_stats)
     {
 	qen_ecost_end(dsh, &timerstat, qen_status);
-	if (DB_FAILURE_MACRO(status))
-	{
-	    return(status);
-	}
     }
 
     return (status);
@@ -2949,6 +3070,10 @@ i4		    function )
 **      23-Apr-2010 (hanal04) bug 123557
 **          When updating QE_QP action nodes only update the current thread's
 **          actions.
+**	11-May-2010 (kschendel) b123565
+**	    Only do the thread-action connection at the topmost QP node under
+**	    a parallel-union EXCH.
+**	    Add hash-join, hash-agg dmhcb fixup.
 */
 static
 void
@@ -2974,9 +3099,17 @@ qen_dsh_fixup(QEE_DSH *dsh, QEN_NODE *node, QEN_EXCH *exch)
 	break;
 
     case QE_HJOIN:
+    {
+	QEN_HASH_BASE *hbase = dsh->dsh_hash[node->node_qen.qen_hjoin.hjn_hash];
+
 	outer = node->node_qen.qen_hjoin.hjn_out;
 	inner = node->node_qen.qen_hjoin.hjn_inner;
+
+	/* Fix hsh_dmhcb now that dsh_cbs has been fixed */
+	hbase->hsh_dmhcb = dsh->dsh_cbs[node->node_qen.qen_hjoin.hjn_dmhcb];
+	hbase->hsh_flags &= HASH_KEEP_OVER_RESET;
 	break;
+    }
 
     case QE_KJOIN:
     { 
@@ -3024,6 +3157,7 @@ qen_dsh_fixup(QEE_DSH *dsh, QEN_NODE *node, QEN_EXCH *exch)
 
     case QE_ORIG:
     case QE_ORIGAGG:
+    case QE_TPROC:
 	outer = NULL;
 	inner = NULL;
 	break;
@@ -3080,12 +3214,28 @@ qen_dsh_fixup(QEE_DSH *dsh, QEN_NODE *node, QEN_EXCH *exch)
 	     act != NULL;
 	     act = act->ahd_next, i++)
 	{
-            if ( ( (exch->exch_flag & EXCH_UNION) == 0 ||
-                   (dsh->dsh_threadno == i) )
-                 &&
-                 (act->ahd_flags & QEA_NODEACT) )
-		qen_dsh_fixup(dsh, act->qhd_obj.qhd_qep.ahd_qep, exch);
+	    /* If the QP immediately under a parallel union EXCH, action i
+	    ** belongs to thread i, only process that action.  Any other
+	    ** case, process all the actions.
+	    */
+            if ( (exch->exch_flag & EXCH_UNION) == 0 ||
+		 (node != exch->exch_out) ||
+                 (dsh->dsh_threadno == i) )
+	    {
+		if (act->ahd_atype == QEA_HAGGF)
+		{
+		    QEN_HASH_AGGREGATE *haptr;
+		    /* Fix up DMH CB pointer for hash agg */
+		    haptr = dsh->dsh_hashagg[act->qhd_obj.qhd_qep.u1.s2.ahd_agcbix];
+		    haptr->hshag_dmhcb = dsh->dsh_cbs[act->qhd_obj.qhd_qep.u1.s2.ahd_agdmhcb];
+		}
+		if (act->ahd_flags & QEA_NODEACT)
+		{
+		    qen_dsh_fixup(dsh, act->qhd_obj.qhd_qep.ahd_qep, exch);
+		}
+	    }
 	}
     }
 
 } /* qen_dsh_fixup */
+

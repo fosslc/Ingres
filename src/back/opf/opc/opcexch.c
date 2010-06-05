@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -154,8 +154,7 @@ opc_exnodearrset(
 	QEN_NODE	*node,
 	i2		*array1,
 	i4		*array2,
-	i4		*arrcnts,
-	bool		resettable);
+	i4		*arrcnts);
 
 static VOID
 opc_exnheadcnt(
@@ -183,8 +182,7 @@ opc_exactarrset(
 	QEF_AHD		*action,
 	i2		*array1,
 	i4		*array2,
-	i4		*arrcnts,
-	bool		resettable);
+	i4		*arrcnts);
 
 
 /*{
@@ -221,7 +219,10 @@ opc_exactarrset(
 **	    code (fixes 113694).
 **	27-Aug-2007 (kschendel) SIR 122512
 **	    Count subplan headers, info used by hashop reservation.
-[@history_template@]...
+**	14-May-2010 (kschendel) b123565
+**	    Node nthreads now defaults to zero, push counts even for 1:1
+**	    exchange so that QEF knows whether a given node is under an
+**	    exchange or not.
 */
 VOID
 opc_exch_build(
@@ -266,7 +267,7 @@ opc_exch_build(
     {
 	ex->exch_flag |= EXCH_UNION;
 	ex->exch_out->node_qen.qen_qp.qp_flag |= QP_PARALLEL_UNION;
-	ucount = co->opo_ccount;
+	ucount = ex->exch_ccount;
     }
     else ucount = 1;
 
@@ -277,15 +278,12 @@ opc_exch_build(
     if (ex->exch_out->qen_type != QE_ORIG)
 	qp->qp_pqhead_cnt += ucount;
 
-    /* If outer is partitioned table ORIG and this is 1:n exchange,
-    ** stuff thread count in ORIG for dividing the partitions. Later
-    ** when 1:n threads become more general, this will have to be 
-    ** done differently. */
-    /* Call function to search for joins and ORIG nodes under 1:n
-    ** exchange. Post counts to enable proper functioning of 
-    ** partitioned ORIG nodes and partition compatible joins. */
-    if (ex->exch_ccount > 1)
-	opc_pushcount(ex->exch_out, ex->exch_ccount);
+    /* Post exch thread-counts to the sub-plan underneath this exch.
+    ** (even if it's a 1:1 exch).  This tells everyone that the sub-plan
+    ** will be executed in a child thread.  In addition, for the 1:n
+    ** case, the ORIG and partition-compatible joins need to know N.
+    */
+    opc_pushcount(ex->exch_out, ex->exch_ccount);
 
     /* materialize the inner tuple */
     opc_materialize(global, cnode, &ex->exch_mat, 
@@ -405,11 +403,11 @@ opc_exch_build(
 			qpp->qp_qual->qen_pos;
 	    opc_exactarrset(global, union_action, 
 		ex->exch_ixes[i].exch_array1,
-		ex->exch_ixes[i].exch_array2, arrcnts, FALSE);
+		ex->exch_ixes[i].exch_array2, arrcnts);
 	}
 	else opc_exnodearrset(global, qn->node_qen.qen_exch.exch_out,
 		ex->exch_ixes[i].exch_array1,
-		ex->exch_ixes[i].exch_array2, arrcnts, FALSE);
+		ex->exch_ixes[i].exch_array2, arrcnts);
     }
 
 }
@@ -492,7 +490,7 @@ opc_eexatts(
 ** Name: OPC_PUSHCOUNT	- post child partition group/thread counts to
 **	ORIG nodes
 **
-** Description: Descend query tree fragment under 1:n exchange node,
+** Description: Descend query tree fragment under an exchange node,
 **	posting partition group/groups per thread counts into join
 **	and ORIG nodes below.
 **
@@ -502,9 +500,14 @@ opc_eexatts(
 **	  only PC-joinable nodes will occur, in particular we won't
 **	  see an SE-joins or QP nodes;
 **	- over a union QP, where each action of the sub-plan is
-**	  run in a different thread.  Don't traverse into the QP
-**	  to push things, because each thread is independent; not
-**	  replicated as is the case with the PC-join or 1:n orig.
+**	  run in a different thread.  As we descend past the QP node
+**	  (which will be tagged with the parallel union flag), each
+**	  action under the QP is executed by ONE thread, so the count
+**	  becomes 1.
+**
+**	Even a 1:1 exch posts counts;  a nonzero count indicates that
+**	the node will be executed in a child thread.  This is important
+**	in some cases (e.g. to suppress AGG/ORIG -> ORIGAGG transformation.)
 **
 ** Inputs:
 **
@@ -519,6 +522,9 @@ opc_eexatts(
 **	    Written for || query processing.
 **	27-may-05 (inkdo01)
 **	    Update qen_nthreads for each node.
+**	14-May-2010 (kschendel) b123565
+**	    Push all the way down, and even for 1:1 exchanges.  The default
+**	    node nthreads is now zero.
 */
 static VOID
 opc_pushcount(
@@ -526,9 +532,12 @@ opc_pushcount(
 	i4		tcount)
 
 {
+    QEF_AHD *act;
 
     /* Update count of threads node executes under and then
     **  recursively descend the tree in search of ORIG nodes. */
+    if (node->qen_nthreads == 0)
+	node->qen_nthreads = 1;		/* node now known to be under EXCH */
     node->qen_nthreads *= tcount;
 
     switch(node->qen_type) {
@@ -564,6 +573,13 @@ opc_pushcount(
 				tcount);
 	    return;
 
+	case QE_SEJOIN:
+	    opc_pushcount(node->node_qen.qen_sejoin.sejn_out, 
+				tcount);
+	    opc_pushcount(node->node_qen.qen_sejoin.sejn_inner, 
+				tcount);
+	    return;
+
 	case QE_CPJOIN:
 	case QE_FSMJOIN:
 	case QE_ISJOIN:
@@ -574,11 +590,22 @@ opc_pushcount(
 	    return;
 
 	case QE_ORIG:
-	    node->node_qen.qen_orig.orig_part->part_threads = tcount;
+	    if (node->node_qen.qen_orig.orig_part != NULL)
+		node->node_qen.qen_orig.orig_part->part_threads = tcount;
 	    return;
 
-	case QE_ORIGAGG:
 	case QE_QP:
+	    act = node->node_qen.qen_qp.qp_act;
+	    if (node->node_qen.qen_qp.qp_flag & QP_PARALLEL_UNION)
+		tcount = 1;
+	    while (act != NULL)
+	    {
+		if (act->ahd_flags & QEA_NODEACT)
+		    opc_pushcount(act->qhd_obj.qhd_qep.ahd_qep, tcount);
+		act = act->ahd_next;
+	    }
+	    return;
+
 	default:
 	    return;
     }
@@ -653,6 +680,9 @@ opc_exunion_arrcnt(
 **	    Remove QEN_PART_INFO entities from arrays.
 **	13-Dec-2005 (kschendel)
 **	    Remaining inline QEN_ADF structs moved to pointers, fix here.
+**	15-May-2010 (kschendel) b123565
+**	    Add missing TPROC case to prevent looping;  add default.
+**	    Continue below 1:1 exch, as they depend on parents.
 */
 static VOID
 opc_exnodearrcnt(
@@ -669,6 +699,7 @@ opc_exnodearrcnt(
     QEN_HJOIN	*hjnp;
     QEN_SEJOIN	*sejnp;
     QEN_SORT	*srtp;
+    QEN_TPROC	*tprocp;
     QEN_TSORT	*tsrtp;
     QEN_ORIG	*origp;
     QEN_QP	*qpp;
@@ -859,8 +890,25 @@ opc_exnodearrcnt(
 	    exchp = &node->node_qen.qen_exch;
 	    if (exchp->exch_mat != (QEN_ADF *) NULL)
 		arrcnts[IX_CX]++;
+	    /* Don't probe below 1:N exchanges, they'll do their own setup.
+	    ** 1:1 exchange depends on parent, so keep going.
+	    */
+	    if (exchp->exch_ccount > 1)
+		return;
 	    node = exchp->exch_out;
-	    return;
+	    break;
+
+	  case QE_TPROC:
+	    tprocp = &node->node_qen.qen_tproc;
+	    if (tprocp->tproc_parambuild != NULL)
+		arrcnts[IX_CX]++;
+	    if (tprocp->tproc_qual != NULL)
+		arrcnts[IX_CX]++;
+	    return;		/* Nothing else interesting */
+
+	  default:
+	    TRdisplay("Unexpected QP node type %d under exch\n",node->qen_type);
+	    opx_error(E_OP068E_NODE_TYPE);
 	}	/* end of switch */
 
 	/* Node specific bits have been set - now go over OJ and
@@ -955,6 +1003,10 @@ opc_exnodearrcnt(
 **	    Forgot QEN_PART_INFOs addr'ed from ORIG nodes.
 **	10-sep-04 (inkdo01)
 **	    Remove QEN_PART_INFO entities from arrays.
+**	15-May-2010 (kschendel) b123565
+**	    Add missing TPROC case to prevent looping;  add default.
+**	    Continue below 1:1 exch, as they depend on parents.
+**	    Delete "resettable", done as a separate pass in opcran now.
 */
 static VOID
 opc_exnodearrset(
@@ -962,8 +1014,7 @@ opc_exnodearrset(
 	QEN_NODE	*node,
 	i2		*array1,
 	i4		*array2,
-	i4		*arrcnts,
-	bool		resettable)
+	i4		*arrcnts)
 
 {
     QEN_OJINFO	*ojinfop;
@@ -974,6 +1025,7 @@ opc_exnodearrset(
     QEN_HJOIN	*hjnp;
     QEN_SEJOIN	*sejnp;
     QEN_SORT	*srtp;
+    QEN_TPROC	*tprocp;
     QEN_TSORT	*tsrtp;
     QEN_ORIG	*origp;
     QEN_QP	*qpp;
@@ -995,10 +1047,6 @@ opc_exnodearrset(
     {
 	if (node == (QEN_NODE *) NULL)
 	    return;		/* just in case */
-
-	if (resettable)
-	    node->qen_flags |= QEN_PQ_RESET;
-				/* show reset can be done on this node */
 
 	opc_exnheadset(global, node, array1, array2, arrcnts);
 				/* set node header indexes */
@@ -1027,11 +1075,8 @@ opc_exnodearrset(
 		array2[arrcnts[IX_CX]++] = sjnp->sjn_joinkey->qen_pos;
 	    if (sjnp->sjn_jqual != (QEN_ADF *) NULL)
 		array2[arrcnts[IX_CX]++] = sjnp->sjn_jqual->qen_pos;
-	    opc_exnodearrset(global, sjnp->sjn_out, array1, array2, arrcnts,
-							resettable);
+	    opc_exnodearrset(global, sjnp->sjn_out, array1, array2, arrcnts);
 	    node = sjnp->sjn_inner;
-	    if (node->qen_type != QE_FSMJOIN)
-		resettable = TRUE;	/* for inner subtree of CP/IS */
 	    break;
 
 	  case QE_KJOIN:
@@ -1088,8 +1133,7 @@ opc_exnodearrset(
 		array2[arrcnts[IX_CX]++] = hjnp->hjn_ptmat->qen_pos;
 	    if (hjnp->hjn_jqual != (QEN_ADF *) NULL)
 		array2[arrcnts[IX_CX]++] = hjnp->hjn_jqual->qen_pos;
-	    opc_exnodearrset(global, hjnp->hjn_out, array1, array2,
-						arrcnts, resettable);
+	    opc_exnodearrset(global, hjnp->hjn_out, array1, array2, arrcnts);
 	    node = hjnp->hjn_inner;
 	    break;
 
@@ -1113,10 +1157,8 @@ opc_exnodearrset(
 		array2[arrcnts[IX_CX]++] = sejnp->sejn_kcompare->qen_pos;
 	    if (sejnp->sejn_kqual != NULL)
 		array2[arrcnts[IX_CX]++] = sejnp->sejn_kqual->qen_pos;
-	    opc_exnodearrset(global, sejnp->sejn_out, array1, array2,
-						arrcnts, resettable);
+	    opc_exnodearrset(global, sejnp->sejn_out, array1, array2, arrcnts);
 	    node = sejnp->sejn_inner;
-	    resettable = TRUE;		/* for inner of SEjoin */
 	    break;
 
 	  case QE_TSORT:
@@ -1167,16 +1209,32 @@ opc_exnodearrset(
 	    /* Process action headers anchored in QP node. */
 	    for (act = node->node_qen.qen_qp.qp_act; act; 
 						act = act->ahd_next)
-		opc_exactarrset(global, act, array1, array2, arrcnts,
-						resettable);
+		opc_exactarrset(global, act, array1, array2, arrcnts);
 	    return;
 
 	  case QE_EXCHANGE:
 	    exchp = &node->node_qen.qen_exch;
 	    if (exchp->exch_mat != (QEN_ADF *) NULL)
 		array2[arrcnts[IX_CX]++] = exchp->exch_mat->qen_pos;
+	    /* Don't probe below 1:N exchanges, they'll do their own setup.
+	    ** 1:1 exchange depends on parent, so keep going.
+	    */
+	    if (exchp->exch_ccount > 1)
+		return;
 	    node = exchp->exch_out;
-	    return;		/* don't probe below exchanges */
+	    break;
+
+	  case QE_TPROC:
+	    tprocp = &node->node_qen.qen_tproc;
+	    if (tprocp->tproc_parambuild != NULL)
+		array2[arrcnts[IX_CX]++] = tprocp->tproc_parambuild->qen_pos;
+	    if (tprocp->tproc_qual != NULL)
+		array2[arrcnts[IX_CX]++] = tprocp->tproc_qual->qen_pos;
+	    return;		/* Nothing underneath */
+
+	  default:
+	    TRdisplay("Unexpected QP node type %d under exch\n",node->qen_type);
+	    opx_error(E_OP068E_NODE_TYPE);
 	}	/* end of switch */
 
 	/* Node specific bits have been set - now go over OJ and
@@ -1400,8 +1458,10 @@ opc_exactarrcnt(
 ** History:
 **      11-june-04 (inkdo01)
 **	    Written for || processing.
-*	22-july-04 (inkdo01)
+**	22-july-04 (inkdo01)
 **	    Reworked to produce arrays of DSH ptr array indexes.
+**	16-May-2010 (kschendel) b123565
+**	    Don't set resettable here, do separately.
 */
 static VOID
 opc_exactarrset(
@@ -1409,8 +1469,7 @@ opc_exactarrset(
 	QEF_AHD		*action,
 	i2		*array1,
 	i4		*array2,
-	i4		*arrcnts,
-	bool		resettable)
+	i4		*arrcnts)
 
 {
 
@@ -1433,6 +1492,6 @@ opc_exactarrset(
 	array1[arrcnts[IX_HSHA]++] = action->qhd_obj.qhd_qep.u1.s2.ahd_agcbix;
     }
     opc_exnodearrset(global, action->qhd_obj.qhd_qep.ahd_qep, array1, array2,
-		arrcnts, resettable);	/* node anchored in action header */
+		arrcnts);	/* node anchored in action header */
 
 }

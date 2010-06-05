@@ -167,6 +167,8 @@
 **	    Use slightly faster/more convenient dsh test for qe90, and
 **	    remove pointless error returns from cost begin/end.  Minor
 **	    streamlining.
+**	11-May-2010 (kschendel) b123565
+**	    Rename dsh-root to dsh-parent.
 **/
 
 /* Local static procedure declarations */
@@ -949,7 +951,7 @@ i4		    function )
 	    qen_status->node_ppart_num = ppartno;
 	    /* end of partitioned-specific OPEN preparation */
 	}
-	else if ( dmr_cb->dmr_access_id == NULL && dsh != dsh->dsh_root )
+	else if ( dmr_cb->dmr_access_id == NULL && dsh != dsh->dsh_parent )
 	{
 	    /*
 	    ** Then this is a Child thread that needs a table

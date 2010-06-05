@@ -1101,6 +1101,10 @@ struct _LKH
 **	    llb_dist_stamp array.
 **      16-Jun-2009 (hanal04) Bug 122117
 **          Added LLB_FORCEABORT.
+**	17-May-2010 (kschendel) b123565
+**	    Make llb_status volatile, as it's examined without being
+**	    mutexed to (among other things) determine whether the LLB
+**	    is shared or not.
 */
 struct _LLB
 {
@@ -1112,7 +1116,7 @@ struct _LLB
                                         ** aligned */
     i4         	    llb_lkb_count;	/* The count of locks on this list. */
     LLB_ID	    llb_id;	    	/* Lock list identifier. */
-    i4         	    llb_status;		/* Lock list status information. */
+    volatile i4	    llb_status;		/* Lock list status information. */
 					/* These values are currently viewed
 					** by IPM and are hard-coded into the
 					** ipm code (temporarily).  Until this

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -82,7 +82,7 @@
 **	    qee_buildTempTable - build structures for a temporary table
 **	    qee_allocateDMTCB - allocate a DMF table control block
 **	    qee_allocateDMRCB - allocate a DMF record control block
-**	    qee_resolve_excbs - Resolve EXCB addresses into XADDRS structure
+**	    qee_resolve_xaddrs - Resolve EXCB addresses into XADDRS structure
 **
 **  History:
 **      11-jun-86 (daved)    
@@ -418,7 +418,9 @@
 **          Changes for Long IDs
 **	20-apr-2010 (toumi01) SIR 122403
 **	    Add support for column encryption.
-[@history_template@]...
+**	12-May-2010 (kschendel) b123565
+**	    Kill shd_options, not used, replace with shd_row_no for
+**	    parallel query fixup.
 **/
 /*
 NO_OPTIM = a64_sol
@@ -999,19 +1001,10 @@ qee_destroy(
 	{
 	    if (dsh->dsh_shd[i]->shd_streamid != (PTR)NULL)
 	    {
-		if((dsh->dsh_shd[i]->shd_options & SHD1_DSH_POOL) == 0)
-		{
-		    /* stream comes from sort pool */
-		    STRUCT_ASSIGN_MACRO(Qef_s_cb->qef_s_ulmcb, ulm);
-		    ulm.ulm_streamid_p = &dsh->dsh_shd[i]->shd_streamid;
-		    qef_cb->qef_s_used -= dsh->dsh_shd[i]->shd_size;
-		}
-		else
-		{
-		    /* stream comes from dsh pool */
-		    STRUCT_ASSIGN_MACRO(Qef_s_cb->qef_d_ulmcb, ulm);
-		    ulm.ulm_streamid_p = &dsh->dsh_shd[i]->shd_streamid;
-		}
+		/* stream comes from sort pool */
+		STRUCT_ASSIGN_MACRO(Qef_s_cb->qef_s_ulmcb, ulm);
+		ulm.ulm_streamid_p = &dsh->dsh_shd[i]->shd_streamid;
+		qef_cb->qef_s_used -= dsh->dsh_shd[i]->shd_size;
 
 		if ((status = ulm_closestream(&ulm)) != E_DB_OK)
 		{
@@ -1422,6 +1415,9 @@ qee_destroy(
 **	17-Feb-2010 (thaju02) b123338
 **	    For repeat query, initialize dsh_stack, dsh_exeimm and 
 **	    dsh_depth_act.
+**	11-May-2010 (kschendel) b123565
+**	    Rename dsh_root to dsh_parent.
+**	    Init the "stats are inited" flag.
 */
 DB_STATUS
 qee_fetch(
@@ -1529,6 +1525,7 @@ qee_fetch(
 	    ndsh->dsh_qp_stats = FALSE;
 	    if (ult_check_macro(&qefcb->qef_trace,90,&val1,&val2))
 		ndsh->dsh_qp_stats = TRUE;
+	    ndsh->dsh_stats_inited = FALSE;
 	}
     }
     else
@@ -1643,7 +1640,7 @@ qee_fetch(
 	ndsh->dsh_cpuoverhead = 0.0;
 	ndsh->dsh_diooverhead = 0.0;
 	ndsh->dsh_threadno = 0;
-	ndsh->dsh_root = ndsh;
+	ndsh->dsh_parent = ndsh;
 	/* Need to do this before calling qee-create for setup tracing */
 	ndsh->dsh_hash_debug = FALSE;
 	if (ult_check_macro(&qefcb->qef_trace,QEF_TRACE_HASH_DEBUG,&val1,&val2))
@@ -1652,6 +1649,7 @@ qee_fetch(
 	ndsh->dsh_qp_stats = FALSE;
 	if (ult_check_macro(&qefcb->qef_trace,90,&val1,&val2))
 	    ndsh->dsh_qp_stats = TRUE;
+	ndsh->dsh_stats_inited = FALSE;
 
 	/* if the qp is flagged as possibly needing query constants,
 	** allocate a ADF_CONST_BLK, zero it, and store its pointer in the dsh.
@@ -2754,6 +2752,8 @@ qee_create(
 **	    Fix result row sizes of scroll files.
 **	5-Aug-2009 (kschendel) SIR 122512
 **	    Call new hash reservation framework for hashops.
+**	14-May-2010 (kschendel) b123565
+**	    Don't do origagg transformation if agg action is under an EXCH.
 */
 static DB_STATUS
 qee_cract(
@@ -2978,14 +2978,18 @@ qee_cract(
 
                         if ((qep_node->node_qen.qen_orig.orig_flag & ORIG_UKEY)
 			      || qep_node->node_qen.qen_orig.orig_part
+			      || qep_node->qen_nthreads > 0
                               || (key_by_tid == TRUE)
                               || (key_by_position == TRUE
                               || qep_node->node_qen.qen_orig.orig_tid >= 0 ))
                         {
-                            /*  no performance gain in aggregates */ 
-			    /*  or, partitioned, can't do origagg (yet) */
-                            /*  The check option sets a select any() on tid */
-                            /*  Aggr computation involves tid like max(tid) */
+                            /*  no performance gain in aggregates
+			    **  or, partitioned, can't do origagg (yet)
+			    **  or, under EXCH, will confuse subplan-init
+			    **  (until origagg positioning is moved out!)
+                            **  The check option sets a select any() on tid
+                            **  Aggr computation involves tid like max(tid)
+			    */
                         }
                         else
                         { 
@@ -3737,7 +3741,7 @@ qee_cract(
 		** call to cract already did that.
 		*/
 		if (act->qhd_obj.qhd_qep.ahd_qep != NULL)
-		    qee_resolve_xaddrs(dsh, act->qhd_obj.qhd_qep.ahd_qep, FALSE);
+		    qee_resolve_xaddrs(dsh, act->qhd_obj.qhd_qep.ahd_qep, NULL);
 
 		break;
 
@@ -4562,8 +4566,8 @@ qee_buildTempTable(
 **	    page size. But for now use the maxtup size of the installation.
 **	24-nov-97 (inkdo01)
 **	    Init shd_free, too.
-**	
-[@history_template@]...
+**	12-May-2010 (kschendel) b123565
+**	    Drop shd_options, create shd_row_no, initialize it for || query.
 */
 static DB_STATUS
 qee_buildHoldFile(
@@ -4603,9 +4607,9 @@ qee_buildHoldFile(
 	qen_shd->shd_free = (DM_MDATA *)NULL;
 	qen_shd->shd_tup_cnt = 0;
 	qen_shd->shd_next_tup = 0;
+	qen_shd->shd_row_no = row_no;
 	qen_shd->shd_row = dsh->dsh_row[row_no];
 	qen_shd->shd_width = dsh->dsh_qp_ptr->qp_row_len[row_no];
-	qen_shd->shd_options = 0;
 	qen_shd->shd_dups = 0;   
 	
 	/* Initialize the hold structure page size */
@@ -5842,7 +5846,9 @@ qee_build_byref_tdesc(
 ** Inputs:
 **	dsh			The (child) thread's DSH
 **	node			Topmost node to resolve
-**	follow_qp		TRUE to resolve below QP's, FALSE to not.
+**	exch			EXCH node address if we're resolving a
+**				child thread at execution time, else NULL.
+**				If NULL, QP sub-actions are not resolved.
 **
 ** Outputs:
 **	None
@@ -5852,6 +5858,9 @@ qee_build_byref_tdesc(
 ** History:
 **	16-Jan-2006 (kschendel)
 **	    Written.
+**	11-May-2010 (kschendel/zhi/alex) b123565
+**	    Change call so that we can arrange to only resolve the proper
+**	    QP sub-action under a parallel union EXCH.
 **
 */
 
@@ -6004,9 +6013,10 @@ static const struct _qee_xoffsets qee_tproc_xoffsets[] = {
 
 void
 qee_resolve_xaddrs(QEE_DSH *dsh,
-	QEN_NODE *node, bool follow_qp)
+	QEN_NODE *node, QEN_EXCH *exch)
 {
 
+    i4 actno;			/* QP sub-action counter */
     i4 nxo;			/* Number of xoffsets entries */
     PTR *cbs = dsh->dsh_cbs;
     QEE_XADDRS *node_xaddrs = dsh->dsh_xaddrs[node->qen_num];
@@ -6036,9 +6046,21 @@ qee_resolve_xaddrs(QEE_DSH *dsh,
 	break;
 
     case QE_EXCHANGE:
+	/* Stop here if landed on a 1:N exchange, and it's not the
+	** not the caller's EXCH.  The exchange we're looking at will
+	** do from here on down in its own child thread.  (A 1:1
+	** exchange uses the parent thread xaddrs, so resolve through
+	** a 1:1 exchange.)
+	*/
+	oj = NULL;
+	if (node->node_qen.qen_exch.exch_ccount > 1 && exch != &node->node_qen.qen_exch)
+	{
+	    nxo = 0;
+	    inner = outer = NULL;
+	    break;
+	}
 	xo = &qee_exch_xoffsets[0];
 	nxo = sizeof(qee_exch_xoffsets) / sizeof(struct _qee_xoffsets);
-	oj = NULL;
 	outer = node->node_qen.qen_exch.exch_out;
 	inner = NULL;
 	break;
@@ -6161,12 +6183,12 @@ qee_resolve_xaddrs(QEE_DSH *dsh,
     /* Recursively do left, right subtrees */
 
     if (outer != NULL)
-	qee_resolve_xaddrs(dsh, outer, follow_qp);
+	qee_resolve_xaddrs(dsh, outer, exch);
 
     if (inner != NULL)
-	qee_resolve_xaddrs(dsh, inner, follow_qp);
+	qee_resolve_xaddrs(dsh, inner, exch);
 
-    if (follow_qp && node->qen_type == QE_QP)
+    if (exch != NULL && node->qen_type == QE_QP)
     {
 	QEF_AHD *act;
 
@@ -6177,12 +6199,22 @@ qee_resolve_xaddrs(QEE_DSH *dsh,
 	** We don't do xaddrs for action headers (yet), just resolve the
 	** node subtree.
 	*/
-	for (act = node->node_qen.qen_qp.qp_act;
+	for (act = node->node_qen.qen_qp.qp_act, actno = 1;
 	     act != NULL;
-	     act = act->ahd_next)
+	     act = act->ahd_next, actno++)
 	{
-	    if (act->ahd_flags & QEA_NODEACT)
-		qee_resolve_xaddrs(dsh, act->qhd_obj.qhd_qep.ahd_qep, follow_qp);
+	    /* If the QP immediately under a parallel union EXCH, action actno 
+	    ** belongs to thread threadno, only process that action.  Any other
+	    ** case, process all the actions.
+	    */
+            if ( ( (exch->exch_flag & EXCH_UNION) == 0 ||
+		   (node != exch->exch_out) ||
+                   (dsh->dsh_threadno == actno) )
+                 &&
+                 (act->ahd_flags & QEA_NODEACT) )
+	    {
+		qee_resolve_xaddrs(dsh, act->qhd_obj.qhd_qep.ahd_qep, exch);
+	    }
 	}
     }
 

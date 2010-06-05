@@ -2115,6 +2115,8 @@ struct _QEN_NKEY
 **	    underneath another partition-compatible operation.
 **	13-Nov-2009 (kiria01) 121883
 **	    Distinguish between LHS and RHS card checks for 01.
+**	14-May-2010 (kschendel) b123565
+**	    Update nthreads comment.  Delete high/low, not used.
 */
 struct _QEN_NODE
 {
@@ -2149,19 +2151,9 @@ struct _QEN_NODE
 					** that have them.
 					** 
 					*/
-    /* NOTE: the following 2 elements could probably be moved to the 
-    ** EXCHANGE node header because it is in exchange processing that
-    ** they are used. However, they were initially placed here in
-    ** anticipation that they might be used with other node headers, too. */
-    i4			qen_high;	/* high buffer no allocated with
-					** this node. Used by 1:n exch.
-					*/
-    i4			qen_low;	/* low buffer no allocated in current
-					** subtree. Used by 1:n exch.
-					*/
-    i4			qen_nthreads;	/* no. of threads this node will 
-					** execute under - may be of some 
-					** use, but also for documentation
+    i4			qen_nthreads;	/* no. of threads this node will
+					** execute under.  Zero if node is
+					** NOT under an EXCH, else 1 or more.
 					*/
     i4			qen_frow;	/* DSH result row for qen_fatts
 					** code (or -1).

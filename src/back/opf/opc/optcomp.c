@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -2675,7 +2675,8 @@ opt_prqep(
 **	16-Apr-2007 (kschendel) b122118
 **	    Spiff up the header flags display a little, and use a more visible
 **	    separator than just formfeed.
-[@history_template@]...
+**	14-May-2010 (kschendel) b123565
+**	    Drop high/low, not used.
 */
 static VOID
 opt_qenode(
@@ -2832,8 +2833,8 @@ opt_qenode(
 	qn->qen_size, qn->qen_row, qn->qen_rsz);
 
     TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf, OPT_PBLEN,
-	"qen_frow: %5d\t qen_high: %5d \t qen_low: %5d\t qen_nthreads: %5d\n\n\n", 
-	qn->qen_frow, qn->qen_high, qn->qen_low, qn->qen_nthreads);
+	"qen_frow: %5d\t qen_nthreads: %5d\n\n\n", 
+	qn->qen_frow, qn->qen_nthreads);
 
     /* Now lets print out the attribute names, plus the offsets if possible
     */

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -245,6 +245,9 @@
 **	    Init qen_nthreads for parallel query.
 **	6-may-2008 (dougi)
 **	    Add support for table procedure nodes.
+**	14-May-2010 (kschendel) b123565
+**	    Init nthreads to zero now.  A nonzero nthreads means that the node
+**	    is under an exch.  Drop qen-high/low, not used.
 */
 VOID
 opc_qentree_build(
@@ -447,8 +450,7 @@ opc_qentree_build(
     qn->qen_atts = NULL;
     qn->qen_row = -1;
     qn->qen_frow = -1;
-    qn->qen_low = qp->qp_row_cnt;
-    qn->qen_nthreads = 1;
+    qn->qen_nthreads = 0;
 
     /* The code below is supposed to prevent integer overflow.
     ** We are assuming that a sizeof(i4) == sizeof(i4)
@@ -617,7 +619,6 @@ opc_qentree_build(
     ** of this routine from the current number of rows.
     */
     cnode->opc_below_rows = qp->qp_row_cnt - below_rows;
-    qn->qen_high = qp->qp_row_cnt-1;
 
     /* Now lets return all of the memory that we used in the stack ULM
     ** memory stream to the global pool

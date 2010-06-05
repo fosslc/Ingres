@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -135,6 +135,9 @@
 **	    Fix bug 6346. Do not reset local variables after a commit action.
 **	29-dec-03 (inkdo01)
 **	    DSH is now parameter, "function" replaces "reset".
+**	14-May-2010 (kschendel) b123565
+**	    Validate is now two parts, we only need the validate/table open
+**	    part.
 */
 DB_STATUS
 qea_commit(
@@ -201,12 +204,10 @@ i4		    state )
 		    ++qef_cb->qef_open_count; /* the current query is opened */
 
 		    /* reopen and validate the tables */
-		    /* Indicate through the init_action parameter that we   */
-		    /* only want the tables opened, do not initialize the   */
-		    /* first action. */
-		    if (status = qeq_validate(qef_rcb, dsh, 
-				dsh->dsh_qp_ptr->qp_ahd, (i4)NO_FUNC, 
-				(bool)FALSE))
+		    /* Don't need to reinit the subplan */
+		    status = qeq_topact_validate(qef_rcb, dsh,
+				dsh->dsh_qp_ptr->qp_ahd, FALSE);
+		    if (status != E_DB_OK)
 		    {
 			if (dsh->dsh_error.err_code == E_QE0015_NO_MORE_ROWS)
 			{

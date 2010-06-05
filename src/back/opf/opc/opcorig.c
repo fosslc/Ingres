@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -2833,8 +2833,11 @@ opc_qerangeand(
 **	    Copy partition DB_TAB_IDs into QEF_VALID.
 **	11-may-04 (inkdo01)
 **	    Add one more DMR_CB slot in cb array for partitioned masters.
-[@history_line@]...
-[@history_template@]...
+**	13-May-2010 (kschendel) b123565
+**	    Remove some confusing action-header fiddling.  The valid-list
+**	    entry will always go on the "top" action.  We might check
+**	    some stuff on the "first" action, but the valid entry won't
+**	    be attached there.
 */
 QEF_VALID *
 opc_valid(
@@ -2856,7 +2859,6 @@ opc_valid(
     PTR			temp_id;
     i4			i;
     bool                mustlock = FALSE;
-    QEF_AHD             *ahd;
     QEF_MEM_CONSTTAB	*cnsttab_p;
     DMT_PHYS_PART	*dmt_ppp;
 
@@ -2957,26 +2959,12 @@ opc_valid(
 	    top_vl->vl_est_pages = npage_est;
 	}
     }
-    if (rel->rdr_rel->tbl_id.db_tab_base == 0 &&
-            rel->rdr_rel->tbl_id.db_tab_index == 0
+    if (rel->rdr_rel->tbl_id.db_tab_base != 0 ||
+            rel->rdr_rel->tbl_id.db_tab_index != 0
         )
     {
-        /* if this is a temporary relation then we want to put the new
-        ** valid list entry on the top most action header of the current
-        ** action header. This ensures that the relation gets opened
-        ** after it gets created. This also avoids having valid list
-        ** entries on action headers that are below QEN_QP nodes, which
-        ** QEF doesn't like.
-        */
-        ahd = global->ops_cstate.opc_topahd;
-    }
-    else
-    {
-        /* If this is a user relation, then lets put the new valid list
-        ** entry on the first action header. This ensures that the relation
-        ** is validated by time stamp and, hence, the query plan can be
-        ** kicked out as early as possible.
-        */
+	QEF_AHD *ahd;
+
         ahd = global->ops_cstate.opc_firstahd;
 
 	/* If the query is an Update/Delete and Read access via a Secondary

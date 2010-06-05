@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -133,6 +133,8 @@
 **	    procedure to their inital values after a rollback action.
 **	29-dec-03 (inkdo01)
 **	    DSH is now parameter, "function" replaces "reset".
+**	14-May-2010 (kschendel) b123565
+**	    Validate is now two pieces, fix here.
 */
 DB_STATUS
 qea_rollback(
@@ -205,12 +207,9 @@ i4		    state )
 		    }
 		    
 		    /* reopen and validate the tables */
-		    /* The init_action parameter is set to FALSE to	    */
-		    /* indicate we only want the plan's tables open; do not */
-		    /* initialize the action for processing. */
-		    if (status = qeq_validate(qef_rcb, dsh, 
-				dsh->dsh_qp_ptr->qp_ahd, (i4)NO_FUNC, 
-				(bool)FALSE))
+		    status = qeq_topact_validate(qef_rcb, dsh,
+				dsh->dsh_qp_ptr->qp_ahd, FALSE);
+		    if (status != E_DB_OK)
 		    {
 			if (dsh->dsh_error.err_code == E_QE0015_NO_MORE_ROWS)
 			{

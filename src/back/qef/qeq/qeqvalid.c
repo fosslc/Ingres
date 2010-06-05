@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -357,6 +357,14 @@
 **        and qeq_destroy_tproc_qp().
 **      01-Dec-2009 (horda03) B103150
 **          In qeq_vopen, instruct DMT_OPEN not to wait for busy locks.
+**	13-May-2010 (kschendel) b123565
+**	    Don't pass action to vopen, not needed.
+**	    Split validation into two pieces.  One is called to open tables
+**	    for a "top action" (ie an action that's not under a QP node).
+**	    The other walks a sub-plan starting at an action or a node and
+**	    does initialization (VIRGIN segments and such).  The sub-plan
+**	    initialization has to run in the proper child thread context
+**	    when parallel query is in use, so it needs to be a separate piece.
 **/
 
 
@@ -379,10 +387,14 @@ QEE_DSH	     *dsh,
 QEF_AUD      *aud,
 DB_STATUS   *status );
 
+static DB_STATUS qeq_vld_first_act(
+	QEF_RCB		*qef_rcb,
+	QEE_DSH		*dsh,
+	bool		init_action);
+
 static DB_STATUS
 qeq_vopen(
 	  QEF_RCB     *qef_rcb,
-	  QEF_AHD     *action,
 	  QEE_DSH     *dsh,
           QEF_VALID   *vl);
 
@@ -420,22 +432,33 @@ qeq_destroy_tproc_qp(
 GLOBALREF QEF_S_CB		*Qef_s_cb;
 
 /*{
-** Name: QEQ_VALIDATE	- validate an action
+** Name: qeq_topact_validate - Validate a "top" action
 **
 ** Description:
-**      The relations for this action are opened and checked 
-**  for the proper timestamp. Keys are then created and checked
-**  for the appropriate use of pattern matching characters. 
+**	This routine is called to validate a "top" action.  Top actions
+**	are always run in the main session thread and are never actions
+**	found in a QP tree under a QP node.
+**
+**	If it's the first action of the query, the resource list is
+**	used to open and validate tables.  If some table (or DBproc) is
+**	newer than the QP timestamp, the entire query plan is invalid.
+**
+**	Each top action (first or not) of a query has a "valid" list,
+**	which is a list of tables that need to be opened for that action.
+**	We'll open the table in the appropriate lockmode.  Note that for
+**	a parallel query, child threads may have to open the table
+**	again in the child context;  it would be slicker to tie table-
+**	opens to the specific threads, but that's not how it works at
+**	the moment.
 **
 ** Inputs:
-**      qef_rcb
-**	action			action to validate
-**	    .ahd_valid		relation validation list
-**	    .ahd_mkey		key builder
-**	reset
-**	init_action		TRUE if the action should be initialized
-**				FALSE if only the valid list should be run
-**	    
+**      qef_rcb			QEF query request control block
+**	dsh			DSH for the (main session) thread.
+**	action			A "top" action, possibly with a resource or
+**				valid list.
+**	init_action		TRUE if we're going to execute actions,
+**				FALSE if just reopening tables (e.g. for
+**				DBproc continuation after commit/rollback)
 **
 ** Outputs:
 **	qef_rcb
@@ -453,7 +476,7 @@ GLOBALREF QEF_S_CB		*Qef_s_cb;
 **	    none
 **
 ** Side Effects:
-**	    relations are opened and keys are created.
+**	    relations are opened
 **
 ** History:
 **	1-july-86 (daved)
@@ -462,7 +485,7 @@ GLOBALREF QEF_S_CB		*Qef_s_cb;
 **	    mark invalid queries as non-repeat so that cleanup will happen
 **	    properly.
 **	19-aug-87 (puree)
-**	    reset dsh_qen_status->node_status when repositioning a table in 
+**	    reset dsh_qen_status->node_status when repositioning a table in
 **	    an orig node.
 **	09-dec-87 (puree)
 **	    return immediately on warning or error.  also zero out the
@@ -523,8 +546,8 @@ GLOBALREF QEF_S_CB		*Qef_s_cb;
 **	    the tables should be opened and the action initialized.
 **      07-jul-89 (jennifer)
 **          Added routine to audit direct updates to secure system catalogs,
-**          to audit the access of tables and views, to indicate which 
-**          alarm events happened, and to re-qualify access to all 
+**          to audit the access of tables and views, to indicate which
+**          alarm events happened, and to re-qualify access to all
 **          views (This forces a view MAC check in DMF each time
 **          a query is run).
 **          Must audit success and failure.
@@ -579,7 +602,7 @@ GLOBALREF QEF_S_CB		*Qef_s_cb;
 **          Avoid executing ahd_constant in qeq_validate when QEA_AGGF (b41134)
 **	14-jan-1992 (nancy)
 **	    Bug #39225 -- local variables in dbp's do not get initialized in
-**	    IF and RETURN statements.  Add types QEA_IF and QEA_RETURN to 
+**	    IF and RETURN statements.  Add types QEA_IF and QEA_RETURN to
 **	    section for initializing cx's to build keys. (need opc part also)
 **	14-jan-1992 (nancy)
 **	    Bug 38565 -- Add new error/return status for table size change -
@@ -595,10 +618,10 @@ GLOBALREF QEF_S_CB		*Qef_s_cb;
 **	    Various fixes for support of statement level rules. (FIPS)
 **	18-may-93 (nancy)
 **	    Bug 48032.  Only do size_sensitive check if init_action is TRUE.
-**	    If init_action is FALSE then we are inside a database procedure 
+**	    If init_action is FALSE then we are inside a database procedure
 **	    and we don't need to know if the qep needs recompiling.  This
-**	    avoids QE0301 error for table size change and thus avoids QE0115 
-**	    error which is fatal dbp error.  
+**	    avoids QE0301 error for table size change and thus avoids QE0115
+**	    error which is fatal dbp error.
 **	5-jul-93 (robf)
 **	    Reworked ORANGE code, security auditing.
 **      20-jul-1993 (pearl)
@@ -622,7 +645,7 @@ GLOBALREF QEF_S_CB		*Qef_s_cb;
 **	    validate query plans. Now we validate resource lists, not valid
 **	    lists.
 **      7-jan-94 (robf)
-**          Rework secure changes after mainline integration. 
+**          Rework secure changes after mainline integration.
 **	31-jan-94 (jhahn)
 **	    Fixed support for resource lists.  Moved some code into the
 **	    procedure "qeq_release_dsh_resources".
@@ -662,7 +685,7 @@ GLOBALREF QEF_S_CB		*Qef_s_cb;
 **	    We weren't updating the statement number on resources which are
 **	    open but not yet in use ( i.e. they are sitting on the free_vl
 **	    list ).  This breaks the deferred update semantics in DMF. #76670
-**	    Also, the addition of qe90 tracing on 5-dec-95 above broke 
+**	    Also, the addition of qe90 tracing on 5-dec-95 above broke
 **	    the error handling in this routine as it trashed status ; I've
 **	    fixed this.
 **	20-dec-96 (kch)
@@ -742,7 +765,7 @@ GLOBALREF QEF_S_CB		*Qef_s_cb;
 **	25-feb-04 (inkdo01)
 **	    Assign DSH addr to dmr_q_arg instead of QEF_CB for thread safety.
 **	27-feb-04 (inkdo01)
-**	    Changed dsh_qen_status from ptr to array of QEN_STATUSs to 
+**	    Changed dsh_qen_status from ptr to array of QEN_STATUSs to
 **	    ptr to arrays of ptrs.
 **	11-mar-04 (inkdo01)
 **	    Save key structure in qen_status for partitioned table keyed
@@ -755,17 +778,17 @@ GLOBALREF QEF_S_CB		*Qef_s_cb;
 **	8-apr-04 (inkdo01)
 **	    Add dsh to QEF_CHECK_FOR_INTERRUPT macro.
 **	12-may-04 (inkdo01)
-**	    Support added slot in cbs array for master DMR_CB of 
+**	    Support added slot in cbs array for master DMR_CB of
 **	    partitioned table.
 **	14-may-04 (inkdo01)
 **	    Fix above change for action header defined DMR_CB's.
 **	8-Jun-2004 (schka24)
 **	    Move above to vopen so that it happens for all vl opens.
 **	11-june-04 (inkdo01)
-**	    Change to use local dsh rather than global (eliminates 
+**	    Change to use local dsh rather than global (eliminates
 **	    SEGV in || processing).
 **	15-july-04 (inkdo01)
-**	    Make same change for first dsh_act_ptr ref (not sure why I 
+**	    Make same change for first dsh_act_ptr ref (not sure why I
 **	    didn't make this change before).
 **	30-Jul-2004 (jenjo02)
 **	    Use dsh_dmt_id rather than qef_dmt_id transaction context.
@@ -810,7 +833,7 @@ GLOBALREF QEF_S_CB		*Qef_s_cb;
 **          field to be removed from ADI_WARN structure. (b121246).
 **      03-Dec-2008 (gefei01)
 **          Fixed SD 132599: qeq_validate() checks for QEF_CLEAN_RSRC
-**          for table procedure. 
+**          for table procedure.
 **      17-Dec-2008 (gefei01)
 **          Fixed bug 121399: Save QP ID for each table procedure.
 **	4-Jun-2009 (kschendel) b122118
@@ -837,51 +860,34 @@ GLOBALREF QEF_S_CB		*Qef_s_cb;
 **	    Also: don't clear orig node stats at reset, is very confusing.
 **	17-Nov-2009 (kschendel) SIR 122890
 **	    Combine load with append.  Add needs-X-lock support.
+**	13-May-2010 (kschendel) b123565
+**	    Split validate into two pieces.  This piece is for opening tables
+**	    at the "top" action of a query.
 */
+
 DB_STATUS
-qeq_validate(
+qeq_topact_validate(
 QEF_RCB		*qef_rcb,
 QEE_DSH		*dsh,
 QEF_AHD		*action,
-i4		function,
-bool		init_action )
+bool		init_action)
 {
     QEF_VALID	    *vl;
-    QEE_VALID	    *qevl;
-    DB_STATUS	    status = E_DB_OK, sts = E_DB_OK;
+    DB_STATUS	    status = E_DB_OK;
     QEF_CB	    *qef_cb = dsh->dsh_qefcb;
-    ADF_CB	    *adfcb = dsh->dsh_adf_cb;
-    PTR		    *cbs = dsh->dsh_cbs;		/* control blocks for 
-							** DMU, ADF 
+    PTR		    *cbs = dsh->dsh_cbs;		/* control blocks for
+							** DMU, ADF
 							*/
-    QEN_NODE	    *qep_node;
-    QEN_ORIG	    *orig_node;
+    QEE_VALID	*qevl;
     DMR_CB	    *dmr_cb;
     DMT_CB	    *dmt_cb;
-    DMT_CHAR_ENTRY  dmt_char_entry[2];
-    QEN_TKEY	    *tkptr;
-    QEN_ADF	    *qen_adf;
-    ADE_EXCB	    *ade_excb;
     QEF_QP_CB       *qp = dsh->dsh_qp_ptr;
-    i4		    dmr_index;
-    bool	    key_by_tid;
-    TIMERSTAT	    init_tstat;
-    TIMERSTAT	    open_tstat;
     i4		    i;
-    i4		    val1 = 0;
-    i4		    val2 = 0;
     QEE_RESOURCE    *resource;
     QEF_RESOURCE    *qefresource;
     ULM_RCB	    ulm;
     DMR_CHAR_ENTRY  dmr_char_entry;
-    STATUS	    csret;
-    i4		    cson;
-    QEN_OJINFO	    *oj;
-    QEN_PART_QUAL   *pqual;
-    RDF_CB          rdf_cb;
     QSF_RCB         qsf_rcb;
-    DB_STATUS       status1 = E_DB_OK;
-    bool	    reset = ((function & FUNC_RESET) != 0);
     bool            tproc_tm_match = TRUE;
 
     /* This call will prevent a server which implements CSswitch from
@@ -901,690 +907,573 @@ bool		init_action )
     dsh->dsh_act_ptr = (QEF_AHD *)NULL;
 
     /* validate relations */
-    if (!reset)
+    /* Give DMT a new statement number, so that it can properly maintain
+    ** the deferred update semantics (but only if deferred processing
+    ** is required).
+    */
+    if (qp->qp_status & QEQP_DEFERRED)
+	dsh->dsh_stmt_no = qef_cb->qef_stmt++;
+
+    if (action == qp->qp_ahd)
     {
-	/* Give DMT a new statement number, so that it can properly maintain
-	** the deferred update semantics (but only if deferred processing
-	** is required).
+	/* If the first action of a query, process the resource list,
+	** which specifies the tables needed.  This will check timestamps
+	** too, and will return a not-OK status if the QP is out of date
+	** with respect to the resources needed.
 	*/
-	if (qp->qp_status & QEQP_DEFERRED)
-		dsh->dsh_stmt_no = qef_cb->qef_stmt++;
+	status = qeq_vld_first_act(qef_rcb, dsh, init_action);
+    }
 
-	/* only validate the resource list before the execution of the
-	** first action 
-	*/
-	if (action == qp->qp_ahd)
+    /* Open tables for this action */
+    for (vl = action->ahd_valid;
+	    status == E_DB_OK && vl != NULL;
+	    vl = vl->vl_next
+	)
+    {
+	bool vl_found = FALSE;
+
+	if (vl->vl_flags & QEF_MCNSTTBL) continue;
+
+	if (vl->vl_flags & QEF_TPROC)
 	{
-	    /* for each resource */
-	    for (i = 0; i < qp->qp_cnt_resources; i += 1)
+
+	    if ((qef_rcb->qef_intstate & QEF_CLEAN_RSRC) != 0)
 	    {
-		resource = &dsh->dsh_resources[i];
-		qefresource = (QEF_RESOURCE *) resource->qer_qefresource;
-
-		/* if this is a resource that needs validating */
-
-		/* First check for in-memory table (MS Access OR transform) */
-		if (qefresource->qr_type == QEQR_TABLE &&
-		    qefresource->qr_resource.qr_tbl.qr_tbl_type
-			== QEQR_MCNSTTBL)
-		{
-		    i4	tab_index;
-		    QEF_MEM_CONSTTAB	*qef_con_p;
-		    QEE_MEM_CONSTTAB	*qee_con_p;
-
-		    tab_index = qefresource->qr_resource.qr_tbl.
-			qr_lastvalid->vl_dmr_cb;
-		    qef_con_p = qefresource->qr_resource.qr_tbl.
-			qr_cnsttab_p;
-		    qee_con_p = resource->qer_resource.qer_tbl.
-							qer_cnsttab_p;
-		    /* Init. MEM_CONSTTAB and stick addr in dsh_cbs */
-		    qee_con_p->qer_tab_p = qef_con_p->qr_tab_p;
-		    qee_con_p->qer_rowcount = qef_con_p->qr_rowcount;
-		    qee_con_p->qer_rowsize = qef_con_p->qr_rowsize;
-		    qee_con_p->qer_scancount = 0;
-		    cbs[tab_index] = (PTR)qee_con_p;
-				/* VERY IMPORTANT - stick QEE_MEM_CONSTTAB
-				** ptr here for qen_orig to find later */
-		    continue;	/* skip rest of the loop */
-		}
-
-		if (qefresource->qr_type == QEQR_TABLE &&
-		     qefresource->qr_resource.qr_tbl.qr_tbl_type
-							== QEQR_REGTBL &&
-		     resource->qer_resource.qer_tbl.qer_free_vl == NULL &&
-		     resource->qer_resource.qer_tbl.qer_inuse_vl == NULL
-		    )
-		{
-		    vl = qefresource->qr_resource.qr_tbl.qr_valid;
-
-		    status = qeq_vopen(qef_rcb, action, dsh, vl);
-		    dmt_cb = (DMT_CB *) cbs[vl->vl_dmf_cb];
-
-		    if (status != E_DB_OK)
-			break;
-
-		    /* 
-		    ** if there aren't empty resource structs then
-		    ** allocate them, otherwise take one off the list.
-		    */
-		    if (resource->qer_resource.qer_tbl.qer_empty_vl == NULL)
-		    {
-			ulm.ulm_psize = sizeof (QEE_VALID);
-			status = qec_malloc(&ulm);
-			if (status != E_DB_OK)
-			{
-			    dsh->dsh_error.err_code = ulm.ulm_error.err_code;
-			    return (status);
-			}
-                        /* cast to quiesce the compiler warning */
-			qevl = (QEE_VALID *)ulm.ulm_pptr; 
-		    }
-		    else
-		    {
-			qevl = resource->qer_resource.qer_tbl.qer_empty_vl;
-			resource->qer_resource.qer_tbl.qer_empty_vl = 
-							    qevl->qevl_next;
-			if (qevl->qevl_next != NULL)
-			    qevl->qevl_next->qevl_prev = NULL;
-			qevl->qevl_next = qevl->qevl_prev = NULL;
-		    }
-
-		    qevl->qevl_qefvl = (PTR) vl;
-		    if (resource->qer_resource.qer_tbl.qer_free_vl == NULL)
-		    {
-			qevl->qevl_next = qevl->qevl_prev = NULL;
-			resource->qer_resource.qer_tbl.qer_free_vl = qevl;
-		    }
-
-		    /* this is the real validation step for tables */
-		    if (vl->vl_timestamp.db_tab_high_time != 
-			dmt_cb->dmt_timestamp.db_tab_high_time ||
-			vl->vl_timestamp.db_tab_low_time !=
-			dmt_cb->dmt_timestamp.db_tab_low_time)
-		    {
-			/* relation out of date */
-			dsh->dsh_qp_status |= DSH_QP_OBSOLETE;
-			dsh->dsh_error.err_code = E_QE0023_INVALID_QUERY;
-			status = E_DB_WARN;
-
-                        qeu_rdfcb_init((PTR) &rdf_cb, qef_cb);
-			/* There's no need to imagine that this QP exists
-			** in other servers, so keep this invalidation local.
-			*/
-			rdf_cb.rdf_rb.rdr_fcb = NULL;
-
-                        rdf_cb.rdf_rb.rdr_tabid.db_tab_base = 
-                                           dmt_cb->dmt_id.db_tab_base;
-                        rdf_cb.rdf_rb.rdr_tabid.db_tab_index = 
-                                           dmt_cb->dmt_id.db_tab_index;                           
-                        status1 = rdf_call(RDF_INVALIDATE, (PTR) &rdf_cb);
-                        if (DB_FAILURE_MACRO(status1))
-                        {
-                            dsh->dsh_error.err_code = rdf_cb.rdf_error.err_code;
-                            return(status1);
-                        }
-			break;
-		    }
-
-		    /* 
-		    ** The semantics of the size_sensitive field in the valid
-		    ** list is defined below:
-		    **
-		    **   If the size_sensitive is FALSE, the query plan is
-		    **   totally independent of actual number of pages in the
-		    **   relation
-		    ** 
-		    **   If the size_sensitive is TRUE, the the estimated number
-		    **   of affected pages in the query plan must be adjusted by
-		    **   the proportion of the actual page count (from DMF) to
-		    **   the estimated page count (in the query plan).
-		    **
-		    **   If the difference of the adjusted value and the 
-		    **   estimated number (specified in the query plan) is 
-		    **   greater than a certain level (2 times + 5), the 
-		    **   query plan is invalid.
-		    */
-
-		    /* Skip all this if the number of pages hasn't changed */
-		    if (vl->vl_size_sensitive && init_action == TRUE &&
-			vl->vl_total_pages != dmt_cb->dmt_page_count)
-		    {
-			i4	adj_affected_pages, adj_est_pages;
-			i4 growth_factor;
-
-			/*
-			** scale estimated pages by growth factor, if any,
-			** using integer arithmetic...
-			*/
-			growth_factor = ((dmt_cb->dmt_page_count -
-					  vl->vl_total_pages) * 100)
-					 / vl->vl_total_pages;
-
-			/* Account for growth or shrinkage */
-			growth_factor = +growth_factor;
-			
-			adj_affected_pages = vl->vl_est_pages + 
-				((vl->vl_est_pages * growth_factor) / 100);
-
-			/* if the scaled estimated pages is more than
-			** 2 times the original estimate + 5, cause a recompile 
-			** with new RDF cache */
-		    
-			/* 
-			** calculate comparand so that overflow becoming 
-			** negative can be detected 
-			*/
-			adj_est_pages = (2 * vl->vl_est_pages) + 5;
-
-			if (adj_affected_pages > adj_est_pages)
-			{
-			    dsh->dsh_qp_status |= DSH_QP_OBSOLETE;
-			    dsh->dsh_error.err_code = E_QE0301_TBL_SIZE_CHANGE;
-			    status = E_DB_WARN;
-
-                            qeu_rdfcb_init((PTR) &rdf_cb, qef_cb);
-			    /* Local invalidation only */
-			    rdf_cb.rdf_rb.rdr_fcb = NULL;
-                            rdf_cb.rdf_rb.rdr_tabid.db_tab_base = 
-                                           dmt_cb->dmt_id.db_tab_base;
-                            rdf_cb.rdf_rb.rdr_tabid.db_tab_index = 
-                                           dmt_cb->dmt_id.db_tab_index;                           
-                            status1 = rdf_call(RDF_INVALIDATE, (PTR) &rdf_cb);
-                            if (DB_FAILURE_MACRO(status1))
-                            {
-                                dsh->dsh_error.err_code = 
-                                      rdf_cb.rdf_error.err_code;
-                                return(status1);
-                            }
-
-			    break;
-			}
-		    }   /* end if size_sensitive */
-		}
+		dsh->dsh_error.err_code = E_QE0025_USER_ERROR;
+		qef_rcb->qef_intstate &= ~QEF_CLEAN_RSRC;
+		status = E_DB_ERROR;
+		return status;
 	    }
-	    /* For each sequence (if any) - open with DMF call. */
-            if (status == E_DB_OK)
-	    {
-		DMS_CB		*dms_cb;
-		QEF_SEQUENCE	*qseqp;
 
-		for (qseqp = qp->qp_sequences; qseqp; qseqp = qseqp->qs_qpnext)
+	    /* recompile and reload the tproc */
+	    STRUCT_ASSIGN_MACRO(*qef_rcb, *dsh->dsh_saved_rcb);
+
+	    /* reset qefresource */
+	    qefresource = vl->vl_resource;
+
+	    status = qeq_load_tproc_qp(qef_rcb, dsh, &qsf_rcb, qefresource);
+
+	    if (status == E_DB_OK &&                     /* tproc QP cached */
+		!(qp->qp_status & QEQP_ISDBP) &&               /* top query */
+		!(qef_rcb->qef_intstate & QEF_DBPROC_QP)/* not QEF callback */
+	       )
+	    {
+		/* Validate timestamp mismatch */
+		status = qeq_validate_tproc(qef_rcb, &qsf_rcb, dsh,
+					&ulm, &tproc_tm_match);
+		if (status!= E_DB_OK)
+		    return status;
+
+		if (!tproc_tm_match)
 		{
-		    dms_cb = (DMS_CB *)dsh->dsh_cbs[qseqp->qs_cbnum];
-		    dms_cb->dms_tran_id = dsh->dsh_dmt_id;
-		    dms_cb->dms_db_id = qef_rcb->qef_db_id;
-		    status = dmf_call(DMS_OPEN_SEQ, dms_cb);
+		    /* If there is any timestamp mismatch, destroy
+		     * all ttproc QP from QSF, so when the control
+		     * is back to SCF, the query is treated is being
+		     * executed the first time and all the nested
+		     * tprocs will be recompiled.
+		     */
+		    QEF_RESOURCE  *qp_resource
+			= ((QEF_QP_CB *)qsf_rcb.qsf_root)->qp_resources;
+
+		    status = qeq_destroy_tproc_qp(qef_rcb, dsh, &qsf_rcb,
+					      qp_resource);
 		    if (status != E_DB_OK)
-		    {
-			dsh->dsh_error.err_code = 
-			      dms_cb->error.err_code;
-			return(status);
-		    }
+			return status;
+
+		    /* Error out to force the tproc recompilation. */
+		    status = E_DB_ERROR;
 		}
 	    }
 
-	} /* end if first action */
 
-	for (vl = action->ahd_valid;
-		status == E_DB_OK && vl != NULL; 
-		vl = vl->vl_next
-	    )
-	{
-	    bool vl_found = FALSE;
-
-	    if (vl->vl_flags & QEF_MCNSTTBL) continue;
-
-            if (vl->vl_flags & QEF_TPROC)
-            {
-
-                if ((qef_rcb->qef_intstate & QEF_CLEAN_RSRC) != 0)
-                {
-                    dsh->dsh_error.err_code = E_QE0025_USER_ERROR;
-                    qef_rcb->qef_intstate &= ~QEF_CLEAN_RSRC;
-                    status = E_DB_ERROR;
-                    return status;
-                }
-
-                /* recompile and reload the tproc */
-                STRUCT_ASSIGN_MACRO(*qef_rcb, *dsh->dsh_saved_rcb);
-                dsh->dsh_act_ptr = action;
-
-                /* reset qefresource */
-                qefresource = vl->vl_resource;
-
-                status = qeq_load_tproc_qp(qef_rcb, dsh, &qsf_rcb, qefresource);
-
-                if (status == E_DB_OK &&                     /* tproc QP cached */
-                    !(qp->qp_status & QEQP_ISDBP) &&               /* top query */
-                    !(qef_rcb->qef_intstate & QEF_DBPROC_QP)/* not QEF callback */
-                   )
-                {
-                    /* Validate timestamp mismatch */
-                    sts = qeq_validate_tproc(qef_rcb, &qsf_rcb, dsh,
-                                            &ulm, &tproc_tm_match);
-                    if (sts!= E_DB_OK)
-                        return sts;
-
-                    if (!tproc_tm_match)
-                    {
-                        /* If there is any timestamp mismatch, destroy
-                         * all ttproc QP from QSF, so when the control
-                         * is back to SCF, the query is treated is being
-                         * executed the first time and all the nested
-                         * tprocs will be recompiled.
-                         */
-                        QEF_RESOURCE  *qp_resource
-                            = ((QEF_QP_CB *)qsf_rcb.qsf_root)->qp_resources;
-
-                        sts = qeq_destroy_tproc_qp(qef_rcb, dsh, &qsf_rcb,
-                                                  qp_resource);                                           
-                        if (sts != E_DB_OK)
-                            return sts;
-
-                        /* Error out to force the tproc recompilation. */
-                        status = E_DB_ERROR;
-                    }
-                }
-
-
-                if (DB_FAILURE_MACRO(status))
-                {
-                    /* No such procedure in QSF, ask SCF to recompile. */
-                    qef_rcb->qef_intstate |= QEF_DBPROC_QP; 
-
-                    dsh->dsh_error.err_code = E_QE030F_LOAD_TPROC_QP;
-
-                    break;    
-                }
-                else
-                {
-                    /* The procedure was found. Turn off the saved bit. */
-                    qef_rcb->qef_intstate &= ~QEF_DBPROC_QP;
-                    
-                    /* save the cursor ID to locate the tproc qp from QSF */
-                    MEcopy((PTR)qsf_rcb.qsf_obj_id.qso_name,
-                           sizeof(DB_CURSOR_ID),
-                           (PTR)&qefresource->qr_resource.qr_proc.qr_dbpalias);
-                }
-
-                continue;
-            }
-				/* skip all this stuff for in-memory tabs */
-	    resource = &dsh->dsh_resources[vl->vl_resource->qr_id_resource];
-
-	    /* if there's an unused open valid struct then use that */
-	    if (resource->qer_resource.qer_tbl.qer_free_vl != NULL &&
-		 resource->qer_resource.qer_tbl.qer_free_vl->qevl_qefvl == 
-								    (PTR) vl
-		)
+	    if (DB_FAILURE_MACRO(status))
 	    {
-		resource->qer_resource.qer_tbl.qer_free_vl->qevl_next =
-			resource->qer_resource.qer_tbl.qer_inuse_vl;
-		resource->qer_resource.qer_tbl.qer_inuse_vl = 
-			resource->qer_resource.qer_tbl.qer_free_vl;
-		resource->qer_resource.qer_tbl.qer_free_vl = NULL;
-		vl_found = TRUE;
+		/* No such procedure in QSF, ask SCF to recompile. */
+		qef_rcb->qef_intstate |= QEF_DBPROC_QP;
+
+		dsh->dsh_error.err_code = E_QE030F_LOAD_TPROC_QP;
+
+		break;
 	    }
 	    else
 	    {
-		/* See if we've already opened the table */
-		for (qevl = resource->qer_resource.qer_tbl.qer_inuse_vl;
-			qevl != NULL;
-			qevl = qevl->qevl_next
-		    )
-		{
-		    if (qevl->qevl_qefvl == (PTR) vl)
-		    {
-			vl_found = TRUE;
-			break;
-		    }
-		}
+		/* The procedure was found. Turn off the saved bit. */
+		qef_rcb->qef_intstate &= ~QEF_DBPROC_QP;
+
+		/* save the cursor ID to locate the tproc qp from QSF */
+		MEcopy((PTR)qsf_rcb.qsf_obj_id.qso_name,
+		       sizeof(DB_CURSOR_ID),
+		       (PTR)&qefresource->qr_resource.qr_proc.qr_dbpalias);
 	    }
 
-	    if (!vl_found)
-	    {
-                /*
-                ** Open the table and add it to the inuse list
-                */
-                if (resource->qer_resource.qer_tbl.qer_empty_vl == NULL)
-                {
-                    ulm.ulm_psize = sizeof (QEE_VALID);
-                    status = qec_malloc(&ulm);
-                    if (status != E_DB_OK)
-                    {
-                        dsh->dsh_error.err_code = ulm.ulm_error.err_code;
-                        return (status);
-                    }
-                    /* quiesce the compiler warning */
-                    qevl = (QEE_VALID *)ulm.ulm_pptr;
-                }
-                else
-                {
-                    qevl = resource->qer_resource.qer_tbl.qer_empty_vl;
-                    resource->qer_resource.qer_tbl.qer_empty_vl =
-                            qevl->qevl_next;
-                    if (qevl->qevl_next != NULL)
-                        qevl->qevl_next->qevl_prev = NULL;
-                    qevl->qevl_next = qevl->qevl_prev = NULL;
-                }
-
-                qevl->qevl_qefvl = (PTR) vl;
-                if (resource->qer_resource.qer_tbl.qer_inuse_vl == NULL)
-                {
-                    qevl->qevl_next = qevl->qevl_prev = NULL;
-                    resource->qer_resource.qer_tbl.qer_inuse_vl = qevl;
-                }
-                else
-                {
-                    qevl->qevl_next =
-                        resource->qer_resource.qer_tbl.qer_inuse_vl;
-                    qevl->qevl_prev = NULL;
-                    qevl->qevl_next->qevl_prev = qevl;
-                    resource->qer_resource.qer_tbl.qer_inuse_vl = qevl;
-                }
-
-                status = qeq_vopen(qef_rcb, action, dsh, vl);
-                if (status != E_DB_OK)
-                    break;
-	    }
-		/* 
-		** If we've opened the table already, then DMR_ALTER the 
-		** statement number
-		*/
-	    dmt_cb = (DMT_CB *) cbs[vl->vl_dmf_cb];
-	    if (dmt_cb->dmt_sequence != dsh->dsh_stmt_no)
-	    {
-	        /* set up to pass it to DMF */
-	        dmr_char_entry.char_id = DMR_SEQUENCE_NUMBER;
-	        dmr_char_entry.char_value = dsh->dsh_stmt_no;
-	        dmt_cb->dmt_sequence = dsh->dsh_stmt_no;
-
-	        dmr_cb = (DMR_CB *) cbs[vl->vl_dmr_cb];
-	        dmr_cb->dmr_char_array.data_in_size = 
-					    sizeof(DMR_CHAR_ENTRY);
-	        dmr_cb->dmr_char_array.data_address = 
-					    (PTR)&dmr_char_entry;
-
-	        status = dmf_call(DMR_ALTER, dmr_cb);
-	        if (DB_FAILURE_MACRO(status))    
-	        {
-		    dsh->dsh_error.err_code = dmr_cb->error.err_code;
-		    break;
-		}
-	    }
-
-	    /*
-	    ** Make sure the table was locked with the correct lock mode
-	    **
-	    ** If the table open open failed with lock timeout while 
-	    ** validating ALL query plan table resources, we performed the
-	    ** table validation with readlock=nolock which requests a table
-	    ** control lock.
-	    **
-	    ** The current action requires this table resource so we must 
-	    ** now try to lock the table with the correct lock mode.
-	    ** Try to open a new cursor with the correct lock mode.
-	    ** 
-	    ** We could alter the lock mode... (the way it is done in scsraat)
-	    ** but this won't necessarily get the table lock mode we would
-	    ** have gotten by calling open (which uses session lockmode info)
-	    **
-	    ** Close the cursor opened with readlock nolock AFTER we request
-	    ** the lock we need, so that the control lock is held while
-	    ** the table lock is requested.
-	    */ 
-	    if (dmt_cb->dmt_lock_mode == DMT_N)
-	    {
-		PTR		nolock_access_id;
-		PTR		new_access_id;
-
-		nolock_access_id = dmt_cb->dmt_record_access_id;
-		dmt_cb->dmt_record_access_id = (PTR)0;
-
-		/* default for lock granularity setting purposes */
-		switch (dmt_cb->dmt_access_mode)
-		{
-		    case DMT_A_READ:
-		    case DMT_A_RONLY:
-			dmt_cb->dmt_lock_mode = DMT_IS;
-			break;
-
-		    case DMT_A_WRITE:
-			/* See qeq-vopen... */
-			if (vl->vl_flags & QEF_NEED_XLOCK)
-			    dmt_cb->dmt_lock_mode = DMT_X;
-			dmt_cb->dmt_lock_mode = DMT_IX;
-			break;
-		}
-		status = dmf_call(DMT_OPEN, dmt_cb);
-		if (DB_FAILURE_MACRO(status))    
-		{
-		    if (dmt_cb->error.err_code == E_DM004D_LOCK_TIMER_EXPIRED)
-			dsh->dsh_error.err_code = E_QE1004_TABLE_NOT_OPENED;
-		    else
-			dsh->dsh_error.err_code = dmt_cb->error.err_code;
-		    dmt_cb->dmt_record_access_id = nolock_access_id;
-		    break;
-		}
-		else
-		{
-		    new_access_id = dmt_cb->dmt_record_access_id;
-		    dmt_cb->dmt_record_access_id = nolock_access_id;
-		    status = dmf_call(DMT_CLOSE, dmt_cb);
-		    dmt_cb->dmt_record_access_id = new_access_id;
-		    /* set the table record access ids into the DMR_CBs */
-		    ((DMR_CB*) cbs[vl->vl_dmr_cb])->dmr_access_id =
-					    dmt_cb->dmt_record_access_id;
-		    
-		    if (status)
-		    {
-			i4 err;
-			qef_error(dmt_cb->error.err_code, 0L, status, &err,
-			    &dsh->dsh_error, 0);
-			break;
-		    }
-		}
-	    }
-
-	}   /* end of the validation loop */
-
-	if (status != E_DB_OK)
-	{
-	    if ((dsh->dsh_error.err_code == E_QE0023_INVALID_QUERY ||
-	         dsh->dsh_error.err_code == E_QE0301_TBL_SIZE_CHANGE) &&
-		dsh->dsh_qp_ptr->qp_ahd != action)
-	    {
-		status = E_DB_ERROR;
-	    }
-	    return (status);
+	    continue;
 	}
+			    /* skip all this stuff for in-memory tabs */
+	resource = &dsh->dsh_resources[vl->vl_resource->qr_id_resource];
 
-	/* 
-	** Now we must handle any security audit requirements.
-        */
-	if  ( (action->ahd_audit != NULL) && 
-	      (Qef_s_cb->qef_state & QEF_S_C2SECURE)
+	/* if there's an unused open valid struct then use that */
+	if (resource->qer_resource.qer_tbl.qer_free_vl != NULL &&
+	     resource->qer_resource.qer_tbl.qer_free_vl->qevl_qefvl ==
+								(PTR) vl
 	    )
 	{
-	    QEF_AUD     *aud;
-	    QEF_ART     *art;
-	    i4          i;
-  
-	    aud = (QEF_AUD *)action->ahd_audit;
-	    status = qeq_audit(qef_rcb, dsh, aud, &status);
-	    if (status != E_DB_OK)
-	    	return (status);	    
+	    resource->qer_resource.qer_tbl.qer_free_vl->qevl_next =
+		    resource->qer_resource.qer_tbl.qer_inuse_vl;
+	    resource->qer_resource.qer_tbl.qer_inuse_vl =
+		    resource->qer_resource.qer_tbl.qer_free_vl;
+	    resource->qer_resource.qer_tbl.qer_free_vl = NULL;
+	    vl_found = TRUE;
 	}
-	/*
-	** Check if query plan needs QUERY_SYSCAT privilege, if so
-	** make sure the session has it, and invalidate the query plan
-	** if not.
-	*/
-        if (action->ahd_flags & QEA_NEED_QRY_SYSCAT)
+	else
 	{
-	    /*
-	    ** Query needs QUERY_SYSCAT, so verify session has it
-	    */
-	    if (!(qef_cb->qef_fl_dbpriv & DBPR_QUERY_SYSCAT))
+	    /* See if we've already opened the table */
+	    for (qevl = resource->qer_resource.qer_tbl.qer_inuse_vl;
+		    qevl != NULL;
+		    qevl = qevl->qevl_next
+		)
 	    {
-		/* Session missing priv, so invalidate */
-		status = E_DB_WARN;
-		dsh->dsh_qp_status |= DSH_QP_OBSOLETE;
-		dsh->dsh_error.err_code = E_QE0023_INVALID_QUERY;
-		return (status);
+		if (qevl->qevl_qefvl == (PTR) vl)
+		{
+		    vl_found = TRUE;
+		    break;
+		}
 	    }
 	}
-    }	/* end of the if-not-reset block */
-        
-    /* At this point determine if this request is only to validate the
-    ** query by opening all tables and checking timestamps or if we are
-    ** actually about to execute the specified. If we are going to execute
-    ** the specified action, the code below will initialize the action for
-    ** processing. 'init_action' is TRUE in this case. 'init_action' is
-    ** FALSE if we are only interested in opening the tables for the QP;
-    ** this is the case after a ROLLBACK or COMMIT action has been taken.
-    ** The actual problem being fixed when this code was added was that the
-    ** action initialization for the first action in a DB procedure also
-    ** initialized all local variables in the DB procedure to their default
-    ** values. Thus, after a COMMIT or ROLLBACK in a DB procedure, all
-    ** local variables lost their current values.
-    */
-    if (!init_action)
+
+	if (!vl_found)
+	{
+	    /*
+	    ** Open the table and add it to the inuse list
+	    */
+	    if (resource->qer_resource.qer_tbl.qer_empty_vl == NULL)
+	    {
+		ulm.ulm_psize = sizeof (QEE_VALID);
+		status = qec_malloc(&ulm);
+		if (status != E_DB_OK)
+		{
+		    dsh->dsh_error.err_code = ulm.ulm_error.err_code;
+		    return (status);
+		}
+		/* quiesce the compiler warning */
+		qevl = (QEE_VALID *)ulm.ulm_pptr;
+	    }
+	    else
+	    {
+		qevl = resource->qer_resource.qer_tbl.qer_empty_vl;
+		resource->qer_resource.qer_tbl.qer_empty_vl =
+			qevl->qevl_next;
+		if (qevl->qevl_next != NULL)
+		    qevl->qevl_next->qevl_prev = NULL;
+		qevl->qevl_next = qevl->qevl_prev = NULL;
+	    }
+
+	    qevl->qevl_qefvl = (PTR) vl;
+	    if (resource->qer_resource.qer_tbl.qer_inuse_vl == NULL)
+	    {
+		qevl->qevl_next = qevl->qevl_prev = NULL;
+		resource->qer_resource.qer_tbl.qer_inuse_vl = qevl;
+	    }
+	    else
+	    {
+		qevl->qevl_next =
+		    resource->qer_resource.qer_tbl.qer_inuse_vl;
+		qevl->qevl_prev = NULL;
+		qevl->qevl_next->qevl_prev = qevl;
+		resource->qer_resource.qer_tbl.qer_inuse_vl = qevl;
+	    }
+
+	    status = qeq_vopen(qef_rcb, dsh, vl);
+	    if (status != E_DB_OK)
+		break;
+	}
+	    /*
+	    ** If we've opened the table already, then DMR_ALTER the
+	    ** statement number
+	    */
+	dmt_cb = (DMT_CB *) cbs[vl->vl_dmf_cb];
+	if (dmt_cb->dmt_sequence != dsh->dsh_stmt_no)
+	{
+	    /* set up to pass it to DMF */
+	    dmr_char_entry.char_id = DMR_SEQUENCE_NUMBER;
+	    dmr_char_entry.char_value = dsh->dsh_stmt_no;
+	    dmt_cb->dmt_sequence = dsh->dsh_stmt_no;
+
+	    dmr_cb = (DMR_CB *) cbs[vl->vl_dmr_cb];
+	    dmr_cb->dmr_char_array.data_in_size =
+					sizeof(DMR_CHAR_ENTRY);
+	    dmr_cb->dmr_char_array.data_address =
+					(PTR)&dmr_char_entry;
+
+	    status = dmf_call(DMR_ALTER, dmr_cb);
+	    if (DB_FAILURE_MACRO(status))
+	    {
+		dsh->dsh_error.err_code = dmr_cb->error.err_code;
+		break;
+	    }
+	}
+
+	/*
+	** Make sure the table was locked with the correct lock mode
+	**
+	** If the table open open failed with lock timeout while
+	** validating ALL query plan table resources, we performed the
+	** table validation with readlock=nolock which requests a table
+	** control lock.
+	**
+	** The current action requires this table resource so we must
+	** now try to lock the table with the correct lock mode.
+	** Try to open a new cursor with the correct lock mode.
+	**
+	** We could alter the lock mode... (the way it is done in scsraat)
+	** but this won't necessarily get the table lock mode we would
+	** have gotten by calling open (which uses session lockmode info)
+	**
+	** Close the cursor opened with readlock nolock AFTER we request
+	** the lock we need, so that the control lock is held while
+	** the table lock is requested.
+	*/
+	if (dmt_cb->dmt_lock_mode == DMT_N)
+	{
+	    PTR		nolock_access_id;
+	    PTR		new_access_id;
+
+	    nolock_access_id = dmt_cb->dmt_record_access_id;
+	    dmt_cb->dmt_record_access_id = (PTR)0;
+
+	    /* default for lock granularity setting purposes */
+	    switch (dmt_cb->dmt_access_mode)
+	    {
+		case DMT_A_READ:
+		case DMT_A_RONLY:
+		    dmt_cb->dmt_lock_mode = DMT_IS;
+		    break;
+
+		case DMT_A_WRITE:
+		    /* See qeq-vopen... */
+		    if (vl->vl_flags & QEF_NEED_XLOCK)
+			dmt_cb->dmt_lock_mode = DMT_X;
+		    dmt_cb->dmt_lock_mode = DMT_IX;
+		    break;
+	    }
+	    status = dmf_call(DMT_OPEN, dmt_cb);
+	    if (DB_FAILURE_MACRO(status))
+	    {
+		if (dmt_cb->error.err_code == E_DM004D_LOCK_TIMER_EXPIRED)
+		    dsh->dsh_error.err_code = E_QE1004_TABLE_NOT_OPENED;
+		else
+		    dsh->dsh_error.err_code = dmt_cb->error.err_code;
+		dmt_cb->dmt_record_access_id = nolock_access_id;
+		break;
+	    }
+	    else
+	    {
+		new_access_id = dmt_cb->dmt_record_access_id;
+		dmt_cb->dmt_record_access_id = nolock_access_id;
+		status = dmf_call(DMT_CLOSE, dmt_cb);
+		dmt_cb->dmt_record_access_id = new_access_id;
+		/* set the table record access ids into the DMR_CBs */
+		((DMR_CB*) cbs[vl->vl_dmr_cb])->dmr_access_id =
+					dmt_cb->dmt_record_access_id;
+
+		if (status)
+		{
+		    i4 err;
+		    qef_error(dmt_cb->error.err_code, 0L, status, &err,
+			&dsh->dsh_error, 0);
+		    break;
+		}
+	    }
+	}
+
+    }   /* end of the validation loop */
+
+    if (status != E_DB_OK)
     {
+	if ((dsh->dsh_error.err_code == E_QE0023_INVALID_QUERY ||
+	     dsh->dsh_error.err_code == E_QE0301_TBL_SIZE_CHANGE) &&
+	    dsh->dsh_qp_ptr->qp_ahd != action)
+	{
+	    status = E_DB_ERROR;
+	}
 	return (status);
     }
 
-    /* Drop through IF we actually going to execute the specified action */
+    /*
+    ** Now we must handle any security audit requirements.
+    */
+    if  ( (action->ahd_audit != NULL) &&
+	  (Qef_s_cb->qef_state & QEF_S_C2SECURE)
+	)
+    {
+	QEF_AUD     *aud;
+	QEF_ART     *art;
+	i4          i;
 
-    /* put the query parameters into place */
+	aud = (QEF_AUD *)action->ahd_audit;
+	status = qeq_audit(qef_rcb, dsh, aud, &status);
+	if (status != E_DB_OK)
+	    return (status);
+    }
+    /*
+    ** Check if query plan needs QUERY_SYSCAT privilege, if so
+    ** make sure the session has it, and invalidate the query plan
+    ** if not.
+    */
+    if (action->ahd_flags & QEA_NEED_QRY_SYSCAT)
+    {
+	/*
+	** Query needs QUERY_SYSCAT, so verify session has it
+	*/
+	if (!(qef_cb->qef_fl_dbpriv & DBPR_QUERY_SYSCAT))
+	{
+	    /* Session missing priv, so invalidate */
+	    status = E_DB_WARN;
+	    dsh->dsh_qp_status |= DSH_QP_OBSOLETE;
+	    dsh->dsh_error.err_code = E_QE0023_INVALID_QUERY;
+	    return (status);
+	}
+    }
+
+    /* Don't set dsh-act-ptr, subplan init does that after an action passes
+    ** the "constant" test.
+    */
+    dsh->dsh_error.err_code = E_QE0000_OK;
+    return (E_DB_OK);
+
+} /* qeq_topact_validate */
+
+/*
+** Name: qeq_subplan_init - Initialize or reset a query (sub)plan
+**
+** Description:
+**	This routine is the second half of the original qeq_validate.
+**
+**	A QP or part of a QP is to be executed, or reset.  We walk
+**	the query plan sub-tree and do initialization / reset things:
+**	- some final ADE_EXCB setup is done;
+**	- some action CX's (keys, constants) are executed;
+**	- VIRGIN segments in CX's are run, if they exist;
+**	- partition pruning / qualification is set up, and constant
+**	  qualifications are executed;
+**	- orig keys are set up
+**	- orig positioning is done (ORIGAGG only)
+**
+**	All of these things are done in the context of the thread that
+**	will actually execute this part of the plan.  To that end, we'll
+**	stop walking the tree at an EXCH node;  the exch's child thread(s)
+**	will take care of things underneath.  A sub-plan might belong
+**	to multiple threads (if under a 1:N exch), which is fine;  each
+**	thread will run its subplan-init on the sub-plan, using data
+**	structures private to that thread.
+**
+**	The caller should pass either an action (the usual case), or a
+**	start-node (probably an EXCH), but never both.  The "node"
+**	argument should always be NULL, except for recursive calls
+**	from subplan-init itself.
+**
+**	The plan walk does not go below a QP node.  It could, but there is
+**	no real benefit to doing so.  The QP node executor will complete
+**	the subplan-init for the actions under the QP (selecting the proper
+**	action for this thread, in the parallel union case).
+**
+** Inputs:
+**	qef_rcb			QEF request control block for query
+**	dsh			This thread's DSH
+**	action			Action to start initializing at, or ...
+**	start_node		QP node to start initializing at (most
+**				likely an EXCH)
+**	node			Node to process when moving recursively down
+**				the tree;  outside callers ALWAYS pass NULL.
+**
+** Outputs:
+**	Returns E_DB_OK or error status
+**	Can return E_DB_WARN and QE0015 (no more rows), but *only* if called
+**	from an action -- never happens when started in mid-QP.  (resettable
+**	EXCH child depends on this.)
+**
+** History:
+**	13-May-2010 (kschendel)
+**	    Split from original qeq-validate while trying to make
+**	    complex parallel queries work.
+*/
+
+DB_STATUS
+qeq_subplan_init(QEF_RCB *qef_rcb, QEE_DSH *dsh,
+	QEF_AHD *act, QEN_NODE *start_node, QEN_NODE *node)
+{
+    ADE_EXCB	*ade_excb;
+    ADF_CB	*adfcb = dsh->dsh_adf_cb;
+    bool	key_by_tid;
+    DB_STATUS	status = E_DB_OK;
+    DMR_CB	*dmr_cb;
+    i4		dmr_index;
+    i4		i;
+    i4		val1, val2;
+    PTR		*cbs = dsh->dsh_cbs;
+    QEF_CB	*qef_cb = dsh->dsh_qefcb;
+    QEF_QP_CB	*qp = dsh->dsh_qp_ptr;
+    QEN_ADF	*qen_adf;
+    QEN_NODE	*inner, *outer;
+    QEN_OJINFO	*oj;
+    QEN_PART_QUAL  *pqual;
+    TIMERSTAT	open_tstat;
 
     if (qef_rcb->qef_pcount && qef_rcb->qef_param)
         dsh->dsh_param	= qef_rcb->qef_param->dt_data;
-    dsh->dsh_result	= (PTR) dsh->dsh_qef_output;
+    dsh->dsh_result = (PTR) dsh->dsh_qef_output;
+    dsh->dsh_error.err_code = E_QE0000_OK;
 
-    /* initialize the queries begining cpu, dio, and wall clock numbers */
-    if (ult_check_macro(&qef_cb->qef_trace, 91, &val1, &val2))
+    /* run the timer initialization stuff if we don't have the overheads
+    ** calculated yet for this query and DSH.
+    */
+    if (! dsh->dsh_stats_inited)
     {
-	cson = 1;
-	csret = CSaltr_session((CS_SID) 0, CS_AS_CPUSTATS, 
-		    ( PTR ) &cson);
+	i4 cson;
+	STATUS csret;
+	TIMERSTAT init_tstat;
 
-	if (csret != OK && csret != E_CS001F_CPUSTATS_WASSET)
+	/* initialize the queries begining cpu, dio, and wall clock numbers */
+	if (ult_check_macro(&qef_cb->qef_trace, 91, &val1, &val2))
 	{
-	    dsh->dsh_error.err_code = csret;
-	    return(E_DB_ERROR);
-	}
 
-	qen_bcost_begin(dsh, &init_tstat, NULL);
+	    cson = 1;
+	    csret = CSaltr_session((CS_SID) 0, CS_AS_CPUSTATS,
+			( PTR ) &cson);
 
-	dsh->dsh_tcpu = init_tstat.stat_cpu;
-	dsh->dsh_tdio = init_tstat.stat_dio;
-	dsh->dsh_twc = init_tstat.stat_wc;
-    }
+	    if (csret != OK && csret != E_CS001F_CPUSTATS_WASSET)
+	    {
+		dsh->dsh_error.err_code = csret;
+		return(E_DB_ERROR);
+	    }
 
-    /* initialize cpu and dio overhead numbers if needed */
-    if (dsh->dsh_qp_stats)
-    {
-	cson = 1;
-	csret = CSaltr_session((CS_SID) 0, CS_AS_CPUSTATS, 
-		    ( PTR ) &cson);
-
-	if (csret != OK && csret != E_CS001F_CPUSTATS_WASSET)
-	{
-	    dsh->dsh_error.err_code = csret;
-	    return(E_DB_ERROR);
-	}
-
-	dsh->dsh_diooverhead = 0.0;	/* Silly to even have this */
-	if (dsh->dsh_cpuoverhead == 0.0)
-	{
 	    qen_bcost_begin(dsh, &init_tstat, NULL);
 
-	    /* need enough of these to get at least a couple of cpu-seconds,
-	    ** else it's a waste of effort (and source of error).
-	    ** cpu time is x10 so look for at least 2000 ms.
-	    ** FIXME! CSstatistics, and hence bcost, measures in different
-	    ** units on different platforms!  and unix platforms currently
-	    ** manage to deliberately lose resolution below 10 ms!  this
-	    ** area could use some attention...
-	    */
+	    dsh->dsh_tcpu = init_tstat.stat_cpu;
+	    dsh->dsh_tdio = init_tstat.stat_dio;
+	    dsh->dsh_twc = init_tstat.stat_wc;
+	}
+
+	/* initialize cpu and dio overhead numbers if needed */
+	if (dsh->dsh_qp_stats)
+	{
+	    cson = 1;
+	    csret = CSaltr_session((CS_SID) 0, CS_AS_CPUSTATS,
+			( PTR ) &cson);
+
+	    if (csret != OK && csret != E_CS001F_CPUSTATS_WASSET)
+	    {
+		dsh->dsh_error.err_code = csret;
+		return(E_DB_ERROR);
+	    }
+
+	    dsh->dsh_diooverhead = 0.0;	/* Silly to even have this */
+	    if (dsh->dsh_cpuoverhead == 0.0)
+	    {
+		qen_bcost_begin(dsh, &init_tstat, NULL);
+
+		/* need enough of these to get at least a couple of cpu-seconds,
+		** else it's a waste of effort (and source of error).
+		** cpu time is x10 so look for at least 2000 ms.
+		** FIXME! CSstatistics, and hence bcost, measures in different
+		** units on different platforms!  and unix platforms currently
+		** manage to deliberately lose resolution below 10 ms!  this
+		** area could use some attention...
+		*/
 #ifdef NT_GENERIC
 #define QEQ_OVERHEAD_NEEDED 2000
 #else
 #define QEQ_OVERHEAD_NEEDED 200
 #endif
 
-	    for (i = 1; i < 2000000; i++)
-	    {
-		TIMERSTAT loop_tstat;
-		qen_bcost_begin(dsh, &loop_tstat, NULL);
-		if (loop_tstat.stat_cpu - init_tstat.stat_cpu >= QEQ_OVERHEAD_NEEDED)
-		    break;
+		for (i = 1; i < 2000000; i++)
+		{
+		    TIMERSTAT loop_tstat;
+		    qen_bcost_begin(dsh, &loop_tstat, NULL);
+		    if (loop_tstat.stat_cpu - init_tstat.stat_cpu >= QEQ_OVERHEAD_NEEDED)
+			break;
+		}
+
+		qen_ecost_end(dsh, &init_tstat, NULL);
+
+		/* N bcost calls is N/2 b/e pairs;  just use a tiny value if
+		** we can't generate enough overhead in 1 million pairs.
+		*/
+		if (init_tstat.stat_cpu >= QEQ_OVERHEAD_NEEDED)
+		    dsh->dsh_cpuoverhead = (f4) init_tstat.stat_cpu / (f4)(i/2);
+		if (dsh->dsh_cpuoverhead == 0.0)
+		    dsh->dsh_cpuoverhead = 1.0e-10;
 	    }
-
-	    qen_ecost_end(dsh, &init_tstat, NULL);
-
-	    /* N bcost calls is N/2 b/e pairs;  just use a tiny value if
-	    ** we can't generate enough overhead in 1 million pairs.
-	    */
-	    if (init_tstat.stat_cpu >= QEQ_OVERHEAD_NEEDED)
-		dsh->dsh_cpuoverhead = (f4) init_tstat.stat_cpu / (f4)(i/2);
-	    if (dsh->dsh_cpuoverhead == 0.0)
-		dsh->dsh_cpuoverhead = 1.0e-10;
 	}
-    }
+
+	dsh->dsh_stats_inited = TRUE;
+    } /* if stats not inited */
 
     /* further (re)initialize the ADE_EXCBs, run virgin segments */
 
-    /*
-    ** Fix B38161: Return E_QE0018_BAD_PARAM_IN_CB if qen_pcx_idx is
-    **             positive but qef_pcount is 0.
-    */
-    if (action->ahd_mkey && 
-		action->ahd_mkey->qen_pcx_idx && !qef_rcb->qef_pcount)
+    if (act != NULL)
     {
-        dsh->dsh_error.err_code = E_QE0018_BAD_PARAM_IN_CB;
-        return (E_DB_ERROR);
-    }
+	/*
+	** Fix B38161: Return E_QE0018_BAD_PARAM_IN_CB if qen_pcx_idx is
+	**             positive but qef_pcount is 0.
+	*/
+	if (act->ahd_mkey &&
+		    act->ahd_mkey->qen_pcx_idx && !qef_rcb->qef_pcount)
+	{
+	    dsh->dsh_error.err_code = E_QE0018_BAD_PARAM_IN_CB;
+	    return (E_DB_ERROR);
+	}
 
-    /* 
-    ** position the first record where appropriate if action contains a QEP.
-    ** also check constant qualifications.
-    */
-    if ((action->ahd_atype > QEA_DMU && action->ahd_atype < QEA_UTL) ||
-	    (action->ahd_atype == QEA_RAGGF) || 
-	    (action->ahd_atype == QEA_HAGGF) || 
-	    (action->ahd_atype == QEA_LOAD) ||
-	    (action->ahd_atype == QEA_PUPD) || 
-	    (action->ahd_atype == QEA_RETURN) || 
-	    (action->ahd_atype == QEA_IF) || 
-	    (action->ahd_atype == QEA_PDEL)
-	)
-    {
+	/* Cursor- (remote-) update has no QP under it, but does have
+	** CX's to initialize
+	*/
+	if (act->ahd_atype == QEA_RUP)
+	{
+	    status = qeq_ade(dsh, act->qhd_obj.qhd_qep.ahd_current);
+	    if (status)
+		return (status);
+
+	    status = qeq_ade(dsh, act->qhd_obj.qhd_qep.ahd_constant);
+	    return (status);
+
+	}
+	/* Other actions with no QP need no further effort */
+	if ((act->ahd_atype <= QEA_DMU || act->ahd_atype >= QEA_UTL) &&
+		(act->ahd_atype != QEA_RAGGF) &&
+		(act->ahd_atype != QEA_HAGGF) &&
+		(act->ahd_atype != QEA_LOAD) &&
+		(act->ahd_atype != QEA_PUPD) &&
+		(act->ahd_atype != QEA_RETURN) &&
+		(act->ahd_atype != QEA_IF) &&
+		(act->ahd_atype != QEA_PDEL)
+	    )
+	{
+	    /* Set the current action in the DSH */
+	    dsh->dsh_act_ptr = act;
+	    return (E_DB_OK);
+	}
 
 	/* Copy first "n" and offset "n" values for SELECTs or CTAS. */
-	if ((action->ahd_atype == QEA_GET || action->ahd_atype == QEA_APP ||
-	     action->ahd_atype == QEA_LOAD) &&
-			action->qhd_obj.qhd_qep.ahd_firstncb >= 0)
+	if ((act->ahd_atype == QEA_GET || act->ahd_atype == QEA_APP ||
+	     act->ahd_atype == QEA_LOAD)
+	  && act->qhd_obj.qhd_qep.ahd_firstncb >= 0)
 	{
-	    QEA_FIRSTN	    *firstncbp = (QEA_FIRSTN *)dsh->dsh_cbs[action->
-						qhd_obj.qhd_qep.ahd_firstncb];
+	    QEA_FIRSTN	    *firstncbp;
 	    PTR		    valp;
 	    bool	    offval = FALSE, firval = FALSE;
 
+	    firstncbp = (QEA_FIRSTN *)cbs[act->qhd_obj.qhd_qep.ahd_firstncb];
 	    firstncbp->get_count = 0;
 
-	    firstncbp->get_offsetn = action->qhd_obj.qhd_qep.ahd_offsetn;
-	    if (action->qhd_obj.qhd_qep.ahd_qepflag & AHD_PARM_OFFSETN)
+	    firstncbp->get_offsetn = act->qhd_obj.qhd_qep.ahd_offsetn;
+	    if (act->qhd_obj.qhd_qep.ahd_qepflag & AHD_PARM_OFFSETN)
 	    {
 		if (qp->qp_status & QEQP_ISDBP)
 		{
 		    /* Procedure parameter or local variable - must be either
 		    ** 2-byte integer or 4-byte integer. */
-		
-		    valp = dsh->dsh_row[action->qhd_obj.qhd_qep.ahd_offsetn];
-		    if (qp->qp_row_len[action->qhd_obj.qhd_qep.ahd_offsetn] 
+
+		    valp = dsh->dsh_row[act->qhd_obj.qhd_qep.ahd_offsetn];
+		    if (qp->qp_row_len[act->qhd_obj.qhd_qep.ahd_offsetn]
 							== 2)
 			firstncbp->get_offsetn = *(i2 *)valp;
 		    else firstncbp->get_offsetn = *(i4 *)valp;
@@ -1592,8 +1481,8 @@ bool		init_action )
 		else
 		{
 		    /* Repeat query parm - load value from param array. */
-		    valp = dsh->dsh_param[action->qhd_obj.qhd_qep.ahd_offsetn];
-		    if (qp->qp_params[action->qhd_obj.qhd_qep.ahd_offsetn-1]->
+		    valp = dsh->dsh_param[act->qhd_obj.qhd_qep.ahd_offsetn];
+		    if (qp->qp_params[act->qhd_obj.qhd_qep.ahd_offsetn-1]->
 							db_length == 2)
 			firstncbp->get_offsetn = *(i2 *)valp;
 		    else firstncbp->get_offsetn = *(i4 *)valp;
@@ -1601,24 +1490,24 @@ bool		init_action )
 		offval = TRUE;
 	    }
 
-	    firstncbp->get_firstn = action->qhd_obj.qhd_qep.ahd_firstn;
-	    if (action->qhd_obj.qhd_qep.ahd_qepflag & AHD_PARM_FIRSTN)
+	    firstncbp->get_firstn = act->qhd_obj.qhd_qep.ahd_firstn;
+	    if (act->qhd_obj.qhd_qep.ahd_qepflag & AHD_PARM_FIRSTN)
 	    {
 		if (qp->qp_status & QEQP_ISDBP)
 		{
 		    /* Procedure parameter or local variable - must be either
 		    ** 2-byte integer or 4-byte integer. */
-		
-		    valp = dsh->dsh_row[action->qhd_obj.qhd_qep.ahd_firstn];
-		    if (qp->qp_row_len[action->qhd_obj.qhd_qep.ahd_firstn] == 2)
+
+		    valp = dsh->dsh_row[act->qhd_obj.qhd_qep.ahd_firstn];
+		    if (qp->qp_row_len[act->qhd_obj.qhd_qep.ahd_firstn] == 2)
 			firstncbp->get_firstn = *(i2 *)valp;
 		    else firstncbp->get_firstn = *(i4 *)valp;
 		}
 		else
 		{
 		    /* Repeat query parm - load value from param array. */
-		    valp = dsh->dsh_param[action->qhd_obj.qhd_qep.ahd_firstn];
-		    if (qp->qp_params[action->qhd_obj.qhd_qep.ahd_firstn-1]
+		    valp = dsh->dsh_param[act->qhd_obj.qhd_qep.ahd_firstn];
+		    if (qp->qp_params[act->qhd_obj.qhd_qep.ahd_firstn-1]
 							->db_length == 2)
 			firstncbp->get_firstn = *(i2 *)valp;
 		    else firstncbp->get_firstn = *(i4 *)valp;
@@ -1641,31 +1530,31 @@ bool		init_action )
 	    }
 	}
 
-	if (action->ahd_atype == QEA_AGGF || 
-	    action->ahd_atype == QEA_RAGGF ||
-	    action->ahd_atype == QEA_HAGGF)    
+	if (act->ahd_atype == QEA_AGGF ||
+	    act->ahd_atype == QEA_RAGGF ||
+	    act->ahd_atype == QEA_HAGGF)
 	{
-	    status = qeq_ade(dsh, action->qhd_obj.qhd_qep.ahd_by_comp);
-	    if (status) 
+	    status = qeq_ade(dsh, act->qhd_obj.qhd_qep.ahd_by_comp);
+	    if (status)
 		return (status);
 	}
 
-	if (action->ahd_atype == QEA_HAGGF)    
+	if (act->ahd_atype == QEA_HAGGF)
 	{
-	    status = qeq_ade(dsh, action->qhd_obj.qhd_qep.u1.s2.ahd_agoflow);
-	    if (status) 
+	    status = qeq_ade(dsh, act->qhd_obj.qhd_qep.u1.s2.ahd_agoflow);
+	    if (status)
 		return (status);
 	}
 
-        status = qeq_ade(dsh, action->ahd_mkey);
-        if (status) 
+	status = qeq_ade(dsh, act->ahd_mkey);
+	if (status)
 	    return (status);
 
 	/* create the keys */
-	qen_adf	= action->ahd_mkey;
+	qen_adf	= act->ahd_mkey;
 	if (qen_adf != NULL)
 	{
-	    ade_excb    = (ADE_EXCB*) cbs[qen_adf->qen_pos];	
+	    ade_excb    = (ADE_EXCB*) cbs[qen_adf->qen_pos];
 	    ade_excb->excb_seg = ADE_SMAIN;
 	    status = ade_execute_cx(adfcb, ade_excb);
 	    if (status != E_DB_OK)
@@ -1677,7 +1566,7 @@ bool		init_action )
 	    /* handle the condition where the qualification failed */
 	    if (ade_excb->excb_value != ADE_TRUE)
 	    {
-		/* if qp->qp_status has bits set for QEQP_RPT 
+		/* if qp->qp_status has bits set for QEQP_RPT
 		** and QEQP_SHAREABLE and not set for QEQP_SQL_QRY,
 		** we don't destroy the query plan */
 		if(!(dsh->dsh_qp_ptr->qp_status & QEQP_SHAREABLE) ||
@@ -1689,629 +1578,864 @@ bool		init_action )
 
 		/* force recompile */
 		dsh->dsh_error.err_code = E_QE0023_INVALID_QUERY;
-		if (dsh->dsh_qp_ptr->qp_ahd == action)
+		if (dsh->dsh_qp_ptr->qp_ahd == act)
 		    status = E_DB_WARN;
-		else 
+		else
 		    status = E_DB_ERROR;
 		return (status);
 	    }
 	}
 
-        if ((action->ahd_atype == QEA_RETURN) ||
-	    (action->ahd_atype == QEA_IF))
+	if ((act->ahd_atype == QEA_RETURN) ||
+	    (act->ahd_atype == QEA_IF))
 	{
+	    /* Note that although this is an "ok" return, dsh-act-ptr is
+	    ** not set for these two actions ... not sure if that is
+	    ** deliberate or irrelevant (kschendel).
+	    */
 	    return (status);
 	}
 
-	status = qeq_ade(dsh, action->qhd_obj.qhd_qep.ahd_current);
+	status = qeq_ade(dsh, act->qhd_obj.qhd_qep.ahd_current);
 	if (status)
 	    return (status);
 
-	status = qeq_ade(dsh, action->qhd_obj.qhd_qep.ahd_constant);
-	if (status) 
+	status = qeq_ade(dsh, act->qhd_obj.qhd_qep.ahd_constant);
+	if (status)
 	    return (status);
 
-	if (action->qhd_obj.qhd_qep.ahd_qepflag & AHD_KEYSET)
+	if (act->qhd_obj.qhd_qep.ahd_qepflag & AHD_KEYSET)
 	{
-	    status = qeq_ade(dsh,
-			action->qhd_obj.qhd_qep.ahd_scroll->ahd_rskcurr);
-	    if (status) 
+	    status = qeq_ade(dsh, act->qhd_obj.qhd_qep.ahd_scroll->ahd_rskcurr);
+	    if (status)
 		return (status);
 	}
 
-	/* check constant qualification	    
-	** except in AGGF & SAGG which will evaluate this CX 
-	** in the action interpreter */
+	/* check constant qualification
+	** except in AGGF & SAGG which will evaluate this CX
+	** in the action interpreter.
+	** AGGF is special because it may finish a projection if the
+	** constant qual says "false".
+	** SAGGF is special because it runs the "current" CX even if
+	** the constant qual says "false", and because it has a special
+	** hack for ALTER TABLE ADD CONSTRAINT.
+	*/
 
-	if (action->ahd_atype != QEA_AGGF && action->ahd_atype != QEA_SAGG)
+	if (act->ahd_atype != QEA_AGGF && act->ahd_atype != QEA_SAGG)
 	{
-	    qen_adf	    = action->qhd_obj.qhd_qep.ahd_constant;
+	    qen_adf = act->qhd_obj.qhd_qep.ahd_constant;
 	    if (qen_adf)
 	    {
-		ade_excb    = (ADE_EXCB*) cbs[qen_adf->qen_pos];	
+		ade_excb = (ADE_EXCB*) cbs[qen_adf->qen_pos];
 		ade_excb->excb_seg = ADE_SMAIN;
 
 		/* process the constant expression */
 		status = ade_execute_cx(adfcb, ade_excb);
 		if (status != E_DB_OK)
 		{
-		    if ((status = qef_adf_error(&adfcb->adf_errcb, 
-				status, qef_cb, &dsh->dsh_error)) != E_DB_OK)
-			return (status);
-		}
-		/* handle the condition where the qualification failed */
-		if (ade_excb->excb_value != ADE_TRUE)
-		    goto noposition;
-	    }
-	}
-
-	/* Run additional cx init, run virgin segments.
-	** For orig, prepare runtime copy of keys, do some dmr setup.
-	** For origagg (non-partitioned) only, do the actual DMF position.
-	** (this is a relic of yore and could probably be moved into
-	** origagg itself.)
-	*/
-	for (qep_node = action->qhd_obj.qhd_qep.ahd_postfix; 
-		    qep_node; qep_node = qep_node->qen_postfix)
-	{
-	    status = qeq_ade(dsh, qep_node->qen_fatts);
-	    if (status) 
-		return (status);
-
-	    status = qeq_ade(dsh, qep_node->qen_prow);
-	    if (status) 
-		return (status);
-
-	    dmr_index = -1;
-	    pqual = NULL;
-	    switch (qep_node->qen_type)
-	    {
-                case QE_FSMJOIN:
-		case QE_ISJOIN:
-		case QE_CPJOIN:
-		    status = qeq_ade(dsh,
-				    qep_node->node_qen.qen_sjoin.sjn_joinkey);
-		    if (status) 
-			return (status);
-
-		    status = qeq_ade(dsh,
-				    qep_node->node_qen.qen_sjoin.sjn_okcompare);
-		    if (status) 
-			return (status);
-		    status = qeq_ade(dsh,
-				    qep_node->node_qen.qen_sjoin.sjn_okmat);
-		    if (status) 
-			return (status);
-
-		    status = qeq_ade(dsh,
-				    qep_node->node_qen.qen_sjoin.sjn_itmat);
-		    if (status) 
-		    	return (status);
-
-		    status = qeq_ade(dsh,
-				    qep_node->node_qen.qen_sjoin.sjn_jqual);
-		    if (status) 
-			return (status);
-                    
-		    /* Look at individual OJ ADF chunks */
-		    oj = qep_node->node_qen.qen_sjoin.sjn_oj;
-		    if (oj == NULL)
-			break;		/* no OJ, just exit case now */
-		    status = qeq_ade(dsh, oj->oj_oqual);
-		    if (status) 
-			return (status);
-
-		    status = qeq_ade(dsh, oj->oj_equal);
-		    if (status) 
-			return (status);
-
-		    status = qeq_ade(dsh, oj->oj_rnull);
-		    if (status) 
-			return (status);
-
-		    status = qeq_ade(dsh, oj->oj_lnull);
-		    if (status) 
-			return (status);
-
-		    break;
-
-		case QE_SORT:
-		    dmr_index = qep_node->node_qen.qen_sort.sort_load;
-		    status = qeq_ade(dsh,
-				    qep_node->node_qen.qen_sort.sort_mat);
-		    if (status) 
-			return (status);
-
-		    break;
-
-		case QE_TSORT:
-		    dmr_index = qep_node->node_qen.qen_tsort.tsort_load;
-		    status = qeq_ade(dsh,
-				    qep_node->node_qen.qen_tsort.tsort_mat);
-		    if (status) 
-			return (status);
-		    pqual = qep_node->node_qen.qen_tsort.tsort_pqual;
-		    break;
-
-		case QE_QP:
-		    status = qeq_ade(dsh,
-				    qep_node->node_qen.qen_qp.qp_qual);
-		    if (status) 
-			return (status);
-
-		    break;
-
-		case QE_SEJOIN:
-		    status = qeq_ade(dsh,
-				    qep_node->node_qen.qen_sejoin.sejn_oqual);
-		    if (status) 
-			return (status);
-
-		    status = qeq_ade(dsh,
-				    qep_node->node_qen.qen_sejoin.sejn_kqual);
-		    if (status) 
-			return (status);
-
-		    status = qeq_ade(dsh,
-				    qep_node->node_qen.qen_sejoin.sejn_okmat);
-		    if (status) 
-			return (status);
-
-		    status = qeq_ade(dsh,
-				    qep_node->node_qen.qen_sejoin.sejn_itmat);
-		    if (status) 
-			return (status);
-
-		    status = qeq_ade(dsh,
-				 qep_node->node_qen.qen_sejoin.sejn_kcompare);
-		    if (status) 
-			return (status);
-
-		    status = qeq_ade(dsh,
-				    qep_node->node_qen.qen_sejoin.sejn_ccompare);
-		    if (status) 
-			return (status);
-
-		    break;   
-
-		case QE_TJOIN:
-		    dmr_index = qep_node->node_qen.qen_tjoin.tjoin_get;
-
-		    status = qeq_ade(dsh,
-				    qep_node->node_qen.qen_tjoin.tjoin_jqual);
-		    if (status) 
-			return (status);
-
-		    status = qeq_ade(dsh, 
-				     qep_node->node_qen.qen_tjoin.tjoin_isnull);
-		    if (status) return (status);
-
-		    pqual = qep_node->node_qen.qen_tjoin.tjoin_pqual;
- 
-		    /* Look at individual OJ ADF chunks */
-		    oj = qep_node->node_qen.qen_tjoin.tjoin_oj;
-		    if (oj == NULL)
-			break;		/* no OJ, just exit case now */
-		    status = qeq_ade(dsh, oj->oj_oqual);
-		    if (status) 
-			return (status);
-
-		    status = qeq_ade(dsh, oj->oj_equal);
-		    if (status) 
-			return (status);
-
-		    status = qeq_ade(dsh, oj->oj_rnull);
-		    if (status) 
-			return (status);
-
-		    status = qeq_ade(dsh, oj->oj_lnull);
-                    if (status) 
-			return (status);
-
-		    break;
-
-		case QE_HJOIN:
-		    status = qeq_ade(dsh,
-				    qep_node->node_qen.qen_hjoin.hjn_btmat);
-		    if (status) 
-		    	return (status);
-
-		    status = qeq_ade(dsh,
-				    qep_node->node_qen.qen_hjoin.hjn_ptmat);
-		    if (status) 
-		    	return (status);
-
-		    status = qeq_ade(dsh,
-				    qep_node->node_qen.qen_hjoin.hjn_jqual);
-		    if (status) 
-			return (status);
-                    
-		    pqual = qep_node->node_qen.qen_hjoin.hjn_pqual;
-
-		    /* Look at individual OJ ADF chunks */
-		    oj = qep_node->node_qen.qen_hjoin.hjn_oj;
-		    if (oj == NULL)
-			break;		/* no OJ, just exit case now */
-		    status = qeq_ade(dsh, oj->oj_oqual);
-		    if (status) 
-			return (status);
-
-		    status = qeq_ade(dsh, oj->oj_equal);
-		    if (status) 
-			return (status);
-
-		    status = qeq_ade(dsh, oj->oj_rnull);
-		    if (status) 
-			return (status);
-
-		    status = qeq_ade(dsh, oj->oj_lnull);
-		    if (status) 
-			return (status);
-
-		    break;
-
-		case QE_KJOIN:
-		    dmr_index = qep_node->node_qen.qen_kjoin.kjoin_get;
-		    dmr_cb = (DMR_CB*) cbs[dmr_index];
-		    status = qeq_ade(dsh,
-				    qep_node->node_qen.qen_kjoin.kjoin_kqual);
-		    if (status) 
-			return (status);
- 
-		    status = qeq_ade(dsh,
-				    qep_node->node_qen.qen_kjoin.kjoin_jqual);
-		    if (status) 
-			return (status);
-
-		    status = qeq_ade(dsh,
-				    qep_node->node_qen.qen_kjoin.kjoin_iqual);
-		    if (status) 
-			return (status);
-
-		    /* *Note* !! don't set iqual for DMF until AFTER we
-		    ** run the qeq-ade setup on it.  Qeq-ade sets the CX
-		    ** segment to virgin.  We need it left at main, which
-		    ** is one of the things set-qualfunc does.  (DMF has
-		    ** no idea what it's calling and can't set the CX
-		    ** segment, unlike QEF calls which do set the segment.)
-		    */
-		    qen_set_qualfunc(dmr_cb, qep_node, dsh);
-                
-		    status = qeq_ade(dsh,
-				     qep_node->node_qen.qen_kjoin.kjoin_kcompare);
-		    if (status) 
-			return (status);
-
-		    status = qeq_ade(dsh,
-				    qep_node->node_qen.qen_kjoin.kjoin_key);
-		    if (status) 
-			return (status);
-
-		    pqual = qep_node->node_qen.qen_kjoin.kjoin_pqual;
-
-		    /* Look at individual OJ ADF chunks */
-		    oj = qep_node->node_qen.qen_kjoin.kjoin_oj;
-		    if (oj == NULL)
-			break;		/* no OJ, just exit case now */
-		    status = qeq_ade(dsh, oj->oj_oqual);
-		    if (status) 
-			return (status);
-
-		    status = qeq_ade(dsh, oj->oj_equal);
-		    if (status) 
-			return (status);
-
-		    status = qeq_ade(dsh, oj->oj_rnull);
-		    if (status) 
-			return (status);
-
-		    status = qeq_ade(dsh, oj->oj_lnull);
-		    if (status) 
-			return (status);
-
-		    break;
-
-		case QE_ORIG:
-	        case QE_ORIGAGG:
-		  {
-		    QEN_STATUS *ns;
-		    bool bcost = FALSE;
-
-		    orig_node = &qep_node->node_qen.qen_orig;
-		    dmr_index = orig_node->orig_get;
-		    dmr_cb = (DMR_CB*) cbs[dmr_index];
-		    status = qeq_ade(dsh, orig_node->orig_qual);
-		    if (status) 
-			return (status);
-
-		    pqual = orig_node->orig_pqual;
-
-		    /* Init status, prior to possible break (for MS Access
-		    ** OR transform) */
-		    ns = dsh->dsh_xaddrs[qep_node->qen_num]->qex_status;
-		    ns->node_status = QEN0_INITIAL;
-
-		    if (orig_node->orig_flag & ORIG_MCNSTTAB)
-		    {
-			dmr_index = -1;
-			if (orig_node->orig_qual)
-			{	/* kludge to fill in buffer addr */
-			    ADE_EXCB	*ade_excb;
-			    ade_excb = (ADE_EXCB *)cbs[orig_node->
-					orig_qual->qen_pos];
-        		    ade_excb->excb_bases[orig_node->orig_qual->
-				   qen_input + ADE_ZBASE] = 
-				dsh->dsh_row[qep_node->qen_row];
-				/* use ORIG node row buffer for qual code */
-			}
-			break;	/* rest is DMR fiddling */
-		    } 
-
-#ifdef xDEBUG
-		    if (dmr_cb->dmr_access_id == (PTR)NULL)
-		    {
-			dsh->dsh_error.err_code = E_QE1004_TABLE_NOT_OPENED;
-			status = E_DB_ERROR;
-			return(status);
-		    }
-#endif /* xDEBUG */
-		    /* Setup qualification in DMF if appropriate */
-		    /* *Note* !! don't set qual for DMF until AFTER we
-		    ** run the qeq-ade setup on it.  Qeq-ade sets the CX
-		    ** segment to virgin.  We need it left at main, which
-		    ** is one of the things set-qualfunc does.  (DMF has
-		    ** no idea what it's calling and can't set the CX
-		    ** segment, unlike QEF calls which do set the segment.)
-		    */
-		    qen_set_qualfunc(dmr_cb, qep_node, dsh);
-
-		    /* 
-		    ** If qe90, prepare node stats for DMR_POSITION (72937)
-		    ** (only if origagg)
-		    */
-		    if (qep_node->qen_type == QE_ORIGAGG
-		      && dsh->dsh_qp_stats)
-    		    {
- 			qen_bcost_begin(dsh, &open_tstat, ns);
-			bcost = TRUE;
-    		    }
-
-		    /* position the cursor to the first record */
-		    if (orig_node->orig_pkeys == 0)
-		    {
-			dmr_cb->dmr_position_type = DMR_ALL;
-
-			dmr_cb->dmr_flags_mask = 0;
-			if (orig_node->orig_flag & ORIG_READBACK)
-				dmr_cb->dmr_position_type = DMR_LAST;
-			if (qep_node->qen_type == QE_ORIGAGG)
-			{	/* only position non-partitioned tables */
-			    status = dmf_call(DMR_POSITION, dmr_cb);
-			    if (status != E_DB_OK)
-			    {
-				if (dmr_cb->error.err_code == E_DM0055_NONEXT)
-				{
-				    status = E_DB_OK;
-				}
-				else
-				{
-				    dsh->dsh_error.err_code = 
-						dmr_cb->error.err_code;
-				    return (status);
-				}
-			    }
-			}
-		    }
-		    else
-		    {
-			bool	readback = (orig_node->orig_flag & 
-							ORIG_READBACK);
-			/* sort the keys and determine which ones to use */
-			tkptr = (QEN_TKEY*) cbs[orig_node->orig_keys];
-			/*
-			** If orig_keys haven't been constructed yet,
-			** call qen_keyprep() to do it.
-			*/
-			if ( tkptr == (QEN_TKEY*)NULL )
-			{
-			    if ( status = qen_keyprep(dsh, qep_node) )
-				return(status);
-			}
-			else
-			{
-			    status = qeq_ksort(tkptr, orig_node->orig_pkeys,
-				     dsh, (bool)TRUE, readback);
-			    if (status != E_DB_OK)
-				return(status);
-			    ns->node_u.node_orig.node_keys = tkptr->qen_nkey;
-					/* save for partitioned tables */
-			}
-
-			/* don't position on tids or unique keys because
-			** these are handled in QEN_ORIG
-			*/
-			if (orig_node->orig_pkeys != NULL &&
-			    orig_node->orig_pkeys->key_kor != NULL &&
-			    orig_node->orig_pkeys->key_kor->kor_keys != NULL &&
-			    orig_node->orig_pkeys->key_kor->kor_keys->kand_attno == 0
-			    )
-			{
-			    key_by_tid = TRUE;
-			}
-			else
-			{
-			    key_by_tid = FALSE;
-			}
-			if (!(orig_node->orig_flag & ORIG_UKEY) &&
-			   (key_by_tid == FALSE) && 
-			    qep_node->qen_type == QE_ORIGAGG)
-			{
-			    dsh->dsh_qef_rowcount = 0;
-			    status = qen_position(tkptr, dmr_cb, dsh,
-				orig_node->orig_ordcnt, readback);
-			    if (status != E_DB_OK)
-			    {
-				if (dsh->dsh_error.err_code == 
-						E_QE0015_NO_MORE_ROWS)
-				{
-				    orig_node->orig_flag &= ~ORIG_MAXOPT;
-				    status = E_DB_OK;
-				}
-				else
-				    return (status);
-			    }
-			    if (dmr_cb->dmr_flags_mask == DMR_PREV)
-				ns->node_access = QEN_READ_PREV;
-						/* descending sort logic */
-			}
-		    }
-		    /* 
-		    ** If qe90, update node stats with cost of position (72937)
-		    */
-    		    if (bcost)
-    		    {
-			qen_ecost_end(dsh, &open_tstat, ns);
-		    }
-
-		    } /* end of orig case block */
-		    break;
- 
-	        case QE_EXCHANGE:
-		/*
-		** EXCH_FIXME we need validation logic here
-		*/
-		    break;
-
-		default:
-		    break;
-
-	    }  /* end of switch (qep_node->qen_type) */
-
-	    /* If this node has partition qualification, complete the
-	    ** CX initialization;  and, if there are constant qualifications
-	    ** (ie it's an orig-like node), execute them.
-	    */
-	    if (pqual != NULL)
-	    {
-		QEE_PART_QUAL *rqual, *jq;
-
-		status = qeq_pqual_init(dsh, pqual, qeq_ade);
-		if (status != E_DB_OK)
-		    return (status);
-		rqual = &dsh->dsh_part_qual[pqual->part_pqual_ix];
-		if (pqual->part_node_type == QE_ORIG
-		  || pqual->part_node_type == QE_KJOIN
-		  || pqual->part_node_type == QE_TJOIN)
-		{
-		    /* Orig-like node, start out assuming all partitions
-		    ** whether there's a qual to eval or not.
-		    */
-		    MEfill(rqual->qee_mapbytes, -1, rqual->qee_constmap);
-		}
-		if (pqual->part_const_eval != NULL)
-		{
-		    /* evaluate, AND with constant map */
-		    status = qeq_pqual_eval(pqual->part_const_eval,
-				rqual, dsh);
+		    status = qef_adf_error(&adfcb->adf_errcb, status,
+					qef_cb, &dsh->dsh_error);
 		    if (status != E_DB_OK)
 			return (status);
-		    /* As an optimization, if the constant map restricted
-		    ** the table to just one partition, don't bother with
-		    ** any join-time stuff;  it's hard to beat 1 partition,
-		    ** and total exclusion is unlikely for most queries.
-		    ** FIXME? maybe "small" should work too rather than
-		    ** just "one"?  need some experience here first.
-		    */
-		    if (rqual->qee_qnext != NULL
-		      && BTcount(rqual->qee_constmap,rqual->qee_qdef->nphys_parts) <= 1)
+		}
+		/* handle the condition where the qualification failed.
+		** Aggregates still have to run init and finalization.
+		*/
+		if (ade_excb->excb_value != ADE_TRUE)
+		{
+		    dsh->dsh_qef_rowcount = 0;
+		    dsh->dsh_error.err_code = E_QE0015_NO_MORE_ROWS;
+		    if (act->ahd_atype == QEA_RAGGF ||
+			act->ahd_atype == QEA_HAGGF)
 		    {
-			do
+			/* initialize the aggregate result */
+			qen_adf = act->qhd_obj.qhd_qep.ahd_current;
+			ade_excb = (ADE_EXCB*) cbs[qen_adf->qen_pos];
+			ade_excb->excb_seg = ADE_SINIT;
+			if (qen_adf->qen_uoutput > -1)
 			{
-			    jq = rqual->qee_qnext;
-			    jq->qee_qualifying = FALSE;
-			    jq->qee_enabled = FALSE;
-			} while (jq->qee_qnext != NULL);
+			    if (qp->qp_status & QEQP_GLOBAL_BASEARRAY)
+				dsh->dsh_row[qen_adf->qen_uoutput] = dsh->dsh_qef_output->dt_data;
+			    else
+				ade_excb->excb_bases[ADE_ZBASE + qen_adf->qen_uoutput] =
+				    dsh->dsh_qef_output->dt_data;
+			}
+
+			status = ade_execute_cx(adfcb, ade_excb);
+			if (status != E_DB_OK)
+			{
+			    status = qef_adf_error(&adfcb->adf_errcb, status,
+					qef_cb, &dsh->dsh_error);
+			    if (status != E_DB_OK)
+				return (status);
+			}
+			dsh->dsh_qef_remnull |= ade_excb->excb_nullskip;
+
+			/* finalize the aggregate result now */
+			ade_excb->excb_seg = ADE_SFINIT;
+			status = ade_execute_cx(adfcb, ade_excb);
+			if (status != E_DB_OK)
+			{
+			    status = qef_adf_error(&adfcb->adf_errcb, status,
+					qef_cb, &dsh->dsh_error);
+			    if (status != E_DB_OK)
+				return (status);
+			}
+		    }
+		    return (E_DB_WARN);
+		}
+	    }
+	}
+	/* Made it thru constant qual, set current DSH action now.
+	** If this is done any sooner, cursor fetches that fail the constant
+	** test will still retrieve rows!  the constant test is in the OPEN,
+	** and there's no other mechanism to tell FETCH to not do anything.
+	*/
+	dsh->dsh_act_ptr = act;
+
+	/* Looks like an action with a QP under it, start at the top. */
+
+	node = act->qhd_obj.qhd_qep.ahd_qep;
+	start_node = NULL;
+    }
+
+    /* An outside caller starting in the middle of the QP tree (ie, EXCH)
+    ** will pass non-NULL start-node and NULL node and action.
+    */
+    if (start_node != NULL && node == NULL)
+	node = start_node;
+
+    if (node == NULL)
+    {
+	return (E_DB_OK);
+    }
+
+    /* Walk the QP starting at "node" and run CX inits, virgin segments.
+    ** Don't walk through EXCH nodes because the EXCH and below need
+    ** to be inited in the EXCH child thread(s) context.
+    ** Although we could walk through QP nodes and do the QP actions,
+    ** it's not really necessary, let qenqp init its sub-actions
+    ** in the traditional and historical manner.  (which has the
+    ** added benefit of assuring that only the proper action of a
+    ** parallel union is inited by this thread, without any extra work
+    ** needed here.
+    */
+
+    /* Big loop to walk the tree */
+    do
+    {
+	status = qeq_ade(dsh, node->qen_fatts);
+	if (status)
+	    return (status);
+
+	status = qeq_ade(dsh, node->qen_prow);
+	if (status)
+	    return (status);
+
+	dmr_index = -1;
+	pqual = NULL;
+	oj = NULL;
+	switch (node->qen_type)
+	{
+	case QE_EXCHANGE:
+	    /* Unless this exchange is the starting node, stop here.  The
+	    ** exch's child thread will take it from this exch on down.
+	    */
+	    if (node != start_node)
+		return (E_DB_OK);
+
+	    /* Nothing to do for the exch itself, but init on down the tree */
+	    outer = node->node_qen.qen_exch.exch_out;
+	    inner = NULL;
+	    break;
+
+	case QE_TJOIN:
+	    outer = node->node_qen.qen_tjoin.tjoin_out;
+	    inner = NULL;
+	    dmr_index = node->node_qen.qen_tjoin.tjoin_get;
+	    status = qeq_ade(dsh, node->node_qen.qen_tjoin.tjoin_jqual);
+	    if (status)
+		return (status);
+
+	    status = qeq_ade(dsh, node->node_qen.qen_tjoin.tjoin_isnull);
+	    if (status)
+		return (status);
+
+	    pqual = node->node_qen.qen_tjoin.tjoin_pqual;
+	    oj = node->node_qen.qen_tjoin.tjoin_oj;
+	    break;
+
+	case QE_KJOIN:
+	    outer = node->node_qen.qen_kjoin.kjoin_out;
+	    inner = NULL;
+	    dmr_index = node->node_qen.qen_kjoin.kjoin_get;
+	    dmr_cb = (DMR_CB*) cbs[dmr_index];
+	    status = qeq_ade(dsh, node->node_qen.qen_kjoin.kjoin_kqual);
+	    if (status)
+		return (status);
+
+	    status = qeq_ade(dsh, node->node_qen.qen_kjoin.kjoin_jqual);
+	    if (status)
+		return (status);
+
+	    status = qeq_ade(dsh, node->node_qen.qen_kjoin.kjoin_iqual);
+	    if (status)
+		return (status);
+
+	    /* *Note* !! don't set iqual for DMF until AFTER we
+	    ** run the qeq-ade setup on it.  Qeq-ade sets the CX
+	    ** segment to virgin.  We need it left at main, which
+	    ** is one of the things set-qualfunc does.  (DMF has
+	    ** no idea what it's calling and can't set the CX
+	    ** segment, unlike QEF calls which do set the segment.)
+	    */
+	    qen_set_qualfunc(dmr_cb, node, dsh);
+
+	    status = qeq_ade(dsh, node->node_qen.qen_kjoin.kjoin_kcompare);
+	    if (status)
+		return (status);
+
+	    status = qeq_ade(dsh, node->node_qen.qen_kjoin.kjoin_key);
+	    if (status)
+		return (status);
+
+	    pqual = node->node_qen.qen_kjoin.kjoin_pqual;
+	    oj = node->node_qen.qen_kjoin.kjoin_oj;
+	    break;
+
+	case QE_CPJOIN:
+	case QE_FSMJOIN:
+	case QE_ISJOIN:
+	    outer = node->node_qen.qen_sjoin.sjn_out;
+	    inner = node->node_qen.qen_sjoin.sjn_inner;
+	    status = qeq_ade(dsh, node->node_qen.qen_sjoin.sjn_joinkey);
+	    if (status)
+		return (status);
+
+	    status = qeq_ade(dsh, node->node_qen.qen_sjoin.sjn_okcompare);
+	    if (status)
+		return (status);
+
+	    status = qeq_ade(dsh, node->node_qen.qen_sjoin.sjn_okmat);
+	    if (status)
+		return (status);
+
+	    status = qeq_ade(dsh, node->node_qen.qen_sjoin.sjn_itmat);
+	    if (status)
+		return (status);
+
+	    status = qeq_ade(dsh, node->node_qen.qen_sjoin.sjn_jqual);
+	    if (status)
+		return (status);
+
+	    oj = node->node_qen.qen_sjoin.sjn_oj;
+	    break;
+
+	case QE_SORT:
+	    outer = node->node_qen.qen_sort.sort_out;
+	    inner = NULL;
+	    dmr_index = node->node_qen.qen_sort.sort_load;
+	    status = qeq_ade(dsh, node->node_qen.qen_sort.sort_mat);
+	    if (status)
+		return (status);
+	    break;
+
+	case QE_TSORT:
+	    outer = node->node_qen.qen_tsort.tsort_out;
+	    inner = NULL;
+	    dmr_index = node->node_qen.qen_tsort.tsort_load;
+	    status = qeq_ade(dsh, node->node_qen.qen_tsort.tsort_mat);
+	    if (status)
+		return (status);
+	    pqual = node->node_qen.qen_tsort.tsort_pqual;
+	    break;
+
+	case QE_HJOIN:
+	    outer = node->node_qen.qen_hjoin.hjn_out;
+	    inner = node->node_qen.qen_hjoin.hjn_inner;
+	    status = qeq_ade(dsh, node->node_qen.qen_hjoin.hjn_btmat);
+	    if (status)
+		return (status);
+
+	    status = qeq_ade(dsh, node->node_qen.qen_hjoin.hjn_ptmat);
+	    if (status)
+		return (status);
+
+	    status = qeq_ade(dsh, node->node_qen.qen_hjoin.hjn_jqual);
+	    if (status)
+		return (status);
+
+	    pqual = node->node_qen.qen_hjoin.hjn_pqual;
+	    oj = node->node_qen.qen_hjoin.hjn_oj;
+	    break;
+
+	case QE_SEJOIN:
+	    outer = node->node_qen.qen_sejoin.sejn_out;
+	    inner = node->node_qen.qen_sejoin.sejn_inner;
+	    status = qeq_ade(dsh, node->node_qen.qen_sejoin.sejn_oqual);
+	    if (status)
+		return (status);
+
+	    status = qeq_ade(dsh, node->node_qen.qen_sejoin.sejn_kqual);
+	    if (status)
+		return (status);
+
+	    status = qeq_ade(dsh, node->node_qen.qen_sejoin.sejn_okmat);
+	    if (status)
+		return (status);
+
+	    status = qeq_ade(dsh, node->node_qen.qen_sejoin.sejn_itmat);
+	    if (status)
+		return (status);
+
+	    status = qeq_ade(dsh, node->node_qen.qen_sejoin.sejn_kcompare);
+	    if (status)
+		return (status);
+
+	    status = qeq_ade(dsh, node->node_qen.qen_sejoin.sejn_ccompare);
+	    if (status)
+		return (status);
+
+	    break;
+
+	case QE_QP:
+	    status = qeq_ade(dsh, node->node_qen.qen_qp.qp_qual);
+	    if (status)
+		return (status);
+
+	    /* As noted above, don't dive into the QP actions.  Let qenqp
+	    ** do it, which will also select the correct action of a
+	    ** parallel union automatically.
+	    */
+	    inner = outer = NULL;
+	    break;
+
+	case QE_TPROC:
+	    inner = outer = NULL;
+	    status = qeq_ade(dsh, node->node_qen.qen_tproc.tproc_qual);
+	    if (status)
+		return (status);
+	    status = qeq_ade(dsh, node->node_qen.qen_tproc.tproc_parambuild);
+	    if (status)
+		return (status);
+	    break;
+
+	case QE_ORIG:
+	case QE_ORIGAGG:
+	{
+	    QEN_ORIG *orig_node;
+	    QEN_STATUS *ns;
+	    QEN_TKEY *tkptr;
+	    bool bcost = FALSE;
+
+	    inner = outer = NULL;
+	    orig_node = &node->node_qen.qen_orig;
+	    dmr_index = orig_node->orig_get;
+	    dmr_cb = (DMR_CB*) cbs[dmr_index];
+	    status = qeq_ade(dsh, orig_node->orig_qual);
+	    if (status)
+		return (status);
+
+	    pqual = orig_node->orig_pqual;
+
+	    /* Init status, prior to possible break (for MS Access
+	    ** OR transform) */
+	    ns = dsh->dsh_xaddrs[node->qen_num]->qex_status;
+	    ns->node_status = QEN0_INITIAL;
+
+	    if (orig_node->orig_flag & ORIG_MCNSTTAB)
+	    {
+		dmr_index = -1;
+		if (orig_node->orig_qual)
+		{	/* kludge to fill in buffer addr */
+		    ADE_EXCB	*ade_excb;
+		    ade_excb = (ADE_EXCB *)cbs[orig_node->orig_qual->qen_pos];
+		    ade_excb->excb_bases[orig_node->orig_qual->qen_input + ADE_ZBASE]
+					    = dsh->dsh_row[node->qen_row];
+			/* use ORIG node row buffer for qual code */
+		}
+		break;	/* rest is DMR fiddling */
+	    }
+
+	    /* Setup qualification in DMF if appropriate */
+	    /* *Note* !! don't set qual for DMF until AFTER we
+	    ** run the qeq-ade setup on it.  Qeq-ade sets the CX
+	    ** segment to virgin.  We need it left at main, which
+	    ** is one of the things set-qualfunc does.  (DMF has
+	    ** no idea what it's calling and can't set the CX
+	    ** segment, unlike QEF calls which do set the segment.)
+	    */
+	    qen_set_qualfunc(dmr_cb, node, dsh);
+
+	    /*
+	    ** If qe90, prepare node stats for DMR_POSITION (72937)
+	    ** (only if origagg)
+	    */
+	    if (node->qen_type == QE_ORIGAGG
+	      && dsh->dsh_qp_stats)
+	    {
+		qen_bcost_begin(dsh, &open_tstat, ns);
+		bcost = TRUE;
+	    }
+
+	    /* position the cursor to the first record */
+	    /* But only if it's an ORIGAGG!  which is never done for a
+	    ** partitioned table, or under an exchange.  So the necessary
+	    ** table open has been done.
+	    ** FIXME origagg positioning should be removed to qenorig, just
+	    ** like ordinary orig positioning has been.
+	    */
+	    if (orig_node->orig_pkeys == 0)
+	    {
+		dmr_cb->dmr_position_type = DMR_ALL;
+
+		dmr_cb->dmr_flags_mask = 0;
+		if (orig_node->orig_flag & ORIG_READBACK)
+		    dmr_cb->dmr_position_type = DMR_LAST;
+		if (node->qen_type == QE_ORIGAGG)
+		{	/* only position non-partitioned tables */
+		    status = dmf_call(DMR_POSITION, dmr_cb);
+		    if (status != E_DB_OK)
+		    {
+			if (dmr_cb->error.err_code == E_DM0055_NONEXT)
+			{
+			    status = E_DB_OK;
+			}
+			else
+			{
+			    dsh->dsh_error.err_code = dmr_cb->error.err_code;
+			    return (status);
+			}
 		    }
 		}
 	    }
-
-	    /* reset the row pointer in the DMR_CB for safety. */
-	    if (dmr_index >= 0)
+	    else
 	    {
-		/* set index for open cb */
-		dmr_cb = (DMR_CB*) dsh->dsh_cbs[dmr_index];
-		/* assign the output row and its size */
-		dmr_cb->dmr_data.data_address = 
-		    dsh->dsh_row[qep_node->qen_row];
-		dmr_cb->dmr_data.data_in_size = qep_node->qen_rsz;
-	    }		
+		bool	readback = (orig_node->orig_flag & ORIG_READBACK) != 0;
+
+		/* sort the keys and determine which ones to use */
+		tkptr = (QEN_TKEY*) cbs[orig_node->orig_keys];
+		/*
+		** If orig_keys haven't been constructed yet,
+		** call qen_keyprep() to do it.
+		*/
+		if ( tkptr == (QEN_TKEY*)NULL )
+		{
+		    if ( status = qen_keyprep(dsh, node) )
+			return(status);
+		}
+		else
+		{
+		    status = qeq_ksort(tkptr, orig_node->orig_pkeys,
+			     dsh, (bool)TRUE, readback);
+		    if (status != E_DB_OK)
+			return(status);
+		    ns->node_u.node_orig.node_keys = tkptr->qen_nkey;
+				/* save for partitioned tables */
+		}
+
+		/* don't position on tids or unique keys because
+		** these are handled in QEN_ORIG
+		*/
+		if (orig_node->orig_pkeys != NULL &&
+		    orig_node->orig_pkeys->key_kor != NULL &&
+		    orig_node->orig_pkeys->key_kor->kor_keys != NULL &&
+		    orig_node->orig_pkeys->key_kor->kor_keys->kand_attno == 0
+		    )
+		{
+		    key_by_tid = TRUE;
+		}
+		else
+		{
+		    key_by_tid = FALSE;
+		}
+		if (!(orig_node->orig_flag & ORIG_UKEY) &&
+		   (key_by_tid == FALSE) &&
+		    node->qen_type == QE_ORIGAGG)
+		{
+		    dsh->dsh_qef_rowcount = 0;
+		    status = qen_position(tkptr, dmr_cb, dsh,
+			orig_node->orig_ordcnt, readback);
+		    if (status != E_DB_OK)
+		    {
+			if (dsh->dsh_error.err_code ==
+					E_QE0015_NO_MORE_ROWS)
+			{
+			    orig_node->orig_flag &= ~ORIG_MAXOPT;
+			    status = E_DB_OK;
+			}
+			else
+			    return (status);
+		    }
+		    if (dmr_cb->dmr_flags_mask == DMR_PREV)
+			ns->node_access = QEN_READ_PREV;
+					/* descending sort logic */
+		}
+	    }
+	    /*
+	    ** If qe90, update node stats with cost of position (72937)
+	    */
+	    if (bcost)
+	    {
+		qen_ecost_end(dsh, &open_tstat, ns);
+	    }
+
+	} /* end of orig case block */
+
+	default:
+	    /* huh? */
+	    inner = outer = NULL;
+	    break;
+
+	} /* node-type switch */
+
+	if (oj != NULL)
+	{
+	    /* Process standard outer-join CX's */
+	    status = qeq_ade(dsh, oj->oj_oqual);
+	    if (status)
+		return (status);
+
+	    status = qeq_ade(dsh, oj->oj_equal);
+	    if (status)
+		return (status);
+
+	    status = qeq_ade(dsh, oj->oj_rnull);
+	    if (status)
+		return (status);
+
+	    status = qeq_ade(dsh, oj->oj_lnull);
+	    if (status)
+		return (status);
 	}
-    }
-    /* validate the remote update action */
-    if (action->ahd_atype == QEA_RUP)
-    {
-	status = qeq_ade(dsh, action->qhd_obj.qhd_qep.ahd_current);
-	if (status) 
-	    return (status);
 
-	status = qeq_ade(dsh, action->qhd_obj.qhd_qep.ahd_constant);
-	if (status) 
-	    return (status);
+	/* If this node has partition qualification, complete the
+	** CX initialization;  and, if there are constant qualifications
+	** (ie it's an orig-like node), execute them.
+	*/
+	if (pqual != NULL)
+	{
+	    QEE_PART_QUAL *rqual, *jq;
 
-    }
+	    status = qeq_pqual_init(dsh, pqual, qeq_ade);
+	    if (status != E_DB_OK)
+		return (status);
+	    rqual = &dsh->dsh_part_qual[pqual->part_pqual_ix];
+	    if (pqual->part_node_type == QE_ORIG
+	      || pqual->part_node_type == QE_KJOIN
+	      || pqual->part_node_type == QE_TJOIN)
+	    {
+		/* Orig-like node, start out assuming all partitions
+		** whether there's a qual to eval or not.
+		*/
+		MEfill(rqual->qee_mapbytes, -1, rqual->qee_constmap);
+	    }
+	    if (pqual->part_const_eval != NULL)
+	    {
+		/* evaluate, AND with constant map */
+		status = qeq_pqual_eval(pqual->part_const_eval, rqual, dsh);
+		if (status != E_DB_OK)
+		    return (status);
+		/* As an optimization, if the constant map restricted
+		** the table to just one partition, don't bother with
+		** any join-time stuff;  it's hard to beat 1 partition,
+		** and total exclusion is unlikely for most queries.
+		** FIXME? maybe "small" should work too rather than
+		** just "one"?  need some experience here first.
+		*/
+		if (rqual->qee_qnext != NULL
+		  && BTcount(rqual->qee_constmap,rqual->qee_qdef->nphys_parts) <= 1)
+		{
+		    do
+		    {
+			jq = rqual->qee_qnext;
+			jq->qee_qualifying = FALSE;
+			jq->qee_enabled = FALSE;
+		    } while (jq->qee_qnext != NULL);
+		}
+	    }
+	}
 
-    /* Set up the DSH structure by setting its current action pointer */
-    dsh->dsh_act_ptr = action;
+	/* reset the row pointer in the DMR_CB for safety. */
+	if (dmr_index >= 0)
+	{
+	    /* set index for open cb */
+	    dmr_cb = (DMR_CB*) cbs[dmr_index];
+	    /* assign the output row and its size */
+	    dmr_cb->dmr_data.data_address = dsh->dsh_row[node->qen_row];
+	    dmr_cb->dmr_data.data_in_size = node->qen_rsz;
+	}
+
+	/* Recurse on inner, loop on outer or only.  This isn't a big deal,
+	** just reduces the recursion depth a bit.
+	*/
+	if (outer == NULL)
+	{
+	    outer = inner;
+	    inner = NULL;
+	}
+	if (inner != NULL)
+	{
+	    status = qeq_subplan_init(qef_rcb, dsh, NULL, NULL, inner);
+	    if (status != E_DB_OK)
+		return (status);
+	}
+	node = outer;
+    } while (outer != NULL);
 
     dsh->dsh_error.err_code = E_QE0000_OK;
     return (status);
+}
+
+/*
+** Name: qeq_vld_first_act -- Validation for first query action
+**
+** Description:
+**	Do validation / table open actions for the first query action.
+**	This is only done once on the first action of a QP.
+**	We run through the resource list and validate / open the
+**	listed tables.
+**
+** Inputs:
+**	qef_rcb			QEF request control block
+**	dsh			(main) thread's data segment header
+**	init_action		TRUE if we're going to execute actions,
+**				FALSE if just reopening tables (e.g. for
+**				DBproc continuation after commit/rollback)
+**
+** Outputs:
+**	Returns E_DB_OK or error status; error info will be in dsh_error.
+**
+** History:
+**	13-May-2010 (kschendel) b123565
+**	    Split from qeq-validate whilst trying to figure out the
+**	    parallel query validation fiasco.
+*/
 
-    /*
-    ** We come here because the action had a constant predicate (ahd_constant)
-    ** that evaluated to FALSE.  The action will not be executed.
-    ** This is good for most actions except for aggregate function actions.
-    ** These actions need their ADE_SINIT and
-    ** ADE_SFINIT CX's to be executed, regardless.
-    */
-noposition:
-    dsh->dsh_qef_rowcount = 0;
-    dsh->dsh_error.err_code = E_QE0015_NO_MORE_ROWS;
-    if (action->ahd_atype == QEA_AGGF ||
-	action->ahd_atype == QEA_RAGGF ||
-	action->ahd_atype == QEA_HAGGF ||
-	action->ahd_atype == QEA_SAGG)
+static DB_STATUS
+qeq_vld_first_act(QEF_RCB *qef_rcb, QEE_DSH *dsh, bool init_action)
+{
+    DB_STATUS	status, status1;
+    DMT_CB	*dmt_cb;
+    i4		i;
+    PTR		*cbs = dsh->dsh_cbs;
+    RDF_CB	rdf_cb;
+    QEE_RESOURCE  *resource;
+    QEE_VALID	*qevl;
+    QEF_RESOURCE  *qefresource;
+    QEF_CB	*qef_cb = dsh->dsh_qefcb;
+    QEF_QP_CB	*qp = dsh->dsh_qp_ptr;
+    QEF_VALID	*vl;
+    ULM_RCB	ulm;
+
+    /* set up to allocate memory out of the dsh's stream */
+    STRUCT_ASSIGN_MACRO(Qef_s_cb->qef_d_ulmcb, ulm);
+    ulm.ulm_streamid_p = &dsh->dsh_streamid;
+
+    /* for each resource */
+    status = E_DB_OK;
+    for (i = 0; i < qp->qp_cnt_resources; i += 1)
     {
-	/* initialize the aggregate result */
-	qen_adf = action->qhd_obj.qhd_qep.ahd_current;
-	ade_excb = (ADE_EXCB*) cbs[qen_adf->qen_pos];	
-	ade_excb->excb_seg = ADE_SINIT;
-	if (qen_adf->qen_uoutput > -1)
-	 if (qp->qp_status & QEQP_GLOBAL_BASEARRAY)
-	    dsh->dsh_row[qen_adf->qen_uoutput] = dsh->dsh_qef_output->dt_data;
-	 else ade_excb->excb_bases[ADE_ZBASE + qen_adf->qen_uoutput] =
-		    dsh->dsh_qef_output->dt_data;
+	resource = &dsh->dsh_resources[i];
+	qefresource = (QEF_RESOURCE *) resource->qer_qefresource;
 
-	status = ade_execute_cx(adfcb, ade_excb);
-	if (status != E_DB_OK)
+	/* if this is a resource that needs validating */
+
+	/* First check for in-memory table (MS Access OR transform) */
+	if (qefresource->qr_type == QEQR_TABLE &&
+	    qefresource->qr_resource.qr_tbl.qr_tbl_type == QEQR_MCNSTTBL)
 	{
-	    if ((status = qef_adf_error(&adfcb->adf_errcb, status, 
-		qef_cb, &dsh->dsh_error)) != E_DB_OK)
-		return (status);
+	    i4	tab_index;
+	    QEF_MEM_CONSTTAB	*qef_con_p;
+	    QEE_MEM_CONSTTAB	*qee_con_p;
+
+	    tab_index = qefresource->qr_resource.qr_tbl.qr_lastvalid->vl_dmr_cb;
+	    qef_con_p = qefresource->qr_resource.qr_tbl.qr_cnsttab_p;
+	    qee_con_p = resource->qer_resource.qer_tbl.qer_cnsttab_p;
+	    /* Init. MEM_CONSTTAB and stick addr in dsh_cbs */
+	    qee_con_p->qer_tab_p = qef_con_p->qr_tab_p;
+	    qee_con_p->qer_rowcount = qef_con_p->qr_rowcount;
+	    qee_con_p->qer_rowsize = qef_con_p->qr_rowsize;
+	    qee_con_p->qer_scancount = 0;
+	    cbs[tab_index] = (PTR)qee_con_p;
+			/* VERY IMPORTANT - stick QEE_MEM_CONSTTAB
+			** ptr here for qen_orig to find later */
+	    continue;	/* skip rest of the loop */
 	}
-	dsh->dsh_qef_remnull |= ade_excb->excb_nullskip;
 
-	/* finalize the aggregate result now */
-	ade_excb->excb_seg = ADE_SFINIT;
-	status = ade_execute_cx(adfcb, ade_excb);
-	if (status != E_DB_OK)
+	if (qefresource->qr_type == QEQR_TABLE &&
+	     qefresource->qr_resource.qr_tbl.qr_tbl_type == QEQR_REGTBL &&
+	     resource->qer_resource.qer_tbl.qer_free_vl == NULL &&
+	     resource->qer_resource.qer_tbl.qer_inuse_vl == NULL
+	    )
 	{
-	    if ((status = qef_adf_error(&adfcb->adf_errcb, status, 
-		qef_cb, &dsh->dsh_error)) != E_DB_OK)
-		return (status);
+	    vl = qefresource->qr_resource.qr_tbl.qr_valid;
+
+	    status = qeq_vopen(qef_rcb, dsh, vl);
+	    dmt_cb = (DMT_CB *) cbs[vl->vl_dmf_cb];
+
+	    if (status != E_DB_OK)
+		break;
+
+	    /*
+	    ** if there aren't empty resource structs then
+	    ** allocate them, otherwise take one off the list.
+	    */
+	    if (resource->qer_resource.qer_tbl.qer_empty_vl == NULL)
+	    {
+		ulm.ulm_psize = sizeof (QEE_VALID);
+		status = qec_malloc(&ulm);
+		if (status != E_DB_OK)
+		{
+		    dsh->dsh_error.err_code = ulm.ulm_error.err_code;
+		    return (status);
+		}
+		/* cast to quiesce the compiler warning */
+		qevl = (QEE_VALID *)ulm.ulm_pptr;
+	    }
+	    else
+	    {
+		qevl = resource->qer_resource.qer_tbl.qer_empty_vl;
+		resource->qer_resource.qer_tbl.qer_empty_vl = qevl->qevl_next;
+		if (qevl->qevl_next != NULL)
+		    qevl->qevl_next->qevl_prev = NULL;
+		qevl->qevl_next = qevl->qevl_prev = NULL;
+	    }
+
+	    qevl->qevl_qefvl = (PTR) vl;
+	    if (resource->qer_resource.qer_tbl.qer_free_vl == NULL)
+	    {
+		qevl->qevl_next = qevl->qevl_prev = NULL;
+		resource->qer_resource.qer_tbl.qer_free_vl = qevl;
+	    }
+
+	    /* this is the real validation step for tables */
+	    if (vl->vl_timestamp.db_tab_high_time !=
+			dmt_cb->dmt_timestamp.db_tab_high_time ||
+		vl->vl_timestamp.db_tab_low_time !=
+			dmt_cb->dmt_timestamp.db_tab_low_time)
+	    {
+		/* relation out of date */
+		dsh->dsh_qp_status |= DSH_QP_OBSOLETE;
+		dsh->dsh_error.err_code = E_QE0023_INVALID_QUERY;
+		status = E_DB_WARN;
+
+		qeu_rdfcb_init((PTR) &rdf_cb, qef_cb);
+		/* There's no need to imagine that this QP exists
+		** in other servers, so keep this invalidation local.
+		*/
+		rdf_cb.rdf_rb.rdr_fcb = NULL;
+
+		rdf_cb.rdf_rb.rdr_tabid.db_tab_base =
+				   dmt_cb->dmt_id.db_tab_base;
+		rdf_cb.rdf_rb.rdr_tabid.db_tab_index =
+				   dmt_cb->dmt_id.db_tab_index;
+		status1 = rdf_call(RDF_INVALIDATE, (PTR) &rdf_cb);
+		if (DB_FAILURE_MACRO(status1))
+		{
+		    dsh->dsh_error.err_code = rdf_cb.rdf_error.err_code;
+		    return(status1);
+		}
+		break;
+	    }
+
+	    /*
+	    ** The semantics of the size_sensitive field in the valid
+	    ** list is defined below:
+	    **
+	    **   If the size_sensitive is FALSE, the query plan is
+	    **   totally independent of actual number of pages in the
+	    **   relation
+	    **
+	    **   If the size_sensitive is TRUE, the the estimated number
+	    **   of affected pages in the query plan must be adjusted by
+	    **   the proportion of the actual page count (from DMF) to
+	    **   the estimated page count (in the query plan).
+	    **
+	    **   If the difference of the adjusted value and the
+	    **   estimated number (specified in the query plan) is
+	    **   greater than a certain level (2 times + 5), the
+	    **   query plan is invalid.
+	    */
+
+	    /* Skip all this if the number of pages hasn't changed */
+	    if (vl->vl_size_sensitive && init_action &&
+		vl->vl_total_pages != dmt_cb->dmt_page_count)
+	    {
+		i4	adj_affected_pages, adj_est_pages;
+		i4	growth_factor;
+
+		/*
+		** scale estimated pages by growth factor, if any,
+		** using integer arithmetic...
+		*/
+		growth_factor = ((dmt_cb->dmt_page_count -
+				  vl->vl_total_pages) * 100)
+				 / vl->vl_total_pages;
+
+		/* Account for growth or shrinkage */
+		growth_factor = +growth_factor;
+
+		adj_affected_pages = vl->vl_est_pages +
+			((vl->vl_est_pages * growth_factor) / 100);
+
+		/* if the scaled estimated pages is more than
+		** 2 times the original estimate + 5, cause a recompile
+		** with new RDF cache */
+
+		/*
+		** calculate comparand so that overflow becoming
+		** negative can be detected
+		*/
+		adj_est_pages = (2 * vl->vl_est_pages) + 5;
+
+		if (adj_affected_pages > adj_est_pages)
+		{
+		    dsh->dsh_qp_status |= DSH_QP_OBSOLETE;
+		    dsh->dsh_error.err_code = E_QE0301_TBL_SIZE_CHANGE;
+		    status = E_DB_WARN;
+
+		    qeu_rdfcb_init((PTR) &rdf_cb, qef_cb);
+		    /* Local invalidation only */
+		    rdf_cb.rdf_rb.rdr_fcb = NULL;
+		    rdf_cb.rdf_rb.rdr_tabid.db_tab_base =
+				   dmt_cb->dmt_id.db_tab_base;
+		    rdf_cb.rdf_rb.rdr_tabid.db_tab_index =
+				   dmt_cb->dmt_id.db_tab_index;
+		    status1 = rdf_call(RDF_INVALIDATE, (PTR) &rdf_cb);
+		    if (DB_FAILURE_MACRO(status1))
+		    {
+			dsh->dsh_error.err_code = rdf_cb.rdf_error.err_code;
+			return(status1);
+		    }
+
+		    break;
+		}
+	    }   /* end if size_sensitive */
 	}
     }
-    return (E_DB_WARN);
-}
+    /* For each sequence (if any) - open with DMF call. */
+    if (status == E_DB_OK)
+    {
+	DMS_CB		*dms_cb;
+	QEF_SEQUENCE	*qseqp;
+
+	for (qseqp = qp->qp_sequences; qseqp; qseqp = qseqp->qs_qpnext)
+	{
+	    dms_cb = (DMS_CB *)dsh->dsh_cbs[qseqp->qs_cbnum];
+	    dms_cb->dms_tran_id = dsh->dsh_dmt_id;
+	    dms_cb->dms_db_id = qef_rcb->qef_db_id;
+	    status = dmf_call(DMS_OPEN_SEQ, dms_cb);
+	    if (status != E_DB_OK)
+	    {
+		dsh->dsh_error.err_code = dms_cb->error.err_code;
+		return(status);
+	    }
+	}
+    }
+
+    return (status);
+} /* qeq_vld_first_act */
 
 /*{
 ** Name: QEQ_VOPEN	- Open a valid list entry.
@@ -2391,13 +2515,12 @@ noposition:
 **	    SIR 121619 MVCC: Tell DMF if table being opened is for a cursor.
 **	26-Feb-2010 (jonj)
 **	    Use DSH pointer as cursorid to dmt_open.
-**	    
-[@history_template@]...
+**	13-May-2010 (kschendel) b123565
+**	    Delete "action" parameter, not real meaningful.
 */
 static DB_STATUS
 qeq_vopen(
 	QEF_RCB	    *qef_rcb, 
-	QEF_AHD	    *action, 
 	QEE_DSH	    *dsh, 
 	QEF_VALID   *vl)
 {
@@ -2593,11 +2716,11 @@ qeq_vopen(
 	    char		reason[100];
 
 	    status = E_DB_ERROR;
-	    STprintf(reason, "vl_dmr_cb = %d, cbs[%d] = NULL, ahd_atype = %d",
-		     vl->vl_dmr_cb, vl->vl_dmr_cb, action->ahd_atype);
+	    STprintf(reason, "vl_dmr_cb = %d, cbs[%d] = NULL",
+		     vl->vl_dmr_cb, vl->vl_dmr_cb);
 	    qef_error(E_QE0105_CORRUPTED_CB, 0L, status, &err,
 		      &dsh->dsh_error, 2,
-		      sizeof("qeq_validate")-1, "qeq_validate",
+		      sizeof("qeq_vopen")-1, "qeq_vopen",
 		      STlength(reason), reason);
 	    dsh->dsh_error.err_code = E_QE0025_USER_ERROR;
 	    break;

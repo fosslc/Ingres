@@ -159,16 +159,18 @@
 **	    to match current reality.
 **	1-May-2006 (kschendel)
 **	    Set blob base properly when doing global base arrays.
-[@history_template@]...
+**	16-May-2010 (kschendel) b123565
+**	    Caller must pass DSH to make parallel query + table procs
+**	    work properly.
 */
 DB_STATUS
 qea_retrow(
 QEF_AHD		*action,
 QEF_RCB		*qef_rcb,
+QEE_DSH		*dsh,
 i4		function )
 {
     QEF_CB	*qef_cb = qef_rcb->qef_cb;
-    QEE_DSH	*dsh	= (QEE_DSH *)qef_cb->qef_dsh;
     QEF_DATA	*output;
     i4 		bufs_used;
     DB_STATUS	status = E_DB_OK;

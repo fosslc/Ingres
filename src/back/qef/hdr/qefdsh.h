@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 /**
@@ -261,6 +261,10 @@ typedef struct _QEE_VLT
 **	24-nov-97 (inkdo01)
 **	    Added free chain ptr, so that buffers may be alloc'ed numerous
 **	    at a time, thus significantly reducing ULM calls.
+**	12-May-2010 (kschendel) b123565
+**	    Delete shd_options, nothing uses it;  change to shd_row_no
+**	    which is the index for shd_row, so that parallel query can
+**	    reset shd_row in a cloned QEN_SHD.
 */
 typedef struct _QEN_SHD     
 {
@@ -274,9 +278,7 @@ typedef struct _QEN_SHD
     i4		shd_next_tup;	/* the next tuple to be fetched */
     PTR		shd_row;	/* addr of row buffer for the tuple */
     i4		shd_width;	/* the size of the row/tuple */
-    i4	shd_options;    /* bit array for special options */
-#define SHD1_DSH_POOL	    0X00000001	    /* memory stream from dsh pool   
-					    ** bit off indicates sort pool */
+    i4		shd_row_no;	/* DSH row index for shd_row for || query */
     i4	shd_dups;	/* for sort: DMR_NODUPLICATES, or 0 otherwise 
                                 ** for hold: eof tuple index: last append + 1   
 				*/
@@ -1924,6 +1926,13 @@ typedef struct _QEE_XADDRS
 **	4-Jun-2009 (kschendel) b122118
 **	    Add bools for quick tests for qe90 (stats) and qe89 (hash debug).
 **	    Add qe11 (suppress output) info.
+**	11-May-2010 (kschendel) b123565
+**	    Change root DSH to parent DSH.  A 1:1 exch under a 1:N parallel
+**	    union needs to operate using the parallel union data, not the
+**	    root thread data.
+**	    Add "stats are inited" flag so that subplan-init doesn't
+**	    recalculate the QE90 stuff for every action.  Once per dsh
+**	    is enough.
 */
 
 /* typedef struct _QEE_DSH	    QEE_DSH; */
@@ -1970,7 +1979,13 @@ struct	_QEE_DSH
 #define DSH_TPROC_DSH       0x800
     /* This query contains a table procedure. Set only to the top DSH */
     QEF_CB	   *dsh_qefcb;	    /* PTR to qef_cb */
-    QEE_DSH	   *dsh_root;	    /* PTR to root DSH for query */
+    QEE_DSH	   *dsh_parent;	    /* PTR to parent DSH for || query */
+				    /* By the way, this can be confusing,
+				    ** because for a ||-child DSH, parent
+				    ** points to the SNAPSHOT of the parent
+				    ** dsh -- not the dsh the parent is
+				    ** actually using!
+				    */
     PTR		    dsh_handle;	    /* handle to memory for this object */
     PTR             *dsh_param;     /* base of parameter list array */
     PTR             dsh_result;     /* base of result area */
@@ -2093,6 +2108,8 @@ struct	_QEE_DSH
 				    ** the hot path */
     bool	    dsh_qp_stats;   /* TRUE for QE90 and related stats.
 				    ** (another ult-check-macro avoider) */
+    bool	    dsh_stats_inited;  /* TRUE if QE90-type stats overheads
+				    ** have been calculated for this DSH */
 
 	/* Dsh_cpuoverhead and dsh_diooverhead hold the cpu and dio
 	** required to gather stats for the QEN_NODE actual (vs. estimated)

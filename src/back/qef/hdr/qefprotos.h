@@ -1,4 +1,4 @@
-/* Copyright (c) 1995, 2005 Ingres Corporation
+/* Copyright (c) 1995, 2010 Ingres Corporation
 **
 **
 */
@@ -245,6 +245,10 @@
 **          Changes for Long IDs
 **	12-Apr-2010 (gupsh01) SIR 123444
 **	    Added support for ALTER TABLE RENAME table/columns.
+**	11-May-2010 (kschendel) b123565
+**	    Update qee-resolve-xaddrs prototype for ||-union resolution.
+**	    Split validate into two pieces.
+**	    Pass dsh to retrow action.
 */
 
 /*	QEC functions	*/
@@ -682,7 +686,7 @@ qee_update_byref_params(
 FUNC_EXTERN void qee_resolve_xaddrs(
 	QEE_DSH		*dsh,
 	QEN_NODE	*node,
-	bool		follow_qp);
+	QEN_EXCH	*exch);
 
 FUNC_EXTERN	VOID
 qee_d1_qid(
@@ -1708,6 +1712,7 @@ FUNC_EXTERN DB_STATUS
 qea_retrow(
 QEF_AHD		*action,
 QEF_RCB		*qef_rcb,
+QEE_DSH		*dsh,
 i4		function );
 
 FUNC_EXTERN DB_STATUS
@@ -2219,13 +2224,18 @@ qeq_p35_upd_csr(
 QEF_RCB		*v_qer_p,
 QEE_DSH		*i_dsh_p );
 
-FUNC_EXTERN DB_STATUS
-qeq_validate(
-QEF_RCB		*qef_rcb,
-QEE_DSH		*dsh,
-QEF_AHD		*action,
-i4		function,
-bool		init_action );
+FUNC_EXTERN DB_STATUS qeq_topact_validate(
+	QEF_RCB		*qef_rcb,
+	QEE_DSH		*dsh,
+	QEF_AHD		*action,
+	bool		init_action);
+
+FUNC_EXTERN DB_STATUS qeq_subplan_init(
+	QEF_RCB		*qef_rcb,
+	QEE_DSH		*dsh,
+	QEF_AHD		*act,
+	QEN_NODE	*start_node,
+	QEN_NODE	*node);
 
 FUNC_EXTERN void qeq_join_pqeof(
 	QEE_DSH		*dsh,
