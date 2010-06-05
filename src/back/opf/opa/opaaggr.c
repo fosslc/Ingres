@@ -1515,6 +1515,9 @@ opa_suckdriver(OPS_STATE 	*global,
 **	20-Jan-2010 (smeke01) b122967 b122556
 **	    Prevent opa_suckrestrict() from being called on aggregate 
 **	    subqueries. 
+**      15-mar-2010 (huazh01)
+**          Back up the pst_tvrm map and restore it if opa_suckchange()
+**          produces a useless 'x = x' node. (b123425)
 */
 
 static VOID
@@ -1527,6 +1530,7 @@ opa_suck( OPS_STATE	*global,
     PST_QNODE	*vararray[32];
     i4		i, j, k = 0;
     bool	tidyvars, gotvars, match;
+    PST_J_MASK  old_tvrm; 
 
 
     /* Load source subquery address (it might be a list of union's) and
@@ -1575,6 +1579,14 @@ opa_suck( OPS_STATE	*global,
 	    andp->pst_right = subquery->ops_root->pst_right;
 	    opv_copytree(global, &andp->pst_left);
 				/* make copy of where fragment */
+
+            /* b123425: back up pst_tvrm and restore it if we end up getting a 
+            ** 'x = x' node.
+            */
+            MEcopy((PTR)&subquery->ops_root->pst_sym.pst_value.pst_s_root.pst_tvrm, 
+                   sizeof(PST_J_MASK), 
+                   (PTR)&old_tvrm); 
+
 	    opa_suckchange(global, subquery, &andp->pst_left, vararray);
 
 	    /* First check if we copied "x = x". It's too silly to keep. */
@@ -1587,7 +1599,13 @@ opa_suck( OPS_STATE	*global,
 		    n2->pst_sym.pst_value.pst_s_var.pst_vno &&
 		n1->pst_sym.pst_value.pst_s_var.pst_atno.db_att_id ==
 		    n2->pst_sym.pst_value.pst_s_var.pst_atno.db_att_id)
-	     return;		/* all for naught */
+            {
+                MEcopy((PTR)&old_tvrm,
+                  sizeof(PST_J_MASK),
+                  (PTR)&subquery->ops_root->pst_sym.pst_value.pst_s_root.pst_tvrm);
+
+                return;		/* all for naught */
+            }
 	    
 	    subquery->ops_root->pst_right = andp;
 				/* splice to current sq where clause */
@@ -1712,7 +1730,9 @@ opa_suck( OPS_STATE	*global,
 ** History:
 **	8-jun-98 (inkdo01)
 **	    Written.
-**
+**      15-mar-2010 (huazh01)
+**          Back up the pst_tvrm map and restore it if opa_suckchange()
+**          produces a useless 'x = x' node. (b123425)
 */
 
 static bool
@@ -1725,6 +1745,7 @@ opa_suckandcheck(OPS_STATE 	*global,
 {
     bool	success, leftres, rightres, gotvar;
     PST_QNODE	*n1, *n2, *andp;
+    PST_J_MASK  old_tvrm; 
 
 
     /* This code recursively descends the where clause of the "next"
@@ -1761,6 +1782,14 @@ opa_suckandcheck(OPS_STATE 	*global,
 	andp = opv_opnode(global, PST_AND, (ADI_OP_ID)0, PST_NOJOIN);
 	andp->pst_left = n1;
 	opv_copytree(global, &andp->pst_left);	/* copy the sucker */
+
+        /* b123425: back up pst_tvrm and restore it if we end up getting a
+        ** 'x = x' node.
+        */
+        MEcopy((PTR)&subquery->ops_root->pst_sym.pst_value.pst_s_root.pst_tvrm,
+               sizeof(PST_J_MASK),
+               (PTR)&old_tvrm);
+
 	opa_suckchange(global, subquery, &andp->pst_left, vararray);
 
 	/* First check if we copied "x = x". It's too silly to keep. */
@@ -1773,7 +1802,13 @@ opa_suckandcheck(OPS_STATE 	*global,
 		n2->pst_sym.pst_value.pst_s_var.pst_vno &&
 	    n1->pst_sym.pst_value.pst_s_var.pst_atno.db_att_id ==
 		n2->pst_sym.pst_value.pst_s_var.pst_atno.db_att_id)
-	 return(FALSE);		/* all for naught */
+        {
+            MEcopy((PTR)&old_tvrm,
+               sizeof(PST_J_MASK),
+               (PTR)&subquery->ops_root->pst_sym.pst_value.pst_s_root.pst_tvrm);
+
+            return(FALSE);         /* all for naught */
+        }
 	    
 	andp->pst_right = subquery->ops_root->pst_right;
 	subquery->ops_root->pst_right = andp;
