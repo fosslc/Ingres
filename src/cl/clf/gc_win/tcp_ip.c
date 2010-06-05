@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2003, 2007 Ingres Corporation
+** Copyright (c) 2003, 2010 Ingres Corporation
 */
 /*
 **  Name: TCP_IP.C
@@ -35,6 +35,10 @@
 **          Implemented extended symbolic port range mapping algorithm.
 **          Implemented support for explicit port rollup indicator for
 **          symbolic and numeric ports.
+**      26-Apr-2010 (rajus01) SIR 123621
+**	    Display the actual symbolic port for the symbolic ports defined 
+**	    using new port syntax (example, II7+). See SIR 120457 for new port 
+**	    syntax. Ported the Unix CL changes for bug 120552 to fix the issue.
 */
 
 #include <winsock2.h>
@@ -62,7 +66,7 @@
 */
 STATUS 		GCtcpip_init(GCC_PCE * , GCC_WINSOCK_DRIVER *);
 STATUS		GCtcpip_addr( char *, char *, char * );
-STATUS		GCtcpip_port( char *, i4 , char * );
+STATUS		GCtcpip_port( char *, i4 , char *, char * );
 
 GLOBALREF	WS_DRIVER WS_tcpip;
 
@@ -281,6 +285,8 @@ GCtcpip_init(GCC_PCE * pptr, GCC_WINSOCK_DRIVER *wsd)
 STATUS
 GCtcpip_addr(char *node, char *port, char *port_name)
 {
+    char actual_portID[ GCC_L_PORT + 1 ];
+
     char *p = STindex(port, "+", 0);
 
     if (node == NULL)
@@ -292,17 +298,16 @@ GCtcpip_addr(char *node, char *port, char *port_name)
 	    STcopy(port, port_name);
 	else
 	{
-	    if (GCtcpip_port(port, sbprt, port_name) != OK)
+	    if (GCtcpip_port(port, sbprt, port_name, actual_portID) != OK)
 		return(FAIL);
 
-	    if (sbprt && p == NULL)
-		STprintf(port, "%s%d", port, sbprt);
+	    STcopy(actual_portID, port);
 	    sbprt++;
 	}
     }
     else
     {
-        if (GCtcpip_port(port, 0, port_name) != OK)
+        if (GCtcpip_port(port, 0, port_name, actual_portID) != OK)
 	    return FAIL;
     }
 
@@ -364,10 +369,11 @@ GCtcpip_addr(char *node, char *port, char *port_name)
 */
 
 STATUS
-GCtcpip_port( pin, subport, pout )
+GCtcpip_port( pin, subport, pout, pout_symbolic )
 char	*pin;
 i4	subport;
 char	*pout;
+char	*pout_symbolic;
 {
     u_i2 portid, offset;
     
@@ -452,6 +458,11 @@ char	*pout;
 		    | (baseport & 0x07);
 
 	CVla( (u_i4)portid, pout );
+	if( baseport == 0 )
+	    STprintf(pout_symbolic, "%c%c", pin[0], pin[1]);
+	else
+	    STprintf(pout_symbolic, "%c%c%d", pin[0], pin[1], baseport);
+
 	return( OK );
     } 
 
@@ -475,6 +486,7 @@ char	*pout;
 	*/
 	if ( subport > 15 )  return( FAIL );
 	CVla( portid + subport, pout );
+	STcopy(pout, pout_symbolic);
 	return( OK );
     }
 
@@ -484,5 +496,6 @@ char	*pout;
     */
     if( subport )  return( FAIL );
     STcopy( pin, pout );
+    STcopy(pin, pout_symbolic);
     return( OK );
 }
