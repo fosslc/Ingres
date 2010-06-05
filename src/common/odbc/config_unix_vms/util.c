@@ -103,6 +103,9 @@
 **   28-Apr-2010 (Ralph Loen) 
 **          In getDefaultInfo(), mispelled libiiodbcdriver.1.SLSFX and 
 **          libiiodbcdriverro.1.SLSFX.
+**   03-May-2010 (Ralph Loen) Bug 123676
+**          In readConfigData(), return error F_OD0172_IDS_ERR_CORRUPT_SECT
+**          if a section header is corrupted.
 **  
 */
 
@@ -207,6 +210,9 @@ GLOBALDEF char *dsnValues[] =
 ** History:
 **      03-Jun-03 (loera01)
 **          Created.
+**   03-May-2010 (Ralph Loen) Bug 123676
+**          Return error F_OD0172_IDS_ERR_CORRUPT_SECT if a section header is 
+**          corrupted.
 */
 
 STATUS readConfigData(OCFG_CB *ocfg_cb)
@@ -245,6 +251,14 @@ STATUS readConfigData(OCFG_CB *ocfg_cb)
             CMnext(p);
             p = getFileToken(p, pToken, FALSE); /* get entry keyword */
             section = addSection(ocfg_cb, pToken);
+        }
+        else if ( !STindex(buf, "[", 0) && STindex(buf, "]", 0))
+        {
+            return F_OD0172_IDS_ERR_CORRUPT_SECT;
+        }
+        else if ( !STindex(buf, "]", 0) && STindex(buf, "[", 0))
+        {
+            return F_OD0172_IDS_ERR_CORRUPT_SECT;
         }
         else
         {

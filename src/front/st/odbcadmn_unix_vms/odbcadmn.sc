@@ -132,6 +132,12 @@
 **      earlier code lines only.
 **   29-Apr-2010 (Ralph Loen) SIR 123641
 **      Replaced defAttr[0] with defAttr[INFO_ATTR_DRIVER_FILE_NAME].
+**   03-May-2010 (Ralph Loen) Bug 123676
+**      Return error F_OD0172_IDS_ERR_CORRUPT_SECT if a section header is
+**      corrupted.
+**   03-May-2010 (Ralph Loen) Bug 123676
+**       In display_err(), display error message associated with ERget() 
+**       rather than ERreport(), which reports only compatlib error messages.
 */
 /*
 PROGRAM = (PROG1PRFX)odbcadmin
@@ -498,7 +504,7 @@ top_form()
 	else if (dsnStatus != OK)
 	{
 	    STprintf(errMsg,"Error obtaining DSN path.\n");
-            display_err(errMsg,status);
+            display_err(errMsg,dsnStatus);
 	}
     }
     exec frs end;
@@ -2501,12 +2507,14 @@ VOID test_connection( char *dsnname )
 ** History:
 **	 10-feb-04 (loera01)
 **	    Created.
+**       03-May-2010 (Ralph Loen) Bug 123676
+**          Display error message associated with ERget() rather than
+**          ERreport(), which reports only compatlib error messages.
+
 */
 void display_err(char *errMsg, STATUS status)
 {
-    if (OK != ERreport(status, &errMsg[STlength(errMsg)]))
-        STprintf(&errMsg[STlength(errMsg)],
-        ERget(S_ST0036_reason_unknown), status);
+    STprintf(&errMsg[STlength(errMsg)], ERget(status));
     display_message(errMsg);
 }
 

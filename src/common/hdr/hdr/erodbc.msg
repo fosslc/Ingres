@@ -23,6 +23,8 @@
 **          Added F_OD0170_IDS_ERR_ROW_RANGE.
 **    09-Mar-2010 (Ralph Loen) Bug 123392
 **          Added F_OD0171_IDS_ERR_NULL_PTR.
+**    03-May-2010 (Ralph Loen) Bug 123676
+**          Added F_OD0172_IDS_ERR_CORRUPT_SECTION. 
 */
 
 #define _OD_CLASS 235
@@ -542,3 +544,6 @@ F_OD0170_IDS_ERR_ROW_RANGE
 
 F_OD0171_IDS_ERR_NULL_PTR
 "Invalid use of null pointer"
+
+F_OD0172_IDS_ERR_CORRUPT_SECT
+"Corrupted section name in ODBC configuration file"
