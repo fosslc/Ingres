@@ -47,6 +47,8 @@
 **      26-Jul-2004 (lakvi01)
 **          Backed-out the above change to keep the open-source stable.
 **          Will be revisited and submitted at a later date. 
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Include cv.h for function defintions
 */
 
 # include <compat.h>
@@ -60,6 +62,7 @@
 # include <si.h>
 # include <st.h>
 # include "gcclocal.h"
+# include <cv.h>
 
 # define MAX_NAME               256
 # define MAX_PROTOCOL_ENTRY     256

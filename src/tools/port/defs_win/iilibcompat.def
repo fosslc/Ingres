@@ -94,6 +94,8 @@
 ;           Started functions at 1058 to avoid conflicts with main.
 ;	12-Mar-2010 (kschendel) SIR 123275
 ;	    Add MHpowerTenTab for change 503216.
+;	13-Jan-2010 (wanfr01) Bug 123139
+;	    Add SB and DB prototypes for CV/ST functions
 
 EXPORTS
 	iiBTand	@1				
@@ -253,7 +255,7 @@ EXPORTS
 	CVexp10	@158				
 	CVahxl	@159				
 	CVuahxl	@160				
-	CVal	@161				
+;	CVal	@161				
 	CVan	@162				
 	CVaptr	@163				
 	CVaxptr	@164				
@@ -266,7 +268,7 @@ EXPORTS
 	CV2n_f4	@171				
 	CV2n_f8	@172				
 	CVla	@173				
-	CVlower	@174				
+;	CVlower	@174				
 	CVlx	@175				
 	CVna	@176				
 	CVol	@177				
@@ -281,7 +283,7 @@ EXPORTS
 	CVptra	@186				
 	CVptrax	@187				
 	CVula	@188				
-	CVupper	@189				
+;	CVupper	@189				
 	CVla8	@190				
 	CVpkl8	@191				
 	CXcluster_enabled	@192				
@@ -328,7 +330,7 @@ EXPORTS
 	CXnuma_support	@233				
 	CXcluster_configured	@234				
 	CXnode_info	@235				
-	CVal8	@236				
+;	CVal8	@236				
 	CM_getcharset	@237				
 	DIalloc	@238				
 	DIclose	@239				
@@ -683,26 +685,26 @@ EXPORTS
 ;	SRread	@588				
 ;	SRwrite	@589				
 	IISTalloc	@590				
-	IISTbcompare	@591				
-	IISTindex	@592				
+;	IISTbcompare	@591				
+;	IISTindex	@592				
 	STlcopy	@593				
 	IISTmove	@594				
 	IISTprintf	@595				
-	IISTrindex	@596				
+;	IISTrindex	@596				
 	STrskip	@597				
 	IISTskipblank	@598				
-	IISTgetwords	@599				
+;	IISTgetwords	@599				
 	IISTnlength	@600				
 	IISTlpolycat	@601				
 	IISTpolycat	@602				
-	IISTscompare	@603				
+;	IISTscompare	@603				
 	IISTtalloc	@604				
-	IISTtrmwhite	@605				
-	IISTtrmnwhite	@606				
+;	IISTtrmwhite	@605				
+;	IISTtrmnwhite	@606				
 	IISTxcompare	@607				
-	IISTzapblank	@608				
-	IISTstrindex	@609				
-	IISTrstrindex	@610				
+;	IISTzapblank	@608				
+;	IISTstrindex	@609				
+;	IISTrstrindex	@610				
 	TMbreak	@611				
 	TMcmp	@612				
 	TMcpu	@613				
@@ -1158,3 +1160,31 @@ EXPORTS
 	EVSetLookupVar	@1064
 	EVSetDeleteFile	@1065
 	MHpowerTenTab	@1066
+	CVal_SB		@1067
+	CVal_DB		@1068
+	CVal8_SB	@1069
+	CVal8_DB	@1070
+	IISTrstrindex_DB	@1071
+	IISTrstrindex_SB	@1072
+	IISTscompare_DB	@1073
+	IISTscompare_SB	@1074
+	IISTstrindex_DB	@1075
+	IISTstrindex_SB	@1076
+	IISTtrmnwhite_DB	@1077
+	IISTtrmnwhite_SB	@1078
+	IISTzapblank_DB	@1079
+	IISTzapblank_SB	@1080
+	CVlower_DB	@1081
+	CVlower_SB	@1082
+	CVupper_DB	@1083
+	CVupper_SB	@1084
+	IISTtrmwhite_DB	@1085
+	IISTtrmwhite_SB	@1086
+	IISTbcompare_DB	@1087
+	IISTbcompare_SB	@1088			
+	IISTgetwords_DB	@1089
+	IISTgetwords_SB	@1090
+	IISTindex_DB	@1091
+	IISTindex_SB	@1092
+	IISTrindex_DB	@1093
+	IISTrindex_SB	@1094

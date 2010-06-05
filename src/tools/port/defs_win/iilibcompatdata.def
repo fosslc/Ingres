@@ -30,6 +30,8 @@
 ;	    Change hMutexGccCompleteQ to GccCompleteQCritSect.
 ;	17-Dec-2009 (bonro01)
 ;	    Add CM_isDBL for change 501847 bug 122994
+;	13-Jan-2010 (wanfr01) Bug 123139
+;	    Add CV_fvp and ST_fvp
 ;
 
 EXPORTS
@@ -411,3 +413,6 @@ MO_cdefs		@185	DATA
     CM_UTF8CaseTab	@243	DATA
     NMLckSymloc         @244    DATA
     CM_isDBL		@245	DATA
+    CV_fvp		@246	DATA
+    ST_fvp		@247	DATA
+
