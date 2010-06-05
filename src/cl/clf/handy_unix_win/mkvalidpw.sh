@@ -211,6 +211,10 @@
 ##	    Don't chown symbol.tbl as we don't always install as 'ingres'.
 ##	    Add check before running ingprenv as the file should already exist
 ##	    and doing so won't change the ownership.
+##	03-May-2010 (hanje04)
+##	    Bug 123648
+##	    Path not always set when running mkvalidpw, use full path for
+##	    ingprenv
 ##
 #  PROGRAM = (PROG0PRFX)mkvalidpw
 #******************************************************************************
@@ -244,7 +248,7 @@ then
 	exit 255
 fi
 
-II_CONFIG=`ingprenv $(PROG3PRFX)_CONFIG`
+II_CONFIG=`$BIN/ingprenv $(PROG3PRFX)_CONFIG`
 if [ ! -r "$(PRODLOC)/(PROD2NAME)/files/symbol.tbl" ] &&
     [ -z "$(PROG3PRFX)_ADMIN" -o ! -r "$(PROG3PRFX)_ADMIN/symbol.tbl" ] &&
     [ -z "$(PROG3PRFX)_CONFIG" -o ! -r "$(PROG3PRFX)_CONFIG/symbol.tbl" ]
