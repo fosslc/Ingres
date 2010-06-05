@@ -1406,6 +1406,8 @@ i4	    (*user_routine)();		/* Function to get/put rows */
 **	2-Mar-2010 (kschendel) SIR 122974
 **	    Fix a couple null-data issues:  byte varying is a db-text-string
 **	    type, and we don't want to fool with nvarchar null-data.
+**	7-May-2010 (kschendel) SIR 122974
+**	    Total row length (cp_row_length) still wrong, fix.
 */
 
 static STATUS
@@ -2402,11 +2404,6 @@ IIcpinit( II_LBQ_CB *IIlbqcb, II_CP_STRUCT *copy_blk, i4  msg_type )
 	cgroup->cpg_row_length += copy_map->cp_delim_len;
 	if (cgroup->cpg_row_length > max_rowlen)
 	    max_rowlen = cgroup->cpg_row_length;
-	/* Accumulate total length, mostly for VMS fixed-width copy so that
-	** it has a valid record length.  This only has to be right for
-	** fixed-length rows; text or var rows won't use row-length.
-	*/
-	copy_blk->cp_row_length += cgroup->cpg_row_length;
 
 	/*
 	** If any binary datatypes are specified for the copy file, turn off
@@ -2485,6 +2482,18 @@ IIcpinit( II_LBQ_CB *IIlbqcb, II_CP_STRUCT *copy_blk, i4  msg_type )
 		  && (absttype == DB_NCHR_TYPE || absttype == DB_NVCHR_TYPE)))
 		cgroup->cpg_validate = TRUE;
 	}
+    }
+
+    /* Accumulate total length, mostly for VMS fixed-width copy so that
+    ** it has a valid record length.  This only has to be right for
+    ** fixed-length rows; text or var rows won't use row-length.
+    */
+    for (cgroup = &copy_blk->cp_copy_group[0];
+	 cgroup <= &copy_blk->cp_copy_group[copy_blk->cp_num_groups-1];
+	 ++cgroup)
+    {
+	if (cgroup->cpg_row_length > 0)
+	    copy_blk->cp_row_length += cgroup->cpg_row_length;
     }
 
     /*
