@@ -262,6 +262,9 @@ FE_fullresolve(frn_ptr)
 **	26-sep-1995 (sarjo01) Bug 71612
 **	        Restore delimiters back into resolved_name buffer for call
 **		to IIUGdlm_ChkdlmBEobject() if name has embedded spaces.	
+**	Cinco de Mayo 2010 (miket) SIR 121123
+**		For pre Ingres 10.0 look in the resolver buffer for the info
+**		based on the old max id lengths.
 */
 
 
@@ -281,6 +284,7 @@ FE_resolve(frn_ptr,name,owner)
 			FE_RSLV_NAME	w_frn;
 			FE_REL_INFO		relinfo;
 			char	owner_buf[(DB_MAXNAME + 1)];
+			i4	rel_db_maxname;
 	EXEC SQL BEGIN DECLARE SECTION;
 			/*
 			** The result of the database function is stored as follows:
@@ -293,6 +297,10 @@ FE_resolve(frn_ptr,name,owner)
 			char	resolved_name[((2 * DB_MAXNAME) + 1)];
 	EXEC SQL END DECLARE SECTION;
 
+	if (STcompare(IIUIscl_StdCatLevel(),UI_LEVEL_1000) < 0)
+		rel_db_maxname = DB_OLDMAXNAME_32;
+	else
+		rel_db_maxname = DB_MAXNAME;
 
 	if  (owner == NULL)		/* Substitute empty string for NULL pointer	*/
 	{
@@ -329,12 +337,12 @@ SIprintf("Effecting FErel_ffetch() for %s.%s\n",owner,name);
 		}
 		else
 		{
-			MEfill((2 * DB_MAXNAME),' ',&resolved_name[0]);
+			MEfill((2 * rel_db_maxname),' ',&resolved_name[0]);
 			STcopy(relinfo.owner,&resolved_name[0]);
 			*(&resolved_name[0] + STlength(relinfo.owner)) = ' ';
-			STcopy(relinfo.name,&resolved_name[DB_MAXNAME]);
-			*(&resolved_name[DB_MAXNAME] + STlength(relinfo.name)) = ' ';
-			*(&resolved_name[0] + (2 * DB_MAXNAME)) = EOS;
+			STcopy(relinfo.name,&resolved_name[rel_db_maxname]);
+			*(&resolved_name[rel_db_maxname] + STlength(relinfo.name)) = ' ';
+			*(&resolved_name[0] + (2 * rel_db_maxname)) = EOS;
 		}
 	}
 	else
@@ -375,10 +383,10 @@ SIprintf("Result from resolve_table() for %.64s\n",&resolved_name[0]);
 	** to a separate buffer and set owner_ptr to indicate whether or not
 	** it was moved.
 	*/
-	i_ptr = &resolved_name[DB_MAXNAME];
+	i_ptr = &resolved_name[rel_db_maxname];
 	save_end_char = *i_ptr;
 	*i_ptr = EOS;
-	if  (resolved_name[(DB_MAXNAME - 1)] != ' ')
+	if  (resolved_name[(rel_db_maxname - 1)] != ' ')
 	{
 		STcopy(&resolved_name[0],&owner_buf[0]);
 		owner_ptr = &owner_buf[0];
@@ -397,7 +405,7 @@ SIprintf("Result from resolve_table() for %.64s\n",&resolved_name[0]);
 	*/
 	*i_ptr = save_end_char;
 
-	i_ptr = &resolved_name[DB_MAXNAME];	/* Trim the name component	*/
+	i_ptr = &resolved_name[rel_db_maxname];	/* Trim the name component	*/
 	if  (STtrmwhite(i_ptr) == 0)
 	{
 		STcopy(ERx(" "),i_ptr);
@@ -476,7 +484,7 @@ SIprintf("Internal Error!  Bad Syn RETURN!\n|%s| => |%s|\n",
                 char    *name_ptr, namebuf[(DB_MAXNAME + 3)];
                 bool    norml = TRUE;
 
-		name_ptr = &resolved_name[DB_MAXNAME];
+		name_ptr = &resolved_name[rel_db_maxname];
                 if (*name_ptr != '"' && STindex(name_ptr, " ", 0) != NULL)
                 {
                         STpolycat(3, "\"", name_ptr, "\"", namebuf);
@@ -498,7 +506,7 @@ SIprintf("Internal Error!  Bad Syn RETURN!\n|%s| => |%s|\n",
 	}
 	else if (r_ptr != NULL)
 	{
-		STcopy(&resolved_name[DB_MAXNAME],r_ptr);
+		STcopy(&resolved_name[rel_db_maxname],r_ptr);
 	}
 
 	return(TRUE);
