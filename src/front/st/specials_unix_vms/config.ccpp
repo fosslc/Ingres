@@ -211,6 +211,8 @@
 **          libraries under /usr/lib/ingres and config under /usr/share/ingres
 **      16-Apr-2010 (hanal04) Code Sprint SIR 122168 Ticket 387
 **          Add dbmsmlst.hlp to the distribution.
+**	22-Apr-2010 (thaju02)
+**	    Rmeove dbmsmtpl.hlp.
 */
 
 PART   config
@@ -315,7 +317,6 @@ PART   config
       FILE dbmsltut.hlp
       FILE dbmsmdep.hlp
       FILE dbmsmlst.hlp
-      FILE dbmsmtpl.hlp
       FILE dbmsname.hlp
       FILE dbmsnrst.hlp
       FILE dbmsopfa.hlp
