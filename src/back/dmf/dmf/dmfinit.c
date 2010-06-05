@@ -326,6 +326,9 @@
 **	    SIR 120874: dm0p_? functions converted to DB_ERROR *
 **      22-dec-2008 (stegr01)
 **          Itanium VMS port.
+**     02-Apr-2010(hweho01) SIR 122757
+**          Setup svcb_directio_align unconditionally by calling 
+**          DIget_directio_align(). 
 [@history_template@]...
 **/
 
@@ -1424,10 +1427,8 @@ dmf_setup_directio(void)
 		(char *)NULL, 0L, (i4 *)NULL, &err_code, 0);
 	return(E_DB_ERROR);
     }
-    /* Get alignment if either direct I/O hint is set. */
-    dmf_svcb->svcb_directio_align = 0;
-    if (dmf_svcb->svcb_directio_tables || dmf_svcb->svcb_directio_load)
-	dmf_svcb->svcb_directio_align = DIget_direct_align();
+    /* Get alignment  */
+    dmf_svcb->svcb_directio_align = DIget_direct_align();
 
     return(E_DB_OK);
 }

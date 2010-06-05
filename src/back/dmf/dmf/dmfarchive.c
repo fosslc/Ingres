@@ -516,6 +516,9 @@
 **	    Need cx.h for proper CX declarations (gcc 4.3).
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs, db_buffer holds (dbname, owner.. )
+**      02-Apr-2010 (hweho01) SIR 122757
+**          Add dmf_setup_directio() call into dma_prepare(), so 
+**          the parameters will be initialized in the server startup. 
 **/
 
 /*
@@ -794,6 +797,16 @@ DB_ERROR    *dberr)
 
 	dmf_svcb = &svcb;
 	svcb.svcb_status = (SVCB_SINGLEUSER | SVCB_ACTIVE | SVCB_ACP);
+
+	/*
+	** Read the direct-io hints in the configuration..
+	*/
+	status = dmf_setup_directio();
+	if (status != E_DB_OK)
+	{
+	    SETDBERR(dberr, 0, E_DM9411_DMF_INIT);
+	    return (status);
+	}
 
 	/* Init DMF memory manager */
 	dm0m_init();
