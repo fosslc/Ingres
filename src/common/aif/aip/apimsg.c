@@ -80,6 +80,10 @@
 **	06-Apr-10 (gordy)
 **	    Include missing header files.  Drop unused local variables.
 **	    Cast numeric values to eliminate warning messages.
+**	 7-Apr-10 (gordy)
+**	    Use intermediate storage when copying GCA four byte integers
+**	    into API two byte values.  Fix protocol level for database
+**	    procedure output parameters.
 */
 
 
@@ -702,6 +706,13 @@ IIapi_readMsgDescr( IIAPI_STMTHNDL *stmtHndl )
 **	    Created.
 **	06-Apr-10 (gordy)
 **	    Add cast to quiet compiler warning.
+**	 7-Apr-10 (gordy)
+**	    Integer sizes which are different in GCA messages and API
+**	    structures require intermediate values to ensure the proper
+**	    bits of the values are copied.  Doesn't cause a problem on
+**	    little-endian platforms as the values are copied in order
+**	    so that the extra bytes don't overwrite copied data.  On
+**	    big-endian platforms, the low order bytes are lost.
 */
 
 II_EXTERN IIAPI_STATUS
@@ -711,8 +722,6 @@ IIapi_readMsgCopyMap( IIAPI_STMTHNDL *stmtHndl )
     IIAPI_MSG_BUFF	*msgBuff;
     IIAPI_COPYMAP	*map = &stmtHndl->sh_copyMap;
     i4			i, dir, tsize, flags, tid, count;
-    i4			length, delim, nullable, nullen;
-    char		delims[ 2 ];
     bool		ext;
     IIAPI_STATUS	status = IIAPI_ST_SUCCESS;
 
@@ -963,6 +972,9 @@ IIapi_readMsgCopyMap( IIAPI_STMTHNDL *stmtHndl )
     {
 	IIAPI_FDATADESCR	*fd = &map->cp_fileDescr[ map->cp_fileCount ];
 	char			name[ GCA_MAXNAME + 1 ];
+	i4			type, prec, length, dellen, nullen;
+	i4			delim, nullable;
+	char			delims[ 2 ];
 
 	fd->fd_name = NULL;
 	fd->fd_delimValue = NULL;
@@ -995,21 +1007,21 @@ IIapi_readMsgCopyMap( IIAPI_STMTHNDL *stmtHndl )
 	    goto done;
 	}
 
-	fd->fd_prec = 0;
+	prec = 0;
 	fd->fd_cvPrec = 0;
 
 	if ( msgBuff->length >= (i2)((sizeof( i4 ) * (ext ? 11 : 9)) + 
 				     sizeof( delims )) )
 	{
 	    /* gca_type_cp */
-	    I4ASSIGN_MACRO( *msgBuff->data, fd->fd_type );
+	    I4ASSIGN_MACRO( *msgBuff->data, type );
 	    msgBuff->data += sizeof( i4 );
 	    msgBuff->length -= sizeof( i4 );
 
 	    if ( ext )
 	    {
 		/* gca_precision_cp */
-		I4ASSIGN_MACRO( *msgBuff->data, fd->fd_prec );
+		I4ASSIGN_MACRO( *msgBuff->data, prec );
 		msgBuff->data += sizeof( i4 );
 		msgBuff->length -= sizeof( i4 );
 	    }
@@ -1025,7 +1037,7 @@ IIapi_readMsgCopyMap( IIAPI_STMTHNDL *stmtHndl )
 	    msgBuff->length -= sizeof( i4 );
 
 	    /* gca_l_delim_cp */
-	    I4ASSIGN_MACRO( *msgBuff->data, fd->fd_delimLength );
+	    I4ASSIGN_MACRO( *msgBuff->data, dellen );
 	    msgBuff->data += sizeof( i4 );
 	    msgBuff->length -= sizeof( i4 );
 
@@ -1068,11 +1080,11 @@ IIapi_readMsgCopyMap( IIAPI_STMTHNDL *stmtHndl )
 	    msgBuff->length -= sizeof( i4 );
 	}
 	else  if ( 
-		   ! READI4( connHndl, &msgBuff, &fd->fd_type )  ||
-		   (ext  &&  ! READI4( connHndl, &msgBuff, &fd->fd_prec ))  ||
+		   ! READI4( connHndl, &msgBuff, &type )  ||
+		   (ext  &&  ! READI4( connHndl, &msgBuff, &prec ))  ||
 		   ! READI4( connHndl, &msgBuff, &length )  ||
 		   ! READI4( connHndl, &msgBuff, &delim )  ||
-		   ! READI4( connHndl, &msgBuff, &fd->fd_delimLength )  ||
+		   ! READI4( connHndl, &msgBuff, &dellen )  ||
 		   ! readBytes( connHndl, &msgBuff, sizeof(delims), delims ) ||
 		   ! READI4( connHndl, &msgBuff, &fd->fd_column )  ||
 		   ! READI4( connHndl, &msgBuff, &fd->fd_funcID )  ||
@@ -1089,8 +1101,11 @@ IIapi_readMsgCopyMap( IIAPI_STMTHNDL *stmtHndl )
 	    goto done;
 	}
 
+	fd->fd_type = (II_INT2)type;
 	fd->fd_length = (II_INT2)length;
+	fd->fd_prec = (II_INT2)prec;
 	fd->fd_delimiter = delim ? TRUE : FALSE;
+	fd->fd_delimLength = (II_INT2)dellen;
 	fd->fd_nullable = nullable ? TRUE : FALSE;
 	fd->fd_nullInfo = (nullable  &&  nullen > 0) ? TRUE : FALSE;
 
@@ -5078,6 +5093,8 @@ initRepeatExec( IIAPI_STMTHNDL *stmtHndl, IIAPI_PUTPARMPARM *putParmParm )
 ** History:
 **	25-Mar-10 (gordy)
 **	    Created.
+**	 7-Apr-10 (gordy)
+**	    Output parameters supported at protocol level 66.
 */
 
 static IIAPI_STATUS
@@ -5180,7 +5197,7 @@ addQueryParams( IIAPI_STMTHNDL *stmtHndl,
 		    /*
 		    ** Output parameters backward supported as BYREF.
 		    */
-		    if ( connHndl->ch_partnerProtocol >= GCA_PROTOCOL_LEVEL_68 )
+		    if ( connHndl->ch_partnerProtocol >= GCA_PROTOCOL_LEVEL_66 )
 			mask |= GCA_IS_OUTPUT;
 		    else
 			mask |= GCA_IS_BYREF;

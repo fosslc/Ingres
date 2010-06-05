@@ -101,6 +101,9 @@
 **	25-Mar-10 (gordy)
 **	    Support for batch processing.  Replaced formatted GCA
 **	    interface with byte stream.
+**	 7-Apr-10 (gordy)
+**	    Don't consume the GCA_RESPONSE message so that it can be
+**	    accessed by the transaction state machine.
 */
 
 /*
@@ -1252,6 +1255,8 @@ sm_evaluate
 	    ** of procedure execution.  The GCA message buffer will be
 	    ** NULL in this case and it is assumed that the response
 	    ** is successful.
+	    **
+	    ** The RESPONSE message is not consumed during evaluation.
 	    */
 	    msgBuff = (IIAPI_MSG_BUFF *)parmBlock;
 
@@ -1640,6 +1645,10 @@ sm_evaluate
 **	25-Mar-10 (gordy)
 **	    Support for batch processing.  Replaced formatted GCA
 **	    interface with byte stream.
+**	 7-Apr-10 (gordy)
+**	    Don't consume the GCA_RESPONSE message.  It must be
+**	    accessible in the transaction state machine so that
+**	    the session transaction state can be determined.
 */
 
 static II_BOOL
@@ -2144,14 +2153,19 @@ sm_execute
 	    ** messages under certain GCA protocol levels (so as to simulate
 	    ** the preferred protocol).  The parameter block will be NULL
 	    ** in this case.  Handle as success with no additional data.
+	    **
+	    ** The RESPONSE message cannot be consumed because it is
+	    ** needed to determine the session transaction state and
+	    ** must be accessible when the event is processed in the
+	    ** transaction state machine.
 	    */
 	    if ( parmBlock )
 	    {
 		IIAPI_MSG_BUFF	*msgBuff = (IIAPI_MSG_BUFF *)parmBlock;
 		GCA_RE_DATA	respData;
 
-		if ( (status = IIapi_readMsgResponse(msgBuff, &respData, TRUE)) 
-							!= IIAPI_ST_SUCCESS )
+		if ( (status = IIapi_readMsgResponse(
+			    msgBuff, &respData, FALSE )) != IIAPI_ST_SUCCESS )
 		{
 		    success = FALSE;
 		    break;
