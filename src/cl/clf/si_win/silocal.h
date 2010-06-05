@@ -9,14 +9,11 @@
 **	    Add prototype for GetOpenRoadStyle().
 **      06-aug-1999 (mcgem01)
 **          Replace nat and longnat with i4.
+**      07-may-2010 (coomi01)
+**          Move SI result codes to si.h
 */
 
 # define MAXSTRINGBUF   80
-
-# define SI_BAD_SYNTAX  (E_CL_MASK | E_SI_MASK | 1)
-# define SI_CAT_DIR     (E_CL_MASK | E_SI_MASK | 2)
-# define SI_CAT_NONE    (E_CL_MASK | E_SI_MASK | 3)
-# define SI_CANT_OPEN    (E_CL_MASK | E_SI_MASK | 4)
 
 GLOBALREF BOOL SIchar_mode;
 FUNC_EXTERN BOOL SIget_charmode();

@@ -60,7 +60,20 @@
 **	    Remove obsolete functions.
 **	07-sep-2005 (abbjo03)
 **	    Move SIfopen()/CPopen() file format constants here from sicl.h.
+**      07-may-2010 (coomi01)
+**          Move SI result codes here from silocal.h
+**          Add two new results, SI_CANT_OPEN_EACCES and SI_CANT_OPEN_EEXIST 
 **/
+
+#ifndef  SI_RESULT_CODES /* Thwart multiple inclusions */
+# define SI_RESULT_CODES PRESENT
+# define SI_BAD_SYNTAX          (E_CL_MASK | E_SI_MASK | 1) /* SIopen() */
+# define SI_CAT_DIR             (E_CL_MASK | E_SI_MASK | 2) /* SIcat()  */
+# define SI_CAT_NONE            (E_CL_MASK | E_SI_MASK | 3) /* SIcat()  */
+# define SI_CANT_OPEN           (E_CL_MASK | E_SI_MASK | 4) /* SIcat(), SIcopy(), SIcreate(), SIopen() */
+# define SI_CANT_OPEN_EACCES    (E_CL_MASK | E_SI_MASK | 5) /* SIcreate() : Permission not granted     */
+# define SI_CANT_OPEN_EEXIST    (E_CL_MASK | E_SI_MASK | 6) /* SIcreate() : File already exists        */
+#endif
 
 /* File formats for SIfopen() and CPopen() */
 # define	SI_BIN		3	/* binary, semi-structured sequential

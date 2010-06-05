@@ -1416,6 +1416,8 @@ NMlogOperation(char *oper, char *name, char *value, char *new_value, STATUS stat
 ** History:
 **	31-Aug-2004 (jenjo02)
 **	    Created.
+**      05-may-2010 (coomi01) b123677
+**          On error, test status for priviledges problem.
 */
 
 STATUS
@@ -1441,6 +1443,14 @@ NMlocksyms( void )
     */
     while ( (status = SIcreate( &NMLckSymloc )) != OK  )
     {
+	if (SI_CANT_OPEN_EEXIST != status)
+	{
+	    /* 
+	    ** Unable to open symbol table due to lack of privs. 
+	    */
+	    return(NM_STOPN);
+	}
+
 	fp = NULL;
 	LckPid = (PID)0;
 

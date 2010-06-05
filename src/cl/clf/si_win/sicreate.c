@@ -31,6 +31,8 @@
 **	    Updated to use CreateFile(), which is lower than open().
 **	03-feb-2004 (somsa01)
 **	    Backed out last changes for now.
+**      05-may-2010 (coomi01) b123677
+**          Distinguish failure to open due to O_EXCL from other errors 
 */
 STATUS
 SIcreate (LOCATION* lo)
@@ -45,9 +47,13 @@ SIcreate (LOCATION* lo)
     {
         close (handle);
     }
+    else if (errno != EEXIST)
+    {
+        status = SI_CANT_OPEN_EACCES;
+    }
     else
     {
-        status = SI_CANT_OPEN;
+        status = SI_CANT_OPEN_EEXIST;
     }
     return status;
 }
