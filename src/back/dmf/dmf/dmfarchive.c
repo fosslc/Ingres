@@ -6855,6 +6855,8 @@ SIDEFILE	**ret_sf)
 ** History:
 **      04-mar-2008 (stial01)
 **          Created (for incremental rollforwarddb)
+**	05-Mar-2010 (thaju02) Bug 122216
+**	    next_journal() passes jnl_seq of zero, jnlswitch not written. 
 */
 static DB_STATUS
 write_jnl_eof(
@@ -6877,7 +6879,7 @@ i4	    blk_seq)
     DM0L_JNL_SWITCH	rec;
     DB_ERROR		local_dberr;
 
-    if (jnl_seq < 1)
+    if ((jnl_seq < 1) && (openjnl == (DM0J_CTX *)NULL))
 	return (E_DB_OK);
 
     /*

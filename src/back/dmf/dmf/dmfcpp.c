@@ -690,6 +690,11 @@ NO_OPTIM = dr6_us5
 **	    compiler.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	05-Mar-2010 (thaju02) Bug 122216
+**	    Incremental rolldb unable to apply journal which preceeds an 
+**	    offline checkpoint. Added write_jnlswitch(), to write jnlswitch 
+**	    record to journal before upd1_jnl_dmp() increments ckp/jnl 
+**	    sequence.
 */
 
 /*
@@ -889,6 +894,12 @@ static DB_STATUS GetClusterStatusLock(
 
 static DB_STATUS ReleaseClusterStatusLock(
 	DMF_JSX		*jsx);
+
+static DB_STATUS write_jnlswitch(
+DMP_DCB         *dcb,
+DM0C_CNF        *cnf,
+DMF_JSX		*jsx,
+i4              *err_code);
 
 #define	    OPEN_CONFIG		1
 #define	    UPDATE_CONFIG	2
@@ -1627,6 +1638,11 @@ DMP_DCB	    *dcb)
 
 	    if (status == E_DB_OK)
 		status = config_handler(OPEN_CONFIG, dcb, &cnf,  jsx);
+
+	    if (status != E_DB_OK)
+		break;
+
+	    status = write_jnlswitch(dcb, cnf, jsx, err_code);
 
 	    if (status != E_DB_OK)
 		break;
@@ -9183,4 +9199,79 @@ LK_LOCK_KEY	*lockxkey)
     if (jsx->jsx_status & JSX_TRACE)
 	TRdisplay("%@ CPP: LK_CKP_TXN %~t %d\n",
 		20, (char*)(&lockxkey->lk_key1), lockxkey->lk_key6);
+}
+
+/*
+** for rolldb -incremental, last jnl before offline ckpt must be 
+** closed with jnlswitch record.
+*/
+static DB_STATUS
+write_jnlswitch(
+DMP_DCB		*dcb,
+DM0C_CNF	*cnf,
+DMF_JSX		*jsx,
+i4		*err_code)
+{
+    DM0J_CTX            *jnl = 0;
+    DM0L_JNL_SWITCH     jsrec;
+
+    DB_STATUS           status;
+    i4                  fil_seq, blk_seq, jnl_seq;
+    i4			node_id = -1;
+
+    if (jsx->jsx_status & JSX_TRACE)
+	TRdisplay("%@ CPP: Write eof for database %~t to journal %d\n",
+	    sizeof(DB_DB_NAME), &dcb->dcb_name, jnl_seq);
+
+    for (;;)
+    {
+	if (CXcluster_enabled())
+	{
+	    node_id = dmf_svcb->svcb_lctx_ptr->lctx_node_id;
+
+	    fil_seq = cnf->cnf_jnl->jnl_node_info[node_id].cnode_fil_seq;
+	    blk_seq = cnf->cnf_jnl->jnl_node_info[node_id].cnode_blk_seq;
+	}
+	else
+	{
+	    fil_seq = cnf->cnf_jnl->jnl_fil_seq;
+	    blk_seq = cnf->cnf_jnl->jnl_blk_seq;
+	}
+
+        status = dm0j_open(0, (char *)&dcb->dcb_jnl->physical, 
+			dcb->dcb_jnl->phys_length,
+                        &dcb->dcb_name, cnf->cnf_jnl->jnl_bksz,
+                        fil_seq, cnf->cnf_jnl->jnl_ckp_seq,
+                        blk_seq + 1, DM0J_M_WRITE, node_id,
+                        DM0J_FORWARD, (DB_TAB_ID *)0,
+                        (DM0J_CTX **)&jnl, err_code);
+        if (status != E_DB_OK)
+            break;
+
+        MEfill(sizeof(jsrec), 0, (char *)&jsrec);
+        jsrec.js_header.length = sizeof(DM0L_JNL_SWITCH);
+        jsrec.js_header.type = DM0LJNLSWITCH;
+        jsrec.js_header.database_id = dcb->dcb_id;
+        TMget_stamp((TM_STAMP *)&jsrec.js_time);
+
+        status = dm0j_write(jnl, (PTR)&jsrec, *(i4 *)&jsrec, err_code);
+        if (status != E_DB_OK)
+            break;
+
+        status = dm0j_update(jnl, &jnl_seq, err_code);
+	if (status != E_DB_OK)
+	    break;
+
+        status = dm0j_close(&jnl, err_code);
+	if (status != E_DB_OK)
+	    break;
+
+        return(E_DB_OK);
+    }
+
+    if (jnl)
+    {
+        status = dm0j_close(&jnl, err_code);
+    }
+    return(E_DB_ERROR);
 }
