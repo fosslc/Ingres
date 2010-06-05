@@ -149,8 +149,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 3,50,1000,117
- PRODUCTVERSION 3,50,1000,117
+ FILEVERSION 3,50,1000,118
+ PRODUCTVERSION 3,50,1000,118
  FILEFLAGSMASK 0x3L
 #ifdef _DEBUG
  FILEFLAGS 0x23L
@@ -167,10 +167,10 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ingres Corp."
             VALUE "FileDescription", "Ingres 32 Bit ODBC Driver"
-            VALUE "FileVersion", "3.50.1000.0117"
+            VALUE "FileVersion", "3.50.1000.0118"
             VALUE "LegalCopyright", "Copyright © 2010 Ingres Corp."
             VALUE "ProductName", "Ingres ODBC Driver"
-            VALUE "ProductVersion", " 3.50.1000.0117"
+            VALUE "ProductVersion", " 3.50.1000.0118"
         END
     END
     BLOCK "VarFileInfo"
