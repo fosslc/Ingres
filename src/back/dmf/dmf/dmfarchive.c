@@ -519,6 +519,10 @@
 **      02-Apr-2010 (hweho01) SIR 122757
 **          Add dmf_setup_directio() call into dma_prepare(), so 
 **          the parameters will be initialized in the server startup. 
+**      15-Apr-2010 (horda03) B123583
+**          On a Clustered Ingres installation, the restart after a crash
+**          will keep JOURNAL locks on DBs that had TXs recovered from
+**          the local TX log file.
 **/
 
 /*
@@ -4045,9 +4049,19 @@ ACB	    	*acb)
 **	neither. Therefore, the CSP archiving routines call this routine to
 **	mark the database as closed and remove it from the logging system.
 **
+**      Note: The way the LG events raised for a DB will depend on whether the
+**      recovery is occuring from the local TX log file or from a TX log file for
+**      one of the other nodes.
+**
 ** History:
 **	20-sep-1993 (bryanp)
 **	    Created to solve some cluster archiving problems.
+**      15-Apr-2010 (horda03) B123583
+**          If the recovery is for the local node then the RCP server has acquired
+**          an OPEN_DB and JOURNAL lock on the DB, so need to signal that recovery
+**          of the DB has completed (LG_A_DBRECOVER) so that these locks will be
+**          released. If the DB is being recovered via a TX log file from another
+**          node, then these locks haven't been taken, so the DB can be closed.
 */
 static DB_STATUS
 mark_fully_closed( ACB *acb, DBCB *dbcb)
@@ -4137,7 +4151,15 @@ mark_fully_closed( ACB *acb, DBCB *dbcb)
 
 	if (dbcb->dbcb_int_db_id != 0)
 	{
-	    if (cl_status = LGalter(LG_A_CLOSEDB, (PTR)&dbcb->dbcb_int_db_id,
+            /* If this is for the local node then the RCP will have
+            ** a JOURNAL lock on the DB, so let it complete the
+            ** CLOSEDB after the locks are released, otherwise just
+            ** close the DB
+            */
+            i4 alter_flag = (acb->acb_node_id == CXnode_number(NULL)) ?
+                                LG_A_DBRECOVER : LG_A_CLOSEDB;
+
+	    if (cl_status = LGalter(alter_flag, (PTR)&dbcb->dbcb_int_db_id,
 			sizeof(dbcb->dbcb_int_db_id), &sys_err))
 	    {
 		uleFormat(NULL, cl_status, &sys_err, ULE_LOG, NULL,
