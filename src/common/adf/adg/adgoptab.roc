@@ -283,6 +283,9 @@
 **	    being a new function.
 **	18-Mar-2010 (kiria01) b123438
 **	    Added SINGLETON aggregate for scalar sub-query support.
+**      19-apr-2010 (huazh01) 
+**          change the definition of SINGLETON aggregate from 
+**          ADI_NORM_FUNC to ADI_AGG_FUNC. (b123597)
 **/
 
 
@@ -1051,7 +1054,7 @@ GLOBALDEF   const	ADI_OPRATION    Adi_2RO_operations[] = {
 	DB_SQL|DB_QUEL,     ADI_INGRES_6                 ,  
 		ADO_ASIN_CNT,  		    ADZ_ASIN_FIIDX},
 
-{ {"singleton"},	ADI_SINGLETON_OP,   ADI_NORM_FUNC,  ADI_PREFIX,
+{ {"singleton"},	ADI_SINGLETON_OP,   ADI_AGG_FUNC,  ADI_PREFIX,
 	DB_SQL|DB_QUEL,     ADI_INGRES_6                 ,  
 		ADO_SINGLETON_CNT,  	    ADZ_SINGLETON_FIIDX},
 
