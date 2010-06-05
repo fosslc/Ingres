@@ -4,7 +4,4 @@
 
 IISUBSYS front frontcl files_unix ;
 
-IIFILES dayfile.dst ii_interface.jbl ingmfcobol rcingsetperm rcingstartup ;
-
-IIFILE dayfile : dayfile.dst ;
-
+IIFILES ii_interface.jbl ingmfcobol rcingsetperm rcingstartup ;

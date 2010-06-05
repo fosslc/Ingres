@@ -45,6 +45,10 @@
 #	15-Mar-2010 (hanje04)
 #	    SIR 123296
 #	    Add rfm file for LSB build
+#	22-Apr-2010 (hanje04)
+#	    SIR 123609
+#	    Add help to dayfile.dst and move to frontcl!files from platform
+#	    specific directories.
 
 
 SubDir ING_SRC front frontcl files ;
@@ -119,6 +123,11 @@ IIFILE eqsqlcd.for : eqsqlcd_for.w32 ;
 if ! $(VMS)
 {
     IILIBINGRES INGRESLIB ;
+    IIRemRCComments $(INGFILES)$(DFS)dayfile.dst : dayfile.dst ;
+}
+else
+{
+    IIRemRCComments $(INGFILES)$(DFS)dayfile : dayfile.dst ;
 }
 
 if $(NT)

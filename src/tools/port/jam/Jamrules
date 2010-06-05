@@ -1391,6 +1391,10 @@
 #	    Xerces library versions.
 #       27-Nov-2008 (horda03)
 #           Ensure the SIG directory exists when building IISIGEXE's.
+#	28-Apr-2010 (hanje04)
+#	    SIR 123609
+#	    Fix actions IIRemRCComments for VMS so it can be used to process
+#	    dayfile.dst
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -9121,7 +9125,7 @@ actions quietly IISedShellVMS
 
 actions IIRemRCComments
 {
-$(AWK) "
+$(PIPE) $(AWK) "
     /^##[ \t]/ || /^##$/ { next }
     { print }
 " $(>) > $(<)

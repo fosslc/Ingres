@@ -12,4 +12,4 @@ IISUBSYS front frontcl files_vms ;
 
 IIFILES vt100f.map vt100i.map vt100nk.map vt200i.map vt220.map 
 	equel.noshare equel.opt esql.noshare esql.opt iiapi.noshare iiapi.opt
-	dayfile startup startsql abfdyn.opt abflnk.opt oslhdr.h ;
+	startup startsql abfdyn.opt abflnk.opt oslhdr.h ;

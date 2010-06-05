@@ -10,8 +10,6 @@ IIFILES abfdyn.opt
 	abfdyn64.opt
 	abflnk.opt
 	abflnk64.opt
-	dayfile
-	dayfile.dst
 	oslhdr.h
 	oslhdr64.h
 	startsql
