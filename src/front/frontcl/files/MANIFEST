@@ -49,6 +49,8 @@
 #	    SIR 123609
 #	    Add help to dayfile.dst and move to frontcl!files from platform
 #	    specific directories.
+#	03-May-2010 (drivi01)
+#	    Build dayfile.dst to II_SYSTEM\ingres\files\dayfile on Windows.
 
 
 SubDir ING_SRC front frontcl files ;
@@ -123,6 +125,10 @@ IIFILE eqsqlcd.for : eqsqlcd_for.w32 ;
 if ! $(VMS)
 {
     IILIBINGRES INGRESLIB ;
+}
+
+if $(UNIX)
+{
     IIRemRCComments $(INGFILES)$(DFS)dayfile.dst : dayfile.dst ;
 }
 else
