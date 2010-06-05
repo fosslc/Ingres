@@ -428,6 +428,8 @@ static	STATUS	gcn_ip_auth( GCS_IP_PARM * );
 **          Added E_GC0173_GCN_HOSTNAME_MISMATCH informational message to
 **          report difference between local hostname and config.dat
 **          '.local_vnode' value. 
+**      28-Apr-10 (ashco01) Bug: 123645 & 123551
+**          Change hostname comparison to case insensitive comparison.
 */	
 
 i4
@@ -687,7 +689,7 @@ char 	**argv;
         STncpy( lvn_value, buf, GCN_TYP_MAX_LEN );
 
     /* compare them */
-    if ( STcompare( IIGCn_static.hostname, lvn_value ) != 0) 
+    if ( STbcompare( IIGCn_static.hostname, 0, lvn_value, 0, TRUE ) ) 
     {
         /* Mismatch - Log informational message */
         earg[0].er_value = ERx(IIGCn_static.hostname);
