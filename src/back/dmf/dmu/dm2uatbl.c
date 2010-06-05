@@ -339,6 +339,9 @@ static DB_STATUS    pt_adddrop_adjust(
 **		Add support for geospatial
 **	30-Dec-2009 (gupsh01, dougi)
 **	    Add alter table rename tables and columns support.
+**	26-Apr-2010 (gupsh01) SIR 123444
+**	    In case of column rename updated the attribute name
+**	    of dependent indexes.
 */
 
 DB_STATUS
@@ -1222,6 +1225,8 @@ DB_ERROR	*dberr)
 	    }
 	    else if ( operation == DMU_C_ALTCOL_RENAME ) /* ALTER TABLE RENAME COLUMN */
 	    {
+	      DMP_TCB *it;
+
 	      for (i = 1; i <= t->tcb_rel.relatts; i++)
               {
 		  MEmove(t->tcb_atts_ptr[i].attnmlen,
@@ -1253,7 +1258,6 @@ DB_ERROR	*dberr)
                   break;
 
 	      for (;;)
-
               {
 	          /* Get the iiattribute record */
                   status = dm2r_get(attr_rcb, &attrtid, DM2R_GETNEXT,
@@ -1302,6 +1306,88 @@ DB_ERROR	*dberr)
                       break;
                   }
 	      } /* end for ;; */
+
+	      /* Fix the attribute names for any secondry indexes */
+	      for (it = t->tcb_iq_next;
+        		it != (DMP_TCB*) &t->tcb_iq_next;
+        		it = it->tcb_q_next)
+    	      {
+		bool 		found = FALSE;
+		DB_TAB_ID	index_id;
+
+		for (i = 0; i <= t->tcb_rel.relatts; i++)
+                {
+                  MEmove(it->tcb_atts_ptr[i].attnmlen,
+                    it->tcb_atts_ptr[i].attnmstr,
+                    ' ', DB_ATT_MAXNAME, tmpattnm.db_att_name);
+
+                  if (MEcmp(tmpattnm.db_att_name,
+                           (PTR)&attr_entry[0]->attr_name,
+                                sizeof(DB_ATT_NAME) ) == 0)
+                  {
+		    found = TRUE; /* keyed on renamed attribute */
+                    break;
+                  }
+                }
+
+		if (found)
+		{ 
+                   key_desc[1].attr_operator = DM2R_EQ;
+                   key_desc[1].attr_number = DM_2_ATTRIBUTE_KEY;
+                   key_desc[1].attr_value = (char *) &it->tcb_rel.reltid.db_tab_index;
+
+	           status = dm2r_position(attr_rcb, DM2R_QUAL, key_desc, (i4)2,
+                                      (DM_TID *)0, dberr);
+                   if (status != E_DB_OK)
+                     break;
+
+		   for (;;)
+		   {
+	             /* Get the iiattribute record for this index */
+                      status = dm2r_get(attr_rcb, &attrtid, DM2R_GETNEXT,
+                                     (char *)&attrrecord, dberr);
+                      if (status == E_DB_OK)
+                      {
+                        if ((attrrecord.attrelid.db_tab_base == table_id.db_tab_base) &&
+                            (attrrecord.attrelid.db_tab_index == it->tcb_rel.reltid.db_tab_index) 
+			    )
+		        { 
+			  if (MEcmp((PTR) &(attr_entry[0]->attr_name.db_att_name), 
+					(PTR) &(attrrecord.attname), 
+					sizeof(DB_ATT_NAME)) == 0 )
+			  {
+			    /* substitue the column name. */
+                            MEcopy((PTR)&attrrecord, sizeof(DMP_ATTRIBUTE), (PTR)&attrrecord_tmp);
+                            STRUCT_ASSIGN_MACRO(attr_entry[1]->attr_name,
+                                        attrrecord_tmp.attname);
+                            status = dm2r_replace(attr_rcb, &attrtid,
+                                          DM2R_BYPOSITION, (char *)&attrrecord_tmp,
+                                          (char *)0, dberr);
+                            if (status != E_DB_OK)
+                            {
+                               uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG,
+                                           NULL, (char *)NULL, (i4)0,
+                                           (i4 *)NULL, &local_error, 0);
+			       SETDBERR(&log_err, 0, E_DM9028_ATTR_UPDATE_ERR);
+                               break;
+                            }
+		            error = 0;
+			    status = E_DB_OK;
+			  } 
+		        } 
+		    }
+		    else
+                    {
+		      if (dberr->err_code == E_DM0055_NONEXT)
+                      {
+                          status = E_DB_OK;
+                          CLRDBERR(dberr);
+                      }
+                      break;
+                    }
+	          } /* go through attribute records for this index */
+		} /* Done with the index */
+    	      }
 	    }
 	    else if ( operation == DMU_C_ALTTBL_RENAME ) /* ALTER TABLE RENAME TO ... */
 	    {
