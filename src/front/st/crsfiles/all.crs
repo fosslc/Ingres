@@ -260,6 +260,8 @@
 --#         to use "iinethost -local" for that setting.     
 --#         Since VMS already uses iigetsyi to generate the host name,     
 --#         add "#else" before the statement.     
+--#	08-Jan-2010 (thaju02) Bug 123336
+--#	    Add (PROG4PRFX).*.config.svr_slots.
 --#	23-Mar-2010 (hanje04)
 --#	    SIR 123296
 --#	    Use full path when calling syscheck on UNIX
@@ -741,4 +743,7 @@
 (PROG4PRFX).*.setup.charset.wthai  :	"Windows Thai";
 (PROG4PRFX).*.setup.charset.koi8:	"Windows Russian (Cyrillic)";
 (PROG4PRFX).*.setup.charset.utf8:	"UTF-8";
+#ifdef UNIX
+(PROG4PRFX).*.config.svr_slots:         32, MIN = 32, MAX = 128;
+#endif /* UNIX */
 
