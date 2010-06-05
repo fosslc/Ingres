@@ -812,6 +812,9 @@ static bool   set_role=FALSE;
 **          generated file, cause it was erroneously omitted so far.
 **	 28-Mar-2010 (gupsh01) B123444
 **	    Added Alter table rename table/column .. and rename parsing.
+**       23-Apr-2010 (smeke01) b123626
+**          Added explicit derived_table production to enable a derived table
+**          to appear on the right hand side of a join operator.
 **
 ** Rules to apply when writing new grammar parts:
 **
@@ -4207,7 +4210,9 @@ from_source:	from_item
 		{
 		    $$.i = FRM_JOIN;
 		}
-	|	sql_lparen select_full sql_rparen dt_corr
+;
+
+derived_table:	sql_lparen select_full sql_rparen dt_corr
 		{
 		    $$.i = $2.i;
 		}
@@ -4231,6 +4236,10 @@ from_item:	own_tbl_corr
 	|	sql_lparen from_source sql_rparen
 		{
 		    $$.i = $2.i;
+		}
+	|	derived_table
+		{
+		    $$.i = $$.i;
 		}
 ;
 opt_tproc_spec:	/* Nothing ... */
