@@ -1,11 +1,12 @@
 /*
-** Copyright (c) 2003, 2009 Ingres Corporation.
+** Copyright (c) 2003, 2010 Ingres Corporation.
 */
 
 #include <compat.h>
 #include <gl.h>
 #include <er.h>
 #include <me.h>
+#include <pc.h>
 #include <sp.h>
 #include <mo.h>
 #include <si.h>
@@ -64,6 +65,8 @@
 **	    Compiler warning fixes.
 **	21-Jul-09 (gordy)
 **	    Remove username length restrictions.
+**	22-Apr-10 (rajus01) SIR 123621
+**	    Display process ID.
 */
 
 /*
@@ -1977,6 +1980,8 @@ build_rsltlst( QUEUE *rsltlst_q, char *msg_buff, i4 max_len  )
 **
 ** History:
 **	 08-Jul-04 (wansh01) 
+**	22-Apr-10 (rajus01) SIR 123621
+**	    Display process ID.
 */
 
 static void 
@@ -1984,6 +1989,9 @@ rqst_show_server( GCC_SESS_CB *sess_cb, PTR scb )
 {
     int i=0;
     i4	max_len = 0;
+    PID proc_id; 
+
+    PCpid( &proc_id );
 
     STprintf( sess_cb->msg_buff,
 		"     Server:     %s " ,IIGCc_global->gcc_lcl_id );
@@ -1995,6 +2003,10 @@ rqst_show_server( GCC_SESS_CB *sess_cb, PTR scb )
                              sess_cb->msg_buff, max_len );
 
     STprintf( sess_cb->msg_buff,"     Object:     %s " , "*" );
+    max_len = build_rsltlst( &sess_cb->rsltlst_q,
+                             sess_cb->msg_buff, max_len );
+
+    STprintf( sess_cb->msg_buff,"     Pid:        %d " , proc_id );
     max_len = build_rsltlst( &sess_cb->rsltlst_q,
                              sess_cb->msg_buff, max_len );
 

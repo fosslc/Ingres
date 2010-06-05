@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1987, 2009 Ingres Corporation All Rights Reserved.
+** Copyright (c) 1987, 2010 Ingres Corporation All Rights Reserved.
 */
 
 #include    <compat.h>
@@ -438,6 +438,9 @@
 **	    Remove string length restrictions.
 **      09-Feb-2010 (smeke01) b123226, b113797 
 **	    MOlongout/MOulongout now take i8/u_i8 parameter.
+**	22-Apr-10 (rajus01) SIR 123621
+**	    After a successful network open request update PIB with 
+**	    the actual_port_id. 
 */
 
 
@@ -1571,6 +1574,9 @@ gcc_tl_registry()
 **          incremented (Example: II1, II2) in the startup messages, while the
 **          actual portnumber is increasing and printed correctly.
 **	    Log the actual_port_id for a successful network open request.
+**	22-Apr-10 (rajus01) SIR 123621
+**	    After a successful network open request update PIB with 
+**	    the actual_port_id. 
 */
 
 static VOID
@@ -1987,9 +1993,12 @@ gcc_tl_exit( PTR ptr )
 	    if ( ! STcompare( pib->addr, pib->port ) )
 		STcopy( pib->addr, port );
 	    else if( p_list->function_parms.open.actual_port_id != NULL )
+	    {
 		/* Use the actual symbolic listen port in the error messages.*/
                    STprintf( port, "%s (%s)",
                        p_list->function_parms.open.actual_port_id, pib->port );
+		   STcopy(p_list->function_parms.open.actual_port_id, pib->addr );
+	    }
 	    else
                    STprintf( port, "%s (%s)",
                        p_list->function_parms.open.port_id, pib->port );

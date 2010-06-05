@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004, 2008 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include <compat.h>
@@ -72,6 +72,9 @@
 **          ports to TLA_OCMP state to match equivalent on the GCC.
 **      09-Feb-2010 (smeke01) b123226, b113797 
 **	    MOlongout/MOulongout now take i8/u_i8 parameter.
+**      22-Apr-10 (rajus01) SIR 123621
+**          After a successful network open request update PIB with
+**          the actual_port_id.
 */	
 
 /*
@@ -1300,6 +1303,9 @@ gcc_complete( PTR ptr )
 **	    actual portnumber is increasing and printed correctly. This problem
 **	    in all of the GC[B|C|D] servers.
 **	    Log the actual_port_id for a successful network open request. 
+**      22-Apr-10 (rajus01) SIR 123621
+**          After a successful network open request update PIB with
+**          the actual_port_id.
 */
 
 static void
@@ -1408,8 +1414,11 @@ gcc_sm( GCD_RCB *rcb )
 	    if ( ! STcompare( pib->addr, pib->port ) )
 		STcopy( pib->addr, port );
             else if( p_list->function_parms.open.actual_port_id != NULL )
+	    {
 		STprintf( port, "%s (%s)", 
 		    p_list->function_parms.open.actual_port_id, pib->port );
+		STcopy(p_list->function_parms.open.actual_port_id, pib->addr );
+	    }
 	    else
 		STprintf( port, "%s (%s)", pib->addr, pib->port );
 

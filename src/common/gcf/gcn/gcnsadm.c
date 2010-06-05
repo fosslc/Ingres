@@ -1,5 +1,5 @@
 /* 
-** Copyright (c) 2003, 2009 Ingres Corporation.
+** Copyright (c) 2003, 2010 Ingres Corporation.
 */
 
 #include <compat.h>
@@ -7,6 +7,7 @@
 #include <gl.h>
 #include <er.h>
 #include <me.h>
+#include <pc.h>
 #include <sp.h>
 #include <mo.h>
 #include <si.h>
@@ -64,6 +65,8 @@
 **	    ever reached.
 **	11-Aug-09 (gordy)
 **	    Remove string length restrictions.
+**      22-Apr-10 (rajus01) SIR 123621
+	    Display process ID.
 */
 
 
@@ -1453,6 +1456,8 @@ adm_exit_cb( PTR ptr )
 **	 22-Jun-06 (rajus01)
 **	    Formatted display o/p by 'show server' command to make it similar
 **	    to DBMS server display o/p. Implemented REGISTER SERVER command.
+**      22-Apr-10 (rajus01) SIR 123621
+** 	    Display process ID.          
 */
 
 static void
@@ -1462,9 +1467,11 @@ rqst_show_server( GCN_SESS_CB *sess_cb, PTR scb )
     i4		usr_sess_cnt;
     i4		sys_sess_cnt;
     i4		max_len = 0;
+    PID		proc_id;
 
     usr_sess_cnt = gcn_sess_info( NULL, GCN_USER_COUNT );
     sys_sess_cnt = gcn_sess_info( NULL, GCN_SYS_COUNT );
+    PCpid( &proc_id );
 
     switch( IIGCn_static.registry_type )
     {
@@ -1487,6 +1494,10 @@ rqst_show_server( GCN_SESS_CB *sess_cb, PTR scb )
     STprintf( sess_cb->msg_buff, "     Object:     %s ", "*" ); 
     max_len = build_rsltlst( &sess_cb->rsltlst_q, 
 			     sess_cb->msg_buff, max_len );
+
+    STprintf( sess_cb->msg_buff,"     Pid:        %d " , proc_id );
+    max_len = build_rsltlst( &sess_cb->rsltlst_q, sess_cb->msg_buff, max_len );
+
 
     max_len = build_rsltlst( &sess_cb->rsltlst_q, " ", max_len );
     max_len = build_rsltlst( &sess_cb->rsltlst_q, " Registry ", max_len );

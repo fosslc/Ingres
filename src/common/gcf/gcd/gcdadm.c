@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2003, 2009 Ingres Corporation.
+** Copyright (c) 2003, 2010 Ingres Corporation.
 */
 
 #include <compat.h>
@@ -8,6 +8,7 @@
 #include <gl.h>
 #include <er.h>
 #include <me.h>
+#include <pc.h>
 #include <sp.h>
 #include <mo.h>
 #include <pc.h>
@@ -79,6 +80,8 @@
 **	    3rd attempt after 2 successful attempts. The hang doesn't seem
 **	    to occur on other plaforms but E_GCFFFF_IN_PROCESS error gets 
 **	    logged in errlog.log.
+**      22-Apr-10 (rajus01) SIR 123621
+	    Display process ID.
 */
 
 /*
@@ -2310,6 +2313,8 @@ verify_sid( PTR  sid )
 **	08-Jul-04 (wansh01) 
 **	 5-Dec-07 (gordy)
 **	    Minor changes to client connection metrics.
+**      22-Apr-10 (rajus01) SIR 123621
+	    Display process ID.
 */
 
 static void 
@@ -2317,7 +2322,9 @@ rqst_show_server( GCD_SESS_CB *sess_cb, PTR scb )
 {
     int i=0;
     i4  max_len = 0;
+    PID proc_id;
 
+    PCpid( &proc_id );
     STprintf( sess_cb->msg_buff,"     Server:     %s " ,GCD_global.gcd_lcl_id );
     max_len = build_rsltlst( &sess_cb->rsltlst_q, sess_cb->msg_buff, max_len );
 
@@ -2325,6 +2332,9 @@ rqst_show_server( GCD_SESS_CB *sess_cb, PTR scb )
     max_len = build_rsltlst( &sess_cb->rsltlst_q, sess_cb->msg_buff, max_len );
 
     STprintf( sess_cb->msg_buff,"     Object:     %s " , "*" );
+    max_len = build_rsltlst( &sess_cb->rsltlst_q, sess_cb->msg_buff, max_len );
+
+    STprintf( sess_cb->msg_buff,"     Pid:        %d " , proc_id );
     max_len = build_rsltlst( &sess_cb->rsltlst_q, sess_cb->msg_buff, max_len );
 
     STprintf( sess_cb->msg_buff," " ); 
