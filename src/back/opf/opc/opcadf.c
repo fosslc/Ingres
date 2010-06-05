@@ -200,6 +200,8 @@ FUNC_EXTERN DB_STATUS	    adi_resolve();
 **          opc_adtransform: DB_LNLOC_TYPE is a unicode type
 **	2-Jun-2009 (kschendel) b122118
 **	    Remove dead code, unused adbase parameters.
+**	04-May-2010 (kiria01) b123680
+**	    Correct the bad stack referencing code in dt_family processing
 [@history_template@]...
 **/
 
@@ -1669,6 +1671,8 @@ opc_adtransform(
                || (resop->opr_len == OPC_UNKNOWN_LEN))
        {
        	  PTR	 dataptr = NULL;
+	  ADI_FI_DESC newfidesc;
+
 	  opptrs[0] = srcop;
 	  if (global->ops_gmask & OPS_DECCOERCION)
 		saved_prec = resop->opr_prec;
@@ -1677,11 +1681,7 @@ opc_adtransform(
 	  if ((abs(fdesc->adi_dtresult) == DB_DTE_TYPE) && 
 	      (abs_restype != DB_DTE_TYPE))
 	  {
-  		ADI_FI_DESC          oldfidesc;
-  		ADI_FI_DESC          newfidesc;
-
-  		MEcopy ((char *)fdesc, (i4) sizeof(ADI_FI_DESC), (char *)&oldfidesc);
-  		if ((ret = adi_coerce_dtfamily_resolve( global->ops_adfcb, &oldfidesc, 
+  		if ((ret = adi_coerce_dtfamily_resolve(global->ops_adfcb, fdesc, 
 				abs_srctype, abs_restype, &newfidesc)) != E_DB_OK)
 		{
 	    	  /* EJLFIX: get a better error no */

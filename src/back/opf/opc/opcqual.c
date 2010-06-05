@@ -276,6 +276,10 @@
 **	    Fix a couple new compiler warnings.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	04-May-2010 (kiria01) b123680
+**	    Use stack local copy of fi descriptor and add the missing dt_family
+**	    processing to ensure that views involving ANSI datatypes were
+**	    reconstituted correctly.
 **/
 
 /*
@@ -1410,7 +1414,7 @@ opc_cqual1(
      case PST_COP:
      case PST_MOP:
      {
-	ADI_FI_DESC	    *fi = root->pst_sym.pst_value.pst_s_op.pst_fdesc;
+	ADI_FI_DESC	    fi = *root->pst_sym.pst_value.pst_s_op.pst_fdesc;
 	i4		    opnum;  /* The number of operands used in 'ops' */
 	i4		    align;  /* used to compute the alignment of results. */
     	i4		    i;
@@ -1453,7 +1457,7 @@ opc_cqual1(
 	**  Set a flag in qp_status indicating we need to start a transaction 
 	**  to process this query
 	*/
-	if (fi->adi_fitype == ADI_NORM_FUNC
+	if (fi.adi_fitype == ADI_NORM_FUNC
 	    && (root->pst_sym.pst_value.pst_s_op.pst_opno == ADI_DBMSI_OP))
 	{
 	    /*
@@ -1472,7 +1476,7 @@ opc_cqual1(
 	** operand (note that in ADF, the zeroth operand is always for
 	** for the result operand, if there is one).
 	*/
-	if (fi->adi_fitype == ADI_COMPARISON)
+	if (fi.adi_fitype == ADI_COMPARISON)
 	{
 	    comparison = TRUE;
 	}
@@ -1521,7 +1525,7 @@ opc_cqual1(
 		    cnt++; /* count in the RHSs */
 		while (inlist = inlist->pst_left);
 		inlist = root->pst_right;
-		Pops = (ADE_OPERAND *) MEreqmem(0, sizeof(ADE_OPERAND)*cnt, FALSE, NULL);
+		Pops = (ADE_OPERAND*)MEreqmem(0, sizeof(ADE_OPERAND)*cnt, FALSE, NULL);
 		/* Generate LHS we are not interested in the const state of the
 		** LHS as the parser will not generate PST_INLIST in that case. */
 		Pops[0].opr_dt = abs(root->pst_left->pst_sym.pst_dataval.db_datatype);
@@ -1558,19 +1562,16 @@ opc_cqual1(
 	    ** The numargs check is for VARARGS user functions.
 	    */
 	    ops[opnum].opr_dt = DB_ALL_TYPE;
-	    if (i < fi->adi_numargs)
-		ops[opnum].opr_dt = fi->adi_dt[i];
+	    if (i < fi.adi_numargs)
+		ops[opnum].opr_dt = fi.adi_dt[i];
 
 	    if (ops[opnum].opr_dt == DB_ALL_TYPE)
 	    {
 		ops[opnum].opr_dt = lqnode->pst_sym.pst_dataval.db_datatype;
 	    }
-	    else
+	    else if (lqnode->pst_sym.pst_dataval.db_datatype < 0)
 	    {
-		if (lqnode->pst_sym.pst_dataval.db_datatype < 0)
-		{
-		    ops[opnum].opr_dt = -ops[opnum].opr_dt;
-		}
+		ops[opnum].opr_dt = -ops[opnum].opr_dt;
 	    }
 
 	    /* Fix for bug 42363. Check for comparison operator and if
@@ -1598,7 +1599,7 @@ opc_cqual1(
 	    /* Trick it into using reasonable scale if coercing to DECIMAL
 	    ** for a binary operation (major kludge). */
 	    if ((root->pst_sym.pst_type == PST_BOP) &&
-		(fi->adi_fitype == ADI_COMPARISON) &&
+		comparison &&
 		(!leftvisited &&
 		(abs(root->pst_right->pst_sym.pst_dataval.db_datatype) ==
 							    DB_DEC_TYPE) &&
@@ -1666,9 +1667,9 @@ opc_cqual1(
 	}
 
 	if (constexpr && !comparison &&
-		fi->adi_fitype != ADI_COMPARISON
+		fi.adi_fitype != ADI_COMPARISON
 		&&
-		!(fi->adi_fiflags & ADI_F32_NOTVIRGIN)
+		!(fi.adi_fiflags & ADI_F32_NOTVIRGIN)
 	    )
 	{
 	    /* If both the left and right trees are constant expressions and
@@ -1725,6 +1726,12 @@ opc_cqual1(
 	    {
 		ops[0].opr_dt = 
 		    root->pst_sym.pst_dataval.db_datatype;
+		/* Update temp copy lenspec if dtfamily result */
+		if (abs(fi.adi_dtresult) == DB_DTE_TYPE)
+		{
+		    adi_coerce_dtfamily_resolve(global->ops_adfcb, &fi, 
+				fi.adi_dt[0], ops[0].opr_dt, &fi);
+		}
 
 		/* This fixes for bug 93275 (ingsrv 533). Problem occurs
 		** on PST_BOP and PST_UOP with resop, if the PST_VAR for
@@ -1738,7 +1745,7 @@ opc_cqual1(
 		** Don't screw with UDF's that want exact-type params
 		** (really ought to carry the nonullskip flag in the FIdesc!)
 		*/
-		if (fi->adi_npre_instr != ADE_0CXI_IGNORE
+		if (fi.adi_npre_instr != ADE_0CXI_IGNORE
 		  && ops[0].opr_dt > 0 && opnum > 1)
 		{
 		    for (i = 1; i < opnum; ++i)
@@ -1758,13 +1765,13 @@ opc_cqual1(
 		if (opnum == 1)
 		{
 		    opc_adcalclen(global, cadf,
-			&fi->adi_lenspec,
+			&fi.adi_lenspec,
 			0, (ADE_OPERAND **)NULL, &ops[0], (PTR *)NULL);
 		}
 		else
 		{
 		    opc_adcalclen(global, cadf,
-			&fi->adi_lenspec,
+			&fi.adi_lenspec,
 			opnum-1, opsptrs, &ops[0], data);
 		}
 
@@ -5186,7 +5193,7 @@ opc_crupcurs1(
 		    cnt++; /* count in the RHSs */
 		while (inlist = inlist->pst_left);
 		inlist = root->pst_right;
-		Pops = (ADE_OPERAND *) MEreqmem(0, sizeof(ADE_OPERAND)*cnt, FALSE, NULL);
+		Pops = (ADE_OPERAND*)MEreqmem(0, sizeof(ADE_OPERAND)*cnt, FALSE, NULL);
 		/* Generate LHS we are not interested in the const state of the
 		** LHS as the parser will not generate PST_INLIST in that case. */
 		Pops[0].opr_dt = abs(root->pst_left->pst_sym.pst_dataval.db_datatype);
@@ -5220,15 +5227,11 @@ opc_crupcurs1(
 
 	    if (ops[opnum].opr_dt == DB_ALL_TYPE)
 	    {
-		ops[opnum].opr_dt = 
-			lqnode->pst_sym.pst_dataval.db_datatype;
+		ops[opnum].opr_dt = lqnode->pst_sym.pst_dataval.db_datatype;
 	    }
-	    else
+	    else if (lqnode->pst_sym.pst_dataval.db_datatype < 0)
 	    {
-		if (lqnode->pst_sym.pst_dataval.db_datatype < 0)
-		{
-		    ops[opnum].opr_dt = -ops[opnum].opr_dt;
-		}
+		ops[opnum].opr_dt = -ops[opnum].opr_dt;
 	    }
 
 	    ops[opnum].opr_offset = OPR_NO_OFFSET;
@@ -5270,14 +5273,20 @@ opc_crupcurs1(
 	}
 	else
 	{
+	    ADI_FI_DESC	fi = *root->pst_sym.pst_value.pst_s_op.pst_fdesc;
 	    ops[0].opr_dt = 
 		    root->pst_sym.pst_dataval.db_datatype;
 	    ops[0].opr_base = cadf->opc_row_base[OPC_CTEMP];
 	    ops[0].opr_offset = global->ops_cstate.opc_temprow->opc_olen;
+	    /* Update temp copy lenspec if dtfamily result */
+	    if (abs(fi.adi_dtresult) == DB_DTE_TYPE)
+	    {
+		adi_coerce_dtfamily_resolve(global->ops_adfcb, &fi, 
+			fi.adi_dt[0], ops[0].opr_dt, &fi);
+	    }
 	    
 	    /* calculate the length of the result */
-	    opc_adcalclen(global, cadf,
-		    &root->pst_sym.pst_value.pst_s_op.pst_fdesc->adi_lenspec,
+	    opc_adcalclen(global, cadf, &fi.adi_lenspec,
 		    opnum - 1, opsptrs, &ops[0], data);
 
 	    /* increase the temp results buffer to hold our new value. */
