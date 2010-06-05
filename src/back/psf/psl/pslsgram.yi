@@ -3492,6 +3492,17 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **          Changes for Long IDs
 **	14-Apr-2010 (smeke01) b123572
 **	    Improve error message handling for the call to adc_compare.
+**	11-Mar-2010 (smeke01) b123017
+**	    Merged the former derived table production, which used to split
+**	    at LPAREN, into one production, explicitly named 'derived_table' for
+**	    readability. This change enables the parser to handle any balanced
+**	    LPAREN/RPAREN pairs around the query_expr using existing 
+**	    productions. This fixes bug b123017. As a result, the state save
+**	    that used to be done at LPAREN is now done in the select production
+**	    if and only if $Yin_from_clause is TRUE. This in turn necessitated
+**	    the addition of $Yin_from_clause handling into the UPDATE version
+**	    of from (existing from_u production, and new from_word_u 
+**	    production).
 */
 %{
 
@@ -4509,7 +4520,7 @@ psl_mk_const_similar(
 %type	<psl_inttype> intconst_p month from from_word intconst_e
 %type	<psl_inttype> interval_type interval_junk2
 %type	<psl_inttype> crl_tbl_stmt_list crl_tbl_stmt 
-%type	<psl_varmap>  from_list_item joined_table qualified_join 
+%type	<psl_varmap>  from_list_item joined_table qualified_join derived_table
 %type	<psl_varmap>  cross_join natural_join table_proc
 %type	<psl_inttype> intsetparam setjint parconst
 %type	<psl_inttype> timeofday distinct int2_int4 int2_int4_p
@@ -29713,6 +29724,25 @@ select:			SELECT
 	PSS_J_QUAL	       *join_qual;
 	DB_STATUS              status;
 
+	if ($Yin_from_clause)
+	{
+	    /* 
+	    ** We are in a from-clause, and now we've seen a SELECT, so this is
+	    ** a derived table. We need to push the state of the outer statement 
+	    ** and get new state variables for the derived table/inner select. 
+	    */
+	    $Ysave_pss_rsdmno[cb->pss_qualdepth] = cb->pss_rsdmno;
+	    $Ysave_psq_mode = psq_cb->psq_mode;
+	    status = psl_push_yyvars(psq_cb, cb, yyvarspp);
+	    if (DB_FAILURE_MACRO(status))
+		return(status);
+	    yyvarsp = *yyvarspp;
+	}
+
+	/*
+	** If we were processing a join_search condition, subselects are
+	** presently disallowed
+	*/
 	if ($Yin_orderby &&
 		    ($Ynonupdt_reason & PSS_UNION_IN_OUTERMOST_SUBSEL))
 	{
@@ -30213,18 +30243,25 @@ optional_as:	AS
 	|
 ;
 
-from_u:			FROM from_list
+from_u:			from_word_u from_list
     {
 	/*
 	** we have to remove vars appearing in this FROM list from the
 	** $Yjoin_tbls to allow for correlated queries.
 	*/
 	BTclearmask(BITS_IN(PST_J_MASK), (char *) &$Yflists[cb->pss_qualdepth], (char *) &$Yjoin_tbls);
+	$Yin_from_clause = FALSE;
 
 	cb->pss_stmt_flags |= PSS_XTABLE_UPDATE;
 
     }
 		|
+;
+
+from_word_u:		FROM
+    {
+	$Yin_from_clause = TRUE;
+    }
 ;
 
 from:			from_word from_list
@@ -30640,25 +30677,28 @@ from_list_item:	    obj_spec corr_name
 
 	$$ = mask;
     }
-	|	LPAREN
+	|	derived_table
     {
-	DB_STATUS	status;
-
-	$Ysave_pss_rsdmno[cb->pss_qualdepth] = cb->pss_rsdmno;
-	$Ysave_psq_mode = psq_cb->psq_mode;
-	status = psl_push_yyvars(psq_cb, cb, yyvarspp);
-	if (DB_FAILURE_MACRO(status))
-	    return(status);
-	yyvarsp = *yyvarspp;
+	$$ = $1;
     }
-		query_expr RPAREN corr_name1 dcollist
+	|	joined_table
+    {
+	$$ = $1;
+    }
+	|	table_proc
+    {
+	$$ = $1;
+    }
+;
+
+derived_table:	LPAREN query_expr RPAREN corr_name1 dcollist
     {
 	PST_J_MASK	*mask;
 	DB_STATUS	status;
 	PSS_RNGTAB	*resrange;
 
 	status = psl_drngent(&cb->pss_auxrng, cb->pss_qualdepth, 
-		$5, cb, &resrange, $3, PST_DRTREE, &psq_cb->psq_error);
+		$4, cb, &resrange, $2, PST_DRTREE, &psq_cb->psq_error);
 
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
@@ -30769,14 +30809,6 @@ from_list_item:	    obj_spec corr_name
 	BTor(PST_NUMVARS, (char *)mask, (char *)&$Yjoin_tbls);
 
 	$$ = mask;
-    }
-	|	joined_table
-    {
-	$$ = $1;
-    }
-	|	table_proc
-    {
-	$$ = $1;
     }
 ;
 
