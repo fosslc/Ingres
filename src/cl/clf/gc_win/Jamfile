@@ -29,9 +29,10 @@ IILIBRARY COMPATLIB : win_tcp.c
 	gcccl.c
 	gcatrace.c
 	gcaclw95.c
+	gcarw.c
 	gcacl.c ;
 
-IILIBRARY IMPCOMPATLIBDATA : gcdata.c	gccptbl.c ;
+IILIBRARY IMPCOMPATLIBDATA : gcdata.c ;
 
 IIRCTORES gcpasswd.rc ;
 IICPEXE $(INGLIB)/gcpasswd.res : gcpasswd.res ;

@@ -87,11 +87,27 @@
 **	    large enough for worst case maximum length user and host names.
 **	    Add ClientSysUserName to ASSOC_IPC; for named pipes, this is the
 **	    pipe owner.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Add support for net drivers like "tcp_ip" as local IPC.
+**	    Add GCC_P_PLIST structure to ASYNC_IOCB to enable calling GCC
+**	    network protocol drivers, such as tcp_ip, rather than using
+**	    named pipes.
+**	    Add pointer (GCA_GCB *gca_gcb) in ASSOC_IPC to GCB association
+**	    control block allocated when using drivers and required for
+**	    multiplexing gcacl association channels (normal and expedited)
+**	    over a single network connection.
+**	    Add FUNC_EXTERNs for GCDriver* functions.  Add include for gcarw.h.
+**	    Add versions 0 & 1 of peer info message for backward compat in
+**	    direct connect to older (Ingres r3/2006 and later) systems on
+**	    Linux or Unix on Intel-compatible machines.  Also make prefix
+**	    filler for peer info message larger (2 -> GCA_CL_HDR_SZ) for
+**	    use by lower GC CL layers.
 */
 
 #include <cs.h>
 #include <gl.h>
 #include <sl.h>
+#include "gcarw.h"
 
 /*
 ** Defines for Asynchronous Events.
@@ -104,6 +120,10 @@
 #define GCC_COMPLETE    2
 #define SYNC_EVENT      3
 #define TIMEOUT     	4	/* Timeout event */
+
+/*
+**  PIPES defines, structures, etc
+*/
 
 #define MAXPIPENAME     80
 
@@ -197,8 +217,49 @@ typedef struct IPC_INT_
 **	    Change max message size (see buf[]) from 512 to 1024 to agree
 **	    with Unix and original intent for Windows.  512 is not quite
 **	    large enough for worst case maximum length user and host names.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Add versions 0 & 1 of peer info message to enable backward
+**	    compatibility with Ingres r3/2006 and later releases for
+**	    direct connect from Linux or other direct=connect-compatible
+**	    Unix installations.
 **
 ******************************************************************************/
+
+/*
+** Name: GC_OLD_ASSOC
+**
+** Description:
+**	Original information exchanged upon connection when included
+**	with GCA peer info.
+*/
+
+typedef struct _GC_OLD_ASSOC
+{
+    char        user_name[32];
+    char        account_name[32];
+    char        access_point_id[32];
+}   GC_OLD_ASSOC;
+
+/*
+** Name: GC_PEER_ORIG
+**
+** Description:
+**	Peer info from the olden days when GC{send,recv}peer() 
+**	existed and GCA and CL peer info were combined.
+*/
+
+typedef struct _GC_PEER_ORIG
+{
+    GC_OLD_PEER		gca_info;
+    GC_OLD_ASSOC	gc_info;
+}   GC_PEER_ORIG;
+
+/*
+** Name: CONNECT_orig
+**
+** Description:
+**	Original information exchanged upon connection on Windows
+*/
 
 typedef struct _CONNECT_orig
 {
@@ -208,6 +269,37 @@ typedef struct _CONNECT_orig
 	char  account[127];
 	char  access_point[127];
 } CONNECT_orig;
+
+/*
+** Name: GC_RQ_ASSOC#
+**
+** Description:
+**	Information exchanged upon connection
+**	- supercedes prior formats
+**	- V0 and V1 sent only on Unix/Linux, but supported inbound
+**	  on Windows for direct connect from compatible (Intel-based)
+**	  Unix/Linux systems.
+**	- V2 sent on both Unix/Linux and Windows (when long-names
+**	  support added).
+*/
+
+typedef struct _GC_RQ_ASSOC0
+{
+    i4		length;
+    i4		id;
+    i4		version;
+    char	host_name[ 32 ];
+    char	user_name[ 32 ];
+    char	term_name[ 32 ];
+
+} GC_RQ_ASSOC0;
+
+typedef struct _GC_RQ_ASSOC1
+{
+    GC_RQ_ASSOC0	rq_assoc0;
+    i4			flags;
+
+} GC_RQ_ASSOC1;
 
 typedef struct _GC_RQ_ASSOC2
 {
@@ -229,6 +321,8 @@ typedef struct _GC_RQ_ASSOC2
 typedef union _CONNECT
 {
     CONNECT_orig	v_orig;
+    GC_RQ_ASSOC0	v0;
+    GC_RQ_ASSOC1	v1;
     GC_RQ_ASSOC2	v2;
 
     /*
@@ -242,7 +336,9 @@ typedef union _CONNECT
 
 #define GC_RQ_ASSOC_ID	0x47435251	/* 'GCRQ' (ascii big-endian) */
 
-#define GC_ASSOC_V2	2		/* +Names variable length */
+#define GC_ASSOC_V0	0
+#define GC_ASSOC_V1	1		/* Added flags */
+#define GC_ASSOC_V2	2		/* Names variable length */
 
 #define GC_RQ_REMOTE	0x01		/* Flags: Direct remote connection */
 
@@ -252,10 +348,27 @@ typedef union _CONNECT
 **
 ** Description:
 **      This structure is used only within gcacl.c. It stores all
-**  the information necessary to communicate via named pipes.
+**  the information necessary to communicate via named pipes or gcc protocol
+**  (such as tcp_ip).
 **  The information is on a per-association basis.
 **
+** History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Add pointer (GCA_GCB *gca_gcb) in ASSOC_IPC to GCB association
+**	    control block allocated when using drivers and required for
+**	    multiplexing gcacl association channels (normal and expedited)
+**	    over a single network connection.
+**	    Increase size of filler prefix to CONNECT peer info message
+**	    area to allow lower layers (GCA CL, GCC CL tcp_ip protocol
+**	    driver) to add their information.  GCA_CL_HDR_SZ is the
+**	    standard size allowed for this by GCA.
+**	    Add new pointer to ASYNC_IOCBs(4 => 1 for each pipe).  These
+**	    are now allocated once at the start of a connection and freed
+**	    at disconnect so that they don't have to be allocated and
+**	    freed for each send and receive.
+**
 ******************************************************************************/
+typedef struct _ASYNC_IOCB ASYNC_IOCB;	/* Forward reference */
 
 typedef struct _ASSOC_IPC
 {
@@ -272,17 +385,25 @@ typedef struct _ASSOC_IPC
         HANDLE    hDisconnThread; 
         i4        asyncIoPending;
         SVC_PARMS *Disconn_svc_parms;
-        CONNECT   connect;
+	ULONG     connect_recv_numxfer;
+	char      connect_GCdriver_recv_prefix[GCA_CL_HDR_SZ];  /* MUST precede connect */
+        CONNECT   connect;	/* peer info received from client */
         i4        flags;
-# define GC_IPC_LISTEN  1
-# define GC_IPC_DISCONN 2
-# define GC_IPC_NETCOMPL 4
+# define GC_IPC_LISTEN    1
+# define GC_IPC_DISCONN   2
+# define GC_IPC_NETCOMPL  4
+# define GC_IPC_IS_REMOTE 8	/* connecting client is remote */
         IPC_INT   IpcInternal;
         HANDLE    ClientReadHandle;
 	HANDLE 	  hPurgeSemaphore;
         UINT      timer_event;
         ASYNC_TIMEOUT *async_timeout;
 	char      *ClientSysUserName; /* For listen, client username per OS */
+	GCA_GCB   *gca_gcb;	/* association struct for using drivers */
+	ASYNC_IOCB *iocbs;	/* ptr to iocbs for send/recv on each chan */
+# define GC_IOCB_SEND	0
+# define GC_IOCB_RECV	1
+	ASYNC_IOCB *connect_iocb; /* ptr to driver iocb for connect */
         SL_LABEL  sec_label;
         char      sec_label_pad[SL_MAX_EXTERNAL - sizeof(SL_LABEL)]; 
 } ASSOC_IPC;
@@ -305,6 +426,7 @@ typedef struct _ASYNC_IOCB
 #define	GC_IO_TIMEOUT	0x0004
 #define	GC_IO_CREATED	0x0008
         DWORD      lstnthread;
+	GCC_P_PLIST gcccl_parmlist;	/* Parmlist to GCC protocol driver */
 } ASYNC_IOCB;
 
 
@@ -339,3 +461,7 @@ FUNC_EXTERN DWORD  GCconnectToStandardPipes(ASSOC_IPC *);
 FUNC_EXTERN HANDLE GCconnectToServer(ASSOC_IPC *, char *);
 FUNC_EXTERN VOID   WINAPI GCasyncDisconn(SVC_PARMS *);
 FUNC_EXTERN VOID   GCdisconnectAllPipes(ASSOC_IPC *);
+FUNC_EXTERN VOID   GCDriverReceive(SVC_PARMS *);
+FUNC_EXTERN VOID   GCDriverSend(SVC_PARMS *);
+FUNC_EXTERN VOID   GCDriverPurge(SVC_PARMS *);
+FUNC_EXTERN VOID   GCDriverDisconn(SVC_PARMS *);

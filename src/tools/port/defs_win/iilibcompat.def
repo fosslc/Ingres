@@ -96,6 +96,9 @@
 ;	    Add MHpowerTenTab for change 503216.
 ;	13-Jan-2010 (wanfr01) Bug 123139
 ;	    Add SB and DB prototypes for CV/ST functions
+;	13-Apr-2010 (Bruce Lunsford) Sir 122679
+;	   Remove deleted function GCwinsock2_get_thread.
+;	   Add new functions GCwinsock2_save and GCwinsock2_restore.
 
 EXPORTS
 	iiBTand	@1				
@@ -839,7 +842,7 @@ EXPORTS
 	GCwinsock_exit	@742				
 	GCwinsock2_exit	@743				
 	GCwinsock_get_thread	@744				
-	GCwinsock2_get_thread	@745				
+;	GCwinsock2_get_thread	@745				
 	GCwinsock_init	@746				
 	GCwinsock2_init	@747				
 	GCwinsock_listen	@748				
@@ -1188,3 +1191,5 @@ EXPORTS
 	IISTindex_SB	@1092
 	IISTrindex_DB	@1093
 	IISTrindex_SB	@1094
+	GCwinsock2_save	@1095			
+	GCwinsock2_restore @1096			

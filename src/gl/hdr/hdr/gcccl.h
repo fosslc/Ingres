@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 /**
@@ -90,6 +90,11 @@
 **	    "open" structure field of the function_parms (per function 
 **	    union structure) of the "GCC_P_PLIST" parameter list structure. 
 **	    Also fixed the GCpportaddr() prototype.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Add timeout (in milliseconds) to parmlist plus associated PCE
+**	    option flag to enable it.
+**	    Add PCE option flag to tell protocol driver to skip callback
+**	    if request completed immediately.
 */
 
 
@@ -269,6 +274,8 @@ struct _GCC_ADDR
 **	 6-Jun-03 (gordy)
 **	    Added local/remote connection addresses output to 
 **	    CONNECT/LISTEN parms.  Removed unused pkt_sz.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Add timeout (in milliseconds) to parmlist.
 */
 
 struct _GCC_P_PLIST
@@ -335,6 +342,7 @@ struct _GCC_P_PLIST
 
     STATUS          generic_status;     /* Status of operation execution */
     CL_SYS_ERR      system_status;      /* System-specific status code */
+    i4              timeout;            /* Timeout in ms */
 };
 
 
@@ -368,6 +376,8 @@ struct _GCC_P_PLIST
 **
 **	pce_options		Flagword for protocol options:
 **	    PCT_VAR_PKT_SZ	Per conn packet size (unsupported)
+**	    PCT_ENABLE_TIMEOUTS Timeout field in parmlist is enabled
+**	    PCT_SKIP_CALLBK_IF_DONE Skip callback if done on initial call
 **
 **	pce_flags		Flagword for runtime state:
 **	    PCT_NO_PORT		No listen port
@@ -396,6 +406,15 @@ struct _GCC_P_PLIST
 **	4-Sep-2008 (lunbr01) Bug/Sir 119985
 **	    Update PCT structure doc as part of bigger change to make
 **	    "tcp_ip" the default network protocol instead of "wintcp".
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Add PCE option PCT_ENABLE_TIMEOUTS for backward compatibility
+**	    with use of drivers from GCC TL, which doesn't use or set the
+**	    timeout field.  GCA CL uses the timeout field.
+**	    Add PCE option PCT_SKIP_CALLBK_IF_DONE to indicate support
+**	    for immediate request completion (without callback).
+**	    This is used by tcp_ip driver on Windows to return results
+**	    of requests from GCA CL if operation completed immediately
+**	    and skip the subsequent callback.
 */
 
 struct _GCC_PCE 
@@ -438,6 +457,9 @@ struct _GCC_PCE
 
 #define			PCT_VAR_PKT_SZ      0x0001  /* Per conn packet size.
 						       Unsupported.  */
+#define			PCT_ENABLE_TIMEOUTS 0x0002  /* Use parmlist timeout */
+#define			PCT_SKIP_CALLBK_IF_DONE 0x0004 /* if IO (request) done,
+					         skip callback to compl exit */
 
     u_i4		pce_flags;			    
 				/* Flagword for runtime state: */

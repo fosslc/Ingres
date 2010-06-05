@@ -1,5 +1,5 @@
 /*
-**  Copyright (c) 1995, 2009 Ingres Corporation
+**  Copyright (c) 1995, 2010 Ingres Corporation
 */
 
 /*
@@ -55,6 +55,25 @@ LIBRARY = IMPCOMPATLIBDATA
 **      06-Aug-2009 (Bruce Lunsford) Sir 122426
 **          Remove global hCompletion mutex...no longer needed.
 **          Change GccCompleteQ from a mutex to a critical section.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Add support for net drivers like "tcp_ip" as local IPC.
+**	      - Add gca cl PCT (GCdrivers[]), similar to gcaptbl.c on Unix.
+**	    Also, some "cleanup" restructuring:
+**	      - Merged ptrs to protocol init and exit functions from 
+**	        tables in gccptbl.c into WS_DRIVER structs, thus eliminating
+**	        separate prot init and exit tables which had to be kept
+**	        in same order as PCT.  File gccptbl.c was then no longer
+**	        needed and was deleted.
+**	      - Change GLOBALDEF to static on WS_DRIVER definitions since
+**	        only needed locally after removal of external ref's.
+**	    "WSAStartup_called" boolean changed to a (use count) integer
+**	    to allow only calling Winsock cleanup when last protocol driver
+**	    instance(thread) exits (previously did on 1st exit, which caused
+**	    problems for other instances that had not yet exited).
+**	    Added 2 new driver exits: save and restore.  These are needed
+**	    for supporting GCsave/GCrestore in local IPC usage.
+**	    Change packet size for tcp_ip from 32768 to 12288 to match
+**	    GCA CL buffer size (for performance).
 */
 
 #include <compat.h>
@@ -125,7 +144,7 @@ GLOBALDEF CRITICAL_SECTION GccCompleteQCritSect;
 **  Data from gcwinsck
 */
 
-GLOBALDEF bool WSAStartup_called = FALSE;
+GLOBALDEF i4 WSAStartup_called = 0;  /* used by both gcwinsck and gcwinsock2 */
 GLOBALDEF i4 GCWINSOCK_trace = 0;
 
 /*
@@ -138,10 +157,14 @@ GLOBALDEF i4 GCWINSOCK2_trace = 0;
 **  Data from nvlspx
 */
 
-GLOBALDEF	WS_DRIVER WS_nvlspx =
+static	WS_DRIVER WS_nvlspx =
 {
+	GCwinsock_init,
 	GCnvlspx_init,
-	GCnvlspx_addr
+	GCwinsock_exit,
+	GCnvlspx_addr,
+	NULL,
+	NULL
 };
 
 GLOBALDEF i4 GCNVLSPX_trace = 0;
@@ -150,10 +173,14 @@ GLOBALDEF i4 GCNVLSPX_trace = 0;
 **  Data from win_tcp.c
 */
 
-GLOBALDEF	WS_DRIVER WS_wintcp =
+static	WS_DRIVER WS_wintcp =
 {
+	GCwinsock_init,
 	GCwintcp_init,
-	GCwintcp_addr
+	GCwinsock_exit,
+	GCwintcp_addr,
+	NULL,
+	NULL
 };
 
 GLOBALDEF i4 GCWINTCP_trace = 0;
@@ -162,34 +189,82 @@ GLOBALDEF i4 GCWINTCP_trace = 0;
 **  Data from tcp_ip.c
 */
 
-GLOBALDEF	WS_DRIVER WS_tcpip =
+static	WS_DRIVER WS_tcpip =
 {
+	GCwinsock2_init,
 	GCtcpip_init,
-	GCtcpip_addr
+	GCwinsock2_exit,
+	GCtcpip_addr,
+	GCwinsock2_save,
+	GCwinsock2_restore
 };
 
 GLOBALDEF i4 GCTCPIP_trace = 0;
 
 /*
-**  Data from gccptb
-**  NOTE! Keep in same order as IIGCc_prot_init/exit in gccptbl.c!
+**  Data from iilmgnbi
+*/
+
+static	WS_DRIVER WS_lanman=
+{
+	GClanman_init,
+	NULL,
+	GClanman_exit,
+	NULL,
+	NULL,
+	NULL
+};
+
+
+GLOBALDEF i4 GCLANMAN_trace = 0;
+
+
+/*
+**  Data from gccptbl
+**
+**  Protocol setup table
+**
+**	char		pce_pid[GCC_L_PROTOCOL];    Protocol ID
+**	char		pce_port[GCC_L_PORT];	    Port ID
+**	STATUS		(*pce_protocol_rtne)();	    Protocol handler
+**	i4     		pce_pkt_sz;		    Packet size
+**	i4     		pce_exp_pkt_sz;		    Exp. Packet size
+**	u_i4 		pce_options;		    Protocol options
+**	u_i4 		pce_flags;		    flags
+**	PTR             pce_driver;                 handed to prot driver
+**	PTR             pce_dcb;                    driver control block
+**  	    	    	    	    	    	     (private to driver)
 */
 
 GLOBALDEF	GCC_PCT		IIGCc_gcc_pct =
 {
 	8,
   {
-    {TCPIP_ID, "II", GCwinsock2, 32768, 64, 0, 0, (PTR)&WS_tcpip, (PTR)NULL},
+    {TCPIP_ID, "II", GCwinsock2, 12288, 64, 0, 0, (PTR)&WS_tcpip, (PTR)NULL},
     {WINTCP_ID, "II", GCwinsock, 4096, 64, 0, 0, (PTR)&WS_wintcp, (PTR)NULL},
-    {LANMAN_ID, "II", GClanman, 2048, 64, 0, 0, (PTR)NULL, (PTR)NULL},
+    {LANMAN_ID, "II", GClanman, 2048, 64, 0, 0, (PTR)&WS_lanman, (PTR)NULL},
     {SPX_ID, "8265", GCwinsock, 1024, 64, 0, 0, (PTR)&WS_nvlspx, (PTR)NULL},
     { "", "", 0, 0, 0, 0, 0, (PTR)NULL, (PTR)NULL}
   }
 };
 
+
 /*
-**  Data from iilmgnbi
+**  GCA CL protocol drivers  (for local IPC communications)
+**
+**  List of interprocess and/or network protocol drivers that can be used
+**  as local IPC.
+**  Modeled after GCC PCT above; unlike Unix, use same structure as for
+**  GCC to minimize changes to gcwinsock2.
+**  NOTE that named pipes protocol is NOT defined here as it is the default
+**  embedded protocol in gcacl.c so does not (currently) need a defn here.
+**  II_GC_PROT can be set to a protocol name contained in this table to
+**  override named pipes as the local IPC.  Also note special options set
+**  here for "tcp_ip" that modify behavior of the driver for local IPC.
 */
 
-GLOBALDEF i4 GCLANMAN_trace = 0;
-
+GLOBALDEF	GCC_PCE		GCdrivers[] =
+{
+    {TCPIP_ID, "0", GCwinsock2, 12288, 64, PCT_ENABLE_TIMEOUTS | PCT_SKIP_CALLBK_IF_DONE, 0, (PTR)&WS_tcpip, (PTR)NULL},
+    { "", "", 0, 0, 0, 0, 0, (PTR)NULL, (PTR)NULL}
+};

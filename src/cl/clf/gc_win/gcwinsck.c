@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1987, 2009 Ingres Corporation
+** Copyright (c) 1987, 2010 Ingres Corporation
 **
 **
 */
@@ -192,6 +192,14 @@
 **	    Convert CreateThread() to _beginthreadex() which is recommended
 **	    when using C runtime. This also involves using errno instead of
 **	    GetLastError() for failures.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Variable name of protocol-specific init_func was changed to
+**	    prot_init_func.  Also sync up code with later winsock2 driver
+**	    regarding initialization and cleanup of the winsock facility.
+**	    In GCwinsock_exit(), add PCT entry as an input parm which is
+**	    now available, which allows termination of specified protocol
+**	    only, making the code cleaner.  Also change return value from
+**	    VOID to STATUS since caller expects it.
 */
 
 /* FD_SETSIZE is the maximum number of sockets that can be
@@ -230,7 +238,7 @@ typedef char   *caddr_t;
 
 STATUS 		GCwinsock_init(GCC_PCE * pptr);
 STATUS          GCwinsock(i4 function_code, GCC_P_PLIST * parm_list);
-VOID     	GCwinsock_exit(void);
+STATUS   	GCwinsock_exit(GCC_PCE * pptr);
 VOID            GCwinsock_async_thread(void *parms);
 STATUS          GCwinsock_open(GCC_P_PLIST *parm_list);
 VOID            GCwinsock_listen(void *parms);
@@ -241,7 +249,7 @@ VOID            GCcomplete_conn(HANDLE event);
 /*
 ** Globals: only need 1 listen socket descriptor
 */
-GLOBALREF bool WSAStartup_called;
+GLOBALREF i4   WSAStartup_called;
 static bool Winsock_exit_set = FALSE;
 static bool is_win9x = FALSE;
 
@@ -328,17 +336,28 @@ static i4 GCWINSOCK_select = 10;
 **	06-Aug-2009 (Bruce Lunsford) Sir 122426
 **	    Convert CreateThread() to _beginthreadex() which is recommended
 **	    when using C runtime.
+**      13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Move call of WSAStartup() from GCwinsock_open() to here
+**	    since this routine and GCwinsock_term() are symmetric in
+**	    that they are called the same # of times...once for each
+**	    driver instance...at startup vs shutdown.  This makes it
+**	    easier to track # of driver instances using winsock, which
+**	    can only be started up the first time and only cleaned up
+**	    when the last driver instance exits.
+**	    WSAStartup_called field is now a "use count" rather than a
+**	    true/false boolean and is used to know, not only when to
+**	    "startup" winsock, but also when to "cleanup".  Improve tracing.
 */
 STATUS
 GCwinsock_init(GCC_PCE * pptr)
 {
-
 	char           *ptr;
 	int		tid;
 	HANDLE		hThread;
 	STATUS		status;
 	GCC_WINSOCK_DRIVER *wsd;
 	THREAD_EVENTS   *Tptr;
+	char		*proto = pptr->pce_pid;
 	WS_DRIVER	*driver = (WS_DRIVER *)pptr->pce_driver;
 	SECURITY_ATTRIBUTES sa;
     OSVERSIONINFOEX osver;
@@ -377,7 +396,7 @@ GCwinsock_init(GCC_PCE * pptr)
             is_win9x = TRUE;
         }
     }
-    
+
 	iimksec (&sa);
 
 	/*
@@ -391,6 +410,33 @@ GCwinsock_init(GCC_PCE * pptr)
 	else
 	{
 	    GCWINSOCK_trace = atoi( ptr );
+	}
+    
+	GCTRACE(1)("GCwinsock_init %s: Entered.  winsock use_count=%d\n",
+		    proto, WSAStartup_called);
+
+	/*
+	** NT March Beta and June Beta have different version #s that
+	** work. So call WSAStartup with both if necessary.
+	*/
+	WSAStartup_called++;
+	if ( WSAStartup_called <= 1 )
+	{
+	    WORD version = MAKEWORD(2,2);
+	    int err = WSAStartup(version, &startup_data);
+	    if (err != 0) 
+		return FAIL;
+
+	    /*
+	    ** Confirm that the WinSock DLL supports 2.2.
+	    ** Note that if the DLL supports versions greater
+	    ** than 2.2 in addition to 2.2, it will still return
+	    ** 2.2 in wVersion since that is the version we
+	    ** requested.
+	    */
+	    if (LOBYTE(startup_data.wVersion) != 2 ||
+		HIBYTE(startup_data.wVersion) != 2)
+		return FAIL;
 	}
 
 	/*
@@ -437,7 +483,7 @@ GCwinsock_init(GCC_PCE * pptr)
 	/*
 	** Now call the protocol-specific init routine.
 	*/
-	if ( (*driver->init_func)( pptr, wsd ) != OK )
+	if ( (*driver->prot_init_func)( pptr, wsd ) != OK )
 	    return FAIL;
 
 	/*
@@ -1020,16 +1066,19 @@ sys_err:
 **	    Remove mutexing around calls to GCA service completion routine
 **	    as it is no longer necessary, since GCA is thread-safe...removes
 **	    calls to GCwaitCompletion + GCrestart. Should improve peformance.
+**      13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Move call of WSAStartup() from this routine to GCwinsock_init()
+**	    to better keep track of when to cleanup winsock.  Added a trace
+**	    at entry.
 */
 STATUS
 GCwinsock_open( GCC_P_PLIST *parm_list )
 {
-	WORD version;
-	int err;
 	int turn_on = 1; /* Used to indicate address reuse option. */
 	STATUS	status;
 	GCC_LSN *lsn, *lsn_ptr;
         GCC_WINSOCK_DRIVER *wsd;
+	char               *proto = parm_list->pce->pce_pid;
 	WS_DRIVER *driver = (WS_DRIVER *)parm_list->pce->pce_driver;
 	THREAD_EVENTS *Tptr;
 	char *port  = parm_list->function_parms.open.port_id;
@@ -1037,38 +1086,7 @@ GCwinsock_open( GCC_P_PLIST *parm_list )
 
 	parm_list->function_parms.open.lsn_port = NULL;
 
-	/*
-	** NT March Beta and June Beta have different version #s that
-	** work. So call WSAStartup with both if necessary.
-	*/
-	if ( !WSAStartup_called )
-	{
-	    version = MAKEWORD(2,2);
-	    err = WSAStartup(version, &startup_data);
-	    if (err != 0) 
-	    {
-		parm_list->generic_status = GC_OPEN_FAIL;
-		SETWIN32ERR(&parm_list->system_status, err, ER_open);
-		goto err_exit;
-	    }
-
-	    /*
-	    ** Confirm that the WinSock DLL supports 2.2.
-	    ** Note that if the DLL supports versions greater
-	    ** than 2.2 in addition to 2.2, it will still return
-	    ** 2.2 in wVersion since that is the version we
-	    ** requested.
-	    */
-	    if (LOBYTE(startup_data.wVersion) != 2 ||
-		HIBYTE(startup_data.wVersion) != 2)
-	    {
-		parm_list->generic_status = GC_OPEN_FAIL;
-		SETWIN32ERR(&parm_list->system_status, err, ER_open);
-		goto err_exit;
-	    }
-
-	    WSAStartup_called = TRUE;
-	}
+	GCTRACE(1)("GCwinsock_open %s: Entered.\n", proto);
 
         if ( (Tptr = GCwinsock_get_thread( parm_list->pce->pce_pid )) == NULL )
         {
@@ -2085,27 +2103,39 @@ top:
 ** History:
 **	20-feb-2004 (somsa01)
 **	    Updated to account for multiple listen ports per protocol.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Add PCT entry as an input parm which is now available.
+**	    Rather than terminating all valid protocols supported by
+**	    this program on first call in (only), terminate the protocol
+**	    in the input parm.  Also change return value from VOID to
+**	    STATUS since caller expects it.  WSAStartup_called field is now
+**	    a "use count" rather than a true/false boolean and is used
+**	    to know, not only when to "startup" winsock, but also when
+**	    to "cleanup".
 */
-VOID
-GCwinsock_exit()
+STATUS
+GCwinsock_exit(GCC_PCE * pptr)
 {
 	int             i = 1;
 	GCC_LSN *lsn;
 	GCC_WINSOCK_DRIVER *wsd;
 	THREAD_EVENTS *Tptr;
 	STATUS status;
+	char   *proto = pptr->pce_pid;
+
+	GCTRACE(1)("GCwinsock_exit %s: Entered.  winsock use_count=%d\n",
+		    proto, WSAStartup_called);
 
 	in_shutdown = 1;
 
-	/* Have we already been called once? */
-	if ( Winsock_exit_set )
-	    return;
-	Winsock_exit_set = TRUE;
+	/*
+	** Get pointer to WinSock 2.2 protocol's control entry in table.
+	*/
+	Tptr = (THREAD_EVENTS *)pptr->pce_dcb;
 
 	/*
-	** Close listen sockets.  ummmm, make this better ....
+	** Close listen sockets.
 	*/
-        if ( (Tptr = GCwinsock_get_thread( DECNET_ID  ) ) != NULL )
         {
             wsd = &Tptr->wsd;
 	    lsn = wsd->lsn;
@@ -2120,37 +2150,16 @@ GCwinsock_exit()
 
             status = TerminateThread( Tptr->hAIOThread, 0 );
         }
-	if ( (Tptr = GCwinsock_get_thread( SPX_ID  ) ) != NULL )
-	{
-	    wsd = &Tptr->wsd;
-	    lsn = wsd->lsn;
-	    while (lsn)
-	    {
-		(void) setsockopt(lsn->listen_sd, SOL_SOCKET, SO_DONTLINGER, 
-				  (u_caddr_t)&i, sizeof(i));
-		(void) closesocket(lsn->listen_sd);
-		TerminateThread(lsn->hListenThread, 0);
-		lsn = lsn->lsn_next;
-	    }
 
-            status = TerminateThread( Tptr->hAIOThread, 0 );
-	}
-	if ( (Tptr = GCwinsock_get_thread( WINTCP_ID  ) ) != NULL )
-	{
-	    wsd = &Tptr->wsd;
-	    lsn = wsd->lsn;
-	    while (lsn)
-	    {
-		(void) setsockopt(lsn->listen_sd, SOL_SOCKET, SO_DONTLINGER, 
-				  (u_caddr_t)&i, sizeof(i));
-		(void) closesocket(lsn->listen_sd);
-		TerminateThread(lsn->hListenThread, 0);
-		lsn = lsn->lsn_next;
-	    }
+	/*
+	** Don't cleanup/shutdown winsock until no driver instance/thread
+	** is using it.  Ie, last one out the door turns out the lights.
+	*/
+	WSAStartup_called--;
+	if (WSAStartup_called == 0)
+	    WSACleanup();
 
-            status = TerminateThread( Tptr->hAIOThread, 0 );
-	}
-	WSACleanup();
+	return(OK);
 }
 
 /*

@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 1996, 1997 Ingres Corporation All Rights Reserved.
+** Copyright (C) 1996, 2010 Ingres Corporation All Rights Reserved.
 */
 
 /*
@@ -49,10 +49,16 @@
 **          Will be revisited and submitted at a later date. 
 **	13-Jan-2010 (wanfr01) Bug 123139
 **	    Include cv.h for function defintions
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Add support for net drivers like "tcp_ip" as local IPC.
+**	    Move protocol_init/exit into WS_DRIVER structure (in PCE)
+**	    instead of into IIGCc_prot_init IIGCc_prot_exit tables,
+**	    which no longer exist.
 */
 
 # include <compat.h>
 # include <gcccl.h>
+# include <cv.h>
 # include <er.h>
 # include <gc.h>
 # include <lo.h>
@@ -62,7 +68,6 @@
 # include <si.h>
 # include <st.h>
 # include "gcclocal.h"
-# include <cv.h>
 
 # define MAX_NAME               256
 # define MAX_PROTOCOL_ENTRY     256
@@ -175,8 +180,7 @@ static VOID ParseProtEntry (PPROT_LIST* pProtHead, PPROT_LIST* pProtTail,
                             char* pszProtEntry, i4 * pnProt);
 
 static STATUS LoadProtDriver (PGCIMPORT pImport, PPROT_LIST pEntry,
-                              GCC_PCE * pPce, STATUS (* *fnInit)(),
-                              STATUS (* *fnExit)());
+                              GCC_PCE * pPce);
 
 /*
 ** Name: EnumStringVal
@@ -343,8 +347,7 @@ bool blCopy;
 **      pEntry          pointer to a protocol driver description structure.
 **      pPce            pointer to protocol control entry structure.
 ** Outputs:
-**      fnInit          address of function pointer for driver initialisation.
-**      fnExit          address of function pointer for driver termination.
+**      pPce contents   pce values are filled in for each loaded protocol.
 **
 ** Returns:
 **      status      OK      sucess
@@ -353,10 +356,14 @@ bool blCopy;
 **      01-Jul-97 (fanra01)
 **          Moved the enumeration of type and use this to set the mask which
 **          determines whether a function is required.
+**      13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Change output parms fnInit and fnExit to local variables since
+**	    they are now put directly into the WS_DRIVER structure instead
+**	    of being passed back to caller to be placed into tables
+**	    IIGCc_prot_init/exit[], which no longer exist.
 */
 static STATUS
-LoadProtDriver (PGCIMPORT pImport, PPROT_LIST pEntry, GCC_PCE * pPce,
-                STATUS (* *fnInit)(), STATUS (* *fnExit)())
+LoadProtDriver (PGCIMPORT pImport, PPROT_LIST pEntry, GCC_PCE * pPce)
 {
 STATUS status = OK;
 HANDLE hProtDrv = NULL;
@@ -365,6 +372,8 @@ i4  i;
 PGCIMPORT pDrvDesc = NULL;
 i4  nDrvType;
 i4  nMask;
+STATUS (* *fnInit)() = NULL;
+STATUS (* *fnExit)() = NULL;
 
     nDrvType = EnumStringVal(pszTypes,pEntry->pEntryParam[TYPE]);
 
@@ -448,7 +457,9 @@ i4  nMask;
             if ( pPce->pce_driver != NULL)
             {
             WS_DRIVER * pWsDrv = (WS_DRIVER *) pPce->pce_driver;
-                pWsDrv->init_func = pDrvDesc[GC_PROT_DRVINIT].fnDriver;
+                pWsDrv->init_func = fnInit;
+                pWsDrv->exit_func = fnExit;
+                pWsDrv->prot_init_func = pDrvDesc[GC_PROT_DRVINIT].fnDriver;
                 pWsDrv->addr_func = pDrvDesc[GC_PROT_ADDR].fnDriver;
             }
         }
@@ -492,6 +503,10 @@ i4  nMask;
 ** History:
 **      19-May-97 (fanra01)
 **          Created.
+**      13-Apr-2010 (Bruce Lunsford) Sir 122679
+**          Remove refs to IIGCc_prot_init/exit[] on call to LoadProtDriver
+**	    since the contents of these tables were merged into WS_DRIVER.
+**	    Remove unref'd variables nMem and szProtPath.
 */
 STATUS
 GCloadprotocol (GCC_PCT* pPct)
@@ -499,10 +514,8 @@ GCloadprotocol (GCC_PCT* pPct)
 STATUS status = OK;
 i4  nProt = 0;
 i4  i;
-i4  nMem;
 LOCATION stProtLoc;
 char szFilesDir[MAX_LOC + 1];
-char szProtPath[MAX_LOC + 1];
 FILE* pFile = NULL;
 char szProtocolEntry[MAX_PROTOCOL_ENTRY + 1];
 PPROT_LIST pEntry;
@@ -552,9 +565,7 @@ PPROT_LIST pEntry;
              (status == OK) && (pEntry != NULL) && (i  < nProt);
              i++, pEntry=pEntry->qNext)
         {
-            status = LoadProtDriver (&sGCImport[0], pEntry, &pPct->pct_pce[i],
-                                     &IIGCc_prot_init[i],
-                                     &IIGCc_prot_exit[i]);
+            status = LoadProtDriver (&sGCImport[0], pEntry, &pPct->pct_pce[i]);
             if (status == OK)
             {
                 pEntry->nPctIndex = i;

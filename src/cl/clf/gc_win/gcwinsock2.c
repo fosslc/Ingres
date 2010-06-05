@@ -1,5 +1,5 @@
 /*
-**  Copyright (c) 2009 Ingres Corporation
+**  Copyright (c) 2010 Ingres Corporation
 **
 */
 
@@ -172,6 +172,126 @@
 **	17-Dec-2009 (Bruce Lunsford) Sir 122536
 **	    Add support for long identifiers. Use cl-defined GC_HOSTNAME_MAX
 **	    instead of gl-defined GCC_L_NODE in GCdns_hostname().
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Add support for net drivers like "tcp_ip" as local IPC.
+**	    Variable name of protocol-specific init_func was changed to
+**	    prot_init_func. In GCwinsock2_exit(), get dcb from input parm
+**	    PCT entry rather than calling GCwinsock2_get_thread(); since
+**	    GCwinsock2_get_thread() is no longer used, removed it.
+**	    Remove calls to WSAGetLastError() after getaddrinfo() failure
+**	    as it returns a zero (0) status, which is confusing.  Just use
+**	    the return value directly from getaddrinfo(); also add call to
+**	    gai_strerror() to get message text for error during GCC_OPEN.
+**	    Support port zero (0) listens for local IPC.
+**
+**	    Embed one PER_IO_DATA structure for both send and receive
+**	    into the PCB.  This eliminates the overhead of allocating and
+**	    freeing them for each send and receive request.  For some
+**	    situations, such as immediate returns that skip subsequent
+**	    callback, the single embedded PER_IO_DATA is insufficient,
+**	    so additional ones are allocated as needed.  Allocation is
+**	    now done in new function GCwinsock2_get_piod.  Deallocation
+**	    is handled by GCwinsock2_rel_piod.
+**
+**	    If an error occurs on a request immediately, rather than
+**	    scheduling a callback to the caller's completion routine
+**	    and returning OK, instead just return FAIL thereby allowing
+**	    the caller to detect the error right away.
+**
+**	    Change default mechanism for scheduling completion requests
+**	    to one that supports a multithreaded environment; doesn't
+**	    affect Alertable IO (AIO) sends/receives because they call
+**	    completion routine directly since they always run in the
+**	    caller's thread.  The old completion scheduling mechanism
+**	    was fairly high overhead (EnterCritSect, alloc memory, add
+**	    entry to completion Q, LeaveCritSect, set event ... and the
+**	    reverse on the receiving (caller's) side).  If multiple threads
+**	    were waiting on a callback, the old mechanism had no way to
+**	    ensure that the correct thread woke up from the event posting.
+**	    Use Windows QueueUserAPC functionality to replace it; much
+**	    simpler, may improve performance, and can target completions
+**	    to the correct thread.  Provide config variable
+**	    II_WINSOCK2_EVENT_Q (=ON) to resort back to original mechanism.
+**
+**	    Set system_status to ER_close if send or receive failed due to
+**	    connection having been closed (BytesTransferred == 0).
+**
+**	    Shutdown function GCwinsock2_exit() now returns STATUS rather
+**	    than VOID since caller expects it.
+**	    Occasional crash in iigcc shutdown that was more common with
+**	    II_GC_PROT=tcp_ip was resolved by adding a short sleep after
+**	    each pending listen socket is closed to allow waiting worker
+**	    thread to process before freeing associated resources.
+**
+**	    To improve turnaround time and support peeks (receives with
+**	    zero timeout values), if PCT option PCT_SKIP_CALLBK_IF_DONE
+**	    is set, then caller supports getting results immediately (if
+**	    request has completed) rather than waiting to get results when
+**	    the completion exit is called back, which then won't be done.
+**	    Similar for sends.  Currently, only GCA CL (gcarw.c) can handle
+**	    immediate results with no callback.
+**
+**	    Add support for timeouts on receives.  Timeouts are required for
+**	    calls from GCA CL in selected circumstances.  Most receives have
+**	    no timeout (timeout=-1 for INFINITE) and is not even used on
+**	    calls from GCC TL.  A new field, timeout, was added to the end
+**	    of the input parmlist.  For backward compatibility
+**	    to GCC TL, which doesn't pass a timeout value in the parm_list,
+**	    only check timeout if PCE option PCT_ENABLE_TIMEOUTS is on.
+**	    Unfortunately, Winsock2 async receives provide no mechanism for
+**	    timing them out or cancelling them (except by closing the socket,
+**	    which shuts down the whole connection).  The only timeout options
+**	    that winsock provides, such as setsockopt(SO_RCVTIMEO) only work
+**	    with sync calls.  Even WSACancelBlockingCall() only works for
+**	    sync(blocking) calls and is not supported in winsock2.
+**	    For performance, switching to sync/blocking calls is not viable
+**	    without spinning them off to separate threads.  Another option
+**	    is to use select(), which DOES have a timeout value, but this
+**	    would defeat the whole purpose of the switch to winsock2 to use
+**	    a common wait mechanism (WaitForMultipleObjects) throughout
+**	    Ingres central wait points (wintcp uses winsock1 with select(),
+**	    tcp_ip uses winsock2 with WaitFor...Objects).  Due to lack of
+**	    native winsock2 timeout support, a "smoke and mirrors" scheme
+**	    was used.  Receives with timeouts are issued in the normal way
+**	    but are directed to receive into an internal work/overflow
+**	    buffer area. If the timeout period is reached before the
+**	    receive completes, the caller's completion routine is called
+**	    with GC_TIME_OUT error.  In the meantime, if a new receive
+**	    comes in, the pending receive to the OS is redirected to the
+**	    new receive request; it is too late to change the target area
+**	    or length of the receive which is why it was initially
+**	    directed to the internal overflow area.  When the IO completes,
+**	    the data is copied from the overflow buffer to the requester's
+**	    receive buffer.  There is a new state field in the PER_IO_DATA
+**	    structure used to keep track of the receive flow since there
+**	    are a number of event sequences that can occur and have
+**	    slightly different actions/results.  One special case is
+**	    receives with timeout=0, which is essentially a "peek".
+**	    The immediate return logic is used in this case and no
+**	    timer needs to be set.  However, the IO callback still occurs
+**	    and must be handled in a manner similar to "timeout > 0" cases.
+**	    Windows "waitable timer" object is used to handle the timer
+**	    duties. When the timer expires and the thread becomes "alertable",
+**	    the OS calls the completion routine associated with the timer,
+**	    GCwinsock2_Timer_Callback(), which then cleans up and calls
+**	    the GCC_RECEIVE request completion routine.
+**
+**	    Change default size of receive overflow buffer from #defined
+**	    value (=32768) to the packet size in the protocol table (PCT).
+**	    Change default IO processing mode from IO completion port to
+**	    alertable IO (AIO), which generally performs better and is
+**	    supported for tcp_ip as local IPC.
+**
+**	    Added "id" to pcb and traced it; modeled after gcb->id in
+**	    gcarw.c.  This simplifies analyzing traces.
+**	    Change PCB typedef to PCB2 so that Windows debugger will
+**	    pick it up properly; the one in iilmgnbi.c was being picked
+**	    up instead.
+**
+**	    Add 2 new external functions, GCwinsock2_save() and
+**	    GCwinsock2_restore() to support GCsave() and GCrestore()
+**	    (and are called by those routines).  These functions are
+**	    only used when running under GCA CL (ie, as local IPC).
 */
 
 /* FD_SETSIZE is the maximum number of sockets that can be
@@ -216,53 +336,91 @@ typedef char   *caddr_t;
 ** Protocol threads are all synchronized with the main struture:
 ** IIGCc_proto_threads -- the main Event structure for protocol driver threads.
 */
-GLOBALREF bool			WSAStartup_called;
+GLOBALREF i4			WSAStartup_called;
 GLOBALREF HANDLE		hAsyncEvents[];
 GLOBALREF CRITICAL_SECTION	GccCompleteQCritSect;
 GLOBALREF THREAD_EVENT_LIST	IIGCc_proto_threads;
 GLOBALREF BOOL			is_comm_svr;
 GLOBALREF i4			GCWINSOCK2_trace;
 
+
 /*
-** The PER_IO_DATA is allocated per I/O request, containing information
-** pertaining to the I/O request.
+** PER_IO_DATA is the control block for each winsock I/O request.
+** The overlapped structure MUST BE FIRST and is the only part used by the OS.
 */
+typedef struct _PCB2 PCB2;    /* Forward reference */
+
 typedef struct _PER_IO_DATA
 {
     WSAOVERLAPPED	Overlapped;
     SOCKET		listen_sd;
     SOCKET		client_sd;
-    int			OperationType;
+    i4 			OperationType;
 #define		OP_ACCEPT	0x010	/* AcceptEx */
 #define		OP_CONNECT	0x020	/* ConnectEx */
 #define		OP_RECV		0x080	/* WSARecv */
 #define		OP_SEND		0x100	/* WSASend */
 #define		OP_DISCONNECT	0x200	/* Disconnect */
+    i4 			flags;
+#define		PIOD_DYN_ALLOC	0x0001	/* Dynamically allocated */
+    DWORD		ThreadId;	/* Requester's thread id - set if
+					** completion in other thread */
     WSABUF		wbuf;
     bool		block_mode;
+    u_i1		state;		/* State of request/PER_IO_DATA: */
+#define	PIOD_ST_AVAIL		0x00	/* - available for use */
+#define	PIOD_ST_IO_PENDING 	0x01	/* - IO pending (no timeout) */
+#define	PIOD_ST_IO_TMO_PENDING	0x02	/* - IO pending with timeout */
+#define	PIOD_ST_SKIP_CALLBK	0x03	/* - skip compl rtn callback */
+#define	PIOD_ST_TIMED_OUT 	0x04	/* - request timed out       */
+#define	PIOD_ST_REDIRECT  	0x05	/* - redirect IO compl to new request */
     GCC_P_PLIST		*parm_list;
+    PCB2		*pcb;		/* Stored here in case parm_list gone*/
+    HANDLE		hWaitableTimer; /* Handle to timer */
     GCC_LSN     	*lsn;              /* ptr to LSN struct for addr/port */
     struct addrinfo	*addrinfo_posted;  /* ptr to last posted lsn addr */
     int     		socket_ix_posted;  /* socket index last posted */
     char		AcceptExBuffer[(sizeof(SOCKADDR_STORAGE) + 16) * 2];
 } PER_IO_DATA;
 
+
 /*
-**  The PCB is allocated on listen or connection request.  The format is
+**  The PCB2 is allocated on listen or connection request.  The format is
 **  internal and specific to each protocol driver.
 */
-typedef struct _PCB
+typedef struct _PCB2
 {
+    unsigned char	id;		/* connecton counter (info only): */
+					/*  - evens inbound, odds outbound*/
     SOCKET		sd;
+    i4			session_state;      /* state of connection */
+#define			SS_CONNECTED	0   /* - setting up or connected */
+#define			SS_DISCONNECTED	1   /* - other side disconnected */
     i4			tot_snd;	    /* total to send */
     i4			tot_rcv;	    /* total to rcv */
     char		*snd_bptr;	    /* utility buffer pointer */
     char		*rcv_bptr;	    /* utility buffer pointer */
-    struct addrinfo	*addrinfo_list;      /* ptr to addrinfo list for connect */
+    PER_IO_DATA		snd_PerIoData;	    /* send IO control block */
+    PER_IO_DATA		rcv_PerIoData;	    /* recv IO control block */
+    PER_IO_DATA		*last_rcv_PerIoData;    /* last recv IO control block */
+    struct addrinfo	*addrinfo_list;     /* ptr to addrinfo list for connect */
     struct addrinfo	*lpAddrinfo;        /* ptr to current addrinfo entry */
     GCC_ADDR		lcl_addr, rmt_addr;
+    /*
+    ** Number of async IOs still pending.  Disconnect (and associated
+    ** freeing of resources) should not occur until this is zero.  Normally,
+    ** the value is 0-2, but with AIO and immediate results (GCA CL only),
+    ** the value can get very high in a busy system/application because
+    ** the thread rarely becomes alertable.  To alleviate this (though no
+    ** limit is known or has been encountered), when the value exceeds the
+    ** (very arbitrary) soft limit, begin returning results in callback rather
+    ** than immediately, until the number goes back below the soft limit.
+    */
     volatile LONG	AsyncIoRunning;
+#define ASYNC_IO_RUNNING_SOFT_LIMIT 20
+
     volatile LONG	DisconnectAsyncIoWaits;
+    bool		skipped_callbk_flag; /* If TRUE, a callback was skipped */
     char		*b1;		    /* start of receive buffer */
     char		*b2;		    /* end   of receive buffer */
     /*
@@ -278,7 +436,19 @@ typedef struct _PCB
 					    ** The 1st 2 bytes contain the
 					    ** length of the message field.
 					    */
-} PCB;
+} PCB2;
+
+/*
+**  The SAVE_DATA structure is used to save and restore information
+**  for a connection across processes.  It contains the protocol-specific
+**  information needed for the connection to enable GCsave/GCrestore in 
+**  the GCA CL to work with this driver.
+*/
+typedef struct _SAVE_DATA
+{
+    unsigned char	id;		/* = pcb->id ... for info only */
+    SOCKET		sd;		/* socket descriptor */
+} SAVE_DATA;
 
 /*
 **  Defines of other constants.
@@ -292,13 +462,15 @@ typedef struct _PCB
 /*
 **  Definition of static variables and forward static functions.
 */
-static bool				Winsock2_exit_set = FALSE;
+static i4				GCwinsock2_use_count = 0;
+static bool				GCwinsock2_shutting_down = FALSE;
 static bool				is_win9x = FALSE;
-static WSADATA  			startup_data;
 static i4				GCWINSOCK2_timeout;
 static bool				GCWINSOCK2_nodelay = FALSE;
+static bool				GCWINSOCK2_event_q = FALSE;
 static HANDLE				GCwinsock2CompletionPort = NULL;
-static u_i2				GCWINSOCK2_recv_buffer_size;
+static HANDLE				hGCwinsock2Process       = NULL;
+static i4	 			GCWINSOCK2_recv_buffer_size = -1;
 static QUEUE				DisconnectQ_in;
 static QUEUE				DisconnectQ;
 CRITICAL_SECTION			DisconnectCritSect;
@@ -307,6 +479,12 @@ static HANDLE				hDisconnectThread = NULL;
 static LPFN_ACCEPTEX			lpfnAcceptEx = NULL;
 static LPFN_CONNECTEX			lpfnConnectEx = NULL;
 static LPFN_GETACCEPTEXSOCKADDRS	lpfnGetAcceptExSockaddrs = NULL;
+
+
+/* Function pointer for QueueUserAPC */
+static DWORD (FAR WINAPI *pfnQueueUserAPC)(PAPCFUNC pfnAPC,
+                                           HANDLE hThread,
+                                           DWORD dwData) = NULL;
 
 /***********************************************************************
 ** AIO (Alertable IO) async connect/listen variables
@@ -362,11 +540,12 @@ static u_i4		totalAIOConnectQ = 0;    /* Total # queued (since startup) */
 **  Forward and/or External function references.
 */
 
-STATUS		GCwinsock2_init(GCC_PCE * pptr);
+STATUS		GCwinsock2_init(GCC_PCE *pptr);
 STATUS          GCwinsock2_startup_WSA();
-STATUS		GCwinsock2(i4 function_code, GCC_P_PLIST * parm_list);
-VOID		GCwinsock2_exit(void);
-STATUS		GCwinsock2_schedule_completion(REQUEST_Q *rq, GCC_P_PLIST *parm_list);
+STATUS		GCwinsock2(i4 function_code, GCC_P_PLIST *parm_list);
+STATUS		GCwinsock2_exit(GCC_PCE *pptr);
+STATUS		GCwinsock2_save(char *buffer, i4 *buf_len, PCB2 *pcb);
+STATUS		GCwinsock2_restore(char *buffer, GCC_PCE *pptr, PCB2 **lpPcb);
 DWORD WINAPI	GCwinsock2_worker_thread(LPVOID CompletionPortID);
 STATUS		GCwinsock2_open(GCC_P_PLIST *parm_list);
 VOID 		GCwinsock2_open_setSPXport(SOCKADDR_IPX *spx_sockaddr, char *port_name);
@@ -376,13 +555,22 @@ STATUS  	GCwinsock2_connect(GCC_P_PLIST *parm_list, char *lpPerIoData);
 VOID 		GCwinsock2_connect_complete(GCC_P_PLIST *parm_list);
 VOID		GCwinsock2_disconnect_thread();
 char *  	GCwinsock2_display_IPaddr(struct addrinfo *lpAddrinfo, char *IPaddr_out);
-THREAD_EVENTS	*GCwinsock2_get_thread(char *);
+PCB2 *		GCwinsock2_get_pcb(GCC_PCE *pptr, bool outbound);
+VOID		GCwinsock2_rel_pcb(PCB2 *pcb);
+PER_IO_DATA *	GCwinsock2_get_piod(i4 OperationType, GCC_P_PLIST *parm_list);
+VOID		GCwinsock2_rel_piod(PER_IO_DATA *lpPerIoData);
 STATUS		GCwinsock2_alloc_connect_events();
 STATUS		GCwinsock2_add_connect_event(LPOVERLAPPED lpOverlapped, SOCKET sd);
 bool		GCwinsock2_wait_completed_connect(LPOVERLAPPED *lpOverlapped, STATUS *status);
 VOID CALLBACK	GCwinsock2_AIO_Callback(DWORD, DWORD, WSAOVERLAPPED *, DWORD);
-bool		GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS status, DWORD BytesTransferred, PER_IO_DATA *lpPerIoData);
+STATUS		GCwinsock2_schedule_completion(REQUEST_Q *rq, GCC_P_PLIST *parm_list, DWORD ThreadId);
+VOID WINAPI	GCwinsock2_async_completion( GCC_P_PLIST *parm_list );
+bool		GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS *status, DWORD BytesTransferred, PER_IO_DATA *lpPerIoData);
+bool		GCwinsock2_copy_ovflo_to_inbuf(PCB2 *pcb, GCC_P_PLIST *parm_list, bool block_mode, DWORD *BytesTransferred);
+STATUS		GCwinsock2_set_timer(PER_IO_DATA *lpPerIoData, i4 timeout);
+VOID CALLBACK	GCwinsock2_timer_callback(PER_IO_DATA *lpPerIoData, DWORD dwTimerLowValue, DWORD dwTimerHighValue);
 VOID 		GCwinsock2_close_listen_sockets(GCC_LSN *lsn);
+VOID		gc_tdump( char *buf, i4 len );
 
 
 /*
@@ -421,6 +609,27 @@ VOID 		GCwinsock2_close_listen_sockets(GCC_LSN *lsn);
 **	    Added variable II_WINSOCK2_NODELAY and config.dat winsock2_nodelay.
 **	    and set corresponding static variable GCWINSOCK2_nodelay
 **	    accordingly.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Now that this driver can be used for local communications
+**	    as well as remote (via GCx server), only do the initialization
+**	    on the first time in.  WSAStartup_called field is now
+**	    a "use count" rather than a true/false boolean.
+**	    Locate QueueuUserAPC() for new thread-aware callback mechanism
+**	    and provide config variable II_WINSOCK2_EVENT_Q (=ON) to
+**	    resort back to original queue/GCC_COMPLETE event mechanism.
+**	    Change default size of receive overflow buffer from #defined
+**	    value (=32768) to the packet size in the protocol table (PCT).
+**	    The #define value is now only used if PCT packet size is not
+**	    greater than 0.  This reduces wasted memory in the case where
+**	    the overflow was much bigger than the PCT packet size, without
+**	    impacting performance (receive size is set to minimum of
+**	    the 2 sizes, which now default to being equal).
+**	    Change default IO processing from IO Completion Port to
+**	    Alertable IO (AIO), which provides slightly better performance
+**	    in most environments and is currently the only supported
+**	    option for tcp_ip as a local (GCA CL) protocol (instead of
+**	    pipes.  IO Completion Port logic can be enabled by setting
+**	    II_WINSOCK2_CONCURRENT_THREADS to a non-zero numeric value.
 */
 
 STATUS
@@ -436,7 +645,8 @@ GCwinsock2_init(GCC_PCE * pptr)
     OSVERSIONINFOEX	osver;
     u_i4		NumConcurrentThreads = 0;
     u_i4		NumWorkerThreads = 0;
-    
+    HANDLE		hDll = NULL;
+
     /*
     ** Get trace variable
     */
@@ -446,9 +656,15 @@ GCwinsock2_init(GCC_PCE * pptr)
     else
 	GCWINSOCK2_trace = atoi(ptr);
 
-    if (!WSAStartup_called)  
-        if (GCwinsock2_startup_WSA() == FAIL)
-            return FAIL;
+    GCTRACE(1)("GCwinsock2_init %s: Entered.  use_count(this driver,winsock)=(%d,%d)\n",
+		proto, GCwinsock2_use_count, WSAStartup_called);
+
+    GCwinsock2_use_count++;	/* Increment # times init called */
+
+    if (GCwinsock2_startup_WSA() == FAIL)
+	    return FAIL;
+
+    hGCwinsock2Process = GetCurrentProcess();  /* Get pseudo handle for proces*/
 
     iimksec(&sa);
 
@@ -508,8 +724,6 @@ GCwinsock2_init(GCC_PCE * pptr)
 	GCWINSOCK2_nodelay = FALSE;
 
     /*
-
-    /*
     ** Get pointer to WinSock 2.2 protocol's control entry in table.
     */
     Tptr = (THREAD_EVENTS *)pptr->pce_dcb;
@@ -518,11 +732,64 @@ GCwinsock2_init(GCC_PCE * pptr)
     /*
     ** Now call the protocol-specific init routine.
     */
-    if ((*driver->init_func)(pptr, wsd) != OK)
+    if ((*driver->prot_init_func)(pptr, wsd) != OK)
     {
 	GCTRACE(1)("GCwinsock2_init %s: Protocol-specific init function failed\n", proto);
 	return(FAIL);
     }
+    
+    /*****************************************************************
+    ** The remainder of the code below should only be executed once
+    ** (1st time in), so exit if we've been here before.
+    *****************************************************************/
+    if (GCwinsock2_use_count > 1)  
+	return OK;
+
+    /*
+    ** Get a handle to the kernel32 dll and get the proc address for
+    ** QueueUserAPC, which is used in optional thread-aware callback
+    ** mechanism.
+    */
+    if ((hDll = LoadLibrary( TEXT("kernel32.dll") )) != NULL)
+    {
+	pfnQueueUserAPC = (DWORD (FAR WINAPI *)(PAPCFUNC pfnAPC,
+			   			HANDLE hThread,
+			   			DWORD dwData))
+			   GetProcAddress(hDll, TEXT("QueueUserAPC"));
+	if (pfnQueueUserAPC == NULL)
+	{
+	    GCTRACE(1)("GCwinsock2_init %s: Function QueueUserAPC not found\n", proto);
+	}
+	FreeLibrary( hDll );
+    }
+    else
+    {
+	    GCTRACE(1)("GCwinsock2_init %s: LoadLibrary kernel32 failed %d\n",
+                       proto, GetLastError());
+    }
+
+    /*
+    ** The option II_WINSOCK2_EVENT_Q (or config.dat winsock2_event_q) forces
+    ** the legacy callback mechanism to be used instead of QueueUserAPC().
+    ** This option is more for comparing performance than expected to really be
+    ** needed by any situation/user.  Presumably could be removed someday
+    ** if not really needed.  Unless this option is configured, all
+    ** request completions that are queued back to the caller will use
+    ** QueueUserAPC() instead of the legacy mechanism that queued the
+    ** completions to an internal queue (required synchronization) and
+    ** then set the GCC_COMPLETE event.  NOTE that this has no effect on
+    ** situations where we call the completion routine back directly,
+    ** such as for alertable IO (AIO).
+    */
+    NMgtAt("II_WINSOCK2_EVENT_Q", &ptr);
+    if ( ((ptr && *ptr) || (PMget("!.winsock2_event_q", &ptr) == OK)) &&
+	 (STcasecmp( ptr, "ON" ) == 0) )
+    {
+	GCWINSOCK2_event_q = TRUE;
+	GCTRACE(1)("GCwinsock2_init %s: EVENT_Q option is ON\n", proto);
+    }
+    else
+	GCWINSOCK2_event_q = FALSE;
 
     /*
     ** If this is not Windows 9x, create the I/O completion port to handle
@@ -540,7 +807,7 @@ GCwinsock2_init(GCC_PCE * pptr)
 	GUID		GuidGetAcceptExSockaddrs = WSAID_GETACCEPTEXSOCKADDRS;
 	DWORD		dwBytes;
 	HANDLE		ThreadHandle;
-	int		tid;
+	u_i4		tid;
 
 	/*
 	** Create a dummy socket.
@@ -571,8 +838,11 @@ GCwinsock2_init(GCC_PCE * pptr)
 
 	/*
 	** The size of the receive overflow buffer can be overridden
-	** with Ingres variable or config.dat setting.  The default
-	** size is whatever RCV_PCB_BUFF_SZ is #defined to in the PCB...
+	** with Ingres variable II_WINSOCK2_RECV_BUFFER_SIZE or
+	** config.dat parm winsock2_recv_buffer_size.
+	** If neither is defined, then the default size is the
+	** packet size from the protocol table; if not defined
+	** there, use RCV_PCB_BUFF_SZ, which is #defined in the PCB...
 	** typically 8K or 32K.  This size does not include a 2-byte prefix
 	** for the length of the message, which is always present.
 	** If this variable is set to zero (0), then no overflow will be
@@ -580,20 +850,22 @@ GCwinsock2_init(GCC_PCE * pptr)
 	** I/O method rather than the 1-step stream I/O method.  This variable
 	** has no impact on block message protocols.
 	** The variable was originally added to compare performance between
-	** the original 2-step approach and the 1-step approach and could be
-	** removed if one approach is found to be universally better.
+	** the old 2-step approach and the new 1-step approach and could be
+	** removed if one approach is found to be universally better, and
+	** if no other benefit seen in being able to specify a specific size.
 	*/
 	NMgtAt("II_WINSOCK2_RECV_BUFFER_SIZE", &ptr);
 	if (!(ptr && *ptr) && PMget("!.winsock2_recv_buffer_size", &ptr) != OK)
 	{
-	    GCWINSOCK2_recv_buffer_size = RCV_PCB_BUFF_SZ;
+	    GCWINSOCK2_recv_buffer_size = -1;  /* not overridden...use default*/
 	}
 	else
 	{
-	    GCWINSOCK2_recv_buffer_size = (u_i2)(atoi(ptr));
+	    GCWINSOCK2_recv_buffer_size = (atoi(ptr));
 	}
-	GCTRACE(1)("GCwinsock2_init %s: RECV Overflow Buffer size=%d ... use %s logic\n", 
+	GCTRACE(1)("GCwinsock2_init %s: RECV Overflow Buffer size=%d %s ... use %s logic\n", 
 		    proto, GCWINSOCK2_recv_buffer_size,
+		    (GCWINSOCK2_recv_buffer_size == -1) ? "(use PCT pkt size)" : "",
 		    GCWINSOCK2_recv_buffer_size ? "'1-step read all'" : "'2-step read length prefix first'");
 
 	/*
@@ -603,31 +875,33 @@ GCwinsock2_init(GCC_PCE * pptr)
 	** in situations where it is desired to limit processing
 	** to less than the total # of CPUs on the machine.
 	**
-	** If concurrent threads is set to 0, then AIO will be used instead
-	** of IO completion port. Sends and Receives for AIO run completely
-	** in the caller's thread whereas, for IO completion port, their
-	** completion is handled by the worker threads.
+	** If concurrent threads is set to 0 or not set, then AIO
+	** will be used instead of IO completion port. Sends and Receives
+	** for AIO run completely in the caller's thread whereas, for
+	** IO completion port, their completion is handled by the worker
+	** threads.
 	**
-	** If not set, then the default # of concurrent threads will be
-	** created (=#CPUs) and IO completion port used.
-	**
-	** If not set, then the default # of worker threads will be created
+	** If set to a negative value, then IO completion port logic will
+	** be used and the default # of worker threads created will be:
 	** (# concurrent + 2) + (#listen ports - 1)) [eg, on a dual-core
 	** machine with both IPv6 and IPv4 ports ==> 5 worker threads].
-	** If set to other than zero, then that number of worker threads
+	** If set to more than zero, then that number of worker threads
 	** will be created (plus possibly a thread(s) for listen ports).
 	*/
 	GetSystemInfo(&SystemInfo);
 	NMgtAt("II_WINSOCK2_CONCURRENT_THREADS", &ptr);
 	if (!(ptr && *ptr) && PMget("!.winsock2_concurrent_threads", &ptr) != OK)
 	{
-	    NumConcurrentThreads =
-		SystemInfo.dwNumberOfProcessors > MAX_WORKER_THREADS ?
-		    MAX_WORKER_THREADS : SystemInfo.dwNumberOfProcessors;
+	    NumConcurrentThreads = 0;
 	}
 	else
 	{
 	    NumConcurrentThreads = atoi(ptr);
+	    if (NumConcurrentThreads < 0)
+		NumConcurrentThreads =
+		    SystemInfo.dwNumberOfProcessors > MAX_WORKER_THREADS ?
+		        MAX_WORKER_THREADS : SystemInfo.dwNumberOfProcessors;
+	    else
 	    if (NumConcurrentThreads > MAX_WORKER_THREADS)
 		NumConcurrentThreads = MAX_WORKER_THREADS;
 	}
@@ -826,22 +1100,48 @@ GCwinsock2_init(GCC_PCE * pptr)
 **	    Convert CreateThread() to _beginthreadex() which is recommended
 **	    when using C runtime.
 **	    Add async connect logic for AIO using Events.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Don't call WSAGetLastError() after getaddrinfo() failure as it
+**	    returns a zero (0) status, which is confusing.  Just use the
+**	    return value directly from getaddrinfo().
+**
+**	    Create new functions GCwinsock2_get_pcb() and ...rel_pcb()
+**	    to handle allocating/initializing and releasing/freeing a PCB,
+**	    respectively.
+**	    PER_IO_DATA structures for send and receive are now embedded
+**	    in the PCB and no longer need to be allocated and freed for
+**	    each send/receive request.
+**
+**	    If caller supports it, when an operation completes immediately,
+**	    return with the results and skip the subsequent callback to the
+**	    completion routine; this condition is indicated by returning
+**	    status=FAIL but generic_status=OK. Support for this feature
+**	    by the caller is indicated with flag PCT_SKIP_CALLBK_IF_DONE
+**	    being set in the PCE pce_options field.  Currently the feature
+**	    is used by GCA CL to support "peeks" (receives with timeout=0)
+**	    and to improve performance.
+**
+**	    Add support for timeouts on receives. For backward compatibility
+**	    to GCC TL which doesn't pass a timeout value in the parm_list,
+**	    only check timeout if PCE option PCT_ENABLE_TIMEOUTS is on.
 */
 
 STATUS
 GCwinsock2(i4 function_code, GCC_P_PLIST *parm_list)
 {
     STATUS		status = OK;
+    bool		retval = TRUE;
     THREAD_EVENTS	*Tptr = NULL;
     GCC_LSN		*lsn = NULL;
     GCC_WINSOCK_DRIVER	*wsd;
-    PCB			*pcb = (PCB *)parm_list->pcb;
+    u_i4		pce_options;
+    PCB2		*pcb = (PCB2 *)parm_list->pcb;
     char		*port = NULL;
     char		*node = NULL;
     int			i, rval;
     DWORD		dwBytes=0;
     DWORD		dwBytes_wanted;
-    i4			len;
+    i4			len, len_prefix, timeout;
     char		*proto = parm_list->pce->pce_pid;
     WS_DRIVER		*driver;
     char		port_name[36];
@@ -850,6 +1150,7 @@ GCwinsock2(i4 function_code, GCC_P_PLIST *parm_list)
     struct addrinfo	hints, *lpAddrinfo;
     int 		tid;
     SECURITY_ATTRIBUTES sa;
+    DWORD		CurrentThreadId = GetCurrentThreadId();
 
     parm_list->generic_status = OK;
     CLEAR_ERR(&parm_list->system_status);
@@ -860,6 +1161,12 @@ GCwinsock2(i4 function_code, GCC_P_PLIST *parm_list)
     */
     Tptr = (THREAD_EVENTS *)parm_list->pce->pce_dcb;
     wsd = &Tptr->wsd;
+    len_prefix = wsd->block_mode ? 0 : 2;  /* Streams mode has 2 byte len prfx*/
+    pce_options = parm_list->pce->pce_options;
+    timeout = (pce_options & PCT_ENABLE_TIMEOUTS ) ? parm_list->timeout : -1;
+
+
+    GCTRACE(5)("GCwinsock2 %s: %p Entered: function=%d thread_id=%d\n", proto, parm_list, function_code, CurrentThreadId);
 
     /*
     ** Set error based on function code and determine whether we got a
@@ -891,20 +1198,41 @@ GCwinsock2(i4 function_code, GCC_P_PLIST *parm_list)
 	    {
 		SETWIN32ERR(&parm_list->system_status, status, ER_listen);
 	        parm_list->generic_status = GC_LISTEN_FAIL;
-	        status = FAIL;
 		GCTRACE(1)("GCwinsock2 %s: GCC_LISTEN %p No matching GCC_LSN cb found for port %s\n", 
 			proto, parm_list, parm_list->pce->pce_port);
 	        goto complete;
 	    }
 
+	    /*
+	    ** Since LISTENs are always done in a different thread
+	    ** from the originator, pass on the original caller's thread
+	    ** handle to the listen processing functions so that the
+	    ** callback to the caller's completion routine can be done in
+	    ** the original thread.  Without the handle, can still use LISTEN
+	    ** event instead at callback time as long as only 1 thread is
+	    ** waiting on it, which is usually the case.
+	    ** Create a REQUEST_Q block to contain this info along with
+	    ** the pointer to the parmlist.
+	    */
+	    rq = (REQUEST_Q *)MEreqmem(0, sizeof(*rq), TRUE, NULL);
+	    if (rq == NULL)
+	    {
+		SETWIN32ERR(&parm_list->system_status, status, ER_alloc);
+	        parm_list->generic_status = GC_LISTEN_FAIL;
+		GCTRACE(1)("GCwinsock2%s: GCC_LISTEN %p ERROR: Unable to allocate rq structure\n", proto, parm_list);
+		return(FAIL);
+	    }
+	    rq->plist = parm_list;
+	    rq->ThreadId = CurrentThreadId;
+
 	    if (lpfnAcceptEx)
-		return GCwinsock2_listen(parm_list);
+		return GCwinsock2_listen(rq);
 	    else
 	    {
 		if (lsn->hListenThread =
 			(HANDLE)_beginthreadex(&sa, GC_STACK_SIZE,
 				     (LPTHREAD_START_ROUTINE)GCwinsock2_listen,
-				     parm_list, 0, &tid))
+				     rq, 0, &tid))
 		{
 		    return(OK);
 		}
@@ -913,6 +1241,7 @@ GCwinsock2(i4 function_code, GCC_P_PLIST *parm_list)
 		SETWIN32ERR(&parm_list->system_status, status, ER_threadcreate);
 		GCTRACE(1)("GCwinsock2 %s: GCC_LISTEN %p Unable to create listen thread, status=%d\n", 
 			proto, parm_list, status);
+		MEfree((PTR)rq);
 		break;
 	    }
 
@@ -927,21 +1256,14 @@ GCwinsock2(i4 function_code, GCC_P_PLIST *parm_list)
 	    driver = (WS_DRIVER *)wsd->pce_driver;
 
 	    /*
-	    ** Allocate the protocol control block.
+	    ** Obtain a protocol control block.
 	    */
-	    pcb = (PCB *) MEreqmem(0, sizeof(PCB) + GCWINSOCK2_recv_buffer_size, FALSE, &status);
-	    parm_list->pcb = (char *)pcb;
-	    if (pcb == NULL)
+	    if ( ((PCB2 *)parm_list->pcb = pcb = GCwinsock2_get_pcb(parm_list->pce, TRUE)) == NULL )
 	    {
 		SETWIN32ERR(&parm_list->system_status, status, ER_alloc);
 		parm_list->generic_status = GC_CONNECT_FAIL;
-        	GCTRACE(1)("GCwinsock2 %s: GCC_CONNECT %p Unable to allocate PCB (size=%d)\n",
-                       proto, parm_list, sizeof(PCB));
 		break;
 	    }
-	    ZeroMemory(pcb, sizeof(PCB));  /* Don't bother to zero buffer */
-	    pcb->rcv_buf_len = sizeof(pcb->rcv_buffer) + GCWINSOCK2_recv_buffer_size;
-	    pcb->b1 = pcb->b2 = pcb->rcv_buffer;
 
 	    /*
 	    ** Call the protocol-specific addressing function.
@@ -949,18 +1271,17 @@ GCwinsock2(i4 function_code, GCC_P_PLIST *parm_list)
 	    ** will convert it to a numeric port that can be used
 	    ** in the network function calls.
 	    */ 
-	    if ((*driver->addr_func)(node, port, port_name) == FAIL)
+	    if ((status = (*driver->addr_func)(node, port, port_name)) == FAIL)
 	    {
-		status = WSAGetLastError();
 		SETWIN32ERR(&parm_list->system_status, status, ER_socket);
 		parm_list->generic_status = GC_CONNECT_FAIL;
-        	GCTRACE(1)("GCwinsock2 %s: GCC_CONNECT %p Protocol-specific address function failed for node=%s port=%s, status=%d\n",
-                       proto, parm_list, node, port, status);
+        	GCTRACE(1)("GCwinsock2 %s %d: GCC_CONNECT %p Protocol-specific address function failed for node=%s port=%s, status=%d\n",
+                       proto, pcb->id, parm_list, node, port, status);
 		break;
 	    }
 
-	    GCTRACE(2)( "GCwinsock2 %s: GCC_CONNECT %p connecting to %s port %s(%s)\n", 
-		proto, parm_list, node, port, port_name );
+	    GCTRACE(2)( "GCwinsock2 %s %d: GCC_CONNECT %p connecting to %s port %s(%s)\n", 
+		proto, pcb->id, parm_list, node, port, port_name );
 
 	    /*
 	    ** Set up criteria for getting list of IPv* addrs to connect to.
@@ -979,11 +1300,15 @@ GCwinsock2(i4 function_code, GCC_P_PLIST *parm_list)
 	    status = getaddrinfo(node, port_name, &hints, &pcb->addrinfo_list);
 	    if (status != 0)
 	    {
-	        status = WSAGetLastError();
+	        /*
+	        ** Use status from getaddrinfo() directly; do not call
+	        ** WSAGetLastError() as it returns a zero status, which
+	        ** is confusing if there is an error.
+	        */
 	        SETWIN32ERR(&parm_list->system_status, status, ER_getaddrinfo);
 	        parm_list->generic_status = GC_CONNECT_FAIL;
-	        GCTRACE(1)( "GCwinsock2 %s: GCC_CONNECT %p getaddrinfo() failed for node=%s port=%s(%s), status=%d\n",
-			    proto, parm_list, node, port, port_name, status);
+	        GCTRACE(1)( "GCwinsock2 %s %d: GCC_CONNECT %p getaddrinfo() failed for node=%s port=%s(%s), status=%d\n",
+			    proto, pcb->id, parm_list, node, port, port_name, status);
 	        break;
 	    }
 
@@ -994,9 +1319,8 @@ GCwinsock2(i4 function_code, GCC_P_PLIST *parm_list)
 	    {
 	        SETWIN32ERR(&parm_list->system_status, status, ER_getaddrinfo);
 	        parm_list->generic_status = GC_CONNECT_FAIL;
-	        status = FAIL;
-	        GCTRACE(1)( "GCwinsock2 %s: GCC_CONNECT %p getaddrinfo() returned no addresses for node=%s port=%s(%s)\n",
-			    proto, parm_list, node, port, port_name);
+	        GCTRACE(1)( "GCwinsock2 %s %d: GCC_CONNECT %p getaddrinfo() returned no addresses for node=%s port=%s(%s)\n",
+			    proto, pcb->id, parm_list, node, port, port_name);
 	        break;
 	    }
 
@@ -1005,20 +1329,13 @@ GCwinsock2(i4 function_code, GCC_P_PLIST *parm_list)
 		/*
 		** Allocate the PER_IO_DATA structure and initialize.
 		*/
-		lpPerIoData = (PER_IO_DATA *)MEreqmem(0, sizeof(PER_IO_DATA),
-		  				      TRUE, &status);
+		lpPerIoData = GCwinsock2_get_piod(OP_CONNECT, parm_list);
 		if (lpPerIoData == NULL)
 		{
-		    SETWIN32ERR(&parm_list->system_status, status, ER_alloc);
 		    parm_list->generic_status = GC_CONNECT_FAIL;
-		    GCTRACE(1)("GCwinsock2 %s: GCC_CONNECT %p Unable to allocate PER_IO_DATA (size=%d)\n",
-			    proto, parm_list, sizeof(PER_IO_DATA));
 		    break;
 		}
-
-		lpPerIoData->OperationType = OP_CONNECT;
-		lpPerIoData->parm_list = parm_list;
-		lpPerIoData->block_mode = wsd->block_mode;
+		lpPerIoData->ThreadId = CurrentThreadId;
 
 	    }  /* Endif lpfnConnectEx */
 
@@ -1049,229 +1366,510 @@ GCwinsock2(i4 function_code, GCC_P_PLIST *parm_list)
 	    {
 		SETWIN32ERR(&parm_list->system_status, status, ER_connect);
 		parm_list->generic_status = GC_CONNECT_FAIL;
-		GCTRACE(1)("GCwinsock2 %s: GCC_CONNECT %p All IP addrs failed to connect to %s port %s(%s)\n",
-			proto, parm_list, node, port, port_name );
+		GCTRACE(1)("GCwinsock2 %s %d: GCC_CONNECT %p All IP addrs failed to connect to %s port %s(%s)\n",
+			proto, pcb->id, parm_list, node, port, port_name );
 		goto complete;
 	    }
 
 	case GCC_SEND:
-	    GCTRACE(2) ("GCwinsock2 %s: GCC_SEND %p\n", proto, parm_list);
-
 	    if (!pcb) goto complete;
 
-	    if (wsd->block_mode)
-	    {
-		pcb->snd_bptr = parm_list->buffer_ptr;
-		pcb->tot_snd = parm_list->buffer_lng;
-	    }
-	    else
+	    GCTRACE(2) ("GCwinsock2 %s %d: GCC_SEND %p PendingIOs=%d\n",
+		proto, pcb->id, parm_list, pcb->AsyncIoRunning);
+
+	    pcb->snd_bptr = parm_list->buffer_ptr - len_prefix;
+	    pcb->tot_snd  = parm_list->buffer_lng + len_prefix;
+	    if (len_prefix > 0)
 	    {
 		u_i2	tmp_i2;
 		u_char	*cptr;
 
 		/*
 		** Handle 1st 2 bytes which are a msg length field.
+		** NOTE!! It is a REQUIREMENT that the caller provides
+		** space preceding the message that can be used
+		** by the protocol driver.  For streams-based protocols
+		** like TCP/IP, this is used to prefix a 2-byte message
+		** length field.
 		*/
-		pcb->snd_bptr = parm_list->buffer_ptr - 2;
-		tmp_i2 = (u_i2)(pcb->tot_snd = (i4)(parm_list->buffer_lng + 2));
+		tmp_i2 = (u_i2)(pcb->tot_snd);
 		cptr = (u_char *)&tmp_i2;
 		pcb->snd_bptr[1] = cptr[1];
 		pcb->snd_bptr[0] = cptr[0];
 	    }
 
 	    /*
-	    ** Allocate the PER_IO_DATA structure and initialize.
+	    ** Initialize the PER_IO_DATA structure.
+	    ** If the default one is still in use, then get a new one.
 	    */
-	    lpPerIoData = (PER_IO_DATA *)MEreqmem(0, sizeof(PER_IO_DATA),
-						  TRUE, &status);
-	    if (lpPerIoData == NULL)
+	    lpPerIoData = &pcb->snd_PerIoData;
+	    if (lpPerIoData->state != PIOD_ST_AVAIL)
 	    {
-		SETWIN32ERR(&parm_list->system_status, status, ER_alloc);
-		parm_list->generic_status = GC_SEND_FAIL;
-		GCTRACE(1)("GCwinsock2 %s: GCC_SEND %p Unable to allocate PER_IO_DATA (size=%d)\n",
-			    proto, parm_list, sizeof(PER_IO_DATA));
-		break;
+		lpPerIoData = GCwinsock2_get_piod(OP_SEND, parm_list);
+		if (lpPerIoData == NULL)
+		{
+		    parm_list->generic_status = GC_SEND_FAIL;
+		    break;
+		}
 	    }
-
-	    lpPerIoData->OperationType = OP_SEND;
-	    lpPerIoData->parm_list = parm_list;
-	    lpPerIoData->block_mode = wsd->block_mode;
+	    else  /* reuse existing (default) one */
+	    {
+		ZeroMemory(&lpPerIoData->Overlapped, sizeof(OVERLAPPED));
+		lpPerIoData->state	= PIOD_ST_IO_PENDING;
+		lpPerIoData->parm_list	= parm_list;
+		lpPerIoData->block_mode = wsd->block_mode;
+	    }
 	    lpPerIoData->wbuf.buf = pcb->snd_bptr;
 	    lpPerIoData->wbuf.len = pcb->tot_snd;
+	    if (GCwinsock2CompletionPort)
+		lpPerIoData->ThreadId = CurrentThreadId;
 
 	    InterlockedIncrement(&pcb->AsyncIoRunning);
 	    rval = WSASend( pcb->sd, &lpPerIoData->wbuf, 1, &dwBytes, 0,
 			&lpPerIoData->Overlapped,
 			GCwinsock2CompletionPort ? NULL : GCwinsock2_AIO_Callback );
 
-	    if (rval == SOCKET_ERROR)
+	    if (rval)
 	    {
 		status = WSAGetLastError();
-		if (status != WSA_IO_PENDING)
+		if (status == WSA_IO_PENDING)
 		{
-		    InterlockedDecrement(&pcb->AsyncIoRunning);
+		    GCTRACE(2)( "GCwinsock2 %s %d: GCC_SEND %p, try send %d bytes, WSASend() IO_PENDING\n",
+			proto, pcb->id, parm_list, lpPerIoData->wbuf.len );
+		    return(OK);
+		}
+		else
+		{
+		    GCTRACE(1)( "GCwinsock2 %s %d: GCC_SEND %p WSASend() failed for %d bytes on socket=0x%p, status=%d\n",
+			     proto, pcb->id, parm_list, pcb->tot_snd, pcb->sd, status);
+		    pcb->tot_snd = 0;
 		    parm_list->generic_status = GC_SEND_FAIL;
 		    SETWIN32ERR(&parm_list->system_status, status, ER_socket);
-		    GCTRACE(1)( "GCwinsock2 %s: GCC_SEND %p WSASend() failed for %d bytes, socket=0x%p, status=%d\n",
-			     proto, parm_list, pcb->tot_snd, pcb->sd, status);
-		    goto complete;
+		    InterlockedDecrement(&pcb->AsyncIoRunning);
+		    GCwinsock2_rel_piod(lpPerIoData);
+		    return FAIL; /* GCC_SEND failed */
+		}
+	    }
+	    else   /* Successful immediate completion */
+	    {
+		/*
+		** If caller requires results to be provided to its callback
+		** completion routine (rather than now at return), or if said
+		** callback can't be blocked/suppressed,
+		** just return OK now and let the normal callback pass back
+		** the results.  GCC TL, for instance, requires callback, but
+		** GCA CL (gcarw.c) doesn't (checks for results upon return).
+		** Return results now and block/skip the callback ONLY IF flag
+		** PCT_SKIP_CALLBK_IF_DONE is set.
+		**
+		** A special case to also wait for callback is when 0 bytes
+		** were sent, indicating the other side disconnected.
+		** The callback logic is already set up to handle this as an
+		** error and there is no harm in waiting until callback.
+		** Also makes it consistent with GCC_RECEIVE processing.
+		**
+		** For now, immediate returns for IO Completion Port logic is
+		** is not supported because the IO callback runs in separate
+		** worker threads and so may have already run.  Hence,
+		** it is difficult to reliably suppress the callback of the
+		** caller's completion routine...a timing issue.
+		*/
+		if ( !(pce_options & PCT_SKIP_CALLBK_IF_DONE) ||
+		     GCwinsock2CompletionPort ||
+		     pcb->AsyncIoRunning > ASYNC_IO_RUNNING_SOFT_LIMIT ||
+		     !dwBytes )
+		{
+		    GCTRACE(2)( "GCwinsock2 %s %d: GCC_SEND %p, try send %d bytes, did send %d bytes, results in callback\n",
+			proto, pcb->id, parm_list, pcb->tot_snd, dwBytes);
+		    return(OK);
 		}
 	    }
 
-	    GCTRACE(2)( "GCwinsock2 %s: GCC_SEND %p, try send %d bytes, did send %d bytes, status=%d\n",
-			proto, parm_list, pcb->tot_snd, dwBytes, rval);
+	    /*
+	    ** WSASend() completed immediately - successfully.
+	    ** Set return status to FAIL, which actually means "all done".
+	    ** The OS will still call our IO callback routine even
+	    ** though the request completed immediately.  Flag the IO
+	    ** request so that our IO callback routine, when invoked
+	    ** by the OS, will not callback the caller's completion routine.
+	    */
+	    GCTRACE(2)( "GCwinsock2 %s %d: GCC_SEND %p, try send %d bytes, did send %d bytes\n",
+			proto, pcb->id, parm_list, pcb->tot_snd, dwBytes );
+	    lpPerIoData->state = PIOD_ST_SKIP_CALLBK;
+	    pcb->skipped_callbk_flag = TRUE;
+	    return(FAIL);
 
-	    return(OK);
 
 	case GCC_RECEIVE:
-	    GCTRACE(2) ("GCwinsock2 %s: GCC_RECEIVE %p\n", proto, parm_list);
-
 	    if (!pcb) goto complete;
 
-	    if (wsd->block_mode)	/* message (block) read */
-	    {
-		pcb->rcv_bptr = parm_list->buffer_ptr;
-		pcb->tot_rcv = parm_list->buffer_lng;
-	    }
-	    else if( pcb->rcv_buf_len <= sizeof(pcb->rcv_buffer)  )   /* stream 2-step read */
-	    {
-		/*
-		** No receive buffer for overflow, so will first read the
-		** 2 byte header that specifies what the message length is.
-		** Then will do a 2nd receive to get the actual message.
-		*/
-		pcb->rcv_bptr = parm_list->buffer_ptr - 2;
-		pcb->tot_rcv = 2;
-	    }
-	    else     /* stream 1-step read with overflow buffer */
-	    {
-		/*
-		** Setup bounds of read area.
-		**
-		** Caller should restrict requests to the limit defined
-		** in the protocol table.  We allow longer requests, but
-		** are limited by the size of the overflow buffer.  By
-		** restricting reads to the size of the overflow buffer,
-		** we ensure that a buffer overrun won't occur.  This
-		** means multiple reads will be required to receive
-		** requests larger than the declared limit.
-		*/
-		pcb->rcv_bptr = parm_list->buffer_ptr - 2;
-		pcb->tot_rcv = min( parm_list->buffer_lng + 2, pcb->rcv_buf_len );
-
-		/* Get what we can from the buffer */
-
-		if( len = ( pcb->b2 - pcb->b1 ) )  /* #bytes in buffer */
-		{
-		    bool flag_skip_recv = FALSE;
-		    /* If we have the NDU header, use the length */
-		    if( len >= 2 )
-		    {
-			i4 len2 = ((u_char *)pcb->b1)[0] +
-			          ((u_char *)pcb->b1)[1] * 256;
-			/*
-			** Ensure buffered msg has valid length...must be at
-			** least 2 for NDU hdr & must fit in caller's buffer.
-			*/
-			if (len2 < 2 || len2 > parm_list->buffer_lng + 2)
-			{
-			    parm_list->generic_status = GC_RECEIVE_FAIL;
-			    GCTRACE(1)( "GCwinsock2 %s: GCC_RECEIVE %p failure - Invalid incoming message len = %d bytes, buffer = %d bytes, socket=0x%p\n",
-		                proto, parm_list,
-		                len2 - 2, 
-		                parm_list->buffer_lng,
-		                pcb->sd);
-			    break;
-			}
-
-			if (len2 <= len)  /* Have a whole msg? */
-			{
-			    len = len2;
-			    flag_skip_recv = TRUE;
-			}
-		    }  /* End if have at least 2 bytes in buffer */
-
-		    GCTRACE(3)("GCwinsock2 %s: GCC_RECEIVE %p using %d - %s message\n",
-			proto, parm_list, len,
-			flag_skip_recv ? "whole" : "part" );
-
-		    MEcopy( pcb->b1, len, pcb->rcv_bptr );
-		    pcb->rcv_bptr += len;
-		    pcb->tot_rcv -= len;
-		    pcb->b1 += len;
-		    /*
-		    ** If we've copied out everything from the overflow
-		    ** buffer, then reset the pointers to the overflow
-		    ** buffer back to the beginning (indicating nothing
-		    ** in the overflow buffer).
-		    ** NOTE: b1 and b2 should be equal in this condition,
-		    ** but we check for > also just to be safe.
-		    */
-		    if (pcb->b1 >= pcb->b2)
-			pcb->b1 = pcb->b2 = pcb->rcv_buffer;
-		    /*
-		    ** Skip the receive if an entire message was
-		    ** found in the overflow area from a prior receive.
-		    ** Ie, the GCC_RECEIVE is done!
-		    */
-		    if (flag_skip_recv == TRUE)
-		    {
-			parm_list->buffer_lng  = len - 2;
-			goto complete;
-		    }
-		}  /* End if have any bytes already in buffer. */
-	    }  /* End if non-blocked mode (ie, stream mode) */
+	    GCTRACE(2) ("GCwinsock2 %s %d: GCC_RECEIVE %p PendingIOs=%d PLIST: buf=0x%p len=%d\n",
+			proto, pcb->id, parm_list, pcb->AsyncIoRunning,
+			parm_list->buffer_ptr, parm_list->buffer_lng);
+	    GCTRACE(5) ("GCwinsock2 %s %d: GCC_RECEIVE %p PCB: bptr=0x%p buffer=x%p for len=%d Ovflo[0x%p-0x%p]\n",
+			proto, pcb->id, parm_list,
+			pcb->rcv_bptr, pcb->rcv_buffer, pcb->rcv_buf_len,
+			pcb->b1, pcb->b2);
 
 	    /*
-	    ** Allocate the PER_IO_DATA structure and initialize.
+	    ** DBMS server tends to reissue expedited receives no matter what
+	    ** has happened in order to keep an expedited receive pending.
+	    ** If the session was already disconnected by the client,
+	    ** then there is no point in reissuing a receive and getting
+	    ** the same error (again).  Ignore the request.
 	    */
-	    lpPerIoData = (PER_IO_DATA *)MEreqmem(0, sizeof(PER_IO_DATA),
-						  TRUE, &status);
-	    if (lpPerIoData == NULL)
+	    if (pcb->session_state == SS_DISCONNECTED)
+		return(OK);
+
+	    /*
+	    ** Sanity check prior receive request state.  Also, if an IO is 
+	    ** pending for a previously timed out request, then redirect
+	    ** the pending IO to this new request.
+	    */
+	    if (pcb->last_rcv_PerIoData)
 	    {
-		SETWIN32ERR(&parm_list->system_status, status, ER_alloc);
-		parm_list->generic_status = GC_RECEIVE_FAIL;
-		GCTRACE(1)("GCwinsock2 %s: GCC_RECEIVE %p Unable to allocate PER_IO_DATA (size=%d)\n",
-			    proto, parm_list, sizeof(PER_IO_DATA));
-		break;
+		PER_IO_DATA *last_PerIoData = pcb->last_rcv_PerIoData;
+		switch (last_PerIoData->state)
+		{
+		case PIOD_ST_AVAIL:
+		case PIOD_ST_SKIP_CALLBK:
+		    break;		/* OK to proceed */
+
+		case PIOD_ST_TIMED_OUT:
+		    /*
+		    ** Hijack prior receive, which was timed out but the IO
+		    ** is still pending.
+		    */
+		    last_PerIoData->parm_list = parm_list;
+		    switch (timeout)
+		    {
+		    case -1: 	/* no timeout (INFINITE)  - IO Pending */
+			GCTRACE(4)( "GCwinsock2 %s %d: GCC_RECEIVE %p, want %d bytes, use existing WSARecv() IO_PENDING\n",
+			        proto, pcb->id, parm_list, last_PerIoData->wbuf.len );
+			last_PerIoData->state     = PIOD_ST_REDIRECT;
+			break;
+
+		    case 0:	/* "peek" failed - still no data received */
+			GCTRACE(4)( "GCwinsock2 %s %d: GCC_RECEIVE %p, want %d bytes, Timed out (timeout=0)\n",
+			        proto, pcb->id, parm_list, last_PerIoData->wbuf.len );
+			parm_list->generic_status = GC_TIME_OUT;
+	    		last_PerIoData->state = PIOD_ST_TIMED_OUT;
+			return(FAIL);
+
+		    default: 		/* timeout > 0 - set timer */
+			GCTRACE(4)( "GCwinsock2 %s %d: GCC_RECEIVE %p, want %d bytes, use existing WSARecv() IO_PENDING with timeout=%d\n",
+			        proto, pcb->id, parm_list, last_PerIoData->wbuf.len, timeout );
+			GCwinsock2_set_timer(last_PerIoData, timeout);
+			break;
+		    }  /* end switch on timeout */
+
+		    return(OK);		/* Return as if WSARecv() issued */
+
+		default:		/* Shouldn't be in that state */
+		    parm_list->generic_status = GC_RECEIVE_FAIL;
+		    GCTRACE(1)( "GCwinsock2 %s %d: GCC_RECEIVE %p failure - Invalid state (%d) of last GCC_RECEIVE %p, socket=0x%p\n",
+		                proto, pcb->id, parm_list,
+		                last_PerIoData->state,
+		                last_PerIoData->parm_list,
+		                pcb->sd);
+		    goto complete;
+		} /* End switch on state */
+	    } /* End if last_rcv_PerIoData exists */
+
+	    /*
+	    ** Set buffer pointer and length for receive.
+	    **
+	    ** NOTE!! It is a REQUIREMENT that the caller provides
+	    ** space preceding the message buffer that can be used
+	    ** by the protocol driver.  
+	    **
+	    ** For streams-based protocols like TCP/IP, this is used
+	    ** to prefix a 2-byte length field to each message. The caller's
+	    ** completion routine is not invoked until the entire message,
+	    ** based on the incoming length field, has been received,
+	    ** which may require multiple WSARecv()s.
+	    ** The caller only sees the message, not the prefix, since
+	    ** the prefix is placed ahead of the message buffer of the caller.
+	    ** Excess incoming data, if any, is saved in an internal
+	    ** receive buffer area (ie, for overflow).
+	    **
+	    ** For block-mode protocols, no message prefix is used.
+	    ** Whatever is received is passed directly back to the caller.
+	    ** Hence, no such thing as excess.
+	    ** Block mode is used by Novell SPX protocol and by GCA CL
+	    ** calling this driver for TCP_IP.  GCA CL has his own
+	    ** length information embedded within the message and keeps
+	    ** track of when a full message has been received as well as
+	    ** excess/overflow.
+	    */
+	    pcb->rcv_bptr = parm_list->buffer_ptr - len_prefix;
+	    pcb->tot_rcv  = parm_list->buffer_lng + len_prefix;
+
+	    if (len_prefix > 0)
+	    {
+		if( pcb->rcv_buf_len <= sizeof(pcb->rcv_buffer) )  /* stream 2-step read */
+		{
+		    /*
+		    ** No receive buffer for overflow, so will first read only
+		    ** the length prefix that contains the message length.
+		    ** Then will do a 2nd receive to get the actual message.
+		    */
+		    pcb->tot_rcv = len_prefix;
+		}
+		else     /* stream 1-step read with overflow buffer */
+		{
+		    /*
+		    ** Setup bounds of read area.
+		    **
+		    ** Caller should restrict requests to the limit defined
+		    ** in the protocol table.  We allow longer requests, but
+		    ** are limited by the size of the overflow buffer.  By
+		    ** restricting reads to the size of the overflow buffer,
+		    ** we ensure that a buffer overrun won't occur.  This
+		    ** means multiple reads will be required to receive
+		    ** requests larger than the declared limit.
+		    ** NOTE: The default size of the overflow buffer is
+		    ** now set to equal the protocol table packet size.
+		    */
+		    pcb->tot_rcv = min( parm_list->buffer_lng + len_prefix, pcb->rcv_buf_len );
+		}
 	    }
 
-	    lpPerIoData->OperationType = OP_RECV;
-	    lpPerIoData->parm_list = parm_list;
-	    lpPerIoData->block_mode = wsd->block_mode;
+	    /*
+	    ** Get what we can from the overflow buffer.  If a whole
+	    ** message is there, use it instead of issuing the
+	    ** WSARecv() below.
+	    */
+	    if( len = ( pcb->b2 - pcb->b1 ) )  /* #bytes in ovflo buffer */
+	    {
+		/*
+		** Turn off timeout for this receive (in case it happens to
+		** have been set by the caller).  Since we have data already
+		** available in the overflow/receive buffer, we consider
+		** the receive immediately satisfied by that data.  Hence,
+		** no timeout can occur, even if we only have a partial
+		** message and need to issue another WSARecv() to get the rest.
+		*/
+		timeout = -1;
+
+		/*
+		** Skip the receive if an entire message was found
+		** in the overflow area from a prior receive.
+		** Ie, the GCC_RECEIVE is done!
+		*/
+		if (GCwinsock2_copy_ovflo_to_inbuf(pcb, parm_list, wsd->block_mode, &len) == TRUE)
+		{   /* got whole message */
+		    if (pce_options & PCT_SKIP_CALLBK_IF_DONE)
+			return(FAIL);  /* No need to call compl rtn...immed rtns OK */
+		    else
+		        goto complete; /* Call completion rtn */
+		}
+	    }  /* End if have any bytes already in (overflow) buffer. */
+
+	    /*
+	    ** Initialize a PER_IO_DATA structure.
+	    ** If the default one is still in use, then get a new one.
+	    */
+	    lpPerIoData = &pcb->rcv_PerIoData;
+	    if (lpPerIoData->state != PIOD_ST_AVAIL)
+	    {
+		lpPerIoData = GCwinsock2_get_piod(OP_RECV, parm_list);
+		if (lpPerIoData == NULL)
+		{
+		    parm_list->generic_status = GC_RECEIVE_FAIL;
+		    break;
+		}
+	    }
+	    else  /* reuse existing (default) one */
+	    {
+		ZeroMemory(&lpPerIoData->Overlapped, sizeof(OVERLAPPED));
+		lpPerIoData->state	= PIOD_ST_IO_PENDING;
+		lpPerIoData->parm_list  = parm_list;
+		lpPerIoData->block_mode = wsd->block_mode;
+	    }
+	    if (GCwinsock2CompletionPort)
+		lpPerIoData->ThreadId = CurrentThreadId;
+	    pcb->last_rcv_PerIoData = lpPerIoData;   /* save ptr to it */
+
+	    /*
+	    ** If a timeout was specified ( >=0  or !=-1), the overflow
+	    ** buffer is used to receive the data rather than the caller's
+	    ** buffer.  This is because we have no convenient way to
+	    ** time out or cancel a receive once we've issued it below.
+	    ** When a timeout occurs, the caller is notified of the 
+	    ** error (GC_TIME_OUT), but the WSARecv() IO remains pended.
+	    ** If a new GCC_RECEIVE request comes in, it is hooked up
+	    ** to the pended IO.  Since the new GCC_RECEIVE request will
+	    ** likely have a different target buffer address and length
+	    ** from the timed out request, and because neither value can
+	    ** be changed once WSARecv() has been issued, we instead use
+	    ** an intermediate area (the receive buffer/overflow area) to
+	    ** receive the data; this area persists for the duration of
+	    ** the connection.  When the IO completes, then the data
+	    ** must be copied from the intermediate area into the caller's
+	    ** buffer; this is a slight performance hit, but unavoidable.
+	    ** Fortunately, timeouts on receives are the exception, not
+	    ** the "norm".
+	    */
+	    if (timeout >= 0)
+	    {
+		lpPerIoData->state = PIOD_ST_IO_TMO_PENDING;
+		pcb->rcv_bptr = pcb->b2;
+		pcb->tot_rcv = pcb->rcv_buf_len - (pcb->b2 - pcb->b1);
+		GCTRACE(3)("GCwinsock2 %s %d: GCC_RECEIVE %p with timeout=%d, recv into ovflo at 0x%p (offset=%d) for len=%d\n",
+			proto, pcb->id, parm_list, timeout,
+			pcb->rcv_bptr,
+			pcb->rcv_bptr - pcb->rcv_buffer,
+			pcb->tot_rcv);
+	    }
+
+	    /*
+	    ** Finish setting up PER_IO_DATA with address and length
+	    ** of area to receive into.
+	    */
 	    lpPerIoData->wbuf.buf = pcb->rcv_bptr;
 	    lpPerIoData->wbuf.len = dwBytes_wanted = pcb->tot_rcv;
 
-	    i = 0;
+	    GCTRACE(5)("GCwinsock2 %s %d: GCC_RECEIVE %p WSARecv() args: PIOD=0x%p &wbuf=0x%p, .buf=0x%p, .len=%d, Overlapped=0x%p\n",
+			proto, pcb->id, parm_list,
+			lpPerIoData,
+			&lpPerIoData->wbuf,
+			lpPerIoData->wbuf.buf,
+			lpPerIoData->wbuf.len,
+			&lpPerIoData->Overlapped);
+
 	    InterlockedIncrement(&pcb->AsyncIoRunning);
+	    i = 0;
 	    rval = WSARecv( pcb->sd, &lpPerIoData->wbuf, 1, &dwBytes, &i,
 			&lpPerIoData->Overlapped,
 			GCwinsock2CompletionPort ? NULL : GCwinsock2_AIO_Callback );
 
-	    if (rval == SOCKET_ERROR)
+	    if (rval)
 	    {
 		status = WSAGetLastError();
-		if (status != WSA_IO_PENDING)
+		if (status == WSA_IO_PENDING)
 		{
-		    InterlockedDecrement(&pcb->AsyncIoRunning);
-		    parm_list->generic_status = GC_RECEIVE_FAIL;
-		    SETWIN32ERR(&parm_list->system_status, status, ER_socket);
-		    GCTRACE(1)( "GCwinsock2 %s: GCC_RECEIVE %p WSARecv() failed for %d bytes, socket=0x%p, status=%d\n",
-			     proto, parm_list, pcb->tot_rcv, pcb->sd, status);
-		    goto complete;
+		    switch (timeout)
+		    {
+		    case -1: 	/* no timeout (INFINITE)  - IO Pending */
+			GCTRACE(4)( "GCwinsock2 %s %d: GCC_RECEIVE %p, want %d bytes, WSARecv() IO_PENDING\n",
+			        proto, pcb->id, parm_list, dwBytes_wanted );
+			return(OK);
+
+		    case 0:	/* "peek" failed - not immediate completion */
+			GCTRACE(4)( "GCwinsock2 %s %d: GCC_RECEIVE %p, want %d bytes, timed out (timeout=0)\n",
+			        proto, pcb->id, parm_list, dwBytes_wanted );
+			parm_list->generic_status = GC_TIME_OUT;
+	    		lpPerIoData->state = PIOD_ST_TIMED_OUT;
+			return(FAIL);
+
+		    default: 		/* timeout > 0 - set timer */
+			GCTRACE(4)( "GCwinsock2 %s %d: GCC_RECEIVE %p, want %d bytes, WSARecv() IO_PENDING with timeout=%d\n",
+			        proto, pcb->id, parm_list, dwBytes_wanted, timeout );
+			GCwinsock2_set_timer(lpPerIoData, timeout);
+			return(OK);
+		    }  /* end switch on timeout */
+		}  /* end if IO_PENDING */
+	    }  /* end if non-zero return from WSARecv() */
+	    else   /* Successful immediate completion */
+	    {
+		/*
+		** If caller requires results to be provided to its callback
+		** completion routine (rather than now at return), or if said
+		** callback can't be blocked/suppressed,
+		** just return OK now and let the normal callback pass back
+		** the results.  GCC TL, for instance, requires callback, but
+		** GCA CL (gcarw.c) doesn't (checks for results upon return).
+		** Return results now and block/skip the callback ONLY IF flag
+		** PCT_SKIP_CALLBK_IF_DONE is set.
+		**
+		** A special case to also wait for callback is when 0 bytes
+		** were received, indicating the other side disconnected.
+		** This makes disconnects in the DBMS server "cleaner" since
+		** it allows time for a just-received GCA_RELEASE message to
+		** get processed before the DBMS gets notified that his
+		** "always pending" expedited receive failed.
+		**
+		** For now, immediate returns for IO Completion Port logic is
+		** is not supported because the IO callback runs in separate
+		** worker threads and so may have already run.  Hence,
+		** it is difficult to reliably suppress the callback of the
+		** caller's completion routine...a timing issue.
+		*/
+		if ( !(pce_options & PCT_SKIP_CALLBK_IF_DONE) ||
+		     GCwinsock2CompletionPort ||
+		     pcb->AsyncIoRunning > ASYNC_IO_RUNNING_SOFT_LIMIT ||
+		     !dwBytes )
+		{
+		    GCTRACE(2)( "GCwinsock2 %s %d: GCC_RECEIVE %p, want %d bytes got %d, results in callback\n",
+			proto, pcb->id, parm_list, dwBytes_wanted, dwBytes );
+		    return(OK);
 		}
 	    }
 
-	    GCTRACE(4)( "GCwinsock2 %s: GCC_RECEIVE %p, want %d bytes got %d bytes\n",
-			proto, parm_list, dwBytes_wanted, dwBytes );
+	    /*
+	    ** WSARecv() completed immediately, either with an error or
+	    ** successfully.  Call common Receive completion logic.
+	    ** If it returns TRUE, then the receive is complete, so set return
+	    ** status to FAIL, meaning "all done" -> results are available
+	    ** now and caller's completion routine will not be called back.
+	    **
+	    ** For successful completions, the results are available now
+	    ** to the caller. However, the OS will still call our IO
+	    ** callback routine, so flag the IO request so that our
+	    ** IO callback routine, when invoked by the OS, will not
+	    ** callback the caller's completion routine.
+	    **
+	    ** For errors, the parm_list->generic_status contains an
+	    ** error code.  The OS won't make a callback so free
+	    ** the lpPerIoData, which is normally freed in our callback
+	    ** routine.
+	    */
+            if ( (GCwinsock2_OP_RECV_complete(rval, &status, dwBytes,
+ lpPerIoData)) == TRUE )
+	    {
+		if (parm_list->generic_status != OK )  /* Error...*/
+		{
+		    /*
+		    ** While errors can be returned immediately, deferring
+		    ** them  until callback helps the DBMS with disconnect;
+		    ** otherwise, expedited recv will likely be posted
+		    ** before DBMS has a chance to start mainline code
+		    ** GCA_DISASSOCIATE processing.  Benign, but annoying,
+		    ** error messages can show up in the errlog.log from
+		    ** disconnect otherwise.
+		    */
+		    return(OK); 	/* defer error until callback */
+		    /* Alternative - return error now */
+		    //InterlockedDecrement(&pcb->AsyncIoRunning);
+		    //GCwinsock2_rel_piod(lpPerIoData);
+		}
+		else  /* successful...return results now, ignore later callbk */
+		{
+		    lpPerIoData->state = PIOD_ST_SKIP_CALLBK;
+		    pcb->skipped_callbk_flag = TRUE;
+		}
+		return(FAIL);
+	    }
+	    /*
+	    ** GCwinsock2_OP_RECV_complete() returned FALSE, indicating
+	    ** processing NOT yet complete...caller will get results
+	    ** when his completion routine is called back.  Hence, return
+	    ** TRUE as with normal WSA_IO_PENDING case above.
+	    ** This situation could occur if it is ever decided to support
+	    ** stream mode (rather than just block mode) for immediate
+	    ** completions.  GCwinsock2_OP_RECV_complete() would need to
+	    ** be fixed to not reuse same lpPerIoData if it decides to
+	    ** reissue a WSARecv() to get the remainder of a message.
+	    */
+            return(OK);  /* another WSARecv() was issued...not done yet */
 
-	    return(OK);
 
 	case GCC_DISCONNECT:
-	    GCTRACE(2)("GCwinsock2 %s: GCC_DISCONNECT %p\n", proto, parm_list);
+	    if (!pcb) goto complete;
 
-	    if (!pcb)
-		break;
+	    GCTRACE(2)("GCwinsock2 %s %d: GCC_DISCONNECT %p PendingIOs=%d\n",
+			proto, pcb->id, parm_list, pcb->AsyncIoRunning);
 
 	    /*
 	    ** OK to issue closesocket() here because it returns
@@ -1282,16 +1880,48 @@ GCwinsock2(i4 function_code, GCC_P_PLIST *parm_list)
 	    ** get the disconnect started sooner, rather than later.
 	    */
 	    closesocket(pcb->sd);
-	    GCTRACE(2)("GCwinsock2 %s: GCC_DISCONNECT %p Closed socket=0x%p\n",
-			proto, parm_list, pcb->sd);
+	    GCTRACE(2)("GCwinsock2 %s %d: GCC_DISCONNECT %p Closed socket=0x%p\n",
+			proto, pcb->id, parm_list, pcb->sd);
+
+	    /*
+	    ** If we have skipped any callbacks to the caller's completion
+	    ** routine, the corresponding IO callbacks may not have all
+	    ** yet completed.  Before we disconnect, make sure they get a
+	    ** chance to complete (even though they are basically NO-OPs);
+	    ** this is to make sure that accvio's don't occur if this
+	    ** thread goes away (eg, at server shutdown or DBMS session
+	    ** disconnect).
+	    ** NOTE: The WaitForMultipleObjectsEx() calls in GCexec, etc
+	    ** process events in the wait list before (ie, higher priority)
+	    ** than async IO completions.  This can cause these skipped
+	    ** callbacks to queue up if the system is busy with various
+	    ** events getting driven (such as connects and disconnects).
+	    */
+	    if (pcb->skipped_callbk_flag == TRUE)
+		SleepEx(0, TRUE);
 
 	    if (pcb->AsyncIoRunning > 0)
 	    {
 		/*
 		** Async I/O is pending on this socket.  Must wait for
 		** it to complete before calling disconnect completion
-		** routine.
+		** routine.  NOTE that we may have been called by the
+		** completion routine of the last pending GCC_RECEIVE
+		** or GCC_SEND, in which case the I/O pending count will
+		** be 1 now but will go to zero as soon as we return from
+		** the send/recv completion routine.  Hence, the disconnect
+		** thread, when it wakes up, will likely find the count
+		** already set to 0 and immediately call the disconnect
+		** completion routine.  While this is somewhat of a waste
+		** of resources in that it would probably be OK to go
+		** ahead and call the disconnect completion routine from
+		** here, it is not "in general" a safe thing to do and
+		** checking for that special case may cause more overhead
+		** than it's worth.  Slight delays in disconnect processing
+		** are not felt to be a concern.
 		*/
+		GCTRACE(2)("GCwinsock2 %s %d: GCC_DISCONNECT %p Pending I/Os=%d not zero so Q to disconnect thread for completion\n",
+			proto, pcb->id, parm_list, pcb->AsyncIoRunning);
 
 		/*
 		** Schedule request to the Disconnect thread
@@ -1300,12 +1930,13 @@ GCwinsock2(i4 function_code, GCC_P_PLIST *parm_list)
 		{
 		    SETWIN32ERR(&parm_list->system_status, status, ER_close);
 		    parm_list->generic_status = GC_DISCONNECT_FAIL;
-		    GCTRACE(1)("GCwinsock2 %s: GCC_DISCONNECT %p Unable to allocate memory for rq\n",
-			    proto, parm_list);
+		    GCTRACE(1)("GCwinsock2 %s %d: GCC_DISCONNECT %p Unable to allocate memory for rq\n",
+			    proto, pcb->id, parm_list);
 		    break;
 		}
 
 		rq->plist = parm_list;
+		rq->ThreadId = CurrentThreadId;
 
 		/*
 		** Get critical section object for Disconnect input Q.
@@ -1331,8 +1962,8 @@ GCwinsock2(i4 function_code, GCC_P_PLIST *parm_list)
 		    GCTRACE(1)("GCwinsock2 GCC_DISCONNECT, SetEvent error = %d\n", status);
 		    SETWIN32ERR(&parm_list->system_status, status, ER_close);
 		    parm_list->generic_status = GC_DISCONNECT_FAIL;
-	    	    GCTRACE(1)("GCwinsock2 %s: GCC_DISCONNECT %p PostQueuedCompletionStatus() failed for socket=0x%p, status=%d)\n", 
-			    proto, parm_list, pcb->sd, status);
+	    	    GCTRACE(1)("GCwinsock2 %s %d: GCC_DISCONNECT %p PostQueuedCompletionStatus() failed for socket=0x%p, status=%d)\n", 
+			    proto, pcb->id, parm_list, pcb->sd, status);
 		    break;
 		}
 
@@ -1343,12 +1974,15 @@ GCwinsock2(i4 function_code, GCC_P_PLIST *parm_list)
 	    ** No async I/O pending on socket, so OK to complete disconnect
 	    ** processing immediately.
 	    */
-	    if (pcb->addrinfo_list)
-		freeaddrinfo(pcb->addrinfo_list);
-
-	    MEfree((PTR)pcb);
-
+	    GCwinsock2_rel_pcb(pcb);
 	    parm_list->pcb = NULL;
+
+	    /*
+	    ** If caller supports immediate return with results and skipping
+	    ** the callback to the completion routine, then return now.
+	    */
+	    if (pce_options & PCT_SKIP_CALLBK_IF_DONE)
+		return(FAIL);  /* signals that disconnect done...not pending */
 	    break;
 
 	default:
@@ -1360,85 +1994,13 @@ complete:
     /*
     ** Drive the completion routine.
     */
-    status = GCwinsock2_schedule_completion(NULL, parm_list);
-
-    return(status);
-}
-
-
-/*
-**  Name: GCwinsock2_schedule_completion
-**  Description:
-**	Schedule (drive) the completion routine for the request.
-**
-**  Inputs:
-**	One and only one of the following inputs should be provided.
-**	Supply the rq if one already exists, else one will be built
-**	from the parm list:
-**      rq         	Ptr to request queue entry.
-**			If NULL, one will be created.
-**      parm_list	Ptr to function parm list.
-**			Only required if rq==NULL.
-**
-**  Outputs: none
-**
-**  Returns:
-**	OK if successful
-**	FAIL or Windows status if unsuccessful
-**
-**  History:
-**	26-Nov-2008 (Bruce Lunsford) Bug 121285
-**	    Split out into standalone function since code is now needed
-**	    in 5 places.
-*/
-STATUS
-GCwinsock2_schedule_completion(REQUEST_Q *rq_in, GCC_P_PLIST *parm_list)
-{
-    STATUS	status = OK;
-    REQUEST_Q	*rq = rq_in;
-
-    GCTRACE(5)("GCwinsock2_schedule_completion Entered: rq=%p, parm_list=%p\n",
-		rq, parm_list);
-    /*
-    ** Create a request queue entry if not provided as input parm.
-    */
-    if ( rq_in == NULL )
-    {
-	rq = (REQUEST_Q *)MEreqmem(0, sizeof(*rq), TRUE, NULL);
-	if (rq == NULL)
-	{
-	    GCTRACE(1)("GCwinsock2_schedule_completion ERROR: Unable to allocate rq for parm_list=%p\n", parm_list);
-	    return(FAIL);
-	}
-	rq->plist = parm_list;
-    }
+    (*parm_list->compl_exit)( parm_list->compl_id );
 
     /*
-    ** Get critical section for completion Q.
+    ** Return OK since we just called the completion routine.
+    ** FAIL means immediate error, no callback.
     */
-    EnterCriticalSection( &GccCompleteQCritSect );
-
-    /*
-    ** Now insert the completed request into the completed Q.
-    ** Place at end to cause FIFO processing.
-    */
-    QUinsert(&rq->req_q, IIGCc_proto_threads.completed_head.q_prev);
-
-    /*
-    ** Exit/leave critical section for completion Q.
-    */
-    LeaveCriticalSection( &GccCompleteQCritSect );
-
-    /*
-    ** Raise the completion event to wake up GCexec.
-    */
-    if (!SetEvent(hAsyncEvents[GCC_COMPLETE]))
-    {
-	status = GetLastError();
-	GCTRACE(1)("GCwinsock2_schedule_completion SetEvent error = %d\n", status);
-    }
-
-    return(status);
+    return(OK);
 }
 
 
@@ -1479,6 +2041,17 @@ GCwinsock2_schedule_completion(REQUEST_Q *rq_in, GCC_P_PLIST *parm_list)
 **	    Also, add = to ck against MAX_WORKER_THREADS.
 **	    Convert CreateThread() to _beginthreadex() which is recommended
 **	    when using C runtime.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Don't call WSAGetLastError() after getaddrinfo() failure as it
+**	    returns a zero (0) status, which is confusing.  Just use the
+**	    return value directly from getaddrinfo().  Also add call to
+**	    gai_strerror() to get message text for error.
+**	    Port will be zero (0) for local IPC listens; this will cause
+**	    the bind to return an available non-zero port.  Grab the one
+**	    assigned to the 1st address info entry returned by getaddrinfo()
+**	    and then use it for any subsequent address info entries (if any).
+**	    Also, the generated port must be returned to the caller rather
+**	    than zero as the port number.
 */
 
 STATUS
@@ -1498,8 +2071,10 @@ GCwinsock2_open(GCC_P_PLIST *parm_list)
     struct addrinfo	hints, *lpAddrinfo;
     struct sockaddr_storage ws_addr;
     int			ws_addr_len = sizeof(ws_addr);
+    struct sockaddr_in *ws_addr_in_ptr = (struct sockaddr_in *)&ws_addr;
     char        	hoststr[NI_MAXHOST], servstr[NI_MAXSERV];
     SECURITY_ATTRIBUTES	sa;
+    u_i2		port_num, port_num_assigned, sin_port_assigned = 0;
 
     parm_list->function_parms.open.lsn_port = NULL;
 
@@ -1606,12 +2181,14 @@ GCwinsock2_open(GCC_P_PLIST *parm_list)
 	{
 	    parm_list->generic_status = GC_OPEN_FAIL;
 	    SETWIN32ERR(&parm_list->system_status, WSAEADDRINUSE, ER_badadar);
-	    GCTRACE(1)( "GCwinsock2_open %s: %p addr_func() failed on port_id=%s, status=%d\n",
+	    GCTRACE(1)( "GCwinsock2_open %s: %p addr() failed on port_id=%s, status=%d\n",
 			proto, parm_list, port_id, status);
 	    goto complete_open;
 	}
-	GCTRACE(1)( "GCwinsock2_open %s: %p addr_func() - port=%s(%s)\n",
+	GCTRACE(1)( "GCwinsock2_open %s: %p addr() - port=%s(%s)\n",
 			proto, parm_list, port_id, lsn->port_name);
+
+	port_num = atoi(lsn->port_name);
 
 	/*
 	** If this is a "retry" attempt, there will already be an
@@ -1631,11 +2208,19 @@ GCwinsock2_open(GCC_P_PLIST *parm_list)
 	status = getaddrinfo(NULL, lsn->port_name, &hints, &lsn->addrinfo_list);
 	if (status != 0)
 	{
-	    status = WSAGetLastError();
+	    /*
+	    ** Use status from getaddrinfo() directly; do not call
+	    ** WSAGetLastError() as it returns a zero status, which
+	    ** is confusing if there is an error.  Also, gai_strerror
+	    ** is safe to call at this point even though it is not
+	    ** thread-safe as this GCC_OPEN code is only called by
+	    ** initialization.
+	    */
 	    parm_list->generic_status = GC_OPEN_FAIL;
 	    SETWIN32ERR(&parm_list->system_status, status, ER_getaddrinfo);
-	    GCTRACE(1)( "GCwinsock2_open %s: %p getaddrinfo() failed on port=%s, status=%d\n",
-			proto, parm_list, lsn->port_name, status);
+	    GCTRACE(1)( "GCwinsock2_open %s: %p getaddrinfo() failed on port=%s, status=%d(%s)\n",
+			proto, parm_list, lsn->port_name,
+			status, gai_strerror(status));
 	    goto complete_open;
 	}
 
@@ -1691,6 +2276,10 @@ GCwinsock2_open(GCC_P_PLIST *parm_list)
 	     i < lsn->num_sockets; 
 	     i++, lpAddrinfo = lpAddrinfo->ai_next)
 	{
+	    /* if port was zero, use port assigned to 1st good @ for other @s */
+	    if( port_num == 0 )
+		((struct sockaddr_in *)(lpAddrinfo->ai_addr))->sin_port = sin_port_assigned;
+
 	    /*
 	    ** Create the socket.
 	    */
@@ -1756,6 +2345,31 @@ GCwinsock2_open(GCC_P_PLIST *parm_list)
 	        goto complete_open;
 	    }
 
+	    /*
+	    ** If input port was zero, the bind() will have given us a new
+	    ** port assigned by the system.  Save the port assigned to the
+	    ** first address to use for subsequent addresses in list.
+ 	    ** Get the assigned port by using getsockname().
+ 	    */
+	    if( ( port_num == 0 ) && ( sin_port_assigned == 0 ) )
+	    {
+		if (getsockname(lsn->listen_sd[i],
+	    		    (struct sockaddr *)&ws_addr,
+	    		    &ws_addr_len) != 0) 
+		{
+		    status = WSAGetLastError();
+		    parm_list->generic_status = GC_OPEN_FAIL;
+		    SETWIN32ERR(&parm_list->system_status, status, ER_getsockname);
+		    GCTRACE(1)( "GCwinsock2_open %s: %p getsockname() failed on listen socket[%d]=%p, status=%d\n", 
+			    proto, parm_list, i, lsn->listen_sd[i], status);
+		    goto complete_open;
+		}
+		sin_port_assigned = ws_addr_in_ptr->sin_port;
+		((struct sockaddr_in *)(lpAddrinfo->ai_addr))->sin_port = sin_port_assigned;
+		port_num_assigned = ntohs( sin_port_assigned );
+		STprintf( lsn->port_name, "%d", port_num_assigned );
+	    }
+
 	    if (GCwinsock2CompletionPort)
 	    {
 		/*
@@ -1773,22 +2387,6 @@ GCwinsock2_open(GCC_P_PLIST *parm_list)
 		    goto complete_open;
 		}
     	    }
-
-	    /*
- 	    ** Grab the name, in case we used a port number of 0 and got a
- 	    ** random address...
- 	    */
-	    if (getsockname(lsn->listen_sd[i],
-	    		    (struct sockaddr *)&ws_addr,
-	    		    &ws_addr_len) != 0) 
-	    {
-		status = WSAGetLastError();
-		parm_list->generic_status = GC_OPEN_FAIL;
-		SETWIN32ERR(&parm_list->system_status, status, ER_getsockname);
-		GCTRACE(1)( "GCwinsock2_open %s: %p getsockname() failed on listen socket[%d]=%p, status=%d\n", 
-			proto, parm_list, i, lsn->listen_sd[i], status);
-		goto complete_open;
-	    }
 
 	    /*
 	    ** SPX specific setup 
@@ -1933,6 +2531,9 @@ GCwinsock2_open(GCC_P_PLIST *parm_list)
     }  /*** End of loop until unique port found ***/
 
     parm_list->generic_status = OK;
+
+    /* get name for output */
+
     STcopy(port_id, port);
     parm_list->function_parms.open.lsn_port = lsn->port_name;
     STcopy(port_id, parm_list->pce->pce_port);
@@ -1942,7 +2543,8 @@ complete_open:
     /*
     ** Drive the completion routine.
     */
-    (*parm_list->compl_exit)(parm_list->compl_id);
+    if (parm_list->compl_exit)
+        (*parm_list->compl_exit)(parm_list->compl_id);
 
     /* The driver should only return single error status. An error
     ** may be returned via callback or from the protocol driver routine
@@ -2039,16 +2641,25 @@ GCwinsock2_open_setSPXport(SOCKADDR_IPX *spx_sockaddr, char *port_name)
 **	26-Nov-2008 (Bruce Lunsford) Bug 121285
 **	    Call new standalone function GCwinsock2_schedule_completion
 **	    instead of having code inline.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Call new function GCwinsock2_get_pcb() rather than directly
+**	    allocating and initializing a PCB.
+**	    Keep track of requestor's thread id for later completion.
+**	    At end in complete_listen, only return status from schedule
+**	    completion, not status from this function; the reason is
+**	    that successfully scheduling a completion and then returning
+**	    a non-OK return here could cause caller confusion.
 */
 
 STATUS
-GCwinsock2_listen(VOID *parms)
+GCwinsock2_listen(VOID *rq_in)
 {
-    GCC_P_PLIST		*parm_list = (GCC_P_PLIST *)parms;
+    REQUEST_Q		*rq = (REQUEST_Q *)rq_in;
+    GCC_P_PLIST		*parm_list = rq->plist;
     char		*proto = parm_list->pce->pce_pid;
     int			i, i_stop;
     SOCKET		sd;
-    PCB			*pcb;
+    PCB2		*pcb;
     int			status = OK;
     int			status_sc;
     GCC_LSN		*lsn;
@@ -2096,21 +2707,14 @@ GCwinsock2_listen(VOID *parms)
     parm_list->options = 0;
 
     /*
-    ** Allocate Protcol Control Block specific to this driver/port
+    ** Obtain a Protcol Control Block specific to this driver/port
     */
-    if ((pcb = (PCB *)MEreqmem(0, sizeof(PCB) + GCWINSOCK2_recv_buffer_size, FALSE, &status)) == NULL)
+    if ( ((PCB2 *)parm_list->pcb = pcb = GCwinsock2_get_pcb(parm_list->pce, FALSE)) == NULL )
     {
 	SETWIN32ERR(&parm_list->system_status, status, ER_alloc);
 	parm_list->generic_status = GC_LISTEN_FAIL;
-	GCTRACE(1)("GCwinsock2_listen %s: %p Unable to allocate PCB (size=%d)\n",
-		proto, parm_list, sizeof(PCB));
 	goto complete_listen;
     }
-
-    parm_list->pcb = (char *)pcb;  
-    ZeroMemory(pcb, sizeof(PCB));  /* Don't bother to zero buffer */
-    pcb->rcv_buf_len = sizeof( pcb->rcv_buffer ) + GCWINSOCK2_recv_buffer_size;
-    pcb->b1 = pcb->b2 = pcb->rcv_buffer;
 
     if (!lpfnAcceptEx) goto normal_accept;
 
@@ -2141,26 +2745,22 @@ GCwinsock2_listen(VOID *parms)
        i++, lpAddrinfo = lpAddrinfo->ai_next)
   {
     /*
-    ** Allocate the PER_IO_DATA structure and initialize.
+    ** Allocate a PER_IO_DATA structure and initialize.
+    ** NOTE: parm_list set to NULL because may be gone when AcceptEx completes.
     */
-    lpPerIoData = (PER_IO_DATA *)MEreqmem(0, sizeof(PER_IO_DATA), TRUE,
-					  &status);
+    lpPerIoData = GCwinsock2_get_piod(OP_ACCEPT, NULL);
     if (lpPerIoData == NULL)
     {
-	SETWIN32ERR(&parm_list->system_status, status, ER_alloc);
 	parm_list->generic_status = GC_LISTEN_FAIL;
-	GCTRACE(1)("GCwinsock2_listen %s: %p ai[%d]=%p Unable to allocate lpPerIoData (size=%d)\n",
-		proto, parm_list, i, lpAddrinfo, sizeof(PER_IO_DATA));
 	goto complete_listen;
     }
 
-    lpPerIoData->OperationType = OP_ACCEPT;
-    lpPerIoData->parm_list = NULL;  /* parmlist may be gone when AcceptEx completes */
     lpPerIoData->block_mode = wsd->block_mode;
     lpPerIoData->listen_sd = lsn->listen_sd[i];
     lpPerIoData->lsn       = lsn;
     lpPerIoData->addrinfo_posted = lpAddrinfo;
     lpPerIoData->socket_ix_posted = i;
+    lpPerIoData->ThreadId = rq->ThreadId;
 
     /*
     ** Create the client socket for the accepted connection.
@@ -2298,9 +2898,9 @@ complete_listen:
     /*
     ** Drive the completion routine.
     */
-    status_sc = GCwinsock2_schedule_completion(NULL, parm_list);
+    status_sc = GCwinsock2_schedule_completion(rq, NULL, 0);
 
-    return(status_sc ? status_sc : status);
+    return(status_sc);
 }
 
 
@@ -2337,7 +2937,7 @@ complete_listen:
 VOID
 GCwinsock2_listen_complete(GCC_P_PLIST *parm_list, char *AcceptExBuffer)
 {
-    PCB			*pcb = (PCB *)parm_list->pcb;
+    PCB2		*pcb = (PCB2 *)parm_list->pcb;
     char		*proto = parm_list->pce->pce_pid;
     STATUS		retval;
     char		hostname[NI_MAXHOST]={0};
@@ -2382,9 +2982,10 @@ GCwinsock2_listen_complete(GCC_P_PLIST *parm_list, char *AcceptExBuffer)
             parm_list->options |= GCC_LOCAL_CONNECT;
     }
 
-    GCTRACE(2)( "GCwinsock2_listen_complete %s: %p Connection is %s\n",
-		proto, parm_list,
-                parm_list->options & GCC_LOCAL_CONNECT ? "local" : "remote" );
+    GCTRACE(2)( "GCwinsock2_listen_complete %s %d: %p Connection is %s on socket=0x%p\n",
+		proto, pcb->id, parm_list,
+                parm_list->options & GCC_LOCAL_CONNECT ? "local" : "remote",
+		pcb->sd );
 
     parm_list->function_parms.listen.node_id = NULL;
 
@@ -2403,8 +3004,8 @@ GCwinsock2_listen_complete(GCC_P_PLIST *parm_list, char *AcceptExBuffer)
 	retval = WSAGetLastError();
 	SETWIN32ERR(&parm_list->system_status, retval, ER_ioctl);
 	parm_list->generic_status = GC_LISTEN_FAIL;
-	GCTRACE(1)("GCwinsock2_listen_complete %s: %p ioctlsocket() set non-blocking failed with status %d, socket=0x%p\n",
-		proto, parm_list, retval, pcb->sd);
+	GCTRACE(1)("GCwinsock2_listen_complete %s %d: %p ioctlsocket() set non-blocking failed with status %d, socket=0x%p\n",
+		proto, pcb->id, parm_list, retval, pcb->sd);
 	return;
     }
 }
@@ -2429,6 +3030,8 @@ GCwinsock2_listen_complete(GCC_P_PLIST *parm_list, char *AcceptExBuffer)
 **	    Also must associate the socket with the IO completion port
 **	    for W2K for the SENDs and RECEIVEs, even if ConnectEx() not
 **	    available.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Keep track of requestor's thread id for later completion.
 */
 STATUS
 GCwinsock2_connect(GCC_P_PLIST *parm_list, char *inPerIoData)
@@ -2438,7 +3041,7 @@ GCwinsock2_connect(GCC_P_PLIST *parm_list, char *inPerIoData)
     char		*proto = parm_list->pce->pce_pid;
     char		*port = parm_list->function_parms.connect.port_id;
     char		*node = parm_list->function_parms.connect.node_id;
-    PCB			*pcb = (PCB *)parm_list->pcb;
+    PCB2		*pcb = (PCB2 *)parm_list->pcb;
     SOCKET		sd;
     struct addrinfo	*lpAddrinfo = pcb->lpAddrinfo;
     PER_IO_DATA		*lpPerIoData = (PER_IO_DATA *)inPerIoData;
@@ -2454,8 +3057,8 @@ GCwinsock2_connect(GCC_P_PLIST *parm_list, char *inPerIoData)
     if (pcb->sd != INVALID_SOCKET)
     {
 	closesocket(pcb->sd);
-	GCTRACE(2)( "GCwinsock2_connect %s: %p Closed prior (failed) socket %p\n", 
-		proto, parm_list, pcb->sd );
+	GCTRACE(2)( "GCwinsock2_connect %s %d: %p Closed prior (failed) socket %p\n", 
+		proto, pcb->id, parm_list, pcb->sd );
     }
 
     /*
@@ -2471,8 +3074,8 @@ GCwinsock2_connect(GCC_P_PLIST *parm_list, char *inPerIoData)
 	status = WSAGetLastError();
 	SETWIN32ERR(&parm_list->system_status, status, ER_socket);
 	parm_list->generic_status = GC_CONNECT_FAIL;
-	GCTRACE(1)( "GCwinsock2_connect %s: %p WSASocket() failed with status %d. family=%d, socktype=%d, protocol=%d\n", 
-		proto, parm_list,
+	GCTRACE(1)( "GCwinsock2_connect %s %d: %p WSASocket() failed with status %d. family=%d, socktype=%d, protocol=%d\n", 
+		proto, pcb->id, parm_list,
 		status,
 		lpAddrinfo->ai_family,
 		lpAddrinfo->ai_socktype,
@@ -2491,13 +3094,13 @@ GCwinsock2_connect(GCC_P_PLIST *parm_list, char *inPerIoData)
 	status = WSAGetLastError();
 	SETWIN32ERR(&parm_list->system_status, status, ER_ioctl);
 	parm_list->generic_status = GC_CONNECT_FAIL;
-	GCTRACE(1)( "GCwinsock2_connect %s: %p ioctlsocket() set non-blocking failed with status %d, socket=0x%p\n", 
-		proto, parm_list, status, sd);
+	GCTRACE(1)( "GCwinsock2_connect %s %d: %p ioctlsocket() set non-blocking failed with status %d, socket=0x%p\n", 
+		proto, pcb->id, parm_list, status, sd);
 	return(FAIL);
     }
 
-    GCTRACE(2)( "GCwinsock2_connect %s: %p connecting to %s(%s) port %s(%d)\n",
-	    proto, parm_list, node,
+    GCTRACE(2)( "GCwinsock2_connect %s %d: %p connecting to %s(%s) port %s(%d)\n",
+	    proto, pcb->id, parm_list, node,
 	    GCwinsock2_display_IPaddr(lpAddrinfo,hoststr),
 	    port, port_num );
 /* FIX: Add GCwinsock2_display_IPaddr() to other GCTRACE calls below if it works */
@@ -2514,8 +3117,8 @@ GCwinsock2_connect(GCC_P_PLIST *parm_list, char *inPerIoData)
 	SETWIN32ERR(&parm_list->system_status, status,
 		    ER_createiocompport);
 	parm_list->generic_status = GC_CONNECT_FAIL;
-	GCTRACE(1)( "GCwinsock2_connect %s: %p CreateIoCompletionPort() failed with status %d, socket=0x%p\n", 
-		proto, parm_list, status, sd);
+	GCTRACE(1)( "GCwinsock2_connect %s %d: %p CreateIoCompletionPort() failed with status %d, socket=0x%p\n", 
+		proto, pcb->id, parm_list, status, sd);
 	return(FAIL);
     }
 
@@ -2528,8 +3131,8 @@ GCwinsock2_connect(GCC_P_PLIST *parm_list, char *inPerIoData)
 	{
 	    SETWIN32ERR(&parm_list->system_status, status, ER_alloc);
 	    parm_list->generic_status = GC_CONNECT_FAIL;
-	    GCTRACE(1)( "GCwinsock2_connect %s: %p GCwinsock2_add_connect_event() failed with status %d, socket=0x%p\n", 
-		    proto, parm_list, status, sd);
+	    GCTRACE(1)( "GCwinsock2_connect %s %d: %p GCwinsock2_add_connect_event() failed with status %d, socket=0x%p\n", 
+		    proto, pcb->id, parm_list, status, sd);
 	    return(FAIL);
 	}
     }
@@ -2548,8 +3151,8 @@ GCwinsock2_connect(GCC_P_PLIST *parm_list, char *inPerIoData)
 	status = WSAGetLastError();
 	SETWIN32ERR(&parm_list->system_status, status, ER_bind);
 	parm_list->generic_status = GC_CONNECT_FAIL;
-	GCTRACE(1)("GCwinsock2_connect %s: %p bind() error = %d\n",
-		    proto, parm_list, status);
+	GCTRACE(1)("GCwinsock2_connect %s %d: %p bind() error = %d\n",
+		    proto, pcb->id, parm_list, status);
 	return(FAIL);
     }
 
@@ -2568,8 +3171,8 @@ GCwinsock2_connect(GCC_P_PLIST *parm_list, char *inPerIoData)
 	    return(FAIL);
 	SETWIN32ERR(&parm_list->system_status, status, ER_connect);
 	parm_list->generic_status = GC_CONNECT_FAIL;
-	GCTRACE(1)("GCwinsock2_connect %s: %p ConnectEx() error = %d\n",
-		    proto, parm_list, status);
+	GCTRACE(1)("GCwinsock2_connect %s %d: %p ConnectEx() error = %d\n",
+		    proto, pcb->id, parm_list, status);
 	return(FAIL);
     }
     return(OK);
@@ -2581,8 +3184,8 @@ normal_connect:
     if (rval == SOCKET_ERROR)
     {
 	status = WSAGetLastError();
-	GCTRACE(2)("GCwinsock2_connect %s: %p connect() SOCKET_ERROR status = %d\n",
-		    proto, parm_list, status);
+	GCTRACE(2)("GCwinsock2_connect %s %d: %p connect() SOCKET_ERROR status = %d\n",
+		    proto, pcb->id, parm_list, status);
 	if (status == WSAEWOULDBLOCK)
 	{
 	    fd_set		check_fds;
@@ -2604,8 +3207,8 @@ normal_connect:
 		status = WSAGetLastError();
 		if (status != WSAEINPROGRESS)
 		{
-	            GCTRACE(1)("GCwinsock2_connect %s: %p select() error = %d\n",
-			        proto, parm_list, status);
+	            GCTRACE(1)("GCwinsock2_connect %s %d: %p select() error = %d\n",
+			        proto, pcb->id, parm_list, status);
 		    return(FAIL);
 		}
 
@@ -2614,21 +3217,21 @@ normal_connect:
 	    else if (rval == 0)
 	    {
 		/* Connection timed out */
-	        GCTRACE(1)("GCwinsock2_connect %s: %p timeout after %d secs\n",
-			    proto, parm_list, tm.tv_sec);
+	        GCTRACE(1)("GCwinsock2_connect %s %d: %p timeout after %d secs\n",
+			    proto, pcb->id, parm_list, tm.tv_sec);
 		return(FAIL);
 	    }
 	}
 	else  /* Not WSAEWOULDBLOCK status, real failure to connect */
 	{
-	    GCTRACE(1)("GCwinsock2_connect %s: %p connect() error = %d\n",
-		    proto, parm_list, status);
+	    GCTRACE(1)("GCwinsock2_connect %s %d: %p connect() error = %d\n",
+		    proto, pcb->id, parm_list, status);
 	    return(FAIL);
 	}
     }  /* end if connect returned a SOCKET_ERROR */
 
-    GCTRACE(2)("GCwinsock2_connect %s: %p connect() completed; call ...connect_complete()\n",
-	    proto, parm_list);
+    GCTRACE(2)("GCwinsock2_connect %s %d: %p connect() completed; call ...connect_complete()\n",
+	    proto, pcb->id, parm_list);
 
     GCwinsock2_connect_complete(parm_list);
 
@@ -2661,7 +3264,7 @@ normal_connect:
 VOID
 GCwinsock2_connect_complete(GCC_P_PLIST *parm_list)
 {
-    PCB			*pcb = (PCB *)parm_list->pcb;
+    PCB2		*pcb = (PCB2 *)parm_list->pcb;
     char		*proto = parm_list->pce->pce_pid;
     struct addrinfo	*lpAddrinfo = pcb->lpAddrinfo;
     STATUS		retval;
@@ -2683,8 +3286,8 @@ GCwinsock2_connect_complete(GCC_P_PLIST *parm_list)
 	retval = WSAGetLastError();
 	parm_list->generic_status = GC_CONNECT_FAIL;
 	SETWIN32ERR(&parm_list->system_status, retval, ER_getnameinfo);
-	GCTRACE(1)("GCwinsock2_connect_complete %s: %p getnameinfo(local) error = %d\n",
-		   proto, parm_list, retval);
+	GCTRACE(1)("GCwinsock2_connect_complete %s %d: %p getnameinfo(local) error = %d\n",
+		   proto, pcb->id, parm_list, retval);
 	return;
     }
 
@@ -2698,8 +3301,8 @@ GCwinsock2_connect_complete(GCC_P_PLIST *parm_list)
 	retval = WSAGetLastError();
 	parm_list->generic_status = GC_CONNECT_FAIL;
 	SETWIN32ERR(&parm_list->system_status, retval, ER_getnameinfo);
-	GCTRACE(1)("GCwinsock2_connect_complete %s: %p getnameinfo(remote) error = %d\n",
-		   proto, parm_list, retval);
+	GCTRACE(1)("GCwinsock2_connect_complete %s %d: %p getnameinfo(remote) error = %d\n",
+		   proto, pcb->id, parm_list, retval);
 	return;
     }
 
@@ -2847,11 +3450,11 @@ GCwinsock2_disconnect_thread()
 	{
 	    REQUEST_Q *rq = (REQUEST_Q *)q;
 	    GCC_P_PLIST *parm_list = rq->plist;
-	    PCB *pcb = (PCB *)parm_list->pcb;
+	    PCB2 *pcb = (PCB2 *)parm_list->pcb;
 	    q = q->q_next;		/* Bump/save next Q entry address */
-	    GCTRACE(5)( "GCwinsock2_disconnect_thread %s check disconnect: parm_list=%p, pcb=%p\n",
+	    GCTRACE(5)( "GCwinsock2_disconnect_thread %s check disconnect: parm_list=%p, pcb=%d(0x%p)\n",
 			 parm_list->pce->pce_pid, 
-			 parm_list, pcb );
+			 parm_list, pcb->id, pcb );
 	    if (pcb)
 	    {
 		/*
@@ -2859,9 +3462,9 @@ GCwinsock2_disconnect_thread()
 		** don't schedule disconnect yet, UNLESS we've
 		** waited (slept) long enough.
 		*/
-		GCTRACE(5)( "GCwinsock2_disconnect_thread %s check I/Os complete: parmlist=%p, pcb=%p, Pending I/Os=%d\n",
+		GCTRACE(5)( "GCwinsock2_disconnect_thread %s check I/Os complete: parmlist=%p, pcb=%d(0x%p), Pending I/Os=%d\n",
 			     parm_list->pce->pce_pid, 
-			     parm_list, pcb,
+			     parm_list, pcb->id, pcb,
 			     pcb->AsyncIoRunning );
 		if (wait_stat == WAIT_TIMEOUT) /* Means we slept above */
 		    pcb->DisconnectAsyncIoWaits++;
@@ -2870,9 +3473,9 @@ GCwinsock2_disconnect_thread()
 		    if (pcb->DisconnectAsyncIoWaits <= DISCONNECT_ASYNC_WAITS_MAX_LOOPS )
 			continue;  /* Don't disconnect this session yet */
 		    else
-			GCTRACE(1)( "GCwinsock2_disconnect_thread %s WARNING: disconnect completion scheduled with pending I/Os\n (parmlist%p, pcb=%p, Pending I/Os=%d\n",
+			GCTRACE(1)( "GCwinsock2_disconnect_thread %s WARNING: disconnect completion scheduled with pending I/Os\n (parmlist%p, pcb=%d(0x%p), Pending I/Os=%d\n",
 			         parm_list->pce->pce_pid, 
-			         parm_list, pcb,
+			         parm_list, pcb->id, pcb,
 			         pcb->AsyncIoRunning );
 		}
 
@@ -2880,9 +3483,7 @@ GCwinsock2_disconnect_thread()
 		** No IOs pending or max wait/sleep time exceeded...
 		** so start disconnecting the session.
 		*/
-		if (pcb->addrinfo_list)
-		    freeaddrinfo(pcb->addrinfo_list);
-		MEfree((PTR)pcb);
+		GCwinsock2_rel_pcb(pcb);
 	    } /* End if pcb exists */
 
 	    /*
@@ -2893,7 +3494,7 @@ GCwinsock2_disconnect_thread()
 			 parm_list, pcb );
 	    parm_list->pcb = NULL;
 	    QUremove(&rq->req_q);  /* Remove from disconnect Q */
-	    status = GCwinsock2_schedule_completion(rq, NULL);
+	    status = GCwinsock2_schedule_completion(rq, NULL, 0);
 
 	} /* End for each request in disconnect Q */
 
@@ -2955,7 +3556,7 @@ GCwinsock2_display_IPaddr(struct addrinfo *lpAddrinfo, char *IPaddr_out)
 /*
 **  Name: GCwinsock2_exit
 **  Description:
-**	This function exists from the Winsock 2.2 protocol, cleaning up.
+**	This function exits from the Winsock 2.2 protocol, cleaning up.
 **
 **  History:
 **	30-oct-2003 (somsa01)
@@ -2966,30 +3567,50 @@ GCwinsock2_display_IPaddr(struct addrinfo *lpAddrinfo, char *IPaddr_out)
 **	    Add logic to terminate and close the Disconnect Thread
 **	    (missing from fix for bug 121285). Free resources for
 **	    event array (if exists) used for async AIO connects/listens.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Add PCT entry as an input parm since we may be called from
+**	    gcacl, which has a different PCT than GCC; ie, can't use
+**	    GCwinsock2_get_thread() to find it since it only accesses
+**	    the global GCC PCT.  Don't release shared resources until
+**	    all users of the driver have called this exit function.
+**	    Return STATUS rather than VOID since caller expects it (and
+**	    always did).
 */
-VOID
-GCwinsock2_exit()
+STATUS
+GCwinsock2_exit(GCC_PCE * pptr)
 {
     int			i = 1, j;
     GCC_WINSOCK_DRIVER	*wsd;
     THREAD_EVENTS	*Tptr;
+    char		*proto = pptr->pce_pid;
+
+    GCTRACE(1)("GCwinsock2_exit %s: Entered.  use_count(this driver,winsock)=(%d,%d)\n",
+		proto, GCwinsock2_use_count, WSAStartup_called);
 
     /*
-    ** Have we already been called once?
+    ** Decrement "use count"s for this driver and for winsock in general
+    ** (the latter is also used by previous winsock 1.1 driver).
     */
-    if (Winsock2_exit_set)
-	return;
-    Winsock2_exit_set = TRUE;
+    GCwinsock2_use_count--;
+    WSAStartup_called--;
+    GCwinsock2_shutting_down = TRUE;
 
     /*
-    ** Close listen sockets and various associated threads.
+    ** Get pointer to WinSock 2.2 protocol's control entry in table.
     */
-    if ((Tptr = GCwinsock2_get_thread(TCPIP_ID)) != NULL)
+    Tptr = (THREAD_EVENTS *)pptr->pce_dcb;
+
+    /*
+    ** Close listen sockets and various associated threads for this
+    ** driver instance.
+    */
     {
 	GCC_LSN	*lsn;
 
 	wsd = &Tptr->wsd;
 	lsn = wsd->lsn;
+	if (lsn)
+	    GCTRACE(2)("GCwinsock2_exit %s: Close Listen sockets and threads.\n", proto);
 	while (lsn)
 	{
 	    GCwinsock2_close_listen_sockets(lsn);
@@ -3002,13 +3623,28 @@ GCwinsock2_exit()
 	    lsn = lsn->lsn_next;
 	}
 
+	if (Tptr->NumWorkerThreads)
+	    GCTRACE(2)("GCwinsock2_exit %s: Close worker threads.\n", proto);
 	for (j = 0; j < Tptr->NumWorkerThreads; j++)
 	{
 	    TerminateThread(Tptr->hWorkerThreads[j], 0);
 	    CloseHandle(Tptr->hWorkerThreads[j]);
 	}
+    }
 
-	if (GCwinsock2CompletionPort) CloseHandle(GCwinsock2CompletionPort);
+    /*
+    ** Don't cleanup common/shared resources until the use count goes to zero.
+    */
+    if (GCwinsock2_use_count > 0)
+	return(OK);
+
+    /*
+    ** Close the IO Completion Port, if created/used.
+    */
+    if (GCwinsock2CompletionPort)
+    {
+	CloseHandle(GCwinsock2CompletionPort);
+	GCwinsock2CompletionPort = 0;
     }
 
     /*
@@ -3016,6 +3652,7 @@ GCwinsock2_exit()
     */
     if (hDisconnectThread)
     {
+	GCTRACE(2)("GCwinsock2_exit %s: Close Disconnect thread.\n", proto);
 	TerminateThread(hDisconnectThread, 0);
 	CloseHandle(hDisconnectThread);
 	hDisconnectThread = 0;
@@ -3027,6 +3664,7 @@ GCwinsock2_exit()
     */
     if (arrayConnectEvents)
     {
+	GCTRACE(2)("GCwinsock2_exit %s: Cleanup/free AIO async connect array.\n", proto);
 	for (i = 0; i < MAX_PENDING_CONNECTS; i++)
 	{
 	    CloseHandle(arrayConnectEvents[i]);
@@ -3042,42 +3680,450 @@ GCwinsock2_exit()
 		    numAIOConnectQ, totalAIOConnectQ);
     }
 
-    WSACleanup();
+    /*
+    ** Don't cleanup/shutdown winsock until no driver instance/thread
+    ** is using it.  Ie, last one out the door turns out the lights.
+    ** NOTE that winsock is a shared resource/facility with the prior
+    ** winsock 1.1 driver (gcwinsck.c) and hence used by WINTCP protocol.
+    */
+    if (WSAStartup_called == 0)
+	WSACleanup();
+
+    return(OK);
 }
 
+
 /*
-**  Name: GCwinsock2_get_thread
+**  Name: GCwinsock2_save
 **  Description:
-**	Return pointer to appropriate entry in IIGCc_wsproto_tab.
-**	This table is indexed the same as IIGCc_proto_threads.
+**	This function is called externally during GCsave operation
+**	to save protocol-specific information needed to "restore"
+**	the session under a different process.  The new (other) process
+**	will call complementary function GCwinsock2_restore() to
+**	establish communications on the same socket/connection set
+**	up by the original process.
+**
+**  Inputs:
+**	buffer 		Pointer to buffer into which to save information
+**	buf_len_in	Pointer to length of buffer area.
+**
+**  Outputs: None
+**	*buf_len_in	Length of data saved into buffer.
+**
+**  Returns:
+**	OK    if success
+**	FAIL  if error occurred...such as buffer not large enough
 **
 **  History:
-**	16-oct-2003 (somsa01)
-**	    Created.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Created for GCsave local IPC processing.
 */
-
-THREAD_EVENTS *
-GCwinsock2_get_thread(char *proto_name)
+STATUS
+GCwinsock2_save(char *buffer, i4 *buf_len_in, PCB2 *pcb)
 {
-    int i;
+    SAVE_DATA	save_data;
+    i4		buf_len = *buf_len_in;
+
+    GCTRACE(2)("GCwinsock2_save %d: Entered.\n", pcb->id);
 
     /*
-    ** Go thru the the protocol threads event list and find the index
-    ** of the winsock thread.  Set the Global Tptr for easy reference
-    ** to the event q's for this protocols thread.
+    ** Verify buffer large enough for data to save into.
     */
-    for (i = 0; i < IIGCc_proto_threads.no_threads; i++)
+    if (sizeof(save_data) > buf_len)
     {
-	THREAD_EVENTS *p = &IIGCc_proto_threads.thread[i];
-
-	if (!STcompare(proto_name, p->thread_name))
-	    return p;
+	GCTRACE(1)("GCwinsock2_save %d: ERROR! Input save area (%d) not large enough for data to save (%d)\n",
+		    pcb->id, buf_len, sizeof(save_data) );
+	return(FAIL);
     }
 
     /*
-    ** Failed
+    ** Reject request if IO Completion Ports being used -- not supported.
+    ** IO Completion Port sockets cannot be transferred to another
+    ** process because of the following Windows limitations:
+    ** 1. An I/O completion port and its handle are associated with the
+    **    process that created it and is not shareable between processes.
+    ** 2. A handle can be associated with only 1 I/O completion port
+    **    and the handle remains associated with that I/O completion
+    **    port until it is closed.
+    ** It may be that duplicating the socket handle and then associating
+    ** it in the new process, or some variation thereof, might work,
+    ** though the Microsoft doc warns against this.  May try to get
+    ** this working sometime in the future.  For now, just reject the
+    ** save and document that IO Completion Ports do not support
+    ** GCA_SAVE/GCA_RESTORE.  Not rejecting the request causes the
+    ** application to hang in the new process; the next socket request
+    ** is successful (sent data or received data), but the callback
+    ** into the worker thread completion routine never occurs.
+    ** The workaround is to use Alertable IO, which DOES work, and
+    ** is now the default.
     */
-    return NULL;
+    if (GCwinsock2CompletionPort)
+    {
+	GCTRACE(0)("GCwinsock2_save %d: ERROR! Connection cannot be tranferred to spawned process with I/O Completion Port;\n - use Alertable I/O (unset II_WINSOCK2_CONCURRENT_THREADS or set to zero, or\n - use named pipes for local IPC (unset II_GC_PROT)\nRejecting GCA_SAVE request.\n",
+		    pcb->id );
+	return(FAIL);
+    }
+
+    /*
+    ** Note if any IOs pending.
+    */
+    if (pcb->AsyncIoRunning > 0)
+    {
+	GCTRACE(1)("GCwinsock2_save %d: WARNING! %d IOs pending on connection\n",
+		    pcb->id, pcb->AsyncIoRunning );
+    }
+
+    save_data.id = pcb->id;
+    save_data.sd = pcb->sd;
+    MEcopy( &save_data, sizeof(save_data), buffer );
+    *buf_len_in = sizeof(save_data);  /* Tell caller how much data was saved */
+
+    return(OK);
+}
+
+/*
+**  Name: GCwinsock2_restore
+**  Description:
+**	This function is called externally during GCrestore operation
+**	to restore protocol-specific information from a prior "save"
+**	for a session under a different process.
+**
+**  Inputs:
+**	buffer 		Pointer to buffer from which to get saved information
+**	pptr		Pointer to Protocol Control Table (PCT) entry
+**	lpPcb		Pointer to address in which to return PCB2 address
+**
+**  Outputs:
+**	lpPcb		Address of newly allocated/initialized PCB2
+**
+**  Returns:
+**	OK    if success
+**	FAIL  if error occurred...such as unable to allocate PCB2
+**
+**  History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Created for GCrestore local IPC processing.
+*/
+STATUS
+GCwinsock2_restore(char *buffer, GCC_PCE *pptr, PCB2 **lpPcb)
+{
+    SAVE_DATA	save_data;
+    PCB2	*pcb;
+    char	*proto = pptr->pce_pid;
+
+    GCTRACE(2)("GCwinsock2_restore %s: Entered.\n", proto);
+
+    MEcopy( buffer, sizeof(save_data), &save_data );
+
+    /*
+    ** Obtain a Protcol Control Block specific to this driver/port
+    */
+    if ( (pcb = GCwinsock2_get_pcb(pptr, TRUE)) == NULL )
+	return(FAIL);
+
+    pcb->id = save_data.id;
+    pcb->sd = save_data.sd;
+    *lpPcb = pcb;
+
+    GCTRACE(2)("GCwinsock2_restore %s %d: Exited. socket=0x%p\n",
+		proto, pcb->id, pcb->sd);
+
+    return(OK);
+}
+    
+
+/*
+**  Name: GCwinsock2_get_pcb
+**  Description:
+**	Get an available PCB for the caller and initialize it.  PCB is the
+**	protocol connection block for the protocol driver (1 per connection).
+**	Currently, a new one is always allocated and then freed at disconnect.
+**	In the future, may want to keep unused PCBs on a free list and
+**	obtain them from there rather than reallocating each time.
+**
+**	Changed default size of receive overflow buffer from #defined
+**	value (=32768) to the packet size in the protocol table (PCT).
+**	The #define value is now only used if PCT packet size is not
+**	greater than 0 (and if value wasn't overridden with Ingres variable
+**	or config parm). This reduces wasted memory in the case where
+**	the overflow size was much bigger than the PCT packet size,
+**	since the caller's requested size is normally no larger than the
+**	PCT packet size and, when the WSARecv() is issued, the actual
+**	receive size used is set to the minimum of the caller's
+**	requested size and the overflow size.
+**
+**  Inputs:
+**	pptr	Pointer to Protocol Control Table (PCT) entry
+**
+**  Outputs: None
+**
+**  Returns:
+**	Address to a PCB
+**	NULL if unable to allocate a PCB	         
+**
+**  History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Created.
+*/
+PCB2 *
+GCwinsock2_get_pcb(GCC_PCE *pptr, bool outbound)
+{
+    PCB2	*pcb;
+    STATUS	status;
+    u_i2	recv_buffer_size;
+    static i4	outbound_counter   = -1;  /* just for id'ing */
+    static i4	inbound_counter    =  0;
+    u_i1	pcb_id;
+
+    /*
+    ** Determine size of receive overflow buffer, which is allocated as
+    ** part of the PCB.  It can be overridden with Ingres or environment
+    ** variable II_WINSOCK2_RECV_BUFFER_SIZE or config.dat parm
+    ** winsock2_recv_buffer_size, which has been saved in static variable
+    ** GCWINSOCK2_recv_buffer_size.  If not overridden, it defaults to
+    ** the protocol control table (PCT) packet size. In the unlikely
+    ** event that the PCT packet size is not specified or is not available,
+    ** then it defaults to hard-coded #define RCV_PCB_BUFF_SZ (=32K).
+    */
+    if (GCWINSOCK2_recv_buffer_size != -1)
+	recv_buffer_size = (u_i2)GCWINSOCK2_recv_buffer_size;
+    else
+    if (pptr && pptr->pce_pkt_sz > 0)
+	recv_buffer_size = (u_i2)pptr->pce_pkt_sz;
+    else
+	recv_buffer_size = RCV_PCB_BUFF_SZ;
+
+    /*
+    **  Allocate a new PCB
+    */
+    pcb = (PCB2 *) MEreqmem(0, sizeof(PCB2) + recv_buffer_size, FALSE, &status);
+    if (pcb == NULL)
+    {
+	GCTRACE(1)("GCwinsock2_get_pcb: Unable to allocate PCB (size=%d)\n",
+		    sizeof(PCB2) + recv_buffer_size);
+	return(pcb);
+    }
+    pcb_id = (u_i1)(outbound ? (outbound_counter += 2) : (inbound_counter += 2));
+
+
+    GCTRACE(5)("GCwinsock2_get_pcb: Allocated PCB %d (size=%d) at 0x%p\n",
+		pcb_id, sizeof(PCB2) + recv_buffer_size, pcb);
+
+    /*
+    **  Initialize the PCB
+    */
+    ZeroMemory(pcb, sizeof(PCB2));  /* Don't bother to zero buffer */
+    pcb->id = pcb_id;
+    pcb->snd_PerIoData.OperationType = OP_SEND;
+    pcb->snd_PerIoData.pcb       = pcb;
+
+    pcb->rcv_PerIoData.OperationType = OP_RECV;
+    pcb->rcv_PerIoData.pcb       = pcb;
+    pcb->rcv_buf_len = sizeof(pcb->rcv_buffer) + recv_buffer_size;
+    pcb->b1 = pcb->b2 = pcb->rcv_buffer;
+
+    return(pcb);
+}
+
+
+/*
+**  Name: GCwinsock2_rel_pcb
+**  Description:
+**	Release PCB - Protocol Connection Block.  Currently, we always
+**	free it and all attached memory. 
+**	In the future, may want to keep unused PCBs on a free list and
+**	obtain them from there rather than reallocating each time.
+**
+**  Inputs:  Pointer to PCB to be released/freed
+**
+**  Outputs: None, though memory for PCB will no longer be available.
+**
+**  Returns: None
+**
+**  History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Created.
+*/
+VOID
+GCwinsock2_rel_pcb(PCB2 *pcb)
+{
+    if (!pcb)	/* Should never happen...but just in case */
+    {
+	GCTRACE(1)("GCwinsock2_rel_pcb: WARNING! PCB input ptr NULL!\n");
+	return;
+    }
+
+    GCTRACE(5)("GCwinsock2_rel_pcb: Freeing PCB %d at 0x%p for socket=0x%p\n",
+		pcb->id, pcb, pcb->sd);
+
+    /*
+    ** Do some basic validation that the PCB is in a state that is OK to free.
+    ** This is more for diagnosis/debugging than anything.  We will still
+    ** free the PCB, but at least provide a trace level 1 warning if
+    ** anything seems amiss.  Only do the checking if tracing is on since
+    ** there is no point in incurring the additional (admittedly slight)
+    ** overhead if we're not going to display the warning.
+    */
+    if (GCWINSOCK2_trace >= 1)
+    {
+	if (pcb->AsyncIoRunning != 0)
+	{
+	    GCTRACE(5)("GCwinsock2_rel_pcb: WARNING! Freeing PCB %d at 0x%p for socket=0x%p with %d IO(s) pending!\n",
+			pcb->id, pcb, pcb->sd, pcb->AsyncIoRunning);
+	}
+
+	if ( (pcb->snd_PerIoData.state != PIOD_ST_AVAIL) ||
+	     (pcb->rcv_PerIoData.state != PIOD_ST_AVAIL) )
+	{
+	    GCTRACE(5)("GCwinsock2_rel_pcb: WARNING! Freeing PCB %d at 0x%p for socket=0x%p with an active snd/rcv state(%d/%d)!\n",
+			pcb->id, pcb, pcb->sd,
+			pcb->snd_PerIoData.state,
+			pcb->rcv_PerIoData.state);
+	}
+    }
+
+    /*
+    **  Free memory and close object handles linked to the PCB
+    **  and then free the PCB itself.
+    */
+
+    if (pcb->addrinfo_list)
+	freeaddrinfo(pcb->addrinfo_list);
+    if (pcb->snd_PerIoData.hWaitableTimer)
+	CloseHandle(pcb->snd_PerIoData.hWaitableTimer);
+    if (pcb->rcv_PerIoData.hWaitableTimer)
+	CloseHandle(pcb->rcv_PerIoData.hWaitableTimer);
+
+    MEfree((PTR)pcb);
+
+    return;
+}
+
+
+/*
+**  Name: GCwinsock2_get_piod
+**  Description:
+**	Get an available PER_IO_DATA for the caller and initialize it.
+**	PER_IO_DATA is the control block for each Winsock2 IO request.
+**	Currently, this routine always allocates a new one in memory.
+**	It is up to the caller to free it.  NOTE that flags value
+**	PIOD_DYN_ALLOC is set to distinguish these blocks from those
+**	that are embedded in other structures (such as the PCB) and
+**	shouldn't be freed directly.
+**
+**	While not strictly critical to the operation of this function
+**	as it currently stands, the input parms are used to initialize
+**	some of the common fields within the structure.
+**	The OperationType is an input parm that could, in the future,
+**	be used to allocate and initialize different types/sizes of
+**	PER_IO_DATA structures.
+**
+**	In the future, may want to keep unused PER_IO_DATAs on a free
+**	list and obtain them from there rather than reallocating each time.
+**
+**  Inputs:
+**	OperationType   OP_RECV, OP_SEND, etc
+**	GCC_P_PLIST	parmlist for GCC_RECEIVE, GCC_SEND, etc
+**
+**  Outputs: None
+**
+**  Returns:
+**	Address to a PER_IO_DATA structure
+**	NULL if unable to allocate a PER_IO_DATA	         
+**
+**  History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Created.
+*/
+PER_IO_DATA *
+GCwinsock2_get_piod(i4 OperationType, GCC_P_PLIST *parm_list)
+{
+    PER_IO_DATA	*lpPerIoData;
+    PCB2        *pcb = (parm_list ? (PCB2 *)parm_list->pcb : NULL);
+    STATUS	status;
+
+    /*
+    ** Allocate a new PER_IO_DATA structure
+    */
+    lpPerIoData = (PER_IO_DATA *)MEreqmem(0, sizeof(PER_IO_DATA),
+  				      TRUE, &status);
+    if (lpPerIoData == NULL)
+    {
+	GCTRACE(1)("GCwinsock2_get_piod: %p Unable to allocate PER_IO_DATA (size=%d) for optype=%d\n",
+		    parm_list, sizeof(PER_IO_DATA), OperationType);
+	if (parm_list)
+	    SETWIN32ERR(&parm_list->system_status, status, ER_alloc);
+	return(lpPerIoData);
+    }
+
+    GCTRACE(5)("GCwinsock2_get_piod: %p Allocated PER_IO_DATA (size=%d) at 0x%p for optype=%d\n",
+		parm_list, sizeof(PER_IO_DATA), lpPerIoData, OperationType);
+
+    /*
+    **  Initialize the PER_IO_DATA
+    */
+    lpPerIoData->OperationType	= OperationType;
+    lpPerIoData->state		= PIOD_ST_IO_PENDING;
+    lpPerIoData->flags		= PIOD_DYN_ALLOC;
+    lpPerIoData->parm_list	= parm_list;
+    lpPerIoData->pcb		= pcb;
+    if (parm_list)
+    {
+	GCC_WINSOCK_DRIVER *wsd = &((THREAD_EVENTS *)parm_list->pce->pce_dcb)->wsd;
+        lpPerIoData->block_mode = wsd->block_mode;
+    }
+
+    return(lpPerIoData);
+}
+
+/*
+**  Name: GCwinsock2_rel_piod
+**  Description:
+**	Release PER_IO_DATA object.
+**	If pre-allocated, mark it as available.
+**	If dynamically allocated, free it (the memory).
+**
+**	In the future, may want to put released PER_IO_DATAs on a free
+**	list for use by GCwinsock2_get_piod().
+**
+**  Inputs:
+**	lpPerIoData     Ptr to PerIoData to be released
+**
+**  Outputs: None
+**
+**  Returns: None
+**
+**  History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Created.
+*/
+VOID
+GCwinsock2_rel_piod(PER_IO_DATA *lpPerIoData)
+{
+    i4		OperationType = lpPerIoData->OperationType;
+    PCB2        *pcb = lpPerIoData->pcb;
+    GCC_P_PLIST *parm_list = lpPerIoData->parm_list;
+
+    GCTRACE(5)("GCwinsock2_rel_piod: %p %s PER_IO_DATA at 0x%p for optype=%d, state=%d\n",
+		parm_list,
+		(lpPerIoData->flags & PIOD_DYN_ALLOC) ? "Freeing" : "Releasing",
+		lpPerIoData,
+		OperationType,
+		lpPerIoData->state);
+    if (lpPerIoData->flags & PIOD_DYN_ALLOC)
+    {
+	if ( (OperationType == OP_RECV) &&
+	     ((pcb = lpPerIoData->pcb) != NULL) &&
+	     (lpPerIoData == pcb->last_rcv_PerIoData) )
+		pcb->last_rcv_PerIoData = NULL;
+	if (lpPerIoData->hWaitableTimer)
+	    CloseHandle(lpPerIoData->hWaitableTimer);
+	MEfree((PTR)lpPerIoData);
+    }
+    else
+    {
+	lpPerIoData->state = PIOD_ST_AVAIL;
+    }
 }
 
 
@@ -3206,7 +4252,7 @@ GCwinsock2_alloc_connect_events()
 **  History:
 **	06-Aug-2009 (Bruce Lunsford) Sir 122426
 **	    Created.
-**      19-Nov-2009 (Bruce Lunsford) Bug 122940 + Sir 122679
+**      19-Nov-2009 (Bruce Lunsford) Bug 122940 + Sir 122426
 **	    Failed connects and listens were not detected when using
 **	    recently added async alertable I/O logic (sir 122426).
 **	    Save socket descriptor (new input parm and new field in
@@ -3332,7 +4378,7 @@ GCwinsock2_add_connect_event(LPOVERLAPPED lpOverlapped, SOCKET sd)
 **  History:
 **	06-Aug-2009 (Bruce Lunsford) Sir 122426
 **	    Created.
-**      19-Nov-2009 (Bruce Lunsford) Bug 122940 + Sir 122679
+**      19-Nov-2009 (Bruce Lunsford) Bug 122940 + Sir 122426
 **	    Failed connects and listens were not detected when using
 **	    recently added async alertable I/O logic (sir 122426).
 **	    Added calls to WSAGetOverlappedResult() and WSAGetLastError()
@@ -3545,6 +4591,17 @@ wait_completed_connect_exit:
 **	    Do not call GetLastError() for AIO when retval is non-zero
 **	    because it was already called and stored in input parm "status"
 **	    by GCwinsock2_wait_completed_connect().
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Add check for shutting down to avoid misleading trace output.
+**	    Add trace at entry + exit with blank lines before/after for
+**	    easier tracking of IO completion processing in trace output.
+**	    Also add thread id (tid) to traces.
+**	    Use thread id from incoming PER_IO_DATA structure to
+**	    call GCwinsock2_schedule_completion(), which now requires
+**	    the original caller's thread id.
+**	    Set system_status to ER_close if send failed due to
+**	    connection having been closed (BytesTransferred == 0);
+**	    can be used by caller to detect closed socket.
 */
 
 DWORD WINAPI
@@ -3557,13 +4614,19 @@ GCwinsock2_worker_thread(LPVOID CompletionPortID)
     GCC_LSN    		*lsn;
     bool		retval;
     STATUS		status;
-    PCB			*pcb = NULL;
+    PCB2		*pcb = NULL;
     PER_IO_DATA		*lpPerIoData;
     bool		DecrementIoCount;
     char		*proto = "";
     ULONG_PTR		dummyCompletionKey;
+    u_i4  		tid;
+    DWORD		ThreadId;
 
     CompletionPort = (HANDLE)CompletionPortID;
+    tid = GetCurrentThreadId();
+
+    GCTRACE(3)("GCwinsock2_worker_thread: Started.  Worker Thread tid = %d\n",
+		tid);
 
     while(TRUE)
     {
@@ -3584,24 +4647,81 @@ GCwinsock2_worker_thread(LPVOID CompletionPortID)
 
 	if (!lpOverlapped)
 	{
-	    GCTRACE(1)("GCwinsock2_worker_thread %s: Entered with no Overlapped area and failure status %d\n",
-		        proto, status);
+	    if (GCwinsock2_shutting_down)  /* if shutting down,       */
+		return(OK);		   /*   just exit the thread. */
+	    GCTRACE(1)("GCwinsock2_worker_thread(%s): Entered with no Overlapped area and failure status %d ...skip it!\n",
+		        tid, status);
 	    continue;
 	}
 
 	lpPerIoData = CONTAINING_RECORD(lpOverlapped, PER_IO_DATA, Overlapped);
+	ThreadId  = lpPerIoData->ThreadId;
 	parm_list = lpPerIoData->parm_list;
+	pcb       = lpPerIoData->pcb;
+
+	/*
+	** If we already processed this I/O when we first issued it, then
+	** skip most of the processing below.  NOTE that because the caller
+	** has already received the results, the parmlist is probably
+	** gone, and hence cannot be used.
+	*/
+	if (lpPerIoData->state == PIOD_ST_SKIP_CALLBK)
+	{
+	    if ( (lpPerIoData->OperationType == OP_RECV) ||
+		 (lpPerIoData->OperationType == OP_SEND) )
+		DecrementIoCount = TRUE;
+	    else
+		DecrementIoCount = FALSE;
+	    goto worker_thread_err_exit;
+	}
+
         if (parm_list)  /* No parm list OK for LISTEN -> OP_ACCEPT */
 	{
 	    proto = parm_list->pce->pce_pid;
-	    pcb = (PCB *)parm_list->pcb;
+	    if (!pcb)   /* if wasn't found above in PerIoData, try parm_list. */
+		pcb = (PCB2 *)parm_list->pcb;
 	    if (!pcb)
 	    {
-		GCTRACE(1)("GCwinsock2_worker_thread %s: %p Entered with no PCB\n",
-			            proto, parm_list);
+		GCTRACE(1)("GCwinsock2_worker_thread(%d) %s: %p Entered with no PCB\n",
+			            tid, proto, parm_list);
+		DecrementIoCount = FALSE;
 	        goto worker_thread_err_exit;
 	    }
 	}
+	else
+	{
+	    proto = "";   /* Until proto located below */
+	    pcb = NULL;   /* Until pcb   located below */
+	}
+
+
+	GCTRACE(5)("\nGCwinsock2_worker_thread(%d) %s %d: %p Entered with retval/status=%d/%d...\n ... for optype=%d on socket=0x%p with PendingIOs=%d\n",
+		tid, proto,
+		pcb ? pcb->id : 0,
+		parm_list, retval, status,
+		lpPerIoData->OperationType,
+		pcb ? pcb->sd : 0,
+		pcb ? pcb->AsyncIoRunning : 0);
+
+	/*
+	** If this IO had an active timer associated with it, cancel it.
+	*/
+	if ( (lpPerIoData->state == PIOD_ST_IO_TMO_PENDING) &&
+	     (lpPerIoData->hWaitableTimer) )
+	{
+	    GCTRACE(3)("GCwinsock2_worker_thread %s: %p Cancelling Timer\n",
+			proto, parm_list);
+	    if ( CancelWaitableTimer(lpPerIoData->hWaitableTimer) == 0 )
+	    {
+		DWORD tmp_status = GetLastError();
+		GCTRACE(1)("GCwinsock2_worker_thread %s: %p WARNING CancelWaitableTimer() failed, status=%d\n",
+			    proto, parm_list, tmp_status);
+	    }
+	}
+
+	/*
+	**   Process completion based on Operation Type
+	*/
 
 	switch(lpPerIoData->OperationType)
 	{
@@ -3638,15 +4758,15 @@ GCwinsock2_worker_thread(LPVOID CompletionPortID)
 		WaitForSingleObject(lsn->hListenEvent, INFINITE);
 		parm_list = lsn->parm_list;
 		proto = parm_list->pce->pce_pid;
-		pcb = (PCB *)parm_list->pcb;
+		pcb = (PCB2 *)parm_list->pcb;
 		pcb->sd = lpPerIoData->client_sd;
 		lsn->addrinfo_posted  = lpPerIoData->addrinfo_posted;
 		lsn->socket_ix_posted = lpPerIoData->socket_ix_posted;
 
 		if (!retval)
 		{
-		    GCTRACE(1)("GCwinsock2_worker_thread %s: %p OP_ACCEPT Failed with status %d, socket=0x%p\n",
-			    proto, parm_list, status, pcb->sd);
+		    GCTRACE(1)("GCwinsock2_worker_thread(%d) %s %d: %p OP_ACCEPT Failed with status %d, socket=0x%p\n",
+			    tid, proto, pcb->id, parm_list, status, pcb->sd);
 		    if (status == ERROR_OPERATION_ABORTED)
 			goto worker_thread_err_exit;
 		    SETWIN32ERR(&parm_list->system_status, status, ER_accept);
@@ -3674,8 +4794,8 @@ GCwinsock2_worker_thread(LPVOID CompletionPortID)
 		    parm_list->generic_status = GC_LISTEN_FAIL;
 		    SETWIN32ERR(&parm_list->system_status, status,
 				ER_createiocompport);
-		    GCTRACE(1)("GCwinsock2_worker_thread %s: %p OP_ACCEPT CreateIoCompletionPort() failed with status %d, socket=0x%p\n",
-			    proto, parm_list, status, pcb->sd);
+		    GCTRACE(1)("GCwinsock2_worker_thread(%d) %s %d: %p OP_ACCEPT CreateIoCompletionPort() failed with status %d, socket=0x%p\n",
+			    tid, proto, pcb->id, parm_list, status, pcb->sd);
 		    break;
 		}
 
@@ -3685,8 +4805,8 @@ GCwinsock2_worker_thread(LPVOID CompletionPortID)
 		DecrementIoCount = FALSE;
 		if (!retval)
 		{
-		    GCTRACE(1)("GCwinsock2_worker_thread %s: %p OP_CONNECT Failed with status %d, socket=0x%p\n",
-			    proto, parm_list, status, pcb->sd);
+		    GCTRACE(1)("GCwinsock2_worker_thread(%d) %s %d: %p OP_CONNECT Failed with status %d, socket=0x%p\n",
+			    tid, proto, pcb->id, parm_list, status, pcb->sd);
 		    if (status == ERROR_OPERATION_ABORTED)
 			goto worker_thread_err_exit;
 
@@ -3706,8 +4826,8 @@ op_connect_next_addr:
 		    {
 		        SETWIN32ERR(&parm_list->system_status, status, ER_connect);
 		        parm_list->generic_status = GC_CONNECT_FAIL;
-		        GCTRACE(1)("GCwinsock2_worker_thread %s: %p OP_CONNECT All IP addrs failed\n",
-			    proto, parm_list);
+		        GCTRACE(1)("GCwinsock2_worker_thread(%d) %s %d: %p OP_CONNECT All IP addrs failed\n",
+			    tid, proto, pcb->id, parm_list);
 		        break;
 		    }
 		}
@@ -3722,8 +4842,9 @@ op_connect_next_addr:
 	    case OP_SEND:
 		if (!retval)
 		{
-		    GCTRACE(1)("GCwinsock2_worker_thread %s: %p OP_SEND Failed with status %d, socket=0x%p\n",
-			    proto, parm_list, status, pcb->sd);
+		    GCTRACE(1)("GCwinsock2_worker_thread(%d) %s %d: %p OP_SEND Failed with status %d, socket=0x%p\n",
+			    tid, proto, pcb->id, parm_list, status, pcb->sd);
+		    pcb->tot_snd = 0;
 		    if (status == ERROR_OPERATION_ABORTED)
 			goto worker_thread_err_exit;
 		    parm_list->generic_status = GC_SEND_FAIL;
@@ -3734,17 +4855,19 @@ op_connect_next_addr:
 		if (!BytesTransferred)
 		{
 		    /* The session has been disconnected */
+		    GCTRACE(1)("GCwinsock2_worker_thread(%d) %s %d: %p OP_SEND Failed- 0 bytes trfrd indicating session disconnected, socket=0x%p\n",
+			    tid, proto, pcb->id, parm_list, pcb->sd);
+		    pcb->session_state = SS_DISCONNECTED;
 		    pcb->tot_snd = 0;
 		    parm_list->generic_status = GC_SEND_FAIL;
-		    GCTRACE(1)("GCwinsock2_worker_thread %s: %p OP_SEND Failed- 0 bytes trfrd indicating session disconnected, socket=0x%p\n",
-			    proto, parm_list, pcb->sd);
+		    SETWIN32ERR(&parm_list->system_status, 0, ER_close);
 		    break;
 		}
 
 		break;
 
 	    case OP_RECV:
-		if ( (GCwinsock2_OP_RECV_complete((DWORD)!retval, status, BytesTransferred, lpPerIoData)) == FALSE )
+		if ( (GCwinsock2_OP_RECV_complete((DWORD)!retval, &status, BytesTransferred, lpPerIoData)) == FALSE )
 		    continue;  /* another WSARecv() was issued...not done yet */
 		if (status == ERROR_OPERATION_ABORTED)
 		    goto worker_thread_err_exit;
@@ -3755,15 +4878,36 @@ op_connect_next_addr:
 	} /* End switch on OperationType */
 
 	/*
+	** Release PER_IO_DATA before running completion routine so that
+	** it can be reused if we are called back with another request
+	** from within the completion routine.  The PER_IO_DATA is no
+	** longer needed at this point, so it is safe to release.
+	** This also helps with reuse of pre-allocated PER_IO_DATA(s)
+	** by making them available a bit sooner.
+	*/
+	GCwinsock2_rel_piod(lpPerIoData);
+	lpPerIoData = NULL;
+
+	/*
 	** Drive the completion routine.
 	*/
-	status = GCwinsock2_schedule_completion(NULL, parm_list);
+	status = GCwinsock2_schedule_completion(NULL, parm_list, ThreadId);
 
 worker_thread_err_exit:
+	if (lpPerIoData)
+	    GCwinsock2_rel_piod(lpPerIoData);
 	if (DecrementIoCount)
 	    InterlockedDecrement(&pcb->AsyncIoRunning);
-	MEfree((PTR)lpPerIoData);
+	GCTRACE(5)("GCwinsock2_worker_thread(%d) %s: %p Exited (back to sleep - wait for next IO completion)\n\n",
+		tid, proto, parm_list);
     } /* End while TRUE */
+
+    /*
+    ** Return a value for compiler's sake; in actuality, we should never
+    ** reach this as we stay in the while loop until the thread is 
+    ** terminated at shutdown.
+    */
+    return(OK);
 }
 
 
@@ -3801,6 +4945,9 @@ worker_thread_err_exit:
 **	    and OP_RECV_MSG_LEN code with single call to new shared code
 **	    GCwinsock2_OP_RECV_complete(), which handles both 1-step and
 **	    2-step receives.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Add trace to exit and a blank line before entry and after exit
+**	    for easier tracking of IO completion processing in trace output.
 */
 
 VOID CALLBACK
@@ -3809,26 +4956,60 @@ GCwinsock2_AIO_Callback(DWORD dwError, DWORD BytesTransferred, WSAOVERLAPPED *lp
     PER_IO_DATA		*lpPerIoData;
     GCC_P_PLIST		*parm_list;
     char		*proto = "";
-    PCB			*pcb;
+    PCB2		*pcb;
     STATUS		status = 0;
 
     lpPerIoData = CONTAINING_RECORD(lpOverlapped, PER_IO_DATA, Overlapped);
     parm_list = lpPerIoData->parm_list;
+    pcb       = lpPerIoData->pcb;
+
+    /*
+    ** If we already processed this I/O when we first issued it, then
+    ** skip most of the processing below.  NOTE that because the caller
+    ** has already received the results, the parmlist is probably
+    ** gone, and hence cannot be used.
+    */
+    if (lpPerIoData->state == PIOD_ST_SKIP_CALLBK)
+	goto AIO_Callback_err_exit;
+
     proto = parm_list->pce->pce_pid;
-    pcb = (PCB *)parm_list->pcb;
 
     if (dwError != OK)
 	status = WSAGetLastError();
-    GCTRACE(5)("GCwinsock2_AIO_Callback %s: %p Entered with error/status=%d/%d for optype=%d on socket=0x%p\n",
-        proto, parm_list, dwError, status, lpPerIoData->OperationType, pcb->sd);
 
+    GCTRACE(5)("\nGCwinsock2_AIO_Callback %s %d: %p Entered with error/status=%d/%d...\n   ... for optype=%d on socket=0x%p with PendingIOs=%d\n",
+		proto, pcb->id, parm_list, dwError, status,
+		lpPerIoData->OperationType, pcb->sd,
+		pcb->AsyncIoRunning);
+
+    /*
+    ** If this IO had an active timer associated with it, cancel it.
+    */
+    if ( (lpPerIoData->state == PIOD_ST_IO_TMO_PENDING) &&
+	 (lpPerIoData->hWaitableTimer) )
+    {
+	GCTRACE(3)("GCwinsock2_AIO_Callback %s: %p Cancelling Timer\n",
+		    proto, parm_list);
+	if ( CancelWaitableTimer(lpPerIoData->hWaitableTimer) == 0 )
+	{
+	    DWORD tmp_status = GetLastError();
+	    GCTRACE(1)("GCwinsock2_AIO_Callback %s: %p WARNING CancelWaitableTimer() failed, status=%d\n",
+			proto, parm_list, tmp_status);
+	}
+    }
+
+    /*
+    **   Process completion based on Operation Type
+    */
     switch(lpPerIoData->OperationType)
     {
 	case OP_SEND:
 	    if (dwError != OK)
 	    {
-		GCTRACE(1)("GCwinsock2_AIO_Callback %s: %p OP_SEND Failed with status %d, socket=0x%p\n",
-			    proto, parm_list, status, pcb->sd);
+		GCTRACE(1)("GCwinsock2_AIO_Callback %s %d: %p OP_SEND Failed with status %d, socket=0x%p\n",
+			    proto, pcb->id, parm_list, status, pcb->sd);
+		pcb->session_state = SS_DISCONNECTED;
+		pcb->tot_snd = 0;
 		if (status == ERROR_OPERATION_ABORTED)
 		    goto AIO_Callback_err_exit;
 		parm_list->generic_status = GC_SEND_FAIL;
@@ -3839,16 +5020,17 @@ GCwinsock2_AIO_Callback(DWORD dwError, DWORD BytesTransferred, WSAOVERLAPPED *lp
 	    if (!BytesTransferred)
 	    {
 		/* The session has been disconnected */
+		GCTRACE(1)("GCwinsock2_AIO_Callback %s %d: %p OP_SEND Failed- 0 bytes trfrd indicating session disconnected, socket=0x%p\n",
+			    proto, pcb->id, parm_list, pcb->sd);
 		pcb->tot_snd = 0;
 		parm_list->generic_status = GC_SEND_FAIL;
-		GCTRACE(1)("GCwinsock2_AIO_Callback %s: %p OP_SEND Failed- 0 bytes trfrd indicating session disconnected, socket=0x%p\n",
-			    proto, parm_list, pcb->sd);
+		SETWIN32ERR(&parm_list->system_status, 0, ER_close);
 	    }
 
 	    break;
 
 	case OP_RECV:
-	    if ( (GCwinsock2_OP_RECV_complete(dwError, status, BytesTransferred, lpPerIoData)) == FALSE )
+	    if ( (GCwinsock2_OP_RECV_complete(dwError, &status, BytesTransferred, lpPerIoData)) == FALSE )
 		return;  /* another WSARecv() was issued...not done yet */
 	    if (status == ERROR_OPERATION_ABORTED)
 		goto AIO_Callback_err_exit;
@@ -3859,17 +5041,272 @@ GCwinsock2_AIO_Callback(DWORD dwError, DWORD BytesTransferred, WSAOVERLAPPED *lp
     }
 
     /*
+    ** Release PER_IO_DATA before running completion routine so that
+    ** it can be reused if we are called back with another request
+    ** from within the completion routine.  The PER_IO_DATA is no
+    ** longer needed at this point, so it is safe to release.
+    ** This also helps with reuse of pre-allocated PER_IO_DATA(s)
+    ** by making them available a bit sooner.
+    */
+    GCwinsock2_rel_piod(lpPerIoData);	/* Release PER_IO_DATA first */
+    lpPerIoData = NULL;
+
+    /*
     ** Drive the completion routine.
     */
-    /* status = GCwinsock2_schedule_completion(NULL, parm_list); */
     (*parm_list->compl_exit)( parm_list->compl_id );
 
 AIO_Callback_err_exit:
+    if (lpPerIoData)
+	GCwinsock2_rel_piod(lpPerIoData);
     InterlockedDecrement(&pcb->AsyncIoRunning);
-    MEfree((PTR)lpPerIoData);
+    GCTRACE(5)("GCwinsock2_AIO_Callback %s: %p Exited\n\n",
+		proto, parm_list);
 }
 
 
+
+/*
+**  Name: GCwinsock2_schedule_completion
+**  Description:
+**	Schedule callback of the completion routine for the request.
+**	This is an alternative to calling the completion routine
+**	directly.  It must be used when the thread that is handling
+**	the completion is different from the thread that originated
+**	the request; the completion routine is required to be invoked
+**	from the thread of the original request.
+**
+**	Two(2) options are supported:
+**	1. Queue a UserAPC to the target thread's and invoke the
+**	   completion routine from there.
+**	2. (Legacy) Queue a request element to the GCC completion
+**	   queue (global) and set event to trigger routine in main
+**	   thread to run the completion routine.  This only works
+**	   reliably for GC* servers which are single-threaded and
+**	   only wait on the completion queue event from the main
+**	   thread.  This option has no thread awareness, which would
+**	   be needed in any multi-threaded environment, like the DBMS.
+**	   Another drawback of this approach over option 1 is the
+**	   extra overhead since this option involves acquiring and
+**	   releasing a sync object, setting an event, ...all system
+**	   functions.  One potential advantage is that the completion
+**	   routine will be invoked from the requester thread in a
+**	   "normal" thread context whereas, with option 1, the
+**	   completion routine is invoked in a UserAPC callback mode.
+**
+**	The following are scenarios that must call this function:
+**        1. Completion Port IO, which runs in worker threads.
+**        2. Alertable IO async connects and listens, which run in worker
+**	     threads.
+**	  3. Disconnects that had been queued to the disconnect thread
+**	     awaiting completion of all pending IOs.
+**
+**  Inputs:
+**	One and only one of the following inputs should be provided.
+**	Supply the rq if one already exists, else one will be built
+**	from the parm list:
+**      rq_in      	Ptr to request queue entry.
+**			If NULL, one will be created if needed.
+**      parm_list_in	Ptr to function parm list.
+**			If NULL, rq_in required and must contain parm list
+**			in rq_in->plist.
+**			If not NULL, and if rq_in is not NULL, then
+**			parm_list_in should match rq_in->plist (not verified).
+**	ThreadId_in	Thread id of original requestor.
+**			If NULL, get from rq_in if present, else use current
+**			thread.
+**
+**  Outputs: none
+**
+**  Returns:
+**	OK if successful
+**	FAIL or Windows status if unsuccessful (unable to schedule callback)
+**
+**  History:
+**	26-Nov-2008 (Bruce Lunsford) Bug 121285
+**	    Split out into standalone function since code is now needed
+**	    in 5 places.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Use QueueUserAPC() to queue completions to the target thread
+**	    instead of prior mechanism, which allocated memory for request,
+**	    queued it to global completion Q (synchronized) and set
+**	    GCC_COMPLETE event.  New mechanism is thread-aware and simpler--
+**	    probably faster as well.  Add target thread to input parm list;
+**	    ThreadId_in takes precedence, but if not specified there, then
+**	    use the one in the rq_in.  If zero, then get a handle to the
+**	    current thread.
+*/
+STATUS
+GCwinsock2_schedule_completion(REQUEST_Q *rq_in, GCC_P_PLIST *parm_list_in, DWORD ThreadId_in)
+{
+    STATUS	status = OK;
+    STATUS	temp_status;
+    bool	retval = TRUE;
+    REQUEST_Q	*rq = rq_in;
+    GCC_P_PLIST *parm_list = parm_list_in ? parm_list_in : (rq ? rq->plist : parm_list_in);
+    DWORD	TargetThreadId = ThreadId_in ? ThreadId_in : (rq ? rq->ThreadId : 0);
+    DWORD	CurrentThreadId = GetCurrentThreadId();
+
+    GCTRACE(5)("GCwinsock2_schedule_completion Entered: rq=%p, parm_list=%p, target thread id=%d\n",
+		rq, parm_list, TargetThreadId);
+
+    /*
+    ** Sanity check the parm_list.
+    */
+    if (!parm_list || !parm_list->compl_exit)
+    {
+	GCTRACE(1)("GCwinsock2_schedule_completion ERROR: parmlist or compl exit NULL!...exit; rq=%p, parm_list=%p, target thread id=%d\n",
+		rq, parm_list, TargetThreadId);
+	return(FAIL);
+    }
+
+    /*
+    ** If target thread id is zero, use our own thread id as the target.
+    */
+    if (!TargetThreadId)
+	TargetThreadId = CurrentThreadId;
+
+    /*
+    ** If target and current are equal, it might make sense to call the
+    ** completion routine directly from here.  Currently, however, we
+    ** always queue the request.
+    */
+
+    /*
+    ** If QueueUserAPC() exists and has not been disabled by setting
+    ** II_WINSOCK2_EVENT_Q=ON, queue a UserAPC to the original
+    ** calling thread to invoke the completion routine.
+    */
+    if ( (!GCWINSOCK2_event_q) && (pfnQueueUserAPC != NULL) )
+    {   
+	HANDLE hThread;
+	/*
+	** A thread handle is required to queue it with QueueUserAPC.
+	*/
+        hThread = OpenThread(THREAD_SET_CONTEXT, FALSE, TargetThreadId);
+	if (hThread == NULL)
+	{
+	    temp_status = GetLastError();
+	    GCTRACE(1)("GCwinsock2_schedule_completion: WARNING: OpenThread() error=%d on thread id=%d for parm_list=%p\n",
+			temp_status, TargetThreadId, parm_list);
+	    goto legacy_callback;
+	}
+
+	/*
+	** If an rq has been allocated already (such as for async
+	** completing disconnects), free it since this code doesn't
+	** use it.
+	*/
+	if ( rq_in != NULL )
+	    MEfree ((PTR)rq_in);
+
+	GCTRACE(5)("GCwinsock2_schedule_completion: Queue UserAPC for parm_list=%p, target thread id=%d\n",
+		    parm_list, TargetThreadId);
+	pfnQueueUserAPC((PAPCFUNC)(GCwinsock2_async_completion),
+			hThread, 
+                        (DWORD)parm_list);
+	CloseHandle(hThread);
+	return(OK);
+    }
+
+legacy_callback:
+    /*
+    ** Legacy callback mechanism - requires GCC_COMPLETE event/processing.
+    ** - Only used if II_WINSOCK2_EVENT_Q set to ON.
+    ** Create a request queue entry if not provided as input parm.
+    */
+    if ( rq_in == NULL )
+    {
+	rq = (REQUEST_Q *)MEreqmem(0, sizeof(*rq), TRUE, NULL);
+	if (rq == NULL)
+	{
+	    GCTRACE(1)("GCwinsock2_schedule_completion ERROR: Unable to allocate rq for parm_list=%p\n", parm_list);
+	    return(FAIL);
+	}
+	rq->plist = parm_list;
+	rq->ThreadId = TargetThreadId;  /* Currently just informational */
+    }
+
+    GCTRACE(5)("GCwinsock2_schedule_completion: Queue rq=%p to GCC_COMPLETE for parm_list=%p\n",
+		rq, rq->plist);
+    /*
+    ** Get critical section for completion Q.
+    */
+    EnterCriticalSection( &GccCompleteQCritSect );
+
+    /*
+    ** Now insert the completed request into the completed Q.
+    ** Place at end to cause FIFO processing.
+    */
+    QUinsert(&rq->req_q, IIGCc_proto_threads.completed_head.q_prev);
+
+    /*
+    ** Exit/leave critical section for completion Q.
+    */
+    LeaveCriticalSection( &GccCompleteQCritSect );
+
+    /*
+    ** Raise the completion event to wake up GCexec.
+    */
+    if (!SetEvent(hAsyncEvents[GCC_COMPLETE]))
+    {
+	status = GetLastError();
+	GCTRACE(1)("GCwinsock2_schedule_completion SetEvent error = %d\n", status);
+    }
+
+    return(status);
+}
+
+
+/******************************************************************************
+**
+** Name: GCwinsock2_async_completion
+**
+** Description:
+**	This function calls the completion routine for a request that 
+**	completed in a thread other than the original thread of the
+**	request.  This function is itself run as a completion routine
+**	for a Windows User APC that is queued to the original thread by
+**	GCwinsock2_schedule_completion().
+**      The thread must be in an alertable wait state for this function
+**      to be executed.
+**	TIP: There might be a temptation to eliminate this function
+**	     and queue the UserAPC directly to the actual requester's
+**	     completion routine since, as seen below, this routine does
+**	     nothing more than turn around and call the requester's
+**	     completion routine.  DON'T BOTHER! ... the call mechanism
+**	     for this Windows UserAPC routine is WINAPI which is #defined
+**	     to __stdcall, which is different from the default call
+**	     mechanism which is used by all the Ingres programs.  If that
+**	     were to ever get in sync, then this middle-man function could
+**	     be eliminated.
+**
+** Inputs:
+**      parm_list	Ptr to function parm list.
+**
+** Outputs:
+**      None.
+**
+** Returns:
+**      None.
+**
+** History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**          Created.  Modeled after gcacl.c GCasyncCompletion().
+**
+******************************************************************************/
+VOID WINAPI
+GCwinsock2_async_completion( GCC_P_PLIST *parm_list )
+{
+    char	*proto = parm_list->pce->pce_pid;
+    GCTRACE(3)( "\nGCwinsock2_async_completion %s: %p Entry point.\n",
+		proto, parm_list );
+
+    (*parm_list->compl_exit)( parm_list->compl_id );
+
+    GCTRACE(3)( "GCwinsock2_async_completion: Exit point.\n\n" );
+    return;
+}
 
 /*
 **  Name: GCwinsock2_OP_RECV_complete
@@ -3895,18 +5332,19 @@ AIO_Callback_err_exit:
 **	   better performance as the # of RECV requests issued to the OS
 **	   is cut approximately in half.
 **
-** Inputs:
+**  Inputs:
 **      dwError         Error indicator received by callback mechanism
 **			for WSARecv.
-**      status          Error code from WSAGetLastError() after WSARecv.
+**      &status         Ptr to error code from WSAGetLastError() after WSARecv.
 **      BytesTransferred  Number of bytes received into target buffer.
 **	lpPerIoData	Control block associated with the I/O - contains
 **			the Overlapped area as well as data specific to
 **			this protocol.
 **
-** Outputs:		None
+**  Outputs:
+**	status		May be overridden to ERROR_OPERATION_ABORTED.
 **
-** Returns:
+**  Returns:
 **                      TRUE  if receive is completed.  Ie, either:
 **			  - error in receive, or
 **			  - entire message received
@@ -3916,44 +5354,119 @@ AIO_Callback_err_exit:
 **  History:
 **	06-Aug-2009 (Bruce Lunsford) Sir 122426
 **	    Created.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Check for timeout errors; if WSAETIMEDOUT returned from OS,
+**	    then return GC_TIME_OUT in parm_list->generic_status.
+**	    Set system_status to ER_close if receive failed due to
+**	    connection having been closed (BytesTransferred == 0);
+**	    can be used by caller to detect closed socket.  Also
+**	    clear pcb->tot_rcv if error occurs, as done elsewhere.
 */
 bool 
-GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS status, DWORD BytesTransferred, PER_IO_DATA *lpPerIoData)
+GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS *lpstatus, DWORD BytesTransferred_in, PER_IO_DATA *lpPerIoData)
 {
+    STATUS		status = *lpstatus;
+    DWORD		BytesTransferred = BytesTransferred_in;
     GCC_P_PLIST		*parm_list;
     char		*proto;
-    PCB			*pcb;
+    PCB2		*pcb;
     int			i;
     DWORD		dwBytes;
     DWORD		dwBytes_wanted;
     i4			len;
+    i4			len_prefix = lpPerIoData->block_mode ? 0 : 2;
 
     parm_list = lpPerIoData->parm_list;
     proto = parm_list->pce->pce_pid;
-    pcb = (PCB *)parm_list->pcb;
+    pcb = (PCB2 *)parm_list->pcb;
 
     if (dwError != OK)
     {
-	GCTRACE(1)("GCwinsock2_OP_RECV_complete %s: %p Failed with status %d, socket=0x%p\n",
-		    proto, parm_list, status, pcb->sd);
+	GCTRACE(1)("GCwinsock2_OP_RECV_complete %s %d: %p Failed with status %d in state=%d on socket=0x%p\n",
+		    proto, pcb->id, parm_list, status, lpPerIoData->state, pcb->sd);
+	pcb->tot_rcv = 0;
 	if (status == ERROR_OPERATION_ABORTED)
 	    return TRUE; /* GCC_RECEIVE is done */
-	parm_list->generic_status = GC_RECEIVE_FAIL;
+
+	if (lpPerIoData->state == PIOD_ST_TIMED_OUT)
+	{
+	    /*
+	    ** The requester has already been notified of the timeout.
+	    ** Nothing left to do except "eat" the IO completion.
+	    */
+	    *lpstatus = ERROR_OPERATION_ABORTED;
+	    return TRUE; /* GCC_RECEIVE is done */
+	}
+
+	/*
+	** WSAETIMEDOUT is unlikely to ever actually occur since receives
+	** are currently all asynchronous and cannot time out.  However,
+	** we check for it anyway for completeness.
+	*/
+	if (status == WSAETIMEDOUT)
+	    parm_list->generic_status = GC_TIME_OUT;
+	else
+	    parm_list->generic_status = GC_RECEIVE_FAIL;
 	SETWIN32ERR(&parm_list->system_status, status, ER_socket);
 	return TRUE; /* GCC_RECEIVE is done */
     }
 
-    GCTRACE(2)( "GCwinsock2_OP_RECV_complete %s: %p Want %d bytes got %d bytes\n",
-		proto, parm_list, pcb->tot_rcv, BytesTransferred );
+    GCTRACE(2)( "GCwinsock2_OP_RECV_complete %s %d: %p Want %d bytes got %d bytes\n",
+		proto, pcb->id, parm_list, pcb->tot_rcv, BytesTransferred );
 
     if (!BytesTransferred)
     {
 	/* The session has been disconnected */
+	GCTRACE(2)("GCwinsock2_OP_RECV_complete %s %d: %p Failed- 0 bytes trfrd indicating session disconnected, socket=0x%p\n",
+		    proto, pcb->id, parm_list, pcb->sd);
+	pcb->session_state = SS_DISCONNECTED;
 	pcb->tot_rcv = 0;
+	if (lpPerIoData->state == PIOD_ST_TIMED_OUT)
+	{
+	    /*
+	    ** The requester has already been notified of the timeout.
+	    ** Nothing left to do except "eat" the IO completion.
+	    */
+	    *lpstatus = ERROR_OPERATION_ABORTED;
+	    return TRUE; /* GCC_RECEIVE is done */
+	}
 	parm_list->generic_status = GC_RECEIVE_FAIL;
-	GCTRACE(2)("GCwinsock2_OP_RECV_complete %s: %p Failed- 0 bytes trfrd indicating session disconnected, socket=0x%p\n",
-		    proto, parm_list, pcb->sd);
+	SETWIN32ERR(&parm_list->system_status, 0, ER_close);
 	return TRUE; /* GCC_RECEIVE is done */
+    }
+
+    /*
+    ** Check if data was received into overflow buffer area rather
+    ** than requester's buffer; if so, it must be copied over...
+    ** whatever will fit.  Data gets read into the overflow area
+    ** on receives with a timeout value (not -1) specified.
+    */
+    if ( (lpPerIoData->state == PIOD_ST_IO_TMO_PENDING) ||
+	 (lpPerIoData->state == PIOD_ST_REDIRECT) )
+    {
+	pcb->b2 += BytesTransferred;	/* Adjust ptr to end of data read */
+	/*
+	** Redirect target from overflow to caller's buffer.
+	*/
+	pcb->rcv_bptr = parm_list->buffer_ptr - len_prefix;
+	pcb->tot_rcv  = parm_list->buffer_lng + len_prefix;
+	/*
+	** Copy data from overflow to caller's buffer.
+	** NOTES re. function GCwinsock2_copy_ovflo_to_inbuf():
+	** 1. It adjusts pcb->tot_rcv & rcv_bptr.
+	** 2. It may increase BytesTransferred because, theoretically, there
+	**    may have already been data in the overflow prior to this receive.
+	**    All that will fit into caller's buffer is copied.
+	*/
+	GCwinsock2_copy_ovflo_to_inbuf(pcb, parm_list, lpPerIoData->block_mode, &BytesTransferred);
+	if (parm_list->generic_status != OK)
+	    return TRUE; /* GCC_RECEIVE is done */
+	lpPerIoData->state = PIOD_ST_IO_PENDING;
+    }
+    else	/* data was read directly into caller's buffer */
+    {
+	pcb->tot_rcv -= BytesTransferred;
+	pcb->rcv_bptr += BytesTransferred;
     }
 
     /*
@@ -3970,9 +5483,6 @@ GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS status, DWORD BytesTransferred
 
     /* The remainder of this code below only runs for non-block mode */
 
-    pcb->tot_rcv -= BytesTransferred;
-    pcb->rcv_bptr += BytesTransferred;
-
     if (pcb->rcv_bptr < parm_list->buffer_ptr)
     {
 	/*
@@ -3982,7 +5492,6 @@ GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS status, DWORD BytesTransferred
 	*/
 
 	ZeroMemory(&lpPerIoData->Overlapped, sizeof(OVERLAPPED));
-	lpPerIoData->OperationType = OP_RECV;
 	lpPerIoData->wbuf.buf = pcb->rcv_bptr;
 	lpPerIoData->wbuf.len = dwBytes_wanted = pcb->tot_rcv;
 
@@ -3998,13 +5507,13 @@ GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS status, DWORD BytesTransferred
 		parm_list->generic_status = GC_RECEIVE_FAIL;
 		SETWIN32ERR(&parm_list->system_status, status,
 			    ER_socket);
-		GCTRACE(1)("GCwinsock2_OP_RECV_complete %s: %p WSARecv() failed with status %d, socket=0x%p\n",
-		        proto, parm_list, status, pcb->sd);
+		GCTRACE(1)("GCwinsock2_OP_RECV_complete %s %d: %p WSARecv() failed with status %d, socket=0x%p\n",
+		        proto, pcb->id, parm_list, status, pcb->sd);
 		return TRUE; /* GCC_RECEIVE is done */
 	    }
 	}
-	GCTRACE(4)( "GCwinsock2_OP_RECV_complete %s: %p want %d bytes got %d bytes\n",
-		    proto, parm_list, dwBytes_wanted, dwBytes );
+	GCTRACE(4)( "GCwinsock2_OP_RECV_complete %s %d: %p want %d bytes got %d bytes\n",
+		    proto, pcb->id, parm_list, dwBytes_wanted, dwBytes );
 
 	return FALSE;  /* GCC_RECEIVE is not yet done...need more data. */
     }  /* End if still need rest of 2-byte length header */
@@ -4022,11 +5531,15 @@ GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS status, DWORD BytesTransferred
     if (len < 0 || len > parm_list->buffer_lng)
     {
 	parm_list->generic_status = GC_RECEIVE_FAIL;
-	GCTRACE(1)( "GCwinsock2_OP_RECV_complete %s: %p failure - Invalid incoming message len = %d bytes, buffer = %d bytes, socket=0x%p\n",
-	            proto, parm_list,
+	GCTRACE(1)( "GCwinsock2_OP_RECV_complete %s %d: %p failure - Invalid incoming message len = %d bytes, buffer = %d bytes, socket=0x%p\n",
+	            proto, pcb->id, parm_list,
 	            len, 
 	            parm_list->buffer_lng,
 	            pcb->sd);
+	/* Dump 1st 1024 bytes (arbitrary max) of invalid incoming message */
+	if( GCWINSOCK2_trace )
+	    gc_tdump(&parm_list->buffer_ptr[-4],
+		     (BytesTransferred > 1024) ? 1024 : BytesTransferred);
 	return TRUE; /* GCC_RECEIVE is done */
     }
     parm_list->buffer_lng  = len;
@@ -4043,7 +5556,6 @@ GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS status, DWORD BytesTransferred
     {
 	pcb->tot_rcv = -len;
 	ZeroMemory(&lpPerIoData->Overlapped, sizeof(OVERLAPPED));
-	lpPerIoData->OperationType = OP_RECV;
 	lpPerIoData->wbuf.buf = pcb->rcv_bptr;
 	lpPerIoData->wbuf.len = dwBytes_wanted = pcb->tot_rcv;
 
@@ -4058,13 +5570,13 @@ GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS status, DWORD BytesTransferred
 	    {
 		parm_list->generic_status = GC_RECEIVE_FAIL;
 		SETWIN32ERR(&parm_list->system_status, status, ER_socket);
-		GCTRACE(1)("GCwinsock2_OP_RECV_complete %s: %p WSARecv() #2 failed with status %d, socket=0x%p\n",
-		        proto, parm_list, status, pcb->sd);
+		GCTRACE(1)("GCwinsock2_OP_RECV_complete %s %d: %p WSARecv() #2 failed with status %d, socket=0x%p\n",
+		        proto, pcb->id, parm_list, status, pcb->sd);
 		return TRUE; /* GCC_RECEIVE is done */
 	    }
 	}
-	GCTRACE(4)( "GCwinsock2_OP_RECV_complete %s: %p Want %d bytes got %d, msg len %d remaining %d\n",
-		proto, parm_list, dwBytes_wanted, dwBytes,
+	GCTRACE(4)( "GCwinsock2_OP_RECV_complete %s %d: %p Want %d bytes got %d, msg len %d remaining %d\n",
+		proto, pcb->id, parm_list, dwBytes_wanted, dwBytes,
 		parm_list->buffer_lng, -len );
 	return FALSE;  /* GCC_RECEIVE is not yet done...need more data. */
     }  /* End if len < 0 */
@@ -4077,8 +5589,8 @@ GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS status, DWORD BytesTransferred
     */
     if( len > 0 )
     {
-	GCTRACE(3)("GCwinsock2_OP_RECV_complete %s: %p saving %d\n",
-	    proto, parm_list, len );
+	GCTRACE(3)("GCwinsock2_OP_RECV_complete %s %d: %p saving %d\n",
+	    proto, pcb->id, parm_list, len );
 	MEcopy( pcb->rcv_bptr - len, len, pcb->rcv_buffer );
 	pcb->b1 = pcb->rcv_buffer;
 	pcb->b2 = pcb->rcv_buffer + len;
@@ -4087,6 +5599,279 @@ GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS status, DWORD BytesTransferred
     return TRUE; /* GCC_RECEIVE is done */
 }
 
+
+/*
+**  Name: GCwinsock2_copy_ovflo_to_inbuf
+**  Description:
+**	Copy what we can from the overflow buffer into the
+**	requester's receive buffer.
+**
+**	Data can reside in the overflow area due to one of the
+**	following prior events:
+**	1. Data came in after a receive timed out.
+**	2. Data from more than 1 message was received together;
+**	   anything past 1st message was saved in overflow.  This can
+**	   only occur with stream mode and not with block mode.
+**
+**  Inputs:
+**      pcb    	        Protocol Connection Block, which includes receive
+**			overflow buffer area and related pointers.
+**	    ->b1 to b2     (area to copy from)
+**	    ->rcv_bptr     (area to copy to)
+**	    ->tot_rcv      (len of area to copy to)
+**      parm_list       Caller's input parameter list for the receive.
+**	block_mode      Block/message or stream (with 2-byte prefix) mode
+**	&BytesTransferred Ptr to output # of bytes copied
+**
+**  Outputs:
+**	parm_list->generic_status  Set to GC_RECEIVE_FAIL if error
+**	parm_list->buffer_lng      Set to "logical" message length (not
+**		                   including prefix) if found whole msg.
+**	pcb->rcv_bptr and tot_rcv  Ptr and len of target (adjusted by
+**		                   # of bytes copied into it)
+**	BytesTransferred           # of bytes copied
+**
+**  Returns:
+**                      TRUE  if whole   message copied or ERROR
+**                      FALSE if partial message copied...ie, need more data.
+**
+**  History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Created.
+*/
+bool
+GCwinsock2_copy_ovflo_to_inbuf(PCB2 *pcb, GCC_P_PLIST *parm_list, bool block_mode, DWORD *BytesTransferred)
+{
+    char	*proto = parm_list->pce->pce_pid;
+    bool	got_whole_msg = FALSE;
+    i4		len;
+    i4		excess = 0;
+    i4		len_prefix = block_mode ? 0 : 2;
+
+    len = pcb->b2 - pcb->b1;  /* #bytes in ovflo buffer */
+
+    if (block_mode)	  /* block mode => use whatever will fit */
+    {
+	got_whole_msg = TRUE;
+	if (len > parm_list->buffer_lng)
+	{
+	    excess = len - parm_list->buffer_lng;
+	    len = parm_list->buffer_lng;
+	}
+    }
+    else                  /* streams mode => ck if got entire msg */
+    {
+	/* If we have the NDU header, use the length */
+	if( len >= 2 )
+	{
+	    i4 len2 = ((u_char *)pcb->b1)[0] +
+	              ((u_char *)pcb->b1)[1] * 256;
+	    /*
+	    ** Ensure buffered msg has valid length...must be at
+	    ** least 2 for NDU hdr & must fit in caller's buffer.
+	    */
+	    if (len2 < 2 || len2 > parm_list->buffer_lng + 2)
+	    {
+		parm_list->generic_status = GC_RECEIVE_FAIL;
+		GCTRACE(1)( "GCwinsock2_copy_ovflo_to_inbuf %s %d: GCC_RECEIVE %p failure - Invalid incoming message len = %d bytes, buffer = %d bytes, socket=0x%p\n",
+		             proto, pcb->id, parm_list,
+		             len2 - 2, 
+		             parm_list->buffer_lng,
+		             pcb->sd);
+		*BytesTransferred = 0;
+		return(TRUE);
+	    }
+
+	    excess = len - len2;	/* calc excess/under */
+	    if (excess >= 0)  /* Have a whole msg? */
+	    {                 /* - whole msg (or more) */
+		got_whole_msg = TRUE;
+		len = len2;             /* only take 1st msg  */
+	    }
+	}  /* End if have at least 2 bytes in buffer */
+    } /* End if streams mode */
+
+    GCTRACE(3)("GCwinsock2_copy_ovflo_to_inbuf %s %d: GCC_RECEIVE %p using %d - %s message, excess=%d buffered\n",
+		proto, pcb->id, parm_list, len,
+		got_whole_msg ? "whole" : "part",
+		excess );
+
+    MEcopy( pcb->b1, len, pcb->rcv_bptr );
+    pcb->rcv_bptr += len;
+    pcb->tot_rcv -= len;
+    pcb->b1 += len;
+    *BytesTransferred = len;
+
+    /*
+    ** If we've copied out everything from the overflow
+    ** buffer, then reset the pointers to the overflow
+    ** buffer back to the beginning (indicating nothing
+    ** in the overflow buffer).
+    ** NOTE: b1 and b2 should be equal in this condition,
+    ** but we check for > also just to be safe.
+    ** NOTE: Another option here would be to always copy
+    ** the excess data, if any, to the start of the buffer;
+    ** this would maximize the buffer area, but require a
+    ** perhaps unneeded copying of data.
+    */
+    if (pcb->b1 >= pcb->b2)
+	pcb->b1 = pcb->b2 = pcb->rcv_buffer;
+
+    /*
+    ** Tell caller if an entire message was found in (and
+    ** copied from) the overflow area (from prior receive(s)).
+    ** Allows caller to skip any further WSARecv()'s...
+    ** Ie, the GCC_RECEIVE is done!
+    */
+    if (got_whole_msg == TRUE)
+    {
+	parm_list->buffer_lng  = len - len_prefix;
+    }
+
+    return(got_whole_msg);
+}
+
+
+/*
+**  Name: GCwinsock2_set_timer
+**  Description:
+**	This function creates (if not already created) a waitable timer
+**	and then sets the timer for the specified amount of time.
+**
+**  Inputs:
+**	lpPerIoData	Control block associated with the I/O - contains
+**			the Overlapped area as well as data specific to
+**			this protocol.
+**	timeout		Timeout period in milliseconds.
+**
+**  Outputs:
+**	lpPerIoData->hWaitableTimer  Handle to Waitable Timer for request
+**		                     (created if non-existent)
+**
+**  Returns:
+**                      OK     if timer set successfully
+**                      status of failed OS timer function
+**
+**  History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Created.
+*/
+STATUS
+GCwinsock2_set_timer(PER_IO_DATA *lpPerIoData, i4 timeout)
+{
+    STATUS	status = OK;
+    GCC_P_PLIST	*parm_list = lpPerIoData->parm_list;
+    char	*proto = parm_list->pce->pce_pid;
+    PCB2	*pcb   = (PCB2 *)parm_list->pcb;
+
+    LARGE_INTEGER	li;
+    LONGLONG		nanosec;
+
+    /*
+    ** Create a waitable timer for the request if one does not
+    ** already exist.
+    */
+    if (!lpPerIoData->hWaitableTimer)
+    {
+	SECURITY_ATTRIBUTES sa;
+	iimksec (&sa);
+	sa.bInheritHandle = FALSE;
+	lpPerIoData->hWaitableTimer = CreateWaitableTimer(&sa, FALSE, NULL);
+	if (!lpPerIoData->hWaitableTimer)
+	{
+	    status = GetLastError();
+	    GCTRACE(1)("GCwinsock2_set_timer %s %d: %p CreateWaitableTimer() failed, status=%d\n",
+			proto, pcb->id, parm_list, status);
+	    return(status);
+	}
+    }
+
+    /*
+    ** Set the timer to specified timeout value.
+    */
+
+    nanosec = (LONGLONG) timeout * 10000;
+
+    /*
+    ** Negate the time so that SetWaitableTimer knows
+    ** we want relative time instead of absolute time.
+    ** This negative value tells the function to go off 
+    ** at a time relative to the time when we call the function.
+    */
+    nanosec=-nanosec;
+
+    /*
+    ** Copy the relative time from a __int64 into a LARGE_INTEGER.
+    */
+    li.LowPart = (DWORD) (nanosec & 0xFFFFFFFF );
+    li.HighPart = (LONG) (nanosec >> 32 );
+
+    if ( SetWaitableTimer(lpPerIoData->hWaitableTimer, &li, 0, GCwinsock2_timer_callback, lpPerIoData, FALSE) == 0)
+    {
+	status = GetLastError();
+	GCTRACE(1)("GCwinsock2_set_timer %s %d: %p SetWaitableTimer() failed for %d msecs, status=%d\n",
+			proto, pcb->id, parm_list, timeout, status);
+	return(status);
+    }
+
+    lpPerIoData->state = PIOD_ST_IO_TMO_PENDING;
+
+    GCTRACE(3)("GCwinsock2_set_timer %s %d: %p timeout(millisec)=%d\n",
+		proto, pcb->id, parm_list, timeout);
+    return(status);
+}
+
+
+/*
+**  Name: GCwinsock2_timer_callback
+**  Description:
+**	This function is called by the OS if a waitable timer expires.
+**	It then calls back, with a GC_TIME_OUT error, the completion routine
+**	for the request that timed out.  NOTE that although this timer
+**	was started for a request that had a timeout ( >0 ), the
+**	associated actual IO request is not touched in any way and
+**	will complete independently later, at which time it will be
+**	either ignored or linked up with a new request if one has come in.
+**	The PerIoData state is merely set to PIOD_ST_TIMED_OUT at this
+**	time to note that the original request (not the IO) has timed out.
+**	In other words, the original request is timed out, but not the IO
+**	because there is no way to cancel it.
+**
+**  Inputs:
+**	lpPerIoData	Control block associated with the I/O - contains
+**			the Overlapped area as well as data specific to
+**			this protocol.
+**	dwTimerLowValue	Low order portion of timeout period
+**	dwTimerHighValue High order portion of timeout period
+**
+**  Outputs: None
+**
+**  Returns: None
+**
+**  History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Created.
+*/
+VOID CALLBACK
+GCwinsock2_timer_callback(PER_IO_DATA *lpPerIoData, DWORD dwTimerLowValue, DWORD dwTimerHighValue)
+{
+    GCC_P_PLIST	*parm_list = lpPerIoData->parm_list;
+    char	*proto = parm_list->pce->pce_pid;
+    PCB2	*pcb   = (PCB2 *)parm_list->pcb;
+
+    GCTRACE(3)("GCwinsock2_timer_callback %s %d: %p Timer Expired - call completion with GC_TIME_OUT error\n",
+		proto, pcb->id, parm_list);
+
+    lpPerIoData->state = PIOD_ST_TIMED_OUT;
+
+    /*
+    ** Drive the completion routine with timeout error.
+    */
+    parm_list->generic_status = GC_TIME_OUT;
+    (*parm_list->compl_exit)( parm_list->compl_id );
+
+    return;
+}
 
 
 /*
@@ -4098,11 +5883,24 @@ GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS status, DWORD BytesTransferred
 **  History:
 **      28-Aug-2006 (lunbr01) Sir 116548
 **          Add IPv6 support.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Add Sleep for minumum duration after closing each socket
+**	    to allow any triggered reactions to complete before returning
+**	    to the caller.  This avoids potential shutdown problems
+**	    where the triggered events don't occur until later and 
+**	    expected resources have already been freed.  For example,
+**	    with AIO async connects/listens, the GCwinsock2_exit() code
+**	    could terminate the worker threads and free the connect/listen
+**	    arrays before or while a worker thread is woken up to process
+**	    the closed listen socket, which results in an AccVio.
+**	    This problem could have been encountered prior to this Sir.
 */
 VOID
 GCwinsock2_close_listen_sockets(GCC_LSN *lsn)
 {
     int 	i;
+#define	AFTER_CLOSE_SOCKET_WAIT_TIME	50  /* milliseconds to sleep */
+
     if (lsn->addrinfo_list)
     {
 	freeaddrinfo(lsn->addrinfo_list);
@@ -4119,6 +5917,7 @@ GCwinsock2_close_listen_sockets(GCC_LSN *lsn)
 	            closesocket(lsn->listen_sd[i]);
 		    GCTRACE(1)( "GCwinsock2_close_listen_sockets: socket=0x%p closed\n",
             		lsn->listen_sd[i]);
+		    Sleep(AFTER_CLOSE_SOCKET_WAIT_TIME);
 	        }
 	    }
 	    lsn->num_sockets = 0;
@@ -4143,19 +5942,19 @@ GCwinsock2_close_listen_sockets(GCC_LSN *lsn)
 **      qualified network name is found, but the output buffer is too 
 **      small, the host name is truncated and an error is returned.
 **
-** Inputs:
+**  Inputs:
 **      hostlen         Byte length of host name buffer.
 **      ourhost         Allocated buffer at least "hostlen" in size.
 **
-** Outputs:
+**  Outputs:
 **      ourhost         Fully qualified host name - null terminated string.
 **
-** Returns:
+**  Returns:
 **                      OK
 **                      GC_NO_HOST
 **                      GC_HOST_TRUNCATED
 **                      GC_INVALID_ARGS
-** Exceptions:
+**  Exceptions:
 **                      N/A
 **
 **  History:
@@ -4166,7 +5965,8 @@ GCwinsock2_close_listen_sockets(GCC_LSN *lsn)
 **      (=256 on Windows) instead of gl-defined GCC_L_NODE (=64).
 */
 
-STATUS GCdns_hostname( char *ourhost, i4 hostlen )
+STATUS
+GCdns_hostname( char *ourhost, i4 hostlen )
 {
     struct hostent *hp, *hp1;
     struct addrinfo *result=NULL;
@@ -4192,8 +5992,7 @@ STATUS GCdns_hostname( char *ourhost, i4 hostlen )
 
     ourhost[0] = '\0';
 
-    if (!WSAStartup_called)
-        status = GCwinsock2_startup_WSA();
+    status = GCwinsock2_startup_WSA();
 
     /*
     ** gethostname() is the most straightforward means of getting
@@ -4334,10 +6133,53 @@ exit_routine:
         CVlower(ourhost);
     return status;
 }
-STATUS GCwinsock2_startup_WSA()
+
+
+/*
+**  Name: GCwinsock2_startup_WSA()
+**
+**  Description:
+**
+**      GCwinsock2_startup_WSA() -- Start up Winsock facility
+**
+**      This function must be called before any other winsock functions
+**      are called.  It calls WSAStartup() which initializes the winsock
+**	facility.
+**
+**  Inputs:
+**      none
+**
+**  Outputs:
+**      none
+**
+**  Returns:
+**                      OK
+**                      FAIL
+**  Exceptions:
+**                      N/A
+**
+**  History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Add function flower box header.
+**	    Change startup_data from static to local variable as it is not
+** 	    referenced anywhere except in this function.  WSAStartup_called
+**	    is now a "use count" rather than a true/false boolean.
+*/
+STATUS
+GCwinsock2_startup_WSA()
 {
     WORD	version;
+    WSADATA	startup_data;
     int	err;
+
+    /*
+    ** Keep a driver instance/thread "use count" and only call WSAStartup()
+    ** on 1st call (or if use_count had dropped to 0 indicating WSACleanup()
+    ** had been called). 
+    */
+    WSAStartup_called++;
+    if (WSAStartup_called > 1)
+	return(OK);
 
     version = MAKEWORD(2,2);
     err = WSAStartup(version, &startup_data);
@@ -4346,7 +6188,7 @@ STATUS GCwinsock2_startup_WSA()
         GCTRACE(1)("GCwinsock2_startup_WSA: Couldn't find usable WinSock DLL, status = %d\n", err);
         return(FAIL);
     }
-    
+
     /*
     ** Confirm that the WinSock DLL supports 2.2.
     ** Note that if the DLL supports versions greater
@@ -4362,6 +6204,48 @@ STATUS GCwinsock2_startup_WSA()
         return(FAIL);
     }
     
-    WSAStartup_called = TRUE;
     return (OK);
+}
+/*
+**  Name:	gc_tdump	- Trace a buffer.
+**
+**  Description:
+**	Prints out the buffer in hex and ASCII for debugging purposes.
+**
+**  Inputs:
+**	buf		Pointer to buffer
+**	len		Buffer length
+**
+**  Outputs:
+**	None.
+**
+**  History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Cloned from gcx_tdump in gcc tl, with a couple of minor mods
+**	    to be equivalent to odbc_hexdump().
+*/
+VOID					 
+gc_tdump( char *buf, i4  len )
+{
+    char *hexchar = "0123456789ABCDEF";
+    char hex[ 49 ]; /* 3 * 16 + \0 */
+    char asc[ 17 ]; 
+    u_i2 i;
+
+    for( i = 0 ; len-- > 0; buf++ )
+    {
+	hex[3*i] = hexchar[ (*buf >> 4) & 0x0F ];
+	hex[3*i+1] = hexchar[ *buf & 0x0F ];
+	hex[3*i+2] =  ' ';
+	asc[i++] = CMprint(buf) && !(*buf & 0x80) ? *buf : '.' ;
+
+	if( i == 16 || !len )
+	{
+	    hex[3*i] = asc [i] = '\0';
+	    TRdisplay("%48s    %s\n", hex, asc);
+	    i = 0;
+	}
+    }
+
+    return;
 }

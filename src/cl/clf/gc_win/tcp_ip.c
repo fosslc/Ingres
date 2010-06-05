@@ -39,6 +39,9 @@
 **	    Display the actual symbolic port for the symbolic ports defined 
 **	    using new port syntax (example, II7+). See SIR 120457 for new port 
 **	    syntax. Ported the Unix CL changes for bug 120552 to fix the issue.
+**	13-Apr-2010 (Bruce Lunsford)  SIR 122679
+**	    Set wsd->pce_driver from GCC PCT rather than from ex-global
+**	    WS_tcpip.
 */
 
 #include <winsock2.h>
@@ -67,8 +70,6 @@
 STATUS 		GCtcpip_init(GCC_PCE * , GCC_WINSOCK_DRIVER *);
 STATUS		GCtcpip_addr( char *, char *, char * );
 STATUS		GCtcpip_port( char *, i4 , char *, char * );
-
-GLOBALREF	WS_DRIVER WS_tcpip;
 
 /*
 **  Statics
@@ -171,6 +172,11 @@ GLOBALREF i4 GCTCPIP_trace;
 **		   Original behaviour:
 **		   First GCF server will come up OK (II0, II1). The second
 **		   GCF server will come up fine too ( II2, II3 ).
+**	13-Apr-2010 (Bruce Lunsford)  SIR 122679
+**	    Get wsd->pce_driver from GCC PCT rather than from ex-global
+**	    WS_tcpip.  If input PCT entry port = "0", then skip checking
+**	    for an explicit port setting, since this is likely the case
+**	    for gcacl which just wants to listen on any available port.
 */
 
 STATUS
@@ -201,7 +207,14 @@ GCtcpip_init(GCC_PCE * pptr, GCC_WINSOCK_DRIVER *wsd)
 
     /*
     **  Construct the network port identifier.
+    **
+    **  If PCT entry port is "0", then a non-specific port is being
+    **  asked for, such as when used by gcacl, so skip checking for
+    **  an explicit port setting.
     */
+    if (!STcompare(pptr->pce_port, "0"));
+	goto GCtcpip_addr_nonspecific;
+
     host = PMhost();
     server_id = PMgetDefault(3);
     if (!server_id)
@@ -225,6 +238,8 @@ GCtcpip_init(GCC_PCE * pptr, GCC_WINSOCK_DRIVER *wsd)
     }
 
     STcopy(port_id, pptr->pce_port);
+
+GCtcpip_addr_nonspecific:
     GCTRACE(1)("GCtcpip_init: port = %s\n", pptr->pce_port);
 
     /*
@@ -257,7 +272,7 @@ GCtcpip_init(GCC_PCE * pptr, GCC_WINSOCK_DRIVER *wsd)
     wsd->sock_type = SOCK_STREAM;
     wsd->sock_proto = IPPROTO_TCP;
     wsd->block_mode = FALSE;
-    wsd->pce_driver = (PTR)&WS_tcpip;
+    wsd->pce_driver = pptr->pce_driver;
 
     return(OK);
 }

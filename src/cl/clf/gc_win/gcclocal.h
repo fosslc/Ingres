@@ -1,4 +1,8 @@
 /*
+**  Copyright (c) 1995, 2010 Ingres Corporation
+*/
+
+/*
 ** Name: GCCLOCAL.H
 ** Description:
 **	Contains struct typedefs and #defines used locally for GC CL functions
@@ -43,6 +47,12 @@
 **	    Add IPv6 support.  Update GCC_LSN structure to add hListenEvent.
 **          Change single listen address and socket to array ptrs for
 **          Winsock2 ONLY and misc other Winsock2 ONLY fields.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Remove GLOBALREF's for ex-global WS_DRIVER definitions.
+**	    Add thread handle of original requestor to REQUEST_Q structure.
+**	    Change return type of protocol driver exits from VOID to STATUS.
+**	    WS_DRIVER structure now has all driver exit pointers, not just
+**	    init and addr; also added 2 new exits for GCsave/GCrestore.
 */
 
 /*
@@ -90,20 +100,34 @@ typedef struct _GCC_WINSOCK_DRIVER
 	int		sock_type;	/* socket type: STREAM, SEQPACKET..*/
 	int		sock_proto;	/* protocol for socket */
 	bool		block_mode;	/* block or byte stream type */
+	bool		use_gc_mtyp_len; /* use msg GC_MTYP prefix length */
 	PTR		pce_driver;
 	GCC_LSN		*lsn;		/* Listen block, could be a list */
 } GCC_WINSOCK_DRIVER;
 
 /*
 ** Name: WS_DRIVER
+**
 ** Description:
 **	Structure containing function pointers to some protocol specific
-**	functions used by winsock driver.
+**	functions used by winsock and other drivers.
+**
+** History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Merge prot_init and prot_exit table entries into here as
+**	    init_func and exit_func respectively.  Prior init_func renamed
+**	    to prot_init_func.  Also added 2 new exits to support GCsave
+**	    and GCrestore when driver used as local IPC.
 */
 typedef struct _WS_DRIVER
 {
-	STATUS	(*init_func)();
-	STATUS	(*addr_func)();
+	STATUS	(*init_func)(); 	/* Init fn common to driver */
+	STATUS	(*prot_init_func)();	/* Init fn specific to protocol - called
+				           by generic driver init func() */
+	STATUS	(*exit_func)();		/* Exit fn for driver            */
+	STATUS	(*addr_func)();		/* Network address fn for protocol */
+	STATUS	(*save_func)();		/* GCsave driver-specific fn       */
+	STATUS	(*restore_func)();	/* GCrestore driver-specific fn    */
 } WS_DRIVER;
 
 
@@ -167,6 +191,11 @@ typedef struct _REQUEST_Q
 {
     QUEUE	req_q;
     GCC_P_PLIST *plist;
+    DWORD	ThreadId;	/* Thread id of original requester;
+				** allows completion callback to be run
+				** on original thread.  If zero, means OK
+				** to run in current thread.
+				*/
 } REQUEST_Q;
 
 # define WINTCP_ID	"WINTCP"
@@ -203,23 +232,21 @@ typedef struct _PCB_STATE
 
 FUNC_EXTERN	STATUS	GCwinsock();
 FUNC_EXTERN	STATUS	GCwinsock_init();
-FUNC_EXTERN	VOID	GCwinsock_exit();
+FUNC_EXTERN	STATUS	GCwinsock_exit();
 FUNC_EXTERN	STATUS	GCwinsock2();
 FUNC_EXTERN	STATUS	GCwinsock2_init();
-FUNC_EXTERN	VOID	GCwinsock2_exit();
+FUNC_EXTERN	STATUS	GCwinsock2_exit();
+FUNC_EXTERN	STATUS	GCwinsock2_save();
+FUNC_EXTERN	STATUS	GCwinsock2_restore();
 FUNC_EXTERN	STATUS	GCnvlspx_init();
 FUNC_EXTERN	STATUS	GCwintcp_init();
 FUNC_EXTERN	STATUS	GCtcpip_init();
 
 FUNC_EXTERN	STATUS	GClanman();
 FUNC_EXTERN	STATUS	GClanman_init();
-FUNC_EXTERN	VOID	GClanman_exit();
+FUNC_EXTERN	STATUS	GClanman_exit();
 
 FUNC_EXTERN	int GCget_incoming_reqs( THREAD_EVENTS *, HANDLE );
 FUNC_EXTERN	VOID GCcomplete_request( QUEUE * );
-
-GLOBALREF	WS_DRIVER WS_wintcp;
-GLOBALREF	WS_DRIVER WS_tcpip;
-GLOBALREF	WS_DRIVER WS_nvlspx;
 
 GLOBALREF	THREAD_EVENT_LIST IIGCc_proto_threads;

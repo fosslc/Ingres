@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1987, 2007 Ingres Corporation
+** Copyright (c) 1987, 2010 Ingres Corporation
 */
 /*
 **  Name: GCWINTCP.C
@@ -60,6 +60,9 @@
 **          Implemented extended symbolic port range mapping algorithm.
 **          Implemented support for explicit port rollup indicator for
 **          symbolic and numeric ports.
+**	13-Apr-2010 (Bruce Lunsford)  SIR 122679
+**	    Set wsd->pce_driver from GCC PCT rather than from ex-global
+**	    WS_wintcp.
 */
 
 # include	<compat.h>
@@ -90,8 +93,6 @@
 STATUS 		GCwintcp_init(GCC_PCE * , GCC_WINSOCK_DRIVER *);
 STATUS		GCwintcp_addr( char *, char *, struct sockaddr_in *, char * );
 STATUS		GCwintcp_port( char *, i4 , char * );
-
-GLOBALREF	WS_DRIVER WS_wintcp;
 
 /*
 ** Statics
@@ -205,6 +206,9 @@ GLOBALREF i4 GCWINTCP_trace;
 **		   will fail for tcp_ip protocol, but will come up on win_tcp
 **		   protocol. This doesn't seem to be much of an issue because
 **		   the second GCF server will still come up using win_tcp. 
+**	13-Apr-2010 (Bruce Lunsford)  SIR 122679
+**	    Set wsd->pce_driver from GCC PCT rather than from ex-global
+**	    WS_wintcp.
 */
 STATUS
 GCwintcp_init(GCC_PCE * pptr, GCC_WINSOCK_DRIVER *wsd)
@@ -266,7 +270,7 @@ GCwintcp_init(GCC_PCE * pptr, GCC_WINSOCK_DRIVER *wsd)
 	wsd->sock_type = SOCK_STREAM;
 	wsd->sock_proto = 0;
 	wsd->block_mode = FALSE;
-	wsd->pce_driver = (PTR)&WS_wintcp;
+	wsd->pce_driver = pptr->pce_driver;
 
 	/*
 	** Get trace variable

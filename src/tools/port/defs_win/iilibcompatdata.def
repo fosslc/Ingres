@@ -32,6 +32,10 @@
 ;	    Add CM_isDBL for change 501847 bug 122994
 ;	13-Jan-2010 (wanfr01) Bug 123139
 ;	    Add CV_fvp and ST_fvp
+;	13-Apr-2010 (Bruce Lunsford) Sir 122679
+;	    Remove ex-globals WS_tcpip, WS_wintcp, WS_nvlspx.
+;	    Add new global GCdrivers for GCA CL PCT.
+;	    Remove deleted globals IIGCc_prot_init and IIGCc_prot_exit.
 ;
 
 EXPORTS
@@ -145,14 +149,14 @@ IIGCc_proto_threads		@89	DATA
 ;    Dummy_Buf                           DATA
 GCLANMAN_trace		@90	DATA			
 GCWINTCP_trace		@91	DATA			
-WS_wintcp		@92	DATA			
+;    WS_wintcp		@92	DATA			
 IIGCc_gcc_pct		@93	DATA			
-IIGCc_prot_init		@94	DATA			
-IIGCc_prot_exit		@95	DATA			
+;IIGCc_prot_init		@94	DATA			
+;IIGCc_prot_exit		@95	DATA			
 GCWINSOCK_trace		@96	DATA			
 WSAStartup_called		@97	DATA			
 GCNVLSPX_trace		@98	DATA			
-WS_nvlspx		@99	DATA			
+;    WS_nvlspx		@99	DATA			
 Terminal		@100	DATA			
 Env_ID		@101	DATA			
 II_copyright		@102	DATA			
@@ -379,7 +383,7 @@ MO_cdefs		@185	DATA
     SyncEvent			@210	DATA
     is_comm_svr			@211	DATA
     is_gcn		@212	DATA
-    WS_tcpip		@213	DATA
+;   WS_tcpip		@213	DATA
     GCTCPIP_trace		@214	DATA	
     GCWINSOCK2_trace		@215	DATA
     hWndDummy		@216	DATA
@@ -415,4 +419,4 @@ MO_cdefs		@185	DATA
     CM_isDBL		@245	DATA
     CV_fvp		@246	DATA
     ST_fvp		@247	DATA
-
+    GCdrivers           @248    DATA

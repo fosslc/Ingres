@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1987, 2009 Ingres Corporation
+** Copyright (c) 1987, 2010 Ingres Corporation
 */
 
 /*
@@ -93,6 +93,9 @@
 **	    Convert CreateThread() to _beginthreadex() which is recommended
 **	    when using C runtime. This also involves using errno instead of
 **	    GetLastError() for failures and _endthreadex() at end of thread.
+**      13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    In GClanman_exit(), change return value from VOID to STATUS
+**	    and add PCT entry as input parm, since caller expects it.
 */
 
 # include	<compat.h>
@@ -127,7 +130,7 @@
 
 STATUS 		GClanman_init(GCC_PCE * pptr);
 STATUS          GClanman(i4 function_code, GCC_P_PLIST * parm_list);
-VOID     	GClanman_exit(void);
+STATUS     	GClanman_exit(GCC_PCE * pptr);
 VOID            GClanman_async_thread(void *parms);
 STATUS          GClanman_open(GCC_P_PLIST *parm_list);
 VOID            GClanman_listen(void *parms);
@@ -1335,12 +1338,17 @@ top:
 ** Description:
 **
 **
+** History:
+**      13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Change return value from VOID to STATUS and add PCT entry
+**	    as input parm, since caller expects it.
+**
 */
-VOID
-GClanman_exit()
+STATUS
+GClanman_exit(GCC_PCE * pptr)
 {
 	if ( In_Shutdown )
-	    return;
+	    return OK;
 
 	In_Shutdown = TRUE;
 
@@ -1350,4 +1358,6 @@ GClanman_exit()
     Name_Ncb.ncb_lana_num = lana_num;
 
     (void) Netbios( &Name_Ncb );
+
+    return OK;
 }

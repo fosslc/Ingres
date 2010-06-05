@@ -1,10 +1,11 @@
 /******************************************************************************
-** Copyright (c) 1987, 2001 Ingres Corporation
+** Copyright (c) 1987, 2010 Ingres Corporation
 ******************************************************************************/
 
 # include       <compat.h>
 # include	<tr.h>
 # include	<pc.h>
+# include	<gcccl.h>
 # include	<gc.h>
 # include	<st.h>
 # include	"gclocal.h"
@@ -142,6 +143,8 @@ GLOBALREF VOID (*GCevent_func[NUM_EVENTS])();
 **	31-mar-1999 (somsa01)
 **	    Properly set the number of events when passed to
 **	    WaitForMultipleObjectsEx() on Windows 95.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Include of gcccl.h added since now needed by gclocal.h.
 **
 ******************************************************************************/
 VOID

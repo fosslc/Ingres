@@ -1,5 +1,5 @@
 /*
-**  Copyright (c) 1995, 2004 Ingres Corporation
+**  Copyright (c) 1995, 2010 Ingres Corporation
 **
 */
 
@@ -427,6 +427,15 @@
 **	07-May-2009 (drivi01)
 **	    Move clusapi.h up in a header list to clean up errors in
 **	    effort to port to Visual Studio 2008.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    With II_GC_PROT=tcpip, ingstop could not find any running
+**	    server processes.  Remove prefix containing installation
+**	    id and backslash (\) from search criteria (looking at
+**	    iinamu output).  With tcp_ip as the local IPC, the listen
+**	    addresses are tcp port numbers and not pipe names and so
+**	    are not in the format II\svrtype\....  Just use the server
+**	    type, which is also displayed in the iinamu output, regardless
+**	    of local protocol.
 */
 
 /*
@@ -613,7 +622,7 @@ static void stop_gcb( BOOL flag );
 static void stop_gcd( BOOL flag );
 static int  get_procs( );
 static void find_procs( );
-static char *find_key( char *buf, char *key );
+static char *find_key( char *buf, char *key, int *id_len );
 static BOOL start_process( char *cmdbuf );
 static STATUS execute( char *cmd );
 static void get_server_classnames( void );
@@ -1842,19 +1851,55 @@ skip_printfs:
     PCexit (OK);
 }
 
+
+/******************************************************************************
+**
+** Name: find_procs - Find the requested server processes that are running
+**
+** Description:
+**   This routine identifies the listen ids of all running server processes
+**   for the requested server types.  This info is obtained from the output
+**   of the iinamu command.
+** 
+** Inputs:
+**     no input parms
+**     globals:
+**        readbuf           Pointer to iinamu output
+**        iixxx_key         String constant of server xxx name
+** Outputs:
+**     no input parms
+**     globals:
+**        iixxx_id          Listen id of server xxx
+**
+** Returns:
+**     none
+**
+** Exceptions:
+**     none
+**
+** Side Effects:
+**     none
+**
+** History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Changed to search for the real server name in the iinamu
+**	    output (column 1) and then return the server's listen id
+**	    in column 3.  Previously, the pipe name prefix (which included
+**	    the server name embedded in it) was being used as the search
+**	    key; that approach doesn't work for tcp_ip which uses numeric
+**	    ports as the listen_id.
+**
+******************************************************************************/
 static
 void
 find_procs( )
 {
-    char    kbuf[64];
     char    *kp;
     char    *p = readbuf;
-    int     i;
+    int     i, id_len;
     char    prevId[64] = {0};
-    char    *prevPtr = prevId;
     i4      len;
     bool    duplicate;
-    static char *keyform = ERx("%s\\%s\\");
 
     iigcn_count = 0;
     iigcc_count = 0;
@@ -1871,249 +1916,267 @@ find_procs( )
     odbc_count = 0;
     db2udb_count = 0;
     
-    STprintf( kbuf, ERx("%s\\%s"), ii_install, gcn_server_class );
-    if (find_key( p, kbuf ))
+    kp = iigcn_id;
+    if (p = find_key( p, iigcn_key, &id_len ))
     {
-        STcopy( kbuf, iigcn_id );
+        STlcopy( p, kp, id_len );
         iigcn_count++;
     }
     else if (!Individual)
         return;
 
-    STprintf( kbuf, keyform, ii_install, iigcc_key );
     kp = iigcc_id;
     p = readbuf;
-    while (p = find_key( p, kbuf ))
+    while (p = find_key( p, iigcc_key, &id_len ))
     {
-        while (!isspace( *p ))
-        {
-            *kp++ = *p++;
-        }
-        *kp++ = '\0';
+        STlcopy( p, kp, id_len );
+        p  += id_len;
+        kp += id_len + 1;
         iigcc_count++;
     }
 
-    STprintf( kbuf, keyform, ii_install, iigcd_key );
     kp = iigcd_id;
     p = readbuf;
-    while (p = find_key( p, kbuf ))
+    while (p = find_key( p, iigcd_key, &id_len ))
     {
-        while (!isspace( *p ))
-        {
-            *kp++ = *p++;
-        }
-        *kp++ = '\0';
+        STlcopy( p, kp, id_len );
+        p  += id_len;
+        kp += id_len + 1;
         iigcd_count++;
     }
 
-    STprintf( kbuf, keyform, ii_install, iigcb_key );
     kp = iigcb_id;
     p = readbuf;
-    while (p = find_key( p, kbuf ))
+    while (p = find_key( p, iigcb_key, &id_len ))
     {
-        while (!isspace( *p ))
-        {
-            *kp++ = *p++;
-        }
-        *kp++ = '\0';
+        STlcopy( p, kp, id_len );
+        p  += id_len;
+        kp += id_len + 1;
         iigcb_count++;
     }
 
     if (Is_w95)
     {
-    	STprintf( kbuf, keyform, ii_install, iigws_key );
-    	kp = iigws_id;
+        kp = iigws_id;
     	p = readbuf;
-    	while (p = find_key( p, kbuf ))
+    	while (p = find_key( p, iigws_key, &id_len ))
     	{
-            while (!isspace( *p ))
-            {
-            	*kp++ = *p++;
-            }
-            *kp++ = '\0';
+            STlcopy( p, kp, id_len );
+            p  += id_len;
+            kp += id_len + 1;
             iigws_count++;
     	}
     }
 
-    STprintf(kbuf, keyform, ii_install, iirmcmd_key);
     kp = iirmcmd_id;
     p = readbuf;
-    while (p = find_key(p, kbuf))
+    while (p = find_key(p, iirmcmd_key, &id_len))
     {
-        while (!isspace(*p))
-        {
-            *kp++ = *p++;
-        }
-        *kp++ = '\0';
+        STlcopy( p, kp, id_len );
+        p  += id_len;
+        kp += id_len + 1;
         iirmcmd_count++;
     }
 
     kp = iidbms_id;
     for (i = 0; i <= num_dbms_classes; i++)
     {
-	STprintf( kbuf, keyform, ii_install, iidbms_key[i] );
 	p = readbuf;
 	len = 0;
 	duplicate = FALSE;
 
-	while (p = find_key( p, kbuf ))
+	while (p = find_key( p, iidbms_key[i], &id_len ))
 	{
 	    if (iidbms_count)
 	    {
-	       duplicate = !STscompare(prevId, len, p, len);
-	    }
-
-	    len = 0;
-	    prevPtr = prevId;
-
-	    while (!isspace( *p ))
-	    {
-		*prevPtr++ = *p;
-		if (!duplicate)
-		{
-	            *kp++ = *p;
-		}
-		p++;
-		len++;
+	       duplicate = !STscompare(prevId, len, p, id_len);
 	    }
 
 	    if (!duplicate)
 	    {
-	    *kp++ = '\0';
-	    iidbms_count++;
+                STlcopy( p, kp, id_len );
+                kp += id_len + 1;
+	        iidbms_count++;
 	    }
+            STlcopy( p, prevId, id_len );
+            len = id_len;
+            p  += id_len;
 	}
     }
-    STprintf( kbuf, keyform, ii_install, iirecovery_key );
+
     kp = iirecovery_id;
     p = readbuf;
-    while (p = find_key( p, kbuf ))
+    while (p = find_key( p, iirecovery_key, &id_len ))
     {
-        while (!isspace( *p ))
-        {
-            *kp++ = *p++;
-        }
-        *kp++ = '\0';
+        STlcopy( p, kp, id_len );
+        p  += id_len;
+        kp += id_len + 1;
         iirecovery_count++;
     }
 
     kp = iistar_id;
     for (i = 0; i <= num_star_classes; i++)
     {
-	STprintf( kbuf, keyform, ii_install, iistar_key[i] );
 	p = readbuf;
-	while (p = find_key( p, kbuf ))
+	while (p = find_key( p, iistar_key[i], &id_len ))
 	{
-	    while (!isspace( *p ))
-	    {
-		*kp++ = *p++;
-	    }
-	    *kp++ = '\0';
+            STlcopy( p, kp, id_len );
+            p  += id_len;
+            kp += id_len + 1;
 	    iistar_count++;
 	}
     }
 
-    STprintf( kbuf, keyform, ii_install, icesvr_key );
     kp = icesvr_id;
     p = readbuf;
-    while (p = find_key( p, kbuf ))
+    while (p = find_key( p, icesvr_key, &id_len ))
     {
-        while (!isspace( *p ))
-        {
-            *kp++ = *p++;
-        }
-        *kp++ = '\0';
+        STlcopy( p, kp, id_len );
+        p  += id_len;
+        kp += id_len + 1;
         icesvr_count++;
     }
 
-    STprintf( kbuf, keyform, ii_install, oracle_key );
     kp = oracle_id;
     p = readbuf;
-    while (p = find_key( p, kbuf ))
+    while (p = find_key( p, oracle_key, &id_len ))
     {
-        while (!isspace( *p ))
-        {
-            *kp++ = *p++;
-        }
-        *kp++ = '\0';
+        STlcopy( p, kp, id_len );
+        p  += id_len;
+        kp += id_len + 1;
         oracle_count++;
     }
-    STprintf( kbuf, keyform, ii_install, informix_key );
+
     kp = informix_id;
     p = readbuf;
-    while (p = find_key( p, kbuf ))
+    while (p = find_key( p, informix_key, &id_len ))
     {
-        while (!isspace( *p ))
-        {
-            *kp++ = *p++;
-        }
-        *kp++ = '\0';
+        STlcopy( p, kp, id_len );
+        p  += id_len;
+        kp += id_len + 1;
         informix_count++;
     }
-    STprintf( kbuf, keyform, ii_install, sybase_key );
+
     kp = sybase_id;
     p = readbuf;
-    while (p = find_key( p, kbuf ))
+    while (p = find_key( p, sybase_key, &id_len ))
     {
-        while (!isspace( *p ))
-        {
-            *kp++ = *p++;
-        }
-        *kp++ = '\0';
+        STlcopy( p, kp, id_len );
+        p  += id_len;
+        kp += id_len + 1;
         sybase_count++;
     }
-    STprintf( kbuf, keyform, ii_install, mssql_key );
+
     kp = mssql_id;
     p = readbuf;
-    while (p = find_key( p, kbuf ))
+    while (p = find_key( p, mssql_key, &id_len ))
     {
-        while (!isspace( *p ))
-        {
-            *kp++ = *p++;
-        }
-        *kp++ = '\0';
+        STlcopy( p, kp, id_len );
+        p  += id_len;
+        kp += id_len + 1;
         mssql_count++;
     }
-    STprintf( kbuf, keyform, ii_install, odbc_key );
+
     kp = odbc_id;
     p = readbuf;
-    while (p = find_key( p, kbuf ))
+    while (p = find_key( p, odbc_key, &id_len ))
     {
-        while (!isspace( *p ))
-        {
-            *kp++ = *p++;
-        }
-        *kp++ = '\0';
+        STlcopy( p, kp, id_len );
+        p  += id_len;
+        kp += id_len + 1;
         odbc_count++;
     }
-    STprintf( kbuf, keyform, ii_install, db2udb_key );
+
     kp = db2udb_id;
     p = readbuf;
-    while (p = find_key( p, kbuf ))
+    while (p = find_key( p, db2udb_key, &id_len ))
     {
-        while (!isspace( *p ))
-        {
-            *kp++ = *p++;
-        }
-        *kp++ = '\0';
+        STlcopy( p, kp, id_len );
+        p  += id_len;
+        kp += id_len + 1;
         db2udb_count++;
     }
 
 }
 
+/******************************************************************************
+**
+** Name: find_key - Find the listen id for the input key (server name)
+**
+** Description:
+**   This routine scans the input buffer of iinamu output for the listen
+**   id of the first entry of a matching server name (specifed as the input
+**   key). 
+** 
+**  iinamu lines are in the format of:
+**     servername  classes     listen_id
+**  eg:  COMSVR       *       II\COMSVR\cd4   (named pipes)
+**       COMSVR       *       1234            (tcp_ip)
+**
+** Inputs:
+**   buf                    Pointer to some place in the iinamu output
+**   key                    Server name key (eg, IINMSVR, COMSVR, etc)
+**   id_len                 Pointer to len field where the length of the
+**                            listen id should be stored.
+** Outputs:
+**   id_len                 Length of the listen_id of the server
+**                            =0 if server not found
+**
+** Returns:
+**     Pointer to the listen id of the server (NULL if server not found).
+**
+** Exceptions:
+**     none
+**
+** Side Effects:
+**     none
+**
+** History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Changed to search for the real server name in the iinamu
+**	    output (column 1) and then return the server's listen id
+**	    in column 3.  Previously, the pipe name prefix (which included
+**	    the server name embedded in it) was being used as the search
+**	    key; that approach doesn't work for tcp_ip which uses numeric
+**	    ports as the listen_id.
+**
+******************************************************************************/
 static
 char *
-find_key( char *buf, char *key )
+find_key( char *buf, char *key , int *id_len)
 {
     int     len = STlength( key );
+    char    *id = NULL;
+    *id_len = 0;
 
     while (*buf)
     {
-        if (!memcmp( buf, key, len ))
-            return buf;
+        if ( (!memcmp( buf, key, len ))
+        &&   ( *(buf+len) == ' ' ) )
+        {
+            buf = buf + len + 1;  /* pt to 1st byte after "key+space" */
+            break;  /* Match on server name */
+        }
         buf++;
     }
-    return NULL;
+    if (!(*buf)) return NULL;
+
+    /*
+    ** A match has been found on the server key.  Now find and
+    ** return a pointer to the listen_id (3rd field).
+    */
+
+    while (isspace( *buf )) {buf++;};  /* skip 1st set of spaces */
+    if (!(*buf)) return NULL;
+    while (!isspace( *buf ) && (*buf)) {buf++;};  /* skip classes field */
+    if (!(*buf)) return NULL;
+    while (isspace( *buf )) {buf++;};  /* skip 2nd set of spaces */
+    if (!(*buf)) return NULL;
+    id = buf;
+    while (!CMwhite( buf ) && (*buf)) {buf++;};  /* find end of listen id */
+    if (!(*buf)) return NULL;
+    *id_len = buf - id;
+    return (id);
 }
 
 static

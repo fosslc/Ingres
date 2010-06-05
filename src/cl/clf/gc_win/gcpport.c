@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1987, 2004 Ingres Corporation
+** Copyright (c) 1987, 2010 Ingres Corporation
 */
 
 /*
@@ -23,7 +23,8 @@
 **          The SD issue is specific to Unix platforms. VMS, and Windows
 **          display the actual symbolic ports correctly. Added this additional
 **          parameter to avoid compilation errors on Windows.
-
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Remove unref'd variables.
 */
 #include <compat.h>
 #include <er.h>
@@ -83,8 +84,6 @@ GCpportaddr( char* protname, i4 addrlen, char* portaddr,
     struct sockaddr ws_addr;            /* use sockaddr for now but this    */
                                         /* may change depending on protocol */
                                         /* requirements                     */
-    GCC_WINSOCK_DRIVER	*wsd;
-    THREAD_EVENTS	*Tptr;
     char        addr[GCC_L_PORT];
     i4          entries;
     

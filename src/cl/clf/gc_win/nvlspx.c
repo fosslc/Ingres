@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1995, 2004 Ingres Corporation
+** Copyright (c) 1995, 2010 Ingres Corporation
 **
 ** History:
 **      12-Sep-95 (fanra01)
@@ -17,6 +17,9 @@
 **	    In GCnvlspx_init(), updated config.dat string used to retrieve
 **	    port information such that we do not rely specifically on the GCC
 **	    port.
+**	13-Apr-2010 (Bruce Lunsford)  SIR 122679
+**	    Set wsd->pce_driver from GCC PCT rather than from ex-global
+**	    WS_nvlspx.
 */
 
 /*
@@ -69,7 +72,6 @@ static          subport = 0;	/* number of failed listen attempts */
 
 GLOBALREF	THREAD_EVENT_LIST IIGCc_proto_threads;
 
-GLOBALREF	WS_DRIVER WS_nvlspx;
 GLOBALREF i4 GCNVLSPX_trace;
 
 /*
@@ -98,6 +100,9 @@ GLOBALREF i4 GCNVLSPX_trace;
 **	13-may-2004 (somsa01)
 **	    Updated config.dat string used to retrieve port information such
 **	    that we do not rely specifically on the GCC port.
+**	13-Apr-2010 (Bruce Lunsford)  SIR 122679
+**	    Set wsd->pce_driver from GCC PCT rather than from ex-global
+**	    WS_nvlspx.
 */
 STATUS
 GCnvlspx_init(GCC_PCE * pptr, GCC_WINSOCK_DRIVER *wsd)
@@ -173,7 +178,7 @@ GCnvlspx_init(GCC_PCE * pptr, GCC_WINSOCK_DRIVER *wsd)
 	wsd->sock_type = SOCK_SEQPACKET;
 	wsd->sock_proto = NSPROTO_SPX;
 	wsd->block_mode = TRUE;
-	wsd->pce_driver = (PTR)&WS_nvlspx;
+	wsd->pce_driver = pptr->pce_driver;
 
 	return OK;
 }

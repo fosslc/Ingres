@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1987, 2009 Ingres Corporation
+** Copyright (c) 1987, 2010 Ingres Corporation
 */
 
 #include <compat.h>
@@ -28,8 +28,6 @@ GLOBALREF i4 GCCL_trace;
 extern		VOID		GCc_callback_driver();
 extern		STATUS		GCc_prot_shutdown();
 GLOBALREF 	GCC_PCT		IIGCc_gcc_pct;
-GLOBALREF	STATUS		(*IIGCc_prot_init[])();
-GLOBALREF	STATUS		(*IIGCc_prot_exit[])();
 GLOBALREF	VOID		(*GCevent_func[])();
 
 GLOBALREF	THREAD_EVENT_LIST IIGCc_proto_threads;
@@ -40,6 +38,9 @@ GLOBALREF CS_SEMAPHORE	ME_stream_sem;
 # endif /* MCT */
 
 /* Forward and/or External function references */
+VOID GCpinit_common();
+FUNC_EXTERN STATUS GCloadprotocol (GCC_PCT* pPct);
+FUNC_EXTERN STATUS GCunloadprotocol (GCC_PCT* pPct);
 
 /* type_definitions */
 
@@ -131,6 +132,16 @@ GLOBALREF CS_SEMAPHORE	ME_stream_sem;
 **      06-Aug-2009 (Bruce Lunsford) Sir 122426
 **          Convert GCC completion queue mutex to a critical section
 **          to improve performance (less overhead).
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Add support for net drivers like "tcp_ip" as local IPC.
+**	    The driver init and exit routines were merged into the WS_DRIVER
+**	    structure pointed to by the PCT, rather than maintained as
+**	    separate init and exit tables.  Change access logic accordingly.
+**	    Add external prototype defns for GCloadprotocol and GCunloadprotocol
+**	    to eliminate compiler warnings.
+**	    Split out some of the code to new function GCpinit_common()
+**	    which is executed even if a full PCT is not needed, such as when
+**	    called by gcacl in non-GCx server environment and II_GC_PROT is set.
 ******************************************************************************/
 
 /******************************************************************************
@@ -144,33 +155,23 @@ CL_ERR_DESC *system_status;
 {
 	STATUS  status = OK;
 	i4 i;
-	char *trace;
-	SECURITY_ATTRIBUTES sa;
 
-	iimksec (&sa);
-
-	/*
-	** Set the GCexec GCC callback function.
-	*/
-	GCevent_func[GCC_COMPLETE] = GCc_callback_driver;
-	GCevent_func[SHUTDOWN] = GCc_prot_shutdown;
-
-	NMgtAt( "II_GCCL_TRACE", &trace );
-	if ( !(trace && *trace) && PMget( "!.gccl_trace_level", &trace ) != OK )
-	{
-	    GCCL_trace = 0;
-	}
-	else
-	{
-	    GCCL_trace = atoi( trace );
-	}
+	GCpinit_common();
 
 	GCTRACE(4)("GCpinit: Start ....\n");
+
 	/*
-	** Create the Mutex for the GCC completion Q.
+	** If called with a NULL PCT pointer, then the
+	** remainder of the logic can be skipped.
+	** This is used by gcacl to do minimal initialization.
 	*/
-	GCTRACE(4)("GCpinit: Initializing Completion Q Critical Section ...\n");
-	InitializeCriticalSection( &GccCompleteQCritSect );
+	if (pct == NULL)
+	    return (status);
+
+	/*
+	** Set the GCexec GCC shutdown function.
+	*/
+	GCevent_func[SHUTDOWN] = GCc_prot_shutdown;
 
         /*
         **  Load DLL protocol drivers and extend the protocol control table
@@ -178,7 +179,7 @@ CL_ERR_DESC *system_status;
 	GCTRACE(4)("GCpinit: loading protocol DLLs ...\n");
         if ((status = GCloadprotocol (&IIGCc_gcc_pct)) != OK)
         {
-            GCTRACE(4)("GCloadprotocol failed status = %d", status);
+            GCTRACE(4)("GCloadprotocol failed status = %d\n", status);
             status = OK;
         }
 
@@ -219,17 +220,14 @@ CL_ERR_DESC *system_status;
 	}
 
 	/*
-	** Init completed queue
-	*/
-	QUinit( &IIGCc_proto_threads.completed_head );
-
-	/*
 	** Call any specific protocol driver initialization routines,
 	** if any.
 	*/
 	GCTRACE(4)("GCpinit: Calling protocol init . . .\n");
 	for ( i = 0; i < IIGCc_gcc_pct.pct_n_entries; i++ )
 	{
+	    GCC_PCE *pce = &IIGCc_gcc_pct.pct_pce[i];
+
 	    /*
 	    ** Init queues for threads.
 	    */
@@ -240,7 +238,7 @@ CL_ERR_DESC *system_status;
 	    ** Assign the thread name.
 	    */
 	    IIGCc_proto_threads.thread[i].thread_name = 
-	    	IIGCc_gcc_pct.pct_pce[i].pce_pid;
+	    	pce->pce_pid;
 
 	    /*
 	    ** Point the PCE's pce_dcb (driver control block) to the
@@ -249,11 +247,10 @@ CL_ERR_DESC *system_status;
 	    ** all driver requests.  Can still scan on pce_pid if
 	    ** needed (old drivers will continue to do this).
 	    */
-	    IIGCc_gcc_pct.pct_pce[i].pce_dcb = 
-		(PTR)&IIGCc_proto_threads.thread[i];
+	    pce->pce_dcb = (PTR)&IIGCc_proto_threads.thread[i];
 
-	    if ( IIGCc_prot_init[i] != NULL )
-	        status = (*IIGCc_prot_init[i])( &IIGCc_gcc_pct.pct_pce[i] );
+	    if ( ((WS_DRIVER *)pce->pce_driver)->init_func != NULL )
+	        status = (*((WS_DRIVER *)pce->pce_driver)->init_func)( pce );
 	    if ( status != OK )
 	    {
 		DeleteCriticalSection( &GccCompleteQCritSect );
@@ -267,6 +264,119 @@ end_pinit:
 	return (status);
 }
 
+/******************************************************************************
+** Name: GCpinit_common - Protocol initialization routine common code
+**
+** Description:
+**      This routine is called by GCpinit() during comm server initialization
+**	and/or by gcacl initialization if II_GC_PROT was used to select a
+**	network driver for the local IPC.  This routine will return
+**	immediately if it has previously been called.  This ensures that
+**	it doesn't reinitialize objects that are already active and thus
+**	can be called by anyone in any order.
+**
+** Inputs:
+**      none
+**
+** Outputs:
+**      Initialized global objects required for network drivers
+**
+** Returns:
+**      none
+**
+** Exceptions:
+**      none
+**
+** Side Effects:
+**      none
+**
+** History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Extracted from GCpinit() function.
+******************************************************************************/
+VOID
+GCpinit_common()
+{
+	char *trace;
+	/*
+	** Make sure logic is only done once (1st time in).
+	*/
+	static bool GCpinit_common_called = FALSE;
+	if (GCpinit_common_called == TRUE)
+	    return;
+	GCpinit_common_called = TRUE;
+
+	NMgtAt( "II_GCCL_TRACE", &trace );
+	if ( !(trace && *trace) && PMget( "!.gccl_trace_level", &trace ) != OK )
+	{
+	    GCCL_trace = 0;
+	}
+	else
+	{
+	    GCCL_trace = atoi( trace );
+	}
+
+	GCTRACE(4)("GCpinit_common: Start ....\n");
+
+	/*
+	** Set the GCexec/GCsync GCC callback function.
+	*/
+	GCevent_func[GCC_COMPLETE] = GCc_callback_driver;
+
+	/*
+	** Create the Mutex for the GCC completion Q.
+	*/
+	GCTRACE(4)("GCpinit: Initializing Completion Q Critical Section ...\n");
+	InitializeCriticalSection( &GccCompleteQCritSect );
+
+	/*
+	** Init completed queue
+	*/
+	QUinit( &IIGCc_proto_threads.completed_head );
+}
+
+
+/******************************************************************************
+** Name: GCc_prot_shutdown - Protocol shutdown routine
+**
+** Description:
+**      This routine is set as the GCevent_func() for the SHUTDOWN event by
+**	GCinitiate (GCA CL initialization).  The SHUTDOWN event is signalled
+**	with SetEvent() by GCshut() when a shutdown of GCC has been requested
+**	and (unless forced) no connections exist.  When the event is signalled,
+**      this routine is called by GCexec() or any other function that waits
+**	on the SHUTDOWN event.
+**	This routine calls the exit function for each protocol driver in the
+**	PCT.
+**
+** Inputs:
+**      none
+**
+** Outputs:
+**      Initialized global objects required for network drivers
+**
+** Returns:
+**      STATUS:
+**	    OK
+**	    status of (first) failing protocol driver routine
+**
+** Exceptions:
+**      none
+**
+** Side Effects:
+**      All protocol drivers inactivated and resources freed.
+**
+** History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Added function header documentation comment box.
+**	    The driver init and exit routines were merged into the WS_DRIVER
+**	    structure pointed to by the PCT, rather than maintained as
+**	    separate init and exit tables.  Change access to the exit 
+**	    routine accordingly.
+**	    Only check status when exit function called; otherwise could
+**	    erroneously think an error occurred if uninit'd status has garbage.
+**	    Add some tracing.
+******************************************************************************/
 STATUS
 GCc_prot_shutdown()
 {
@@ -274,12 +384,21 @@ GCc_prot_shutdown()
 	STATUS status;
 	STATUS ret = OK;
 
+	GCTRACE(4)("GCc_prot_shutdown: Start .... \n");
+
         for ( i = 0; i < IIGCc_gcc_pct.pct_n_entries; i++ )
         {
-            if ( IIGCc_prot_exit[i] != NULL )
-                status = (*IIGCc_prot_exit[i])();
-            if ( status != OK )
-		ret = status;
+	    GCC_PCE *pce = &IIGCc_gcc_pct.pct_pce[i];
+	    if ( ((WS_DRIVER *)pce->pce_driver)->exit_func != NULL )
+	    {
+		GCTRACE(4)("GCc_prot_shutdown: Calling Protocol %s exit function\n", pce->pce_pid);
+	        status = (*((WS_DRIVER *)pce->pce_driver)->exit_func)( pce );
+        	if ( status != OK )
+		{
+		    GCTRACE(1)("GCc_prot_shutdown: Protocol %s exit function returned error status %d\n", pce->pce_pid, status);
+		    ret = status;
+		}
+	    }
         }
         GCunloadprotocol (&IIGCc_gcc_pct);
 	return ( ret );

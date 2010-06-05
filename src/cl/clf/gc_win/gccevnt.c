@@ -1,6 +1,6 @@
 /******************************************************************************
 **
-** Copyright (c) 1987, 2009 Ingres Corporation
+** Copyright (c) 1987, 2010 Ingres Corporation
 **
 ******************************************************************************/
 /*
@@ -121,6 +121,8 @@
 **          to GCwaitCompletion + GCrestart. Should improve peformance.
 **          Convert GCC completion queue mutex to a critical section
 **          to improve performance (less overhead).
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Add more tracing to GCc_callback_driver().
 */
 #include <compat.h>
 #include <ex.h>
@@ -189,6 +191,7 @@ GCc_callback_driver()
 	/*
 	** drive completion.
 	*/
+	GCTRACE(5)("GCc_callback_driver: Calling compl_exit for parmlist=0x%p\n", parm_list);
 	(*parm_list->compl_exit)( parm_list->compl_id );
 
     }
@@ -197,6 +200,7 @@ GCc_callback_driver()
     ** We're done, unlock the Q.
     */
     LeaveCriticalSection( &GccCompleteQCritSect );
+    GCTRACE(5)("GCc_callback_driver: Completed\n");
 }
 
 /*

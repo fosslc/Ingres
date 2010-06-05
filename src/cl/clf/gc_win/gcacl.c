@@ -13,7 +13,7 @@
 #include <cs.h>
 #include <ex.h>
 #include <gc.h>
-#include <gv.h>
+#include <gcccl.h>
 #include <me.h>
 #include <nm.h>
 #include <st.h>
@@ -26,28 +26,52 @@
 #include <bsi.h>
 #include <meprivate.h> /* for tls */
 #include "gclocal.h"
+#include "gcclocal.h"
 #include "gcaclw95.h"
 #include <winbase.h>
 #include <mmsystem.h> /* for timeSetEvent */
 
 /*
 **  Local prototypes
+**
+**	- related to external functions
 */
 STATUS	GCrequest2(SVC_PARMS *svc_parms);
-STATUS	GCrequestSendPeer(SVC_PARMS *svc_parms);
+STATUS	GCrequestSendPeer(SVC_PARMS *svc_parms, ASYNC_IOCB *iocb_in);
 VOID WINAPI GCrequestSendPeerComplete(DWORD dwError, DWORD dwNumberXfer, LPOVERLAPPED pOverlapped);
+VOID	GClisten2_complete();
+/*
+**	- "Common" routines
+*/
 VOID WINAPI GCasyncCompletion(SVC_PARMS *svc_parms);
-VOID	GCrpt_stats();
-DWORD	GCconnectToServerPipe(SVC_PARMS *svc_parms);
+static void GCsetWaitableTimer(SVC_PARMS *svc_parms);
+static void CALLBACK GCrectimeout(UINT uID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2 );
 DWORD 	GCcreateSemaphore(ASSOC_IPC * asipc);
 VOID	GCdestroySemaphore(ASSOC_IPC * asipc);
-
+VOID	GCrpt_stats();
+/*
+**	- Named Pipes routines
+*/
+DWORD	GCconnectToServerPipe(SVC_PARMS *svc_parms);
 static void GCqualifiedPipeName( char *p, char *i, char *pn );
-static void GCsetWaitableTimer( SVC_PARMS *svc_parms );
-static void CALLBACK GCrectimeout(UINT uID, UINT uMsg, DWORD dwUser, DWORD dw1, DWORD dw2 );
+/*
+**	- Network Protocol Driver routines
+*/
+GCC_PCE  * GC_get_driver();
+DWORD	GCDriverRegister(SVC_PARMS *svc_parms, ASSOC_IPC *asipc, ASYNC_IOCB *iocb);
+VOID	GCDriverRequest(SVC_PARMS *svc_parms, ASYNC_IOCB *iocb);
+VOID	GCDriverRequest_exit(PTR ptr);
+VOID	GCDriverSendPeer(SVC_PARMS *svc_parms, CONNECT *connect_block);
+VOID	GCDriverSendPeer_exit(PTR ptr);
+DWORD	GCDriverListen(SVC_PARMS *svc_parms, ASYNC_IOCB *iocb);
+VOID	GCDriverListen_exit(PTR ptr);
+VOID	GCDriverListen2(SVC_PARMS *svc_parms);
+VOID	GCDriverListen2_exit(PTR closure);
 
 FUNC_EXTERN VOID GVshobj(char **ObjectPrefix);
 
+static i4		GCinitialized_count = 0;
+static char		*LOCALHOST = "localhost";
 static USER_LABEL	*ul_root=NULL;
 
 GLOBALREF   BOOL	is_gcn;
@@ -56,10 +80,19 @@ static    char		Asc_std_name[MAXPNAME];
 static    i4            NamedPipeServer = FALSE;
 static    char		prot_name[MAX_LOC] = "NAMED_PIPE";
 static    char 		local_host[GC_HOSTNAME_MAX + 1];
+static    char 		gc_user_name[GC_USERNAME_MAX + 1] = "";
+
+/*
+**  Flag for allowing/disabling direct connect access from remote machines.
+*/
+#define		GC_RA_DISABLED          (-1)
+#define		GC_RA_UNDEFINED         0
+#define		GC_RA_ENABLED           1  /* direct connects allowed */
+#define		GC_RA_ALL               2  /* direct connects + II_DBMS_SERVER allowed */
+static    i4		remote_access = GC_RA_UNDEFINED;
 
 FACILITYDEF ME_TLS_KEY       gc_compl_key = 0;
 static HANDLE           gc_asto_mutex = 0;
-static BOOL             commServerListenPipe = FALSE;
 
 /* Event Objects */
 
@@ -864,6 +897,60 @@ GLOBALREF HANDLE    GCshutdownEvent;
 **	    end, this change requires tightening up the check to determine
 **	    the type of incoming peer info message (previously counted on
 **	    unique length only).
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Add support for net drivers like "tcp_ip" as local IPC.
+**	    New functions named GCDriver* were added for calling net
+**	    driver(s)--versus the default of executing the pipes protocol
+**	    logic, which was modified as little as possible.
+**	    Added calls out to gcarw.c functions (ported from Unix)
+**	    to implement multiplexing of the normal and expedited channels
+**	    for an association over a single network connection (1 per
+**	    association -> pipes uses 4 pipe connections per association!).
+**	    File gcarw.c has driver functions GCDriver[Receive,Send,Purge,
+**	    Disconn]; the others (for connect and listen) are in this file.
+**	    NOTE that driver logic is only used if II_GC_PROT environment/
+**	    Ingres variable is set to "tcp_ip" or one of the other protocols
+**	    listed in the new gcacl PCT (protocol control table).
+**	    Status codes returned from the network driver are remapped to
+**	    valid gcacl status codes, which are later remapped (in GCA) to
+**	    GCA status codes.  Not remapping the driver statuses causes
+**	    error message file lookup problems because the converted GCA
+**	    status won't be valid (see gc.h and gca.h for valid mappings).
+**	    FYI: Unix BS statuses don't get converted to GCF statuses, so
+**	    don't experience the same problem.
+**	    For readability:
+**	    - Reorganize location of functions within file:
+**	        External and related, common, named pipe, network protocol
+**	        driver, windows 95 anonymous pipes, and DEBUG routines.
+**	    - Add long asterisks lines to start and end of function flowerboxes
+**	      for those that were missing.
+**	    Add svc_parm to fn entry traces in a consistent manner and made
+**	    miscellaneous other trace improvements.
+**	    With local IPC set to "tcp_ip", direct connects from Unix/Linux
+**	    from compatible machines are now supported for Ingres versions
+**	    r3/2006 and later.  Due to increased access, added requirement
+**	    that direct access from remotes must be configured (II_GC_REMOTE)
+**	    in server (same as Unix); this also applies now to remote access
+**	    via named pipes from remote Windows machines.
+**
+**	    Set local_host to "true" local hostname with GetComputerName()
+**	    rather than using GChostname(), which can be influenced by
+**	    II_HOSTNAME variable.  "local_host" is used in peer info message
+**	    processing and is used somewhat to determine if connection is
+**	    local or remote and is part of security checking.
+**
+**	    For pipes, preallocate IOCBs for sends and receives once at
+**	    connection start and free at disconnect.  This avoids the
+**	    overhead of allocating and freeing on each send and receive.
+**	    (Not applicable to the net driver logic, which doesn't use
+**	    IOCBs for sends and receives.)
+**
+**	    Make disconnect safer by not considering IO complete until
+**	    the caller's completion routine for the IO has returned, not
+**	    just that the physical IO callback has been entered.
+**
+**	    Change default pipe size from 4096 to 12288 to match Unix and
+**	    new tcp_ip packet size (for performance).
 */
 
 /******************************************************************************
@@ -877,10 +964,9 @@ GLOBALREF HANDLE    GCshutdownEvent;
 #define GC_STACK_SIZE        32768
 #define NORMAL               0
 #define EXPEDITE             1
-#define MAX_SERVER_INSTANCES 128
 #define GC_PURGE_MESSAGE     "IIPRGMSG"
 #define GCA_IACK_LEN         28
-#define PIPE_RETRIES	     10
+#define PIPE_RETRIES         10
 #define PIPE_RETRY_SLEEP     100
 
 /*
@@ -889,18 +975,16 @@ GLOBALREF HANDLE    GCshutdownEvent;
 ** the INGRES environment variable II_GCA_PIPESIZE
 */
 
-#define DEFAULT_NP_SIZE     4096
+#define DEFAULT_NP_SIZE     12288
 #define MIN_NP_SIZE         1024
 #define MAX_NP_SIZE         32768
-#define PIPE_PREFIX	    "\\\\.\\PIPE\\INGRES"
+#define PIPE_PREFIX         "\\\\.\\PIPE\\INGRES"
 #define PIPE_QUAL_PREFIX    "\\PIPE\\INGRES"
 
 #define CSGET_SCB(x)        if (Is_server) \
                                 CSget_scb((CS_SCB * *)x); \
                             else \
                                 * ((CS_SCB * *)(x)) = (CS_SCB *) NULL
-
-# define IO_RETRIES     10
 
 /*****************************************************************************
 ** Debugging and trace macros
@@ -930,6 +1014,9 @@ GCTRACE(4)("GCresrc: %d %x %s\n", __LINE__, x, #y)
 /******************************************************************************
 **  Definition of static variables and forward static functions.
 ******************************************************************************/
+
+GLOBALREF GCC_PCE	GCdrivers[];	/* Ptr to local IPC PCT table */
+static    GCC_PCE	*GCdriver_pce;	/* Ptr to local IPC PCT entry */
 
 /* information about our listener */
 
@@ -994,34 +1081,14 @@ static BOOL (FAR WINAPI *pfnCancelIo)(HANDLE hFile) = NULL;
 
 FUNC_EXTERN BOOL GVosvers(char *OSVersionString);
 
-# ifdef xDEBUG
-void GCtrace(char* fmt, ...);
 
-/*
-** A thread that wakes up every 10 seconds.
-** Useful in clients which have hung and the debugger cannot break in
-** while all threads are in system calls.
-*/
-static HANDLE hwakeupthread = NULL;
-
-DWORD WINAPI
-wakeup(LPVOID parm)
-{
-    DWORD   status = 0;
-    HANDLE  hwakeup = NULL;
-
-    GCRESRC( hwakeup, hwakeup = CreateEvent( NULL, TRUE, FALSE, NULL) );
-
-    for (;hwakeup != NULL;)
-    {
-        WaitForSingleObject(hwakeup, 10000);
-    }
-
-    GCRESRC( hwakeup, CloseHandle(hwakeup) );
-    _endthreadex(0);
-    return(status);
-}
-# endif /* xDEBUG */
+/******************************************************************************
+*******************************************************************************
+**
+**  External and related routines
+**
+*******************************************************************************
+******************************************************************************/
 
 
 /******************************************************************************
@@ -1066,24 +1133,33 @@ wakeup(LPVOID parm)
 **	    when using C runtime.  Remove creation of hCompletion mutex
 **	    and CompletionCritSect critical section since they are no longer
 **	    needed.
+**      13-Apr-2010 (Bruce Lunsford) Sir 122679
+**          Add support for net drivers like "tcp_ip" as local IPC.
+**	    Get "true" local hostname with GetComputerName() rather than
+**	    using GChostname() which can be influenced by II_HOSTNAME variable.
+**	    The "local_host" static field is used in peer info message
+**	    processing and is used somewhat to determine if connection is
+**	    local or remote and is part of security checking.
 **
 ******************************************************************************/
 STATUS
 GCinitiate(PTR  (*alloc_ptr)(), VOID (*free_ptr) ())
 {
 	char *trace;
+	char *ptr = NULL;
 	SECURITY_ATTRIBUTES sa;
         char VersionString[256];
-        static bool GCinitialized = FALSE;
         HANDLE hDll = NULL;
+	STATUS status;
+	i4     host_len;
 
         /*
         ** If GCinitiate has already been called - we can just return here.
         */
 
-        if ( GCinitialized == TRUE )
+	GCinitialized_count++;
+        if ( GCinitialized_count > 1 )
             return (OK);
-        GCinitialized = TRUE;
 # ifdef xDEBUG
         {
             /*
@@ -1096,9 +1172,11 @@ GCinitiate(PTR  (*alloc_ptr)(), VOID (*free_ptr) ())
 # endif /* xDEBUG */
 
 	/*
-	** Initialize local hostname
+	** Initialize local (real) hostname and effective user id.
 	*/
- 	GChostname( local_host, sizeof( local_host ) );
+	host_len = sizeof(local_host);
+	GetComputerName(local_host, &host_len);
+	GCusername( gc_user_name, sizeof( gc_user_name ) );
 
 	iimksec (&sa);
 	/* 
@@ -1110,18 +1188,6 @@ GCinitiate(PTR  (*alloc_ptr)(), VOID (*free_ptr) ())
 	GVosvers(VersionString);
 	Is_w95 = (STstrindex(VersionString, "Microsoft Windows 9",
                       0, FALSE) != NULL) ? TRUE : FALSE;
-
-        /*
-        ** Set the listen completion routine for GCexec()
-        */
-
-        if (Is_w95)
-            GCevent_func[LISTEN] = GClisten95_2;
-        else
-	{
-            GCevent_func[LISTEN] = GClisten2;
-	    GCevent_func[TIMEOUT] = GClisten_timeout;
-	}
 
 	/*
 	** See if any tracing is to be used.
@@ -1135,16 +1201,6 @@ GCinitiate(PTR  (*alloc_ptr)(), VOID (*free_ptr) ())
 	else
 	{
 	    CVan(trace, &GC_trace);
-	}
-
-	/*
-	** Check for alternate protocols
-	*/
-	trace = NULL;
-	NMgtAt( "II_GC_PROT", &trace );
-	if ( trace && *trace )
-	{
-	    STcopy( trace, prot_name );
 	}
 
 	/*
@@ -1184,6 +1240,8 @@ GCinitiate(PTR  (*alloc_ptr)(), VOID (*free_ptr) ())
 		hAsyncEvents[SHUTDOWN] = NULL;
 		return FAIL;
 	}
+
+	MEfill(sizeof(ListenIOCB), 0, &ListenIOCB);
 	
 	/*
 	** Events for timeout.
@@ -1240,7 +1298,7 @@ GCinitiate(PTR  (*alloc_ptr)(), VOID (*free_ptr) ())
 		FreeLibrary( hDll );
 	    }
 
-	    GCTRACE(3)("Createwaitable timer success..\n");
+	    GCTRACE(3)("GCinitiate: Createwaitable timer success.\n");
         }
 
 	/*
@@ -1337,7 +1395,105 @@ GCinitiate(PTR  (*alloc_ptr)(), VOID (*free_ptr) ())
         }
 	hAsyncEvents[SYNC_EVENT] = SyncEvent;
 
-	GCTRACE (3) ("GCinitate: Complete.\n");
+	/*
+	** Check for alternate LOCAL IPC protocols and call driver init
+	*/
+	GCdriver_pce = GC_get_driver();
+
+	/*
+	** Set the listen completion routine for GCexec(), GCsync(),
+	** and CSsuspend()...anyone who waits on the LISTEN event.
+	*/
+
+	if (GCdriver_pce)
+	{
+	    GCevent_func[LISTEN] = GClisten2_complete;
+	    GCevent_func[TIMEOUT] = GClisten_timeout;
+	}
+	else
+	if (Is_w95)
+	    GCevent_func[LISTEN] = GClisten95_2;
+	else
+	{
+	    GCevent_func[LISTEN] = GClisten2;
+	    GCevent_func[TIMEOUT] = GClisten_timeout;
+	}
+
+	/*
+	** If network protocol driver selected, call its init function
+	** if there is one.
+	** FIXME...why not move all this code to GC_get_driver()?...
+	** keeping this code simpler and more generic.  One prob is
+	** that we need to handle an initialization error and do
+	** appropriate cleanup.
+	*/
+	if (( GCdriver_pce ) &&
+	    ( ((WS_DRIVER *)GCdriver_pce->pce_driver)->init_func != NULL ))
+	{
+	    status = (*((WS_DRIVER *)GCdriver_pce->pce_driver)->init_func)( GCdriver_pce );
+	    if ( status != OK )
+	    {
+		TRdisplay ("GCinitiate: '%s' driver initialization failed with status %d\n",
+			   GCdriver_pce->pce_pid,
+			   status);
+                return (FAIL);
+	    }
+	    GCTRACE(1) ("GCinitiate: '%s' driver selected for local protocol\n",
+			GCdriver_pce->pce_pid);
+	}
+
+	/*
+	** This variable is intended primarily for testing the various
+	** options; it may not be needed long term.
+	**
+	** II_GC_MSG_MODE variable may have one of the following values:
+	**   =BLOCK     -> force protocol driver to use "block" mode (even
+	**                 if underlying protocol is stream-based).
+	**                 (default)
+	**   =ADDPREFIX -> tell protocol driver to use normal stream-based
+	**                 mode where it prefixes all messages with 2-byte
+	**                 length prefix.
+	**   =USEPREFIX -> tell protocol driver to use length field from
+	**                 passed-in (GC_MTYP) prefix in lieu of adding
+	**                 or expecting his own 2-byte prefix.
+	**                 (NOT YET SUPPORTED...a "future" if needed)
+	** Set flag to tell protocol driver not to prefix messages
+	** with 2-byte length prefix since the gcacl.c will supply
+	** its own prefix (GC_MTYP) in the multiplexing code.
+	** BLOCK mode or USEPREFIX are required for "direct connect"
+	** interoperability with Linux/Unix compatible systems, which
+	** have a GC_MTYP prefix only for GCA CL messages.  Setting
+	** block_mode to TRUE causes the driver to simply read/write w/o
+	** the prefix and w/o ensuring full messages, but requires the
+	** calling code to reinvoke sends/receives when incomplete,
+	** which the GCA CL multiplexing code does.
+	*/
+	if ( GCdriver_pce )
+	{
+	  ((THREAD_EVENTS *)GCdriver_pce->pce_dcb)->wsd.block_mode = TRUE;
+	  NMgtAt( "II_GC_MSG_MODE", &ptr );
+	  if (ptr && *ptr)
+  	  {
+	    GCTRACE(1) ("GCinitiate: driver msg mode = %s\n", *ptr);
+	    if ( STcasecmp( ptr, "BLOCK" ) == 0 )
+	    {
+		((THREAD_EVENTS *)GCdriver_pce->pce_dcb)->wsd.block_mode = TRUE;
+	    }
+	    else
+	    if ( STcasecmp( ptr, "ADDPREFIX" ) == 0 )
+	    {
+		((THREAD_EVENTS *)GCdriver_pce->pce_dcb)->wsd.use_gc_mtyp_len = FALSE;
+	    }
+	    //else    ** future maybe ** 
+	    //if ( STcasecmp( ptr, "USEPREFIX" ) == 0 )
+	    //{
+		//((THREAD_EVENTS *)GCdriver_pce->pce_dcb)->wsd.use_gc_mtyp_len = TRUE;
+	    //}
+	  }
+	}
+
+	GCTRACE(3) ("GCinitate: Complete for (process id) PID=%d.\n",
+		    Conn_id);
 	return OK;
 }
 
@@ -1426,11 +1582,18 @@ GCinitiate(PTR  (*alloc_ptr)(), VOID (*free_ptr) ())
 **	17-Dec-2009 (Bruce Lunsford) Sir 122536
 **	    Remove allocation of access_point_identifier area at end of
 **	    asipc; it is no longer used.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    If net driver selected, call it with GCC_OPEN instead of embedded
+**	    named pipes logic. Rearrange code so that pipes-specific code is
+**	    together (at bottom of function).
+**	    Remove unneeded variable commServerListenPipe.
+**	    Preallocate IOCBs for pipe sends and receives (for performance).
 **
 ******************************************************************************/
 VOID
 GCregister(SVC_PARMS *svc_parms)
 {
+    char		*env= NULL;
     ULONG		pipesize;
     char		*ii_pipesz;
     char		*out_name;
@@ -1440,14 +1603,90 @@ GCregister(SVC_PARMS *svc_parms)
     DWORD		status;
     ASSOC_IPC		*asipc;
 
-    GCTRACE(3)("GCregister: Entry point\n");
+    GCTRACE(3)("GCregister: %p Entry point. PID=%d\n", svc_parms, Conn_id);
+
+    svc_parms->status    = OK;
 
     iimksec (&sa);
 
     Is_server = TRUE;
 
+    /*
+    ** Establish whether or not the running process is a GCN by checking
+    ** the name provided from GCA.  Note that this value may change in
+    ** the future.
+    */
+    if ((svc_parms->svr_class) &&
+        (!STbcompare(svc_parms->svr_class,6,"NMSVR",5,TRUE)))
+        is_gcn = TRUE;
+
+    /*
+    ** Check to see if direct connect from remote machines is allowed.
+    */
+    if ( remote_access == GC_RA_UNDEFINED )
+    {
+    	NMgtAt( "II_GC_REMOTE", &env );
+    	if ( ! env  ||  ! *env )
+	    remote_access = GC_RA_DISABLED;
+	else if ( ! STcasecmp( env, "ON" )  || 
+		  ! STcasecmp( env, "ENABLED" ) )
+	    remote_access = GC_RA_ENABLED;
+	else if ( ! STcasecmp( env, "FULL" )  || 
+		  ! STcasecmp( env, "ALL" ) )
+	    remote_access = GC_RA_ALL;
+	else
+	    remote_access = GC_RA_DISABLED;
+    }
+
+    /*
+    ** Initialize a structure for listening and set the LISTEN event.
+    */
+
+    ListenIOCB.Overlapped.hEvent = hAsyncEvents[LISTEN];
+    ListenIOCB.svc_parms = svc_parms;
+
+    /*
+    ** Get an ipc block and initialize it.
+    **
+    */
+    asipc = (ASSOC_IPC *)MEreqmem(0, sizeof(ASSOC_IPC), TRUE, NULL);
+    if (!asipc)
+    {
+	GCTRACE(1)("GCregister: Failed to allocate an IPC block.\n");
+	GCerror(GC_LSN_FAIL, 0);
+    }
+    asipc->flags |= GC_IPC_LISTEN;
+    ListenIOCB.asipc = asipc;
+
+    /*
+    ** If network protocol driver selected, call it with GCC_OPEN.
+    */
+    if (GCdriver_pce)
+    {
+	status = GCDriverRegister (svc_parms, asipc, &ListenIOCB);
+	return;
+    }
+
+    /*
+    ** Preallocate IOCBs for pipe send/recv's.  A send and a receive
+    ** IOCB is needed for each channel (normal + expedited)...hence,
+    ** a total of 4.  For the protocol driver, IOCBs are not used; an
+    ** exception is one temporarily used during connection setup which
+    ** remains dynamically allocated and freed.
+    */
+    asipc->iocbs = (ASYNC_IOCB *)MEreqmem(0, sizeof(ASYNC_IOCB) * 4, TRUE, NULL);
+    if (!asipc->iocbs)
+    {
+	GCTRACE(1)("GCregister: Failed to allocate IOCBs (4 for a total size of %d bytes).\n",
+		    sizeof(ASYNC_IOCB) * 4);
+	GCerror(GC_LSN_FAIL, 0);
+    }
+
+    /*
+    **  Set up pipes for this server
+    */
+
     svc_parms->listen_id = out_name = Listen_id;
-    svc_parms->status    = OK;
 
     /*
     ** The installation id preceeds all server names
@@ -1469,16 +1708,6 @@ GCregister(SVC_PARMS *svc_parms)
 	STlcopy(svc_parms->svr_class, out_name, 8);
     else
 	STcopy("UNKNSRVR", out_name);
-
-    /*
-    ** Establish whether or not the running process is a GCC by checking
-    ** the name provided from GCA.  Note that this value may change in
-    ** the future.
-    */
-    if (!STbcompare(out_name,6,"COMSVR",6,TRUE))
-        commServerListenPipe = TRUE;
-    else if (!STbcompare(out_name,6,"NMSVR",5,TRUE))
-        is_gcn = TRUE;
 
     /*
     ** Put in server class name
@@ -1523,13 +1752,6 @@ GCregister(SVC_PARMS *svc_parms)
     STprintf(Cli2srv_exp_pipe_name,"%s\\C2S_EXP\\%s",
 	    PIPE_PREFIX,Listen_id);
 
-    /*
-    ** Initialize a structure for listening and set the LISTEN event.
-    */
-
-    MEfill(sizeof(ListenIOCB), 0, &ListenIOCB);
-    ListenIOCB.Overlapped.hEvent = hAsyncEvents[LISTEN];
-
     if (Is_w95) /* Windows 95 */
     {
 	/* set up names for all connections to server */
@@ -1545,19 +1767,6 @@ GCregister(SVC_PARMS *svc_parms)
     ** still initializing, the requests will wait until we are ready to
     ** process them.
     */
-
-    /*
-    ** Get an ipc block and initialize it.
-    */
-    asipc = (ASSOC_IPC *)MEreqmem(0, sizeof(ASSOC_IPC), TRUE, NULL);
-    if (!asipc)
-    {
-	GCTRACE(1)("GCregister: Failed to allocate an IPC block.\n");
-	GCerror(GC_LSN_FAIL, 0);
-    }
-    asipc->flags |= GC_IPC_LISTEN;
-    ListenIOCB.asipc = asipc;
-
     /*
     ** Create the pipes.
     */
@@ -1588,6 +1797,7 @@ GCregister(SVC_PARMS *svc_parms)
     }
     ListenIOCB.flags |= GC_IO_CREATED;
 }
+
 
 /******************************************************************************
 ** Name: GCrequest - Build connection to peer entity
@@ -1624,7 +1834,9 @@ GCregister(SVC_PARMS *svc_parms)
 ** Inputs:
 **   svc_parms              Pointer to GCA service parmeter list containing:
 **     (*gca_cl_completion)() Routine to call on completion.
-**     partner_id             Identifier of partner to which connection is
+**     partner_host           host name of partner to which connection is
+**                            requested...may be NULL.
+**     partner_name           port name of partner to which connection is
 **                            requested.
 **     time_out               timeout in ms. 0=poll, -1=no timeout
 **
@@ -1711,6 +1923,8 @@ GCregister(SVC_PARMS *svc_parms)
 **	    Remove unnecessary options GENERIC_READ, FILE_SHARE_WRITE and
 **	    FILE_ATTRIBUTE_NORMAL from sending pipe. Convert CreateThread()
 **	    to _beginthreadex() which is recommended when using C runtime.
+**      13-Apr-2010 (Bruce Lunsford) Sir 122679
+**          If net protocol driver selected, call it with GCC_CONNECT.
 **
 ******************************************************************************/
 VOID
@@ -1727,7 +1941,7 @@ GCrequest(SVC_PARMS *svc_parms)
 	bool       infinite_timeout = FALSE;
 	bool       sync_flag = svc_parms->flags.run_sync;
 
-	GCTRACE(3)("GCrequest: %p Entry point. target=%s %s time_out=%d %s\n",
+	GCTRACE(3)("GCrequest: %p Entry point. target=%s %s timeout=%d %s\n",
 		    svc_parms,
 		    svc_parms->partner_host ? svc_parms->partner_host : "",
 		    svc_parms->partner_name,
@@ -1745,13 +1959,30 @@ GCrequest(SVC_PARMS *svc_parms)
 	 */
 
 	asipc = (ASSOC_IPC *)MEreqmem(0, sizeof(ASSOC_IPC), TRUE, NULL);
-
 	if (!asipc)
 	{
 	    GCTRACE(1)("GCrequest: Failed to allocate an IPC block.\n");
 	    GCerror(GC_RQ_FAIL, 0);
 	}
 	svc_parms->gc_cb = (char *)asipc;
+
+        asipc->flags &= ~GC_IPC_LISTEN;
+
+	/*
+	**  If network protocol driver selected, call it with GCC_CONNECT.
+	*/
+	if (GCdriver_pce)
+	{
+	    ASYNC_IOCB *iocb = (ASYNC_IOCB *) MEreqmem(0, sizeof(ASYNC_IOCB) + GCA_CL_HDR_SZ + sizeof(CONNECT), FALSE, NULL);
+	    if (!iocb)
+	    {
+		GCTRACE(1)("GCrequest: Failed to allocate ASYNC IOCB block for GCC driver call.\n");
+		GCerror(GC_RQ_RESOURCE, ER_alloc);
+	    }
+	    iocb->svc_parms = svc_parms;
+	    GCDriverRequest (svc_parms, iocb);
+	    return;
+	}
 
 	/*
 	** Bug 79293
@@ -1763,7 +1994,16 @@ GCrequest(SVC_PARMS *svc_parms)
 	    GCerror(GC_RQ_FAIL, 0);
 	}
 
-        asipc->flags &= ~GC_IPC_LISTEN;
+	/*
+	** Preallocate IOCBs for pipe send/recv's.
+	*/
+	asipc->iocbs = (ASYNC_IOCB *)MEreqmem(0, sizeof(ASYNC_IOCB) * 4, TRUE, NULL);
+	if (!asipc->iocbs)
+	{
+	    GCTRACE(1)("GCrequest: Failed to allocate IOCBs (4 for a total size of %d bytes).\n",
+		    sizeof(ASYNC_IOCB) * 4);
+	    GCerror(GC_RQ_FAIL, 0);
+	}
 
         /* windows95 */
         if (Is_w95)
@@ -1980,7 +2220,7 @@ GCrequest2(SVC_PARMS *svc_parms)
     ASSOC_IPC	*asipc = (ASSOC_IPC *)svc_parms->gc_cb;
     bool	sync_flag = svc_parms->flags.run_sync;
 
-    GCTRACE(3)("GCrequest2:%p Entry point. thread=%p%s %s to server pipe\n",
+    GCTRACE(3)("GCrequest2: %p Entry point. thread=%p%s %s to server pipe\n",
 		svc_parms,
 		GetCurrentThreadId(),
 		asipc->hRequestThread ? "(spawned)" : "",
@@ -2021,7 +2261,7 @@ GCrequest2(SVC_PARMS *svc_parms)
     /*
     ** Send connection peer info data to server
     */
-    status = GCrequestSendPeer(svc_parms);
+    status = GCrequestSendPeer(svc_parms, NULL);
     if (status != OK)
     {
 	svc_parms->status = NP_IO_FAIL;
@@ -2061,6 +2301,7 @@ GCrequest2_end:
 
 
 /******************************************************************************
+**
 ** Name: GCrequestSendPeer - Send Connection Peer Info
 **
 ** Description:
@@ -2134,15 +2375,25 @@ GCrequest2_end:
 **	    Send peer info as variable length (only what is needed)
 **	    rather than full max fixed length message to make compatible
 **	    with Unix and use slightly less (network) overhead.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Add prefix filler to connect peer info message area; this is
+**	    used by called GC CL lower layers to store GC_MTYP and tcp_ip
+**	    2-byte length prefix.
+**	    Add optional input parm iocb_in which will be used if not NULL;
+**	    needed for driver logic which already has an ASYNC_IOCB.
 **
 ******************************************************************************/
 STATUS
-GCrequestSendPeer(SVC_PARMS *svc_parms)
+GCrequestSendPeer(SVC_PARMS *svc_parms, ASYNC_IOCB *iocb_in)
 {
     STATUS	status = OK;
     ASSOC_IPC	*asipc = (ASSOC_IPC *)svc_parms->gc_cb;
     bool	sync_flag = svc_parms->flags.run_sync;
-    CONNECT 	connect_block_local;
+    struct
+    {
+	char		connect_GCdriver_prefix[GCA_CL_HDR_SZ];
+	CONNECT 	connect_block_local;
+    } connect_buffer;
     CONNECT	*connect_block;
     GC_RQ_ASSOC2 *connect_block_base;
     char	*out;
@@ -2164,22 +2415,31 @@ GCrequestSendPeer(SVC_PARMS *svc_parms)
     ** the other scenarios continue to get these control blocks from the
     ** local stack.
     */
+    if (iocb_in)
+    {
+	iocb = iocb_in;
+	connect_block = (CONNECT *)( (PTR)iocb + sizeof(ASYNC_IOCB) +
+			  sizeof(connect_buffer.connect_GCdriver_prefix) );
+    }
+    else
     if (!sync_flag && !asipc->hRequestThread)
     {
-	iocb = (ASYNC_IOCB *) MEreqmem(0, sizeof(ASYNC_IOCB) + sizeof(CONNECT), FALSE, NULL);
+	iocb = (ASYNC_IOCB *) MEreqmem(0, sizeof(ASYNC_IOCB) + sizeof(connect_buffer), FALSE, NULL);
 	if (!iocb)
 	{
-	    GCTRACE(1)("GCrequestSendPeer: Failed to allocate ASYNC IOCB + CONNECT block.\n");
+	    GCTRACE(1)("GCrequestSendPeer: Failed to allocate ASYNC IOCB + CONNECT buffer.\n");
 	    SETWIN32ERR(svc_parms->sys_err, ~OK, ER_alloc);
 	    return(~OK);
 	}
-	connect_block = (CONNECT *)((PTR)iocb + sizeof(ASYNC_IOCB));
+	connect_block = (CONNECT *)( (PTR)iocb + sizeof(ASYNC_IOCB) +
+			  sizeof(connect_buffer.connect_GCdriver_prefix) );
     }
     else
     {
 	iocb = &iocb_local;
-	connect_block = &connect_block_local;
+	connect_block = &connect_buffer.connect_block_local;
     }
+
     connect_block_base = &connect_block->v2;
 
     /*
@@ -2194,6 +2454,7 @@ GCrequestSendPeer(SVC_PARMS *svc_parms)
 
     if ( svc_parms->partner_host  &&  *svc_parms->partner_host )
     {
+	GCTRACE(2)("GCrequestSendPeer: REMOTE flag set.\n");
 	/*
 	** Direct remote connection.  Set the REMOTE flag.
 	*/
@@ -2252,15 +2513,22 @@ GCrequestSendPeer(SVC_PARMS *svc_parms)
     /*
     ** If the write fails for any reason other than I/O pending, then
     ** we clean up and flag an Association failure.
-    **
+    */
+
+    /*
+    **  If network protocol driver selected, call it with GCDriverSendPeer.
+    */
+    if (GCdriver_pce)
+    {
+	GCDriverSendPeer (svc_parms, connect_block);
+	return(svc_parms->status);
+    }
+
+    /*
     ** If processing an ASYNC GCrequest, and if running in the original
     ** thread that called GCrequest(), then the send of the peer info
     ** cannot block.  Hence, issue an async write and schedule a completion
     ** (GCrequestSendPeerComplete()) to run when the IO is complete.
-    ** FUTURE: Set completion to gca_cl_completion rather than to
-    ** intermediate completion routine GCrequestSendPeerComplete()
-    ** to avoid extra layer in completion stack...can be done when/if
-    ** wrappers GCwaitCompletion and GCrestart removed.
     */
     if (!sync_flag && !asipc->hRequestThread)
     {
@@ -2275,12 +2543,13 @@ GCrequestSendPeer(SVC_PARMS *svc_parms)
 	                 GCrequestSendPeerComplete))
 	{
 	    status = GetLastError();
-	    if (status != ERROR_IO_PENDING)
+	    if (status == ERROR_IO_PENDING)
+		status = OK;
+	    else
 	    {
 		GCTRACE(1)("GCrequestSendPeer: Write (async) failed.\n");
+		MEfree((PTR)iocb);
 	    }
-	    else
-		status = OK;
 	}
 
 	return(status);
@@ -2296,10 +2565,14 @@ GCrequestSendPeer(SVC_PARMS *svc_parms)
 
     /*
     ** Write with overlapped, and return to caller when complete with status.
+    **
+    ** Also note that there is no need to free the iocb in this section
+    ** because we are working from a local (in stack) iocb, not an
+    ** allocated one here.
     */
     if (!WriteFile(asipc->SndStdChan,
 		   connect_block,
-	           connect_block->v2.length,
+		   connect_block->v2.length,
 		   &bytes_written,
 		   &(iocb->Overlapped)))
     {
@@ -2311,7 +2584,7 @@ GCrequestSendPeer(SVC_PARMS *svc_parms)
 	{
 	    #define SEND_WAIT_TIME_MSECS     1000
 	    /*
-	    ** Wait until the IO event is signalled or we time out.
+	    ** Wait until the IO event is signaled or we time out.
 	    ** Ignore pending async IOs that complete during this time
 	    ** and just re-Wait.
 	    */
@@ -2346,6 +2619,45 @@ GCrequestSendPeer(SVC_PARMS *svc_parms)
     return(status);
 }
 
+
+
+/******************************************************************************
+**
+** Name: GCrequestSendPeerComplete - Send Connection Peer Info Completion
+**
+** Description:
+**   This routine is called when the send peer info data has completed.
+**   It is invoked by GCrequestSendPeer when implementing non-blocking I/O
+**   in the calling thread.
+**
+** Inputs:
+**   dwError                Error code (=0 if I/O successful)
+**   dwNumberXfer           Number of bytes sent
+**   pOverlapped            Pointer to async I/O Overlapped structure
+**
+** Outputs:
+**   status                 Success or failure indication:
+**      OK                    Normal completion
+**      other                 System error from Write to pipe
+**
+** Returns:
+**     none
+**
+** Exceptions:
+**     none
+**
+** Side Effects:
+**     none
+**
+** History:
+**	29-Apr-2009 (Bruce Lunsford) Bug 122009
+**	    Created.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Change MEfree(pOverlapped) to MEfree(iocb)...either is correct
+**	    since Overlapped is at start of iocb structure, but the latter
+**	    is more clear.
+**
+******************************************************************************/
 VOID WINAPI
 GCrequestSendPeerComplete(DWORD        dwError,
                           DWORD        dwNumberXfer,
@@ -2366,7 +2678,7 @@ GCrequestSendPeerComplete(DWORD        dwError,
     /* call the completion routine */
     (*svc_parms->gca_cl_completion) (svc_parms->closure);
 
-    MEfree((PTR)pOverlapped);
+    MEfree((PTR)iocb);
     return;
 }
 
@@ -2463,6 +2775,8 @@ GCrequestSendPeerComplete(DWORD        dwError,
 **	    Remove unused access_point_identifier area at end of asipc used 
 **	    to store string version of pid.  Access_point_identifier is
 **	    obtained from received peer info (aka, connect) message..
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Preallocate IOCBs for pipe sends and receives (for performance).
 **
 ******************************************************************************/
 VOID
@@ -2472,7 +2786,8 @@ GClisten(SVC_PARMS *svc_parms)
 	ASSOC_IPC *asipc;
 	static    bool   init=FALSE;
 
-	GCTRACE(3)("GClisten: Entry point.\n");
+	GCTRACE(3)("GClisten: %p Entry point.\n",
+		svc_parms);
 
 	ListenIOCB.svc_parms = svc_parms;
 	ListenIOCB.flags &= ~GC_IO_READFILE;
@@ -2530,7 +2845,9 @@ GClisten(SVC_PARMS *svc_parms)
 
 	if ((ListenIOCB.flags & GC_IO_LISTEN) ||
 	    (ListenIOCB.flags & GC_IO_CREATED) )
+	{
 	    asipc = ListenIOCB.asipc;
+	}
 	else
 	{
 	    /*
@@ -2545,9 +2862,50 @@ GClisten(SVC_PARMS *svc_parms)
  
 	    asipc->flags |= GC_IPC_LISTEN;
 	    ListenIOCB.asipc = asipc;
+
+	    if (!GCdriver_pce)
+	    {
+		/*
+		** Preallocate IOCBs for pipe send/recv's.
+		*/
+		if (asipc->iocbs)
+		{
+		}
+		asipc->iocbs = (ASYNC_IOCB *)MEreqmem(0, sizeof(ASYNC_IOCB) * 4, TRUE, NULL);
+		if (!asipc->iocbs)
+		{
+		    GCTRACE(1)("GClisten: Failed to allocate IOCBs (4 for a total size of %d bytes).\n",
+			    sizeof(ASYNC_IOCB) * 4);
+		    GCerror(GC_LSN_FAIL, 0);
+		}
+	    }
 	}
 
 	svc_parms->gc_cb                = (PTR) asipc;
+
+	/* If we are already listening, do not issue a listen.
+	** Start a new timer and set the TIMEOUT flag and return.
+	*/ 
+	if ( ListenIOCB.flags & GC_IO_LISTEN )
+	{
+	    if ( svc_parms->time_out >= 0 &&
+		 ! (ListenIOCB.flags & GC_IO_TIMEOUT) )
+	    {
+                if ( !Is_w95 )
+		    GCsetWaitableTimer( svc_parms );
+		ListenIOCB.flags |= GC_IO_TIMEOUT;
+	    }
+	    return;
+	}
+
+	/*
+	**  If network protocol driver selected, call it with GCC_LISTEN.
+	*/
+	if (GCdriver_pce)
+	{
+	    status = GCDriverListen (svc_parms, &ListenIOCB);
+	    return;
+	}
 
         /* windows95 */
         if (Is_w95)
@@ -2573,21 +2931,7 @@ GClisten(SVC_PARMS *svc_parms)
             return;
         }
 
-	/* If we are already listening, do not call GCcreateStandardPipes.
-	** Start a new timer and set the TIMEOUT flag. Otherwise create 
-	** new pipes and wait for new connections.
-	*/ 
-	if ( ListenIOCB.flags & GC_IO_LISTEN )
-	{
-	    if ( svc_parms->time_out >= 0 &&
-		 ! (ListenIOCB.flags & GC_IO_TIMEOUT) )
-	    {
-                if ( !Is_w95 )
-		    GCsetWaitableTimer( svc_parms );
-		ListenIOCB.flags |= GC_IO_TIMEOUT;
-	    }
-	}
-	else
+        /* Named Pipes */
 	{
 	    if (!(ListenIOCB.flags & GC_IO_CREATED))
 	    {
@@ -2619,7 +2963,6 @@ GClisten(SVC_PARMS *svc_parms)
 			    ListenIOCB.flags |= GC_IO_TIMEOUT;
 			}
 
-
 			ListenIOCB.flags |= GC_IO_LISTEN;
 			break;
 		    }
@@ -2645,12 +2988,19 @@ GClisten(SVC_PARMS *svc_parms)
 		    GCerror (GC_LSN_FAIL, status);
 		} /* end if ! ConnectNamedPipe() */
             } /* end for loop waiting for client to connect */
-	} /* end if/else already listening */
+	} /* end Named Pipes */
 }
+
 
 /******************************************************************************
 **
-** This is part 2 that GClisten uses to connect a server to a client
+** Name: GClisten2 - Listen phase 2
+**
+** Description:
+**
+** This is phase/part 2 that GClisten uses to connect a server to a client.
+** An incoming network connection has been established.  Now issue read
+** for connection data.
 **
 ** History:
 **      09-Sep-1999 (fanra01)
@@ -2681,6 +3031,17 @@ GClisten(SVC_PARMS *svc_parms)
 **	    Tighten up check to determine if incoming peer info is in new or
 **	    original format since new format is now being sent as variable
 **	    length; ie, add check for constant value in new format's id field.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    With drivers, this function is now called directly instead
+**	    of due to the setting of the LISTEN event.  In the driver
+**	    direct-call scenario, no need to check if this is a listen
+**	    thread...will be checked later in driver's LISTEN event_func,
+**	    which is GClisten2_complete().
+**	    Split out common code at end to a separate function,
+**	    GClisten2_complete(), that can also be called/shared
+**	    by a driver listen at the end of its processing,
+**	    as well as by the inline pipe processing below.
+**	    Cleaned up handling of Overlapped.hEvent.
 ******************************************************************************/
 VOID
 GClisten2() 
@@ -2689,30 +3050,28 @@ GClisten2()
 	SVC_PARMS  *svc_parms = iocb->svc_parms;
 	ASSOC_IPC  *asipc     = (ASSOC_IPC *)svc_parms->gc_cb;
 	STATUS     status     = OK;
-	ULONG      numxfer;
-
-	/*  Comment out unused fields for commented out code below
-	char       szUserName[GC_USERNAME_MAX + 1];
-	char       *pszUserName = szUserName;
-	*/
-
-	CS_SCB	   *scb;
-	STATUS     err;
 	OVERLAPPED Overlapped;
 	SECURITY_ATTRIBUTES sa;
 
-	GCTRACE(3)("GClisten2: Entry Point\n");
+	GCTRACE(3)("GClisten2: %p Entry point.\n",
+		svc_parms);
 
-        if (ListenIOCB.lstnthread == GetCurrentThreadId())
-        {
+	/*
+	** If we were called due to the LISTEN event being signaled,
+	** then verify we're in the correct thread.
+	*/
+	if (GCevent_func[LISTEN] == GClisten2)
+	{
+          if (ListenIOCB.lstnthread == GetCurrentThreadId())
+          {
             /*
             **  Listen threads context
             */
             ResetEvent( ListenIOCB.Overlapped.hEvent );
             GCTRACE(3)("GClisten2: Listening thread continue\n");
-        }
-        else
-        {
+          }
+          else
+          {
             /*
             ** Woke up in another threads GCsync. GCsync will re-issue the
             ** wait.
@@ -2722,9 +3081,8 @@ GClisten2()
             */
             GCTRACE(3)("GClisten2: Not listening thread\n");
             return;
-        }
-	iimksec (&sa);
-	CSGET_SCB(&scb);
+          }
+	}
 
         iocb->flags &= ~GC_IO_CREATED;
         iocb->flags &= ~GC_IO_LISTEN;
@@ -2748,8 +3106,21 @@ GClisten2()
 	** Also, comm server can call here after a listen failure.
 	*/
 
-	if ( asipc == NULL || asipc->RcvStdChan == NULL )
+	if ( (asipc == NULL) ||
+	     (!GCdriver_pce && asipc->RcvStdChan == NULL) )
 	    return;
+
+	asipc->connect_recv_numxfer = 0;
+
+	/*
+	**  If network protocol driver selected, call it to receive the
+	**  connection peer info data.
+	*/
+	if (GCdriver_pce)
+	{
+	    GCDriverListen2 (svc_parms);
+	    return;
+	}
 
 	/*
 	** Bug 79293
@@ -2767,19 +3138,24 @@ GClisten2()
 	 * Read the connection data *
 	 ****************************/
 
-	memset(&Overlapped, 0, sizeof(OVERLAPPED));
-	GCRESRC( Overlapped.hEvent,
-            Overlapped.hEvent = CreateEvent(&sa, TRUE, FALSE, NULL) );
+	iimksec (&sa);
 
+	memset(&Overlapped, 0, sizeof(OVERLAPPED));
+
+	GCRESRC( Overlapped.hEvent,
+            Overlapped.hEvent = CreateEvent(&sa, FALSE, FALSE, NULL) );
         if (Overlapped.hEvent == NULL)
 	{
-	    err = GetLastError();
+	    status = GetLastError();
+	    GCcloseAllPipes(asipc);
+	    GCTRACE(1)("GClisten2: CreateEvent status = %0x %d\n", status, status);
+	    GCerror(GC_LSN_FAIL, status);
 	}
 
 	if (!ReadFile(asipc->RcvStdChan,
 		          &asipc->connect,
 		          sizeof(asipc->connect),
-		          &numxfer,
+		          &asipc->connect_recv_numxfer,
 		          &Overlapped))
 	{
 	    switch(status = GetLastError())
@@ -2787,159 +3163,25 @@ GClisten2()
 		case ERROR_IO_PENDING:
 		    WaitForSingleObject(Overlapped.hEvent, INFINITE);
                     GetOverlappedResult( asipc->RcvStdChan, &Overlapped,
-                        &numxfer, TRUE);
-                    ResetEvent( Overlapped.hEvent );
-		    Gc_reads++;	/* increment counter */
-		    if (scb)
-			scb->cs_bior++;
+                        &asipc->connect_recv_numxfer, TRUE);
 		    break;
 
 		default:
 	            GCRESRC( Overlapped.hEvent, CloseHandle(Overlapped.hEvent) );
 		    GCcloseAllPipes(asipc);
-	            GCTRACE(3)("GClisten2: ReadFile status = %0x %d\n", status, status);
+	            GCTRACE(1)("GClisten2: ReadFile status = %0x %d\n", status, status);
 	    	    GCerror(GC_LSN_FAIL, status);
 	    }
 	}
-	else
-	{
-	    Gc_reads++;
-	    if (scb)
-	        scb->cs_bior++;
-	}
 
 	GCRESRC( Overlapped.hEvent, CloseHandle(Overlapped.hEvent) );
-	GCTRACE(2)( "GClisten2: %p Received peer info of length %d\n",
-		    svc_parms, numxfer );
 
 	/*
-	** Advise user of optimum size *
-	*/
-
-	svc_parms->size_advise = Pipe_buffer_size;
-
-	/*
-	** Fill in the trusted flag and sec_label
-	*/
-
-        svc_parms->sec_label               = (char *)&asipc->sec_label;
-
-	/*
-	** Process incoming peer info structure, which may be in one
-	** of several formats.  Determine the format and then handle
-	** accordingly.
-	*/
-
-	/*
-	** Original peer info is identified by a fixed data length,
-	** and the lack of GC_RQ_ASSOC_ID in the id field.
-	*/
-	if ( (numxfer != sizeof(CONNECT_orig))  ||
-	     (asipc->connect.v2.id == GC_RQ_ASSOC_ID) )
-	{
-	    /*
-	    ** The first three peer info fields are identical
-	    ** in all peer versions other than the original.
-	    ** Identify and validate peer info version.
-	    */
-	    GC_RQ_ASSOC2	*peer2 = &asipc->connect.v2;
-	    char	 	*host, *user, *tty;
-	    u_i4		flags = 0;
-
-	    if ( peer2->length > (i4)numxfer )
-	    {
-		GCTRACE(1)( "GClisten2 %p: invalid peer length: %d\n", 
-			    svc_parms, peer2->length );
-		GCerror(GC_USRPWD_FAIL, 0);
-	    }
-
-	    if ( peer2->id != GC_RQ_ASSOC_ID )
-	    {
-		GCTRACE(1)( "GClisten2 %p: invalid peer info ID: 0x%x\n", 
-			    svc_parms, peer2->id );
-		GCerror(GC_USRPWD_FAIL, 0);
-	    }
-
-	    GCTRACE(2)( "GClisten2 %p: peer info v%d: length %d\n",
-	    		svc_parms, peer2->version, peer2->length );
-
-	    /*
-	    ** Since named pipes is the only supported local IPC on Windows,
-	    ** only the original and the V2 formats can be received.
-	    */
-	    switch( peer2->version )
-	    {
-	    case GC_ASSOC_V2 :
-	    {
-		/*
-		** Host, user, and terminal names follow, in that
-		** order, the fixed portion of peer info structure.
-		*/
-		i4 length = sizeof( GC_RQ_ASSOC2 ) + peer2->host_name_len +
-			    peer2->user_name_len + peer2->term_name_len;
-
-		if ( peer2->length < length )
-		{
-		    GCTRACE(1)( 
-		    "GClisten2 %p: invalid peer v2 len: %d (%d,%d,%d)\n",
-				svc_parms, peer2->length, peer2->host_name_len,
-				peer2->user_name_len, peer2->term_name_len );
-		    GCerror(GC_USRPWD_FAIL, 0);
-		}
-
-		host = (char *)peer2 + sizeof( GC_RQ_ASSOC2 );
-		user = host + peer2->host_name_len;
-		tty = user + peer2->user_name_len;
-		flags = peer2->flags;
-		break;
-	    }
-	    default :
-	    {
-		GCTRACE(1)( "GClisten2 %p: unsupported peer version: %d\n",
-			    svc_parms, peer2->version );
-		GCerror(GC_USRPWD_FAIL, 0);
-		break;
-	    }
-	    } /* end switch on peer2_version */
-
-	    GCTRACE(2)
-		( "GClisten2 %p: flags 0x%x, host %s, user %s, tty %s\n",
-		  svc_parms, flags, host, user, tty );
-
-	    svc_parms->user_name = user;
-	    svc_parms->account_name = user;
-	    svc_parms->access_point_identifier = tty;
-
-	}
-	else
-	{
-	    /*
-	    ** This is an old style peer info packet from the
-	    ** Windows GC CL days which is not compatible with
-	    ** other platforms, such as Linux.
-	    */
-	    GCTRACE(2)( "GClisten2 %p: peer info v_orig: pid %d\n",
-	    		svc_parms, asipc->connect.v_orig.pid);
-	    svc_parms->user_name               = asipc->connect.v_orig.userid;
-	    svc_parms->account_name            = asipc->connect.v_orig.account;
-	    svc_parms->access_point_identifier = asipc->connect.v_orig.access_point;
-
-	    GCTRACE(2)( "GClisten2 %p: flag 0x%x, account %s, user %s, term %s\n",
-			svc_parms, asipc->connect.v_orig.flag,
-			svc_parms->account_name,
-			svc_parms->user_name,
-			svc_parms->access_point_identifier );
-
-	}  /* end old-style Windows (pre long identifiers) peer info */
-
-        /*
-	** Get the owner of the pipe and use it in place of the name
-	** received in the peer info message.
-	** These "should" be the same; however, the pipe owner is a
-	** more reliable source (since it is from the OS) than what
-	** the client sent, so provides a bit of extra security.
-	** Trace if they happen to be different.
-	**
+	** Get the pipe owner name since this is more reliable and
+	** trustworthy than the user name sent by the client in the
+	** CL GC peer info message.  While the 2 user names
+	** will normally be the same, maintain them separately as
+	** they may be different and of different lengths.
 	** We can no longer overlay directly onto the client-sent 
 	** user id field, because the pipe owner name may be longer.
 	** Store the pipe owner into a separate fixed-length field
@@ -2965,94 +3207,371 @@ GClisten2()
                       NULL,
                       asipc->ClientSysUserName,
                       GC_USERNAME_MAX + 1);
-	/*
-	** If tracing on, compare the names and trace if different.
-	*/
-	if ( GC_trace &&
-	    STcompare(svc_parms->user_name, asipc->ClientSysUserName) )
-	{
-	    GCTRACE(1)( "GClisten2 %p: WARNING! Client-sent user(%s) not same as pipe owner(%s)!\n",
-		     svc_parms, svc_parms->user_name, asipc->ClientSysUserName);
-	}
-
-	svc_parms->user_name = asipc->ClientSysUserName;
-	_strlwr(svc_parms->user_name);
-
-/*
-**   The "trusted" flag is currently not useful, since the user name of
-**   the thread is always the same as the login name.
-        GCusername(pszUserName, sizeof(szUserName));
-        svc_parms->flags.trusted =
-                !STcompare(svc_parms->user_name, pszUserName);
-*/
-        svc_parms->flags.trusted = FALSE;
 
 	/*
-	** Call completion routine
+	** Advise user of optimum size *
 	*/
+	svc_parms->size_advise = Pipe_buffer_size;
 
-	GCerror(OK, 0);
+	GClisten2_complete();
 }
+
 
-/*
-** Name: GCasyncCompletion
+/******************************************************************************
+**
+** Name: GClisten2_complete - Listen phase 2 COMPLETION
 **
 ** Description:
-**	This function calls the completion routine for a request that 
-**	completed in a thread other than the original thread of the
-**	request.  This function is itself run as a completion routine
-**	for a Windows User APC that is queueed to the original thread.
-**	There are 2 cases that use this:
-**        1. ASYNC Connects that entered blocking code and were spawned
-**	     off into a separate thread.
-**        2. Disconnects after all I/Os have completed.
-**      The thread must be in an alertable wait state for this function
-**      to be executed.
 **
-** Inputs:
-**      svc_parms      pointer to svc_parms parameter list
-**
-** Outputs:
-**      None.
-**
-** Returns:
-**      None.
+** This is the completion routine for GClisten_2.  It is called when the
+** connection data from the client has been received or an error occurred
+** on the read.  Check for errors; if OK, process the incoming connection
+** data, which should be in one of several release-dependent formats.
+** Lastly, call the GClisten caller's completion routine to complete
+** listen processing.
 **
 ** History:
-**      03-Dec-1999 (fanra01)
-**          Created.
-**      26-Aug-2005 (lunbr01) Bug 115107
-**          Change this to an APC function rather than an I/O completion
-**          routine.
-**	29-Apr-2009 (Bruce Lunsford) Bug 122009
-**	    Change name of this function from GCasyncDisconn to
-**	    GCasyncCompletion to indicate its more general purpose,
-**	    now that it is used for connects in addition to disconnects.
-**	06-Aug-2009 (Bruce Lunsford) Sir 122426
-**	    Remove mutexing around calls to GCA service completion routine
-**	    as it is no longer necessary, since GCA is thread-safe...removes
-**	    GCwaitCompletion + GCrestart.  This should improve peformance.
-*/
-VOID WINAPI
-GCasyncCompletion( SVC_PARMS *svc_parms)
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Created...extracted from last half of GClisten2() so it
+**	    could be called by driver and pipes code.  Made this the
+**	    event_func[LISTEN] for drivers (instead of GClisten2) to
+**	    deal with the way the DBMS in CSsuspend() treats the
+**	    signaling of the LISTEN event.  In addition to invoking
+**	    the associated function, it signals to the DBMS that the
+**	    listen has completed when the associated function returns.
+**
+**	    Added support for incoming previous Unix/Linux peerinfo
+**	    formats V0 and V1 since direct connect is now supported
+**	    from those non-Windows platforms if using TCP_IP as the
+**	    local IPC.  Due to this "opening up" of direct connect
+**	    access, the same protections that exist on Unix servers
+**	    was added for Windows.  That is, direct connect from
+**	    remote machines must have direct connect enabled in the
+**	    DBMS server configuration.
+**
+**	    Reworked code a bit by adding "for(;;)" wrapper and using
+**	    break statements instead of using GCerror() macro.  Helps
+**	    a little with the flow (and matches better with Unix).
+**
+**	    Also reinstated setting of "trusted" flag, modeled after
+**	    Unix, and removed corresponding commented-out code that
+**	    existed before for Windows.
+**	    
+******************************************************************************/
+VOID
+GClisten2_complete() 
 {
-    ASSOC_IPC  *asipc = NULL;
+	ASYNC_IOCB *iocb      = &ListenIOCB;
+	SVC_PARMS  *svc_parms = iocb->svc_parms;
+	ASSOC_IPC  *asipc     = (ASSOC_IPC *)svc_parms->gc_cb;
+	ULONG      numxfer    = asipc->connect_recv_numxfer;
+	CS_SCB	   *scb;
 
-    GCTRACE(3)( "GCasyncCompletion: Entry point.\n" );
+	GCTRACE(3)("GClisten2_complete: %p Entry point.\n",
+		svc_parms);
 
-    if ((svc_parms != NULL) &&
-        (!IsBadReadPtr(svc_parms, sizeof(SVC_PARMS))) &&
-        (svc_parms->gc_cb != NULL))
+	/*
+	** If we were called due to the LISTEN event being signaled,
+	** then verify we're in the correct thread.
+	*/
+	if (GCevent_func[LISTEN] == GClisten2_complete)
+	{
+          if (ListenIOCB.lstnthread == GetCurrentThreadId())
+          {
+            /*
+            **  Listen threads context
+            */
+	    ResetEvent( hAsyncEvents[LISTEN] );
+            GCTRACE(3)("GClisten2_complete: Listening thread continue\n");
+          }
+          else
+          {
+            /*
+            ** Woke up in another threads GCsync. GCsync will re-issue the
+            ** wait.
+            ** Leave the event set so that the listening thread will also
+            ** get woken up.
+            **
+            */
+            GCTRACE(3)("GClisten2_complete: Not listening thread\n");
+            return;
+          }
+	}
+
+	Gc_reads++;
+	CSGET_SCB(&scb);
+	if (scb)
+	    scb->cs_bior++;
+
+	/*
+	** Fill in the trusted flag and sec_label
+	*/
+        svc_parms->sec_label               = (char *)&asipc->sec_label;
+
+	/*
+	** Process incoming peer info structure, which may be in one
+	** of several formats.  Determine the format and then handle
+	** accordingly.
+	*/
+	GCTRACE(2)( "GClisten2_complete: %p Received peer info of length %d\n",
+		    svc_parms, numxfer );
+
+    for(;;)      /* ...allows "break" at error conditions */
     {
-        asipc = (ASSOC_IPC*) svc_parms->gc_cb;
+	if ( svc_parms->status != OK )
+	{
+	    svc_parms->status = GC_ASSOC_FAIL;
+	    break;
+	}
 
-        svc_parms->sys_err->errnum = 0;
-        svc_parms->status = OK;
-        (*svc_parms->gca_cl_completion) (svc_parms->closure);
-        GCTRACE(3)( "GCasyncCompletion: gca_service completed.\n" );
-    }
-    GCTRACE(3)( "GCasyncCompletion: Exit point.\n" );
-    return;
+	/*
+	** Original peer info is identified by a fixed data length,
+	** and the lack of GC_RQ_ASSOC_ID in the id field.
+	*/
+	if ( (numxfer != sizeof(CONNECT_orig))  ||
+	     (asipc->connect.v2.id == GC_RQ_ASSOC_ID) )
+	{
+	    /*
+	    ** The first three peer info fields are identical
+	    ** in all peer versions other than the original.
+	    ** Identify and validate peer info version.
+	    */
+	    GC_RQ_ASSOC2	*peer2 = &asipc->connect.v2;
+	    char	 	*host, *user, *tty;
+	    u_i4		flags = 0;
+
+	    if ( peer2->length > (i4)numxfer )
+	    {
+		GCTRACE(1)( "GClisten2_complete %p: invalid peer length: %d\n", 
+			    svc_parms, peer2->length );
+		svc_parms->status = GC_USRPWD_FAIL;
+		break;
+	    }
+
+	    if ( peer2->id != GC_RQ_ASSOC_ID )
+	    {
+		GCTRACE(1)( "GClisten2_complete %p: invalid peer info ID: 0x%x\n", 
+			    svc_parms, peer2->id );
+		svc_parms->status = GC_USRPWD_FAIL;
+		break;
+	    }
+
+	    GCTRACE(2)( "GClisten2_complete %p: peer info v%d: length %d\n",
+	    		svc_parms, peer2->version, peer2->length );
+
+	    /*
+	    ** Since named pipes is the only supported local IPC on Windows,
+	    ** only the original and the V2 formats can be received.
+	    */
+	    switch( peer2->version )
+	    {
+	    case GC_ASSOC_V0 :
+	    {
+		GC_RQ_ASSOC0	*peer0 = &asipc->connect.v0;
+
+		if ( peer0->length < sizeof( GC_RQ_ASSOC0 ) )
+		{
+		    GCTRACE(1)( "GClisten2_complete %p: invalid peer v0 len: %d\n",
+				svc_parms, peer0->length );
+		    svc_parms->status = GC_USRPWD_FAIL;
+		    break;
+		}
+
+		host = peer0->host_name;
+		user = peer0->user_name;
+		tty = peer0->term_name;
+	    	break;
+	    }
+	    case GC_ASSOC_V1 :
+	    {
+		GC_RQ_ASSOC1	*peer1 = &asipc->connect.v1;
+
+		if ( peer1->rq_assoc0.length < sizeof( GC_RQ_ASSOC1 ) )
+		{
+		    GCTRACE(1)( "GClisten2_complete %p: invalid peer v1 len: %d\n",
+				svc_parms, peer1->rq_assoc0.length );
+		    svc_parms->status = GC_USRPWD_FAIL;
+		    break;
+		}
+
+		host = peer1->rq_assoc0.host_name;
+		user = peer1->rq_assoc0.user_name;
+		tty = peer1->rq_assoc0.term_name;
+		flags = peer1->flags;
+		break;
+	    }
+	    case GC_ASSOC_V2 :
+	    {
+		/*
+		** Host, user, and terminal names follow, in that
+		** order, the fixed portion of peer info structure.
+		*/
+		i4 length = sizeof( GC_RQ_ASSOC2 ) + peer2->host_name_len +
+			    peer2->user_name_len + peer2->term_name_len;
+
+		if ( peer2->length < length )
+		{
+		    GCTRACE(1)( 
+		    "GClisten2_complete %p: invalid peer v2 len: %d (%d,%d,%d)\n",
+				svc_parms, peer2->length, peer2->host_name_len,
+				peer2->user_name_len, peer2->term_name_len );
+		    svc_parms->status = GC_USRPWD_FAIL;
+		    break;
+		}
+
+		host = (char *)peer2 + sizeof( GC_RQ_ASSOC2 );
+		user = host + peer2->host_name_len;
+		tty = user + peer2->user_name_len;
+		flags = peer2->flags;
+		break;
+	    }
+	    default :
+	    {
+		GCTRACE(1)( "GClisten2_complete %p: unsupported peer version: %d\n",
+			    svc_parms, peer2->version );
+		svc_parms->status = GC_USRPWD_FAIL;
+		break;
+	    }
+	    } /* end switch on peer2_version */
+
+	    if ( svc_parms->status != OK )  break;
+
+	    GCTRACE(2)
+		( "GClisten2_complete %p: flags 0x%x, host %s, user %s, tty %s\n",
+		  svc_parms, flags, host, user, tty );
+
+	    svc_parms->user_name = user;
+	    svc_parms->account_name = user;
+	    svc_parms->access_point_identifier = tty;
+
+	    /*
+	    ** Clients are only trusted if they are on the
+	    ** same host and have the same user ID.
+	    **
+	    ** If remote, check to see if remote access is
+	    ** disabled or restricted.
+	    **
+	    ** For pipes (!GCdriver_pce), there is no way until Windows
+	    ** Vista or Server 2008, when function
+	    ** GetNamedPipeClientComputerName() is available,
+	    ** to determine the client's computer name from the protocol.
+	    ** Instead, just use what was sent in the peer info to
+	    ** determine if the client was local or remote.
+	    */
+	    if ( !GCdriver_pce && STcompare( host, local_host ) )
+		asipc->flags |= GC_IPC_IS_REMOTE;
+
+	    if ( ! (asipc->flags & GC_IPC_IS_REMOTE) )  /* if local */
+	    {
+		if ( STcompare( host, local_host ) )
+		{
+		    GCTRACE(1)( "GClisten2_complete %p: invalid host: %s!\n", 
+				svc_parms, host );
+		    svc_parms->status = GC_RMTACCESS_FAIL;
+		    break;
+		}
+
+		svc_parms->flags.trusted = ! STcompare( user, gc_user_name );
+	    }
+	    else  if ( remote_access != GC_RA_ALL  && 
+		       remote_access != GC_RA_ENABLED )
+	    {
+		/*
+		** Remote access through GC is not allowed.
+		*/
+		GCTRACE(1)( "GClisten2_complete %p: remote access not enabled!\n", 
+			    svc_parms );
+		svc_parms->status = GC_RMTACCESS_FAIL;
+		break;
+	    }
+	    else  if ( remote_access == GC_RA_ENABLED  &&
+	    	       ! (flags & GC_RQ_REMOTE) )
+	    {
+		/*
+		** Uncontrolled remote access is not allowed.
+		*/
+		GCTRACE(1)( "GClisten2_complete %p: invalid remote GC access\n", 
+			    svc_parms );
+		svc_parms->status = GC_RMTACCESS_FAIL;
+		break;
+	    }
+	}
+	else
+	{
+	    /*
+	    ** This is an old style peer info packet from the
+	    ** Windows GC CL days which is not compatible with
+	    ** other platforms, such as Linux.
+	    */
+	    GCTRACE(2)( "GClisten2_complete %p: peer info v_orig: pid %d\n",
+	    		svc_parms, asipc->connect.v_orig.pid);
+	    svc_parms->user_name               = asipc->connect.v_orig.userid;
+	    svc_parms->account_name            = asipc->connect.v_orig.account;
+	    svc_parms->access_point_identifier = asipc->connect.v_orig.access_point;
+
+	    GCTRACE(2)( "GClisten2_complete %p: flag 0x%x, account %s, user %s, term %s\n",
+			svc_parms, asipc->connect.v_orig.flag,
+			svc_parms->account_name,
+			svc_parms->user_name,
+			svc_parms->access_point_identifier );
+	    /*
+	    ** NOTE: No checking of remote access being enabled is done here
+	    **       for old style peer info's because we cannot determine if
+	    **       the client is local or remote (pipes pre-Windows Vista
+	    **       won't tell us and the client's computer name is not passed
+	    **       in the peer info message). Also, this maintains backward
+	    **       compatibility with older clients; once they upgrade
+	    **       though, the server will need II_GC_REMOTE set
+	    **       appropriately. This is not a big security exposure
+	    **       since old style peerinfo will only come in via named
+	    **       pipes from Windows clients in the same Windows domain;
+	    **       such is not the case for tcp_ip.
+	    */
+
+	}  /* end old-style Windows (pre long identifiers) peer info */
+
+        /*
+	** If available, use the client name retrieved from the system
+	** instead of the one received in the peer info message.  For the
+	** named pipes protocol, the system name will contain the pipe owner.
+	** For tcp/ip, no equivalent exists, so must just use the name in the
+	** message.
+	** The system and message client user names "should" be the same;
+	** however, the pipe owner, for instance, is a more reliable
+	** source (since it is from the OS) than what the client sent,
+	** so provides a bit of extra security.
+	** Trace if they happen to be different and, although not rejecting
+	** the connection (though perhaps we should), at least turn "trusted"
+	** off.
+	*/
+	if ( asipc->ClientSysUserName )
+	{
+	    /*
+	    ** If tracing on, compare the names and trace if different.
+	    */
+	    if ( GC_trace &&
+		STcompare(svc_parms->user_name, asipc->ClientSysUserName) )
+	    {
+		GCTRACE(1)( "GClisten2_complete %p: WARNING! Client-sent user(%s) not same as pipe owner(%s)!\n",
+		     svc_parms, svc_parms->user_name, asipc->ClientSysUserName);
+		svc_parms->flags.trusted = FALSE;
+	    }
+	    svc_parms->user_name = asipc->ClientSysUserName;
+	}
+
+	_strlwr(svc_parms->user_name);
+
+	break;
+
+    }  /* end for(;;) */
+
+    /*
+    ** Call completion routine
+    */
+    GCTRACE(3)( "GClisten2_complete %p: Listen complete. status %x\n",
+                svc_parms, svc_parms->status );
+
+    (*svc_parms->gca_cl_completion)( svc_parms->closure );
 }
 
 /******************************************************************************
@@ -3139,6 +3658,9 @@ GCasyncCompletion( SVC_PARMS *svc_parms)
 **          no longer need to do the 0-byte write either.
 **	10-Dec-2009 (Bruce Lunsford) Bug 123046 (and 122406)
 **	    Add some tracing.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    If net driver selected, call it with GCDriverDisconn instead of
+**	    embedded named pipes logic.
 ******************************************************************************/
 
 VOID
@@ -3146,7 +3668,7 @@ GCdisconn(SVC_PARMS *svc_parms)
 {
     ASSOC_IPC *asipc = (ASSOC_IPC *)svc_parms->gc_cb;
 
-    GCTRACE(3)("GCdisconn: Entry point.\n");
+    GCTRACE(3)("GCdisconn: %p Entry point.\n", svc_parms);
 
     if (asipc != NULL)
     {
@@ -3161,6 +3683,15 @@ GCdisconn(SVC_PARMS *svc_parms)
         */
         if (is_comm_svr)
             asipc->flags |= GC_IPC_NETCOMPL;
+
+	/*
+	**  Disconnect using appropriate protocol.
+	*/
+	if (GCdriver_pce) /* Network Driver */
+	{
+	    GCDriverDisconn (svc_parms);
+	    return;
+	}
 
         if (!Is_w95)
         {
@@ -3235,18 +3766,26 @@ GCdisconn(SVC_PARMS *svc_parms)
 **	    reorg'd the code a bit to ensure no ACCVIO if asipc==NULL.
 **	14-Jan-2010 (Bruce Lunsford) Sir 122536 addendum
 **	    Free client Pipe owner (user name) if present.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    If a driver was selected (ie, if a gcb ptr is in the asipc),
+**	    then free the gcb memory and the connect IOCB. Also free memory
+**	    for pipe IOCBs which are now preallocated at start of connection.
+**	    Close hRequestThread handle if exists.
 ******************************************************************************/
 VOID
 GCrelease(SVC_PARMS * svc_parms)
 {
     ASSOC_IPC *asipc = (ASSOC_IPC *)svc_parms->gc_cb;
 
-    GCTRACE(3)("GCrelease: Entry point.\n");
+    GCTRACE(3)("GCrelease: %p Entry point.\n", svc_parms);
 
     svc_parms->status = OK;
 
     if (!asipc)		/* Remainder of logic depends on asipc present */
 	return;
+
+    if (asipc->hRequestThread)
+        CloseHandle(asipc->hRequestThread);
 
     if (asipc->hDisconnThread)
         CloseHandle(asipc->hDisconnThread);
@@ -3256,20 +3795,37 @@ GCrelease(SVC_PARMS * svc_parms)
 
     GCdestroySemaphore(asipc);
 
-    if ( ListenIOCB.flags & GC_IO_LISTEN  &&  asipc == ListenIOCB.asipc )
+    if ( (asipc == ListenIOCB.asipc) &&
+         (ListenIOCB.flags & GC_IO_LISTEN || ListenIOCB.flags & GC_IO_CREATED) )
     {
+        GCTRACE(3)("GCrelease: %p Reusing IPC %p ListenIOCB.flags=%d\n",
+		    svc_parms, asipc, ListenIOCB.flags);
         /* Save control block, will be re-used on next GClisten() */
     }
     else
     {
-        if (!Is_w95)
-        {
-            GCcloseAllPipes(asipc);
-        }
-        else
-        {
-            CloseAsc(asipc);
-        }
+        GCTRACE(4)("GCrelease: %p Freeing gcb=%p iocbs=%p connect_iocb=%p IPC=%p, ListenIOCB.flags=%d\n",
+		    svc_parms, asipc->gca_gcb,
+		    asipc->iocbs, asipc->connect_iocb,
+		    asipc, ListenIOCB.flags);
+
+	if (asipc->gca_gcb)  /* protocol driver used */
+	    MEfree(asipc->gca_gcb);
+	else   /* must be pipes */
+	{
+            if (!Is_w95)
+        	GCcloseAllPipes(asipc);
+            else
+        	CloseAsc(asipc);
+	}
+	if (asipc->iocbs)
+	{
+	    MEfree(asipc->iocbs);
+	}
+	if (asipc->connect_iocb)
+	{
+	    MEfree(asipc->connect_iocb);
+	}
         MEfree((PTR)asipc);
     }
     svc_parms->gc_cb = NULL;
@@ -3356,6 +3912,11 @@ GCrelease(SVC_PARMS * svc_parms)
 **	    Correct GCTRACE message slightly from "WriteFileEx" to "SendPipe"
 **	    to better reflect logic and distinguish from other identical
 **	    "WriteFileEx" GCTRACE's elsewhere.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    If net driver selected, call it with GCDriverSend instead of
+**	    named pipes logic.  Add more info on trace at entry.
+**	    Use appropriate pre-allocated ASYNC_IOCB rather than allocating
+**	    and freeing one for each send (for performance).
 ******************************************************************************/
 VOID
 GCsend(SVC_PARMS *svc_parms)
@@ -3366,7 +3927,12 @@ GCsend(SVC_PARMS *svc_parms)
 	HANDLE     fd;
 	ASYNC_IOCB *iocb;
 
-	GCTRACE(3)("GCsend: Entry point.\n");
+	GCTRACE(3)("GCsend: %p Entry point. %s timeout=%d %s send_length=%d\n",
+		svc_parms,
+                (svc_parms->flags.flow_indicator == GC_NORMAL) ? "nor" : "exp",
+		svc_parms->time_out,
+		svc_parms->flags.run_sync ? "sync" : "async",
+		svc_parms->svc_send_length );
 
 	svc_parms->status = OK;
 
@@ -3381,29 +3947,32 @@ GCsend(SVC_PARMS *svc_parms)
 		GCerror(GC_ASSOC_FAIL, 0);
 	}
 
-	/*
-	** Determine the channel for message to go to
-	*/
-
-	if (svc_parms->flags.flow_indicator == GC_NORMAL)
+	if (GCdriver_pce) /* Network Driver */
 	{
-		fd    = asipc->SndStdChan;
-	}
-	else
-	{
-		fd    = asipc->SndExpChan;
+	    GCDriverSend (svc_parms);
+	    return;
 	}
 
 	/*
-	** Do asynchronous IO *
+	** Do asynchronous pipes IO *
 	*/
 
-	iocb = (ASYNC_IOCB *) MEreqmem(0, sizeof(ASYNC_IOCB), TRUE, NULL);
+	iocb = &asipc->iocbs[svc_parms->flags.flow_indicator * 2 + GC_IOCB_SEND];
+	ZeroMemory( iocb, sizeof(*iocb) );
 	iocb->svc_parms = svc_parms;
 	iocb->flags &= ~GC_IO_READFILE;
 
-	GCTRACE(2)( "GCsend: send_length = %d\n", svc_parms->svc_send_length );
+	/*
+	** Determine the channel for message to go to
+	*/
+	if (svc_parms->flags.flow_indicator == GC_NORMAL)
+	    fd    = asipc->SndStdChan;
+	else
+	    fd    = asipc->SndExpChan;
 
+	/*
+	**  Send using appropriate protocol.
+	*/
         if (Is_w95) /* Windows 95 */
         {
             status = GCAnonPipeSend (fd, svc_parms, asipc, iocb,
@@ -3415,7 +3984,12 @@ GCsend(SVC_PARMS *svc_parms)
                 GCCompletionRoutine);
         }
 
-        GCTRACE(2)( "GCsend: PipeSend status %d\n", status );
+	if ((status == 0) || (status == ERROR_IO_PENDING))
+            InterlockedIncrement( &asipc->asyncIoPending );
+
+        GCTRACE(2)( "GCsend: status %d asyncIoPending=%d\n",
+		    status,
+		    asipc->asyncIoPending );
 	svc_parms->status = rval;
 }
 
@@ -3534,6 +4108,10 @@ GCsend(SVC_PARMS *svc_parms)
 **          at the pipe level.
 **      03-Dec-1999 (fanra01)
 **          Add completion function as a parameter to the pipe reads.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    If net driver selected, call it with GCDriverReceive instead of
+**	    embedded pipes logic.  Remove unused SECURITY_ATTRIBUTES and init.
+**	    Trace more info at entry.
 **
 ******************************************************************************/
 VOID
@@ -3543,14 +4121,15 @@ GCreceive(SVC_PARMS *svc_parms)
         ASSOC_IPC  *asipc;
         HANDLE     fd;
         ASYNC_IOCB *iocb;
-	SECURITY_ATTRIBUTES sa;
 	BOOL       expedited;
 
-	iimksec (&sa);
-
-        GCTRACE(3)("GCreceive: Entry point.\n");
+        GCTRACE(3)("GCreceive: %p Entry point. %s timeout=%d %s  buffer size=%d\n",
+		svc_parms,
+                (svc_parms->flags.flow_indicator == GC_NORMAL) ? "nor" : "exp",
+		svc_parms->time_out,
+		svc_parms->flags.run_sync ? "sync" : "async",
+		svc_parms->reqd_amount );
         svc_parms->status = OK;
-
 
         /*
         ** Get local control block for this association.
@@ -3563,6 +4142,11 @@ GCreceive(SVC_PARMS *svc_parms)
                 GCerror(GC_ASSOC_FAIL, 0);
         }
 
+	if (GCdriver_pce) /* Network Driver */
+	{
+	    GCDriverReceive (svc_parms);
+	    return;
+	}
 
         if (svc_parms->flags.flow_indicator == GC_NORMAL)
 	{
@@ -3578,18 +4162,17 @@ GCreceive(SVC_PARMS *svc_parms)
         svc_parms->flags.new_chop = FALSE;
 
         /*
-        ** Allocate an OVERLAPPED structure for I/O.
+        ** Select an OVERLAPPED structure for I/O.
         */
 
-        iocb = (ASYNC_IOCB *) MEreqmem(0, sizeof(ASYNC_IOCB), TRUE, NULL);
+	iocb = &asipc->iocbs[svc_parms->flags.flow_indicator * 2 + GC_IOCB_RECV];
+	ZeroMemory( iocb, sizeof(*iocb) );
         iocb->svc_parms = svc_parms;
         iocb->flags |= GC_IO_READFILE;
 
-        /*
-        ** If there is a timeout specified do async I/O, otherwise
-        ** do sync I/O
-        */
-
+	/*
+	**  Receive using appropriate pipes protocol.
+	*/
         if (Is_w95) /* Windows 95 */
         {
             GCAnonPipeReceive (fd, svc_parms, asipc, iocb, expedited,
@@ -3668,6 +4251,12 @@ GCreceive(SVC_PARMS *svc_parms)
 **          fix to scan the entire buffer; however, that could 
 **          negatively impact performance. 
 **          Check purge semaphore on comm servers now on W9x.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Since the asyncIoPending counter is now incremented AFTER
+**	    rather than BEFORE calling this function, adjust check on
+**	    asyncIoPending by 1 (was 1, now 2) in logic that checks for
+**	    expedited receive failure indicating a disconnect in progress
+**	    (versus an error).
 **
 ******************************************************************************/
 VOID
@@ -3688,13 +4277,14 @@ GCreceiveCompletion(SVC_PARMS *svc_parms,
     ** We MUST set new_chop to TRUE on 0 byte reads!
     */
 	
-    GCTRACE(3)("GCreceiveCompletion: Read %s %d\n",
+    GCTRACE(3)("GCreceiveCompletion: %p Read %s %d\n",
+		svc_parms,
                 (svc_parms->flags.flow_indicator == GC_NORMAL) ? "Norm" : "Exped",
                 dwNumberXfer);
     svc_parms->flags.new_chop = FALSE;
     if (dwNumberXfer == 0)
     {
-        if ((asipc->asyncIoPending <= 1) &&
+        if ((asipc->asyncIoPending <= 2) &&
             (svc_parms->flags.flow_indicator != GC_NORMAL) &&
             (dwError == ERROR_BROKEN_PIPE))
         {
@@ -3860,6 +4450,11 @@ GCreceiveCompletion(SVC_PARMS *svc_parms,
 **	    Properly address pointers out of ulptr.
 **	07-nov-2003 (somsa01)
 **	    Prior change is only for LP64.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Preallocate IOCBs for pipe sends and receives (for performance).
+**	    If protocol driver being used, call it to allow it to restore
+**	    and initialize protocol-specific info.  Also cleaned up the code
+**	    to make it a little more generic/maintainable.
 **
 ******************************************************************************/
 VOID
@@ -3867,9 +4462,11 @@ GCrestore(SVC_PARMS *svc_parms)
 {
 	ASSOC_IPC *asipc;
 	HANDLE    *ulptr = (HANDLE *) svc_parms->svc_buffer;
+        i4         hdrsize = 0;
+        i4         ipcsize = 0;
+	char      *ipcptr  = NULL;    
 
-	GCTRACE(3)("GCrestore: Entry point.\n");
-
+	GCTRACE(3)("GCrestore: %p Entry point.\n", svc_parms);
 
 	/*
 	 * Allocate the new LCB.
@@ -3896,8 +4493,56 @@ GCrestore(SVC_PARMS *svc_parms)
 	Is_server = (i4)ulptr[8];
 #endif
 
+	hdrsize = 9 * sizeof(PTR);
+	ipcptr  = svc_parms->svc_buffer + hdrsize;
+
+	/*
+	** If a protocol driver is being used, call its restore function
+	** to allow it to restore protocol-specific information.
+	*/
+	if (GCdriver_pce)
+	{
+	    GCA_GCB	*gcb       = NULL;
+	    /*
+	    ** Allocate a connection block (GCA_GCB) for gcacl driver use.
+	    ** Then, initialize it and link to it from the asipc.
+	    */
+	    gcb = (GCA_GCB *)MEreqmem( 0, sizeof(GCA_GCB), TRUE, NULL );
+	    gcb->GCdriver_pce = (PTR)GCdriver_pce;
+	    gcb->buffer_guard = GCB_BUFFER_GUARD;
+	    asipc->gca_gcb = gcb;	/* link to it from the asipc */
+
+	    /*
+	    ** Restore generic driver info.
+	    */
+	    MEcopy( ipcptr, sizeof(gcb->id), &gcb->id );
+	    ipcsize = sizeof(gcb->id);
+	    ipcptr += sizeof(gcb->id);
+	    if (((WS_DRIVER *)GCdriver_pce->pce_driver)->restore_func != NULL)
+	    {
+		STATUS status;
+		status = (*((WS_DRIVER *)GCdriver_pce->pce_driver)->restore_func)( ipcptr, GCdriver_pce, &gcb->GCdriver_pcb );
+		if( status != OK )
+		{
+	            GCTRACE(0)( "GCrestore: protocol driver restore failed with status %d\n", status );
+	            svc_parms->status = GC_RESTORE_FAIL;
+	            return;
+		}
+	    }
+	}  /* endif protocol driver used */
+	else
 	if (Is_w95) /* Windows 95 */
+	{
 	    IPCrestore( asipc, (ULONG *)&ulptr[9] );
+	}
+
+	if (!GCdriver_pce)
+	{
+	    /*
+	    ** Preallocate IOCBs for pipe send/recv's.
+	    */
+	    asipc->iocbs = (ASYNC_IOCB *)MEreqmem(0, sizeof(ASYNC_IOCB) * 4, TRUE, NULL);
+	}
 
 	svc_parms->status = OK;
 }
@@ -3956,6 +4601,11 @@ GCrestore(SVC_PARMS *svc_parms)
 **          Flag connection that it is being GCsave'd.
 **      26-Aug-2005 (lunbr01) Bug 115107 + 109115
 **          Undo prior fix to flag connection...no longer needed. 
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    If protocol driver being used, call it to allow it to save
+**	    protocol-specific info.  Also cleaned up the code
+**	    to make it a little more generic/maintainable.
+**
 **
 ******************************************************************************/
 VOID
@@ -3963,9 +4613,11 @@ GCsave(SVC_PARMS * svc_parms)
 {
 	ASSOC_IPC *asipc = (ASSOC_IPC *) svc_parms->gc_cb;
 	HANDLE    *ulptr = (HANDLE *)    svc_parms->svc_buffer;
-        i4          ipcsize;
+        i4         hdrsize = 0;
+        i4         ipcsize = 0;
+	char      *ipcptr  = NULL;    
 
-	GCTRACE(3)("GCsave: Entry point.\n");
+	GCTRACE(3)("GCsave: %p Entry point.\n", svc_parms);
 
 	/*
 	** Store the pipe handles in the svc_buffer.
@@ -3989,14 +4641,56 @@ GCsave(SVC_PARMS * svc_parms)
 	ulptr[8] = (HANDLE)Is_server;
 #endif
 
+	hdrsize = 9 * sizeof(PTR);
+	ipcptr  = svc_parms->svc_buffer + hdrsize;
+
+	/*
+	** If a protocol driver is being used, call its save function
+	** to allow it to save protocol-specific information.
+	*/
+	if (GCdriver_pce)
+	{
+	    GCA_GCB	*gcb       = asipc->gca_gcb;
+
+	    /* Note idleness of send/receive state machines. */
+	    if( gcb->send.state || gcb->recv.state )
+	    {
+	        GCTRACE(1)("GCsave: line not idle (%d %d)\n",
+	                gcb->send.state, gcb->recv.state );
+	    }
+
+	    /*
+	    ** Save generic driver info.
+	    */
+	    MEcopy( &gcb->id, sizeof(gcb->id), ipcptr);
+	    ipcsize = sizeof(gcb->id);
+	    ipcptr += sizeof(gcb->id);
+
+	    /*
+	    ** Allow protocol driver to save state.
+	    */
+	    if (((WS_DRIVER *)GCdriver_pce->pce_driver)->save_func != NULL)
+	    {
+		STATUS status;
+		i4  driversize = svc_parms->reqd_amount - (hdrsize + ipcsize);
+		status = (*((WS_DRIVER *)GCdriver_pce->pce_driver)->save_func)( ipcptr, &driversize, gcb->GCdriver_pcb );
+		if( status != OK )
+		{
+	            GCTRACE(0)( "GCsave: protocol driver save failed with status %d\n", status );
+	            svc_parms->status = GC_SAVE_FAIL;
+	            return;
+		}
+		ipcsize += driversize;
+		ipcptr  += driversize;
+	    }
+	}  /* endif protocol driver used */
+	else
 	if (Is_w95) /* Windows 95 */
 	{
-            ipcsize = IPCsave( asipc, (ULONG *)&ulptr[9] );
-            svc_parms->rcv_data_length = 9*sizeof(ULONG) + ipcsize;
-            return;
+            ipcsize = IPCsave( asipc, (ULONG *)ipcptr );
 	}
 
-	svc_parms->rcv_data_length = 9 * sizeof(PTR);
+	svc_parms->rcv_data_length = hdrsize + ipcsize;
 	svc_parms->status = OK;
 }
 
@@ -4067,6 +4761,9 @@ GCsave(SVC_PARMS * svc_parms)
 **	29-Apr-2009 (Bruce Lunsford) Bug 122009
 **	    Don't reissue redundant GetLastError() for input to SETWIN32ERR
 **	    after WriteFile() error.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    If net driver selected, call it (GCDriverPurge) instead of
+**	    embedded pipes logic.
 **
 ******************************************************************************/
 VOID
@@ -4084,9 +4781,15 @@ GCpurge(SVC_PARMS *svc_parms)
 	HANDLE	hGCprgSemaphore;
 	HANDLE  hPeekPipe;
 
-	GCTRACE(3)("GCpurge: Entry Point\n");
+	GCTRACE(3)("GCpurge: %p Entry Point\n", svc_parms);
 
         svc_parms->status = OK;
+
+	if (GCdriver_pce) /* Network Driver */
+	{
+	    GCDriverPurge (svc_parms);
+	    return;
+	}
 
 	if (!Is_w95)
 	{
@@ -4219,93 +4922,42 @@ GCpurge_end:
 ** History:
 **	29-Apr-2009 (Bruce Lunsford) Bug 122009
 **	    Add call to generate statistics report if tracing is on.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Add/comment call to shutdown/terminate protocol driver.
 **
 ******************************************************************************/
 VOID
 GCterminate(SVC_PARMS * svc_parms)
 {
-	GCTRACE(3)("GCterminate: Entry point.\n");
+	GCTRACE(3)("GCterminate: %p Entry point. PID=%d, use_count=%d\n",
+		    svc_parms, Conn_id, GCinitialized_count);
 	svc_parms->status = OK;
+
+	GCinitialized_count--;
+	if ( GCinitialized_count > 0 )
+	    return;
+
+	/*
+	**  If network protocol driver selected, call its exit function
+	**  if there is one.
+	*/
+	    if (( GCdriver_pce ) &&
+	        ( ((WS_DRIVER *)GCdriver_pce->pce_driver)->exit_func != NULL ))
+		svc_parms->status = (*((WS_DRIVER *)GCdriver_pce->pce_driver)->exit_func)(GCdriver_pce);
+
 	if (GC_trace)
 	    GCrpt_stats();
 }
 
-
+
 /******************************************************************************
-** Name: GCrpt_stats    - Report GC statistics
+*******************************************************************************
 **
-** Description:
+**  "Common" routines
 **
-**  Print/trace various internal statistics that can be used for problem
-**  diagnosis and performance tuning.  This function is currently called
-**  at shutdown from GCterminate() if tracing is on.
-**
-** Inputs:
-**      none
-**
-** Outputs:
-**      none
-**
-** Returns:
-**      none
-**
-** Exceptions:
-**      none
-**
-** Side Effects:
-**      none
-**
-** History:
-**	29-Apr-2009 (Bruce Lunsford) Bug 122009
-**	    Created.
-**
+*******************************************************************************
 ******************************************************************************/
-VOID
-GCrpt_stats()
-{
-    i4	GCrequest_delay_calls;
-    i4	total, success, failures;
 
-    TRdisplay("\n%31*- GC Statistics %31*-\n\n");
-
-    TRdisplay(" *** Named Pipes (gcacl.c) ***\n");
-    TRdisplay("                         Total    Success  Failures\n");
-    TRdisplay("                       --------  --------  --------\n");
-
-    failures = GCrequest_calls - GCrequest_OK;
-    TRdisplay("  GCrequest (#)     : %9d %9d %9d\n",
-	      GCrequest_calls, GCrequest_OK, failures);
-
-    /*
-    **  Delayed calls are those that were not immediately completed.
-    **  That is, the connect to the server pipe did not return with success
-    **  so function GCconnectToServer() was invoked to block/wait until
-    **  a server pipe instance became available and could be connected to.
-    **
-    **  Report the total # of these as well as the average # of milliseconds
-    **  that it took for the operation to finally complete (for delayed ones
-    **  only...not including immediately connecting sessions).
-    **
-    **  While the delay time is not the full time it takes to do a connect,
-    **  it should be the bulk of it and warrants breaking out as a separate
-    **  statistic.
-    */
-    GCrequest_delay_calls = GCrequest_delay_OK + GCrequest_delay_FAIL;
-    TRdisplay("    - delayed (#)   : %9d %9d %9d\n",
-	      GCrequest_delay_calls, GCrequest_delay_OK, GCrequest_delay_FAIL);
-    if (GCrequest_delay_calls)
-    {
-        total   = (i4)((GCrequest_delay_OK_msecs + GCrequest_delay_FAIL_msecs) / GCrequest_delay_calls);
-        success = GCrequest_delay_OK   ? (i4)(GCrequest_delay_OK_msecs   / GCrequest_delay_OK)   : 0;
-        failures= GCrequest_delay_FAIL ? (i4)(GCrequest_delay_FAIL_msecs / GCrequest_delay_FAIL) : 0;
-        TRdisplay("         (avg msec) : %9d %9d %9d\n",
-		  total, success, failures);
-    }
-
-    TRdisplay("\n%77*-\n\n");
-
-    return;
-}
 
 /******************************************************************************
 ** Name:  GCdetect      ... Detect whether a listen id is alive.
@@ -4337,7 +4989,6 @@ GCrpt_stats()
 **	    Modified to use 6.4 pipe naming conventions.
 **
 ******************************************************************************/
-
 STATUS
 GCdetect(char *listen_id)
 {
@@ -4356,6 +5007,108 @@ GCdetect(char *listen_id)
         STprintf(name, "%s\\C2S_STD\\%s", PIPE_PREFIX, listen_id);
 	status = WaitNamedPipe(name, NMPWAIT_USE_DEFAULT_WAIT);
 	return (status? OK : FAIL);
+}
+
+
+/******************************************************************************
+**
+** Name: GCusername
+**
+** Description:
+**	Set the passed in argument 'name' to contain the name of the user 
+**	who is executing this process.  Name is a pointer to an array 
+**	large enough to hold the user name.  The user name is returned
+**	NULL-terminated in lowercase with any trailing whitespace deleted.
+**
+**	On systems where relevant, this should return the effective rather 
+**	than the real user ID. 
+**
+**	It does the samething as what IDname does.
+**
+** Input:
+**	size		Length of buffer for user name.
+**
+** Output:
+**	name		The effective user name.
+**
+** Returns:
+**	VOID
+**
+** History:
+**	18-Mar-98 (rajus01)
+**	    Created.
+**	07-nov-2000 (somsa01)
+**	    For Embedded Ingres, the user is always ingres.
+**      23-feb-2001 (rigka01) 
+**	    Cross integrate 2.5 change 448098 to 2.0: 
+**          In GCusername(), for Embedded Ingres, the user is always ingres.
+**      01-May-2007 (Fei Ge) Bug 116825
+**          szUserName shouldn't be static.
+**	17-Dec-2009 (Bruce Lunsford) Sir 122536
+**	    Add support for long identifiers by increasing username buffer
+**	    to max size supported by Windows.  
+**	    Also improve performance (affects connect requests primarily) by
+**	    only checking 1st time in for TNG/embedded Ingres installation.
+**
+*******************************************************************************/
+VOID
+GCusername( char *name, i4  size )
+{
+    char  szUserName[GC_USERNAME_MAX + 1] = "";
+    DWORD dwUserNameLen = sizeof(szUserName);
+    static i1   TNGInstallation = -1;
+    GCTRACE(5)("GCusername: Entered with size %d, TNGInstallation flag=%d\n",
+		size, TNGInstallation);
+
+# ifdef EVALUATION_RELEASE
+    STlcopy("ingres", name, size - 1);
+# else
+
+    /*
+    ** On 1st time in only, check  if this is an embedded Ingres installation.
+    */
+    if (TNGInstallation == -1)  /* If not already set, set it. */
+    {
+	char        *host;
+	char        *value = NULL;
+	char        config_string[256];
+	PMinit();
+	PMload( NULL, (PM_ERR_FUNC *)NULL );
+	host = PMhost();
+  
+	STprintf( config_string, ERx("%s.%s.setup.embed_user"),
+		  SystemCfgPrefix, host);
+	PMget( config_string, &value );
+   
+	if (value == NULL || (STbcompare(value, 0, "OFF", 0, TRUE) == 0))
+	    TNGInstallation = FALSE;
+	else
+	    TNGInstallation = TRUE;
+    }  /* endif TNGInstallation not set */
+
+    if (TNGInstallation == TRUE)
+    {
+	STlcopy("ingres", name, size - 1);
+	return;
+    }
+
+    /*
+    ** Normal, non-TNG/embedded, non-Eval Ingres installation...get the
+    ** effective userid from the operating system.
+    ** NOTE: GetUserName() returns nothing if the target field is too
+    **       small to hold the result.  GCusername(), on the other hand,
+    **       returns a truncated length if the target field is too small.
+    **       This is the reason an intermediate (large) buffer field is
+    **       used rather than GetUserName'ing directly into the target.
+    **       
+    */
+    if (GetUserName(szUserName, &dwUserNameLen))
+    {
+	_strlwr(szUserName);
+	STlcopy(szUserName, name, size - 1);
+    }
+
+# endif /* EVALUATION_RELEASE */
 }
 
 /******************************************************************************
@@ -4480,6 +5233,13 @@ GCusrpwd(char *username, char *password, CL_ERR_DESC * sys_err)
 **	    FIX: If timeout event previously occured and has been canceled
 **	    don't load waitarray for current request with the invalid 
 **	    canceled handle.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Remove ifdefs for embedded comm server i(GCF_EMBEDDED_GCC)
+**	    around GCC_COMPLETE event.  Now always include it in the wait
+**	    list since it will be used if a network protocol driver
+**	    (like Winsock tcp_ip) is selected with II_GC_PROT.  If not,
+**	    it's just a wasted entry in the list but should be OK; it is
+**	    always created by this program anyway during initialization.
 **
 ******************************************************************************/
 
@@ -4510,11 +5270,9 @@ GCsync(i4 timeout)
 	waitarray[++index] = hAsyncEvents[TIMEOUT];
 	numElements++;
     }
-# ifdef GCF_EMBEDDED_GCC
     waitarray[++index] = hAsyncEvents[GCC_COMPLETE];
     gcc_compl_event = index;
     numElements++;
-# endif
     if ( gc_compl_key )
     {
         ME_tls_get( gc_compl_key, (PTR *)&asto, &status );
@@ -4574,11 +5332,9 @@ GCsync(i4 timeout)
 		else
 		{
 		    GCTRACE (3) ("GCsync: WAIT_OBJECT_%d\n", status);
-# ifdef GCF_EMBEDDED_GCC
 		    if ( status == (STATUS)WAIT_OBJECT_0 + gcc_compl_event )
 			(*GCevent_func[GCC_COMPLETE])();
 		    else
-# endif
 		    /* async receive timeout */
 		    if ( status == (STATUS)WAIT_OBJECT_0 + to_compl_event )
 		    {
@@ -4596,11 +5352,9 @@ GCsync(i4 timeout)
             case WAIT_OBJECT_0 + 4:
             case WAIT_OBJECT_0 + 5:
                 GCTRACE (3) ("GCsync: WAIT_OBJECT_%d\n", status);
-# ifdef GCF_EMBEDDED_GCC
                 if ( status == (STATUS)WAIT_OBJECT_0 + gcc_compl_event )
                     (*GCevent_func[GCC_COMPLETE])();
                 else
-# endif
                 /* async receive timeout */
                 if ( (gc_compl_key) &&
 		     (status == (STATUS)WAIT_OBJECT_0 + to_compl_event) )
@@ -4799,65 +5553,7 @@ GChostname(char *buf,
 	*buf = EOS;
     }
 }
-
-/******************************************************************************
-**
-** Function: GCcloseAllPipes
-**
-** Description:
-**	Close all of the named pipes.
-**
-** History:
-**	13-nov-95 (emmag)
-**	    Changed to close four pipes instead of two.
-**	06-may-1999 (somsa01)
-**	    For the Server-ended pipes, we must also perform a
-**	    DisconnectNamedPipe() before closing the handle.
-**	10-may-1999 (somsa01)
-**	    Remove the FlushFileBuffers() calls from last change, as they
-**	    were causing hangs during the Replicator handoffqa tests.
-**      01-Oct-1999 (fanra01)
-**          Removed 0 length writes on receive pipes as all IO should be
-**          completed by the time we get this call.
-**	10-Dec-2009 (Bruce Lunsford) Bug 123046 (and 122406)
-**	    Add some tracing at entry and exit.
-**
-******************************************************************************/
-VOID
-GCcloseAllPipes(ASSOC_IPC * asipc)
-{
-        int i = 0;
-	GCTRACE(3)("GCcloseAllPipes: Entry point. asipc=0x%p\n", asipc);
 
-	if (asipc->SndStdChan)
-	{
-	    GCRESRC( asipc->SndStdChan, CloseHandle(asipc->SndStdChan) );
-	    asipc->SndStdChan  = NULL;
-	}
-	if (asipc->RcvStdChan)
-	{
-	    GCRESRC( asipc->RcvStdChan, CloseHandle(asipc->RcvStdChan) );
-	    asipc->RcvStdChan  = NULL;
-	}
-	if (asipc->SndExpChan)
-	{
-	    GCRESRC( asipc->SndExpChan, CloseHandle(asipc->SndExpChan) );
-	    asipc->SndExpChan  = NULL;
-	}
-	if (asipc->RcvExpChan)
-	{
-	    GCRESRC( asipc->RcvExpChan, CloseHandle(asipc->RcvExpChan) );
-	    asipc->RcvExpChan  = NULL;
-	}
-	if (asipc->ClientReadHandle)
-	{
-	    GCRESRC( asipc->ClientReadHandle,
-                CloseHandle(asipc->ClientReadHandle) );
-	    asipc->ClientReadHandle  = NULL;
-	}
-	GCTRACE(3)("GCcloseAllPipes: Completed. asipc=0x%p\n", asipc);
-	return;
-}
 
 /******************************************************************************
 **
@@ -4931,6 +5627,13 @@ GCcloseAllPipes(ASSOC_IPC * asipc)
 **	    Remove mutexing around calls to GCA service completion routine
 **	    as it is no longer necessary, since GCA is thread-safe...removes
 **	    GCwaitCompletion + GCrestart.  This should improve peformance.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Remove MEfree(iocb) since the send/recv iocbs are now
+**	    preallocated and not freed until disconnect.
+**	    Defer decrementing asyncIoPending until after returning
+**	    from the GCA completion routine to prevent possible nested
+**	    call to GCdisconn and GCrelease thinking it OK to release
+**	    resources.
 ******************************************************************************/
 
 VOID WINAPI
@@ -4944,10 +5647,10 @@ GCCompletionRoutine(DWORD        dwError,
     CS_SCB     *scb;
     HANDLE     hDisconnThread;
     i4         pendingio;
-    i4         flags;
     SVC_PARMS  *disconn_svc_parms = NULL;
 
-    GCTRACE(3)("GCCompletionRoutine: Entry point. dwError=%d\n", dwError);
+    GCTRACE(3)("\nGCCompletionRoutine: %p Entry point. dwError=%d\n",
+		svc_parms, dwError);
 
     if ( svc_parms != NULL &&
 	svc_parms->gc_cb != NULL )
@@ -4955,7 +5658,6 @@ GCCompletionRoutine(DWORD        dwError,
 	asipc = (ASSOC_IPC *)  svc_parms->gc_cb;
 
         GCTRACE(3)("GCCompletionRoutine: Cmplt %d\n", asipc->asyncIoPending);
-        pendingio = InterlockedDecrement( &asipc->asyncIoPending );
 
         if ( svc_parms->time_out != -1 && asipc->timer_event != 0 )
         {
@@ -4998,23 +5700,452 @@ GCCompletionRoutine(DWORD        dwError,
             }
         }
 
+        GCTRACE(3)( "GCCompletionRoutine: %p calling gca_service completion. level=%p\n",
+		    svc_parms, &svc_parms );
+        (*svc_parms->gca_cl_completion) (svc_parms->closure);
+        pendingio = InterlockedDecrement( &asipc->asyncIoPending );
+        GCTRACE(3)( "GCCompletionRoutine: %p gca_service completed. level=%p\n",
+		    svc_parms, &svc_parms );
+
         hDisconnThread = asipc->hDisconnThread;
         disconn_svc_parms = asipc->Disconn_svc_parms;
-        flags = asipc->flags;
-
-        (*svc_parms->gca_cl_completion) (svc_parms->closure);
-
-        if ((flags & GC_IPC_DISCONN) && (pendingio == 0) &&
+        if ((asipc->flags & GC_IPC_DISCONN) && (pendingio == 0) &&
             (hDisconnThread != NULL))
         {
+            GCTRACE(3)( "GCCompletionRoutine: %p queue disconnect completion\n",
+			disconn_svc_parms );
             pfnQueueUserAPC((PAPCFUNC)GCasyncCompletion, hDisconnThread, 
                             (DWORD)disconn_svc_parms);
         }
     }
 
-    MEfree((PTR)pOverlapped);
     return;
 }
+
+
+/******************************************************************************
+**
+** Name: GCasyncCompletion
+**
+** Description:
+**	This function calls the completion routine for a request that 
+**	completed in a thread other than the original thread of the
+**	request.  This function is itself run as a completion routine
+**	for a Windows User APC that is queued to the original thread.
+**	There are 2 cases that use this:
+**        1. ASYNC Connects that entered blocking code and were spawned
+**	     off into a separate thread.
+**        2. Disconnects after all I/Os have completed.
+**      The thread must be in an alertable wait state for this function
+**      to be executed.
+**	TIP: There might be a temptation to eliminate this function
+**	     and queue the UserAPC directly to the actual requester's
+**	     completion routine since, as seen below, this routine does
+**	     nothing more than turn around and call the requester's
+**	     completion routine.  DON'T BOTHER! ... the call mechanism
+**	     for this Windows UserAPC routine is WINAPI which is #defined
+**	     to __stdcall, which is different from the default call
+**	     mechanism which is used by all the Ingres programs.  If that
+**	     were to ever get in sync, then this middle-man function could
+**	     be eliminated.
+**
+** Inputs:
+**      svc_parms      pointer to svc_parms parameter list
+**
+** Outputs:
+**      None.
+**
+** Returns:
+**      None.
+**
+** History:
+**      03-Dec-1999 (fanra01)
+**          Created.
+**      26-Aug-2005 (lunbr01) Bug 115107
+**          Change this to an APC function rather than an I/O completion
+**          routine.
+**	29-Apr-2009 (Bruce Lunsford) Bug 122009
+**	    Change name of this function from GCasyncDisconn to
+**	    GCasyncCompletion to indicate its more general purpose,
+**	    now that it is used for connects in addition to disconnects.
+**	06-Aug-2009 (Bruce Lunsford) Sir 122426
+**	    Remove mutexing around calls to GCA service completion routine
+**	    as it is no longer necessary, since GCA is thread-safe...removes
+**	    GCwaitCompletion + GCrestart.  This should improve peformance.
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Add TIP doc above and eliminate use of asipc below as it was
+**	    not really being used. Add extra line break in tracing for
+**	    improved readability for what runs between start and finish
+**	    of this async execution.
+**
+******************************************************************************/
+VOID WINAPI
+GCasyncCompletion( SVC_PARMS *svc_parms)
+{
+    GCTRACE(3)( "\nGCasyncCompletion: %p Entry point.\n", svc_parms );
+
+    if ((svc_parms != NULL) &&
+        (!IsBadReadPtr(svc_parms, sizeof(SVC_PARMS))))
+    {
+        svc_parms->sys_err->errnum = 0;
+        svc_parms->status = OK;
+        (*svc_parms->gca_cl_completion) (svc_parms->closure);
+        GCTRACE(3)( "GCasyncCompletion: gca_service completed.\n" );
+    }
+    GCTRACE(3)( "GCasyncCompletion: Exit point.\n\n" );
+    return;
+}
+
+
+/******************************************************************************
+**
+** Name: GCsetWaitableTimer
+**
+** Description:
+**	Calls SetWaitableTimer for GClisten() requests to set the
+**	timer to go off 'svc_parms->timeout' seconds after calling the
+**	SetWaitableTimer function.
+**
+** Input:
+**	svc_parms		Ptr to service parms.
+**
+** Output:
+**      None.
+**
+** Returns:
+**	VOID
+**
+** History:
+**	26-Jul-98 (rajus01)
+**	    Created.
+**
+*******************************************************************************/
+static
+void 
+GCsetWaitableTimer( SVC_PARMS *svc_parms )
+{
+
+    LARGE_INTEGER	li;
+
+    LONGLONG nanosec = (LONGLONG) svc_parms->time_out * 10000;
+
+    GCTRACE(3) ("GCsetWaitableTimer: %p timeout(milli_sec)=%d\n",
+		svc_parms, svc_parms->time_out);
+
+    /* Negate the time so that SetWaitableTimer knows
+    ** we want relative time instead of absolute time.
+    ** This negative value tells the function to go off 
+    ** at a time relative to the time when we call the function.
+    */
+    nanosec=-nanosec;
+
+    /*
+    ** Copy the relative time from a __int64 into a
+    ** LARGE_INTEGER.
+    */
+
+    li.LowPart = (DWORD) (nanosec & 0xFFFFFFFF );
+    li.HighPart = (LONG) (nanosec >> 32 );
+
+    svc_parms->time_out = -1;
+			
+    (*pfnSetWaitableTimer)( hAsyncEvents[TIMEOUT], &li, 0, NULL, NULL, FALSE );
+
+    GCTRACE(3)("Setwaitable timer was called. \n");
+}
+
+/******************************************************************************
+**
+** Name: GClisten_timeout
+**
+** Description:
+**
+**	Callback function for (listen) TIMEOUT event.
+**
+** Input:
+**	None	
+**
+** Output:
+**      None.
+**
+** Returns:
+**	VOID
+**
+** History:
+**	27-Jul-98 (rajus01)
+**	    Created.
+**      04-Aug-2001 (lunbr01)  Bug 105239
+**          After a listen timeout, hide the asipc from the current
+**          session since we'll reuse it for the new listen.
+**
+*******************************************************************************/
+VOID
+GClisten_timeout()
+{
+    ASYNC_IOCB	*iocb      = &ListenIOCB;
+    SVC_PARMS	*svc_parms = iocb->svc_parms;
+    CS_SCB	*scb;
+    HANDLE pHandle;
+    DWORD  priority = 0;
+    static bool priorityWasSet = FALSE;
+ 
+
+    if (!priorityWasSet && is_gcn)
+    {
+        pHandle = OpenProcess(PROCESS_SET_INFORMATION | 
+            PROCESS_QUERY_INFORMATION, FALSE, GetCurrentProcessId());
+        if (pHandle)
+        {
+            priority = GetPriorityClass(pHandle);
+            GCTRACE(3)("GClisten_timeout: process prority is %d\n",priority);
+            if (priority != NORMAL_PRIORITY_CLASS && priority != 0 )
+                SetPriorityClass(pHandle, NORMAL_PRIORITY_CLASS);
+        }
+        CloseHandle(pHandle);
+    }
+    priorityWasSet = TRUE;
+
+    GCTRACE(3)("GClisten_timeout: Entry point.\n");
+
+    CSGET_SCB(&scb);
+
+    iocb->flags &= ~GC_IO_TIMEOUT;
+    /*
+    ** Since the listen asipc will be reused for the new listen
+    ** which will come in by calling the completion routine,
+    ** hide it from any further processing on this session by
+    ** clearing it in the svc_parms; otherwise, the GCdisconn
+    ** that is coming will clear all of the pipe channels.
+    */
+    svc_parms->gc_cb = NULL; 
+    GCerror( GC_TIME_OUT, 0 );
+}
+
+/******************************************************************************
+**
+** Name: GCrectimeout
+**
+** Description:
+**      Timer-expired callback routine for receives.  Sets async I/O timeout
+**	event when timer goes off.
+**
+** Inputs:
+**      uID         timer id
+**      uMsg        pointer to service parameter structure
+**      dwUser      pointer user-supplied callback data
+**      dw1         pointer to dw1
+**      dw2         pointer to dw2
+**
+** Outputs:
+**      asto->event is set
+**
+** Returns:
+**      None.
+**
+** History:
+**
+*******************************************************************************/
+static
+void
+CALLBACK
+GCrectimeout(UINT uID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2 )
+{
+    ASYNC_TIMEOUT *asto = (ASYNC_TIMEOUT *)dwUser;
+
+    WaitForSingleObject(gc_asto_mutex, INFINITE);
+    if ( asto->event != INVALID_HANDLE_VALUE )
+        SetEvent( asto->event );
+    ReleaseMutex(gc_asto_mutex);
+
+    return;
+}
+
+
+/******************************************************************************
+**
+** Name:  GCcreateSemaphore.
+**
+** Description:
+**  Create a syncronization semaphore for the purge event based on the
+**  association id and the process id.  This should synchronize the purge send/
+**  receive per connection exclusively.
+**
+** Inputs:
+**  Address of ASSOC_IPC control block for the session.
+**
+** Outputs:
+**  Handle of purge semaphore saved in ASSOC_IPC control block.
+**
+** Returns:
+**	0	On error.
+**	1  	OK...semaphore created.
+**
+** History:
+**	23-Oct-2001 (lunbr01) Bug 105793 & 106119
+**	    Move purge semaphore from global array to the per-session
+**          ASIPC control block. This is much simpler and removes the 
+**          restriction on max associations imposed by the pre-defined
+**          array size. The sequential 1-100 sem_id portion of the
+**          purge semaphore is replaced by the address of the ASIPC...
+**          which is also unique within process.  The purge semaphore
+**          will now be preserved across GCA_SAVE/GCA_RESTORE.
+**	06-Dec-2006 (drivi01)
+**	    Adding support for Vista, Vista requires "Global\" prefix for
+**	    shared objects as well.  Replacing calls to GVosvers with 
+**	    GVshobj which returns the prefix to shared objects.
+**
+*******************************************************************************/
+DWORD
+GCcreateSemaphore(ASSOC_IPC * asipc)
+{
+    DWORD   status = 0;
+    SECURITY_ATTRIBUTES	sa;
+    char		szSemaphoreName[MAX_PATH];
+    char		*ObjectPrefix;
+
+    iimksec (&sa);
+    sa.bInheritHandle = TRUE;
+    GVshobj(&ObjectPrefix);
+
+    if ( asipc->hPurgeSemaphore )
+    {
+	GCTRACE(2)( "GCcreateSemaphore - semaphore already created!?\n" );
+    }
+    else
+    {
+	STprintf(szSemaphoreName, "%sGCprg%x%x", ObjectPrefix,
+	     		GetCurrentProcessId(), asipc);
+
+	GCRESRC( asipc->hPurgeSemaphore, asipc->hPurgeSemaphore =
+			CreateSemaphore( &sa, 0, 5, szSemaphoreName ) );
+
+	GCTRACE(2)( "GCcreateSemaphore - Created %s [%d,%d]\n", 
+		szSemaphoreName, asipc, asipc->hPurgeSemaphore );
+        status = TRUE;
+    }
+
+    return(status);
+}
+
+/******************************************************************************
+**
+** Name:  GCdestroySemaphore.
+**
+** Description:
+**  Closes the purge semaphore.
+**
+** Inputs:
+**  Address of ASSOC_IPC control block for the session.
+**
+** Outputs:
+**  Clears handle of purge semaphore saved in ASSOC_IPC control block.
+**
+** Returns:
+**  none.
+**
+** History:
+**	23-Oct-2001 (lunbr01) Bug 105793 & 106119
+**	    Move purge semaphore from global array to the per-session
+**          ASIPC control block.
+**
+*******************************************************************************/
+VOID
+GCdestroySemaphore(ASSOC_IPC * asipc)
+{
+    if ( asipc->hPurgeSemaphore )
+    {
+        GCRESRC( asipc->hPurgeSemaphore, CloseHandle( asipc->hPurgeSemaphore ) );
+        GCTRACE(2)( "GCdestroySemaphore - Destroyed [%d,%d]\n",
+                    asipc, asipc->hPurgeSemaphore);
+        asipc->hPurgeSemaphore = NULL;
+    }
+}
+
+
+
+/******************************************************************************
+** Name: GCrpt_stats    - Report GC statistics
+**
+** Description:
+**
+**  Print/trace various internal statistics that can be used for problem
+**  diagnosis and performance tuning.  This function is currently called
+**  at shutdown from GCterminate() if tracing is on.
+**
+** Inputs:
+**      none
+**
+** Outputs:
+**      none
+**
+** Returns:
+**      none
+**
+** Exceptions:
+**      none
+**
+** Side Effects:
+**      none
+**
+** History:
+**	29-Apr-2009 (Bruce Lunsford) Bug 122009
+**	    Created.
+**
+******************************************************************************/
+VOID
+GCrpt_stats()
+{
+    i4	GCrequest_delay_calls;
+    i4	total, success, failures;
+
+    TRdisplay("\n%31*- GC Statistics %31*-\n\n");
+
+    TRdisplay(" *** Named Pipes (gcacl.c) ***\n");
+    TRdisplay("                         Total    Success  Failures\n");
+    TRdisplay("                       --------  --------  --------\n");
+
+    failures = GCrequest_calls - GCrequest_OK;
+    TRdisplay("  GCrequest (#)     : %9d %9d %9d\n",
+	      GCrequest_calls, GCrequest_OK, failures);
+
+    /*
+    **  Delayed calls are those that were not immediately completed.
+    **  That is, the connect to the server pipe did not return with success
+    **  so function GCconnectToServer() was invoked to block/wait until
+    **  a server pipe instance became available and could be connected to.
+    **
+    **  Report the total # of these as well as the average # of milliseconds
+    **  that it took for the operation to finally complete (for delayed ones
+    **  only...not including immediately connecting sessions).
+    **
+    **  While the delay time is not the full time it takes to do a connect,
+    **  it should be the bulk of it and warrants breaking out as a separate
+    **  statistic.
+    */
+    GCrequest_delay_calls = GCrequest_delay_OK + GCrequest_delay_FAIL;
+    TRdisplay("    - delayed (#)   : %9d %9d %9d\n",
+	      GCrequest_delay_calls, GCrequest_delay_OK, GCrequest_delay_FAIL);
+    if (GCrequest_delay_calls)
+    {
+        total   = (i4)((GCrequest_delay_OK_msecs + GCrequest_delay_FAIL_msecs) / GCrequest_delay_calls);
+        success = GCrequest_delay_OK   ? (i4)(GCrequest_delay_OK_msecs   / GCrequest_delay_OK)   : 0;
+        failures= GCrequest_delay_FAIL ? (i4)(GCrequest_delay_FAIL_msecs / GCrequest_delay_FAIL) : 0;
+        TRdisplay("         (avg msec) : %9d %9d %9d\n",
+		  total, success, failures);
+    }
+
+    TRdisplay("\n%77*-\n\n");
+
+    return;
+}
+
+/******************************************************************************
+*******************************************************************************
+**
+**  Named Pipe routines
+**
+*******************************************************************************
+******************************************************************************/
 
 /******************************************************************************
 **
@@ -5256,7 +6387,7 @@ GCconnectToServerPipe(SVC_PARMS *svc_parms)
     i4		time_to_connect = 0; /* Elapsed msecs to connect or fail*/
     i4		time_to_connect_approx = 0;  /* Approximate Elapsed msecs*/
 
-    GCTRACE(3)("GCconnectToServerPipe: Entry point.\n");
+    GCTRACE(3)("GCconnectToServerPipe: %p Entry point.\n", svc_parms);
 
     pipe_security.nLength              = sizeof(pipe_security);
     pipe_security.lpSecurityDescriptor = NULL;
@@ -5567,107 +6698,6 @@ GCconnectToStandardPipes(ASSOC_IPC *asipc)
 
 /******************************************************************************
 **
-** Name:  GCcreateSemaphore.
-**
-** Description:
-**  Create a syncronization semaphore for the purge event based on the
-**  association id and the process id.  This should synchronize the purge send/
-**  receive per connection exclusively.
-**
-** Inputs:
-**  Address of ASSOC_IPC control block for the session.
-**
-** Outputs:
-**  Handle of purge semaphore saved in ASSOC_IPC control block.
-**
-** Returns:
-**	0	On error.
-**	1  	OK...semaphore created.
-**
-** History:
-**	23-Oct-2001 (lunbr01) Bug 105793 & 106119
-**	    Move purge semaphore from global array to the per-session
-**          ASIPC control block. This is much simpler and removes the 
-**          restriction on max associations imposed by the pre-defined
-**          array size. The sequential 1-100 sem_id portion of the
-**          purge semaphore is replaced by the address of the ASIPC...
-**          which is also unique within process.  The purge semaphore
-**          will now be preserved across GCA_SAVE/GCA_RESTORE.
-**	06-Dec-2006 (drivi01)
-**	    Adding support for Vista, Vista requires "Global\" prefix for
-**	    shared objects as well.  Replacing calls to GVosvers with 
-**	    GVshobj which returns the prefix to shared objects.
-**
-*******************************************************************************/
-
-DWORD
-GCcreateSemaphore(ASSOC_IPC * asipc)
-{
-    DWORD   status = 0;
-    SECURITY_ATTRIBUTES	sa;
-    char		szSemaphoreName[MAX_PATH];
-    char		*ObjectPrefix;
-
-    iimksec (&sa);
-    sa.bInheritHandle = TRUE;
-    GVshobj(&ObjectPrefix);
-
-    if ( asipc->hPurgeSemaphore )
-    {
-	GCTRACE(2)( "GCcreateSemaphore - semaphore already created!?\n" );
-    }
-    else
-    {
-	STprintf(szSemaphoreName, "%sGCprg%x%x", ObjectPrefix,
-	     		GetCurrentProcessId(), asipc);
-
-	GCRESRC( asipc->hPurgeSemaphore, asipc->hPurgeSemaphore =
-			CreateSemaphore( &sa, 0, 5, szSemaphoreName ) );
-
-	GCTRACE(2)( "GCcreateSemaphore - Created %s [%d,%d]\n", 
-		szSemaphoreName, asipc, asipc->hPurgeSemaphore );
-        status = TRUE;
-    }
-
-    return(status);
-}
-
-/******************************************************************************
-**
-** Name:  GCdestroySemaphore.
-**
-** Description:
-**  Closes the purge semaphore.
-**
-** Inputs:
-**  Address of ASSOC_IPC control block for the session.
-**
-** Outputs:
-**  Clears handle of purge semaphore saved in ASSOC_IPC control block.
-**
-** Returns:
-**  none.
-**
-** History:
-**	23-Oct-2001 (lunbr01) Bug 105793 & 106119
-**	    Move purge semaphore from global array to the per-session
-**          ASIPC control block.
-**
-*******************************************************************************/
-
-VOID
-GCdestroySemaphore(ASSOC_IPC * asipc)
-{
-    if ( asipc->hPurgeSemaphore )
-    {
-        GCRESRC( asipc->hPurgeSemaphore, CloseHandle( asipc->hPurgeSemaphore ) );
-        GCTRACE(2)( "GCdestroySemaphore - Destroyed [%d,%d]\n",
-                    asipc, asipc->hPurgeSemaphore);
-        asipc->hPurgeSemaphore = NULL;
-    }
-}
-
-/*
 ** Name: GCqualifiedPipeName   - format a pipe name 
 **
 ** Description:	Format a pipe name, given a fully qualified name
@@ -5688,7 +6718,8 @@ GCdestroySemaphore(ASSOC_IPC * asipc)
 ** History:
 **	22-apr-1997 (canor01)
 **	    Created.
-*/
+**
+*******************************************************************************/
 static
 void
 GCqualifiedPipeName( char *partner_name, char *infix, char *pipename )
@@ -5712,7 +6743,8 @@ GCqualifiedPipeName( char *partner_name, char *infix, char *pipename )
     return;
 }
 
-/*
+/******************************************************************************
+**
 ** Name: GCNamePipeSend
 **
 ** Description:
@@ -5722,7 +6754,7 @@ GCqualifiedPipeName( char *partner_name, char *infix, char *pipename )
 **
 ** Inputs:
 **      fd          handle to the write pipe
-**      svc_parms   pointer to service paramater structure
+**      svc_parms   pointer to service parameter structure
 **      asipc       pointer to association parameter structure
 **      iocb        pointer to I/O control block
 **
@@ -5731,8 +6763,8 @@ GCqualifiedPipeName( char *partner_name, char *infix, char *pipename )
 **      svc_parms->status
 **
 ** Returns:
-**      status      0 success
-**                  !0 failure
+**      status      0 or ERROR_IO_PENDING success
+**                  else failure
 **
 ** History:
 **      25-Jul-97 (fanra01)
@@ -5749,7 +6781,12 @@ GCqualifiedPipeName( char *partner_name, char *infix, char *pipename )
 **	    to the pipe, per recommendation in Microsoft docs.
 **	    Clean up tracing: "GCsend" changed to "GCNamePipeSend" and
 **	    more detail added to distinguish previously identical traces.
-*/
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Move increment of asyncIoPending (on success) and MEfree of
+**	    iocb (on failure) up to caller for more consistency across
+**	    various types of sends. Requires status to be set correctly
+**	    upon return.
+*******************************************************************************/
 DWORD
 GCNamePipeSend( HANDLE fd, SVC_PARMS *svc_parms, ASSOC_IPC *asipc,
     ASYNC_IOCB *iocb, VOID (WINAPI *completion)(DWORD, DWORD, LPOVERLAPPED) )
@@ -5768,7 +6805,6 @@ GCNamePipeSend( HANDLE fd, SVC_PARMS *svc_parms, ASSOC_IPC *asipc,
         {
 	    DWORD errstat;
 
-	    MEfree((PTR)iocb);
             if ( status == ERROR_NO_DATA ) /* Pipe being closed */
                 errstat = GC_ASSOC_FAIL;
             else
@@ -5776,15 +6812,13 @@ GCNamePipeSend( HANDLE fd, SVC_PARMS *svc_parms, ASSOC_IPC *asipc,
 
             GCTRACE(1)( "GCNamePipeSend: WriteFileEx status %d, errstat=%d\n",
 			 status, errstat);
-            svc_parms->sys_err->errnum = status;
-            svc_parms->status = (errstat);
-            (*svc_parms->gca_cl_completion) (svc_parms->closure);
+	    svc_parms->sys_err->errnum = status;
+	    svc_parms->status = (errstat);
+	    (*svc_parms->gca_cl_completion) (svc_parms->closure);
         }
         else
         {
-            InterlockedIncrement( &asipc->asyncIoPending );
-            GCTRACE(3)("GCNamePipeSend: (Write pending) asyncIoPending=%d\n",
-			asipc->asyncIoPending );
+            GCTRACE(3)("GCNamePipeSend: (Write pending)\n");
         }
     }
     else
@@ -5793,29 +6827,14 @@ GCNamePipeSend( HANDLE fd, SVC_PARMS *svc_parms, ASSOC_IPC *asipc,
         status = GetLastError();
         if ((status != ERROR_SUCCESS) && (status != ERROR_IO_PENDING))
             GCTRACE(1)( "GCNamePipeSend: WriteFileEx success but status=%d\n", status );
-        InterlockedIncrement( &asipc->asyncIoPending );
-        GCTRACE(3)("GCNamePipeSend: (Write successful) asyncIoPending=%d\n",
-		    asipc->asyncIoPending );
+        GCTRACE(3)("GCNamePipeSend: (Write successful)\n");
+	status = 0;
     }
     return (status);
 }
 
-static
-void
-CALLBACK
-GCrectimeout(UINT uID, UINT uMsg, DWORD dwUser, DWORD dw1, DWORD dw2 )
-{
-    ASYNC_TIMEOUT *asto = (ASYNC_TIMEOUT *)dwUser;
-
-    WaitForSingleObject(gc_asto_mutex, INFINITE);
-    if ( asto->event != INVALID_HANDLE_VALUE )
-        SetEvent( asto->event );
-    ReleaseMutex(gc_asto_mutex);
-
-    return;
-}
-
-/*
+/******************************************************************************
+**
 ** Name: GCNamePipeReceive
 **
 ** Description:
@@ -5823,7 +6842,7 @@ GCrectimeout(UINT uID, UINT uMsg, DWORD dwUser, DWORD dw1, DWORD dw2 )
 **
 ** Inputs:
 **      fd          handle to the write pipe
-**      svc_parms   pointer to service paramater structure
+**      svc_parms   pointer to service parameter structure
 **      asipc       pointer to association parameter structure
 **      iocb        pointer to I/O control block
 **      expeditied  flag indicates read channel
@@ -5867,7 +6886,11 @@ GCrectimeout(UINT uID, UINT uMsg, DWORD dwUser, DWORD dw1, DWORD dw2 )
 **	06-Aug-2009 (Bruce Lunsford) Sir 122426
 **	    Check for error/warning conditions after successful read
 **	    from the pipe, per recommendation in Microsoft docs.
-*/
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Add trace at entry.  Remove MEfree(iocb)'s since the send/recv
+**	    iocbs are now preallocated and not freed until disconnect.
+**
+*******************************************************************************/
 VOID
 GCNamePipeReceive (HANDLE fd, SVC_PARMS *svc_parms, ASSOC_IPC *asipc,
     ASYNC_IOCB *iocb, BOOL expedited,
@@ -5880,6 +6903,8 @@ SECURITY_ATTRIBUTES sa;
 bool       sync_flag = svc_parms->flags.run_sync;
 STATUS     errstat;
 DWORD      status_wait = 0;
+
+    GCTRACE(3)("GCNamePipeReceive: %p Entry point.\n", svc_parms);
 
     iimksec (&sa);
 
@@ -5929,8 +6954,6 @@ DWORD      status_wait = 0;
         {
             if ((status = GetLastError()) != ERROR_IO_PENDING)
             {
-
-                MEfree((PTR)iocb);
                 if ( expedited == TRUE )
                 {
                     SleepEx( 0, TRUE );
@@ -5957,8 +6980,6 @@ DWORD      status_wait = 0;
             if (!PeekNamedPipe(fd, NULL, 0, NULL, &dwAvail, NULL))
             {
                 status = GetLastError();
-
-                MEfree((PTR)iocb);
                 if ( expedited == TRUE )
                 {
                     SleepEx( 0, TRUE );
@@ -5971,7 +6992,6 @@ DWORD      status_wait = 0;
             {
                 if (!dwAvail)
                 {
-                    MEfree((PTR)iocb);
                     GCerror(GC_TIME_OUT, 0);
                 }
             }
@@ -6005,12 +7025,11 @@ DWORD      status_wait = 0;
 		             if ( pfnCancelIo )
                                  (*pfnCancelIo)( fd );
                              CloseHandle(iocb->Overlapped.hEvent);
-                             MEfree((PTR)iocb);
                              GCerror(GC_TIME_OUT, 0);
                              break;
                         case WAIT_OBJECT_0:
                              /* The event for the IO completed.  */
-                             GCTRACE(4)("GCNamePipeReceive: Sync IO event signalled..get data\n" );
+                             GCTRACE(4)("GCNamePipeReceive: Sync IO event signaled..get data\n" );
 			     GetOverlappedResult(fd, &iocb->Overlapped, &dwAvail,
 			          TRUE);
 			     GCreceiveCompletion(svc_parms, &status, dwAvail);
@@ -6018,7 +7037,6 @@ DWORD      status_wait = 0;
                         default:
                              GCTRACE(4)("GCNamePipeReceive: sync wait default - error %x\n", status_wait );
                              CloseHandle(iocb->Overlapped.hEvent);
-                             MEfree((PTR)iocb);
                              if ( expedited == TRUE )
                              {
                                  SleepEx( 0, TRUE );
@@ -6032,7 +7050,6 @@ DWORD      status_wait = 0;
 
                 default:
                     CloseHandle(iocb->Overlapped.hEvent);
-                    MEfree((PTR)iocb);
                     if ( expedited == TRUE )
                     {
                         SleepEx( 0, TRUE );
@@ -6050,20 +7067,827 @@ DWORD      status_wait = 0;
         GCRESRC( iocb->Overlapped.hEvent,
             CloseHandle(iocb->Overlapped.hEvent) );
         ReleaseSemaphore (SyncEvent, 1, NULL);
-        MEfree((PTR)iocb);
         GCerror(OK, 0);
     }
     return;
 }
 
+
+/******************************************************************************
+**
+** Function: GCcloseAllPipes
+**
+** Description:
+**	Close all of the named pipes.
+**
+** History:
+**	13-nov-95 (emmag)
+**	    Changed to close four pipes instead of two.
+**	06-may-1999 (somsa01)
+**	    For the Server-ended pipes, we must also perform a
+**	    DisconnectNamedPipe() before closing the handle.
+**	10-may-1999 (somsa01)
+**	    Remove the FlushFileBuffers() calls from last change, as they
+**	    were causing hangs during the Replicator handoffqa tests.
+**      01-Oct-1999 (fanra01)
+**          Removed 0 length writes on receive pipes as all IO should be
+**          completed by the time we get this call.
+**
+******************************************************************************/
+VOID
+GCcloseAllPipes(ASSOC_IPC * asipc)
+{
+        int i = 0;
+
+	if (asipc->SndStdChan)
+	{
+	    GCRESRC( asipc->SndStdChan, CloseHandle(asipc->SndStdChan) );
+	    asipc->SndStdChan  = NULL;
+	}
+	if (asipc->RcvStdChan)
+	{
+	    GCRESRC( asipc->RcvStdChan, CloseHandle(asipc->RcvStdChan) );
+	    asipc->RcvStdChan  = NULL;
+	}
+	if (asipc->SndExpChan)
+	{
+	    GCRESRC( asipc->SndExpChan, CloseHandle(asipc->SndExpChan) );
+	    asipc->SndExpChan  = NULL;
+	}
+	if (asipc->RcvExpChan)
+	{
+	    GCRESRC( asipc->RcvExpChan, CloseHandle(asipc->RcvExpChan) );
+	    asipc->RcvExpChan  = NULL;
+	}
+	if (asipc->ClientReadHandle)
+	{
+	    GCRESRC( asipc->ClientReadHandle,
+                CloseHandle(asipc->ClientReadHandle) );
+	    asipc->ClientReadHandle  = NULL;
+	}
+	return;
+}
+
+/******************************************************************************
+*******************************************************************************
+**
+**  Network Protocol Driver routines
+**
+*******************************************************************************
+******************************************************************************/
+
+
+/******************************************************************************
+** Name: GC_get_driver - Get driver info from local IPC PCT.
+**
+** Description:
+**
+** This routine is called by GCinitiate() to look up the driver in the 
+** local IPC driver table (aka, local PCT) if Ingres/environment
+** symbol II_GC_PROT is defined.  If not defined or no match is found,
+** then return NULL (which implies that the embedded, default, named pipes
+** logic should be used).
+**
+** If a GCC-type driver has been requested and is found in the local PCT,
+** then initialize various items for the driver, such as the driver
+** control block.
+**
+** Inputs:
+**     None in parmlist
+**     Requested driver id (such as "tcp_ip") in II_GC_PROT env variable
+**     Local IPC PCT (global)
+**
+** Outputs:
+**     None in parmlist
+**     Alloc'd and initialized driver control block (dcb) plus related items
+**
+** Returns:
+**     GCC_PCE	Address of local PCT entry for communications driver
+**
+** Exceptions:
+**     none
+**
+** History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Created.  (modeled after Unix version plus GCpinit() on Windows)
+**
+******************************************************************************/
+GCC_PCE  *
+GC_get_driver()
+{
+	char	*driver = NULL;		/* driver name */
+	GCC_PCE	*driver_pce = NULL;	/* Set default driver -> none */
+	THREAD_EVENTS	*driver_thread;	/* driver thread (dcb) */
+	STATUS		status;
+	STATUS		generic_status;
+	CL_ERR_DESC	system_status;
+
+	/* Scan for alternate driver */
+
+	NMgtIngAt( "II_GC_PROT", &driver );
+
+	if( driver && *driver )
+	{
+	    GCC_PCE	*pct = &GCdrivers[0];
+
+	    while( pct->pce_pid && STcasecmp( driver, pct->pce_pid ) )
+		    pct++;
+	    
+	    if( pct->pce_pid )
+	    {
+		driver_pce = pct;
+	    }
+	    else
+	    {
+	        GCTRACE(1) ("GC_get_driver: II_GC_PROT='%s' driver not found--using named pipes instead\n",
+			driver);
+	    }
+	}
+
+	/*
+	** If no GCC net driver will be used, we're all done here.
+	*/
+	if (!driver_pce)
+	    return NULL;
+
+	GCTRACE(1) ("GC_get_driver: '%s' driver selected for local protocol\n",
+		     driver);
+
+	/*
+	** Initialize some GCC objects to simulate a GCC environment
+	** for the GCC network protocol driver.  This is basically
+	** a subset of what is done by GCpinit() in a true GCC environment.
+	** Setting 1st parm (pct) to NULL indicates a full PCT init is not
+	** required.
+	*/
+	if ( (status = GCpinit( NULL, &generic_status, &system_status )) != OK )
+	    return NULL;
+	
+        driver_thread = (THREAD_EVENTS *)MEreqmem( 0,
+                                                sizeof(THREAD_EVENTS),
+                                                TRUE, NULL );
+	if (driver_thread == NULL)
+	{
+	    GCTRACE(1) ("GC_get_driver: Unable to alloc driver control block (dcb) - size=%d",
+		     sizeof(THREAD_EVENTS));
+	    return NULL;
+	}
+
+	/*
+	** Init queues for driver thread.
+	*/
+	QUinit( &driver_thread->incoming_head );
+	QUinit( &driver_thread->process_head );
+
+	/*
+	** Assign the driver thread name.
+	*/
+	driver_thread->thread_name = driver_pce->pce_pid;
+
+	/*
+	** Point the PCE's pce_dcb (driver control block) to this
+	** thread event structure to enable the driver to find it.
+	*/
+	driver_pce->pce_dcb = (PTR)driver_thread;
+
+	return driver_pce;
+}
+
+
+/******************************************************************************
+**
+** Name: GCDriverRegister
+**
+** Description:
+**      Calls network protocol driver to do GCC_OPEN for GCregister
+**
+**	NOTE that caller of GCregister() assumes a synchronous return
+**	in that, unless there is an error, the output values (listen_id)
+**	are expected to have been set upon return.  Ie, we can't return
+**	now without finishing and then expect to be able to to call the
+**	gca_cl_completion later with the results.
+**	Fortunately, the driver function GCC_OPEN is synchronous and
+**	calls the completion routine (compl_exit) before returning.
+**	For that reason, we can take a shortcut and provide a no-op
+**	completion routine to the GCC driver and process the results here.
+**
+** Inputs:
+**      svc_parms   pointer to service parameter structure
+**      asipc       pointer to association parameter structure
+**      iocb        pointer to I/O control block
+**
+** Outputs:
+**      svc_parms->sys_err->errnum
+**      svc_parms->status
+**      svc_parms->listen_id
+**      iocb->flags
+**
+** Returns:
+**      status      0 success
+**                  !0 failure
+**
+** History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Created.
+**
+*******************************************************************************/
+DWORD
+GCDriverRegister(SVC_PARMS *svc_parms, ASSOC_IPC *asipc, ASYNC_IOCB *iocb)
+{
+    DWORD   status = 0;
+    GCC_P_PLIST *gcccl_parmlist = &iocb->gcccl_parmlist;
+
+    GCTRACE(3)("GCDriverRegister: %p Entry point.\n",
+		svc_parms);
+
+    MEfill(sizeof(GCC_P_PLIST), 0, gcccl_parmlist);
+    gcccl_parmlist->function_invoked = GCC_OPEN;
+    gcccl_parmlist->pce        = GCdriver_pce;
+    gcccl_parmlist->compl_exit = NULL;
+    gcccl_parmlist->compl_id   = NULL;
+    gcccl_parmlist->function_parms.open.port_id  = GCdriver_pce->pce_port;
+    status = (*GCdriver_pce->pce_protocol_rtne)(
+			gcccl_parmlist->function_invoked, gcccl_parmlist);
+    if(( status != OK ) || (gcccl_parmlist->generic_status != OK))
+    {
+	GCTRACE(1)("GCDriverRegister: Local network GCC_OPEN failed for protocol '%s' on port '%s' with status=%d/%x system_status=%d\n",
+		GCdriver_pce->pce_pid,
+		gcccl_parmlist->function_parms.open.port_id,
+		status,
+		gcccl_parmlist->generic_status,
+		gcccl_parmlist->system_status.callid);
+	GCerror(GC_LSN_FAIL, status ? status : gcccl_parmlist->system_status.callid) (status);
+    }
+    svc_parms->listen_id = gcccl_parmlist->function_parms.open.lsn_port;
+    iocb->flags |= GC_IO_CREATED;
+    return (status);
+}
+
+
+/******************************************************************************
+**
+** Name: GCDriverRequest
+**
+** Description:
+**      Calls network protocol driver to do connect for GCrequest
+**
+** Inputs:
+**      svc_parms   pointer to service parameter structure
+**        -> partner_host      target host (may be NULL)
+**        -> partner_name      target port
+**      iocb        pointer to I/O control block
+**
+** Outputs:
+**      svc_parms->sys_err->errnum
+**      svc_parms->status
+**
+** Returns:
+**	VOID
+**
+** History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Created.
+**
+*******************************************************************************/
+VOID
+GCDriverRequest(SVC_PARMS *svc_parms, ASYNC_IOCB *iocb)
+{
+    DWORD   status = 0;
+    ASSOC_IPC	*asipc = (ASSOC_IPC *)svc_parms->gc_cb;
+    GCC_P_PLIST *gcccl_parmlist = &iocb->gcccl_parmlist;
+
+    GCTRACE(3)("GCDriverRequest: %p Entry point.\n",
+		svc_parms);
+
+    MEfill(sizeof(GCC_P_PLIST), 0, gcccl_parmlist);
+    gcccl_parmlist->function_invoked = GCC_CONNECT;
+    gcccl_parmlist->pce        = GCdriver_pce;
+    gcccl_parmlist->compl_exit = (void (*)(PTR))GCDriverRequest_exit;
+    gcccl_parmlist->compl_id   = (PTR)iocb;
+    if (svc_parms->partner_host == NULL)
+        gcccl_parmlist->function_parms.connect.node_id = LOCALHOST;
+    else
+        gcccl_parmlist->function_parms.connect.node_id = svc_parms->partner_host;
+    gcccl_parmlist->function_parms.connect.port_id  = svc_parms->partner_name;
+
+    status = (*GCdriver_pce->pce_protocol_rtne)(
+			gcccl_parmlist->function_invoked, gcccl_parmlist);
+
+    if( status != OK )  /* No callback scheduled ... handle now */
+	(*gcccl_parmlist->compl_exit)( gcccl_parmlist->compl_id );
+
+    return;
+}
 
 /******************************************************************************
 **
-**  windows95 routines
+** Name: GCDriverRequest_exit	- GCC driver completion routine for GCrequest
+**
+** Description:
+** This routine is called by GCC driver when GCC_CONNECT is completed.
+** It was specified as the completion exit by GCDriverRequest when it invoked
+** the protocol driver.  It is passed a pointer to an IOCB, which has
+** pointers to all things relevant, such as the gcacl svc_parms as well
+** as the GCC parmlist.
+**
+** Inputs:
+**	IOCB
+**
+** Outputs:
+**	asipc->GCdriver_pcb
+**	svc_parms->size_advise  Suggested buffer size for communication
+**	                        optimization.
+**
+** Returns:
+**	VOID
+**
+** History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Created.
 **
 ******************************************************************************/
+VOID
+GCDriverRequest_exit( PTR ptr )
+{
+    ASYNC_IOCB  *iocb      = (ASYNC_IOCB *)ptr;
+    SVC_PARMS   *svc_parms = iocb->svc_parms;
+    ASSOC_IPC   *asipc     = (ASSOC_IPC *)svc_parms->gc_cb;
+    GCA_GCB	*gcb       = NULL;
+    static int	counter	   = -1;  /* const */
+    GCC_P_PLIST *gcccl_parmlist = &iocb->gcccl_parmlist;
+    STATUS     status = OK;
 
-/*
+    GCTRACE(3)("GCDriverRequest_exit: %p Entry point. gcccl_parmlist=0x%p\n",
+		svc_parms, gcccl_parmlist);
+
+    /*
+    ** If connect failed, return an error.
+    */
+    if (gcccl_parmlist->generic_status != OK)
+    {
+	GCTRACE(1)("GCDriverRequest_exit: Local network GCC_CONNECT failed for protocol '%s' to node %s port '%s' with status=%x system_status=%d\n",
+		    GCdriver_pce->pce_pid,
+		    gcccl_parmlist->function_parms.connect.node_id,
+		    gcccl_parmlist->function_parms.connect.port_id,
+		    gcccl_parmlist->generic_status,
+		    gcccl_parmlist->system_status.callid);
+	MEfree( iocb );
+	/*
+	** Map GCC CL errors to GCA CL errors
+	*/
+	switch(gcccl_parmlist->system_status.callid)
+	{
+	    case ER_alloc:
+		status = GC_RQ_RESOURCE;
+		break;
+	    case ER_connect:
+		status = GC_NO_PARTNER;
+		break;
+	    default:
+		status = GC_RQ_FAIL;
+	}
+	GCerror(status, gcccl_parmlist->system_status.callid);
+    }
+
+    /*
+    ** Allocate a connection block (GCA_GCB) for gcacl driver use.
+    ** Then, initialize it and link to it from the asipc.
+    */
+    gcb = (GCA_GCB *)MEreqmem( 0, sizeof(GCA_GCB), TRUE, NULL );
+    if (gcb == NULL)
+    {
+	GCTRACE(1) ("GCDriverRequest_exit: Unable to alloc driver connection block (gcb) - size=%d", sizeof(*gcb));
+	GCerror(GC_RQ_RESOURCE, ER_alloc);
+    }
+
+    gcb->id = ( counter += 2 );
+    gcb->GCdriver_pce = (PTR)GCdriver_pce;
+    gcb->GCdriver_pcb = gcccl_parmlist->pcb;
+    gcb->buffer_guard = GCB_BUFFER_GUARD;
+    asipc->gca_gcb = gcb;	/* link to it from the asipc */
+
+    /*
+    ** Advise user of optimum size.
+    **
+    ** Currently based on GC_SIZE_ADVISE which is size of internal
+    ** gcacl buffer for drivers (see GCB structure); this also happens
+    ** to match what is done on Unix.  An alternative would be to base
+    ** it on gcccl_parmlist->pce->pce_pkt_sz (minus sizeof(GC_MTYP)).
+    ** Yet another option would be to make it configurable; for instance,
+    ** II_GCA_PIPESIZE is used to configure size_advise for named pipes
+    ** and this could also be used here, though the name is not ideal.
+    ** With named pipes, the server (listen) side sets the size advise and
+    ** the client (connecting) side uses the server's setting by checking
+    ** an attribute of the pipe.  This capability doesn't currently exist
+    ** with the drivers so just make sure both sides set the same value.
+    */
+    svc_parms->size_advise = GC_SIZE_ADVISE - sizeof(GC_MTYP);
+
+    /*
+    ** The following will kick off part 2 of the request (aka, connect)
+    ** processing.  This is the same code used by pipes logic once a
+    ** connection has been set up for an outgoing connection.
+    */
+
+    /*
+    ** Send connection peer info data to server
+    */
+    status = GCrequestSendPeer(svc_parms, iocb);
+    if (status != OK)
+    {
+	svc_parms->status = NP_IO_FAIL;
+	MEfree(iocb);
+	svc_parms->sys_err->errnum = status;
+	(*svc_parms->gca_cl_completion) (svc_parms->closure);
+    }
+
+    /*
+    ** Save pointer to iocb so that it can be freed in GCrelease.
+    ** Since the gca_cl_completion() will be invoked directly from
+    ** the GCDriverSend() state machine at lower layers when the send
+    ** IO completes (successfully or not), we don't get control back
+    ** when that happens, so don't have a good way to free the iocb.
+    ** The GCDriverSend layer doesn't know about the iocb, so it can't
+    ** really free it either.  It also can't be freed until the send is
+    ** fully completed because the send buffer is the connect block,
+    ** which is concatenated to the iocb.
+    */
+    asipc->connect_iocb = iocb;
+    return;
+}
+
+
+/******************************************************************************
+**
+** Name: GCDriverSendPeer
+**
+** Description:
+**      Calls network protocol driver to do send of the CONNECT info
+**	(ie, send GC peer info to partner).
+**
+** Inputs:
+**      svc_parms   pointer to service parameter structure
+**        -> svc_buffer       pointer to data to be sent
+**        -> svc_send_length  length  of data to be sent
+**      connect_block   pointer to CONNECT info to be sent
+**
+** Outputs:
+**      svc_parms->sys_err->errnum
+**      svc_parms->status
+**
+** Returns:
+**      VOID
+**
+** History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Created.
+**
+*******************************************************************************/
+VOID
+GCDriverSendPeer(SVC_PARMS *svc_parms, CONNECT *connect_block)
+{
+    ASSOC_IPC	*asipc = (ASSOC_IPC *)svc_parms->gc_cb;
+    GCA_GCB	*gcb   = (GCA_GCB *)asipc->gca_gcb;
+
+    GCTRACE(3)("GCDriverSendPeer %d: Entry point.\n",
+		gcb->id);
+
+    /*
+    ** Hijack svc_parms from GCrequest and use for send peer info.
+    */
+    svc_parms->time_out = -1;   /* Don't timeout subsequent ops */
+    svc_parms->flags.flow_indicator = 0;
+    svc_parms->svc_buffer = (PTR)connect_block;
+    svc_parms->svc_send_length = connect_block->v2.length;
+
+    /*
+    ** On Unix/Linux servers, detection of the original (Unix/Linux)
+    ** peer info structure relies on the structure length (see
+    ** GC_recvpeer_sm() on Unix/Linux).  If the current peer
+    ** structure happens to be the same size, add one additional 
+    ** (garbage) byte to avoid confusion...in case we are connecting
+    ** via "direct connect" to a compatible Unix/Linux server.
+    */
+    if ( svc_parms->svc_send_length == sizeof( GC_PEER_ORIG ) )  
+    	svc_parms->svc_send_length++;
+
+    GCDriverSend( svc_parms );
+
+    /*
+    ** Increment connect counter in stats even though there is a
+    ** (small) chance that the send could fail in the completion
+    ** callback.  It's not critical that the counter be correct
+    ** since it is informational only.  Incrementing it here avoids
+    ** having to set up a special exit callback for GCDriverSend().
+    */
+    if( svc_parms->status == OK)
+	GCrequest_OK++;
+
+    return;
+}
+
+
+/******************************************************************************
+**
+** Name: GCDriverListen
+**
+** Description:
+**      Calls network protocol driver to do listen.
+**
+** Inputs:
+**      svc_parms   pointer to service parameter structure
+**      iocb        pointer to I/O control block
+**
+** Outputs:
+**      svc_parms->sys_err->errnum
+**      svc_parms->status
+**      iocb->flags
+**
+** Returns:
+**      status      0 success
+**                  !0 failure
+**
+** History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Created.
+**
+*******************************************************************************/
+DWORD
+GCDriverListen(SVC_PARMS *svc_parms, ASYNC_IOCB *iocb)
+{
+    DWORD   status = 0;
+    GCC_P_PLIST *gcccl_parmlist = &iocb->gcccl_parmlist;
+
+    GCTRACE(3)("GCDriverListen: %p Entry point.\n", svc_parms);
+
+    MEfill(sizeof(GCC_P_PLIST), 0, gcccl_parmlist);
+    gcccl_parmlist->function_invoked = GCC_LISTEN;
+    gcccl_parmlist->pce        = GCdriver_pce;
+    gcccl_parmlist->compl_exit = (void (*)(PTR))GCDriverListen_exit;
+    gcccl_parmlist->compl_id   = (PTR)iocb;
+    gcccl_parmlist->function_parms.listen.port_id  = GCdriver_pce->pce_port;
+    status = (*GCdriver_pce->pce_protocol_rtne)(
+			gcccl_parmlist->function_invoked, gcccl_parmlist);
+
+    if( status != OK )  /* No callback scheduled ... handle now */
+	(*gcccl_parmlist->compl_exit)( gcccl_parmlist->compl_id );
+
+    if ( svc_parms->time_out >= 0 &&
+         ! (iocb->flags & GC_IO_TIMEOUT) )
+    {
+        if ( !Is_w95 )
+	    GCsetWaitableTimer( svc_parms );
+	iocb->flags |= GC_IO_TIMEOUT;
+    }
+    iocb->flags |= GC_IO_LISTEN;
+    return (status);
+}
+
+/******************************************************************************
+**
+** Name: GCDriverListen_exit	- GCC driver completion routine for GClisten
+**
+** Description:
+** This routine is called by GCC driver when GCC_LISTEN is completed.
+** It was specified as the completion exit by GCDriverListen when it invoked
+** the protocol driver.  It is passed a pointer to an IOCB, which has
+** pointers to all things relevant, such as the gcacl svc_parms as well
+** as the GCC parmlist.
+**
+** Inputs:
+**	IOCB
+**
+** Outputs:
+**	asipc->GCdriver_pcb
+**
+** Returns:
+**	VOID
+**
+** History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Created.
+**
+******************************************************************************/
+VOID
+GCDriverListen_exit( PTR ptr )
+{
+    ASYNC_IOCB  *iocb      = (ASYNC_IOCB *)ptr;
+    SVC_PARMS   *svc_parms = iocb->svc_parms;
+    ASSOC_IPC   *asipc     = (ASSOC_IPC *)svc_parms->gc_cb;
+    GCA_GCB	*gcb       = NULL;
+    static int	counter = 0;    /* const */ /* just for id'ing */
+    GCC_P_PLIST *gcccl_parmlist = &iocb->gcccl_parmlist;
+    STATUS	status = OK;
+
+    GCTRACE(3)("GCDriverListen_exit: %p Entry point. gcccl_parmlist=0x%p\n",
+		svc_parms, gcccl_parmlist);
+
+    /*
+    ** If listen failed, return an error.
+    */
+    if (gcccl_parmlist->generic_status != OK)
+    {
+	GCTRACE(1)("GCDriverListen_exit: %p Local network GCC_LISTEN failed for protocol '%s' on port '%s' with status=%x system_status=%d\n",
+		    svc_parms,
+		    GCdriver_pce->pce_pid,
+		    gcccl_parmlist->function_parms.listen.port_id,
+		    gcccl_parmlist->generic_status,
+		    gcccl_parmlist->system_status.callid);
+	/*
+	** Map GCC CL errors to GCA CL errors
+	*/
+	switch(gcccl_parmlist->system_status.callid)
+	{
+	    case ER_alloc:
+	    case ER_threadcreate:
+		status = GC_LSN_RESOURCE;
+		break;
+	    case ER_accept:
+		status = GC_ASSOC_FAIL;
+		break;
+	    default:
+		status = GC_LSN_FAIL;
+	}
+	GCerror(status, gcccl_parmlist->system_status.callid);
+    }
+
+    /*
+    ** Set flag if client is remote.
+    */
+    if ( !(gcccl_parmlist->options & GCC_LOCAL_CONNECT) )
+	asipc->flags |= GC_IPC_IS_REMOTE;
+    /*
+    ** Allocate a connection block (GCA_GCB) for gcacl driver use.
+    ** Then, initialize it and link to it from the asipc.
+    */
+    gcb = (GCA_GCB *)MEreqmem( 0, sizeof(GCA_GCB), TRUE, NULL );
+    if (gcb == NULL)
+    {
+	GCTRACE(1) ("GCDriverListen_exit: Unable to alloc driver connection block (gcb) - size=%d", sizeof(*gcb));
+	GCerror(GC_LSN_RESOURCE, ER_alloc);
+    }
+
+    gcb->id = ( counter += 2 );
+    gcb->GCdriver_pce = (PTR)GCdriver_pce;
+    gcb->GCdriver_pcb = gcccl_parmlist->pcb;
+    gcb->buffer_guard = GCB_BUFFER_GUARD;
+    asipc->gca_gcb = gcb;	/* link to it from the asipc */
+
+    /*
+    ** The following will kick off part 2 of the listen processing.
+    ** This is the same as when pipes logic detects and connects to
+    ** an incoming connection.
+    **
+    ** For consistency with pipes logic, originally the LISTEN event
+    ** was set here.  This worked for IIGCx servers using GCexec(),
+    ** but not for DBMS which uses CSsuspend(); the latter assumes
+    ** that LISTEN processing is complete once the event_func[LISTEN]
+    ** (=GClisten2()) returns.  Since we still must do an "async" receive
+    ** to get the CONNECT block (driver doesn't have a "sync/blocking"
+    ** receive) and don't want to hang out here in a wait (prefer to
+    ** return to caller's wait environment), we call GClisten2()
+    ** directly.  The goal is to not set event[LISTEN} until we
+    ** are sure we'll be done when we return; else DBMS gets confused
+    ** and issues E_GCFFFF_IN_PROCESS and E_GC0024_DUP_REQUEST messages
+    ** and reissues another LISTEN, even though this one is not yet
+    ** complete.
+    ** There may be a minor performance benefit to doing the call
+    ** directly here to GClisten2 (versus setting event, wait for caller
+    ** to WFMO on the event and then call it).
+    */
+    GClisten2();
+    return;
+}
+
+
+/******************************************************************************
+**
+** Name: GCDriverListen2
+**
+** Description:
+**      Calls network protocol driver to receive CONNECT info from remote client
+**	This is for part 2 of the Listen processing.  It is called by
+**	GClisten2().
+**
+** Inputs:
+**      svc_parms   pointer to service parameter structure
+**
+** Outputs:
+**      svc_parms->sys_err->errnum
+**      svc_parms->status
+**      iocb->flags
+**
+** Returns:
+**      VOID
+**
+** History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Created.
+**
+*******************************************************************************/
+VOID
+GCDriverListen2(SVC_PARMS *svc_parms)
+{
+    ASSOC_IPC	*asipc = (ASSOC_IPC *)svc_parms->gc_cb;
+    GCA_GCB	*gcb   = (GCA_GCB *)asipc->gca_gcb;
+
+    GCTRACE(3)("GCDriverListen2 %d: Entry point.\n", gcb->id);
+
+    /*
+    ** Receive the GC peer info from partner.  Hijack svc_parms.
+    */
+    svc_parms->flags.flow_indicator = 0;
+    svc_parms->reqd_amount = sizeof( asipc->connect );
+    svc_parms->svc_buffer = (char *)&asipc->connect;
+
+    gcb->ccb.save_completion = svc_parms->gca_cl_completion;
+    gcb->ccb.save_closure = svc_parms->closure;
+    svc_parms->gca_cl_completion = GCDriverListen2_exit;
+    svc_parms->closure = (PTR)svc_parms;
+
+    GCDriverReceive( svc_parms );
+
+    return;
+}
+
+/******************************************************************************
+**
+** Name: GCDriverListen2_exit - GCC driver completion rtn for GCDriverListen2
+**
+** Description:
+** This routine is called by GCDriverReceive's completion callback logic when
+** GCC_RECEIVE is completed for the CONNECT block (peer info message).
+** It was specified as the completion exit by GCDriverListen2 when it invoked
+** the protocol driver.  It is passed a pointer to an IOCB, which has
+** pointers to all things relevant, such as the gcacl svc_parms as well
+** as the GCC parmlist.
+**
+** Inputs:
+**      svc_parms   pointer to service parameter structure
+**
+** Outputs:
+**	svc_parms->size_advise  Suggested buffer size for communication
+**	                        optimization.
+**
+** Returns:
+**	VOID
+**
+** History:
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Created.
+**
+******************************************************************************/
+VOID
+GCDriverListen2_exit( PTR closure )
+{
+    SVC_PARMS	*svc_parms = (SVC_PARMS *)closure;
+    ASSOC_IPC   *asipc     = (ASSOC_IPC *)svc_parms->gc_cb;
+    GCA_GCB     *gcb       = (GCA_GCB *)asipc->gca_gcb;
+
+    /*
+    ** Restore svc_parms
+    */
+    svc_parms->gca_cl_completion = gcb->ccb.save_completion;
+    svc_parms->closure = gcb->ccb.save_closure;
+
+    GCTRACE(2)( "GCDriverListen2_exit %d: Entry point. status %x\n", gcb->id, svc_parms->status );
+
+    if ( svc_parms->status != OK )
+    {
+	(*svc_parms->gca_cl_completion) (svc_parms->closure);
+	return;
+    }
+    asipc->connect_recv_numxfer = svc_parms->rcv_data_length;
+
+    /*
+    ** Advise user of optimum size.
+    **
+    ** For more info, see discussion where this is set for driver connects
+    ** (GCrequest), currently in GCDriverRequest_exit().
+    */
+    svc_parms->size_advise = GC_SIZE_ADVISE - sizeof(GC_MTYP);
+
+    /*
+    ** Triggers final phase of LISTEN processing in gcacl and
+    ** lets caller know (if he cares) that the listen phase is
+    ** complete (and gca_cl_completion called) once the event_func
+    ** for LISTEN completes and returns to the caller.
+    */
+    SetEvent (hAsyncEvents[LISTEN]);
+
+    return;
+}
+
+/******************************************************************************
+*******************************************************************************
+**
+**  windows95 routines - Anonymous Pipes
+**
+*******************************************************************************
+******************************************************************************/
+
+/******************************************************************************
+**
 ** Name: GClisten95
 **
 ** Description:
@@ -6096,7 +7920,8 @@ DWORD      status_wait = 0;
 **	06-Aug-2009 (Bruce Lunsford) Sir 122426
 **	    Since _beginthreadex() is now used to start this thread,
 **	    use _endthreadex() to end it.
-*/
+**
+*******************************************************************************/
 VOID
 GClisten95 (SVC_PARMS * svc_parms)
 {
@@ -6171,7 +7996,8 @@ end:
     _endthreadex(status);
 }
 
-/*
+/******************************************************************************
+**
 ** Name: GClisten95_2
 **
 ** Description:
@@ -6200,7 +8026,8 @@ end:
 **	    end of asipc; access_point_identifier is obtained from received
 **	    peer info (aka, connect) message.  Qualify connect fields with
 **	    v_orig since this is only format currently supported by W95 logic.
-*/
+**
+*******************************************************************************/
 VOID
 GClisten95_2 ()
 {
@@ -6283,7 +8110,8 @@ SECURITY_ATTRIBUTES sa;
     GCerror(OK, 0);
 }
 
-/*
+/******************************************************************************
+**
 ** Name: GCrequest95
 **
 ** Description:
@@ -6313,7 +8141,8 @@ SECURITY_ATTRIBUTES sa;
 **	17-Dec-2009 (Bruce Lunsford) Sir 122536
 **	    Change connect_block from CONNECT to CONNECT_orig structure
 **	    since this is only format currently supported by W95 logic.
-*/
+**
+*******************************************************************************/
 VOID
 GCrequest95(SVC_PARMS *svc_parms)
 {
@@ -6389,7 +8218,8 @@ exit:
 
 }
 
-/*
+/******************************************************************************
+**
 ** Name: GCCompletion95
 **
 ** Description:
@@ -6416,7 +8246,8 @@ exit:
 ** History:
 **      25-Jul-97 (fanra01)
 **	    Created.
-*/
+**
+*******************************************************************************/
 VOID APIENTRY
 GCCompletion95 (PIOPARMS pIoparms)
 {
@@ -6427,7 +8258,8 @@ GCCompletion95 (PIOPARMS pIoparms)
     return;
 }
 
-/*
+/******************************************************************************
+**
 ** Name: GCreceive95
 **
 ** Description:
@@ -6454,7 +8286,8 @@ GCCompletion95 (PIOPARMS pIoparms)
 **	06-Aug-2009 (Bruce Lunsford) Sir 122426
 **	    Since _beginthreadex() is now used to start this thread,
 **	    use _endthreadex() to end it.
-*/
+**
+*******************************************************************************/
 VOID
 GCreceive95 (PIOPARMS pIoparms)
 {
@@ -6476,7 +8309,8 @@ ULONG       amount_read = 0;
     return;
 }
 
-/*
+/******************************************************************************
+**
 ** Name: GCAnonPipeReceive
 **
 ** Description:
@@ -6498,7 +8332,7 @@ ULONG       amount_read = 0;
 **
 ** Inputs:
 **      fd          handle to the write pipe
-**      svc_parms   pointer to service paramater structure
+**      svc_parms   pointer to service parameter structure
 **      asipc       pointer to association parameter structure
 **      iocb        pointer to I/O control block
 **      expeditied  flag indicates read channel
@@ -6523,7 +8357,11 @@ ULONG       amount_read = 0;
 **	06-Aug-2009 (Bruce Lunsford) Sir 122426
 **	    Convert CreateThread() to _beginthreadex() which is recommended
 **	    when using C runtime.
-*/
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Remove MEfree(iocb)'s since the send/recv iocbs are now
+**	    preallocated and not freed until disconnect.
+**
+*******************************************************************************/
 VOID
 GCAnonPipeReceive( HANDLE fd, SVC_PARMS *svc_parms, ASSOC_IPC *asipc,
     ASYNC_IOCB *iocb, BOOL expedited,
@@ -6571,7 +8409,6 @@ GCAnonPipeReceive( HANDLE fd, SVC_PARMS *svc_parms, ASSOC_IPC *asipc,
                         TerminateThread( hThread, 0 );
                         svc_parms->status = GC_ASSOC_FAIL;
                         MEfree( (PTR)pIoparms );
-                        MEfree( (PTR)iocb );
                         GCRESRC( hThread, CloseHandle( hThread ) );
                         GCerror( svc_parms->status, ERROR_BROKEN_PIPE );
                     }
@@ -6590,20 +8427,17 @@ GCAnonPipeReceive( HANDLE fd, SVC_PARMS *svc_parms, ASSOC_IPC *asipc,
                     svc_parms->status = GC_ASSOC_FAIL;
                     status = errno;
                     MEfree((PTR)pIoparms);
-                    MEfree((PTR)iocb);
                     GCerror(svc_parms->status, status);
                 }
             }
             else
             {
                 TRdisplay ("GC MEreqmem failed error %d\n", status);
-                MEfree((PTR)iocb);
             }
         }
         else
         {
             TRdisplay ("GC DuplicateHandle failed error %d\n", GetLastError());
-            MEfree((PTR)iocb);
         }
     }
     else
@@ -6617,13 +8451,13 @@ GCAnonPipeReceive( HANDLE fd, SVC_PARMS *svc_parms, ASSOC_IPC *asipc,
                               svc_parms->time_out);
 	GCreceiveCompletion(svc_parms, &status, amount_read);
         ReleaseSemaphore (SyncEvent, 1, NULL);
-        MEfree((PTR)iocb);
         GCerror(status, 0);
     }
     return;
 }
 
-/*
+/******************************************************************************
+**
 ** Name: GCsend95
 **
 ** Description:
@@ -6652,7 +8486,11 @@ GCAnonPipeReceive( HANDLE fd, SVC_PARMS *svc_parms, ASSOC_IPC *asipc,
 **	06-Aug-2009 (Bruce Lunsford) Sir 122426
 **	    Since _beginthreadex() is now used to start this thread,
 **	    use _endthreadex() to end it.
-*/
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Move increment of asyncIoPending (on success) up to caller of
+**	    send routines for more consistency across various types of sends.
+**
+*******************************************************************************/
 VOID
 GCsend95 (PIOPARMS pIoparms)
 {
@@ -6677,7 +8515,8 @@ GCsend95 (PIOPARMS pIoparms)
     return;
 }
 
-/*
+/******************************************************************************
+**
 ** Name: GCAnonPipeSend
 **
 ** Description:
@@ -6699,7 +8538,7 @@ GCsend95 (PIOPARMS pIoparms)
 **
 ** Inputs:
 **      fd          handle to the write pipe
-**      svc_parms   pointer to service paramater structure
+**      svc_parms   pointer to service parameter structure
 **      asipc       pointer to association parameter structure
 **      iocb        pointer to I/O control block
 **
@@ -6720,7 +8559,12 @@ GCsend95 (PIOPARMS pIoparms)
 **	    GCwaitCompletion + GCrestart.  This should improve peformance.
 **	    Convert CreateThread() to _beginthreadex() which is recommended
 **	    when using C runtime.
-*/
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Move and MEfree of iocb (on failure) up to caller for more
+**	    consistency across various types of sends. Requires status
+**	    to be set correctly upon return.
+**
+*******************************************************************************/
 DWORD
 GCAnonPipeSend( HANDLE fd, SVC_PARMS *svc_parms, ASSOC_IPC *asipc,
     ASYNC_IOCB *iocb, VOID (WINAPI *completion)(DWORD, DWORD, LPOVERLAPPED) )
@@ -6764,250 +8608,66 @@ DWORD       dwTid = 0;
                 SETWIN32ERR(svc_parms->sys_err, status, ER_system);
                 svc_parms->sys_err->errnum = status;
                 (*svc_parms->gca_cl_completion) (svc_parms->closure);
-                MEfree((PTR)iocb);
             }
         }
         else
         {
             TRdisplay ("GC MEreqmem failed error %d\n", status);
-            MEfree((PTR)iocb);
         }
     }
     else
     {
-        TRdisplay ("GC DuplicateHandle failed error %d\n", GetLastError());
-        MEfree((PTR)iocb);
+	status = GetLastError();
+        TRdisplay ("GC DuplicateHandle failed error %d\n", status);
     }
     return (status);
 }
 
-/*
-** Name: GCusername
+/******************************************************************************
+*******************************************************************************
 **
-** Description:
-**	Set the passed in argument 'name' to contain the name of the user 
-**	who is executing this process.  Name is a pointer to an array 
-**	large enough to hold the user name.  The user name is returned
-**	NULL-terminated in lowercase with any trailing whitespace deleted.
+**  DEBUG routines
 **
-**	On systems where relevant, this should return the effective rather 
-**	than the real user ID. 
-**
-**	It does the samething as what IDname does.
-**
-** Input:
-**	size		Length of buffer for user name.
-**
-** Output:
-**	name		The effective user name.
-**
-** Returns:
-**	VOID
-**
-** History:
-**	18-Mar-98 (rajus01)
-**	    Created.
-**	07-nov-2000 (somsa01)
-**	    For Embedded Ingres, the user is always ingres.
-**      23-feb-2001 (rigka01) 
-**	    Cross integrate 2.5 change 448098 to 2.0: 
-**          In GCusername(), for Embedded Ingres, the user is always ingres.
-**      01-May-2007 (Fei Ge) Bug 116825
-**          szUserName shouldn't be static.
-**	17-Dec-2009 (Bruce Lunsford) Sir 122536
-**	    Add support for long identifiers by increasing username buffer
-**	    to max size supported by Windows.  
-**	    Also improve performance (affects connect requests primarily) by
-**	    only checking 1st time in for TNG/embedded Ingres installation.
-*/
-
-VOID
-GCusername( char *name, i4  size )
-{
-    char  szUserName[GC_USERNAME_MAX + 1] = "";
-    DWORD dwUserNameLen = sizeof(szUserName);
-    static i1   TNGInstallation = -1;
-    GCTRACE(5)("GCusername: Entered with size %d, TNGInstallation flag=%d\n",
-		size, TNGInstallation);
-
-# ifdef EVALUATION_RELEASE
-    STlcopy("ingres", name, size - 1);
-# else
-
-    /*
-    ** On 1st time in only, check  if this is an embedded Ingres installation.
-    */
-    if (TNGInstallation == -1)  /* If not already set, set it. */
-    {
-	char        *host;
-	char        *value = NULL;
-	char        config_string[256];
-	PMinit();
-	PMload( NULL, (PM_ERR_FUNC *)NULL );
-	host = PMhost();
-  
-	STprintf( config_string, ERx("%s.%s.setup.embed_user"),
-		  SystemCfgPrefix, host);
-	PMget( config_string, &value );
-   
-	if (value == NULL || (STbcompare(value, 0, "OFF", 0, TRUE) == 0))
-	    TNGInstallation = FALSE;
-	else
-	    TNGInstallation = TRUE;
-    }  /* endif TNGInstallation not set */
-
-    if (TNGInstallation == TRUE)
-    {
-	STlcopy("ingres", name, size - 1);
-	return;
-    }
-
-    /*
-    ** Normal, non-TNG/embedded, non-Eval Ingres installation...get the
-    ** effective userid from the operating system.
-    ** NOTE: GetUserName() returns nothing if the target field is too
-    **       small to hold the result.  GCusername(), on the other hand,
-    **       returns a truncated length if the target field is too small.
-    **       This is the reason an intermediate (large) buffer field is
-    **       used rather than GetUserName'ing directly into the target.
-    **       
-    */
-    if (GetUserName(szUserName, &dwUserNameLen))
-    {
-	_strlwr(szUserName);
-	STlcopy(szUserName, name, size - 1);
-    }
-
-# endif /* EVALUATION_RELEASE */
-}
-
-
-/*
-** Name: GCsetWaitableTimer
-**
-** Description:
-**	Calls SetWaitableTimer for GClisten() requests to set the
-**	timer to go off 'svc_parms->timeout' seconds after calling the
-**	SetWaitableTimer function.
-**
-** Input:
-**	svc_parms		Ptr to service parms.
-**
-** Output:
-**      None.
-**
-** Returns:
-**	VOID
-**
-** History:
-**	26-Jul-98 (rajus01)
-**	    Created.
-*/
-static
-void 
-GCsetWaitableTimer( SVC_PARMS *svc_parms )
-{
-
-    LARGE_INTEGER	li;
-
-    LONGLONG nanosec = (LONGLONG) svc_parms->time_out * 10000;
-
-    GCTRACE(3)
-       ("GCsetWaitableTimer: timeout(milli_sec)=%d\n", svc_parms->time_out);
-
-    /* Negate the time so that SetWaitableTimer knows
-    ** we want relative time instead of absolute time.
-    ** This negative value tells the function to go off 
-    ** at a time relative to the time when we call the function.
-    */
-    nanosec=-nanosec;
-
-    /*
-    ** Copy the relative time from a __int64 into a
-    ** LARGE_INTEGER.
-    */
-
-    li.LowPart = (DWORD) (nanosec & 0xFFFFFFFF );
-    li.HighPart = (LONG) (nanosec >> 32 );
-
-    svc_parms->time_out = -1;
-			
-    (*pfnSetWaitableTimer)( hAsyncEvents[TIMEOUT], &li, 0, NULL, NULL, FALSE );
-
-    GCTRACE(3)("Setwaitable timer was called. \n");
-}
-
-/*
-** Name: GClisten_timeout
-**
-** Description:
-**
-**	Callback function for TIMEOUT event.
-**
-** Input:
-**	None	
-**
-** Output:
-**      None.
-**
-** Returns:
-**	VOID
-**
-** History:
-**	27-Jul-98 (rajus01)
-**	    Created.
-**      04-Aug-2001 (lunbr01)  Bug 105239
-**          After a listen timeout, hide the asipc from the current
-**          session since we'll reuse it for the new listen.
-*/
-VOID GClisten_timeout()
-{
-    ASYNC_IOCB	*iocb      = &ListenIOCB;
-    SVC_PARMS	*svc_parms = iocb->svc_parms;
-    CS_SCB	*scb;
-    HANDLE pHandle;
-    DWORD  priority = 0;
-    static bool priorityWasSet = FALSE;
- 
-
-    if (!priorityWasSet && is_gcn)
-    {
-        pHandle = OpenProcess(PROCESS_SET_INFORMATION | 
-            PROCESS_QUERY_INFORMATION, FALSE, GetCurrentProcessId());
-        if (pHandle)
-        {
-            priority = GetPriorityClass(pHandle);
-            GCTRACE(3)("GClisten_timeout: process prority is %d\n",priority);
-            if (priority != NORMAL_PRIORITY_CLASS && priority != 0 )
-                SetPriorityClass(pHandle, NORMAL_PRIORITY_CLASS);
-        }
-        CloseHandle(pHandle);
-    }
-    priorityWasSet = TRUE;
-
-    GCTRACE(3)("GClisten_timeout: Entry point.\n");
-
-    CSGET_SCB(&scb);
-
-    iocb->flags &= ~GC_IO_TIMEOUT;
-    /*
-    ** Since the listen asipc will be reused for the new listen
-    ** which will come in by calling the completion routine,
-    ** hide it from any further processing on this session by
-    ** clearing it in the svc_parms; otherwise, the GCdisconn
-    ** that is coming will clear all of the pipe channels.
-    */
-    svc_parms->gc_cb = NULL; 
-    GCerror( GC_TIME_OUT, 0 );
-}
+*******************************************************************************
+******************************************************************************/
 
 # ifdef xDEBUG
+
+void GCtrace(char* fmt, ...);
+
+/*
+** A thread that wakes up every 10 seconds.
+** Useful in clients which have hung and the debugger cannot break in
+** while all threads are in system calls.
+*/
+static HANDLE hwakeupthread = NULL;
+
+DWORD WINAPI
+wakeup(LPVOID parm)
+{
+    DWORD   status = 0;
+    HANDLE  hwakeup = NULL;
+
+    GCRESRC( hwakeup, hwakeup = CreateEvent( NULL, TRUE, FALSE, NULL) );
+
+    for (;hwakeup != NULL;)
+    {
+        WaitForSingleObject(hwakeup, 10000);
+    }
+
+    GCRESRC( hwakeup, CloseHandle(hwakeup) );
+    _endthreadex(0);
+    return(status);
+}
+
+
 static LARGE_INTEGER freq;
 static int bFirst = TRUE;
 static unsigned int nMHz = 0;
 
-/*
-** Name: GCtimestamp
+/******************************************************************************
+**
+** Name: GCGetCyclecount
 **
 ** Description:
 **      Execute instructions to return the cycle count from the processor.
@@ -7025,7 +8685,8 @@ static unsigned int nMHz = 0;
 ** History:
 **      18-Oct-2002 (fanra01)
 **          Created.
-*/
+**
+*******************************************************************************/
 unsigned __int64
 GCGetCyclecount(unsigned __int64 nStart)
 {
@@ -7044,8 +8705,9 @@ GCGetCyclecount(unsigned __int64 nStart)
     return (now - nStart);
 }
 
-/*
-** Name: GCtimestamp
+/******************************************************************************
+**
+** Name: GCGetCpuMHz
 **
 ** Description:
 **      Reads the registry key to get the CPU frequency
@@ -7062,7 +8724,8 @@ GCGetCyclecount(unsigned __int64 nStart)
 ** History:
 **      18-Oct-2002 (fanra01)
 **          Created.
-*/
+**
+*******************************************************************************/
 unsigned int
 GCGetCpuMHz()
 {
@@ -7091,7 +8754,8 @@ GCGetCpuMHz()
     return nMHz;
 }
 
-/*
+/******************************************************************************
+**
 ** Name: GCtimestamp
 **
 ** Description:
@@ -7110,7 +8774,8 @@ GCGetCpuMHz()
 ** History:
 **      18-Oct-2002 (fanra01)
 **          Created.
-*/
+**
+*******************************************************************************/
 static longlong
 GCtimestamp( LARGE_INTEGER* now )
 {
@@ -7125,7 +8790,8 @@ GCtimestamp( LARGE_INTEGER* now )
     return((longlong)(now->QuadPart));
 }
 
-/*
+/******************************************************************************
+**
 ** Name: GCtrace
 **
 ** Description:
@@ -7146,7 +8812,8 @@ GCtimestamp( LARGE_INTEGER* now )
 ** History:
 **      03-Dec-1999 (fanra01)
 **          Created.
-*/
+**
+*******************************************************************************/
 void
 GCtrace( char* fmt, ... )
 {
@@ -7163,4 +8830,4 @@ GCtrace( char* fmt, ... )
     TRdisplay( mbuf );
     return;
 }
-#endif
+# endif  /* xDEBUG */

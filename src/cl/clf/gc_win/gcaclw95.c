@@ -1,8 +1,9 @@
 /*
-**  Copyright (c) 1995, 2001 Ingres Corporation
+**  Copyright (c) 1995, 2010 Ingres Corporation
 */
 
 #include <compat.h>
+#include <gcccl.h>
 #include <gc.h>
 #include <pc.h>
 #include <me.h>
@@ -94,6 +95,8 @@
 **	08-feb-2001 (somsa01)
 **	    Use INVALID_HANDLE_VALUE rather than 0xFFFFFFFF when calling
 **	    CreateFileMapping().
+**	13-Apr-2010 (Bruce Lunsford) Sir 122679
+**	    Include of gcccl.h added since now needed by gclocal.h.
 */
 
 GLOBALREF ULONG Pipe_buffer_size;
