@@ -1,5 +1,5 @@
 :
-INGLOGS_VERSION="1.26"
+INGLOGS_VERSION="1.27"
 #
 #usage: inglogs [-noparallel] [-internalthreads] ... [-h|-help] [--help] [-v|-version|--version]
 #(run "inglogs -help" or "inglogs --help to get a short or detailed description)
@@ -188,6 +188,9 @@ INGLOGS_VERSION="1.26"
 # 20-Jan-2010 (hanje04)
 #    SIR 123296
 #    Add support for LSB builds.
+# 14-May-2010 (hanal04) Bug 123291
+#    Ensure LOGDIR is unique to the inglogs process to avoid conflict
+#    with concurrent instances (and associated hang).
 #
 #####################################################################
 #
@@ -449,6 +452,7 @@ inglogs_init()
   esac
   LOGDIR1=`date +inglogs_%Y%m%d_%H%M%S`
   [ -n "$INGLOGSDIR" ] && LOGDIR=$INGLOGSDIR/$LOGDIR1 || LOGDIR=$LOGDIR1
+  LOGDIR=${LOGDIR}_pid$$
   mkdir $LOGDIR && cd $LOGDIR || {
     echo "can't create LOGDIR: $LOGDIR"
     exit 1

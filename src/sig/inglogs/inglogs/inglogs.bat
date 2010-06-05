@@ -48,9 +48,12 @@ REM   Also added show help and flags to run individual modules
 REM   similar to the unix inglogs
 REM   v1.02
 REM   Amended echo statements for blank lines
+REM 14-May-2010 (hanal04) Bug 123291
+REM   Reduce risk of multiple inglogs hitting the same output directory
+REM   by including ms in the directory name. pid is not available as it is
+REM   in unix shell scripts.
 
-
-set INGLOGS_VERSION=1.02_WIN
+set INGLOGS_VERSION=1.03_WIN
 
 set HELP=0
 set USAGE=0
@@ -109,10 +112,11 @@ for /f "skip=1 tokens=2-4 delims=(-)" %%a in ('echo:^|date') do (
   )
 )
 
-for /f "tokens=5-7 delims=:., " %%a in ('echo:^|time') do (
+for /f "tokens=5-8 delims=:., " %%a in ('echo:^|time') do (
   set hh=%%a
   set mn=%%b
   set ss=%%c
+  set ms=%%d
 )
 if %hh% LSS 10 set hh=0%hh%
 
@@ -121,7 +125,7 @@ REM and the purpose of this - to generate a directory name
 REM based on a date-time stamp
 REM
 
-SET DNAME=INGLOGS_%yy%%mm%%dd%_%hh%%mn%%ss%
+SET DNAME=INGLOGS_%yy%%mm%%dd%_%hh%%mn%%ss%%ms%
 
 echo Creating directory %DNAME% for logs
 echo.
