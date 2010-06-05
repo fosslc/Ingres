@@ -140,6 +140,10 @@
 **	    removed call to LKcreate_list().
 **	    Modified to use log transaction id instead of log process,
 **	    do ms sleeps in LG_pgyback_write() instead of here.
+**	28-Apr-2010 (jonj) B123649
+**	    Change 494685 for SIR 120874 inadvertantly stopped
+**	    group commit from functioning.
+**	    "if ( status = E_DB_OK )" isn't as useful as "if ( status == E_DB_OK )"
 */
 DB_STATUS
 dmc_group_commit(DMC_CB	    *dmc_cb)
@@ -228,7 +232,7 @@ dmc_group_commit(DMC_CB	    *dmc_cb)
     /*
     ** Notify LG that this process has a Group Commit thread now:
     */
-    if ( status = E_DB_OK )
+    if ( status == E_DB_OK )
     {
 	cl_status = LGalter(LG_A_GCMT_SID, (PTR)&lx_id,
 			    sizeof(lx_id), &sys_err);
