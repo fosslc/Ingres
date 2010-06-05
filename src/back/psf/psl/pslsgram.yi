@@ -3535,6 +3535,8 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	    FROM list is not in one of the other contexts.
 **	29-apr-2010 (stephenb)
 **	    Add syntax for "set [no]batch_copy_optim"
+**	06-May-2010 (kiria01) b123689
+**	    Correct DECIMAL CAST when the scale is defaulted.
 */
 %{
 
@@ -38143,7 +38145,11 @@ cast_type:		tname collate
 	}
 
 	$Ydb_pdata.db_collID = $5;
-	$Ycast_length = len;	/* Save user specified length qualifier */
+	/* Save user specified length qualifier. If .db_prec has been
+	** set from DECIMAL, FLOAT or one of the TIM/TIMESTAMPs then use it. */
+	$Ycast_length = $Ydb_pdata.db_prec
+				? $Ydb_pdata.db_prec
+				: len;
 	$$ = &$Ydb_pdata;
     }
 		|	tname LPAREN intconst_e COMMA intconst_e RPAREN

@@ -60,6 +60,8 @@
 **	    replace nat and longnat with i4
 **	13-Jan-2010 (wanfr01) Bug 123139
 **	    Include cv.h for function defintions
+**	06-May-2010 (kiria01) b123689
+**	    Correct header comment.
 **/
 
 /*
@@ -142,8 +144,9 @@
 **					non-nullable.  This will be set to
 **					DB_NODT if the datatype name is unknown.
 **	    .db_prec			The precision and scale for this column,
-**					if the datatype is DECIMAL.  Set to zero
-**					if not DECIMAL.
+**					if the datatype is DECIMAL, FLOAT or one
+**					of the precision carrying ANSI datatype.
+**					Set to zero otherwise.
 **	    .db_length			The internal length for the column.
 **					That is, the number of bytes necessary
 **					to store a value in this column.
