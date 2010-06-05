@@ -130,6 +130,8 @@
 ;       28-Jan-2010 (horda03) Bug 121811
 ;           Add Evidence Set functions.
 ;           Started funcs at 824 to avoid conflicts with main.
+;	20-Apr-2010 (kschendel) SIR 123485
+;	    No more dmpe-replace;  add end-row, query-end functions.
 ;
 EXPORTS
 LGCnode_names		@1				
@@ -770,7 +772,7 @@ dmpe_destroy		@636
 dmpe_modify		@637				
 dmpe_move		@638				
 dmpe_relocate		@639				
-dmpe_replace		@640				
+; dmpe_replace		@640				
 dmr_alloc_rcp		@641				
 dmr_alter		@642				
 dmr_analysis_pass		@643				
@@ -955,3 +957,5 @@ dm1r_check_lock		@823
 dmf_diag_dmp_pool	@824
 dmf_diag_dump_tables	@825
 dmd_summary_statistics	@826
+dmpe_end_row		@827
+dmpe_query_end		@828

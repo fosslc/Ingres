@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -323,6 +323,8 @@
 **	    Init new qualification-function members.
 **	9-sep-2009 (stephenb)
 **	    Initialize scb_last_id.
+**	13-Apr-2010 (kschendel) SIR 123485
+**	    Init BQCB list, mutex.
 */
 
 DB_STATUS
@@ -462,6 +464,11 @@ DMC_CB    *dmc_cb)
 	scb->scb_readlock = DMC_C_SYSTEM;
         scb->scb_tran_iso = DMC_C_SYSTEM;
 	scb->scb_sess_am = scb->scb_tran_am = 0;
+	scb->scb_bqcb_next = NULL;
+	/* Really only need the mutex for "normal" scb's, but the session
+	** type can be altered.  Just init the mutex.
+	*/
+	dm0s_minit(&scb->scb_bqcb_mutex, "BQCB");
 
 	/* Init default degree of parallelism */
 	scb->scb_dop = svcb->svcb_dop;

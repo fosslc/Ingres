@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -364,6 +364,8 @@
 **	    implicit lock conversions.
 **	6-Nov-2009 (kschendel) SIR 122757
 **	    Straighten out new vs old sync flags, allow direct-io option.
+**	12-Apr-2010 (kschendel) SIR 123485
+**	    Open tables no-coupon to avoid unnecessary LOB processing.
 */
 DB_STATUS
 dm2u_relocate(
@@ -649,7 +651,7 @@ DB_ERROR	*dberr)
 	** To do this we must open the table. */
 
 	status = dm2t_open(dcb, tbl_id, lk_mode,
-	    DM2T_UDIRECT, DM2T_A_WRITE, timeout,
+	    DM2T_UDIRECT, DM2T_A_WRITE_NOCPN, timeout,
 	    (i4)20, xcb->xcb_sp_id,
 	    xcb->xcb_log_id, xcb->xcb_lk_id,(i4)0, (i4)0, 
 	    db_lockmode, &xcb->xcb_tran_id, &timestamp,

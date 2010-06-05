@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 #include    <compat.h>
 #include    <gl.h>
@@ -221,6 +221,8 @@ static STATUS init_child_thread(
 **	    since that's what we're actually using (the type is MISC_CB)
 **	11-Apr-2008 (kschendel)
 **	    dm2r position call updated, fix here.
+**	13-Apr-2010 (kschendel) SIR 123485
+**	    Don't need to set no-coupon, done by access mode now.
 */
 DB_STATUS
 dm2u_pload_table(
@@ -247,13 +249,6 @@ DB_ERROR            *dberr)
     /* Check if we are projecting key columns into exchange buffer */
     if (m->mx_rcb->rcb_proj_misc)
     {
-	/* Avoid farting with coupons, which would lead to disaster because
-	** the projection is almost certainly excluding them from the
-	** result (projected) row!  Coupons aren't involved in indexing
-	** anyway.
-	** FIXME probably should set NO_CPN unconditionally.
-	*/
-	m->mx_rcb->rcb_state |= RCB_NO_CPN;
 	reclen = m->mx_rcb->rcb_proj_relwid;
     }
     else

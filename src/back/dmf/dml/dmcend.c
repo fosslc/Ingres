@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -22,6 +22,7 @@
 #include    <dm.h>
 #include    <dml.h>
 #include    <dmp.h>
+#include    <dmpecpn.h>
 #include    <dm2t.h>
 #include    <dm2d.h>
 #include    <dm0s.h>
@@ -225,6 +226,8 @@ static DB_STATUS release_cb(
 **	15-Aug-2005 (jenjo02)
 **	    Implement multiple DMF LongTerm memory pools and
 **	    ShortTerm session memory.
+**	14-Apr-2010 (kschendel) SIR 123485
+**	    Destroy BQCB mutex.
 */
 
 DB_STATUS
@@ -346,9 +349,8 @@ DMC_CB    *dmc_cb)
 		break;
 	    }
 	}
-	/* Clean up mutexes.
-	** There aren't any, at the moment.
-	*/
+	/* Clean up mutexes. */
+	dm0s_mrelease(&scb->scb_bqcb_mutex);
 
 	/* Free session's memory pool(s), if any */
 	(VOID) dm0m_destroy(scb, &local_dberr);
@@ -393,6 +395,8 @@ DMC_CB    *dmc_cb)
 **	    Update destroy-temp call parameters.
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Deallocate lctx, jctx if allocated.
+**	14-Apr-2010 (kschendel) SIR 123485
+**	    Force a BLOB query-end during cleanup.
 */
 static DB_STATUS
 release_cb(
@@ -418,6 +422,22 @@ DML_SCB		*scb)
 
 	xcb = (DML_XCB *) scb->scb_x_next;
 	odcb = (DML_ODCB *) xcb->xcb_odcb_ptr;
+
+	/* Remove blob Locator context */
+	if (scb->scb_lloc_cxt)
+	    dm0m_deallocate((DM_OBJECT **)&scb->scb_lloc_cxt);
+
+	/* Close off any in-flight DMPE stuff */
+	status = dmpe_query_end(TRUE, TRUE, &dmc->error);
+	if ( status != E_DB_OK )
+	{
+	    SETDBERR(&dmc->error, 0, E_DM0106_ERROR_ENDING_SESSION);
+	    return (E_DB_FATAL);
+	}
+
+	/* Remove blob PCB's */
+	while (xcb->xcb_pcb_list != NULL)
+	    dmpe_deallocate(xcb->xcb_pcb_list);
 
 	/*  Close all open tables and destroy all open temporary tables. */
 
@@ -510,6 +530,14 @@ DML_SCB		*scb)
 		}
 	    }
 	}
+	/* One more time after table closes, guarantees BQCB's deleted */
+	status = dmpe_query_end(TRUE, FALSE, &dmc->error);
+	if ( status != E_DB_OK )
+	{
+	    SETDBERR(&dmc->error, 0, E_DM0106_ERROR_ENDING_SESSION);
+	    return (E_DB_FATAL);
+	}
+
 	/*  Remove SPCBs. */
 
 	while (xcb->xcb_sq_next != (DML_SPCB*) &xcb->xcb_sq_next)
@@ -527,14 +555,6 @@ DML_SCB		*scb)
 
 	    dm0m_deallocate((DM_OBJECT **)&spcb);
 	}
-
-	/* Remove blob PCB's */
-	while (xcb->xcb_pcb_list != NULL)
-	    dmpe_deallocate(xcb->xcb_pcb_list);
-
-	/* Remove blob Locator context */
-	if (scb->scb_lloc_cxt)
-	    dm0m_deallocate((DM_OBJECT **)&scb->scb_lloc_cxt);
 
 	/*  Remove XCCBs. */
 

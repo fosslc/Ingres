@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 
@@ -338,6 +338,8 @@
 **	    Replaced dmx_show() with the more robust 
 **	    dmxCheckForInterrupt() to standardize external
 **	    interrupt handling.
+**	12-Apr-2010 (kschendel) SIR 123485
+**	    Open table no-coupon to avoid unnecessary LOB overhead.
 */  
 
 DB_STATUS
@@ -537,7 +539,7 @@ dmu_relocate(DMU_CB    *dmu_cb)
 	table_id.db_tab_index = dmu->dmu_tbl_id.db_tab_index;
    
 	status = dm2t_open(odcb->odcb_dcb_ptr, &table_id, lk_mode,
-	    DM2T_UDIRECT, DM2T_A_WRITE, timeout, (i4)20, xcb->xcb_sp_id,
+	    DM2T_UDIRECT, DM2T_A_WRITE_NOCPN, timeout, (i4)20, xcb->xcb_sp_id,
 	    xcb->xcb_log_id, xcb->xcb_lk_id, 0, 0, db_lockmode, 
             &xcb->xcb_tran_id, &timestamp,
 	    &relocate_rcb, (DML_SCB *)0, &dmu->error);

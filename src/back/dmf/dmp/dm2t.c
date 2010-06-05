@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1985, 2004 Ingres Corporation
+** Copyright (c) 1985, 2010 Ingres Corporation
 **
 **
 NO_OPTIM=dr6_us5
@@ -1598,6 +1598,9 @@ static READONLY struct
 **	    think we're going to use it (b123376).
 **	    Issue warning if MVCC update mode with nologging before switching
 **	    to ROW, just so everyone knows.
+**	13-Apr-2010 (kschendel) SIR 123485
+**	    Accept "no coupon" access modes;  for ordinary read/write with
+**	    LOB's in the table, find or create BQCB, save in RCB.
 */
 DB_STATUS
 dm2t_open(
@@ -1655,6 +1658,7 @@ DB_ERROR            *dberr)
     i4			mvcc_lock_mode;
     LK_LKID		mvcc_lkid;
     bool		mvcc_lock = FALSE;
+    bool		nocoupon;
     i4			lockLevel;
 
     CLRDBERR(dberr);
@@ -1675,6 +1679,20 @@ DB_ERROR            *dberr)
 
     mvcc_lkid.lk_unique = 0;
     mvcc_lkid.lk_common = 0;
+
+    /* Only regular read/write wants coupon / LOB processing.
+    ** Once that's set, normalize no-coupon read/write into ordinary r/w.
+    */
+
+    nocoupon = TRUE;
+    if (req_access_mode == DM2T_A_READ || req_access_mode == DM2T_A_WRITE
+      || req_access_mode == DM2T_A_SYNC_CLOSE)
+	nocoupon = FALSE;
+
+    if (req_access_mode == DM2T_A_READ_NOCPN)
+	req_access_mode = DM2T_A_READ;
+    else if (req_access_mode == DM2T_A_WRITE_NOCPN)
+	req_access_mode = DM2T_A_WRITE;
 
     /*
     ** The conversion of lock_mode is needed
@@ -2138,6 +2156,8 @@ DB_ERROR            *dberr)
 	r = rcb;
 	r->rcb_sp_id = sp_id;
 	r->rcb_update_mode = update_mode;
+	if (nocoupon)
+	    r->rcb_state |= RCB_NO_CPN;
 
 	/*
 	** Set collation sequence to use - this is determined by the database.
@@ -4675,6 +4695,9 @@ DB_ERROR	*dberr)
 **      14-Aug-2008 (kschendel) b120791
 **          Make sure that busy+reclaim really returns warning; above change
 **          repositioned some loops.
+**	22-Apr-2010 (kschendel) SIR 123485
+**	    TCB purge needs to dump any BQCB, else alter table involving
+**	    adding or dropping blob columns will fail.
 */
 DB_STATUS
 dm2t_release_tcb(
@@ -5175,6 +5198,13 @@ DB_ERROR	*dberr)
 		t->tcb_et_list->etl_prev = t->tcb_et_list;
 	    }
 	}
+
+	/* If table has blobs, and we're purging, make sure that there is
+	** no BQCB for the table either.  BQCB's contain an array of blob
+	** attributes, which may now be out of date.
+	*/
+	if ((flag & DM2T_PURGE) && (t->tcb_rel.relstat2 & TCB2_HAS_EXTENSIONS))
+	    dmpe_purge_bqcb(t->tcb_rel.reltid.db_tab_base);
 
 	/*
 	** Release any index TCB's.
@@ -8108,6 +8138,10 @@ DB_ERROR	*dberr)
 **	    Fix duh, input almost has to be for a partition, follow TCB
 **	    pointer to master.  Fix header comments that implied that a
 **	    TCB pointer is passed in.
+**	16-Apr-2010 (kschendel) SIR 123485
+**	    Logical key updates are journaled, and one might happen as we're
+**	    couponifying incoming blobs.  Make sure we've written any delayed
+**	    BT necessary. (used to be in dmpe but this is the right place IMO.)
 */
 DB_STATUS
 dm2t_update_logical_key(
@@ -8189,6 +8223,18 @@ DB_ERROR	*dberr)
 	*/
 	if (input_rcb->rcb_xcb_ptr->xcb_flags & XCB_NOLOGGING)
 	    rcb->rcb_logging = 0;
+
+	/* Write any delayed BT necessary */
+	if (input_rcb->rcb_xcb_ptr->xcb_flags & XCB_DELAYBT
+	  && input_rcb->rcb_logging != 0)
+	{
+	    status = dmxe_writebt(input_rcb->rcb_xcb_ptr, rcb->rcb_usertab_jnl, dberr);
+	    if (status != E_DB_OK)
+	    {
+		input_rcb->rcb_xcb_ptr->xcb_state |= XCB_TRANABORT;
+		break;
+	    }
+	}
 
 	/*
 	** dm2r_rcb_allocate() defaults to exclusive access, so this

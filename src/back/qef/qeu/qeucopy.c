@@ -1,4 +1,4 @@
-/* Copyright (c) 2004 Ingres Corporation
+/* Copyright (c) 2010 Ingres Corporation
 **
 **
 */
@@ -151,6 +151,8 @@
 **	    Add session-temp flag.
 **	01-Jul-2004 (jenjo02)
 **	    CUT_BUFFER renamed to CUT_RCB.
+**	12-Apr-2010 (kschendel) SIR 123485
+**	    dmt_open no longer harms the flags, delete is-session-temp bool.
 */
 
 typedef struct _QEU_COPY_CTL
@@ -164,12 +166,6 @@ typedef struct _QEU_COPY_CTL
     DMT_CB	dmtcb;			/* Table open/close request block */
     /* copy BEGIN does a (master) DMT SHOW to get table info. */
     DMT_TBL_ENTRY tbl_info;		/* (Master) table info from SHOW */
-
-    /* Table OPEN likes to clear the session-temp flag (who knows why).
-    ** Since we'll be opening the table more than once, remember session
-    ** temp-ness so that all the opens can set the right flags.
-    */
-    bool	is_session_temp;	/* copy table is a session temp */
 
     /* TRUE if we are doing a bulk-load (COPY FROM only, obviously).
     ** For partitioned tables, the decision is on a per-partition basis,
@@ -463,7 +459,6 @@ QEF_RCB       *qef_rcb)
     copy_ctl->cut_rcb.cut_buf_handle = NULL;
     copy_ctl->child_status = E_DB_OK;
     copy_ctl->state = 0;
-    copy_ctl->is_session_temp = FALSE;
     qeu_copy->qeu_copy_ctl = copy_ctl;
 
     copy_ctl->use_load = FALSE;
@@ -569,16 +564,13 @@ QEF_RCB       *qef_rcb)
 	copy_ctl->dmtcb.length       = sizeof(DMT_CB);
 	copy_ctl->dmtcb.dmt_db_id    = qef_rcb->qef_db_id;
 	STRUCT_ASSIGN_MACRO(qeu_copy->qeu_tab_id, copy_ctl->dmtcb.dmt_id);
-	copy_ctl->dmtcb.dmt_flags_mask  = 0;
+	copy_ctl->dmtcb.dmt_flags_mask = DMT_MULTI_ROW;
+	if (qeu_copy->qeu_direction == CPY_FROM)
+	    copy_ctl->dmtcb.dmt_flags_mask |= DMT_MANUAL_ENDOFROW;
 	if ((copy_ctl->dmtcb.dmt_id.db_tab_base < 0) &&
 	   (!STncmp("$Sess", copy_ctl->tbl_info.tbl_owner.db_own_name, 5)))
 	{
 	    copy_ctl->dmtcb.dmt_flags_mask |= DMT_SESSION_TEMP;
-	    /* For some reason, table open turns the session temp flag off.
-	    ** Since we use copies of this dmt-cb in the children, remember
-	    ** session-temp-ness so that we don't have to recompute it.
-	    */
-	    copy_ctl->is_session_temp = TRUE;
 	}
 
 	copy_ctl->dmtcb.dmt_update_mode = DMT_U_DIRECT;
@@ -674,6 +666,8 @@ QEF_RCB       *qef_rcb)
 	    status = dmf_call(DMR_LOAD, &dmr_cb);
 	    if (status != E_DB_OK)
 	    {
+		i4 flags_mask;
+
 		if (dmr_cb.error.err_code != E_DM0050_TABLE_NOT_LOADABLE)
 		{
 		    qef_error(dmr_cb.error.err_code, 0L, status, &error_code, 
@@ -686,7 +680,8 @@ QEF_RCB       *qef_rcb)
 		** Cannot use fast load.   Close and reopen the table in
 		** normal sync-write mode with normal IX locking.
 		*/
-		copy_ctl->dmtcb.dmt_flags_mask   = 0;
+		flags_mask = copy_ctl->dmtcb.dmt_flags_mask;
+		copy_ctl->dmtcb.dmt_flags_mask = 0;
 		copy_ctl->dmtcb.dmt_access_mode = DMT_A_WRITE;
 
 		status = dmf_call(DMT_CLOSE, &copy_ctl->dmtcb);
@@ -699,9 +694,7 @@ QEF_RCB       *qef_rcb)
 
 		copy_ctl->dmtcb.dmt_lock_mode = DMT_IX;
 		copy_ctl->dmtcb.dmt_update_mode = DMT_U_DIRECT;
-		copy_ctl->dmtcb.dmt_flags_mask  = 0;
-		if (copy_ctl->is_session_temp)
-		    copy_ctl->dmtcb.dmt_flags_mask |= DMT_SESSION_TEMP;
+		copy_ctl->dmtcb.dmt_flags_mask = flags_mask;
 		copy_ctl->dmtcb.dmt_char_array.data_in_size = 0;
 		copy_ctl->dmtcb.dmt_char_array.data_address = NULL;
 
@@ -715,6 +708,9 @@ QEF_RCB       *qef_rcb)
 
 	    } /* if didn't work */
 	} /* if bulk-load */
+
+	/* Save the access ID cookie in case there are blobs */
+	qeu_copy->qeu_access_id = copy_ctl->dmtcb.dmt_record_access_id;
 
 	/*
 	** Only bulk-load builds the table, if user has passed options
@@ -907,18 +903,13 @@ QEF_RCB       *qef_rcb)
     */
     if (qef_cb->qef_stat != QEF_NOTRAN)
     {
-	DB_SP_NAME	spoint;
-
 	if(qef_rcb->error.err_code == E_QE0023_INVALID_QUERY   /* if retry */
 	   && qef_cb->qef_open_count > 0)		/* and open cursors */
 	      return(E_DB_ERROR);         /* return without aborting/closing */
 
 	if (qef_cb->qef_stat == QEF_MSTRAN)
 	{
-	    qef_rcb->qef_spoint = &spoint;
-	    MEmove(QEF_PS_SZ, (PTR) QEF_SP_SAVEPOINT, (char) ' ',
-		sizeof(DB_SP_NAME),
-		(PTR) qef_rcb->qef_spoint->db_sp_name);
+	    qef_rcb->qef_spoint = &Qef_s_cb->qef_sp_savepoint;
 	}
 	else
 	{
@@ -1019,6 +1010,9 @@ QEF_RCB       *qef_rcb)
 **	    QEF house keeping initiated by qeu_b_copy.
 **	26-Apr-2004 (schka24)
 **	    Add child cleanup for partitioned COPY.
+**	12-Apr-2010 (kschendel) SIR 123485
+**	    Change adu-free-objects call to new "query ended" call to DMF.
+**	    Use padded copy of standard savepoint name in the QEF SCB.
 */
 
 DB_STATUS
@@ -1029,7 +1023,6 @@ QEF_RCB     *qef_rcb)
     QEU_COPY		*qeu_copy = qef_rcb->qeu_copy;
     QEU_COPY_CTL	*copy_ctl;
     DMR_CB		dmr_cb;
-    DB_SP_NAME		spoint;
     DB_STATUS		status = E_DB_OK;
     DB_ERROR		cut_error;
     i4			err;
@@ -1037,6 +1030,8 @@ QEF_RCB     *qef_rcb)
     ULM_RCB		ulm;
 
     copy_ctl = qeu_copy->qeu_copy_ctl;
+    dmr_cb.type = DMR_RECORD_CB;
+    dmr_cb.length = sizeof(DMR_CB);
 
     /*
     ** If we are doing fast copy and we are not aborting the copy, then
@@ -1044,8 +1039,6 @@ QEF_RCB     *qef_rcb)
     */
     if ((copy_ctl->use_load) && ((qeu_copy->qeu_stat & CPY_FAIL) == 0))
     {
-	dmr_cb.type = DMR_RECORD_CB;
-	dmr_cb.length = sizeof(DMR_CB);
 	dmr_cb.dmr_access_id = copy_ctl->dmtcb.dmt_record_access_id;
 	dmr_cb.dmr_count = 0;
 	dmr_cb.dmr_mdata = (DM_MDATA *) 0;
@@ -1133,6 +1126,20 @@ QEF_RCB     *qef_rcb)
 
     /* Note: no need to "close" sequences after doing only DML on them. */
 
+    /* In case we were having fun with blobs, make sure they're cleaned up.
+    ** The dmr-cb is only used to return error info.
+    */
+    dmr_cb.dmr_flags_mask = DMR_QEND_FREE_TEMPS;
+    if (qeu_copy->qeu_stat & CPY_FAIL)
+	dmr_cb.dmr_flags_mask |= DMR_QEND_ERROR;
+    status = dmf_call(DMPE_QUERY_END, &dmr_cb);
+    if (status != E_DB_OK && (qeu_copy->qeu_stat & CPY_FAIL) == 0)
+    {
+        qef_error(dmr_cb.error.err_code, 0L, status, &err,
+		&qef_rcb->error, 0);
+	qeu_copy->qeu_stat |= CPY_FAIL;
+    }
+
     /* Close the copy table.  This is the master if partitioned. */
     copy_ctl->dmtcb.dmt_flags_mask   = 0;
     status = dmf_call(DMT_CLOSE, &copy_ctl->dmtcb);
@@ -1143,9 +1150,7 @@ QEF_RCB     *qef_rcb)
 		&qef_rcb->error, 0);
 	qeu_copy->qeu_stat |= CPY_FAIL;
     }
-
-    /* In case we were having fun with blobs, make sure they're cleaned up */
-    adu_free_objects(copy_ctl->dmtcb.dmt_db_id,0);
+    qeu_copy->qeu_access_id = NULL;	/* Unnecessary, but be tidy */
 
     /*
     ** If copy has been successful, try to commit this transaction (or 
@@ -1157,10 +1162,7 @@ QEF_RCB     *qef_rcb)
     {
 	if ((qef_cb->qef_stat == QEF_MSTRAN) && (qef_cb->qef_open_count == 0))
         {
-	    qef_rcb->qef_spoint = &spoint;
-	    MEmove(QEF_PS_SZ, (PTR) QEF_SP_SAVEPOINT,
-		(char) ' ', sizeof(DB_SP_NAME), 
-		(PTR) qef_rcb->qef_spoint->db_sp_name);
+	    qef_rcb->qef_spoint = &Qef_s_cb->qef_sp_savepoint;
 	    status = qet_savepoint(qef_cb);
         }
 	else if ((qef_cb->qef_stat != QEF_NOTRAN) &&
@@ -1184,9 +1186,7 @@ QEF_RCB     *qef_rcb)
 	qef_rcb->qeu_copy->qeu_count = 0;
 	if (qef_cb->qef_stat == QEF_MSTRAN)
 	{
-	    qef_rcb->qef_spoint = &spoint;
-	    MEmove(QEF_PS_SZ, (PTR) QEF_SP_SAVEPOINT,
-		' ', sizeof(DB_SP_NAME), (PTR)qef_rcb->qef_spoint->db_sp_name);
+	    qef_rcb->qef_spoint = &Qef_s_cb->qef_sp_savepoint;
 	}
 	else if (qef_cb->qef_stat != QEF_NOTRAN)
 	{
@@ -1993,8 +1993,6 @@ copy_from_unpartitioned(QEU_COPY_CTL *copy_ctl,CUT_RCB *cut_rcb, PTR tran_id)
 	*/
 	STRUCT_ASSIGN_MACRO(copy_ctl->dmtcb, dmtcb);
 	dmtcb.dmt_tran_id = tran_id;
-	if (copy_ctl->is_session_temp)
-	    dmtcb.dmt_flags_mask |= DMT_SESSION_TEMP;
 	status = dmf_call(DMT_OPEN, &dmtcb);
 	if (status != E_DB_OK)
 	{
@@ -2376,8 +2374,6 @@ copy_from_partitioned(QEU_COPY_CTL *copy_ctl, CUT_RCB *cut_rcb,
 		{
 		    /* We have to open this partition.  Use the same
 		    ** flags, access mode, etc from the master.
-		    ** (Session temps aren't partitioned, don't need to check
-		    ** the is_session_temp thing.)
 		    */
 		    STRUCT_ASSIGN_MACRO(copy_ctl->dmtcb, dmtcb);
 		    STRUCT_ASSIGN_MACRO(pparray[partno].pp_tabid,
@@ -2717,8 +2713,6 @@ copy_into_child(SCF_FTX *ftx)
 	    /* Not partitioned, just (re)open the table */
 	    STRUCT_ASSIGN_MACRO(copy_ctl->dmtcb, dmtcb);
 	    dmtcb.dmt_tran_id = tran_id;
-	    if (copy_ctl->is_session_temp)
-		dmtcb.dmt_flags_mask |= DMT_SESSION_TEMP;
 	    status = dmf_call(DMT_OPEN, &dmtcb);
 	    if (status != E_DB_OK)
 	    {

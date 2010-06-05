@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -289,6 +289,8 @@
 **	    nested DBP (qef_context_cnt > 1). This prevents DSH cleanup -
 **	    qee_cleanup() called from qeu_etran() - and failure of
 **	    subsequent DBP calls. This change fixes bug 102123.
+**	22-Apr-2010 (kschendel) SIR 123485
+**	    Use padded copy of standard savepoint name in the QEF SCB.
 */
 DB_STATUS
 qet_abort(
@@ -411,7 +413,7 @@ QEF_CB         *qef_cb)
 	if (save_point)
 	{
 	    sp_name = qef_cb->qef_rcb->qef_spoint;
-	    if (MEcmp((PTR) qef_cb->qef_rcb->qef_spoint->db_sp_name,
+	    if (MEcmp((PTR) sp_name->db_sp_name,
 			  (PTR) QEF_SP_SAVEPOINT, QEF_PS_SZ) == 0)
 	    {
 		internal_savepoint = TRUE;
@@ -513,12 +515,7 @@ QEF_CB         *qef_cb)
 		      (PTR) qef_cb->qef_rcb->qef_spoint->db_sp_name,
 			QEF_PS_SZ)) != 0)
 	    {
-		DB_SP_NAME  spoint;
-
-		qef_cb->qef_rcb->qef_spoint = &spoint;   /* write one */
-		MEmove(QEF_PS_SZ, (PTR) QEF_SP_SAVEPOINT,
-		      (char) ' ', sizeof(DB_SP_NAME), 
-			(PTR) qef_cb->qef_rcb->qef_spoint->db_sp_name);
+		qef_cb->qef_rcb->qef_spoint = &Qef_s_cb->qef_sp_savepoint;   /* write one */
 		status = qet_savepoint(qef_cb);
 
 		if (DB_FAILURE_MACRO(status) && 

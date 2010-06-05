@@ -167,6 +167,7 @@ static DB_STATUS scs_cp_redeem(SCD_SCB *scb,
 				i4  outsize);
 
 static DB_STATUS scs_redeem(SCD_SCB   	 *scb,
+			    DB_BLOB_WKSP *wksp,
 			    i4           continuation,
 			    DB_DT_ID     datatype,
 			    i4           prec,
@@ -495,7 +496,8 @@ scs_copy_begin(SCD_SCB *scb, i4 *next_op, DB_STATUS *ret_val)
 **	next_op		Set to CS_INPUT or CS_EXCHANGE as above
 **	ret_val		Set to return value for caller return
 **
-** Returns a sequencer-action code (continue, break, or return(ret_val)).
+** Returns a sequencer-action code (break, or return(ret_val); continue
+** is not allowed).
 **
 ** History:
 **	25-Mar-2010 (kschendel) SIR 123485
@@ -1171,7 +1173,8 @@ scs_copy_from(SCD_SCB *scb, i4 *next_op, DB_STATUS *ret_val)
 **	next_op		Set to CS_OUTPUT or CS_EXCHANGE as above
 **	ret_val		Set to return value for caller return
 **
-** Returns a sequencer-action code (continue, break, or return(ret_val)).
+** Returns a sequencer-action code (break, or return(ret_val); continue is
+** not allowed here).
 **
 ** History:
 **	25-Mar-2010 (kschendel) SIR 123485
@@ -2415,6 +2418,7 @@ scs_scopy(SCD_SCB *scb,
 			i4       res_prec;
 
 			status = scs_redeem(scb,
+					    NULL,
 					    0,
 					    gdv.gca_type,
 					    gdv.gca_precision,
@@ -2847,6 +2851,9 @@ scs_cpinterrupt(SCD_SCB *scb )
 **	    Improve header comments.
 **	25-Mar-2010 (kschendel) SIR 123485
 **	    Pass qe_copy to get copy state out of sequencer sscb.
+**	31-Mar-2010 (kschendel) SIR 123485
+**	    Pass the qe-copy to blob fetch so it can do blob optimization.
+**	    Issue manual end-of-row's to DMF as we see them.
 */
 static DB_STATUS
 scs_cp_cpnify(SCD_SCB *scb,
@@ -2921,7 +2928,16 @@ scs_cp_cpnify(SCD_SCB *scb,
 	    if (local_dv.db_datatype < 0)
 		current_get += 1;
 
+	    /* Pick up in-progress coupon plus null indicator.  If first
+	    ** time thru for this lob, make sure the DMF part of the coupon
+	    ** is initially cleared.
+	    */
 	    MEcopy((PTR) obp, current_get, (PTR) pdv.buf);
+	    if (!qe_copy->qeu_cp_in_lobj)
+	    {
+		MEfill(sizeof(pdv.periph.per_value.val_coupon), 0,
+			(PTR) &pdv.periph.per_value.val_coupon);
+	    }
 	    local_dv.db_length = current_get;
 	    local_dv.db_data = pdv.buf;
 
@@ -2933,7 +2949,7 @@ scs_cp_cpnify(SCD_SCB *scb,
 				    &local_dv,
 				    &insize,
 				    &ibp,
-				    1 /* Called from a copy */ );
+				    qe_copy);
 	    MEcopy((PTR) pdv.buf, current_get, (PTR) obp);
 	    qe_copy->qeu_cp_in_lobj = scb->scb_sscb.sscb_dmm;
 	    scb->scb_sscb.sscb_dmm = 0;
@@ -2967,9 +2983,26 @@ scs_cp_cpnify(SCD_SCB *scb,
 	}
 	if (qe_copy->qeu_cp_att_need == 0)
 	{
-	    /* Finished this att, move to next, see if done */
+	    /* Finished this att, move to next, see if done.
+	    ** Tell DMF (dmpe) that this row is done and it should reset
+	    ** any row-by-row data, namely the logical key generator.
+	    **
+	    ** (and why is this done here in the sequencer, instead of in
+	    ** QEF, you ask?  It's because incoming blobs are (we hope!)
+	    ** being couponified directly into the copy-table's etabs, so
+	    ** the couponifier has to stay in sync with the base row bounds
+	    ** or coupons from different rows will clash.  We might
+	    ** couponify any number of rows in the buffer before handing
+	    ** the lot off to QEF.  So, the "end row" call has to be here.)
+	    */
 	    if (++qe_copy->qeu_cp_cur_att >= qe_copy->qeu_cp_att_count)
 	    {
+		DMR_CB fakedmr;		/* Just to get access ID to DMF */
+
+		fakedmr.type = DMR_RECORD_CB;
+		fakedmr.length = sizeof(DMR_CB);
+		fakedmr.dmr_access_id = qe_copy->qeu_access_id;
+		(void) dmf_call(DMPE_END_ROW, &fakedmr);
 		qe_copy->qeu_cp_cur_att = -1;
 		break;
 	    }
@@ -3052,6 +3085,9 @@ scs_cp_cpnify(SCD_SCB *scb,
 **          the remaining space in the output buffer.
 **	25-Mar-2010 (kschendel)
 **	    Move state variables to qeu-copy. Fix up the comments.
+**	20-Apr-2010 (kschendel) SIR 123485
+**	    Pass redeem a blob-wksp with the open base table and column
+**	    number, makes DMPE's life a lot easier.
 */
 static DB_STATUS
 scs_cp_redeem(SCD_SCB *scb,
@@ -3063,6 +3099,7 @@ scs_cp_redeem(SCD_SCB *scb,
     char    	    *ibp;
     char            *obp;
     DB_DATA_VALUE   att;
+    DB_BLOB_WKSP    wksp;
     i4              current_get;
     i4		    insize;
     i4              res_prec;
@@ -3132,7 +3169,11 @@ scs_cp_redeem(SCD_SCB *scb,
 	    ** number of bytes left in the copy buffer after we have
 	    ** accounted for the remaining non LO bytes.
 	    */
+	    wksp.access_id = qe_copy->qeu_access_id;
+	    wksp.base_attid = qe_copy->qeu_cp_cur_att+1;
+	    wksp.flags = BLOBWKSP_ACCESSID | BLOBWKSP_ATTID;
 	    status = scs_redeem(scb,
+				&wksp,
 				qe_copy->qeu_cp_in_lobj,
 				att.db_datatype,
 				att.db_prec,
@@ -3241,9 +3282,13 @@ scs_cp_redeem(SCD_SCB *scb,
 **          that the call is from copy processing.
 **	11-May-2004 (schka24)
 **	    Remove same.
+**	20-Apr-2010 (kschendel) SIR 123485
+**	    Pass a db-blob-wksp from caller so that DMPE has an easier
+**	    time figuring out what is going on.
 */
 static DB_STATUS
 scs_redeem(SCD_SCB  	*scb,
+	   DB_BLOB_WKSP *wksp,
 	   i4           continuation,
 	   DB_DT_ID     datatype,
 	   i4           prec,
@@ -3297,6 +3342,15 @@ scs_redeem(SCD_SCB  	*scb,
 	
 	wksp_dv.db_data = (char *) lowksp;
 	wksp_dv.db_length = sizeof(*lowksp);
+
+	if (!continuation)
+	{
+	    /* If caller passed workspace info, pass it along. */
+	    ((DB_BLOB_WKSP *) lowksp->adw_fip.fip_pop_cb.pop_info)->flags = 0;
+	    lowksp->adw_fip.fip_pop_cb.pop_temporary = ADP_POP_TEMPORARY;
+	    if (wksp != NULL)
+		*((DB_BLOB_WKSP *) lowksp->adw_fip.fip_pop_cb.pop_info) = *wksp;
+	}
 	
 	status = adu_redeem(scb->scb_sscb.sscb_adscb,
 			    &result_dv,

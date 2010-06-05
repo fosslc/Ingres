@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 /**
@@ -623,6 +623,8 @@ struct _DML_LOC_MASKS
 **	    Added qualification-function info for DMF exception handler
 **	    to see, so that it knows that it was executing a user CX.
 **	    Added ADF error message area for session.
+**	13-Apr-2010 (kschendel) SIR 123485
+**	    Add BQCB list and mutex for new blobbery code.
 */
 
 struct _DML_SCB
@@ -706,6 +708,8 @@ struct _DML_SCB
 					    ** "$INGRES" if regular ids upper.
 					    */
     /* The next thing for blobs is relevant in the parent SCB ONLY.  */
+    DM_MUTEX	    scb_bqcb_mutex;	    /* Protect concurrent BQCB list */
+    struct _DMPE_BQCB *scb_bqcb_next;	    /* Head of BQCB list (singly linked) */
     bool	    scb_global_lo;          /* TRUE if blob etab created
 					    ** for session temp parent.  This
 					    ** is a hint, if false we can

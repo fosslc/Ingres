@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 **
 */
 
@@ -668,15 +668,18 @@ typedef struct _SCS_ICS
 **	14-may-1997 (nanpr01)
 **	    We need a field to save the pointer for the newly allocated
 **	    piece of memory where we saved the current tuple descriptor.
-[@history_template@]...
+**	21-Apr-2010 (kschendel) SIR 123485
+**	    Delete lo_next/prev.  It was a list of coupons created by
+**	    couponify (from the input stream), presumably for release at
+**	    end-of-query;  but QEF/DMF has taken care of that for a long
+**	    time.  The coupon list has been nothing but CPU overhead for
+**	    years, apparently.  (!)
 */
 typedef struct _SCS_RDESC
 {
     PTR		    rd_tdesc;		/* tuple desc for networ ULC */
     i4		    rd_modifier;	/* gca_result_modifier values */
 	/* See <gca.h>\GCA_TD_DATA\gca_result_modifier for #define's */
-    PTR		    rd_lo_next;
-    PTR		    rd_lo_prev;
 #define			SCS_LO_TYPE	0x0920
 #define			SCS_LO_ASCII_ID	CV_C_CONST_MACRO('S','C','L','O')
     SCF_TD_CB       rd_rqf_desc;        /* Tuple desc's for STAR/rqf */
@@ -1339,6 +1342,8 @@ struct _SCS_MCB
 **	30-Mar-2010 (kschendel) SIR 123485
 **	    Re-type some ptr's as the proper struct pointer.
 **	    Delete unused xxarea pointers, nonexistent ULF cb pointers.
+**	21-Apr-2010 (kschendel) SIR 123485
+**	    Delete blobwork, always included in lowksp now.
 */
 typedef struct _SCS_SSCB
 {
@@ -1557,7 +1562,6 @@ typedef struct _SCS_SSCB
     SCS_GCA_DESC    sscb_gca_desc;      /* GCA buffer description */
     PTR             sscb_segment_buffer;   /* ->buffer to hold gca data */
     SCS_FTC	    sscb_factotum_parms;   /* Parms to initiate factotum thread */
-    PTR		    sscb_blobwork;	 /* more work area for blobs */
     PTR		    sscb_cpy_qeccb;	/* QEF_RCB used for insert to copy optimization 
 					** this is saved between trips through the
 					** sequencer and becomes invalid on commit
@@ -1772,11 +1776,13 @@ FUNC_EXTERN VOID scs_gca_error(DB_STATUS status,
 			       i4 err_code,
 			       i4 error_blame );
 
+/* scs.h users may not have qefcopy.h, so define this: */
+typedef struct _QEU_COPY *QEU_COPY_PTR;
 FUNC_EXTERN DB_STATUS scs_blob_fetch(SCD_SCB *scb,
 				     DB_DATA_VALUE *coupon_dv,
 				     i4  *qry_size,
 				     char **buffer,
-				     i4  from_copy );
+				     QEU_COPY_PTR qeu_copy);
 
 FUNC_EXTERN DB_STATUS scs_fetch_data(SCD_SCB *scb,
 				     i4  for_psf,

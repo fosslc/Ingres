@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1989, 2009 Ingres Corporation
+** Copyright (c) 1989, 2010 Ingres Corporation
 ** All Rights Reserved
 */
 
@@ -4266,7 +4266,8 @@ DB_ERROR	*dberr)
 **	    and dmpe_get doesn't need the coupon tcb.
 **	11-May-2007 (gupsh01)
 **	    Initialize adf_utf8_flag.
-[@history_template@]...
+**	15-Apr-2010 (kschendel) SIR 123485
+**	    Short-term part of DMF coupon changed, fix here.
 */
 static VOID
 data_page(
@@ -4460,11 +4461,10 @@ DB_ERROR	*dberr)
 		if(t->tcb_atts_ptr[j+1].flag & ATT_PERIPHERAL)
 		{
 		    cpn = (DMPE_COUPON *) &((ADP_PERIPHERAL *)adf->dm1u_dv[j].db_data)->per_value.val_coupon;
-		    /* Make sure there's no garbage in coupon TCB.
-		    ** dmpe_get doesn't use the coupon TCB.
-		    ** FIXME this def needs to be in a .h file
-		    */
-		    DMPE_TCB_ASSIGN_MACRO("\0\0\0\0\0\0\0\0", cpn->cpn_tcb);
+		    /* Fill in short term things that dmpe-get wants. */
+		    cpn->cpn_base_id = t->tcb_rel.reltid.db_tab_base;
+		    cpn->cpn_att_id = j+1;
+		    cpn->cpn_flags = 0;
 		}
 
 		status = adc_valchk(&adf->dm1u_cbadf, &(adf->dm1u_dv[j]));

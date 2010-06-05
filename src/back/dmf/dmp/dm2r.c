@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1985, 2009 Ingres Corporation
+** Copyright (c) 1985, 2010 Ingres Corporation
 NO_OPTIM=dr6_us5 i64_aix
 */
 
@@ -63,6 +63,7 @@ NO_OPTIM=dr6_us5 i64_aix
 #include    <dml.h>
 #include    <dmpbuild.h>
 #include    <dmfgw.h>
+#include    <dmpecpn.h>
 #include    <dmpepcb.h>
 #include    <dma.h>
 #include    <dm1cn.h>
@@ -1278,6 +1279,8 @@ static DB_STATUS SIcomplete(
 **	    dm2t_row_lock prototype change, pass proposed lock level.
 **	    Init some critical stuff in the RCB before releasing
 **	    the tcb_mutex.
+**	13-Apr-2010 (kschendel) SIR 123485
+**	    Init bqcb ptr and manual EOR flag.  Drop row version.
 */
 DB_STATUS
 dm2r_rcb_allocate(
@@ -1561,7 +1564,6 @@ DB_ERROR	    *dberr )
     r->rcb_val_logkey = 0;
     r->rcb_usertab_jnl = 0;
     r->rcb_temp_iirelation = 0;
-    r->rcb_row_version = 0;
     DM1B_POSITION_INIT_MACRO(r, RCB_P_START);
     DM1B_POSITION_INIT_MACRO(r, RCB_P_GET);
     DM1B_POSITION_INIT_MACRO(r, RCB_P_FETCH);
@@ -1594,6 +1596,8 @@ DB_ERROR	    *dberr )
     r->rcb_rnl_online = (DMP_RNL_ONLINE *)0;
     r->rcb_et_parent_id = 0;
     r->rcb_temp_iirelation = 0;
+    r->rcb_bqcb_ptr = NULL;	/* Caller will figure this one out */
+    r->rcb_manual_endrow = 0;
 
     /* 
     ** Initialize fields used to do a DMF projection.
@@ -2243,11 +2247,22 @@ dm2r_return_rcb(
 	    curscrib->crib_next->crib_prev = curscrib->crib_prev;
 	    curscrib->crib_prev->crib_next = curscrib->crib_next;
 
+	    /* If BQCB is having etabs opened against this cursor CRIB,
+	    ** it can't do that any more.  Use the transaction CRIB if an
+	    ** etab open is needed.
+	    */
+	    if (r->rcb_bqcb_ptr != NULL
+	      && r->rcb_bqcb_ptr->bqcb_crib == curscrib)
+	    {
+		r->rcb_bqcb_ptr->bqcb_crib = r->rcb_xcb_ptr->xcb_crib_ptr;
+	    }
+
 	    object = (DM_OBJECT*)((char*)curscrib - sizeof(DM_OBJECT));
 	    dm0m_deallocate(&object);
 	}
     }
     r->rcb_crib_ptr = (LG_CRIB*)NULL;
+    r->rcb_bqcb_ptr = NULL;		/* Cleanliness */
 
     /* Update master counts, remove from master possibly-update list if
     ** we're on one.  Do this before allowing the RCB to appear on the
@@ -2800,7 +2815,6 @@ dm2r_delete(
 		&& (flag & DM2R_REDO_SF) == 0)
     {
 	status = dm1c_pdelete(t->tcb_atts_ptr,
-				(i4)t->tcb_rel.relatts,
 				r,
 				r->rcb_record_ptr,
 				dberr);
@@ -4683,6 +4697,12 @@ rtree_position(
 **       5-Feb-2009 (hanal04) Bug 121564
 **         Correct previous change for Bug 121564. dma_row_access() now expects
 **         a DB_ERROR pointer not an i4 err_code.
+**	14-Apr-2010 (kschendel) SIR 123485
+**	    Logical keys for LOB's are no longer done here, but in dmpe.
+**	    Update the pput call.
+**	    After doing the put, if there are LOB's, do a pget to fix up
+**	    the coupons with "get" info.  The record might be going to
+**	    a rule dbproc later.
 */
 DB_STATUS
 dm2r_put(
@@ -4788,8 +4808,7 @@ dm2r_put(
 
 	/* Check for system/dmf initialized attributes */
 	/* Skip if redoing online modify sidefile updates */
-	if (((t->tcb_rel.relstat & TCB_SYS_MAINTAINED) || 
-	    (t->tcb_rel.relstat2 & TCB2_HAS_EXTENSIONS)) &&
+	if ((t->tcb_rel.relstat & TCB_SYS_MAINTAINED) &&
 	    (flag & DM2R_REDO_SF) == 0)
 	{
 	    u_i4	high;
@@ -4798,7 +4817,7 @@ dm2r_put(
 	    /* Get logical key, generating new one if needed */
 	    status = dm1c_get_high_low_key(t, r, &high, &low, dberr);
 
-	    if ( status == E_DB_OK && t->tcb_rel.relstat & TCB_SYS_MAINTAINED )
+	    if ( status == E_DB_OK )
 	    {
 		status = dm1c_sys_init(&r->rcb_logkey, t->tcb_atts_ptr,
 			      (i4)t->tcb_rel.relatts, record,
@@ -4993,13 +5012,12 @@ dm2r_put(
 	**  If there are extensions, then we need to move any
 	**  extension tuples.  This is all managed by the DMPE
 	**  routines.
-	**
+	**  Note that this has to happen against the original record as
+	**  passed in;  if the caller re-uses the row for more (such as
+	**  QEF passing it to a rule-fired DBproc), it needs to see real
+	**  coupons, not old or temp coupons.  See also the pget call below.
 	*/
-	status = dm1c_pput( 0,
-			    (u_i4)r->rcb_logkey.olk_high_id, 
-			    (u_i4)r->rcb_logkey.olk_low_id,
-			    t->tcb_atts_ptr,
-			    (i4)t->tcb_rel.relatts,
+	status = dm1c_pput(t->tcb_atts_ptr,
 			    r,
 			    record,
 			    dberr);
@@ -5248,6 +5266,13 @@ dm2r_put(
 	    }
 	}
     }
+
+    /* Reconstitute short-term part of coupons in case QEF wants the
+    ** record for more "stuff" such as rule firing.
+    */
+    if (status == E_DB_OK && t->tcb_rel.relstat2 & TCB2_HAS_EXTENSIONS)
+	status = dm1c_pget(t->tcb_atts_ptr, r, record, dberr);
+
     /*
     ** check for replication and perform data capture in necesary
     */
@@ -6262,7 +6287,6 @@ DB_ERROR	    *dberr )
 	    (flag & DM2R_REDO_SF) == 0)
 	{
 	    status = dm1c_preplace(t->tcb_atts_ptr,
-				    (i4)t->tcb_rel.relatts,
 				    r,
 				    r->rcb_record_ptr,
 				    record,
@@ -7600,6 +7624,9 @@ dm2r_unfix_pages(
 **	23-Mar-2010 (kschendel) SIR 123448
 **	    Define no-parallel-sort flag for load.
 **	    Fix master reltups, relpages after bulk-load of a partition.
+**	14-Apr-2010 (kschendel) SIR 123485
+**	    Don't make LOB etab bulk-load decisions here.  Move all of that
+**	    to dmpe.
 */
 DB_STATUS
 dm2r_load(
@@ -7681,93 +7708,80 @@ dm2r_load(
       case DM2R_L_ADD:
 
 	mct = &lct->lct_mct;
-	for (i = 0, data_ptr = record_list; i < *count;
-		 i++, data_ptr = data_ptr->data_next)
+	/* Take an initial run thru the list and handle system maintained
+	** or LOB columns.
+	*/
+	if (t->tcb_rel.relstat & TCB_SYS_MAINTAINED
+	  || t->tcb_rel.relstat2 & TCB2_HAS_EXTENSIONS)
 	{
-	    rcb->rcb_s_load++;
-
-	    /*
-	    ** First update any system maintained attributes and
-            ** insert any required security label.
-	    */
-
-	    put_record = data_ptr->data_address;
-
-	    /* Check for system/dmf initialized attributes */
-
-	    status = E_DB_OK;
-	    if (    (t->tcb_rel.relstat & TCB_SYS_MAINTAINED)
-		||  (t->tcb_rel.relstat2 & TCB2_HAS_EXTENSIONS))
+	    for (i = 0, data_ptr = record_list; i < *count;
+		     i++, data_ptr = data_ptr->data_next)
 	    {
-		u_i4	high;
-		u_i4	low;
+		/*
+		** First update any system maintained attributes and
+		** insert any required security label.
+		*/
 
-		/* Generate a logical key value */
+		put_record = data_ptr->data_address;
 
-		status = dm1c_get_high_low_key(t, rcb, &high, &low, dberr);
+		/* Check for system/dmf initialized attributes */
 
-		if (status == E_DB_OK)
+		status = E_DB_OK;
+		if (t->tcb_rel.relstat & TCB_SYS_MAINTAINED)
 		{
-		    if (t->tcb_rel.relstat & TCB_SYS_MAINTAINED)
+		    u_i4	high;
+		    u_i4	low;
+
+		    /* Generate a logical key value */
+
+		    status = dm1c_get_high_low_key(t, rcb, &high, &low, dberr);
+
+		    if (status == E_DB_OK)
 		    {
 			status = dm1c_sys_init(&rcb->rcb_logkey,
-                                        t->tcb_atts_ptr,
-                                        (i4)t->tcb_rel.relatts,
-					put_record, &rcb->rcb_val_logkey,
-					dberr);
-		    }
-
-		    if (t->tcb_rel.relstat2 & TCB2_HAS_EXTENSIONS)
-		    {
-			/*
-			** Extension tables can't be heap tables.
-			** Therefore, a load can only be done on those
-			** tables if they are empty. If the base table is
-			** empty, then its extension tables must be empty
-			** (since, the way it is coded right now, an
-			** extension table can only be part of one base
-			** table).
-			*/
-			i4 load_blob = (rcb->rcb_reltups) ? 0 : 1;
-
-			/*
-			**  If there are extensions, then we need to move any
-			**  extension tuples.  This is all managed by the DMPE
-			**  routines.
-			*/
-			status = dm1c_pput( load_blob,
-					    (u_i4) high, (u_i4) low,
 					    t->tcb_atts_ptr,
 					    (i4)t->tcb_rel.relatts,
-					    rcb,
-					    put_record,
+					    put_record, &rcb->rcb_val_logkey,
 					    dberr);
+		    }
+		}
 
-			if (DB_FAILURE_MACRO(status))
+		if (t->tcb_rel.relstat2 & TCB2_HAS_EXTENSIONS)
+		{
+		    /*
+		    **  If there are extensions, then we need to move any
+		    **  extension tuples.  This is all managed by the DMPE
+		    **  routines.
+		    */
+		    status = dm1c_pput( t->tcb_atts_ptr,
+					rcb,
+					put_record,
+					dberr);
+
+		    if (DB_FAILURE_MACRO(status))
+		    {
+			if (dberr->err_code != E_DM0065_USER_INTR
+			  && dberr->err_code != E_DM010C_TRAN_ABORTED
+			  && dberr->err_code != E_DM016B_LOCK_INTR_FA)
 			{
-			    if (dberr->err_code != E_DM0065_USER_INTR
-			      && dberr->err_code != E_DM010C_TRAN_ABORTED
-                              && dberr->err_code != E_DM016B_LOCK_INTR_FA)
-			    {
-				/*
-				** User interrupts are now a
-				** possibility, since dmpe updates may
-				** make recursive DMF calls to mung
-				** with objects in the extension
-				** tables.  Given that that's the
-				** case, we just pass the error back
-				** up the chain, and the upper layers
-				** will handle it correctly.
-				*/
-		
-				i4	    local_err_code;
-			
-				uleFormat(dberr, 0,
-					   (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
-					   (char *)NULL, (i4)0, (i4 *)NULL,
-					   &local_err_code, 0);
-				SETDBERR(dberr, 0, E_DM9B04_LOAD_DMPE_ERROR);
-			    }
+			    /*
+			    ** User interrupts are now a
+			    ** possibility, since dmpe updates may
+			    ** make recursive DMF calls to mung
+			    ** with objects in the extension
+			    ** tables.  Given that that's the
+			    ** case, we just pass the error back
+			    ** up the chain, and the upper layers
+			    ** will handle it correctly.
+			    */
+	    
+			    i4	    local_err_code;
+		    
+			    uleFormat(dberr, 0,
+				       (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
+				       (char *)NULL, (i4)0, (i4 *)NULL,
+				       &local_err_code, 0);
+			    SETDBERR(dberr, 0, E_DM9B04_LOAD_DMPE_ERROR);
 			}
 		    }
 		}
@@ -7777,9 +7791,9 @@ dm2r_load(
 		    if (dberr->err_code == E_DM9380_TAB_KEY_OVERFLOW)
 		    {
 			/* error can be returned from dm1c_sys_init(),
-                        ** not logged
+			** not logged
 			** there because it doesn't have the necessary
-                        ** context for
+			** context for
 			** the error parameters.
 			*/
 			uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
@@ -7795,9 +7809,9 @@ dm2r_load(
 		    break;
 		}
 	    }
-	}
-	if (status != E_DB_OK)
-	    break;
+	    if (status != E_DB_OK)
+		break;
+	} /* if prepass */
 
 	/*
 	** Give this set of tuples to the sorter.
@@ -7810,6 +7824,7 @@ dm2r_load(
 		 i < *count;
 		 i++, data_ptr = data_ptr->data_next)
 	    {
+		++rcb->rcb_s_load;
 		put_record = data_ptr->data_address;
 		if (t->tcb_rel.relspec == TCB_HASH)
 		{
@@ -7849,6 +7864,7 @@ dm2r_load(
 	    for (i = 0, data_ptr = record_list; i < *count;
 		 i++, data_ptr = data_ptr->data_next)
 	    {
+		++rcb->rcb_s_load;
 		status = dm1sbput(mct, data_ptr->data_address, lct->lct_width,
 		    (i4)0, dberr);
 		if (status != E_DB_OK)
@@ -8516,49 +8532,16 @@ dm2r_load(
 	*/
 	if (t->tcb_rel.relstat2 & TCB2_HAS_EXTENSIONS)
 	{
-	    DMP_ET_LIST *etlist_ptr = t->tcb_et_list->etl_next;
-	    DMP_RCB	*et_rcb;
-	    DMP_TCB	*et_tcb;
-	    i4	row_count;
-
-	    while (etlist_ptr != t->tcb_et_list)
-	    {
-		if ((etlist_ptr->etl_etab.etab_base ==
-			t->tcb_rel.reltid.db_tab_base) &&
-		    (etlist_ptr->etl_status & ETL_LOAD))
-		{
-		    /*
-		    ** Finish up the load for this extension table,
-		    ** and then close it.
-		    */
-		    et_rcb = (DMP_RCB *)etlist_ptr->etl_dmrcb.dmr_access_id;
-		    et_tcb = et_rcb->rcb_tcb_ptr;
-		    row_count = 0;
-		    status = dm2r_load( et_rcb,
-					et_tcb,
-					DM2R_L_END, (i4)0, &row_count,
-					(DM_MDATA *)0, (i4)0,
-					(DM2R_BUILD_TBL_INFO *) 0, dberr);
-
-		    if (status != E_DB_OK)
-			break;
-
-		    etlist_ptr->etl_status &= ~ETL_LOAD;
-		    etlist_ptr->etl_dmtcb.dmt_flags_mask = 0;
-		    status = dmt_close(&etlist_ptr->etl_dmtcb);
-		    etlist_ptr->etl_dmtcb.dmt_record_access_id = 0;
-		    etlist_ptr->etl_dmrcb.dmr_access_id = 0;
-		    if (status)
-		    {
-			uleFormat(&etlist_ptr->etl_dmtcb.error, 0, NULL,
-					ULE_LOG, NULL, (char *)NULL, 0L,
-					(i4 *)NULL, &local_err_code, 0);
-			SETDBERR(dberr, 0, E_DM9B04_LOAD_DMPE_ERROR);
-		    }
-		}
-
-		etlist_ptr = etlist_ptr->etl_next;
-	    }
+	    /* If we're ending a load, the query itself must be on the way
+	    ** to being over, so just call the query ender.
+	    ** (If this is a wrong guess, e.g. ctas in nested DB proc,
+	    ** it's not fatal;  we'll just have to rebuild context as
+	    ** the query continues.)
+	    ** Not an error, don't drop any holding temps.
+	    */
+	    status = dmpe_query_end(FALSE, FALSE, dberr);
+	    if (status != E_DB_OK)
+		break;
 	}
 
 	/*

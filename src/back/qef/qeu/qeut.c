@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 #include    <compat.h>
 #include    <gl.h>
@@ -129,7 +129,6 @@
 **	10-Jan-2001 (jenjo02)
 **	    Delted qef_dmf_id, use qef_sess_id instead.
 **/
-
 
 
 /*{
@@ -337,6 +336,8 @@ QEU_CB      *qeu_cb)
 **	    released by dm2t_destroy_temp_tcb(), and copy map processing
 **	    would fail during the redemption of the large object null
 **	    indicator values. This change fixes bug 72504.
+**	22-Apr-2010 (kschendel) SIR 123485
+**	    Use padded copy of standard savepoint name in the QEF SCB.
 */
 DB_STATUS
 qeu_etran(
@@ -346,7 +347,6 @@ QEU_CB		*qeu_cb)
     DB_STATUS	status = E_DB_OK;
     QEF_RCB	*oqef_rcb;
     QEF_RCB	qef_rcb;	/* temporary qef_rcb for lower levels */
-    DB_SP_NAME	spoint;
 
     qeu_cb->error.err_code = E_QE0000_OK;   /* assume */
     oqef_rcb = qef_cb->qef_rcb;
@@ -422,9 +422,7 @@ QEU_CB		*qeu_cb)
 	    if (status != E_DB_OK)
 		break;
 
-	    qef_rcb.qef_spoint = &spoint;
-	    MEmove(QEF_PS_SZ, (PTR) QEF_SP_SAVEPOINT,
-	      ' ', sizeof(DB_SP_NAME), (PTR) qef_rcb.qef_spoint->db_sp_name);
+	    qef_rcb.qef_spoint = &Qef_s_cb->qef_sp_savepoint;
 	    status = qet_savepoint(qef_cb);
 	    break;
     }

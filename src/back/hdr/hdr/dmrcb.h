@@ -1,7 +1,7 @@
 #ifndef INCLUDE_DMRCB_H
 #define INCLUDE_DMRCB_H
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 /**
@@ -338,6 +338,8 @@ typedef struct _DMR_CHAR_ENTRY
 **          Add bitmask for context from DSH.
 **	23-Mar-2010 (kschendel) SIR 123448
 **	    Define no-parallel-sort flag for load.
+**	19-Apr-2010 (kschendel) SIR 123485
+**	    Define a couple more flags for query-end.
 */
 typedef struct _DMR_CB 
 {
@@ -472,6 +474,16 @@ typedef struct _DMR_CB
 #define                 DMR_NO_SIAGENTS     0x1000000
 					    /* Do not use siAgents to
 					    ** update indexes.
+					    */
+#define			DMR_QEND_ERROR	    0x2000000
+					    /* DMPE_QUERY_END: query has ended
+					    ** with an error.  Toss rather than
+					    ** finish any in-progress etab
+					    ** loads.
+					    */
+#define			DMR_QEND_FREE_TEMPS 0x4000000
+					    /* DMPE_QUERY_END: implied
+					    ** adu_free_objects.
 					    */
     i4         dmr_position_type;       /* Type of positioning data. */
 #define                 DMR_ALL             1L

@@ -1,6 +1,6 @@
 #ifndef INCLUDE_DMTCB_H
 #define INCLUDE_DMTCB_H
-/* Copyright (c) 1995, 2005 Ingres Corporation
+/* Copyright (c) 1995, 2010 Ingres Corporation
 **
 **
 */
@@ -494,6 +494,10 @@ typedef struct
 **	    Add dmt_crib_ptr.
 **	24-Mar-2010 (jonj)
 **	    SIR 121619 MVCC blobs: Added DMT_CRIBPTR
+**	12-Apr-2010 (kschendel) SIR 123485
+**	    Add manual-blob-logkey-gen and multi-row flags.  Both of these
+**	    are for the new BLOB logic that uses the BQCB for context during
+**	    the query lifetime.
 */
 typedef struct _DMT_CB
 {
@@ -576,6 +580,28 @@ typedef struct _DMT_CB
 #define			DMT_CRIBPTR	    0x20000L
 					    /* Use MVCC lock level and dmt_cribptr,
 					    ** used by blob etabs
+					    */
+#define			DMT_MULTI_ROW	    0x40000L
+					    /* DMF can expect multiple row
+					    ** operations on this table.  This
+					    ** flag is mainly for use with
+					    ** BLOBs, as a hint to use bulk-
+					    ** load on etabs if possible, but
+					    ** could be extended to other uses.
+					    ** The canonical example is COPY.
+					    */
+#define			DMT_MANUAL_ENDOFROW 0x80000L
+					    /* Normally, reaching dm1c_pput or
+					    ** dm1c_preplace is "end of row"
+					    ** for BLOB logical key generation
+					    ** purposes.  When this flag is
+					    ** set, DMF will expect the caller
+					    ** to explicitly signal end-of-row
+					    ** via dmf-call.  This is used by
+					    ** code (e.g. COPY) where LOB
+					    ** couponification is asynchronous
+					    ** and decoupled from the actual
+					    ** row-put into DMF.
 					    */
 
     i4		    dmt_unique_dbid;	    /* Unique DBid from rdr_unique_dbid */

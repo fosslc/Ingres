@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -393,7 +393,8 @@ i4 val2);
 **          switches ON/OFF the fix to b112978.
 **	5-Aug-2009 (kschendel) SIR 122512
 **	    Pass in new hash related config items.
-[@history_line@]...
+**	22-Apr-2010 (kschendel) SIR 123485
+**	    Set up padded copy of standard savepoint name in the QEF SCB.
 */
 DB_STATUS
 qec_initialize(
@@ -445,6 +446,8 @@ QEF_SRCB       *qef_srcb )
     Qef_s_cb->qef_type = QEFSCB_CB;
     Qef_s_cb->qef_owner = (PTR)DB_QEF_ID;
     Qef_s_cb->qef_ascii_id = QEFSCB_ASCII_ID;
+    MEmove(QEF_PS_SZ, QEF_SP_SAVEPOINT, ' ',
+		sizeof(DB_SP_NAME), &Qef_s_cb->qef_sp_savepoint.db_sp_name[0]);
     Qef_s_cb->qef_dsh_maxmem = qef_srcb->qef_dsh_maxmem;
     Qef_s_cb->qef_sort_maxmem = qef_srcb->qef_sort_maxmem;
     Qef_s_cb->qef_hash_maxmem = qef_srcb->qef_hash_maxmem;

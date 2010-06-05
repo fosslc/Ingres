@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 /**
@@ -211,6 +211,8 @@ struct _QEU_MISSING_COL
 **	    Forgot to delete qeu-moving-data, do that.  Comment updates.
 **	    Add LOB couponify/redeem state variables formerly in sequencer
 **	    session control block.
+**	12-Apr-2010 (kschendel) SIR 123485
+**	    Add base table access ID for COPY FROM, for use with blobs.
 */
 struct _QEU_COPY
 {
@@ -314,6 +316,19 @@ struct _QEU_COPY
     ** definition.  The parse makes a copy and sticks the address here.
     */
     DB_PART_DEF		*qeu_part_def;	    /* Address of partition def */
+
+    /* When COPY startup in QEF opens the copy table, the "access ID"
+    ** supplied by DMF is stored here.  This is the open in the session
+    ** thread, not any copy child.  If the table is partitioned, this
+    ** is the open of the partitioned master.
+    ** As far as most of COPY is concerned, this access ID is just a
+    ** cookie.  DMF knows that it's an RCB pointer, and will use the
+    ** access ID to do nice things with blobs.  Blob-less copies don't
+    ** need this at present.
+    */
+    PTR			qeu_access_id;	    /* Base table access ID from
+					    ** table open in main thread.
+					    */
 
     /* This copy control info pointed to here is defined locally
     ** in qefcopy.c;  nobody outside cares what's in here.

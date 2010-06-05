@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -212,6 +212,8 @@
 **	    SIR 121619 MVCC: Replace DMPP_PAGE* with DMP_PINFO* where needed.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	13-Apr-2010 (kschendel) SIR 123485
+**	    Open no-coupon to avoid unnecessary LOB overhead.
 **/
 
 static DB_STATUS dmv_remodify(
@@ -655,7 +657,7 @@ DM0L_MODIFY 	*log_rec)
 	    master_id.db_tab_index = 0;
 	
 	status = dm2t_open(dmve->dmve_dcb_ptr, &master_id,
-			DM2T_X, DM2T_UDIRECT, DM2T_A_WRITE, 
+			DM2T_X, DM2T_UDIRECT, DM2T_A_WRITE_NOCPN,
 			(i4)0, (i4)20, (i4)0, 
 			dmve->dmve_log_id, dmve->dmve_lk_id,
 			(i4)0, (i4)0, dmve->dmve_db_lockmode,
@@ -784,7 +786,7 @@ DM0L_MODIFY 	*log_rec)
 	    omcb.omcb_octx = (PTR)octx;
 
 	    status = dm2t_open(dmve->dmve_dcb_ptr, &log_rec->dum_rnl_tbl_id, 
-		    DM2T_N, DM2T_UDIRECT, DM2T_A_READ, 
+		    DM2T_N, DM2T_UDIRECT, DM2T_A_READ_NOCPN,
 		    (i4)0, (i4)20, (i4)0, dmve->dmve_log_id, dmve->dmve_lk_id,
 		    (i4)0, (i4)0, dmve->dmve_db_lockmode, &dmve->dmve_tran_id, 
 		    &timestamp, &rnl_rcb, (DML_SCB *)NULL, &dmve->dmve_error);
@@ -846,7 +848,7 @@ DM0L_MODIFY 	*log_rec)
 		if (rnl_tcb->tcb_rel.relnparts)
 		{
 		    status = dm2t_open(dmve->dmve_dcb_ptr, tabid, DM2T_N, 
-				DM2T_UDIRECT, DM2T_A_READ, (i4)0, (i4)20, 
+				DM2T_UDIRECT, DM2T_A_READ_NOCPN, (i4)0, (i4)20,
 				(i4)0, dmve->dmve_log_id, dmve->dmve_lk_id,
 				(i4)0, (i4)0, dmve->dmve_db_lockmode, 
 				&dmve->dmve_tran_id, &timestamp, 

@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1985, 2008 Ingres Corporation
+** Copyright (c) 1985, 2010 Ingres Corporation
 **
 **
 NO_OPTIM=dr6_us5
@@ -274,8 +274,8 @@ static const struct
 	{ DMR_RECORD_CB, sizeof(DMR_CB) },  /* DMR_ALTER */
 	{ DMR_RECORD_CB, sizeof(DMR_CB) },  /* DMR_AGGREGATE */
 	{ DMR_RECORD_CB, sizeof(DMR_CB) },  /* DMR_UNFIX */
-	{ 0, 0 },			    /* NOT USED*/
-	{ 0, 0 },			    /* NOT USED*/
+	{ DMR_RECORD_CB, sizeof(DMR_CB) },  /* DMPE_END_ROW */
+	{ DMR_RECORD_CB, sizeof(DMR_CB) },  /* DMPE_QUERY_END */
 	{ 0, 0 },			    /* NOT USED*/
 	{ 0, 0 },			    /* NOT USED*/
 	{ 0, 0 },			    /* NOT USED*/
@@ -457,6 +457,8 @@ static const struct
 **	    Relocated setting rcb_dmr_opcode to individual dmr
 **	    modules; dmpe bypasses dmf_call to get to the
 **	    dmr functions.
+**	13-Apr-2010 (kschendel) SIR 123485
+**	    Add two DMPE functions.
 */
 DB_STATUS
 dmf_call(operation, control_block)
@@ -480,13 +482,13 @@ PTR		    control_block;
 
     CLRDBERR(&cb->error);
 
-    if (operation >= DM_NEXT_OP ||
+    if (operation >= DM_NEXT_OP || operation < 0 ||
 	cb_check[operation].cb_type != cb->type ||
 	cb_check[operation].cb_size > cb->length)
     {
 	/*  Figure out the error in more detail. */
 
-	if (operation >= DM_NEXT_OP || cb_check[operation].cb_type == 0)
+	if (operation >= DM_NEXT_OP || operation < 0 || cb_check[operation].cb_type == 0)
 	    SETDBERR(&cb->error, 0, E_DM006D_BAD_OPERATION_CODE);
 	else if (cb_check[operation].cb_type != cb->type)
 	    SETDBERR(&cb->error, 0, E_DM000C_BAD_CB_TYPE);
@@ -495,12 +497,17 @@ PTR		    control_block;
 	return (E_DB_ERROR);
     }
 
-    if ((dmf_svcb !=0) && DMZ_CLL_MACRO(5))
+    if ((dmf_svcb != NULL) && DMZ_CLL_MACRO(5))
 	dmd_call(operation, (PTR)control_block, cb->error.err_code);
 
     if (EXdeclare(ex_handler, &context) == OK &&
-	(dmf_svcb == 0 || (dmf_svcb->svcb_status & SVCB_CHECK) == 0))
+	(dmf_svcb == NULL || (dmf_svcb->svcb_status & SVCB_CHECK) == 0))
     {
+	/* Amazingly enough, this switch ought to be efficient on most
+	** C compilers even though it is large.  The dmf-call op codes
+	** are contiguous enough that a straight dispatch table should
+	** be used.  (At least, gcc 4.3 manages it.)
+	*/
 	switch (operation)
 	{
     
@@ -545,6 +552,21 @@ PTR		    control_block;
 	case DMR_UNFIX:
 	    status = dmr_unfix((DMR_CB *)cb);
 	    break;
+
+	case DMPE_END_ROW:
+	    dmpe_end_row(((DMR_CB *)cb)->dmr_access_id);
+	    status = E_DB_OK;
+	    break;
+
+	case DMPE_QUERY_END:
+	    /* Interpret the flags inline, simplest */
+	    {
+		bool was_error, free_temps;
+		was_error = (((DMR_CB *)cb)->dmr_flags_mask & DMR_QEND_ERROR) != 0;
+		free_temps = (((DMR_CB *)cb)->dmr_flags_mask & DMR_QEND_FREE_TEMPS) != 0;
+		status = dmpe_query_end(was_error, free_temps, &cb->error);
+		break;
+	    }
     
 	/* TABLE operations. */
 
@@ -876,7 +898,7 @@ PTR		    control_block;
 	    break;
 	}
 
-	if ((dmf_svcb !=0) && DMZ_CLL_MACRO(5))
+	if (dmf_svcb != NULL && DMZ_CLL_MACRO(5))
 	    dmd_return(operation, (PTR)control_block, status);
 
 	EXdelete();
@@ -887,7 +909,7 @@ PTR		    control_block;
         CSfac_trace(FALSE, CS_DMF_ID, operation, control_block);
 #endif
 
-	if (dmf_svcb !=0 && status == E_DB_ERROR 
+	if (status == E_DB_ERROR && dmf_svcb != NULL
 		&& cb->error.err_code == E_DM002A_BAD_PARAMETER)
 	{
 	    uleFormat(&cb->error, 0, (CL_ERR_DESC *)NULL,

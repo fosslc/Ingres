@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1985, 2005 Ingres Corporation
+** Copyright (c) 1985, 2010 Ingres Corporation
 **
 **
 */
@@ -429,106 +429,115 @@ typedef struct _DM_MDATA DM_MDATA;
 **	    Add E_DM01A0_INVALID_ALTCOL_DEFAULT
 **	16-Mar-2010 (frima01) SIR 121619
 **	    Add IIDBDB_ID defined as 1.
+**	12-Apr-2010 (kschendel) SIR 123485
+**	    Add LOB functions for manual end-of-row, query end.
+**	    Kill the annoying "L", these are ints, not longs.
 */
 typedef i4 DM_OPERATION;
-#define			DMC_CSP_MAIN		4L  /* Control operations. */
-#define                 DMC_CSP_MSGMON		5L
-#define                 DMC_CSP_MSGTHR		6L
-#define			DMC_RESET_EFF_USER_ID	7L  
-#define                 DMC_START_WB_THREADS    8L
-#define			DMC_FAST_COMMIT		9L
-#define                 DMC_ALTER		10L
-#define                 DMC_SHOW		11L
-#define                 DMC_START_SERVER	12L
-#define                 DMC_STOP_SERVER		13L
-#define                 DMC_BEGIN_SESSION	14L
-#define                 DMC_END_SESSION		15L
-#define                 DMC_OPEN_DB		16L
-#define                 DMC_CLOSE_DB		17L
-#define                 DMC_ADD_DB		18L
-#define                 DMC_DEL_DB		19L
-#define                 DMD_ALTER_CB		20L /* Debug operations. */
-#define                 DMD_CANCEL_TRACE	21L 
-#define                 DMD_DISPLAY_TRACE	22L
-#define                 DMD_GET_CB		23L
-#define                 DMD_RELEASE_CB		24L
-#define                 DMD_SET_TRACE		25L
-#define                 DMD_SHOW_CB		26L
-#define			DMC_REP_QMAN		27L /* another control op */
-#define			DMC_DIST_DEADLOCK_THR   28L /* another control op */
-#define			DMC_GLC_SUPPORT_THR	29L /* another control op */
-#define                 DMR_DELETE		30L /* Record Operations. */
-#define                 DMR_GET			31L
-#define                 DMR_POSITION		32L
-#define                 DMR_PUT			33L
-#define                 DMR_REPLACE		34L
-#define                 DMR_LOAD		35L
-#define                 DMR_DUMP_DATA		36L
-#define                 DMR_ALTER		37L
-#define                 DMR_AGGREGATE		38L
-#define                 DMR_UNFIX		39L
-#define                 DMT_ALTER		50L /* Table Operations. */
-#define                 DMT_CLOSE		51L
-#define                 DMT_CREATE_TEMP		52L
-#define                 DMT_DELETE_TEMP		53L
-#define                 DMT_OPEN		54L
-#define                 DMT_SHOW		55L
-#define                 DMT_SORT_COST		56L
-#define                 DMT_INVALIDATE_TCB	57L
-#define			DMT_TABLE_LOCKED	58L
-#define			DMT_RELEASE_TABLE_LOCKS	59L
-#define                 DMU_CREATE_TABLE	60L /* Utility operations. */
-#define                 DMU_DESTROY_TABLE	61L
-#define                 DMU_INDEX_TABLE		62L
-#define                 DMU_MODIFY_TABLE	63L
-#define                 DMU_RELOCATE_TABLE	64L
-#define                 DMU_ALTER		65L
-#define                 DMU_SHOW		66L
-#define                 DMU_GET_TABID		67L
-#define                 DMU_CONVERT_TABLE	68L
-#define                 DMX_INFO		69L /* Transaction operations. */
-#define                 DMX_ABORT		70L 
-#define                 DMX_BEGIN		71L
-#define                 DMX_COMMIT		72L
-#define                 DMX_SECURE		73L
-#define                 DMX_SAVEPOINT		74L
-#define                 DMX_RESUME		75L
-#define			DMM_CREATE_DB		76L
-#define			DMM_DESTROY_DB		77L
-#define			DMM_ALTER_DB		78L
-#define			DMA_WRITE_RECORD	79L
-#define			DMM_LISTFILE		80L
-#define			DMM_DROPFILE		81L
-#define			DMM_ADD_LOC		82L
-#define                 DMA_SET_STATE		83L
-#define			DMA_SHOW_STATE		84L
-#define			DMM_FINDDBS		85L
-#define			DMC_RECOVERY_THREAD	86L
-#define			DMC_CHECK_DEAD		87L
-#define			DMC_GROUP_COMMIT	88L
-#define			DMC_FORCE_ABORT		89L
-#define			DMC_LOGWRITER		90L
-#define			DMM_CONFIG		91L
-#define			DMM_DEL_DUMP_CONFIG	92L
-#define			DMC_CP_TIMER		93L
-#define                 DMC_WRITE_ALONG         95L
-#define                 DMC_READ_AHEAD          96L
-#define                 DMU_SETPRODUCTION       97L
-#define			DMU_ALTER_TABLE		98L	
-#define                 DMC_LK_CALLBACK         99L
-#define                 DMC_DEADLOCK_THREAD    100L
-#define                 DMU_PINDEX_TABLE       101L
-#define                 DMS_OPEN_SEQ           102L
-#define                 DMS_CLOSE_SEQ          103L
-#define                 DMS_NEXT_SEQ           104L
-#define			DMM_DEL_LOC		105L
-#define			DMX_XA_START		106L
-#define			DMX_XA_END		107L
-#define			DMX_XA_PREPARE		108L
-#define			DMX_XA_COMMIT		109L
-#define			DMX_XA_ROLLBACK		110L
-#define			DMT_CONTROL_LOCK	111L
-#define                 DM_NEXT_OP             112L
+/*	1 thru 3 unused */
+#define		DMC_CSP_MAIN		4  /* Control operations. */
+#define		DMC_CSP_MSGMON		5
+#define		DMC_CSP_MSGTHR		6
+#define		DMC_RESET_EFF_USER_ID	7
+#define		DMC_START_WB_THREADS    8
+#define		DMC_FAST_COMMIT		9
+#define		DMC_ALTER		10
+#define		DMC_SHOW		11
+#define		DMC_START_SERVER	12
+#define		DMC_STOP_SERVER		13
+#define		DMC_BEGIN_SESSION	14
+#define		DMC_END_SESSION		15
+#define		DMC_OPEN_DB		16
+#define		DMC_CLOSE_DB		17
+#define		DMC_ADD_DB		18
+#define		DMC_DEL_DB		19
+#define		DMD_ALTER_CB		20 /* Debug operations. */
+#define		DMD_CANCEL_TRACE	21
+#define		DMD_DISPLAY_TRACE	22
+#define		DMD_GET_CB		23
+#define		DMD_RELEASE_CB		24
+#define		DMD_SET_TRACE		25
+#define		DMD_SHOW_CB		26
+#define		DMC_REP_QMAN		27 /* another control op */
+#define		DMC_DIST_DEADLOCK_THR   28 /* another control op */
+#define		DMC_GLC_SUPPORT_THR	29 /* another control op */
+#define		DMR_DELETE		30 /* Record Operations. */
+#define		DMR_GET			31
+#define		DMR_POSITION		32
+#define		DMR_PUT			33
+#define		DMR_REPLACE		34
+#define		DMR_LOAD		35
+#define		DMR_DUMP_DATA		36
+#define		DMR_ALTER		37
+#define		DMR_AGGREGATE		38
+#define		DMR_UNFIX		39
+#define		DMPE_END_ROW		40 /* Manual end-of-row for BLOB */
+#define		DMPE_QUERY_END		41 /* End-of-query for BLOB */
+/* 42 thru 49 unused */
+#define		DMT_ALTER		50 /* Table Operations. */
+#define		DMT_CLOSE		51
+#define		DMT_CREATE_TEMP		52
+#define		DMT_DELETE_TEMP		53
+#define		DMT_OPEN		54
+#define		DMT_SHOW		55
+#define		DMT_SORT_COST		56
+#define		DMT_INVALIDATE_TCB	57
+#define		DMT_TABLE_LOCKED	58
+#define		DMT_RELEASE_TABLE_LOCKS	59
+#define		DMU_CREATE_TABLE	60 /* Utility operations. */
+#define		DMU_DESTROY_TABLE	61
+#define		DMU_INDEX_TABLE		62
+#define		DMU_MODIFY_TABLE	63
+#define		DMU_RELOCATE_TABLE	64
+#define		DMU_ALTER		65
+#define		DMU_SHOW		66
+#define		DMU_GET_TABID		67
+#define		DMU_CONVERT_TABLE	68
+#define		DMX_INFO		69 /* Transaction operations. */
+#define		DMX_ABORT		70
+#define		DMX_BEGIN		71
+#define		DMX_COMMIT		72
+#define		DMX_SECURE		73
+#define		DMX_SAVEPOINT		74
+#define		DMX_RESUME		75
+#define		DMM_CREATE_DB		76
+#define		DMM_DESTROY_DB		77
+#define		DMM_ALTER_DB		78
+#define		DMA_WRITE_RECORD	79
+#define		DMM_LISTFILE		80
+#define		DMM_DROPFILE		81
+#define		DMM_ADD_LOC		82
+#define		DMA_SET_STATE		83
+#define		DMA_SHOW_STATE		84
+#define		DMM_FINDDBS		85
+#define		DMC_RECOVERY_THREAD	86
+#define		DMC_CHECK_DEAD		87
+#define		DMC_GROUP_COMMIT	88
+#define		DMC_FORCE_ABORT		89
+#define		DMC_LOGWRITER		90
+#define		DMM_CONFIG		91
+#define		DMM_DEL_DUMP_CONFIG	92
+#define		DMC_CP_TIMER		93
+/*	94 unused */
+#define		DMC_WRITE_ALONG         95
+#define		DMC_READ_AHEAD          96
+#define		DMU_SETPRODUCTION       97
+#define		DMU_ALTER_TABLE		98
+#define		DMC_LK_CALLBACK         99
+#define		DMC_DEADLOCK_THREAD	100
+#define		DMU_PINDEX_TABLE	101
+#define		DMS_OPEN_SEQ		102
+#define		DMS_CLOSE_SEQ		103
+#define		DMS_NEXT_SEQ		104
+#define		DMM_DEL_LOC		105
+#define		DMX_XA_START		106
+#define		DMX_XA_END		107
+#define		DMX_XA_PREPARE		108
+#define		DMX_XA_COMMIT		109
+#define		DMX_XA_ROLLBACK		110
+#define		DMT_CONTROL_LOCK	111
+/* Keep DM_NEXT_OP up to date!  should be last op + 1 */
+#define		DM_NEXT_OP		112
 
 /* typedef end 
 **/

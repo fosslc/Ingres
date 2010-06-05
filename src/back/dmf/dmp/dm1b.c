@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -3804,6 +3804,9 @@ dm1b_delete(
 **	    changed arguments for dmd_prkey
 **	11-Apr-2008 (kschendel)
 **	    Row qualification mechanism updated to run in DMF context.
+**	14-Apr-2010 (kschendel) SIR 123485
+**	    Updated pget call.
+**	    rcb_row_version dropped, fix here.
 */
 DB_STATUS
 dm1b_get(
@@ -4278,7 +4281,6 @@ dm1b_get(
 		    }
 
 		    s = dm1c_pget(t->tcb_atts_ptr,
-				  (i4)t->tcb_rel.relatts,
 				  r,
 				  rec_ptr,
 				  dberr);
@@ -4836,7 +4838,6 @@ dm1b_get(
 	    r->rcb_fetchtid.tid_i4 = r->rcb_lowtid.tid_i4;
 	    r->rcb_currenttid.tid_i4 = localtid.tid_i4;
 	    r->rcb_state &= ~RCB_FETCH_REQ;
-	    r->rcb_row_version = row_version;
 
 	    /*
 	    ** If the table being examined has extensions,
@@ -4873,7 +4874,6 @@ dm1b_get(
                 }
 
 		s = dm1c_pget(t->tcb_atts_ptr,
-			      (i4)t->tcb_rel.relatts,
 			      r,
 			      rec_ptr,
 			      dberr);
@@ -8170,6 +8170,9 @@ btree_search(
 **      16-mar-2004 (gupsh01)
 **          Modified dm1r_cvt_row to include adf control block in parameter
 **          list.
+**	22-Apr-2010 (kschendel) SIR 123485
+**	    Process coupons if doing full row duplicate checking and there
+**	    are blobs, otherwise dmpe now complains about lack of context.
 */
 static DB_STATUS
 dm1badupcheck(
@@ -8390,6 +8393,18 @@ dm1badupcheck(
 		    if (s && dberr->err_code != E_DM938B_INCONSISTENT_ROW)
 			break;
 		    wrec_ptr = wrec;
+		}
+		if (s == E_DB_OK && t->tcb_rel.relstat2 & TCB2_HAS_EXTENSIONS)
+		{
+		    /* Apply context to short-term part of coupon in row
+		    ** that we're checking against.
+		    */
+		    if (wrec_ptr != wrec)
+		    {
+			MEcopy(wrec_ptr, t->tcb_rel.relwid, wrec);
+			wrec_ptr = wrec;
+		    }
+		    s = dm1c_pget(t->tcb_atts_ptr, r, wrec_ptr, dberr);
 		}
 
 		if (s != E_DB_OK)

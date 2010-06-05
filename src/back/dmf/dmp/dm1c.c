@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1985, 2009 Ingres Corporation All Rights Reserved.
+** Copyright (c) 1985, 2010 Ingres Corporation All Rights Reserved.
 **
 **
 */
@@ -36,8 +36,6 @@
 #include    <dmucb.h>
 #include    <dmpecpn.h>
 #include    <dmppn.h>
-
-# define DMPE_NULL_TCB	"\0\0\0\0\0\0\0\0"
 
 /**
 **
@@ -239,7 +237,9 @@
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Add V6, V7 page types, prototype changes
 **	    to page accessors.
-**	
+**	14-Apr-2010 (kschendel) SIR 123485
+**	    Changes to LOB handling, using new short-term coupon structure
+**	    and blob query context (BQCB).
 */
 
 
@@ -269,7 +269,6 @@ static bool valid_page_type_size(
 static DB_STATUS dm1c_pvalidate(
 	char		*where,
 	DB_ATTS           *atts,
-	i4		   att_count,
 	DMP_RCB            *rcb,
 	char		   *record,
 	DB_ERROR	   *dberr);
@@ -889,10 +888,14 @@ DB_ERROR		*dberr)
 **	attribute which is peripheral, call the dmpe_delete() routine to remove
 **	it.
 **
+**	Note that we're now looking at a "current version" image of the
+**	row.  If a blob column was added after the original row version, the
+**	version converter will zero out the coupon, and everything just
+**	sort of falls through.
+**
 ** Inputs:
 **      atts                            Pointer to array of DB_ATTS describing
 **					the tuple
-**      att_count                       Count of elements in atts
 **	rcb				Pointer to RCB of table being deleted
 **					from
 **      record                          Ptr to tuple being for which this
@@ -929,17 +932,22 @@ DB_ERROR		*dberr)
 **	    Initialize pop_info to NULL.
 **	11-May-2004 (schka24)
 **	    Delete is from "permanent" etab.
-[@history_template@]...
+**	14-Apr-2010 (kschendel) SIR 123485
+**	    Pass RCB context to dmpe so that it knows what is going on.
+**	    Use BQCB to rapidly pick on only the LOB columns.
 */
 DB_STATUS
 dm1c_pdelete(
 	DB_ATTS           *atts,
-	i4            att_count,
 	DMP_RCB		   *rcb,
 	char               *record,
 	DB_ERROR	   *dberr)
 {
+    DB_ATTS		*lob_att;
+    DB_BLOB_WKSP	wksp;
     DB_STATUS           status = E_DB_OK;
+    DMPE_BQCB		*bqcb;
+    DMPE_BQCB_ATT	*bqcb_att;
     ADP_POP_CB		pop_cb;
     DB_DATA_VALUE	cpn_dv;
     union {
@@ -947,10 +955,14 @@ dm1c_pdelete(
 	char		    buf[sizeof(ADP_PERIPHERAL) + 1];
     }			pdv;
     DMPE_COUPON		*cpn;
-    i4		i;
     i4			*err_code = &dberr->err_code;
+    i4			i;
 
     CLRDBERR(dberr);
+
+    bqcb = rcb->rcb_bqcb_ptr;
+    if (bqcb == NULL)
+	return (E_DB_OK);		/* Probably "can't happen" */
 
     pop_cb.pop_type = ADP_POP_TYPE;
     pop_cb.pop_length = sizeof(pop_cb);
@@ -960,32 +972,41 @@ dm1c_pdelete(
     pop_cb.pop_continuation = 0;
     pop_cb.pop_temporary = ADP_POP_PERMANENT;
     pop_cb.pop_user_arg = (PTR) 0;
-    pop_cb.pop_info = (PTR) 0;
 
-    for (i = 1; i <= att_count; i++)
+    i = bqcb->bqcb_natts;
+    bqcb_att = &bqcb->bqcb_atts[0];
+    cpn = (DMPE_COUPON *) &pdv.periph.per_value.val_coupon;
+    do
     {
-	if ( (atts[i].flag & ATT_PERIPHERAL) &&
-	     (atts[i].ver_dropped == 0) &&
-	     (rcb->rcb_row_version >= atts[i].ver_added) )
+	lob_att = &atts[bqcb_att->bqcb_att_id];
+	if (lob_att->ver_dropped == 0)
 	{
-	    cpn_dv.db_datatype = atts[i].type;
-	    cpn_dv.db_length = atts[i].length;
-	    cpn_dv.db_prec = atts[i].precision;
-	    cpn_dv.db_collID = atts[i].collID;
+	    cpn_dv.db_datatype = lob_att->type;
+	    cpn_dv.db_length = lob_att->length;
+	    cpn_dv.db_prec = lob_att->precision;
+	    cpn_dv.db_collID = lob_att->collID;
 
-	    MECOPY_VAR_MACRO(&record[atts[i].offset],
-				cpn_dv.db_length, pdv.buf);
+	    MEcopy(&record[lob_att->offset], cpn_dv.db_length, pdv.buf);
 
 	    cpn_dv.db_data = (PTR) pdv.buf;
-	    cpn = (DMPE_COUPON *) &pdv.periph.per_value.val_coupon;
-	    DMPE_TCB_ASSIGN_MACRO(rcb->rcb_tcb_ptr, cpn->cpn_tcb);
+	    cpn->cpn_base_id = rcb->rcb_tcb_ptr->tcb_rel.reltid.db_tab_base;
+	    cpn->cpn_att_id = bqcb_att->bqcb_att_id;
+	    cpn->cpn_flags = 0;
+	    wksp.access_id = rcb;
+	    wksp.base_attid = bqcb_att->bqcb_att_id;
+	    wksp.flags = BLOBWKSP_ACCESSID | BLOBWKSP_ATTID;
+	    pop_cb.pop_info = (PTR) &wksp;
 	    status = dmpe_delete(&pop_cb);
 	    if (DB_FAILURE_MACRO(status))
 	    {
 	        *dberr = pop_cb.pop_error;
 	    }
 	}
-    }
+	++bqcb_att;
+    } while (--i > 0);
+
+    /* Delete doesn't generate logical keys, doesn't need "end of row" */
+
     if (DMZ_REC_MACRO(3))
     {
 	if (DB_FAILURE_MACRO(status))
@@ -1009,10 +1030,14 @@ dm1c_pdelete(
 **
 **	At this time, the only information necessary is the rcb address.
 **
+**	Note that we're now looking at a "current version" image of the
+**	row.  If a blob column was added after the original row version, the
+**	version converter will zero out the coupon, and everything just
+**	sort of falls through.
+**
 ** Inputs:
 **      atts                            Pointer to array of DB_ATTS describing
 **					the tuple
-**      att_count                       Count of elements in atts
 **	rcb				Pointer to RCB of table being gotten
 **					from
 **      record                          Ptr to tuple being for which this
@@ -1050,46 +1075,53 @@ dm1c_pdelete(
 **          peripheral attributes might not be aligned. Use the expression
 **          "(...val_coupon)->cpn_tcb" in the assign macro instead.
 **          bug 120329.
-[@history_template@]...
+**	14-Apr-2010 (kschendel) SIR 123485
+**	    Fill in new short-term coupon info.
 */
 DB_STATUS
 dm1c_pget(
 	DB_ATTS           *atts,
-	i4		   att_count,
 	DMP_RCB            *rcb,
 	char		   *record,
 	DB_ERROR	   *dberr)
 {
-    i4		i;
+    DB_ATTS		*lob_att;
+    DMPE_BQCB		*bqcb;
+    DMPE_BQCB_ATT	*bqcb_att;
+    DMPE_COUPON		*cpn;
+    i4			i;
 
     CLRDBERR(dberr);
 
+    /* Don't screw with coupon if MODIFY, CREATE INDEX, or similar operation
+    ** that simply wants to move base rows around without touching LOB data.
+    */
     if (rcb->rcb_state & RCB_NO_CPN)
 	return (E_DB_OK);
 
-    /*
-    ** The short term tcb pointer in DMPE_COUPON is no longer needed during get
-    ** because dmpe_allocate gets context by calling CSget_sid, GET_DML_SCB.
-    **
-    ** Zero out the tcb pointer in the DMPE_COUPON
-    ** Even when called by modify
-    */
-    for (i = 1; i <= att_count; i++)
+    bqcb = rcb->rcb_bqcb_ptr;
+    i = bqcb->bqcb_natts;
+    bqcb_att = &bqcb->bqcb_atts[0];
+    do
     {
-	if ( (atts[i].flag & ATT_PERIPHERAL) &&
-	     (atts[i].ver_dropped == 0) &&
-	     (rcb->rcb_row_version >= atts[i].ver_added) )
+	lob_att = &atts[bqcb_att->bqcb_att_id];
+	if (lob_att->ver_dropped == 0)
 	{
-	    /*
-	    ** Don't know that the coupon is aligned, so must account
-	    ** for moving a pointer into it.
+	    /* Fill in some short-term coupon stuff so that an eventual redeem
+	    ** (possibly in a different thread) can use proper access modes.
 	    */
-
-	    DMPE_TCB_ASSIGN_MACRO(DMPE_NULL_TCB, 
-                   ((DMPE_COUPON *) &((ADP_PERIPHERAL *)
-                    &record[atts[i].offset])->per_value.val_coupon)->cpn_tcb);
+	    cpn = (DMPE_COUPON *) &((ADP_PERIPHERAL *) &record[lob_att->offset])
+					->per_value.val_coupon;
+	    cpn->cpn_base_id = rcb->rcb_tcb_ptr->tcb_rel.reltid.db_tab_base;
+	    cpn->cpn_att_id = bqcb_att->bqcb_att_id;
+	    cpn->cpn_flags = 0;
+	    if (lob_att->geomtype != -1)
+		cpn->cpn_flags |= DMPE_CPN_CHECK_SRID;
 	}
-    }
+	++bqcb_att;
+    } while (--i > 0);
+
+    /* Get doesn't generate logical keys, doesn't need "end of row" */
 
     return(E_DB_OK);
 }
@@ -1111,7 +1143,6 @@ dm1c_pget(
 **	low				Low half of same.
 **      atts                            Pointer to array of DB_ATTS describing
 **					the tuple
-**      att_count                       Count of elements in atts
 **	rcb				Pointer to RCB of table being deleted
 **					from
 **      record                          Ptr to tuple being for which this
@@ -1120,7 +1151,7 @@ dm1c_pget(
 **
 ** Outputs:
 **      *error				Filled with error (if any) from
-**					dmpe_delete()
+**					dmpe_move()
 **
 **	Returns:
 **	    DB_STATUS
@@ -1175,30 +1206,26 @@ dm1c_pget(
 **      01-Dec-2008 (coomi01) b121301
 **          If in a dbproc we do not throw away temp blob tables
 **          immediately. They might be referenced by local variables.
-**          
-[@history_template@]...
+**	14-Apr-2010 (kschendel) SIR 123485
+**	    dmpe generates logical key and makes load decisions now.
+**	    Find lob atts using BQCB to help.
 */
 DB_STATUS
 dm1c_pput(
-	i4		   load_blob,
-	u_i4		   high,
-	u_i4		   low,
 	DB_ATTS           *atts,
-	i4            att_count,
 	DMP_RCB		   *rcb,
 	char               *record,
 	DB_ERROR	   *dberr)
 {
-    DB_STATUS		status = E_DB_OK;
     ADP_POP_CB		pop_cb;
-    DB_DATA_VALUE	cpn_dv;
-    DB_DATA_VALUE	orig_dv;
+    DB_ATTS		*lob_att;
+    DB_STATUS		status = E_DB_OK;
+    DB_DATA_VALUE	cpn_dv;		/* Points to "new_one" */
+    DB_DATA_VALUE	old_dv;		/* Points to "old_one" */
+    DMPE_BQCB		*bqcb;
+    DMPE_BQCB_ATT	*bqcb_att;
     DMPE_COUPON		*cpn;
-    DMPE_COUPON		*orig_cpn;
-    union {
-	ADP_PERIPHERAL	p;
-	char		buf[sizeof(ADP_PERIPHERAL) + 1];
-    }			orig;
+    DMPE_COUPON		*old_cpn;
     union {
 	ADP_PERIPHERAL	p;
 	char		buf[sizeof(ADP_PERIPHERAL) + 1];
@@ -1207,161 +1234,115 @@ dm1c_pput(
 	ADP_PERIPHERAL	p;
 	char		buf[sizeof(ADP_PERIPHERAL) + 1];
     }			old_one;
-    i4		i;
-    DMP_TCB             *t = rcb->rcb_tcb_ptr;
     DB_BLOB_WKSP        blob_work;
 
     CLRDBERR(dberr);
 
-    if (t->tcb_rel.relstat2 & TCB2_BSWAP)
-    {
-	char cp = *((char *)&low);
-	*((char *)&low) = *((char *)&low + 3);
-	*((char *)&low + 3) = cp;
-    }
+    /* Don't screw with coupon if MODIFY, CREATE INDEX, or similar operation
+    ** that simply wants to move base rows around without touching LOB data.
+    */
+    if (rcb->rcb_state & RCB_NO_CPN)
+	return (E_DB_OK);
 
     pop_cb.pop_type = ADP_POP_TYPE;
     pop_cb.pop_length = sizeof(pop_cb);
     pop_cb.pop_coupon = &cpn_dv;
     pop_cb.pop_underdv = (DB_DATA_VALUE *) 0;
-    pop_cb.pop_segment = &orig_dv;
+    pop_cb.pop_segment = &old_dv;
     pop_cb.pop_continuation = 0;
     pop_cb.pop_temporary = ADP_POP_PERMANENT;
     pop_cb.pop_user_arg = (PTR) 0;
-    pop_cb.pop_info = (PTR) 0;
 
-    for (i = 1; i <= att_count; i++)
+    bqcb = rcb->rcb_bqcb_ptr;
+    for (bqcb_att = &bqcb->bqcb_atts[bqcb->bqcb_natts-1];
+	 bqcb_att >= &bqcb->bqcb_atts[0];
+	 --bqcb_att
+	)
     {
-	if ( (atts[i].flag & ATT_PERIPHERAL) &&
-	     (atts[i].ver_dropped == 0) )
+	lob_att = &atts[bqcb_att->bqcb_att_id];
+	if ( lob_att->ver_dropped == 0 )
 	{
-	    cpn_dv.db_datatype =
-		orig_dv.db_datatype = atts[i].type;
-	    cpn_dv.db_length =
-		orig_dv.db_length = atts[i].length;
-	    cpn_dv.db_prec =
-		orig_dv.db_prec = atts[i].precision;
-	    cpn_dv.db_collID =
-		orig_dv.db_collID = atts[i].collID;
-	    MEcopy(&record[atts[i].offset], orig_dv.db_length,
-					orig.buf);
-	    MECOPY_CONST_MACRO(orig.buf, sizeof(orig), old_one.buf);
-	    MECOPY_CONST_MACRO(orig.buf, sizeof(orig), new_one.buf);
-	    orig_dv.db_data = (PTR) &orig;
+	    cpn_dv.db_datatype = old_dv.db_datatype = lob_att->type;
+	    cpn_dv.db_length = old_dv.db_length = lob_att->length;
+	    cpn_dv.db_prec = old_dv.db_prec = lob_att->precision;
+	    cpn_dv.db_collID = old_dv.db_collID = lob_att->collID;
+	    MEcopy(&record[lob_att->offset], old_dv.db_length, old_one.buf);
+	    old_dv.db_data = (PTR) &old_one.buf;
+
+	    /* If coupon is passed as null or empty, ensure that the DMF
+	    ** part is clean, and simply store it and move on
+	    */
+	    if (ADF_ISNULL_MACRO(&old_dv)
+	      || (old_one.p.per_length0 == 0 && old_one.p.per_length1 == 0) )
+	    {
+		old_one.p.per_length0 = 0;		/* Clean (if null) */
+		old_one.p.per_length1 = 0;	
+		cpn = (DMPE_COUPON *) &old_one.p.per_value.val_coupon;
+		MEfill(sizeof(DMPE_COUPON), 0, (PTR) cpn);
+		MEcopy(old_one.buf, lob_att->length, &record[lob_att->offset]);
+		continue;
+	    }
+
+	    MEcopy(old_one.buf, sizeof(old_one), new_one.buf);
 	    cpn_dv.db_data = (PTR) &new_one;
 
 	    cpn = (DMPE_COUPON *) &new_one.p.per_value.val_coupon;
-	    DMPE_TCB_ASSIGN_MACRO(rcb->rcb_tcb_ptr, cpn->cpn_tcb);
-	    cpn->cpn_log_key.tlk_low_id = (u_i4) low;
-	    cpn->cpn_log_key.tlk_high_id = (u_i4) high;
-	    orig_cpn = (DMPE_COUPON *) &old_one.p.per_value.val_coupon;
-
-	    /*
-	    ** If column is nullable, or empty, no data to move.
-	    */
-	    if (pop_cb.pop_segment->db_datatype < 0)
-	    {
-		i4	is_null;
-		ADF_CB	adf_cb;
-
-		MEfill(sizeof(ADF_CB),0,(PTR)&adf_cb);
-		adf_cb.adf_maxstring = DB_MAXSTRING;
-
-        	if (CMischarset_utf8())
-          	  adf_cb.adf_utf8_flag = AD_UTF8_ENABLED;
-        	else
-          	  adf_cb.adf_utf8_flag = 0;
-
-		status = adc_isnull(&adf_cb, pop_cb.pop_segment, &is_null);
-		if (status)
-		{
-		    pop_cb.pop_error= adf_cb.adf_errcb.ad_dberror;
-		    break;
-		}
-
-		if (is_null)
-		{
-		    ((ADP_PERIPHERAL *) 
-			pop_cb.pop_coupon->db_data)->per_length0 = 
-			old_one.p.per_length0 = 0;
-		    ((ADP_PERIPHERAL *) 
-			pop_cb.pop_coupon->db_data)->per_length1 = 
-			old_one.p.per_length1 = 0;
-		    orig_cpn->cpn_log_key.tlk_low_id = (u_i4) low;
-		    orig_cpn->cpn_log_key.tlk_high_id = (u_i4) high;
-		    DMPE_TCB_ASSIGN_MACRO(DMPE_NULL_TCB, orig_cpn->cpn_tcb);
-		    MEcopy(old_one.buf, atts[i].length,
-			   &record[atts[i].offset]);
-		    continue;
-		}
-	    }
-
-	    /* 
-	    ** BUG : b119852
-	    **
-	    ** Whether or not the column is nullable, the per_len may be zero.
-	    ** - (This test used only to be in the nullable 'test & branch' above)
-	    ** We must transfer the coupon none the less, for it contains
-	    ** the per_key information, which otherwise will be lost.
-	    **
-	    */
-	    if (((ADP_PERIPHERAL *)
-		 pop_cb.pop_coupon->db_data)->per_length0 == 0 &&
-		((ADP_PERIPHERAL *)
-		 pop_cb.pop_coupon->db_data)->per_length1 == 0)
-	    {
-		orig_cpn->cpn_log_key.tlk_low_id = (u_i4) low;
-		orig_cpn->cpn_log_key.tlk_high_id = (u_i4) high;
-		old_one.p.per_length0 = 0;
-		old_one.p.per_length1 = 0;
-		DMPE_TCB_ASSIGN_MACRO(DMPE_NULL_TCB, orig_cpn->cpn_tcb);
-		MEcopy(old_one.buf, atts[i].length,
-		       &record[atts[i].offset]);
-
-		continue;
-	    }
+	    old_cpn = (DMPE_COUPON *) &old_one.p.per_value.val_coupon;
 
 	    /* If sequencer was able to tell blob putter where the final
 	    ** blob destination is, coupon is OK, no need to move data.
 	    */
-	    if (! DMPE_TCB_COMPARE_NE_MACRO(orig_cpn->cpn_tcb, DMPE_TCB_PUT_OPTIM))
+	    if (old_cpn->cpn_flags & DMPE_CPN_FINAL)
 	    {
-		DMPE_TCB_ASSIGN_MACRO(DMPE_NULL_TCB, orig_cpn->cpn_tcb);
-		MEcopy(old_one.buf, atts[i].length, &record[atts[i].offset]);
+		/* Make sure short-term part is clean though */
+		old_cpn->cpn_base_id = old_cpn->cpn_att_id = 0;
+		old_cpn->cpn_flags = 0;
+		MEcopy(old_one.buf, lob_att->length, &record[lob_att->offset]);
 	    }
 	    else
 	    {
 		/* Init pop_info with target table info */
-		blob_work.flags = BLOBWKSP_ATTID;
-		blob_work.base_attid = i;
-		blob_work.source_dt = t->tcb_atts_ptr[i].type;
+		blob_work.flags = BLOBWKSP_ACCESSID | BLOBWKSP_ATTID;
+		blob_work.access_id = rcb;
+		blob_work.base_attid = bqcb_att->bqcb_att_id;
 		pop_cb.pop_info = (PTR)&blob_work;
 
+		/* Since we're storing into a new row, the new coupon
+		** definitely needs a new logical key.  Clean out the
+		** new coupon so that dmpe assigns one.
+		*/
+		cpn->cpn_log_key.tlk_low_id = 0;
+		cpn->cpn_log_key.tlk_high_id = 0;
+		cpn->cpn_etab_id = 0;		/* Might as well */
+		cpn->cpn_flags = 0;
 
 		/*
-		** Move can delete source if it's an anon-temp
-		** - Unless we are in a dbproc, when the tidy up
-		**   comes at end of dbproc as part of adu_free_objects().
+		** Move can delete source if it's an anon-temp and at a
+		** top level of the query (i.e. not in a db proc)
 		*/
-		status = dmpe_move(&pop_cb, load_blob, (rcb->rcb_dsh_isdbp == 0));
+		status = dmpe_move(&pop_cb, (rcb->rcb_dsh_isdbp == 0));
 
 		if (status)
 		{
 		    break;
 		}
-		DMPE_TCB_ASSIGN_MACRO(DMPE_NULL_TCB, cpn->cpn_tcb);
-		MEcopy(new_one.buf, atts[i].length, &record[atts[i].offset]);
+		/* Make sure short-term part is clean now */
+		cpn->cpn_base_id = cpn->cpn_att_id = cpn->cpn_flags = 0;
+		MEcopy(new_one.buf, lob_att->length, &record[lob_att->offset]);
 	    }
 	}
     }
     if (status)
 	*dberr = pop_cb.pop_error;
 
+    if (! rcb->rcb_manual_endrow)
+	dmpe_end_row(rcb);		/* Even if error */
+
     if (DMZ_TBL_MACRO(22) && status == E_DB_OK)
     {
 	DB_STATUS lstatus;
 	DB_ERROR  ldberr;
-	lstatus = dm1c_pvalidate("INSERT  ", atts, att_count, rcb, record, &ldberr);
+	lstatus = dm1c_pvalidate("INSERT  ", atts, rcb, record, &ldberr);
     }
 
     return(status);
@@ -1373,13 +1354,13 @@ dm1c_pput(
 ** Description:
 **	This routine replaces the peripheral objects for all peripheral objects
 **	associated with a particular tuple.  This is accomplished by searching
-**	the attributes.  For each attribute which is peripheral, call the
-**	dmpe_replace() routine to replace it.
+**	the attributes.  For each attribute which is peripheral, delete the
+**	old LOB value (if any), and then dmpe_move the new value to make
+**	sure that it is in a proper permanent etab.
 **
 ** Inputs:
 **      atts                            Pointer to array of DB_ATTS describing
 **					the tuple
-**      att_count                       Count of elements in atts
 **	rcb				DMP_RCB * for record being updated.
 **      old				Ptr to old tuple (being replaced)
 **	new				Ptr to new tuple
@@ -1387,7 +1368,7 @@ dm1c_pput(
 **
 ** Outputs:
 **      *error				Filled with error (if any) from
-**					dmpe_delete()
+**					dmpe functions
 **
 **	Returns:
 **	    DB_STATUS
@@ -1441,23 +1422,33 @@ dm1c_pput(
 **          force the update through rather than optimize it away.
 **      11-Nov-2008 (coomi01) b121046
 **          Move the declarator for old_periph to head of routine.
-**
-[@history_template@]...
+**	14-Apr-2010 (kschendel) SIR 123485
+**	    Rework to eliminate dmpe_replace, and to avoid various problems
+**	    (such as the above 121046) that were at the root manifestations of
+**	    junk in the DMF part of a coupon when the length was zero.  The
+**	    original intent was (probably) to re-use an assigned logical key
+**	    even if the value length was or becomes zero, but the rest of
+**	    the server isn't careful enough about initializing in-memory
+**	    coupons for that to work out.
+**	    Run the loop using the BQCB to skip to the LOB atts.
 */
 DB_STATUS
 dm1c_preplace(
 	DB_ATTS           *atts,
-	i4            att_count,
 	DMP_RCB		   *rcb,
 	char		   *old,
 	char               *new,
 	DB_ERROR	   *dberr)
 {
-    DB_STATUS		status = E_DB_OK;
     ADP_POP_CB		pop_cb;
+    DB_ATTS		*lob_att;
+    DB_BLOB_WKSP        blob_work;
     DB_DATA_VALUE	old_dv;
     DB_DATA_VALUE	new_dv;
-    DMP_RCB         	*r = rcb;
+    DB_STATUS		status = E_DB_OK;
+    DB_TAB_LOGKEY_INTERNAL save_logkey;
+    DMPE_BQCB		*bqcb;
+    DMPE_BQCB_ATT	*bqcb_att;
     DMPE_COUPON		*old_cpn;
     DMPE_COUPON		*new_cpn;
     union {
@@ -1468,184 +1459,190 @@ dm1c_preplace(
 	    ADP_PERIPHERAL	periph;
 	    char		buf[sizeof(ADP_PERIPHERAL) + 1];
     }			new_value;
-    i4		i;
     bool		updated = FALSE;
-    DMP_TCB             *t = rcb->rcb_tcb_ptr;
-    DB_BLOB_WKSP        blob_work;
-    bool		need_to_insert = FALSE;
-    ADP_PERIPHERAL      *old_periph;
+    bool		old_empty, new_empty;
     i4			*err_code = &dberr->err_code;
 
     CLRDBERR(dberr);
 
     pop_cb.pop_type = ADP_POP_TYPE;
     pop_cb.pop_length = sizeof(pop_cb);
-    pop_cb.pop_coupon = &new_dv;
     pop_cb.pop_underdv = (DB_DATA_VALUE *) 0;
-    pop_cb.pop_segment = &old_dv;
     pop_cb.pop_continuation = 0;
     pop_cb.pop_temporary = ADP_POP_PERMANENT;
     pop_cb.pop_user_arg = (PTR) 0;
-    pop_cb.pop_info = (PTR) 0;
+    /* pop_coupon and pop_segment will get set as needed */
 
-    for (i = 1; i <= att_count; i++)
+    bqcb = rcb->rcb_bqcb_ptr;
+    for (bqcb_att = &bqcb->bqcb_atts[bqcb->bqcb_natts-1];
+	 bqcb_att >= &bqcb->bqcb_atts[0];
+	 --bqcb_att
+	)
     {
-	if ( (atts[i].flag & ATT_PERIPHERAL) && (atts[i].ver_dropped == 0) )
+	lob_att = &atts[bqcb_att->bqcb_att_id];
+	if ( lob_att->ver_dropped == 0 )
 	{
 	    /* Non-dropped blob column */
-	    need_to_insert = FALSE; /* init for every column */
-	    old_dv.db_datatype =
-		new_dv.db_datatype = atts[i].type;
-	    old_dv.db_length =
-		new_dv.db_length = atts[i].length;
-	    old_dv.db_prec =
-		new_dv.db_prec = atts[i].precision;
-	    new_dv.db_data = (PTR) &new_value;
-	    old_dv.db_collID =
-		new_dv.db_collID = atts[i].collID;
-	    MECOPY_VAR_MACRO( (PTR) &new[atts[i].offset],
+	    old_empty = new_empty = FALSE;
+	    old_dv.db_datatype = new_dv.db_datatype = lob_att->type;
+	    old_dv.db_length = new_dv.db_length = lob_att->length;
+	    old_dv.db_prec = new_dv.db_prec = lob_att->precision;
+	    old_dv.db_collID = new_dv.db_collID = lob_att->collID;
+	    new_dv.db_data = (PTR) &new_value.buf;
+	    old_dv.db_data = (PTR) &old_value.buf;
+	    MEcopy( (PTR) &new[lob_att->offset],
 				new_dv.db_length,
 				(PTR) new_value.buf);
-	    old_dv.db_data = (PTR) old_value.buf;
 	    new_cpn = (DMPE_COUPON *) &new_value.periph.per_value.val_coupon;
-	    if ( r->rcb_row_version >= atts[i].ver_added )
-	    {
-		/* Row contains old coupon, but check that the coupon is
-		** real and not something bogus introduced by add column
-		** followed by modify
-		*/
-		MECOPY_VAR_MACRO( (PTR) &old[atts[i].offset],
-				old_dv.db_length,
-				(PTR) old_value.buf);
+	    old_cpn = (DMPE_COUPON *) &old_value.periph.per_value.val_coupon;
 
-		old_cpn = (DMPE_COUPON *)
-				&old_value.periph.per_value.val_coupon;
-		if ( (old_cpn->cpn_log_key.tlk_low_id == 0) &&
-		     (old_cpn->cpn_log_key.tlk_high_id == 0) )
-		    need_to_insert = TRUE;
+	    /* Preen the "new" coupon to clean up if null or empty */
+	    if (ADF_ISNULL_MACRO(&new_dv)
+	      || (new_value.periph.per_length0 == 0
+		  && new_value.periph.per_length1 == 0) )
+	    {
+		new_value.periph.per_length0 = 0;
+		new_value.periph.per_length1 = 0;
+		MEfill(sizeof(DMPE_COUPON), 0, (PTR) new_cpn);
+		new_empty = TRUE;
+	    }
+	    /* Preen the "old" coupon to clean up if null or empty.
+	    ** Unfortunately, the older dm1r_cvt_row code did not
+	    ** carefully clean up LOB types, so make sure that we aren't
+	    ** looking at something bogus introduced by add column
+	    ** followed by modify.
+	    */
+	    MEcopy( (PTR) &old[lob_att->offset],
+			    old_dv.db_length,
+			    (PTR) old_value.buf);
+
+	    if (ADF_ISNULL_MACRO(&old_dv)
+	      || (old_cpn->cpn_log_key.tlk_low_id == 0
+		  && old_cpn->cpn_log_key.tlk_high_id == 0)
+	      || (old_cpn->cpn_etab_id >= 0 && old_cpn->cpn_etab_id <= DM_SCATALOG_MAX)
+	      || (old_value.periph.per_length0 == 0 && old_value.periph.per_length1 == 0)
+	      || old_value.periph.per_length0 < 0
+	      || old_value.periph.per_length1 < 0
+	      || old_value.periph.per_tag < 0
+	      || old_value.periph.per_tag > ADP_P_TAG_MAX)
+	    {
+		old_value.periph.per_length0 = 0;
+		old_value.periph.per_length1 = 0;
+		MEfill(sizeof(DMPE_COUPON), 0, (PTR) old_cpn);
+		old_empty = TRUE;
+	    }
+
+	    /* If old and new were identical, there is no update of this
+	    ** column.  (If the new coupon shows "put optimization" then
+	    ** old and new can't be identical.)
+	    ** We can't tell "was_empty = ''" from "old = old", so let the
+	    ** former look like something actually is updated.
+	    */
+	    if (!old_empty && !new_empty
+	      && (new_cpn->cpn_flags & DMPE_CPN_FINAL) == 0
+	      && old_cpn->cpn_log_key.tlk_low_id == new_cpn->cpn_log_key.tlk_low_id
+	      && old_cpn->cpn_log_key.tlk_high_id == new_cpn->cpn_log_key.tlk_high_id
+	      && old_cpn->cpn_etab_id == new_cpn->cpn_etab_id)
+	    {
+		continue;
+	    }
+
+	    /* Delete the old value if there is one.  Preserve the
+	    ** old-value logical key (if any) so that we can re-use it.
+	    */
+	    if (!old_empty)
+	    {
+		save_logkey = old_cpn->cpn_log_key;
+		pop_cb.pop_coupon = &old_dv;
+		/* Init pop_info with target table info */
+		blob_work.flags = BLOBWKSP_ACCESSID | BLOBWKSP_ATTID;
+		blob_work.access_id = rcb;
+		blob_work.base_attid = bqcb_att->bqcb_att_id;
+		pop_cb.pop_info = (PTR)&blob_work;
+		status = dmpe_delete(&pop_cb);
+		old_cpn->cpn_log_key = save_logkey;
+	    }
+	    /* Now, if the new value is empty, or shows "final" (put optim),
+	    ** just copy back the (preened) new coupon into the new row.
+	    **
+	    ** For all other cases, dmpe-move the new value into a proper
+	    ** permanent etab, telling dmpe-move to use/update the old
+	    ** coupon as the output coupon.  This way we re-use any valid
+	    ** logical key in the old coupon, avoiding wastage.
+	    ** Then we'll stuff the old coupon into the new row.
+	    */
+	    if (status == E_DB_OK)
+	    {
+		if (new_cpn->cpn_flags & DMPE_CPN_FINAL || new_empty)
+		{
+		    /* Copy back the new coupon in case we preened it.
+		    ** Make sure short-term part is clean incase "final".
+		    */
+		    new_cpn->cpn_base_id = new_cpn->cpn_att_id = new_cpn->cpn_flags = 0;
+		    MEcopy( (PTR) new_value.buf,
+				    new_dv.db_length,
+				    (PTR) &new[lob_att->offset]);
+		}
 		else
 		{
-		    DMPE_TCB_ASSIGN_MACRO(rcb->rcb_tcb_ptr, old_cpn->cpn_tcb);
-		    
-		    /* Bug 121046
-		    **
-		    **   When the old peripheral had zero length we may not
-		    **   take the optim route. The old coupon is not in the
-		    **   old etab itself (data is zero length). We have then to go 
-		    **   through, delete and update the master table to maintain
-		    **   consistency. Not doing so potentially leaves us with
-		    **   duplicate keys in the master table.
+		    /* Move new lob data on top of old coupon.
+		    ** "New" isn't empty, make sure null indicator for old
+		    ** coupon is turned off, or dmpe doesn't do anything.
 		    */
-                    old_periph = (ADP_PERIPHERAL *)old_dv.db_data;
-
-		    if ( 
-			 ! (old_periph->per_length0 == 0 && old_periph->per_length1 == 0 ) && 
-			 ! DMPE_TCB_COMPARE_NE_MACRO(new_cpn->cpn_tcb, DMPE_TCB_PUT_OPTIM) )
+		    old_value.buf[sizeof(ADP_PERIPHERAL)] = 0;
+		    pop_cb.pop_segment = &new_dv;
+		    pop_cb.pop_coupon = &old_dv;
+		    /* Init pop_info with target table info */
+		    blob_work.flags = BLOBWKSP_ACCESSID | BLOBWKSP_ATTID;
+		    blob_work.access_id = rcb;
+		    blob_work.base_attid = bqcb_att->bqcb_att_id;
+		    pop_cb.pop_info = (PTR)&blob_work;
+		    /* Update doesn't delete source if anon-temp, who knows
+		    ** what OPC compiled and we might need the source again.
+		    */
+		    status = dmpe_move(&pop_cb, FALSE);
+		    if (status == E_DB_OK)
 		    {
-			pop_cb.pop_coupon = &old_dv;
-			status = dmpe_delete(&pop_cb);
-			/* The coupon in new is already correct */
-			continue;
-		    }
-		    else
-		    {
- 			/* Send table information in pop_info */
-			blob_work.flags = BLOBWKSP_ATTID;
-			blob_work.base_attid = i;
-			blob_work.source_dt = t->tcb_atts_ptr[i].type;
-			pop_cb.pop_info = (PTR)&blob_work;
-			/* Delete old, move new to old, update old coupon */
-			status = dmpe_replace(&pop_cb);
-		    }
-		    if (status)
-		    {
-			if (DMZ_REC_MACRO(3))
-			{
-			    if (DB_FAILURE_MACRO(status))
-			    {
-				uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
-				    (char *)NULL, (i4)0, (i4 *)NULL, err_code, 0);
-			    }
-			    status = E_DB_OK;
-			    CLRDBERR(dberr);
-			}
-			else
-			{
-			    break;
-			}
-		    }
-		    else if (pop_cb.pop_error.err_code != E_DM0154_DUPLICATE_ROW_NOTUPD)
-		    {
-			updated = TRUE;
-		    }
-		    new_cpn->cpn_etab_id = old_cpn->cpn_etab_id;
-		    new_cpn->cpn_log_key.tlk_low_id = (u_i4)
-					old_cpn->cpn_log_key.tlk_low_id;
-		    new_cpn->cpn_log_key.tlk_high_id = (u_i4)
-					old_cpn->cpn_log_key.tlk_high_id;
-
-		    DMPE_TCB_ASSIGN_MACRO(DMPE_NULL_TCB, new_cpn->cpn_tcb);
-		    MECOPY_VAR_MACRO( (PTR) new_value.buf,
+			/* The old DMF coupon now reflects the moved new data,
+			** but the non-DMF part of the new data is still in
+			** new_value.  (dmpe doesn't deal with per_length etc,
+			** other than to zero it if null.)  Confusing, no?
+			** Glue the bits together...
+			*/
+			MEcopy((PTR) old_cpn, sizeof(DMPE_COUPON), (PTR) new_cpn);
+			/* Make sure short-term part is clean now */
+			new_cpn->cpn_base_id = new_cpn->cpn_att_id = new_cpn->cpn_flags = 0;
+			MEcopy( (PTR) new_value.buf,
 				    new_dv.db_length,
-				    (PTR) &new[atts[i].offset]);
-		}
-	    } /* if row contained att */
-	    if ( r->rcb_row_version < atts[i].ver_added || need_to_insert )
-	    {
-		u_i4 high, low;
-
-		if (! DMPE_TCB_COMPARE_NE_MACRO(new_cpn->cpn_tcb, DMPE_TCB_PUT_OPTIM))
-		{
-		    /* The coupon in new is already correct */
-		    continue;
-		}
-
-		status = dm1c_get_high_low_key(rcb->rcb_tcb_ptr, rcb, &high, &low,
-			&pop_cb.pop_error);
-		if (status != E_DB_OK)
-		    break;
-		MECOPY_CONST_MACRO(new_value.buf, sizeof(new_value), old_value.buf);
- 
-		DMPE_TCB_ASSIGN_MACRO(rcb->rcb_tcb_ptr, new_cpn->cpn_tcb);
-		new_cpn->cpn_log_key.tlk_low_id = (u_i4) low;
-		new_cpn->cpn_log_key.tlk_high_id = (u_i4) high;
-
-		/*
-		** Init pop_info with target table info
-		*/
-		blob_work.flags = BLOBWKSP_ATTID;
-		blob_work.base_attid = i;
-		blob_work.source_dt = t->tcb_atts_ptr[i].type;
-		pop_cb.pop_info = (PTR)&blob_work;
-		/* Move can delete source if it's an anon-temp */
-		status = dmpe_move(&pop_cb, 0, TRUE);
-
-		if (status)
-		{
-		    if (DMZ_REC_MACRO(3))
-		    {
-			if (DB_FAILURE_MACRO(status))
-			{
-			    uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
-				(char *)NULL, (i4)0, (i4 *)NULL, err_code, 0);
-			}
-			status = E_DB_OK;
-			CLRDBERR(dberr);
-		    }
-		    else
-		    {
-			break;
+				    (PTR) &new[lob_att->offset]);
 		    }
 		}
-		else if (pop_cb.pop_error.err_code != E_DM0154_DUPLICATE_ROW_NOTUPD)
-		{
-		    updated = TRUE;
-		}
-		DMPE_TCB_ASSIGN_MACRO(DMPE_NULL_TCB, new_cpn->cpn_tcb);
-		MEcopy(new_value.buf, atts[i].length, &new[atts[i].offset]);
 	    }
-	} /* if blob */
+	    if (status != E_DB_OK)
+	    {
+		if (DMZ_REC_MACRO(3))
+		{
+		    /* DM803 ignores errors */
+		    if (DB_FAILURE_MACRO(status))
+		    {
+			uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
+			    (char *)NULL, (i4)0, (i4 *)NULL, err_code, 0);
+		    }
+		    status = E_DB_OK;
+		    CLRDBERR(dberr);
+		}
+		else
+		{
+		    break;
+		}
+	    }
+	    updated = TRUE;
+	} /* if non-dropped LOB */
     } /* for each att */
+
+    if (! rcb->rcb_manual_endrow)
+	dmpe_end_row(rcb);		/* Even if error */
+
     if (status)
 	*dberr = pop_cb.pop_error;
     else if (!updated)
@@ -1666,12 +1663,13 @@ dm1c_preplace(
     {
 	DB_STATUS lstatus;
 	DB_ERROR  ldberr;
-	lstatus = dm1c_pvalidate("REPL old", atts, att_count, rcb, old, &ldberr);
-	lstatus = dm1c_pvalidate("REPL new", atts, att_count, rcb, new, &ldberr);
+	lstatus = dm1c_pvalidate("REPL old", atts, rcb, old, &ldberr);
+	lstatus = dm1c_pvalidate("REPL new", atts, rcb, new, &ldberr);
     }
 
     return(status);
 }
+
 VOID
 dm1cBadTidFcn(
 DMP_RCB	    *rcb,
@@ -1889,7 +1887,6 @@ DB_ERROR	*dberr)
     else if (s == E_DB_WARN && rec_ptr)
 	s = E_DB_OK;			/* Accept deleted row */
 
-    r->rcb_row_version = row_version;
     convert_row = (r->rcb_data_rac->compression_type != TCB_C_NONE) ||
 		(row_version != r->rcb_proj_relversion);
 
@@ -1915,14 +1912,14 @@ DB_ERROR	*dberr)
 		r->rcb_data_rac,
 		rec_ptr, record, record_size,
 		&uncompressed_length,
-		&r->rcb_tupbuf, r->rcb_row_version, r->rcb_adf_cb);
+		&r->rcb_tupbuf, row_version, r->rcb_adf_cb);
 	}
 	else
 	{
 	    s = dm1r_cvt_row(
 		r->rcb_data_rac->att_ptrs, r->rcb_data_rac->att_count,
 		rec_ptr, record, record_size, &uncompressed_length,
-		r->rcb_row_version, r->rcb_adf_cb);
+		row_version, r->rcb_adf_cb);
 	}
 
 	if ( (s != E_DB_OK) || (uncompressed_length != record_size))
@@ -1979,7 +1976,6 @@ static DB_STATUS
 dm1c_pvalidate(
 	char		*where,
 	DB_ATTS           *atts,
-	i4		   att_count,
 	DMP_RCB            *rcb,
 	char		   *record,
 	DB_ERROR	   *dberr)
@@ -1995,11 +1991,10 @@ dm1c_pvalidate(
     CLRDBERR(dberr);
 
     /* Validate etab id in coupon is an etab for this table */
-    for (i = 1; i <= att_count; i++)
+    for (i = 1; i <= rcb->rcb_tcb_ptr->tcb_rel.relatts; i++)
     {
 	if ( (atts[i].flag & ATT_PERIPHERAL) &&
-	     (atts[i].ver_dropped == 0) &&
-	     (rcb->rcb_row_version >= atts[i].ver_added) )
+	     (atts[i].ver_dropped == 0) )
 	{
 	    /*
 	    ** Don't know that the coupon is aligned, so must account

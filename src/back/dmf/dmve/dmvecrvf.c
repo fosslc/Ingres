@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -112,6 +112,8 @@
 **	    Check db_tab_index > 0 for indexes, not just != 0.
 **	12-Feb-2004 (schka24)
 **	    Don't verify partitions either.
+**	13-Apr-2010 (kschendel) SIR 123485
+**	    Open no-coupon to avoid unnecessary LOB overhead.
 */
 DB_STATUS
 dmve_crverify(
@@ -160,7 +162,7 @@ DMVE_CB		*dmve_cb)
 		break;
 
 	    status = dm2t_open(dmve->dmve_dcb_ptr, &log_rec->ducv_tbl_id,
-		DM2T_X, DM2T_UDIRECT, DM2T_A_WRITE, (i4) 0, (i4) 20,
+		DM2T_X, DM2T_UDIRECT, DM2T_A_WRITE_NOCPN, (i4) 0, (i4) 20,
 		0, dmve->dmve_log_id, dmve->dmve_lk_id, 0, 0,
 		dmve->dmve_db_lockmode, &dmve->dmve_tran_id, &timestamp,
 		&rcb, (DML_SCB *)0, &dmve->dmve_error);

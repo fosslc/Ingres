@@ -1,6 +1,6 @@
 
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 /**
@@ -154,6 +154,8 @@
 **	    Integrate various changes for new rowaccessor scheme.
 **      09-dec-2009 (stial01)
 **          Added DM1C_SPLIT_DUPS
+**	14-Apr-2010 (kschendel) SIR 123485
+**	    dm1c LOB related routines changed prototypes, fix here.
 **/
 
 /*
@@ -329,28 +331,21 @@ FUNC_EXTERN VOID	dm1cBadTidFcn(
 	dm1cBadTidFcn(rcb,tid,__FILE__,__LINE__)
 
 FUNC_EXTERN DB_STATUS   dm1c_pdelete(DB_ATTS	*atts,
-				     i4    att_count,
 				     DMP_RCB	*rcb,
 				     char       *record,
 				     DB_ERROR	*dberr);
 
 FUNC_EXTERN DB_STATUS   dm1c_pget(DB_ATTS   *atts,
-				  i4   att_count,
 				  DMP_RCB   *rcb,
 				  char	    *record,
 				  DB_ERROR  *dberr);
 
-FUNC_EXTERN DB_STATUS   dm1c_pput(i4	    load_blob,
-				  u_i4	    high,
-				  u_i4	    low,
-				  DB_ATTS   *atts,
-				  i4   att_count,
+FUNC_EXTERN DB_STATUS   dm1c_pput(DB_ATTS   *atts,
 				  DMP_RCB   *rcb,
 				  char      *record,
 				  DB_ERROR  *dberr);
 
 FUNC_EXTERN DB_STATUS   dm1c_preplace(DB_ATTS	*atts,
-				      i4   att_count,
 				      DMP_RCB	*rcb,
 				      char	*old,
 				      char      *new,

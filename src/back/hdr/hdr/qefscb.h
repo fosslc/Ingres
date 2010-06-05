@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 **
 */
 
@@ -104,6 +104,10 @@ GLOBALREF	QEF_S_CB	*Qef_s_cb;
 **      7-jun-2007 (huazh01)
 **          Add qef_no_dependency_chk for the config parameter which switches
 **          ON/OFF the fix to b112978.
+**	22-Apr-2010 (kschendel) SIR 123485
+**	    Keep a copy of the blank-padded internal savepoint name
+**	    (QEF_SP_SAVEPOINT) here, so that qef RCB's can point at
+**	    a properly padded copy.
 */
 struct _QEF_S_CB
 {
@@ -131,6 +135,7 @@ struct _QEF_S_CB
     ULM_RCB	    qef_s_ulmcb;    /* ulm_cb template for SORT memory */
     QEF_FUNC        qef_func[QEF_MAX_FUNC]; 
                                     /* routines to perform QEF functions */
+    DB_SP_NAME	qef_sp_savepoint;   /* QEF_SP_SAVEPOINT padded out */
     ULT_VECTOR_MACRO(QEF_SNB, QEF_SNVAO) qef_trace; /* server trace flag */   
     CS_SEMAPHORE    qef_sem;	    /* semaphore for access to this struct */
     i4         qef_state;      /* State indicators, for example

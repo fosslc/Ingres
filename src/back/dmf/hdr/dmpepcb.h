@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 ** All Rights Reserved
 */
 
@@ -99,18 +99,25 @@ typedef struct _DMPE_RECORD
 **	The PCB is what remembers things like the etab DMR_CB and
 **	DMT_CB for the duration of the operation.
 **
-**	A PCB is allocated (dmpe_allocate) at the start of a POP when
-**	dmpe sees the ADP_C_BEGIN_MASK flag, and is deallocated at
+**	A PCB is usually allocated (dmpe_allocate) at the start of a POP
+**	when dmpe sees the ADP_C_BEGIN_MASK flag, and is deallocated at
 **	the end of the POP, or by an explicit ADP_CLEANUP call if
 **	a filter function ends the POP prematurely (before processing
-**	all segments).
+**	all segments).  The exception happens when a PUT POP is bulk-loading
+**	one or more etabs;  in order to keep the etabs being loaded open
+**	for the duration of the load (which might cover many POP's),
+**	it turns out to be convenient to find and re-use the PCB
+**	and its attached DMR/DMT CB's for as long as the bulk-load lasts.
+**	The DMP_ET_LIST entry for any etab being bulk-loaded will point to
+**	the PCB driving the bulk-load.  (Multiple DMP_ET_LIST entries
+**	might point to the same PCB if we had to fill multiple etabs.)
 **
 **	Note that all phases of one POP take place within a single
 **	thread, and hence uses that thread's transaction context.
 **	This is different from the situation with a coupon.  A coupon
 **	can be passed from thread to thread in a parallel query, and
 **	so the coupon may only contain thread- and open-instance-independent
-**	stuff (e.g. a TCB pointer).
+**	stuff (e.g. base table and attribute ID numbers; see dmpepcn.h).
 **
 ** History:
 **      02-Jan-1990 (fred)
@@ -132,7 +139,10 @@ typedef struct _DMPE_RECORD
 **	    Implement multiple DMF LongTerm memory pools and
 **	    ShortTerm session memory.
 **	    Define PCB_CB as DM_PCB_CB.
-[@history_template@]...
+**	16-Apr-2010 (kschendel) SIR 123485
+**	    Delete pcb-base-dmt stuff, add "did we fix tcb" bool.
+**	    Add row counts and "held" record to fix bug with bulk loading
+**	    etabs (wasn't checking for an etab being full).
 */
 struct _DMPE_PCB
 {
@@ -157,52 +167,62 @@ struct _DMPE_PCB
     DMR_CB	    *pcb_dmrcb;		    /* DMR_CB for etab row opers */
     DMT_CB	    *pcb_dmtcb;		    /* DMT_CB for etab table opers */
     DMPE_RECORD	    *pcb_record;	    /* Ptr to record itself */
-    i4 		    pcb_rsize;		    /* Sizeof the actual record */
-    DM_MUTEX	    *pcb_got_mutex;	    /* Are we holding a TCB mutex? */
+    DMPE_RECORD	    *pcb_held_record;	    /* Previous segment not yet written
+					    ** (only when bulk-loading). See
+					    ** dmpe-put for more info
+					    */
+    void	    *pcb_held_access_id;    /* Access-ID to use to write the
+					    ** held record (could be prior
+					    ** rather than current etab).
+					    */
+    DMP_ET_LIST	    *pcb_et;		    /* Pointer to entry on TCB's
+					    ** etab list for the etab currently
+					    ** being put into (put only).
+					    */
+    CS_SID	    pcb_sid;		    /* Session ID */
     i4		    pcb_cat_scan;	    /* Have we scanned the catalog */
     u_i4	    pcb_seg0_next;	    /* Next segment we need */
     u_i4	    pcb_seg1_next;
+
+    /* If loading an etab, limit the number of rows loaded to any given one
+    ** so that we don't exceed the max size of a single etab.
+    */
+    u_i4	    pcb_loaded;		    /* Rows loaded into this etab */
+    u_i4	    pcb_per_etab;	    /* Guesstimate at max rows per etab
+					    ** before making it too full
+					    */
 
     /* etab opens need a transaction context and database context.
     ** We'll get those when the PCB is created.
     */
     DML_XCB	    *pcb_xcb;		    /* Current thread XCB (tran ID) */
     PTR		    pcb_db_id;		    /* Database ID (ODCB) */
+    struct _DMPE_BQCB *pcb_bqcb;	    /* BLOB query context pointer */
 
-    /* The base table TCB is only filled in when we know it for sure,
-    ** and it's typically only relevant when we're targeting a POP at
-    ** a permanent etab.  It may be null if the POP is operating on a
-    ** temporary holding table.
+    /* The base TCB is filled in only if it's a DML operation, get or put.
+    ** See also pcb_fixed_tcb below.
     */
-    DMP_TCB	    *pcb_tcb;		    /*
-					    ** TCB of base table of manipulated
+    DMP_TCB	    *pcb_tcb;		    /* TCB of base table of manipulated
 					    ** object.
 					    */
-    DMP_ET_LIST	    *pcb_scan_list;	    /* List of table extensions */
     DB_TAB_ID	    pcb_table_previous;	    /*
 					    ** Table id of `previous' for this
 					    ** peripheral object.
 					    */
     ADF_FN_BLK	    pcb_fblk;		    /* coercion function for
 					    ** new inserts */
-    DMT_CB	    pcb_base_dmtcb;	    /* base table's CB */
     i4              pcb_att_id;             /* base table att_id */
     /* Singly-linked list of PCB's belonging to a thread, headed by
     ** xcb's xcb_pcb_list.
     */
     DMPE_PCB	    *pcb_xq_next;	    /* PCB list for cleanup */
 
-    /* TRUE if we happen to be doing an optimized put from an input
-    ** stream directly into an etab.  This can only occur when the
-    ** caller supplies a pop-info giving a table name, and turns on the
-    ** BLOBWKSP_TABLENAME flag prior to starting the put POP.
-    ** If the segments are all put successfully, the coupon will be
-    ** tagged with DMPE_OPTIM_TCB (see dmpecpn.h).
-    ** The effect is that low-level record put (dm1c) assumes that the
-    ** coupon is complete and the data is in the final etab, and does
-    ** not call dmpe-move to shuffle the data segments around.
+    /* TRUE if dmpe-begin-dml had to fix the base table TCB itself.
+    ** An unfix must be done when the PCB is deallocated.
+    ** If FALSE, something else (eg caller RCB) is holding the TCB
+    ** open for the duration of the operation, and no fix/unfix was needed.
     */
-    bool	    pcb_put_optim;	    /* TRUE if put optim done */
+    bool	    pcb_fixed_tcb;	    /* TRUE if unfix needed */
 };
 
 void dmpe_deallocate(DMPE_PCB *pcb);

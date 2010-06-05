@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1985, 2004 Ingres Corporation
+** Copyright (c) 1985, 2010 Ingres Corporation
 **
 */
 
@@ -19,6 +19,7 @@
 #include    <adf.h>
 #include    <dmtcb.h>
 #include    <dmrcb.h>
+#include    <dmucb.h>
 #include    <dmxcb.h>
 #include    <dmccb.h>
 #include    <lg.h>
@@ -29,6 +30,7 @@
 #include    <dm2t.h>
 #include    <dmftrace.h>
 #include    <dma.h>
+#include    <dmpecpn.h>
 
 /**
 ** Name: DMTOPEN.C - Implements the DMF open table operation.
@@ -595,6 +597,10 @@ static STATUS check_char(
 **	19-Mar-2010 (jonj)
 **	    SIR 121619 MVCC, blob support: dmpe passes base table
 **	    CRIB in dmt_crib_ptr, use same CRIB for etabs.
+**	12-Apr-2010 (kschendel) SIR 123485
+**	    Don't hose the flags in the caller's DMTCB.  Just leave them
+**	    alone, so caller doesn't have to recompute the flags to re-use
+**	    the DMTCB.  Recognize new multi-row and manual end-of-row flags.
 */
 
 DB_STATUS
@@ -604,8 +610,7 @@ DMT_CB   *dmt_cb)
     DMT_CB	    *dmt = dmt_cb;
     DML_SCB         *scb;
     DML_XCB	    *xcb;
-    DMP_RCB	    *rcb = 0;
-    DMP_RCB	    *r;
+    DMP_RCB	    *r = NULL;
     DMP_TCB	    *t;
     DML_ODCB	    *odcb;
     ADF_CB	    *adf_cb;
@@ -639,7 +644,7 @@ DMT_CB   *dmt_cb)
         if ((dmt->dmt_flags_mask & ~(DMT_DBMS_REQUEST | DMT_SHOW_STAT | 
                DMT_CONSTRAINT | DMT_SESSION_TEMP |
 	       DMT_LK_ONLN_NEEDED | DMT_FORCE_NOLOCK | DMT_NO_LOCK_WAIT | 
-	       DMT_CURSOR | DMT_CRIBPTR)) == 0)
+	       DMT_CURSOR | DMT_CRIBPTR | DMT_MULTI_ROW | DMT_MANUAL_ENDOFROW)) == 0)
 	{
 	    odcb = (DML_ODCB *)dmt->dmt_db_id;
 
@@ -863,7 +868,6 @@ DMT_CB   *dmt_cb)
 	if (dmt->dmt_flags_mask & DMT_FORCE_NOLOCK)
 	{
 	    lock_mode = dmt->dmt_lock_mode;
-	    dmt->dmt_flags_mask &= ~DMT_FORCE_NOLOCK;
 	}
 
 	if (dmt->dmt_flags_mask & DMT_SESSION_TEMP)
@@ -910,11 +914,10 @@ DMT_CB   *dmt_cb)
 	    dmt->dmt_update_mode, access_mode, timeout, max_locks,
 	    xcb->xcb_sp_id, xcb->xcb_log_id, lk_list_id, dmt->dmt_sequence,
 	    iso_level, db_lockmode, &xcb->xcb_tran_id, &dmt->dmt_timestamp,
-	    &rcb, scb, &dmt->error);
+	    &r, scb, &dmt->error);
 	if (status != E_DB_OK)
 	    break;
 
-	r = rcb;
 	t = r->rcb_tcb_ptr;
 
         /* If the OPEN was done with DMT_NO_LOCK_WAIT, then rest the rcb timeout */
@@ -1290,34 +1293,52 @@ DMT_CB   *dmt_cb)
 	*/
 	if (scb->scb_sess_mask & SCB_NOLOGGING)
 	{
-	    rcb->rcb_logging = 0;
-	    rcb->rcb_journal = 0;
-	    if (rcb->rep_shad_rcb)
+	    r->rcb_logging = 0;
+	    r->rcb_journal = 0;
+	    if (r->rep_shad_rcb)
 	    {
-		rcb->rep_shad_rcb->rcb_logging = 0;
-		rcb->rep_shad_rcb->rcb_journal = 0;
+		r->rep_shad_rcb->rcb_logging = 0;
+		r->rep_shad_rcb->rcb_journal = 0;
 	    }
-	    if (rcb->rep_arch_rcb)
+	    if (r->rep_arch_rcb)
 	    {
-		rcb->rep_arch_rcb->rcb_logging = 0;
-		rcb->rep_arch_rcb->rcb_journal = 0;
+		r->rep_arch_rcb->rcb_logging = 0;
+		r->rep_arch_rcb->rcb_journal = 0;
 	    }
-	    if (rcb->rep_shadidx_rcb)
+	    if (r->rep_shadidx_rcb)
 	    {
-		rcb->rep_shadidx_rcb->rcb_logging = 0;
-		rcb->rep_shadidx_rcb->rcb_journal = 0;
+		r->rep_shadidx_rcb->rcb_logging = 0;
+		r->rep_shadidx_rcb->rcb_journal = 0;
 	    }
-	    if (rcb->rep_prio_rcb)
+	    if (r->rep_prio_rcb)
 	    {
-		rcb->rep_prio_rcb->rcb_logging = 0;
-		rcb->rep_prio_rcb->rcb_journal = 0;
+		r->rep_prio_rcb->rcb_logging = 0;
+		r->rep_prio_rcb->rcb_journal = 0;
 	    }
-	    if (rcb->rep_cdds_rcb)
+	    if (r->rep_cdds_rcb)
 	    {
-		rcb->rep_cdds_rcb->rcb_logging = 0;
-		rcb->rep_cdds_rcb->rcb_journal = 0;
+		r->rep_cdds_rcb->rcb_logging = 0;
+		r->rep_cdds_rcb->rcb_journal = 0;
 	    }
 	}
+
+	/* If table has blobs, hook RCB to BQCB.  This needs to wait until
+	** after the RCB, XCB, and CRIB are connected.
+	*/
+	if ((r->rcb_state & RCB_NO_CPN) == 0
+	  && t->tcb_rel.relstat2 & TCB2_HAS_EXTENSIONS)
+	{
+	    status = dmpe_find_or_create_bqcb(r, &dmt->error);
+	    if (status != E_DB_OK)
+		break;
+	}
+	/* Set LOB flags into RCB, BQCB */
+	if (dmt->dmt_flags_mask & DMT_MANUAL_ENDOFROW)
+	    r->rcb_manual_endrow = 1;
+	if (dmt->dmt_flags_mask & DMT_MULTI_ROW
+	  && r->rcb_bqcb_ptr != NULL)
+	    r->rcb_bqcb_ptr->bqcb_multi_row = TRUE;
+
 
 	/* 
 	** Return # of records and # of pages as part of a successful DMT_OPEN,
@@ -1349,12 +1370,12 @@ DMT_CB   *dmt_cb)
 	return (E_DB_OK);
     }
     
-    if (rcb)
+    if (r)
     {
 	DB_STATUS	    local_status;
 	DB_ERROR	    local_dberr;
 
-	local_status = dm2t_close(rcb, 0, &local_dberr);
+	local_status = dm2t_close(r, 0, &local_dberr);
 	if (local_status != E_DB_OK)
 	{
 	    uleFormat(&local_dberr, 0, NULL, ULE_LOG, NULL, 

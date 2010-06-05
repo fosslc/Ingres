@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 /**
@@ -148,6 +148,8 @@
 **	03-Mar-2010 (jonj)
 **	    SIR 121619 MVCC, blob support:
 **	    Add lockLevel to dm2t_row_lock() prototype.
+**	13-Apr-2010 (kschendel) SIR 123485
+**	    Add no-coupon access modes.
 **/
 
 /*
@@ -165,16 +167,26 @@ typedef struct  _DM2T_KEY_ENTRY DM2T_KEY_ENTRY;
 
 /*
 **  Table access mode constants.
+**
+**  The MODIFY access mode is the same as WRITE_NOCPN, but does special
+**  things for gateway tables (see RCB_A_MODIFY).
+**
+**  The two "no coupon" variants open a table for read and write, but
+**  indicate that LOB data will not be accessed (coupons will not be
+**  created or redeemed).  This is used by modify / index type operations,
+**  and avoids creating a blob BQCB unnecessarily.
 */
 
-#define			DM2T_A_READ		((i4)1)
-#define                 DM2T_A_WRITE		((i4)2)
-#define			DM2T_SHOW_READ		((i4)3)
-#define			DM2T_DEL_WRITE		((i4)4)
-#define			DM2T_A_OPEN_NOACCESS	((i4)5)
-#define			DM2T_A_MODIFY		((i4)6)
-#define			DM2T_A_SYNC_CLOSE	((i4)7)
-#define			DM2T_A_SET_PRODUCTION	((i4)8)
+#define			DM2T_A_READ		1
+#define                 DM2T_A_WRITE		2
+#define			DM2T_SHOW_READ		3
+#define			DM2T_DEL_WRITE		4
+#define			DM2T_A_OPEN_NOACCESS	5
+#define			DM2T_A_MODIFY		6
+#define			DM2T_A_SYNC_CLOSE	7
+#define			DM2T_A_SET_PRODUCTION	8
+#define			DM2T_A_READ_NOCPN	9
+#define			DM2T_A_WRITE_NOCPN	10
 
 /* 
 **  Table lock mode constants.

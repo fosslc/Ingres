@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1985, 2007 Ingres Corporation
+** Copyright (c) 1985, 2010 Ingres Corporation
 */
 
 #include    <qu.h>
@@ -1821,6 +1821,10 @@ struct _DMP_POS_INFO {
 **	26-Feb-2010 (jonj)
 **	    Add rcb_crib_ptr, change RootPageIsInconsistent macro
 **	    to reference this rather than xcb_crib_ptr.
+**	13-Apr-2010 (kschendel) SIR 123485
+**	    Add bqcb pointer, manual end-of-row flag.
+**	    Delete rcb_row_version, wasn't being set much of the time, and
+**	    isn't really needed.
 */
 
 struct _DMP_RCB
@@ -1928,7 +1932,15 @@ struct _DMP_RCB
     BITFLD	    rcb_siAgents:1;	    /* Indexes are updated
 					    ** by SI agents */
     BITFLD          rcb_dsh_isdbp:1;        /* Reflect QEQP_ISDBP Flag From DSH */
-    BITFLD	    rcb_bits_free:24;	    /* reserved for future use */
+    BITFLD	    rcb_manual_endrow:1;    /* Set if higher level caller will
+					    ** indicate "end of row" for LOB
+					    ** operations manually.  Normal
+					    ** case (unset) will tell dmpe that
+					    ** end-of-row occurred when base
+					    ** row hits dm1c_pput or preplace.
+					    ** Manual e-o-r is for COPY.
+					    */
+    BITFLD	    rcb_bits_free:23;	    /* reserved for future use */
     i4         	    rcb_iso_level;          /* Isolation level. */         
 #define                  RCB_READ_UNCOMMITTED    1L
 #define                  RCB_CURSOR_STABILITY    2L
@@ -2007,6 +2019,10 @@ struct _DMP_RCB
 					    ** partitioned master table.
 					    ** NOTE: these two queue lists point at the queue
 					    ** structs, not the rcb or tcb itself
+					    */
+    struct _DMPE_BQCB *rcb_bqcb_ptr;	    /* Pointer to BQCB if table has
+					    ** LOB's and RCB is for normal
+					    ** read or write access
 					    */
     i4         	    rcb_k_type;             /* Lock type specified at open
                                             ** and not modified by lower
@@ -2126,6 +2142,13 @@ READ,TRAN,PHYSICAL,TEMPORARY"
 #define                 RCB_UPD_LOCK            0x02000000L 
 					    /* Get update mode lock */
 #define                 RCB_NO_CPN              0x04000000L
+					    /* A bit of a misnomer: NO_CPN says
+					    ** that LOB's in the base row will
+					    ** never be changed or redeemed,
+					    ** and any coupons can be handled
+					    ** as if they were just bits.
+					    ** MODIFY is a typical use.
+					    */
 #define                 RCB_RECORD_PTR_VALID    0x08000000L
 					    /* *rcb_record_ptr contains
 					    ** an (uncompressed) copy
@@ -2333,14 +2356,6 @@ REC_PTR_VALID"
 					    ** would be the rcb used by QEF
 					    ** just for updating table. Needed
 					    ** for sec indx prefetch calc.
-					    */
-    i4         	    rcb_row_version;        /* Row version number of last record
-					    ** retreived.  Needed primarily for
-					    ** 'replace' operations where a 
-					    ** check is required to see if the 
-					    ** row being updated (replaced) is
-					    ** added or dropped columns that may
-					    ** alter the record length.
 					    */
 
     i4         	    rcb_csrr_flags;         /* CursorStability,RepeatableRead */
@@ -4146,7 +4161,10 @@ typedef struct _DMP_ETAB_CATALOG
 **	    performed on this extension table. In this situation, also added
 **	    new parameters to save the dmrcb and dmtcb of an opened extension
 **	    table.  (Bug #92217)
-[@history_template@]...
+**	16-Apr-2010 (kschendel) SIR 123485
+**	    Replace dmt/dmr cb's with dmpe-pcb pointer.  The PCB contains the
+**	    necessary dmr/dmr CB's and more, plus it reduces memory allocation
+**	    activity during a load.
 */
 struct _DMP_ET_LIST
 {
@@ -4164,11 +4182,21 @@ struct _DMP_ET_LIST
 #define                 ETL_FULL_MASK		0x02
 #define                 ETL_INVALID_MASK	0x04
 #define                 ETL_LOAD		0x08
-    DMR_CB	    etl_dmrcb;		/* The DMR_CB of an opened extension
-					** table for a load operation.
+    struct _DMPE_PCB *etl_pcb;		/* Pointer to a DMPE_PCB when the
+					** etab is being bulk-loaded.  By
+					** using the same PCB throughout the
+					** load, we can re-use PCB state and
+					** eliminate constant alloc/dealloc.
+					** IMPORTANT: More than one ET list
+					** entry can point to the same PCB,
+					** if an etab fills during the query.
 					*/
-    DMT_CB	    etl_dmtcb;		/* The DMT_CB of an opened extension
-					** table for a load operation.
+    void	    *etl_access_id;	/* The access ID (ie rcb) pointer to
+					** the opened etab while it's being
+					** bulk-loaded.
+					*/
+    CS_SID	    etl_sid;		/* Session ID of bulk-loading session,
+					** for double checking during cleanup
 					*/
     DMP_ETAB_CATALOG
 		    etl_etab;		/* Record describing table */

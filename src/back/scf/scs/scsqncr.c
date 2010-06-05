@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1986, 2009 Ingres Corporation
+** Copyright (c) 1986, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -41,6 +41,7 @@
 #include    <qsf.h>
 #include    <qefmain.h>
 #include    <qefrcb.h>
+#include    <qefscb.h>
 #include    <qefqeu.h>
 #include    <qefcopy.h>
 #include    <qefnode.h>
@@ -1205,6 +1206,12 @@
 **	    Re-type some ptr's as the proper struct pointer.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	21-Apr-2010 (kschendel) SIR 123485
+**	    Always pass the blob "workspace" info to couponify, since it
+**	    might take more than one call to have enough input data to
+**	    make it into DMF (who is the guy who needs the workspace info).
+**	    Delete rd_lo_next/prev list, has been nothing but a very
+**	    expensive no-op for a long time it seems.
 **/
 
 /*
@@ -2601,15 +2608,15 @@ static char execproc_syntax2[] = " = session.";
 **	30-Mar-2010 (kschendel) SIR 123485
 **	    Chop another 150 lines by table-driving most PSY calls.
 **	    Clean out routine locals a little bit.
-<<<< THEIR VERSION
 **	30-mar-2010 (stephenb)
 **	    re-add QSF cleanup for batch processing; we need to
 **	    clean out the query stuff for every query, not just at
 **	    the end of the batch, otherwise we loose track.
-====
 **	19-Mar-2009 (gupsh01) SIR 123444
 **	    Added support for rename table/column.
->>>> YOUR VERSION
+**	31-Mar-2010 (kschendel) SIR 123485
+**	    More fine-tuning for COPY, handle it early and get out of the way.
+**	    Use preset internal savepoint name in QEF server block.
 */
 DB_STATUS
 scs_sequencer(i4 op_code,
@@ -2750,6 +2757,38 @@ scs_sequencer(i4 op_code,
     */
     if(op_code==CS_INPUT || sscb->sscb_state!=SCS_INPUT)
 	    sscb->sscb_is_idle=FALSE;
+
+    /* If in the middle of COPY FROM or COPY INTO, deal with it and get
+    ** out of the way.  COPY startup has to parse and go thru the usual.
+    ** Let the "error" state fall thru as well, into the normal code.
+    */
+    if (sscb->sscb_qmode == PSQ_COPY
+      && (sscb->sscb_state == SCS_CP_FROM || sscb->sscb_state == SCS_CP_INTO)
+      && ! (sscb->sscb_interrupt || (sscb->sscb_force_abort == SCS_FAPENDING)) )
+    {
+	xact_state = QEF_X_MACRO(sscb->sscb_qescb);
+	qry_status = SCS_OK;
+	psf_stuff = 0;
+	if (sscb->sscb_state == SCS_CP_FROM)
+	    seq_action = scs_copy_from(scb, next_op, &ret_val);
+	else
+	    seq_action = scs_copy_into(scb, op_code, next_op, &ret_val);
+	/* Note that neither of these can return SEQUENCER_CONTINUE! */
+	if (seq_action == SEQUENCER_RETURN)
+	    return (ret_val);
+	/* else it's SEQUENCER_BREAK.  We're supposed to be in the
+	** "massive switch", so we'll set up the status and jump down
+	** to exit the switch (and the "massive for" as well).
+	** not-OK sets the query status.  Anything less than ERROR
+	** resets ret_val to OK, although ret_val and qry_status
+	** are sorta kinda the same thing but not really.
+	*/
+	if (ret_val != E_DB_OK)
+	    qry_status = GCA_FAIL_MASK;
+	if (DB_SUCCESS_MACRO(ret_val))
+	    ret_val = E_DB_OK;
+	goto massive_for_exit;
+    }
 
     switch (op_code)
     {
@@ -3083,7 +3122,8 @@ scs_sequencer(i4 op_code,
 	    {
 		/*
 		** These states mean we are in the middle of executing a
-		** COPY.  We will continue handling the copy below.
+		** COPY (although something must be wrong, e.g. interrupt,
+		** else we'd handle these early on).  Just skip along.
 		*/
 		break;
 	    }
@@ -5170,7 +5210,6 @@ scs_sequencer(i4 op_code,
 
 		    /* If STAR, pre-fetch the tuple descriptor from the LDB */
 		    qe_ccb->qef_output = data_buffer =
-				(QEF_DATA *)cquery->cur_amem;
 		    cquery->cur_qef_data =
 			(QEF_DATA *) ((char *)cquery->cur_amem +
 				sizeof(SC0M_OBJECT));
@@ -6859,7 +6898,7 @@ scs_sequencer(i4 op_code,
 		    xa_qe_ccb->qef_db_id =
 			xa_scb->scb_sscb.sscb_ics.ics_opendb_id;
 		    xa_qe_ccb->qef_flag = 0;
-		    xa_qe_ccb->qef_spoint= 0;
+		    xa_qe_ccb->qef_spoint= NULL;
 
 		    xa_qe_ccb->qef_modifier = QEF_MSTRAN;
 		    xa_qe_ccb->qef_eflag = QEF_EXTERNAL;
@@ -7335,7 +7374,7 @@ scs_sequencer(i4 op_code,
 		    qe_ccb = sscb->sscb_qeccb;
 		    qe_ccb->qef_db_id = sscb->sscb_ics.ics_opendb_id;
 		    qe_ccb->qef_flag = 0;
-		    qe_ccb->qef_spoint= 0;
+		    qe_ccb->qef_spoint= NULL;
 		}
 	        if (ult_always_trace())
 	        {
@@ -7660,23 +7699,16 @@ scs_sequencer(i4 op_code,
 		/* Let the copy handlers figure out what to do next.
 		** The initial state after parsing the copy statement
 		** will be SCS_CONTINUE.  Copy-begin will change the
-		** state to CP_FROM or CP_INTO as appropriate.
+		** state to CP_FROM or CP_INTO as appropriate.  Those
+		** two states are handled early, not here.  The other
+		** possibility is "SCS_CP_ERROR", which we handle here
+		** since we're trying to end the copy.
 		*/
-		switch (sscb->sscb_state)
-		{
-		case SCS_CONTINUE:
+		if (sscb->sscb_state == SCS_CONTINUE)
 		    seq_action = scs_copy_begin(scb, next_op, &ret_val);
-		    break;
-		case SCS_CP_FROM:
-		    seq_action = scs_copy_from(scb, next_op, &ret_val);
-		    break;
-		case SCS_CP_INTO:
-		    seq_action = scs_copy_into(scb, op_code, next_op, &ret_val);
-		    break;
-		default:
+		else
 		    seq_action = scs_copy_bad(scb, next_op, &ret_val);
-		    break;
-		}
+
 		if (seq_action == SEQUENCER_CONTINUE)
 		    continue;
 		else if (seq_action == SEQUENCER_RETURN)
@@ -9466,6 +9498,9 @@ scs_sequencer(i4 op_code,
 	}   /* end of massive switch stmt */
 	break;
     }	    /* end of massive for loop */
+
+    /* Label for special statement-done, e.g. COPY got an error. */
+massive_for_exit:
 
     if ((sscb->sscb_interrupt)
 	    || deadlock_occurred != 0
@@ -9500,8 +9535,6 @@ scs_sequencer(i4 op_code,
 		    || (sscb->sscb_interrupt == SCS_INTERRUPT)
 		    || (sscb->sscb_force_abort == SCS_FAPENDING))
 	{
-	    DB_SP_NAME		spoint;
-
 	    if (sscb->sscb_force_abort == SCS_FAPENDING)
             {
 		sscb->sscb_force_abort = SCS_FORCE_ABORT;
@@ -9601,22 +9634,17 @@ scs_sequencer(i4 op_code,
 			&& (!on_user_error)
 			&& (!sscb->sscb_force_abort))
 		{
-		    MEmove(STlength(QEF_SP_SAVEPOINT),
-				QEF_SP_SAVEPOINT,
-				' ',
-				sizeof(spoint),
-				(PTR) &spoint);
-		    qe_ccb->qef_spoint = &spoint;
+		    qe_ccb->qef_spoint = &Qef_s_cb->qef_sp_savepoint;
 		}
 		else
 		{
-		    qe_ccb->qef_spoint = 0;
+		    qe_ccb->qef_spoint = NULL;
 		}
 	    }
 	    else
 	    {
 		qe_ccb->qef_modifier = qe_ccb->qef_stat;
-		qe_ccb->qef_spoint = 0;
+		qe_ccb->qef_spoint = NULL;
 	    }
 
 	    if (qe_ccb->qef_stat != QEF_NOTRAN)
@@ -10038,17 +10066,6 @@ scs_sequencer(i4 op_code,
 	sscb->sscb_ics.ics_l_lqbuf = sscb->sscb_ics.ics_l_qbuf;
         sscb->sscb_ics.ics_l_qbuf = 0;
 
-	if ((qmode != PSQ_DEFQRY) && (qmode != PSQ_QRYDEFED))
-	{
-	    while (cquery->cur_rdesc.rd_lo_next !=
-		    (PTR) &cquery->cur_rdesc.rd_lo_next)
-	    {
-		object = (SC0M_OBJECT *) cquery->cur_rdesc.rd_lo_next;
-		cquery->cur_rdesc.rd_lo_next = (PTR) object->sco_next;
-		sc0m_deallocate(0, (PTR *)&object);
-	    }
-	}
-	cquery->cur_rdesc.rd_lo_prev = (PTR) &cquery->cur_rdesc.rd_lo_next;
 	/*
 	** If we allocated the QEF_PARAM block deallocate it now
 	*/
@@ -13378,7 +13395,12 @@ scs_input(SCD_SCB *scb,
     {
 	QEU_CB		    *qeu;
 
-	if (qeu = (QEU_CB *) cquery->cur_amem)
+	/* If cur-amem is non-null here, it must be a QEU CB allocated to
+	** create a transaction to allow couponifying inbound blobs.
+	** Since the blobs are in the bag now, end the transaction and
+	** toss the QEU CB.
+	*/
+	if ( (qeu = (QEU_CB *) cquery->cur_amem) != NULL)
 	{
 	    qeu->qeu_qmode = sscb->sscb_qmode;
 	    status = qef_call(QEU_ETRAN, qeu);
@@ -13708,16 +13730,35 @@ scs_gca_error(DB_STATUS status,
 **	For large objects, SCF will always ask ADF to build a coupon to carry
 **	around.
 **
+**	Blobs may go on and on, so it might take multiple calls to
+**	scs-blob-fetch to get the entire blob couponified.  The
+**	sscb_dmm indicator says whether this is the first call for
+**	a given blob or not.  If couponification was not completed,
+**	we'll return E_DB_INFO to tell the caller that more data
+**	is needed.
+**
+**	The blob data has to land somewhere, and if we can't figure out
+**	where, it will go into a holding temp.  If this is the
+**	first call for the blob, we'll expend a little effort to try
+**	to figure out where the blob is going.  (e.g. for COPY, we
+**	have enough context to know.  For some API queries such as
+**	execute prepared query or insert, we might be able to figure
+**	it out.  For traditional LIBQ queries which send the parameters
+**	before the query, it's hopeless.)  The blob context info
+**	goes into the DB_BLOB_WKSP that is passed along to the
+**	couponifier (and ultimately to DMF/dmpe).  IMPORTANT:  the first
+**	couponify call might not have enough data available to even make
+**	it to DMF, so the DB_BLOB_WKSP has to be passed along for each
+**	couponify (re-)call until the blob is definitely done.
+**
 ** Inputs:
 **      scb                             Session Control Block
 **      qry_size                        Address of size of current buffer
 **      buffer                          Pointer to current buffer
 **      coupon_dv                       Ptr to DB_DATA_VALUE to receive
 **					    the coupon being created.
-**      from_copy                       Indicates that this is being
-**                                      called from within the
-**                                      processing of a copy
-**                                      statement. 
+**	qeu_copy			If COPY FROM, pointer to QEU_COPY;
+**					if not COPY, pass NULL.
 **
 ** Outputs:
 **      *qry_size                       Updated to reflect amount of buffer used
@@ -13800,13 +13841,18 @@ scs_gca_error(DB_STATUS status,
 **	        should reset dmm. Make sure we do that.
 **	10-May-2004 (schka24)
 **	    Remove transaction, session stuff from pop info.
+**	31-Mar-2010 (kschendel) SIR 123485
+**	    Pass COPY cb instead of just a flag, so that we can fill in
+**	    blob copy optim data for the copy.
+**	    Execute of prepared statement has table ID now, easier on dmpe.
+**	    "Blob workspace" is always allocated with the lowksp now.
 */
 DB_STATUS
 scs_blob_fetch(SCD_SCB *scb,
                 DB_DATA_VALUE  *coupon_dv,
                 i4  *qry_size,
                 char **buffer,
-                i4  from_copy )
+                QEU_COPY *qeu_copy )
 {
     DB_STATUS           status;
     ADP_LO_WKSP		*lowksp;
@@ -13819,7 +13865,7 @@ scs_blob_fetch(SCD_SCB *scb,
     bool		name_found = FALSE;
     bool		owner_found = FALSE;
     bool		no_func = FALSE;
-    DB_BLOB_WKSP	*ins_work;
+    DB_BLOB_WKSP	*blob_info;
     
     sscb = &scb->scb_sscb;
     cquery = &sscb->sscb_cquery;
@@ -13844,49 +13890,19 @@ scs_blob_fetch(SCD_SCB *scb,
 	if (status)
 	    break;
 
-	if (sscb->sscb_blobwork == NULL)
-	{
-	    status = sc0m_allocate(0, sizeof(SC0M_OBJECT) + 
-		sizeof(DB_BLOB_WKSP), DB_SCF_ID,
-		(PTR) SCS_MEM, CV_C_CONST_MACRO('l', 'o', 'w', 'k'),
-		&sscb->sscb_blobwork);
-	    if (status)
-		break;
-	}
+	blob_info = (DB_BLOB_WKSP *)(lowksp->adw_fip.fip_pop_cb.pop_info);
 
-	ins_work = (DB_BLOB_WKSP *)(sscb->sscb_blobwork + 
-	    sizeof(SC0M_OBJECT));
-
-	if (sscb->sscb_dmm == 0)
-	{
-	    ins_work->flags = 0;
-	    MEfill(sizeof(DB_OWN_NAME), ' ', ins_work->table_owner.db_own_name);
-	    MEfill(sizeof(DB_TAB_NAME), ' ', ins_work->table_name.db_tab_name);
-	}
-	
-	if ((cquery->cur_rdesc.rd_lo_next ==
-		(PTR) &cquery->cur_rdesc.rd_lo_next)
-	    && !cquery->cur_amem
-	    && !from_copy)
+	/* If first blob this query, and no qeu-cb allocated, allocate it
+	** and start a transaction so that we can write the blob data
+	** into (real or holding) etabs.  We must be coming from scs-input
+	** and the qeu-cb will be deallocated when scs-input is done.
+	**
+	** COPY doesn't do this, the copy is already started in QEF and
+	** no separate transaction is needed.
+	*/
+	if (qeu_copy == NULL && cquery->cur_amem == NULL)
 	{
 	    QEU_CB		*qeu;
-
-	    /*
-	    **	{@fix_me@}
-	    **
-	    **	Can really only do this if sql & not autocommit?
-	    **	When do we trash the qeu?
-	    **
-	    **	When do we trash the lo?  AT end of query,
-	    **	    unless repeat query and must redo or
-	    **	    repeat query and not a variable parameter
-	    **
-	    **	    But if repeat query, must coordinate with remainder
-	    **	    of system when we end the transaction (esp. if aborted...)
-	    **	    etc.
-	    **
-	    **	Yucko
-	    */
 
 	    status = sc0m_allocate(0,
 		    sizeof(QEU_CB),
@@ -13895,6 +13911,8 @@ scs_blob_fetch(SCD_SCB *scb,
 		    QEUCB_ASCII_ID,
 		    &block);
 	    qeu = (QEU_CB *)block;
+	    qeu->qeu_type = QEUCB_CB;
+	    qeu->qeu_ascii_id = QEUCB_ASCII_ID;
 	    /* First, we start an xact to manage the work */
 	    qeu->qeu_eflag = QEF_EXTERNAL;
 	    qeu->qeu_db_id = (PTR) sscb->sscb_ics.ics_opendb_id;
@@ -13908,229 +13926,242 @@ scs_blob_fetch(SCD_SCB *scb,
 		sc0m_deallocate(0, (PTR *)&qeu);
 		break;
 	    }
+	    /* Record so that scs-input sees we started a transaction and
+	    ** ends it before the real query starts...
+	    */
 	    cquery->cur_amem = (PTR) qeu;
 	}
 
 	/*
-	** If we got to this point, then we know that we are running an 
-	** "insert into....values", so we'll do a quick parse on the query
-	** to find the target table name. The assumption here is that repeated
-	** queries are not allowed with BLOBs, so the query won't be an
-	** execute.
+	** If it's the first time for this blob, we may want to parse
+	** the passed-in query text (if any!) 
 	*/
-	lowksp->adw_fip.fip_pop_cb.pop_info = NULL;
 	query = ((PSQ_QDESC *)sscb->sscb_troot)->psq_qrytext;
 
 #ifdef xDEBUG
-	if (sscb->sscb_dmm == 0 && sscb->sscb_troot)
+	if (sscb->sscb_dmm == 0)
 	    TRdisplay("scs_blob_fetch psq_qry_size = %d\n", 
 		((PSQ_QDESC *)sscb->sscb_troot)->psq_qrysize);
 #endif
 
-	if (sscb->sscb_dmm == 0 && sscb->sscb_troot &&
-		STncasecmp(query, "execute ", 8) == 0 &&
-		STncasecmp(query + 8, "procedure ", 11 != 0))
+	if (sscb->sscb_dmm == 0)
 	{
-	    char        buf[DB_MAXNAME + 1];
-	    char	*pos = query + 8;
-	    i4		offset = 0;
-	    i4		stmt_mode;
-	    PSQ_CB	psq_cb;
-	    DB_STATUS   psf_status;	    
-	    PSQ_STMT_INFO   *stmt_info = NULL;
+	    /* First time thru for this blob, see if we can give DMF some
+	    ** direction as to where the blob should land.
+	    */
+	    blob_info->flags = 0;	/* Assume not */
+	    lowksp->adw_fip.fip_pop_cb.pop_temporary = ADP_POP_TEMPORARY;
+	    if (qeu_copy != NULL)
+	    {
+		/* COPY FROM can supply all the necessary info for DMF,
+		** so that DMF can store directly into the etab.  (Unless
+		** it's a bulk-load, in which case DMF does even better things,
+		** but that isn't our problem here.)
+		** Note that the base-attid is one origin.
+		*/
+		blob_info->access_id = qeu_copy->qeu_access_id;
+		blob_info->base_attid = qeu_copy->qeu_cp_cur_att+1;
+		blob_info->flags = BLOBWKSP_ACCESSID | BLOBWKSP_ATTID;
+	    }
+	    else if (STncasecmp(query, "execute ", 8) == 0 &&
+		    STncasecmp(query + 8, "procedure ", 11 != 0))
+	    {
+		char        buf[DB_MAXNAME + 1];
+		char	*pos = query + 8;
+		i4		offset = 0;
+		i4		stmt_mode;
+		PSQ_CB	psq_cb;
+		DB_STATUS   psf_status;	    
+		PSQ_STMT_INFO   *stmt_info = NULL;
 
-	    for (;*pos != ' ' && offset <= DB_MAXNAME; pos++, offset++)
-		buf[offset] = *pos;
-	    buf[offset] = '\0';
-	    CVlower(buf);
+		for (;*pos != ' ' && offset <= DB_MAXNAME; pos++, offset++)
+		    buf[offset] = *pos;
+		buf[offset] = '\0';
+		CVlower(buf);
 
-	    psq_cb.psq_type = PSQCB_CB;
-	    psq_cb.psq_length = sizeof(psq_cb);
-	    psq_cb.psq_ascii_id = PSQCB_ASCII_ID;
-	    psq_cb.psq_owner = (PTR) DB_SCF_ID;
-	    psq_cb.psq_sessid = scb->cs_scb.cs_self;
-	    psq_cb.psq_qid = buf;
-	    psf_status = psq_call(PSQ_GET_STMT_INFO, &psq_cb, NULL);
-	    stmt_mode = psq_cb.psq_ret_flag;
+		psq_cb.psq_type = PSQCB_CB;
+		psq_cb.psq_length = sizeof(psq_cb);
+		psq_cb.psq_ascii_id = PSQCB_ASCII_ID;
+		psq_cb.psq_owner = (PTR) DB_SCF_ID;
+		psq_cb.psq_sessid = scb->cs_scb.cs_self;
+		psq_cb.psq_qid = buf;
+		psf_status = psq_call(PSQ_GET_STMT_INFO, &psq_cb, NULL);
+		stmt_mode = psq_cb.psq_ret_flag;
 
 #ifdef xDEBUG
-	    TRdisplay("scs_blob_fetch stmt %x %s stmt_mode %d psf_status %d\n", 
+		TRdisplay("scs_blob_fetch stmt %x %s stmt_mode %d psf_status %d\n", 
 			stmt_info, buf, stmt_mode, psf_status);
 #endif
-	    if (psf_status == E_DB_OK && 
-			(stmt_mode == PSQ_APPEND || stmt_mode == PSQ_REPCURS))
-	    {
-		stmt_info = psq_cb.psq_stmt_info;
-		if (stmt_info && stmt_info->psq_stmt_blob_cnt == 1)
+		if (psf_status == E_DB_OK && 
+			    (stmt_mode == PSQ_APPEND || stmt_mode == PSQ_REPCURS))
 		{
-		    MEcopy(stmt_info->psq_stmt_ownname, DB_OWN_MAXNAME, 
-			ins_work->table_owner.db_own_name);
-		    MEcopy(stmt_info->psq_stmt_tabname, DB_TAB_MAXNAME, 
-			ins_work->table_name.db_tab_name);
-		    ins_work->source_dt = sscb->sscb_gcadv.gca_type;
-		    ins_work->flags = (BLOBWKSP_TABLENAME | BLOBWKSP_ATTID);
-		    ins_work->base_attid = stmt_info->psq_stmt_blob_colno;
-		    lowksp->adw_fip.fip_pop_cb.pop_info = (PTR)ins_work;
-		}
-	    }
-#ifdef xDEBUG
-	    if (stmt_info)
-		TRdisplay("%s optimize insert/update (%d) for %32.32s %32.32s (%d,%d)\n",
-		    ins_work->flags ? "can" : "can't", stmt_mode, 
-		    stmt_info->psq_stmt_ownname,
-		    stmt_info->psq_stmt_tabname, 
-		    stmt_info->psq_stmt_blob_cnt,
-		    stmt_info->psq_stmt_blob_colno);
-	    else
-		TRdisplay("CANT optimize insert/update for '%s'\n", buf); 
-#endif
-	}
-
-	else if (sscb->sscb_dmm == 0 && sscb->sscb_troot && 
-	    STncasecmp(query, "insert into ", 12) == 0)
-	{
-	    char	*name_start, *name_end, *pos;
-	    i4		offset = 0;
-	    i4          skip;
-
-#ifdef xDEBUG
-	    TRdisplay("DEBUG %~t\n" , 
-		    ((PSQ_QDESC *)sscb->sscb_troot)->psq_qrysize,
-		    query);
-#endif
-	
-	    if (*query == 'i' || *query == 'I')
-		skip = 11;
-	    /* query is realy "insert into", find table name */
-	    for (query += skip; *query == ' '; query++); /* skip blanks */
-	    pos = query;
-	    for (;;)
-	    {
-		/* check for delimited name */
-		if (*pos == '"') /* delimited name */
-		{
-		    name_start = pos;
-		    for (;;)
+		    stmt_info = psq_cb.psq_stmt_info;
+		    if (stmt_info && stmt_info->psq_stmt_blob_cnt == 1
+		      && stmt_info->psq_stmt_tabid.db_tab_index == 0)
 		    {
-			for (;*pos != '"' && offset <= DB_MAXNAME; 
-			     pos++, offset++); /* get next quote */
-			if (offset > DB_MAXNAME)
-			    break; /* can't find quote, bail here */
-			if (*pos == '"') /* quoted quote, skip it */
+			blob_info->base_id = stmt_info->psq_stmt_tabid.db_tab_base;
+			blob_info->source_dt = sscb->sscb_gcadv.gca_type;
+			blob_info->flags = (BLOBWKSP_TABLEID | BLOBWKSP_ATTID | BLOBWKSP_COERCE);
+			blob_info->base_attid = stmt_info->psq_stmt_blob_colno;
+		    }
+		}
+#ifdef xDEBUG
+		if (stmt_info)
+		    TRdisplay("%s optimize insert/update (%d) for (%d,%d) (%d,%d)\n",
+			blob_info->flags ? "can" : "can't", stmt_mode, 
+			stmt_info->psq_stmt_tabid.db_tab_base,
+			stmt_info->psq_stmt_tabid.db_tab_index, 
+			stmt_info->psq_stmt_blob_cnt,
+			stmt_info->psq_stmt_blob_colno);
+		else
+		    TRdisplay("CANT optimize insert/update for '%s'\n", buf); 
+#endif
+	    }
+
+	    else if (STncasecmp(query, "insert into ", 12) == 0)
+	    {
+		char	*name_start, *name_end, *pos;
+		i4		offset = 0;
+		i4          skip;
+
+#ifdef xDEBUG
+		TRdisplay("DEBUG %~t\n" , 
+			((PSQ_QDESC *)sscb->sscb_troot)->psq_qrysize,
+			query);
+#endif
+	    
+		if (*query == 'i' || *query == 'I')
+		    skip = 11;
+		/* query is realy "insert into", find table name */
+		for (query += skip; *query == ' '; query++); /* skip blanks */
+		pos = query;
+		for (;;)
+		{
+		    /* check for delimited name */
+		    if (*pos == '"') /* delimited name */
+		    {
+			name_start = pos;
+			for (;;)
 			{
-			    pos++;
-			    offset++;
-			    continue;
+			    for (;*pos != '"' && offset <= DB_MAXNAME; 
+				 pos++, offset++); /* get next quote */
+			    if (offset > DB_MAXNAME)
+				break; /* can't find quote, bail here */
+			    if (*pos == '"') /* quoted quote, skip it */
+			    {
+				pos++;
+				offset++;
+				continue;
+			    }
+			    else
+			    {
+				name_found = TRUE;
+				break;
+			    }
 			}
+			if (!name_found)
+			    break; /* name not found, bail */
+			name_end = pos - 1;
+			/* skip spaces */
+			for (;*pos == ' ' && offset <= DB_MAXNAME; pos++, offset++);
+			/* check for owner name */
+			if (offset < DB_OWN_MAXNAME && !owner_found && *pos == '.')
+			{
+			    owner_found = TRUE;
+			    name_found = FALSE;
+			    pos++;
+			}
+			/* ditch trailing spaces */
+			for (;*name_end == ' '; name_end--, offset--);
+		    }
+		    else
+		    {
+			name_start = pos;
+			for (;*pos != ' ' && *pos != '(' && offset <= DB_MAXNAME;
+			     pos++, offset++);
+			if (offset > DB_MAXNAME)
+			    break; /* can't find space, bail here */
 			else
 			{
 			    name_found = TRUE;
-			    break;
+			    name_end = pos;
+			}
+			if (!owner_found && *pos == '.')
+			{
+			    owner_found = TRUE;
+			    name_found = FALSE;
+			    pos++;
 			}
 		    }
-		    if (!name_found)
-			break; /* name not found, bail */
-		    name_end = pos - 1;
+		    if (!name_found && owner_found)
+		    {
+			char	buf[DB_MAXNAME + 1];
+
+			MEcopy(name_start, name_end - name_start, buf);
+			buf[name_end - name_start] = '\0';
+			if (sscb->sscb_ics.ics_dbserv & DU_NAME_UPPER)
+			    CVupper(buf);
+			else
+			    CVlower(buf);
+			MEcopy(buf, name_end - name_start, 
+			    blob_info->table_owner.db_own_name);
+			continue;
+		    }
+		    else if (name_found)
+		    {
+			char	buf[DB_MAXNAME + 1];
+
+			MEcopy(name_start, name_end - name_start, buf);
+			buf[name_end - name_start] = '\0';
+			if (sscb->sscb_ics.ics_dbserv & DU_NAME_UPPER)
+			    CVupper(buf);
+			else
+			    CVlower(buf);
+			MEcopy(buf, name_end - name_start, 
+			    blob_info->table_name.db_tab_name);
+		    }
+		    else
+			break;
+		    /* found name, check for keyword "values" */
 		    /* skip spaces */
 		    for (;*pos == ' ' && offset <= DB_MAXNAME; pos++, offset++);
-		    /* check for owner name */
-		    if (offset < DB_OWN_MAXNAME && !owner_found && *pos == '.')
-		    {
-			owner_found = TRUE;
-			name_found = FALSE;
-			pos++;
-		    }
-		    /* ditch trailing spaces */
-		    for (;*name_end == ' '; name_end--, offset--);
-		}
-		else
-		{
-		    name_start = pos;
-		    for (;*pos != ' ' && *pos != '(' && offset <= DB_MAXNAME;
-			 pos++, offset++);
-		    if (offset > DB_MAXNAME)
-			break; /* can't find space, bail here */
+		    /* find "values" */
+		    for (;(*pos != 'v' || *pos != 'V') && *(pos-1) != ' ' &&
+			 STbcompare("values", 6, pos, 6, TRUE) && *pos != EOS;
+			 pos++);
+		    if (*pos == EOS)
+			break;
+		    /* pos must be "values", skip it */
+		    pos += 6;
+		    /* find paren. */
+		    for (;*pos != '(' && *pos != EOS; pos++);
+		    if (*pos == EOS)
+			break;
+		    /* skip paren */
+		    pos++;
+		    /*
+		    ** if we find another paren after this, we have a function,
+		    ** we can't deal with this so bail
+		    */
+		    for (;*pos != '(' && *pos != EOS; pos++);
+		    if (*pos == EOS)
+			no_func = TRUE;
 		    else
 		    {
-			name_found = TRUE;
-			name_end = pos;
+			/* just to be safe */
+			blob_info->table_owner.db_own_name[0] = EOS;
+			blob_info->table_name.db_tab_name[0] = EOS;
 		    }
-		    if (!owner_found && *pos == '.')
-		    {
-			owner_found = TRUE;
-			name_found = FALSE;
-			pos++;
-		    }
-		}
-		if (!name_found && owner_found)
-		{
-		    char	buf[DB_MAXNAME + 1];
-
-		    MEcopy(name_start, name_end - name_start, buf);
-		    buf[name_end - name_start] = '\0';
-		    if (sscb->sscb_ics.ics_dbserv & DU_NAME_UPPER)
-			CVupper(buf);
-		    else
-			CVlower(buf);
-		    MEcopy(buf, name_end - name_start, 
-			ins_work->table_owner.db_own_name);
-		    continue;
-		}
-		else if (name_found)
-		{
-		    char	buf[DB_MAXNAME + 1];
-
-		    MEcopy(name_start, name_end - name_start, buf);
-		    buf[name_end - name_start] = '\0';
-		    if (sscb->sscb_ics.ics_dbserv & DU_NAME_UPPER)
-			CVupper(buf);
-		    else
-			CVlower(buf);
-		    MEcopy(buf, name_end - name_start, 
-			ins_work->table_name.db_tab_name);
-		}
-		else
 		    break;
-		/* found name, check for keyword "values" */
-		/* skip spaces */
-		for (;*pos == ' ' && offset <= DB_MAXNAME; pos++, offset++);
-		/* find "values" */
-		for (;(*pos != 'v' || *pos != 'V') && *(pos-1) != ' ' &&
-		     STbcompare("values", 6, pos, 6, TRUE) && *pos != EOS;
-		     pos++);
-		if (*pos == EOS)
-		    break;
-		/* pos must be "values", skip it */
-		pos += 6;
-		/* find paren. */
-		for (;*pos != '(' && *pos != EOS; pos++);
-		if (*pos == EOS)
-		    break;
-		/* skip paren */
-		pos++;
-		/*
-		** if we find another paren after this, we have a function,
-		** we can't deal with this so bail
-		*/
-		for (;*pos != '(' && *pos != EOS; pos++);
-		if (*pos == EOS)
-		    no_func = TRUE;
-		else
-		{
-		    /* just to be safe */
-		    ins_work->table_owner.db_own_name[0] = EOS;
-		    ins_work->table_name.db_tab_name[0] = EOS;
 		}
-		break;
+		if (no_func && name_found)
+		{
+		    blob_info->flags = BLOBWKSP_TABLENAME | BLOBWKSP_COERCE;
+		    blob_info->source_dt = sscb->sscb_gcadv.gca_type;
+		}		
 	    }
-	    if (no_func && name_found)
-	    {
-		ins_work->flags |= BLOBWKSP_TABLENAME;
-		ins_work->source_dt = sscb->sscb_gcadv.gca_type;
-		lowksp->adw_fip.fip_pop_cb.pop_info = (PTR)ins_work;
-	    }		
-	}
-	
+	} /* dmm == 0 */
+
 	segment_dv.db_datatype = sscb->sscb_gcadv.gca_type;
 	segment_dv.db_prec = sscb->sscb_gcadv.gca_precision;
 	segment_dv.db_length = *qry_size;
@@ -14140,10 +14171,10 @@ scs_blob_fetch(SCD_SCB *scb,
 				&segment_dv,
 				lowksp,
 				coupon_dv);
-	if (ins_work->flags & BLOBWKSP_BASE_USED && status == E_DB_ERROR)
+	if (blob_info->flags & BLOBWKSP_FINAL && status == E_DB_ERROR)
 	  /* this is fatal if we used the optimization, otherwise we will
 	  ** try to continue with the query, and fail elsewhere */
-	  status = E_DB_SEVERE; /* failed, session fatal */
+	    status = E_DB_SEVERE; /* failed, query fatal */
 	if (DB_FAILURE_MACRO(status))
 	{
 	    sscb->sscb_dmm = 0;	/* No blob in progress */
@@ -14153,61 +14184,31 @@ scs_blob_fetch(SCD_SCB *scb,
 	if (status == E_DB_OK)
 	{
 	    /*
-	    **	The the blob has been created.  Save a copy of the coupon
-	    **	or the table id so that we can destroy it later, when
-	    **	the query is over or at end of session.
-	    **	
-	    **	If from_copy, then we don't need to save a pointer
-	    **	here. The large object temporary will have been
-	    **	created as a short temporary, and will have been
-	    **	destroyed by normal copy processing's
-	    **	adu_free_objects() call which removes the large
-	    **	objects as their rows are processed.
+	    **	The the blob has been created.  Indicate that we're
+	    **  no longer in blob gathering mode, and update the
+	    **  caller query size and position.
+	    **
+	    ** If we managed to couponify into the final etab, and if we
+	    ** asked for coercion when the blob was started, reconcile
+	    ** null-ness of the coupon and the final datatype.
 	    */
 	    
-	    i4		size = sizeof(SC0M_OBJECT) + sizeof(ADP_PERIPHERAL);
-
-	    if (ins_work->flags & BLOBWKSP_BASE_USED)
+	    if ((blob_info->flags & (BLOBWKSP_FINAL | BLOBWKSP_COERCE)) == (BLOBWKSP_FINAL | BLOBWKSP_COERCE))
 	    {
-		if (coupon_dv->db_datatype < 0 && ins_work->source_dt > 0)
+		if (coupon_dv->db_datatype < 0 && blob_info->source_dt > 0)
 		    /* coerced to a non-null, remove null byte */
 		    coupon_dv->db_length--;
-		else if (coupon_dv->db_datatype > 0 && ins_work->source_dt < 0)
+		else if (coupon_dv->db_datatype > 0 && blob_info->source_dt < 0)
 		{
 		    /* coerced to a null, add extra byte */
 		    *((u_char *)(coupon_dv->db_data+coupon_dv->db_length)) = 0;
 		    coupon_dv->db_length++;
 		}
-		coupon_dv->db_datatype = ins_work->source_dt;
+		coupon_dv->db_datatype = blob_info->source_dt;
 	    }
 
 	    sscb->sscb_dmm = 0;	/* No blob in progress */
-	    
-	    if (sscb->sscb_gcadv.gca_type < 0)
-		size += 1;
 
-	    if (!from_copy)
-	    {
-		status = sc0m_allocate(0,
-				       size,
-				       SCS_LO_TYPE,
-				       (PTR)DB_SCF_ID,
-				       SCS_LO_ASCII_ID,
-				       &block);
-		object = (SC0M_OBJECT *)block;
-		if (status)
-		    break;
-
-		MEcopy(coupon_dv->db_data,
-			 size - sizeof(SC0M_OBJECT),
-			 (PTR) (object+1));
-
-		object->sco_next = (SC0M_OBJECT *) &cquery->cur_rdesc.rd_lo_next;
-		object->sco_prev = (SC0M_OBJECT *) cquery->cur_rdesc.rd_lo_prev; 
-		((SC0M_OBJECT *) cquery->cur_rdesc.rd_lo_prev)->sco_next = object;
-		cquery->cur_rdesc.rd_lo_prev = (PTR) object;
-	    }
-	    
 	    *qry_size -= lowksp->adw_shared.shd_i_used;
 	    *buffer += lowksp->adw_shared.shd_i_used;
 	}
@@ -14327,7 +14328,10 @@ scs_blob_fetch(SCD_SCB *scb,
 **	    for this alignment.  (Bug 55993)
 **      18-dec-1997 (stial01)
 **          Return if blob data in input.
-[@history_template@]...
+**	14-Apr-2010 (kschendel) SIR 123485
+**	    Make sure blob coupon starts out clean.  Leaving junk in the DMF
+**	    part can lead to bug 121046 (inconsistent results with API queries)
+**	    if the blob length is zero; zero length blobs skip much of dmpe.
 */
 DB_STATUS
 scs_fetch_data(SCD_SCB	  *scb,
@@ -14548,7 +14552,12 @@ scs_fetch_data(SCD_SCB	  *scb,
 	    if (dtbits & AD_PERIPHERAL)
 	    {
 		*ad_peripheral = TRUE;
-		ret_val= scs_blob_fetch(scb, cdv, &qry_size, &buf, 0);
+		/* Make sure no junk is in the coupon, especially important
+		** to clear the DMF part if zero length blob!
+		*/
+		MEfill(sizeof(ADP_COUPON), 0,
+			(PTR) &((ADP_PERIPHERAL *)cdv->db_data)->per_value.val_coupon);
+		ret_val= scs_blob_fetch(scb, cdv, &qry_size, &buf, NULL);
 		if (ret_val)
 		    break;
 		if (!for_psf)
@@ -14624,7 +14633,7 @@ scs_fetch_data(SCD_SCB	  *scb,
 
 	    if (dtbits & AD_PERIPHERAL)
 	    {
-	        ret_val = scs_blob_fetch(scb, cdv, &qry_size, &buf, 0);
+	        ret_val = scs_blob_fetch(scb, cdv, &qry_size, &buf, NULL);
 		if ((ret_val == E_DB_OK) && (!for_psf))
 		{
 		    ((PSQ_QDESC *)
@@ -16395,7 +16404,8 @@ scs_csr_find( SCD_SCB *scb )
 **	    rd_modifier or csi_state.  (Bug #89000)
 **	06-dec-2004 (thaju02)
 **	    Destroy stored query text object. (B113588) 
-[@history_template@]...
+**	21-Apr-2010 (kschendel) SIR 123485
+**	    Delete pointless fiddling with blob coupon lists.
 */
 VOID
 scs_cursor_remove(SCD_SCB *scb,
@@ -16440,15 +16450,6 @@ scs_cursor_remove(SCD_SCB *scb,
 	    {
 		sc0m_deallocate(0, (PTR *)&c->csi_tdesc_msg);
 	    }
-
-	    while (c->csi_rdesc.rd_lo_next !=
-			(PTR) &c->csi_rdesc.rd_lo_next)
-	    {
-		object = (SC0M_OBJECT *) c->csi_rdesc.rd_lo_next;
-		c->csi_rdesc.rd_lo_next = (PTR) object->sco_next;
-		sc0m_deallocate(0, (PTR *)&object);
-	    }
-	    c->csi_rdesc.rd_lo_prev = (PTR) &c->csi_rdesc.rd_lo_next;
 
 	    /*
 	    ** if this is a repeat cursor whose definition involved 
@@ -17027,6 +17028,10 @@ scs_chkretry(
 **      If this session has already done so, then the known lowksp is
 **      returned.
 **
+**	A blob couponify or redeem might be in progress when this
+**	routine is called, so don't hurt anything that will confuse
+**	an in-progress blob operation (such as db-blob-wksp flags).
+**
 ** Re-entrancy:
 **	Yes.
 **
@@ -17074,38 +17079,40 @@ scs_chkretry(
 **	    Init pop_info field
 **	11-May-2004 (schka24)
 **	    Simplify pop-temporary setting.
+**	21-Apr-2010 (kschendel) SIR 123485
+**	    Always allocate a db-blob-wksp with the rest of it.
+**	    Don't hurt anything related to query-in-progress.
 */
 DB_STATUS
 scs_lowksp_alloc(SCD_SCB    	*scb,
 		 PTR     	*lowkspp)
 {
-    DB_STATUS 	status = E_DB_OK;
+    DB_STATUS 	status;
     ADP_LO_WKSP *lowksp;
 
-    for (;;)
+    if (!scb->scb_sscb.sscb_lowksp)
     {
-	if (!scb->scb_sscb.sscb_lowksp)
-	{
-	    status = sc0m_allocate(0,
-				   sizeof(ADP_LO_WKSP) + Sc_main_cb->sc_maxtup,
-				   DB_SCF_ID,
-				   (PTR)ADP_ADW_TYPE,
-				   ADP_ADW_ASCII_ID,
-				   &scb->scb_sscb.sscb_lowksp);
-	    if (status)
-		break;
-	}
-
-	lowksp = (ADP_LO_WKSP *) scb->scb_sscb.sscb_lowksp;
-	lowksp->adw_fip.fip_work_dv.db_data = (PTR) (lowksp + 1);
-	lowksp->adw_fip.fip_work_dv.db_length = DB_MAXTUP;
-	lowksp->adw_fip.fip_work_dv.db_prec = 0;
-	lowksp->adw_fip.fip_pop_cb.pop_info = NULL;
-	lowksp->adw_fip.fip_pop_cb.pop_temporary = ADP_POP_TEMPORARY;
-	*lowkspp = (PTR) lowksp;
-	break;
+	/* ADP_LO_WKSP includes the usual scf/dmf header. */
+	status = sc0m_allocate(0,
+			       sizeof(ADP_LO_WKSP)
+				+ sizeof(DB_BLOB_WKSP)
+				+ Sc_main_cb->sc_maxtup,
+			       DB_SCF_ID,
+			       (PTR)ADP_ADW_TYPE,
+			       ADP_ADW_ASCII_ID,
+			       &scb->scb_sscb.sscb_lowksp);
+	if (status)
+	    return (status);
     }
-    return(status);
+
+    lowksp = (ADP_LO_WKSP *) scb->scb_sscb.sscb_lowksp;
+    lowksp->adw_fip.fip_pop_cb.pop_info = (PTR) (lowksp + 1);
+    lowksp->adw_fip.fip_work_dv.db_data =
+	    (char *) lowksp->adw_fip.fip_pop_cb.pop_info + sizeof(DB_BLOB_WKSP);
+    lowksp->adw_fip.fip_work_dv.db_length = Sc_main_cb->sc_maxtup;
+    lowksp->adw_fip.fip_work_dv.db_prec = 0;
+    *lowkspp = (PTR) lowksp;
+    return(E_DB_OK);
 }
 
 /*{
@@ -17253,6 +17260,8 @@ scs_lowksp_alloc(SCD_SCB    	*scb,
 **	1-Jul-2009 (wanfr01)
 **	    Bug 122248 - Need to set GCA_SCROLL_MASK in GCA if the
 **	    cursor is scrollable to inform ODBC programs.
+**	21-Apr-2010 (kschendel) SIR 123485
+**	    Delete pointless fiddling with blob coupon lists, nobody cares.
 */
 static DB_STATUS
 scs_def_curs(
@@ -17827,31 +17836,6 @@ scs_def_curs(
 	    STRUCT_ASSIGN_MACRO(qe_ccb->qef_comstamp, 
 			        scb->scb_sscb.sscb_comstamp);
 
-	    /* Attach any necessary BLOBs */
-		
-	    if (scb->scb_sscb.sscb_cquery.cur_rdesc.rd_lo_next !=
-	        (PTR) &scb->scb_sscb.sscb_cquery.cur_rdesc.rd_lo_next)
-	    {
-	        csi_entry->csi_rdesc.rd_lo_next =
-		    scb->scb_sscb.sscb_cquery.cur_rdesc.rd_lo_next;
-	        csi_entry->csi_rdesc.rd_lo_prev =
-		    scb->scb_sscb.sscb_cquery.cur_rdesc.rd_lo_prev;
-	        ((SC0M_OBJECT *) csi_entry->csi_rdesc.rd_lo_prev)->sco_next =
-		    (SC0M_OBJECT *) &csi_entry->csi_rdesc.rd_lo_next;
-	        ((SC0M_OBJECT *) csi_entry->csi_rdesc.rd_lo_next)->sco_prev =
-		    (SC0M_OBJECT *) &csi_entry->csi_rdesc.rd_lo_next;
-		    
-	        scb->scb_sscb.sscb_cquery.cur_rdesc.rd_lo_next =
-		    scb->scb_sscb.sscb_cquery.cur_rdesc.rd_lo_prev =
-		      (PTR) &scb->scb_sscb.sscb_cquery.cur_rdesc.rd_lo_next;
-	    }
-	    else
-	    {
-	        csi_entry->csi_rdesc.rd_lo_next =
-		    csi_entry->csi_rdesc.rd_lo_prev =
-		    (PTR) &csi_entry->csi_rdesc.rd_lo_next;
-	    }
-
 	    csi_entry->csi_rep_parm_handle = param_handle;
 	    csi_entry->csi_rep_parm_lk_id  = param_lk_id;
 	    csi_entry->csi_rep_parms = params;
@@ -18190,7 +18174,6 @@ scs_set_session(
 	{
 	    i4  len;
 	    DB_DIS_TRAN_ID temp_db_distid;
-	    DB_SP_NAME		spoint;
 
 	    /*
 	    ** Set session distributed transaction id
@@ -18225,12 +18208,9 @@ scs_set_session(
 		** AS1 - xa_start(TM_JOIN), xa_end
 		*/
 
-		MEmove(STlength(QEF_SP_SAVEPOINT), QEF_SP_SAVEPOINT, ' ',
-			sizeof(spoint), (PTR) &spoint);
 		qe_ccb = scb->scb_sscb.sscb_qeccb;
 		qe_ccb->qef_db_id = scb->scb_sscb.sscb_ics.ics_opendb_id;
 		qe_ccb->qef_flag = 0;
-		qe_ccb->qef_spoint= 0;
 		qe_ccb->qef_modifier = QEF_MSTRAN;
 		qe_ccb->qef_eflag = QEF_EXTERNAL;
 		qe_ccb->qef_cb = scb->scb_sscb.sscb_qescb;
@@ -18238,7 +18218,7 @@ scs_set_session(
 		qe_ccb->qef_no_xact_stmt =
 		    (scb->scb_sscb.sscb_req_flags & SCS_NO_XACT_STMT) != 0;
 		qe_ccb->qef_illegal_xact_stmt = FALSE;
-		qe_ccb->qef_spoint = &spoint;
+		qe_ccb->qef_spoint = &Qef_s_cb->qef_sp_savepoint;
 		status = qef_call(QET_SAVEPOINT, qe_ccb);
 		if (DB_FAILURE_MACRO( status ))
 		{

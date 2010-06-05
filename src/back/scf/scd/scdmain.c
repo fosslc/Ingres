@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1986, 2005 Ingres Corporation
+** Copyright (c) 1986, 2010 Ingres Corporation
 **
 **
 NO_OPTIM=dr6_us5
@@ -1042,6 +1042,8 @@ char		**argv;
 **	   requests.
 **	30-Mar-2010 (kschendel) SIR 123485
 **	    Re-type some ptr's as the proper struct pointer.
+**	21-Apr-2010 (kschendel) SIR 123485
+**	    Delete unused blob coupon list.
 */
 STATUS
 scd_alloc_scb( SCD_SCB  **scb_ptr, GCA_LS_PARMS  *input_crb, i4  thread_type )
@@ -1894,9 +1896,6 @@ scd_alloc_scb( SCD_SCB  **scb_ptr, GCA_LS_PARMS  *input_crb, i4  thread_type )
 	}
 
 	scb->scb_sscb.sscb_cquery.cur_row_count = GCA_NO_ROW_COUNT;
-	scb->scb_sscb.sscb_cquery.cur_rdesc.rd_lo_next =
-	    scb->scb_sscb.sscb_cquery.cur_rdesc.rd_lo_prev =
-		(PTR) &scb->scb_sscb.sscb_cquery.cur_rdesc.rd_lo_next;
 	scb->scb_sscb.sscb_cquery.cur_rdesc.rd_comp_size = 0;
 	scb->scb_sscb.sscb_cquery.cur_rdesc.rd_comp_tdesc = 0;
 	scb->scb_sscb.sscb_cquery.cur_qtxt = NULL;

@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1986, 2008 Ingres Corporation
+** Copyright (c) 1986, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -594,6 +594,9 @@
 **	03-Mar-2010 (jonj)
 **	    SIR 121619 MVCC, blob support:
 **	    Use NeedPhysLock(r) to determine physical page lock needs.
+**	22-Apr-2010 (kschendel) SIR 123485
+**	    Process coupons if doing full row duplicate checking and there
+**	    are blobs, otherwise dmpe now complains about lack of context.
 */
 DB_STATUS
 dm1h_allocate(
@@ -844,6 +847,18 @@ DB_ERROR       *dberr)
 		{
 		    s = dm1c_get(r, pinfo->page, &localtid, record2, dberr);
 		    rec_ptr = record2;
+		}
+		if (s == E_DB_OK && t->tcb_rel.relstat2 & TCB2_HAS_EXTENSIONS)
+		{
+		    /* Apply context to short-term part of coupon in row
+		    ** that we're checking against.
+		    */
+		    if (rec_ptr != record2)
+		    {
+			MEcopy(rec_ptr, t->tcb_rel.relwid, record2);
+			rec_ptr = record2;
+		    }
+		    s = dm1c_pget(t->tcb_atts_ptr, r, rec_ptr, dberr);
 		}
 
 		if (s == E_DB_ERROR)

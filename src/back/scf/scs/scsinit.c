@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1986, 2009 Ingres Corporation
+** Copyright (c) 1986, 2010 Ingres Corporation
 */
 
 /*
@@ -4490,6 +4490,9 @@ scs_initiate(SCD_SCB *scb )
 **	    Do a better job of CUT termination.
 **	01-may-2008 (smeke01) b118780
 **	    Corrected name of sc_avgrows to sc_totrows.
+**	21-Apr-2010 (kschendel) SIR 123485
+**	    Blobwork is now allocated along with lowksp.  Delete lowksp when
+**	    terminating a session.
 */
 DB_STATUS
 scs_terminate(SCD_SCB *scb )
@@ -4592,6 +4595,13 @@ scs_terminate(SCD_SCB *scb )
 	*/
 	sce_end_session(scb, (SCF_SESSION)scb->cs_scb.cs_self);
 
+	/* If session used blobs, delete sequencer couponify/redeem
+	** blob workspace.
+	*/
+
+	if (scb->scb_sscb.sscb_lowksp != NULL)
+	    (void) sc0m_deallocate(0, &scb->scb_sscb.sscb_lowksp);
+
 	/*
 	** Free any memory the RAAT API allocated, except for raat_message,
 	** which must not be freed until we run through the message queue.
@@ -4613,13 +4623,6 @@ scs_terminate(SCD_SCB *scb )
 	    {
 		sc0e_0_put(status, 0);
 	    }
-	}
-
-	if (scb->scb_sscb.sscb_blobwork != NULL)
-	{
-	    status = sc0m_deallocate(0, &scb->scb_sscb.sscb_blobwork);
-	    if (status)
-		sc0e_0_put(status, 0);
 	}
 
 	/* Fire any session termination alarms */
@@ -5836,6 +5839,8 @@ scs_icsxlate(SCD_SCB	*scb ,
 **	    Temp (?) fix for new cmptlvl being less than all the old ones.
 **	12-Nov-2009 (kschendel) SIR 122882
 **	    dbcmptlvl is now an integer.
+**	22-Apr-2010 (kschendel) SIR 123485
+**	    Remove a couple bad deallocs of tmptupmem, found by accident.
 */
 DB_STATUS
 scs_dbdb_info(SCD_SCB *scb ,
@@ -6176,14 +6181,12 @@ scs_dbdb_info(SCD_SCB *scb ,
 			sc0e_0_put(qeu.error.err_code, 0);
 			qeu.error.err_code = E_US000F_DATABASE_TABLE;
 		    }
-		    sc0m_deallocate(0, &tmptupmem);
 		    break;
 		}
 
 		status = qef_call(QEU_CLOSE, &qeu);
 		if (status)
 		{
-		    sc0m_deallocate(0, &tmptupmem);
 		    break;
 		}
 		opened = 0;

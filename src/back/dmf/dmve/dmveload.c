@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -328,6 +328,8 @@
 **	    Don't close-purge the TCB if the load was non-recreate load.
 **	    We may not have a control lock in that situation, and there's
 **	    no need to close-purge anyway unless it was a recreate load.
+**	13-Apr-2010 (kschendel) SIR 123485
+**	    Open no-coupon to avoid unnecessary LOB overhead.
 */
 DB_STATUS
 dmve_load(
@@ -394,7 +396,7 @@ DMVE_CB		*dmve_cb)
             master_id.db_tab_index = 0;
         }
         status = dm2t_open(dmve->dmve_dcb_ptr, &master_id, DM2T_X,
-            DM2T_UDIRECT, DM2T_A_WRITE, (i4)0, (i4)20, 0,
+            DM2T_UDIRECT, DM2T_A_WRITE_NOCPN, (i4)0, (i4)20, 0,
 	    dmve->dmve_log_id, dmve->dmve_lk_id, 0, 0, dmve->dmve_db_lockmode,
             &dmve->dmve_tran_id, &timestamp,
             &master_rcb, (DML_SCB *)0, &dmve->dmve_error);
@@ -403,7 +405,7 @@ DMVE_CB		*dmve_cb)
         if (is_partition)
         {
             status = dm2t_open(dmve->dmve_dcb_ptr, &log_rec->dul_tbl_id,
-                DM2T_X, DM2T_UDIRECT, DM2T_A_WRITE, (i4)0, (i4)20, 0,
+                DM2T_X, DM2T_UDIRECT, DM2T_A_WRITE_NOCPN, (i4)0, (i4)20, 0,
                 dmve->dmve_log_id, dmve->dmve_lk_id, 0, 0,
                 dmve->dmve_db_lockmode,
                 &dmve->dmve_tran_id, &timestamp, &rcb, (DML_SCB *)0, &dmve->dmve_error);

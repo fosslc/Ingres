@@ -585,6 +585,8 @@ char		**argv;
 **          Add cleanup checking thread.
 **      25-Feb-1999 (fanra01)
 **          Add tracing thread.
+**	22-Apr-2010 (kschendel)
+**	    Rd-lo-next/prev gone, fix here.
 */
 STATUS
 ascd_alloc_scb( SCD_SCB  **scb_ptr, GCA_LS_PARMS  *input_crb, i4  thread_type )
@@ -1194,9 +1196,6 @@ ascd_alloc_scb( SCD_SCB  **scb_ptr, GCA_LS_PARMS  *input_crb, i4  thread_type )
 	    scb->scb_sscb.sscb_cursor.curs_csi->csitbl[i].csi_state = 0;
 
 	scb->scb_sscb.sscb_cquery.cur_row_count = GCA_NO_ROW_COUNT;
-	scb->scb_sscb.sscb_cquery.cur_rdesc.rd_lo_next =
-	    scb->scb_sscb.sscb_cquery.cur_rdesc.rd_lo_prev =
-		(PTR) &scb->scb_sscb.sscb_cquery.cur_rdesc.rd_lo_next;
 	scb->scb_sscb.sscb_cquery.cur_rdesc.rd_comp_size = 0;
 	scb->scb_sscb.sscb_cquery.cur_rdesc.rd_comp_tdesc = 0;
 

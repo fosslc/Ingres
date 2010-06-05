@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1986, 2004 Ingres Corporation
+** Copyright (c) 1986, 2010 Ingres Corporation
 **
 **
 NO_OPTIM=dr6_us5 i64_aix
@@ -696,6 +696,8 @@ NO_OPTIM=dr6_us5 i64_aix
 **          TCB2_PHYSLOCK_CONCUR the same as S_CONCUR and throw
 **          E_DM005A if a modify to anything other than HASH is attempted
 **          This gets reported as E_US159D to the frontend.
+**	13-Apr-2010 (kschendel) SIR 123485
+**	    Open tables "no coupon" to avoid BQCB, coupon processing stuff.
 **/
 
 /*
@@ -1597,7 +1599,7 @@ DB_ERROR        *dberr)
     	   (mcb->mcb_verify & DM1U_OPMASK) == DM1U_FPATCH) )
 	table_access_mode = DM2T_A_SYNC_CLOSE;
     else if (is_table_debug)
-	table_access_mode = DM2T_A_READ;
+	table_access_mode = DM2T_A_READ_NOCPN;
     else
 	table_access_mode = DM2T_A_MODIFY;
 
@@ -1685,7 +1687,7 @@ DB_ERROR        *dberr)
 	if (mcb->mcb_flagsmask & DMU_ONLINE_START) 
 	{
 	    lk_mode = DM2T_N;
-	    table_access_mode = DM2T_A_READ;
+	    table_access_mode = DM2T_A_READ_NOCPN;
 	}
 
 	/*  Open up the table.
@@ -8959,7 +8961,7 @@ DB_ERROR	    *dberr)
  
 	/* Open modify table readnolock */
 	status = dm2t_open(dcb, &t->tcb_rel.reltid, DM2T_N,
-	    DM2T_UDIRECT, DM2T_A_READ,
+	    DM2T_UDIRECT, DM2T_A_READ_NOCPN,
 	    (i4)0, (i4)20, (i4)0, m->mx_log_id,
 	    xcb->xcb_lk_id, (i4)0, (i4)0,
 	    db_lockmode,
@@ -9012,10 +9014,10 @@ DB_ERROR	    *dberr)
 	    else
 	    {
 		status = dm2t_open(dcb, 
-		    &readnolock_rcb->rcb_tcb_ptr->tcb_pp_array[i].pp_tabid, 
-		    DM2T_N, DM2T_UDIRECT, DM2T_A_READ, (i4)0, (i4)20, (i4)0, 
-		    m->mx_log_id, xcb->xcb_lk_id, (i4)0, (i4)0, 
-		    db_lockmode, &xcb->xcb_tran_id, &timestamp, 
+		    &readnolock_rcb->rcb_tcb_ptr->tcb_pp_array[i].pp_tabid,
+		    DM2T_N, DM2T_UDIRECT, DM2T_A_READ_NOCPN, 0, 20, 0,
+		    m->mx_log_id, xcb->xcb_lk_id, (i4)0, (i4)0,
+		    db_lockmode, &xcb->xcb_tran_id, &timestamp,
 		    &(osrc->osrc_rnl_rcb), (DML_SCB *)0, dberr);
 		if (status != E_DB_OK)
 		    break;
@@ -9278,8 +9280,8 @@ DB_ERROR	    *dberr)
         }
 
 	/* Open $online table to logically reapply SF updates  */
-	status = dm2t_open(dcb, modtemp_tabid, DM2T_X, 
-            DM2T_UDIRECT, DM2T_A_WRITE, (i4)0, (i4)20, (i4)0, m->mx_log_id, 
+	status = dm2t_open(dcb, modtemp_tabid, DM2T_X,
+            DM2T_UDIRECT, DM2T_A_WRITE_NOCPN, 0, 20, 0, m->mx_log_id,
             xcb->xcb_lk_id, (i4)0, (i4)0, db_lockmode, &xcb->xcb_tran_id, 
 	    &timestamp, &opcb->opcb_master_rcb, (DML_SCB *)0, dberr);
 
@@ -9305,7 +9307,7 @@ DB_ERROR	    *dberr)
 
 		status = dm2t_open(dcb,
 			&online_tcb->tcb_pp_array[i].pp_tabid,
-			DM2T_X, DM2T_UDIRECT, DM2T_A_WRITE, (i4)0,
+			DM2T_X, DM2T_UDIRECT, DM2T_A_WRITE_NOCPN, 0,
 			(i4)20, (i4)0, m->mx_log_id, xcb->xcb_lk_id,
 			(i4)0, (i4)0, db_lockmode, &xcb->xcb_tran_id,
 			&timestamp, &opcb->opcb_rcb, (DML_SCB *)0,
@@ -9393,7 +9395,7 @@ DB_ERROR	    *dberr)
 		DMP_RCB		*ix_rcb;
 		/* check for duplicates */
 		status = dm2t_open(dcb, &ix_dmu->dmu_idx_id, DM2T_N,
-            			DM2T_UDIRECT, DM2T_A_READ, (i4)0, 
+            			DM2T_UDIRECT, DM2T_A_READ_NOCPN, (i4)0, 
 				(i4)20, (i4)0, m->mx_log_id,
             			xcb->xcb_lk_id, (i4)0, (i4)0,
             			db_lockmode, &xcb->xcb_tran_id, 
@@ -10137,11 +10139,11 @@ DB_ERROR	    *dberr)
 
 	    /* positioning using index */
 	    dm2r_flag = DM2R_BYTID;
-	    status = dm2t_open(dcb, &position_tcb->tcb_rel.reltid, DM2T_X, 
-		DM2T_UDIRECT, DM2T_A_WRITE, (i4)0, (i4)20, (i4)0, m->mx_log_id, 
-		xcb->xcb_lk_id, (i4)0, (i4)0, 
-		db_lockmode, 
-		&xcb->xcb_tran_id, &timestamp, &position_rcb, (DML_SCB *)0, 
+	    status = dm2t_open(dcb, &position_tcb->tcb_rel.reltid, DM2T_X,
+		DM2T_UDIRECT, DM2T_A_WRITE_NOCPN, 0, 20, 0, m->mx_log_id,
+		xcb->xcb_lk_id, (i4)0, (i4)0,
+		db_lockmode,
+		&xcb->xcb_tran_id, &timestamp, &position_rcb, (DML_SCB *)0,
 		dberr);
 	    if (status != E_DB_OK)
 	    {
@@ -10172,7 +10174,7 @@ DB_ERROR	    *dberr)
 
 		    status = dm2t_open(dcb,
 				&position_tcb->tcb_pp_array[i].pp_tabid,
-				DM2T_X, DM2T_UDIRECT, DM2T_A_WRITE, (i4)0,
+				DM2T_X, DM2T_UDIRECT, DM2T_A_WRITE_NOCPN, 0,
 				(i4)20, (i4)0, m->mx_log_id, xcb->xcb_lk_id,
 				(i4)0, (i4)0, db_lockmode, &xcb->xcb_tran_id,
 				&timestamp, &pos_opcb->opcb_rcb,
@@ -10728,7 +10730,7 @@ DB_ERROR	    *dberr)
 			{
 			    local_status = dm2t_open(dcb, 
 				&src_tcb->tcb_pp_array[i].pp_tabid, 
-				DM2T_N, DM2T_UDIRECT, DM2T_A_READ, 
+				DM2T_N, DM2T_UDIRECT, DM2T_A_READ_NOCPN,
 				(i4)0, (i4)20, (i4)0, m->mx_log_id,
 				xcb->xcb_lk_id, (i4)0, (i4)0,
 				db_lockmode, &xcb->xcb_tran_id, 
@@ -11245,7 +11247,7 @@ DB_ERROR        *dberr)
     {
 	/* open $dupchk tbl & do a full scan */
 	status = dm2t_open(dcb, dupchk_tabid, DM2T_N, DM2T_UDIRECT, 
-		DM2T_A_READ, (i4)0, (i4)20, (i4)0, mxcb->mx_log_id, 
+		DM2T_A_READ_NOCPN, (i4)0, (i4)20, (i4)0, mxcb->mx_log_id, 
 		xcb->xcb_lk_id, (i4)0, (i4)0, db_lockmode, &xcb->xcb_tran_id, 
 		&timestamp, &dupchk_rcb, (DML_SCB *)0, dberr);
 
@@ -11757,7 +11759,7 @@ DB_ERROR                *dberr)
     {
         /* Open $online table readnolock nolock to get reltup */
         status = dm2t_open(dcb, modtemp_tabid, DM2T_N,
-            DM2T_UDIRECT, DM2T_A_READ,
+            DM2T_UDIRECT, DM2T_A_READ_NOCPN,
             (i4)0, (i4)20, (i4)0, m->mx_log_id,
             xcb->xcb_lk_id, (i4)0, (i4)0,
             db_lockmode,

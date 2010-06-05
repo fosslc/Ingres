@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1985, 2007 Ingres Corporation
+** Copyright (c) 1985, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -44,6 +44,7 @@
 #include    <dm0l.h>
 #include    <dmd.h>
 #include    <dmrthreads.h>
+#include    <dmpecpn.h>
 
 /**
 **
@@ -676,6 +677,8 @@ DM_OBJECT	   *obj)
 **	    Replaced code for displaying DM0P_BSTAT structure by call
 **	    to function dmd_summary_statistics(). Replaced %d with %u
 **	    for DM0P_BSTAT fields.
+**	16-Apr-2010 (kschendel) SIR 123485
+**	    Add the BQCB.
 */
 static STATUS
 ex_handler(
@@ -718,6 +721,7 @@ DM_OBJECT	    *obj)
     DML_CSEQ	    *cseq;
     DMR_RTB	    *rtb;
     DMR_RTL	    *rtl;
+    DMPE_BQCB	    *bqcb;
     i4		    i;
     i4		    type, mode;
     i4		    already_locked;
@@ -2313,6 +2317,21 @@ TRdisplay("         ATTID  OFFSET  TYPE    LENGTH PREC KEY KOFFSET\n");
 	    }
 	}
 	break;
+
+    case DM_BQCB_CB:
+	bqcb = (DMPE_BQCB *) obj;
+	TRdisplay("    Next: %p  base_id %d, nlobs %d\n",
+		bqcb->hdr.obj_next, bqcb->bqcb_base_id, bqcb->bqcb_natts);
+	TRdisplay("    Hints: TableLock %s, X-lock %s, CRIB %p\n",
+		bqcb->bqcb_table_lock ? "Y" : "N",
+		bqcb->bqcb_x_lock ? "Y" : "N",
+		bqcb->bqcb_crib);
+	TRdisplay("    Load-etabs %d, multi-row %s, logkey RCB %p\n",
+		bqcb->bqcb_load_etabs,
+		bqcb->bqcb_multi_row ? "Y" : "N",
+		bqcb->bqcb_logkey_rcb);
+	break;
+
 
 
     default:

@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1986, 2005 Ingres Corporation
+** Copyright (c) 1986, 2010 Ingres Corporation
 **
 */
 
@@ -1970,11 +1970,14 @@ typedef struct _PSQ_TRPARMS
 ** History:
 **     24-jul-2003 (stial01)
 **          Added for b110620
+**	15-Apr-2010 (kschendel) SIR 123485
+**	    Include table ID, is easier on dmpe than table name/owner.
 */
 typedef struct _PSQ_STMT_INFO
 {
     char		psq_stmt_tabname[DB_TAB_MAXNAME+1];
     char		psq_stmt_ownname[DB_OWN_MAXNAME+1];
+    DB_TAB_ID		psq_stmt_tabid;
     i4			psq_stmt_blob_cnt;
     i4			psq_stmt_blob_colno;
 } PSQ_STMT_INFO;

@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1986, 2004 Ingres Corporation
+** Copyright (c) 1986, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -813,6 +813,8 @@
 **	    Ask for direct-io if config suggests it.
 **	16-Nov-2009 (kschendel) SIR 122890
 **	    Update call to dm2t-destroy-temp-tcb.
+**	14-Apr-2010 (kschendel) SIR 123485
+**	    Use no-coupon access modes.
 */
 DB_STATUS
 dm2u_index(
@@ -842,7 +844,7 @@ DM2U_INDEX_CB   *index_cb)
     i4              setrelstat;
     u_i4            setrelstat2 = 0;
     i4              tbl_lk_mode;
-    i4	     	    tbl_access_mode = DM2T_A_READ;
+    i4	     	    tbl_access_mode = DM2T_A_READ_NOCPN;
     i4              loc_count;
     i4              timeout = 0;
     u_i4	    db_sync_flag;
@@ -1154,7 +1156,7 @@ DM2U_INDEX_CB   *index_cb)
 		status = dm2t_open(dcb, 
 			 	index_cb->indxcb_idx_id, 
 			 	LK_X, DM2T_UDIRECT, 
-			 	DM2T_A_WRITE, 
+			 	DM2T_A_WRITE_NOCPN,
 			 	(i4)0,		/* timeout */
 			 	(i4)20, 	/* maxlocks */
 			 	(i4)0, 		/* savepoint id */
@@ -1812,6 +1814,8 @@ DM2U_INDEX_CB   *index_cb)
 **	    Extract another 500 or so lines of common code between index
 **	    and parallel index, so that I can figure out where to put the
 **	    new row-accessor stuff.
+**	14-Apr-2010 (kschendel) SIR 123485
+**	    Use no-coupon access modes.
 */
 
 DB_STATUS
@@ -2066,7 +2070,7 @@ dm2uMakeIndMxcb(DM2U_MXCB **mxcb,
     /* Stuff needed later for source's dm2t_open() calls */
     m->mx_db_lk_mode = index_cb->indxcb_db_lockmode;
     m->mx_tbl_lk_mode = tbl_lk_mode;
-    m->mx_tbl_access_mode = DM2T_A_READ;
+    m->mx_tbl_access_mode = DM2T_A_READ_NOCPN;
     m->mx_timeout = timeout;
 
     /* Until we have partitioned indexes, this will be null */

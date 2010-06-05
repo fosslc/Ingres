@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -457,6 +457,8 @@ DMVE_CB		*dmve_cb)
 **	    Added dui_relstat2 for Global Indexes, Partitioning.
 **	6-Feb-2004 (schka24)
 **	    Pass along name generator info.
+**	13-Apr-2010 (kschendel) SIR 123485
+**	    Open no-coupon to avoid unnecessary LOB overhead.
 */
 static DB_STATUS
 dmv_reindex(
@@ -501,7 +503,7 @@ DM0L_INDEX 	*log_rec)
 	** access methods.
 	*/
 	status = dm2t_open(dmve->dmve_dcb_ptr, &log_rec->dui_tbl_id, 
-			DM2T_X, DM2T_UDIRECT, DM2T_A_READ, 
+			DM2T_X, DM2T_UDIRECT, DM2T_A_READ_NOCPN,
 			(i4)0, (i4)20, (i4)0,
 			dmve->dmve_log_id, dmve->dmve_lk_id, 
 			(i4)0, (i4)0, dmve->dmve_db_lockmode,

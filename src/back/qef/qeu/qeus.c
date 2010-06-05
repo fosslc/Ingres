@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 #include    <compat.h>
 #include    <gl.h>
@@ -1063,6 +1063,9 @@ static i4 createTblErrXlate(
 **          Initialise qef_rcb.error.
 **	12-Apr-2010 (gupsh01) SIR 123444
 **	    Added support for alter table rename table/column.
+**	22-Apr-2010 (kschendel) SIR 123485
+**	    Use padded copy of standard savepoint name in the QEF SCB.
+**
 */
 DB_STATUS
 qeu_dbu(
@@ -1087,7 +1090,6 @@ i4		caller )
     DMU_CB	    dmu_cb, *dmu_ptr = &dmu_cb, *tdmu_ptr, *errdmu_ptr;	
     DMT_CB	    dmt_cb, *dmt_ptr = &dmt_cb;
     QEF_RCB	    qef_rcb;
-    DB_SP_NAME	    spoint;
     i4	    	    opcode = qeu_cb->qeu_d_op;
     bool            createDfltTuple = (qeu_cb->qeu_flag & QEU_DFLT_VALUE_PRESENT) != 0;
     bool	    TempTable = (qeu_cb->qeu_flag & QEU_TMP_TBL) != 0;
@@ -2677,10 +2679,7 @@ exit:
 			qef_rcb.qef_spoint = (DB_SP_NAME *)NULL;
 		    else
 		    {
-			qef_rcb.qef_spoint = &spoint;
-			MEmove(QEF_PS_SZ, (PTR) QEF_SP_SAVEPOINT,
-			    (char)' ', sizeof(DB_SP_NAME), 
-			    (PTR) qef_rcb.qef_spoint->db_sp_name);
+			qef_rcb.qef_spoint = &Qef_s_cb->qef_sp_savepoint;
 			stat = qet_abort(qef_cb);
 		    }
 		}
@@ -2710,10 +2709,7 @@ exit:
 			stat = E_DB_OK;	    /* no internal savepoint in distr */
 		    else
 		    {
-			qef_rcb.qef_spoint = &spoint;
-			MEmove(QEF_PS_SZ, (PTR) QEF_SP_SAVEPOINT,
-			    (char) ' ', sizeof(DB_SP_NAME), 
-			    (PTR) qef_rcb.qef_spoint->db_sp_name);
+			qef_rcb.qef_spoint = &Qef_s_cb->qef_sp_savepoint;
 			stat = qet_savepoint(qef_cb);
 		    }
 		}

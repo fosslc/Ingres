@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -33,6 +33,7 @@
 #include    <dm2u.h>
 #include    <dmxe.h>
 #include    <dm0m.h>
+#include    <dmpecpn.h>
 
 /**
 ** Name: DMRLOAD.C - Implements the DMF load record operation.
@@ -627,6 +628,9 @@ DMR_CB  *dmr_cb)
 **	    dm2r position call updated, fix here.
 **	23-Mar-2010 (kschendel) SIR 123448
 **	    Define no-parallel-sort flag for load.
+**	20-Apr-2010 (kschendel) SIR 123485
+**	    A table bulk-load is definitely a multi-row operation in the
+**	    LOB sense, reflect it in the BQCB if there is one.
 */
 static STATUS
 start_load(
@@ -945,5 +949,14 @@ DMP_RCB		*rcb)
     status = dm2r_load( rcb, tcb, DM2R_L_BEGIN, flag,
 	                &row_count, dmr->dmr_mdata, row_estimate, 
 			&build_tbl_info, &dmr->error);
+
+    /* If we have LOB's around, make sure that it's marked as being
+    ** part of a multi-row query.  Callers might set multi-row
+    ** for their own purposes, but for some queries it's easier to
+    ** set it here.  (e.g. create table as select)
+    */
+    if (status == E_DB_OK && rcb->rcb_bqcb_ptr != NULL)
+	rcb->rcb_bqcb_ptr->bqcb_multi_row = TRUE;
+
     return (status);
 }

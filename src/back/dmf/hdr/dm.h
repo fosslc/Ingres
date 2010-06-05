@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1985, 2004 Ingres Corporation
+** Copyright (c) 1985, 2010 Ingres Corporation
 **
 **
 */
@@ -649,6 +649,8 @@
 **	    Add DM5065 warning.
 **	26-Feb-2010 (jonj)
 **	    Define DM_CRIB_CB for cursor CRIBs.
+**	13-Apr-2010 (kschendel) SIR 123485
+**	    Define DM_BQCB_CB for blob query context blocks.
 */
 
 /*
@@ -937,9 +939,10 @@ blow chunks now!
 #define        	DM_ETL_CB		(56 | DM0M_LONGTERM)
 #define		DM_LLOC_CB		(57 | DM0M_SHORTTERM)
 #define		DM_CRIB_CB		(58 | DM0M_SHORTTERM)
+#define		DM_BQCB_CB		(59 | DM0M_LONGTERM)
 
 /* Don't forget to update this... */
-#define		DM0M_MAX_TYPE		 58
+#define		DM0M_MAX_TYPE		 59
 
 /*
 **  Define macro for dm0m_check to avoid function call at entry point to all

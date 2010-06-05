@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1985, 2004 Ingres Corporation
+** Copyright (c) 1985, 2010 Ingres Corporation
 **
 */
 
@@ -1543,6 +1543,8 @@ delete(
 **	    Allow user aborts during long scans with no qualifying rows.
 **	11-Apr-2008 (kschendel)
 **	    Change qual-function call to speed up the normal CX case.
+**	14-Apr-2010 (kschendel) SIR 123485
+**	    Updated pget call.
 */
 
 DB_STATUS
@@ -2018,8 +2020,7 @@ dm1r_get(
 		}
 
 		s = dm1c_pget(t->tcb_atts_ptr,
-			      (i4)t->tcb_rel.relatts, r,
-			      rec_ptr, dberr);
+			      r, rec_ptr, dberr);
 		if (s)
 		{
 		    uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
@@ -6199,6 +6200,9 @@ dm1r_count(
 **	29-Aug-2008 (kschendel) Bug 120690
 **	    Set exception ADF cb pointer around cvinto calls to handle
 **	    arithmetic exceptions (e.g. overflow) during conversion.
+**	14-Apr-2010 (kschendel) SIR 123485
+**	    Make sure that atts not present originally in the row are
+**	    zeroed (or blanked)!  Original switch was missing a default.
 */
 DB_STATUS	
 dm1r_cvt_row(
@@ -6324,6 +6328,17 @@ dm1r_cvt_row(
                                                 TRUE, NULL);
 		tovalue.db_collID = att_to->collID;
 
+		/* FIXME!! (but not here)
+		** This fails for numerous reasons if the old or new type
+		** is a blob type.  The most difficult-to-fix reason is
+		** that if we convert old-blob to new-blob, and then eventually
+		** later rewrite the row, we have to delete the old etab
+		** rows!  or, if the row ISN'T rewritten, we'd have to delete
+		** the new version.  It's all just too hard to keep track of,
+		**
+		** The parser should be fixed to disallow alter table alter
+		** column when the new or old type is blob.
+		*/
 		stat = adc_cvinto (rcb_adf_cb, &fromvalue, &tovalue);
 		if (scb != NULL)
 		    scb->scb_qfun_adfcb = rcb_adf_cb;
@@ -6361,110 +6376,53 @@ dm1r_cvt_row(
 	      }
 	      else 
 	      {
-		/* 
-                ** In this case, the select returns a column for which no
-                ** data exists.  Set the null flag to indicate that this is
-                ** null.  If variable-length datatype, put zeros in 
-                ** the first two bytes to indicate zero length. 
-                */
-		if (type > 0) 
+		/* Only other possibility is that the column was added
+		** after this row was inserted, so fake up a default value.
+		** Generate zeros and null-indicator set if nullable;
+		** blanks for C, CHAR, NCHAR;  zeros for everything else.
+		** FIXME someday we need to be able to do value defaults,
+		** if some higher level can discover what those are and
+		** put them in some accessible place.
+		*/
+		if (type < 0)
 		{
-		  /* If added column is "not null with default", project 0 or 
-		  ** blank into row buffer, depending on data type. */
-		  switch (type)
-	          {
-		    case DB_VCH_TYPE:
-		    case DB_TXT_TYPE:
-		    case DB_LTXT_TYPE:
-		    case DB_VBYTE_TYPE:
-		    case DB_VBIT_TYPE:
-                    {
-                    	MEfill( sizeof(u_i2), (u_char) '\0', (PTR) dst);
-                    	break;
-                    }
-		    case DB_INT_TYPE:
-		    case DB_BIT_TYPE:
-		    case DB_BYTE_TYPE:
-		    case DB_LOGKEY_TYPE:
-		    case DB_TABKEY_TYPE:
-		    case DB_FLT_TYPE:
-		    case DB_MNY_TYPE:
-		    {
-			f8	f8val = 0.0;
-			MEcopy((PTR)&f8val, att_len, (PTR) dst);
-			break;
-		    }
-		    case DB_CHA_TYPE:
-		    case DB_CHR_TYPE:
-		    {
-			MEfill( att_len, (u_char)' ', (PTR) dst);
-			break;
-		    }
-		    case DB_DTE_TYPE:
-		    case DB_ADTE_TYPE:
-        	    case DB_TMWO_TYPE:
-        	    case DB_TMW_TYPE:
-        	    case DB_TME_TYPE:
-        	    case DB_TSWO_TYPE:
-        	    case DB_TSW_TYPE:
-        	    case DB_TSTMP_TYPE:
-        	    case DB_INDS_TYPE:
-        	    case DB_INYM_TYPE:
-		    {
-			/* Note: this depends on the fact that the internal
-			** representation of a "blank" date is 12 bytes of 0's.
-			** If this changes, adudate.h from common!hdr must be
-			** included in this module and the AD_DATENTRNL 
-			** structure will be needed for the initialization. */
-                    	MEfill( att_len, (u_char) 0, (PTR) dst);
-                    	break;
-                    }
-		    case DB_DEC_TYPE:
-		    {
-                    	MEfill( att_len, (u_char) 0, (PTR) dst);
-			dst[att_len-1] = MH_PK_PLUS;
-						/* add packed decimal plus sign */
-                    	break;
-                    }
-		  }
-		}		/* end of not null with default */
+		    MEfill(att_len-1, 0, dst);
+		    dst[att_len-1] = ADF_NVL_BIT;
+		}
 		else
 		{
-		  /* If nullable, set null indicator and (if var text) init
-		  ** column length to 0. */
-		  dst[(att_len - 1)] = ADF_NVL_BIT;
-        	  switch(type)
-        	  {
-                    case -DB_VCH_TYPE:
-                    case -DB_TXT_TYPE:
-                    case -DB_LTXT_TYPE:
-                    case -DB_VBYTE_TYPE:
-                    {
-                    	MEfill( sizeof(u_i2), '\0', (PTR) dst);
-                    	break;
-                    }
-		    case -DB_DTE_TYPE:
+		    switch (type)
 		    {
-			/* Note: this depends on the fact that the internal
-			** representation of a "blank" date is 12 bytes of 0's.
-			** If this changes, adudate.h from common!hdr must be
-			** included in this module and the AD_DATENTRNL 
-			** structure will be needed for the initialization. */
-                    	MEfill( (u_i2)(att_len - 1), (u_char) 0, (PTR) dst);
-                    	break;
-                    }
-		    case -DB_LVCH_TYPE:
-		    case -DB_LBYTE_TYPE:
-		    {
-			MEfill( (att_len - 1), '\0', (PTR) dst);
+		    case DB_CHA_TYPE:
+		    case DB_CHR_TYPE:
+			MEfill(att_len, ' ', dst);
+			break;
+
+		    case DB_NCHR_TYPE:
+			{
+			    i4 char_len = att_len / sizeof(UCS2);
+			    u_i2 *p = (u_i2 *) dst;
+			    u_i2 u_ch = U_BLANK;
+
+			    while (--char_len >= 0)
+			    {
+				I2ASSIGN_MACRO(u_ch, *(i2 *)p);
+				++p;
+			    }
+			}
+			break;
+
+		    case DB_DEC_TYPE:
+			/* Need to include decimal plus-sign */
+			MEfill(att_len-1, 0, dst);
+			dst[att_len-1] = MH_PK_PLUS;
+			break;
+
+		    default:
+			MEfill(att_len, 0, dst);
 			break;
 		    }
-                    default:
-                    {
-                    	  break;
-                    }
-        	  } 
-		}		/* end of nullable */
+		}
 
 		dst += att_len;
 		cum_width += att_len;

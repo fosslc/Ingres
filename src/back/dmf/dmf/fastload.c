@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -199,6 +199,7 @@ handle_peripheral(
 		DMF_JSX		*jsx,
 		char		*readbuffer, 
 		FILE		*fdesc,
+		DMP_RCB		*tab_rcb,
 		DMP_TCB		*tab_tcb,
 		i4		att_num);
 /*
@@ -309,6 +310,9 @@ handle_peripheral(
 **	    Make sure the fastcommit flag is set in the DCB if appropriate;
 **	    otherwise we can fail to set WCOMMIT and end up with DM9302
 **	    errors.
+**	19-Apr-2010 (kschendel) SIR 123485
+**	    Various changes for new blob handling, which among other things
+**	    requires the use of DML level table open here.
 */
 DB_STATUS
 dmffload( DMF_JSX	*jsx,
@@ -323,6 +327,7 @@ dmffload( DMF_JSX	*jsx,
     DMP_EXT		*ext;
     DMX_CB		dmx;
     SCF_CB              scf_cb;
+    DMT_CB		dmt;
     DMP_RCB		*tab_rcb = NULL, *master_rcb = NULL;
     DMP_TCB		*tab_tcb = NULL, *master_tcb = NULL;
     DM_MDATA		*load_data;
@@ -451,6 +456,7 @@ dmffload( DMF_JSX	*jsx,
     dml_scb.scb_lock_list = dmf_svcb->svcb_lock_list;
     CSget_sid(&dml_scb.scb_sid);
     dml_scb.scb_adf_cb = &adf_scb;
+    dm0s_minit(&dml_scb.scb_bqcb_mutex, "BQCB mutex");
     /*
     ** Init DML Open database control block, and queue it to the session
     ** control block (above)
@@ -705,27 +711,31 @@ dmffload( DMF_JSX	*jsx,
 	/*
 	** open the table
 	*/
-	flag = DM2T_X;
+	MEfill(sizeof(dmt), 0, (PTR) &dmt);
+	dmt.length = sizeof(DMT_CB);
+	dmt.type = DMT_TABLE_CB;
+	dmt.ascii_id = DMT_ASCII_ID;
+	dmt.dmt_record_access_id = NULL;
+	dmt.dmt_tran_id = (PTR) xcb;
+	dmt.dmt_db_id = (PTR) &dml_odcb;
+	dmt.dmt_lock_mode = DMT_X;
 	if (partition_no != -1)
-	    flag = DM2T_IX;
-	status = dm2t_open(dcb, &tab_id, flag, DM2T_UDIRECT, DM2T_A_WRITE,
-	    (i4)0, (i4)20, (i4)0, xcb->xcb_log_id, 
-	    xcb->xcb_lk_id, 0, DMC_C_SERIALIZABLE, DM2T_S, &xcb->xcb_tran_id,
-	    &timestamp, &tab_rcb, (DML_SCB *)0, &jsx->jsx_dberr);
+	    dmt.dmt_lock_mode = DMT_IX;
+	dmt.dmt_update_mode = DMT_U_DIRECT;
+	dmt.dmt_access_mode = DMT_A_WRITE;
+	dmt.dmt_flags_mask = DMT_DBMS_REQUEST;
+	dmt.dmt_id = tab_id;
+	status = dmt_open(&dmt);
 	if (status != E_DB_OK)
 	{
+	    jsx->jsx_dberr = dmt.error;
 	    uleFormat(&jsx->jsx_dberr, E_DM1604_FLOAD_OPEN_TABLE,(CL_ERR_DESC *)NULL, 
 		ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL, &local_err, 0);
 	    break;
 	}
+	tab_rcb = (DMP_RCB *) dmt.dmt_record_access_id;
 	tab_tcb = tab_rcb->rcb_tcb_ptr;
 	table_open = TRUE;
-	/* queue RCB to XCB */
-	tab_rcb->rcb_xcb_ptr = xcb;
-	tab_rcb->rcb_xq_next = xcb->xcb_rq_next;
-	tab_rcb->rcb_xq_prev = (DMP_RCB *)&xcb->xcb_rq_next;
-	xcb->xcb_rq_next->rcb_q_prev = (DMP_RCB *)&tab_rcb->rcb_xq_next;
-	xcb->xcb_rq_next = (DMP_RCB *)&tab_rcb->rcb_xq_next;
 	/*
 	** at this point we check if the table can be fastladed, it must be
 	** an empty indexed table, or if it containse records, a heap, and
@@ -747,7 +757,7 @@ dmffload( DMF_JSX	*jsx,
 		ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL, &local_err, 0);
 	    break;
 	}
-	/* Error Contition 2: table is not partitioned but user specified a partition_no */
+	/* Error Condition 2: table is not partitioned but user specified a partition_no */
 	if (!(tab_tcb->tcb_rel.relstat & TCB_IS_PARTITIONED)&&(-1!=partition_no))
 	{
 	    SIfprintf(stderr, "The table is not partitioned, therefore, the partition number you specified is invalid.\n");
@@ -766,24 +776,18 @@ dmffload( DMF_JSX	*jsx,
 	    master_tcb=tab_tcb;
 	    tab_rcb=NULL;
 	    tab_tcb=NULL;
-	    tab_id=master_tcb->tcb_pp_array[partition_no].pp_tabid;
-	    status = dm2t_open(dcb, &tab_id, DM2T_IX, DM2T_UDIRECT, DM2T_A_WRITE,
-		(i4)0, (i4)20, (i4)0, xcb->xcb_log_id,
-		xcb->xcb_lk_id, 0, DMC_C_SERIALIZABLE, DM2T_S, &xcb->xcb_tran_id,
-		&timestamp, &tab_rcb, (DML_SCB *)0, &jsx->jsx_dberr);
+	    dmt.dmt_id=master_tcb->tcb_pp_array[partition_no].pp_tabid;
+	    dmt.dmt_flags_mask = 0;
+	    status = dmt_open(&dmt);
 	    if (status != E_DB_OK)
 	    {
+		jsx->jsx_dberr = dmt.error;
 		uleFormat(&jsx->jsx_dberr, E_DM1604_FLOAD_OPEN_TABLE,(CL_ERR_DESC *)NULL, 
 		    ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL, &local_err, 0);
 		break;
 	    }
+	    tab_rcb = (DMP_RCB *) dmt.dmt_record_access_id;
 	    tab_tcb = tab_rcb->rcb_tcb_ptr;
-	    /* queue RCB to XCB */
-	    tab_rcb->rcb_xcb_ptr = xcb;
-	    tab_rcb->rcb_xq_next = xcb->xcb_rq_next;
-	    tab_rcb->rcb_xq_prev = (DMP_RCB *)&xcb->xcb_rq_next;
-	    xcb->xcb_rq_next->rcb_q_prev = (DMP_RCB *)&tab_rcb->rcb_xq_next;
-	    xcb->xcb_rq_next = (DMP_RCB *)&tab_rcb->rcb_xq_next;
 	    /*
 	    ** at this point we check if the table can be fastladed, it must be
 	    ** an empty indexed table, or if it containse records, a heap, and
@@ -877,6 +881,8 @@ dmffload( DMF_JSX	*jsx,
 		have_peripherals = TRUE;
 		start_offset = tab_tcb->tcb_atts_ptr[i].offset;
 	        input_bsize = row_size;
+		if (tab_rcb->rcb_bqcb_ptr != NULL)
+		    tab_rcb->rcb_bqcb_ptr->bqcb_multi_row = TRUE;
 		break;
 	    }
 	}
@@ -974,7 +980,7 @@ dmffload( DMF_JSX	*jsx,
 		    }
 		}
 		status = handle_peripheral(jsx, readbuffer + record_offset, 
-		    fdesc, tab_tcb, att_num);
+		    fdesc, tab_rcb, tab_tcb, att_num);
 		if (status == E_DB_WARN) /* no data left */
 		{
 		    status = E_DB_OK;
@@ -1039,7 +1045,7 @@ dmffload( DMF_JSX	*jsx,
 			** couponise
 			*/
 			status = handle_peripheral(jsx, readbuffer + record_offset,
-			    fdesc, tab_tcb, att_num);
+			    fdesc, tab_rcb, tab_tcb, att_num);
 			if (status != E_DB_OK)
 			    break;
 		        record_offset += sizeof(ADP_PERIPHERAL);
@@ -1117,7 +1123,8 @@ dmffload( DMF_JSX	*jsx,
 	if (status != E_DB_OK)
 	    break;
 	/*
-	** finish the load
+	** finish the load.
+	** will do the query-end for blobs.
 	*/
 	status = dm2r_load(tab_rcb, tab_tcb, DM2R_L_END | DM2R_L_FLOAD, 0, 
 	    &rows_read, NULL, 0, NULL, &jsx->jsx_dberr);
@@ -1168,7 +1175,7 @@ dmffload( DMF_JSX	*jsx,
 	** (normally happens at blob move time).
 	*/
 	if (have_peripherals)
-	    (void) dmpe_free_temps(&dml_odcb, &local_dberr);
+	    (void) dmpe_query_end(FALSE, TRUE, &local_dberr);
 
 	/*
 	** end the transaction
@@ -1504,12 +1511,15 @@ dml_get_tabid (	DMP_DCB		*dcb,
 **	    Name change for temp flag, make sure pop-info is clear.
 **	17-Apr-2008 (kibro01) b120276
 **	    Initialise ADF_CB structure
+**	19-Apr-2010 (kschendel) SIR 123485
+**	    Use blob-wksp thing to send blob directly home.
 */
 static DB_STATUS
 handle_peripheral(
 		DMF_JSX		*jsx,
 		char		*readbuffer, 
 		FILE		*fdesc,
+		DMP_RCB		*tab_rcb,
 		DMP_TCB		*tab_tcb,
 		i4		att_num)
 {
@@ -1519,6 +1529,7 @@ handle_peripheral(
     i2			more_data = 1;
     i4			cont = 0;
     DB_DATA_VALUE	load_dv, coupon_dv;
+    DB_BLOB_WKSP	wksp;
     ADP_LO_WKSP		*workspace;
     ADP_PERIPHERAL	coupon;
     DB_DT_ID		datatype;
@@ -1552,6 +1563,16 @@ handle_peripheral(
 		ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL, &local_err, 0);
 	    break;
 	}
+	workspace->adw_fip.fip_pop_cb.pop_temporary = ADP_POP_TEMPORARY;
+	/* Even though we've said "temporary", arrange for dmpe to send
+	** the blob directly to the target etab.  dmpe will know what
+	** to do.
+	** Since it's a binary load, don't (shouldn't) need to coerce.
+	*/
+	wksp.access_id = tab_rcb;
+	wksp.base_attid = att_num;
+	wksp.flags = BLOBWKSP_ACCESSID | BLOBWKSP_ATTID;
+	MEfill(sizeof(coupon), 0, (PTR) &coupon);
 
 	/* 
 	** Get memory for peripheral data 
@@ -1714,16 +1735,8 @@ handle_peripheral(
 	    workspace->adw_fip.fip_work_dv.db_length = DB_MAXTUP;
 	    workspace->adw_fip.fip_work_dv.db_prec = 0;
 	    workspace->adw_fip.fip_work_dv.db_collID = -1;
-	    workspace->adw_fip.fip_pop_cb.pop_temporary = ADP_POP_TEMPORARY;
+	    workspace->adw_fip.fip_pop_cb.pop_info = (PTR) &wksp;
 
-	    /* FIXME this is, uh, suboptimal... we know the table,
-	    ** we know the attid, should be able to pass a pop-info that
-	    ** tells dmpe to do put optimization.  What's mostly needed
-	    ** is an info variant that avoids dmpe's show and open of the
-	    ** table.  (may 2004)
-	    */
-	    workspace->adw_fip.fip_pop_cb.pop_info = NULL;
-		    
 	    /* 
 	    ** couponify the data 
 	    */

@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1985, 2005 Ingres Corporation
+** Copyright (c) 1985, 2010 Ingres Corporation
 **
 **
 */
@@ -3920,39 +3920,95 @@ typedef struct _DB_DBCAPABILITIES
 ** Name: DB_BLOB_WKSP - Workspace for BLOB inserts
 **
 ** Description:
-**	This area contains usefull information for BLOB inserts. One
-**	of these structures is allocated in SCF the first time a session 
-**	attempts to insert a record into a table containing peripheral
-**	fields. The structure is then attached to the pop_cb and used in
-**	DMF to determin information about the target table.
+**
+**	This area is an addendum to the ADP_POP_CB for BLOB operations.
+**	It's used to pass optional information about the BLOB source
+**	(for GET) or target (for PUT) to the DMF BLOB data-fetching routines.
+**	In the absence of a WKSP, the BLOB handlers either have to operate
+**	off of data found in the coupon itself, or give up and operate
+**	against a holding temp etab.
+**
+**	The caller might pass:
+**	- ACCESSID and ATTID.
+**	  The caller already has the base table open and knows where the
+**	  BLOB is coming from or going to.  This is the simplest case for
+**	  dmpe.  A typical example might be the final put of a base row
+**	  into the table, where LOB values are moved from where-ever into
+**	  actual etabs for the proper table and column.
+**
+**	- TABLEID and ATTID.
+**	  Similar to the first case, but the caller only knows the base table
+**	  ID, there's no open table reference.  This might happen when the
+**	  sequencer is couponifying incoming data against a prepared query;
+**	  the query is already parsed, so the sequencer knows where the
+**	  data is going, but the actual query isn't running yet.
+**
+**	- TABLENAME with or without ATTID.
+**	  This case happens when the sequencer is couponifying an incoming
+**	  LOB against a query that's known to be an INSERT, but the
+**	  query isn't parsed yet.  The sequencer can extract the table name
+**	  from the query text, and that's about it.  The ATTID probably will
+**	  *not* be supplied, which means that if there is more than one
+**	  LOB column in the table, we don't know which one to target and
+**	  the data goes to a holding temp.
 **
 ** History:
 **	24-feb-98 (stephenb)
 **	    Created.
 **	10-May-2004 (schka24)
 **	    Remove unused members, flags.
+**	31-Mar-2010 (kschendel) SIR 123485
+**	    Add stuff so that COPY FROM can pass along known table/att info
+**	    into dmpe.  (later) more/different stuff for BQCB changes.
 */
 typedef struct _DB_BLOB_WKSP
 {
     DB_OWN_NAME		table_owner;	/* owner of base table */
     DB_TAB_NAME		table_name;	/* name of base table */
-    DB_DT_ID		source_dt;	/* datatype of source data */
+    void		*access_id;	/* An "access ID" (really RCB) opened
+					** to base table in current thread
+					*/
+    DB_DT_ID		source_dt;	/* datatype of source data, needed if
+					** COERCE flag is set
+					*/
+    i4			base_id;	/* Base table db_tab_base */
     i4                  base_attid;     /* base table blob column number */
 
     i4                  flags;
-/* If sequencer thinks it can couponify blob data directly into etab, it
+/* Set flags indicating what data in the wksp was known and passed by the
+** caller: either table name or accessid, and optionally the attribute id.
+**
+** If sequencer thinks it can couponify blob data directly into etab, it
 ** sets the TABLENAME flag (and optionally the ATTID) flag.  If the optim
-** is successful, dmpe returns with the BASE_USED flag turned on.
+** is successful, dmpe returns with the FINAL flag turned on.
 ** If a put (or replace) of a row containing a blob requires moving the
 ** blob from a temp holding table to the final etab, the ATTID flag must
 ** be provided so that dmpe knows which att it's working with.  (Temp
 ** holding etabs are tricked out such that a new one is created for each blob,
 ** and they aren't attr specific.)
 */
-#define    BLOBWKSP_TABLENAME    0x01   /* base table name provided */
-#define    BLOBWKSP_BASE_USED    0x02   /* Couponify blob directly into etab */
-					/* (skipping temp etab)              */
-#define    BLOBWKSP_ATTID        0x04   /* base table blob column # provided */
+#define    BLOBWKSP_TABLENAME	0x01	/* base table owner.name provided */
+#define    BLOBWKSP_TABLEID	0x02	/* Table base_id provided */
+#define    BLOBWKSP_ACCESSID	0x04	/* Access ID provided */
+#define    BLOBWKSP_ATTID	0x08	/* base table blob column # provided */
+#define    BLOBWKSP_FINAL	0x10	/* Result of blob put (e.g. couponify)
+					** went to a real etab rather than a
+					** holding temp.  The coupon itself
+					** is flagged too, but the flag is in
+					** the DMF part that others (sequencer)
+					** can't see, so mirror it here.
+					** This is an "out" flag, not an "in"
+					** flag like the rest.
+					*/
+#define    BLOBWKSP_COERCE	0x20	/* If set, dmpe should check source_dt
+					** to see if coercion to att needed.
+					** This is only used by the sequencer
+					** when an incoming value might not be
+					** the same type as the table.  In all
+					** other situations (copy, base row
+					** dmpe-move puts, etc) the source data
+					** is already the proper type.
+					*/
 
 } DB_BLOB_WKSP;
 

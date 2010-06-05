@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -30,6 +30,7 @@
 #include    <dmfgw.h>
 #include    <dmftrace.h>
 #include    <dm2rep.h>
+#include    <dmpecpn.h>
 
 
 /**
@@ -363,6 +364,8 @@ GLOBALREF	DMC_REP		*Dmc_rep;
 **	    SIR 121619 MVCC: Deallocate lctx, jctx if allocated.
 **	23-Mar-2010 (kschendel) SIR 123448
 **	    Release xccb list mutex when all done.
+**	13-Apr-2010 (kschendel) SIR 123485
+**	    Force LOB query-end upon commit.
 */
 DB_STATUS
 dmx_commit(
@@ -575,6 +578,24 @@ DMX_CB    *dmx_cb)
 	    break;
 	}
 
+	/* Tell LOB processing that it's over (probably happened already).
+	** Don't however drop holding temps!  we might have just finished
+	** couponifying LOB's (from the sequencer), or the commit might have
+	** been issued from a nested DBP and LOB's might still exist in
+	** the outer DBP.
+	** Do this before forcible table close so that we can close any
+	** opens attached to the BQCB, nicely.
+	*/
+	status = dmpe_query_end(FALSE, FALSE, &dmx->error);
+	if (status != E_DB_OK)
+	    break;
+
+	/* Clean up any blob memory that is dangling.
+	** (shouldn't be any if commit?)
+	*/
+	while (xcb->xcb_pcb_list != NULL)
+	    dmpe_deallocate(xcb->xcb_pcb_list);
+
 	/*  
 	** Close all open tables and destroy all open temporary tables.
 	** If the transaction is in the WILLING COMMIT state, all the
@@ -610,12 +631,14 @@ DMX_CB    *dmx_cb)
 		return (status);
 	    }
 	}
-
-	/* Clean up any blob operations that may not have completed.
-	** (shouldn't be any if commit?)
+	/* One more swipe at BQCB's now that all tables are closed.
+	** This call will definitely delete all BQCB's.
+	** (dmpe-query-end perhaps should have been named "dmpe-query-end-
+	** as-much-as-you-can-for-now"!  The call above is there to neatly
+	** close out loads and logical-key-generators.  This call, after
+	** forcible table close, guarantees deletion of the BQCB's.)
 	*/
-	while (xcb->xcb_pcb_list != NULL)
-	    dmpe_deallocate(xcb->xcb_pcb_list);
+	(void) dmpe_query_end(FALSE, FALSE, &dmx->error);
 
 	/*
 	** If this server is connected to a gateway, then notify the gateway

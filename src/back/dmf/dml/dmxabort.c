@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -508,6 +508,8 @@ static	DB_STATUS   empty_temporary_tables();
 **	    if allocated.
 **	23-Mar-2010 (kschendel) SIR 123448
 **	    XCB's XCCB list now has to be mutex protected.
+**	13-Apr-2010 (kschendel) SIR 123485
+**	    Force LOB query-end upon abort.
 */
 DB_STATUS
 dmx_abort(
@@ -745,6 +747,19 @@ DMX_CB    *dmx_cb)
 	if ( savepoint_id == 0 && (xcb->xcb_seq || xcb->xcb_cseq) )
 	    status = dms_end_tran(DMS_TRAN_ABORT, xcb, &dmx->error);
 
+	/* BLOB query is ended one way or the other now.  Don't however
+	** drop holding temps, if this is a rollback inside a DBP the
+	** outermost query might still have valid holding temps around.
+	** Do this before forcible table close so that we can close any
+	** opens attached to the BQCB, nicely.
+	** Unclear what should be done about error here, just ignore it.
+	*/
+	(void) dmpe_query_end(TRUE, FALSE, &dmx->error);
+
+	/* Clean up any dangling blob memory */
+	while (xcb->xcb_pcb_list != NULL)
+	    dmpe_deallocate(xcb->xcb_pcb_list);
+
 	/*  
 	** Close all open tables and destroy all open temporary tables.
 	** If the transaction is in the WILLING COMMIT state, all the
@@ -808,10 +823,14 @@ DMX_CB    *dmx_cb)
 		return (E_DB_FATAL);
 	    }
 	}
-
-	/* Clean up any blob operations that may not have completed */
-	while (xcb->xcb_pcb_list != NULL)
-	    dmpe_deallocate(xcb->xcb_pcb_list);
+	/* One more swipe at the BQCB's now that all tables are closed.
+	** This call definitively deletes BQCB's.
+	** (dmpe-query-end perhaps should have been named "dmpe-query-end-
+	** as-much-as-you-can-for-now"!  The call above is there to neatly
+	** close out loads and logical-key-generators.  This call, after
+	** forcible table close, guarantees deletion of the BQCB's.)
+	*/
+	(void) dmpe_query_end(TRUE, FALSE, &dmx->error);
 
 	/*
 	** Get abort flags.

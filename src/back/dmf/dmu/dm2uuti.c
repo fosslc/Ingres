@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1989, 2005 Ingres Corporation
+** Copyright (c) 1989, 2010 Ingres Corporation
 **
 **
 */
@@ -731,6 +731,8 @@ i4 dm2uu_tab_id_warn_now  = DM2UU_TAB_ID_WARN_NOW;
 **	    When using child threads do not call dm0m_deallocate on their MISC_CB 
 **	    memory allocations after they have exited. This is because the child 
 **	    threads ALWAYS call dm0m_destroy before exiting. 
+**	12-Apr-2010 (kschendel) SIR 123485
+**	    No need to set no-coupon in RCB, access mode does it now.
 */
 
 DB_STATUS
@@ -761,11 +763,6 @@ DB_ERROR	    *dberr)
     i4			switch_counter;
 
     CLRDBERR(dberr);
-
-    /* Update rcb_state so dm1c_pget doesn't change coupon.
-    ** There's no need since we're just copying it.
-    */
-    r->rcb_state |= RCB_NO_CPN;
 
     /*	Initialize the MCT(s) for the load operations. */
     for ( tp = m->mx_tpcb_next; 
@@ -1700,8 +1697,6 @@ DB_ERROR	*dberr)
 	    sp->spcb_positioned = FALSE;
 	    /* Catch query interrupts */
 	    sp->spcb_rcb->rcb_uiptr = m->mx_rcb->rcb_uiptr;
-	    /* Update rcb_state so dm1c_pget doesn't change coupon */
-	    sp->spcb_rcb->rcb_state |= RCB_NO_CPN;
 	    /* Leave RCB sid zero, caller will do cancel checks if needed */
 	}
     }
@@ -6822,6 +6817,8 @@ DB_ERROR	    *dberr)
 **	    Relocate dupchk_tcb declaration.
 **	29-Sept-2009 (troal01)
 **		Add geospatial support
+**	12-Apr-2010 (kschendel) SIR 123485
+**	    Open no-coupon to avoid BLOB handling overhead.
 */
 
 DB_STATUS
@@ -7014,7 +7011,8 @@ columns = %d, length = %d\n",
 	if (!(tp->tpcb_dupchk_rcb))
 	{
            /* Open $dupchk table */
-            status = dm2t_open(dcb, new_tabid, DM2T_X, DM2T_UDIRECT, DM2T_A_WRITE,
+            status = dm2t_open(dcb, new_tabid, DM2T_X,
+		DM2T_UDIRECT, DM2T_A_WRITE_NOCPN,
                 (i4)0, (i4)20, (i4)0, m->mx_log_id, m->mx_lk_id, (i4)0, (i4)0,
                 DM2T_X, &xcb->xcb_tran_id, &timestamp, &tp->tpcb_dupchk_rcb,
                 (DML_SCB *)0, dberr);

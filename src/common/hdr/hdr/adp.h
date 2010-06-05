@@ -1,5 +1,5 @@
 /*
-**  Copyright (c) 2004,2009 Ingres Corporation
+**  Copyright (c) 2004,2010 Ingres Corporation
 */
 
 #ifndef _ADP_H_INCLUDE
@@ -216,7 +216,8 @@ typedef struct _ADP_COUPON
 **	    Remove definition of val_locator. Locator values are expected to be 
 **	    at a constant offset of ADP_HEADER_SIZE by API etc and on 64 bit 
 **	    platforms per_value will get aligned to the ALIGN_RESTRICT boundary.
-[@history_template@]...
+**	14-Apr-2010 (kschendel) SIR 123485
+**	    Define max tag value for validity checking.
 */
 typedef struct _ADP_PERIPHERAL
 {
@@ -241,6 +242,9 @@ typedef struct _ADP_PERIPHERAL
 					    ** per_value field as per_value is 
 					    ** aligned at ALIGN_RESTRICT boundary. 
 					    */
+
+# define		ADP_P_TAG_MAX	5   /* UPDATE ME if you add tags! */
+
     u_i4	    per_length0;	/* First half of length */
     u_i4	    per_length1;	/* Second half */
     union {

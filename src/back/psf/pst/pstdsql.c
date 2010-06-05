@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -394,6 +394,8 @@ static DB_STATUS pst_descinput_walk(
 **        Bug 122125
 **        cache dynamic QSF objects need dbids to prevent them being used 
 **        in multiple databases.
+**	15-Apr-2010 (kschendel) SIR 123485
+**	    Pass table ID instead of name for statement info, easier for dmpe.
 */
 DB_STATUS
 pst_prepare(
@@ -738,6 +740,8 @@ pst_prepare(
     proto->pst_stmt_info.psq_stmt_blob_cnt = 0;
     proto->pst_stmt_info.psq_stmt_blob_colno = 0;
     proto->pst_stmt_info.psq_stmt_tabname[0] = '\0';
+    proto->pst_stmt_info.psq_stmt_tabid.db_tab_base = 0;
+    proto->pst_stmt_info.psq_stmt_tabid.db_tab_index = 0;
 
     /* can only do blob optimization if insert or update current of cursor */
 
@@ -754,6 +758,7 @@ pst_prepare(
 	s->psq_stmt_tabname[DB_TAB_MAXNAME] = '\0';
 	MEcopy(rng->pss_ownname.db_own_name, sizeof(DB_OWN_NAME), s->psq_stmt_ownname);
 	s->psq_stmt_ownname[sizeof(DB_OWN_NAME)] = '\0';
+	s->psq_stmt_tabid = rng->pss_tabid;
 
 	s->psq_stmt_blob_cnt = 0;
 	s->psq_stmt_blob_colno = 0;
@@ -776,8 +781,8 @@ pst_prepare(
 	}
 #ifdef xDEBUG
 	TRdisplay("PREPARE '%s' %x\n", stmt, s);
-	TRdisplay("PREPARE resrng %32.32s %32.32s\n",
-		rng->pss_ownname.db_own_name, rng->pss_tabname.db_tab_name);
+	TRdisplay("PREPARE resrng (%d %d)\n",
+		rng->pss_tabid.db_tab_base,rng->pss_tabid.db_tab_index);
 	TRdisplay("PREPARE blob col %d cnt %d\n",
 	    s->psq_stmt_blob_colno, s->psq_stmt_blob_cnt);
 #endif

@@ -1,4 +1,4 @@
-/* Copyright (c) 1986, 2004 Ingres Corporation
+/* Copyright (c) 1986, 2010 Ingres Corporation
 **
 **
 */
@@ -5388,6 +5388,11 @@ qeq_close_dsh_nodes(QEE_DSH *dsh)
 **      01-Apr-2009 (gefei01)
 **          Bug 121870: qeq_cleanup does qet_commit to abort to the last
 **          internal savepoint even when open cursor count is non zero.
+**	13-Apr-2010 (kschendel) SIR 123485
+**	    Call new query-end routine in DMF to shut down blob processing.
+**	    Statement abort was broken because we put the savepoint name in a
+**	    local, then promptly exited the block containing the local!
+**	    Who knows why that has ever worked.  Caused E_US087A.
 */
 DB_STATUS
 qeq_cleanup(
@@ -5539,6 +5544,44 @@ bool	    release )
 			    &qef_rcb->error, 0);
 		    }
 		}
+		/* Before nailing all open tables, tell DMF that the query
+		** is coming to an end.  Indicate whether the query ended
+		** OK or not, and (unless an outer level of the query is
+		** still in progress) drop all LOB holding temps.
+		** Note that indicating query-end is a valid thing to do
+		** even if the query isn't really ending, because all tables
+		** are going to be closed.  If the query gets going again,
+		** DMF can rebuild its LOB context and other needed things.
+		** The only really critical thing to hang on to is in-flight
+		** LOB's in holding temps.
+		*/
+		if (qef_cb->qef_open_count == 0)
+		{
+		    DMR_CB dmrcb;
+		    dmrcb.type = DMR_RECORD_CB;
+		    dmrcb.length = sizeof(DMR_CB);
+		    dmrcb.dmr_flags_mask = 0;
+		    if (c_status == E_DB_ERROR)
+			dmrcb.dmr_flags_mask |= DMR_QEND_ERROR;
+		    if (dsh->dsh_stack == NULL
+		      && !(c_status == E_DB_WARN && 
+			   (c_err == E_QE0023_INVALID_QUERY || 
+			    c_err == E_QE0301_TBL_SIZE_CHANGE)))
+		    {
+			dmrcb.dmr_flags_mask |= DMR_QEND_FREE_TEMPS;
+		    }
+		    status = dmf_call(DMPE_QUERY_END, &dmrcb);
+		    if (status != E_DB_OK)
+		    {
+			qef_error(dmrcb.error.err_code, 0L, status,
+				  &err, &qef_rcb->error, 0);
+			if (status > c_status)
+			{
+			    STRUCT_ASSIGN_MACRO(qef_rcb->error, error);
+			    c_status = status;
+			}
+		    }
+		}
 
 		/* close all open tables.  also destroy all temp tables. */
 
@@ -5595,22 +5638,6 @@ bool	    release )
 		}
 		qeq_release_dsh_resources(dsh);
 
-		/*
-		** Free BLOB temp tables which were used for this query
-		** EXCEPT if error is E_QE0023_INVALID_QUERY 
-		** or if error is E_QE0301_TBL_SIZE_CHANGE
-		** because SCF will retry the query
-		** If called from nested procedure do not call
-		** adu_free_objects() which will free all BLOB temps including
-		** the calling procedures temps. b110957 INGSRV2529
-		*/
-		if (!(c_status == E_DB_WARN && 
-			(c_err == E_QE0023_INVALID_QUERY || 
-			    c_err == E_QE0301_TBL_SIZE_CHANGE)))
-		{
-		    if (dsh->dsh_stack == (QEE_DSH *)NULL)
-			adu_free_objects(qef_rcb->qef_db_id, 0);
-		}
 	    } /* if dsh */
 
 	    if (status)
@@ -5643,12 +5670,7 @@ bool	    release )
 		     qef_cb->qef_open_count == 0 && 
 		     !ddb_b)			/* no distributed internal sp */
 	    {
-		DB_SP_NAME  spoint;
-
-		qef_rcb->qef_spoint = &spoint;
-		MEmove(QEF_PS_SZ, (PTR) QEF_SP_SAVEPOINT,
-		  (char) ' ', sizeof(DB_SP_NAME), 
-		    (PTR) qef_rcb->qef_spoint->db_sp_name);
+		qef_rcb->qef_spoint = &Qef_s_cb->qef_sp_savepoint;
 		status = qet_savepoint(qef_cb);
 	    }
 	    if (DB_FAILURE_MACRO(status) && 
@@ -5682,7 +5704,7 @@ bool	    release )
 	{
 	    if (ddb_b)		/* distributed? */
 	    {
-		qef_rcb->qef_spoint = 0;
+		qef_rcb->qef_spoint = NULL;
 	        /* Drop temp tables */
 	        if (dsh && (dsh->dsh_qp_ptr->qp_ddq_cb.qeq_d3_elt_cnt > 0) )
 	        {
@@ -5722,22 +5744,36 @@ bool	    release )
 	    else if ((qef_cb->qef_stat != QEF_MSTRAN) || 
 		(qef_cb->qef_open_count != 0))
 	    {
-		qef_rcb->qef_spoint = 0;
+		qef_rcb->qef_spoint = NULL;
 	    }
 	    else /* MST with no open cursors only */
 	    {
-		DB_SP_NAME  spoint;
-
-		qef_rcb->qef_spoint = &spoint;
-		MEmove(QEF_PS_SZ, (PTR) QEF_SP_SAVEPOINT,
-		   (char) ' ', sizeof(DB_SP_NAME), 
-		    (PTR) qef_rcb->qef_spoint->db_sp_name);
+		qef_rcb->qef_spoint = &Qef_s_cb->qef_sp_savepoint;
 	    }
-	/* Must clear down TX BLOB temps before the abort frees the XCB */
-	    if ( ( !ddb_b ) && ( dsh != ( QEE_DSH * ) NULL ) )
+	    /* Could in theory let the abort do this from inside DMF, but
+	    ** it's cleaner to indicate end-of-query explicitly.
+	    */
+	    if (qef_cb->qef_open_count == 0 && ( !ddb_b ) && ( dsh != NULL ) )
 	    {
-		if (dsh->dsh_stack == (QEE_DSH *)NULL)
-			adu_free_objects(qef_rcb->qef_db_id, 0);
+		DMR_CB dmrcb;
+		dmrcb.type = DMR_RECORD_CB;
+		dmrcb.length = sizeof(DMR_CB);
+		dmrcb.dmr_flags_mask = DMR_QEND_ERROR;
+		if (dsh->dsh_stack == NULL)
+		{
+		    dmrcb.dmr_flags_mask |= DMR_QEND_FREE_TEMPS;
+		}
+		status = dmf_call(DMPE_QUERY_END, &dmrcb);
+		if (status != E_DB_OK)
+		{
+		    qef_error(dmrcb.error.err_code, 0L, status,
+			      &err, &qef_rcb->error, 0);
+		    if (status > c_status)
+		    {
+			STRUCT_ASSIGN_MACRO(qef_rcb->error, error);
+			c_status = status;
+		    }
+		}
 	    }
 	    status = qet_abort(qef_cb);
 	    if (DB_FAILURE_MACRO(status) && 

@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 /**
 ** Name: ADF.H - All external definitions needed to use the ADF.
@@ -779,6 +779,10 @@
 **	    Update adu-valuetomystr prototype.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	14-Apr-2010 (kschendel) SIR 123485
+**	    Define ADF_ISNULL_MACRO here instead of adfint.h because it's
+**	    very useful (i.e. a replacement for adc_isnull, which does
+**	    the same thing, but slowly).
 */
 
 #ifndef ADF_HDR_INCLUDED
@@ -818,6 +822,13 @@
 						/* data should be interpreted */
 						/* as usual based on datatype */
 						/* and length.                */
+
+/* This macro tells if the data value pointed to by DB_DATA_VALUE v is NULL.
+** If it is, the macro evaluates to TRUE, otherwise FALSE.  NULL is data
+** type independent (other than nullable types being negative).
+*/
+
+#define  ADF_ISNULL_MACRO(v)  ( ((v)->db_datatype < 0 && (*(((u_char *)(v)->db_data) + (v)->db_length - 1) & ADF_NVL_BIT) ? TRUE : FALSE))
 
 
 /*: ADF Error Codes

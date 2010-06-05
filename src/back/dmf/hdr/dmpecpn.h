@@ -1,7 +1,9 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 ** All Rights Reserved
 */
+
+#include "adp.h"
 
 /**
 ** Name: DMPECPN.H - Define coupon for peripheral Objects
@@ -64,44 +66,66 @@
 ** Name: DMPE_COUPON - DMF's idea of the coupon structure
 **
 ** Description:
-**      This data structure describes the information stored and provided by DMF
-**	for its manipulation of peripheral datatypes.  DMF stores an
-**	ADF_PERIPHERAL data structure on disk for each attribute of each table
-**	which contains a peripheral data element.  The header portion of this is
-**	fixed, and set by ADF.  DMF knows little about it.  The coupon portion,
-**	however, ADF does not understand.  DMF is in complete control of this
-**	portion of the data value.
+**
+**	LOB data is stored externally to a row, with a "coupon" in the row
+**	providing a pointer to the stored LOB data.  The term "coupon" is
+**	used a bit loosely, unfortunately.  The on-disk structure stored
+**	in the base row is an ADP_PERIPHERAL structure,  which is
+**	defined in common in adp.h.  The ADP_PERIPHERAL structure has an
+**	ADP_COUPON sub-structure which is the DMF part of the coupon.
+**	This ADP_COUPON is defined as 5 i4's in adp.h, but it actually has
+**	more structure to it that only DMF knows about.  That additional
+**	structure is what is defined here, as a DMPE_COUPON.  Thus the word
+**	"coupon" might apply to the entire on-disk ADP_PERIPHERAL, or
+**	to the DMF part only.  The latter is more properly called the DMF
+**	or DMPE coupon.
 **
 **	The DMPE_COUPON contains enough information for DMF to reconstruct the
 **	data as needed.  The coupon contains some long term information which
 **	appears on and is valid on disk, and some short term information, which
-**	is valid only while the coupon is held, and the base table to which the
-**	coupon belongs is open (in some thread).
-**	These two portions are marked below as LT and ST, respectively.
+**	is zero on disk but possibly nonzero while the coupon is being
+**	passed around the server as part of a base row.  The long term part
+**	is what's needed to read or write the LOB data, the short term part
+**	helps provide extra context so that the LOB data access and the
+**	base row access can operate in a compatible way.  (e.g. use the same
+**	lock modes.)
 **
-**	The TCB portion of the coupon has the following meanings:
+**	The long term parts of the DMF coupon are:
+**	- A logical key value that uniquely identifies the base table row.
+**	  The same logical key appears on all etab rows containing the LOB
+**	  value.  Although one could have a unique logical key for each LOB
+**	  in a base row (if there are more than one), it's not necessary since
+**	  the DMF coupon also contains an etab table ID which uniqueifies
+**	  things.  The most efficient way is to use one logical key for all
+**	  the LOBs in one base table row.
 **
-**	0  - (DMPE_NULL_TCB) Empty, null, or uninitialized coupon
+**	- The etab table ID of the etab which contains the first segment of
+**	  the LOB.  Each LOB points to the next segment, so if the LOB
+**	  crosses etabs, it can be figured out as the LOB is read.
 **
-**	-1 - (DMPE_TEMP_TCB) Coupon references an anonymous holding temp
-**	     table.  The base table may or may not be known (but clearly
-**	     you can't tell the base table from this coupon).
+**	The short term parts of the DMF coupon are:
+**	- The base table ID (base ID only, LOB's are not stored specific
+**	  to partitions or indexes).
+**	- The attribute ID for the LOB column (1-origin).
+**	- Flags:
+**	  - check the SRID (used by geometry columns to verify the
+**	    embedded SRID against the att definition SRID)
+**	  - Data-in-final-etab, also known as put-optimization.  This flag
+**	    is set when a couponify has enough context available to
+**	    send the incoming LOB data directly to the proper etab instead
+**	    of to a holding temp.
+**	  - Data-in-holding-temp, set when LOB data is in a short term
+**	    holding temp table.
 **
-**	-2 - (DMPE_PUT_OPTIM_TCB) Coupon describes an object that the
-**	     upper level machinery managed to route directly to its final
-**	     resting place in an etab.  The usual routing is to a holding
-**	     temp, and at base record-put or record-replace time the value
-**	     is moved from holding temp to etab.  The -2 value indicates
-**	     that the move can be skipped.
+**	The baseid/attrid parts are at present only used for outgoing
+**	LOBs.  Incoming LOB's only use the flags.
 **
-**	a TCB address - Coupon references a value in some known etab for
-**	a known base table (the TCB is for the base table).
-**
-**	Note that the coupon's etab ID and logical key are sufficient to
-**	retrieve a blob value, the TCB isn't needed just for that.  The
-**	TCB address is used for puts to real etabs so that we can do things
-**	like read the etab catalog for the base table, determine if the
-**	base table is a session temp, etc.
+**	On some platforms, the DMF coupon is sized in adp.h as being 6 i4's
+**	instead of 5 i4's.  This is a historical accident due to the
+**	DMF coupon once upon a time containing a pointer.  The DMF coupon
+**	size cannot change without breaking existing data, so we'll make sure
+**	that the DMPE_COUPON matches the ADP_COUPON in size.  The DMF coupon
+**	may not take more than 5 i4's to be platform independent, though.
 **
 ** History:
 **      17-Jan-1990 (fred)
@@ -109,34 +133,57 @@
 **	6-May-2004 (schka24)
 **	    RCB's belong to threads, and passing RCB's around fails in the
 **	    face of parallel query.  Use TCB instead.  Attempt to doc.
-[@history_template@]...
+**	12-Apr-2010 (kschendel) SIR 123485
+**	    Redo the short-term part (again), this time to pass base ID, attr
+**	    ID, and flags.  The new blob query CB (BQCB) will supply the
+**	    necessary query lifetime context.  More redoing of the doc.
 */
+
+/* *** Important definition note: ***
+** Nothing in DMPE_COUPON may be larger than an i4.
+** The DMPE_COUPON may not be larger than i4[5].
+**
+** The ADP_COUPON is defined in terms of N i4's.  If the DMPE_COUPON
+** contains a larger object, compiler added padding might screw things up,
+** at the least causing incompatibility with existing on-disk coupons.
+** If you need an object larger than an i4 (which isn't going to happen
+** unless it's redefined entirely), define it as a char or i2/i4 array.
+*/
+
 typedef struct _DMPE_COUPON
 {
     DB_TAB_LOGKEY_INTERNAL
 		    cpn_log_key; /*
-				 ** LT --
-				 **  Logical key identifying this large object
+				 ** Long term:
+				 ** Logical key identifying this large object
 				 */
-    i4	    cpn_etab_id; /* LT -- table id of first seg */
-    char    cpn_tcb[sizeof (ADP_COUPON) - 
-		sizeof(DB_TAB_LOGKEY_INTERNAL) - sizeof(i4)];
+    i4	    cpn_etab_id;	/* Long term: etab table id of first seg */
+    i4	    cpn_base_id;	/* Short term: Base table's ID */
+    i2	    cpn_att_id;		/* Short term: LOB column's attribute ID */
+    u_i2    cpn_flags;		/* Short term: flags */
+#define	DMPE_CPN_CHECK_SRID	0x0001	/* Set if SRID needs to be checked */
+#define DMPE_CPN_FINAL		0x0002	/* Set if data in final etab, ie
+					** LOB put optimization was done
+					*/
+#define DMPE_CPN_TEMP		0x0004	/* Set if data is in a holding temp */
+
+    /* Fill (if necessary) to size of ADP_COUPON */
+    /* Compiler note:  the size of this array may evaluate to zero.
+    ** If that causes your compiler to complain, the best fix is to
+    ** put a #if !defined(your_platform_string) around this.
+    */
+    char    cpn_fill[sizeof (ADP_COUPON) - 
+		(sizeof(DB_TAB_LOGKEY_INTERNAL) + sizeof(i4) + sizeof(i4)
+		 + sizeof(i2) + sizeof(u_i2)) ];
 }   DMPE_COUPON;
 
-#define DMPE_TCB_ASSIGN_MACRO(src, dst)			\
-(MEcopy( ((char *)&(src)), sizeof(PTR), ((char *)&(dst)) ))
-#define DMPE_TCB_COMPARE_NE_MACRO(a, b)			\
-(MEcmp(((char *)&(a)), ((char *)&(b)), sizeof(PTR)))
 
-/* Fake TCB values used as flags.
-** *NOTE* dmpe.c uses 0 and -1 internally
-** The exact contents here don't matter specifically, it's neither
-** 0 nor -1 nor a valid pointer, and works with the above macros.
-** Define fake TCB flag saying that the value-put machinery managed to
-** get the value into its final etab instead of a holding temp.
+/* Define a macro to construct a pointer to the DMF coupon given a
+** pointer to a DB_DATA_VALUE:
 */
-#define DMPE_TCB_PUT_OPTIM "\377\377\377\376\377\377\377\376"
 
+#define DMPE_CPN_FROM_DBV_MACRO(dv) \
+    ((DMPE_COUPON *) &(((ADP_PERIPHERAL *) ((dv)->db_data))->per_value.val_coupon))
 
 
 /*}
@@ -173,6 +220,139 @@ typedef struct _DMPE_LLOC_CXT
 
 
 /*
+** Name: DMPE_BQCB - Blob Query Context Block
+**
+** Description:
+**
+**	LOB processing is a bit unusual in that the storing and retrieval
+**	of the LOB data (couponifying and redeeming) is divorced in time
+**	from the base row access.  For instance, a base row might be
+**	read in a child thread, passed to a parent thread, and as the
+**	row heads "out the door" to the client, the LOB coupon is redeemed.
+**	At this point, the RCB used for the original base row fetch might
+**	have even been closed.  In the inbound direction, similar
+**	problems exist:  LOB data has to be stored as it appears, which
+**	is before the base row is stored -- which in turn means before
+**	bulk-load vs row-put decisions are made, etc.
+**
+**	The Blob Query Context block (BQCB) connects LOB data processing
+**	with base row processing by existing for the life of the query.
+**	(When locators have been established, the BQCB can exist until
+**	all locators are freed.)  Queries can exist across transactions,
+**	such as when commits/aborts are issued inside DBP's;  but in that
+**	situation, QEF will re-open everything and it's OK to wipe all
+**	BQCB's at transaction end and re-establish new ones.  (Things such
+**	as bulk-load cannot persist across transactions in this sense.)
+**
+**	In the get (outgoing) direction, the BQCB is used to a) allow etabs
+**	to be opened using the same lockmode (page, table, mvcc) as the
+**	base table was;  and b) allow verification of the embedded SRID
+**	for geospatial data.
+**
+**	In the put (incoming) direction, the BQCB is used to a) centralize
+**	logical-key generation for the coupons, and decouple it from the
+**	base row handling;  b) centralize the bulk-load decision for etab
+**	loading (which can be done independently of bulk-load on the base
+**	table);  and c) allow etabs to be opened using the proper lockmode,
+**	just as for get.
+**
+**	The BQCB can also serve as a central point for linking to cached
+**	data used for accessing etabs, such as PCB's, DMT/DMR CB's, etc.
+**	This will be implemented later.
+**
+**	One BQCB exists per table per session.  It is created when a
+**	table containing LOB's is opened for read or write access (but
+**	not for show, noaccess, or modify).  It is normally deleted when
+**	the query ends, although as noted above it might continue to
+**	exist for the lifetime of any locators.  (In which case the end-
+**	of-query call resets some of the BQCB but does not delete it.)
+**	All BQCB's for a session are on a linked list headed in the main
+**	session thread's DML_SCB.  BQCB's never appear on child thread SCB's.
+**
+**	Given a base table ID, the relevant BQCB can be found by scanning
+**	the BQCB list.  (Normally, only a few LOB-containing tables are
+**	open per query, so no hashing should be needed.)  Any RCB opened
+**	for read/write access to a LOB table will contain the BQCB pointer
+**	in the RCB for direct access.
+**
+**	The BQCB contains:
+**	- the base table ID (just the db_tab_base, don't need the index)
+**	- Link to next BQCB on the SCB chain
+**	- Pointer to RCB opened for logical-key generation
+**	- Load-etabs indicator (yes, no, unknown)
+**	- Single-row vs multi-row operation flag, default is single row
+**	- etab locking hint: use table locking
+**	- etab locking hint: use MVCC locking, and CRIB pointer if MVCC
+**	- Number of LOB attributes
+**	- Array with one entry per LOB column:
+**		- attribute number (1 origin)
+**		- Current SRID from att definition if geometry type
+**		- (Future) real-etab get and put pop-cb+pcb lists
+**
+** Edit History:
+**	12-Apr-2010 (kschendel) SIR 123485
+**	    Invented.
+*/
+
+/* First, the BQCB per-attribute entry. */
+struct _DMPE_BQCB_ATT
+{
+    i4	bqcb_att_id;	/* One-origin attribute ID in base table */
+    i4	bqcb_srid;	/* Current SRID if geometry type, undefined if not */
+    /* Future: link to per-thread put, get pop-cb's so we can hold etabs
+    ** open and not do a bazillion memory alloc/dealloc per row.  Maybe also
+    ** include a one-segment data holder (see e.g. dmpe-move, dmpe-replace).
+    */
+};
+typedef struct _DMPE_BQCB_ATT DMPE_BQCB_ATT;
+
+/* Then, the actual BQCB itself */
+struct _DMPE_BQCB
+{
+    DM_OBJECT	hdr;		/* Standard object header...
+				** Only obj_next is used for singly linked
+				** list, obj_prev is not used.
+				** Type is DM_BQCB_CB, ascii_id is below
+				*/
+#define BQCB_ASCII_ID	CV_C_CONST_MACRO('B','Q','C','B')
+
+    struct _DMP_RCB *bqcb_logkey_rcb;  /* Pointer to RCB opened for logical
+				** key generation, if doing LOB puts.  Note
+				** that (at present) we assume that all logkey
+				** generations are done in just one thread,
+				** probably the main session thread, either
+				** during couponification or at the top of
+				** an insert or replace QP.
+				*/
+    struct _LG_CRIB *bqcb_crib;	/* Open etabs with MVCC, and use this CRIB.
+				** bqcb_crib and bqcb_table_lock (below) are
+				** mutually exclusive.  If neither is set,
+				** use page locking on the etabs.
+				*/
+    i4		bqcb_base_id;	/* Base table db_tab_base */
+    i2		bqcb_natts;	/* Number of LOB attributes in the table */
+    enum {
+	BQCB_LOAD_UNKNOWN,	/* don't know yet */
+	BQCB_LOAD_YES,		/* bulk-load etabs (if you can bulk load one,
+				** you can probably bulk load 'em all) */
+	BQCB_LOAD_NO		/* Don't bulk-load etabs */
+    }		bqcb_load_etabs;  /* bulk-load-etabs indicator */
+    bool	bqcb_multi_row;	/* Query is likely to involve multiple rows
+				** and many LOB operations, e.g COPY
+				*/
+    bool	bqcb_table_lock;  /* Open etabs with table locking */
+    bool	bqcb_x_lock;	/* Base table was opened X (so etab load is
+				** a possibility;  can't load if base is non-
+				** X-locked since it gets tricky to deal with
+				** other inserting sessions.)
+				*/
+    DMPE_BQCB_ATT bqcb_atts[1];	/* Array of LOB attribute entries */
+};
+typedef struct _DMPE_BQCB DMPE_BQCB;
+
+/* Size of BQCB is sizeof(DMPE_BQCB) + (bqcb_natts-1)*sizeof(DMPE_BQCB_ATT) */
+
+/*
 ** DMPE Function prototypes.
 */
 DB_STATUS
@@ -184,11 +364,7 @@ dmpe_delete(ADP_POP_CB     *pop_cb );
 
 DB_STATUS
 dmpe_move(ADP_POP_CB	*pop_cb,
-	  i4		load_blob,
 	  bool		cleanup_source);
-
-DB_STATUS
-dmpe_replace(ADP_POP_CB	*pop_cb );
 
 DB_STATUS
 dmpe_destroy(DMU_CB	  *base_dmu ,
@@ -233,3 +409,11 @@ DB_STATUS dmpe_free_temps(
 	DB_ERROR	*dberr);
 
 DB_STATUS dmpe_free_locator(ADP_POP_CB	*pop_cb);
+
+DB_STATUS dmpe_find_or_create_bqcb(DMP_RCB *r, DB_ERROR *dberr);
+
+void dmpe_end_row(DMP_RCB *r);
+
+DB_STATUS dmpe_query_end(bool was_error, bool delete_temps, DB_ERROR *dberr);
+
+void dmpe_purge_bqcb(i4 base_id);

@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1989, 2009 Ingres Corporation
+** Copyright (c) 1989, 2010 Ingres Corporation
 */
 
 # include   <compat.h>
@@ -69,7 +69,7 @@
 **	interface necessary to use that routine.  ADF requires, for large object
 **	management, a routine with a specified interface, regardless of the
 **	product in which it is embedded (i.e. DBMS or frontend).  These routines
-**	provide the interface for the INGRES local DBMS. 
+**	provide the interface for the INGRES local DBMS.
 **
 **	Public Routines:
 **          dmpe_peripheral() - Provide std interface
@@ -79,7 +79,6 @@
 **          dmpe_get() - Retrieve a portion of a peripheral object.
 **          dmpe_delete() - Remove an entire peripheral object.
 **	    dmpe_move()	- Move an entire peripheral object to a new place
-**	    dmpe_replace() - Replace one peripheral object with another.
 **          dmpe_information() - Obtain information about peripheral object
 **			    management.
 **	    dmpe_check_args() - Check parameters by function for these routines
@@ -124,7 +123,7 @@
 **          changed default size of extension tables.
 **      13-Jul-1993 (fred)
 **          Made system more tolerant of lack of disk space.  See
-**          dmpe_put(). 
+**          dmpe_put().
 **	14-jul-93 (ed)
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
 **	26-jul-1993 (rogerk)
@@ -167,7 +166,7 @@
 **	    Return proper error codes in cleanup cases.
 **	15-Feb-1994 (chiku) B59178
 **	    System catalog should be created in accordance with case
-**          specifications. 
+**          specifications.
 **	25-feb-94 (robf)
 **          Check for E_DM008E as well as E_DM0074 returns from dmr_position
 **      13-Apr-1994 (fred)
@@ -196,7 +195,7 @@
 **          page size.
 **	25-Jul-1996 (kch)
 **	    In dmpe_free_temps(), we now test for pop_cb->pop_s_reserved != TRUE
-**	    rather than !pop_cb->pop_s_reserved, because pop_s_reserved might 
+**	    rather than !pop_cb->pop_s_reserved, because pop_s_reserved might
 **	    be unintialized.
 **	31-Jul-1996 (kch)
 **	    In dmpe_free_temps(), added the new argument sess_temp_flag to
@@ -251,19 +250,19 @@
 **            Bug #74213
 **            dmpe_add_extension() altered to set the extension table
 **            security label id to the base table label id. They must match.
-**            Otherwise the extension table inherits its security label 
+**            Otherwise the extension table inherits its security label
 **	      from the user who inserts the first row.
 **      24-mar-1998 (thaju02)
 **          Bug #87130 - Holding tcb_et_mutex while retrieving tuples to be
 **          deleted from extension table. Modified dmpe_delete().
 **	24-mar-1998 (thaju02)
 **	    Bug #87880 - inserting or copying blobs into a temp table chews
-**	    up cpu, locks and file descriptors. Modified dmpe_put(), 
+**	    up cpu, locks and file descriptors. Modified dmpe_put(),
 **	    dmpe_allocate().
 **	29-Jun-98 (thaju02)
 **          Regression bug: with autocommit on, temporary tables created
 **          during blob insertion, are not being destroyed at statement
-**          commital, but are being held until session termination. 
+**          commital, but are being held until session termination.
 **          Regression due to fix for bug 87880. (B91469)
 **	02-jul-1998 (shust01)
 **	    Initialized cpn_rcb for fake peripheral in dmpe_destroy(),
@@ -331,11 +330,11 @@
 **	    In places where we locally allocate an ADP_POP_CB, initialize
 **	    the pop_info field to a NULL pointer.
 **	7-may-99 (stephenb)
-**	    Add function dmpe_cleanup() to cleanup peripheral operations 
-**	    environment, at this point it's simply a synonym for 
+**	    Add function dmpe_cleanup() to cleanup peripheral operations
+**	    environment, at this point it's simply a synonym for
 **	    dmpe_deallocate.
 **      30-jul-99 (stial01)
-**          Fix dmpe_allocate error handling, fix pop_temporary initialization 
+**          Fix dmpe_allocate error handling, fix pop_temporary initialization
 **      03-aug-99 (stial01)
 **          Added dmpe_create_extension, called from dmu, dmpe_add_extension
 **      12-aug-99 (stial01)
@@ -347,10 +346,10 @@
 **          dmpe_replace() call dmpe_copy instead of gets/put. (SIR 92574)
 **          Use ADP_INFO_* defines instead of constants
 **          Removed incorrect references to DM_COMPAT_PGSIZE (VPS etab support)
-**      20-sep-99 (stial01) 
+**      20-sep-99 (stial01)
 **          Get intent (IS/IX) etab table locks.
 **      02-nov-99 (stial01)
-**          dmpe_allocate() Set SCB_BLOB_OPTIM only if BLOBWKSP_TABLENAME 
+**          dmpe_allocate() Set SCB_BLOB_OPTIM only if BLOBWKSP_TABLENAME
 **      08-dec-99 (stial01)
 **         Backout of previous changes for vps etab
 **      21-dec-99 (stial01)
@@ -365,11 +364,11 @@
 **      07-mar-2000 (stial01)
 **          Disable blob optimization for spatial  (B100776)
 **      09-mar-2000 (stial01)
-**          PCB memory leak from dmpe_delete (B100829) 
+**          PCB memory leak from dmpe_delete (B100829)
 **          Restore MAX_DMPE_RECORD_SIZE DB_MAXSTRING -> sizeof(DMPE_RECORD)
 **      27-mar-2000 (stial01)
 **          Changes for b101046,b101047. Pass DMT_BLOB_OPTIM to close base table
-**          Also do not require pop_info to close base table. Save base table 
+**          Also do not require pop_info to close base table. Save base table
 **          attribute in pcb. Cleanup unused VPS etab code.
 **      18-may-2000 (hweho01)
 **         Fixed the type mismatch in argument list of ule_format() call.
@@ -419,7 +418,7 @@
 **          Added dmpe_journaling to support SET [NO]BLOBJOURNALING ON table
 **          dmpe_modify() support MODIFY to ADD_EXTEND with BLOB_EXTEND
 **      14-jan-2004 (stial01)
-**          Cleaned up 02-jan-2004 changes. 
+**          Cleaned up 02-jan-2004 changes.
 **	15-Jan-2004 (schka24)
 **	    Partitioned tables project.
 **      10-feb-2004 (stial01)
@@ -452,14 +451,14 @@
 **      13-may-2004 (stial01)
 **          Remove unecessary code for NOBLOBLOGGING redo recovery.
 **      03-jun-2004 (stial01)
-**          Undo minor part of 6-May-2004 change so that we don't skip the 
+**          Undo minor part of 6-May-2004 change so that we don't skip the
 **          insert of a blob segment when it doesn't fit in the current buffer.
 **	21-Jun-2004 (schka24)
 **	    Get rid of SCB blob-cleanup list, use XCCB list instead so
 **	    that we don't have to keep two lists in sync.  Which we weren't
 **	    doing anyway, causing problems.
 **      8-jul-2004 (stial01)
-**          dmpe_get() Remove last reference to tcb in coupon, 
+**          dmpe_get() Remove last reference to tcb in coupon,
 **          as of changes on 6-May-2004, dmpe_get->dmpe_allocate always calls
 **          CSget_sid, GET_DML_SCB for context
 **       8-Jul-2004 (hanal04) Bug 112558 INGSRV2879
@@ -513,6 +512,14 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Prototype changes for dmpp_get/put/delete
+**	12-Apr-2010 (kschendel) SIR 123485
+**	    Change short-term part of DMF coupon to be baseid, attid, flags.
+**	    Implement the DMPE_BQCB (blob query cb) to communicate context
+**	    info for the duration of a query.  This allows coupons to be
+**	    redeemed with proper locking, and incoming blobs to be couponified
+**	    more efficiently.
+**	    Get rid of adc_isnull, use inline check.
+**	    Fix "table too large" (DM0138) when bulk-loading etabs. (b120497)
 **/
 
 /*
@@ -520,21 +527,23 @@
 */
 static DB_STATUS dmpe_information(ADP_POP_CB *pop_cb );
 
-static DB_STATUS dmpe_put(ADP_POP_CB	*pop_cb ,
-			  i4		load_blob);
+static DB_STATUS dmpe_put(ADP_POP_CB	*pop_cb);
 
 static DB_STATUS dmpe_get(i4	    	op_code ,
 			  ADP_POP_CB    *pop_cb );
 
 static DB_STATUS dmpe_allocate(ADP_POP_CB   *pop_cb ,
-			       DMPE_PCB     **pcb_ptr );
+			       DMPE_PCB     **pcb_ptr);
+
+static DB_STATUS dmpe_begin_dml(ADP_POP_CB *pop_cb,
+			 DMPE_PCB **pcbp, bool is_put);
 
 static DB_STATUS dmpe_check_args(i4        op_code,
 				 ADP_POP_CB *pop_cb);
 
 static DB_STATUS dmpe_tcb_populate(ADP_POP_CB *pop_cb );
 
-static DB_STATUS dmpe_add_extension(ADP_POP_CB *pop_cb, 
+static DB_STATUS dmpe_add_extension(ADP_POP_CB *pop_cb,
 			DMP_TCB *base_tcb,
 			i4      att_id,
 			u_i4	*new_etab);
@@ -566,14 +575,12 @@ static DB_STATUS dmpe_buffered_put(
 			ADP_POP_CB	*pop_cb,
 			DMR_CB *dmr_cb);
 
-static void dmpe_check_table_lock(
-	i4		opcode,
-	DMT_CB		*dmtcb,
-	DMP_TCB		*base_tcb);
-
 static DB_STATUS etab_open(
 	DMT_CB		*dmtcb,
-	DMP_TCB		*base_tcb);
+	ADP_POP_CB	*pop_cb);
+
+static u_i4 dmpe_load_etab_limit(
+	DMP_TCB		*et);
 
 static DB_STATUS dmpe_cpn_to_locator(
 ADP_POP_CB  *pop_cb);
@@ -585,10 +592,12 @@ static DB_STATUS dmpe_create_locator_temp(
 static DB_STATUS dmpe_locator_to_cpn(
 	ADP_POP_CB	*pop_cb);
 
-static DB_STATUS dmpe_destroy_heap_etab(
-	DMP_TCB		*base_tcb,
-	u_i4		etab_extension,
-	DB_ERROR	*dberr);
+/* Not used, should this be deleted?
+**static DB_STATUS dmpe_destroy_heap_etab(
+**	DMP_TCB		*base_tcb,
+**	u_i4		etab_extension,
+**	DB_ERROR	*dberr);
+*/
 
 
 /* File wide # defines */
@@ -597,7 +606,7 @@ static DB_STATUS dmpe_destroy_heap_etab(
 
 /*
 ** DMPE_DEF_TBL_SIZE
-** 
+**
 ** This value is the minpages that will be set for large object files.
 ** (schka24) There used to be a comment here about defaulting to 1000
 ** overflow pages, but the actual default did not reflect that; it
@@ -610,17 +619,14 @@ static DB_STATUS dmpe_destroy_heap_etab(
 ** Maxpages is only 3849344 for 2k V2/V3/V4 tables, however 2k etabs MUST be V1.
 ** An exact maxpages calculation can be done using the DM1P_VPT_MAXPAGES_MACRO,
 ** but you must provide page type and page size information.
-** Since page type is currently not determined here, and currently 
+** Since page type is currently not determined here, and currently
 ** max pages is 8388608 for all valid etab pagetype/pagesize combinations,
 ** the DM1P_MAX_TABLE_SIZE have not been changed to DM1P_VPT_MAXPAGES_MACRO.
 */
 
 # define DMPE_DEF_TBL_SIZE  	    	128
-# define DMPE_DEF_TBL_EXTEND            DMPE_DEF_TBL_SIZE
+# define DMPE_DEF_TBL_EXTEND            128
 # define DMPE_DEFAULT_ATTID		1  /* default attid for temp etabs */
-
-# define DMPE_NULL_TCB	"\0\0\0\0\0\0\0\0"
-# define DMPE_TEMP_TCB	"\377\377\377\377\377\377\377\377" /* -1, octal */
 
 FUNC_EXTERN VOID dmd_petrace(
 			char		*operation,
@@ -636,7 +642,7 @@ FUNC_EXTERN VOID dmd_petrace(
 ** Description:
 **      This routine is primarily a dispatch routine for the ADF large object
 **	management extensions.  That is, based on the operation code, the
-**	appropriate subroutine is called. 
+**	appropriate subroutine is called.
 **
 ** Inputs:
 **      op_code                         Operation code
@@ -711,12 +717,12 @@ dmpe_call(i4        op_code ,
 	    case ADP_INFORMATION:
 		status = dmpe_information(pop_cb);
 		break;
-		
+
 	    case ADP_PUT:
-		status = dmpe_put(pop_cb, 0);
+		status = dmpe_put(pop_cb);
 		error_override = E_AD7006_ADP_PUT_ERROR;
 		break;
-		
+
 	    case ADP_GET:
 		status = dmpe_get(ADP_GET, pop_cb);
 		error_override =  E_AD7007_ADP_GET_ERROR;
@@ -731,7 +737,7 @@ dmpe_call(i4        op_code ,
 		/* Don't delete source, who knows whether adf code will
 		** refer to it again.
 		*/
-		status = dmpe_move(pop_cb, 0, FALSE);
+		status = dmpe_move(pop_cb, FALSE);
 		error_override = E_AD7009_ADP_MOVE_ERROR;
 		break;
 
@@ -739,14 +745,14 @@ dmpe_call(i4        op_code ,
 		status = dmpe_free_temps((DML_ODCB *) pop_cb->pop_user_arg,
 				&pop_cb->pop_error);
 		break;
-		
+
 	    /* The CLEANUP function is used when a get is terminated early
 	    ** by a filter function.  It signals the end of the POP.
 	    */
 	    case ADP_CLEANUP:
 		{
 		    DMPE_PCB   *pcb = (DMPE_PCB *) pop_cb->pop_user_arg;
-		 
+
 		    if ( pcb )
 		    {
 			if (pcb->pcb_dmtcb->dmt_record_access_id != NULL)
@@ -755,12 +761,12 @@ dmpe_call(i4        op_code ,
 			    status = dmt_close(pcb->pcb_dmtcb);
 			}
 			dmpe_deallocate(pcb);
-			pop_cb->pop_user_arg = (PTR) 0;
+			pop_cb->pop_user_arg = NULL;
 		    }
 		    status = E_DB_OK;
 		}
 		break;
-	
+
 	    case ADP_CPN_TO_LOCATOR:
 		status = dmpe_cpn_to_locator(pop_cb);
 		error_override =  E_AD7013_ADP_CPN_TO_LOCATOR;
@@ -818,20 +824,21 @@ dmpe_call(i4        op_code ,
 ** Name: dmpe_put	- Put a peripheral object.
 **
 ** Description:
-**      This routine inserts a peripheral object, returning with the peripheral
-**	portion of the coupon completed.
+**	This routine appends one segment of a peripheral object (LOB) to
+**	another LOB, and fills in the output LOB description as a coupon.
 **
-**      This routine will take, as input, a peripheral object.  However, as is
-**	the case with all peripheral objects, the input can take one of two
-**	forms:  it can be a coupon, in which case the object references a
-**	peripheral object already stored as a temporary somewhere, or it can
-**	take a peripheral object intact, which may be either partial or
-**	complete.  In the cases where this object is partial, this routine may
-**	need to be called a number of times to complete the put.
+**	From a high level perspective, the operation is "move LOB data to
+**	either a table row or a holding area."  The row / holding area
+**	is identified by a coupon, which dmpe_put fills in.  Since LOBs
+**	come in different forms, couponified or data streams, some caller
+**	will have to fetch and disassemble the incoming LOB data.
+**	dmpe_put only deals with one segment at a time.  The higher level may
+**	call dmpe_put multiple times, indicating "first segment" and
+**	"last segment".
 **
 **	Peripheral objects are actually stored in tables in the system.  These
 **	tables have the look as if created by
-**	
+**
 **	    create table <extended_table>
 **	    (
 **		per_key	    table_key,
@@ -852,33 +859,74 @@ dmpe_call(i4        op_code ,
 **	information is not decided or controlled by this routine -- I just
 **	happen to know it at the time of this writing).
 **
+**	If conditions are right, the data segments may be bulk-loaded into
+**	the target extension tables instead of stored row by row.
+**	Bulk-loading poses a unique problem, which is dealing with a
+**	full etab. For normal row-by-row puts to an etab, we can simply
+**	check the DMR_PUT return status for "table too large", and move
+**	on to a new etab.  The catch is that each LOB segment has to
+**	indicate the etab number of the next segment, which means that
+**	we have to go back and update the last-written LOB segment.
+**	This is easy enough for regular etabs, but when we're bulk-loading,
+**	rows are going to the sorter and there is no such thing as
+**	updating a row in the sorter.
+**
+**	The way this is fixed is to write one segment behind.  As each
+**	segment arrives, if we predict it fits into an etab, the PRIOR
+**	segment is written (to the sorter).  If the current segment won't
+**	fit, a new etab load is started, and the PRIOR segment is updated
+**	before being written.  Then, the current segment is made the prior.
+**	Care is needed to get the details right (e.g. a new bulk-load on
+**	the first segment, and getting the END segment out right, and
+**	LOBs with just one segment, etc).
+**
+**	When bulk-loading, the BQCB will indicate whether to attempt a
+**	bulk-load.  The current etab's DMP_ET_LIST entry will indicate
+**	whether the etab is really being bulk-loaded or not.
+**
+**	By the way, this write-behind idea doesn't work so well for
+**	ordinary row-puts.  The best way to tell if an etab is full if
+**	NOT bulk-loading it, is to simply do the put and see what happens.
+**	When bulk-loading we can (indeed, have to) predict when a etab
+**	will fill, by counting rows.  Counting doesn't work for an existing
+**	partly full etab with ??? rows in it already.
+**
 ** Inputs:
 **      pop_cb                          ADP_POP_CB Ptr for controlling the
 **					peripheral operation
-**	    pop_continuation		state of the world.  Can be one of
+**	    pop_continuation		state of the world.
 **					ADP_C_BEGIN_MASK   - the first of a
-**					multicall operation
-**					ADP_C_END_MASK - the last of one
-**	    pop_coupon			The input to the put...
-**	    pop_segment			A pointer to a data area which is to be
-**					filled.  If this is zero, then there
-**					is no segment to put.  This can only be
-**					the case when ADP_C_END_MASK is set.
+**					multicall operation.
+**					ADP_C_END_MASK - the last of one.
+**					Either/both/neither can be set.
+**	    pop_segment			DB_DATA_VALUE which points to a segment
+**					of input data to send to the lob.
+**					(Historical:  NULL used to be allowed
+**					as a sort of "oops, last one was the
+**					end, I don't have any more, go back and
+**					fix up the last segment" but nobody
+**					calls it that way any more.)
+**	    pop_coupon			DB_DATA_VALUE pointing to the output
+**					coupon which is to be filled in.
 **	    pop_underdv			A pointer to a DB_DATA_VALUE which
 **					describes the datatype to be used
 **					for each segment.
 **	    pop_temporary		Indicator as to whether this is
-**					put into a temporary file.  These are
-**					used when someone (like SCF) within the
-**					DBMS needs to temporarily store a
-**					peripheral object.
+**					put into a temporary file.  If the
+**					caller says "temp", dmpe *might* be
+**					able to do better;  but if the caller
+**					says "permanent", the target has to be
+**					resolvable into a real etab.
 **	    pop_user_arg		Workspace area used by DMF.  The caller
 **					knows nothing of the contents here, but
 **					is expected to preserve its contents
 **					across multipass calls.  Failure to do
 **					so will result in errors.
-**	load_blob			This is set if we are bulk loading
-**					blobs into extension tables.
+**	    pop_info			Optional pointer to DB_BLOB_WKSP which
+**					can be filled in by the caller to
+**					supply target information when the
+**					operation is beginning (i.e.
+**					ADP_C_BEGIN_MASK).  See dmpe_begin_dml.
 **
 ** Outputs:
 **      pop_cb
@@ -909,7 +957,7 @@ dmpe_call(i4        op_code ,
 **          Made the system more tolerant of lack of disk space.  If
 **          we attempt to allocate space and file more than once, then
 **          give up rather than continuing to attempt all over the
-**          place. 
+**          place.
 **      20-Oct-1993 (fred)
 **          Added support for working with session temporary tables.
 **          If the blob is being added to a session temporary table,
@@ -952,7 +1000,7 @@ dmpe_call(i4        op_code ,
 **	29-Jun-98 (thaju02)
 **	    Regression bug: with autocommit on, temporary tables created
 **	    during blob insertion, are not being destroyed at statement
-**	    commital, but are being held until session termination. 
+**	    commital, but are being held until session termination.
 **	    Regression due to fix for bug 87880. (B91469)
 **	28-jul-1998 (somsa01)
 **	    Added another parameter to dmpe_put() to tell us if we are to
@@ -987,61 +1035,43 @@ dmpe_call(i4        op_code ,
 **	    do the move.
 **	23-Sep-2009 (kiria01) b122578
 **	    Initialise the ADF_FN_BLK .adf_fi_desc and adf_dv_n members.
-[@history_template@]...
+**	15-Apr-2010 (kschendel) SIR 123485 b120497
+**	    load-blob no longer passed in, we decide here.
+**	    Delete code dealing with pop_segment NULL, doesn't seem to do
+**	    anything rational and is never called that way.
+**	    Fix long-standing problem with bulk-load mode getting "table
+**	    too large":  the sorter doesn't return E_DM0138 so we didn't
+**	    realize when too much data is being bulk-loaded into an etab.
+**	    Keep track by hand and start loading a new etab when nearing
+**	    the danger point.
 */
 static DB_STATUS
-dmpe_put(ADP_POP_CB	*pop_cb,
-	 i4		load_blob )
-
+dmpe_put(ADP_POP_CB	*pop_cb)
 {
-    DB_STATUS           status;
+    DB_STATUS           status, close_status;
     DB_DATA_VALUE	*input = pop_cb->pop_segment;
     ADP_PERIPHERAL	*p = (ADP_PERIPHERAL *) pop_cb->pop_coupon->db_data;
-    DMPE_COUPON		*output = (DMPE_COUPON *) &((ADP_PERIPHERAL *)
-			    pop_cb->pop_coupon->db_data)->per_value.val_coupon;
-    DMPE_PCB		*pcb = (DMPE_PCB *) 0;
-    DMP_TCB		*tcb;
-    i4		err_code;
+    DMPE_COUPON		*output = DMPE_CPN_FROM_DBV_MACRO(pop_cb->pop_coupon);
+    DMPE_PCB		*pcb = (DMPE_PCB *) NULL;
+    DMP_RCB		*er;		/* etab RCB */
+    DMP_TCB		*et;		/* etab TCB */
+    DMP_TCB		*tcb;		/* Base table TCB */
+    i4			err_code;
     i4			tried;
     i4			failed;
-    i4			null_value;
-    ADF_CB		adf_cb;
     DMP_ET_LIST		*etlist_ptr;
-    DB_BLOB_WKSP        *ins_work;
-    i4                  att_id = DMPE_DEFAULT_ATTID;
-    u_i4		new_etab = 0;
+    i4                  att_id;
+    u_i4		new_etab;
 
     CLRDBERR(&pop_cb->pop_error);
 
-    /* Make sure that load_blob is only used in conjunction with
-    ** put to permanent etab.  (There's not enough context to load-put
-    ** multiple blob segments into a holding etab anyway.)
-    */
-    if (load_blob && pop_cb->pop_temporary != ADP_POP_PERMANENT)
-    {
-	TRdisplay("%@ load-blob into temp holding table\n");
-	SETDBERR(&pop_cb->pop_error, 0, E_AD700C_ADP_BAD_POP_UA);
-	return (E_DB_ERROR);
-    }
-
-    MEfill(sizeof(adf_cb), 0, &adf_cb);
-    adf_cb.adf_maxstring = DMPE_SEGMENT_LENGTH;
-
-    status = adc_isnull(&adf_cb, pop_cb->pop_coupon, &null_value);
-    if (status)
-    {
-	pop_cb->pop_error = adf_cb.adf_errcb.ad_dberror;
-	return (status);
-    }
-    if (null_value)
+    if (ADF_ISNULL_MACRO(pop_cb->pop_coupon))
     {
 	p->per_tag = ADP_P_COUPON;
 	p->per_length0 = p->per_length1 = 0;
-	DMPE_TCB_ASSIGN_MACRO(DMPE_NULL_TCB, output->cpn_tcb);
+	output->cpn_flags = 0;
 	return(E_DB_OK);
     }
-
-    ins_work = (DB_BLOB_WKSP *)pop_cb->pop_info;
 
     do /* Break-out-of control structure */
     {
@@ -1052,29 +1082,21 @@ dmpe_put(ADP_POP_CB	*pop_cb,
 
 	if (pop_cb->pop_continuation & ADP_C_BEGIN_MASK)
 	{
-	    status = dmpe_allocate(pop_cb, &pcb);
+	    status = dmpe_begin_dml(pop_cb, &pcb, TRUE);
 	    if (status != E_DB_OK)
 		return(status);
 
-	    /* att_id may be in DB_BLOB_WKSP.
-	    ** Should always be there if this is the final move into the
-	    ** permanent etab, or if we're doing blob optimization (store
-	    ** from input stream directly into final destination etab).
-	    ** In the former case, dm1c is the caller via move or replace,
-	    ** and it supplies the pop_info.  In the latter case,
-	    ** sequencer figures things out and supplies the pop info.
-	    ** In other situations the destination is not the final one
-	    ** and a "random" att ID of 1 (default-att-id) will do.
+	    /* If we haven't assigned a pcb-att-id, the target must be a
+	    ** holding temp, use a fake att id.
 	    */
-	    if (ins_work && (ins_work->flags & BLOBWKSP_ATTID))
-		att_id = ins_work->base_attid;
-	    pcb->pcb_att_id = att_id;
+	    if (pcb->pcb_att_id == 0)
+		pcb->pcb_att_id = DMPE_DEFAULT_ATTID;
 	}
 	else
 	{
 	    pcb = (DMPE_PCB *) pop_cb->pop_user_arg;
-	    att_id = pcb->pcb_att_id;
 	}
+	att_id = pcb->pcb_att_id;
 
 	/* Build the tuple based on the pointers in the pcb */
 
@@ -1083,53 +1105,44 @@ dmpe_put(ADP_POP_CB	*pop_cb,
 	**  if, after being incremented, the first segment = 0,
 	**  increment the second segment number.
 	*/
-	
+
 	pcb->pcb_record->prd_segment1 += 1;
 	if (pcb->pcb_record->prd_segment1 == 0)
 	{
 	    pcb->pcb_record->prd_segment0 += 1;
 	}
-	if (input)
+	/* check if we need to coerce */
+	if (pcb->pcb_fblk.adf_fi_id > 0 && pcb->pcb_fblk.adf_r_dv.db_data)
 	{
-	    /* check if we need to coerce */
-	    if (pcb->pcb_fblk.adf_fi_id > 0 && pcb->pcb_fblk.adf_r_dv.db_data)
+	    ADF_CB *adfcb = pcb->pcb_xcb->xcb_scb_ptr->scb_adf_cb;
+
+	    pcb->pcb_fblk.adf_fi_desc = NULL;
+	    pcb->pcb_fblk.adf_dv_n = 1;
+	    STRUCT_ASSIGN_MACRO(*input, pcb->pcb_fblk.adf_1_dv);
+	    pcb->pcb_fblk.adf_r_dv.db_length = input->db_length;
+	    status = adf_func(adfcb, &pcb->pcb_fblk);
+	    if (status != E_DB_OK)
 	    {
-		pcb->pcb_fblk.adf_fi_desc = NULL;
-		pcb->pcb_fblk.adf_dv_n = 1;
-		STRUCT_ASSIGN_MACRO(*input, pcb->pcb_fblk.adf_1_dv);
-		pcb->pcb_fblk.adf_r_dv.db_length = input->db_length;
-		status = adf_func(&adf_cb, &pcb->pcb_fblk);
-		if (status != E_DB_OK)
-		{
-		    pop_cb->pop_error = adf_cb.adf_errcb.ad_dberror;
-		    break;
-		}
-		MEcopy((PTR) pcb->pcb_fblk.adf_r_dv.db_data,
-		    pcb->pcb_fblk.adf_r_dv.db_length,
-		    (PTR) pcb->pcb_record->prd_user_space);
+		pop_cb->pop_error = adfcb->adf_errcb.ad_dberror;
+		break;
 	    }
-	    else
-		MEcopy((PTR) input->db_data, input->db_length,
-		    (PTR) pcb->pcb_record->prd_user_space);
-	    tried = failed = 0;
+	    MEcopy((PTR) pcb->pcb_fblk.adf_r_dv.db_data,
+		pcb->pcb_fblk.adf_r_dv.db_length,
+		(PTR) pcb->pcb_record->prd_user_space);
 	}
 	else
-	{
-	    /*
-	    **	In this case, we fool the loop into
-	    **  fixing up the previous record
-	    */
-	    status = E_DB_OK;
-	    tried = failed = 1;
-	}
+	    MEcopy((PTR) input->db_data, input->db_length,
+		(PTR) pcb->pcb_record->prd_user_space);
+	tried = failed = 0;
 
-	    
 	/* Now we insert the tuple into a relation. */
 
+	status = E_DB_OK;
 	for ( ; /* Until broken out of */ ; )
 	{
-	    if ((pcb->pcb_dmrcb->dmr_access_id) || (!input))
+	    if (pcb->pcb_dmrcb->dmr_access_id)
 	    {
+		etlist_ptr = pcb->pcb_et;	/* NULL if holding temp */
 		if (pop_cb->pop_continuation & ADP_C_END_MASK)
 		{
 		    pcb->pcb_record->prd_r_next = 0;
@@ -1140,28 +1153,21 @@ dmpe_put(ADP_POP_CB	*pop_cb,
 			pcb->pcb_dmtcb->dmt_id.db_tab_base;
 		}
 
-		if (load_blob)
-		{
-		    /*
-		    ** Set etlist_ptr to the current extension node off
-		    ** of the tcb_et_list.
-		    */
-		    etlist_ptr = pcb->pcb_tcb->tcb_et_list;
-		    while (etlist_ptr->etl_etab.etab_extension !=
-			    pcb->pcb_dmtcb->dmt_id.db_tab_base)
-		        etlist_ptr = etlist_ptr->etl_next;
-		}
-
 		tried++;	    /* Mark that we attempted to put a record */
-		if (input)
+
+		if (etlist_ptr == NULL || (etlist_ptr->etl_status & ETL_LOAD) == 0)
 		{
-#ifdef	xDEBUG
-		    /*
-		    **	If in test mode, then only put one record per object per
-		    **	extension table.  This will forcibly test the full table
-		    **	code.
+		    /* Ordinary row being sent to an etab.
+		    ** Attempt to use a "bulk put" that gathers up a bunch of
+		    ** rows before writing.  (Low level details are not our
+		    ** problem here.)
 		    */
-		    
+#ifdef	xDEBUG
+		    /* If in test mode, then only put one record per object per
+		    ** extension table.  This will forcibly test the full table
+		    ** code.
+		    */
+
 		    if (DMZ_TBL_MACRO(11)
 			&& (tried == 1)
 			&& ((pop_cb->pop_continuation & ADP_C_BEGIN_MASK) == 0))
@@ -1170,252 +1176,186 @@ dmpe_put(ADP_POP_CB	*pop_cb,
 			SETDBERR(&pcb->pcb_dmrcb->error, 0, E_DM0138_TOO_MANY_PAGES);
 		    }
 		    else
-#endif			
+#endif
+		    status = dmpe_buffered_put(pop_cb, pcb->pcb_dmrcb);
+		    if (status == E_DB_OK)
 		    {
-			/*
-			** If load_blob is set, then we are bulk loading
-			** this blob into an extension table.
-			*/
-			if (load_blob)
-			{
-			    DMP_RCB	*rcb =
-				(DMP_RCB *)pcb->pcb_dmrcb->dmr_access_id;
-			    DMP_TCB	*t = rcb->rcb_tcb_ptr;
-			    DM_MDATA	record;
-			    i4	row_count = 1;
-
-			    /* Note that in this section, rcb and t refer to
-			    ** the etab, not the base table.
-			    */
-			    if (dm0m_check((DM_OBJECT *)rcb,
-				(i4)RCB_CB) == E_DB_OK)
-			    {
-				status = E_DB_OK;
-				if ((etlist_ptr->etl_status & ETL_LOAD) == 0)
-				{
-				    status = dmpe_start_load(rcb, 
-				    		&pcb->pcb_dmrcb->error);
-				    if (status == E_DB_OK)
-				    {
-					etlist_ptr->etl_status |= ETL_LOAD;
-					STRUCT_ASSIGN_MACRO(*pcb->pcb_dmrcb,
-						etlist_ptr->etl_dmrcb);
-					STRUCT_ASSIGN_MACRO(*pcb->pcb_dmtcb,
-						etlist_ptr->etl_dmtcb);
-				    }
-				}
-
-				if (status == E_DB_OK)
-				{
-				    record.data_next = NULL;
-				    record.data_size = t->tcb_rel.relwid;
-				    record.data_address = (PTR)pcb->pcb_record;
-				    status = dm2r_load( rcb, t, DM2R_L_ADD,
-						    (i4)0, &row_count,
-						    &record, (i4)0,
-						    (DM2R_BUILD_TBL_INFO *) 0,
-						    &pcb->pcb_dmrcb->error);
-				}
-			    }
-			    else
-			    {
-				SETDBERR(&pcb->pcb_dmrcb->error, 0, E_DM002B_BAD_RECORD_ID);
-				status = E_DB_ERROR;
-			    }
-			}
-			else
-			{
-			    /*
-			    ** Don't call dmr_put holding tcb_et_mutex (b110258)
-			    */
-			    if (pcb->pcb_got_mutex)
-			    {
-				dm0s_munlock(pcb->pcb_got_mutex);
-				pcb->pcb_got_mutex = 0;
-			    }
-
-			    status = dmpe_buffered_put(pop_cb, pcb->pcb_dmrcb);
-			}
-		    }
-		}
-		if (status == E_DB_OK)
-		{
-		    if (    ((pop_cb->pop_continuation & ADP_C_BEGIN_MASK) == 0)
-			&&  (tried)
-			&&  (failed))
-		    {
-			/*
-			**  Then we ended up placing a record in a place which
-			**  was not expected -- i.e. in a different table
-			**  [extension] than its predecessor.  That being the
-			**  case, we must go back and fix up the predecessor to
-			**  point to this new table -- this is necessary because
-			**  the new record didn't fit in the old table.
-			**
-			**  To accomplish this, we will open the
-			**  previous table, fetch the record, alter its next
-			**  pointer, rewrite it, and close the table.
-			*/
-			
-			if (DMZ_SES_MACRO(11) && (!load_blob))
-			    dmd_petrace("DMPE_PUT: Fixup required", 0, 0, 0);
-			status = dmpe_nextchain_fixup(pop_cb);
-			if (status)
-			    break;
-		    }
-
-		    if (DMZ_SES_MACRO(11) && (!load_blob))
-		    {
-			if (pcb->pcb_tcb)
+			if (DMZ_SES_MACRO(11) && pcb->pcb_tcb)
 			{
 			    dmd_petrace("DMPE_PUT: ", pcb->pcb_record,
-			    pcb->pcb_tcb->tcb_rel.reltid.db_tab_base,
-			    pcb->pcb_dmtcb->dmt_id.db_tab_base);
+				pcb->pcb_tcb->tcb_rel.reltid.db_tab_base,
+				pcb->pcb_dmtcb->dmt_id.db_tab_base);
 			}
-			else
+			if (((pop_cb->pop_continuation & ADP_C_BEGIN_MASK) == 0)
+			  &&  failed)
 			{
-			    if (((DMP_RCB *)pcb->pcb_dmrcb->dmr_access_id)->rcb_logging)
-			    {
-				dmd_petrace("DMPE_PUT: ", pcb->pcb_record, 0,
-					pcb->pcb_dmtcb->dmt_id.db_tab_base);
-			    }
+			    /* We ended up placing a not-first segment in an
+			    ** etab which was not the same as the previous
+			    ** segment's etab.  So that we can find this
+			    ** segment, we must go back and fix up the previous
+			    ** row to point to this new table.
+			    **
+			    ** To accomplish this, we will open the
+			    ** previous table, fetch the record, alter its next
+			    ** pointer, rewrite it, and close the table.
+			    */
+
+			    if (DMZ_SES_MACRO(11))
+				dmd_petrace("DMPE_PUT: Fixup required", 0, 0, 0);
+			    status = dmpe_nextchain_fixup(pop_cb);
+			    if (status)
+				break;
 			}
-		    }
-			
-		    STRUCT_ASSIGN_MACRO(pcb->pcb_dmtcb->dmt_id,
+			/* Record the last successful put-to etab for any
+			** future nextchain-fixup.
+			*/
+			STRUCT_ASSIGN_MACRO(pcb->pcb_dmtcb->dmt_id,
 						pcb->pcb_table_previous);
-
-
-		    if (pop_cb->pop_continuation & ADP_C_BEGIN_MASK)
-		    {
-			/* Fill in the coupon if this is the first segment */
-# ifdef xDEV_TEST
-			/*
-			** For test purposes, use the length0 field to hold the
-			** number of segments...Initialize it.
-			*/
-			
-			((ADP_PERIPHERAL *)
-			    pop_cb->pop_coupon->db_data)->per_length0 = 0;
-# endif
-			
-			output->cpn_etab_id =
-				pcb->pcb_dmtcb->dmt_id.db_tab_base;
-			/* If put to a holding table, indicate so.  (If
-			** we managed to optimize this into a put to the
-			** final etab, we'll update the coupon at the end.)
-			*/
-			if (pop_cb->pop_temporary)
-			    DMPE_TCB_ASSIGN_MACRO(DMPE_TEMP_TCB, output->cpn_tcb);
-		    }
-
-		    /*
-		    ** In the case of load_blob, we do not want to close
-		    ** the extension table just yet. When we are finally
-		    ** done loading the segments for this extension
-		    ** table into the sorter, dm2r_load() will close out
-		    ** the extension table once it moves the appropriate
-		    ** tuples from the sorter into the extension table.
-		    */
-		    if (    (pop_cb->pop_continuation & ADP_C_END_MASK) &&
-			((!load_blob) || (load_blob &&
-			   (etlist_ptr->etl_status & ETL_LOAD) == 0)) )
-		    {
-			DB_STATUS	local_stat = E_DB_OK;
-
-			/*
-			** If this is the last entry, close the etab
-			** and the base table (if we opened it).
-			** (Base table is only opened for put optimization.)
-			*/
-			
-			pcb->pcb_dmtcb->dmt_flags_mask = 0;
-			status = dmt_close(pcb->pcb_dmtcb);
-			pcb->pcb_dmtcb->dmt_record_access_id = 0;
-			pcb->pcb_dmrcb->dmr_access_id = 0;
-			if (pcb->pcb_base_dmtcb.dmt_record_access_id)
-			{
-			    /* Close base table if dmpe opened it */
-			    pcb->pcb_base_dmtcb.dmt_flags_mask = 0;
-			    local_stat = dmt_close(&pcb->pcb_base_dmtcb);
-			    pcb->pcb_base_dmtcb.dmt_record_access_id = 0;
-			    if (local_stat != E_DB_OK)
-				pcb->pcb_dmtcb->error =
-					 pcb->pcb_base_dmtcb.error;
-			}
-			if (status || local_stat)
-			{
-			    uleFormat(&pcb->pcb_dmtcb->error, 0, NULL,
-					    ULE_LOG, NULL, (char *) NULL, 0L,
-					    (i4 *) NULL, &err_code, 0);
-			    uleFormat(NULL, E_DM9B05_DMPE_PUT_CLOSE_TABLE, NULL,
-					    ULE_LOG, NULL, (char *) NULL, 0L,
-					    (i4 *) NULL, &err_code, 0);
-			    pop_cb->pop_error = pcb->pcb_dmtcb->error;
-			    if (status == E_DB_OK)
-				status = local_stat;
-			    break;
-			}
-		    }
-		    break;
-		}
-		else
-		{
-		    DB_STATUS 	    close_status;
-	
-		    if (    (status)
-			&&  (pcb->pcb_dmrcb->error.err_code !=
-				E_DM0112_RESOURCE_QUOTA_EXCEED)
-			&&  (pcb->pcb_dmrcb->error.err_code !=
-				E_DM0138_TOO_MANY_PAGES)
-		       )
-		    {
-			pop_cb->pop_error = pcb->pcb_dmrcb->error;
-		    }
-		    pcb->pcb_dmtcb->dmt_flags_mask = 0;
-		    close_status = dmt_close(pcb->pcb_dmtcb);
-		    pcb->pcb_dmtcb->dmt_record_access_id = 0;
-		    pcb->pcb_dmrcb->dmr_access_id = 0;
-		    if (close_status)
-		    {
-			uleFormat(&pcb->pcb_dmtcb->error, 0, NULL, ULE_LOG,
-					NULL, (char *) NULL, 0L, (i4 *) NULL,
-					&err_code, 0);
-			uleFormat(NULL, E_DM9B05_DMPE_PUT_CLOSE_TABLE, NULL , ULE_LOG,
-					NULL, (char *) NULL, 0L, (i4 *) NULL,
-					&err_code, 0);
-			pop_cb->pop_error = pcb->pcb_dmtcb->error;
-			break;
-		    }
-		    if (    (status)
-			&&  (pcb->pcb_dmrcb->error.err_code !=
-				E_DM0112_RESOURCE_QUOTA_EXCEED)
-			&&  (pcb->pcb_dmrcb->error.err_code !=
-				E_DM0138_TOO_MANY_PAGES)
-		       )
-		    {
-			/* Messages logged above... */
-			break;
 		    }
 		    else
 		    {
-			/* If we arrive and find that we've failed a */
-			/* couple of times to allocate space, don't */
-			/* keep trying.  System is out of space. */
+			/* The put failed */
 
-			failed++;
-			if (!pop_cb->pop_temporary)
-			    pcb->pcb_scan_list->etl_status |= ETL_FULL_MASK;
-			if (failed >= 2)
+			if ((pcb->pcb_dmrcb->error.err_code !=
+				    E_DM0112_RESOURCE_QUOTA_EXCEED)
+			    &&  (pcb->pcb_dmrcb->error.err_code !=
+				    E_DM0138_TOO_MANY_PAGES)
+			   )
 			{
-			    SETDBERR(&pop_cb->pop_error, 0, 
-			    	pcb->pcb_dmrcb->error.err_code);
+			    pop_cb->pop_error = pcb->pcb_dmrcb->error;
+			}
+			pcb->pcb_dmtcb->dmt_flags_mask = 0;
+			close_status = dmt_close(pcb->pcb_dmtcb);
+			pcb->pcb_dmtcb->dmt_record_access_id = 0;
+			pcb->pcb_dmrcb->dmr_access_id = 0;
+			if (close_status)
+			{
+			    uleFormat(&pcb->pcb_dmtcb->error, 0, NULL, ULE_LOG,
+					    NULL, (char *) NULL, 0L, (i4 *) NULL,
+					    &err_code, 0);
+			    uleFormat(NULL, E_DM9B05_DMPE_PUT_CLOSE_TABLE, NULL , ULE_LOG,
+					    NULL, (char *) NULL, 0L, (i4 *) NULL,
+					    &err_code, 0);
+			    pop_cb->pop_error = pcb->pcb_dmtcb->error;
 			    break;
 			}
-		    }
+			if ((pcb->pcb_dmrcb->error.err_code !=
+				    E_DM0112_RESOURCE_QUOTA_EXCEED)
+			    &&  (pcb->pcb_dmrcb->error.err_code !=
+				    E_DM0138_TOO_MANY_PAGES)
+			   )
+			{
+			    /* Messages logged above... */
+			    break;
+			}
+			else
+			{
+			    /* If we arrive and find that we've failed a */
+			    /* couple of times to allocate space, don't */
+			    /* keep trying.  System is out of space. */
+
+			    failed++;
+			    if (etlist_ptr != NULL)
+				etlist_ptr->etl_status |= ETL_FULL_MASK;
+			    if (failed >= 2)
+			    {
+				SETDBERR(&pop_cb->pop_error, 0,
+				    pcb->pcb_dmrcb->error.err_code);
+				break;
+			    }
+			    /* Else continue below with this etab closed,
+			    ** trying to find a new etab
+			    */
+			}
+		    } /* status != OK */
 		}
-	    }
-	    
+		else
+		{
+		    DM_MDATA mdata;
+		    i4 row_count;
+
+		    /* We're doing a bulk-load.  If not first time, write
+		    ** the held record (which may have been updated) using
+		    ** the held access ID.  If at the end, write the
+		    ** current record, else move current to hold.
+		    ** Then, count off rows to see if the etab might be
+		    ** full;  if so, mark this etab full, and signal for
+		    ** a new etab (if more segments are to arrive).
+		    */
+
+		    status = E_DB_OK;
+		    if ((pop_cb->pop_continuation & ADP_C_BEGIN_MASK) == 0)
+		    {
+			er = (DMP_RCB *) pcb->pcb_held_access_id;
+			et = er->rcb_tcb_ptr;
+			mdata.data_next = NULL;
+			mdata.data_address = (char *) pcb->pcb_held_record;
+			mdata.data_size = et->tcb_rel.relwid;
+			row_count = 1;
+			status = dm2r_load( er, et, DM2R_L_ADD,
+					0, &row_count,
+					&mdata, 0,
+					(DM2R_BUILD_TBL_INFO *) NULL,
+					&pcb->pcb_dmrcb->error);
+		    }
+		    if ((pop_cb->pop_continuation & ADP_C_END_MASK) == 0)
+		    {
+			MEcopy((PTR) pcb->pcb_record, sizeof(DMPE_RECORD),
+				(PTR) pcb->pcb_held_record);
+			pcb->pcb_held_access_id = pcb->pcb_dmrcb->dmr_access_id;
+		    }
+		    else if (status == E_DB_OK)
+		    {
+			er = (DMP_RCB *) pcb->pcb_dmrcb->dmr_access_id;
+			et = er->rcb_tcb_ptr;
+			mdata.data_next = NULL;
+			mdata.data_address = (char *) pcb->pcb_record;
+			mdata.data_size = et->tcb_rel.relwid;
+			row_count = 1;
+			status = dm2r_load( er, et, DM2R_L_ADD,
+					0, &row_count,
+					&mdata, 0,
+					(DM2R_BUILD_TBL_INFO *) NULL,
+					&pcb->pcb_dmrcb->error);
+		    }
+		    if (status != E_DB_OK)
+		    {
+			/* (one of) the writes failed.  Not much can be done
+			** about it in bulk-load mode.
+			** Null out dmtcb access ID so that error cleanup
+			** outside the loop doesn't close anything.
+			*/
+			pop_cb->pop_error = pcb->pcb_dmrcb->error;
+			pcb->pcb_dmtcb->dmt_record_access_id = NULL;
+			break;
+		    }
+		    /* See if the etab can take more rows, or if the next
+		    ** segment (either in this LOB or a new one) has to go
+		    ** into a new etab.
+		    */
+		    if (++pcb->pcb_loaded >= pcb->pcb_per_etab)
+		    {
+			etlist_ptr->etl_status |= ETL_FULL_MASK;
+			pcb->pcb_dmrcb->dmr_access_id = NULL;
+			pcb->pcb_dmtcb->dmt_record_access_id = NULL;
+			/* Leave dmt_id.db_tab_base alone for coupon */
+			pcb->pcb_et = NULL;
+		    }
+		} /* if bulk-load */
+
+		/* If we managed to put a row, and it's BEGIN, make sure
+		** that the initial segment etab is recorded in the coupon.
+		** Then, break out of the FOR loop.
+		*/
+		if (status == E_DB_OK)
+		{
+		    if (pop_cb->pop_continuation & ADP_C_BEGIN_MASK)
+			output->cpn_etab_id = pcb->pcb_dmtcb->dmt_id.db_tab_base;
+		    break;	/* Normal for-loop exit */
+		}
+	    } /* if dmr-access-id */
+
+
 	    /* If we get this far, then we failed to insert the record,
 	    ** or perhaps no etab has been opened yet.
 	    */
@@ -1428,7 +1368,7 @@ dmpe_put(ADP_POP_CB	*pop_cb,
 	    **	    of peripheral tables for this column.  Whenever one
 	    **	    is found, open it and attempt an insert.  If that
 	    **	    works, fine.  If not, then keep going.
-	    **	    
+	    **
 	    **	2) If there are no tables into which the new tuple will
 	    **	    fit, then search the catalog for other tables.  This
 	    **	    has the side affect of adding new entries to the
@@ -1444,53 +1384,56 @@ dmpe_put(ADP_POP_CB	*pop_cb,
 	    **	    conversion will be necessary to use them.  This will be nice
 	    **	    if marketting decides to price these optionally -- it
 	    **	    needn't be an ongoing conversion issue.
-	    **	    
+	    **
 	    **	3) If there is still no fit, then create a new
  	    **	    peripheral table for this column.  This will be
 	    **	    added to the TCB's list of tables, so that other
 	    **	    sessions will be able to make use of it.
 	    */
 
-	    if (!pop_cb->pop_temporary)
+	    if (pop_cb->pop_temporary == ADP_POP_TEMPORARY)
+	    {
+		/* Put to an anonymous holding temp.  Just grab a temp
+		** table.  dmpe_temp will know to NOT put this one on any
+		** et list, and to flag the table as a holding temp.
+		*/
+		status = dmpe_temp(pop_cb, att_id, &new_etab);
+		if (status)
+		    break;
+		pcb->pcb_record->prd_r_next = new_etab;
+		etlist_ptr = NULL;
+	    }
+	    else
 	    {
 		/* Put is to permanent etab.  Keep in mind that a
-		** "permanent" etab might be a temporary one, if the
+		** "permanent" etab might be a temporary table, if the
 		** base table is a session temp!
 		*/
 		tcb = pcb->pcb_tcb;
 
 		/* Protect ET list (even if gtt, because of || query) */
-		if (!pcb->pcb_got_mutex)
-		{
-		    dm0s_mlock(&tcb->tcb_et_mutex);
-		    pcb->pcb_got_mutex = &tcb->tcb_et_mutex;
-		}
+		dm0s_mlock(&tcb->tcb_et_mutex);
 
-		if (pcb->pcb_scan_list == 0)
-		{
-		    pcb->pcb_scan_list = tcb->tcb_et_list->etl_next;
-		}
+		etlist_ptr = pcb->pcb_et;
+		if (etlist_ptr == NULL)
+		    etlist_ptr = tcb->tcb_et_list->etl_next;
 		else
-		{
-		    pcb->pcb_scan_list = pcb->pcb_scan_list->etl_next;
-		}
+		    etlist_ptr = etlist_ptr->etl_next;
 
-		while (	(pcb->pcb_scan_list != tcb->tcb_et_list)
-			&& (((i4)pcb->pcb_scan_list->etl_etab.etab_att_id !=
-							att_id)
-			    || (pcb->pcb_scan_list->etl_etab.etab_type
-						    != DMP_LO_ETAB)
-			    || (pcb->pcb_scan_list->etl_status &
-			       (ETL_INVALID_MASK | ETL_FULL_MASK))))
+		while (	(etlist_ptr != tcb->tcb_et_list)
+		  && ((etlist_ptr->etl_etab.etab_att_id != att_id)
+		      || (etlist_ptr->etl_etab.etab_type != DMP_LO_ETAB)
+		      || (etlist_ptr->etl_status & (ETL_INVALID_MASK | ETL_FULL_MASK | ETL_LOAD))))
 		{
 		    /*
 		    **	Skip over tables which are known to be full or are not
 		    **	for this attribute.
 		    */
-		    
-		    pcb->pcb_scan_list = pcb->pcb_scan_list->etl_next;
-		}		
-		
+
+		    etlist_ptr = etlist_ptr->etl_next;
+		}
+		dm0s_munlock(&tcb->tcb_et_mutex);
+
 		/*
 		**	It is important to note here that this scan list is
 		**	safe to remember without semaphores.  This is true
@@ -1501,11 +1444,12 @@ dmpe_put(ADP_POP_CB	*pop_cb,
 		**	removed.  Thus, one must only have the semaphore to
 		**	move from one place to another.
 		*/
-		
-		if (pcb->pcb_scan_list != tcb->tcb_et_list)
+
+		if (etlist_ptr != tcb->tcb_et_list)
 		{
+		    /* Found one, use it */
 		    pcb->pcb_record->prd_r_next =
-			    pcb->pcb_scan_list->etl_etab.etab_extension;
+			    etlist_ptr->etl_etab.etab_extension;
 		}
 		else
 		{
@@ -1515,8 +1459,6 @@ dmpe_put(ADP_POP_CB	*pop_cb,
 		    ** create a new temp etab.  Otherwise we'll do a bit
 		    ** fancier stuff for a new real permanent etab.
 		    */
-		    dm0s_munlock(&tcb->tcb_et_mutex);
-		    pcb->pcb_got_mutex = NULL;
 		    if (tcb->tcb_temporary)
 		    {
 			/* Create a temp etab.  Since pop_temporary isn't
@@ -1533,6 +1475,8 @@ dmpe_put(ADP_POP_CB	*pop_cb,
 			** the et catalog for this attempt, scan it.  This
 			** will add any new entries to the end of the TCB's
 			** et-list.
+			** Note that tcb-populate uses the PCB dmt/dmrcb's
+			** to read the iiextended_relation catalog.
 			*/
 
 			if (!pcb->pcb_cat_scan)
@@ -1544,6 +1488,7 @@ dmpe_put(ADP_POP_CB	*pop_cb,
 			    /* Maybe we added some, and it's no big deal to
 			    ** just loop back around and look.
 			    */
+			    pcb->pcb_et = NULL;	/* Look at 'em all */
 			    continue;
 			}
 
@@ -1557,144 +1502,128 @@ dmpe_put(ADP_POP_CB	*pop_cb,
 		    /* Other sessions might be adding ET entries too, so
 		    ** look for the newly added one (by table ID).
 		    */
-		    if (!pcb->pcb_got_mutex)
-		    {
-			dm0s_mlock(&tcb->tcb_et_mutex);
-			pcb->pcb_got_mutex = &tcb->tcb_et_mutex;
-		    }
-		    pcb->pcb_scan_list = tcb->tcb_et_list->etl_next;
-		    while (pcb->pcb_scan_list->etl_etab.etab_extension != new_etab
-			   && pcb->pcb_scan_list != tcb->tcb_et_list)
-			pcb->pcb_scan_list = pcb->pcb_scan_list->etl_next;
+		    dm0s_mlock(&tcb->tcb_et_mutex);
+		    etlist_ptr = tcb->tcb_et_list->etl_next;
+		    while (etlist_ptr->etl_etab.etab_extension != new_etab
+			   && etlist_ptr != tcb->tcb_et_list)
+			etlist_ptr = etlist_ptr->etl_next;
 
 		    dm0s_munlock(&tcb->tcb_et_mutex);
-		    pcb->pcb_got_mutex = NULL;
 		    /* Double check that someone else didn't fill it? */
-		    if (pcb->pcb_scan_list->etl_status & (ETL_INVALID_MASK | ETL_FULL_MASK))
+		    if (etlist_ptr->etl_status & (ETL_INVALID_MASK | ETL_FULL_MASK))
+		    {
 			/* huh?  whirl around to try another */
+			pcb->pcb_et = NULL;
 			continue;
+		    }
 
 		    pcb->pcb_record->prd_r_next = new_etab;
 		} /* if found another etab */
-	    }
-	    else
-	    {
-		/* Put to an anonymous holding temp.  Just grab a temp
-		** table.  dmpe_temp will know to NOT put this one on any
-		** et list, and to flag the table as a holding temp.
-		*/
-		status = dmpe_temp(pop_cb, att_id, &new_etab);
-		if (status)
-		    break;
-		pcb->pcb_record->prd_r_next = new_etab;
-	    }
+	    } /* temporary/permanent */
 
 	    /*
 	    ** Now open the table indicated by prd_r_next.  If the table is
-	    ** a real etab, pcb_scan_list will point to its etlist entry.
+	    ** a real etab, etlist_ptr will point to its etlist entry.
 	    */
-	    
-	    if (load_blob)
-	    {
-		/*
-		** Set etlist_ptr to the current extension node off
-		** of the tcb_et_list.
-		*/
-		etlist_ptr = pcb->pcb_tcb->tcb_et_list;
-		while (etlist_ptr->etl_etab.etab_extension !=
-			pcb->pcb_record->prd_r_next)
-		    etlist_ptr = etlist_ptr->etl_next;
-	    }
 
-	    if ((!load_blob) || (load_blob &&
-		((etlist_ptr->etl_status & ETL_LOAD) == 0)))
-	    {
-		pcb->pcb_dmtcb->dmt_db_id = pcb->pcb_db_id;
-		pcb->pcb_dmtcb->dmt_tran_id = (PTR) pcb->pcb_xcb;
-		pcb->pcb_dmtcb->dmt_id.db_tab_base =
-				pcb->pcb_record->prd_r_next;
-		pcb->pcb_dmtcb->dmt_flags_mask = DMT_DBMS_REQUEST;
+	    pcb->pcb_et = etlist_ptr;
+	    pcb->pcb_dmtcb->dmt_id.db_tab_base = pcb->pcb_record->prd_r_next;
+	    pcb->pcb_dmtcb->dmt_flags_mask = DMT_DBMS_REQUEST;
 
-		pcb->pcb_dmtcb->dmt_lock_mode = DMT_IX;
-		dmpe_check_table_lock(ADP_PUT, pcb->pcb_dmtcb, pcb->pcb_tcb);
-		pcb->pcb_dmtcb->dmt_update_mode = DMT_U_DIRECT;
-		pcb->pcb_dmtcb->dmt_access_mode = DMT_A_WRITE;
-		status = etab_open(pcb->pcb_dmtcb, pcb->pcb_tcb);
-		if (status)
+	    pcb->pcb_dmtcb->dmt_update_mode = DMT_U_DIRECT;
+	    pcb->pcb_dmtcb->dmt_access_mode = DMT_A_WRITE;
+	    status = etab_open(pcb->pcb_dmtcb, pop_cb);
+	    if (status)
+	    {
+		if (pcb->pcb_dmtcb->error.err_code != E_DM0054_NONEXISTENT_TABLE
+		  || etlist_ptr == NULL )
 		{
-		    if (pcb->pcb_dmtcb->error.err_code != E_DM0054_NONEXISTENT_TABLE
-		      || pop_cb->pop_temporary )
-		    {
-			pop_cb->pop_error = pcb->pcb_dmtcb->error;
-			break;
-		    }
-		    else
-		    {
-			/* Extended table disappeared, probably because of
-			** ROLLBACK. Mark it invalid and find another.
-			*/
-			pcb->pcb_scan_list->etl_status |= ETL_INVALID_MASK;
-			continue;
-		    }
+		    pop_cb->pop_error = pcb->pcb_dmtcb->error;
+		    break;
 		}
-		pcb->pcb_dmrcb->dmr_access_id =
+		else
+		{
+		    /* Extended table disappeared, probably because of
+		    ** ROLLBACK. Mark it invalid and find another.
+		    */
+		    etlist_ptr->etl_status |= ETL_INVALID_MASK;
+		    pcb->pcb_et = NULL;		/* Consider all of them */
+		    continue;
+		}
+	    }
+	    pcb->pcb_dmrcb->dmr_access_id =
 			pcb->pcb_dmtcb->dmt_record_access_id;
-	    }
-	    else if (load_blob && (etlist_ptr->etl_status & ETL_LOAD))
+	    if (pop_cb->pop_temporary == ADP_POP_PERMANENT
+	       && pcb->pcb_bqcb->bqcb_load_etabs == BQCB_LOAD_YES)
 	    {
-		/*
-		** In the case of load_blob, we want to set the dmrcb and
-		** dmtcb to what it was when we first opened this
-		** extension table (since we have not closed it yet).
+		/* If we're bulk-loading etabs, start a bulk-load on this
+		** newly chosen etab.  If that fails, give up.
+		** If it works, record the bulk-loading state in the ETL
+		** entry and in the pcb.
+		** Note that once ETL_LOAD is lit, the table can't be closed
+		** until we finish all pending loads at query end.
 		*/
-		pcb->pcb_dmrcb = &etlist_ptr->etl_dmrcb;
-		pcb->pcb_dmtcb = &etlist_ptr->etl_dmtcb;
-	    }
+		er = (DMP_RCB *) pcb->pcb_dmrcb->dmr_access_id;
+		status = dmpe_start_load(er, &pop_cb->pop_error);
+		if (status != E_DB_OK)
+		    break;
+		etlist_ptr->etl_status |= ETL_LOAD;
+		etlist_ptr->etl_access_id = er;
+		etlist_ptr->etl_pcb = pcb;
+		etlist_ptr->etl_sid = pcb->pcb_sid;
+		/* If there's a held record waiting, fix its "next".
+		** This is why we do the held record thing.
+		*/
+		if ((pop_cb->pop_continuation & ADP_C_BEGIN_MASK) == 0)
+		{
+		    pcb->pcb_held_record->prd_r_next = etlist_ptr->etl_etab.etab_extension;
+		}
+		pcb->pcb_loaded = 0;
+		pcb->pcb_per_etab = dmpe_load_etab_limit(er->rcb_tcb_ptr);
+	    } /* If starting bulk load */
+
 	    /* Loop around and try inserting into table just chosen */
 	} /* infinite for */
+
     } while (0);
-    
-    if (DB_FAILURE_MACRO(status) &&
-	pcb && pcb->pcb_dmtcb->dmt_record_access_id)
+
+    /* If error, or no-error and the last segment just went out, close
+    ** the (current) etab unless we were bulk-loading it.  Bulk-loaded
+    ** etabs are left open since more rows may be added.  (And, if error,
+    ** multiple etabs might need to be cleaned up.)  Eventually, someone
+    ** will call dmpe-query-end which will close out all of the
+    ** outstanding etab loads (moving rows from sorter to etab, etc).
+    ** Likewise, don't deallocate the PCB if we might be bulk-loading.
+    */
+    if ( (status != E_DB_OK || pop_cb->pop_continuation & ADP_C_END_MASK)
+      && pcb != NULL
+      && (pcb->pcb_bqcb == NULL
+	  || pcb->pcb_bqcb->bqcb_load_etabs != BQCB_LOAD_YES))
     {
-	pcb->pcb_dmtcb->dmt_flags_mask = 0;
-	err_code = (i4) dmt_close(pcb->pcb_dmtcb);
-	pcb->pcb_dmtcb->dmt_record_access_id = 0;
-	pcb->pcb_dmrcb->dmr_access_id = 0;
-	if (err_code)
+	if (pcb->pcb_dmtcb->dmt_record_access_id != NULL)
 	{
-	    uleFormat(&pcb->pcb_dmtcb->error, 0, NULL, ULE_LOG,
+	    pcb->pcb_dmtcb->dmt_flags_mask = 0;
+	    close_status = dmt_close(pcb->pcb_dmtcb);
+	    pcb->pcb_dmtcb->dmt_record_access_id = 0;
+	    pcb->pcb_dmrcb->dmr_access_id = 0;
+	    if (close_status)
+	    {
+		uleFormat(&pcb->pcb_dmtcb->error, 0, NULL, ULE_LOG,
 			    NULL, (char *) NULL, 0L, (i4 *) NULL,
 			    &err_code, 0);
-	    uleFormat(NULL, E_DM9B05_DMPE_PUT_CLOSE_TABLE, NULL , ULE_LOG,
+		uleFormat(NULL, E_DM9B05_DMPE_PUT_CLOSE_TABLE, NULL , ULE_LOG,
 			    NULL, (char *) NULL, 0L, (i4 *) NULL,
 			    &err_code, 0);
+	    }
 	}
-    }
-    if (pcb && pcb->pcb_got_mutex)
-    {
-	dm0s_munlock(pcb->pcb_got_mutex);
-	pcb->pcb_got_mutex = 0;
-    }
-    
-    if (	DB_FAILURE_MACRO(status)
-	    || (pop_cb->pop_continuation & ADP_C_END_MASK))
-    {
-	if (DB_SUCCESS_MACRO(status) && pcb->pcb_put_optim)
-	{
-	    /* Tag the coupon so that when it's eventually put into a
-	    ** row, DMF will see that the data is in its final resting
-	    ** place and the coupon is OK as-is.
-	    */
-	    DMPE_TCB_ASSIGN_MACRO(DMPE_TCB_PUT_OPTIM, output->cpn_tcb);
-	}
-	if (pcb->pcb_fblk.adf_r_dv.db_data)
-	    (VOID)MEfree(pcb->pcb_fblk.adf_r_dv.db_data);
 	dmpe_deallocate(pcb);
-	pop_cb->pop_user_arg = (PTR) 0;
     }
+    if (status != E_DB_OK || pop_cb->pop_continuation & ADP_C_END_MASK)
+	pop_cb->pop_user_arg = NULL;
+
     return(status);
-}
+
+} /* dmpe_put */
 
 /*
 **{
@@ -1726,7 +1655,7 @@ dmpe_put(ADP_POP_CB	*pop_cb,
 **		5c) Clear the continuation indicator in the pop_cb.
 **		5d) set return status to NO_MORE_ROWS-ish thing
 **	    6) Return.
-**	    
+**
 **	Note that gaps in the segment numbers may be possible.  This may happen
 **	if all segments are not renumbered when a change to a large object
 **	results in the deletion of a segment.  This routine does not require
@@ -1736,12 +1665,14 @@ dmpe_put(ADP_POP_CB	*pop_cb,
 ** Inputs:
 **      pop_cb                              ADP_POP_CB control block...
 **	    pop_continuation                 Continuation indicator...
-**						ADP_BEGIN -- first call
-**						ADP_CONTINUE -- ! first call
+**						ADP_C_BEGIN_MASK -- first call,
 **                                              ADP_C_RANDOM_MASK --
 **                                              want the segment
 **                                              indicated in the
 **                                              pop_segno# fields.
+**					    Calls to dmpe-get should not use
+**					    ADP_C_END_MASK, as that would mean
+**					    that the operation is already over.
 **          pop_segno0
 **          pop_segno1                      Segment number to get if
 **                                              ADP_C_RANDOM_MASK set
@@ -1759,6 +1690,12 @@ dmpe_put(ADP_POP_CB	*pop_cb,
 **					    pop_continuation above), and must be
 **					    presented unchanged for subsequent
 **					    calls.
+**	    pop_info			    Pointer to optional DB_BLOB_WKSP,
+**					    used for passing info about the
+**					    context, base table, and LOB att.
+**					    If omitted, dmpe-get will use what
+**					    it can find in the short-term part
+**					    of the DMF coupon.
 **
 ** Outputs:
 **      pop_cb...
@@ -1766,7 +1703,11 @@ dmpe_put(ADP_POP_CB	*pop_cb,
 **	    (pop_user_arg)                  Filled iff appropriate.
 **
 **	Returns:
-**	    DB_STATUS
+**	    E_DB_WARN and E_AD7001_ADP_NONEXT if we're returning the last
+**	    segment, or RANDOM requested and segment not found.
+**	    E_DB_ERROR and E_AD7001 if we already returned the last segment
+**	    and there's nothing more to return.
+**	    E_DB_OK if segment returned and there's more.
 **	Exceptions:
 **	    none
 **
@@ -1779,11 +1720,11 @@ dmpe_put(ADP_POP_CB	*pop_cb,
 **      30-Jun-1993 (fred)
 **          Fixed up null and zero length object handling.
 **      23-Aug-1993 (fred)
-**          Added CSswitch() call.  This will keep a session mucking 
-**          with a large object from consuming the whole server.  It 
-**          is currently called only from dmpe_get.  It is assumed 
-**          that dmpe_put()'s will either alternate with gets (in 
-**          dmpe_copy's) or will be called because of some higher 
+**          Added CSswitch() call.  This will keep a session mucking
+**          with a large object from consuming the whole server.  It
+**          is currently called only from dmpe_get.  It is assumed
+**          that dmpe_put()'s will either alternate with gets (in
+**          dmpe_copy's) or will be called because of some higher
 **          level, which will be doing CSswitch()'s as well.
 **      27-Oct-1993 (fred)
 **          Added random segment fetching.  Allow, by setting the
@@ -1809,7 +1750,7 @@ dmpe_put(ADP_POP_CB	*pop_cb,
 **          these random deletions.
 **	22-Aug-1996 (prida01)
 **	    Open the extended table in read mode. Stops problems with
-**	    pages still being fixed in the cache when we commit. 
+**	    pages still being fixed in the cache when we commit.
 **	29-May-1997 (shero03)
 **	    Set the ptr to the pcb null after deallocating it.
 **	3-Apr-1998 (thaju02)
@@ -1839,7 +1780,10 @@ dmpe_put(ADP_POP_CB	*pop_cb,
 **          associated file, without the need to GET the entire blob.
 **	13-Feb-2007 (kschendel)
 **	    Remove the CSswitch call, there's a useful one in dmr_get now.
-[@history_template@]...
+**	16-Apr-2010 (kschendel) SIR 123485
+**	    Call dml-begin routine to get context set up.  Use context
+**	    for opening etabs.  Using txn-logging as a key for DM11 tracing
+**	    on gets is weird, delete.
 */
 static DB_STATUS
 dmpe_get(i4	  op_code ,
@@ -1850,25 +1794,12 @@ dmpe_get(i4	  op_code ,
     DB_STATUS		status, local_status;
     i4		err_code;
     ADP_PERIPHERAL	*p = (ADP_PERIPHERAL *) pop_cb->pop_coupon->db_data;
-    DMPE_COUPON		*input = (DMPE_COUPON *)
-			&((ADP_PERIPHERAL *)
-			    pop_cb->pop_coupon->db_data)->per_value.val_coupon;
+    DMPE_COUPON		*input = DMPE_CPN_FROM_DBV_MACRO(pop_cb->pop_coupon);
     i4			repositioned;
     u_i4		current_low_segment;
-    i4			null_value;
-    ADF_CB		adf_cb;
-    i4			run_petrace = 1;
     DMP_RCB		*etab_rcb;
 
-    MEfill(sizeof(adf_cb), 0, &adf_cb);
-
-    status = adc_isnull(&adf_cb, pop_cb->pop_coupon, &null_value);
-    if (status)
-    {
-	pop_cb->pop_error = adf_cb.adf_errcb.ad_dberror;
-	return (status);
-    }
-    if (null_value)
+    if (ADF_ISNULL_MACRO(pop_cb->pop_coupon))
     {
 	p->per_tag = ADP_P_COUPON;
 	p->per_length0 = p->per_length1 = 0;
@@ -1893,11 +1824,10 @@ dmpe_get(i4	  op_code ,
 	}
 
 	if (	(pop_cb->pop_continuation & ADP_C_BEGIN_MASK)
-	    ||  (pop_cb->pop_user_arg == (PTR) 0))
+	    ||  (pop_cb->pop_user_arg == NULL))
 	{
-	    pop_cb->pop_info = 0; /* Not defined for GET */
-	    status = dmpe_allocate(pop_cb, &pcb);
-	    if (DB_FAILURE_MACRO(status))
+	    status = dmpe_begin_dml(pop_cb, &pcb, FALSE);
+	    if (status != E_DB_OK)
 		return(status);
 	}
 	else
@@ -1923,7 +1853,7 @@ dmpe_get(i4	  op_code ,
 		SETDBERR(&pop_cb->pop_error, 0, E_AD7001_ADP_NONEXT);
 		break;
 	    }
-	    
+
 	}
 	else
 	{
@@ -1942,7 +1872,8 @@ dmpe_get(i4	  op_code ,
 	{
 	    pcb->pcb_dmtcb->dmt_flags_mask = 0;
 	    status = dmt_close(pcb->pcb_dmtcb);
-	    pcb->pcb_dmtcb->dmt_record_access_id = 0;
+	    pcb->pcb_dmtcb->dmt_record_access_id = NULL;
+	    pcb->pcb_dmrcb->dmr_access_id = NULL;
 	    if (status)
 	    {
 		pop_cb->pop_error = pcb->pcb_dmtcb->error;
@@ -1951,15 +1882,13 @@ dmpe_get(i4	  op_code ,
 	}
 
 	etab_rcb = ((DMP_RCB *)pcb->pcb_dmrcb->dmr_access_id);
-	if (!pcb->pcb_dmtcb->dmt_record_access_id)
+	if (etab_rcb == NULL)
 	{
 	    /*
 	    **	If we have no table open, then open the next table,
 	    **	whichever that is, and position based on our logical key.
 	    */
 
-	    pcb->pcb_dmtcb->dmt_db_id = pcb->pcb_db_id;
-	    pcb->pcb_dmtcb->dmt_tran_id = (PTR) pcb->pcb_xcb;
 	    pcb->pcb_dmtcb->dmt_id.db_tab_base = pcb->pcb_record->prd_r_next;
 	    pcb->pcb_dmtcb->dmt_flags_mask = DMT_DBMS_REQUEST;
 
@@ -1967,16 +1896,13 @@ dmpe_get(i4	  op_code ,
 	    if (op_code == ADP_GET)
 	    {
 	    	pcb->pcb_dmtcb->dmt_access_mode = DMT_A_READ;
-		pcb->pcb_dmtcb->dmt_lock_mode = DMT_IS;
 	    }
 	    else
 	    {
 	    	pcb->pcb_dmtcb->dmt_access_mode = DMT_A_WRITE;
-		pcb->pcb_dmtcb->dmt_lock_mode = DMT_IX;
 	    }
 
-	    dmpe_check_table_lock(op_code, pcb->pcb_dmtcb, pcb->pcb_tcb);
-	    status = etab_open(pcb->pcb_dmtcb, pcb->pcb_tcb);
+	    status = etab_open(pcb->pcb_dmtcb, pop_cb);
 	    if (status)
 	    {
 		pop_cb->pop_error = pcb->pcb_dmtcb->error;
@@ -1996,7 +1922,7 @@ dmpe_get(i4	  op_code ,
 		DMR_ATTR_ENTRY	**attr_entry =
 				    (DMR_ATTR_ENTRY **)
 				      pcb->pcb_dmrcb->dmr_attr_desc.ptr_address;
-					    
+
 		pcb->pcb_dmrcb->dmr_position_type = DMR_QUAL;
 		attr_entry[0]->attr_operator = DMR_OP_EQ;
 		attr_entry[0]->attr_number = 1;
@@ -2014,7 +1940,7 @@ dmpe_get(i4	  op_code ,
 		** Position to pcb_seg1_next
 		**
 		** Warning: if you position to seg1 == pcb_seg1_next
-		** this code will reposition for every segment!!! 
+		** this code will reposition for every segment!!!
 		**
 		** For BTREE etabs, we can position seg1 >= pcb_seg1_next,
 		** This works when positioning to the first or a RANDOM segment
@@ -2098,15 +2024,15 @@ dmpe_get(i4	  op_code ,
 		    status = E_DB_ERROR;
 		    if (pop_cb->pop_continuation & ADP_C_RANDOM_MASK)
 			status = E_DB_WARN;
-		    
+
 		    SETDBERR(&pop_cb->pop_error, 0, E_AD7001_ADP_NONEXT);
-		    /* 
+		    /*
 		    ** if we have repositioned twice and no blob
-		    ** segment has been retrieved, yet the coupon 
+		    ** segment has been retrieved, yet the coupon
 		    ** specifies a non-zero blob length, there is an
 		    ** inconsistency, flag an error
 		    */
-		    if ( (op_code == ADP_GET) && 
+		    if ( (op_code == ADP_GET) &&
 				(p->per_length0 || p->per_length1) )
 		    {
 			/* No errors for ADP_C_RANDOM_MASK */
@@ -2147,20 +2073,13 @@ dmpe_get(i4	  op_code ,
 
 	if (status == E_DB_OK)
 	{
-	    if (dm0m_check((DM_OBJECT *)
-			pcb->pcb_dmrcb->dmr_access_id,
-			(i4)RCB_CB) == E_DB_OK)
-		run_petrace =
-			((DMP_RCB *)pcb->pcb_dmrcb->dmr_access_id)->rcb_logging;
-
-	    if (DMZ_SES_MACRO(11) && run_petrace)
+	    if (DMZ_SES_MACRO(11))
 	    {
-		/* don't depend on input->cpn_tcb just for tracepoint */
 		dmd_petrace("DMPE_GET", pcb->pcb_record,
 		    0,  /* base table id */
 		    pcb->pcb_dmtcb->dmt_id.db_tab_base);
 	    }
-		
+
 	    /* Return the segment number fetched */
 
 	    pop_cb->pop_segno0 = pcb->pcb_seg0_next;
@@ -2181,7 +2100,7 @@ dmpe_get(i4	  op_code ,
 	}
 	break;
     }
-    
+
     if (status)
     {
 	if (pop_cb->pop_error.err_code != E_AD7001_ADP_NONEXT)
@@ -2218,11 +2137,11 @@ dmpe_get(i4	  op_code ,
 			    &err_code, 0);
 	    }
 	}
-	
+
 	if (op_code == ADP_GET)
-	{	
+	{
 	    dmpe_deallocate(pcb);
-	    pop_cb->pop_user_arg = (PTR) 0;
+	    pop_cb->pop_user_arg = NULL;
 	}
     }
     return(status);
@@ -2235,7 +2154,7 @@ dmpe_get(i4	  op_code ,
 ** Description:
 **      This routine deletes the tuples in the various extension tables which
 **	make up the peripheral objects.  Only the coupon can be passed in;  this
-**	routine will delete all extension tuples. 
+**	routine will delete all extension tuples.
 **
 ** Inputs:
 **      pop_cb                          ADF's peripheral operation control block
@@ -2269,7 +2188,7 @@ dmpe_get(i4	  op_code ,
 **          This will allow calling code to avoid logging of [non]
 **          errors in this case.
 **	31-Jul-1996 (kch)
-**	    We now check for the existence of a list of extended tables 
+**	    We now check for the existence of a list of extended tables
 **	    (pcb->pcb_rcb->rcb_tcb_ptr->tcb_et_list) before attempting to
 **	    operate on it. This prevents a 'delete from session.temp' causing
 **	    a SEGV if the sesion.temp contains a blob column.
@@ -2284,7 +2203,9 @@ dmpe_get(i4	  op_code ,
 **	    look for the etab ID, not the base table ID!
 **	21-Jun-2004 (schka24)
 **	    Get rid of separate temp-cleanup list completely.
-[@history_template@]...
+**	16-Apr-2010 (kschendel) SIR 123485
+**	    Caller will supply blob info, don't ignore it.
+**	    Delete bogus extra loop around segment delete loop.
 */
 DB_STATUS
 dmpe_delete(ADP_POP_CB     *pop_cb )
@@ -2292,13 +2213,10 @@ dmpe_delete(ADP_POP_CB     *pop_cb )
     DB_STATUS           status, local_status;
     ADP_POP_CB		my_pop_cb;
     i4		err_code;
-    DMPE_PCB		*pcb = 0;
+    DMPE_PCB		*pcb;
     DMP_ET_LIST		*list;
     ADP_PERIPHERAL	*p = (ADP_PERIPHERAL *) pop_cb->pop_coupon->db_data;
     DMPE_COUPON		*cpn;
-    ADF_CB		adf_cb;
-    i4			null = FALSE;
-    i4			done = 0;
     i4			last_etab_base, cur_etab_base;
     bool                first_seg = TRUE;
     DMP_TCB             *t;
@@ -2310,20 +2228,9 @@ dmpe_delete(ADP_POP_CB     *pop_cb )
 	dmd_petrace("DMPE_DELETE requested", 0, 0 , 0);
 #endif
 
-    my_pop_cb.pop_segment = 0;
-    my_pop_cb.pop_user_arg = 0;
-    MEfill(sizeof(adf_cb), 0, &adf_cb);
     CLRDBERR(&pop_cb->pop_error);
-    CLRDBERR(&my_pop_cb.pop_error);
-    my_pop_cb.pop_info = 0;
-    
-    status = adc_isnull(&adf_cb, pop_cb->pop_coupon, &null);
-    if (status)
-    {
-	pop_cb->pop_error = adf_cb.adf_errcb.ad_dberror;
-	return (status);
-    }
-    else if (null)
+
+    if (ADF_ISNULL_MACRO(pop_cb->pop_coupon))
     {
 	return(E_DB_OK);
     }
@@ -2333,15 +2240,20 @@ dmpe_delete(ADP_POP_CB     *pop_cb )
 	return(E_DB_OK);
     }
 
+    CLRDBERR(&my_pop_cb.pop_error);
+    my_pop_cb.pop_segment = NULL;
+    my_pop_cb.pop_user_arg = NULL;
+    my_pop_cb.pop_info = pop_cb->pop_info;
+
     cpn = (DMPE_COUPON *) &p->per_value.val_coupon;
 
-    if (!DMPE_TCB_COMPARE_NE_MACRO(cpn->cpn_tcb, DMPE_TEMP_TCB))
+    if (cpn->cpn_flags & DMPE_CPN_TEMP)
     {
 	DMT_CB		dmt_cb;
-	
+
 	/* Then object is a temporary -- just evaporate it */
 
-	MEfill(sizeof(DMT_CB), 0, &dmt_cb);
+	MEfill(sizeof(DMT_CB), 0, (PTR) &dmt_cb);
 	dmt_cb.length = sizeof(DMT_CB);
 	dmt_cb.type = DMT_TABLE_CB;
 	dmt_cb.ascii_id = DMT_ASCII_ID;
@@ -2362,98 +2274,71 @@ dmpe_delete(ADP_POP_CB     *pop_cb )
 		status = E_DB_OK;
 	    }
 	}
+	/* Tidy up, just in case. */
+	cpn->cpn_flags &= ~DMPE_CPN_TEMP;
+	cpn->cpn_etab_id = 0;
     }
     else
     {
-	for (;status == E_DB_OK;)
+	STRUCT_ASSIGN_MACRO(*pop_cb, my_pop_cb);
+	my_pop_cb.pop_continuation = ADP_C_BEGIN_MASK;
+	my_pop_cb.pop_segment = NULL;
+	my_pop_cb.pop_user_arg = NULL;
+	last_etab_base = 0;
+
+	/*
+	 **  Mark that we don't really want the input tuple back.
+	 **  We don't really care what it is, we just need to position
+	 **  ourselves so that the dmr_delete() will work.
+	 */
+
+	do
 	{
-	    STRUCT_ASSIGN_MACRO(*pop_cb, my_pop_cb);
-	    my_pop_cb.pop_continuation = ADP_C_BEGIN_MASK;
-	    my_pop_cb.pop_segment = 0;
-	    my_pop_cb.pop_user_arg = 0;
-	    my_pop_cb.pop_info = 0;
-	    last_etab_base = 0;
-	    
-	    /*
-	     **  Mark that we don't really want the input tuple back.
-	     **  We don't really care what it is, we just need to position
-	     **  ourselves so that the dmr_delete() will work.
-	     */
-	    
-	    while (!done)
+	    status = dmpe_get(ADP_DELETE, &my_pop_cb);
+	    if (status)
 	    {
-		status = dmpe_get(ADP_DELETE, &my_pop_cb);
-		if (status)
+		if (status != E_DB_WARN
+		  || my_pop_cb.pop_error.err_code != E_AD7001_ADP_NONEXT)
+		    break;
+		my_pop_cb.pop_continuation |= ADP_C_END_MASK;
+	    }
+	    my_pop_cb.pop_continuation &= ~ADP_C_BEGIN_MASK;
+
+	    pcb = (DMPE_PCB *) my_pop_cb.pop_user_arg;
+
+	    /* Here if we must delete each segment */
+	    pcb->pcb_dmrcb->dmr_flags_mask = DMR_CURRENT_POS;
+
+	    status = dmr_delete(pcb->pcb_dmrcb);
+	    if (status)
+	    {
+		my_pop_cb.pop_error = pcb->pcb_dmrcb->error;
+		break;
+	    }
+	    cur_etab_base = ((DMP_RCB *)pcb->pcb_dmrcb->dmr_access_id)->
+				    rcb_tcb_ptr->tcb_rel.reltid.db_tab_base;
+	    t = pcb->pcb_tcb;
+	    if (t->tcb_et_list && cur_etab_base != last_etab_base)
+	    {
+		/* Mark this etab not-full */
+		dm0s_mlock(&t->tcb_et_mutex);
+
+		for (list = t->tcb_et_list->etl_next;
+		    list != t->tcb_et_list;
+		    list = list->etl_next)
 		{
-		    if (my_pop_cb.pop_error.err_code == E_AD7001_ADP_NONEXT)
+		    if (list->etl_etab.etab_type == DMP_LO_ETAB
+		       && list->etl_etab.etab_extension == cur_etab_base)
 		    {
-			done = TRUE;
-		    }
-		    else
-		    {
+			list->etl_status &= ~ETL_FULL_MASK;
 			break;
 		    }
 		}
-		my_pop_cb.pop_continuation &= ~ADP_C_BEGIN_MASK;
 
-		pcb = (DMPE_PCB *) my_pop_cb.pop_user_arg;
-
-#ifdef xDEBUG
-		/* ifdef temporary,prototype code for one blob per heap etab */
-		etab_rcb = (DMP_RCB *)pcb->pcb_dmtcb->dmt_record_access_id;
-		if (etab_rcb && 
-		    etab_rcb->rcb_tcb_ptr->tcb_rel.relspec == DB_HEAP_STORE)
-		{
-		    pcb->pcb_dmtcb->dmt_flags_mask = 0;
-		    local_status = dmt_close(pcb->pcb_dmtcb);
-		    pcb->pcb_dmtcb->dmt_record_access_id = 0;
-
-		    /* If this is a heap - one segment etab, delete the etab */
-		    DMPE_TCB_ASSIGN_MACRO(cpn->cpn_tcb, base_tcb);
-		    status = dmpe_destroy_heap_etab(base_tcb, cpn->cpn_etab_id,
-		    		&my_pop_cb.pop_error);
-
-		    /* If this was a one segment etab, we're done */
-		    done = TRUE;
-		    break;
-		}
-#endif /* xDEBUG */
-
-		/* Here if we must delete each segment */
-		pcb->pcb_dmrcb->dmr_flags_mask = DMR_CURRENT_POS;
-
-		status = dmr_delete(pcb->pcb_dmrcb);
-		if (status)
-		{
-		    my_pop_cb.pop_error = pcb->pcb_dmrcb->error;
-		    break;
-		}
-		cur_etab_base = ((DMP_RCB *)pcb->pcb_dmrcb->dmr_access_id)->
-					rcb_tcb_ptr->tcb_rel.reltid.db_tab_base;
-		t = pcb->pcb_tcb;
-		if (t->tcb_et_list && cur_etab_base != last_etab_base)
-		{
-		    /* Mark this etab not-full */
-		    dm0s_mlock(&t->tcb_et_mutex);
-
-		    for (list = t->tcb_et_list->etl_next;
-			list != t->tcb_et_list;
-			list = list->etl_next)
-		    {
-			if (list->etl_etab.etab_type == DMP_LO_ETAB
-			   && list->etl_etab.etab_extension == cur_etab_base)
-			{
-			    list->etl_status &= ~ETL_FULL_MASK;
-			    break;
-			}
-		    }
-		    
-		    dm0s_munlock(&t->tcb_et_mutex);
-		    last_etab_base = cur_etab_base;
-		}
+		dm0s_munlock(&t->tcb_et_mutex);
+		last_etab_base = cur_etab_base;
 	    }
-	    break;   
-	}
+	} while ((my_pop_cb.pop_continuation & ADP_C_END_MASK) == 0);
     }
     if (status)
     {
@@ -2510,8 +2395,6 @@ dmpe_delete(ADP_POP_CB     *pop_cb )
 **					a coupon.
 **	    pop_coupon			The coupon to which to move.
 **	    pop_info			Target table info (attid, etc)
-**	load_blob			This is set if we are bulk loading
-**					blobs into extension tables.
 **	cleanup_source			TRUE if this is a final move of an
 **					object into its resting etab upon a
 **					put or replace, and the source can
@@ -2559,7 +2442,7 @@ dmpe_delete(ADP_POP_CB     *pop_cb )
 [@history_template@]...
 */
 DB_STATUS
-dmpe_move(ADP_POP_CB *pop_cb, i4  load_blob, bool cleanup_source)
+dmpe_move(ADP_POP_CB *pop_cb, bool cleanup_source)
 {
     DB_STATUS           status;
     DB_DATA_VALUE	under_dv;
@@ -2569,12 +2452,11 @@ dmpe_move(ADP_POP_CB *pop_cb, i4  load_blob, bool cleanup_source)
     char		*tuple;
     ADP_POP_CB		*get_pop;
     ADP_POP_CB		*put_pop;
-    i4			done;
     i4			err_code;
 
     CLRDBERR(&pop_cb->pop_error);
 
-    if (DMZ_SES_MACRO(11) && (!load_blob))
+    if (DMZ_SES_MACRO(11))
 	dmd_petrace("DMPE_MOVE requested", 0, 0 , 0);
 
     if ( (((ADP_PERIPHERAL *) pop_cb->pop_segment->db_data)->per_length0 == 0)
@@ -2584,6 +2466,15 @@ dmpe_move(ADP_POP_CB *pop_cb, i4  load_blob, bool cleanup_source)
 	/* If nothing to move, get out fast */
 	return(E_DB_OK);
     }
+
+    if (ADF_ISNULL_MACRO(pop_cb->pop_segment))
+    {
+	((ADP_PERIPHERAL *) pop_cb->pop_coupon->db_data)->per_length0 = 0;
+	((ADP_PERIPHERAL *) pop_cb->pop_coupon->db_data)->per_length1 = 0;
+	/* Wonder why we don't set NULL if coupon dv is nullable? */
+	return(E_DB_OK);
+    }
+
     MEfill(sizeof(ADF_CB),0,(PTR)&adf_cb);
     adf_cb.adf_maxstring = DMPE_SEGMENT_LENGTH;
 
@@ -2592,29 +2483,11 @@ dmpe_move(ADP_POP_CB *pop_cb, i4  load_blob, bool cleanup_source)
     else
       adf_cb.adf_utf8_flag = 0;
 
-    if (pop_cb->pop_segment->db_datatype < 0)
-    {
-	i4	is_null;
-
-	status = adc_isnull(&adf_cb, pop_cb->pop_segment, &is_null);
-	if (status)
-	{
-	    pop_cb->pop_error = adf_cb.adf_errcb.ad_dberror;
-	    return (status);
-	}
-
-	if (is_null)
-	{
-	    ((ADP_PERIPHERAL *) pop_cb->pop_coupon->db_data)->per_length0 = 0;
-	    ((ADP_PERIPHERAL *) pop_cb->pop_coupon->db_data)->per_length1 = 0;
-	    return(E_DB_OK);
-	}
-    }
-
     do
     {
 	/*
 	**	Determine what underlying format ADF thinks is good
+	**	dmpe-temp needs underdv set too.
 	*/
 	pop_cb->pop_underdv = &under_dv;
 	status = adi_per_under(&adf_cb,
@@ -2656,31 +2529,25 @@ dmpe_move(ADP_POP_CB *pop_cb, i4  load_blob, bool cleanup_source)
 	get_pop->pop_info = NULL;
 	put_pop->pop_info = pop_cb->pop_info;
 
-	for (done = FALSE;!done;)
+	do
 	{
 	    status = dmpe_get(ADP_GET, get_pop);
 	    if (status)
 	    {
-		if (get_pop->pop_error.err_code == E_AD7001_ADP_NONEXT)
-		{
-		    CLRDBERR(&get_pop->pop_error);
-		    put_pop->pop_continuation |= ADP_C_END_MASK;
-		    done = TRUE;
-		}
-		else
+		if (get_pop->pop_error.err_code != E_AD7001_ADP_NONEXT)
 		    break;
+		/* Normal exit from the loop after the next put */
+		CLRDBERR(&get_pop->pop_error);
+		put_pop->pop_continuation |= ADP_C_END_MASK;
 	    }
 
-	    status = dmpe_put(put_pop, load_blob);
+	    status = dmpe_put(put_pop);
 	    if (status)
 		break;
 	    get_pop->pop_continuation &= ~ADP_C_BEGIN_MASK;
 	    put_pop->pop_continuation &= ~ADP_C_BEGIN_MASK;
-	    
-	}
-	if (status &&
-	    ((get_pop->pop_error.err_code)
-	           || (put_pop->pop_error.err_code)))
+	} while ((put_pop->pop_continuation & ADP_C_END_MASK) == 0);
+	if (get_pop->pop_error.err_code || put_pop->pop_error.err_code)
 	{
 	    if (get_pop->pop_error.err_code)
 	    {
@@ -2691,7 +2558,7 @@ dmpe_move(ADP_POP_CB *pop_cb, i4  load_blob, bool cleanup_source)
 			    &err_code, 0);
 		STRUCT_ASSIGN_MACRO(get_pop->pop_error, pop_cb->pop_error);
 	    }
-		
+
 	    if (put_pop->pop_error.err_code)
 	    {
 		if ((put_pop->pop_error.err_code != E_DM0065_USER_INTR) &&
@@ -2714,11 +2581,9 @@ dmpe_move(ADP_POP_CB *pop_cb, i4  load_blob, bool cleanup_source)
 		** number of temp files floating around.
 		*/
 
-		DMPE_COUPON *cpn = (DMPE_COUPON *)
-				&((ADP_PERIPHERAL *)
-			get_pop->pop_coupon->db_data)->per_value.val_coupon;
+		DMPE_COUPON *cpn = DMPE_CPN_FROM_DBV_MACRO(get_pop->pop_coupon);
 
-		if (! DMPE_TCB_COMPARE_NE_MACRO(cpn->cpn_tcb, DMPE_TEMP_TCB))
+		if (cpn->cpn_flags & DMPE_CPN_TEMP)
 		{
 		    /* Delete of anon object is just a temp file drop */
 		    (void) dmpe_delete(get_pop);
@@ -2734,299 +2599,12 @@ dmpe_move(ADP_POP_CB *pop_cb, i4  load_blob, bool cleanup_source)
     return(status);
 }
 
-/*
-** {
-** Name: dmpe_replace	- Replace an entire peripheral object
-**
-** Description:
-**      This routine replaces an existing peripheral object from one place to
-**	another.  This is implemented by deleting the original, then performing
-**	gets and puts on the new version.
-**
-** Inputs:
-**      pop_cb                          The peripheral operations control block
-**	    pop_segment			The old object -- in this case, it is
-**					a coupon.
-**	    pop_coupon			The coupon for the new object.
-**	    pop_info			Target table info for new object.
-**
-** Outputs:
-**      pop_cb.pop_error                Set if appropriate.
-**	      .pop_segment		Altered to represent replaced value.
-**
-**	Returns:
-**	    DB_STATUS
-**	Exceptions:
-**	    none
-**
-** Side Effects:
-**	    none
-**
-** History:
-**      26-Jan-1990 (fred)
-**          Created.
-**	15-Oct-1992 (fred)
-**	    Added code to correctly handle nulls.
-**      30-Jun-1993 (fred)
-**          Fixed up replacement of nulls with non-nulls and converse.
-**	15-nov-93 (swm)
-**	    Bug #58633
-**	    Rounded up under_dv.db_length to guarantee pointer-alignment
-**	    after dm0m_allocate() memory allocation.
-**	31-jan-1994 (bryanp) B58471
-**	    Check adc_isnull return code.
-**      13-Apr-1994 (fred)
-**          Alter error processing to return handle interrupts
-**          specially.  This allows us to avoid logging them unnecessarily.
-**	28-jul-1998 (somsa01)
-**	    Added another parameter to dmpe_put().  (Bug #92217)
-**	17-feb-1999 (somsa01)
-**	    If there is nothing to update, set the pop_error.err_code to
-**	    E_DM0154_DUPLICATE_ROW_NOTUPD.
-**	11-May-2007 (gupsh01)
-**	    Added support for UTF8 character set.
-**	17-Apr-2008 (kibro01) b120276
-**	    Initialise ADF_CB structure
-[@history_template@]...
-*/
-DB_STATUS
-dmpe_replace(ADP_POP_CB	*pop_cb )
-
-{
-    DB_STATUS           status;
-    DB_DATA_VALUE	under_dv;
-    DB_DATA_VALUE	seg_dv;
-    ADF_CB		adf_cb;
-    DM_OBJECT		*object = 0;
-    char		*tuple;
-    ADP_POP_CB		*get_pop;
-    ADP_POP_CB		*put_pop;
-    i4		err_code;
-    DMPE_COUPON		*new_cpn;
-    DMPE_COUPON		*old_cpn;
-    i4			done;
-    i4			new_null;
-    i4			old_null;
-    DB_DT_ID            old_datatype = 0;
-
-    MEfill(sizeof(ADF_CB),0,(PTR)&adf_cb);
-    
-    /* First, check that the coupons are different.  If not, then return */
-    CLRDBERR(&pop_cb->pop_error);
-    adf_cb.adf_maxstring = DMPE_SEGMENT_LENGTH;
-
-    if (CMischarset_utf8())
-      adf_cb.adf_utf8_flag = AD_UTF8_ENABLED;
-    else
-      adf_cb.adf_utf8_flag = 0;
-
-    status = adc_isnull(&adf_cb, pop_cb->pop_coupon, &new_null);
-    if (status)
-    {
-	pop_cb->pop_error = adf_cb.adf_errcb.ad_dberror;
-	return (status);
-    }
-    status = adc_isnull(&adf_cb, pop_cb->pop_segment, &old_null);
-    if (status)
-    {
-	pop_cb->pop_error = adf_cb.adf_errcb.ad_dberror;
-	return (status);
-    }
-
-    new_cpn = (DMPE_COUPON *)
-	&((ADP_PERIPHERAL *)
-	    pop_cb->pop_coupon->db_data)->per_value.val_coupon;
-    old_cpn = (DMPE_COUPON *)
-	&((ADP_PERIPHERAL *)
-	    pop_cb->pop_segment->db_data)->per_value.val_coupon;
-
-    if (new_null)
-    {
-	ADP_PERIPHERAL 	*p = (ADP_PERIPHERAL *) pop_cb->pop_coupon->db_data;
-
-	p->per_length0 = p->per_length1 = 0;
-	if (old_null)
-	    return(E_DB_OK);
-    }
-    else if (!old_null)
-    {
-	/*
-	** Check if the new coupon is the same as the old coupon
-	** A blob is uniquely identified by the cpn_etab_id, and cpn_log_key
-	**
-	** NOTE, we used to have att_id in the coupon and would also check 
-	** 	new_cpn->cpn_att_id == old_cpn->cpn_att_id
-	** However att_id in the coupon is redundant,
-	** new_cpn->cpn_etab_id == old_cpn->cpn_etab_id
-	** will tell if it is the same attribute or not
-	** If for example we had a table with two blob columns b1 and b2, 
-	** at the time of insert, cpn_log_key for b1 and b2 would match,
-	** but the cpn_etab_id would not.
-	*/
-	if ((new_cpn->cpn_etab_id == old_cpn->cpn_etab_id)
-	    &&  (new_cpn->cpn_log_key.tlk_high_id ==
-				old_cpn->cpn_log_key.tlk_high_id)
-	    &&  (new_cpn->cpn_log_key.tlk_low_id ==
-				old_cpn->cpn_log_key.tlk_low_id))
-	{
-	    /* Then there is no change to make */
-	    SETDBERR(&pop_cb->pop_error, 0, E_DM0154_DUPLICATE_ROW_NOTUPD);
-	    return(E_DB_OK);
-	}
-    }
-
-    if (DMZ_SES_MACRO(11))
-	dmd_petrace("DMPE_REPLACE requested", 0, 0 , 0);
-
-    do
-    {
-	pop_cb->pop_underdv = &under_dv;
-
-	/*
-	**	Determine what underlying datatype ADF thinks is good
-	*/
-	
-	status = adi_per_under(&adf_cb,
-				pop_cb->pop_segment->db_datatype,
-				&under_dv);
-	if (status)
-	{
-	    pop_cb->pop_error = adf_cb.adf_errcb.ad_dberror;
-	    break;
-	}
-
-	status = dm0m_allocate(sizeof(DM_OBJECT)
-			+ DB_ALIGN_MACRO(under_dv.db_length)
-			+ (2 * sizeof(ADP_POP_CB)),
-			(i4) 0,
-			(i4) PCB_CB,
-			(i4) PCB_ASCII_ID,
-			(i4) 0,
-			(DM_OBJECT **) &object,
-			&pop_cb->pop_error);
-	if (status)
-	    break;
-	tuple = (char *) ((char *) object + sizeof(DM_OBJECT));
-	get_pop = (ADP_POP_CB *) (tuple +
-			DB_ALIGN_MACRO(under_dv.db_length));
-	put_pop = (ADP_POP_CB *) ((char *) get_pop + sizeof(ADP_POP_CB));
-	STRUCT_ASSIGN_MACRO(*pop_cb, *get_pop);
-	STRUCT_ASSIGN_MACRO(*pop_cb, *put_pop);
-
-        put_pop->pop_coupon = pop_cb->pop_segment;
-	if (!old_null)
-	{
-	    status = dmpe_delete(put_pop);
-	    if (status)
-	    {
-		pop_cb->pop_error = put_pop->pop_error;
-		break;
-	    }
-	}
-	else
-	{
-	    /* Make old coupon not null for now */
-
-	    if (!new_null)
-	    {
-		old_datatype = put_pop->pop_coupon->db_datatype;
-		put_pop->pop_coupon->db_datatype = abs(old_datatype);
-
-	    }
-	}
-	if (!new_null)
-	{
-	    ADP_PERIPHERAL 	*p = (ADP_PERIPHERAL *)
-		pop_cb->pop_coupon->db_data;
-	    
-	    if ((p->per_length0 == 0) && (p->per_length1 == 0))
-	    {
-		new_null = TRUE; /* Fake out rest of code */
-	    }
-	}
-
-	
-	get_pop->pop_segment = &seg_dv;
-	put_pop->pop_segment = &seg_dv;
-	
-	get_pop->pop_continuation = ADP_C_BEGIN_MASK;
-	put_pop->pop_continuation = ADP_C_BEGIN_MASK;
-	STRUCT_ASSIGN_MACRO(under_dv, seg_dv);
-	seg_dv.db_data = (PTR) tuple;
-
-	get_pop->pop_info = (PTR)0;
-	put_pop->pop_info = pop_cb->pop_info;
-
-	for (done = new_null; !done;)
-	{
-	    status = dmpe_get(ADP_GET, get_pop);
-	    if (status)
-	    {
-		if (get_pop->pop_error.err_code == E_AD7001_ADP_NONEXT)
-		{
-		    put_pop->pop_continuation |= ADP_C_END_MASK;
-		    done = TRUE;
-		}
-		else
-		    break;
-	    }
-	    status = dmpe_put(put_pop, 0);
-	    if (status)
-		break;
-	    get_pop->pop_continuation &= ~ADP_C_BEGIN_MASK;
-	    put_pop->pop_continuation &= ~ADP_C_BEGIN_MASK;
-	}
-	if (old_datatype < 0)
-	    put_pop->pop_coupon->db_datatype = old_datatype;
-	
-	if (status == E_DB_OK)
-	{
-	    /* If old value was an anonymous temp, clean it away */
-	    if (! DMPE_TCB_COMPARE_NE_MACRO(old_cpn->cpn_tcb, DMPE_TEMP_TCB))
-	    {
-		/* Delete of anon object is just a temp file drop */
-		(void) dmpe_delete(get_pop);
-	    }
-	}
-	else
-	{
-	    if (get_pop->pop_error.err_code != E_AD7001_ADP_NONEXT)
-	    {
-	        pop_cb->pop_error = get_pop->pop_error;
-	    }
-	    if (put_pop->pop_error.err_code)
-	    {
-	        pop_cb->pop_error = put_pop->pop_error;
-	    }
-	}
-	/* fall out */
-    } while (0);
-
-    if (DB_FAILURE_MACRO(status)
-	    && (pop_cb->pop_error.err_code != E_AD700A_ADP_REPLACE_ERROR))
-    {
-	if ((pop_cb->pop_error.err_code != E_DM0065_USER_INTR) &&
-            (pop_cb->pop_error.err_code != E_DM016B_LOCK_INTR_FA))
-	{
-	    uleFormat(&pop_cb->pop_error, 0, NULL, ULE_LOG,
-					NULL, (char *) NULL, 0L, (i4 *) NULL,
-					&err_code, 0);
-	    SETDBERR(&pop_cb->pop_error, 0, E_AD700A_ADP_REPLACE_ERROR);
-	}
-    }
-
-    if (object)
-	(VOID) dm0m_deallocate(&object);
-
-    return(status);
-}
-
 /*{
 ** Name: dmpe_information	- Supply caller with operational characteristics
 **
 ** Description:
 **      This routine supplies the caller with operational characteristics about
-**	the peripheral datatype service system. 
+**	the peripheral datatype service system.
 **
 ** Inputs:
 **      pop_cb                          ADP_POP_CB for calling
@@ -3060,7 +2638,7 @@ dmpe_information(ADP_POP_CB     *pop_cb )
     static  i4             dmpe_length = DMPE_CPS_COMPONENT_PART_SIZE;
 
     CLRDBERR(&pop_cb->pop_error);
-    
+
     /*
     ** When multiple page sizes are supported, then this routine will have to
     ** adjust for the underlying page size in use.  That's why the input
@@ -3083,7 +2661,7 @@ dmpe_information(ADP_POP_CB     *pop_cb )
 	dmpe_length = DMPE_TCPS_TST_COMP_PART_SIZE;
 #endif
     pop_cb->pop_underdv->db_length = dmpe_length;
-				    
+
     return(E_DB_OK);
 }
 
@@ -3097,7 +2675,7 @@ dmpe_information(ADP_POP_CB     *pop_cb )
 **	session temporary tables are handled in dmu.)
 **
 **	Based upon this id, the routine scans the iiextended_relation catalog.
-**	Any table whose parent matches the table id passed in is destroyed. 
+**	Any table whose parent matches the table id passed in is destroyed.
 **
 **	The base TCB et-list is not maintained, because this is called when
 **	the base table itself is being deleted.
@@ -3126,7 +2704,8 @@ dmpe_information(ADP_POP_CB     *pop_cb )
 **	02-jul-1998 (shust01)
 **	    Initialized cpn_rcb for fake peripheral, since it
 **	    it is used further down and has the potential to SEGV.
-[@history_template@]...
+**	15-Apr-2010 (kschendel) SIR 123485
+**	    Don't need a fake any more.
 */
 DB_STATUS
 dmpe_destroy(DMU_CB	  *base_dmu ,
@@ -3136,24 +2715,17 @@ dmpe_destroy(DMU_CB	  *base_dmu ,
     DB_STATUS           status;
     ADP_POP_CB		pop_cb;
     DMPE_PCB		*pcb;
-    ADP_PERIPHERAL	fake;
-    DB_DATA_VALUE	fake_dbdv;
     DMP_ETAB_CATALOG	etab_record;
     DMU_CB		dmu_cb;
-    DMPE_COUPON		*cpn;
 
     CLRDBERR(&pop_cb.pop_error);
-    
+
     if (DMZ_SES_MACRO(11))
 	dmd_petrace("DMPE_DESTROY requested", 0, 0 , 0);
 
-    fake.per_tag = ADP_P_COUPON;
-    cpn = (DMPE_COUPON *)&(fake.per_value.val_coupon);
-    DMPE_TCB_ASSIGN_MACRO(DMPE_NULL_TCB, cpn->cpn_tcb);
     pop_cb.pop_temporary = ADP_POP_TEMPORARY;
-    pop_cb.pop_coupon = &fake_dbdv;
+    pop_cb.pop_coupon = NULL;
     pop_cb.pop_info = NULL;
-    fake_dbdv.db_data = (PTR) &fake;
 
     dmu_cb.type = DMU_UTILITY_CB;
     dmu_cb.length = sizeof(dmu_cb);
@@ -3171,9 +2743,6 @@ dmpe_destroy(DMU_CB	  *base_dmu ,
 	return(status);
     }
 
-    pcb->pcb_dmtcb->dmt_tran_id = (PTR) pcb->pcb_xcb;
-    pcb->pcb_dmtcb->dmt_db_id = pcb->pcb_db_id;
-    
     while (status == E_DB_OK)
     {
 	status = dmpe_cat_scan(&pop_cb, &base_dmu->dmu_tbl_id, &etab_record);
@@ -3267,8 +2836,8 @@ dmpe_destroy(DMU_CB	  *base_dmu ,
 **	    we were setting the dmf_svcb->svcb_blob_etab_struct to hash,
 **	    but were neglecting to change the char_entry structure value,
 **	    which was set to btree.
-**	    
-[@history_template@]...
+**	15-Apr-2010 (kschendel) SIR 123485
+**	    Don't need a fake coupon any more.
 */
 DB_STATUS
 dmpe_modify(DMU_CB	  *base_dmu ,
@@ -3286,8 +2855,6 @@ dmpe_modify(DMU_CB	  *base_dmu ,
     DB_STATUS           status;
     ADP_POP_CB		pop_cb;
     DMPE_PCB		*pcb;
-    ADP_PERIPHERAL	fake;
-    DB_DATA_VALUE	fake_dbdv;
     DMP_ETAB_CATALOG	etab_record;
     DMU_CB		dmu_cb;
     DMU_KEY_ENTRY	key_ents[DMPE_KEY_COUNT];
@@ -3298,25 +2865,20 @@ dmpe_modify(DMU_CB	  *base_dmu ,
     DMP_RCB		*rcb = (DMP_RCB *)0;
     DMP_TCB		*t;
     DMP_ET_LIST		*etlist_ptr = (DMP_ET_LIST *)0;
-    DMPE_COUPON		*cpn;
     i4		local_error;
-    bool		base_open = 0;
+    bool		base_open = FALSE;
     DB_ERROR		local_dberr;
 
     CLRDBERR(&pop_cb.pop_error);
-        
+
     if (DMZ_SES_MACRO(11))
 	dmd_petrace("DMPE_MODIFY requested", 0, 0 , 0);
 
-    fake.per_tag = ADP_P_COUPON;
-    cpn = (DMPE_COUPON *)&(fake.per_value.val_coupon);
-    DMPE_TCB_ASSIGN_MACRO(DMPE_NULL_TCB, cpn->cpn_tcb);
     pop_cb.pop_temporary = ADP_POP_TEMPORARY;
-    pop_cb.pop_coupon = &fake_dbdv;
+    pop_cb.pop_coupon = NULL;
     pop_cb.pop_info = NULL;
-    fake_dbdv.db_data = (PTR) &fake;
 
-    MEfill(sizeof(DMU_CB), 0, &dmu_cb);
+    MEfill(sizeof(DMU_CB), 0, (PTR) &dmu_cb);
     dmu_cb.type = DMU_UTILITY_CB;
     dmu_cb.length = sizeof(dmu_cb);
     dmu_cb.dmu_tran_id = base_dmu->dmu_tran_id;
@@ -3345,7 +2907,7 @@ dmpe_modify(DMU_CB	  *base_dmu ,
 	{
 	    keys[i] = &key_ents[i];
 	}
-	
+
 	MEmove(7, "per_key", ' ',
 		sizeof(key_ents[0].key_attr_name),
 	       (PTR) &key_ents[0].key_attr_name);
@@ -3399,16 +2961,13 @@ dmpe_modify(DMU_CB	  *base_dmu ,
 	dmu_cb.dmu_key_array.ptr_size = sizeof(DMU_KEY_ENTRY);
 	dmu_cb.dmu_key_array.ptr_in_count = DMPE_KEY_COUNT;
     }
-    
+
     status = dmpe_allocate(&pop_cb, &pcb);
     if (status)
     {
 	*dberr = pop_cb.pop_error;
 	return(status);
     }
-
-    pcb->pcb_dmtcb->dmt_tran_id = (PTR) pcb->pcb_xcb;
-    pcb->pcb_dmtcb->dmt_db_id = pcb->pcb_db_id;
 
     while (status == E_DB_OK)
     {
@@ -3429,7 +2988,7 @@ dmpe_modify(DMU_CB	  *base_dmu ,
 		DB_TAB_TIMESTAMP timestamp;
 
 		status = dm2t_open( dcb, tbl_id, DM2T_S, DM2T_UDIRECT,
-				    DM2T_A_READ, timeout, (i4)20,
+				    DM2T_A_READ_NOCPN, timeout, (i4)20,
 				    (i4)0, xcb->xcb_log_id,
 				    xcb->xcb_scb_ptr->scb_lock_list,
 				    (i4)0, (i4)0, db_lockmode,
@@ -3468,14 +3027,14 @@ dmpe_modify(DMU_CB	  *base_dmu ,
 	{
 	    dmu_cb.dmu_tbl_id.db_tab_base = etab_record.etab_extension;
 	    dmu_cb.dmu_tbl_id.db_tab_index = 0;
-	    
+
 	    if (truncated)
 	    {
 		char_entry[0].char_id = DMU_TRUNCATE;
 		status = dmu_modify(&dmu_cb);
 		char_entry[0].char_id = DMU_STRUCTURE;
 	    }
-	    
+
 	    if (status == E_DB_OK)
 	    {
 		status = dmu_modify(&dmu_cb);
@@ -3527,16 +3086,17 @@ dmpe_modify(DMU_CB	  *base_dmu ,
 **      17-Nov-1992 (fred)
 **          Created.
 **      17-Sep-1993 (fred)
-**          Fixup support for relocation.  Make sure to reset the 
-**          dmu_flags_mask to not include any extension related masks 
-**          for this modify.  If this is not done, then we sometimes 
+**          Fixup support for relocation.  Make sure to reset the
+**          dmu_flags_mask to not include any extension related masks
+**          for this modify.  If this is not done, then we sometimes
 **          skip the movement of this extension.
 **	31-jan-1994 (bryanp) B58477
 **	    Check return code from dmpe_allocate.
 **	02-jul-1998 (shust01)
 **	    Initialized cpn_rcb for fake peripheral, since it
 **	    it is used further down and has the potential to SEGV.
-[@history_template@]...
+**	15-Apr-2010 (kschendel) SIR 123485
+**	    Don't need a fake coupon any more.
 */
 DB_STATUS
 dmpe_relocate(DMU_CB	  *base_dmu ,
@@ -3546,28 +3106,20 @@ dmpe_relocate(DMU_CB	  *base_dmu ,
     DB_STATUS           status;
     ADP_POP_CB		pop_cb;
     DMPE_PCB		*pcb;
-    ADP_PERIPHERAL	fake;
-    DB_DATA_VALUE	fake_dbdv;
     DMP_ETAB_CATALOG	etab_record;
     DMU_CB		dmu_cb;
-    DMPE_COUPON		*cpn;
 
     CLRDBERR(&pop_cb.pop_error);
-        
+
     if (DMZ_SES_MACRO(11))
 	dmd_petrace("DMPE_RELOCATE requested", 0, 0 , 0);
 
-    fake.per_tag = ADP_P_COUPON;
-    cpn = (DMPE_COUPON *)&(fake.per_value.val_coupon);
-    DMPE_TCB_ASSIGN_MACRO(DMPE_NULL_TCB, cpn->cpn_tcb);
     pop_cb.pop_temporary = ADP_POP_TEMPORARY;
-    pop_cb.pop_coupon = &fake_dbdv;
+    pop_cb.pop_coupon = NULL;
     pop_cb.pop_info = NULL;
-    fake_dbdv.db_data = (PTR) &fake;
 
     STRUCT_ASSIGN_MACRO(*base_dmu, dmu_cb);
     dmu_cb.dmu_flags_mask &= ~(DMU_EXTTOO_MASK | DMU_EXTONLY_MASK);
-    
 
     status = dmpe_allocate(&pop_cb, &pcb);
     if (status)
@@ -3576,9 +3128,6 @@ dmpe_relocate(DMU_CB	  *base_dmu ,
 	return (status);
     }
 
-    pcb->pcb_dmtcb->dmt_tran_id = (PTR) pcb->pcb_xcb;
-    pcb->pcb_dmtcb->dmt_db_id = pcb->pcb_db_id;
-
     while (status == E_DB_OK)
     {
 	status = dmpe_cat_scan(&pop_cb, &base_dmu->dmu_tbl_id, &etab_record);
@@ -3586,7 +3135,7 @@ dmpe_relocate(DMU_CB	  *base_dmu ,
 	{
 	    dmu_cb.dmu_tbl_id.db_tab_base = etab_record.etab_extension;
 	    dmu_cb.dmu_tbl_id.db_tab_index = 0;
-	    
+
 	    status = dmu_relocate(&dmu_cb);
 
 	    pop_cb.pop_error = dmu_cb.error;
@@ -3606,26 +3155,249 @@ dmpe_relocate(DMU_CB	  *base_dmu ,
 }
 
 /*
+** Name: dmpe_find_or_create_bqcb - Find or Create Blob Context Block
+**
+** Description:
+**
+**	The BQCB (blob query context block) is created when a table
+**	containing blobs is first opened during a query.  This is
+**	the routine, called by table open, which locates the existing
+**	BQCB, or creates a new one.
+**
+**	BQCB's are linked in a simple singly linked list off of the
+**	session DML_SCB.  It ought to be quite unusual to have more than
+**	a handful of tables open per query that have LOB's in them,
+**	so an ordinary list search should suffice.
+**
+**	The caller should ensure that the table has LOB's in it before
+**	calling, and the passed-in RCB should have all of the lockmode
+**	information set up (since we'll copy table-open hints to the
+**	BQCB).
+**
+** Inputs:
+**	r		RCB that has just been opened for read or write
+**	dberr		DB_ERROR that is filled in if error
+**
+** Outputs:
+**	r->rcb_bqcb_ptr gets filled in;
+**	BQCB is created or updated.
+**	Returns E_DB_OK or error status.
+**
+** History:
+**	15-Apr-2010 (kschendel) SIR 123485
+**	    Created.
+*/
+
+/* First, a helper routine to extract common code.  This routine
+** fills in interesting info from the RCB into the BQCB.
+** Should be called with the BQCB mutex held, so that multiple
+** threads opening tables don't crash into one another.
+*/
+static void
+dmpe_update_bqcb(DMPE_BQCB *bqcb, DMP_RCB *r)
+{
+    r->rcb_bqcb_ptr = bqcb;
+    if (r->rcb_lk_type == RCB_K_CROW)
+    {
+	bqcb->bqcb_table_lock = FALSE;
+	bqcb->bqcb_x_lock = FALSE;
+	bqcb->bqcb_crib = r->rcb_crib_ptr;
+    }
+    else if (r->rcb_lk_type == RCB_K_TABLE)
+    {
+	bqcb->bqcb_crib = NULL;
+	bqcb->bqcb_table_lock = TRUE;
+	/* Set X lock if RCB is LK_X, but don't clear if it's not.
+	** A statement such as insert/select (if using LOAD) might open
+	** the same table X and S.
+	*/
+	if (r->rcb_lk_mode == LK_X)
+	    bqcb->bqcb_x_lock = TRUE;
+    }
+    else
+    {
+	/* Looks like ordinary row or page locking */
+	bqcb->bqcb_table_lock = FALSE;
+	bqcb->bqcb_x_lock = FALSE;
+	bqcb->bqcb_crib = NULL;
+    }
+} /* dmpe_update_bqcb */
+
+
+DB_STATUS
+dmpe_find_or_create_bqcb(DMP_RCB *r, DB_ERROR *dberr)
+{
+
+    DB_ATTS *att;		/* Pointer to TCB attribute array */
+    DB_STATUS status;
+    DML_SCB *scb;		/* Parent (session) thread's SCB */
+    DMPE_BQCB *bqcb;		/* Found or created BQCB */
+    DMPE_BQCB *new_bqcb;	/* Created BQCB */
+    DMPE_BQCB_ATT *bqcb_att;
+    DMP_TCB *t;			/* Base table's TCB */
+    i4 nlobs;			/* Number of blob columns */
+
+    t = r->rcb_tcb_ptr;
+    scb = r->rcb_xcb_ptr->xcb_odcb_ptr->odcb_scb_ptr;
+    dm0s_mlock(&scb->scb_bqcb_mutex);
+    bqcb = scb->scb_bqcb_next;
+    while (bqcb != NULL && bqcb->bqcb_base_id != t->tcb_rel.reltid.db_tab_base)
+	bqcb = (DMPE_BQCB *) bqcb->hdr.obj_next;
+
+    if (bqcb != NULL)
+    {
+	dmpe_update_bqcb(bqcb, r);
+	dm0s_munlock(&scb->scb_bqcb_mutex);
+	return (E_DB_OK);
+    }
+    dm0s_munlock(&scb->scb_bqcb_mutex);
+
+    /* Looks like we need to create one, count LOB attributes */
+    nlobs = 0;
+    for (att = &t->tcb_atts_ptr[t->tcb_rel.relatts];
+	 att >= &t->tcb_atts_ptr[0];
+	 --att)
+    {
+	if (att->flag & ATT_PERIPHERAL)
+	    ++nlobs;
+    }
+
+    /* Note that the BQCB is (by default) a LONGTERM allocation, because
+    ** it might be created in a factotum thread that the BQCB might
+    ** outlast.  ("session term" memory might be nice!)
+    */
+    status = dm0m_allocate( sizeof(DMPE_BQCB) + nlobs * sizeof(DMPE_BQCB_ATT),
+		DM0M_ZERO,
+		DM_BQCB_CB, BQCB_ASCII_ID,
+		(char *) scb, (DM_OBJECT **) &bqcb, dberr);
+    if (status != E_DB_OK)
+	return (status);
+
+    /* Initialize anything nonzero */
+    bqcb->bqcb_base_id = t->tcb_rel.reltid.db_tab_base;
+    bqcb->bqcb_natts = nlobs;
+    bqcb_att = &bqcb->bqcb_atts[0];
+    for (att = &t->tcb_atts_ptr[1];
+	 att <= &t->tcb_atts_ptr[t->tcb_rel.relatts];
+	 ++att)
+    {
+	if (att->flag & ATT_PERIPHERAL)
+	{
+	    bqcb_att->bqcb_att_id = att - t->tcb_atts_ptr;
+	    if (att->geomtype != -1)
+		bqcb_att->bqcb_srid = att->srid;
+	    ++bqcb_att;
+	}
+    }
+
+    /* Before hooking into the BQCB list, make sure that some other
+    ** session thread hasn't snuck in and created the darn thing first.
+    ** Do the search thing all over again.
+    */
+    new_bqcb = bqcb;
+    scb = r->rcb_xcb_ptr->xcb_odcb_ptr->odcb_scb_ptr;
+    dm0s_mlock(&scb->scb_bqcb_mutex);
+    bqcb = scb->scb_bqcb_next;
+    while (bqcb != NULL && bqcb->bqcb_base_id != t->tcb_rel.reltid.db_tab_base)
+	bqcb = (DMPE_BQCB *) bqcb->hdr.obj_next;
+
+    if (bqcb != NULL)
+    {
+	dmpe_update_bqcb(bqcb, r);
+	dm0s_munlock(&scb->scb_bqcb_mutex);
+	dm0m_deallocate((DM_OBJECT **) &new_bqcb);  /* All for naught */
+    }
+    else
+    {
+	new_bqcb->hdr.obj_next = (DM_OBJECT *) scb->scb_bqcb_next;
+	scb->scb_bqcb_next = new_bqcb;	/* Link in front */
+	dmpe_update_bqcb(new_bqcb, r);
+	dm0s_munlock(&scb->scb_bqcb_mutex);
+    }
+    return (E_DB_OK);
+
+} /* dmpe_find_or_create_bqcb */
+
+/*
+** Name: dmpe_purge_bqcb - Purge Blob Query Context (BQCB) for a table
+**
+** Description:
+**	If a DDL operation causes a base table's TCB to be forcibly
+**	purged, it's necessary to make sure that no BQCB for that table
+**	exists either.  A BQCB has a list of blob attributes in it,
+**	and if the table now has a different definition, that list may
+**	be obsolete.
+**
+** Inputs:
+**	base_id			The base table base ID.
+**
+** Outputs:
+**	None.
+**
+** History:
+**	22-Apr-2010 (kschendel) SIR 123485
+**	    Write, for alter table add/drop/alter long varchar column.
+*/
+
+void
+dmpe_purge_bqcb(i4 base_id)
+{
+    CS_SID sid;
+    DML_SCB *thread_scb, *scb;		/* Thread and session-parent SCB's */
+    DMPE_BQCB *bqcb, *prev_bqcb;
+
+    CSget_sid(&sid);
+    thread_scb = GET_DML_SCB(sid);
+    if (thread_scb == NULL)
+	return;				/* Probably rollforward */
+    scb = thread_scb->scb_oq_next->odcb_scb_ptr;
+    dm0s_mlock(&scb->scb_bqcb_mutex);
+    prev_bqcb = NULL;
+    bqcb = scb->scb_bqcb_next;		/* Look for matching BQCB */
+    while (bqcb != NULL && bqcb->bqcb_base_id != base_id)
+    {
+	prev_bqcb = bqcb;
+	bqcb = (DMPE_BQCB *) bqcb->hdr.obj_next;
+    }
+    if (bqcb != NULL)
+    {
+	/* Found it, take it off the list */
+	if (prev_bqcb == NULL)
+	    scb->scb_bqcb_next = (DMPE_BQCB *) bqcb->hdr.obj_next;
+	else
+	    prev_bqcb->hdr.obj_next = bqcb->hdr.obj_next;
+    }
+    dm0s_munlock(&scb->scb_bqcb_mutex);
+    if (bqcb != NULL)
+	dm0m_deallocate((DM_OBJECT **) &bqcb);
+
+} /* dmpe_purge_bqcb */
+
+/*
 ** {
 ** Name: dmpe_allocate	- Allocate a peripheral control block.
 **
 ** Description:
-**      This routine allocates a peripheral control block.  This is used by DMF
-**	to maintain context between calls to the multicall operations of
-**	dmpe_put() and dmpe_get().
+**      This routine allocates a peripheral control block, DMPE_PCB.
+**	As an adjunct to the PCB, we also allocate space for a DMT_CB,
+**	a DMR_CB, one DMPE_RECORD (aka etab row), and enough PTR's
+**	and DMR_ATTR_ENTRY's to make up an etab key array for DMR_POSITION
+**	type calls.  Thus, the PCB is useful not only for multi-call
+**	operations like put/get, but also for DDL/DMU type operations
+**	that require dmr / dmt calls.
 **
+**	Upon return, the non-LOB-specific parts of the PCB are initialized,
+**	and the DMT/DMR cb's partially set up.  Any parts of the PCB that
+**	are dependent on the base table or specific LOB column are
+**	zeroed;  to set those up (as for get or put), use dmpe_begin_dml
+**	instead of dmpe_allocate.
 **
 ** Inputs:
 **      pop_cb			ADP_POP_CB for which to allocate...
-**	    pop_info		Optional DB_BLOB_WKSP info block (puts only).
-**				If table name passed via pop_info,
-**				we'll attempt to aim the blob at its final
-**				etab if we can figure it out.
 **      pcb_ptr                 Ptr to ptr to pcb to allocate
 **
 ** Outputs:
 **      *pcb_ptr                Filled with the result
-**	    pcb_put_optim	Set TRUE if blob can be put to real etab.
 **      pop_cb...
 **	    pop_user_arg        Filled with result
 **
@@ -3645,11 +3417,11 @@ dmpe_relocate(DMU_CB	  *base_dmu ,
 **          objects in cases where multiple streams are necessary.
 **	24-Mar-1998 (thaju02)
 **          Bug #87880 - inserting or copying blobs into a temp table chews
-**          up cpu, locks and file descriptors. 
+**          up cpu, locks and file descriptors.
 **      29-Jun-98 (thaju02)
 **          Regression bug: with autocommit on, temporary tables created
 **          during blob insertion, are not being destroyed at statement
-**          commital, but are being held until session termination. 
+**          commital, but are being held until session termination.
 **          Regression due to fix for bug 87880. (B91469)
 **	feb-mar-99 (stephenb)
 **	    Add code to allow peripheraal inserts to load directly into
@@ -3663,7 +3435,7 @@ dmpe_relocate(DMU_CB	  *base_dmu ,
 **      30-jul-1999 (stial01)
 **          Fix up error handling, initialization of pop_cb->pop_temporary
 **	14-oct-99 (stephenb)
-**	    Set SCB_BLOB_OPTIM in the DML_SCB session mask if we used the 
+**	    Set SCB_BLOB_OPTIM in the DML_SCB session mask if we used the
 **	    base etab to store the segments.
 **      07-mar-2000 (stial01)
 **          Disable blob optimization for spatial  (B100776)
@@ -3676,30 +3448,20 @@ dmpe_relocate(DMU_CB	  *base_dmu ,
 **          will be journaled.
 **	17-Apr-2008 (kibro01) b120276
 **	    Initialise ADF_CB structure
-[@history_template@]...
+**	12-Apr-2010 (kschendel) SIR 123485
+**	    Split out blob optim stuff to dmpe_begin_dml.
 */
 static DB_STATUS
 dmpe_allocate(ADP_POP_CB     *pop_cb ,
-               DMPE_PCB  **pcb_ptr )
+               DMPE_PCB  **pcb_ptr)
 {
     DB_STATUS           status;
     DMPE_PCB		*pcb = (DMPE_PCB *)0;
-    DMR_ATTR_ENTRY	**ptr_place;
-    DMR_ATTR_ENTRY	*attr_entry;
-    DMPE_COUPON		*cpn;
-    DMT_SHW_CB		dmt_shw;
-    DMT_TBL_ENTRY	dmt_tbl_entry;
     CS_SID		sid;
     DML_SCB		*scb;
-    DMP_RCB		*rcb = 0;	/* Base RCB for optim case */
-    DMP_TCB		*tcb = 0;
-    i4			att_num = 0;
-    DB_BLOB_WKSP        *ins_work = (DB_BLOB_WKSP *)0;
-    u_i4                low, high;
-    DMP_TCB		*cpn_tcb;
-    DML_XCB		*xcb = NULL;
-    i4			error;
-
+    DML_XCB		*xcb;
+    DMR_ATTR_ENTRY	**ptr_place;
+    DMR_ATTR_ENTRY	*attr_entry;
 
     do
     {
@@ -3712,12 +3474,7 @@ dmpe_allocate(ADP_POP_CB     *pop_cb ,
 	/*
 	**  To operate, we need the pcb, plus the record to read in & out of,
 	**  plus a DMR_CB and a DMT_CB to perform table manipulations with,
-	**  
 	*/
-	cpn = (DMPE_COUPON *) &((ADP_PERIPHERAL *)
-			    pop_cb->pop_coupon->db_data)->per_value.val_coupon;
-
-	DMPE_TCB_ASSIGN_MACRO(cpn->cpn_tcb, cpn_tcb);
 
 	status = dm0m_allocate(	(sizeof(DMPE_PCB)
 				    + sizeof(DMPE_RECORD)
@@ -3729,29 +3486,29 @@ dmpe_allocate(ADP_POP_CB     *pop_cb ,
 			(i4) 0,
 			(i4) PCB_CB,
 			(i4) PCB_ASCII_ID,
-			(char *) cpn_tcb,
+			(char *) pop_cb,
 			(DM_OBJECT **) pcb_ptr,
 			&pop_cb->pop_error);
 	if (status)
 	    break;
-	    
+
 	pop_cb->pop_user_arg = (PTR) (*pcb_ptr);
 	pcb = *pcb_ptr;
 
-	/* 
-	** We MUST init pcb_tcb and pcb_got_mutex before doing any code
-	** that could cause an error
-	*/
-	pcb->pcb_tcb = 0;
-	pcb->pcb_got_mutex = 0;
+	pcb->pcb_tcb = NULL;
+	pcb->pcb_fixed_tcb = FALSE;
 	pcb->pcb_self = pcb;
 	pcb->pcb_fblk.adf_r_dv.db_data = NULL;
-	pcb->pcb_fblk.adf_fi_id = 0;
-	pcb->pcb_base_dmtcb.dmt_record_access_id = 0; /* base table closed*/
+	pcb->pcb_fblk.adf_fi_id = ADI_NOFI;
 	pcb->pcb_xcb = NULL;
 	pcb->pcb_db_id = 0;
 	pcb->pcb_xq_next = NULL;
-	pcb->pcb_put_optim = FALSE;
+	pcb->pcb_bqcb = NULL;
+	pcb->pcb_att_id = 0;
+	pcb->pcb_et = NULL;
+	pcb->pcb_held_record = NULL;
+	pcb->pcb_loaded = 0;
+	pcb->pcb_per_etab = 0;
 
 	/* The transaction ID for any operations from this PCB is the
 	** current thread's tranid.  In a parallel query situation we
@@ -3759,8 +3516,9 @@ dmpe_allocate(ADP_POP_CB     *pop_cb ,
 	** has attached to it via shared transaction connect.
 	*/
 	CSget_sid(&sid);
+	pcb->pcb_sid = sid;
 	scb = GET_DML_SCB(sid);
-    
+
 	if (scb->scb_x_ref_count > 0)
 	{
 	    xcb = scb->scb_x_next;
@@ -3774,262 +3532,6 @@ dmpe_allocate(ADP_POP_CB     *pop_cb ,
 	    break;
 	}
 
-	/*
-	** We may have been passed the target table name in the pop cb, if
-	** we have this then we can place the segments directly into the
-	** target table (provided it only has one peripheral field)
-	*/
-	do	/* to break from */
-	{
-	    bool	owner_given = FALSE;
-	    i4		i;
-	    ADF_CB	adf_scb;
-	    i4		dt_bits;
-
-	    /* bail if we have no info */
-	    if (pop_cb->pop_info == NULL)
-		break;
-
-	    ins_work = (DB_BLOB_WKSP *)pop_cb->pop_info;
-
-	    /* bail if tablename info is invalid */
-	    if ((ins_work->flags & BLOBWKSP_TABLENAME) == 0)
-		break;
-	  
-	    /* Now get the table info from the name */
-	    dmt_shw.type = DMT_SH_CB;
-	    dmt_shw.length = sizeof(DMT_SHW_CB);
-	    dmt_shw.dmt_char_array.data_in_size = 0;
-	    dmt_shw.dmt_flags_mask = DMT_M_TABLE | DMT_M_NAME;
-	    dmt_shw.dmt_table.data_address = (PTR) &dmt_tbl_entry;
-	    dmt_shw.dmt_table.data_in_size = sizeof(DMT_TBL_ENTRY);
-	    dmt_shw.dmt_char_array.data_address = (PTR)NULL;
-	    dmt_shw.dmt_char_array.data_in_size = 0;
-	    dmt_shw.dmt_char_array.data_out_size  = 0;
-	    dmt_shw.error.err_code = 0;
-
-	    dmt_shw.dmt_session_id = sid;
-	    dmt_shw.dmt_db_id = pcb->pcb_db_id;
-
-	    MEcopy(ins_work->table_name.db_tab_name, sizeof(DB_TAB_NAME), 
-		&dmt_shw.dmt_name);
-	    if (ins_work->table_owner.db_own_name[0] && 
-		ins_work->table_owner.db_own_name[0] != ' ')
-	    {
-		/* owner provided, use it */
-		owner_given = TRUE;
-		MEcopy(ins_work->table_owner.db_own_name, sizeof(DB_OWN_NAME), 
-		    &dmt_shw.dmt_owner);
-	    }
-	    else
-	    {
-		/* try user first */
-		MEcopy(&scb->scb_user, sizeof(DB_OWN_NAME), 
-		    &dmt_shw.dmt_owner);
-	    }
-
-	    status = dmt_show(&dmt_shw);
-	    if (status != E_DB_OK && owner_given == FALSE && 
-		dmt_shw.error.err_code == E_DM0054_NONEXISTENT_TABLE)
-	    {
-		/* try again with DBA */
-		MEcopy(&xcb->xcb_odcb_ptr->odcb_dcb_ptr->dcb_db_owner,
-		    sizeof(DB_OWN_NAME), &dmt_shw.dmt_owner);
-		dmt_shw.error.err_code = 0;
-		status = dmt_show(&dmt_shw);
-	    }
-	    /* bail if we can't get table info */
-	    if (status != E_DB_OK)
-	    {
-		status = E_DB_OK;
-		break;
-	    }
-
-	    /* 
-	    ** We've found the table. We need to open it to 
-	    ** check to see if datatype is coercable and set up the coercion
-	    */
-	    MEfill(sizeof(DMT_CB), 0, &pcb->pcb_base_dmtcb);
-	    pcb->pcb_base_dmtcb.type = DMT_TABLE_CB;
-	    pcb->pcb_base_dmtcb.length = sizeof(DMT_TABLE_CB);
-	    pcb->pcb_base_dmtcb.dmt_db_id = pcb->pcb_db_id;
-	    pcb->pcb_base_dmtcb.dmt_tran_id = (PTR) pcb->pcb_xcb;
-	    pcb->pcb_base_dmtcb.dmt_id.db_tab_base = 
-		dmt_tbl_entry.tbl_id.db_tab_base;
-	    pcb->pcb_base_dmtcb.dmt_id.db_tab_index = 
-		dmt_tbl_entry.tbl_id.db_tab_index;
-	    pcb->pcb_base_dmtcb.dmt_flags_mask = DMT_DBMS_REQUEST;
-	    pcb->pcb_base_dmtcb.dmt_lock_mode = DMT_N;
-	    pcb->pcb_base_dmtcb.dmt_update_mode = DMT_U_DIRECT;
-	    pcb->pcb_base_dmtcb.dmt_access_mode = DMT_A_OPEN_NOACCESS;
-	    status = dmt_open(&pcb->pcb_base_dmtcb);
-	    /* bail of open failed */
-	    if (status != E_DB_OK)
-	    {
-		status = E_DB_OK;
-		break;
-	    }
-
-	    rcb = (DMP_RCB *)pcb->pcb_base_dmtcb.dmt_record_access_id;
-	    tcb = rcb->rcb_tcb_ptr;
-
-	    MEfill(sizeof(ADF_CB),0,(PTR)&adf_scb);
-
-	    /* Check for flags BLOBWKSP_ATTID (caller gives att num) */
-	    if (ins_work->flags & BLOBWKSP_ATTID)
-	    {
-		att_num = ins_work->base_attid;
-		break;
-	    }
-
-	    /* Make sure there is only one peripheral column */
-	    for (i = 1; i <= tcb->tcb_rel.relatts; i++)
-	    {
-		status = adi_dtinfo(&adf_scb, tcb->tcb_atts_ptr[i].type, 
-		    &dt_bits);
-		if (status != E_DB_OK)
-		    break;
-		if (dt_bits & AD_PERIPHERAL)
-		{
-		    if (att_num)
-		    {
-			/* already found one, can't handle two, bail */
-			att_num = 0;
-			status = E_DB_ERROR;
-			break;
-		    }
-		    else
-			att_num = i;
-		}
-	    }
-	    if (status != E_DB_OK || att_num == 0)
-	    {
-		status = E_DB_OK;
-	    }
-        } while (0);
-	if (rcb && !att_num)
-	{
-	    pcb->pcb_base_dmtcb.dmt_flags_mask = 0;
-	    /* close table an bail */
-	    status = dmt_close(&pcb->pcb_base_dmtcb);
-	    pcb->pcb_base_dmtcb.dmt_record_access_id = 0;
-	}
-	if (att_num) /* peripheral att was found */
-	{
-	    DB_DATA_VALUE	source_under, target_under;
-	    ADF_CB		adf_scb;
-	    MEfill(sizeof(ADF_CB), 0, (PTR)&adf_scb);
-	    /* 
-	    ** check to see if datatype is coercable and set up the coercion
-	    ** function block
-	    ** We can only do this optimization for LBYTE, LVCH
-	    ** We cannot do this optimization for long spacial (B100776)
-	    ** because the size might change.
-	    */
-	    if (ins_work->source_dt == tcb->tcb_atts_ptr[att_num].type ||
-		((abs(tcb->tcb_atts_ptr[att_num].type) == DB_LVCH_TYPE ||
-		abs(tcb->tcb_atts_ptr[att_num].type) == DB_LBYTE_TYPE) &&
-		adi_per_under(&adf_scb, ins_work->source_dt, &source_under)
-		     == E_DB_OK &&
-		 adi_per_under(&adf_scb, tcb->tcb_atts_ptr[att_num].type, 
-		     &target_under) == E_DB_OK &&
-		 (source_under.db_datatype == DB_VCH_TYPE ||
-		     source_under.db_datatype == DB_VBYTE_TYPE) &&
-		 (target_under.db_datatype == DB_VCH_TYPE ||
-		     target_under.db_datatype == DB_VBYTE_TYPE) &&
-		 adi_ficoerce(&adf_scb, source_under.db_datatype, 
-		     target_under.db_datatype, &pcb->pcb_fblk.adf_fi_id) 
-		     == E_DB_OK &&
-		 adf_scb.adf_errcb.ad_errcode == E_AD0000_OK))
-	    {
-	        STATUS		cl_stat;
-		pcb->pcb_fblk.adf_r_dv.db_data = 
-		    MEreqmem(0, DMPE_SEGMENT_LENGTH, TRUE, &cl_stat);
-		if (pcb->pcb_fblk.adf_r_dv.db_data)
-		{
-		    pcb->pcb_fblk.adf_r_dv.db_length = DMPE_SEGMENT_LENGTH;
-		    pcb->pcb_fblk.adf_r_dv.db_datatype = 
-			target_under.db_datatype;
-		    /* Tell sequencer that optimization is working,
-		    ** we're couponifying directly into etab.
-		    */
-		    ins_work->flags |= (BLOBWKSP_BASE_USED | BLOBWKSP_ATTID);
-		    ins_work->base_attid = att_num;
-		    pcb->pcb_put_optim = TRUE;
-		    ins_work->source_dt = tcb->tcb_atts_ptr[att_num].type;
-		    pop_cb->pop_temporary = ADP_POP_PERMANENT;
-
-		    /* Set base TCB for dmpe-put */
-		    DMPE_TCB_ASSIGN_MACRO(tcb, cpn->cpn_tcb);
-		    cpn_tcb = tcb;
-
-		    /* check for delayed bt */
-		    if ( (xcb->xcb_flags & XCB_DELAYBT) &&
-			((xcb->xcb_flags & XCB_NOLOGGING) ||
-			    (rcb->rcb_logging != 0)) )
-		    {
-                        i4 journal = is_journal(rcb);
-
-			status = dmxe_writebt(xcb, journal, &pop_cb->pop_error);
-			if (status != E_DB_OK)
-			{
-			    xcb->xcb_state |= XCB_TRANABORT;
-			    break;
-			}
-		    }
-
-		    /* Ask for a fresh key */
-		    status = dm1c_get_high_low_key(tcb, rcb, &high, &low,
-			    &pop_cb->pop_error);
-
-		    if (status != E_DB_OK)
-		    {
-			if (pop_cb->pop_error.err_code == 
-			    E_DM9380_TAB_KEY_OVERFLOW)
-			{
-			    /* error can be returned from dm1c_sys_init(), not 
-			    ** logged there because it doesn't have the 
-			    ** necessary context for the error parameters.
-			    */
-			    uleFormat(&pop_cb->pop_error, 0, 
-				(CL_ERR_DESC *) NULL, ULE_LOG, 
-				NULL, (char *) NULL, (i4) 0, (i4 *) NULL, 
-				&error, 3, 
-				sizeof(DB_TAB_NAME), 
-				&tcb->tcb_rel.relid, sizeof(DB_OWN_NAME), 
-				&tcb->tcb_rel.relowner, sizeof(DB_DB_NAME), 
-				&tcb->tcb_dcb_ptr->dcb_name);
-
-			    SETDBERR(&pop_cb->pop_error, 0, E_DM9381_DM2R_PUT_RECORD);
-			}
-
-			return(E_DB_ERROR);
-		    }
-		    cpn->cpn_log_key.tlk_low_id = low;
-		    cpn->cpn_log_key.tlk_high_id = high;
-		}
-	    }
-	    else
-	    {
-		if (rcb)
-		{
-		    pcb->pcb_base_dmtcb.dmt_flags_mask = 0;
-		    status = dmt_close(&pcb->pcb_base_dmtcb);
-		    pcb->pcb_base_dmtcb.dmt_record_access_id = 0;
-		}
-	    }
-	}
-
-	/* Base table TCB if we know it.
-	** Don't attempt to fill in tcb if this is a holding temp
-	** operation, because the coupon might be uninitialized
-	** garbage.
-	*/
- 	if (pop_cb->pop_temporary == ADP_POP_PERMANENT
-	  && DMPE_TCB_COMPARE_NE_MACRO(cpn_tcb, DMPE_TEMP_TCB))
-	{
-	    pcb->pcb_tcb = cpn_tcb;
-	}
 	/* Queue PCB to thread's XCB so that PCB stuff can be cleaned up
 	** upon thread interrupt/abort.
 	*/
@@ -4038,35 +3540,32 @@ dmpe_allocate(ADP_POP_CB     *pop_cb ,
 	pcb->pcb_record = (DMPE_RECORD *) ((char *) pcb + sizeof(DMPE_PCB));
 	pcb->pcb_record->prd_segment0 = 0;
 	pcb->pcb_record->prd_segment1 = 0;
-	
-	pcb->pcb_scan_list = 0;
+
 	pcb->pcb_cat_scan = 0;
 	pcb->pcb_seg0_next = 0;
 	pcb->pcb_seg1_next = 0;
 	pcb->pcb_table_previous.db_tab_base = 0;
 	pcb->pcb_table_previous.db_tab_index = 0;
-	
-	STRUCT_ASSIGN_MACRO(cpn->cpn_log_key, pcb->pcb_record->prd_log_key);
-	
-	pcb->pcb_rsize = DMPE_CPS_COMPONENT_PART_SIZE;
+
 	pcb->pcb_dmrcb = (DMR_CB *) ((char *) pcb->pcb_record +
 						sizeof(DMPE_RECORD));
-	MEfill(sizeof(DMR_CB), 0, pcb->pcb_dmrcb);
+	MEfill(sizeof(DMR_CB), 0, (PTR) pcb->pcb_dmrcb);
 	pcb->pcb_dmrcb->length = sizeof(DMR_CB);
 	pcb->pcb_dmrcb->type = DMR_RECORD_CB;
 	pcb->pcb_dmrcb->ascii_id = DMR_ASCII_ID;
+	pcb->pcb_dmrcb->dmr_access_id = NULL;
 	pcb->pcb_dmrcb->dmr_data.data_address = (char *) pcb->pcb_record;
 	pcb->pcb_dmrcb->dmr_data.data_in_size = sizeof(DMPE_RECORD);
 	pcb->pcb_dmrcb->dmr_attr_desc.ptr_in_count = DMPE_KEY_COUNT;
 	pcb->pcb_dmrcb->dmr_attr_desc.ptr_size = sizeof(DMR_ATTR_ENTRY);
-	pcb->pcb_dmrcb->dmr_attr_desc.ptr_address = (PTR) 
+	pcb->pcb_dmrcb->dmr_attr_desc.ptr_address = (PTR)
 			((char *) pcb->pcb_dmrcb + sizeof(DMR_CB));
 	ptr_place =
 	    (DMR_ATTR_ENTRY **) pcb->pcb_dmrcb->dmr_attr_desc.ptr_address;
 	*ptr_place = (DMR_ATTR_ENTRY *)
 	    ((char *) pcb->pcb_dmrcb->dmr_attr_desc.ptr_address
 	                      + (DMPE_KEY_COUNT * sizeof(PTR)));
-	
+
 	attr_entry = (DMR_ATTR_ENTRY *) *ptr_place;
 	attr_entry->attr_operator = DMR_OP_EQ;
 	attr_entry->attr_number = 1;
@@ -4088,19 +3587,20 @@ dmpe_allocate(ADP_POP_CB     *pop_cb ,
 
 	pcb->pcb_dmtcb = (DMT_CB *) (attr_entry + 1);
 
-	MEfill(sizeof(DMT_CB), 0, pcb->pcb_dmtcb);
+	MEfill(sizeof(DMT_CB), 0, (PTR) pcb->pcb_dmtcb);
 	pcb->pcb_dmtcb->length = sizeof(DMT_CB);
 	pcb->pcb_dmtcb->type = DMT_TABLE_CB;
 	pcb->pcb_dmtcb->ascii_id = DMT_ASCII_ID;
+	pcb->pcb_dmtcb->dmt_record_access_id = NULL;
+	pcb->pcb_dmtcb->dmt_tran_id = (PTR) pcb->pcb_xcb;
+	pcb->pcb_dmtcb->dmt_db_id = pcb->pcb_db_id;
 
     } while (0);
 
     if (status && pcb)
     {
-	if (pcb->pcb_fblk.adf_r_dv.db_data)
-	    (VOID)MEfree(pcb->pcb_fblk.adf_r_dv.db_data);
 	dmpe_deallocate(pcb);
-	pop_cb->pop_user_arg = (PTR)0;
+	pop_cb->pop_user_arg = NULL;
     }
 
     return(status);
@@ -4132,7 +3632,11 @@ dmpe_allocate(ADP_POP_CB     *pop_cb ,
 **          Created.
 **	10-May-2004 (schka24)
 **	    Take PCB off of cleanup list when it's deallocated..
-[@history_template@]...
+**	6-Apr-2010 (kschendel) SIR 123485
+**	    Deallocate coercion data area here, so we don't leak memory if
+**	    the dmpe operation is interrupted.
+**	    Clean up ET list entries if any point to this PCB.
+**	    Unfix tcb if we fixed it in dmpe-begin-dml.
 */
 void
 dmpe_deallocate(DMPE_PCB      *pcb )
@@ -4158,13 +3662,1029 @@ dmpe_deallocate(DMPE_PCB      *pcb )
 		else
 		    pcb->pcb_xcb->xcb_pcb_list = pcb->pcb_xq_next;
 	}
-	if (pcb->pcb_got_mutex)
-	    dm0s_munlock(pcb->pcb_got_mutex);
-	    
+	if (pcb->pcb_tcb != NULL)
+	{
+	    DMP_ET_LIST *etl;
+
+	    /* Make sure that no ET list entries were pointing at this PCB.
+	    ** Shouldn't happen, but make sure!
+	    ** Don't close any etabs, let session or query or abort cleanup
+	    ** that closes all open tables do that part.
+	    */
+	    dm0s_mlock(&pcb->pcb_tcb->tcb_et_mutex);
+	    etl = pcb->pcb_tcb->tcb_et_list;
+	    if (etl != NULL)
+	    {
+		do
+		{
+		    if (etl->etl_etab.etab_type == DMP_LO_ETAB
+		      && etl->etl_pcb == pcb)
+		    {
+			etl->etl_pcb = NULL;
+			etl->etl_access_id = NULL;
+			etl->etl_sid = 0;
+			etl->etl_status &= ~(ETL_LOAD | ETL_FULL_MASK);
+		    }
+		    etl = etl->etl_next;
+		} while (etl != pcb->pcb_tcb->tcb_et_list);
+	    }
+	    dm0s_munlock(&pcb->pcb_tcb->tcb_et_mutex);
+	}
+	if (pcb->pcb_fblk.adf_r_dv.db_data)
+	    (VOID)MEfree(pcb->pcb_fblk.adf_r_dv.db_data);
+	if (pcb->pcb_fixed_tcb)
+	{
+	    DB_ERROR toss_error;
+	    i4 lk_list_id = pcb->pcb_xcb->xcb_lk_id;
+	    if (pcb->pcb_tcb->tcb_rel.reltid.db_tab_base < 0)
+		lk_list_id = pcb->pcb_xcb->xcb_scb_ptr->scb_lock_list;
+	    (void) dm2t_unfix_tcb(&pcb->pcb_tcb, DM2T_VERIFY,
+			lk_list_id, pcb->pcb_xcb->xcb_log_id,
+			&toss_error);
+	}
+	if (pcb->pcb_held_record != NULL)
+	    dm0m_tbdealloc((char **) &pcb->pcb_held_record);
+
 	dm0m_deallocate((DM_OBJECT **) &pcb);
     }
     return;
 }
+
+/*
+** Name: dmpe_begin_dml - Setup for GET or PUT operations
+**
+** Description:
+**
+**	This routine sets up context data needed for dmpe
+**	operations that actually read or write LOB data, i.e.
+**	the dmpe_get and dmpe_put operations.  It allocates a PCB
+**	(unless we can find one from a continued bulk-load), and
+**	determines the query context if known.
+**
+**	For GET, we need to determine the query context (so that
+**	etabs can be opened properly).  This might come from a
+**	DB_BLOB_WKSP hooked to the pop_cb, or it might arrive
+**	as data in the short-term part of the DMF coupon.
+**
+**	For PUT, the query context is also needed, but in the put
+**	case the only available source is a DB_BLOB_WKSP.  If no
+**	base table info is suppled, the put will have to go to a
+**	holding temp.  Additionally, for put (if not to a temp),
+**	the coupon might need a logical key assigned to it.  And
+**	finally, if no bulk-load decision was made for this query
+**	yet, see if it would be possible to try bulk-loading into etabs.
+**
+**	For either operation, again if not to a holding temp, the
+**	get/put code will need safe access to the etab list in the
+**	base TCB.  So, if there is no assurance that the base TCB is
+**	fixed / opened already, fix it so that dmpe get/put can be
+**	assured that the base TCB won't be reclaimed out from under (!).
+**	The corresponding unfix will happen in dmpe_deallocate.
+**	"Assurance" here means either a) the caller passed a wksp
+**	with access-id (ie RCB) filled in, or b) the BQCB we end up
+**	with has an RCB open against the base table for logical-key
+**	generation.
+**
+**	Note:  while there's a lot of code here, most of it is for
+**	first-time-thru-the-query setup.  Once the query is off and
+**	running, the normal path should be fairly quick.
+**
+** Inputs:
+**	pop_cb			Pointer to ADP_POP_CB
+**	    pop_coupon		DB_DATA_VALUE pointing to coupon
+**	    pop_info		Optional pointer to DB_BLOB_WKSP
+**	pcbp			Pointer to pointer to DMPE_PCB
+**	is_put			TRUE if put direction, else get
+**
+** Outputs:
+**	(if put) coupon filled in with flags, logical key.
+**	*pcbp points to allocated or retrieved PCB.
+**	pcb_bqcb, pcb_tcb filled in unless coupon is for holding temp.
+**	Returns E_DB_OK or error
+**
+** History:
+**	15-Apr-2010 (kschendel) SIR 123485
+**	    Written.
+*/
+
+static DB_STATUS
+dmpe_begin_dml(ADP_POP_CB *pop_cb, DMPE_PCB **pcbp, bool is_put)
+{
+
+    DB_BLOB_WKSP        *wksp;
+    DB_STATUS		status = E_DB_OK;
+    DML_SCB		*ses_scb;	/* Session thread SCB */
+    DML_XCB		*xcb;
+    DMPE_BQCB		*bqcb;
+    DMPE_COUPON		*cpn;
+    DMPE_PCB		*pcb;
+    DMP_RCB		*rcb;		/* Logical-key generator RCB */
+    i4			att_num;
+    i4			base_id;
+    i4			natts;		/* Attribute count */
+
+    cpn = DMPE_CPN_FROM_DBV_MACRO(pop_cb->pop_coupon);
+    wksp = (DB_BLOB_WKSP *) pop_cb->pop_info;
+    bqcb = NULL;
+    att_num = 0;
+    base_id = 0;
+
+    /* First, try to figure out what the base table is, directly or
+    ** indirectly.
+    */
+    if (!is_put)
+    {
+	/* Get: if we have a workspace that passed access-id (and att-id),
+	** use that.  Otherwise, use the coupon.
+	** Get doesn't currently have any long-term operations that re-use
+	** a PCB, so start by creating one.
+	*/
+	status = dmpe_allocate(pop_cb, pcbp);
+	if (status != E_DB_OK)
+	    return (status);
+	pcb = *pcbp;
+	xcb = pcb->pcb_xcb;
+	ses_scb = xcb->xcb_odcb_ptr->odcb_scb_ptr;
+	if (wksp != NULL
+	  && (wksp->flags & (BLOBWKSP_ACCESSID | BLOBWKSP_ATTID)) == (BLOBWKSP_ACCESSID | BLOBWKSP_ATTID))
+	{
+	    bqcb = ((DMP_RCB *)(wksp->access_id))->rcb_bqcb_ptr;
+	    att_num = wksp->base_attid;
+	}
+	if ((bqcb == NULL || att_num == 0)
+	  && (cpn->cpn_flags & DMPE_CPN_TEMP) == 0)
+	{
+	    base_id = cpn->cpn_base_id;
+	    att_num = cpn->cpn_att_id;
+	}
+	/* Gotta have something by now, or it's an error */
+	if ( ((bqcb == NULL && base_id == 0) || att_num == 0)
+	  && (cpn->cpn_flags & DMPE_CPN_TEMP) == 0)
+	{
+	    /* NOTE: this is now a lot stricter than it used to be.
+	    ** A non-temporary coupon *must* have short term context.
+	    ** I've managed to fix all the known places that was not
+	    ** setting up coupon context, but at the cost of much
+	    ** weeping, gnashing of teeth, and hair-pulling.  And I
+	    ** don't have that much hair left...
+	    ** So, if this error turns up in some situation where a fix
+	    ** seems intractable, consider relaxing this to not be an error,
+	    ** and either a) teach dmpe-get/put to operate without a tcb,
+	    ** bqcb, etc etc as a fallback, OR b) search the world using
+	    ** the etab table ID and find the base ID/attnum that way.
+	    ** (b) would be better, but (much) more expensive since it might
+	    ** involve an iiextended_relation catalog search.
+	    ** (kschendel Apr 2010)
+	    */
+	    TRdisplay("%@ dmpe_begin_dml: Can't resolve GET\nbqcb: %p, base_id %d, att %d, wksp-flags %x\n",
+			bqcb, base_id, att_num, wksp ? wksp->flags : -1);
+	    SETDBERR(&pop_cb->pop_error, 0, E_AD700B_ADP_BAD_POP_CB);
+	    dmpe_deallocate(pcb);
+	    pop_cb->pop_user_arg = NULL;
+	    return (E_DB_ERROR);
+	}
+    }
+    else
+    {
+	/* Put: it's the workspace or nothing. */
+	/* If there's a passed access-id in the workspace, it might be a
+	** load, and we might be re-using a PCB.  Otherwise, allocate one.
+	*/
+	cpn->cpn_flags = 0;		/* We'll compute this */
+	pcb = NULL;
+	if (wksp != NULL
+	  && (wksp->flags & (BLOBWKSP_ACCESSID | BLOBWKSP_ATTID)) == (BLOBWKSP_ACCESSID | BLOBWKSP_ATTID))
+	{
+	    DMP_RCB *r = (DMP_RCB *) (wksp->access_id);
+
+	    /* Most common case, base table RCB passed in. */
+	    bqcb = r->rcb_bqcb_ptr;
+	    att_num = wksp->base_attid;
+	    /* If we know we might be bulk-loading an etab, look for an
+	    ** etab marked LOAD (and not full).  Since an X lock on the
+	    ** base table is a prerequisite, nobody else can be loading.
+	    ** If we find a LOAD etab it must be us.
+	    */
+	    if (r->rcb_lk_mode == LK_X
+	      && bqcb->bqcb_load_etabs == BQCB_LOAD_YES)
+	    {
+		DMP_TCB *t = r->rcb_tcb_ptr;
+		DMP_ET_LIST *etl;
+		dm0s_mlock(&t->tcb_et_mutex);
+		etl = t->tcb_et_list->etl_next;
+		while (etl != t->tcb_et_list
+		  && (etl->etl_etab.etab_type != DMP_LO_ETAB
+		      || etl->etl_etab.etab_att_id != att_num
+		      || (etl->etl_status & (ETL_FULL_MASK | ETL_INVALID_MASK | ETL_LOAD)) != ETL_LOAD) )
+		    etl = etl->etl_next;
+		if (etl == t->tcb_et_list)
+		{
+		    /* Do it again, but this time don't disallow FULL etabs. */
+		    etl = etl->etl_next;
+		    while (etl != t->tcb_et_list
+		      && (etl->etl_etab.etab_type != DMP_LO_ETAB
+			  || etl->etl_etab.etab_att_id != att_num
+			  || (etl->etl_status & (ETL_INVALID_MASK | ETL_LOAD)) != ETL_LOAD) )
+			etl = etl->etl_next;
+		}
+		dm0s_munlock(&t->tcb_et_mutex);
+		if (etl != t->tcb_et_list)
+		{
+		    /* Found it, continue loading.  Do some start-of-blob
+		    ** cleanup on the PCB before re-using it.
+		    */
+		    pcb = *pcbp = etl->etl_pcb;
+		    pop_cb->pop_user_arg = (PTR) pcb;
+		    pcb->pcb_record->prd_segment0 = 0;
+		    pcb->pcb_record->prd_segment1 = 0;
+		    pcb->pcb_seg0_next = 0;
+		    pcb->pcb_seg1_next = 0;
+		    if ((etl->etl_status & ETL_FULL_MASK) == 0)
+		    {
+			pcb->pcb_dmtcb->dmt_record_access_id = (PTR) etl->etl_access_id;
+			pcb->pcb_dmtcb->dmt_id.db_tab_base = etl->etl_etab.etab_extension;
+			pcb->pcb_dmrcb->dmr_access_id = (PTR) etl->etl_access_id;
+			pcb->pcb_et = etl;
+		    }
+		    else
+		    {
+			/* Tell dmpe-put we'll need to start with a new etab */
+			pcb->pcb_dmtcb->dmt_record_access_id = NULL;
+			pcb->pcb_dmrcb->dmr_access_id = NULL;
+			pcb->pcb_et = NULL;
+		    }
+		}
+	    }
+	}
+	if (pcb == NULL)
+	{
+	    /* Non-load case, allocate a PCB */
+	    status = dmpe_allocate(pop_cb, pcbp);
+	    if (status != E_DB_OK)
+		return (status);
+	    pcb = *pcbp;
+	}
+	xcb = pcb->pcb_xcb;
+	ses_scb = xcb->xcb_odcb_ptr->odcb_scb_ptr;
+	if (bqcb == NULL && wksp != NULL)
+	{
+	    natts = 0;
+	    if (wksp->flags & BLOBWKSP_TABLEID)
+	    {
+		base_id = wksp->base_id;
+	    }
+	    else if (wksp->flags & BLOBWKSP_TABLENAME)
+	    {
+		bool owner_given;
+		DMT_SHW_CB dmt_shw;
+		DMT_TBL_ENTRY dmt_tbl_entry;
+
+		/* Get the table info from the name */
+		dmt_shw.type = DMT_SH_CB;
+		dmt_shw.length = sizeof(DMT_SHW_CB);
+		dmt_shw.dmt_char_array.data_in_size = 0;
+		dmt_shw.dmt_flags_mask = DMT_M_TABLE | DMT_M_ATTR | DMT_M_NAME;
+		dmt_shw.dmt_table.data_address = (PTR) &dmt_tbl_entry;
+		dmt_shw.dmt_table.data_in_size = sizeof(DMT_TBL_ENTRY);
+		dmt_shw.dmt_char_array.data_address = NULL;
+		dmt_shw.dmt_char_array.data_in_size = 0;
+		dmt_shw.dmt_char_array.data_out_size  = 0;
+		dmt_shw.error.err_code = 0;
+
+		dmt_shw.dmt_session_id = pcb->pcb_sid;
+		dmt_shw.dmt_db_id = pcb->pcb_db_id;
+
+		MEcopy(wksp->table_name.db_tab_name, sizeof(DB_TAB_NAME),
+		    &dmt_shw.dmt_name);
+		owner_given = FALSE;
+		if (wksp->table_owner.db_own_name[0] &&
+		    wksp->table_owner.db_own_name[0] != ' ')
+		{
+		    /* owner provided, use it */
+		    owner_given = TRUE;
+		    MEcopy(wksp->table_owner.db_own_name, sizeof(DB_OWN_NAME),
+			&dmt_shw.dmt_owner);
+		}
+		else
+		{
+		    /* try user first */
+		    MEcopy(&xcb->xcb_scb_ptr->scb_user, sizeof(DB_OWN_NAME),
+			&dmt_shw.dmt_owner);
+		}
+
+		status = dmt_show(&dmt_shw);
+		if (status != E_DB_OK && ! owner_given &&
+		    dmt_shw.error.err_code == E_DM0054_NONEXISTENT_TABLE)
+		{
+		    /* try again with DBA */
+		    MEcopy(&xcb->xcb_odcb_ptr->odcb_dcb_ptr->dcb_db_owner,
+			sizeof(DB_OWN_NAME), &dmt_shw.dmt_owner);
+		    dmt_shw.error.err_code = 0;
+		    status = dmt_show(&dmt_shw);
+		}
+		if (status == E_DB_OK && dmt_tbl_entry.tbl_id.db_tab_index == 0)
+		{
+		    /* Success so far... */
+		    base_id = dmt_tbl_entry.tbl_id.db_tab_base;
+		    natts = dmt_tbl_entry.tbl_attr_count;
+		}
+		status = E_DB_OK;
+	    }
+	    if (att_num == 0 && wksp->flags & BLOBWKSP_ATTID)
+		att_num = wksp->base_attid;
+	    if (att_num == 0 || wksp->flags & BLOBWKSP_COERCE)
+	    {
+		DMT_ATT_ENTRY *att, *base_att, **ptrs, **base;
+		DMT_SHW_CB dmt_shw;
+		DMT_TBL_ENTRY dmt_tbl_entry;
+		i4 i, size;
+		STATUS clstat;
+
+		/* Either we still don't know where the LOB is going, or
+		** the caller isn't sure that the incoming data type matches
+		** the LOB itself.  Either way, we need to SHOW the table
+		** columns and do some more whirling around.
+		*/
+		if (natts == 0)
+		    natts = DB_MAX_COLS;	/* Not worth an extra show */
+		size = natts * (sizeof(DMT_ATT_ENTRY) + sizeof(DMT_ATT_ENTRY *));
+		base = NULL;
+
+		do	/* break-out dummy */
+		{
+		    /* Set up att pointer area for SHOW to fill in.  If
+		    ** something goes wrong, don't error out, just say
+		    ** that we can't resolve the column.
+		    */
+		    base = (DMT_ATT_ENTRY **) MEreqmem(0, size, FALSE, &clstat);
+		    if (base == NULL)
+			break;
+		    base_att = (DMT_ATT_ENTRY *) ((char *) base + natts * sizeof(DMT_ATT_ENTRY *));
+		    att = base_att;
+		    ptrs = base;
+		    i = natts;
+		    do
+		    {
+			*ptrs++ = att++;
+		    } while (--i > 0);
+
+		    dmt_shw.type = DMT_SH_CB;
+		    dmt_shw.length = sizeof(DMT_SHW_CB);
+		    dmt_shw.dmt_char_array.data_in_size = 0;
+		    dmt_shw.dmt_flags_mask = DMT_M_ATTR;
+		    dmt_shw.dmt_table.data_address = NULL;
+		    dmt_shw.dmt_table.data_in_size = 0;
+		    dmt_shw.dmt_char_array.data_address = NULL;
+		    dmt_shw.dmt_char_array.data_in_size = 0;
+		    dmt_shw.dmt_char_array.data_out_size  = 0;
+		    dmt_shw.dmt_attr_array.ptr_address = (PTR) base;
+		    dmt_shw.dmt_attr_array.ptr_in_count = natts;
+		    dmt_shw.dmt_attr_array.ptr_out_count = 0;
+		    dmt_shw.error.err_code = 0;
+
+		    dmt_shw.dmt_session_id = pcb->pcb_sid;
+		    dmt_shw.dmt_db_id = pcb->pcb_db_id;
+
+		    status = dmt_show(&dmt_shw);
+		    if (status != E_DB_OK)
+			break;
+
+		    /* If we don't know the LOB att yet, there may only be
+		    ** one of 'em.
+		    */
+		    if (att_num == 0)
+		    {
+			att = base_att;
+			i = natts;
+			do
+			{
+			    if (att->att_flags & DMU_F_PERIPHERAL)
+			    {
+				if (att_num != 0)
+				{
+				    /* Oops, too many, ambiguous */
+				    att_num = 0;
+				    break;
+				}
+				att_num = (att - base_att) + 1;
+			    }
+			    ++att;
+			} while (--i > 0);
+			if (att_num == 0)
+			    break;	/* Nogo */
+		    }
+		    if (wksp->flags & BLOBWKSP_COERCE)
+		    {
+			ADF_CB *adf_scb = xcb->xcb_scb_ptr->scb_adf_cb;
+			DB_DT_ID abs_source, abs_att;
+			DB_DT_ID source_under, att_under;
+			i4 dt_bits;
+
+			att = base_att + att_num - 1;
+			abs_source = abs(wksp->source_dt);
+			abs_att = abs(att->att_type);
+			if (abs_source != abs_att)
+			{
+			    /* Might need a coercion.  Skip coercion for
+			    ** varchar vs varbyte, they are the same as far
+			    ** as dmpe is concerned.
+			    */
+			    source_under = abs_source;
+			    status = adi_dtinfo(adf_scb, source_under, &dt_bits);
+			    if (status != E_DB_OK)
+				break;
+			    if (dt_bits & AD_PERIPHERAL)
+			    {
+				status = adi_per_under(adf_scb, abs_source, &source_under);
+				if (status != E_DB_OK)
+				    break;
+			    }
+			    status = adi_per_under(adf_scb, abs_att, &att_under);
+			    if (status != E_DB_OK)
+				break;
+			    /* Note, don't need abs here, non-nullable dt is
+			    ** returned by adi-per-under.
+			    */
+			    if (source_under == att_under
+			      || (source_under == DB_VCH_TYPE && att_under == DB_VBYTE_TYPE)
+			      || (source_under == DB_VBYTE_TYPE && att_under == DB_VCH_TYPE) )
+				break;	/* status OK, no coercion */
+			    status = adi_ficoerce(adf_scb,
+					source_under, att_under,
+					&pcb->pcb_fblk.adf_fi_id);
+			    if (status != E_DB_OK)
+				break;
+			    pcb->pcb_fblk.adf_r_dv.db_datatype = att_under;
+			    /* Actual target type returned for sequencer */
+			    wksp->source_dt = att->att_type;
+			    /* We'll need a coercion temp area */
+			    pcb->pcb_fblk.adf_r_dv.db_data =
+				MEreqmem(0, DMPE_SEGMENT_LENGTH, FALSE, &clstat);
+			    if (clstat != OK)
+			    {
+				status = E_DB_ERROR;
+				break;
+			    }
+			    pcb->pcb_fblk.adf_r_dv.db_length = DMPE_SEGMENT_LENGTH;
+			}
+		    } /* if coercion */
+		} while (0);
+		/* If broke out with error, it means ambiguity in LOB
+		** atts, or couldn't set up coercions.
+		*/
+		if (status != E_DB_OK)
+		{
+		    att_num = 0;
+		    status = E_DB_OK;
+		}
+		if (base != NULL)
+		    MEfree(base);
+	    } /* if need to show att stuff */
+	} /* if wksp != NULL */
+	if ((bqcb == NULL && base_id == 0) || att_num == 0)
+	{
+	    /* Don't know where it's going, send to temp.  Clean out
+	    ** any junk in the coupon too.
+	    */
+	    MEfill(sizeof(DMPE_COUPON), 0, (PTR) cpn);
+	    cpn->cpn_flags = DMPE_CPN_TEMP;
+	    if (pop_cb->pop_temporary == ADP_POP_PERMANENT)
+	    {
+		/* This would be a screw-up, if the caller requires a real
+		** result but didn't pass enough info to figure it out.
+		** For GET, it doesn't matter, but for PUT it certainly does.
+		*/
+		SETDBERR(&pop_cb->pop_error, 0, E_AD700B_ADP_BAD_POP_CB);
+		return (E_DB_ERROR);
+	    }
+	}
+    }
+
+    /* At this point we should know: bqcb or base_id, and att_num.
+    ** Or, it's a temp.  Or, the caller screwed up.
+    */
+
+    if (cpn->cpn_flags & DMPE_CPN_TEMP)
+    {
+	/* Double check that the caller didn't supply something bogus,
+	** then get out now ... nothing else to set up if read or write.
+	** Holding temps are heaps and the logical key is unused / junk.
+	** Do however make sure that pcb_record has the same zero/junk.
+	*/
+	if (bqcb != NULL || base_id != 0)
+	{
+	    TRdisplay("%@ dmpe_begin_dml: Holding temp but BQCB resolved to %p, base_id to %d (put? %d)\n",
+			bqcb, base_id, is_put);
+	    SETDBERR(&pop_cb->pop_error, 0, E_AD700B_ADP_BAD_POP_CB);
+	    status = E_DB_ERROR;
+	}
+	STRUCT_ASSIGN_MACRO(cpn->cpn_log_key, pcb->pcb_record->prd_log_key);
+	return (status);
+    }
+
+    /* So, it's not a holding temp.  If we have base table ID but not
+    ** a BQCB, find a BQCB for the base table.  Cause one to be invented
+    ** if none is found.
+    */
+    if (bqcb == NULL)
+    {
+	/* We'll have a base_id then, look for BQCB */
+	dm0s_mlock(&ses_scb->scb_bqcb_mutex);
+	bqcb = ses_scb->scb_bqcb_next;
+	while (bqcb != NULL && bqcb->bqcb_base_id != base_id)
+	    bqcb = (DMPE_BQCB *) bqcb->hdr.obj_next;
+	dm0s_munlock(&ses_scb->scb_bqcb_mutex);
+	if (bqcb == NULL)
+	{
+	    DMT_CB dmt;
+
+	    /* No BQCB either.  Open/close the base table to create one. */
+	    MEfill(sizeof(DMT_CB), 0, (PTR) &dmt);
+	    dmt.length = sizeof(DMT_TABLE_CB);
+	    dmt.type = DMT_TABLE_CB;
+	    dmt.ascii_id = DMT_ASCII_ID;
+	    dmt.dmt_db_id = (PTR) pcb->pcb_db_id;
+	    dmt.dmt_tran_id = (PTR) xcb;
+	    dmt.dmt_lock_mode = DMT_IS;
+	    dmt.dmt_update_mode = DMT_U_DIRECT;
+	    dmt.dmt_access_mode = DMT_A_READ;
+	    /* "internal request" to suppress the check for interrupts. */
+	    dmt.dmt_flags_mask = DMT_DBMS_REQUEST;
+	    if (base_id < 0)
+		dmt.dmt_flags_mask |= DMT_SESSION_TEMP;	/* Base table is GTT */
+	    dmt.dmt_id.db_tab_base = base_id;
+	    dmt.dmt_id.db_tab_index = 0;
+	    dmt.dmt_record_access_id = NULL;
+	    status = dmt_open(&dmt);
+	    if (status != E_DB_OK)
+	    {
+		pop_cb->pop_error = dmt.error;
+		return (status);
+	    }
+	    /* Now there will be a BQCB ptr in the returned RCB. */
+	    rcb = (DMP_RCB *) dmt.dmt_record_access_id;
+	    bqcb = rcb->rcb_bqcb_ptr;
+	    dmt.dmt_flags_mask = 0;
+	    status = dmt_close(&dmt);
+	    if (status != E_DB_OK)
+	    {
+		pop_cb->pop_error = dmt.error;
+		return (status);
+	    }
+	}
+    }
+
+    /* We now have a BQCB pointer, if this is PUT we'll probably need to
+    ** generate logical keys (only exception would be some kinds of update
+    ** statements).  So, make sure there's a key generator RCB open against
+    ** the base table.  Mutex protect this check against multi threads.
+    */
+    pcb->pcb_bqcb = bqcb;
+    dm0s_mlock(&ses_scb->scb_bqcb_mutex);
+    rcb = bqcb->bqcb_logkey_rcb;
+    dm0s_munlock(&ses_scb->scb_bqcb_mutex);
+    if (is_put && rcb == NULL)
+    {
+	DMT_CB dmt;
+
+	/* Open the base table noaccess/nolock, this will only be
+	** used to generate logical keys.
+	** * Note * We more or less assume that real puts are only done
+	** in the main session thread, not ||-query or copy children.
+	** That is true enough, but it's a bit dirty.  If random child
+	** threads were to start doing puts, there would be mutexing and
+	** query-end issues to deal with.
+	*/
+
+	MEfill(sizeof(DMT_CB), 0, (PTR) &dmt);
+	dmt.length = sizeof(DMT_TABLE_CB);
+	dmt.type = DMT_TABLE_CB;
+	dmt.ascii_id = DMT_ASCII_ID;
+	dmt.dmt_db_id = (PTR) pcb->pcb_db_id;
+	dmt.dmt_tran_id = (PTR) xcb;
+	dmt.dmt_lock_mode = DMT_N;
+	dmt.dmt_update_mode = DMT_U_DIRECT;
+	dmt.dmt_access_mode = DMT_A_OPEN_NOACCESS;
+	dmt.dmt_flags_mask = DMT_DBMS_REQUEST;
+	if (bqcb->bqcb_base_id < 0)
+	    dmt.dmt_flags_mask |= DMT_SESSION_TEMP;	/* Base table is GTT */
+	dmt.dmt_id.db_tab_base = bqcb->bqcb_base_id;
+	dmt.dmt_id.db_tab_index = 0;
+	dmt.dmt_record_access_id = NULL;
+	status = dmt_open(&dmt);
+	if (status != E_DB_OK)
+	{
+	    pop_cb->pop_error = dmt.error;
+	    return (status);
+	}
+	dm0s_mlock(&ses_scb->scb_bqcb_mutex);
+	if (bqcb->bqcb_logkey_rcb == NULL)
+	{
+	    rcb = bqcb->bqcb_logkey_rcb = (DMP_RCB *) dmt.dmt_record_access_id;
+	    dm0s_munlock(&ses_scb->scb_bqcb_mutex);
+	}
+	else
+	{
+	    /* Oops, a parallel thread snuck in */
+	    rcb = bqcb->bqcb_logkey_rcb;
+	    dm0s_munlock(&ses_scb->scb_bqcb_mutex);
+	    dmt.dmt_flags_mask = 0;
+	    (void) dmt_close(&dmt);
+	}
+    }
+
+    /* It's time to get the base table TCB for the PCB, fixing it if
+    ** necessary (see the intro).  "rcb" contains the logical key
+    ** generator if any.
+    */
+    if (rcb != NULL)
+    {
+	pcb->pcb_tcb = rcb->rcb_tcb_ptr;
+    }
+    else if (wksp && wksp->flags & BLOBWKSP_ACCESSID)
+    {
+	pcb->pcb_tcb = ((DMP_RCB *)(wksp->access_id))->rcb_tcb_ptr;
+    }
+    else
+    {
+	DB_TAB_ID tabid;
+	DMP_DCB *dcb = ses_scb->scb_oq_next->odcb_dcb_ptr;
+	i4 lk_list_id;
+
+	/* Better fix it ourselves, just in case nothing else has it open.
+	** This is a bit unlikely, but it might be an asynchronous redeem
+	** done after the base table is closed -- who knows what evil lurks
+	** in the sequencer!
+	*/
+	tabid.db_tab_base = bqcb->bqcb_base_id;
+	tabid.db_tab_index = 0;
+	lk_list_id = xcb->xcb_lk_id;
+	if (tabid.db_tab_base < 0)
+	    lk_list_id = ses_scb->scb_lock_list;
+	status = dm2t_fix_tcb(dcb->dcb_id, &tabid, &xcb->xcb_tran_id,
+			lk_list_id, xcb->xcb_log_id,
+			DM2T_VERIFY, dcb,
+			&pcb->pcb_tcb, &pop_cb->pop_error);
+	if (status != E_DB_OK)
+	    return (status);
+	pcb->pcb_fixed_tcb = TRUE;
+    }
+
+    if (!is_put)
+    {
+	STRUCT_ASSIGN_MACRO(cpn->cpn_log_key, pcb->pcb_record->prd_log_key);
+	return (status);	/* Done if GET */
+    }
+
+    /* For PUT, generate a logical key for the coupon (and the row) if
+    ** necessary, and look into the bulk-load question.
+    */
+    pop_cb->pop_temporary = ADP_POP_PERMANENT;
+    pcb->pcb_att_id = att_num;
+    if (cpn->cpn_log_key.tlk_high_id == 0 && cpn->cpn_log_key.tlk_low_id == 0)
+    {
+	u_i4 high, low;
+
+	/* rcb was set above */
+	if (rcb->rcb_logkey.olk_high_id == 0 && rcb->rcb_logkey.olk_low_id == 0)
+	{
+	    DMP_TCB *t = rcb->rcb_tcb_ptr;
+	    i4 error;
+
+	    /* Haven't generated a key yet, or the last row "ended" and we
+	    ** need a new key for this row.
+	    */
+	    status = dm1c_get_high_low_key(t, rcb,
+				&high, &low, &pop_cb->pop_error);
+	    if (status != E_DB_OK)
+	    {
+		if (pop_cb->pop_error.err_code == E_DM9380_TAB_KEY_OVERFLOW)
+		{
+		    /* error can be returned from dm1c, not
+		    ** logged there because it doesn't have the
+		    ** necessary context for the error parameters.
+		    */
+		    uleFormat(&pop_cb->pop_error, 0,
+			(CL_ERR_DESC *) NULL, ULE_LOG,
+			NULL, (char *) NULL, (i4) 0, (i4 *) NULL,
+			&error, 3,
+			sizeof(DB_TAB_NAME), &t->tcb_rel.relid,
+			sizeof(DB_OWN_NAME), &t->tcb_rel.relowner,
+			sizeof(DB_DB_NAME), &t->tcb_dcb_ptr->dcb_name);
+
+		    SETDBERR(&pop_cb->pop_error, 0, E_DM9381_DM2R_PUT_RECORD);
+		}
+		return (status);
+	    }
+	}
+	else
+	{
+	    /* Use the same key, remember to do the bswap nonsense. */
+	    high = rcb->rcb_logkey.olk_high_id;
+	    low = rcb->rcb_logkey.olk_low_id;
+	    if (rcb->rcb_tcb_ptr->tcb_rel.relstat2 & TCB2_BSWAP)
+	    {
+		char c = *((char *)&low);
+		*((char *)&low) = *((char *)&low + 3);
+		*((char *)&low + 3) = c;
+	    }
+	}
+	cpn->cpn_log_key.tlk_high_id = high;
+	cpn->cpn_log_key.tlk_low_id = low;
+    }
+    STRUCT_ASSIGN_MACRO(cpn->cpn_log_key, pcb->pcb_record->prd_log_key);
+
+    /* Since we're not going into a temp etab, it must be a real one */
+    cpn->cpn_flags |= DMPE_CPN_FINAL;
+    if (wksp != NULL)
+	wksp->flags |= BLOBWKSP_FINAL;
+
+    /* And last, if we haven't decided on bulk-load-ability, do it now.
+    ** Bulk-load an etab if a) the base table was opened with X (not IX)
+    ** locking, b) the base table appears to have no rows, and
+    ** c) someone higher up has marked the query as "multi-row".
+    */
+    if (bqcb->bqcb_load_etabs == BQCB_LOAD_UNKNOWN)
+    {
+	bqcb->bqcb_load_etabs = BQCB_LOAD_NO;	/* Assume nope. */
+	if (bqcb->bqcb_multi_row
+	  && bqcb->bqcb_x_lock
+	  && pcb->pcb_tcb->tcb_rel.reltups == 0
+	  && (pcb->pcb_tcb->tcb_rel.relstat & (TCB_JOURNAL | TCB_GATEWAY)) == 0)
+	{
+	    bqcb->bqcb_load_etabs = BQCB_LOAD_YES;
+	}
+    }
+    /* If we're starting a load on a new column, make sure there is a "held
+    ** record" area.  There might already be one from a prior row.
+    */
+    if (bqcb->bqcb_load_etabs == BQCB_LOAD_YES && pcb->pcb_held_record == NULL)
+    {
+	pcb->pcb_held_record = (DMPE_RECORD *) dm0m_tballoc(sizeof(DMPE_RECORD));
+    }
+    return (E_DB_OK);
+
+} /* dmpe_begin_dml */
+
+/*
+** Name: dmpe_end_row -- End of a row with LOBs
+**
+** Description:
+**	At the end of processing for a row, we need to reset the
+**	logical key used for LOBs in that row.  Each row gets a
+**	new logical key.
+**
+** Inputs:
+**	r		DMP_RCB opened against the base table
+**
+** Outputs:
+**	None
+**
+** History:
+**	16-Apr-2010 (kschendel) SIR 123485
+**	    Written.
+*/
+
+void
+dmpe_end_row(DMP_RCB *r)
+{
+
+    DMP_RCB *key_rcb;
+
+    /* The base table RCB should point to the BQCB, which should point
+    ** to the logical-key-generator RCB.  If the latter isn't there,
+    ** just exit, although it could be an error.
+    */
+
+    if (r->rcb_bqcb_ptr == NULL)
+	return;			/* Strange, but whatever. */
+
+    key_rcb = r->rcb_bqcb_ptr->bqcb_logkey_rcb;
+    if (key_rcb != NULL)
+    {
+	key_rcb->rcb_logkey.olk_high_id = 0;
+	key_rcb->rcb_logkey.olk_low_id = 0;
+    }
+
+} /* dmpe_end_row */
+
+/*
+** Name: dmpe_query_end -- End of query that uses LOBs
+**
+** Description:
+**
+**	When a query or transaction is finished, this routine is called
+**	to clean up any in-progress LOB handling.
+**	- If there were any in-flight etab bulk-loads that our session was
+**	  doing, finish (or abort) them.
+**	- Toss the blob query context blocks (BQCB's), unless there are
+**	  locators around, in which case reset them instead of tossing
+**	  them (in case a locator is referenced).
+**	- Delete all holding temps belonging to the session, unless the
+**	  caller specifically asks not to.  (which might be the case if
+**	  the query is still in progress at an outer level, e.g. an
+**	  outer DB procedure calling an inner one that did a commit or
+**	  rollback.)
+**
+**	In any situation where all tables opened by a session are going
+**	to be closed, dmpe-query-end should be called first.  If the
+**	query happens to continue, that is OK, we'll just rebuild the
+**	query context as if it were a new query.  (Which in effect it
+**	is, outside of kept blob holding temps.)
+**
+**	Query-end must also be called before any dangling-PCB cleanup loop.
+**
+** Inputs:
+**	was_error		TRUE if overall query had error
+**				This is a shortcut hint to toss any in-
+**				progress bulk-loads instead of finishing
+**				them (and then rolling them back).
+**	delete_temps		TRUE to delete holding temps, which is the
+**				normal call;  FALSE to not delete them.
+**	dberr			DB_ERROR error status block
+**
+** Outputs:
+**	Returns E_DB_OK or error with dberr updated.
+**	All BQCB's deleted or reset.
+**
+** History:
+**	16-Apr-2010 (kschendel) SIR 123485
+**	    Written.
+*/
+
+DB_STATUS
+dmpe_query_end(bool was_error, bool delete_temps, DB_ERROR *dberr)
+{
+    CS_SID sid;
+    DB_STATUS status = E_DB_OK;
+    DML_SCB *scb;		/* Main session thread's SCB */
+    DMPE_BQCB *bqcb, *bqcb_next;
+    DMT_CB dmt;
+
+    CLRDBERR(dberr);
+
+    CSget_sid(&sid);
+    scb = GET_DML_SCB(sid);
+    if (scb == NULL || scb != scb->scb_oq_next->odcb_scb_ptr)
+	return (E_DB_OK);	/* Not the main thread, just return */
+
+    if (delete_temps)
+    {
+	status = dmpe_free_temps(scb->scb_oq_next, dberr);
+	if (status != E_DB_OK)
+	    return (status);
+    }
+    /* Child threads should be done at this stage, or the call is no good
+    ** anyway.  Don't bother with the bqcb mutex.
+    **
+    ** First pass is to finish any loads, close logical-key generators.
+    */
+    bqcb_next = scb->scb_bqcb_next;
+    while (bqcb_next != NULL)
+    {
+	bqcb = bqcb_next;
+	bqcb_next = (DMPE_BQCB *) bqcb->hdr.obj_next;
+	if (bqcb->bqcb_logkey_rcb != NULL)
+	{
+	    /* If there's a logical key generator RCB, we're doing PUTs,
+	    ** which might mean that etab bulk-loads were in progress.
+	    */
+	    if (bqcb->bqcb_load_etabs == BQCB_LOAD_YES)
+	    {
+		DMPE_PCB *pcb;
+		DMP_ET_LIST *etl;
+		DMP_TCB *bt;		/* Base table TCB */
+		i4 toss;
+
+		bt = bqcb->bqcb_logkey_rcb->rcb_tcb_ptr;
+		for (;;)
+		{
+		    dm0s_mlock(&bt->tcb_et_mutex);
+		    etl = bt->tcb_et_list->etl_next;
+		    while (etl != bt->tcb_et_list
+		      && (etl->etl_etab.etab_type != DMP_LO_ETAB
+			  || (etl->etl_status & ETL_LOAD) == 0
+			  || etl->etl_access_id == NULL
+			  || etl->etl_sid != sid) )
+			etl = etl->etl_next;
+		    dm0s_munlock(&bt->tcb_et_mutex);
+		    if (etl == bt->tcb_et_list)
+			break;
+
+		    /* Looks like an etab load that our session was doing.
+		    ** (Note, etab loads are always done by the main session
+		    ** thread at the present time!)
+		    ** Either end the load normally, or close the load RCB
+		    ** thus tossing the load.
+		    ** There must be a PCB for this bulk-load, use it.
+		    */
+		    pcb = etl->etl_pcb;
+		    if (! was_error)
+		    {
+			pcb->pcb_dmrcb->dmr_access_id = etl->etl_access_id;
+			pcb->pcb_dmrcb->dmr_flags_mask = DMR_ENDLOAD;
+			pcb->pcb_dmrcb->dmr_count = 0;
+			pcb->pcb_dmrcb->dmr_mdata = NULL;
+			status = dmr_load(pcb->pcb_dmrcb);
+			if (status != E_DB_OK)
+			{
+			    *dberr = pcb->pcb_dmrcb->error;
+			    return (status);
+			}
+		    }
+		    /* Close the load table */
+		    pcb->pcb_dmtcb->dmt_record_access_id = etl->etl_access_id;
+		    pcb->pcb_dmtcb->dmt_flags_mask = 0;
+		    status = dmt_close(pcb->pcb_dmtcb);
+		    if (status != E_DB_OK)
+		    {
+			uleFormat(&pcb->pcb_dmtcb->error, 0, NULL,
+					ULE_LOG, NULL, (char *)NULL, 0L,
+					(i4 *)NULL, &toss, 0);
+			SETDBERR(dberr, 0, E_DM9B04_LOAD_DMPE_ERROR);
+		    }
+		    etl->etl_access_id = NULL;
+		    /* Leave etl_pcb, etl_sid, etl_status alone so a post-
+		    ** pass can deallocate the PCB's.  One pcb might have
+		    ** loaded multiple etabs, so don't do it yet!
+		    **
+		    ** Loop back to look for another etab to end.
+		    */
+		} /* for */
+
+		/* Now, look for etabs that we *were* loading, and close
+		** the PCB's.  As each one is closed, dmpe-deallocate will
+		** clean up all ET list entries using that PCB.
+		*/
+		for (;;)
+		{
+		    dm0s_mlock(&bt->tcb_et_mutex);
+		    etl = bt->tcb_et_list->etl_next;
+		    while (etl != bt->tcb_et_list
+		      && (etl->etl_etab.etab_type != DMP_LO_ETAB
+			  || (etl->etl_status & ETL_LOAD) == 0
+			  || etl->etl_pcb == NULL
+			  || etl->etl_sid != sid) )
+			etl = etl->etl_next;
+		    dm0s_munlock(&bt->tcb_et_mutex);
+		    if (etl == bt->tcb_et_list)
+			break;
+		    pcb = etl->etl_pcb;
+		    dmpe_deallocate(pcb);
+		}
+	    } /* if might have been doing LOADs */
+
+	    /* Close the logical-key generator RCB */
+	    MEfill(sizeof(DMT_CB), 0, &dmt);
+	    dmt.length = sizeof(DMT_TABLE_CB);
+	    dmt.type = DMT_TABLE_CB;
+	    dmt.ascii_id = DMT_ASCII_ID;
+	    dmt.dmt_db_id = (PTR) scb->scb_oq_next;
+	    dmt.dmt_tran_id = (PTR) &scb->scb_x_next->xcb_tran_id;
+	    dmt.dmt_flags_mask = 0;
+	    dmt.dmt_record_access_id = (PTR) bqcb->bqcb_logkey_rcb;
+	    (void) dmt_close(&dmt);
+	    bqcb->bqcb_logkey_rcb = NULL;
+	}
+	/* Reset the BQCB for end-of-query */
+	bqcb->bqcb_load_etabs = BQCB_LOAD_UNKNOWN;
+	bqcb->bqcb_multi_row = FALSE;
+	bqcb->bqcb_table_lock = FALSE;
+	bqcb->bqcb_x_lock = FALSE;
+	bqcb->bqcb_crib = NULL;
+    }
+
+    /* Now, delete BQCB's if allowable.  We'll double check the XCB / RCB
+    ** list for any open RCB's that reference a BQCB;  such a thing might
+    ** possibly mean that QEF has goofed.
+    */
+    if (scb->scb_lloc_cxt == NULL && scb->scb_bqcb_next != NULL)
+    {
+	DML_XCB *xcb = scb->scb_x_next;
+	DMP_RCB *r;
+
+	if (xcb != (DML_XCB *) &scb->scb_x_next)
+	{
+	    r = xcb->xcb_rq_next;
+	    while (r != (DMP_RCB *) &xcb->xcb_rq_next)
+	    {
+		r = (DMP_RCB *) ((char *)r - CL_OFFSETOF(DMP_RCB, rcb_xq_next));
+		if (r->rcb_bqcb_ptr != NULL)
+		    return (E_DB_OK);	/* Whoops, stop now */
+		r = r->rcb_xq_next;
+	    }
+	}
+	/* Looks OK, delete 'em */
+	while (scb->scb_bqcb_next != NULL)
+	{
+	    bqcb = scb->scb_bqcb_next;
+	    scb->scb_bqcb_next = (DMPE_BQCB *) bqcb->hdr.obj_next;
+	    dm0m_deallocate((DM_OBJECT **) &bqcb);
+	}
+    }
+    return (E_DB_OK);
+
+} /* dmpe_query_end */
 
 /*
 ** {
@@ -4172,7 +4692,7 @@ dmpe_deallocate(DMPE_PCB      *pcb )
 **
 ** Description:
 **      This routine checks the ADP_POP_CB for consistency based on
-**	the operation being performed. 
+**	the operation being performed.
 **
 ** Inputs:
 **      op_code                         ADP operation being performed
@@ -4199,15 +4719,12 @@ dmpe_deallocate(DMPE_PCB      *pcb )
 **          may have never created a file.
 **	6-May-2004 (schka24)
 **	    Clean up some can't-get-here tests.
-[@history_template@]...
 */
 static DB_STATUS
 dmpe_check_args(i4                op_code,
 		ADP_POP_CB         *pop_cb)
 {
     DB_STATUS           status = E_DB_ERROR;
-    DMPE_COUPON		*cpn;
-    DMP_TCB		*cpn_tcb;
     ADP_PERIPHERAL      *p;
 
     do
@@ -4232,7 +4749,7 @@ dmpe_check_args(i4                op_code,
 	{
 	    /* FIX ME check args for ADP_CPN_TO_LOCATOR */
 	}
-	else if ((op_code != ADP_INFORMATION) 
+	else if ((op_code != ADP_INFORMATION)
 		&& (op_code != ADP_FREE_NONSESS_OBJS)
 		&& (op_code != ADP_FREE_LOCATOR))
 	{
@@ -4263,7 +4780,7 @@ dmpe_check_args(i4                op_code,
 	    }
 
 	    /* removed unhelpful test for  E_AD700E_ADP_BAD_COUPON */
-	}	
+	}
 	status = E_DB_OK;
     } while (0);
 
@@ -4309,7 +4826,9 @@ dmpe_check_args(i4                op_code,
 **	7-May-2004 (schka24)
 **	    Use TCB pointer in PCB, has to be set by the time we get here.
 **	    Don't hold et mutex during catalog scanning, makes me nervous.
-[@history_template@]...
+**	19-Apr-2010 (kschendel) SIR 123485
+**	    Clean up mutex handling.  Make sure pop_error is clean when
+**	    we return OK.
 */
 static DB_STATUS
 dmpe_tcb_populate(ADP_POP_CB   *pop_cb )
@@ -4330,8 +4849,6 @@ dmpe_tcb_populate(ADP_POP_CB   *pop_cb )
     for (;;)
     {
 	status = E_DB_OK;
-	pcb->pcb_dmtcb->dmt_db_id = pcb->pcb_db_id;
-	pcb->pcb_dmtcb->dmt_tran_id = (PTR) pcb->pcb_xcb;
 	save_ptr = pcb->pcb_dmrcb->dmr_attr_desc.ptr_address;
 
 	tab_id.db_tab_index = 0;
@@ -4344,15 +4861,12 @@ dmpe_tcb_populate(ADP_POP_CB   *pop_cb )
 	    {
 		break;
 	    }
-	    if (!pcb->pcb_got_mutex)
-	    {
-		dm0s_mlock(pcb->pcb_got_mutex = &tcb->tcb_et_mutex);
-	    }
-	    
+	    dm0s_mlock(&tcb->tcb_et_mutex);
+
 	    list = tcb->tcb_et_list->etl_next;
 
 	    /* Do we already know about this table? */
-	
+
 	    while (	(list != tcb->tcb_et_list)
 		  &&
 			(etab_record.etab_extension !=
@@ -4365,14 +4879,14 @@ dmpe_tcb_populate(ADP_POP_CB   *pop_cb )
 	    if (etab_record.etab_type == DMP_LO_HEAP)
 	    {
 		dm0s_munlock(&tcb->tcb_et_mutex);
-		pcb->pcb_got_mutex = NULL;
 		continue;
 	    }
 
 	    /* If not, add the table to the list of known tables */
-	    
+
 	    if (list == tcb->tcb_et_list)
 	    {
+		/* Holding the tcb ET mutex, a bit non-optimal but easier */
 		status = dm0m_allocate(	sizeof(DMP_ET_LIST),
 			(i4) 0,
 			(i4) ETL_CB,
@@ -4381,7 +4895,10 @@ dmpe_tcb_populate(ADP_POP_CB   *pop_cb )
 			(DM_OBJECT **) &list,
 			&pop_cb->pop_error);
 		if (status)
+		{
+		    dm0s_munlock(&tcb->tcb_et_mutex);
 		    break;
+		}
 		list->etl_status = 0;
 		STRUCT_ASSIGN_MACRO(etab_record, list->etl_etab);
 		list->etl_next = tcb->tcb_et_list;
@@ -4390,15 +4907,9 @@ dmpe_tcb_populate(ADP_POP_CB   *pop_cb )
 		list->etl_prev->etl_next = list;
 	    }
 	    dm0s_munlock(&tcb->tcb_et_mutex);
-	    pcb->pcb_got_mutex = NULL;
 	} /* while more cat entries */
 	if (status)
 	    break;
-    }
-    if (pcb->pcb_got_mutex)
-    {
-	dm0s_munlock(pcb->pcb_got_mutex);
-	pcb->pcb_got_mutex = NULL;
     }
     if (status)
     {
@@ -4422,11 +4933,12 @@ dmpe_tcb_populate(ADP_POP_CB   *pop_cb )
 	    **	needed.  But we want to leave the interrupt status so
 	    **	it gets correctly reflected back...
 	    */
-	    
+
 	    status = E_DB_OK;
+	    CLRDBERR(&pop_cb->pop_error);
 	}
     }
-    
+
     pcb->pcb_dmrcb->dmr_attr_desc.ptr_address = save_ptr;
     pcb->pcb_dmrcb->dmr_data.data_address = (char *) pcb->pcb_record;
     pcb->pcb_dmrcb->dmr_data.data_in_size = sizeof(DMPE_RECORD);
@@ -4453,8 +4965,14 @@ dmpe_tcb_populate(ADP_POP_CB   *pop_cb )
 **
 ** Inputs:
 **      pop_cb                          Peripheral Control Block.
+**	base_tcb			Base table TCB (since this is only used
+**					from dmpe-put, there will be a valid
+**					pcb_tcb and this is it)
+**	att_id				LOB column we're adding an etab for
+**	etab_id				An output
 **
 ** Outputs:
+**	etab_id				Returned etab table db_tab_base.
 **
 **	Returns:
 **	    DB_STATUS
@@ -4496,10 +5014,11 @@ dmpe_tcb_populate(ADP_POP_CB   *pop_cb )
 **          Moved some of the code into dmpe_create_extension
 **	7-May-2004 (schka24)
 **	    PCB knows where its XCB is now.  Mutex ET list manipulations.
-[@history_template@]...
+**	19-Apr-2010 (kschendel) SIR 123485
+**	    Clean up ET mutex handling a little.
 */
 static DB_STATUS
-dmpe_add_extension(ADP_POP_CB  *pop_cb, DMP_TCB *base_tcb, i4 att_id, 
+dmpe_add_extension(ADP_POP_CB  *pop_cb, DMP_TCB *base_tcb, i4 att_id,
 	u_i4 *new_etab)
 {
     DB_STATUS           status;
@@ -4514,41 +5033,20 @@ dmpe_add_extension(ADP_POP_CB  *pop_cb, DMP_TCB *base_tcb, i4 att_id,
 
     do
     {
-	/* 
-	** put some sanity check here - an attid of zero denotes corrupted
-	** coupons and causes extra iietab* table creation. This is related
-	** to bug 89183.
-	** I am putting this code so that the problems get noticed &
-	** fixed rather than getting ignored.
-	** FIX ME this is no longer a sanity check on coupon
-	** since att_id is not coming from the coupon
-	** Is there some other way to validate coupon?
-	*/
-	if (att_id == 0)
-	{
-	    TRdisplay("Blob coupon corruption \n");
-	    SETDBERR(&pop_cb->pop_error, 0, E_DM002A_BAD_PARAMETER);
-	    status = E_DB_ERROR;
-	    break;
-	}
-
 	xcb = pcb->pcb_xcb;
 
 	t = pcb->pcb_tcb;
 	status = dmpe_create_extension(xcb, &t->tcb_rel,
-		/* pgsize ignored */0, t->tcb_table_io.tbio_location_array, 
+		/* pgsize ignored */0, t->tcb_table_io.tbio_location_array,
 		t->tcb_table_io.tbio_loc_count,
 		att_id,
-		t->tcb_atts_ptr[att_id].type, 
+		t->tcb_atts_ptr[att_id].type,
 		&etab_record, &pop_cb->pop_error);
 	if (status != E_DB_OK)
 	    break;
 
-	*new_etab = etab_record.etab_extension;
 
 	/* Add the new etab record to the tcb extension info */
-	if (pcb->pcb_got_mutex == NULL)
-	    dm0s_mlock(pcb->pcb_got_mutex = &t->tcb_et_mutex);
 
 	status = dm0m_allocate(	sizeof(DMP_ET_LIST),
 		(i4) 0,
@@ -4559,19 +5057,18 @@ dmpe_add_extension(ADP_POP_CB  *pop_cb, DMP_TCB *base_tcb, i4 att_id,
 		&pop_cb->pop_error);
 	if (status)
 	    break;
-	    
+
 	list->etl_status = 0;
 	STRUCT_ASSIGN_MACRO(etab_record, list->etl_etab);
+
+	dm0s_mlock(&t->tcb_et_mutex);
 	list->etl_next = t->tcb_et_list;
 	list->etl_prev = t->tcb_et_list->etl_prev;
 	t->tcb_et_list->etl_prev = list;
 	list->etl_prev->etl_next = list;
+	dm0s_munlock(&t->tcb_et_mutex);
+	*new_etab = etab_record.etab_extension;
     } while (FALSE);
-    if (pcb->pcb_got_mutex)
-    {
-	dm0s_munlock(pcb->pcb_got_mutex);
-	pcb->pcb_got_mutex = NULL;
-    }
 
     if (DB_FAILURE_MACRO(status))
     {
@@ -4606,7 +5103,7 @@ dmpe_add_extension(ADP_POP_CB  *pop_cb, DMP_TCB *base_tcb, i4 att_id,
 **
 **
 **	The table is created as if:
-**	
+**
 **	    CREATE TABLE iietab_<base_id>_<extension_id>
 **	    (
 **		per_key		TABLE_KEY NOT SYSTEM_MAINTAINED,
@@ -4617,7 +5114,7 @@ dmpe_add_extension(ADP_POP_CB  *pop_cb, DMP_TCB *base_tcb, i4 att_id,
 **	    )
 **		WITH JOURNALING = that of base table,
 **		     LOCATIONS = (those of base table);
-**	
+**
 **	This routine is for real etabs, not session temp etabs.
 **	See dmpe_temp for session temp etabs.
 **
@@ -4718,18 +5215,18 @@ dmpe_create_extension(
 	perm_etab_struct = dmf_svcb->svcb_blob_etab_struct;
 
 	/* See if this is first etab created for this table */
-	status = dmpe_get_etab(xcb, rel_record, &etab_extension, 
+	status = dmpe_get_etab(xcb, rel_record, &etab_extension,
 				TRUE, dberr);
 	if (status && dberr->err_code != E_DM0055_NONEXT)
 	    break;
 
 	/* Clear residual error code */
 	CLRDBERR(dberr);
-	
+
 	if (status)
 	{
 	    /*
-	    ** This is only possible from create table, alter add column, 
+	    ** This is only possible from create table, alter add column,
 	    ** upgradedb
 	    ** Tell adi_per_under the page size we want to use
 	    ** Caller page size is only used if this is the first etab
@@ -4748,7 +5245,7 @@ dmpe_create_extension(
 
 #ifdef xDEBUG
 	    TRdisplay("Creating first etab for %~t with pagesize %d journal %d jon %d\n",
-		sizeof(rel_record->relid), &rel_record->relid, create_pagesize, 
+		sizeof(rel_record->relid), &rel_record->relid, create_pagesize,
 		(etab_tbl_status & TCB_JOURNAL),
 		(etab_tbl_status & TCB_JON));
 #endif
@@ -4784,14 +5281,14 @@ dmpe_create_extension(
 #ifdef xDEBUG
 	    TRdisplay("Creating new etab for %~t with pagesize %d journal %d jon %d\n",
 		sizeof(rel_record->relid), &rel_record->relid, create_pagesize,
-		(etab_tbl_status & TCB_JOURNAL), 
+		(etab_tbl_status & TCB_JOURNAL),
 		(etab_tbl_status & TCB_JON));
 #endif
 
 	}
 
-	/* 
-	** Get the underlying datatype/length 
+	/*
+	** Get the underlying datatype/length
 	*/
 	MEfill(sizeof(ADF_CB),0,(PTR)&adf_cb);
 	adf_cb.adf_maxstring = DMPE_SEGMENT_LENGTH;
@@ -4807,7 +5304,7 @@ dmpe_create_extension(
 	    break;
 
 	/* Try to open iiextended_relation */
-	MEfill(sizeof(DMT_CB), 0, &dmtcb);
+	MEfill(sizeof(DMT_CB), 0, (PTR) &dmtcb);
 	dmtcb.length = sizeof(DMT_TABLE_CB);
 	dmtcb.type = DMT_TABLE_CB;
 	dmtcb.ascii_id = DMT_ASCII_ID;
@@ -4870,7 +5367,7 @@ dmpe_create_extension(
 	** Otherwise create this etab using journaling status of other etabs
 	*/
 	char_entry[0].char_id = DMU_JOURNALED;
-	char_entry[0].char_value = (etab_tbl_status & TCB_JOURNAL) 
+	char_entry[0].char_value = (etab_tbl_status & TCB_JOURNAL)
 					? DMU_C_ON : DMU_C_OFF;
 
 	char_entry[1].char_id = DMU_EXT_CREATE;
@@ -4907,8 +5404,8 @@ dmpe_create_extension(
 	{
 	    keys[i] = &key_ents[i];
 	}
-	
-	
+
+
 	MEmove(7, "per_key", ' ', sizeof(att_ents[0].attr_name),
 	       (PTR) &att_ents[0].attr_name);
 	att_ents[0].attr_type = DB_TABKEY_TYPE;
@@ -5046,9 +5543,9 @@ dmpe_create_extension(
 		break;
 	    }
 	}
-	
+
 	/* Insert record into iiextended_relation */
-	MEfill(sizeof(DMR_CB), 0, &dmrcb);
+	MEfill(sizeof(DMR_CB), 0, (PTR) &dmrcb);
 	dmrcb.length = sizeof(DMR_CB);
 	dmrcb.type = DMR_RECORD_CB;
 	dmrcb.ascii_id = DMR_ASCII_ID;
@@ -5061,7 +5558,7 @@ dmpe_create_extension(
 	    etab_record->etab_type = DMP_LO_ETAB;
 	etab_record->etab_att_id = attr_id;
 	MEfill(sizeof(etab_record->etab_filler), '\0', &etab_record->etab_filler);
-	
+
 	dmrcb.dmr_data.data_address = (char *) etab_record;
 	dmrcb.dmr_data.data_in_size = sizeof(DMP_ETAB_CATALOG);
 
@@ -5113,7 +5610,7 @@ dmpe_create_extension(
 **	the table created is a dmf temporary table (dmt_create_temp);  as such,
 **	it will disappear at the end of the session (if not sooner).
 **	Second, no entries are made the in iiextended_relation for the
-**	temporary table. 
+**	temporary table.
 **
 **	Temporary peripheral tables are those used by the system to store large
 **	objects which are components of queries.  They are not associated with
@@ -5197,7 +5694,7 @@ dmpe_create_extension(
 **          Added support for keeping track of the short lived
 **          temporary tables within DMF.  This is used so that these
 **          tables can be destroyed when they have outlived their
-**          usefulness. 
+**          usefulness.
 **	 1-Feb-1996 (kch)
 **	    Save the creation data for session temporary tables as well.
 **	    This will allow specific session temp extension tables in II_WORK
@@ -5217,7 +5714,7 @@ dmpe_create_extension(
 **      29-Jun-98 (thaju02)
 **          Regression bug: with autocommit on, temporary tables created
 **          during blob insertion, are not being destroyed at statement
-**          commital, but are being held until session termination. 
+**          commital, but are being held until session termination.
 **          Regression due to fix for bug 87880. (B91469)
 **	12-aug-1998 (somsa01)
 **	    We also need to set up the proper table structure of the
@@ -5257,9 +5754,6 @@ dmpe_temp( ADP_POP_CB         *pop_cb, i4 att_id, u_i4 *new_temp_etab)
     i4			i;
     i4		err_code, ind = 0;
     DMT_CB		*dmtcb;
-    DMPE_COUPON		*cpn = (DMPE_COUPON *)
-		    &((ADP_PERIPHERAL *)
-			pop_cb->pop_coupon->db_data)->per_value.val_coupon;
     DB_LOC_NAME		loc_name;
     DMT_CB  	    	*dup_dmt_cb;
     DML_SCB         	*parent_scb;
@@ -5270,7 +5764,6 @@ dmpe_temp( ADP_POP_CB         *pop_cb, i4 att_id, u_i4 *new_temp_etab)
     DMP_TCB             *tcb;
     DMU_CB		dmucb;
     DMU_CHAR_ENTRY	char_entry[5];
-    DMP_TCB		*cpn_tcb;
 
     /*
     ** Number of attributes in an extended table:
@@ -5283,14 +5776,12 @@ dmpe_temp( ADP_POP_CB         *pop_cb, i4 att_id, u_i4 *new_temp_etab)
     DMU_KEY_ENTRY	*keys[DMPE_KEY_COUNT];
     DMU_KEY_ENTRY	key_ents[DMPE_KEY_COUNT];
 
-    DMPE_TCB_ASSIGN_MACRO(cpn->cpn_tcb, cpn_tcb);
-
     CLRDBERR(&pop_cb->pop_error);
 
     do
     {
 	dmtcb = pcb->pcb_dmtcb;
-	
+
 	dmtcb->type = DMU_UTILITY_CB;
 	dmtcb->length = sizeof(DMT_TABLE_CB);
 
@@ -5315,7 +5806,7 @@ dmpe_temp( ADP_POP_CB         *pop_cb, i4 att_id, u_i4 *new_temp_etab)
 	status = dmpe_qdata(pop_cb, dmtcb);
 	if (status)
 	    break;
-	
+
 	MEmove(8, "$default", ' ',
 	    sizeof(DB_LOC_NAME), (PTR) loc_name.db_loc_name);
 
@@ -5351,8 +5842,8 @@ dmpe_temp( ADP_POP_CB         *pop_cb, i4 att_id, u_i4 *new_temp_etab)
 	{
 	    keys[i] = &key_ents[i];
 	}
-	
-	
+
+
 	MEmove(7, "per_key", ' ',
 		sizeof(att_ents[0].attr_name),
 	       (PTR) &att_ents[0].attr_name);
@@ -5416,7 +5907,7 @@ dmpe_temp( ADP_POP_CB         *pop_cb, i4 att_id, u_i4 *new_temp_etab)
 	att_ents[4].attr_geomtype = -1;
 	att_ents[4].attr_srid = -1;
 	att_ents[4].attr_flags_mask = 0;
-	
+
 	status = dmt_create_temp(dmtcb);
 	if (status)
 	{
@@ -5488,7 +5979,7 @@ dmpe_temp( ADP_POP_CB         *pop_cb, i4 att_id, u_i4 *new_temp_etab)
 	dmtcb->dmt_char_array.data_in_size = 0;
 
 	*new_temp_etab = dmtcb->dmt_id.db_tab_base;
-    
+
 	if ( pop_cb->pop_temporary == ADP_POP_PERMANENT )
 	{
 	    /* For gtt etab, more work:
@@ -5509,7 +6000,7 @@ dmpe_temp( ADP_POP_CB         *pop_cb, i4 att_id, u_i4 *new_temp_etab)
 	    etab_record.etab_type = DMP_LO_ETAB;
 	    etab_record.etab_att_id = att_id;
 	    MEfill(sizeof(etab_record.etab_filler), '\0', &etab_record.etab_filler);
- 
+
 	    status = dm0m_allocate( sizeof(DMP_ET_LIST),
 		(i4) 0,
 		(i4) ETL_CB,
@@ -5519,7 +6010,6 @@ dmpe_temp( ADP_POP_CB         *pop_cb, i4 att_id, u_i4 *new_temp_etab)
 		&pop_cb->pop_error);
 	    if ( status == E_DB_OK )
 	    {
-		/* won't have the mutex here, ignore pcb-got-mutex gook */
 		dm0s_mlock(&tcb->tcb_et_mutex);
 		list->etl_status = 0;
 		STRUCT_ASSIGN_MACRO(etab_record, list->etl_etab);
@@ -5545,7 +6035,7 @@ dmpe_temp( ADP_POP_CB         *pop_cb, i4 att_id, u_i4 *new_temp_etab)
 	}
     }
     return(status);
-    
+
 }
 
 /*
@@ -5610,7 +6100,7 @@ dmpe_qdata(ADP_POP_CB	*pop_cb ,
 
     CSget_sid(&sid);
     scb = GET_DML_SCB(sid);
-    
+
     if (scb->scb_x_ref_count == 1)
     {
 	dmtcb->dmt_tran_id = (PTR) scb->scb_x_next;
@@ -5645,6 +6135,10 @@ dmpe_qdata(ADP_POP_CB	*pop_cb ,
 **
 **	The calling of this routine is expected to be `unlikely'.  In most
 **	cases, the entire peripheral object will fit in a single table.
+**
+**	Nextchain-fixup is not used when bulk-loading etabs.  We can't
+**	get or update a row already in the sorter, so bulk-load uses a
+**	write behind method instead.  See dmpe-put.
 **
 **
 ** Inputs:
@@ -5706,16 +6200,13 @@ dmpe_nextchain_fixup(ADP_POP_CB     *pop_cb )
     DB_STATUS		status;
     DMR_ATTR_ENTRY	*attr_entry[DMPE_KEY_COUNT];
     DMR_ATTR_ENTRY	attr[DMPE_KEY_COUNT];
-    DMPE_COUPON		*input = (DMPE_COUPON *)
-		    &((ADP_PERIPHERAL *)
-			pop_cb->pop_coupon->db_data)->per_value.val_coupon;
+    DMPE_COUPON		*input = DMPE_CPN_FROM_DBV_MACRO(pop_cb->pop_coupon);
     i4			open = 0;
     i4			repositioned = 0;
     i4                  i;
     i4		err_code;
     u_i4		segment0;
     u_i4		segment1;
-    DMP_TCB		*cpn_tcb;	/* TCB of base table */
     DMP_RCB		*r;
     i4			error;
 
@@ -5730,27 +6221,26 @@ dmpe_nextchain_fixup(ADP_POP_CB     *pop_cb )
 	    segment0 = pcb->pcb_record->prd_segment0 - 1;
 	    segment1 = 0;
 	}
-	    
-	DMPE_TCB_ASSIGN_MACRO(input->cpn_tcb, cpn_tcb);
+
 	status = dm0m_allocate(	(sizeof(DMP_MISC)
-				    + 
+				    +
 				 sizeof(DMT_CB)
-				    + 
+				    +
 				 sizeof(DMR_CB)
 				    +
-				 sizeof(DMPE_RECORD) 
+				 sizeof(DMPE_RECORD)
 			        ),
 			(i4) 0,
 			(i4) MISC_CB,
 			(i4) MISC_ASCII_ID,
-			(char *) cpn_tcb,
+			(char *) pop_cb,
 			(DM_OBJECT **) &misc_cb,
 			&pop_cb->pop_error);
 	if (status)
 	    break;
 	dmt_cb = (DMT_CB *) ((char *) misc_cb + sizeof(DMP_MISC));
 	misc_cb->misc_data = (char*)dmt_cb;
-	MEfill(sizeof(DMT_CB), 0, dmt_cb);
+	MEfill(sizeof(DMT_CB), 0, (PTR) dmt_cb);
 	dmt_cb->length = sizeof(DMT_CB);
 	dmt_cb->type = DMT_TABLE_CB;
 	dmt_cb->ascii_id = DMT_ASCII_ID;
@@ -5758,9 +6248,6 @@ dmpe_nextchain_fixup(ADP_POP_CB     *pop_cb )
 	dmt_cb->dmt_db_id = pcb->pcb_db_id;
 	dmt_cb->dmt_tran_id = (PTR) pcb->pcb_xcb;
 	dmt_cb->dmt_flags_mask = DMT_DBMS_REQUEST;
-
-	dmt_cb->dmt_lock_mode = DMT_IX;
-	dmpe_check_table_lock(ADP_PUT, dmt_cb, pcb->pcb_tcb);
 
 	dmt_cb->dmt_update_mode = DMT_U_DIRECT;
 	dmt_cb->dmt_access_mode = DMT_A_WRITE;
@@ -5771,7 +6258,7 @@ dmpe_nextchain_fixup(ADP_POP_CB     *pop_cb )
 	dmt_cb->dmt_char_array.data_address = 0;
 	dmt_cb->dmt_char_array.data_in_size = 0;
 
-	status = etab_open(dmt_cb,pcb->pcb_tcb);
+	status = etab_open(dmt_cb, pop_cb);
 
 	if (DB_FAILURE_MACRO(status))
 	{
@@ -5780,11 +6267,11 @@ dmpe_nextchain_fixup(ADP_POP_CB     *pop_cb )
 	}
 	open = 1;
 	dmr_cb = (DMR_CB *) ((char *) dmt_cb + sizeof(DMT_CB));
-	MEfill(sizeof(DMR_CB), 0, dmr_cb);
+	MEfill(sizeof(DMR_CB), 0, (PTR) dmr_cb);
 	dmr_cb->length = sizeof(DMR_CB);
 	dmr_cb->type = DMR_RECORD_CB;
 	dmr_cb->ascii_id = DMR_ASCII_ID;
-	
+
 	dmr_cb->dmr_access_id = dmt_cb->dmt_record_access_id;
 	r = (DMP_RCB *)dmt_cb->dmt_record_access_id;
 
@@ -5879,7 +6366,7 @@ dmpe_nextchain_fixup(ADP_POP_CB     *pop_cb )
 	    **	the next segment is the table id of the currently open table.
 	    **	Otherwise, it is zero (i.e. if there is no next).
 	    */
-	    
+
 	    if (pop_cb->pop_segment)
 	    {
 		record->prd_r_next = pcb->pcb_dmtcb->dmt_id.db_tab_base;
@@ -5942,7 +6429,7 @@ dmpe_nextchain_fixup(ADP_POP_CB     *pop_cb )
 **	(POP).
 **
 **	This routine will open the catalog, and scan it based on the key (which
-**	is the table id of the base table). 
+**	is the table id of the base table).
 **
 ** Inputs:
 **      pop_cb				The Peripheral OPerations control
@@ -6082,7 +6569,7 @@ dmpe_cat_scan(ADP_POP_CB	*pop_cb ,
 	    **	needed.  However, if the case is interrupt, we need to
 	    **  reflect that back to the caller.
 	    */
-	    
+
 	    status = E_DB_WARN;
 	    SETDBERR(&pop_cb->pop_error, 0, E_DM0055_NONEXT);
 	}
@@ -6102,7 +6589,7 @@ dmpe_cat_scan(ADP_POP_CB	*pop_cb ,
 **
 **      It is expected that this routine will be called when it is safe
 **      to do so -- meaning that there are no blobs "in flight".
-**      
+**
 **	Session temp table etabs are not considered "temporary", and
 **	are not flagged as such.  Therefore they are not deleted
 **	by this routine.  Only anonymous holding temp tables are deleted.
@@ -6165,7 +6652,7 @@ dmpe_cat_scan(ADP_POP_CB	*pop_cb ,
 **	    weren't keeping in sync with the main XCCB temp-cleanup list,
 **	    run this routine off of the session XCCB list and simply look
 **	    for a flag that says this temp table is a blob holding temp.
-**	
+**
 [@history_template@]...
 */
 DB_STATUS
@@ -6248,6 +6735,9 @@ dmpe_free_temps(DML_ODCB *odcb, DB_ERROR *dberr)
 **	dmrload.c) sets up the appropriate variables for a call to
 **	dm2r_load() with the DM2R_L_BEGIN flag.
 **
+**	Etabs being loaded are never heaps, so we can skip a couple
+**	start-load cases that only have to do with heaps.
+**
 ** Inputs:
 **	rcb				The RCB of the extension table.
 **
@@ -6269,20 +6759,26 @@ dmpe_free_temps(DML_ODCB *odcb, DB_ERROR *dberr)
 **	    Removed recbuf stuff; it is not used.
 **	03-aug-1998 (somsa01)
 **	    Put part of last removal back.
+**	13-Apr-2010 (kschendel) SIR 123485
+**	    Do "noparallel" sorts on etab loads, mostly because there might
+**	    be a bunch of 'em and we don't want to flood the OS with a
+**	    zillion sort child threads.  Force 100% fillfactors, there is
+**	    little to no benefit in less.  Start hash etabs out at something
+**	    vaguely resembling a useful size (these are LOBs, after all).
 */
 static STATUS
 dmpe_start_load(
 DMP_RCB		*rcb,
 DB_ERROR	*error)
 {
-    DMP_TCB		 *tcb = rcb->rcb_tcb_ptr;
-    i4		 flag = 0;
-    DB_STATUS		 status = E_DB_OK;
-    i4		 row_count;
-    i4		 row_estimate;
+    DMP_TCB	*tcb = rcb->rcb_tcb_ptr;
+    i4		flag;
+    DB_STATUS	status = E_DB_OK;
+    i4		row_count;
+    i4		row_estimate;
     DM2R_BUILD_TBL_INFO  build_tbl_info;
-    i4		 min_pages, max_pages;
-    i4		 local_error;
+    i4		min_pages, max_pages;
+    i4		local_error;
 
     /* Get the tuple buffer from the rcb */
     if ( rcb->rcb_tupbuf == NULL )
@@ -6296,7 +6792,7 @@ DB_ERROR	*error)
 
     /* Start the load process. */
 
-    flag |= DM2R_EMPTY;
+    flag = DM2R_NOPARALLEL;
 
     /*
     ** Pass on estimated number of rows (zero for now).
@@ -6307,35 +6803,34 @@ DB_ERROR	*error)
     ** Setup information on how to build the table. These are set
     ** from the table's TCB.
     */
-    build_tbl_info.dm2r_fillfactor   = tcb->tcb_rel.reldfill;
-    build_tbl_info.dm2r_nonleaffill  = tcb->tcb_rel.relifill;
-    build_tbl_info.dm2r_leaffill     = tcb->tcb_rel.rellfill;
-    build_tbl_info.dm2r_hash_buckets = tcb->tcb_rel.relprim;
+    build_tbl_info.dm2r_fillfactor   = 100;
+    build_tbl_info.dm2r_nonleaffill  = 100;
+    build_tbl_info.dm2r_leaffill     = 100;
+    build_tbl_info.dm2r_hash_buckets = 0;
     build_tbl_info.dm2r_extend       = tcb->tcb_rel.relextend;
     build_tbl_info.dm2r_allocation   = tcb->tcb_rel.relallocation;
 
     /*
     ** If a HASH table determine the number of HASH buckets
     ** which are required.
+    ** Without an estimated row count, calling dm2u_calc_hash_buckets is
+    ** a waste of time.  For a bulk-load, one expects a certain volume,
+    ** so use a special hard-coded value if the etab doesn't have a
+    ** usefully large looking minpages already.
+    ** It would be nice to use the base table estimate, if there is one,
+    ** but I don't know any way to get at it.
     */
     if ( tcb->tcb_rel.relspec == TCB_HASH )
     {
-	min_pages = DMPE_DEF_TBL_SIZE;
-	max_pages = DM1P_MAX_TABLE_SIZE - 1;
-	build_tbl_info.dm2r_hash_buckets = dm2u_calc_hash_buckets( 
-			    tcb->tcb_rel.relpgtype,
-			    tcb->tcb_rel.relpgsize,
-			    build_tbl_info.dm2r_fillfactor,
-			    (i4)tcb->tcb_rel.relwid,
-			    row_estimate,
-			    min_pages,
-			    max_pages );
+	build_tbl_info.dm2r_hash_buckets = tcb->tcb_rel.relmin;
+	if (build_tbl_info.dm2r_hash_buckets < 512)
+	    build_tbl_info.dm2r_hash_buckets = 4096;	/* 32 meg at 8K page */
     }
 
     row_count = 0;
 
     status = dm2r_load( rcb, tcb, DM2R_L_BEGIN, flag,
-	                &row_count, (DM_MDATA *)NULL, row_estimate, 
+	                &row_count, (DM_MDATA *)NULL, row_estimate,
 			&build_tbl_info, error);
     return (status);
 }
@@ -6362,7 +6857,7 @@ dmpe_get_etab(DML_XCB                 *xcb,
     */
     do
     {
-	MEfill(sizeof(DMT_CB), 0, &dmtcb);
+	MEfill(sizeof(DMT_CB), 0, (PTR) &dmtcb);
 	dmtcb.length = sizeof(DMT_TABLE_CB);
 	dmtcb.type = DMT_TABLE_CB;
 	dmtcb.ascii_id = DMT_ASCII_ID;
@@ -6382,7 +6877,7 @@ dmpe_get_etab(DML_XCB                 *xcb,
 	    break;
 	}
 
-	MEfill(sizeof(DMR_CB), 0, &dmrcb);
+	MEfill(sizeof(DMR_CB), 0, (PTR) &dmrcb);
 	dmrcb.length = sizeof(DMR_CB);
 	dmrcb.type = DMR_RECORD_CB;
 	dmrcb.ascii_id = DMR_ASCII_ID;
@@ -6436,95 +6931,6 @@ dmpe_get_etab(DML_XCB                 *xcb,
     return(status);
 }
 
-static DB_STATUS
-dmpe_destroy_heap_etab(DMP_TCB		*base_tcb,
-		u_i4			etab_extension,
-		DB_ERROR		*dberr)
-
-{
-    DB_STATUS           status;
-    ADP_POP_CB		pop_cb;
-    DMPE_PCB		*pcb;
-    ADP_PERIPHERAL	fake;
-    DB_DATA_VALUE	fake_dbdv;
-    DMP_ETAB_CATALOG	etab_record;
-    DMU_CB		dmu_cb;
-    DMPE_COUPON		*cpn;
-    bool		deleted_etab = FALSE;
-
-    CLRDBERR(&pop_cb.pop_error);
-    
-    fake.per_tag = ADP_P_COUPON;
-    cpn = (DMPE_COUPON *)&(fake.per_value.val_coupon);
-    DMPE_TCB_ASSIGN_MACRO(DMPE_NULL_TCB, cpn->cpn_tcb);
-    pop_cb.pop_temporary = ADP_POP_TEMPORARY;
-    pop_cb.pop_coupon = &fake_dbdv;
-    pop_cb.pop_info = NULL;
-    fake_dbdv.db_data = (PTR) &fake;
-
-    dmu_cb.type = DMU_UTILITY_CB;
-    dmu_cb.length = sizeof(dmu_cb);
-    dmu_cb.dmu_flags_mask = 0;
-    dmu_cb.dmu_char_array.data_address = (PTR) 0;
-    dmu_cb.dmu_char_array.data_in_size = 0;
-    dmu_cb.dmu_char_array.data_out_size = 0;
-    dmu_cb.dmu_part_def = NULL;
-    dmu_cb.dmu_ppchar_array.data_address = NULL;
-    dmu_cb.dmu_ppchar_array.data_in_size = 0;
-
-    status = dmpe_allocate(&pop_cb, &pcb);
-    if (status)
-    {
-	*dberr = pop_cb.pop_error;
-	return(status);
-    }
-    dmu_cb.dmu_tran_id = (PTR) pcb->pcb_xcb;
-    dmu_cb.dmu_db_id = pcb->pcb_db_id;
-    pcb->pcb_dmtcb->dmt_tran_id = (PTR) pcb->pcb_xcb;
-    pcb->pcb_dmtcb->dmt_db_id = pcb->pcb_db_id;
-
-    while (status == E_DB_OK)
-    {
-	status = dmpe_cat_scan(&pop_cb, &base_tcb->tcb_rel.reltid,
-			&etab_record);
-
-	if (status)
-	    break;
-
-	if (etab_record.etab_extension != etab_extension)
-	    continue;
-
-	if (DMZ_SES_MACRO(11))
-	    dmd_petrace("DMPE_DESTROY requested for one etab", 0, 0 , 0);
-
-	/* Delete the record from the iiextended_relation */
-	pcb->pcb_dmrcb->dmr_flags_mask = DMR_CURRENT_POS;
-	status = dmr_delete(pcb->pcb_dmrcb);
-	if (status)
-	{
-	    pop_cb.pop_error = pcb->pcb_dmrcb->error;
-	    break;
-	}
-
-	/* Drop the heap etab */
-	dmu_cb.dmu_tbl_id.db_tab_base = etab_record.etab_extension;
-	dmu_cb.dmu_tbl_id.db_tab_index = 0;
-	status = dmu_destroy(&dmu_cb);
-	pop_cb.pop_error = dmu_cb.error;
-	*dberr = dmu_cb.error;
-	deleted_etab = TRUE;
-	break;
-    }
-
-    dmpe_deallocate(pcb);
-
-    *dberr = pop_cb.pop_error;
-    if (status == E_DB_OK && !deleted_etab)
-	status = E_DB_WARN;
-       
-    return(status);
-}
-
 
 /*
 **{
@@ -6537,13 +6943,13 @@ dmpe_destroy_heap_etab(DMP_TCB		*base_tcb,
 **      data pages in which case we don't need to do page allocations within
 **      mini transactions.
 **
-**      When using nojournaling, NOBLOBLOGGING protocols, 
+**      When using nojournaling, NOBLOBLOGGING protocols,
 **      all segments must be inserted onto new disassociated data pages,
 **      to support rollback of blobs when nojournaling, NOBLOBLOGGING.
 **
 **      Currently if the blob has only one segment we are doing normal puts
 **      which may use the associated data page, and therefore must be logged.
-**      If this is not the desired behavior, we can change the code to 
+**      If this is not the desired behavior, we can change the code to
 **      do buffered puts for single segment blobs as well.
 **
 **      The bulk of the work for buffered puts is in dm1b_bulk_put,
@@ -6569,22 +6975,24 @@ dmpe_destroy_heap_etab(DMP_TCB		*base_tcb,
 ** History:
 **      02-jan-2004 (stial01)
 **	27-Jul-2009 (thaju02) B122383
-**       iietab data filesize grows very large; For fairly small blobs 
-**	 as pagesize increases disassociated data pages have more 
+**       iietab data filesize grows very large; For fairly small blobs
+**	 as pagesize increases disassociated data pages have more
 **	 unused space.
+**	6-Apr-2010 (kschendel) SIR 123485
+**	    short-term is OK for rcb-bulk-misc.
 **
 */
 static DB_STATUS
-dmpe_buffered_put( 
+dmpe_buffered_put(
 ADP_POP_CB	*pop_cb,
-DMR_CB		*dmr_cb) 
+DMR_CB		*dmr_cb)
 {
     DMPE_RECORD		dmpe_seg_buf;
     DMPE_RECORD		*put_rec;
     DMPE_RECORD		*first_rec;
     DMPE_RECORD		*fix_rec;
     bool		last_seg;
-    DMP_RCB		*r = (DMP_RCB *)dmr_cb->dmr_access_id; 
+    DMP_RCB		*r = (DMP_RCB *)dmr_cb->dmr_access_id;
     DMP_TCB		*t = r->rcb_tcb_ptr;
     i4			error;
     DMPP_PAGE		*page;
@@ -6602,7 +7010,7 @@ DMR_CB		*dmr_cb)
 	/*
 	** Bulk put implemented only if etab is V2, BTREE and compression NONE.
 	*/
-	if (t->tcb_rel.relpgtype == DM_COMPAT_PGTYPE 
+	if (t->tcb_rel.relpgtype == DM_COMPAT_PGTYPE
 		|| t->tcb_rel.relspec != TCB_BTREE
 		|| t->tcb_rel.relcomptype != TCB_C_NONE
 		|| ((pop_cb->pop_continuation & ADP_C_BEGIN_MASK) &&
@@ -6615,8 +7023,6 @@ DMR_CB		*dmr_cb)
 	    */
 	    if (r->rcb_bulk_misc)
 	    {
-		TRdisplay("dmpe_buffered_put single segment, bulk_misc %x\n",
-				r->rcb_bulk_misc);
 		dm0m_deallocate((DM_OBJECT **)&r->rcb_bulk_misc);
 	    }
 	    status = dmr_put(dmr_cb);
@@ -6636,17 +7042,16 @@ DMR_CB		*dmr_cb)
 
 	    size = sizeof(DMP_MISC) + t->tcb_rel.relpgsize;
 	    /*
-	    ** Should this be SHORTTERM or LONGTERM memory?
-	    ** Default for MISC_CB is ShortTerm, so override
-	    ** with LongTerm just to be safe.
+	    ** Ask for short-term memory (default for MISC_CB), since
+	    ** rcb_bulk_misc is deallocated when the RCB is released.
 	    */
-	    status = dm0m_allocate( size, (DM0M_ZERO | DM0M_LONGTERM), 
-			    (i4) MISC_CB, 
-			    (i4) MISC_ASCII_ID, (char *) 0, 
+	    status = dm0m_allocate( size, DM0M_ZERO,
+			    (i4) MISC_CB,
+			    (i4) MISC_ASCII_ID, (char *) 0,
 			    (DM_OBJECT **) &r->rcb_bulk_misc, &dmr_cb->error);
 	    if ( status != E_DB_OK )
 	    {
-		uleFormat(&dmr_cb->error, 0, NULL, ULE_LOG , NULL, 
+		uleFormat(&dmr_cb->error, 0, NULL, ULE_LOG , NULL,
 			(char * )NULL, 0L, (i4 *)NULL, &error, 0);
 	        SETDBERR(&dmr_cb->error, 0, E_DM9B02_PUT_DMPE_ERROR);
 		break;
@@ -6667,13 +7072,13 @@ DMR_CB		*dmr_cb)
 	{
 	    pageno = 0; /* for now */
 
-	    (*t->tcb_acc_plv->dmpp_format)(t->tcb_rel.relpgtype, 
+	    (*t->tcb_acc_plv->dmpp_format)(t->tcb_rel.relpgtype,
 				    t->tcb_rel.relpgsize,
 				    page,
-				    pageno, 
+				    pageno,
 				    (DMPP_DATA | DMPP_MODIFY),
 				    DM1C_ZERO_FILL);
-	    
+
 	}
 
 	put_tid.tid_tid.tid_page = 0;
@@ -6696,7 +7101,7 @@ DMR_CB		*dmr_cb)
 	    first_tid.tid_tid.tid_line = 0;
 
 	    status = (*t->tcb_acc_plv->dmpp_get)(t->tcb_rel.relpgtype,
-		t->tcb_rel.relpgsize, page, &first_tid, 
+		t->tcb_rel.relpgsize, page, &first_tid,
 		&record_size, (PTR *)&first_rec, NULL, NULL, NULL, (DMPP_SEG_HDR *)0);
 	    if (status != E_DB_OK)
 	    {
@@ -6714,33 +7119,29 @@ DMR_CB		*dmr_cb)
 	    if (first_rec->prd_r_next != t->tcb_rel.reltid.db_tab_base)
 	    {
 		fix_tid.tid_tid.tid_page = 0;
-		for (fix_tid.tid_tid.tid_line = 0; 
+		for (fix_tid.tid_tid.tid_line = 0;
 			fix_tid.tid_tid.tid_line < r->rcb_bulk_cnt;
 				fix_tid.tid_tid.tid_line++)
 		{
 		    status = (*t->tcb_acc_plv->dmpp_get)(t->tcb_rel.relpgtype,
-			t->tcb_rel.relpgsize, page, &fix_tid, 
+			t->tcb_rel.relpgsize, page, &fix_tid,
 			&record_size, (PTR *)&fix_rec, NULL, NULL, NULL, (DMPP_SEG_HDR *)0);
 
 		    if (fix_rec->prd_r_next != 0)
 		    {
-			TRdisplay("dmpe_buffered_put fix prd_r_next %d -> %d\n",
-				fix_rec->prd_r_next, 
-				t->tcb_rel.reltid.db_tab_base);
-
 			fix_rec->prd_r_next = t->tcb_rel.reltid.db_tab_base;
 
 			(*t->tcb_acc_plv->dmpp_put)(t->tcb_rel.relpgtype,
 			t->tcb_rel.relpgsize, page, DM1C_DIRECT,
-			&r->rcb_tran_id, r->rcb_slog_id_id, &fix_tid, 
+			&r->rcb_tran_id, r->rcb_slog_id_id, &fix_tid,
 			sizeof(DMPE_RECORD), (char *)fix_rec,
-			t->tcb_rel.relversion, (DMPP_SEG_HDR *)0); 
+			t->tcb_rel.relversion, (DMPP_SEG_HDR *)0);
 		    }
 		}
 
 		/* re-get first record */
 		status = (*t->tcb_acc_plv->dmpp_get)(t->tcb_rel.relpgtype,
-		    t->tcb_rel.relpgsize, page, &first_tid, 
+		    t->tcb_rel.relpgsize, page, &first_tid,
 		    &record_size, (PTR *)&first_rec, NULL, NULL, NULL,
 		    (DMPP_SEG_HDR *)0);
 	    }
@@ -6764,10 +7165,10 @@ DMR_CB		*dmr_cb)
 	    r->rcb_bulk_cnt = 0;
 	    continue;
 	}
-	
+
 	/* assumes relcomptype != TCB_C_NONE */
 	/* Pass pointer to 1st record inserted on rcb_bulk_misc data page */
-	(*t->tcb_acc_plv->dmpp_put)(t->tcb_rel.relpgtype, t->tcb_rel.relpgsize,	
+	(*t->tcb_acc_plv->dmpp_put)(t->tcb_rel.relpgtype, t->tcb_rel.relpgsize,
 		page, DM1C_DIRECT, &r->rcb_tran_id, r->rcb_slog_id_id, &put_tid,
 		sizeof(DMPE_RECORD), (char *)put_rec,
 		t->tcb_rel.relversion, (DMPP_SEG_HDR *)0);
@@ -6790,7 +7191,7 @@ DMR_CB		*dmr_cb)
 	    first_tid.tid_tid.tid_line = 0;
 
 	    status = (*t->tcb_acc_plv->dmpp_get)(t->tcb_rel.relpgtype,
-		t->tcb_rel.relpgsize, page, &first_tid, 
+		t->tcb_rel.relpgsize, page, &first_tid,
 		&record_size, (PTR *)&first_rec, NULL, NULL, NULL, (DMPP_SEG_HDR *)0);
 	    if (status != E_DB_OK)
 	    {
@@ -6806,33 +7207,30 @@ DMR_CB		*dmr_cb)
 	    if (first_rec->prd_r_next != t->tcb_rel.reltid.db_tab_base)
 	    {
 		fix_tid.tid_tid.tid_page = 0;
-		for (fix_tid.tid_tid.tid_line = 0; 
+		for (fix_tid.tid_tid.tid_line = 0;
 			fix_tid.tid_tid.tid_line < r->rcb_bulk_cnt;
 				fix_tid.tid_tid.tid_line++)
 		{
 		    status = (*t->tcb_acc_plv->dmpp_get)(t->tcb_rel.relpgtype,
-			t->tcb_rel.relpgsize, page, &fix_tid, 
+			t->tcb_rel.relpgsize, page, &fix_tid,
 			&record_size, (PTR *)&fix_rec, NULL, NULL, NULL,
 			(DMPP_SEG_HDR *)0);
 
 		    if (fix_rec->prd_r_next != 0)
 		    {
-			TRdisplay("(last) dmpe_buffered_put fix prd_r_next %d -> %d\n",
-				fix_rec->prd_r_next, 
-				t->tcb_rel.reltid.db_tab_base);
 			fix_rec->prd_r_next = t->tcb_rel.reltid.db_tab_base;
 
 			(*t->tcb_acc_plv->dmpp_put)(t->tcb_rel.relpgtype,
 			    t->tcb_rel.relpgsize, page, DM1C_DIRECT,
-			    &r->rcb_tran_id, r->rcb_slog_id_id, &fix_tid, 
+			    &r->rcb_tran_id, r->rcb_slog_id_id, &fix_tid,
 			    sizeof(DMPE_RECORD), (char *)fix_rec,
-			    t->tcb_rel.relversion, (DMPP_SEG_HDR *)0); 
+			    t->tcb_rel.relversion, (DMPP_SEG_HDR *)0);
 		    }
 		}
 
 		/* re-get first record */
 		status = (*t->tcb_acc_plv->dmpp_get)(t->tcb_rel.relpgtype,
-		    t->tcb_rel.relpgsize, page, &first_tid, 
+		    t->tcb_rel.relpgsize, page, &first_tid,
 		    &record_size, (PTR *)&first_rec, NULL, NULL, NULL,
 		    (DMPP_SEG_HDR *)0);
 	    }
@@ -6885,9 +7283,9 @@ DMR_CB		*dmr_cb)
 		    ** We may need to dmpe_add_extension and dmpe_nextchain_fixup
 		    ** And then retry
 		    */
-		    (*t->tcb_acc_plv->dmpp_delete)(t->tcb_rel.relpgtype, 
+		    (*t->tcb_acc_plv->dmpp_delete)(t->tcb_rel.relpgtype,
 		    	t->tcb_rel.relpgsize, page, DM1C_DIRECT, TRUE,
-		    	&r->rcb_tran_id, r->rcb_slog_id_id, &put_tid, 
+		    	&r->rcb_tran_id, r->rcb_slog_id_id, &put_tid,
 			sizeof(DMPE_RECORD));
 		    r->rcb_bulk_cnt--;
 		    break;
@@ -6909,7 +7307,7 @@ DMR_CB		*dmr_cb)
 
 
 /*
-** Name: dmpe_journaling - This routine updates the journaling status 
+** Name: dmpe_journaling - This routine updates the journaling status
 **				for all extension tables for a given table.
 **
 ** Description:
@@ -6918,8 +7316,11 @@ DMR_CB		*dmr_cb)
 **	It is based on the table id of the parent table.
 **
 **	Based upon this id, the routine scans the iiextended_relation catalog.
-**	Any table whose parent matches the table id passed in has its 
+**	Any table whose parent matches the table id passed in has its
 **      journaling status changed.
+**
+**	Journaling doesn't apply to session temps, so this is easier than
+**	(say) dmpe-modify.
 **
 ** Inputs:
 **      blob_journaling			DMT_C_ON or DMT_C_OFF
@@ -6939,7 +7340,9 @@ DMR_CB		*dmr_cb)
 **
 ** History:
 **      02-jan-2004 (stial01)
-**	    Created.     
+**	    Created.
+**	15-Apr-2010 (kschendel) SIR 123485
+**	    Don't need a fake coupon any more.
 */
 DB_STATUS
 dmpe_journaling(
@@ -6951,23 +7354,19 @@ DB_ERROR	*dberr)
     DB_STATUS           status;
     ADP_POP_CB		pop_cb;
     DMPE_PCB		*pcb;
-    ADP_PERIPHERAL	fake;
-    DB_DATA_VALUE	fake_dbdv;
     DMP_ETAB_CATALOG	etab_record;
     DMU_CHAR_ENTRY	char_entry[1];
     i4			i;
     DMP_ET_LIST		*etlist_ptr = (DMP_ET_LIST *)0;
-    DMPE_COUPON		*cpn;
     DMT_CB		dmt_cb;
     i4		local_error;
-    bool		base_open = 0;
 
     CLRDBERR(&pop_cb.pop_error);
-        
+
     if (DMZ_SES_MACRO(11))
 	dmd_petrace("DMPE_JOURNAL requested", 0, 0 , 0);
 
-    MEfill(sizeof(DMT_CB), 0, &dmt_cb);
+    MEfill(sizeof(DMT_CB), 0, (PTR) &dmt_cb);
     dmt_cb.length = sizeof(DMT_CB);
     dmt_cb.type = DMT_TABLE_CB;
     dmt_cb.ascii_id = DMT_ASCII_ID;
@@ -6979,13 +7378,9 @@ DB_ERROR	*dberr)
     char_entry[0].char_id = DMT_C_JOURNALED;
     char_entry[0].char_value = blob_journaling; /* DMT_C_ON or DMT_C_OFF */
 
-    fake.per_tag = ADP_P_COUPON;
-    cpn = (DMPE_COUPON *)&(fake.per_value.val_coupon);
-    DMPE_TCB_ASSIGN_MACRO(DMPE_NULL_TCB, cpn->cpn_tcb);
     pop_cb.pop_temporary = ADP_POP_TEMPORARY;
-    pop_cb.pop_coupon = &fake_dbdv;
+    pop_cb.pop_coupon = NULL;
     pop_cb.pop_info = NULL;
-    fake_dbdv.db_data = (PTR) &fake;
 
     status = dmpe_allocate(&pop_cb, &pcb);
     if (status)
@@ -6994,9 +7389,6 @@ DB_ERROR	*dberr)
 	return(status);
     }
 
-    pcb->pcb_dmtcb->dmt_db_id = pcb->pcb_db_id;
-    pcb->pcb_dmtcb->dmt_tran_id = (PTR) pcb->pcb_xcb;
-
     while (status == E_DB_OK)
     {
 	status = dmpe_cat_scan(&pop_cb, base_tab_id, &etab_record);
@@ -7004,7 +7396,7 @@ DB_ERROR	*dberr)
 	{
 	    dmt_cb.dmt_id.db_tab_base = etab_record.etab_extension;
 	    dmt_cb.dmt_id.db_tab_index = 0;
-	    
+
 	    status = dmt_alter(&dmt_cb);
 	    pop_cb.pop_error = dmt_cb.error;
 	    *dberr = dmt_cb.error;
@@ -7023,102 +7415,6 @@ DB_ERROR	*dberr)
 }
 
 /*
-** Name: dmpe_check_table_lock
-**
-** Description:
-**	When opening a permanent etab, we normally use page level locking.
-**	If some user of the base table is in table level lock mode, though,
-**	open the etab in table level locking to avoid deadlocks on the etab.
-**	We also use table locking for temp tables (who knows why we lock
-**	them at all).
-**
-** Inputs:
-**	opcode			ADP_GET or other (ADP_PUT)
-**	dmtcb			DMT_CB for etab open being built
-**	    .dmt_id		db_tab_base negative for temp tables
-**	base_tcb		TCB of base table (or NULL)
-**
-** Outputs:
-**	dmtcb
-**	    .dmt_lock_mode	Updated to S or X if table locking needed
-**
-** History:
-**	10-May-2004 (schka24)
-**	    Extract from common code.
-**	03-Mar-2010 (jonj)
-**	    SIR 121619 MVCC, blob support:
-**	    Check transaction's list of opened tables
-**	    instead of TCB->RCB list, which is not thread-safe.
-**	    If base table is opened by this transaction for MVCC,
-**	    do likewise for its extended tables.
-**	    Set DMT_SESSION_TEMP here instead of scattering it all
-**	    over the place.
-**	18-Mar-2010 (jonj)
-**	    Send base table's CRIB over to dmt_open via dmt_crib_ptr.
-**	24-Mar-2010 (jonj)
-**	    Tell dmt_open to use CRIB in dmt_crib_ptr; dmt_open
-**	    figures everything else out.
-*/
-
-static void
-dmpe_check_table_lock(i4 opcode, DMT_CB *dmtcb, DMP_TCB *base_tcb)
-{
-    DMP_RCB		*base_rcb;
-    DML_XCB		*xcb;
-
-    dmtcb->dmt_crib_ptr = NULL;
-
-    /* If table being opened is a temp table, no point in page-locking */
-    if (dmtcb->dmt_id.db_tab_base < 0)
-    {
-	dmtcb->dmt_flags_mask |= DMT_SESSION_TEMP;
-
-	if (opcode == ADP_GET)
-	    dmtcb->dmt_lock_mode = DMT_S;
-	else
-	    dmtcb->dmt_lock_mode = DMT_X;
-    }
-    /* If don't have a base TCB, it's probably a temp table, but leave
-    ** it alone since we don't really know.
-    */
-    else if ( base_tcb )
-    {
-        /* 
-	** First, see if this transaction has the base table
-	** opened to use MVCC or, while we're at it, TABLE locking:
-	*/
-	xcb = (DML_XCB*)dmtcb->dmt_tran_id;
-	base_rcb = xcb->xcb_rq_next;
-
-	while ( base_rcb != (DMP_RCB*)&xcb->xcb_rq_next )
-	{
-	    base_rcb = (DMP_RCB*)((char *)base_rcb 
-	    		- CL_OFFSETOF(DMP_RCB, rcb_xq_next));
-
-	    if ( base_rcb->rcb_tcb_ptr == base_tcb )
-	    {
-	        if ( crow_locking(base_rcb) )
-		{
-		    /* etabs use base table's CRIB */
-		    dmtcb->dmt_crib_ptr = (PTR)base_rcb->rcb_crib_ptr;
-		    dmtcb->dmt_flags_mask |= DMT_CRIBPTR;
-		}
-		else if ( base_rcb->rcb_lk_type == RCB_K_TABLE )
-		{
-		    if (opcode == ADP_GET)
-			dmtcb->dmt_lock_mode = DMT_S;
-		    else
-			dmtcb->dmt_lock_mode = DMT_X;
-		}
-		break;
-	    }
-	    base_rcb = base_rcb->rcb_xq_next;
-	}
-    }
-
-} /* dmpe_check_table_lock */
-
-/*
 ** Name: etab_open
 **
 ** Description:
@@ -7129,9 +7425,20 @@ dmpe_check_table_lock(i4 opcode, DMT_CB *dmtcb, DMP_TCB *base_tcb)
 **	(typically etabs are closed by hand here in dmpe, but interrupts
 **	or premature POP end might leave an etab open.)
 **
+**	We'll also figure out the extension table lock level.  If the original
+**	POP CB passed along an open table reference, use that RCB to open
+**	the etabs in a compatible manner.  Otherwise, use the hints in
+**	the operation's query context (BQCB).
+**	bqcb-table-lock -> S or X locking
+**	bqcb-crib -> MVCC locking, possibly against a cursor CRIB.
+**
+**	etab_open is only used for GET and PUT operations, so there will
+**	always be a valid query context (BQCB) unless the etab is a holding.
+**	temp.
+**
 ** Inputs:
 **	dmtcb			DMT_CB describing etab to open
-**	base_tcb		TCB pointer to base table, can be null
+**	pop_cb			ADP_POP_CB for this blob operation
 **
 ** Outputs:
 **	Returns E_DB_xxx, error details in DMT_CB
@@ -7139,24 +7446,198 @@ dmpe_check_table_lock(i4 opcode, DMT_CB *dmtcb, DMP_TCB *base_tcb)
 ** History:
 **	12-May-2004 (schka24)
 **	    Written.
+**	24-Mar-2010 (jonj)
+**	    Tell dmt_open to use CRIB in dmt_crib_ptr; dmt_open
+**	    figures everything else out.
+**	16-Apr-2010 (kschendel) SIR 123485
+**	    Figure out the lock level and mvcc-ness from the query context
+**	    (BQCB), which the caller will provide.
 */
 
 static DB_STATUS
-etab_open(DMT_CB *dmtcb, DMP_TCB *base_tcb)
+etab_open(DMT_CB *dmtcb, ADP_POP_CB *pop_cb)
 {
+    bool table_lock;
+    DB_BLOB_WKSP *wksp;			/* Possible caller supplied info */
     DB_STATUS status;
+    DMPE_BQCB *bqcb;			/* May be NULL if holding temp */
+    DMPE_PCB *pcb;
+    DMP_RCB *r;				/* Possible RCB from wksp */
+    DMP_TCB *t;
+    LG_CRIB *crib;
+    i4 lockmode;
+
+    pcb = (DMPE_PCB *) pop_cb->pop_user_arg;
+    bqcb = pcb->pcb_bqcb;
+    r = NULL;
+    crib = NULL;
+    table_lock = FALSE;
+    wksp = (DB_BLOB_WKSP *) pop_cb->pop_info;
+    if (wksp != NULL && wksp->flags & BLOBWKSP_ACCESSID)
+    {
+	/* Use lock modes compatible with base RCB */
+	r = (DMP_RCB *) wksp->access_id;
+	if (r->rcb_lk_type == RCB_K_CROW)
+	    crib = r->rcb_crib_ptr;
+	else if (r->rcb_lk_type == RCB_K_TABLE)
+	    table_lock = TRUE;
+    }
+    else if (bqcb != NULL)
+    {
+	/* Use lock modes as remembered in the crib from the most
+	** recent base table open.
+	*/
+	table_lock = bqcb->bqcb_table_lock;
+	crib = bqcb->bqcb_crib;
+    }
+
+    dmtcb->dmt_crib_ptr = NULL;
+    if (dmtcb->dmt_access_mode == DMT_A_WRITE)
+    {
+	/* Session temps always use table locking */
+	if (dmtcb->dmt_id.db_tab_base < 0)
+	{
+	    dmtcb->dmt_flags_mask |= DMT_SESSION_TEMP;
+	    lockmode = DMT_X;
+	}
+	else
+	{
+	    lockmode = DMT_IX;
+	    if (table_lock)
+		lockmode = DMT_X;
+	    else if (crib != NULL)
+	    {
+		lockmode = DMT_MIX;	/* Kind-of unnecessary with cribptr */
+		dmtcb->dmt_crib_ptr = (PTR) crib;
+		dmtcb->dmt_flags_mask |= DMT_CRIBPTR;
+	    }
+	}
+    }
+    else
+    {
+	/* Session temps always use table locking */
+	if (dmtcb->dmt_id.db_tab_base < 0)
+	{
+	    dmtcb->dmt_flags_mask |= DMT_SESSION_TEMP;
+	    lockmode = DMT_S;
+	}
+	else
+	{
+	    lockmode = DMT_IS;
+	    if (table_lock)
+		lockmode = DMT_S;
+	    else if (crib != NULL)
+	    {
+		lockmode = DMT_MIS;	/* Kind-of unnecessary with cribptr */
+		dmtcb->dmt_crib_ptr = (PTR) crib;
+		dmtcb->dmt_flags_mask |= DMT_CRIBPTR;
+	    }
+	}
+    }
+    dmtcb->dmt_lock_mode = lockmode;
 
     status = dmt_open(dmtcb);		/* First do the open */
     if (status != E_DB_OK)
 	return (status);
 
-    if (base_tcb != NULL)
+    if (pcb->pcb_tcb != NULL)
+    {
 	((DMP_RCB *) (dmtcb->dmt_record_access_id))->rcb_et_parent_id =
-		base_tcb->tcb_rel.reltid.db_tab_base;
+		pcb->pcb_tcb->tcb_rel.reltid.db_tab_base;
+    }
 
     return (E_DB_OK);
 } /* etab_open */
+
+/*
+** Name: dmpe_load_etab_limit - Calculate max rows per etab for bulk-load
+**
+** Description:
+**	When bulk-loading an etab, we need to keep track of when too
+**	many rows have been sent to the sorter, because the sorter may
+**	not tell us in time to switch the load to another etab.
+**	This routine takes a whack at calculating the max number of
+**	rows that can fit into one etab.
+**
+**	This is meant to be a conservative calculation.  Take off about
+**	1% of the limit for slop and fmaps, etc.  (Even in the worst case,
+**	the 2K page etab, we only need 500 or so fmaps to map 8 million
+**	pages.)  If the etab is btree, account for leaf and index pages,
+**	take them away from the total, and recalculate.  This procedure
+**	may slightly under-estimate the number of rows, but that's better
+**	than over-estimating.
+**
+**	Etab bulk-loads always run at 100% fillfactors, regardless of
+**	etab definition, so don't worry about fillfactors.
+**
+** Inputs:
+**	et		TCB pointer for the etab
+**
+** Outputs:
+**	Returns # of rows that we estimate can fit into the etab.
+**
+** History:
+**	19-Apr-2010 (kschendel) SIR 123485
+**	    New.
+*/
 
+static u_i4
+dmpe_load_etab_limit(DMP_TCB *et)
+{
+    u_i4 pagelimit, pages, rows;
+
+    /* Take a whack at calculating max rows that can go into the
+    ** table before it fills and we have to start another.
+    ** This is meant to be a conservative calculation!
+    ** Subtract about 1% for slop.  We don't bother calculating
+    ** fmaps;  the 2K fmap (smallest) maps 16000 pages,
+    ** needing 524 fmaps which is well within slop.
+    */
+    pages = pagelimit = DM1P_MAX_TABLE_SIZE - 80000;
+    rows = pages * et->tcb_tperpage;
+    if (et->tcb_rel.relspec == TCB_ISAM || et->tcb_rel.relspec == TCB_BTREE)
+    {
+	for (;;)
+	{
+	    u_i4 extra_pages, keys, p;
+
+	    /* Calculate overhead pages, then take that away from
+	    ** initial rows guess, until it all fits.  This does
+	    ** not result in the max possible rows, but it's close
+	    ** enough and won't get us into trouble.  I hope.
+	    */
+	    extra_pages = 0;
+	    keys = rows;
+	    if (et->tcb_rel.relspec == TCB_BTREE)
+	    {
+		/* Add double the number of calculated leaf pages, because
+		** each new leaf starts a new data page as its associated
+		** data page.
+		*/
+		p = (keys + et->tcb_kperleaf - 1) / et->tcb_kperleaf;
+		extra_pages += p + p;
+		keys = p;
+	    }
+	    do
+	    {
+		p = (keys + et->tcb_kperpage - 1) / et->tcb_kperpage;
+		extra_pages += p;
+		keys = p;
+	    } while (keys > 1);
+	    if (pages + extra_pages <= pagelimit)
+		break;
+	    rows = rows - (pages + extra_pages - pagelimit) * et->tcb_tperpage;
+	    pages = (rows + et->tcb_tperpage - 1) / et->tcb_tperpage;
+	}
+    }
+#ifdef xDEBUG
+    /* Fake up lower limit for testing */
+    if (DMZ_TBL_MACRO(11)
+	rows = 50;
+#endif
+
+    return (rows);
+} /* dmpe_load_etab_limit */
 
 /*
 ** Name: dmpe_cpn_to_locator 	Return a locator for input coupon
@@ -7188,12 +7669,14 @@ etab_open(DMT_CB *dmtcb, DMP_TCB *base_tcb)
 **      16-oct-2006 (stial01)
 **	    created.
 **	24-jun-2009 (gupsh01)
-**	    Fix setting the locator values at constant offset of 
-**	    ADP_HDR_SIZE in the ADP_PERIPHERAL structure, irrespective 
+**	    Fix setting the locator values at constant offset of
+**	    ADP_HDR_SIZE in the ADP_PERIPHERAL structure, irrespective
 **	    of the platform. This was not happening for 64 bit platforms
-**	    where per_value was aligned on ALIGN_RESTRICT boundary, and 
+**	    where per_value was aligned on ALIGN_RESTRICT boundary, and
 **	    this causes problems for API / JDBC etc as it expects it to
-**	    to be at the constant offset irrespective of the platform.  
+**	    to be at the constant offset irrespective of the platform.
+**	5-Apr-2010 (kschendel) SIR 123485
+**	    Remove deprecated CSswitch call.
 */
 static DB_STATUS
 dmpe_cpn_to_locator(ADP_POP_CB	*pop_cb)
@@ -7210,8 +7693,6 @@ dmpe_cpn_to_locator(ADP_POP_CB	*pop_cb)
     DMPE_COUPON		*cpn = (DMPE_COUPON *)&cpn_p->per_value.val_coupon;
 
     ADP_PERIPHERAL	*loc_p = (ADP_PERIPHERAL *)pop_cb->pop_segment->db_data;
-    i4			null_value;
-    ADF_CB		adf_cb;
     ADP_LOCATOR		locator;
     DM_TID		loc_tid;
     DMR_CB              dmrcb;
@@ -7222,26 +7703,15 @@ dmpe_cpn_to_locator(ADP_POP_CB	*pop_cb)
     bool		found;
     DB_ERROR		local_dberr;
 
-    CSswitch();    /* Context switch if appropriate */
-   
-    MEfill(sizeof(adf_cb), 0, &adf_cb);
-
     CLRDBERR(&pop_cb->pop_error);
 
-    status = adc_isnull(&adf_cb, pop_cb->pop_coupon, &null_value);
-    if (status)
-    {
-	pop_cb->pop_error = adf_cb.adf_errcb.ad_dberror;
-	return (status);
-    }
-
-    if (null_value)
+    if (ADF_ISNULL_MACRO(pop_cb->pop_coupon))
     {
 	/* Init output ADP_PERIPHERAL (ADP_P_LOCATOR) */
 	loc_p->per_tag = ADP_P_LOCATOR;
 	loc_p->per_length0 = cpn_p->per_length0;
 	loc_p->per_length1 = cpn_p->per_length1;
-        MEfill(sizeof(ADP_LOCATOR), 0, 
+        MEfill(sizeof(ADP_LOCATOR), 0,
 		((char *)loc_p + ADP_HDR_SIZE));
 
 	/* We do not create a locator for null columns */
@@ -7372,7 +7842,7 @@ dmpe_cpn_to_locator(ADP_POP_CB	*pop_cb)
 
 	loc_tid.tid_i4 = dmrcb.dmr_tid;
 	page = loc_tid.tid_tid.tid_page;
- 
+
 	/* Map tid to locator */
 	page += lloc_cxt->lloc_mem_pgcnt;
 	locator = (page * loc_rcb->rcb_tcb_ptr->tcb_tperpage)
@@ -7459,7 +7929,7 @@ DB_ERROR	*error)
 	dmtcb.dmt_flags_mask = DMT_LOCATOR_TEMP;
 
 	dmtcb.dmt_tran_id = (PTR)xcb;
-	dmtcb.dmt_db_id = (PTR)xcb->xcb_odcb_ptr; 
+	dmtcb.dmt_db_id = (PTR)xcb->xcb_odcb_ptr;
 
         STprintf(dmtcb.dmt_table.db_tab_name, "<LOC_TEMP_SID:%p>", scb);
         STmove(dmtcb.dmt_table.db_tab_name, ' ',
@@ -7521,7 +7991,7 @@ DB_ERROR	*error)
 	dmtcb.dmt_record_access_id = 0;
 
 	/*
-	** Open the locator temp now... and keep it open 
+	** Open the locator temp now... and keep it open
 	** FIX ME should we open/close for each put/get operation
 	*/
 	status = dmt_open(&dmtcb);
@@ -7581,12 +8051,14 @@ DB_ERROR	*error)
 **      16-oct-2006 (stial01)
 **	    created.
 **	24-jun-2009 (gupsh01)
-**	    Fix setting the locator values at constant offset of 
-**	    ADP_HDR_SIZE in the ADP_PERIPHERAL structure, irrespective 
+**	    Fix setting the locator values at constant offset of
+**	    ADP_HDR_SIZE in the ADP_PERIPHERAL structure, irrespective
 **	    of the platform. This was not happening for 64 bit platforms
-**	    where per_value was aligned on ALIGN_RESTRICT boundary, and 
+**	    where per_value was aligned on ALIGN_RESTRICT boundary, and
 **	    this causes problems for API / JDBC etc as it expects it to
-**	    to be at the constant offset irrespective of the platform.  
+**	    to be at the constant offset irrespective of the platform.
+**	5-Apr-2010 (kschendel) SIR 123485
+**	    Remove deprecated CSswitch call.
 */
 
 static DB_STATUS
@@ -7610,8 +8082,6 @@ dmpe_locator_to_cpn(ADP_POP_CB	*pop_cb)
     DMPE_LLOC_CXT	*lloc_cxt;
 
     CLRDBERR(&pop_cb->pop_error);
-
-    CSswitch();    /* Context switch if appropriate */
 
     /* Need to get context to anchor locator to this session */
     CSget_sid(&sid);
@@ -7660,7 +8130,7 @@ dmpe_locator_to_cpn(ADP_POP_CB	*pop_cb)
 	    /* this locator has been freed */
 	    return (E_DB_ERROR);
 	}
-	    
+
 	return (E_DB_OK);
     }
 
@@ -7681,7 +8151,7 @@ dmpe_locator_to_cpn(ADP_POP_CB	*pop_cb)
     loc_tid.tid_tid.tid_page -= lloc_cxt->lloc_mem_pgcnt;
     loc_tid.tid_tid.tid_line = locator % loc_rcb->rcb_tcb_ptr->tcb_tperpage;
 
-    MEfill(sizeof(DMR_CB), 0, &dmrcb);
+    MEfill(sizeof(DMR_CB), 0, (PTR) &dmrcb);
     dmrcb.length = sizeof(DMR_CB);
     dmrcb.type = DMR_RECORD_CB;
     dmrcb.ascii_id = DMR_ASCII_ID;
@@ -7690,7 +8160,7 @@ dmpe_locator_to_cpn(ADP_POP_CB	*pop_cb)
     dmrcb.dmr_data.data_address = (char *) &tmp_p;
     dmrcb.dmr_data.data_in_size = sizeof(ADP_PERIPHERAL);
     dmrcb.dmr_tid = loc_tid.tid_i4;
-    
+
     status = dmr_get(&dmrcb);
     if (status)
     {
@@ -7724,7 +8194,7 @@ dmpe_locator_to_cpn(ADP_POP_CB	*pop_cb)
 **
 **      It is expected that this routine will be called when it is safe
 **      to do so -- meaning that there are no blobs "in flight".
-**      
+**
 **	Session temp table etabs are not considered "temporary", and
 **	are not flagged as such.  Therefore they are not deleted
 **	by this routine.  Only anonymous holding temp tables are deleted.
@@ -7750,13 +8220,13 @@ dmpe_locator_to_cpn(ADP_POP_CB	*pop_cb)
 **          Remove redundant xDEBUG checks on the input session_id which
 **          is no longer passed into this function.
 **	24-jun-2009 (gupsh01)
-**	    Fix setting the locator values at constant offset of 
-**	    ADP_HDR_SIZE in the ADP_PERIPHERAL structure, irrespective 
+**	    Fix setting the locator values at constant offset of
+**	    ADP_HDR_SIZE in the ADP_PERIPHERAL structure, irrespective
 **	    of the platform. This was not happening for 64 bit platforms
-**	    where per_value was aligned on ALIGN_RESTRICT boundary, and 
+**	    where per_value was aligned on ALIGN_RESTRICT boundary, and
 **	    this causes problems for API / JDBC etc as it expects it to
-**	    to be at the constant offset irrespective of the platform.  
-**	
+**	    to be at the constant offset irrespective of the platform.
+**
 [@history_template@]...
 */
 DB_STATUS
@@ -7784,11 +8254,10 @@ dmpe_free_locator(ADP_POP_CB *pop_cb)
 
     /*
     ** Get current thread
-    ** We don't worry if this parent thread... since this routine 
+    ** We don't worry if this parent thread... since this routine
     ** should not be called as part of query processing,
     ** instead it is currently part of commit (or explicit drop locator)
     */
-    odcb = (DML_ODCB *)pop_cb->pop_user_arg;
     if (loc_dv)
         MEcopy( ((char *)loc_dv->db_data + ADP_HDR_SIZE),
 		sizeof(ADP_LOCATOR), &locator);
@@ -7821,7 +8290,7 @@ dmpe_free_locator(ADP_POP_CB *pop_cb)
 #endif
 
 	    loc_rcb = (DMP_RCB *)lloc_cxt->lloc_tbl;
-	    MEfill(sizeof(DMT_CB), 0, &dmtcb);
+	    MEfill(sizeof(DMT_CB), 0, (PTR) &dmtcb);
 	    dmtcb.length = sizeof(DMT_TABLE_CB);
 	    dmtcb.type = DMT_TABLE_CB;
 	    dmtcb.ascii_id = DMT_ASCII_ID;
@@ -7844,7 +8313,7 @@ dmpe_free_locator(ADP_POP_CB *pop_cb)
 	if (locator <= lloc_cxt->lloc_max)
 	{
 	    lloc_cxt->lloc_adp[locator - 1].per_tag = -1;
-	    STRUCT_ASSIGN_MACRO(lloc_cxt->lloc_adp[locator - 1], invalid_per);	
+	    STRUCT_ASSIGN_MACRO(lloc_cxt->lloc_adp[locator - 1], invalid_per);
 	    invalid_cpn = (DMPE_COUPON *)&invalid_per.per_value.val_coupon;
 	}
 	else
@@ -7870,7 +8339,7 @@ dmpe_free_locator(ADP_POP_CB *pop_cb)
 	    dmrcb.dmr_data.data_address = (char *) &invalid_per;
 	    dmrcb.dmr_data.data_in_size = sizeof(ADP_PERIPHERAL);
 	    dmrcb.dmr_tid = loc_tid.tid_i4;
-	    
+
 	    status = dmr_get(&dmrcb);
 	    if (status)
 	    {
@@ -7916,7 +8385,7 @@ dmpe_free_locator(ADP_POP_CB *pop_cb)
     {
 	/* Save next in case we deallocate this xccb */
 	next_xccb = xccb->xccb_q_next;
-	if (xccb->xccb_operation != XCCB_T_DESTROY || 
+	if (xccb->xccb_operation != XCCB_T_DESTROY ||
 		xccb->xccb_blob_temp_flags == 0)
 	    continue;
 
@@ -7931,7 +8400,7 @@ dmpe_free_locator(ADP_POP_CB *pop_cb)
 	    ** cleanup.
 	    */
 #ifdef xDEBUG
-	    TRdisplay("%@ DESTROY blob holding temp %x\n", 
+	    TRdisplay("%@ DESTROY blob holding temp %x\n",
 		xccb->xccb_blob_temp_flags);
 #endif
 	    xccb->xccb_q_prev->xccb_q_next = xccb->xccb_q_next;
@@ -7941,7 +8410,7 @@ dmpe_free_locator(ADP_POP_CB *pop_cb)
 	    ** a valid transaction which we may not have.
 	    */
 	    status = dmt_destroy_temp(thread_scb, xccb, &local_dberr);
-	    if (status != E_DB_OK && 
+	    if (status != E_DB_OK &&
 		local_dberr.err_code != E_DM0054_NONEXISTENT_TABLE)
 	    {
 		/* If it didn't work, log the problem */

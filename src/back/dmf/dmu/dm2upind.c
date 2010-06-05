@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1986, 2004 Ingres Corporation
+** Copyright (c) 1986, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -339,6 +339,8 @@
 **	    Recognize direct-io for load option.
 **	16-Nov-2009 (kschendel) SIR 122890
 **	    Update dm2t-destroy-temp-tcb call.
+**	13-Apr-2010 (kschendel) SIR 123485
+**	    Open sources no-coupon to avoid unnecessary LOB handling.
 */
 STATUS
 dm2u_pindex(
@@ -372,7 +374,7 @@ DM2U_INDEX_CB   *index_cbs)
     i4               log_relstat;
     i4               setrelstat;
     i4               tbl_lk_mode;
-    i4	     	     tbl_access_mode = DM2T_A_READ;
+    i4	     	     tbl_access_mode = DM2T_A_READ_NOCPN;
     i4               timeout = 0, numberOfIndices;
     u_i4	     db_sync_flag;
     ADF_CB	     *adf_cb;
@@ -674,7 +676,7 @@ DM2U_INDEX_CB   *index_cbs)
 		status = dm2t_open(dcb, 
 			 	index_cb->indxcb_idx_id, 
 			 	LK_X, DM2T_UDIRECT, 
-			 	DM2T_A_WRITE, 
+			 	DM2T_A_WRITE_NOCPN,
 			 	(i4)0,		/* timeout */
 			 	(i4)20, 	/* maxlocks */
 			 	(i4)0, 		/* savepoint id */

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -1271,6 +1271,8 @@ dm1m_delete(
 **	20-nov-2006 (wanfr01)
 **	    SIR 117586
 **	    changed arguments for dmd_prkey
+**	14-Apr-2010 (kschendel) SIR 123485
+**	    Updated pget call.
 */
 DB_STATUS
 dm1m_get(
@@ -1632,7 +1634,6 @@ dm1m_get(
 	    }
 
 	    s = dm1c_pget(t->tcb_atts_ptr,
-			  (i4)t->tcb_rel.relatts,
 			  r,
 			  rec_ptr,
 			  dberr);
@@ -1925,7 +1926,6 @@ dm1m_get(
                   rec_ptr = record;
                 }
 		s = dm1c_pget(t->tcb_atts_ptr,
-			      (i4)t->tcb_rel.relatts,
 			      r,
 			      rec_ptr,
 			      dberr);
@@ -2105,7 +2105,6 @@ dm1m_get(
 	    {
 		rec_ptr = record;
 		s = dm1c_pget(t->tcb_atts_ptr,
-			      (i4)t->tcb_rel.relatts,
 			      r,
 			      rec_ptr,
 			      dberr);

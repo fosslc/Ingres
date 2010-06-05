@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1986, 2009 Ingres Corporation
+** Copyright (c) 1986, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -85,6 +85,8 @@
 **          Created to factor out block by block extraction for the varchar
 **          and byte versions of long data types from original adu_lvarcharcmp()
 **          rotuine.
+**	22-Apr-2010 (kschendel) SIR 123485
+**	    Make sure pop-info, pop-user-arg is cleared, else dmpe is confused..
 */
 
 DB_STATUS
@@ -153,6 +155,10 @@ i4                  *rcmp)
     pop_cb2.pop_type = ADP_POP_TYPE;
     pop_cb1.pop_ascii_id = ADP_POP_ASCII_ID;
     pop_cb2.pop_ascii_id = ADP_POP_ASCII_ID;
+    pop_cb1.pop_user_arg = NULL;
+    pop_cb2.pop_user_arg = NULL;
+    pop_cb1.pop_info = NULL;	/* Don't pass any context */
+    pop_cb2.pop_info = NULL;
     /* (temp flag setting is bogus as we're just getting, but be safe) */
     pop_cb1.pop_temporary = ADP_POP_TEMPORARY;
     pop_cb2.pop_temporary = ADP_POP_TEMPORARY;

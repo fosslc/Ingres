@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1986, 2008 Ingres Corporation
+** Copyright (c) 1986, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -668,6 +668,8 @@ static	const	struct
 **	    Check qef_id rather than qef_cb->qef_rcb->qef_operation,
 **	    to determine if adu_free_locator() should be called in 
 **	    the case of qef_call(QET_SCOMMIT).
+**	22-Apr-2010 (kschendel) SIR 123485
+**	    Use padded copy of standard savepoint name in the QEF SCB.
 */
 DB_STATUS
 qef_call(
@@ -724,8 +726,6 @@ void *	    rcb )
 	    /* abort the query/transaction */
 	    if (qef_cb->qef_stat != QEF_NOTRAN)
 	    {
-		DB_SP_NAME		spoint;
-
 		qef_rcb = (QEF_RCB*)rcb;
 		save1 = (PTR)qef_cb->qef_rcb;
 		save2 = qef_cb->qef2_rcb;
@@ -734,10 +734,7 @@ void *	    rcb )
 
 		if (qef_cb->qef_stat == QEF_MSTRAN)
 		{
-		    qef_rcb->qef_spoint = &spoint;
-		    MEmove(QEF_PS_SZ, (PTR) QEF_SP_SAVEPOINT, (char) ' ',
-			sizeof(DB_SP_NAME),
-			(PTR) qef_rcb->qef_spoint->db_sp_name);
+		    qef_rcb->qef_spoint = &Qef_s_cb->qef_sp_savepoint;
 		}
 		else
 		{
