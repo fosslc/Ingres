@@ -623,6 +623,9 @@ PTR        dms_cb)
 **	28-Apr-2005 (jenjo02)
 **	    On successful ALTER, set seq_version to zero to
 **	    induce refetch of IISEQUENCE.
+**      22-Apr-2010 (hanal04) Bug 123617
+**          When a sequence is dropped clear down any references to it in
+**          the xcb_cseq list.
 */
 DB_STATUS
 dms_close_seq(
@@ -716,7 +719,21 @@ PTR        dms_cb)
 
 	    /* If DROP succeeded, vacate the DML_SEQ */
 	    else if ( dms->dms_flags_mask == DMS_DROP )
+            {
+                DML_CSEQ	*cs;
+
+                /* Clear down any refrences to the dropped sequence in the
+                ** xcb_cseq list.
+                */
+                for ( cs = xcb->xcb_cseq;
+                      cs && cs->cseq_seq != s;
+                      cs = cs->cseq_q_next );
+
+                if ( cs )
+                    cs->cseq_seq = (DML_SEQ*)NULL;
+
 		s->seq_id = 0;
+            }
 
 	    /*
 	    ** If ALTER succeeded, set the in-memory
