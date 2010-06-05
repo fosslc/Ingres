@@ -2,7 +2,8 @@
 
 URL="http://code.ingres.com/ingres/main"
 SVNLatest=`svn info http://code.ingres.com/ingres/main | grep "Last Changed Rev:" | awk '{print $4}'`
-GitLatest=`tail -1 svn_import/imported_revisions.txt`
+RevLog="svn_import/imported_revisions.txt"
+GitLatest=`tail -1 ${RevLog}`
 NOW=`date +"%h%d-%Y-%H%M"`
 
 echo "Now: ${NOW} svn: rev >${SVNLatest}< git: rev >${GitLatest}<"
@@ -37,15 +38,13 @@ else
       svn log -r${PreviousRev}:${CurrentRev} ${URL} > ${CommitMessage}
 
       #echo "Applying patch"
-      #patch -p0 < ${PatchFile}
-
-      # Git add the files
-      #git add -a 
+      patch -p0 < ${PatchFile}
 
       # Commit, with the same commit message
-      #git commit -F ${CommitMessage}
+      git commit -a -F ${CommitMessage}
 
       # Add the revision number to the log
+      echo "${CurrentRev} >> ${RevLog}
 
     done
   fi
