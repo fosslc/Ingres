@@ -75,6 +75,8 @@
 **          Add routines to print btree keys without rcb.
 **	20-Oct-2009 (kschendel) SIR 122739
 **	    Update above for new rowaccessor scheme.
+**      15-Apr-2010 (stial01)
+**          Prototypes: added dmdprentries(), changed dmd_print_entry()
 */
 
 /*
@@ -187,7 +189,6 @@ FUNC_EXTERN VOID dmd_prkey(
 
 FUNC_EXTERN VOID dmd_print_key(
 			char			*key,
-			i4                      page_type,
 			DB_ATTS			**katt,
 			i4			suppress_newline,
 			i4			keys_given,
@@ -210,6 +211,15 @@ FUNC_EXTERN VOID dmd_print_brange(
 			i4		page_size,
 			DMP_ROWACCESS	*rac,
 			i4		rngklen,
+			i4		keys,
+			ADF_CB		*adf_cb,
+			DMPP_PAGE	*b);
+
+FUNC_EXTERN VOID dmdprentries(
+			i4		page_type,
+			i4		page_size,
+			DMP_ROWACCESS	*rac,
+			i4		klen,
 			i4		keys,
 			ADF_CB		*adf_cb,
 			DMPP_PAGE	*b);
