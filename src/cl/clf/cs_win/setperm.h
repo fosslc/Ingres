@@ -18,6 +18,8 @@
 **	    Added the extra executables from the "setuid" stuff.
 **      28-august-2007 (rapma01)
 **          added dbmstcbl.hlp according to issue 120886 for linux
+**	22-Apr-2010 (thaju02)
+**	    Remove dbmsmtpl.hlp.
 */
 
 /*
@@ -296,7 +298,6 @@ char	*filelist[]=
     "\\files\\english\\dbmsbufc.hlp",
     "\\files\\english\\dbmsdmfa.hlp",
     "\\files\\english\\dbmsdpgs.hlp",
-    "\\files\\english\\dbmsmtpl.hlp",
     "\\files\\english\\dbmsopft.hlp",
     "\\files\\english\\dbmsopfj.hlp",
     "\\files\\english\\dmcm.hlp",
