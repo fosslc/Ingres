@@ -86,6 +86,12 @@
 **	29-Mar-10 (Bruce Lunsford)
 **	    Remove extra semicolon (typo) at end of msg_flags from prior
 **	    change as it caused Windows build to fail.
+**	13-May-10 (gordy)
+**	    Processing TL packets containing multiple message segments
+**	    more efficiently by delaying extraction of individual
+**	    segments until ready to process.  Extraction is done by
+**	    referencing the message segment rather than copying to a
+**	    new buffer.
 */	
 
 
@@ -128,10 +134,10 @@ static GCULIST	stateMap[] =
 ** Forward References
 */
 
-static	STATUS	build_msg_list( GCD_RCB * );
 static	bool	read_msg_hdr( GCD_RCB * );
 static	void	process_messages( GCD_CCB * );
 static	bool	scan_msg_list( GCD_CCB * );
+static	STATUS	split_msg_list( GCD_RCB ** );
 static	bool	chk_msg_state( GCD_CCB * );
 static	void	gcd_flush_info( GCD_CCB *ccb );
 static	void	gcd_hdr_init( GCD_RCB *, u_i1 );
@@ -160,6 +166,10 @@ static	void	gcd_hdr_upd( GCD_RCB *, u_i1 );
 **	    Created.
 **	15-Jan-03 (gordy)
 **	    Moved building of message list into this function and renamed.
+**	13-May-10 (gordy)
+**	    Message segments are no longer separated on message queue.  
+**	    RCB is loaded with info on initial (or only) message segment 
+**	    and simply placed on the message queue.  Skip empty packets.
 */
 
 void
@@ -169,14 +179,31 @@ gcd_msg_process( GCD_RCB *rcb )
     STATUS	status;
 
     /*
-    ** Add new message segments to connection message list.
+    ** Skip empty NL/TL data segments.
     */
-    if ( (status = build_msg_list( rcb )) != OK )
+    if ( ! rcb->buf_len )
     {
 	gcd_del_rcb( rcb );
-	gcd_sess_abort( ccb, status );
 	return;
     }
+
+    /*
+    ** The TL data segment may contain multiple message
+    ** segments.  The RCB is initialized with info for
+    ** the first (or only) message segment.  Message
+    ** segments will be separated by scan_msg_list().
+    */
+    if ( ! read_msg_hdr( rcb ) )
+    {
+	gcd_del_rcb( rcb );
+	gcd_sess_abort( ccb, E_GC480A_PROTOCOL_ERROR );
+	return;
+    }
+
+    /*
+    ** Append RCB to end of connection message list.
+    */
+    QUinsert( &rcb->q, rcb->ccb->msg.msg_q.q_prev );
 
     /*
     ** Notify the messaging sub-system that there is a
@@ -316,110 +343,6 @@ gcd_msg_flush( GCD_CCB *ccb )
 
 
 /*
-** Name: build_msg_list
-**
-** Description:
-**	Process a request control block by separating
-**	message segments into individual control blocks
-**	and placing the blocks on the connection message
-**	list for simplified access.
-**
-**	The RCB is not freed if an error occurs and is
-**	left to the calling routine to handle.  For a
-**	successful call, the RCB will be freed when the
-**	contents have been processed.
-**
-** Input:
-**	rcb	Request control block.
-**
-** Output:
-**	None.
-**
-** Returns:
-**	STATUS	OK or error code.
-**
-** History:
-**	 3-Jun-99 (gordy)
-**	    Created.
-**	15-Jan-03 (gordy)
-**	    Moved to this file.  Adjusted semantics of RCB buffer parameters.
-**	25-Mar-10 (gordy)
-**	    Added end-of-batch flag.
-*/
-
-static STATUS
-build_msg_list( GCD_RCB *rcb )
-{
-    /*
-    ** Skip empty NL/TL data segments.
-    */
-    if ( ! rcb->buf_len )
-    {
-	/*
-	** The caller won't free the RCB, so we
-	** do it here since the buffer is empty.
-	*/
-	gcd_del_rcb( rcb );
-	return( OK );
-    }
-
-    for(;;)
-    {
-	if ( ! read_msg_hdr( rcb ) )  return( E_GC480A_PROTOCOL_ERROR );
-
-	if ( GCD_global.gcd_trace_level >= 2 )
-	    TRdisplay( "%4d    GCD received message %s length %d%s%s%s\n", 
-		       rcb->ccb->id, gcu_lookup( msgMap, rcb->msg.msg_id ), 
-		       rcb->msg.msg_len,
-		       rcb->msg.msg_flags & MSG_HDR_EOD ? " EOD" : "",
-		       rcb->msg.msg_flags & MSG_HDR_EOB ? " EOB" : "",
-		       rcb->msg.msg_flags & MSG_HDR_EOG ? " EOG" : "" );
-
-	/*
-	** If the GCD client splits a message it is
-	** probably because it exceeds the negotiated
-	** buffer size.  Multiple message segments in
-	** a single buffer is most likely caused by
-	** different message types.  In either case
-	** each individual message segment is placed
-	** into its own RCB and linked together.
-	*/
-        if ( rcb->msg.msg_len < rcb->buf_len )
-	{
-	    GCD_RCB	*new_rcb;
-
-	    if ( ! (new_rcb = gcd_new_rcb( rcb->ccb, (i2)rcb->msg.msg_len )) )
-		return( E_GC4808_NO_MEMORY );
-
-	    /*
-	    ** Extract leading message segment into new RCB.
-	    */
-	    new_rcb->msg.msg_id = rcb->msg.msg_id;
-	    new_rcb->msg.msg_len = rcb->msg.msg_len;
-	    new_rcb->msg.msg_flags = rcb->msg.msg_flags;
-	    MEcopy( (PTR)rcb->buf_ptr, rcb->msg.msg_len, 
-		    (PTR)&new_rcb->buf_ptr[ new_rcb->buf_len ] );
-	    rcb->buf_ptr += rcb->msg.msg_len;
-	    rcb->buf_len -= rcb->msg.msg_len;
-	    new_rcb->buf_len += rcb->msg.msg_len;
-
-	    QUinsert( &new_rcb->q, rcb->ccb->msg.msg_q.q_prev );
-	    continue;
-	}
-
-	/*
-	** RCB now has just a single message segment.
-	** Append to end of list and we are done.
-	*/
-	QUinsert( &rcb->q, rcb->ccb->msg.msg_q.q_prev );
-	break;
-    }
-
-    return( OK );
-}
-
-
-/*
 ** Name: read_msg_hdr
 **
 ** Description:
@@ -445,6 +368,14 @@ build_msg_list( GCD_RCB *rcb )
 **	    Message header ID now protocol level dependent.
 **	15-Jan-03 (gordy)
 **	    Moved to this file.  Adjusted semantics of RCB buffer parameters.
+**	13-May-10 (gordy)
+**	    Check the buffer length against the length extracted from
+**	    the header.  The prior test against the un-updated RCB length
+**	    results in failure when processing multiple message segments
+**	    in a single TL packet.  This bug had not previously been hit
+**	    because clients always packed a single message segment in
+**	    a TL packet even though multiple segments should have been
+**	    supported.
 */
 
 static bool
@@ -498,7 +429,7 @@ read_msg_hdr( GCD_RCB *rcb )
     ** are required to provide an entire data
     ** segment even if split during transport.
     */
-    if ( rcb->msg.msg_len > rcb->buf_len )
+    if ( hdr.msg_len > rcb->buf_len )
     {
 	if ( GCD_global.gcd_trace_level >= 1 )
 	    TRdisplay( "%4d    GCD insufficient data message segment\n",
@@ -509,6 +440,14 @@ read_msg_hdr( GCD_RCB *rcb )
     rcb->msg.msg_id = hdr.msg_id;
     rcb->msg.msg_len = hdr.msg_len;
     rcb->msg.msg_flags = hdr.msg_flags;
+
+    if ( GCD_global.gcd_trace_level >= 2 )
+	TRdisplay( "%4d    GCD receive message %s length %d%s%s%s\n", 
+		   rcb->ccb->id, gcu_lookup( msgMap, rcb->msg.msg_id ), 
+		   rcb->msg.msg_len,
+		   rcb->msg.msg_flags & MSG_HDR_EOD ? " EOD" : "",
+		   rcb->msg.msg_flags & MSG_HDR_EOB ? " EOB" : "",
+		   rcb->msg.msg_flags & MSG_HDR_EOG ? " EOG" : "" );
 
     return( TRUE );
 }
@@ -589,6 +528,10 @@ process_messages( GCD_CCB *ccb )
 	if ( ccb->msg.tl_service )  (*ccb->msg.tl_service->xoff)( ccb, FALSE );
 	return;
     }
+
+    if ( GCD_global.gcd_trace_level >= 4 )
+	TRdisplay( "%4d    GCD process message %s\n", 
+		    ccb->id, gcu_lookup( msgMap, ccb->msg.msg_id ) );
 
     /*
     ** Verify and update message processing state.
@@ -690,6 +633,12 @@ process_messages( GCD_CCB *ccb )
 **	29-Mar-10 (Bruce Lunsford)
 **	    Remove extra semicolon (typo) at end of msg_flags from prior
 **	    change as it caused Windows build to fail.
+**	13-May-10 (gordy)
+**	    TL packets with multiple message segments are no longer
+**	    separated when first received.  The RCB has been loaded
+**	    with the message info for the first (or only) message
+**	    segment.  If there are multiple message segments in the
+**	    RCB, separate out the first for separate processing.
 */
 
 static bool
@@ -699,6 +648,7 @@ scan_msg_list( GCD_CCB *ccb )
     u_i1	msg_id;
     u_i1	msg_flags = 0;
     u_i4	msg_len = 0;
+    STATUS	status;
     bool	success = FALSE;
 
     for(
@@ -707,6 +657,15 @@ scan_msg_list( GCD_CCB *ccb )
 	 rcb = next
        )
     {
+	/*
+	** Each RCB on the message list is initialized with
+	** the message info for the message contained.  In
+	** the case of an RCB containing multiple message
+	** segments, the message info is for the first
+	** message segment in the RCB.
+	**
+	** Save message type or verify proper continuation.
+	*/
 	if ( ! next )
 	    msg_id = rcb->msg.msg_id;
 	else  if ( msg_id != rcb->msg.msg_id )
@@ -715,6 +674,17 @@ scan_msg_list( GCD_CCB *ccb )
 		TRdisplay( "%4d    GCD invalid message continuation\n", 
 			    ccb->id );
 	    gcd_sess_abort( ccb, E_GC480A_PROTOCOL_ERROR );
+	    break;
+	}
+
+	/*
+	** If RCB contains multiple message segments, separate 
+	** out the first message segment for processing.
+	*/
+	if ( rcb->msg.msg_len < rcb->buf_len  &&  
+	     (status = split_msg_list( &rcb )) != OK )
+	{
+	    gcd_sess_abort( ccb, status );
 	    break;
 	}
 
@@ -739,15 +709,94 @@ scan_msg_list( GCD_CCB *ccb )
 	    ccb->msg.msg_id = msg_id;
 	    ccb->msg.msg_len = msg_len;
 	    ccb->msg.msg_flags = msg_flags;
-
-	    if ( GCD_global.gcd_trace_level >= 4 )
-		TRdisplay( "%4d    GCD process message %s\n", 
-			    ccb->id, gcu_lookup( msgMap, ccb->msg.msg_id ) );
 	    break;
 	}
     }
 
     return( success );
+}
+
+
+/*
+** Name: split_msg_list
+**
+** Description:
+**	Process a request control block by separating
+**	message segments into individual control blocks
+**	and placing the blocks on the connection message
+**	list for simplified access.
+**
+**	Only the first message segment in the provided
+**	RCB is separated and the new RCB is returned.
+**	The new RCB is also inserted into the message
+**	list preceding the provided RCB.
+**
+**	Nothing is done if provided RCB does not contain
+**	multiple message segments.
+**
+** Input:
+**	rcb		Request control block.
+**
+** Output:
+**	rcb		RCB of next segment.
+**
+** Returns:
+**	STATUS		OK or error code.
+**
+** History:
+**	13-May-10 (gordy)
+**	    Created (converted from build_msg_list()).
+*/
+
+static STATUS
+split_msg_list( GCD_RCB **rcb_ptr )
+{
+    GCD_RCB	*rcb = *rcb_ptr;
+    GCD_RCB	*new_rcb;
+
+    /*
+    ** Nothing to do if message segment is empty
+    ** or it is the only segment in the RCB.
+    */
+    if ( ! rcb->msg.msg_len  ||  rcb->msg.msg_len >= rcb->buf_len )
+	return( OK );
+
+    /*
+    ** Extract leading message segment into new RCB.
+    ** The message segment is left in place and simply
+    ** referenced by the new RCB and existing RCB is
+    ** updated to reference the next segment.
+    */
+    if ( ! (new_rcb = gcd_new_rcb( rcb->ccb, 0 )) )
+	return( E_GC4808_NO_MEMORY );
+
+    new_rcb->buf_ptr = rcb->buf_ptr;
+    new_rcb->buf_len = rcb->msg.msg_len;
+    new_rcb->msg.msg_id = rcb->msg.msg_id;
+    new_rcb->msg.msg_len = rcb->msg.msg_len;
+    new_rcb->msg.msg_flags = rcb->msg.msg_flags;
+    rcb->buf_ptr += rcb->msg.msg_len;
+    rcb->buf_len -= rcb->msg.msg_len;
+
+    /*
+    ** Load next message segment info for buffer where
+    ** current message segment was just removed.
+    */
+    if ( ! read_msg_hdr( rcb ) )  
+    {
+	gcd_del_rcb( new_rcb );
+	return( E_GC480A_PROTOCOL_ERROR );
+    }
+
+    /*
+    ** Insert new message segment in front of buffer
+    ** from where it was removed and return the new
+    ** RCB to the caller.
+    */
+    QUinsert( &new_rcb->q, rcb->q.q_prev );
+    *rcb_ptr = new_rcb;
+
+    return( OK );
 }
 
 

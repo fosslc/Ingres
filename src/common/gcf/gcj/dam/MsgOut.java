@@ -86,6 +86,18 @@ package	com.ingres.gcf.dam;
 **	    Support SQL BOOLEAN and Java boolean values.
 **	25-Mar-10 (gordy)
 **	    Added support for batch processing.
+**	13-May-10 (gordy)
+**	    Concatenate group message segments in the same TL packet.
+**	    The ML/TL protocols are supposed to support concatenation
+**	    of ML message segments in TL packets, and this does indeed
+**	    occur in server-to-client packets.  Clients have not used
+**	    this capability and start a TL packet for each ML message.  
+**	    In fact, a bug existed in the Data Access Server which 
+**	    would result in connection failure if a client attempted
+**	    to use this capability.  This bug has been fixed as a part 
+**	    of the batch processing support, so the client-to-server
+**	    concatenation capability is now limited to ML protocol
+**	    level 7 or higher.  
 */
 
 import	java.io.InputStream;
@@ -222,6 +234,8 @@ import	com.ingres.gcf.util.SqlLoc;
 **	    Added write() method for boolean.
 **	25-Mar-10 (gordy)
 **	    Added done() method which takes explicit header flags.
+**	13-May-10 (gordy)
+**	    Added end-of-group indicator to control TL packet building.
 */
 
 class
@@ -243,6 +257,7 @@ MsgOut
     private byte	out_msg_id = 0;
     private int		out_hdr_pos = 0;
     private int		out_hdr_len = 0;
+    private boolean	out_eog = true;
 
 
 /*
@@ -578,6 +593,8 @@ setIoProtoLvl( byte proto_lvl )
 **	    Replaced check() with inline test.
 **	20-Dec-02 (gordy)
 **	    Header ID protocol level dependent.
+**	13-May-10 (gordy)
+**	    Only begin a new TL packet when absolutely necessary.
 */
 
 public void
@@ -590,16 +607,33 @@ begin( byte msg_id )
     if ( trace.enabled( 3 ) )
 	trace.write( title + ": begin message " + IdMap.map(msg_id, msgMap) );
 
-    /*
-    ** Reserve space in output buffer for header.
-    ** Note that we don't do message concatenation
-    ** at this level.  We rely on messages being
-    ** concatenated by the output buffer if not
-    ** explicitly flushed.
-    */
     try 
     { 
-	out.begin( DAM_TL_DT, 8 );	// Begin new message
+	/*
+	** Begin a new TL packet under the following conditions:
+	**
+	**    o The preceding message group was flushed
+	**	(occurs at EOG).
+	**
+	**    o There isn't room in the current packet
+	**	for the ML header and a significant part
+	**	of the message.  Somewhat arbitrarily,
+	**	4 bytes has been chosen as significant.
+	**
+	**    o Message concatentation is not supported.
+	**	A bug in the Data Access Server resulted
+	**	in this capability not being supported
+	**	until batch protocol changes were added.
+	*/
+	if ( msg_proto_lvl < MSG_PROTO_7  ||  out.avail() < 12  ||  out_eog )
+	{
+	    out.begin( DAM_TL_DT, 8 );	// Begin new packet
+	    out_eog = false;
+	}
+
+	/*
+	** Build the ML header.
+	*/
 	out_msg_id = msg_id;
 	out_hdr_pos = out.position();
     
@@ -2205,6 +2239,8 @@ done( boolean flush )
 ** History:
 **	25-Mar-10 (gordy)
 **	    Extracted from done( boolean ).
+**	13-May-10 (gordy)
+**	    Save EOG indicator when message group is flushed.
 */
 
 public void
@@ -2231,7 +2267,11 @@ done( byte flags )
     }
 
     if ( (flags & MSG_HDR_EOG) != 0 )
-	try { out.flush(); }
+	try 
+	{ 
+	    out_eog = true;
+	    out.flush(); 
+	}
 	catch( SQLException ex )
 	{
 	    disconnect();
@@ -2280,14 +2320,23 @@ split()
 	    trace.write( title + ": split message " + 
 			 IdMap.map(out_msg_id, msgMap) + " length " + length );
 
-	// Update the message header.
 	try
 	{
+	    /*
+	    ** Update the ML header.
+	    */
 	    out.write( out_hdr_pos + 4, length );
 	    out.write( out_hdr_pos + 7, (byte)0 );
-	    out.flush();
 
-	    out.begin( DAM_TL_DT, 8 );		// Begin continued message
+	    /*
+	    ** Flush current TL packet and begin new packet.
+	    */
+	    out.flush();
+	    out.begin( DAM_TL_DT, 8 );
+
+	    /*
+	    ** Build the ML header.
+	    */
 	    out_hdr_pos = out.position();
 	    out.write( (msg_proto_lvl >= MSG_PROTO_3) 
 			? MSG_HDR_ID_2 : MSG_HDR_ID_1);	// Eyecatcher

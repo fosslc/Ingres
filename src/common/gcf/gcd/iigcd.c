@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1999, 2008 Ingres Corporation All Rights Reserved.
+** Copyright (c) 1999, 2010 Ingres Corporation All Rights Reserved.
 */
 
 
@@ -129,7 +129,8 @@ NEEDLIBS= APILIB GCFLIB ADFLIB CUFLIB COMPATLIB
 **      05-Jun-08 (Ralph Loen)  SIR 120457
 **          Moved startup message to gcd_gca_init(), to be consistent with
 **          the format of the GCC.
-**          
+**	13-May-10 (gordy)
+**	    Added queue for free RCB.
 */
 
 
@@ -297,6 +298,8 @@ main( int argc, char **argv )
 **	    Length-check the charset name.
 **	 5-Dec-07 (gordy)
 **	    Moved client connection limit to GCC level.
+**	13-May-10 (gordy)
+**	    Initialize free RCB queue.
 */ 
 
 static STATUS
@@ -378,6 +381,7 @@ initialize( i4 argc, char **argv )
     GCD_global.tl_srvc_cnt = ARR_SIZE( gcd_tl_services );
 
     QUinit( &GCD_global.pib_q );
+    QUinit( &GCD_global.rcb_q );
     QUinit( &GCD_global.ccb_q );
     QUinit( &GCD_global.ccb_free );
     for( i = 0; i < ARR_SIZE( GCD_global.cib_free ); i++ )  

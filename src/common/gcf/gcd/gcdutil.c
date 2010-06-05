@@ -87,6 +87,8 @@
 **	    MOlongout/MOulongout now take i8/u_i8 parameter.
 **	25-Mar-10 (gordy)
 **	    Added gcd_combine_qdata() for batch processing support.
+**	13-May-10 (gordy)
+**	    Save RCB for re-use.
 */	
 
 /*
@@ -96,6 +98,7 @@
 */
 #define	CRYPT_SIZE	8
 
+static	void	gcd_free_rcb( GCD_RCB *rcb );
 static	bool	alloc_qdata( QDATA *, u_i2, bool );
 static	void	copy_i1( u_i1 *, u_i1 * );
 static	void	copy_i2( u_i1 *, u_i1 * );
@@ -271,6 +274,8 @@ gcd_rel_env( u_i2 api_vers )
 **	    Initialize the request result queue.
 **	21-Apr-06 (gordy)
 **	    Added message INFO queue.
+**	13-May-10 (gordy)
+**	    Initialize free RCB queue.
 */
 
 GCD_CCB *
@@ -296,6 +301,7 @@ gcd_new_ccb( void )
 	ccb->xact.auto_mode = GCD_XACM_DBMS;
 	ccb->api.env = NULL;
 	QUinit( &ccb->q );
+	QUinit( &ccb->rcb_q );
 	QUinit( &ccb->gcc.send_q );
 	QUinit( &ccb->msg.msg_q );
 	QUinit( &ccb->msg.info_q );
@@ -351,6 +357,8 @@ gcd_new_ccb( void )
 **	    Cursor name now dynamically allocated.
 **	25-Mar-10 (gordy)
 **	    Free batch database procedure info.
+**	13-May-10 (gordy)
+**	    Physically free the RCB on the free queue.
 */
 
 void
@@ -412,6 +420,10 @@ gcd_del_ccb( GCD_CCB *ccb )
 
 	while( (rcb = (GCD_RCB *)QUremove( ccb->msg.info_q.q_next )) )
 	    gcd_del_rcb( rcb );
+
+	/* Free RCB must be physically freed */
+	while( (rcb = (GCD_RCB *)QUremove( ccb->rcb_q.q_next )) )
+	    gcd_free_rcb( rcb );
 
 	while( (q = QUremove( ccb->rqst.rqst_q.q_next )) )
 	    MEfree( (PTR)q );
@@ -624,49 +636,73 @@ gcd_release_sp( GCD_CCB *ccb, GCD_SPCB *target )
 **	21-Apr-06 (gordy)
 **	    Added buffer length request instead of optional CCB
 **	    to determine buffer allocation.
+**	13-May-10 (gordy)
+**	    Allocate buffer as part of RCB memory block.  Re-use
+**	    free RCB if available with same buffer size.
 */
 
 GCD_RCB *
 gcd_new_rcb( GCD_CCB *ccb, i2 len )
 {
-    GCD_RCB *rcb = (GCD_RCB *)MEreqmem( 0, sizeof(GCD_RCB), TRUE, NULL );
+    GCD_RCB *rcb;
 
-    if ( rcb )
+    /*
+    ** Adjust length to reserve header space.
+    **
+    ** The majority of RCB allocations are for default
+    ** buffer sizes or no buffers.  Re-use free RCB with
+    ** same buffer size if available.
+    */
+    if ( len == 0 )
+	rcb = (GCD_RCB *)QUremove( GCD_global.rcb_q.q_next );
+    else  if ( len < 0 )
     {
-	rcb->ccb = ccb;
-
-        if ( len )
-	{
-	    /*
-	    ** Increase requested buffer length by the TL header
-	    ** size or use the negotiated TL protocol buffer size
-	    ** from the CCB (TL header length already included).
-	    */
-	    if ( len > 0 )  
-		len = min( len + GCD_global.tl_hdr_sz, ccb->max_buff_len );
-	    else
-	        len = ccb->max_buff_len;
-
-	    /*
-	    ** Need to provide space for NL header.
-	    */
-	    rcb->buf_max = (u_i2)(len + GCD_global.nl_hdr_sz);
-	    rcb->buffer = (u_i1 *)MEreqmem( 0, rcb->buf_max, FALSE, NULL );
-
-	    if ( rcb->buffer )
-		gcd_init_rcb( rcb );
-	    else
-	    {
-		MEfree( (PTR)rcb );
-		rcb = NULL;
-	    }
-	}
+	/*
+	** Use the negotiated TL protocol buffer size from 
+	** the CCB (TL header length already included) and
+	** provide space for the NL header.
+	*/
+	len = ccb->max_buff_len + (u_i2)GCD_global.nl_hdr_sz;
+	rcb = (GCD_RCB *)QUremove( ccb->rcb_q.q_next );
+    }
+    else
+    {
+	/*
+	** NL protocol restricts the size of buffers which
+	** may be sent.  Provide space for TL header by
+	** increasing requested buffer length.  Space is
+	** also provided for the NL header.
+	*/
+	len = min( len + (u_i2)GCD_global.tl_hdr_sz, ccb->max_buff_len ) +
+	      (u_i2)GCD_global.nl_hdr_sz;
+	rcb = NULL;	/* RCB must be allocated */
     }
 
-    if ( ! rcb )
-	gcu_erlog(0, GCD_global.language, E_GC4808_NO_MEMORY, NULL, 0, NULL);
-    else if ( GCD_global.gcd_trace_level >= 6 )
-	TRdisplay( "%4d    GCD new RCB (%p)\n", -1, rcb );
+    if ( rcb )
+	MEfill( sizeof( GCD_RCB ), 0, rcb );
+    else
+    {
+	rcb = (GCD_RCB *)MEreqmem( 0, sizeof( GCD_RCB ) + len, TRUE, NULL );
+
+    	if ( ! rcb )
+	{
+	    gcu_erlog( 0, GCD_global.language, 
+	    	       E_GC4808_NO_MEMORY, NULL, 0, NULL );
+	    return( NULL );
+	}
+
+	if ( GCD_global.gcd_trace_level >= 6 )
+	    TRdisplay( "%4d    GCD new RCB[%d] (%p)\n", ccb->id, len, rcb );
+    }
+
+    rcb->ccb = ccb;
+
+    if ( len )
+    {
+	rcb->buffer = (u_i1 *)rcb + sizeof( GCD_RCB );
+	rcb->buf_max = (u_i2)len;
+	gcd_init_rcb( rcb );
+    }
 
     return( rcb );
 }
@@ -693,6 +729,8 @@ gcd_new_rcb( GCD_CCB *ccb, i2 len )
 ** History:
 **	15-Jan-03 (gordy)
 **	    Created.
+**	13-May-10 (gordy)
+**	    Handle RCB with no associated buffer.
 */
 
 void
@@ -701,7 +739,12 @@ gcd_init_rcb( GCD_RCB *rcb )
     /* 
     ** Reserver space for NL & TL headers.  
     */
-    rcb->buf_ptr = rcb->buffer + GCD_global.nl_hdr_sz + GCD_global.tl_hdr_sz;
+    if ( rcb->buffer )
+	rcb->buf_ptr = rcb->buffer + GCD_global.nl_hdr_sz + 
+				     GCD_global.tl_hdr_sz;
+    else
+	rcb->buf_ptr = NULL;
+
     rcb->buf_len = 0;
     return;
 }
@@ -711,7 +754,50 @@ gcd_init_rcb( GCD_RCB *rcb )
 ** Name: gcd_del_rcb
 **
 ** Description:
-**	Free a request control block and the associated message buffer.
+**	Free a request control block.
+**
+** Input:
+**	rcb	Request control block to be freed.
+**
+** Output:
+**	None.
+**
+** Returns:
+**	void
+**
+** History:
+**	13-May-10 (gordy)
+**	    Original renamed to gcd_free_rcb().  Save RCB for
+**	    most common buffer sizes.
+*/
+
+void
+gcd_del_rcb( GCD_RCB *rcb )
+{
+    GCD_CCB	*ccb = rcb->ccb;
+    u_i2	dflt_len = ccb->max_buff_len + (u_i2)GCD_global.nl_hdr_sz;
+
+    /*
+    ** If RCB has no buffer or has a default sized
+    ** buffer, save RCB on free queue for re-use.
+    ** Otherwise, free the RCB.
+    */
+    if ( ! rcb->buf_max )
+	QUinsert( &rcb->q, GCD_global.rcb_q.q_prev );
+    else  if ( rcb->buf_max == dflt_len )
+	QUinsert( &rcb->q, ccb->rcb_q.q_prev );
+    else
+	gcd_free_rcb( rcb );
+
+    return;
+}
+
+
+/*
+** Name: gcd_free_rcb
+**
+** Description:
+**	Free a request control block.
 **
 ** Input:
 **	rcb	Request control block to be freed.
@@ -725,15 +811,17 @@ gcd_init_rcb( GCD_RCB *rcb )
 ** History:
 **	 4-Jun-99 (gordy)
 **	    Created.
+**	13-May-10 (gordy)
+**	    Renamed and made local when physical free is needed.
+**	    Buffer is now allocated in same memory block as RCB.
 */
 
-void
-gcd_del_rcb( GCD_RCB *rcb )
+static void
+gcd_free_rcb( GCD_RCB *rcb )
 {
     if ( GCD_global.gcd_trace_level >= 6 )
-	TRdisplay( "%4d    GCD del RCB (%p)\n", -1, rcb );
+	TRdisplay( "%4d    GCD del RCB (%p)\n", rcb->ccb->id, rcb );
 
-    if ( rcb->buffer )  MEfree( (PTR)rcb->buffer );
     MEfree( (PTR)rcb );
     return;
 }

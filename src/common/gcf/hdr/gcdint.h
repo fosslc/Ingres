@@ -146,6 +146,8 @@
 **	    Add support for batch processing.
 **	 31-Mar-10 (gordy & rajus01) SD issue 142688, Bug 123270
 **	    Add gcd_gca_activate().
+**	13-May-10 (gordy)
+**	    Added free RCB queues.
 */
 
 #ifndef _GCD_INCLUDED_
@@ -221,6 +223,8 @@ typedef struct GCD_MSGTL_SERVICE	MSG_SRVC;	/* MSG Service */
 **	 5-Dec-07 (gordy)
 **	    Changed connections to client_max and client_cnt to enforce 
 **	    connection limit at GCC level.
+**	13-May-10 (gordy)
+**	    Add free RCB queue for zero length buffers.
 */
 
 typedef struct
@@ -238,6 +242,7 @@ typedef struct
     SYSTIME	client_check;
 
     QUEUE	pib_q;
+    QUEUE	rcb_q;
 
     u_i4	ccb_total;
     u_i4	ccb_active;
@@ -507,6 +512,8 @@ typedef struct
 **	    between standard queries and batch query sets.  Store initial 
 **	    connection handle (prior to IIapi_connect() completion) in 
 **	    API parms.  Add storage for batch procedures.
+**	13-May-10 (gordy)
+**	    Add free RCB queue for default sized buffers.
 */
 
 typedef struct
@@ -530,6 +537,7 @@ typedef struct
     char	*client_addr;	/* Client host addr */
 
     u_i2	max_buff_len;	/* Communication buffer size */
+    QUEUE	rcb_q;		/* Free RCB - default buffer size */
 
     /*
     ** GCC interface info.
