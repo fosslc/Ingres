@@ -32251,6 +32251,12 @@ i4		flags)
 **	    SIR 121619 MVCC: Watch for buffers being reclaimed,
 **	    report E_DM0028_UNABLE_TO_MAKE_CONSISTENT here so
 **	    page, table, database can be made known.
+**	05-May-2010 (jonj)
+**	    Transaction that created the CR page must be this transaction
+**	    when checking "if consistent with crib". If some other
+**	    transaction created the CR page and had a crib that matches
+**	    this one, it may have undone changes made by this transaction,
+**	    which must now be visible.
 */
 DB_STATUS 
 dm0pMakeCRpage(
@@ -32492,6 +32498,7 @@ DB_ERROR	*dberr)
 
 		/* If consistent with crib, pick it */
 		if ( b->buf_cr_noundo == 0 &&
+		     b->buf_page_tranid.db_low_tran == r->rcb_tran_id.db_low_tran &&
 		     LSN_EQ(&b->buf_cr_clsn, &crib->crib_last_commit) &&
 		     LSN_EQ(&b->buf_page_lsn, &crib->crib_low_lsn) )
 		{
