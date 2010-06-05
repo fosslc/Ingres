@@ -177,13 +177,15 @@
 **      22-Mar-2010 (coomi01) b123449
 **          Backout previous two changes, they prejudiced operation of UTF8
 **          installations. Changed routine TDfgoto() to compensate.
+**      20-Apr-2010 (coomi01) b123602
+**          Make DOUBLE-BYTE a runtime test and bring into line with
+**          routine TDfgoto()
 */
+u_char		TDsaveLast();
 
 
-# ifdef DOUBLEBYTE
 void            TDsaveLast_dx();
 void            TDaddLast_dx();
-# endif /* DOUBLEBYTE */
 
 # ifndef min
 # define		min(x,y)	(x < y ? x : y)
@@ -249,42 +251,38 @@ GLOBALREF  i4	IIcurscr_firstch[200];	/* 1st char changed on nth line */
 static	bool	clr_eol = FALSE;
 static	WINDOW	*xs_savewin = NULL;
 
-# ifndef DOUBLEBYTE
-IITDctsClearToScroll(win, lastline)
-WINDOW	*win;
-char	*lastline;
-# else
 IITDctsClearToScroll(win, lastline, lastline_dx)
 WINDOW	*win;
 char	*lastline;
 char	*lastline_dx;
-# endif /* #ifndef DOUBLEBYTE */
 {
 	u_char	saveattr;
 
-# ifdef DOUBLEBYTE
 	void    TDsaveLast_dx();
 	void    TDaddLast_dx();
-# endif /* DOUBLEBYTE */
 
 	if (!(win->_flags & _TDSPDRAW))
 	{
-# ifdef DOUBLEBYTE
+	    if (CMGETDBL)
+	    {
 		TDsaveLast_dx(lastline_dx);
-# endif /* DOUBLEBYTE */
-		saveattr = TDsaveLast(lastline);
-		TDerase(curscr);
-		TDrefresh(curscr);
+	    }
+	    saveattr = TDsaveLast(lastline);
+	    TDerase(curscr);
+	    TDrefresh(curscr);
 	}
 	TDtouchwin(win);
 	TDrefresh(win);
 	if (!(win->_flags & _TDSPDRAW))
 	{
-# ifdef DOUBLEBYTE
+
+	    if (CMGETDBL)
+	    {
 		TDaddLast_dx(lastline_dx);
-# endif /* DOUBLEBYTE */
-		TDaddLast(lastline, saveattr);
-		TDclrTop();
+	    }
+
+	    TDaddLast(lastline, saveattr);
+	    TDclrTop();
 	}
 }
 
@@ -324,9 +322,7 @@ WINDOW	*awin;
 		bool	dont_center = FALSE;
 		bool	onmuline = FALSE;
 		char	lastLine[MAX_TERM_SIZE + 1];
-# ifdef DOUBLEBYTE
 		char	lastLine_dx[MAX_TERM_SIZE + 1];
-# endif /* DOUBLEBYTE */
 		char	scp[20];
 		char	ucp[20];
 		char	outbuf[TDBUFSIZE + 1];
@@ -581,11 +577,15 @@ WINDOW	*awin;
 				}
 			}
 
-# ifndef DOUBLEBYTE
-			IITDctsClearToScroll(win, lastLine);
-# else
-			IITDctsClearToScroll(win, lastLine, lastLine_dx);
-# endif /* #ifndef DOUBLEBYTE */
+			if (CMGETDBL)
+			{
+			    IITDctsClearToScroll(win, lastLine, lastLine_dx);
+			}
+			else
+			{
+			    IITDctsClearToScroll(win, lastLine,0);
+			}
+
 			win = twin;
 			_win = win;
 		}
@@ -614,11 +614,16 @@ WINDOW	*awin;
 					cscr->_begy = (LINES - 1 - win->_starty)
 						- win->_maxy;
 				}
-# ifndef DOUBLEBYTE
-				IITDctsClearToScroll(win, lastLine);
-# else
-				IITDctsClearToScroll(win, lastLine, lastLine_dx);
-# endif /* #ifndef DOUBLEBYTE */
+
+				if (CMGETDBL)
+				{
+				    IITDctsClearToScroll(win, lastLine, lastLine_dx);
+				}
+				else
+				{
+				    IITDctsClearToScroll(win, lastLine,0);
+				}
+
 				win = twin;
 				_win = win;
 			}
@@ -642,10 +647,11 @@ WINDOW	*awin;
 			    {
 				if (CAS == NULL)
 				{
-# ifdef DOUBLEBYTE
+				    if (CMGETDBL)
+				    {
 					TDsaveLast_dx(lastLine_dx);
-# endif /* DOUBLEBYTE */
-					saveLattr = TDsaveLast(lastLine);
+				    }
+				    saveLattr = TDsaveLast(lastLine);
 				}
 				TDsmvcur((i4) 0, COLS - 1, LINES - 2, lx);
 				cscr->_cury = ly = LINES - 2;
@@ -737,11 +743,12 @@ WINDOW	*awin;
 				}
 				else
 				{
-# ifdef DOUBLEBYTE
+				    if (CMGETDBL)
+				    {
 					TDaddLast_dx(lastLine_dx);
-# endif /* DOUBLEBYTE */
-					TDaddLast(lastLine, saveLattr);
-					TDclrTop();
+				    }
+				    TDaddLast(lastLine, saveLattr);
+				    TDclrTop();
 				}
 			    }
 			}
@@ -821,9 +828,11 @@ WINDOW	*awin;
 			}
 			else
 			{
-# ifdef DOUBLEBYTE
+			    if (CMGETDBL)
+			    {
 				TDsaveLast_dx(lastLine_dx);
-# endif /* DOUBLEBYTE */
+			    }
+
 				saveLattr = TDsaveLast(lastLine);
 				win->_cury = twin->_cury + twin->_begy -
 					win->_begy;
@@ -840,11 +849,16 @@ WINDOW	*awin;
 						(dont_center ? 0 : LINES/2) -
 						(win->_cury + win->_begy);
 				}
-# ifndef DOUBLEBYTE
-				IITDctsClearToScroll(win, lastLine);
-# else
-				IITDctsClearToScroll(win, lastLine, lastLine_dx);
-# endif /* #ifndef DOUBLEBYTE */
+
+				if (CMGETDBL)
+				{
+				    IITDctsClearToScroll(win, lastLine, lastLine_dx);
+				}
+				else
+				{
+				    IITDctsClearToScroll(win, lastLine,0);
+				}
+
 				win = twin;
 				_win = win;
 			}
@@ -1451,11 +1465,15 @@ i4	wy;
 # ifdef TRACING
 		SIfprintf(dbgout, "Top of loop\n");
 # endif /* TRACING */
-# ifdef DOUBLEBYTE
-		if (CMcmpcase(nsp,csp) || *nda != *cda)
-# else
-		if (*nsp != *csp || *nda != *cda)
-# endif /* DOUBLEBYTE */
+
+		/* 
+		** Use ternary to choose which (Db/Sb) boolean expression to use 
+		*/
+                if (
+		    (CMGETDBL) ?
+		    (CMcmpcase(nsp,csp) || (*nda != *cda))  :
+		    (*nsp != *csp ||  *nda != *cda)
+		    )
 		{
 # ifdef TRACING
 			SIfprintf(dbgout, "Data different\n");
@@ -1478,13 +1496,13 @@ i4	wy;
 				IITDcda_prev = zda;
 			}
 
-# ifdef DOUBLEBYTE
-			while ((wx <= lch) &&
-				(CMcmpcase(nsp, csp) || (*nda != *cda) ))
-# else
-			while ((wx <= lch) &&
-				((*nsp != *csp) || (*nda != *cda)))
-# endif /* DOUBLEBYTE */
+
+			while ( (wx <= lch) && (
+				    (CMGETDBL) ?
+				    (CMcmpcase(nsp,csp) || (*nda != *cda))  :
+				    (*nsp != *csp ||  *nda != *cda)
+				    )
+			    )
 			{
 				if (ce != NULL && wx >= nlsp
 					&& *nsp == ' ' && *nda == 0)
@@ -1693,7 +1711,9 @@ i4	wy;
 					TDdaout(fonts, da, color);
 				}
 
-# ifdef DOUBLEBYTE
+				if (CMGETDBL)
+				{
+				    /** Do Double Byte Processing **/
 				/* save current position for using later */
 				svx = wx;
 				/*
@@ -1728,13 +1748,13 @@ i4	wy;
 							TDput(*nsp);
 						    else
 							TDput(OVERLAYSP);
-fonts = (ndaval = *(nda + 1)) & _LINEMASK;
-da = ndaval & _DAMASK;
-color = ndaval & _COLORMASK;
-if (da != pda || fonts != pfonts || pcolor != color)
-{
-	TDdaout(fonts, da, color);
-}
+						    fonts = (ndaval = *(nda + 1)) & _LINEMASK;
+						    da = ndaval & _DAMASK;
+						    color = ndaval & _COLORMASK;
+						    if (da != pda || fonts != pfonts || pcolor != color)
+						    {
+							TDdaout(fonts, da, color);
+						    }
 
 						    TDput(*(nsp + 1));
 						    *csp = *nsp;
@@ -1763,13 +1783,13 @@ if (da != pda || fonts != pfonts || pcolor != color)
 							TDput(*nsp);
 						   else
 							TDput(OVERLAYSP);
-fonts = (ndaval = *(nda + 1)) & _LINEMASK;
-da = ndaval & _DAMASK;
-color = ndaval & _COLORMASK;
-if (da != pda || fonts != pfonts || pcolor != color)
-{
-	TDdaout(fonts, da, color);
-}
+						   fonts = (ndaval = *(nda + 1)) & _LINEMASK;
+						   da = ndaval & _DAMASK;
+						   color = ndaval & _COLORMASK;
+						   if (da != pda || fonts != pfonts || pcolor != color)
+						   {
+						       TDdaout(fonts, da, color);
+						   }
 
 						   TDput(*(nsp + 1));
 						}
@@ -1892,21 +1912,21 @@ if (da != pda || fonts != pfonts || pcolor != color)
 								TDput(*nsp);
 							   else
 								TDput(OVERLAYSP);
-fonts = (ndaval = *(nda + 1)) & _LINEMASK;
-da = ndaval & _DAMASK;
-color = ndaval & _COLORMASK;
-if (da != pda || fonts != pfonts || pcolor != color)
-{
-	TDdaout(fonts, da, color);
-}
+							   fonts = (ndaval = *(nda + 1)) & _LINEMASK;
+							   da = ndaval & _DAMASK;
+							   color = ndaval & _COLORMASK;
+							   if (da != pda || fonts != pfonts || pcolor != color)
+							   {
+							       TDdaout(fonts, da, color);
+							   }
 
-								TDput(*(nsp + 1));
-								*cda++ = *nda;
-								*cdx++ = *ndx;
-								*cda++ = *(nda + 1);
-								*cdx++ = *(ndx + 1);
-								CMcpychar(nsp, csp);
-								CMnext(csp);
+							   TDput(*(nsp + 1));
+							   *cda++ = *nda;
+							   *cdx++ = *ndx;
+							   *cda++ = *(nda + 1);
+							   *cdx++ = *(ndx + 1);
+							   CMcpychar(nsp, csp);
+							   CMnext(csp);
 							}
 							else
 							{
@@ -1965,13 +1985,13 @@ if (da != pda || fonts != pfonts || pcolor != color)
 						{
 							*csp = ' ';
 							*cda = *(nda + 1);
-fonts = (ndaval = *(nda + 1)) & _LINEMASK;
-da = ndaval & _DAMASK;
-color = ndaval & _COLORMASK;
-if (da != pda || fonts != pfonts || pcolor != color)
-{
-	TDdaout(fonts, da, color);
-}
+							fonts = (ndaval = *(nda + 1)) & _LINEMASK;
+							da = ndaval & _DAMASK;
+							color = ndaval & _COLORMASK;
+							if (da != pda || fonts != pfonts || pcolor != color)
+							{
+							    TDdaout(fonts, da, color);
+							}
 							TDput(' ');
 							TDput('\b');
 						}
@@ -2045,18 +2065,18 @@ if (da != pda || fonts != pfonts || pcolor != color)
 							else
 							{
 								TDput(OVERLAYSP);
-fonts = (ndaval = *(nda + 1)) & _LINEMASK;
-da = ndaval & _DAMASK;
-color = ndaval & _COLORMASK;
-if (da != pda || fonts != pfonts || pcolor != color)
-{
-	TDdaout(fonts, da, color);
-}
+								fonts = (ndaval = *(nda + 1)) & _LINEMASK;
+								da = ndaval & _DAMASK;
+								color = ndaval & _COLORMASK;
+								if (da != pda || fonts != pfonts || pcolor != color)
+								{
+								    TDdaout(fonts, da, color);
+								}
 								TDput(*(nsp+1));
 							}
 							}
 							else
-								TDput(*nsp);
+							    TDput(*nsp);
 						}
 					}
 				}
@@ -2073,7 +2093,11 @@ if (da != pda || fonts != pfonts || pcolor != color)
 					CMbyteinc(ndx,nsp);
 					CMnext(nsp);
 				}
-# else
+                            }
+                            else
+                            {
+                                /** Do Single Byte Processing **/
+
 				wx++;
 				if (wx > winxmax && wy == winymax - 1)
 				{
@@ -2158,7 +2182,8 @@ if (da != pda || fonts != pfonts || pcolor != color)
 				}
 				nsp++;
 				nda++;
-# endif /* DOUBLEBYTE */
+                           } /** Double, else, Single Processing Ends */
+
 			}
 			if (lx == wx + invc_wx && printAble) /* if no change */
 				break;
@@ -2205,7 +2230,9 @@ if (da != pda || fonts != pfonts || pcolor != color)
 # ifdef TRACING
 			SIfprintf(dbgout, "Data same\n");
 # endif /* TRACING */
-# ifdef DOUBLEBYTE
+			if (CMGETDBL)
+			{
+
 			while (!CMcmpcase(nsp,csp) && *nda == *cda && wx < lch)
 			{
 				if (!_curwin)
@@ -2232,7 +2259,9 @@ if (da != pda || fonts != pfonts || pcolor != color)
 
 				CMnext(nsp);
 			}
-# else
+			}
+			else
+			{
 			if (!lcurwin)
 			{
 				while (*nsp == *csp && *nda == *cda && wx < lch)
@@ -2262,7 +2291,7 @@ if (da != pda || fonts != pfonts || pcolor != color)
 					++wx;
 				}
 			}
-# endif /* DOUBLEBYTE */
+			}
 		}
 		else
 		{
@@ -2390,7 +2419,6 @@ TDclrTop()
 	}
 }
 
-# ifdef DOUBLEBYTE
 /*
 ** The 2 routines that follows saves the cdx LINE needed
 ** for doublebyte MENU displays.
@@ -2413,4 +2441,4 @@ char    *lastline_dx;
 		(u_i2)curscr->_maxx,
 		curscr->_dx[curscr->_maxy - 1] );
 }
-# endif /* DOUBLEBYTE */
+
