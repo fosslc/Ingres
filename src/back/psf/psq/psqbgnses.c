@@ -360,6 +360,8 @@
 **	    for defaulting SET CARDINALITY_CHECK
 **      November 2009 (stephenb)
 **          Batch execution; initilization of new fields.
+**      29-apr-2010 (stephenb)
+**          Init batch_copy_optim.
 **	04-may-2010 (miket) SIR 122403
 **	    Init new sess_cb->pss_stmt_flags2.
 */
@@ -747,6 +749,8 @@ psq_bgn_session(
     
     /* init last statement */
     sess_cb->pss_last_sname[0] = EOS;
+    /* batch optimization switch starts undefined */
+    sess_cb->batch_copy_optim = PSS_BATCH_OPTIM_UNDEF;
 
     /* 
     ** if starting a local session, determine whether the database is being 

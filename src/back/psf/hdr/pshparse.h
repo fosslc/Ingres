@@ -1799,6 +1799,8 @@ typedef struct _PSS_DECVAR PSS_DECVAR;  /* forward declaration */
 **	04-may-2010 (miket) SIR 122403
 **	    Add 32 more session-level flags: pss_stmt_flags2.
 **	    Add flags PSS_2_ENCRYPTION and PSS_2_PASSPHRASE.
+**	29-apr-2010 (stephenb)
+**	    Add batch_copy_optim and associated defines.
 */
 typedef struct _PSS_SESBLK
 {
@@ -2703,6 +2705,12 @@ i4		    pss_flattening_flags;
 					 ** dynamic statement is being re-executed */
     PST_QTREE	*pss_qtree;		/* query tree, used for dynamic insert
 					** optimization.*/
+    u_i1	batch_copy_optim;	/* whether to use batch copy optimization
+					** determined by "set [no]batch_copy_optim"
+					*/
+#define		PSS_BATCH_OPTIM_UNDEF	0 /* use server default */
+#define		PSS_BATCH_OPTIM_SET	1 /* use optimization (if possible ) */
+#define		PSS_BATCH_OPTIM_UNSET	2 /* do not use optimization */
     struct PST_STK1 *pss_stk_freelist;
 } PSS_SESBLK;	
 

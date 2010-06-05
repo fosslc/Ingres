@@ -2515,6 +2515,9 @@ typedef struct _PST_OBJDEP
 **          Added psq_server_class so SC930 can output server class
 **	18-Mar-2010 (gupsh01, dougi) SIR 123444
 **	    Add defines for Alter table rename table/column.
+**	29-apr-2010 (stephenb)
+**	    Move batch flags from psq_flags to psq_flags2 to to avoid
+**	    conflicts. Add PSQ_SETBATCHCOPYOPTIM.
 */
 typedef enum psq_mode_enum {
 #define PSQ_MODES_MACRO \
@@ -2709,6 +2712,7 @@ _DEFINE(PSQ_GCA_XA_ROLLBACK,   188,"PSQ_GCA_XA_ROLLBACK")\
 _DEFINE(PSQ_FREELOCATOR,       189,"FREE LOCATOR")\
 _DEFINE(PSQ_ATBL_RENAME_COLUMN,190,"PSQ_ATBL_RENAME_COLUMN")\
 _DEFINE(PSQ_ATBL_RENAME_TABLE, 191,"PSQ_ATBL_RENAME_TABLE")\
+_DEFINE(PSQ_SETBATCHCOPYOPTIM, 192, "SET BATCH_COPY_OPTIM")\
 _ENDDEFINE
 #define _DEFINE(n,v,x) n=v,
 #define _ENDDEFINE PSQ_MODE_MAX
@@ -2973,8 +2977,6 @@ typedef struct _PSQ_CB
 					** drop/add constraint on tables owned
 					** by other users.
 					*/
-					/* query is part of a batch */
-#define		PSQ_BATCH		0x0800000L
 
 #define		PSQ_INGRES_PRIV	        0x1000000L
 
@@ -2984,8 +2986,6 @@ typedef struct _PSQ_CB
 /* User is allowed to run "set trace record" */
 /* NOTE: psq_flag has space in Ingres 2.6 - move to psq_flag2 in main */
 #define		PSQ_ALLOW_TRACEFILE_CHANGE	0x4000000L
-    
-#define		PSQ_LAST_BATCH		0x8000000L /* end of batch */
 
 					/* No user passwords */
 
@@ -3203,6 +3203,9 @@ typedef struct _PSQ_CB
 					*/
 #define	    PSQ_RULE_UPD_PREFETCH	0x0001L
 #define     PSQ_DFLT_READONLY_CRSR	0x0002L
+#define	    PSQ_BATCH			0x0004L /* query is part of a batch */
+#define	    PSQ_LAST_BATCH		0x0008L /* end of batch */
+#define	    PSQ_COPY_OPTIM		0x0010L /* use copy optim */
 					 /*
 					 ** set ==> set if the default cursor 
 					 ** mode is readonly 

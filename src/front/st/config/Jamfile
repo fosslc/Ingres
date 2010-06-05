@@ -80,6 +80,8 @@
 #       Add missing dbmsmlst.hlp reference.
 #    08-Mar-2010 (thaju02)
 #	Remove dbmsmtpl.hlp.
+#	30-apr-2010 (stephenb)
+#	    Add dbmscpop.hlp
 
 SubDir ING_SRC front st config ;
 
@@ -218,6 +220,7 @@ File $(INGMSG)$(DFS)dbmsopfj.hlp : dbmsopfj.hlp ;
 File $(INGMSG)$(DFS)dbmsopfm.hlp : dbmsopfm.hlp ;
 File $(INGMSG)$(DFS)dbmsopfn.hlp : dbmsopfn.hlp ;
 File $(INGMSG)$(DFS)dbmsopfo.hlp : dbmsopfo.hlp ;
+File $(INGMSG)$(DFS)dbmscpop.hlp : dbmscpop.hlp ;
 File $(INGMSG)$(DFS)dbmsopfs.hlp : dbmsopfs.hlp ;
 File $(INGMSG)$(DFS)dbmsopft.hlp : dbmsopft.hlp ;
 File $(INGMSG)$(DFS)dbmsophj.hlp : dbmsophj.hlp ;

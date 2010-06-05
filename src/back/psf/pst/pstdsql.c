@@ -1148,6 +1148,10 @@ pst_prepare(
 **    	    convert grouped execute of append into "copy"
 **      26-Oct-2009 (coomi01) b122714
 **          Use PST_TEXT_STORAGE to allow for long (>64k) view text.
+**      29-apr-2010 (stephenb)
+**          Batch flags are now on psq_flag2. Add support for user
+**          over-ride of batch optimization through config and 
+**          session "set" statement.
 */
 #define	RT_NODE_SIZE \
 	    sizeof(PST_QNODE) - sizeof(PST_SYMVALUE) + sizeof(PST_RT_NODE)
@@ -1412,9 +1416,28 @@ pst_execute(
         status = E_DB_OK;
     }
     
-    /* convert batched table append to copy */
+    /* 
+    ** convert batched table append to copy.
+    ** This may be over-ridden by either the session or the server.
+    ** Session settings take precedence over server settings. If session
+    ** wants the optimization (OPTIM_SET) we use it, else if session is 
+    ** undefined (OPTIM_UNDEF)
+    ** the server must request it (with PSQ_COPY_OPTIM). Else, the
+    ** session does not want it (settings other than OPTIMN_SET and OPTIM_UNDEF)
+    ** and we do not use it (regardless of the sever setting).
+    ** if session is undefined and server does not explicitly ask for it
+    ** then it is not used.
+    */
     
-    if (proto->pst_mode == PSQ_APPEND && psq_cb->psq_flag & PSQ_BATCH)
+    
+    if ((psq_cb->psq_flag2 & PSQ_BATCH) && proto->pst_mode == PSQ_APPEND &&
+	    /* statement qualifies for batch optim, does user want it ? */
+	    ( (sess_cb->batch_copy_optim == PSS_BATCH_OPTIM_SET)  || 
+	    /* session wants it */
+	    (sess_cb->batch_copy_optim == PSS_BATCH_OPTIM_UNDEF &&
+	    psq_cb->psq_flag2 & (PSQ_COPY_OPTIM)))
+	    /* server wants it */
+	    )
     {
 	QEF_RCB		*qef_rcb;
 	QEU_COPY	*qe_copy;

@@ -451,6 +451,8 @@ typedef struct _SCD_ALIST
 **      10-feb-2010 (maspa05) SIR 123293
 **          Changed sc_server_class to use SVR_CLASS_MAXNAME instead of 
 **          hard-coded 24
+**      29-apr-2010 (stephenb)
+**          Add sc_batch_copy_optim.
 */
 typedef struct _SC_MAIN_CB
 {
@@ -658,6 +660,8 @@ CSP_SERVER,LIC_VIOL_REJECT,IS_MT"
     					       be run on 1 node of a cluster */
     char	    sc_server_class[SVR_CLASS_MAXNAME]; 
                                             /* ' ' padded svr class name */
+    bool	    sc_batch_copy_optim;    /* enable copy optimization 
+					    ** for batched inserts */
 
 }   SC_MAIN_CB;
 

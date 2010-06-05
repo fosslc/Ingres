@@ -2617,6 +2617,8 @@ static char execproc_syntax2[] = " = session.";
 **	31-Mar-2010 (kschendel) SIR 123485
 **	    More fine-tuning for COPY, handle it early and get out of the way.
 **	    Use preset internal savepoint name in QEF server block.
+**	29-apr-2010 (stephenb)
+**	    Batch flags are now on psq_flag2. Add case for PSQ_SETBATCHCOPYOPTIM.
 */
 DB_STATUS
 scs_sequencer(i4 op_code,
@@ -3851,11 +3853,13 @@ scs_sequencer(i4 op_code,
 			sc0a_qrytext(scb,"",0,SC0A_QT_END);
 		}
 		if (cscb->cscb_batch_count > 0)
-		    ps_ccb->psq_flag |= PSQ_BATCH;
+		    ps_ccb->psq_flag2 |= PSQ_BATCH;
+		if (Sc_main_cb->sc_batch_copy_optim)
+		    ps_ccb->psq_flag2 |= PSQ_COPY_OPTIM;
 		if (cscb->cscb_gci.gca_end_of_group &&
-			ps_ccb->psq_flag & PSQ_BATCH)
+			ps_ccb->psq_flag2 & PSQ_BATCH)
 		{
-		    ps_ccb->psq_flag |= PSQ_LAST_BATCH;
+		    ps_ccb->psq_flag2 |= PSQ_LAST_BATCH;
 		}
 		if (sscb->sscb_cpy_qeccb)
 		    ps_ccb->psq_cp_qefrcb = sscb->sscb_cpy_qeccb;
@@ -9430,6 +9434,15 @@ scs_sequencer(i4 op_code,
 
 	    case PSQ_DDEXECPROC: /* STAR, dynamic execute procedure */
 		status = scs_dcxproc(scb, &qry_status, next_op, op_code);
+		break;
+		
+	    case PSQ_SETBATCHCOPYOPTIM:
+		/* "set batch_copy_optim"; nothing to do here
+		** it's all covered in the parser.
+		*/
+	        *next_op = CS_EXCHANGE;
+	        sscb->sscb_state = SCS_INPUT;
+		status = E_DB_OK;
 		break;
 
 	    default:

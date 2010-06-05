@@ -1,0 +1,36 @@
+# a64_lnx_LSB is the same as int_lnx except that it builds with:
+# 	 LSB_BUILD=TRUE
+# Which builds Ingres in an Linux Standards Base compliant manor, mainly for
+# the purpose of inclusion with Linux distros e.g. Fedora
+
+# History:
+#	21-Apr-2010
+#	    SIR 123296
+# 	    Created from VERS.int_lnx_LSB
+
+
+#set: config32 int_lnx
+#set: config64 a64_lnx
+#set: option libc6
+#set: option DBL
+#set: option B64
+#set: option CAS_ENABLED
+#set: build 00
+
+# Any jam definitions go here, e.g. VAR = value ;
+# Don't forget spaces around the = and before the ;
+
+LSB_BUILD = "TRUE" ; #set: option LSB_BUILD
+SVR_ARLIB = "TRUE" ; #set: option SVR_AR
+
+# Hybridization ...
+# int_lnx is a hybrid capable build that is built in pure 32 bits.
+BUILD_ARCH = "64" ;	#set: arch 64
+XERCES_ARCH ?= 64 ;	# but change to 64 if building on a 64-bit box
+SLVERS = 10.0.0 ; # Used for versioning UDT and SPAT shlibs
+
+PAX_CHECK = FALSE ;
+PLATFORM_JAMDEFS = hyb86_lnx ;
+BUILD_GTK_INST = FALSE ;
+BUILD_GTK_GUI = FALSE ;
+

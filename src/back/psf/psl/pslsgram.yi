@@ -3533,6 +3533,8 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	    list or its WHERE clause or the joins ON clause, then the push was
 **	    made in error. An extra check is made to assert that a SELECT in the
 **	    FROM list is not in one of the other contexts.
+**	29-apr-2010 (stephenb)
+**	    Add syntax for "set [no]batch_copy_optim"
 */
 %{
 
@@ -4464,6 +4466,9 @@ psl_mk_const_similar(
 /* "set role" taken as a single token. */
 %token		    SETROLE
 
+/* "set [no]batch_copy_optim" taken as a single token */
+%token		    SETBATCHCOPYOPTIM
+
 %token		    SUBSTRING SYMMETRIC
 
 %token              TABLE TEMPORARY THEN TO TRANSACTION
@@ -4540,7 +4545,7 @@ psl_mk_const_similar(
 %type	<psl_utextype> UCONST
 %type	<psl_tytype>  SETHASH SETJOINOP SETJOURNAL SETTRACE SETIOTRACE
 %type   <psl_tytype>  SETLOGTRACE SETLOGGING SETFLATTEN SETCARDCHK SETOJFLATTEN
-%type   <psl_tytype>  SETPARALLEL SETCACHEDYN
+%type   <psl_tytype>  SETPARALLEL SETCACHEDYN SETBATCHCOPYOPTIM
 %type   <psl_tytype>  SETQEP SETSTATS SETPRINTQRY SETLOCKTRACE SETPRTRULES
 %type	<psl_tytype>  SETMXIO SETMXROW SETMXCPU SETMXPAGE SETMXCOST
 %type   <psl_tytype>  SETPRTEVENTS SETLOGEVENTS SETRULES SETOPTIMIZEONLY
@@ -4772,6 +4777,7 @@ stmt:		    abort
 	  |	    savepoint
 	  |	    setaggr
 	  |	    setautocommit
+	  |	    setbatchcopyoptim
 	  |	    setcachedyn
 	  |	    setcpufact
           |	    setdatefmt
@@ -19849,6 +19855,7 @@ ex_imdte_stmts:	    abort
 	  |	    savepoint
 	  |	    setaggr
 	  |	    setautocommit
+	  |	    setbatchcopyoptim
 	  |	    setcachedyn
 	  |	    setcpufact
           |	    setdatefmt
@@ -40589,6 +40596,16 @@ setlogtrace:	    SETLOGTRACE
 	debug_cb->db_trswitch = ($1 == PSL_ONSET) ? DB_TR_ON : DB_TR_OFF;
     }
 ;
+
+setbatchcopyoptim:	SETBATCHCOPYOPTIM
+    {
+	psq_cb->psq_mode = PSQ_SETBATCHCOPYOPTIM;
+	if ($1 == PSL_ONSET)
+	    cb->batch_copy_optim = PSS_BATCH_OPTIM_SET;
+	else
+	    cb->batch_copy_optim = PSS_BATCH_OPTIM_UNSET;
+    }
+; 
 
 setmnyfmt:	    SETMNYFMT strconst_e
     {

@@ -320,6 +320,8 @@ psf_svr_handle(
 **	    Re-type call to use the proper struct pointer.
 **	12-Mar-2010 (thaju02) Bug 123440
 **	    Add PSQ_GET_SESS_INFO to return session cache_dynamic setting.
+**	29-apr-2010 (stephenb)
+**	    Batch flags are now on psq_flag2.
 **	04-may-2010 (miket) SIR 122403
 **	    Init new sess_cb->pss_stmt_flags2.
 */
@@ -485,11 +487,11 @@ psq_call(
 	
 	if (copy_in_progress && 
 		((psq_cb->psq_ret_flag & PSQ_CONTINUE_COPY) == 0 || 
-			psq_cb->psq_flag & PSQ_LAST_BATCH))
+			psq_cb->psq_flag2 & PSQ_LAST_BATCH))
 	{
 	    psq_cb->psq_ret_flag |= PSQ_FINISH_COPY;
 	    sess_cb->pss_last_sname[0] = EOS;
-	    psq_cb->psq_flag &= ~(PSQ_BATCH | PSQ_LAST_BATCH);
+	    psq_cb->psq_flag2 &= ~(PSQ_BATCH | PSQ_LAST_BATCH);
 	}
 
 	/*
@@ -729,11 +731,11 @@ psq_call(
 
 	ret_val = pst_cpdata(sess_cb, psq_cb, NULL, TRUE);
 	
-	if (psq_cb->psq_flag & PSQ_LAST_BATCH)
+	if (psq_cb->psq_flag2 & PSQ_LAST_BATCH)
 	{
 	    psq_cb->psq_ret_flag |= PSQ_FINISH_COPY;
 	    sess_cb->pss_last_sname[0] = EOS;
-	    psq_cb->psq_flag &= ~(PSQ_BATCH | PSQ_LAST_BATCH);
+	    psq_cb->psq_flag2 &= ~(PSQ_BATCH | PSQ_LAST_BATCH);
 	}
 
 	break;

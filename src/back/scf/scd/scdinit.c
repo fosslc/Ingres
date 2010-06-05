@@ -1697,6 +1697,8 @@ GLOBALREF const char	Version[];
 **	    SIR 121619 MVCC: Add DMC_C_PAGETYPE_V6, DMC_C_PAGETYPE_V7
 **      15-feb-2010 (maspa05) SIR 123293
 **          Pass server_class to PSF so we can output it in SC930 trace
+**      29-apr-2010 (Stephenb)
+**          Init sc_batch_copy_optim.
 */
 DB_STATUS
 scd_initiate( CS_INFO_CB  *csib )
@@ -1919,6 +1921,7 @@ scd_initiate( CS_INFO_CB  *csib )
     Sc_main_cb->sc_event_priority = Sc_main_cb->sc_norm_priority;
     Sc_main_cb->sc_startup_time = TMsecs();     /* remember when we started */
     Sc_main_cb->sc_class_node_affinity = 0; /* Default = no node affinity */
+    Sc_main_cb->sc_batch_copy_optim = TRUE; /* Use copy optim by default */
 
     ult_init_macro(&Sc_main_cb->sc_trace_vector, SCF_NBITS, SCF_VPAIRS, SCF_VONCE);
 

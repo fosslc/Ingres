@@ -1,0 +1,24 @@
+/*
+** Copyright (c) 2010 Ingres Corporation
+*/
+/*
+** Generic part file for logrote support.
+*/
+
+/*
+** History
+**	20-Apr-2010 (hanje04)
+**	    Created. Initially LSB only
+*/
+
+# ifdef conf_LSB_BUILD
+PART logrotate
+
+/*
+** ingres!files!logrotate
+*/
+
+   DIRECTORY etc!logrotate.d
+   BUILD_DIR (ING_BUILD)!files!logrotate
+      FILE ingres
+# endif

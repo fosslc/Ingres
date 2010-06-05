@@ -618,6 +618,8 @@
 --#	    Defaults for ii_database, ii_checkpoint etc. need to be commands not
 --#	    values. Make defaults for LSB seprate dirs for easy of moving at a
 --#	    later date. Locations created by RPM.
+--# 29-apr-2010 (stephenb)
+--#		Add rule for batch_copy_optim
 
 -- location setup resources
 # ifdef UNIX 
@@ -725,6 +727,8 @@ ii.$.recovery.$.vms_enqueue_limit:  32767;
 
 -- dbms resources 
 
+-- use copy optimization for batched inserts ?
+ii.$.dbms.$.batch_copy_optim:	ON;
 --# I would like to get rid of active_limit, but the CL (cs) reads it,
 --# and there's no great need to be fardling with cs right now.
 ii.$.dbms.$.active_limit:	ii.$.dbms.$.connect_limit;

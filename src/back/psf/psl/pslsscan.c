@@ -507,6 +507,8 @@
 **	    Changes for encrypt parsing.
 **	19-Apr-2010 (gupsh01) SIR 123444
 **	    Added support for RENAME table.
+**	29-apr-2010 (stephenb)
+**	    Add support for "set [no]batch_copy_optim"
 **/
 
 /*
@@ -836,6 +838,7 @@ static const SECONDARY	Primarywords[] = {
 static const SECONDARY      Setwords[] = {
 			{ "aggregate",    SETAGGR,     PSL_GOVAL  },
 			{ "autocommit",	  SETAUTOCOMMIT, PSL_GOVAL},
+			{ "batch_copy_optim",	 SETBATCHCOPYOPTIM, PSL_ONSET},
 			{ "cache_dynamic",SETCACHEDYN, PSL_ONSET  },
 			{ "cardinality_check",SETCARDCHK, PSL_ONSET},
 		        { "cpufactor",    SETCPUFACT,  PSL_GOVAL  },
@@ -862,6 +865,7 @@ static const SECONDARY      Setwords[] = {
 			{ "maxrow",	  SETMXROW,    PSL_ONSET  },
 			{ "money_format", SETMNYFMT,   PSL_GOVAL  },
 			{ "money_prec",   SETMNYPREC,  PSL_GOVAL  },
+			{ "nobatch_copy_optim", SETBATCHCOPYOPTIM, PSL_OFFSET},
 			{ "nocache_dynamic",SETCACHEDYN, PSL_OFFSET},
 			{ "nocardinality_check",SETCARDCHK, PSL_OFFSET},
 			{ "noflatten",    SETFLATTEN,  PSL_OFFSET },

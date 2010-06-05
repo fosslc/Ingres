@@ -1,0 +1,49 @@
+## Copyright (c) 2010 Ingres Corporation 
+## Name:
+##      ingres.logrotate
+##
+## Usage:
+##      /etc/logrotate.d/ingres
+##
+## Description:
+##      logrotate configuration file for RH/Fedora Linux. Shipped as part of
+##	LSB builds, for automated management of Ingres log files
+##
+## History:
+##	20-Apr-2010 (hanje04)
+##	    SIR 123296
+##	    Created.
+##
+/var/log/ingres/errlog.log
+{
+    nocreate
+    copytruncate
+    weekly
+    size 250k
+}
+
+/var/log/ingres/ii*.log
+{
+    missingok
+    nocreate
+    copytruncate
+    daily
+    notifempty
+    size 100k
+}
+
+/var/log/ingres/config.log /var/log/ingres/symbol.log
+{
+    nocreate
+    daily
+    notifempty
+    nocompress
+}
+
+/var/log/ingres/rcpconfig.log /var/log/ingres/install.log /var/log/ingres/files/ckpdb.log
+{
+    nocreate
+    weekly
+    rotate 5
+    notifempty
+}

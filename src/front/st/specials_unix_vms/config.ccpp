@@ -213,6 +213,8 @@
 **          Add dbmsmlst.hlp to the distribution.
 **	22-Apr-2010 (thaju02)
 **	    Rmeove dbmsmtpl.hlp.
+**	30-apr-2010 (stephenb)
+**		Add dbmscpop.hlp
 */
 
 PART   config
@@ -270,6 +272,7 @@ PART   config
       FILE dbmscady.hlp
       FILE dbmsclim.hlp
       FILE dbmscore.hlp
+      FILE dbmscpop.hlp
       FILE dbmscpus.hlp
       FILE dbmscrsr.hlp
       FILE dbmscrop.hlp

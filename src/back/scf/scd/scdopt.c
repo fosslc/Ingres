@@ -363,6 +363,8 @@ NO_OPTIM=dr6_us5
 **	    Add CRYPT_MAXKEYS for data encryption a rest.
 **	08-Mar-2010 (thaju02)
 **	    Remove max_tuple_length.
+**	29-apr-2010 (stephenb)
+**	    Add option "!.batch_copy_optim"
 */
 
 /*
@@ -636,6 +638,7 @@ struct _SCD_OPT {
 #define		SCO_PAGETYPE_V6		    216
 #define		SCO_PAGETYPE_V7		    217
 #define		SCO_CRYPT_MAXKEYS	    218 /* max crypt shmem keys */
+#define		SCO_BATCH_COPY_OPTIM	    219
 static SCD_OPT scd_opttab[] =
 {
     /* echoing first so the rest get echoed */
@@ -876,6 +879,7 @@ static SCD_OPT scd_opttab[] =
     SCO_QEF_NO_DEPENDENCY_CHK,  't',    ' ',    "!.qef_no_dependency_chk",
     SCO_PAGETYPE_V6,		'z',	'3',	"!.pagetype_v6", /*default on*/
     SCO_PAGETYPE_V7,		'z',	'3',	"!.pagetype_v7", /*default on*/
+    SCO_BATCH_COPY_OPTIM,		'z',	' ',	"!.batch_copy_optim",
     0, 0, 0, 0
 } ;
 
@@ -2392,6 +2396,11 @@ scd_options(
             case SCO_QEF_NO_DEPENDENCY_CHK:
                 qef_cb->qef_nodep_chk = TRUE;
                 break; 
+                
+	    case SCO_BATCH_COPY_OPTIM:
+		/* batch copy optimization off */
+		Sc_main_cb->sc_batch_copy_optim = FALSE;
+		break;
  
 	    default:
 		sc0e_put( E_SC0232_INVALID_STARTUP_CODE, (CL_ERR_DESC *)0, 2,
