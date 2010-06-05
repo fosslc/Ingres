@@ -20,6 +20,9 @@
 **     Integrate Export assistant into vdba
 **  23-Mar-2010 (drivi01)
 **     Add bIsVectorWise to LPDOMDATA structure to track VW version.
+**  11-May-2010 (drivi01)
+**     Add DomCreateIndex function which adds support for 
+**     "Create Index" menu functionality. 
 ********************************************************************/
 
 #ifndef __DOM_INCLUDED__
@@ -179,6 +182,7 @@ extern BOOL ResequenceTree(HWND hwndMdi, LPDOMDATA lpDomData);
 extern VOID DomAddObject(HWND hwndMdi, LPDOMDATA lpDomData, WPARAM wParam, LPARAM lParam);
 extern VOID DomAlterObject(HWND hwndMdi, LPDOMDATA lpDomData, WPARAM wParam, LPARAM lParam);
 extern BOOL DomDropObject(HWND hwndMdi, LPDOMDATA lpDomData, WPARAM wParam, LPARAM lParam);
+extern VOID DomCreateIndex(HWND hwndMdi, LPDOMDATA lpDomData, WPARAM wParam, LPARAM lParam);
 
 extern VOID DomGrantObject (HWND hwndMdi, LPDOMDATA lpDomData, WPARAM wParam, LPARAM lParam);
 extern VOID DomRevokeObject (HWND hwndMdi, LPDOMDATA lpDomData, WPARAM wParam, LPARAM lParam);

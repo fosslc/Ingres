@@ -25,6 +25,10 @@
 **   (SIR 111507)Add new datatype BigInt
 **  10-Nov-2004 (schph01)
 **   (bug 113426) Add OT_ICE_MAIN for managing on Force Refresh or Expand All
+**  11-May-2010 (drivi01)
+**    Added function CanObjectExistInVectorWise which returns
+**    TRUE or FALSE depending on if the object supported by
+**    VectorWise.
 ********************************************************************/
 
 #ifndef DBA_HEADER
@@ -591,6 +595,7 @@ BOOL HasProperties4display(int iobjecttype);
 BOOL CanObjectBeAdded(int iobjecttype);
 BOOL CanObjectBeCopied(int iobjecttype, LPUCHAR lpobjectname, LPUCHAR lpobjectowner);
 BOOL CanObjectStructureBeModified(int iobjecttype);
+BOOL CanObjectExistInVectorWise(int iobjecttype);
 BOOL HasOwner(int iobjecttype);
 BOOL NonDBObjectHasOwner(int iobjecttype);
 BOOL HasExtraDisplayString(int iobjecttype);

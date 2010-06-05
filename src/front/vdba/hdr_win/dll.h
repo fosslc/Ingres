@@ -15,6 +15,10 @@
 **   function
 **  18-Mar-2003 (schph01)
 **   sir 107523 management of sequences
+**  06-May-2010 (drivi01)
+**   Add ComboBoxFillTablesFiltered which will load combo box
+**   of tables with either Ingres or VW tables depending
+**   on which are requested.
 ********************************************************************/
 
 #ifndef _DLL_H
@@ -196,6 +200,7 @@ BOOL CAListBoxFillSequences (HWND hwndCtl, LPUCHAR DatabaseName);
 BOOL ComboBoxFillDBevents   (HWND hwndCtl, LPUCHAR DatabaseName);
 BOOL CAListBoxFillDBevents  (HWND hwndCtl, LPUCHAR DatabaseName);
 BOOL ComboBoxFillTables     (HWND hwndCtl, LPUCHAR DatabaseName);
+BOOL ComboBoxFillTablesFiltered	(HWND hwndCtl, LPUCHAR DatabaseName, BOOL bVW);
 BOOL ComboBoxFillViews      (HWND hwndCtl, LPUCHAR DatabaseName);
 BOOL CAListBoxFillViews     (HWND hwndCtl, LPUCHAR DatabaseName);
 void ComboBoxSelectFirstStr (HWND hwndCtl);

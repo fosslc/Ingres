@@ -90,6 +90,11 @@
 **    two available unicode normalization options, added group box with
 **    two checkboxes corresponding to each normalization, including all
 **    expected functionlity.
+** 12-May-2010 (drivi01)
+**    Add assignment of stored address location from LPTREERECORD 
+**    to tblType in DMLCREATESTRUCT.
+**    Add DomCreateIndex function which will bring up "Create Index"
+**    dialog for the newly added "Create Index" menu. 
 ************************************************************************/
 
 //
@@ -1048,6 +1053,7 @@ VOID DomAddObject (HWND hwndMdi, LPDOMDATA lpDomData, WPARAM wParam, LPARAM lPar
                     lstrcpy (cr.tchszDatabase,    (LPCTSTR)parentstrings [0]);
                     lstrcpy (cr.tchszObject,      (LPCTSTR)RemoveDisplayQuotesIfAny(StringWithoutOwner(parentstrings [1])));
                     lstrcpy (cr.tchszObjectOwner, (LPCTSTR)ParentTableOwner);
+		    cr.tblType = getint(lpRecord->szComplim + STEPSMALLOBJ + STEPSMALLOBJ);
 
                     iret = VDBA_CreateIndex(hwndMdi, &cr);
                     if (iret != IDOK)
@@ -5758,6 +5764,75 @@ VOID DomModifyObjectStruct (HWND hwndMdi, LPDOMDATA lpDomData, WPARAM wParam, LP
    // complimentary management of right pane: refresh it immediately
    UpdateRightPane(hwndMdi, lpDomData, TRUE, 0);
 }
+
+//
+// IVM unindexed tables - create index
+//
+VOID DomCreateIndex(HWND hwndMdi, LPDOMDATA lpDomData, WPARAM wParam, LPARAM lParam)
+{
+	LPUCHAR parentstrings[MAXPLEVEL];
+	UCHAR ParentTableOwner[MAXOBJECTNAME];
+	LPTREERECORD lpRecord;
+	int objType = -1;
+	DWORD dwCurSel = 0;
+	int iret = -1;
+	int tblType = 0;
+
+
+	objType = GetCurSelUnsolvedItemObjType (lpDomData);
+	dwCurSel=(DWORD)SendMessage(lpDomData->hwndTreeLb, LM_GETSEL, 0, 0L);
+	if (!dwCurSel)
+          return;             // How did we happen here ?
+        lpRecord = (LPTREERECORD) SendMessage(lpDomData->hwndTreeLb,
+                               LM_GETITEMDATA, 0, (LPARAM)dwCurSel);
+	fstrncpy(ParentTableOwner,lpRecord->ownerName,MAXOBJECTNAME);
+	if (!GetCurSelObjParents (lpDomData, parentstrings))
+          return;             // TESTER RETVAL
+      
+	switch (objType)
+	{
+	    case OT_TABLE:
+	    {
+		if (IsVW() && (tblType = getint(lpRecord->szComplim + STEPSMALLOBJ + STEPSMALLOBJ)) == IDX_VW)
+		{
+			if (GetOIVers == OIVERS_NOTOI)
+			{
+				INDEXPARAMS idx;
+					
+				ZEROINIT(idx);
+				idx.bPersistence = TRUE;
+				idx.bCreate = TRUE;
+				x_strcpy (idx.DBName   , lpRecord->extra); 
+				x_strcpy (idx.TableName, lpRecord->objName);
+				x_strcpy (idx.TableOwner, ParentTableOwner);
+
+				iret = DlgCreateIndex (hwndMdi, &idx);
+				if (iret != IDOK)
+					return;	
+			}
+			else 
+			{
+                    		DMLCREATESTRUCT cr;
+				//char extra2[MAXOBJECTNAME];
+				//x_strcat(extra2, lpRecord->ownerName);
+				//x_strcat(extra2, lpRecord->objName);
+                   		memset (&cr, 0, sizeof (cr));
+                    		lstrcpy (cr.tchszDatabase,    (LPCTSTR)lpRecord->extra);
+                    		lstrcpy (cr.tchszObject,      (LPCTSTR)RemoveDisplayQuotesIfAny(StringWithoutOwner(lpRecord->objName)));
+                    		lstrcpy (cr.tchszObjectOwner, (LPCTSTR)ParentTableOwner);
+				cr.tblType = tblType;
+
+                    		iret = VDBA_CreateIndex(hwndMdi, &cr);
+                    		if (iret != IDOK)
+                        	  return;
+                	}
+		}
+	    }
+	    default:
+		break;
+	}
+}
+
 
 //
 // Star management

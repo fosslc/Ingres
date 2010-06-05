@@ -129,6 +129,13 @@
 **    is not a VectorWise installation.
 **    Disable "Options" button if VectorWise is checked, as options
 **    are not supported with VectorWise table.
+** 11-May-2010 (drivi01)
+**    Disable "Check" constraint button b/c it isn't supported.
+**    Add OnCreateVectorWiseTable function which will be
+**    executed every time "Create VectorWise table" is checked.
+**    The function will enable/disable supported options and
+**    set Table parameter structure bCreateVectorWise option
+**    appropriately.
 *****************************************************************************/
 
 
@@ -567,6 +574,7 @@ static void OnAsSelectClick         (HWND hwnd);
 static BOOL OnAssistant (HWND hwnd);
 static void OnUniqueConstraint      (HWND hwnd);
 static void OnCheckConstraint       (HWND hwnd);
+static void OnCreateVectorWiseTable	(HWND hwnd);
 static BOOL  VDBA20xTableDataValidate (HWND hwnd, LPTABLEPARAMS lpTS);
 
 static void OnOK (HWND hwnd);
@@ -686,9 +694,9 @@ static BOOL OnInitDialog(HWND hwnd, HWND hwndFocus, LPARAM lParam)
     }
 
     if (IsVW())
-	EnableWindow (GetDlgItem (hwnd, IDC_INGCHECKVW), TRUE);
+	  EnableWindow (GetDlgItem (hwnd, IDC_INGCHECKVW), TRUE);
     else
-	EnableWindow (GetDlgItem (hwnd, IDC_INGCHECKVW), FALSE);
+	  EnableWindow (GetDlgItem (hwnd, IDC_INGCHECKVW), FALSE);
 
     // Star management
     bDDB = lptbl->bDDB;   // global variable update
@@ -842,10 +850,7 @@ static void OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
       OnStarLocalTable(hwnd);
       break;
     case IDC_INGCHECKVW:
-      if (Button_GetCheck(GetDlgItem(hwnd, IDC_INGCHECKVW)))
-	EnableWindow(GetDlgItem(hwnd, IDC_STRUCTURE), FALSE);
-      else
-	EnableWindow(GetDlgItem(hwnd, IDC_STRUCTURE), TRUE);
+      OnCreateVectorWiseTable(hwnd);
       break;
     }
 }
@@ -3608,6 +3613,7 @@ static void OnUniqueConstraint (HWND hwnd)
     ts.lpUnique     = VDBA20xTableUniqueKey_CopyList (lptbl->lpUnique);
     ts.lpReferences = lptbl->lpReferences;
     ts.primaryKey   = lptbl->primaryKey;
+    ts.bCreateVectorWise = lptbl->bCreateVectorWise;
     MakeColumnsList   (hwnd, &ts);
     if (CTUnique(hwnd, &ts) == IDOK)
     {
@@ -3645,6 +3651,23 @@ static void OnCheckConstraint (HWND hwnd)
     ts.lpColumns= VDBA20xColumnList_Done (ts.lpColumns);
 }
 
+static void OnCreateVectorWiseTable(HWND hwnd)
+{
+    LPTABLEPARAMS lptbl = (LPTABLEPARAMS)GetDlgProp (hwnd);
+
+    if (Button_GetCheck(GetDlgItem(hwnd, IDC_INGCHECKVW)))
+    {
+      EnableWindow(GetDlgItem(hwnd, IDC_STRUCTURE), FALSE);
+      EnableWindow(GetDlgItem(hwnd, IDC_TLCBUTTON_CHECK), FALSE);
+      lptbl->bCreateVectorWise=TRUE;
+    }
+    else
+    {
+      EnableWindow(GetDlgItem(hwnd, IDC_STRUCTURE), TRUE);
+      EnableWindow(GetDlgItem(hwnd, IDC_TLCBUTTON_CHECK), TRUE);
+      lptbl->bCreateVectorWise=FALSE;
+    }
+}
 
 static BOOL  VDBA20xTableDataValidate (HWND hwnd, LPTABLEPARAMS lpTS)
 {
@@ -3748,6 +3771,11 @@ static void OnOK (HWND hwnd)
     //
     // Create Table as VectorWise
     lptbl->bCreateVectorWise = Button_GetCheck(GetDlgItem(hwnd, IDC_INGCHECKVW));
+    //erase all the data under options and check dialogs as it isn't supported
+    if (lptbl->bCreateVectorWise)
+    {
+	lptbl->lpCheck = NULL;
+    }
 
     //
     // Create Table as Select ...
@@ -4180,6 +4208,7 @@ static void OnReference   (HWND hwnd)
     ts.lpReferences = VDBA20xTableReferences_CopyList (lptbl->lpReferences);
     ts.lpUnique     = lptbl->lpUnique;
     ts.primaryKey   = lptbl->primaryKey;
+    ts.bCreateVectorWise = lptbl->bCreateVectorWise;
     MakeColumnsList   (hwnd, &ts);
     if (DlgReferences (hwnd, &ts) == IDOK)
     {

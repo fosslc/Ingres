@@ -252,6 +252,11 @@
 **    Ingres VectorWise product has been updated to return INGRES_VECTORWISE
 **    DBMS_TYPE.  Updated the code to recognize VectorWise installation using
 **    DBMS_TYPE for VectorWise instead of version string.
+** 11-May-2010 (drivi01)
+**    Update DBAOrgGetFirstObject, retrieve table storage structure 
+**    when querying the information about table.  Set the storage structure
+**    in the Table parameters structure so it's always available 
+**    when table parameters sturcture is available.
 ******************************************************************************/
 
 #include <time.h>
@@ -279,7 +284,7 @@
 
 #include "ice.h"
 
-int  i,nbItems;
+int  i,j,nbItems;
 int  imaxsessions    = 6;
 long llastgetsession = 0;
 static BOOL bsuppspace;
@@ -1778,6 +1783,7 @@ LPUCHAR lpextradata;
   exec sql begin declare section;
     char singlename[MAXOBJECTNAME];
     char singleownername[MAXOBJECTNAME];
+    char storage_struct[MAXOBJECTNAME];
     char name3[MAXOBJECTNAME];
     char bufev1[MAXOBJECTNAME];
     char bufev2[MAXOBJECTNAME];
@@ -1805,6 +1811,15 @@ LPUCHAR lpextradata;
     ICE_STATUS      status = 0;
     LPUCHAR pret[20];
     ICEBUSUNITDOCDATA busdocdata;
+    struct VWStorageStruct {
+	LPUCHAR lpVal;
+	int nVal;
+    } VWStorageStruct[] = {
+	{"vectorwise", IDX_VW},
+	{"VECTORWISE", IDX_VW},
+	{"vectorwise_ix", IDX_VWIX},
+	{"VECTORWISE_IX", IDX_VWIX},
+	{"\0", 0}};
 
   bsuppspace= FALSE;
 
@@ -3088,10 +3103,11 @@ cont_getlocks:
           if (GetOIVers() == OIVERS_NOTOI) {
              intno=-1;   // reltid = -1 (dummy if gateway or <Oping 1.x )
              exec sql repeated select table_name,table_owner,table_indexes,
-                             table_integrities,view_base,location_name, multi_locations
+                             table_integrities,view_base,location_name, multi_locations,
+			     storage_structure
                         
                     into :singlename,:singleownername,:rt1,
-                       :rt2,:rt3,:name3,:rt4
+                       :rt2,:rt3,:name3,:rt4, :storage_struct
                     from iitables t
                     where table_type='T';
 
@@ -3111,7 +3127,16 @@ cont_getlocks:
                pcur->ExtraData[MAXOBJECTNAME+2]=GetYNState(rt3); // base_v
                pcur->ExtraData[MAXOBJECTNAME+3]=GetYNState(rt4); // multiloc
                storeint(pcur->ExtraData+MAXOBJECTNAME+4,intno); // table id for monitoring
-               storeint(pcur->ExtraData+MAXOBJECTNAME+4+STEPSMALLOBJ, OBJTYPE_NOTSTAR); 
+               suppspace(storage_struct);
+               for (j=0; VWStorageStruct[j].nVal!=0;j++)
+               {
+               		if (x_strnicmp(VWStorageStruct[j].lpVal, storage_struct, x_strlen(storage_struct)) == 0)
+               		{
+               			storeint(pcur->ExtraData+MAXOBJECTNAME+4+STEPSMALLOBJ, VWStorageStruct[j].nVal);
+               			break;
+               		}
+               } 
+               storeint(pcur->ExtraData+MAXOBJECTNAME+4+STEPSMALLOBJ+STEPSMALLOBJ, OBJTYPE_NOTSTAR); 
                pcur=GetNextLLData(pcur);
                if (!pcur) {
                  iresselect = RES_ERR;
@@ -3125,9 +3150,9 @@ cont_getlocks:
            }
            exec sql repeated select table_name,table_owner,table_indexes,
                        table_integrities,view_base,location_name, multi_locations,
-                       reltid
+                       reltid, storage_structure
                     into :singlename,:singleownername,:rt1,
-                       :rt2,:rt3,:name3,:rt4,:intno
+                       :rt2,:rt3,:name3,:rt4,:intno, :storage_struct
                     from iitables t,iirelation r
                     where table_type='T' and t.table_name=r.relid and t.table_owner=r.relowner;
 
@@ -3148,7 +3173,16 @@ cont_getlocks:
              pcur->ExtraData[MAXOBJECTNAME+2]=GetYNState(rt3); // base_v
              pcur->ExtraData[MAXOBJECTNAME+3]=GetYNState(rt4); // multiloc
              storeint(pcur->ExtraData+MAXOBJECTNAME+4,intno); // table id for monitoring
-             storeint(pcur->ExtraData+MAXOBJECTNAME+4+STEPSMALLOBJ, OBJTYPE_NOTSTAR); 
+             suppspace(storage_struct);
+             for (j=0; VWStorageStruct[j].nVal!=0;j++)
+             {
+             	if (x_strnicmp(VWStorageStruct[j].lpVal, storage_struct, x_strlen(storage_struct)) == 0)
+             	{
+             		storeint(pcur->ExtraData+MAXOBJECTNAME+4+STEPSMALLOBJ, VWStorageStruct[j].nVal);
+             		break;
+             	}
+             } 
+             storeint(pcur->ExtraData+MAXOBJECTNAME+4+STEPSMALLOBJ+STEPSMALLOBJ, OBJTYPE_NOTSTAR); 
              pcur=GetNextLLData(pcur);
              if (!pcur) {
                iresselect = RES_ERR;

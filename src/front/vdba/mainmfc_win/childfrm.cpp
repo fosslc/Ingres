@@ -53,6 +53,14 @@
 **  10-Mar-2010 (drivi01) SIR 123397
 **     Refresh the whole tree after rollforward completes, only if 
 **     rollforward is executed from the main menu.
+**  10-May-2010 (drivi01)
+**     Enable\Disable file menus for Ingres VectorWise tables
+**     depending on weather the menus apply.
+**     Checkpoint/rollforward will be disabled for the entire
+**     database in VectorWise installation due to the fact
+**     that running backups/restores for the whole database
+**     that contains Ingres VectorWise tables could result
+**     in inconsistent catalog data.
 **/
 
 #include "stdafx.h"
@@ -911,6 +919,8 @@ BEGIN_MESSAGE_MAP(CChildFrame, CMDIChildWnd)
 	ON_COMMAND(ID_BUTTON_REVOKE, OnButtonRevoke)
 	ON_UPDATE_COMMAND_UI(ID_BUTTON_MODIFYSTRUCT, OnUpdateButtonModifystruct)
 	ON_COMMAND(ID_BUTTON_MODIFYSTRUCT, OnButtonModifystruct)
+	ON_UPDATE_COMMAND_UI(ID_BUTTON_CREATEIDX, OnUpdateButtonCreateidx)
+	ON_COMMAND(ID_BUTTON_CREATEIDX, OnButtonCreateidx)
 	ON_UPDATE_COMMAND_UI(ID_BUTTON_LOAD, OnUpdateButtonLoad)
 	ON_COMMAND(ID_BUTTON_LOAD, OnButtonLoad)
 	ON_UPDATE_COMMAND_UI(ID_BUTTON_UNLOAD, OnUpdateButtonUnload)
@@ -1701,7 +1711,10 @@ void CChildFrame::OnUpdateButtonAlterobject(CCmdUI* pCmdUI)
       int oldOIVers = GetOIVers();
       SetOIVers(lpDomData->ingresVer);
       if (CanObjectBeAltered(CurItemObjType, lpRecord->objName,
-                                            lpRecord->ownerName))
+                                            lpRecord->ownerName) 
+	&& (!IsVW() 
+	|| (IsVW() && getint(lpRecord->szComplim + STEPSMALLOBJ + STEPSMALLOBJ) == 0))
+	)
         bEnable = TRUE;
       else
         bEnable = FALSE;
@@ -2389,6 +2402,12 @@ void CChildFrame::OnEditPaste()
 void CChildFrame::OnUpdateButtonAlterdb(CCmdUI* pCmdUI) 
 {
   BOOL bEnable = GetDbItemState();
+  LPDOMDATA lpDomData = GetLPDomData(this);
+  DWORD dwCurSel = GetCurSel(lpDomData);
+  int   CurItemObjType = GetUnsolvedItemObjType(lpDomData, dwCurSel);
+  BOOL  bCurSelStatic = IsCurSelObjStatic (lpDomData);
+  if (!CanObjectExistInVectorWise(CurItemObjType))
+	  bEnable=FALSE;
   pCmdUI->Enable(bEnable);
 }
 
@@ -2400,6 +2419,12 @@ void CChildFrame::OnButtonAlterdb()
 void CChildFrame::OnUpdateButtonSysmod(CCmdUI* pCmdUI) 
 {
   BOOL bEnable = GetDbItemState();
+  LPDOMDATA lpDomData = GetLPDomData(this);
+  DWORD dwCurSel = GetCurSel(lpDomData);
+  int   CurItemObjType = GetUnsolvedItemObjType(lpDomData, dwCurSel);
+  //BOOL  bCurSelStatic = IsCurSelObjStatic (lpDomData);
+  if (!CanObjectExistInVectorWise(CurItemObjType))
+	  bEnable=FALSE;
   pCmdUI->Enable(bEnable);
 }
 
@@ -2411,6 +2436,12 @@ void CChildFrame::OnButtonSysmod()
 void CChildFrame::OnUpdateButtonAudit(CCmdUI* pCmdUI) 
 {
   BOOL bEnable = GetDbItemState();
+  LPDOMDATA lpDomData = GetLPDomData(this);
+  DWORD dwCurSel = GetCurSel(lpDomData);
+  int   CurItemObjType = GetUnsolvedItemObjType(lpDomData, dwCurSel);
+  BOOL  bCurSelStatic = IsCurSelObjStatic (lpDomData);
+  if (!CanObjectExistInVectorWise(CurItemObjType))
+	  bEnable=FALSE;
   pCmdUI->Enable(bEnable);
 }
 
@@ -2444,7 +2475,16 @@ void CChildFrame::OnButtonDispstat()
 void CChildFrame::OnUpdateButtonCheckpoint(CCmdUI* pCmdUI) 
 {
   BOOL bEnable = GetDbItemState();
-  pCmdUI->Enable(bEnable);
+  LPDOMDATA lpDomData = GetLPDomData(this);
+  ASSERT (lpDomData);
+  DWORD dwCurSel = GetCurSel(lpDomData);
+  LPTREERECORD lpRecord = (LPTREERECORD) ::SendMessage(lpDomData->hwndTreeLb,
+                                LM_GETITEMDATA, 0, (LPARAM)dwCurSel);
+  int CurItemObjType = lpRecord->recType;
+  if ((IsVW() && getint(lpRecord->szComplim + STEPSMALLOBJ + STEPSMALLOBJ) > 0)
+	  || CurItemObjType == OT_DATABASE || CurItemObjType == OT_STATIC_TABLE)
+	  bEnable=FALSE;
+    pCmdUI->Enable(bEnable);
 }
 
 void CChildFrame::OnButtonCheckpoint() 
@@ -2455,7 +2495,16 @@ void CChildFrame::OnButtonCheckpoint()
 void CChildFrame::OnUpdateButtonRollforward(CCmdUI* pCmdUI) 
 {
   BOOL bEnable = GetDbItemState();
-  pCmdUI->Enable(bEnable);
+  LPDOMDATA lpDomData = GetLPDomData(this);
+  ASSERT (lpDomData);
+  DWORD dwCurSel = GetCurSel(lpDomData);
+  LPTREERECORD lpRecord = (LPTREERECORD) ::SendMessage(lpDomData->hwndTreeLb,
+                                LM_GETITEMDATA, 0, (LPARAM)dwCurSel);
+  int CurItemObjType = lpRecord->recType;
+  if ((IsVW() && getint(lpRecord->szComplim + STEPSMALLOBJ + STEPSMALLOBJ) > 0)
+	  || CurItemObjType == OT_DATABASE || CurItemObjType == OT_STATIC_TABLE)
+	  bEnable = FALSE;
+    pCmdUI->Enable(bEnable);
 }
 
 void CChildFrame::OnButtonRollforward() 
@@ -2467,6 +2516,12 @@ void CChildFrame::OnButtonRollforward()
 void CChildFrame::OnUpdateButtonVerifydb(CCmdUI* pCmdUI) 
 {
   BOOL bEnable = GetDbItemState();
+  LPDOMDATA lpDomData = GetLPDomData(this);
+  DWORD dwCurSel = GetCurSel(lpDomData);
+  int   CurItemObjType = GetUnsolvedItemObjType(lpDomData, dwCurSel);
+  BOOL  bCurSelStatic = IsCurSelObjStatic (lpDomData);
+  if (!CanObjectExistInVectorWise(CurItemObjType))
+	  bEnable=FALSE;
   pCmdUI->Enable(bEnable);
 }
 
@@ -2691,6 +2746,10 @@ void CChildFrame::OnUpdateButtonModifystruct(CCmdUI* pCmdUI)
   if (lpDomData->ingresVer==OIVERS_NOTOI)
     bEnable = FALSE;
 
+  // Restricted feature if VectorWise
+  if (lpDomData->bIsVectorWise && getint(lpRecord->szComplim + STEPSMALLOBJ + STEPSMALLOBJ) > 0)
+	  bEnable = FALSE;
+
   // Restricted features if DDB
   if (lpRecord != 0 && lpRecord->parentDbType == DBTYPE_DISTRIBUTED)
     bEnable = FALSE;
@@ -2705,6 +2764,32 @@ void CChildFrame::OnUpdateButtonModifystruct(CCmdUI* pCmdUI)
 void CChildFrame::OnButtonModifystruct() 
 {
   RelayCommand(ID_BUTTON_MODIFYSTRUCT);
+}
+
+void CChildFrame::OnUpdateButtonCreateidx(CCmdUI* pCmdUI) 
+{
+  BOOL bEnable = TRUE;
+
+  LPDOMDATA lpDomData = GetLPDomData(this);
+  DWORD dwCurSel = GetCurSel(lpDomData);
+  int   CurItemObjType = GetUnsolvedItemObjType(lpDomData, dwCurSel);
+  LPTREERECORD lpRecord = (LPTREERECORD) ::SendMessage(lpDomData->hwndTreeLb,
+                                LM_GETITEMDATA, 0, (LPARAM)dwCurSel);
+
+  if (lpDomData->bIsVectorWise && getint(lpRecord->szComplim + STEPSMALLOBJ + STEPSMALLOBJ) == IDX_VW)
+	  bEnable = TRUE;
+  else
+      bEnable = FALSE;
+
+  // Not acceptable for system object
+  if (lpRecord && IsSystemObject(CurItemObjType, lpRecord->objName, lpRecord->ownerName))
+    bEnable = FALSE;
+
+  pCmdUI->Enable(bEnable);
+}
+void CChildFrame::OnButtonCreateidx()
+{
+	RelayCommand(ID_BUTTON_CREATEIDX);
 }
 
 void CChildFrame::OnUpdateButtonLoad(CCmdUI* pCmdUI) 
@@ -3003,8 +3088,9 @@ void CChildFrame::OnUpdateButtonFastload(CCmdUI* pCmdUI)
       if (lpRecord->recType == OT_TABLE)
         if (lpRecord->parentDbType == DBTYPE_REGULAR)
           if (!IsNoItem(lpRecord->recType, (char*)lpRecord->objName))
-            if (!IsSystemObject(lpRecord->recType, lpRecord->objName, lpRecord->ownerName))
-              bEnable = TRUE;
+            if (!IsSystemObject(lpRecord->recType, lpRecord->objName, lpRecord->ownerName) && 
+				(!IsVW() || (IsVW && getint(lpRecord->szComplim + STEPSMALLOBJ + STEPSMALLOBJ) == 0)))
+	              bEnable = TRUE;
     }
   }
 
@@ -3147,7 +3233,7 @@ void CChildFrame::OnUpdateButtonDuplicateDb(CCmdUI* pCmdUI)
       LPTREERECORD lpRecord = (LPTREERECORD) ::SendMessage(lpDomData->hwndTreeLb,
                                     LM_GETITEMDATA, 0, (LPARAM)dwCurSel);
       if (lpRecord->recType == OT_DATABASE)
-        if (lpRecord->parentDbType == DBTYPE_REGULAR)
+        if (lpRecord->parentDbType == DBTYPE_REGULAR && !IsVW())
           bEnable = TRUE;
     }
   }
@@ -3473,7 +3559,8 @@ void CChildFrame::OnUpdateButtonJournaling(CCmdUI* pCmdUI)
       if (lpRecord->recType == OT_TABLE)
         if (lpRecord->parentDbType == DBTYPE_REGULAR)
           if (!IsNoItem(lpRecord->recType, (char*)lpRecord->objName))
-            if (!IsSystemObject(lpRecord->recType, lpRecord->objName, lpRecord->ownerName))
+            if (!IsSystemObject(lpRecord->recType, lpRecord->objName, lpRecord->ownerName) && 
+				(!IsVW() || (IsVW() && getint(lpRecord->szComplim + STEPSMALLOBJ + STEPSMALLOBJ) == 0)))
               bEnable = TRUE;
     }
   }
@@ -3641,7 +3728,10 @@ void CChildFrame::OnUpdateButtonUsermod(CCmdUI* pCmdUI)
           if (lpRecord->parentDbType != DBTYPE_DISTRIBUTED)
             bEnable = TRUE;
         }
-      }
+	  }
+
+	  if (!CanObjectExistInVectorWise(lpRecord->recType))
+		  bEnable=FALSE;
     }
   }
   pCmdUI->Enable(bEnable);

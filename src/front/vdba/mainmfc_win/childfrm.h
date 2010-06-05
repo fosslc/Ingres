@@ -26,6 +26,10 @@
 **    from command line by providing proper vnode/database/table flags
 **    to Visual DBA utility.
 **    example: vdba.exe /c dom (local) table junk/mytable1 GENSTATANDEXIT
+** 11-May-2010 (drivi01)
+**    Added 2 functions OnUpdateButtonCreateidx and OnButtonCreateidx.
+**    These functions will add functionality behind newly added
+**    "Create Index" file menu.
 **/
 
 //
@@ -235,6 +239,8 @@ protected:
 	afx_msg void OnButtonRevoke();
 	afx_msg void OnUpdateButtonModifystruct(CCmdUI* pCmdUI);
 	afx_msg void OnButtonModifystruct();
+	afx_msg void OnUpdateButtonCreateidx(CCmdUI* pCmdUI);
+	afx_msg void OnButtonCreateidx();
 	afx_msg void OnUpdateButtonLoad(CCmdUI* pCmdUI);
 	afx_msg void OnButtonLoad();
 	afx_msg void OnUpdateButtonUnload(CCmdUI* pCmdUI);

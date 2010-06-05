@@ -49,6 +49,9 @@
 **   SIR 123397
 **   Add Refresh menu to the popup menu.
 **   Add routines to refresh the tree after rollforward completes.
+**  06-May-2010 (drivi01)
+**   Add "Create Index" menu to the popup menu for
+**   creating index for non-indexed Ingres VectorWise tables.
 *****************************************************************************/
 
 //
@@ -393,6 +396,7 @@ static BOOL NEAR ManagePopupMenu(HWND hwndMdi, LPDOMDATA lpDomData, DWORD dwClic
   UINT aIdmSecAAD[] = {IDM_ADDOBJECT,
                        IDM_ALTEROBJECT,
                        IDM_DROPOBJECT,
+					   IDM_CREATEIDX,
                        IDM_MODIFYSTRUCT,
                        IDM_TERMINATOR };
 

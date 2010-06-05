@@ -57,6 +57,10 @@
 **  11-May-2005 (srisu02 for schph01)
 **    The above fix causes errors when a Force Refresh was done on the Ice
 **    nodes. Corrected the error.
+**  06-May-2010 (drivi01)
+**    Update DOMUpdateDisplayData2, add tblType variable which will
+**    contain information about table type if it is a Vectorwise table.
+**    For Ingres Vectorwise tables the tree will look very different.
 
 ********************************************************************/
 
@@ -781,6 +785,9 @@ int DOMUpdateDisplayData2 (int hnodestruct, int iobjecttype, int level, LPUCHAR 
   // Star management
   int  databaseType = -1;   // star...
   int  objType      = -1;   // star...
+  
+  // IVW management
+  int  tblType		= -1; //IVW Table 
 
   // Language used to generate the view TRUE = SQL , FALSE = QUEL
   BOOL bViewSqlType;
@@ -2600,6 +2607,10 @@ int DOMUpdateDisplayData2 (int hnodestruct, int iobjecttype, int level, LPUCHAR 
           // Star management: create sub-branches according to Star feature
           objType = getint(lpRecord->szComplim + STEPSMALLOBJ);
 
+          // IVW Tables: Check if the table is IVW b/c some tree items 
+          // aren't needed for IVW
+          tblType = getint(lpRecord->szComplim + STEPSMALLOBJ + STEPSMALLOBJ);
+
           // if star native object, no sub branches at all
           if (objType == OBJTYPE_STARNATIVE)
             break;
@@ -2655,6 +2666,7 @@ int DOMUpdateDisplayData2 (int hnodestruct, int iobjecttype, int level, LPUCHAR 
 
           // Add sub-subitems with sub dummies collapsed
             // Add sub-subitem INTEGRITY with sub dummy collapsed
+          if (tblType == 0)
             idChild2Obj = AddStaticSubItem(lpDomData, idAnchorObj,
                           aparentsResult[0],
                           buf2,       // schema - instead of aparentsResult[1]
@@ -2668,7 +2680,8 @@ int DOMUpdateDisplayData2 (int hnodestruct, int iobjecttype, int level, LPUCHAR 
               return MergeResStatus(iretGlob, RES_ERR);   // Fatal
 
           // Add sub-subitem RULE with sub dummy collapsed
-            idChild2Obj = AddStaticSubItem(lpDomData, idAnchorObj,
+          if (tblType == 0)
+	    idChild2Obj = AddStaticSubItem(lpDomData, idAnchorObj,
                           aparentsResult[0],
                           buf2,       // schema - instead of aparentsResult[1]
                           aparentsResult[2],
@@ -2685,7 +2698,8 @@ int DOMUpdateDisplayData2 (int hnodestruct, int iobjecttype, int level, LPUCHAR 
             //
             
             // Add sub-subitem SECURITY ALARMS on one level only
-            idChild2Obj = AddStaticSubItem(lpDomData, idAnchorObj,
+            if (tblType == 0)
+				idChild2Obj = AddStaticSubItem(lpDomData, idAnchorObj,
                           aparentsResult[0],
                           aparentsResult[1],
                           aparentsResult[2],
@@ -2812,7 +2826,8 @@ int DOMUpdateDisplayData2 (int hnodestruct, int iobjecttype, int level, LPUCHAR 
             //
 
           // Add sub-subitem INDEX with sub dummy collapsed
-          idChild2Obj = AddStaticSubItem(lpDomData, idAnchorObj,
+          if (tblType == 0)
+	    idChild2Obj = AddStaticSubItem(lpDomData, idAnchorObj,
                         aparentsResult[0],
                         buf2,       // schema - instead of aparentsResult[1]
                         aparentsResult[2],
@@ -2825,7 +2840,8 @@ int DOMUpdateDisplayData2 (int hnodestruct, int iobjecttype, int level, LPUCHAR 
             return MergeResStatus(iretGlob, RES_ERR);   // Fatal
 
             // Add sub-subitem TABLELOCATION with sub dummy collapsed
-            idChild2Obj = AddStaticSubItem(lpDomData, idAnchorObj,
+            if (tblType == 0)
+	            idChild2Obj = AddStaticSubItem(lpDomData, idAnchorObj,
                           aparentsResult[0],
                           aparentsResult[1],
                           aparentsResult[2],
@@ -2999,6 +3015,7 @@ int DOMUpdateDisplayData2 (int hnodestruct, int iobjecttype, int level, LPUCHAR 
 
             // Add sub-subitem CDDS ON TABLE with sub dummy collapsed,
             // with full collapse
+		  if (tblType == 0)
             idChild2Obj = AddStaticSubItem(lpDomData, idAnchorObj,
                           aparentsResult[0],
                           aparentsResult[1],

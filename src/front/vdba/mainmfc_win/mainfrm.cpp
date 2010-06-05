@@ -37,6 +37,9 @@
 **    Remove redundant <afx...> include which is already in "stdafx.h"
 ** 19-Mar-2009 (drivi01)
 **    In effort to port to Visual Studio 2008, clean up warnings.
+** 13-May-2010 (drivi01)
+**    Update ConvertCommandId by adding new ID_BUTTON_CREATEIDX 
+**    to the list.
 **/
 
 // MainFrm.cpp : implementation of the CMainFrame class
@@ -727,6 +730,7 @@ UINT CMainFrame::ConvertCommandId(UINT cppId, BOOL bContextHelp)
     case ID_BUTTON_ALTERDB               :return IDM_ALTERDB              ;
     case ID_BUTTON_AUDIT                 :return IDM_AUDIT                ;
     case ID_BUTTON_MODIFYSTRUCT          :return IDM_MODIFYSTRUCT         ;
+    case ID_BUTTON_CREATEIDX		 :return IDM_CREATEIDX			  ;
     case ID_BUTTON_SYSMOD                :return IDM_SYSMOD               ;
     case ID_BUTTON_VERIFYDB              :return IDM_VERIFYDB             ;
     case ID_BUTTON_REPLIC_INSTALL        :return IDM_REPLIC_INSTALL       ;

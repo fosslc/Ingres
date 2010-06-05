@@ -74,6 +74,10 @@
 **    Modified date to ingresdate.
 **  12-Oct-2006 (wridu01)
 **    (Sir 116835) Added support for Ansi Date/Time data types.
+**  11-May-2010 (drivi01)
+**    Added function CanObjectExistInVectorWise which returns
+**    TRUE or FALSE depending on if the object supported by
+**    VectorWise.
 ********************************************************************/
 
 #include "dba.h" 
@@ -615,6 +619,26 @@ BOOL CanObjectStructureBeModified(int iobjecttype)
       return FALSE;
   }
   return FALSE;
+}
+
+BOOL CanObjectExistInVectorWise(int iobjecttype)
+{
+
+	if (IsVW())
+	{
+		switch(iobjecttype)
+		{
+		case OT_TABLE:
+		case OT_STATIC_TABLE:
+		case OT_VIEW:
+		case OT_STATIC_VIEW:
+		case OT_SCHEMAUSER_TABLE:
+		case OT_SCHEMAUSER_VIEW:
+		case OT_SYNONYM:
+			return FALSE;
+		}
+	}
+	return TRUE;
 }
 
 // defaults to FALSE

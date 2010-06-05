@@ -37,6 +37,10 @@
 ** 01-Dec-2004 (uk$so01)
 **    VDBA BUG #113548 / ISSUE #13768610 
 **    Fix the problem of serialization.
+** 11-May-2010 (drivi01)
+**    Remove resource.h from the file.  resource.h doesn't
+**    exist in this directory. dlgres.h will be used instead.
+**    The files are now generated.
 **/
 
 #include "stdafx.h"
@@ -52,7 +56,6 @@
 extern "C"
 {
 #include "dlgres.h"
-#include "resource.h"
 //
 // These following functions are coded in file "main.c":
 void ManageSessionPreferenceSettup(HWND hWndDialog);

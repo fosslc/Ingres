@@ -25,6 +25,14 @@
 **    Modify date to ingresdate.
 ** 12-Oct-2006 (wridu01)
 **    Add support for Ansi Date/Time
+** 10-May-2010 (drivi01)
+**    Disable Index button on the dialog for Ingres
+**    VectorWise tables.
+**    Update ComboBoxFillTables function with
+**    ComboBoxFillTablesFiltered function to modify behavior 
+**    slightly.  ComboBoxFillTablesFiltered will fill the
+**    combo box with VectorWise tables if 3rd parameter
+**    is set to True and Ingres tables if parameter is FALSE.
 **/
 
 #include "dll.h"
@@ -338,7 +346,7 @@ static BOOL OnInitDialog (HWND hwnd, HWND hwndFocus, LPARAM lParam)
             ComboBox_SetItemData (hwndReferencedTable, index, dummyCreator);
         }
     }
-    ComboBoxFillTables (hwndReferencedTable, (LPUCHAR)(lpTable->DBName));
+    ComboBoxFillTablesFiltered (hwndReferencedTable, (LPUCHAR)(lpTable->DBName), lpTable->bCreateVectorWise);
     if (!lpTable->bCreate)
     {
         TCHAR tchszItem [MAXOBJECTNAME];
@@ -357,7 +365,8 @@ static BOOL OnInitDialog (HWND hwnd, HWND hwndFocus, LPARAM lParam)
     EnableButton (hwnd);
     //
     // Hide the button index enhancement if not Ingres >= 2.5
-    if ( GetOIVers() < OIVERS_25) 
+    if ( GetOIVers() < OIVERS_25 || 
+		(IsVW() && lpTable->bCreateVectorWise))  //disable for Ingres VW
     {
         HWND hwndButtonIndex = GetDlgItem (hwnd, IDC_CONSTRAINT_INDEX);
         if (hwndButtonIndex && IsWindow (hwndButtonIndex))

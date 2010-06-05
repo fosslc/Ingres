@@ -38,6 +38,16 @@
 **     Also removed no more used VerifyDBName() function
 **    28-Mar-2003 (schph01)
 **     SIR 107523 Add CAListBoxFillSequences ()
+**    06-May-2010 (drivi01)
+**     Fix CAListBoxFillTables and ComboBoxFillTables
+**     functions to strip out IVW tables.
+**     CAListBoxFillTables used by usermod and auditDB to populate
+**     list of tables in the dialog and ComboBoxFillTables is used
+**     by VerifyDB to populate a list of tables.
+**     The commands mentioned aren't supported by IVW.
+**     Add ComboBoxFillTablesFiltered which will load combo box
+**     of tables with either Ingres or VW tables depending
+**     on which are requested.
 ********************************************************************/
 
 #include "dll.h"
@@ -1872,11 +1882,13 @@ BOOL ComboBoxFillTables (HWND hwndCtl, LPUCHAR DatabaseName)
 	BOOL		bwsystem;
 	char		buf 	 [MAXOBJECTNAME];
 	char		szOwner	 [MAXOBJECTNAME];
+	char		szExtra [MAXOBJECTNAME];
 	char*		buffowner;
 
 	LPUCHAR parentstrings [MAXPLEVEL];
 
 	ZEROINIT (buf);
+	ZEROINIT (szExtra);
 	parentstrings [0] = DatabaseName;
 	parentstrings [1] = NULL;
 
@@ -1892,17 +1904,73 @@ BOOL ComboBoxFillTables (HWND hwndCtl, LPUCHAR DatabaseName)
 		NULL,
 		buf,
 		szOwner,
-		NULL);
+		szExtra);
+	idx = CB_ERR;
 	while (ires == RES_SUCCESS)
 	{
-		idx = ComboBox_AddString	(hwndCtl, buf);
+		if (getint(szExtra+STEPSMALLOBJ+STEPSMALLOBJ) == 0)
+		  idx = ComboBox_AddString	(hwndCtl, buf);
 		buffowner = ESL_AllocMem (x_strlen (szOwner) +1);
 		if (!buffowner)
 			return FALSE;
 		x_strcpy (buffowner, szOwner);
-		ComboBox_SetItemData (hwndCtl, idx, buffowner);
+		if (idx != CB_ERR && idx != CB_ERRSPACE)
+		{
+		  ComboBox_SetItemData (hwndCtl, idx, buffowner);
+		  idx = CB_ERR;
+		}
 
-		ires	  = DOMGetNextObject (buf, szOwner, NULL);
+		ires	  = DOMGetNextObject (buf, szOwner, szExtra);
+	}
+	return TRUE;
+}
+
+BOOL ComboBoxFillTablesFiltered (HWND hwndCtl, LPUCHAR DatabaseName, BOOL bVW)
+{
+	int		hdl, ires, idx;
+	BOOL		bwsystem;
+	char		buf 	 [MAXOBJECTNAME];
+	char		szOwner	 [MAXOBJECTNAME];
+	char		szExtra [MAXOBJECTNAME];
+	char*		buffowner;
+
+	LPUCHAR parentstrings [MAXPLEVEL];
+
+	ZEROINIT (buf);
+	ZEROINIT (szExtra);
+	parentstrings [0] = DatabaseName;
+	parentstrings [1] = NULL;
+
+	hdl		= GetCurMdiNodeHandle ();
+	bwsystem = GetSystemFlag ();
+
+	ires = DOMGetFirstObject (
+		hdl,
+		OT_TABLE,
+		1,
+		parentstrings,
+		bwsystem,
+		NULL,
+		buf,
+		szOwner,
+		szExtra);
+	idx = CB_ERR;
+	while (ires == RES_SUCCESS)
+	{
+		if ((!bVW && getint(szExtra+STEPSMALLOBJ+STEPSMALLOBJ) == 0)
+			|| (bVW && getint(szExtra+STEPSMALLOBJ+STEPSMALLOBJ) > 0))
+			idx = ComboBox_AddString	(hwndCtl, buf);
+		buffowner = ESL_AllocMem (x_strlen (szOwner) +1);
+		if (!buffowner)
+			return FALSE;
+		x_strcpy (buffowner, szOwner);
+		if (idx != CB_ERR && idx != CB_ERRSPACE)
+		{
+		  ComboBox_SetItemData (hwndCtl, idx, buffowner);
+		  idx = CB_ERR;
+		}
+
+		ires	  = DOMGetNextObject (buf, szOwner, szExtra);
 	}
 	return TRUE;
 }
@@ -1913,12 +1981,14 @@ BOOL CAListBoxFillTables (HWND hwndCtl, LPUCHAR DatabaseName)
 	BOOL		bwsystem;
 	char		buf		[MAXOBJECTNAME];
 	char		szOwner	[MAXOBJECTNAME];
+	char		szExtra [MAXOBJECTNAME];
 	char*		buffowner;
 
 	LPUCHAR parentstrings [MAXPLEVEL];
 
 	ZEROINIT (buf);
 	ZEROINIT (szOwner);
+	ZEROINIT (szExtra);
 
 	parentstrings [0] = DatabaseName;
 	parentstrings [1] = NULL;
@@ -1935,19 +2005,27 @@ BOOL CAListBoxFillTables (HWND hwndCtl, LPUCHAR DatabaseName)
 		NULL,
 		buf,
 		szOwner,
-		NULL);
+		szExtra);
 	if (ires != RES_SUCCESS)
 		return FALSE;
+	idx = CB_ERR;
 	while (ires == RES_SUCCESS)
 	{
-		idx = CAListBox_AddString	 (hwndCtl, buf);
+		// Do not display VectorWise tables b/c this table type
+		// doesn't support this command.
+		if (getint(szExtra+STEPSMALLOBJ+STEPSMALLOBJ) == 0)
+			idx = CAListBox_AddString	 (hwndCtl, buf);
 		buffowner = ESL_AllocMem (x_strlen (szOwner) +1);
 		if (!buffowner)
 			return FALSE;
 		x_strcpy (buffowner, szOwner);
-		CAListBox_SetItemData (hwndCtl, idx, buffowner);
-
-		ires	  = DOMGetNextObject (buf, szOwner, NULL);
+		if (idx != CB_ERR && idx != CB_ERRSPACE)
+		{
+		  CAListBox_SetItemData (hwndCtl, idx, buffowner);
+		  idx = CB_ERR;
+		}
+			
+		ires	  = DOMGetNextObject (buf, szOwner, szExtra);
 	}
 	return TRUE;
 }

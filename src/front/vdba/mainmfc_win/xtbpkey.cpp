@@ -17,6 +17,9 @@
 **    (sir 104270) removal of code for managing Ingres/Desktop
 ** 30-Mar-2001 (noifr01)
 **    (sir 104378) differentiation of II 2.6.
+** 11-May-2010 (drivi01)
+**    Disable Index button in the primary key constraint dialog for
+**    Ingres VectorWise tables.
 **
 **/
 
@@ -315,7 +318,8 @@ BOOL CxDlgTablePrimaryKey::OnInitDialog()
 
 	//
 	// Hide the button index enhancement if not Ingres >= 2.5
-	if ( GetOIVers() < OIVERS_25 ) 
+	if ( GetOIVers() < OIVERS_25 || 
+		(IsVW() && m_pTable && ((LPTABLEPARAMS)m_pTable)->bCreateVectorWise)) //disable for Ingres VW
 	{
 		m_cButtonIndex.ShowWindow (SW_HIDE);
 	}

@@ -68,6 +68,9 @@
 **     Make sure to keep the static variable in dbaginfo.sc
 **     with accurate value, but setting it on Window Activation
 **     and Window creation.
+**  12-May-2010 (drivi01)
+**     For newly added "Create Index" menu item, added
+**     case statement to handle the selection.
 *****************************************************************************/
 
 // ---   IMPORTANT NOTES !!!    ---
@@ -1463,6 +1466,10 @@ static BOOL NEAR DomWindowCommand(HWND hwndMdi, LPDOMDATA lpDomData, int id, HWN
 
     case IDM_MODIFYSTRUCT:
         DomModifyObjectStruct(hwndMdi, lpDomData, (WPARAM)NULL, (LPARAM)NULL);
+      break;
+
+    case IDM_CREATEIDX:
+      DomCreateIndex(hwndMdi, lpDomData, (WPARAM)NULL, (LPARAM)NULL);
       break;
 
     // CPP Managed

@@ -107,6 +107,11 @@
 **    Add function prototypes for detecting VectorWise installation.
 **  23-Mar-2010 (drivi01)
 **    Add structure constant for VectorWise table structure.
+**  25-Mar-2010 (drivi01)
+**    Add Vectorwise index table structure vectorwise_ix.
+**  10-May-2010 (drivi01)
+**    Ingres VectorWise table structure type is added to
+**    LPTABLEPARAMS structure.
 */
 
 #ifndef _DBASET_H
@@ -753,6 +758,7 @@ typedef struct IdxCols
 #define IDX_HEAPSORT    5
 #define IDX_RTREE       6       // Index structure for spatial datatype (28-01-1997)
 #define IDX_VW		7	//VectorWise table structure
+#define IDX_VWIX	8	//VectorWise table index structure
 
 #define IDX_UNIQUE_UNKNOWN       0
 #define IDX_UNIQUE_NO            1
@@ -1225,6 +1231,9 @@ typedef struct TableParams
 
    TableDetailSubset  detailSubset;       // What subset do we query?
    TCHAR              cJournaling;        // Journaling : 'Y', 'C' or 'N' exclusively
+
+   // Ingres VectorWise table type in Ingres 10.0 and VectorWise 1.0
+   int nVWStructType;
 
 } TABLEPARAMS, FAR * LPTABLEPARAMS;
 

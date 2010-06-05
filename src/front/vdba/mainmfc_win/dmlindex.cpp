@@ -15,7 +15,11 @@
 //                                                                           //
 //    06-Jan-2000 (schph01)                                                  //
 //      BUG #99937                                                           //
-//      Add comma when there are more than one location.                     //
+//      Add comma when there are more than one location.					 //
+//    11-May-2010 (drivi01)													 //
+//      Remove persistance routine for VectorWise index.					 //
+//      In VectorWise persistance will be initialized to -1 to avoid         //
+//      it being set.														 //
 ******************************************************************************/
 #include "stdafx.h"
 #include "dmlindex.h"
@@ -339,6 +343,8 @@ BOOL CaIndex::GenerateWithClause(CString& strWithClause, CString& strListKey)
 	}
 	//
 	// Generate PERSISTENCE:
+	if (m_bPersistence >=0)
+	{
 	if (m_bPersistence)
 	{
 		strWithClause += _T(", ");
@@ -349,6 +355,7 @@ BOOL CaIndex::GenerateWithClause(CString& strWithClause, CString& strListKey)
 		strWithClause += _T(", ");
 		strWithClause += cstrNo;
 		strWithClause += cstrPersistence;
+	}
 	}
 	//
 	// Generate UNIQUE SCOPE:

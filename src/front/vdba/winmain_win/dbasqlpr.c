@@ -48,6 +48,9 @@
 **	better query plan.
 **    02-apr-2009 (drivi01)
 **      In efforts to port to Visual Studio 2008, clean up warnings.
+**    12-May-2010 (drivi01)
+**      Upddated BuildSQLCreIdx function with VECTORWISE_IX 
+**      index storage structure.
 ******************************************************************************/
 #include "dba.h"
 #include "dbaset.h"
@@ -1450,6 +1453,7 @@ LPINDEXPARAMS idxparm;
       IDX_ISAM ,"isam",
       IDX_HASH ,"hash",
       IDX_RTREE,"rtree",
+      IDX_VWIX, "vectorwise_ix",
       0 ,NULL};
    struct _IndexStorage *pIndexStorage = &IndexStorage[0];
 

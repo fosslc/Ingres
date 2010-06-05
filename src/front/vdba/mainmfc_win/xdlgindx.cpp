@@ -29,6 +29,12 @@
 ** 02-May-2001 (uk$so01)
 **    SIR #102678
 **    Support the composite histogram of base table and secondary index.
+**    11-May-2010 (drivi01)
+**      Add VectorWise index structure to the list of Index structures
+**      in the "create index" dialog.  Disable all other options as
+**      they do not apply to Ingres VectorWise table index.
+**      Properly initialize all other options to avoid the settings
+**      being appended to create index syntax statement.
 **/
 
 #include "stdafx.h"
@@ -153,6 +159,9 @@ CxDlgCreateIndex::CxDlgCreateIndex(CWnd* pParent /*=NULL*/)
 //	pStruct->AddComponent (_T("Data Compression"),  CaComponentValueConstraint::CONSTRAINT_CHECK, _T("FALSE"));
 	m_listStructure.AddTail (pStruct);
 
+	pStruct = new CaIndexStructure (IDX_VWIX, _T("Vectorwise_ix"));
+	m_listStructure.AddTail (pStruct);
+	
 	m_nMinPageMin    = 1;
 	m_nMinPageMax    = 8388607;
 	m_nMaxPageMin    = 1;
@@ -359,14 +368,22 @@ BOOL CxDlgCreateIndex::OnInitDialog()
 	InitPageSize (2048L);
 	//
 	// Initialize the Combobox of Structure:
-	int idx;
+	int idx = CB_ERR;
 	POSITION pos = m_listStructure.GetHeadPosition();
 	while (pos != NULL)
 	{
 		CaIndexStructure* pStruct = m_listStructure.GetNext (pos);
-		idx = m_cComboStructure.AddString (pStruct->m_strStructure);
+		if (m_pParam->tblType == IDX_VW)
+		{
+			if (pStruct->m_nStructType == IDX_VWIX)
+				idx = m_cComboStructure.AddString (pStruct->m_strStructure);
+		}
+		else
+			if (pStruct->m_nStructType != IDX_VWIX)
+				idx = m_cComboStructure.AddString (pStruct->m_strStructure);
 		if (idx != CB_ERR)
 			m_cComboStructure.SetItemData (idx, (DWORD)pStruct);
+		idx = CB_ERR;
 	}
 	m_cComboStructure.SetCurSel(m_nStructure);
 	//
@@ -868,6 +885,8 @@ void CxDlgCreateIndex::SelchangeComboIndexStructure(BOOL bSetDefaultValue)
 
 			m_cCheckCompressData.EnableWindow (FALSE);
 			m_cCheckCompressKey.EnableWindow (FALSE);
+			m_cComboPageSize.EnableWindow (FALSE);
+			m_cListLocation.EnableWindow (FALSE);
 
 			CheckRadioButton (IDC_RADIO_UNIQUE_NO, IDC_RADIO_UNIQUE_STATEMENT, IDC_RADIO_UNIQUE_NO);
 			GetDlgItem(IDC_RADIO_UNIQUE_ROW)->EnableWindow (FALSE);
@@ -893,6 +912,61 @@ void CxDlgCreateIndex::SelchangeComboIndexStructure(BOOL bSetDefaultValue)
 			m_strMaxPage.Empty();
 
 			m_cCheckCompressData.EnableWindow (FALSE);
+		}
+		if (pStruct->m_nStructType == IDX_VWIX)
+		{
+			m_cStaticRange.ShowWindow (SW_HIDE);
+			m_cStaticMinX.ShowWindow (SW_HIDE);
+			m_cStaticMaxX.ShowWindow (SW_HIDE);
+			m_cStaticMinY.ShowWindow (SW_HIDE);
+			m_cStaticMaxY.ShowWindow (SW_HIDE);
+			m_cEditMinX.ShowWindow (SW_HIDE);
+			m_cEditMaxX.ShowWindow (SW_HIDE);
+			m_cEditMinY.ShowWindow (SW_HIDE);
+			m_cEditMaxY.ShowWindow (SW_HIDE);
+
+			m_cStaticMinPage.ShowWindow (SW_HIDE);
+			m_cStaticMaxPage.ShowWindow (SW_HIDE);
+			m_cStaticLeaffill.ShowWindow (SW_HIDE);
+			m_cStaticNonleaffill.ShowWindow (SW_HIDE);
+
+			m_cEditMinPage.ShowWindow (SW_HIDE);
+			m_cEditMaxPage.ShowWindow (SW_HIDE);
+			m_cEditLeaffill.ShowWindow (SW_HIDE);
+			m_cEditNonleaffill.ShowWindow (SW_HIDE);
+			m_cSpinLeaffill.ShowWindow (SW_HIDE);
+			m_cSpinNonleaffill.ShowWindow (SW_HIDE);
+
+			m_cCheckCompressData.EnableWindow (FALSE);
+			m_cCheckCompressKey.EnableWindow (FALSE);
+
+			m_cEditAllocation.EnableWindow (FALSE);
+			m_cEditExtend.EnableWindow (FALSE);
+			m_cEditFillfactor.EnableWindow (FALSE);
+			m_cListLocation.EnableWindow (FALSE);
+			m_cComboPageSize.EnableWindow (FALSE);
+			m_cCheckPersistence.EnableWindow (FALSE);
+			m_cCheckPersistence.SetCheck(0);
+			m_cComboPageSize.Clear();
+			
+
+			CheckRadioButton (IDC_RADIO_UNIQUE_NO, IDC_RADIO_UNIQUE_STATEMENT, IDC_RADIO_UNIQUE_NO);
+			GetDlgItem(IDC_RADIO_UNIQUE_ROW)->EnableWindow (FALSE);
+			GetDlgItem(IDC_RADIO_UNIQUE_STATEMENT)->EnableWindow (FALSE);
+			if (pIndex)
+			{
+				pIndex->m_bUnique = FALSE;
+				pIndex->m_nUniqueScope = -1;
+			}
+			m_strMinPage.Empty();
+			m_strMaxPage.Empty();
+			m_strAllocation.Empty();
+			m_strExtend.Empty();
+			m_strFillfactor.Empty();
+			pIndex->m_bPersistence = -1;
+			pIndex->m_strPageSize = "";
+			
+
 		}
 		else
 		{
@@ -1154,7 +1228,8 @@ void CxDlgCreateIndex::GetIndexData (CaIndex* pIndex)
 	CaIndexStructure* pStructure = NULL;
 
 	UpdateData (TRUE);
-	pIndex->m_bPersistence   = m_bPersistence;
+	if ( m_cCheckPersistence.IsWindowEnabled())
+		pIndex->m_bPersistence   = m_bPersistence;
 
 	int nID = GetCheckedRadioButton (IDC_RADIO_UNIQUE_NO, IDC_RADIO_UNIQUE_STATEMENT);
 	pIndex->m_bUnique        = (nID != IDC_RADIO_UNIQUE_NO)? TRUE: FALSE;
@@ -1169,9 +1244,12 @@ void CxDlgCreateIndex::GetIndexData (CaIndex* pIndex)
 	pIndex->m_bCompressKey   = m_bCompressKey;
 
 	pIndex->m_nStructure     = m_nStructure;
+	if (m_cComboPageSize.IsWindowEnabled())
+	{
 	pIndex->m_nPageSize      = m_nPageSize;
 	lPageSize = (long)m_cComboPageSize.GetItemData (m_nPageSize);
 	pIndex->m_strPageSize.Format (_T("%ld"),lPageSize);
+	}
 	pStructure = (CaIndexStructure*)m_cComboStructure.GetItemData (m_nStructure);
 	pIndex->m_strStructure   = pStructure->m_strStructure;
 
@@ -1203,6 +1281,8 @@ void CxDlgCreateIndex::GetIndexData (CaIndex* pIndex)
 	// List locations:
 	pIndex->m_listLocation.RemoveAll();
 	nCount = m_cListLocation.GetCount();
+	if (m_cListLocation.IsWindowEnabled())
+	{
 	for (i=0; i<nCount; i++)
 	{
 		if (m_cListLocation.GetCheck (i) == 1)
@@ -1210,6 +1290,7 @@ void CxDlgCreateIndex::GetIndexData (CaIndex* pIndex)
 			m_cListLocation.GetText (i, strItem);
 			pIndex->m_listLocation.AddTail (strItem);
 		}
+	}
 	}
 }
 

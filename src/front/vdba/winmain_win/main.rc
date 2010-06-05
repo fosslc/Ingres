@@ -218,6 +218,7 @@ BEGIN
     MENUITEM "Al&ter DB...",                  IDM_ALTERDB, GRAYED
     MENUITEM "A&udit...",                     IDM_AUDIT, GRAYED
     MENUITEM "Mod&ify Structure...\tCtrl+M",  IDM_MODIFYSTRUCT, GRAYED
+    MENUITEM "C&reate Index...\tCtrl+I",      IDM_CREATEIDX, GRAYED
     MENUITEM "&Sysmod...\tCtrl+Y",            IDM_SYSMOD, GRAYED
     MENUITEM "User&mod...",                   IDM_USERMOD, GRAYED
     MENUITEM "Verif&y Database...",           IDM_VERIFYDB, GRAYED

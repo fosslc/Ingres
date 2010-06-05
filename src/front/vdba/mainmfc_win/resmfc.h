@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by MAINMFC.RC
+// Used by mainmfc.rc
 //
 #define IDR_MAINFRAME                   99
 #define IDD_STAR_TABLEREGISTER          102
@@ -897,6 +897,10 @@
 #define IDC_MFC_STATIC_ACCESSDB         1668
 #define IDC_STATIC_PASSWD               1671
 #define IDC_STATIC_CPASSWD              1672
+#define IDC_STATIC_JNL                  1673
+#define IDC_STATIC_JNL_ACTIVE           1674
+#define IDC_STATIC_JNL_INACTIVE         1675
+#define IDC_STATIC_JNL_AFTERCKP         1676
 #define IDS_NODE                        3446
 #define IDS_NODE_NONE                   3447
 #define IDS_NODE_OPENWIN                3448
@@ -1904,6 +1908,7 @@
 #define IDC_XUSER_SECURITY              32900
 #define IDS_URP_TAB_PRIV                32901
 #define IDS_URP_TAB_SEC                 32902
+#define ID_BUTTON_CREATEIDX		32903
 #define IDC_STATIC_INDEXNAME            65535
 
 // Next default values for new objects
@@ -1913,7 +1918,7 @@
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        903
 #define _APS_NEXT_COMMAND_VALUE         32730
-#define _APS_NEXT_CONTROL_VALUE         1673
+#define _APS_NEXT_CONTROL_VALUE         1677
 #define _APS_NEXT_SYMED_VALUE           3854
 #endif
 #endif

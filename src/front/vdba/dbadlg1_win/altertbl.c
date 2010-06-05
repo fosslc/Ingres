@@ -105,6 +105,10 @@
 ** 23-Mar-2010 (drivi01)
 **    Disable "Create VectorWise Table" option for Alter table
 **    dialog as it doesn't apply.
+** 10-May-2010 (drivi01)
+**    Update alter table dialog to not allow add/drop columns
+**    functionality for Ingres VectorWise tables.
+**    Disable column selection for Ingres VectorWise tables.
 *******************************************************************************/
 
 // NOTE:
@@ -624,6 +628,20 @@ static BOOL OnInitDialog(HWND hwnd, HWND hwndFocus, LPARAM lParam)
     EnableWindow(GetDlgItem(hwnd, IDC_ADD),             FALSE);
     EnableWindow(GetDlgItem(hwnd, IDC_DROP),            FALSE);
     EnableWindow(GetDlgItem(hwnd, IDC_REMOVE_CASCADE),  FALSE);
+
+    //
+    // For VectorWise tables, hide the add/remove/remove cascade buttons 
+    // as add/remove column functionality is not supported in 1.0 release
+    //
+    if (lptbl && (lptbl->StorageParams.nStructure == IDX_VW 
+	|| lptbl->StorageParams.nStructure == IDX_VWIX))
+    {
+      ShowWindow(GetDlgItem(hwnd, IDC_ADD),             SW_HIDE);
+      ShowWindow(GetDlgItem(hwnd, IDC_DROP),            SW_HIDE);
+      ShowWindow(GetDlgItem(hwnd, IDC_REMOVE_CASCADE),  SW_HIDE);
+      EnableWindow(GetDlgItem(hwnd, IDC_TLCBUTTON_CHECK), SW_HIDE);
+    }
+
     //
     // Set the appropriate Dialog Box Title
     //
@@ -1185,6 +1203,8 @@ static void CntOnLButtonDown(HWND hwnd, BOOL fDoubleClick, int x, int y, UINT ke
     lpFI = CntFldAtPtGet (hwndCnt, &ptMouse);
     if (!lpFI)
         return;
+    if (lpTS && (lpTS->StorageParams.nStructure == IDX_VW || lpTS->StorageParams.nStructure == IDX_VWIX))
+	return;
     if (lpRC = CntRecAtPtGet(hwndCnt, &ptMouse))
     {
         CNTDATA   data, dataAttr;

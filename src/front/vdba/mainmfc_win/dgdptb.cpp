@@ -16,6 +16,11 @@
 **	    sir 102821 Comment on table and columns.
 ** 10-Jun-2002 (uk$so01)
 **    SIR #107951, Display date format according to the LOCALE.
+** 25-Mar-2010 (drivi01)
+**    Add Vectorwise structures as case statements for
+**    displaying correct structures in the properties for the table.
+**    Disable journaling for VectorWise tables in the properties page
+**    b/c it doesn't apply to VectorWise tables.
 */
 
 #include "stdafx.h"
@@ -136,6 +141,12 @@ static CString GetStorageStructureName(int structType)
    case IDX_HEAPSORT:
      return "Heapsort";
      break;
+   case IDX_VW:
+     return "vectorwise";
+	 break;
+   case IDX_VWIX:
+     return "vectorwise_ix";
+	 break;
    default :
      ASSERT (FALSE);
      return "Unknown";
@@ -516,6 +527,22 @@ void CuDlgDomPropTable::RefreshDisplay()
   m_edStruct1.ShowWindow(SW_HIDE);
   m_stStruct2.ShowWindow(SW_HIDE);
   m_edStruct2.ShowWindow(SW_HIDE);
+  // Show all controls for jounraling
+  // only will be hidden for VectorWise tables
+  CButton *m_cActive = (CButton *)GetDlgItem(IDC_RAD_JNL_ACTIVE);
+  CButton *m_cInactive = (CButton *)GetDlgItem(IDC_RAD_JNL_INACTIVE);
+  CButton *m_cAfterCKPDB = (CButton *)GetDlgItem(IDC_RAD_JNL_AFTERCKPDB);
+  CStatic *m_sActive = (CStatic *)GetDlgItem(IDC_STATIC_JNL_ACTIVE);
+  CStatic *m_sInactive = (CStatic *)GetDlgItem(IDC_STATIC_JNL_INACTIVE);
+  CStatic *m_sAfterCKPDB = (CStatic *)GetDlgItem(IDC_STATIC_JNL_AFTERCKP);
+  CStatic *m_sGroupJnl = (CStatic *)GetDlgItem(IDC_STATIC_JNL);
+  m_cActive->ShowWindow(SW_SHOW);
+  m_cInactive->ShowWindow(SW_SHOW);
+  m_cAfterCKPDB->ShowWindow(SW_SHOW);
+  m_sActive->ShowWindow(SW_SHOW);
+  m_sInactive->ShowWindow(SW_SHOW);
+  m_sAfterCKPDB->ShowWindow(SW_SHOW);
+  m_sGroupJnl->ShowWindow(SW_SHOW);
   switch(m_Data.m_nStructure) {
     case IDX_BTREE:
       m_stFillFact.ShowWindow(SW_SHOW);
@@ -566,7 +593,16 @@ void CuDlgDomPropTable::RefreshDisplay()
     case IDX_HEAPSORT:
       // nothing appears
       break;
-
+	case IDX_VW:
+	case IDX_VWIX:
+		m_cActive->ShowWindow(SW_HIDE);
+		m_cInactive->ShowWindow(SW_HIDE);
+		m_cAfterCKPDB->ShowWindow(SW_HIDE);
+		m_sActive->ShowWindow(SW_HIDE);
+		m_sInactive->ShowWindow(SW_HIDE);
+		m_sAfterCKPDB->ShowWindow(SW_HIDE);
+		m_sGroupJnl->ShowWindow(SW_HIDE);
+		break;
     default :
       ASSERT (FALSE);
       break;

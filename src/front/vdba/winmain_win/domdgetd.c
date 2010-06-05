@@ -35,6 +35,10 @@
 **   (sir 107523) management of sequences
 **  10-Nov-2004 (schph01)
 **   (bug 113426) management of OT_ICE_MAIN.
+**  12-May-2010 (drivi01)
+**   Update DomGetFirstObject function in OT_TABLE case
+**   to copy the Ingres VectorWise table type to Table Data structure,
+**   TableVWType field.
 ******************************************************************************/
 
 #include <stdio.h>
@@ -2290,7 +2294,6 @@ getobj:
    return DOMGetNextObject(lpobjectname, lpresultowner,lpresultextrastring);
 }
 
-
 int  DOMGetNextObject ( lpobjectname, lpresultowner,lpresultextrastring)
 LPUCHAR lpobjectname;
 LPUCHAR lpresultowner;
@@ -2694,10 +2697,11 @@ LPUCHAR lpresultextrastring;
                if (lpresultextrastring) {
                  storeint(lpresultextrastring,                pTableData->Tableid);
                  storeint(lpresultextrastring + STEPSMALLOBJ, pTableData->TableStarType);
-			   }
+                 storeint(lpresultextrastring + STEPSMALLOBJ + STEPSMALLOBJ, pTableData->TableVWType);
+               }
                pmemstruct = pTableData->pnext;
                break;
-            }
+			}
          case OT_VIEW      :
          case OT_VIEWALL   :
             {

@@ -37,6 +37,10 @@
 ** 09-Mar-2009 (smeke01) b121764
 **    Change parameters to CreateSQLWizard CreateSelectStmWizard, CreateSQLWizard, 
 **    and CreateSearchCondWizard to LPUCHAR so that we don't need to use the T2A macro.
+** 11-May-2010 (drivi01)
+**    Add tblType to DMLCREATESTRUCT for "Create Index" dialog.
+**    So that in "Create Index" dialog the available storage structures for
+**    the index reflect the storage structures available for the table type.
 */
 
 #if !defined (EXTERN_C_CALL_HEADER)
@@ -134,6 +138,8 @@ typedef struct tagDMLCREATESTRUCT
 
 	LPCTSTR lpszStatement; // Copy pointer only (do not free it!)
 	LPCTSTR lpszStatement2;// If this pointer is not null, the ESL_FreeMem must be called !
+
+	int tblType; //Ingres VectorWise table types
 } DMLCREATESTRUCT;
 
 int VDBA_CreateIndex(HWND hwndParent, DMLCREATESTRUCT* pCr);

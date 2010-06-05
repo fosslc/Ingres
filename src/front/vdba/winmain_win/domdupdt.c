@@ -46,6 +46,9 @@
 **   (sir 107523) management of sequences
 **  10-Nov-2004 (schph01)
 **    (bug 113426) manage OT_ICE_MAIN no details needed for this type.
+**  12-May-2010 (drivi01)
+**    Update UpdateDOMDataDetail function to assign ptabledatanew, 
+**    TableVWType field with Ingres VectorWise table type.
 ******************************************************************************/
 
 #include "compat.h"
@@ -3908,7 +3911,8 @@ locationchildren:
                   fstrncpy(ptabledatanew->TableName ,buf,      MAXOBJECTNAME);
                   fstrncpy(ptabledatanew->TableOwner,buffilter,MAXOBJECTNAME);
                   ptabledatanew->Tableid=getint(extradata+MAXOBJECTNAME+4);
-                  ptabledatanew->TableStarType=getint(extradata+MAXOBJECTNAME+4+STEPSMALLOBJ);
+		  ptabledatanew->TableVWType=getint(extradata+MAXOBJECTNAME+4+STEPSMALLOBJ);
+                  ptabledatanew->TableStarType=getint(extradata+MAXOBJECTNAME+4+STEPSMALLOBJ+STEPSMALLOBJ);
                   {
                      LPUCHAR aparentsloc[2];
                      LPUCHAR parents4disp[MAXPLEVEL];

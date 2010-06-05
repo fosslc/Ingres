@@ -19,6 +19,9 @@
 **   added #if[n]def's for the libmon project
 **  25-Mar-2003 (noifr01)
 **   (sir 107523) management of sequences
+**  11-May-2010 (drivi01)
+**   Add TableVWType to TableData structure to mark 
+**   Ingres VectorWise table structures.
 ********************************************************************/
 
 #ifndef LIBMON_HEADER
@@ -451,6 +454,7 @@ struct TableData {
    UCHAR TableOwner[MAXOBJECTNAME];
    long  Tableid;
    int   TableStarType;
+   int	 TableVWType; //Type of VectorWise structure if VW table
 
    /* any change not related to sub-branches should be ported into the
       ViewTableData structure */

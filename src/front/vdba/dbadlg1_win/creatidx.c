@@ -19,6 +19,9 @@
 **   (bug 107773) adapted buffer sizes - avoiding an impact
 **   of the fact that the VerifyObjectName() function doesn't
 **   test any more the length of the string
+** 11-May-2010 (drivi01)
+**   Add vectorwise_ix storage structure to the list of 
+**   possible structures for index.
 **/
 
 #include "dll.h"
@@ -47,6 +50,7 @@ static CTLDATA typeStructs[] =
 	IDX_BTREE,	IDS_STRUCT_BTREE,
 	IDX_ISAM,	IDS_STRUCT_ISAM,
 	IDX_HASH,	IDS_STRUCT_HASH,
+	IDX_VWIX, 	IDS_STRUCT_VWIX,
 	-1		// terminator
 };
 
@@ -56,6 +60,7 @@ static CTLDATA typeStructsV2[] =
 	IDX_ISAM,	IDS_STRUCT_ISAM,
 	IDX_HASH,	IDS_STRUCT_HASH,
     IDX_RTREE,  IDS_STRUCT_RTREE,
+	IDX_VWIX, 	IDS_STRUCT_VWIX,
 	-1		// terminator
 };
 
@@ -148,6 +153,24 @@ static STRUCTCNTLS cntlEnable[] =
       IDC_SPIN_NONLEAFFILL,   FALSE,   -1,   -1,
       IDC_KEY_COMPRESSION,    FALSE,   -1,   -1,
       IDC_DATA_COMPRESSION,   TRUE,    -1,   -1,
+   IDX_VWIX,
+      IDC_MINPAGES,           FALSE,   -1,   -1,
+      IDC_MAXPAGES,           FALSE,   -1,   -1,
+      IDC_FILLFACTOR,         FALSE,   -1,   -1,
+      IDC_LEAFFILL,           FALSE,   -1,   -1,
+      IDC_NONLEAFFILL,        FALSE,   -1,   -1,
+      IDC_TXT_MINPAGES,       FALSE,   -1,   -1,
+      IDC_TXT_MAXPAGES,       FALSE,   -1,   -1,
+      IDC_TXT_FILLFACTOR,     FALSE,   -1,   -1,
+      IDC_TXT_LEAFFILL,       FALSE,   -1,   -1,
+      IDC_TXT_NONLEAFFILL,    FALSE,   -1,   -1,
+      IDC_SPIN_MINPAGES,      FALSE,   -1,   -1,
+      IDC_SPIN_MAXPAGES,      FALSE,   -1,   -1,
+      IDC_SPIN_FILLFACTOR,    FALSE,   -1,   -1,
+      IDC_SPIN_LEAFFILL,      FALSE,   -1,   -1,
+      IDC_SPIN_NONLEAFFILL,   FALSE,   -1,   -1,
+      IDC_KEY_COMPRESSION,    FALSE,   -1,   -1,
+      IDC_DATA_COMPRESSION,   FALSE,   -1,   -1,
    -1,   // terminator
 };
 

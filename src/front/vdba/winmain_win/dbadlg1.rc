@@ -1687,6 +1687,7 @@ BEGIN
     IDS_STRUCT_HASH         "Hash"
     IDS_STRUCT_HEAP         "Heap"
     IDS_STRUCT_ISAM         "Isam"
+    IDS_STRUCT_VWIX         "Vectorwise_ix"
     IDS_ERR_OUTSIDE_RANGE   "Value Must be between %lu and %lu."
     IDS_ERR_TITLE           "%s/Visual DBA Error"
     IDS_PROD_INGRES         "ABF, QBF, RBF and VIFRED"

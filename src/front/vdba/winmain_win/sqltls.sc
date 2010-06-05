@@ -143,6 +143,10 @@
 **    In efforts to port to Visual Studio 2009, clean up some warnings.
 **  23-Mar-2010 (drivi01)
 **    Add VectorWise structure to the list.
+**  12-May-2010 (drivi01)
+**    Add new storage structures VECTORWISE and VECTORWISE_IX
+**    to the list of recognized table storage structures in
+**    StorageStruct structure.
 */
 
 #define BUGNOTNULLABLE     // remove when the bug is corrected at ingres level
@@ -4226,6 +4230,8 @@ int GetInfIndex(LPINDEXPARAMS indexprm)
       {"RTREE",    IDX_RTREE     },
       {"vectorwise", IDX_VW	 },
       {"VECTORWISE", IDX_VW	 },
+      {"vectorwise_ix", IDX_VWIX  },
+      {"VECTORWISE_IX", IDX_VWIX  },
       {"\0", 0}};
    struct StorageStruct *lpStorageStruct;
 
@@ -4800,6 +4806,8 @@ int GetInfTable(LPTABLEPARAMS tableprm)
       {"HEAPSORT", IDX_HEAPSORT  },
       {"vectorwise", IDX_VW  },
       {"VECTORWISE", IDX_VW  },
+      {"vectorwise_ix", IDX_VWIX },
+      {"VECTORWISE_IX", IDX_VWIX },
       {"\0", 0}};
    struct StorageStruct *lpStorageStruct;
 

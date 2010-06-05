@@ -17,6 +17,9 @@
 **    (sir 104270) removal of code for managing Ingres/Desktop
 **  30-Mar-2001 (noifr01)
 **    (sir 104378) differentiation of II 2.6.
+** 10-May-2010 (drivi01)
+**    Disable Index button on the dialog for Ingres
+**    VectorWise tables.
 **/
 
 #include "dll.h"
@@ -216,7 +219,8 @@ static BOOL OnInitDialog (HWND hwnd, HWND hwndFocus, LPARAM lParam)
     richCenterDialog (hwnd);
     //
     // Hide the button index enhancement if not Ingres >= 2.5
-    if ( GetOIVers() < OIVERS_25) 
+    if ( GetOIVers() < OIVERS_25 || 
+		(IsVW() && lpTable->bCreateVectorWise)) //disable for Ingres VW
     {
         HWND hwndButtonIndex = GetDlgItem (hwnd, IDC_CONSTRAINT_INDEX);
         if (hwndButtonIndex && IsWindow (hwndButtonIndex))

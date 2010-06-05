@@ -42,6 +42,13 @@
 ** 15-Sep-2004 (uk$so01)
 **    VDBA BUG #113047,  Vdba load/save does not function correctly with the 
 **    Right Pane of DOM/Table/Rows page.
+** 13-May-2010 (drivi01)
+**    Add functionality to display only subset of property pages for
+**    Ingres VectorWise tables.
+**    Add new function AllocateIVWTablePageInfo to handle properties
+**    tabs for Ingres VectorWise tables, reduce the amount of tabs
+**    displayed and the class name in the pages, to force full
+**    refresh between selection of Ingres tables and VectorWise tables.
 */
 
 #include "stdafx.h"
@@ -883,6 +890,35 @@ static CuDomPageInformation* AllocateRegularTablePageInfo(BOOL bRowsNotDisplayab
   return pPageInfo;
 }
 
+static CuDomPageInformation* AllocateIVWTablePageInfo(BOOL bRowsNotDisplayable)
+{
+  CuDomPageInformation *pPageInfo = NULL;
+
+  UINT nTabID [5] = {
+                     IDS_DOMPROP_TABLE_COLUMNS,
+                     IDS_DOMPROP_TABLE,
+                     IDS_DOMPROP_TABLE_ROWS,
+                     IDS_DOMPROP_TABLE_STATISTIC,
+                     IDS_DOMPROP_TABLE_GRANTEES,
+                    };
+  UINT nDlgID [5] = {
+                     IDD_DOMPROP_TABLE_COLUMNS,
+                     IDD_DOMPROP_TABLE,
+                     IDD_DOMPROP_TABLE_ROWS,
+                     IDD_DOMPROP_TABLE_STATISTIC,
+                     IDD_DOMPROP_TABLE_GRANTEES,
+                    };
+  UINT nIDTitle = IDS_DOMPROP_TABLE_TITLE;
+  if (bRowsNotDisplayable) {
+    nTabID[2] = IDS_DOMPROP_TABLE_ROWSNA;
+    nDlgID[2] = IDD_DOMPROP_TABLE_ROWSNA;
+    pPageInfo = new CuDomPageInformation ((LPCTSTR)"CuDomVWTableNoRows", 5, nTabID, nDlgID, nIDTitle);
+  }
+  else
+    pPageInfo = new CuDomPageInformation ((LPCTSTR)"CuDomVWTable", 5, nTabID, nDlgID, nIDTitle);
+  return pPageInfo;
+}
+
 
 static CuDomPageInformation* AllocateStarNativeTablePageInfo(BOOL bRowsNotDisplayable)
 {
@@ -977,6 +1013,8 @@ static CuDomPageInformation* AllocateTablePageInfo(LPTREERECORD pItemData, int i
 
   if (pItemData->parentDbType == DBTYPE_DISTRIBUTED)
     return AllocateStarTablePageInfo(pItemData, bRowsNotDisplayable);
+  if (getint(pItemData->szComplim + STEPSMALLOBJ + STEPSMALLOBJ) > 0)
+    return AllocateIVWTablePageInfo(bRowsNotDisplayable);
   else
     return AllocateRegularTablePageInfo(bRowsNotDisplayable);
 }

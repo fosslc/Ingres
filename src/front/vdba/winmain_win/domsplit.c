@@ -107,6 +107,9 @@
 **    Remove the #include <ansiapi.h> and replace A2W by CMmbstowcs
 ** 02-apr-2009 (drivi01)
 **    In efforts to port to Visual Studio 2008, clean up warnings.
+** 12-May-2010 (drivi01)
+**    Disable menus for Ingres VectorWise tables for unsupported
+**    features.
 */
 
 //
@@ -770,8 +773,10 @@ VOID DomUpdateMenu(HWND hwndMdi, LPDOMDATA lpDomData, BOOL bActivate)
           // special management due to load feature, added 21/11/96
           int oldOIVers = GetOIVers();
           SetOIVers(lpDomData->ingresVer);
-          if (CanObjectBeAltered(CurItemObjType, lpRecord->objName,
-                                                lpRecord->ownerName))
+          if (CanObjectBeAltered(CurItemObjType, lpRecord->objName, lpRecord->ownerName)
+		&& (!IsVW() 
+		|| (IsVW() && getint(lpRecord->szComplim + STEPSMALLOBJ + STEPSMALLOBJ) == 0))
+		)
             EnableItemAndBtn(hMenu, lpDomData, IDM_ALTEROBJECT , MF_ENABLED);
           else
             EnableItemAndBtn(hMenu, lpDomData, IDM_ALTEROBJECT , MF_GRAYED);
@@ -844,9 +849,37 @@ VOID DomUpdateMenu(HWND hwndMdi, LPDOMDATA lpDomData, BOOL bActivate)
       // Restricted features if gateway
       //if (lpDomData->ingresVer==OIVERS_NOTOI)
        // EnableItemAndBtn(hMenu, lpDomData, IDM_PASTE, MF_GRAYED);
+      if (lpDomData->bIsVectorWise && (CurItemObjType == OT_TABLE ||
+		CurItemObjType == OT_VIEW ||
+		CurItemObjType == OT_SYNONYM ||
+		CurItemObjType == OT_SCHEMAUSER_TABLE ||
+		CurItemObjType == OT_SCHEMAUSER_VIEW))
+      {
+		EnableItemAndBtn(hMenu, lpDomData, IDM_ALTERDB, MF_GRAYED);
+        	EnableItemAndBtn(hMenu, lpDomData, IDM_SYSMOD,  MF_GRAYED);
 
+        	EnableItemAndBtn(hMenu, lpDomData, IDM_AUDIT   , MF_GRAYED);
+		EnableItemAndBtn(hMenu, lpDomData, IDM_VERIFYDB ,  MF_GRAYED);
+
+		EnableItemAndBtn(hMenu, lpDomData, IDM_GENSTAT , MF_ENABLED);
+		EnableItemAndBtn(hMenu, lpDomData, IDM_DISPSTAT ,  MF_ENABLED);
+
+		if (getint(lpRecord->szComplim + STEPSMALLOBJ + STEPSMALLOBJ) == 0)
+		{
+			EnableItemAndBtn(hMenu, lpDomData, IDM_CHECKPOINT , MF_ENABLED);
+			EnableItemAndBtn(hMenu, lpDomData, IDM_ROLLFORWARD, MF_ENABLED);
+		}
+		else
+		{
+			EnableItemAndBtn(hMenu, lpDomData, IDM_CHECKPOINT ,MF_GRAYED);
+			EnableItemAndBtn(hMenu, lpDomData, IDM_ROLLFORWARD,MF_GRAYED);
+		}
+
+		EnableItemAndBtn(hMenu, lpDomData, IDM_UNLOADDB,  MF_ENABLED);
+        	EnableItemAndBtn(hMenu, lpDomData, IDM_COPYDB,    MF_ENABLED);
+      }
       // audit, genstat... : only on database direct child items
-      if (HasTrueParentDB(lpDomData, NULL)) {
+      else if (HasTrueParentDB(lpDomData, NULL)) {
         EnableItemAndBtn(hMenu, lpDomData, IDM_ALTERDB, MF_ENABLED);
         EnableItemAndBtn(hMenu, lpDomData, IDM_SYSMOD,  MF_ENABLED);
 
@@ -854,8 +887,17 @@ VOID DomUpdateMenu(HWND hwndMdi, LPDOMDATA lpDomData, BOOL bActivate)
         EnableItemAndBtn(hMenu, lpDomData, IDM_GENSTAT , MF_ENABLED);
 
         EnableItemAndBtn(hMenu, lpDomData, IDM_DISPSTAT ,  MF_ENABLED);
-        EnableItemAndBtn(hMenu, lpDomData, IDM_CHECKPOINT ,MF_ENABLED);
-        EnableItemAndBtn(hMenu, lpDomData, IDM_ROLLFORWARD,MF_ENABLED);
+	if (lpDomData->bIsVectorWise && (CurItemObjType == OT_DATABASE 
+		|| CurItemObjType == OT_STATIC_TABLE))
+	{
+		EnableItemAndBtn(hMenu, lpDomData, IDM_CHECKPOINT ,MF_GRAYED);
+		EnableItemAndBtn(hMenu, lpDomData, IDM_ROLLFORWARD,MF_GRAYED);
+	}
+	else
+	{
+		EnableItemAndBtn(hMenu, lpDomData, IDM_CHECKPOINT ,MF_ENABLED);
+		EnableItemAndBtn(hMenu, lpDomData, IDM_ROLLFORWARD,MF_ENABLED);
+	}
         EnableItemAndBtn(hMenu, lpDomData, IDM_VERIFYDB ,  MF_ENABLED);
 
         EnableItemAndBtn(hMenu, lpDomData, IDM_UNLOADDB,  MF_ENABLED);
@@ -892,6 +934,8 @@ VOID DomUpdateMenu(HWND hwndMdi, LPDOMDATA lpDomData, BOOL bActivate)
         EnableItemAndBtn(hMenu, lpDomData, IDM_UNLOADDB,  MF_GRAYED);
         EnableItemAndBtn(hMenu, lpDomData, IDM_COPYDB,    MF_GRAYED);
       }
+
+
 
       // Populate : only if item is a table or Database
       switch (CurItemObjType) {
@@ -961,12 +1005,19 @@ VOID DomUpdateMenu(HWND hwndMdi, LPDOMDATA lpDomData, BOOL bActivate)
         EnableMenuItem(hMenu,  IDM_GRANT,       MF_BYCOMMAND | MF_GRAYED);
         EnableMenuItem(hMenu,  IDM_REVOKE,      MF_BYCOMMAND | MF_GRAYED);
       }
+	
+      //Create index for VW unindexed tables only
+      if (lpRecord && IsVW() && getint(lpRecord->szComplim + STEPSMALLOBJ + STEPSMALLOBJ) == IDX_VW)
+        EnableMenuItem(hMenu, IDM_CREATEIDX, MF_BYCOMMAND | MF_ENABLED);
+      else
+        EnableMenuItem(hMenu, IDM_CREATEIDX, MF_BYCOMMAND | MF_GRAYED);
 
       // Modify structure
       if (lpRecord==0 || IsNoItem(CurItemObjType, lpRecord->objName))
         EnableMenuItem(hMenu, IDM_MODIFYSTRUCT, MF_BYCOMMAND | MF_GRAYED);
       else
-        if (CanObjectStructureBeModified(CurItemObjType))
+        if (CanObjectStructureBeModified(CurItemObjType) && (!lpDomData->bIsVectorWise ||
+			(IsVW() && getint(lpRecord->szComplim + STEPSMALLOBJ + STEPSMALLOBJ) == 0)))
           EnableMenuItem(hMenu, IDM_MODIFYSTRUCT, MF_BYCOMMAND | MF_ENABLED);
         else
           EnableMenuItem(hMenu, IDM_MODIFYSTRUCT, MF_BYCOMMAND | MF_GRAYED);
@@ -1104,7 +1155,7 @@ VOID DomUpdateMenu(HWND hwndMdi, LPDOMDATA lpDomData, BOOL bActivate)
       EnableMenuItem(hMenu, IDM_DUPLICATEDB,   MF_BYCOMMAND | MF_GRAYED);
       if (lpDomData->ingresVer > OIVERS_20) {
         if (lpRecord != 0 && lpRecord->parentDbType == DBTYPE_REGULAR) {
-          if (lpRecord->recType == OT_DATABASE)
+          if (lpRecord->recType == OT_DATABASE && !IsVW())
             EnableMenuItem(hMenu, IDM_DUPLICATEDB,   MF_BYCOMMAND | MF_ENABLED);
         }
       }
@@ -1125,9 +1176,11 @@ VOID DomUpdateMenu(HWND hwndMdi, LPDOMDATA lpDomData, BOOL bActivate)
           if (CurItemObjType == OT_TABLE && !IsNoItem(CurItemObjType, lpRecord->objName))
             if (!IsSystemObject(CurItemObjType, lpRecord->objName, lpRecord->ownerName)) {
               EnableMenuItem(hMenu, IDM_EXPIREDATE, MF_BYCOMMAND | MF_ENABLED);
-              if (lpDomData->ingresVer > OIVERS_20) 
-                EnableMenuItem(hMenu, IDM_FASTLOAD,   MF_BYCOMMAND | MF_ENABLED);
-              EnableMenuItem(hMenu, IDM_JOURNALING, MF_BYCOMMAND | MF_ENABLED);
+			  if (!IsVW() || (IsVW() && getint(lpRecord->szComplim + STEPSMALLOBJ + STEPSMALLOBJ) == 0)) {
+                if (lpDomData->ingresVer > OIVERS_20) 
+                  EnableMenuItem(hMenu, IDM_FASTLOAD,   MF_BYCOMMAND | MF_ENABLED);
+                EnableMenuItem(hMenu, IDM_JOURNALING, MF_BYCOMMAND | MF_ENABLED);
+			  }
             }
       }
       // Manage IDM_COMMENT
@@ -1144,8 +1197,8 @@ VOID DomUpdateMenu(HWND hwndMdi, LPDOMDATA lpDomData, BOOL bActivate)
       if (lpDomData->ingresVer>=OIVERS_26 && HasTrueParentDB(lpDomData, NULL)) {
         if (lpRecord != 0 && 
 			(!IsSystemObject(CurItemObjType, lpRecord->objName, lpRecord->ownerName)|| lpRecord->parentDbType == DBTYPE_COORDINATOR)
-		   ) {
-          if (lpRecord->parentDbType != DBTYPE_DISTRIBUTED)
+		    ) {
+          if (lpRecord->parentDbType != DBTYPE_DISTRIBUTED && (!IsVW() || (IsVW() && CurItemObjType == OT_DATABASE)))
             EnableMenuItem(hMenu, IDM_USERMOD, MF_BYCOMMAND | MF_ENABLED);
         }
       }
@@ -1256,6 +1309,9 @@ VOID DomUpdateMenu(HWND hwndMdi, LPDOMDATA lpDomData, BOOL bActivate)
       // Modify structure
       EnableMenuItem(hMenu,  IDM_MODIFYSTRUCT, MF_BYCOMMAND | MF_GRAYED);
 
+      // Create Index for unindexed VW tables
+      EnableMenuItem(hMenu,  IDM_CREATEIDX, MF_BYCOMMAND | MF_GRAYED);
+	  
       // ingres desktop specific
       EnableMenuItem(hMenu, IDM_LOAD,       MF_BYCOMMAND | MF_GRAYED);
       EnableMenuItem(hMenu, IDM_UNLOAD,     MF_BYCOMMAND | MF_GRAYED);

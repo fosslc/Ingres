@@ -772,7 +772,7 @@ BEGIN
     GROUPBOX        "Security Audit",IDC_STATIC,179,40,116,39
     CONTROL         "All Events",IDC_MFC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,185,51,46,10
     CONTROL         "Query Text",IDC_MFC_CHECK2,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,185,64,49,10
-    LTEXT           "Expire Date:",IDC_STATIC,179,81,45,8
+    LTEXT           "Expiration Date:",IDC_STATIC,179,81,45,8
     EDITTEXT        IDC_MFC_EDIT2,179,91,68,12,ES_AUTOHSCROLL
     LTEXT           "Limiting Security Label:",IDC_MFC_STATIC1,179,110,72,8
     EDITTEXT        IDC_MFC_EDIT3,179,119,116,12,ES_AUTOHSCROLL
@@ -807,7 +807,7 @@ BEGIN
     LTEXT           "Default Pro&file:",-1,7,39,48,8
     COMBOBOX        IDC_MFC_COMBO2,61,37,112,60,CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
     EDITTEXT        IDC_MFC_EDIT2,61,52,112,12,ES_AUTOHSCROLL
-    LTEXT           "&Expire Date:",-1,7,55,48,8
+    LTEXT           "&Expiration Date:",-1,7,55,48,8
     PUSHBUTTON      "Show &Advanced >>",IDC_MORE_OPTIONS,218,50,77,14
     CONTROL         "",IDC_XUSER_TAB,"SysTabControl32",0x0,7,89,288,132
 END
@@ -1286,6 +1286,7 @@ BEGIN
         MENUITEM "Al&ter DB...",                ID_BUTTON_ALTERDB, GRAYED
         MENUITEM "A&udit...",                   ID_BUTTON_AUDIT, GRAYED
         MENUITEM "Mod&ify Structure...\tCtrl+M", ID_BUTTON_MODIFYSTRUCT, GRAYED
+        MENUITEM "C&reate Index...\tCtrl+I",    ID_BUTTON_CREATEIDX, GRAYED
         MENUITEM "&Sysmod...\tCtrl+Y",          ID_BUTTON_SYSMOD, GRAYED
         MENUITEM "User&mod...",                 ID_BUTTON_USERMOD, GRAYED
         MENUITEM "Verif&y Database...",         ID_BUTTON_VERIFYDB, GRAYED
@@ -1675,6 +1676,7 @@ BEGIN
         MENUITEM "Al&ter DB...",                ID_BUTTON_ALTERDB, GRAYED
         MENUITEM "A&udit...",                   ID_BUTTON_AUDIT, GRAYED
         MENUITEM "Mod&ify Structure...\tCtrl+M", ID_BUTTON_MODIFYSTRUCT, GRAYED
+        MENUITEM "C&reate Index...\tCtrl+I",    ID_BUTTON_MODIFYSTRUCT, GRAYED
         MENUITEM "&Sysmod...\tCtrl+Y",          ID_BUTTON_SYSMOD, GRAYED
         MENUITEM "User&mod...",                 ID_BUTTON_USERMOD, GRAYED
         MENUITEM "Verif&y Database...",         ID_BUTTON_VERIFYDB, GRAYED
@@ -2117,6 +2119,17 @@ END
 
 STRINGTABLE 
 BEGIN
+    IDM_IPMBAR_REFRESH_FREQUENCY 
+                            "Refresh Frequency (Seconds)\nRefresh Frequency (Seconds)"
+    IDM_IPMBAR_EXPRESS_REFRESH_ONLYIF "Only if...\nOnly if..."
+    IDS_MSG_EDBC_ROOT_NOT_DEFINED "EDBC_ROOT is not defined."
+    IDS_URP_TAB_PRIV        "&Privileges"
+    IDS_URP_TAB_SEC         "Security"
+    ID_BUTTON_CREATEIDX     "Create Index\nCreateIndex"
+END
+
+STRINGTABLE 
+BEGIN
     IDM_DBEVENT_TRACE_SYSDBEVENT "System DB Events\nSystem DB Events"
     IDM_DBEVENT_TRACE_CLEARFIRST 
                             "Delete First Line of Raised DB Events when Max Lines is Reached\nClear First when Max Reached"
@@ -2524,16 +2537,6 @@ BEGIN
     IDS_DOM_FAST_CANNOTEXPAND "Cannot Expand Tree up to Selected Item"
     IDS_DOMPROP_ST_SCHEMA_TITLE "Schemas of Database %1"
     IDS_DOMPROP_ST_SYN_TITLE "Synonyms of Database %1"
-END
-
-STRINGTABLE 
-BEGIN
-    IDM_IPMBAR_REFRESH_FREQUENCY 
-                            "Refresh Frequency (Seconds)\nRefresh Frequency (Seconds)"
-    IDM_IPMBAR_EXPRESS_REFRESH_ONLYIF "Only if...\nOnly if..."
-    IDS_MSG_EDBC_ROOT_NOT_DEFINED "EDBC_ROOT is not defined."
-    IDS_URP_TAB_PRIV        "&Privileges"
-    IDS_URP_TAB_SEC         "Security"
 END
 
 STRINGTABLE 
@@ -5604,7 +5607,7 @@ BEGIN
 END
 
 IDD_DOMPROP_TABLE DIALOGEX 0, 0, 267, 302
-STYLE DS_SETFONT | WS_CHILD
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     GROUPBOX        "",IDC_STATIC,4,0,258,81
@@ -5628,13 +5631,13 @@ BEGIN
     LTEXT           "Read-Only",IDC_STATIC,24,95,37,8
     CONTROL         "",IDC_CHECK_DUPROWS,"Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,10,109,10,10
     LTEXT           "Allow Duplic.Rows",IDC_STATIC_DUPROWS,24,110,60,8
-    GROUPBOX        "Journaling",IDC_STATIC,92,83,84,43
+    GROUPBOX        "Journaling",IDC_STATIC_JNL,91,83,87,43
     CONTROL         "",IDC_RAD_JNL_ACTIVE,"Button",BS_AUTORADIOBUTTON | WS_DISABLED,97,94,11,10
-    LTEXT           "Active",IDC_STATIC,107,94,23,8
+    LTEXT           "Active",IDC_STATIC_JNL_ACTIVE,107,94,23,8
     CONTROL         "",IDC_RAD_JNL_INACTIVE,"Button",BS_AUTORADIOBUTTON | WS_DISABLED,132,94,11,10
-    LTEXT           "Inactive",IDC_STATIC,145,95,28,8
+    LTEXT           "Inactive",IDC_STATIC_JNL_INACTIVE,145,95,28,8
     CONTROL         "",IDC_RAD_JNL_AFTERCKPDB,"Button",BS_AUTORADIOBUTTON | WS_DISABLED,97,109,11,10
-    LTEXT           "Active after ckpdb +j",IDC_STATIC,108,110,66,8
+    LTEXT           "Active after ckpdb +j",IDC_STATIC_JNL_AFTERCKP,108,110,70,8
     GROUPBOX        "Expiration",IDC_STATIC,181,83,81,43
     LTEXT           "Exp. date:",IDC_STATIC,187,95,33,8
     ICON            IDI_EXPIRE,IDC_EXPIRE,227,88,20,20,NOT WS_VISIBLE,WS_EX_TRANSPARENT
