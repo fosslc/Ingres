@@ -265,6 +265,10 @@
 --#	23-Mar-2010 (hanje04)
 --#	    SIR 123296
 --#	    Use full path when calling syscheck on UNIX
+--#	20-Apr-2010 (hanje04)
+--#	    SIR 123622
+--#	    Enable history recall by default on Unix. Control behavior with
+--#	    ii.$.tm.history_recall
 --#
 --#
 -- configuration system preferences
@@ -747,3 +751,7 @@
 (PROG4PRFX).*.config.svr_slots:         32, MIN = 32, MAX = 128;
 #endif /* UNIX */
 
+# Terminal monitor config
+# ifdef UNIX
+(PROG4PRFX).*.tm.history_recall:	"true", VALID = { true, false } ;
+# endif

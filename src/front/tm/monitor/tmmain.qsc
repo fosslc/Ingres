@@ -40,6 +40,9 @@ exec sql include	<ui.sh>;
 # include	<itline.h>
 # include	<qr.h>
 # include	<uigdata.h>
+# include      <pm.h>
+# include      <si.h>
+
 # include       <libq.h>
 
 # ifndef NT_GENERIC
@@ -61,6 +64,7 @@ GLOBALDEF	TCFILE *IITMoutcomm = NULL;	/* output COMM-file */
 # define MAX_ING_OPTS   13
 
 GLOBALREF	bool 	Runtime_INGRES;
+static		void	tmerr( STATUS status, i4 nargs, ER_ARGUMENT *args);
 /**
 ** Name:	tmmain.sc
 **
@@ -90,7 +94,7 @@ GLOBALREF	bool 	Runtime_INGRES;
 **	flags:
 **	-M 	 -- trace flag
 **	-partial -- access a partially created DB. For internal use only. 
-**	-history_recall -- allows command history recall feature enabled.
+**	-[no]history_recall -- dis/enables command history recall feature.
 **	-d 	 -- suppress dayfile
 **	-s 	 -- suppress prompt (sets -d)
 **	-a 	 -- disable autoclear function
@@ -359,6 +363,11 @@ GLOBALREF	bool 	Runtime_INGRES;
 **	24-Feb-2010 (frima01) Bug 122490
 **	    Update return types and add header files as neccessary
 **	    to eliminate gcc 4.3 warnings.
+**	20-Apr-2010 (hanje04)
+**	    SIR 123622
+**	    Enable command history in TM by default and have it controlled by
+**	    ii.*.tm.history_recall
+**	    also add -nohistory_recall flag to allow local override
 */
 
 FUNC_EXTERN	VOID	go_buffer();
@@ -376,7 +385,7 @@ GLOBALDEF	char	*Uname;
 GLOBALDEF	char	*Dbname;
 GLOBALDEF	ADF_CB	*Tm_adfscb;
 GLOBALDEF	QRB	*Tm_qrb;
-GLOBALDEF	bool HistoryRecall = FALSE;
+GLOBALDEF	bool HistoryRecall = TRUE;
 GLOBALREF	bool TrulySilent ;
 GLOBALREF	bool Uservflag ;
 GLOBALREF	char Uservchar[VDELIM_SIZE+1] ;
@@ -1026,11 +1035,26 @@ register char	**argv;
 	LOCATION	inLoc,outLoc;
 	char		inFile[MAX_LOC+1],outFile[MAX_LOC+1];
 	char		*cptr;
+	char		tmp_buf[30];
+	char		*hrval;
 #endif /* SEP */
 
 # ifdef WANT_SQL
 	Tm_adfscb->adf_qlang = DB_SQL;
 # endif
+
+	/*
+	**  Enable history recall by default
+	** unless it been configured otherwise
+	*/
+	PMinit();
+	if( PMload( NULL, tmerr ) != OK )
+	    PCexit( FAIL );
+
+	STprintf( tmp_buf, ERx("%s.*.tm.history_recall"), SystemCfgPrefix);
+	PMget(tmp_buf, &hrval);
+	if (STbcompare(hrval, 0, ERx("false"),0, TRUE) == 0)
+	    HistoryRecall = FALSE;
 
 	for (targc = *argc, *argc = 0, targv = argv; targc--; argv++)
 	{
@@ -1175,6 +1199,13 @@ register char	**argv;
 			if (STbcompare(((*argv)+1),0,ERx("history_recall"),0,TRUE) == 0)
 			{
 			    HistoryRecall = TRUE;
+			    break;
+			}
+
+			/* Look for '-nohistory_recall' flag */
+			if (STbcompare(((*argv)+1),0,ERx("nohistory_recall"),0,TRUE) == 0)
+			{
+			    HistoryRecall = FALSE;
 			    break;
 			}
 
@@ -1421,3 +1452,24 @@ EXEC SQL END DECLARE SECTION;
  
 	return OK;
 }
+
+/*
+** Function passed to PMload() and PMmLoad() to display error messages.
+*/
+static void
+tmerr( STATUS status, i4  nargs, ER_ARGUMENT *args )
+{
+        i4 language;
+        char buf[ 1024 ];
+        i4 len;
+        CL_ERR_DESC cl_err;
+
+        if( ERlangcode( ERx( "english" ), &language ) != OK )
+                return;
+        if( ERlookup( status, NULL, ER_TEXTONLY, NULL, buf, sizeof( buf ),
+                language, &len, &cl_err, nargs, args ) == OK)
+                SIfprintf( stderr, "\n%s\n\n", buf );
+
+	SIflush(stderr);
+}
+

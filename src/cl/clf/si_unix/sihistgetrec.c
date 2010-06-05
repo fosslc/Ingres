@@ -6,6 +6,7 @@
 # include	<cmcl.h>
 # include	<st.h>
 # include	<me.h>
+# include	<ex.h>
 # include	<termios.h>
 
 /*
@@ -41,13 +42,18 @@
 **	29-apr-2004 (kodse01)
 **		Fixed handling of special keys at buffer boundary condition.
 **		Added support for control-u key to erase complete line.
-**		Added support for control-k key to erase line from cursor till end.
+**		Added support for control-k key to erase line from cursor
+**		till end.
 **	27-Jun-2007 (kiria01) b110040
 **		Executing \i caused the SIclearhistory() but did not
 **		clear the hist pointer thereby meaning that the next command
 **		added to the list would get the old block reallocated via
 **		the stale hist pointer. This resulted in the block pointing
 **		to itself and a cpu loop waiting to happen.
+**	20-Apr-2010 (hanje04)
+**	    SIR 123622
+**	    Add control-c (interupt) and contol-d (quit) support.
+**	    Replace references to int with i4.
 */
 
 # define	MAX_BUF_LENGTH	512 /* maximum buffer length */
@@ -58,12 +64,16 @@
 # define	DEL		'\177'
 # define	NAK		'\025'
 # define	VT		'\013'
+# define        ETX             '\003'
+# define        EOT             '\004'
 # else
 # define	ESC		'\047'
 # define	BS		'\026'
 # define	DEL		'\007'
 # define	NAK		'\075'
 # define	VT		'\013'
+# define        ETX             '\003'
+# define        EOT             '\004'
 # endif
 
 /* Structure defining the doubly linked list node to maintain history */
@@ -114,7 +124,7 @@ char *buf;
 }
 
 /* adds a line to the doubly linked list containing history */
-static int 
+static i4 
 SIaddhistnode(buf)
 char *buf;
 { 
@@ -164,10 +174,10 @@ SIclearhistory()
 /* erases the current line being edited */
 static void 
 SIeraseline(next, last)
-int next;
-int last;
+i4 next;
+i4 last;
 {
-	int i;
+	i4 i;
 	for (i=0; i < last-next; i++)
 		SIprintf(" ");
 	for (i=0; i < last; i++)
@@ -177,10 +187,10 @@ int last;
 /* erases the current line from cursor till end */
 static void 
 SIeraselineend(next, last)
-int next;
-int last;
+i4 next;
+i4 last;
 {
-	int i;
+	i4 i;
 	for (i=0; i < last-next; i++)
 		SIprintf(" ");
 	for (i=0; i < last-next; i++)
@@ -220,11 +230,11 @@ FILE	*stream;	/* get record from file stream */
 	char tempbuf1[MAX_BUF_LENGTH] = {0};
 	char tempbuf2[MAX_BUF_LENGTH] = {0};
 	char onechar[4] = {0};
-	int next_ch = 0;	/* Next character from stream */
-	int ch_indx = 0;	/* Zero-based index for last character in streambuf */
-	int next_indx = 0;	/* Zero-based index for next character in streambuf */
+	i4 next_ch = 0;	/* Next character from stream */
+	i4 ch_indx = 0;	/* Zero-based index for last character in streambuf */
+	i4 next_indx = 0;	/* Zero-based index for next character in streambuf */
 						/* (middle of line) */
-	int i = 0;
+	i4 i = 0;
 
 	if (TEsettmattr() < 0)
 		return ENDFILE;
@@ -316,6 +326,18 @@ FILE	*stream;	/* get record from file stream */
 			SIeraselineend(next_indx, ch_indx);	
 			MEfill(MAX_BUF_LENGTH-next_indx, 0, streambuf+next_indx);	
 			ch_indx = next_indx;
+		}
+		else if (next_ch == ETX) /* control-c */
+		{
+		        TEresettmattr();
+			/* raise an interrupt */
+			EXsignal(EXINTR, 0);
+		}
+		else if (next_ch == EOT) /* control-c */
+		{
+		        TEresettmattr();
+			/* raise an interrupt */
+			return(ENDFILE);
 		}
 		else if (ch_indx >= n-1)
 		{

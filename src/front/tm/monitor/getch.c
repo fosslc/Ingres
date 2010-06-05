@@ -96,6 +96,9 @@ GLOBALREF   TCFILE *IITMoutcomm;
 **		SIhistgetrec() is called if HistoryRecall is TRUE.
 **	26-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	20-Apr-2010 (hanje04)
+**	    SIR 123622
+**	    Enable history recall for all UNIXES
 */
 
 GLOBALREF	bool	IIMOupcUsePrintChars;
@@ -148,15 +151,16 @@ getch()
 			/* Place characters in international xlate buffer */
 			if (*Inbufptr == '\0')
 			{
-#ifdef LNX
+/* Ony want command recall for Unixes */
+# ifdef UNIX
 				if (HistoryRecall)
 					status = SIhistgetrec(Inbufraw, MAX_T_LINE, Input);
 				else
 					status = SIgetrec(Inbufraw, MAX_T_LINE, Input);
 				if (status == ENDFILE)
-#else
+# else
 				if (SIgetrec(Inbufraw, MAX_T_LINE, Input) == ENDFILE)
-#endif
+# endif
 				{
 					c = EOF;
 				}
