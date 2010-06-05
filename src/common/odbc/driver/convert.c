@@ -173,6 +173,11 @@
 **         not support boolean data types.  Replaced byte length for tinyints
 **         to 1 from 2.  Replaced Ingres lengths for integers with
 **         definitions from iiapi.h, instead of hard-coded references.
+**    14-May-2010 (Ralph Loen)  Bug 123742
+**         In CvtCharNumStr(), copy the input string to a work area and
+**         null terminate at the specified length, since the input
+**         string may be truncated at the specified length or not 
+**         null-terminated.
 **         
 */
 
@@ -1195,15 +1200,37 @@ UDWORD CvtCharNumStr(
     CHAR      * FAR * prgbNext,
     UWORD     * pcbNext)
 {
-    CHAR      * c;
+    CHAR      * szNumStr = NULL;
+    CHAR      * szNumStrSave = NULL;
     CHAR      * p;
     CHAR      * sz;
     UWORD       i;
     SDWORD      cbMax;
     SWORD       cbPrec, cbScale;
     UWORD       fZero;
+    CHAR      buf[51];
+    UDWORD    rc = SQL_SUCCESS;
 
-    c       = rgbData;
+    /*
+    ** The stack buffer is the preferred workspace for editing the numeric
+    ** string, but allocate space dyanmically if the application specified a 
+    ** ridiculously large numeric string buffer.
+    */
+    if (cbData > 50)
+    {
+        szNumStr = MEreqmem(0, cbData+1, TRUE, NULL);
+        szNumStrSave = szNumStr;
+    }
+    else
+        szNumStr = &buf[0];
+
+    /*
+    ** Since the input string may not be null-terminated, 
+    ** copy rgbData to a work area and null-terminate at cbData);
+    */
+    MEcopy(rgbData, cbData, szNumStr);
+    szNumStr[cbData] = '\0';
+
     i       = cbData;
     sz      = szValue;
     cbMax   = cbValueMax - 1;
@@ -1214,47 +1241,53 @@ UDWORD CvtCharNumStr(
     /*
     **  Skip leading white space, if any:
     */
-    c = CvtSkipSpace (c, i, &i);
-    if (c == NULL)
-        return (CVT_ERROR);
+    szNumStr = CvtSkipSpace (szNumStr, i, &i);
+    if (szNumStr == NULL)
+    {
+        rc = CVT_ERROR;
+        goto end_routine;
+    }
 
     /*
-    **  Get sign, if any:
+    **  Get sign, if any.
     */
 
-    switch (*c)
+    switch (*szNumStr)
     {
     case '-':
 
-        *sz = *c;
+        *sz = *szNumStr;
         CMnext(sz);
         cbMax--;
 
     case '+':
 
-        CMnext(c); 
+        CMnext(szNumStr); 
         i--;
         if (i == 0)
-            return (CVT_ERROR);
+        {
+            rc = CVT_ERROR;
+            goto end_routine;
+        }
     }
 
     /*
-    **  Get significant digits:
+    **  Get significant digits.
     */
-    while ((i > 0) && (*c == '0'))
+    while ((i > 0) && (*szNumStr == '0'))
     {
         fZero = TRUE;
-        CMnext(c);
+        CMnext(szNumStr);
         i--;
     }
-    while ((i > 0) && (CMdigit (c)))
+    while ((i > 0) && (CMdigit (szNumStr)))
     {
         if (cbPrec < cbMax)
         {
-            *sz = *c;
+            *sz = *szNumStr;
             CMnext(sz);
         }
-        CMnext(c); 
+        CMnext(szNumStr); 
         i--;
         cbPrec++;
     }
@@ -1266,9 +1299,9 @@ UDWORD CvtCharNumStr(
     }
 
     /*
-    **  Get fraction, if any:
+    **  Get fraction, if any.
     */
-    if (i > 0 && !CMcmpcase(c,"."))
+    if (i > 0 && !CMcmpcase(szNumStr,"."))
     {
         if (cbPrec < cbMax)
         {
@@ -1276,26 +1309,26 @@ UDWORD CvtCharNumStr(
 			CMnext(sz);
             cbMax--;
         }
-        CMnext(c); 
+        CMnext(szNumStr); 
         i--;
 
-        while ((i > 0) && (CMdigit (c)))
+        while ((i > 0) && (CMdigit (szNumStr)))
         {
             if (cbPrec < cbMax)
             {
-                CMcpychar(c,sz);
+                CMcpychar(szNumStr,sz);
                 CMnext(sz);
             }
             cbScale++;
             cbPrec++;
-            CMnext(c);
+            CMnext(szNumStr);
             i--;
         }
         /*
         **  Adjust scale and precision for trailing 0's,
-        **  dump "." if nothing after it:
+        **  dump "." if nothing after it.
         */
-        p = c;
+        p = szNumStr;
         while ((cbScale > 0) && (*p == '0'))
         {
             CMprev(p, szValue);
@@ -1309,29 +1342,33 @@ UDWORD CvtCharNumStr(
     }
 
     /*
-    **  Null terminate:
+    **  Null terminate.
     */
     CMcpychar("\0",sz); 
 
     /*
-    **  Skip trailing white space, if any:
+    **  Skip trailing white space, if any.
     */
-    c = CvtSkipSpace (c, i, &i);
+    szNumStr = CvtSkipSpace (szNumStr, i, &i);
     if (prgbNext)
-        *prgbNext = c;
+        *prgbNext = szNumStr;
     if (pcbNext)
         *pcbNext  = i;
 
     /*
-    **  Tell caller if numeric value fit in buffer:
+    **  Tell caller if numeric value fit in buffer.
     */
     if (cbPrec - cbScale > cbMax)
-        return (CVT_OUT_OF_RANGE);
+        rc = CVT_OUT_OF_RANGE;
+    else if (cbPrec > cbMax)
+        rc = CVT_TRUNCATION;
 
-    if (cbPrec > cbMax)
-        return (CVT_TRUNCATION);
+end_routine:
 
-    return (CVT_SUCCESS);
+    if (szNumStrSave)
+        MEfree((PTR)szNumStrSave);
+
+    return (rc);
 }
 
 
