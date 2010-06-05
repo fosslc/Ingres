@@ -7687,6 +7687,11 @@ dm2r_unfix_pages(
 **	14-Apr-2010 (kschendel) SIR 123485
 **	    Don't make LOB etab bulk-load decisions here.  Move all of that
 **	    to dmpe.
+**	10-may-2010 (stephenb)
+**	    reltups and relpages are now i8 on disk (and therefore in the
+**	    DMP_RELATION structure, use new CSadjust_i8counter to peform
+**	    atomic counter adjustment. Also, restrict actual values to
+**	    MAXI4 until we can handle larger numbers.
 */
 DB_STATUS
 dm2r_load(
@@ -9013,27 +9018,32 @@ dm2r_load(
 		{
 		    DMP_TCB *master_tcb;
 		    DMT_PHYS_PART *pp_ptr;
-		    i4 page_delta, tup_delta;
+		    i8 page_delta, tup_delta;
 
 		    /* Updating a partition, roll into pp array too. */
 		    master_tcb = t->tcb_pmast_tcb;
 		    pp_ptr = &master_tcb->tcb_pp_array[t->tcb_partno];
-		    tup_delta = relrecord.reltups - pp_ptr->pp_reltups;
-		    page_delta = relrecord.relpages - pp_ptr->pp_relpages;
-		    pp_ptr->pp_reltups = relrecord.reltups;
-		    pp_ptr->pp_relpages = relrecord.relpages;
+		    /* restrict reltups and relpages to MAXI4 */
+		    tup_delta = (master_tcb->tcb_rel.reltups + 
+			    relrecord.reltups - pp_ptr->pp_reltups) > MAXI4 ?
+				    0 : relrecord.reltups - pp_ptr->pp_reltups;
+		    page_delta = (master_tcb->tcb_rel.relpages + 
+			    relrecord.relpages - pp_ptr->pp_relpages) > MAXI4 ?
+				    0 : relrecord.relpages - pp_ptr->pp_relpages;
+		    pp_ptr->pp_reltups = (i4)relrecord.reltups;
+		    pp_ptr->pp_relpages = (i4)relrecord.relpages;
 		    /* Roll deltas into master, so that master base counts are
 		    ** always the sum of the pp-array counts.
 		    */
-		    CSadjust_counter(&master_tcb->tcb_rel.reltups, tup_delta);
-		    CSadjust_counter(&master_tcb->tcb_rel.relpages, page_delta);
+		    CSadjust_i8counter(&master_tcb->tcb_rel.reltups, tup_delta);
+		    CSadjust_i8counter(&master_tcb->tcb_rel.relpages, page_delta);
 		}
 		t->tcb_tup_adds = 0;
 		t->tcb_page_adds = 0;
 		rcb->rcb_tup_adds = 0;
 		rcb->rcb_page_adds = 0;
-		rcb->rcb_reltups = t->tcb_rel.reltups;
-		rcb->rcb_relpages = t->tcb_rel.relpages;
+		rcb->rcb_reltups = (i4)t->tcb_rel.reltups;
+		rcb->rcb_relpages = (i4)t->tcb_rel.relpages;
 	    }
 
 	    if (mct->mct_recreate)

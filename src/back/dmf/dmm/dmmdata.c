@@ -109,6 +109,11 @@ LIBRARY = IMPDMFLIBDATA
 **	    eventually, for future converters.
 **	06-May-2010
 **	    Remove unused variable.
+**	11-may-2010 (stephenb)
+**	    iirelation changes: make reltups and relpages i8, move relstat2
+**	    next to relstat to make correct i8 bus alignment, move relid,
+**	    relowner, and relloc to the end of the table to avoid offset
+**	    issues with compression.
 */
 
 /* dmmcre.c */
@@ -143,23 +148,27 @@ LIBRARY = IMPDMFLIBDATA
 /*
 ** NOTE there is code in dmverep/dmveput/dmvedel that assumes 
 ** that reltid is first column in reltid
+** NOTE: the location of relid and relowner are defined in
+** DM_RELID_FIELD_NO and DM_RELOWNER_FIELD_NO in dmm.h; these
+** values are used in dm2d.c to bootsrap iirel_idx when
+** the database is opened. If you move either of these
+** fields or add new fields in front of them (more likely),
+** remember to update the definitions.
 */
 #define reldef(tabid, relid, relwid, relkeys, relidxcount, relstat, relstat2, relmin, relcomptype)\
     tabid, /* reltid,reltidx */\
-    {relid},\
-    {"$ingres"},\
     DUMMY_ATTRIBUTE_COUNT,\
     0, /* reltcpri */\
     relkeys,\
     TCB_HASH, /* relspec */\
     relstat,\
+    relstat2, /* relstat2 */\
     DUMMY_TUPLE_COUNT,\
     1, /* relpages */\
     1, /* relprim */\
     1, /* relmain */\
     0, /* relsave */\
     {0, 0}, /* relstamp1,2 */\
-    {"$default"}, /* relloc */\
     DMF_T_VERSION, /* relcmptlvl */\
     0, /* relcreate */\
     0, /* relqid1 */\
@@ -181,8 +190,6 @@ LIBRARY = IMPDMFLIBDATA
     DM_TBL_DEFAULT_EXTEND, /* relextend */\
     relcomptype,\
     TCB_PG_V1, /* relpgtype */\
-    relstat2, /* relstat2 */\
-    { ' ' }, /* relfree1 */\
     1, /* relloccount */\
     0, /* relversion */\
     relwid, /* relwid */\
@@ -194,8 +201,11 @@ LIBRARY = IMPDMFLIBDATA
     0, /* relencflags */\
     0, /* relencver */\
     { ' ' }, /* relenckey */\
-    { ' ' } /* relfree */
-
+    { ' ' }, /* relfree */\
+    {"$default"}, /* relloc */\
+    {"$ingres"},/* relowner */\
+    {relid}
+ 
 #define CORE_RELSTAT (TCB_CATALOG | TCB_NOUPDT | TCB_CONCUR | TCB_PROALL | TCB_SECURE | TCB_DUPLICATES)
 #define REL_RELSTAT (CORE_RELSTAT | TCB_COMPRESSED)
 #define RIDX_RELSTAT (CORE_RELSTAT | TCB_COMPRESSED)
@@ -244,21 +254,19 @@ GLOBALDEF DMP_ATTRIBUTE DM_core_attributes[] =
     /* tabid, attname, offset, len, iskey */
     { attdef_int(REL_TAB_ID, "reltid", REL_OFFSET(reltid.db_tab_base), 4, 1) },
     { attdef_int(REL_TAB_ID, "reltidx", REL_OFFSET(reltid.db_tab_index), 4, 0) },
-    { attdef_cha(REL_TAB_ID, "relid", REL_OFFSET(relid), DB_TAB_MAXNAME, 0) },
-    { attdef_cha(REL_TAB_ID, "relowner", REL_OFFSET(relowner), DB_OWN_MAXNAME, 0) },
     { attdef_int(REL_TAB_ID, "relatts", REL_OFFSET(relatts), 2, 0) },
     { attdef_int(REL_TAB_ID, "reltcpri", REL_OFFSET(reltcpri), 2, 0) },
     { attdef_int(REL_TAB_ID, "relkeys", REL_OFFSET(relkeys), 2, 0) },
     { attdef_int(REL_TAB_ID, "relspec", REL_OFFSET(relspec), 2, 0) },
     { attdef_int(REL_TAB_ID, "relstat", REL_OFFSET(relstat), 4, 0) },
-    { attdef_int(REL_TAB_ID, "reltups", REL_OFFSET(reltups), 4, 0) },
-    { attdef_int(REL_TAB_ID, "relpages", REL_OFFSET(relpages), 4, 0) },
+    { attdef_int(REL_TAB_ID, "relstat2", REL_OFFSET(relstat2), 4, 0) },
+    { attdef_int(REL_TAB_ID, "reltups", REL_OFFSET(reltups), 8, 0) },
+    { attdef_int(REL_TAB_ID, "relpages", REL_OFFSET(relpages), 8, 0) },
     { attdef_int(REL_TAB_ID, "relprim", REL_OFFSET(relprim), 4, 0) },
     { attdef_int(REL_TAB_ID, "relmain", REL_OFFSET(relmain), 4, 0) },
     { attdef_int(REL_TAB_ID, "relsave", REL_OFFSET(relsave), 4, 0) },
     { attdef_int(REL_TAB_ID, "relstamp1", REL_OFFSET(relstamp12.db_tab_high_time), 4, 0) },
     { attdef_int(REL_TAB_ID, "relstamp2", REL_OFFSET(relstamp12.db_tab_low_time), 4, 0) },
-    { attdef_cha(REL_TAB_ID, "relloc", REL_OFFSET(relloc), DB_LOC_MAXNAME, 0) },
     { attdef_int(REL_TAB_ID, "relcmptlvl", REL_OFFSET(relcmptlvl), 4, 0) },
     { attdef_int(REL_TAB_ID, "relcreate", REL_OFFSET(relcreate), 4, 0) },
     { attdef_int(REL_TAB_ID, "relqid1", REL_OFFSET(relqid1), 4, 0) },
@@ -280,8 +288,6 @@ GLOBALDEF DMP_ATTRIBUTE DM_core_attributes[] =
     { attdef_int(REL_TAB_ID, "relextend", REL_OFFSET(relextend), 4, 0) },
     { attdef_int(REL_TAB_ID, "relcomptype", REL_OFFSET(relcomptype), 2, 0) },
     { attdef_int(REL_TAB_ID, "relpgtype", REL_OFFSET(relpgtype), 2, 0) },
-    { attdef_int(REL_TAB_ID, "relstat2", REL_OFFSET(relstat2), 4, 0) },
-    { attdef_free(REL_TAB_ID, "relfree1", REL_OFFSET(relfree1), 8, 0) },
     { attdef_int(REL_TAB_ID, "relloccount", REL_OFFSET(relloccount), 2, 0) },
     { attdef_int(REL_TAB_ID, "relversion", REL_OFFSET(relversion), 2, 0) },
     { attdef_int(REL_TAB_ID, "relwid", REL_OFFSET(relwid), 4, 0) },
@@ -293,7 +299,10 @@ GLOBALDEF DMP_ATTRIBUTE DM_core_attributes[] =
     { attdef_int(REL_TAB_ID, "relencflags", REL_OFFSET(relencflags), 2, 0) },
     { attdef_int(REL_TAB_ID, "relencver", REL_OFFSET(relencver), 2, 0) },
     { attdef_byte(REL_TAB_ID, "relenckey", REL_OFFSET(relenckey), 64, 0) },
-    { attdef_free(REL_TAB_ID, "relfree", REL_OFFSET(relfree), 12, 0) },
+    { attdef_free(REL_TAB_ID, "relfree", REL_OFFSET(relfree), 20, 0) },
+    { attdef_cha(REL_TAB_ID, "relloc", REL_OFFSET(relloc), DB_LOC_MAXNAME, 0) },
+    { attdef_cha(REL_TAB_ID, "relowner", REL_OFFSET(relowner), DB_OWN_MAXNAME, 0) },
+    { attdef_cha(REL_TAB_ID, "relid", REL_OFFSET(relid), DB_TAB_MAXNAME, 0) },
     { attdef_cha(RIDX_TAB_ID, "relid", RIDX_OFFSET(relname), DB_TAB_MAXNAME, 1) },
     { attdef_cha(RIDX_TAB_ID, "relowner", RIDX_OFFSET(relowner), DB_OWN_MAXNAME, 2) },
     { attdef_int(RIDX_TAB_ID, "tidp", RIDX_OFFSET(tidp), 4, 0) },

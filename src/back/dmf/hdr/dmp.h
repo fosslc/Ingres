@@ -3060,6 +3060,13 @@ READONLY,FASTCOMMIT,MULTIPLE,RCP_RECOVERY,ROLLDB_RECOVERY,NO_GROUPREAD,DMCM"
 **	12-Nov-2009 (kschendel) SIR 122882
 **	    Change relcmptlvl from i4 to u_i4, don't want signed compares.
 **	    Note TCB_BINARY unused, may become TCB_CLUSTER.
+**	11-may-2010 (stephenb)
+**	    Lots of shuffling around for better efficiency and correct
+**	    bus alignment without padding. reltups and relpages become
+**	    i8; relstat2 is moved next to relstat to provide correct
+**	    8-byte alignment for reltups; new larger text fields
+**	    (relid, relowner, relloc) are moved to the end of the table
+**	    to make sure text compression doesn't affect alignment
 */
 struct _DMP_TCB
 {
@@ -3479,8 +3486,6 @@ CLOSE_ERROR,TMPMOD_WAIT,INCONS_IDX,FLUSH,VALIDATED,SHOWONLY,BEING_RELEASED"
     {
 #define			DM_1_RELATION_KEY  1
      DB_TAB_ID	     reltid;		    /* Table identifier. */
-     DB_TAB_NAME     relid;                 /* Table name. */
-     DB_OWN_NAME     relowner;              /* Table owner. */
      i2              relatts;               /* Number of attributes in table. */
      i2		     reltcpri;		    /* Table Cache priority */
      i2		     relkeys;		    /* Number of attributes in key. */
@@ -3628,75 +3633,6 @@ COMPRESSED,INDEX_COMP,PARTITIONED,PROALL,PROTECT,EXTCATALOG,\
 JON,UNIQUE,IDXD,JOURNAL,NORECOVER,ZOPTSTAT,DUPLICATES,\
 MULTIPLE_LOC,GATEWAY,RULE,SYS_MAINTAINED,GW_NOUPDT,COMMENT,\
 SYNONYM,VGRANT_OK,SECURE,80000000"
-
-     i4              reltups;               /* Approximate number of records
-                                            ** in a table. */
-     i4              relpages;              /* Approximate number of pages
-                                            ** in a table. */
-     i4              relprim;               /* Number of  primary pages 
-                                            ** in a table. */
-     i4              relmain;               /* Number of non-index(isam only)
-                                            ** pages in a table. */          
-     i4              relsave;               /* Unix time to indicate how
-                                            ** long to save table. */
-     DB_TAB_TIMESTAMP
-                     relstamp12;            /* Create or modify Timestamp for 
-                                            ** table. */
-     DB_LOC_NAME     relloc;                /* ingres location of a table. */
-     u_i4            relcmptlvl;	    /* DMF version of table. */
-/* Following added for Jupiter. */
-     i4              relcreate;             /* Date table created. */
-     i4              relqid1;               /* Query id if table is a view. */
-     i4              relqid2;               /* Query id if table is a view. */ 
-     i4              relmoddate;            /* Date table last modified. */
-/* Watch the alignment here. !!! */
-     i2              relidxcount;           /* Number of indices on table. */ 
-     i2              relifill;              /* Modify index fill factor. */
-     i2              reldfill;              /* Modify data fill factor. */
-     i2              rellfill;              /* Modify leaf fill factor. */
-     i4              relmin;                /* Modify min pages value. */
-     i4              relmax;                /* Modify max pages value. */
-     i4		     relpgsize;		    /* page size of this relation */
-     i2              relgwid;	            /* identifier of gateway that owns
-					    ** the table. */
-     i2              relgwother;            /* identifier of gateway that owns
-					    ** the table. */
-     u_i4            relhigh_logkey;        /* Most significant i4 of the 8
-					    ** byte integer which is used to
-					    ** generate logical keys. */
-     u_i4            rellow_logkey;         /* Least significant i4 of the 8
-					    ** byte integer which is used to
-					    ** generate logical keys. */
-     u_i4	     relfhdr;
-     u_i4	     relallocation;
-     u_i4	     relextend;
-     i2		     relcomptype;	    /* Type of compression employed */
-#define 		TCB_C_NONE	    0
-#define 		TCB_C_STANDARD	    1
-#define 		TCB_C_OLD	    2	/* See below */
-#define                 TCB_C_HICOMPRESS    7
-#define 		TCB_C_DEFAULT	    TCB_C_STANDARD /* for normal */
-
-	/* Note, the TCB_C_OLD compression type is not really stored
-	** in relcomptype.  Somewhere in ancient times, the standard
-	** compression algorithm got changed (to include null compression),
-	** but the type code didn't change.  When the server used to
-	** support reading ancient tables, it used TCB_C_OLD internally.
-	** For safety, and to avoid confusion, please treat TCB_C_OLD
-	** as "reserved";  don't reuse it if you add a new compression
-	** type number.  (kschendel Oct 2009)
-	*/
-
-     i2		     relpgtype;		    /* Page format */
-#define			TCB_PG_INVALID      DM_PG_INVALID /* 0 */
-#define                 TCB_PG_V1           DM_PG_V1 /* 1 */
-#define                 TCB_PG_V2           DM_PG_V2 /* 2 */
-#define                 TCB_PG_V3           DM_PG_V3 /* 3 */
-#define                 TCB_PG_V4           DM_PG_V4 /* 4 */
-#define			TCB_PG_V5	    DM_PG_V5 /* 5 */
-#define			TCB_PG_V6	    DM_PG_V6 /* 6 */
-#define			TCB_PG_V7	    DM_PG_V7 /* 7 */
-
      u_i4	     relstat2;
 #define			 TCB2_EXTENSION	    0x00000001L
 					    /*
@@ -3828,7 +3764,74 @@ NOT_DROPPABLE,STMT_LEVEL_UNIQUE,READONLY,CONCURRENT,PHYS_INCONSIST,\
 LOG_INCONSIST,NO_TBL_RECOV,ALTERED,PARALLEL_IDX,NOT_UNIQUE,PARTITION,\
 GLOBAL_INDEX,PHYSLOCK_CONCUR,40000,80000,100000,200000,400000,ROW_AUDIT,ALARM,\
 SESSION_TEMP,BSWAP"
-     char	     relfree1[8];	    /* Reserved for future use */
+
+     i8              reltups;               /* Approximate number of records
+                                            ** in a table. */
+     i8              relpages;              /* Approximate number of pages
+                                            ** in a table. */
+     i4              relprim;               /* Number of  primary pages 
+                                            ** in a table. */
+     i4              relmain;               /* Number of non-index(isam only)
+                                            ** pages in a table. */          
+     i4              relsave;               /* Unix time to indicate how
+                                            ** long to save table. */
+     DB_TAB_TIMESTAMP
+                     relstamp12;            /* Create or modify Timestamp for 
+                                            ** table. */
+     u_i4            relcmptlvl;	    /* DMF version of table. */
+/* Following added for Jupiter. */
+     i4              relcreate;             /* Date table created. */
+     i4              relqid1;               /* Query id if table is a view. */
+     i4              relqid2;               /* Query id if table is a view. */ 
+     i4              relmoddate;            /* Date table last modified. */
+/* Watch the alignment here. !!! */
+     i2              relidxcount;           /* Number of indices on table. */ 
+     i2              relifill;              /* Modify index fill factor. */
+     i2              reldfill;              /* Modify data fill factor. */
+     i2              rellfill;              /* Modify leaf fill factor. */
+     i4              relmin;                /* Modify min pages value. */
+     i4              relmax;                /* Modify max pages value. */
+     i4		     relpgsize;		    /* page size of this relation */
+     i2              relgwid;	            /* identifier of gateway that owns
+					    ** the table. */
+     i2              relgwother;            /* identifier of gateway that owns
+					    ** the table. */
+     u_i4            relhigh_logkey;        /* Most significant i4 of the 8
+					    ** byte integer which is used to
+					    ** generate logical keys. */
+     u_i4            rellow_logkey;         /* Least significant i4 of the 8
+					    ** byte integer which is used to
+					    ** generate logical keys. */
+     u_i4	     relfhdr;
+     u_i4	     relallocation;
+     u_i4	     relextend;
+     i2		     relcomptype;	    /* Type of compression employed */
+#define 		TCB_C_NONE	    0
+#define 		TCB_C_STANDARD	    1
+#define 		TCB_C_OLD	    2	/* See below */
+#define                 TCB_C_HICOMPRESS    7
+#define 		TCB_C_DEFAULT	    TCB_C_STANDARD /* for normal */
+
+	/* Note, the TCB_C_OLD compression type is not really stored
+	** in relcomptype.  Somewhere in ancient times, the standard
+	** compression algorithm got changed (to include null compression),
+	** but the type code didn't change.  When the server used to
+	** support reading ancient tables, it used TCB_C_OLD internally.
+	** For safety, and to avoid confusion, please treat TCB_C_OLD
+	** as "reserved";  don't reuse it if you add a new compression
+	** type number.  (kschendel Oct 2009)
+	*/
+
+     i2		     relpgtype;		    /* Page format */
+#define			TCB_PG_INVALID      DM_PG_INVALID /* 0 */
+#define                 TCB_PG_V1           DM_PG_V1 /* 1 */
+#define                 TCB_PG_V2           DM_PG_V2 /* 2 */
+#define                 TCB_PG_V3           DM_PG_V3 /* 3 */
+#define                 TCB_PG_V4           DM_PG_V4 /* 4 */
+#define			TCB_PG_V5	    DM_PG_V5 /* 5 */
+#define			TCB_PG_V6	    DM_PG_V6 /* 6 */
+#define			TCB_PG_V7	    DM_PG_V7 /* 7 */
+
      i2              relloccount;	    /* Number of locations. */
      u_i2	     relversion;	    /* metadata version #; incr when column
 					    ** layouts are altered
@@ -3863,7 +3866,19 @@ SESSION_TEMP,BSWAP"
      i2		     relencver;		    /* encryption internal version */
 #define			TCB_ENC_VER_1	1
      u_char	     relenckey[64];	    /* encryption key */
-     char	     relfree[12];	    /* Reserved for future use. */
+/* WARNING:
+** There are i8 fields in this structure and the DBMS contains checks that
+** the combined size of all fields adds to sizeof(DMP_RELATION). The actual
+** size of the structure will be padded to the nearest 8 bytes by the compiler.
+** Therefore, to make this add up, relfree must be sized so that the added size 
+** of all the fields sums to a multiple of 8. If you add fields that are not
+** an even multiple of 8 in size you should adjust relfree appropriately
+** (also see hard-coded definitions in dmmdata.c)
+*/
+     char	     relfree[20];	    /* Reserved for future use. */
+     DB_LOC_NAME     relloc;                /* ingres location of a table. */
+     DB_OWN_NAME     relowner;              /* Table owner. */
+     DB_TAB_NAME     relid;                 /* Table name. */
 
      }		    tcb_rel;                   
 };

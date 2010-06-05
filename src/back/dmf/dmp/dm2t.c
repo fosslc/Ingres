@@ -7831,7 +7831,12 @@ DB_ERROR            *dberr)
 **	    Leave lowest value returned for pages as 1.
 **	25-Sep-2009 (smeke01) b122244
 **	    Take account of those values that are deltas, and can 
-**	    legitimately be negative. 
+**	    legitimately be negative.
+**	10-may-2010 (stephenb)
+**	    reltups and relpages are now i8 on disk (and therefore in the
+**	    DMP_RELATION structure, use new CSadjust_i8counter to peform
+**	    atomic counter adjustment. Also, restrict actual values to
+**	    MAXI4 until we can handle larger numbers.
 */
 
 void
@@ -7854,7 +7859,7 @@ dm2t_current_counts(DMP_TCB *tcb, i4 *reltups, i4 *relpages)
     if ( (tcb->tcb_rel.reltups < 0 ) || ((MAXI4 - tcb->tcb_rel.reltups) < 0))
 	tups_overflow = TRUE;
     else
-	tups = tcb->tcb_rel.reltups;
+	tups = (i4)tcb->tcb_rel.reltups;
 
     /* tcb_tup_adds is a delta and can be negative. Clip result to 0 */
     if ((tcb->tcb_tup_adds > 0 ) && ((MAXI4 - tcb->tcb_tup_adds) < tups))
@@ -7869,7 +7874,7 @@ dm2t_current_counts(DMP_TCB *tcb, i4 *reltups, i4 *relpages)
     if ( (tcb->tcb_rel.relpages < 0) || ((MAXI4 - tcb->tcb_rel.relpages) < 0))
 	pages_overflow = TRUE;
     else
-	pages = tcb->tcb_rel.relpages;
+	pages = (i4)tcb->tcb_rel.relpages;
 
     /* tcb_page_adds is a delta and can be negative. Clip result to 0 whilst we are still accumulating */
     if ((tcb->tcb_page_adds > 0) && ((MAXI4 - tcb->tcb_page_adds) < pages))
@@ -10284,6 +10289,11 @@ DM_MUTEX	**hash_mutex)
 **	    Change the short-lived '10.0' relcmptlvl to DMF_T10_VERSION.
 **	    De-support ancient (6.0) T0 version tables, if hashed or
 **	    compressed.
+**	10-may-2010 (stephenb)
+**	    reltups and relpages are now i8 on disk (and therefore in the
+**	    DMP_RELATION structure, use new CSadjust_i8counter to peform
+**	    atomic counter adjustment. Also, restrict actual values to
+**	    MAXI4 until we can handle larger numbers.
 */
 
 static DB_STATUS
@@ -10527,7 +10537,7 @@ DB_ERROR	*dberr)
 	    build_showonly = FALSE;
 	    if (opening_partition)
 	    {
-		i4 row_delta, page_delta;
+		i8 row_delta, page_delta;
 
 		status = dm2r_get(rel_rcb, (DM_TID *) &pp_ptr->pp_iirel_tid, DM2R_BYTID,
 			(char *) &relation, dberr);
@@ -10552,18 +10562,23 @@ DB_ERROR	*dberr)
 		** be the same as what's in the PP array, unless we're
 		** running multiple servers!
 		*/
-		row_delta = relation.reltups - pp_ptr->pp_reltups;
-		page_delta = relation.relpages - pp_ptr->pp_relpages;
+		/* restrict reltups and relpages to MAXI4 */
+		row_delta = (master_tcb->tcb_rel.reltups + 
+			relation.reltups - pp_ptr->pp_reltups) > MAXI4 ?
+				0 : relation.reltups - pp_ptr->pp_reltups;
+		page_delta = (master_tcb->tcb_rel.relpages +
+			relation.relpages - pp_ptr->pp_relpages) > MAXI4 ?
+				0 :relation.relpages - pp_ptr->pp_relpages;
 		if (row_delta != 0 || page_delta != 0)
 		{
-		    pp_ptr->pp_reltups = relation.reltups;
-		    pp_ptr->pp_relpages = relation.relpages;
+		    pp_ptr->pp_reltups = (i4)relation.reltups;
+		    pp_ptr->pp_relpages = (i4)relation.relpages;
 		    /* The master's base counts are always the sum of the
 		    ** pp-array counts, so adjust them.  (without bothering
 		    ** to mutex the master...)
 		    */
-		    CSadjust_counter(&master_tcb->tcb_rel.reltups, row_delta);
-		    CSadjust_counter(&master_tcb->tcb_rel.relpages, page_delta);
+		    CSadjust_i8counter(&master_tcb->tcb_rel.reltups, row_delta);
+		    CSadjust_i8counter(&master_tcb->tcb_rel.relpages, page_delta);
 		}
 	    }
 	    else
@@ -11083,10 +11098,14 @@ DB_ERROR	*dberr)
 		** The Master reltups/pages is always the sum
 		** of the pp-array reltups/pages.
 		*/
-		base_tcb->tcb_rel.reltups += pp_ptr->pp_reltups;
-		base_tcb->tcb_rel.relpages += pp_ptr->pp_relpages;
+		CSadjust_i8counter(&base_tcb->tcb_rel.reltups, pp_ptr->pp_reltups);
+		CSadjust_i8counter(&base_tcb->tcb_rel.relpages, pp_ptr->pp_relpages);
 	    }
-
+	    /* restrict reltups and relpages to i4 */
+	    if (base_tcb->tcb_rel.relpages > MAXI4)
+		base_tcb->tcb_rel.relpages = MAXI4;
+	    if (base_tcb->tcb_rel.relpages > MAXI4)
+		base_tcb->tcb_rel.relpages = MAXI4;
 	    /* Free partition cache */
 	    if ( pcache != lcache )
 		MEfree((char*)pcache);
@@ -13628,6 +13647,11 @@ DB_ERROR	*dberr)
 **	    In determining whether to invalidate tcb, the comparision of
 **	    tcb relpages to iirel relpages should be '>' rather than '<'.
 **	    Added relpages delta constant check.
+**	10-may-2010 (stephenb)
+**	    reltups and relpages are now i8 on disk (and therefore in the
+**	    DMP_RELATION structure, use new CSadjust_i8counter to peform
+**	    atomic counter adjustment. Also, restrict actual values to
+**	    MAXI4 until we can handle larger numbers.
 */
 static DB_STATUS
 update_rel(
@@ -13748,9 +13772,12 @@ DB_ERROR	    *dberr)
             {
                *InvalidateTCB = TRUE;
             }
-
-	    relrecord.reltups += t->tcb_tup_adds;
-	    relrecord.relpages += t->tcb_page_adds;
+	    
+	    /* restrict relpages and reltups to MAXI4 */
+	    relrecord.reltups = (relrecord.reltups + t->tcb_tup_adds) > MAXI4 ?
+		    MAXI4 : relrecord.reltups + t->tcb_tup_adds;
+	    relrecord.relpages = (relrecord.relpages + t->tcb_page_adds) > MAXI4 ?
+		    MAXI4 : relrecord.relpages + t->tcb_page_adds;
 
 	    t->tcb_rel.reltups = relrecord.reltups;
 	    t->tcb_rel.relpages = relrecord.relpages;
@@ -13759,16 +13786,21 @@ DB_ERROR	    *dberr)
 		/* Updating a partition, roll into pp array too. */
 		master_tcb = t->tcb_pmast_tcb;
 		pp_ptr = &master_tcb->tcb_pp_array[t->tcb_partno];
-		pp_ptr->pp_reltups = relrecord.reltups;
-		pp_ptr->pp_relpages = relrecord.relpages;
+		pp_ptr->pp_reltups = (i4)relrecord.reltups;
+		pp_ptr->pp_relpages = (i4)relrecord.relpages;
 		/* Roll deltas into master, so that master base counts are
 		** always the sum of the pp-array counts, and take this
 		** partition's deltas out of the master deltas.
 		*/
-		CSadjust_counter(&master_tcb->tcb_rel.reltups, t->tcb_tup_adds);
-		CSadjust_counter(&master_tcb->tcb_rel.relpages, t->tcb_page_adds);
 		CSadjust_counter(&master_tcb->tcb_tup_adds, -t->tcb_tup_adds);
 		CSadjust_counter(&master_tcb->tcb_page_adds, -t->tcb_page_adds);
+		/* restrict relpages and reltups to MAXI4 */
+		if (master_tcb->tcb_rel.reltups + t->tcb_tup_adds > MAXI4)
+		    t->tcb_tup_adds = 0;
+		if (master_tcb->tcb_rel.relpages + t->tcb_page_adds > MAXI4)
+		    t->tcb_page_adds = 0;
+		CSadjust_i8counter(&master_tcb->tcb_rel.reltups, t->tcb_tup_adds);
+		CSadjust_i8counter(&master_tcb->tcb_rel.relpages, t->tcb_page_adds);
 	    }
 	    t->tcb_tup_adds = 0;
 	    t->tcb_page_adds = 0;

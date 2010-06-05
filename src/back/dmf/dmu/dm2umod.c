@@ -702,6 +702,8 @@ NO_OPTIM=dr6_us5 i64_aix
 **	    Open tables "no coupon" to avoid BQCB, coupon processing stuff.
 **      29-Apr-2010 (stial01)
 **          dm2u_sysmod iirelation, iirel_idx, iiattribute with compression
+**      10-may-2010 (stephenb)
+**          Cast new i8 reltups to i4.
 **/
 
 /*
@@ -4434,11 +4436,11 @@ DB_ERROR        *dberr)
 	    mct = &tp->tpcb_mct;
 
 	    tp->tpcb_newtup_cnt = 
-		(t->tcb_rel.reltups >= 0) ? t->tcb_rel.reltups : 0;
+		(t->tcb_rel.reltups >= 0) ? (i4)t->tcb_rel.reltups : 0;
 	    mct->mct_relpages = 
-		(t->tcb_rel.relpages > 0) ? t->tcb_rel.relpages : 1;
+		(t->tcb_rel.relpages > 0) ? (i4)t->tcb_rel.relpages : 1;
 	    mct->mct_prim =
-		(t->tcb_rel.relpages > 0) ? t->tcb_rel.relpages : 1;
+		(t->tcb_rel.relpages > 0) ? (i4)t->tcb_rel.relpages : 1;
 
 	    mct->mct_main = 1;
 	    mct->mct_i_fill = 90;
@@ -11827,8 +11829,8 @@ DB_ERROR                *dberr)
 		    break;
             }
 
-            tp->tpcb_newtup_cnt = pt->tcb_rel.reltups;
-            tp->tpcb_mct.mct_relpages = pt->tcb_rel.relpages;
+            tp->tpcb_newtup_cnt = (i4)pt->tcb_rel.reltups;
+            tp->tpcb_mct.mct_relpages = (i4)pt->tcb_rel.relpages;
             tp->tpcb_mct.mct_prim = pt->tcb_rel.relprim;
             tp->tpcb_mct.mct_main = pt->tcb_rel.relmain;
             tp->tpcb_mct.mct_i_fill = pt->tcb_rel.relifill;

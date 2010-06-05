@@ -818,6 +818,8 @@
 **	    Update call to dm2t-destroy-temp-tcb.
 **	14-Apr-2010 (kschendel) SIR 123485
 **	    Use no-coupon access modes.
+**	10-may-2010 (stephenb)
+**	    Cast new i8 reltups back to i4
 */
 DB_STATUS
 dm2u_index(
@@ -1571,7 +1573,7 @@ DM2U_INDEX_CB   *index_cb)
 		break;
 
               default:
-		tp->tpcb_newtup_cnt = bbase_tcb->tcb_rel.reltups;
+		tp->tpcb_newtup_cnt = (i4)bbase_tcb->tcb_rel.reltups;
 		*index_cb->indxcb_tup_info = tp->tpcb_newtup_cnt;
 		break;
 	    } /* end switch */

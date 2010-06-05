@@ -37,8 +37,17 @@
 **	    instead of i4 *err_code.
 **      29-Apr-2010 (stial01)
 **          Added DM_CORE_REL_CNT, DM_CORE_RINDEX_CNT
+**      12-may-2010 (stephenb)
+**          Added DM_RELID_FIELD_NO and DM_RELOWNER_FIELD_NO to avoid
+**          hard-coding those values in dm2d.c
 **/
 
+/*
+** location of relid and relowner fields in iirelation. These values are
+** used to bootsrap iirel_idx when the database is opened in dm2d.c
+*/
+#define DM_RELID_FIELD_NO	51
+#define DM_RELOWNER_FIELD_NO	50
 /*
 ** DM_CORE_REL_CNT The number of core catalogs initialized in dmm routines
 ** DM_CORE_RINDEX_CNT The number of core catalogs initialized in dmm routines

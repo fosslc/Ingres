@@ -7649,6 +7649,10 @@ dm2d_alter_db(
 **		Add support for geospatial.
 **	23-Oct-2009 (kschendel) SIR 122739
 **	    Set up rowaccessor before using the tcb.
+**	11-may-2010 (stephenb)
+**	    relid and relowner are now at columns 51 and 50 respectively
+**	    in iirelation, fix hard-coded values for iirel_idx, replacing
+**	    them with defined values from dmm.h
 */
 static DB_STATUS
 construct_tcb(
@@ -7698,7 +7702,7 @@ construct_tcb(
     */
 
     if (rel->reltid.db_tab_index == 2)
-        t->tcb_ikey_map[0] = 3, t->tcb_ikey_map[1] = 4;
+        t->tcb_ikey_map[0] = DM_RELID_FIELD_NO, t->tcb_ikey_map[1] = DM_RELOWNER_FIELD_NO;
 
     STRUCT_ASSIGN_MACRO (dcb->dcb_root->logical, t->tcb_rel.relloc);
 

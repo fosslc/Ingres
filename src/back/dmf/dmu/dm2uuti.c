@@ -402,6 +402,8 @@
 **          Changes for Long IDs
 **	01-apr-2010 (toumi01) SIR 122403
 **	    Add support for column encryption.
+**	10-may-2010 (stephenb)
+**	    Cast new i8 reltups to i4
 **/
 
 GLOBALREF	DMC_CRYPT	*Dmc_crypt;
@@ -2506,9 +2508,9 @@ DB_ERROR	*dberr)
     ** false assumption.
     */
     if ( m->mx_tpcb_threads )
-	est_recs = t->tcb_rel.reltups / m->mx_tpcb_threads;
+	est_recs = (i4)t->tcb_rel.reltups / m->mx_tpcb_threads;
     else
-	est_recs = t->tcb_rel.reltups / m->mx_tpcb_count;
+	est_recs = (i4)t->tcb_rel.reltups / m->mx_tpcb_count;
 
     if ( status == E_DB_OK )
 	status = dmse_begin(sort_flag, 
@@ -3605,7 +3607,7 @@ SCF_FTX		*ftx)
 	    */
 	    /* Assume an even distribution of tuples to targets */
 	    cut_rcb.cut_num_cells = 
-		m->mx_rcb->rcb_tcb_ptr->tcb_rel.reltups /
+		(i4)m->mx_rcb->rcb_tcb_ptr->tcb_rel.reltups /
 			m->mx_tpcb_threads;
 	    if ( cut_rcb.cut_num_cells > dmf_svcb->svcb_stbsize )
 		cut_rcb.cut_num_cells = dmf_svcb->svcb_stbsize;
