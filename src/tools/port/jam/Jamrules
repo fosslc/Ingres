@@ -1398,6 +1398,8 @@
 #	28-Apr-2010 (hanje04)
 #	    SIR 123609
 #	    Fix actions IIRemRCComments for Windows.
+#	13-May-2010 (bonro01)
+#	    Fix typo in IIUCHARALIAS rule from change 504046.
 #
 #
 #####
@@ -7784,7 +7786,7 @@ if $(VERSHB)
 	LOCATE on $(_t64) = $(INGFILES)$(DFS)ucharmaps ;
 	SEARCH on $(>) = $(SEARCH_SOURCE) ;
 
-	_USETOOL $(_t64) : $(SUFHB)$(DFS)unialscompile$(EXESUF) ;
+	_USETOOL $(_t64) : $(SUFHB)$(DFS)unialscompile$(SUFEXE) ;
 
 	_IIUCHARALIASHB $(_t64) : $(>) ;
 
@@ -8610,7 +8612,7 @@ rule IISLNDLL
 	DEPENDS $(<) : $(_cp) ;
 
 	SEARCH on $(>) = $(SEARCH_SOURCE) ;
-	SEARCH on $(INGRESLIB) = $(INGLIB) ;	###
+	SEARCH on $(INGRESLIB) = $(INGLIB) ;
 	LOCATE on $(<) = $(INGBIN) ;
 	
 }
