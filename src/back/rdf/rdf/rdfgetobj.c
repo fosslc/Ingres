@@ -176,6 +176,8 @@ GLOBALREF DD_CAPS	      Iird_dd_caps;	    /* initial value for DD_CAPS */
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	14-apr-2010 (toumi01) SIR 122403
+**	    Add support for column encryption.
 */
 
 /*{
@@ -5214,6 +5216,8 @@ iidd_columns where table_name =",
 	    col_ptr->att_collID = 0;
 	    col_ptr->att_geomtype = -1;
 	    col_ptr->att_srid = -1;
+	    col_ptr->att_encflags = 0;
+	    col_ptr->att_encwid = 0;
 	    
 	    if (mapped)
 		MEcopy( (PTR)&local_name, sizeof(*local_names), 

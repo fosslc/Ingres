@@ -783,6 +783,8 @@
 **	    Define ADF_ISNULL_MACRO here instead of adfint.h because it's
 **	    very useful (i.e. a replacement for adc_isnull, which does
 **	    the same thing, but slowly).
+**	21-apr-2010 (toumi01) SIR 122403
+**	    Add ADI_O1AES for encryption.
 */
 
 #ifndef ADF_HDR_INCLUDED
@@ -2661,6 +2663,7 @@ typedef struct _ADI_LENSPEC
 #define                 ADI_O1UNORM     60	/* lenspec to unorm 1st op */
 #define			ADI_PATCOMP	61	/* Est pat len */
 #define			ADI_PATCOMPU	62	/* Est unicode pat len */
+#define			ADI_O1AES	63	/* padded for block crypto */
 
 /*
 ** ADI_LEN_INDIRECT is introduced to support the DB_ALL_TYPE and

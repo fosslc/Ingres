@@ -208,6 +208,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**	26-Mar-2010 (toumi01) SIR 122403
+**	    For encryption project add att_encflags, att_encwid.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
 **/
@@ -480,6 +482,8 @@ DB_ERROR	    *dberr)
 	column_array[i].att_key_seq_number = 0;
 	column_array[i].att_geomtype = attr_ptr->attr_geomtype;
 	column_array[i].att_srid = attr_ptr->attr_srid;
+	column_array[i].att_encflags = attr_ptr->attr_encflags;
+	column_array[i].att_encwid = attr_ptr->attr_encwid;
 
 	offset += attr_ptr->attr_size;
     }
@@ -979,6 +983,8 @@ DB_ERROR	    *dberr)
 	column_array[i].att_key_seq_number = attr_ptr->key;
 	column_array[i].att_geomtype = attr_ptr->geomtype;
 	column_array[i].att_srid = attr_ptr->srid;
+	column_array[i].att_encflags = attr_ptr->encflags;
+	column_array[i].att_encwid = attr_ptr->encwid;
     }
 
     /*

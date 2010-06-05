@@ -3477,6 +3477,8 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **      This fixes b122643.
 **      12-feb-2010 (joea)
 **          Back out use of UNKNCONST in inexpr and update_item productions.
+**	12-Feb-2010 (toumi01) SIR 122403
+**	    Support for AES encryption of data at rest.
 **	01-Mar-2010 (kiria01) b123356
 **	    In NOT IN list, ensure that the join id is retained even for the
 **	    non-joining parts of the tree. If this is not the case it can
@@ -4087,6 +4089,8 @@ psl_mk_const_similar(
 */
 %token              DOLLAR
 
+%token		    ENCRYPT
+
 /*
 ** "end transaction" taken as a single token.
 */
@@ -4642,6 +4646,10 @@ psl_mk_const_similar(
 %type	<psl_constype>	ref_action
 %type	<psl_strtype>	constraint_name
 %type	<psl_coltype>	cons_colspec cons_collist cons_col
+
+/* encryption tokens
+ */
+%type	<psl_inttype>	encrypt_spec encrypt_option
 
 %left CROSSJOIN FULLANTI FULLJOIN FULLOUTER INNERJOIN INTERSECTJOIN JOIN LEFTANTI LEFTJOIN LEFTOUTER NATURAL RIGHTANTI RIGHTJOIN RIGHTOUTER
 
@@ -9029,6 +9037,38 @@ identity_kwds:	    AUTOINCREMENT
     }
 ;
 
+encrypt_spec:	    ENCRYPT encrypt_option
+    {
+	$$ = PSS_ENCRYPT | $2;
+    }
+	  |
+    {
+	$$ = 0;
+    }
+;
+
+encrypt_option:     nonkeyword
+    {
+	i4	err_code;
+
+	if (STcasecmp($1, "SALT") == 0)
+	    $$ = PSS_ENCRYPT_SALT;
+	else if (STcasecmp($1, "NOSALT") == 0)
+	    $$ = 0;
+	else
+	{
+	    /* invalid ENCRYPT column-level option */
+	    (VOID) psf_error(9400, 0L, PSF_USERERR, &err_code,
+			&psq_cb->psq_error, 1, STtrmwhite($1), $1);
+	    return (E_DB_ERROR);
+	}
+    }
+	  |
+    {
+	$$ = PSS_ENCRYPT_SALT;
+    }
+;
+
 opt_seqname:	    /* Nothing - system name generated */
     {
 	$$ = 0;
@@ -10210,7 +10250,7 @@ newcolname:	    col_spec
     }
 ;
 
-typedesc:          tname type_qual_list collate
+typedesc:          tname type_qual_list collate encrypt_spec
     {
 	DB_STATUS		status;
 
@@ -10227,14 +10267,14 @@ typedesc:          tname type_qual_list collate
 	}
 
 	status = psl_ct14_typedesc(cb, $1, 0, (i4 *) NULL, $2, 
-			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, $3);
+			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, $3, $4);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return(status);
 	}
 	$$ = $1;
     }
-	|         tname LPAREN intconst_e RPAREN type_qual_list collate
+	|         tname LPAREN intconst_e RPAREN type_qual_list collate encrypt_spec
     {
 	DB_STATUS               status;
 	i4			len = $3;
@@ -10249,7 +10289,7 @@ typedesc:          tname type_qual_list collate
 		return (E_DB_ERROR);
 	}
 	status = psl_ct14_typedesc(cb, $1, 1, &len, $5, 
-			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, $6);
+			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, $6, $7);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return(status);
@@ -10273,7 +10313,7 @@ typedesc:          tname type_qual_list collate
 	parms[0] = $3;
 	parms[1] = $5;
 	status = psl_ct14_typedesc(cb, $1, 2, parms, $7, 
-			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1);
+			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1, 0);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return(status);
@@ -10305,7 +10345,7 @@ typedesc:          tname type_qual_list collate
 	}
 
 	status = psl_ct14_typedesc(cb, value, 0, (i4 *) NULL, $4, 
-			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1);
+			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1, 0);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return(status);
@@ -10338,7 +10378,7 @@ typedesc:          tname type_qual_list collate
 	}
 
 	status = psl_ct14_typedesc(cb, value, 0, (i4 *) NULL, $4, 
-			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1);
+			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1, 0);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return(status);
@@ -10372,7 +10412,7 @@ typedesc:          tname type_qual_list collate
 	}
 
 	status = psl_ct14_typedesc(cb, value, 1, &len, $7,
-			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1);
+			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1, 0);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return(status);
@@ -10405,7 +10445,7 @@ typedesc:          tname type_qual_list collate
 	}
 
 	status = psl_ct14_typedesc(cb, value, 1, &len, $7, 
-			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1);
+			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1, 0);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return(status);
@@ -10530,6 +10570,7 @@ tblwithlist:	    tblwithopt
 tblwithopt:	    twith_name
 	    |	    twith_ix_name
 	    |	    twith_nm_eq_str
+	    |	    twith_nm_eq_hexconst
 		{
 		if (psq_cb->psq_mode == PSQ_CONS)
 		    cb->pss_curcons->pss_cons_flags |= PSS_CONS_OTHER_OPTS;
@@ -10570,6 +10611,26 @@ twith_name:	    nonkeyword EQUAL twith_nkw_kwd
 	{
 	    status = psl_nm_eq_nm(cb, $1, $3, &$Ywith_clauses, psq_cb->psq_mode,
 		&psq_cb->psq_error);
+	}
+	if (DB_FAILURE_MACRO(status))
+	    return(status);
+    }
+;
+
+/* WITH clause: name = hexconst */
+twith_nm_eq_hexconst:	    nonkeyword EQUAL HEXCONST
+    {
+	DB_STATUS		status;
+
+	if (cb->pss_distrib & DB_3_DDB_SESS)
+	{
+	    status = psl_ct15_distr_with(cb, $1, $3->db_t_text,
+			&$Yxlated_qry, FALSE, psq_cb);
+	}
+	else
+	{
+	    status = psl_nm_eq_hexconst(cb, $1, $3->db_t_count, $3->db_t_text,
+		&$Ywith_clauses, psq_cb->psq_mode, &psq_cb->psq_error);
 	}
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
@@ -10625,13 +10686,15 @@ twith_ix_name:  INDEX EQUAL twith_nkw_bts
     }
 ;
 
-/* WITH clause: name = 'thing', only allowed in Star */
+/* WITH clause: name = 'thing', only allowed in Star except for passphrase */
 twith_nm_eq_str:    nonkeyword EQUAL SCONST
     {
 	DB_STATUS		status;
 
-	/* No quotes allowed in non-distributed */
-	if (~cb->pss_distrib & DB_3_DDB_SESS)
+	/* No quotes allowed in non-distributed except for passphrase */
+	if ((~cb->pss_distrib & DB_3_DDB_SESS) &&
+		(CMcmpnocase($1, "passphrase") != 0) &&
+		(CMcmpnocase($1, "new_passphrase") != 0))
 	{
 	    i4	err_code;
 
@@ -10640,8 +10703,12 @@ twith_nm_eq_str:    nonkeyword EQUAL SCONST
 	    return (E_DB_ERROR);
 	}
 
-	status = psl_ct15_distr_with(cb, $1, sconvert($3),
+	if (cb->pss_distrib & DB_3_DDB_SESS)
+	    status = psl_ct15_distr_with(cb, $1, sconvert($3),
 		    		&$Yxlated_qry, TRUE, psq_cb);
+	else
+	    status = psl_nm_eq_nm(cb, $1, sconvert($3), &$Ywith_clauses,
+		psq_cb->psq_mode, &psq_cb->psq_error);
 
         if (DB_FAILURE_MACRO(status))
 	    return (status);

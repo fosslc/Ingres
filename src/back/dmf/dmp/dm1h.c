@@ -34,6 +34,8 @@
 #include    <dmxcb.h>
 #include    <dml.h>
 #include    <dmxe.h>
+#include    <dmftrace.h>
+#include    <dmfcrypt.h>
 
 /**
 **
@@ -310,6 +312,8 @@
 **	    SIR 121619 MVCC: Replace DMPP_PAGE* with DMP_PINFO* where needed.
 **	    New macros to lock/unlock pages, LG_LRI replaces LG_LSN,
 **	    sensitized to crow_locking().
+**	01-apr-2010 (toumi01) SIR 122403
+**	    Add header includes handy for encryption debug tracing.
 */
 
 /*{

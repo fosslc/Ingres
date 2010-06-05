@@ -165,6 +165,8 @@
 **          Fixed calclen for ADI_O1UNIDBL, Added calclen for ADI_O1UNORM
 **	24-Aug-2009 (kschendel) 121804
 **	    Need me.h to satisfy gcc 4.3.
+**	12-Mar-2010 (toumi01) SIR 122403
+**	    Added ADI_O1AES for encryption.
 **/
 
 /*
@@ -2313,6 +2315,14 @@ DB_DATA_VALUE      *adi_dvr;
            }
            break;
        }
+	case ADI_O1AES:
+	    /* 16-byte multiple for block encryption + varbyte length */
+	    rprec = prec[0];
+	    if (len[0] % 16)
+		rlen = (16*((len[0]/16)+1))+sizeof(u_i2);
+	    else
+		rlen = len[0]+sizeof(u_i2);
+	    break;
 
 	default:
 	    /* invalid result length specification */

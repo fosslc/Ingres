@@ -222,6 +222,8 @@
 **	    SIR 120874: dmxe_? functions converted to DB_ERROR *
 **	08-Dec-2008 (jonj)
 **	    SIR 120874: dma_? auditing functions converted to DB_ERROR *
+**	01-apr-2010 (toumi01) SIR 122403
+**	    Add support for column encryption.
 **/
 
 /*{
@@ -937,6 +939,11 @@ dmu_modify(DMU_CB    *dmu_cb)
 	    case DMU_CLUSTERED:
 		mcb->mcb_clustered = chr[i].char_value == DMU_C_ON;
 		continue;
+
+	    case DMU_ENCRYPT:
+		got_action = TRUE;
+		mcb->mcb_mod_options2 |= DM2U_2_ENCRYPT;
+	        continue;
 
 	    default:
 		SETDBERR(&dmu->error, i, E_DM000D_BAD_CHAR_ID);

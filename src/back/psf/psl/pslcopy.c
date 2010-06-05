@@ -326,6 +326,18 @@
 **	    Batch procesing, new parameter for psl_proc_func
 **	19-Mar-2010 (kschendel) SIR 123448
 **	    Tmptuple should be allocated by qef, not psf.
+**	2-Apr-2010 (toumi01) SIR 122403
+**	    For the encryption project teach an old dog new tricks:
+**	    a row can have different values for physical length e.g.
+**		qe_copy->qeu_tup_physical
+**		sess_cb->pss_resrng->pss_tabdesc->tbl_width
+**	    vs. logical length e.g.
+**		qe_copy->qeu_tup_length
+**		sess_cb->pss_resrng->pss_tabdesc->tbl_data_width
+**	    This makes things clearer in displaying table info in HELP
+**	    TABLE etc. but is also essential for things like MODIFY
+**	    TABLE where the CUT records for encrypted table rows may be
+**	    much shorter than the rows as stored in DMF.
 */
 DB_STATUS
 psl_cp1_copy(
@@ -498,8 +510,21 @@ psl_cp1_copy(
 
     /*
     ** Fill in some QEU_COPY fields that will be needed to process the COPY.
+    **
+    ** Note a change here for encryption support: the answer to the question
+    ** "How wide is that relation?" is not so easy anymore, because DMF has
+    ** to know about the physical width with encryption expansion and the
+    ** front ends (mostly) care about the logical data width. The COPY code
+    ** that pulls from tuples and stores to CUT and thence to files must
+    ** say one thing to DMF and other to CUT.
     */
-    qe_copy->qeu_tup_length = sess_cb->pss_resrng->pss_tabdesc->tbl_width;
+    qe_copy->qeu_tup_length = sess_cb->pss_resrng->pss_tabdesc->tbl_data_width;
+    qe_copy->qeu_tup_physical = sess_cb->pss_resrng->pss_tabdesc->tbl_width;
+if (qe_copy->qeu_tup_length == 0)
+{
+TRdisplay("CRYPT_FIXME in psl_cp1_copy qeu_tup_length=%d so reset to qeu_tup_physical=%d\n",qe_copy->qeu_tup_length,qe_copy->qeu_tup_physical);
+qe_copy->qeu_tup_length = qe_copy->qeu_tup_physical; 
+}
     qe_copy->qeu_ext_length = qe_copy->qeu_tup_length; 
     qe_copy->qeu_dmscb = NULL;		/* Filled in below if needed */
 

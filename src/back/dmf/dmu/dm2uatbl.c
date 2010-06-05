@@ -145,6 +145,9 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**	26-Mar-2010 (toumi01) SIR 122403
+**	    Add new width fields for encryption.
+**	    Disable ALTER TABLE for encrypted tables for now.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
 **/
@@ -460,6 +463,14 @@ DB_ERROR	*dberr)
         t = r->rcb_tcb_ptr;
         r->rcb_xcb_ptr = xcb;
 
+	/* Can't alter an encrypted table (yet) CRYPT_FIXME */
+	if ( t->tcb_rel.relencflags & TCB_ENCRYPTED )
+        {
+	   SETDBERR(dberr, 0, E_DM010A_ERROR_ALTERING_TABLE);
+	   status = E_DB_ERROR;
+           break;
+        }
+
         journal = ((t->tcb_rel.relstat & TCB_JOURNAL) != 0);
         syscat = ((t->tcb_rel.relstat & (TCB_CATALOG | TCB_EXTCATALOG)) != 0);
         gateway = ((t->tcb_rel.relstat & TCB_GATEWAY) != 0);
@@ -709,6 +720,8 @@ DB_ERROR	*dberr)
                       attrrecord.attcollID = attr_entry[0]->attr_collID;
                       attrrecord.attgeomtype = attr_entry[0]->attr_geomtype;
                       attrrecord.attsrid = attr_entry[0]->attr_srid;
+                      attrrecord.attencflags = attr_entry[0]->attr_encflags;
+                      attrrecord.attencwid = attr_entry[0]->attr_encwid;
                       MEfill(sizeof(attrrecord.attfree), 0,
                              (PTR)&attrrecord.attfree);
 
@@ -1081,6 +1094,8 @@ DB_ERROR	*dberr)
 					attr_entry[0]->attr_collID;
                             attrrecord_tmp.attgeomtype = attr_entry[0]->attr_geomtype;
                             attrrecord_tmp.attsrid = attr_entry[0]->attr_srid;
+                            attrrecord_tmp.attencflags = attr_entry[0]->attr_encflags;
+                            attrrecord_tmp.attencwid = attr_entry[0]->attr_encwid;
                             MEfill(sizeof(attrrecord_tmp.attfree), 0, 
 					(PTR)&attrrecord_tmp.attfree);
 
@@ -2172,6 +2187,8 @@ pt_adddrop_adjust(
 
 	relrecord.reltotwid = relrecp->reltotwid;
 	relrecord.relwid = relrecp->relwid;
+	relrecord.reltotdatawid = relrecp->reltotwid;
+	relrecord.reldatawid = relrecp->relwid;
 	relrecord.relmoddate = relrecp->relmoddate;
 	relrecord.relversion = relrecp->relversion;
 	relrecord.relidxcount = relrecp->relidxcount;

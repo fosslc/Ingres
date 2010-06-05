@@ -11,6 +11,8 @@
 #	    Build dm1p.c with NOOPTIM on Tru64 (axp_osf) platform.
 #       20-Oct-2009 (hweho01)
 #           Remove the IINOOPTIM entries that were generated incorrectly.
+#	14-feb-2010 (toumi01)
+#	    Add dm1e.c.
 #
 
 SubDir ING_SRC back dmf dmp ;
@@ -36,7 +38,7 @@ IILIBRARY DMFLIB : dmrfpsup.c dmckp.c dm2t.c dm2rep.c dm2r.c
 	dm1i.c dm1hbuild.c dm1h.c dm1cnv2.c dm1cn.c dm1cidx.c
 	dm1ccmpn.c dm1ccmph.c dm1c.c dm1bmerge.c dm1bindex.c
 	dm1bbuild.c dm1b.c dm0s.c dm0pmo.c dm0p.c dm0m.c dm0l.c
-	dm0j.c dm0d.c dm0c.c ;
+	dm0j.c dm0d.c dm0c.c dm1e.c ;
 
 IILIBRARY IMPDMFLIBDATA : dmpdata.c dmplkup.roc ;
 

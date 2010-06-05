@@ -80,6 +80,8 @@ EXEC SQL INCLUDE <xf.sh>;
 **	    Need ui.h to satisfy gcc 4.3.
 **	13-Jan-2010 (wanfr01) Bug 123139
 **	    Include cv.h for function defintions
+**	21-Apr-2010 (toumi01) SIR 122403
+**	    Add With_r1000_catalogs for encryption support.
 **/
 
 
@@ -208,6 +210,10 @@ xfcapset()
     if (STcompare(IIUIscl_StdCatLevel(), UI_LEVEL_930) >= 0)
     {
 	With_r930_catalogs = TRUE;
+    }
+    if (STcompare(IIUIscl_StdCatLevel(), UI_LEVEL_1000) >= 0)
+    {
+	With_r1000_catalogs = TRUE;
     }
 }
 

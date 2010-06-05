@@ -512,6 +512,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Prototype changes for dmpp_get/put/delete
+**	26-Mar-2010 (toumi01) SIR 122403
+**	    For encryption project add attr_encflags, attr_encwid.
 **	12-Apr-2010 (kschendel) SIR 123485
 **	    Change short-term part of DMF coupon to be baseid, attid, flags.
 **	    Implement the DMPE_BQCB (blob query cb) to communicate context
@@ -5415,6 +5417,8 @@ dmpe_create_extension(
 	att_ents[0].attr_geomtype = -1;
 	att_ents[0].attr_srid = -1;
 	att_ents[0].attr_flags_mask = DMU_F_NDEFAULT;
+	att_ents[0].attr_encflags = 0;
+	att_ents[0].attr_encwid = 0;
 
 	STRUCT_ASSIGN_MACRO(att_ents[0].attr_name, key_ents[0].key_attr_name);
 	key_ents[0].key_order = DMU_ASCENDING;	/* Useless! */
@@ -5428,6 +5432,8 @@ dmpe_create_extension(
 	att_ents[1].attr_geomtype = -1;
 	att_ents[1].attr_srid = -1;
 	att_ents[1].attr_flags_mask = DMU_F_NDEFAULT;
+	att_ents[1].attr_encflags = 0;
+	att_ents[1].attr_encwid = 0;
 
 	STRUCT_ASSIGN_MACRO(att_ents[1].attr_name, key_ents[1].key_attr_name);
 	key_ents[1].key_order = DMU_ASCENDING;	/* Useless! */
@@ -5441,6 +5447,8 @@ dmpe_create_extension(
 	att_ents[2].attr_geomtype = -1;
 	att_ents[2].attr_srid = -1;
 	att_ents[2].attr_flags_mask = DMU_F_NDEFAULT;
+	att_ents[2].attr_encflags = 0;
+	att_ents[2].attr_encwid = 0;
 
 	STRUCT_ASSIGN_MACRO(att_ents[2].attr_name, key_ents[2].key_attr_name);
 	key_ents[2].key_order = DMU_ASCENDING;	/* Useless! */
@@ -5454,6 +5462,8 @@ dmpe_create_extension(
 	att_ents[3].attr_geomtype = -1;
 	att_ents[3].attr_srid = -1;
 	att_ents[3].attr_flags_mask = DMU_F_NDEFAULT;
+	att_ents[3].attr_encflags = 0;
+	att_ents[3].attr_encwid = 0;
 
 	MEmove(9, "per_value", ' ', sizeof(att_ents[4].attr_name),
 	       (PTR) &att_ents[4].attr_name);
@@ -5464,12 +5474,16 @@ dmpe_create_extension(
 	att_ents[4].attr_geomtype = -1;
 	att_ents[4].attr_srid = -1;
 	att_ents[4].attr_flags_mask = DMU_F_NDEFAULT;
+	att_ents[4].attr_encflags = 0;
+	att_ents[4].attr_encwid = 0;
 
 	dmucb->dmu_part_def = NULL;
 	dmucb->dmu_ppchar_array.data_address = NULL;
 	dmucb->dmu_ppchar_array.data_in_size = 0;
 	dmucb->dmu_partno = 0;
 	dmucb->dmu_nphys_parts = 0;
+	dmucb->dmu_enc_flags = 0;
+	dmucb->dmu_enc_flags2 = 0;
 
  	status = dmu_create(dmucb);
 	if (status)
@@ -5854,6 +5868,8 @@ dmpe_temp( ADP_POP_CB         *pop_cb, i4 att_id, u_i4 *new_temp_etab)
 	att_ents[0].attr_geomtype = -1;
 	att_ents[0].attr_srid = -1;
 	att_ents[0].attr_flags_mask = 0;
+	att_ents[0].attr_encflags = 0;
+	att_ents[0].attr_encwid = 0;
 
 	STRUCT_ASSIGN_MACRO(att_ents[0].attr_name, key_ents[0].key_attr_name);
 	key_ents[0].key_order = DMU_ASCENDING;
@@ -5868,6 +5884,8 @@ dmpe_temp( ADP_POP_CB         *pop_cb, i4 att_id, u_i4 *new_temp_etab)
 	att_ents[1].attr_geomtype = -1;
 	att_ents[1].attr_srid = -1;
 	att_ents[1].attr_flags_mask = 0;
+	att_ents[1].attr_encflags = 0;
+	att_ents[1].attr_encwid = 0;
 
 	STRUCT_ASSIGN_MACRO(att_ents[1].attr_name, key_ents[1].key_attr_name);
 	key_ents[1].key_order = DMU_ASCENDING;
@@ -5882,6 +5900,8 @@ dmpe_temp( ADP_POP_CB         *pop_cb, i4 att_id, u_i4 *new_temp_etab)
 	att_ents[2].attr_geomtype = -1;
 	att_ents[2].attr_srid = -1;
 	att_ents[2].attr_flags_mask = 0;
+	att_ents[2].attr_encflags = 0;
+	att_ents[2].attr_encwid = 0;
 
 	STRUCT_ASSIGN_MACRO(att_ents[2].attr_name, key_ents[2].key_attr_name);
 	key_ents[2].key_order = DMU_ASCENDING;
@@ -5896,6 +5916,8 @@ dmpe_temp( ADP_POP_CB         *pop_cb, i4 att_id, u_i4 *new_temp_etab)
 	att_ents[3].attr_geomtype = -1;
 	att_ents[3].attr_srid = -1;
 	att_ents[3].attr_flags_mask = 0;
+	att_ents[3].attr_encflags = 0;
+	att_ents[3].attr_encwid = 0;
 
 	MEmove(9, "per_value", ' ',
 		sizeof(att_ents[4].attr_name),
@@ -5907,6 +5929,8 @@ dmpe_temp( ADP_POP_CB         *pop_cb, i4 att_id, u_i4 *new_temp_etab)
 	att_ents[4].attr_geomtype = -1;
 	att_ents[4].attr_srid = -1;
 	att_ents[4].attr_flags_mask = 0;
+	att_ents[4].attr_encflags = 0;
+	att_ents[4].attr_encwid = 0;
 
 	status = dmt_create_temp(dmtcb);
 	if (status)
@@ -5935,6 +5959,8 @@ dmpe_temp( ADP_POP_CB         *pop_cb, i4 att_id, u_i4 *new_temp_etab)
 	    dmucb.dmu_nphys_parts = 0;
 	    dmucb.dmu_ppchar_array.data_address = 0;
 	    dmucb.dmu_ppchar_array.data_in_size = 0;
+	    dmucb.dmu_enc_flags = 0;
+	    dmucb.dmu_enc_flags2 = 0;
 
 	    char_entry[0].char_id = DMU_STRUCTURE;
 	    char_entry[0].char_value = dmf_svcb->svcb_blob_etab_struct;

@@ -29,6 +29,8 @@
 **	    Added identity (for identity columns).
 **      28-jan-2009 (stial01)
 **          Use DB_MAXNAME for db objects, DB_IITYPE_LEN for iitypename() result
+**	25-mar-2010 (toumi01) SIR 122403
+**	    Add encrypt_width and encrypt_salt.
 */
 
 EXEC SQL BEGIN DECLARE SECTION;
@@ -58,6 +60,9 @@ typedef struct
 	i2      adf_type;
 	i2      intern_prec;
 	i4 intern_length;
+	/* column encryption fields */
+	i4	encrypt_width;
+	char	encrypt_salt[2];
 } QR_COL_INFO;
 
 EXEC SQL END DECLARE SECTION;

@@ -2197,6 +2197,8 @@ psl_ct3_crwith(
 **	    Use structure name lookup utility.
 **	13-Apr-2006 (jenjo02)
 **	    Add special structure "clustered" (Btree under the covers).
+**	22-Mar-2010 (toumi01) SIR 122403
+**	    Process WITH ENCRYPTION=<spec>, PASSPHRASE=<secret>
 */
 DB_STATUS
 psl_nm_eq_nm(
@@ -2527,6 +2529,289 @@ psl_nm_eq_nm(
 	sess_cb->pss_curcons->pss_cons_flags |= PSS_CONS_IXNAME;
 	PSS_WC_SET_MACRO(PSS_WC_CONS_INDEX, with_clauses);
     }  /* end if index */
+    else 
+	if (STcasecmp(name, ERx("encryption")) == 0)
+    {
+	qeu_cb = (QEU_CB *) sess_cb->pss_object;
+	dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
+	if (STcasecmp(value, ERx("aes128")) == 0)
+	    dmu_cb->dmu_enc_flags |= (DMU_ENCRYPTED|DMU_AES128);
+	else
+	if (STcasecmp(value, ERx("aes192")) == 0)
+	    dmu_cb->dmu_enc_flags |= (DMU_ENCRYPTED|DMU_AES192);
+	else
+	if (STcasecmp(value, ERx("aes256")) == 0)
+	    dmu_cb->dmu_enc_flags |= (DMU_ENCRYPTED|DMU_AES256);
+	else
+	{
+	    /* invalid ENCRYPTION= type */
+	    (void) psf_error(9401L, 0L, PSF_USERERR, &err_code, err_blk, 1,
+			     (i4) STlength(value), value);
+	    return (E_DB_ERROR);
+	}
+    }  /* end if encryption */
+    else 
+	if (STcasecmp(name, ERx("passphrase")) == 0)
+    {
+	int i;
+	char *p;
+	char *pend;
+	u_char *pass_addr[4];
+	int	pass_offset[4];
+	int	pass, pass_start, pass_end;
+
+	qeu_cb = (QEU_CB *) sess_cb->pss_object;
+	dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
+
+	/* This is so fancy you just know it's ugly deep down. For CREATE
+	** we know what type of AES encryption we are dealing with, but
+	** with MODIFY we won't know until we access the relation record
+	** for the table, so prep all AES flavors from the user string.
+	*/
+	if (qmode == PSQ_CREATE)
+	{
+	    pass_addr[0] = dmu_cb->dmu_enc_passphrase;
+	    if (dmu_cb->dmu_enc_flags & DMU_AES128)
+		pass_offset[0] = AES_128_BYTES;
+	    else
+	    if (dmu_cb->dmu_enc_flags & DMU_AES192)
+		pass_offset[0] = AES_192_BYTES;
+	    else
+	    if (dmu_cb->dmu_enc_flags & DMU_AES256)
+		pass_offset[0] = AES_256_BYTES;
+	    else
+	    {
+		/* ENCRYPTION type has not been specified */
+		(void) psf_error(9402L, 0L, PSF_USERERR, &err_code, err_blk, 0);
+		return (E_DB_ERROR);
+	    }
+	    pass_start = 0;
+	    pass_end = 1;
+	}
+	else
+	{
+	    pass_addr[1] = dmu_cb->dmu_enc_old128pass;
+	    pass_addr[2] = dmu_cb->dmu_enc_old192pass;
+	    pass_addr[3] = dmu_cb->dmu_enc_old256pass;
+	    pass_offset[1] = AES_128_BYTES;
+	    pass_offset[2] = AES_192_BYTES;
+	    pass_offset[3] = AES_256_BYTES;
+	    pass_start = 1;
+	    pass_end = 4;
+	}
+
+	for ( pass = pass_start ; pass < pass_end ; pass++ )
+	{
+	    p = pend = pass_addr[pass];
+	    pend += pass_offset[pass];
+	    MEfill(pass_offset[pass],0,(PTR)pass_addr[pass]);
+	    for ( i = 0; value[i] ; i++ )
+	    {
+		*p += value[i];
+		p++;
+		if (p == pend)
+		    p = pass_addr[pass];
+	    }
+	    if (qmode == PSQ_MODIFY && i == 0)
+	    {
+		/* NULL key turns off encryption */
+		dmu_cb->dmu_enc_flags2 |= DMU_NULLPASS;
+	    }
+	    else if ( i < ENCRYPT_PASSPHRASE_MINIMUM )
+	    {
+		/* passphrase is too short */
+	        (void) psf_error(9403L, 0L, PSF_USERERR, &err_code, err_blk, 0);
+		return (E_DB_ERROR);
+	    }
+	}
+
+    }  /* end if passphrase */
+    else 
+	if (STcasecmp(name, ERx("new_passphrase")) == 0)
+    {
+	int i;
+	char *p;
+	char *pend;
+	u_char *pass_addr[3];
+	int	pass_offset[3];
+	int	pass, pass_start, pass_end;
+
+	qeu_cb = (QEU_CB *) sess_cb->pss_object;
+	dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
+
+	if (dmu_cb->dmu_enc_flags2 & DMU_NULLPASS)
+	{
+	    /* invalid passphrase change; old passphrase entered as '' */
+            (void) psf_error(9404L, 0L, PSF_USERERR, &err_code, err_blk, 0);
+	    return (E_DB_ERROR);
+	}
+
+	/* remember we are modifying the passphrase */
+	dmu_cb->dmu_enc_flags2 |= DMU_NEWPASS;
+
+	if (qmode == PSQ_CREATE)
+	{
+	    /* NEW_PASSPHRASE= is only for MODIFY */
+            (void) psf_error(9405L, 0L, PSF_USERERR, &err_code, err_blk, 0);
+	    return (E_DB_ERROR);
+	}
+	else
+	{
+	    /* For MODIFY prep all AES flavors from the user string. */
+	    pass_addr[0] = dmu_cb->dmu_enc_new128pass;
+	    pass_addr[1] = dmu_cb->dmu_enc_new192pass;
+	    pass_addr[2] = dmu_cb->dmu_enc_new256pass;
+	    pass_offset[0] = AES_128_BYTES;
+	    pass_offset[1] = AES_192_BYTES;
+	    pass_offset[2] = AES_256_BYTES;
+	    pass_start = 0;
+	    pass_end = 3;
+	}
+
+	for ( pass = pass_start ; pass < pass_end ; pass++ )
+	{
+	    p = pend = pass_addr[pass];
+	    pend += pass_offset[pass];
+	    MEfill(pass_offset[pass],0,(PTR)pass_addr[pass]);
+	    for ( i = 0; value[i] ; i++ )
+	    {
+		*p += value[i];
+		p++;
+		if (p == pend)
+		    p = pass_addr[pass];
+	    }
+	    if ( i < ENCRYPT_PASSPHRASE_MINIMUM )
+	    {
+		/* passphrase is too short */
+	        (void) psf_error(9403L, 0L, PSF_USERERR, &err_code, err_blk, 0);
+		return (E_DB_ERROR);
+	    }
+	}
+
+    }  /* end if new_passphrase */
+    else 
+	if (   (qmode == PSQ_RETINTO || qmode == PSQ_CREATE)
+	     && sess_cb->pss_lang == DB_SQL
+	     && psl_gw_option(name))
+    {
+	/*
+	** if processing CREATE TABLE [AS SELECT], before declaring this a
+	** syntax error, check if it looks like a gateway option; gateway option
+	** starts with an alphabetic char, followed by 2 alphanumeric chars
+	** followed by an underscore; if it looks like a gateway-specific
+	** option, produce an informational message
+	*/
+	(VOID) psf_error(I_PS1002_CRTTBL_WITHOPT_IGNRD, 0L, PSF_USERERR,
+	    &err_code, err_blk, 1, (i4) STlength(name), name);
+    }
+    else
+    {
+	/* give different error for MODIFY */
+	if (qmode == PSQ_MODIFY)
+	    (void) psf_error(5558L, 0L, PSF_USERERR, &err_code, err_blk, 1,
+			     (i4) STlength(name), name);
+	else 
+	    (void) psf_error(5340L, 0L, PSF_USERERR, &err_code, err_blk, 2,
+			     qry_len, qry, (i4) STtrmwhite(name), name);
+	return (E_DB_ERROR);    
+    }
+
+    return (E_DB_OK);
+
+}  /* end psl_nm_eq_nm */
+
+/*
+** Name: psl_nm_eq_hexconst - semantic actions for processing a WITH clause
+**			      of form NAME=HEXCONST;
+**
+** Description:
+**	This routine performs the semantic actions for WITH clauses of the
+**	general form NAME = HEXCONST.  At creation time for this function
+**	the only production that should get here is AESKEY=.
+**
+** Inputs:
+**	sess_cb		    ptr to a PSF session CB
+**	    pss_lang	    query language
+**	name		    NAME given on the LHS 
+**	value		    value given on the RHS
+**	with_clauses	    mask representing WITH options specified so far
+**	qmode		    query mode
+**	    PSQ_RETINTO	    CREATE TABLE AS SELECT
+**	    PSQ_CREATE	    CREATE TABLE
+**	    PSQ_CONS	    ANSI constraint definition
+**	    PSQ_DGTT	    DECLARE GLOBAL TEMPORARY TABLE
+**	    PSQ_DGTT_AS_SELECT
+**			    DECLARE GLOBAL TEMPORARY TABLE AS SELECT
+**	    PSQ_INDEX	    [CREATE] INDEX
+**	    PSQ_MODIFY	    MODIFY
+**
+** Outputs:
+**	with_clauses	    Updated to indicate the newly specified WITH option.
+**	err_blk		    will be filled in if an error occurs
+**
+** Returns:
+**	E_DB_{OK, ERROR}
+**
+** History:
+**	12-apr-1020 (toumi01)
+**	    Created.
+*/
+DB_STATUS
+psl_nm_eq_hexconst(
+	PSS_SESBLK	*sess_cb,
+	char		*name,
+	u_i2		hexlen,
+	char		*hexvalue,
+	PSS_WITH_CLAUSE *with_clauses,
+	i4		qmode,
+	DB_ERROR	*err_blk)
+{
+    i4	    err_code;
+    char    	    qry[PSL_MAX_COMM_STRING];
+    i4	    qry_len;
+    QEU_CB	    *qeu_cb;
+    DMU_CB	    *dmu_cb;
+    bool	in_partition_def;
+
+    in_partition_def = (sess_cb->pss_stmt_flags & PSS_PARTITION_DEF) != 0;
+
+    psl_command_string(qmode, sess_cb->pss_lang, qry, &qry_len);
+
+    /* At present, there aren't any name = name options allowed inside a
+    ** partition definition, so trap it off right away:
+    */
+    if (in_partition_def)
+    {
+	(void) psf_error(E_US1931_6449_PARTITION_BADOPT, 0, PSF_USERERR,
+		&err_code, err_blk, 2,
+		qry_len, qry, STlength(name), name);
+	return (E_DB_ERROR);
+    }
+
+    if (STcasecmp(name, ERx("aeskey")) == 0)
+    {
+	int i;
+	char *p;
+	char *pend;
+
+	qeu_cb = (QEU_CB *) sess_cb->pss_object;
+	dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
+	if (((dmu_cb->dmu_enc_flags & DMU_AES128) && (hexlen == 16)) ||
+	    ((dmu_cb->dmu_enc_flags & DMU_AES192) && (hexlen == 24)) ||
+	    ((dmu_cb->dmu_enc_flags & DMU_AES256) && (hexlen == 32)))
+	{
+	    MEcopy((PTR)hexvalue, hexlen, (PTR)dmu_cb->dmu_enc_aeskey);
+	    dmu_cb->dmu_enc_aeskeylen = hexlen;
+	    dmu_cb->dmu_enc_flags2 |= DMU_AESKEY;
+	}
+	else
+	{
+	    /* AESKEY= hex value invalid for encryption type */
+	    (void) psf_error(9406L, 0L, PSF_USERERR, &err_code, err_blk, 1,
+			     sizeof(hexlen), &hexlen);
+	    return (E_DB_ERROR);
+	}
+    }  /* end if aeskey */
     else 
 	if (   (qmode == PSQ_RETINTO || qmode == PSQ_CREATE)
 	     && sess_cb->pss_lang == DB_SQL
@@ -6671,6 +6956,8 @@ psl_ct13_newcolname(
 **      16-Feb-2010 (hanal04) Bug 123292
 **          Initialise attr_defaultTuple to avoid spurious values being
 **          picked up.
+**	22-Mar-2010 (toumi01) SIR 122403
+**	    Save encryption settings.
 */
 DB_STATUS
 psl_ct14_typedesc(
@@ -6683,7 +6970,8 @@ psl_ct14_typedesc(
 	DB_TEXT_STRING	*default_text,
 	DB_IISEQUENCE	*idseqp,
 	PSQ_CB		*psq_cb,
-	DB_COLL_ID	collationID)
+	DB_COLL_ID	collationID,
+	i4		encrypt_spec)
 {
     ADF_CB		*adf_scb = (ADF_CB*) sess_cb->pss_adfcb;
     DB_STATUS	        status;
@@ -6697,6 +6985,7 @@ psl_ct14_typedesc(
     i4		err_code;
     i4		        colno;
     i4                  bits;
+    i4			enc_modulo;
     bool		nulldefaultproblem = FALSE;
     bool		identity = FALSE;
 
@@ -6870,6 +7159,35 @@ psl_ct14_typedesc(
      */
     cur_attr->attr_geomtype = -1;
     cur_attr->attr_srid = -1;
+
+    /* store attribute encryption flags and length
+    */
+    cur_attr->attr_encflags = 0;
+    cur_attr->attr_encwid = 0;
+    if (encrypt_spec & PSS_ENCRYPT)
+    {
+	/* peripheral data types are not valid for encryption */
+	if ((bits & AD_PERIPHERAL) != 0)
+	{
+	    _VOID_ psf_error(E_PS0C85_ENCRYPT_INVALID, 0L, PSF_USERERR,
+		&err_code, &psq_cb->psq_error, 1,
+		psf_trmwhite(DB_ATT_MAXNAME, (char *) &cur_attr->attr_name),
+		&cur_attr->attr_name);
+	    return (E_DB_ERROR);
+	}
+
+	cur_attr->attr_encflags |= ATT_ENCRYPT;
+	cur_attr->attr_encwid = cur_attr->attr_size;
+	if (encrypt_spec & PSS_ENCRYPT_SALT)
+	{
+	    cur_attr->attr_encflags |= ATT_ENCRYPT_SALT;
+	    cur_attr->attr_encwid += AES_BLOCK;
+	}
+	cur_attr->attr_encflags |= ATT_ENCRYPT_CRC;
+	cur_attr->attr_encwid += CRC_BYTES;
+	if (enc_modulo = cur_attr->attr_encwid % AES_BLOCK)
+	    cur_attr->attr_encwid += AES_BLOCK - enc_modulo;
+    }
 
     /* record that column is "known not nullable" (a SQL92 notion);
     ** will be used for future SQL92 INFO_SCHEMA catalogs

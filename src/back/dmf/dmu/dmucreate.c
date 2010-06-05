@@ -252,6 +252,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs (remove temp code added 24-aug-2009)
+**	01-apr-2010 (toumi01) SIR 122403
+**	    Add support for column encryption.
 **/
 
 /*
@@ -692,6 +694,7 @@ dmu_create(DMU_CB        *dmu_cb)
     i4         	    bad_name, bad_attr;
     i4         	    db_lockmode;
     i4         	    ntab_width;
+    i4         	    ntab_data_width;
     DB_DATA_VALUE   adc_dv1;
     DB_STATUS       s;
     ADF_CB          adf_cb;
@@ -1013,7 +1016,7 @@ dmu_create(DMU_CB        *dmu_cb)
 	{
 	    attr_entry = (DMF_ATTR_ENTRY**) dmu->dmu_attr_array.ptr_address;
 	    attr_count = dmu->dmu_attr_array.ptr_in_count;
-	    ntab_width = 0;
+	    ntab_width = ntab_data_width = 0;
 	    for (i = 0; i < attr_count; i++)
 	    {
 		bad_attr = FALSE;
@@ -1062,7 +1065,10 @@ dmu_create(DMU_CB        *dmu_cb)
 	            bad_attr = TRUE;
 		    break;
     		}	    	
-		ntab_width += attr_entry[i]->attr_size;
+		ntab_width +=
+			attr_entry[i]->attr_encwid > 0 ?
+			attr_entry[i]->attr_encwid : attr_entry[i]->attr_size;
+		ntab_data_width += attr_entry[i]->attr_size;
 		s = adi_dtinfo(&adf_cb, attr_entry[i]->attr_type, &bits);
 		if (s != E_DB_OK)
 		{
@@ -1358,7 +1364,8 @@ dmu_create(DMU_CB        *dmu_cb)
 	status = dm2u_create(odcb->odcb_dcb_ptr, xcb, &dmu->dmu_table_name, 
 			&dmu->dmu_owner, location, loc_count, 
 			&dmu->dmu_tbl_id, &dmu->dmu_idx_id, index, view, 
-			relstat, relstat2, structure, ntab_width, attr_count, 
+			relstat, relstat2, structure, ntab_width,
+			ntab_data_width, attr_count, 
 			attr_entry, db_lockmode,
 			allocation, extend, page_type, page_size,
 			&dmu->dmu_qry_id, &dmu->dmu_gwattr_array,
@@ -1367,7 +1374,8 @@ dmu_create(DMU_CB        *dmu_cb)
 			(DMU_FROM_PATH_ENTRY *)dmu->dmu_olocation.data_address,
 			&dmu->dmu_char_array,
 			0, 0, (f8 *)NULL, tbl_pri,
-			dmu->dmu_part_def, dmu->dmu_partno, &dmu->error);
+			dmu->dmu_part_def, dmu->dmu_partno, dmu,
+			&dmu->error);
 
     if (dmu->error.err_code > E_DM_INTERNAL)
     {

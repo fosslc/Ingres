@@ -722,6 +722,8 @@ typedef struct _DMC_CB
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Added DMC_C_MVCC lock level, DMC_C_PAGETYPE_V6
 **	    DMC_C_PAGETYPE_V7
+**	13-Apr-2010 (toumi01) SIR 122403
+**	    Add DMC_C_CRYPT_MAXKEYS for data at rest encryption.
 */
 typedef struct _DMC_CHAR_ENTRY
 {
@@ -1009,6 +1011,7 @@ typedef struct _DMC_CHAR_ENTRY
                                                 ** aka mwrite_blocks */
 #define			DMC_C_PAGETYPE_V6    129L /* page type V6 */
 #define			DMC_C_PAGETYPE_V7    130L /* page type V7 */
+#define			DMC_C_CRYPT_MAXKEYS  131L /* max shmem encrypt keys */
     i4         char_value;             /* Value of characteristic. */
 #define                 DMC_C_ON            1L
 #define                 DMC_C_OFF           0L

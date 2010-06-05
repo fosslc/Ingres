@@ -376,6 +376,12 @@ EXEC SQL include SQLCA;
 **          Rewrite duc_init_iidefault so that it can be used by both createdb
 **          and upgradedb and can be more easily updated if additional defaults
 **          become necessary.
+**	01-apr-2010 (toumi01) SIR 122403
+**	    For the encryption project add columns to
+**	    iitables: table_reldatawid, table_reltotdatawid, encrypted_columns,
+**		encryption_version, encryption_type
+**	    iicolumns: column_encrypted, column_encrypt_width,
+**		column_encrypt_salt, column_encrypt_crc
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
 **          Also, iitree.treetree should be varbyte (not varchar)
@@ -4528,7 +4534,14 @@ bool		upcase)
 	    iitblstat(int4(iitableinfo('keys_per_page', reltid, reltidx))) keys_per_page,
 	    iitblstat(int4(iitableinfo('keys_per_leaf', reltid, reltidx))) keys_per_leaf,
 	    relnparts phys_partitions,
-	    relnpartlevels partition_dimensions
+	    relnpartlevels partition_dimensions,
+	    int4(reldatawid) table_reldatawid, int4(reltotdatawid) table_reltotdatawid,
+	    char(byteextract('NY',(mod(relencflags/1,2)+1))) encrypted_columns,
+	    relencver encryption_version,
+	    CASE WHEN char(byteextract('NY',(mod(relencflags/2,2)+1))) = 'Y' then 'AES128'
+		 WHEN char(byteextract('NY',(mod(relencflags/4,2)+1))) = 'Y' then 'AES192'
+		 WHEN char(byteextract('NY',(mod(relencflags/8,2)+1))) = 'Y' then 'AES256'
+		 ELSE 'NONE' END as encryption_type
 	    from iirelation;
 
 	    if(sqlca.sqlcode<0)
@@ -4612,7 +4625,11 @@ bool		upcase)
 	    column_default_val = d.defvalue,
 	    security_audit_key = char(byteextract('NY',mod(a.attflag/8192,2)+1)),
 	    column_always_ident    = char(byteextract('NY',(mod(a.attflag/512,2)+1))),
-	    column_bydefault_ident = char(byteextract('NY',(mod(a.attflag/1024,2)+1)))
+	    column_bydefault_ident = char(byteextract('NY',(mod(a.attflag/1024,2)+1))),
+	    column_encrypted = char(byteextract('NY',(mod(a.attencflags/1,2)+1))),
+	    column_encrypt_width = a.attencwid,
+	    column_encrypt_salt = char(byteextract('NY',(mod(a.attencflags/2,2)+1))),
+	    column_encrypt_crc = char(byteextract('NY',(mod(a.attencflags/4,2)+1)))
 	    FROM  iirelation r,  iiattribute a, iidefault d
 	    WHERE 
 	      a.attrelid  = r.reltid AND a.attrelidx = r.reltidx
@@ -4673,7 +4690,11 @@ bool		upcase)
 	    column_default_val = d.defvalue,
 	    security_audit_key = char(byteextract('NY',mod(a.attflag/8192,2)+1)),
 	    column_always_ident    = char(byteextract('NY',(mod(a.attflag/512,2)+1))),
-	    column_bydefault_ident = char(byteextract('NY',(mod(a.attflag/1024,2)+1)))
+	    column_bydefault_ident = char(byteextract('NY',(mod(a.attflag/1024,2)+1))),
+	    column_encrypted = char(byteextract('NY',(mod(a.attencflags/1,2)+1))),
+	    column_encrypt_width = a.attencwid,
+	    column_encrypt_salt = char(byteextract('NY',(mod(a.attencflags/2,2)+1))),
+	    column_encrypt_crc = char(byteextract('NY',(mod(a.attencflags/4,2)+1)))
 	    FROM  iirelation r, iiattribute a, iidefault d
 	    WHERE a.attrelid  = r.reltid AND a.attrelidx = r.reltidx
 	    AND a.attdefid1 = d.defid1 AND a.attdefid2 = d.defid2;

@@ -356,6 +356,8 @@
 **      16-Feb-2010 (hanal04) Bug 123292
 **          Initialise attr_seqTuple to avoid spurious values being
 **          picked up.
+**	22-Mar-2010 (toumi01) SIR 122403
+**	    Add encflags and encwid for encryption.
 **	25-Mar-2010 (kiria01) b123535
 **	    Added call to psl_ss_flatten() to apply the flattening of
 **	    subselects in views too.
@@ -773,6 +775,9 @@ psl_cv1_create_view(
 	 */
 	attr->attr_geomtype = -1;
 	attr->attr_srid = -1;
+
+	attr->attr_encflags = 0;
+	attr->attr_encwid = 0;
 
 	/*
 	** Set up defaultibility.

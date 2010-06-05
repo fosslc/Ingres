@@ -425,6 +425,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	22-apr-2010 (toumi01) SIR 122403
+**	    Add support for column encryption.
 [@history_template@]...
 **/
 
@@ -4725,6 +4727,8 @@ setupAttrInfo(DMU_CB *dmucb, DMT_SHW_CB *dmtshow,
 	dmu_attp->attr_srid = attp->att_srid;
 	STRUCT_ASSIGN_MACRO(attp->att_defaultID, dmu_attp->attr_defaultID);
 	dmu_attp->attr_defaultTuple = NULL;
+	dmu_attp->attr_encflags = attp->att_encflags;
+	dmu_attp->attr_encwid = attp->att_encwid;
 	++ attpp;
 	++ dmu_attpp;
     } while (--i > 0);

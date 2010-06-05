@@ -457,6 +457,8 @@ SQLSTATE_MAPPING_REQUIRED
 **          Changes for Long IDs
 **	12-Apr-2010 (gupsh01) SIR 123444.
 **	    Added E_US2494_9364, E_US2495_9365 for rename table/columns.
+**	21-apr-2010 (toumi01) SIR 122403
+**	    Added messages for encryption.
 */
 
 #define _US_CLASS   0
@@ -11457,5 +11459,132 @@ on it. Check the error log (errlog.log) for details."
 **	Delete the dependent objects first and then rename. You
 **	can create the dependent objects after renaming.
 */
+E_US24B8_9400:SS42000_SYN_OR_ACCESS_ERR
+"Invalid ENCRYPT option '%0c'. Valid options are SALT (the default) and NOSALT."
+/*%
+** Parameters:
+**
+**      %0c - erroneous option
+**
+** Explanation:
+**	Valid column-level ENCRYPT options are SALT and NOSALT.
+**
+** System Status:
+**	The command is not executed.
+**
+** Recommendation:
+**	Correct the syntax error and retry.
+*/
+E_US24B9_9401:SS42000_SYN_OR_ACCESS_ERR
+"Invalid ENCRYPTION type '%0c'. Valid types are AES128, AES192 and AES256."
+/*%
+** Parameters:
+**
+**      %0c - erroneous type
+**
+** Explanation:
+**	Valid table-level ENCRYPT options are AES128, AES192, AES256.
+**
+** System Status:
+**	The command is not executed.
+**
+** Recommendation:
+**	Correct the syntax error and retry.
+*/
+E_US24BA_9402:SS42000_SYN_OR_ACCESS_ERR
+"The encryption type has not been set. Please provide the WITH option
+ENCRYPTION= with type AES128, AES192 or AES256 before supplying the
+PASSPHRASE= specification."
+/*%
+** Parameters:
+**
+** Explanation:
+**	This arises when the PASSPHRASE= has been parsed without the
+**	ENCRYPTION= type having first been specified.
+**
+** System Status:
+**	The command is not executed.
+**
+** Recommendation:
+**	Correct the syntax error and retry.
+*/
+E_US24BB_9403:SS42000_SYN_OR_ACCESS_ERR
+"The PASSPHRASE must be a minimum of 8 characters in length."
+/*%
+** Parameters:
+**
+** Explanation:
+**	The PASSPHRASE= value is too short (must be >= 8).
+**
+** System Status:
+**	The command is not executed.
+**
+** Recommendation:
+**	Correct the syntax error and retry.
+*/
+E_US24BC_9404:SS42000_SYN_OR_ACCESS_ERR
+"The NEW_PASSPHRASE= option is not valid when PASSPHRASE='' (disabling
+encryption) has been specified for the MODIFY command."
+/*%
+** Parameters:
+**
+** Explanation:
+**	To change to a new passphrase you have to provide the old one.
+**
+** System Status:
+**	The command is not executed.
+**
+** Recommendation:
+**	Correct the syntax error and retry.
+*/
+E_US24BD_9405:SS42000_SYN_OR_ACCESS_ERR
+"The NEW_PASSPHRASE= option is only valid for the MODIFY command."
+/*%
+** Parameters:
+**
+** Explanation:
+**	NEW_PASSPHRASE= is for MODIFY, not CREATE.
+**
+** System Status:
+**	The command is not executed.
+**
+** Recommendation:
+**	Correct the syntax error and retry.
+*/
+E_US24BE_9406:SS42000_SYN_OR_ACCESS_ERR
+"Invalid AESKEY= specification. The length of the hex value provided
+(%0d) is incorrect for the encryption type. The correct type/length
+options are AES128/16 AES192/24 AES256/32."
+/*%
+** Parameters:
+**
+**      %0d - length of hex string that the user provided
+**
+** Explanation:
+**	A key specified via AESKEY= must be the exact size of the
+**	encryption key for type specified by the ENCRYPTION= parameter.
+**
+** System Status:
+**	The command is not executed.
+**
+** Recommendation:
+**	Correct the syntax error and retry.
+*/
+E_US24BF_9407:SS5000A_QUERY_ERROR
+"A query has been issued against an encrypted table for which encryption
+is not enabled. Please contact your system administrator."
+E_US24C0_9408:SS5000A_QUERY_ERROR
+"The table is not encrypted."
+E_US24C1_9409:SS5000A_QUERY_ERROR
+"Incorrect passphrase specified."
+E_US24C2_9410:SS5000A_QUERY_ERROR
+"The key for a modify or index operation is of a datatype which
+is either non-keyable or non-sortable. All key fields must be both
+keyable and sortable and (for primary keys) cannot be encrypted. An
+encrypted index may contain only a single encrypted column."
+E_US24C3_9411:SS5000A_QUERY_ERROR
+"Invalid encrypted index. An encrypted index must: (1) contain only one
+column, (2) that column must be encrypted with NOSALT, (3) the index
+must be of structure HASH."
 
 NO_SQLSTATE_MAPPING

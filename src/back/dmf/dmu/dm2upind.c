@@ -131,6 +131,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	01-apr-2010 (toumi01) SIR 122403
+**	    Add support for column encryption.
 */
 
 /*{
@@ -711,7 +713,7 @@ DM2U_INDEX_CB   *index_cbs)
 	  index_cb->indxcb_l_count,
           index_cb->indxcb_tbl_id, index_cb->indxcb_idx_id, 
 	  (i4)1, (i4)0, setrelstat, m->mx_new_relstat2,
-          index_cb->indxcb_structure, m->mx_width, NumCreAtts,
+          index_cb->indxcb_structure, m->mx_width, m->mx_width, NumCreAtts,
           att_list, index_cb->indxcb_db_lockmode,
           DM_TBL_DEFAULT_ALLOCATION, DM_TBL_DEFAULT_EXTEND, 
 	  m->mx_page_type, m->mx_page_size, index_cb->indxcb_qry_id, 
@@ -719,7 +721,8 @@ DM2U_INDEX_CB   *index_cbs)
 	  index_cb->indxcb_gw_id, (i4)0,
           index_cb->indxcb_gwsource, index_cb->indxcb_char_array, 
 	  m->mx_dimension, m->mx_hilbertsize, 
-	  m->mx_range, index_cb->indxcb_tbl_pri, NULL, 0, &local_dberr);
+	  m->mx_range, index_cb->indxcb_tbl_pri, NULL, 0, NULL /* DMU_CB */,
+	  &local_dberr);
         if (status != E_DB_OK)
         {
           /*
@@ -1022,6 +1025,8 @@ DM2U_INDEX_CB   *index_cbs)
 	 	attr_entry[i].attr_collID = -1;
 	 	attr_entry[i].attr_geomtype = -1;
 	 	attr_entry[i].attr_srid = -1;
+	 	attr_entry[i].attr_encflags = 0;
+	 	attr_entry[i].attr_encwid = 0;
 		COPY_DEFAULT_ID(atts->defaultID, attr_entry[i].attr_defaultID);
 	    }
 

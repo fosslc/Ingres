@@ -209,6 +209,8 @@
 **          Use DB_MAXNAME for database objects.
 **      25-feb-2010 (joea)
 **          Add case for DB_BOO_TYPE in writecopy.
+**	21-apr-2010 (toumi01) SIR 122403
+**	    Add encryption support.
 **/
 /* # define's */
 /* GLOBALDEF's */
@@ -646,6 +648,16 @@ writecreate(XF_TABINFO	*tp, i4 output_flags)
 		    (ap->sys_maint[0] == 'Y') ? ERx("with") : ERx("not"));
 	    xfwrite(Xf_in, tbuf);
 	}
+
+	/*
+	** If this column is encrypted add that info.
+	*/
+	if (ap->column_encrypted[0] == 'Y')
+	{
+	    xfwrite(Xf_in, ERx(" encrypt"));
+	    if (ap->column_encrypt_salt[0] == 'N')
+		xfwrite(Xf_in, ERx(" nosalt"));
+	}
     }
 
     xfwrite(Xf_in, ERx("\n)\n"));
@@ -702,6 +714,16 @@ writecreate(XF_TABINFO	*tp, i4 output_flags)
     }
 
     /*
+    ** Add table-level encryption options.
+    */
+    if (tp->encrypted_columns[0] == 'Y')
+    {
+	STprintf(tbuf, ERx(",\nencryption = %s"), tp->encryption_type); 
+	xfwrite(Xf_in, tbuf);
+	xfwrite(Xf_in, ERx(", passphrase = 'TEMPORARY PASSPHRASE'"));
+    }
+
+    /*
     ** Write any secure options
     */
 
@@ -738,6 +760,19 @@ writecreate(XF_TABINFO	*tp, i4 output_flags)
     }
 	
     xfwrite(Xf_in, GO_STMT);
+
+    /*
+    ** If encryption add a MODIFY ENCRYPT PASSPHRASE placeholder.
+    */
+    if (tp->encrypted_columns[0] == 'Y')
+    {
+	xfwrite(Xf_in, ERx("modify "));
+	xfwrite_id(Xf_in, tp->name);
+	xfwrite(Xf_in, ERx(" encrypt with passphrase = 'TEMPORARY PASSPHRASE'"));
+    }
+
+    xfwrite(Xf_in, GO_STMT);
+
 }
 
 /*{

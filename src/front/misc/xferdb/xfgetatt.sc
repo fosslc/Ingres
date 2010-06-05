@@ -134,6 +134,8 @@ EXEC SQL INCLUDE <xf.sh>;
 **	    false positives resulting from the residual garbage in the buffer.
 **      17-Feb-2010 (coomi01) b122954
 **          Port previous change for use with 65 catalogs and above.
+**	21-apr-2010 (toumi01) SIR 122403
+**	    Add encryption support and With_r1000_catalogs.
 **/
 
 /* # define's */
@@ -259,7 +261,55 @@ EXEC SQL END DECLARE SECTION;
 
     if (!strcmp(table_owner, "")) /* No table_owner was supplied. */
     {
-    if (With_r930_catalogs)
+    if (With_r1000_catalogs)
+    {
+	EXEC SQL REPEATED SELECT c.table_owner,
+		    c.column_name, c.column_datatype,
+		    c.column_internal_datatype, c.column_internal_ingtype,
+		    c.column_scale, c.column_length, c.column_internal_length,
+		    c.column_nulls, c.column_defaults,
+		    c.column_default_val,   -- user defaults in 6.5
+		    c.column_has_default,
+		    c.column_sequence, c.key_sequence, 
+		    c.column_system_maintained,
+		    c.column_collid,
+		    c.column_always_ident, c.column_bydefault_ident,
+		    c.security_audit_key,
+		    c.column_encrypted, c.column_encrypt_salt
+	    INTO	:owner_name,
+		    :cp->column_name, :datatype,
+		    :int_datatype, :int_ingtype,
+		    :scale, :extern_len, :intern_len,
+		    :cp->nulls, :cp->defaults,
+		    :default_value:null_ind, :cp->has_default, 
+		    :cp->col_seq, :cp->key_seq, :cp->sys_maint,
+		    :cp->collID, :cp->always_ident, :cp->bydefault_ident,
+		    :cp->audit_key,
+		    :cp->column_encrypted, :cp->column_encrypt_salt
+	    FROM iicolumns c, iitables t
+	    WHERE c.table_name = :table_name
+	    	    AND c.table_owner = t.table_owner
+		    AND c.table_name = t.table_name
+		    AND t.table_type = 'T'
+	    ORDER BY c.table_owner, c.column_sequence desc;
+	EXEC SQL BEGIN;
+	{
+	    if (xffillcolinfo( table_name, owner_name, datatype, int_datatype,
+		    int_ingtype, extern_len, intern_len, scale, cp, 
+		    (null_ind == -1 ? (char *) NULL : default_value)))
+	    {
+		/* First see if we must save identity default. */
+		if (cp->always_ident[0] == 'Y' ||
+		    cp->bydefault_ident[0] == 'Y')
+		    *seqvalpp = cp->default_value;
+
+		/* get another empty node */
+		cp = attnode();
+	    }
+	}
+	EXEC SQL END;
+    }
+    else if (With_r930_catalogs)
     {
 	EXEC SQL REPEATED SELECT c.table_owner,
 		    c.column_name, c.column_datatype,
@@ -431,7 +481,56 @@ EXEC SQL END DECLARE SECTION;
     }
     else /* A table_owner was supplied */
     {
-        if (With_r930_catalogs)
+        if (With_r1000_catalogs)
+        {
+        EXEC SQL REPEATED SELECT c.table_owner,
+                c.column_name, c.column_datatype,
+                c.column_internal_datatype, c.column_internal_ingtype,
+                c.column_scale, c.column_length, c.column_internal_length,
+                c.column_nulls, c.column_defaults,
+                c.column_default_val,   -- user defaults in 6.5
+                c.column_has_default,
+                c.column_sequence, c.key_sequence, 
+                c.column_system_maintained,
+                c.column_collid,
+		c.column_always_ident, c.column_bydefault_ident,
+		c.security_audit_key,
+		c.column_encrypted, c.column_encrypt_salt
+            INTO    :owner_name,
+                :cp->column_name, :datatype,
+                :int_datatype, :int_ingtype,
+                :scale, :extern_len, :intern_len,
+                :cp->nulls, :cp->defaults,
+                :default_value:null_ind, :cp->has_default, 
+                :cp->col_seq, :cp->key_seq, :cp->sys_maint,
+		:cp->collID, :cp->always_ident, :cp->bydefault_ident,
+		:cp->audit_key,
+		:cp->column_encrypted, :cp->column_encrypt_salt
+            FROM iicolumns c, iitables t
+            WHERE c.table_name = :table_name
+                AND c.table_owner = t.table_owner
+                AND c.table_name = t.table_name
+                AND c.table_owner = :table_owner
+                AND t.table_type = 'T'
+            ORDER BY c.table_owner, c.column_sequence desc;
+        EXEC SQL BEGIN;
+        {
+            if (xffillcolinfo( table_name, owner_name, datatype, int_datatype,
+                int_ingtype, extern_len, intern_len, scale, cp, 
+                (null_ind == -1 ? (char *) NULL : default_value)))
+            {
+		/* First see if we must save identity default. */
+		if (cp->always_ident[0] == 'Y' ||
+		    cp->bydefault_ident[0] == 'Y')
+		    *seqvalpp = cp->default_value;
+
+            /* get another empty node */
+            cp = attnode();
+            }
+        }
+        EXEC SQL END;
+        }
+        else if (With_r930_catalogs)
         {
         EXEC SQL REPEATED SELECT c.table_owner,
                 c.column_name, c.column_datatype,

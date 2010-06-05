@@ -441,6 +441,8 @@
 #	    ADI_DECBLEND functionality is now in ADI_LONGER.
 #       05-mar-2010 (joea)
 #           Add BOO_BOO.
+#	10-Mar-2010 (toumi01) SIR 122403
+#	    Added ADI_AES_DECRYPT_OP and ADI_AES_ENCRYPT_OP.
 #	13-Mar-2010 (kiria01) b123422
 #	    Add Unicode and Binary forms of REPLACE and corrected the
 #	    symbol names and descriptions for some of the longtext functions
@@ -8808,6 +8810,26 @@ group ADI_NORM_FUNC
 	    result DB_INT_TYPE
 	    operands DB_VCH_TYPE DB_VCH_TYPE
 	    routine adu_strvalidate_digit
+
+    operator ADI_AES_DECRYPT_OP
+
+	fi ADFI_1464_AES_DECRYPT_VARBYTE
+	    description varbyte  :  aes_decrypt(varbyte,varbyte)
+	    lenspec ADI_O1
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_VBYTE_TYPE
+	    operands DB_VBYTE_TYPE DB_VBYTE_TYPE
+	    routine adu_aesdecrypt
+
+    operator ADI_AES_ENCRYPT_OP
+
+	fi ADFI_1465_AES_ENCRYPT_VARBYTE
+	    description varbyte  :  aes_encrypt(varbyte,varbyte)
+	    lenspec ADI_O1AES
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_VBYTE_TYPE
+	    operands DB_VBYTE_TYPE DB_VBYTE_TYPE
+	    routine adu_aesencrypt
 
 
 group ADI_COPY_COERCION

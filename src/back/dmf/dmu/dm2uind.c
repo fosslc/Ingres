@@ -370,6 +370,9 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**	26-Mar-2010 (toumi01) SIR 122403
+**	    Add new width fields for encryption.
+**	    Special rules for encryped indices.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
 **      22-apr-2010 (stial01)
@@ -1238,7 +1241,7 @@ DM2U_INDEX_CB   *index_cb)
 	      index_cb->indxcb_index_name, &owner, index_cb->indxcb_location, 
 	      loc_count, index_cb->indxcb_tbl_id, index_cb->indxcb_idx_id, 
 	      (i4)1, (i4)0, setrelstat, setrelstat2,
-	      m->mx_structure, m->mx_width, NumCreAtts,
+	      m->mx_structure, m->mx_width, m->mx_width, NumCreAtts,
 	      att_list, index_cb->indxcb_db_lockmode,
 	      DM_TBL_DEFAULT_ALLOCATION, DM_TBL_DEFAULT_EXTEND, 
 	      m->mx_page_type, m->mx_page_size, index_cb->indxcb_qry_id, 
@@ -1246,7 +1249,8 @@ DM2U_INDEX_CB   *index_cb)
 	      index_cb->indxcb_gw_id, (i4)0,
 	      index_cb->indxcb_gwsource, index_cb->indxcb_char_array, 
 	      m->mx_dimension, m->mx_hilbertsize, 
-	      m->mx_range, m->mx_tbl_pri, NULL, 0, &local_dberr);
+	      m->mx_range, m->mx_tbl_pri, NULL, 0,
+	      NULL /* DMU_CB */, &local_dberr);
 	    if (status != E_DB_OK)
 	    {
 	        /*
@@ -2481,8 +2485,10 @@ DB_ERROR	*dberr)
     i4		ax, bx, cx, dx, ix, mx;
     i4		dt_bits;
     i4		collength;
+    i4		colencwid;
     i2		coltype;
     bool	upcase;
+    bool	encrypted_index;
     i4		OnlyKeyLen = 0;
     DB_STATUS	status = E_DB_OK;
     DB_ATT_NAME tmpattnm;
@@ -2519,6 +2525,46 @@ DB_ERROR	*dberr)
 	dx = 0;
 	ix = m->mx_ai_count = 0;
 	mx = m->mx_c_count = 0;
+
+	/* If this is an encrypted table and we are building an index
+	** on it, it might be a normal index, or it might be an encrypted
+	** index, which must comply with these rules:
+	** (1) only one column in the index
+	** (2) column must be encrypted NOSALT
+	** (3) must be a HASH index
+	*/
+	encrypted_index = FALSE;
+	if ((t->tcb_rel.relencflags & TCB_ENCRYPTED) &&
+	    (index_cb->indxcb_acount == 1))
+	{ /* we might have a valid encrypted index */
+            for (j = 1; j <= t->tcb_rel.relatts; j++)
+            {
+		MEmove(t->tcb_atts_ptr[j].attnmlen,
+		    t->tcb_atts_ptr[j].attnmstr,
+		    ' ', DB_ATT_MAXNAME, tmpattnm.db_att_name);
+		if ((MEcmp(tmpattnm.db_att_name,
+		     (char *)&index_cb->indxcb_key[0]->key_attr_name,
+		     sizeof(index_cb->indxcb_key[0]->key_attr_name)) == 0) &&
+		    (t->tcb_atts_ptr[j].ver_altcol == 0) &&
+		    (t->tcb_atts_ptr[j].ver_added >= t->tcb_atts_ptr[j].ver_dropped))
+                 {
+                     break;
+                 }
+            }
+            if (j <= t->tcb_rel.relatts &&
+		    t->tcb_atts_ptr[j].encflags & ATT_ENCRYPT)
+	    {
+		if (!(t->tcb_atts_ptr[j].encflags & ATT_ENCRYPT_SALT) && 
+			m->mx_structure == TCB_HASH)
+		    encrypted_index = TRUE;
+		else
+		{
+		    status = E_DB_ERROR;
+		    SETDBERR(dberr, 0, E_DM019F_INVALID_ENCRYPT_INDEX);
+		    break;
+		}
+	    }
+	}
 
 	/*
 	** If HASH, reserve 1st compare attribute for hash bucket;
@@ -2560,6 +2606,16 @@ DB_ERROR	*dberr)
 		SETDBERR(dberr, 0, E_DM001C_BAD_KEY_SEQUENCE);
                 break;
             }
+	    /* if we stumble across an encrypted index column and have not
+	    ** already decided this is a valid encrypted index, then there
+	    ** is something rotten in the state of Denmark.
+	    */
+	    if ((t->tcb_atts_ptr[j].encflags & ATT_ENCRYPT) &&
+	        encrypted_index == FALSE)
+	    {
+		SETDBERR(dberr, 0, E_DM0066_BAD_KEY_TYPE);
+		break;
+	    }
                 
             if (m->mx_structure == TCB_RTREE)
             {
@@ -2609,6 +2665,7 @@ DB_ERROR	*dberr)
             else
 	    {
               collength = t->tcb_atts_ptr[j].length;
+              colencwid = t->tcb_atts_ptr[j].encwid;
 	      coltype = t->tcb_atts_ptr[j].type;
 	    }
 
@@ -2624,6 +2681,8 @@ DB_ERROR	*dberr)
             CreAtts[cx]->attr_collID = t->tcb_atts_ptr[j].collID;
             CreAtts[cx]->attr_geomtype = t->tcb_atts_ptr[j].geomtype;
             CreAtts[cx]->attr_srid = t->tcb_atts_ptr[j].srid;
+            CreAtts[cx]->attr_encflags = t->tcb_atts_ptr[j].encflags;
+            CreAtts[cx]->attr_encwid = t->tcb_atts_ptr[j].encwid;
 
 
             /* 
@@ -2686,7 +2745,7 @@ DB_ERROR	*dberr)
                 mx++;
             }
 
-            m->mx_width += collength;
+            m->mx_width += colencwid > 0 ? colencwid : collength;
 
             /*
             **  If this column is part of the key, update the key width.
@@ -2758,6 +2817,8 @@ DB_ERROR	*dberr)
 		    CreAtts[cx]->attr_collID = t->tcb_key_atts[j]->collID;
 		    CreAtts[cx]->attr_geomtype = t->tcb_key_atts[j]->geomtype;
 		    CreAtts[cx]->attr_srid = t->tcb_key_atts[j]->srid;
+		    CreAtts[cx]->attr_encflags = t->tcb_key_atts[j]->encflags;
+		    CreAtts[cx]->attr_encwid = t->tcb_key_atts[j]->encwid;
 
 		    /*
 		    **  Build a attribute entry for the next record of the
@@ -2837,6 +2898,8 @@ DB_ERROR	*dberr)
 	    m->mx_kwidth += m->mx_hilbertsize;
 	    m->mx_width += m->mx_hilbertsize;
 	    m->mx_att_map[ax] = ix+1;
+	    m->mx_atts_ptr[ax].encflags = 0;
+	    m->mx_atts_ptr[ax].encwid = 0;
 
 	    MEmove(7, (upcase ? "HILBERT" : "hilbert"), ' ',
 		sizeof(CreAtts[cx]->attr_name),
@@ -2850,6 +2913,8 @@ DB_ERROR	*dberr)
 	    CreAtts[cx]->attr_collID = -1;
 	    CreAtts[cx]->attr_geomtype = -1;
 	    CreAtts[cx]->attr_srid = -1;
+	    CreAtts[cx]->attr_encflags = 0;
+	    CreAtts[cx]->attr_encwid = 0;
 
 	    ax++;
 	    cx++;
@@ -2898,6 +2963,8 @@ DB_ERROR	*dberr)
         CreAtts[cx]->attr_collID = -1;
         CreAtts[cx]->attr_geomtype = -1;
         CreAtts[cx]->attr_srid = -1;
+        CreAtts[cx]->attr_encflags = 0;
+        CreAtts[cx]->attr_encwid = 0;
 
         /*
         ** Add the TIDP (last) to the attribute list.
@@ -2919,6 +2986,8 @@ DB_ERROR	*dberr)
 	m->mx_atts_ptr[ax].geomtype = -1;
 	m->mx_atts_ptr[ax].srid = -1;
         m->mx_data_rac.att_ptrs[dx] = &m->mx_atts_ptr[ax];
+	m->mx_atts_ptr[ax].encflags = 0;
+	m->mx_atts_ptr[ax].encwid = 0;
 
 	/*
 	**  HASH indices never include TIDP as a key.
@@ -3257,6 +3326,8 @@ DB_ERROR	*dberr)
 	relrecord.relatts = AttCount;
 	relrecord.relwid = m->mx_width;	        
 	relrecord.reltotwid = m->mx_width;	        
+	relrecord.reldatawid = m->mx_width;	        
+	relrecord.reltotdatawid = m->mx_width;	        
 	relrecord.relkeys = m->mx_ai_count;
 	relrecord.relspec = m->mx_structure;
 	relrecord.relpages = 3;

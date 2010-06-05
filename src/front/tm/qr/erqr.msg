@@ -144,6 +144,8 @@
 **	    Add F_QR00B2_clustered
 **	30-May-2006 (jenjo02)
 **	    Removed F_QR00B2_clustered - no longer needed.
+**	25-mar-2010 (toumi01) SIR 122403
+**	    Add message constants for encryption.
 */
 
 # define	_QR_CLASS	99
@@ -1347,6 +1349,15 @@ F_QR00AF_Seq_is_DBAs	"Sequence %s is owned by the DBA.\n"
 */
 
 F_QR00B0_part_def	"Table partitioning definition:"
+
+F_QR00C0_crypto_hdr	"Column encryption:    %s\n"
+F_QR00C1_crypto_colname	"Encrypted Column Name"
+F_QR00C2_crypto_width	"Width"
+F_QR00C3_crypto_salt	"Salt"
+F_QR00C4_yes_salt	" yes"
+F_QR00C5_no_salt	"  no"
+F_QR00C6_rel_datawid	"Encrypted width:      %d\n"
+F_QR00C7_rel_totdatawid	"Alter table totwidth: %d\n"
 
 E_QR0060_no_help_sequence  "Help on database sequences is not available on this system.\n"
 /*%

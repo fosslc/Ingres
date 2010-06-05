@@ -143,6 +143,8 @@
 **	    Added NVL and NVL2
 **	18-Mar-2010 (kiria01) b123438
 **	    Added SINGLETON aggregate for scalar sub-query support.
+**	25-Mar-2010 (toumi01) SIR 122403
+**	    Add AES_DECRYPT and AES_ENCRYPT.
 **/
 
 /*
@@ -413,6 +415,8 @@ _DEFINE(NVL2,          235  /* NVL2                    */)\
 _DEFINE(GENERATEDIGIT, 236  /* generate_digit()        */)\
 _DEFINE(VALIDATEDIGIT, 237  /* validate_digit()        */)\
 _DEFINE(SINGLETON,     238  /* singleton               */)\
+_DEFINE(AES_DECRYPT,   239  /* aes_decrypt             */)\
+_DEFINE(AES_ENCRYPT,   240  /* aes_encrypt             */)\
 _DEFINEEND
 
 

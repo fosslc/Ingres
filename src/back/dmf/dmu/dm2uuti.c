@@ -54,6 +54,8 @@
 #include    <scf.h>
 #include    <cut.h>
 #include    <cui.h>
+#include    <adurijndael.h>
+#include    <dmfcrypt.h>
 
 /**
 **
@@ -398,7 +400,11 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	01-apr-2010 (toumi01) SIR 122403
+**	    Add support for column encryption.
 **/
+
+GLOBALREF	DMC_CRYPT	*Dmc_crypt;
 
 /*
 ** Forward function declarations
@@ -1009,11 +1015,45 @@ DB_ERROR	    *dberr)
 		    status = NextFromAllSources(m, &sp, &tp, &record, 
 						    &tid8, dberr);
 
+		/* May return E_DB_INFO if duplicate - that's ok */
 		if ( (m->mx_flags & MX_ROLLDB_ONLINE_MODIFY) && 
 		     (status == E_DB_INFO) &&
 		     (dberr->err_code == E_DM9CB1_RNL_LSN_MISMATCH) )
 		{
 		    return(status);
+		}
+
+		/* If there are encrypted columns, encrypt them.
+		** MX_MODIFY
+		**    we decide on whether to encrypt based on the table
+		**    encryption setting and we use the table's data_rac
+		**    as the pattern for what/how to encrypt
+		** MX_INDEX
+		**    since an encrypted index has just two columns (the
+		**    TID and the encrypted column) we check to see if that
+		**    one attribute-level encryption flag is on and we us
+		**    the mxcb's data_rac for what/how to encrypt
+		*/
+		if (DB_SUCCESS_MACRO(status))
+		{
+		    local_status = E_DB_OK;
+		    if (m->mx_operation == MX_MODIFY &&
+			t->tcb_rel.relencflags & TCB_ENCRYPTED)
+		    {
+			local_status = dm1e_aes_encrypt(r, &t->tcb_data_rac,
+			    record, r->rcb_erecord_ptr, dberr);
+			record = r->rcb_erecord_ptr;
+		    }
+		    else
+		    if (m->mx_operation == MX_INDEX &&
+			m->mx_atts_ptr[1].encflags & ATT_ENCRYPT)
+		    {
+			local_status = dm1e_aes_encrypt(r, &m->mx_data_rac,
+			    record, r->rcb_erecord_ptr, dberr);
+			record = r->rcb_erecord_ptr;
+		    }
+		    if (local_status != E_DB_OK)
+			return(local_status);
 		}
 
 		/* May return E_DB_INFO if duplicate - that's ok */
@@ -6390,6 +6430,441 @@ DB_ERROR            *dberr)
 }
 
 /*{
+** Name: dm2u_modify_encrypt -  Enable encryption and perhaps modify
+**				the encryption passphrase.
+**
+** Description:
+**	Most commonly we will be here to enable encryption for a table.
+**	In that case we just ensure that the table exists, the user has
+**	access to it, and the user knows the encryption passphrase. An
+**	encryption key to process user data will be posted to shared memory
+**	(the Dmc_crypt block) for access by the AES encryption routines. A
+**	variant on the above occurs when PASSPHRASE='' is specified. In
+**	this case we clear out the Dmc_crypt entry. Note that this action
+**	does not require knowledge of the passphrase, just valid ownership
+**	of the table. Finally, it may be that the NEW_PASSPHRASE= option
+**	was specified. In this case we decrypt the AES key with the old
+**	passphrase and re-encrypt with the new passphrase. As a byproduct we
+**	clear the Dmc_crypt entry. This forces a subsequent MODIFY ENCRYPT
+**	command, implementing a sort of a "please retype your password"
+**	feature. If this second MODIFY fails (oops, typed the wrong
+**	thing!) and providing a COMMIT has not been issued, the user can
+**	ROLLBACK and try again. Note that once the NEW_PASSPHRASE has been
+**	implemented and a COMMIT has been done there is no access to the
+**	data without this new passphrase (the only recovery option being
+**	restoration from a backup of the database before the passphrase
+**	change).
+**
+** Inputs:
+**      mxcb                            The modify index control block.
+**	dmu				The modify table control block.
+**	journal				Indicates whether user table is
+**					journaled.
+**
+** Outputs:
+**      err_code			The reason for an error return status.
+**	Returns:
+**	    E_DB_OK
+**	    E_DB_ERROR
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	    enables/disable table's encryption key in shared memory
+**
+** History:
+**	16-apr-2010 (toumi01) SIR 122403
+**	    Created with some cloning from dm2u_alterstatus_upd_cats.
+*/
+DB_STATUS
+dm2u_modify_encrypt(
+DM2U_MXCB	*mxcb,
+DMU_CB		*dmu,
+i4		journal,
+DB_ERROR	*dberr)
+{
+    DM2U_MXCB		*m = mxcb;
+    DMP_RCB		*r = (DMP_RCB *)0;
+    DMP_TCB		*t;
+    DB_TAB_ID		table_id;
+    DM_TID		tid;
+    DB_STATUS		status;
+    DB_TAB_TIMESTAMP	timestamp;
+    DM2R_KEY_DESC	qual_list[1];
+    DMP_RELATION	rel;
+    i4			error;
+    DB_ERROR		local_dberr;
+
+    bool		old_decrypt_done = FALSE;
+    bool		new_encrypt_done = FALSE;
+    u_char		*oldkey;
+    u_char		*newkey;
+    u_char		decrypted_key[sizeof(rel.relenckey)];
+    i4			nrounds, keybits, keybytes, blocks;
+    i4			i, cbc;
+    char		*et, *pt, *pprev;
+    u_i4		crc;
+    u_i4		rk[RKLENGTH(AES_256_BITS)];
+
+
+    if (Dmc_crypt == NULL)
+    {
+	i4 slots = 0;
+	uleFormat( NULL, E_DM0179_DMC_CRYPT_SLOTS_EXHAUSTED,
+	    (CL_ERR_DESC *)NULL,
+	    ULE_LOG, NULL, (char *)NULL,
+	    (i4)0, (i4 *)NULL, &error, 1,
+	    sizeof(slots), &slots);
+	SETDBERR(dberr, 0, E_DM9101_UPDATE_CATALOGS_ERROR);
+	return (E_DB_ERROR);
+    }
+
+    do
+    {
+	/*
+	** Build a qualification list used for searching the system tables.
+	*/
+	qual_list[0].attr_number = DM_1_RELATION_KEY;
+	qual_list[0].attr_operator = DM2R_EQ;
+	qual_list[0].attr_value = (char *)&m->mx_table_id.db_tab_base;
+
+	/*
+	** Update the relstat bits for the base table and any
+	** secondary indices that were built on the table whilst
+	** table was in index_build mode
+	*/
+	table_id.db_tab_base = DM_B_RELATION_TAB_ID;
+	table_id.db_tab_index = DM_I_RELATION_TAB_ID;
+
+	status = dm2t_open(m->mx_dcb, &table_id, DM2T_IX,
+		DM2T_UDIRECT, DM2T_A_WRITE,
+		(i4)0, (i4)20, (i4)0,
+		m->mx_log_id,m->mx_lk_id,
+		(i4)0, (i4)0, DM2T_S, &m->mx_xcb->xcb_tran_id,
+                &timestamp, &r, (DML_SCB *)0, dberr);
+	if (status != E_DB_OK)
+	    break;
+
+	r->rcb_xcb_ptr = m->mx_xcb;
+
+	t = m->mx_rcb->rcb_tcb_ptr;
+
+	/*
+	** Check for NOLOGGING - no updates should be written to the log
+	** file if this session is running without logging.
+	*/
+	if (m->mx_xcb->xcb_flags & XCB_NOLOGGING)
+	    r->rcb_logging = 0;
+	r->rcb_usertab_jnl = (journal) ? 1 : 0;
+
+	/*
+	** Update the base table accordingly
+	*/
+	status = dm2r_position(r, DM2R_QUAL, qual_list,
+                     (i4)1,
+                     (DM_TID *)0, dberr);
+	if (status != E_DB_OK)
+	    break;
+
+	for (;;)
+	{
+	    status = dm2r_get(r, &tid, DM2R_GETNEXT,
+                         (char *)&rel, dberr);
+	    if (status != E_DB_OK)
+	    {
+		if (dberr->err_code == E_DM0055_NONEXT)
+		{
+		    CLRDBERR(dberr);
+		    status = E_DB_OK;
+		}
+		break;
+	    }
+
+	    /*
+	    ** If modifying the passphrase we will be updating the
+	    ** relation record.
+	    */
+	    if (dmu->dmu_enc_flags2 & DMU_NEWPASS)
+		TMget_stamp((TM_STAMP *)&rel.relstamp12);
+
+	    /*
+	    ** Check this is the correct base table
+	    */
+	    if ( (rel.reltid.db_tab_base !=
+				m->mx_table_id.db_tab_base)
+				||
+		(rel.reltid.db_tab_index !=
+				m->mx_table_id.db_tab_index ))
+	    {
+		/*
+		** If altering a Master table, then also alter
+		** its underlying partitions (but not indexes).
+		*/
+		if ( rel.reltid.db_tab_base != m->mx_table_id.db_tab_base ||
+		    !(t->tcb_rel.relstat & TCB_IS_PARTITIONED) ||
+		     rel.relstat & TCB_INDEX )
+		{
+		    continue;
+		}
+	    }
+
+	    /*
+	    ** Decrypt the relation-stored key with the passphrase= value.
+	    ** The result is what we use to encrypt and decrypt user data.
+	    */
+
+	    /* Prepare based on the AES encryption type */
+	    if ( old_decrypt_done || dmu->dmu_enc_flags2 & DMU_NULLPASS )
+	    	continue;
+	    if (!(rel.relencflags & TCB_ENCRYPTED))
+	    {
+		SETDBERR(dberr, 0, E_DM0177_RECORD_NOT_ENCRYPTED);
+		status = E_DB_ERROR;
+		break;
+	    }
+	    if (rel.relencflags & TCB_AES128)
+	    {
+		keybits = AES_128_BITS;
+		keybytes = AES_128_BYTES;
+		blocks = 3;
+		oldkey = dmu->dmu_enc_old128pass;
+		newkey = dmu->dmu_enc_new128pass;
+	    }
+	    else
+	    if (rel.relencflags & TCB_AES192)
+	    {
+		keybits = AES_192_BITS;
+		keybytes = AES_192_BYTES;
+		blocks = 3;
+		oldkey = dmu->dmu_enc_old192pass;
+		newkey = dmu->dmu_enc_new192pass;
+	    }
+	    else
+	    if (rel.relencflags & TCB_AES256)
+	    {
+		keybits = AES_256_BITS;
+		keybytes = AES_256_BYTES;
+		blocks = 4;
+		oldkey = dmu->dmu_enc_old256pass;
+		newkey = dmu->dmu_enc_new256pass;
+	    }
+	    else
+	    {
+		/* internal error */
+		SETDBERR(dberr, 0, E_DM0175_ENCRYPT_FLAG_ERROR);
+		status = E_DB_ERROR;
+		break;
+	    }
+
+	    nrounds = adu_rijndaelSetupDecrypt(rk, oldkey, keybits);
+	    pprev = NULL;
+	    et = rel.relenckey;	/* encrypted key in relation */
+	    pt = decrypted_key;	/* decrypted key on stack */
+	    MEfill(sizeof(decrypted_key), 0, (PTR)&decrypted_key);
+	    for ( i = blocks ; i > 0 ; i-- )
+	    {
+		adu_rijndaelDecrypt(rk, nrounds, et, pt);
+		if (pprev)
+		    for ( cbc = 0 ; cbc < AES_BLOCK ; cbc++ )
+			pt[cbc] ^= pprev[cbc];
+		pprev = et;
+		et += AES_BLOCK;
+		pt += AES_BLOCK;
+	    }
+
+	    old_decrypt_done = TRUE;
+
+	    /*
+	    ** Check the hash to verify we decrypted correctly. If not
+	    ** it is a probable user error. Correct and retry!
+	    */
+	    crc = -1;
+	    HSH_CRC32(decrypted_key, keybytes, &crc);
+	    if (MEcmp((PTR)&crc, (PTR)decrypted_key + keybytes,
+		sizeof(crc)) != 0)
+	    {
+		PCsleep(2000);	/* slow down rapid-fire guesses */
+		SETDBERR(dberr, 0, E_DM0178_PASSPHRASE_FAILED_CRC);
+		status = E_DB_ERROR;
+		break;
+	    }
+
+	    /*
+	    ** If we are just enabling encryption we'll not need to
+	    ** modify the relation, so we're done here.
+	    */
+	    if (!(dmu->dmu_enc_flags2 & DMU_NEWPASS))
+		break;
+
+	    /*
+	    ** It seems we're here to modify the passphrase, so we need
+	    ** to re-encrypt the internal key with the new phrase.
+	    */
+	    if (!new_encrypt_done)
+	    {
+		nrounds = adu_rijndaelSetupEncrypt(rk, newkey, keybits);
+		pprev = NULL;
+		et = rel.relenckey;	/* encrypted key in relation */
+		pt = decrypted_key;	/* plain key on stack */
+		for ( i = blocks ; i > 0 ; i-- )
+		{
+		    /* CBC cipher mode */
+		    if (pprev)
+			for ( cbc = 0 ; cbc < AES_BLOCK ; cbc++ )
+			    pt[cbc] ^= pprev[cbc];
+		    adu_rijndaelEncrypt(rk, nrounds, pt, et);
+		    pprev = et;
+		    et += AES_BLOCK;
+		    pt += AES_BLOCK;
+		}
+		new_encrypt_done = TRUE;
+	    }
+
+	    status = dm2r_replace(r, &tid, DM2R_BYPOSITION,
+                             (char *)&rel, (char *)NULL, dberr);
+
+	    if ( status != E_DB_OK )
+	        break;
+	}
+
+	/*
+	** If error updating the base table then bail
+	*/
+        if ( status != E_DB_OK )
+	    break;
+
+    	status = dm2t_close(r, DM2T_NOPURGE, dberr);
+	if (status != E_DB_OK)
+	    break;
+	r = 0;
+
+    } while (FALSE);
+
+    /*	Handle cleanup for error recovery. */
+
+    if (r)
+    {
+	DB_STATUS local_status;
+
+	local_status = dm2t_close(r, DM2T_NOPURGE, &local_dberr);
+
+	if ( local_status != E_DB_OK )
+	    uleFormat(&local_dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL, 
+		(char *)NULL, (i4)0, (i4 *)NULL, &error, 0);
+    }
+
+    if ( status && (dberr->err_code == 0 || dberr->err_code > E_DM_INTERNAL) )
+    {
+	if (dberr->err_code )
+	    uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL, (char *)NULL,
+		(i4)0, (i4 *)NULL, &error, 0);
+
+	uleFormat( NULL, E_DM944F_DM2U_MOD_ENCRYPT, (CL_ERR_DESC *)NULL,
+		    ULE_LOG, NULL, (char *)NULL,
+	            (i4)0, (i4 *)NULL, &error, 3,
+		    sizeof( m->mx_dcb->dcb_name),
+		    &m->mx_dcb->dcb_name,
+		    sizeof( m->mx_rcb->rcb_tcb_ptr->tcb_rel.relid),
+		    &m->mx_rcb->rcb_tcb_ptr->tcb_rel.relid,
+		    sizeof( m->mx_rcb->rcb_tcb_ptr->tcb_rel.relowner),
+		    &m->mx_rcb->rcb_tcb_ptr->tcb_rel.relowner);
+
+	SETDBERR(dberr, 0, E_DM9101_UPDATE_CATALOGS_ERROR);
+    }
+
+    /*
+    ** If all is well, post the encryption key for user data to shared
+    ** memory, keyed on the base table id.
+    */
+    if ( status == E_DB_OK )
+    {
+	DMC_CRYPT_KEY	*cp;
+	DMC_CRYPT_KEY	*cp_inactive = NULL;
+
+	CSp_semaphore(TRUE, &Dmc_crypt->crypt_sem);
+	/*
+	** If we changed the passphrase, nullify the encryption enabling
+	** so that the user has to respecify it to turn on encryption again.
+	** That way, they are forced to prove they know the key and can
+	** ROLLBACK their passphrase change and try again if they fat-finger
+	** the new key specification.
+	*/ 
+	if (dmu->dmu_enc_flags2 & DMU_NEWPASS)
+	    dmu->dmu_enc_flags2 |= DMU_NULLPASS;
+	/*
+	** A linear search. Not elegant, but we only have to look through
+	** memory at active slots, one per table with encryption that has
+	** been enabled, matching on base reltid. Should be fast.
+	*/
+	for ( cp = (DMC_CRYPT_KEY *)((PTR)Dmc_crypt + sizeof(DMC_CRYPT)),
+		i = 0 ;
+		i < Dmc_crypt->seg_active ; cp++, i++ )
+	{
+	    /* found the entry for this record ... done */
+	    if ( cp->db_tab_base == rel.reltid.db_tab_base )
+		break;
+	    /* found first inactive slot ... remember */
+	    if ( cp->status == DMC_CRYPT_INACTIVE &&
+		 cp_inactive == NULL )
+		cp_inactive = cp;
+	}
+	/*
+	** Are we here just to disable encryption because PASSPHRASE=''
+	** was specified? If so and we found our man, clear him out!
+	** Otherwise, encryption was already off for the table.
+	*/
+	if (dmu->dmu_enc_flags2 & DMU_NULLPASS)
+	{
+	    if ( cp->db_tab_base == rel.reltid.db_tab_base )
+	    {
+		MEfill(sizeof(DMC_CRYPT_KEY), 0, (PTR)cp);
+		cp->status = DMC_CRYPT_INACTIVE;
+	    }
+	}
+	else
+	/*
+	** Use (in order of preference)
+	** 1. our own existing slot
+	** 2. the first inactive slot
+	** 3. a new slot at the end
+	*/
+	{
+	    if ( cp->db_tab_base == rel.reltid.db_tab_base )
+	    	;			/* reuse our slot */
+	    else
+	    if ( cp_inactive != NULL)
+		cp = cp_inactive;	/* reuse empty slot */
+	    else
+	    {
+		Dmc_crypt->seg_active++;	/* new slot */
+		if (Dmc_crypt->seg_active > Dmc_crypt->seg_size)
+		{
+		    /* > hard-coded value or ii.*.dbms.*.dmf_crypt_maxkeys */
+		    uleFormat( NULL, E_DM0179_DMC_CRYPT_SLOTS_EXHAUSTED,
+			(CL_ERR_DESC *)NULL,
+			ULE_LOG, NULL, (char *)NULL,
+			(i4)0, (i4 *)NULL, &error, 1,
+			sizeof(Dmc_crypt->seg_size),
+			&Dmc_crypt->seg_size);
+		    SETDBERR(dberr, 0, E_DM9101_UPDATE_CATALOGS_ERROR);
+		    status = E_DB_ERROR;
+		}
+	    }
+	    if ( status == E_DB_OK )
+	    {
+		MEfill(sizeof(DMC_CRYPT_KEY), 0, (PTR)cp);
+		MEcopy((PTR)decrypted_key, keybytes, (PTR)cp->key);
+		cp->db_tab_base = rel.reltid.db_tab_base;
+		cp->status = DMC_CRYPT_ACTIVE;
+	    }
+	}
+	CSv_semaphore(&Dmc_crypt->crypt_sem);
+    }
+
+    return (status);
+}
+
+/*{
 ** Name: dm2u_bbox_range - create an ibox from the range box
 **
 ** Description:
@@ -6950,6 +7425,8 @@ DB_ERROR	*dberr)
 		attrs[i].attr_collID = keyatt->collID;
 		attrs[i].attr_geomtype = keyatt->geomtype;
 		attrs[i].attr_srid = keyatt->srid;
+		attrs[i].attr_encflags = keyatt->encflags;
+		attrs[i].attr_encwid = keyatt->encwid;
 		MEcopy((PTR)(record + keyatt->offset), keyatt->length, pos);
 		pos += keyatt->length;
 	    }

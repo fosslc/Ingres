@@ -62,6 +62,7 @@ LIBRARY = IMPDMFLIBDATA
 #include    <dmpecpn.h>
 #include    <dmftm.h>
 #include    <dm2rep.h>
+#include    <dmfcrypt.h>
 
 
 /*
@@ -76,7 +77,10 @@ LIBRARY = IMPDMFLIBDATA
 **	29-Sep-2004 (drivi01)
 **	    Added LIBRARY jam hint to put this file into IMPDMFLIBDATA
 **	    in the Jamfile.
+**	13-Apr-2010 (toumi01) SIR 122403
+**	    Added Dmc_crypt for data encryption at rest.
 */
 
 /* dmcstart.c */
 GLOBALDEF	DMC_REP		*Dmc_rep;
+GLOBALDEF	DMC_CRYPT	*Dmc_crypt;

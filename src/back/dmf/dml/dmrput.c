@@ -385,9 +385,18 @@ DMR_CB  *dmr_cb)
 
 	    if (xcb->xcb_state == 0)
 	    {
+/* CRYPT_FIXME need to fix logical/physical width split and alttbl issues.
+** It used to be so simple: 
+**		if (dmr->dmr_data.data_address  &&
+**		    dmr->dmr_data.data_in_size 
+**			>= rcb->rcb_tcb_ptr->tcb_rel.relwid)
+*/
 		if (dmr->dmr_data.data_address  &&
+		   (dmr->dmr_data.data_in_size 
+			>= rcb->rcb_tcb_ptr->tcb_rel.relwid
+			||
 		    dmr->dmr_data.data_in_size 
-                             >= rcb->rcb_tcb_ptr->tcb_rel.relwid)
+			>= rcb->rcb_tcb_ptr->tcb_rel.reldatawid))
 		{
 		    /*
 		    ** If operation is requested inside a mini-xact, do this

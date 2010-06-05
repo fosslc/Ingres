@@ -48,6 +48,7 @@
 #include    <dma.h>
 #include    <cm.h>
 #include    <gwf.h>
+#include    <dmfcrypt.h>
 
 /**
 **
@@ -242,6 +243,9 @@
 **	    Need hshcrc.h for gcc 4.3.
 [@history_template@]...
 **/
+
+GLOBALREF	DMC_CRYPT	*Dmc_crypt;
+
 
 /*{
 ** Name: dm2u_destroy - Destroy a permanent table.
@@ -494,6 +498,8 @@
 **	    lock conversions.
 **	10-Nov-2009 (kschendel) SIR 122757
 **	    No need for db sync flag here, files aren't actually opened.
+**	20-Apr-2010 (toumi01) SIR 122403
+**	    If the table is encrypted, delete its enabling Dmc_crypt entry.
 */
 DB_STATUS
 dm2u_destroy(
@@ -963,6 +969,42 @@ DB_ERROR	*dberr)
 	return (E_DB_ERROR);
     }
     
+    /* It looks like we're going to do the destroy. If this is a base record
+    ** and encryption is enabled for the system, check for a Dmc_crypt key
+    ** entry slot to delete.
+    */
+    if ( Dmc_crypt != NULL && table_id.db_tab_index == 0 )
+    {
+	DMC_CRYPT_KEY	*cp;
+	i4		keycount;
+	bool		found_it = FALSE;
+
+	for ( cp = (DMC_CRYPT_KEY *)((PTR)Dmc_crypt + sizeof(DMC_CRYPT)),
+		keycount = 0 ;
+		keycount < Dmc_crypt->seg_active ; cp++, keycount++ )
+	{
+	    /* found the entry for this record */
+	    if ( cp->db_tab_base == table_id.db_tab_base )
+	    {
+		found_it = TRUE;
+		break;
+	    }
+	}
+	if ( found_it == TRUE )
+	{
+	    CSp_semaphore(TRUE, &Dmc_crypt->crypt_sem);
+	    /* if dirty read is verified, delete the entry */
+	    if ( cp->db_tab_base == table_id.db_tab_base )
+	    {
+		MEfill(sizeof(DMC_CRYPT_KEY), 0, (PTR)cp);
+		cp->status = DMC_CRYPT_INACTIVE;
+	    }
+	    else
+		TRdisplay("Dropping a table, deleting the encryption key for reltid %d, the\nDmc_crypt slot was not found. This is not expected, but is not an error.\n",cp->db_tab_base);
+	    CSv_semaphore(&Dmc_crypt->crypt_sem);
+	}
+    }
+
     do		/* here we have table name, owner name, etc and exclusive lock
 		   on table.  We can preceed with the delete. */
     {

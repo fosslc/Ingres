@@ -123,6 +123,8 @@
 **	    as it makes it much easier to batch up the which-part'ed rows
 **	    for DMF.  Split up row-reader loops for unpartitioned vs
 **	    partitioned, do partitioned with DIRECT read and batching.
+**	14-apr-2010 (toumi01) SIR 122403
+**	    Add support for column encryption.
 **/
 
 
@@ -533,12 +535,14 @@ QEF_RCB       *qef_rcb)
 	    copy_ctl->dmtcb.dmt_access_mode = DMT_A_WRITE;
             copy_ctl->dmtcb.dmt_mustlock = TRUE;
 
-	    /* Attempt bulk-load if table is not journalled and not
-	    ** indexed.  Later we might have to backtrack on this
+	    /* Attempt bulk-load if table is not journalled and not index and
+	    ** not encrypted.  Later we might have to backtrack on this
 	    ** idea, if DMF tells us that bulk load isn't going to work.
             */
 
-            if ((copy_ctl->tbl_info.tbl_status_mask & (DMT_JNL | DMT_IDXD)) == 0)
+            if ((copy_ctl->tbl_info.tbl_status_mask & (DMT_JNL | DMT_IDXD)) == 0
+		&&
+		(copy_ctl->tbl_info.tbl_encflags & DMT_ENCRYPTED) == 0)
             {
                 copy_ctl->use_load = TRUE;
 		copy_ctl->dmtcb.dmt_lock_mode = DMT_X;
@@ -2804,7 +2808,7 @@ copy_into_child(SCF_FTX *ftx)
 	    ** write them to the user via CUT.
 	    */
 	    dmrcb.dmr_data.data_address = row_temp;
-	    dmrcb.dmr_data.data_in_size = qeu_copy->qeu_tup_length;
+	    dmrcb.dmr_data.data_in_size = qeu_copy->qeu_tup_physical;
 	    while ((copy_ctl->state & CCF_ABORT) == 0)
 	    {
 		/* Read a row */

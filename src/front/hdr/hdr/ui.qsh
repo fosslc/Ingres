@@ -135,6 +135,9 @@
 **	    to eliminate gcc 4.3 warnings.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	01-apr-2010 (toumi01) SIR 122403
+**	    For encryption add rel_datawid, rel_totdatawid,
+**	    encrypted_columns, encryption_type.
 */
  
 #ifndef UI_HDR_INCLUDED
@@ -417,6 +420,10 @@ typedef i4 DBSTATUS;
 ##	i2	cache_pri;
 ##	u_i2	phys_partitions;
 ##	i2	partition_dimensions;
+##	i4	rel_datawid;
+##	i4	rel_totdatawid;
+##	char	encrypted_columns[2];
+##	char	encryption_type[7];
 ##} UI_HELP_INFO;
      
      

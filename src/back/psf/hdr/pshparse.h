@@ -544,6 +544,9 @@
 **	12-Nov-2009 (kiria01) b122841
 **	    Corrected psl_mk_const_similar parameters with explicit
 **	    mstream.
+**	10-Feb-2010 (toumi01) SIR 122403
+**	    New #defines and encrypt_spec for tracking encryption parsing.
+**	    New function psl_nm_eq_hexconst for AESKEY= parsing.
 **	25-Mar-2010 (kiria01) b123535
 **	    Clarified PST_DESCEND_MARK and exported psl_ss_flatten.
 **      01-apr-2010 (stial01)
@@ -4072,6 +4075,11 @@ typedef struct _PSY_VIEWINFO
 #define	PSS_TYPE_GENDEFAULT	    0x100   /* "generate by default as identity" */
 #define	PSS_TYPE_NAMED_IDENT	    0x200   /* explicitly named identity seq */
 
+/* used for encryption */
+#define PSS_ENCRYPT		    0x001
+#define PSS_ENCRYPT_SALT	    0x002
+#define PSS_ENCRYPT_CRC		    0x004
+
 /*
 ** size of the characteristic array for [CREATE] INDEX
 */
@@ -5775,6 +5783,15 @@ psl_nm_eq_nm(
 	i4		qmode,
 	DB_ERROR	*err_blk);
 FUNC_EXTERN DB_STATUS
+psl_nm_eq_hexconst(
+	PSS_SESBLK	*sess_cb,
+	char		*name,
+	u_i2		hexlen,
+	char		*hexvalue,
+	PSS_WITH_CLAUSE *with_clauses,
+	i4		qmode,
+	DB_ERROR	*err_blk);
+FUNC_EXTERN DB_STATUS
 psl_nm_eq_no(
 	PSS_SESBLK	*sess_cb,
 	char		*name,
@@ -5859,7 +5876,8 @@ psl_ct14_typedesc(
 	DB_TEXT_STRING	*default_text,
 	DB_IISEQUENCE	*identity_seq,
 	PSQ_CB		*psq_cb,
-	DB_COLL_ID	collationID);
+	DB_COLL_ID	collationID,
+	i4		encrypt_spec);
 FUNC_EXTERN DB_STATUS
 psl_ct15_distr_with(
 	PSS_SESBLK	*sess_cb,

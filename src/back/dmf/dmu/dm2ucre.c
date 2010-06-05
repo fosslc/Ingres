@@ -48,6 +48,7 @@
 #include    <cm.h>
 #include    <st.h>
 #include    <cui.h>
+#include    <adurijndael.h>
 
 /**
 **
@@ -433,6 +434,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	01-apr-2010 (toumi01) SIR 122403
+**	    Support for column encryption.
 **      10-Feb-2010 (maspa05) b122651
 **          Added TCB2_PHYSLOCK_CONCUR to iidevices and iisequence as this is 
 **          how we check for the need for physical locks now
@@ -948,10 +951,14 @@ NO_OPTIM=su4_cmw i64_aix
 **  	Add geospatial support
 **	6-Nov-2009 (kschendel) SIR 122757
 **	    Ask for direct IO if config says to.
+**	01-apr-2010 (toumi01) SIR 122403
+**	    Support for column encryption. Start passing dmu.
 */
 
 /* ****FIXME THIS parameter list is simply ridiculous.  Just pass
 ** the DMU_CB!!!  it's not like it has cooties or anything.
+** Started passing it and used it for new args, but there is still
+** room for improvement! (MikeT)
 */
 
 
@@ -971,6 +978,7 @@ i4		    relstat,
 u_i4		    relstat2,
 i4		    structure,
 i4		    ntab_width,
+i4		    ntab_data_width,
 i4		    attr_count,
 DMF_ATTR_ENTRY	    **attr_entry,
 i4		    db_lockmode,
@@ -991,6 +999,7 @@ f8 		    *range,
 i4		    tbl_pri,
 DB_PART_DEF	    *dmu_part_def,
 i4		    dmu_partno,
+DMU_CB		    *dmu,
 DB_ERROR	    *errcb)
 {
     DMP_RCB		*rel_rcb = (DMP_RCB *)0;
@@ -1047,6 +1056,11 @@ DB_ERROR	    *errcb)
     DMP_ETAB_CATALOG    etab_record;
     bool	dd_reg_tbl_idx = FALSE;
     DB_ERROR		local_dberr;
+    u_i2		dmu_enc_flags;
+    u_i2		dmu_enc_flags2;
+    u_char		*dmu_enc_passphrase;
+    u_char		*dmu_enc_aeskey;
+    u_i2		dmu_enc_aeskeylen;
 
     /* List of all the system catalogs with fixed table ID numbers.
     ** Any ii-table excluding blob etabs and user partitions that
@@ -1234,6 +1248,27 @@ DB_ERROR	    *errcb)
 	    TCB_CATALOG | TCB_NOUPDT | TCB_PROALL, 0},
     };
     char		*name_ptr;
+
+    /* If the DMU_CB was passed in grab values from it. We are still
+    ** passing in individual args that could come from here. Where
+    ** are the janitors?! ;-)
+    */
+    if (dmu == NULL)
+    {
+	dmu_enc_flags = 0;
+	dmu_enc_flags2 = 0;
+	dmu_enc_passphrase = NULL;
+	dmu_enc_aeskey = NULL;
+	dmu_enc_aeskeylen = 0;
+    }
+    else
+    {
+	dmu_enc_flags = dmu->dmu_enc_flags;
+	dmu_enc_flags2 = dmu->dmu_enc_flags2;
+	dmu_enc_passphrase = dmu->dmu_enc_passphrase;
+	dmu_enc_aeskey = dmu->dmu_enc_aeskey;
+	dmu_enc_aeskeylen = dmu->dmu_enc_aeskeylen;
+    }
 
     CLRDBERR(errcb);
     CLRDBERR(&log_err);
@@ -2152,6 +2187,8 @@ DB_ERROR	    *errcb)
 	relrecord.relatts = attr_count;
 	relrecord.relwid = ntab_width;
 	relrecord.reltotwid = ntab_width;	        
+	relrecord.reldatawid = ntab_data_width;	        
+	relrecord.reltotdatawid = ntab_data_width;	        
 	relrecord.relkeys = 0;
 	relrecord.relspec = structure;
 	relrecord.reltups = 0;
@@ -2309,6 +2346,122 @@ DB_ERROR	    *errcb)
 		ulb_rev_bits(ntab_id.db_tab_index);
 	}
 
+	/*
+	** Set up encryption at the table level.
+	** - store a version number as "future changes insurance"
+	** - store the type of encrytion as a flag
+	** - generate a key for the selected type and
+	**	- append a validating hash
+	**	- encrypt the lot with the user passphrase
+	** Layout of key / hash / 0-pad / extra bytes is as follow:
+	** AES 128
+	** <----BLOCK1----><----BLOCK2---->
+	** KKKKKKKKKKKKKKKKhhhh000000000000................................
+	** AES 192
+	** <----BLOCK1----><----BLOCK2---->
+	** KKKKKKKKKKKKKKKKKKKKKKKKhhhh0000................................
+	** AES 256
+	** <----BLOCK1----><----BLOCK2----><----BLOCK3---->
+	** KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKhhhh000000000000................
+	** Note that the original design called for a SHA-1 hash rather
+	** than the Ingres hash, and requires up to 4 blocks, as shown
+	** below. For various reasons of software licensing and storage
+	** space efficiency (in user records) TCB_ENC_VER_1 does not
+	** require more than 3 blocks (see above), but the "extra" space
+	** in iirelation is retained as "future insurance", should SHA-1
+	** or some other lengthier hash be desired for a later release.
+	** AES 128
+	** <----BLOCK1----><----BLOCK2----><----BLOCK3---->
+	** KKKKKKKKKKKKKKKKhhhhhhhhhhhhhhhhhhhh000000000000................
+	** AES 192
+	** <----BLOCK1----><----BLOCK2----><----BLOCK3---->
+	** KKKKKKKKKKKKKKKKKKKKKKKKhhhhhhhhhhhhhhhhhhhh0000................
+	** AES 256
+	** <----BLOCK1----><----BLOCK2----><----BLOCK3----><----BLOCK4---->
+	** KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKhhhhhhhhhhhhhhhhhhhh000000000000
+	*/
+	if (dmu_enc_flags & DMU_ENCRYPTED)
+	{
+	    i4 i, j, nrounds, keybits, keybytes, blocks;
+	    union {
+		u_i4	rand_i4[AES_BLOCK*4/sizeof(u_i4)];
+		u_char	randkey[AES_BLOCK*4];
+	    } u_key;
+	    u_i4 rk[RKLENGTH(AES_256_BITS)];
+	    u_char *et, *pt, *pprev;
+	    u_i4 crc;
+
+	    relrecord.relencver = TCB_ENC_VER_1;
+	    relrecord.relencflags = TCB_ENCRYPTED;
+	    if (dmu_enc_flags & DMU_AES128)
+	    {
+		relrecord.relencflags |= TCB_AES128;
+		keybits = AES_128_BITS;
+		keybytes = AES_128_BYTES;
+		blocks = 2;
+	    }
+	    else
+	    if (dmu_enc_flags & DMU_AES192)
+	    {
+		relrecord.relencflags |= TCB_AES192;
+		keybits = AES_192_BITS;
+		keybytes = AES_192_BYTES;
+		blocks = 2;
+	    }
+	    else
+	    if (dmu_enc_flags & DMU_AES256)
+	    {
+		relrecord.relencflags |= TCB_AES256;
+		keybits = AES_256_BITS;
+		keybytes = AES_256_BYTES;
+		blocks = 3;
+	    }
+	    else
+	    {
+		/* internal error */
+		SETDBERR(errcb, 0, E_DM0175_ENCRYPT_FLAG_ERROR);
+		return (E_DB_ERROR);
+	    }
+
+	    MEfill(sizeof(u_key.randkey), 0, (PTR)&u_key.randkey);
+	    if (dmu_enc_flags2 & DMU_AESKEY)
+	    {
+		/* The user chose to supply an explicit AES key value for
+		** this table; just take them at their word.
+		*/
+		MEcopy((PTR)dmu_enc_aeskey, dmu_enc_aeskeylen,
+		    (PTR)u_key.randkey);
+	    }
+	    else
+	    {
+		/* Construct an encryption key by generating enough pseudo
+		** random u_i4s to fill in the key for the AES type.
+		*/
+		for ( i = 0 ; i < (keybytes / sizeof(u_i4)) ; i++ )
+		    u_key.rand_i4[i] = MHrand2();
+	    }
+	    /* fill in the hash */
+	    crc = -1;
+	    HSH_CRC32(u_key.randkey, keybytes, &crc);
+	    MEcopy((PTR)&crc, sizeof(crc), u_key.randkey + keybytes);
+	    /* Encrypt the internal encryption key with the passphrase */
+	    nrounds = adu_rijndaelSetupEncrypt(rk, dmu_enc_passphrase, keybits);
+	    pprev = NULL;
+	    et = relrecord.relenckey;	/* Encrypted Text in relation */
+	    pt = u_key.randkey;		/* Plain Text on stack */
+	    for ( i = blocks ; i > 0 ; i-- )
+	    {
+		/* CBC cipher mode */
+		if (pprev)
+		    for ( j = 0 ; j < AES_BLOCK ; j++ )
+			pt[j] ^= pprev[j];
+		adu_rijndaelEncrypt(rk, nrounds, pt, et);
+		pprev = et;
+		et += AES_BLOCK;
+		pt += AES_BLOCK;
+	    }
+	}
+
 	relrecord.relstat2 = relstat2;
 
 	/*
@@ -2388,6 +2541,8 @@ DB_ERROR	    *errcb)
 		attrrecord.attver_altcol = 0;
 		attrrecord.attcollID = attr_entry[i]->attr_collID;
 		attrrecord.attgeomtype = attr_entry[i]->attr_geomtype;
+		attrrecord.attencflags = attr_entry[i]->attr_encflags;
+		attrrecord.attencwid = attr_entry[i]->attr_encwid;
 		attrrecord.attsrid = attr_entry[i]->attr_srid;
 		MEfill(sizeof(attrrecord.attfree), 0, (PTR)&attrrecord.attfree);
 

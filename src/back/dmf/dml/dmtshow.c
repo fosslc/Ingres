@@ -299,6 +299,8 @@
 **          Rename CM_ischarsetUTF8 to CMischarset_utf8.
 **	19-Aug-2009 (kschendel) 121804
 **	    Need cm.h for proper CM declarations (gcc 4.3).
+**	26-Mar-2010 (toumi01) SIR 122403
+**	    For encryption project add encflags, encwid.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
 */
@@ -1422,6 +1424,7 @@ DMT_SHW_CB  *dmt_show_cb)
 	    tbl->tbl_attr_high_colno = tcb->tcb_rel.relatts;
 	    tbl->tbl_index_count = (i4)tcb->tcb_index_count;
 	    tbl->tbl_width = tcb->tcb_rel.relwid;
+	    tbl->tbl_data_width = tcb->tcb_rel.reldatawid;
 	    tbl->tbl_pgsize = tcb->tcb_rel.relpgsize;
 	    tbl->tbl_storage_type = tcb->tcb_rel.relspec;
 	    tbl->tbl_status_mask = tcb->tcb_rel.relstat;
@@ -1455,6 +1458,7 @@ DMT_SHW_CB  *dmt_show_cb)
 	    tbl->tbl_cachepri = tcb->tcb_rel.reltcpri;
 	    tbl->tbl_nparts = tcb->tcb_rel.relnparts;
 	    tbl->tbl_ndims = tcb->tcb_rel.relnpartlevels;
+	    tbl->tbl_encflags = tcb->tcb_rel.relencflags;
 
 	    /* FIXME:  make these DMT-flags and TCB2-flags identical, get
 	    ** rid of TCB2 defs, ditch all this silly translation code.
@@ -1915,6 +1919,8 @@ DMT_SHW_CB  *dmt_show_cb)
 		a[j].att_geomtype = tcb->tcb_atts_ptr[i].geomtype;
 		a[j].att_srid = tcb->tcb_atts_ptr[i].srid;
 		a[j].att_flags = tcb->tcb_atts_ptr[i].flag;
+		a[j].att_encflags = tcb->tcb_atts_ptr[i].encflags;
+		a[j].att_encwid = tcb->tcb_atts_ptr[i].encwid;
 		COPY_DEFAULT_ID( tcb->tcb_atts_ptr[i].defaultID,
 		    a[j].att_defaultID );
 #if defined(axp_osf) || defined(ris_u64) || defined(axp_lnx) || \
@@ -1969,6 +1975,8 @@ DMT_SHW_CB  *dmt_show_cb)
 		a->att_geomtype = tcb->tcb_atts_ptr[i].geomtype;
 		a->att_srid = tcb->tcb_atts_ptr[i].srid;
 		a->att_flags = tcb->tcb_atts_ptr[i].flag;
+		a->att_encflags = tcb->tcb_atts_ptr[i].encflags;
+		a->att_encwid = tcb->tcb_atts_ptr[i].encwid;
 		COPY_DEFAULT_ID( tcb->tcb_atts_ptr[i].defaultID, a->att_defaultID );
 		a->att_default = ( PTR ) NULL;
 		a->att_key_seq_number = tcb->tcb_atts_ptr[i].key;

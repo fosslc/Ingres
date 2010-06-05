@@ -59,6 +59,8 @@
 **          Added db_replicated and with_no_rep globals.
 **       8-jun-2009 (maspa05) SIR 122202
 **          Added -nologging to put "set nologging" at the top of copy.in 
+**	21-apr-2010 (toumi01) SIR 122403
+**	    Add encryption support and With_r1000_catalogs.
 */
 
 /* xfchkcap.sc */
@@ -84,6 +86,7 @@ GLOBALDEF bool With_20_catalogs = FALSE;
 GLOBALDEF bool With_r3_catalogs = FALSE;
 GLOBALDEF bool With_r302_catalogs = FALSE;
 GLOBALDEF bool With_r930_catalogs = FALSE;
+GLOBALDEF bool With_r1000_catalogs = FALSE;
 GLOBALDEF bool CreateParallelIndexes = FALSE;
 GLOBALDEF bool SetJournaling = FALSE;
 GLOBALDEF bool Unload_byuser = FALSE;

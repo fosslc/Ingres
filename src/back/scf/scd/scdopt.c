@@ -359,6 +359,8 @@ NO_OPTIM=dr6_us5
 **          Pick up opf_pq_dop and change the default to 0 (OFF). This
 **          allows those that want to use parallel query to use it as
 **          documented.
+**	13-Apr-2010 (toumi01) SIR 122403
+**	    Add CRYPT_MAXKEYS for data encryption a rest.
 **	08-Mar-2010 (thaju02)
 **	    Remove max_tuple_length.
 */
@@ -633,6 +635,7 @@ struct _SCD_OPT {
 
 #define		SCO_PAGETYPE_V6		    216
 #define		SCO_PAGETYPE_V7		    217
+#define		SCO_CRYPT_MAXKEYS	    218 /* max crypt shmem keys */
 static SCD_OPT scd_opttab[] =
 {
     /* echoing first so the rest get echoed */
@@ -740,6 +743,7 @@ static SCD_OPT scd_opttab[] =
     SCO_DTCB_LIMIT,		'o',    '3',    "!.dmf_tcb_limit",
     SCO_DOP,			'o',	' ',	"!.degree_of_parallelism",
     SCO_DMF_PAD_BYTES,		'o',	' ',	"!.dmf_pad_bytes",
+    SCO_CRYPT_MAXKEYS,		'o',	'3',	"!.dmf_crypt_maxkeys",
     SCO_EVENTS,			'o',	'3',	"!.event_limit",
     SCO_EVENT_PRIORITY,         'o',    '3',    "!.event_priority",
     SCO_FAST_COMMIT,		't',	'3',	"!.fast_commit",
@@ -1199,6 +1203,11 @@ scd_options(
 		    dca++->char_value = scd_value;
 		}
 		break;
+
+	    case SCO_CRYPT_MAXKEYS:
+		/* Set the maximum shmem active encryption keys */
+		dca->char_id = DMC_C_CRYPT_MAXKEYS;
+		dca++->char_value = scd_value;
 
 	    case SCO_DBCNT:
 		scd_cb->max_dbcnt = scd_value;

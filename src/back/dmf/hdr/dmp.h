@@ -509,6 +509,9 @@
 **	03-Mar-2010 (jonj)
 **	    SIR 121619 MVCC, blob support:
 **	    Add NeedPhysLock macro.
+**	26-Mar-2010 (toumi01) SIR 122403
+**	    For encryption project add rcb_erecord_ptr, relencflags,
+**	    relencver, relenckey, tcb_enckey_offset.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
 **      10-Feb-2010 (maspa05) bug 122651, trac 442
@@ -1494,6 +1497,9 @@ struct _DMP_ROWACCESS
 					** allocated, and if this can change the
 					** row size, allocation needs to know.
 					*/
+    bool	encrypted_attrs;	/* TRUE if one or more attributes in
+					** the rac is encrypted
+					*/
 };
 
 struct _DMP_POS_INFO {
@@ -2234,6 +2240,8 @@ REC_PTR_VALID"
     char            *rcb_srecord_ptr;       /* Pointer to area in this RCB
                                             ** used to create keys, compress
                                             ** a record, etc. */
+    char	    *rcb_erecord_ptr;	    /* Pointer to area in this RCB
+					    ** used to encrypt a record */
     char	    *rcb_hl_ptr;	    /* Key used for scans. */
     i4	    	    rcb_hl_given;	    /* Number of key fields given. */
     i4	    	    rcb_hl_op_type;	    /* Type of comparison 
@@ -2400,6 +2408,7 @@ LEAF,DATA,ROW,BASEDATA"
     DM_TID	    rcb_crow_tid;	    /* TID of last crow locked row */
     LK_LKID	    rcb_mvcc_lkid;	    /* lock id of TBL_MVCC lock, if any */
     LG_CRIB	    *rcb_crib_ptr;	    /* This RCB's CRIB */
+    i4		    rcb_enckey_slot;	    /* Encryption key in Dmc_crypt */
 
 /*
 **  Section for Rtree.
@@ -3821,8 +3830,20 @@ SESSION_TEMP,BSWAP"
      u_i2	     relversion;	    /* metadata version #; incr when column
 					    ** layouts are altered
 					    */
+/* With the addition of the encryption feature we for the first time need to
+** differentiate between the physical width of a row and the logical width
+** of the (non-encrypted) data. Even compression did not require this, since
+** compression is just a pre/post I/O transformation of the whole shebang.
+** Example: t1 (c1 int, c2 int encrypt nosalt, c3 int)
+** The logical row for three nullable i4s is
+**	111112222233333			(width = 15)
+** The physical row accounting for encryption is
+**	11111222222222222222233333	(width = 26)
+*/
      i4              relwid;		    /* Width in bytes of table record.*/
      i4              reltotwid;             /* Tot Width in bytes of table record.*/
+     i4              reldatawid;	    /* Width in bytes of data.*/
+     i4              reltotdatawid;         /* Tot Width in bytes of data.*/
      u_i2	     relnparts;		    /* Total physical partitions, zero
 					    ** (not 1) for unpartitioned tables
 					    ** Overloaded to mean physical
@@ -3831,7 +3852,15 @@ SESSION_TEMP,BSWAP"
      i2		     relnpartlevels;	    /* Number of partitioning levels, zero
 					    ** (not 1) for unpartitioned tables.
 					    */
-     char            relfree[8];            /* Reserved for future use. */
+     u_i2	     relencflags;	    /* encryption flags */
+#define			TCB_ENCRYPTED	0x0001L
+#define			TCB_AES128	0x0002L
+#define			TCB_AES192	0x0004L
+#define			TCB_AES256	0x0008L
+     i2		     relencver;		    /* encryption internal version */
+#define			TCB_ENC_VER_1	1
+     u_char	     relenckey[64];	    /* encryption key */
+     char	     relfree[12];	    /* Reserved for future use. */
 
      }		    tcb_rel;                   
 };

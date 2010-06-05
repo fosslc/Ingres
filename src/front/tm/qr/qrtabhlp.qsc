@@ -150,6 +150,8 @@
 **          Use DB_MAXNAME for db objects, DB_IISTRUCT_LEN for iistructure() 
 **	24-Aug-2009 (kschendel) 121804
 **	    Need ui.h to satisfy gcc 4.3.
+**	25-mar-2010 (toumi01) SIR 122403
+**	    Add HELP TABLE support for encryption.
 **      31-Mar-2010 (hanal04) Bug 123481
 **          Extend the width of the column datatype in HELP TABLE from
 **          10 to 18 characters. Most terminal displays are not at least 80
@@ -179,6 +181,8 @@ FUNC_EXTERN	VOID		qrdiprintf( u_i4 nth, QRB *qrb, char *fmt,
 
 VOID		IIQRdci_DoColumnInfo();
 VOID		IIQRpci_PrintColumnInfo();
+VOID		IIQRdei_DoEncryptColInfo();
+VOID		IIQRpei_PrintEncryptColInfo();
 VOID		IIQRthp_TableHelp();
 VOID		IIQRihp_IndexHelp();
 bool		IIQRget_is_secure();
@@ -269,6 +273,14 @@ static	char	*sA9_user_table_part = NULL;
 static	char	*sAA_phys_parts = NULL;
 static	char	*sAB_part_dims = NULL;
 static	char	*sB0_part_def = NULL;
+static	char	*sC0_crypto_hdr = NULL;
+static	char	*sC1_crypto_colname = NULL;
+static	char	*sC2_crypto_width = NULL;
+static	char	*sC3_crypto_salt = NULL;
+static	char	*sC4_yes_salt = NULL;
+static	char	*sC5_no_salt = NULL;
+static	char	*sC6_rel_datawid = NULL;
+static	char	*sC7_rel_totdatawid = NULL;
 static  char    *s110_Compression = NULL;
 static  char    *s111_data = NULL;
 static  char    *s112_key = NULL;
@@ -582,8 +594,12 @@ EXEC SQL END DECLARE SECTION;
 
     if (help_struct->row_width != -1)
     {
+/* CRYPT_FIXME need to sort out this logical/physical width problem
 	qrprintf(qrb, s205_Tot_width, help_struct->rel_totwid);
 	qrprintf(qrb, s1C_Row_width, help_struct->row_width);
+*/
+	qrprintf(qrb, s205_Tot_width, help_struct->rel_totdatawid);
+	qrprintf(qrb, s1C_Row_width, help_struct->rel_datawid);
     }
 
     /* display physical attributes */
@@ -1022,6 +1038,26 @@ EXEC SQL END DECLARE SECTION;
 		FALSE, qraddstr, qrb);
 	qrputc(qrb, '\n');
     }
+
+    /* If there are encrypted columns, display table and column info:
+    **    table:  encryption type, physical table width
+    **    column: name, type, physical width, salt YN
+    */
+    if (help_struct->encrypted_columns[0] == 'Y')
+    {
+	qrprintf(qrb, sC0_crypto_hdr, help_struct->encryption_type);
+	if (help_struct->row_width != -1)
+	{
+	    qrprintf(qrb, sC7_rel_totdatawid, help_struct->rel_totwid);
+	    qrprintf(qrb, sC6_rel_datawid, help_struct->row_width);
+	}
+	qrputc(qrb, '\n');
+	qrprintf(qrb, ERx("%-*s %-10s %6s %s"), (i4)qrb->col_maxname, 
+	    sC1_crypto_colname, s5D_mainline_dtype_name,
+	    sC2_crypto_width, sC3_crypto_salt);
+	IIQRdei_DoEncryptColInfo(qrb, t, town);
+	qrputc(qrb, '\n');
+    }
 }
 
 
@@ -1297,8 +1333,104 @@ EXEC SQL END DECLARE SECTION;
 	    EXEC SQL END;
 	} 	/* end else before 6.5 and not logical keys */
 }
+
+/*{
+** Name:	IIQRdei_DoEncyptColInfo - do encrypted column information
+**
+** Description:
+**	Produce the encrypted column information help
+**
+** Inputs:
+**	qrb		ubiquitous qrb
+**	tab_name	table name
+**	tab_owner	table owner
+**
+** Outputs:
+**	none
+**
+** Side Effects:
+**	puts the help column information into the qrb's output buffer
+**
+** History:
+**	25-mar-2010 (toumi01) SIR 122403
+**	    Written.
+*/
+VOID
+IIQRdei_DoEncryptColInfo(qrb, tab_name, tab_owner)
+QRB			*qrb;
+EXEC SQL BEGIN DECLARE SECTION;
+char			*tab_name;
+char			*tab_owner;
+EXEC SQL END DECLARE SECTION;
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+	QR_COL_INFO	colinfo;
+	EXEC SQL END DECLARE SECTION;
 
+	if  (STcompare(IIUIscl_StdCatLevel(),UI_LEVEL_1000) >= 0
+	     && IIUIdbdata()->dmldef != UI_DML_GTWSQL)
+	{
 
+		EXEC SQL REPEATED
+		SELECT 	column_name, column_datatype,
+			column_encrypt_width,
+			column_encrypt_salt
+
+		INTO 	:colinfo.colname, :colinfo.datatype,
+			:colinfo.encrypt_width,
+			:colinfo.encrypt_salt
+
+		FROM	iicolumns
+
+		WHERE	table_name = :tab_name
+		AND		table_owner = :tab_owner
+		AND		column_encrypted = 'Y'
+		ORDER BY	column_sequence;
+
+		EXEC SQL BEGIN;
+
+		IIQRpei_PrintEncryptColInfo(qrb, &colinfo);
+
+		EXEC SQL END;
+	}
+}
+
+VOID
+IIQRpei_PrintEncryptColInfo(qrb, col_info)
+QRB		*qrb;
+QR_COL_INFO	*col_info;
+{
+	char	saltc[5];
+	i4	i;
+
+	if (set_fast_strings == FALSE)
+	{
+		set_those_wacky_strings();
+		set_fast_strings = TRUE;
+	}
+
+	if (qrb->putfunc != NULL)		/* flush print buffer */
+	{
+		(*qrb->putfunc)(qrb);
+	}
+
+	qrtrimwhite( col_info->colname );
+
+	col_info->datatype[10] = EOS;		/* truncate datatype */
+	CVlower(col_info->datatype);
+
+	if (col_info->encrypt_salt[0] == 'Y')
+		STcopy(sC4_yes_salt, saltc);
+	else
+		STcopy(sC5_no_salt, saltc);
+
+	qrputc(qrb, '\n');
+	qrdiprintf( QRARG2, qrb, ERx("%-*s %s %6d %s"),
+	    (i4)qrb->col_maxname, col_info->colname, col_info->datatype,
+	    col_info->encrypt_width, saltc);
+
+}
+
 /*{
 ** Name:	IIQRihp_IndexHelp - perform help index <table> for one index nm
 **
@@ -1494,10 +1626,14 @@ UI_HELP_INFO    *help_struct;
 	printf("all_to_all is %s\n", help_struct->all_to_all);
 	printf("ret_to_all is %s\n", help_struct->ret_to_all);
 	printf("row_width is %d\n", help_struct->row_width);
+	printf("rel_totwid is %d\n", help_struct->rel_totwid);
+	printf("rel_datawid is %d\n", help_struct->rel_datawid);
+	printf("rel_totdatawid is %d\n", help_struct->rel_totdatawid);
 	printf("is_journalled is %s\n", help_struct->is_journalled);
 	printf("multi_locations is %s\n", help_struct->multi_locations);
 	printf("view_base is %s\n", help_struct->view_base);
 	printf("location_name is %s\n", help_struct->location_name);
+	printf("encryption_type is %s\n", help_struct->encryption_type);
 }
 # endif	/* QRDEBUG */
 
@@ -1862,6 +1998,14 @@ set_those_wacky_strings()
 	sAA_phys_parts = ERget(F_QR00AA_phys_parts);
 	sAB_part_dims = ERget(F_QR00AB_part_dims);
 	sB0_part_def = ERget(F_QR00B0_part_def);
+	sC0_crypto_hdr = ERget(F_QR00C0_crypto_hdr);
+	sC1_crypto_colname = ERget(F_QR00C1_crypto_colname);
+	sC2_crypto_width = ERget(F_QR00C2_crypto_width);
+	sC3_crypto_salt = ERget(F_QR00C3_crypto_salt);
+	sC4_yes_salt = ERget(F_QR00C4_yes_salt);
+	sC5_no_salt = ERget(F_QR00C5_no_salt);
+	sC6_rel_datawid = ERget(F_QR00C6_rel_datawid);
+	sC7_rel_totdatawid = ERget(F_QR00C7_rel_totdatawid);
 	s110_Compression = ERget(F_QR0110_Compression);
 	s111_data = ERget(F_QR0111_data);
 	s112_key = ERget(F_QR0112_key);

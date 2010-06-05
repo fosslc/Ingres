@@ -120,6 +120,10 @@
 ;	    Add adu_29replace_raw and adu_29replace_uni
 ;	22-Mar-2010 (bonro01) b123422
 ;	    Fix previous change which used the wrong function numbers
+;	20-Apr-2010 (toumi01) SIR 122403
+;	    Add for encryption: adu_aesdecrypt adu_aesencrypt
+;	    adu_rijndaelSetupEncrypt adu_rijndaelSetupDecrypt
+;	    adu_rijndaelEncrypt adu_rijndaelDecrypt
 
 EXPORTS
 adb_breakpoint		@1				
@@ -643,3 +647,9 @@ adu_strgenerate_digit	@529
 adu_monthname_lookup	@530
 adu_29replace_raw	@531
 adu_29replace_uni	@532
+adu_aesdecrypt		@533
+adu_aesencrypt		@534
+adu_rijndaelSetupEncrypt @535
+adu_rijndaelSetupDecrypt @536
+adu_rijndaelEncrypt	@537
+adu_rijndaelDecrypt	@538

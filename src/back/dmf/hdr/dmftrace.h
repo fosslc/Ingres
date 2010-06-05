@@ -627,6 +627,8 @@
 **  History:
 **	16-jun-1986 (derek)
 **	    Created for Jupiter .
+**	08-apr-2010 (toumi01) SIR 122403
+**	    Dump AES encryption records to trace file.
 **
 **  T              Description
 **  __________     -----------------------------------------------------------
@@ -638,7 +640,9 @@
 **  803		    Allow dm1c_p{delete,replace} to succeed in spite of dmpe
 **		    errors.
 **  804		    Show actions that will be taken by DMF Aggregate Processor.
-**  805-899	    UNUSED.
+**  805		    Dump AES ENcrypt buffers to trace file.
+**  806		    Dump AES DEcrypt buffers to trace file.
+**  807-899	    UNUSED.
 */
 
 /*

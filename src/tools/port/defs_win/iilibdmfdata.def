@@ -35,6 +35,8 @@
 ;	    Add references because of change 501041 for bug 122739
 ;	11-Feb-2010 (bonro01)
 ;	    Add DM_sizeof_ucore_attr for change 502617 bug 121123
+;	20-Apr-2010 (toumi01) SIR 122403
+;	    Add for encryption Dmc_crypt
 EXPORTS
 dmf_jsp_dcb		@1	DATA			
 ;Db_incons_crash		@2	DATA			
@@ -88,4 +90,5 @@ dm1c_compexpand_v	@49	DATA
 dm1c_cmpcontrol_setup_v	@50	DATA
 dm1c_cmpcontrol_size_v	@51	DATA
 DM_sizeof_ucore_attr	@52	DATA
+Dmc_crypt		@53	DATA
 

@@ -72,6 +72,7 @@ NO_OPTIM=dr6_us5 i64_aix
 #include    <cui.h>
 #include    <nmcl.h>
 #include    <dmrthreads.h>
+#include    <dmfcrypt.h>
 
 #define no_dup_rows(t)                                         \
   ((t->tcb_table_type != TCB_HEAP) && !(t->tcb_rel.relstat & TCB_DUPLICATES))
@@ -975,6 +976,8 @@ NO_OPTIM=dr6_us5 i64_aix
 **	    sensitized to crow_locking().
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	01-apr-2010 (toumi01) SIR 122403
+**	    Add support for column encryption.
 **      10-Feb-2010 (maspa05) bug 122651, trac 442
 **          Changed test for iisequence for physical locking to a more
 **          generic one using a new relstat2 flag, TCB2_PHYSLOCK_CONCUR
@@ -1299,8 +1302,10 @@ DB_ERROR	    *dberr )
     CL_ERR_DESC          sys_err;
     bool		reclaimed;
     i4             key_buffers;
+    i4			rec_buffers;
     i4                  klen;
     i4			seglen = 0;
+    TM_STAMP		tm_stamp;
     DB_ERROR		local_dberr;
     i4		    *err_code = &dberr->err_code;
 
@@ -1313,6 +1318,20 @@ DB_ERROR	    *dberr )
 
     if (t->tcb_seg_rows)
 	seglen = t->tcb_rel.reltotwid + t->tcb_data_rac.worstcase_expansion;
+
+    rec_buffers = 2;			/* record, srecord */    
+    if ((t->tcb_rel.relencflags & TCB_ENCRYPTED) ||
+	((t->tcb_parent_tcb_ptr) &&
+	 (t->tcb_parent_tcb_ptr->tcb_rel.relencflags & TCB_ENCRYPTED)))
+    {
+	i4 tempi = MHrand2();
+	rec_buffers++;			/* erecord */
+	TMget_stamp(&tm_stamp);
+	/* seed the random generator: kick the can an arbitrary distance
+	** (tms_usc) down the road from an arbitrary starting point (tempi)
+	*/
+	MHsrand2(tm_stamp.tms_usec * tempi);
+    }
 
     if (t->tcb_table_type == TCB_BTREE)
 	key_buffers = 5;
@@ -1341,7 +1360,8 @@ DB_ERROR	    *dberr )
 	{	
 	    /* lint truncation warnings if size of ptr > int, but code valid */
 	    status = dm0m_allocate(sizeof(DMP_RCB) +
-		DB_ALIGN_MACRO(t->tcb_rel.relwid + t->tcb_data_rac.worstcase_expansion) * 2 +
+		DB_ALIGN_MACRO(t->tcb_rel.relwid +
+			t->tcb_data_rac.worstcase_expansion) * rec_buffers +
 		DB_ALIGN_MACRO(klen) * key_buffers +
 		sizeof(ADF_CB) + seglen,
 		DM0M_ZERO, (i4)RCB_CB, (i4)RCB_ASCII_ID,
@@ -1383,6 +1403,13 @@ DB_ERROR	    *dberr )
 	r->rcb_srecord_ptr = p;
 	p += t->tcb_rel.relwid + t->tcb_data_rac.worstcase_expansion;
 	p = ME_ALIGN_MACRO(p, sizeof(PTR));
+
+	if (rec_buffers == 3)		/* encryption */
+	{
+	    r->rcb_erecord_ptr = p;
+	    p += t->tcb_rel.relwid + t->tcb_data_rac.worstcase_expansion;
+	    p = ME_ALIGN_MACRO(p, sizeof(PTR));
+	}
 
 	r->rcb_hl_ptr = p;
 	*(char *)(r->rcb_hl_ptr + (klen-1)) = 0xFE;
@@ -3782,6 +3809,14 @@ dm2r_position(
         return (status);
     }
 
+/* CRYPT_FIXME hack to (partially) work around bad hash encrypted SI lookup.
+** For some reason (length of plain text vs. encrypted text difference?)
+** we are not hashing to the right page for the lookup, or are building
+** the encrypted SI incorrectly. This change forces us to read the entire
+** index where we do indeed find our match and achieve our TJOIN select.
+*/
+if (t->tcb_parent_tcb_ptr->tcb_rel.relencflags & TCB_ENCRYPTED)
+flag |= DM2R_ALL;
     /*	Handle the position for full scan case. */
     if (flag & DM2R_ALL)
     {
@@ -4926,15 +4961,27 @@ dm2r_put(
 	}
     }
 
-    /*	Check for compressed storage. */
+    /*	Check for compressed storage and encryption. */
     rec_len = t->tcb_rel.relwid;
     rec = record;
 
+    /* If there are encrypted columns, encrypt the record */
+    if ( status == E_DB_OK && t->tcb_rel.relencflags & TCB_ENCRYPTED)
+    {
+	status = dm1e_aes_encrypt(r, &t->tcb_data_rac, rec,
+			r->rcb_erecord_ptr, dberr);
+	if (status != E_DB_OK)
+	    return(status);
+	rec = r->rcb_erecord_ptr;
+    }
+
+    /*	Check for compressed storage. */
     if ( status == E_DB_OK && t->tcb_data_rac.compression_type != TCB_C_NONE )
     {
 	rec = crec = r->rcb_record_ptr;
 	status = (*t->tcb_data_rac.dmpp_compress)(&t->tcb_data_rac,
-	    record,
+	    (t->tcb_rel.relencflags & TCB_ENCRYPTED) ?
+	    r->rcb_erecord_ptr : record,
 	    (i4)t->tcb_rel.relwid, rec, &rec_len);
 	if ( status )
 	    SETDBERR(dberr, 0, E_DM9381_DM2R_PUT_RECORD);
@@ -6543,6 +6590,15 @@ DB_ERROR	    *dberr )
     /*  Compute the sizes of the old and new records. */
     oldlength = newlength = t->tcb_rel.relwid;
 
+    /* If there are encrypted columns, encrypt the record */
+    if (t->tcb_rel.relencflags & TCB_ENCRYPTED)
+    {
+	status = dm1e_aes_encrypt(r, &t->tcb_data_rac, newrecord,
+			r->rcb_erecord_ptr, dberr);
+	if (status != E_DB_OK)
+	    return(status);
+    }
+
     /*  Check for compressed storage. */
     if ( status == E_DB_OK &&
         (t->tcb_data_rac.compression_type != TCB_C_NONE ||
@@ -6551,6 +6607,8 @@ DB_ERROR	    *dberr )
         if (t->tcb_data_rac.compression_type != TCB_C_NONE)
 	{
 	    status = (*t->tcb_data_rac.dmpp_compress)(&t->tcb_data_rac,
+		      (t->tcb_rel.relencflags & TCB_ENCRYPTED) ?
+		      r->rcb_erecord_ptr :
                       newrecord, (i4)t->tcb_rel.relwid,
                       r->rcb_srecord_ptr, &newlength);
 	    if ( status )
@@ -10190,10 +10248,20 @@ si_put(
 	    MEcopy((char *)&r->rcb_si_newtid, sizeof(DM_TID),
 	       &ir->rcb_record_ptr[it->tcb_atts_ptr[i + 1].offset]);
 
-	/*	Compress the record if needed. */
-
-	rec = ir->rcb_record_ptr;
+	/*	Encrypt the record if needed. */
+	if (it->tcb_data_rac.encrypted_attrs == TRUE)
+	{
+	    status = dm1e_aes_encrypt(r, &it->tcb_data_rac, ir->rcb_record_ptr,
+			ir->rcb_erecord_ptr, dberr);
+	    if (status != E_DB_OK)
+		return(status);
+	    rec = ir->rcb_erecord_ptr;
+	}
+	else
+	    rec = ir->rcb_record_ptr;
 	rec_len = it->tcb_rel.relwid;
+
+	/*	Compress the record if needed. */
 	if (it->tcb_data_rac.compression_type != TCB_C_NONE)
 	{
 	    rec = crec = ir->rcb_srecord_ptr;
@@ -11667,6 +11735,8 @@ base_delete_put(
 
     CLRDBERR(dberr);
 
+    if (t->tcb_rel.relencflags & TCB_ENCRYPTED)
+	crec = r->rcb_erecord_ptr;
     if (t->tcb_rel.relcomptype != TCB_C_NONE)
 	crec = r->rcb_srecord_ptr;
 
@@ -11960,6 +12030,8 @@ base_replace(
 
     CLRDBERR(dberr);
 
+    if (t->tcb_rel.relencflags & TCB_ENCRYPTED)
+	crec = r->rcb_erecord_ptr;
     if (t->tcb_rel.relcomptype != TCB_C_NONE)
 	crec = r->rcb_srecord_ptr;
 
@@ -12102,6 +12174,8 @@ base_replace(
     ** If the table is compressed, then pass the compressed record to replace
     ** We pass the uncompressed record to allocate, lock/unlock value routines
     */
+    if (t->tcb_rel.relencflags & TCB_ENCRYPTED)
+	newrecord = r->rcb_erecord_ptr;
     if (t->tcb_rel.relcomptype != TCB_C_NONE)
 	newrecord = r->rcb_srecord_ptr;
 

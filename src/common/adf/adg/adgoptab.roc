@@ -283,6 +283,8 @@
 **	    being a new function.
 **	18-Mar-2010 (kiria01) b123438
 **	    Added SINGLETON aggregate for scalar sub-query support.
+**	25-Mar-2010 (toumi01) SIR 122403
+**	    Added "aes_decrypt" and "aes_encrypt".
 **      19-apr-2010 (huazh01) 
 **          change the definition of SINGLETON aggregate from 
 **          ADI_NORM_FUNC to ADI_AGG_FUNC. (b123597)
@@ -1397,6 +1399,14 @@ GLOBALDEF   const	ADI_OPRATION    Adi_2RO_operations[] = {
 { {"validate_digit"},	ADI_VALIDATEDIGIT_OP,  ADI_NORM_FUNC,	    ADI_PREFIX,
 	DB_SQL|DB_QUEL,     ADI_INGRES_6                 ,  
 		ADO_VALIDATEDIGIT_CNT,  	    ADZ_VALIDATEDIGIT_FIIDX},
+
+{ {"aes_decrypt"},	ADI_AES_DECRYPT_OP,   ADI_NORM_FUNC,	    ADI_PREFIX,
+	DB_SQL|DB_QUEL,     ADI_INGRES_6                 ,  
+		ADO_AES_DECRYPT_CNT,    ADZ_AES_DECRYPT_FIIDX},
+
+{ {"aes_encrypt"},	ADI_AES_ENCRYPT_OP,   ADI_NORM_FUNC,	    ADI_PREFIX,
+	DB_SQL|DB_QUEL,     ADI_INGRES_6                 ,  
+		ADO_AES_ENCRYPT_CNT,    ADZ_AES_ENCRYPT_FIIDX},
 
 { {""},			ADI_NOOP,	-1,		    -1,
 	      0       ,                     0            ,  

@@ -184,6 +184,8 @@
 **	28-May-2009 (kschendel) b122118
 **	    Catch bogus index modifies (eg truncated) sooner.
 **	    Table drive single-keyword with-clause actions.
+**	15-feb-2010 (toumi01) SIR 122403
+**	    Add support for column encryption.
 **	09-Apr-2010 (frima01) SIR 122739
 **	    In psl_md3_modstorage change DMU char to the with-option
 **	    form of unique_scope to facilitate distinguishing catalog
@@ -354,6 +356,9 @@ static const struct _MODIFY_STORNAMES
 	*/
 	{"unique_scope",
 	 DMU_TO_STATEMENT_LEVEL_UNIQUE, DMU_C_ON, PSS_WC_UNIQUE_SCOPE, PSL_MDF_UNIQUESCOPE
+	},
+	{"encrypt",
+	 DMU_ENCRYPT, DMU_C_OFF, -1, 0
 	},
 	{"table_verify",
 	 DMU_VERIFY, DMU_V_VERIFY, -1, PSL_MDF_PPART_ONLY
@@ -959,6 +964,9 @@ psl_md2_modstmnt(
     dmu_cb->dmu_flags_mask  = 0;
     dmu_cb->dmu_db_id	    = (char*) sess_cb->pss_dbid;
     STRUCT_ASSIGN_MACRO(sess_cb->pss_user, dmu_cb->dmu_owner);
+
+    dmu_cb->dmu_enc_flags   = 0;
+    dmu_cb->dmu_enc_flags2  = 0;
 
     /*
     ** Allocate the key entries.  Allocate enough space for DB_MAX_COLS

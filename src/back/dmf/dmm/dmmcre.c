@@ -284,6 +284,8 @@
 **	    SIR 120874: dm1p_? functions converted to DB_ERROR *
 **      04-feb-2010 (stial01)
 **          dmm_init_catalog_templates() Init ucore from core
+**	26-Mar-2010 (toumi01) SIR 122403
+**	    For encryption project add attencflags, attencwid.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs Init varchar lengths in core catalogs
 **          Use more readable variable names
@@ -2355,6 +2357,10 @@ dmm_init_catalog_templates( )
 	    u_att->attgeomtype = -1;
 	    att->attsrid = -1;
 	    u_att->attsrid = -1;
+	    att->attencflags = 0;
+	    u_att->attencflags = 0;
+	    att->attencwid = 0;
+	    u_att->attencwid = 0;
 
 	    MEfill(sizeof(att->attfree), 0,
 		    att->attfree);

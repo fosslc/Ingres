@@ -696,6 +696,8 @@ NO_OPTIM=dr6_us5 i64_aix
 **          TCB2_PHYSLOCK_CONCUR the same as S_CONCUR and throw
 **          E_DM005A if a modify to anything other than HASH is attempted
 **          This gets reported as E_US159D to the frontend.
+**	01-apr-2010 (toumi01) SIR 122403
+**	    Add support for column encryption.
 **	13-Apr-2010 (kschendel) SIR 123485
 **	    Open tables "no coupon" to avoid BQCB, coupon processing stuff.
 **/
@@ -3747,6 +3749,14 @@ DB_ERROR        *dberr)
 			t->tcb_atts_ptr[j].attnmstr, ' ',
 			DB_ATT_MAXNAME, tmpattnm.db_att_name);
 
+		    /* Only encrypted hash secondary indices are allowed
+		    ** for encrypted columns.
+		    */
+		    if (t->tcb_atts_ptr[j].encflags & ATT_ENCRYPT)
+		    {
+			SETDBERR(dberr, 0, E_DM0066_BAD_KEY_TYPE);
+			break;
+		    }
 		    if ((MEcmp(tmpattnm.db_att_name, 
 			 (char *)&mcb->mcb_key[i]->key_attr_name,
 			 sizeof(mcb->mcb_key[i]->key_attr_name)) == 0) && 
@@ -5248,6 +5258,8 @@ DB_ERROR	*dberr)
 	    AttlPtr->attr_flags_mask = att_ptr->flag;	    
 	    AttlPtr->attr_collID = att_ptr->collID;
 	    AttlPtr->attr_geomtype = att_ptr->geomtype;
+	    AttlPtr->attr_encflags = att_ptr->encflags;
+	    AttlPtr->attr_encwid = att_ptr->encwid;
 	    AttlPtr->attr_srid = att_ptr->srid;
 	    COPY_DEFAULT_ID( att_ptr->defaultID, AttlPtr->attr_defaultID );
 	}
@@ -5290,12 +5302,14 @@ DB_ERROR	*dberr)
 	    dm2u_create(dcb, xcb, &newtab_name, &owner, &location, (i4)1,
 		    &ntbl_id, &nidx_id, index, view,
 		    setrelstat, relstat2,
-		    structure, ntab_width, NumAtts, AttList, db_lockmode,
+		    structure, ntab_width, ntab_width,
+		    NumAtts, AttList, db_lockmode,
 		    allocation, extend, newpgtype, newpgsize,
 		    (DB_QRY_ID *)0, (DM_PTR *)NULL,
 		    (DM_DATA *)NULL, (i4)0, (i4)0,
 		    (DMU_FROM_PATH_ENTRY *)NULL, (DM_DATA *)0, 
-		    0, 0, (f8*)NULL, 0, NULL, 0, dberr);
+		    0, 0, (f8*)NULL, 0, NULL, 0, NULL /* DMU_CB */,
+		    dberr);
 	if (status != E_DB_OK)
 	{
 	    /*
@@ -6912,6 +6926,8 @@ DB_ERROR      	    *dberr)
 		attrs[i].attr_defaultID );
 	    attrs[i].attr_collID = t->tcb_atts_ptr[i+1].collID;
 	    attrs[i].attr_geomtype = t->tcb_atts_ptr[i+1].geomtype;
+	    attrs[i].attr_encflags = t->tcb_atts_ptr[i+1].encflags;
+	    attrs[i].attr_encwid = t->tcb_atts_ptr[i+1].encwid;
 	    attrs[i].attr_srid = t->tcb_atts_ptr[i+1].srid;
 	}
 
@@ -8199,6 +8215,8 @@ dm2u_repointerize_ppchar(PTR rawdata)
 **		to [ROW/STATEMENT]_LEVEL_UNIQUE
 **		to [NO]PSEUDOTEMPORARY
 **		to [NO]CHANGE_TRACKING
+**		to ENCRYPT WITH PASSPHRASE='my passphrase' or ''
+**			[, NEW_PASSPHRASE='my revised passphrase']
 **
 **	these are not necessarily the SQL syntax keywords but you get
 **	the idea!
@@ -8226,6 +8244,8 @@ dm2u_repointerize_ppchar(PTR rawdata)
 **	20-Mar-2008 (kschendel) SIR 122739
 **	    Extract from giant modify mainline.  Add change-tracking,
 **	    pseudotemporary.
+**	16-Apr-2010 (toumi01) SIR 122403
+**	    Add support for MODIFY ENCRYPT.
 */
 
 static DB_STATUS
@@ -8331,6 +8351,9 @@ dm2u_catalog_modify(DM2U_MOD_CB *mcb, DMP_RCB *r,
     journal = (t->tcb_rel.relstat & TCB_JOURNAL) != 0;
     if (action & (DM2U_2_READONLY | DM2U_2_NOREADONLY) )
 	status = dm2u_readonly_upd_cats(&local_mxcb, journal, dberr);
+    else
+    if (action & DM2U_2_ENCRYPT)
+	status = dm2u_modify_encrypt(&local_mxcb, mcb->mcb_dmu, journal, dberr);
     else
 	status = dm2u_alterstatus_upd_cats(&local_mxcb, journal, dberr);
     if (status != E_DB_OK)
@@ -8748,6 +8771,8 @@ DB_ERROR	    *dberr)
 		attrs[i].attr_defaultID );
 	    attrs[i].attr_collID = t->tcb_atts_ptr[i+1].collID;
 	    attrs[i].attr_geomtype = t->tcb_atts_ptr[i+1].geomtype;
+	    attrs[i].attr_encflags = t->tcb_atts_ptr[i+1].encflags;
+	    attrs[i].attr_encwid = t->tcb_atts_ptr[i+1].encwid;
 	    attrs[i].attr_srid = t->tcb_atts_ptr[i+1].srid;
 	    if (t->tcb_rel.relstat & TCB_INDEX)
 	    {
@@ -8775,14 +8800,15 @@ DB_ERROR	    *dberr)
 		    tp->tpcb_loc_list, tp->tpcb_loc_count, 
 		    &new_tabid, &new_ixid, 0, view,
 		    (setrelstat), base_relstat2,
-		    DB_HEAP_STORE, t->tcb_rel.relwid, 
+		    DB_HEAP_STORE, t->tcb_rel.relwid, t->tcb_rel.reldatawid,
 		    attr_count, attr_ptrs, db_lockmode,
 		    allocation, extend, 
 		    m->mx_page_type, m->mx_page_size,
 		    (DB_QRY_ID *)0, (DM_PTR *)NULL,
 		    (DM_DATA *)NULL, (i4)0, (i4)0,
 		    (DMU_FROM_PATH_ENTRY *)NULL, (DM_DATA *)0, 
-		    0, 0, (f8*)NULL, 0, &dmu_part_def, 0, dberr);
+		    0, 0, (f8*)NULL, 0, &dmu_part_def, 0,
+		    NULL /* DMU_CB */, dberr);
 
 	if ((t->tcb_rel.relstat & TCB_INDEX) == 0)
 	{
@@ -8915,7 +8941,7 @@ DB_ERROR	    *dberr)
                     locnArray, sp->spcb_loc_count,
                     &newpart_tabid, &newpart_ixid, 0, view,
                     setrelstat, base_relstat2,
-                    DB_HEAP_STORE, t->tcb_rel.relwid,
+                    DB_HEAP_STORE, t->tcb_rel.relwid, t->tcb_rel.reldatawid,
                     0, 0, db_lockmode,
                     allocation, extend,
                     m->mx_page_type, m->mx_page_size,
@@ -8923,7 +8949,8 @@ DB_ERROR	    *dberr)
                     (DM_DATA *)NULL, (i4)0, (i4)0,
                     (DMU_FROM_PATH_ENTRY *)NULL, (DM_DATA *)0,
                     0, 0, (f8*)NULL, 0, 
-		    &dmu_part_def, sp->spcb_partno, dberr);
+		    &dmu_part_def, sp->spcb_partno,
+		    NULL /* DMU_CB */, dberr);
 	
 		dm0m_deallocate((DM_OBJECT **)&loc_misc_cb);
 
@@ -11710,13 +11737,14 @@ DB_ERROR		*dberr)
 		part->loc_array.data_in_size/sizeof(DB_LOC_NAME),
 		&newpart_tabid, &newpart_ixid, 0, 0,
 		relstat, relstat2,
-		DB_HEAP_STORE, t->tcb_rel.relwid,
+		DB_HEAP_STORE, t->tcb_rel.relwid, t->tcb_rel.reldatawid,
 		0, 0, db_lockmode, 0, 0,
 		m->mx_page_type, m->mx_page_size,
 		(DB_QRY_ID *)0, (DM_PTR *)NULL,
 		(DM_DATA *)NULL, (i4)0, (i4)0,
 		(DMU_FROM_PATH_ENTRY *)NULL, (DM_DATA *)0,
-		0, 0, (f8*)NULL, 0, dmu_part_def, partno, dberr);
+		0, 0, (f8*)NULL, 0, dmu_part_def, partno,
+		NULL /* DMU_CB */, dberr);
 
 	if (status != E_DB_OK)
 	{

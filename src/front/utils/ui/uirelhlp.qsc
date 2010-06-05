@@ -68,6 +68,8 @@ exec sql include 	<uigdata.sh>;
 **	    structure - no longer necessary.
 **      28-jan-2009 (stial01)
 **          Use DB_MAXNAME for database objects.
+**	25-mar-2010 (toumi01) SIR 122403
+**	    Add IIUI100rel_help and encryption support.
 **/
 
 /*
@@ -81,6 +83,7 @@ static	DB_STATUS	IIUI64rel_help();
 static	DB_STATUS	IIUI65rel_help();
 static	DB_STATUS	IIUI66rel_help();
 static	DB_STATUS	IIUIr3rel_help();
+static	DB_STATUS	IIUI100rel_help();
 
 
 /*{
@@ -133,6 +136,10 @@ static	DB_STATUS	IIUIr3rel_help();
 **	i2	cache_pri;
 **	u_i2	phys_partitions;		* New for r3 *
 **	i2	partition_dimensions;
+**	i4	rel_datawid;			* new for 10.0 *
+**	i4	rel_totdatawid;			* new for 10.0 *
+**	char	encrypted_columns[2];		* new for 10.0 *
+**	char	encryption_type[7];		* new for 10.0 *
 ** UI_HELP_INFO;
 **
 ** Inputs:
@@ -220,11 +227,19 @@ EXEC SQL END DECLARE SECTION;
 	help_info[0].page_size = help_info[1].page_size = 2048;
 	help_info[0].rel_version = help_info[1].rel_version = 0;
 	help_info[0].rel_totwid = help_info[1].rel_totwid = 0;
+	help_info[0].rel_datawid = help_info[1].rel_datawid = 0;
+	help_info[0].rel_totdatawid = help_info[1].rel_totdatawid = 0;
 	help_info[0].cache_pri = help_info[1].cache_pri = 0;
 	help_info[0].phys_partitions = help_info[1].phys_partitions = 0;
 	help_info[0].partition_dimensions = help_info[1].partition_dimensions = 0;
 
-	if  (STcompare(IIUIscl_StdCatLevel(),UI_LEVEL_900) >= 0)
+	if  (STcompare(IIUIscl_StdCatLevel(),UI_LEVEL_1000) >= 0)
+	{ /* 10.0 or later standard catalogs */
+	    if  ((errnum = IIUI100rel_help(relname,relowner,&i,save_date,
+					  uidbdata)) != OK)
+		return(errnum);
+	}
+	else if  (STcompare(IIUIscl_StdCatLevel(),UI_LEVEL_900) >= 0)
 	{ /* r3 or later standard catalogs */
 	    if  ((errnum = IIUIr3rel_help(relname,relowner,&i,save_date,
 					  uidbdata)) != OK)
@@ -318,6 +333,8 @@ EXEC SQL END DECLARE SECTION;
 		STtrmwhite(help_info[i].table_name);
 		STtrmwhite(help_info[i].table_owner);
 		STcopy(help_info[i].create_date, help_info[i].alter_date);
+		/* encryption project added logical widths for 10.0 */
+		help_info[i].rel_datawid = help_info[i].row_width;
 		i++;
 	EXEC SQL END;
 	EXEC SQL INQUIRE_INGRES (:errnum = errorno);
@@ -362,6 +379,8 @@ EXEC SQL END DECLARE SECTION;
 			STtrmwhite(help_info[i].table_name);
 			STtrmwhite(help_info[i].table_owner);
 			STcopy(help_info[i].create_date, help_info[i].alter_date);
+			/* encryption project added logical widths for 10.0 */
+			help_info[i].rel_datawid = help_info[i].row_width;
 			i++;
 		EXEC SQL END;
 		EXEC SQL INQUIRE_INGRES (:errnum = errorno);
@@ -569,6 +588,8 @@ EXEC SQL END DECLARE SECTION;
 		STtrmwhite(help_info[i].table_name);
 		STtrmwhite(help_info[i].table_owner);
 		STcopy(help_info[i].create_date, help_info[i].alter_date);
+		/* encryption project added logical widths for 10.0 */
+		help_info[i].rel_datawid = help_info[i].row_width;
 		i++;
 	EXEC SQL END;
 	EXEC SQL INQUIRE_INGRES (:errnum = errorno);
@@ -615,6 +636,8 @@ EXEC SQL END DECLARE SECTION;
 			STtrmwhite(help_info[i].table_name);
 			STtrmwhite(help_info[i].table_owner);
 			STcopy(help_info[i].create_date, help_info[i].alter_date);
+			/* encryption project added logical widths for 10.0 */
+			help_info[i].rel_datawid = help_info[i].row_width;
 			i++;
 		EXEC SQL END;
 		EXEC SQL INQUIRE_INGRES (:errnum = errorno);
@@ -779,6 +802,8 @@ FE_RSLV_NAME	w_frn;
 		    STcopy(ERx(" "),help_info[i].table_owner);
 		}
 		STcopy(help_info[i].create_date, help_info[i].alter_date);
+		/* encryption project added logical widths for 10.0 */
+		help_info[i].rel_datawid = help_info[i].row_width;
 		i++;
 	EXEC SQL END;
 	EXEC SQL INQUIRE_INGRES (:errnum = errorno);
@@ -836,6 +861,8 @@ FE_RSLV_NAME	w_frn;
 			}
 			STcopy(help_info[i].create_date,
 			       help_info[i].alter_date);
+			/* encryption project added logical widths for 10.0 */
+			help_info[i].rel_datawid = help_info[i].row_width;
 			i++;
 		EXEC SQL END;
 		EXEC SQL INQUIRE_INGRES (:errnum = errorno);
@@ -1008,6 +1035,9 @@ FE_RSLV_NAME	w_frn;
 		    STcopy(ERx(" "),help_info[i].table_owner);
 		}
 		STcopy(help_info[i].create_date, help_info[i].alter_date);
+		/* encryption project added logical widths for 10.0 */
+		help_info[i].rel_datawid = help_info[i].row_width;
+		help_info[i].rel_totdatawid = help_info[i].rel_totwid;
 		i++;
 	EXEC SQL END;
 	EXEC SQL INQUIRE_INGRES (:errnum = errorno);
@@ -1065,6 +1095,8 @@ FE_RSLV_NAME	w_frn;
 			}
 			STcopy(help_info[i].create_date,
 			       help_info[i].alter_date);
+			/* encryption project added logical widths for 10.0 */
+			help_info[i].rel_datawid = help_info[i].row_width;
 			i++;
 		EXEC SQL END;
 		EXEC SQL INQUIRE_INGRES (:errnum = errorno);
@@ -1245,6 +1277,9 @@ FE_RSLV_NAME	w_frn;
 		    STcopy(ERx(" "),help_info[i].table_owner);
 		}
 		STcopy(help_info[i].create_date, help_info[i].alter_date);
+		/* encryption project added logical widths for 10.0 */
+		help_info[i].rel_datawid = help_info[i].row_width;
+		help_info[i].rel_totdatawid = help_info[i].rel_totwid;
 		i++;
 	EXEC SQL END;
 	EXEC SQL INQUIRE_INGRES (:errnum = errorno);
@@ -1302,6 +1337,264 @@ FE_RSLV_NAME	w_frn;
 			}
 			STcopy(help_info[i].create_date,
 			       help_info[i].alter_date);
+			/* encryption project added logical widths for 10.0 */
+			help_info[i].rel_datawid = help_info[i].row_width;
+			help_info[i].rel_totdatawid = help_info[i].rel_totwid;
+			i++;
+		EXEC SQL END;
+		EXEC SQL INQUIRE_INGRES (:errnum = errorno);
+		if  (errnum != OK )
+		{
+		    return(errnum);
+		}
+		if  ((i - *ind) > 1)	/* Should never find more than one! */
+		{
+		    return(FAIL);
+		}
+	}
+
+	/* Should never be true for an r3 database but I'll leave it */
+	if (help_info[i].page_size == 0)
+	    help_info[i].page_size = 2048;
+
+	*ind = i;
+	return(OK);
+}
+/*
+** Name:  IIUI100rel_help - Query for relation help info - release 10 and later.
+**
+** Description:
+**	Fills the  statically defined UI_HELP_INFO structure for one relation.
+**	If the specified relation is a synonym, then the information returned
+**	including the table name and owner will refect that of the base table.
+**
+**	This clone is for release 10 catalogs which include encryption info.
+**	It would be slicker to come up with some kind of dynamic query,
+**	but then it couldn't be REPEATED.
+**
+** Inputs:
+**      relname         Name of the relation for which information is to be
+**                      returned.  This is expected to be normalized and to
+**	 		not contain any wildcards.  It may be a synonym.
+**	relowner	Name of the owner of the relation for which information
+**			is to be returned.  This is also expected to be in
+**			normalized form.  However, it may also be specified
+**			as NULL or an empty string when the true owner is
+**			unknown or unimportant.
+**	ind:		Index of help_info structure to be filled.
+**	uidbdata:	Current user/dba info.
+**
+** Ouputs:
+**	save_date[]:	Expire_date of relation as retrieved from iitables.
+**	ind:		Index of help_info structure is incremented.
+**
+**	Returns:
+**		OK	successful.
+**		other	DBMS error returned.
+**
+** Side Effects:
+**	UI_HELP_INFO: 	Help_info structure contains the requested relation 
+**			information.
+**
+** History:
+**	24-Mar-2010 (toumi01) SIR 122403
+**	    Yet another clone clone, for new 10.0 columns.
+*/
+
+static
+DB_STATUS
+IIUI100rel_help(relname,relowner,ind,save_date,uidbdata)
+char		*relname;
+char		*relowner;
+EXEC SQL BEGIN DECLARE SECTION;
+i4		*ind;
+i4		save_date[];
+UIDBDATA	*uidbdata;
+EXEC SQL END DECLARE SECTION;
+{
+EXEC SQL BEGIN DECLARE SECTION;
+i4              errnum, i;
+char		relname_buf[(DB_MAXNAME + 1)];
+char		relowner_buf[(DB_MAXNAME + 1)];
+EXEC SQL END DECLARE SECTION;
+FE_RSLV_NAME	w_frn;
+
+
+	i = *ind;	/* Save initial value of help_info index	*/
+
+	/*
+	** Effect any synonym resolution, and determine any true owner.
+	*/
+	w_frn.owner_dest = &relowner_buf[0];
+	w_frn.name_dest = &relname_buf[0];
+	if  (!FE_resolve(&w_frn,relname,relowner))
+	{
+	    /*
+	    ** No relations meet qualification
+	    */
+	    return(OK);
+	}
+
+	EXEC SQL REPEATED SELECT 
+			table_name,
+			table_owner,
+			create_date,
+		 	table_type,
+			table_subtype,
+			table_version,
+                	system_use,
+			table_stats,
+			table_indexes,
+			is_readonly,
+			num_rows,
+			storage_structure,
+			is_compressed,
+			duplicate_rows,
+			unique_rule,
+			number_pages,
+                	overflow_pages,
+			table_integrities,
+			table_permits,
+			all_to_all,
+			ret_to_all,
+			row_width,
+                	is_journalled,
+			multi_locations,
+			view_base,
+			location_name,
+			expire_date,
+			key_is_compressed,
+			table_pagesize,
+			table_relversion,
+			table_reltotwid,
+			table_reltcpri,
+			phys_partitions,
+			partition_dimensions,
+/* CRYPT_FIXME temp workaround for alttbl sep testing until alt table net
+** change for both logical and physical table widths is fully sorted out
+*/
+			row_width,
+			table_reltotwid,
+/*
+			table_reldatawid,
+			table_reltotdatawid,
+*/
+			encrypted_columns,
+			encryption_type
+		INTO
+			:help_info[i].table_name,
+			:help_info[i].table_owner,
+			:help_info[i].create_date,
+			:help_info[i].table_type,
+			:help_info[i].table_subtype,
+			:help_info[i].table_version,
+			:help_info[i].system_use,
+			:help_info[i].table_stats,
+			:help_info[i].table_indexes,
+			:help_info[i].is_readonly,
+			:help_info[i].num_rows,
+			:help_info[i].storage_structure,
+			:help_info[i].is_compressed,
+			:help_info[i].duplicate_rows,
+			:help_info[i].unique_rule,
+			:help_info[i].number_pages,
+			:help_info[i].overflow_pages,
+			:help_info[i].table_integrities,
+			:help_info[i].table_permits,
+			:help_info[i].all_to_all,
+			:help_info[i].ret_to_all,
+			:help_info[i].row_width,
+			:help_info[i].is_journalled,
+			:help_info[i].multi_locations,
+			:help_info[i].view_base,
+			:help_info[i].location_name,
+			:save_date[i],
+			:help_info[i].key_is_compressed,
+			:help_info[i].page_size,
+			:help_info[i].rel_version,
+			:help_info[i].rel_totwid,
+			:help_info[i].cache_pri,
+			:help_info[i].phys_partitions,
+			:help_info[i].partition_dimensions,
+			:help_info[i].rel_datawid,
+			:help_info[i].rel_totdatawid,
+			:help_info[i].encrypted_columns,
+			:help_info[i].encryption_type
+		FROM 
+			iitables
+		WHERE
+			table_name = :relname_buf
+		    AND
+			table_owner = :relowner_buf;
+	EXEC SQL BEGIN;
+		if  (STtrmwhite(help_info[i].table_name) == 0)
+		{
+		    STcopy(ERx(" "),help_info[i].table_name);
+		}
+		if  (STtrmwhite(help_info[i].table_owner) == 0)
+		{
+		    STcopy(ERx(" "),help_info[i].table_owner);
+		}
+		STcopy(help_info[i].create_date, help_info[i].alter_date);
+		i++;
+	EXEC SQL END;
+	EXEC SQL INQUIRE_INGRES (:errnum = errorno);
+	if ( errnum != OK )
+	{
+	    return(errnum);
+	}
+	if  ((i - *ind) > 1)	/* Should never find more than one! */
+	{
+	    return(FAIL);
+	}
+
+	if ( !IIUIdct_use_iitables() )
+	{
+		EXEC SQL REPEATED SELECT 
+			table_stats,
+			table_indexes,
+			is_readonly,
+			num_rows,
+			storage_structure,
+			is_compressed,
+			duplicate_rows,
+			unique_rule,
+			number_pages,
+                	overflow_pages,
+			row_width,
+			key_is_compressed
+			INTO
+			:help_info[i].table_stats,
+			:help_info[i].table_indexes,
+			:help_info[i].is_readonly,
+			:help_info[i].num_rows,
+			:help_info[i].storage_structure,
+			:help_info[i].is_compressed,
+			:help_info[i].duplicate_rows,
+			:help_info[i].unique_rule,
+			:help_info[i].number_pages,
+			:help_info[i].overflow_pages,
+			:help_info[i].row_width,
+			:help_info[i].key_is_compressed
+			FROM 
+				iiphysical_tables
+			WHERE
+				table_name = :relname_buf
+			    AND
+				table_owner = :relowner_buf;
+		EXEC SQL BEGIN;
+			if  (STtrmwhite(help_info[i].table_name) == 0)
+			{
+			    STcopy(ERx(" "),help_info[i].table_name);
+			}
+			if  (STtrmwhite(help_info[i].table_owner) == 0)
+			{
+			    STcopy(ERx(" "),help_info[i].table_owner);
+			}
+			STcopy(help_info[i].create_date,
+			       help_info[i].alter_date);
+			/* encryption project added logical widths for 10.0 */
+			help_info[i].rel_datawid = help_info[i].row_width;
 			i++;
 		EXEC SQL END;
 		EXEC SQL INQUIRE_INGRES (:errnum = errorno);

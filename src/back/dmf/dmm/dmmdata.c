@@ -96,6 +96,9 @@ LIBRARY = IMPDMFLIBDATA
 **      10-Feb-2010 (maspa05) b122651
 **          Added TCB2_PHYSLOCK_CONCUR as this is now how we check for
 **          the need to use physical locks
+**	01-apr-2010 (toumi01) SIR 122403
+**	    For encryption add reldatawid, reltotdatawid, relencflags,
+**	    relencver, relenckey, attencflags, attencwid.
 */
 
 /* dmmcre.c */
@@ -170,8 +173,13 @@ LIBRARY = IMPDMFLIBDATA
     0, /* relversion */\
     relwid, /* relwid */\
     relwid, /* reltotwid */\
+    relwid, /* reldatawid */\
+    relwid, /* reltotdatawid */\
     0, /* relnparts */\
     0, /* relnpartlevels */\
+    0, /* relencflags */\
+    0, /* relencver */\
+    { ' ' }, /* relenckey */\
     { ' ' } /* relfree */
 
 #define CORE_RELSTAT (TCB_CATALOG | TCB_NOUPDT | TCB_CONCUR | TCB_PROALL | TCB_SECURE | TCB_DUPLICATES)
@@ -201,13 +209,13 @@ GLOBALDEF DMP_RELATION DM_ucore_relations[4];
 **  core system tables.
 */
 #define attdef_int(tabid, name, offset, len, iskey)\
- tabid, DUMMY_ATTRIBUTE_NUMBER, 0, name, offset, len, iskey, 0, {DB_DEF_ID_0}, 0, 0,0,0, ATT_INT, 0,0,0,0,0, {' '}
+ tabid, DUMMY_ATTRIBUTE_NUMBER, 0, name, offset, len, iskey, 0, {DB_DEF_ID_0}, 0, 0,0,0, ATT_INT, 0,0,0,0,0,0,0, {' '}
 
 #define attdef_cha(tabid, name, offset, len, iskey)\
-tabid, DUMMY_ATTRIBUTE_NUMBER, 0, name, offset, len, iskey, 0, {DB_DEF_ID_BLANK}, 0, 0,0,0, ATT_CHA, 0,0,0,0,0, {' '}
+tabid, DUMMY_ATTRIBUTE_NUMBER, 0, name, offset, len, iskey, 0, {DB_DEF_ID_BLANK}, 0, 0,0,0, ATT_CHA, 0,0,0,0,0,0,0, {' '}
 
 #define attdef_free(tabid, name, offset, len, iskey)\
-tabid, DUMMY_ATTRIBUTE_NUMBER, 0, name, offset, len, iskey, 0, {DB_DEF_ID_0}, 0, 0,0,0, ATT_CHA, 0,0,0,0,0, {' '}
+tabid, DUMMY_ATTRIBUTE_NUMBER, 0, name, offset, len, iskey, 0, {DB_DEF_ID_0}, 0, 0,0,0, ATT_CHA, 0,0,0,0,0,0,0, {' '}
 
 GLOBALDEF DMP_ATTRIBUTE DM_core_attributes[] =
 {
@@ -256,9 +264,14 @@ GLOBALDEF DMP_ATTRIBUTE DM_core_attributes[] =
     { attdef_int(REL_TAB_ID, "relversion", REL_OFFSET(relversion), 2, 0) },
     { attdef_int(REL_TAB_ID, "relwid", REL_OFFSET(relwid), 4, 0) },
     { attdef_int(REL_TAB_ID, "reltotwid", REL_OFFSET(reltotwid), 4, 0) },
+    { attdef_int(REL_TAB_ID, "reldatawid", REL_OFFSET(reldatawid), 4, 0) },
+    { attdef_int(REL_TAB_ID, "reltotdatawid", REL_OFFSET(reltotdatawid), 4, 0) },
     { attdef_int(REL_TAB_ID, "relnparts", REL_OFFSET(relnparts), 2, 0) },
     { attdef_int(REL_TAB_ID, "relnpartlevels", REL_OFFSET(relnpartlevels), 2, 0) },
-    { attdef_free(REL_TAB_ID, "relfree", REL_OFFSET(relfree), 8, 0) },
+    { attdef_int(REL_TAB_ID, "relencflags", REL_OFFSET(relencflags), 2, 0) },
+    { attdef_int(REL_TAB_ID, "relencver", REL_OFFSET(relencver), 2, 0) },
+    { attdef_cha(REL_TAB_ID, "relenckey", REL_OFFSET(relenckey), 64, 0) },
+    { attdef_free(REL_TAB_ID, "relfree", REL_OFFSET(relfree), 12, 0) },
     { attdef_cha(RIDX_TAB_ID, "relid", RIDX_OFFSET(relname), DB_TAB_MAXNAME, 1) },
     { attdef_cha(RIDX_TAB_ID, "relowner", RIDX_OFFSET(relowner), DB_OWN_MAXNAME, 2) },
     { attdef_int(RIDX_TAB_ID, "tidp", RIDX_OFFSET(tidp), 4, 0) },
@@ -283,7 +296,9 @@ GLOBALDEF DMP_ATTRIBUTE DM_core_attributes[] =
     { attdef_int(ATT_TAB_ID, "attcollid", ATT_OFFSET(attcollID), 2, 0) },
     { attdef_int(ATT_TAB_ID, "attsrid", ATT_OFFSET(attsrid), 4, 0) },
     { attdef_int(ATT_TAB_ID, "attgeomtype", ATT_OFFSET(attgeomtype), 2, 0) },
-    { attdef_free(ATT_TAB_ID, "attfree", ATT_OFFSET(attfree), 10, 0) },
+    { attdef_int(ATT_TAB_ID, "attencflags", ATT_OFFSET(attencflags), 2, 0) },
+    { attdef_int(ATT_TAB_ID, "attencwid", ATT_OFFSET(attencwid), 4, 0) },
+    { attdef_free(ATT_TAB_ID, "attfree", ATT_OFFSET(attfree), 4, 0) },
     { attdef_int(IND_TAB_ID, "baseid", IND_OFFSET(baseid), 4, 1) },
     { attdef_int(IND_TAB_ID, "indexid", IND_OFFSET(indexid), 4, 0) },
     { attdef_int(IND_TAB_ID, "sequence", IND_OFFSET(sequence), 2, 0) },
@@ -355,7 +370,7 @@ GLOBALDEF DMP_ATTRIBUTE DM_core_attributes[] =
 #endif /* NOT_UNTIL_CLUSTERED_INDEXES */
 };
 
-GLOBALDEF DMP_ATTRIBUTE DM_ucore_attributes[107];
+GLOBALDEF DMP_ATTRIBUTE DM_ucore_attributes[114];
 
 
 /*

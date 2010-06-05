@@ -132,6 +132,9 @@
 ;           Started funcs at 824 to avoid conflicts with main.
 ;	20-Apr-2010 (kschendel) SIR 123485
 ;	    No more dmpe-replace;  add end-row, query-end functions.
+;	20-Apr-2010 (toumi01) SIR 122403
+;	    Add for encryption: dm1e_aes_decrypt dm1e_aes_encrypt
+;	    dm2u_modify_encrypt
 ;
 EXPORTS
 LGCnode_names		@1				
@@ -959,3 +962,6 @@ dmf_diag_dump_tables	@825
 dmd_summary_statistics	@826
 dmpe_end_row		@827
 dmpe_query_end		@828
+dm1e_aes_decrypt	@829
+dm1e_aes_encrypt	@830
+dm2u_modify_encrypt	@831

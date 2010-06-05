@@ -532,6 +532,9 @@ SQLSTATE_MAPPING_REQUIRED
 **          Added E_DM1415_ALT_MUSTLOG_DISABLED and E_DM1416_ALT_MUSTLOG_ENABLED
 **          for output from new alterdb options -enable_mustlog and
 **          -disable_mustlog.
+**	21-apr-2010 (toumi01) SIR 122403
+**	    Add messages for encryption. Also fix typo noticed in
+**	    E_DM930D_DM2U_READONLY_UPD_CATS.
 */
 
 #define _DM_CLASS  3
@@ -2238,6 +2241,24 @@ E_DM0171_BAD_CACHE_PROTOCOL:SS5000B_INTERNAL_ERROR
  the DMCM protocol."
 E_DM0172_DMCM_LOCK_FAIL:SS5000B_INTERNAL_ERROR
 "An attempt to request or convert the DMCM control lock failed."
+E_DM0174_ENCRYPT_NOT_ENABLED:SS50000_MISC_ERRORS
+"Encryption is not enabled for the table."
+E_DM0175_ENCRYPT_FLAG_ERROR:SS5000B_INTERNAL_ERROR
+"Internal encryption error: invalid encrytion options flags."
+E_DM0176_ENCRYPT_CRC_ERROR:SS5000B_INTERNAL_ERROR
+"Internal encryption error: CRC mismatch decrypting data."
+E_DM0177_RECORD_NOT_ENCRYPTED:SS50000_MISC_ERRORS
+"A command has been issue to enable encryption for non-encrypted table."
+E_DM0178_PASSPHRASE_FAILED_CRC:SS50000_MISC_ERRORS
+"The user-specified passphrase was used to decrypt a stored AES key and
+failed the CRC check. This usually indicates a user error."
+E_DM0179_DMC_CRYPT_SLOTS_EXHAUSTED:SS50002_LIMIT_EXCEEDED
+"The %0d encryption key slots in shared memory segment Dmc_crypt are
+exhausted. One slot is needed for each base table for which encryption
+is enabled. The value can be configured (ii.*.dbms.*.dmf_crypt_maxkeys)
+to increase the limit. Either increase the limit and restart the server,
+or use the MODIFY command to disable encryption for tables that are not
+actively being used."
 /*%
 ** Parameters:
 **      None.
@@ -11986,7 +12007,7 @@ E_DM930C_DM0P_PAGE_CHKSUM_FAIL:SS5000B_INTERNAL_ERROR
 */
 E_DM930D_DM2U_READONLY_UPD_CATS:SS5000B_INTERNAL_ERROR
 "An error occurred updating the system catalogs while modifying the status of a
-table: Database $0c, Tale %1c, Owner %2c"
+table: Database %0c, Tale %1c, Owner %2c"
 /*%
 ** Parameters:
 **	%0c - database name
@@ -15330,6 +15351,8 @@ E_DM944D_RCP_INCONS_PAGE:SS5000B_INTERNAL_ERROR
 "Error during recovery of (%0c, %1c) at LSN (%2d, %3d). Recovery will be halted on page %4d."
 E_DM944E_RCP_INCONS_TABLE:SS5000B_INTERNAL_ERROR
 "Error during recovery of (%0c, %1c) at LSN (%2d, %3d). Recovery will be halted on this table."
+E_DM944F_DM2U_MOD_ENCRYPT:SS5000B_INTERNAL_ERROR
+"An error occurred processing a modify encryption request for table: Database %0c, Tale %1c, Owner %2c"
 E_DM9500_DMXE_BEGIN:SS5000B_INTERNAL_ERROR
 "Error occurred beginning a transaction."
 E_DM9501_DMXE_COMMIT:SS5000B_INTERNAL_ERROR

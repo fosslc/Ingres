@@ -44,6 +44,7 @@
 #include    <dmxcb.h>
 #include    <dmxe.h>
 #include    <dml.h>
+#include    <dmfcrypt.h>
 
 /*
 **  NO_OPTIM = dr6_us5 nc4_us5 i64_aix
@@ -779,6 +780,8 @@
 **          dm1b_get() crow_locking and constraint/Upd-cursor save cursor
 **          position after locking the row
 **          dm1b_rowlk_access() fixed lock_status checking
+**	01-apr-2010 (toumi01) SIR 122403
+**	    Add decryption calls.
 **	15-Apr-2010 (stial01)
 **          reposition for RCB_P_FETCH, should not reposition to deleted entry
 */
@@ -3053,6 +3056,17 @@ retry:
 		    break;
 		rec_ptr = record;
 	    }
+
+	    /* If there are encrypted columns, decrypt the record */
+	    if (s == E_DB_OK &&
+		t->tcb_rel.relencflags & TCB_ENCRYPTED)
+	    {
+		s = dm1e_aes_decrypt(r, &t->tcb_data_rac, rec_ptr, record,
+			r->rcb_erecord_ptr, dberr);
+		if (s != E_DB_OK)
+		    return(s);
+		rec_ptr = record;
+	    }
 	}
 
 	/*
@@ -4237,6 +4251,16 @@ dm1b_get(
 		    }
 		}
 
+		/* If there are encrypted columns, decrypt the record */
+		if (t->tcb_rel.relencflags & TCB_ENCRYPTED)
+		{
+		    s = dm1e_aes_decrypt(r, &t->tcb_data_rac, rec_ptr, record,
+				r->rcb_erecord_ptr, dberr);
+		    if (s != E_DB_OK)
+			return(s);
+		    rec_ptr = record;
+		}
+
 		tid->tid_i4 = localtid.tid_i4;
 
 		/*
@@ -4817,6 +4841,17 @@ dm1b_get(
 	    s = dm1c_get(r, r->rcb_data.page, &localtid, record, dberr);
 	    if (s && dberr->err_code != E_DM938B_INCONSISTENT_ROW)
 		break;
+	    rec_ptr = record;
+	}
+
+	/* If there are encrypted columns, decrypt the record */
+	if (s == E_DB_OK &&
+	    t->tcb_rel.relencflags & TCB_ENCRYPTED)
+	{
+	    s = dm1e_aes_decrypt(r, &t->tcb_data_rac, rec_ptr, record,
+			r->rcb_erecord_ptr, dberr);
+	    if (s != E_DB_OK)
+		return(s);
 	    rec_ptr = record;
 	}
 
@@ -8386,6 +8421,7 @@ dm1badupcheck(
 		/* Additional processing if compressed, altered, or segmented */
 		if (s == E_DB_OK &&
 		    (t->tcb_data_rac.compression_type != TCB_C_NONE ||
+		    (t->tcb_rel.relencflags & TCB_ENCRYPTED) ||
 		    row_version != t->tcb_rel.relversion ||
 		    t->tcb_seg_rows))
 		{
@@ -8405,6 +8441,17 @@ dm1badupcheck(
 			wrec_ptr = wrec;
 		    }
 		    s = dm1c_pget(t->tcb_atts_ptr, r, wrec_ptr, dberr);
+		}
+
+		/* If there are encrypted columns, decrypt the record */
+		if (s == E_DB_OK &&
+		    t->tcb_rel.relencflags & TCB_ENCRYPTED)
+		{
+		    s = dm1e_aes_decrypt(r, &t->tcb_data_rac, wrec_ptr, wrec,
+				r->rcb_erecord_ptr, dberr);
+		    if (s != E_DB_OK)
+			return(s);
+		    wrec_ptr = wrec;
 		}
 
 		if (s != E_DB_OK)
@@ -13517,6 +13564,7 @@ tid = (%d,%d) rnl_btree_flags = %x\n",
 	/* Additional get processing if compressed, altered, or segmented */
 	if (s == E_DB_OK && 
 	    (t->tcb_data_rac.compression_type != TCB_C_NONE ||
+	    (t->tcb_rel.relencflags & TCB_ENCRYPTED) ||
 	    row_version != r->rcb_proj_relversion ||
 	    t->tcb_seg_rows))
 	{
@@ -13608,6 +13656,16 @@ records from data page %d\n",
 		    tid->tid_tid.tid_line++;
 		continue;
 	    }
+	}
+
+	/* If there are encrypted columns, decrypt the record */
+	if (t->tcb_rel.relencflags & TCB_ENCRYPTED)
+	{
+	    s = dm1e_aes_decrypt(r, &t->tcb_data_rac, rec_ptr, record,
+			r->rcb_erecord_ptr, dberr);
+	    if (s != E_DB_OK)
+		return(s);
+	    rec_ptr = record;
 	}
 
 	rettid->tid_i4 = tid->tid_i4; /* return current tid to caller */

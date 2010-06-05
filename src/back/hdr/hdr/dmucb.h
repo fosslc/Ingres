@@ -133,6 +133,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**	15-feb-2010 (toumi01) SIR 122403
+**	    Add support for column encryption.
 **     22-apr-2010 (stial01)
 **          Removed unreferenced DMU_EXTFMT_ENTRY
 **/
@@ -418,6 +420,35 @@ typedef struct _DMU_CB
     */
     DM_DATA	    dmu_ppchar_array;	    /* Physical partition info array */
 
+    /* Encryption values: AES bit count and user-supplied key (which is
+    ** circularly added to a 16/24/32 byte AES key for 128/192/256 bit
+    ** encryption).
+    */ 
+    u_i2	    dmu_enc_flags;	    /* encryption flags .. */
+#define			DMU_ENCRYPTED	0x0001L /* .. must match relencflags! */
+#define			DMU_AES128	0x0002L
+#define			DMU_AES192	0x0004L
+#define			DMU_AES256	0x0008L
+    u_i2	    dmu_enc_flags2;	    /* local to DMU_CB */
+#define			DMU_AESKEY	0x0001L /* user supplied AESKEY= */
+#define			DMU_NEWPASS	0x0002L /* new passphrase */
+#define			DMU_NULLPASS	0x0004L /* NULL passphrase */
+    u_i2	    dmu_enc_aeskeylen;
+    u_char	    dmu_enc_aeskey[AES_256_BYTES];
+    u_char	    dmu_enc_passphrase[AES_256_BYTES];
+    /* For CREATE TABLE the encryption key bits is specified, but for
+    ** MODIFY we don't know when we are parsing what we'll find when we
+    ** go to enable or modify the encryption. Bummer. Just prepare 128,
+    ** 192, and 256 bit versions, computationally cheaper than looking
+    ** up the catalog info. Sure is ugly, though! :-(
+    */
+    u_char	    dmu_enc_old128pass[AES_128_BYTES];
+    u_char	    dmu_enc_old192pass[AES_192_BYTES];
+    u_char	    dmu_enc_old256pass[AES_256_BYTES];
+    u_char	    dmu_enc_new128pass[AES_128_BYTES];
+    u_char	    dmu_enc_new192pass[AES_192_BYTES];
+    u_char	    dmu_enc_new256pass[AES_256_BYTES];
+
 }   DMU_CB;
 
 /*}
@@ -564,6 +595,7 @@ typedef struct _DMU_CHAR_ENTRY
 				/* modify to unique_scope=statement */
 #define			DMU_TO_PERSISTS_OVER_MODIFIES 60L 
 				/* modify to persistence */
+#define			DMU_ENCRYPT		61L	/* encryption */
 
     i4       char_value;               /* Characteristic value. */
 #define                 DMU_C_OFF           0L

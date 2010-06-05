@@ -416,6 +416,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	20-apr-2010 (toumi01) SIR 122403
+**	    Add support for column encryption.
 [@history_template@]...
 **/
 /*
@@ -4891,6 +4893,8 @@ qee_allocateDMTCB(
 		attr_entry[i]->attr_collID = -1;
 		attr_entry[i]->attr_geomtype = -1;
 		attr_entry[i]->attr_srid = -1;
+		attr_entry[i]->attr_encflags = 0;
+		attr_entry[i]->attr_encwid = 0;
 		i++;
 	    }
 	    dmt_cb->dmt_attr_array.ptr_address  = (PTR) attr_entry;

@@ -66,6 +66,7 @@ NO_OPTIM=dr6_us5
 #include    <dmse.h>
 #include    <dmst.h>
 #include    <dm0pbmcb.h>
+#include    <dmfcrypt.h>
 
 /**
 ** Name: DMCSTART.C - Functions used to start a server.
@@ -388,6 +389,8 @@ NO_OPTIM=dr6_us5
 **          associated llb with LLB_FORCEABORT. This is used to stop
 **          the force aborted session from entering a lock wait which
 **          could lead to a LOG/LOCK hang.
+**	13-Apr-2010 (toumi01) 122403
+**	    Dmc_crypt shared memory segment for encryption keywords.
 [@history_template@]...
 */
 
@@ -395,6 +398,7 @@ NO_OPTIM=dr6_us5
 ** globals
 */
 GLOBALREF	DMC_REP		*Dmc_rep;
+GLOBALREF	DMC_CRYPT	*Dmc_crypt;
 # ifdef UNIX
 GLOBALREF     i4      Ex_core_enabled;  
 # endif
@@ -919,6 +923,7 @@ DMC_CB    *dmc_cb)
     i4		c_pind_nbuffers = DM_DEFAULT_EXCH_NBUFF;
     i4		c_dop = SCB_DOP_DEFAULT;
     i4		c_pad_bytes = 0;
+    i4		c_crypt_maxkeys = 0;
     bool		gc_numticks_changed = FALSE;
     bool		gc_threshold_changed = FALSE;
     bool		log_allocated = FALSE;
@@ -1032,6 +1037,9 @@ DB_VPT_SIZEOF_TUPLE_HDR(TCB_PG_V4), DMPP_VPT_SIZEOF_TUPLE_HDR_MACRO(TCB_PG_V4));
 	/* WriteBehind defaults to ON */
 	c_writebehind[cache_ix] = 1;
     }
+
+    if ( !(dmc->dmc_flags_mask & (DMC_RECOVERY|DMC_STAR_SVR)) )
+	c_crypt_maxkeys = 1; /* by default allocate 1 page of encryption keys */
 
     for (;;)
     {
@@ -1580,6 +1588,10 @@ DB_VPT_SIZEOF_TUPLE_HDR(TCB_PG_V4), DMPP_VPT_SIZEOF_TUPLE_HDR_MACRO(TCB_PG_V4));
 
 		case DMC_C_PAD_BYTES:
 		    c_pad_bytes = chr[i].char_value;
+		    continue;
+
+		case DMC_C_CRYPT_MAXKEYS:
+		    c_crypt_maxkeys = chr[i].char_value;
 		    continue;
 
                 case DMC_C_BUILD_PAGES:
@@ -2828,6 +2840,78 @@ DB_VPT_SIZEOF_TUPLE_HDR(TCB_PG_V4), DMPP_VPT_SIZEOF_TUPLE_HDR_MACRO(TCB_PG_V4));
 	    {
 		SETDBERR(&dmc->error, 0, E_DM007F_ERROR_STARTING_SERVER);
 		Dmc_rep = NULL;
+		break;
+	    }
+	}
+
+	/*
+	** init encryption key block
+	*/
+
+	Dmc_crypt = NULL;
+	if (c_crypt_maxkeys)
+	{
+	    SIZE_TYPE	   pages = ( (sizeof(DMC_CRYPT) +
+				c_crypt_maxkeys * sizeof(DMC_CRYPT_KEY) )
+				/ ME_MPAGESIZE) + 1;
+	    SIZE_TYPE	   pages_got;
+	    CL_ERR_DESC	   sys_err;
+	    /*
+	    ** round up to make full use of memory
+	    */
+	    c_crypt_maxkeys = ((pages * ME_MPAGESIZE) - sizeof(DMC_CRYPT)) /
+		sizeof(DMC_CRYPT_KEY);
+	    TRdisplay("Encryption maximum active keys = %d\n", c_crypt_maxkeys);
+	    /*
+	    ** get shared memory
+	    */
+	    stat = MEget_pages(
+		ME_SSHARED_MASK|ME_MZERO_MASK|ME_CREATE_MASK|ME_NOTPERM_MASK,
+		pages, DMC_CRYPT_MEM, (PTR *)&Dmc_crypt, &pages_got, &sys_err);
+	    if (stat == OK && pages_got == pages)
+	    {
+		/*
+		** init semaphore
+		*/
+	        stat = CSi_semaphore(&Dmc_crypt->crypt_sem, CS_SEM_MULTI);
+	        if (stat != OK)
+	        {
+		    SETDBERR(&dmc->error, 0, E_DM007F_ERROR_STARTING_SERVER);
+		    break;
+	        }
+                CSn_semaphore(&Dmc_crypt->crypt_sem, "Dmc crypt Mutex");
+		/*
+		** then grab it and init header
+		*/
+		stat = CSp_semaphore(TRUE, &Dmc_crypt->crypt_sem);
+		if (stat != OK)
+	        {
+		    SETDBERR(&dmc->error, 0, E_DM007F_ERROR_STARTING_SERVER);
+		    break;
+	        }
+		Dmc_crypt->seg_size = c_crypt_maxkeys;
+		Dmc_crypt->seg_active = 0;
+		stat = CSv_semaphore(&Dmc_crypt->crypt_sem);
+		if (stat != OK)
+	        {
+		    SETDBERR(&dmc->error, 0, E_DM007F_ERROR_STARTING_SERVER);
+		    break;
+	        }
+	    }
+	    else if (stat == ME_ALREADY_EXISTS) /* just attach to it */
+	    {
+		stat = MEget_pages(ME_SSHARED_MASK|ME_NOTPERM_MASK, pages, 
+                    DMC_CRYPT_MEM, (PTR *)&Dmc_crypt, &pages_got, &sys_err);
+		if (stat != OK || pages_got != pages)
+	        {
+		    SETDBERR(&dmc->error, 0, E_DM007F_ERROR_STARTING_SERVER);
+		    break;
+	        }
+	    }
+	    else
+	    {
+		SETDBERR(&dmc->error, 0, E_DM007F_ERROR_STARTING_SERVER);
+		Dmc_crypt = NULL;
 		break;
 	    }
 	}

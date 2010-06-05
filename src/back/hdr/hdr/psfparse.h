@@ -678,6 +678,8 @@
 **	12-Mar-2010 (thaju02) Bug 123440
 **	    Added defines PSQ_GET_SESS_INFO, PSQ_SESS_CACHEDYN, 
 **	    PSQ_SESS_NOCACHEDYN.
+**	21-apr-2010 (toumi01) SIR 122403
+**	    Add E_PS0C85_ENCRYPT_INVALID.
 **/
 
 /*
@@ -1658,6 +1660,7 @@
 						** function other than decimal()
 						*/
 #define E_PS0C84_TERNARY_FUNC  (E_PS_DT + 0x84L)
+#define E_PS0C85_ENCRYPT_INVALID  (E_PS_DT + 0x85L)
 
 /*
 **     Errors having to do with parsing string functions 

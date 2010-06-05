@@ -12,6 +12,8 @@
 #	    adugreatest.c
 #	16-Nov-2009 (coomi01) 
 #	    Add adulongcmp.c
+#	14-dec-2009 (toumi01) SIR 122403
+#	    Add aducrypt.c and adurijndael.c
 
 
 SubDir ING_SRC common adf adu ;
@@ -42,7 +44,7 @@ IILIBRARY ADFLIB : adubool.c aduuuid.c aduuserlen.c aduulike.c aduucs.c
 	aduagstr.c aduagstat.c aduagmny.c aduaglgk.c aducheck.c
 	adupat.c adupatda.c adupatcomp.c adupatexec.c adugreatest.c
 	aduagint.c aduagflt.c aduagdec.c aduagdate.c aduagcommon.c aduuquel.c 
-	adulongcmp.c ;
+	adulongcmp.c aducrypt.c adurijndael.c ;
 
 IILIBRARY IMPADFLIBDATA : adumontab.roc adutabdate.roc aduoutarg.roc ;
 

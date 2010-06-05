@@ -152,6 +152,9 @@
 **      22-Feb-2010 (maspa05) 123293
 **        added SVR_CLASS_MAXNAME for the size of a server_class name, used
 **        to be hard-coded to 24
+**	25-Mar-2010 (toumi01) SIR 122403
+**	    Add DB_ATTS fields encflags and encwid and definitions for
+**	    encryption.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
 **     22-apr-2010 (stial01)
@@ -2571,6 +2574,8 @@ typedef struct _DB_ATT_NAME
 **	    Added collID to define collation ID.
 **	29-Sept-09 (troal01)
 **		Added geomtype and srid.
+**	25-Mar-2010 (toumi01) SIR 122403
+**	    Add encflags and encwid.
 */
 
 typedef struct _DB_ATTS
@@ -2598,6 +2603,8 @@ typedef struct _DB_ATTS
     i4	    ver_altcol;			/* Version Modified metadata value */
     i4		srid;				/* Spatial reference id */
     i2		geomtype;			/* Geometry data type */
+    i2		encflags;		/* encryption flags */
+    i4		encwid;			/* encrypted net width */
     i2	            attnmlen;	/* blank trimmed length of name (future) */
     char	    *attnmstr;
 }   DB_ATTS;
@@ -2732,5 +2739,22 @@ typedef struct _DB_DEBUG_CB
 	i4	code;		/* The coded value */
 	char	*string;	/* Its textual translation */
 } INTXLATE;
+
+/*
+** Definitions for AES encryption. Most are built into the definition of
+** the standard; they are immutable values but make the code more readable.
+*/
+#define	AES_BLOCK	16	/* AES encryption block size in bytes */
+#define AES_128_BITS	128	/* AES 128 encryption bits */
+#define AES_128_BYTES	16	/* AES 128 encryption bytes */
+#define AES_192_BITS	192	/* AES 192 encryption bits */
+#define AES_192_BYTES	24	/* AES 192 encryption bytes */
+#define AES_256_BITS	256	/* AES 256 encryption bits */
+#define AES_256_BYTES	32	/* AES 256 encryption bytes */
+#define CRC_BITS	32	/* CRC hash block bits */
+#define CRC_BYTES	4	/* CRC hash block bytes */
+#define SHA1_BITS	160	/* SHA1 hash block bits */
+#define SHA1_BYTES	20	/* SHA1 hash block bytes */
+#define ENCRYPT_PASSPHRASE_MINIMUM	8	/* sanity check */
 
 #endif /* common_include */

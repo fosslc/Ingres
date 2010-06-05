@@ -427,6 +427,8 @@
 **          Changes for Long IDs
 **	12-Apr-2010 (gupsh01) SIR 123444
 **	    Added qeu_rename_grants to support alter table rename table/columns.
+**	21-apr-2010 (toumi01) SIR 122403
+**	    Add support for column encryption.
 **/
 
 FUNC_EXTERN char	    *STskipblank();
@@ -11726,6 +11728,8 @@ DMT_TBL_ENTRY	*tbl_entry)
         attr_array[0].attr_srid = -1;
 	SET_CANON_DEF_ID(attr_array[0].attr_defaultID, DB_DEF_NOT_DEFAULT);
 	attr_array[0].attr_defaultTuple = NULL;
+        attr_array[0].attr_encflags = 0;
+        attr_array[0].attr_encwid = 0;
 
 	for (i =1; i < TEMP_TBL_DEGREE; i++)
 	    STRUCT_ASSIGN_MACRO(attr_array[0], attr_array[i]);
@@ -19624,6 +19628,8 @@ i4			*error)
 
 	for (i = 1; i < QEU_MATCH_PRIV_TBL_DEGREE; i++)
 	    STRUCT_ASSIGN_MACRO(temp_array[0], temp_array[i]);
+	temp_array[0].attr_encflags = 0;
+	temp_array[0].attr_encwid = 0;
 
 	/* not all attributes are i4's + we need to assign them names */
 
@@ -21639,6 +21645,8 @@ QEU_PDI_TBL_DESCR	*pdi_tbl_descr)
 	temp_array[0].attr_srid = -1;
 	SET_CANON_DEF_ID(temp_array[0].attr_defaultID, DB_DEF_NOT_DEFAULT);
 	temp_array[0].attr_defaultTuple = NULL;
+	temp_array[0].attr_encflags = 0;
+	temp_array[0].attr_encwid = 0;
 
 	for (i = 1; i < QEU_REVOKE_TBL_DEGREE; i++)
 	    STRUCT_ASSIGN_MACRO(temp_array[0], temp_array[i]);
@@ -30037,6 +30045,8 @@ qeu_crt_pdi_tbl(
     attr_p[0].attr_srid = -1;
     SET_CANON_DEF_ID(attr_p[0].attr_defaultID, DB_DEF_NOT_DEFAULT);
     attr_p[0].attr_defaultTuple = NULL;
+    attr_p[0].attr_encflags = 0;
+    attr_p[0].attr_encwid = 0;
 
     /* attributes 2-4 */
     for (i = 1; i < 4; i++)
@@ -30052,6 +30062,8 @@ qeu_crt_pdi_tbl(
     attr_p[4].attr_srid = -1;
     SET_CANON_DEF_ID(attr_p[4].attr_defaultID, DB_DEF_NOT_DEFAULT);
     attr_p[4].attr_defaultTuple = NULL;
+    attr_p[4].attr_encflags = 0;
+    attr_p[4].attr_encwid = 0;
 
     /* attribute 6 - privilege */
     attr_p[5].attr_type = DB_INT_TYPE;
@@ -30063,6 +30075,8 @@ qeu_crt_pdi_tbl(
     attr_p[5].attr_srid = -1;
     SET_CANON_DEF_ID(attr_p[5].attr_defaultID, DB_DEF_NOT_DEFAULT);
     attr_p[5].attr_defaultTuple = NULL;
+    attr_p[5].attr_encflags = 0;
+    attr_p[5].attr_encwid = 0;
     
     for (i = 6; i < QEU_PERM_DEPTH_TBL_DEGREE; i++)
         STRUCT_ASSIGN_MACRO(attr_p[5], attr_p[i]);

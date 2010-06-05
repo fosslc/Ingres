@@ -69,6 +69,7 @@ NO_OPTIM=dr6_us5
 #include    <scf.h>
 #include    <rep.h>
 #include    <cui.h>
+#include    <dmfcrypt.h>
 
 /**
 **
@@ -1048,6 +1049,8 @@ NO_OPTIM=dr6_us5
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	01-apr-2010 (toumi01) SIR 122403
+**	    Add support for column encryption.
 **      10-Feb-2010 (maspa05) bug 122651, trac 442
 **          set tcb_sysrel for TCB2_PHYSLOCK_CONCUR tables so that physical 
 **          locks are used consistently - they were being used during creation 
@@ -1056,6 +1059,8 @@ NO_OPTIM=dr6_us5
 **          as all TCB_CONCUR now have TCB2_PHYSLOCK_CONCUR as well
 */
 
+GLOBALREF	DMC_CRYPT	*Dmc_crypt;
+
 static VOID		locate_tcb(
 				i4		db_id,
 				DB_TAB_ID	*table_id,
@@ -2778,6 +2783,31 @@ DB_ERROR            *dberr)
 	}
 
 	*record_cb = r;
+
+	/* If this is an encrypted table, locate its key in Dmc_crypt and
+	** save the slot number in the RCB. Will not find it if encryption
+	** is not enabled yet. Indices inherit the encryption of the parent.
+	*/
+	r->rcb_enckey_slot = 0;
+	if ( (Dmc_crypt != NULL) &&
+	     (tcb->tcb_rel.relencflags & TCB_ENCRYPTED ||
+	      tcb->tcb_parent_tcb_ptr->tcb_rel.relencflags & TCB_ENCRYPTED)
+	   )
+	{
+	    DMC_CRYPT_KEY *cp;
+	    int	i;
+
+	    for ( cp = (DMC_CRYPT_KEY *)((PTR)Dmc_crypt + sizeof(DMC_CRYPT)),
+			i = 0 ; i < Dmc_crypt->seg_active ; cp++, i++ )
+	    {
+		if ( cp->db_tab_base == tcb->tcb_rel.reltid.db_tab_base )
+		{
+		    r->rcb_enckey_slot = i;
+		    break;
+		}
+	    }
+	}
+
 	return (E_DB_OK);
     } while (0);
 
@@ -6876,6 +6906,8 @@ bool		    from_online_modify)
 	    for (alen = DB_ATT_MAXNAME;  
 		attr_array[i-1]->attr_name.db_att_name[alen-1] == ' ' 
 			&& alen >= 1; alen--);
+	    t->tcb_atts_ptr[i].encflags = 0;
+	    t->tcb_atts_ptr[i].encwid = 0;
 
 	    /* see if we need more space for attribute name */
 	    if (t->tcb_atts_used + alen + 1 > t->tcb_atts_size)
@@ -12076,6 +12108,7 @@ DB_ERROR	*dberr)
     i4			local_error;
     DB_STATUS		local_status;
     DB_ERROR		local_dberr;
+    bool		encrypted_attrs = FALSE;
     i4		    *err_code = &dberr->err_code;
     i4			alen;
     PTR			nextattname = t->tcb_atts_names;
@@ -12370,6 +12403,7 @@ DB_ERROR	*dberr)
 	*/
 	att_count = 0;
 
+	t->tcb_data_rac.encrypted_attrs = FALSE;
 	/*
 	** Read through iiattribute records describing each column in
 	** in the tcb's attribute array.
@@ -12524,6 +12558,12 @@ DB_TAB_MAXNAME, t->tcb_rel.relid.db_tab_name);
 	    a->collID = attribute.attcollID;
 	    a->geomtype = attribute.attgeomtype;
 	    a->srid = attribute.attsrid;
+	    a->encflags = attribute.attencflags;
+	    if (attribute.attencflags & ATT_ENCRYPT)
+		t->tcb_data_rac.encrypted_attrs = TRUE;
+	    a->encwid = attribute.attencwid;
+
+
 
 	    /*
 	    ** Set up list of pointers to attribute info for use in

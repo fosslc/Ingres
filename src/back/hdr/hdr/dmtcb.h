@@ -286,6 +286,8 @@
 **	07-Dec-09 (troal01)
 **		Moved DMT_F_SEC_LBL and DMT_F_TPROCPARM defines here after
 **		removing DMT_ATTR_ENTRY.
+**	15-feb-2010 (toumi01)
+**	    Support for column encryption.
 */
 typedef struct
 {
@@ -320,6 +322,8 @@ typedef struct
     i4		att_collID;		/* collation ID */
     i4		att_srid;		/* Spatial reference ID */
     i2		att_geomtype;	/* Geometry data type code */
+    i2		att_encflags;	/* encryption flags */
+    i4		att_encwid;	/* encrypted net width */
 }   DMT_ATT_ENTRY;
 
 /*}
@@ -1205,6 +1209,9 @@ typedef struct
 **	    Return 0x40 bit to DMT_BASE_VIEW.
 **	26-aug-2008 (dougi)
 **	    Add TPROC to storage types - for completeness.
+**	01-apr-2010 (toumi01) SIR 122403
+**	    Add tbl_data_width; because of encryption a relation has both
+**	    a physical width and a (possibly smaller) logical width.
 */
 typedef struct _DMT_TBL_ENTRY
 {
@@ -1216,7 +1223,8 @@ typedef struct _DMT_TBL_ENTRY
     DB_LOC_NAME	    tbl_filename;	    /* Table file name. */
     i4         tbl_attr_count;         /* Table attribute count. */
     i4         tbl_index_count;        /* Count of indexes on table. */
-    i4         tbl_width;              /* Table record width. */
+    i4         tbl_width;              /* Table physical record width. */
+    i4         tbl_data_width;         /* Table logical data width. */
     i4         tbl_storage_type;       /* Table storage structure. */
 #define                DMT_HEAP_TYPE        3L
 #define                DMT_ISAM_TYPE        5L
@@ -1390,6 +1398,12 @@ typedef struct _DMT_TBL_ENTRY
     i2		   tbl_ndims;		     /* Number of partitioning
 					     ** dimensions (relnpartlevels)
 					     */
+
+    u_i2	   tbl_encflags;	     /* encryption flags .. */
+#define			DMT_ENCRYPTED	0x0001L	/* .. must match relencflags! */
+#define			DMT_AES128	0x0002L
+#define			DMT_AES192	0x0004L
+#define			DMT_AES256	0x0008L
 
     i2		   tbl_dimension;	     /* RTree dimension		*/
     i2		   tbl_hilbertsize;	     /* RTree Hilbertsize	*/

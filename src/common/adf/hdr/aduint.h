@@ -172,6 +172,8 @@
 **     Added NVL2
 **       01-Dec-2009 (coomi01) b122980
 **          Add adu_fltround prototype
+**	14-apr-2010 (toumi01) SIR 122403
+**	    Add adu_aesdecrypt and adu_aesencrypt.
 */
 
 
@@ -1295,3 +1297,5 @@ FUNC_EXTERN DB_STATUS adu_nvchr_utf8_bldkey( ADF_CB          *scb,
 					i4              semantics,
 					ADC_KEY_BLK     *key_block);
 FUNC_EXTERN ADU_NORM1_FUNC adu_numeric_norm;
+FUNC_EXTERN ADU_NORM2_FUNC adu_aesdecrypt;
+FUNC_EXTERN ADU_NORM2_FUNC adu_aesencrypt;

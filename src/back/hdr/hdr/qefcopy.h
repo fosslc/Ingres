@@ -211,6 +211,8 @@ struct _QEU_MISSING_COL
 **	    Forgot to delete qeu-moving-data, do that.  Comment updates.
 **	    Add LOB couponify/redeem state variables formerly in sequencer
 **	    session control block.
+**	15-feb-2010 (toumi01) SIR 122403
+**	    For encryption add qeu_tup_physical.
 **	12-Apr-2010 (kschendel) SIR 123485
 **	    Add base table access ID for COPY FROM, for use with blobs.
 */
@@ -228,6 +230,7 @@ struct _QEU_COPY
     i4		qeu_count;          /* number of tuples */
     i4		qeu_duptup;         /* number of duplicate tuples */
     i4		qeu_tup_length;	    /* width of tuples being copied */
+    i4		qeu_tup_physical;   /* physical width (e.g. encrypted) */
     i4		qeu_ext_length;	    /* external width of tuples */
     i4		qeu_maxerrs;	    /* num errs till have to end copy */
     i4		qeu_uputerr[5];     /* array of errors to send to FE */

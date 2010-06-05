@@ -343,6 +343,8 @@
 **          Added E_DM0201_NOLG_MUSTLOG_ERROR
 **      16-Jun-2009 (hanal04) Bug 122117
 **          Added E_DM016B_LOCK_INTR_FA
+**	15-feb-2010 (toumi01)
+**	    Add attribute fields and messages for column encryption.
 [@history_template@]...
 **/
 
@@ -938,6 +940,12 @@ typedef struct _DM_ERR
 #define             E_DM0171_BAD_CACHE_PROTOCOL         (E_DM_MASK + 0x0171L)
 #define             E_DM0172_DMCM_LOCK_FAIL             (E_DM_MASK + 0x0172L)
 #define             E_DM0173_RAAT_SI_TIMER              (E_DM_MASK + 0x0173L)
+#define		    E_DM0174_ENCRYPT_NOT_ENABLED	(E_DM_MASK + 0x0174L)
+#define		    E_DM0175_ENCRYPT_FLAG_ERROR		(E_DM_MASK + 0x0175L)
+#define		    E_DM0176_ENCRYPT_CRC_ERROR		(E_DM_MASK + 0x0176L)
+#define		    E_DM0177_RECORD_NOT_ENCRYPTED	(E_DM_MASK + 0x0177L)
+#define		    E_DM0178_PASSPHRASE_FAILED_CRC	(E_DM_MASK + 0x0178L)
+#define		    E_DM0179_DMC_CRYPT_SLOTS_EXHAUSTED	(E_DM_MASK + 0x0179L)
 
 # define            E_DM0180_SPROD_UPD_IIDB             (E_DM_MASK + 0x0180L)
 # define            E_DM0181_PROD_MODE_ERR              (E_DM_MASK + 0x0181L)
@@ -964,6 +972,7 @@ typedef struct _DM_ERR
 #define             E_DM019C_ACOL_KEY_NOT_ALLOWED	(E_DM_MASK + 0x019CL)
 #define             E_DM019D_ROW_CONVERSION_FAILED	(E_DM_MASK + 0x019DL)
 #define		    E_DM019E_ERROR_FILE_EXIST		(E_DM_MASK + 0x019EL)
+#define		    E_DM019F_INVALID_ENCRYPT_INDEX	(E_DM_MASK + 0x019EL)
 #define             E_DM01A0_INVALID_ALTCOL_DEFAULT	(E_DM_MASK + 0x01A0L)
 #define             E_DM0200_MOD_TEMP_TABLE_KEY         (E_DM_MASK + 0x0200L) 
 #define             E_DM0201_NOLG_MUSTLOG_ERROR         (E_DM_MASK + 0x0201L)
@@ -1760,7 +1769,16 @@ struct _DM_COLUMN
      u_i2	     attcollID;		    /* explicitly declared Collation */
      i4			 attsrid;			/* geometry spatial reference system id */
      i2			 attgeomtype;		/* geometry data type */
-     char	     attfree[10];	    /*   F R E E   S P A C E   */
+     u_i2	     attencflags;	    /* encryption flags */
+		/* Is the column encrypted, and if so does it include
+		** salt and a verifying hash? The encryption algorithm
+		** and key length are stored with the relation.
+		*/
+#define		ATT_ENCRYPT		0x0001	/* column is encrypted */
+#define		ATT_ENCRYPT_SALT	0x0002	/* salt (IV) added */
+#define		ATT_ENCRYPT_CRC		0x0004	/* verifying CRC added */
+     i4		     attencwid;		    /* encrypted net width */
+     char	     attfree[4];	    /*   F R E E   S P A C E   */
 };
 
 /*}
@@ -1884,6 +1902,8 @@ typedef struct _DMF_ATTR_ENTRY
 			*/
     i4		attr_srid; /* Spatial reference ID */
     i2		attr_geomtype; /* Geometry type code */
+    i2		attr_encflags;	/* encryption flags */
+    i4		attr_encwid;	/* encrypted net width */
 }   DMF_ATTR_ENTRY;
 
 

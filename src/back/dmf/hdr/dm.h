@@ -651,6 +651,8 @@
 **	    Define DM_CRIB_CB for cursor CRIBs.
 **	13-Apr-2010 (kschendel) SIR 123485
 **	    Define DM_BQCB_CB for blob query context blocks.
+**	21-apr-2010 (toumi01) SIR 122403
+**	    Add E_DM944F_DM2U_MOD_ENCRYPT.
 */
 
 /*
@@ -2576,6 +2578,7 @@ typedef struct
 #define		    E_DM944C_RCP_TABLEINCONS		(E_DM_MASK + 0x944CL)
 #define		    E_DM944D_RCP_INCONS_PAGE		(E_DM_MASK + 0x944DL)
 #define		    E_DM944E_RCP_INCONS_TABLE		(E_DM_MASK + 0x944EL)
+#define		    E_DM944F_DM2U_MOD_ENCRYPT		(E_DM_MASK + 0x944FL)
 
 /* DMXE internal error conditions. */
 #define		    E_DM9500_DMXE_BEGIN			(E_DM_MASK + 0x9500L)

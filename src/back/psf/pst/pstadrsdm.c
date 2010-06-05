@@ -202,6 +202,8 @@
 **          Remove downgrade of decimal RESDOMs, old clients can display
 **          precision in excess of 31, they just can't use them in ascii
 **          copy.
+**	22-Mar-2010 (toumi01) SIR 122403
+**	    Init new encryption variables.
 */
 /*
 ** NOTE: in SQL grammar target_list of a subselect is processed BEFORE the
@@ -418,6 +420,8 @@ pst_adresdom(
 	coldesc->att_collID	= -1;
 	coldesc->att_geomtype = -1;
 	coldesc->att_srid = -1;
+	coldesc->att_encflags = 0;
+	coldesc->att_encwid = 0;
     }
     else
     {
@@ -560,6 +564,8 @@ pst_adresdom(
 **          Remove downgrade of decimal RESDOMs, old clients can display
 **          precision in excess of 31, they just can't use them in ascii
 **          copy.
+**	22-Mar-2010 (toumi01) SIR 122403
+**	    Init new encryption variables.
 */
 DB_STATUS
 pst_rsdm_dt_resolve(
@@ -656,6 +662,8 @@ pst_rsdm_dt_resolve(
 	coldesc->att_collID = (i4) -1;
 	coldesc->att_geomtype = (i2) -1;
 	coldesc->att_srid = (i4) -1;
+	coldesc->att_encflags = (i2) 0;
+	coldesc->att_encwid = 0;
     }
 
     return(E_DB_OK);

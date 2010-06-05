@@ -762,6 +762,8 @@ NO_OPTIM=dr6_us5 pym_us5
 **	    (mostly, tlv's are gone, get plv's only.)
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	01-apr-2010 (toumi01) SIR 122403
+**	    For encryption add attencflags and att_v9.attencwid.
 **      14-Apr-2010 (hanal04) SIR 123574
 **          Check if the DB was created with the new -m flag (DU_MUSTLOG
 **          set in dsc_dbaccess). If so, set DCB_S_MUST_LOG in the dcb_status.
@@ -7776,6 +7778,8 @@ construct_tcb(
 	t->tcb_atts_ptr[i + 1].ver_dropped = att[i].attver_dropped;
 	t->tcb_atts_ptr[i + 1].val_from = att[i].attval_from;
 	t->tcb_atts_ptr[i + 1].ver_altcol = att[i].attver_altcol;
+	t->tcb_atts_ptr[i + 1].encflags = att[i].attencflags;
+	t->tcb_atts_ptr[i + 1].encwid = att[i].attencwid;
 
 	t->tcb_data_rac.att_ptrs[i] = &(t->tcb_atts_ptr[i + 1]);
 
@@ -12206,6 +12210,10 @@ DMP_ATTRIBUTE	*new_attp)
 	    /* initialise geospatial columns */
 	    att_v9.attgeomtype = -1;
 	    att_v9.attsrid = -1;
+
+	    /* initialize encryption columns */
+	    att_v9.attencflags = 0;
+	    att_v9.attencwid = 0;
 
 	    /* now the row is DSC_V9 */	
 	    row_version = DSC_V9;

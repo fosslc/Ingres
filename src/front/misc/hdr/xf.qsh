@@ -170,6 +170,8 @@
 **          Add NoLogging for -nologging flag on copydb, unloaddb
 **	25-Aug-2009 (kschendel) 121804
 **	    Delete duplicate routine definitions.  Add a couple bool protos.
+**	21-apr-2010 (toumi01) SIR 122403
+**	    Add encryption support and With_r1000_catalogs.
 */
 
 /*
@@ -215,6 +217,10 @@ typedef struct xf_colinfo_struct
     /* For identity columns */
     char	always_ident[1];
     char	bydefault_ident[1];
+
+    /* For encryption */
+    char	column_encrypted[2];
+    char	column_encrypt_salt[2];
 
     struct xf_colinfo_struct *col_next;
 } XF_COLINFO;
@@ -282,6 +288,8 @@ typedef struct xf_tabinfo_struct
     i4 table_reltidx;
     i4 phys_partitions;
     i4 partition_dimensions;
+    char    encrypted_columns[2];
+    char    encryption_type[7];
     char    idseq_name[DB_MAXNAME + 1];
     char    idseq_owner[DB_MAXNAME + 1];
 } XF_TABINFO;
@@ -298,6 +306,7 @@ GLOBALREF	bool With_20_catalogs;
 GLOBALREF	bool With_r3_catalogs;
 GLOBALREF	bool With_r302_catalogs;
 GLOBALREF	bool With_r930_catalogs;
+GLOBALREF	bool With_r1000_catalogs;
 GLOBALREF	bool CreateParallelIndexes;
 GLOBALREF	bool GroupTabIdx;
 GLOBALREF	bool NoLogging;

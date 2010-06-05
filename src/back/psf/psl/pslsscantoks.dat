@@ -15,6 +15,8 @@
 **	    Created for sanity sake.
 **	19-Mar-2010 (gupsh01) SIR 123444
 **	    Added rename keyword.
+**	14-Apr-2010 (toumi01) SIR 122403
+**	    Add encrypt token.
 */
 
 /* Keywords of length 0, and other non-existent lengths */
@@ -163,6 +165,7 @@
  44 declare
 129 default
 117 disable
+217 encrypt
  45 endloop
  46 execute
 130 foreign

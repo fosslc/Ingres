@@ -137,6 +137,10 @@ SQLSTATE_MAPPING_REQUIRED
 **	February 2010 (stephenb)
 **		Add messages E_PS03B1_NULL_RCB, E_PS03B3_NULL_QUERY_TREE, and
 **		E_PS0402_NONUPDATABLE_COLUMN for batch processing.
+**	21-apr-2010 (toumi01) SIR 122403
+**	    Add message E_PS0C85_ENCRYPT_INVALID for encryption. Also
+**	    modify E_PS03A7_QUOTED_WITH_CLAUSE to include mention of new
+**	    PASSPHRASE syntax.
 */
 
 
@@ -769,7 +773,7 @@ E_PS03A6_AGGR_IN_JOIN_COND:SS50008_UNSUPPORTED_STMT
 */
 E_PS03A7_QUOTED_WITH_CLAUSE:SS42000_SYN_OR_ACCESS_ERR
 "CREATE TABLE statement WITH-clause options may not be quoted except for
-\nthe NODE, DATABASE, DBMS and TABLE options."
+\nthe NODE, DATABASE, DBMS, TABLE and PASSPHRASE options."
 /*%
 ** Parameters:
 **	None.
@@ -5822,6 +5826,23 @@ E_PS0C84_TERNARY_FUNC:SS42000_SYN_OR_ACCESS_ERR
 ** Recommendation:
 **	Either change the function name to decimal or get rid of an extra
 **	parameter.
+*/
+E_PS0C85_ENCRYPT_INVALID:SS42000_SYN_OR_ACCESS_ERR
+"Column %0c is not a valid data type for encryption."
+/*%
+** Parameters:
+**	%0c - column name
+**
+** Explanation:
+**	The user tried to encrypt a column that is a peripheral data type.
+**
+** System Status:
+**	The query is aborted.
+**
+** Recommendation:
+**	Peripheral data type encryption must be handled in a manner other
+**	than using transparent column encryption, e.g. using functions
+**	such as aes_encrypt in application code.
 */
 E_PS0C90_MUSTBE_CONST_INT:SS42000_SYN_OR_ACCESS_ERR
 "The second argument to the char(), varchar(), ascii() and text() conversion\

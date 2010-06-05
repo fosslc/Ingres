@@ -212,6 +212,10 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **	18-Mar-2010 (gupsh01) SIR 123444
 **	    Pass the new table name to dm2u_atable. 
+**	26-Mar-2010 (toumi01) SIR 122403
+**	    Changes for encryption project: DM2U_2_ENCRYPT,
+**	    dm2u_create parameters ntab_data_width and dmu, function
+**	    prototype for dm2u_modify_encrypt.
 */
 
 /*
@@ -274,6 +278,7 @@ typedef struct  _DM2U_MOD_CB	DM2U_MOD_CB;
 #define			DM2U_2_TO_PSEUDOTEMP		0x00040000
 #define			DM2U_2_PSEUDOTEMP		0x00080000
 #define			DM2U_2_NOPSEUDOTEMP		0x00100000
+#define			DM2U_2_ENCRYPT			0x00200000
 
 /* All of the modify-to-catalog-action flags.
 ** Basically everything EXCEPT add-extend, and cache-priority as a with-option
@@ -290,7 +295,8 @@ typedef struct  _DM2U_MOD_CB	DM2U_MOD_CB;
 		DM2U_2_TO_TABLE_PRIORITY | DM2U_2_STATEMENT_LEVEL_UNIQUE | \
 		DM2U_2_PERSISTS_OVER_MODIFIES | DM2U_2_NOPERSIST_OVER_MODIFIES | \
 		DM2U_2_TO_PSEUDOTEMP | \
-		DM2U_2_CHANGE_TRACKING | DM2U_2_NOCHANGE_TRACKING)
+		DM2U_2_CHANGE_TRACKING | DM2U_2_NOCHANGE_TRACKING | \
+		DM2U_2_ENCRYPT)
 
 /* 
 **  The following flags are used in the modoptions flag
@@ -548,6 +554,7 @@ FUNC_EXTERN DB_STATUS	dm2u_create(
 		u_i4		    relstat2,
 		i4		    structure,
 		i4		    ntab_width,
+		i4		    ntab_data_width,
 		i4		    attr_count,
 		DMF_ATTR_ENTRY	    **attr_entry,
 		i4		    db_lockmode,
@@ -568,6 +575,7 @@ FUNC_EXTERN DB_STATUS	dm2u_create(
 		i4		    tbl_pri,
 		DB_PART_DEF	    *dmu_part_def,
 		i4		    dmu_partno,
+		DMU_CB		    *dmu,
 		DB_ERROR	    *errcb);
 
 FUNC_EXTERN DB_STATUS	dm2u_destroy(
@@ -695,6 +703,12 @@ FUNC_EXTERN DB_STATUS	dm2u_file_create(
 
 FUNC_EXTERN DB_STATUS dm2u_alterstatus_upd_cats(
 		DM2U_MXCB           *mxcb,
+		i4		    journal,
+		DB_ERROR            *dberr);
+
+FUNC_EXTERN DB_STATUS dm2u_modify_encrypt(
+		DM2U_MXCB           *mxcb,
+		DMU_CB		    *dmu,
 		i4		    journal,
 		DB_ERROR            *dberr);
 

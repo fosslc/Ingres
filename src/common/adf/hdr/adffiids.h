@@ -405,6 +405,8 @@
 **          and cloaked ADFI_165_LOCATE_UNISTR_UNISTR. C to VARCHAR
 **          coercion was stripping trailing from p2 which is not the
 **          documented behaviour. 
+**	25-Mar-2010 (toumi01) SIR 122403
+**	    Add ADFI_1464_AES_DECRYPT_VARBYTE and ADFI_1465_AES_ENCRYPT_VARBYTE.
 **/
 
 
@@ -1733,4 +1735,6 @@
 #define ADFI_1461_REPL_NVCH_NVCH_NVCH	(ADI_FI_ID)1461 /* replace(nvarchar,nvarchar,nvarchar) */
 #define ADFI_1462_REPL_VBYT_VBYT_VBYT	(ADI_FI_ID)1462 /* replace(vbyte,vbyte,vbyte) */
 #define ADFI_1463_SINGLETON_ALL		(ADI_FI_ID)1463 /* all := singleton(all) */
+#define ADFI_1464_AES_DECRYPT_VARBYTE   (ADI_FI_ID)1464 /* decrypt varbyte */
+#define ADFI_1465_AES_ENCRYPT_VARBYTE   (ADI_FI_ID)1465 /* encrypt varbyte */
 

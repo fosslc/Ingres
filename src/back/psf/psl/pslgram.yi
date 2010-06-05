@@ -753,6 +753,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **	06-Feb-2010 (kiria01) b123438
 **	    Fix compiler warnings.
+**	12-Feb-2010 (toumi01) SIR 122403
+**	    For encryption project add arg to psl_ct14_typedesc calls.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
 */
@@ -2438,7 +2440,7 @@ typedesc:          tname null_default
 
 	status = psl_ct14_typedesc(cb, $1, 0, (i4 *) NULL, $2,
 				  (PST_QNODE *) NULL, (DB_TEXT_STRING *) NULL,
-				   	(DB_IISEQUENCE *) NULL, psq_cb, -1);
+				   	(DB_IISEQUENCE *) NULL, psq_cb, -1, 0);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return(status);
@@ -2451,7 +2453,7 @@ typedesc:          tname null_default
 
 	status = psl_ct14_typedesc(cb, $1, 1, &len, $5,
 				   (PST_QNODE *) NULL, (DB_TEXT_STRING *) NULL,
-				   (DB_IISEQUENCE *) NULL, psq_cb, -1);
+				   (DB_IISEQUENCE *) NULL, psq_cb, -1, 0);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return(status);
@@ -2466,7 +2468,7 @@ typedesc:          tname null_default
 	parms[1] = $5;
 	status = psl_ct14_typedesc(cb, $1, 2, parms, $7, 
 				   (PST_QNODE *) NULL, (DB_TEXT_STRING *) NULL,
-				   (DB_IISEQUENCE *) NULL, psq_cb, -1);
+				   (DB_IISEQUENCE *) NULL, psq_cb, -1, 0);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return(status);

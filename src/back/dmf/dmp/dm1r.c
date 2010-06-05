@@ -46,6 +46,7 @@
 #include    <dmxe.h>
 #include	<dmpepcb.h>
 #include    <dmve.h>
+#include    <dmfcrypt.h>
 
 /**
 **
@@ -556,6 +557,8 @@
 **	    sensitized to crow_locking().
 **	18-Feb-2010 (jonj)
 **	    SIR 121619 MVCC: Reinstated dm1r_crowlk_access().
+**	01-apr-2010 (toumi01) SIR 122403
+**	    Add decryption call.
 */
 
 /*
@@ -1938,6 +1941,18 @@ dm1r_get(
 		else
 		    SETDBERR(dberr, 0, E_DM938B_INCONSISTENT_ROW);
 		return (E_DB_ERROR);
+	    }
+
+	    /* If there are encrypted table or si columns, decrypt. */
+	    if ( t->tcb_rel.relencflags & TCB_ENCRYPTED ||
+		(t->tcb_parent_tcb_ptr && 
+		 t->tcb_parent_tcb_ptr->tcb_rel.relencflags & TCB_ENCRYPTED) )
+	    {
+		s = dm1e_aes_decrypt(r, &t->tcb_data_rac, rec_ptr, record,
+			r->rcb_erecord_ptr, dberr);
+		if (s != E_DB_OK)
+		    return(s);
+		rec_ptr = record;
 	    }
 
 	    if ( opflag & DM1C_GETNEXT &&

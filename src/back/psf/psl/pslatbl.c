@@ -995,6 +995,8 @@ psl_alt_tbl_col_drop(
 **          Don't change psq_mode to PSQ_CREATE, a syntax error will cause the wrong error
 **          message to be displayed. Use US error 2032 rather than 2013 to report a
 **          duplicate column error.
+**	22-Mar-2010 (toumi01) SIR 122403
+**	    Add encflags and encwid for encryption.
 */
 DB_STATUS
 psl_alt_tbl_col_add(
@@ -1079,6 +1081,8 @@ psl_alt_tbl_col_add(
 	    (*dmu_attr)->attr_collID = dmt_attr->att_collID;
 	    (*dmu_attr)->attr_geomtype = dmt_attr->att_geomtype;
 	    (*dmu_attr)->attr_srid = dmt_attr->att_srid;
+	    (*dmu_attr)->attr_encflags = dmt_attr->att_encflags;
+	    (*dmu_attr)->attr_encwid = dmt_attr->att_encwid;
 	    (*dmu_attr)->attr_defaultTuple = NULL;
 	    (*dmu_attr)->attr_seqTuple = NULL;
 	    switch (altopts) {

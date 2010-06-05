@@ -163,6 +163,8 @@ EXEC SQL INCLUDE <xf.sh>;
 **          Added -no_rep option to exclude all replicator objects.
 **      28-jan-2009 (stial01)
 **          Use DB_MAXNAME for database objects.
+**	21-apr-2010 (toumi01) SIR 122403
+**	    Add encryption support and With_r1000_catalogs.
 [@history_template@]...
 **/
 
@@ -268,7 +270,84 @@ EXEC SQL END DECLARE SECTION;
     /* get an empty node to fill in. */
     tp = get_empty_xf_tabinfo();
 
-    if (With_r3_catalogs )
+    if (With_r1000_catalogs )
+    {
+	/* Partitioned tables in r3 and beyond */
+
+	STprintf(stmtbuf, "SELECT t.table_name, t.table_owner, \
+t.table_permits, t.all_to_all, t.ret_to_all, t.table_type, \
+t.table_integrities, t.is_journalled, t.expire_date, t.multi_locations, \
+t.location_name, t.duplicate_rows, t.storage_structure, t.is_compressed, \
+t.key_is_compressed, t.unique_rule, t.unique_scope, t.table_ifillpct, \
+t.table_dfillpct, t.table_lfillpct, t.table_minpages, t.table_maxpages, \
+t.allocation_size, t.extend_size, t.is_readonly, t.num_rows, \
+t.row_security_audit, t.table_pagesize, t.table_reltcpri, t.row_width, \
+t.table_reltid, t.table_reltidx, t.phys_partitions, t.partition_dimensions, \
+t.encrypted_columns, t.encryption_type \
+FROM iitables t WHERE t.table_type = 'T' AND t.table_subtype = 'N' \
+AND ( t.table_owner = '%s' OR '' = '%s' ) AND t.table_name NOT LIKE 'iietab%%' \
+AND t.table_reltidx >= 0", Owner, Owner); 
+
+	if (Objcount && Obj_list)
+	{
+	    EXEC SQL DECLARE GLOBAL TEMPORARY TABLE 
+		session.tbl_list (tabname char(32) not null) 
+		ON COMMIT PRESERVE ROWS WITH NORECOVERY;
+
+	    with_tbl_list = TRUE;
+            status = IIUGhsHtabScan(Obj_list, FALSE, &entry_key, &obj_name);
+
+            while(status)
+            {
+		EXEC SQL INSERT into session.tbl_list values (:obj_name);
+                status = IIUGhsHtabScan(Obj_list, TRUE, &entry_key, &obj_name);
+            }
+
+            /* IN clause */
+	    STcat(stmtbuf, " AND t.table_name IN ( SELECT tabname FROM session.tbl_list )");
+	}
+
+        if (output_flags2 & XF_NOREP && db_replicated)
+        {
+	    with_no_rep = TRUE;
+
+            STcat(stmtbuf, " AND (t.table_name NOT IN ( SELECT table_name FROM dd_support_tables ))");
+        }
+
+	STcat(stmtbuf, " ORDER BY t.table_owner DESC, t.table_name DESC"); 
+
+	EXEC SQL EXECUTE IMMEDIATE :stmtbuf INTO
+                :tp->name, :tp->owner, :tp->has_permit,
+                :tp->alltoall, :tp->rettoall, :tp->table_type,
+                :tp->has_integ, :tp->journaled,
+                :tp->expire_date, :tp->multi_locations, :tp->location,
+                :tp->duplicates,
+                :tp->storage,
+                :tp->is_data_comp, :tp->is_key_comp, :tp->is_unique,
+                :tp->unique_scope,
+                :tp->ifillpct, :tp->dfillpct,
+                :tp->lfillpct, :tp->minpages, :tp->maxpages,
+                :tp->allocation_size, :tp->extend_size,
+                :tp->is_readonly, :tp->num_rows,
+                :tp->row_sec_audit,
+                :tp->pagesize, :tp->priority,
+                :tp->row_width, :tp->table_reltid, :tp->table_reltidx,
+                :tp->phys_partitions, :tp->partition_dimensions,
+                :tp->encrypted_columns, :tp->encryption_type;
+        EXEC SQL BEGIN;
+        {
+            if (filltable(tp, &tcount))
+            {
+                tp->tab_next = tablist;
+                tablist = tp;
+
+                /* get a new empty node to fill in. */
+                tp = get_empty_xf_tabinfo();
+            }
+        }
+        EXEC SQL END;
+    }
+    else if (With_r3_catalogs )
     {
 	/* Partitioned tables in r3 and beyond */
 
