@@ -59317,6 +59317,9 @@ psl_patcomp(
 **	04-Nov-2009 (kiria01) b122841
 **	    Adjusted handling of NULLability to allow for more general use as
 **	    in column defaults.
+**	02-May-2010: (kiria01) b123672
+**	    Split length check from datatype to avoid the inevitable but
+**	    overlooked clash between BYTE(64) and I8 etc!
 */
 
 DB_STATUS
@@ -59364,30 +59367,38 @@ psl_mk_const_similar(
 	op.pst_opmeta = PST_NOMETA;
 	op.pst_pat_flags = AD_PAT_DOESNT_APPLY;
 	/* The darn i4 casts are because sizeof is technically
-	** a size_t, which is 64-bit on LP64, and gcc complains.
-	*/
-	switch (ndv.db_datatype*8+ndv.db_length)
+	** a size_t, which is 64-bit on LP64, and gcc complains. */
+	switch (ndv.db_datatype)
 	{
-	case DB_INT_TYPE*8+(i4)sizeof(i1):
-	    op.pst_opno = ADI_I1_OP;
+	case DB_INT_TYPE:
+	    switch (ndv.db_length)
+	    {
+	    case (i4)sizeof(i1):
+		op.pst_opno = ADI_I1_OP;
+		break;
+	    case (i4)sizeof(i2):
+		op.pst_opno = ADI_I2_OP;
+		break;
+	    case (i4)sizeof(i4):
+		op.pst_opno = ADI_I4_OP;
+		break;
+	    case (i4)sizeof(i8):
+		op.pst_opno = ADI_I8_OP;
+		break;
+	    }
 	    break;
-	case DB_INT_TYPE*8+(i4)sizeof(i2):
-	    op.pst_opno = ADI_I2_OP;
+	case DB_FLT_TYPE:
+	    switch (ndv.db_length)
+	    {
+	    case (i4)sizeof(f4):
+		op.pst_opno = ADI_F4_OP;
+		break;
+	    case (i4)sizeof(f8):
+		op.pst_opno = ADI_F8_OP;
+		break;
+	    }
 	    break;
-	case DB_INT_TYPE*8+(i4)sizeof(i4):
-	    op.pst_opno = ADI_I4_OP;
-	    break;
-	case DB_INT_TYPE*8+(i4)sizeof(i8):
-	    op.pst_opno = ADI_I8_OP;
-	    break;
-	case DB_FLT_TYPE*8+(i4)sizeof(f4):
-	    op.pst_opno = ADI_F4_OP;
-	    break;
-	case DB_FLT_TYPE*8+(i4)sizeof(f8):
-	    op.pst_opno = ADI_F8_OP;
-	    break;
-	default:
-	    if (ndv.db_datatype == DB_DEC_TYPE)
+	case DB_DEC_TYPE:
 	    {
 		/* Decimal is a little more awkward */
 		PST_CNST_NODE cconst;
@@ -59408,16 +59419,15 @@ psl_mk_const_similar(
 		ndv.db_length = DB_PREC_TO_LEN_MACRO(DB_P_DECODE_MACRO(ndv.db_prec));
 		op.pst_opno = ADI_DEC_OP;
 	    }
-	    else
+	    break;
+	default:
+	    if (ndv.db_datatype == cdv.db_datatype &&
+		ndv.db_prec == cdv.db_prec)
 	    {
-		if (ndv.db_datatype == cdv.db_datatype &&
-		    ndv.db_prec == cdv.db_prec)
-		{
-		    *handled = TRUE;
-		    return status;
-		}
-		status = adi_castid(sess_cb->pss_adfcb, &op.pst_opno, &ndv);
+		*handled = TRUE;
+		return status;
 	    }
+	    status = adi_castid(sess_cb->pss_adfcb, &op.pst_opno, &ndv);
 	}
 	if (!status && ndv.db_datatype == DB_INT_TYPE)
 	{

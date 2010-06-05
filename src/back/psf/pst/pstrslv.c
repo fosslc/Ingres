@@ -368,6 +368,9 @@ pst_get_union_resdom_type(
 **	27-Nov-2009 (kiria01) b122966
 **	    Fully ringfence exceptions in adf_func as they will be
 **	    re-raised in context later.
+**	02-May-2010: (kiria01) b123672
+**	    Split length check from datatype to avoid the inevitable but
+**	    overlooked clash between BYTE(64) and I8 etc!
 */
 DB_STATUS
 pst_resolve(
@@ -702,36 +705,40 @@ pst_resolve(
 		    op.pst_opmeta = PST_NOMETA;
 		    op.pst_pat_flags = AD_PAT_DOESNT_APPLY;
 		    /* The darn i4 casts are because sizeof is technically
-		    ** a size_t, which is 64-bit on LP64, and gcc complains.
-		    */
-		    switch (n_dt*8+len)
+		    ** a size_t, which is 64-bit on LP64, and gcc complains. */
+		    switch (abs(n_dt))
 		    {
-		    case DB_INT_TYPE*8+(i4)sizeof(i1):
-		    case-DB_INT_TYPE*8+(i4)sizeof(i1)+1: /*Nullable*/
-			op.pst_opno = ADI_I1_OP;
+		    case DB_INT_TYPE:
+		    case DB_FLT_TYPE:
+			switch (n_dt*8+len)
+			{
+			case DB_INT_TYPE*8+(i4)sizeof(i1):
+			case-DB_INT_TYPE*8+(i4)sizeof(i1)+1: /*Nullable*/
+			    op.pst_opno = ADI_I1_OP;
+			    break;
+			case DB_INT_TYPE*8+(i4)sizeof(i2):
+			case-DB_INT_TYPE*8+(i4)sizeof(i2)+1: /*Nullable*/
+			    op.pst_opno = ADI_I2_OP;
+			    break;
+			case DB_INT_TYPE*8+(i4)sizeof(i4):
+			case-DB_INT_TYPE*8+(i4)sizeof(i4)+1: /*Nullable*/
+			    op.pst_opno = ADI_I4_OP;
+			    break;
+			case DB_INT_TYPE*8+(i4)sizeof(i8):
+			case-DB_INT_TYPE*8+(i4)sizeof(i8)+1: /*Nullable*/
+			    op.pst_opno = ADI_I8_OP;
+			    break;
+			case DB_FLT_TYPE*8+(i4)sizeof(f4):
+			case-DB_FLT_TYPE*8+(i4)sizeof(f4)+1: /*Nullable*/
+			    op.pst_opno = ADI_F4_OP;
+			    break;
+			case DB_FLT_TYPE*8+(i4)sizeof(f8):
+			case-DB_FLT_TYPE*8+(i4)sizeof(f8)+1: /*Nullable*/
+			    op.pst_opno = ADI_F8_OP;
+			    break;
+			}
 			break;
-		    case DB_INT_TYPE*8+(i4)sizeof(i2):
-		    case-DB_INT_TYPE*8+(i4)sizeof(i2)+1: /*Nullable*/
-			op.pst_opno = ADI_I2_OP;
-			break;
-		    case DB_INT_TYPE*8+(i4)sizeof(i4):
-		    case-DB_INT_TYPE*8+(i4)sizeof(i4)+1: /*Nullable*/
-			op.pst_opno = ADI_I4_OP;
-			break;
-		    case DB_INT_TYPE*8+(i4)sizeof(i8):
-		    case-DB_INT_TYPE*8+(i4)sizeof(i8)+1: /*Nullable*/
-			op.pst_opno = ADI_I8_OP;
-			break;
-		    case DB_FLT_TYPE*8+(i4)sizeof(f4):
-		    case-DB_FLT_TYPE*8+(i4)sizeof(f4)+1: /*Nullable*/
-			op.pst_opno = ADI_F4_OP;
-			break;
-		    case DB_FLT_TYPE*8+(i4)sizeof(f8):
-		    case-DB_FLT_TYPE*8+(i4)sizeof(f8)+1: /*Nullable*/
-			op.pst_opno = ADI_F8_OP;
-			break;
-		    default:
-			if (abs(n_dt) == DB_DEC_TYPE)
+		    case DB_DEC_TYPE:
 			{
 			    /* Decimal is a little more awkward */
 			    PST_CNST_NODE cconst;
@@ -752,8 +759,9 @@ pst_resolve(
 			    len = DB_PREC_TO_LEN_MACRO(DB_P_DECODE_MACRO(ps));
 			    op.pst_opno = ADI_DEC_OP;
 			}
-			else
-			    status = -1;
+			break;
+		    default:
+			status = -1;
 		    }
 		    if (!status && abs(n_dt) == DB_INT_TYPE)
 		    {
