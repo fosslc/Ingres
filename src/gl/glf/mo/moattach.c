@@ -208,6 +208,12 @@ MO_getinstance( char *classid, char *instance )
 **	06-sep-1993 (tad)
 **	    Bug #56449
 **	    Changed %x to %p.
+**	13-Apr-2010 (bonro01) Bug 123570
+**	    A hang can occur if MOattach calls MO_alloc which needs to
+**	    call MEget_pages to allocate more pages. This results in a
+**	    call to MOclassdef which also locks the MO_mutex.
+**	    To eliminate this problem the MO_mutex is released before calling
+**	    MO_alloc and re-acquired afterwards.
 */
 
 STATUS
@@ -257,7 +263,10 @@ MOattach( i4  flags, char *classid, char *instance, PTR idata )
 		break;
 	    }
 
+	    /* Release mutex to prevent deadlock in MO_alloc call */
+	    (VOID) MO_unmutex();
 	    ip = (MO_INSTANCE *)MO_alloc( sizeof(*ip), &stat );
+            stat = MO_mutex();
 	    if( NULL == ip )
 		break;
 
