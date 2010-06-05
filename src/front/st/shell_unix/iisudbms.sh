@@ -665,6 +665,8 @@
 ##	05-Apr-2010 (hanje04)
 ##	    SIR 123296
 ##	    Fix typo in demodb section for LSB builds
+##	09-Apr-2010 (frima01) SIR 123296
+##	    Change demodir to the data directory where the demodb scripts are.
 ##	    
 #----------------------------------------------------------------------------
 . iisysdep
@@ -3094,7 +3096,7 @@ else
    [ -f ${cfgloc}/startsql.dst ] &&
       [ ! -r ${cfgloc}/startsql ] &&
    {
-      $DOIT cp ${cfgloc}/startsql.dst $II_SYSTEM/startsql
+      $DOIT cp ${cfgloc}/startsql.dst ${cfgloc}/startsql
    }
        
    #
@@ -3876,15 +3878,16 @@ Populating demodb...
 
 !
 	if [ x"$conf_LSB_BUILD" = x"TRUE" ] ; then
-	    demodir=/usr/share/ingres/demo
+	    demodir=/usr/share/ingres/demo/data
 	    demologdir=/var/log/ingres/demo
 	else
-	    demodir=$II_SYSTEM/ingres/demo
+	    demodir=$II_SYSTEM/ingres/demo/data
 	    demologdir=$demodir
 	fi
 	[ -f "${demodir}/drop.sql" ] &&
-	    [ -f "${demodir}/data/copy.in" ] &&
-	    ( $DOIT sql demodb < ${demodir}/drop.sql > \
+	    [ -f "${demodir}/copy.in" ] &&
+	    ( $DOIT cd ${demodir} ;
+		$DOIT sql demodb < ${demodir}/drop.sql >> \
 				${demologdir}/copyin.log ;
 		$DOIT sql demodb < ${demodir}/copy.in >> \
 				${demologdir}/copyin.log ) ||
