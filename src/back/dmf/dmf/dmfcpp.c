@@ -1129,6 +1129,8 @@ static DB_STATUS ReleaseClusterStatusLock(
 **	    in a cluster. Tidy up LK_CKP_CLUSTER lock forms.
 **	30-may-2008 (joea)
 **	    dm0d_merge now takes only two arguments.
+**	08-feb-2010 (thaju02) Bug 122328
+**	    Disallow ckp while database is in incremental rolldb.
 */
 DB_STATUS
 dmfcpp(
@@ -1380,6 +1382,12 @@ DMP_DCB	    *dcb)
 	    ((jsx->jsx_status & (JSX_JON | JSX_JOFF)) == 0))
 	{
 	    SETDBERR(&jsx->jsx_dberr, 0, E_DM1157_CPP_DISABLE_JNL);
+	    break;
+	}
+
+	if (cnf->cnf_dsc->dsc_status & DSC_INCREMENTAL_RFP)
+	{
+	    *err_code = E_DM1171_CKP_DISALLOW_INCR_ROLLDB;
 	    break;
 	}
 

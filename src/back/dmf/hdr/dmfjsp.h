@@ -322,6 +322,8 @@
 **	    Add missing prototype for dmffload.
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Added E_DM1411, E_DM1412, E_DM1413, E_DM1414.
+**	08-feb-2010 (thaju02) Bug 122328
+**	    Added E_DM1171_CKP_DISALLOW_INCR_ROLLDB.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
 **      14-Apr-2010 (hanal04) SIR 123574
@@ -543,6 +545,7 @@
 #define		    E_DM116E_CPP_TBL_CKP_DISALLOWED (E_DM_MASK+0x116EL)
 #define		    E_DM116F_CPP_DRN_PURGE	  (E_DM_MASK + 0x116FL)
 #define		    E_DM1170_NO_RECOVERY_SERVER	  (E_DM_MASK + 0x1170L)
+#define		    E_DM1171_CKP_DISALLOW_INCR_ROLLDB (E_DM_MASK + 0x1171L)
 
 #define		    E_DM1200_ATP_DB_NOT_JNL	(E_DM_MASK + 0x1200L)
 #define		    E_DM1201_ATP_WRITING_AUDIT  (E_DM_MASK + 0x1201L)

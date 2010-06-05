@@ -523,6 +523,8 @@ SQLSTATE_MAPPING_REQUIRED
 **	    SIR 121619 MVCC: Add E_DM0020_UNABLE_TO_SERIALIZE,
 **	    E_DM0028_UNABLE_TO_MAKE_CONSISTENT, E_DM0029_ROW_UPDATE_CONFLICT,
 **	    E_DM1411, E_DM1412, E_DM1413, E_DM1414, E_DM0012, E_DM0013,E_DM9691
+**	08-feb-2010 (thaju02) Bug 122328
+**	    Added E_DM1171_CKP_DISALLOW_INCR_ROLLDB.
 **	02-Apr-2010 (jonj)
 **	    SIR 121619 MVCC:
 **	    Add useful information to E_DM0028_UNABLE_TO_MAKE_CONSISTENT
@@ -3888,6 +3890,8 @@ checkpoint processing."
 E_DM1170_NO_RECOVERY_SERVER:SS5000B_INTERNAL_ERROR
 "Error occurred waiting for Recovery Server during Offline 
 checkpoint processing."
+E_DM1171_CKP_DISALLOW_INCR_ROLLDB:SS5000B_INTERNAL_ERROR
+"Ckpdb disallowed while database is in incremental rollforward."
 /*%
 ** Parameters:
 **	%0c - Database name
