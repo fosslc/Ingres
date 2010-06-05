@@ -340,7 +340,8 @@ SHOW_BUFFER(char *which, BCD_STRUCT_TYPE *details)
 **	25-Aug-2009 (kschendel) b121804
 **	    Tidy up array-pointer usage, it's either array or &array[0] but
 **	    not &array.  Gcc 4.3 was not amused.
-**          
+**      14-May-2010 (coomi01) b123739
+**          Add cast to unsigned int to cache expressions.
 */
 static DB_STATUS
 dms_iiseq(
@@ -588,7 +589,7 @@ DML_SEQ		*s)
 
 		/* Determine maximum number of cached values */
 		/* Watch for under/overflow */
-		if ( (i8temp = (i8max - i8min) / i8incr) >= MAXI4 || i8temp < 0 )
+		if ( (i8temp = ((u_i8)(i8max - i8min)) / i8incr) >= MAXI4 || i8temp < 0 )
 		    max_cache = MAXI4;
 		else
 		    max_cache = i8temp;
@@ -603,14 +604,14 @@ DML_SEQ		*s)
 		*/
 		if ( asc )
 		{
-		    if ( (i8temp = (i8max - i8next) / i8incr) >= MAXI4 || i8temp < 0 )
+		    if ( (i8temp = ((u_i8)(i8max - i8next)) / i8incr) >= MAXI4 || i8temp < 0 )
 			rcache = MAXI4;
 		    else
 			rcache = i8temp+1;
 		}
 		else
 		{
-		    if ( (i8temp = (i8next - i8min) / i8incr) >= MAXI4 || i8temp < 0 )
+		    if ( (i8temp = ((u_i8)(i8next - i8min)) / i8incr) >= MAXI4 || i8temp < 0 )
 			rcache = MAXI4;
 		    else
 			rcache = i8temp+1;
