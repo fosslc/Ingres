@@ -1374,7 +1374,9 @@
 #	    compiler resulting in extern symbols being imported as 
 #	    __declspec(dllimport) on Windows.  This was resulting in
 #	    import/export symbol mismatch and link issues. 
-#	    
+#       22-apr-2010 (maspa05) Bug 122651
+#           The above problem occurred because of a switch on the full grist
+#           filename. Changed this to just the directory - a more general fix.
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -2301,7 +2303,7 @@ rule IIBINEXE
 		for _o in $(>)	
 		{
 			_g = [ FGristFiles $(_o:S=$(SUFOBJ)) ] ;
-			switch $(_g)
+			switch $(_g:G)
 			{
 				case *front*abf*impexp*	   	: CMPORTS = $(PORTIMP) ;
 				case *front*embed*cobol*        : CMPORTS = $(PORTIMP) ;
@@ -2512,7 +2514,7 @@ rule IITOOLSEXE
 	for _o in $(>)	
 	{
 		_g = [ FGristFiles $(_o:S=$(SUFOBJ)) ] ;
-		switch $(_g)
+		switch $(_g:G)
 		{
 			case *testtool*sep*listexec* 	: CMPORTS = $(PORTIMP) ;
 			case *testtool*sep*sep*		: CMPORTS = $(PORTIMP) ;
@@ -2586,7 +2588,7 @@ rule IIUTILEXE
 	for _o in $(>)	
 	{
 		_g = [ FGristFiles $(_o:S=$(SUFOBJ)) ] ;
-		switch $(_g)
+		switch $(_g:G)
 		{
 			case *common*adf*adl*	   : CMPORTS = $(PORTIMP) ;
 			case *			   : CMPORTS = $(PORTIMP) ;
@@ -2659,7 +2661,7 @@ rule IITOOLSWNTEXE
 	for _o in $(>)	
 	{
 		_g = [ FGristFiles $(_o:S=$(SUFOBJ)) ] ;
-		switch $(_g)
+		switch $(_g:G)
 		{
 			case *testtool*sep*listexec* 	: CMPORTS = $(PORTIMP) ;
 			case *testtool*sep*sep*		: CMPORTS = $(PORTIMP) ;
@@ -3957,7 +3959,8 @@ rule IILIBRARY
 		for _o in $(>)	
 		{
 			_g = [ FGristFiles $(_o:S=$(SUFOBJ)) ] ;
-			switch $(_g)
+
+			switch $(_g:G)
 			{
 			case *front*st*enterprise_dll_win*	: CMPORTS = $(PORTIMP) ;
 			case *cl*clf*		   : CMPORTS = $(PORTREF) ;
@@ -4054,7 +4057,7 @@ rule IILIBRARY
 			{
 				case IMP*LIBDATA :
 					_g = [ FGristFiles $(>[1]:S=$(SUFOBJ)) ] ;
-					switch $(_g)
+					switch $(_g:G)
 					{
 						case *front*embed*equel* : LIBRARY $(EQUELLIB) : $(>) ;
 						case *front*embed*libqgca* : LIBRARY $(LIBQGCALIB) : $(>) ;
@@ -4112,7 +4115,7 @@ rule IILIBRARY
 	    {
 		    case IMP*LIBDATA :
 			    _g = [ FGristFiles $(>:S=$(SUFOBJ)) ] ;
-			    switch $(_g)
+			    switch $(_g:G)
 			    {
 				    case *front*embed*equel*	: LibraryHB EQUELLIB : $(>) ;
 				    case *front*embed*libqgca*	: LibraryHB LIBQGCALIB : $(>) ;
@@ -6365,7 +6368,7 @@ rule CCSCW
 		for _o in $(>)	
 		{
 			_g = [ FGristFiles $(_o:S=$(SUFOBJ)) ] ;
-			switch $(_g)
+			switch $(_g:G)
 			{
 			case *front*abf*copyapp*   : CCSCO $(<) : $(>) ;
 			case *	: CCSC $(<) : $(>) ;	
@@ -7302,7 +7305,7 @@ rule IIMCTOH
 {
 	local _s ;
 	_s = [ FGristFiles $(>) ] ;
-	switch $(_s)
+	switch $(_s:G)
 	{
 		case *cl*clf*cs* 	: MCFLAG on $(<) = "-h" ;
 					  _IIMCTOH $(<) : $(>) ;
@@ -7359,7 +7362,7 @@ rule IIRCTORES
 {
     local _s ;
     _s = [ FGristFiles $(<) ] ;
-    switch $(_s)
+    switch $(_s:G)
     {
 	case *common*odbc*winspecials*	: RCFLAGS on $(<:S=.res) = /i ;
 					  RCHDR	on $(<:S=.res) = $(HDRDRV) ;
@@ -7469,7 +7472,7 @@ rule IISLN
 
 	if $(_temp_suf:L) != ".lib" && $(_temp_suf:L) != ".dll" 
 	{
-	switch $(_s)
+	switch $(_s:G)
 	{
 	    case *front*vdba*adbtofst* : LOCATE on $(<) = $(INGBIN) ;
 	    case *front*vdba*rmcmd* : LOCATE on $(<) = $(INGBIN) ;
