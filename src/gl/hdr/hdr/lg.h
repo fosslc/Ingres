@@ -1559,6 +1559,8 @@ typedef struct
 **	    for cursor CRIBs.
 **	    Cursor CRIBs are allocated when a cursor is opened, and linked
 **	    from the XCB's primary CRIB.
+**	24-Mar-2010 (jonj)
+**	    Add crib_rcb_state, for etabs.
 */
 struct _LG_CRIB
 {
@@ -1570,6 +1572,7 @@ struct _LG_CRIB
     					** if the XCB's CRIB */
     i4		    crib_inuse;		/* Number of RCBs open on this
     					** cursor CRIB */
+    i4		    crib_rcb_state;	/* rcb_state of CRIB creator */
     LG_LGID	    crib_log_id;	/* The caller's log handle */
     LG_LSN	    crib_low_lsn;	/* Oldest uncommitted LSN in DB */
     LG_LSN	    crib_last_commit;	/* LSN of last commit in DB */

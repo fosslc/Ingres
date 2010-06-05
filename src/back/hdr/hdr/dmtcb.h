@@ -492,6 +492,8 @@ typedef struct
 **	17-Mar-2010 (jonj)
 **	    SIR 121619 MVCC, blob support:
 **	    Add dmt_crib_ptr.
+**	24-Mar-2010 (jonj)
+**	    SIR 121619 MVCC blobs: Added DMT_CRIBPTR
 */
 typedef struct _DMT_CB
 {
@@ -571,6 +573,10 @@ typedef struct _DMT_CB
 #define			DMT_ONLINE_MODIFY   0x4000L /* From online modify */
 #define			DMT_NO_LOCK_WAIT    0x8000L /* Don't wait for a busy lock */
 #define			DMT_CURSOR	    0x10000L /* Table is opened for a cursor */
+#define			DMT_CRIBPTR	    0x20000L
+					    /* Use MVCC lock level and dmt_cribptr,
+					    ** used by blob etabs
+					    */
 
     i4		    dmt_unique_dbid;	    /* Unique DBid from rdr_unique_dbid */
     DB_TAB_ID       dmt_id;                 /* Internal table identifier */

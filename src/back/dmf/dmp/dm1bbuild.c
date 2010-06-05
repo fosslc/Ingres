@@ -238,6 +238,8 @@
 **	    SIR 121619 MVCC: Replace DMPP_PAGE* with DMP_PINFO* where needed.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      15-Apr-2010 (stial01)
+**          dmd* routine parameter changes
 **/
 
 /*
@@ -1998,11 +2000,9 @@ DB_ERROR	*dberr)
 	if (DMZ_AM_MACRO(18))
 	{
 	    TRdisplay("add_with_dups: dupkey\n");
-	    dmd_print_key(key, mct->mct_page_type, mct->mct_leaf_keys, 0,
-		 mct->mct_keys, adf_cb);
+	    dmd_print_key(key, mct->mct_leaf_keys, 0, mct->mct_keys, adf_cb);
 	    TRdisplay("add_with_dups: endkey\n");
-	    dmd_print_key(endkey, mct->mct_page_type, mct->mct_leaf_keys, 0,
-		 mct->mct_keys, adf_cb);
+	    dmd_print_key(endkey, mct->mct_leaf_keys, 0, mct->mct_keys, adf_cb);
 	}
 
 	if ( status = dm1b_AllocKeyBuf(t->tcb_klen, decr_kbuf,
@@ -2016,8 +2016,7 @@ DB_ERROR	*dberr)
 	    if (DMZ_AM_MACRO(18))
 	    {
 		TRdisplay("add_with_dups: decrkey\n");
-		dmd_print_key(decrkey, mct->mct_page_type, mct->mct_leaf_keys, 0,
-		mct->mct_keys, adf_cb);
+		dmd_print_key(decrkey, mct->mct_leaf_keys, 0, mct->mct_keys, adf_cb);
 	    }
 
 	    /*

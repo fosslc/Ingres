@@ -305,6 +305,8 @@
 **          dmve_bid_check() pass rcb to dm1cxclean, dont clean unless needed
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs, move consistency check to dmveutil
+**      15-Apr-2010 (stial01)
+**          Added diagnostics for dmve_bid_check failures
 */
 
 /*
@@ -1751,16 +1753,16 @@ DMP_PINFO	    **pinfoP)
 
 	if (DMZ_ASY_MACRO(6)) /* DM1306 */
 	{
-	    dmd_print_key(logkey_ptr, log_pgtype, btatts.bt_leafkeys, 0,
+	    dmd_print_key(logkey_ptr, btatts.bt_leafkeys, 0,
 		 btatts.bt_keys, &dmve->dmve_adf_cb);
 	    dmd_print_brange(log_pgtype, log_pgsize,
-		&btatts.bt_rng_rac,
-		btatts.bt_rngklen, 
+		&btatts.bt_rng_rac, btatts.bt_rngklen, 
 		btatts.bt_keys, &dmve->dmve_adf_cb, *page);
 	}
 
 	if (have_leaf == FALSE)
 	{
+	    /* MVCC undo never allocates misc_buffer, just return */
 	    if (dmve->dmve_flags & DMVE_MVCC)
 		return (E_DB_WARN);
 
@@ -1894,7 +1896,7 @@ DMP_PINFO	    **pinfoP)
 			DM1B_VPT_GET_BT_TIDSZ_MACRO(log_pgtype, *page))
 				== FALSE)
 	    {
-		if (bt_unique)
+		if (bt_unique || (dmve->dmve_flags & DMVE_MVCC))
 		{
 		    uleFormat(NULL, E_DM966F_DMVE_BTOVFL_NOROOM, (CL_ERR_DESC *)NULL,
 			ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
@@ -1953,6 +1955,68 @@ DMP_PINFO	    **pinfoP)
 			DM1B_VPT_GET_PAGE_PAGE_MACRO(log_pgtype, *page);
 		    leaf_bid.tid_tid.tid_line = pos;
 		    break;
+		}
+	    }
+	}
+    }
+
+    if (status != E_DB_OK)
+    {
+	i4		lgid = 0;
+	i4		i;
+	DMP_POS_INFO    *pos;
+	char		*prevrec;
+
+        if (dmve->dmve_flags & DMVE_MVCC)
+	{
+	    lgid = rcb->rcb_crib_ptr->crib_lgid_low;
+	    pos = &rcb->rcb_pos_info[RCB_P_GET];
+	    if (DM1B_POSITION_VALID_MACRO(rcb, RCB_P_GET))
+	    {
+		/* Print key we are positioned on since it can't be cleaned */
+		TRdisplay("GETPOS leaf %d,%d TID %d,%d lsn %x %x cc %d stat %x next %d\n",
+		    pos->bid.tid_tid.tid_page, pos->bid.tid_tid.tid_line,
+		    pos->tidp.tid_tid.tid_page, pos->tidp.tid_tid.tid_line,
+		    pos->lsn.lsn_low, pos->lsn.lsn_high,
+		    pos->clean_count, pos->page_stat, pos->nextleaf);
+		TRdisplay("RCB lowtid %d,%d\n", 
+		    rcb->rcb_lowtid.tid_tid.tid_page,
+		    rcb->rcb_lowtid.tid_tid.tid_line);
+		dmd_print_key(rcb->rcb_repos_key_ptr, btatts.bt_leafkeys, 0,
+		     btatts.bt_keys, &dmve->dmve_adf_cb);
+	    }
+	}
+	TRdisplay("BTREE undo %d %x error for tran %x %x lgid %d\n", 
+	    log_hdr->type, log_hdr->flags,
+	    dmve->dmve_tran_id.db_low_tran, dmve->dmve_tran_id.db_high_tran,
+	    lgid);
+	dmd_print_key(logkey_ptr, btatts.bt_leafkeys, 0,
+	     btatts.bt_keys, &dmve->dmve_adf_cb);
+	if (*page)
+	{
+	    TRdisplay("LEAF %d has page_stat %x cc %d lsn %x %x CRPAGE %d kids %d\n",
+		DM1B_VPT_GET_PAGE_PAGE_MACRO(log_pgtype, *page),
+		DM1B_VPT_GET_PAGE_STAT_MACRO(log_pgtype, *page),
+		DM1B_VPT_GET_BT_CLEAN_COUNT_MACRO(log_pgtype,*page),
+		DM1B_VPT_GET_LOG_ADDR_LOW_MACRO(log_pgtype, *page),
+		DM1B_VPT_GET_LOG_ADDR_HIGH_MACRO(log_pgtype, *page),
+		DMPP_VPT_IS_CR_PAGE(log_pgtype, *page),
+		DM1B_VPT_GET_BT_KIDS_MACRO(log_pgtype, *page));
+
+	    dmd_print_brange(log_pgtype, log_pgsize,
+		&btatts.bt_rng_rac, btatts.bt_rngklen, 
+		btatts.bt_keys, &dmve->dmve_adf_cb, *page);
+	    dmdprentries(log_pgtype, log_pgsize,
+		&btatts.bt_leaf_rac, btatts.bt_klen, 
+		btatts.bt_keys, &dmve->dmve_adf_cb, *page);
+	    if (dmve->dmve_flags & DMVE_MVCC)
+	    {
+		for (i = 0, prevrec = dmve->dmve_prev_rec; 
+		    i < *dmve->dmve_prev_cnt; 
+			i++, prevrec += dmve->dmve_prev_size)
+		{
+		    TRdisplay("Make consistent previous undo to this page:\n");
+		    dmd_log(TRUE, prevrec,  ((DM0L_HEADER *)prevrec)->length);
 		}
 	    }
 	}
@@ -2264,7 +2328,7 @@ DM_LINE_IDX	*pos)
 		** with matching tidp.
 		** UNDO DM0LBTPUT, skip delete etries
 		*/
-		if (log_hdr->type == DM0LBTPUT &
+		if (log_hdr->type == DM0LBTPUT &&
 		(dmve->dmve_action == DMVE_UNDO || (log_hdr->flags & DM0L_CLR)))
 		    continue;
 	    }

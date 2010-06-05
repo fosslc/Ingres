@@ -1146,6 +1146,33 @@ bool                 allocate)
 	/*
 	** Reinsert the key,tid,partition values.
 	*/
+    /* If leaf overflow look for entry with matching tid */
+    /* skip key comparison all the keys on overflow are the same */
+    if (DM1B_VPT_GET_PAGE_STAT_MACRO(page_type, page) & DMPP_CHAIN)
+    {
+	i4 i;
+	DM_TID	tmptid;
+	i4	tmppart;
+	LG_LSN lsn;
+	for (i = 0; i < DM1B_VPT_GET_BT_KIDS_MACRO(page_type, page); i++)
+	{
+	    dm1cxtget(page_type, log_rec->btd_page_size, page, i, &tmptid, &tmppart); 
+	lsn = DMPP_VPT_GET_PAGE_LSN_MACRO(page_type, page);
+	    if (log_rec->btd_tid.tid_i4 == tmptid.tid_i4 &&
+		dmpp_vpt_test_free_macro(page_type,
+		DM1B_VPT_BT_SEQUENCE_MACRO(page_type, page), 
+		(i4)i + DM1B_OFFSEQ) == FALSE)
+	    TRdisplay("dmvebtdl: dup entry on overflow %d for tid %d,%d CRPAGE %d page lsn %x\n",
+		DM1B_VPT_GET_PAGE_PAGE_MACRO(page_type, page),
+		log_rec->btd_tid.tid_tid.tid_page,
+		log_rec->btd_tid.tid_tid.tid_line,
+	        DMPP_VPT_IS_CR_PAGE(page_type, page), lsn.lsn_low);
+/*
+does this trigger the dm1bxreserve failure from dm1bxovfl_alloc 
+	    return (E_DB_ERROR);
+*/
+	}
+    }
 	status = dm1cxput(page_type, log_rec->btd_page_size, page,
 			ix_compressed, update_mode, 
 			&dmve->dmve_tran_id,

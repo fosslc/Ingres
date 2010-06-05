@@ -218,6 +218,8 @@ struct _DMVE_FIX_HISTORY
 **	    SIR 121619 MVCC: Add DMVE_MVCC, dmve_page.
 **	23-Feb-2010 (stial01)
 **          Added dmve_rcb to DMVE_CB
+**	15-Apr-2010 (stial01)
+**          Added mvcc trace fields to DMVE_CB
 */
 struct _DMVE_CB
 {
@@ -274,6 +276,9 @@ struct _DMVE_CB
     DMP_TABLE_IO    *dmve_tbio;             /* for offline recovery */
     DMP_TCB	    *dmve_tcb;
     DMP_RCB	    *dmve_rcb;
+    char	    *dmve_prev_rec;	/* for tracing mvcc undo failure */
+    i4		    *dmve_prev_cnt;     /* for tracing mvcc undo failure */
+    i4		    dmve_prev_size;    /* for tracing mvcc undo failure */
 
 };
 

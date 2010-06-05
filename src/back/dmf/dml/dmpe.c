@@ -7055,6 +7055,9 @@ DB_ERROR	*dberr)
 **	    over the place.
 **	18-Mar-2010 (jonj)
 **	    Send base table's CRIB over to dmt_open via dmt_crib_ptr.
+**	24-Mar-2010 (jonj)
+**	    Tell dmt_open to use CRIB in dmt_crib_ptr; dmt_open
+**	    figures everything else out.
 */
 
 static void
@@ -7098,17 +7101,7 @@ dmpe_check_table_lock(i4 opcode, DMT_CB *dmtcb, DMP_TCB *base_tcb)
 		{
 		    /* etabs use base table's CRIB */
 		    dmtcb->dmt_crib_ptr = (PTR)base_rcb->rcb_crib_ptr;
-
-		    /* Duplicate "is cursor", "is constraint" flags */
-		    if ( base_rcb->rcb_state & RCB_CURSOR )
-			dmtcb->dmt_flags_mask |= DMT_CURSOR;
-		    if ( base_rcb->rcb_state & RCB_CONSTRAINT )
-			dmtcb->dmt_flags_mask |= DMT_CONSTRAINT;
-
-		    if ( opcode == ADP_GET )
-			dmtcb->dmt_lock_mode = DMT_MIS;
-		    else
-			dmtcb->dmt_lock_mode = DMT_MIX;
+		    dmtcb->dmt_flags_mask |= DMT_CRIBPTR;
 		}
 		else if ( base_rcb->rcb_lk_type == RCB_K_TABLE )
 		{

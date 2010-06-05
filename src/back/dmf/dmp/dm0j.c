@@ -750,6 +750,8 @@ DB_ERROR	    *dberr)
 **	19-Mar-2010 (jonj)
 **	    Must refresh the block when changing read direction or
 **	    bytes_left will be wrong.
+**	15-Apr-2010 (jonj)
+**	    If dm0j_open can't find filseq, "j" may be null.
 */
 DB_STATUS
 dm0j_position(
@@ -871,7 +873,8 @@ DB_ERROR	    *dberr)
 		        if ( --CurrFilseq > 0 )
 			{
 			    CurrBlock = DM0J_EXTREME;
-			    j->dm0j_jnl_seq = 0;
+			    if ( j )
+				j->dm0j_jnl_seq = 0;
 			    status = E_DB_OK;
 			    continue;
 			}

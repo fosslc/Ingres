@@ -629,6 +629,7 @@ DMT_CB   *dmt_cb)
     CL_ERR_DESC	    sys_err;
     LG_CRIB	    *curscrib;
     char	    *cribmem;
+    LG_CRIB	    *crib;
 
     CLRDBERR(&dmt->error);
 
@@ -638,7 +639,7 @@ DMT_CB   *dmt_cb)
         if ((dmt->dmt_flags_mask & ~(DMT_DBMS_REQUEST | DMT_SHOW_STAT | 
                DMT_CONSTRAINT | DMT_SESSION_TEMP |
 	       DMT_LK_ONLN_NEEDED | DMT_FORCE_NOLOCK | DMT_NO_LOCK_WAIT | 
-	       DMT_CURSOR)) == 0)
+	       DMT_CURSOR | DMT_CRIBPTR)) == 0)
 	{
 	    odcb = (DML_ODCB *)dmt->dmt_db_id;
 
@@ -704,6 +705,36 @@ DMT_CB   *dmt_cb)
 	}
 	if (dmt->error.err_code)
 	    break;
+
+	/* Check for lock level, CRIB override (etabs) */
+	if ( dmt->dmt_flags_mask & DMT_CRIBPTR )
+	{
+	    /*
+	    ** Use the blob's CRIB information for
+	    ** the etabs.
+	    */
+	    if ( !(crib = (LG_CRIB*)dmt->dmt_crib_ptr) )
+	    {
+		SETDBERR(&dmt->error, 0, E_DM002A_BAD_PARAMETER);
+		break;
+	    }
+
+	    /* Reverse-engineer CRIB into dmt parameters for etab */
+	    if ( crib->crib_rcb_state & RCB_CURSOR )
+	    {
+	        dmt->dmt_flags_mask |= DMT_CURSOR;
+		dmt->dmt_cursid = crib->crib_cursid;
+	    }
+	    if ( crib->crib_rcb_state & RCB_CONSTRAINT )
+	        dmt->dmt_flags_mask |= DMT_CONSTRAINT;
+
+	    dmt->dmt_sequence = crib->crib_sequence;
+
+	    if ( access_mode == DMT_A_WRITE )
+	        dmt->dmt_lock_mode = DMT_MIX;
+	    else
+	        dmt->dmt_lock_mode = DMT_MIS;
+	}
 
 	if (dmt->dmt_lock_mode < DMT_MIX || dmt->dmt_lock_mode > DMT_X ||
             dmt->dmt_update_mode == 0 ||
@@ -1054,23 +1085,18 @@ DMT_CB   *dmt_cb)
 	{
 	    /*
 	    ** If blob etab table, use the same CRIB as the base
-	    ** table if known, passed here by dmpe in dmt_crib_ptr, otherwise
-	    ** the transaction's CRIB is used by all RCBs
-	    ** except read-committed cursors.
+	    ** table, set by dmpe in dmt_crib_ptr and vetted earlier.
+	    ** Otherwise, the transaction's CRIB is used by all RCBs
+	    ** except read-committed cursors, each of which have
+	    ** their own CRIB.
 	    */
-	    r->rcb_crib_ptr = xcb->xcb_crib_ptr;
 
-	    if ( t->tcb_extended )
-	    {
-		if ( dmt->dmt_crib_ptr )
-		{
-		    /* Same crib, cursor, sequence as base table's */
-		    r->rcb_crib_ptr = (LG_CRIB*)dmt->dmt_crib_ptr;
-		}
-		dmt->dmt_cursid = r->rcb_crib_ptr->crib_cursid;
-		dmt->dmt_sequence = r->rcb_crib_ptr->crib_sequence;
-	    }
-
+	    /* Use CRIB provided by caller */
+	    if ( dmt->dmt_flags_mask & DMT_CRIBPTR )
+		r->rcb_crib_ptr = crib;
+	    else
+		r->rcb_crib_ptr = xcb->xcb_crib_ptr;
+	    
 	    if ( r->rcb_state & RCB_CURSOR && r->rcb_iso_level == RCB_READ_COMMITTED )
 	    {
 		/*
@@ -1197,6 +1223,13 @@ DMT_CB   *dmt_cb)
 		    }
 		}
 	    }
+	    /*
+	    ** Copy rcb_state to CRIB.
+	    **
+	    ** This remembers if statement is for a CURSOR or CONSTRAINT
+	    ** so etabs can be opened with the same dmt flags.
+	    */
+	    r->rcb_crib_ptr->crib_rcb_state = r->rcb_state;
 	}
 
 	/* 
@@ -1627,6 +1660,12 @@ i4         *lock_level)
 **	    SIR 121619 MVCC: Add support for MVCC lock level.
 **	19-Mar-2010 (jonj)
 **	    SIR 121619 MVCC: Check lock mode MIX regardless of lock level.
+**	24-Mar-2010 (jonj)
+**	    SIR 121619 MVCC, blob support: 
+**	    Check explicit MVCC lock modes when lock_level is DMC_C_SYSTEM.
+**	15-Apr-2010 (jonj)
+**	    Don't let isolation level READ_UNCOMMITTED override
+**	    lock level MVCC, change to READ_COMMITTED.
 */
 STATUS
 dmt_set_lock_values(
@@ -1689,10 +1728,16 @@ i4         total_pages)
 
     if (lock_level == DMC_C_SYSTEM)    
     {                                   
-        if (lock_mode >= DMT_S)         /* Default locking granularity   */
-            lock_level = DMC_C_TABLE;   /* is one that matches lock_mode */
-        else if (lock_mode <= DMT_RIS)  /* provided by caller.           */ 
+	/*
+	** Default lock_level is the one that 
+	** matches lock_mode provided by caller.
+	*/
+        if (lock_mode >= DMT_S)
+            lock_level = DMC_C_TABLE;
+        else if (lock_mode == DMT_RIS || lock_mode == DMT_RIX)
             lock_level = DMC_C_ROW;     
+        else if (lock_mode == DMT_MIS || lock_mode == DMT_MIX)
+            lock_level = DMC_C_MVCC;     
         else
             lock_level = DMC_C_PAGE;
     } 
@@ -1790,12 +1835,14 @@ i4         total_pages)
     /*
     ** Check for readlock protocol
     ** Readonly cursor: check for readlock=nolock, readlock=exclusive
+    **
+    ** Ignore readlock=nolock if MVCC.
     */
     if (dmt->dmt_access_mode == DMT_A_READ)
     {
 	if (readlock == DMC_C_READ_NOLOCK)
 	{
-	    if (dmt->dmt_mustlock != TRUE)
+	    if ( lock_level != DMC_C_MVCC && !dmt->dmt_mustlock )
 		lock_mode = DM2T_N;
 	}
 	else if (readlock == DMC_C_READ_EXCLUSIVE)
@@ -1846,12 +1893,18 @@ i4         total_pages)
 
     /*
     ** Readonly cursor: check for isolation level READ UNCOMMITTED
+    **
+    ** If lock level is MVCC, isolation READ UNCOMMITTED cannot
+    ** override MVCC semantics, change to READ COMMITTED.
     */
     if (dmt->dmt_access_mode == DMT_A_READ && 
 	iso_level == DMC_C_READ_UNCOMMITTED &&
 	dmt->dmt_mustlock != TRUE)
     {
-	lock_mode = DM2T_N;
+	if ( lock_level == DMC_C_MVCC )
+	    iso_level = DMC_C_READ_COMMITTED;
+	else
+	    lock_mode = DM2T_N;
     }
 
     /*

@@ -779,6 +779,8 @@
 **          dm1b_get() crow_locking and constraint/Upd-cursor save cursor
 **          position after locking the row
 **          dm1b_rowlk_access() fixed lock_status checking
+**	15-Apr-2010 (stial01)
+**          reposition for RCB_P_FETCH, should not reposition to deleted entry
 */
 
 
@@ -11349,6 +11351,10 @@ btree_reposition(
     DMP_POS_INFO   *savepos;
     DMP_POS_INFO   origpos;
     DMPP_PAGE		**leaf;
+    i4			i;
+    DM_TID		tmp_tid;
+    i4			tmp_part;
+    bool		is_deleted;
     /* ***temp */
     i4 line1,line2,line3,line4=0;
 
@@ -11571,18 +11577,63 @@ btree_reposition(
 	{
 	    dmf_svcb->svcb_stat.btree_repos_search++;
 
-	    /*
-	    ** Search for the key on the this leaf page.
-	    */
-	    s = dm1bxsearch(r, *leaf, mode, DM1C_EXACT,
+	    if ((DM1B_VPT_GET_PAGE_STAT_MACRO(t->tcb_rel.relpgtype, *leaf) & 
+		DMPP_CHAIN) == 0)
+	    {
+		/*
+		** Search for the key on the this leaf page.
+		*/
+		s = dm1bxsearch(r, *leaf, mode, DM1C_EXACT,
 		    key_ptr, t->tcb_keys, &savepos->tidp, &tidpartno,
 		    &pos, NULL, dberr);
+	    }
+	    else
+	    {
+		/*
+		** ALL keys on DMPP_CHAIN (overflow) are DUPS 
+		** Look at each entry to make sure we position correctly:
+		** We may have multiple entries with the same tid: 
+		** 'dupkey' tid (5,5) DELETED
+		** 'dupkey' tid (5,5) DELETED
+		** 'dupkey' tid (5,5)
+		** If repostition for RCB_P_FETCH, we must position to
+		** the entry that is not already deleted!
+		** If reposition for RCB_P_ALLOC, we probably should 
+		** position to the entry reserved by this transaction
+		*/
+		s = E_DB_ERROR;
+		for (pos = 0; 
+			pos < DM1B_VPT_GET_BT_KIDS_MACRO(t->tcb_rel.relpgtype, 
+			    *leaf); pos++)
+		{
+		    dm1cxtget(t->tcb_rel.relpgtype, t->tcb_rel.relpgsize, 
+			*leaf, pos, &tmp_tid, &tmp_part);
+
+		    if (tmp_tid.tid_i4 != savepos->tidp.tid_i4)
+			continue;
+
+		    /* RCB_P_FETCH ignore deleted entries! */
+		    if (pop == RCB_P_FETCH &&
+			dmpp_vpt_test_free_macro(t->tcb_rel.relpgtype, 
+			DM1B_VPT_BT_SEQUENCE_MACRO(t->tcb_rel.relpgtype, *leaf),
+			    (i4)pos + DM1B_OFFSEQ))
+			continue;
+
+		   /* The entry we are looking for */
+		   s = E_DB_OK;
+		   break;
+		}
+		if (s == E_DB_ERROR)
+		    SETDBERR(dberr, 0, E_DM0056_NOPART);
+	    }
+
 	    if (s != E_DB_OK)
 	    {
 		if (dberr->err_code == E_DM0056_NOPART)
 		{
 		    if ((t->tcb_rel.relstat & TCB_UNIQUE) ||
-			(t->tcb_rel.relstat & TCB_INDEX))
+			(t->tcb_rel.relstat & TCB_INDEX) ||
+			t->tcb_dups_on_ovfl)
 			break;
 
 		    /*

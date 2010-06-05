@@ -828,6 +828,8 @@ dm1r_replace_segs(
 **	03-Mar-2010 (jonj)
 **	    SIR 121619 MVCC, blob support:
 **	    Use NeedPhysLock(r) to determine physical page lock needs.
+**	15-Apr-2010 (jonj)
+**	    Additional diagnostics before dmd_check on deleted tid.
 */
 DB_STATUS
 dm1r_delete(
@@ -974,14 +976,14 @@ delete(
 	    if ( r->rcb_crib_ptr )
 	    {
 		TM_STAMP	tim;
-		char		err_buffer[256];
+		char		err_buffer[512];
 
 		TMget_stamp(&tim);
 		TMstamp_str(&tim, err_buffer);
 		STprintf(err_buffer + STlength(err_buffer),
-		    " delete %d: status %d tid [%d,%d] record %p row_tran_id %x row_lg_id %d"
-		    " crib xid %x"
-		    " rcb tranid %x crib_bos_tranid %x\n",
+		    " delete %d: status %d tid [%d,%d] record %p row_tran_id %x row_lg_id %d\n"
+		    " crib xid %x rcb tranid %x crib_bos_tranid %x\n"
+		    " log_id %d low_lsn %x commit %x bos %x\n",
 			__LINE__,
 			status,
 			tid->tid_tid.tid_page, tid->tid_tid.tid_line,
@@ -989,8 +991,36 @@ delete(
 			row_tran_id, row_lg_id,
 			r->rcb_crib_ptr->crib_xid_array[row_lg_id],
 			r->rcb_tran_id.db_low_tran,
-			r->rcb_crib_ptr->crib_bos_tranid);
+			r->rcb_crib_ptr->crib_bos_tranid,
+			r->rcb_slog_id_id,
+			r->rcb_crib_ptr->crib_low_lsn.lsn_low,
+			r->rcb_crib_ptr->crib_last_commit.lsn_low,
+			r->rcb_crib_ptr->crib_bos_lsn.lsn_low);
 		ERlog(err_buffer, STlength(err_buffer), &sys_err);
+		TRdisplay(err_buffer);
+	    }
+
+	    /* Additional diagnostics, print page contents */
+	    if ( r->rcb_other.page )
+	    {
+	        TRdisplay("\n%@ RCB other.page 0x%x:\n", r->rcb_other.page);
+		dmd_prindex(r, r->rcb_other.page, (i4)0);
+	    }
+	    if ( r->rcb_other.CRpage )
+	    {
+	        TRdisplay("\n%@ RCB other.CRpage 0x%x:\n", r->rcb_other.CRpage);
+		dmd_prindex(r, r->rcb_other.CRpage, (i4)0);
+	    }
+
+	    if ( r->rcb_data.page )
+	    {
+	        TRdisplay("\n%@ RCB data.page 0x%x:\n", r->rcb_data.page);
+		dmd_prdata(r, r->rcb_data.page);
+	    }
+	    if ( r->rcb_data.CRpage )
+	    {
+	        TRdisplay("\n%@ RCB data.CRpage 0x%x:\n", r->rcb_data.CRpage);
+		dmd_prdata(r, r->rcb_data.CRpage);
 	    }
 
 	    dmd_check(E_DMF011_DM1R_BAD_TID);

@@ -1844,6 +1844,8 @@ NO_OPTIM=dr6_us5 i64_aix
 **         LOG and read-only under FILES location.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      15-apr-2010 (stial01)
+**          Init mvcc trace fields in DMVE_CB
 **/
 
 
@@ -33057,8 +33059,9 @@ DB_ERROR	*dberr)
     char		*newCLRs;
 
     /* For tracing, in case there's an error */
-#define MVCC_REC_MAX 5 
-    DM0L_HEADER		trace_rec[MVCC_REC_MAX];
+#define MVCC_REC_MAX 10 
+#define MVCC_REC_SIZE 100  /* big enough for fixed part of most log records */
+    char		trace_rec[MVCC_REC_MAX * MVCC_REC_SIZE];
     i4			trace_cnt = 0;
 
     localPinfo = *pinfo;
@@ -33098,6 +33101,9 @@ DB_ERROR	*dberr)
     dmve.dmve_log_id = log_id;
     dmve.dmve_rolldb_action = NULL;
     dmve.dmve_db_lockmode = LK_N;
+    dmve.dmve_prev_rec = &trace_rec[0];
+    dmve.dmve_prev_cnt = &trace_cnt;
+    dmve.dmve_prev_size = MVCC_REC_SIZE;
 
     /* Prevents DMVE from writing CLRs */
     dmve.dmve_logging = FALSE;
@@ -33436,7 +33442,8 @@ DB_ERROR	*dberr)
 	    record = (DM0L_HEADER*)dmve.dmve_log_rec;
 
 	    trace_cnt++;
-	    STRUCT_ASSIGN_MACRO(*record, trace_rec[trace_cnt % MVCC_REC_MAX]);
+	    MEcopy(record, MVCC_REC_SIZE, 
+		trace_rec + ((trace_cnt % MVCC_REC_MAX) * MVCC_REC_SIZE));
 
 	    /* Sanity check the log record */
 	    if ( !(record->flags & DM0L_CR_HEADER)

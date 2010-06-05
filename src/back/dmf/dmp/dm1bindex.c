@@ -555,6 +555,8 @@
 **	    sensitized to crow_locking().
 **	23-Feb-2010 (stial01)
 **          dm1bxclean() pass rcb to dm1cxclean
+**	15-Apr-2010 (stial01)
+**          dm1bxdelete() More validation of entry to be deleted
 **/
 
 /*
@@ -1034,6 +1036,8 @@ dm1bxdelete(
     i4                  compare = DM1B_SAME;
     i4		    *err_code = &dberr->err_code;
     LG_LRI		lri;
+    bool		bad_tid = FALSE;
+    bool		is_deleted = FALSE;
 
     CLRDBERR(dberr);
 
@@ -1115,6 +1119,14 @@ dm1bxdelete(
 	if ((index_update) && (child != 0))
 	    childkey--;
 
+	if (!index_update && dmpp_vpt_test_free_macro(tbio->tbio_page_type,
+		DM1B_VPT_BT_SEQUENCE_MACRO(tbio->tbio_page_type, b), 
+			(i4)child + DM1B_OFFSEQ))
+	{
+	    /* must have repositioned to WRONG/deleted entry */
+	    is_deleted = TRUE;
+	}
+
 	/*
 	** Look up pointer to the delete victim's key.  In addition to
 	** validating the existence of the entry, the key is needed in the
@@ -1124,6 +1136,10 @@ dm1bxdelete(
 	dm1cxrecptr(tbio->tbio_page_type, tbio->tbio_page_size, b, childkey, &key);
 	dm1cxtget(tbio->tbio_page_type, tbio->tbio_page_size, b, child, 
 			&deltid, &delpartno);
+	if (!index_update && r->rcb_currenttid.tid_i4 != deltid.tid_i4)
+	{
+	   bad_tid = TRUE;
+	}
 
 	/* Non-compressed keys: we just use the fixed size key length */
 	key_len = index_update ? t->tcb_ixklen : t->tcb_klen;
@@ -1140,7 +1156,8 @@ dm1bxdelete(
 		t->tcb_keys, &compare, dberr);
 	}
 
-	if ((status != E_DB_OK) ||
+	if ((status != E_DB_OK) || is_deleted || bad_tid ||
+	    DMPP_VPT_IS_CR_PAGE(tbio->tbio_page_type, b) ||
 	    (compare != DM1B_SAME) ||
 	    ((i4) child >= 
 	    (i4) DM1B_VPT_GET_BT_KIDS_MACRO(tbio->tbio_page_type, b)) || 
@@ -1154,7 +1171,16 @@ dm1bxdelete(
 		0, child, 0, DM1B_VPT_GET_PAGE_PAGE_MACRO(tbio->tbio_page_type, b),
 		0, DM1B_VPT_GET_BT_KIDS_MACRO(tbio->tbio_page_type, b), 0, key_len,
 		0, (key - (char *)b));
+
+
+	    TRdisplay("dm1bxdelete (%d,%d) tid (%d,%d) currenttid (%d,%d)\n",
+		delbid.tid_tid.tid_page, delbid.tid_tid.tid_line,
+		deltid.tid_tid.tid_page, deltid.tid_tid.tid_line,
+		r->rcb_currenttid.tid_tid.tid_page,
+		r->rcb_currenttid.tid_tid.tid_line);
+
 	    dmd_prindex(rcb, b, 1);
+
 	    uleFormat(NULL, E_DM93B7_BXDELETE_ERROR, (CL_ERR_DESC*)NULL, ULE_LOG, NULL,
 		(char *)NULL, (i4)0, (i4 *)NULL, err_code, 0);
 	    SETDBERR(dberr, 0, E_DM93B7_BXDELETE_ERROR);
@@ -5542,7 +5568,7 @@ DB_ERROR	*dberr)
     CLRDBERR(dberr);
 
     leaf = leafPinfo->page;
-    ovflPinfo.page = NULL;
+    DMP_PINIT(&ovflPinfo);
 
     for (;;)
     {

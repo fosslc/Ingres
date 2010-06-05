@@ -185,6 +185,10 @@
 **          Check if table has segmented rows (instead of if pagetype supports)
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Prototype changes for dmpp_get, dm1cxget
+**      15-Apr-2010 (stial01)
+**          dmdprentries() eliminated rcb dependency
+**          dmd_print_key eliminated page_type arg. Its not needed and
+**          wasn't passed correctly from outside this file
 */
 
 
@@ -200,11 +204,6 @@ static VOID          dmdprbkey(
 static VOID          dmdprbtree(
 			DMP_RCB		*rcb,
 			i4		subroot,
-			i4		indent );
-
-static VOID          dmdprentries(
-			DMP_RCB		*rcb,
-			DMPP_PAGE	*b,
 			i4		indent );
 
 static VOID          dmdprleaves(
@@ -351,6 +350,9 @@ DMP_RCB    *rcb)
 **	14-apr-2004 (gupsh01)
 **	    Modified dm1r_cvt_row to include adf control block in the 
 **	    parameter list.
+**	15-Apr-2010 (jonj)
+**	    Add display of TID, row_low_tran, row_lg_id, deleted TIDs,
+**	    page header information.
 */
 VOID
 dmd_prdata(
@@ -368,17 +370,34 @@ DMPP_PAGE   *data)
     i4	        row_version = 0;		
     i4		*row_ver_ptr;
     DB_ERROR		local_dberr;
+    DB_TRAN_ID		page_tran_id;
+    LG_LSN		page_lsn;
+    u_i2		page_lg_id;
+    u_i4		page_stat;
+    u_i4		row_low_tran;
+    u_i2		row_lg_id;
  
     rec_buf = dm0m_tballoc(t->tcb_rel.relwid + t->tcb_data_rac.worstcase_expansion);
     if (rec_buf == 0)
 	return;
 
     p = data; 
-    s = TRdisplay("    %d: data page, %s\n", 
-	DMPP_VPT_GET_PAGE_PAGE_MACRO(t->tcb_rel.relpgtype, p), 
-        (DMPP_VPT_GET_PAGE_STAT_MACRO(t->tcb_rel.relpgtype, p) & DMPP_ASSOC)?
-	"associated":"dissociated"); 
+
+    page_stat = DMPP_VPT_GET_PAGE_STAT_MACRO(t->tcb_rel.relpgtype, p);
+    page_tran_id = DMPP_VPT_GET_PAGE_TRAN_ID_MACRO(t->tcb_rel.relpgtype, p);
+    page_lsn = DMPP_VPT_GET_PAGE_LSN_MACRO(t->tcb_rel.relpgtype, p);
+    page_lg_id = DMPP_VPT_GET_PAGE_LG_ID_MACRO(t->tcb_rel.relpgtype, p);
     tid.tid_tid.tid_page = DMPP_VPT_GET_PAGE_PAGE_MACRO(t->tcb_rel.relpgtype, p); 
+    
+    s = TRdisplay("    %d: data page, tran %x%x lsn (%x,%x) lg_id %d stat %v\n", 
+	tid.tid_tid.tid_page,
+	page_tran_id.db_high_tran,
+	page_tran_id.db_low_tran,
+	page_lsn.lsn_high,
+	page_lsn.lsn_low,
+	page_lg_id,
+	PAGE_STAT, page_stat);
+
     record_size = t->tcb_rel.relwid;
 
     if (t->tcb_rel.relversion)
@@ -393,9 +412,21 @@ DMPP_PAGE   *data)
     {
 	s = (*t->tcb_acc_plv->dmpp_get)(t->tcb_rel.relpgtype, 
 		    t->tcb_rel.relpgsize, p, &tid, &record_size,
-		    &record, row_ver_ptr, NULL, NULL, (DMPP_SEG_HDR *)0);
+		    &record, row_ver_ptr, &row_low_tran, &row_lg_id, (DMPP_SEG_HDR *)0);
+
+	TRdisplay("TID:{%d,%d} tran %x lg_id %d ",
+		tid.tid_tid.tid_page, 
+		tid.tid_tid.tid_line,
+		row_low_tran,
+		row_lg_id);
+		
 	if (s == E_DB_WARN)
+	{
+	    TRdisplay(" DELETED\n");
 	    continue;
+	}
+	else
+	    TRdisplay(":\n");
 
 	/* Additional processing if compressed, altered, or segmented */
 	if (s == E_DB_OK &&
@@ -462,21 +493,39 @@ i4      indent)
 {
     DB_STATUS     s;
     DMP_TCB       *t = rcb->rcb_tcb_ptr;
+    DMP_ROWACCESS *rac;
+    i4		  klen;
+    bool	  is_index = FALSE;
+    DB_TRAN_ID		page_tran_id;
+    LG_LSN		page_lsn;
+    u_i2		page_lg_id;
+    u_i4		page_stat;
+    DM_PAGENO		page_number;
+
+    page_stat = DM1B_VPT_GET_PAGE_STAT_MACRO(t->tcb_rel.relpgtype, b);
+    page_tran_id = DM1B_VPT_GET_PAGE_TRAN_ID_MACRO(t->tcb_rel.relpgtype, b);
+    DM1B_VPT_GET_PAGE_LOG_ADDR_MACRO(t->tcb_rel.relpgtype, b, page_lsn);
+    page_lg_id = DM1B_VPT_GET_PAGE_LG_ID_MACRO(t->tcb_rel.relpgtype, b);
+    page_number = DM1B_VPT_GET_PAGE_PAGE_MACRO(t->tcb_rel.relpgtype, b); 
 	
-    if (DM1B_VPT_GET_PAGE_STAT_MACRO(t->tcb_rel.relpgtype, b) & DMPP_INDEX)
+    if ( page_stat & DMPP_INDEX )
     {
-	s = TRdisplay("%#* <<page:%d>> %s\n", indent * 4,
-	    DM1B_VPT_GET_PAGE_PAGE_MACRO(t->tcb_rel.relpgtype, b),
-	    (DM1B_VPT_GET_PAGE_STAT_MACRO(t->tcb_rel.relpgtype,
-		b) & DMPP_SPRIG) ? "sprig page" : "");
+	is_index = TRUE;
+	rac = &t->tcb_leaf_rac;
+	klen = t->tcb_klen;
+
+	s = TRdisplay("%#* <<page:%d>> stat %v\n", indent * 4,
+	    page_number,
+	    PAGE_STAT, page_stat);
     }
-    else if (!(DM1B_VPT_GET_PAGE_STAT_MACRO(t->tcb_rel.relpgtype,
-	b) & DMPP_DATA))
+    else if ( !(page_stat & DMPP_DATA) )
     {
-        s = TRdisplay("%#* Page:%d\t is %s page. \n", indent * 4,
-	    DM1B_VPT_GET_PAGE_PAGE_MACRO(t->tcb_rel.relpgtype, b),
-	    (DM1B_VPT_GET_PAGE_STAT_MACRO(t->tcb_rel.relpgtype,
-	    b) & DMPP_LEAF) ? "A LEAF" : "AN OVFL" );
+	rac = t->tcb_rng_rac;
+	klen = t->tcb_rngklen;
+
+        s = TRdisplay("%#* Page:%d\t stat %v\n", indent * 4,
+	    page_number,
+	    PAGE_STAT, page_stat);
         s = TRdisplay("%#*  Data page is:%d\t Next page is:%d\t Ovfl page is:%d\n",   
             indent * 4, 
 	    DM1B_VPT_GET_BT_DATA_MACRO(t->tcb_rel.relpgtype, b), 
@@ -484,9 +533,29 @@ i4      indent)
             DM1B_VPT_GET_PAGE_OVFL_MACRO(t->tcb_rel.relpgtype, b)); 
     }
     else
-        s = TRdisplay("%#* Page:%d\n", indent * 4, 
-		DM1B_VPT_GET_PAGE_PAGE_MACRO(t->tcb_rel.relpgtype, b)); 
-    dmdprentries(rcb, b, indent); 
+    {
+        s = TRdisplay("%#* Page:%d stat %v\n", indent * 4, 
+		page_number,
+		PAGE_STAT, page_stat);
+	return;
+    }
+
+    TRdisplay("%#* tran %x%x lsn (%x,%x) lg_id %d\n", indent * 4,
+    		page_tran_id.db_high_tran,
+    		page_tran_id.db_low_tran,
+		page_lsn.lsn_high,
+		page_lsn.lsn_low,
+		page_lg_id);
+
+    /* Index/leaf/overflow */
+    TRdisplay("    %d:children.\n", 
+	DM1B_VPT_GET_BT_KIDS_MACRO(t->tcb_rel.relpgtype, b)); 
+    if (is_index == FALSE)
+	dmdprbrange(rcb, b); 
+    if (DM1B_VPT_GET_BT_KIDS_MACRO(t->tcb_rel.relpgtype, b) == 0)
+	return;
+    dmdprentries(t->tcb_rel.relpgtype, t->tcb_rel.relpgsize, rac,
+		klen, t->tcb_keys, rcb->rcb_adf_cb, b);
 }
 
 /*{
@@ -568,13 +637,12 @@ i4			keys_given)
     if ( (katt = atts) == (DB_ATTS**)NULL )
 	katt = (page_type == DM1B_PLEAF) ? t->tcb_leafkeys : t->tcb_ixkeys;
 
-    dmd_print_key(key, page_type, katt, suppress_newline, keys_given, rcb->rcb_adf_cb);
+    dmd_print_key(key, katt, suppress_newline, keys_given, rcb->rcb_adf_cb);
 }
 
 VOID
 dmd_print_key(
 char			*key,
-i4                      page_type,
 DB_ATTS			**katt,
 i4			suppress_newline,
 i4			keys_given,
@@ -597,11 +665,7 @@ ADF_CB			*adf_cb)
 	return;
     }
 
-    if (page_type == DM1B_PLEAF)
-	TRdisplay("KEY (leaf):<");
-    else
-	TRdisplay("KEY:(indx)<");
-
+    TRdisplay("KEY:<");
     for (i = 0; i < keys_given; i++)
     {
 	att = katt[i];
@@ -938,6 +1002,8 @@ i4      i)
     DMP_ROWACCESS *rac;
     bool        is_index;
     DB_ERROR	local_dberr;
+    u_i4	row_low_tran = 0;
+    u_i2	row_lg_id = 0;
 
     is_index = 
     ((DM1B_VPT_GET_PAGE_STAT_MACRO(t->tcb_rel.relpgtype, b) & DMPP_INDEX) != 0);
@@ -960,17 +1026,18 @@ i4      i)
     }
 
     s = dm1cxget( t->tcb_rel.relpgtype, t->tcb_rel.relpgsize, b,
-		rac, i, &keypos,
-		&tid, (i4*)NULL, &key_len, NULL, NULL, rcb->rcb_adf_cb );
-    if (s == E_DB_OK)
+		rac, i, &keypos, &tid, (i4*)NULL, &key_len, 
+		&row_low_tran, &row_lg_id, rcb->rcb_adf_cb );
+    if (s == E_DB_OK || (s == E_DB_WARN && t->tcb_rel.relpgtype != TCB_PG_V1))
     {
-	dmd_prkey(rcb, keypos, is_index ? DM1B_PINDEX : DM1B_PLEAF, (DB_ATTS**)NULL, (i4)0, (i4)0);
-    }
-    else if (s == E_DB_WARN 
-	&& (t->tcb_rel.relpgtype != TCB_PG_V1) )
-    {
-	    dmd_prkey(rcb, keypos, is_index ? DM1B_PINDEX : DM1B_PLEAF, (DB_ATTS**)NULL, (i4)1, (i4)0);
-	    TRdisplay(" DELETED\n"); 
+	dmd_prkey(rcb, keypos, is_index ? DM1B_PINDEX : DM1B_PLEAF, (DB_ATTS**)NULL, (i4)1, (i4)0);
+
+	/* print tuple header also */
+	TRdisplay(" tran %x lg_id %d ", row_low_tran, (i4)row_lg_id);
+	if (s == E_DB_WARN)
+	    TRdisplay(" DELETED \n");
+	else
+	    TRdisplay("\n");
     }
     else
     {
@@ -1098,7 +1165,7 @@ DMPP_PAGE	*b)
 	else
 	{
 	    TRdisplay("LRANGE:["); 
-	    dmd_print_key(keypos, DM1B_PLEAF, rac->att_ptrs, (i4)1, keys, adf_cb);
+	    dmd_print_key(keypos, rac->att_ptrs, (i4)1, keys, adf_cb);
 	    TRdisplay("]\n"); 
 	}
     }
@@ -1126,7 +1193,7 @@ DMPP_PAGE	*b)
 	else
 	{
 	    TRdisplay("RRANGE:["); 
-	    dmd_print_key(keypos, DM1B_PLEAF, rac->att_ptrs, (i4)1, keys, adf_cb);
+	    dmd_print_key(keypos, rac->att_ptrs, (i4)1, keys, adf_cb);
 	    TRdisplay("]\n"); 
 	}
     }
@@ -1209,11 +1276,16 @@ i4      indent)
 **
 ** Description:
 **      This routine prints the entries of the index page of a BTREE.
+**      Caller must pass correct rac and klen for page type (index vs. leaf)
 **
 ** Inputs:
-**      rcb                             Pointer to RCB.
-**      b                               Pointer to page to print.
-**      indent                          Value indicating indentation level.
+**      page_type
+**      page_size
+**      rac				row accessor 
+**      klen				entry size 
+**      keys				number of keys
+**      adf_cb
+**      page 
 **
 ** Outputs:
 **      none
@@ -1231,50 +1303,75 @@ i4      indent)
 **	06-may_1996 (thaju02)
 **	    New Page Format Project: Change page header references to use
 **	    macros.
+**      15-Apr-2010 (stial01)
+**          Eliminated rcb dependency so that it can be called from dmve
 */
-static VOID
+VOID
 dmdprentries(
-DMP_RCB     *rcb, 
-DMPP_PAGE   *b, 
-i4      indent) 
+i4		page_type,
+i4		page_size,
+DMP_ROWACCESS	*rac,
+i4		klen,
+i4		keys,
+ADF_CB		*adf_cb,
+DMPP_PAGE	*b) 
 {
-    i4      i; 
-    DB_STATUS    s;
-    DMP_TCB     *t = rcb->rcb_tcb_ptr;
+    i4		infinity; 
+    DM_TID	tid; 
+    char	*AllocKbuf, *KeyBuf;
+    char	key_buf[DM1B_MAXSTACKKEY];
+    i4		key_len;
+    char        *keypos; 
+    DB_STATUS	s;
+    DB_ERROR	local_dberr;
+    i4		kids;
+    i4		i;
+    u_i4	row_low_tran = 0;
+    u_i2	row_lg_id = 0;
 
-    s = TRdisplay("    %d:children.\n", 
-	DM1B_VPT_GET_BT_KIDS_MACRO(t->tcb_rel.relpgtype, b)); 
-    if (DM1B_VPT_GET_BT_KIDS_MACRO(t->tcb_rel.relpgtype,b) == 0)
+    if ( dm1b_AllocKeyBuf(klen, key_buf, &KeyBuf, &AllocKbuf, &local_dberr) )
     {
-        if (DM1B_VPT_GET_PAGE_STAT_MACRO(t->tcb_rel.relpgtype, b) & DMPP_LEAF || 
-	    DM1B_VPT_GET_PAGE_STAT_MACRO(t->tcb_rel.relpgtype, b) & DMPP_CHAIN)
-            dmdprbrange(rcb, b); 
-        return; 
+	TRdisplay("*** dmdprentries: Can't allocate %d bytes for key\n",
+		klen);
+	return;
     }
-    if (DM1B_VPT_GET_PAGE_STAT_MACRO(t->tcb_rel.relpgtype, b) & DMPP_INDEX)
+
+    if (DM1B_VPT_GET_PAGE_STAT_MACRO(page_type, b) & DMPP_INDEX)
+	kids = DM1B_VPT_GET_BT_KIDS_MACRO(page_type, b) - 1;
+    else 
+	kids = DM1B_VPT_GET_BT_KIDS_MACRO(page_type, b);
+
+    for (i = 0; i < kids; i++)
     {
-        dmdprtid(t->tcb_rel.relpgtype, t->tcb_rel.relpgsize, b, (i4)0); 
-	TRdisplay("\n");
-        for (i=0; i<DM1B_VPT_GET_BT_KIDS_MACRO(t->tcb_rel.relpgtype,
-	    b)-1; i++)
-        {
-            dmdprtid(t->tcb_rel.relpgtype, t->tcb_rel.relpgsize, b, i+1); 
-            dmdprbkey(rcb, b, i); 
-        }
+	dmdprtid(page_type, page_size, b, i); 
+	if (DM1B_VPT_GET_PAGE_STAT_MACRO(page_type, b) & DMPP_INDEX)
+	    s = dm1cxget(page_type, page_size, b, rac, i, &keypos,
+		    &tid, (i4*)NULL, &key_len, NULL, NULL, adf_cb );
+	else
+	    s = dm1cxget(page_type, page_size, b, rac, i, &keypos,
+		&tid, (i4*)NULL, &key_len, &row_low_tran, &row_lg_id, adf_cb );
+
+	if (s == E_DB_OK || (s == E_DB_WARN && page_type != TCB_PG_V1))
+	{
+	    dmd_print_key(keypos, rac->att_ptrs, 1, keys, adf_cb);
+	    /* print tuple header also */
+	    TRdisplay(" tran %x lg_id %d ", row_low_tran, (i4)row_lg_id);
+	    if (s == E_DB_WARN)
+		TRdisplay(" DELETED \n");
+	    else
+		TRdisplay("\n");
+	}
+	else
+	{
+	    TRdisplay("***Unable to get entry %d from page %d\n",
+		i, DM1B_VPT_GET_PAGE_PAGE_MACRO(page_type, b));
+	}
     }
-    else if (DM1B_VPT_GET_PAGE_STAT_MACRO(t->tcb_rel.relpgtype, b) & DMPP_LEAF || 
-	DM1B_VPT_GET_PAGE_STAT_MACRO(t->tcb_rel.relpgtype, b) & DMPP_CHAIN)
-    {
-        if (DM1B_VPT_GET_PAGE_STAT_MACRO(t->tcb_rel.relpgtype, b) & DMPP_LEAF || 
-	    DM1B_VPT_GET_PAGE_STAT_MACRO(t->tcb_rel.relpgtype, b) & DMPP_CHAIN)
-            dmdprbrange(rcb, b); 
-        for (i=0; i<DM1B_VPT_GET_BT_KIDS_MACRO(t->tcb_rel.relpgtype,
-	    b); i++)
-        {
-            dmdprtid(t->tcb_rel.relpgtype, t->tcb_rel.relpgsize, b, i); 
-            dmdprbkey(rcb, b, i); 
-        }
-    }
+
+    /* Discard any allocated key b */
+    if ( AllocKbuf )
+	dm1b_DeallocKeyBuf(&AllocKbuf, &KeyBuf);
+    return;
 }
 
 /*{
