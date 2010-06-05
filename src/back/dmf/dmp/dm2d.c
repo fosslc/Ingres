@@ -762,6 +762,9 @@ NO_OPTIM=dr6_us5 pym_us5
 **	    (mostly, tlv's are gone, get plv's only.)
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      14-Apr-2010 (hanal04) SIR 123574
+**          Check if the DB was created with the new -m flag (DU_MUSTLOG
+**          set in dsc_dbaccess). If so, set DCB_S_MUST_LOG in the dcb_status.
 */
 
 /*
@@ -4355,11 +4358,6 @@ dm2d_open_db(
 	if (lock_mode == DM2D_S || lock_mode == DM2D_X)
 	    dcb->dcb_status |= DCB_S_EXCLUSIVE;
 
-        if (flag & DM2D_MUST_LOG) 
-        {
-            dcb->dcb_status |= DCB_S_MUST_LOG;
-        }
-
 	/*
 	** Allow MVCC protocols when appropriate.
 	**
@@ -4399,7 +4397,18 @@ dm2d_open_db(
 	      dcb->dcb_status |= DCB_S_NOBACKUP;
 	else
 	    dcb->dcb_status &= ~DCB_S_NOBACKUP;
-
+        if ((cnf->cnf_dsc->dsc_dbaccess & DU_MUSTLOG) ||
+            (flag & DM2D_MUST_LOG))
+        {
+            /* Database was created with MustLog option or is in this
+            ** DBMS's MustLog DB List
+            */
+            dcb->dcb_status |= DCB_S_MUST_LOG;
+        }
+        else
+        {
+            dcb->dcb_status &= ~DCB_S_MUST_LOG;
+        }
 
 	dcb->dcb_collation = NULL;
 	if (status = aducolinit(cnf->cnf_dsc->dsc_collation, dm2d_reqmem, 

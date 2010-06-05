@@ -606,6 +606,8 @@
 **	    Compiler warning fixes.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      14-Apr-2010 (hanal04) SIR 123574
+**          Added -disable_mustlog and -enable_mustlog options to alterdb.
 **	    
 */
 /*
@@ -1813,6 +1815,14 @@ DMF_JSX		    *journal_context)
 		    else
 			SETDBERR(&jsx->jsx_dberr, 0, E_DM1005_JSP_BAD_ARG_COMBO);
 		}
+                else if ((operator == JSX_O_ALTER) &&
+                        (STcompare("disable_mustlog",  &argv[i][1]) == 0))
+                {
+                    if ( !(jsx->jsx_status2 & JSX2_ALTDB_EMUSTLOG) )
+                        jsx->jsx_status2 |= JSX2_ALTDB_DMUSTLOG;
+                    else
+                        SETDBERR(&jsx->jsx_dberr, 0, E_DM1005_JSP_BAD_ARG_COMBO);
+                }
 		else if (MEcmp(&argv[i][1], "dmf_cache_size", 14) == 0)
 			SETDBERR(&jsx->jsx_dberr, 0, E_DM105C_JSP_INV_ARG_VAL);
 		else
@@ -1865,6 +1875,14 @@ DMF_JSX		    *journal_context)
 		    else
 			SETDBERR(&jsx->jsx_dberr, 0, E_DM1005_JSP_BAD_ARG_COMBO);
 		}
+                else if ((operator == JSX_O_ALTER) &&
+                        (STcompare("enable_mustlog",  &argv[i][1]) == 0))
+                {
+                    if ( !(jsx->jsx_status2 & JSX2_ALTDB_DMUSTLOG) )
+                        jsx->jsx_status2 |= JSX2_ALTDB_EMUSTLOG;
+                    else
+                        SETDBERR(&jsx->jsx_dberr, 0, E_DM1005_JSP_BAD_ARG_COMBO);
+                }
 		else
 		    SETDBERR(&jsx->jsx_dberr, 0, E_DM1004_JSP_BAD_ARGUMENT);
 
@@ -4990,6 +5008,9 @@ DMF_JSX		*jsx)
 	    "\t[-n|-i[ucollation_name]] [-keep=nnn]\n");
 	SIprintf(
 	    "\t[-disable_mvcc] [-enable_mvcc]\n");
+        SIprintf(
+            "\t[-disable_mustlog] [-enable_mustlog]\n");
+
 
 # ifdef PMODE_DOCUMENTED
 	SIprintf(

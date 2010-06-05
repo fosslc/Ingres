@@ -324,6 +324,10 @@
 **	    SIR 121619 MVCC: Added E_DM1411, E_DM1412, E_DM1413, E_DM1414.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      14-Apr-2010 (hanal04) SIR 123574
+**          Added E_DM1415_ALT_MUSTLOG_DISABLED, E_DM1416_ALT_MUSTLOG_ENABLED,
+**          JSX2_ALTDB_DMUSTLOG and JSX2_ALTDB_EMUSTLOG for new alterdb
+**          options -disable_mustlog and -enable_mustlog.
 [@history_template@]...
 **/
 
@@ -697,6 +701,8 @@
 #define             E_DM1412_ALT_MVCC_NOT_DISABLED	(E_DM_MASK + 0x1412L)
 #define             E_DM1413_ALT_MVCC_DISABLED		(E_DM_MASK + 0x1413L)
 #define             E_DM1414_ALT_MVCC_ENABLED		(E_DM_MASK + 0x1414L)
+#define             E_DM1415_ALT_MUSTLOG_DISABLED       (E_DM_MASK + 0x1415L)
+#define             E_DM1416_ALT_MUSTLOG_ENABLED        (E_DM_MASK + 0x1416L)
 /*
 ** Relocatedb  (and some RFP relocate) errors.
 */
@@ -1000,6 +1006,8 @@ typedef struct _DMF_JSX
 # define		    JSX2_ALTDB_KEEP_N	    0x00080000L
 # define		    JSX2_ALTDB_DMVCC	    0x00100000L
 # define		    JSX2_ALTDB_EMVCC	    0x00200000L
+# define                    JSX2_ALTDB_DMUSTLOG     0x00400000L
+# define                    JSX2_ALTDB_EMUSTLOG     0x00800000L
     DB_TAB_TIMESTAMP	jsx_bgn_time;		/*  Begin time. */
     DB_TAB_TIMESTAMP	jsx_end_time;		/*  End time. */
     i4		jsx_db_cnt;		/*  Count of db's passed. */

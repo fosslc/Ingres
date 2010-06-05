@@ -299,6 +299,8 @@ static	DB_STATUS	output_tbllist(
 **	    SIR 121619 MVCC: Utilize DSC_STATUS, DSC_INCONST_CODE defines.
 **	05-Mar-2010 (frima01) SIR 121619
 **	    For usability explicitly state that MVCC is enabled.
+**      14-Apr-2010 (hanal04) SIR 123574
+**          Add "Always logged" status to infodb output.
 [@history_template@]...
 */
 DB_STATUS
@@ -385,6 +387,11 @@ DMP_DCB		    *dcb)
     TRformat(dmf_put_line, 0, line_buffer, sizeof(line_buffer),
 	"    Unicode enabled : %s\n",
 	cnf->cnf_dsc->dsc_dbservice & DU_UTYPES_ALLOWED ? "Yes" : "No");
+
+    /* Provide MustLog information here */
+    TRformat(dmf_put_line, 0, line_buffer, sizeof(line_buffer),
+	"    Always logged : %s\n",
+	cnf->cnf_dsc->dsc_dbaccess & DU_MUSTLOG ? "Yes" : "No");
 
     if (cnf->cnf_dsc->dsc_dbservice & DU_UTYPES_ALLOWED)
     {	

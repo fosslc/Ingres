@@ -66,6 +66,9 @@
 **	04-Feb-2005 (gupsh01)
 **	    Added duc_unicode_nfc flag to indicate if Normal form C 
 **	    normalization is required for Unicode.
+**	14-Apr-2010 (hanal04) SIR 123574
+**	    Added duc_mustlog_flag to indicate the database must always
+**          be logged.
 **
 [@history_template@]...
 */
@@ -77,6 +80,7 @@ typedef struct _DUC_MODE_VECT
     i4		    duc_jnlloc_flag;	/* Was the "-j" flag used? */
     i4		    duc_dmploc_flag;	/* Was the "-b" flag used? */
     i4		    duc_ckploc_flag;	/* Was the "-c" flag used? */
+    i4              duc_mustlog_flag;   /* Was the "-m" flag used? */
     i4		    duc_sortloc_flag;	/* Was the "-s" flag used? */
     i4		    duc_rdonly_flag;	/* Was the "-r" flag used? */
     i4		    duc_national_flag;	/* Was the "-n" flag used? */

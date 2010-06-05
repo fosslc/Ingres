@@ -202,6 +202,9 @@
 **	    Use ALTERDB_MSG_LEN = 132 + DB_MAXNAME + 1 for message buffers.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      14-Apr-2010 (hanal04) SIR 123574
+**          Added alter_mustlog() to handle new -disable_must_log and
+**          -enable_mustlog options in alterdb.
 [@history_template@]...
 **/
 
@@ -264,6 +267,11 @@ static DB_STATUS alter_mvcc(
     DMP_DCB	*dcb,
     DM0C_CNF    *cnf);
 
+static DB_STATUS alter_mustlog(
+    DMF_JSX     *jsx,
+    DMP_DCB     *dcb,
+    DM0C_CNF    *cnf);
+
 # define	ALTERDB_MSG_LEN	132 + DB_DB_MAXNAME + DB_COLLATION_MAXNAME + 1
 
 /*{
@@ -290,6 +298,8 @@ static DB_STATUS alter_mvcc(
 **	    -production=(on|off)
 **	    -disable_mvcc
 **	    -enable_mvcc
+**          -disable_mustlog
+**          -enable_mustlog
 **	    (-|+)w
 **
 **	The meaning of each alterdb option is described below:
@@ -459,7 +469,8 @@ DMP_DCB	    *dcb)
          ((jsx->jsx_status2 & 
 	  (JSX2_PMODE | JSX2_OCKP | JSX2_READ_ONLY | JSX2_READ_WRITE |
 	   JSX2_SWITCH_JOURNAL | JSX2_ALTDB_CKP_INVALID | JSX2_ALTDB_UNICODED |
-	   JSX2_ALTDB_UNICODEC | JSX2_ALTDB_DMVCC | JSX2_ALTDB_EMVCC))==0))
+	   JSX2_ALTDB_UNICODEC | JSX2_ALTDB_DMVCC | JSX2_ALTDB_EMVCC |
+           JSX2_ALTDB_DMUSTLOG | JSX2_ALTDB_EMUSTLOG))==0))
     {
 	return (E_DB_OK);
     }
@@ -631,6 +642,14 @@ DMP_DCB	    *dcb)
             if (DB_FAILURE_MACRO(status))
                 break;
 	}
+        else if ( jsx->jsx_status2 & 
+                  (JSX2_ALTDB_DMUSTLOG | JSX2_ALTDB_EMUSTLOG))
+        {
+            /* Enable/disable MustLog in database */
+            status = alter_mustlog(jsx, dcb, cnf);
+            if (DB_FAILURE_MACRO(status))
+                break;
+        }
 
 	/*
 	** Close and update the config file.
@@ -895,6 +914,86 @@ DM0C_CNF    *cnf)
     return (E_DB_OK);
 }
 
+/*{
+** Name: alter_mustlog     enable/disable MustLog status of a database
+**
+** Description:
+**	Enables or disables MustLog access to a database.
+**
+**	By default, MustLog is disabled, but may be switched on
+**	and back off again if one wishes.
+**
+**	The runtime change in MustLog status will not occur until the next
+**	time the database is opened.
+**
+** Inputs:
+**      jsx				Journal context.
+**	dcb				Database context.
+**	cnf				Config file control block.
+**
+** Outputs:
+**      DB_STATUS
+**
+**	Returns:
+**	    E_DB_OK			Operation successfull.
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	An warning message is written to the log file to indicate that
+**	MustLog has been enabled or disabled.
+**
+**	The config file is marked with DU_MUSTLOG when enabled, unset
+**	when disabled.
+**
+** History:
+**	14-Apr-2010 (hanal04) SIR 123574
+**	    Created.
+[@history_template@]...
+*/
+static DB_STATUS
+alter_mustlog(
+DMF_JSX	    *jsx,
+DMP_DCB	    *dcb,
+DM0C_CNF    *cnf)
+{
+    i4			local_error, err_code;
+    char		local_buffer[ALTERDB_MSG_LEN];
+
+    CLRDBERR(&jsx->jsx_dberr);
+
+    if ( jsx->jsx_status2 & JSX2_ALTDB_DMUSTLOG )
+    {
+	cnf->cnf_dsc->dsc_dbaccess &= ~DU_MUSTLOG;
+	err_code = E_DM1415_ALT_MUSTLOG_DISABLED;
+    }
+
+    if ( jsx->jsx_status2 & JSX2_ALTDB_EMUSTLOG )
+    {
+	cnf->cnf_dsc->dsc_dbaccess |= DU_MUSTLOG;
+	err_code = E_DM1416_ALT_MUSTLOG_ENABLED;
+    }
+
+    TRformat(dmf_put_line, 0, local_buffer, sizeof(local_buffer),
+	"%@ ALTERDB: MustLog %s for Database '%~t'.\n",
+	    (cnf->cnf_dsc->dsc_dbaccess & DU_MUSTLOG)
+		? "enabled" : "disabled",
+	    sizeof(dcb->dcb_name), &dcb->dcb_name);
+
+    /*
+    ** Log informational message to the error log indicating that 
+    ** enabled or disabled.  Write database name to local buffer
+    ** so we can strip blanks off of it.
+    */
+    STncpy( local_buffer, dcb->dcb_name.db_db_name, DB_DB_MAXNAME);
+    local_buffer[ DB_DB_MAXNAME ] = '\0';
+    STtrmwhite(local_buffer);
+    uleFormat(NULL, err_code, (CL_ERR_DESC *)NULL, ULE_LOG,
+	(DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, (i4 *)NULL, 
+	&local_error, 1, 0, local_buffer);
+
+    return (E_DB_OK);
+}
 /*{
 ** Name: alter_jnl_bksz	- Alter the journal file block size.
 **

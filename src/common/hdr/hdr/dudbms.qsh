@@ -347,6 +347,8 @@ EXEC SQL END DECLARE SECTION;
 **	    dudbms.h.
 **	    Change dbcmptlvl to an unsigned i4.  (It was a char[4] so the
 **	    tuple size and layout doesn't change.)
+**      14-Apr-2010 (hanal04) SIR 123574
+**          Added DU_MUSTLOG to the possible du_access values.
 */
 typedef struct _DU_DATABASE
 {
@@ -382,6 +384,7 @@ typedef struct _DU_DATABASE
 ##define	DU_PRODUCTION	512     /* Production mode */
 ##define	DU_NOBACKUP	1024    /* No online checkpoints */
 ##define	DU_RDONLY	2048	/* Database is readonly */
+##define        DU_MUSTLOG      4096    /* Database must be logged */
     i4		    du_dbservice;	/* Database services available. (E.g.
 					** Is the database distributed, can
 					** it be accessed thru gateways, etc.)

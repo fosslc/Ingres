@@ -414,6 +414,10 @@ EXEC SQL include SQLCA;
 **	    cmptlvl is now integer, fix here.
 **	16-Mar-2010 (frima01) SIR 121619
 **	    Changed DU_DBIDDBDB to IIDBDB_ID, located in dmf.h.
+**      14-Apr-2010 (hanal04) SIR 123574
+**          Added -m flag for MustLog. If specified the database must always
+**          be logged. This is stored by adding DU_MUSTLOG to the du_access 
+**          mask.
 **
 NEEDLIBS =	DBUTILLIB SHEMBEDLIB COMPATLIB 
 
@@ -3978,6 +3982,10 @@ in duc_db_evinit()
 
 		break;
 
+              case 'm':
+                duc_modes->duc_mustlog_flag = TRUE;
+                break;
+
 	      case 'r':
 		if (! duc_modes->duc_dbloc_flag)
 		{
@@ -4386,6 +4394,8 @@ in duc_db_evinit()
 	duc_dbenv->du_access = DU_CREATEDB | DU_GLOBAL;
     if (duc_modes->duc_rdonly_flag)
 	duc_dbenv->du_access |= DU_RDONLY;
+    if (duc_modes->duc_mustlog_flag)
+        duc_dbenv->du_access |= DU_MUSTLOG;
 
 #ifdef DU_PARSEDEBUG
     duu_dumpdbenv(duc_dbenv, duc_modes);

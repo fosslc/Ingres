@@ -526,6 +526,10 @@ SQLSTATE_MAPPING_REQUIRED
 **	02-Apr-2010 (jonj)
 **	    SIR 121619 MVCC:
 **	    Add useful information to E_DM0028_UNABLE_TO_MAKE_CONSISTENT
+**      14-Apr-2010 (hanal04) SIR 123574
+**          Added E_DM1415_ALT_MUSTLOG_DISABLED and E_DM1416_ALT_MUSTLOG_ENABLED
+**          for output from new alterdb options -enable_mustlog and
+**          -disable_mustlog.
 */
 
 #define _DM_CLASS  3
@@ -5393,6 +5397,42 @@ E_DM1414_ALT_MVCC_ENABLED:SS5000B_INTERNAL_ERROR
 ** System Status:
 **	The next time the database is opened, MVCC lock modes will
 **	be honored.
+**
+** Recommendation:
+**	None.
+*/
+E_DM1415_ALT_MUSTLOG_DISABLED:SS5000B_INTERNAL_ERROR
+"MustLog has been disabled in database %0c by alterdb."
+/*%
+** Parameters:
+**	%0c - database name
+**
+** Explanation:
+**	This message is logged whenever "alterdb -disable_mustlog" is
+**	run on a database.  It does not indicate an error; this message
+**	is informational only.
+**
+** System Status:
+**	The next time the database is opened, "SET NOLOGGING" will be
+**	allowed unless the database is in the DBMS's MustLog list.
+**
+** Recommendation:
+**	None.
+*/
+E_DM1416_ALT_MUSTLOG_ENABLED:SS5000B_INTERNAL_ERROR
+"MustLog has been enabled in database %0c by alterdb."
+/*%
+** Parameters:
+**	%0c - database name
+**
+** Explanation:
+**	This message is logged whenever "alterdb -enable_mustlog" is
+**	run on a database.  It does not indicate an error; this message
+**	is informational only.
+**
+** System Status:
+**	The next time the database is opened, "SET NOLOGGING" will not be
+**	allowed.
 **
 ** Recommendation:
 **	None.
