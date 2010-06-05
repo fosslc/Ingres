@@ -1385,6 +1385,10 @@
 #	    Add new rules for possible reverse-hybrid build on Windows
 #	    in a future and for pure 64-bit build.
 #	    Port existing rules that are reused to work on Windows.
+#	26-Apr-2010 (bonro01)
+#	    Add back WCHART variable yet again because it was incorrectly
+#	    removed by the previous change.  This is needed to support older
+#	    Xerces library versions.
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -2333,7 +2337,7 @@ rule IIBINEXE
 			}
 			switch $(_o:S)
 			{
-			case *cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) ;
+			case *cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) $(WCHART) ;
 			case * : CCFLAGS on $(_g) += $(CMPORTS) ;
 			}
 		}
@@ -2593,7 +2597,7 @@ rule IITOOLSEXE
 		}
 		switch $(_o:S)
 		{
-		case *.cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) ;
+		case *.cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) $(WCHART) ;
 		case * : CCFLAGS on $(_g) += $(CMPORTS) ;
 		}
 	}
@@ -2673,7 +2677,7 @@ rule IIUTILEXE
 		}
 		switch $(_o:S)
 		{
-		case *.cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) ;
+		case *.cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) $(WCHART) ;
 		case * : CCFLAGS on $(_g) += $(CMPORTS) ;
 		}
 		
@@ -2802,7 +2806,7 @@ rule IITOOLSWNTEXE
 		}
 		switch $(_o:S)
 		{
-		case *cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) ;
+		case *cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) $(WCHART) ;
 		case * : CCFLAGS on $(_g) += $(CMPORTS) ;
 		}
 	}
@@ -4384,7 +4388,7 @@ rule IILIBRARY
 			}
 			switch $(_o:S)
 			{
-			case *cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) ;
+			case *cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) $(WCHART) ;
 			case * : CCFLAGS on $(_g) += $(CMPORTS) ;
 			}
 			CMPORTS = "" ;
@@ -7848,7 +7852,7 @@ rule IIXERCLIB
 
 	Clean clean : $(<) $(<:S=.$(SLSFX).$(XERCVERS) $(INGLIB)/$(XERCESCLIB) ;
 
-	if $(VERSHB && !$(NT))
+	if $(VERSHB) && ! $(NT)
 	{
 		# Jamdefs should have figured out a xerceslochb.
 		XERCESCHBLIB = $(XERCESCLIB:G=hb) ;

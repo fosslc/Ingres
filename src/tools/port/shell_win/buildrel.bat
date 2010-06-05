@@ -314,6 +314,8 @@ REM	     Update the script to roll pure 64-bit image.
 REM	07-Apr-2010 (drivi01)
 REM	     Temporarily remove VDBA dependecies, as VDBA is not being
 REM	     distributed for the moment.
+REM	26-Apr-2010 (bonro01)
+REM	     Fix typo caused by previous change.
 REM	
 
 set SUFFIX=
@@ -446,7 +448,7 @@ msidepcheck IngresIIEsqlCEsqlCobol%SUFFIX%.ism
 msidepcheck IngresIIIce%SUFFIX%.ism 
 msidepcheck IngresIIJdbc%SUFFIX%.ism 
 msidepcheck IngresIIODBC%SUFFIX%.ism 
-if "%SUFFIX" == "" msidepcheck IngresIIVdba%SUFFIX%.ism 
+if "%SUFFIX%" == "" msidepcheck IngresIIVdba%SUFFIX%.ism 
 msidepcheck IngresIINet%SUFFIX%.ism 
 msidepcheck IngresIINetTools%SUFFIX%.ism 
 if "%SUFFIX%" == "" msidepcheck IngresIIDotNETDataProvider.ism 

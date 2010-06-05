@@ -29,6 +29,9 @@
 #	    Added /nologo to linker flags; took off /PDB:none and /WARN.
 #	08-Apr-2010 (drivi01)
 #	    Setup environment and variables for 64-bit port.
+#	26-Apr-2010 (bonro01)
+#	    Add comments for WCHART variable for Xerces so that the comment
+#	    is available in all Windows Jamdefs files.
 #
 #
 # Tell Jamdefs that this include worked:
@@ -81,6 +84,14 @@ REBASE		= rebase ;
 platform_string = "Microsoft Windows 64-bit" ;  #Equal to GV_ENV val 
 extension_string = $(config_string) ;
 CMPORTS		default = "" ;
+
+#
+# Xerces shared libary link flag
+#    The following WCHART definition is required for older Xerces libraries
+#    like version 2.7 and for newer xerces libraries using Visual C 7.1
+#    Uncomment this variable or get a newer version of xerces compiled with
+#    VC 8.0 or newer to resolve any link problems with xerces.
+#WCHART         default = /Zc:wchar_t- ;
 
 #
 #set CPUFLAGS
