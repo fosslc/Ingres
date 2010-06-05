@@ -51,6 +51,8 @@
 **	    Added HELP_PERM_SEQ for sequence support.
 **	26-Aug-2009 (kschendel) b121804
 **	    Bool prototypes to keep gcc 4.3 happy.
+**      19-Apr-2010 (hanal04) Bug 123481
+**          Moved CTW define to qrhelp.h
 **/
 
 # define	HELP_OBJECT	1000	/* 'help x[, y]' command */
@@ -80,6 +82,8 @@
 # define	HELP_PERM_SEQ	 1022	/* 'help permit on sequence x[, y]' command */
 
 # define	HELP_MAX_VALUE	 1022	/* Maximum legal help value */
+
+# define        CTW                18   /* Help table's Column Type Width */
 
 typedef struct _IIQRlist
 {

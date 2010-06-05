@@ -159,6 +159,13 @@ static	char	*sA9_user_table_part = NULL;
 **		type of synonyms
 **	2-Jun-2004 (schka24)
 **	    Help on partitioned tables
+**      31-Mar-2010 (hanal04) Bug 123481
+**          Extend the width of the column datatype in HELP TABLE from
+**          10 to 18 characters. Most terminal displays are not at least 80
+**          characters so this will not cause wrapping in most if not all
+**          modern cases. For timestamp and time types reformat the
+**          column type to abbreviate (if required) and add the precision.
+**          Also add the precision/scale details to decimal types.
 */
 VOID
 IIQRlhp_LogicalHelp(qrb, t, town, type)
@@ -184,6 +191,7 @@ EXEC SQL END DECLARE SECTION;
 	i4		i;
 	bool	first_time = TRUE;
 	char	*oldo;
+        char    fmt[32];
 
 
 	if (set_fast_strings == FALSE)
@@ -397,14 +405,17 @@ EXEC SQL END DECLARE SECTION;
 	** used on the 'info_mainline' below.
 	*/
 	qrprintf(qrb, ERx("%*s"),
-	    (i4)((col_maxname + 1) + (10 + 1) + (6 + 1) + (5 + 1) + (8 + 1) + 3), 
+	    (i4)((col_maxname + 1) + (CTW + 1) + (6 + 1) + (5 + 1) + (8 + 1) + 3), 
 	    s5B_topline_key);
 
 	qrprintf(qrb, ERx("\n"));
-	qrprintf(qrb, ERx("%-*s %-10s %6s %s %s %s"), (i4)qrb->col_maxname, 
-	    s5C_mainline_coltitle, s5D_mainline_dtype_name,
-	    s5E_mainline_dtype_len, s5F_mainline_nulls,
-	    s60_mainline_defaults, s61_mainline_seq);
+
+        STprintf(fmt, "%s%d%s", ERx("%-*s %-"), CTW, ERx("s %6s %s %s %s"));
+        qrprintf(qrb, fmt, (i4)qrb->col_maxname,
+            s5C_mainline_coltitle, s5D_mainline_dtype_name,
+            s5E_mainline_dtype_len, s5F_mainline_nulls,
+            s60_mainline_defaults, s61_mainline_seq);
+
 	qrprintf(qrb, ERx("\n"));
 
 	/* Call procedure in qrtabhlp.qsc so this code is help ONLY once! */

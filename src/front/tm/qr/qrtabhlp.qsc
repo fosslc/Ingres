@@ -161,10 +161,11 @@
 **          Ensure all length selects from iicolumns also select scale.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      19-Apr-2010 (hanal04) Bug 123481
+**          Moved CTW define to qrhelp.h
 **/
 
 /* # define's */
-#define		CTW	18      /* Help table's Column Type Width */
 
 /* GLOBALDEF's */
 
