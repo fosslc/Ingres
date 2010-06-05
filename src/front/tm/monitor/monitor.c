@@ -190,6 +190,9 @@
 **              \nosilent,\titles,\notitles,\vdelimiter, \trim, \notrim
 **	29-Sep-2009 (frima01) 122490
 **		Add return type for IItmmonitor() to avoid gcc 4.3 warnings.
+**	05-May-2010 (hanje04)
+**		SIR 123622
+**	   	HistoryRecall now enabled for all UNIX.
 */
 
 FUNC_EXTERN i4		getch();
@@ -709,7 +712,7 @@ bool include_file;
 	{
 		SIclose(Input);
 	}
-#ifdef LNX
+#ifdef UNIX
 	if (HistoryRecall)
 		SIclearhistory(); /* Clear the history and free the history list */
 #endif

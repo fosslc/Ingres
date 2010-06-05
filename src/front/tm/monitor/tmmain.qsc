@@ -368,6 +368,9 @@ static		void	tmerr( STATUS status, i4 nargs, ER_ARGUMENT *args);
 **	    Enable command history in TM by default and have it controlled by
 **	    ii.*.tm.history_recall
 **	    also add -nohistory_recall flag to allow local override
+**	05-May-2010 (hanje04)
+**	    SIR 123622
+**	    Check return code of PM get before using value.
 */
 
 FUNC_EXTERN	VOID	go_buffer();
@@ -1052,9 +1055,9 @@ register char	**argv;
 	    PCexit( FAIL );
 
 	STprintf( tmp_buf, ERx("%s.*.tm.history_recall"), SystemCfgPrefix);
-	PMget(tmp_buf, &hrval);
-	if (STbcompare(hrval, 0, ERx("false"),0, TRUE) == 0)
-	    HistoryRecall = FALSE;
+	if (( PMget(tmp_buf, &hrval) == OK ) &&
+	      (STbcompare(hrval, 0, ERx("false"),0, TRUE) == 0) )
+	        HistoryRecall = FALSE;
 
 	for (targc = *argc, *argc = 0, targv = argv; targc--; argv++)
 	{

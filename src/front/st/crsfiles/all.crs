@@ -273,6 +273,10 @@
 --#	    SIR 123296
 --#	    Use hard coded path for syscheck in LSB builds. 
 --#	    II_SYSTEM not always available
+--#	05-May-2010 (hanje04)
+--#	    SIR 123622
+--#	    Add default value for history_recall for non-unix platforms
+--#	    and correct valid values for UNIX
 --#
 --#
 -- configuration system preferences
@@ -759,5 +763,7 @@
 
 # Terminal monitor config
 # ifdef UNIX
-(PROG4PRFX).*.tm.history_recall:	"true", VALID = { true, false } ;
+(PROG4PRFX).*.tm.history_recall:	"true", VALID = { "true", "false" } ;
+# else
+(PROG4PRFX).*.tm.history_recall:	"false", VALID = { "false" } ;
 # endif
