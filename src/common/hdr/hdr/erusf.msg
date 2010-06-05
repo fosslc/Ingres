@@ -2091,7 +2091,7 @@ E_US09C6_2502:SS42000_SYN_OR_ACCESS_ERR
 E_US09C7_2503:SS42000_SYN_OR_ACCESS_ERR
 "line %0d, Syntax error on '%1c'.  The correct syntax is:
 \n INSERT INTO tablename [(column {, ... })]
-\n   VALUES [OVERRIDING {SYSTEM | USER} VALUE] (expression {, ... })
+\n   [OVERRIDING {SYSTEM | USER} VALUE] VALUES (expression {, ... })
 \n
 \n INSERT INTO tablename [(column {, ... })] 
 \n   [OVERRIDING {SYSTEM | USER} VALUE] subselect"
