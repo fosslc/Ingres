@@ -186,6 +186,10 @@
 **          Resized catalog work buffers to OBJECT_NAME_SIZE.  Replaced
 **          references to CATALOG_NAME_WORK_NAME_LEN to OBJECT_NAME_SIZE
 **          for consistency.
+**     14-Apr-2010 (Ralph Loen) Bug 123558
+**          In ExecDirectOrPrepareW(), if the query string is greater than
+**          32K UCS2 or 16K UCS4 characters, convert to multi-byte in
+**          segments.
 */
 
 /*
@@ -1141,9 +1145,11 @@ SQLRETURN SQL_API SQLErrorW(
     return rc;
 }
 
-#define EXEC_DIRECT_UNICODE_WORKBUFFER_SIZE   1000
 
-                              /* common code for SQLExecDirect and SQLPrepare */
+#define EXEC_DIRECT_UNICODE_WORKBUFFER_SIZE   1000
+#define MAX_UNICODE_CHAR_SIZE 64000 / sizeof(SQLWCHAR) 
+
+/* common code for SQLExecDirect and SQLPrepare */
 static SQLRETURN SQL_API ExecDirectOrPrepareW(
     SQLHSTMT         hstmt,
     SQLWCHAR        *szWideSqlStr,
@@ -1152,12 +1158,14 @@ static SQLRETURN SQL_API ExecDirectOrPrepareW(
 {
     LPSTMT     pstmt= (LPSTMT)hstmt;
     LPDBC      pdbc;
-    char     * szValue;
-    SQLINTEGER     cbValue;
+    SQLCHAR     * szValue;
+    SQLINTEGER     cbValue, retLen;
     char     * pwork = NULL;
     RETCODE    rc = SQL_SUCCESS;
     SQLINTEGER     cbWideSqlStrOrig=cbWideSqlStr; /*   save the original count */
     char       workbuffer[EXEC_DIRECT_UNICODE_WORKBUFFER_SIZE];
+    SQLWCHAR   saveWChar;
+    SQLWCHAR   *pWSqlStr = szWideSqlStr;
 
     if (!LockStmt (pstmt)) return SQL_INVALID_HANDLE;
 
@@ -1190,19 +1198,57 @@ static SQLRETURN SQL_API ExecDirectOrPrepareW(
              else
                  return SQL_ERROR;
             }
+            szValue = pwork;
+            szValue[0] = '\0';
         }
 
-    rc = ConvertWCharToChar(pdbc,
-                        szWideSqlStr,        cbWideSqlStr,  /* source */
-                        szValue,             cbValue,       /* target */
-                        NULL, NULL, &cbValue);
-    if (rc != SQL_SUCCESS)
-       {UnlockStmt (pstmt);
-        return rc;
-       }
+    /*
+    ** The Unicode string szWideSqlStr is passed as an IIAPI_DATAVALUE 
+    ** when ConvertWCharToChar() converts to multibyte.  Because of this,
+    ** the byte length cannot be greater than approximately 64K.  This works
+    ** out to 32K UCS2 characters or 16K UCS4 characters.  
+    ** If szWideSqlStr doesn't fit, convert in 64K-byte segments.
+    */
+    if (cbWideSqlStr > MAX_UNICODE_CHAR_SIZE)
+    {
+        SQLINTEGER len = MAX_UNICODE_CHAR_SIZE;
+
+        while (cbWideSqlStr)
+        {
+            rc = ConvertWCharToChar(pdbc,
+                pWSqlStr, len,  /* source */
+                szValue, MAX_UNICODE_CHAR_SIZE + 2, /* target */
+                NULL, NULL, &retLen);
+    
+            if (rc != SQL_SUCCESS)
+            {
+                UnlockStmt (pstmt);
+                return rc;
+            }
+            cbWideSqlStr -= len;
+            pWSqlStr += len;
+            szValue += retLen;
+            len = min(cbWideSqlStr, MAX_UNICODE_CHAR_SIZE);
+        }
+        szValue = pwork;
+    }
+    else
+    {
+        rc = ConvertWCharToChar(pdbc,
+            szWideSqlStr,        cbWideSqlStr,  /* source */
+            szValue,             cbValue,       /* target */
+            NULL, NULL, &retLen);
+        if (rc != SQL_SUCCESS)
+        {
+            UnlockStmt (pstmt);
+            return rc;
+        }
+    }
 
     if (cbWideSqlStrOrig == SQL_NTS) /* if user passed NTS, we pass NTS */
         cbValue           = SQL_NTS;
+	else
+		cbValue = cbWideSqlStrOrig;
 
     UnlockStmt (pstmt);
 
@@ -1213,7 +1259,8 @@ static SQLRETURN SQL_API ExecDirectOrPrepareW(
         rc = SQLPrepare_InternalCall(hstmt, (SQLCHAR*)szValue, 
             (SDWORD)cbValue, FALSE);
 
-    MEfree((PTR)pwork);                 /* free work area for work string */
+    if (pwork)
+        MEfree((PTR)pwork);                 /* free work area for work string */
 
     return rc;
 }
