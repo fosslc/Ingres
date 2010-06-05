@@ -97,6 +97,10 @@
 **	24-Mar-2010 (hanje04)
 **	    SIR 123296
 **	    Only exclude Xerces for LSB builds.
+**	20-Apr-2010 (hanje04)
+**	    SIR 123296
+**	    Use LIB_TGT instead of 'lib' for LSB builds so we can handle 64bit
+**	    builds which install under /usr/lib64
 */
 
 /*
@@ -112,7 +116,7 @@ PART  sharelib
 */
 
 #ifdef conf_LSB_BUILD
-	DIRECTORY usr!lib!ingres
+	DIRECTORY usr!LIB_TGT!ingres
 #else
 	DIRECTORY (PROD2NAME)!LIB_TGT
 #endif
@@ -141,7 +145,7 @@ PART  sharelib
    PRELOAD delshlib
    BUILD_DIR (ING_BUILD)!LIB_BLD
 #ifdef conf_LSB_BUILD
-	DIRECTORY usr!lib!ingres
+	DIRECTORY usr!LIB_TGT!ingres
       {
       EXECUTABLE lib(PROG0PRFX)compat.${slvers}.$SLSFX
       EXECUTABLE lib(PROG0PRFX)frame.${slvers}.$SLSFX

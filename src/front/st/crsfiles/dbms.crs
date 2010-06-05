@@ -613,19 +613,26 @@
 --#         for dbms QEF parameters for inclusion in syscheck resource checks.
 --#	01-Apr-2010 (stial01)
 --#         Changes for Long IDs
+--#	08-Apr-2010 (hanje04)
+--#	    SIR 123296
+--#	    Defaults for ii_database, ii_checkpoint etc. need to be commands not
+--#	    values. Make defaults for LSB seprate dirs for easy of moving at a
+--#	    later date. Locations created by RPM.
 
 -- location setup resources
 # ifdef UNIX 
 # ifdef conf_LSB_BUILD
-ii.*.setup.ii_database:		"/var/lib";
-ii.*.setup.ii_checkpoint:	"/var/lib";
+ii.*.setup.ii_database:		"echo /var/lib/ingres/data";
+ii.*.setup.ii_checkpoint:	"echo /var/lib/ingres/backup";
+ii.*.setup.ii_work:		"echo /var/lib/ingres/work";
+ii.*.setup.ii_log_file:		"echo /var/lib/ingres/txlog";
 # else
 ii.*.setup.ii_checkpoint:	"echo \"$II_SYSTEM\"";
+ii.*.setup.ii_work:		"echo \"$II_SYSTEM\"";
+ii.*.setup.ii_log_file:		"ingprenv II_CHECKPOINT";
 # endif
 ii.*.setup.ii_journal:		"ingprenv II_CHECKPOINT";
 ii.*.setup.ii_dump:		"ingprenv II_CHECKPOINT";
-ii.*.setup.ii_work:		"echo \"$II_SYSTEM\"";
-ii.*.setup.ii_log_file:		"ingprenv II_CHECKPOINT";
 ii.*.setup.ii_dual_log:		"ingprenv II_DATABASE";
 # endif /* UNIX */
 

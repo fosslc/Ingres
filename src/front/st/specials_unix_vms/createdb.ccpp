@@ -22,6 +22,10 @@
 **          Add support for LSB builds, server binaries live under
 **          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
 **          libraries under /usr/lib/ingres and config under /usr/share/ingres
+**	20-Apr-2010 (hanje04)
+**	    SIR 123296
+**	    Move createdb to /usr/libexec/ingres/bin and add ingcreatedb for
+**	    LSB builds. /usr/bin/createdb conflicts with postgreSQL
 */
 
 PART   createdb
@@ -29,12 +33,14 @@ PART   createdb
 /*
 ** ingres!bin
 */
+   BUILD_DIR (ING_BUILD)!bin
 #ifdef conf_LSB_BUILD
 	DIRECTORY usr!bin
+      SCRIPT ingcreatedb
+	DIRECTORY usr!libexec!ingres!bin
 #else
 	DIRECTORY ingres!bin
 #endif
-   BUILD_DIR (ING_BUILD)!bin
       EXECUTABLE createdb
 
 /*

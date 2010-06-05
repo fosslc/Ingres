@@ -759,6 +759,10 @@
 ##	19-Apr-2010 (hweho01)
 ##	    For Solaris/Sparc, prepare runtime compiler and linker 
 ##	    settings with flags that are introduced in Studio 12.
+##	19-Apr-2010 (hanje04)
+##	    SIR 123296
+##	    Add support for 64bit LSB builds by using LIB_TGT to define
+##	    the location for library files apropriately
 
 TMP=/tmp/libc.nm
 trap 'rm -f $TMP' 0 1 2 13 15
@@ -1905,7 +1909,12 @@ if [ -n "$build_arch" ] ; then
 fi
 
 # Define LIB_BLD and LIB_TGT needed for CCPP
-
-echo "#define LIB_BLD lib"
-echo "#define LIB_TGT lib"
+if $conf_LSB_BUILD && [ "$build_arch" = 64 -o "$build_arch" = '32+64' ]
+then
+    echo "#define LIB_BLD lib"
+    echo "#define LIB_TGT lib64"
+else
+    echo "#define LIB_BLD lib"
+    echo "#define LIB_TGT lib"
+fi
 exit 0

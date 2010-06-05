@@ -35,6 +35,10 @@
 **          Add support for LSB builds, server binaries live under
 **          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
 **          libraries under /usr/lib/ingres and config under /usr/share/ingres
+**	20-Apr-2010 (hanje04)
+**	    SIR 123296
+**	    Use LIB_TGT instead of 'lib' for LSB builds so we can handle 64bit
+**	    builds which install under /usr/lib64
 */
 
 PART   spatial
@@ -51,7 +55,7 @@ PART   spatial
       FILE spat.olb
 # else /* VMS */
 #ifdef conf_LSB_BUILD
-	DIRECTORY usr!lib!ingres
+	DIRECTORY usr!LIB_TGT!ingres
    BUILD_DIR (ING_BUILD)!LIB_BLD
       EXECUTABLE libspat.${slvers}.$SLSFX
       LINK libspat.1.$SLSFX

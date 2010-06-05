@@ -4,6 +4,9 @@
 #       4-apr-2008  (bolke01) 120219
 #          MANIFEST was not in sync with the .lot files for
 #          CREATEDB
+#       19-apr-2010 (hanje04)
+#           BUG 123296
+#           Add wrapper script for createdb for LSB builds
 
 SubDir ING_SRC dbutil duf duc ;
 
@@ -11,6 +14,10 @@ IISUBSYS dbutil duf duc ;
 
 
 IIBINEXE createdb : ducreate.qsc ;
+if $(UNIX)
+{
+    IIBINSH ingcreatedb : ingcreatedb.sh ;
+}
 
 if ! $(VMS)
 {

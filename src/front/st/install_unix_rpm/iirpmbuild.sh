@@ -127,6 +127,9 @@
 ##	    builds under $ING_BUILD/files/srpmflists. Under Fedora packaging
 ##	    standards. RPMs should own all directories they create as well as
 ##	    files.
+##	07-Apr-2010 (hanje04)
+##	    SIR 123296
+##	    Exclude %{_sysconfdir}/pam.d from dirlists
 ##
 
 self=`basename $0`
@@ -494,7 +497,7 @@ gen_srpm_flists()
 	return 1
     }
     cdirlis=/tmp/ingres-${core}$$.dlist
-    skpdirs="%{_bindir}$|%{_var}/lib/ingres/files/name$"
+    skpdirs="%{_bindir}$|%{_var}/lib/ingres/files/name$|%{_sysconfdir}/pam.d$"
 
     # generate a list of all unique directory names in the file list
     # excluding those we don't want
@@ -502,7 +505,10 @@ gen_srpm_flists()
     grep ^%attr $listdir/ingres-${core}.flist | \
 	sed -e 's,\/[^/]*$,,' | \
 	sort --key=8 -u | \
-	awk '{printf "%%dir %s\n", $8}' | \
+	awk '$2 ~ "(.*,ingres,ingres)" \
+		{ printf "%%dir %attr(755,ingres,ingres) %s\n", $8 } ;
+	     $2 ~ "(.*,root,root)" \
+		{ printf "%%dir %attr(755,root,root) %s\n", $8 }' | \
 	egrep -v $skpdirs > $cdirlis
 
     # ...and the rest
@@ -525,7 +531,10 @@ gen_srpm_flists()
     	    grep ^%attr $listdir/ingres-${pkg}.flist | \
 		sed -e 's,\/[^/]*$,,' | \
 		sort --key=8 -u | \
-		awk '{printf "%%dir %s\n", $8}' | \
+		awk '$2 ~ "(.*,ingres,ingres)" \
+			{ printf "%%dir %attr(755,ingres,ingres) %s\n", $8 } ;
+	     	     $2 ~ "(.*,root,root)" \
+			{ printf "%%dir %attr(755,root,root) %s\n", $8 }' | \
 		egrep -v $skpdirs > $dtmp
 	    # remove directories that are already covered by the core package
 	    cat $cdirlis $dtmp | \

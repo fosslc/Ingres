@@ -148,6 +148,9 @@
 **	28-Mar-2010 (hanje04)
 **	    SIR 123296
 **	    Add catch for files not being "macro-ized" for LSB builds.
+**	07-Apr-2010 (hanje04)
+**	    SIR 123296
+**	    All files in /etc (%{_sysconfdir}) must be tagged as '%config'
 */
 
 static STATUS
@@ -658,7 +661,17 @@ gen_rpm_file_list( SPECS *specs, FILE *fileSpecs )
                              STprintf( destloc, "%%{_sysconfdir}%s/%s",
                                         dirptr,
                                         file->name );
-                             STcopy("root", owner);
+			     /*
+ 			     ** Anything under /etc needs to be marked as
+ 			     ** config, so add it here as such and move on
+			     */
+                             SIfprintf(fileSpecs,
+                                ERx("%%config %%attr(%o,%s,%s) %%verify (%s) %s\n"),
+                              	    file->link ? 0777 : file->permission_sb,
+                                    "root", "root",
+                                    ERx("mode md5 size mtime"),
+                          	    destloc);
+			     continue;
                          }
 			 else
 			 {
@@ -672,7 +685,7 @@ gen_rpm_file_list( SPECS *specs, FILE *fileSpecs )
 			   
 
                         SIfprintf(fileSpecs,
-                                ERx("%%attr (%o,%s,%s) %%verify (%s) %s\n"),
+                                ERx("%%attr(%o,%s,%s) %%verify (%s) %s\n"),
                               file->link ? 0777 : file->permission_sb,
                                 owner, owner,
                                 ERx("mode md5 size mtime"),

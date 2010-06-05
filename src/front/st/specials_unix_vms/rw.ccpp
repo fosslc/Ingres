@@ -18,6 +18,10 @@
 **          Add support for LSB builds, server binaries live under
 **          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
 **          libraries under /usr/lib/ingres and config under /usr/share/ingres
+**	21-Apr-2010 (hanje04)
+**	    SIR 123296
+**	    Move to binaries to /usr/libexec/ingres for LSB to prevent conflicts
+**	    with other (non-ingres) packages
 */
 
 /*
@@ -29,7 +33,7 @@ PART  report-writer
 
    BUILD_DIR (ING_BUILD)!bin
 #ifdef conf_LSB_BUILD
-	DIRECTORY usr!bin
+	DIRECTORY usr!libexec!ingres!bin
 #else
 	DIRECTORY ingres!bin
 #endif

@@ -82,6 +82,10 @@
 **	    Move some abf utilities to /usr/libexec/ingres/bin for LSB builds
 **	    as they're really system utilities and that's where ABF expects
 **	    to find them
+**	20-Apr-2010 (hanje04)
+**	    SIR 123296
+**	    Use LIB_TGT instead of 'lib' for LSB builds so we can handle 64bit
+**	    builds which install under /usr/lib64
 */
 
 PART   abf
@@ -230,7 +234,7 @@ PART   abf
 */
 
 #ifdef conf_LSB_BUILD
-	DIRECTORY usr!lib!ingres
+	DIRECTORY usr!LIB_TGT!ingres
 #else
 	DIRECTORY ingres!LIB_TGT
 #endif

@@ -56,6 +56,10 @@
 **          Add support for LSB builds, server binaries live under
 **          /usr/libexec/ingres, utilties and client binaries under /usr/bin,
 **          libraries under /usr/lib/ingres and config under /usr/share/ingres
+**	23-Apr-2010 (hanje04)
+**	    SIR 123296
+**	    /usr/bin/isql conflicts with UnixODBC for LSB builds on fedora so
+**	    mode it to /usr/libexec/ingres/bin.
 */
 
 PART   tm
@@ -112,10 +116,13 @@ PART   tm
    BUILD_DIR (ING_BUILD)!bin
 # ifndef VMS
       SCRIPT ingres
+      SCRIPT (PROG0PRFX)sql
+#ifdef conf_LSB_BUILD
+        DIRECTORY usr!libexec!ingres!bin
+#endif
+      SCRIPT isql
       SCRIPT iquel
       SCRIPT quel
-      SCRIPT isql
-      SCRIPT (PROG0PRFX)sql
 # endif /* VMS */
 # ifdef LNX
       EXECUTABLE dataldr

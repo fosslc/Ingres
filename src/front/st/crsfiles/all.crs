@@ -269,6 +269,10 @@
 --#	    SIR 123622
 --#	    Enable history recall by default on Unix. Control behavior with
 --#	    ii.$.tm.history_recall
+--#	08-Mar-2010 (hanje04)
+--#	    SIR 123296
+--#	    Use hard coded path for syscheck in LSB builds. 
+--#	    II_SYSTEM not always available
 --#
 --#
 -- configuration system preferences
@@ -285,13 +289,15 @@
 # endif /* VMS */
 
 # ifdef UNIX
-(PROG4PRFX).*.(PROG2PRFX)start.syscheck_command:	"$(PRODLOC)/(PROD2NAME)/utility/(PROG0PRFX)syscheck";
-# endif /* UNIX */
-
-# ifdef UNIX
 (PROG4PRFX).$.prefs.cbf_syscheck:	ON;
 (PROG4PRFX).$.cbf.syscheck_mode:		(PROG4PRFX).$.prefs.cbf_syscheck;
+# ifdef conf_LSB_BUILD
+(PROG4PRFX).*.(PROG2PRFX)start.syscheck_command:	"/usr/libexec/ingres/utility/syscheck";
+(PROG4PRFX).*.cbf.syscheck_command:	"/usr/libexec/ingres/utility/syscheck >/dev/null";
+# else
+(PROG4PRFX).*.(PROG2PRFX)start.syscheck_command:	"$(PRODLOC)/(PROD2NAME)/utility/(PROG0PRFX)syscheck";
 (PROG4PRFX).*.cbf.syscheck_command:	"$(PRODLOC)/(PROD2NAME)/utility/(PROG0PRFX)syscheck >/dev/null";
+# endif /* LSB */
 # endif /* UNIX */
 
 

@@ -411,6 +411,9 @@
 **	    Move some of the packages around for LSB build to satisfy package
 **	    requirements for the location of 'devel' files. (e.g. source, 
 **	    object and header files). Create PACKAGE devel for this purpose
+**	20-Apr-2010 (hanje04)
+**	    SIR 123296
+**	    Add logrotate to setupsup for LSB builds.
 */
 
 RELEASE Ingres
@@ -755,6 +758,11 @@ PACKAGE setupsup
 
    PART setupsup
       DEFINITION setupsup.prt
+
+# ifdef conf_LSB_BUILD
+   PART logrotate
+      DEFINITION logrotate.prt
+# endif /* LSB build */
 
 # ifdef conf_BUILD_ARCH_32_64
 PACKAGE setupsup64

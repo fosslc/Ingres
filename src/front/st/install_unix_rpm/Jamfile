@@ -20,5 +20,7 @@ IIDFILES rpmtemplates : ingres.template ingres-dbms.template
 
 MODE on $(INGFILES)/ingenv.bashrc = $(FILEMODE) ;
 MODE on $(INGFILES)/pam/ingres = $(FILEMODE) ;
+MODE on $(INGFILES)/logrotate/ingres = $(FILEMODE) ;
 IIRemRCComments $(INGFILES)/ingenv.bashrc : ingenv.bashrc ;
 IIRemRCComments $(INGFILES)/pam/ingres : ingres.pamconf ;
+IIRemRCComments $(INGFILES)/logrotate/ingres : ingres.logrotate ;

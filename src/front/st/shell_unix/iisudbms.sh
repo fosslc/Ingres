@@ -667,6 +667,10 @@
 ##	    Fix typo in demodb section for LSB builds
 ##	09-Apr-2010 (frima01) SIR 123296
 ##	    Change demodir to the data directory where the demodb scripts are.
+##      21-Apr-2010 (hanje04)
+##          SIR 123296
+##          Call createdb explicity as /usr/bin/createdb had to be removed
+##          to prevent conflicts for LSB builds.
 ##	    
 #----------------------------------------------------------------------------
 . iisysdep
@@ -3715,11 +3719,7 @@ The Ingres server could not be started.  See the server error log ($II_LOG/errlo
 Initializing the Ingres master database, iidbdb...
 
 !
-	if [ x"$conf_LSB_BUILD" = x"TRUE" ] ; then
-	    createdb=/usr/bin/createdb
-	else
-	    createdb=$II_SYSTEM/ingres/bin/createdb
-	fi
+	createdb=$II_SYSTEM/ingres/bin/createdb
 	if $DOIT $createdb -S iidbdb ; then
 	    # FIXME - sleep to stop DB lock race condition
 	    sleep 1
