@@ -386,6 +386,11 @@ psy_asequence(
 **	    Fix "not found" message for "drop sequence".
 **      09-Mar-2010 (coomi01) b123351
 **          Block users from dropping dba sequences.
+**      29-Apr-2010 (coomi01) b123638
+**          Backout the above change, then put in a test
+**          to prevent delete dba's sequence by non dba.  
+**          This allows non-dba to find sequence for 
+**          updating.
 */
 DB_STATUS
 psy_gsequence(
@@ -446,15 +451,17 @@ psy_gsequence(
 	    break;
 
 	/*
-	** Dropped through, so sequence was not found!
-	** Now check to see if sequences owned by DBA are to be considered.
-	** If so, check that the caller/owner are matched, 
-	** ie caller must be the dba to do another search at this point.
+	** if sequence was not found, and
+	**    - caller requested that DBA's sequences be considered, and
+	**    - user is not the DBA,
+	**    - check we are not attempting to destroy the sequence.
+	** check if the sequence is owned by the DBA
 	*/
-	if ( (seq_mask & PSS_DBASEQ) &&
-	     (0 == MEcmp((PTR) &sess_cb->pss_dba.db_tab_own, 
-		         (PTR) &sess_cb->pss_user, sizeof(DB_OWN_NAME)))
-	    )
+	if ((qmode != PSQ_DSEQUENCE) &&
+	       seq_mask & PSS_DBASEQ
+	    && MEcmp((PTR) &sess_cb->pss_dba.db_tab_own, 
+		   (PTR) &sess_cb->pss_user, sizeof(DB_OWN_NAME))
+	   )
 	{
 	    STRUCT_ASSIGN_MACRO(sess_cb->pss_dba.db_tab_own,
 				rdf_seq.rdf_rb.rdr_owner);
