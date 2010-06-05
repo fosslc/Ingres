@@ -3776,6 +3776,8 @@ DMVE_CB		*dmve)
 ** History:
 **	29-Apr-2010 (stial01)
 **          Created.
+**	5-May-2010 (kschendel)
+**	    Copy to aligned ints for alignment-sensitive platforms (SPARC).
 */
 bool
 dmve_iirel_cmp(
@@ -3789,8 +3791,8 @@ i4		size2)
     DMP_TCB		*t;
     DMP_RELATION	*rel1;
     DMP_RELATION	*rel2;
-    DMP_RELATION	reltup1;
-    DMP_RELATION	reltup2;
+    i4			rel1_base, rel2_base;
+    i4			rel1_index, rel2_index;
 
     tbio = dmve->dmve_tbio;
 
@@ -3810,14 +3812,18 @@ i4		size2)
     rel1 = (DMP_RELATION *)rec1;
     rel2 = (DMP_RELATION *)rec2;
 
+    /* Records aren't necessarily aligned, copy to locals. */
+    I4ASSIGN_MACRO(rel1->reltid.db_tab_base, rel1_base);
+    I4ASSIGN_MACRO(rel2->reltid.db_tab_base, rel2_base);
+    I4ASSIGN_MACRO(rel1->reltid.db_tab_index, rel1_index);
+    I4ASSIGN_MACRO(rel2->reltid.db_tab_index, rel2_index);
+
 #ifdef xDEBUG
     TRdisplay("CONSISTENCY CHECK iirel (%d,%d), (%d,%d)\n",
-	rel1->reltid.db_tab_base, rel1->reltid.db_tab_index,
-	rel2->reltid.db_tab_base, rel2->reltid.db_tab_index);
+	rel1_base, rel1_index, rel2_base, rel2_index);
 #endif
 
-    if (rel1->reltid.db_tab_base != rel2->reltid.db_tab_base ||
-	    rel1->reltid.db_tab_index != rel2->reltid.db_tab_index)
+    if (rel1_base != rel2_base || rel1_index != rel2_index)
 	return (TRUE);
     else
 	return (FALSE);

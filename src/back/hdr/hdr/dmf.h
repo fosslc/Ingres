@@ -1915,6 +1915,19 @@ typedef struct _DMF_ATTR_ENTRY
 ** config file itself is defined privately to DMF, but upgradedb needs
 ** to help out with these versions on occasion.  So, define the actual
 ** version constants here.
+**
+** Attention:  DO NOT UPDATE DSC_VCURRENT until you have actually made
+** changes to core catalogs (iirelation, iiattribute, iiindex, iidevices)
+** that requires an update.
+**
+** DO NOT UPDATE DSC_VCURRENT JUST BECAUSE THE INGRES VERSION CHANGED.
+**
+** Also, you will be better loved by Ingres developers if you can forestall
+** a DSC_VCURRENT change for as late in the development cycle as possible.
+** Otherwise one gets into the problem of having e.g. an "early" V10 and
+** a "late" V10, which upgradedb can't decipher, and developers have to
+** toss and recreate all databases.  Obviously there is a balance to be
+** struck between being nice and getting things done!
 */
 
 #define			DSC_PREHISTORIC	0L
@@ -1926,13 +1939,8 @@ typedef struct _DMF_ATTR_ENTRY
 #define			DSC_V6		6L	/* II 2.6, raw locs */
 #define			DSC_V7		7L	/* r3, partitions, v5 pages */
 #define			DSC_V8		8L	/* r3.0.2, attcollid added */
-#define			DSC_V9		9L	/* Ingres2007:*/
-						/* iiindex.idom[32]->[64] */
-#ifdef NOT_UNTIL_CLUSTERED_INDEXES
+#define			DSC_V9		9L	/* 10.0: long names */
 #define			DSC_VCURRENT	DSC_V9
-#else
-#define DSC_VCURRENT DSC_V9  /* until clustered is released */
-#endif
 
 
 

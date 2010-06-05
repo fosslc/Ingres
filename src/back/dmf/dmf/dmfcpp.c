@@ -695,6 +695,8 @@ NO_OPTIM = dr6_us5
 **	    offline checkpoint. Added write_jnlswitch(), to write jnlswitch 
 **	    record to journal before upd1_jnl_dmp() increments ckp/jnl 
 **	    sequence.
+**	28-Apr-2010 (kschendel)
+**	    Update Julie's cross (above) to use DB_ERROR.
 */
 
 /*
@@ -899,7 +901,7 @@ static DB_STATUS write_jnlswitch(
 DMP_DCB         *dcb,
 DM0C_CNF        *cnf,
 DMF_JSX		*jsx,
-i4              *err_code);
+DB_ERROR        *dberr);
 
 #define	    OPEN_CONFIG		1
 #define	    UPDATE_CONFIG	2
@@ -1642,7 +1644,7 @@ DMP_DCB	    *dcb)
 	    if (status != E_DB_OK)
 		break;
 
-	    status = write_jnlswitch(dcb, cnf, jsx, err_code);
+	    status = write_jnlswitch(dcb, cnf, jsx, &jsx->jsx_dberr);
 
 	    if (status != E_DB_OK)
 		break;
@@ -9210,7 +9212,7 @@ write_jnlswitch(
 DMP_DCB		*dcb,
 DM0C_CNF	*cnf,
 DMF_JSX		*jsx,
-i4		*err_code)
+DB_ERROR	*dberr)
 {
     DM0J_CTX            *jnl = 0;
     DM0L_JNL_SWITCH     jsrec;
@@ -9244,7 +9246,7 @@ i4		*err_code)
                         fil_seq, cnf->cnf_jnl->jnl_ckp_seq,
                         blk_seq + 1, DM0J_M_WRITE, node_id,
                         DM0J_FORWARD, (DB_TAB_ID *)0,
-                        (DM0J_CTX **)&jnl, err_code);
+                        (DM0J_CTX **)&jnl, dberr);
         if (status != E_DB_OK)
             break;
 
@@ -9254,15 +9256,15 @@ i4		*err_code)
         jsrec.js_header.database_id = dcb->dcb_id;
         TMget_stamp((TM_STAMP *)&jsrec.js_time);
 
-        status = dm0j_write(jnl, (PTR)&jsrec, *(i4 *)&jsrec, err_code);
+        status = dm0j_write(jnl, (PTR)&jsrec, *(i4 *)&jsrec, dberr);
         if (status != E_DB_OK)
             break;
 
-        status = dm0j_update(jnl, &jnl_seq, err_code);
+        status = dm0j_update(jnl, &jnl_seq, dberr);
 	if (status != E_DB_OK)
 	    break;
 
-        status = dm0j_close(&jnl, err_code);
+        status = dm0j_close(&jnl, dberr);
 	if (status != E_DB_OK)
 	    break;
 
@@ -9271,7 +9273,7 @@ i4		*err_code)
 
     if (jnl)
     {
-        status = dm0j_close(&jnl, err_code);
+        status = dm0j_close(&jnl, dberr);
     }
     return(E_DB_ERROR);
 }

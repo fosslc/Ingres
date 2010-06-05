@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 /**
@@ -141,6 +141,8 @@
 **	    set if journal content has changed.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	29-APr-2010 (kschendel)
+**	    Bump the config version for long ID's.
 **/
 
 /*
@@ -325,6 +327,14 @@ struct _DM0C_CNF
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Added DSC_NOMVCC status, DSC_STATUS,
 **	    DSC_INCONST_CODE defines.
+**	29-Apr-2010 (kschendel)
+**	    Rather than adding Vx_CONV_DONE flags indefinitely, define a
+**	    pair of _A_{att,rel}_DONE and _B_{att,rel}_DONE flags, plus
+**	    one more flag saying which is to be used (A or B).  When
+**	    a db is upgraded, it uses (say) the A flags and clears the
+**	    B flags.  The next time it will be the other way around.
+**	    Bump up the config version for long ID's (all the definitions
+**	    were done, just needed to change VCURRENT).
 */
 struct _DM0C_DSC
 {
@@ -343,14 +353,22 @@ struct _DM0C_DSC
 #define			CNF_V6		0x00060001  /* raw partition support */
 						    /* and new page types */
 #define			CNF_V7		0x00070001  /* long names */
-#define			CNF_VCURRENT	CNF_V6	    /* current config format */
+#define			CNF_VCURRENT	CNF_V7	    /* current config format */
     i4	    dsc_c_version;	/* Version of DMF that created this
-					** database.  (essentially means
-					** core catalog version).  The
-					** actual defines are in dmf.h so
-					** that upgradedb can see them too.
+				** database.  (essentially means
+				** core catalog version).  The
+				** actual defines are in dmf.h so
+				** that upgradedb can see them too.
 				*/
-    i4	    dsc_version;	/* Current version of database */
+    i4	    dsc_version;	/* Current version of database.
+				** This actually turns out to be somewhat
+				** useless, because it's been confused with
+				** dsc_c_version.  I (kschendel) think this
+				** was originally meant to track the
+				** dbcmptlvl in iidbdb.iidatabase, but
+				** nothing updates dsc_version.
+				** Do not use.
+				*/
     i4	    dsc_status;		/* Database status. */
 #define			DSC_VALID	    0x01
 #define			DSC_JOURNAL	    0x02
@@ -376,35 +394,70 @@ struct _DM0C_DSC
 ** version.  The flags need not be set in newly created databases.
 ** Their purpose is simply to skip non-redoable steps in core catalog
 ** conversions.
+** Historically, the conversion-done flags were left on after conversion,
+** and we simply defined new ones.  Rather than use up bits this way, I've
+** changed the scheme so that there are two flag pairs, used alternately.
+** Initially a database is on the "A" cycle; the "B" flag is always clear
+** when the database is new.  If the database goes through a core catalog
+** upgrade, the _A_CONV_DONE flags are tested and set; the _B_CONV_DONE
+** flags are forcibly cleared; and the "B" flag is set.  The next time
+** through a core catalog upgrade, the opposite happens:  the _B_ flags
+** are used, the _A_ flags are cleared, and the "B" flag is cleared.
+** In this way the database flip-flops between using the two flag pairs.
+**
+** (The A vs B flag has to be specific to each database, because some
+** databases might skip a version.  E.g. v9 db1 might be upgraded to v10 and
+** then v11, while v9 db2 might go straight to v11.  It's unlikely but
+** certainly possible.)
 */
-#define			DSC_IIREL_CONV_DONE 0x1000
-				/* Has IIrelation been converted to the
-				** increased 6.5 size? T/F */
+#define			DSC_B_IIREL_CONV_DONE 0x1000
+				/* "B" cycle:  is iirelation conversion done?
+				** Cleared for new DB's and the A cycle.
+				*/
 
 #define			DSC_65_SMS_DBMS_CATS_CONV_DONE	0x2000
 				/* If set indicates that the DBMS catalogs
 				** have been converted to 6.5 Space management
-				** scheme */
+				** scheme.  Core-catalog conversions that
+				** rewrite the catalog may clear this flag
+				** so that SMS can be redone.
+				*/
 
-#define			DSC_IIATT_CONV_DONE 0x4000
-				/* Has IIattribute been converted to the
-				** increased 6.5 size? T/F */
-#define			DSC_IIREL_V6_CONV_DONE 0x8000
-				/* Not used any more, but may be set in
-				** upgraded databases */
-#define			DSC_IIATT_V7_CONV_DONE 0x10000
-				/* Set if iiattribute is converted to v7+ */
-#define			DSC_IIATT_V9_CONV_DONE 0x20000
-				/* Set if iiattribute is converted to v9+ */
-#define			DSC_IIIND_V9_CONV_DONE 0x40000
-				/* Set if iiindex is converted to v9+ */
+#define			DSC_B_IIATT_CONV_DONE 0x4000
+				/* "B" cycle:  is iiattribute conversion done?
+				** Cleared for new DB's and the A cycle.
+				*/
+
+/* 0x8000, 0x10000 not used, cleared as of config V7 / DSC V9 */
+#define			DSC_NOTUSED (0x8000 | 0x10000)
+				/* Note, for DSC_V10 and future, these two
+				** could be used to track iiindex conversion
+				** done if an iiindex conversion is needed.
+				*/
+
+#define			DSC_A_IIREL_CONV_DONE 0x20000
+				/* "A" cycle:  is iirelation conversion done?
+				** Cleared for new DB's and the B cycle.
+				*/
+
+#define			DSC_A_IIATT_CONV_DONE 0x40000
+				/* "A" cycle:  is iiattribute conversion done?
+				** Cleared for new DB's and the B cycle.
+				*/
+
 #define			DSC_INCREMENTAL_RFP    0x80000
+
+#define			DSC_CONV_B	0x100000
+				/* Set if the database is on the "B" conversion
+				** cycle.  Always cleared initially.  See
+				** the conversion-done discussion above.
+				*/
 
 #define DSC_STATUS "\
 VALID,JOURNAL,CKP,DUMP,ROLL_FORWARD,SM_INCON,\
 PARTIAL_ROLL,NOMVCC,PRETEND,CFG_BACKUP,JOURNAL_DISABLED,\
-NOLOGGING,IIREL_CONV,65_CATS,IIATT_CONV,IIREL_V6,IIATT_V7,\
-IIATT_V9,IIIND_V9,INCR_RFP"
+NOLOGGING,B_IIREL_CONV,65_CATS,B_IIATT_CONV,nu8000,nu10000,\
+A_IIREL_CONV,A_IIATT_CONV,INCR_RFP,B_CONV_CYCLE"
 
     i4         dsc_open_count;     /* Count of concurrent server opens.
                                         ** This is used to determine if a 
@@ -542,6 +595,8 @@ INDEX_INCONS,TABLE_INCONS"
 ** History:
 **	21-apr-2009 (stial01)
 **	    Created for increasing DB_MAXNAME project.
+**	30-Apr-2010 (kschendel)
+**	    Fix goof in dbname definition.
 */
 struct _DM0C_ODSC_32
 {
@@ -576,9 +631,9 @@ struct _DM0C_ODSC_32
 					** config file status set ~DSC_VALID */
     i4	    dsc_iirel_relprim;	/* Relprim value for iirelation. */
     char    dsc_name[DB_OLDMAXNAME_32];	/* Name of the database. */
-    DB_OWN_NAME	    dsc_owner[DB_OLDMAXNAME_32];	/* Owner of the database. */
-    char	    dsc_collation[DB_OLDMAXNAME_32];    /* collation name */
-    char	    dsc_extra1[8];	/* Unused now */
+    char    dsc_owner[DB_OLDMAXNAME_32];	/* Owner of the database. */
+    char    dsc_collation[DB_OLDMAXNAME_32];    /* collation name */
+    char    dsc_extra1[8];	/* Unused now */
     i4         dsc_iirel_relpgsize; /* Relpgsize value for iirelation */
     i4         dsc_iiatt_relpgsize;  /* Relpgsize value for iiattribute */
     i4         dsc_iiind_relpgsize;  /* Relpgsize value for iiindexes  */

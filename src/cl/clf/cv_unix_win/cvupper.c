@@ -125,7 +125,7 @@ register char	*string;
 	{
 		/* make sure you got at least a ptr */
 
-		while (*string != NULL)
+		while (*string != EOS)
 		{
 			if (CMlower_SB(string))
 			{

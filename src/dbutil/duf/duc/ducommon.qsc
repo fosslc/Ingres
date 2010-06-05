@@ -1,4 +1,4 @@
-/* Copyright (c) 1990, 2005 Ingres Corporation
+/* Copyright (c) 1990, 2010 Ingres Corporation
 **
 **
 */
@@ -34,7 +34,6 @@
 
 EXEC SQL include SQLCA;
 ## int db_maxname_hostvar = DB_MAXNAME;
-## int db_maxown_hostvar = DB_OWN_MAXNAME;
 ## int db_maxloc_hostvar = DB_LOC_MAXNAME;
 
 /*
@@ -389,6 +388,10 @@ EXEC SQL include SQLCA;
 **          Use DB_EXTFMT_SIZE for register table newcolname IS 'ext_format'
 **     29-Apr-2010 (stial01)
 **          duc_modify_catalog() check for sql error
+**	27-Apr-2010 (kschendel) SIR 123639
+**	    Allow DB_COL_BYTES in table and dbproc definitions;
+**	    change iiprotect, iiintegrity to sql definition to allow
+**	    byte-izing the bitmap columns.
 */
 
 
@@ -814,6 +817,7 @@ bool		convert_flag;
 	upper_case = ((dbenv->du_dbservice & DU_NAME_UPPER) != 0);
 	duc_iisesspriv();	/* iisession_privileges */
 
+	duc_create_catalog("iischema");
 	duc_iischema(upper_case);	/* build iischema */
 	duc_modify_catalog("iischema");
 
@@ -2090,7 +2094,7 @@ duc_init_iidefault(
 	id1 = iidefaults[i].id1;
 	if (is_upgrade)
 	{
-	    exec sql select 1 into :dummy from iidefault
+	    exec sql repeated select 1 into :dummy from iidefault
 		     where defid1 = :id1 and defid2 = 0;
 	    if (sqlca.sqlcode < 0)
 		return du_error(errcb, E_DU241C_SELECT_ERR_UPGR_IIDEFAULT, 2,
@@ -2362,6 +2366,8 @@ WHERE lxb_is_prepared='Y' AND
 **	    Added upper_case flag to tell us which way to go.
 **	19-jul-94 (robf)
 **          Make sure error diagnostic on failure to insert is reported.
+**	6-May-2010 (kschendel)
+**	    Take out create so that upgradedb can use this to insert $ingres.
 */
 VOID
 duc_iischema(upper_case)
@@ -2372,31 +2378,29 @@ i4  upper_case;
 	char	owner[DB_MAXNAME+1];
     exec sql end declare section;
 
-    duc_create_catalog("iischema");
-
     /* populate iischema with canonical schema ids */
 
-	if (upper_case)
-	    MEmove(sizeof(ERx("$ingres")) - 1, (PTR) ERx("$INGRES"), ' ',
-		   sizeof(owner), owner);
-	else
-	    MEmove(sizeof(ERx("$ingres")) - 1, (PTR) ERx("$ingres"), ' ',
-		   sizeof(owner), owner);
+    if (upper_case)
+	MEmove(sizeof(ERx("$ingres")) - 1, (PTR) ERx("$INGRES"), ' ',
+	       sizeof(owner), owner);
+    else
+	MEmove(sizeof(ERx("$ingres")) - 1, (PTR) ERx("$ingres"), ' ',
+	       sizeof(owner), owner);
 
-	owner[sizeof(owner)-1] = EOS;
-    
+    owner[sizeof(owner)-1] = EOS;
 
-	id1 = DB_INGRES_SCHEMA_ID;
-	EXEC SQL INSERT INTO iischema
-		( schema_name, schema_owner, schema_id, schema_idx )
-	VALUES
+
+    id1 = DB_INGRES_SCHEMA_ID;
+    EXEC SQL INSERT INTO iischema
+	    ( schema_name, schema_owner, schema_id, schema_idx )
+    VALUES
 		( :owner,
 		  :owner,
 		  :id1,	  0 );
-	if(sqlca.sqlcode<0)
-	{
-		duc_sqlerror();
-	}
+    if(sqlca.sqlcode<0)
+    {
+	duc_sqlerror();
+    }
 }
 
 
@@ -3274,6 +3278,8 @@ auditor, maintain_users)",
 ** History:
 **	12-june-2008 (dougi)
 **	    Written for iisequence upgrade to support bigint.
+**	27-Apr-2010 (kschendel)
+**	    Double-check for no rows returned, means "FALSE".
 */
 bool
 check_tbl_colsize(tname, cname, colsize)
@@ -3292,7 +3298,7 @@ exec sql end declare section;
 	and lowercase(a.attname) = :cname and a.attrelid = r.reltid
 	and a.attrelidx = r.reltidx;
 
-    if (colsize == oldcolsize)
+    if (sqlca.sqlerrd[2] > 0 && colsize == oldcolsize)
     {
 	return TRUE;
     }
@@ -6128,13 +6134,19 @@ duc_create_catalog(char *catalog)
 	    exec sql execute immediate :qry;
 	    if (sqlca.sqlcode)
 	    {
-		EXEC SQL INQUIRE_SQL(:errorno = ERRORNO, :errortext = ERRORTEXT);
-
 		/* upgradedb may not have dropped the catalog */
 		ensure_not_exists(catalog);
 
 		/* try again */
 		exec sql execute immediate :qry;
+		if (sqlca.sqlcode < 0)
+		{
+		    EXEC SQL INQUIRE_SQL(:errorno = ERRORNO, :errortext = ERRORTEXT);
+		    SIprintf("ERROR create %s failed, errorno %d, errortext %s\n",
+				catalog, errorno, errortext);
+		    SIprintf("Create query was: %s\n",qry);
+		}
+
 	    }
 	}
 	else
@@ -6167,17 +6179,19 @@ duc_create_catalog(char *catalog)
 	    if (sqlca.sqlcode != 0)
 		SIprintf("ERROR create %s failed\n", catname);
 		
-	    if (relwid > relpgsize || (catdef->size && relwid != catdef->size))
+	    if (relwid > relpgsize
+	      || (catdef->structsize != 0 && relwid != catdef->structsize))
 	    {
 		/* structure my have extra bytes for alignment */
 		/* this could be a problem */
-		SIprintf("WARNING %s relwid %d (%d) pagesize %d pagetype %d\n",
-		catname, relwid, catdef->size, relpgsize, relpgtype);
+		SIprintf("WARNING %s relwid %d (structwid %d) pagesize %d pagetype %d\n",
+		catname, relwid, catdef->structsize, relpgsize, relpgtype);
 	    }
-	    if (catdef->columns && relatts != catdef->columns)
+	    if ((catdef->rowsize != 0 && relwid != catdef->rowsize)
+	      || (catdef->columns != 0 && relatts != catdef->columns))
 	    {
-		SIprintf("INTERNAL ERROR: Fix DUC_CATDEF for %s (%d %d)\n",
-			catdef->catname, catdef->columns, relatts);
+		SIprintf("INTERNAL ERROR: Fix DUC_CATDEF for %s; cols: %d is %d, wid %d is %d \n",
+			catdef->catname, catdef->columns, relatts, catdef->rowsize, relwid);
 	    }
 	}
     }
@@ -6208,6 +6222,8 @@ duc_create_catalog(char *catalog)
 **      09-Feb-2010 (maspa05) b122651
 **       added Duc_equivcats - a list of equivalent catalogs for the purposes
 **       of modify. Prime (so far only) instance is iirelation for iirel_idx
+**	5-May-2010 (kschendel)
+**	    Return as soon as a statement fails, so caller can do nice msgs.
 */
 VOID
 duc_modify_catalog(char *catalog)
@@ -6249,8 +6265,11 @@ duc_modify_catalog(char *catalog)
 	qry = catdef->modify;
 	exec sql execute immediate :qry;
 	if (sqlca.sqlcode < 0)
+	{
 	    /* Error shouldn't happen, but this should be msg-ized! */
 	    SIprintf("SQL ERROR %d for %s\n", sqlca.sqlcode, qry);
+	    return;
+	}
     }
    
     if (catdef->index1)
@@ -6258,8 +6277,11 @@ duc_modify_catalog(char *catalog)
 	qry = catdef->index1;
 	exec sql execute immediate :qry;
 	if (sqlca.sqlcode < 0)
+	{
 	    /* Error shouldn't happen, but this should be msg-ized! */
 	    SIprintf("SQL ERROR %d for %s\n", sqlca.sqlcode, qry);
+	    return;
+	}
     }
 
     if (catdef->index2)
@@ -6267,8 +6289,11 @@ duc_modify_catalog(char *catalog)
 	qry = catdef->index2;
 	exec sql execute immediate :qry;
 	if (sqlca.sqlcode < 0)
+	{
 	    /* Error shouldn't happen, but this should be msg-ized! */
 	    SIprintf("SQL ERROR %d for %s\n", sqlca.sqlcode, qry);
+	    return;
+	}
     }
 
     return;
@@ -6382,7 +6407,7 @@ duc_ins_capabilities(char *capabilities, char *value)
 
     cap = capabilities;
     val = value;
-    exec sql insert into iidbcapabilities (cap_capability,cap_value)
+    exec sql repeated insert into iidbcapabilities (cap_capability,cap_value)
 	 values (:cap, :val); 
 }
 
@@ -6408,7 +6433,6 @@ duc_ins_capabilities(char *capabilities, char *value)
 **	out of inertia.
 ** 
 ** NOTE: some of these create statements use db_maxname_hostvar !!!
-** NOTE: some of these create statements use db_maxown_hostvar !!!
 ** NOTE: some of these create statements use db_maxloc_hostvar !!!
 ** 
 ** Inputs:
@@ -6426,6 +6450,8 @@ duc_ins_capabilities(char *capabilities, char *value)
 ** History:
 **      07-apr-2009
 **          Created (from code in other routines)
+**	27-Apr-2010 (kschendel) SIR 123639
+**	    Drop iiprotect and iiintegrity out of this list, do via sql.
 */
 static VOID
 duc_quel_create(char *catalog)
@@ -6449,73 +6475,6 @@ duc_quel_create(char *catalog)
 ##	create iitree(treetabbase=i4, treetabidx=i4,treeid1=i4, treeid2=i4, 
 ##		      treeseq=i2, treemode=i2, treevers=i2,
 ##		      treetree=varbyte(1024))
-	}
-
-	else if (!STcmp(catalog, "iiprotect"))
-	{
-##	create iiprotect(
-##		protabbase=i4,		protabidx=i4,
-##		propermid=i2,		proflags=i2,
-##		protodbgn=i2,		protodend=i2,
-##		prodowbgn=i2,		prodowend=i2,
-##		proqryid1=i4,		proqryid2=i4,
-##		protreeid1=i4,		protreeid2=i4,
-##		procrtime1=i4,		procrtime2=i4,
-##		proopctl=i4,		proopset=i4,
-##		provalue=i4,		prodepth=i2,
-##		probjtype=char(1),	probjstat=char(1),
-##		probjname=char(db_maxname_hostvar),
-##		probjowner=char(db_maxown_hostvar),
-##		prograntor=char(db_maxown_hostvar),
-##		prouser=char(db_maxown_hostvar),	proterm=char(16),
-##		profill3=i2,		progtype=i2,	
-##		proseq=i4,
-##		prodomset1=i4,          prodomset2=i4,		
-##		prodomset3=i4, 		prodomset4=i4,		
-##		prodomset5=i4, 		prodomset6=i4,		
-##		prodomset7=i4, 		prodomset8=i4,		
-##		prodomset9=i4, 		prodomseta=i4,		
-##		prodomset11=i4,		prodomset12=i4,		
-##		prodomset13=i4,		prodomset14=i4,		
-##		prodomset15=i4,		prodomset16=i4,		
-##		prodomset17=i4,		prodomset18=i4,		
-##		prodomset19=i4,		prodomset20=i4,		
-##		prodomset21=i4,		prodomset22=i4,		
-##		prodomset23=i4,		prodomset24=i4,		
-##		prodomset25=i4,		prodomset26=i4,		
-##		prodomset27=i4,		prodomset28=i4,		
-##		prodomset29=i4,		prodomset30=i4,		
-##		prodomset31=i4,		prodomset32=i4,		
-##		prodomset33=i4,
-##		proreserve=char(32))
-	}
-
-	else if (!STcmp(catalog, "iiintegrity"))
-	{
-##      create iiintegrity(inttabbase=i4, inttabidx=i4,
-##                         intqryid1=i4, intqryid2=i4, inttreeid1=i4,
-##                         inttreeid2=i4, intresvar=i2, intnumber=i2,
-##                         intseq=i4,
-##                         intdomset1=i4, 
-##                         intdomset2=i4, intdomset3=i4, intdomset4=i4, 
-##                         intdomset5=i4, intdomset6=i4, intdomset7=i4, 
-##                         intdomset8=i4, intdomset9=i4, intdomseta=i4,
-##                         intdomset11=i4, intdomset12=i4, intdomset13=i4,
-##                         intdomset14=i4, intdomset15=i4, intdomset16=i4,
-##                         intdomset17=i4, intdomset18=i4, intdomset19=i4,
-##                         intdomset20=i4, intdomset21=i4, intdomset22=i4,
-##                         intdomset23=i4, intdomset24=i4, intdomset25=i4,
-##                         intdomset26=i4, intdomset27=i4, intdomset28=i4,
-##                         intdomset29=i4, intdomset30=i4, intdomset31=i4,
-##                         intdomset32=i4, intdomset33=i4,
-##			   consname=char(db_maxname_hostvar),
-##                         consid1=i4,
-##                         consid2=i4,
-##			   consschema_id1=i4,
-##			   consschema_id2=i4,
-##			   consflags=i4, cons_create_date=i4,
-##			   consdelrule=i2, consupdrule=i2,
-##                         intreserve=char(28))
 	}
 }
 
@@ -6581,6 +6540,11 @@ duc_fix_maxname(char *b)
     {
 	CVla((i4)DB_COLLATION_MAXNAME, tempbuf);
 	MEmove(STlength(tempbuf), tempbuf, ' ', 24, b);
+    }
+    else if (MEcmp(b, "##DB_COL_BYTES##", 16) == 0)
+    {
+	CVla((i4)DB_COL_BYTES, tempbuf);
+	MEmove(STlength(tempbuf), tempbuf, ' ', 16, b);
     }
     else
     {

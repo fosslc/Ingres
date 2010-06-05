@@ -187,10 +187,12 @@ FUNC_EXTERN	DB_STATUS	cut_thread_term(bool		cascade,
 **	    Added CUT_BUF_TRACE, cut_async_status
 **	16-Sep-2004 (schka24)
 **	    Added PARENT flag, mostly for cleanup.
+**	27-Apr-2010 (kschendel)
+**	    32 is plenty for an internal name
 */
 struct _CUT_RCB
 {
-    char	cut_buf_name[DB_MAXNAME + 1]; /* null terminated 32char name */
+    char	cut_buf_name[DB_OLDMAXNAME_32 + 1]; /* null terminated 32char name */
     i4		cut_cell_size;
     i4		cut_num_cells;
     i4		cut_buf_use;

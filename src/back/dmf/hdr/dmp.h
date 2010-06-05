@@ -3520,7 +3520,10 @@ CLOSE_ERROR,TMPMOD_WAIT,INCONS_IDX,FLUSH,VALIDATED,SHOWONLY,BEING_RELEASED"
 					    ** Can steal for e.g. TCB_CLUSTERED
                                             */
 #define                  TCB_COMPRESSED     0x00000200L
-                                            /* Table has compressed records. */
+                                            /* Table has compressed records.
+					    ** FIXME!  GET RID OF THIS!
+					    ** Look at relcomptype instead.
+					    */
 #define			 TCB_INDEX_COMP	    0x00000400L
 					    /* will be set at table creation
 					    ** time if this table (or index)

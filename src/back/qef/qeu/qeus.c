@@ -1067,6 +1067,8 @@ static i4 createTblErrXlate(
 **	    Added support for alter table rename table/column.
 **	22-Apr-2010 (kschendel) SIR 123485
 **	    Use padded copy of standard savepoint name in the QEF SCB.
+**	5-May-2010 (kschendel)
+**	    Don't dependency-check catalogs.
 **
 */
 DB_STATUS
@@ -1900,64 +1902,67 @@ ddb_refresh:
 		    err = dmt_show.error.err_code;
 		    goto exit;
 	        }
-    
-	        status = E_DB_OK;
-    
-	        qeuq_cb.qeuq_next = qeuq_cb.qeuq_prev = 0;
-	        qeuq_cb.qeuq_length = sizeof (qeuq_cb);
-	        qeuq_cb.qeuq_type = QEUQCB_CB;
-	        qeuq_cb.qeuq_owner = (PTR)DB_QEF_ID;
-	        qeuq_cb.qeuq_ascii_id = QEUQCB_ASCII_ID;
-	        qeuq_cb.qeuq_db_id = qeu_cb->qeu_db_id;
-	        qeuq_cb.qeuq_d_id = qeu_cb->qeu_d_id;
-	        qeuq_cb.qeuq_eflag = qeu_cb->qeu_eflag;
-	        qeuq_cb.qeuq_rtbl = &dmu_ptr->dmu_tbl_id;
-	        qeuq_cb.qeuq_status_mask = dmt_tbl_entry.tbl_status_mask;
-	        qeuq_cb.qeuq_qid.db_qry_high_time =
-		    qeuq_cb.qeuq_qid.db_qry_low_time = 0;
-    
-                if (!memoryStreamOpened)
-                {
-                    /* get a memory stream in which to build DMU_CBs */
-                    STRUCT_ASSIGN_MACRO(Qef_s_cb->qef_d_ulmcb, ulm);
-                    if ((status = qec_mopen(&ulm)) != E_DB_OK)
-                    {
-                        err = ulm.ulm_error.err_code;
-                        goto exit;
-                    }
-                    memoryStreamOpened = TRUE;
-                }
-        
-                STRUCT_ASSIGN_MACRO(dmu_ptr->dmu_tbl_id, indexid);
-    
-                /* Check for a dependent constraint */
-                status = qeu_d_check_conix(qef_cb, &qeuq_cb,
-                      &ulm, &indexid, 
-                      (dmt_tbl_entry.tbl_temporary) ? TRUE:FALSE,
-                      &error, &found_one);
-       
-                if ((status != E_DB_OK) || (found_one))
-                {
-                    if(status != E_DB_OK)
-                    {
-                        err = error;
-                    }
-                    else
-                    {
-                        /* Dependent constraint found */
-                        status = E_DB_ERROR;
-                        qef_error(I_QE2038_CONSTRAINT_TAB_IDX_ERR, 0L, 
-                               status, &error, error_block, 3,
-                               (sizeof("MODIFY") - 1), "MODIFY",
-                               (sizeof("modify") - 1), "modify",
-                               qec_trimwhite(DB_TAB_MAXNAME,
-                               dmu_ptr->dmu_table_name.db_tab_name),
-                               dmu_ptr->dmu_table_name.db_tab_name);
-                        err = E_QE0025_USER_ERROR;
-                    }
-                    goto exit;
-                }
-            }
+
+		/* Don't do dependency checking for catalogs, is a waste */
+		status = E_DB_OK;
+		if ((dmt_tbl_entry.tbl_status_mask & DMT_CATALOG) == 0)
+		{
+		    qeuq_cb.qeuq_next = qeuq_cb.qeuq_prev = 0;
+		    qeuq_cb.qeuq_length = sizeof (qeuq_cb);
+		    qeuq_cb.qeuq_type = QEUQCB_CB;
+		    qeuq_cb.qeuq_owner = (PTR)DB_QEF_ID;
+		    qeuq_cb.qeuq_ascii_id = QEUQCB_ASCII_ID;
+		    qeuq_cb.qeuq_db_id = qeu_cb->qeu_db_id;
+		    qeuq_cb.qeuq_d_id = qeu_cb->qeu_d_id;
+		    qeuq_cb.qeuq_eflag = qeu_cb->qeu_eflag;
+		    qeuq_cb.qeuq_rtbl = &dmu_ptr->dmu_tbl_id;
+		    qeuq_cb.qeuq_status_mask = dmt_tbl_entry.tbl_status_mask;
+		    qeuq_cb.qeuq_qid.db_qry_high_time =
+			qeuq_cb.qeuq_qid.db_qry_low_time = 0;
+
+		    if (!memoryStreamOpened)
+		    {
+			/* get a memory stream in which to build DMU_CBs */
+			STRUCT_ASSIGN_MACRO(Qef_s_cb->qef_d_ulmcb, ulm);
+			if ((status = qec_mopen(&ulm)) != E_DB_OK)
+			{
+			    err = ulm.ulm_error.err_code;
+			    goto exit;
+			}
+			memoryStreamOpened = TRUE;
+		    }
+
+		    STRUCT_ASSIGN_MACRO(dmu_ptr->dmu_tbl_id, indexid);
+
+		    /* Check for a dependent constraint */
+		    status = qeu_d_check_conix(qef_cb, &qeuq_cb,
+			  &ulm, &indexid, 
+			  (dmt_tbl_entry.tbl_temporary) ? TRUE:FALSE,
+			  &error, &found_one);
+
+		    if ((status != E_DB_OK) || (found_one))
+		    {
+			if(status != E_DB_OK)
+			{
+			    err = error;
+			}
+			else
+			{
+			    /* Dependent constraint found */
+			    status = E_DB_ERROR;
+			    qef_error(I_QE2038_CONSTRAINT_TAB_IDX_ERR, 0L, 
+				   status, &error, error_block, 3,
+				   (sizeof("MODIFY") - 1), "MODIFY",
+				   (sizeof("modify") - 1), "modify",
+				   qec_trimwhite(DB_TAB_MAXNAME,
+				   dmu_ptr->dmu_table_name.db_tab_name),
+				   dmu_ptr->dmu_table_name.db_tab_name);
+			    err = E_QE0025_USER_ERROR;
+			}
+			goto exit;
+		    }
+		} /* if not catalog */
+            } /* if dependency-check */
 
 	   /* If renaming a table or a column then validate 
 	   ** the dependent objects on this table 
@@ -5084,6 +5089,17 @@ qeu_modify_finish(QEF_CB *qef_cb, DMU_CB *dmucb, DM_DATA *pp_array)
 **	    is present.
 **      30-Nov-2009 (coomi01) b122958
 **          Make check on comments present column specific.
+**	5-May-2010 (kschendel)
+**	    During an upgradedb of an old (6.4) database, iisynonym may not
+**	    exist when a table with a secondary index is dropped.  It turns
+**	    out that "drop synonyms" is ALWAYS called when a table has a
+**	    secondary index (because there might be a synonym on the index!!).
+**	    If qeu-drop-synonym returns a QE0031 (nonexistent table),
+**	    and the session is running upgradedb, just ignore the error.
+**	    Note that none of the other cascading drops called here has
+**	    this problem;  old DB's won't show "comment exists", system
+**	    catalogs won't have rules or constraints, and permit cascade
+**	    manages to work even if iiprotect is in an old format.
 */
 DB_STATUS
 qeu_dqrymod_objects(
@@ -5275,7 +5291,11 @@ i4 	*tbl_2_status_mask)
 	    if (status = qeu_drop_synonym(qef_cb, qeuq_cb))
 	    {
 		err_num = qeuq_cb->error.err_code;
-		break;
+		if (err_num != E_QE0031_NONEXISTENT_TABLE
+		  || (qef_cb->qef_sess_flags & QEF_RUNNING_UPGRADEDB) == 0)
+		    break;
+		status = E_DB_OK;
+		CLRDBERR(&qeuq_cb->error);
 	    }
 	}
 

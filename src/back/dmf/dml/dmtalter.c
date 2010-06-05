@@ -495,6 +495,8 @@
 **	    Enable journalling state to be flagged on iirelation records 
 **	    for indexes (including primary key and foreign key constraints
 **	    since these are implemented as indexes).
+**	4-May-2010 (kschendel)
+**	    DM9026 can't take parameters, just drop the message here.
 */
 DB_STATUS
 dmt_alter(
@@ -1108,13 +1110,6 @@ DMT_CB	    *dmt_cb)
     {
 	uleFormat(&dmt->error, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL, 
 	    (char * )NULL, (i4)0, (i4 *)NULL, &local_error, 0);
-	if (relupdate)
-	{
-	    uleFormat(NULL, E_DM9026_REL_UPDATE_ERR, (CL_ERR_DESC *)NULL, ULE_LOG, 
-		NULL, (char *)NULL, (i4)0, (i4 *)NULL, &local_error, 1,
-		sizeof(DB_DB_NAME),
-		&rel_rcb->rcb_tcb_ptr->tcb_dcb_ptr->dcb_name);
-	}
 	SETDBERR(&dmt->error, 0, E_DM010A_ERROR_ALTERING_TABLE);
     }
 

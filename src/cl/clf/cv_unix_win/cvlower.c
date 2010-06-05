@@ -133,7 +133,7 @@ char	*string;
 	{
 		/* make sure you got at least a ptr */
 
-		while (*sp != NULL)
+		while (*sp != EOS)
 		{
 			/*
 				split assignment and increment as

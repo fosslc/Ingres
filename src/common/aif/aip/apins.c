@@ -1339,6 +1339,8 @@ ns_keyword( char *token, KEYWORD_TBL *tbl )
 ** History:
 **	10-Mar-97 (gordy)
 **	    Created.
+**	7-May-2010 (kschendel)
+**	    Compiler caught missing & on CVal call.
 */
 
 static II_BOOL
@@ -1354,7 +1356,7 @@ ns_param_marker( API_PARSE *parse, i4  fld, i4  *index )
 	** included with the marker?
 	*/
 	if ( parse->fields[ fld ][2]  &&
-	     CVal( parse->fields[ fld ][2], &value ) == OK )
+	     CVal( &parse->fields[ fld ][2], &value ) == OK )
 	    *index = value;
 
 	/*

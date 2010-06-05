@@ -331,17 +331,19 @@ EXEC SQL END DECLARE SECTION;
 **	    Added FIPS flag for upgradedb of FIPS database.
 **	31-Aug-2004 (schka24)
 **	    Remove was-journaling, add did-bootstrap.
+**	2-May-2010 (kschendel) SIR 123639
+**	    Don't need did-bootstrap any more.
 */
 
 typedef struct _dbname_node
 {
-    char	dbname[DB_MAXNAME+1];	    /* holds a database name */
-    char	ddbname[DB_MAXNAME+1];	    /* holds a DDB name */
-    char	cdbname[DB_MAXNAME+1];	    /* holds a CDB name */
-    char	dba[DB_MAXNAME+1];	    /* dba for database */
-    char	locname[DU_LOC_SIZE+4];	    /* Database location name */
+    char	dbname[DB_DB_MAXNAME+1];    /* holds a database name */
+    char	ddbname[DB_DB_MAXNAME+1];   /* holds a DDB name */
+    char	cdbname[DB_DB_MAXNAME+1];   /* holds a CDB name */
+    char	dba[DB_OWN_MAXNAME+1];	    /* dba for database */
+    char	locname[DB_LOC_MAXNAME+4];  /* Database location name */
     char	areaname[DB_AREA_MAX+4];    /* Database area name */
-    char	locdump[DU_LOC_SIZE+4];	    /* Dump location name */
+    char	locdump[DB_LOC_MAXNAME+4];  /* Dump location name */
     char	areadump[DB_AREA_MAX+4];    /* Dump area name */
     i4		level;			    /* db's current level */
     i4		access;			    /* db's access flags */
@@ -352,7 +354,6 @@ typedef struct _dbname_node
     bool	tree_convert;		    /* convert trees */
     bool	star_flag;		    /* true if db is a STAR db*/
     bool	upcase;   		    /* true for FIPS db */
-    bool	did_bootstrap;		    /* Converted "bootstrap" catalogs */
     bool	first_open;		    /* First-time flag for open msgs */
     struct _dbname_node	*nextdb;	    /* link pointer */
 } DBNAME_NODE;

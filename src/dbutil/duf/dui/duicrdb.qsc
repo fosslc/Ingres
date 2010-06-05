@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004, 2009 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -22,6 +22,7 @@
 ##include    <duenv.qsh>
 #include    <ducdb.h>
 #include    <duu.h>
+#include    <duucatdef.h>
 exec sql include SQLCA;     /* Embedded SQL Communications Area */
 
 /**
@@ -841,6 +842,8 @@ dui_stdcts(gateway, duc_errcb, duc_modes, duc_dbenv)
 **	    Added SQL_MAX_DECIMAL_PRECISION capability row.
 **	 1-Oct-09 (gordy)
 **	    Added SQL_MAX_PROCEDURE_NAME_LEN capability row.
+**	28-Apr-2010 (kschendel) SIR 123639
+**	    Table drive most of iidbcapabilities.
 */
 DU_STATUS
 dui_stdcats(gateway, duc_errcb, duc_modes, duc_dbenv)
@@ -850,9 +853,8 @@ DUC_MODE_VECT   *duc_modes;
 ##DU_ENV	*duc_dbenv;
 {
 	i4	col, nchar_set;
-	char	namelen[10]; 
-	char	user_namelen[10]; 
-	char	capvalue[10];
+	i4	i;
+	DUC_DBCAPS *cap;
 
 	/*
 	**  We only have entries here for capabilities in iidbcapabilities for
@@ -864,7 +866,6 @@ DUC_MODE_VECT   *duc_modes;
 ##	static  char  *cap_savepoints[]		= { "Y", "N" };
 ##	static  char  *cap_dbms_type[]		= { "INGRES", "RMS" };
 ##	static	char  *cap_nchar_set[]		= { "N", "Y" };
-##		char  owner[DB_MAXNAME+1];
 
 	nchar_set = *duc_dbenv->du_ucollation ? 1 : 0;
 
@@ -890,60 +891,21 @@ DUC_MODE_VECT   *duc_modes;
 
 	duc_create_catalog("iidbcapabilities");
 
-	STprintf(namelen, "%d", DB_MAXNAME);
-	STprintf(user_namelen, "%d", DB_OWN_MAXNAME);
-	duc_ins_capabilities(DU_DB1_QUEL_LEVEL, DU_DB1_CUR_QUEL_LEVEL);
-	duc_ins_capabilities(DU_DB2_SQL_LEVEL, DU_DB2_CUR_SQL_LEVEL);
-	duc_ins_capabilities("DISTRIBUTED", "N");
-	duc_ins_capabilities("MIXEDCASE_NAMES", "N");
+	cap = &Duc_dbcaps[0];
+	i = Duc_num_dbcaps;
+	while (--i >= 0)
+	{
+	    duc_ins_capabilities(cap->duc_capability, cap->duc_value);
+	    ++cap;
+	}
+	/* Finish up with non-constant entries */
 	duc_ins_capabilities("INGRES", cap_ingres[col]);
-	duc_ins_capabilities(DU_DB3_INGSQL_LEVEL, DU_DB3_CUR_INGSQL_LEVEL);
-	duc_ins_capabilities(DU_DB4_CMNSQL_LEVEL, DU_DB4_CUR_CMNSQL_LEVEL);
-	duc_ins_capabilities(DU_DB5_INGQUEL_LEVEL, DU_DB5_CUR_INGQUEL_LEVEL);
 	duc_ins_capabilities("SAVEPOINTS", cap_savepoints[col]);
 	duc_ins_capabilities("DBMS_TYPE", cap_dbms_type[col]);
-	duc_ins_capabilities("PHYSICAL_SOURCE", "T");
-	STprintf(capvalue, "%d", DB_MAX_COLS);
-	duc_ins_capabilities("MAX_COLUMNS", capvalue);
-	duc_ins_capabilities("INGRES_RULES", "Y");
-	duc_ins_capabilities("INGRES_UDT", "Y");
-	duc_ins_capabilities("INGRES_AUTH_GROUP", "Y");
-	duc_ins_capabilities("INGRES_AUTH_ROLE", "Y");
-	duc_ins_capabilities("INGRES_LOGICAL_KEY", "Y");
-	duc_ins_capabilities("UNIQUE_KEY_REQ", "N");
-	duc_ins_capabilities("ESCAPE", "Y");
-	duc_ins_capabilities("OWNER_NAME", "QUOTED");
-	duc_ins_capabilities(DU_DB6_STDCAT_LEVEL, DU_DB6_CUR_STDCAT_LEVEL);
-	duc_ins_capabilities(DU_DB7_OPENSQL_LEVEL, DU_DB7_CUR_OPENSQL_LEVEL);
 	duc_ins_capabilities("DB_NAME_CASE", duc_dbenv->du_reg_id_case);
 	duc_ins_capabilities("DB_DELIMITED_CASE", duc_dbenv->du_delim_id_case);
 	duc_ins_capabilities("DB_REAL_USER_CASE", duc_dbenv->du_real_user_case);
 	duc_ins_capabilities("NATIONAL_CHARACTER_SET", cap_nchar_set[nchar_set]);
-	duc_ins_capabilities("SQL_MAX_BYTE_LITERAL_LEN", "32000");
-	duc_ins_capabilities("SQL_MAX_CHAR_LITERAL_LEN", "32000");
-	duc_ins_capabilities("SQL_MAX_BYTE_COLUMN_LEN", "32000");
-	duc_ins_capabilities("SQL_MAX_VBYT_COLUMN_LEN", "32000");
-	duc_ins_capabilities("SQL_MAX_CHAR_COLUMN_LEN", "32000");
-	duc_ins_capabilities("SQL_MAX_VCHR_COLUMN_LEN", "32000");
-	duc_ins_capabilities("SQL_MAX_NCHR_COLUMN_LEN", "16000");
-	duc_ins_capabilities("SQL_MAX_NVCHR_COLUMN_LEN", "16000");
-	duc_ins_capabilities("SQL_MAX_SCHEMA_NAME_LEN", user_namelen);
-	duc_ins_capabilities("SQL_MAX_PROCEDURE_NAME_LEN", namelen);
-	duc_ins_capabilities("SQL_MAX_TABLE_NAME_LEN", namelen);
-	duc_ins_capabilities("SQL_MAX_COLUMN_NAME_LEN", namelen);
-	duc_ins_capabilities("SQL_MAX_USER_NAME_LEN", user_namelen);
-	duc_ins_capabilities("SQL_MAX_ROW_LEN", "262144");
-	duc_ins_capabilities("SQL_MAX_STATEMENTS", "0");
-	STprintf(capvalue, "%d", DB_MAX_DECPREC);
-	duc_ins_capabilities("SQL_MAX_DECIMAL_PRECISION", capvalue);
-
-	if (duc_dbenv->du_dbservice & DU_NAME_UPPER)
-	    MEmove(sizeof(ERx("$ingres")) - 1, (PTR) ERx("$INGRES"), ' ',
-		   sizeof(owner), owner);
-	else
-	    MEmove(sizeof(ERx("$ingres")) - 1, (PTR) ERx("$ingres"), ' ',
-		   sizeof(owner), owner);
-	owner[sizeof(owner)-1] = EOS;
 
 	/* Create all standard catalog views */
 	duc_create_stdcat_views(duc_dbenv->du_dbname, 

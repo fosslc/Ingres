@@ -45,6 +45,8 @@
 **      26-Jul-2004 (lakvi01)
 **          Backed-out the above change to keep the open-source stable.
 **          Will be revisited and submitted at a later date. 
+**	29-Apr-2010 (kschendel)
+**	    Fix a Solaris compiler warning.
 **/
 
 /*
@@ -149,7 +151,7 @@ typedef struct {
 } UT_COM;
 
 
-FUNC_EXTERN UTcomline(
+FUNC_EXTERN STATUS UTcomline(
 #if defined(CL_PROTOTYPED) && !defined(sgi_us5)
         SH_DESC                 *sh_desc,
         SH_DESC                 *desc_ret,

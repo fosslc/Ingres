@@ -535,6 +535,8 @@ SQLSTATE_MAPPING_REQUIRED
 **	21-apr-2010 (toumi01) SIR 122403
 **	    Add messages for encryption. Also fix typo noticed in
 **	    E_DM930D_DM2U_READONLY_UPD_CATS.
+**	30-Apr-2010 (kschendel)
+**	    9026 & 928E don't have parameters, fix the messages.
 */
 
 #define _DM_CLASS  3
@@ -9312,7 +9314,7 @@ E_DM9025_BAD_TABLE_DESTROY:SS5000B_INTERNAL_ERROR
 "Error destroying the table:%1c
 in database:%0c."
 E_DM9026_REL_UPDATE_ERR:SS5000B_INTERNAL_ERROR
-"Error updating iirelation system table on database %0c
+"Error updating iirelation system table
 while executing some other operation such as modify, index, etc.
 Check consistency of system catalogs."
 E_DM9027_INDEX_UPDATE_ERR:SS5000B_INTERNAL_ERROR
@@ -11411,22 +11413,18 @@ perform an online backup operation."
 **	problem.
 */
 E_DM928E_CONFIG_FORMAT_ERROR:SS5000B_INTERNAL_ERROR
-"Error in configuration file format--
-  size = %0d, rel1check = %1d, rel2check = %2d attcheck = %3d, indcheck = %4d."
+"Length or type error in configuration file format."
 /*%
 ** Parameters:
-**	%0 - size of structures
-**	%1 - first iirelation check
-**	%2 - second iirelation check
-**	%3 - iiattribute check
-**	%4 - iiindex check
+**	None.
 **
 ** Explanation:
-**	The config file, aaaaaaaa.cnf, is inconsistent with the core system
-**	catalogs.
+**	An internal check of structure lengths or type codes in the
+**	database configuration file (aaaaaaaa.cnf) failed.  This
+**	indicates a corrupted config file.
 **
 ** System Status:
-**	The database is inconsistent.
+**	The database is inaccessible.
 **
 ** Recommendation:
 **	This error may be due to a config file format problem.  The only

@@ -1048,6 +1048,14 @@ typedef i4		    DM_MISC_FLAG;
 #define		DMF_T_OLD_VERSION	DU_OLD_DBCMPTLVL
 
 #define		DMF_T10_VERSION		DU_MAKE_VERSION(10,0,0)
+
+/* This is the "current" table creation version.
+**
+** DO NOT BLINDLY CHANGE THIS!
+**
+** Only change this when something about a table internal structure
+** changes.  THIS DOES NOT NEED TO REFLECT THE INGRES VERSION.
+*/
 #define		DMF_T_VERSION		DMF_T10_VERSION
 
 /*

@@ -225,6 +225,8 @@
 **          Add cases for DB_DEF_ID_FALSE/TRUE in ckdefault.
 **	13-Jan-2010 (wanfr01) Bug 123139
 **	    Include cv.h for function defintions
+**	27-Apr-2010 (kschendel) SIR 123639
+**	    Change bitmap columns to BYTE for easier expansion.
 **/
 
 
@@ -4357,7 +4359,8 @@ DUVE_CB            *duve_cb;
 **	    Don't suggest dropping the whole of iiprotect if a permit is
 **	    found wrong for a database table - just note it (like with
 **	    S_DU163D).
-[@history_template@]...
+**	27-Apr-2010 (kschendel) SIR 123639
+**	    Byte-ize the bitmap columns.
 */
 DU_STATUS
 ckprotups(duve_cb)
@@ -5121,39 +5124,7 @@ DUVE_CB            *duve_cb;
 		**     be marked dormant
 		*/
 
-		attr_map[0] = pro_tbl.prodomset1;
-		attr_map[1] = pro_tbl.prodomset2;
-		attr_map[2] = pro_tbl.prodomset3;
-		attr_map[3] = pro_tbl.prodomset4;
-		attr_map[4] = pro_tbl.prodomset5;
-		attr_map[5] = pro_tbl.prodomset6;
-		attr_map[6] = pro_tbl.prodomset7;
-		attr_map[7] = pro_tbl.prodomset8;
-		attr_map[8] = pro_tbl.prodomset9;
-		attr_map[9] = pro_tbl.prodomseta;
-		attr_map[10] = pro_tbl.prodomset11;
-		attr_map[11] = pro_tbl.prodomset12;
-		attr_map[12] = pro_tbl.prodomset13;
-		attr_map[13] = pro_tbl.prodomset14;
-		attr_map[14] = pro_tbl.prodomset15;
-		attr_map[15] = pro_tbl.prodomset16;
-		attr_map[16] = pro_tbl.prodomset17;
-		attr_map[17] = pro_tbl.prodomset18;
-		attr_map[18] = pro_tbl.prodomset19;
-		attr_map[19] = pro_tbl.prodomset20;
-		attr_map[20] = pro_tbl.prodomset21;
-		attr_map[21] = pro_tbl.prodomset22;
-		attr_map[22] = pro_tbl.prodomset23;
-		attr_map[23] = pro_tbl.prodomset24;
-		attr_map[24] = pro_tbl.prodomset25;
-		attr_map[25] = pro_tbl.prodomset26;
-		attr_map[26] = pro_tbl.prodomset27;
-		attr_map[27] = pro_tbl.prodomset28;
-		attr_map[28] = pro_tbl.prodomset29;
-		attr_map[29] = pro_tbl.prodomset30;
-		attr_map[30] = pro_tbl.prodomset31;
-		attr_map[31] = pro_tbl.prodomset32;
-		attr_map[32] = pro_tbl.prodomset33;
+		MEcopy(&pro_tbl.prodomset[0], sizeof(attr_map), (char *) &attr_map[0]);
 
 		duve_check_privs(&pro_id, 
 		    (i4) (pro_tbl.proopset | DB_GRANT_OPTION),
@@ -7681,40 +7652,8 @@ ckpriv(
 	{
 	    priv_needed = prv_tbl.i_priv;
 	}
-	
-	attr_map[0] = prv_tbl.i_priv_map1;
-	attr_map[1] = prv_tbl.i_priv_map2;
-	attr_map[2] = prv_tbl.i_priv_map3;
-	attr_map[3] = prv_tbl.i_priv_map4;
-	attr_map[4] = prv_tbl.i_priv_map5;
-	attr_map[5] = prv_tbl.i_priv_map6;
-	attr_map[6] = prv_tbl.i_priv_map7;
-	attr_map[7] = prv_tbl.i_priv_map8;
-	attr_map[8] = prv_tbl.i_priv_map9;
-	attr_map[9] = prv_tbl.i_priv_mapa;
-	attr_map[10] = prv_tbl.i_priv_map11;
-	attr_map[11] = prv_tbl.i_priv_map12;
-	attr_map[12] = prv_tbl.i_priv_map13;
-	attr_map[13] = prv_tbl.i_priv_map14;
-	attr_map[14] = prv_tbl.i_priv_map15;
-	attr_map[15] = prv_tbl.i_priv_map16;
-	attr_map[16] = prv_tbl.i_priv_map17;
-	attr_map[17] = prv_tbl.i_priv_map18;
-	attr_map[18] = prv_tbl.i_priv_map19;
-	attr_map[19] = prv_tbl.i_priv_map20;
-	attr_map[20] = prv_tbl.i_priv_map21;
-	attr_map[21] = prv_tbl.i_priv_map22;
-	attr_map[22] = prv_tbl.i_priv_map23;
-	attr_map[23] = prv_tbl.i_priv_map24;
-	attr_map[24] = prv_tbl.i_priv_map25;
-	attr_map[25] = prv_tbl.i_priv_map26;
-	attr_map[26] = prv_tbl.i_priv_map27;
-	attr_map[27] = prv_tbl.i_priv_map28;
-	attr_map[28] = prv_tbl.i_priv_map29;
-	attr_map[29] = prv_tbl.i_priv_map30;
-	attr_map[30] = prv_tbl.i_priv_map31;
-	attr_map[31] = prv_tbl.i_priv_map32;
-	attr_map[32] = prv_tbl.i_priv_map33;
+
+	MEcopy(&prv_tbl.i_priv_map[0], sizeof(attr_map), (char *) &attr_map[0]);
 
 	duve_check_privs(&indep_obj_id, priv_needed, 
 	    prv_tbl.i_priv_grantee, attr_map, &satisfied);
@@ -8065,7 +8004,8 @@ ckpriv(
 **	28-Feb-2008 (kibro01) b119427
 **	    The DBA doesn't have the GRANT option in the bitmask in iiprotect,
 **	    but they always have an implicit GRANT option to anything.
-[@history_template@]...
+**	27-Apr-2010 (kschendel) SIR 123639
+**	    Byte-ize the bitmap.
 */
 static VOID
 duve_check_privs( 
@@ -8084,39 +8024,7 @@ duve_check_privs(
 	i4	priv_wogo;
 	i4	user_grantee;
 	i4	public_grantee;
-	u_i4	attr_word1;
-	u_i4    attr_word2;
-	u_i4    attr_word3;
-	u_i4    attr_word4;
-	u_i4    attr_word5;
-	u_i4    attr_word6;
-	u_i4    attr_word7;
-	u_i4    attr_word8;
-	u_i4    attr_word9;
-	u_i4    attr_worda;
-	u_i4    attr_word11;
-	u_i4    attr_word12;
-	u_i4    attr_word13;
-	u_i4    attr_word14;
-	u_i4    attr_word15;
-	u_i4    attr_word16;
-	u_i4    attr_word17;
-	u_i4    attr_word18;
-	u_i4    attr_word19;
-	u_i4    attr_word20;
-	u_i4    attr_word21;
-	u_i4    attr_word22;
-	u_i4    attr_word23;
-	u_i4    attr_word24;
-	u_i4    attr_word25;
-	u_i4    attr_word26;
-	u_i4    attr_word27;
-	u_i4    attr_word28;
-	u_i4    attr_word29;
-	u_i4    attr_word30;
-	u_i4    attr_word31;
-	u_i4    attr_word32;
-	u_i4    attr_word33;
+	char	attr_bytes[DB_COL_BYTES];
 	i4	cnt;
     EXEC SQL END DECLARE SECTION;
 
@@ -8153,7 +8061,6 @@ duve_check_privs(
     {
         i4	i;
         u_i4	attrs_to_find[DB_COL_WORDS];
-    	u_i4	*priv_attrs[DB_COL_WORDS];
 
 	/* 
 	** make a copy of users attribute map since we plan to clear some (and
@@ -8163,53 +8070,8 @@ duve_check_privs(
 	for (i = 0; i < DB_COL_WORDS; i++)
 	    attrs_to_find[i] = attrmap[i];
 
-	/* 
-	** store addresses of attr_word1-attr_worda into priv_attrs to simplify
-	** code determining whether the privilege has been satisfied
-	*/
-	priv_attrs[0] = &attr_word1;
-	priv_attrs[1] = &attr_word2;
-	priv_attrs[2] = &attr_word3;
-	priv_attrs[3] = &attr_word4;
-	priv_attrs[4] = &attr_word5;
-	priv_attrs[5] = &attr_word6;
-	priv_attrs[6] = &attr_word7;
-	priv_attrs[7] = &attr_word8;
-	priv_attrs[8] = &attr_word9;
-	priv_attrs[9] = &attr_worda;
-	priv_attrs[10] = &attr_word11;
-	priv_attrs[11] = &attr_word12;
-	priv_attrs[12] = &attr_word13;
-	priv_attrs[13] = &attr_word14;
-	priv_attrs[14] = &attr_word15;
-	priv_attrs[15] = &attr_word16;
-	priv_attrs[16] = &attr_word17;
-	priv_attrs[17] = &attr_word18;
-	priv_attrs[18] = &attr_word19;
-	priv_attrs[19] = &attr_word20;
-	priv_attrs[20] = &attr_word21;
-	priv_attrs[21] = &attr_word22;
-	priv_attrs[22] = &attr_word23;
-	priv_attrs[23] = &attr_word24;
-	priv_attrs[24] = &attr_word25;
-	priv_attrs[25] = &attr_word26;
-	priv_attrs[26] = &attr_word27;
-	priv_attrs[27] = &attr_word28;
-	priv_attrs[28] = &attr_word29;
-	priv_attrs[29] = &attr_word30;
-	priv_attrs[30] = &attr_word31;
-	priv_attrs[31] = &attr_word32;
-	priv_attrs[32] = &attr_word33;
-
         EXEC SQL DECLARE check_priv_cursor CURSOR FOR
-	    select prodomset1, prodomset2, prodomset3, prodomset4, prodomset5,
-	           prodomset6, prodomset7, prodomset8, prodomset9, prodomseta,
-	           prodomset11, prodomset12, prodomset13, prodomset14,
-	           prodomset15, prodomset16, prodomset17, prodomset18,
-	           prodomset19, prodomset20, prodomset21, prodomset22,
-	           prodomset23, prodomset24, prodomset25, prodomset26,
-	           prodomset27, prodomset28, prodomset29, prodomset30,
-	           prodomset31, prodomset32, prodomset33
+	    select prodomset
 	    from iiprotect
 	    where 
 		    protabbase = :priv_tid
@@ -8230,15 +8092,7 @@ duve_check_privs(
         {
 	    /* get tuple from iiprotect */
 	    EXEC SQL FETCH check_priv_cursor 
-		INTO :attr_word1, :attr_word2, :attr_word3, :attr_word4,
-		     :attr_word5, :attr_word6, :attr_word7, :attr_word8,
-		     :attr_word9, :attr_worda, :attr_word11, :attr_word12,
-		     :attr_word13, :attr_word14, :attr_word15, :attr_word16,
-		     :attr_word17, :attr_word18, :attr_word19, :attr_word20,
-		     :attr_word21, :attr_word22, :attr_word23, :attr_word24,
-		     :attr_word25, :attr_word26, :attr_word27, :attr_word28,
-		     :attr_word29, :attr_word30, :attr_word31, :attr_word32,
-		     :attr_word33;
+		INTO :attr_bytes;
 	    if (sqlca.sqlcode == 100) /* then no more tuples in table */
 	    {
 	        EXEC SQL CLOSE check_priv_cursor;
@@ -8250,7 +8104,7 @@ duve_check_privs(
 
 	    for (i = 0; i < DB_COL_WORDS; i++)
 	    {
-		if (attrs_to_find[i] &= ~*priv_attrs[i])
+		if (attrs_to_find[i] &= ~*((u_i4 *)(&attr_bytes[0]) + i))
 		    *satisfied = FALSE;
 	    }
 	}

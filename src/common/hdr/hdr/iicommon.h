@@ -159,6 +159,8 @@
 **          Changes for Long IDs
 **     22-apr-2010 (stial01)
 **          Use DB_EXTFMT_SIZE for register table newcolname IS 'ext_format'
+**	27-Apr-2010 (kschendel) SIR 123639
+**	    Take max # of columns from build config if available.
 **/
 
 #define                  P2K		 2048
@@ -336,6 +338,23 @@ typedef char	DB_DATE_STR[DB_DATE_OUTLENGTH + 1];    /* date + EOS */
 
 /* New style versions. */
 #define		DU_DBV1000		DU_MAKE_VERSION(10,0,0)
+
+/*
+** Define the current database compatibility level.
+**
+** DO NOT BLINDLY CHANGE THIS.
+**
+** DO NOT MAKE A NEW COMPAT-LEVEL JUST BECAUSE THE INGRES VERSION HAS CHANGED.
+**
+** The database "compatibility" level is not a version number!
+** It does not need to advance every time the Ingres version advances!
+**
+** Do not change this unless something structural in the database has
+** changed (new catalogs, different catalogs, new page types, etc).
+** If you change the compat-level without need, at best you are
+** making life difficult for upgradedb, and at worst you are sowing
+** massive confusion during the development cycle.
+*/
 #define		DU_CUR_DBCMPTLVL	DU_DBV1000
 
 /*}
@@ -440,8 +459,14 @@ typedef struct _DB_ERROR
         (e)->err_data = (i4)d
 
 
+#ifndef conf_MAX_COLS
 #define                 DB_MAX_COLS     1024	/* Max # of cols in table   */
-#define                 DB_GW2_MAX_COLS 1024	/* ......... for gateways */
+#else
+#define			DB_MAX_COLS	conf_MAX_COLS
+#endif
+
+#define                 DB_GW2_MAX_COLS DB_MAX_COLS	/* ......... for gateways */
+
 #define			DB_MAXTUP	2008	/* Maximum size of a tuple */
 
 #define			DB_MAXTUP_DOC	2000	/* Max documented tuple size */

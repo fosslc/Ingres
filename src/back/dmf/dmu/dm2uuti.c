@@ -2705,6 +2705,8 @@ DB_ERROR	*dberr)
 **	    Implement multiple DMF LongTerm memory pools and
 **	    ShortTerm session memory.
 **	    Start kids with DMF facility.
+**	27-Apr-2010 (kschendel)
+**	    Shorten thread names so they aren't truncated.
 */
 i4
 SpawnDMUThreads(
@@ -2720,7 +2722,7 @@ i4		thread_type)
     STATUS	scf_status = OK;
     i4		new_threads;
     char	sem_name[CS_SEM_NAME_LEN+16];
-    char	thread_name[DB_MAXNAME*2];
+    char	thread_name[60];
     i4		avail_threads;
     i4		threads, remainder;
 
@@ -2885,7 +2887,7 @@ i4		thread_type)
 		    sp->spcb_count++;
 
 		STprintf(thread_name,
-			  "<%DMUSource (%d,%d):%d>",
+			  "DMUs (%d,%d):%d",
 			  sp->spcb_tabid.db_tab_base,
 			  sp->spcb_tabid.db_tab_index 
 			      & ~DB_TAB_PARTITION_MASK,
@@ -2900,7 +2902,7 @@ i4		thread_type)
 		    tp->tpcb_count++;
 
 		STprintf(thread_name,
-			  "<%DMUTarget (%d,%d):%d>",
+			  "DMUt (%d,%d):%d",
 			  tp->tpcb_tabid.db_tab_base,
 			  tp->tpcb_tabid.db_tab_index 
 			      & ~DB_TAB_PARTITION_MASK,
@@ -4170,6 +4172,9 @@ EX_ARGS		    *ex_args)
 **	    constraints since these are implemented as indexes), copy the 
 **	    journaling state from the base table into the index's iirelation 
 **	    record.
+**	4-May-2010 (kschendel)
+**	    DM9026 can't take parameters, used too often by setdberr.
+**	    Drop the param in the message here.
 */
 DB_STATUS
 dm2u_update_catalogs(
@@ -5127,9 +5132,7 @@ DB_ERROR      	    *dberr)
 	    if (dberr->err_code > E_DM_INTERNAL)
 	    {
 		uleFormat(NULL, E_DM9026_REL_UPDATE_ERR, NULL, ULE_LOG, NULL,
-		    (char *) NULL, 0L, (i4 *)NULL, &local_error, 1,
-		    sizeof(DB_DB_NAME),
-		    &r->rcb_tcb_ptr->tcb_dcb_ptr->dcb_name);
+		    (char *) NULL, 0L, (i4 *)NULL, &local_error, 0);
 	    }
 	    break;
 	}

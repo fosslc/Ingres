@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1986, 2004 Ingres Corporation
+** Copyright (c) 1986, 2010 Ingres Corporation
 **
 */
 
@@ -313,6 +313,9 @@
 **	    Don't include dudbms when not needed.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	29-Apr-2010 (kschendel)
+**	    Made the change to set cnf version to V7, fix up extend to not
+**	    smash the config buffer (broke the converters).
 **/
 
 
@@ -375,15 +378,9 @@ static DB_STATUS dm0c_test_upgrade(
     DB_ERROR	    *dberr);
 
 /*
-** Define Config file name for error messages.  For OS2 include slash (\)
-** prefix to file name.
+** Define Config file name for error messages.
 */
-#ifdef OS2
-# define CONF_FILE "\\aaaaaaaa.cnf"
-# undef FILE_OPEN
-#else
 # define CONF_FILE "aaaaaaaa.cnf"
-#endif
 
 
 /*{
@@ -1046,10 +1043,6 @@ DB_ERROR	    *dberr)
 
     for (;;)
     {
-	/*
-	**  partN -- used for E_DM928E
-	**  NAT not BOOL for ule_format() "portability"
-	*/
         i4     part1=0;
 
 	/*  Lock the configuration file. */
@@ -1405,8 +1398,7 @@ DB_ERROR	    *dberr)
 	if (part1)
 	{
 	    uleFormat(NULL, E_DM928E_CONFIG_FORMAT_ERROR, NULL,
-		       ULE_LOG, NULL, NULL, 0, NULL, err_code, 1,
-		       sizeof(part1), &part1);
+		       ULE_LOG, NULL, NULL, 0, NULL, err_code, 0);
 	    break;
 	}
 
@@ -1784,10 +1776,17 @@ DM0C_CNF            *cnf)   /* config file info (header) record */
 **	config file and there is no more room in the location list.
 **	The file is extended to make room for the new location.
 **
-**	A new (larger) buffer is allocated to hold the config file data and
-**	the old buffer is thrown away, so any changes that have been made in
-**	the config file data buffer by the caller are lost.  FURTHERMORE,
-**	ANY POINTERS INTO THE OLD DATA BUFFER ARE NO LONGER VALID.
+**	A new (larger) buffer is allocated to hold the config file data,
+**	and the old buffer copied to the new one.  All of the cnf
+**	pointers into the config file are updated to point to the
+**	new buffer, using the old offsets.  (The data in the cnf buffer
+**	might be an old style config in the process of being converted,
+**	so doing something like "cnf->cnf_dsc->length" is wrong and
+**	won't work.)
+**
+**	ANY CALLER-HELD POINTERS TO THE OLD CONFIG ARE INVALID.
+**	The only pointers that are fixed are the ones in the passed-in
+**	DM0C_CNF structure itself.
 **
 **	Since the extended page is not formatted (even though we zero
 **	fill it here, it should not be considered guaranteed to be so),
@@ -1836,14 +1835,18 @@ DM0C_CNF            *cnf)   /* config file info (header) record */
 **	    Ensure the misc_data pointer in a MISC_CB is set correctly and
 **	    that we correctly allocate sizeof(DMP_MISC), not sizeof(DM_OBJECT)
 **	    since that's what we're actually using (the type is MISC_CB)
-[@history_template@]...
+**	30-Apr-2010 (kschendel)
+**	    The new-style config converters operate in-memory, so tossing
+**	    out the old buffer and re-reading from disk isn't such a good
+**	    idea any more.  Rework to preserve the memory contents, and
+**	    make no assumptions about what cnf->cnf_xxx points to.
 */
 DB_STATUS
 dm0c_extend(
-DM0C_CNF            *config,
+DM0C_CNF            *cnf,
 DB_ERROR	    *dberr)
 {
-    DM0C_CNF		*cnf = config;
+    char		*old_data, *new_data;
     DM_OBJECT		*cnf_buffer;
     DB_STATUS		status;
     i4		page_num;
@@ -1879,15 +1882,6 @@ DB_ERROR	    *dberr)
     }
 
     /*
-    ** Deallocate the old config data buffer.
-    */
-    if (cnf->cnf_data)
-    {
-	cnf->cnf_data = ((char *)cnf->cnf_data -sizeof(DMP_MISC));
-	dm0m_deallocate((DM_OBJECT **) &cnf->cnf_data);
-    }
-
-    /*
     ** Allocate a new config data buffer.
     */
     cnf_pages = page_num + 1;
@@ -1900,18 +1894,30 @@ DB_ERROR	    *dberr)
 	SETDBERR(dberr, 0, E_DM928A_CONFIG_EXTEND_ERROR);
 	return (E_DB_ERROR);
     }
-    cnf->cnf_data = (char *)cnf_buffer + sizeof(DMP_MISC);
-    ((DMP_MISC *)cnf_buffer)->misc_data = cnf->cnf_data;
+    new_data = (char *) cnf_buffer + sizeof(DMP_MISC);
+    ((DMP_MISC *)cnf_buffer)->misc_data = new_data;
+    old_data = cnf->cnf_data;
+
+    /* Copy old to new, set pointers */
+
+    MEcopy(old_data, cnf->cnf_bytes, new_data);
+    cnf->cnf_data = new_data;
+    cnf->cnf_jnl = (DM0C_JNL *) (((char *)(cnf->cnf_jnl) - old_data) + new_data);
+    cnf->cnf_dmp = (DM0C_DMP *) (((char *)(cnf->cnf_dmp) - old_data) + new_data);
+    cnf->cnf_dsc = (DM0C_DSC *) (((char *)(cnf->cnf_dsc) - old_data) + new_data);
+    cnf->cnf_ext = (DM0C_EXT *) (((char *)(cnf->cnf_ext) - old_data) + new_data);
+
     cnf->cnf_bytes = cnf_pages * DM_PG_SIZE;
     cnf->cnf_free_bytes += DM_PG_SIZE;
 
     /*
     ** Write out a blank page so its not full of garbage.
+    ** Re-use the old buffer for this, it will be big enough.
     */
-    MEfill(DM_PG_SIZE, '\0', (PTR) cnf->cnf_data);
+    MEfill(DM_PG_SIZE, '\0', old_data);
     num_pgs = 1;
     status = DIwrite((DI_IO *)cnf->cnf_di, &num_pgs, page_num, 
-	cnf->cnf_data, &sys_err);
+	old_data, &sys_err);
     if (status != OK)
     {
 	log_di_error(status, E_DM9006_BAD_FILE_WRITE, &sys_err, cnf->cnf_dcb);
@@ -1922,35 +1928,8 @@ DB_ERROR	    *dberr)
 	return (E_DB_ERROR);
     }
 
-    /*
-    ** Read in config file to new buffer.
-    */
-    n = cnf_pages;
-    status = DIread((DI_IO *)cnf->cnf_di, &n, 0, cnf->cnf_data, &sys_err);
-    if (status != OK)
-    {
-	log_di_error(status, E_DM9005_BAD_FILE_READ, &sys_err, cnf->cnf_dcb);
-	SETDBERR(dberr, 0, E_DM928A_CONFIG_EXTEND_ERROR);
-	return (E_DB_ERROR);
-    }
-
-    /*
-    ** Once we have read in the new data, we must update the ptr's in the cnf
-    ** so that they point into the newly allocated cnf buffer.
-    ** We bypass validation of the type/length values in the cnf as we have
-    ** already validated them when we first opened the config file.
-    */
-
-    /* 
-    ** Note: These pointers may be wrong if this routine is being called
-    ** from the convert code. No matter. We'll reupdate these pointers
-    ** in the convert routines.
-    */
-
-    cnf->cnf_dsc = (DM0C_DSC *)cnf->cnf_data;
-    cnf->cnf_jnl = (DM0C_JNL *)((char *)cnf->cnf_dsc + cnf->cnf_dsc->length);
-    cnf->cnf_dmp = (DM0C_DMP *)((char *)cnf->cnf_jnl + cnf->cnf_jnl->length);
-    cnf->cnf_ext = (DM0C_EXT *)((char *)cnf->cnf_dmp + cnf->cnf_dmp->length);
+    old_data = old_data - sizeof(DMP_MISC);
+    dm0m_deallocate((DM_OBJECT **) &old_data);
 
     return (E_DB_OK);
 }
@@ -2258,7 +2237,7 @@ DB_ERROR	    *dberr)
     relx = (DM0C_TAB *)((char *)rel + rel->length);
     att = (DM0C_TAB *)((char *)relx + relx->length);
     idx = (DM0C_TAB *)((char *)att + att->length);
-    space_needed = sizeof(DM0C_DSC) + sizeof(DM0C_V4JNL) + sizeof(DM0C_V4DMP) +
+    space_needed = sizeof(DM0C_ODSC) + sizeof(DM0C_V4JNL) + sizeof(DM0C_V4DMP) +
 		   rel->length + relx->length + att->length + idx->length +
 		   ((desc->dsc_ext_count + 1) * sizeof(DM0C_OEXT)) + 8;
 
@@ -2547,7 +2526,7 @@ DB_ERROR	    *dberr)
     DM0C_V5EXT		*new_ext;
     DM0C_V4JNL		*new_jnl, *old_jnl;
     DM0C_V4DMP		*new_dmp, *old_dmp;
-    DM0C_DSC		*new_desc;
+    DM0C_ODSC_32	*new_desc;
     DM0C_ODSC		*old_desc;
     DM0C_TAB		*rel, *relx, *att, *idx;
     CL_ERR_DESC		sys_err;
@@ -2568,7 +2547,7 @@ DB_ERROR	    *dberr)
 
     old_desc = (DM0C_ODSC *)cnf->cnf_data;
 
-    space_needed = sizeof(DM0C_DSC) + sizeof(DM0C_V4JNL) + sizeof(DM0C_V4DMP) +
+    space_needed = sizeof(DM0C_ODSC_32) + sizeof(DM0C_V4JNL) + sizeof(DM0C_V4DMP) +
 	((old_desc->dsc_ext_count) * sizeof(DM0C_V5EXT)) + 8;
 
     if (space_needed > MAXI2 || cnf->cnf_bytes > MAXI2)
@@ -2648,9 +2627,9 @@ DB_ERROR	    *dberr)
     ** 32 bytes. Move the relprim value for iirelation into dsc_iirel_relprim.
     */
 
-    new_desc = (DM0C_DSC *)cnf->cnf_data;
+    new_desc = (DM0C_ODSC_32 *)cnf->cnf_data;
 
-    new_desc->length = sizeof(DM0C_DSC);
+    new_desc->length = sizeof(DM0C_ODSC_32);
     new_desc->type = DM0C_T_DSC;
 
     /* Update config version number. */
@@ -2789,7 +2768,7 @@ DB_ERROR	    *dberr)
     cnf->cnf_c_ext = new_desc->dsc_ext_count;
     cnf->cnf_jnl = (DM0C_JNL *)new_jnl;
     cnf->cnf_dmp = (DM0C_DMP *)new_dmp;
-    cnf->cnf_dsc = new_desc;
+    cnf->cnf_dsc = (DM0C_DSC *) new_desc;
     cnf->cnf_ext = (DM0C_EXT *)(new_dmp + 1);
 
     /*
@@ -2847,7 +2826,7 @@ DB_ERROR	    *dberr)
     DM0C_JNL		*new_jnl;
     DM0C_V4DMP		*old_dmp;
     DM0C_DMP		*new_dmp;
-    DM0C_DSC		*new_desc, *old_desc;
+    DM0C_ODSC_32	*new_desc, *old_desc;
     CL_ERR_DESC		sys_err;
     DB_STATUS		status = E_DB_OK;
     STATUS		cl_status;
@@ -2864,9 +2843,9 @@ DB_ERROR	    *dberr)
     ** new config file.  Need room for DSC, JNL, DMP and EXT information.
     */
 
-    old_desc = (DM0C_DSC *)cnf->cnf_data;
+    old_desc = (DM0C_ODSC_32 *)cnf->cnf_data;
 
-    space_needed = sizeof(DM0C_DSC) + sizeof(DM0C_JNL) + sizeof(DM0C_DMP) +
+    space_needed = sizeof(DM0C_ODSC_32) + sizeof(DM0C_JNL) + sizeof(DM0C_DMP) +
 	((old_desc->dsc_ext_count) * sizeof(DM0C_V5EXT)) + 8;
 
     if (space_needed > MAXI2 || cnf->cnf_bytes > MAXI2)
@@ -2921,7 +2900,7 @@ DB_ERROR	    *dberr)
 
     /* Get pointers to cnf data sections. */
 
-    old_desc = (DM0C_DSC *)old_config;
+    old_desc = (DM0C_ODSC_32 *)old_config;
     old_jnl = (DM0C_V4JNL *)((char *)old_desc + old_desc->length);
     old_dmp = (DM0C_V4DMP *)((char *)old_jnl + old_jnl->length);
     old_ext = (DM0C_V5EXT *)((char *)old_dmp + old_dmp->length);
@@ -2936,7 +2915,7 @@ DB_ERROR	    *dberr)
     ** 32 bytes. Move the relprim value for iirelation into dsc_iirel_relprim.
     */
 
-    new_desc = (DM0C_DSC *)cnf->cnf_data;
+    new_desc = (DM0C_ODSC_32 *)cnf->cnf_data;
     MEcopy((PTR)old_desc, old_desc->length, (PTR)new_desc);
 
     /* Update config version number. */
@@ -3054,7 +3033,7 @@ DB_ERROR	    *dberr)
     cnf->cnf_c_ext = new_desc->dsc_ext_count;
     cnf->cnf_jnl = new_jnl;
     cnf->cnf_dmp = new_dmp;
-    cnf->cnf_dsc = new_desc;
+    cnf->cnf_dsc = (DM0C_DSC *) new_desc;
     cnf->cnf_ext = (DM0C_EXT *)(new_dmp + 1);
 
     /*
@@ -3102,6 +3081,8 @@ DB_ERROR	    *dberr)
 **	    Ensure the misc_data pointer in a MISC_CB is set correctly and
 **	    that we correctly allocate sizeof(DMP_MISC), not sizeof(DM_OBJECT)
 **	    since that's what we're actually using (the type is MISC_CB)
+**	29-Apr-2010 (kschendel)
+**	    We're outputting a DM0C_ODSC_32 now.
 */
 static DB_STATUS
 dm0c_convert_to_CNF_V6(
@@ -3110,11 +3091,11 @@ DB_ERROR	    *dberr)
 {
     DM0C_CNF		*cnf = config;
     DM_OBJECT		*cnf_buffer;
-    DM0C_EXT		*new_ext;
+    DM0C_V6EXT		*new_ext;
     DM0C_V5EXT		*old_ext;
     DM0C_JNL		*new_jnl, *old_jnl;
     DM0C_DMP		*new_dmp, *old_dmp;
-    DM0C_DSC		*new_desc, *old_desc;
+    DM0C_ODSC_32	*new_desc, *old_desc;
     DB_STATUS		status = E_DB_OK;
     PTR			old_config;
     i4		space_needed, pre_space, i;
@@ -3129,10 +3110,10 @@ DB_ERROR	    *dberr)
     ** new config file.  Need room for DSC, JNL, DMP and EXT information.
     */
 
-    old_desc = (DM0C_DSC *)cnf->cnf_data;
+    old_desc = (DM0C_ODSC_32 *)cnf->cnf_data;
 
-    space_needed = sizeof(DM0C_DSC) + sizeof(DM0C_JNL) + sizeof(DM0C_DMP) +
-	((old_desc->dsc_ext_count) * sizeof(DM0C_EXT)) + 8;
+    space_needed = sizeof(DM0C_ODSC_32) + sizeof(DM0C_JNL) + sizeof(DM0C_DMP) +
+	((old_desc->dsc_ext_count) * sizeof(DM0C_V6EXT)) + 8;
 
     if (space_needed > MAXI2 || cnf->cnf_bytes > MAXI2)
     {
@@ -3186,7 +3167,7 @@ DB_ERROR	    *dberr)
 
     /* Get pointers to cnf data sections. */
 
-    old_desc = (DM0C_DSC *)old_config;
+    old_desc = (DM0C_ODSC_32 *)old_config;
     old_jnl = (DM0C_JNL *)((char *)old_desc + old_desc->length);
     old_dmp = (DM0C_DMP *)((char *)old_jnl + old_jnl->length);
     old_ext = (DM0C_V5EXT *)((char *)old_dmp + old_dmp->length);
@@ -3198,7 +3179,7 @@ DB_ERROR	    *dberr)
 
     /* Copy in DESC info */
 
-    new_desc = (DM0C_DSC *)cnf->cnf_data;
+    new_desc = (DM0C_ODSC_32 *)cnf->cnf_data;
     MEcopy((PTR)old_desc, old_desc->length, (PTR)new_desc);
 
     /* Update config version number. */
@@ -3248,11 +3229,11 @@ DB_ERROR	    *dberr)
     MEcopy((PTR)old_dmp, old_dmp->length, (PTR)new_dmp);
     new_dmp->length = sizeof(DM0C_JNL);
 
-    new_ext = (DM0C_EXT *)(new_dmp + 1);
+    new_ext = (DM0C_V6EXT *)(new_dmp + 1);
     for (i = 0; i < new_desc->dsc_ext_count; i++, old_ext++, new_ext++)
     {
 	MEcopy((PTR)old_ext, old_ext->length, (PTR)new_ext);
-	new_ext->length = sizeof(DM0C_EXT);
+	new_ext->length = sizeof(DM0C_V6EXT);
 	new_ext->ext_location.raw_start   = 0;
 	new_ext->ext_location.raw_blocks  = 0;
 	new_ext->ext_location.raw_total_blocks  = 0;
@@ -3260,12 +3241,12 @@ DB_ERROR	    *dberr)
 
     /* Update cnf control block info. */
 
-    end_ptr = (char *)new_ext + sizeof(DM0C_EXT);
+    end_ptr = (char *)new_ext + sizeof(DM0C_V6EXT);
     cnf->cnf_free_bytes = cnf->cnf_bytes - (end_ptr - cnf->cnf_data);
     cnf->cnf_c_ext = new_desc->dsc_ext_count;
     cnf->cnf_jnl = new_jnl;
     cnf->cnf_dmp = new_dmp;
-    cnf->cnf_dsc = new_desc;
+    cnf->cnf_dsc = (DM0C_DSC *) new_desc;
     cnf->cnf_ext = (DM0C_EXT *)(new_dmp + 1);
 
     /*
@@ -3376,15 +3357,6 @@ DB_ERROR	    *dberr)
     TRdisplay("Convert config to V7 free space %d\n", cnf->cnf_free_bytes);
 
     /*
-    ** FIX ME 
-    ** A few more changes are required in dm0c.c when CNF_VCURRENT==CNF_V7
-    **
-    ** - in older upgrade routines change DM0C_DSC to DM0C_ODSC_32 *new_desc
-    ** - in older upgrade routines change DM0C_EXT to DM0C_V6EXT
-    ** - possibly define in dm0c.h.. and test in dm0c_open for new desc->type
-    */
-
-    /*
     ** Figure out the space necessary in the config file to hold the
     ** new config file.  Need room for DSC, JNL, DMP and EXT information.
     */
@@ -3469,12 +3441,9 @@ DB_ERROR	    *dberr)
     new_desc->dsc_cnf_version = CNF_V7;
 
     /* Copy each field from old DSC to new DSC, expand names */
-    new_desc->length = old_desc->length;
-    new_desc->type = old_desc->type;
-    new_desc->dsc_cnf_version = old_desc->dsc_cnf_version;
     new_desc->dsc_c_version = old_desc->dsc_c_version;
     new_desc->dsc_version = old_desc->dsc_version;
-    new_desc->dsc_status = old_desc->dsc_status;
+    new_desc->dsc_status = old_desc->dsc_status & ~DSC_NOTUSED;
     new_desc->dsc_open_count = old_desc->dsc_open_count;
     new_desc->dsc_sync_flag = old_desc->dsc_sync_flag;
     new_desc->dsc_type = old_desc->dsc_type;
@@ -3499,10 +3468,8 @@ DB_ERROR	    *dberr)
     new_desc->dsc_iirel_relpgtype = old_desc->dsc_iirel_relpgtype;
     new_desc->dsc_iiatt_relpgtype = old_desc->dsc_iiatt_relpgtype;
     new_desc->dsc_iiind_relpgtype = old_desc->dsc_iiind_relpgtype;
-    MEcopy(old_desc->dsc_extra, sizeof(old_desc->dsc_extra), 
-		new_desc->dsc_extra);
-    MEcopy(old_desc->dsc_extra1, sizeof(old_desc->dsc_extra1), 
-		new_desc->dsc_extra1);
+    MEfill(sizeof(new_desc->dsc_extra), 0, &new_desc->dsc_extra);
+    MEfill(sizeof(new_desc->dsc_extra1), 0, &new_desc->dsc_extra1);
 
     /* Copy the name and owner into the expanded fields. */
     MEmove(sizeof(old_desc->dsc_name), (PTR)&old_desc->dsc_name,

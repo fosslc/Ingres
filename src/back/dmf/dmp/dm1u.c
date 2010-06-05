@@ -412,6 +412,8 @@
 **	    SIR 121619 MVCC: Replace DMPP_PAGE* with DMP_PINFO* where needed.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	4-May-2010 (kschendel)
+**	    DM9026 can't take parameters, fix here.
 */
 
 #define MAXUI2    (2 * MAXI2 + 1)    /* Largest u_i2 */
@@ -1294,8 +1296,6 @@ DB_ERROR	   *dberr)
     {
 	uleFormat(dberr, 0, NULL, ULE_LOG, NULL,
 			NULL, 0, NULL, &error, 0);
-	dm1u_talk(dm1u,E_DM9026_REL_UPDATE_ERR, 2, 
-			sizeof(DB_DB_NAME), &dcb->dcb_name);
 	SETDBERR(dberr, 0, E_DM9026_REL_UPDATE_ERR);
 	return (E_DB_ERROR);
     }
@@ -1314,8 +1314,6 @@ DB_ERROR	   *dberr)
     {
 	uleFormat(dberr, 0, NULL, ULE_LOG, NULL, 
 			NULL, 0, NULL, &error, 0);
-	dm1u_talk(dm1u,E_DM9026_REL_UPDATE_ERR, 2, 
-			sizeof(DB_DB_NAME), &dcb->dcb_name);
 	SETDBERR(dberr, 0, E_DM9026_REL_UPDATE_ERR);
 	return (E_DB_ERROR);
     }
@@ -1342,8 +1340,6 @@ DB_ERROR	   *dberr)
 		    break;
 		uleFormat(&local_dberr, 0, NULL, ULE_LOG, NULL, 
 				NULL, 0, NULL, &error,0);
-		dm1u_talk(dm1u,E_DM9026_REL_UPDATE_ERR, 2, 
-			sizeof(DB_DB_NAME), &dcb->dcb_name);
 		SETDBERR(dberr, 0, E_DM9026_REL_UPDATE_ERR);
 		break;
 	    }
@@ -1394,8 +1390,6 @@ DB_ERROR	   *dberr)
 	    {
 		uleFormat(dberr, 0, NULL, ULE_LOG, NULL, 
 				NULL, 0, NULL, &error,0);
-		dm1u_talk(dm1u,E_DM9026_REL_UPDATE_ERR, 2, 
-			sizeof(DB_DB_NAME), &dcb->dcb_name);
 		SETDBERR(dberr, 0, E_DM9026_REL_UPDATE_ERR);
 		break;
 	    }

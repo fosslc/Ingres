@@ -142,7 +142,6 @@
 **	    test_29	  - Performs verifydb iirelation test 29
 **	    test_30_and_31 - - Performs verifydb iirelation test2 30 and 31
 **                   tests 32-93 are performed elsewhere
-**	    test_94       - Performs verifydb iirelation test 94
 **	    test_95       - Performs verifydb iirelation test 95
 **
 **  History:
@@ -261,6 +260,8 @@
 **          set as defined in dub_mandflags. 
 **          Added test_95 - test that if TCB2_PHYSLOCK_CONCUR is set that the
 **          structure is hash.
+**	3-May-2010 (kschendel) SIR 123639
+**	    Pull test 94, we're leaving it up to DMF now.
 **/
 
 
@@ -363,7 +364,6 @@ static DU_STATUS test_27();		/* verifydb iirelation test */
 static DU_STATUS test_28();		/* verifydb iirelation test */
 static DU_STATUS test_29();		/* verifydb iirelation test */
 static DU_STATUS test_30_and_31();	/* verifydb iirelation test 30 & 31 */
-static DU_STATUS test_94();		/* verifydb iirelation test */
 static DU_STATUS test_95();		/* verifydb iirelation test */
 static void create_schema();		/* create schema for orphaned object */
 static DU_STATUS check_cons();		/* check if constraints present in sch
@@ -2404,8 +2404,6 @@ DUVE_CB		*duve_cb;
 	    if ( (status = test_29( duve_cb, iirelation)) != DUVE_YES)
 		break;
 	    if ( (status = test_30_and_31( duve_cb, iirelation)) != DUVE_YES)
-		break;
-	    if ( (status = test_94( duve_cb, &iirelation)) != DUVE_YES)
 		break;
 	    if ( (status = test_95( duve_cb, iirelation)) != DUVE_YES)
 		break;
@@ -5594,115 +5592,6 @@ DMP_RELATION	iirelation;
 	}
 
     }/* endif */
-    return ( (DU_STATUS)DUVE_YES);
-}
-
-/*
-** Name: test_94 - run verifydb test #94
-**
-** Description:
-**	This routine runs the following test:
-**
-** 94:	Verify that this relation has the 'mandatory' flag bits set for
-**      relstat and relstat2
-** TEST:Check the relid against the dub_mandflags list and if it's
-**      on the list then it should have the bits set
-** FIX:	Change the bits according to whether the relid is on the list or not
-**
-** Inputs:
-**	duve_cb  	verifydb control block
-**	iirelation	pointer to structure containing all attributes in 
-**                      iirelation tuple. NOTE: unlike all the similar test_
-**                      functions we pass this as a pointer so we can update
-**                      the values of relstat and relstat2. This means the
-**                      user doesn't have to re-run verifydb to fix a situation
-**                      where a relation fails both tests 94 and 95
-**
-** Outputs:
-**	duve_cb		verifydb control block
-**	Returns
-**	    DUVE_YES
-**	    DUVE_BAD
-**	Exceptions:
-**	    none.
-**
-** Side Effects:
-** 	none.
-**
-** History:
-**	10-Feb-2010 (maspa05) bug 122651
-**	    initial creation.
-*/
-static DU_STATUS
-test_94 ( duve_cb, iirelation )
-DUVE_CB		*duve_cb;
-DMP_RELATION	*iirelation ;
-{
-    exec sql begin declare section;
-	u_i4	tid,tidx;
-	i4	relstat, relstat2;
-    exec sql end declare section;
- 
-    i2 i,l;
-    char relid[DB_MAXNAME+1];
-
-    EXEC SQL WHENEVER SQLERROR call Clean_Up;
-    
-    tid  = iirelation->reltid.db_tab_base;
-    tidx = iirelation->reltid.db_tab_index;
-    relstat = iirelation->relstat;
-    relstat2 = iirelation->relstat2;
-
-    STlcopy(iirelation->relid.db_tab_name, relid,DB_MAXNAME);
-    l=STtrmwhite(relid);
-
-    for (i= 0;i < dub_num_mandflags ; i++)
-    {
-        if (STbcompare (dub_mandflags[i].du_relname, 0,
-	                relid, 0, TRUE) 
-            ==DU_IDENTICAL)
-        {
-    	    relstat |= dub_mandflags[i].du_relstat;
-    	    relstat2 |= dub_mandflags[i].du_relstat2;
-            break;
-        }
-    }
-
-    if ( relstat2 != iirelation->relstat2 || relstat != iirelation->relstat)
-    {
-       if (duve_banner( DUVE_IIRELATION, 94, duve_cb) == DUVE_BAD) 
-		return ( (DU_STATUS)DUVE_BAD);
-       duve_talk( DUVE_MODESENS, duve_cb, 
-		S_DU1760_MAND_FLAGS_INCORRECT, 10,
-		0,relid,
-		sizeof(iirelation->relstat),&(iirelation->relstat),
-		sizeof(relstat),&relstat,
-		sizeof(iirelation->relstat2),&(iirelation->relstat2),
-		sizeof(relstat2),&relstat2);
-       if (duve_talk(DUVE_ASK, duve_cb, S_DU025A_SET_MAND_RELFLAGS, 2,
-                0,relid)
-	        == DUVE_YES)
-       {	
-	    /* FIX relstat,relstat2 in the database */
-            EXEC SQL UPDATE iirelation 
-                  SET relstat= :relstat, relstat2=:relstat2
-                WHERE reltid= :tid
-                  AND reltidx= :tidx;
-
-	    /* update the local copies as we won't re-read iirelation
-            ** from the database before the next test
-            */
-
-            iirelation->relstat=relstat;
-            iirelation->relstat2=relstat2;
-
-	    duve_talk(DUVE_MODESENS, duve_cb, 
-			S_DU045A_MAND_RELFLAGS_SET,0);
-       }
-
-    }
-
-
     return ( (DU_STATUS)DUVE_YES);
 }
 

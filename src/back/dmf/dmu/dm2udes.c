@@ -500,6 +500,9 @@ GLOBALREF	DMC_CRYPT	*Dmc_crypt;
 **	    No need for db sync flag here, files aren't actually opened.
 **	20-Apr-2010 (toumi01) SIR 122403
 **	    If the table is encrypted, delete its enabling Dmc_crypt entry.
+**	5-May-2010 (kschendel)
+**	    It's kind of silly to try to open iidevices when dropping
+**	    iidevices, so don't do it.
 */
 DB_STATUS
 dm2u_destroy(
@@ -910,10 +913,15 @@ DB_ERROR	*dberr)
 	    ** Check for destroy of special tables that may preclude lookups
 	    ** to the iidevices table because iidevices may not exist.
 	    ** Core catalogs and sysmod temps fall into this group.
+	    ** If destroying iidevices itself (upgradedb), don't lookup
+	    ** into it (duh).  None of these are multi-location catalogs
+	    ** so it's ok.
 	    */
 	    if ((sconcur) ||
 		(STncasecmp((char *)&table_name, "iirtemp",7) == 0) ||
-		(STncasecmp((char *)&table_name, "iiridxtemp",10) == 0))
+		(STncasecmp((char *)&table_name, "iiridxtemp",10) == 0) ||
+		(table_id.db_tab_base == DM_B_DEVICE_TAB_ID
+		 && table_id.db_tab_index == DM_I_DEVICE_TAB_ID) )
 	    {
 		nodevices_destroy = TRUE;
 	    }

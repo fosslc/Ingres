@@ -1,10 +1,17 @@
 VERS Format:
 
-VERS files contain build time specific options that can be
+VERS files contain build-time specific options that can be
 adjusted based on site or platform requirements.
-The prototype VERS.config_string files are under source code control,
-but the VERS file itself is not, making it feasible to vary
-VERS-controlled options from one build client to another.
+
+The build will look for a file named VERS.  If no such file exists,
+it will use a file named VERS.config_string.
+
+The VERS.config_string files are the standard configs distributed
+with the Ingres source, and are under source code control.
+The VERS file is not distributed and (if it exists) is entirely
+under the build site's control.  Ths makes it easy for a build client
+to use either standard (no VERS) or custom (site VERS) build options.
+Different build clients can easily use different vers options.
 
 VERS files have two sections, one for controlling jam directly
 and one for generating shell variables and source-level defines.
@@ -162,9 +169,13 @@ RELID	- (string) Override the release ID string built by genrelid.
 	Nothing uses this at present;  it's included in case there is
 	some need to apply a special ID string for a particular build.
 
-(Datallegro)
 MAX_COLS - (number) Define the maximum number of columns allowed in a table.
+	If not defined, a default in iicommon.h is used.  None of the
+	standard VERS files define MAX_COLS, but a site may wish to
+	change the maximum number of columns for special builds.
+	Increasing MAX_COLS beyond 32K (!) is probably not going to work.
 
+(Datallegro)
 LZO	- (directory path) Link with the LZO Professional compression
 	library.  The parameter value is the path to the LZO Pro .a
 	library (directory path only, without the filename).  Without

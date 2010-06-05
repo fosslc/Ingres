@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 
@@ -104,6 +104,9 @@ LIBRARY = IMPDMFLIBDATA
 **	    but better represents the nature of the stored data.
 **      29-Apr-2010 
 **          Create core catalogs having long ids with compression=(data)
+**	4-May-2010 (kschendel)
+**	    Make a frozen copy of the final DSC_V9 catalogs;  we'll need it
+**	    eventually, for future converters.
 */
 
 /* dmmcre.c */
@@ -425,4 +428,112 @@ GLOBALDEF i4 DM_core_index_cnt = CORE_INDEX_COUNT;
 GLOBALDEF DMP_INDEX DM_ucore_index[CORE_INDEX_COUNT];
 
 
+/* ------------------------------------------------------------- */
+/*
+** What follows are frozen copies of compressed-catalog attributes,
+** for core catalog versions >= DSC_V9.
+**
+** The reason that these exist is that the core catalog converter in dm2d
+** has to build a DMP_ROWACCESS for decompressing old-format rows.
+** Since they are in fact old format, the row-accessor has to be built
+** using the list of attributes that are in the old version catalog.
+** Those attributes are archived here.
+**
+** We only need attributes for iirelation, iirel_idx, and iiattribute;
+** iiindex is not compressed and doesn't need a row-accessor.
+**
+** The row-accessor builder only needs a few items (data type and length,
+** mostly).  Names are unimportant, and there is no need for both
+** upper- and lower-case versions in the frozen copies.  Offsets are
+** also unimportant, and indeed would be incorrect in reference to the
+** old-version catalog, so all offsets are set to -1 to prevent mistakes.
+**
+** And finally, since these are FROZEN, all lengths are defined in terms
+** of the final V9 values, rather than using DB_TAB_MAXNAME etc.
+*/
 
+GLOBALDEF DMP_ATTRIBUTE DM_frozen_V9_attributes[] =
+{
+    /* tabid, attname, offset, len, iskey */
+    { attdef_int(REL_TAB_ID, "reltid", -1, 4, 1) },
+    { attdef_int(REL_TAB_ID, "reltidx", -1, 4, 0) },
+    { attdef_cha(REL_TAB_ID, "relid", -1, 256, 0) },
+    { attdef_cha(REL_TAB_ID, "relowner", -1, 32, 0) },
+    { attdef_int(REL_TAB_ID, "relatts", -1, 2, 0) },
+    { attdef_int(REL_TAB_ID, "reltcpri", -1, 2, 0) },
+    { attdef_int(REL_TAB_ID, "relkeys", -1, 2, 0) },
+    { attdef_int(REL_TAB_ID, "relspec", -1, 2, 0) },
+    { attdef_int(REL_TAB_ID, "relstat", -1, 4, 0) },
+    { attdef_int(REL_TAB_ID, "reltups", -1, 4, 0) },
+    { attdef_int(REL_TAB_ID, "relpages", -1, 4, 0) },
+    { attdef_int(REL_TAB_ID, "relprim", -1, 4, 0) },
+    { attdef_int(REL_TAB_ID, "relmain", -1, 4, 0) },
+    { attdef_int(REL_TAB_ID, "relsave", -1, 4, 0) },
+    { attdef_int(REL_TAB_ID, "relstamp1", -1, 4, 0) },
+    { attdef_int(REL_TAB_ID, "relstamp2", -1, 4, 0) },
+    { attdef_cha(REL_TAB_ID, "relloc", -1, 32, 0) },
+    { attdef_int(REL_TAB_ID, "relcmptlvl", -1, 4, 0) },
+    { attdef_int(REL_TAB_ID, "relcreate", -1, 4, 0) },
+    { attdef_int(REL_TAB_ID, "relqid1", -1, 4, 0) },
+    { attdef_int(REL_TAB_ID, "relqid2", -1, 4, 0) },
+    { attdef_int(REL_TAB_ID, "relmoddate", -1, 4, 0) },
+    { attdef_int(REL_TAB_ID, "relidxcount", -1, 2, 0) },
+    { attdef_int(REL_TAB_ID, "relifill", -1, 2, 0) },
+    { attdef_int(REL_TAB_ID, "reldfill", -1, 2, 0) },
+    { attdef_int(REL_TAB_ID, "rellfill", -1, 2, 0) },
+    { attdef_int(REL_TAB_ID, "relmin", -1, 4, 0) },
+    { attdef_int(REL_TAB_ID, "relmax", -1, 4, 0) },
+    { attdef_int(REL_TAB_ID, "relpgsize", -1, 4, 0) },
+    { attdef_int(REL_TAB_ID, "relgwid", -1, 2, 0) },
+    { attdef_int(REL_TAB_ID, "relgwother", -1, 2, 0) },
+    { attdef_int(REL_TAB_ID, "relhigh_logkey", -1, 4, 0) },
+    { attdef_int(REL_TAB_ID, "rellow_logkey", -1, 4, 0) },
+    { attdef_int(REL_TAB_ID, "relfhdr", -1, 4, 0) },
+    { attdef_int(REL_TAB_ID, "relallocation", -1, 4, 0) },
+    { attdef_int(REL_TAB_ID, "relextend", -1, 4, 0) },
+    { attdef_int(REL_TAB_ID, "relcomptype", -1, 2, 0) },
+    { attdef_int(REL_TAB_ID, "relpgtype", -1, 2, 0) },
+    { attdef_int(REL_TAB_ID, "relstat2", -1, 4, 0) },
+    { attdef_free(REL_TAB_ID, "relfree1", -1, 8, 0) },
+    { attdef_int(REL_TAB_ID, "relloccount", -1, 2, 0) },
+    { attdef_int(REL_TAB_ID, "relversion", -1, 2, 0) },
+    { attdef_int(REL_TAB_ID, "relwid", -1, 4, 0) },
+    { attdef_int(REL_TAB_ID, "reltotwid", -1, 4, 0) },
+    { attdef_int(REL_TAB_ID, "reldatawid", -1, 4, 0) },
+    { attdef_int(REL_TAB_ID, "reltotdatawid", -1, 4, 0) },
+    { attdef_int(REL_TAB_ID, "relnparts", -1, 2, 0) },
+    { attdef_int(REL_TAB_ID, "relnpartlevels", -1, 2, 0) },
+    { attdef_int(REL_TAB_ID, "relencflags", -1, 2, 0) },
+    { attdef_int(REL_TAB_ID, "relencver", -1, 2, 0) },
+    { attdef_byte(REL_TAB_ID, "relenckey", -1, 64, 0) },
+    { attdef_free(REL_TAB_ID, "relfree", -1, 12, 0) },
+    { attdef_cha(RIDX_TAB_ID, "relid", -1, 256, 1) },
+    { attdef_cha(RIDX_TAB_ID, "relowner", -1, 32, 2) },
+    { attdef_int(RIDX_TAB_ID, "tidp", -1, 4, 0) },
+    { attdef_int(ATT_TAB_ID, "attrelid", -1, 4, 1) },
+    { attdef_int(ATT_TAB_ID, "attrelidx", -1, 4, 2) },
+    { attdef_int(ATT_TAB_ID, "attid", -1, 2, 0) },
+    { attdef_int(ATT_TAB_ID, "attxtra", -1, 2, 0) },
+    { attdef_cha(ATT_TAB_ID, "attname", -1, 256, 0) },
+    { attdef_int(ATT_TAB_ID, "attoff", -1, 4, 0) },
+    { attdef_int(ATT_TAB_ID, "attfrml", -1, 4, 0) },
+    { attdef_int(ATT_TAB_ID, "attkdom", -1, 2, 0) },
+    { attdef_int(ATT_TAB_ID, "attflag", -1, 2, 0) },
+    { attdef_int(ATT_TAB_ID, "attdefid1", -1, 4, 0) },
+    { attdef_int(ATT_TAB_ID, "attdefid2", -1, 4, 0) },
+    { attdef_int(ATT_TAB_ID, "attintl_id", -1, 2, 0) },
+    { attdef_int(ATT_TAB_ID, "attver_added", -1, 2, 0) },
+    { attdef_int(ATT_TAB_ID, "attver_dropped", -1, 2, 0) },
+    { attdef_int(ATT_TAB_ID, "attval_from", -1, 2, 0) },
+    { attdef_int(ATT_TAB_ID, "attfrmt", -1, 2, 0) },
+    { attdef_int(ATT_TAB_ID, "attfrmp", -1, 2, 0) },
+    { attdef_int(ATT_TAB_ID, "attver_altcol", -1, 2, 0) },
+    { attdef_int(ATT_TAB_ID, "attcollid", -1, 2, 0) },
+    { attdef_int(ATT_TAB_ID, "attsrid", -1, 4, 0) },
+    { attdef_int(ATT_TAB_ID, "attgeomtype", -1, 2, 0) },
+    { attdef_int(ATT_TAB_ID, "attencflags", -1, 2, 0) },
+    { attdef_int(ATT_TAB_ID, "attencwid", -1, 4, 0) },
+    { attdef_free(ATT_TAB_ID, "attfree", -1, 4, 0) },
+};
+
+GLOBALDEF i4 DM_frozen_V9_att_cnt = sizeof(DM_frozen_V9_attributes) / sizeof(DMP_ATTRIBUTE); 

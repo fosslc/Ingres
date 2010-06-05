@@ -86,6 +86,8 @@ static VOID	so_clean_up();
 **      25-aug-2000 (chash01) 08-jun-99 (chash01)
 **        Do not confuse gateway (i.e dbname/RMS) database with STAR database
 **        by determine if extension is /STAR.
+**	6-May-2010 (kschendel)
+**	    Don't leave ii_reports as a heap.
 */
 
 /*
@@ -265,6 +267,9 @@ EXEC SQL end   declare section;
 		object_id, reptype, 0, repacount,
 	        repscount, repqcount, repbcount
 	FROM iitmp_ii_reports;
+	err_check();
+	exec sql MODIFY ii_reports TO BTREE UNIQUE ON object_id
+		WITH FILLFACTOR = 100;
 	err_check();
 	exec sql DROP TABLE iitmp_ii_reports;
 	err_check();

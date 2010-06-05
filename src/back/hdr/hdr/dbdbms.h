@@ -948,10 +948,19 @@ typedef struct _DB_ALERT_NAME
 **	    DB_MAXKEYS defines the max number of key + non-key columns a
 **	    user may name, but indexes on Clustered Tables may add
 **	    up to DB_MAXKEYS internal Cluster Key attributes.
+**	27-Apr-2010 (kschendel) SIR 123639
+**	    Add DB_COL_BYTES for byte-izing the bitmap catalog columns.
 */
 
 #define			DB_COL_WORDS  (DB_MAX_COLS/BITS_IN(i4)+1)
 						/* # of words in col masks  */
+
+/* Make sure we compute size of BYTE columns holding bitmaps in terms
+** of the i4's, not the exact number of bytes needed, because that's how
+** the structures and old catalogs were defined.
+** (i.e. DB_MAX_COLS/8+1 would be wrong)
+*/
+#define			DB_COL_BYTES  (DB_COL_WORDS*sizeof(i4))
 #define			DB_COL_BITS   ((DB_COL_WORDS*BITS_IN(i4))-1)
 						/* # bits in col masks - 1  */
 #define			DB_MAXKEYS	32	/* Max # of keys in 2ary idx */

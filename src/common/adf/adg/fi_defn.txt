@@ -457,6 +457,8 @@
 #           documented behaviour.
 #       0l-apr-2010 (stial01)
 #           Changes for Long IDs
+#	27-Apr-2010 (kschendel)
+#	    One more db-maxname fix, in iipermittype.
 #	04-May-2010 (kiria01) b123678
 #	    Add missing routines for Unicode CHARACTER_LENGTH and
 #	   OCTET_LENGTH
@@ -6564,7 +6566,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_789_II_PERM_TYPE
 	    description char	   : iipermittype(int, int)
-	    lenspec ADI_FIXED 2*DB_MAXNAME
+	    lenspec ADI_FIXED 2*DB_TYPE_MAXLEN
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_CHA_TYPE
 	    operands DB_INT_TYPE DB_INT_TYPE

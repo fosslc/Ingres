@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 */
 
 /**
@@ -87,7 +87,10 @@
 **          defined in dubdata.c
 **          Added DUC_CATEQV - a structure for a list of 'equivalent' catalogs
 **          for the purposes of modify. See ducdata.c for list Duc_equivcats
-[@history_template@]...
+**	30-Apr-2010 (kschendel)
+**	    Added definitions for an iidbcapabilities table.
+**	    Defined separate row-width and struct-width fields in the catalog
+**	    definitions table.
 **/
 /*
 [@forward_type_references@]
@@ -141,7 +144,16 @@ FUNC_EXTERN VOID    dub_iidbdbcats_def();   /* Setup a lookup table for iidbdb
 ** Name: DUU_CATDEF - System catalog description for database utilities.
 **
 ** Description:
-[@comment_line@]...
+**	DUU_CATDEF defines a modify and/or index commands for the
+**	system catalogs, for sysmod.  The table data is in dubdata.c.
+**
+**	DUC_CATDEF sounds similar, but it's very different;  it
+**	contains the actual table create definition as well as the
+**	modify / create index statements.  It's used by createdb and
+**	upgradedb, and the data is in ducdata.c.
+**
+**	The two could probably be combined, which sounds like a useful
+**	project for someone.
 **
 ** History:
 [@history_template@]...
@@ -165,13 +177,24 @@ typedef struct _DUU_CATDEF
 
 typedef struct _DUC_CATDEF
 {
-    i4	 size; /* structure size */
+    i4 rowsize;			/* Table row size.  This must be
+					** the exact row size.
+					*/
+    i4 structsize;		/* Equivalent structure size, for double-
+				** checking.  Zero means don't check.
+				** A "no check" might mean that the structure
+				** is inaccessible to duc (e.g. it's in a
+				** private header, say in dmf), or it might
+				** mean that the structure is known to have
+				** a different size for a valid reason such
+				** as end-padding.
+				*/
     char *catname;
     i4   columns; /* number of columns */
-    char *create;
-    char *modify;
-    char *index1;
-    char *index2;
+    char *create;	/* Create table statement, NULL means do via quel */
+    char *modify;	/* Modify table statement, NULL means none */
+    char *index1;	/* Create index #1, NULL means none */
+    char *index2;	/* Create index #2, NULL means none */
 } DUC_CATDEF;
 
 typedef struct _DUC_PROCDEF
@@ -207,26 +230,47 @@ typedef struct _DUC_CATEQV
 
 GLOBALREF DUC_CATEQV Duc_equivcats[];
 
-
+
 /*
-** Name: DUU_MANDFLAGS - mandatory relstat flags for system catalogs
+** Name: DUC_DBCAPS - List of "constant" iidbcapabilities entries.
 **
 ** Description:
-**     A list of relstat, relstat2 flags that are mandatory.
+**	This structure describes a list of iidbcapabilities entries
+**	which are constant in the sense that they are either hardcoded
+**	literals or system #define constants.
+**
+**	Also defined is a (somewhat goofy looking) macro for quoting
+**	numeric #defines.
+**
+**	Usage examples:
+**	   ... {DU_DB1_QUEL_LEVEL, DU_DB1_CUR_QUEL_LEVEL}, ...
+**
+**	The #defines used above are defined as strings (e.g. "QUEL_LEVEL"),
+**	so they get used as-is.
+**
+**	   ... DUC_DBCAP("SQL_MAX_TABLE_NAME_LEN", DB_TAB_MAXNAME), ...
+**
+**	Here, DB_TAB_MAXNAME is a number (256), so the DUC_DBCAP macro
+**	is needing to string-ize things.
 **
 ** History:
-**     16-mar-2010 (maspa05)
-**          Created.
-**
+**	27-Apr-2010 (kschendel) SIR 123639
+**	    Put the hammer down on iidbcapabilities once and for all.  I hope.
 */
-typedef struct _DUU_MANDFLAGS
+
+typedef struct _DUC_DBCAPS
 {
-    char            *du_relname;      /* Catalog name */
-    i4              du_relstat;       /* bitmask for relstat mandatory flags */
-    i4              du_relstat2;      /* bitmask for relstat2 mandatory flags */
-}  DUU_MANDFLAGS;
+    char	duc_capability[32+1];	/* Catalog is currently hardwired to 32 */
+    char	duc_value[32+1];
+} DUC_DBCAPS;
 
-GLOBALREF DUU_MANDFLAGS dub_mandflags[];
+GLOBALREF DUC_DBCAPS Duc_dbcaps[];
+GLOBALREF i4 Duc_num_dbcaps;
 
-GLOBALREF i4 dub_num_mandflags;
+/* This stuff is all ansi C and even the Microsoft compiler had
+** better implement it!  The extra level of macro expansion serves
+** to expand (say) DB_TAB_MAXNAME into 256.
+*/
+#define DUC_DBCAP_STR(x) #x
+#define DUC_DBCAP(c,v) {c, DUC_DBCAP_STR(v)}
 

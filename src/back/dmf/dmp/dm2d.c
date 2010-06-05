@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1985, 2009 Ingres Corporation
+** Copyright (c) 1985, 2010 Ingres Corporation
 **
 **
 NO_OPTIM=dr6_us5 pym_us5
@@ -771,6 +771,15 @@ NO_OPTIM=dr6_us5 pym_us5
 **          set in dsc_dbaccess). If so, set DCB_S_MUST_LOG in the dcb_status.
 **      29-Apr-2010 (stial01)
 **          Globals renamed
+**	29-Apr-2010 (kschendel)
+**	    Fix issues with core catalog upgrading: don't assume that
+**	    DMP_RELATION is the largest.  Add an inplace updater for
+**	    iiattribute (neither inplace updater is used this version,
+**	    though).  Clean up the conversion-done flag scheme so that
+**	    we don't have to keep adding new flags forever.  Fix goof
+**	    where the 2.6 dmp-relation was used in error, trashed the stack.
+**	    Delete unused clustered-index catalog updating code that
+**	    used the old style updaters.
 */
 
 /*
@@ -932,14 +941,17 @@ typedef struct _DMP_ATTRIBUTE_V8	/* Ingres 2006r3 DB_MAXNAME 32 */
 typedef struct _DM2D_UPGRADE
 {
     i4		upgr_create_version;
-    i4		upgr_iirel;
-    i4		upgr_iiatt;
-    i4		upgr_iiindex;
+    i4		upgr_iirel;	/* 0 / rewrite / inplace / debug */
+    i4		upgr_iirel_wid;	/* Original iirelation row width */
+    i4		upgr_iiatt;	/* 0 / rewrite / inplace / debug */
+    i4		upgr_iiatt_wid;	/* Original iiattribute row width */
+    i4		upgr_iiindex;	/* 0 / rewrite / inplace / debug */
+    i4		upgr_iiix_wid;	/* Original iiindex row width */
+    i4		upgr_dbg_env; /* value specified by II_UPGRADEDB_DEBUG */
+} DM2D_UPGRADE;
 #define UPGRADE_REWRITE 1
 #define UPGRADE_INPLACE 2
 #define UPGRADE_DEBUG	3
-    i4		upgr_dbg_env; /* value specified by II_UPGRADEDB_DEBUG */
-} DM2D_UPGRADE;
 
 
 /*
@@ -1023,34 +1035,16 @@ makeDefaultID(
 
 static STATUS   	list_func(VOID);	
 
-static DB_STATUS
-dm2d_convert_inplace_iirel (
+static DB_STATUS dm2d_convert_inplace_iiatt (
 			   DM2D_UPGRADE    *upgrade_cb,
  			   DMP_DCB	    *db_id,
 			   i4              flag,
 			   i4              lock_list,
 			   DB_ERROR	   *dberr );
 
-static DB_STATUS
-dm2d_convert_preV9_iirel (
+static DB_STATUS dm2d_convert_inplace_iirel (
+			   DM2D_UPGRADE    *upgrade_cb,
  			   DMP_DCB	    *db_id,
-			   i4		   create_version,
-			   i4              flag,
-			   i4              lock_list,
-			   DB_ERROR	   *dberr );
-
-static DB_STATUS
-dm2d_convert_preV9_iiatt (
- 			   DMP_DCB	    *db_id,
-			   i4		   create_version,
-			   i4              flag,
-			   i4              lock_list,
-			   DB_ERROR	   *dberr );
-
-static DB_STATUS
-dm2d_convert_preV9_iiind (
- 			   DMP_DCB	    *db_id,
-			   i4		   create_version,
 			   i4              flag,
 			   i4              lock_list,
 			   DB_ERROR	   *dberr );
@@ -1062,11 +1056,6 @@ static DB_STATUS dm2d_upgrade_rewrite_iiatt(
 			    i4              lock_list,
 			    DB_ERROR	    *dberr );
 
-static VOID upgrade_iiatt_row(
-			    DM2D_UPGRADE *upgrade_cb,
-			    char		*old_att,
-			    DMP_ATTRIBUTE	*new_attp);
-
 static DB_STATUS dm2d_upgrade_rewrite_iirel(
 			    DM2D_UPGRADE *upgrade_cb,
 			    DMP_DCB	    *db_id,
@@ -1074,16 +1063,16 @@ static DB_STATUS dm2d_upgrade_rewrite_iirel(
 			    i4              lock_list,
 			    DB_ERROR	    *dberr );
 
-static VOID upgrade_iirel_row(
-			    DM2D_UPGRADE *upgrade_cb,
-			    char		*input_rel,
-			    DMP_RELATION	*new_relp,
-			    i4			dsc_status);
-
 static VOID upgrade_core_reltup(
 			    DM2D_UPGRADE *upgrade_cb,
-			    DMP_RELATION *core);
+			    DMP_RELATION *core,
+			    DM0C_CNF	 *cnf);
 
+static DB_STATUS build_core_rac(
+		DB_TAB_ID *table_id,
+		DMP_ATTRIBUTE *core_atts,
+		DMP_ROWACCESS **racp,
+		DB_ERROR *dberr);
 
 /*
 **  The following tables (defined in dmmcre.c) contain the initialized records
@@ -1094,6 +1083,7 @@ static VOID upgrade_core_reltup(
 GLOBALREF DMP_RELATION DM_core_relations[];
 GLOBALREF DMP_ATTRIBUTE DM_core_attributes[];	/* Normal (lower) case */
 GLOBALREF DMP_ATTRIBUTE DM_ucore_attributes[];	/* Uppercase */
+GLOBALREF i4 DM_core_att_cnt;			/* Number of attributes */
 
 /*}
 ** Name: DMP_OLDRELATION - format of old iirelation tuple
@@ -1257,6 +1247,19 @@ typedef struct _DMP_RELATION_26	/* Ingres 2.6 Relation tuple structure. */
 
      } DMP_RELATION_26;                   
 
+typedef union {
+    DMP_OLDRELATION	rel_64;		/* 6.4 style, DSC_V2 (or V1?) */
+    DMP_RELATION_26	rel_26;		/* 1.2 thru 2.6, DSC_V3 thru _V7 */
+    DMP_RELATION_V8	rel_v8;		/* r3/9.x style, DSC_V8 */
+    DMP_RELATION	rel_v9;		/* 10.0 style, DSC_V9 */
+} DMP_RELATION_ANY;
+
+static VOID upgrade_iirel_row(
+			    DM2D_UPGRADE *upgrade_cb,
+			    DMP_RELATION_ANY	*input_rel,
+			    DMP_RELATION	*new_relp,
+			    DM0C_CNF		*cnf);
+
 /* Structure of an OI 1.x iiattribute entry. (DSC_V3).  This is the
 ** same as the later 2.x iiattribute except that it stops at the default
 ** ID.  Define it separately so that we know the size of such entries.
@@ -1307,6 +1310,20 @@ typedef struct _DMP_ATTRIBUTE_26
      u_i2	     attval_from;           /* previous intl_id value  */
      char	     attfree[24];	    /*   F R E E   S P A C E   */
 } DMP_ATTRIBUTE_26;
+
+typedef union {
+    DMP_OLDATTRIBUTE	att_64;		/* 6.4 style, DSC_V2 (or V1?) */
+    DMP_ATTRIBUTE_1X	att_1x;		/* 1.x style, DSC_V3 */
+    DMP_ATTRIBUTE_26	att_26;		/* 2.0 thru 2.6, DSC_V4 thru _V7 */
+    DMP_ATTRIBUTE_V8	att_v8;		/* r3/9.x style, DSC_V8 */
+    DMP_ATTRIBUTE	att_v9;		/* 10.0 style, DSC_V9 */
+} DMP_ATTRIBUTE_ANY;
+
+static VOID upgrade_iiatt_row(
+		DM2D_UPGRADE		*upgrade_cb,
+		DMP_ATTRIBUTE_ANY	*old_att,
+		DMP_ATTRIBUTE		*new_attp);
+
 
 /* Structure of a 3.0 iiindex entry: */
 typedef struct _DMP_INDEX_30
@@ -1951,34 +1968,73 @@ dm2d_add_db(
 	    ** Two types of upgrade, in-place or rewrite
 	    ** basically if a core catalog row gets wider its a rewrite
 	    **
+	    ** DANGER WILL ROBINSON if the catalog being converted is
+	    ** compressed, an in-place upgrade is fraught with peril.
+	    ** You need to be sure that whatever is changing, will not
+	    ** affect the row size after compression.  I suspect that
+	    ** it might be simpler to just use rewrite for most future
+	    ** catalog conversions, but we'll see!  (kschendel Apr 2010)
+	    **
 	    ** Adding new upgrade stuff... should mostly require 
 	    ** only new code to upgrade_iirel_row, upgrade_iiatt_row
 	    **
 	    ** UPGRADE_REWRITE isn't always necessary, 
 	    ** but it should always work!
+	    **
+	    ** In older versions, some core catalog changes were made by
+	    ** upgradedb via direct update to iirelation or iiattribute.
+	    ** That sort of thing is VERY strongly discouraged now,
+	    ** if not outright prohibited.
+	    ** A new core-catalog version would be needed anyway, so just use
+	    ** the converter machinery that exists here in dm2d.
 	    */
 	    MEfill(sizeof(upgrade_cb), 0, &upgrade_cb);
 	    upgrade_cb.upgr_create_version = create_version;
 
 	    /* Determine type of upgrade we need for iirelation */
 	    if (create_version < DSC_V3)
-		upgrade_cb.upgr_iirel = UPGRADE_REWRITE;
-	    else if (create_version < DSC_V7)
+		upgrade_cb.upgr_iirel_wid = sizeof(DMP_OLDRELATION);
+	    else if (create_version <= DSC_V7)
+		upgrade_cb.upgr_iirel_wid = sizeof(DMP_RELATION_26);
+	    else if (create_version == DSC_V8)
+		upgrade_cb.upgr_iirel_wid = sizeof(DMP_RELATION_V8);
+	    else
+		upgrade_cb.upgr_iirel_wid = sizeof(DMP_RELATION);
+
+	    if (create_version == DSC_VCURRENT)
+		upgrade_cb.upgr_iirel = 0;
+	    else if (upgrade_cb.upgr_iirel_wid == sizeof(DMP_RELATION))
 		upgrade_cb.upgr_iirel = UPGRADE_INPLACE;
 	    else
-		upgrade_cb.upgr_iirel = 0;
+		upgrade_cb.upgr_iirel = UPGRADE_REWRITE;
+
 
 	    /* Determine type of upgrade we need for iiattribute */
-	    if (create_version < DSC_V7)
-		upgrade_cb.upgr_iiatt = UPGRADE_REWRITE; 
+	    if (create_version < DSC_V3)
+		upgrade_cb.upgr_iiatt_wid = sizeof(DMP_OLDATTRIBUTE);
+	    else if (create_version == DSC_V3)
+		upgrade_cb.upgr_iiatt_wid = sizeof(DMP_ATTRIBUTE_1X);
+	    else if (create_version <= DSC_V7)
+		upgrade_cb.upgr_iiatt_wid = sizeof(DMP_ATTRIBUTE_26);
+	    else if (create_version == DSC_V8)
+		upgrade_cb.upgr_iiatt_wid = sizeof(DMP_ATTRIBUTE_V8);
 	    else
-	    {
-		/*
-		** note: currently INPLACE iiattribute upgradedb done by
-		** front end upgradeb program
-		*/
+		upgrade_cb.upgr_iiatt_wid = sizeof(DMP_ATTRIBUTE);
+
+	    if (create_version == DSC_VCURRENT)
 		upgrade_cb.upgr_iiatt = 0;
-	    }
+	    else if (upgrade_cb.upgr_iiatt_wid == sizeof(DMP_ATTRIBUTE))
+		upgrade_cb.upgr_iiatt = UPGRADE_INPLACE;
+	    else
+		upgrade_cb.upgr_iiatt = UPGRADE_REWRITE;
+
+	    /* Note: not all core catalog version changes will hit
+	    ** both iirelation and iiattribute.  However, in order for
+	    ** database-open to detect a completed upgrade, the upgrade
+	    ** CB should indicate "inplace" for a catalog that isn't
+	    ** changed.  The inplace-updaters will avoid actually
+	    ** updating rows if nothing changed, and they will do all
+	    ** the right things with the config conversion-done flags.
 
 	    /*
 	    ** To test the core catalog upgrade
@@ -2021,121 +2077,58 @@ dm2d_add_db(
 		}
 	    }
 
-	    /* If database is pre-V7 (ie older than r3), we need to
-	    ** convert both iirelation and iiattribute.
-	    ** The iirelation conversion rewrites the table file if
-	    ** the db is 6.4 or older;  it is converted in-place if
-	    ** the db is newer than 6.4.
-	    ** iiattribute rewrites a new table file in both cases,
-	    ** as the contents change significantly for V7+.
-	    ** Note that if we have to do conversion here, we actually
-	    ** convert to "current" (V8 at present).
-	    ** If the database is already V7, we do not need to do anything
-	    ** here.  Upgradedb will take care of getting it to V8.
-	    ** (V8 overlays some of attfree with attcollid, and upgradedb
-	    ** can do that.)
+	    /* Upgrade iirelation first, then iiattribute.
+	    **
+	    ** upgrade_cb has stubs to get iiindex into the act, but
+	    ** so far (DSC_V9) no iiindex upgrade has been needed.
 	    */
 	    if (upgrade_cb.upgr_iirel || upgrade_cb.upgr_iiatt)
 		TRdisplay("upgrade %~t create version %d current version %d\n", 
 		sizeof(dcb->dcb_name.db_db_name), dcb->dcb_name.db_db_name,
 		create_version, DSC_VCURRENT);
 
+	    status = E_DB_OK;
 	    if (upgrade_cb.upgr_iirel == UPGRADE_REWRITE)
 	    {
 		status = dm2d_upgrade_rewrite_iirel(&upgrade_cb, dcb,
 			cnf_flag, temp_lock_list, dberr);
-		if (status != E_DB_OK)
-		{
-		    uleFormat(dberr, 0, NULL, ULE_LOG, (DB_SQLSTATE *)NULL, 
-		    		NULL, 0, NULL, err_code, 0);
-		    SETDBERR(dberr, 0, E_DM9265_ADD_DB);
-		    dm0s_munlock(&svcb->svcb_dq_mutex);
-		    break;
-		}
 
 	    }
 	    else if (upgrade_cb.upgr_iirel == UPGRADE_INPLACE)
 	    {
-		/* Older than V7 (r3), but newer than 6.4 */
 		status = dm2d_convert_inplace_iirel(&upgrade_cb, dcb,
 			cnf_flag, temp_lock_list, dberr);
-		if (status != E_DB_OK)
-		{
-		    uleFormat(dberr, 0, NULL, ULE_LOG, (DB_SQLSTATE *)NULL, 
-		    		NULL, 0, NULL, err_code, 0);
-		    SETDBERR(dberr, 0, E_DM9265_ADD_DB);
-		    dm0s_munlock(&svcb->svcb_dq_mutex);
-		    break;
-		}
 	    }
-
-#ifdef NOT_UNTIL_CLUSTERED_INDEXES
-/* 
-** FIX ME remove dm2d_convert_preV9_iirel and add iirelation changes
-** to upgrade_iirel_row instead
-*/
-	    if ( create_version < DSC_V9 )
+	    if (status != E_DB_OK)
 	    {
-		/* Older than V9 (Ingres2007), but newer than 6.4 */
-		status = dm2d_convert_preV9_iirel(dcb, create_version,
-			cnf_flag, temp_lock_list, dberr);
-		if (status != E_DB_OK)
-		{
-		    uleFormat(dberr, 0, NULL, ULE_LOG, (DB_SQLSTATE *)NULL, 
-		    		NULL, 0, NULL, err_code, 0);
-		    SETDBERR(dberr, 0, E_DM9265_ADD_DB);
-		    dm0s_munlock(&svcb->svcb_dq_mutex);
-		    break;
-		}
-		/* Convert IIINDEX to V9 format */
-		status = dm2d_convert_preV9_iiind(dcb, create_version,
-			cnf_flag, temp_lock_list, dberr);
-		if (status != E_DB_OK)
-		{
-		    uleFormat(dberr, 0, NULL, ULE_LOG, (DB_SQLSTATE *)NULL, 
-		    		NULL, 0, NULL, err_code, 0);
-		    SETDBERR(dberr, 0, E_DM9265_ADD_DB);
-		    dm0s_munlock(&svcb->svcb_dq_mutex);
-		    break;
-		}
+		uleFormat(dberr, 0, NULL, ULE_LOG, (DB_SQLSTATE *)NULL, 
+				NULL, 0, NULL, err_code, 0);
+		SETDBERR(dberr, 0, E_DM9265_ADD_DB);
+		dm0s_munlock(&svcb->svcb_dq_mutex);
+		break;
 	    }
-#endif /* NOT_UNTIL_CLUSTERED_INDEXES */
 
-	    /* iiattribute conversion is the same for all pre-V7 db's */
+	    status = E_DB_OK;
 	    if (upgrade_cb.upgr_iiatt == UPGRADE_REWRITE)
 	    {
 		status = dm2d_upgrade_rewrite_iiatt(&upgrade_cb, dcb,
 			cnf_flag, temp_lock_list, dberr);
-		if (status != E_DB_OK)
-		{
-		    uleFormat(dberr, 0, NULL, ULE_LOG, (DB_SQLSTATE *)NULL, 
-		    		NULL, 0, NULL, err_code, 0);
-		    SETDBERR(dberr, 0, E_DM9265_ADD_DB);
-		    dm0s_munlock(&svcb->svcb_dq_mutex);
-		    break;
-		}
+
+	    }
+	    else if (upgrade_cb.upgr_iiatt == UPGRADE_INPLACE)
+	    {
+		status = dm2d_convert_inplace_iiatt(&upgrade_cb, dcb,
+			cnf_flag, temp_lock_list, dberr);
+	    }
+	    if (status != E_DB_OK)
+	    {
+		uleFormat(dberr, 0, NULL, ULE_LOG, (DB_SQLSTATE *)NULL, 
+				NULL, 0, NULL, err_code, 0);
+		SETDBERR(dberr, 0, E_DM9265_ADD_DB);
+		dm0s_munlock(&svcb->svcb_dq_mutex);
+		break;
 	    }
 
-#ifdef NOT_UNTIL_CLUSTERED_INDEXES
-/* 
-** FIX ME remove dm2d_convert_preV9_iiatt and add iiattribute changes
-** to upgrade_iiatt_row instead
-*/
-	    /* Do iiattribute stuff for Ingres2007 */
-	    if (create_version < DSC_V9)
-	    {
-		status = dm2d_convert_preV9_iiatt(dcb, create_version,
-			cnf_flag, temp_lock_list, dberr);
-		if (status != E_DB_OK)
-		{
-		    uleFormat(dberr, 0, NULL, ULE_LOG, (DB_SQLSTATE *)NULL, 
-		    		NULL, 0, NULL, err_code, 0);
-		    SETDBERR(dberr, 0, E_DM9265_ADD_DB);
-		    dm0s_munlock(&svcb->svcb_dq_mutex);
-		    break;
-		}
-	    }
-#endif /* NOT_UNTIL_CLUSTERED_INDEXES */
 	} /* if upgradedb */
 
 	/*  Unlock the SVCB. */
@@ -3548,6 +3541,10 @@ dm2d_del_db(
 **	    Make use of IIDBDB_ID macro.
 **	28-apr-2010 (miket) SIR 122403
 **	    Init new relation encryption columns.
+**	30-Apr-2010 (kschendel)
+**	    Replace version specific conversion-done flags with A/B
+**	    scheme, so that we don't have to keep adding more flags
+**	    indefinitely.
 */
 DB_STATUS
 dm2d_open_db(
@@ -3598,6 +3595,7 @@ dm2d_open_db(
     char		*uvtbl;
     bool		SMS_converted_flag = TRUE;
     bool		has_raw = FALSE;
+    bool		dsc_old_version = FALSE;
     DB_TRAN_ID		tran_id;
     DMP_RCB		*rcb = NULL;
     char		tab_name[DB_TAB_MAXNAME]; 
@@ -4066,48 +4064,32 @@ dm2d_open_db(
 	*/
 	if  (cnf->cnf_dsc->dsc_c_version < DSC_VCURRENT)
 	{   
-	    if	(cnf->cnf_dsc->dsc_c_version < DSC_V3
-	      && (cnf->cnf_dsc->dsc_status & DSC_IIREL_CONV_DONE) == 0)
+	    i4 iirel_done = DSC_A_IIREL_CONV_DONE;
+	    i4 iiatt_done = DSC_A_IIATT_CONV_DONE;
+
+	    if (cnf->cnf_dsc->dsc_status & DSC_CONV_B)
+	    {
+		iirel_done = DSC_B_IIREL_CONV_DONE;
+		iiatt_done = DSC_B_IIATT_CONV_DONE;
+	    }
+
+	    if ((cnf->cnf_dsc->dsc_status & iirel_done) == 0)
 	    {	
 		SETDBERR(dberr, 0, E_DM93AD_IIREL_NOT_CONVERTED);
 		break;
 	    }
-	    if	(cnf->cnf_dsc->dsc_c_version < DSC_V7)
-	    {
-		if ((cnf->cnf_dsc->dsc_status & DSC_IIATT_V7_CONV_DONE) == 0)
-		{	
-		    SETDBERR(dberr, 0, E_DM93F1_IIATT_NOT_CONVERTED);
-		    break;
-		}
-
-		if ((cnf->cnf_dsc->dsc_status & 
-					DSC_65_SMS_DBMS_CATS_CONV_DONE) == 0)
-		{	
-		    SMS_converted_flag = FALSE;
-		}
+	    if ((cnf->cnf_dsc->dsc_status & iiatt_done) == 0)
+	    {	
+		SETDBERR(dberr, 0, E_DM93F1_IIATT_NOT_CONVERTED);
+		break;
 	    }
-#ifdef NOT_UNTIL_CLUSTERED_INDEXES
-	    if	(cnf->cnf_dsc->dsc_c_version < DSC_V9)
-	    {
-		if ((cnf->cnf_dsc->dsc_status & DSC_IIIND_V9_CONV_DONE) == 0)
-		{	
-		    /* ***temp Need new error code */
-		    SETDBERR(dberr, 0, E_DM93F1_IIATT_NOT_CONVERTED);
-		    break;
-		}
-		if ((cnf->cnf_dsc->dsc_status & DSC_IIATT_V9_CONV_DONE) == 0)
-		{	
-		    SETDBERR(dberr, 0, E_DM93F1_IIATT_NOT_CONVERTED);
-		    break;
-		}
 
-		if ((cnf->cnf_dsc->dsc_status & 
+	    dsc_old_version = TRUE;
+	    if ((cnf->cnf_dsc->dsc_status & 
 					DSC_65_SMS_DBMS_CATS_CONV_DONE) == 0)
-		{	
-		    SMS_converted_flag = FALSE;
-		}
+	    {	
+		SMS_converted_flag = FALSE;
 	    }
-#endif /* NOT_UNTIL_CLUSTERED_INDEXES */
 	}
 
 	/*
@@ -4842,6 +4824,9 @@ dm2d_open_db(
 		break;
 	}
 
+	/* The sms-cats-conv-done flag being cleared should be a
+	** tip-off, but double check:
+	*/
 	if ( (flag & DM2D_CVCFG) &&
 	    rel_tcb->tcb_rel.relfhdr == DM_TBL_INVALID_FHDR_PAGENO ||
 	    relx_tcb->tcb_rel.relfhdr == DM_TBL_INVALID_FHDR_PAGENO ||
@@ -4862,7 +4847,7 @@ dm2d_open_db(
 	** config->cnf_dsc->dsc_status &= ~DSC_65_SMS_DBMS_CATS_CONV_DONE;
 	** so we end up here
 	*/
-	if ( flag & DM2D_CVCFG && SMS_converted_flag == FALSE )
+	if ( flag & DM2D_CVCFG && dsc_old_version)
 	{
 	    /* 
 	    ** Open the config file to lock anyone out whilst we are
@@ -4876,36 +4861,44 @@ dm2d_open_db(
 
 	    config = cnf;
 
-	    /*
-	    ** All upgrades that rewrite a core catalog as a 1-bucket hash
-	    ** needs to fix up FHDR/FMAP here
-	    */
-	    status = dm2d_convert_core_cats_to_65(
+	    if (! SMS_converted_flag)
+	    {
+		/*
+		** All upgrades that rewrite a core catalog as a 1-bucket hash
+		** needs to fix up FHDR/FMAP here
+		*/
+		status = dm2d_convert_core_cats_to_65(
 			    rel_tcb, relx_tcb,
 			    att_tcb, idx_tcb,
 			    lock_list, dberr );
-	    if ( status != E_DB_OK )
-		break;
-	
-	    if (cnf->cnf_dsc->dsc_c_version < DSC_V3)
-	    {
-		/* 
-		** Convert the the other DBMS catalogs 
-		*/
-		status = dm2d_convert_DBMS_cats_to_65( 
-				dcb, lock_list, dberr );
 		if ( status != E_DB_OK )
-		       break;
+		    break;
+	    
+		if (cnf->cnf_dsc->dsc_c_version < DSC_V3)
+		{
+		    /* 
+		    ** 6.4 only, convert the the other DBMS catalogs 
+		    */
+		    status = dm2d_convert_DBMS_cats_to_65( 
+				    dcb, lock_list, dberr );
+		    if ( status != E_DB_OK )
+			   break;
+		}
 	    }
 
 	    /* 
 	    ** Conversion of the DBMS catalogs done ok so mark
 	    ** in config file so that we do not do again.
-	    ** If we had to do SMS stuff we must have been coming from
-	    ** pre-V7, and the converters take us right up to core
-	    ** version V8.
+	    **
+	    ** Also, flip the A vs B flag (see dm0c.h), and indicate
+	    ** that the catalogs in this database are now up to date.
+	    **
+	    ** We could turn off all the "core cat done" flags here, but
+	    ** leave the most recent ones, they are a useful (?) sign that
+	    ** the DB went through an upgrade.
 	    */
 	    cnf->cnf_dsc->dsc_status |= DSC_65_SMS_DBMS_CATS_CONV_DONE;
+	    cnf->cnf_dsc->dsc_status ^= DSC_CONV_B;
 	    cnf->cnf_dsc->dsc_c_version = DSC_VCURRENT;
 
 	    /* 
@@ -4917,16 +4910,14 @@ dm2d_open_db(
 	         break;
 
 	    config = 0;
-
-	    SMS_converted_flag = TRUE;
-
+	    dsc_old_version = FALSE;
 	}
 
 
 	/*
 	** make sure database hase been converted to correct level 
 	*/
-	if ( SMS_converted_flag == FALSE )
+	if ( dsc_old_version )
 	{
 	    SETDBERR(dberr, 0, E_DM92CA_SMS_CONV_NEEDED);
 	    status = E_DB_ERROR;
@@ -7711,19 +7702,6 @@ construct_tcb(
 
     STRUCT_ASSIGN_MACRO (dcb->dcb_root->logical, t->tcb_rel.relloc);
 
-    /* 
-    ** Note: since initial Jupiter databases, configuration files
-    ** etc, did not support multiple locations, they to not
-    ** have their relloccount value initialized.  So do here
-    ** just in case. 
-    */
-
-    if (((t->tcb_rel.relstat & TCB_MULTIPLE_LOC) == 0) &&
-	(t->tcb_rel.relloccount != 1))
-    {
-	t->tcb_rel.relloccount = 1;
-    }
-
     /*
     ** This might eventually be replaced by database updgrade software, but
     ** for now, if relpgsize is not set, force it to be DM_PG_SIZE.
@@ -8101,25 +8079,6 @@ update_tcb(
 		*/
 		if (tcb->tcb_rel.relpgsize == 0)
 		    tcb->tcb_rel.relpgsize = DM_PG_SIZE;
-
-		/* 
-		** Since initial Jupiter databases, configuration files
-		** etc, did not support multiple locations, they to not
-		** have their relloccount value initialized.  So do here
-		** just in case. 
-		*/
-		if (((tcb->tcb_rel.relstat & TCB_MULTIPLE_LOC) == 0) &&
-		    (tcb->tcb_rel.relloccount != 1))
-		{
-#ifdef xDEBUG
-		    TRdisplay("Warning: iirelation row for single location\n");
-		    TRdisplay("  table (%t) has an invalid relloccount field\n",
-			sizeof(tcb->tcb_rel.relid), 
-			tcb->tcb_rel.relid.db_tab_name);
-		    TRdisplay("  Setting relloccount value to 1\n");
-#endif
-		    tcb->tcb_rel.relloccount = 1;
-		}
 
 		/* For iirelation and iiattribute, turn on duplicates
 		** allowed.  NODUPLICATES is just a waste of time.  Anyway,
@@ -8757,6 +8716,9 @@ dm2d_check_db_backup_status(
 **      23-mar-1995 (chech02)
 **          b67533, dm2d_convert_DBMS_cats_to_65(), update relpages of 
 **          iirelation too.
+**	29-Apr-2010 (kschendel)
+**	    New core catalog conversion has been done, so relrecord needs
+**	    to be a current style relation record.
 */
 static DB_STATUS
 dm2d_convert_DBMS_cats_to_65 (
@@ -8767,7 +8729,7 @@ dm2d_convert_DBMS_cats_to_65 (
     DB_STATUS 		status = E_DB_OK;
     DMP_RCB		*rel_rcb = 0;
     DMP_RCB		*table_rcb = 0;
-    DMP_RELATION_26	relrecord;
+    DMP_RELATION	relrecord;
     DB_TRAN_ID		tran_id;
     DM_TID		tid;
     DMP_TCB		*table_tcb;
@@ -8815,7 +8777,7 @@ dm2d_convert_DBMS_cats_to_65 (
 	** DB has been converted.
 	** 
 	*/
-	rel_rcb->rcb_state ^= RCB_READAHEAD;
+	rel_rcb->rcb_state &= ~RCB_READAHEAD;
 
 	do
 	{
@@ -8978,7 +8940,6 @@ dm2d_convert_core_table_to_65(
     DB_STATUS		status;
     DMP_RCB		*rcb = 0;
     DM2R_KEY_DESC	qual_list[1];
-    DMP_RELATION_26	relrecord;
     DB_TRAN_ID		tran_id;
     DM_TID		tid;
     i4		    *err_code = &dberr->err_code;
@@ -9551,37 +9512,424 @@ DMP_DCB             *dcb)
 }
 
 /*{
+** Name: dm2d_convert_inplace_iiatt - convert iiattribute to CURRENT format
+**
+** Description:
+**	An iiattribute change that does not change the width of the
+**	row can use read-convert-replace to update iiattribute.
+**
+**	We assume that the iiattribute key columns aren't changed or
+**	moved, either.  Otherwise the conversion will have to be done
+**	with a rewrite.
+**
+**	Core-catalog versions that don't change iiattribute at all
+**	would come here as well.  It's still necessary to manipulate
+**	the "conversion done" flags in the config, but we can skip
+**	the rewriting of iiattribute in that case.
+**
+** Inputs:
+**	upgrade_cb			Upgrade conversion info
+**      db_id                           database to upgrade
+**	flag				Config flags (ro, locked)
+**	lock_list			Lock list if config already locked
+**
+** Outputs:
+**      err_code                        error return code
+**
+**	Returns:
+**	    DB_STATUS
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	    none
+**
+** History:
+**	29-Apr-2010 (kschendel)
+**	    Duplicate inplace-iirel;  we don't need an inplace iiattribute
+**	    converter for V9, but maybe in the future we will.
+*/
+
+/* Preliminary:  a function that says "do we actually need to rewrite
+** iiattribute rows when moving from version X to current?"
+** If FALSE is returned, we don't bother uselessly rewriting iiattribute.
+**
+** For DSC_V9, no conversions are inplace, so the question is moot.
+** Note that even if this function returns FALSE, we'll still set the
+** appropriate conversion-done flags in the config status.
+*/
+static bool
+iiatt_conversion_needed(i4 old_version)
+{
+    /* V9, question is irrelevant. */
+    return (FALSE);
+}
+
+
+/* Now for the real thing */
+
+static DB_STATUS
+dm2d_convert_inplace_iiatt (
+    DM2D_UPGRADE    *upgrade_cb,
+    DMP_DCB	    *db_id,
+    i4              flag,
+    i4              lock_list,
+    DB_ERROR	    *dberr )
+{
+    DMP_DCB	    *dcb = (DMP_DCB *)db_id;
+    i4	            temp_lock_list;
+    STATUS	    status = OK;
+    DB_STATUS       db_status = E_DB_OK;
+    DB_STATUS       local_status;
+    i4		    local_error;
+    CL_ERR_DESC	    sys_err;
+    DM0C_CNF	    *config = 0;
+    bool	    config_open = FALSE;
+    bool	    iiatt_open = FALSE;
+    DB_TAB_ID	    iiatt_tab_id;
+    DM_FILE	    iiatt_file_name;
+    DI_IO	    iiatt_di_io;
+    DMPP_PAGE	    *iiatt_pg = (DMPP_PAGE *)NULL;
+    i4	   	    io_count;
+    DMP_ATTRIBUTE    new_iiatt;
+    DMP_ATTRIBUTE_ANY  old_iiatt;
+    char	    *old_iiatt_ptr;
+    DM_TID	    iiatt_tid;
+    DMPP_ACC_PLV    *local_plv;
+    DB_TRAN_ID	    upgrade_tran;
+    DM_TID	    tid;
+    i4	    record_size = upgrade_cb->upgr_iiatt_wid;
+    i4      iiatt_pgformat;
+    i4      iiatt_pgsize;
+    i4	    curpagenum;
+    i4	    convert_cnt = 0;
+    i4	    done_flag, to_clear_flag;
+    i4		    *err_code = &dberr->err_code;
+
+    CLRDBERR(dberr);
+
+    for (;;)
+    {
+	
+	/*  
+	** Create a temporary lock list. This is needed to open the config file
+	*/
+	if ((flag & DM0C_CNF_LOCKED) == 0)
+	{
+	    status = LKcreate_list(LK_ASSIGN | LK_NONPROTECT | LK_NOINTERRUPT,
+		(i4)0, (LK_UNIQUE *)NULL, (LK_LLID *)&temp_lock_list, 0, &sys_err);
+
+	    if (status != OK)
+	    {
+		uleFormat(NULL, status, &sys_err, ULE_LOG, (DB_SQLSTATE *)NULL,
+		    (char *)NULL, 0L, (i4 *)NULL, &local_error, 0);
+		uleFormat(NULL, E_DM901A_BAD_LOCK_CREATE, &sys_err, ULE_LOG, 
+                    (DB_SQLSTATE *)NULL,
+		    (char *)NULL, 0L, (i4 *)NULL, &local_error, 0);
+		break;
+	    }
+	}
+	else
+	{
+	    temp_lock_list = lock_list;    
+	}
+
+	/*
+	** Open the config file.
+	** Note that the updating of iiattribute is happening at a physical
+	** file level, without locking or page buffering.
+	*/
+	db_status = dm0c_open(dcb, flag, temp_lock_list, &config, dberr);
+	if (db_status != E_DB_OK)
+	    break;
+
+	config_open = TRUE;
+
+	/*
+	** Check the status of the upgrade. Its possible that upgradedb failed
+	** and we're trying again. In that case upgradedb might have
+	** failed after completing the convert.
+	*/
+
+	done_flag = DSC_A_IIATT_CONV_DONE;
+	to_clear_flag = DSC_B_IIATT_CONV_DONE;
+	if (config->cnf_dsc->dsc_status & DSC_CONV_B)
+	{
+	    done_flag = DSC_B_IIATT_CONV_DONE;
+	    to_clear_flag = DSC_A_IIATT_CONV_DONE;
+	}
+	to_clear_flag |= DSC_NOTUSED;
+
+	/* See if we already finished this conversion. */
+	if (config->cnf_dsc->dsc_status & done_flag)
+	{
+	    /* We've already completed the conversion. */
+
+	    /* Close the configuration file. */
+
+	    db_status = dm0c_close(config, (flag & DM0C_CNF_LOCKED), dberr);
+
+	    if (db_status != E_DB_OK)
+		break;
+
+	    /*  Release the temporary lock list. */
+
+	    if((flag & DM0C_CNF_LOCKED) == 0)
+	    {
+		status = LKrelease( LK_ALL, temp_lock_list, (LK_LKID *)NULL, 
+			(LK_LOCK_KEY *)NULL, (LK_VALUE *)NULL, &sys_err);
+
+		if (status != OK)
+		{
+		    uleFormat(NULL, status, &sys_err, ULE_LOG, (DB_SQLSTATE *)NULL,
+			(char *)NULL, 0L, (i4 *)NULL, &local_error, 0);
+		    uleFormat(NULL, E_DM901B_BAD_LOCK_RELEASE, &sys_err, ULE_LOG , 
+			(DB_SQLSTATE *)NULL, (char *)NULL, 0L, (i4 *)NULL, 
+			&local_error, 1, sizeof(temp_lock_list), temp_lock_list);
+		    break;
+		}
+	    }
+	    return (E_DB_OK);
+	}
+
+	/* Is anything really needed other than config flag updating? */
+	if (iiatt_conversion_needed(upgrade_cb->upgr_create_version))
+	{
+
+	    /* Forcibly turn off journaling.  We're reformatting iiattribute
+	    ** rows without benefit of logging, and it would just confuse
+	    ** any journals. User will have to restore journaling after the upgrade.
+	    ** Also note that this is running at "add" time, DCB journal status
+	    ** is set at later "open" time, will pick up the cleared flag.
+	    */
+
+	    config->cnf_dsc->dsc_status &= ~DSC_JOURNAL;
+
+	    /* Determine the page format of iiattribute */
+	    /* If an inplace conversion is possible, we can rely on
+	    ** the size/type in the config.
+	    */
+	    iiatt_pgsize = config->cnf_dsc->dsc_iiatt_relpgsize;
+	    iiatt_pgformat = config->cnf_dsc->dsc_iiatt_relpgtype;
+
+	    if ((iiatt_pg = (DMPP_PAGE *)dm0m_pgalloc(iiatt_pgsize)) == 0)
+	    {
+		/* FIX ME fix me error */
+		break;
+	    }
+
+	    /*  Generate the filename for iiattribute table. */
+	    iiatt_tab_id.db_tab_base = DM_B_ATTRIBUTE_TAB_ID;
+	    iiatt_tab_id.db_tab_index = DM_I_ATTRIBUTE_TAB_ID;
+	    dm2f_filename (DM2F_TAB, &iiatt_tab_id, 0, 0, 0, &iiatt_file_name);
+
+	    /* Open the iiattribute for write. */
+	    status = DIopen(&iiatt_di_io,
+		dcb->dcb_location.physical.name, dcb->dcb_location.phys_length,
+		iiatt_file_name.name, sizeof(iiatt_file_name.name),
+		iiatt_pgsize, DI_IO_WRITE, DI_SYNC_MASK, &sys_err);
+
+	    if (status != OK)
+		break;
+
+	    iiatt_open = TRUE;
+
+	    dm1c_get_plv(iiatt_pgformat, &local_plv);
+
+	    /* iiattribute is HASH, start reading at page zero */
+	    curpagenum = 0;
+
+	    /* init zero tranid for dmpp_put */
+	    upgrade_tran.db_low_tran = 0;
+	    upgrade_tran.db_high_tran = 0;
+
+	    /* Now update all records in iiattribute */
+	    for (;;)
+	    {
+		/* Read a page from the iiattribute */
+		io_count = 1;
+		status = DIread(&iiatt_di_io, &io_count,(i4)curpagenum, 
+			(char *)iiatt_pg, &sys_err);
+		if (status != OK)
+		    break;
+
+		if (DMPP_VPT_GET_PAGE_PAGE_MACRO(iiatt_pgformat, iiatt_pg)
+				!= curpagenum)
+		{
+		    /* fix me error */
+		    break;
+		}
+
+
+		/* Read all records on current page */
+		tid.tid_tid.tid_page = curpagenum;
+		tid.tid_tid.tid_line = DM_TIDEOF;
+
+		/* Update each iiattribute record on this page */
+		while (++tid.tid_tid.tid_line < 
+		    (i4)DMPP_VPT_GET_PAGE_NEXT_LINE_MACRO(iiatt_pgformat, iiatt_pg))
+		{
+		    old_iiatt_ptr = (char *) &old_iiatt;
+		    db_status = (*local_plv->dmpp_get)(iiatt_pgformat, iiatt_pgsize,
+			iiatt_pg, &tid, &record_size, &old_iiatt_ptr,
+			(i4*)NULL, (u_i4*)NULL, (u_i2*)NULL, 
+			(DMPP_SEG_HDR *)NULL);
+	    
+		    /* If the line is empty, go to the next line. */
+		    if  (db_status == E_DB_WARN)
+			continue;
+		    if (db_status != E_DB_OK)
+			break;
+
+		    /* FIXME will need to uncompress the row.  Don't need
+		    ** to worry about it for < DSC_V9, but future changes
+		    ** will have to be able to do decompression.
+		    */
+		    if (upgrade_cb->upgr_create_version >= DSC_V9)
+		    {
+			*(i4 *)0 = 1;		/* ADD CODE HERE */
+		    }
+
+		    if (old_iiatt_ptr != (char *) &old_iiatt)
+			MEcopy(old_iiatt_ptr, record_size, (PTR) &old_iiatt);
+
+		    /*
+		    ** UPGRADE the row to the CURRENT format 
+		    */
+		    upgrade_iiatt_row(upgrade_cb, &old_iiatt, &new_iiatt);
+
+		    /* FIXME NEED TO RECOMPRESS THE ROW */
+		    *(i4 *)0 = 1;		/* ADD CODE HERE */
+
+		    (*local_plv->dmpp_put)(iiatt_pgformat, iiatt_pgsize, iiatt_pg,
+			    DM1C_DIRECT, &upgrade_tran, (u_i2)0, &tid,
+			    sizeof(new_iiatt), (char *)&new_iiatt,
+			    (u_i2)0, /* alter table version 0 */
+			    (DMPP_SEG_HDR *)NULL);
+
+		    convert_cnt++;
+
+		} /* end while */
+
+		if (db_status == E_DB_ERROR) 
+		    break;
+		else
+		    db_status = E_DB_OK;
+
+		/* clear DMPP_MODIFY, checksum page */
+		DMPP_VPT_CLR_PAGE_STAT_MACRO(iiatt_pgformat, iiatt_pg, DMPP_MODIFY);
+		dm0p_insert_checksum(iiatt_pg, iiatt_pgformat, iiatt_pgsize); 
+
+		io_count = 1;
+		status = DIwrite(&iiatt_di_io, &io_count, curpagenum,
+		    (char *)iiatt_pg, &sys_err);
+		if (status != OK) 
+		    break;
+
+		/* Follow overflow chain */
+		if (DMPP_VPT_GET_PAGE_OVFL_MACRO(iiatt_pgformat, iiatt_pg) != 0)
+		    curpagenum = 
+			    DMPP_VPT_GET_PAGE_OVFL_MACRO(iiatt_pgformat, iiatt_pg);
+		/* No more overflow buckets. Go to the next hash bucket. */
+		else if (DMPP_VPT_GET_PAGE_MAIN_MACRO(iiatt_pgformat, iiatt_pg) != 0)
+		    curpagenum = 
+			    DMPP_VPT_GET_PAGE_MAIN_MACRO(iiatt_pgformat, iiatt_pg);
+		/* No more main and overflow buckets. We're done. */
+		else
+		    break;
+
+	    } /* end for */
+
+	    if (status != OK || db_status != E_DB_OK) 
+		break;
+
+	    /* Close the new iiattribute file */
+	    status = DIclose (&iiatt_di_io, &sys_err);
+	    if  (status != OK)
+		break;
+		
+	    iiatt_open = FALSE;
+
+	} /* conversion needed? */
+
+	/* 
+	** Mark the flag in the config file to say we've completed the 
+	** conversion.  Turn off the old conversion-done flags.
+	*/
+
+	config->cnf_dsc->dsc_status |= done_flag;
+	config->cnf_dsc->dsc_status &= ~to_clear_flag;
+
+	/* Close the configuration file. */
+
+	db_status = dm0c_close(config, (flag & DM0C_CNF_LOCKED) | DM0C_UPDATE, 
+			dberr);
+
+	if (db_status != E_DB_OK)
+	    break;
+
+	config_open = FALSE;
+
+	/*  Release the temporary lock list. */
+
+	if ((flag & DM0C_CNF_LOCKED) == 0)
+	{
+	    status = LKrelease(LK_ALL, temp_lock_list, (LK_LKID *)NULL,
+			(LK_LOCK_KEY *)NULL, (LK_VALUE *)NULL, &sys_err);
+
+	    if (status != OK)
+	    {
+		uleFormat(NULL, status, &sys_err, ULE_LOG, (DB_SQLSTATE *)NULL,
+		    (char *)NULL, 0L, (i4 *)NULL, &local_error, 0);
+		uleFormat(NULL, E_DM901B_BAD_LOCK_RELEASE, &sys_err, ULE_LOG, 
+                    (DB_SQLSTATE *)NULL,
+		    (char *)NULL, 0L, (i4 *)NULL, &local_error, 1,
+		    sizeof(temp_lock_list), temp_lock_list);
+		break;
+	    }
+	}
+
+	/* Return success. */
+	if (iiatt_pg != NULL)
+	    dm0m_pgdealloc((char **)&iiatt_pg);
+
+	return (E_DB_OK);
+    } /* end for */
+
+    if (iiatt_pg)
+	dm0m_pgdealloc((char **)&iiatt_pg);
+
+    /* Deallocate the configuration record. */
+    if (config_open == TRUE)
+	local_status = dm0c_close(config, (flag & DM0C_CNF_LOCKED), dberr);
+
+    /* Close the iiattation files if they are open. */
+    if (iiatt_open == TRUE)
+	local_status = DIclose (&iiatt_di_io, &sys_err);
+
+    SETDBERR(dberr, 0, E_DM93F0_CONVERT_IIATT);
+    return (E_DB_ERROR);
+} /* dm2d_convert_inplace_iiatt */
+
+/*{
 ** Name: dm2d_convert_inplace_iirel - convert iirelation to V7 format
 **
 ** Description:
-**      Used indirectly by upgradedb to convert iirelation to V7 format
-**      V7 is DMF version for Ingres Release 3
+**	An iirelation change that does not change the width of the
+**	row can use read-convert-replace to update iirelation.
 **
-**      Since this upgrade does not change the width of the iirelation catalog,
-**      it can put-replace the new iirelation record onto the old iirelation 
-**      record.
-**      
-**      Since we are not changing the width of iirelation and we are not
-**      moving any rows there is no need to convert iirel_idx.
-**      Since we are not changing the position of any key columns in iirelation,
-**      there is no need to make any changes in iiindex.
+**	We assume that the iirelation key columns aren't changed or
+**	moved, either.  Otherwise the conversion will have to be done
+**	with a rewrite.
 **
-**      For the 256k row project, the relwid and reltotwid columns must
-**      change from i2 to i4. The new format was chosen such that the offset
-**      of only a few attributes changed. The relpgsize attribute was moved
-**      so that the upgrade would know if the upgrade had already been done.
-**      The relloccount attribute was changed from i4 to i2 so that we could
-**      still have 8 bytes available in relfree.
-**   
-**	Since significant core catalog (iirelation and iiattribute) changes
-**	have occurred, we'll take the approach of reconstructing the
-**	iiattribute rows describing the core catalog columns.  (See
-**	the iiattribute conversion.)  Equivalent changes must be plugged
-**	into the core catalog iirelation rows as we encounter them.
+**	Core-catalog versions that don't change iirelation at all
+**	would come here as well.  It's still necessary to manipulate
+**	the "conversion done" flags in the config, but we can skip
+**	the rewriting of iirelation in that case.
 **
 ** Inputs:
+**	upgrade_cb			Upgrade info
 **      db_id                           database to upgrade
-**	create_version			Version converting from
 **	flag				Config flags (ro, locked)
 **	lock_list			Lock list if config already locked
 **
@@ -9603,8 +9951,29 @@ DMP_DCB             *dcb)
 **          Core catalog upgrade for 256k rows, rows spanning pages
 **	25-Aug-2004 (schka24)
 **	    Combine V6 and V7 updates.
-[@history_template@]...
+**	29-Apr-2010 (kschendel)
+**	    Union-ize the old iirelation.  Note that 10.0 won't be using
+**	    this routine for upgrades.
 */
+
+/* Preliminary:  a function that says "do we actually need to rewrite
+** iirelation rows when moving from version X to current?"
+** If FALSE is returned, we don't bother uselessly rewriting iirelation.
+**
+** For DSC_V9, no conversions are inplace, so the question is moot.
+** Note that even if this function returns FALSE, we'll still set the
+** appropriate conversion-done flags in the config status.
+*/
+static bool
+iirel_conversion_needed(i4 old_version)
+{
+    /* V9, question is irrelevant. */
+    return (FALSE);
+}
+
+
+/* Now for the real thing */
+
 static DB_STATUS
 dm2d_convert_inplace_iirel (
     DM2D_UPGRADE    *upgrade_cb,
@@ -9629,17 +9998,18 @@ dm2d_convert_inplace_iirel (
     DMPP_PAGE	    *iirel_pg = (DMPP_PAGE *)NULL;
     i4	   	    io_count;
     DMP_RELATION    new_iirel;
-    DMP_RELATION    old_iirel;
-    DMP_RELATION    *old_iirel_ptr;
+    DMP_RELATION_ANY  old_iirel;
+    char	    *old_iirel_ptr;
     DM_TID	    iirel_tid;
     DMPP_ACC_PLV    *local_plv;
     DB_TRAN_ID	    upgrade_tran;
     DM_TID	    tid;
-    i4	    record_size = sizeof(DMP_RELATION);
+    i4	    record_size = upgrade_cb->upgr_iirel_wid;
     i4      iirel_pgformat;
     i4      iirel_pgsize;
     i4	    curpagenum;
     i4	    convert_cnt = 0;
+    i4	    done_flag, to_clear_flag;
     i4		    *err_code = &dberr->err_code;
 
     CLRDBERR(dberr);
@@ -9681,534 +10051,234 @@ dm2d_convert_inplace_iirel (
 
 	config_open = TRUE;
 
-	/* Forcibly turn off journaling.  We're reformatting iirelation
-	** rows without benefit of logging, and it would just confuse
-	** any journals.  (Actually, we would probably get away with this
-	** here, but the iiattribute rewrite would toast the journals for
-	** sure.)  User will have to restore journaling after the upgrade.
-	** Also note that this is running at "add" time, DCB journal status
-	** is set at later "open" time, will pick up the cleared flag.
+	/*
+	** Check the status of the upgrade. Its possible that upgradedb failed
+	** and we're trying again. In that case upgradedb might have
+	** failed after completing the convert.
 	*/
 
-	config->cnf_dsc->dsc_status &= ~DSC_JOURNAL;
-
-	/* Determine the page format of iirelation */
-	/* Some paranoia here, dm0c conversions should have set all this */
-	iirel_pgsize = config->cnf_dsc->dsc_iirel_relpgsize;
-	iirel_pgformat = config->cnf_dsc->dsc_iirel_relpgtype;
-	if (iirel_pgsize == 0) iirel_pgsize = 2048;
-	if (upgrade_cb->upgr_create_version < DSC_V6 &&
- 	    (config->cnf_dsc->dsc_status & DSC_IIREL_V6_CONV_DONE) == 0)
+	done_flag = DSC_A_IIREL_CONV_DONE;
+	to_clear_flag = DSC_B_IIREL_CONV_DONE;
+	if (config->cnf_dsc->dsc_status & DSC_CONV_B)
 	{
-	    /* Set iirelation page type based on size */
-	    iirel_pgformat = TCB_PG_V1;
-	    if (iirel_pgsize != DM_COMPAT_PGSIZE)
-		iirel_pgformat = TCB_PG_V2;
+	    done_flag = DSC_B_IIREL_CONV_DONE;
+	    to_clear_flag = DSC_A_IIREL_CONV_DONE;
 	}
+	to_clear_flag |= DSC_NOTUSED;
 
-	if ((iirel_pg = (DMPP_PAGE *)dm0m_pgalloc(iirel_pgsize)) == 0)
+	/* See if we already finished this conversion. */
+	if (config->cnf_dsc->dsc_status & done_flag)
 	{
-	    /* FIX ME fix me error */
-	    break;
-	}
+	    /* We've already completed the conversion. */
 
-	/*  Generate the filename for iirelation table. */
-	iirel_tab_id.db_tab_base = DM_B_RELATION_TAB_ID;
-	iirel_tab_id.db_tab_index = DM_I_RELATION_TAB_ID;
-	dm2f_filename (DM2F_TAB, &iirel_tab_id, 0, 0, 0, &iirel_file_name);
+	    /* Close the configuration file. */
 
-	/* Open the iirelation for write. */
-	status = DIopen(&iirel_di_io,
-	    dcb->dcb_location.physical.name, dcb->dcb_location.phys_length,
-	    iirel_file_name.name, sizeof(iirel_file_name.name),
-	    iirel_pgsize, DI_IO_WRITE, DI_SYNC_MASK, &sys_err);
+	    status = dm0c_close(config, (flag & DM0C_CNF_LOCKED), dberr);
 
-	if (status != OK)
-	    break;
-
-	iirel_open = TRUE;
-
-	dm1c_get_plv(iirel_pgformat, &local_plv);
-
-	/* iirelation is HASH, start reading at page zero */
-	curpagenum = 0;
-
-	/* init zero tranid for dmpp_put */
-	upgrade_tran.db_low_tran = 0;
-	upgrade_tran.db_high_tran = 0;
-
-	/* Now update all records in iirelation */
-	for (;;)
-	{
-	    /* Read a page from the iirelation */
-	    io_count = 1;
-	    status = DIread(&iirel_di_io, &io_count,(i4)curpagenum, 
-		    (char *)iirel_pg, &sys_err);
-	    if (status != OK)
+	    if (status != E_DB_OK)
 		break;
 
-	    if (DMPP_VPT_GET_PAGE_PAGE_MACRO(iirel_pgformat, iirel_pg)
-			    != curpagenum)
+	    /*  Release the temporary lock list. */
+
+	    if((flag & DM0C_CNF_LOCKED) == 0)
 	    {
-		/* fix me error */
-		break;
-	    }
-
-
-	    /* Read all records on current page */
-	    tid.tid_tid.tid_page = curpagenum;
-	    tid.tid_tid.tid_line = DM_TIDEOF;
-
-	    /* Update each iirelation record on this page */
-	    while (++tid.tid_tid.tid_line < 
-		(i4)DMPP_VPT_GET_PAGE_NEXT_LINE_MACRO(iirel_pgformat, iirel_pg))
-	    {
-		old_iirel_ptr = &old_iirel;
-		db_status = (*local_plv->dmpp_get)(iirel_pgformat, iirel_pgsize,
-		    iirel_pg, &tid, &record_size, (char **)&old_iirel_ptr,
-		    (i4*)NULL, (u_i4*)NULL, (u_i2*)NULL, 
-		    (DMPP_SEG_HDR *)NULL);
-	
-		/* If the line is empty, go to the next line. */
-		if  (db_status == E_DB_WARN)
-		    continue;
-		if (db_status != E_DB_OK)
-		    break;
-		    
-		if (old_iirel_ptr != &old_iirel)
-		    MEcopy(old_iirel_ptr, sizeof(old_iirel), &old_iirel);
-
-		/*
-		** UPGRADE the row to the CURRENT format 
-		** if this row is for a core catalog it will also sync 
-		** new_rel with DM_core_relations (upgrade_core_reltup)
-		*/
-		upgrade_iirel_row(upgrade_cb, (char *)&old_iirel,
-			&new_iirel, config->cnf_dsc->dsc_status);
-			
-		(*local_plv->dmpp_put)(iirel_pgformat, iirel_pgsize, iirel_pg,
-			DM1C_DIRECT, &upgrade_tran, (u_i2)0, &tid,
-			sizeof(new_iirel), (char *)&new_iirel,
-			(u_i2)0, /* alter table version 0 */
-			(DMPP_SEG_HDR *)NULL);
-
-		convert_cnt++;
-
-	    } /* end while */
-
-	    if (db_status == E_DB_ERROR) 
-		break;
-	    else
-		db_status = E_DB_OK;
-
-	    /* clear DMPP_MODIFY, checksum page */
-	    DMPP_VPT_CLR_PAGE_STAT_MACRO(iirel_pgformat, iirel_pg, DMPP_MODIFY);
-	    dm0p_insert_checksum(iirel_pg, iirel_pgformat, iirel_pgsize); 
-
-	    io_count = 1;
-	    status = DIwrite(&iirel_di_io, &io_count, curpagenum,
-		(char *)iirel_pg, &sys_err);
-	    if (status != OK) 
-		break;
-
-	    /* Follow overflow chain */
-	    if (DMPP_VPT_GET_PAGE_OVFL_MACRO(iirel_pgformat, iirel_pg) != 0)
-		curpagenum = 
-			DMPP_VPT_GET_PAGE_OVFL_MACRO(iirel_pgformat, iirel_pg);
-	    /* No more overflow buckets. Go to the next hash bucket. */
-	    else if (DMPP_VPT_GET_PAGE_MAIN_MACRO(iirel_pgformat, iirel_pg) != 0)
-		curpagenum = 
-			DMPP_VPT_GET_PAGE_MAIN_MACRO(iirel_pgformat, iirel_pg);
-	    /* No more main and overflow buckets. We're done. */
-	    else
-		break;
-
-	} /* end for */
-
-	if (status != OK || db_status != E_DB_OK) 
-	    break;
-
-	/* Close the new iirelation file */
-	status = DIclose (&iirel_di_io, &sys_err);
-	if  (status != OK)
-	    break;
-	    
-	iirel_open = FALSE;
-
-	/* Close the configuration file. */
-	/* The configuration file version is not yet updated.  We still
-	** need to deal with iiattribute which the caller will do shortly.
-	*/
-
-	db_status = dm0c_close(config, (flag & DM0C_CNF_LOCKED) | DM0C_UPDATE, 
-			dberr);
-
-	if (db_status != E_DB_OK)
-	    break;
-
-	config_open = FALSE;
-
-	/*  Release the temporary lock list. */
-
-	if ((flag & DM0C_CNF_LOCKED) == 0)
-	{
-	    status = LKrelease(LK_ALL, temp_lock_list, (LK_LKID *)NULL,
+		status = LKrelease( LK_ALL, temp_lock_list, (LK_LKID *)NULL, 
 			(LK_LOCK_KEY *)NULL, (LK_VALUE *)NULL, &sys_err);
 
-	    if (status != OK)
-	    {
-		uleFormat(NULL, status, &sys_err, ULE_LOG, (DB_SQLSTATE *)NULL,
-		    (char *)NULL, 0L, (i4 *)NULL, &local_error, 0);
-		uleFormat(NULL, E_DM901B_BAD_LOCK_RELEASE, &sys_err, ULE_LOG, 
-                    (DB_SQLSTATE *)NULL,
-		    (char *)NULL, 0L, (i4 *)NULL, &local_error, 1,
-		    sizeof(temp_lock_list), temp_lock_list);
-		break;
-	    }
-	}
-
-	/* Return success. */
-	dm0m_pgdealloc((char **)&iirel_pg);
-
-	return (E_DB_OK);
-    } /* end for */
-
-    if (iirel_pg)
-	dm0m_pgdealloc((char **)&iirel_pg);
-
-    /* Deallocate the configuration record. */
-    if (config_open == TRUE)
-	local_status = dm0c_close(config, (flag & DM0C_CNF_LOCKED), dberr);
-
-    /* Close the iirelation files if they are open. */
-    if (iirel_open == TRUE)
-	local_status = DIclose (&iirel_di_io, &sys_err);
-
-    SETDBERR(dberr, 0, E_DM93AC_CONVERT_IIREL);
-    return (E_DB_ERROR);
-}
-
-
-/*{
-** Name: dm2d_convert_preV9_iirel - convert iirelation to V9 format
-**
-** Description:
-**      Used indirectly by upgradedb to convert iirelation to V9 format
-**
-**      V9 is DMF version for Ingres2007
-**
-**      Since this upgrade does not change the width of the iirelation catalog,
-**      it can put-replace the new iirelation record onto the old iirelation 
-**      record.
-**      
-**      Since we are not changing the width of iirelation and we are not
-**      moving any rows there is no need to convert iirel_idx.
-**      Since we are not changing the position of any key columns in iirelation,
-**      there is no need to make any changes in iiindex.
-**
-**	For Ingres2007 Clustered Tables and indexes on Clustered Tables,
-**	TCB_CLUSTERED reuses the old TCB_VBASE bit, so make sure it's off.
-**
-**	The size and content of the IIINDEX table has changed, adding
-**	32 more idom attributes, so the relwid and relatts of the iirelation
-**	row for IIINDEX must be modified. The core catalog attributes will
-**	be reconstructed in dm2d_convert_preV9_iiatt(), to follow.
-**   
-**	Since significant core catalog (iirelation and iiattribute) changes
-**	have occurred, we'll take the approach of reconstructing the
-**	iiattribute rows describing the core catalog columns.  (See
-**	the iiattribute conversion.)  Equivalent changes must be plugged
-**	into the core catalog iirelation rows as we encounter them.
-**
-** Inputs:
-**      db_id                           database to upgrade
-**	create_version			Version converting from
-**	flag				Config flags (ro, locked)
-**	lock_list			Lock list if config already locked
-**
-** Outputs:
-**      err_code                        error return code
-**
-**	Returns:
-**	    DB_STATUS
-**	Exceptions:
-**	    none
-**
-** Side Effects:
-**	    none
-**
-** History:
-**	26-May-2006 (jenjo02)
-**	    Added for any need mods to iirelation for Ingres2007.
-[@history_template@]...
-*/
-static DB_STATUS
-dm2d_convert_preV9_iirel (
-    DMP_DCB	    *db_id,
-    i4		    create_version,
-    i4              flag,
-    i4              lock_list,
-    DB_ERROR	    *dberr )
-{
-    DMP_DCB	    *dcb = (DMP_DCB *)db_id;
-    i4	            temp_lock_list;
-    STATUS	    status = OK;
-    DB_STATUS       db_status = E_DB_OK;
-    DB_STATUS       local_status;
-    i4		    local_error;
-    CL_ERR_DESC	    sys_err;
-    DM0C_CNF	    *config = 0;
-    bool	    config_open = FALSE;
-    bool	    iirel_open = FALSE;
-    DB_TAB_ID	    iirel_tab_id;
-    DM_FILE	    iirel_file_name;
-    DI_IO	    iirel_di_io;
-    DMPP_PAGE	    *iirel_pg = (DMPP_PAGE *)NULL;
-    i4	   	    io_count;
-    DMP_RELATION    old_iirel;
-    DMP_RELATION    *old_iirel_ptr;
-    DMP_RELATION    new_iirel;
-    DM_TID	    iirel_tid;
-    DMPP_ACC_PLV    *local_plv;
-    DB_TRAN_ID	    upgrade_tran;
-    DM_TID	    tid;
-    i4	    	    record_size = sizeof(DMP_RELATION);
-    i4      	    iirel_pgformat;
-    i4      	    iirel_pgsize;
-    i4	    	    curpagenum;
-    i4	    	    convert_cnt = 0;
-    i4		    i;
-    i4		    *err_code = &dberr->err_code;
-
-    CLRDBERR(dberr);
-
-    for (;;)
-    {
-	
-	/*  
-	** Create a temporary lock list. This is needed to open the config file
-	*/
-	if ((flag & DM0C_CNF_LOCKED) == 0)
-	{
-	    status = LKcreate_list(LK_ASSIGN | LK_NONPROTECT | LK_NOINTERRUPT,
-		(i4)0, (LK_UNIQUE *)NULL, (LK_LLID *)&temp_lock_list, 0, &sys_err);
-
-	    if (status != OK)
-	    {
-		uleFormat(NULL, status, &sys_err, ULE_LOG, (DB_SQLSTATE *)NULL,
-		    (char *)NULL, 0L, (i4 *)NULL, &local_error, 0);
-		uleFormat(NULL, E_DM901A_BAD_LOCK_CREATE, &sys_err, ULE_LOG, 
-                    (DB_SQLSTATE *)NULL,
-		    (char *)NULL, 0L, (i4 *)NULL, &local_error, 0);
-		break;
-	    }
-	}
-	else
-	{
-	    temp_lock_list = lock_list;    
-	}
-
-	/*
-	** Open the config file.
-	** Note that the updating of iirelation is happening at a physical
-	** file level, without locking or page buffering.
-	*/
-	db_status = dm0c_open(dcb, flag, temp_lock_list, &config, dberr);
-	if (db_status != E_DB_OK)
-	    break;
-
-	config_open = TRUE;
-
-	/* Forcibly turn off journaling.  We're reformatting iirelation
-	** rows without benefit of logging, and it would just confuse
-	** any journals.  (Actually, we would probably get away with this
-	** here, but the iiattribute rewrite would toast the journals for
-	** sure.)  User will have to restore journaling after the upgrade.
-	** Also note that this is running at "add" time, DCB journal status
-	** is set at later "open" time, will pick up the cleared flag.
-	*/
-
-	config->cnf_dsc->dsc_status &= ~DSC_JOURNAL;
-
-	/* Determine the page format of iirelation */
-	/* Some paranoia here, dm0c conversions should have set all this */
-	iirel_pgsize = config->cnf_dsc->dsc_iirel_relpgsize;
-	iirel_pgformat = config->cnf_dsc->dsc_iirel_relpgtype;
-	if (iirel_pgsize == 0) iirel_pgsize = 2048;
-	if (create_version < DSC_V6 &&
- 	    (config->cnf_dsc->dsc_status & DSC_IIREL_V6_CONV_DONE) == 0)
-	{
-	    /* Set iirelation page type based on size */
-	    iirel_pgformat = TCB_PG_V1;
-	    if (iirel_pgsize != DM_COMPAT_PGSIZE)
-		iirel_pgformat = TCB_PG_V2;
-	}
-
-	if ((iirel_pg = (DMPP_PAGE *)dm0m_pgalloc(iirel_pgsize)) == 0)
-	{
-	    /* FIX ME fix me error */
-	    break;
-	}
-
-	/*  Generate the filename for iirelation table. */
-	iirel_tab_id.db_tab_base = DM_B_RELATION_TAB_ID;
-	iirel_tab_id.db_tab_index = DM_I_RELATION_TAB_ID;
-	dm2f_filename (DM2F_TAB, &iirel_tab_id, 0, 0, 0, &iirel_file_name);
-
-	/* Open the iirelation for write. */
-	status = DIopen(&iirel_di_io,
-	    dcb->dcb_location.physical.name, dcb->dcb_location.phys_length,
-	    iirel_file_name.name, sizeof(iirel_file_name.name),
-	    iirel_pgsize, DI_IO_WRITE, DI_SYNC_MASK, &sys_err);
-
-	if (status != OK)
-	    break;
-
-	iirel_open = TRUE;
-
-	dm1c_get_plv(iirel_pgformat, &local_plv);
-
-	/* iirelation is HASH, start reading at page zero */
-	curpagenum = 0;
-
-	/* init zero tranid for dmpp_put */
-	upgrade_tran.db_low_tran = 0;
-	upgrade_tran.db_high_tran = 0;
-
-	/* Now update all records in iirelation */
-	for (;;)
-	{
-	    /* Read a page from the iirelation */
-	    io_count = 1;
-	    status = DIread(&iirel_di_io, &io_count,(i4)curpagenum, 
-		    (char *)iirel_pg, &sys_err);
-	    if (status != OK)
-		break;
-
-	    if (DMPP_VPT_GET_PAGE_PAGE_MACRO(iirel_pgformat, iirel_pg)
-			    != curpagenum)
-	    {
-		/* fix me error */
-		break;
-	    }
-
-
-	    /* Read all records on current page */
-	    tid.tid_tid.tid_page = curpagenum;
-	    tid.tid_tid.tid_line = DM_TIDEOF;
-
-	    /* Update each iirelation record on this page */
-	    while (++tid.tid_tid.tid_line < 
-		(i4)DMPP_VPT_GET_PAGE_NEXT_LINE_MACRO(iirel_pgformat, iirel_pg))
-	    {
-		old_iirel_ptr = &old_iirel;
-		db_status = (*local_plv->dmpp_get)(iirel_pgformat, iirel_pgsize,
-		    iirel_pg, &tid, &record_size, (char **)&old_iirel_ptr,
-		    (i4*)NULL, (u_i4*)NULL, (u_i2*)NULL, 
-		    (DMPP_SEG_HDR *)NULL);
-	
-		/* If the line is empty, go to the next line. */
-		if  (db_status == E_DB_WARN)
-		    continue;
-		if (db_status != E_DB_OK)
-		    break;
-		    
-		if (old_iirel_ptr != &old_iirel)
-		    MEcopy(old_iirel_ptr, sizeof(old_iirel), &old_iirel);
-
-		MEcopy((PTR)&old_iirel, sizeof(DMP_RELATION), (PTR)&new_iirel);
-
-		/* IIINDEX's iirelation needs relwid, relatts updated */
-		if ( new_iirel.reltid.db_tab_base == DM_B_INDEX_TAB_ID )
+		if (status != OK)
 		{
-		    for ( i = 0; i < DM_CORE_REL_CNT; i++ )
+		    uleFormat(NULL, status, &sys_err, ULE_LOG, (DB_SQLSTATE *)NULL,
+			(char *)NULL, 0L, (i4 *)NULL, &local_error, 0);
+		    uleFormat(NULL, E_DM901B_BAD_LOCK_RELEASE, &sys_err, ULE_LOG , 
+			(DB_SQLSTATE *)NULL, (char *)NULL, 0L, (i4 *)NULL, 
+			&local_error, 1, sizeof(temp_lock_list), temp_lock_list);
+		    break;
+		}
+	    }
+	    return (E_DB_OK);
+	}
+
+	/* Is anything really needed other than config flag updating? */
+	if (iirel_conversion_needed(upgrade_cb->upgr_create_version))
+	{
+	    /* Forcibly turn off journaling.  We're reformatting iirelation
+	    ** rows without benefit of logging, and it would just confuse
+	    ** any journals.  (Actually, we would probably get away with this
+	    ** here, but the iiattribute rewrite would toast the journals for
+	    ** sure.)  User will have to restore journaling after the upgrade.
+	    ** Also note that this is running at "add" time, DCB journal status
+	    ** is set at later "open" time, will pick up the cleared flag.
+	    */
+
+	    config->cnf_dsc->dsc_status &= ~DSC_JOURNAL;
+
+	    /* Determine the page format of iirelation */
+	    /* If an inplace conversion is possible, we can rely on
+	    ** the size/type in the config.
+	    */
+	    iirel_pgsize = config->cnf_dsc->dsc_iirel_relpgsize;
+	    iirel_pgformat = config->cnf_dsc->dsc_iirel_relpgtype;
+
+	    if ((iirel_pg = (DMPP_PAGE *)dm0m_pgalloc(iirel_pgsize)) == 0)
+	    {
+		/* FIX ME fix me error */
+		break;
+	    }
+
+	    /*  Generate the filename for iirelation table. */
+	    iirel_tab_id.db_tab_base = DM_B_RELATION_TAB_ID;
+	    iirel_tab_id.db_tab_index = DM_I_RELATION_TAB_ID;
+	    dm2f_filename (DM2F_TAB, &iirel_tab_id, 0, 0, 0, &iirel_file_name);
+
+	    /* Open the iirelation for write. */
+	    status = DIopen(&iirel_di_io,
+		dcb->dcb_location.physical.name, dcb->dcb_location.phys_length,
+		iirel_file_name.name, sizeof(iirel_file_name.name),
+		iirel_pgsize, DI_IO_WRITE, DI_SYNC_MASK, &sys_err);
+
+	    if (status != OK)
+		break;
+
+	    iirel_open = TRUE;
+
+	    dm1c_get_plv(iirel_pgformat, &local_plv);
+
+	    /* iirelation is HASH, start reading at page zero */
+	    curpagenum = 0;
+
+	    /* init zero tranid for dmpp_put */
+	    upgrade_tran.db_low_tran = 0;
+	    upgrade_tran.db_high_tran = 0;
+
+	    /* Now update all records in iirelation */
+	    for (;;)
+	    {
+		/* Read a page from the iirelation */
+		io_count = 1;
+		status = DIread(&iirel_di_io, &io_count,(i4)curpagenum, 
+			(char *)iirel_pg, &sys_err);
+		if (status != OK)
+		    break;
+
+		if (DMPP_VPT_GET_PAGE_PAGE_MACRO(iirel_pgformat, iirel_pg)
+				!= curpagenum)
+		{
+		    /* fix me error */
+		    break;
+		}
+
+
+		/* Read all records on current page */
+		tid.tid_tid.tid_page = curpagenum;
+		tid.tid_tid.tid_line = DM_TIDEOF;
+
+		/* Update each iirelation record on this page */
+		while (++tid.tid_tid.tid_line < 
+		    (i4)DMPP_VPT_GET_PAGE_NEXT_LINE_MACRO(iirel_pgformat, iirel_pg))
+		{
+		    old_iirel_ptr = (char *) &old_iirel;
+		    db_status = (*local_plv->dmpp_get)(iirel_pgformat, iirel_pgsize,
+			iirel_pg, &tid, &record_size, &old_iirel_ptr,
+			(i4*)NULL, (u_i4*)NULL, (u_i2*)NULL, 
+			(DMPP_SEG_HDR *)NULL);
+	    
+		    /* If the line is empty, go to the next line. */
+		    if  (db_status == E_DB_WARN)
+			continue;
+		    if (db_status != E_DB_OK)
+			break;
+
+		    /* FIXME will need to uncompress the row.  Don't need
+		    ** to worry about it for < DSC_V9, but future changes
+		    ** will have to be able to do decompression.
+		    */
+		    if (upgrade_cb->upgr_create_version >= DSC_V9)
 		    {
-			if ( DM_core_relations[i].reltid.db_tab_base ==
-				DM_B_INDEX_TAB_ID &&
-			     DM_core_relations[i].reltid.db_tab_index ==
-				DM_I_INDEX_TAB_ID )
-			{
-			    new_iirel.relwid     = DM_core_relations[i].relwid;
-			    new_iirel.reltotwid  = DM_core_relations[i].reltotwid;
-			    new_iirel.relatts    = DM_core_relations[i].relatts;
-
-			    /* We'll be rebuilding the iiindex rows */
-			    new_iirel.relprim = 1;
-			    new_iirel.relfhdr       = DM_TBL_INVALID_FHDR_PAGENO;
-			    new_iirel.relallocation = DM_TBL_DEFAULT_ALLOCATION;
-			    new_iirel.relextend     = DM_TBL_DEFAULT_EXTEND;
-			    break;
-			}
+			*(i4 *)0 = 1;		/* ADD CODE HERE */
 		    }
-		}
-		else if ( new_iirel.reltid.db_tab_base == DM_B_ATTRIBUTE_TAB_ID )
-		{
-		    /* We'll be rebuilding the attributes */
-		    new_iirel.relprim = 1;
-		    new_iirel.relfhdr       = DM_TBL_INVALID_FHDR_PAGENO;
-		    new_iirel.relallocation = DM_TBL_DEFAULT_ALLOCATION;
-		    new_iirel.relextend     = DM_TBL_DEFAULT_EXTEND;
-		}
 
-		/* CLUSTERED reuses old VBASE bit, make sure it's off */
-		new_iirel.relstat &= ~TCB_CLUSTERED;
+		    if (old_iirel_ptr != (char *) &old_iirel)
+			MEcopy(old_iirel_ptr, record_size, (PTR) &old_iirel);
 
-		/* iirel_idx, iiindex unchanged since 6.4 */
+		    /*
+		    ** UPGRADE the row to the CURRENT format 
+		    ** if this row is for a core catalog it will also sync 
+		    ** new_rel with DM_core_relations (upgrade_core_reltup)
+		    **
+		    ** WARNING WARNING WARNING
+		    **
+		    ** Unless the inplace upgrade is idempotent,
+		    ** upgrade_iirel_row will have to have some way to
+		    ** distinguish converted rows from non-converted rows.
+		    ** See e.g. the V3..V7 to V8 check in upgrade_iirel_row,
+		    ** as that was a non-idempotent inplace upgrade.
+		    ** The check will necessarily have to be something
+		    ** version specific.
+		    */
+		    upgrade_iirel_row(upgrade_cb, &old_iirel,
+			    &new_iirel, config);
 
-		(*local_plv->dmpp_put)(iirel_pgformat, iirel_pgsize, iirel_pg,
-			DM1C_DIRECT, &upgrade_tran, (u_i2)0, &tid,
-			sizeof(new_iirel), (char *)&new_iirel,
-			(u_i2)0, /* alter table version 0 */
-			(DMPP_SEG_HDR *)NULL);
+		    /* FIXME NEED TO RECOMPRESS THE ROW */
+		    *(i4 *)0 = 1;		/* ADD CODE HERE */
 
-		convert_cnt++;
+		    (*local_plv->dmpp_put)(iirel_pgformat, iirel_pgsize, iirel_pg,
+			    DM1C_DIRECT, &upgrade_tran, (u_i2)0, &tid,
+			    sizeof(new_iirel), (char *)&new_iirel,
+			    (u_i2)0, /* alter table version 0 */
+			    (DMPP_SEG_HDR *)NULL);
 
-	    } /* end while */
+		    convert_cnt++;
 
-	    if (db_status == E_DB_ERROR) 
+		} /* end while */
+
+		if (db_status == E_DB_ERROR) 
+		    break;
+		else
+		    db_status = E_DB_OK;
+
+		/* clear DMPP_MODIFY, checksum page */
+		DMPP_VPT_CLR_PAGE_STAT_MACRO(iirel_pgformat, iirel_pg, DMPP_MODIFY);
+		dm0p_insert_checksum(iirel_pg, iirel_pgformat, iirel_pgsize); 
+
+		io_count = 1;
+		status = DIwrite(&iirel_di_io, &io_count, curpagenum,
+		    (char *)iirel_pg, &sys_err);
+		if (status != OK) 
+		    break;
+
+		/* Follow overflow chain */
+		if (DMPP_VPT_GET_PAGE_OVFL_MACRO(iirel_pgformat, iirel_pg) != 0)
+		    curpagenum = 
+			    DMPP_VPT_GET_PAGE_OVFL_MACRO(iirel_pgformat, iirel_pg);
+		/* No more overflow buckets. Go to the next hash bucket. */
+		else if (DMPP_VPT_GET_PAGE_MAIN_MACRO(iirel_pgformat, iirel_pg) != 0)
+		    curpagenum = 
+			    DMPP_VPT_GET_PAGE_MAIN_MACRO(iirel_pgformat, iirel_pg);
+		/* No more main and overflow buckets. We're done. */
+		else
+		    break;
+
+	    } /* end for */
+
+	    if (status != OK || db_status != E_DB_OK) 
 		break;
-	    else
-		db_status = E_DB_OK;
 
-	    /* clear DMPP_MODIFY, checksum page */
-	    DMPP_VPT_CLR_PAGE_STAT_MACRO(iirel_pgformat, iirel_pg, DMPP_MODIFY);
-	    dm0p_insert_checksum(iirel_pg, iirel_pgformat, iirel_pgsize); 
-
-	    io_count = 1;
-	    status = DIwrite(&iirel_di_io, &io_count, curpagenum,
-		(char *)iirel_pg, &sys_err);
-	    if (status != OK) 
+	    /* Close the new iirelation file */
+	    status = DIclose (&iirel_di_io, &sys_err);
+	    if  (status != OK)
 		break;
-
-	    /* Follow overflow chain */
-	    if (DMPP_VPT_GET_PAGE_OVFL_MACRO(iirel_pgformat, iirel_pg) != 0)
-		curpagenum = 
-			DMPP_VPT_GET_PAGE_OVFL_MACRO(iirel_pgformat, iirel_pg);
-	    /* No more overflow buckets. Go to the next hash bucket. */
-	    else if (DMPP_VPT_GET_PAGE_MAIN_MACRO(iirel_pgformat, iirel_pg) != 0)
-		curpagenum = 
-			DMPP_VPT_GET_PAGE_MAIN_MACRO(iirel_pgformat, iirel_pg);
-	    /* No more main and overflow buckets. We're done. */
-	    else
-		break;
-
-	} /* end for */
-
-	if (status != OK || db_status != E_DB_OK) 
-	    break;
-
-	/* Close the new iirelation file */
-	status = DIclose (&iirel_di_io, &sys_err);
-	if  (status != OK)
-	    break;
-	    
-	iirel_open = FALSE;
+		
+	    iirel_open = FALSE;
+	} /* really update iirelation? */
 
 	/* Close the configuration file. */
-	/* The configuration file version is not yet updated.  We still
-	** need to deal with iiattributes for IIINDEX which the caller 
-	** will do shortly.
+	/* 
+	** Mark the flag in the config file to say we've completed the 
+	** conversion. We must do this before we delete the temporary table.
 	*/
+
+	config->cnf_dsc->dsc_status |= done_flag;
+	config->cnf_dsc->dsc_status &= ~to_clear_flag;
 
 	db_status = dm0c_close(config, (flag & DM0C_CNF_LOCKED) | DM0C_UPDATE, 
 			dberr);
@@ -10238,7 +10308,8 @@ dm2d_convert_preV9_iirel (
 	}
 
 	/* Return success. */
-	dm0m_pgdealloc((char **)&iirel_pg);
+	if (iirel_pg != NULL)
+	    dm0m_pgdealloc((char **)&iirel_pg);
 
 	return (E_DB_OK);
     } /* end for */
@@ -10257,1203 +10328,6 @@ dm2d_convert_preV9_iirel (
     SETDBERR(dberr, 0, E_DM93AC_CONVERT_IIREL);
     return (E_DB_ERROR);
 }
-
-/*{
-** Name: dm2d_convert_preV9_iiatt - convert iiattribute to V9 format
-**
-** Description:
-**      Used indirectly by upgradedb to convert iiattribute to V9 format
-**
-**	V9 is DMF version for Ingres2007
-**
-**	For Ingres2007, nothing in iiattribute has changed from Ingres2006,
-**	so there's no "conversion" to be done.
-**
-**	But the core catalog IIINDEX needs 32 more "idom" attributes,
-**	and the easiest way to add them is to just copy all existing
-**	non-core attributes, then remake the core attributes.
-**
-** Inputs:
-**      db_id                           database to upgrade
-**
-** Outputs:
-**      err_code                        error return code
-**
-**	Returns:
-**	    DB_STATUS
-**	Exceptions:
-**	    none
-**
-** Side Effects:
-**	    none
-**
-** History:
-**	26-May-2006 (jenjo02)
-**	    Written to expand number of IIINDEX idom attributes from
-**	    32 to 64 for Indexes on Clustered Tables.
-[@history_template@]...
-*/
-static DB_STATUS
-dm2d_convert_preV9_iiatt(
-    DMP_DCB	    *db_id,
-    i4		    create_version,
-    i4              flag,
-    i4              lock_list,
-    DB_ERROR	    *dberr )
-{
-    DMP_DCB	    *dcb = (DMP_DCB *)db_id;
-    i4	    temp_lock_list, status, i=0, local_error, local_status;
-    CL_ERR_DESC	    sys_err;
-    DM0C_CNF	    *config = 0;
-    bool	    config_open = FALSE, tmp_open = FALSE;
-    bool	    iiatt_open = FALSE, add_status;
-    DB_TAB_ID	    iiatt_tab_id;
-    DM_FILE	    tmp_file_name = 
-			{{'i','i','a','t','t','c','v','t','.','t','m','p'}};
-    DM_FILE	    iiatt_file_name;
-    DI_IO	    tmp_di_context, iiatt_di_context;
-    DMPP_PAGE	    *iiatt_pg, *tmp_pg;
-    i4	    	    iiatt_page_number=0;
-    i4	    	    read_count, write_count, line, offset;
-    DMP_ATTRIBUTE   new_att;
-    char	    *old_att;
-    DMP_ATTRIBUTE    old_att_row;	/* See below, at "get" */
-    DM_TID	    iiatt_tid;
-    DMPP_ACC_PLV    *local_plv;
-    DM_TID	    tid;
-    i4	    record_size;
-    i4      iiatt_pgformat;
-    i4      iiatt_pgsize;
-    i4		    *err_code = &dberr->err_code;
-
-    CLRDBERR(dberr);
- 
-    for (;;)
-    {
-	/*  
-	**  Create a temporary lock list. This is needed to open the config
-	**  file. 
-	*/
-	if((flag & DM0C_CNF_LOCKED) == 0)
-	{
-	    status = LKcreate_list(
-		LK_ASSIGN | LK_NONPROTECT | LK_NOINTERRUPT,
-		(i4)0, 
-		(LK_UNIQUE *)NULL, 
-		(LK_LLID *)&temp_lock_list, 
-		0,
-		&sys_err);
-
-	    if (status != OK)
-	    {
-		uleFormat(NULL, status, &sys_err, ULE_LOG, (DB_SQLSTATE *)NULL,
-			(char *)NULL, 0L, (i4 *)NULL, &local_error, 0);
-		uleFormat(NULL,
-			E_DM901A_BAD_LOCK_CREATE, 
-			&sys_err, 
-			ULE_LOG, 
-			(DB_SQLSTATE *)NULL, 
-			(char *)NULL, 
-			0L, 
-			(i4 *)NULL, 
-			&local_error, 
-			0);
-
-	    	break;
-	    }
-	}
-	else
-	{
-	    temp_lock_list = lock_list;
-	}
-
-	/*  Open the config file. */
-
-	status = dm0c_open(dcb, flag, temp_lock_list, &config, dberr);
-
-	if (status != E_DB_OK)
-	    break;
-
-	config_open = TRUE;
-
-	/*
-	** Check the status of the upgrade. Its possible that upgradedb failed
-	** and we're trying again. In that case upgradedb might have
-	** failed after completing the convert.
-	*/
-
-	if  ((config->cnf_dsc->dsc_status & DSC_IIATT_V9_CONV_DONE) != 0)
-	{
-	    /* We've already completed the conversion. */
-
-	    /* If it still exists, delete the temporary file. */
-
-	    status = DIdelete (	
-		&tmp_di_context, 
-		(char *) &dcb->dcb_location.physical,
-		dcb->dcb_location.phys_length,
-		tmp_file_name.name, 
-		sizeof(tmp_file_name.name), 
-		&sys_err);
-
-	    if ((status != OK) && (status != DI_FILENOTFOUND))
-		break;
-
-	    /* Close the configuration file. */
-
-	    status = dm0c_close(config, (flag & DM0C_CNF_LOCKED), dberr);
-
-	    if (status != E_DB_OK)
-		break;
-
-	    /*  Release the temporary lock list. */
-
-          if((flag & DM0C_CNF_LOCKED) == 0)
-          {
-	    status = LKrelease(
-		LK_ALL, 
-		temp_lock_list, 
-		(LK_LKID *)NULL, 
-		(LK_LOCK_KEY *)NULL,
-		(LK_VALUE *)NULL, 
-		&sys_err);
-
-	    if (status != OK)
-	    {
-		uleFormat(NULL, status, &sys_err, ULE_LOG, (DB_SQLSTATE *)NULL,
-		    (char *)NULL, 0L, (i4 *)NULL, &local_error, 0);
-		uleFormat(NULL,
-		    E_DM901B_BAD_LOCK_RELEASE, 
-		    &sys_err, 
-		    ULE_LOG , 
-		    (DB_SQLSTATE *)NULL, 
-		    (char *)NULL, 
-		    0L, 
-		    (i4 *)NULL, 
-		    &local_error, 
-		    1, 
-		    sizeof(temp_lock_list), 
-		    temp_lock_list);
-
-		break;
-	    }
-          }
-	    return (E_DB_OK);
-	}
-
-	/*  Generate the filenames for iiattribute tables. */
-
-	iiatt_tab_id.db_tab_base = DM_B_ATTRIBUTE_TAB_ID;
-	iiatt_tab_id.db_tab_index = DM_I_ATTRIBUTE_TAB_ID;
-
-	dm2f_filename (DM2F_TAB, &iiatt_tab_id, 0, 0, 0, &iiatt_file_name);
-
-	/* 
-	** Check if we've already renamed iiattribute in a previous invocation
-	** of upgradedb. If the file exists, we shouldn't do any renaming.
-	*/ 
-
-	/* Determine the page format of iiattribute.  These will have
-	** been set properly by the iirelation conversion.
-	*/
-
-	iiatt_pgsize = config->cnf_dsc->dsc_iiatt_relpgsize;
-	iiatt_pgformat = config->cnf_dsc->dsc_iiatt_relpgtype;
-
-	if ((iiatt_pg = (DMPP_PAGE *)dm0m_pgalloc(iiatt_pgsize)) == 0)
-	{
-	    /* FIX ME fix me error */
-	    break;
-	}
-	if ((tmp_pg = (DMPP_PAGE *)dm0m_pgalloc(iiatt_pgsize)) == 0)
-	{
-	    /* FIX ME fix me error */
-	    break;
-	}
-
-	/* Open the tmp iiattribute for read. */
-
- 	status = DIopen(
-	    &tmp_di_context, 
-	    (char *) &dcb->dcb_location.physical,
-	    dcb->dcb_location.phys_length,
-	    tmp_file_name.name, 
-	    sizeof(tmp_file_name.name),
-	    iiatt_pgsize, 
-	    DI_IO_READ, 
-	    DI_SYNC_MASK,
-	    &sys_err);
-
-	/* If the file doesn't exist, we need to rename iiattribute. */
-
-	if (status == DI_FILENOTFOUND)
-	{
-	    /*  Rename iiattribute to the tmp filename. */
-
-	    status = DIrename (
-		0, 
-		(char *) &dcb->dcb_location.physical,
-		dcb->dcb_location.phys_length,
-		iiatt_file_name.name,
-		sizeof(iiatt_file_name.name),	     
-		tmp_file_name.name,
-		sizeof(tmp_file_name.name),
-		&sys_err);
-
-	    if (status != OK)
-		break;
-
-	    /* Now open the tmp iiattribute for read. */
-
-	    status = DIopen(
-		&tmp_di_context, 
-		(char *) &dcb->dcb_location.physical,
-		dcb->dcb_location.phys_length,
-		tmp_file_name.name, 
-		sizeof(tmp_file_name.name),
-		iiatt_pgsize, 
-		DI_IO_READ, 
-		DI_SYNC_MASK,
-		&sys_err);
-	}
-
-	if (status != OK)
-	    break;
-
-	tmp_open = TRUE;
-
-	/* 
-	** Delete iiattribute if it exists. We might have created this file
-	** in a previous invocation of upgradedb.
-	*/
-
-	status = DIdelete (	
-	    &iiatt_di_context, 
-	    (char *) &dcb->dcb_location.physical,
-	    dcb->dcb_location.phys_length,
-	    iiatt_file_name.name, 
-	    sizeof(iiatt_file_name.name), 
-	    &sys_err);
-
-	/* DI_FILENOTFOUND is an ok bad status. The file might not exist. */
-
-	if  ((status != OK) && (status != DI_FILENOTFOUND))
-	    break;
-
-	/* Create the new iiattribute file. */
-
-	status = DIcreate(
-	    &iiatt_di_context, 
-	    (char *) &dcb->dcb_location.physical,
-	    dcb->dcb_location.phys_length,
-	    iiatt_file_name.name, 
-	    sizeof(iiatt_file_name.name), 
-	    iiatt_pgsize, 
-	    &sys_err);
-
-	if (status != OK)
-	    break;
-
-	/* Open the new iiattribute. */
-
-	status = DIopen(
-	    &iiatt_di_context, 
-	    (char *) &dcb->dcb_location.physical,
-	    dcb->dcb_location.phys_length,
-	    iiatt_file_name.name, 
-	    sizeof(iiatt_file_name.name),
-	    iiatt_pgsize, 
-	    DI_IO_WRITE, 
-	    DI_SYNC_MASK,
-	    &sys_err);
-
-	if (status != OK)
-	    break;
-
-	iiatt_open = TRUE;
-
-	dm1c_get_plv(iiatt_pgformat, &local_plv);
-
-	
-	/* Format the first pages of the new iiattribute */
-
-	(*local_plv->dmpp_format)(iiatt_pgformat, iiatt_pgsize, 
-			iiatt_pg, 0, DMPP_DATA, DM1C_ZERO_FILL);
-
-	/* Set the proper size for the old rows */
-	record_size = sizeof(DMP_ATTRIBUTE);
-
-	/* 
-	** Now copy the records from the tmp iiattribute to the new iiattribute.
-	*/
-
-	for (i=0;;)
-	{
-	    /* Read a page from the tmp iiattribute */
-
-	    read_count = 1;
-
-	    status = DIread(
-		&tmp_di_context, 
-		&read_count, 
-		i,
-		(char *) tmp_pg, 
-		&sys_err);
-
-	    if (status != OK)
-		break;
-
-	    tid.tid_tid.tid_page = i;
-	    tid.tid_tid.tid_line = DM_TIDEOF;
-
-	    /* Copy each line to the new iiattribute. */
-
-	    while (++tid.tid_tid.tid_line <
-		     (i4)DMPP_VPT_GET_PAGE_NEXT_LINE_MACRO(iiatt_pgformat, 
-							tmp_pg))
-	    {
-		/* We'll use "old_att_row" as an aligned holder; otherwise
-		** the rows can be unaligned and we poof.  This is sort of
-		** cheating, but "old_att_row" is defined as the largest
-		** of the old formats, and they should all have identical
-		** stack-alignment requirements.
-		*/
-		old_att = (char *) &old_att_row;
-		local_status = (*local_plv->dmpp_get)(iiatt_pgformat, iiatt_pgsize,
-		    tmp_pg, &tid, &record_size, &old_att,
-		    0, NULL, NULL, (DMPP_SEG_HDR *)NULL);
-
-		/* If the line is empty, go to the next line. */
-
-		if  (local_status == E_DB_WARN)
-		    continue;
-		if (local_status != E_DB_OK)
-		    break;
-
-		if (old_att != (char *) &old_att_row)
-		{
-		    MEcopy(old_att, sizeof(old_att_row), &old_att_row);
-		    old_att = (char *) &old_att_row;	/* Aligned copy */
-		}
-
-		/* Copy the old row to the new one in new_att.
-		** We'll ignore att rows for iirelation, iirel_idx,
-		** iiattribute, and iiindex.  Since column offsets in
-		** these catalogs change around, it's easier to just
-		** reconstruct the core catalog att records from the
-		** builtin DM_core_attributes.
-		*/
-		if ( old_att_row.attrelid.db_tab_base <= DM_B_INDEX_TAB_ID )
-		    continue;
-
-		/* 
-		** Do stuff to iiattribute here, if needed.
-		*/
-
-
-		MEcopy((PTR)&old_att_row, sizeof(DMP_ATTRIBUTE), (PTR)&new_att);
-
-
-		/* 
-		** Store the record on the page. 
-		*/
-
-		status = add_record(iiatt_pgformat, iiatt_pgsize,
-		    iiatt_pg,
-		    (char *)&new_att,
-		    sizeof(new_att),
-		    &iiatt_tid,
-		    &iiatt_di_context,
-		    local_plv,
-		    dberr);
-
-		if (status != OK)
-		    break; 
-
-	    } /* end while */
-
-	    if (status != OK) 
-		break;
-
-	    /* Follow any overflow chains. */
-
-	    if (DMPP_VPT_GET_PAGE_OVFL_MACRO(iiatt_pgformat, tmp_pg) != 0)
-		i = DMPP_VPT_GET_PAGE_OVFL_MACRO(iiatt_pgformat, tmp_pg);
-
-	    /* 
-	    ** No more overflow buckets. We're done with this hash bucket.
-	    ** Go to the next hash bucket.
-	    */
-
-	    else if (DMPP_VPT_GET_PAGE_MAIN_MACRO(iiatt_pgformat, tmp_pg) != 0) 
-		i = DMPP_VPT_GET_PAGE_MAIN_MACRO(iiatt_pgformat, tmp_pg);
-
-	    /* 
-	    ** No more main and overflow buckets. We've finished copying
-	    ** all the attribute records.
-	    */
-
-	    else
-	    {
-		/*
-		** Insert the core catalog iiattribute records.
-		** Remember, we earlier ignored these records.
-		*/
-
-		i4	j;
-		i4 	k;
-		bool upcase = (config->cnf_dsc->dsc_dbservice & DU_NAME_UPPER) != 0;
-
-		/* 
-		** Figure out the total # of columns in the core catalogs.
-		** Its more elegant to do this as
-		** j = sizeof(DM_core_attributes)/sizeof(DMP_ATTRIBUTE)
-		** but the compiler isn't able to figure out the size of 
-		** DM_core_attributes from this module.
-		** So loop thru DM_core_relations and add up the relatts field.
-		*/
- 
-		j = 0;
-		for (k = 0; k < DM_CORE_REL_CNT; k++)
-		{
-		    j += DM_core_relations[k].relatts;
-		}
-
-		for (k = 0; k < j; k++)
-		{
-		    char    *att_record;
-		    
-		    att_record = (char *)&DM_core_attributes[k];
-		    if (upcase)
-			att_record = (char *) &DM_ucore_attributes[k];
-
-		    status = add_record(iiatt_pgformat, iiatt_pgsize,
-			iiatt_pg,
-			att_record,
-			sizeof(DMP_ATTRIBUTE),
-			&iiatt_tid,
-			&iiatt_di_context,
-			local_plv,
-			dberr);
-
-		    if (status != OK)
-			break; 
-		}
-
-		if (status != OK)
-		    break; 
-		
-		/* 
-		** Allocate and write out the last iiatt pages and then exit
-		** the loop.
-		*/
-
-		status = DIalloc(
-		    &iiatt_di_context, 1, &iiatt_page_number, &sys_err);
-
-		if (status != OK)
-		    break;
-
-		status = DIflush(&iiatt_di_context, &sys_err);
-
-		if (status != OK)
-		    break;
-
-		DMPP_VPT_CLR_PAGE_STAT_MACRO(iiatt_pgformat, iiatt_pg, DMPP_MODIFY);
-		dm0p_insert_checksum(iiatt_pg, iiatt_pgformat, iiatt_pgsize);
-
-		write_count = 1;
-
-		status = DIwrite(
-		    &iiatt_di_context, 
-		    &write_count,
-		    DMPP_VPT_GET_PAGE_PAGE_MACRO(iiatt_pgformat, iiatt_pg), 
-		    (char *) iiatt_pg, 
-		    &sys_err);
-
-		break;
-	    }
-	} /* end for */
-
-	if (status != OK) 
-	    break;
-
-	/* Close the new iiattribute file */
-
-	status = DIclose (&iiatt_di_context, &sys_err);
-
-	if  (status != OK)
-	    break;
-	    
-	iiatt_open = FALSE;
-
-	/* 
-	** Mark the flag in the config file to say we've completed the 
-	** conversion. We must do this before we delete the temporary table.
-	** Because we hosed the space management setup for iiattribute,
-	** leave the core catalog version alone.  We'll do more "stuff"
-	** at database open time.  (This is database add time.)
-	*/
-
-	config->cnf_dsc->dsc_status |= DSC_IIATT_V9_CONV_DONE;
-	config->cnf_dsc->dsc_status &= ~DSC_65_SMS_DBMS_CATS_CONV_DONE;
-
-
-	/* Close the configuration file. */
-
-	status = dm0c_close(config, (flag & DM0C_CNF_LOCKED) | DM0C_UPDATE, dberr);
-
-	if (status != E_DB_OK)
-	    break;
-
-	config_open = FALSE;
-
-	/*  Release the temporary lock list. */
-
-	if((flag & DM0C_CNF_LOCKED) == 0)
-	{
-	    status = LKrelease(
-		LK_ALL, 
-		temp_lock_list, 
-		(LK_LKID *)NULL, 
-		(LK_LOCK_KEY *)NULL,
-		(LK_VALUE *)NULL, 
-		&sys_err);
-
-	    if (status != OK)
-	    {
-		uleFormat(NULL, status, &sys_err, ULE_LOG, (DB_SQLSTATE *)NULL,
-			(char *)NULL, 0L, (i4 *)NULL, &local_error, 0);
-		uleFormat(NULL,
-			E_DM901B_BAD_LOCK_RELEASE, 
-			&sys_err, 
-			ULE_LOG , 
-			(DB_SQLSTATE *)NULL, 
-			(char *)NULL, 
-			0L, 
-			(i4 *)NULL, 
-			&local_error, 
-			1, 
-			sizeof(temp_lock_list), 
-			temp_lock_list);
-
-		break;
-	    }
-	}
-	/* Close and delete the tmp iiattribute file. */
-
-	status = DIclose (&tmp_di_context, &sys_err);
-
-	if (status != OK)
-	    break;
-
-	tmp_open = FALSE;
-
-	status = DIdelete (	
-	    &tmp_di_context, 
-	    (char *) &dcb->dcb_location.physical,
-	    dcb->dcb_location.phys_length,
-	    tmp_file_name.name, 
-	    sizeof(tmp_file_name.name), 
-	    &sys_err);
-
-	if (status != OK)
-	    break;
-
-	/* Return success. */
-
-	dm0m_pgdealloc((char **)&iiatt_pg);
-	dm0m_pgdealloc((char **)&tmp_pg);
-	return (E_DB_OK);
-    } /* end for */
-
-    /* Error, clean up */
-
-    if (iiatt_pg != NULL)
-	dm0m_pgdealloc((char **)&iiatt_pg);
-    if (tmp_pg != NULL)
-	dm0m_pgdealloc((char **)&tmp_pg);
-
-    /* Deallocate the configuration record. */
-
-    if (config_open == TRUE)
-	local_status = dm0c_close(config, (flag & DM0C_CNF_LOCKED), dberr);
-
-    /* Close the iiattribute files if they are open. */
-
-    if (tmp_open == TRUE)
-	local_status = DIclose (&tmp_di_context, &sys_err);
-
-    if (iiatt_open == TRUE)
-	local_status = DIclose (&iiatt_di_context, &sys_err);
-
-    SETDBERR(dberr, 0, E_DM93F0_CONVERT_IIATT);
-    return (E_DB_ERROR);
-}
-/*{
-** Name: dm2d_convert_preV9_iiind - convert iiindex to V9 format
-**
-** Description:
-**      Used indirectly by upgradedb to convert iiindex to V9 format
-**
-**	V9 is DMF version for Ingres2007
-**
-**	For Ingres2007, the "idom" column of IIINDEX is expanded from
-**	DB_MAXKEYS to DB_MAXIXATTS, so extant IIINDEX rows must have
-**	these added idom's zero-filled.
-**
-** Inputs:
-**      db_id                           database to upgrade
-**
-** Outputs:
-**      err_code                        error return code
-**
-**	Returns:
-**	    DB_STATUS
-**	Exceptions:
-**	    none
-**
-** Side Effects:
-**	    none
-**
-** History:
-**	26-May-2006 (jenjo02)
-**	    Written to expand number of IIINDEX idom columns from
-**	    32 to 64 for Indexes on Clustered Tables.
-[@history_template@]...
-*/
-static DB_STATUS
-dm2d_convert_preV9_iiind(
-    DMP_DCB	    *db_id,
-    i4		    create_version,
-    i4              flag,
-    i4              lock_list,
-    DB_ERROR   	    *dberr )
-{
-    DMP_DCB	    *dcb = (DMP_DCB *)db_id;
-    i4	    	    temp_lock_list, status, i=0, local_error, local_status;
-    CL_ERR_DESC	    sys_err;
-    DM0C_CNF	    *config = 0;
-    bool	    config_open = FALSE, tmp_open = FALSE;
-    bool	    iiind_open = FALSE, add_status;
-    DB_TAB_ID	    iiind_tab_id;
-    DM_FILE	    tmp_file_name = 
-			{{'i','i','i','n','d','c','v','t','.','t','m','p'}};
-    DM_FILE	    iiind_file_name;
-    DI_IO	    tmp_di_context, iiind_di_context;
-    DMPP_PAGE	    *iiind_pg, *tmp_pg;
-    i4	    	    iiind_page_number=0;
-    i4	    	    read_count, write_count, line, offset;
-    char    	    *old_ind;
-    char	    *old_ind_ptr;
-    DMP_INDEX_30    old_ind_row;
-    DMP_INDEX       new_ind;
-    DM_TID	    iiind_tid;
-    DMPP_ACC_PLV    *local_plv;
-    DM_TID	    tid;
-    i4	    	    record_size;
-    i4      	    iiind_pgformat;
-    i4      	    iiind_pgsize;
-    i4		    *err_code = &dberr->err_code;
-
-    CLRDBERR(dberr);
- 
-    for (;;)
-    {
-	/*  
-	**  Create a temporary lock list. This is needed to open the config
-	**  file. 
-	*/
-	if((flag & DM0C_CNF_LOCKED) == 0)
-	{
-	    status = LKcreate_list(
-		LK_ASSIGN | LK_NONPROTECT | LK_NOINTERRUPT,
-		(i4)0, 
-		(LK_UNIQUE *)NULL, 
-		(LK_LLID *)&temp_lock_list, 
-		0,
-		&sys_err);
-
-	    if (status != OK)
-	    {
-		uleFormat(NULL, status, &sys_err, ULE_LOG, (DB_SQLSTATE *)NULL,
-			(char *)NULL, 0L, (i4 *)NULL, &local_error, 0);
-		uleFormat(NULL,
-			E_DM901A_BAD_LOCK_CREATE, 
-			&sys_err, 
-			ULE_LOG, 
-			(DB_SQLSTATE *)NULL, 
-			(char *)NULL, 
-			0L, 
-			(i4 *)NULL, 
-			&local_error, 
-			0);
-
-	    	break;
-	    }
-	}
-	else
-	{
-	    temp_lock_list = lock_list;
-	}
-
-	/*  Open the config file. */
-
-	status = dm0c_open(dcb, flag, temp_lock_list, &config, dberr);
-
-	if (status != E_DB_OK)
-	    break;
-
-	config_open = TRUE;
-
-	/*
-	** Check the status of the upgrade. Its possible that upgradedb failed
-	** and we're trying again. In that case upgradedb might have
-	** failed after completing the convert.
-	*/
-
-	if  ((config->cnf_dsc->dsc_status & DSC_IIIND_V9_CONV_DONE) != 0)
-	{
-	    /* We've already completed the conversion. */
-
-	    /* If it still exists, delete the temporary file. */
-
-	    status = DIdelete (	
-		&tmp_di_context, 
-		(char *) &dcb->dcb_location.physical,
-		dcb->dcb_location.phys_length,
-		tmp_file_name.name, 
-		sizeof(tmp_file_name.name), 
-		&sys_err);
-
-	    if ((status != OK) && (status != DI_FILENOTFOUND))
-		break;
-
-	    /* Close the configuration file. */
-
-	    status = dm0c_close(config, (flag & DM0C_CNF_LOCKED), dberr);
-
-	    if (status != E_DB_OK)
-		break;
-
-	    /*  Release the temporary lock list. */
-
-          if((flag & DM0C_CNF_LOCKED) == 0)
-          {
-	    status = LKrelease(
-		LK_ALL, 
-		temp_lock_list, 
-		(LK_LKID *)NULL, 
-		(LK_LOCK_KEY *)NULL,
-		(LK_VALUE *)NULL, 
-		&sys_err);
-
-	    if (status != OK)
-	    {
-		uleFormat(NULL, status, &sys_err, ULE_LOG, (DB_SQLSTATE *)NULL,
-		    (char *)NULL, 0L, (i4 *)NULL, &local_error, 0);
-		uleFormat(NULL,
-		    E_DM901B_BAD_LOCK_RELEASE, 
-		    &sys_err, 
-		    ULE_LOG , 
-		    (DB_SQLSTATE *)NULL, 
-		    (char *)NULL, 
-		    0L, 
-		    (i4 *)NULL, 
-		    &local_error, 
-		    1, 
-		    sizeof(temp_lock_list), 
-		    temp_lock_list);
-
-		break;
-	    }
-          }
-	    return (E_DB_OK);
-	}
-
-	/*  Generate the filenames for iiindex tables. */
-
-	iiind_tab_id.db_tab_base = DM_B_INDEX_TAB_ID;
-	iiind_tab_id.db_tab_index = DM_I_INDEX_TAB_ID;
-
-	dm2f_filename (DM2F_TAB, &iiind_tab_id, 0, 0, 0, &iiind_file_name);
-
-	/* 
-	** Check if we've already renamed iiindex in a previous invocation
-	** of upgradedb. If the file exists, we shouldn't do any renaming.
-	*/ 
-
-	/* Determine the page format of iiindex.  These will have
-	** been set properly by the iirelation conversion.
-	*/
-
-	iiind_pgsize = config->cnf_dsc->dsc_iiind_relpgsize;
-	iiind_pgformat = config->cnf_dsc->dsc_iiind_relpgtype;
-
-	if ((iiind_pg = (DMPP_PAGE *)dm0m_pgalloc(iiind_pgsize)) == 0)
-	{
-	    /* FIX ME fix me error */
-	    break;
-	}
-	if ((tmp_pg = (DMPP_PAGE *)dm0m_pgalloc(iiind_pgsize)) == 0)
-	{
-	    /* FIX ME fix me error */
-	    break;
-	}
-
-	/* Open the tmp iiindex for read. */
-
- 	status = DIopen(
-	    &tmp_di_context, 
-	    (char *) &dcb->dcb_location.physical,
-	    dcb->dcb_location.phys_length,
-	    tmp_file_name.name, 
-	    sizeof(tmp_file_name.name),
-	    iiind_pgsize, 
-	    DI_IO_READ, 
-	    DI_SYNC_MASK,
-	    &sys_err);
-
-	/* If the file doesn't exist, we need to rename iiindex. */
-
-	if (status == DI_FILENOTFOUND)
-	{
-	    /*  Rename iiindex to the tmp filename. */
-
-	    status = DIrename (
-		0, 
-		(char *) &dcb->dcb_location.physical,
-		dcb->dcb_location.phys_length,
-		iiind_file_name.name,
-		sizeof(iiind_file_name.name),	     
-		tmp_file_name.name,
-		sizeof(tmp_file_name.name),
-		&sys_err);
-
-	    if (status != OK)
-		break;
-
-	    /* Now open the tmp iiindex for read. */
-
-	    status = DIopen(
-		&tmp_di_context, 
-		(char *) &dcb->dcb_location.physical,
-		dcb->dcb_location.phys_length,
-		tmp_file_name.name, 
-		sizeof(tmp_file_name.name),
-		iiind_pgsize, 
-		DI_IO_READ, 
-		DI_SYNC_MASK,
-		&sys_err);
-	}
-
-	if (status != OK)
-	    break;
-
-	tmp_open = TRUE;
-
-	/* 
-	** Delete iiindex if it exists. We might have created this file
-	** in a previous invocation of upgradedb.
-	*/
-
-	status = DIdelete (	
-	    &iiind_di_context, 
-	    (char *) &dcb->dcb_location.physical,
-	    dcb->dcb_location.phys_length,
-	    iiind_file_name.name, 
-	    sizeof(iiind_file_name.name), 
-	    &sys_err);
-
-	/* DI_FILENOTFOUND is an ok bad status. The file might not exist. */
-
-	if  ((status != OK) && (status != DI_FILENOTFOUND))
-	    break;
-
-	/* Create the new iiindex file. */
-
-	status = DIcreate(
-	    &iiind_di_context, 
-	    (char *) &dcb->dcb_location.physical,
-	    dcb->dcb_location.phys_length,
-	    iiind_file_name.name, 
-	    sizeof(iiind_file_name.name), 
-	    iiind_pgsize, 
-	    &sys_err);
-
-	if (status != OK)
-	    break;
-
-	/* Open the new iiindex. */
-
-	status = DIopen(
-	    &iiind_di_context, 
-	    (char *) &dcb->dcb_location.physical,
-	    dcb->dcb_location.phys_length,
-	    iiind_file_name.name, 
-	    sizeof(iiind_file_name.name),
-	    iiind_pgsize, 
-	    DI_IO_WRITE, 
-	    DI_SYNC_MASK,
-	    &sys_err);
-
-	if (status != OK)
-	    break;
-
-	iiind_open = TRUE;
-
-	dm1c_get_plv(iiind_pgformat, &local_plv);
-
-	
-	/* Format the first pages of the new iiindex */
-
-	(*local_plv->dmpp_format)(iiind_pgformat, iiind_pgsize, 
-			iiind_pg, 0, DMPP_DATA, DM1C_ZERO_FILL);
-
-	/* Set the proper size for the old rows */
-	record_size = DMP_INDEX_SIZE_30;
-
-	/* 
-	** Now copy the records from the tmp iiindex to the new iiindex.
-	*/
-
-	for (i=0;;)
-	{
-	    /* Read a page from the tmp iiindex */
-
-	    read_count = 1;
-
-	    status = DIread(
-		&tmp_di_context, 
-		&read_count, 
-		i,
-		(char *) tmp_pg, 
-		&sys_err);
-
-	    if (status != OK)
-		break;
-
-	    tid.tid_tid.tid_page = i;
-	    tid.tid_tid.tid_line = DM_TIDEOF;
-
-	    /* Copy each line to the new iiindex. */
-
-	    while (++tid.tid_tid.tid_line <
-		     (i4)DMPP_VPT_GET_PAGE_NEXT_LINE_MACRO(iiind_pgformat, 
-							tmp_pg))
-	    {
-		/* We'll use "old_ind_row" as an aligned holder; otherwise
-		** the rows can be unaligned and we poof.
-		*/
-		old_ind = (char *) &old_ind_row;
-		local_status = (*local_plv->dmpp_get)(iiind_pgformat, iiind_pgsize,
-		    tmp_pg, &tid, &record_size, &old_ind,
-		    0, NULL, NULL, (DMPP_SEG_HDR *)NULL);
-
-		/* If the line is empty, go to the next line. */
-
-		if  (local_status == E_DB_WARN)
-		    continue;
-		if (local_status != E_DB_OK)
-		    break;
-
-		/* Copy the old row to the new one in new_ind,
-		** padding out the new idom[32-63] with zeroes.
-		** We'll include iiindex rows for the core catalogs
-		** (there's only one).
-		*/
-		MEmove(DMP_INDEX_SIZE_30, (PTR)old_ind, 0,
-		       DMP_INDEX_SIZE, (PTR)&new_ind);
-
-
-		/* 
-		** Store the record on the page. 
-		*/
-
-		status = add_record(iiind_pgformat, iiind_pgsize,
-		    iiind_pg,
-		    (char *)&new_ind,
-		    DMP_INDEX_SIZE,
-		    &iiind_tid,
-		    &iiind_di_context,
-		    local_plv,
-		    dberr);
-
-		if (status != OK)
-		    break; 
-
-	    } /* end while */
-
-	    if (status != OK) 
-		break;
-
-	    /* Follow any overflow chains. */
-
-	    if (DMPP_VPT_GET_PAGE_OVFL_MACRO(iiind_pgformat, tmp_pg) != 0)
-		i = DMPP_VPT_GET_PAGE_OVFL_MACRO(iiind_pgformat, tmp_pg);
-
-	    /* 
-	    ** No more overflow buckets. We're done with this hash bucket.
-	    ** Go to the next hash bucket.
-	    */
-
-	    else if (DMPP_VPT_GET_PAGE_MAIN_MACRO(iiind_pgformat, tmp_pg) != 0) 
-		i = DMPP_VPT_GET_PAGE_MAIN_MACRO(iiind_pgformat, tmp_pg);
-
-	    /* 
-	    ** No more main and overflow buckets. We've finished copying
-	    ** all the iiindex records.
-	    */
-	    else
-	    {
-		/* 
-		** Allocate and write out the last iiindex pages and then exit
-		** the loop.
-		*/
-
-		status = DIalloc(
-		    &iiind_di_context, 1, &iiind_page_number, &sys_err);
-
-		if (status != OK)
-		    break;
-
-		status = DIflush(&iiind_di_context, &sys_err);
-
-		if (status != OK)
-		    break;
-
-		DMPP_VPT_CLR_PAGE_STAT_MACRO(iiind_pgformat, iiind_pg, DMPP_MODIFY);
-		dm0p_insert_checksum(iiind_pg, iiind_pgformat, iiind_pgsize);
-
-		write_count = 1;
-
-		status = DIwrite(
-		    &iiind_di_context, 
-		    &write_count,
-		    DMPP_VPT_GET_PAGE_PAGE_MACRO(iiind_pgformat, iiind_pg), 
-		    (char *) iiind_pg, 
-		    &sys_err);
-
-		break;
-	    }
-	} /* end for */
-
-	if (status != OK) 
-	    break;
-
-	/* Close the new iiindex file */
-
-	status = DIclose (&iiind_di_context, &sys_err);
-
-	if  (status != OK)
-	    break;
-	    
-	iiind_open = FALSE;
-
-	/* 
-	** Mark the flag in the config file to say we've completed the 
-	** conversion. We must do this before we delete the temporary table.
-	** Because we hosed the space management setup for iiindex,
-	** leave the core catalog version alone.  We'll do more "stuff"
-	** at database open time.  (This is database add time.)
-	*/
-
-	config->cnf_dsc->dsc_status |= DSC_IIIND_V9_CONV_DONE;
-	config->cnf_dsc->dsc_status &= ~DSC_65_SMS_DBMS_CATS_CONV_DONE;
-
-
-	/* Close the configuration file. */
-
-	status = dm0c_close(config, (flag & DM0C_CNF_LOCKED) | DM0C_UPDATE, dberr);
-
-	if (status != E_DB_OK)
-	    break;
-
-	config_open = FALSE;
-
-	/*  Release the temporary lock list. */
-
-	if((flag & DM0C_CNF_LOCKED) == 0)
-	{
-	    status = LKrelease(
-		LK_ALL, 
-		temp_lock_list, 
-		(LK_LKID *)NULL, 
-		(LK_LOCK_KEY *)NULL,
-		(LK_VALUE *)NULL, 
-		&sys_err);
-
-	    if (status != OK)
-	    {
-		uleFormat(NULL,status, &sys_err, ULE_LOG, (DB_SQLSTATE *)NULL,
-			(char *)NULL, 0L, (i4 *)NULL, &local_error, 0);
-		uleFormat(NULL,
-			E_DM901B_BAD_LOCK_RELEASE, 
-			&sys_err, 
-			ULE_LOG , 
-			(DB_SQLSTATE *)NULL, 
-			(char *)NULL, 
-			0L, 
-			(i4 *)NULL, 
-			&local_error, 
-			1, 
-			sizeof(temp_lock_list), 
-			temp_lock_list);
-
-		break;
-	    }
-	}
-	/* Close and delete the tmp iiindex file. */
-
-	status = DIclose (&tmp_di_context, &sys_err);
-
-	if (status != OK)
-	    break;
-
-	tmp_open = FALSE;
-
-	status = DIdelete (	
-	    &tmp_di_context, 
-	    (char *) &dcb->dcb_location.physical,
-	    dcb->dcb_location.phys_length,
-	    tmp_file_name.name, 
-	    sizeof(tmp_file_name.name), 
-	    &sys_err);
-
-	if (status != OK)
-	    break;
-
-	/* Return success. */
-
-	dm0m_pgdealloc((char **)&iiind_pg);
-	dm0m_pgdealloc((char **)&tmp_pg);
-	return (E_DB_OK);
-    } /* end for */
-
-    /* Error, clean up */
-
-    if (iiind_pg != NULL)
-	dm0m_pgdealloc((char **)&iiind_pg);
-    if (tmp_pg != NULL)
-	dm0m_pgdealloc((char **)&tmp_pg);
-
-    /* Deallocate the configuration record. */
-
-    if (config_open == TRUE)
-	local_status = dm0c_close(config, (flag & DM0C_CNF_LOCKED), dberr);
-
-    /* Close the iiindex files if they are open. */
-
-    if (tmp_open == TRUE)
-	local_status = DIclose (&tmp_di_context, &sys_err);
-
-    if (iiind_open == TRUE)
-	local_status = DIclose (&iiind_di_context, &sys_err);
-
-    SETDBERR(dberr, 0, E_DM93F0_CONVERT_IIATT);
-    return (E_DB_ERROR);
-}
-
 
 /*{
 ** Name: dm2d_upgrade_rewrite_iiatt - convert iiattribute to CURRENT format
@@ -11485,14 +10359,11 @@ dm2d_convert_preV9_iiind(
 **      and other code in this file that does the row conversion.
 **      Future iiattribute upgrades requiring iiattribute re-write
 **      should require changes to upgrade_iiatt_row() only.
-**  
-**      V7 is DMF version for Ingres Release 3 (3.0.1).
-**      V8 is DMF version for release 3.0.2.
-**      As far as we're concerned, the two are identical (V8 uses an i2
-**      of attfree for attcollid, but we just zero it here anyway).
 **
-**      For the 256K row project, iiattribute.attoff changed from i2 -> i4
-**      To accommodate i4 attoff, attfmt has been moved into the attfree space.
+**	(Actually, the above is false;  code to build a RAC for the
+**	old-format iiattribute and do decompression still needs to be
+**	added.  After that's done, though, future changes should only
+**	affect upgrade_iiatt_row.)
 **
 ** Inputs:
 **      db_id                           database to upgrade
@@ -11511,7 +10382,9 @@ dm2d_convert_preV9_iiind(
 ** History:
 **      07-apr-2007
 **          Created from dm2d_convert_preV7_iiatt
-[@history_template@]...
+**	29-Apr-2010 (kschendel)
+**	    Union-ize the old attribute stuff for generality.
+**	    (3-May) Changes for compressed core catalogs.
 */
 static DB_STATUS
 dm2d_upgrade_rewrite_iiatt(
@@ -11536,19 +10409,26 @@ dm2d_upgrade_rewrite_iiatt(
     DMPP_PAGE	    *att_pg, *tmp_pg;
     i4	    att_pageno=0;
     i4	    read_count, write_count, line, offset;
-    DMP_ATTRIBUTE   tmp_att;
+    DMP_ATTRIBUTE_ANY   old_att;
     DMP_ATTRIBUTE   new_att;
-    char	    *old_att;
+    DMP_ATTRIBUTE   cmp_att;	/* NOTE: iiattribute can't grow when compressed */
+    char	    *old_att_cp;
     DM_TID	    att_tid;
-    DMPP_ACC_PLV    *loc_plv;
+    DMPP_ACC_PLV    *old_plv;
+    DMPP_ACC_PLV    *new_plv;
+    DMP_ROWACCESS   *new_rac;	/* Row-accessor for result */
     DM_TID	    tid;
-    i4	    record_size;
-    i4      pgtype;
-    i4      pgsize;
+    i4		record_size = upgrade_cb->upgr_iiatt_wid;
+    i4		oldpgtype, newpgtype;
+    i4		pgsize;
+    i4		done_flag, to_clear_flag;
+    i4		cmp_len;
+    i4		old_version;
     i4		    *err_code = &dberr->err_code;
 
     CLRDBERR(dberr);
  
+    new_rac = NULL;
     for (;;)
     {
 	/*  
@@ -11585,26 +10465,32 @@ dm2d_upgrade_rewrite_iiatt(
 
 	config_open = TRUE;
 
+	/* Forcibly turn off journaling if it isn't off already. */
+	config->cnf_dsc->dsc_status &= ~DSC_JOURNAL;
+
 	/*
 	** Check the status of the upgrade. Its possible that upgradedb failed
 	** and we're trying again. In that case upgradedb might have
 	** failed after completing the convert.
 	*/
 
-	if  (upgrade_cb->upgr_dbg_env == UPGRADE_REWRITE)
+	done_flag = DSC_A_IIATT_CONV_DONE;
+	to_clear_flag = DSC_B_IIATT_CONV_DONE;
+	if (config->cnf_dsc->dsc_status & DSC_CONV_B)
 	{
-	    /* for now, always do the rewrite ! */
-	    TRdisplay("UPGRADE rewrite iiattribute config status %x\n",
-		config->cnf_dsc->dsc_status);
+	    done_flag = DSC_B_IIATT_CONV_DONE;
+	    to_clear_flag = DSC_A_IIATT_CONV_DONE;
 	}
-	else if ((config->cnf_dsc->dsc_status & DSC_IIATT_V7_CONV_DONE) != 0)
+	to_clear_flag |= DSC_NOTUSED;
+
+	/* See if we already finished this conversion. */
+	if (config->cnf_dsc->dsc_status & done_flag)
 	{
 	    /* We've already completed the conversion. */
 
 	    /* If it still exists, delete the temporary file. */
 
-	    status = DIdelete (	&tmp_di_io, 
-		(char *) &dcb->dcb_location.physical,
+	    status = DIdelete (&tmp_di_io, (char *) &dcb->dcb_location.physical,
 		dcb->dcb_location.phys_length,
 		tmp_file.name, sizeof(tmp_file.name), &sys_err);
 
@@ -11620,21 +10506,21 @@ dm2d_upgrade_rewrite_iiatt(
 
 	    /*  Release the temporary lock list. */
 
-          if((flag & DM0C_CNF_LOCKED) == 0)
-          {
-	    status = LKrelease(LK_ALL, lk_id, (LK_LKID *)NULL,
-		(LK_LOCK_KEY *)NULL, (LK_VALUE *)NULL, &sys_err); 
-
-	    if (status != OK)
+	    if((flag & DM0C_CNF_LOCKED) == 0)
 	    {
-		uleFormat(NULL, status, &sys_err, ULE_LOG, (DB_SQLSTATE *)NULL,
-		    (char *)NULL, 0L, (i4 *)NULL, &local_error, 0);
-		uleFormat(NULL, E_DM901B_BAD_LOCK_RELEASE, &sys_err, ULE_LOG, 
-		    (DB_SQLSTATE *)NULL, (char *)NULL, 0L, (i4 *)NULL, 
-		    &local_error, 1, sizeof(lk_id), lk_id);
-		break;
+		status = LKrelease( LK_ALL, lk_id, (LK_LKID *)NULL, 
+			(LK_LOCK_KEY *)NULL, (LK_VALUE *)NULL, &sys_err);
+
+		if (status != OK)
+		{
+		    uleFormat(NULL, status, &sys_err, ULE_LOG, (DB_SQLSTATE *)NULL,
+			(char *)NULL, 0L, (i4 *)NULL, &local_error, 0);
+		    uleFormat(NULL, E_DM901B_BAD_LOCK_RELEASE, &sys_err, ULE_LOG , 
+			(DB_SQLSTATE *)NULL, (char *)NULL, 0L, (i4 *)NULL, 
+			&local_error, 1, sizeof(lk_id), lk_id);
+		    break;
+		}
 	    }
-          }
 	    return (E_DB_OK);
 	}
 
@@ -11645,27 +10531,61 @@ dm2d_upgrade_rewrite_iiatt(
 
 	dm2f_filename (DM2F_TAB, &att_tab_id, 0, 0, 0, &att_file);
 
-	/* 
-	** Check if we've already renamed iiattribute in a previous invocation
-	** of upgradedb. If the file exists, we shouldn't do any renaming.
-	*/ 
+	/* Build a DMP_ROWACCESS and the necessary associated
+	** attribute lists and compression control for the
+	** new iiattribute.
+	** build-core-rac will allocate DMF memory for this.
+	*/
+	status = build_core_rac(&att_tab_id, DM_core_attributes, &new_rac, dberr);
+	if (status != E_DB_OK)
+	    break;
 
-	/* Determine the page format of iiattribute.  These will have
-	** been set properly by the iirelation conversion.
+	/* FIXME For future, if the old version is >= DSC_V9, we'll
+	** need to build a RAC for the *old* version using *old*
+	** core attributes.
+	** For this version, no old catalogs are compressed yet.
 	*/
 
-	pgsize = config->cnf_dsc->dsc_iiatt_relpgsize;
-	pgtype = config->cnf_dsc->dsc_iiatt_relpgtype;
+	old_version = upgrade_cb->upgr_create_version;
+	if (old_version >= DSC_V9)
+	{
+	    *(i4 *)0 = 1;		/* ADD CODE HERE */
+	}
+
+
+	/* Determine the page format of iiattribute.
+	** The new page format may differ from the old, if the
+	** page size is 2K.  Due to compression starting with DSC_V9,
+	** core catalogs no longer use V1 pages even on a 2K page.
+	*/
+
+	if (old_version < DSC_V3)
+	{
+	    pgsize = DM_COMPAT_PGSIZE; 
+	    oldpgtype = DM_COMPAT_PGTYPE;
+	}
+	else
+	{
+	    pgsize = config->cnf_dsc->dsc_iiatt_relpgsize;
+	    oldpgtype = config->cnf_dsc->dsc_iiatt_relpgtype;
+	    if (pgsize == 0)
+		pgsize = 2048;
+	    if (old_version < DSC_V6)
+	    {
+		oldpgtype = TCB_PG_V1;
+		if (pgsize != DM_COMPAT_PGSIZE)
+		    oldpgtype = TCB_PG_V2;
+	    }
+	}
+	(void) dm1c_getpgtype(pgsize, DM1C_CREATE_CORE, sizeof(DMP_ATTRIBUTE),
+		&newpgtype);
 
 	/*
-	** NOTE allocate additional sizeof(DMP_ATTRIBUTE) so we can
-	** safely copy sizeof(DMP_ATTRIBUTE) bytes instead of
-	** worrying here about what is the correct size of the old row
+	** One page to read the old iiattribute, one to write the new.
 	** Also note that we're NOT using direct IO here, so don't
 	** worry about alignments.
 	*/
-	status = dm0m_allocate(2*pgsize + sizeof(DMP_ATTRIBUTE) +
-		+ sizeof(DMP_MISC),
+	status = dm0m_allocate(2*pgsize + sizeof(DMP_MISC),
 	    (i4)0, (i4)MISC_CB, (i4)MISC_ASCII_ID,
 	    (char*)dcb, (DM_OBJECT**)&mem, dberr);
 	if ( status )
@@ -11743,22 +10663,13 @@ dm2d_upgrade_rewrite_iiatt(
 
 	att_open = TRUE;
 
-	dm1c_get_plv(pgtype, &loc_plv);
+	dm1c_get_plv(oldpgtype, &old_plv);
+	dm1c_get_plv(newpgtype, &new_plv);
 	
 	/* Format the first pages of the new iiattribute */
 
-	(*loc_plv->dmpp_format)(pgtype, pgsize, 
+	(*new_plv->dmpp_format)(newpgtype, pgsize, 
 			att_pg, 0, DMPP_DATA, DM1C_ZERO_FILL);
-
-	/* Set size for the old rows, (even though dmpp_get doesn't care) */
-	if (upgrade_cb->upgr_create_version < DSC_V8)
-	    record_size = sizeof(DMP_ATTRIBUTE_26);
-	if (upgrade_cb->upgr_create_version < DSC_V3)
-	    record_size = sizeof(DMP_OLDATTRIBUTE);
-	else if (upgrade_cb->upgr_create_version == DSC_V3)
-	    record_size = sizeof(DMP_ATTRIBUTE_1X);
-	else
-	    record_size = 0;
 
 	/* Copy the records from the tmp iiattribute to the new iiattribute */
 
@@ -11779,18 +10690,13 @@ dm2d_upgrade_rewrite_iiatt(
 	    /* Copy each line to the new iiattribute. */
 
 	    while (++tid.tid_tid.tid_line <
-		     (i4)DMPP_VPT_GET_PAGE_NEXT_LINE_MACRO(pgtype, 
+		     (i4)DMPP_VPT_GET_PAGE_NEXT_LINE_MACRO(oldpgtype, 
 							tmp_pg))
 	    {
-		/* We'll use "old_att_row" as an aligned holder; otherwise
-		** the rows can be unaligned and we poof.  This is sort of
-		** cheating, but "old_att_row" is defined as the largest
-		** of the old formats, and they should all have identical
-		** stack-alignment requirements.
-		*/
-		old_att = (char *) &tmp_att;
-		local_status = (*loc_plv->dmpp_get)(pgtype, pgsize,
-		    tmp_pg, &tid, &record_size, &old_att,
+		/* Point to the next row */
+		old_att_cp = (char *) &old_att;
+		local_status = (*old_plv->dmpp_get)(oldpgtype, pgsize,
+		    tmp_pg, &tid, &record_size, &old_att_cp,
 		    (i4*)NULL, (u_i4*)NULL, (u_i2*)NULL, (DMPP_SEG_HDR *)NULL);
 
 		/* If the line is empty, go to the next line. */
@@ -11800,20 +10706,23 @@ dm2d_upgrade_rewrite_iiatt(
 		if (local_status != E_DB_OK)
 		    break;
 
-		if (old_att != (char *) &tmp_att)
+		/* FIXME will need to uncompress the row.  Don't need
+		** to worry about it for < DSC_V9, but future changes
+		** will have to be able to do decompression.
+		*/
+		if (old_version >= DSC_V9)
 		{
-		    /*
-		    ** Note old_att may not be sizeof(DMP_ATTRIBUTE)
-		    ** but we can always copy sizeof(DMP_ATTRIBUTE)
-		    ** because we allocated 2*pgsize + sizeof(DMP_ATTRIBUTE) 
-		    */
-		    MEcopy(old_att, sizeof(DMP_ATTRIBUTE), (char *)&tmp_att);
-		    old_att = (char *)&tmp_att;	/* Aligned copy */
+		    *(i4 *)0 = 1;		/* ADD CODE HERE */
+		}
+
+		if (old_att_cp != (char *) &old_att)
+		{
+		    MEcopy(old_att_cp, record_size, (char *) &old_att);
 		}
 
 		/* UPGRADE the row to the CURRENT format */
 
-		upgrade_iiatt_row(upgrade_cb, old_att, &new_att);
+		upgrade_iiatt_row(upgrade_cb, &old_att, &new_att);
 
 		/*
 		** Ignore att rows for iirelation, iirel_idx,
@@ -11821,15 +10730,23 @@ dm2d_upgrade_rewrite_iiatt(
 		** these catalogs change around, it's easier to just
 		** reconstruct the core catalog att records from the
 		** builtin DM_core_attributes.
+		** Too bad we can't do this (easily) before upgrading
+		** the row, but attrelid might have moved around.
 		*/
 	        if (new_att.attrelid.db_tab_base <= DM_B_INDEX_TAB_ID)
 		    continue;
 
+		/* iiattribute is compressed from DSC_V9 on. */
+		status = (*new_rac->dmpp_compress)(new_rac, (char *)&new_att,
+			sizeof(new_att), (char *)&cmp_att, &cmp_len);
+		if (status != E_DB_OK)
+		    break;
+
 		/* Store the record on the page */
 
-		status = add_record(pgtype, pgsize, att_pg,
-		    (char *)&new_att, sizeof(new_att),
-		    &att_tid, &att_di_io, loc_plv, dberr);
+		status = add_record(newpgtype, pgsize, att_pg,
+		    (char *)&cmp_att, cmp_len,
+		    &att_tid, &att_di_io, new_plv, dberr);
 
 		if (status != OK)
 		    break; 
@@ -11841,16 +10758,16 @@ dm2d_upgrade_rewrite_iiatt(
 
 	    /* Follow any overflow chains. */
 
-	    if (DMPP_VPT_GET_PAGE_OVFL_MACRO(pgtype, tmp_pg) != 0)
-		i = DMPP_VPT_GET_PAGE_OVFL_MACRO(pgtype, tmp_pg);
+	    if (DMPP_VPT_GET_PAGE_OVFL_MACRO(oldpgtype, tmp_pg) != 0)
+		i = DMPP_VPT_GET_PAGE_OVFL_MACRO(oldpgtype, tmp_pg);
 
 	    /* 
 	    ** No more overflow buckets. We're done with this hash bucket.
 	    ** Go to the next hash bucket.
 	    */
 
-	    else if (DMPP_VPT_GET_PAGE_MAIN_MACRO(pgtype, tmp_pg) != 0) 
-		i = DMPP_VPT_GET_PAGE_MAIN_MACRO(pgtype, tmp_pg);
+	    else if (DMPP_VPT_GET_PAGE_MAIN_MACRO(oldpgtype, tmp_pg) != 0) 
+		i = DMPP_VPT_GET_PAGE_MAIN_MACRO(oldpgtype, tmp_pg);
 
 	    /* 
 	    ** No more main and overflow buckets. We've finished copying
@@ -11878,7 +10795,7 @@ dm2d_upgrade_rewrite_iiatt(
 		*/
  
 		j=0;
-		for (k=0;k<4;k++)
+		for (k = 0; k < DM_CORE_REL_CNT; ++k)
 		{
 		    j += DM_core_relations[k].relatts;
 		}
@@ -11891,9 +10808,15 @@ dm2d_upgrade_rewrite_iiatt(
 		    if (upcase)
 			att_record = (char *) &DM_ucore_attributes[k];
 
-		    status = add_record(pgtype, pgsize, att_pg, att_record,
-			sizeof(DMP_ATTRIBUTE), &att_tid, &att_di_io,
-			loc_plv, dberr);
+		    /* iiattribute is compressed from DSC_V9 on. */
+		    status = (*new_rac->dmpp_compress)(new_rac, att_record,
+				sizeof(DMP_ATTRIBUTE), (char *)&cmp_att, &cmp_len);
+		    if (status != E_DB_OK)
+			break;
+
+		    status = add_record(newpgtype, pgsize, att_pg,
+			(char *)&cmp_att, cmp_len, &att_tid, &att_di_io,
+			new_plv, dberr);
 
 		    if (status != OK)
 			break; 
@@ -11917,17 +10840,17 @@ dm2d_upgrade_rewrite_iiatt(
 		if (status != OK)
 		    break;
 
-		DMPP_VPT_CLR_PAGE_STAT_MACRO(pgtype, att_pg, DMPP_MODIFY);
-		dm0p_insert_checksum(att_pg, pgtype, pgsize);
+		DMPP_VPT_CLR_PAGE_STAT_MACRO(newpgtype, att_pg, DMPP_MODIFY);
+		dm0p_insert_checksum(att_pg, newpgtype, pgsize);
 
 		write_count = 1;
 
 		TRdisplay("Write iiattribute page %d nxtlino %d \n", 
-		    DMPP_VPT_GET_PAGE_PAGE_MACRO(pgtype, att_pg), 
-		(i4)DMPP_VPT_GET_PAGE_NEXT_LINE_MACRO(pgtype, att_pg));
+		    DMPP_VPT_GET_PAGE_PAGE_MACRO(newpgtype, att_pg), 
+		(i4)DMPP_VPT_GET_PAGE_NEXT_LINE_MACRO(newpgtype, att_pg));
 
 		status = DIwrite( &att_di_io, &write_count,
-		    DMPP_VPT_GET_PAGE_PAGE_MACRO(pgtype, att_pg), 
+		    DMPP_VPT_GET_PAGE_PAGE_MACRO(newpgtype, att_pg), 
 		    (char *) att_pg, &sys_err);
 
 		break;
@@ -11951,7 +10874,12 @@ dm2d_upgrade_rewrite_iiatt(
 	** conversion. We must do this before we delete the temporary table.
 	*/
 
-	config->cnf_dsc->dsc_status |= DSC_IIATT_V7_CONV_DONE;
+	config->cnf_dsc->dsc_status |= done_flag;
+	config->cnf_dsc->dsc_status &= ~to_clear_flag;
+
+	/* Set the possibly changed iiattribute page type */
+	config->cnf_dsc->dsc_iiatt_relpgsize = pgsize;
+	config->cnf_dsc->dsc_iiatt_relpgtype = newpgtype;
 
 	/*
 	** Because we hosed the space management setup for iiattribute,
@@ -12005,6 +10933,10 @@ dm2d_upgrade_rewrite_iiatt(
 
 	dm0m_deallocate(&mem);
 
+	/* Deallocate the row-accessor and attached data */
+	mem = (DM_OBJECT *) ((char *)new_rac - sizeof(DMP_MISC));
+	dm0m_deallocate(&mem);
+
 	/* Return success. */
 	return (E_DB_OK);
 
@@ -12014,6 +10946,13 @@ dm2d_upgrade_rewrite_iiatt(
 
     if (mem != NULL)
 	dm0m_deallocate(&mem);
+
+    if (new_rac != NULL)
+    {
+	mem = (DM_OBJECT *) ((char *)new_rac - sizeof(DMP_MISC));
+	dm0m_deallocate(&mem);
+	new_rac = NULL;
+    }
 
     /* Deallocate the configuration record. */
 
@@ -12038,27 +10977,32 @@ dm2d_upgrade_rewrite_iiatt(
 **
 ** Description:
 ** 
-**      Used by upgradedb to convert iiattribute to CURRENT format
+**      Used by upgradedb to convert iiattribute to CURRENT format.
+**	The old style row is in a DMP_ATTRIBUTE_ANY union which can
+**	hold any version attribute row.  Conversion proceeds step-wise,
+**	e.g. v8 -> v9, v9 -> v10, etc, each time updating the old style
+**	row in the union.  At the end, we copy the result to the output.
+**
 **      NOTE previously for each upgrade an iiattribute row was upgraded
 **      like this:
 **      64iiatt -> current iiatt
 **      V3iiatt -> current iiatt
 **      26iatt -> current iiatt
 **
-** A simpler way to upgrade would be this:
-**      64iiatt -> V3iiatt
-**      V3iiatt -> 26iatt
-**      26iiatt -> nextversion
-**
-** That is, convert the row from version to next version
-** New conversions should convert from previous version only
-** (which should be simpler and cause fewer upgrade bugs)
+**	Since this routine is built upon those foundations, anything older
+**	than V8 (r3/9.x) is converted directly to V8 first, and then to
+**	current version step-wise.  Doing the conversion one step at a
+**	time should be simpler and less error prone.
 **
 ** Inputs:
-**      db_id                           database to upgrade
+**	upgrade_cb			Upgrade info block
+**	old_att				DMP_ATTRIBUTE_ANY containing old row;
+**					might get changed around as the
+**					conversion proceeds.
 **
 ** Outputs:
-**      err_code                        error return code
+**	new_attp			Where to copy the new att row to,
+**					should not be the same as old-att.
 **
 **	Returns:
 **	    DB_STATUS
@@ -12073,21 +11017,22 @@ dm2d_upgrade_rewrite_iiatt(
 **          Created.
 **      29-Sept-2009 (troal01)
 **      	Added support for geospatial types.
-[@history_template@]...
+**	29-Apr-2010 (kschendel)
+**	    Union-ize the old attribute.  Fix v8 -> v9.  Add cmptlvl hacking.
 */
 static VOID
 upgrade_iiatt_row(
 DM2D_UPGRADE    *upgrade_cb,
-char		*old_att,
+DMP_ATTRIBUTE_ANY  *old_att,
 DMP_ATTRIBUTE	*new_attp)
 {
     DMP_OLDATTRIBUTE *old_att_64 = NULL;
     DMP_ATTRIBUTE_1X *old_att_1x = NULL;
     DMP_ATTRIBUTE_26 *old_att_26 = NULL;
+    DMP_ATTRIBUTE_V8 *old_att_v8;
     DMP_ATTRIBUTE_V8 att_v8;
     DMP_ATTRIBUTE    att_v9;
     i4		     row_version = upgrade_cb->upgr_create_version;
-    char	     *tmp_att = old_att;
 
     MEfill(sizeof(att_v8), 0, (PTR) &att_v8);
     MEfill(sizeof(att_v9), 0, (PTR) &att_v9);
@@ -12096,7 +11041,8 @@ DMP_ATTRIBUTE	*new_attp)
     {
 	if (row_version < DSC_V3)
 	{
-	    old_att_64 = (DMP_OLDATTRIBUTE *) tmp_att;
+	    /* Convert 6.4 -> v8 */
+	    old_att_64 = &old_att->att_64;
 	    STRUCT_ASSIGN_MACRO(old_att_64->attrelid, att_v8.attrelid);
 	    att_v8.attid = old_att_64->attid;
 	    att_v8.attxtra = old_att_64->attxtra;
@@ -12115,14 +11061,13 @@ DMP_ATTRIBUTE	*new_attp)
 
 	    /* now the row is DSC_V8 */	
 	    row_version = DSC_V8;
-	    tmp_att = (char *)&att_v8;
+	    /* Will move to old_att->att_v8 below */
 	}
 
-	if (row_version == DSC_VCURRENT)
-	    break;
-	else if (row_version == DSC_V3)
+	if (row_version == DSC_V3)
 	{
-	    old_att_1x = (DMP_ATTRIBUTE_1X *) tmp_att;
+	    /* Convert 1.x -> v8 */
+	    old_att_1x = &old_att->att_1x;
 	    STRUCT_ASSIGN_MACRO(old_att_1x->attrelid, att_v8.attrelid);
 	    att_v8.attid = old_att_1x->attid;
 	    att_v8.attxtra = old_att_1x->attxtra;
@@ -12139,14 +11084,13 @@ DMP_ATTRIBUTE	*new_attp)
 
 	    /* now the row is DSC_V8 */	
 	    row_version = DSC_V8;
-	    tmp_att = (char *)&att_v8;
+	    /* Will move to old_att->att_v8 below */
 	}
 
-	if (row_version == DSC_VCURRENT)
-	    break;
-	else if (row_version < DSC_V8)
+	if (row_version < DSC_V8)
 	{
-	    old_att_26 = (DMP_ATTRIBUTE_26 *) tmp_att;
+	    /* Convert 2.x -> v8 */
+	    old_att_26 = &old_att->att_26;
 	    STRUCT_ASSIGN_MACRO(old_att_26->attrelid, att_v8.attrelid);
 	    att_v8.attid = old_att_26->attid;
 	    att_v8.attxtra = old_att_26->attxtra;
@@ -12166,7 +11110,7 @@ DMP_ATTRIBUTE	*new_attp)
 
 	    /* now the row is DSC_V8 */	
 	    row_version = DSC_V8;
-	    tmp_att = (char *)&att_v8;
+	    /* Will move to old_att->att_v8 below */
 	}
 
 	/* more upgrade for V8, current version should be in att_v8 */
@@ -12185,31 +11129,31 @@ DMP_ATTRIBUTE	*new_attp)
 	    }
 	    /* No label attributes any more */
 	    att_v8.attflag &= ~(0x4000);	/* clear SEC_LBL */
+	    /* Now move v8 att back to old-att for more conversion */
+	    MEcopy((PTR) &att_v8, sizeof(att_v8), (PTR) &old_att->att_v8);
 	}
 
-	if (row_version == DSC_VCURRENT)
-	    break;
-	else if (row_version == DSC_V8)
+	if (row_version == DSC_V8)
 	{
-	    /* currently the only change in v9 is longer attname */
-	    STRUCT_ASSIGN_MACRO(att_v8.attrelid, att_v9.attrelid);
-	    att_v9.attid = att_v8.attid;
-	    att_v9.attxtra = att_v8.attxtra;
-	    MEmove(sizeof(att_v8.attname), (char *)&att_v8.attname, 
+	    old_att_v8 = &old_att->att_v8;
+	    STRUCT_ASSIGN_MACRO(old_att_v8->attrelid, att_v9.attrelid);
+	    att_v9.attid = old_att_v8->attid;
+	    att_v9.attxtra = old_att_v8->attxtra;
+	    MEmove(sizeof(old_att_v8->attname), (char *)&old_att_v8->attname, 
 		' ', sizeof(att_v9.attname), (char *)&att_v9.attname);
-	    att_v9.attoff = att_v8.attoff;
-	    att_v9.attfml = att_v8.attfml;
-	    att_v9.attkey = att_v8.attkey;
-	    att_v9.attflag = att_v8.attflag;
-	    STRUCT_ASSIGN_MACRO(att_v8.attDefaultID, att_v9.attDefaultID);
-	    att_v9.attintl_id = att_v8.attintl_id;
-	    att_v9.attver_added = att_v8.attver_added;
-	    att_v9.attver_dropped = att_v8.attver_dropped;
-	    att_v9.attval_from = att_v8.attval_from;
-	    att_v9.attfmt = att_v8.attfmt;
-	    att_v9.attfmp = att_v8.attfmp;
-	    att_v9.attver_altcol = att_v8.attver_altcol;
-	    att_v9.attcollID = att_v8.attcollID;
+	    att_v9.attoff = old_att_v8->attoff;
+	    att_v9.attfml = old_att_v8->attfml;
+	    att_v9.attkey = old_att_v8->attkey;
+	    att_v9.attflag = old_att_v8->attflag;
+	    STRUCT_ASSIGN_MACRO(old_att_v8->attDefaultID, att_v9.attDefaultID);
+	    att_v9.attintl_id = old_att_v8->attintl_id;
+	    att_v9.attver_added = old_att_v8->attver_added;
+	    att_v9.attver_dropped = old_att_v8->attver_dropped;
+	    att_v9.attval_from = old_att_v8->attval_from;
+	    att_v9.attfmt = old_att_v8->attfmt;
+	    att_v9.attfmp = old_att_v8->attfmp;
+	    att_v9.attver_altcol = old_att_v8->attver_altcol;
+	    att_v9.attcollID = old_att_v8->attcollID;
 	    MEfill(sizeof(att_v9.attfree), 0, (PTR) att_v9.attfree);
 
 	    /* initialise geospatial columns */
@@ -12220,9 +11164,35 @@ DMP_ATTRIBUTE	*new_attp)
 	    att_v9.attencflags = 0;
 	    att_v9.attencwid = 0;
 
+	    /* Special checks for old char[4] style cmptlvl's.  The
+	    ** usual upgradedb mechanism (table unload/reload) doesn't
+	    ** work well for these, because it ends up trying to put
+	    ** a char into an integer.  Just whack the type here,
+	    ** much easier!
+	    */
+
+	    /* Special check for iirelation.relcmptlvl, change to i4 */
+	    if (att_v9.attrelid.db_tab_base == DM_B_RELATION_TAB_ID
+	      && att_v9.attrelid.db_tab_index == DM_I_RELATION_TAB_ID
+	      && STbcompare("relcmptlvl",sizeof("relcmptlvl")-1,
+			att_v9.attname.db_att_name, 0, TRUE) == 0)
+	    {
+		att_v9.attfmt = DB_INT_TYPE;
+	    }
+
+	    /* Special check for iidatabase.dbcmptlvl, change to i4 */
+	    if (att_v9.attrelid.db_tab_base == DM_B_DATABASE_TAB_ID
+	      && att_v9.attrelid.db_tab_index == DM_I_DATABASE_TAB_ID
+	      && STbcompare("dbcmptlvl",sizeof("dbcmptlvl")-1,
+			att_v9.attname.db_att_name, 0, TRUE) == 0)
+	    {
+		att_v9.attfmt = DB_INT_TYPE;
+	    }
+
+
 	    /* now the row is DSC_V9 */	
 	    row_version = DSC_V9;
-	    tmp_att = (char *)&att_v9;
+	    MEcopy((PTR) &att_v9, sizeof(att_v9), (PTR) &old_att->att_v9);
 	}
     
 	/* Add new upgrades to iiattribute here !!! */
@@ -12230,14 +11200,17 @@ DMP_ATTRIBUTE	*new_attp)
 	break;  /* ALWAYS */
     }
 
-    /* tmp_att should point to current version ! */
-    MEcopy(tmp_att, sizeof(DMP_ATTRIBUTE), new_attp);
+    /* Move converted att row to output */
+    MEcopy((PTR) &old_att->att_v9, sizeof(DMP_ATTRIBUTE), (PTR) new_attp);
 
-    TRdisplay("upgrade att %~t (%d,%d) (%d %d %d %d %d %x)\n",
-	sizeof(new_attp->attname), new_attp->attname.db_att_name,
-	new_attp->attrelid.db_tab_base, new_attp->attrelid.db_tab_index,
-	new_attp->attid, new_attp->attfmt, new_attp->attfml,
-	new_attp->attfmp, new_attp->attkey, new_attp->attflag);
+    if (new_attp->attrelid.db_tab_base > DM_B_INDEX_TAB_ID)
+    {
+	TRdisplay("upgrade att %~t (%d,%d) (%d %d %d %d %d %x)\n",
+	    sizeof(new_attp->attname), new_attp->attname.db_att_name,
+	    new_attp->attrelid.db_tab_base, new_attp->attrelid.db_tab_index,
+	    new_attp->attid, new_attp->attfmt, new_attp->attfml,
+	    new_attp->attfmp, new_attp->attkey, new_attp->attflag);
+    }
 
     return;
 
@@ -12270,10 +11243,15 @@ DMP_ATTRIBUTE	*new_attp)
 **      other code in this file that does the row conversion.
 **      Future iirelation upgrades requiring iirelation re-write
 **      should require changes to upgrade_iirel_row() only.
-**      
+**
+**	(Actually, the above is false;  code to build a RAC for the
+**	old-format iirelation and do decompression still needs to be
+**	added.  After that's done, though, future changes should only
+**	affect upgrade_iirel_row.)
 **
 ** Inputs:
-**      db_id                           database to upgrade
+**	upgrade_cb		Upgrade control info
+**	db_id			Database ID being upgraded
 **
 ** Outputs:
 **      err_code                        error return code
@@ -12289,7 +11267,10 @@ DMP_ATTRIBUTE	*new_attp)
 ** History:
 **      07-apr-2007
 **          Created from dm2d_convert_iirel_from_64
-[@history_template@]...
+**	29-Apr-2010 (kschendel)
+**	    Use union so we don't have to make assumptions about
+**	    relative sizes of iirelation versions.
+**	    (3-May) Changes for compressed core catalogs.
 */
 static DB_STATUS
 dm2d_upgrade_rewrite_iirel (
@@ -12314,20 +11295,31 @@ dm2d_upgrade_rewrite_iirel (
     DMPP_PAGE	    *tmp_pg, *rel_pg, *rix_pg;
     i4	    rel_pageno=0, rix_pageno=0;
     i4	    read_count, write_count, line, offset;
+    DMP_RELATION_ANY old_rel;		/* Union of all types */
     DMP_RELATION    new_rel;
-    DMP_RELATION    tmp_rel;
-    char	    *old_rel;
+    char	    cmp_rel[sizeof(DMP_RELATION)+20];  /* iirelation shouldn't
+					** grow if compressed, but be safe */
+    char	    cmp_rix[sizeof(DMP_RINDEX)+20];
+    char	    *old_rel_cp;
     DMP_RINDEX	    rix_rec;
     DM_TID	    rix_tid, rel_tid;
-    DMPP_ACC_PLV    *loc_plv;
+    DMPP_ACC_PLV    *old_plv;
+    DMPP_ACC_PLV    *new_plv;
+    DMP_ROWACCESS   *new_r_rac;	/* Row-accessor for iirelation */
+    DMP_ROWACCESS   *new_i_rac;	/* Row-accessor for iirel_idx */
     DM_TID	    tid;
-    i4	    record_size;
+    i4	 	    record_size = upgrade_cb->upgr_iirel_wid;
     i4		    *err_code = &dberr->err_code;
-    i4		    pgtype;
+    i4		    oldpgtype, newpgtype;
     i4		    pgsize;
+    i4		    cmp_r_len, cmp_i_len;
+    i4		    old_version;
+    i4		    done_flag, to_clear_flag;
 
     CLRDBERR(dberr);
 
+    new_r_rac = NULL;
+    new_i_rac = NULL;
     for (;;)
     {
       /*  Create a temporary lock list, needed to open the config */
@@ -12360,22 +11352,25 @@ dm2d_upgrade_rewrite_iirel (
 
 	config_open = TRUE;
 
-	/* Note: conversion from 6.4 must go thru a config conversion,
-	** which will turn off journaling for us.
-	*/
+	/* Forcibly turn off journaling if it isn't off already. */
+	config->cnf_dsc->dsc_status &= ~DSC_JOURNAL;
 
 	/*
 	** Check the status of the upgrade. Its possible that upgradedb failed
 	** and we're trying again. In that case upgradedb might have
 	** failed after completing the convert.
 	*/
-	if  (upgrade_cb->upgr_dbg_env == UPGRADE_REWRITE)
+
+	done_flag = DSC_A_IIREL_CONV_DONE;
+	to_clear_flag = DSC_B_IIREL_CONV_DONE;
+	if (config->cnf_dsc->dsc_status & DSC_CONV_B)
 	{
-	    /* for now, always do the rewrite ! */
-	    TRdisplay("UPGRADE rewrite iirelation config status %x\n",
-		config->cnf_dsc->dsc_status);
+	    done_flag = DSC_B_IIREL_CONV_DONE;
+	    to_clear_flag = DSC_A_IIREL_CONV_DONE;
 	}
-	else if ((config->cnf_dsc->dsc_status & DSC_IIREL_CONV_DONE) != 0)
+	to_clear_flag |= DSC_NOTUSED;
+
+	if (config->cnf_dsc->dsc_status & done_flag)
 	{
 	    /* We've already completed the conversion. */
 
@@ -12397,44 +11392,54 @@ dm2d_upgrade_rewrite_iirel (
 
 	    /*  Release the temporary lock list. */
 
-          if((flag & DM0C_CNF_LOCKED) == 0)
-          {
-	    status = LKrelease( LK_ALL, lk_id, (LK_LKID *)NULL, 
-		(LK_LOCK_KEY *)NULL, (LK_VALUE *)NULL, &sys_err);
-
-	    if (status != OK)
+	    if((flag & DM0C_CNF_LOCKED) == 0)
 	    {
-		uleFormat(NULL, status, &sys_err, ULE_LOG, (DB_SQLSTATE *)NULL,
-		    (char *)NULL, 0L, (i4 *)NULL, &local_error, 0);
-		uleFormat(NULL, E_DM901B_BAD_LOCK_RELEASE, &sys_err, ULE_LOG , 
-		    (DB_SQLSTATE *)NULL, (char *)NULL, 0L, (i4 *)NULL, 
-		    &local_error, 1, sizeof(lk_id), lk_id);
-		break;
+		status = LKrelease( LK_ALL, lk_id, (LK_LKID *)NULL, 
+			(LK_LOCK_KEY *)NULL, (LK_VALUE *)NULL, &sys_err);
+
+		if (status != OK)
+		{
+		    uleFormat(NULL, status, &sys_err, ULE_LOG, (DB_SQLSTATE *)NULL,
+			(char *)NULL, 0L, (i4 *)NULL, &local_error, 0);
+		    uleFormat(NULL, E_DM901B_BAD_LOCK_RELEASE, &sys_err, ULE_LOG , 
+			(DB_SQLSTATE *)NULL, (char *)NULL, 0L, (i4 *)NULL, 
+			&local_error, 1, sizeof(lk_id), lk_id);
+		    break;
+		}
 	    }
-          }
-	  return (E_DB_OK);
+	    return (E_DB_OK);
 	}
 
-	if (upgrade_cb->upgr_create_version < DSC_V3)
+	old_version = upgrade_cb->upgr_create_version;
+	if (old_version < DSC_V3)
 	{
 	    pgsize = DM_COMPAT_PGSIZE; 
-	    pgtype = DM_COMPAT_PGTYPE;
+	    oldpgtype = DM_COMPAT_PGTYPE;
 	}
 	else
 	{
 	    pgsize = config->cnf_dsc->dsc_iirel_relpgsize;
-	    pgtype = config->cnf_dsc->dsc_iirel_relpgtype;
+	    oldpgtype = config->cnf_dsc->dsc_iirel_relpgtype;
+	    if (pgsize == 0)
+		pgsize = 2048;
+	    if (old_version < DSC_V6)
+	    {
+		oldpgtype = TCB_PG_V1;
+		if (pgsize != DM_COMPAT_PGSIZE)
+		    oldpgtype = TCB_PG_V2;
+	    }
 	}
+	/* Determine the new catalog page type, might not be the same! */
+	(void) dm1c_getpgtype(pgsize, DM1C_CREATE_CORE, sizeof(DMP_RELATION),
+		&newpgtype);
 
 	/*
-	** NOTE allocate additional sizeof(DMP_RELATION) so we can
-	** safely copy sizeof(DMP_RELATION) bytes instead of
-	** worrying here about what is the correct size of the old row
+	** One page for reading the old iirelation, one for writing
+	** the new one, and one for writing the new iirel_idx.
 	** Also note that we're NOT using direct IO here, so don't
 	** worry about alignments.
 	*/
-	status = dm0m_allocate(3*pgsize + sizeof(DMP_RELATION) +
-		+ sizeof(DMP_MISC),
+	status = dm0m_allocate(3*pgsize + sizeof(DMP_MISC),
 	    (i4)0, (i4)MISC_CB, (i4)MISC_ASCII_ID,
 	    (char*)dcb, (DM_OBJECT**)&mem, dberr);
 	if ( status )
@@ -12454,6 +11459,31 @@ dm2d_upgrade_rewrite_iirel (
 
 	dm2f_filename (DM2F_TAB, &rel_tab_id, 0, 0, 0, &rel_file);
 	dm2f_filename (DM2F_TAB, &rix_tab_id, 0, 0, 0, &rix_file);
+
+	/* Build a DMP_ROWACCESS and the necessary associated
+	** attribute lists and compression control for the
+	** new iirelation and iirel_idx.
+	** build-core-rac will allocate DMF memory for this.
+	*/
+	status = build_core_rac(&rel_tab_id, DM_core_attributes,
+			&new_r_rac, dberr);
+	if (status != E_DB_OK)
+	    break;
+
+	status = build_core_rac(&rix_tab_id, DM_core_attributes,
+			&new_i_rac, dberr);
+	if (status != E_DB_OK)
+	    break;
+
+	/* FIXME For future, if the old version is >= DSC_V9, we'll
+	** need to build a RAC for the *old* version using *old*
+	** core attributes.
+	** For this version, no old catalogs are compressed yet.
+	*/
+	if (old_version >= DSC_V9)
+	{
+	    *(i4 *)0 = 1;		/* ADD CODE HERE */
+	}
 
 	/* 
 	** Check if we've already renamed iirelation in a previous invocation
@@ -12569,14 +11599,24 @@ dm2d_upgrade_rewrite_iirel (
 	/* Before we go any further, need to determine the page format of 
 	** the tables. 
 	*/
-	dm1c_get_plv(pgtype, &loc_plv);
+	dm1c_get_plv(oldpgtype, &old_plv);
+	dm1c_get_plv(newpgtype, &new_plv);
 	
 	/* Format the first pages of the new iirelation and rel_idx. */
 
-	(*loc_plv->dmpp_format)(pgtype, pgsize, 
+	(*new_plv->dmpp_format)(newpgtype, pgsize, 
 			rel_pg, 0, DMPP_DATA, DM1C_ZERO_FILL);
-	(*loc_plv->dmpp_format)(pgtype, pgsize, 
+	(*new_plv->dmpp_format)(newpgtype, pgsize, 
 			rix_pg, 0, DMPP_DATA, DM1C_ZERO_FILL);
+
+ 	/* Set relprim in config to note 1 bucket hash we just created,
+	** and make sure the iirelation page size/type is current.
+	** Do this now so that the core-relation updater can put the
+	** proper page size/type into the iirelation and iirel_idx rows.
+	*/
+	config->cnf_dsc->dsc_iirel_relprim = 1;
+	config->cnf_dsc->dsc_iirel_relpgsize = pgsize;
+	config->cnf_dsc->dsc_iirel_relpgtype = newpgtype;
 
 	/* copy the records from the tmp iirelation to the new iirelation */
 
@@ -12593,18 +11633,17 @@ dm2d_upgrade_rewrite_iirel (
 		break;
 
 	    tid.tid_tid.tid_page = i;
-	    record_size = sizeof(DMP_OLDRELATION);
 	    line = -1;
 
 	    /* Copy each line to the new iirelation. */
 
-	    while (++line < (i4)DMPP_VPT_GET_PAGE_NEXT_LINE_MACRO(pgtype, 
+	    while (++line < (i4)DMPP_VPT_GET_PAGE_NEXT_LINE_MACRO(oldpgtype, 
 		tmp_pg))
 	    {
 		tid.tid_tid.tid_line = line;
-		old_rel = (char *) &tmp_rel;
-		local_status = (*loc_plv->dmpp_get)(pgtype, pgsize,
-		    tmp_pg, &tid, &record_size, &old_rel,
+		old_rel_cp = (char *) &old_rel;
+		local_status = (*old_plv->dmpp_get)(oldpgtype, pgsize,
+		    tmp_pg, &tid, &record_size, &old_rel_cp,
 		    (i4*)NULL, (u_i4*)NULL, (u_i2*)NULL, (DMPP_SEG_HDR *)NULL);
 
 		/* If the line is empty, go to the next line. */
@@ -12612,28 +11651,45 @@ dm2d_upgrade_rewrite_iirel (
 		if  (local_status == E_DB_WARN)
 		    continue;
 
-		if (old_rel != (char *) &tmp_rel)
+		/* FIXME will need to uncompress the row.  Don't need
+		** to worry about it for < DSC_V9, but future changes
+		** will have to be able to do decompression.
+		*/
+		if (old_version >= DSC_V9)
 		{
-		    MEcopy(old_rel, sizeof(DMP_RELATION), (char *)&tmp_rel);
-		    old_rel = (char *)&tmp_rel;	/* Aligned copy */
+		    *(i4 *)0 = 1;		/* ADD CODE HERE */
+		}
+
+		if (old_rel_cp != (char *) &old_rel)
+		{
+		    /* Copy to aligned area */
+		    MEcopy(old_rel_cp, record_size, (char *)&old_rel);
 		}
 
 		/*
 		** UPGRADE the row to the CURRENT format 
 		** if this row is for a core catalog it will also sync 
 		** new_rel with DM_core_relations (upgrade_core_reltup)
+		** Note that old-rel may get changed but we don't care.
 		*/
-		upgrade_iirel_row(upgrade_cb, old_rel,
-			&new_rel, config->cnf_dsc->dsc_status);
+		upgrade_iirel_row(upgrade_cb, &old_rel,
+			&new_rel, config);
+
+		/* iirelation is compressed from DSC_V9 on. */
+		status = (*new_r_rac->dmpp_compress)(new_r_rac,
+			(char *)&new_rel, sizeof(new_rel),
+			&cmp_rel[0], &cmp_r_len);
+		if (status != E_DB_OK)
+		    break;
 
 		/* 
 		** Store the record on the page. If it doesn't fit
 		** allocate an overflow page.
 		*/
 
-		status = add_record(pgtype, pgsize, rel_pg,
-		    (char *)&new_rel, sizeof(new_rel),
-		    &rel_tid, &rel_di_io, loc_plv, dberr);
+		status = add_record(newpgtype, pgsize, rel_pg,
+		    &cmp_rel[0], cmp_r_len,
+		    &rel_tid, &rel_di_io, new_plv, dberr);
 		    
 		if (status != OK)
 		    break; 
@@ -12646,9 +11702,15 @@ dm2d_upgrade_rewrite_iirel (
 		STRUCT_ASSIGN_MACRO(new_rel.relowner, rix_rec.relowner);
 		rix_rec.tidp = rel_tid.tid_i4;
 
-		status = add_record(pgtype, pgsize, rix_pg,
-		    (char *)&rix_rec, sizeof(rix_rec),
-		    &rix_tid, &rix_di_io, loc_plv, dberr);
+		/* iirel_idx is compressed from DSC_V9 on. */
+		status = (*new_i_rac->dmpp_compress)(new_i_rac,
+			(char *)&rix_rec, sizeof(rix_rec),
+			&cmp_rix[0], &cmp_i_len);
+		if (status != E_DB_OK)
+		    break;
+		status = add_record(newpgtype, pgsize, rix_pg,
+		    &cmp_rix[0], cmp_i_len,
+		    &rix_tid, &rix_di_io, new_plv, dberr);
 
 		if (status != OK)
 		    break; 
@@ -12660,16 +11722,16 @@ dm2d_upgrade_rewrite_iirel (
 
 	    /* Follow any overflow chains. */
 
-	    if (DMPP_VPT_GET_PAGE_OVFL_MACRO(pgtype, tmp_pg) != 0)
-		i = DMPP_VPT_GET_PAGE_OVFL_MACRO(pgtype, tmp_pg);
+	    if (DMPP_VPT_GET_PAGE_OVFL_MACRO(oldpgtype, tmp_pg) != 0)
+		i = DMPP_VPT_GET_PAGE_OVFL_MACRO(oldpgtype, tmp_pg);
 
 	    /* 
 	    ** No more overflow buckets. We're done with this hash bucket.
 	    ** Go to the next hash bucket.
 	    */
 
-	    else if (DMPP_VPT_GET_PAGE_MAIN_MACRO(pgtype, tmp_pg) != 0) 
-		i = DMPP_VPT_GET_PAGE_MAIN_MACRO(pgtype, tmp_pg);
+	    else if (DMPP_VPT_GET_PAGE_MAIN_MACRO(oldpgtype, tmp_pg) != 0) 
+		i = DMPP_VPT_GET_PAGE_MAIN_MACRO(oldpgtype, tmp_pg);
 
 	    /* 
 	    ** No more main and overflow buckets. We're done. Allocate and
@@ -12694,11 +11756,11 @@ dm2d_upgrade_rewrite_iirel (
 		write_count = 1;
 
 		TRdisplay("Write iirelation page %d nxtlino %d \n", 
-		    DMPP_VPT_GET_PAGE_PAGE_MACRO(pgtype, rel_pg), 
-		(i4)DMPP_VPT_GET_PAGE_NEXT_LINE_MACRO(pgtype, rel_pg));
+		    DMPP_VPT_GET_PAGE_PAGE_MACRO(newpgtype, rel_pg), 
+		(i4)DMPP_VPT_GET_PAGE_NEXT_LINE_MACRO(newpgtype, rel_pg));
 
 		status = DIwrite( &rel_di_io, &write_count,
-		    DMPP_VPT_GET_PAGE_PAGE_MACRO(pgtype, rel_pg), 
+		    DMPP_VPT_GET_PAGE_PAGE_MACRO(newpgtype, rel_pg), 
 		    (char *)rel_pg, &sys_err);
 
 		if (status != OK)
@@ -12719,11 +11781,11 @@ dm2d_upgrade_rewrite_iirel (
 		write_count = 1;
 
 		TRdisplay("Write iirelidx page %d nxtlino %d \n", 
-		    DMPP_VPT_GET_PAGE_PAGE_MACRO(pgtype, rix_pg), 
-		(i4)DMPP_VPT_GET_PAGE_NEXT_LINE_MACRO(pgtype, rix_pg));
+		    DMPP_VPT_GET_PAGE_PAGE_MACRO(newpgtype, rix_pg), 
+		(i4)DMPP_VPT_GET_PAGE_NEXT_LINE_MACRO(newpgtype, rix_pg));
 
 		status = DIwrite( &rix_di_io, &write_count,
-		    DMPP_VPT_GET_PAGE_PAGE_MACRO(pgtype, rix_pg), 
+		    DMPP_VPT_GET_PAGE_PAGE_MACRO(newpgtype, rix_pg), 
 		    (char *)rix_pg, &sys_err);
 
 		break;
@@ -12758,7 +11820,8 @@ dm2d_upgrade_rewrite_iirel (
 	** Also make the database consistent.	
 	*/
 
-	config->cnf_dsc->dsc_status |= DSC_IIREL_CONV_DONE;
+	config->cnf_dsc->dsc_status |= done_flag;
+	config->cnf_dsc->dsc_status &= ~to_clear_flag;
 
 	/*
 	** Because we hosed the space management setup for iirelation
@@ -12772,19 +11835,6 @@ dm2d_upgrade_rewrite_iirel (
 	** exactly 1 hash bucket each. Set relprim to 1 for iirelation
 	** in the config file.
 	*/
-
- 	/* Set relprim in config to note 1 bucket hash we just created */
-	config->cnf_dsc->dsc_iirel_relprim = 1;
-
-	if (upgrade_cb->upgr_create_version < DSC_V3)
-	{
-	    config->cnf_dsc->dsc_iirel_relpgsize = DM_PG_SIZE;
-	    config->cnf_dsc->dsc_iiatt_relpgsize = DM_PG_SIZE;
-	    config->cnf_dsc->dsc_iiind_relpgsize = DM_PG_SIZE;
-	    config->cnf_dsc->dsc_iirel_relpgtype = TCB_PG_V1;
-	    config->cnf_dsc->dsc_iiatt_relpgtype = TCB_PG_V1;
-	    config->cnf_dsc->dsc_iiind_relpgtype = TCB_PG_V1;
-	}
 
 	/* Close the configuration file. */
 
@@ -12829,6 +11879,11 @@ dm2d_upgrade_rewrite_iirel (
 	    break;
 
 	dm0m_deallocate(&mem);
+	/* Deallocate the row-accessor and attached data */
+	mem = (DM_OBJECT *) ((char *)new_r_rac - sizeof(DMP_MISC));
+	dm0m_deallocate(&mem);
+	mem = (DM_OBJECT *) ((char *)new_i_rac - sizeof(DMP_MISC));
+	dm0m_deallocate(&mem);
 
 	/* Return success. */
 	return (E_DB_OK);
@@ -12837,6 +11892,17 @@ dm2d_upgrade_rewrite_iirel (
 
     if (mem != NULL)
 	dm0m_deallocate(&mem);
+
+    if (new_r_rac != NULL)
+    {
+	mem = (DM_OBJECT *) ((char *)new_r_rac - sizeof(DMP_MISC));
+	dm0m_deallocate(&mem);
+    }
+    if (new_i_rac != NULL)
+    {
+	mem = (DM_OBJECT *) ((char *)new_i_rac - sizeof(DMP_MISC));
+	dm0m_deallocate(&mem);
+    }
 
     /* Deallocate the configuration record. */
 
@@ -12864,33 +11930,33 @@ dm2d_upgrade_rewrite_iirel (
 **
 ** Description:
 ** 
-**      Used by upgradedb to convert iirelation to CURRENT format
-**      NOTE previously for each upgrade an iiattribute row was upgraded
+**      Used by upgradedb to convert iirelation to CURRENT format.
+**	The old style row is in a DMP_RELATION_ANY union which can
+**	hold any version iirelation row.  Conversion proceeds step-wise,
+**	e.g. v8 -> v9, v9 -> v10, etc, each time updating the old style
+**	row in the union.  At the end, we copy the result to the output.
+**
+**      NOTE previously for each upgrade an iirelation row was upgraded
 **      like this:
 **      64iirel -> current iirel
-**      26iirel -> current iirel
+**      V3iirel -> current iirel
+**      26irel -> current iirel
 **
-** A simpler way to upgrade would be this:
-**      64iirel -> 26iirel
-**      26iirel -> nextversion
-**
-** That is, convert the row from version to next version
-** New conversions should convert from previous version only
-** (which should be simpler and cause fewer upgrade bugs)
-**
-** NOTE this routine was created using existing coversion code which converts
-**      64iirel/26iirel -> v8 iirel
-** Going forward new upgrades should not change the upgrade to v8. 
-** New upgrades should allow the iirelation row go through multiple upgrades:
-**      e.g.
-**      64iirel  -> v8 iirel
-**      v8rel -> next iirel
+**	Since this routine is built upon those foundations, anything older
+**	than V8 (r3/9.x) is converted directly to V8 first, and then to
+**	current version step-wise.  Doing conversion one version at a time
+**	should be simpler and less error prone.
 **
 ** Inputs:
-**      db_id                           database to upgrade
+**	upgrade_cb			Upgrade control info
+**	old_rel				DMP_RELATION_ANY to upgrade;
+**					may get updated as we convert.
+**	new_relp			Where to put upgraded iirelation row,
+**					should not be the same as old_rel.
+**	cnf				Pointer to db config data
 **
 ** Outputs:
-**      err_code                        error return code
+**	new_relp			Updated with vcurrent iirelation row.
 **
 **	Returns:
 **	    DB_STATUS
@@ -12906,21 +11972,25 @@ dm2d_upgrade_rewrite_iirel (
 **	12-Nov-2009 (kschendel) SIR 122882
 **	    Forcibly turn off TCB_BINARY, never used anywhere.  We may
 **	    want to steal that bit for something (e.g. clustered) later.
+**	29-Apr-2010 (kschendel)
+**	    union-ize the old-relation input.
+**	    Include mandatory-flag setting of PHYSLOCK-CONCUR, easier to do
+**	    here than in upgradedb.
 */
 static VOID
 upgrade_iirel_row(
 DM2D_UPGRADE    *upgrade_cb,
-char		*old_rel,
+DMP_RELATION_ANY  *old_rel,
 DMP_RELATION	*new_relp,
-i4		dsc_status)
+DM0C_CNF	*cnf)
 {
     DMP_OLDRELATION	*old_rel_64 = NULL;
     DMP_RELATION_26     *old_rel_26 = NULL;
     DMP_RELATION_V8	*old_rel_v8 = NULL;
     DMP_RELATION_V8	rel_v8;
     DMP_RELATION	rel_v9;
+    i4			dsc_status = cnf->cnf_dsc->dsc_status;
     i4			row_version = upgrade_cb->upgr_create_version;
-    char		*tmp_rel = old_rel;
     i4			j;
 
     for ( ; row_version != DSC_VCURRENT ; )
@@ -12928,7 +11998,7 @@ i4		dsc_status)
 	if (row_version < DSC_V3)
 	{
 	    /* convert 6.4 iirelation row to DSC_V8 */
-	    old_rel_64 = (DMP_OLDRELATION *)tmp_rel;
+	    old_rel_64 = &old_rel->rel_64;
 
 	    MEfill (sizeof(rel_v8), (u_char)0, (PTR)&rel_v8);
 
@@ -12964,18 +12034,6 @@ i4		dsc_status)
 	    rel_v8.relmin = old_rel_64->relmin;                
 	    rel_v8.relmax = old_rel_64->relmax;                
 	    rel_v8.relloccount = old_rel_64->relloccount;
-
-	    /*
-	    ** Note: since initial Jupiter databases, configuration files
-	    ** etc, did not support multiple locations, they to not
-	    ** have their relloccount value initialized.  So do here
-	    ** just in case.
-	    */
-	    if (((old_rel_64->relstat & TCB_MULTIPLE_LOC) == 0) &&
-		 (old_rel_64->relloccount != 1))
-	    {
-		rel_v8.relloccount = 1;
-	    }
 
 	    rel_v8.relgwid = old_rel_64->relgwid;	            
 	    rel_v8.relgwother = old_rel_64->relgwother;            
@@ -13015,12 +12073,11 @@ i4		dsc_status)
 	    
 	    /* now the row is DSC_V8 */	
 	    row_version = DSC_V8;
-	    tmp_rel = (char *)&rel_v8;
+	    MEcopy((PTR) &rel_v8, sizeof(rel_v8), (PTR) &old_rel->rel_v8);
+	
 	}
 
-	if (row_version == DSC_VCURRENT)
-	    break;
-	else if (row_version < DSC_V8)
+	if (row_version < DSC_V8)
 	{
 	    /*
 	    **
@@ -13033,7 +12090,7 @@ i4		dsc_status)
 	    ** This is only possible for in-place upgrade of iirelation rows
 	    ** where we are re-starting a previously incomplete upgrade
 	    */
-	    old_rel_v8 = (DMP_RELATION_V8 *)tmp_rel;
+	    old_rel_v8 = &old_rel->rel_v8;
 
 	    if (old_rel_v8->relpgsize == 2048 || 
 		    old_rel_v8->relpgsize == 4096 ||
@@ -13046,15 +12103,12 @@ i4		dsc_status)
 	    }
 	}
 
-	if (row_version == DSC_VCURRENT)
-	    break;
-	else if (row_version < DSC_V8)
+	if (row_version < DSC_V8)
 	{
-	    old_rel_26 = (DMP_RELATION_26 *)tmp_rel;
+	    old_rel_26 = &old_rel->rel_26;
 
 	    /* Set page size, type if converting from 1.X, 2.0 */
-	    if (row_version < DSC_V6 &&
-		(dsc_status & DSC_IIREL_V6_CONV_DONE) == 0)
+	    if (row_version < DSC_V6)
 	    {
 		if (old_rel_26->relpgsize == 0)
 		{
@@ -13174,21 +12228,18 @@ i4		dsc_status)
 
 	    /* now the row is DSC_V8 */	
 	    row_version = DSC_V8;
-	    tmp_rel = (char *)&rel_v8;
+	    MEcopy((PTR) &rel_v8, sizeof(rel_v8), (PTR) &old_rel->rel_v8);
 	}
 
-	/* This conversion will be necessary when DSC_VCURRENT > DSC_V8 */
-	/* right now the only catalog change is longer relid,relowner,relloc */
-	if (row_version == DSC_VCURRENT)
-	    break;
-	else if (row_version < DSC_V9)
+	if (row_version < DSC_V9)
 	{
-	    old_rel_v8 = (DMP_RELATION_V8 *)tmp_rel;
+	    old_rel_v8 = &old_rel->rel_v8;
 
 	    /* Convert V8 to V9 here */
 	    /* Longer relid;  turn off old TCB_BINARY (we can steal that
 	    ** one for TCB_CLUSTER eventually).
 	    */
+	    MEfill(sizeof(rel_v9), 0, (PTR) &rel_v9);
 	    STRUCT_ASSIGN_MACRO(old_rel_v8->reltid, rel_v9.reltid);
 	    MEmove(sizeof(old_rel_v8->relid), (char *)&old_rel_v8->relid, 
 		' ', sizeof(rel_v9.relid), (char *)&rel_v9.relid);
@@ -13242,11 +12293,53 @@ i4		dsc_status)
 	    MEfill (sizeof(rel_v9.relenckey), (u_char)0, rel_v9.relenckey);
 	    MEfill (sizeof(rel_v9.relfree), (u_char)0, rel_v9.relfree);
 
+	    /*
+	    ** There's been server FUD about relloccount for years.
+	    ** (Ancient servers didn't support multiple locations.)
+	    ** Put a stop to it once and for all.
+	    */
+	    if (((rel_v9.relstat & TCB_MULTIPLE_LOC) == 0) &&
+		 (rel_v9.relloccount != 1))
+	    {
+		rel_v9.relloccount = 1;
+	    }
+
+
+	    /* Enforce TCB2_PHYSLOCK_CONCUR on selected core catalogs.
+	    ** This replaces maspa05's equivalent changes in upgradedb.
+	    ** It's a wee bit easier to do here.
+	    */
+	    if (rel_v9.reltid.db_tab_base == DM_B_RELATION_TAB_ID
+	      || (rel_v9.reltid.db_tab_base == DM_B_ATTRIBUTE_TAB_ID
+		  && rel_v9.reltid.db_tab_index == DM_I_ATTRIBUTE_TAB_ID)
+	      || (rel_v9.reltid.db_tab_base == DM_B_INDEX_TAB_ID
+		  && rel_v9.reltid.db_tab_index == DM_I_INDEX_TAB_ID)
+	      || (rel_v9.reltid.db_tab_base == DM_B_DEVICE_TAB_ID
+		  && rel_v9.reltid.db_tab_index == DM_I_DEVICE_TAB_ID)
+	      || (rel_v9.reltid.db_tab_base == DM_B_SEQ_TAB_ID
+		  && rel_v9.reltid.db_tab_index == DM_I_SEQ_TAB_ID) )
+	    {
+		rel_v9.relstat2 |= TCB2_PHYSLOCK_CONCUR;
+	    }
+	    /* Allow duplicates in iiextended_relation, easier to do here
+	    ** than in upgradedb!
+	    */
+	    if (rel_v9.reltid.db_tab_base == DM_B_ETAB_TAB_ID
+	      && rel_v9.reltid.db_tab_index == DM_I_ETAB_TAB_ID)
+		rel_v9.relstat |= TCB_DUPLICATES;
+
+	    /* To prepare for the possible reclamation of TCB_GATEWAY, make
+	    ** sure that the two gateway-ID columns are zero if TCB_GATEWAY
+	    ** is not set.
+	    */
+	    if ((rel_v9.relstat & TCB_GATEWAY) == 0)
+	    {
+		rel_v9.relgwid = rel_v9.relgwother = 0;
+	    }
+
 	    /* now the row is DSC_V9 */	
 	    row_version = DSC_V9;
-	    tmp_rel = (char *)&rel_v9;
-	    if (row_version == DSC_VCURRENT)
-		break;
+	    MEcopy((PTR) &rel_v9, sizeof(rel_v9), (PTR) &old_rel->rel_v9);
 	}
 
 	/* Add new upgrades to iirelation here !!! */
@@ -13260,15 +12353,14 @@ i4		dsc_status)
 	TRdisplay("upgrade_iirel_row %d %d\n", row_version, DSC_VCURRENT);
     }
 
-    /* tmp_rel should point to current version ! */
-    MEcopy(tmp_rel, sizeof(DMP_RELATION), new_relp);
+    MEcopy((PTR) &old_rel->rel_v9, sizeof(DMP_RELATION), new_relp);
 
     /*
     ** Special upgrade for core catalogs
     ** MUST be done when row is in current version
     */
     if (new_relp->reltid.db_tab_base <= DM_B_INDEX_TAB_ID)
-	upgrade_core_reltup(upgrade_cb, (DMP_RELATION *)new_relp);
+	upgrade_core_reltup(upgrade_cb, new_relp, cnf);
 
     TRdisplay("upgrade rel %~t (%d,%d) (%d %d %d %d %d %x %x)\n",
 	sizeof(new_relp->relid), new_relp->relid.db_tab_name,
@@ -13288,7 +12380,9 @@ i4		dsc_status)
 ** Description: Special upgrade for core iirelation tuples
 **
 ** Inputs:
-**      db_id                           database to upgrade
+**	upgrade_cb		Pointer to upgrade info
+**	core			The (vcurrent) iirelation row to fix up
+**	cnf			Pointer to (current) config info
 **
 ** Outputs:
 **      err_code                        error return code
@@ -13304,14 +12398,21 @@ i4		dsc_status)
 ** History:
 **      14-apr-2009
 **          Created.
-[@history_template@]...
+**	4-May-2010 (kschendel)
+**	    Core catalogs no longer automatically use the same page type
+**	    as they had originally;  in particular, compressed catalogs
+**	    (iirelation, iirel_idx, iiattribute) are never page type V1
+**	    any more.  Update the relpgsize and relpgtype.
+**	    Preserve relcomptype and static relstat flags.
 */
 static VOID
 upgrade_core_reltup(
 DM2D_UPGRADE *upgrade_cb,
-DMP_RELATION *core)
+DMP_RELATION *core,
+DM0C_CNF *cnf)
 {
     i4	j;
+    i4	pgsize, newpgtype;
     DMP_RELATION *dm_core;
 
     for (j = 0, dm_core = &DM_core_relations[0]; 
@@ -13327,10 +12428,23 @@ DMP_RELATION *core)
 	TRdisplay("Upgrade CORE from %~t\n", 
 		sizeof(DB_TAB_NAME), dm_core->relid.db_tab_name);
 
-    /* Update the relwid, reltotwid, relatt from DM_core_relations */
+    /* Things to enforce from the prototype core catalog iirelation row:
+    ** Widths: relwid, reltotwid, reldatawid, reltotdatawid;
+    ** The standard compression type;  most of relstat, except for bits
+    ** related to views and permits; the number of attributes.
+    ** Relstat2 could be copied from the prototype as well, but at
+    ** present (DSC_V9) there appears to be no pressing reason to do so.
+    */
     core->relwid = dm_core->relwid;
     core->reltotwid = dm_core->reltotwid;
+    core->reldatawid = dm_core->reldatawid;
+    core->reltotdatawid = dm_core->reltotdatawid;
     core->relatts = dm_core->relatts;
+    core->relcomptype = dm_core->relcomptype;
+    /* Keep ONLY the listed flags */
+    core->relstat &= (TCB_VBASE | TCB_PROALL | TCB_PROTECT | TCB_JON | TCB_JOURNAL
+			| TCB_ZOPTSTAT | TCB_COMMENT | TCB_SYNONYM);
+    core->relstat |= dm_core->relstat;	/* Turn on flags defined in prototype */
 
     /* Will upgrade make iirelation/iirelidx 1-bucket hash ? */
     if (core->reltid.db_tab_base == DM_B_RELATION_TAB_ID)
@@ -13342,6 +12456,9 @@ DMP_RELATION *core)
 	    core->relfhdr       = DM_TBL_INVALID_FHDR_PAGENO;
 	    core->relallocation = DM_TBL_DEFAULT_ALLOCATION;
 	    core->relextend     = DM_TBL_DEFAULT_EXTEND;
+	    /* rewriter updated this for us to see */
+	    core->relpgtype	= cnf->cnf_dsc->dsc_iirel_relpgtype;
+	    core->relpgsize	= cnf->cnf_dsc->dsc_iirel_relpgsize;
 	}
     }
 
@@ -13355,6 +12472,27 @@ DMP_RELATION *core)
 	    core->relfhdr       = DM_TBL_INVALID_FHDR_PAGENO;
 	    core->relallocation = DM_TBL_DEFAULT_ALLOCATION;
 	    core->relextend     = DM_TBL_DEFAULT_EXTEND;
+	    /* Although in theory iirelation and iiattribute ought to
+	    ** always use the same page size/type, it seems dangerous to
+	    ** depend on that, when a few extra lines of code can make
+	    ** sure the proper size/type is used...
+	    ** The below is what the iiattribute rewriter is going to do.
+	    */
+	    if (upgrade_cb->upgr_create_version < DSC_V3)
+	    {
+		pgsize = DM_COMPAT_PGSIZE; 
+	    }
+	    else
+	    {
+		pgsize = cnf->cnf_dsc->dsc_iiatt_relpgsize;
+		if (pgsize == 0)
+		    pgsize = 2048;
+	    }
+	    /* Compute the same type that iiattribute rewrite will */
+	    (void) dm1c_getpgtype(pgsize, DM1C_CREATE_CORE, sizeof(DMP_ATTRIBUTE),
+			&newpgtype);
+	    core->relpgtype	= newpgtype;
+	    core->relpgsize	= pgsize;
 	}
     }
 
@@ -13368,6 +12506,10 @@ DMP_RELATION *core)
 	    core->relfhdr       = DM_TBL_INVALID_FHDR_PAGENO;
 	    core->relallocation = DM_TBL_DEFAULT_ALLOCATION;
 	    core->relextend     = DM_TBL_DEFAULT_EXTEND;
+	    /* reset of pgsize/type not needed (so far!) because unlike
+	    ** iirelation/iiattribute, iiindex is not compressed, so it
+	    ** can stay a V1 page catalog on 2K pages.
+	    */
 	}
     }
 
@@ -13378,3 +12520,135 @@ DMP_RELATION *core)
 		core->relallocation, core->relextend,
 		core->relwid, core->relatts);
 }
+
+/*
+** Name: build_core_rac -- Build a DMP_ROWACCESS for core catalog conversion
+**
+** Description:
+**
+**	Starting with DSC_V9, core catalogs are compressed;  and indeed,
+**	not just "are compressed", they MUST BE compressed.  There is
+**	currently no allowance for uncompressed iirelation and iiattribute
+**	in the rest of the DBMS server.
+**
+**	The implication for the core catalog converter is that it must
+**	compress converted rows (and possibly uncompress old rows, if
+**	they're V9 or newer).  Compression is simple enough, but it
+**	requires a DMP_ROWACCESS, and at conversion time there isn't one
+**	around.
+**
+**	This routine builds a DMP_ROWACCESS and anything else it needs
+**	(attribute pointers, compression-control arrays, etc).  A MISC_CB
+**	is allocated to hold the rac (which will immediately follow
+**	the DMP_MISC header) and the other stuff.  The rac will be
+**	fully "set up", compression-control initialized etc.
+**
+** Inputs:
+**	table_id		The table to build a rac for (iirelation,
+**				iirel_idx, or iiattribute)
+**	core_atts		The reference list of core catalog attributes
+**				corresponding to the catalog version being
+**				read or written
+**	rac			An output (DMP_ROWACCESS **)
+**	dberr			Usual DB_ERROR thing
+**
+** Outputs:
+**	rac			Points to newly created DMP_ROWACCESS
+**				(immediately after DMP_MISC header)
+**
+** Returns E_DB_OK or error status
+**
+** History:
+**	3-May-2010 (kschendel) SIR 123639
+**	    Compression in the core catalogs means we have to compress
+**	    converted iiattribute / iirelation.
+*/
+
+static DB_STATUS
+build_core_rac(DB_TAB_ID *table_id, DMP_ATTRIBUTE *core_atts,
+	DMP_ROWACCESS **racp, DB_ERROR *dberr)
+{
+    char *p;
+    DB_ATTS *dbatts;		/* Pointer to DB_ATTS style attribute */
+    DB_ATTS **dbattpp;		/* Pointer to pointer list */
+    DB_STATUS status;
+    DMP_ATTRIBUTE *attp;	/* Pointer to attributes */
+    DMP_ATTRIBUTE *first_att;	/* Where first attribute for table is */
+    DMP_MISC *misc;		/* Allocated memory header */
+    DMP_ROWACCESS *rac;		/* The new row-accessor */
+    i4 att_count;		/* Number of atts in this table */
+    i4 cmpcontrol_size;		/* Size of compression control */
+    i4 size;			/* Memory size */
+
+    /* Find, count attributes that belong to this catalog.
+    ** Note, we assume that all attributes for a catalog are together
+    ** in the reference list, and not strewn around randomly.
+    */
+    first_att = NULL;
+    att_count = 0;
+    for (attp = &DM_core_attributes[0];
+	 attp < &DM_core_attributes[DM_core_att_cnt];
+	 ++attp)
+    {
+	if (attp->attrelid.db_tab_base == table_id->db_tab_base
+	  && attp->attrelid.db_tab_index == table_id->db_tab_index)
+	{
+	    if (first_att == NULL)
+		first_att = attp;
+	    ++att_count;
+	}
+	else if (first_att != NULL)
+	{
+	    break;	/* Ran off end of atts for this table */
+	}
+    }
+
+    /* Allocate memory for the RAC, att pointers, and compression control.
+    ** Assume standard compression.  (If core catalogs ever move to a
+    ** different type, pass in the reference DMP_RELATION as well so
+    ** relcomptype can be examined.)
+    */
+    cmpcontrol_size = dm1c_cmpcontrol_size(TCB_C_STANDARD, att_count, 0);
+    size = sizeof(DMP_MISC) + DB_ALIGN_MACRO(sizeof(DMP_ROWACCESS))
+		+ att_count * sizeof(DB_ATTS *)
+		+ att_count * sizeof(DB_ATTS)
+		+ DB_ALIGN_MACRO(cmpcontrol_size);
+    status = dm0m_allocate(size, DM0M_ZERO, MISC_CB, MISC_ASCII_ID,
+		NULL, (DM_OBJECT **) &misc, dberr);
+    if (status != E_DB_OK)
+	return (status);
+    misc->misc_data = (char *) misc + sizeof(DMP_MISC);
+    /* Lay out the rowaccess memory*/
+    rac = *racp = (DMP_ROWACCESS *) misc->misc_data;
+    rac->att_count = att_count;
+    p = (char *) rac + sizeof(DMP_ROWACCESS);
+    p = ME_ALIGN_MACRO(p, DB_ALIGN_SZ);
+    dbattpp = rac->att_ptrs = (DB_ATTS **) p;
+    p = p + att_count * sizeof(DB_ATTS *);
+    dbatts = (DB_ATTS *) p;
+    p = p + att_count * sizeof(DB_ATTS);
+    rac->cmp_control = p;
+    rac->control_count = cmpcontrol_size;
+    rac->compression_type = TCB_C_STANDARD;
+
+    attp = first_att;
+    while (--att_count >= 0)
+    {
+	/* Don't need to copy everything, just what compression needs.
+	** Everything else was zeroed by dm0m.
+	*/
+	dbatts->length = attp->attfml;
+	dbatts->type = attp->attfmt;
+	dbatts->precision = attp->attfmp;
+	*dbattpp++ = dbatts++;	/* Fill in the pointer array */
+	++ attp;
+    }
+    status = dm1c_rowaccess_setup(rac);
+    if (status != E_DB_OK)
+    {
+	/* FIXME should setdberr here */
+	return (status);
+    }
+
+    return (E_DB_OK);
+} /* build_core_rac */

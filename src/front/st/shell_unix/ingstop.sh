@@ -331,6 +331,11 @@
 ##	14-Feb-2010 (hanje04)
 ##	    SIR 123296
 ##	    Add support for LSB builds
+##	5-May-2010 (kschendel) SIR 122890
+##	    Some of the timers put in for 122890 were too short, especially
+##	    for slower Solaris (SPARC) boxes.  (Solaris seems to do an awful
+##	    lot in iisysdep, including compiling a small trial C program.)
+##	    Increase some exec-with-timeout timers.
 ##
 #  PROGRAM = (PROG2PRFX)stop
 #
@@ -1515,7 +1520,7 @@ if [ -n "$shutids_rcp" -o -n "$shutids_dbms" -o -n "$shutids_ice" ] ||
     # get status of Ingres processes from csreport
     ## Send to file first to get exec-with-timeout status, not tr status!
     ## Return status > 128 implies spin, csreport killed.
-    exec_with_timeout 15 "(PROG0PRFX)csreport" >/tmp/xcsreport.$$
+    exec_with_timeout 20 "(PROG0PRFX)csreport" >/tmp/xcsreport.$$
     if [ $? -gt 128 ] ; then
 	## FIXME here, and in similar places, if we are force & kill we could
 	## ps for ii and dmf processes with the right installation ID, kill
@@ -1869,7 +1874,7 @@ SOLE=`iigetres ii.$CONFIG_HOST.dbms.*.sole_server`
     wmsg ""
     wmsg "Shutting down the remote command server..."
 
-    exec_with_timeout 5 rmcmdstp
+    exec_with_timeout 10 rmcmdstp
     sleep 2
     rmcmd_count=`$PSCMD | grep "rmcmd $(PROG3PRFX)_INSTALLATION" | wc -l | tr -d ' '`
 #
@@ -1885,7 +1890,7 @@ SOLE=`iigetres ii.$CONFIG_HOST.dbms.*.sole_server`
 ## we'll take care of it later on.
 #
     if [ $rmcmd_count -ge 1 -a \( $dbms_count -eq 1 -o "$SOLE" = 'OFF' \) ] ; then
-	exec_with_timeout 5 rmcmdstp
+	exec_with_timeout 10 rmcmdstp
 	sleep 2
 	rmcmd_count=`$PSCMD | grep "rmcmd $(PROG3PRFX)_INSTALLATION" | wc -l | tr -d ' '`
     fi
@@ -2025,7 +2030,7 @@ quit
 !
 	    echo "(PROG1PRFX)monitor $server_id </tmp/(PROG1PRFX)monin.$$" >/tmp/monex.$$
 	    ## Much patience this first time in case server is super busy
-	    exec_with_timeout 30 "sh /tmp/monex.$$" >/tmp/(PROG1PRFX)monit.$$
+	    exec_with_timeout 45 "sh /tmp/monex.$$" >/tmp/(PROG1PRFX)monit.$$
 	    rm -f /tmp/monex.$$
             if [ $? -eq 0 ]
 	    then
@@ -2061,7 +2066,7 @@ quit
     wmsg "Shutting down the remote command server..."
 
     sleep 2
-    exec_with_timeout 5 rmcmdstp
+    exec_with_timeout 10 rmcmdstp
     sleep 2
     rmcmd_count=`$PSCMD | grep "rmcmd $(PROG3PRFX)_INSTALLATION" | wc -l | tr -d ' '`
 
@@ -2077,7 +2082,7 @@ quit
 	    fi
 	done
 	if [ $dbms_running -eq 1 ] ; then
-	    exec_with_timeout 5 rmcmdstp
+	    exec_with_timeout 10 rmcmdstp
 	    sleep 2
 	fi
     fi
@@ -2393,7 +2398,7 @@ quit
 !
 	    ## less patience this time
 	    echo "(PROG1PRFX)monitor $server_id </tmp/(PROG1PRFX)monin.$$" >/tmp/monex.$$
-	    exec_with_timeout 5 "sh /tmp/monex.$$" >/tmp/(PROG1PRFX)monit.$$
+	    exec_with_timeout 10 "sh /tmp/monex.$$" >/tmp/(PROG1PRFX)monit.$$
 	    rm -f /tmp/monex.$$
 	    if [ $? -ne 0 ]
 	    then
@@ -2526,7 +2531,7 @@ dmfdown=0
 	maxtries=25
     fi
 
-    exec_with_timeout 5 "$cmd" >/tmp/rcpconf.$$
+    exec_with_timeout 20 "$cmd" >/tmp/rcpconf.$$
     if [ $? -ne 0 ] ; then
 	fatal_box 76 1 -1 << ! | wmsg
 Unable to deliver shutdown message to the logging system.  Please review the following error message for help in diagnosing the problem:
@@ -2547,14 +2552,14 @@ Unable to deliver shutdown message to the logging system.  Please review the fol
     if [ "$KILL" = 'true' ] ; then
 	indef=' up to 100 seconds'
     fi
-    [ -n "$shutok" ] && exec_with_timeout 5 "rcpstat -online -silent" &&
+    [ -n "$shutok" ] && exec_with_timeout 10 "rcpstat -online -silent" &&
     {
 	if [ "$IMMEDIATE" = 'false' ] ; then
 	    wmsg ""
 	    wmsg "Waiting$indef for the logging system to shut down ..."
 	fi;
 	tries=0
-	while exec_with_timeout 5 "rcpstat -online -silent"
+	while exec_with_timeout 10 "rcpstat -online -silent"
 	do
 	    sleep 4
 	    tries=`expr $tries + 1`
@@ -2612,9 +2617,9 @@ Cleaning up shared memory and semaphores...
 	## FIXME would be useful to have a utility that forces the
 	## spinlock in the system segment to OFF, so that these two will
 	## always work.
-	exec_with_timeout 3 cscleanup >/dev/null 2>&1
+	exec_with_timeout 10 cscleanup >/dev/null 2>&1
 	sleep 1
-	exec_with_timeout 3 ipcclean >/dev/null 2>&1
+	exec_with_timeout 10 ipcclean >/dev/null 2>&1
 	if [ $? -ne 0 ] ; then
 	    wmsg "ipcclean could not be run.  Use ipcs -m and ipcrm to"
 	    wmsg "remove idle Ingres shared-memory segments (nattch = 0)"

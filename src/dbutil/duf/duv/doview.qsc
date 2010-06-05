@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 EXEC SQL include sqlca;
 
@@ -109,6 +109,8 @@ EXEC SQL include sqlca;
 **          Write to debug log, unless -n (nolog) specified
 **	13-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.  Remove qef/dmf includes (again?).
+**	2-May-2010 (kschendel) SIR 123639
+**	    Toss do-quel, not needed any more.
 */
 
 /* GLOBALDEFs */
@@ -120,7 +122,7 @@ EXEC SQL include sqlca;
 GLOBALREF DU_UPGRADE_CB	upgr_cb ;	/* upgradedb control block */
 
 /* statics */
-STATIC STATUS	exec_txt(DB_LANG dml, char *buf);
+STATIC STATUS	exec_txt(char *buf);
 STATUS		setauth(char *owner);
 static STATUS 	populate_alarms_for_user( char *alarm_owner);
 
@@ -165,6 +167,12 @@ static char     Last_owner[DB_MAXNAME + 1] = ERx("");
 **         immediate.
 **	8-Sep-2004 (schka24)
 **	    Init "last owner" by passing NULL, e.g. on (re)connect.
+**	5-May-2010 (kschendel)
+**	    Always quote-delimit the owner name.  This is almost always
+**	    safe, no matter what kind of wacky owner names exist.
+**	    (Unless someone managed to set different reg-id-case and
+**	    delim-id-case in their config.dat, and I can't be bothered
+**	    at the moment.)
 */
 STATUS
 setauth(char *owner)
@@ -192,8 +200,8 @@ setauth(char *owner)
 /*	}*/
 
 	exec sql commit;
-	STprintf(obuf, "SET SESSION AUTHORIZATION %s", owner);
-	if (exec_txt(DB_SQL, obuf) != OK)
+	STprintf(obuf, "SET SESSION AUTHORIZATION \"%s\"", owner);
+	if (exec_txt(obuf) != OK)
 	    return (FAIL);
 	
 	exec sql commit;
@@ -204,10 +212,9 @@ setauth(char *owner)
 }
 
 STATIC STATUS
-exec_txt(dml, txt_buf)
-DB_LANG	dml;
+exec_txt(txt_buf)
 EXEC SQL BEGIN DECLARE SECTION;
-##  char	*txt_buf;
+char	*txt_buf;
 EXEC SQL END DECLARE SECTION;
 {
     if (txt_buf == NULL || *txt_buf == EOS)
@@ -226,75 +233,27 @@ EXEC SQL END DECLARE SECTION;
     return (OK);
 
 #else
-    if (dml == DB_SQL)
+    if (upg_dbg_out)
     {
-	if (upg_dbg_out)
-	{
-	    SIfprintf(upgr_cb.du_dbg.du_file, "]==> executing SQL <%s>\n\n", txt_buf);
-	}
-	EXEC SQL EXECUTE IMMEDIATE :txt_buf;
-	if (upg_dbg_out)
-		check_sql(sqlca.sqlcode);
-	if (sqlca.sqlcode == -50)
-	{
-	    return(OK);
-	}
-	if (sqlca.sqlcode == -34000)
-	{
-	  show_sql_error(sqlca.sqlcode,txt_buf);
-	  return (OK);
-        }
+	SIfprintf(upgr_cb.du_dbg.du_file, "]==> executing SQL <%s>\n\n", txt_buf);
     }
-    else
+    EXEC SQL EXECUTE IMMEDIATE :txt_buf;
+    if (upg_dbg_out)
+	    check_sql(sqlca.sqlcode);
+    if (sqlca.sqlcode == -50)
     {
-	do_quel(txt_buf);
+	return(OK);
+    }
+    if (sqlca.sqlcode == -34000)
+    {
+      show_sql_error(sqlca.sqlcode,txt_buf);
+      return (OK);
     }
     return (chkinqerr());
 
 #endif
 }
 
-
-/*
-**
-** History:
-**	25 March 1994 (jpk) fix bug 60813 (another rblumer fix)
-**	When recreating objects with queries (views) parse
-**	quel query text more robustly.  A line feed in the
-**	query text does not always delimit a separate quel
-**	statement.  Look for "r" following it to signify a
-**	range statement.  If "r" not found, then the line feed does
-**	NOT delimit a statement; don't execute it separately.
-*/
-do_quel(str)
-##char	*str;
-{
-    char	*ptr;
-    while ((ptr = STchr(str, '\n')) != NULL)
-    {
-	*ptr=EOS;
-	if (upg_dbg_out)
-	{
-	    SIfprintf(upgr_cb.du_dbg.du_file, "]==> executing first quel <%s>\n\n", str);
-	}
-##	IISTATEMENT str
-	str = ptr;
-	CMnext(str);
-	/* if next character is not an 'r', we've hit the end
-	** of the list of range statements, so break out and execute
-	** rest of statement.
-	** Since statement itself could contain line-feeds (\n),
-	** can't just continue until out of line feeds
-	*/
-	if (*str != 'r')
-	    break;
-    }
-    if (upg_dbg_out)
-    {
-	SIfprintf(upgr_cb.du_dbg.du_file, "]==> executing nth quel <%s>\n\n", str);
-    }
-##  IISTATEMENT str	/* fall through, execute last (or only) stmt */
-}
 
 /*
 ** Name: check_sql - check sql status code
@@ -453,7 +412,6 @@ EXEC SQL END DECLARE SECTION;
     }
 
     MEfree(owner_list);
-    /*setauth("$dba"); */
     setauth("$ingres");
 
 badness:
@@ -525,7 +483,7 @@ exec sql end declare section;
 		err=TRUE;
 		break;
 	}
-	if(exec_txt(DB_SQL, saqtxt)!=OK)
+	if(exec_txt(saqtxt)!=OK)
 	{
     	    if (upg_dbg_out)
     	    {
@@ -609,6 +567,8 @@ exec sql end declare section;
 **	    Fix (silent) error converting iidbdb since the only schema
 **	    it's likely to have is $ingres;  which is placed into iischema
 **	    when we create tables.
+**	5-May-2010 (kschendel)
+**	    Always quote-delimit the schema name.
 */
 VOID
 populate_iischema()
@@ -618,7 +578,7 @@ EXEC SQL BEGIN DECLARE SECTION;
     i4		owner_count = 0;
     char	**owner_list = NULL;
     char	**list_ptr = NULL;
-    char	stmt[140];
+    char	stmt[DB_MAXNAME+100];
 EXEC SQL END DECLARE SECTION;
     int		i;
     STATUS	stat = OK;
@@ -669,7 +629,7 @@ EXEC SQL END DECLARE SECTION;
 	goto badness;
 
 	/* tables and views */
-    EXEC SQL SELECT owner
+    EXEC SQL SELECT varchar(owner)
 	     INTO :owner
 	     FROM xxsch_owner;
     EXEC SQL begin;
@@ -699,8 +659,8 @@ EXEC SQL END DECLARE SECTION;
 	if (setauth(owner_list[i]) != OK)	/* set session owner */
 		break;
 						
-	STprintf(stmt, "create schema authorization %s", owner_list[i]);
-	if(exec_txt(DB_SQL, stmt)!=OK)
+	STprintf(stmt, "create schema authorization \"%s\"", owner_list[i]);
+	if(exec_txt(stmt)!=OK)
 	{
 	    if (upg_dbg_out)
 	    {
@@ -712,7 +672,6 @@ EXEC SQL END DECLARE SECTION;
     }
 
     MEfree(owner_list);
-    /* setauth("$dba"); */
     setauth("$ingres");
     return;
 
@@ -720,7 +679,6 @@ badness:
     EXEC SQL ROLLBACK WORK;
     if (upg_dbg_out)
 	    SIfprintf(upgr_cb.du_dbg.du_file, "]==> Error in populate_iischema\n");
-    /* setauth("$dba"); */
     setauth("$ingres");
     return ;
 

@@ -89,6 +89,8 @@
 **          Check for new LK_INTR_FA error.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	28-Apr-2010 (kschendel)
+**	    Compiler warning fix to above.
 */
 /*
 ** globals
@@ -228,7 +230,7 @@ dmc_repq(DMC_CB		*dmc_cb)
     DB_STATUS		local_stat;
     SCF_CB		scf_cb;
     QEF_RCB		qef_rcb;
-    DB_NAME		event_name;
+    DB_EVENT_NAME	event_name;
     DML_SCB		*scb;
     LK_EVENT		lk_event;
     LK_LLID		EventLockList;
@@ -274,7 +276,7 @@ dmc_repq(DMC_CB		*dmc_cb)
     lk_event.type_low = 0;
     lk_event.value = REP_READQ_VAL;
 
-    MEfill(DB_DB_MAXNAME - 13, ' ', event_name.db_name + 13);
+    MEfill(DB_EVENT_MAXNAME - 13, ' ', event_name.db_ev_name + 13);
     qef_rcb.qef_length	= sizeof(QEF_RCB);
     qef_rcb.qef_type	= QEFRCB_CB;
     qef_rcb.qef_ascii_id	= QEFRCB_ASCII_ID;
@@ -437,7 +439,7 @@ dmc_repq(DMC_CB		*dmc_cb)
 	    */
 	    MEcopy((next_dcb->dcb_dbservice & 
 		(DU_NAME_UPPER | DU_DELIM_UPPER)) ? 
-		"DD_DISTRIBUTE" : "dd_distribute", 13, event_name.db_name);
+		"DD_DISTRIBUTE" : "dd_distribute", 13, event_name.db_ev_name);
 	    qef_rcb.qef_evowner = &next_dcb->dcb_db_owner;
 	    status = qef_call(QEU_RAISE_EVENT, (PTR)&qef_rcb);
 	    if (status != E_DB_OK)
