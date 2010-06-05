@@ -742,6 +742,12 @@ static STATUS duc_goodClientList();
 **	19-Apr-2007 (bonro01)
 **	   Detect internal error in duc_init() and exit with
 **	   a bad return code.
+**      10-May-2010 (hanal04) Bug 123691
+**         When we create IIDBDB we append the dbservice values to
+**         iidatabase. This leaves the CNF value for dbservice unset.
+**         If we are creating IIDBDB call iiqef_alter_db() to update the
+**         CBF file with the db_service flags we have established before
+**         we exit.
 */
 
 main(argc, argv)
@@ -1218,6 +1224,31 @@ IIlq_Protect(FALSE);
 ##  exit
           duc_dbenv.du_dbopen = FALSE;
            
+         }
+
+         if (duc_modes.duc_dbdb_flag)
+         {
+            EXEC SQL BEGIN DECLARE SECTION;
+                char        dbname[DB_MAXNAME+1];
+                i4          dbservice_set;
+            EXEC SQL END DECLARE SECTION;
+
+            (void) STcopy (duc_dbenv.du_dbname, dbname);
+            dbservice_set = duc_dbenv.du_dbservice;
+
+            EXEC SQL EXECUTE PROCEDURE iiqef_alter_db (
+                dbname              =   :dbname,
+                access_on           =   0,
+                access_off          =   0,
+                service_on          =   :dbservice_set,
+                service_off         =   0,
+                last_table_id       =   0);
+            if (sqlca.sqlcode < 0)
+            {
+                /* we were unable to execute the internal procedure */
+
+                duc_sqlerr_handler(E_DU200C_BAD_IPROC_EXECUTE);
+            } 
          }
     } while (0);	/* end of control loop */
     
