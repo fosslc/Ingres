@@ -6494,9 +6494,14 @@ opj_exchadd(
 **
 **	For P/R and sort, just copy the outer's bitmap along.
 **
-**	For EXCH, FIXME FIXME zero out the bitmap.  Until QEF is fixed
-**	up to be able to open a child thread without starting it running
-**	right away, parallel query trumps join-time partition qual.
+**	For EXCH, FIXME FIXME zero out the bitmap.  Join-time partition
+**	pruning is not allowed across an exch, for a couple reasons:
+**	a) we currently have no way to open a child thread without
+**	starting it running right away, before the bitmaps are ready;
+**	b) joins above the (1:n) exch wouldn't know how to update all
+**	of the (n) child bitmap copies.
+**	For now, parallel query trumps join-time partition qual.
+**	
 **
 **	For joins, we return the OR of the two inputs, unless the
 **	join is an outer join.  Outer joins introduce nulls, which
@@ -6521,6 +6526,8 @@ opj_exchadd(
 **	    Move partvars pass from opc to opj, is a little cleaner.
 **	8-Jan-2008 (kschendel)
 **	    K/T-joins are now in the game.
+**	19-May-2010 (kschendel) b123759
+**	    Comment update only re parallel query issues.
 */
 
 /* First, the routine that actually processes a CO node */
@@ -6577,8 +6584,8 @@ opj_partvarco(OPS_SUBQUERY *sq, OPO_CO *cop)
 	break;
 
     case DB_EXCH:
-	/* Suppress join qual below parallelizing point, until qef can be
-	** taught to not start the child until join-quals are ready.
+	/* Suppress join qual across parallelizing point, until the
+	** QEF issues can be figured out (see intro).
 	*/
 	MEfill(sizeof(OPV_BMVARS), 0, (PTR) ppartvars);
 	break;

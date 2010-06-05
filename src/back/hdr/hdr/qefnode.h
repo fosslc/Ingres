@@ -1584,7 +1584,8 @@ struct _QEN_QP
 **	    Add exch_key_cnt for QEN_TKEY structures.
 **	21-july-04 (inkdo01)
 **	    Change bit map to pair of arrays of DSH ptr array indexes.
-[@history_line@]...
+**	19-May-2010 (kschendel) b123759
+**	    Add array entry for PQUAL indexes.
 */
 struct _QEN_EXCH
 {
@@ -1637,13 +1638,14 @@ struct _QEN_EXCH
 	i2	exch_ttab_cnt;	/* number of array entries for temp table strs */
 	i2	exch_hld_cnt;	/* number of array entries for hold structs */
 	i2	exch_shd_cnt;	/* number of array entries for SHD structs */
+	i2	exch_pqual_cnt;	/* Number of array entries for PQUALs */
 	i2	exch_cx_cnt;	/* number of array entries for ADE_EXCBs */
 	i2	exch_dmr_cnt;	/* number of array entries for DMR_CBs */
 	i2	exch_dmt_cnt;	/* number of array entries for DMT_CBs */
 	i2	exch_dmh_cnt;	/* number of array entries for DMH_CBs */
-	i2	*exch_array1;	/* Array of i2 indexes for row, hash, hash
-				** aggregate, node status, temp table, hold
-				** and SHD ptr arrays */
+	i2	*exch_array1;	/* Array of i2 indexes for row ptr, hash, hash
+				** aggregate, node status, temp table, hold,
+				** SHD, and PQUAL arrays */
 	i4	*exch_array2;	/* array of i4 indexes for ADE_EXCB, DMR_CB, 
 				** DMT_CB and DMH_CB entries in dsh_cbs array */
     } exch_ixes[1];

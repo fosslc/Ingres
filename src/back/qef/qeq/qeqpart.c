@@ -897,6 +897,8 @@ qeq_pqual_eval(QEN_PQ_EVAL *pqe,
 **				(If null, return without doing anything)
 **	cx_init			CX initialization routine;
 **				either qee_ade or qeq_ade.
+**				Can be NULL if neither is needed (e.g. redoing
+**				setup under an exchange node).
 **
 ** Outputs:
 **	Returns E_DB_OK or E_DB_xxx error code
@@ -906,6 +908,8 @@ qeq_pqual_eval(QEN_PQ_EVAL *pqe,
 ** History:
 **	25-Jul-2007 (kschendel) SIR 122513
 **	    Write for generalized partition qualification.
+**	19-May-2010 (kschendel) b123759
+*	    Allow a null initializer to be passed in.
 */
 
 DB_STATUS
@@ -924,7 +928,7 @@ qeq_pqual_init(QEE_DSH *dsh, QEN_PART_QUAL *pqual,
     {
 	/* Let's start by setting up the CX's in the evaluation arrays. */
 	pqe = pqual->part_const_eval;
-	if (pqe != NULL)
+	if (pqe != NULL && cx_init != NULL)
 	{
 	    status = (*cx_init)(dsh, pqe->un.hdr.pqe_cx);
 	}
@@ -933,7 +937,7 @@ qeq_pqual_init(QEE_DSH *dsh, QEN_PART_QUAL *pqual,
 	** one or the other;  K/T-joins might have both.
 	*/
 	pqe = pqual->part_join_eval;
-	if (pqe != NULL)
+	if (pqe != NULL && cx_init != NULL)
 	{
 	    status = (*cx_init)(dsh, pqe->un.hdr.pqe_cx);
 	}

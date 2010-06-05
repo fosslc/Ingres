@@ -103,13 +103,18 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **	19-May-2010 (kschendel) b123565
 **	    oj_ijFlagsFile is a hold, not a row, fix in a couple places.
+**	19-May-2010 (kschendel) b123759
+**	    Include (new style) partition qualification data in exch counts.
+**	    DSH rows can pop up multiple times, especially in pquals, use
+**	    a bitmap to avoid listing a row more than once (would leak
+**	    memory in QEF, at least for 1:N exchanges).
 **/
 
 /*
 **  Forward and/or External function references.
 */
 
-/* Indexes to bit map offset array. */
+/* Indexes to counter array. */
 #define	IX_ROW	0
 #define	IX_HSH	1
 #define	IX_HSHA	2
@@ -117,11 +122,12 @@
 #define IX_TTAB	4
 #define	IX_HLD	5
 #define	IX_SHD	6
-#define	IX_CX	7
-#define	IX_DMR	8
-#define	IX_DMT	9
-#define	IX_DMH	10
-#define	IX_MAX	11
+#define IX_PQUAL 7
+#define	IX_CX	8
+#define	IX_DMR	9
+#define	IX_DMT	10
+#define	IX_DMH	11
+#define	IX_MAX	12	/* # of indexes, not max index */
 
 static VOID
 opc_eexatts(
@@ -141,13 +147,15 @@ opc_exunion_arrcnt(
 	OPS_STATE	*global,
 	QEN_NODE	*node,
 	QEF_AHD		**action,
-	i4		*arrcnts);
+	i4		*arrcnts,
+	PTR		rowmap);
 
 static VOID
 opc_exnodearrcnt(
 	OPS_STATE	*global,
 	QEN_NODE	*node,
-	i4		*arrcnts);
+	i4		*arrcnts,
+	PTR		rowmap);
 
 static VOID
 opc_exnodearrset(
@@ -161,7 +169,8 @@ static VOID
 opc_exnheadcnt(
 	OPS_STATE	*global,
 	QEN_NODE	*node,
-	i4		*arrcnts);
+	i4		*arrcnts,
+	PTR		rowmap);
 
 static VOID
 opc_exnheadset(
@@ -175,7 +184,8 @@ static VOID
 opc_exactarrcnt(
 	OPS_STATE	*global,
 	QEF_AHD		*action,
-	i4		*arrcnts);
+	i4		*arrcnts,
+	PTR		rowmap);
 
 static VOID
 opc_exactarrset(
@@ -224,6 +234,11 @@ opc_exactarrset(
 **	    Node nthreads now defaults to zero, push counts even for 1:1
 **	    exchange so that QEF knows whether a given node is under an
 **	    exchange or not.
+**	19-May-2010 (kschendel) b123759
+**	    Include (new style) partition qualification data in exch counts.
+**	    DSH rows can pop up multiple times, especially in pquals, use
+**	    a bitmap to avoid listing a row more than once (would leak
+**	    memory in QEF, at least for 1:N exchanges).
 */
 VOID
 opc_exch_build(
@@ -239,8 +254,10 @@ opc_exch_build(
     QEF_QP_CB		*qp = global->ops_cstate.opc_qp;
     OPC_NODE		outer_cnode;
     QEF_AHD		*union_action = NULL;
+    PTR			rowmap;		/* DSH row tracker */
     i4			arr1size, arr2size, i, j, ucount;
     i4			arrcnts[IX_MAX];
+    i4			mapbits, mapbytes;
     bool		weset_exchn = FALSE;
 
     /* compile the outer tree */
@@ -323,6 +340,16 @@ opc_exch_build(
     ex->exch_macount = 0;
     ex->exch_matts = (DMT_KEY_ENTRY **) NULL;
 
+    /* To avoid double-counting a row, which is especially easy if PQUAL's
+    ** are around, use a bitmap to track rows.  There usually aren't a
+    ** huge number of rows, even in complex query plans.
+    ** Double-counting a row is nonfatal, but it leaks memory for unused
+    ** row buffers in QEF for 1:N plans.
+    */
+    mapbits = global->ops_cstate.opc_qp->qp_row_cnt;
+    mapbytes = (mapbits + 7) / 8;
+    rowmap = opu_Gsmemory_get(global, mapbytes);
+
     /* Build buffer/structure index arrays for each child (if || union,
     ** one set of arrays per child, else just one set of arrays). */
     for (i = 0; i < ucount; i++)
@@ -332,20 +359,22 @@ opc_exch_build(
 	** of subarray counts for each class of buffers/structs. */
 	for (j = 0; j < IX_MAX; j++)
 	    arrcnts[j] = 0;		/* init count array */
+	MEfill(mapbytes, 0, rowmap);	/* and row tracker */
 
 	/* Set subarray counts. */
-	opc_exnheadcnt(global, qn, arrcnts);	/* count for EXCH node hdr */
+	opc_exnheadcnt(global, qn, arrcnts, rowmap); /* count for EXCH node hdr */
 	arrcnts[IX_CX]++;		/* + 1 for the exch_mat CX */
-	arrcnts[IX_ROW]++;		/* + 1 for temp row under exch */
+	BTset(OPC_CTEMP, rowmap);	/* + the temp row under exch */
 
 	if (ex->exch_flag & EXCH_UNION)
-	    opc_exunion_arrcnt(global, qn, &union_action, arrcnts);
+	    opc_exunion_arrcnt(global, qn, &union_action, arrcnts, rowmap);
 					/* counts for curr union select */
 	else
-	    opc_exnodearrcnt(global, qn->node_qen.qen_exch.exch_out, arrcnts);
+	    opc_exnodearrcnt(global, qn->node_qen.qen_exch.exch_out, arrcnts, rowmap);
 					/* counts everything under exch */
 
 	/* Determine total size of i2 and i4 arrays and alloc memory. */
+	arrcnts[IX_ROW] = BTcount(rowmap, mapbits);
 	for (j = 0, arr1size = 0; j < IX_CX; j++)
 	    arr1size += arrcnts[j];
 	for (j = IX_CX, arr2size = 0; j < IX_MAX; j++)
@@ -363,6 +392,7 @@ opc_exch_build(
 	ex->exch_ixes[i].exch_ttab_cnt = arrcnts[IX_TTAB];
 	ex->exch_ixes[i].exch_hld_cnt = arrcnts[IX_HLD];
 	ex->exch_ixes[i].exch_shd_cnt = arrcnts[IX_SHD];
+	ex->exch_ixes[i].exch_pqual_cnt = arrcnts[IX_PQUAL];
 	ex->exch_ixes[i].exch_cx_cnt = arrcnts[IX_CX];
 	ex->exch_ixes[i].exch_dmr_cnt = arrcnts[IX_DMR];
 	ex->exch_ixes[i].exch_dmt_cnt = arrcnts[IX_DMT];
@@ -384,12 +414,18 @@ opc_exch_build(
 	** EXCH node is loaded here, not in opc_ex...arrset(). Likewise,
 	** the QP node on top of a || union is loaded here. The subtrees
 	** below the EXCH and QP nodes are handled by the opc_ex...arrset()
-	** functions. */
+	** functions.  The row indexes are listed via the row bitmap.
+	*/
+
+	j = BTnext(-1, rowmap, mapbits);
+	while (j != -1)
+	{
+	    ex->exch_ixes[i].exch_array1[arrcnts[IX_ROW]++] = j;
+	    j = BTnext(j, rowmap, mapbits);
+	}
 	opc_exnheadset(global, qn, ex->exch_ixes[i].exch_array1,
 		ex->exch_ixes[i].exch_array2, arrcnts);
 					/* for EXCH node header */
-	ex->exch_ixes[i].exch_array1[arrcnts[IX_ROW]++] = OPC_CTEMP;
-					/* temp buffer below EXCH */
 	ex->exch_ixes[i].exch_array2[arrcnts[IX_CX]++] = ex->exch_mat->
 			qen_pos;	/* exch_mat CX */
 	
@@ -637,14 +673,15 @@ opc_exunion_arrcnt(
 	OPS_STATE	*global,
 	QEN_NODE	*node,
 	QEF_AHD		**action,
-	i4		*arrcnts)
+	i4		*arrcnts,
+	PTR		rowmap)
 
 {
 
     /* Count EXCH node header bits, QP node header bits and then
     ** locate action header for this select of the union and count it, too. */
 
-    opc_exnheadcnt(global, node->node_qen.qen_exch.exch_out, arrcnts);
+    opc_exnheadcnt(global, node->node_qen.qen_exch.exch_out, arrcnts, rowmap);
 				/* count QP node header indexes */
     if (node->node_qen.qen_exch.exch_out->node_qen.qen_qp.qp_qual != 
 							(QEN_ADF *) NULL)
@@ -655,7 +692,7 @@ opc_exunion_arrcnt(
 				/* 1st action from QP node under EXCH */
     else *action = (*action)->ahd_next; /* otherwise, next action */
 
-    opc_exactarrcnt(global, *action, arrcnts);
+    opc_exactarrcnt(global, *action, arrcnts, rowmap);
 
 }
 
@@ -684,16 +721,44 @@ opc_exunion_arrcnt(
 **	15-May-2010 (kschendel) b123565
 **	    Add missing TPROC case to prevent looping;  add default.
 **	    Continue below 1:1 exch, as they depend on parents.
+**	19-May-2010 (kschendel) b123759
+**	    ijFlagsFile is a hold, not a row.
 */
+
+/* First, a tiny helper routine to deal with the mini-program pointed
+** to by a QEN_PART_QUAL.
+*/
+static void
+opc_arrcnt_pqe(QEN_PQ_EVAL *pqe, i4 *arrcnts, PTR rowmap)
+{
+    i4 ninstrs;
+
+    arrcnts[IX_CX]++;
+    BTset(pqe->un.hdr.pqe_value_row, rowmap);
+    BTset(pqe->pqe_result_row, rowmap);
+    ninstrs = pqe->un.hdr.pqe_ninstrs;
+    while (--ninstrs > 0)
+    {
+	pqe = (QEN_PQ_EVAL *) ((char *)pqe + pqe->pqe_size_bytes);
+	BTset(pqe->pqe_result_row, rowmap);
+	if (pqe->pqe_eval_op == PQE_EVAL_ANDMAP
+	  || pqe->pqe_eval_op == PQE_EVAL_ORMAP)
+	    BTset(pqe->un.andor.pqe_source_row, rowmap);
+    }
+} /* opc_arrcnt_pqe */
+
+/* And now the real thing */
 static VOID
 opc_exnodearrcnt(
 	OPS_STATE	*global,
 	QEN_NODE	*node,
-	i4		*arrcnts)
+	i4		*arrcnts,
+	PTR		rowmap)
 
 {
     QEN_OJINFO	*ojinfop;
     QEN_PART_INFO *partp;
+    QEN_PART_QUAL *pqual;
     QEN_SJOIN	*sjnp;
     QEN_KJOIN	*kjnp;
     QEN_TJOIN	*tjnp;
@@ -723,11 +788,12 @@ opc_exnodearrcnt(
 	if (node == (QEN_NODE *) NULL)
 	    return;		/* just in case */
 
-	opc_exnheadcnt(global, node, arrcnts);
+	opc_exnheadcnt(global, node, arrcnts, rowmap);
 				/* count node header indexes */
 
 	ojinfop = (QEN_OJINFO *) NULL;
 	partp = (QEN_PART_INFO *) NULL;
+	pqual = NULL;
 	dmrix = -1;
 
 	switch (node->qen_type) {
@@ -737,7 +803,7 @@ opc_exnodearrcnt(
 	    sjnp = &node->node_qen.qen_sjoin;
 	    ojinfop = sjnp->sjn_oj;
 	    if (sjnp->sjn_krow >= 0)
-		arrcnts[IX_ROW]++;
+		BTset(sjnp->sjn_krow, rowmap);
 	    if (sjnp->sjn_hfile >= 0)
 		arrcnts[IX_HLD]++;
 	    if (sjnp->sjn_itmat != (QEN_ADF *) NULL)
@@ -750,7 +816,7 @@ opc_exnodearrcnt(
 		arrcnts[IX_CX]++;
 	    if (sjnp->sjn_jqual != (QEN_ADF *) NULL)
 		arrcnts[IX_CX]++;
-	    opc_exnodearrcnt(global, sjnp->sjn_out, arrcnts);
+	    opc_exnodearrcnt(global, sjnp->sjn_out, arrcnts, rowmap);
 	    node = sjnp->sjn_inner;
 	    break;
 
@@ -758,10 +824,11 @@ opc_exnodearrcnt(
 	    kjnp = &node->node_qen.qen_kjoin;
 	    ojinfop = kjnp->kjoin_oj;
 	    partp = kjnp->kjoin_part;
+	    pqual = kjnp->kjoin_pqual;
 	    if ((dmrix = kjnp->kjoin_get) >= 0)
 		arrcnts[IX_DMR]++;
 	    if (kjnp->kjoin_krow >= 0)
-		arrcnts[IX_ROW]++;
+		BTset(kjnp->kjoin_krow, rowmap);
 	    if (kjnp->kjoin_key != (QEN_ADF *) NULL)
 		arrcnts[IX_CX]++;
 	    if (kjnp->kjoin_kqual != (QEN_ADF *) NULL)
@@ -779,12 +846,13 @@ opc_exnodearrcnt(
 	    tjnp = &node->node_qen.qen_tjoin;
 	    ojinfop = tjnp->tjoin_oj;
 	    partp = tjnp->tjoin_part;
+	    pqual = tjnp->tjoin_pqual;
 	    if ((dmrix = tjnp->tjoin_get) >= 0)
 		arrcnts[IX_DMR]++;
 	    if (tjnp->tjoin_orow >= 0)
-		arrcnts[IX_ROW]++;
+		BTset(tjnp->tjoin_orow, rowmap);
 	    if (tjnp->tjoin_irow >= 0)
-		arrcnts[IX_ROW]++;
+		BTset(tjnp->tjoin_irow, rowmap);
 	    if (tjnp->tjoin_jqual != (QEN_ADF *) NULL)
 		arrcnts[IX_CX]++;
 	    if (tjnp->tjoin_isnull != (QEN_ADF *) NULL)
@@ -795,11 +863,13 @@ opc_exnodearrcnt(
 	  case QE_HJOIN:
 	    hjnp = &node->node_qen.qen_hjoin;
 	    ojinfop = hjnp->hjn_oj;
+	    pqual = hjnp->hjn_pqual;
 	    arrcnts[IX_HSH]++;
 	    if (hjnp->hjn_brow >= 0)
-		arrcnts[IX_ROW]++;
-	    /* if (hjnp->hjn_prow >= 0) already counted as qen_row
-		arrcnts[IX_ROW]++; */
+		BTset(hjnp->hjn_brow, rowmap);
+	    /* prow is probably already counted as qen_row but make sure */
+	    if (hjnp->hjn_prow >= 0)
+		BTset(hjnp->hjn_prow, rowmap);
 	    if (hjnp->hjn_dmhcb >= 0)
 		arrcnts[IX_DMH]++;
 	    if (hjnp->hjn_btmat != (QEN_ADF *) NULL)
@@ -808,7 +878,7 @@ opc_exnodearrcnt(
 		arrcnts[IX_CX]++;
 	    if (hjnp->hjn_jqual != (QEN_ADF *) NULL)
 		arrcnts[IX_CX]++;
-	    opc_exnodearrcnt(global, hjnp->hjn_out, arrcnts);
+	    opc_exnodearrcnt(global, hjnp->hjn_out, arrcnts, rowmap);
 	    node = hjnp->hjn_inner;
 	    break;
 
@@ -832,12 +902,13 @@ opc_exnodearrcnt(
 		arrcnts[IX_CX]++;
 	    if (sejnp->sejn_kqual != NULL)
 		arrcnts[IX_CX]++;
-	    opc_exnodearrcnt(global, sejnp->sejn_out, arrcnts);
+	    opc_exnodearrcnt(global, sejnp->sejn_out, arrcnts, rowmap);
 	    node = sejnp->sejn_inner;
 	    break;
 
 	  case QE_TSORT:
 	    tsrtp = &node->node_qen.qen_tsort;
+	    pqual = tsrtp->tsort_pqual;
 	    if (tsrtp->tsort_get >= 0)
 		arrcnts[IX_DMR]++;
 	    if (tsrtp->tsort_load >= 0)
@@ -872,6 +943,7 @@ opc_exnodearrcnt(
 		arrcnts[IX_DMR]++;
 	    }
 	    partp = origp->orig_part;
+	    pqual = origp->orig_pqual;
 	    if (origp->orig_qual != (QEN_ADF *) NULL)
 		arrcnts[IX_CX]++;
 	    node = (QEN_NODE *) NULL;
@@ -884,7 +956,7 @@ opc_exnodearrcnt(
 	    /* Process action headers anchored in QP node. */
 	    for (act = node->node_qen.qen_qp.qp_act; act; 
 						act = act->ahd_next)
-		opc_exactarrcnt(global, act, arrcnts);
+		opc_exactarrcnt(global, act, arrcnts, rowmap);
 	    return;
 
 	  case QE_EXCHANGE:
@@ -917,13 +989,13 @@ opc_exnodearrcnt(
 	if (ojinfop)
 	{
 	    if (ojinfop->oj_heldTidRow >= 0)
-		arrcnts[IX_ROW]++;
+		BTset(ojinfop->oj_heldTidRow, rowmap);
 	    if (ojinfop->oj_ijFlagsRow >= 0)
-		arrcnts[IX_ROW]++;
+		BTset(ojinfop->oj_ijFlagsRow, rowmap);
 	    if (ojinfop->oj_resultEQCrow >= 0)
-		arrcnts[IX_ROW]++;
+		BTset(ojinfop->oj_resultEQCrow, rowmap);
 	    if (ojinfop->oj_specialEQCrow >= 0)
-		arrcnts[IX_ROW]++;
+		BTset(ojinfop->oj_specialEQCrow, rowmap);
 	    if (ojinfop->oj_tidHoldFile >= 0)
 		arrcnts[IX_HLD]++;
 	    if (ojinfop->oj_ijFlagsFile >= 0)
@@ -942,10 +1014,34 @@ opc_exnodearrcnt(
 
 	if (partp)
 	{
-	    /* There are currently no DSH entities in QEN_PART_INFO
-	    ** to be replicated for child threads. part_qpcix, 
-	    ** part_qpix and part_qpart are used in qeqvalid.c
-	    ** before threads are spawned. */
+	    if (partp->part_groupmap_ix >= 0)
+		BTset(partp->part_groupmap_ix, rowmap);
+	    if (partp->part_ktconst_ix >= 0)
+		BTset(partp->part_ktconst_ix, rowmap);
+	    if (partp->part_knokey_ix >= 0)
+		BTset(partp->part_knokey_ix, rowmap);
+	}
+
+	/* Part-qual structures contain mini-programs that must be
+	** scanned to gather up row numbers.
+	*/
+	if (pqual != NULL)
+	{
+	    QEN_PQ_EVAL *pqe;
+
+	    arrcnts[IX_PQUAL]++;
+	    if (pqual->part_constmap_ix >= 0)
+		BTset(pqual->part_constmap_ix, rowmap);
+	    if (pqual->part_lresult_ix >= 0)
+		BTset(pqual->part_lresult_ix, rowmap);
+	    if (pqual->part_work1_ix >= 0)
+		BTset(pqual->part_work1_ix, rowmap);
+	    pqe = pqual->part_const_eval;
+	    if (pqe != NULL)
+		opc_arrcnt_pqe(pqe, arrcnts, rowmap);
+	    pqe = pqual->part_join_eval;
+	    if (pqe != NULL)
+		opc_arrcnt_pqe(pqe, arrcnts, rowmap);
 	}
 
 	/* If TJOIN, KJOIN or ORIG, locate DMT_CB index in valid's. */
@@ -1008,6 +1104,9 @@ opc_exnodearrcnt(
 **	    Add missing TPROC case to prevent looping;  add default.
 **	    Continue below 1:1 exch, as they depend on parents.
 **	    Delete "resettable", done as a separate pass in opcran now.
+**	19-May-2010 (kschendel) b123759
+**	    ijFlagsFile is a hold, not a row.
+**	    Don't need to do rows here, done via bitmap.
 */
 static VOID
 opc_exnodearrset(
@@ -1019,7 +1118,7 @@ opc_exnodearrset(
 
 {
     QEN_OJINFO	*ojinfop;
-    QEN_PART_INFO *partp;
+    QEN_PART_QUAL *pqual;
     QEN_SJOIN	*sjnp;
     QEN_KJOIN	*kjnp;
     QEN_TJOIN	*tjnp;
@@ -1053,7 +1152,7 @@ opc_exnodearrset(
 				/* set node header indexes */
 
 	ojinfop = (QEN_OJINFO *) NULL;
-	partp = (QEN_PART_INFO *) NULL;
+	pqual = NULL;
 	dmrix = -1;
 
 	switch (node->qen_type) {
@@ -1062,8 +1161,6 @@ opc_exnodearrset(
 	  case QE_ISJOIN:
 	    sjnp = &node->node_qen.qen_sjoin;
 	    ojinfop = sjnp->sjn_oj;
-	    if (sjnp->sjn_krow >= 0)
-		array1[arrcnts[IX_ROW]++] = sjnp->sjn_krow;
 	    if (sjnp->sjn_hfile >= 0)
 		array1[arrcnts[IX_HLD]++] = sjnp->sjn_hfile;
 	    if (sjnp->sjn_itmat != (QEN_ADF *) NULL)
@@ -1083,11 +1180,9 @@ opc_exnodearrset(
 	  case QE_KJOIN:
 	    kjnp = &node->node_qen.qen_kjoin;
 	    ojinfop = kjnp->kjoin_oj;
-	    partp = kjnp->kjoin_part;
+	    pqual = kjnp->kjoin_pqual;
 	    if ((dmrix = kjnp->kjoin_get) >= 0)
 		array2[arrcnts[IX_DMR]++] = kjnp->kjoin_get;
-	    if (kjnp->kjoin_krow >= 0)
-		array1[arrcnts[IX_ROW]++] = kjnp->kjoin_krow;
 	    if (kjnp->kjoin_key != (QEN_ADF *) NULL)
 		array2[arrcnts[IX_CX]++] = kjnp->kjoin_key->qen_pos;
 	    if (kjnp->kjoin_kqual != (QEN_ADF *) NULL)
@@ -1104,13 +1199,9 @@ opc_exnodearrset(
 	  case QE_TJOIN:
 	    tjnp = &node->node_qen.qen_tjoin;
 	    ojinfop = tjnp->tjoin_oj;
-	    partp = tjnp->tjoin_part;
+	    pqual = tjnp->tjoin_pqual;
 	    if ((dmrix = tjnp->tjoin_get) >= 0)
 		array2[arrcnts[IX_DMR]++] = tjnp->tjoin_get;
-	    if (tjnp->tjoin_orow >= 0)
-		array1[arrcnts[IX_ROW]++] = tjnp->tjoin_orow;
-	    if (tjnp->tjoin_irow >= 0)
-		array1[arrcnts[IX_ROW]++] = tjnp->tjoin_irow;
 	    if (tjnp->tjoin_jqual != (QEN_ADF *) NULL)
 		array2[arrcnts[IX_CX]++] = tjnp->tjoin_jqual->qen_pos;
 	    if (tjnp->tjoin_isnull != (QEN_ADF *) NULL)
@@ -1121,11 +1212,8 @@ opc_exnodearrset(
 	  case QE_HJOIN:
 	    hjnp = &node->node_qen.qen_hjoin;
 	    ojinfop = hjnp->hjn_oj;
+	    pqual = hjnp->hjn_pqual;
 	    array1[arrcnts[IX_HSH]++] = hjnp->hjn_hash;
-	    if (hjnp->hjn_brow >= 0)
-		array1[arrcnts[IX_ROW]++] = hjnp->hjn_brow;
-	    /* if (hjnp->hjn_prow >= 0) already loaded as qen_row
-		array1[arrcnts[IX_ROW]++] = hjnp->hjn_prow; */
 	    if (hjnp->hjn_dmhcb >= 0)
 		array2[arrcnts[IX_DMH]++] = hjnp->hjn_dmhcb;
 	    if (hjnp->hjn_btmat != (QEN_ADF *) NULL)
@@ -1141,7 +1229,6 @@ opc_exnodearrset(
 	  case QE_SEJOIN:
 	    sejnp = &node->node_qen.qen_sejoin;
 	    ojinfop = (QEN_OJINFO *) NULL;
-	    partp = (QEN_PART_INFO *) NULL;
 	    /* if (sejnp->sejn_hget >= 0) - these aren't ref'ed in QEF
 		array2[arrcnts[IX_DMR]++] = sejnp->sejn_hget; */
 	    if (sejnp->sejn_hfile >= 0)
@@ -1164,6 +1251,7 @@ opc_exnodearrset(
 
 	  case QE_TSORT:
 	    tsrtp = &node->node_qen.qen_tsort;
+	    pqual = tsrtp->tsort_pqual;
 	    if (tsrtp->tsort_get >= 0)
 		array2[arrcnts[IX_DMR]++] = tsrtp->tsort_get;
 	    if (tsrtp->tsort_load >= 0)
@@ -1193,11 +1281,11 @@ opc_exnodearrset(
 	  case QE_ORIG:
 	  case QE_ORIGAGG:
 	    origp = &node->node_qen.qen_orig;
+	    pqual = origp->orig_pqual;
 	    if ((dmrix = origp->orig_get) >= 0)
 	    {
 		array2[arrcnts[IX_DMR]++] = origp->orig_get;
 	    }
-	    partp = origp->orig_part;
 	    if (origp->orig_qual != (QEN_ADF *) NULL)
 		array2[arrcnts[IX_CX]++] = origp->orig_qual->qen_pos;
 	    node = (QEN_NODE *) NULL;
@@ -1242,14 +1330,6 @@ opc_exnodearrset(
 	** partition stuff (if any). */
 	if (ojinfop)
 	{
-	    if (ojinfop->oj_heldTidRow >= 0)
-		array1[arrcnts[IX_ROW]++] = ojinfop->oj_heldTidRow;
-	    if (ojinfop->oj_ijFlagsRow >= 0)
-		array1[arrcnts[IX_ROW]++] = ojinfop->oj_ijFlagsRow;
-	    if (ojinfop->oj_resultEQCrow >= 0)
-		array1[arrcnts[IX_ROW]++] = ojinfop->oj_resultEQCrow;
-	    if (ojinfop->oj_specialEQCrow >= 0)
-		array1[arrcnts[IX_ROW]++] = ojinfop->oj_specialEQCrow;
 	    if (ojinfop->oj_tidHoldFile >= 0)
 		array1[arrcnts[IX_HLD]++] = ojinfop->oj_tidHoldFile;
 	    if (ojinfop->oj_ijFlagsFile >= 0)
@@ -1267,12 +1347,13 @@ opc_exnodearrset(
 		array2[arrcnts[IX_CX]++] = ojinfop->oj_rnull->qen_pos;
 	}
 
-	if (partp)
+	if (pqual != NULL)
 	{
-	    /* There are currently no DSH entities in QEN_PART_INFO
-	    ** to be replicated for child threads. part_qpcix, 
-	    ** part_qpix and part_qpart are used in qeqvalid.c
-	    ** before threads are spawned. */
+	    array1[arrcnts[IX_PQUAL]++] = pqual->part_pqual_ix;
+	    if (pqual->part_const_eval != NULL)
+		array2[arrcnts[IX_CX]++] = pqual->part_const_eval->un.hdr.pqe_cx->qen_pos;
+	    if (pqual->part_join_eval != NULL)
+		array2[arrcnts[IX_CX]++] = pqual->part_join_eval->un.hdr.pqe_cx->qen_pos;
 	}
 
 	/* If TJOIN, KJOIN or ORIG, locate DMT_CB index in valid's. */
@@ -1320,7 +1401,8 @@ static VOID
 opc_exnheadcnt(
 	OPS_STATE	*global,
 	QEN_NODE	*node,
-	i4		*arrcnts)
+	i4		*arrcnts,
+	PTR		rowmap)
 
 {
 
@@ -1332,9 +1414,9 @@ opc_exnheadcnt(
 
     arrcnts[IX_STAT]++;
     if (node->qen_row >= 0)
-	arrcnts[IX_ROW]++;
+	BTset(node->qen_row, rowmap);
     if (node->qen_frow >= 0)
-	arrcnts[IX_ROW]++;
+	BTset(node->qen_frow, rowmap);
     if (node->qen_fatts != (QEN_ADF *) NULL)
 	arrcnts[IX_CX]++;
     if (node->qen_prow != (QEN_ADF *) NULL)
@@ -1379,10 +1461,6 @@ opc_exnheadset(
 	return;		/* just in case */
 
     array1[arrcnts[IX_STAT]++] = node->qen_num;
-    if (node->qen_row >= 0)
-	array1[arrcnts[IX_ROW]++] = node->qen_row;
-    if (node->qen_frow >= 0)
-	array1[arrcnts[IX_ROW]++] = node->qen_frow;
     if (node->qen_fatts != (QEN_ADF *) NULL)
 	array2[arrcnts[IX_CX]++] = node->qen_fatts->qen_pos;
     if (node->qen_prow != (QEN_ADF *) NULL)
@@ -1413,7 +1491,8 @@ static VOID
 opc_exactarrcnt(
 	OPS_STATE	*global,
 	QEF_AHD		*action,
-	i4		*arrcnts)
+	i4		*arrcnts,
+	PTR		rowmap)
 
 {
 
@@ -1434,7 +1513,7 @@ opc_exactarrcnt(
 	arrcnts[IX_HSHA]++;
     }
 
-    opc_exnodearrcnt(global, action->qhd_obj.qhd_qep.ahd_qep, arrcnts);
+    opc_exnodearrcnt(global, action->qhd_obj.qhd_qep.ahd_qep, arrcnts, rowmap);
 			/* node anchored in action header */
 
 }

@@ -84,6 +84,11 @@ static void qen_dsh_fixup(
 		QEE_DSH *dsh, 
 		QEN_NODE *node, 
 		QEN_EXCH *exch);
+
+static void qen_exch_pqual_init(
+		QEE_DSH *dsh,
+		QEN_NODE *node,
+		QEN_EXCH *exch);
 
 /*{
 ** Name: QEN_EXCHANGE	- exchange node processing
@@ -2016,6 +2021,8 @@ qen_exchange_child(SCF_FTX *ftxcb)
 **	    Our DSH is cloned from the parent thread, not necessarily the
 **	    root thread;  rename RootXxx to ParentXxx
 **	    Reallocate dsh_vlt area if 1:n exch needs it.
+**	19-May-2010 (kschendel) b123759
+**	    Duplicate runtime QEE_PART_QUAL's under a 1:n exchange.
 */
 
 DB_STATUS
@@ -2065,7 +2072,7 @@ DB_ERROR	*error)
     ** this isn't necessary since plan initialization performed the needed
     ** allocations.  (The parent and child execute different parts of the
     ** query plan, and don't overlap.)
-    *
+    */
 
     /* Nothing here, yet */
     *newdshp = NULL;
@@ -2170,6 +2177,12 @@ DB_ERROR	*error)
 	i += DB_ALIGN_MACRO(exix->exch_dmh_cnt * sizeof(DMH_CB));
 	if (qp->qp_pcx_cnt > 0)
 	    i += DB_ALIGN_MACRO(qp->qp_pcx_cnt * sizeof(QEE_VLT));
+	/* dsh-part-qual is a structure array, not a pointer array, we
+	** need the whole thing if we need any of it (because the array
+	** index is computed for the entire QP).
+	*/
+	if (exix->exch_pqual_cnt > 0)
+	    i += DB_ALIGN_MACRO(qp->qp_pqual_cnt * sizeof(QEE_PART_QUAL));
 	ulm.ulm_psize += i;
     }
     ulm.ulm_psize += DB_ALIGN_MACRO(np * sizeof(PTR));
@@ -2813,11 +2826,31 @@ DB_ERROR	*error)
 	    Mem += DB_ALIGN_MACRO(qp->qp_pcx_cnt * sizeof(QEE_VLT));
 	}
 
+	/* If there are partition qualification structures, allocate
+	** them.  They will be set up shortly.
+	** Since the rqual's are indexed by a QP wide array index,
+	** we need the entire array.
+	*/
+	if (exix->exch_pqual_cnt > 0)
+	{
+	    ChildDSH->dsh_part_qual = (QEE_PART_QUAL *)Mem;
+	    j = DB_ALIGN_MACRO(qp->qp_pqual_cnt * sizeof(QEE_PART_QUAL));
+	    MEfill(j, 0, Mem);
+	    Mem += j;
+	}
+
 	/* Fill in ADE_EXCB addresses in XADDR structures,
 	** starting with the exch node itself.  Resolve through
 	** any QP nodes we might find.
 	*/
 	qee_resolve_xaddrs(ChildDSH, node, exch);
+
+	/* Initialize runtime partition qualification copies.  This has to
+	** be done bottom-up, and the subplan-init call operates top-down
+	** and doesn't cross QP nodes either.  So a special call is needed.
+	*/
+	if (exix->exch_pqual_cnt > 0)
+	    qen_exch_pqual_init(ChildDSH, node, exch);
 
 	/* 
 	** Fix up the data segment addresses in the ChildDSH.
@@ -3239,3 +3272,142 @@ qen_dsh_fixup(QEE_DSH *dsh, QEN_NODE *node, QEN_EXCH *exch)
 
 } /* qen_dsh_fixup */
 
+/*
+** Name: qen_exch_pqual_init - Initialize child copy of runtime
+**	partition qualification structures
+**
+** Description:
+**	The child threads of a 1:N exchange each have to have their own
+**	copy of the runtime partition qualification status structure
+**	(QEE_PART_QUAL, or "rqual").  The rquals contain pointers to
+**	various DSH rows in addition to pointers to other rquals.
+**	Therefore, each child will have to set up the rquals needed
+**	by its subplan.
+**
+**	The initial setup of the rquals must be done from the bottom up.
+**	This is necessary because the ORIG-level rqual has to be first
+**	in the list of rquals that all affect that orig (i.e. rquals
+**	for higher join nodes that can do join-time pruning).  The
+**	setup that will be done by qeq-subplan-init operates top down,
+**	and doesn't go through QP nodes, so a special post-order (bottom
+**	up) tree walker is needed.
+**
+**	The exchange node has the rqual indexes that have to be fixed up,
+**	but they aren't in the right order, and we can't get from the rqual
+**	to the pqual anyway.  So those indexes aren't actually used.
+**
+** Inputs:
+**	dsh			Cloned DSH for the child, with dsh-part-qual
+**				pointing to zeroed out rqual area
+**	node			Plan node pointer
+**	exch			The exchange that started it all.
+**
+** Outputs:
+**	None.
+**
+** History:
+**	19-May-2010 (kschendel) b123759
+**	    Fix partition pruning under an exchange.  We never used
+**	    parallel query at Datallegro, so the "new" partition pruning
+**	    architecture (SIR 122513) didn't do any of the right things
+**	    for 1:N parallel exchange.
+*/
+
+static void
+qen_exch_pqual_init(QEE_DSH *dsh, QEN_NODE *node, QEN_EXCH *exch)
+{
+    QEN_PART_QUAL *pqual;
+
+    pqual = NULL;
+    switch (node->qen_type)
+    {
+	case QE_CPJOIN:
+	case QE_ISJOIN:
+	case QE_FSMJOIN:
+	    qen_exch_pqual_init(dsh, node->node_qen.qen_sjoin.sjn_out, exch);
+	    qen_exch_pqual_init(dsh, node->node_qen.qen_sjoin.sjn_inner, exch);
+	    break;
+
+	case QE_SEJOIN:
+	    qen_exch_pqual_init(dsh, node->node_qen.qen_sejoin.sejn_out, exch);
+	    qen_exch_pqual_init(dsh, node->node_qen.qen_sejoin.sejn_inner, exch);
+	    break;
+
+	case QE_HJOIN:
+	    qen_exch_pqual_init(dsh, node->node_qen.qen_hjoin.hjn_out, exch);
+	    qen_exch_pqual_init(dsh, node->node_qen.qen_hjoin.hjn_inner, exch);
+	    pqual = node->node_qen.qen_hjoin.hjn_pqual;
+	    break;
+
+	case QE_KJOIN:
+	    qen_exch_pqual_init(dsh, node->node_qen.qen_kjoin.kjoin_out, exch);
+	    pqual = node->node_qen.qen_kjoin.kjoin_pqual;
+	    break;
+
+	case QE_TJOIN:
+	    qen_exch_pqual_init(dsh, node->node_qen.qen_tjoin.tjoin_out, exch);
+	    pqual = node->node_qen.qen_tjoin.tjoin_pqual;
+	    break;
+
+	case QE_TSORT:
+	    qen_exch_pqual_init(dsh, node->node_qen.qen_tsort.tsort_out, exch);
+	    pqual = node->node_qen.qen_tsort.tsort_pqual;
+	    break;
+
+	case QE_SORT:
+	    qen_exch_pqual_init(dsh, node->node_qen.qen_sort.sort_out, exch);
+	    break;
+
+	case QE_EXCHANGE:
+	    /* Don't walk through a 1:N exchange, it will do its own
+	    ** thing with its own subplan, and partition pruning never
+	    ** reaches through an exchange.  For a 1:1 exchange, keep
+	    ** going in case there's partition pruning in the 1:1 exch's
+	    ** sub-plan.
+	    */
+	    if (node->node_qen.qen_exch.exch_ccount > 1)
+		return;
+	    qen_exch_pqual_init(dsh, node->node_qen.qen_exch.exch_out, exch);
+	    break;
+
+	case QE_QP:
+	    {
+		QEF_AHD *act;
+		i4 i;
+
+		/* Walk down the QP actions, choosing only ours if this is
+		** the QP immediately under a parallel union exchange.
+		*/
+		for (act = node->node_qen.qen_qp.qp_act, i = 1;
+		     act != NULL;
+		     act = act->ahd_next, i++)
+		{
+		    if ( (exch->exch_flag & EXCH_UNION) == 0 ||
+			 (node != exch->exch_out) ||
+			 (dsh->dsh_threadno == i) )
+		    {
+			if (act->ahd_flags & QEA_NODEACT)
+			    qen_exch_pqual_init(dsh, act->qhd_obj.qhd_qep.ahd_qep, exch);
+		    }
+		}
+		break;
+	    }
+
+	case QE_ORIG:
+	    pqual = node->node_qen.qen_orig.orig_pqual;
+	    break;
+
+	default:
+	    /* origaggs, tprocs, etc */
+	    return;
+    } /* switch */
+
+    /* All of that just to get here ... set up the partition qual structure
+    ** for this node, if any.  The CX was already set up once by QEE and
+    ** the normal exch machinery will deal with it.  Any VIRGIN code in
+    ** the pqual CX will get run by subplan-init.
+    */
+    if (pqual != NULL)
+	(void) qeq_pqual_init(dsh, pqual, NULL);
+
+} /* qen_exch_pqual_init */

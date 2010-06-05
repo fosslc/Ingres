@@ -2677,6 +2677,8 @@ opt_prqep(
 **	    separator than just formfeed.
 **	14-May-2010 (kschendel) b123565
 **	    Drop high/low, not used.
+**	19-May-2010 (kschendel) b123759
+**	    Added pqual count to the exchange node arrays.
 */
 static VOID
 opt_qenode(
@@ -3159,7 +3161,7 @@ opt_qenode(
 		for (j = arroff, k = 0; j < arroff + 
 			exch->exch_ixes[i].exch_row_cnt; j++, k++)
 		{
-		    if (k > 8)
+		    if (k >= 8)
 		    {
 			/* Max. 8 values per line. */
 			k = 0;
@@ -3183,7 +3185,7 @@ opt_qenode(
 		for (j = arroff, k = 0; j < arroff + 
 			exch->exch_ixes[i].exch_hsh_cnt; j++, k++)
 		{
-		    if (k > 8)
+		    if (k >= 8)
 		    {
 			/* Max. 8 values per line. */
 			k = 0;
@@ -3207,7 +3209,7 @@ opt_qenode(
 		for (j = arroff, k = 0; j < arroff + 
 			exch->exch_ixes[i].exch_hsha_cnt; j++, k++)
 		{
-		    if (k > 8)
+		    if (k >= 8)
 		    {
 			/* Max. 8 values per line. */
 			k = 0;
@@ -3231,7 +3233,7 @@ opt_qenode(
 		for (j = arroff, k = 0; j < arroff + 
 			exch->exch_ixes[i].exch_stat_cnt; j++, k++)
 		{
-		    if (k > 8)
+		    if (k >= 8)
 		    {
 			/* Max. 8 values per line. */
 			k = 0;
@@ -3255,7 +3257,7 @@ opt_qenode(
 		for (j = arroff, k = 0; j < arroff + 
 			exch->exch_ixes[i].exch_ttab_cnt; j++, k++)
 		{
-		    if (k > 8)
+		    if (k >= 8)
 		    {
 			/* Max. 8 values per line. */
 			k = 0;
@@ -3279,7 +3281,7 @@ opt_qenode(
 		for (j = arroff, k = 0; j < arroff + 
 			exch->exch_ixes[i].exch_hld_cnt; j++, k++)
 		{
-		    if (k > 8)
+		    if (k >= 8)
 		    {
 			/* Max. 8 values per line. */
 			k = 0;
@@ -3303,7 +3305,7 @@ opt_qenode(
 		for (j = arroff, k = 0; j < arroff + 
 			exch->exch_ixes[i].exch_shd_cnt; j++, k++)
 		{
-		    if (k > 8)
+		    if (k >= 8)
 		    {
 			/* Max. 8 values per line. */
 			k = 0;
@@ -3319,6 +3321,30 @@ opt_qenode(
 		arroff += exch->exch_ixes[i].exch_shd_cnt;
 	    }
 
+	    if (exch->exch_ixes[i].exch_pqual_cnt > 0)
+	    {
+		TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
+		    OPT_PBLEN, "exch_pqual_cnt: %6d\t -", 
+		    exch->exch_ixes[i].exch_pqual_cnt);
+		for (j = arroff, k = 0; j < arroff + 
+			exch->exch_ixes[i].exch_pqual_cnt; j++, k++)
+		{
+		    if (k >= 8)
+		    {
+			/* Max. 8 values per line. */
+			k = 0;
+			TRformat(opt_scc, (i4*)NULL, global->ops_cstate.
+			    opc_prbuf, OPT_PBLEN, "\n\n");
+		    }
+		    TRformat(opt_scc, (i4*)NULL, global->ops_cstate.
+			opc_prbuf, OPT_PBLEN, "%6d", 
+			exch->exch_ixes[i].exch_array1[j]);
+		}
+		TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
+		    OPT_PBLEN, "\n");
+		arroff += exch->exch_ixes[i].exch_pqual_cnt;
+	    }
+
 	    arroff = 0;		/* reset for exch_array2 */
 	    if (exch->exch_ixes[i].exch_cx_cnt > 0)
 	    {
@@ -3328,7 +3354,7 @@ opt_qenode(
 		for (j = arroff, k = 0; j < arroff + 
 			exch->exch_ixes[i].exch_cx_cnt; j++, k++)
 		{
-		    if (k > 8)
+		    if (k >= 8)
 		    {
 			/* Max. 8 values per line. */
 			k = 0;
@@ -3352,7 +3378,7 @@ opt_qenode(
 		for (j = arroff, k = 0; j < arroff + 
 			exch->exch_ixes[i].exch_dmr_cnt; j++, k++)
 		{
-		    if (k > 8)
+		    if (k >= 8)
 		    {
 			/* Max. 8 values per line. */
 			k = 0;
@@ -3376,7 +3402,7 @@ opt_qenode(
 		for (j = arroff, k = 0; j < arroff + 
 			exch->exch_ixes[i].exch_dmt_cnt; j++, k++)
 		{
-		    if (k > 8)
+		    if (k >= 8)
 		    {
 			/* Max. 8 values per line. */
 			k = 0;
@@ -3400,7 +3426,7 @@ opt_qenode(
 		for (j = arroff, k = 0; j < arroff + 
 			exch->exch_ixes[i].exch_dmh_cnt; j++, k++)
 		{
-		    if (k > 8)
+		    if (k >= 8)
 		    {
 			/* Max. 8 values per line. */
 			k = 0;

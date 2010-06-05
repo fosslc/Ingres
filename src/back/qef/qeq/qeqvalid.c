@@ -1295,6 +1295,8 @@ bool		init_action)
 **	13-May-2010 (kschendel)
 **	    Split from original qeq-validate while trying to make
 **	    complex parallel queries work.
+**	19-May-2010 (kschendel) b123759
+**	    Move a couple variable declarations closer to their use point.
 */
 
 DB_STATUS
@@ -1303,7 +1305,6 @@ qeq_subplan_init(QEF_RCB *qef_rcb, QEE_DSH *dsh,
 {
     ADE_EXCB	*ade_excb;
     ADF_CB	*adfcb = dsh->dsh_adf_cb;
-    bool	key_by_tid;
     DB_STATUS	status = E_DB_OK;
     DMR_CB	*dmr_cb;
     i4		dmr_index;
@@ -1316,7 +1317,6 @@ qeq_subplan_init(QEF_RCB *qef_rcb, QEE_DSH *dsh,
     QEN_NODE	*inner, *outer;
     QEN_OJINFO	*oj;
     QEN_PART_QUAL  *pqual;
-    TIMERSTAT	open_tstat;
 
     if (qef_rcb->qef_pcount && qef_rcb->qef_param)
         dsh->dsh_param	= qef_rcb->qef_param->dt_data;
@@ -1718,7 +1718,7 @@ qeq_subplan_init(QEF_RCB *qef_rcb, QEE_DSH *dsh,
     ** in the traditional and historical manner.  (which has the
     ** added benefit of assuring that only the proper action of a
     ** parallel union is inited by this thread, without any extra work
-    ** needed here.
+    ** needed here.)
     */
 
     /* Big loop to walk the tree */
@@ -1927,6 +1927,7 @@ qeq_subplan_init(QEF_RCB *qef_rcb, QEE_DSH *dsh,
 	    QEN_STATUS *ns;
 	    QEN_TKEY *tkptr;
 	    bool bcost = FALSE;
+	    TIMERSTAT open_tstat;
 
 	    inner = outer = NULL;
 	    orig_node = &node->node_qen.qen_orig;
@@ -2012,6 +2013,7 @@ qeq_subplan_init(QEF_RCB *qef_rcb, QEE_DSH *dsh,
 	    else
 	    {
 		bool	readback = (orig_node->orig_flag & ORIG_READBACK) != 0;
+		bool	key_by_tid;
 
 		/* sort the keys and determine which ones to use */
 		tkptr = (QEN_TKEY*) cbs[orig_node->orig_keys];
