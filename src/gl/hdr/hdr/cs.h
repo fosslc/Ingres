@@ -127,6 +127,8 @@
 **      20-apr-2010 (stephenb)
 **          define CSadjust_i8counter. CSadjust_counter is defined twice
 **          remove one of them.
+**	17-may-2010 (stephenb)
+**	    Fix typo in above change.
 **/
 
 /* Adjust counter */
@@ -143,7 +145,7 @@ FUNC_EXTERN i4 CSadjust_counter(
 #ifndef CSadjust_i8counter
 /* not already defined in csnormal, we need a real function */
 #define CSadjust_i8counter IICSadjust_i8counter
-#define NEED_CSADJUST_I8COUNTER_FUNCION
+#define NEED_CSADJUST_I8COUNTER_FUNCTION
 FUNC_EXTERN i8 CSadjust_i8counter( 
 	    i8 *pcounter, 
 	    i8 adjustment 
