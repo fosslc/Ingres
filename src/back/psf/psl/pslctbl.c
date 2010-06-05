@@ -1777,6 +1777,9 @@ psl_ct2s_crt_tbl_as_select(
 **	    Consolidate all the table-like with clauses.
 **	23-Nov-2005 (schka24)
 **	    Interpret allocation= per partition for validation.
+**	07-apr-2010 (thaju02) Bug 123518
+**	    Initialize attr->attr_seqTuple to 0 for system_maintained keys 
+**	    table attribute "_ii_sec_tabkey".
 */
 DB_STATUS
 psl_ct3_crwith(
@@ -2071,6 +2074,7 @@ psl_ct3_crwith(
 			, ' ',sizeof(DB_ATT_NAME), 
 			(char*) &(cur_attr->attr_name));
 		cur_attr->attr_defaultTuple=0;
+		cur_attr->attr_seqTuple=0;
 		cur_attr->attr_precision=0;
 		cur_attr->attr_size=DB_LEN_TAB_LOGKEY;
 		cur_attr->attr_type=DB_TABKEY_TYPE;

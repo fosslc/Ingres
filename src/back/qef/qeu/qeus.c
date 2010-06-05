@@ -6822,6 +6822,8 @@ getNewIndexIDs(
 **      15-Feb-2010 (hanal04) Bug 123292
 **          Prevet E_QE0018 errors in qefErrorFcn() by setting
 **          the caller's error code after E_US1912.
+**	07-Apr-2010 (thaju02) Bug 123518
+**	    Build default string only if default tuple exists.
 */
 
 static DB_STATUS
@@ -6972,16 +6974,19 @@ createDefaultTuples(
 	    ** and then build the default string.  Might as well do it
 	    ** directly into the default tuple value area. */
 
-	    STlcopy((char *) &seqp->dbs_owner, &own[0], sizeof(own)-1);
-	    STlcopy((char *) &seqp->dbs_name, &name[0], sizeof(name)-1);
-	    STtrmwhite(&own[0]);
-	    STtrmwhite(&name[0]);
-	    STlpolycat(5, sizeof(attribute->attr_defaultTuple->dbd_def_value)-1,
-		"next value for \"", own, "\".\"", name, "\"",
-		&attribute->attr_defaultTuple->dbd_def_value[0]);
-	    attribute->attr_defaultTuple->dbd_def_length = 
+	    if ( attribute->attr_defaultTuple != ( DB_IIDEFAULT * ) NULL )
+	    {
+		STlcopy((char *) &seqp->dbs_owner, &own[0], sizeof(own)-1);
+		STlcopy((char *) &seqp->dbs_name, &name[0], sizeof(name)-1);
+		STtrmwhite(&own[0]);
+		STtrmwhite(&name[0]); 
+		STlpolycat(5, sizeof(attribute->attr_defaultTuple->dbd_def_value)-1,
+		    "next value for \"", own, "\".\"", name, "\"",
+		    &attribute->attr_defaultTuple->dbd_def_value[0]);
+		attribute->attr_defaultTuple->dbd_def_length = 
 			STlength(attribute->attr_defaultTuple->dbd_def_value);
 
+	    }
 	}
 
 	/* if PSF has cooked up a default tuple */
