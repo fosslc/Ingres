@@ -38,6 +38,8 @@
 #	06-Aug-2009 (hanje04)
 #	   BUG 122571
 #	   Created from 2007 prototype
+#	15-Apr-2010 (bonro01)
+#	    Updated to detect Ingres vectorwise installs
 
 
 # load external modules
@@ -77,7 +79,8 @@ dblocdict = dict( zip( dblocnames, range( 1, len( dblocnames ) ) ) )
 # search masks
 rnm = '[A-Z]([A-Z]|[0-9])' # rename mask
 sm = ( 'ca-ingres$', 'ca-ingres-%s$' % rnm, 'ingres2006$', \
-	'ingres2006-%s$' % rnm, 'ingres$', 'ingres-%s$' % rnm )
+	'ingres2006-%s$' % rnm, 'ingres$', 'ingres-%s$' % rnm, \
+	'ingresvw$', 'ingresvw-%s$' % rnm )
 
 # error messages
 FAIL_IMPORT_RPM = "ERROR: Failed to load Python module \"rpm\" \n\
