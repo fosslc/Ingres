@@ -6761,6 +6761,9 @@ fix_header(
 **	      - Removed requirement that FHDR and FMAP pages be written at
 **		unfix time when they are modified.  They are now recovered
 **		through standard REDO recovery actions.
+**	19-Apr-2010 (jonj)
+**	    Bug 123598: "fmap_lock" input parameter may be NULL, 
+**	    don't dereference if so.
 */
 static DB_STATUS
 unfix_header(
@@ -6791,7 +6794,7 @@ unfix_header(
 	** the FHDR, otherwise we'll have to wait until after the FMAP
 	** is unlocked and unfixed.
 	*/
-	if (r->rcb_lk_type != RCB_K_TABLE && fmap_lock->pinfo.page &&
+	if (r->rcb_lk_type != RCB_K_TABLE && fmap_lock && fmap_lock->pinfo.page &&
 	    ( fmap_lock->lock_id.lk_unique == 0 ||
 	      fmap_lock->lock_id.lk_common == 0 ||
 	      fmap_lock->lock_value.lk_mode != FMAP_UPDATE_LKMODE ))
