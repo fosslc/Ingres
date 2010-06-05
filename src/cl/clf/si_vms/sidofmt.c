@@ -119,6 +119,10 @@
 **          Provide uppercase hex with %X.
 **       2-may-2008 (horda03) Bug 120202
 **          Fix syntax error.
+**      12-Apr-2010 (maspa05) bug 123560
+**          SIdofrmt unable to handle long strings (such as those passed by
+**          SC930) because realwidth was an i2. Make it an i4.
+
 */
 
 /* VARARGS2 */
@@ -138,7 +142,7 @@ va_list		ap;
 	i4			width;
 	i4			prec;
 	i4			flag;
-	i2			realwidth;
+	i4			realwidth;
 	uchar		temp[SI_MAXOUT];
 	bool			float_flag;
 
@@ -284,6 +288,7 @@ va_list		ap;
 				f8	val;
 				i4	decp;
 				char	decchar;
+				i2	res_len;
 
 				/*
 				** With international support
@@ -309,7 +314,9 @@ va_list		ap;
 				** of digits printed.
 				*/
 
-				CVfa(val, width, prec, *p, decchar, r = temp, &realwidth);
+				CVfa(val, width, prec, *p, decchar, r = temp, &res_len);
+				realwidth=(i4) res_len;
+
 				break;
 			}
 

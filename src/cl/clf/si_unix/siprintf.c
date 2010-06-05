@@ -124,6 +124,9 @@
 **	    of two bytes long. (Bug 120865)
 **	14-May-2009 (kiria01) b122073
 **	    Don't scan beyond a given precision with %s
+**     12-Apr-2010 (maspa05) bug 123560
+**          SIdofrmt unable to handle long strings (such as those passed by
+**          SC930) because realwidth was an i2. Make it an i4.
 */
 
 # define	LEFTADJUST	0x01
@@ -174,7 +177,7 @@ va_list		ap;
 	i4		width;
 	i4		prec;
 	i4		flag;
-	i2		realwidth;
+	i4		realwidth;
 	uchar		temp[SI_MAXOUT];
 	bool		float_flag;
 	FILE		*outfile=(FILE *)outarg;
@@ -338,6 +341,7 @@ va_list		ap;
 			{
 				f8	f8val;
 				i4	dec_pt;
+				i2      res_len;
 
 				float_flag = TRUE;
 
@@ -371,7 +375,9 @@ va_list		ap;
 				dec_pt = va_arg( ap, i4  );
 
 				(void)CVfa(f8val, width, prec, *p,
-				    (char)(dec_pt & 0377), r = temp, &realwidth);
+				    (char)(dec_pt & 0377), r = temp, &res_len);
+
+				realwidth=(i4) res_len;
 
 				break;
 			}
