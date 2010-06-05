@@ -78,6 +78,8 @@
 #       Added dbmsqefm.hlp file for qef_memory.
 #    14-Apr-2010 (hanal04) SIR 123574
 #       Add missing dbmsmlst.hlp reference.
+#    08-Mar-2010 (thaju02)
+#	Remove dbmsmtpl.hlp.
 
 SubDir ING_SRC front st config ;
 
@@ -206,7 +208,6 @@ File $(INGMSG)$(DFS)dbmsltsc.hlp : dbmsltsc.hlp ;
 File $(INGMSG)$(DFS)dbmsltut.hlp : dbmsltut.hlp ;
 FILE $(INGMSG)$(DFS)dbmsmdep.hlp : dbmsmdep.hlp ;
 FILE $(INGMSG)$(DFS)dbmsmlst.hlp : dbmsmlst.hlp ;
-File $(INGMSG)$(DFS)dbmsmtpl.hlp : dbmsmtpl.hlp ;
 File $(INGMSG)$(DFS)dbmsname.hlp : dbmsname.hlp ;
 File $(INGMSG)$(DFS)dbmsnrst.hlp : dbmsnrst.hlp ;
 File $(INGMSG)$(DFS)dbmsopfa.hlp : dbmsopfa.hlp ;
