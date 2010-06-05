@@ -1261,6 +1261,8 @@ errexit:
 **	    Add read buffer size.
 **	24-Sep-2007 (kschendel) SIR 122512
 **	    Fiddle with the output some more.
+**      12-May-2010 (kschendel) Bug 123720
+**          Take qef_trsem for valid parallel-query output.
 */
 static VOID 
 hjoin_stat_dump(QEF_RCB	*rcb,
@@ -1275,6 +1277,7 @@ hjoin_stat_dump(QEF_RCB	*rcb,
     i4		    cbufsize = qef_cb->qef_trsize;
 
 
+    CSp_semaphore(1, &qef_cb->qef_trsem);
     STprintf(cbuf, "Hash join summary for node %d thread %d\n",
 		node->qen_num, dsh->dsh_threadno);
     qec_tprintf(rcb, cbufsize, cbuf);
@@ -1311,6 +1314,7 @@ hjoin_stat_dump(QEF_RCB	*rcb,
     STprintf(cbuf, "Repartitions: %d, unspilled ht-build partitions: %d\n\n",
 	hbase->hsh_rpcount, hbase->hsh_memparts);
     qec_tprintf(rcb, cbufsize, cbuf);
+    CSv_semaphore(&qef_cb->qef_trsem);
 
 }
 

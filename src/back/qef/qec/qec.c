@@ -843,6 +843,8 @@ QEF_SRCB       *qef_srcb )
 **	    per-session memory via parameters.
 **	4-oct-2006 (dougi)
 **	    Fix ult_init_macro() to allow multiple trace points.
+**      13-Sep-2010 (kschendel) Bug 123720
+**          Add qef_trsem for valid parallel-query output.
 */
 DB_STATUS
 qec_begin_session(
@@ -1006,6 +1008,7 @@ QEF_CB         *qef_cb )
 
 	qef_cb->qef_trfmt = ulm.ulm_pptr;
 	qef_cb->qef_trsize = QEF_TRFMT_SIZE;
+	CSw_semaphore(&qef_cb->qef_trsem, CS_SEM_SINGLE, "qefcb trsem");
 
 	/* Set session characteristics */
 	status = qec_alter(qef_cb);
@@ -1093,6 +1096,8 @@ QEF_CB         *qef_cb )
 **	    probability of stack overrun owing to large buffers.
 **	30-jul-1997 (nanpr01)
 **	    Set the streamid to NULL after memory deallocation.
+**      13-Sep-2010 (kschendel) Bug 123720
+**          Add qef_trsem for valid parallel-query output.
 */
 DB_STATUS
 qec_end_session(
@@ -1129,6 +1134,7 @@ QEF_CB       *qef_cb )
 
     /* De-reference TRformat buffer from session control block */
 
+    CSr_semaphore(&qef_cb->qef_trsem);
     qef_cb->qef_trfmt = (char *)0;
     qef_cb->qef_trsize = 0;
 

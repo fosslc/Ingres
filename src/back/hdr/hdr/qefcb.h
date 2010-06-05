@@ -548,6 +548,8 @@ typedef struct _QES_DDB_SES
 **	24-Sep-09 (smeke01) b122635
 **	    Add trace point QE71 to enable/disable diagnostic function 
 **	    qen_exchange_serial(). 
+**      13-Sep-2010 (kschendel) Bug 123720
+**          Add qef_trsem for valid parallel-query output.
 */
 /* FIXME:  This structure should have been reorganized for better alignment */
 struct _QEF_CB
@@ -653,12 +655,16 @@ struct _QEF_CB
 					** query plans */
 #define QEF_TRACE_HASH_DEBUG	    89	/* Massive debug output from hash
 					** join, hash aggregation */
+
     char    *qef_trfmt;			/* buffer for TRformat, initialised
 					** in qec_begin_session() */
     i4	    qef_trsize;			/* size of TRformat buffer */
 #define QEF_TRFMT_SIZE 4096		/* allocated buffer size, must be >=
 					** ULD_PRNODE_LINE_WIDTH + 1
 					** DB_MAXTUP * 2 */
+    CS_SEMAPHORE qef_trsem;		/* Mutex the trfmt buffer for valid
+					** parallel-query output
+					*/
 
     bool	    qef_ade_abort;	/* ADF fatal error flag */
     /* small sort */

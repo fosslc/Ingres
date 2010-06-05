@@ -1421,7 +1421,9 @@ errexit:
 **      11-Mar-2010 (hanal04) Bug 123415 
 **          Make sure QE99 and OP173 do not interleave output with
 **          using parallel query.
-[@history_template@]...
+**	12-May-2010 (kschendel) Bug 123720
+**	    Above doesn't quite go far enough, mutex the buffer.
+**          Take qef_trsem for valid parallel-query output.
 */
 DB_STATUS
 qen_print_row(
@@ -1450,10 +1452,12 @@ QEE_DSH		*dsh )
 	}
 
 	/* Print in one operation to avoid interleaved output */
+	CSp_semaphore(1, &dsh->dsh_qefcb->qef_trsem);
 	STprintf(cbuf, "Row %d of node %d\n%s\n\n", 
 			    qen_status->node_rcount, node->qen_num,
 			    dsh->dsh_row[qen_adf->qen_output]);
         qec_tprintf(qef_rcb, cbufsize, cbuf);
+	CSv_semaphore(&dsh->dsh_qefcb->qef_trsem);
     }			
     return(E_DB_OK);
 }
