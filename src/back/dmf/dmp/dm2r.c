@@ -5986,6 +5986,9 @@ BuildRtreeRecord(
 **	    updates never happen normally, they would occur if a table ID
 **	    reclaimer were written;  and there is no need to disobey a
 **	    key update request if one happens.
+**	28-Apr-2010 (jonj) SD 144272
+**	    Use DMP_PINIT to fully initialize local pinfos, use
+**	    direct references to pinfo.page.
 */
 DB_STATUS
 dm2r_replace(
@@ -6032,13 +6035,12 @@ DB_ERROR	    *dberr )
     DB_ERROR		local_dberr;
     i4		    *err_code = &dberr->err_code;
     DMP_PINFO		newleafPinfo, newdataPinfo;
-    DMPP_PAGE		**newleaf = &newleafPinfo.page;
-    DMPP_PAGE		**newdata = &newdataPinfo.page;
 
     CLRDBERR(dberr);
 
-    *newleaf = NULL;
-    *newdata = NULL;
+    /* Fully init local pinfos */
+    DMP_PINIT(&newleafPinfo);
+    DMP_PINIT(&newdataPinfo);
 
 #ifdef xDEBUG
     if (r->rcb_type != RCB_CB)
@@ -6708,21 +6710,21 @@ DB_ERROR	    *dberr )
     /*
     ** Make sure that all locally fixed pages are unfixed.
     */
-    if (*newdata && (status == E_DB_OK))
+    if (newdataPinfo.page && (status == E_DB_OK))
     {
 	status = dm0p_unfix_page(r, DM0P_UNFIX, &newdataPinfo, dberr);
     }
-    if (*newleaf && (status == E_DB_OK))
+    if (newleafPinfo.page && (status == E_DB_OK))
     {
 	status = dm0p_unfix_page(r, DM0P_UNFIX, &newleafPinfo, dberr);
     }
 
     if ( status )
     {
-	if (*newdata)
+	if (newdataPinfo.page)
 	    status = dm0p_unfix_page(r, DM0P_UNFIX,
 			&newdataPinfo, &local_dberr);
-	if (*newleaf)
+	if (newleafPinfo.page)
 	    status = dm0p_unfix_page(r, DM0P_UNFIX,
 			&newleafPinfo, &local_dberr);
 	status = E_DB_ERROR;
@@ -10944,6 +10946,9 @@ si_delete(
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Set index's rcb_dmr_opcode properly when doing
 **	    GET, REPLACE.
+**	28-Apr-2010 (jonj) SD 144272
+**	    Remove indirect references to pinfo.page, use DMP_PINIT to
+**	    fully init pinfos.
 */
 static DB_STATUS
 si_replace(
@@ -10982,8 +10987,6 @@ si_replace(
     DB_ERROR		local_dberr;
     i4		    *err_code = &dberr->err_code;
     DMP_PINFO		newdataPinfo, newleafPinfo;
-    DMPP_PAGE   	**newdata = &newdataPinfo.page;
-    DMPP_PAGE   	**newleaf = &newleafPinfo.page;
 
     CLRDBERR(dberr);
 
@@ -11115,8 +11118,8 @@ si_replace(
 	do
     {
 	status = E_DB_OK;
-	*newdata = NULL;
-	*newleaf = NULL;
+	DMP_PINIT(&newdataPinfo);
+	DMP_PINIT(&newleafPinfo);
 
 	/* Make big tids for global indexes */
 	if ( it->tcb_rel.relstat2 & TCB2_GLOBAL_INDEX )
@@ -11582,7 +11585,7 @@ si_replace(
 	}
     }
 
-    if ( *newdata && 
+    if ( newdataPinfo.page && 
 	(loc_status = dm0p_unfix_page(ir, DM0P_UNFIX, &newdataPinfo, &local_dberr)) &&
 	 status == E_DB_OK )
     {
@@ -11590,7 +11593,7 @@ si_replace(
 	*dberr = local_dberr;
     }
 
-    if ( *newleaf && 
+    if ( newleafPinfo.page && 
 	(loc_status = dm0p_unfix_page(ir, DM0P_UNFIX, &newleafPinfo, &local_dberr)) &&
 	 status == E_DB_OK )
     {
