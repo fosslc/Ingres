@@ -30,6 +30,7 @@
 #define IDS_NO_NODES                    62011
 #define IDS_ROOT_NODE                   62012
 #define IDS_INGRES_NOT_RUNNING          62013
+#define IDS_NOJNL_VW			62014
 
 // Next default values for new objects
 // 

@@ -47,6 +47,9 @@
 **    to 9.0 level versioning. Make sure that 9.0 version string is
 **    correctly interpreted by visual tools and VDBA internal version
 **    is set properly upon that interpretation.
+** 05-Apr-2010 (drivi01)
+**    Add 9.1 and 10.0 versions of Ingres to the list.
+**    Add DBMS_INGRESVW dbms type.
 **/
 
 
@@ -64,9 +67,12 @@
 #define INGRESVERS_26     (INGRESVERS_NOTOI + 4)
 #define INGRESVERS_30     (INGRESVERS_NOTOI + 5)
 #define INGRESVERS_90     (INGRESVERS_NOTOI + 6)
+#define INGRESVERS_91     (INGRESVERS_NOTOI + 7)
+#define INGRESVERS_100    (INGRESVERS_NOTOI + 10)
 
 #define DBMS_UNKNOWN      0
 #define DBMS_INGRESII     1
+#define DBMS_INGRESVW	  2
 
 //
 // SET LOCKMODE:

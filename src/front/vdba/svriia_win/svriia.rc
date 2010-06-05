@@ -67,7 +67,7 @@ STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_DISABLED | WS_CAPTION
 CAPTION "2"
 FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
-    LTEXT           "If one of the tabs below corresponds to the desired format, select 'Tab corresponds to expected results'. ",IDC_STATIC,125,5,254,18
+    LTEXT           "If one of the tabs below corresponds to the desired format, select 'Tab corresponds to expected result'. ",IDC_STATIC,125,5,254,18
     CONTROL         "Tab1",IDC_TAB1,"SysTabControl32",WS_TABSTOP,126,25,291,158
     CONTROL         "&Define Your Own Fixed Width Fields Format",IDC_CHECK1,
                     "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,126,188,184,14
@@ -488,8 +488,9 @@ END
 
 STRINGTABLE 
 BEGIN
-    IDS_MSG_SUGGEST_OPTIMIZEDB 
-                            "The Ingres query optimizer is cost based and uses heuristics to\nfind the optimal query execution plan for your query. To do\nthat it needs to understand your data. It is recommended that you\ngenerate statistics for the imported data using Visual DBA."
+    IDS_MSG_SUGGEST_OPTIMIZEDB
+			    "The Ingres query optimizer needs to understand your imported data.\nWe recommend that you generate statistics for the data so that the\noptimizer can find the best query execution plan.\nUse Visual DBA to connect to your database, then choose Generate Statistics."
+
     IDS_FILE_EMPTY          "The imported file is empty."
 END
 

@@ -17,6 +17,11 @@
 **    problems on Solaris.
 ** 05-Sep-2003 (uk$so01)
 **    SIR #106648, Integrate libraries libwctrl.lib, libingll.lib in Ija
+** 05-Mar-2010 (drivi01)
+**    Add m_bVW field to CaIjaDatabase class to use it to mark
+**    VectorWise databases. Also add SetVW/GetVW functions.
+**    VectorWise is not journaled and therefore shouldn't allow users
+**    to view journals.
 **/
 
 #if !defined(IJATREE_HEADER)
@@ -190,9 +195,12 @@ public:
 	CTypedPtrList < CObList, CaIjaTreeItemData* >& GetListTable(){return m_listTable;}
 	void SetStar(int nStar = 0);
 	int  GetStar(){return m_nStar;}
+	void SetVW(int bVW = 0){m_bVW = bVW;}
+	int  GetVW(){return m_bVW;}
 
 protected:
 	int m_nStar;
+	int m_bVW;
 	CaIjaTreeItemData m_EmptyTable;
 	CTypedPtrList < CObList, CaIjaTreeItemData* > m_listTable;
 };

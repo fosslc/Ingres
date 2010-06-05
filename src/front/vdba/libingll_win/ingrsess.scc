@@ -92,6 +92,12 @@
 ** 07-Aug-2009 (drivi01)
 **    Add pragma to disable warning 4996 about deprecated POSIX functions
 **    because it is a bug.
+** 05-Mar-2010 (drivi01)
+**    Add Ingres version handling to IJA session control to enable versions
+**    10.0 and above of Ingres to work as expected.  Also, account for
+**    possible future versions since the functionality is not expected to 
+**    change.  Add handling of VectorWise installations by settings
+**    dbms type to VW.
 **/
 /* Turn off POSIX warning for this file until Microsoft fixes this bug */
 #pragma warning(disable: 4996)
@@ -138,12 +144,14 @@ BOOL INGRESII_llConnectSession(CaSession* pInfo)
 	ASSERT(pInfo);
 	if (!pInfo)
 		return FALSE;
-	TCHAR*  szIngPrefixes[]= {_T("oi"), _T("oping"), _T("ingres"), _T("ii")};
+	TCHAR* ing_server=_T("INGRES");
+	TCHAR* ingvw_server=_T("INGRES_VECTORWISE");
 	CString strConnection = pInfo->GetConnection();
 	CString strOptions = pInfo->GetOptions();
 	CString strUser;
 	int  i, nIngresVersion = INGRESVERS_NOTOI;
 	BOOL bIsIngres = FALSE;
+	BOOL bIsVW = FALSE;
 	
 	strUser = _T("\"");
 	strUser += pInfo->GetUser();
@@ -151,6 +159,7 @@ BOOL INGRESII_llConnectSession(CaSession* pInfo)
 	
 	EXEC SQL BEGIN DECLARE SECTION;
 		char  szIngresVersion[200];
+		char dbms_type[DBOBJECTLEN];
 		char* connection = T2A((LPTSTR)(LPCTSTR)strConnection);
 		char* user = T2A((LPTSTR)(LPCTSTR)strUser);
 		char* lpszOptions = T2A((LPTSTR)(LPCTSTR)strOptions);
@@ -222,15 +231,12 @@ BOOL INGRESII_llConnectSession(CaSession* pInfo)
 
 	//
 	// Check the ingres version info:
-	EXEC SQL SELECT DBMSINFO('_version') INTO :szIngresVersion;
-	for (i=0; i < sizeof(szIngPrefixes)/sizeof(TCHAR *); i++)
-	{
-		if (_tcsnicmp(A2T(szIngresVersion), szIngPrefixes[i], _tcslen(szIngPrefixes[i])) == 0)
-		{
-			bIsIngres = TRUE;
-			break;
-		}
-	}
+	EXEC SQL SELECT cap_value INTO :dbms_type FROM iidbcapabilities WHERE cap_capability='DBMS_TYPE'; 
+ 	EXEC SQL SELECT DBMSINFO('_version') INTO :szIngresVersion;
+	if (_tcsnicmp(A2T(dbms_type), ing_server, _tcslen(ing_server)) == 0)
+		bIsIngres=TRUE;
+	if (_tcsnicmp(A2T(dbms_type), ingvw_server, _tcslen(ingvw_server)) == 0)
+		bIsVW=TRUE;
 	if (bIsIngres)
 	{
 		if (pInfo->GetLockMode() != 0)
@@ -244,14 +250,23 @@ BOOL INGRESII_llConnectSession(CaSession* pInfo)
 		CString strVersion = szIngresVersion;
 		strVersion.MakeLower();
 		int pos;
-
-		if ((pos = strVersion.Find(_T("9."))) == 0 ||
+		if (bIsVW)
+			nIngresVersion = INGRESVERS_100;
+		else if ((pos = strVersion.Find(_T(" "))) > 0 &&
+				atoi(strVersion.Mid(pos+1, 2)) > 10)
+			nIngresVersion = INGRESVERS_100;
+		else if ((pos = strVersion.Find(_T("10."))) == 0 ||
+				pos > 0 && strVersion[pos-1] == ' ')
+			nIngresVersion = INGRESVERS_100;
+		else if ((pos = strVersion.Find(_T("9."))) == 0 ||
 				pos > 0 && strVersion[pos-1] == ' ')
 		{
 			switch (strVersion[pos+2])
 			{
 			default:
 				//FALLTHROUGH
+			case '1': nIngresVersion = INGRESVERS_91;
+				break;
 			case '0': nIngresVersion = INGRESVERS_90;
 				break;
 			}
@@ -279,6 +294,8 @@ BOOL INGRESII_llConnectSession(CaSession* pInfo)
 
 		if (strVersion.Find(_T("ii")) == 0) 
 			pInfo->SetDbmsType(DBMS_INGRESII);
+		if (bIsVW)
+			pInfo->SetDbmsType(DBMS_INGRESVW);
 
 		CString strDescription = pInfo->GetDescription();
 		if (!strDescription.IsEmpty())

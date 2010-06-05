@@ -248,6 +248,10 @@
 **    VectorWise Ingres installation version will always be set to 
 **    OIVERS_100 to take advantage of all Ingres 10.0 functionality in 
 **    VDBA.
+** 08-Apr-2010 (drivi01)
+**    Ingres VectorWise product has been updated to return INGRES_VECTORWISE
+**    DBMS_TYPE.  Updated the code to recognize VectorWise installation using
+**    DBMS_TYPE for VectorWise instead of version string.
 ******************************************************************************/
 
 #include <time.h>
@@ -1431,7 +1435,6 @@ int * phdl;
          BOOL bIsVectorWise=FALSE;
          int i;
          static char * ingprefixes[]= {"OI","Oping","Ingres","II","ING"};
-         static char * vwprefixes[]= {"VW"};
 
          if (OIVERS_12<= OIVERS_NOTOI || 
              OIVERS_20<= OIVERS_12    || 
@@ -1482,11 +1485,9 @@ int * phdl;
              }
              if (strstr(dbms_type, _T("INGRES")) > 0)
                  bIsIngres=TRUE;
+	     if (strstr(dbms_type, _T("INGRES_VECTORWISE")) > 0)
+		bIsVectorWise=TRUE;
 
-             for (i=0;i<sizeof(vwprefixes)/sizeof(char *);i++) {
-             if (!x_strnicmp(buf,vwprefixes[i],x_strlen(vwprefixes[i])))
-                 bIsVectorWise=TRUE;
-             }
              
           }
          

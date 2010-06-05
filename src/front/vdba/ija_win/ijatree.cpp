@@ -30,6 +30,11 @@
 **    BUG #113511 replace CompareNoCase function by CollateNoCase
 **    according to the LC_COLLATE category setting of the locale code
 **    page currently in use.
+** 05-Mar-2010 (drivi01)
+**    Add m_bVW field to CaIjaDatabase class to use it to mark
+**    VectorWise databases.
+**    VectorWise is not journaled and therefore shouldn't allow users
+**    to view journals.
 **/
 
 #include "stdafx.h"
@@ -277,6 +282,7 @@ CaIjaDatabase::CaIjaDatabase(LPCTSTR lpszItem, LPCTSTR lpszOwner):CaIjaTreeItemD
 	m_EmptyTable.GetTreeCtrlData().SetImage (IM_FOLDER_EMPTY, IM_FOLDER_EMPTY);
 	m_pBackParent = NULL;
 	m_nStar = OBJTYPE_NOTSTAR;
+	m_bVW = 0;
 }
 
 void CaIjaDatabase::SetStar(int nStar)

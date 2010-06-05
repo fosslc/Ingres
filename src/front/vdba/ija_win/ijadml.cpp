@@ -17,6 +17,11 @@
 ** 02-Feb-2004 (noifr01)
 **    removed test code that was causing problem with new versions of the
 **    compiler (with iostream libraries)
+** 05-Mar-2010 (drivi01)
+**    Temporarily use SubType field of CaLLQueryInfo to set VectorWise
+**    installation field.
+**    VectorWise is not journaled and therefore shouldn't allow users
+**    to view journals.
 **/
 
 #include "stdafx.h"
@@ -75,6 +80,10 @@ BOOL IJA_QueryDatabase (LPCTSTR lpszNode, CTypedPtrList<CObList, CaIjaTreeItemDa
 			CaDatabase* pDb = (CaDatabase*)listObj.GetNext(pos);
 			CaIjaDatabase* pObj = new CaIjaDatabase(pDb->GetName(), pDb->GetOwner());
 			pObj->SetStar(pDb->GetStar());
+			if (info.GetSubObjectType() == DBMS_INGRESVW)
+			{
+				pObj->SetVW(1);
+			}
 			delete pDb;
 			listDatabase.AddTail(pObj);
 		}

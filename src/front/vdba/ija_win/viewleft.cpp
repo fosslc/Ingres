@@ -27,6 +27,10 @@
 ** 16-Dec-2003 (schph01)
 **    SIR #111462 Removed obsolete code that was including hardcoded strings
 **    (rather than putting the string into resources)
+** 05-Mar-2010 (drivi01)
+**    Add error when user attempts to expand or view a vectorwise database.
+**    VectorWise is not journaled and therefore shouldn't allow users
+**    to view journals.
 **/
 
 #include "stdafx.h"
@@ -502,6 +506,11 @@ void CvViewLeft::OnSelchanging(NMHDR* pNMHDR, LRESULT* pResult)
 					AfxMessageBox (theApp.m_strMsgErrorDBStar, MB_ICONEXCLAMATION|MB_OK);
 					*pResult = 1;
 				}
+				if (((CaIjaDatabase *)pItem)->GetVW())
+				{
+					AfxMessageBox(IDS_NOJNL_VW, MB_ICONEXCLAMATION|MB_OK);
+					*pResult = 1;
+				}
 				break;
 			default:
 				break;
@@ -533,6 +542,11 @@ void CvViewLeft::OnItemexpanding(NMHDR* pNMHDR, LRESULT* pResult)
 				if (((CaIjaDatabase*)pItem)->GetStar() == OBJTYPE_STARLINK )
 				{
 					AfxMessageBox (theApp.m_strMsgErrorDBStar, MB_ICONEXCLAMATION|MB_OK);
+					*pResult = 1;
+				}
+				if (((CaIjaDatabase *)pItem)->GetVW())
+				{
+					AfxMessageBox(IDS_NOJNL_VW, MB_ICONEXCLAMATION|MB_OK);
 					*pResult = 1;
 				}
 			}

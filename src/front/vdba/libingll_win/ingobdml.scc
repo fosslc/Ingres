@@ -61,6 +61,15 @@
 ** 12-Mar-2009 (drivi01)
 **    In efforts to port to Visual Studio 2008 compiler, update return
 **    type from functions QuerySynonymAll and QuerySynonymRestrict.
+** 31-Mar-2010 (drivi01)
+**    Update INGRESII_llIsDatabaseGateway to use iidbcapabilitites
+**    table to determine if it's connected to the gateway instead
+**    of version string to avoid false messages when version string
+**    prefixes are updated.
+** 05-Mar-2010 (drivi01)
+**    Save the VectorWise type in one of the fields in CaLLQueryInfo.
+**    VectorWise is not journaled and therefore shouldn't allow users
+**    to view journals.
 **/
 
 #include "stdafx.h"
@@ -406,6 +415,7 @@ BOOL INGRESII_llQueryObject (CaLLQueryInfo* pQueryInfo, CTypedPtrList< CObList, 
 				session.Connect();
 				pSession = &session;
 			}
+			pQueryInfo->SetSubObjectType(pSession->GetDbmsType());
 		}
 		else
 		{
@@ -3120,11 +3130,11 @@ BOOL INGRESII_llIsDatabaseGateway(CaLLQueryInfo* pQueryInfo, CaSessionManager* p
 {
 	USES_CONVERSION;
 	EXEC SQL BEGIN DECLARE SECTION;
-		char szResult [64];
+		char dbms_type[MAXOBJECTNAME];
 	EXEC SQL END DECLARE SECTION;
 
-	const int nGW = 4;
-	TCHAR tchszIngresGW[nGW][16]= {_T("oi"), _T("oping"), _T("ingres"), _T("ii")};
+	TCHAR *type_ingres = _T("INGRES");
+	TCHAR *type_vw = _T("INGRES_VECTORWISE");
 
 	BOOL bGateway = TRUE;
 	CaSessionUsage* pUseSession = NULL;
@@ -3137,19 +3147,14 @@ BOOL INGRESII_llIsDatabaseGateway(CaLLQueryInfo* pQueryInfo, CaSessionManager* p
 	pUseSession = new CaSessionUsage (pSessionManager, &session);
 
 	EXEC SQL WHENEVER SQLERROR GOTO ISDATABASEGATEWAY_LERROR;
-	EXEC SQL SELECT DBMSINFO('_version') INTO :szResult;
+	EXEC SQL SELECT cap_value INTO :dbms_type FROM iidbcapabilities WHERE cap_capability='DBMS_TYPE';
 
 	EXEC SQL BEGIN;
-		CString strResult = szResult;
-		strResult.MakeLower();
-		for (int i=0; i<nGW; i++)
-		{
-			if (strResult.Find(tchszIngresGW[i]) == 0)
-			{
-				bGateway = FALSE;
-				break;
-			}
-		}
+		CString strResult = dbms_type;
+		strResult.TrimRight(' ');
+		if (strResult.CompareNoCase(type_ingres) == 0 || 
+			strResult.CompareNoCase(type_vw) == 0)
+			bGateway = FALSE;
 		EXEC SQL ENDSELECT;
 	EXEC SQL END;
 

@@ -301,6 +301,7 @@ BEGIN
     IDS_NO_NODES            "<No Nodes>"
     IDS_ROOT_NODE           "<Nodes>"
     IDS_INGRES_NOT_RUNNING  "Local Ingres Name Server is not running !\nYou will not be able to get the list of nodes."
+    IDS_NOJNL_VW	    "You are connected to an Ingres VectorWise node.\nNo journals are available because Ingres VectorWise databases are not journaled."
 END
 
 #endif    // English (U.S.) resources
