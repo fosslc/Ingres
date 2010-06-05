@@ -553,6 +553,9 @@
 **	    Added protocol level GCA_PROTOCOL_LEVEL_68 for boolean type.
 **	5-feb-2010 (stephenb)
 **	    Add GCA_REPEAT_MASK.
+**	15-Apr-10 (gordy)
+**	    Note that batch processing and positional database procedure
+**	    parameters are supported at GCA_PROTOCOL_LEVEL_68.
 */
 
 #ifndef GCA_INCLUDED
@@ -644,6 +647,9 @@
 ** GCA_PROTOCOL_LEVEL_68
 **	New boolean datatype GCA_TYPE_BOOL.
 **	GCA2_INVPROC for unrestricted procedure names.
+**	Query modifier GCA_REPEAT_MASK.
+**	Batch processing via control of end-of-group.
+**	Positional (unnamed) DB proc parameters in GCA{,1,2}_INVPROC.
 **
 ** N.B. Since no GCA client can presume to speak a new protocol without
 **      actual coding changes, the existence of the GCA_PROTOCOL_LEVEL 

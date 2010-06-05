@@ -23,30 +23,31 @@
 **	    IIapi_connect() connection type parameter.
 **
 **	IIAPI_VERSION_3
-**	    Support for UCS-2 character data types.
-**          Support IIAPI_CP_LOGIN_LOCAL as a connection parameter.	
+**	    UCS-2 character data types.
+**	    IIAPI_CP_LOGIN_LOCAL connection parameter.	
 **
 **	IIAPI_VERSION_4
-**	    Support for eight-byte integer query parameters and columns.
-**	    IIapi_setEnvParam() accepts IIAPI_EP_INT8_WIDTH.
-**	    IIAPI_setConnectParam() accepts IIAPI_CP_INT8_WIDTH.
+**	    Eight-byte integer data type.
+**	    IIAPI_EP_INT8_WIDTH environment parameter.
+**	    IIAPI_CP_INT8_WIDTH connection parameter.
 **
 **	IIAPI_VERSION_5
-**	    Support for ANSI date/time data types.  Descriptor column
-**	    types IIAPI_COL_PROCINPARM, IIAPI_COL_PROCOUTPARM, and
-**	    IIAPI_COL_PROCINOUTPARM for procedure parameter added.
-**	    XA support: IIapi_xaStart(), IIapi_xaEnd(), IIapi_xaPrepare(),
-**	    IIapi_xaCommit(), IIapi_xaRollback().
+**	    ANSI date/time data types.  
+**	    IIAPI_COL_PROC{IN,OUT,INOUT}PARM descriptor column types.
+**	    XA transactions: IIapi_xaStart(), IIapi_xaEnd(), 
+**	    IIapi_xaPrepare(), IIapi_xaCommit(), IIapi_xaRollback().
 **
 **	IIAPI_VERSION_6
-**	    Support for Blob/Clob locator data types.
+**	    Blob/Clob locator data types.
 **	    IIapi_query() accepts query flags.
-**	    Support for scrollable cursors.
-**	    Date alias environment & connection parameters.
+**	    Scrollable cursors: IIapi_position(), IIapi_scroll().
+**	    IIAPI_EP_DATE_ALIAS environment parameter.
+**	    IIAPI_CP_DATE_ALIAS connection parameter.
 **
 **	IIAPI_VERSION_7
-**	    Support for Boolean data type.
-**	    Support for batch processing.
+**	    Boolean data type.
+**	    Batch processing: IIapi_batch().
+**	    Positional (unnamed) DB procedure parameeters.
 ##
 ## History:
 ##      01-sep-93 (ctham)
@@ -187,6 +188,9 @@
 ##	    for Boolean type.
 ##	25-Mar-10 (gordy)
 ##	    Added IIapi_batch() function and parameter structure.
+##	15-Apr-10 (gordy)
+##	    Noted that positional database procedure parameters are
+##	    are supported at IIAPI_VERSION_7/IIAPI_LEVEL_6.
 */
 
 # ifndef __IIAPI_H__

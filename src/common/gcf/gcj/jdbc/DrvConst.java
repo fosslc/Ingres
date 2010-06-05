@@ -179,6 +179,8 @@ package com.ingres.gcf.jdbc;
 **	    Bumped version to 4.0.1 for support of batch processing.
 **	    Added driver property batch.enabled to allow batch requests
 **	    to be executed as individual queries.
+**	15-Apr-10 (gordy)
+**	    Bumped version to 4.0.2 for positional DB proc parameters.
 */
 
 import	com.ingres.gcf.dam.MsgConst;
@@ -327,6 +329,8 @@ import	com.ingres.gcf.dam.MsgConst;
 **	25-Mar-10 (gordy)
 **	    Bumped version to 4.0.1 for batch support.  
 **	    Added configuration property DRV_CNF_BATCH.
+**	15-Apr-10 (gordy)
+**	    Bumped version to 4.0.2 for positional DB proc parameters.
 */
 
 interface
@@ -339,7 +343,7 @@ DrvConst
     String	DRV_VENDOR_NAME		= "Ingres Corporation";
     int		DRV_MAJOR_VERSION	= 4;
     int		DRV_MINOR_VERSION	= 0;
-    int		DRV_PATCH_VERSION	= 1;
+    int		DRV_PATCH_VERSION	= 2;
     String	DRV_JDBC_VERSION	= "JDBC 4.0";
     int		DRV_JDBC_MAJ_VERS	= 4;
     int		DRV_JDBC_MIN_VERS	= 0;
