@@ -947,6 +947,9 @@ CL_ERR_DESC	    *sys_err)
 **	    SIR 121619 MVCC: whether journaling or not, the transaction
 **	    must be put on the LDB's active transaction's list when doing
 **	    its first write.
+**	06-May-2010 (jonj)
+**	    When optimized writes are enabled with a single logwriter,
+**	    don't initiate group commit - it's a performance killer.
 */
 static STATUS
 LG_write(
@@ -2662,8 +2665,13 @@ CL_ERR_DESC	    *sys_err)
 	** to be written, then this must be master trying to
 	** write the BCP (it's the only LGwrite allowed to
 	** proceed when stalled on a BCP), so write it.
+	**
+	** If running with optimized writes and a single logwriter,
+	** then don't use group commit - it kills performance.
 	*/
 	if (
+	    (lgd->lgd_state_flags & LGD_OPTIMWRITE &&
+	     lgd->lgd_lwlxb.lwq_count == 1) ||
 	    span_lbb->lbb_wait_count >= 
 		lgd->lgd_protect_count - span_lbb->lbb_commit_count ||
 	    lgd->lgd_status & LGD_BCPSTALL

@@ -395,6 +395,9 @@ CL_ERR_DESC	    *sys_err)
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: relocate "force" stat counts, keep going
 **	    until target_lsn is completely forced.
+**	06-May-2010 (jonj)
+**	    When optimized writes are enabled with a single logwriter,
+**	    don't initiate group commit - it's a performance killer.
 **
 */
 static STATUS
@@ -770,9 +773,14 @@ CL_ERR_DESC	    *sys_err)
 	** transactions) are now waiting for the buffer to be written, 
 	** write it now rather than waiting for
 	** the group commit thread to wake up and notice.
+	**
+	** If running with optimized writes and a single logwriter,
+	** then don't use group commit - it kills performance.
 	*/
 
-	if ( current_lbb->lbb_wait_count >= 
+	if ( (lgd->lgd_state_flags & LGD_OPTIMWRITE &&
+	      lgd->lgd_lwlxb.lwq_count == 1) ||
+	     current_lbb->lbb_wait_count >= 
 		lgd->lgd_protect_count - current_lbb->lbb_commit_count )
 	{
 	    /* LG_queue_write() will free current LBB's mutex */
