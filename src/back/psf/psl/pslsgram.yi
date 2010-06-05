@@ -3493,6 +3493,9 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **          Changes for Long IDs
 **	14-Apr-2010 (smeke01) b123572
 **	    Improve error message handling for the call to adc_compare.
+**	03-Mar-2010 (thaju02) b123382
+**	    union order by tbl.col, col must be in result set  of first 
+**	    arm of union. 
 **	11-Mar-2010 (smeke01) b123017
 **	    Merged the former derived table production, which used to split
 **	    at LPAREN, into one production, explicitly named 'derived_table' for
@@ -33096,6 +33099,34 @@ cname:			col_ref
 				(i4) STtrmwhite($1->pss_col_name), 
 				$1->pss_col_name);
 			}
+			return (E_DB_ERROR);
+		    }
+		}
+
+		/* b123382 */
+		if ($Yunion_head && 
+		    $Yunion_head->pst_sym.pst_value.pst_s_root.pst_union.pst_next)
+		{
+		    bool	    found_resdom = FALSE;
+		    PST_QNODE   *node;
+
+		    for (node = $Yunion_head->pst_left; 
+			 node != (PST_QNODE *)NULL;
+			 node = node->pst_left)
+		    {
+			if ((node->pst_sym.pst_type == PST_RESDOM) &&
+			    (MEcmp(&fwdvar.pst_atname,
+			    node->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
+			    DB_MAXNAME) == 0))
+			{
+			    found_resdom = TRUE;
+			    break;
+			}
+		    }
+		    if (!found_resdom)
+		    {
+			(VOID) psf_error(6338, 0L, PSF_USERERR, &err_code,
+				&psq_cb->psq_error, 0);
 			return (E_DB_ERROR);
 		    }
 		}
