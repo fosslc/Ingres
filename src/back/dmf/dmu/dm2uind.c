@@ -372,6 +372,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      22-apr-2010 (stial01)
+**          Fix the for loop condition for the attnmstr initialization
 **/
 
 /*{
@@ -2040,7 +2042,7 @@ dm2uMakeIndMxcb(DM2U_MXCB **mxcb,
 
     nextattname = p;
     p += attnmsz;
-    for (curatt = m->mx_atts_ptr, i = 0; i < (AllAttsCount * 3); i++,curatt++)
+    for (curatt = m->mx_atts_ptr, i = 0; i < (AllAttsCount + 3); i++,curatt++)
     {
 	curatt->attnmstr = nextattname;
 	nextattname += sizeof(DB_ATT_STR);

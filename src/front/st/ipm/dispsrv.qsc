@@ -217,6 +217,8 @@ static char shwsess[] = "fshowsess";
 **      24-Nov-2009 (frima01) Bug 122490
 **          Moved string_move prototype to fe.h and added return values
 **          to eliminate gcc 4.3 warnings.
+**      22-apr-2010 (stial01)
+**          Changes for Long Ids
 */
 
 /*
@@ -1236,7 +1238,8 @@ char *servdata;
 	    /* past ">>>Session 002F4900<<< DB Name:" */
 	    s_scan(&bufptr, 4, "past sessid, dbname");
 	    bufptr++;						/* past " " */
-	    FIXLEN_GET(curr_sessinfo->database, DB_MAXNAME, "dbname");
+	    FIXLEN_GET(curr_sessinfo->database, 
+		sizeof(curr_sessinfo->database), "dbname");
 	    d_print("\tdatabase=\"%s\"\n", curr_sessinfo->database);
 	    if (*bufptr == '(')		/* dbname(exclusive) possiblility */
 	    {
@@ -1245,23 +1248,26 @@ char *servdata;
 	    }
 	    s_scan(&bufptr, 2, "past owned by");	/* past "(Owned by:" */
 	    bufptr++;					/* past " " */
-	    FIXLEN_GET(curr_sessinfo->dba, DB_MAXNAME, "dba");/* get dba */
+	    FIXLEN_GET(curr_sessinfo->dba, sizeof(curr_sessinfo->dba), "dba");
 	    d_print("\tdba=\"%s\"\n", curr_sessinfo->dba);
 	    bufptr += 2;					/* past " )" */
 	}
 	s_scan(&bufptr, 1, "past user");		/* past "User:" */
 	bufptr++;					/* past " " */
- 	FIXLEN_GET(curr_sessinfo->apparent_user, DB_MAXNAME, "app user");
+ 	FIXLEN_GET(curr_sessinfo->apparent_user,
+		sizeof(curr_sessinfo->apparent_user), "app user");
 	d_print("\tapparent_user=\"%s\"\n", curr_sessinfo->apparent_user);
 	bufptr += 2;					/* past " (" */
 	/* get real user */
- 	FIXLEN_GET(curr_sessinfo->real_user, DB_MAXNAME, "realuser");
+ 	FIXLEN_GET(curr_sessinfo->real_user,
+		sizeof(curr_sessinfo->real_user), "realuser");
 	d_print("\treal_user=\"%s\"\n", curr_sessinfo->real_user);
 	bufptr++;					/* past ")" */
 
  	s_scan(&bufptr, 5, "past user name at session startup");/* past that */
  	bufptr++;					/* past " " */
- 	FIXLEN_GET(curr_sessinfo->startup_user, DB_MAXNAME, "startup_user");
+ 	FIXLEN_GET(curr_sessinfo->startup_user,
+		sizeof(curr_sessinfo->startup_user), "startup_user");
  	d_print("\tstartup_user=\"%s\"\n", curr_sessinfo->startup_user);
 
 	s_scan(&bufptr, 1, "past terminal");		/* past "Terminal:" */
@@ -1282,13 +1288,15 @@ char *servdata;
 	s_scan(&bufptr, 2, "past groupid");		/* past "Group Id:" */
 	bufptr++;					/* past " " */
 	/* get group id */
-	FIXLEN_GET(curr_sessinfo->groupid, DB_MAXNAME, "groupid");
+	FIXLEN_GET(curr_sessinfo->groupid, 
+		sizeof(curr_sessinfo->groupid), "groupid");
 	d_print("\tgroupid=\"%s\"\n", curr_sessinfo->groupid);
 
 	s_scan(&bufptr, 2, "past roleid");		/* past "Role Id:" */
 	bufptr++;					/* past " " */
 	/* get role id */
-	FIXLEN_GET(curr_sessinfo->roleid, DB_MAXNAME, "roleid");
+	FIXLEN_GET(curr_sessinfo->roleid,
+		sizeof(curr_sessinfo->roleid), "roleid");
 	d_print("\troleid=\"%s\"\n", curr_sessinfo->roleid);
 	bufptr++;					/* past " " */
 

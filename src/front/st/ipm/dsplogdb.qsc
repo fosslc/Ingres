@@ -73,9 +73,11 @@
 **	24-Nov-2009 (frima01) Bug 122490
 **	    Moved string_move declaration to fe.h for inclustion in
 **	    front end mudules.
+**      22-apr-2010 (stial01)
+**          Changes for Long Ids
 */
 
-#define		LOC_MAXSIZE		(DB_MAXNAME * 2)
+#define		LOC_MAXSIZE		(DB_LOC_MAXNAME * 2)
 
 /*
 ** forward declarations
@@ -308,12 +310,12 @@ printlgdb()
 	stat_decode(db_stat, Lgdbstat, (u_i4) ldb->db_status);
 
  	/* len of location (counted string) */
- 	length = *(i4 *)&ldb->db_buffer[DB_MAXNAME + DB_MAXNAME + 4];
+ 	length = *(i4 *)&ldb->db_buffer[DB_DB_MAXNAME + DB_OWN_MAXNAME + 4];
  	if (length > LOC_MAXSIZE)
  	{
  	    length = LOC_MAXSIZE;
  	}
- 	STlcopy(&ldb->db_buffer[DB_MAXNAME + DB_MAXNAME + 4 + sizeof(i4)],
+ 	STlcopy(&ldb->db_buffer[DB_DB_MAXNAME + DB_OWN_MAXNAME + 4 + sizeof(i4)],
  	    location, length);
 
 	bgn1 = ldb->db_f_jnl_la.la_sequence;
