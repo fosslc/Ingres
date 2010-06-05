@@ -150,11 +150,22 @@
 **          Use DB_MAXNAME for db objects, DB_IISTRUCT_LEN for iistructure() 
 **	24-Aug-2009 (kschendel) 121804
 **	    Need ui.h to satisfy gcc 4.3.
+**      31-Mar-2010 (hanal04) Bug 123481
+**          Extend the width of the column datatype in HELP TABLE from
+**          10 to 18 characters. Most terminal displays are not at least 80
+**          characters so this will not cause wrapping in most if not all
+**          modern cases. For timestamp and time types reformat the
+**          column type to abbreviate (if required) and add the precision.
+**          Also add the precision/scale details to decimal types.
+**      12-Apr-2010 (hanal04) Bug 123481
+**          Ensure all length selects from iicolumns also select scale.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
 **/
 
 /* # define's */
+#define		CTW	18      /* Help table's Column Type Width */
+
 /* GLOBALDEF's */
 
 /* extern's */
@@ -378,6 +389,7 @@ EXEC SQL END DECLARE SECTION;
     char	*vwbase_value = NULL;
     char	*etype;
     char        compres_buf[20];
+    char	fmt[32];
 
     if (IIUIrel_help(t, town, &help_struct) != OK)
     {
@@ -862,7 +874,7 @@ EXEC SQL END DECLARE SECTION;
     ** used on the 'info_mainline' below.
     */
     qrprintf(qrb, ERx("%*s"),
-      (i4)((qrb->col_maxname + 1) + (10+ 1) + (6 + 1) + (5 + 1) + (8 + 1) + 3), 
+      (i4)((qrb->col_maxname + 1) + (CTW+ 1) + (6 + 1) + (5 + 1) + (8 + 1) + 3),
 	s5B_topline_key);
 
     if (stats_exist)
@@ -870,7 +882,8 @@ EXEC SQL END DECLARE SECTION;
     else
 	qrputc(qrb, '\n');
 
-    qrprintf(qrb, ERx("%-*s %-10s %6s %s %s %s"), (i4)qrb->col_maxname, 
+    STprintf(fmt, "%s%d%s", ERx("%-*s %-"), CTW, ERx("s %6s %s %s %s"));
+    qrprintf(qrb, fmt, (i4)qrb->col_maxname, 
 	s5C_mainline_coltitle, s5D_mainline_dtype_name,
 	s5E_mainline_dtype_len, s5F_mainline_nulls,
 	s60_mainline_defaults, s61_mainline_seq);
@@ -1060,7 +1073,7 @@ EXEC SQL END DECLARE SECTION;
 
 	    	EXEC SQL REPEATED 
 	    	SELECT 	column_name, column_datatype, 
-			column_length, column_nulls, 
+			column_length, column_scale, column_nulls, 
 			column_defaults, key_sequence, 
 			column_sequence,
 		    	column_system_maintained, column_internal_datatype,
@@ -1071,7 +1084,7 @@ EXEC SQL END DECLARE SECTION;
 			column_bydefault_ident
 
 	    	INTO 	:colinfo.colname, :colinfo.datatype,
-			:colinfo.extern_len, :colinfo.nulls,
+			:colinfo.extern_len, :colinfo.scale, :colinfo.nulls,
 			:colinfo.defaults, :colinfo.keyseq,
 			:colinfo.seq,
 			:colinfo.sysmaint, :colinfo.idatatype,
@@ -1103,7 +1116,7 @@ EXEC SQL END DECLARE SECTION;
 
 	    	EXEC SQL REPEATED 
 	    	SELECT 	column_name, column_datatype, 
-			column_length, column_nulls, 
+			column_length, column_scale, column_nulls, 
 			column_defaults, key_sequence, 
 			column_sequence,
 		    	column_system_maintained, column_internal_datatype,
@@ -1112,7 +1125,7 @@ EXEC SQL END DECLARE SECTION;
 			column_default_val
 
 	    	INTO 	:colinfo.colname, :colinfo.datatype,
-			:colinfo.extern_len, :colinfo.nulls,
+			:colinfo.extern_len, :colinfo.scale, :colinfo.nulls,
 			:colinfo.defaults, :colinfo.keyseq,
 			:colinfo.seq,
 			:colinfo.sysmaint, :colinfo.idatatype,
@@ -1144,14 +1157,14 @@ EXEC SQL END DECLARE SECTION;
 
 	    	EXEC SQL REPEATED 
 	    	SELECT 	column_name, column_datatype, 
-			column_length, column_nulls, 
+			column_length, column_scale, column_nulls, 
 			column_defaults, key_sequence, 
 			column_sequence,
 			column_has_default, 
 			column_default_val
 
 	    	INTO 	:colinfo.colname, :colinfo.datatype,
-			:colinfo.extern_len, :colinfo.nulls,
+			:colinfo.extern_len, :colinfo.scale, :colinfo.nulls,
 			:colinfo.defaults, :colinfo.keyseq,
 			:colinfo.seq,
 			:colinfo.has_default,
@@ -1185,13 +1198,14 @@ EXEC SQL END DECLARE SECTION;
 	    {
 	    	EXEC SQL REPEATED 
 	    	SELECT 	column_name, column_datatype, column_length,
+                        column_scale,
 		    	column_nulls, column_defaults, key_sequence, 
 			column_sequence,
 		    	column_system_maintained, column_internal_datatype,
 		    	column_internal_length
 
 	    	INTO 	:colinfo.colname, :colinfo.datatype,
-			:colinfo.extern_len, :colinfo.nulls,
+			:colinfo.extern_len, :colinfo.scale, :colinfo.nulls,
 			:colinfo.defaults, :colinfo.keyseq,
 			:colinfo.seq,
 			:colinfo.sysmaint, :colinfo.idatatype,
@@ -1221,11 +1235,12 @@ EXEC SQL END DECLARE SECTION;
 
 	    	EXEC SQL REPEATED 
 	    	SELECT 	column_name, column_datatype, column_length,
+                        column_scale,
 		    	column_nulls, column_defaults, key_sequence, 
 			column_sequence
 
 	    	INTO 	:colinfo.colname, :colinfo.datatype,
-			:colinfo.extern_len, :colinfo.nulls,
+			:colinfo.extern_len, :colinfo.scale, :colinfo.nulls,
 			:colinfo.defaults, :colinfo.keyseq,
 			:colinfo.seq
 
@@ -1259,12 +1274,12 @@ EXEC SQL END DECLARE SECTION;
 
 	    EXEC SQL REPEATED 
 	    SELECT	column_name, column_datatype, 
-			    column_length, column_nulls, 
+			    column_length, column_scale, column_nulls, 
 			    column_defaults, key_sequence, 
 			    column_sequence
 
 	    INTO 	:colinfo.colname, :colinfo.datatype,
-			    :colinfo.extern_len, :colinfo.nulls,
+			    :colinfo.extern_len, :colinfo.scale, :colinfo.nulls,
 			    :colinfo.defaults, :colinfo.keyseq,
 			    :colinfo.seq
 
@@ -1537,14 +1552,14 @@ struct QRSTAT_STRUCT	statarray[];
 		    col_info->extern_len =  col_info->intern_len;
 		    STcopy(col_info->idatatype, col_info->datatype);
 		}
-	        col_info->datatype[10] = EOS;		/* truncate it here */
+	        col_info->datatype[CTW] = EOS;		/* truncate it here */
 	        CVlower(col_info->datatype);
 
 		/*
 		** Combine logical key data type descriptions
 		** with system_maintained info.
 		*/
-		if (STbcompare(col_info->datatype, 10, 
+		if (STbcompare(col_info->datatype, CTW, 
 					ERx("object_key"), 10, TRUE) == 0)
 		{
 		    if (col_info->sysmaint[0] == 'Y')
@@ -1553,7 +1568,7 @@ struct QRSTAT_STRUCT	statarray[];
 			STcopy(s99_objkeynosm, col_info->datatype);
 		}
 		else if (STbcompare(col_info->datatype, 
-				10, ERx("table_key "), 10, TRUE) == 0)
+				CTW, ERx("table_key "), 10, TRUE) == 0)
 		{
 		    if (col_info->sysmaint[0] == 'Y')
 			STcopy(s9A_tblkey_sm, col_info->datatype);
@@ -1564,16 +1579,78 @@ struct QRSTAT_STRUCT	statarray[];
 	} /* end if logical key support */
 	else
 	{
-	        col_info->datatype[10] = EOS;		/* truncate it here */
+	        col_info->datatype[CTW] = EOS;		/* truncate it here */
 	        CVlower(col_info->datatype);
 	}
+        
+        if ((qrb->lang == DB_SQL) &&
+               (STscompare(col_info->datatype, 10, ERx("timestamp "), 10) == 0))
+        {
+            /* Apply shorthand type names for timestamps */
+            if (STscompare(col_info->idatatype, sizeof(col_info->idatatype),
+                          ERx("TIMESTAMP WITHOUT TIME ZONE"), 
+                          sizeof(col_info->idatatype)) == 0)
+            {
+                    STprintf(col_info->datatype, "timestamp(%1d)      ",
+                             col_info->scale);
+            }
+            if (STscompare(col_info->idatatype, sizeof(col_info->idatatype),
+                          ERx("TIMESTAMP WITH TIME ZONE"), 
+                          sizeof(col_info->idatatype)) == 0)
+            {
+                    STprintf(col_info->datatype, "timestamp(%1d) wtz  ",
+                             col_info->scale);
+            }
+            if (STscompare(col_info->idatatype, sizeof(col_info->idatatype),
+                          ERx("TIMESTAMP WITH LOCAL TIME ZONE"), 
+                          sizeof(col_info->idatatype)) == 0)
+            {
+                    STprintf(col_info->datatype, "timestamp(%1d) wltz ",
+                             col_info->scale);
+            }
+        }
+
+        if ((qrb->lang == DB_SQL) &&
+               (STscompare(col_info->datatype, 5, ERx("time "), 5) == 0))
+        {
+            /* Apply shorthand type names for times */
+            if (STscompare(col_info->idatatype, sizeof(col_info->idatatype),
+                          ERx("TIME WITHOUT TIME ZONE"), 
+                          sizeof(col_info->idatatype)) == 0)
+            {
+                    STprintf(col_info->datatype, "time(%1d)           ",
+                             col_info->scale);
+            }
+            if (STscompare(col_info->idatatype, sizeof(col_info->idatatype),
+                          ERx("TIME WITH TIME ZONE"), 
+                          sizeof(col_info->idatatype)) == 0)
+            {
+                    STprintf(col_info->datatype, "time(%1d) wtz       ",
+                             col_info->scale);
+            }
+            if (STscompare(col_info->idatatype, sizeof(col_info->idatatype),
+                          ERx("TIME WITH LOCAL TIME ZONE"), 
+                          sizeof(col_info->idatatype)) == 0)
+            {
+                    STprintf(col_info->datatype, "time(%1d) wltz      ",
+                             col_info->scale);
+            }
+        }
+
+        if ((qrb->lang == DB_SQL) &&
+               (STscompare(col_info->datatype, 8, ERx("decimal "), 8) == 0))
+        {
+            STprintf(col_info->datatype, "decimal(%2d,%2d)    ",
+                     col_info->extern_len, col_info->scale);
+        }
 
         /* Bug #1464	-If SQL print vchar not text for data type */
 
         if ((qrb->lang == DB_SQL) && 
-		(STcompare(col_info->datatype,ERx("text      ")) == 0))
+		(STscompare(col_info->datatype, sizeof(col_info->datatype)
+                            , ERx("text "), 5) == 0))
         {
-		STcopy (ERx("vchar     "),col_info->datatype);
+		STcopy (ERx("vchar             "),col_info->datatype);
         }
 
 	if (col_info->nulls[0] == 'Y')
