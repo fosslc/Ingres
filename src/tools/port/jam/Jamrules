@@ -1368,6 +1368,13 @@
 #	    Fix IIRemRCComments after adding grists as targets were always 
 #	    being rebuilt. Remove grist an use MkDir instead of MakeLocate
 #	    which ensures the target names are always unique.
+#	21-Apr-2010 (drivi01) Bug 122651
+#	    Switch a REFERENCE_IN_DLL flag to IMPORT_DLL_DATA for ducommon.qsc.
+#	    The file was mistakingly getting REFERENCE_IN_DLL flag in the
+#	    compiler resulting in extern symbols being imported as 
+#	    __declspec(dllimport) on Windows.  This was resulting in
+#	    import/export symbol mismatch and link issues. 
+#	    
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -3955,6 +3962,7 @@ rule IILIBRARY
 			case *front*st*enterprise_dll_win*	: CMPORTS = $(PORTIMP) ;
 			case *cl*clf*		   : CMPORTS = $(PORTREF) ;
 			case *gl*glf*		   : CMPORTS = $(PORTREF) ;
+			case *dbutil*duf*duc* 	   : CMPORTS = $(PORTIMP) ;
 
 			case *common*aif*ait*	   : CMPORTS = $(PORTIMP) ;
  			case *common*aif*demo*     : CMPORTS = $(PORTIMP) ;	
