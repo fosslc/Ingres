@@ -77,6 +77,8 @@
 **      15-Jan-2010 (maspa05) b123141
 **          Changed call to FEset_date_format to FE_apply_date_format and so
 **          on. Allows us to get the dependency on libq out of feadfcb.c
+**      14-apr-2010 (stial01)
+**          Init col_maxname for select blob column
 **/
 
 GLOBALREF QRB	*QRqrb;
@@ -342,6 +344,7 @@ register QRB	*qrb;
 	    QRqrb = qrb;
 
 	    qrb->error = 0;
+	    qrb->col_maxname = DB_OLDMAXNAME_32; /* For help, select */
 	    qrb->sno++;
 	    if (qrb->echo)
 	    {

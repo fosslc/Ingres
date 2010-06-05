@@ -70,6 +70,8 @@
 **          In silent mode don't output leading and trailing separators
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      14-apr-2010 (stial01)
+**          Init col_maxname for select blob column
 */
 
 GLOBALREF	bool	TrulySilent;
@@ -317,6 +319,10 @@ QRIOB		qriob	= {
 			** buffer flushed to out at each segment 
 			** (II) of col
 			*/
+
+	    /* Init col_maxname for for this column */
+	    qrb->col_maxname = qrb->dvlen[i].worstlen;
+
 	    switch( abs( qrb->rd->RD_DBVS_MACRO(i).db_datatype ) )
 	    {
 			    /* return FAIL at err or finish,

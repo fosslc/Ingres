@@ -284,6 +284,8 @@
 **          Display xccb_blob_temp_flags (new)
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      13-apr-2010 (stial01)
+**          Fix DB_ATTS TRdisplay's
 **/
 
 
@@ -1482,20 +1484,20 @@ TRdisplay("\n%.4s Control Block @0x%p..0x%p owned by 0x%x for %d bytes.\n\n",
 	    &((DB_CMP_LIST *)0)->cmp_type,
 	    &((DB_CMP_LIST *)0)->cmp_length, "ascending,descending", &((DB_CMP_LIST *)0)->cmp_direction);
         TRdisplay("    BASE Key Information\n");
-TRdisplay("        NAME                    OFFSET  TYPE    LENGTH PREC KEY KOFFSET\n"); 
-        TRdisplay("%#[%8* %.#s  %4.2d  %8.2w  %4.2d %4.2d %3.2d    %4.2d\n%]",
+TRdisplay("         ATTID  OFFSET  TYPE    LENGTH PREC KEY KOFFSET\n"); 
+        TRdisplay("%#[%8* %6.4d  %4.2d  %8.2w  %4.2d %4.2d %3.2d    %4.2d\n%]",
 	    mxcb->mx_ab_count, mxcb->mx_b_key_atts,
-	    32, ((DB_ATTS *)0)->attnmstr,
+	    &((DB_ATTS *)0)->ordinal_id, 
 	    &((DB_ATTS *)0)->offset, 
 	    ",,,DATE,,MONEY,,,,,DECIMAL,OBJECT_KEY,TABLE_KEY,,,,,,,,CHAR,VCHAR,,,,,,,,,INT,FLOAT,CHAR,,,,,TEXT",
 	    &((DB_ATTS *)0)->type,
 	    &((DB_ATTS *)0)->length, &((DB_ATTS *)0)->precision, &((DB_ATTS *)0)->key,
 	    &((DB_ATTS *)0)->key_offset); 
         TRdisplay("    INDEX Key Information\n");
-TRdisplay("        NAME                    OFFSET  TYPE    LENGTH PREC KEY KOFFSET\n"); 
-        TRdisplay("%#[%8* %.#s  %4.2d  %8.2w  %4.2d %4.2d %3.2d    %4.2d\n%]",
+TRdisplay("         ATTID  OFFSET  TYPE    LENGTH PREC KEY KOFFSET\n"); 
+        TRdisplay("%#[%8* %6.4d  %4.2d  %8.2w  %4.2d %4.2d %3.2d    %4.2d\n%]",
 	    mxcb->mx_ai_count, mxcb->mx_i_key_atts,
-	    32, ((DB_ATTS *)0)->attnmstr,
+	    &((DB_ATTS *)0)->ordinal_id, 
 	    &((DB_ATTS *)0)->offset, 
 	    ",,,DATE,,MONEY,,,,,DECIMAL,OBJECT_KEY,TABLE_KEY,,,,,,,,CHAR,VCHAR,,,,,,,,,INT,FLOAT,CHAR,,,,,TEXT",
 	    &((DB_ATTS *)0)->type,
@@ -1954,11 +1956,11 @@ TRdisplay("        NAME                    OFFSET  TYPE    LENGTH PREC KEY KOFFS
 	if ( ! (tcb->tcb_status & TCB_PARTIAL) && (tcb->tcb_atts_ptr) )
 	{
 	    TRdisplay("    Attribute Information\n");
-	    TRdisplay("        NAME                            OFFSET  TYPE    LENGTH  PREC KEY KOFFSET\n"); 
-	    TRdisplay("%#.#{%8* %.#s  %4.2d  %8.2w  %4.2d %4.2d %3.2d    %4.2d\n%}",
+	    TRdisplay("         ATTID  OFFSET  TYPE    LENGTH  PREC KEY KOFFSET\n"); 
+	    TRdisplay("%#.#{%8* %6.4d  %4.2d  %8.2w  %4.2d %4.2d %3.2d    %4.2d\n%}",
 		tcb->tcb_rel.relatts, 
 		sizeof(DB_ATTS), &tcb->tcb_atts_ptr[1], 
-		32, ((DB_ATTS *)0)->attnmstr,
+		&((DB_ATTS *)0)->ordinal_id, 
 		&((DB_ATTS *)0)->offset, 
 		",,,DATE,ADATE,MONEY,TMWO,TMW,TME,TSWO,DECIMAL,OBJECT_KEY,TABLE_KEY,,,,,,TSW,TSTMP,CHAR,VCHAR,LVCH,BYTE,VBYTE,LBYTE,NCHAR,NVCHR,LNVCHR,,INT,FLOAT,C,,,,,TEXT,BOOL",
 		 &((DB_ATTS *)0)->type,
@@ -1970,10 +1972,10 @@ TRdisplay("        NAME                    OFFSET  TYPE    LENGTH PREC KEY KOFFS
 	if ( ! (tcb->tcb_status & TCB_PARTIAL) && (tcb->tcb_keys))
 	{
 	    TRdisplay("    Key Information\n");
-	    TRdisplay("        NAME                            OFFSET  TYPE    LENGTH PREC KEY KOFFSET\n"); 
-	    TRdisplay("%#[%8* %.#s  %4.2d  %8.2w  %4.2d %4.2d %3.2d    %4.2d\n%]",
+	    TRdisplay("         ATTID  OFFSET  TYPE    LENGTH PREC KEY KOFFSET\n"); 
+	    TRdisplay("%#[%8* %6.4d  %4.2d  %8.2w  %4.2d %4.2d %3.2d    %4.2d\n%]",
 		tcb->tcb_rel.relkeys, tcb->tcb_key_atts,
-		32, ((DB_ATTS *)0)->attnmstr,
+		&((DB_ATTS *)0)->ordinal_id, 
 		&((DB_ATTS *)0)->offset, 
 		",,,DATE,ADATE,MONEY,TMWO,TMW,TME,TSWO,DECIMAL,OBJECT_KEY,TABLE_KEY,,,,,,TSW,TSTMP,CHAR,VCHAR,LVCH,BYTE,VBYTE,LBYTE,NCHAR,NVCHR,LNVCHR,,INT,FLOAT,C,,,,,TEXT,BOOL",
 		&((DB_ATTS *)0)->type,
