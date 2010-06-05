@@ -107,6 +107,8 @@ LIBRARY = IMPDMFLIBDATA
 **	4-May-2010 (kschendel)
 **	    Make a frozen copy of the final DSC_V9 catalogs;  we'll need it
 **	    eventually, for future converters.
+**	06-May-2010
+**	    Remove unused variable.
 */
 
 /* dmmcre.c */
@@ -425,7 +427,6 @@ GLOBALDEF DMP_INDEX DM_core_index[] =
 
 #define CORE_INDEX_COUNT (sizeof(DM_core_index)/ sizeof(DMP_INDEX))
 GLOBALDEF i4 DM_core_index_cnt = CORE_INDEX_COUNT;
-GLOBALDEF DMP_INDEX DM_ucore_index[CORE_INDEX_COUNT];
 
 
 /* ------------------------------------------------------------- */

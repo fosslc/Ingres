@@ -295,6 +295,8 @@
 **	    include cv.h for function definitions
 **      29-Apr-2010 
 **          Create core catalogs having long ids with compression=(data)
+**	06-May-2010
+**	    Remove unsued variable which was a typo
 */
 
 /* core table ids */
@@ -506,7 +508,6 @@ GLOBALREF DMP_RINDEX DM_ucore_rindex[];
 **  There is no upper-case version because IIINDEX does not have identifiers.
 */
 GLOBALREF DMP_INDEX DM_core_index[];
-GLOBALREF DMP_INDEX DM_uore_index[];
 GLOBALREF i4 DM_core_index_cnt;
 
 

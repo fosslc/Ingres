@@ -39,6 +39,8 @@
 ;	    Add for encryption Dmc_crypt
 ;	03-May-2010 (bonro01)
 ;	    Remove references because of change 504290 for bug 121123
+;	06-May-2010 (bonro01)
+;	    Add references for change 504290 for bug 121123
 EXPORTS
 dmf_jsp_dcb		@1	DATA			
 ;Db_incons_crash		@2	DATA			
@@ -60,8 +62,8 @@ DM_core_relations		@13	DATA
 DM_ucore_attributes		@18	DATA			
 DM_ucore_relations		@19	DATA			
 Dmc_rep		@20	DATA			
-;core_index		@21	DATA			
-;ucore_rindex		@22	DATA			
+DM_core_index		@21	DATA			
+DM_ucore_rindex		@22	DATA			
 dm1cnv2_plv		@23	DATA			
 ;dm1ch_tlv		@24	DATA			
 ;dm1cn_tlv		@25	DATA			
@@ -77,7 +79,7 @@ LK_mycbt		@34	DATA
 LK_compatible		@35	DATA
 csp_debug		@36	DATA
 LG_my_pid		@37	DATA	
-;core_rindex		@38	DATA
+DM_core_rindex		@38	DATA
 LG_is_mt		@39	DATA
 Dmpp_pgtype     @40 DATA
 ;LK_main_dsmc    @41 DATA
@@ -93,4 +95,6 @@ dm1c_cmpcontrol_setup_v	@50	DATA
 dm1c_cmpcontrol_size_v	@51	DATA
 ;DM_sizeof_ucore_attr	@52	DATA
 Dmc_crypt		@53	DATA
+DM_core_index_cnt	@54	DATA
+DM_core_att_cnt		@55	DATA
 
