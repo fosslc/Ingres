@@ -725,8 +725,9 @@ psl_flatten1(
 
 				opnode.pst_retnull = TRUE;
 				opnode.pst_opmeta = PST_NOMETA;
-				opnode.pst_joinid =
-					subsel->pst_sym.pst_value.pst_s_root.pst_ss_joinid;
+				opnode.pst_joinid = correl
+					? subsel->pst_sym.pst_value.pst_s_root.pst_ss_joinid
+					: PST_NOJOIN;
 				if (status = pst_node(cb, &cb->pss_ostream, var_node, NULL, 
 						PST_AOP, (PTR) &opnode, sizeof(opnode), 
 						tmp_dv.db_datatype,
@@ -1360,21 +1361,21 @@ psl_flatten1(
 		if (parent && parent->pst_sym.pst_type != PST_RESDOM)
 		    /* Finished this levels tgtlist - onto WHERE clause*/
 		    BTset(qual_depth, (PTR)in_WHERE);
-	    if (node->pst_sym.pst_value.pst_s_rsdm.pst_ttargtype == PST_USER)
-	    {
-		/* Ensure any remaining empty names are filled with the column default */
-		i4 i;
-		for (i = 0; i < DB_ATT_MAXNAME; i++)
-		    if (node->pst_sym.pst_value.pst_s_rsdm.pst_rsname[i] != ' ')
-			break;
-		if (i >= DB_ATT_MAXNAME)
+		if (node->pst_sym.pst_value.pst_s_rsdm.pst_ttargtype == PST_USER)
 		{
-		    STprintf(node->pst_sym.pst_value.pst_s_rsdm.pst_rsname, "col%d",
-				node->pst_sym.pst_value.pst_s_rsdm.pst_rsno);
-		    i = STlength(node->pst_sym.pst_value.pst_s_rsdm.pst_rsname);
-		    MEfill(DB_ATT_MAXNAME-i, ' ', node->pst_sym.pst_value.pst_s_rsdm.pst_rsname+i);
+		    /* Ensure any remaining empty names are filled with the column default */
+		    i4 i;
+		    for (i = 0; i < DB_ATT_MAXNAME; i++)
+			if (node->pst_sym.pst_value.pst_s_rsdm.pst_rsname[i] != ' ')
+			    break;
+		    if (i >= DB_ATT_MAXNAME)
+		    {
+			STprintf(node->pst_sym.pst_value.pst_s_rsdm.pst_rsname, "col%d",
+				    node->pst_sym.pst_value.pst_s_rsdm.pst_rsno);
+			i = STlength(node->pst_sym.pst_value.pst_s_rsdm.pst_rsname);
+			MEfill(DB_ATT_MAXNAME-i, ' ', node->pst_sym.pst_value.pst_s_rsdm.pst_rsname+i);
+		    }
 		}
-	    }
 	    }
 	    break;
 	}
