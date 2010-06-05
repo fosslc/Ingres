@@ -1408,6 +1408,9 @@ i4	    (*user_routine)();		/* Function to get/put rows */
 **	    type, and we don't want to fool with nvarchar null-data.
 **	7-May-2010 (kschendel) SIR 122974
 **	    Total row length (cp_row_length) still wrong, fix.
+**	10-May-2010 (kschendel) SIR 122974
+**	    Very large binary (non-converting) COPY FROM needs an unusually
+**	    large read size.
 */
 
 static STATUS
@@ -2794,7 +2797,7 @@ IIcpinit( II_LBQ_CB *IIlbqcb, II_CP_STRUCT *copy_blk, i4  msg_type )
 	    if (copy_blk->cp_convert)
 		worklen = DB_MAXSTRING + 200;	/* +200 is arbitrary slop */
 	    else
-		worklen = max_rowlen - 1;
+		worklen = max_rowlen;
 	    if (copy_blk->cp_has_blobs && worklen < MAX_SEG_FROM_FILE+20)
 		worklen = MAX_SEG_FROM_FILE+20;	/* segment plus next count */
 	    /* Force alignment to larger of 8 and DB_ALIGN_SZ, the easy way */
@@ -2802,11 +2805,18 @@ IIcpinit( II_LBQ_CB *IIlbqcb, II_CP_STRUCT *copy_blk, i4  msg_type )
 	    worklen = DB_ALIGN_MACRO(worklen);
 	    copy_blk->cp_rbuf_worksize = worklen;
 	    copy_blk->cp_rbuf_readsize = READ_BUF_SIZE;
-	    copy_blk->cp_rbuf_size = worklen + READ_BUF_SIZE;
+	    /* cp-refill expects to only have to do one read, so if the
+	    ** worklen is larger than normal, make sure the read size is too.
+	    ** This should only happen for binary (no-convert) copies into
+	    ** extremely wide rows.
+	    */
+	    if (worklen > READ_BUF_SIZE)
+		copy_blk->cp_rbuf_readsize = worklen;
+	    copy_blk->cp_rbuf_size = worklen + copy_blk->cp_rbuf_readsize;;
 	    /* include hidden leading and trailing guard space.  8 keeps
 	    ** everything aligned even in worst case.
 	    */
-	    total = worklen + READ_BUF_SIZE + 8 + 8;
+	    total = copy_blk->cp_rbuf_size + 8 + 8;
 	    if(loc_alloc(1, total, &copy_blk->cp_rowbuf_all))
 		return (E_CO0037_MEM_INIT_ERR);
 	    copy_blk->cp_rowbuf = copy_blk->cp_rowbuf_all + 8;
