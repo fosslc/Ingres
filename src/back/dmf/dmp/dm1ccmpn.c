@@ -1109,6 +1109,8 @@ dm1cn_compexpand(
 **	3-Nov-2009 (kschendel) SIR 122739
 **	    Remove C99 initializer because MS's C compiler is an oozing,
 **	    pustulent excrescence.
+**	7-May-2010 (kschendel)
+**	    Fix to never compress encrypted columns, not even null-compression.
 */
 
 /* Define a helper table indexed by (abs) type.
@@ -1138,6 +1140,7 @@ dm1cn_cmpcontrol_setup(DMP_ROWACCESS *rac)
     DM1CN_CMPCONTROL *op;	/* Control entry being built */
     i4 abstype;
     i4 attno, attcount;		/* Attribute index and count */
+    i4 att_type, att_len;	/* Attribute type and length (adjusted) */
     i4 control_count;		/* Number of entries so far */
     i4 cum_length;		/* Accumulated length for COPYN */
     i4 dt_bits;			/* Data type flags */
@@ -1160,9 +1163,19 @@ dm1cn_cmpcontrol_setup(DMP_ROWACCESS *rac)
     {
 	++attno;
 	att = *attpp++;
-	abstype = abs(att->type);
+	att_type = att->type;
+	att_len = att->length;
+	abstype = abs(att_type);
 	cumok = TRUE;
-	if (att->type < 0 || att->ver_added != 0 || att->ver_dropped != 0)
+	if (att->encflags & ATT_ENCRYPT)
+	{
+	    /* Encrypted columns are never compressed, and since the null
+	    ** is encrypted into the data, they aren't null-compressed either.
+	    */
+	    att_type = abstype;
+	    att_len = att->encwid;
+	}
+	if (att_type < 0 || att->ver_added != 0 || att->ver_dropped != 0)
 	{
 	    /* Needs a ver-check or null-check or both.  Tie off any
 	    ** COPYN that might be in progress, and make sure that this
@@ -1232,15 +1245,15 @@ dm1cn_cmpcontrol_setup(DMP_ROWACCESS *rac)
 			op->flags |= flag;
 		    }
 		}
-		op->length = att->length;
-		if (att->type < 0)
+		op->length = att_len;
+		if (att_type < 0)
 		{
 		    --op->length;
 		    op->flags |= DM1CN_NULLABLE;
 		}
 		op->attno = attno;
 	    }
-	    if (att->type < 0)
+	    if (att_type < 0)
 	    {
 		++op;
 		if (op >= guard)
@@ -1248,7 +1261,7 @@ dm1cn_cmpcontrol_setup(DMP_ROWACCESS *rac)
 		++control_count;
 		op->opcode = DM1CN_OP_NULLCHK;
 		op->flags = DM1CN_NULLABLE;
-		op->length = att->length - 1;
+		op->length = att_len - 1;
 		op->attno = attno;
 		/* Light flag if this is a coupon type.
 		** NOTE:  the only reason dtinfo needs an ADF CB is for
@@ -1265,7 +1278,11 @@ dm1cn_cmpcontrol_setup(DMP_ROWACCESS *rac)
 	/* Now emit an opcode to handle this column, or accumulate
 	** a COPYN if non-compressed and non-checked column.
 	*/
-	if (abstype < DM1CN_OPTAB_MAX)
+	if (att->encflags & ATT_ENCRYPT)
+	{
+	    opcode = DM1CN_OP_COPYN;	/* Never compress if encrypted */
+	}
+	else if (abstype < DM1CN_OPTAB_MAX)
 	{
 	    opcode = dm1cn_opcodes[abstype];
 	    if (opcode == 0)
@@ -1288,7 +1305,7 @@ dm1cn_cmpcontrol_setup(DMP_ROWACCESS *rac)
 	    /* Just tag this column onto a group being copied.
 	    ** Column can't be nullable or cum would have been zeroed.
 	    */
-	    cum_length += att->length;
+	    cum_length += att_len;
 	}
 	else
 	{
@@ -1305,10 +1322,10 @@ dm1cn_cmpcontrol_setup(DMP_ROWACCESS *rac)
 	    op->opcode = opcode;
 	    op->attno = attno;
 	    op->flags = 0;
-	    op->length = att->length;
+	    op->length = att_len;
 	    if (opcode == DM1CN_OP_COPYN && cumok)
 		cum_length = op->length;
-	    if (att->type < 0)
+	    if (att_type < 0)
 	    {
 		--op->length;
 		op->flags |= DM1CN_NULLABLE;
