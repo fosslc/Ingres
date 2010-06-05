@@ -1399,6 +1399,8 @@ FE_RSLV_NAME	w_frn;
 ** History:
 **	24-Mar-2010 (toumi01) SIR 122403
 **	    Yet another clone clone, for new 10.0 columns.
+**	13-may-2010 (miket) SIR 122403
+**	    Fix net-change logic for width for ALTER TABLE.
 */
 
 static
@@ -1470,15 +1472,8 @@ FE_RSLV_NAME	w_frn;
 			table_reltcpri,
 			phys_partitions,
 			partition_dimensions,
-/* CRYPT_FIXME temp workaround for alttbl sep testing until alt table net
-** change for both logical and physical table widths is fully sorted out
-*/
-			row_width,
-			table_reltotwid,
-/*
 			table_reldatawid,
 			table_reltotdatawid,
-*/
 			encrypted_columns,
 			encryption_type
 		INTO

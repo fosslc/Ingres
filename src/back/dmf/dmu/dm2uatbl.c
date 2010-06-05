@@ -155,6 +155,8 @@
 **          Define keybufs for each table catalog we position into.
 **      29-Apr-2010 (stial01)
 **         Fixed previous (bad) integration to head rev.
+**	13-may-2010 (miket) SIR 122403
+**	    Fix net-change logic for width for ALTER TABLE.
 **          
 **/
 
@@ -782,6 +784,8 @@ DB_ERROR	*dberr)
                 relrecord.relatts++;
                 relrecord.relwid += attrrecord.attfml;
 		relrecord.reltotwid += attrrecord.attfml;
+		relrecord.reldatawid += attrrecord.attfml;
+		relrecord.reltotdatawid += attrrecord.attfml;
 
 		/* If we added a peripheral column, create the etab */
 		status = adi_dtinfo(&adf_scb, attr_entry[0]->attr_type, 
@@ -866,6 +870,7 @@ DB_ERROR	*dberr)
 		             attrrecord.attver_dropped =
 			    			 (relrecord.relversion + 1);
 		      	     relrecord.relwid -= attrrecord.attfml;
+		      	     relrecord.reldatawid -= attrrecord.attfml;
 
             	      	     status = dm2r_replace(attr_rcb, &attrtid,
 			    		  DM2R_BYPOSITION, (char *)&attrrecord,
@@ -1142,6 +1147,8 @@ DB_ERROR	*dberr)
                             relrecord.relwid += sizediff;
                 	    relrecord.relatts++;
                             relrecord.reltotwid += sizediff;
+                            relrecord.reldatawid += sizediff;
+                            relrecord.reltotdatawid += sizediff;
 			    column_altered = TRUE;
 		        }
 		        else if (attrrecord.attintl_id > altcol_col_intlid)
@@ -2300,8 +2307,8 @@ pt_adddrop_adjust(
 
 	relrecord.reltotwid = relrecp->reltotwid;
 	relrecord.relwid = relrecp->relwid;
-	relrecord.reltotdatawid = relrecp->reltotwid;
-	relrecord.reldatawid = relrecp->relwid;
+	relrecord.reltotdatawid = relrecp->reltotdatawid;
+	relrecord.reldatawid = relrecp->reldatawid;
 	relrecord.relmoddate = relrecp->relmoddate;
 	relrecord.relversion = relrecp->relversion;
 	relrecord.relidxcount = relrecp->relidxcount;

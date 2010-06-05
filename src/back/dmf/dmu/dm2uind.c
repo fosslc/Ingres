@@ -377,6 +377,8 @@
 **          Changes for Long IDs
 **      22-apr-2010 (stial01)
 **          Fix the for loop condition for the attnmstr initialization
+**	13-may-2010 (miket) SIR 122403
+**	    Fix net-change logic for width for ALTER TABLE.
 **/
 
 /*{
@@ -2748,6 +2750,7 @@ DB_ERROR	*dberr)
             }
 
             m->mx_width += colencwid > 0 ? colencwid : collength;
+            m->mx_datawidth += collength;
 
             /*
             **  If this column is part of the key, update the key width.
@@ -2842,6 +2845,7 @@ DB_ERROR	*dberr)
 		    if ( m->mx_structure == TCB_BTREE )
 			m->mx_kwidth += t->tcb_key_atts[j]->length;
 		    m->mx_width += t->tcb_key_atts[j]->length;
+		    m->mx_datawidth += t->tcb_key_atts[j]->length;
 
 		    ax++;
 		    bx++;
@@ -2899,6 +2903,7 @@ DB_ERROR	*dberr)
 	    m->mx_i_key_atts[ix] = &(m->mx_atts_ptr[ax]);
 	    m->mx_kwidth += m->mx_hilbertsize;
 	    m->mx_width += m->mx_hilbertsize;
+	    m->mx_datawidth += m->mx_hilbertsize;
 	    m->mx_att_map[ax] = ix+1;
 	    m->mx_atts_ptr[ax].encflags = 0;
 	    m->mx_atts_ptr[ax].encwid = 0;
@@ -3025,6 +3030,7 @@ DB_ERROR	*dberr)
 	dx++;
 
         m->mx_width += m->mx_tidsize;
+        m->mx_datawidth += m->mx_tidsize;
 
 	/* Done with TIDP... */
 

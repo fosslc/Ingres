@@ -4177,6 +4177,8 @@ EX_ARGS		    *ex_args)
 **	4-May-2010 (kschendel)
 **	    DM9026 can't take parameters, used too often by setdberr.
 **	    Drop the param in the message here.
+**	13-may-2010 (miket) SIR 122403
+**	    Fix net-change logic for width for ALTER TABLE.
 */
 DB_STATUS
 dm2u_update_catalogs(
@@ -5033,6 +5035,7 @@ DB_ERROR      	    *dberr)
 		    rel.relstat2 |= m->mx_new_relstat2;
 		    rel.relversion = 0;
 		    rel.reltotwid = m->mx_width;
+		    rel.reltotdatawid = m->mx_datawidth;
 		    rel.relatts = col_cnt - drop_cnt;
 
 		    /*

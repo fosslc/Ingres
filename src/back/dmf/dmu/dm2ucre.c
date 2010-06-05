@@ -953,6 +953,8 @@ NO_OPTIM=su4_cmw i64_aix
 **	    Ask for direct IO if config says to.
 **	01-apr-2010 (toumi01) SIR 122403
 **	    Support for column encryption. Start passing dmu.
+**	13-may-2010 (miket) SIR 122403
+**	    Fix net-change logic for width for ALTER TABLE.
 */
 
 /* ****FIXME THIS parameter list is simply ridiculous.  Just pass
@@ -2314,6 +2316,8 @@ DB_ERROR	    *errcb)
 		    */
 		    relrecord.relwid-=attr_entry[i]->attr_size;
 		    relrecord.reltotwid-=attr_entry[i]->attr_size;
+		    relrecord.reldatawid-=attr_entry[i]->attr_size;
+		    relrecord.reltotdatawid-=attr_entry[i]->attr_size;
 		}
 	    }
 	}

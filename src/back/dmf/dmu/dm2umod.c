@@ -1450,6 +1450,8 @@ static DB_STATUS check_archiver(
 **	    uncompressed to compressed.
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Temp tables are not DM_SCONCUR_MAX.
+**	13-may-2010 (miket) SIR 122403
+**	    Fix net-change logic for width for ALTER TABLE.
 */
 DB_STATUS
 dm2u_modify(
@@ -3043,6 +3045,7 @@ DB_ERROR        *dberr)
 	m->mx_ab_count = 0;
 	m->mx_ai_count = 0;
 	m->mx_width = t->tcb_rel.relwid;
+	m->mx_datawidth = t->tcb_rel.reldatawid;
 	m->mx_src_width = t->tcb_rel.relwid;
 	m->mx_kwidth = 0;
 	m->mx_rcb = r;

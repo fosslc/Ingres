@@ -357,6 +357,8 @@ static  char    *s206_cache_pri = NULL;
 **	    Partitioned table help; fix messed up indentations.
 **	25-Jun-2004 (schka24)
 **	    Add partitioning details to partitioned table help.
+**	13-may-2010 (miket) SIR 122403
+**	    Fix net-change logic for width for ALTER TABLE.
 */
 
 VOID
@@ -594,10 +596,6 @@ EXEC SQL END DECLARE SECTION;
 
     if (help_struct->row_width != -1)
     {
-/* CRYPT_FIXME need to sort out this logical/physical width problem
-	qrprintf(qrb, s205_Tot_width, help_struct->rel_totwid);
-	qrprintf(qrb, s1C_Row_width, help_struct->row_width);
-*/
 	qrprintf(qrb, s205_Tot_width, help_struct->rel_totdatawid);
 	qrprintf(qrb, s1C_Row_width, help_struct->rel_datawid);
     }

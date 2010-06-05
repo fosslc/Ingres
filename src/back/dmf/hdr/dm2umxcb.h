@@ -168,6 +168,8 @@ typedef struct _DM2U_OMCB DM2U_OMCB;
 **	    Add mx_tidsize.
 **	04-Nov-2008 (jonj)
 **	    SIR 120874 Change i4 mx_err_code to DB_ERROR mx_dberr.
+**	13-may-2010 (miket) SIR 122403
+**	    Fix net-change logic for width for ALTER TABLE.
 **	   
 */
 struct _DM2U_MXCB
@@ -275,6 +277,7 @@ struct _DM2U_MXCB
     i4         	    mx_idom_map[DB_MAXIXATTS];
 					/* Map of attributes in base table. */
     i4	    	    mx_width;		/* Width of record to load. */
+    i4	    	    mx_datawidth;	/* Logical width of the record */
     i4	    	    mx_kwidth;		/* Width of the key. */
     i4		    mx_src_width;	/* Width of sourced (base) record
 					** This is what goes thru CUT */
