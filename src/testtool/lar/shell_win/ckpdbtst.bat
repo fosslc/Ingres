@@ -35,6 +35,9 @@ REM		Created from ckpdbtst.sh .
 REM	01-nov-1999 (mcgem01)
 REM		Add CONTINUE label which is referenced a couple of times
 REM		but didn't exist.
+REM      4-May-2010 (hanal04) SIR 123608
+REM             ingres.sh now starts an sql session not a quel session. Update
+REM             this script to call quel directly.
 REM
 REM Get commandline args 
 REM
@@ -150,12 +153,12 @@ REM
 REM Copy result tables out.
 REM 
     echo Checking results of stress tests
-    ingres -s %dbname% <ckp%df%qry1 |sed -f %cpdbmask% >%dbname%.out1
-    ingres -s %dbname% <ckp%df%qry2 |sed -f %cpdbmask% >%dbname%.out2
-    ingres -s %dbname% <ckp%df%qry3 |sed -f %cpdbmask% >%dbname%.out3
-    ingres -s %dbname% <ckp%df%qry4 |sed -f %cpdbmask% >%dbname%.out4
-    ingres -s %dbname% <ckp%df%qry5 |sed -f %cpdbmask% >%dbname%.out5
-    ingres -s %dbname% <ckp%df%qry6 |sed -f %cpdbmask% >%dbname%.out6
+    quel -s %dbname% <ckp%df%qry1 |sed -f %cpdbmask% >%dbname%.out1
+    quel -s %dbname% <ckp%df%qry2 |sed -f %cpdbmask% >%dbname%.out2
+    quel -s %dbname% <ckp%df%qry3 |sed -f %cpdbmask% >%dbname%.out3
+    quel -s %dbname% <ckp%df%qry4 |sed -f %cpdbmask% >%dbname%.out4
+    quel -s %dbname% <ckp%df%qry5 |sed -f %cpdbmask% >%dbname%.out5
+    quel -s %dbname% <ckp%df%qry6 |sed -f %cpdbmask% >%dbname%.out6
 
 if not "%journaled%"=="TRUE" goto ELSE3
 REM
@@ -215,12 +218,12 @@ REM
 REM Copy result tables out.
 REM
     echo Checking results of rollforwarddb
-    ingres -s %dbname% <ckp%df%qry1 |sed -f %cpdbmask% >%dbname%.out7
-    ingres -s %dbname% <ckp%df%qry2 |sed -f %cpdbmask% >%dbname%.out8
-    ingres -s %dbname% <ckp%df%qry3 |sed -f %cpdbmask% >%dbname%.out9
-    ingres -s %dbname% <ckp%df%qry4 |sed -f %cpdbmask% >%dbname%.out10
-    ingres -s %dbname% <ckp%df%qry5 |sed -f %cpdbmask% >%dbname%.out11
-    ingres -s %dbname% <ckp%df%qry6 |sed -f %cpdbmask% >%dbname%.out12
+    quel -s %dbname% <ckp%df%qry1 |sed -f %cpdbmask% >%dbname%.out7
+    quel -s %dbname% <ckp%df%qry2 |sed -f %cpdbmask% >%dbname%.out8
+    quel -s %dbname% <ckp%df%qry3 |sed -f %cpdbmask% >%dbname%.out9
+    quel -s %dbname% <ckp%df%qry4 |sed -f %cpdbmask% >%dbname%.out10
+    quel -s %dbname% <ckp%df%qry5 |sed -f %cpdbmask% >%dbname%.out11
+    quel -s %dbname% <ckp%df%qry6 |sed -f %cpdbmask% >%dbname%.out12
 REM
 REM Clean up space used up by test.
 REM
