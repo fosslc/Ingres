@@ -667,9 +667,16 @@
 **          In odbc_setDescr(), set SQLCODE in the sqlca error block if
 **          PrepareParms() is unsuccessful.  Otherwise, errors will not be
 **          propagated to the application when SQLCA_ERROR is invoked.
-**     23-Mar-2010 (Ralph Loen) SIR 123465
-**         Trace data send to database to in odbc_putParms() with new 
-**         odbc_hexdump() function.
+**    23-Mar-2010 (Ralph Loen) SIR 123465
+**          Trace data send to database to in odbc_putParms() with new 
+**          odbc_hexdump() function.
+**    29-Apr-2010 (Ralph Loen) SIR 123661
+**          In ScanProcParamsAndBuildDescriptor(), make the call to
+**          GetProcParamNames() contingent on IIAPI_LEVEL_6, since
+**          databases at this level don't require the parameters to be
+**          named.
+**          
+**     
 */
 
 /*
@@ -1333,6 +1340,7 @@ BOOL ScanProcParmsAndBuildDescriptor(
     char       ParameterName[OBJECT_NAME_SIZE+1] = "";
     SIZE_TYPE  len;
     char       msgOnlyOneParmAllowed[] = "Only one parameter allowed";
+    LPDBC      pdbc = pstmt->pdbcOwner;
 
     /*
     ** Skip over first output parameter if a procedure return value.
@@ -1522,7 +1530,7 @@ BOOL ScanProcParmsAndBuildDescriptor(
                    force offset to 0 to protect proc param literals by
                    disabling array */
 
-         SetDescDefaultsFromType(pstmt->pdbcOwner, pprocipd);
+         SetDescDefaultsFromType(pdbc, pprocipd);
          if (fFoundSession)
               pprocipd->ParameterType = SQL_PARAM_TYPE_PROCGTTPARM;
          else pprocipd->ParameterType = SQL_PARAM_INPUT; /* treat literal as INPUT */
@@ -1551,10 +1559,18 @@ BOOL ScanProcParmsAndBuildDescriptor(
     if (fFoundSession)   /* if found GTT session then all done, because */
         return(TRUE);    /* the parameter names is already filled in */
 
-    rc = GetProcParamNames(pSession, pstmt, pProcIPD, szProcName, szSchema);
+
+    /*
+    ** Ingres 10 and later supports positional DB procedure parameters,
+    ** so there is no need to get the names of the parameters.
+    */
+    if (pdbc->fAPILevel < IIAPI_LEVEL_6)
+    {
+        rc = GetProcParamNames(pSession, pstmt, pProcIPD, szProcName, szSchema);
                  /* Search and read the catalog for the procedure column names,
                     and fill in the proc IRD with the names since the names 
                     are required by the API. */
+    }
     return(rc);
 
 errexit:
