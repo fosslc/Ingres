@@ -3537,6 +3537,9 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	    Add syntax for "set [no]batch_copy_optim"
 **	06-May-2010 (kiria01) b123689
 **	    Correct DECIMAL CAST when the scale is defaulted.
+**	20-May-2010 (kiria01) b123770
+**	    Status checked too late fron psl_subsel_compare resulting in
+**	    unsafe de-reference.
 */
 %{
 
@@ -34510,6 +34513,10 @@ predicate:		select_expr comparison select_expr
 		(bool)(($Yisdbp && $Ydbpinfo->pss_flags & PSS_INCOND &&
 		!($Yisdbp && $Ydbpinfo->pss_flags & PSS_INFORQ)) || $Yin_rule),
 		$Yin_rule ? E_US189E_6302_RULE_QUAL : 2415L, psq_cb);
+
+	    if (DB_FAILURE_MACRO(status))
+		return (status);
+
 	    /* Flag that the EQ (or NE) op is really an IN. This has
 	    ** implications for duplicates elimination. */
 	    if (treeinfo->pss_tree->pst_sym.pst_type == PST_BOP)
