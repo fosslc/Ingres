@@ -577,9 +577,11 @@ i4		*num;
 **	    Revise to use CVal8 and down-cast the result.  CVal8 is
 **	    now essentially as fast as CVal was anyway, since it runs
 **	    in i4 mode for the first 9 digits.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Optimizations for single byte
 */
 STATUS
-CVal(char *str, i4 *result)
+CVal_DB(char *str, i4 *result)
 {
     i8 val8;
     STATUS sts;
@@ -595,6 +597,63 @@ CVal(char *str, i4 *result)
     }
 
     *result = (i4) val8;
+    return OK;
+}
+
+
+STATUS
+CVal_SB(char *str, i4 *result)
+{
+    register char *p = str;	/* Pointer to current char */
+    i4 negative = FALSE;	/* Flag to indicate the sign */
+    u_i4 val = 0;		/* Holds the integer being formed */
+
+    /* Skip leading blanks */
+    while (CMspace_SB(p))
+        CMnext_SB(p);
+
+    /* Check for sign */
+    switch (*p)
+    {
+    case '-':
+	negative = TRUE;
+	/*FALLTHROUGH*/
+    case '+':
+	CMnext_SB(p);
+        /* Skip any whitespace after sign */
+	while (CMspace_SB(p))
+	    CMnext_SB(p);
+    }
+
+    /* At this point everything had better be numeric ... */
+    while (CMdigit_SB(p))
+    {
+	i4 digit = *p++ - '0';
+
+	/* check for overflow - note that in 2s complement the
+	** magnitude of -MAX will be one greater than +MAX
+	*/
+	if (val > MAXI4/10 ||
+		val == MAXI4/10 && digit > (MAXI4%10)+negative)
+	{
+	    /* underflow / overflow */
+	    return negative ? CV_UNDERFLOW : CV_OVERFLOW;
+	}
+	val = val * 10 + digit;
+    }
+
+    /* ... or trailing spaces */
+    while (CMspace_SB(p))
+        CMnext_SB(p);
+
+    if (*p)
+	return CV_SYNTAX;
+
+    if (negative)
+        *result = -(i4)val;
+    else
+        *result = (i4)val;
+
     return OK;
 }
 
@@ -640,9 +699,11 @@ CVal(char *str, i4 *result)
 **	      assuming ascii digits anyway, so CMdigit is pointless.
 **	    - Run the first 9 digits in i4 mode without overflow checking.
 **	      Only switch to i8 if the number is larger than 9 digits.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Optimizations for single byte
 */
 STATUS
-CVal8(char *str, i8 *result)
+CVal8_DB(char *str, i8 *result)
 {
     register u_char *p = (u_char *) str; /* Pointer to current char */
     i4 negative = FALSE;	/* Flag to indicate the sign */
@@ -713,6 +774,63 @@ CVal8(char *str, i8 *result)
         *result = -(i8)val8;
     else
         *result = (i8)val8;
+
+    return OK;
+}
+
+
+STATUS
+CVal8_SB(char *str, i8 *result)
+{
+    register char *p = str;	/* Pointer to current char */
+    i4 negative = FALSE;	/* Flag to indicate the sign */
+    u_i8 val = 0;		/* Holds the integer being formed */
+
+    /* Skip leading blanks */
+    while (CMspace_SB(p))
+        CMnext_SB(p);
+
+    /* Check for sign */
+    switch (*p)
+    {
+    case '-':
+	negative = TRUE;
+	/*FALLTHROUGH*/
+    case '+':
+	CMnext_SB(p);
+        /* Skip any whitespace after sign */
+	while (CMspace_SB(p))
+	    CMnext_SB(p);
+    }
+
+    /* At this point everything had better be numeric ... */
+    while (CMdigit_SB(p))
+    {
+	i4 digit = *p++ - '0';
+
+	/* check for overflow - note that in 2s complement the
+	** magnitude of -MAX will be one greater than +MAX
+	*/
+	if (val > MAXI8/10 ||
+		val == MAXI8/10 && digit > (MAXI8%10)+negative)
+	{
+	    /* underflow / overflow */
+	    return negative ? CV_UNDERFLOW : CV_OVERFLOW;
+	}
+	val = val * 10 + digit;
+    }
+
+    /* ... or trailing spaces */
+    while (CMspace_SB(p))
+        CMnext_SB(p);
+
+    if (*p)
+	return CV_SYNTAX;
+
+    if (negative)
+        *result = -(i8)val;
+    else
+        *result = (i8)val;
 
     return OK;
 }
@@ -1091,15 +1209,29 @@ char               *string;
 **          Created new for Jupiter.
 **	31-oct-88 (jrb)
 **	    Converted for Kanji.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Optimizations for single byte
 */
 VOID
-CVlower(string)
+CVlower_DB(string)
 register char	*string;
 {
 	while (*string != EOS)
 	{
 		CMtolower(string, string);
 		CMnext(string);
+	}
+}
+
+
+VOID
+CVlower_SB(string)
+register char	*string;
+{
+	while (*string != EOS)
+	{
+		CMtolower_SB(string, string);
+		CMnext_SB(string);
 	}
 }
 
@@ -1163,14 +1295,27 @@ i4	*result;
 **          Created new for Jupiter.
 **	31-oct-88 (jrb)
 **	    Converted for Kanji.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Optimizations for single byte
 */
 VOID
-CVupper(string)
+CVupper_DB(string)
 register char	*string;
 {
 	while (*string != EOS)
 	{
 		CMtoupper(string, string);
 		CMnext(string);
+	}
+}
+
+VOID
+CVupper_SB(string)
+register char	*string;
+{
+	while (*string != EOS)
+	{
+		CMtoupper_SB(string, string);
+		CMnext_SB(string);
 	}
 }

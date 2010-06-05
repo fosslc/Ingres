@@ -6,5 +6,5 @@ SubDir ING_SRC cl clf cv_vms ;
 
 IISUBSYS cl clf cv_vms ;
 
-IILIBRARY COMPATLIB : cv.c cvfa.c cvfcvt.c cvgcc.c cvpk.c cvlpk.c
+IILIBRARY COMPATLIB : cv.c cvfa.c cvfcvt.c cvgcc.c cvglobal.c cvinit.c cvpk.c cvlpk.c
 	cvpkl.c cvpkpk.c cvaptr.c cvaxptr.c cvptra.c cvptrax.c ;

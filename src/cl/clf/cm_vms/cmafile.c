@@ -106,7 +106,6 @@ GLOBALREF CM_UTF8CASE CM_utf8casetab[];
 GLOBALREF i4 CMdefcs;
 
 static char *attrfile();
-static bool Double_byte = FALSE;
 static STATUS init_frab();
 
 static CMATTR Readattr;
@@ -208,6 +207,8 @@ static ENTRY charsets[]=
 **	    Added CM_isUTF8.
 **	03-jun-2008 (gupsh01)
 **	    Update for UTF8 support.
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Reset function pointers after determining character set
 */
 STATUS
 CMset_attr(
@@ -255,8 +256,10 @@ CL_ERR_DESC	*err)
 		return CM_NOCHARSET;
 	    }
 	}
-	Double_byte = charsets[i].isdouble;
 	CM_isDBL = charsets[i].isdouble;
+
+	STinit();
+	CVinit();  
 
 	if (init_frab(&fab,&rab,fn,FALSE,&status) != OK)
 	{
@@ -310,7 +313,7 @@ CL_ERR_DESC	*err)
 bool
 CMischarset_doublebyte()
 {
-    return Double_byte;
+    return CM_isDBL;
 }
 
 /*{

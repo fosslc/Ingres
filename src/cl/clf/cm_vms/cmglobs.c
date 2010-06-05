@@ -32,6 +32,8 @@
 **          failing integer equality tests.
 **	03-Dec-2009 (wanfr01) Bug 122994
 **	    Initialize CM_isDBL
+**	13-Jan-2010 (wanfr01) Bug 123139
+**	    Default CM_isDBL to doublebyte.
 **/
 
 /*
@@ -48,7 +50,7 @@ GLOBALREF CM_UTF8CASE CM_casetab_UTF8[];
 GLOBALDEF {"iicl_gvar$not_ro"} noshare u_i2 *CM_AttrTab = CM_DefAttrTab;
 GLOBALDEF {"iicl_gvar$not_ro"} noshare u_char *CM_CaseTab = CM_DefCaseTab;
 GLOBALDEF {"iicl_gvar$not_ro"} noshare bool CM_isUTF8 = FALSE;
-GLOBALDEF {"iicl_gvar$not_ro"} noshare bool CM_isDBL = FALSE;
+GLOBALDEF {"iicl_gvar$not_ro"} noshare bool CM_isDBL = TRUE;
 GLOBALDEF {"iicl_gvar$not_ro"} noshare i4 *CM_UTF8Bytes = CM_BytesForUTF8;
 GLOBALDEF {"iicl_gvar$not_ro"} noshare CM_UTF8ATTR *CM_UTF8AttrTab = CM_attrtab_UTF8;
 GLOBALDEF {"iicl_gvar$not_ro"} noshare CM_UTF8CASE *CM_UTF8CaseTab = CM_casetab_UTF8;
