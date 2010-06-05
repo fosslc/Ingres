@@ -346,6 +346,10 @@
 **	    no time part).  Convert format template and month lookups to
 **	    perfect-hash lookups, and fast-track the output conversion
 **	    for the simple date case.
+**      29-Apr-2010 (horda03) B123654/B123666
+**          Do not negate the values of Ingresdate' intervals when the
+**          interval is negative. '-11 hrs -22 mins' is being stored as
+**          '-10 hrs 38 mins'.
 */
 
 /*  Static variable references	*/
@@ -2028,7 +2032,7 @@ i4		*now)
     	i4 	monmod;
     	i4 	daymod;
 	i4	tz_hour_component = 0;
-	bool    negative_interval = FALSE;
+        bool    negative_interval = FALSE;
 	i4	tzmn;
 	i4	*sizep = *pdsizp;
 	i2	status;
@@ -2075,20 +2079,16 @@ i4		*now)
 	    if (*p == 'x')
 	    {
 	      dv->dv_year = -dv->dv_year;
-	      if (dv->dv_datetype == DV_LENGTH) 
-		negative_interval = TRUE;
+              if (dv->dv_datetype == DV_LENGTH)
+              {
+                 negative_interval = TRUE;
+              }
 	    }
 	    break;
 
 	  case 'q':
 	    /* This is a month for an ANSI interval year to month */
-	    dv->dv_month = *ip;
-	    if ((negative_interval) || 
-		((dv->dv_datetype == DV_LENGTH) && (dv->dv_year < 0)))
-	    {
-	      dv->dv_month = -dv->dv_month;	
-	      negative_interval = TRUE;
-	    }
+	    dv->dv_month = (negative_interval) ? -(*ip) : *ip;
 	    status = DV_MONTH;
 	    break;
 
@@ -2105,8 +2105,10 @@ i4		*now)
 	    if (*p == 'e')
 	    {
 	      dv->dv_day = -dv->dv_day;
-	      if (dv->dv_datetype == DV_LENGTH)
-	        negative_interval = TRUE;
+              if (dv->dv_datetype == DV_LENGTH)
+              {
+                 negative_interval = TRUE;
+              }
 	    }
 	    status = DV_DAY;
 	    break;
@@ -2117,11 +2119,8 @@ i4		*now)
 
 	    dv->dv_hour = *ip;
 	    status = DV_HOUR;
-	    if ((negative_interval) || 
-		((dv->dv_datetype == DV_LENGTH) && (dv->dv_day < 0)) ||
-	    	(*p == 'j'))
+	    if ( (*p == 'j') || negative_interval)
 	    {
-		negative_interval = TRUE;
 		dv->dv_hour = -dv->dv_hour;	
 	    }
 	    break;
@@ -2132,12 +2131,8 @@ i4		*now)
 
 	    dv->dv_minute = *ip;
 	    status = DV_MINUTE;
-	    if ((negative_interval) || 
-		((dv->dv_datetype == DV_LENGTH) && (dv->dv_hour < 0)) ||
-	    	(*p == 'k'))
+	    if ( (*p == 'k') || negative_interval)
 	    {
-	      if (dv->dv_datetype == DV_LENGTH) 
-		negative_interval = TRUE;
 	      dv->dv_minute = -dv->dv_minute;	
 	    }
 	    break;
@@ -2147,17 +2142,9 @@ i4		*now)
 	    /* This is second */
 
 	    dv->dv_second = *ip;
-	    if (*p == 'p')
+	    if ( (*p == 'p') || negative_interval)
 	    {
 	      dv->dv_second = -dv->dv_second;
-	      if (dv->dv_datetype == DV_LENGTH) 
-		negative_interval = TRUE;
-	    }
-	    else if ((negative_interval) || 
-		((dv->dv_datetype == DV_LENGTH) && (dv->dv_minute < 0)))
-	    {
-		negative_interval = TRUE;
-		dv->dv_second = -dv->dv_second;	
 	    }
 	    status = DV_SECOND;
 	    break;
@@ -2177,11 +2164,8 @@ i4		*now)
 		dv->dv_nanosecond /= nano_mult[prec];
 		dv->dv_nanosecond *= nano_mult[prec];
 	    }
-	    if ((*p == 'g') || (negative_interval) || 
-		((dv->dv_datetype == DV_LENGTH) && (dv->dv_minute < 0)))
+	    if ( (*p == 'g') || negative_interval)
 	    {
-		if (dv->dv_datetype == DV_LENGTH) 
-		    negative_interval = TRUE;
 		dv->dv_nanosecond = -dv->dv_nanosecond;	
 	    }
 	    status = DV_NANOSECOND;
@@ -6441,6 +6425,9 @@ AD_NEWDTNTRNL  *dn)
 ** History:
 **	05-Mar-2008 (kiria01) b120043
 **	    Created
+**      30-Apr-2010 (horda03) b123666
+**          Use adu_2normldint to normalise the interval
+**          otherwise who knows what sort of value we get.
 */
 
 DB_STATUS
@@ -6462,7 +6449,7 @@ DB_DATA_VALUE  *rdv)
 	if (db_stat = ad0_dte_negdtntrnl(adf_scb, &dn))
 	    return (db_stat);
 	/* Let normalise do its job */
-	adu_1normldate(&dn);
+	adu_2normldint(&dn);
 	return (adu_7from_dtntrnl (adf_scb, rdv, &dn));
     default:
 	return (adu_error(adf_scb, (i4)E_AD5094_DATE_ARITH_NOABS, 0));
