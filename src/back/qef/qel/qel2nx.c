@@ -84,6 +84,8 @@
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
 **      09-jan-2009 (stial01)
 **          Fix buffers that are dependent on DB_MAXNAME
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*  Forward reference */
@@ -246,13 +248,9 @@ QEC_LINK	*v_lnk_p )
 
     v_lnk_p->qec_15_ndx_cnt = 0;
 
-    qed_u0_trimtail(
-		    dd_info_p->dd_t1_tab_name,
-		    (u_i4) DB_MAXNAME,
+    qed_u0_trimtail( dd_info_p->dd_t1_tab_name, (u_i4) DB_TAB_MAXNAME,
 		    indexes_p->l6_4_base_name);
-    qed_u0_trimtail(
-		    dd_info_p->dd_t2_tab_owner,
-		    (u_i4) DB_MAXNAME,
+    qed_u0_trimtail( dd_info_p->dd_t2_tab_owner, (u_i4) DB_OWN_MAXNAME,
 		    indexes_p->l6_5_base_owner);
 
     sel_p->qeq_c1_can_id = SEL_107_II_INDEXES;
@@ -275,35 +273,27 @@ QEC_LINK	*v_lnk_p )
     {
 	/* 3.  save LDB index name and owner */
 
-	MEcopy(
-	    indexes_p->l6_1_ind_name,
-	    sizeof(DD_NAME), 
+	MEcopy( indexes_p->l6_1_ind_name, sizeof(DD_TAB_NAME), 
 	    xid_p->qec_i1_name);
 
-	MEcopy(
-	    indexes_p->l6_2_ind_owner,
-	    sizeof(DD_NAME), 
+	MEcopy( indexes_p->l6_2_ind_owner, sizeof(DD_OWN_NAME), 
 	    xid_p->qec_i2_owner);
 
 	/* 4.  use link name and link owner as base identification */
 
-	qed_u0_trimtail(
-			ddl_p->qed_d1_obj_name,
-			(u_i4) DB_MAXNAME,
+	qed_u0_trimtail( ddl_p->qed_d1_obj_name, (u_i4) DB_OBJ_MAXNAME,
 			indexes_p->l6_4_base_name);
-	qed_u0_trimtail(
-			ddl_p->qed_d2_obj_owner,
-			(u_i4) DB_MAXNAME,
+	qed_u0_trimtail( ddl_p->qed_d2_obj_owner, (u_i4) DB_OWN_MAXNAME,
 			indexes_p->l6_5_base_owner);
 
 	/* 5.  generate link name for index */
 
 	qel_26_ndx_name(i_qer_p, v_lnk_p, v_lnk_p->qec_15_ndx_cnt + 1,
-		    ( DD_NAME * ) xid_p->qec_i3_given);
+		    ( DD_TAB_NAME * ) xid_p->qec_i3_given);
 
-	MEcopy(xid_p->qec_i3_given, sizeof(DD_NAME), 
+	MEcopy(xid_p->qec_i3_given, sizeof(DD_TAB_NAME), 
 	    indexes_p->l6_1_ind_name);
-	MEcopy(ddl_p->qed_d2_obj_owner, sizeof(DD_NAME), 
+	MEcopy(ddl_p->qed_d2_obj_owner, sizeof(DD_OWN_NAME), 
 	    indexes_p->l6_2_ind_owner);
 
 	/* 6.  insert into IIDD_INDEXES */
@@ -408,13 +398,9 @@ QEC_INDEX_ID	*i_xid_p )
 
     /* 1.  use local index name to retrieve each II_INDEX_COLUMN column */
 
-    qed_u0_trimtail(
-		    i_xid_p->qec_i1_name,
-		    (u_i4) DB_MAXNAME,
+    qed_u0_trimtail( i_xid_p->qec_i1_name, (u_i4) DB_TAB_MAXNAME,
 		    xcol_p->l7_1_ind_name);
-    qed_u0_trimtail(
-		    i_xid_p->qec_i2_owner,
-		    (u_i4) DB_MAXNAME,
+    qed_u0_trimtail( i_xid_p->qec_i2_owner, (u_i4) DB_OWN_MAXNAME,
 		    xcol_p->l7_2_ind_owner);
 
     sel_p->qeq_c1_can_id = SEL_108_II_INDEX_COLUMNS;
@@ -456,7 +442,7 @@ QEC_INDEX_ID	*i_xid_p )
 	    }
 	    /* replace with local column name */
 
-	    MEcopy(from_p->dd_c1_col_name, sizeof(DD_NAME), 
+	    MEcopy(from_p->dd_c1_col_name, sizeof(DD_ATT_NAME), 
 		    xcol_p->l7_3_col_name);
 	}
 	else
@@ -474,14 +460,10 @@ QEC_INDEX_ID	*i_xid_p )
 	{
 	    /* use generated index name and link owner for insertion */
 
-	    qed_u0_trimtail(
-		    i_xid_p->qec_i3_given,
-		    (u_i4) DB_MAXNAME,
+	    qed_u0_trimtail( i_xid_p->qec_i3_given, (u_i4) DB_TAB_MAXNAME,
 		    xcol_p->l7_1_ind_name);
 
-	    qed_u0_trimtail(
-		    ddl_p->qed_d2_obj_owner,
-		    (u_i4) DB_MAXNAME,
+	    qed_u0_trimtail( ddl_p->qed_d2_obj_owner, (u_i4) DB_OWN_MAXNAME,
 		    xcol_p->l7_2_ind_owner);
 
 	    ins_p->qeq_c1_can_id = INS_622_DD_INDEX_COLUMNS;
@@ -609,7 +591,7 @@ QEC_LINK	*v_lnk_p )
 						/* pass embedded base object id
 						** to create link routine */
 
-    MEcopy(i_ddl_p->qed_d2_obj_owner, sizeof(DD_NAME), 
+    MEcopy(i_ddl_p->qed_d2_obj_owner, sizeof(DD_OWN_NAME), 
 	ddl_p->qed_d2_obj_owner);
     ddl_p->qed_d3_col_count = 0;		/* assume */
     ddl_p->qed_d4_ddb_cols_pp = ddb_cols_pp;
@@ -618,7 +600,7 @@ QEC_LINK	*v_lnk_p )
     ddl_p->qed_d6_tab_info_p = tab_p;
 
     tab_p->dd_t3_tab_type = DD_4OBJ_INDEX;
-    MEcopy(i_ddl_p->qed_d6_tab_info_p->dd_t2_tab_owner, sizeof(DD_NAME), 
+    MEcopy(i_ddl_p->qed_d6_tab_info_p->dd_t2_tab_owner, sizeof(DD_OWN_NAME), 
 	tab_p->dd_t2_tab_owner);
     tab_p->dd_t3_tab_type = DD_4OBJ_INDEX;
     tab_p->dd_t6_mapped_b = i_ddl_p->qed_d6_tab_info_p->dd_t6_mapped_b;
@@ -665,8 +647,7 @@ QEC_LINK	*v_lnk_p )
 		    to_p = *(ddb_cols_pp + j);
 		    if (found_b)
 		    {
-		    	MEcopy(from_p->dd_c1_col_name, 
-			    sizeof(DD_NAME), 
+		    	MEcopy(from_p->dd_c1_col_name, sizeof(DD_ATT_NAME), 
 			    to_p->dd_c1_col_name);
 		    }
 		    else
@@ -678,12 +659,10 @@ QEC_LINK	*v_lnk_p )
 			   )
 			{
 			    if (*i_qer_p->qef_cb->qef_dbxlate & CUI_ID_REG_U)
-			    	MEcopy("TIDP",
-			            sizeof(DD_NAME), 
+			    	MEcopy("TIDP", sizeof(DD_ATT_NAME), 
 			            to_p->dd_c1_col_name);
 			    else
-			    	MEcopy("tidp",
-			            sizeof(DD_NAME), 
+			    	MEcopy("tidp", sizeof(DD_ATT_NAME), 
 			            to_p->dd_c1_col_name);
 			}
 		        else
@@ -702,10 +681,10 @@ QEC_LINK	*v_lnk_p )
 	    ddl_p->qed_d4_ddb_cols_pp = (DD_COLUMN_DESC **)0;
 	}
 
-	MEcopy(xid_p->qec_i3_given, sizeof(DD_NAME), 
+	MEcopy(xid_p->qec_i3_given, sizeof(DD_OBJ_NAME), 
 	    ddl_p->qed_d1_obj_name);
 
-	MEcopy(xid_p->qec_i1_name, sizeof(DD_NAME), 
+	MEcopy(xid_p->qec_i1_name, sizeof(DD_TAB_NAME), 
 	    tab_p->dd_t1_tab_name);
 
 	status = qel_c0_cre_lnk(lnkrcb_p);
@@ -784,13 +763,9 @@ DD_COLUMN_DESC	**o_cid_pp )
 
     /* 1.  set up for looping through each retrieved II_INDEX_COLUMN column */
 
-    qed_u0_trimtail(
-		    i_xid_p->qec_i1_name,
-		    (u_i4) DB_MAXNAME,
+    qed_u0_trimtail( i_xid_p->qec_i1_name, (u_i4) DB_TAB_MAXNAME,
 		    xcol_p->l7_1_ind_name);
-    qed_u0_trimtail(
-		    i_xid_p->qec_i2_owner,
-		    (u_i4) DB_MAXNAME,
+    qed_u0_trimtail( i_xid_p->qec_i2_owner, (u_i4) DB_OWN_MAXNAME,
 		    xcol_p->l7_2_ind_owner);
 
     sel_p->qeq_c1_can_id = SEL_108_II_INDEX_COLUMNS;
@@ -905,14 +880,14 @@ qel_26_ndx_name(
 QEF_RCB		*i_qer_p,
 QEC_LINK	*v_lnk_p,
 i4		i_ndx_ord,
-DD_NAME		*o_given_p )
+DD_TAB_NAME	*o_given_p )
 {
     QEC_D9_TABLEINFO	*tabinfo_p = v_lnk_p->qec_2_tableinfo_p;
     char		*prefix_p, *cp1, *cp2;
     u_i4		name_l;
-    QEC_DBNAMESTR	base_ascii,
-			ord_ascii;
-    char		ndx_name[QEK_100_LEN + DB_MAXNAME];
+    char		base_ascii[50]; /* ascii db_tab_base */
+    char		ord_ascii[50]; /* ascii db_tab_base */
+    char		ndx_name[QEK_100_LEN + DB_TAB_MAXNAME];
 
     /*
     ** Convert the two object ids (table & index) into 4-digit
@@ -925,8 +900,7 @@ DD_NAME		*o_given_p )
     ** registered name, otherwise just use "ddx".  Then assemble
     ** the pieces to make something like "ddx_1001_1002".
     */
-    name_l = qed_u0_trimtail( tabinfo_p->d9_3_tab_name,
-				(u_i4) DB_MAXNAME,
+    name_l = qed_u0_trimtail( tabinfo_p->d9_3_tab_name, (u_i4) DB_TAB_MAXNAME,
 				ndx_name );
     prefix_p = "ddx_";
     if ( name_l >= 2 )
@@ -940,6 +914,6 @@ DD_NAME		*o_given_p )
 	}
     }
     STpolycat(4, prefix_p, base_ascii, "_", ord_ascii, ndx_name);
-    MEmove(STlength(ndx_name), ndx_name, ' ', sizeof(DD_NAME),
+    MEmove(STlength(ndx_name), ndx_name, ' ', sizeof(DD_TAB_NAME),
 	    (char *)o_given_p);
 }    

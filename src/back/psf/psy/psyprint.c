@@ -57,6 +57,8 @@
 **	04-sep-2003 (abbjo03)
 **	    Add missing declaration and initialization of sess_cb in xDEBUG
 **	    block in psy_put.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*{
@@ -116,7 +118,7 @@ psy_print(
 	PSS_USRRANGE	   *rngtab,
 	DB_ERROR	   *err_blk)
 {
-    char                buf[256];
+    char                buf[1024 + DB_TAB_MAXNAME];
     i4                  i4align;
     i2                  i2align;
     f8                  f8align;
@@ -144,8 +146,8 @@ psy_print(
 	    return (status);
 
 	/* NULL terminate and trim blanks from range variable name */
-	MEcopy(rngtab->pss_rngtab[i].pss_rgname, DB_MAXNAME, buf);
-	buf[DB_MAXNAME] = '\0';
+	MEcopy(rngtab->pss_rngtab[i].pss_rgname, DB_TAB_MAXNAME, buf);
+	buf[DB_TAB_MAXNAME] = '\0';
 	slength = STtrmwhite(buf);
 	status = psy_put(mstream, buf, slength, block, err_blk);
 	if (DB_FAILURE_MACRO(status))
@@ -156,8 +158,8 @@ psy_print(
 	    return (status);
 
 	/* NULL terminate and trim blanks from table name */
-	MEcopy((char *) &rngtab->pss_rngtab[i].pss_tabname, DB_MAXNAME, buf);
-	buf[DB_MAXNAME] = '\0';
+	MEcopy((char *) &rngtab->pss_rngtab[i].pss_tabname, DB_TAB_MAXNAME, buf);
+	buf[DB_TAB_MAXNAME] = '\0';
 	slength = STtrmwhite(buf);
 	status = psy_put(mstream, buf, slength, block, err_blk);
 	if (DB_FAILURE_MACRO(status))
@@ -263,8 +265,8 @@ psy_print(
 		if (j < PST_NUMVARS)
 		{
 		    /* trim trailing blanks and NULL terminate */
-		    MEcopy(rngtab->pss_rngtab[j].pss_rgname, DB_MAXNAME, buf);
-		    buf[DB_MAXNAME] = '\0';
+		    MEcopy(rngtab->pss_rngtab[j].pss_rgname, DB_TAB_MAXNAME, buf);
+		    buf[DB_TAB_MAXNAME] = '\0';
 		    slength = STtrmwhite(buf);
 		    status = psy_put(mstream, buf, slength, block, err_blk);
 		    if (DB_FAILURE_MACRO(status))
@@ -293,8 +295,8 @@ psy_print(
 		{
 		    /* NULL terminate and trim blanks from column name */
 		    MEcopy((char *) &lastvar->pss_attdesc[i4align]->att_name,
-			DB_MAXNAME, buf);
-		    buf[DB_MAXNAME] = '\0';
+			DB_ATT_MAXNAME, buf);
+		    buf[DB_ATT_MAXNAME] = '\0';
 		    slength = STtrmwhite(buf);
 		    status = psy_put(mstream, buf, slength, block, err_blk);
 		    if (DB_FAILURE_MACRO(status))
@@ -326,7 +328,7 @@ psy_print(
 		/* NULL terminate and trim blanks from the table name */
 		MEcopy((char *) &rngtab->pss_rsrng.pss_tabname,
 		    sizeof(DB_TAB_NAME), buf);
-		buf[DB_MAXNAME] = '\0';
+		buf[DB_TAB_MAXNAME] = '\0';
 		slength = STtrmwhite(buf);
 		status = psy_put(mstream, buf, slength, block, err_blk);
 		if (DB_FAILURE_MACRO(status))
@@ -352,8 +354,8 @@ psy_print(
 		/* Get the column name from the result range variable */
 		lastvar = &rngtab->pss_rsrng;
 		MEcopy((char *) &lastvar->pss_attdesc[i4align]->att_name,
-		    DB_MAXNAME, buf);
-		buf[DB_MAXNAME] = '\0';
+		    DB_ATT_MAXNAME, buf);
+		buf[DB_ATT_MAXNAME] = '\0';
 		slength = STtrmwhite(buf);
 		status = psy_put(mstream, buf, slength, block, err_blk);
 		if (DB_FAILURE_MACRO(status))

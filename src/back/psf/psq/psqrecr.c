@@ -132,6 +132,8 @@
 **	    Added *PSS_SELBLK parm to psf_mopen(), psf_mlock(), psf_munlock(),
 **	    psf_malloc(), psf_mclose(), psf_mroot(), psf_mchtyp(),
 **	    psl_rptqry_tblids().
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **
 [@history_template@]...
 **/
@@ -1251,10 +1253,10 @@ psq_dbpreg(
 
     MEcopy((PTR) &psq_cb->psq_cursid, sizeof(DB_CURSOR_ID), 
 	(PTR) dbpid);
-    MEcopy((PTR) owner, DB_MAXNAME, (PTR) ((char *)
+    MEcopy((PTR) owner, DB_OWN_MAXNAME, (PTR) ((char *)
 	dbpid + sizeof(DB_CURSOR_ID)));
     I4ASSIGN_MACRO(sess_cb->pss_udbid,
-        *(i4 *) ((char *) dbpid + sizeof(DB_CURSOR_ID) + DB_MAXNAME));
+        *(i4 *) ((char *) dbpid + sizeof(DB_CURSOR_ID) + DB_OWN_MAXNAME));
     MEcopy((PTR) dbpid, sizeof(dbpid), 
     	(PTR) qsf_rb.qsf_feobj_id.qso_name);
 
@@ -1324,7 +1326,7 @@ psq_dbpreg(
     	cps = &stmt_cp->pst_specific.pst_regproc;
 
     	MEcopy((PTR) &psq_cb->psq_cursid.db_cur_name, 
-		DB_MAXNAME, (PTR) &cps->pst_procname);
+		DB_DBP_MAXNAME, (PTR) &cps->pst_procname);
 
     	STRUCT_ASSIGN_MACRO(*owner, cps->pst_ownname);
 
@@ -1334,9 +1336,9 @@ psq_dbpreg(
 
     	regproc_desc->dd_p1_local_proc_id.db_cursor_id[0] = 0;
     	regproc_desc->dd_p1_local_proc_id.db_cursor_id[1] = 0;
-    	MEcopy((PTR) &dbp_local_desc->dd_t1_tab_name, DB_MAXNAME,
+    	MEcopy((PTR) &dbp_local_desc->dd_t1_tab_name, DB_TAB_MAXNAME,
 		(PTR) regproc_desc->dd_p1_local_proc_id.db_cur_name);
-    	MEcopy((PTR) &dbp_local_desc->dd_t2_tab_owner, DB_MAXNAME,
+    	MEcopy((PTR) &dbp_local_desc->dd_t2_tab_owner, DB_OWN_MAXNAME,
 		(PTR) regproc_desc->dd_p2_ldbproc_owner);
     	regproc_desc->dd_p3_regproc_id.db_cursor_id[0] =
 			be_id.db_cursor_id[0];	
@@ -1344,7 +1346,7 @@ psq_dbpreg(
 			be_id.db_cursor_id[1];	
     	MEcopy((PTR) &dbp_desc->dd_o1_objname, DB_MAXNAME,
 		(PTR) regproc_desc->dd_p3_regproc_id.db_cur_name);
-    	MEcopy((PTR) &dbp_desc->dd_o2_objowner, DB_MAXNAME,
+    	MEcopy((PTR) &dbp_desc->dd_o2_objowner, DB_OWN_MAXNAME,
 		(PTR) regproc_desc->dd_p4_regproc_owner);
 
     	STRUCT_ASSIGN_MACRO(dbp_local_desc->dd_t9_ldb_p->dd_i1_ldb_desc, 
@@ -1536,8 +1538,8 @@ psq_dbp_qp_ids(
         /* construct BE QSF object id for a dbproc QP object */
         be_id->db_cursor_id[0] = (i4) sess_cb->pss_psessid;
         be_id->db_cursor_id[1] = (i4) sess_cb->pss_crsid++;
-        MEcopy((PTR) dbp_name, sizeof((*dbp_own_name)), 
-	    (PTR) be_id->db_cur_name);
+	/* DB_CURSOR_MAXNAME = DB_DBP_MAXNAME */
+        MEcopy((PTR) dbp_name, sizeof((*dbp_name)), (PTR) be_id->db_cur_name);
     }
 
     return;

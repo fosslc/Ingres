@@ -81,6 +81,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -369,7 +371,8 @@ pst_adresdom(
 	{
 	    psf_error(2207L, 0L, PSF_USERERR, &err_code, &psq_cb->psq_error, 3,
 		sizeof(cb->pss_lineno), &cb->pss_lineno,
-		psf_trmwhite(DB_MAXNAME, cb->pss_crsr->psc_blkid.db_cur_name),
+		psf_trmwhite(DB_CURSOR_MAXNAME,
+			cb->pss_crsr->psc_blkid.db_cur_name),
 		cb->pss_crsr->psc_blkid.db_cur_name,
 		psf_trmwhite(sizeof(DB_ATT_NAME), attname), attname);
 	    return (E_DB_ERROR);
@@ -381,7 +384,8 @@ pst_adresdom(
 	{
 	    psf_error(2207L, 0L, PSF_USERERR, &err_code, &psq_cb->psq_error, 3,
 		sizeof(cb->pss_lineno), &cb->pss_lineno,
-		psf_trmwhite(DB_MAXNAME, cb->pss_crsr->psc_blkid.db_cur_name),
+		psf_trmwhite(DB_CURSOR_MAXNAME, 
+			cb->pss_crsr->psc_blkid.db_cur_name),
 		cb->pss_crsr->psc_blkid.db_cur_name,
 		psf_trmwhite(sizeof(DB_ATT_NAME), attname), attname);
 	    return (E_DB_ERROR);

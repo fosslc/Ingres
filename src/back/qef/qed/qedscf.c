@@ -131,6 +131,8 @@
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
 **      09-jan-2009 (stial01)
 **          Fix buffers that are dependent on DB_MAXNAME
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -292,10 +294,10 @@ QEF_RCB         *v_qer_p )
     /* 1.  set up LDB control block for iidbdb */
 
     iidbdb_p->dd_l1_ingres_b = FALSE;
-    MEfill(DB_MAXNAME, ' ', iidbdb_p->dd_l2_node_name);
+    MEfill(DB_NODE_MAXNAME, ' ', iidbdb_p->dd_l2_node_name);
     MEmove(STlength(IIQE_c1_iidbdb), IIQE_c1_iidbdb, ' ', 
 	sizeof(iidbdb_p->dd_l3_ldb_name), iidbdb_p->dd_l3_ldb_name);
-    MEfill(DB_MAXNAME, ' ', iidbdb_p->dd_l4_dbms_name);
+    MEfill(DB_TYPE_MAXLEN, ' ', iidbdb_p->dd_l4_dbms_name);
     iidbdb_p->dd_l5_ldb_id = DD_0_IS_UNASSIGNED;
 
     if (ult_check_macro(& qef_cb->qef_trace, QEF_TRACE_DDB_LOG_QRY_55,
@@ -359,7 +361,7 @@ QEF_RCB         *v_qer_p )
     /* 5.  set up to fetch result */
 
     rq_bind[0].rqb_addr = (PTR) ddb_p->dd_d2_dba_desc.dd_u1_usrname;
-    rq_bind[0].rqb_length = DB_MAXNAME;
+    rq_bind[0].rqb_length = DB_OWN_MAXNAME;
     rq_bind[0].rqb_dt_id = DB_CHA_TYPE;
     rq_bind[1].rqb_addr = (PTR) & ddb_p->dd_d6_dbservice;
     rq_bind[1].rqb_length = sizeof(ddb_p->dd_d6_dbservice);
@@ -517,8 +519,8 @@ QEF_RCB         *v_qer_p )
 		    log_err_59 = FALSE;
     i4         i4_1, 
 		    i4_2;
-    char	    ddbname[DB_MAXNAME + 1];
-    char	    qrytxt[QEK_200_LEN + DB_MAXNAME];
+    char	    ddbname[DB_DB_MAXNAME + 1];
+    char	    qrytxt[QEK_200_LEN + DB_DB_MAXNAME];
 
 
     if (ult_check_macro(& qef_cb->qef_trace, QEF_TRACE_DDB_LOG_QRY_55,
@@ -537,7 +539,7 @@ QEF_RCB         *v_qer_p )
 
     /* 1.  set up common information for queries */
 
-    qed_u0_trimtail(ddb_p->dd_d1_ddb_name, (u_i4) DB_MAXNAME, ddbname);
+    qed_u0_trimtail( ddb_p->dd_d1_ddb_name, DB_DB_MAXNAME, ddbname);
 
     /* 2.  set up for calling RQF */
 
@@ -591,7 +593,7 @@ QEF_RCB         *v_qer_p )
     /* 5.  set up to fetch result */
 
     rq_bind[0].rqb_addr = (PTR) ddb_p->dd_d2_dba_desc.dd_u1_usrname;
-    rq_bind[0].rqb_length = DB_MAXNAME;
+    rq_bind[0].rqb_length = DB_OWN_MAXNAME;
     rq_bind[0].rqb_dt_id = DB_CHA_TYPE;
     rq_bind[1].rqb_addr = (PTR) & ddb_p->dd_d5_access;
     rq_bind[1].rqb_length = sizeof(ddb_p->dd_d5_access);
@@ -671,7 +673,7 @@ QEF_RCB         *v_qer_p )
     bind_p = rq_bind;	/* MUST first initialize */
     bind_p->rqb_addr = 
 	(PTR) ddb_p->dd_d3_cdb_info.dd_i1_ldb_desc.dd_l2_node_name;
-    bind_p->rqb_length = DB_MAXNAME;
+    bind_p->rqb_length = DB_NODE_MAXNAME;
     bind_p->rqb_dt_id = DB_CHA_TYPE;
     bind_p++;				/* pt to next bind element */
 
@@ -682,12 +684,13 @@ QEF_RCB         *v_qer_p )
     bind_p->rqb_addr = 
 	(PTR) ddb_p->dd_d3_cdb_info.dd_i1_ldb_desc.dd_l3_ldb_name;
 
-    bind_p->rqb_length = DB_MAXNAME;
+    bind_p->rqb_length = DB_DB_MAXNAME;
     bind_p->rqb_dt_id = DB_CHA_TYPE;
     bind_p++;				/* pt to next bind element */
+
     bind_p->rqb_addr = 
 	(PTR) ddb_p->dd_d3_cdb_info.dd_i1_ldb_desc.dd_l4_dbms_name;
-    bind_p->rqb_length = DB_MAXNAME;
+    bind_p->rqb_length = DB_TYPE_MAXLEN;
     bind_p->rqb_dt_id = DB_CHA_TYPE;
 
     rqr_p->rqr_col_count = QEK_3_COL_COUNT;
@@ -828,7 +831,7 @@ QEF_RCB		*v_qer_p )
 		    log_err_59 = FALSE;
     i4         i4_1, 
 		    i4_2;
-    char	    usrname[DB_MAXNAME],
+    char	    usrname[DB_OWN_MAXNAME],
 		    qrytxt[QEK_200_LEN];
     RQB_BIND	    rq_bind[QEK_2_COL_COUNT];	/* for 2 columns */
 
@@ -906,11 +909,11 @@ QEF_RCB		*v_qer_p )
     /* 2.4.  set up to fetch result */
 
     rq_bind[0].rqb_addr = (PTR) usrname;
-    rq_bind[0].rqb_length = DB_MAXNAME;
+    rq_bind[0].rqb_length = DB_OWN_MAXNAME;
     rq_bind[0].rqb_dt_id = DB_CHA_TYPE;
 
     rq_bind[1].rqb_addr = (PTR) plus_p->dd_p2_dba_name;
-    rq_bind[1].rqb_length = DB_MAXNAME;
+    rq_bind[1].rqb_length = DB_OWN_MAXNAME;
     rq_bind[1].rqb_dt_id = DB_CHA_TYPE;
 
     rqr_p->rqr_col_count = QEK_2_COL_COUNT;
@@ -1040,8 +1043,8 @@ QEF_RCB         *v_qer_p )
 		    log_err_59 = FALSE;
     i4         i4_1, 
 		    i4_2;
-    char	    qrytxt[QEK_200_LEN + DB_MAXNAME];
-    char	    usrname[DB_MAXNAME + 1];
+    char	    qrytxt[QEK_200_LEN + DB_OWN_MAXNAME];
+    char	    usrname[DB_OWN_MAXNAME + 1];
     RQB_BIND	    rq_bind;
 
 
@@ -1061,7 +1064,7 @@ QEF_RCB         *v_qer_p )
 
     /* 1.  set up for calling RQF */
 
-    qed_u0_trimtail(usr_p->dd_u1_usrname, (u_i4) DB_MAXNAME, usrname);
+    qed_u0_trimtail( usr_p->dd_u1_usrname, DB_OWN_MAXNAME, usrname);
 
     MEfill(sizeof(rq_cb), '\0', (PTR) & rq_cb);
     rqr_p->rqr_session = dds_p->qes_d3_rqs_p;  /* RQF session cb ptr */
@@ -1256,8 +1259,8 @@ QEF_RCB		*v_qer_p )
     i4         i4_1, 
 		    i4_2;
     RQB_BIND	    rq_bind[QEK_2_COL_COUNT];	/* for 2 columns */
-    char	    cap_cap[DB_MAXNAME + 1];
-    char	    cap_val[DB_MAXNAME + 1];
+    char	    cap_cap[DB_CAP_MAXLEN + 1];
+    char	    cap_val[DB_CAPVAL_MAXLEN + 1];
     i4		    tup_cnt;
     i4		    str_code;
     i4		    val_code;
@@ -1363,10 +1366,11 @@ QEF_RCB		*v_qer_p )
 	rqr_p->rqr_q_language = DB_SQL;
 
 	rq_bind[0].rqb_addr = (PTR) cap_cap;
-	rq_bind[0].rqb_length = DB_MAXNAME;
+	rq_bind[0].rqb_length = DB_CAP_MAXLEN;
 	rq_bind[0].rqb_dt_id = DB_CHA_TYPE;
+	
 	rq_bind[1].rqb_addr = (PTR) cap_val;
-	rq_bind[1].rqb_length = DB_MAXNAME;
+	rq_bind[1].rqb_length = DB_CAPVAL_MAXLEN;
 	rq_bind[1].rqb_dt_id = DB_CHA_TYPE;
 
 	/* last is QEK_2_COL_COUNT */
@@ -1393,7 +1397,7 @@ QEF_RCB		*v_qer_p )
 		caps_p->dd_c3_comsql_lvl = val_code;
 		break;
 	    case QEK_2CAP_DBMS_TYPE:
-		MEcopy(cap_val, DB_MAXNAME, caps_p->dd_c7_dbms_type);
+		MEcopy(cap_val, DB_TYPE_MAXLEN, caps_p->dd_c7_dbms_type);
 		str_code = qek_c1_str_to_code(cap_val);
 		break;
 	    case QEK_3CAP_DB_NAME_CASE:
@@ -1812,8 +1816,8 @@ QEF_RCB		  *v_qer_p )
 		    log_err_59 = FALSE;
     i4         i4_1, 
 		    i4_2;
-    char	    sysowner[DB_MAXNAME],
-		    qrytxt[QEK_200_LEN + (2*DB_MAXNAME)];
+    char	    sysowner[DB_OWN_MAXNAME],
+		    qrytxt[QEK_200_LEN]; /* buf for select from catalog */
     RQB_BIND	    rq_bind[QEK_1_COL_COUNT];	/* for 1 columns */
 
 
@@ -1883,7 +1887,7 @@ QEF_RCB		  *v_qer_p )
     /* 2.4.  set up to fetch result */
 
     rq_bind[0].rqb_addr = (PTR) sysowner;
-    rq_bind[0].rqb_length = DB_MAXNAME;
+    rq_bind[0].rqb_length = DB_OWN_MAXNAME;
     rq_bind[0].rqb_dt_id = DB_CHA_TYPE;
 
     rqr_p->rqr_col_count = QEK_1_COL_COUNT;
@@ -1949,7 +1953,7 @@ QEF_RCB		  *v_qer_p )
     /* 3.3.  set up to fetch result */
 
     rq_bind[0].rqb_addr = (PTR) plus_p->dd_p6_sys_name;
-    rq_bind[0].rqb_length = DB_MAXNAME;
+    rq_bind[0].rqb_length = DB_OWN_MAXNAME;
     rq_bind[0].rqb_dt_id = DB_CHA_TYPE;
 
     rqr_p->rqr_col_count = QEK_1_COL_COUNT;

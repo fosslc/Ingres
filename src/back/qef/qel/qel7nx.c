@@ -73,6 +73,8 @@
 **	    replace nat and longnat with i4
 **	30-mar-04 (toumi01)
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -212,13 +214,9 @@ QEC_INDEX_ID	*i_id_p )
 
     /* 1.  set up for for deleting from IIDD_DDB_LDB_X_COLUMNs */
 
-    qed_u0_trimtail(
-		    i_id_p->qec_i1_name,
-		    (u_i4) DB_MAXNAME,
+    qed_u0_trimtail( i_id_p->qec_i1_name, (u_i4) DB_TAB_MAXNAME,
 		    xcol_p->l7_1_ind_name);
-    qed_u0_trimtail(
-		    i_id_p->qec_i2_owner,
-		    (u_i4) DB_MAXNAME,
+    qed_u0_trimtail( i_id_p->qec_i2_owner, (u_i4) DB_OWN_MAXNAME,
 		    xcol_p->l7_2_ind_owner);
 
     del_p->qeq_c1_can_id = DEL_522_DD_INDEX_COLUMNS;
@@ -282,14 +280,10 @@ QEC_LINK	*v_lnk_p )
 
     /* 1.  set up */
 
-    qed_u0_trimtail(
-		objects_p->d6_1_obj_name,
-		(u_i4) DB_MAXNAME,
+    qed_u0_trimtail( objects_p->d6_1_obj_name, (u_i4) DB_OBJ_MAXNAME,
 		indexes_p->l6_4_base_name);
 
-    qed_u0_trimtail(
-		objects_p->d6_2_obj_owner,
-		(u_i4) DB_MAXNAME,
+    qed_u0_trimtail( objects_p->d6_2_obj_owner, (u_i4) DB_OWN_MAXNAME,
 		indexes_p->l6_5_base_owner);
 
     del_p->qeq_c1_can_id = DEL_521_DD_INDEXES;

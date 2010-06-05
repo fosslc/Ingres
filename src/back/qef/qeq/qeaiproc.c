@@ -289,6 +289,8 @@
 **          In exp_parm define parameters without blanks
 **      17-dec-2008 (joea)
 **          Replace READONLY/WSCREADONLY by const.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -1133,7 +1135,7 @@ i4	    len )
 **	CREATE PROCEDURE iiQEF_listfile (
 **	    directory=char(DB_MAXNAME) not null not default,
 **	    table =char(DB_MAXNAME) not null not default,
-**	    owner =char(DB_MAXNAME) not null not default,
+**	    owner =char(DB_OWN_MAXNAME) not null not default,
 **	    column=char(DB_MAXNAME) not null not default )
 **	AS begin
 **	      execute internal;
@@ -1557,7 +1559,7 @@ QEE_DSH			*dsh )
     struct
     {
 	i2		l_location_name;
-	char		location_name[DB_MAXNAME];
+	char		location_name[DB_LOC_MAXNAME];
 	i2		l_area_name;
 	char		location_area[DB_AREA_MAX];
 	i4		location_type;
@@ -1639,7 +1641,7 @@ QEE_DSH			*dsh )
 	    status = qeu_secaudit(FALSE, qef_cb->qef_ses_id,
 			    (char *)&dmm.dmm_db_name,
 			    &qef_cb->qef_user,
-			    sizeof(DB_OWN_NAME), SXF_E_DATABASE,
+			    sizeof(DB_DB_NAME), SXF_E_DATABASE,
 			    I_SX2029_DATABASE_CREATE, SXF_A_FAIL | SXF_A_CREATE,
 			    &e_error);
 
@@ -1790,7 +1792,7 @@ QEE_DSH			*dsh )
 
     /*	Insert iidatabase tuple. */
 
-    MEcopy( ( PTR ) &dmm.dmm_db_name, DB_MAXNAME,
+    MEcopy( ( PTR ) &dmm.dmm_db_name, DB_DB_MAXNAME,
 	    ( PTR ) database.du_dbname);
     STRUCT_ASSIGN_MACRO(qef_cb->qef_user, database.du_own);
     MEmove(location_array[0].l_location_name,
@@ -2004,7 +2006,7 @@ QEE_DSH			*dsh )
 	    status = qeu_secaudit(FALSE, qef_cb->qef_ses_id,
 			    (char *)&dmm.dmm_db_name,
 			    &qef_cb->qef_user,
-			    sizeof(DB_OWN_NAME), SXF_E_DATABASE,
+			    sizeof(DB_DB_NAME), SXF_E_DATABASE,
 			    I_SX2029_DATABASE_CREATE, SXF_A_SUCCESS | SXF_A_CREATE,
 			    &e_error);
 
@@ -2024,7 +2026,7 @@ QEE_DSH			*dsh )
 **	The procedure is defined as:
 **
 **	CREATE PROCEDURE iiQEF_destroy_db(
-**	    dbname=char(DB_MAXNAME) not null not default)
+**	    dbname=char(DB_DB_MAXNAME) not null not default)
 **	AS begin
 **	      execute internal;
 **	   end;
@@ -2151,7 +2153,7 @@ QEE_DSH			*dsh )
     struct
     {
 	i2		lname;		    /* length of ... */
-	char		name[DB_MAXNAME];   /* A location name. */
+	char		name[DB_LOC_MAXNAME];   /* A location name. */
     }			location_name;
 
     dsh->dsh_error.err_code = E_DB_OK;
@@ -2247,7 +2249,7 @@ QEE_DSH			*dsh )
 		status = qeu_secaudit(FALSE, qef_cb->qef_ses_id,
 			    (char *)&db_name,
 			    &database.du_own,
-			    sizeof(DB_OWN_NAME), SXF_E_DATABASE,
+			    sizeof(DB_DB_NAME), SXF_E_DATABASE,
 			    I_SX202A_DATABASE_DROP, SXF_A_FAIL | SXF_A_DROP,
 			    &e_error);
 	    }
@@ -2382,9 +2384,8 @@ QEE_DSH			*dsh )
         qeu.qeu_lk_mode = DMT_IX;
         qeu.qeu_flag = QEU_BYPASS_PRIV;
         qeu.qeu_access_mode = DMT_A_WRITE;
-	MEcopy( ( PTR ) &db_name, DB_MAXNAME,
-		( PTR ) location_name.name);
-	location_name.lname = DB_MAXNAME;
+	MEcopy( ( PTR ) &db_name, DB_LOC_MAXNAME, ( PTR ) location_name.name);
+	location_name.lname = DB_LOC_MAXNAME;
 	qeu.qeu_getnext = QEU_REPO;
 	qeu.qeu_klen = 1;
 	qeu.qeu_key = &key_ptr;
@@ -2463,7 +2464,7 @@ QEE_DSH			*dsh )
 		break;
 	    }
 	    if (MEcmp( ( PTR ) &db_name,  ( PTR ) &dbpriv.dbpr_database,
-			DB_MAXNAME) == 0)
+			DB_DB_MAXNAME) == 0)
 	    {
 		/* Delete the existing tuple */
 
@@ -2558,7 +2559,7 @@ QEE_DSH			*dsh )
 	    }
 	    if (dbalarm.dba_objtype==DBOB_DATABASE &&
 		MEcmp( ( PTR ) &db_name,  ( PTR ) &dbalarm.dba_objname,
-			DB_MAXNAME) == 0)
+			DB_DB_MAXNAME) == 0)
 	    {
 		/* Delete query text */
 		qkey_ptr_array[0]= &qkey_array[0];
@@ -2718,7 +2719,7 @@ QEE_DSH			*dsh )
 	    status = qeu_secaudit(FALSE, qef_cb->qef_ses_id,
 			    (char *)&db_name,
 			    &database.du_own,
-			    sizeof(DB_OWN_NAME), SXF_E_DATABASE,
+			    sizeof(DB_DB_NAME), SXF_E_DATABASE,
 			    I_SX202A_DATABASE_DROP, SXF_A_SUCCESS | SXF_A_DROP,
 			    &e_error);
 			       
@@ -2744,7 +2745,7 @@ QEE_DSH			*dsh )
 **	The procedure is defined as:
 **
 **	CREATE PROCEDURE iiQEF_alter_db(
-**	    dbname=char(DB_MAXNAME) not null not default,
+**	    dbname=char(DB_DB_MAXNAME) not null not default,
 **	    access_on = integer not null not default,
 **	    access_off = integer not null not default,
 **	    service_on = integer not null not default,
@@ -2834,7 +2835,7 @@ QEE_DSH			*dsh )
     struct
     {
 	i2		lname;		    /* length of ... */
-	char		name[DB_MAXNAME];   /* A location name. */
+	char		name[DB_LOC_MAXNAME];   /* A location name. */
     }			location_name;
 
     qea_mk_dmmcb(dsh, &dmm_cb);
@@ -3010,7 +3011,7 @@ QEE_DSH			*dsh )
 		status = qeu_secaudit(FALSE, qef_cb->qef_ses_id,
 			    (char *)&db_name,
 			    &database.du_own,
-			    sizeof(DB_OWN_NAME), SXF_E_DATABASE,
+			    sizeof(DB_DB_NAME), SXF_E_DATABASE,
 			    I_SX273A_ALTER_DATABASE, SXF_A_FAIL | SXF_A_CONTROL,
 			    &e_error);
 	    }
@@ -3032,9 +3033,9 @@ QEE_DSH			*dsh )
         qeu.qeu_lk_mode = DMT_IS;
         qeu.qeu_flag = 0;
         qeu.qeu_access_mode = DMT_A_READ;
-	MEcopy( ( PTR ) &database.du_dbloc, DB_MAXNAME,
+	MEcopy( ( PTR ) &database.du_dbloc, DB_LOC_MAXNAME,
 		 ( PTR ) location_name.name);
-	location_name.lname = DB_MAXNAME;
+	location_name.lname = DB_LOC_MAXNAME;
 	qeu.qeu_mask = 0;
 
 	local_status = status = qeu_open(qef_cb, &qeu);
@@ -3108,8 +3109,8 @@ QEE_DSH			*dsh )
 **	The procedure is defined as:
 **
 **	CREATE PROCEDURE iiQEF_add_location(
-**	    database_name = char(DB_MAXNAME) not null not default,
-**	    location_name = char(DB_MAXNAME) not null not default,
+**	    database_name = char(DB_DB_MAXNAME) not null not default,
+**	    location_name = char(DB_LOC_MAXNAME) not null not default,
 **	    access = integer not null not default,
 **	    need_dbdir_flg = integer not null not default)
 **	AS begin
@@ -3224,7 +3225,7 @@ QEE_DSH			*dsh )
     struct
     {
 	i2		lname;		    /* length of ... */
-	char		name[DB_MAXNAME];   /* A location name. */
+	char		name[DB_LOC_MAXNAME];   /* A location name. */
     }			d_name, loc_name, xloc_name, wloc_name;
     DU_LOCATIONS	location, xlocation, wlocation;
     DU_LOCATIONS	db_location;
@@ -3395,9 +3396,9 @@ QEE_DSH			*dsh )
         qeu.qeu_lk_mode = DMT_IS;
         qeu.qeu_flag = 0;
         qeu.qeu_access_mode = DMT_A_READ;
-	MEcopy( ( PTR ) &dmm_cb.dmm_location_name, DB_MAXNAME,
+	MEcopy( ( PTR ) &dmm_cb.dmm_location_name, DB_LOC_MAXNAME,
 		 ( PTR ) loc_name.name);
-	loc_name.lname = DB_MAXNAME;
+	loc_name.lname = DB_LOC_MAXNAME;
 	qeu.qeu_mask = 0;
 
 	local_status = status = qeu_open(qef_cb, &qeu);
@@ -3442,7 +3443,7 @@ QEE_DSH			*dsh )
 		    loc_list[0].loc_type = dmm_cb.dmm_loc_type;
 		    loc_list[0].loc_l_area = location.du_l_area;
 		    MEcopy( ( PTR ) &dmm_cb.dmm_location_name,
-			    DB_MAXNAME,
+			    DB_LOC_MAXNAME,
 			     ( PTR ) &loc_list[0].loc_name);
 		    MEcopy( ( PTR ) location.du_area,
 				location.du_l_area,
@@ -3454,9 +3455,9 @@ QEE_DSH			*dsh )
 		    ** Now get the database base location (needed by DMF)
 		    */
 
-		    MEcopy( ( PTR ) &database.du_dbloc, DB_MAXNAME,
+		    MEcopy( ( PTR ) &database.du_dbloc, DB_LOC_MAXNAME,
 				 ( PTR ) loc_name.name);
-		    loc_name.lname = DB_MAXNAME;
+		    loc_name.lname = DB_LOC_MAXNAME;
 		    qeu.qeu_count = 1;
 		    qeu.qeu_tup_length = sizeof(DU_LOCATIONS);
 		    qeu.qeu_output = &qef_data;
@@ -3539,9 +3540,9 @@ QEE_DSH			*dsh )
 	    key.attr_number = DM_1_EXTEND_KEY;
 	    key.attr_operator = DMR_OP_EQ;
 	    key.attr_value = (char *)&d_name;
-	    MEcopy( ( PTR ) &dmm_cb.dmm_db_name, DB_MAXNAME,
+	    MEcopy( ( PTR ) &dmm_cb.dmm_db_name, DB_DB_MAXNAME,
 		     ( PTR ) d_name.name);
-	    d_name.lname = DB_MAXNAME;
+	    d_name.lname = DB_LOC_MAXNAME;
 	}
 
 	if ( local_status == E_DB_OK  &&
@@ -3580,7 +3581,7 @@ QEE_DSH			*dsh )
 	    {
 		if ( (MEcmp( (PTR)&dmm_cb.dmm_db_name,
 		       (PTR)&dbextend.du_dname,
-		       DB_MAXNAME)) == 0 )
+		       DB_DB_MAXNAME)) == 0 )
 		    /* Already extended to -this- database */
 		    dsh->dsh_error.err_code = E_US0087_EXTEND_ALREADY;
 		else
@@ -3670,7 +3671,7 @@ QEE_DSH			*dsh )
 	    if ( dbextend.du_status & DU_EXT_RAW && 
 		 xlqeu_opened &&
 		 MEcmp( (PTR)&dmm_cb.dmm_db_name,
-		       (PTR)&dbextend.du_dname, DB_MAXNAME) )
+		       (PTR)&dbextend.du_dname, DB_DB_MAXNAME) )
 	    {
 		xlqeu.qeu_count = 1;
 		xlqeu.qeu_tup_length = sizeof(DU_LOCATIONS);
@@ -3764,11 +3765,11 @@ QEE_DSH			*dsh )
 
     /* DMF has augmented loc_type with DMM_L_RAW if raw area */
     
-    dbextend.du_l_length = DB_MAXNAME;
-    dbextend.du_d_length = DB_MAXNAME;
-    MEcopy( ( PTR ) &dmm_cb.dmm_db_name, DB_MAXNAME,
+    dbextend.du_l_length = DB_LOC_MAXNAME;
+    dbextend.du_d_length = DB_DB_MAXNAME;
+    MEcopy( ( PTR ) &dmm_cb.dmm_db_name, DB_DB_MAXNAME,
 	 ( PTR ) dbextend.du_dname);
-    MEcopy( ( PTR ) &dmm_cb.dmm_location_name, DB_MAXNAME,
+    MEcopy( ( PTR ) &dmm_cb.dmm_location_name, DB_LOC_MAXNAME,
 	 ( PTR ) dbextend.du_lname);
     dbextend.du_status = DU_EXT_OPERATIVE | du_extend_type;
 
@@ -3832,8 +3833,8 @@ QEE_DSH			*dsh )
 **	The procedure is defined as:
 **
 **	CREATE PROCEDURE iiQEF_del_location(
-**	    database_name = char(DB_MAXNAME) not null not default,
-**	    location_name = char(DB_MAXNAME) not null not default,
+**	    database_name = char(DB_DB_MAXNAME) not null not default,
+**	    location_name = char(DB_LOC_MAXNAME) not null not default,
 **	    access = integer not null not default,
 **	    need_dbdir_flg = integer not null not default)
 **	AS begin
@@ -3914,7 +3915,7 @@ qea_5del_location(
     struct
     {
 	i2		lname;		    /* length of ... */
-	char		name[DB_MAXNAME];   /* A location name. */
+	char		name[DB_LOC_MAXNAME];   /* A location name. */
     }			d_name, loc_name, xloc_name;
     DU_LOCATIONS	location, xlocation;
     DU_LOCATIONS	db_location;
@@ -4086,9 +4087,9 @@ qea_5del_location(
 	qeu.qeu_lk_mode = DMT_IS;
 	qeu.qeu_flag = 0;
 	qeu.qeu_access_mode = DMT_A_READ;
-	MEcopy( ( PTR ) &dmm_cb.dmm_location_name, DB_MAXNAME,
+	MEcopy( ( PTR ) &dmm_cb.dmm_location_name, DB_LOC_MAXNAME,
 		 ( PTR ) loc_name.name);
-	loc_name.lname = DB_MAXNAME;
+	loc_name.lname = DB_LOC_MAXNAME;
 	qeu.qeu_mask = 0;
 
 	local_status = status = qeu_open(qef_cb, &qeu);
@@ -4133,7 +4134,7 @@ qea_5del_location(
 		    loc_list[0].loc_type = dmm_cb.dmm_loc_type;
 		    loc_list[0].loc_l_area = location.du_l_area;
 		    MEcopy( ( PTR ) &dmm_cb.dmm_location_name,
-			    DB_MAXNAME,
+			    DB_LOC_MAXNAME,
 			    ( PTR ) &loc_list[0].loc_name);
 		    MEcopy( ( PTR ) location.du_area,
 			    location.du_l_area,
@@ -4145,9 +4146,9 @@ qea_5del_location(
 		    ** Now get the database base location (needed by DMF)
 		    */
 
-		    MEcopy( ( PTR ) &database.du_dbloc, DB_MAXNAME,
+		    MEcopy( ( PTR ) &database.du_dbloc, DB_LOC_MAXNAME,
 			    ( PTR ) loc_name.name);
-		    loc_name.lname = DB_MAXNAME;
+		    loc_name.lname = DB_LOC_MAXNAME;
 		    qeu.qeu_count = 1;
 		    qeu.qeu_tup_length = sizeof(DU_LOCATIONS);
 		    qeu.qeu_output = &qef_data;
@@ -4228,9 +4229,9 @@ qea_5del_location(
 	    key.attr_number = DM_1_EXTEND_KEY;
 	    key.attr_operator = DMR_OP_EQ;
 	    key.attr_value = (char *)&d_name;
-	    MEcopy( ( PTR ) &dmm_cb.dmm_db_name, DB_MAXNAME,
+	    MEcopy( ( PTR ) &dmm_cb.dmm_db_name, DB_DB_MAXNAME,
 		     ( PTR ) d_name.name);
-	    d_name.lname = DB_MAXNAME;
+	    d_name.lname = DB_DB_MAXNAME;
 	}
 
 	if ( local_status == E_DB_OK  &&
@@ -4276,7 +4277,7 @@ qea_5del_location(
 		    (dbextend.du_status & du_extend_type))
 	    {
 		if ( (MEcmp( (PTR)&dmm_cb.dmm_db_name,
-			(PTR)&dbextend.du_dname, DB_MAXNAME)) == 0 )
+			(PTR)&dbextend.du_dname, DB_DB_MAXNAME)) == 0 )
 		{
 		    /* Already extended to -this- database */
 		    status = E_DB_OK;
@@ -4614,7 +4615,7 @@ i4			patch_flag )
 **	location. The procedure is defined as:
 **
 **	CREATE PROCEDURE iiQEF_finddbs (
-**	    loc_name	    = char(DB_MAXNAME) not null not default,
+**	    loc_name	    = char(DB_LOC_MAXNAME) not null not default,
 **	    loc_area	    = char(DB_MAXNAME) not null not default,
 **	    codemap_exists  = integer,
 **	    verbose_flag    = integer,
@@ -4784,8 +4785,8 @@ QEE_DSH			*dsh )
 **	The procedure is defined as:
 **
 **	CREATE PROCEDURE iiQEF_alter_extension (
-**	    database_name = char(DB_MAXNAME) not null not default,
-**	    location_name = char(DB_MAXNAME) not null not default,
+**	    database_name = char(DB_DB_MAXNAME) not null not default,
+**	    location_name = char(DB_LOC_MAXNAME) not null not default,
 **	    drop_loc_type = integer not null not default,
 **	    add_loc_type  = integer not null not default)
 **	AS begin
@@ -4860,7 +4861,7 @@ QEE_DSH			*dsh )
     struct
     {
 	i2		lname;		    /* length of ... */
-	char		name[DB_MAXNAME];   /* A location name. */
+	char		name[DB_LOC_MAXNAME];   /* A location name. */
     }			d_name, loc_name;
     DU_LOCATIONS	location;
     DU_EXTEND		dbextend;
@@ -5003,9 +5004,9 @@ QEE_DSH			*dsh )
 	qeu.qeu_lk_mode = DMT_IS;
 	qeu.qeu_flag = 0;
 	qeu.qeu_access_mode = DMT_A_READ;
-	MEcopy( ( PTR ) &dmm_cb.dmm_location_name, DB_MAXNAME,
+	MEcopy( ( PTR ) &dmm_cb.dmm_location_name, DB_LOC_MAXNAME,
 		 ( PTR ) loc_name.name);
-	loc_name.lname = DB_MAXNAME;
+	loc_name.lname = DB_LOC_MAXNAME;
 	qeu.qeu_mask = 0;
 
 	local_status = status = qeu_open(qef_cb, &qeu);
@@ -5015,9 +5016,9 @@ QEE_DSH			*dsh )
 	    ** iilocations catalog (we need to pass the area of this
 	    ** location to dmm so it can find the config file)
 	    */
-	    MEcopy( ( PTR ) &database.du_dbloc, DB_MAXNAME,
+	    MEcopy( ( PTR ) &database.du_dbloc, DB_LOC_MAXNAME,
 		 ( PTR ) loc_name.name);
-	    loc_name.lname = DB_MAXNAME;
+	    loc_name.lname = DB_LOC_MAXNAME;
 	    qeu.qeu_count = 1;
 	    qeu.qeu_tup_length = sizeof(DU_LOCATIONS);
 	    qeu.qeu_output = &qef_data;
@@ -5073,9 +5074,9 @@ QEE_DSH			*dsh )
 	key.attr_number = DM_1_EXTEND_KEY;
 	key.attr_operator = DMR_OP_EQ;
 	key.attr_value = (char *)&d_name;
-	MEcopy( ( PTR ) &dmm_cb.dmm_db_name, DB_MAXNAME,
+	MEcopy( ( PTR ) &dmm_cb.dmm_db_name, DB_DB_MAXNAME,
 		 ( PTR ) d_name.name);
-	d_name.lname = DB_MAXNAME;
+	d_name.lname = DB_LOC_MAXNAME;
 	qeu.qeu_mask = 0;
 
 	local_status = status = qeu_open(qef_cb, &qeu);
@@ -5150,11 +5151,11 @@ QEE_DSH			*dsh )
 	    }
 
 	    /* whip up a new iiextend tuple with new status bits */
-	    dbextend.du_l_length = DB_MAXNAME;
-	    dbextend.du_d_length = DB_MAXNAME;
-	    MEcopy( ( PTR ) &dmm_cb.dmm_db_name, DB_MAXNAME,
+	    dbextend.du_l_length = DB_LOC_MAXNAME;
+	    dbextend.du_d_length = DB_DB_MAXNAME;
+	    MEcopy( ( PTR ) &dmm_cb.dmm_db_name, DB_DB_MAXNAME,
 			 ( PTR ) dbextend.du_dname);
-	    MEcopy( ( PTR ) &dmm_cb.dmm_location_name, DB_MAXNAME,
+	    MEcopy( ( PTR ) &dmm_cb.dmm_location_name, DB_LOC_MAXNAME,
 		 ( PTR ) dbextend.du_lname);
 	    dbextend.du_status = (old_extstat & ~du_drop_type) | du_add_type;
 
@@ -5307,7 +5308,7 @@ DMU_CHAR_ENTRY	   *char_entry )
 **	and RDF will behaves as though the procedure is created as:
 **
 **	CREATE PROCEDURE ii_read_config_value(
-**	    database_name = char(DB_MAXNAME) not null not default,
+**	    database_name = char(DB_DB_MAXNAME) not null not default,
 **	    location_area = char(256) not null not default,
 **	    readtype = integer not null not default)
 **	AS begin
@@ -5497,7 +5498,7 @@ qea_9_readconfig(
 **	and RDF will behaves as though the procedure is created as:
 **
 **	CREATE PROCEDURE ii_update_config(
-**	    database_name = char(DB_MAXNAME) not null not default,
+**	    database_name = char(DB_DB_MAXNAME) not null not default,
 **	    location_area = char(256) not null not default,
 **	    udpate_map = integer not null not default,
 **	    status = integer,
@@ -5742,7 +5743,7 @@ qea_10_updconfig(	QEF_RCB		*qef_rcb,
 **	and RDF will behaves as though the procedure is created as:
 **
 **	CREATE PROCEDURE ii_del_dmp_config(
-**	    database_name = char(DB_MAXNAME) not null not default,
+**	    database_name = char(DB_DB_MAXNAME) not null not default,
 **	    location_area = char(256) not null not default)
 **	AS begin
 **	      execute internal;
@@ -6661,7 +6662,7 @@ DU_LOCATIONS            *loctup)
     struct
     {
 	i2              lname;              /* length of ... */
-	char            name[DB_MAXNAME];   /* A location name. */
+	char            name[DB_LOC_MAXNAME];   /* A location name. */
     }                   location_name;
 
     qeu.qeu_type = QEUCB_CB;
@@ -6672,8 +6673,8 @@ DU_LOCATIONS            *loctup)
     qeu.qeu_lk_mode = DMT_IS;
     qeu.qeu_flag = 0;
     qeu.qeu_access_mode = DMT_A_READ;
-    MEcopy( ( PTR ) locname, DB_MAXNAME, ( PTR ) location_name.name);
-    location_name.lname = DB_MAXNAME;
+    MEcopy( ( PTR ) locname, DB_LOC_MAXNAME, ( PTR ) location_name.name);
+    location_name.lname = DB_LOC_MAXNAME;
     qeu.qeu_mask = 0;
 
     local_status = status = qeu_open(qefcb, &qeu);
@@ -6781,7 +6782,7 @@ i4                 *ext_countp)
     struct
     {
 	i2              lname;              /* length of ... */
-	char            name[DB_MAXNAME];   /* A location name. */
+	char            name[DB_LOC_MAXNAME];   /* A location name. */
     }       db_name;
 
     /* 
@@ -6800,8 +6801,8 @@ i4                 *ext_countp)
     qeu.qeu_lk_mode = DMT_IS;
     qeu.qeu_flag = QEU_BYPASS_PRIV;
     qeu.qeu_access_mode = DMT_A_READ;
-    MEcopy( ( PTR ) dbname, DB_MAXNAME, ( PTR ) db_name.name);
-    db_name.lname = DB_MAXNAME;
+    MEcopy( ( PTR ) dbname, DB_DB_MAXNAME, ( PTR ) db_name.name);
+    db_name.lname = DB_DB_MAXNAME;
     qeu.qeu_mask = 0;
 
     if (phase == GET_EXTENT_COUNT)
@@ -6850,9 +6851,9 @@ i4                 *ext_countp)
 /* 
 bug 71480 - pad dbextend lname with blanks to make length 32 
 */
-		if (dbextend.du_l_length < DB_MAXNAME )
+		if (dbextend.du_l_length < DB_LOC_MAXNAME )
 		{
-			for ( j = dbextend.du_l_length; j < DB_MAXNAME; j ++)
+		    for ( j = dbextend.du_l_length; j < DB_LOC_MAXNAME; j ++)
 				dbextend.du_lname[j] = ' ';
        		}
 		status = get_loc_tuple(dsh,

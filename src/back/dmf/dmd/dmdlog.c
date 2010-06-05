@@ -194,6 +194,8 @@
 **	    rather than signed decimal, "%x,%x" everywhere.
 **	23-Oct-2008 (jonj)
 **	    SIR 120874 Modified to use new DB_ERROR based uleFormat 
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs, db_buffer holds (dbname, owner ...)
 */
 
 /*
@@ -835,7 +837,7 @@ i4		    l_line_buf)
 		TRformat(format_routine, 0, line_buf, l_line_buf,
 		    "%#.#{%16* LOCATION: %.#s\n%}\n",
 		    r->duc_loc_count, sizeof(DB_LOC_NAME), 
-		    r->duc_location, DB_MAXNAME, 0);
+		    r->duc_location, DB_LOC_MAXNAME, 0);
 	    }
 	}
 	break;
@@ -867,7 +869,7 @@ i4		    l_line_buf)
 		TRformat(format_routine, 0, line_buf, l_line_buf,
 		    "%#.#{%16* LOCATION: %.#s\n%}",
 		    r->dud_loc_count, sizeof(DB_LOC_NAME),
-		    r->dud_location, DB_MAXNAME, 0);
+		    r->dud_location, DB_LOC_MAXNAME, 0);
 	    }
 	}
 	break;
@@ -905,7 +907,7 @@ i4		    l_line_buf)
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
 	    	"%#.#{%16* LOCATION: %.#s\n%}",
 		r->dum_loc_count, sizeof(DB_LOC_NAME),
-		r->dum_location, DB_MAXNAME, 0);
+		r->dum_location, DB_LOC_MAXNAME, 0);
 	}
  	break;
 
@@ -937,7 +939,7 @@ i4		    l_line_buf)
 		TRformat(format_routine, 0, line_buf, l_line_buf,
 		    "%#.#{%16* LOCATION: %.#s\n%}",
 		    r->dum_loc_count, sizeof(DB_LOC_NAME),
-		    r->dum_location, DB_MAXNAME, 0);
+		    r->dum_location, DB_LOC_MAXNAME, 0);
 	}
 	break;
 
@@ -983,7 +985,7 @@ i4		    l_line_buf)
 		r->dui_name_id, r->dui_name_gen);
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
 	    	"%#.#{%16* LOCATION: %.#s\n%}", r->dui_loc_count,
-		sizeof(DB_LOC_NAME), r->dui_location, DB_MAXNAME, 0);
+		sizeof(DB_LOC_NAME), r->dui_location, DB_LOC_MAXNAME, 0);
 	}
 	break;
 
@@ -2446,13 +2448,14 @@ i4		options)
 %8* Location:       %64.#s\n\
 %8* Journal Window: <%d,%d,%d>..<%d,%d,%d>\n\
 %8* Start Backup Location: <%d,%d,%d> (%x,%x)\n",
-		    ldb.db_id, DB_MAXNAME, &ldb.db_buffer[0], DB_MAXNAME, &ldb.db_buffer[DB_MAXNAME],
+		    ldb.db_id, DB_DB_MAXNAME, &ldb.db_buffer[0], 
+		    DB_OWN_MAXNAME, &ldb.db_buffer[DB_DB_MAXNAME],
                     DB_STATUS_MEANING, ldb.db_status,
 		    ldb.db_stat.trans, ldb.db_stat.begin, ldb.db_stat.end,
 		    ldb.db_stat.read, ldb.db_stat.write,
 		    ldb.db_stat.force, ldb.db_stat.wait,
-		    *(i4 *)&ldb.db_buffer[DB_MAXNAME+DB_MAXNAME+4], 
-		    &ldb.db_buffer[DB_MAXNAME+DB_MAXNAME+8],
+		    *(i4 *)&ldb.db_buffer[DB_DB_MAXNAME+DB_OWN_MAXNAME+4], 
+		    &ldb.db_buffer[DB_DB_MAXNAME+DB_OWN_MAXNAME+8],
 		    ldb.db_f_jnl_la.la_sequence, 
 		    ldb.db_f_jnl_la.la_block,
 		    ldb.db_f_jnl_la.la_offset,

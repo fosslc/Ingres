@@ -760,6 +760,8 @@ NO_OPTIM=dr6_us5 pym_us5
 **	21-Oct-2009 (kschendel) SIR 122739
 **	    Integrate changes needed for new rowaccessor scheme
 **	    (mostly, tlv's are gone, get plv's only.)
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*
@@ -967,7 +969,8 @@ static VOID 		dm2d_free(
 
 static  VOID            dm2d_cname(
                                 char               *oname,
-                                char               *iname);
+                                char               *iname,
+				i4		   oname_len);
 
 static  STATUS          add_record(
 				i4		page_type,
@@ -1320,9 +1323,10 @@ typedef struct _DMP_INDEX_30
 **
 ** Inputs:
 **      iname                           ptr to 24 char input name
+**      oname_len			size of oname
 **
 ** Outputs:
-**      oname                           ptr to 32 char output name
+**      oname                           ptr to 'oname_len' char output name
 **
 **	Returns:
 **	    VOID
@@ -1340,10 +1344,11 @@ typedef struct _DMP_INDEX_30
 static VOID
 dm2d_cname(
 	    char               *oname,
-	    char               *iname)
+	    char               *iname,
+	    i4			oname_len)
 {
     MEcopy((PTR)iname, DB_OLDMAXNAME, (PTR)oname);
-    MEfill((DB_MAXNAME-DB_OLDMAXNAME), ' ', (PTR)&oname[DB_OLDMAXNAME]);
+    MEfill((oname_len - DB_OLDMAXNAME), ' ', (PTR)&oname[DB_OLDMAXNAME]);
 }
 
 
@@ -1635,7 +1640,7 @@ dm2d_add_db(
     i4         local_error;
     i4	    create_version;
     char	    sem_name[CS_SEM_NAME_LEN+4];
-    char	    null_name[DB_MAXNAME];
+    char	    null_name[DB_DB_MAXNAME];
     bool	dbservice_warning = FALSE;
     i4			*err_code = &dberr->err_code;
     DM2D_UPGRADE	upgrade_cb;
@@ -1914,8 +1919,8 @@ dm2d_add_db(
 	}
 
 	/*  Initialize the DCB mutex. */
-	MEcopy(dcb->dcb_name.db_db_name, DB_MAXNAME, null_name);
-	null_name[DB_MAXNAME - 1] = 0;
+	MEcopy(dcb->dcb_name.db_db_name, DB_DB_MAXNAME, null_name);
+	null_name[DB_DB_MAXNAME - 1] = 0;
 	STtrmwhite(null_name);
 	dm0s_minit(&dcb->dcb_mutex,
 		  STprintf(sem_name, "DCB %s", null_name));
@@ -2369,8 +2374,8 @@ dm2d_close_db(
 		    i = 0;
 		if (i == Dmc_rep->queue_end)
 		    last = TRUE;
-		if (MEcmp(dcb->dcb_name.db_db_name, repq[i].dbname.db_db_name,
-		    DB_MAXNAME))
+		if (MEcmp(dcb->dcb_name.db_db_name, 
+				repq[i].dbname.db_db_name, DB_DB_MAXNAME))
 		    continue;
 		if (repq[i].active)
 		    /*
@@ -2390,7 +2395,7 @@ dm2d_close_db(
 		have_mutex = FALSE;
             	uleFormat(NULL, W_DM9563_REP_TXQ_WORK, (CL_ERR_DESC *)NULL, ULE_LOG,
                     (DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, (i4 *)NULL,
-                    err_code, (i4)1, DB_MAXNAME, dcb->dcb_name.db_db_name);
+                    err_code, (i4)1, DB_DB_MAXNAME, dcb->dcb_name.db_db_name);
 		status = dm2rep_qman(dcb, repq[i].tx_id, &repq[i].trans_time, 
 		    NULL, dberr, TRUE);
                 if (status != E_DB_OK && status != E_DB_WARN)
@@ -3585,7 +3590,7 @@ dm2d_open_db(
     bool		has_raw = FALSE;
     DB_TRAN_ID		tran_id;
     DMP_RCB		*rcb = NULL;
-    char		tab_name[DB_MAXNAME]; 
+    char		tab_name[DB_TAB_MAXNAME]; 
     DM_TID		tid;
     DB_TAB_ID		rep_db;
     DB_TAB_ID		rep_db_idx;
@@ -3598,7 +3603,7 @@ dm2d_open_db(
     i2 			is_local = 0;
     DM2R_KEY_DESC	key_desc;
     i4			offset;
-    char		dbname[DB_MAXNAME];
+    char		dbname[DB_DB_MAXNAME];
     i4             svcb_lock_list;
     bool                sm_inconsistent = FALSE;
     LK_EVENT		lk_event;
@@ -4997,12 +5002,10 @@ dm2d_open_db(
 	    for ( i = 0; i < NumRepTables; i++ )
 	    {
 		if ( dcb->dcb_dbservice & (DU_NAME_UPPER | DU_DELIM_UPPER) )
-		    STmove(RepTables[i].RepTabNameU, ' ',
-			   DB_MAXNAME,
+		    STmove(RepTables[i].RepTabNameU, ' ', DB_TAB_MAXNAME,
 			   (PTR)rep_idx.relname.db_tab_name);
 		else
-		    STmove(RepTables[i].RepTabName, ' ',
-			   DB_MAXNAME,
+		    STmove(RepTables[i].RepTabName, ' ', DB_TAB_MAXNAME,
 			   (PTR)rep_idx.relname.db_tab_name);
 
 		status = dm2r_position(idx_rcb, DM2R_QUAL, qual_list, 
@@ -5034,8 +5037,7 @@ dm2d_open_db(
 
 			/* Skip if different owner */
 			if ( MEcmp(rep_idx.relowner.db_own_name, 
-				    dcb->dcb_db_owner.db_own_name,
-				    DB_MAXNAME) )
+				dcb->dcb_db_owner.db_own_name, DB_OWN_MAXNAME))
 			{
 			    continue;
 			}
@@ -5159,12 +5161,12 @@ dm2d_open_db(
 	        if (status != E_DB_OK)
 		    break;
 	        repdb_tcb = repdb_rcb->rcb_tcb_ptr;
-	        for(i = 0;; i++)
+	        for(i = 1; i <= repdb_tcb->tcb_rel.relatts; i++)
 	        {
-		    if (MEcmp(repdb_tcb->tcb_atts_ptr[i].name.db_att_name, 
-		        "local_db", 8) == 0 || 
-		        MEcmp(repdb_tcb->tcb_atts_ptr[i].name.db_att_name, 
-		        "LOCAL_DB", 8) == 0 || i == repdb_tcb->tcb_rel.relatts)
+		    if (STcompare(repdb_tcb->tcb_atts_ptr[i].attnmstr, 
+		        "local_db") == 0 || 
+		        STcompare(repdb_tcb->tcb_atts_ptr[i].attnmstr, 
+		        "LOCAL_DB") == 0)
 		    break;
 	        }
 	        if (i == repdb_tcb->tcb_rel.relatts)
@@ -5226,7 +5228,7 @@ dm2d_open_db(
 	        */
 	        /*
 	        ** if (is_local && MEcmp(repdb_rec + repdb_tcb->tcb_atts_ptr[3].
-	        **	offset, dcb->dcb_name.db_db_name, DB_MAXNAME))
+	        **	offset, dcb->dcb_name.db_db_name, DB_DB_MAXNAME))
 	        ** {
                 **	uleFormat(dberr, E_DM955B_REP_BAD_LOCAL_DB, (CL_ERR_DESC *)NULL,
                 **	    ULE_LOG, (i4 *)NULL, (char *)NULL, (i4)0, 
@@ -5297,8 +5299,8 @@ dm2d_open_db(
 		    i = 0;
 		if (i == Dmc_rep->queue_end)
 		    last = TRUE;
-		if (MEcmp(dcb->dcb_name.db_db_name, repq[i].dbname.db_db_name,
-		    DB_MAXNAME))
+		if (MEcmp(dcb->dcb_name.db_db_name, 
+			repq[i].dbname.db_db_name, DB_DB_MAXNAME))
 		    continue;
 		if (repq[i].active)
 		    /*
@@ -5318,7 +5320,7 @@ dm2d_open_db(
 		have_mutex = FALSE;
             	uleFormat(NULL, W_DM9563_REP_TXQ_WORK, (CL_ERR_DESC *)NULL, ULE_LOG,
                     (DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, (i4 *)NULL,
-                    err_code, (i4)1, DB_MAXNAME, dcb->dcb_name.db_db_name);
+                    err_code, (i4)1, DB_DB_MAXNAME, dcb->dcb_name.db_db_name);
 		status = dm2rep_qman(dcb, repq[i].tx_id, &repq[i].trans_time, 
 		    NULL, dberr, TRUE);
                 if (status != E_DB_OK && status != E_DB_WARN)
@@ -5398,15 +5400,15 @@ dm2d_open_db(
 		*/
 		if (status != E_DB_OK && status != E_DB_WARN)
 		{
-		    char	dbname[DB_MAXNAME + 1];
+		    char	dbname[DB_DB_MAXNAME + 1];
 
 		    /* log return error and re-set */
 		    if (dberr->err_code)
 		        uleFormat(dberr, 0, NULL, ULE_LOG, 
                             (DB_SQLSTATE *)NULL, NULL, 0, NULL, 
 		    	    &local_error, 0);
-		    MEcopy(dcb->dcb_name.db_db_name, DB_MAXNAME, dbname);
-		    dbname[DB_MAXNAME] = 0;
+		    MEcopy(dcb->dcb_name.db_db_name, DB_DB_MAXNAME, dbname);
+		    dbname[DB_DB_MAXNAME] = 0;
                     uleFormat(dberr, E_DM9569_REP_INQ_CLEANUP, (CL_ERR_DESC *)NULL, ULE_LOG,
                         (DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, (i4 *)NULL,
                         &local_err, (i4)1, STtrmwhite(dbname), dbname);
@@ -5990,7 +5992,7 @@ dm2d_extend_db(
 	    loc = &cnf->cnf_ext[i].ext_location;
 
             if ( (MEcmp((char *)&loc->logical,
-			(char *)location_name, DB_MAXNAME) == 0)
+			(char *)location_name, DB_LOC_MAXNAME) == 0)
 		&& loc->flags & loc_type )
 	    {
 		/* Return extant raw info, or zeroes, anyway */
@@ -6092,7 +6094,7 @@ dm2d_extend_db(
 		    ULE_LOG, (DB_SQLSTATE *)NULL, NULL, 0, NULL, err_code, 4,
 		    l_area, area,
 		    0, raw_total_blocks -  raw_in_use,
-		    DB_MAXNAME, location_name,
+		    DB_LOC_MAXNAME, location_name,
 		    0, *raw_blocks); 
 		status = E_DB_ERROR;
 		SETDBERR(dberr, 0, E_DM0193_RAW_LOCATION_EXTEND);
@@ -6618,7 +6620,7 @@ dm2d_unextend_db(
 	    loc = &cnf->cnf_ext[i].ext_location;
 
 	    if ( (MEcmp((char *)&loc->logical,
-		    (char *)location_name, DB_MAXNAME) == 0)
+		    (char *)location_name, DB_LOC_MAXNAME) == 0)
 		    && loc->flags & loc_type )
 	    {
 		/* location exists */
@@ -7661,6 +7663,8 @@ construct_tcb(
     u_i4	    total_pages;
     i4		    *err_code = &dberr->err_code;
     DB_ERROR	    local_dberr;
+    i4		    alen;
+    PTR			nextattname;
 
     CLRDBERR(dberr);
 
@@ -7728,9 +7732,21 @@ construct_tcb(
     STRUCT_ASSIGN_MACRO(t->tcb_dcb_ptr->dcb_root->logical, 
 			    t->tcb_table_io.tbio_location_array[0].loc_name);
 
+    nextattname = t->tcb_atts_names;
     for (i = 0; i < rel->relatts; i++)
     {
-	t->tcb_atts_ptr[i + 1].name = att[i].attname;
+	for (alen = DB_ATT_MAXNAME;  
+	    att[i].attname.db_att_name[alen-1] == ' ' && alen >= 1; alen--);
+
+	t->tcb_atts_ptr[i + 1].attnmstr = nextattname; 
+	t->tcb_atts_ptr[i + 1].attnmlen = alen;
+	MEcopy(att[i].attname.db_att_name, alen, 
+	    t->tcb_atts_ptr[i + 1].attnmstr);
+	nextattname += alen;
+	*nextattname = '\0';
+	nextattname++;
+	t->tcb_atts_used += (alen + 1);
+
 	t->tcb_atts_ptr[i + 1].offset = att[i].attoff;
 	t->tcb_atts_ptr[i + 1].type = att[i].attfmt;
 	t->tcb_atts_ptr[i + 1].length = att[i].attfml;
@@ -7766,6 +7782,13 @@ construct_tcb(
 
 	if (att[i].attflag & ATT_SEC_KEY)
 	    t->tcb_sec_key_att = &t->tcb_atts_ptr[i+1];
+    }
+
+    if (t->tcb_atts_used > t->tcb_atts_size)
+    {
+	/* should NEVER happen */
+	SETDBERR(dberr, 0, E_DM0075_BAD_ATTRIBUTE_ENTRY);
+	return(E_DB_ERROR);
     }
 
     /* Do rowaccess "setup" -- data only, core catalogs don't use
@@ -8208,6 +8231,7 @@ update_tcbatts(
     i4		att_count = 0;
     i4		    *err_code = &dberr->err_code;
     DB_ERROR		local_dberr;
+    i4		    alen;
 
     CLRDBERR(dberr);
 
@@ -8335,11 +8359,15 @@ update_tcbatts(
 		
 	    /* 
 	    ** Copy the volatile information from the iiattribute
-	    ** record into the corresponding DB_ATTS entry of the
-	    ** TCB.
+	    ** record into the corresponding DB_ATTS entry of the TCB.
+	    ** Compute blank-stripped length of attribute name
 	    */
-	    STRUCT_ASSIGN_MACRO(iiatt_record.attname, 
-	    			tcb->tcb_atts_ptr[iiatt_record.attid].name);
+	    for (alen = DB_ATT_MAXNAME;  
+		iiatt_record.attname.db_att_name[alen-1] == ' ' && alen >= 1; 
+			alen--);
+	    MEcopy(iiatt_record.attname.db_att_name, alen, 
+		tcb->tcb_atts_ptr[iiatt_record.attid].attnmstr);
+	    tcb->tcb_atts_ptr[iiatt_record.attid].attnmlen = alen;
 	}
 
 	if (status != E_DB_OK)
@@ -12054,7 +12082,8 @@ DMP_ATTRIBUTE	*new_attp)
 	    STRUCT_ASSIGN_MACRO(old_att_64->attrelid, att_v8.attrelid);
 	    att_v8.attid = old_att_64->attid;
 	    att_v8.attxtra = old_att_64->attxtra;
-	    dm2d_cname((char *)&att_v8.attname, old_att_64->attname);
+	    dm2d_cname((char *)&att_v8.attname, old_att_64->attname,
+		sizeof(att_v8.attname));
 	    att_v8.attoff = old_att_64->attoff;
 	    att_v8.attfmt = old_att_64->attfmt;
 	    att_v8.attfml = old_att_64->attfml;
@@ -12884,8 +12913,10 @@ i4		dsc_status)
 	    /* copy old info */
 
 	    rel_v8.reltid = old_rel_64->reltid;
-	    dm2d_cname((char *)&rel_v8.relid, old_rel_64->relid);
-	    dm2d_cname((char *)&rel_v8.relowner, old_rel_64->relowner);
+	    dm2d_cname((char *)&rel_v8.relid, old_rel_64->relid,
+			sizeof(rel_v8.relid));
+	    dm2d_cname((char *)&rel_v8.relowner, old_rel_64->relowner,
+			sizeof(rel_v8.relowner));
 	    rel_v8.relatts = old_rel_64->relatts;               
 	    rel_v8.relwid = old_rel_64->relwid;                
 	    rel_v8.relkeys = old_rel_64->relkeys;		    
@@ -12897,7 +12928,8 @@ i4		dsc_status)
 	    rel_v8.relmain = old_rel_64->relmain;               
 	    rel_v8.relsave = old_rel_64->relsave;               
 	    STRUCT_ASSIGN_MACRO(old_rel_64->relstamp12, rel_v8.relstamp12);
-	    dm2d_cname((char *)&rel_v8.relloc, old_rel_64->relloc);
+	    dm2d_cname((char *)&rel_v8.relloc, old_rel_64->relloc,
+			sizeof(rel_v8.relloc));
 	    rel_v8.relcmptlvl = old_rel_64->relcmptlvl;
 	    rel_v8.relcreate = old_rel_64->relcreate;             
 	    rel_v8.relqid1 = old_rel_64->relqid1;               
@@ -13175,7 +13207,6 @@ i4		dsc_status)
 	    rel_v9.relcomptype = old_rel_v8->relcomptype;
 	    rel_v9.relpgtype = old_rel_v8->relpgtype;
 	    rel_v9.relstat2 = old_rel_v8->relstat2;
-	    MEfill (sizeof(rel_v9.relfree1), (u_char)0, rel_v9.relfree1);
 	    rel_v9.relloccount = old_rel_v8->relloccount;
 	    rel_v9.relversion = old_rel_v8->relversion;
 	    rel_v9.relwid = old_rel_v8->relwid;

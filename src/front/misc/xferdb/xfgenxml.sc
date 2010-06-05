@@ -199,6 +199,8 @@ bool printedRowTag = FALSE;
 **      25-feb-2010 (joea)
 **          Add cases for DB_BOO_TYPE in xmlprintcols and IISQ_BOO_TYPE in
 **          xmlprintrows.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /* # define's */
@@ -1209,10 +1211,10 @@ i4  use64bitEncoder;
     static char ii_decimal = NULLCHAR;
 
     EXEC SQL BEGIN DECLARE SECTION;
-    char sql_statement[FE_MAXTABNAME + 32]; /* SQL statement run 
+    char sql_statement[DB_MAXNAME + 256]; /* SQL statement run 
 					       ** against sql_tablename */
-    char sql_dbname[FE_MAXDBNM];    	   /* Database name */   
-    char sql_tablename[FE_MAXTABNAME];
+    char sql_dbname[DB_MAXNAME];    	   /* Database name */   
+    char sql_tablename[DB_MAXNAME];
     EXEC SQL END DECLARE SECTION;
 
     IISQLHDLR *datahdlr_struct;	 /*  Data handler to retreive blobs */

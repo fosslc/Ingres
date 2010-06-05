@@ -94,6 +94,8 @@
 **	    Fix a couple annoying int == NULL warnings.
 **	11-Apr-2008 (kschendel)
 **	    Update DMF row qualification calls.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -1554,7 +1556,7 @@ DU_PROFILE		*protuple)
 	qeu.qeu_qual = NULL;
 	qeu.qeu_qarg = NULL;
 
-	MEmove(DB_MAXNAME, (PTR) profile, (char)' ',
+	MEmove(DB_OWN_MAXNAME, (PTR) profile, (char)' ',
 		   sizeof(qualtuple.du_name), (PTR)&qualtuple.du_name);
 	qeu.qeu_klen = 1;
 	qeu.qeu_key = key_ptr_array;

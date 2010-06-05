@@ -299,6 +299,8 @@
 **          Rename CM_ischarsetUTF8 to CMischarset_utf8.
 **	19-Aug-2009 (kschendel) 121804
 **	    Need cm.h for proper CM declarations (gcc 4.3).
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*
@@ -1023,11 +1025,10 @@ DMT_SHW_CB  *dmt_show_cb)
 		rel_rcb->rcb_k_mode = RCB_K_IS;
 		rel_rcb->rcb_access_mode = RCB_A_READ;
 
-		qual_list[0].attr_number = 1;
+		qual_list[0].attr_number = DM_1_RELIDX_KEY;
 		qual_list[0].attr_operator = DM2R_EQ;
-
 		qual_list[0].attr_value = (char*) &dmt->dmt_name;
-		qual_list[1].attr_number = 2;
+		qual_list[1].attr_number = DM_2_RELIDX_KEY;
 		qual_list[1].attr_operator = DM2R_EQ;
 		qual_list[1].attr_value = (char *) &dmt->dmt_owner;
 		status = dm2r_position(rel_rcb, DM2R_QUAL, qual_list, 
@@ -1311,8 +1312,7 @@ DMT_SHW_CB  *dmt_show_cb)
 	    /* Special case to force "histogram" column of iihistogram
 	    ** table to BYTE, to avoid Unicode normalization on UTF8 dbs. */
 	    if (iihistogram && i == HISTOGRAM_COL_POS &&
-		MEcmp(&tcb->tcb_atts_ptr[i].name, "histogram ", 
-					sizeof("histogram")) == 0)
+		STcompare(tcb->tcb_atts_ptr[i].attnmstr, "histogram") == 0) 
 	    {
 		tcb->tcb_atts_ptr[i].type = DB_BYTE_TYPE;
 #ifdef xDebug
@@ -1321,8 +1321,7 @@ DMT_SHW_CB  *dmt_show_cb)
 	    }
 	    /* Special case for "text_segment" column of iidd_histograms */
 	    else if (iidd_histograms && i == HIST_TEXT_SEGMENT_POS &&
-		MEcmp(&tcb->tcb_atts_ptr[i].name, "text_segment ", 
-					sizeof("text_segment")) == 0)
+		STcompare(tcb->tcb_atts_ptr[i].attnmstr, "text_segment") == 0)
 	    {
 		tcb->tcb_atts_ptr[i].type = DB_BYTE_TYPE;
 #ifdef xDebug
@@ -1331,8 +1330,7 @@ DMT_SHW_CB  *dmt_show_cb)
 	    }
 	    /* Special case for "cfdata" column of ii_encoded_forms */
 	    else if (ii_encoded_forms && i == CFDATA_COL_POS &&
-		MEcmp(&tcb->tcb_atts_ptr[i].name, "cfdata ", 
-					sizeof("cfdata")) == 0)
+		STcompare(tcb->tcb_atts_ptr[i].attnmstr, "cfdata") == 0)
 	    {
 		    tcb->tcb_atts_ptr[i].type = DB_VBYTE_TYPE;
 #ifdef xDebug
@@ -1341,8 +1339,7 @@ DMT_SHW_CB  *dmt_show_cb)
 	    }
 	    /* Special case for "treetree" column of iidd_ddb_tree */
 	    else if (iidd_ddb_tree && i == TREETREE_COL_POS &&
-		MEcmp(&tcb->tcb_atts_ptr[i].name, "treetree ", 
-					sizeof("treetree")) == 0)
+		STcompare(tcb->tcb_atts_ptr[i].attnmstr, "treetree") == 0)
 	    {
 		    tcb->tcb_atts_ptr[i].type = DB_VBYTE_TYPE;
 #ifdef xDebug
@@ -1351,8 +1348,7 @@ DMT_SHW_CB  *dmt_show_cb)
 	    }
 	    /* Special case for "treetree" column of iiddb_tree */
 	    else if (iiddb_tree && i == TREETREE_COL_POS &&
-		MEcmp(&tcb->tcb_atts_ptr[i].name, "treetree ", 
-					sizeof("treetree")) == 0)
+		STcompare(tcb->tcb_atts_ptr[i].attnmstr, "treetree") == 0)
 	    {
 		    tcb->tcb_atts_ptr[i].type = DB_VBYTE_TYPE;
 #ifdef xDebug
@@ -1361,8 +1357,7 @@ DMT_SHW_CB  *dmt_show_cb)
 	    }
 	    /* Special case for "treetree" column of iitree */
 	    else if (iitree && i == TREETREE_COL_POS &&
-		MEcmp(&tcb->tcb_atts_ptr[i].name, "treetree ", 
-					sizeof("treetree")) == 0)
+		STcompare(tcb->tcb_atts_ptr[i].attnmstr, "treetree") == 0)
 	    {
 		    tcb->tcb_atts_ptr[i].type = DB_VBYTE_TYPE;
 #ifdef xDebug
@@ -1371,8 +1366,7 @@ DMT_SHW_CB  *dmt_show_cb)
 	    }
 	    /* Special case for "treetree" column of iitree */
 	    else if (ii_stored_bitmaps && i == II_STORED_BITMAPS_POS &&
-		MEcmp(&tcb->tcb_atts_ptr[i].name, "text_value ", 
-					sizeof("text_value")) == 0)
+		STcompare(tcb->tcb_atts_ptr[i].attnmstr, "text_value") == 0)
 	    {
 		    tcb->tcb_atts_ptr[i].type = DB_VBYTE_TYPE;
 #ifdef xDebug
@@ -1386,8 +1380,8 @@ DMT_SHW_CB  *dmt_show_cb)
 	      TRdisplay("%@ dmt_show - Table:(%~t) Column:(%~t) new type:(%d)\n",
                		sizeof(tcb->tcb_rel.relid.db_tab_name),
                       	tcb->tcb_rel.relid.db_tab_name,
-			sizeof(tcb->tcb_atts_ptr[i].name.db_att_name),
-			tcb->tcb_atts_ptr[i].name.db_att_name,
+			tcb->tcb_atts_ptr[i].attnmlen,
+			tcb->tcb_atts_ptr[i].attnmstr,
 		    	tcb->tcb_atts_ptr[i].type) ;
 	    }
 #endif
@@ -1909,7 +1903,9 @@ DMT_SHW_CB  *dmt_show_cb)
 		if (tcb->tcb_atts_ptr[i].ver_dropped)
 		   continue;
 
-		a[j].att_name = tcb->tcb_atts_ptr[i].name;
+		MEmove(tcb->tcb_atts_ptr[i].attnmlen,
+		    tcb->tcb_atts_ptr[i].attnmstr, ' ',
+		    DB_ATT_MAXNAME, a[j].att_name.db_att_name);
 		a[j].att_number = tcb->tcb_atts_ptr[i].ordinal_id;
 		a[j].att_type = tcb->tcb_atts_ptr[i].type;
 		a[j].att_width = tcb->tcb_atts_ptr[i].length;
@@ -1961,7 +1957,9 @@ DMT_SHW_CB  *dmt_show_cb)
 
 		j++;
 		a = att[j];
-		a->att_name = tcb->tcb_atts_ptr[i].name;
+		MEmove(tcb->tcb_atts_ptr[i].attnmlen,
+		    tcb->tcb_atts_ptr[i].attnmstr, ' ',
+		    DB_ATT_MAXNAME, a->att_name.db_att_name);
 		a->att_number = tcb->tcb_atts_ptr[i].ordinal_id;
 		a->att_type = tcb->tcb_atts_ptr[i].type;
 		a->att_width = tcb->tcb_atts_ptr[i].length;

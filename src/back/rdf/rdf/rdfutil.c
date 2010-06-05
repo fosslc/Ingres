@@ -147,6 +147,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /* Static Prototypes */
@@ -3214,19 +3216,19 @@ rdu_master_infodump(	RDR_INFO        *info,
     {
 	TRdisplay("\n\n--------------------------------------------------------\n");
 	TRdisplay("-- Object Name: %#s     Calling Facility: PSF\n",
-		 DB_MAXNAME, &info->rdr_rel->tbl_name);
+		 DB_TAB_MAXNAME, &info->rdr_rel->tbl_name);
     }
     if (fcb->rdi_fac_id == DB_OPF_ID)
     {
 	TRdisplay("\n\n--------------------------------------------------------\n");
 	TRdisplay("-- Object Name: %#s     Calling Facility: OPF\n",
-		  DB_MAXNAME, &info->rdr_rel->tbl_name);
+		  DB_TAB_MAXNAME, &info->rdr_rel->tbl_name);
     }
     if (fcb->rdi_fac_id == DB_SCF_ID)
     {
 	TRdisplay("\n\n--------------------------------------------------------\n");
 	TRdisplay("-- Object Name: %#s     Calling Facility: SCF\n",
-		 DB_MAXNAME, &info->rdr_rel->tbl_name);
+		 DB_TAB_MAXNAME, &info->rdr_rel->tbl_name);
     }
 
     switch (caller)
@@ -3445,12 +3447,14 @@ rdu_rel_dump(RDR_INFO	*info)
 	TRdisplay("\n--------------------- rdr_rel ----------------------------\n");
 	TRdisplay("table id :  base : %d  index : %d\n",
 	 info->rdr_rel->tbl_id.db_tab_base, info->rdr_rel->tbl_id.db_tab_index);
-	TRdisplay("table name :  %#s\n", DB_MAXNAME, &info->rdr_rel->tbl_name);
-	TRdisplay("table owner :  %#s\n", DB_MAXNAME,&info->rdr_rel->tbl_owner);
+	TRdisplay("table name :  %#s\n", 
+	    DB_TAB_MAXNAME, &info->rdr_rel->tbl_name);
+	TRdisplay("table owner :  %#s\n", 
+	    DB_OWN_MAXNAME, &info->rdr_rel->tbl_owner);
 	TRdisplay("table location count: %d\n",
 	    info->rdr_rel->tbl_loc_count);
-	TRdisplay("table default location name :  %#s\n", DB_MAXNAME,
-	    &info->rdr_rel->tbl_location);
+	TRdisplay("table default location name :  %#s\n",
+	     DB_LOC_MAXNAME, &info->rdr_rel->tbl_location);
 	TRdisplay("table file name :  %12s\n", &info->rdr_rel->tbl_filename);
 	TRdisplay("table attribute count :  %d\n",
 	    info->rdr_rel->tbl_attr_count);
@@ -3650,7 +3654,7 @@ rdu_ituple_dump(RDR_INFO *info)
 			  	tuple->dbi_columns.db_domset[j]);
 
 	    TRdisplay("constraint name: %#.s\n",
-		      DB_MAXNAME, tuple->dbi_consname);
+		      DB_CONS_MAXNAME, tuple->dbi_consname);
 	    TRdisplay("constraint id :  id1 : %d  id2 : %d\n",
 		      tuple->dbi_cons_id.db_tab_base,
 		      tuple->dbi_cons_id.db_tab_index);
@@ -3734,7 +3738,7 @@ rdu_ptuple_dump(RDR_INFO *info)
 	    TRdisplay("tree id:  high : %d  low : %d\n",
 		tuple->dbp_treeid.db_tre_high_time,
 		tuple->dbp_treeid.db_tre_low_time);
-	    TRdisplay("user name :  %#s\n", DB_MAXNAME, &tuple->dbp_owner);
+	    TRdisplay("user name :  %#s\n", DB_OWN_MAXNAME, &tuple->dbp_owner);
 	    TRdisplay("terminal name :  %16s\n", &tuple->dbp_term);
 	    TRdisplay("grantee type: %d\n", tuple->dbp_gtype);
 	    TRdisplay("sequence number: %d\n", tuple->dbp_seq);
@@ -3794,8 +3798,8 @@ rdu_attr_dump(RDR_INFO	*info)
 	{
 
 		TRdisplay("\nATTRIBUTE  NO. %d\n", i);
-		TRdisplay("attribute name : %#s\n", DB_MAXNAME,
-			  &attr[i]->att_name);
+		TRdisplay("attribute name : %#s\n",
+			DB_ATT_MAXNAME,  &attr[i]->att_name);
 		TRdisplay("attribute number : %d\n", attr[i]->att_number);
 		TRdisplay("attribute offset : %d\n", attr[i]->att_offset);
 		TRdisplay("attribute type : %d\n", attr[i]->att_type);
@@ -3859,7 +3863,8 @@ rdu_indx_dump(RDR_INFO	*info)
 	for (i=1, indx = info->rdr_indx; i <= info->rdr_no_index; i++)
 	{
 		TRdisplay("\nINDEX NO. %d\n", i);
-		TRdisplay("index name %#s\n", DB_MAXNAME, &indx[i-1]->idx_name);
+		TRdisplay("index name %#s\n", 
+			DB_TAB_MAXNAME, &indx[i-1]->idx_name);
 		TRdisplay("index table id :  base : %d  index : %d\n",
 		    indx[i-1]->idx_id.db_tab_base,
 		    indx[i-1]->idx_id.db_tab_index);
@@ -3970,17 +3975,16 @@ rdu_atthsh_dump(RDR_INFO *info)
 	TRdisplay("----------------- Attribute Hash Table ---------------------\n");
 	for (i=0; i < RDD_SIZ_ATTHSH; i++)
 	{
-		if ((hsh_element = info->rdr_atthsh->rdd_atthsh_tbl[i]) != NULL)
-		{
-			TRdisplay("\n bucket no %d\n", i);
-			do {
+	    if ((hsh_element = info->rdr_atthsh->rdd_atthsh_tbl[i]) != NULL)
+	    {
+		TRdisplay("\n bucket no %d\n", i);
+		do {
 
-				TRdisplay("attribute name : %#s\n", DB_MAXNAME,
-				    &hsh_element->attr->att_name);
+		    TRdisplay("attribute name : %#s\n",
+			DB_ATT_MAXNAME, &hsh_element->attr->att_name);
 
-			   }	while ((hsh_element = hsh_element->next_attr)
-				 != NULL);
-		}
+		} while ((hsh_element = hsh_element->next_attr) != NULL);
+	    }
 	}
 
 }
@@ -4033,8 +4037,10 @@ rdu_rtuple_dump(RDR_INFO *info)
 
 	    tuple  = (DB_IIRULE *)(data->dt_data);
 	    TRdisplay ("\nRule Tuple Number: %d\n",i);
-	    TRdisplay("name of rule: %#s\n", DB_MAXNAME, &tuple->dbr_name);
-	    TRdisplay("owner of rule: %#s\n", DB_MAXNAME, &tuple->dbr_owner);
+	    TRdisplay("name of rule: %#s\n", 
+		DB_RULE_MAXNAME, &tuple->dbr_name);
+	    TRdisplay("owner of rule: %#s\n", 
+		DB_OWN_MAXNAME, &tuple->dbr_owner);
 	    TRdisplay("rule type: %d\n", tuple->dbr_type);
 	    TRdisplay("rule modifier flag bitmap: %x\n", tuple->dbr_flags);
 	    TRdisplay("table id (0 for time-type rules)  base : %d  index : %d\n",
@@ -4055,9 +4061,9 @@ rdu_rtuple_dump(RDR_INFO *info)
 	    TRdisplay("number procedure parameters for rule: %d\n",
 		tuple->dbr_dbpparam);
 	    TRdisplay("procedure name to evoke: %#s\n",
-		DB_MAXNAME, &tuple->dbr_dbpname);
-	    TRdisplay("procedure owner: %#s\n", DB_MAXNAME,
-		&tuple->dbr_dbpowner);
+		DB_DBP_MAXNAME, &tuple->dbr_dbpname);
+	    TRdisplay("procedure owner: %#s\n",
+		DB_OWN_MAXNAME, &tuple->dbr_dbpowner);
 	    TRdisplay("date to fire time rule: %12s\n",
 		&tuple->dbr_tm_date);
 	    TRdisplay("repeat interval for time rules: %12s\n",
@@ -4114,7 +4120,7 @@ rdu_view_dump(RDR_INFO *info)
 	TRdisplay("Address of procedure parameter: %0x\n", node->pst_parms);
 	TRdisplay("Cursor id:  high value %d,  low value %d,  name %#s\n",
 		node->pst_dbpid.db_cursor_id[0],node->pst_dbpid.db_cursor_id[1],
-		DB_MAXNAME, node->pst_dbpid.db_cur_name);
+		DB_CURSOR_MAXNAME, node->pst_dbpid.db_cur_name);
 	if (node->pst_stmts)
 	{
 	    TRdisplay("\nFIRST STATEMENT\n Statement Mode: %d\n",
@@ -4147,7 +4153,7 @@ rdu_view_dump(RDR_INFO *info)
 	    {
 		TRdisplay(" Variable Number: %d,  DV ptr: %x,  name %#s\n",
 			 j, node->pst_parms->pst_vardef[i],
-			 DB_MAXNAME, &node->pst_parms->pst_varname[i]);
+			 DB_PARM_MAXNAME, &node->pst_parms->pst_varname[i]);
 	    }
 	}
 }
@@ -4187,10 +4193,10 @@ rdu_ldbdesc_dump(RDR_INFO	*info)
 	    return;
 
 	TRdisplay("\n-------------------- LDB Descriptor -----------------------\n");
-	TRdisplay("Distributed Object Name: %#s\n", DB_MAXNAME,
-			info->rdr_obj_desc->dd_o1_objname);
-	TRdisplay("Distributed Object Owner: %#s\n", DB_MAXNAME,
-			info->rdr_obj_desc->dd_o2_objowner);
+	TRdisplay("Distributed Object Name: %#s\n",
+			DB_OBJ_MAXNAME, info->rdr_obj_desc->dd_o1_objname);
+	TRdisplay("Distributed Object Owner: %#s\n",
+			DB_OWN_MAXNAME, info->rdr_obj_desc->dd_o2_objowner);
 	TRdisplay("Distributed Object Id    base : %d  index : %d\n",
 			info->rdr_obj_desc->dd_o3_objid.db_tab_base,
 			info->rdr_obj_desc->dd_o3_objid.db_tab_index);
@@ -4224,10 +4230,10 @@ rdu_ldbdesc_dump(RDR_INFO	*info)
 	else
 	    TRdisplay("System Object:	FALSE\n");
 	TRdisplay("contents of dd_o9_tab_info:\n");
-	TRdisplay("  Local Name: %#s\n", DB_MAXNAME,
-			info->rdr_obj_desc->dd_o9_tab_info.dd_t1_tab_name);
-	TRdisplay("  Local Owner: %#s\n", DB_MAXNAME,
-			info->rdr_obj_desc->dd_o9_tab_info.dd_t2_tab_owner);
+	TRdisplay("  Local Name: %#s\n",
+	    DB_TAB_MAXNAME, info->rdr_obj_desc->dd_o9_tab_info.dd_t1_tab_name);
+	TRdisplay("  Local Owner: %#s\n",
+	    DB_OWN_MAXNAME, info->rdr_obj_desc->dd_o9_tab_info.dd_t2_tab_owner);
 	switch (info->rdr_obj_desc->dd_o9_tab_info.dd_t3_tab_type)
 	{
 	    case DD_0OBJ_NONE:
@@ -4302,9 +4308,11 @@ ldbdesc_dmp(DD_LDB_DESC *ldbdesc)
 	TRdisplay("     Requires Priveleged Association ($ingres Status)\n");
     else
 	TRdisplay("     Does not Require Priveleged Association ($ingres Status)\n");
-    TRdisplay("     Node Name: %#s\n", DB_MAXNAME, ldbdesc->dd_l2_node_name);
+    TRdisplay("     Node Name: %#s\n", 
+	DB_NODE_MAXNAME, ldbdesc->dd_l2_node_name);
     TRdisplay("     LDB Name : %60s\n", ldbdesc->dd_l3_ldb_name);
-    TRdisplay("     DBMS Type: %#s\n", DB_MAXNAME, ldbdesc->dd_l4_dbms_name);
+    TRdisplay("     DBMS Type: %#s\n",
+	DB_TYPE_MAXLEN, ldbdesc->dd_l4_dbms_name);
     TRdisplay("     LDB id   : %d\n",   ldbdesc->dd_l5_ldb_id);
     /* the following bitmasks may only be set between TPF and QEF and be
     ** unused while RDF can see them:
@@ -4349,7 +4357,7 @@ ldbplus_dmp(DD_0LDB_PLUS *ldbplus)
     if (ldbplus->dd_p1_character && DD_1CHR_DBA_NAME)
     {
 	TRdisplay("     Concept of DBA Name is supported\n");
-	TRdisplay("     DBA Name: %#s\n", DB_MAXNAME, ldbplus->dd_p2_dba_name);
+	TRdisplay("     DBA Name: %#s\n", DB_OWN_MAXNAME, ldbplus->dd_p2_dba_name);
     }
     else
 	TRdisplay("     Concept of DBA Name NOT supported\n");
@@ -4357,7 +4365,7 @@ ldbplus_dmp(DD_0LDB_PLUS *ldbplus)
     if (ldbplus->dd_p1_character && DD_2CHR_USR_NAME)
     {
 	TRdisplay("     Concept of User Name is supported\n");
-        TRdisplay("     User Name: %#s\n", DB_MAXNAME, ldbplus->dd_p5_usr_name);
+        TRdisplay("     User Name: %#s\n", DB_OWN_MAXNAME, ldbplus->dd_p5_usr_name);
     }
     else
 	TRdisplay("     Concept of User Name NOT supported\n");
@@ -4365,14 +4373,14 @@ ldbplus_dmp(DD_0LDB_PLUS *ldbplus)
     if (ldbplus->dd_p1_character && DD_3CHR_SYS_NAME)
     {
 	TRdisplay("     Concept of System Name is supported\n");
-        TRdisplay("     System Name: %#s\n", DB_MAXNAME,
-		  ldbplus->dd_p6_sys_name);
+        TRdisplay("     System Name: %#s\n",
+	      sizeof(ldbplus->dd_p6_sys_name), ldbplus->dd_p6_sys_name);
     }
     else
 	TRdisplay("     Concept of System Name NOT supported\n");
 
-    TRdisplay("     STAR Alias for DB Name: %#s\n", DB_MAXNAME,
-	      ldbplus->dd_p4_ldb_alias);
+    TRdisplay("     STAR Alias for DB Name: %#s\n",
+	      DB_DB_MAXNAME, ldbplus->dd_p4_ldb_alias);
 
     if (ldbplus->dd_p3_ldb_caps.dd_c1_ldb_caps && DD_1CAP_DISTRIBUTED)
 	TRdisplay("     DD_1CAP_DISTRIBUTED is ON\n");
@@ -4426,8 +4434,10 @@ ldbplus_dmp(DD_0LDB_PLUS *ldbplus)
 	TRdisplay("     Name Case:  MIXED CASE\n");
     else if (ldbplus->dd_p3_ldb_caps.dd_c6_name_case && DD_2CASE_UPPER)
 	TRdisplay("     Name Case:  UPPER CASE\n");
-    TRdisplay("     DBMS Type: %#s\n", DB_MAXNAME,
-	      ldbplus->dd_p3_ldb_caps.dd_c7_dbms_type);
+
+    TRdisplay("     DBMS Type: %#s\n",
+	  DB_TYPE_MAXLEN, ldbplus->dd_p3_ldb_caps.dd_c7_dbms_type);
+
     switch (ldbplus->dd_p3_ldb_caps.dd_c8_owner_name)
     {
     case DD_0OWN_NO:
@@ -4479,10 +4489,10 @@ static VOID rdu_col_dump(i4 col_cnt, DD_COLUMN_DESC **cols)
 	this_col = cols[i];
 	if (this_col)
 	{
-	    TRdisplay("     Column Name: %#s\n", DB_MAXNAME,
-		      this_col->dd_c1_col_name);
+	    TRdisplay("     Column Name: %#s\n",
+		  DB_ATT_MAXNAME, this_col->dd_c1_col_name);
 	    TRdisplay("     Column Ordinal Position: %d\n",
-		      this_col->dd_c2_col_ord);
+		  this_col->dd_c2_col_ord);
 	}
     }
 }

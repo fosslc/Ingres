@@ -318,6 +318,8 @@
 **         SIR 123296
 **         Add LSB option, writable files are stored under ADMIN, logs under
 **         LOG and read-only under FILES location.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -523,7 +525,7 @@ dmfacp(VOID)
     i4			acp_restart = 0;
     i4			exit_error;
     i4			exit_msg_len;
-    char		exit_db[DB_MAXNAME + 1];
+    char		exit_db[DB_DB_MAXNAME + 1];
     char		exit_text[ER_MAX_LEN];
     DB_ERROR		dberr;
 
@@ -903,8 +905,8 @@ PURGEDB,,,,,,,ECPDONE", event);
     exit_error = a->acb_error_code;
     exit_msg_len = a->acb_errltext;
     MEcopy((PTR) a->acb_errtext, sizeof(exit_text), (PTR) exit_text);
-    STncpy( exit_db, a->acb_errdb.db_db_name, DB_MAXNAME);
-    exit_db[ DB_MAXNAME ] = '\0';
+    STncpy( exit_db, a->acb_errdb.db_db_name, DB_DB_MAXNAME);
+    exit_db[ DB_DB_MAXNAME ] = '\0';
     STtrmwhite(exit_db);
 
     if (dberr.err_code != E_DM9815_ARCH_SHUTDOWN)
@@ -1146,7 +1148,7 @@ char	    *dbname)
     i4		    local_error;
     i4		    command_length;
     char	    command_buf[256];
-    char	    db_buf[DB_MAXNAME + 1];
+    char	    db_buf[DB_DB_MAXNAME + 1];
     char	    num_buf[16];
     char	    *str;
 
@@ -1195,8 +1197,8 @@ char	    *dbname)
 	MEfill(sizeof(db_buf), '\0', (PTR) db_buf);
 	if (dbname)
 	{
-           STncpy( db_buf, dbname, DB_MAXNAME );
-	   db_buf[ DB_MAXNAME ] = '\0';
+           STncpy( db_buf, dbname, DB_DB_MAXNAME );
+	   db_buf[ DB_DB_MAXNAME ] = '\0';
 	}
 	
 

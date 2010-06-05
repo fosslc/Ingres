@@ -84,6 +84,8 @@
 **	15-Mar-2006 (hanje04)
 **	    Add IIAPI_GETQINFOPAR parameters to IIsw calls after X-integ of
 **	    fix for bug 114410. Also define where apropriate.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 GLOBALDEF RS_CONN	RSlocal_conn ZERO_FILL;
@@ -113,10 +115,11 @@ static bool	shutting_down = FALSE;
 STATUS
 RSlocal_db_open()
 {
-	char			database_name[DB_MAXNAME*2+3];
-	char			dba[DB_MAXNAME+1];
-	char			user[DB_MAXNAME+1];
-	char			stmt[1024];
+        char                    database_name[DB_DB_MAXNAME+DB_NODE_MAXNAME+3];
+					/* needs to hold vnode:dbname */
+	char			dba[DB_OWN_MAXNAME+1];
+	char			user[DB_OWN_MAXNAME+1];
+	char			stmt[1024 + DB_MAXNAME];
 	PID			pid;
 	RS_CONN			*conn = &RSlocal_conn;
 	IIAPI_DATAVALUE		cdata[2];
@@ -262,9 +265,9 @@ WHERE database_name = '%s' AND local_db = 1"),
 
 	if (RSnolock_read)
 	{
-		STlcopy(RSlocal_conn.db_name,RSlocal_conn_nlr.db_name,DB_MAXNAME);
+		STlcopy(RSlocal_conn.db_name,RSlocal_conn_nlr.db_name,DB_DB_MAXNAME);
 		STlcopy(RSlocal_conn.vnode_name,RSlocal_conn_nlr.vnode_name,DB_MAXNAME);
-		STlcopy(RSlocal_conn.owner_name,RSlocal_conn_nlr.owner_name,DB_MAXNAME);
+		STlcopy(RSlocal_conn.owner_name,RSlocal_conn_nlr.owner_name,DB_OWN_MAXNAME);
 
 	    	if (RSlocal_db_open_nlr() != OK)
 		    return(FAIL);
@@ -294,10 +297,11 @@ WHERE database_name = '%s' AND local_db = 1"),
 STATUS
 RSlocal_db_open_nlr()
 {
-        char                    database_name[DB_MAXNAME*2+3];
-        char                    dba[DB_MAXNAME+1];
-        char                    user[DB_MAXNAME+1];
-        char                    stmt[1024];
+        char                    database_name[DB_DB_MAXNAME+DB_NODE_MAXNAME+3];
+					/* needs to hold vnode:dbname */
+        char                    dba[DB_OWN_MAXNAME+1];
+        char                    user[DB_OWN_MAXNAME+1];
+        char                    stmt[1024 + DB_MAXNAME];
         PID                     pid;
         RS_CONN                 *conn = &RSlocal_conn_nlr;
         IIAPI_DATAVALUE         cdata[2];

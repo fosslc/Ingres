@@ -8,12 +8,6 @@
 ** Description:
 **      This file contains all the catalog structures dedicated to TPF's use
 **
-** 	    TPC_1C_PLUS1	    - A 2-character array
-** 	    TPC_8C_PLUS1	    - An 9-character array
-** 	    TPC_16C_PLUS1	    - An 17-character array
-** 	    TPC_DATE_PLUS1	    - A date structure
-** 	    TPC_32C_PLUS1	    - A 33-character structure
-** 	    TPC_256_PLUS1	    - A 257-character structure
 ** 	    TPC_D1_DXLOG	    - Catalog structure IIDD_DDB_DXLOG
 ** 	    TPC_D2_DXLDBS	    - Catalog structure IIDD_DDB_DXLDBS
 ** 	    TPC_L1_DBCAPS	    - Catalog structure IIDBCAPABILITIES
@@ -28,67 +22,9 @@
 **      28-oct-90 (carl)
 **	    replaced defines for TPC_D1_DXLOG.d1_5_dx_state with more meaningful
 **	    prefix to avoid confusion
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
-
-
-#define	TPC_8_CHAR_SIZE		    8
-
-
-/*}
-** Name: TPC_8C_PLUS1 - An 9-character array.
-**
-** Description:
-**      This structure defines a 9-character array.
-**      
-** History:
-**      12-oct-89 (carl)
-**          created
-*/
-
-typedef char	TPC_8C_PLUS1[TPC_8_CHAR_SIZE + 1];
-
-
-/*}
-** Name: TPC_DATE_PLUS1 - A date structure.
-**
-** Description:
-**      This structure defines a 26-character array.
-**      
-** History:
-**      12-oct-89 (carl)
-**          created
-*/
-
-typedef char	TPC_DATE_PLUS1[DD_25_DATE_SIZE + 1];
-
-
-
-/*}
-** Name: TPC_32C_PLUS1 - A 33-character structure.
-**
-** Description:
-**      This structure defines a 33-character array.
-**      
-** History:
-**      12-oct-89 (carl)
-**          created
-*/
-
-typedef char	TPC_32C_PLUS1[DB_MAXNAME + 1];
-
-
-/*}
-** Name: TPC_256_PLUS1 - A 257-character structure.
-**
-** Description:
-**      This structure defines a 257-character array.
-**      
-** History:
-**      12-oct-89 (carl)
-**          created
-*/
-
-typedef char	TPC_256_PLUS1[DD_256_MAXDBNAME + 1];
 
 
 /*}
@@ -113,8 +49,7 @@ typedef struct
 {
     i4	    d1_1_dx_id1;	    /* part 1 of DX id */
     i4	    d1_2_dx_id2;	    /* part 2 of DX id */
-    TPC_32C_PLUS1   
-	    d1_3_dx_name;	    /* the DX name */
+    DB_DB_STR  d1_3_dx_name;	    /* the DX name */
     i4	    d1_4_dx_flags;	    /* for future use */
     i4	    d1_5_dx_state;	    /* DX state */
 
@@ -129,20 +64,14 @@ typedef struct
 #define TPC_3DX_ABORT	    3       ** DX was last in abort state **
 */
 
-    TPC_DATE_PLUS1
-	    d1_6_dx_create;	    /* time this DX entry was created/
-				     * recorded */
-    TPC_DATE_PLUS1
-	    d1_7_dx_modify;	    /* time this DX entry was last updated, 
+    DB_DATE_STR d1_6_dx_create;	    /* time DX entry was created/recorded */
+    DB_DATE_STR d1_7_dx_modify;	    /* time DX entry was last updated, 
 				     * e.g., when recovery was attempted */
     i4	    d1_8_dx_starid1;	    /* part 1 of STAR id */
     i4	    d1_9_dx_starid2;	    /* part 2 of STAR id */
-    TPC_32C_PLUS1   
-	    d1_10_dx_ddb_node;	    /* DDB's node name */
-    TPC_256_PLUS1   
-	    d1_11_dx_ddb_name;	    /* DDB's name */
-    TPC_32C_PLUS1   
-	    d1_12_dx_ddb_dbms;	    /* DDB's dbms name */
+    DB_NODE_STR d1_10_dx_ddb_node;  /* DDB's node name */
+    DB_DB_STR d1_11_dx_ddb_name;    /* DDB's name */
+    DB_TYPE_STR d1_12_dx_ddb_dbms;  /* DDB's dbms name */
     i4	    d1_13_dx_ddb_id;	    /* assigned id of the LDB */
 
 #define	TPC_01_CC_DXLOG_13	13  /* number of columns in catalog */
@@ -172,14 +101,14 @@ typedef struct _TPC_D2_DXLDBS
 {
     i4		    d2_1_ldb_dxid1;	/* part 1 of DX id */
     i4		    d2_2_ldb_dxid2;	/* part 2 of DX id */
-    TPC_32C_PLUS1   d2_3_ldb_node;	/* node name */
-    TPC_256_PLUS1   d2_4_ldb_name;	/* database name */
-    TPC_32C_PLUS1   d2_5_ldb_dbms;	/* dbms name */
+    DB_NODE_STR     d2_3_ldb_node;	/* node name */
+    char            d2_4_ldb_name[DD_256_MAXDBNAME + 1];/* database name */
+    DB_TYPE_STR     d2_5_ldb_dbms;	/* dbms name */
     i4		    d2_6_ldb_id;	/* assigned id of the LDB */
     i4		    d2_7_ldb_lxstate;	/* state of the LX on the LDB */
     i4		    d2_8_ldb_lxid1;	/* part 1 of LX id */
     i4		    d2_9_ldb_lxid2;	/* part 2 of LX id */
-    TPC_32C_PLUS1   d2_10_ldb_lxname;   /* the LX's name */
+    DB_DB_STR       d2_10_ldb_lxname;   /* the LX's name */
     i4		    d2_11_ldb_lxflags;  /* for future use */
 
 #define	TPC_LX_02FLAG_2PC	0x0002
@@ -205,8 +134,8 @@ typedef struct _TPC_D2_DXLDBS
 
 typedef struct _TPC_L1_DBCAPS
 {
-    TPC_32C_PLUS1    l1_1_cap_cap;	/* capability */
-    TPC_32C_PLUS1    l1_2_cap_val;	/* value of above */
+    DB_CAP_STR		l1_1_cap_cap;	/* capability */
+    DB_CAPVAL_STR	l1_2_cap_val;	/* value of above */
 
 #define	TPC_03_CC_DBCAPS_2	2	/* number of columns in catalog */
 }   TPC_L1_DBCAPS;
@@ -226,15 +155,17 @@ typedef struct _TPC_L1_DBCAPS
 
 typedef struct _TPC_I1_STARCDBS
 {
-    TPC_32C_PLUS1    i1_1_ddb_name;	/* DDB name */
-    TPC_32C_PLUS1    i1_2_ddb_owner;	/* DDB owner name */
-    TPC_32C_PLUS1    i1_3_cdb_name;	/* CDB name */
-    TPC_32C_PLUS1    i1_4_cdb_owner;	/* CDB owner name */
-    TPC_32C_PLUS1    i1_5_cdb_node;	/* CDB node name */
-    TPC_32C_PLUS1    i1_6_cdb_dbms;	/* DBMS for CDB */
-    TPC_32C_PLUS1    i1_7_scheme_desc;	/* centralized, etc */
-    TPC_DATE_PLUS1   i1_8_create_date;	/* DDB creation date */
-    TPC_8C_PLUS1     i1_9_original;	/* "Y" or "N" */
+    DB_DB_STR        i1_1_ddb_name;	/* DDB name */
+    DB_OWN_STR       i1_2_ddb_owner;	/* DDB owner name */
+    DB_DB_STR        i1_3_cdb_name;	/* CDB name */
+    DB_OWN_STR       i1_4_cdb_owner;	/* CDB owner name */
+    DB_NODE_STR      i1_5_cdb_node;	/* CDB node name */
+    DB_TYPE_STR      i1_6_cdb_dbms;	/* DBMS for CDB */
+    DB_TYPE_STR      i1_7_scheme_desc;	/* centralized, etc */
+    DB_DATE_STR      i1_8_create_date;	/* DDB creation date */
+    DB_TYPE_STR      i1_9_original;	/* "Y" or "N" */
+					/* DB_TYPE_STR big enough for */
+					/* iistar_cdbs.original char(8) */
     i4		     i1_10_cdb_id;	/* id of CDB */
     i4		     i1_11_cdb_cap;	/* encoded CDB caps */
 

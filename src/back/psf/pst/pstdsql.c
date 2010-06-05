@@ -220,6 +220,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 
@@ -233,7 +235,7 @@ GLOBALREF PSF_SERVBLK     *Psf_srvblk;  /* PSF server control block ptr */
 */
 
 #define	GCA_COL_ATT_SIZE \
-    (((((GCA_COL_ATT*)0)->gca_attname - (char*)0) + DB_MAXNAME + \
+    (((((GCA_COL_ATT*)0)->gca_attname - (char*)0) + DB_ATT_MAXNAME + \
       sizeof(ALIGN_RESTRICT) - 1) & ~(sizeof(ALIGN_RESTRICT) - 1))
 
 
@@ -748,10 +750,10 @@ pst_prepare(
 	PSQ_STMT_INFO	*s = &proto->pst_stmt_info;
 
 	/* find the table name in the insert/update statement */
-	MEcopy(rng->pss_tabname.db_tab_name, DB_MAXNAME, s->psq_stmt_tabname);
-	s->psq_stmt_tabname[DB_MAXNAME] = '\0';
-	MEcopy(rng->pss_ownname.db_own_name, DB_MAXNAME, s->psq_stmt_ownname);
-	s->psq_stmt_ownname[DB_MAXNAME] = '\0';
+	MEcopy(rng->pss_tabname.db_tab_name, DB_TAB_MAXNAME, s->psq_stmt_tabname);
+	s->psq_stmt_tabname[DB_TAB_MAXNAME] = '\0';
+	MEcopy(rng->pss_ownname.db_own_name, sizeof(DB_OWN_NAME), s->psq_stmt_ownname);
+	s->psq_stmt_ownname[sizeof(DB_OWN_NAME)] = '\0';
 
 	s->psq_stmt_blob_cnt = 0;
 	s->psq_stmt_blob_colno = 0;
@@ -2336,7 +2338,8 @@ pst_execute(
 		    (VOID) psf_error(2310L, 0L, PSF_USERERR,
 			&err_code, &psq_cb->psq_error, 2,
 			STtrmwhite(sname), sname,
-			psf_trmwhite(DB_MAXNAME, proto->pst_cursid.db_cur_name),
+			psf_trmwhite(DB_CURSOR_MAXNAME, 
+				proto->pst_cursid.db_cur_name),
 			proto->pst_cursid.db_cur_name);
 		    return (E_DB_ERROR);
 		}
@@ -3701,8 +3704,8 @@ pst_sqlatt(
 	DB_COPY_DV_TO_ATT( &resdom->pst_sym.pst_dataval, sqlatts );
 
 	MEcopy(resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname, 
-				DB_MAXNAME, sqlatts->gca_attname);
-	sqlatts->gca_l_attname = STtrmnwhite(sqlatts->gca_attname, DB_MAXNAME);
+				DB_ATT_MAXNAME, sqlatts->gca_attname);
+	sqlatts->gca_l_attname = STtrmnwhite(sqlatts->gca_attname, DB_ATT_MAXNAME);
 
 	sqlatts = (GCA_COL_ATT*)(((char *) sqlatts) + GCA_COL_ATT_SIZE);
 
@@ -4013,7 +4016,7 @@ pst_descinput(PSQ_CB *psq_cb, PSS_SESBLK *sess_cb, char *sname)
     {
 	/* In this case there can only be one parameter, and it's varchar */
 
-	desc_base->gca_attdbv.db_length = DB_MAXNAME + 2; /* plus count */
+	desc_base->gca_attdbv.db_length = DB_OWN_MAXNAME + 2; /* plus count */
 	desc_base->gca_attdbv.db_datatype = DB_VCH_TYPE;
     }
     else

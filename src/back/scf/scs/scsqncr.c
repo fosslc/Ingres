@@ -1203,6 +1203,8 @@
 **	    Fix indents, update some comments.
 **	30-Mar-2010 (kschendel) SIR 123485
 **	    Re-type some ptr's as the proper struct pointer.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -6555,12 +6557,11 @@ scs_sequencer(i4 op_code,
 		    void *f = ult_open_tracefile((PTR)scb->cs_scb.cs_self);
 		    if (f)
 		    {
-			char tmp[20+20+DB_MAXNAME+20+1];
+			char tmp[20+20+DB_CURSOR_MAXNAME+20+1];
 			STprintf(tmp,"(ID=%d/%d)(%.*s)",
-				cquery->cur_qname.db_cursor_id[0],
-				cquery->cur_qname.db_cursor_id[1],
-				DB_MAXNAME,
-				ps_ccb->psq_cursid.db_cur_name);
+			    cquery->cur_qname.db_cursor_id[0],
+			    cquery->cur_qname.db_cursor_id[1],
+			    DB_CURSOR_MAXNAME, ps_ccb->psq_cursid.db_cur_name);
 			ult_print_tracefile(f,SC930_LTYPE_ADDCURSORID,tmp);
 			ult_close_tracefile(f);
 		    }
@@ -6713,18 +6714,17 @@ scs_sequencer(i4 op_code,
                     void *f = ult_open_tracefile((PTR)scb->cs_scb.cs_self);
                     if (f)
                     {
-			char tmp[20+20+DB_MAXNAME+20+1];
+			char tmp[20+20+DB_CURSOR_MAXNAME+20+1];
                         STprintf(tmp,"(ID=%d/%d)(%.*s)",
-                                cquery->cur_qname.db_cursor_id[0],
-                                cquery->cur_qname.db_cursor_id[1],
-                                DB_MAXNAME,
-                                ps_ccb->psq_cursid.db_cur_name);
+			    cquery->cur_qname.db_cursor_id[0],
+			    cquery->cur_qname.db_cursor_id[1],
+			    DB_CURSOR_MAXNAME, ps_ccb->psq_cursid.db_cur_name);
 			ult_print_tracefile(f,SC930_LTYPE_ADDCURSORID,tmp);
                         ult_close_tracefile(f);
                     }
                 }
 
-		/* DON'T assume GCA_MAXNAME > DB_MAXNAME */
+		/* DON'T assume GCA_MAXNAME > DB_CURSOR_MAXNAME */
 		MEmove(sizeof(ps_ccb->psq_cursid.db_cur_name),
 		    (PTR)&ps_ccb->psq_cursid.db_cur_name, ' ',
 		    sizeof(((GCA_ID *)cscb->cscb_tuples)->gca_name),
@@ -10122,7 +10122,7 @@ scs_sequencer(i4 op_code,
 		** The procedure name has already been normalized and case
 		** translated.  This was performed by the dbms when the
 		** procedure was defined.
-		** DON'T assume GCA_MAXNAME > DB_MAXNAME
+		** DON'T assume GCA_MAXNAME > DB_CURSOR_MAXNAME
 		**
 		** Don't send the procedure object ID if the name is too
 		** large to fit in GCA_ID.
@@ -11048,19 +11048,17 @@ scs_input(SCD_SCB *scb,
 	    ** The cursor name was sent by the FE as normalized and
 	    ** translated.  This was performed by the dbms when the
 	    ** cursor was opened.
-	    ** DON'T assume GCA_MAXNAME > DB_MAXNAME
+	    ** DON'T assume GCA_MAXNAME > DB_CURSOR_MAXNAME
 	    */
 	    MEmove(sizeof(id->gca_name), (PTR)&id->gca_name, ' ',
-		sizeof(cquery->cur_qname.db_cur_name),
-		(PTR)&cquery->cur_qname.db_cur_name);
+		DB_CURSOR_MAXNAME, (PTR)&cquery->cur_qname.db_cur_name);
 
             if (print_qry)
 	    {
 		i4 length;
 
 		length = cus_trmwhite(
-		    (u_i4)DB_MAXNAME,
-		    (char *)cquery->cur_qname.db_cur_name);
+		    (u_i4)DB_CURSOR_MAXNAME, cquery->cur_qname.db_cur_name);
 
                 sc0e_trace(STprintf(stbuf,
 		    "%s Cursor <%d.,%d.,%.*s> Statement\n",
@@ -11071,9 +11069,9 @@ scs_input(SCD_SCB *scb,
             }
             TRformat(0, 0, sscb->sscb_ics.ics_qbuf,
                      sizeof(sscb->sscb_ics.ics_qbuf),
-                     mode == GCA_CLOSE ? "Close %t" : "Fetch %t", DB_MAXNAME,
-                     cquery->cur_qname.db_cur_name);
-            sscb->sscb_ics.ics_l_qbuf = 6 + DB_MAXNAME;
+                     mode == GCA_CLOSE ? "Close %t" : "Fetch %t", 
+		     DB_CURSOR_MAXNAME, cquery->cur_qname.db_cur_name);
+            sscb->sscb_ics.ics_l_qbuf = 6 + DB_CURSOR_MAXNAME;
 	    if( (Sc_main_cb->sc_capabilities & SC_C_C2SECURE))
 	    {
 		    sc0a_qrytext(scb, sscb->sscb_ics.ics_qbuf,
@@ -11111,11 +11109,11 @@ scs_input(SCD_SCB *scb,
 		    if (sscb->sscb_cursor.curs_frows < 1)
 			sscb->sscb_cursor.curs_frows = 0;
                 }
-                else  if (CMdigit(&id->gca_name[DB_GW1_MAXNAME]))
+                else  if (CMdigit(&id->gca_name[DB_GW1_MAXNAME_32]))
                 {
 		    /* Last 1/2 of gca_name has row count encoded */
                     id->gca_name[GCA_MAXNAME-1] = EOS;
-                    CVan(&id->gca_name[DB_GW1_MAXNAME],
+                    CVan(&id->gca_name[DB_GW1_MAXNAME_32],
                          &sscb->sscb_cursor.curs_frows);
 		    if (sscb->sscb_cursor.curs_frows < 1)
 			sscb->sscb_cursor.curs_frows = 1;
@@ -11200,7 +11198,7 @@ scs_input(SCD_SCB *scb,
 
 		if (l_id != 0)
 		{
-		    templen = DB_MAXNAME;
+		    templen = DB_OWN_MAXNAME;
 		    status = cui_idxlate(
 				   (u_char *)dl1_data->gca_owner_name.gca_name,
 				   &l_id, (u_char *)tempstr, &templen,
@@ -11272,7 +11270,7 @@ scs_input(SCD_SCB *scb,
 
 		if (l_id != 0)
 		{
-		    templen = DB_MAXNAME;
+		    templen = DB_TAB_MAXNAME;
 		    status = cui_idxlate((u_char *)tbl_name_p,
 					 &l_id, (u_char *)tempstr, &templen,
 					 sscb->sscb_ics.ics_dbxlate,
@@ -11340,7 +11338,7 @@ scs_input(SCD_SCB *scb,
 
 		if (l_id != 0)
 		{
-		    templen = DB_MAXNAME;
+		    templen = DB_TAB_MAXNAME;
 		    status = cui_idxlate(
 				     (u_char *)dldata->gca_table_name.gca_name,
 					 &l_id, (u_char *)tempstr, &templen,
@@ -11388,7 +11386,7 @@ scs_input(SCD_SCB *scb,
 	    /*
 	    ** The cursor name must be normalized and case translated
 	    ** after the trace is printed.
-	    ** DON'T assume GCA_MAXNAME > DB_MAXNAME
+	    ** DON'T assume GCA_MAXNAME > DB_CURSOR_MAXNAME
 	    */
 	    MEmove(sizeof(id->gca_name), (PTR)&id->gca_name, ' ',
 		sizeof(cquery->cur_qname.db_cur_name),
@@ -11399,8 +11397,7 @@ scs_input(SCD_SCB *scb,
 		i4 length;
 
 		length = cus_trmwhite(
-		    (u_i4)DB_MAXNAME,
-		    (char *)cquery->cur_qname.db_cur_name);
+		    (u_i4)DB_CURSOR_MAXNAME, cquery->cur_qname.db_cur_name);
 
 		sc0e_trace(STprintf(stbuf,
 		    "Delete Cursor <%d.,%d.,%.*s> Statement\n",
@@ -11418,7 +11415,7 @@ scs_input(SCD_SCB *scb,
                         STprintf(tmp,"(ID=%d/%d)(%.*s)",
                                 cquery->cur_qname.db_cursor_id[0],
                                 cquery->cur_qname.db_cursor_id[1],
-                                DB_MAXNAME,
+                                DB_CURSOR_MAXNAME,
                                 cquery->cur_qname.db_cur_name);
                         ult_print_tracefile(f,SC930_LTYPE_DELCURSOR,tmp);
                         ult_close_tracefile(f);
@@ -11427,9 +11424,9 @@ scs_input(SCD_SCB *scb,
 
             TRformat(0, 0, sscb->sscb_ics.ics_qbuf,
                             sizeof(sscb->sscb_ics.ics_qbuf),
-                    "Delete %t", DB_MAXNAME,
+                    "Delete %t", DB_CURSOR_MAXNAME,
                         cquery->cur_qname.db_cur_name);
-            sscb->sscb_ics.ics_l_qbuf = 7 + DB_MAXNAME;
+            sscb->sscb_ics.ics_l_qbuf = 7 + DB_CURSOR_MAXNAME;
 
 	    if( (Sc_main_cb->sc_capabilities & SC_C_C2SECURE))
 	    {
@@ -11506,15 +11503,14 @@ scs_input(SCD_SCB *scb,
 		i4	own_l_name = 0;
 		i4	proc_mask;
 		char	*ptr;
+		i4	db_cursor_id[2];
 
 		if (mode == GCA_INVPROC)
 		{
 		    GCA_IP_DATA *msg = (GCA_IP_DATA *)rv->gca_data_area;
 
-		    cquery->cur_qname.db_cursor_id[0] = 
-		    				msg->gca_id_proc.gca_index[0];
-		    cquery->cur_qname.db_cursor_id[1] = 
-		    				msg->gca_id_proc.gca_index[1];
+		    db_cursor_id[0] = msg->gca_id_proc.gca_index[0];
+		    db_cursor_id[1] = msg->gca_id_proc.gca_index[1];
 
 		    proc_l_name = sizeof(msg->gca_id_proc.gca_name);
 		    proc_name = msg->gca_id_proc.gca_name;
@@ -11525,10 +11521,8 @@ scs_input(SCD_SCB *scb,
 		{
 		    GCA1_IP_DATA *msg = (GCA1_IP_DATA *)rv->gca_data_area;
 
-		    cquery->cur_qname.db_cursor_id[0] = 
-		    				msg->gca_id_proc.gca_index[0];
-		    cquery->cur_qname.db_cursor_id[1] = 
-		    				msg->gca_id_proc.gca_index[1];
+		    db_cursor_id[0] = msg->gca_id_proc.gca_index[0];
+		    db_cursor_id[1] = msg->gca_id_proc.gca_index[1];
 
 		    proc_l_name = sizeof(msg->gca_id_proc.gca_name);
 		    proc_name = msg->gca_id_proc.gca_name;
@@ -11554,8 +11548,8 @@ scs_input(SCD_SCB *scb,
 		{
 		    GCA2_IP_DATA *msg = (GCA2_IP_DATA *)rv->gca_data_area;
 
-		    cquery->cur_qname.db_cursor_id[0] = 0;
-		    cquery->cur_qname.db_cursor_id[1] = 0;
+		    db_cursor_id[0] = 0;
+		    db_cursor_id[1] = 0;
 
 		    proc_l_name = msg->gca_proc_name.gca_l_name;
 		    proc_name = msg->gca_proc_name.gca_name;
@@ -11594,13 +11588,15 @@ scs_input(SCD_SCB *scb,
 		/*
 		** The proc name must be normalized and case translated
 		** after the trace is printed.
-		** DON'T assume GCA_MAXNAME > DB_MAXNAME
+		** DON'T assume GCA_MAXNAME > DB_CURSOR_MAXNAME
 		*/
 		MEmove( proc_l_name, (PTR)proc_name, ' ',
 		    sizeof(cquery->cur_qname.db_cur_name),
 		    (PTR)&cquery->cur_qname.db_cur_name);
-
-		l_id =  cus_trmwhite((u_i4)DB_MAXNAME,
+		cquery->cur_qname.db_cursor_id[0] = db_cursor_id[0];
+		cquery->cur_qname.db_cursor_id[1] = db_cursor_id[1];
+		
+		l_id =  cus_trmwhite((u_i4)DB_CURSOR_MAXNAME,
 		      (char *)cquery->cur_qname.db_cur_name);
 
 		if (print_qry)
@@ -11638,7 +11634,7 @@ scs_input(SCD_SCB *scb,
 		if (cui_f_idxlate( cquery->cur_qname.db_cur_name,
 			  l_id, sscb->sscb_ics.ics_dbxlate) == FALSE)
 		{
-		    templen = DB_MAXNAME;
+		    templen = DB_CURSOR_MAXNAME;
 		    status = cui_idxlate(
 		      (u_char *)cquery->cur_qname.db_cur_name,
 		      &l_id, (u_char *)tempstr, &templen,
@@ -11668,14 +11664,14 @@ scs_input(SCD_SCB *scb,
 			break;
 		    }
 		    (VOID)MEmove(templen, (PTR)tempstr, ' ',
-			     DB_MAXNAME, cquery->cur_qname.db_cur_name);
+			 DB_CURSOR_MAXNAME, cquery->cur_qname.db_cur_name);
 		}
 		else
 		{
 		    /* cui_f_idxlate succeeded and translated name,
 		    ** but still need to blank-fill rest of name
 		    */
-		    for (i = l_id; i < DB_MAXNAME; i++)
+		    for (i = l_id; i < DB_CURSOR_MAXNAME; i++)
 			cquery->cur_qname.db_cur_name[i]=' ';
 		}
 
@@ -11685,13 +11681,11 @@ scs_input(SCD_SCB *scb,
 		** string: "Execute Procedure dbp_name" for display in 
 		** iimonitor.
 		*/
-		MEcopy("Execute Procedure ", 
-			   18,
-			   sscb->sscb_ics.ics_qbuf);
+		MEcopy("Execute Procedure ", 18, sscb->sscb_ics.ics_qbuf);
 		MEcopy( cquery->cur_qname.db_cur_name,
-			   DB_MAXNAME,
+			   DB_CURSOR_MAXNAME,
 			   &sscb->sscb_ics.ics_qbuf[18]);
-		sscb->sscb_ics.ics_l_qbuf = 18 + DB_MAXNAME;
+		sscb->sscb_ics.ics_l_qbuf = 18 + DB_CURSOR_MAXNAME;
 		if( (Sc_main_cb->sc_capabilities & SC_C_C2SECURE))
 		{
 		    sc0a_qrytext(scb, sscb->sscb_ics.ics_qbuf,
@@ -11733,7 +11727,7 @@ scs_input(SCD_SCB *scb,
 					  sscb->sscb_ics.ics_dbxlate)
 			        == FALSE)
 			{
-			    templen = DB_MAXNAME;
+			    templen = DB_OWN_MAXNAME;
 			    status = cui_idxlate(
 				     (u_char *)pscb->psq_als_owner.db_own_name,
 				     &l_id, (u_char *)tempstr, &templen,
@@ -12229,7 +12223,7 @@ scs_input(SCD_SCB *scb,
 					  sscb->sscb_ics.ics_dbxlate)
 			    == FALSE)
 			{
-			    templen = DB_MAXNAME;
+			    templen = DB_PARM_MAXNAME;
 			    status = cui_idxlate((u_char *)qup->parm_name,
 					 &l_id, (u_char *)tempstr, &templen,
 					 sscb->sscb_ics.ics_dbxlate,
@@ -12473,12 +12467,13 @@ scs_input(SCD_SCB *scb,
 		buf = (GCA_ID *)rv->gca_data_area;
 
 		sscb->sscb_param = 0;
+
 		cquery->cur_qname.db_cursor_id[0] = buf->gca_index[0];
 		cquery->cur_qname.db_cursor_id[1] = buf->gca_index[1];
 	    	/*
 	    	** The cursor name must be normalized and case translated
 	    	** after the trace is printed.
-		** DON'T assume GCA_MAXNAME > DB_MAXNAME
+		** DON'T assume GCA_MAXNAME > DB_CURSOR_MAXNAME
 	    	*/
 		MEmove(sizeof(buf->gca_name), (PTR)&buf->gca_name, ' ',
 		    sizeof(cquery->cur_qname.db_cur_name),
@@ -12491,10 +12486,9 @@ scs_input(SCD_SCB *scb,
                     {
                         char tmp[1000];
                         STprintf(tmp,"(ID=%d/%d)(%.*s)",
-                                cquery->cur_qname.db_cursor_id[0],
-                                cquery->cur_qname.db_cursor_id[1],
-                                DB_MAXNAME,
-                                cquery->cur_qname.db_cur_name);
+			    cquery->cur_qname.db_cursor_id[0],
+			    cquery->cur_qname.db_cursor_id[1],
+			    DB_CURSOR_MAXNAME, cquery->cur_qname.db_cur_name);
                         ult_print_tracefile(f,SC930_LTYPE_EXECUTE,tmp);
                         ult_close_tracefile(f);
                     }
@@ -12505,8 +12499,7 @@ scs_input(SCD_SCB *scb,
 		    i4 length;
 
 		    length = cus_trmwhite(
-		    (u_i4)DB_MAXNAME,
-		    (char *)cquery->cur_qname.db_cur_name);
+		    (u_i4)DB_CURSOR_MAXNAME, cquery->cur_qname.db_cur_name);
 
 		    sc0e_trace(STprintf(stbuf,
 			"Execute <%d.,%d.,%.*s> Statement\n",
@@ -12517,9 +12510,9 @@ scs_input(SCD_SCB *scb,
 		}
 
 		MEcopy("Execute ", sizeof("Execute ")-1, sscb->sscb_ics.ics_qbuf);
-		MEcopy(cquery->cur_qname.db_cur_name, DB_MAXNAME,
+		MEcopy(cquery->cur_qname.db_cur_name, DB_CURSOR_MAXNAME,
 			&sscb->sscb_ics.ics_qbuf[sizeof("Execute ")-1]);
-		sscb->sscb_ics.ics_l_qbuf = 8 + DB_MAXNAME;
+		sscb->sscb_ics.ics_l_qbuf = 8 + DB_CURSOR_MAXNAME;
 	        if( (Sc_main_cb->sc_capabilities & SC_C_C2SECURE))
 		{
 			sc0a_qrytext(scb, sscb->sscb_ics.ics_qbuf,
@@ -13954,9 +13947,9 @@ scs_blob_fetch(SCD_SCB *scb,
 		stmt_info = psq_cb.psq_stmt_info;
 		if (stmt_info && stmt_info->psq_stmt_blob_cnt == 1)
 		{
-		    MEcopy(stmt_info->psq_stmt_ownname, DB_MAXNAME, 
+		    MEcopy(stmt_info->psq_stmt_ownname, DB_OWN_MAXNAME, 
 			ins_work->table_owner.db_own_name);
-		    MEcopy(stmt_info->psq_stmt_tabname, DB_MAXNAME, 
+		    MEcopy(stmt_info->psq_stmt_tabname, DB_TAB_MAXNAME, 
 			ins_work->table_name.db_tab_name);
 		    ins_work->source_dt = sscb->sscb_gcadv.gca_type;
 		    ins_work->flags = (BLOBWKSP_TABLENAME | BLOBWKSP_ATTID);
@@ -14025,7 +14018,7 @@ scs_blob_fetch(SCD_SCB *scb,
 		    /* skip spaces */
 		    for (;*pos == ' ' && offset <= DB_MAXNAME; pos++, offset++);
 		    /* check for owner name */
-		    if (offset < DB_MAXNAME && !owner_found && *pos == '.')
+		    if (offset < DB_OWN_MAXNAME && !owner_found && *pos == '.')
 		    {
 			owner_found = TRUE;
 			name_found = FALSE;
@@ -15341,7 +15334,7 @@ scs_fdbp_data(SCD_SCB	  *scb,
 	    if (cui_f_idxlate(qup->parm_name, l_id,
 			      scb->scb_sscb.sscb_ics.ics_dbxlate) == FALSE)
 	    {
-		templen = DB_MAXNAME;
+		templen = DB_PARM_MAXNAME;
 		status = cui_idxlate((u_char *)qup->parm_name,
 				     &l_id, (u_char *)tempstr, &templen,
 				     scb->scb_sscb.sscb_ics.ics_dbxlate,
@@ -17395,7 +17388,7 @@ scs_def_curs(
 	        gca_id->gca_index[0] = curs_id->db_cursor_id[0];
 	        gca_id->gca_index[1] = curs_id->db_cursor_id[1];
 
-	        /* DON'T assume GCA_MAXNAME > DB_MAXNAME */
+	        /* DON'T assume GCA_MAXNAME > DB_CURSOR_MAXNAME */
 	        MEmove(sizeof(curs_id->db_cur_name),
                        (PTR)&curs_id->db_cur_name,' ',
 	               sizeof(gca_id->gca_name), (PTR)&gca_id->gca_name);

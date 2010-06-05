@@ -42,6 +42,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -90,7 +92,7 @@ typedef	struct _RDD_DEPENDS		RDD_DEPENDS;
 /*
 **      Max length of query text.
 */
-#define RDD_QRY_LENGTH                  1100
+#define RDD_QRY_LENGTH (1100 + DB_TAB_MAXNAME + DB_ATT_MAXNAME + DB_OWN_MAXNAME)
 
 /*
 **      Max number of ldb capabilities currently supported.
@@ -226,9 +228,9 @@ typedef char		RDD_16CHAR[RDD_16_CHAR];
 struct _RDD_OBJ_ID
 {
     i4		    name_length;               /* name length */ 
-    char  	    tab_name[DB_MAXNAME + 1];  /* object name */
+    char  	    tab_name[DB_TAB_MAXNAME + 1];  /* object name */
     i4		    owner_length;	       /* owner length */
-    char	    tab_owner[DB_MAXNAME + 1]; /* object owner */
+    char	    tab_owner[DB_OWN_MAXNAME + 1]; /* object owner */
 };
 
 /*}
@@ -244,8 +246,8 @@ struct _RDD_OBJ_ID
 */
 struct _RDC_TABLES
 {
-	DD_NAME		table_name;
-	DD_NAME		table_owner;
+	DD_TAB_NAME	table_name;
+	DD_OWN_NAME	table_owner;
 	DD_DATE		create_date;
 	DD_DATE		alter_date;
 	RDD_8CHAR	table_type;
@@ -298,10 +300,10 @@ struct _RDC_TABLES
 */
 struct _RDC_COLUMNS
 {
-    DD_NAME	table_name;
-    DD_NAME	table_owner;
-    DD_NAME	name;
-    DD_NAME	datatype;
+    DD_TAB_NAME	table_name;
+    DD_OWN_NAME	table_owner;
+    DD_ATT_NAME	name;
+    char	datatype[DB_TYPE_MAXLEN];
     i4  	length;
     i4  	scale;
     RDD_8CHAR	nulls;
@@ -323,8 +325,8 @@ struct _RDC_COLUMNS
 */
 struct _RDC_VIEWS
 {
-    DD_NAME	table_name;
-    DD_NAME	table_owner;
+    DD_TAB_NAME	table_name;
+    DD_OWN_NAME	table_owner;
     RDD_8CHAR	dml;
     RDD_8CHAR	check_option;
     i4  	sequence;
@@ -342,11 +344,11 @@ struct _RDC_VIEWS
 */
 struct _RDC_INDEXES
 {
-    DD_NAME	index_name;
-    DD_NAME	index_owner;
+    DD_TAB_NAME	index_name;
+    DD_OWN_NAME	index_owner;
     DD_DATE	create_date;
-    DD_NAME	base_name;
-    DD_NAME	base_owner;
+    DD_TAB_NAME	base_name;
+    DD_OWN_NAME	base_owner;
     RDD_16CHAR	storage;
     RDD_8CHAR	compressed;
     RDD_8CHAR	uniquerule;
@@ -364,9 +366,9 @@ struct _RDC_INDEXES
 */
 struct _RDC_IDX_COLUMNS
 {
-    DD_NAME	index_name;
-    DD_NAME	index_owner;
-    DD_NAME	column_name;
+    DD_TAB_NAME	index_name;
+    DD_OWN_NAME	index_owner;
+    DD_ATT_NAME	column_name;
     i4  	keysequence;
     RDD_8CHAR	direction;
 };
@@ -388,9 +390,9 @@ struct _RDC_IDX_COLUMNS
 */
 struct _RDC_STATS
 {
-    DD_NAME	table_name;
-    DD_NAME	table_owner;
-    DD_NAME	column_name;
+    DD_TAB_NAME	table_name;
+    DD_OWN_NAME	table_owner;
+    DD_ATT_NAME	column_name;
     DD_DATE	create_date;
     f4		num_unique;
     f4		rept_factor;
@@ -413,9 +415,9 @@ struct _RDC_STATS
 */
 struct _RDC_HISTOGRAMS
 {
-    DD_NAME	table_name;
-    DD_NAME	table_owner;
-    DD_NAME	column_name;
+    DD_TAB_NAME	table_name;
+    DD_OWN_NAME	table_owner;
+    DD_ATT_NAME	column_name;
     i2  	sequence;
     char	optdata[228];
 };
@@ -431,9 +433,9 @@ struct _RDC_HISTOGRAMS
 */
 struct _RDC_KEY_COLUMNS
 {
-    DD_NAME	table_name;
-    DD_NAME	table_owner;
-    DD_NAME	column_name;
+    DD_TAB_NAME	table_name;
+    DD_OWN_NAME	table_owner;
+    DD_ATT_NAME	column_name;
     i2  	keysequence;
     RDD_1CHAR	direction;
 };
@@ -449,14 +451,14 @@ struct _RDC_KEY_COLUMNS
 */
 struct _RDC_LDBID
 {
-    DD_NAME	ldb_node;
-    DD_NAME	ldb_dbms;
-    DD_NAME	ldb_database;
+    DD_NODE_NAME	ldb_node;
+    char	ldb_dbms[DB_TYPE_MAXLEN];
+    DD_DB_NAME	ldb_database;
     RDD_8CHAR	ldb_longname;
     i4     ldb_id;
     RDD_8CHAR	ldb_dba;
-    DD_NAME	ldb_dbaname;
-    DD_NAME	ldb_sys_owner;
+    DD_OWN_NAME	ldb_dbaname;
+    DD_OWN_NAME	ldb_sys_owner;
 };
 
 /*}
@@ -471,8 +473,8 @@ struct _RDC_LDBID
 struct _RDC_DBCAPS
 {
     i4	ldb_id;
-    char	cap_capability[DB_MAXNAME + 1];
-    char	cap_value[DB_MAXNAME + 1];
+    char	cap_capability[DB_CAP_MAXLEN + 1];
+    char	cap_value[DB_CAPVAL_MAXLEN + 1];
     i4	cap_level;
 };
 
@@ -489,7 +491,7 @@ struct _RDC_MAP_COLUMNS
 {
     u_i4    	object_base;
     u_i4	object_index;
-    DD_NAME	local_column;
+    DD_ATT_NAME	local_column;
     i4          column_sequence;
 };
 
@@ -504,8 +506,8 @@ struct _RDC_MAP_COLUMNS
 */
 struct _RDC_OBJECTS
 {
-    DD_NAME	object_name;
-    DD_NAME	object_owner;
+    DD_OBJ_NAME	object_name;
+    DD_OWN_NAME	object_owner;
     u_i4	object_base;
     u_i4        object_index;
     u_i4	qid1;
@@ -532,8 +534,8 @@ struct _RDC_LOCTABLE
     u_i4	object_base;
     u_i4	object_index;
     RDD_8CHAR	local_type;
-    DD_NAME     table_name;
-    DD_NAME	table_owner;
+    DD_TAB_NAME table_name;
+    DD_OWN_NAME	table_owner;
     DD_DATE	table_date;
     DD_DATE	table_alter;
     u_i4	stamp1;

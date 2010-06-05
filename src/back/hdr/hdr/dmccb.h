@@ -204,6 +204,8 @@
 **          into main in the first place.
 **       8-Jun-2009 (hanal04) Code Sprint SIR 122168 Ticket 387
 **          Added DMC2_MUST_LOG.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -594,8 +596,8 @@ typedef struct _DMC_CB
     PTR		    dmc_coldesc;	    /* collation descriptor */
     PTR		    dmc_ucoldesc;	    /* Unicode collation descriptor */
     DB_STATUS	    (*dmc_show_state)();    /* Rtn to show security state */
-    char	    dmc_collation[DB_MAXNAME];	    /* collation name */
-    char	    dmc_ucollation[DB_MAXNAME];	    /* Unicode collation name */
+    char	    dmc_collation[DB_COLLATION_MAXNAME]; /* collation name */
+    char	    dmc_ucollation[DB_COLLATION_MAXNAME];/* Unicode collation */
     DMC_LLIST_ITEM  *dmc_names_loc;	    /* location names to alter */
     DB_LOC_NAME	    *dmc_error_loc;	    /* name of location causing error
 					    ** (used only if error occurs)

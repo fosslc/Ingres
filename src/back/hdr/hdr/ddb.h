@@ -74,6 +74,8 @@
 **	    replace nat and longnat with i4
 **	07-jan-2002 (toumi01)
 **	    Replace DD_300_MAXCOLUMN with DD_MAXCOLUMN (1024).
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 
@@ -240,7 +242,7 @@ typedef struct	_DD_DX_ID
 {
     i4	dd_dx_id1;			/* 1st part of id */
     i4	dd_dx_id2;			/* 2nd part of id */
-    char	dd_dx_name[DB_MAXNAME];		/* 3rd part of id */
+    char	dd_dx_name[DB_DB_MAXNAME];	/* 3rd part of id */
 }   DD_DX_ID;
 
 
@@ -249,8 +251,8 @@ typedef struct	_DD_DX_ID
 ** Name: DD_NAME - A name construct.
 **
 ** Description:
-**      This construct contains exactly 32 characters, including trailing 
-**  blanks.
+**      This construct contains exactly DB_MAXNAME characters, 
+**	including trailing blanks.
 **
 ** History:
 **      24-apr-88 (carl)
@@ -258,6 +260,18 @@ typedef struct	_DD_DX_ID
 */
 
 typedef char            DD_NAME[DB_MAXNAME];
+
+typedef char            DD_DB_NAME[DB_DB_MAXNAME];
+typedef char            DD_LOC_NAME[DB_LOC_MAXNAME];
+typedef char            DD_TAB_NAME[DB_TAB_MAXNAME];
+typedef char            DD_OWN_NAME[DB_OWN_MAXNAME];
+typedef char            DD_ATT_NAME[DB_ATT_MAXNAME];
+typedef char            DD_DBP_NAME[DB_DBP_MAXNAME];
+typedef char            DD_OBJ_NAME[DB_OBJ_MAXNAME];
+typedef char            DD_NODE_NAME[DB_NODE_MAXNAME];
+
+/* type value, not a name */
+typedef char            DD_TYPE_VAL[DB_TYPE_MAXLEN];
 
 
 /*}
@@ -274,7 +288,7 @@ typedef char            DD_NAME[DB_MAXNAME];
 
 typedef struct	_DD_COLUMN_DESC
 {
-    DD_NAME	dd_c1_col_name;			/* name of column */
+    DD_ATT_NAME	dd_c1_col_name;			/* name of column */
     i4		dd_c2_col_ord;			/* ordinal of column */
 }   DD_COLUMN_DESC;
 
@@ -375,7 +389,7 @@ typedef struct _DD_CAPS
 #define	    DD_1CASE_MIXED	1	    /* names may be mixed case */ 
 #define	    DD_2CASE_UPPER	2	    /* names are upper-cased */
 
-    DD_NAME 	dd_c7_dbms_type;	    /* a DBMS name */
+    char 	dd_c7_dbms_type[DB_TYPE_MAXLEN]; /* a DBMS name */
     i4		dd_c8_owner_name;	    /* owner name support: one of
 					    ** the following defines */
 
@@ -544,11 +558,11 @@ typedef struct _DD_COM_FLAGS
     i4	    dd_co14_mprec;			/* GCA_MPREC */
     i4	    dd_co15_mlort;			/* GCA_MLORT */
     i4	    dd_co16_date_frmt;			/* GCA_DATE_FORMAT */
-    char    dd_co17_idx_struct[DB_MAXNAME];	/* GCA_IDX_STRUCT */
+    char    dd_co17_idx_struct[32];		/* GCA_IDX_STRUCT */
     u_i2    dd_co18_len_idx;			/* length of previous */
-    char    dd_co19_res_struct[DB_MAXNAME];	/* GCA_RES_STRUCT */
+    char    dd_co19_res_struct[32];		/* GCA_RES_STRUCT */
     u_i2    dd_co20_len_res;			/* length of previous */
-    char    dd_co21_euser[DB_MAXNAME];		/* GCA_EUSER */
+    char    dd_co21_euser[DB_OWN_MAXNAME];		/* GCA_EUSER */
     u_i2    dd_co22_len_euser;			/* length of previous */
     char    dd_co23_mathex[4];			/* GCA_MATHEX */
     char    dd_co24_f4style[4];			/* GCA_F4STYLE */
@@ -561,19 +575,19 @@ typedef struct _DD_COM_FLAGS
     i4	    dd_co31_timezone;			/* GCA_TIMEZONE */
     PTR	    dd_co32_gw_parms;			/* GCA_GW_PARMS */
     i4	    dd_co33_len_gw_parms;		/* length of previous */
-    char    dd_co34_tz_name[DB_MAXNAME];	/* GCA_TIMEZONE_NAME */
+    char    dd_co34_tz_name[32];		/* GCA_TIMEZONE_NAME */
     char    dd_co35_strtrunc[4];                /* GCA_STRTRUNC  */
-    char    dd_co36_grpid[ sizeof(DB_OWN_NAME)  /* GCA_GRPID	 */
+    char    dd_co36_grpid[ DB_OWN_MAXNAME  	/* GCA_GRPID	 */
 			  +sizeof(DB_PASSWORD)	/* Password	 */
 			  +2 ];			/* '/' and EOS   */
-    char    dd_co37_aplid[ sizeof(DB_OWN_NAME)  /* GCA_APLID	 */
+    char    dd_co37_aplid[ DB_OWN_MAXNAME 	/* GCA_APLID	 */
 			  +sizeof(DB_PASSWORD)	/* Password	 */
 			  +2 ];			/* '/' and EOS   */
     char    dd_co38_decformat[4];		/* GCA_DECFORMAT */
     i4	    dd_co39_year_cutoff;		/* GCA_YEAR_CUTOFF */
     char    dd_co40_usrpwd[sizeof(DB_PASSWORD)+2];/* GCA_RUPASS */
     i4	    dd_co41_i8width;			/* GCA_I8WIDTH */
-    char    dd_co42_date_alias[DB_MAXNAME];	/* GCA_DATE_ALIAS */
+    char    dd_co42_date_alias[DB_TYPE_MAXLEN];	/* GCA_DATE_ALIAS */
 } DD_COM_FLAGS;
 
 /*}
@@ -589,7 +603,7 @@ typedef struct _DD_COM_FLAGS
 
 typedef struct _DD_USR_DESC
 {
-    DD_NAME	dd_u1_usrname;		    /* user name */
+    DD_OWN_NAME	dd_u1_usrname;		    /* user name */
     bool	dd_u2_usepw_b;		    /* TRUE if password is
 					    ** known, FALSE otherwise */
     DD_256C	dd_u3_passwd;		    /* user password */
@@ -614,7 +628,7 @@ typedef struct _DD_USR_DESC
 typedef struct _DD_NODENAMES
 {
     struct _DD_NODENAMES  *dd_nextnode;   /* ptr to next node name */
-    DD_NAME                dd_nodename;   /* null terminated node name*/
+    DD_NODE_NAME          dd_nodename;   /* null terminated node name*/
 } DD_NODENAMES;
 
 /*}
@@ -656,8 +670,8 @@ typedef struct _DD_CLUSTER_INFO
 */
 typedef struct _DD_NETCOST
 {
-    DD_NAME         net_source;		/* source node name */
-    DD_NAME         net_dest;           /* destination node name */
+    DD_NODE_NAME    net_source;		/* source node name */
+    DD_NODE_NAME    net_dest;           /* destination node name */
     f8              net_cost;           /* cost of moving one byte
 					** from source to destination
 					** as a fraction of 1 DIO */
@@ -699,7 +713,7 @@ typedef struct _DD_NETLIST
 */
 typedef struct _DD_COSTS
 {
-    DD_NAME         cpu_name;		/* node name of CPU */
+    DD_NODE_NAME    cpu_name;		/* node name of CPU */
     f8              cpu_power;          /* as a relative multiple where
 					** 1 is the default */
     f8              dio_cost;           /* relative multiple of I/O speed
@@ -720,7 +734,7 @@ typedef struct _DD_COSTS
     i4		    cache_size;		/* number of pages available
 					** per thread in the memory
 					** manager cache */
-    i4		    cpu_exp0;		/* expansion init to 0 */
+    f8		    cpu_exp0;		/* expansion init to 0.0 */
     f8              cpu_exp1;           /* expansion init to 0.0 */
     f8              cpu_exp2;           /* expansion init to 0.0 */
 } DD_COSTS;
@@ -764,9 +778,9 @@ typedef struct _DD_LDB_DESC
 {
     bool	    dd_l1_ingres_b;	/* TRUE if LDB access requires the 
 					** $ingres status, FALSE otherwise */
-    DD_NAME	    dd_l2_node_name;	/* node name */
+    DD_NODE_NAME    dd_l2_node_name;	/* node name */
     DD_256C	    dd_l3_ldb_name;	/* LDB name */
-    DD_NAME	    dd_l4_dbms_name;	/* dbms name, e.g. INGRES */
+    char	    dd_l4_dbms_name[DB_TYPE_MAXLEN];/* dbms name, e.g. INGRES */
     i4	    dd_l5_ldb_id;	/* assigned LDB id, DD_0_IS_UNASSIGNED
 					*/
 #define	    DD_0_IS_UNASSIGNED	    0
@@ -824,17 +838,17 @@ typedef struct _DD_0LDB_PLUS
 #define DD_3CHR_SYS_NAME	0x0004L /* ON if system name exists, OFF 
 					** otherwise */
   
-    DD_NAME	dd_p2_dba_name;		/* DBA name, valid if such notion
+    DD_OWN_NAME	dd_p2_dba_name;		/* DBA name, valid if such notion
 					** is supported */
     DD_CAPS	dd_p3_ldb_caps;		/* encoded LDB capabilities */
-    DD_NAME	dd_p4_ldb_alias;	/* same as dd_l3_ldb_name in the
-					** dd_i1_ldb_desc portion if the
-					** LDB name has no more than 32 
+    DD_DB_NAME	dd_p4_ldb_alias;	/* same as dd_l3_ldb_name in the
+					** dd_i1_ldb_desc portion if the LDB
+					** name has no more than DB_DB_MAXNAME 
 					** characters, otherwise a derived
-					** 32-character alias */
-    DD_NAME     dd_p5_usr_name;		/* from the LDB's 
+					** DB_DB_MAXNAME character alias */
+    DD_OWN_NAME dd_p5_usr_name;		/* from the LDB's 
 					** iidbconstants.user_name */
-    DD_NAME     dd_p6_sys_name;		/* from LDB's iidbconstants.system_name 
+    DD_OWN_NAME dd_p6_sys_name;	        /* from LDB's iidbconstants.system_name 
 					** if DD_3CHR_SYS_NAME above is ON,
 					** blank-filled otherwise */
     i4     dd_p7_maxtup;		/* LDB's max tuple size   */ 
@@ -884,8 +898,8 @@ typedef struct _DD_1LDB_INFO
 
 typedef struct _DD_2LDB_TAB_INFO
 {
-    DD_NAME	    dd_t1_tab_name;	/* the table name */
-    DD_NAME	    dd_t2_tab_owner;	/* the table owner */
+    DD_TAB_NAME	    dd_t1_tab_name;	/* the table name */
+    DD_OWN_NAME	    dd_t2_tab_owner;	/* the table owner */
     DD_OBJ_TYPE	    dd_t3_tab_type;	/* DD_2OBJ_TABLE, DD_3OBJ_VIEW, or 
 					** DD_4OBJ_INDEX */
     DD_DATE	    dd_t4_cre_date;	/* create date */
@@ -912,8 +926,8 @@ typedef struct _DD_2LDB_TAB_INFO
 
 typedef struct _DD_OBJ_DESC
 {
-    DD_NAME		dd_o1_objname;	/* object name */
-    DD_NAME		dd_o2_objowner;	/* object owner */
+    DD_OBJ_NAME		dd_o1_objname;	/* object name */
+    DD_OWN_NAME		dd_o2_objowner;	/* object owner */
     DB_TAB_ID		dd_o3_objid;	/* object id */
     DB_QRY_ID		dd_o4_qryid;	/* query id if view */
     DD_DATE		dd_o5_cre_date;	/* create date */
@@ -942,7 +956,7 @@ typedef struct _DD_OBJ_DESC
 
 typedef struct _DD_DDB_DESC
 {
-    DD_NAME	     dd_d1_ddb_name;	/* DDB name */
+    DD_DB_NAME	     dd_d1_ddb_name;	/* DDB name */
     DD_USR_DESC	     dd_d2_dba_desc;	/* DBA desc */
     DD_1LDB_INFO     dd_d3_cdb_info;	/* CDB info */
     DD_1LDB_INFO    *dd_d4_iidbdb_p;	/* information used for accessing 
@@ -970,9 +984,9 @@ typedef struct _DD_DDB_DESC
 typedef struct _DD_REGPROC_DESC
 {
     DB_CURSOR_ID    dd_p1_local_proc_id;    /* name,id LDBMS uses */
-    DD_NAME         dd_p2_ldbproc_owner;    /* owner of LDB proc */
+    DD_OWN_NAME     dd_p2_ldbproc_owner;    /* owner of LDB proc */
     DB_CURSOR_ID    dd_p3_regproc_id;       /* name,id star uses */
-    DD_NAME         dd_p4_regproc_owner;    /* owner of reg'd proc*/
+    DD_OWN_NAME     dd_p4_regproc_owner;    /* owner of reg'd proc*/
     DD_LDB_DESC     *dd_p5_ldbdesc;          /* LDB descriptor */
 }   DD_REGPROC_DESC;
 

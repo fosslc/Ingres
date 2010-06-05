@@ -112,6 +112,8 @@
 **	    Updated qeu-qualification call sequences.
 **	4-Jun-2009 (kschendel) b122118
 **	    Make sure dmt-cb doesn't have junk in it.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 
@@ -275,8 +277,8 @@ QEUQ_CB		    *qeuq_cb)
 	if(atuple->dba_objtype==DBOB_DATABASE &&
 	   !(atuple->dba_flags&DBA_ALL_DBS))
 	{
-	    status=qeu_db_exists(qef_cb, qeuq_cb, &atuple->dba_objname,
-					SXF_A_CONTROL, &objowner);
+	    status=qeu_db_exists(qef_cb, qeuq_cb, 
+		(DB_DB_NAME *)&atuple->dba_objname, SXF_A_CONTROL, &objowner);
 	    if(status==E_DB_ERROR)
 	    {
 		/* Error checking database name */
@@ -606,7 +608,7 @@ QEUQ_CB		    *qeuq_cb)
 	if(qeu_secaudit(FALSE, qef_cb->qef_ses_id,
 		    (char *)&atuple->dba_objname,
 		    &objowner,
-		    sizeof(DB_NAME), 
+		    sizeof(atuple->dba_objname),
 		    evtype,
 		    I_SX202D_ALARM_CREATE,
 		    access,
@@ -876,6 +878,7 @@ bool		from_drop_alarm)
 	    */
             atuple_name   = (DB_SECALARM *)qeuq_cb->qeuq_uld_tup->dt_data;
 	    alarm_name=(char*)&atuple_name->dba_alarmname;
+
 	    /*
 	    ** alarmno -1 indicates all alarms when qualifying
 	    */
@@ -1029,8 +1032,8 @@ bool		from_drop_alarm)
 		** Check access to the  database, also get the security label
 		** for later use
 		*/
-	    	status=qeu_db_exists(qef_cb, qeuq_cb, &atuple.dba_objname,
-					SXF_A_CONTROL, &objowner);
+	    	status=qeu_db_exists(qef_cb, qeuq_cb,
+		    (DB_DB_NAME *)&atuple.dba_objname, SXF_A_CONTROL, &objowner);
 	    	if(status==E_DB_ERROR)
 	    	{
 			/* Error, no access to database */
@@ -1137,7 +1140,7 @@ bool		from_drop_alarm)
         if(qeu_secaudit(FALSE, qef_cb->qef_ses_id,
 		(char *)&atuple.dba_objname,
 		&objowner,
-		sizeof(DB_NAME), 
+		sizeof(atuple.dba_objname), 
 		evtype,
 		I_SX202E_ALARM_DROP,
 		access,
@@ -1215,6 +1218,7 @@ qeu_qalarm_by_name(
     {
 	return (E_DB_ERROR);
     }
+
     if (*search_tup->dba_objname.db_name == '\000' &&
         search_tup->dba_objtype == 'D')
     {
@@ -1259,7 +1263,7 @@ qeu_qalarm_by_name(
     */
     if (MEcmp((PTR)&search_tup->dba_alarmname, 
 		   (PTR)&cur_tup->dba_alarmname,
-		  sizeof(DB_NAME)) == 0 &&
+		  sizeof(cur_tup->dba_alarmname)) == 0 &&
        search_tup->dba_objtype==cur_tup->dba_objtype &&
        (search_tup->dba_objtype == DBOB_TABLE &&
        search_tup->dba_objid.db_tab_base == cur_tup->dba_objid.db_tab_base &&
@@ -1320,8 +1324,8 @@ qeu_gen_alarm_name(
     u_i4	cui_flags =
 		    ( * ( qef_cb->qef_dbxlate ) ) | CUI_ID_DLM | CUI_ID_NORM;
     u_i4   ret_mode;
-    u_i4	len_untrans, len_trans = DB_MAXNAME;
-    u_char	untrans_str[DB_MAXNAME];
+    u_i4	len_untrans, len_trans = DB_ALARM_MAXNAME;
+    u_char	untrans_str[DB_ALARM_MAXNAME];
     i4		j;
     char	*p = (char *) untrans_str;
     char	*limit;
@@ -1379,7 +1383,7 @@ qeu_gen_alarm_name(
     }
 
     /* blank pad */
-    for (p = alarm_name + len_trans, limit = alarm_name + DB_MAXNAME;
+    for (p = alarm_name + len_trans, limit = alarm_name + DB_ALARM_MAXNAME;
 	 p < limit;
 	 CMnext(p))
     {
@@ -1474,7 +1478,7 @@ seedToDigits(
 **	   Created
 */
 DB_STATUS
-qeu_db_exists(QEF_CB * qef_cb, QEUQ_CB *qeuq_cb, DB_NAME *dbname, 
+qeu_db_exists(QEF_CB * qef_cb, QEUQ_CB *qeuq_cb, DB_DB_NAME *dbname, 
 	i4 access, 
 	DB_OWN_NAME *dbowner)
 {

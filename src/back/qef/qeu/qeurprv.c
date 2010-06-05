@@ -92,6 +92,8 @@
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
 **	12-Apr-2008 (kschendel)
 **	    Rework DMF row qualification interface.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -161,8 +163,8 @@ QEUQ_CB		    *qeuq_cb)
     SCF_CB	    scf_cb;
     SCF_SCI	    sci_list[3];
     i4		    user_status;
-    char	    username[DB_MAXNAME];
-    char	    dbname[DB_MAXNAME];
+    char	    username[DB_OWN_MAXNAME];
+    char	    dbname[DB_DB_MAXNAME];
     SXF_ACCESS	    sxfaccess;
    i4	    mesgid;
     char	    *rolename;
@@ -358,7 +360,7 @@ QEUQ_CB		    *qeuq_cb)
 	local_status = qeu_secaudit(FALSE, qef_cb->qef_ses_id,
 	      rolename, 
 	      (DB_OWN_NAME *)NULL, 
-	      DB_MAXNAME,
+	      DB_OWN_MAXNAME,
 	      SXF_E_SECURITY,
 	      mesgid,
 	      sxfaccess,
@@ -949,7 +951,7 @@ qeu_qrolegrant(
 
 	status = qeu_secaudit(FALSE, qef_cb->qef_ses_id,
                 rgr_tuple->rgr_grantee.db_own_name,
-		(DB_OWN_NAME *)NULL, DB_MAXNAME,
+		(DB_OWN_NAME *)NULL, DB_OWN_MAXNAME,
                 SXF_E_SECURITY, 
 		I_SX274F_ROLE_REVOKE,
 		SXF_A_SUCCESS | SXF_A_CONTROL, 

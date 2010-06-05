@@ -98,6 +98,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 GLOBALREF   char    *IITP_00_tpf_p;/* "TPF" */
@@ -142,9 +144,9 @@ tpd_m1_set_dx_id(
     TPD_DX_CB	*dxcb_p = & v_sscb_p->tss_dx_cb;
     SYSTIME	tm_now1,
 		tm_now2;
-    char	hi_ascii[DB_MAXNAME],
-		lo_ascii[DB_MAXNAME],
-		buff[DB_MAXNAME + DB_MAXNAME];
+    char	hi_ascii[100], /* ascii timestamp */
+		lo_ascii[100], /* ascii timestamp */
+		buff[200];  /* hold 'dd_' + lo_ascii + hi_ascii */
 
 
     TMnow(& tm_now1);
@@ -166,8 +168,7 @@ tpd_m1_set_dx_id(
 					** ascii representations of the
 					** timestamp */
 	"dd_", lo_ascii, hi_ascii, buff);
-    MEmove(STlength(buff), buff, ' ', 
-	DB_MAXNAME, dxcb_p->tdx_id.dd_dx_name);
+    MEmove(STlength(buff), buff, ' ', DB_DB_MAXNAME, dxcb_p->tdx_id.dd_dx_name);
 }
 
 
@@ -1272,7 +1273,7 @@ tpd_m9_ldb_to_lxcb(
 	{
 	    /* read and analyze */
 
-	    result = MEcmp(dbcaps_p->l1_2_cap_val, "Y", DB_MAXNAME);
+	    result = MEcmp(dbcaps_p->l1_2_cap_val, "Y", DB_CAPVAL_MAXLEN);
 	    if (result == 0)
 		lxcb_p->tlx_20_flags = LX_02FLAG_2PC;		    
 	    else
@@ -1354,8 +1355,7 @@ tpd_m10_is_ddb_open(
     while (cdcb_p != (TPD_CD_CB *) NULL)
     {
 	if (MEcmp(i1_ddb_p->dd_d1_ddb_name,
-	    cdcb_p->tcd_1_starcdbs.i1_1_ddb_name,
-	    DB_MAXNAME) == 0)
+	    cdcb_p->tcd_1_starcdbs.i1_1_ddb_name, DB_DB_MAXNAME) == 0)
 	{
 	    /* have a match */
 
@@ -1430,8 +1430,7 @@ tpd_m11_is_ddb_open(
     while (cdcb_p != (TPD_CD_CB *) NULL)
     {
 	if (MEcmp(ddb_p->dd_d1_ddb_name,
-	    cdcb_p->tcd_1_starcdbs.i1_1_ddb_name,
-	    DB_MAXNAME) == 0)
+	    cdcb_p->tcd_1_starcdbs.i1_1_ddb_name, DB_DB_MAXNAME) == 0)
 	{
 	    /* have a match */
 

@@ -18,6 +18,8 @@
 **	    replace nat and longnat with i4
 **    04-dec-2008 (coomi01) b121323
 **          Add prototype for gwsxa_rightTrimBlank()
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 # define	SXA_CURRENT_SAL  "current"
@@ -34,7 +36,7 @@
 **	Maximum length of an attribute name [Will need to be increased if
 **	we ever go to longer names]
 */
-# define SXA_ATTR_NAME_LEN 32
+# define SXA_ATTR_NAME_LEN DB_ATT_MAXNAME
 
 /*
 **	Maximum length of an audit file name
@@ -48,6 +50,9 @@
 
 /*
 ** Name: GWSXA_XREL - SXA Extended relation entry
+** NOTE: GWSXA_XREL is used to access iigw06_relation catalog
+** DO NOT change this structure without changing corresponding
+**    CREATE TABLE iigw06_relation in createdb
 */
 typedef struct _GWSXA_XREL {
 	DB_TAB_ID tab_id;
@@ -58,12 +63,15 @@ typedef struct _GWSXA_XREL {
 
 /*
 ** Name: GWSXA_XATT - SXA Extended attribute entry
+** NOTE: GWSXA_XATT is used to access iigw06_attribute catalog
+** DO NOT change this structure without changing corresponding
+**    CREATE TABLE iigw06_attribute in createdb
 */
 typedef struct _GWSXA_XATT {
 	DB_TAB_ID xatt_tab_id;
 	i2	attid;
-	char    attname[SXA_ATTR_NAME_LEN];
 	i2	audid;
+	char    attname[SXA_ATTR_NAME_LEN];
 	char	audname[SXA_ATTR_NAME_LEN];
 } GWSXA_XATT;
 
@@ -93,7 +101,7 @@ typedef struct _GWSXA_RSB
 # define SXA_FLAG_OBJLABEL_REG  0x20
 # define SXA_FLAG_DETAIL_REG    0x40
 	PTR	sxf_access_id;		/* cookie passed into SXF */
-	DB_NAME	database;		/* CURRENT database name */
+	DB_DB_NAME database;		/* CURRENT database name */
 } GWSXA_RSB;
 /*
 **	Builtins for gwsxa_error type

@@ -78,6 +78,8 @@
 **	    type of stream to be opened, shared or private.
 **      7-oct-2004 (thaju02)
 **          Use SIZE_TYPE for memory pool > 2Gig.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -235,8 +237,8 @@ psq_crfind(
     if (dynamic && found_dynamic > 1)
     {
 	(VOID) psf_error(2226L, 0L, PSF_USERERR, &err_code, err_blk, 1,
-			 psf_trmwhite(DB_MAXNAME, cursor_id->db_cur_name),
-			 cursor_id->db_cur_name);
+		 psf_trmwhite(DB_CURSOR_MAXNAME, cursor_id->db_cur_name),
+		 cursor_id->db_cur_name);
 	return (E_DB_ERROR);
     }
 
@@ -1202,7 +1204,7 @@ psq_open_rep_cursor(
 					** because we were not given a query
 					** text to parse
 					*/
-	    psf_trmwhite(DB_MAXNAME, psq_cb->psq_cursid.db_cur_name),
+	    psf_trmwhite(DB_CURSOR_MAXNAME, psq_cb->psq_cursid.db_cur_name),
 	    psq_cb->psq_cursid.db_cur_name);
 
 	return(E_DB_ERROR);

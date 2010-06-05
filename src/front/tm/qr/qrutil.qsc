@@ -152,6 +152,8 @@
 **	11-nov-2009 (wanfr01) b122875
 **	    Use appropriate character for box characters if terminal monitor
 **	    output is not going to standard out.  
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 # define	QRSTMTSIZ	500
@@ -2380,10 +2382,10 @@ qrdiprintf(
     char	*id6, char	*id7, char	*id8,
     char	*id9, char	*id10
 ) {
-    char	buf1[ FE_UNRML_MAXNAME + 1 ];
-    char	buf2[ FE_UNRML_MAXNAME + 1 ];
-    char	buf3[ FE_UNRML_MAXNAME + 1 ];
-    char	buf4[ FE_UNRML_MAXNAME + 1 ];
+    DB_DELIM_STR	buf1;
+    DB_DELIM_STR	buf2;
+    DB_DELIM_STR	buf3;
+    DB_DELIM_STR	buf4;
 
     if ( nth & QRARG1 )
 	if ( qrdorequote( id1, buf1 ) )

@@ -153,6 +153,8 @@
 **	    SIR 121619 MVCC: Replace dm0p_mutex/unmutex with dmveMutex/Unmutex
 **	    macros.
 **	    Replace DMPP_PAGE* with DMP_PINFO* as needed.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs, move consistency check to dmveutil
 **/
 
 static DB_STATUS dmv_unassoc(
@@ -303,11 +305,8 @@ DMVE_CB		*dmve_cb)
 
     for (;;)
     {
-	if ( (log_rec->ass_header.type != DM0LASSOC) ||
-	     (log_rec->ass_header.length !=
-                (sizeof(DM0L_ASSOC) -
-                        (DB_MAXNAME - log_rec->ass_tab_size) -
-                        (DB_MAXNAME - log_rec->ass_own_size))) )
+	/* Consistency Check:  check for illegal log records */
+	if (log_rec->ass_header.type != DM0LASSOC)
 	{
 	    SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
 	    status = E_DB_ERROR;

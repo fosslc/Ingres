@@ -67,6 +67,8 @@
 **        errors with GCC 4.0 due to conflict with implicit declaration.
 **	24-Nov-2008 (jonj)
 **	    SIR 120874: dm0m_? functions converted to DB_ERROR *
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 static void dump_atts();
@@ -302,7 +304,7 @@ void (*error)();
 
                     attribute=atts_ptr[cc];
 
-                    (*output)("  %s%c\n",attribute->name.db_att_name,
+                    (*output)("  %s%c\n",attribute->attnmstr,
                         cc==(number-1)?' ':',');
                 }
 
@@ -319,9 +321,7 @@ void (*error)();
 
                     attribute=atts_ptr[key_att-1];
 
-                    (*output)("%c%s",cc==0?'(':',',
-                        trim(attribute->name.db_att_name,
-                        sizeof(DB_ATT_NAME)));
+                    (*output)("%c%s",cc==0?'(':',', attribute->attnmstr);
                 }
 
                 (*output)(")\\p\\g\n");
@@ -460,8 +460,7 @@ i4  number;
         }
 */
 
-        (*output)("   %s ",trim(attribute->name.db_att_name,
-            sizeof(DB_ATT_NAME)));
+        (*output)("   %s ",attribute->attnmstr);
         (*output)(type,length,attribute->precision);
         (*output)("%s%s%c\n",with_null,with_default,c==(number-1)?' ':',');
     }

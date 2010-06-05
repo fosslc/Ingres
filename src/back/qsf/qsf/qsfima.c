@@ -56,6 +56,8 @@
 **  	    with longlong.
 **	23-Feb-2005 (schka24)
 **	    Alias ID now lives in the master header.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 
@@ -873,7 +875,7 @@ qsf_owner_get( i4  offset, i4  size, PTR object, i4  lsbuf, char *sbuf )
     STATUS	 stat = OK;
     QSO_OBJ_HDR	*obj;
     QSO_OBID	 obid;
-    char	 owner[DB_MAXNAME + 1];
+    char	 owner[DB_OWN_MAXNAME + 1];
 
     obj = (QSO_OBJ_HDR *) object + offset;
     obid = obj->qso_mobject->qsmo_aliasid;
@@ -886,9 +888,9 @@ qsf_owner_get( i4  offset, i4  size, PTR object, i4  lsbuf, char *sbuf )
 
     if (stat == OK)
     {
-	STncpy( owner, (char *) obid.qso_name + sizeof(DB_CURSOR_ID), 
-		DB_MAXNAME);
-	owner[DB_MAXNAME] = '\0';
+	STncpy(owner, (char *) obid.qso_name + sizeof(DB_CURSOR_ID), 
+		DB_OWN_MAXNAME);
+	owner[DB_OWN_MAXNAME] = '\0';
 	MOstrout( MO_VALUE_TRUNCATED, owner, lsbuf, sbuf );
     }
     

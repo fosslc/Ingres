@@ -94,6 +94,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -324,15 +326,11 @@ QEC_LINK	*v_lnk_p)
 
     /* 1.  set up insert information */
 
-    l_obj = (u_i4)qed_u0_trimtail(
-		ddl_p->qed_d1_obj_name, 
-		(u_i2) DB_MAXNAME, 
-		objects_p->d6_1_obj_name);
+    l_obj = (u_i4)qed_u0_trimtail( ddl_p->qed_d1_obj_name, DB_OBJ_MAXNAME, 
+	    objects_p->d6_1_obj_name);
 
-    l_own = (u_i4)qed_u0_trimtail(
-		ddl_p->qed_d2_obj_owner, 
-		(u_i2) DB_MAXNAME, 
-		objects_p->d6_2_obj_owner);
+    l_own = (u_i4)qed_u0_trimtail( ddl_p->qed_d2_obj_owner, DB_OWN_MAXNAME,
+	    objects_p->d6_2_obj_owner);
 
     l_ing = STlength( IIQE_c0_usr_ingres );
 
@@ -438,14 +436,10 @@ QEC_LINK	*v_lnk_p)
 
     /* 1.  set up tuple for insertion */
 
-    qed_u0_trimtail(
-		ddl_p->qed_d1_obj_name,
-		(u_i4) DB_MAXNAME,
+    qed_u0_trimtail( ddl_p->qed_d1_obj_name, DB_OBJ_MAXNAME,
 		tables_p->l16_1_tab_name);
 
-    qed_u0_trimtail(
-		ddl_p->qed_d2_obj_owner,
-		(u_i4) DB_MAXNAME,
+    qed_u0_trimtail( ddl_p->qed_d2_obj_owner, DB_OWN_MAXNAME, 
 		tables_p->l16_2_tab_owner);
 
     STcopy(v_lnk_p->qec_24_cur_time, tables_p->l16_3_cre_date);
@@ -617,14 +611,10 @@ QEC_LINK	*v_lnk_p)
 
     /* 1.  set up constant values for all columns */
 
-    qed_u0_trimtail(
-	ddl_p->qed_d1_obj_name, 
-	(u_i2) DB_MAXNAME,
+    qed_u0_trimtail( ddl_p->qed_d1_obj_name, DB_OBJ_MAXNAME,
 	columns_p->l3_1_tab_name);
 
-    qed_u0_trimtail(
-	ddl_p->qed_d2_obj_owner, 
-	(u_i2) DB_MAXNAME,
+    qed_u0_trimtail( ddl_p->qed_d2_obj_owner, DB_OWN_MAXNAME,
 	columns_p->l3_2_tab_owner);
 
     columns_p->l3_10_seq_in_key = 0;
@@ -635,9 +625,7 @@ QEC_LINK	*v_lnk_p)
 
 	/* 2.  fill in specific information for current column */
 
-	qed_u0_trimtail(
-	    curcol_p->attr_name.db_att_name,
-	    (u_i2) DB_MAXNAME,
+	qed_u0_trimtail( curcol_p->attr_name.db_att_name, DB_ATT_MAXNAME,
 	    columns_p->l3_3_col_name);
 
 	coerce.qec_i4_i4.qec_1_i4 = curcol_p->attr_type;
@@ -753,14 +741,10 @@ QEC_LINK	*v_lnk_p)
 
     /* 1.  set up constant values for all entries */
 
-    qed_u0_trimtail(
-	ddl_p->qed_d1_obj_name, 
-	(u_i2) DB_MAXNAME,
+    qed_u0_trimtail( ddl_p->qed_d1_obj_name, DB_OBJ_MAXNAME,
 	views_p->l17_1_tab_name);
 
-    qed_u0_trimtail(
-	ddl_p->qed_d2_obj_owner, 
-	(u_i2) DB_MAXNAME,
+    qed_u0_trimtail( ddl_p->qed_d2_obj_owner, DB_OWN_MAXNAME,
 	views_p->l17_2_tab_owner);
 
     if (ddu_p->qeu_1_lang == DB_SQL)

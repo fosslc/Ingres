@@ -36,6 +36,8 @@
 **          Added mc_dv, mc_dtbits to QEU_MISSING_COL (b112521)
 **	13-Jun-2006 (kschendel)
 **	    Added sequence poop to QEU_MISSING_COL.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -73,7 +75,7 @@ typedef struct _QEU_MISSING_COL QEU_MISSING_COL;
 struct _QEU_CPDOMD
 {
     QEU_CPDOMD	*cp_next;		/* next domain descriptor */
-    char	cp_domname[DB_MAXNAME]; /* domain name */
+    char	cp_domname[DB_ATT_MAXNAME]; /* domain name */
     DB_DT_ID	cp_type;		/* domain type */
     i4	cp_length;		/* domain length */
     i4	cp_prec;		/* domain precision */

@@ -152,6 +152,8 @@
 **      22-Feb-2010 (maspa05) 123293
 **        added SVR_CLASS_MAXNAME for the size of a server_class name, used
 **        to be hard-coded to 24
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 #define                  P2K		 2048
@@ -165,14 +167,50 @@
 /*
 **	Maxmimum length of a name within the DBMS, with few exceptions.
 */
-#define                 DB_MAXVARS      128 /* Max vars in a single query */
+#define    DB_MAXVARS		128 /* Max vars in a single query */
 
-#define                 DB_MAXNAME      GL_MAXNAME
+#define	   DB_MAXNAME		GL_MAXNAME
+#define	   DB_CLASSID_MAXNAME	(2 * DB_MAXNAME)
+
+#define	   DB_OBJ_MAXNAME	DB_MAXNAME /* object name (can be table) */
+#define	   DB_TAB_MAXNAME	DB_MAXNAME /* table name */
+#define	   DB_ATT_MAXNAME	DB_MAXNAME /* column name */
+#define    DB_DBP_MAXNAME	DB_MAXNAME /* procedure name */
+#define	   DB_PARM_MAXNAME	DB_MAXNAME /* procedure param name */
+#define	   DB_RULE_MAXNAME	DB_MAXNAME /* rule name */
+#define	   DB_CONS_MAXNAME	DB_MAXNAME /* constraint name */
+#define	   DB_SEQ_MAXNAME	DB_MAXNAME /* sequence name */
+
+/* collation name 64, big enough and still works with dbmsinfo('collation') */
+#define	   DB_COLLATION_MAXNAME	64  /* collation name */
+
+/* Owner/schema names will remain 32 */
+#define	   DB_OWN_MAXNAME	32  /* owner name */
+#define	   DB_SCHEMA_MAXNAME	32  /* schema name, must be username */
+
+/* The following will remain at 32 */
+#define    DB_OLDMAXNAME_32	32
+#define	   DB_DB_MAXNAME	32  /* dbname,limited by DI_FILENAME_MAX*/
+#define    DB_NODE_MAXNAME	32  /* node name */
+#define	   DB_LOC_MAXNAME	32  /* ingres location name */
+#define	   DB_EVENT_MAXNAME	32  /* event name */
+#define	   DB_ALARM_MAXNAME	DB_EVENT_MAXNAME  /* alarm name */
+
+/* The following are not names */
+#define    DB_TYPE_MAXLEN	32  /* various 'types' */
+				    /* datatypes, e.g. 'integer' */
+				    /* privileges (same as SXA_MAX_PRIV_LEN) */
+				    /* dbms e.g. 'ingres' */
+				    /* should be same as ADF_MAXNAME */
+#define    DB_CAP_MAXLEN	32  /* cap_capability in iidbcapabilities */
+#define    DB_CAPVAL_MAXLEN	32  /* cap_value in iidbcapabilities */
+#define	   DB_DATE_OUTLENGTH	25  /* date output length */ 
 
 #define			DB_IITYPE_LEN	32 /* as returned by iitypename() */
 #define			DB_IISTRUCT_LEN 16 /* as returned by iistructure() */
 
-#define                 DB_GW1_MAXNAME  32  /* .......... for gateways. */
+#define                 DB_GW1_MAXNAME		DB_MAXNAME  /* for gateways */
+#define                 DB_GW1_MAXNAME_32	32  /* for scsqncr.c */
 
 #define                 DB_TRAN_MAXNAME  64 /* for distributed transaction id */
 
@@ -198,6 +236,24 @@
 ** the documentation.
 */
 #define	DB_EVDATA_MAX		256
+
+/* typedef buffers for name + EOS */
+typedef char	DB_DB_STR[DB_DB_MAXNAME + 1];	     /* database name + EOS */
+typedef char	DB_LOC_STR[DB_LOC_MAXNAME + 1];	     /* location name + EOS */
+typedef char	DB_OWN_STR[DB_OWN_MAXNAME + 1];	     /* owner name + EOS */
+typedef char	DB_TAB_STR[DB_TAB_MAXNAME + 1];	     /* table name + EOS */
+typedef char	DB_OBJ_STR[DB_MAXNAME + 1];	     /* object name + EOS */
+typedef char	DB_ATT_STR[DB_ATT_MAXNAME + 1];	     /* column name + EOS */
+typedef char	DB_DBP_STR[DB_DBP_MAXNAME + 1];	     /* proc name + EOS */
+typedef char	DB_PARM_STR[DB_PARM_MAXNAME + 1];    /* proc parm + EOS */
+typedef char	DB_NODE_STR[DB_NODE_MAXNAME + 1];    /* node name + EOS */
+typedef char	DB_DELIM_STR[DB_MAX_DELIMID + 1];    /* delim name + EOS */
+typedef char    DB_COLLATION_STR[DB_COLLATION_MAXNAME + 1];    /* collation name + EOS */
+
+typedef char	DB_CAP_STR[DB_CAP_MAXLEN + 1];       /* cap + EOS */
+typedef char	DB_CAPVAL_STR[DB_CAPVAL_MAXLEN + 1]; /* capval + EOS */
+typedef char	DB_TYPE_STR[DB_TYPE_MAXLEN + 1];     /* datetype + EOS */
+typedef char	DB_DATE_STR[DB_DATE_OUTLENGTH + 1];    /* date + EOS */
 
 
 /* Alignment macros that aren't machine dependent */
@@ -2477,7 +2533,7 @@ typedef struct _DB_IIDEFAULT
 */
 typedef struct _DB_ATT_NAME
 {
-    char            db_att_name[DB_MAXNAME];    /* attribute name */
+    char            db_att_name[DB_ATT_MAXNAME];    /* attribute name */
 } DB_ATT_NAME;
 
 /*}
@@ -2514,7 +2570,6 @@ typedef struct _DB_ATT_NAME
 
 typedef struct _DB_ATTS
 {
-    DB_ATT_NAME     name;               /* Attribute name. */
     i4              offset;             /* Offset in bytes. */
     i4              length;             /* Length of attribute. */
     i2              type;               /* Type of attribute. */
@@ -2538,6 +2593,8 @@ typedef struct _DB_ATTS
     i4	    ver_altcol;			/* Version Modified metadata value */
     i4		srid;				/* Spatial reference id */
     i2		geomtype;			/* Geometry data type */
+    i2	            attnmlen;	/* blank trimmed length of name (future) */
+    char	    *attnmstr;
 }   DB_ATTS;
 
 

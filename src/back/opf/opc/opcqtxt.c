@@ -153,6 +153,8 @@ NO_OPTIM = i64_aix
 **          opc_sagg() alloc aligned db_data memory for agg results (b116627)
 **	13-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*}
@@ -669,7 +671,7 @@ opc_crtable(
 
     colptr = (char **) opu_qsfmem( txtstate->qtx_global, 
 	( qryptr->qeq_q6_col_cnt * sizeof( PTR )));
-    qryptr->qeq_q7_col_pp = (DD_NAME **) colptr;
+    qryptr->qeq_q7_col_pp = (DD_ATT_NAME **) colptr;
     for ( colno = 0; colno < qryptr->qeq_q6_col_cnt; colno++ )
     {
 	*colptr = tblptr->opq_t6_tcols[colno].opq_c1_col_name;
@@ -2366,7 +2368,7 @@ opc_dproj(
 	i4		plen;
 	i4		flen;
 	i4		clen;
-	char		colname[ DB_MAXNAME];
+	char		colname[ DB_ATT_MAXNAME];
 	char		tbuf[80];
 	char		*tbufptr;
 	char		ibuf[80];

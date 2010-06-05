@@ -127,6 +127,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_line@]...
 **/
 
@@ -169,7 +171,7 @@ typedef struct _QEF_PROC_RESOURCE
     struct
     {
 	DB_CURSOR_ID	qr_crsr_id;	/* cursor ID/proc name */
-	char		qr_user[DB_MAXNAME]; /* proc owner */
+	char		qr_user[DB_OWN_MAXNAME]; /* proc owner */
 	i4		qr_dbid;
     } qr_dbpalias;
 	/* Qr_valid is a listed list of valid structs that
@@ -1728,14 +1730,14 @@ typedef struct _QEF_CALLPROC
 					** fired.  This field is unused for
 					** regular nested procedure calls.
 					*/
-    DB_NAME		ahd_ruleowner;	/* For security auditing. */
+    DB_OWN_NAME		ahd_ruleowner;	/* For security auditing. */
     /* Alias structure for naming the DB procedure to call. Note that the    */
     /* timestamp component of the DB_CURSOR_ID will must be zero to look    */
     /* this procedure name up as an alias. */
     struct
     {
 	DB_CURSOR_ID	als_crsr_id;
-	char		als_user[DB_MAXNAME];
+	char		als_user[DB_OWN_MAXNAME];
 	i4		als_dbid;
     } ahd_dbpalias;
     DB_TAB_ID		ahd_procedureID; /* ID of above procedure or 0 */
@@ -1956,7 +1958,7 @@ typedef struct _QEQ_D1_QRY
 					    ** for executing subquery */
     i4		     qeq_q6_col_cnt;	    /* number of columns in temporary
 					    ** table, 0 if not applicable */
-    DD_NAME	    **qeq_q7_col_pp;	    /* ptr to first of any array of
+    DD_ATT_NAME	    **qeq_q7_col_pp;	    /* ptr to first of any array of
 					    ** ptrs to column names */
     i4		     qeq_q8_dv_cnt;	    /* number of data values accompaning
 					    ** subquery, 0 if none */

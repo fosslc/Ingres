@@ -10,6 +10,7 @@
 #include    <tm.h>
 #include    <pc.h>
 #include    <sr.h>
+#include    <st.h>
 #include    <iicommon.h>
 #include    <dbdbms.h>
 #include    <lg.h>
@@ -369,6 +370,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*{
@@ -1840,6 +1843,9 @@ dm2uMakeIndMxcb(DM2U_MXCB **mxcb,
     i4 reltups;				/* Base table row count */
     i4 Rtreesize;			/* Extra RTREE stuff needed */
     i4 TidSize;				/* tidp size needed */
+    i4 attnmsz;
+    char *nextattname;
+    DB_ATTS *curatt;
 
     t = r->rcb_tcb_ptr;
     dcb = index_cb->indxcb_dcb;
@@ -1967,6 +1973,9 @@ dm2uMakeIndMxcb(DM2U_MXCB **mxcb,
     ** Ideally these would be individually db-aligned, but throwing in the
     ** occasional padding works just as well.
     */
+    attnmsz = (AllAttsCount + 3) * sizeof(DB_ATT_STR);
+    attnmsz = DB_ALIGN_MACRO(attnmsz);
+
     status = dm0m_allocate(sizeof(DM2U_MXCB) +
 	     3 * ((AllAttsCount + 2) * sizeof(DB_ATTS *)) +
 	     (AllAttsCount + 2) * sizeof(DB_CMP_LIST) +
@@ -1976,6 +1985,7 @@ dm2uMakeIndMxcb(DM2U_MXCB **mxcb,
 	     data_cmpcontrol_size +
 	     leaf_cmpcontrol_size +
 	     index_cmpcontrol_size +
+	     attnmsz +
 	     sources * sizeof(DM2U_SPCB) +
 	     sources * buf_size +
 	     sizeof(ALIGN_RESTRICT) +
@@ -2026,6 +2036,14 @@ dm2uMakeIndMxcb(DM2U_MXCB **mxcb,
 	m->mx_index_rac.cmp_control = (PTR) p;
 	m->mx_index_rac.control_count = index_cmpcontrol_size;
 	p += index_cmpcontrol_size;
+    }
+
+    nextattname = p;
+    p += attnmsz;
+    for (curatt = m->mx_atts_ptr, i = 0; i < (AllAttsCount * 3); i++,curatt++)
+    {
+	curatt->attnmstr = nextattname;
+	nextattname += sizeof(DB_ATT_STR);
     }
     /* P remains aligned since cmpcontrol sizes are aligned */
 
@@ -2461,6 +2479,7 @@ DB_ERROR	*dberr)
     bool	upcase;
     i4		OnlyKeyLen = 0;
     DB_STATUS	status = E_DB_OK;
+    DB_ATT_NAME tmpattnm;
 
     CLRDBERR(dberr);
 
@@ -2511,7 +2530,10 @@ DB_ERROR	*dberr)
 	    /* Find the attribute in the TCB's list: */
             for (j = 1; j <= t->tcb_rel.relatts; j++)
             {
-		if ((MEcmp((char *)&t->tcb_atts_ptr[j].name,
+		MEmove(t->tcb_atts_ptr[j].attnmlen,
+		    t->tcb_atts_ptr[j].attnmstr,
+		    ' ', DB_ATT_MAXNAME, tmpattnm.db_att_name);
+		if ((MEcmp(tmpattnm.db_att_name,
 		     (char *)&index_cb->indxcb_key[i]->key_attr_name,
 		     sizeof(index_cb->indxcb_key[i]->key_attr_name)) == 0) &&
 		    (t->tcb_atts_ptr[j].ver_altcol == 0) &&
@@ -2584,7 +2606,9 @@ DB_ERROR	*dberr)
 	      coltype = t->tcb_atts_ptr[j].type;
 	    }
 
-            CreAtts[cx]->attr_name = t->tcb_atts_ptr[j].name;
+	    MEmove(t->tcb_atts_ptr[j].attnmlen,
+		t->tcb_atts_ptr[j].attnmstr,
+		' ', DB_ATT_MAXNAME, CreAtts[cx]->attr_name.db_att_name);
             CreAtts[cx]->attr_type = coltype;
             CreAtts[cx]->attr_size = collength;
             CreAtts[cx]->attr_precision = t->tcb_atts_ptr[j].precision;
@@ -2714,7 +2738,10 @@ DB_ERROR	*dberr)
 		    m->mx_idom_map[bx] = j;
 
 		    /* Make an attribute for Create Table */
-		    CreAtts[cx]->attr_name = t->tcb_key_atts[j]->name;
+		    MEmove(t->tcb_key_atts[j]->attnmlen,
+			t->tcb_key_atts[j]->attnmstr,
+		    ' ', DB_ATT_MAXNAME, CreAtts[cx]->attr_name.db_att_name);
+
 		    CreAtts[cx]->attr_type = t->tcb_key_atts[j]->type; 
 		    CreAtts[cx]->attr_size = t->tcb_key_atts[j]->length;
 		    CreAtts[cx]->attr_precision = t->tcb_key_atts[j]->precision;
@@ -2783,9 +2810,9 @@ DB_ERROR	*dberr)
             m->mx_cmp_list[0].cmp_collID = -1;
 	    /* TIDP comes next, at [1]  */
 
-	    MEmove(7, (upcase ? "HILBERT" : "hilbert"), ' ',
-		sizeof(m->mx_atts_ptr[ax].name),
-		(char *)&m->mx_atts_ptr[ax].name);
+	    STcopy((upcase ? "HILBERT" : "hilbert"),
+		m->mx_atts_ptr[ax].attnmstr);
+	    m->mx_atts_ptr[ax].attnmlen = STlength(m->mx_atts_ptr[ax].attnmstr);
 	    m->mx_atts_ptr[ax].type = DB_BYTE_TYPE;
 	    m->mx_atts_ptr[ax].length = m->mx_hilbertsize;
 	    m->mx_atts_ptr[ax].precision = 0;
@@ -2870,9 +2897,8 @@ DB_ERROR	*dberr)
         ** Add the TIDP (last) to the attribute list.
 	*/
 
-        MEmove(4, (upcase ? "TIDP" : "tidp"), ' ',
-               sizeof(m->mx_atts_ptr[ax].name),
-               (PTR)&m->mx_atts_ptr[ax].name);
+        STcopy((upcase ? "TIDP" : "tidp"), m->mx_atts_ptr[ax].attnmstr);
+	m->mx_atts_ptr[ax].attnmlen = STlength(m->mx_atts_ptr[ax].attnmstr);
         m->mx_atts_ptr[ax].type = DB_INT_TYPE;
         m->mx_atts_ptr[ax].length = m->mx_tidsize;
         m->mx_atts_ptr[ax].precision = 0;
@@ -3167,7 +3193,8 @@ DB_ERROR	*dberr)
     for ( i = 0; i < m->mx_ai_count; i++ )
     {
 	DM2TKeys[i] = &DM2TKey[i];
-	STRUCT_ASSIGN_MACRO(m->mx_i_key_atts[i]->name, DM2TKeys[i]->key_attr_name);
+	MEmove(m->mx_i_key_atts[i]->attnmlen, m->mx_i_key_atts[i]->attnmstr,
+		' ', DB_ATT_MAXNAME, DM2TKeys[i]->key_attr_name.db_att_name);
 	if ( m->mx_i_key_atts[i]->flag & ATT_DESCENDING )
 	    DM2TKeys[i]->key_order = DM2T_DESCENDING;
 	else

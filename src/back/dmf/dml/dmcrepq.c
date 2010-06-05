@@ -87,6 +87,8 @@
 **	    SIR 120874: dm2rep_? functions converted to DB_ERROR *
 **      16-Jun-2009 (hanal04) Bug 122117
 **          Check for new LK_INTR_FA error.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 /*
 ** globals
@@ -272,7 +274,7 @@ dmc_repq(DMC_CB		*dmc_cb)
     lk_event.type_low = 0;
     lk_event.value = REP_READQ_VAL;
 
-    MEfill(DB_MAXNAME - 13, ' ', event_name.db_name + 13);
+    MEfill(DB_DB_MAXNAME - 13, ' ', event_name.db_name + 13);
     qef_rcb.qef_length	= sizeof(QEF_RCB);
     qef_rcb.qef_type	= QEFRCB_CB;
     qef_rcb.qef_ascii_id	= QEFRCB_ASCII_ID;
@@ -340,7 +342,7 @@ dmc_repq(DMC_CB		*dmc_cb)
 		)
 	    { 
 		if (MEcmp(next_dcb->dcb_name.db_db_name, 
-		    repq[i].dbname.db_db_name, DB_MAXNAME) == 0)
+		    repq[i].dbname.db_db_name, DB_DB_MAXNAME) == 0)
 		{
 		    db_added = TRUE;
 		    break;
@@ -365,10 +367,10 @@ dmc_repq(DMC_CB		*dmc_cb)
 	    status = scf_call(SCU_DBADDUSER, &scf_cb);
 	    if (status != E_DB_OK)
 	    {
-		char	dbname[DB_MAXNAME + 1];
+		char	dbname[DB_DB_MAXNAME + 1];
 
-		MEcopy(scf_cb.scf_dbname->db_db_name, DB_MAXNAME, dbname);
-		dbname[DB_MAXNAME] = 0;
+		MEcopy(scf_cb.scf_dbname->db_db_name, DB_DB_MAXNAME, dbname);
+		dbname[DB_DB_MAXNAME] = 0;
 		uleFormat(&dmc->error, E_DM9564_REP_SCF_DBUSERADD, 
 		    NULL, ULE_LOG,
 		    NULL, (char *)NULL, (i4)0, (i4 *)NULL,

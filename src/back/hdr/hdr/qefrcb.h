@@ -147,6 +147,8 @@
 **          Define qef_length as SIZE_TYPE.
 **      7-oct-2004 (thaju02)
 **          Replace i4 with SIZE_TYPE for memory pool > 2Gig.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 {@history_template@}
 **/
 
@@ -437,8 +439,8 @@ typedef struct _QED_LDB_QRYINFO
 
 typedef struct _QED_DDL_INFO
 {
-    DD_NAME	      qed_d1_obj_name;	    /* object name (DDB level) */
-    DD_NAME	      qed_d2_obj_owner;	    /* object owner name (DDB level) */
+    DD_OBJ_NAME	      qed_d1_obj_name;	    /* object name (DDB level) */
+    DD_OWN_NAME	      qed_d2_obj_owner;	    /* object owner name (DDB level) */
     i4		      qed_d3_col_count;	    /* number of columns in table,
 					    ** valid if columns are mapped */
     DD_COLUMN_DESC  **qed_d4_ddb_cols_pp;   /* ptr to array of ptrs to DDB 
@@ -788,7 +790,7 @@ struct _QEF_RCB
     struct
     {
 	DB_CURSOR_ID	qef_p_crsr_id;
-	char		qef_p_user[DB_MAXNAME];
+	char		qef_p_user[DB_OWN_MAXNAME];
 	i4		qef_p_dbid;
     } qef_dbpname;		/* An alias for a procedure (QP) that QEF    */
 				/* needs compiled for execution. This value */
@@ -806,7 +808,7 @@ struct _QEF_RCB
     i4          qef_asize;      /* number of constants to alter */
     QEF_ALT    *qef_alt;        /* alteration array */
     DB_OWN_NAME *qef_evowner;	/* Event owner */
-    DB_NAME 	*qef_evname;    /* Event name */
+    DB_EVENT_NAME *qef_evname;    /* Event name */
     char	*qef_evtext;    /* Event text */
     i4		qef_ev_l_text;  /* Length of even text */
     /* general purpose stuff */

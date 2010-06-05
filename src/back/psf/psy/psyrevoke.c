@@ -69,6 +69,8 @@
 **	    psf_malloc(), psf_mclose(), psf_mroot(), psf_mchtyp().
 **	    Changed psf_sesscb() prototype to return PSS_SESBLK* instead
 **	    of DB_STATUS. Supply scf_session to SCF when it's known.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -264,7 +266,7 @@ psy_revoke(
 	     psy_tbl = (PSY_TBL *) psy_tbl->queue.q_next
 	    )
 	{
-	    DB_NAME         *ev_name = (DB_NAME *) &psy_tbl->psy_tabnm;
+	    DB_EVENT_NAME     *ev_name = (DB_EVENT_NAME *) &psy_tbl->psy_tabnm;
 
 	    STRUCT_ASSIGN_MACRO(*ev_name, rdf_rb->rdr_name.rdr_evname);
 

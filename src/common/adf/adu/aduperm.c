@@ -44,6 +44,8 @@ NO_OPTIM = su4_u42 su4_cmw
 **	    replace nat and longnat with i4
 **	18-Sep-2008 (jonj)
 **	    SIR 120874: Add adfint.h include to pick up adu_error() prototype.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /* Forward/static declarations */
@@ -298,7 +300,7 @@ DB_DATA_VALUE      *rdv)
 		((i != PERM_LOCAL) && (i != PERM_SQL92)) )
 		return (adu_error(adf_scb, E_AD9999_INTERNAL_ERROR, 0));
 
-	MEfill(2*DB_MAXNAME, ' ', rdv->db_data);
+	MEfill(2*DB_TYPE_MAXLEN, ' ', rdv->db_data);
 
 	/*
 	** second value indicates:

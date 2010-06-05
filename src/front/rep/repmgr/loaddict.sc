@@ -58,6 +58,8 @@
 **          create_rep_catalog() fix for loop condition
 **	26-Aug-2009 (kschendel) b121804
 **	    Bool prototypes to keep gcc 4.3 happy.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 EXEC SQL BEGIN DECLARE SECTION;
@@ -72,6 +74,7 @@ EXEC SQL END DECLARE SECTION;
 STATUS update_cat_level(void);
 
 static STATUS create_rep_catalog(char *repcat);
+static VOID rep_fix_maxname(char *b);
 
 
 EXEC SQL BEGIN DECLARE SECTION;
@@ -107,7 +110,7 @@ static struct
 {
 "dd_nodes",
 "CREATE TABLE dd_nodes ("
-" vnode_name CHAR(##DB_MAXNAME##) NOT NULL,"
+" vnode_name CHAR(##DB_NODE_MAXNAME##) NOT NULL,"
 " node_type  SMALLINT NOT NULL WITH DEFAULT)"
 " WITH NODUPLICATES, JOURNALING",
 },
@@ -116,9 +119,9 @@ static struct
 "dd_databases",
 "CREATE TABLE dd_databases ("
 " database_no   SMALLINT NOT NULL,"
-" vnode_name    char(##DB_MAXNAME##) NOT NULL,"
-" database_name char(##DB_MAXNAME##) NOT NULL,"
-" database_owner char(##DB_MAXNAME##) NOT NULL WITH DEFAULT,"
+" vnode_name    char(##DB_NODE_MAXNAME##) NOT NULL,"
+" database_name char(##DB_DB_MAXNAME##) NOT NULL,"
+" database_owner char(##DB_OWN_MAXNAME##) NOT NULL WITH DEFAULT,"
 " dbms_type CHAR(8) NOT NULL WITH DEFAULT,"
 " security_level CHAR(2) NOT NULL WITH DEFAULT,"
 " local_db SMALLINT NOT NULL WITH DEFAULT,"
@@ -139,10 +142,15 @@ static struct
 },
 
 {
+/* Note A cdds_name is just a name for a CDDS, which is an Ingres
+** Replicator invention.  At best it could be considered analogous to a
+** database name since a CDDS is a collection of tables (or parts of
+** tables) that is supposed to be kept consistent across multiple databases.
+*/
 "dd_cdds",
 "CREATE TABLE dd_cdds ("
 " cdds_no SMALLINT NOT NULL,"
-" cdds_name char(##DB_MAXNAME##) NOT NULL,"
+" cdds_name char(##DB_DB_MAXNAME##) NOT NULL," /* keep same as dbname*/
 " control_db SMALLINT NOT NULL WITH DEFAULT,"
 " collision_mode SMALLINT NOT NULL WITH DEFAULT,"
 " error_mode SMALLINT NOT NULL WITH DEFAULT)"
@@ -164,15 +172,15 @@ static struct
 "dd_regist_tables",
 "CREATE TABLE dd_regist_tables ("
 " table_no INTEGER NOT NULL,"
-" table_name char(##DB_MAXNAME##) NOT NULL,"
-" table_owner char(##DB_MAXNAME##) NOT NULL WITH DEFAULT,"
+" table_name char(##DB_TAB_MAXNAME##) NOT NULL,"
+" table_owner char(##DB_OWN_MAXNAME##) NOT NULL WITH DEFAULT,"
 " columns_registered CHAR(25) NOT NULL WITH DEFAULT,"
 " supp_objs_created CHAR(25) NOT NULL WITH DEFAULT,"
 " rules_created	CHAR(25) NOT NULL WITH DEFAULT,"
 " cdds_no SMALLINT NOT NULL WITH DEFAULT,"
-" cdds_lookup_table char(##DB_MAXNAME##) NOT NULL WITH DEFAULT,"
-" prio_lookup_table char(##DB_MAXNAME##) NOT NULL WITH DEFAULT,"
-" index_used char(##DB_MAXNAME##) NOT NULL WITH DEFAULT)"
+" cdds_lookup_table char(##DB_TAB_MAXNAME##) NOT NULL WITH DEFAULT,"
+" prio_lookup_table char(##DB_TAB_MAXNAME##) NOT NULL WITH DEFAULT,"
+" index_used char(##DB_TAB_MAXNAME##) NOT NULL WITH DEFAULT)"
 " WITH NODUPLICATES, JOURNALING"
 },
 
@@ -180,7 +188,7 @@ static struct
 "dd_regist_columns",
 " CREATE TABLE dd_regist_columns ("
 " table_no INTEGER NOT NULL,"
-" column_name char(##DB_MAXNAME##) NOT NULL,"
+" column_name char(##DB_ATT_MAXNAME##) NOT NULL,"
 " column_sequence INTEGER NOT NULL,"
 " key_sequence INTEGER NOT NULL WITH DEFAULT)"
 " WITH NODUPLICATES, JOURNALING"
@@ -240,23 +248,24 @@ static struct
 {
 "dd_support_tables",
 "CREATE TABLE dd_support_tables ("
-" table_name char(##DB_MAXNAME##) NOT NULL)"
+" table_name char(##DB_TAB_MAXNAME##) NOT NULL)"
 " WITH NODUPLICATES, JOURNALING"
 },
 
 {
 "dd_last_number",
 "CREATE TABLE dd_last_number ("
-" column_name char(##DB_MAXNAME##) NOT NULL,"
+" column_name char(##DB_ATT_MAXNAME##) NOT NULL,"
 " last_number INTEGER NOT NULL,"
 " filler VARCHAR(1500) NOT NULL WITH DEFAULT)"
 " WITH NODUPLICATES"
 },
 
 {
+/* intentionally leaving replicator event name 32 */
 "dd_events",
 "CREATE TABLE dd_events ("
-" dbevent char(##DB_MAXNAME##) NOT NULL,"
+" dbevent char(32) NOT NULL,"
 " action SMALLINT NOT NULL,"
 " sort_order INTEGER NOT NULL WITH DEFAULT,"
 " s_flag SMALLINT NOT NULL,"
@@ -640,16 +649,13 @@ EXEC SQL END DECLARE SECTION;
 	if (STcompare(supp_tbls[i].repcat, repcat))
 	    continue;
 
-	/* replace ##DB_MAXNAME## */
 	qry = supp_tbls[i].repcreate;
 
-	/* Check for ##DB_MAXNAME## */
-	fix_maxname = STstrindex(qry, "##DB_MAXNAME##", 0, 0);
+	/* fix MAXNAME  */
+	fix_maxname = STstrindex(qry, "##DB_", 0, 0);
 
 	if (fix_maxname)
 	{
-	    CVla((i4)DB_MAXNAME, maxbuf);
-
 	    qlen = STlength(qry);
 	    if (qlen + 1 < sizeof(tempbuf))
 		buf = tempbuf;
@@ -667,15 +673,10 @@ EXEC SQL END DECLARE SECTION;
 
 	    for ( ; ; )
 	    {
-		fix_maxname = STstrindex(buf, "##DB_MAXNAME", 0, 0);
+		fix_maxname = STstrindex(buf, "##DB_", 0, 0);
 		if (!fix_maxname)
 		    break;
-
-		if (!MEcmp(fix_maxname, "##DB_MAXNAME##", 14))
-		{
-		    MEmove(STlength(maxbuf), maxbuf, ' ', 14, fix_maxname);
-		    continue;
-		}
+		rep_fix_maxname(fix_maxname);
 	    }
 	    qry = buf;
 	}
@@ -699,3 +700,44 @@ EXEC SQL END DECLARE SECTION;
 
     return (OK);
 }  
+
+static VOID
+rep_fix_maxname(char *b)
+{
+    char tempbuf[100];
+
+    if (!MEcmp(b, "##DB_MAXNAME##", 14))
+    {
+	CVla((i4)DB_MAXNAME, tempbuf);
+	MEmove(STlength(tempbuf), tempbuf, ' ', 14, b);
+    }
+    else if (!MEcmp(b, "##DB_OWN_MAXNAME##", 18))
+    {
+	CVla((i4)DB_OWN_MAXNAME, tempbuf);
+	MEmove(STlength(tempbuf), tempbuf, ' ', 18, b);
+    }
+    else if (!MEcmp(b, "##DB_TAB_MAXNAME##", 18))
+    {
+	CVla((i4)DB_TAB_MAXNAME, tempbuf);
+	MEmove(STlength(tempbuf), tempbuf, ' ', 18, b);
+    }
+    else if (!MEcmp(b, "##DB_ATT_MAXNAME##", 18))
+    {
+	CVla((i4)DB_ATT_MAXNAME, tempbuf);
+	MEmove(STlength(tempbuf), tempbuf, ' ', 18, b);
+    }
+    else if (!MEcmp(b, "##DB_DB_MAXNAME##", 17))
+    {
+	CVla((i4)DB_DB_MAXNAME, tempbuf);
+	MEmove(STlength(tempbuf), tempbuf, ' ', 17, b);
+    }
+    else if (!MEcmp(b, "##DB_NODE_MAXNAME##", 19))
+    {
+	CVla((i4)DB_NODE_MAXNAME, tempbuf);
+	MEmove(STlength(tempbuf), tempbuf, ' ', 19, b);
+    }
+    else
+    {
+	printf("unexpected format string %s\n", b);
+    }
+}

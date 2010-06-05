@@ -141,6 +141,8 @@
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
 **	11-Apr-2008 (kschendel)
 **	    Update qualification-function call.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -287,8 +289,8 @@ QEUQ_CB		    *qeuq_cb)
     SCF_CB	    scf_cb;
     SCF_SCI	    sci_list[3];
     i4		    user_status;
-    char	    dbname[DB_MAXNAME];
-    char	    username[DB_MAXNAME];
+    char	    dbname[DB_DB_MAXNAME];
+    char	    username[DB_OWN_MAXNAME];
     i4              access;
     char            string[256];
     i4              l_string;
@@ -518,8 +520,8 @@ QEUQ_CB		    *qeuq_cb)
 	{
 	    if ( Qef_s_cb->qef_state & QEF_S_C2SECURE )
 		status = qeu_secaudit_detail(TRUE, qef_cb->qef_ses_id, 
-		    intuple->dbpr_database.db_own_name, &dbtuple.du_own, 
-		    DB_MAXNAME, SXF_E_DATABASE, msgid,
+		    intuple->dbpr_database.db_db_name, &dbtuple.du_own, 
+		    DB_DB_MAXNAME, SXF_E_DATABASE, msgid,
 		    SXF_A_FAIL | access, 
 		    &e_error,
 		    string,
@@ -761,8 +763,8 @@ QEUQ_CB		    *qeuq_cb)
 
 	if ( Qef_s_cb->qef_state & QEF_S_C2SECURE )
 	    status = qeu_secaudit(FALSE, qef_cb->qef_ses_id, 
-		    intuple->dbpr_database.db_own_name, &dbtuple.du_own, 
-		    DB_MAXNAME, SXF_E_DATABASE, msgid,
+		    intuple->dbpr_database.db_db_name, &dbtuple.du_own, 
+		    DB_DB_MAXNAME, SXF_E_DATABASE, msgid,
 		    SXF_A_SUCCESS | access, &e_error);
 	break;
 
@@ -777,12 +779,12 @@ QEUQ_CB		    *qeuq_cb)
 	    glen = cus_trmwhite(sizeof(intuple->dbpr_gname.db_own_name),
 				intuple->dbpr_gname.db_own_name);
 
-	    dlen = cus_trmwhite(sizeof(intuple->dbpr_database.db_own_name),
-				intuple->dbpr_database.db_own_name);
+	    dlen = cus_trmwhite(sizeof(intuple->dbpr_database.db_db_name),
+				intuple->dbpr_database.db_db_name);
 
 	    (VOID) qef_error(error, 0L, status, &error, &qeuq_cb->error,
 			     (i4)2,
-			     dlen, intuple->dbpr_database.db_own_name,
+			     dlen, intuple->dbpr_database.db_db_name,
 			     glen, intuple->dbpr_gname.db_own_name);
 	}
 	else
@@ -1039,8 +1041,8 @@ qeu_qdbpriv(
 			   &l_string);
 
 	status = qeu_secaudit_detail(FALSE, qef_cb->qef_ses_id, 
-		    dbpriv_tuple->dbpr_database.db_own_name, (DB_OWN_NAME *)NULL, 
-		    DB_MAXNAME, SXF_E_DATABASE, I_SX2006_DBPRIV_DROP,
+		    dbpriv_tuple->dbpr_database.db_db_name, (DB_OWN_NAME *)NULL, 
+		    DB_DB_MAXNAME, SXF_E_DATABASE, I_SX2006_DBPRIV_DROP,
 		    SXF_A_SUCCESS | SXF_A_CONTROL ,
 		    &e_error,
 		    string,

@@ -130,6 +130,8 @@ NO_OPTIM = r64_us5
 **	    SIR 120874: use new form uleFormat, CL_CLEAR_ERR.
 **	19-Aug-2009 (kschendel) 121804
 **	    Need cx.h for proper CX declarations (gcc 4.3).
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs, db_buffer holds (dbname, owner.. )
 */
 
 /*
@@ -656,7 +658,7 @@ CL_ERR_DESC	    *sys_err)
 	** Extract the external Database Id from the info buffer to
 	** put in an accessable place of the ldb.
 	*/
-	I4ASSIGN_MACRO(ldb->ldb_buffer[2*DB_MAXNAME], ldb->ldb_database_id);
+	I4ASSIGN_MACRO(ldb->ldb_buffer[DB_DB_MAXNAME+DB_OWN_MAXNAME], ldb->ldb_database_id);
 
 	if (flag & LG_NOTDB)
 	{

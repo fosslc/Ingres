@@ -71,6 +71,8 @@
 **	    replace nat and longnat with i4
 **	30-mar-04 (toumi01)
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -193,14 +195,10 @@ QEC_LINK	*v_lnk_p )
 
     /* 1.  set up for deletion */
 
-    qed_u0_trimtail(
-		objects_p->d6_1_obj_name,
-		(u_i4) DB_MAXNAME,
+    qed_u0_trimtail( objects_p->d6_1_obj_name, (u_i4) DB_OBJ_MAXNAME,
 		stats_p->l15_1_tab_name);
 
-    qed_u0_trimtail(
-		objects_p->d6_2_obj_owner,
-		(u_i4) DB_MAXNAME,
+    qed_u0_trimtail( objects_p->d6_2_obj_owner, (u_i4) DB_OWN_MAXNAME,
 		stats_p->l15_2_tab_owner);
 
     del_p->qeq_c1_can_id = DEL_530_DD_STATS;
@@ -263,14 +261,10 @@ QEC_LINK	*v_lnk_p )
 
     /* 1.  set up for deletion */
 
-    qed_u0_trimtail(
-		objects_p->d6_1_obj_name,
-		(u_i4) DB_MAXNAME,
+    qed_u0_trimtail( objects_p->d6_1_obj_name, (u_i4) DB_OBJ_MAXNAME,
 		his_p->l5_1_tab_name);
 
-    qed_u0_trimtail(
-		objects_p->d6_2_obj_owner,
-		(u_i4) DB_MAXNAME,
+    qed_u0_trimtail( objects_p->d6_2_obj_owner, (u_i4) DB_OWN_MAXNAME,
 		his_p->l5_2_tab_owner);
 
     del_p->qeq_c1_can_id = DEL_520_DD_HISTOGRAMS;

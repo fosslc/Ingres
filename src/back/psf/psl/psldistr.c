@@ -98,6 +98,8 @@
 **	    Added *PSS_SELBLK parm to psf_mopen(), psf_mlock(), psf_munlock(),
 **	    psf_malloc(), psf_mclose(), psf_mroot(), psf_mchtyp(),
 **	    pst_ldbtab_desc().
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*
@@ -319,7 +321,7 @@ psl_rg1_reg_distr_tv(
 	** change the name of the Owner of the DDB object to be
 	** created to $ingres
 	*/
-	MEcopy((PTR)sess_cb->pss_cat_owner, sizeof(DD_NAME),
+	MEcopy((PTR)sess_cb->pss_cat_owner, sizeof(DD_OWN_NAME),
                    (PTR) ddl_info->qed_d2_obj_owner);
 
 	/* Lookup "ii" tables as $ingres only */
@@ -503,7 +505,7 @@ psl_rg1_reg_distr_tv(
 
 		/* Copy attribute info from the RDF info block */
 		MEcopy((PTR) ((*from_ddb_att_entry)->att_name.db_att_name),
-		       sizeof(DD_NAME),
+		       sizeof(DD_ATT_NAME),
 		       (PTR) ((*to_ddb_col_desc)->dd_c1_col_name));
 
 		(*to_ddb_col_desc)->dd_c2_col_ord =
@@ -517,7 +519,7 @@ psl_rg1_reg_distr_tv(
 	}
 
 	/* Copy DDB object name */
-	MEcopy((PTR) tabname.db_tab_name, sizeof(DD_NAME),
+	MEcopy((PTR) tabname.db_tab_name, sizeof(DD_TAB_NAME),
 	       (PTR) ddl_info->qed_d1_obj_name);
 
 	/* Store number of columns */
@@ -573,12 +575,12 @@ psl_rg1_reg_distr_tv(
 	*/
 	if (!(sess_cb->pss_distr_sflags & PSS_LDB_TABLE))
 	{
-	    STmove(reg_name->pss_orig_obj_name, ' ', sizeof(DD_NAME),
+	    STmove(reg_name->pss_orig_obj_name, ' ', sizeof(DD_TAB_NAME),
 				ldb_tab_info->dd_t1_tab_name);
 	}
 
 	/* store REGISTERed object name for QEF */
-	STmove(reg_name->pss_orig_obj_name, ' ', sizeof(DD_NAME),
+	STmove(reg_name->pss_orig_obj_name, ' ', sizeof(DD_OBJ_NAME),
 			ddl_info->qed_d1_obj_name);
 
 	/* if the LDB table name was not quoted, let RDF case translate
@@ -637,7 +639,7 @@ psl_rg1_reg_distr_tv(
 	    if (ldb_tab_info->dd_t3_tab_type == DD_4OBJ_INDEX)
 	    {
 		(VOID) psf_error(2037L, 0L, PSF_USERERR, &err_code,
-			err_blk,1, psf_trmwhite(sizeof(DD_NAME),
+			err_blk,1, psf_trmwhite(sizeof(DD_TAB_NAME),
 				     ldb_tab_info->dd_t1_tab_name),
 			ldb_tab_info->dd_t1_tab_name);
 		return (E_DB_ERROR);
@@ -678,7 +680,7 @@ psl_rg1_reg_distr_tv(
 		{
                     (VOID) psf_error(E_PS1202_REG_WRONGTYPE, 0L, PSF_USERERR, 
 			&err_code, err_blk, 3, STlength(reg_word), reg_word,
-                        psf_trmwhite(sizeof(DD_NAME),
+                        psf_trmwhite(sizeof(DD_TAB_NAME),
                                     ldb_tab_info->dd_t1_tab_name),
                         ldb_tab_info->dd_t1_tab_name, STlength(type), type);
 		}
@@ -686,7 +688,7 @@ psl_rg1_reg_distr_tv(
 		{
 		    (VOID) psf_error(2038L, 0L, PSF_USERERR, &err_code,
 			err_blk, 3, STlength(reg_word), reg_word,
-			psf_trmwhite(sizeof(DD_NAME),
+			psf_trmwhite(sizeof(DD_TAB_NAME),
 				     ldb_tab_info->dd_t1_tab_name),
 			ldb_tab_info->dd_t1_tab_name, STlength(type), type);
 		}
@@ -703,7 +705,7 @@ psl_rg1_reg_distr_tv(
 	{
 	    (VOID) psf_error(E_PS1201_LDB_PROC_LVL_UNSUP, 0L, PSF_USERERR, 
 			&err_code, err_blk, 1, 
-                        psf_trmwhite(sizeof(DD_NAME),
+                        psf_trmwhite(sizeof(DD_TAB_NAME),
                                     ldb_tab_info->dd_t1_tab_name),
                         ldb_tab_info->dd_t1_tab_name);
 	    return (E_DB_ERROR);
@@ -862,11 +864,11 @@ psl_rg2_reg_distr_idx(
     /* if 'FROM source' was not specified, default to link_name */
     if (~sess_cb->pss_distr_sflags & PSS_LDB_TABLE)
     {
-	STmove(reg_name, ' ', sizeof(DD_NAME), ldb_tab_info->dd_t1_tab_name);
+	STmove(reg_name, ' ', sizeof(DD_TAB_NAME), ldb_tab_info->dd_t1_tab_name);
     }
 
     /* store REGISTERed object name for QEF */
-    STmove(reg_name, ' ', sizeof(DD_NAME), ddl_info->qed_d1_obj_name);
+    STmove(reg_name, ' ', sizeof(DD_OBJ_NAME), ddl_info->qed_d1_obj_name);
 	
     /* column names will be the same */
     ldb_tab_info->dd_t8_cols_pp = ddl_info->qed_d4_ddb_cols_pp;
@@ -905,7 +907,7 @@ psl_rg2_reg_distr_idx(
 							       : "VIEW";
 	(VOID) psf_error(2038L, 0L, PSF_USERERR, &err_code,
 		err_blk, 3, sizeof("INDEX") - 1, "INDEX",
-		psf_trmwhite(sizeof(DD_NAME), ldb_tab_info->dd_t1_tab_name),
+		psf_trmwhite(sizeof(DD_TAB_NAME), ldb_tab_info->dd_t1_tab_name),
 		ldb_tab_info->dd_t1_tab_name, STlength(type), type);
 	return (E_DB_ERROR);
     }
@@ -1006,7 +1008,7 @@ psl_rg3_reg_tvi(
 
     ddl_info = (QED_DDL_INFO *) sess_cb->pss_object;
 
-    MEcopy((PTR)sess_cb->pss_user.db_own_name, sizeof(DD_NAME),
+    MEcopy((PTR)sess_cb->pss_user.db_own_name, sizeof(DD_OWN_NAME),
 	   (PTR) ddl_info->qed_d2_obj_owner);
 
     /*
@@ -1051,7 +1053,7 @@ psl_rg3_reg_tvi(
     ldb_tab_info = (DD_2LDB_TAB_INFO *) ddl_info->qed_d6_tab_info_p;
 
     /* Assume that the user name will not be specified */
-    MEfill(sizeof(DD_NAME), ' ', (PTR) ldb_tab_info->dd_t2_tab_owner);
+    MEfill(sizeof(DD_OWN_NAME), ' ', (PTR) ldb_tab_info->dd_t2_tab_owner);
 	
     ldb_tab_info->dd_t6_mapped_b = FALSE;  /* assume no mapping is needed */
     ldb_tab_info->dd_t7_col_cnt = 0;
@@ -1207,11 +1209,12 @@ psl_rg4_regtext(
     ** Buffer registered object's name.  First unnormalize and delimit if
     ** LDB supports that.
     */
-    name_len = (u_i4) psf_trmwhite(sizeof(DD_NAME),
+    name_len = (u_i4) psf_trmwhite(sizeof(DD_OBJ_NAME),
                                                 ddl_info->qed_d1_obj_name);
 
     if (support_delims)
     {
+	unorm_len=DB_OBJ_MAXNAME*2+2;
 	status = cui_idunorm((u_char *)ddl_info->qed_d1_obj_name, &name_len,
                                 unorm_buf, &unorm_len, CUI_ID_DLM, err_blk);
 	if (DB_FAILURE_MACRO(status))
@@ -1249,12 +1252,12 @@ psl_rg4_regtext(
 	    else
 		str = " ";
 
-	    name_len = (u_i4) psf_trmwhite(sizeof(DD_NAME),
+	    name_len = (u_i4) psf_trmwhite(sizeof(DD_ATT_NAME),
 				(*col_names)->dd_c1_col_name);
 
 	    if (support_delims)
 	    {
-		unorm_len=DB_MAXNAME*2+2;
+		unorm_len=DB_ATT_MAXNAME*2+2;
 		status = cui_idunorm((u_char *)(*col_names)->dd_c1_col_name,
 			&name_len, unorm_buf, &unorm_len, CUI_ID_DLM, err_blk);
 
@@ -1317,12 +1320,12 @@ psl_rg4_regtext(
     ** Unnormalize and delimit owner name if LDB supports that.
     */
 
-    name_len = (u_i4) psf_trmwhite(sizeof(DD_NAME),
+    name_len = (u_i4) psf_trmwhite(sizeof(DD_OWN_NAME),
 				ldb_tab_info->dd_t2_tab_owner);
 
     if (support_delims)
     {
-	unorm_len=DB_MAXNAME*2+2;
+	unorm_len=DB_OWN_MAXNAME*2+2;
 	status = cui_idunorm((u_char *)ldb_tab_info->dd_t2_tab_owner, &name_len,
                                 unorm_buf, &unorm_len, CUI_ID_DLM, err_blk);
 	if (DB_FAILURE_MACRO(status))
@@ -1348,12 +1351,12 @@ psl_rg4_regtext(
 
     /* Unnormalize and delimit tablename */
 
-    name_len = (u_i4) psf_trmwhite(sizeof(DD_NAME),
+    name_len = (u_i4) psf_trmwhite(sizeof(DD_TAB_NAME),
 				ldb_tab_info->dd_t1_tab_name);
 
     if (support_delims)
     {
-	unorm_len=DB_MAXNAME*2+2;
+	unorm_len=DB_TAB_MAXNAME*2+2;
 	status = cui_idunorm((u_char *)ldb_tab_info->dd_t1_tab_name, &name_len,
                                 unorm_buf, &unorm_len, CUI_ID_DLM, err_blk);
 	if (DB_FAILURE_MACRO(status))
@@ -1391,7 +1394,7 @@ psl_rg4_regtext(
 	status = psq_x_add(sess_cb, psq_cb->psq_ldbdesc->dd_l2_node_name,
 			&sess_cb->pss_ostream, xlated_qry->pss_buf_size,
 			&xlated_qry->pss_q_list,
-			(i4) psf_trmwhite(sizeof(DD_NAME),
+			(i4) psf_trmwhite(sizeof(DD_NODE_NAME),
 				psq_cb->psq_ldbdesc->dd_l2_node_name),
 			"'", "'", ", ", err_blk);
 
@@ -1410,7 +1413,7 @@ psl_rg4_regtext(
 	status = psq_x_add(sess_cb, psq_cb->psq_ldbdesc->dd_l3_ldb_name,
 			&sess_cb->pss_ostream, xlated_qry->pss_buf_size,
 			&xlated_qry->pss_q_list,
-			(i4) psf_trmwhite(sizeof(DD_NAME),
+			(i4) psf_trmwhite(sizeof(DD_DB_NAME),
 				psq_cb->psq_ldbdesc->dd_l3_ldb_name),
 			"'", "'", ", ", err_blk);
 
@@ -1427,10 +1430,11 @@ psl_rg4_regtext(
 	    return (status);
 
 	status = psq_x_add(sess_cb, psq_cb->psq_ldbdesc->dd_l4_dbms_name,
-			&sess_cb->pss_ostream, xlated_qry->pss_buf_size,
-			&xlated_qry->pss_q_list,
-			(i4) psf_trmwhite(sizeof(DD_NAME),
-				psq_cb->psq_ldbdesc->dd_l4_dbms_name),
+		    &sess_cb->pss_ostream, xlated_qry->pss_buf_size,
+		    &xlated_qry->pss_q_list,
+		    (i4) psf_trmwhite(
+			sizeof(psq_cb->psq_ldbdesc->dd_l4_dbms_name),
+			psq_cb->psq_ldbdesc->dd_l4_dbms_name),
 			"'", "'", " ", err_blk);
 
 	if (DB_FAILURE_MACRO(status))
@@ -1662,14 +1666,14 @@ psl_rg6_link_col_list(
    	return (status); 
 
     newcol = ddl_info->qed_d4_ddb_cols_pp[*count]->dd_c1_col_name;
-    STmove(colname, ' ', sizeof(DD_NAME), newcol);
+    STmove(colname, ' ', sizeof(DD_ATT_NAME), newcol);
 
     /* check for duplicate column names */
     for (i = *count -1, col = ddl_info->qed_d4_ddb_cols_pp +i;
 	 i > 0; col--, i--)
     {
 	if (!MEcmp((PTR) (*col)->dd_c1_col_name,
-			(PTR) newcol, sizeof(DD_NAME)))
+			(PTR) newcol, sizeof(DD_ATT_NAME)))
 	{
 	    (VOID) psf_error(2032L, 0L, PSF_USERERR, &err_code,
 			    &psq_cb->psq_error, 2,STlength(cmnd), cmnd,

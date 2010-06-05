@@ -197,6 +197,8 @@ PROGRAM =	ntlogdmp
 **	    SIR 120874: dm0l_? functions converted to DB_ERROR *
 **      30-Oct-2009 (horda03) Bug 122823
 **          Allow multiple filenames to handle a partitioned TX log file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -262,7 +264,7 @@ typedef struct
     LG_LA	    ldmp_la_start;
     LG_LA	    ldmp_la_end;
     LG_DBID	    ldmp_db_id;
-    char	    ldmp_t_name [DB_MAXNAME];
+    char	    ldmp_t_name [DB_TAB_MAXNAME];
     i4	    ldmp_rectype;
     i4	    ldmp_skip_count;
     i4	    ldmp_stop_count;
@@ -736,8 +738,8 @@ LDMP_CB	    *ldmp)
     lctx = dmf_svcb->svcb_lctx_ptr;
     size = lctx->lctx_bksz;
 
-    STmove((PTR)DB_LOGDUMP_INFO, ' ', DB_MAXNAME, (PTR) &add_info.ad_dbname);
-    MEcopy((PTR)DB_INGRES_NAME, DB_MAXNAME, (PTR) &add_info.ad_dbowner);
+    STmove((PTR)DB_LOGDUMP_INFO, ' ', DB_DB_MAXNAME, (PTR) &add_info.ad_dbname);
+    MEcopy((PTR)DB_INGRES_NAME, DB_OWN_MAXNAME, (PTR) &add_info.ad_dbowner);
     MEcopy((PTR)"None", 4, (PTR) &add_info.ad_root);
     add_info.ad_dbid = 0;
     add_info.ad_l_root = 4;
@@ -1404,8 +1406,8 @@ PTR	    record)
 {
     char	    *table_name = NULL;
     char	    *owner_name = NULL;
-    i4	    table_length = DB_MAXNAME;
-    i4	    owner_length = DB_MAXNAME;
+    i4	    table_length = DB_TAB_MAXNAME;
+    i4	    owner_length = DB_OWN_MAXNAME;
     DM0L_HEADER	    *h = (DM0L_HEADER *)record;
 
     if (ldmp->ldmp_flags & LDMP_TNAME)

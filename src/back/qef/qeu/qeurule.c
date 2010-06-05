@@ -134,6 +134,8 @@
 **	    added) -- delete the routine.
 **	4-Jun-2009 (kschendel) b122118
 **	    Make sure dmt-cb doesn't have junk in it.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*{
@@ -598,7 +600,7 @@ QEUQ_CB		    *qeuq_cb)
 	    status = qeu_secaudit(FALSE, qef_cb->qef_ses_id,
 	    		(char *)&rtuple->dbr_name,
 			&rtuple->dbr_owner,
-	    		sizeof(DB_NAME), SXF_E_RULE,
+	    		sizeof(rtuple->dbr_name), SXF_E_RULE,
 	      		I_SX2037_RULE_CREATE, SXF_A_SUCCESS | SXF_A_CREATE,
 	      		&e_error);
 	    error = e_error.err_code;
@@ -1367,7 +1369,7 @@ bool		from_drop_rule)
 	        status = qeu_secaudit(FALSE, qef_cb->qef_ses_id,
 	    		(char *)&rtuple.dbr_name,
 			&rtuple.dbr_owner,
-	    		sizeof(DB_NAME), SXF_E_RULE,
+	    		sizeof(rtuple.dbr_name), SXF_E_RULE,
 	      		I_SX2038_RULE_DROP, SXF_A_DROP | SXF_A_SUCCESS,
 	      		&e_error);
 

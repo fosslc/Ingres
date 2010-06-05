@@ -183,6 +183,8 @@ NO_OPTIM = usl_us5
 **	    lock conversions.
 **	13-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 ***/
 
 /* Forward declarations */
@@ -2909,22 +2911,22 @@ sce_efree( EV_SCB *ecb, i4  amount, i4 deall_offset )
 static i4
 sce_ename( i4  lname, char *name, char  *evname )
 {
-    char		anm[DB_MAXNAME + 1]; 	/* Buffers for name parts */
-    char		onm[DB_MAXNAME + 1];
-    char		dnm[DB_MAXNAME + 1];
+    char		anm[DB_EVENT_MAXNAME + 1];/* Buffers for name parts */
+    char		onm[DB_OWN_MAXNAME + 1];
+    char		dnm[DB_DB_MAXNAME + 1];
     DB_ALERT_NAME	*alert;
 
     if (lname == sizeof(DB_ALERT_NAME))	/* Assume well-defined name */
     {
 	alert = (DB_ALERT_NAME *)name;
-	MEcopy((PTR)&alert->dba_alert, DB_MAXNAME, (PTR)anm);
-	anm[DB_MAXNAME] = EOS;
+	MEcopy((PTR)&alert->dba_alert, DB_EVENT_MAXNAME, (PTR)anm);
+	anm[DB_EVENT_MAXNAME] = EOS;
 	STtrmwhite(anm);
-	MEcopy((PTR)&alert->dba_owner, DB_MAXNAME, (PTR)onm);
-	onm[DB_MAXNAME] = EOS;
+	MEcopy((PTR)&alert->dba_owner, DB_OWN_MAXNAME, (PTR)onm);
+	onm[DB_OWN_MAXNAME] = EOS;
 	STtrmwhite(onm);
-	MEcopy((PTR)&alert->dba_dbname, DB_MAXNAME, (PTR)dnm);
-	dnm[DB_MAXNAME] = EOS;
+	MEcopy((PTR)&alert->dba_dbname, DB_DB_MAXNAME, (PTR)dnm);
+	dnm[DB_DB_MAXNAME] = EOS;
 	STtrmwhite(dnm);
 	STprintf(evname, "(%s, %s, %s)", anm, onm, dnm);
     }

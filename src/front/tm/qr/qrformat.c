@@ -68,6 +68,8 @@
 **			in silent mode don't output a vertical separator
 **                      at beginning and end of line for column header
 **                      implement \trim (\nopadding) to strip white space
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /* Initial buffer size--assumed max width of a tuple; subject to growth */
@@ -288,15 +290,23 @@ qrinitsz(
 
 	for (i = 0; i < qrb->rd->rd_numcols; i++)
 	{
-			/* dblvch always is DB_MAXNAME */
+			/* dblvch always is DB_ATT_MAXNAME */
 	    qrdatatype = abs( qrb->rd->RD_DBVS_MACRO(i).db_datatype );
 	    if ( qrdatatype == DB_LVCH_TYPE ||
 	         qrdatatype == DB_LBYTE_TYPE ||
 	         qrdatatype == DB_LBIT_TYPE  || 
 		 qrdatatype == DB_LNVCHR_TYPE )
 	    {
-		qrb->dvlen[i].deflen = DB_MAXNAME;
-		qrb->dvlen[i].worstlen = DB_MAXNAME;
+		if (qrb->rd->rd_names[i].rd_nmlen < DB_OLDMAXNAME_32)
+		{
+		    qrb->dvlen[i].deflen = DB_OLDMAXNAME_32; 
+		    qrb->dvlen[i].worstlen = DB_OLDMAXNAME_32;
+		}
+		else
+		{
+		    qrb->dvlen[i].deflen = DB_ATT_MAXNAME; 
+		    qrb->dvlen[i].worstlen = DB_ATT_MAXNAME; 
+		}
 	    }
 	    else
 	    {

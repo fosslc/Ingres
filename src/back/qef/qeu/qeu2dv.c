@@ -75,6 +75,8 @@
 **	    replace nat and longnat with i4
 **	30-mar-04 (toumi01)
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -140,7 +142,7 @@ QEF_RCB         *i_qer_p)
 
     MEfill(sizeof(link), '\0', (PTR) & link);
     lnk_p->qec_1_ddl_info_p = ddl_p;
-    MEfill(DB_MAXNAME, ' ', lnk_p->qec_5_ldb_alias);
+    MEfill(DB_DB_MAXNAME, ' ', lnk_p->qec_5_ldb_alias);
     lnk_p->qec_6_select_p = & sel;
     lnk_p->qec_9_tables_p = & tables;
     lnk_p->qec_13_objects_p = & objects;
@@ -472,7 +474,7 @@ DB_TAB_ID	    *i_vid_p)
     
     MEfill(sizeof(link), '\0', (PTR) & link);
     lnk_p->qec_1_ddl_info_p = ddl_p;
-    MEfill(DB_MAXNAME, ' ', lnk_p->qec_5_ldb_alias);
+    MEfill(DB_DB_MAXNAME, ' ', lnk_p->qec_5_ldb_alias);
     lnk_p->qec_6_select_p = & sel;
     lnk_p->qec_9_tables_p = & tables;
     lnk_p->qec_13_objects_p = & objects;

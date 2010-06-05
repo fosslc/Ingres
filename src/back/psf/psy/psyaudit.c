@@ -73,6 +73,8 @@
 **         psy_audit() check if security enabled before update security state
 **      15-Apr-2003 (bonro01)
 **          Added include <psyaudit.h> for prototype of psy_secaudit()
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -145,7 +147,7 @@ psy_audit(
 {
     DB_STATUS		status, local_status;
     i4		err_code;
-    char		dbname[DB_MAXNAME];
+    char		dbname[DB_DB_MAXNAME];
     SCF_CB		scf_cb;
     SCF_SCI		sci_list[1];
     RDF_CB		rdf_cb;

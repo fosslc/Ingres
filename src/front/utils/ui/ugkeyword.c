@@ -87,6 +87,8 @@
 **	    replace nat and longnat with i4
 **	09-sep-2001 (hanch04)
 **	    added new reserved words:  endfor, endrepeat, leave, result, row
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 
@@ -748,7 +750,7 @@ IIUGIsSQLKeyWord(name)
 	register i4	i;
 			const   char	*cur_sql_wrd_ptr;
 			const   SQL_KEYWORD	*cur_sql_entry_ptr;
-			char	w_name[(FE_MAXNAME + 1)];
+			char	w_name[(DB_MAXNAME + 1)];
 
 	
 	if  ((name == NULL) || (*name == EOS))

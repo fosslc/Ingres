@@ -110,6 +110,8 @@
 **	    replace nat and longnat with i4
 **	30-mar-04 (toumi01)
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -430,7 +432,7 @@ QEU_CB		*qeu_cb)
     DB_ERROR	    e_error;
     SCF_CB	    scf_cb;
     SCF_SCI	    sci_list[1];
-    char	    username[DB_MAXNAME];
+    char	    username[DB_OWN_MAXNAME];
 
     aptuple = (DB_APPLICATION_ID *)qeuq_cb->qeuq_agid_tup->dt_data;
 
@@ -523,7 +525,7 @@ QEU_CB		*qeu_cb)
 		status = qeu_secaudit(FALSE, qef_cb->qef_ses_id, 
 		    (char *)&aptuple->dbap_aplid,
 		    &aptuple->dbap_aplid,
-		    sizeof(DB_NAME), 
+		    sizeof(aptuple->dbap_aplid), 
 		    SXF_E_SECURITY,
 		    I_SX201B_ROLE_ACCESS, 
 		    SXF_A_FAIL | SXF_A_CREATE,
@@ -973,7 +975,7 @@ QEU_CB		*qeu_cb)
 		status = qeu_secaudit(FALSE, qef_cb->qef_ses_id, 
 		    (char *)&aptuple->dbap_aplid,
 		    &aptuple->dbap_aplid,
-		    sizeof(DB_NAME), 
+		    sizeof(aptuple->dbap_aplid), 
 		    SXF_E_SECURITY,
 		    I_SX201B_ROLE_ACCESS, 
 		    SXF_A_FAIL | SXF_A_ALTER,
@@ -1163,7 +1165,7 @@ DB_APPLICATION_ID   *aptuple)
 	    MEfill(sizeof(altuple.dbap_aplid), (u_char)' ',
 		   (PTR)&altuple.dbap_aplid);
 	else
-	    MEmove(DB_MAXNAME, (PTR) aplid , (char)' ',
+	    MEmove(DB_OWN_MAXNAME, (PTR) aplid , (char)' ',
 		   sizeof(altuple.dbap_aplid),
 		   (PTR)&altuple.dbap_aplid);
 

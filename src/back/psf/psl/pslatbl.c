@@ -145,6 +145,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 
@@ -410,9 +412,9 @@ psl_alt_tbl(
     */
     err_no = 0L;
     if ((MEcmp(rngvar->pss_ownname.db_own_name,
-	      sess_cb->pss_user.db_own_name, DB_MAXNAME) != 0) &&
+	      sess_cb->pss_user.db_own_name, DB_OWN_MAXNAME) != 0) &&
 	(MEcmp(rngvar->pss_ownname.db_own_name,		
-	      sess_cb->pss_sess_owner.db_own_name, DB_MAXNAME) != 0) &&
+	      sess_cb->pss_sess_owner.db_own_name, DB_OWN_MAXNAME) != 0) &&
 	((sess_cb->pss_ses_flag & PSS_INGRES_PRIV) == 0))
 	
 	err_no = 2117L;	
@@ -434,9 +436,8 @@ psl_alt_tbl(
 	}				      
 
 	(void) psf_error(err_no, 0L, PSF_USERERR, &err_code, err_blk, 1,
-			 psf_trmwhite(DB_MAXNAME,
-				      rngvar->pss_tabname.db_tab_name),
-			 rngvar->pss_tabname.db_tab_name);
+		 psf_trmwhite(DB_TAB_MAXNAME, rngvar->pss_tabname.db_tab_name),
+		 rngvar->pss_tabname.db_tab_name);
 	return (E_DB_ERROR);
     }
 
@@ -674,18 +675,16 @@ psl_alt_tbl_col(
     if (rngvar->pss_tabdesc->tbl_status_mask & DMT_GATEWAY)
     {
        (void) psf_error(5557L, 0L, PSF_USERERR, &err_code, err_blk, 1,
-			psf_trmwhite(DB_MAXNAME,
-				     rngvar->pss_tabname.db_tab_name),
-			rngvar->pss_tabname.db_tab_name);
+		psf_trmwhite(DB_TAB_MAXNAME, rngvar->pss_tabname.db_tab_name),
+		rngvar->pss_tabname.db_tab_name);
        return (E_DB_ERROR);
     }
 
     if (rngvar->pss_tabdesc->tbl_status_mask & (DMT_CATALOG | DMT_EXTENDED_CAT))
     {
        (void) psf_error(9347L, 0L, PSF_USERERR, &err_code, err_blk, 1,
-                        psf_trmwhite(DB_MAXNAME,
-                                     rngvar->pss_tabname.db_tab_name),
-                        rngvar->pss_tabname.db_tab_name);
+		psf_trmwhite(DB_TAB_MAXNAME, rngvar->pss_tabname.db_tab_name),
+		rngvar->pss_tabname.db_tab_name);
        return (E_DB_ERROR);
     }
 

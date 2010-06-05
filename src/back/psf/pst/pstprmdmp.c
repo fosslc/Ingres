@@ -132,6 +132,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -139,6 +141,8 @@
 */
 #define	    PST_1WIDTH	    3
 #define	    PST_1HEIGHT	    3
+#define	    PST_BUF_SIZE    (DB_MAXNAME + 3)
+#define	    PST_MAX_STR_LEN (PST_BUF_SIZE - 1)
 
 /*
 **  Forward and/or External function references.
@@ -592,37 +596,37 @@ pst_prnode(
 	PTR                node,
 	PTR                control)
 {
-    char                buf[DB_MAXNAME + 3];   /* Big enough for anything */
+    char                buf[PST_BUF_SIZE];   /* Big enough for anything */
     i4			lc = 0;
     register PST_QNODE	*qnode = (PST_QNODE *) node;
     
     /* Top of the box is all stars */
-    MEfill(DB_MAXNAME + 2, '*', buf);
-    buf[DB_MAXNAME + 2] = '\0';
+    MEfill(PST_MAX_STR_LEN, '*', buf);
+    buf[PST_MAX_STR_LEN] = '\0';
     uld_prnode(control, buf);
     
     /* Now do the node type */
-    pst_ftype(qnode, buf, DB_MAXNAME + 2);
+    pst_ftype(qnode, buf, PST_MAX_STR_LEN);
     uld_prnode(control, buf);
 
     /* Now do the datatype for the node */
-    pst_fdtype(qnode, buf, DB_MAXNAME + 2);
+    pst_fdtype(qnode, buf, PST_MAX_STR_LEN);
     uld_prnode(control, buf);
 
     /* Now do the data length for the node */
-    pst_fdlen(qnode, buf, DB_MAXNAME + 2);
+    pst_fdlen(qnode, buf, PST_MAX_STR_LEN);
     uld_prnode(control, buf);
 
     /* Now do the precision for the node */
-    pst_fdprec(qnode, buf, DB_MAXNAME + 2);
+    pst_fdprec(qnode, buf, PST_MAX_STR_LEN);
     uld_prnode(control, buf);
 
     /* Now do the data value for the node (may be truncated) */
-    pst_fdval(qnode, buf, DB_MAXNAME + 2);
+    pst_fdval(qnode, buf, PST_MAX_STR_LEN);
     uld_prnode(control, buf);
 
     /* Now do the node length for the node */
-    pst_fnlen(qnode, buf, DB_MAXNAME + 2);
+    pst_fnlen(qnode, buf, PST_MAX_STR_LEN);
     uld_prnode(control, buf);
 
     /* Now do the symbol for the node */
@@ -631,7 +635,7 @@ pst_prnode(
     case PST_AND:       /* PST_OP_NODE */
     case PST_OR:        /* PST_OP_NODE */
 	/* Print join id */
-	pst_f_joinid(qnode, buf, DB_MAXNAME + 2);
+	pst_f_joinid(qnode, buf, PST_MAX_STR_LEN);
 	uld_prnode(control, buf);
 	lc = 1;			    /*
 				    ** indicate that one line has been used and
@@ -643,37 +647,37 @@ pst_prnode(
     case PST_AOP:       /* PST_OP_NODE */
     case PST_MOP:       /* PST_OP_NODE */
 	/* Do the operator id */
-	pst_fidop(qnode, buf, DB_MAXNAME + 2);
+	pst_fidop(qnode, buf, PST_MAX_STR_LEN);
 	uld_prnode(control, buf);
 
 	/* Do the function instance id */
-	pst_finop(qnode, buf, DB_MAXNAME + 2);
+	pst_finop(qnode, buf, PST_MAX_STR_LEN);
 	uld_prnode(control, buf);
 
 	/* Do the left conversion id, if any */
-	pst_flcv(qnode, buf, DB_MAXNAME + 2);
+	pst_flcv(qnode, buf, PST_MAX_STR_LEN);
 	uld_prnode(control, buf);
 
 	/* Do the right conversion id, if any */
-	pst_frcv(qnode, buf, DB_MAXNAME + 2);
+	pst_frcv(qnode, buf, PST_MAX_STR_LEN);
 	uld_prnode(control, buf);
 
 	/* Print join id */
-	pst_f_joinid(qnode, buf, DB_MAXNAME + 2);
+	pst_f_joinid(qnode, buf, PST_MAX_STR_LEN);
 	uld_prnode(control, buf);
 	break;
 
     case PST_CONST:         /* PST_CNST_NODE */
 	/* Do the parameter type */
-	pst_fprmtyp(qnode, buf, DB_MAXNAME + 2);
+	pst_fprmtyp(qnode, buf, PST_MAX_STR_LEN);
 	uld_prnode(control, buf);
 
 	/* Do the parameter number */
-	pst_fparm(qnode, buf, DB_MAXNAME + 2);
+	pst_fparm(qnode, buf, PST_MAX_STR_LEN);
 	uld_prnode(control, buf);
 
 	/* Do 3 blank lines */
-	pst_fblank(buf, DB_MAXNAME + 2);
+	pst_fblank(buf, PST_MAX_STR_LEN);
 	uld_prnode(control,buf);
 	uld_prnode(control,buf);
 	uld_prnode(control,buf);
@@ -682,41 +686,41 @@ pst_prnode(
     case PST_RESDOM:        /* PST_RSDM_NODE */
     case PST_BYHEAD:        /* PST_RSDM_NODE */
 	/* Do the result domain number */
-	pst_frdno(qnode, buf, DB_MAXNAME + 2);
+	pst_frdno(qnode, buf, PST_MAX_STR_LEN);
 	uld_prnode(control, buf);
 
 	/* Do the pst_ntargno number */
-	pst_ftgno(qnode, buf, DB_MAXNAME + 2);
+	pst_ftgno(qnode, buf, PST_MAX_STR_LEN);
 	uld_prnode(control, buf);
 
 	/* Do the pst_ttargtype number */
-	pst_ftgtyp(qnode, buf, DB_MAXNAME + 2);
+	pst_ftgtyp(qnode, buf, PST_MAX_STR_LEN);
 	uld_prnode(control, buf);
 
 	/* Do the "for update" flag */
-	pst_fupdt(qnode, buf, DB_MAXNAME + 2);
+	pst_fupdt(qnode, buf, PST_MAX_STR_LEN);
 	uld_prnode(control, buf);
 
 	/* Do the result name */
-	pst_frname(qnode, buf, DB_MAXNAME + 2);
+	pst_frname(qnode, buf, PST_MAX_STR_LEN);
 	uld_prnode(control, buf);
 	break;
 
     case PST_VAR:       /* PST_VAR_NODE */
 	/* Do the variable number */
-	pst_fvno(qnode, buf, DB_MAXNAME + 2);
+	pst_fvno(qnode, buf, PST_MAX_STR_LEN);
 	uld_prnode(control, buf);
 
 	/* Do the attribute number */
-	pst_fnoat(qnode, buf, DB_MAXNAME + 2);
+	pst_fnoat(qnode, buf, PST_MAX_STR_LEN);
 	uld_prnode(control, buf);
 
 	/* Do the attribute name */
-	pst_fnmat(qnode, buf, DB_MAXNAME + 2);
+	pst_fnmat(qnode, buf, PST_MAX_STR_LEN);
 	uld_prnode(control, buf);
 
 	/* Do 2 blank lines */
-	pst_fblank(buf, DB_MAXNAME + 2);
+	pst_fblank(buf, PST_MAX_STR_LEN);
 	uld_prnode(control,buf);
 	uld_prnode(control,buf);
 	break;
@@ -725,15 +729,15 @@ pst_prnode(
     case PST_SUBSEL:    /* PST_RT_NODE */
     case PST_AGHEAD:    /* PST_RT_NODE */
 	/* Do the number of range vars */
-	pst_fvars(qnode, buf, DB_MAXNAME + 2);
+	pst_fvars(qnode, buf, PST_MAX_STR_LEN);
 	uld_prnode(control, buf);
 
 	/* Do the root user flag */
-	pst_frtuser(qnode, buf, DB_MAXNAME + 2);
+	pst_frtuser(qnode, buf, PST_MAX_STR_LEN);
 	uld_prnode(control, buf);
 
 	/* Do 3 blank lines */
-	pst_fblank(buf, DB_MAXNAME + 2);
+	pst_fblank(buf, PST_MAX_STR_LEN);
 	uld_prnode(control,buf);
 	uld_prnode(control,buf);
 	uld_prnode(control,buf);
@@ -741,19 +745,19 @@ pst_prnode(
 
     case PST_CURVAL:    /* PST_CRVAL_NODE */
 	/* Do the cursor id */
-	pst_fcid(qnode, buf, DB_MAXNAME + 2);
+	pst_fcid(qnode, buf, PST_MAX_STR_LEN);
 	uld_prnode(control, buf);
 
 	/* Do the cursor name */
-	pst_fcnm(qnode, buf, DB_MAXNAME + 2);
+	pst_fcnm(qnode, buf, PST_MAX_STR_LEN);
 	uld_prnode(control, buf);
 
 	/* Do the attribute number */
-	pst_fccol(qnode, buf, DB_MAXNAME + 2);
+	pst_fccol(qnode, buf, PST_MAX_STR_LEN);
 	uld_prnode(control, buf);
 
 	/* Do 2 blank lines */
-	pst_fblank(buf, DB_MAXNAME + 2);
+	pst_fblank(buf, PST_MAX_STR_LEN);
 	uld_prnode(control,buf);
 	uld_prnode(control,buf);
 	break;
@@ -774,7 +778,7 @@ pst_prnode(
     case PST_WHOP:
     default:
 	/* 5 blank lines */
-	pst_fblank(buf, DB_MAXNAME + 2);
+	pst_fblank(buf, PST_MAX_STR_LEN);
 	for (;lc < 5; lc++)
 	{
 	    uld_prnode(control,buf);
@@ -783,8 +787,8 @@ pst_prnode(
    }
 
     /* Top of the box is all stars */
-    MEfill(DB_MAXNAME + 2, '*', buf);
-    buf[DB_MAXNAME + 2] = '\0';
+    MEfill(PST_MAX_STR_LEN, '*', buf);
+    buf[PST_MAX_STR_LEN] = '\0';
     uld_prnode(control, buf);
 
     return;
@@ -833,8 +837,8 @@ pst_1prnode(
 	PTR                node,
 	PTR                control)
 {
-    char                buf[DB_MAXNAME + 3];   /* Big enough for anything */
-    char		blanks[DB_MAXNAME + 3];
+    char                buf[PST_BUF_SIZE];   /* Big enough for anything */
+    char		blanks[PST_BUF_SIZE];
     bool		opnode = FALSE;
     register PST_QNODE	*qnode = (PST_QNODE *) node;
 
@@ -842,9 +846,9 @@ pst_1prnode(
     buf[PST_1WIDTH] = '\0';
     uld_prnode(control, buf);
 
-    MEfill(DB_MAXNAME, ' ', buf);
+    MEfill(sizeof(buf), ' ', buf);
     buf[PST_1WIDTH] = '\0';
-    MEfill(DB_MAXNAME, ' ', blanks);
+    MEfill(sizeof(blanks), ' ', blanks);
     blanks[PST_1WIDTH] = '\0';
 
     /* Now do the symbol for the node */
@@ -1180,7 +1184,7 @@ pst_f_1joinid(
 	 numbuf + sizeof("J") - 1);
 
     /* Store it in the return buffer */
-    STmove(numbuf, ' ', DB_MAXNAME, buf);
+    STmove(numbuf, ' ', PST_MAX_STR_LEN - 2, buf);
     return;
 }
 
@@ -1524,7 +1528,7 @@ pst_fidop(
     }
     else
     {
-	MEmove(DB_MAXNAME, opname.adi_opname, ' ', max_str_len - 2, buf + 1);
+	MEmove(DB_TYPE_MAXLEN, opname.adi_opname, ' ', max_str_len - 2, buf + 1);
     }
     adf_scb->adf_errcb.ad_errmsgp = ad_errmsgp;
 
@@ -1570,18 +1574,18 @@ pst_1fidop(
     adf_scb = (ADF_CB*)sess_cb->pss_adfcb;
 
     /* Create box */
-    buf[DB_MAXNAME + 1] = '\0';
+    buf[PST_MAX_STR_LEN] = '\0';
 
     ad_errmsgp = adf_scb->adf_errcb.ad_errmsgp;
     adf_scb->adf_errcb.ad_errmsgp = NULL;
     if (adi_opname(adf_scb, qnode->pst_sym.pst_value.pst_s_op.pst_opno,
 	&opname) != E_DB_OK)
     {
-	STmove("BAD OP ID", ' ', DB_MAXNAME, buf);
+	MEcopy("BAD OP ID", 9, buf);
     }
     else
     {
-	MEcopy(opname.adi_opname, DB_MAXNAME, buf);
+	MEcopy(opname.adi_opname, DB_TYPE_MAXLEN, buf);
     }
 
     adf_scb->adf_errcb.ad_errmsgp = ad_errmsgp;
@@ -2176,7 +2180,7 @@ pst_frname(
     buf[0] = buf[max_str_len - 1] = '*';
     buf[max_str_len] = '\0';
 
-    MEmove(DB_MAXNAME, qnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname, ' ',
+    MEmove(DB_ATT_MAXNAME, qnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname, ' ',
 	max_str_len - 2, buf + 1);
 
     return;
@@ -2324,7 +2328,7 @@ pst_fnmat(
     buf[0] = buf[max_str_len - 1] = '*';
     buf[max_str_len] = '\0';
 
-    MEmove(DB_MAXNAME,
+    MEmove(DB_ATT_MAXNAME,
 	qnode->pst_sym.pst_value.pst_s_var.pst_atname.db_att_name,
 	' ', max_str_len - 2, buf + 1);
 
@@ -2536,7 +2540,7 @@ pst_fcnm(
     buf[max_str_len] = '\0';
 
     /* Copy the name into the buffer */
-    MEmove(DB_MAXNAME,
+    MEmove(DB_CURSOR_MAXNAME,
 	qnode->pst_sym.pst_value.pst_s_curval.pst_cursor.db_cur_name,
 	' ', max_str_len - 2, buf + 1);
 
@@ -2777,7 +2781,7 @@ pst_1ftype(
     else
 	string = "???";
 
-    STmove(string, ' ', DB_MAXNAME, buf);
+    STmove(string, ' ', PST_MAX_STR_LEN - 2, buf);
 }
 
 /*{
@@ -3338,7 +3342,7 @@ pst_dbpdump(
 	    case PST_CREATE_SCHEMA_TYPE:
 	    {
 		PST_CREATE_SCHEMA   *crt_node;
-		char		    objname[DB_MAXNAME+1];
+		char		    objname[DB_OBJ_MAXNAME+1];
 
 		crt_node = &(stmt->pst_specific.pst_createSchema);
 
@@ -3358,8 +3362,8 @@ pst_dbpdump(
 	    {
 		PST_EXEC_IMM        *exec_node;
 		PST_OBJDEP	    *dependency;
-		char		    schname[DB_MAXNAME+1];
-		char		    objname[DB_MAXNAME+1];
+		char		    schname[DB_SCHEMA_MAXNAME+1];
+		char		    objname[DB_OBJ_MAXNAME+1];
 
 		exec_node = &(stmt->pst_specific.pst_execImm);
 
@@ -3418,10 +3422,10 @@ pst_dbpdump(
 		pst_display("\tsubtype:\t%d (%s)\n", 
 			    crt_node->pst_createTableFlags, s);
 		
-		pst_display("\tname:\t%.#s\n", DB_MAXNAME,
+		pst_display("\tname:\t%.#s\n", DB_TAB_MAXNAME,
 			    dmu_cb->dmu_table_name.db_tab_name);
 
-		pst_display("\towner:\t%.#s\n", DB_MAXNAME,
+		pst_display("\towner:\t%.#s\n", DB_OWN_MAXNAME,
 			    dmu_cb->dmu_owner.db_own_name);
 
 		attrs = (DMF_ATTR_ENTRY **) dmu_cb->dmu_attr_array.ptr_address;
@@ -3435,7 +3439,7 @@ pst_dbpdump(
 		    attr = *attrs;
 		    pst_display("\tCol %d:\n", i);
 		    
-		    pst_display("\t\tname:\t%.#s\n", DB_MAXNAME,
+		    pst_display("\t\tname:\t%.#s\n", DB_ATT_MAXNAME,
 				attr->attr_name.db_att_name);
 		    pst_display("\t\ttype:\t%d\n", attr->attr_type);
 		    pst_display("\t\tsize:\t%d\n", attr->attr_size);
@@ -3495,11 +3499,11 @@ pst_dbpdump(
 
 		if (int_node->pst_createIntegrityFlags & PST_CONS_NAME_SPEC)
 		{
-		    pst_display("\tConstraint name: %.#s\n", DB_MAXNAME,
+		    pst_display("\tConstraint name: %.#s\n", DB_CONS_MAXNAME,
 				int_tuple->dbi_consname.db_constraint_name);
 		}
 
-		pst_display("\tSchema name:\t%.#s\n", DB_MAXNAME,
+		pst_display("\tSchema name:\t%.#s\n", DB_SCHEMA_MAXNAME,
 			    int_node->pst_integritySchemaName.db_schema_name);
 
 		unique  = int_tuple->dbi_consflags & CONS_UNIQUE;
@@ -3521,10 +3525,10 @@ pst_dbpdump(
 		    pst_display("\tReferential constraint\n");
 		    
 		pst_display("\t    on table:\t%.#s.%.#s\n",
-				psf_trmwhite(DB_MAXNAME, 
+				psf_trmwhite(DB_OWN_MAXNAME, 
 				       int_node->pst_cons_ownname.db_own_name),
 				int_node->pst_cons_ownname.db_own_name,
-				psf_trmwhite(DB_MAXNAME, 
+				psf_trmwhite(DB_TAB_MAXNAME, 
 				       int_node->pst_cons_tabname.db_tab_name),
 				int_node->pst_cons_tabname.db_tab_name);
 
@@ -3542,10 +3546,10 @@ pst_dbpdump(
 		if (ref)
 		{
 		    pst_display("\tReferenced table name:\t%.#s.%.#s\n", 
-				psf_trmwhite(DB_MAXNAME, 
+				psf_trmwhite(DB_OWN_MAXNAME, 
 					int_node->pst_ref_ownname.db_own_name),
 				int_node->pst_ref_ownname.db_own_name,
-				psf_trmwhite(DB_MAXNAME, 
+				psf_trmwhite(DB_TAB_MAXNAME, 
 					int_node->pst_ref_tabname.db_tab_name),
 				int_node->pst_ref_tabname.db_tab_name);
 

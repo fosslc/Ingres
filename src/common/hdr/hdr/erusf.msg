@@ -453,6 +453,8 @@ SQLSTATE_MAPPING_REQUIRED
 **          Added E_US1072.
 **	02-Apr-2010 (jonj)
 **	    SIR 121619 MVCC: add E_US125A_4698 Insufficient undo information
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 #define _US_CLASS   0
@@ -2871,6 +2873,8 @@ E_US0AAB_2731:SS42000_SYN_OR_ACCESS_ERR
 "line %0d, Incorrect syntax for interval literal."
 E_US0AAC_2732:SS42000_SYN_OR_ACCESS_ERR
 "line %0d, Specified unicode converter mapping table is not found in this installation. Unicode conversion is not possible."
+E_US0AAD_2733:SS42000_SYN_OR_ACCESS_ERR
+"%0c name %1c is too long. The maximum size allowed is %2d."
 E_US0ABE_2750:SS5000A_QUERY_ERROR
 "DROP TABLE: object '%0c' is not a base table."
 E_US0ABF_2751:SS5000A_QUERY_ERROR

@@ -84,6 +84,8 @@
 **	    For this to work, the nesting join is now set to INNER if the
 **	    subselect is in a WHERE clause and not using a COUNT aggregate.
 **	    This has required a finer scope tracking of WHERE clause scope.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 
@@ -860,7 +862,7 @@ psl_flatten1(
 			    u_i4 i;
 			    v->pst_sym.pst_value.pst_s_rsdm.pst_rsno = n;
 			    v->pst_sym.pst_value.pst_s_rsdm.pst_ntargno = n;
-			    for (i = 0; i < DB_MAXNAME; i++)
+			    for (i = 0; i < DB_ATT_MAXNAME; i++)
 			    {
 				if (v->pst_sym.pst_value.pst_s_rsdm.pst_rsname[i] != ' ')
 				{
@@ -874,7 +876,7 @@ psl_flatten1(
 					if (rsd != v &&
 					    !MEcmp((PTR)v->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
 						    (PTR)rsd->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
-						    DB_MAXNAME))
+						    DB_ATT_MAXNAME))
 					{
 					    makename = TRUE;
 					    break;
@@ -885,9 +887,10 @@ psl_flatten1(
 			    }
 			    if (makename)
 			    {
-				char colname[DB_MAXNAME + 2];
+				char colname[DB_ATT_MAXNAME + 2];
 				STprintf(colname, "col%d", n);
-				MEmove(STlength(colname), (PTR)colname, ' ', DB_MAXNAME, 
+				MEmove(STlength(colname), (PTR)colname, ' ', 
+					DB_ATT_MAXNAME, 
 					(PTR)v->pst_sym.pst_value.pst_s_rsdm.pst_rsname); 
 			    }
 			}
@@ -899,21 +902,22 @@ psl_flatten1(
 			** back in. */
 			*nodep = NULL;
 			{
-			    char tmptbl[DB_MAXNAME + 2];
+			    char tmptbl[DB_TAB_MAXNAME + 2];
 			    bool match = TRUE;
 			    i4 i, n=1;
 			    while(match)
 			    {
 				/* Create a unique name - diagnostic aid */
 				STprintf(tmptbl,"dt%d", n);
-				MEfill(DB_MAXNAME-STlen(tmptbl), ' ', tmptbl+STlen(tmptbl));
+				MEfill(DB_TAB_MAXNAME-STlen(tmptbl), ' ',
+				    tmptbl+STlen(tmptbl));
 				match = FALSE;
 				for (i = 0; i < PST_NUMVARS; i++)
 				{
 				    PSS_RNGTAB *rngvar = &cb->pss_auxrng.pss_rngtab[i];
 				    if (rngvar->pss_used &&
 					rngvar->pss_rgno >= 0 &&
-					!MEcmp(tmptbl, rngvar->pss_rgname, DB_MAXNAME))
+					!MEcmp(tmptbl, rngvar->pss_rgname, DB_TAB_MAXNAME))
 				    {
 					match = TRUE;
 					n++;
@@ -1365,15 +1369,15 @@ psl_flatten1(
 	    {
 		/* Ensure any remaining empty names are filled with the column default */
 		i4 i;
-		for (i = 0; i < DB_MAXNAME; i++)
+		for (i = 0; i < DB_ATT_MAXNAME; i++)
 		    if (node->pst_sym.pst_value.pst_s_rsdm.pst_rsname[i] != ' ')
 			break;
-		if (i >= DB_MAXNAME)
+		if (i >= DB_ATT_MAXNAME)
 		{
 		    STprintf(node->pst_sym.pst_value.pst_s_rsdm.pst_rsname, "col%d",
 				node->pst_sym.pst_value.pst_s_rsdm.pst_rsno);
 		    i = STlength(node->pst_sym.pst_value.pst_s_rsdm.pst_rsname);
-		    MEfill(DB_MAXNAME-i, ' ', node->pst_sym.pst_value.pst_s_rsdm.pst_rsname+i);
+		    MEfill(DB_ATT_MAXNAME-i, ' ', node->pst_sym.pst_value.pst_s_rsdm.pst_rsname+i);
 		}
 	    }
 	    }

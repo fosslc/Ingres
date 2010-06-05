@@ -109,6 +109,8 @@
 **	    Fix a couple annoying int == NULL warnings.
 **	11-Apr-2008 (kschendel)
 **	    Update DMF-qualification mechanism.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -205,7 +207,7 @@ QEUQ_CB		    *qeuq_cb)
     struct		loc_name
     {
 	i2		length;
-	char		name[DB_MAXNAME];
+	char		name[DB_LOC_MAXNAME];
     };
     struct loc_name	lname;
 
@@ -465,7 +467,7 @@ QEUQ_CB		    *qeuq_cb)
     struct		loc_name
     {
 	i2		length;
-	char		name[DB_MAXNAME];
+	char		name[DB_LOC_MAXNAME];
     };
     struct loc_name	lname;
 
@@ -754,7 +756,7 @@ QEUQ_CB		    *qeuq_cb)
     struct		loc_name
     {
 	i2		length;
-	char		name[DB_MAXNAME];
+	char		name[DB_LOC_MAXNAME];
     };
     struct loc_name	lname;
 
@@ -1204,7 +1206,7 @@ qeu_qextend(
     PTR qual_loc = qparams->qeu_qparms[0];
     DU_EXTEND *ex_tuple = (DU_EXTEND *) qparams->qeu_rowaddr;
     
-    char	lname[DB_MAXNAME];	/* Buffer to normalize location name */
+    char	lname[DB_LOC_MAXNAME];	/* Buffer to normalize location name */
 
     qparams->qeu_retval = ADE_NOT_TRUE;
     if (qual_loc == NULL || ex_tuple == NULL)	    /* Bad parm; abort! */
@@ -1213,10 +1215,10 @@ qeu_qextend(
     /* Normalize location name to fixed length */
 
     MEmove(ex_tuple->du_l_length, (PTR)ex_tuple->du_lname, ' ',
-	   DB_MAXNAME, (PTR)lname);
+	   DB_LOC_MAXNAME, (PTR)lname);
 
     if	 (MEcmp(qual_loc,
-		(PTR)lname, DB_MAXNAME)
+		(PTR)lname, DB_LOC_MAXNAME)
 		== 0)
 	qparams->qeu_retval = ADE_TRUE;		/* Qualified */
 

@@ -144,6 +144,8 @@
 **	    Scrollable cursors are at GCA protocol level 67.
 **      28-jan-2009 (stial01)
 **          Use DB_MAXNAME for database objects.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -968,10 +970,10 @@ i4	fetcho, fetchn;
 	    SIprintf(ERx("PRTCSR  - Fetch: encode row count (%d)\n"), pfrows);
 	ext_id.gca_index[0] = send_id->gca_index[0];
 	ext_id.gca_index[1] = send_id->gca_index[1];
-	MEcopy(send_id->gca_name, DB_GW1_MAXNAME, ext_id.gca_name);
+	MEcopy(send_id->gca_name, DB_GW1_MAXNAME_32, ext_id.gca_name);
 	CVna(pfrows, pfrowbuf);
-	STmove(pfrowbuf, ' ', GCA_MAXNAME - DB_GW1_MAXNAME, 
-	       &ext_id.gca_name[DB_GW1_MAXNAME]);
+	STmove(pfrowbuf, ' ', GCA_MAXNAME - DB_GW1_MAXNAME_32, 
+	       &ext_id.gca_name[DB_GW1_MAXNAME_32]);
 	send_id = &ext_id;
     }
     IIqid_send( IIlbqcb, send_id );

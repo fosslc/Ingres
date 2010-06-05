@@ -64,6 +64,8 @@
 **          Security audit log fields 'sessionid' and 'objectowner' contain
 **          trailing spaces when iidbdb operations are logged. sxar_write()
 **          amended to handle these stings correctly.           
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*
@@ -512,7 +514,7 @@ sxar_write(
 	}
 	else
 	{
-	    MEfill(DB_MAXNAME, ' ', (PTR) &audit_rec.sxf_objectowner);
+	    MEfill(DB_OWN_MAXNAME, ' ', (PTR) &audit_rec.sxf_objectowner);
 	}
 
 	TMnow(&audit_rec.sxf_tm);

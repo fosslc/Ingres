@@ -34,6 +34,8 @@
 
 EXEC SQL include SQLCA;
 ## int db_maxname_hostvar = DB_MAXNAME;
+## int db_maxown_hostvar = DB_OWN_MAXNAME;
+## int db_maxloc_hostvar = DB_LOC_MAXNAME;
 
 /*
 **  Name: ducommon.qsc - createdb / convto60 shared routines
@@ -374,7 +376,11 @@ EXEC SQL include SQLCA;
 **          Rewrite duc_init_iidefault so that it can be used by both createdb
 **          and upgradedb and can be more easily updated if additional defaults
 **          become necessary.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
+**          Also, iitree.treetree should be varbyte (not varchar)
 */
+
 
 GLOBALREF	DU_ERROR	*Duc_errcb; 
 GLOBALREF DUC_CATDEF Duc_catdef[];
@@ -421,6 +427,7 @@ static		VOID		duc_v_iidd_dbconstants();
 static		VOID		duc_v_iidd_physical_tables();
 static		VOID		duc_v_iidd_registered_objects();
 static		VOID		duc_quel_create(char *catalog);
+static		VOID		duc_fix_maxname(char *b);
 #define DU_ALL			1  /* create object in all databases */
 #define DU_IIDBDB		2  /* only create object in iidbdb */
 #define DU_STAR			3  /* only create object if star db */
@@ -1753,7 +1760,7 @@ VOID
 duc_iidevices()
 {
 ##	create iidevices (devrelid=i4, devrelidx=i4, devrelocid=i4,
-##			  devloc=char(db_maxname_hostvar))
+##			  devloc=char(db_maxloc_hostvar))
 }
 
 
@@ -4426,7 +4433,7 @@ bool		upcase)
 
 	case DU_IIDBCONSTANTS:
 	{
-##              char  owner[DB_MAXNAME+1];
+##              char  owner[DB_OWN_MAXNAME+1];
 
 	    if (upcase)
 		MEmove(sizeof(ERx("$ingres")) - 1, (PTR) ERx("$INGRES"), ' ',
@@ -6045,8 +6052,6 @@ duc_create_catalog(char *catalog)
     DUC_CATDEF *catdef;
     char *fix_maxname;
     char *buf = NULL;
-    char maxbuf[20];
-    char max2buf[20];
     i4	 len;
     STATUS	memstat;
 
@@ -6067,56 +6072,60 @@ duc_create_catalog(char *catalog)
     {
 	/* MUST create with QUEL */
 	duc_quel_create(catalog);
-	return;
     }
-
-    qry = catdef->create;
-
-    /* Check for ##DB_MAXNAME or ##DB_MAXNAME*2 */
-    fix_maxname = STstrindex(qry, "##DB_MAXNAME", 0, 0);
-
-    if (fix_maxname)
+    else
     {
-	CVla((i4)DB_MAXNAME, maxbuf);
-	CVla((i4)DB_MAXNAME*2, max2buf);
-	buf = (char *) MEreqmem(0, STlength(qry) + 1, TRUE, &memstat);
-	if (!buf || memstat != OK)
-	    exit(0);
-	STcopy(qry, buf); 
 
-	for ( ; ; )
+	qry = catdef->create;
+
+	/* Check for ##DB_ constants */
+	fix_maxname = STstrindex(qry, "##DB_", 0, 0);
+
+	if (fix_maxname)
 	{
-	    fix_maxname = STstrindex(buf, "##DB_MAXNAME", 0, 0);
-	    if (!fix_maxname)
-		break;
+	    buf = (char *) MEreqmem(0, STlength(qry) + 1, TRUE, &memstat);
+	    if (!buf || memstat != OK)
+		exit(0);
+	    STcopy(qry, buf); 
 
-	    if (!MEcmp(fix_maxname, "##DB_MAXNAME##", 14))
+	    for ( ; ; )
 	    {
-		MEmove(STlength(maxbuf), maxbuf, ' ', 14, fix_maxname);
-		continue;
+		fix_maxname = STstrindex(buf, "##DB_", 0, 0);
+		if (!fix_maxname)
+		    break;
+		duc_fix_maxname(fix_maxname);
 	    }
-	    else if (!MEcmp(fix_maxname, "##DB_MAXNAME*2##", 16))
-	    {
-		MEmove(STlength(max2buf), max2buf, ' ', 16, fix_maxname);
-		continue;
-	    }
+	    qry = buf;
 	}
-	qry = buf;
-    }
 
-    if (STbcompare(qry, 8, "Register", 8, TRUE))
-    {
-	exec sql execute immediate :qry;
-	if (sqlca.sqlcode)
+	if (STbcompare(qry, 8, "Register", 8, TRUE))
 	{
-	    EXEC SQL INQUIRE_SQL(:errorno = ERRORNO, :errortext = ERRORTEXT);
-
-	    /* upgradedb may not have dropped the catalog */
-	    ensure_not_exists(catalog);
-
-	    /* try again */
 	    exec sql execute immediate :qry;
+	    if (sqlca.sqlcode)
+	    {
+		EXEC SQL INQUIRE_SQL(:errorno = ERRORNO, :errortext = ERRORTEXT);
+
+		/* upgradedb may not have dropped the catalog */
+		ensure_not_exists(catalog);
+
+		/* try again */
+		exec sql execute immediate :qry;
+	    }
 	}
+	else
+	{
+	    /*
+	    ** execute immediate REGISTER table stores query in iiqrytext
+	    ** "execute immediate register table..."
+	    ** Caller seems to check sqlcode, so we won't do it here
+	    */
+	    IIsqInit(&sqlca);
+	    IIwritio(0,(short*)0,1,32,0,qry);
+	    IIsyncup((char *)0,0);
+	}
+
+	if (buf)
+	MEfree(buf);
 
 	/*
 	** Catalog relwid should match the size of the corresponding structure
@@ -6130,33 +6139,23 @@ duc_create_catalog(char *catalog)
 	    exec sql select relwid, relpgsize, relpgtype, relatts
 		into :relwid, :relpgsize, :relpgtype, :relatts
 		from iirelation where lowercase(relid) = :catname;
-	    if (relwid > relpgsize || (catdef->size && relwid > catdef->size))
+	    if (sqlca.sqlcode != 0)
+		SIprintf("ERROR create %s failed\n", catname);
+		
+	    if (relwid > relpgsize || (catdef->size && relwid != catdef->size))
 	    {
 		/* structure my have extra bytes for alignment */
+		/* this could be a problem */
 		SIprintf("WARNING %s relwid %d (%d) pagesize %d pagetype %d\n",
 		catname, relwid, catdef->size, relpgsize, relpgtype);
 	    }
-	    if (relatts != catdef->columns)
+	    if (catdef->columns && relatts != catdef->columns)
 	    {
 		SIprintf("INTERNAL ERROR: Fix DUC_CATDEF for %s (%d %d)\n",
 			catdef->catname, catdef->columns, relatts);
 	    }
 	}
     }
-    else
-    {
-	/*
-	** execute immediate REGISTER table stores query in iiqrytext
-	** "execute immediate register table..."
-	** Caller seems to check sqlcode, so we won't do it here
-	*/
-	IIsqInit(&sqlca);
-	IIwritio(0,(short*)0,1,32,0,qry);
-	IIsyncup((char *)0,0);
-    }
-
-    if (buf)
-	MEfree(buf);
 
     return;
 }
@@ -6256,8 +6255,6 @@ duc_create_procedure(char *procedure)
     DUC_PROCDEF *procdef;
     char *fix_maxname;
     char *buf = NULL;
-    char maxbuf[20];
-    char max2buf[20];
     i4	 len;
     STATUS	memstat;
 
@@ -6276,13 +6273,11 @@ duc_create_procedure(char *procedure)
 
     qry = procdef->procdef;
 
-    /* Check for ##DB_MAXNAME or ##DB_MAXNAME*2 */
-    fix_maxname = STstrindex(qry, "##DB_MAXNAME", 0, 0);
+    /* Check for ##DB_ constants */
+    fix_maxname = STstrindex(qry, "##DB_", 0, 0);
 
     if (fix_maxname)
     {
-	CVla((i4)DB_MAXNAME, maxbuf);
-	CVla((i4)DB_MAXNAME*2, max2buf);
 	buf = (char *) MEreqmem(0, STlength(qry) + 1, TRUE, &memstat);
 	if (!buf || memstat != OK)
 	    exit(0);
@@ -6290,20 +6285,11 @@ duc_create_procedure(char *procedure)
 
 	for ( ; ; )
 	{
-	    fix_maxname = STstrindex(buf, "##DB_MAXNAME", 0, 0);
+	    fix_maxname = STstrindex(buf, "##DB_", 0, 0);
 	    if (!fix_maxname)
 		break;
 
-	    if (!MEcmp(fix_maxname, "##DB_MAXNAME##", 14))
-	    {
-		MEmove(STlength(maxbuf), maxbuf, ' ', 14, fix_maxname);
-		continue;
-	    }
-	    else if (!MEcmp(fix_maxname, "##DB_MAXNAME*2##", 16))
-	    {
-		MEmove(STlength(max2buf), max2buf, ' ', 16, fix_maxname);
-		continue;
-	    }
+	    duc_fix_maxname(fix_maxname);
 	}
 	qry = buf;
     }
@@ -6372,6 +6358,8 @@ duc_ins_capabilities(char *capabilities, char *value)
 **	out of inertia.
 ** 
 ** NOTE: some of these create statements use db_maxname_hostvar !!!
+** NOTE: some of these create statements use db_maxown_hostvar !!!
+** NOTE: some of these create statements use db_maxloc_hostvar !!!
 ** 
 ** Inputs:
 **	none
@@ -6396,7 +6384,7 @@ duc_quel_create(char *catalog)
 	if (!STcmp(catalog, "iidevices"))
 	{
 ##	create iidevices (devrelid=i4, devrelidx=i4, devrelocid=i4,
-##			  devloc=char(db_maxname_hostvar))
+##			  devloc=char(db_maxloc_hostvar))
 	}
 
 	else if (!STcmp(catalog, "iiqrytext"))
@@ -6410,7 +6398,7 @@ duc_quel_create(char *catalog)
 	{
 ##	create iitree(treetabbase=i4, treetabidx=i4,treeid1=i4, treeid2=i4, 
 ##		      treeseq=i2, treemode=i2, treevers=i2,
-##		      treetree=varchar(1024))
+##		      treetree=varbyte(1024))
 	}
 
 	else if (!STcmp(catalog, "iiprotect"))
@@ -6427,9 +6415,9 @@ duc_quel_create(char *catalog)
 ##		provalue=i4,		prodepth=i2,
 ##		probjtype=char(1),	probjstat=char(1),
 ##		probjname=char(db_maxname_hostvar),
-##		probjowner=char(db_maxname_hostvar),
-##		prograntor=char(db_maxname_hostvar),
-##		prouser=char(db_maxname_hostvar),	proterm=char(16),
+##		probjowner=char(db_maxown_hostvar),
+##		prograntor=char(db_maxown_hostvar),
+##		prouser=char(db_maxown_hostvar),	proterm=char(16),
 ##		profill3=i2,		progtype=i2,	
 ##		proseq=i4,
 ##		prodomset1=i4,          prodomset2=i4,		
@@ -6479,4 +6467,71 @@ duc_quel_create(char *catalog)
 ##			   consdelrule=i2, consupdrule=i2,
 ##                         intreserve=char(28))
 	}
+}
+
+static VOID
+duc_fix_maxname(char *b)
+{
+    char tempbuf[100];
+
+    if (!MEcmp(b, "##DB_MAXNAME##", 14))
+    {
+	CVla((i4)DB_MAXNAME, tempbuf);
+	MEmove(STlength(tempbuf), tempbuf, ' ', 14, b);
+    }
+    else if (!MEcmp(b, "##DB_OWN_MAXNAME##", 18))
+    {
+	CVla((i4)DB_OWN_MAXNAME, tempbuf);
+	MEmove(STlength(tempbuf), tempbuf, ' ', 18, b);
+    }
+    else if (!MEcmp(b, "##DB_LOC_MAXNAME##", 18))
+    {
+	CVla((i4)DB_LOC_MAXNAME, tempbuf);
+	MEmove(STlength(tempbuf), tempbuf, ' ', 18, b);
+    }
+    else if (!MEcmp(b, "##DB_DB_MAXNAME##", 17))
+    {
+	CVla((i4)DB_DB_MAXNAME, tempbuf);
+	MEmove(STlength(tempbuf), tempbuf, ' ', 17, b);
+    }
+    else if (!MEcmp(b, "##DB_CLASSID_MAXNAME##", 22))
+    {
+	CVla((i4)DB_CLASSID_MAXNAME, tempbuf);
+	MEmove(STlength(tempbuf), tempbuf, ' ', 22, b);
+    }
+    else if (!MEcmp(b, "##DB_TYPE_MAXLEN##", 18))
+    {
+	CVla((i4)DB_TYPE_MAXLEN, tempbuf);
+	MEmove(STlength(tempbuf), tempbuf, ' ', 18, b);
+    }
+    else if (!MEcmp(b, "##DB_SCHEMA_MAXNAME##", 21))
+    {
+	CVla((i4)DB_SCHEMA_MAXNAME, tempbuf);
+	MEmove(STlength(tempbuf), tempbuf, ' ', 21, b);
+    }
+    else if (!MEcmp(b, "##DB_ALARM_MAXNAME##", 20))
+    {
+	CVla((i4)DB_ALARM_MAXNAME, tempbuf);
+	MEmove(STlength(tempbuf), tempbuf, ' ', 20, b);
+    }
+    else if (!MEcmp(b, "##DB_EVENT_MAXNAME##", 20))
+    {
+	CVla((i4)DB_EVENT_MAXNAME, tempbuf);
+	MEmove(STlength(tempbuf), tempbuf, ' ', 20, b);
+    }
+    else if (!MEcmp(b, "##DB_NODE_MAXNAME##", 19))
+    {
+	CVla((i4)DB_NODE_MAXNAME, tempbuf);
+	MEmove(STlength(tempbuf), tempbuf, ' ', 19, b);
+    }
+    else if (!MEcmp(b, "##DB_COLLATION_MAXNAME##", 24))
+    {
+	CVla((i4)DB_COLLATION_MAXNAME, tempbuf);
+	MEmove(STlength(tempbuf), tempbuf, ' ', 24, b);
+    }
+    else
+    {
+	printf("unexpected format string %s\n", b);
+	exit(0);
+    }
 }

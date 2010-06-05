@@ -106,6 +106,8 @@
 **	    replace nat and longnat with i4
 **	30-mar-04 (toumi01)
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -297,7 +299,7 @@ QEF_RCB		*v_qer_p )
     link_p->qec_2_tableinfo_p = & tabinfo;
     link_p->qec_3_ldb_id = 0;			
     link_p->qec_4_col_cnt = 0;
-    MEfill(DB_MAXNAME, ' ', link_p->qec_5_ldb_alias);
+    MEfill(DB_DB_MAXNAME, ' ', link_p->qec_5_ldb_alias);
     link_p->qec_6_select_p = & sel;
     link_p->qec_7_ldbids_p = & ldbids;
     link_p->qec_8_longnames_p = & longnames;
@@ -330,7 +332,7 @@ QEF_RCB		*v_qer_p )
 		ldb_p->dd_l3_ldb_name);
 
 	len = STlength(ldb_p->dd_l3_ldb_name);
-	if (len > DB_MAXNAME)
+	if (len > DB_DB_MAXNAME)
 	    link_p->qec_10_haves |= QEC_04_LONG_LDBNAME;
 
 	ldb_p = ddl_ldb_p;
@@ -820,19 +822,13 @@ QEC_LINK	    *v_lnk_p )
     sel_p->qeq_c5_eod_b = FALSE;
     sel_p->qeq_c6_col_cnt = 0;
 
-    qed_u0_trimtail(
-		ldb_p->dd_l2_node_name,
-		(u_i4) DB_MAXNAME,
+    qed_u0_trimtail( ldb_p->dd_l2_node_name, (u_i4) DB_NODE_MAXNAME,
 		ldbids_p->d2_1_ldb_node);
-    qed_u0_trimtail(
-		ldb_p->dd_l4_dbms_name,
-		(u_i4) DB_MAXNAME,
+    qed_u0_trimtail( ldb_p->dd_l4_dbms_name, (u_i4) DB_TYPE_MAXLEN,
 		ldbids_p->d2_2_ldb_dbms);
 
     if (i_alias_b)
-	qed_u0_trimtail(
-		v_lnk_p->qec_5_ldb_alias, 
-		(u_i4) DB_MAXNAME,
+	qed_u0_trimtail( v_lnk_p->qec_5_ldb_alias, (u_i4) DB_DB_MAXNAME,
 		ldbids_p->d2_3_ldb_database);
 					    /* use alias as database name */
     else
@@ -1005,9 +1001,9 @@ QEC_LINK	    *v_lnk_p )
 
     /* 1.  set up for retrieving from IITABLES */
 
-    MEcopy(tabinfo_p->dd_t1_tab_name, DB_MAXNAME, 
+    MEcopy(tabinfo_p->dd_t1_tab_name, DB_TAB_MAXNAME, 
 	tables_p->l16_1_tab_name);
-    MEcopy(tabinfo_p->dd_t2_tab_owner, DB_MAXNAME, 
+    MEcopy(tabinfo_p->dd_t2_tab_owner, DB_OWN_MAXNAME, 
 	tables_p->l16_2_tab_owner);
 /*    if (v_qer_p->qef_r3_ddb_req.qer_d13_ctl_info & QEF_06_REG_PROC) */
     if (v_qer_p->qef_r3_ddb_req.qer_d7_ddl_info.qed_d6_tab_info_p->
@@ -1134,9 +1130,7 @@ QEC_LINK	    *v_lnk_p )
     else
     {
 	ldbids_p->d2_7_ldb_dba[0] = 'Y'; 
-	qed_u0_trimtail(
-		dbconsts.l1_2_dba_name, 
-		(u_i4) DB_MAXNAME,
+	qed_u0_trimtail( dbconsts.l1_2_dba_name, (u_i4) DB_OWN_MAXNAME,
 		ldbids_p->d2_8_ldb_dbaname);
     }
     ldbids_p->d2_7_ldb_dba[1] = EOS;	/* null terminate */

@@ -136,6 +136,8 @@
 **	    Compiler warning fixes.
 **	30-May-2009 (kiria01) SIR 121665
 **	    Update GCA API to LEVEL 5
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -552,10 +554,10 @@ ascs_initiate(SCD_SCB *scb )
 		    ** The username should be a null-terminated string.
 		    ** It seems that l_value will include the length of EOS.s
 		    */
-		    if(l_value < DB_MAXNAME)
+		    if(l_value < DB_OWN_MAXNAME)
 			tmp_value = l_value;
 		    else
-			tmp_value = DB_MAXNAME-1;
+			tmp_value = DB_OWN_MAXNAME-1;
 		    MEcopy(flag->gca_p_value.gca_value, tmp_value,
 			   scb->scb_sscb.sscb_ics.ics_eusername);
 		    break;
@@ -768,10 +770,10 @@ ascs_initiate(SCD_SCB *scb )
 		{
 		    i4  tmp_value;
 			
-		    if(l_value < DB_MAXNAME)
+		    if(l_value < DB_TYPE_MAXLEN)
 			tmp_value = l_value;
 		    else
-			tmp_value = DB_MAXNAME-1;
+			tmp_value = DB_TYPE_MAXLEN-1;
 		    MEcopy(flag->gca_p_value.gca_value, tmp_value,
 			   scb->scb_sscb.sscb_ics.ics_tz_name);
 		    scb->scb_sscb.sscb_ics.ics_tz_name[tmp_value] = EOS;
@@ -906,12 +908,12 @@ ascs_initiate(SCD_SCB *scb )
                  case    GCA_DATE_ALIAS:
                  {
                           i4  tmp_value;
-                          char  tmp_chars[DB_MAXNAME];
+                          char  tmp_chars[DB_TYPE_MAXLEN];
 
-                     if(l_value < DB_MAXNAME)
+                     if(l_value < DB_TYPE_MAXLEN)
                          tmp_value = l_value;
                      else
-                         tmp_value = DB_MAXNAME-1;
+                         tmp_value = DB_TYPE_MAXLEN-1;
 
                      MEcopy(flag->gca_p_value.gca_value, tmp_value, tmp_chars);
                      tmp_chars[tmp_value] = EOS;

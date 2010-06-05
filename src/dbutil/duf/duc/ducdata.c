@@ -52,6 +52,8 @@
 **	16-Nov-2009 (kschendel) SIR 122890
 **	    Remove NODUPLICATES from any catalogs with unique keys already.
 **	    It's redundant and key-uniqueness suffices.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /* ducommon.qsc */
@@ -74,6 +76,17 @@ GLOBALDEF DU_STARCB     Duc_star_cb;
 ** NOTE about Duc_catdef
 ** 
 ** - Names should be defined with ##DB_MAXNAME##
+**
+**   DB_DB_MAXNAME	database 
+**   DB_LOC_MAXNAME	location 
+**   DB_OWN_MAXNAME	owner (and role)
+**   DB_SCHEMA_MAXNAME  schema
+**   DB_EVENT_MAXNAME	event
+**   DB_ALARM_MAXNAME	alarm
+**   DB_NODE_MAXNAME	node
+**
+** - The following are not names
+**   DB_TYPE_MAXLEN	
 **
 ** - Watch out for fields defined as char(32) that should NOT be changed
 **   to ##DB_MAXNAME##, e.g. reserved fields
@@ -147,7 +160,7 @@ NULL  /* index 2 */
 },
 
 {
-0,
+sizeof(DB_DBCAPABILITIES),
 "iidbcapabilities",
 2, /* number of columns */
 "CREATE TABLE iidbcapabilities("
@@ -216,10 +229,10 @@ NULL  /* index 2 */
 },
 
 {
-0,
+0, /* iidevices is DMP_DEVICE in back!dmf!hdr dmp.h */
 "iidevices",
 4, /* number of columns */
-NULL, /* MUST create with QUEL */
+NULL, /* MUST create with QUEL in duc_quel_create() */
 "MODIFY iidevices to hash on devrelid, devrelidx",
 NULL, /* index 1 */
 NULL  /* index 2 */
@@ -283,8 +296,8 @@ sizeof(DB_IIEVENT),
 "iievent",
 9, /* number of columns */
 "CREATE TABLE iievent("
-" event_name char(##DB_MAXNAME##) not null default ' ',"
-" event_owner char(##DB_MAXNAME##) not null default ' ',"
+" event_name char(##DB_EVENT_MAXNAME##) not null default ' ',"
+" event_owner char(##DB_OWN_MAXNAME##) not null default ' ',"
 " event_create ingresdate not null default ' ',"
 " event_type integer not null default 0,"
 " event_idbase integer not null default 0,"
@@ -300,7 +313,7 @@ NULL  /* index 2 */
 },
 
 {
-0,
+0,  /* DMP_ETAB_CATALOG in back!dmf!hdr dmp.h */
 "iiextended_relation",
 5, /* number of columns */
 "CREATE TABLE iiextended_relation("
@@ -315,6 +328,7 @@ NULL, /* index 1 */
 NULL  /* index 2 */
 },
 
+/* iigw06_attribute is GWSXA_XATT in back!gwf!gwfsxa gwfsxa.h  */
 {
 0,
 "iigw06_attribute",
@@ -323,8 +337,8 @@ NULL  /* index 2 */
 " reltid integer not null,"
 " reltidx integer not null,"
 " attid smallint not null,"
-" attname char(##DB_MAXNAME##) not null,"
 " auditid smallint not null,"
+" attname char(##DB_MAXNAME##) not null,"
 " auditname char(##DB_MAXNAME##) not null)"
 " with noduplicates",
 "MODIFY iigw06_attribute to hash on reltid, reltidx",
@@ -332,6 +346,7 @@ NULL, /* index 1 */
 NULL  /* index 2 */
 },
 
+/* iigw06_relation is GWSXA_XREL in back!gwf!gwfsxa gwfsxa.h  */
 {
 0,
 "iigw06_relation",
@@ -367,7 +382,7 @@ NULL  /* index 2 */
 0,
 "iiintegrity",
 52, /* number of columns */
-NULL, /* MUST create with QUEL */
+NULL, /* MUST create with QUEL in duc_quel_create() */
 "MODIFY iiintegrity to hash on inttabbase, inttabidx where minpages = 8",
 "CREATE INDEX iiintegrityidx on iiintegrity "
 " (consschema_id1, consschema_id2, consname) "
@@ -420,7 +435,7 @@ sizeof(DB_IIPRIV),
 " i_obj_id integer not null default 0,"
 " i_obj_idx integer not null default 0,"
 " i_priv integer not null default 0,"
-" i_priv_grantee char(##DB_MAXNAME##) not null default ' ',"
+" i_priv_grantee char(##DB_OWN_MAXNAME##) not null default ' ',"
 " prv_flags integer not null default 0,"
 " i_priv_map1 integer not null default 0,"
 " i_priv_map2 integer not null default 0,"
@@ -464,12 +479,14 @@ NULL  /* index 2 */
 },
 
 {
-/* FIX ME iiprivlist */
+/* Note iiprivlist, these are listed in psluser.c, but are strings
+*  The longest string we put in iiprivlist is "maintain locations"
+*/
 0,
 "iiprivlist",
 1, /* number of columns */
 "CREATE TABLE iiprivlist("
-" privname char(##DB_MAXNAME##) not null not default)"
+" privname char(32) not null not default)"
 " with duplicates",
 NULL, /* MODIFY */
 NULL, /* index 1 */
@@ -483,7 +500,7 @@ sizeof(DB_PROCEDURE),
 18, /* number of columns */
 "CREATE TABLE iiprocedure("
 " dbp_name char(##DB_MAXNAME##) not null default ' ',"
-" dbp_owner char(##DB_MAXNAME##) not null default ' ',"
+" dbp_owner char(##DB_OWN_MAXNAME##) not null default ' ',"
 " dbp_txtlen integer not null default 0,"
 " dbp_txtid1 integer not null default 0,"
 " dbp_txtid2 integer not null default 0,"
@@ -533,10 +550,11 @@ NULL  /* index 2 */
 },
 
 {
-0,
+/* iiprotect is DB_PROTECTION in back!hdr!hdr dbdbms.h */
+sizeof(DB_PROTECTION),
 "iiprotect",
 62, /* number of columns */
-NULL, /* MUST create with QUEL */
+NULL, /* MUST create with QUEL in duc_quel_create() */
 "MODIFY iiprotect to btree on protabbase, protabidx with fillfactor=100",
 NULL, /* index 1 */
 NULL  /* index 2 */
@@ -546,7 +564,7 @@ NULL  /* index 2 */
 0,
 "iiqrytext",
 6, /* number of columns */
-NULL, /* MUST create with QUEL */
+NULL, /* MUST create with QUEL in duc_quel_craete() */
 "MODIFY iiqrytext to btree on txtid1, txtid2, mode, seq with fillfactor=100",
 NULL, /* index 1 */
 NULL  /* index 2 */
@@ -585,7 +603,7 @@ sizeof(DB_IIRULE),
 53, /* number of columns */
 "CREATE TABLE iirule("
 " rule_name char(##DB_MAXNAME##) not null default ' ',"
-" rule_owner char(##DB_MAXNAME##) not null default ' ',"
+" rule_owner char(##DB_OWN_MAXNAME##) not null default ' ',"
 " rule_type smallint not null default 0,"
 " rule_flags smallint not null default 0,"
 " rule_tabbase integer not null default 0,"
@@ -596,7 +614,7 @@ sizeof(DB_IIRULE),
 " rule_treeid2 integer not null default 0,"
 " rule_statement integer not null default 0,"
 " rule_dbp_name char(##DB_MAXNAME##) not null default ' ',"
-" rule_dbp_owner char(##DB_MAXNAME##) not null default ' ',"
+" rule_dbp_owner char(##DB_OWN_MAXNAME##) not null default ' ',"
 " rule_time_date ingresdate not null default ' ',"
 " rule_time_int ingresdate not null default ' ',"
 " rule_col1 integer not null default 0,"
@@ -651,8 +669,8 @@ sizeof(DB_IISCHEMA),
 "iischema",
 4, /* number of columns */
 "CREATE TABLE iischema("
-" schema_name char(##DB_MAXNAME##) not null,"
-" schema_owner char(##DB_MAXNAME##) not null,"
+" schema_name char(##DB_SCHEMA_MAXNAME##) not null,"
+" schema_owner char(##DB_OWN_MAXNAME##) not null,"
 " schema_id integer not null,"
 " schema_idx integer not null)"
 " with duplicates",
@@ -664,18 +682,19 @@ NULL  /* index 2 */
 
 {
 /* iisecalarm catalog is DB_SECALARM in back!hdr!hdr dbdbms.h */
+/* subj_name is DB_OWN_NAME */
 sizeof(DB_SECALARM),
 "iisecalarm",
 19, /* number of columns */
 "CREATE TABLE iisecalarm("
-" alarm_name char(##DB_MAXNAME##) not null default ' ',"
+" alarm_name char(##DB_ALARM_MAXNAME##) not null default ' ',"
 " alarm_num integer not null default 0,"
 " obj_id1 integer not null default 0,"
 " obj_id2 integer not null default 0,"
 " obj_name char(##DB_MAXNAME##) not null default ' ',"
 " obj_type char(1) not null default ' ',"
 " subj_type i1 not null default 0,"
-" subj_name char(##DB_MAXNAME##) not null default ' ',"
+" subj_name char(##DB_OWN_MAXNAME##) not null default ' ',"
 " alarm_flags smallint not null default 0,"
 " alarm_txtid1 integer not null default 0,"
 " alarm_txtid2 integer not null default 0,"
@@ -700,7 +719,7 @@ NULL  /* index 2 */
 5, /* number of columns */
 "CREATE TABLE iisectype("
 " sec_type c16,"
-" sec_name c##DB_MAXNAME##,"
+" sec_name c##DB_TYPE_MAXLEN##,"
 " sec_typenum smallint,"
 " sec_namenum smallint,"
 " sec_index smallint)"
@@ -717,7 +736,7 @@ sizeof(DB_IISEQUENCE),
 22, /* number of columns */
 "CREATE TABLE iisequence("
 " seq_name char(##DB_MAXNAME##) not null default ' ',"
-" seq_owner char(##DB_MAXNAME##) not null default ' ',"
+" seq_owner char(##DB_OWN_MAXNAME##) not null default ' ',"
 " seq_create ingresdate not null default ' ',"
 " seq_MODIFY ingresdate not null default ' ',"
 " seq_idbase integer not null default 0,"
@@ -770,13 +789,12 @@ NULL  /* index 2 */
 
 {
 /* iisynonym catalog is DB_IISYNONYM in back!hdr!hdr dbdbms.h */
-/* NOTE!! DB_SYN_MAXNAME is the size of syn name, owner NOT DB_MAXNAME */
 sizeof(DB_IISYNONYM),
 "iisynonym",
 6, /* number of columns */
 "CREATE TABLE iisynonym("
 " synonym_name char(##DB_MAXNAME##) not null,"
-" synonym_owner char(##DB_MAXNAME##) not null,"
+" synonym_owner char(##DB_OWN_MAXNAME##) not null,"
 " syntabbase integer not null,"
 " syntabidx integer not null,"
 " synid integer not null,"
@@ -792,7 +810,7 @@ NULL  /* index 2 */
 0,
 "iitree",
 8, /* number of columns */
-NULL, /* MUST create with QUEL */
+NULL, /* MUST create with QUEL in duc_quel_create() */
 "MODIFY iitree to btree on treetabbase, treetabidx, treemode, treeseq"
 " with fillfactor = 100, compression = (data)",
 NULL, /* index 1 */
@@ -807,18 +825,18 @@ sizeof(DU_DATABASE),
 "iidatabase",
 13, /* number of columns */
 "CREATE TABLE iidatabase("
-" name char(##DB_MAXNAME##) not null default ' ',"
-" own char(##DB_MAXNAME##) not null default ' ',"
-" dbdev char(##DB_MAXNAME##) not null default ' ',"
-" ckpdev char(##DB_MAXNAME##) not null default ' ',"
-" jnldev char(##DB_MAXNAME##) not null default ' ',"
-" sortdev char(##DB_MAXNAME##) not null default ' ',"
+" name char(##DB_DB_MAXNAME##) not null default ' ',"
+" own char(##DB_OWN_MAXNAME##) not null default ' ',"
+" dbdev char(##DB_LOC_MAXNAME##) not null default ' ',"
+" ckpdev char(##DB_LOC_MAXNAME##) not null default ' ',"
+" jnldev char(##DB_LOC_MAXNAME##) not null default ' ',"
+" sortdev char(##DB_LOC_MAXNAME##) not null default ' ',"
 " access integer not null default 0,"
 " dbservice integer not null default 0,"
 " dbcmptlvl integer not null default ' ',"
 " dbcmptminor integer not null default 0,"
 " db_id integer not null default 0,"
-" dmpdev char(##DB_MAXNAME##) not null default ' ',"
+" dmpdev char(##DB_LOC_MAXNAME##) not null default ' ',"
 " dbfree char(8) not null default ' ')",
 "MODIFY iidatabase to hash unique on name where minpages = 5",
 "CREATE unique index iidbid_idx on iidatabase (db_id) with structure = hash",
@@ -827,12 +845,13 @@ NULL /* index 2 */
 
 {
 /* iidbpriv is DB_PRIVILEGES in back!hdr!hdr dbdbms.h */
+/* grantee is DB_OWN_NAME  */
 sizeof(DB_PRIVILEGES),
 "iidbpriv",
 15, /* number of columns */
 "CREATE TABLE iidbpriv("
-" dbname char(##DB_MAXNAME##) not null default ' ',"
-" grantee char(##DB_MAXNAME##) not null default ' ',"
+" dbname char(##DB_DB_MAXNAME##) not null default ' ',"
+" grantee char(##DB_OWN_MAXNAME##) not null default ' ',"
 " gtype smallint not null default 0,"
 " dbflags smallint not null default 0,"
 " control integer not null default 0,"
@@ -862,8 +881,8 @@ sizeof(DD_NETCOST),
 "iiddb_netcost",
 5, /* number of columns */
 "CREATE TABLE iiddb_netcost("
-" net_src char(##DB_MAXNAME##) not null default ' ',"
-" net_dest char(##DB_MAXNAME##) not null default ' ',"
+" net_src char(##DB_NODE_MAXNAME##) not null default ' ',"
+" net_dest char(##DB_NODE_MAXNAME##) not null default ' ',"
 " net_cost float not null default 0,"
 " net_exp1 float not null default 0,"
 " net_exp2 float not null default 0)"
@@ -879,7 +898,7 @@ sizeof(DD_COSTS),
 "iiddb_nodecosts",
 11, /* number of columns */
 "CREATE TABLE iiddb_nodecosts("
-" cpu_name char(##DB_MAXNAME##) not null default ' ',"
+" cpu_name char(##DB_NODE_MAXNAME##) not null default ' ',"
 " cpu_cost float not null default 0,"
 " dio_cost float not null default 0,"
 " create_cost float not null default 0,"
@@ -887,7 +906,7 @@ sizeof(DD_COSTS),
 " block_read integer not null default 0,"
 " sort_size integer not null default 0,"
 " cache_size integer not null default 0,"
-" cpu_exp0 integer not null default 0,"
+" cpu_exp0 float not null default 0,"
 " cpu_exp1 float not null default 0,"
 " cpu_exp2 float not null default 0)"
 " with noduplicates",
@@ -902,8 +921,8 @@ sizeof(DU_EXTEND),
 "iiextend",
 5, /* number of columns */
 "CREATE TABLE iiextend("
-" lname varchar(##DB_MAXNAME##) not null default ' ',"
-" dname varchar(##DB_MAXNAME##) not null default ' ',"
+" lname varchar(##DB_LOC_MAXNAME##) not null default ' ',"
+" dname varchar(##DB_DB_MAXNAME##) not null default ' ',"
 " status integer not null default 0,"
 " rawstart integer not null default 0,"
 " rawblocks integer not null default 0)"
@@ -922,7 +941,7 @@ NULL  /* index 2 */
 " tblid integer not null not default,"
 " tblidx integer not null not default,"
 " attnum smallint not null not default,"
-" classid char(##DB_MAXNAME*2##) not null not default)"
+" classid char(##DB_CLASSID_MAXNAME##) not null not default)"
 " with duplicates",
 "MODIFY iigw07_attribute to btree on tblid, tblidx, attnum",
 NULL, /* index 1 */
@@ -938,7 +957,7 @@ NULL  /* index 2 */
 " tblid integer not null not default,"
 " tblidx integer not null not default,"
 " attnum smallint not null not default,"
-" classid char(##DB_MAXNAME*2##) not null not default)"
+" classid char(##DB_CLASSID_MAXNAME##) not null not default)"
 " with duplicates",
 "MODIFY iigw07_index to btree on tblid, tblidx, attnum",
 NULL, /* index 1 */
@@ -966,7 +985,7 @@ sizeof(DU_LOCATIONS),
 5, /* number of columns */
 "CREATE TABLE iilocations("
 " status integer not null default 0,"
-" lname varchar(##DB_MAXNAME##) not null default ' ',"
+" lname varchar(##DB_LOC_MAXNAME##) not null default ' ',"
 " area varchar(128) not null default ' ',"
 " free char(8) not null default ' ',"
 " rawpct integer not null default 0)",
@@ -977,13 +996,14 @@ NULL  /* index 2 */
 
 {
 /* iiprofile is DU_PROFILE in common!hdr!hdr dudbms.qsh */
+/* name and default_group are DB_OWN_NAME */
 sizeof(DU_PROFILE),
 "iiprofile",
 7, /* number of columns */
 "CREATE TABLE iiprofile("
-" name char(##DB_MAXNAME##) not null default ' ',"
+" name char(##DB_OWN_MAXNAME##) not null default ' ',"
 " status integer not null default 0,"
-" default_group char(##DB_MAXNAME##) not null default ' ',"
+" default_group char(##DB_OWN_MAXNAME##) not null default ' ',"
 " reserve char(8) not null default ' ',"
 " default_priv integer not null default 0,"
 " expire_date ingresdate not null default ' ',"
@@ -999,7 +1019,7 @@ sizeof(DB_APPLICATION_ID),
 "iirole",
 6, /* number of columns */
 "CREATE TABLE iirole("
-" roleid char(##DB_MAXNAME##) not null default ' ',"
+" roleid char(##DB_OWN_MAXNAME##) not null default ' ',"
 " rolepass char(24) not null default ' ',"
 " reserve1 char(16) not null default ' ',"
 " rolestatus integer not null default 0,"
@@ -1012,15 +1032,16 @@ NULL  /* index 2 */
 
 {
 /* iirolegrant is DB_ROLEGRANT in back!hdr!hdr dbdbms.h */
+/* grantee is DB_OWN_NAME */
 sizeof(DB_ROLEGRANT),
 "iirolegrant",
 5, /* number of columns */
 "CREATE TABLE iirolegrant("
-" rgr_rolename char(##DB_MAXNAME##) not null default ' ',"
+" rgr_rolename char(##DB_OWN_MAXNAME##) not null default ' ',"
 " rgr_flags integer not null default 0,"
 " rgr_gtype smallint not null default 0,"
-" rgr_grantee char(##DB_MAXNAME##) not null default ' ',"
-" rgr_reserve char(32) not null default ' ')",
+" rgr_grantee char(##DB_OWN_MAXNAME##) not null default ' ',"
+" rgr_reserve char(34) not null default ' ')",
 "MODIFY iirolegrant to btree unique on rgr_grantee, rgr_rolename",
 NULL, /* index 1 */
 NULL  /* index 2 */
@@ -1042,18 +1063,18 @@ NULL  /* index 2 */
 },
 
 {
-/* iistar_cdbs is TPC_I1_STARCDBS in back!tpf!hdr tpfcat.h  (TPC_32C_PLUS1) */
+/* iistar_cdbs is TPC_I1_STARCDBS in back!tpf!hdr tpfcat.h  */
 0,
 "iistar_cdbs",
 11, /* number of columns */
 "CREATE TABLE iistar_cdbs("
-" ddb_name char(##DB_MAXNAME##) not null default ' ',"
-" ddb_owner char(##DB_MAXNAME##) not null default ' ',"
-" cdb_name char(##DB_MAXNAME##) not null default ' ',"
-" cdb_owner char(##DB_MAXNAME##) not null default ' ',"
-" cdb_node char(##DB_MAXNAME##) not null default ' ',"
-" cdb_dbms char(##DB_MAXNAME##) not null default ' ',"
-" scheme_desc char(##DB_MAXNAME##) not null default ' ',"
+" ddb_name char(##DB_DB_MAXNAME##) not null default ' ',"
+" ddb_owner char(##DB_OWN_MAXNAME##) not null default ' ',"
+" cdb_name char(##DB_DB_MAXNAME##) not null default ' ',"
+" cdb_owner char(##DB_OWN_MAXNAME##) not null default ' ',"
+" cdb_node char(##DB_NODE_MAXNAME##) not null default ' ',"
+" cdb_dbms char(##DB_TYPE_MAXLEN##) not null default ' ',"
+" scheme_desc char(##DB_SCHEMA_MAXNAME##) not null default ' ',"
 " create_date char(25) not null default ' ',"
 " original char(8) not null default ' ',"
 " cdb_id integer not null default 0,"
@@ -1066,18 +1087,19 @@ NULL  /* index 2 */
 
 {
 /* iiuser is DU_USER in common!hdr!hdr dudbms.qsh */
+/* name and default group are DB_OWN_NAME */
 sizeof(DU_USER),
 "iiuser",
 12, /* number of columns */
 "CREATE TABLE iiuser("
-" name char(##DB_MAXNAME##) not null default ' ',"
+" name char(##DB_OWN_MAXNAME##) not null default ' ',"
 " gid smallint not null default 0,"
 " mid smallint not null default 0,"
 " status integer not null default 0,"
-" default_group char(##DB_MAXNAME##) not null default ' ',"
+" default_group char(##DB_OWN_MAXNAME##) not null default ' ',"
 " password char(24) not null default ' ',"
 " reserve char(8) not null default ' ',"
-" profile_name char(##DB_MAXNAME##) not null default ' ',"
+" profile_name char(##DB_OWN_MAXNAME##) not null default ' ',"
 " default_priv integer not null default 0,"
 " expire_date ingresdate not null default ' ',"
 " flags_mask integer not null default 0,"
@@ -1089,26 +1111,37 @@ NULL  /* index 2 */
 
 {
 /* iiusergroup is DB_USERGROUP in back!hdr!hdr dbdbms.h */
+/* groupid and groupmem are DB_OWN_NAME */
 sizeof(DB_USERGROUP),
 "iiusergroup",
 3, /* number of columns */
 "CREATE TABLE iiusergroup("
-" groupid char(##DB_MAXNAME##) not null default ' ',"
-" groupmem char(##DB_MAXNAME##) not null default ' ',"
+" groupid char(##DB_OWN_MAXNAME##) not null default ' ',"
+" groupmem char(##DB_OWN_MAXNAME##) not null default ' ',"
 " reserve char(32) not null default ' ')",
 "MODIFY iiusergroup to btree unique on groupid, groupmem",
 NULL, /* index 1 */
 NULL  /* index 2 */
 },
 
-    /* Below are tables created only in a STAR database */
+/*
+** Below are tables created only in a STAR database
+** Structures in:
+** back!tpf!hdr tpfcat.h
+** back!qef!hdr!qefcat.h
+** are used when selecting from star catalogs
+** The structures do not map to row images. 
+** Instead they are defined to hold host variable data, 
+** chars in these structs are sizeof(column) + 1 for null
+*/
+    
 {
-0,
+0, /* iidd_alt_columns QEC_L2_ALT_COLUMNS in back!qef!hdr qefcat.h */
 "iidd_alt_columns",
 5, /* number of columns */
 "CREATE TABLE iidd_alt_columns("
 " table_name char(##DB_MAXNAME##) not null default ' ',"
-" table_owner char(##DB_MAXNAME##) not null default ' ',"
+" table_owner char(##DB_OWN_MAXNAME##) not null default ' ',"
 " key_id integer not null default 0,"
 " column_name char(##DB_MAXNAME##) not null default ' ',"
 " key_sequence smallint not null default 0)"
@@ -1119,14 +1152,14 @@ NULL, /* index 2 */
 },
 
 {
-0,
+0, /* iidd_columns is QEC_L3_COLUMNS in back!qef!hdr qefcat.h */
 "iidd_columns",
 12, /* number of columns */
 "CREATE TABLE iidd_columns("
 " table_name char(##DB_MAXNAME##) not null default ' ',"
-" table_owner char(##DB_MAXNAME##) not null default ' ',"
+" table_owner char(##DB_OWN_MAXNAME##) not null default ' ',"
 " column_name char(##DB_MAXNAME##) not null default ' ',"
-" column_datatype char(##DB_MAXNAME##) not null default ' ',"
+" column_datatype char(##DB_TYPE_MAXLEN##) not null default ' ',"
 " column_length integer not null default 0,"
 " column_scale smallint not null default 0,"
 " column_nulls char(8) not null default ' ',"
@@ -1142,7 +1175,7 @@ NULL, /* index 2 */
 },
 
 {
-0,
+0, /* iidd_dbcapabilities is QEC_L4_DBCAPABILITIES in back!qef!hdr qefcat.h */
 "iidd_dbcapabilities",
 2, /* number of columns */
 "CREATE TABLE iidd_dbcapabilities("
@@ -1155,7 +1188,7 @@ NULL, /* index 2 */
 },
 
 {
-0,
+0, /* iidd_ddb_dbdepends is QEC_D1_DBDEPENDS in back!qef!hdr qefcat.h */
 "iidd_ddb_dbdepends",
 7, /* number of columns */
 "CREATE TABLE iidd_ddb_dbdepends("
@@ -1173,21 +1206,20 @@ NULL, /* index 2 */
 },
 
 {
-/* iidd_ddb_dxldbs is TPC_D2_DXLDBS in back!tpf!hdr tpfcat.h (TPC_32C_PLUS1) */
-0,
+0, /* iidd_ddb_dxldbs is TPC_D2_DXLDBS in back!tpf!hdr tpfcat.h */
 "iidd_ddb_dxldbs",
 11, /* number of columns */
 "CREATE TABLE iidd_ddb_dxldbs("
 " ldb_dxid1 integer not null not default,"
 " ldb_dxid2 integer not null not default,"
-" ldb_node char(##DB_MAXNAME##) not null not default,"
+" ldb_node char(##DB_NODE_MAXNAME##) not null not default,"
 " ldb_name char(256) not null not default,"
-" ldb_dbms char(##DB_MAXNAME##) not null not default,"
+" ldb_dbms char(##DB_TYPE_MAXLEN##) not null not default,"
 " ldb_id integer not null not default,"
 " ldb_lxstate integer not null not default,"
 " ldb_lxid1 integer not null not default,"
 " ldb_lxid2 integer not null not default,"
-" ldb_lxname char(##DB_MAXNAME##) not null not default,"
+" ldb_lxname char(##DB_DB_MAXNAME##) not null not default,"
 " ldb_lxflags integer not null not default)"
 " with noduplicates",
 "MODIFY iidd_ddb_dxldbs to heap",
@@ -1196,23 +1228,23 @@ NULL
 },
 
 {
-/* iidd_ddb_dxlog is TPC_D1_DXLOG in back!tpf!hdr tpfcat.h (TPC_32C_PLUS1) */
+/* iidd_ddb_dxlog is TPC_D1_DXLOG in back!tpf!hdr tpfcat.h */
 0,
 "iidd_ddb_dxlog",
 13, /* number of columns */
 "CREATE TABLE iidd_ddb_dxlog("
 " dx_id1 integer not null not default,"
 " dx_id2 integer not null not default,"
-" dx_name char(##DB_MAXNAME##) not null not default,"
+" dx_name char(##DB_DB_MAXNAME##) not null not default,"
 " dx_flags integer not null not default,"
 " dx_state integer not null not default,"
 " dx_create char(25) not null not default,"
 " dx_MODIFY char(25) not null not default,"
 " dx_starid1 integer not null not default,"
 " dx_starid2 integer not null not default,"
-" dx_ddb_node char(##DB_MAXNAME##) not null not default,"
+" dx_ddb_node char(##DB_NODE_MAXNAME##) not null not default,"
 " dx_ddb_name char(256) not null not default,"
-" dx_ddb_dbms char(##DB_MAXNAME##) not null not default,"
+" dx_ddb_dbms char(##DB_TYPE_MAXLEN##) not null not default,"
 " dx_ddb_id integer not null not default)"
 " with noduplicates",
 "MODIFY iidd_ddb_dxlog to heap",
@@ -1257,14 +1289,14 @@ NULL
 "iidd_ddb_ldbids",
 8, /* number of columns */
 "CREATE TABLE iidd_ddb_ldbids("
-" ldb_node char(##DB_MAXNAME##) not null default ' ',"
-" ldb_dbms char(##DB_MAXNAME##) not null default ' ',"
-" ldb_database char(##DB_MAXNAME##) not null default ' ',"
+" ldb_node char(##DB_NODE_MAXNAME##) not null default ' ',"
+" ldb_dbms char(##DB_TYPE_MAXLEN##) not null default ' ',"
+" ldb_database char(##DB_DB_MAXNAME##) not null default ' ',"
 " ldb_longname char(8) not null default ' ',"
 " ldb_id integer not null default 0,"
 " ldb_user char(8) not null default ' ',"
 " ldb_dba char(8) not null default ' ',"
-" ldb_dbaname char(##DB_MAXNAME##) not null default ' ')"
+" ldb_dbaname char(##DB_OWN_MAXNAME##) not null default ' ')"
 " with noduplicates",
 "MODIFY iidd_ddb_ldbids to hash on ldb_node, ldb_dbms, ldb_database",
 NULL,
@@ -1278,7 +1310,7 @@ NULL
 "CREATE TABLE iidd_ddb_long_ldbnames("
 " long_ldbname char(256) not null default ' ',"
 " ldb_id integer not null default 0,"
-" long_alias char(##DB_MAXNAME##) not null default ' ')"
+" long_alias char(##DB_DB_MAXNAME##) not null default ' ')"
 " with noduplicates",
 "MODIFY iidd_ddb_long_ldbnames to hash on long_ldbname, ldb_id",
 NULL,
@@ -1298,12 +1330,12 @@ NULL
 },
 
 {
-0,
+0, /* back!qef!hdr qefcat.h QEC_D6_OBJECTS */
 "iidd_ddb_objects",
 12, /* number of columns */
 "CREATE TABLE iidd_ddb_objects("
 " object_name char(##DB_MAXNAME##) not null default ' ',"
-" object_owner char(##DB_MAXNAME##) not null default ' ',"
+" object_owner char(##DB_OWN_MAXNAME##) not null default ' ',"
 " object_base integer not null default 0,"
 " object_index integer not null default 0,"
 " qid1 integer not null default 0,"
@@ -1321,7 +1353,7 @@ NULL,
 },
 
 {
-0,
+0, /* iidd_ddb_tableinfo is QEC_D9_TABLEINFO in back!qef!hdr qefcat.h */
 "iidd_ddb_tableinfo",
 11, /* number of columns */
 "CREATE TABLE iidd_ddb_tableinfo("
@@ -1329,7 +1361,7 @@ NULL,
 " object_index integer not null default 0,"
 " local_type char(8) not null default ' ',"
 " table_name char(##DB_MAXNAME##) not null default ' ',"
-" table_owner char(##DB_MAXNAME##) not null default ' ',"
+" table_owner char(##DB_OWN_MAXNAME##) not null default ' ',"
 " table_date char(25) not null default ' ',"
 " table_alter char(25) not null default ' ',"
 " table_relstamp1 integer not null default 0,"
@@ -1343,7 +1375,7 @@ NULL
 },
 
 {
-0,
+0, /* iidd_ddb_tree is QEC_D10_TREE in back!qef!hdr qefcat.h */
 "iidd_ddb_tree",
 8, /* number of columns */
 "CREATE TABLE iidd_ddb_tree("
@@ -1362,12 +1394,12 @@ NULL
 },
 
 {
-0,
+0, /* iidd_histograms is QEC_L5_HISTOGRAMS in back!qef!hdr qefcat.h */
 "iidd_histograms",
 5, /* number of columns */
 "CREATE TABLE iidd_histograms("
 " table_name char(##DB_MAXNAME##) not null default ' ',"
-" table_owner char(##DB_MAXNAME##) not null default ' ',"
+" table_owner char(##DB_OWN_MAXNAME##) not null default ' ',"
 " column_name char(##DB_MAXNAME##) not null default ' ',"
 " text_sequence smallint not null default 0,"
 " text_segment char(228) not null default ' ')"
@@ -1378,12 +1410,12 @@ NULL
 },
 
 {
-0,
+0,  /* iidd_index_columns is QEC_L7_INDEX_COLUMNS in back!qef!hdr qefcat.h */
 "iidd_index_columns",
 5, /* number of columns */
 "CREATE TABLE iidd_index_columns("
 " index_name char(##DB_MAXNAME##) not null default ' ',"
-" index_owner char(##DB_MAXNAME##) not null default ' ',"
+" index_owner char(##DB_OWN_MAXNAME##) not null default ' ',"
 " column_name char(##DB_MAXNAME##) not null default ' ',"
 " key_sequence smallint not null default 0,"
 " sort_direction char(8) not null default ' ')"
@@ -1394,15 +1426,15 @@ NULL
 },
 
 {
-0,
+0, /* iidd_indexes is QEC_L6_INDEXES in back!qef!hdr qefcat.h */
 "iidd_indexes",
 9, /* number of columns */
 "CREATE TABLE iidd_indexes("
 " index_name char(##DB_MAXNAME##) not null default ' ',"
-" index_owner char(##DB_MAXNAME##) not null default ' ',"
+" index_owner char(##DB_OWN_MAXNAME##) not null default ' ',"
 " create_date char(25) not null default ' ',"
 " base_name char(##DB_MAXNAME##) not null default ' ',"
-" base_owner char(##DB_MAXNAME##) not null default ' ',"
+" base_owner char(##DB_OWN_MAXNAME##) not null default ' ',"
 " storage_structure char(16) not null default ' ',"
 " is_compressed char(8) not null default ' ',"
 " unique_rule char(8) not null default ' ',"
@@ -1419,7 +1451,7 @@ NULL
 6, /* number of columns */
 "CREATE TABLE iidd_integrities("
 " table_name char(##DB_MAXNAME##) not null default ' ',"
-" table_owner char(##DB_MAXNAME##) not null default ' ',"
+" table_owner char(##DB_OWN_MAXNAME##) not null default ' ',"
 " create_date char(25) not null default ' ',"
 " integrity_number smallint not null default 0,"
 " text_sequence smallint not null default 0,"
@@ -1436,9 +1468,9 @@ NULL
 4, /* number of columns */
 "CREATE TABLE iidd_multi_locations("
 " table_name char(##DB_MAXNAME##) not null default ' ',"
-" table_owner char(##DB_MAXNAME##) not null default ' ',"
+" table_owner char(##DB_OWN_MAXNAME##) not null default ' ',"
 " loc_sequence smallint not null default 0,"
-" location_name char(##DB_MAXNAME##) not null default ' ')"
+" location_name char(##DB_LOC_MAXNAME##) not null default ' ')"
 " with noduplicates",
 "MODIFY iidd_multi_locations to hash on table_name, table_owner",
 NULL,
@@ -1451,10 +1483,10 @@ NULL
 8, /* number of columns */
 "CREATE TABLE iidd_permits("
 " object_name char(##DB_MAXNAME##) not null default ' ',"
-" object_owner char(##DB_MAXNAME##) not null default ' ',"
+" object_owner char(##DB_OWN_MAXNAME##) not null default ' ',"
 " object_type char(8) not null default ' ',"
 " create_date char(25) not null default ' ',"
-" permit_user char(##DB_MAXNAME##) not null default ' ',"
+" permit_user char(##DB_OWN_MAXNAME##) not null default ' ',"
 " permit_number smallint not null default 0,"
 " text_sequence smallint not null default 0,"
 " text_segment text(240) not null default ' ')"
@@ -1470,7 +1502,7 @@ NULL
 11, /* number of columns */
 "CREATE TABLE iidd_procedure("
 " dbp_name char(##DB_MAXNAME##) not null default ' ',"
-" dbp_owner char(##DB_MAXNAME##) not null default ' ',"
+" dbp_owner char(##DB_OWN_MAXNAME##) not null default ' ',"
 " dbp_txtlen integer not null default 0,"
 " dbp_txtid1 integer not null default 0,"
 " dbp_txtid2 integer not null default 0,"
@@ -1492,7 +1524,7 @@ NULL
 6, /* number of columns */
 "CREATE TABLE iidd_procedures("
 " procedure_name char(##DB_MAXNAME##) not null default ' ',"
-" procedure_owner char(##DB_MAXNAME##) not null default ' ',"
+" procedure_owner char(##DB_OWN_MAXNAME##) not null default ' ',"
 " create_date char(25) not null default ' ',"
 " proc_subtype varchar(1) not null default ' ',"
 " text_sequence integer not null default 0,"
@@ -1509,7 +1541,7 @@ NULL
 7, /* number of columns */
 "CREATE TABLE iidd_registrations("
 " object_name char(##DB_MAXNAME##) not null default ' ',"
-" object_owner char(##DB_MAXNAME##) not null default ' ',"
+" object_owner char(##DB_OWN_MAXNAME##) not null default ' ',"
 " object_dml char(8) not null default ' ',"
 " object_type char(8) not null default ' ',"
 " object_subtype char(8) not null default ' ',"
@@ -1527,7 +1559,7 @@ NULL
 13, /* number of columns */
 "CREATE TABLE iidd_stats("
 " table_name char(##DB_MAXNAME##) not null default ' ',"
-" table_owner char(##DB_MAXNAME##) not null default ' ',"
+" table_owner char(##DB_OWN_MAXNAME##) not null default ' ',"
 " column_name char(##DB_MAXNAME##) not null default ' ',"
 " create_date char(25) not null default ' ',"
 " num_unique f4 not null default 0,"
@@ -1551,7 +1583,7 @@ NULL
 41, /* number of columns */
 "CREATE TABLE iidd_tables("
 " table_name char(##DB_MAXNAME##) not null default ' ',"
-" table_owner char(##DB_MAXNAME##) not null default ' ',"
+" table_owner char(##DB_OWN_MAXNAME##) not null default ' ',"
 " create_date char(25) not null default ' ',"
 " alter_date char(25) not null default ' ',"
 " table_type char(8) not null default ' ',"
@@ -1570,8 +1602,8 @@ NULL
 " overflow_pages integer not null default 0,"
 " row_width integer not null default 0,"
 " expire_date integer not null default 0,"
-" MODIFY_date char(25) not null default ' ',"
-" location_name char(##DB_MAXNAME##) not null default ' ',"
+" modify_date char(25) not null default ' ',"
+" location_name char(##DB_LOC_MAXNAME##) not null default ' ',"
 " table_integrities char(8) not null default ' ',"
 " table_permits char(8) not null default ' ',"
 " all_to_all char(8) not null default ' ',"
@@ -1603,7 +1635,7 @@ NULL
 6, /* number of columns */
 "CREATE TABLE iidd_views("
 " table_name char(##DB_MAXNAME##) not null default ' ',"
-" table_owner char(##DB_MAXNAME##) not null default ' ',"
+" table_owner char(##DB_OWN_MAXNAME##) not null default ' ',"
 " view_dml char(8) not null default ' ',"
 " check_option char(8) not null default ' ',"
 " text_sequence integer not null default 0,"
@@ -1795,9 +1827,9 @@ NULL, /* index 2 */
 " is 'exp.dmf.lg.ldb_l_buffer',"
 " ldb_buffer char(200) not null not default"
 " is 'exp.dmf.lg.ldb_buffer',"
-" ldb_db_name char (##DB_MAXNAME##) not null not default"
+" ldb_db_name char (##DB_DB_MAXNAME##) not null not default"
 " is 'exp.dmf.lg.ldb_db_name',"
-" ldb_db_owner char (##DB_MAXNAME##) not null not default"
+" ldb_db_owner char (##DB_OWN_MAXNAME##) not null not default"
 " is 'exp.dmf.lg.ldb_db_owner',"
 " ldb_j_first_lga char (30) not null not default"
 " is 'exp.dmf.lg.ldb_j_first_cp',"
@@ -1864,9 +1896,9 @@ NULL, /* index 2 */
 " is 'exp.dmf.lg.lxb_status',"
 " lxb_status_num i4 not null not default"
 " is 'exp.dmf.lg.lxb_status_num',"
-" lxb_db_name char (##DB_MAXNAME##) not null not default"
+" lxb_db_name char (##DB_DB_MAXNAME##) not null not default"
 " is 'exp.dmf.lg.lxb_db_name',"
-" lxb_db_owner char (##DB_MAXNAME##) not null not default"
+" lxb_db_owner char (##DB_OWN_MAXNAME##) not null not default"
 " is 'exp.dmf.lg.lxb_db_owner',"
 " lxb_db_id_id i4 not null not default"
 " is 'exp.dmf.lg.lxb_db_id_id',"
@@ -1941,7 +1973,7 @@ NULL, /* index 2 */
 " is 'exp.dmf.lg.lxb_id.id_id',"
 " lxb_dis_tran_id_hexdump char(350) not null not default"
 " is 'exp.dmf.lg.lxb_dis_tran_id_hexdump',"
-" lxb_db_name char (##DB_MAXNAME##) not null not default"
+" lxb_db_name char (##DB_DB_MAXNAME##) not null not default"
 " is 'exp.dmf.lg.lxb_db_name',"
 " lxb_is_prepared char (1) not null not default"
 " is 'exp.dmf.lg.lxb_is_prepared',"
@@ -1956,22 +1988,23 @@ NULL, /* index 1 */
 NULL, /* index 2 */
 },
 
+/* iiaudit see back!gwf!gwfsxa */
 {
 0,
 "iiaudit",
 0, /* number of columns */
 "REGISTER TABLE iiaudit  ("
 " audittime       ingresdate not null,"
-" user_name char(##DB_MAXNAME##) not null,"
-" real_name char(##DB_MAXNAME##) not null,"
-" userprivileges char(##DB_MAXNAME##) not null,"
-" objprivileges char(##DB_MAXNAME##) not null,"
-" database char(##DB_MAXNAME##) not null,"
+" user_name char(##DB_OWN_MAXNAME##) not null,"
+" real_name char(##DB_OWN_MAXNAME##) not null,"
+" userprivileges char(32) not null,"
+" objprivileges char(32) not null,"
+" database char(##DB_DB_MAXNAME##) not null,"
 " auditstatus char(1)  not null,"
 " auditevent char(24) not null,"
 " objecttype char(24) not null,"
 " objectname char(##DB_MAXNAME##) not null,"
-" objectowner char(##DB_MAXNAME##) not null,"
+" objectowner char(##DB_OWN_MAXNAME##) not null,"
 " description char(80) not null,"
 " sessionid char(16) not null,"
 " detailinfo char(256) not null,"
@@ -2002,26 +2035,26 @@ GLOBALDEF DUC_PROCDEF Duc_procdef[] =
 {
 "iiqef_create_db",
 "CREATE PROCEDURE iiqef_create_db("
-"   dbname         = char(##DB_MAXNAME##) not null not default,"
-"   db_loc_name    = char(##DB_MAXNAME##) not null not default,"
-"   jnl_loc_name   = char(##DB_MAXNAME##) not null not default,"
-"   ckp_loc_name   = char(##DB_MAXNAME##) not null not default,"
-"   dmp_loc_name   = char(##DB_MAXNAME##) not null not default,"
-"   srt_loc_name   = char(##DB_MAXNAME##) not null not default,"
+"   dbname         = char(##DB_DB_MAXNAME##) not null not default,"
+"   db_loc_name    = char(##DB_LOC_MAXNAME##) not null not default,"
+"   jnl_loc_name   = char(##DB_LOC_MAXNAME##) not null not default,"
+"   ckp_loc_name   = char(##DB_LOC_MAXNAME##) not null not default,"
+"   dmp_loc_name   = char(##DB_LOC_MAXNAME##) not null not default,"
+"   srt_loc_name   = char(##DB_LOC_MAXNAME##) not null not default,"
 "   db_access      = integer  not null not default,"
-"   collation      = char(##DB_MAXNAME##) not null not default,"
+"   collation      = char(##DB_COLLATION_MAXNAME##) not null not default,"
 "   need_dbdir_flg = integer  not null not default,"
 "   db_service     = integer  not null not default,"
-"   translated_owner_name   = char(##DB_MAXNAME##) not null not default,"
-"   untranslated_owner_name = char(##DB_MAXNAME##) not null not default,"
-"   ucollation     = char(##DB_MAXNAME##) not null not default)"
+"   translated_owner_name   = char(##DB_OWN_MAXNAME##) not null not default,"
+"   untranslated_owner_name = char(##DB_OWN_MAXNAME##) not null not default,"
+"   ucollation     = char(##DB_COLLATION_MAXNAME##) not null not default)"
 " AS BEGIN EXECUTE INTERNAL; END"
 },
 
 {
 "iiqef_alter_db",
 "CREATE PROCEDURE iiqef_alter_db("
-"   dbname = char(##DB_MAXNAME##) not null not default,"
+"   dbname = char(##DB_DB_MAXNAME##) not null not default,"
 "   access_on = integer not null not default,"
 "   access_off = integer not null not default,"
 "   service_on = integer not null not default,"
@@ -2033,15 +2066,15 @@ GLOBALDEF DUC_PROCDEF Duc_procdef[] =
 {
 "iiqef_destroy_db",
 "CREATE PROCEDURE iiqef_destroy_db("
-" dbname = char(##DB_MAXNAME##) not null not default)"
+" dbname = char(##DB_DB_MAXNAME##) not null not default)"
 " AS BEGIN EXECUTE INTERNAL; END"
 },
 
 {
 "iiqef_add_location",
 "CREATE PROCEDURE iiqef_add_location("
-"   database_name = char(##DB_MAXNAME##) not null not default,"
-"   location_name = char(##DB_MAXNAME##) not null not default,"
+"   database_name = char(##DB_DB_MAXNAME##) not null not default,"
+"   location_name = char(##DB_LOC_MAXNAME##) not null not default,"
 "   access = integer not null not default,"
 "   need_dbdir_flg = integer not null not default)"
 " AS BEGIN EXECUTE INTERNAL; END"
@@ -2050,8 +2083,8 @@ GLOBALDEF DUC_PROCDEF Duc_procdef[] =
 {
 "iiqef_alter_extension",
 "CREATE PROCEDURE iiqef_alter_extension("
-"   database_name = char(##DB_MAXNAME##) not null not default,"
-"   location_name = char(##DB_MAXNAME##) not null not default,"
+"   database_name = char(##DB_DB_MAXNAME##) not null not default,"
+"   location_name = char(##DB_LOC_MAXNAME##) not null not default,"
 "   drop_loc_type = integer not null not default,"
 "   add_loc_type = integer not null not default)"
 " AS BEGIN EXECUTE INTERNAL; END"
@@ -2074,8 +2107,8 @@ GLOBALDEF DUC_PROCDEF Duc_procdef[] =
 {
 "iiqef_del_location",
 "CREATE PROCEDURE iiqef_del_location("
-"   database_name = char(##DB_MAXNAME##) not null not default,"
-"   location_name = char(##DB_MAXNAME##) not null not default,"
+"   database_name = char(##DB_DB_MAXNAME##) not null not default,"
+"   location_name = char(##DB_LOC_MAXNAME##) not null not default,"
 "   access = integer not null not default,"
 "   need_dbdir_flg = integer not null not default)"
 " AS BEGIN EXECUTE INTERNAL; END"

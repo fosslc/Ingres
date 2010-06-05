@@ -6,6 +6,7 @@
 #include    <gl.h>
 #include    <cs.h>
 #include    <pc.h>
+#include    <st.h>
 #include    <iicommon.h>
 #include    <dbdbms.h>
 #include    <lg.h>
@@ -187,6 +188,8 @@
 **	    SIR 121619 MVCC: Replace dm0p_mutex/unmutex with dmveMutex/Unmutex
 **	    macros.
 **	    Replace DMPP_PAGE* with DMP_PINFO* as needed.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -719,6 +722,7 @@ DMP_PINFO	    *datapinfo)
     DB_ATTS             db_atts[DMVE_MAX_ATTS];
     DB_ATTS             *db_atts_ptrs[DMVE_MAX_ATTS];
     DB_ATTS             *db_keys_ptrs[DMVE_MAX_ATTS];
+    char		gen_att_names[32*DMVE_MAX_ATTS];
     DB_ATTS             **atts; 
     DB_ATTS             **keys;
     DB_ATTS             *atr;           /* Ptr to current attribute */
@@ -735,6 +739,9 @@ DMP_PINFO	    *datapinfo)
     DMPP_PAGE		*current = NULL;
     DMPP_PAGE		*sibling = NULL;
     DMPP_PAGE		*data = NULL;
+    i4			attnmsz;
+    char		*attnames;
+    char		*nextattname;
 
     CLRDBERR(&dmve->dmve_error);
 
@@ -768,17 +775,21 @@ DMP_PINFO	    *datapinfo)
     {
 	atts = &db_atts_ptrs[0];
 	keys = &db_keys_ptrs[0];
+	attnames = gen_att_names;
+	nextattname = attnames;
 	for (attno = 0; attno < DMVE_MAX_ATTS; attno++)
 	{
 	    db_atts_ptrs[attno] = &db_atts[attno];
 	}
 
+	attnmsz = (page_attcnt) * 32; /* generated att names */
 	if (page_attcnt > DMVE_MAX_ATTS)
 	{
 	    status = dm0m_allocate((i4)( sizeof(DMP_MISC) +
 		(page_attcnt * sizeof(DB_ATTS)) +
 		(page_attcnt * sizeof(DB_ATTS *)) +
-		(page_attcnt * sizeof(DB_ATTS *))),
+		(page_attcnt * sizeof(DB_ATTS *)) +
+		attnmsz),
 		(i4)0, (i4)MISC_CB, (i4)MISC_ASCII_ID,
 		(char *)NULL, (DM_OBJECT **)&misc_buffer, &dmve->dmve_error);
 	    if (status != OK)
@@ -788,6 +799,8 @@ DMP_PINFO	    *datapinfo)
 	    atts = (DB_ATTS **)((char *)misc_buffer + sizeof(DMP_MISC));
 	    keys = (DB_ATTS **)atts + page_attcnt;
 	    atr = (DB_ATTS *)(keys + page_attcnt);
+	    attnames = (char *)(atr + page_attcnt);
+	    nextattname = attnames;
 	    for (attno = 0; attno < page_attcnt; attno++)
 	    {
 		atts[attno] = atr++;
@@ -808,7 +821,10 @@ DMP_PINFO	    *datapinfo)
 	    /*
 	    ** Init attribute name so dm1cxformat can compare atts with keys
 	    */
-	    MEcopy((char *)&attno, sizeof (attno), (char *)&atr->name);
+	    atr->attnmstr = nextattname;
+	    STprintf(atr->attnmstr, "%d", attno);
+	    atr->attnmlen = STlength(atr->attnmstr);
+	    nextattname += (atr->attnmlen + 1);
 
 	    DM1B_VPT_GET_ATTR(page_type, log_rec->spl_page_size, 
 			split_page, (attno+1), &attdesc);

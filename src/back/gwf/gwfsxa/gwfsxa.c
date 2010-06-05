@@ -107,6 +107,8 @@
 **          Removed gwxit.h inclusion which is not required.
 **      11-dec-2008 (stial01)
 **          Redefine sxf_data as string and then blank pad to name size.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 GLOBALREF	GW_FACILITY	*Gwf_facility;
@@ -1169,7 +1171,7 @@ gwsxa_open( GWX_RCB     *gwx_rcb)
 		{
 			gwf_display(gwf_scctalk, 0, trbuf, sizeof(trbuf) - 1,
 			    "SXA OPEN: Current database is '%s'\n",
-			    gwsxa_rsb->database.db_name);
+			    gwsxa_rsb->database.db_db_name);
 		}
 	}
 	/*
@@ -1492,7 +1494,7 @@ gwsxa_get( GWX_RCB *gwx_rcb )
 	DB_STATUS   	status;
 	SXF_RCB 	sxfrcb;
 	SXF_AUDIT_REC	sxf_record;
-	char	        *database= gwsxa_rsb->database.db_name;
+	char	        *database= gwsxa_rsb->database.db_db_name;
 	char	        sxfdetail[SXF_DETAIL_TXT_LEN];
         char		trbuf[GWF_MAX_MSGLEN + 1]; /* last char for `\n' */
 
@@ -1742,15 +1744,15 @@ gwsxa_get( GWX_RCB *gwx_rcb )
 			    audittmstr);
 
 			gwf_display(gwf_scctalk, 0, trbuf, sizeof(trbuf) - 1,
-			    "Real User    : %t\n", DB_MAXNAME,
+			    "Real User    : %t\n", DB_OWN_MAXNAME,
 			    sxfrcb.sxf_record->sxf_ruserid.db_own_name);
 
 			gwf_display(gwf_scctalk, 0, trbuf, sizeof(trbuf) - 1,
-			    "Effective Usr: %t\n", DB_MAXNAME,
+			    "Effective Usr: %t\n", DB_OWN_MAXNAME,
 			    sxfrcb.sxf_record->sxf_euserid.db_own_name);
 
 			gwf_display(gwf_scctalk, 0, trbuf, sizeof(trbuf) - 1,
-			    "Database     : %t\n", DB_MAXNAME,
+			    "Database     : %t\n", DB_DB_MAXNAME,
 			    sxfrcb.sxf_record->sxf_dbname.db_db_name);
 
 			gwf_display(gwf_scctalk, 0, trbuf, sizeof(trbuf) - 1,
@@ -1779,7 +1781,7 @@ gwsxa_get( GWX_RCB *gwx_rcb )
 
 			gwf_display(gwf_scctalk, 0, trbuf, sizeof(trbuf) - 1,
 			    "Object Owner : %t\n",
-			    DB_MAXNAME,
+			    DB_OWN_MAXNAME,
 			    sxfrcb.sxf_record->sxf_ruserid.db_own_name);
 
 			gwf_display(gwf_scctalk, 0, trbuf, sizeof(trbuf) - 1,
@@ -1808,7 +1810,7 @@ gwsxa_get( GWX_RCB *gwx_rcb )
 			if (STbcompare(sxf_record.sxf_dbname.db_db_name, 
 					sizeof(sxf_record.sxf_dbname.db_db_name),
 					database,
-					sizeof(gwsxa_rsb->database.db_name),
+					sizeof(gwsxa_rsb->database.db_db_name),
 					TRUE)!=0)
 			{
 				

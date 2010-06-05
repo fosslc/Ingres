@@ -364,6 +364,8 @@
 **          Add E_QE030F_LOAD_TPROC_QP and E_QE0310_INVALID_TPROC_ACT
 **      21-Jan-2009 (horda03) Bug 121519
 **          Add E_QE00AA_ERROR_CREATING_TABLE.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -1469,7 +1471,7 @@ typedef struct _QEF_APR
 #define		    QEFA_PUBLIC	     3	/*  Public		    */
      i4	    qef_flags;		/* Various flags */
 # define	    QEFA_F_EVENT      0x01	/* Alarm has associate event */
-     DB_NAME	    qef_evname;		/* Event name */
+     DB_EVENT_NAME  qef_evname;		/* Event name */
      DB_OWN_NAME    qef_evowner;	/* Event owner */
      i2		    qef_ev_l_text;	/* Length of qef_evtext */
      char	    qef_evtext[DB_EVDATA_MAX]; /* Event text */

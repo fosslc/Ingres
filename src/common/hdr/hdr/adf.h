@@ -777,6 +777,8 @@
 **	    Added SINGLETON aggregate error E_AD1028_NOT_ZEROONE_ROWS
 **	30-Mar-2010 (kschendel) SIR 123485
 **	    Update adu-valuetomystr prototype.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 #ifndef ADF_HDR_INCLUDED
@@ -787,7 +789,7 @@
 **  Defines of other constants.
 */
 
-#define                 ADF_MAXNAME     DB_MAXNAME
+#define                 ADF_MAXNAME     DB_TYPE_MAXLEN
 #define			U_BLANK 	((UCS2) 0x0020)	/* unicode blank character */ 
 #define			U_NULL  	((UCS2) 0x0000) /* unicode null character */
 #define			U_TAB   	((UCS2) 0x0009) /* unicode TAB character */

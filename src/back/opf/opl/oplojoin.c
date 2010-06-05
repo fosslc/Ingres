@@ -108,6 +108,8 @@
 **	    Minor cleanup: delete dead ojfilter stuff, use BTclearmask.
 **	24-Nov-2009 (frima01) Bug 122490
 **	    Added include of st.h to eliminate gcc 4.3 warnings.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -1014,8 +1016,8 @@ opl_ojoin(
                          (gvar1->rdr_attr[att1]) &&
                          (gvar2->rdr_attr[p_att]) &&
                          !(STxcompare(
-((*(gvar1->rdr_attr[att1])).att_name).db_att_name,DB_MAXNAME,
-((*(gvar2->rdr_attr[p_att])).att_name).db_att_name,DB_MAXNAME, FALSE, FALSE))
+((*(gvar1->rdr_attr[att1])).att_name).db_att_name,DB_ATT_MAXNAME,
+((*(gvar2->rdr_attr[p_att])).att_name).db_att_name,DB_ATT_MAXNAME, FALSE, FALSE))
                     );
 		else if (ijmap && parentojmap)
 		{   /* check if the relation is outer to one joinid which

@@ -105,6 +105,8 @@ GLOBALREF char	Iird_lower_systab[];  /* lower case system catalog we
 **	    SIR 120874: Use CLRDBERR, SETDBERR to value DB_ERROR structure.
 **	    Pass pointer to facilities DB_ERROR instead of just its err_code
 **	    in rdu_ferror().
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*{
@@ -322,7 +324,7 @@ rdf_usuper(RDF_GLOBAL *global)
     DD_PACKET           ddpkt;
     RQB_BIND    	rq_bind[RDD_01_COL],	/* for 1 columns */
 			*bind_p = rq_bind;
-    char		usrname[DB_MAXNAME + 1];
+    char		usrname[DB_OWN_MAXNAME + 1];
     char		qrytxt[RDD_QRY_LENGTH];
 
 #ifdef xDEBUG
@@ -336,9 +338,9 @@ rdf_usuper(RDF_GLOBAL *global)
 
     /* Get the user status from iiuser in iidbdb */
 
-    MEcopy((PTR)ddbreq->rdr_d4_usr_desc_p->dd_u1_usrname, sizeof(DD_NAME),
+    MEcopy((PTR)ddbreq->rdr_d4_usr_desc_p->dd_u1_usrname, sizeof(DD_OWN_NAME),
 			(PTR)usrname);
-    usrname[DB_MAXNAME] = EOS;
+    usrname[DB_OWN_MAXNAME] = EOS;
 
     (VOID)STtrmwhite(usrname);
 
@@ -519,10 +521,10 @@ rdf_netnode_cost(RDF_GLOBAL *global)
     global->rdf_ddrequests.rdd_ddstatus |= RDD_FETCH; /* set status */ 
 
     rq_bind[0].rqb_addr = (PTR)netcost.net_source; 
-    rq_bind[0].rqb_length = sizeof(DD_NAME);
+    rq_bind[0].rqb_length = sizeof(DD_NODE_NAME);
     rq_bind[0].rqb_dt_id = DB_CHA_TYPE;
     rq_bind[1].rqb_addr = (PTR)netcost.net_dest;
-    rq_bind[1].rqb_length = sizeof(DD_NAME);
+    rq_bind[1].rqb_length = sizeof(DD_NODE_NAME);
     rq_bind[1].rqb_dt_id = DB_CHA_TYPE;
     rq_bind[2].rqb_addr = (PTR)&netcost.net_cost; 
     rq_bind[2].rqb_length = sizeof(netcost.net_cost);
@@ -616,7 +618,7 @@ rdf_netnode_cost(RDF_GLOBAL *global)
     global->rdf_ddrequests.rdd_ddstatus |= RDD_FETCH; /* set status */ 
 
     rq_bind[0].rqb_addr = (PTR)cpucost.cpu_name;
-    rq_bind[0].rqb_length = sizeof(DD_NAME);
+    rq_bind[0].rqb_length = sizeof(DD_NODE_NAME);
     rq_bind[0].rqb_dt_id = DB_CHA_TYPE;
     rq_bind[1].rqb_addr = (PTR)&cpucost.cpu_power;
     rq_bind[1].rqb_length = sizeof(cpucost.cpu_power);
@@ -948,13 +950,13 @@ rdf_ldbplus(RDF_GLOBAL *global)
 */
 DB_STATUS
 rdf_userlocal(	RDF_GLOBAL         *global,
-		DD_NAME		   user_name)
+		DD_OWN_NAME	   user_name)
 {
     DB_STATUS		status;
     QEF_RCB		*qefrcb = &global->rdf_qefrcb;
     QEF_DDB_REQ		*ddr_p = &qefrcb->qef_r3_ddb_req;
     DD_PACKET           ddpkt;
-    DD_NAME		username;
+    DD_OWN_NAME		username;
     RQB_BIND    	rq_bind[RDD_01_COL],	/* for 1 columns */
 			*bind_p = rq_bind;
     char		qrytxt[RDD_QRY_LENGTH];
@@ -980,7 +982,7 @@ rdf_userlocal(	RDF_GLOBAL         *global,
 	return (status); 
 
     rq_bind[0].rqb_addr = (PTR)username; 
-    rq_bind[0].rqb_length = sizeof(DD_NAME);
+    rq_bind[0].rqb_length = sizeof(DD_OWN_NAME);
     rq_bind[0].rqb_dt_id = DB_CHA_TYPE;
 
     qefrcb->qef_r3_ddb_req.qer_d5_out_info.qed_o2_bind_p = (PTR)bind_p;
@@ -995,7 +997,7 @@ rdf_userlocal(	RDF_GLOBAL         *global,
 
     if (ddr_p->qer_d5_out_info.qed_o3_output_b)
     {
-	MEcopy((PTR)username, sizeof(DD_NAME), (PTR)user_name); 
+	MEcopy((PTR)username, sizeof(DD_OWN_NAME), (PTR)user_name); 
 	status = rdd_flush(global);
     }
     else
@@ -1067,7 +1069,7 @@ rdf_attrloc(RDF_GLOBAL *global)
         			      rdr_r2_ddb_req.rdr_d5_tab_info_p;
     DD_COLUMN_DESC	*col_ptr;
     i4		        att_cnt = 0;
-    DD_NAME		col_name;
+    DD_ATT_NAME		col_name;
     i4			col_seq; 
     RQB_BIND    	rq_bind[RDD_02_COL],	/* for 2 columns */
 			*bind_p = rq_bind;
@@ -1107,7 +1109,7 @@ rdf_attrloc(RDF_GLOBAL *global)
 	return (status); 
 
     rq_bind[0].rqb_addr = (PTR)col_name; 
-    rq_bind[0].rqb_length = sizeof(DD_NAME);
+    rq_bind[0].rqb_length = sizeof(DD_ATT_NAME);
     rq_bind[0].rqb_dt_id = DB_CHA_TYPE;
     rq_bind[1].rqb_addr = (PTR)&col_seq;
     rq_bind[1].rqb_length = sizeof(col_seq);
@@ -1142,7 +1144,7 @@ rdf_attrloc(RDF_GLOBAL *global)
 	    /* Fill in column description.
 	    ** Note that caller allocates space for the description */
 	    col_ptr = (DD_COLUMN_DESC *)tab_info_p->dd_t8_cols_pp[col_seq];
-	    MEcopy((PTR)col_name, sizeof(DD_NAME), (PTR)col_ptr->dd_c1_col_name);
+	    MEcopy((PTR)col_name, sizeof(DD_ATT_NAME), (PTR)col_ptr->dd_c1_col_name);
 	}
     } while (ddr_p->qer_d5_out_info.qed_o3_output_b);
 
@@ -1349,13 +1351,13 @@ rdf_localtab(	RDF_GLOBAL         *global,
     char                tab_type[8];
     RDD_OBJ_ID		table_id,
 			*id_p = &table_id;
-    char		iuser[DB_MAXNAME + 1];
+    char		iuser[DB_OWN_MAXNAME + 1];
     char		qrytxt[RDD_QRY_LENGTH];
 
     /* setup system catalog owner name */
 
-    iuser[DB_MAXNAME] = EOS;
-    MEcopy((PTR)sys_owner, sizeof(DD_NAME), (PTR)iuser);
+    iuser[DB_OWN_MAXNAME] = EOS;
+    MEcopy((PTR)sys_owner, sizeof(DD_OWN_NAME), (PTR)iuser);
     (VOID)STtrmwhite(iuser);
 
     /* setup local table name and owner and trim the trailing blanks */
@@ -1379,12 +1381,12 @@ rdf_localtab(	RDF_GLOBAL         *global,
 	     RDR_DD11_SYSOWNER
 	   )
 	    /* use system catalog owner name */
-	    MEcopy((PTR)sys_owner, sizeof(DD_NAME), (PTR)id_p->tab_owner);
+	    MEcopy((PTR)sys_owner, sizeof(DD_OWN_NAME), (PTR)id_p->tab_owner);
 	else
 	    /* use dba name */
-	    MEcopy((PTR)ldb_ptr->dd_p2_dba_name, sizeof(DD_NAME),
+	    MEcopy((PTR)ldb_ptr->dd_p2_dba_name, sizeof(DD_OWN_NAME),
 	       (PTR)id_p->tab_owner);
-	id_p->tab_owner[DB_MAXNAME] = EOS;
+	id_p->tab_owner[DB_OWN_MAXNAME] = EOS;
 	id_p->owner_length = STtrmwhite(id_p->tab_owner);
     }
 
@@ -1567,13 +1569,13 @@ a.table_type from iitables a, iidbconstants b where a.table_name =",
 	{
 	    /* First, look for owner equal to username. If failed, try matching dba name.
 	    ** $ingres is used only when no username and dba name were found. */
-	    if (MEcmp((PTR)tab_info.dd_t2_tab_owner, (PTR)sys_owner, sizeof(DD_NAME)) == 0)
+	    if (MEcmp((PTR)tab_info.dd_t2_tab_owner, (PTR)sys_owner, 
+			sizeof(DD_OWN_NAME)) == 0)
 		curr_user = RDD_INGRES;
 	    else if (((ldb_ptr->dd_p1_character) & DD_1CHR_DBA_NAME)
 		     &&
 		     (MEcmp((PTR)tab_info.dd_t2_tab_owner, 
-			    (PTR)ldb_ptr->dd_p2_dba_name, 
-			    sizeof(DB_MAXNAME)) == 0)
+			    (PTR)ldb_ptr->dd_p2_dba_name, DB_OWN_MAXNAME) == 0)
 		    )
 		    curr_user = RDD_DBA;
 		 else curr_user = RDD_USER;
@@ -1583,8 +1585,7 @@ a.table_type from iitables a, iidbconstants b where a.table_name =",
 		not_found = FALSE;
 		not_assigned = FALSE;
 		MEcopy((PTR)tab_info.dd_t2_tab_owner,
-		       sizeof(DD_NAME),
-		       (PTR)tab_p->dd_t2_tab_owner);
+		       sizeof(DD_OWN_NAME), (PTR)tab_p->dd_t2_tab_owner);
 
 		MEcopy((PTR)tab_info.dd_t4_cre_date,
 			sizeof(DD_DATE),
@@ -1614,11 +1615,9 @@ a.table_type from iitables a, iidbconstants b where a.table_name =",
 		** and making everything else common code */
 		not_assigned = FALSE;
 		MEcopy((PTR)tab_info.dd_t2_tab_owner,
-		       sizeof(DD_NAME),
-		       (PTR)tab_p->dd_t2_tab_owner);
+		       sizeof(DD_OWN_NAME), (PTR)tab_p->dd_t2_tab_owner);
 		MEcopy((PTR)tab_info.dd_t4_cre_date,
-			sizeof(DD_DATE),
-			(PTR)tab_p->dd_t4_cre_date);
+			sizeof(DD_DATE), (PTR)tab_p->dd_t4_cre_date);
 		if (global->rdfcb->rdf_rb.rdr_instr & RDF_REGPROC)
 		{
 		    /* if registered procedure, use create date as alter date */
@@ -1673,7 +1672,7 @@ a.table_type from iitables a, iidbconstants b where a.table_name =",
 	if ( global->rdfcb->rdf_rb.rdr_r2_ddb_req.rdr_d1_ddb_masks &
 	     RDR_DD11_SYSOWNER
 	   )
-	    MEcopy((PTR)sys_owner, sizeof(DD_NAME),
+	    MEcopy((PTR)sys_owner, sizeof(DD_OWN_NAME),
 		   (PTR) tab_p->dd_t2_tab_owner);
 
 	status = E_DB_ERROR;
@@ -1739,7 +1738,7 @@ rdf_sysowner(	RDF_GLOBAL         *global,
     if ( ldb_ptr && (ldb_ptr->dd_p1_character & DD_3CHR_SYS_NAME) )
     {
 	/* already have the system name in the LDB descriptor, so just use it */
-	MEcopy((PTR)&ldb_ptr->dd_p6_sys_name, sizeof(DD_NAME), (PTR)sys_owner);
+	MEcopy((PTR)&ldb_ptr->dd_p6_sys_name, sizeof(DD_OWN_NAME), (PTR)sys_owner);
 	return(status);
     }
     else
@@ -1765,7 +1764,7 @@ rdf_sysowner(	RDF_GLOBAL         *global,
 
 	/* table_owner */
 	rq_bind[0].rqb_addr = (PTR)sys_owner;
-	rq_bind[0].rqb_length = sizeof(DD_NAME);
+	rq_bind[0].rqb_length = sizeof(DD_OWN_NAME);
 	rq_bind[0].rqb_dt_id = DB_CHA_TYPE;
 	
 	qefrcb->qef_r3_ddb_req.qer_d5_out_info.qed_o2_bind_p = (PTR)bind_p;
@@ -1969,8 +1968,8 @@ rdf_tabinfo(RDF_GLOBAL *global)
     DD_1LDB_INFO	*ldbinfo_p = rdfrb->rdr_r2_ddb_req.rdr_d2_ldb_info_p;
     char		*name_p,*c;		
     i4			cnt;	
-    DD_NAME		sys_owner;
-    char		sys_table[DB_MAXNAME + 1];
+    DD_OWN_NAME		sys_owner;
+    char		sys_table[DB_TAB_MAXNAME + 1];
 
 #ifdef xDEBUG
     /* Check two input parameters for local table access 
@@ -2014,7 +2013,7 @@ rdf_tabinfo(RDF_GLOBAL *global)
        )
     {
 	for(cnt = 0, c=global->rdfcb->rdf_rb.rdr_r2_ddb_req.rdr_d5_tab_info_p->
-				dd_t2_tab_owner; cnt < DB_MAXNAME; c++, cnt++)
+				dd_t2_tab_owner; cnt < DB_OWN_MAXNAME; c++, cnt++)
 	{
 	    /* translate case of owner name */
 	    if (ldbinfo_p->dd_i2_ldb_plus.dd_p3_ldb_caps.dd_c6_name_case ==
@@ -2037,7 +2036,7 @@ rdf_tabinfo(RDF_GLOBAL *global)
        )
     {
 	for(cnt = 0, name_p=global->rdfcb->rdf_rb.rdr_r2_ddb_req.
-		rdr_d5_tab_info_p->dd_t1_tab_name; cnt < DB_MAXNAME; 
+		rdr_d5_tab_info_p->dd_t1_tab_name; cnt < DB_TAB_MAXNAME; 
 		name_p++, cnt++)
 	{
 	    /* translate case of table name */

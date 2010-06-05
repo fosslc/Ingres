@@ -109,6 +109,8 @@
 **	    replace nat and longnat with i4
 **	30-mar-04 (toumi01)
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 GLOBALREF   char	IIQE_61_qefsess[];
@@ -243,7 +245,7 @@ QEF_RCB		*v_qer_p )
     link_p->qec_2_tableinfo_p = & tabinfo;
     link_p->qec_3_ldb_id = 0;			
     link_p->qec_4_col_cnt = 0;
-    MEfill(DB_MAXNAME, ' ', link_p->qec_5_ldb_alias);
+    MEfill(DB_DB_MAXNAME, ' ', link_p->qec_5_ldb_alias);
     link_p->qec_6_select_p = & sel;
     link_p->qec_7_ldbids_p = & ldbids;
     link_p->qec_8_longnames_p = & longnames;
@@ -937,15 +939,11 @@ QEC_LINK	*v_lnk_p )
     sel_p->qeq_c4_ldb_p = cdb_p;
     sel_p->qeq_c2_rqf_bind_p = v_lnk_p->qec_20_rqf_bind_p;
 
-    qed_u0_trimtail(
-	    v_lnk_p->qec_13_objects_p->d6_1_obj_name,
-	    (u_i4) DB_MAXNAME,
-	    indexes_p->l6_4_base_name);
+    qed_u0_trimtail( v_lnk_p->qec_13_objects_p->d6_1_obj_name,
+	    (u_i4) DB_OBJ_MAXNAME, indexes_p->l6_4_base_name);
 
-    qed_u0_trimtail(
-	    v_lnk_p->qec_13_objects_p->d6_2_obj_owner,
-	    (u_i4) DB_MAXNAME,
-	    indexes_p->l6_5_base_owner);
+    qed_u0_trimtail( v_lnk_p->qec_13_objects_p->d6_2_obj_owner,
+	    (u_i4) DB_OWN_MAXNAME, indexes_p->l6_5_base_owner);
 
     /* 2.  send SELECT query */
 

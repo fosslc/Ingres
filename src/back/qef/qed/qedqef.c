@@ -114,6 +114,8 @@
 **	    replace nat and longnat with i4
 **	30-mar-04 (toumi01)
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*  Global readonly variables referenced by this file.  */
@@ -637,8 +639,8 @@ QEF_RCB		*v2_qer_p )
     RQR_CB	    rq_cb,
 		    *rqr_p = & rq_cb;
     RQB_BIND	    rq_bind[QEK_2_COL_COUNT];	/* for 2 columns */
-    char	    cap_cap[DB_MAXNAME + 1];
-    char	    cap_val[DB_MAXNAME + 1];
+    char	    cap_cap[DB_CAP_MAXLEN + 1];
+    char	    cap_val[DB_CAPVAL_MAXLEN + 1];
     i4		    tup_cnt;
     i4		    str_code;
     i4		    val_code;
@@ -724,10 +726,10 @@ QEF_RCB		*v2_qer_p )
 	rqr_p->rqr_q_language = DB_SQL;
 
 	rq_bind[0].rqb_addr = (PTR) cap_cap;
-	rq_bind[0].rqb_length = DB_MAXNAME;
+	rq_bind[0].rqb_length = DB_CAP_MAXLEN;
 	rq_bind[0].rqb_dt_id = DB_CHA_TYPE;
 	rq_bind[1].rqb_addr = (PTR) cap_val;
-	rq_bind[1].rqb_length = DB_MAXNAME;
+	rq_bind[1].rqb_length = DB_CAPVAL_MAXLEN;
 	rq_bind[1].rqb_dt_id = DB_CHA_TYPE;
 
 	/* last is QEK_2_COL_COUNT */

@@ -108,6 +108,8 @@
 **	    changed.
 **      2-may-95 (hanch04,inkdo01)
 **          Added check for  && global->ops_subquery
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 */
 
@@ -368,7 +370,7 @@ opc_querycomp(
 		char	    *objtype;
 		char	    *objname;
 		char	    *qrytext;
-		char	    tmp[DB_MAXNAME * 2 + 3 + 1];
+		char	    tmp[(DB_OWN_MAXNAME + DB_CURSOR_MAXNAME)  + 3 + 1];
 		DB_STATUS   status;
 		QSF_RCB	    qsf_rb;
 		PSQ_QDESC   *qdesc;
@@ -396,11 +398,11 @@ opc_querycomp(
 		    i4		    *dbid;
 
 		    curid = (DB_CURSOR_ID *)obj->qso_name;
-		    user = curid->db_cur_name + DB_MAXNAME;
-		    dbid = (i4 *)(user + DB_MAXNAME);
+		    user = curid->db_cur_name + DB_CURSOR_MAXNAME;
+		    dbid = (i4 *)(user + DB_OWN_MAXNAME);
 
 		    STprintf(fmt, ":%%lx:%%lx:%%.%ds:%%.%ds:%%lx:",
-			DB_MAXNAME, DB_MAXNAME);
+			DB_CURSOR_MAXNAME, DB_OWN_MAXNAME);
 
 		    STprintf(tmp, fmt, (i4)curid->db_cursor_id[0], 
 			(i4)curid->db_cursor_id[1],

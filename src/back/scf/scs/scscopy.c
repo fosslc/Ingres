@@ -143,6 +143,8 @@
 **	    the incredibly gigantic sequencer mainline.
 **	30-Mar-2010 (kschendel) SIR 123485
 **	    Re-type some ptr's as the proper struct pointer.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*
@@ -2300,7 +2302,20 @@ scs_scopy(SCD_SCB *scb,
 	 i < cp_num_attr;
 	 i++, cpdom_desc = cpdom_desc->cp_next)
     {
-	MEmove(DB_MAXNAME, (PTR) cpdom_desc->cp_domname, ' ', 
+	/*
+	** Build the gca_row_desc for the COPY code in libq (iicopy.c).
+	** Copy up to GCA_MAXNAME bytes of the cp_domname.
+	** 
+	** If DB_ATT_MXNAME > GCA_MAXNAME, cp_domname is truncated.
+	** This is ok because the truncated cp_domname is mostly
+	** used in iicopy.c for error notifications.
+	** 
+	** The only exception is cp_domname for dummy columns.
+	** In this case the dummy column name cannot be truncated,
+	** so we need to limit the size of dummy column names to
+	** GCA_MAXNAME in pslcopy.c
+	*/
+	MEmove(DB_ATT_MAXNAME, (PTR) cpdom_desc->cp_domname, ' ', 
 	    GCA_MAXNAME, (PTR)data);
 
 	data += GCA_MAXNAME;

@@ -85,6 +85,8 @@
 **	    new derived table thing.  Caused RD0003's unfixing nonsense.
 **      30-mar-2009 (gefei01) bug 121870
 **          Disallow DML operation in table procedure.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -233,20 +235,20 @@ pst_rglook(
 	DB_ERROR	   *err_blk)
 {
     register PSS_RNGTAB *rptr = (PSS_RNGTAB *) rngtable->pss_qhead.q_next;
-    char                namepad[DB_MAXNAME];
+    char                namepad[DB_TAB_MAXNAME];
     DB_STATUS		status = E_DB_OK;
     i4		err_code;
 
     
     /* normalize the range variable name */
-    STmove(name, ' ', DB_MAXNAME, namepad);
+    STmove(name, ' ', DB_TAB_MAXNAME, namepad);
 
     /* Look for the range variable */
     while ((QUEUE *) rptr != &rngtable->pss_qhead)
     {
 	if (rptr->pss_used && 
 	    (rptr->pss_rgparent <= scope || scope == -1) &&
-	    !MEcmp(namepad, rptr->pss_rgname, DB_MAXNAME))
+	    !MEcmp(namepad, rptr->pss_rgname, DB_TAB_MAXNAME))
 	{
 	    break;
 	}
@@ -813,7 +815,7 @@ pst_rgcopy(
 	if (*resrng == fromrng)
 	    *resrng = torng;
         torng->pss_rgno = fromrng->pss_rgno;
-        MEcopy((PTR)fromrng->pss_rgname, DB_MAXNAME, (PTR)torng->pss_rgname);
+        MEcopy((PTR)fromrng->pss_rgname, DB_TAB_MAXNAME, (PTR)torng->pss_rgname);
         STRUCT_ASSIGN_MACRO(fromrng->pss_tabid, torng->pss_tabid);
         STRUCT_ASSIGN_MACRO(fromrng->pss_tabname, torng->pss_tabname);
         STRUCT_ASSIGN_MACRO(fromrng->pss_ownname, torng->pss_ownname);
@@ -1206,7 +1208,7 @@ pst_slook(
 {
     register PSS_RNGTAB *rptr = (PSS_RNGTAB *) rngtable->pss_qhead.q_next;
     PSS_RNGTAB		*first = (PSS_RNGTAB *) NULL;
-    char                namepad[DB_MAXNAME];
+    char                namepad[DB_TAB_MAXNAME];
     i4		err_code;
     i4		err_num = 0L;
     i4			scope = cb->pss_qualdepth;
@@ -1256,7 +1258,7 @@ pst_slook(
     }
     
     /* normalize the range variable name */
-    STmove(name, ' ', DB_MAXNAME, namepad);
+    STmove(name, ' ', DB_TAB_MAXNAME, namepad);
 
     if (!schema_name)
     {
@@ -1274,7 +1276,7 @@ pst_slook(
 		** if the (explicit or implicit) correlation name does not
 		** match that passed by the caller, this entry is of no interest
 		*/
-		if (MEcmp(namepad, rptr->pss_rgname, DB_MAXNAME))
+		if (MEcmp(namepad, rptr->pss_rgname, DB_TAB_MAXNAME))
 		    continue;
 
 		/*
@@ -1440,7 +1442,7 @@ pst_slook(
 		rptr = list_elem->pst_elem;
 
 		if (   rptr->pss_var_mask & PSS_EXPLICIT_CORR_NAME
-		    || MEcmp(namepad, rptr->pss_rgname, DB_MAXNAME)
+		    || MEcmp(namepad, rptr->pss_rgname, DB_TAB_MAXNAME)
 		    || MEcmp((PTR) schema_name, (PTR) &rptr->pss_ownname,
 			     sizeof(cb->pss_user))
 		   )
@@ -1766,7 +1768,7 @@ pst_swelem(
 	i++, rptr = (PSS_RNGTAB *)rptr->pss_rngque.q_next)
     {
 	if (rptr->pss_rgtype == PST_WETREE &&
-		MEcmp(tabname, &rptr->pss_tabname, DB_MAXNAME) == 0)
+		MEcmp(tabname, &rptr->pss_tabname, DB_TAB_MAXNAME) == 0)
 	{
 	    found = TRUE;
 	    *rngvar = rptr;

@@ -47,6 +47,8 @@
 **      16-sep-93 (smc)
 **          Added/moved <cs.h> for CS_SID. Added history_template so we
 **          can automate this next time.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -137,7 +139,8 @@ psy_reregister(
 			
 		(VOID) psf_error(E_PS0903_TAB_NOTFOUND, 0L,
 		    PSF_USERERR, &err_code, &psy_cb->psy_error,1,
-		   psf_trmwhite(sizeof(DD_NAME), ddb_obj_name), ddb_obj_name);
+		   psf_trmwhite(sizeof(DD_OBJ_NAME), ddb_obj_name),
+			 ddb_obj_name);
 		break;
 	    }
 	    /* interrupt */

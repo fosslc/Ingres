@@ -174,6 +174,8 @@ GLOBALREF DD_CAPS	      Iird_dd_caps;	    /* initial value for DD_CAPS */
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*{
@@ -314,8 +316,8 @@ rdd_caps(   RDF_GLOBAL	    *global,
 
 		    /* this capability contains dbms type */
 
-		    MEcopy((PTR)caps->cap_value, sizeof(DD_NAME),
-			    (PTR)cap_p->dd_c7_dbms_type);
+		    MEcopy((PTR)caps->cap_value,
+			    DB_TYPE_MAXLEN, (PTR)cap_p->dd_c7_dbms_type);
 		    break;
 
 	    case RDD_OWNER_NAME:
@@ -719,15 +721,15 @@ iidd_ddb_ldbids a, iidd_ddb_ldb_dbcaps b where a.ldb_id =",
 
     /* node name */
     rq_bind[0].rqb_addr = (PTR)ldbid.ldb_node;
-    rq_bind[0].rqb_length = sizeof(DD_NAME);
+    rq_bind[0].rqb_length = sizeof(DD_NODE_NAME);
     rq_bind[0].rqb_dt_id = DB_CHA_TYPE;
     /* dbms */
     rq_bind[1].rqb_addr = (PTR)ldbid.ldb_dbms;
-    rq_bind[1].rqb_length = sizeof(DD_NAME);
+    rq_bind[1].rqb_length = sizeof(ldbid.ldb_dbms);
     rq_bind[1].rqb_dt_id = DB_CHA_TYPE;
     /* ldb name */
     rq_bind[2].rqb_addr = (PTR)ldbid.ldb_database;
-    rq_bind[2].rqb_length = sizeof(DD_NAME);
+    rq_bind[2].rqb_length = sizeof(DD_DB_NAME);
     rq_bind[2].rqb_dt_id = DB_CHA_TYPE;
     /* long name */
     rq_bind[3].rqb_addr = (PTR)ldbid.ldb_longname;
@@ -739,18 +741,19 @@ iidd_ddb_ldbids a, iidd_ddb_ldb_dbcaps b where a.ldb_id =",
     rq_bind[4].rqb_dt_id = DB_CHA_TYPE;
     /* ldb_dbaname */
     rq_bind[5].rqb_addr = (PTR)ldbid.ldb_dbaname;
-    rq_bind[5].rqb_length = sizeof(DD_NAME);
+    rq_bind[5].rqb_length = sizeof(DD_OWN_NAME);
     rq_bind[5].rqb_dt_id = DB_CHA_TYPE;
 
     /* cap_capability */
-    ldbcaps.cap_capability[DB_MAXNAME] = EOS;
+    ldbcaps.cap_capability[DB_CAP_MAXLEN] = EOS;
     rq_bind[6].rqb_addr = (PTR)ldbcaps.cap_capability;
-    rq_bind[6].rqb_length = sizeof(DD_NAME);
+    rq_bind[6].rqb_length = DB_CAP_MAXLEN;
     rq_bind[6].rqb_dt_id = DB_CHA_TYPE;
+
     /* cap_value */
-    ldbcaps.cap_value[DB_MAXNAME] = EOS;
+    ldbcaps.cap_value[DB_CAPVAL_MAXLEN] = EOS;
     rq_bind[7].rqb_addr = (PTR)ldbcaps.cap_value;
-    rq_bind[7].rqb_length = sizeof(DD_NAME);
+    rq_bind[7].rqb_length = DB_CAPVAL_MAXLEN;
     rq_bind[7].rqb_dt_id = DB_CHA_TYPE;
         
 
@@ -787,27 +790,27 @@ iidd_ddb_ldbids a, iidd_ddb_ldb_dbcaps b where a.ldb_id =",
 	    {
 		MEfill(sizeof(DD_256C), (u_char)' ',
 			    (PTR)ldbdesc_p->dd_l3_ldb_name);
-		MEcopy((PTR)ldbid.ldb_database, sizeof(DD_NAME),
+		MEcopy((PTR)ldbid.ldb_database, sizeof(DD_DB_NAME),
 			    (PTR)ldbdesc_p->dd_l3_ldb_name);
-		MEcopy((PTR)ldbid.ldb_database, sizeof(DD_NAME),
+		MEcopy((PTR)ldbid.ldb_database, sizeof(DD_DB_NAME),
 			    (PTR)ldbplus_p->dd_p4_ldb_alias);
 	    }
-	    MEcopy((PTR)ldbid.ldb_node, sizeof(DD_NAME),
+	    MEcopy((PTR)ldbid.ldb_node, sizeof(DD_NODE_NAME),
 			(PTR)ldbdesc_p->dd_l2_node_name);
-	    MEcopy((PTR)ldbid.ldb_dbms, sizeof(DD_NAME),
+	    MEcopy((PTR)ldbid.ldb_dbms, sizeof(ldbdesc_p->dd_l4_dbms_name),
 			(PTR)ldbdesc_p->dd_l4_dbms_name);
 		/* b65263 - This is a lint error */
 	    /* if (ldbid.ldb_dba[0] = 'Y') */
 	    if (ldbid.ldb_dba[0] == 'Y') 
 	    {
 		ldbplus_p->dd_p1_character = DD_1CHR_DBA_NAME;			
-		MEcopy((PTR)ldbid.ldb_dbaname, sizeof(DD_NAME),
+		MEcopy((PTR)ldbid.ldb_dbaname, sizeof(DD_OWN_NAME),
 			(PTR)ldbplus_p->dd_p2_dba_name);
 	    }
 	    else
 	    {
 		ldbplus_p->dd_p1_character = 0;
-		MEfill(sizeof(DD_NAME), (u_char)' ',
+		MEfill(sizeof(DD_OWN_NAME), (u_char)' ',
 			     (PTR)ldbplus_p->dd_p2_dba_name);
 	    }
 	}
@@ -879,7 +882,7 @@ iidd_ddb_ldbids a, iidd_ddb_ldb_dbcaps b where a.ldb_id =",
 	rq_bind[0].rqb_dt_id = DB_CHA_TYPE;
 	/* long_ldbalias */
 	rq_bind[1].rqb_addr = (PTR)ldbplus_p->dd_p4_ldb_alias;
-	rq_bind[1].rqb_length = sizeof(DD_NAME);
+	rq_bind[1].rqb_length = sizeof(DD_DB_NAME);
 	rq_bind[1].rqb_dt_id = DB_CHA_TYPE;
         
 	qefrcb->qef_r3_ddb_req.qer_d5_out_info.qed_o2_bind_p = (PTR)bind_p;
@@ -1241,7 +1244,7 @@ rdd_cvtype( RDF_GLOBAL	*global,
     DB_STATUS	    status;
     DB_DT_ID	    dt_id;
     ADI_DT_NAME	    dt_name;
-    char            buffer[DB_MAXNAME + 1];
+    char            buffer[DB_TYPE_MAXLEN + 1];
     char            *string = buffer;
     char	    *dst = dt_name.adi_dtname;
     i4		    cnt;
@@ -1249,12 +1252,12 @@ rdd_cvtype( RDF_GLOBAL	*global,
 
     /* convert datatype to lower case */
 
-    STncpy(string, type_name, DB_MAXNAME);
-    string[ DB_MAXNAME ] = '\0';
+    STncpy(string, type_name, DB_TYPE_MAXLEN);
+    string[ DB_TYPE_MAXLEN ] = '\0';
     STtrmwhite(string);
 
     for (cnt = 0;
-	 cnt < DB_MAXNAME;
+	 cnt < DB_TYPE_MAXLEN;
 	 CMbyteinc(cnt, string), CMnext(string), CMnext(dst))
     {
 	CMtolower (string, dst);
@@ -1491,13 +1494,13 @@ rdd_rtrim(  PTR		    tab_name,
 
     /* Copy name to id_p->tab_name and trim the right blanks. */
 
-    MEcopy((PTR)tab_name, sizeof(DD_NAME), (PTR)id_p->tab_name);
-    id_p->tab_name[DB_MAXNAME] = EOS;
+    MEcopy((PTR)tab_name, sizeof(DD_TAB_NAME), (PTR)id_p->tab_name);
+    id_p->tab_name[DB_TAB_MAXNAME] = EOS;
     id_p->name_length = STtrmwhite(id_p->tab_name);
 
     /* Copy owner to id_p->tab_owner and trim the right blanks. */
-    MEcopy((PTR)tab_owner, sizeof(DD_NAME), (PTR)id_p->tab_owner);
-    id_p->tab_owner[DB_MAXNAME] = EOS;
+    MEcopy((PTR)tab_owner, sizeof(DD_OWN_NAME), (PTR)id_p->tab_owner);
+    id_p->tab_owner[DB_OWN_MAXNAME] = EOS;
     id_p->owner_length = STtrmwhite(id_p->tab_owner);
     
 }
@@ -1891,7 +1894,7 @@ rdd_username(RDF_GLOBAL *global)
     QEF_RCB             *qefrcb = &global->rdf_qefrcb;
     QEF_DDB_REQ		*ddr_p = &qefrcb->qef_r3_ddb_req;
     DD_1LDB_INFO	ldb_info;
-    DD_NAME		user_name;
+    DD_OWN_NAME		user_name;
 
     /* Assign ldb info */
 
@@ -1905,7 +1908,7 @@ rdd_username(RDF_GLOBAL *global)
 
     if (DB_SUCCESS_MACRO(status)
 	&&
-	MEcmp((PTR)ldbtab_p->dd_t2_tab_owner, (PTR)user_name, sizeof(DD_NAME))
+	MEcmp((PTR)ldbtab_p->dd_t2_tab_owner, (PTR)user_name, sizeof(DD_OWN_NAME))
        )
     {
 	status = E_DB_ERROR;
@@ -2314,7 +2317,7 @@ rdd_baseviewchk( RDF_GLOBAL *global)
 DB_STATUS
 rdd_schemachk(	RDF_GLOBAL         *global,
 		RDD_OBJ_ID	   *obj_id_p,
-		DD_NAME		   *map_p,
+		DD_ATT_NAME	   *map_p,
 		ADF_CB		   *adfcb)
 {
     DB_STATUS		status = E_DB_OK;
@@ -2333,7 +2336,6 @@ rdd_schemachk(	RDF_GLOBAL         *global,
     RQB_BIND            rq_bind[RDD_07_COL],	/* for 7 columns */
 			*bind_p = rq_bind;
     char		qrytxt[RDD_QRY_LENGTH];
-    DD_NAME		*local_names;
     DB_DATA_VALUE       dv,col_width;
 
 
@@ -2376,10 +2378,10 @@ column_defaults, column_sequence from iicolumns where table_name =",
 	return (status); 
 
     rq_bind[0].rqb_addr = (PTR)column.name; 
-    rq_bind[0].rqb_length = sizeof(DD_NAME);
+    rq_bind[0].rqb_length = sizeof(DD_ATT_NAME);
     rq_bind[0].rqb_dt_id = DB_CHA_TYPE;
     rq_bind[1].rqb_addr = (PTR)column.datatype; 
-    rq_bind[1].rqb_length = sizeof(DD_NAME);
+    rq_bind[1].rqb_length = sizeof(column.datatype);
     rq_bind[1].rqb_dt_id = DB_CHA_TYPE;
     rq_bind[2].rqb_addr = (PTR)&column.length;
     rq_bind[2].rqb_length = sizeof(column.length);
@@ -2436,7 +2438,7 @@ column_defaults, column_sequence from iicolumns where table_name =",
 		{
 		    if ( MEcmp( (PTR)column.name, 
 				(PTR)map_p[cnt],
-				sizeof(DD_NAME)
+				sizeof(DD_ATT_NAME)
 			      )
 		       )
 		    {
@@ -2446,10 +2448,10 @@ column_defaults, column_sequence from iicolumns where table_name =",
 		}
 		else
 		{
-		    char attname_buf[DB_MAXNAME];
+		    char attname_buf[DB_ATT_MAXNAME];
 		    char *buf_p = attname_buf;
 		    char *attname_p = star_attr->att_name.db_att_name;
-		    char *last = attname_p + sizeof(DD_NAME) -1;
+		    char *last = attname_p + sizeof(DD_ATT_NAME) -1;
 
 		    if (ldb_info.dd_i2_ldb_plus.dd_p3_ldb_caps.
 			dd_c10_delim_name_case == DD_0CASE_LOWER)
@@ -2479,7 +2481,7 @@ column_defaults, column_sequence from iicolumns where table_name =",
 		    }
 
  		    if ( MEcmp((PTR)column.name, (PTR)attname_p,
-			        sizeof(DD_NAME))
+			        sizeof(DD_ATT_NAME))
 			)
 		    {
 		    	status = E_DB_ERROR;
@@ -2672,7 +2674,7 @@ column_defaults, column_sequence from iicolumns where table_name =",
 DB_STATUS
 rdd_alterdate(	RDF_GLOBAL         *global,
 		RDD_OBJ_ID	   *obj_id_p,
-		DD_NAME		   *mapped_names,
+		DD_ATT_NAME	   *mapped_names,
 		ADF_CB              *adfcb)
 {
     DB_STATUS		status;
@@ -3442,11 +3444,11 @@ rdd_ldbtab( RDF_GLOBAL     *global,
     rq_bind[2].rqb_dt_id = DB_CHA_TYPE;
     /* table name */
     rq_bind[3].rqb_addr = (PTR)tabinfo.table_name;
-    rq_bind[3].rqb_length = sizeof(DD_NAME);
+    rq_bind[3].rqb_length = sizeof(DD_TAB_NAME);
     rq_bind[3].rqb_dt_id = DB_CHA_TYPE;
     /* table owner */
     rq_bind[4].rqb_addr = (PTR)tabinfo.table_owner;
-    rq_bind[4].rqb_length = sizeof(DD_NAME);
+    rq_bind[4].rqb_length = sizeof(DD_OWN_NAME);
     rq_bind[4].rqb_dt_id = DB_CHA_TYPE;
     /* create date */
     rq_bind[5].rqb_addr = (PTR)tabinfo.table_date;
@@ -3482,9 +3484,9 @@ rdd_ldbtab( RDF_GLOBAL     *global,
 
     if (ddr_p->qer_d5_out_info.qed_o3_output_b)
     {
-	MEcopy((PTR)tabinfo.table_name, sizeof(DD_NAME),
+	MEcopy((PTR)tabinfo.table_name, sizeof(DD_TAB_NAME),
 	       (PTR)ldbtab_p->dd_t1_tab_name);
-	MEcopy((PTR)tabinfo.table_owner, sizeof(DD_NAME),
+	MEcopy((PTR)tabinfo.table_owner, sizeof(DD_OWN_NAME),
 	       (PTR)ldbtab_p->dd_t2_tab_owner);
 
 	rdd_cvobjtype(tabinfo.local_type, &ldbtab_p->dd_t3_tab_type);
@@ -3670,11 +3672,11 @@ rdd_objinfo(	RDF_GLOBAL         *global,
 
 	/* object name */
 	rq_bind[0].rqb_addr = (PTR)iiddb_objects.object_name;
-	rq_bind[0].rqb_length = sizeof(DD_NAME);
+	rq_bind[0].rqb_length = sizeof(DD_OBJ_NAME);
 	rq_bind[0].rqb_dt_id = DB_CHA_TYPE;
 	/* object owner */
 	rq_bind[1].rqb_addr = (PTR)iiddb_objects.object_owner;
-	rq_bind[1].rqb_length = sizeof(DD_NAME);
+	rq_bind[1].rqb_length = sizeof(DD_OWN_NAME);
 	rq_bind[1].rqb_dt_id = DB_CHA_TYPE;
 	/* table id base */
 	rq_bind[2].rqb_addr = (PTR)&iiddb_objects.object_base;
@@ -3742,11 +3744,9 @@ rdd_objinfo(	RDF_GLOBAL         *global,
 		       id_p);
 	}
 
-	MEcopy((PTR)iiddb_objects.object_name,
-	       sizeof(DD_NAME),
+	MEcopy((PTR)iiddb_objects.object_name, sizeof(DD_OBJ_NAME),
 	       (PTR)obj_p->dd_o1_objname);
-	MEcopy((PTR)iiddb_objects.object_owner,
-	       sizeof(DD_NAME),
+	MEcopy((PTR)iiddb_objects.object_owner, sizeof(DD_OWN_NAME),
 	       (PTR)obj_p->dd_o2_objowner);
 	obj_p->dd_o3_objid.db_tab_base = iiddb_objects.object_base;
 	obj_p->dd_o3_objid.db_tab_index = iiddb_objects.object_index;
@@ -3771,9 +3771,9 @@ rdd_objinfo(	RDF_GLOBAL         *global,
 
 	/* Fill object name, owner, and id in temp DMT_TBL_ENTRY */	    
 	MEcopy((PTR)iiddb_objects.object_name,
-	       sizeof(DD_NAME), tbl_p->tbl_name.db_tab_name);
+	       sizeof(DD_TAB_NAME), tbl_p->tbl_name.db_tab_name);
 	MEcopy((PTR)iiddb_objects.object_owner,
-	       sizeof(DD_NAME), tbl_p->tbl_owner.db_own_name);
+	       sizeof(DD_OWN_NAME), tbl_p->tbl_owner.db_own_name);
 	STRUCT_ASSIGN_MACRO(obj_p->dd_o3_objid, tbl_p->tbl_id);
 	STRUCT_ASSIGN_MACRO(obj_p->dd_o4_qryid, tbl_p->tbl_qryid);
 	if (obj_p->dd_o8_sysobj_b)
@@ -4024,11 +4024,11 @@ rdd_relinfo(	RDF_GLOBAL         *global,
 
 	/* object name */
 	rq_bind[0].rqb_addr = (PTR)iiddb_objects.object_name;
-	rq_bind[0].rqb_length = sizeof(DD_NAME);
+	rq_bind[0].rqb_length = sizeof(DD_OBJ_NAME);
 	rq_bind[0].rqb_dt_id = DB_CHA_TYPE;
 	/* object owner */
 	rq_bind[1].rqb_addr = (PTR)iiddb_objects.object_owner;
-	rq_bind[1].rqb_length = sizeof(DD_NAME);
+	rq_bind[1].rqb_length = sizeof(DD_OWN_NAME);
 	rq_bind[1].rqb_dt_id = DB_CHA_TYPE;
 	/* table id base */
 	rq_bind[2].rqb_addr = (PTR)&iiddb_objects.object_base;
@@ -4077,11 +4077,11 @@ rdd_relinfo(	RDF_GLOBAL         *global,
 
 	    /* table_name */
 	    rq_bind[12].rqb_addr = (PTR)iidd_tables.table_name;
-	    rq_bind[12].rqb_length = sizeof(DD_NAME);
+	    rq_bind[12].rqb_length = sizeof(DD_TAB_NAME);
 	    rq_bind[12].rqb_dt_id = DB_CHA_TYPE;
 	    /* table_owner */
 	    rq_bind[13].rqb_addr = (PTR)iidd_tables.table_owner;
-	    rq_bind[13].rqb_length = sizeof(DD_NAME);
+	    rq_bind[13].rqb_length = sizeof(DD_OWN_NAME);
 	    rq_bind[13].rqb_dt_id = DB_CHA_TYPE;
 	    /* create_date */
 	    rq_bind[14].rqb_addr = (PTR)iidd_tables.create_date;
@@ -4420,11 +4420,9 @@ rdd_relinfo(	RDF_GLOBAL         *global,
 		      id_p);
 	}
 
-	MEcopy((PTR)iiddb_objects.object_name,
-	       sizeof(DD_NAME),
+	MEcopy((PTR)iiddb_objects.object_name, sizeof(DD_OBJ_NAME),
 	       (PTR)obj_p->dd_o1_objname);
-	MEcopy((PTR)iiddb_objects.object_owner,
-	       sizeof(DD_NAME),
+	MEcopy((PTR)iiddb_objects.object_owner, sizeof(DD_OWN_NAME),
 	       (PTR)obj_p->dd_o2_objowner);
 	obj_p->dd_o3_objid.db_tab_base = iiddb_objects.object_base;
 	obj_p->dd_o3_objid.db_tab_index = iiddb_objects.object_index;
@@ -4449,11 +4447,11 @@ rdd_relinfo(	RDF_GLOBAL         *global,
 
 	/* Fill object name, owner, and id in temp DMT_TBL_ENTRY */	    
 	MEcopy((PTR)iiddb_objects.object_name,
-	       sizeof(DD_NAME), tbl_p->tbl_name.db_tab_name);
+	       sizeof(DD_TAB_NAME), tbl_p->tbl_name.db_tab_name);
 	MEcopy((PTR)iiddb_objects.object_owner,
-	       sizeof(DD_NAME), tbl_p->tbl_owner.db_own_name);
+	       sizeof(DD_OWN_NAME), tbl_p->tbl_owner.db_own_name);
 	STRUCT_ASSIGN_MACRO(iidd_tables.location_name, tbl_p->tbl_location);
-	MEfill(sizeof(DD_NAME), (u_char)' ', 
+	MEfill(sizeof(DD_LOC_NAME), (u_char)' ', 
 		(PTR)tbl_p->tbl_filename.db_loc_name);
 	STRUCT_ASSIGN_MACRO(obj_p->dd_o3_objid, tbl_p->tbl_id);
 	STRUCT_ASSIGN_MACRO(obj_p->dd_o4_qryid, tbl_p->tbl_qryid);
@@ -4853,7 +4851,7 @@ where object_base =",
 	return (status); 
 
     rq_bind[0].rqb_addr = (PTR)ldb_col.local_column; 
-    rq_bind[0].rqb_length = sizeof(DD_NAME);
+    rq_bind[0].rqb_length = sizeof(DD_ATT_NAME);
     rq_bind[0].rqb_dt_id = DB_CHA_TYPE;
     rq_bind[1].rqb_addr = (PTR)&ldb_col.column_sequence;
     rq_bind[1].rqb_length = sizeof(ldb_col.column_sequence);
@@ -4886,7 +4884,7 @@ where object_base =",
 	    }
 
             col_ptr = (DD_COLUMN_DESC *)attrmap[ldb_col.column_sequence];
-	    MEcopy((PTR)ldb_col.local_column, sizeof(DD_NAME),
+	    MEcopy((PTR)ldb_col.local_column, sizeof(DD_ATT_NAME),
 			     (PTR)col_ptr->dd_c1_col_name);
 	}
     } while (ddr_p->qer_d5_out_info.qed_o3_output_b);
@@ -4971,8 +4969,8 @@ rdd_gattr( RDF_GLOBAL  *global)
     char		qrytxt[RDD_QRY_LENGTH];
     DD_2LDB_TAB_INFO    *ldbtab_p;
     bool                mapped;
-    DD_NAME             *local_names=NULL;
-    DD_NAME             local_name;
+    DD_ATT_NAME             *local_names=NULL;
+    DD_ATT_NAME             local_name;
 
 
     if (!obj_p)
@@ -4998,11 +4996,11 @@ rdd_gattr( RDF_GLOBAL  *global)
     if (mapped)
     {
 	status = rdu_malloc(global, 
-		    (i4) ((ldbtab_p->dd_t7_col_cnt + 1) * sizeof(DD_NAME)),
+		    (i4) ((ldbtab_p->dd_t7_col_cnt + 1) * sizeof(DD_ATT_NAME)),
 		    (PTR *) &local_names);
         if (DB_FAILURE_MACRO(status))
    	    return (status); 
-	MEfill ( (ldbtab_p->dd_t7_col_cnt + 1) * sizeof(DD_NAME),
+	MEfill ( (ldbtab_p->dd_t7_col_cnt + 1) * sizeof(DD_ATT_NAME),
 		 (u_char)'\0',
 		 (PTR)local_names);
 	/* FIXME ~~~ Need to put this ptr in the infoblk somehow. */
@@ -5081,11 +5079,11 @@ iidd_columns where table_name =",
 
     /* column_name */
     rq_bind[0].rqb_addr = (PTR)iicolumns.name; 
-    rq_bind[0].rqb_length = sizeof(DD_NAME);
+    rq_bind[0].rqb_length = sizeof(DD_ATT_NAME);
     rq_bind[0].rqb_dt_id = DB_CHA_TYPE;
     /* column_datatype */
     rq_bind[1].rqb_addr = (PTR)iicolumns.datatype;
-    rq_bind[1].rqb_length = sizeof(DD_NAME);
+    rq_bind[1].rqb_length = sizeof(iicolumns.datatype);
     rq_bind[1].rqb_dt_id = DB_CHA_TYPE;
     /* column_length */
     rq_bind[2].rqb_addr = (PTR)&iicolumns.length;
@@ -5115,7 +5113,7 @@ iidd_columns where table_name =",
     {
 	/* local_column */
 	rq_bind[8].rqb_addr = (PTR)&local_name; 
-	rq_bind[8].rqb_length = sizeof(DD_NAME);
+	rq_bind[8].rqb_length = sizeof(DD_ATT_NAME);
 	rq_bind[8].rqb_dt_id = DB_CHA_TYPE;
     }
     qefrcb->qef_r3_ddb_req.qer_d5_out_info.qed_o2_bind_p = (PTR)bind_p;
@@ -5148,7 +5146,7 @@ iidd_columns where table_name =",
 	    }
 		
             col_ptr = (DMT_ATT_ENTRY *)attr[iicolumns.sequence];
-	    MEcopy((PTR)iicolumns.name, sizeof(DD_NAME),
+	    MEcopy((PTR)iicolumns.name, sizeof(DD_ATT_NAME),
                       (PTR)&col_ptr->att_name);
 	    col_ptr->att_number = iicolumns.sequence;
 
@@ -5388,11 +5386,11 @@ iidd_tables c, iidd_columns d, iidd_columns e where a.base_name =",
 
     /* 0. index_name from iidd_indexes */
     rq_bind[0].rqb_addr = (PTR)idxdesc.index_name;
-    rq_bind[0].rqb_length = sizeof(DD_NAME);
+    rq_bind[0].rqb_length = sizeof(DD_TAB_NAME);
     rq_bind[0].rqb_dt_id = DB_CHA_TYPE;
     /* 1. index_owner from iidd_indexes */
     rq_bind[1].rqb_addr = (PTR)idxdesc.index_owner;
-    rq_bind[1].rqb_length = sizeof(DD_NAME);
+    rq_bind[1].rqb_length = sizeof(DD_OWN_NAME);
     rq_bind[1].rqb_dt_id = DB_CHA_TYPE;
     /* 2. storage_structure from iidd_indexes */
     rq_bind[2].rqb_addr = (PTR)idxdesc.storage;
@@ -5496,7 +5494,7 @@ iidd_tables c, iidd_columns d, iidd_columns e where a.base_name =",
 
 		/* fields from iidd_indexes */
 
-		MEcopy((PTR)idxdesc.index_name, sizeof(DD_NAME),
+		MEcopy((PTR)idxdesc.index_name, sizeof(DD_TAB_NAME),
 			  (PTR)col_ptr->idx_name.db_tab_name);
 
 		status = rdd_cvstorage(idxdesc.storage,

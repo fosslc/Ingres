@@ -94,6 +94,8 @@
 **	    SIR 120874: dm0m_? functions converted to DB_ERROR *
 **	28-Nov-2008 (jonj)
 **	    SIR 120874: dm2t_?, dm2r_? functions converted to DB_ERROR *
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -501,10 +503,10 @@ DB_ERROR		*dberr)
 	/*  Position table using table name and user id. */
 
 	key_desc[0].attr_operator = DM2R_EQ;
-	key_desc[0].attr_number = 1;
+	key_desc[0].attr_number = DM_1_RELIDX_KEY;
 	key_desc[0].attr_value = table->db_tab_name;
 	key_desc[1].attr_operator = DM2R_EQ;
-	key_desc[1].attr_number = 2;
+	key_desc[1].attr_number = DM_2_RELIDX_KEY;
 	key_desc[1].attr_value = owner->db_own_name;
 
 	for (;;)
@@ -625,10 +627,14 @@ DB_ERROR		*dberr)
 	tuple->misc_data = (char *)&tuple[1];
 	for (i=1, col_id = 0; i<= tcb->tcb_rel.relatts; i++)
 	{
+	    DB_ATT_NAME	tmpattnm;
+
+	    MEmove(tcb->tcb_atts_ptr[i].attnmlen, tcb->tcb_atts_ptr[i].attnmstr,
+		' ', DB_ATT_MAXNAME, tmpattnm.db_att_name);
+
 	    /* see if this col is specified col */
-    	    cmp_res = MEcmp( (char *) &tcb->tcb_atts_ptr[i].name, 
-			 (char *) att_name->db_att_name,
-		         sizeof(DB_ATT_NAME) );
+    	    cmp_res = MEcmp( tmpattnm.db_att_name, att_name->db_att_name,
+		sizeof(DB_ATT_NAME) );
 	    if (cmp_res == 0)
 		col_id = i;
 	

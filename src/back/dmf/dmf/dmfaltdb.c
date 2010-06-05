@@ -200,6 +200,8 @@
 **	    SIR 121619 MVCC: Added alter_mvcc to enable/disable MVCC.
 **	02-Mar-2010 (frima01) SIR 121619
 **	    Use ALTERDB_MSG_LEN = 132 + DB_MAXNAME + 1 for message buffers.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -262,7 +264,7 @@ static DB_STATUS alter_mvcc(
     DMP_DCB	*dcb,
     DM0C_CNF    *cnf);
 
-# define	ALTERDB_MSG_LEN	132 + DB_MAXNAME + 1
+# define	ALTERDB_MSG_LEN	132 + DB_DB_MAXNAME + DB_COLLATION_MAXNAME + 1
 
 /*{
 ** Name: dmfalter	- Alter database state or characteristics.
@@ -769,8 +771,8 @@ DM0C_CNF    *cnf)
     ** journaling has been disabled.  Write database name to local buffer
     ** so we can strip blanks off of it.
     */
-    STncpy( local_buffer, dcb->dcb_name.db_db_name, DB_MAXNAME);
-    local_buffer[ DB_MAXNAME ] = '\0';
+    STncpy( local_buffer, dcb->dcb_name.db_db_name, DB_DB_MAXNAME);
+    local_buffer[ DB_DB_MAXNAME ] = '\0';
     STtrmwhite(local_buffer);
     uleFormat(NULL, E_DM1401_ALT_JOURNAL_DISABLED, (CL_ERR_DESC *)NULL, ULE_LOG,
 	(DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, (i4 *)NULL, 
@@ -883,8 +885,8 @@ DM0C_CNF    *cnf)
     ** enabled or disabled.  Write database name to local buffer
     ** so we can strip blanks off of it.
     */
-    STncpy( local_buffer, dcb->dcb_name.db_db_name, DB_MAXNAME);
-    local_buffer[ DB_MAXNAME ] = '\0';
+    STncpy( local_buffer, dcb->dcb_name.db_db_name, DB_DB_MAXNAME);
+    local_buffer[ DB_DB_MAXNAME ] = '\0';
     STtrmwhite(local_buffer);
     uleFormat(NULL, err_code, (CL_ERR_DESC *)NULL, ULE_LOG,
 	(DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, (i4 *)NULL, 
@@ -990,8 +992,8 @@ DM0C_CNF    *cnf)
     ** Log informational message to the error log indicating that 
     ** the block size has been changed.
     */
-    STncpy( local_buffer, dcb->dcb_name.db_db_name, DB_MAXNAME);
-    local_buffer[ DB_MAXNAME ] = '\0';
+    STncpy( local_buffer, dcb->dcb_name.db_db_name, DB_DB_MAXNAME);
+    local_buffer[ DB_DB_MAXNAME ] = '\0';
     STtrmwhite(local_buffer);
 
     uleFormat(NULL, E_DM103E_JSP_JNL_BKSZ_CHGD, (CL_ERR_DESC *)NULL, ULE_LOG,
@@ -1083,8 +1085,8 @@ DM0C_CNF    *cnf)
     ** Log informational message to the error log indicating that 
     ** the block size has been changed.
     */
-    STncpy( local_buffer, dcb->dcb_name.db_db_name, DB_MAXNAME);
-    local_buffer[ DB_MAXNAME ] = '\0';
+    STncpy( local_buffer, dcb->dcb_name.db_db_name, DB_DB_MAXNAME);
+    local_buffer[ DB_DB_MAXNAME ] = '\0';
     STtrmwhite(local_buffer);
 
     uleFormat(NULL, E_DM103D_JSP_JNL_SIZE_CHGD, (CL_ERR_DESC *)NULL, ULE_LOG,
@@ -1182,8 +1184,8 @@ DM0C_CNF    *cnf)
     ** Log informational message to the error log indicating that 
     ** the block size has been changed.
     */
-    STncpy(local_buffer, dcb->dcb_name.db_db_name, DB_MAXNAME);
-    local_buffer[ DB_MAXNAME ] = '\0';
+    STncpy(local_buffer, dcb->dcb_name.db_db_name, DB_DB_MAXNAME);
+    local_buffer[ DB_DB_MAXNAME ] = '\0';
     STtrmwhite(local_buffer);
 
     uleFormat(NULL, E_DM103F_JSP_JNL_BKCNT_CHGD, (CL_ERR_DESC *)NULL, ULE_LOG,
@@ -1955,8 +1957,8 @@ convert_unicode(
        if (*jsx->jsx_ucollation && aduucolinit(jsx->jsx_ucollation,
             MEreqmem, &utbl, &uvtab, &syserr) != OK)
        {
-          STncpy( line_buffer, jsx->jsx_ucollation, DB_MAXNAME);
-          line_buffer[ DB_MAXNAME ] = '\0';
+          STncpy( line_buffer, jsx->jsx_ucollation, DB_COLLATION_MAXNAME);
+          line_buffer[ DB_COLLATION_MAXNAME ] = '\0';
           STtrmwhite(line_buffer);
 
           uleFormat(NULL, E_DM1410_ALT_UCOL_NOTEXIST, (CL_ERR_DESC *)NULL, ULE_LOOKUP,
@@ -2052,8 +2054,8 @@ convert_unicode(
           char            error_buffer[ER_MAX_LEN];
           i4              error_length;
 
-          STncpy( line_buffer, dcb->dcb_name.db_db_name, DB_MAXNAME);
-          line_buffer[ DB_MAXNAME ] = '\0';
+          STncpy( line_buffer, dcb->dcb_name.db_db_name, DB_DB_MAXNAME);
+          line_buffer[ DB_DB_MAXNAME ] = '\0';
           STtrmwhite(line_buffer);
 
           uleFormat(NULL, E_DM1408_ALT_ALREADY_UNICODE, (CL_ERR_DESC *)NULL, ULE_LOOKUP,
@@ -2149,8 +2151,8 @@ convert_unicode(
         char            error_buffer[ER_MAX_LEN];
         i4              error_length;
 
-        STncpy( line_buffer, dcb->dcb_name.db_db_name, DB_MAXNAME);
-        line_buffer[ DB_MAXNAME ] = '\0';
+        STncpy( line_buffer, dcb->dcb_name.db_db_name, DB_DB_MAXNAME);
+        line_buffer[ DB_DB_MAXNAME ] = '\0';
         STtrmwhite(line_buffer);
 
         uleFormat(NULL, E_DM1407_ALT_CON_UNICODE, (CL_ERR_DESC *)NULL, ULE_LOOKUP,

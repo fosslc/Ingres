@@ -129,6 +129,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*{
@@ -1009,7 +1011,8 @@ DM2U_INDEX_CB   *index_cbs)
 		
 		atts = m->mx_i_key_atts[i];
 		attr_ptrs[i] = &attr_entry[i];
-		STRUCT_ASSIGN_MACRO(atts->name, attr_entry[i].attr_name);
+		MEmove(atts->attnmlen, atts->attnmstr, ' ',
+			DB_ATT_MAXNAME, attr_entry[i].attr_name.db_att_name);
 		attr_entry[i].attr_type = atts->type;
 	 	attr_entry[i].attr_size = atts->length;
 	 	attr_entry[i].attr_precision = atts->precision;

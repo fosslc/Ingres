@@ -93,6 +93,8 @@
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
 **	11-Apr-2008 (kschendel)
 **	    Revise DMF-qualification call sequence.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*
@@ -1070,7 +1072,7 @@ qeu_idx_qual_func(
 
     qparams->qeu_retval = ADE_NOT_TRUE;
     if ( MEcmp((PTR) &relidx_tuple->relowner, (PTR) schema_name,
-	    DB_MAXNAME) == 0)
+	    DB_SCHEMA_MAXNAME) == 0)
 	qparams->qeu_retval = ADE_TRUE;
     return (E_DB_OK);
 }
@@ -1105,7 +1107,7 @@ qeu_dbp_qual_func(
 
     qparams->qeu_retval = ADE_NOT_TRUE;
     if ( MEcmp((PTR) &dbp_tuple->db_owner, (PTR) schema_name,
-	    DB_MAXNAME) == 0)
+	    DB_SCHEMA_MAXNAME) == 0)
 	qparams->qeu_retval = ADE_TRUE;
     return (E_DB_OK);
 }
@@ -1140,7 +1142,7 @@ qeu_syn_qual_func(
 
     qparams->qeu_retval = ADE_NOT_TRUE;
     if ( MEcmp((PTR) &syn_tuple->db_synowner, (PTR) schema_name,
-	    DB_MAXNAME) == 0)
+	    DB_SCHEMA_MAXNAME) == 0)
 	qparams->qeu_retval = ADE_TRUE;
     return (E_DB_OK);
 }
@@ -1175,7 +1177,7 @@ qeu_ev_qual_func(
 
     qparams->qeu_retval = ADE_NOT_TRUE;
     if ( MEcmp((PTR) &ev_tuple->dbe_owner, (PTR) schema_name,
-	    DB_MAXNAME) == 0)
+	    DB_SCHEMA_MAXNAME) == 0)
 	qparams->qeu_retval = ADE_TRUE;
     return (E_DB_OK);
 }

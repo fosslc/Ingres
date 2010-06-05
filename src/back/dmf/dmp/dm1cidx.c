@@ -294,6 +294,8 @@
 **	    SIR 121619 MVCC: Changes for MVCC
 **	23-Feb-2010 (stial01)
 **          dm1cxclean() Add rcb param, Skip clean if cursor is positioned on
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 static	i4	    lowest_offset(i4 page_type, i4 page_size, DMPP_PAGE *b);
@@ -1202,7 +1204,7 @@ i4		Clustered)
 		attdesc.u.collID = atr->collID;
 	    else attdesc.u.prec = atr->precision;
 	    if ((keyno <= key_count) &&
-		!MEcmp((char *)&atr->name, (char *)&key->name, sizeof(key->name))) 
+		!STcompare(atr->attnmstr, key->attnmstr)) 
 	    {
 		attdesc.key = keyno++;
 		key = *(key_array++);

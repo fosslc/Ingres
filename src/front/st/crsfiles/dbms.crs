@@ -609,6 +609,8 @@
 --#     29-Mar-2010 (ashco01) Bug 122768 
 --#         Added ii.$.dbms.$.qef_memory to hold total QEF memory requirement
 --#         for dbms QEF parameters for inclusion in syscheck resource checks.
+--#	01-Apr-2010 (stial01)
+--#         Changes for Long IDs
 
 -- location setup resources
 # ifdef UNIX 
@@ -953,9 +955,9 @@ ii.$.dbms.$.stack_caching:	OFF;
 --# Go with 256K on any 64-bit platform, everything is larger.
 --# 32+64 hybrid will probably run the 64-bit server, so include them.
 #if defined(LP64) || defined(conf_BUILD_ARCH_32_64)
-ii.$.dbms.$.stack_size:		256K;
+ii.$.dbms.$.stack_size:		300;
 #else
-ii.$.dbms.$.stack_size:		150K, MIN = 128K;
+ii.$.dbms.$.stack_size:		200K, MIN = 200K;
 #endif /* LP64 */
 
 --ii.$.dbms.$.sxf_memory:		10000 * ii.$.dbms.$.connect_limit + 10000,

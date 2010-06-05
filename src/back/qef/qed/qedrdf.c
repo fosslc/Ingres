@@ -117,6 +117,8 @@
 **          internal RDF query.
 **	30-mar-04 (toumi01)
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -226,9 +228,9 @@ QEF_RCB       *v_qer_p )
     else					/* use LDB id */
 	which_p = & ddr_p->qer_d2_ldb_info_p->dd_i1_ldb_desc;
 
-    if  ((!MEcmp(which_p->dd_l2_node_name, DB_ABSENT_NAME, DB_MAXNAME))
-      && (!MEcmp(which_p->dd_l3_ldb_name,  DB_DBDB_NAME,   DB_MAXNAME))
-      && (!MEcmp(which_p->dd_l4_dbms_name, DB_ABSENT_NAME, DB_MAXNAME)))
+    if  ((!MEcmp(which_p->dd_l2_node_name, DB_ABSENT_NAME, DB_NODE_MAXNAME))
+      && (!MEcmp(which_p->dd_l3_ldb_name,  DB_DBDB_NAME,   DB_DB_MAXNAME))
+      && (!MEcmp(which_p->dd_l4_dbms_name, DB_ABSENT_NAME, DB_TYPE_MAXLEN)))
 	is_iidbdb = TRUE;
 
     if(!which_p->dd_l1_ingres_b		    /* if not privileged assoc */

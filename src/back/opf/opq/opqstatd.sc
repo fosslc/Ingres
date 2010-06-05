@@ -173,6 +173,8 @@ exec sql include sqlda;
 **      28-sep-2009 (joea)
 **          Add restriction on attver_dropped to select from iihistogram in
 **          process().
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*
@@ -535,7 +537,7 @@ char		    **argv)
 		    i4	    	attcount;   /* number of tuples associated
                                             ** with attribute 
                                             */
-		    OPQ_NAME	atnameptr;  /* Attribute name being analyzed */
+		    DB_ATT_STR	atnameptr;  /* Attribute name being analyzed */
 		    bool	ishistogrammable = TRUE;
 
 		    att_from_input = TRUE;  /* at least one attribute specified
@@ -620,7 +622,7 @@ char		    **argv)
   		    {
 			exec sql begin declare section;
 			    char	*es_attname;
-			    char        es_type[DB_GW1_MAXNAME+1];
+			    char        es_type[DB_TYPE_MAXLEN+1];
 			    char        es_nulls[8+1];
 			    i4          es_len;
 			    i4          es_scale;
@@ -799,7 +801,7 @@ char		    **argv)
     {
 	exec sql begin declare section;
 	    char	*es1_atname;
-	    char        es1_type[DB_GW1_MAXNAME+1];
+	    char        es1_type[DB_TYPE_MAXLEN + 1];
 	    char        es1_nulls[8+1];
 	    i4          es1_len;
 	    i4          es1_scale;
@@ -809,7 +811,7 @@ char		    **argv)
 	    i2		es1_ingtype;
 	exec sql end declare section;
 
-        OPQ_NAME    tempname;
+        DB_ATT_STR	tempname;
 
         es1_atname = (char *)&tempname;
 	es1_rname = (char *)&relp->relname;

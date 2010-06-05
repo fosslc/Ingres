@@ -248,6 +248,8 @@
 **	    rdu_ierror macro. Rename rdu_warn() to rduWarn() invoked by
 **	    rdu_warn macro. Replace facilities err_code with its DB_ERROR
 **	    pointer in rdu_ferror() prototype.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /* Macro to return pointer to session's RDF_SESS_CB directly from SCF's SCB */
@@ -1533,7 +1535,7 @@ FUNC_EXTERN DB_STATUS rdf_ldbplus(RDF_GLOBAL *global);
 
 /* rdf_userlocal - get the user name from ldb. */
 FUNC_EXTERN DB_STATUS rdf_userlocal(	RDF_GLOBAL         *global,
-					DD_NAME		   user_name);
+					DD_OWN_NAME	   user_name);
 
 /* rdf_localtab	- retrieve local table information. */
 FUNC_EXTERN DB_STATUS rdf_localtab(	RDF_GLOBAL         *global,
@@ -1731,13 +1733,13 @@ FUNC_EXTERN DB_STATUS rdd_baseviewchk( RDF_GLOBAL *global);
 /* rdd_schemachk - schema consistency check. */
 FUNC_EXTERN DB_STATUS rdd_schemachk(	RDF_GLOBAL         *global,
 					RDD_OBJ_ID	   *obj_id_p,
-					DD_NAME		   *map_p,
+					DD_ATT_NAME	   *map_p,
 					ADF_CB		   *adfcb);
 
 /* rdd_alterdate - retrieve table alternation date LDB. */
 FUNC_EXTERN DB_STATUS rdd_alterdate(	RDF_GLOBAL         *global,
 					RDD_OBJ_ID	   *obj_id_p,
-					DD_NAME		   *mapped_names,
+					DD_ATT_NAME	   *mapped_names,
 					ADF_CB              *adfcb);
 
 /* rdd_getcolno - retrieve attribute count of an objects from CDB. */

@@ -111,6 +111,8 @@
 **	    support operand array in 0calclen
 **      26-Oct-2009 (coomi01) b122714
 **          Move psq_store_text() declarator to pshparse.h and make public.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -1384,7 +1386,7 @@ psq_store_text(
 	    if (rngvar->pss_used && rngvar->pss_rgno >= 0)
 	    {
 		size += (  14   /* "range of  is \n" */
-			 + psf_trmwhite(DB_MAXNAME, rngvar->pss_rgname)
+			 + psf_trmwhite(DB_TAB_MAXNAME, rngvar->pss_rgname)
 			 + psf_trmwhite(sizeof(DB_TAB_NAME),
 			       (char *) &rngvar->pss_tabname));
 	    }
@@ -1439,14 +1441,14 @@ psq_store_text(
 		out += 9;
 
 		/* add in range name */
-		plen = psf_trmwhite(DB_MAXNAME, rngvar->pss_rgname);
+		plen = psf_trmwhite(DB_TAB_MAXNAME, rngvar->pss_rgname);
 		STncpy( (char *)out, rngvar->pss_rgname, plen);
 		out += plen;
 
 		STncpy( (char *)out, " is ", 4);
 		out += 4;
 
-		plen = psf_trmwhite(DB_MAXNAME, (char *) &rngvar->pss_tabname);
+		plen = psf_trmwhite(DB_TAB_MAXNAME, &rngvar->pss_tabname);
 		STncpy( (char *)out, (char *)&rngvar->pss_tabname, plen);
 		out += plen;
 

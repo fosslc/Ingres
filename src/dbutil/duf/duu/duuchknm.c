@@ -38,6 +38,8 @@
 **	    unnest dbms.h
 **	20-sep-2004 (devjo01)
 **	    Remove du_chk3_locname.  Use cui_chk3_lockname from cuid.c instead.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -137,7 +139,7 @@ du_chk2_usrname(uname)
 register char	*uname;
 {
 
-    if ((STlength(uname) > DB_MAXNAME) || (STlength(uname) == 0))
+    if ((STlength(uname) > DB_OWN_MAXNAME) || (STlength(uname) == 0))
 	return(FAIL);
 
     return(OK);

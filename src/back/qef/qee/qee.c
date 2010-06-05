@@ -414,6 +414,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 /*
@@ -5108,7 +5110,7 @@ qee_dbparam(
 	    if (((uparm->parm_flags & QEF_IS_POSPARM) && i == uindex) ||
 		(STncmp(uparm->parm_name, 
 			       dbparm->dbp_name, uparm->parm_nlen ) == 0)
-		&& (   uparm->parm_nlen == DB_MAXNAME
+		&& (   uparm->parm_nlen == DB_PARM_MAXNAME
 		    || dbparm->dbp_name[uparm->parm_nlen] == ' ')
 	       )
 	    {
@@ -5150,7 +5152,7 @@ qee_dbparam(
 		    {
 			(VOID) qef_error(E_QE0113_PARAM_CONVERSION, 0L,
 				 status, &err, &dsh->dsh_error, 1,
-				 qec_trimwhite(DB_MAXNAME,
+				 qec_trimwhite(DB_PARM_MAXNAME,
 					       dbparm->dbp_name),
 				 dbparm->dbp_name);
 			return (status);
@@ -5160,7 +5162,7 @@ qee_dbparam(
 		    {
 			(VOID) qef_error(E_QE011D_PERIPH_CONVERSION, 0L,
 				 status, &err, &dsh->dsh_error, 1,
-				 qec_trimwhite(DB_MAXNAME,
+				 qec_trimwhite(DB_PARM_MAXNAME,
 				 dbparm->dbp_name), dbparm->dbp_name);
 			return (status);
 		    }
@@ -5199,9 +5201,9 @@ qee_dbparam(
 	    {	/* no default value speicified */
 		(VOID) qef_error(E_QE011B_PARAM_MISSING, 0L,
 			 status, &err, &dsh->dsh_error, 2,
-			 qec_trimwhite(DB_MAXNAME, dbparm->dbp_name),
+			 qec_trimwhite(DB_PARM_MAXNAME, dbparm->dbp_name),
 			 dbparm->dbp_name,
-			 qec_trimwhite(DB_MAXNAME, qp->qp_id.db_cur_name),
+			 qec_trimwhite(DB_CURSOR_MAXNAME, qp->qp_id.db_cur_name),
 			 qp->qp_id.db_cur_name);
 		return (E_DB_ERROR);
 	    }
@@ -5238,7 +5240,7 @@ qee_dbparam(
 		if (((uparm->parm_flags & QEF_IS_POSPARM) && i == j) ||
 		    (STncmp(uparm->parm_name,
 				   dbparm->dbp_name, uparm->parm_nlen) == 0)
-		    && (   uparm->parm_nlen == DB_MAXNAME
+		    && (   uparm->parm_nlen == DB_PARM_MAXNAME
 			|| dbparm->dbp_name[uparm->parm_nlen] == ' ')
 		   )
 		{
@@ -5378,7 +5380,7 @@ qee_return_dbparam(
 	    if (((uparm->parm_flags & QEF_IS_POSPARM) && i == uindex) ||
 		(STncmp(uparm->parm_name, 
 			       dbparm->dbp_name, uparm->parm_nlen ) == 0)
-		&& (   uparm->parm_nlen == DB_MAXNAME
+		&& (   uparm->parm_nlen == DB_PARM_MAXNAME
 		    || dbparm->dbp_name[uparm->parm_nlen] == ' ')
 	       )
 	    {
@@ -5394,7 +5396,7 @@ qee_return_dbparam(
 		    {
 			(VOID) qef_error(E_QE0113_PARAM_CONVERSION, 0L,
 				 status, &err, &dsh->dsh_error, 1,
-				 qec_trimwhite(DB_MAXNAME,
+				 qec_trimwhite(DB_PARM_MAXNAME,
 					       dbparm->dbp_name),
 				 dbparm->dbp_name);
 			return (status);
@@ -5404,7 +5406,7 @@ qee_return_dbparam(
 		    {
 			(VOID) qef_error(E_QE011D_PERIPH_CONVERSION, 0L,
 				 status, &err, &dsh->dsh_error, 1,
-				 qec_trimwhite(DB_MAXNAME,
+				 qec_trimwhite(DB_PARM_MAXNAME,
 				 dbparm->dbp_name), dbparm->dbp_name);
 			return (status);
 		    }
@@ -5595,7 +5597,7 @@ qee_update_nested_byrefs(
 		{
 		    (VOID) qef_error(E_QE0113_PARAM_CONVERSION, 0L,
 				     status, &err, &qef_cb->qef_rcb->error, 1,
-				     qec_trimwhite(DB_MAXNAME,
+				     qec_trimwhite(DB_PARM_MAXNAME,
 						   dbparm->dbp_name),
 				     dbparm->dbp_name);
 		    return (status);
@@ -5758,7 +5760,7 @@ qee_build_byref_tdesc(
 		status = E_DB_ERROR;
 		(VOID) qef_error(E_QE030C_BYREF_IN_ROWPROC, 0L,
 				     status, &err, &qef_cb->qef_rcb->error, 1,
-				     qec_trimwhite(DB_MAXNAME,
+				     qec_trimwhite(DB_CURSOR_MAXNAME,
 						   qp->qp_id.db_cur_name),
 				     qp->qp_id.db_cur_name);
 		return (status);

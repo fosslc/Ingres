@@ -189,6 +189,8 @@
 **      23-nov-2009 (horda03) B122555
 **          Added -connected. Indicate processes connected to
 **          LG/LK shared memory.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -2755,10 +2757,10 @@ is_recover(void)
 	    "WARNING The RCP encountered an error and is waiting for input.\n");
 		    TRdisplay("Valid input is:\n");
 		    TRdisplay("rcpconfig -rcp_continue_ignore_db=%~t\n",
-			DB_MAXNAME, recover_show.lg_dbname);
+			DB_DB_MAXNAME, recover_show.lg_dbname);
 		    TRdisplay("OR\n");
 		    TRdisplay("rcpconfig -rcp_continue_ignore_table=%~t\n",
-			DB_MAXNAME, recover_show.lg_tabname);
+			DB_TAB_MAXNAME, recover_show.lg_tabname);
 		    TRdisplay("OR\n");
 		    TRdisplay("rcpconfig -rcp_continue_ignore_lsn=%d,%d\n",
 			recover_show.lg_lsn.lsn_high, 

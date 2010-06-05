@@ -50,13 +50,15 @@ LIBRARY = IMPGWFLIBDATA
 **	    in the Jamfile.
 **      24-Feb-2004 (kodse01)
 **          Removed gwxit.h inclusion which is not required.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /* gwfsxa.c */
 GLOBALDEF CS_SEMAPHORE GWsxamsg_sem ZERO_FILL; /*Semaphore to protect msg list*/
 GLOBALDEF CS_SEMAPHORE GWsxa_sem ZERO_FILL ; /* Semaphore to protect general increments*/
 GLOBALDEF ULM_RCB gwsxa_ulm ZERO_FILL;
-GLOBALDEF      GWSXA_XATT  Gwsxa_xatt_tidp = {{0, 0}, 0, "tidp", 0, "tidp"};
+GLOBALDEF      GWSXA_XATT  Gwsxa_xatt_tidp = {{0, 0}, 0, 0, "tidp", "tidp"};
 GLOBALDEF GWSXASTATS GWsxastats ZERO_FILL;
 GLOBALDEF   char    *GWsxa_version = "GWSXA1.0";
 

@@ -69,6 +69,8 @@
 **	    replace nat and longnat with i4
 **	30-mar-04 (toumi01)
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -201,13 +203,9 @@ QEC_LINK	*v_lnk_p )
 
     /* 1.  set up to retrieve from LDB */
 
-    qed_u0_trimtail(
-		    tabinfo_p->dd_t1_tab_name,
-		    (u_i4) DB_MAXNAME,
+    qed_u0_trimtail( tabinfo_p->dd_t1_tab_name, (u_i4) DB_TAB_MAXNAME,
 		    stats_p->l15_1_tab_name);
-    qed_u0_trimtail(
-		    tabinfo_p->dd_t2_tab_owner,
-		    (u_i4) DB_MAXNAME,
+    qed_u0_trimtail( tabinfo_p->dd_t2_tab_owner, (u_i4) DB_OWN_MAXNAME,
 		    stats_p->l15_2_tab_owner);
 
     sel_p->qeq_c1_can_id = SEL_116_II_STATS;
@@ -230,13 +228,9 @@ QEC_LINK	*v_lnk_p )
     {
 	/* 3.  replace with link name and link owner */
 
-	qed_u0_trimtail(
-			ddl_p->qed_d1_obj_name,
-			(u_i4) DB_MAXNAME,
+	qed_u0_trimtail( ddl_p->qed_d1_obj_name, (u_i4) DB_OBJ_MAXNAME,
 			stats_p->l15_1_tab_name);
-	qed_u0_trimtail(
-			ddl_p->qed_d2_obj_owner,
-			(u_i4) DB_MAXNAME,
+	qed_u0_trimtail( ddl_p->qed_d2_obj_owner, (u_i4) DB_OWN_MAXNAME,
 			stats_p->l15_2_tab_owner);
 	
 	/* 4.  if mapping columns, use link column name */
@@ -255,7 +249,7 @@ QEC_LINK	*v_lnk_p )
 	    }
 	    /* replace with local column name */
 
-	    MEcopy(from_p->dd_c1_col_name, sizeof(DD_NAME), 
+	    MEcopy(from_p->dd_c1_col_name, sizeof(DD_ATT_NAME), 
 		stats_p->l15_3_col_name);
 	}
 	else
@@ -365,13 +359,9 @@ QEC_LINK	*v_lnk_p )
 
     /* 1.  set up for looping through each retrieved IIHISTOGRAM tuple */
 
-    qed_u0_trimtail(
-		    tabinfo_p->dd_t1_tab_name,
-		    (u_i4) DB_MAXNAME,
+    qed_u0_trimtail( tabinfo_p->dd_t1_tab_name, (u_i4) DB_TAB_MAXNAME,
 		    his_p->l5_1_tab_name);
-    qed_u0_trimtail(
-		    tabinfo_p->dd_t2_tab_owner,
-		    (u_i4) DB_MAXNAME,
+    qed_u0_trimtail( tabinfo_p->dd_t2_tab_owner, (u_i4) DB_OWN_MAXNAME,
 		    his_p->l5_2_tab_owner);
 
     sel_p->qeq_c1_can_id = SEL_106_II_HISTOGRAMS;
@@ -396,13 +386,9 @@ QEC_LINK	*v_lnk_p )
     {
 	/* 4.  replace with link name and link owner */
 
-	qed_u0_trimtail(
-			ddl_p->qed_d1_obj_name,
-			(u_i4) DB_MAXNAME,
+	qed_u0_trimtail( ddl_p->qed_d1_obj_name, (u_i4) DB_OBJ_MAXNAME,
 			his_p->l5_1_tab_name);
-	qed_u0_trimtail(
-			ddl_p->qed_d2_obj_owner,
-			(u_i4) DB_MAXNAME,
+	qed_u0_trimtail( ddl_p->qed_d2_obj_owner, (u_i4) DB_OWN_MAXNAME,
 			his_p->l5_2_tab_owner);
 
 	/* 4.  if mapping columns, use link column name */
@@ -421,7 +407,7 @@ QEC_LINK	*v_lnk_p )
 	    }
 	    /* replace with local column name */
 
-	    MEcopy(from_p->dd_c1_col_name, sizeof(DD_NAME), 
+	    MEcopy(from_p->dd_c1_col_name, sizeof(DD_ATT_NAME), 
 						his_p->l5_3_col_name);
 	}
 	else

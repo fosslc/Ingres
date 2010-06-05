@@ -76,6 +76,8 @@
 **	    Ingres release product name will be just "Ingres" now.
 **	29-Sep-2009 (frima01) 122490
 **	    Add prototype for iiCL_get_fd_table_size().
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -88,7 +90,7 @@
 */
 
 /* maximum length of an object in the DBMS */
-#define                 GL_MAXNAME      32
+#define                 GL_MAXNAME      256
 
 /* define compile-time defaults */
 # define SYSTEM_LOCATION_VARIABLE      "II_SYSTEM"

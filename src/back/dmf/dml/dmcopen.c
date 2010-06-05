@@ -128,6 +128,8 @@
 **       8-Jun-2008 (hanal04) Code Sprint SIR 122168 Ticket 387
 **          Set DM2D_MUST_LOG if caller has DMC2_MUST_LOG to allow
 **          SET NOLOGGING to be blocked if required.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*{
@@ -500,8 +502,8 @@ DMC_CB    *dmc_cb)
 	STmove((PTR)DB_AUDIT_THREAD, ' ', sizeof(own), (PTR)&own);
 	if (!(dcb->dcb_status & DCB_S_JOURNAL) &&
 	    !(dmc->dmc_flags_mask & DMC_ADMIN_DB) &&
-	    (MEcmp((PTR)&dcb->dcb_name, (PTR)DB_DBDB_NAME, DB_MAXNAME)
-		== 0) &&
+	    (MEcmp((PTR)dcb->dcb_name.db_db_name, 
+			(PTR)DB_DBDB_NAME, DB_DB_MAXNAME) == 0) &&
 	    (STbcompare(
 		(char *)scb->scb_user.db_own_name, sizeof(DB_OWN_NAME),
 		(char *)DB_INGRES_NAME, sizeof(DB_OWN_NAME), TRUE) 

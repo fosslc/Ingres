@@ -111,6 +111,8 @@
 **	    old form uleFormat.
 **      17-dec-2008 (joea)
 **          Replace READONLY/WSCREADONLY by const.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -534,7 +536,7 @@ dmm_del_config(DMM_CB *dmm_cb)
     DML_SCB		*scb;
     i4			*err_code = &dmm->error.err_code;
     char		location_buffer[MAX_LOC+1];
-    char		db_buffer[DB_MAXNAME+1];
+    char		dbname_str[DB_DB_MAXNAME+1];
     char		pathbuf[LO_PATH_MAX+1];
     char		*path = &pathbuf[0];
     i4		db_length;
@@ -584,11 +586,11 @@ dmm_del_config(DMM_CB *dmm_cb)
 	dmm->dmm_db_location.data_in_size,
 	location_buffer);
     location_buffer[dmm->dmm_db_location.data_in_size] = 0;
-    MEcopy((char *)&dmm->dmm_db_name, sizeof(dmm->dmm_db_name), db_buffer);
-    db_buffer[sizeof(dmm->dmm_db_name)] = 0;
-    STtrmwhite(db_buffer);
-    db_length = STlength(db_buffer);
-    LOingpath(location_buffer, db_buffer, LO_DMP, &cl_loc);
+    MEcopy((char *)&dmm->dmm_db_name, sizeof(dmm->dmm_db_name), dbname_str);
+    dbname_str[DB_DB_MAXNAME] = 0;
+    STtrmwhite(dbname_str);
+    db_length = STlength(dbname_str);
+    LOingpath(location_buffer, dbname_str, LO_DMP, &cl_loc);
     LOtos(&cl_loc, &path);
     status = DIdelete(&di_file, path, STlength(path),
 		      (PTR) "aaaaaaaa.cnf", STlength("aaaaaaaa.cnf"),

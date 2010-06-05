@@ -65,6 +65,8 @@
 **          Replace i4 with SIZE_TYPE for memory pool > 2Gig.
 **	10-Mar-2009 (kiria01) SIR 121665
 **	    Update GCA API to LEVEL 5
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /* forward declarations */
@@ -557,7 +559,7 @@ struct _GW_SESSION
 					    ** settings such as date format,
 					    ** decimal char, etc.
 					    */
-    char	gws_username[DB_MAXNAME+1];  /* Gateway session username */
+    char	gws_username[DB_OWN_MAXNAME+1];  /* Gateway session username */
     i4	gws_trace[1024 / BITS_IN(i4)]; /* Session level trace flags */
     PTR		gws_exit_scb[ GW_GW_COUNT ]; /* GW specific SCB, as needed */
     bool        gws_interrupted;            /* schang: interrupt support */

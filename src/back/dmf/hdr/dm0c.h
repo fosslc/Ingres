@@ -139,6 +139,8 @@
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Add DM0C_UPDATE_JNL flag for dm0c_close,
 **	    set if journal content has changed.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -517,7 +519,7 @@ INDEX_INCONS,TABLE_INCONS"
     i4	    dsc_iirel_relprim;	/* Relprim value for iirelation. */
     DB_DB_NAME	    dsc_name;		/* Name of the database. */
     DB_OWN_NAME	    dsc_owner;		/* Owner of the database. */
-    char	    dsc_collation[DB_MAXNAME];	    /* collation name */
+    char	    dsc_collation[DB_COLLATION_MAXNAME];/* collation name */
     char	    dsc_extra1[8];	/* Unused now */
     i4         dsc_iirel_relpgsize; /* Relpgsize value for iirelation */
     i4         dsc_iiatt_relpgsize;  /* Relpgsize value for iiattribute */
@@ -525,7 +527,7 @@ INDEX_INCONS,TABLE_INCONS"
     i2         dsc_iirel_relpgtype;  /* Relpgtype value for iirelation */
     i2         dsc_iiatt_relpgtype;  /* Relpgtype value for iiattribute */
     i2         dsc_iiind_relpgtype;  /* Relpgtype value for iiindexes  */
-    char	    dsc_ucollation[DB_MAXNAME]; /* unicode collation name */
+    char       dsc_ucollation[DB_COLLATION_MAXNAME]; /* unicode collation */
     char	    dsc_extra[6];	/* Future expansion. */
 };
 

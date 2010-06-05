@@ -12,8 +12,7 @@
 ** 	    QEC_8C_PLUS1	    - An 9-character array
 ** 	    QEC_16C_PLUS1	    - An 17-character array
 ** 	    QEC_24C_PLUS1	    - A 25-character structure
-** 	    QEC_DATE_PLUS1	    - A date structure
-** 	    QEC_DBNAMESTR	    - A (DB_MAXNAME+1) character structure
+** 	    QEC_32C_PLUS1	    - A 33-character structure
 ** 	    QEC_228_PLUS1	    - A 229-character structure
 ** 	    QEC_256_PLUS1	    - A 257-character structure
 ** 	    QEC_D1_DBDEPENDS	    - Catalog IIDD_DDB_DBDEPENDS
@@ -87,6 +86,9 @@
 **	    replace nat and longnat with i4
 **      09-jan-2009 (stial01)
 **          Rename QEC_32C_PLUS1 -> QEC_DBNAMESTR
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
+**          changed l16_22_loc_name from 24C_PLUS1 to 33 sizeof(DB_LOC_NAME)+1
 **/
 
 
@@ -145,33 +147,18 @@ typedef char	QEC_16C_PLUS1[QEK_16_STOR_SIZE + 1];
 
 typedef char	QEC_24C_PLUS1[QEK_24_LOCN_SIZE + 1];
 
-
 /*}
-** Name: QEC_DATE_PLUS1 - A date structure.
+** Name: QEC_32C_PLUS1 - A (32+1) character structure.
 **
 ** Description:
-**      This structure defines a 26-character array.
+**      This structure defines a (32+1) character array.
 **      
 ** History:
 **      20-jul-88 (carl)
 **          written
 */
 
-typedef char	QEC_DATE_PLUS1[DD_25_DATE_SIZE + 1];
-
-
-/*}
-** Name: QEC_DBNAMESTR - A (DB_MAXNAME+1) character structure.
-**
-** Description:
-**      This structure defines a (DB_MAXNAME+1) character array.
-**      
-** History:
-**      20-jul-88 (carl)
-**          written
-*/
-
-typedef char	QEC_DBNAMESTR[DB_MAXNAME + 1];
+typedef char	QEC_32C_PLUS1[32 + 1];
 
 
 /*}
@@ -277,8 +264,8 @@ struct _QEC_D1_DBDEPENDS
 
 struct _QEC_D2_LDBIDS
 {
-    QEC_DBNAMESTR   d2_1_ldb_node;	/* node name */
-    QEC_DBNAMESTR   d2_2_ldb_dbms;	/* dbms name */
+    DB_NODE_STR     d2_1_ldb_node;	/* node name */
+    QEC_32C_PLUS1   d2_2_ldb_dbms;	/* dbms name */
     QEC_256_PLUS1   d2_3_ldb_database;	/* database name, alias is stored here
 					** if the original name has more than 
 					** 32 characters which would be stored 
@@ -289,7 +276,7 @@ struct _QEC_D2_LDBIDS
 					** "N" otherwise */
     QEC_8C_PLUS1    d2_7_ldb_dba;	/* "Y" if notion of DBA exists, "N" 
 					** otherwise */
-    QEC_DBNAMESTR   d2_8_ldb_dbaname;	/* DBA's name if such notion exists */
+    DB_OWN_STR      d2_8_ldb_dbaname;	/* DBA's name if such notion exists */
 
 #define	    QEC_02D_CC_LDBIDS_8	    8	
 } ;
@@ -310,7 +297,7 @@ struct _QEC_D2_LDBIDS
 struct _QEC_D3_LDB_COLUMNS
 {
     DB_TAB_ID	    d3_1_obj_id;	/* object id */
-    QEC_DBNAMESTR   d3_2_lcl_name;	/* local column name */
+    DB_ATT_STR      d3_2_lcl_name;	/* local column name */
     i4		    d3_3_seq_in_row;	/* sequence of column in schema */
 
 #define	QEC_03D_CC_LDB_COLUMNS_4    4	
@@ -331,8 +318,8 @@ struct _QEC_D3_LDB_COLUMNS
 struct _QEC_D4_LDB_DBCAPS
 {
     i4		    d4_1_ldb_id;	/* assigned LDB id */
-    QEC_DBNAMESTR   d4_2_cap_cap;	/* capability */
-    QEC_DBNAMESTR   d4_3_cap_val;	/* value of capability */
+    DB_CAP_STR      d4_2_cap_cap;	/* capability */
+    DB_CAPVAL_STR   d4_3_cap_val;	/* value of capability */
     i4		    d4_4_cap_lvl;	/* numeric value of capability */
 
 #define	QEC_04D_CC_LDB_DBCAPS_4	    4	
@@ -354,7 +341,7 @@ struct _QEC_D5_LONG_LDBNAMES
 {
     QEC_256_PLUS1   d5_1_ldb_name;	/* long ldb name */
     i4		    d5_2_ldb_id;	/* assinged ldb id */
-    QEC_DBNAMESTR   d5_3_ldb_alias;	/* "iildb_" + textual equivalent of 
+    DB_DB_STR       d5_3_ldb_alias;	/* "iildb_" + textual equivalent of 
 					** above id */
 
 #define	QEC_05D_CC_LONG_LDBNAMES_3  3	
@@ -374,16 +361,16 @@ struct _QEC_D5_LONG_LDBNAMES
 
 struct _QEC_D6_OBJECTS
 {
-    QEC_DBNAMESTR   d6_1_obj_name;	/* object name */
-    QEC_DBNAMESTR   d6_2_obj_owner;	/* object owner */
+    DB_OBJ_STR      d6_1_obj_name;	/* object name */
+    DB_OWN_STR      d6_2_obj_owner;	/* object owner */
     DB_TAB_ID	    d6_3_obj_id;	/* object's id */
     DB_QRY_ID	    d6_4_qry_id;	/* query text id */
-    QEC_DATE_PLUS1  d6_5_obj_cre;	/* creation date */
+    DB_DATE_STR     d6_5_obj_cre;	/* creation date */
     QEC_8C_PLUS1    d6_6_obj_type;	/* L, T, V, (I, P, R) */
-    QEC_DATE_PLUS1  d6_7_obj_alt;	/* alter date of object */
+    DB_DATE_STR     d6_7_obj_alt;	/* alter date of object */
     QEC_8C_PLUS1    d6_8_sys_obj;	/* Y or N */
     QEC_8C_PLUS1    d6_9_to_expire;	/* Y or N */
-    QEC_DATE_PLUS1  d6_10_exp_date;	/* expiration date, valid if above is
+    DB_DATE_STR     d6_10_exp_date;	/* expiration date, valid if above is
 					** Y */
 #define	    QEC_06D_CC_OBJECTS_12   12	
 } ;
@@ -424,10 +411,10 @@ struct _QEC_D9_TABLEINFO
 {
     DB_TAB_ID	    d9_1_obj_id;	/* object's id */
     QEC_8C_PLUS1    d9_2_lcl_type;	/* "T", "V", or "I"*/
-    QEC_DBNAMESTR   d9_3_tab_name;	/* local table name */
-    QEC_DBNAMESTR   d9_4_tab_owner;	/* local table owner */
-    QEC_DATE_PLUS1  d9_5_cre_date;	/* creation date */
-    QEC_DATE_PLUS1  d9_6_alt_date;	/* alteration date */
+    DB_TAB_STR      d9_3_tab_name;	/* local table name */
+    DB_OWN_STR      d9_4_tab_owner;	/* local table owner */
+    DB_DATE_STR     d9_5_cre_date;	/* creation date */
+    DB_DATE_STR     d9_6_alt_date;	/* alteration date */
     i4		    d9_7_rel_st1;	/* timestamp 1 */
     i4		    d9_8_rel_st2;	/* timestamp 2 */
     QEC_8C_PLUS1    d9_9_col_mapped;	/* "Y" or "N" */
@@ -481,8 +468,8 @@ struct _QEC_D10_TREE
 
 struct _QEC_L1_DBCONSTANTS
 {
-    QEC_DBNAMESTR   l1_1_usr_name;	/* user name */
-    QEC_DBNAMESTR   l1_2_dba_name;	/* DBA name */
+    DB_OWN_STR     l1_1_usr_name;	/* user name */
+    DB_OWN_STR     l1_2_dba_name;	/* DBA name */
 
 #define	QEC_01I_CC_DBCONSTANTS_2    2	
 } ;
@@ -501,11 +488,11 @@ struct _QEC_L1_DBCONSTANTS
 
 struct _QEC_L2_ALT_COLUMNS
 {
-    QEC_DBNAMESTR   l2_1_tab_name;	/* table name */
-    QEC_DBNAMESTR   l2_2_tab_owner;	/* table owner */
+    DB_TAB_STR      l2_1_tab_name;	/* table name */
+    DB_OWN_STR      l2_2_tab_owner;	/* table owner */
     i4		    l2_3_key_id;	/* an arbitrary number to identify 
 					** the key uniquely */
-    QEC_DBNAMESTR   l2_4_col_name;	/* column name */
+    DB_ATT_STR      l2_4_col_name;	/* column name */
     i2		    l2_5_seq_in_key;	/* sequence of column with key, from 
 					** 1 */
 
@@ -530,10 +517,10 @@ struct _QEC_L2_ALT_COLUMNS
 
 struct _QEC_L3_COLUMNS
 {
-    QEC_DBNAMESTR   l3_1_tab_name;	/* table name */
-    QEC_DBNAMESTR   l3_2_tab_owner;	/* table owner */
-    QEC_DBNAMESTR   l3_3_col_name;	/* column name */
-    QEC_DBNAMESTR   l3_4_data_type;	/* data type of column */
+    DB_TAB_STR      l3_1_tab_name;	/* table name */
+    DB_OWN_STR      l3_2_tab_owner;	/* table owner */
+    DB_ATT_STR      l3_3_col_name;	/* column name */
+    DB_TYPE_STR     l3_4_data_type;	/* data type of column */
     i4		    l3_5_length;	/* length of column */
     i4		    l3_6_scale;		/* scale of column */
     QEC_8C_PLUS1    l3_7_nulls;		/* Y or N */
@@ -552,7 +539,7 @@ struct _QEC_L3_COLUMNS
 
     /* fields supporting UDTs in non-Star iicolumns */
 
-    QEC_DBNAMESTR   l3_13_internal_datatype;
+    DB_TYPE_STR     l3_13_internal_datatype;
     i4		    l3_14_internal_length;
     i4		    l3_15_internal_ingtype;
     QEC_8C_PLUS1    l3_16_system_maintained;
@@ -574,8 +561,8 @@ struct _QEC_L3_COLUMNS
 
 struct _QEC_L4_DBCAPABILITIES
 {
-    QEC_DBNAMESTR    l4_1_cap_cap;	/* capability */
-    QEC_DBNAMESTR    l4_2_cap_val;	/* value of above */
+    DB_CAP_STR     l4_1_cap_cap;	/* capability */
+    DB_CAPVAL_STR  l4_2_cap_val;	/* value of above */
 
 #define	QEC_04I_CC_DBCAPABILITIES_2 2
 } ;
@@ -594,9 +581,9 @@ struct _QEC_L4_DBCAPABILITIES
 
 struct _QEC_L5_HISTOGRAMS
 {
-    QEC_DBNAMESTR   l5_1_tab_name;	/* table name */
-    QEC_DBNAMESTR   l5_2_tab_owner;	/* table owner */
-    QEC_DBNAMESTR   l5_3_col_name;	/* column name */
+    DB_TAB_STR      l5_1_tab_name;	/* table name */
+    DB_OWN_STR      l5_2_tab_owner;	/* table owner */
+    DB_ATT_STR      l5_3_col_name;	/* column name */
     i4		    l5_4_txt_seq;	/* sequence of histogram, numbered from
 					** 1 */
     QEC_228_PLUS1   l5_5_txt_seg;	/* histogram data, created by optimzedb
@@ -621,11 +608,11 @@ struct _QEC_L5_HISTOGRAMS
 
 struct _QEC_L6_INDEXES
 {
-    QEC_DBNAMESTR   l6_1_ind_name;	/* index name */
-    QEC_DBNAMESTR   l6_2_ind_owner;	/* index owner */
-    QEC_DATE_PLUS1  l6_3_cre_date;	/* creation date */
-    QEC_DBNAMESTR   l6_4_base_name;	/* base table name */
-    QEC_DBNAMESTR   l6_5_base_owner;	/* base table owner */
+    DB_TAB_STR      l6_1_ind_name;	/* index name */
+    DB_OWN_STR      l6_2_ind_owner;	/* index owner */
+    DB_DATE_STR     l6_3_cre_date;	/* creation date */
+    DB_TAB_STR      l6_4_base_name;	/* base table name */
+    DB_OWN_STR      l6_5_base_owner;	/* base table owner */
     QEC_16C_PLUS1   l6_6_storage;	/* HEAP, ISAM, BTREE, etc */
     QEC_8C_PLUS1    l6_7_compressed;	/* Y or N */
     QEC_8C_PLUS1    l6_8_uniquerule;	/* U for unique, D for duplicate key 
@@ -652,9 +639,9 @@ struct _QEC_L6_INDEXES
 
 struct _QEC_L7_INDEX_COLUMNS
 {
-    QEC_DBNAMESTR   l7_1_ind_name;	/* index name */
-    QEC_DBNAMESTR   l7_2_ind_owner;	/* index owner */
-    QEC_DBNAMESTR   l7_3_col_name;	/* column name */
+    DB_TAB_STR      l7_1_ind_name;	/* index name */
+    DB_OWN_STR      l7_2_ind_owner;	/* index owner */
+    DB_ATT_STR      l7_3_col_name;	/* column name */
     i4		    l7_4_key_seq;	/* sequence of column within key */
     QEC_8C_PLUS1    l7_5_sort_dir;	/* A(scending) or D(escending) */
 
@@ -677,8 +664,8 @@ struct _QEC_L7_INDEX_COLUMNS
 
 struct _QEC_L14_REGISTRATIONS
 {
-    QEC_DBNAMESTR   l14_1_obj_name;	/* object name */
-    QEC_DBNAMESTR   l14_2_obj_owner;	/* object owner */
+    DB_OBJ_STR      l14_1_obj_name;	/* object name */
+    DB_OWN_STR      l14_2_obj_owner;	/* object owner */
     QEC_8C_PLUS1    l14_3_dml;		/* S for SQL, Q for QUEL*/
     QEC_8C_PLUS1    l14_4_obj_type;	/* T, V, I for table, view, index */
     QEC_8C_PLUS1    l14_5_obj_subtype;	/* L, N for link, native */
@@ -713,10 +700,10 @@ struct _QEC_L14_REGISTRATIONS
 
 struct _QEC_L15_STATS
 {
-    QEC_DBNAMESTR   l15_1_tab_name;	/* table name */
-    QEC_DBNAMESTR   l15_2_tab_owner;	/* table owner */
-    QEC_DBNAMESTR   l15_3_col_name;	/* column name */
-    QEC_DATE_PLUS1  l15_4_cre_date;	/* create date */
+    DB_TAB_STR      l15_1_tab_name;	/* table name */
+    DB_OWN_STR      l15_2_tab_owner;	/* table owner */
+    DB_ATT_STR      l15_3_col_name;	/* column name */
+    DB_DATE_STR     l15_4_cre_date;	/* create date */
     f4		    l15_5_num_uniq;	/* number of unique values in column */
 					/* should be f8 according to standard */
     f4		    l15_6_rept_factor;	/* repitition faction */
@@ -762,10 +749,10 @@ struct _QEC_L15_STATS
 
 struct _QEC_L16_TABLES
 {
-    QEC_DBNAMESTR   l16_1_tab_name;	/* table name */
-    QEC_DBNAMESTR   l16_2_tab_owner;	/* table owner */
-    QEC_DATE_PLUS1  l16_3_cre_date;	/* create date */
-    QEC_DATE_PLUS1  l16_4_alt_date;	/* alter date */
+    DB_TAB_STR      l16_1_tab_name;	/* table name */
+    DB_OWN_STR      l16_2_tab_owner;	/* table owner */
+    DB_DATE_STR     l16_3_cre_date;	/* create date */
+    DB_DATE_STR     l16_4_alt_date;	/* alter date */
     QEC_8C_PLUS1    l16_5_tab_type;	/* T, L, V or I */
     QEC_8C_PLUS1    l16_6_sub_type;	/* L (link), T (table) or blank for 
 					** unknown */
@@ -792,8 +779,8 @@ struct _QEC_L16_TABLES
 
     i4		    l16_19_row_width;	/* row width */
     i4		    l16_20_tab_expire;	/* INGRES _bintime expiration date */
-    QEC_DATE_PLUS1  l16_21_mod_date;	/* modification date of table */
-    QEC_24C_PLUS1   l16_22_loc_name;	/* location name, blank if unknown */
+    DB_DATE_STR     l16_21_mod_date;	/* modification date of table */
+    DB_LOC_STR      l16_22_loc_name;	/* location name, blank if unknown */
     QEC_8C_PLUS1    l16_23_integrities;	/* Y or blank */
     QEC_8C_PLUS1    l16_24_permits;	/* Y or blank */
     QEC_8C_PLUS1    l16_25_all_to_all;	/* Y or N */
@@ -847,8 +834,8 @@ struct _QEC_L16_TABLES
 
 struct _QEC_L17_VIEWS
 {
-    QEC_DBNAMESTR   l17_1_tab_name;	/* table name */
-    QEC_DBNAMESTR   l17_2_tab_owner;	/* table owner */
+    DB_TAB_STR      l17_1_tab_name;	/* table name */
+    DB_OWN_STR      l17_2_tab_owner;	/* table owner */
     QEC_8C_PLUS1    l17_3_dml;		/* S for SQL, Q for QUEL*/
     QEC_8C_PLUS1    l17_4_chk_option;	/* Y, N, or blank for unknown */
     i4		    l17_5_sequence;	/* sequence for text field, from 1 */
@@ -872,9 +859,9 @@ struct _QEC_L17_VIEWS
 
 struct _QEC_L18_PROCEDURES
 {
-    QEC_DBNAMESTR   l18_1_proc_name;	/* object name */
-    QEC_DBNAMESTR   l18_2_proc_owner;	/* object owner */
-    QEC_DATE_PLUS1  l18_3_cre_date;	/* create date */
+    DB_DBP_STR      l18_1_proc_name;	/* object name */
+    DB_OWN_STR      l18_2_proc_owner;	/* object owner */
+    DB_DATE_STR     l18_3_cre_date;	/* create date */
     QEC_8C_PLUS1    l18_4_proc_subtype;	/* N (i4ive) or I (imported) */
     /* note this table also has text_sequence and text_subtype fields, but
     ** we never import these fields */    
@@ -929,9 +916,9 @@ struct _QEC_MIN_CAP_LVLS
 
 typedef struct _QEC_INDEX_ID
 {
-    QEC_DBNAMESTR    qec_i1_name;	/* name */
-    QEC_DBNAMESTR    qec_i2_owner;	/* owner */
-    QEC_DBNAMESTR    qec_i3_given;	/* given name */
+    DB_TAB_STR      qec_i1_name;	/* name */
+    DB_OWN_STR      qec_i2_owner;	/* owner */
+    DB_TAB_STR      qec_i3_given;	/* given name */
 }   QEC_INDEX_ID;
 
 
@@ -995,8 +982,8 @@ typedef struct _QEC_LINK
 						*/
     i4			 qec_3_ldb_id;		/* LDB id, 0 if new participant */
     i4			 qec_4_col_cnt;		/* number of columns */
-    QEC_DBNAMESTR	 qec_5_ldb_alias;	/* LDB alias if name exceeds 32 
-						** chars */
+    DB_DB_STR		 qec_5_ldb_alias;	/* LDB alias if name exceeds
+						** sizeof(DB_DB_NAME) */
     QEQ_1CAN_QRY	*qec_6_select_p;	/* structure ptr union for 
 						** SELECT queries */
     QEC_D2_LDBIDS	*qec_7_ldbids_p;	/* ptr to internal LDB id info 
@@ -1061,7 +1048,7 @@ typedef struct _QEC_LINK
 						** INSERT queries */
     QEQ_1CAN_QRY	*qec_23_update_p;	/* structure ptr union for
 						** UPDATE queries */
-    QEC_DATE_PLUS1	 qec_24_cur_time;	/* current time */
+    DB_DATE_STR		qec_24_cur_time;	/* current time */
     QEC_MIN_CAP_LVLS	*qec_25_pre_mins_p;	/* for computing minimum
 						** LDB capability levels 
 						** before introduction of

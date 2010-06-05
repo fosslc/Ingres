@@ -176,6 +176,8 @@
 **	    dm0c_? functions converted to DB_ERROR *
 **	08-Dec-2008 (jonj)
 **	    SIR 120874: dma_? auditing functions converted to DB_ERROR *
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -792,7 +794,7 @@ DM0C_CNF	*cnf)
 	    	for (i = 0; (i < TBLLST_MAX_TAB) && 
 		    	(MEcmp((char *)&table_list[i],"\0", 1) != 0); i++)
 		    TRformat(dmf_put_line, 0, line_buffer, sizeof(line_buffer),
-			"	%t\n", DB_MAXNAME, &table_list[i]);
+			"	%t\n", DB_TAB_MAXNAME, &table_list[i]);
 	    }
             if (i < TBLLST_MAX_TAB)
             {

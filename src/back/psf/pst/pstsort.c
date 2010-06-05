@@ -69,6 +69,8 @@
 **          Fixed name buffer size
 **	03-Dec-2009 (kiria01) SIR 121883
 **	    Changes for subselect order bys.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -334,12 +336,12 @@ pst_expsort(
 {
     register PST_QNODE	*attr;
     PST_QNODE		*save_attr = (PST_QNODE *) NULL;
-    char                resname[DB_MAXNAME];
+    char                resname[DB_ATT_MAXNAME];
     DB_STATUS		status;
     i4		err_code;
 
     /* Normalize the result column name */
-    STmove(expname, ' ', DB_MAXNAME, resname);
+    STmove(expname, ' ', DB_ATT_MAXNAME, resname);
 
     /* Look through the target list for a column of that name */
     for (attr = tlist;
@@ -347,7 +349,7 @@ pst_expsort(
 	 attr = attr->pst_left)
     {
 	if (!MEcmp(resname, attr->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
-	    DB_MAXNAME))
+	    DB_ATT_MAXNAME))
 	{
 	    save_attr = attr;
 	}
@@ -781,7 +783,7 @@ pst_sqlsort(
     DB_STATUS		status;
     i4		err_code;
     i4			maxrsno;
-    char		expname[DB_MAXNAME + 1];
+    char		expname[DB_ATT_MAXNAME + 1];
     DB_ERROR		err_blk;
     bool                aggQry = FALSE; 
 
@@ -789,14 +791,14 @@ pst_sqlsort(
     ** expression type. But first, seek RESDOM nodes buried in the 
     ** expression and replace them by the pst_right of the resdom. */
 
-    expname[0] = expname[DB_MAXNAME] = 0x0;
+    expname[0] = expname[DB_ATT_MAXNAME] = 0x0;
 
     switch (expnode->pst_sym.pst_type) {
 
       case PST_VAR:
 	/* Copy column name first, in case of error. */
 	MEcopy((PTR)&expnode->pst_sym.pst_value.pst_s_var.pst_atname,
-		DB_MAXNAME, (PTR)&expname);
+		DB_ATT_MAXNAME, (PTR)&expname);
 	/* Search resdom list for matching entry, else leave with NULL */
 	for (attr = rlist;
          attr != NULL && attr->pst_sym.pst_type == PST_RESDOM;
@@ -814,13 +816,13 @@ pst_sqlsort(
 		 attr->pst_right->pst_sym.pst_value.pst_s_var.pst_vno &&
 		(!MEcmp((PTR)&expnode->pst_sym.pst_value.pst_s_var.pst_atname,
 		(PTR)&attr->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
-	    	DB_MAXNAME) ||
+	    	DB_ATT_MAXNAME) ||
 		expnode->pst_sym.pst_value.pst_s_var.pst_atno.db_att_id ==
 		 attr->pst_right->pst_sym.pst_value.pst_s_var.pst_atno.db_att_id))
 	    {
 		save_attr = attr;
 		MEcopy((PTR)&expnode->pst_sym.pst_value.pst_s_var.pst_atname,
-			DB_MAXNAME, (PTR)&expname);
+			DB_ATT_MAXNAME, (PTR)&expname);
 	    }
 	}
 
@@ -866,7 +868,7 @@ pst_sqlsort(
 	      {
 		save_attr = attr;
 		MEcopy((PTR)&attr->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
-			DB_MAXNAME, (PTR)&expname);
+			DB_ATT_MAXNAME, (PTR)&expname);
 		break;
 	      }
 	    if (save_attr != NULL) break;		/* got it */
@@ -890,7 +892,7 @@ pst_sqlsort(
 	}
 	save_attr = expnode;
 	MEcopy((PTR)&expnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
-		DB_MAXNAME, (PTR)&expname);
+		DB_ATT_MAXNAME, (PTR)&expname);
 	break;
 
       default:
@@ -953,9 +955,9 @@ pst_sqlsort(
 	if (expnode->pst_sym.pst_type == PST_VAR)
 	{
 	    MEcopy((PTR)&expnode->pst_sym.pst_value.pst_s_var.pst_atname,
-		DB_MAXNAME, (PTR)&resdom.pst_rsname);
+		DB_ATT_MAXNAME, (PTR)&resdom.pst_rsname);
 	    MEcopy((PTR)&expnode->pst_sym.pst_value.pst_s_var.pst_atname,
-		DB_MAXNAME, (PTR)&expname);
+		DB_ATT_MAXNAME, (PTR)&expname);
 	}
 	resdom.pst_rsno = maxrsno + 1;
 

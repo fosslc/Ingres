@@ -423,6 +423,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -1606,7 +1608,7 @@ ddb_refresh:
                              status, &error, error_block, 3,
                              (sizeof("DROP/DESTROY") - 1), "DROP/DESTROY",
 			     (sizeof("drop") - 1), "drop",
-                             qec_trimwhite(DB_MAXNAME,
+                             qec_trimwhite(DB_TAB_MAXNAME,
                                     dmu_ptr->dmu_table_name.db_tab_name),
                              dmu_ptr->dmu_table_name.db_tab_name);
 			err = E_QE0025_USER_ERROR;
@@ -1934,7 +1936,7 @@ ddb_refresh:
                                status, &error, error_block, 3,
                                (sizeof("MODIFY") - 1), "MODIFY",
                                (sizeof("modify") - 1), "modify",
-                               qec_trimwhite(DB_MAXNAME,
+                               qec_trimwhite(DB_TAB_MAXNAME,
                                dmu_ptr->dmu_table_name.db_tab_name),
                                dmu_ptr->dmu_table_name.db_tab_name);
                         err = E_QE0025_USER_ERROR;
@@ -2137,7 +2139,7 @@ ddb_refresh:
 			case E_DM005D_TABLE_ACCESS_CONFLICT:
 			    qef_error(5005L, 0L, status, &error, 
 			    error_block, 1,
-			    qec_trimwhite(DB_MAXNAME,
+			    qec_trimwhite(DB_TAB_MAXNAME,
 					  dmu_ptr->dmu_table_name.db_tab_name),
 			    dmu_ptr->dmu_table_name.db_tab_name);
 			    errcode = E_QE0025_USER_ERROR;
@@ -2187,7 +2189,7 @@ ddb_refresh:
 				    qef_error( 
 					E_QE0138_CANT_CREATE_UNIQUE_CONSTRAINT,
 					0L, status, &error, error_block, 1,
-					qec_trimwhite(DB_MAXNAME,
+					qec_trimwhite(DB_TAB_MAXNAME,
 					    table_entry.tbl_name.db_tab_name ), 
 			    		table_entry.tbl_name.db_tab_name );
 					errcode = E_QE0025_USER_ERROR;
@@ -2204,7 +2206,7 @@ ddb_refresh:
 			case E_DM005F_CANT_INDEX_CORE_SYSCAT:
 			    qef_error(5305L, 0L, status, &error, 
 			    error_block, 1,
-			    qec_trimwhite(DB_MAXNAME,
+			    qec_trimwhite(DB_TAB_MAXNAME,
 					  dmu_ptr->dmu_table_name.db_tab_name),
 			    dmu_ptr->dmu_table_name.db_tab_name);
 			    errcode = E_QE0025_USER_ERROR;
@@ -2212,7 +2214,7 @@ ddb_refresh:
 			case E_DM005A_CANT_MOD_CORE_STRUCT:
 			    qef_error(5533L, 0L, status, &error, 
 			    error_block, 1,
-			    qec_trimwhite(DB_MAXNAME,
+			    qec_trimwhite(DB_TAB_MAXNAME,
 					  dmu_ptr->dmu_table_name.db_tab_name),
 			    dmu_ptr->dmu_table_name.db_tab_name);
 			    errcode = E_QE0025_USER_ERROR;
@@ -2236,7 +2238,7 @@ ddb_refresh:
 			    keysize = errdmu_ptr->error.err_data;
 			    qef_error(err_num, 0L, status, &error, 
 			    error_block, 3,
-			    qec_trimwhite(DB_MAXNAME,
+			    qec_trimwhite(DB_TAB_MAXNAME,
 				errdmu_ptr->dmu_table_name.db_tab_name),
 			    errdmu_ptr->dmu_table_name.db_tab_name,
 			    sizeof (keysize), (PTR) &keysize, 
@@ -2253,7 +2255,7 @@ ddb_refresh:
 			    keysize = errdmu_ptr->error.err_data;
 			    qef_error(err_num, 0L, status, &error, 
 			    error_block, 3,
-			    qec_trimwhite(DB_MAXNAME,
+			    qec_trimwhite(DB_TAB_MAXNAME,
 					  dmu_ptr->dmu_table_name.db_tab_name),
 			    dmu_ptr->dmu_table_name.db_tab_name,
 			    sizeof (keysize), (PTR) &keysize, 
@@ -2269,7 +2271,7 @@ ddb_refresh:
 				err_num = 5536;
 			    qef_error(err_num, 0L, status, &error, 
 			    error_block, 1,
-			    qec_trimwhite(DB_MAXNAME,
+			    qec_trimwhite(DB_TAB_MAXNAME,
 					  dmu_ptr->dmu_table_name.db_tab_name),
 			    dmu_ptr->dmu_table_name.db_tab_name);
 			    errcode = E_QE0025_USER_ERROR;
@@ -2277,7 +2279,7 @@ ddb_refresh:
 			case E_DM0111_MOD_IDX_UNIQUE:
 			    qef_error(5541L, 0L, status, &error, 
 			    error_block, 1,
-			    qec_trimwhite(DB_MAXNAME,
+			    qec_trimwhite(DB_TAB_MAXNAME,
 					  dmu_ptr->dmu_table_name.db_tab_name),
 			    &dmu_ptr->dmu_table_name);
                             errcode = E_QE0025_USER_ERROR;
@@ -2301,10 +2303,10 @@ ddb_refresh:
 		       		       dmu_ptr->dmu_attr_array.ptr_address;
 			    qef_error(errcode, 0L, status, &error,
 			    error_block, 2,
-			    qec_trimwhite(DB_MAXNAME,
+			    qec_trimwhite(DB_ATT_MAXNAME,
 					  dmu_attr[0]->attr_name.db_att_name),
 			    &dmu_attr[0]->attr_name.db_att_name,
-			    qec_trimwhite(DB_MAXNAME,
+			    qec_trimwhite(DB_TAB_MAXNAME,
 					  dmu_ptr->dmu_table_name.db_tab_name),
 			    &dmu_ptr->dmu_table_name.db_tab_name);
 			    errcode = E_QE0025_USER_ERROR;
@@ -3312,7 +3314,7 @@ qeu_create_table(QEF_RCB *qefrcb, DMU_CB *dmucb,
 	QEU_LOGPART_CHAR *lpc_list, i4 tabid_count, DB_TAB_ID *table_ids)
 {
 
-    char masterNameAsciz[DB_MAXNAME+1];
+    char masterNameAsciz[DB_TAB_MAXNAME+1];
     DB_STATUS status;			/* Called routine status */
     DB_TAB_ID masterId;			/* Master table ID number */
     DM_DATA masterLoc;			/* Master location array */
@@ -3321,8 +3323,8 @@ qeu_create_table(QEF_RCB *qefrcb, DMU_CB *dmucb,
 
     /* Start by creating the (master) table */
 
-    MEcopy(dmucb->dmu_table_name.db_tab_name, DB_MAXNAME, masterNameAsciz);
-    masterNameAsciz[DB_MAXNAME] = '\0';
+    MEcopy(dmucb->dmu_table_name.db_tab_name, DB_TAB_MAXNAME, masterNameAsciz);
+    masterNameAsciz[DB_TAB_MAXNAME] = '\0';
     dmucb->dmu_flags_mask &= ~DMU_PARTITION;   /* Just in case... */
     status = dmf_call(DMU_CREATE_TABLE, dmucb);
     if (DB_FAILURE_MACRO(status) && dmucb->error.err_code == E_DM0101_SET_JOURNAL_ON)
@@ -3331,8 +3333,8 @@ qeu_create_table(QEF_RCB *qefrcb, DMU_CB *dmucb,
 	** message.  "journaling will be turned on at the next ckp..."
 	*/
 	qef_error(5117, 0, status, &toss_error, &qefrcb->error,
-		1, qec_trimwhite(DB_MAXNAME, dmucb->dmu_table_name.db_tab_name),
-		dmucb->dmu_table_name.db_tab_name);
+	    1, qec_trimwhite(DB_TAB_MAXNAME, dmucb->dmu_table_name.db_tab_name),
+	    dmucb->dmu_table_name.db_tab_name);
 	qefrcb->error.err_code = E_QE0000_OK;
 	status = E_DB_OK;
     }
@@ -3362,7 +3364,7 @@ qeu_create_table(QEF_RCB *qefrcb, DMU_CB *dmucb,
     */
     if (dmucb->dmu_part_def != NULL)
     {
-	char tabname[DB_MAXNAME+30];	/* iixxxxx ppnnnnn-master name */
+	char tabname[DB_TAB_MAXNAME+30];/* iixxxxx ppnnnnn-master name */
 	DB_PART_DEF *part_def;
 	DMU_CHAR_ENTRY *chr;		/* DMU characteristics array entry */
 	i4 dim;
@@ -3467,7 +3469,7 @@ qeu_create_table(QEF_RCB *qefrcb, DMU_CB *dmucb,
 	    STprintf(tabname,"ii%x pp%d-%s", partno + masterId.db_tab_base,
 				partno, masterNameAsciz);
 	    /* tabname is already space-filled thanks to mastername */
-	    MEcopy(tabname, DB_MAXNAME, dmucb->dmu_table_name.db_tab_name);
+	    MEcopy(tabname, DB_TAB_MAXNAME, dmucb->dmu_table_name.db_tab_name);
 	    status = dmf_call(DMU_CREATE_TABLE, dmucb);
 	    if (DB_FAILURE_MACRO(status))
 	    {
@@ -3672,8 +3674,8 @@ DB_STATUS
 qeu_modify_prep(QEU_CB *qeucb, DMU_CB *dmucb, ULM_RCB *ulm,
 	DM_DATA *return_pp_array, i4 *err_code)
 {
-    char masterNameAsciz[DB_MAXNAME+1];
-    char tabname[DB_MAXNAME + 30];	/* Generated partition table name */
+    char masterNameAsciz[DB_TAB_MAXNAME+1];
+    char tabname[DB_TAB_MAXNAME + 30];	/* Generated partition table name */
     DB_LOC_NAME *locname_ptr;		/* Pointer to a location name */
     DB_LOC_NAME **loc_pp;		/* Pointer to loc pointer array */
     DB_PART_DEF *part_def;		/* (new) partition definition */
@@ -3821,8 +3823,8 @@ qeu_modify_prep(QEU_CB *qeucb, DMU_CB *dmucb, ULM_RCB *ulm,
 	return (E_DB_OK);
 
     natts = tbl->tbl_attr_count;	/* For later */
-    MEcopy(tbl->tbl_name.db_tab_name, DB_MAXNAME, masterNameAsciz);
-    masterNameAsciz[DB_MAXNAME] = '\0';
+    MEcopy(tbl->tbl_name.db_tab_name, DB_TAB_MAXNAME, masterNameAsciz);
+    masterNameAsciz[DB_TAB_MAXNAME] = '\0';
 
     /* If we're repartitioning (but not unpartitioning), make a clean
     ** copy of the definition, with no extra crap in it, for DMF.
@@ -4734,7 +4736,7 @@ createTblErrXlate(DMU_CB *dmucb, char *tbl_name,
 	i4 dmf_error, DB_STATUS status)
 
 {
-    char masterNameAsciz[DB_MAXNAME+1];
+    char masterNameAsciz[DB_TAB_MAXNAME+1];
     DB_ERROR toss_errblk;
     DB_LOC_NAME *loc;
     i4 errcode = dmucb->error.err_code;
@@ -6727,7 +6729,7 @@ createDefaultTuples(
 	    DMR_ATTR_ENTRY	seqkey_array[2];
 	    DMR_ATTR_ENTRY	*seqkey_ptr_array[2];
 	    i4			error, seq_modifier;
-	    char 		own[DB_MAXNAME+1], name[DB_MAXNAME+1];
+	    char 		own[DB_OWN_MAXNAME+1], name[DB_MAXNAME+1];
 	    DB_NAME		work_name;
 	    bool		userseq = FALSE;
 	    

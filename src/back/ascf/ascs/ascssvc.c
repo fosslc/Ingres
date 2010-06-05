@@ -177,6 +177,8 @@
 **	    Update GCA API to LEVEL 5
 **	30-Mar-2010 (kschendel) SIR 123485
 **	    Re-type some ptr's as the proper struct pointer.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 # define USER_STRING	ERx("user=")
@@ -971,18 +973,18 @@ ascs_iformat(SCD_SCB *scb,
 	*/
         TRformat(sc0e_tput, &print_mask, buf, sizeof(buf) - 1,
     	    "    DB Name: %#s%s (Owned by: %#s )",
-    	    DB_MAXNAME, &scb->scb_sscb.sscb_ics.ics_dbname,
+    	    DB_DB_MAXNAME, &scb->scb_sscb.sscb_ics.ics_dbname,
     	    (scb->scb_sscb.sscb_ics.ics_lock_mode & DMC_L_EXCLUSIVE ?
     	        "(exclusive)" : ""),
-    	    DB_MAXNAME, &scb->scb_sscb.sscb_ics.ics_dbowner);
+    	    DB_OWN_MAXNAME, &scb->scb_sscb.sscb_ics.ics_dbowner);
     }
     TRformat(sc0e_tput, &print_mask, buf, sizeof(buf) - 1,
     	"    User: %#s (%#s) ",
-    	DB_MAXNAME, scb->scb_sscb.sscb_ics.ics_eusername,
-    	DB_MAXNAME, &scb->scb_sscb.sscb_ics.ics_rusername);
+    	DB_OWN_MAXNAME, scb->scb_sscb.sscb_ics.ics_eusername,
+    	DB_OWN_MAXNAME, &scb->scb_sscb.sscb_ics.ics_rusername);
     TRformat(sc0e_tput, &print_mask, buf, sizeof(buf) - 1,
     	"    User Name at Session Startup: %#s",
-    	DB_MAXNAME, &scb->scb_sscb.sscb_ics.ics_iusername);
+    	DB_OWN_MAXNAME, &scb->scb_sscb.sscb_ics.ics_iusername);
     TRformat(sc0e_tput, &print_mask, buf, sizeof(buf) - 1,
     	"    Terminal: %16s",
     	&scb->scb_sscb.sscb_ics.ics_terminal);
@@ -991,10 +993,10 @@ ascs_iformat(SCD_SCB *scb,
     {
         TRformat(sc0e_tput, &print_mask, buf, sizeof(buf) - 1,
         	"    Group Id: %#s",
-        	DB_MAXNAME, &scb->scb_sscb.sscb_ics.ics_egrpid);
+        	DB_OWN_MAXNAME, &scb->scb_sscb.sscb_ics.ics_egrpid);
         TRformat(sc0e_tput, &print_mask, buf, sizeof(buf) - 1,
         	"    Role Id: %#s",
-        	DB_MAXNAME, &scb->scb_sscb.sscb_ics.ics_eaplid);
+        	DB_OWN_MAXNAME, &scb->scb_sscb.sscb_ics.ics_eaplid);
         TRformat(sc0e_tput, &print_mask, buf, sizeof(buf) - 1,
             "    Application Code: %x            Current Facility: %w %<(%x)",
     	    scb->scb_sscb.sscb_ics.ics_appl_code,
@@ -1274,7 +1276,7 @@ ascs_a_conn_get(i4 offset,
 bool
 ascs_chk_priv( char *user_name, char *priv_name )
 {
-	char	pmsym[128], userbuf[DB_MAXNAME+1], *value, *valueptr ;
+	char	pmsym[128], userbuf[DB_OWN_MAXNAME+1], *value, *valueptr ;
 	char	*strbuf = 0;
 	int	priv_len;
 
@@ -1286,7 +1288,7 @@ ascs_chk_priv( char *user_name, char *priv_name )
 	**  	    MONITOR,TRUSTED
         */
 
-	STlcopy( user_name, userbuf, DB_MAXNAME );
+	STlcopy( user_name, userbuf, DB_OWN_MAXNAME );
 	STtrmwhite( userbuf );
 	STprintf(pmsym, "$.$.privileges.user.%s", userbuf);
 	

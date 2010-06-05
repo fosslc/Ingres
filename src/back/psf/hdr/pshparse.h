@@ -546,6 +546,8 @@
 **	    mstream.
 **	25-Mar-2010 (kiria01) b123535
 **	    Clarified PST_DESCEND_MARK and exported psl_ss_flatten.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*
@@ -757,7 +759,7 @@ typedef		i4	PSS_ID_TYPE;
 **      31-dec-85 (jeff)
 **          written
 */
-typedef char PSF_CURNAME[DB_MAXNAME];
+typedef char PSF_CURNAME[DB_CURSOR_MAXNAME]; /* cursor name */
 # endif
 
 /*
@@ -1086,7 +1088,7 @@ typedef struct _PSS_RNGTAB
     i4              pss_used;           /* TRUE iff this slot is used */
     i4		    pss_rgno;		/* Range variable number */
     i4		    pss_permit;		/* used to mark permission to use */
-    char            pss_rgname[DB_MAXNAME]; /* Name of the range variable */
+    char            pss_rgname[DB_TAB_MAXNAME]; /* Name of the range variable */
     i4		    pss_rgtype;		/* type of range var */
 	/*   uses the following definitions from PST_RNGENTRY in psfparse.h
 	**	PST_TABLE 1 	-- table. 
@@ -2607,7 +2609,7 @@ i4		    pss_flattening_flags;
     i4		    pss_ustat;		/* User status flags from SCS_ICS */
 
 					/* NULL-terminated DBA name */
-    char	    pss_dbaname[DB_MAXNAME+1];
+    char	    pss_dbaname[DB_OWN_MAXNAME+1];
     PSQ_INDEP_OBJECTS	pss_indep_objs;
     PSF_MSTREAM		*pss_dependencies_stream;
     DB_DBP_NAME		*pss_dbpgrant_name;
@@ -3908,22 +3910,21 @@ typedef struct _PSS_DUPRB
 #define		PSS_FLAGS_PRESET    0x80
 
 /*
-** PSS_DBPALIAS	    - a typedef for dbproc id to be used throughout PSF
+** PSS_DBPALIAS	   a typedef for dbproc id to be used throughout PSF
 **
-** Description:	      presently, dbproc alias is identified by a DB_CURSOR_ID
-**		      (2 i4's + dbpname (DB_MAXNAME)), owner name (DB_MAXNAME),
-**		      and sess_udbid (i4).  The second i4 in DB_CURSOR_ID may be
-**		      1 or 0  to represent private and public alias,
-**		      respectively.  All dbproc QEPs will have private alias so
-**		      that they can always be executed by the dbproc owner.  To
-**		      warrant creation of public alias, dbproc must be
-**		      "grantable".
+** Description:	   presently, dbproc alias is identified by a DB_CURSOR_ID
+**		   (2 i4's + dbpname (DB_DBP_MAXNAME)), owner (DB_OWN_MAXNAME),
+**		   and sess_udbid (i4).  The second i4 in DB_CURSOR_ID may be
+**		   1 or 0  to represent private and public alias,
+**		   respectively.  All dbproc QEPs will have private alias so
+**		   that they can always be executed by the dbproc owner.  To
+**		   warrant creation of public alias, dbproc must be "grantable".
 **
 ** History:
 **	14-jun-90 (andre)
 **	    defined.
 */
-typedef	    char   PSS_DBPALIAS[sizeof(DB_CURSOR_ID) + DB_MAXNAME + sizeof(i4)];
+typedef char PSS_DBPALIAS[sizeof(DB_CURSOR_ID) + DB_OWN_MAXNAME + sizeof(i4)];
 
 /*
 ** Name: PSS_TREEINFO -- this structure will be used to return a pointer to the
@@ -4479,7 +4480,7 @@ typedef struct _PSS_LTBL_INFO {
 #define		PSS_LTBL_IS_BASETABLE	1
 #define		PSS_LTBL_IS_VIEW	2
 #define		PSS_LTBL_IS_INDEX	3
-    DD_NAME		    pss_tbl_name;
+    DD_TAB_NAME		    pss_tbl_name;
     i4			    pss_delim_tbl;
     DD_LDB_DESC		    pss_ldb_desc;
 } PSS_LTBL_INFO;
@@ -8216,7 +8217,7 @@ psy_kalarm(
 FUNC_EXTERN DB_STATUS
 psy_evraise(
 	PSS_SESBLK *sess_cb,
-	DB_NAME     *evname,
+	DB_EVENT_NAME *evname,
 	DB_OWN_NAME *evowner,
 	char	    *evtext,
 	i4	    ev_l_text,

@@ -255,6 +255,8 @@
 **	    Update GCA API to LEVEL 5
 **	30-Mar-2010 (kschendel) SIR 123485
 **	    Re-type some ptr's as the proper struct pointer.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /* Forward declarations */
@@ -755,7 +757,7 @@ scs_raat_call(i4  op_code,
 		    {
 			*tname = '\0';
 			tname++;
-			STmove(inbuf, ' ', DB_MAXNAME,
+			STmove(inbuf, ' ', DB_OWN_MAXNAME,
 			    (char *)&dmt_shw_cb.dmt_owner);
 			owner_given = TRUE;
 		    }
@@ -780,12 +782,12 @@ scs_raat_call(i4  op_code,
                             err_code = psq_cb.psq_error.err_code;
                             break;
                         }
-			STmove(psq_cb.psq_owner, ' ', DB_MAXNAME, 
-			    (char *)&dmt_shw_cb.dmt_owner);
+			STmove(psq_cb.psq_owner, ' ', 
+			    DB_OWN_MAXNAME, (char *)&dmt_shw_cb.dmt_owner);
 			temptbl = TRUE;
 		    }
 
-		    STmove(tname, ' ', DB_MAXNAME,
+		    STmove(tname, ' ', DB_TAB_MAXNAME,
 			(char *)&dmt_shw_cb.dmt_name);
 		    dmt_shw_cb.dmt_flags_mask = DMT_M_TABLE | DMT_M_NAME;
 		    dmt_shw_cb.dmt_record_access_id = NULL;

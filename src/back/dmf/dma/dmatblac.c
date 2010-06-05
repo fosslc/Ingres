@@ -53,6 +53,8 @@
 **	08-Dec-2008 (jonj)
 **	    SIR 120874: dma_? auditing functions converted to DB_ERROR *,
 **	    use new form uleFormat.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -200,7 +202,7 @@ DB_ERROR    *dberr)
 	sxfrcb.sxf_accessmask=sxf_access;
 	sxfrcb.sxf_objowner= (DB_OWN_NAME*)&tcb->tcb_rel.relowner;
 	sxfrcb.sxf_objname=  (char*)&tcb->tcb_rel.relid;
-	sxfrcb.sxf_objlength= DB_MAXNAME;
+	sxfrcb.sxf_objlength= DB_TAB_MAXNAME;
 	sxfrcb.sxf_detail_len=0;
 	sxfrcb.sxf_auditevent=SXF_E_TABLE; /* Table event */
 	sxfrcb.sxf_force = 0;

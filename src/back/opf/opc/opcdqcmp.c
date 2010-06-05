@@ -94,6 +94,8 @@
 **          Do not mark QP as shareable/repeated for multi-site 
 **          repeated query on Ingres Star server.
 **          This fixes bug 109618. INGSTR 52.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -154,13 +156,13 @@ opc_dldbadd(
 	if ( ldb_desc->dd_l1_ingres_b != ldbptr->dd_l1_ingres_b )
 	    match = FALSE;
 	if ( MEcmp( ldb_desc->dd_l2_node_name, ldbptr->dd_l2_node_name, 
-		sizeof(DD_NAME)) != 0)
+		sizeof(DD_NODE_NAME)) != 0)
 	    match = FALSE;
 	if ( MEcmp( ldb_desc->dd_l3_ldb_name, ldbptr->dd_l3_ldb_name, 
 		sizeof( DD_256C)) != 0)
 	    match = FALSE;
 	if ( MEcmp( ldb_desc->dd_l4_dbms_name, ldbptr->dd_l4_dbms_name, 
-		sizeof(DD_NAME) ) != 0)
+		DB_TYPE_MAXLEN ) != 0)
 	    match = FALSE;
 	if ( ldb_desc->dd_l5_ldb_id != ldbptr->dd_l5_ldb_id )
 	    match = FALSE;
@@ -180,11 +182,11 @@ opc_dldbadd(
 	qldbptr = (QEQ_LDB_DESC *) opu_qsfmem( global, sizeof( QEQ_LDB_DESC ));
         qldbptr->qeq_l2_nxt_ldb_p = NULL;
 	qldbptr->qeq_l1_ldb_desc.dd_l1_ingres_b = ldbptr->dd_l1_ingres_b;
-	MEcopy( ldbptr->dd_l2_node_name, sizeof(DD_NAME), 
+	MEcopy( ldbptr->dd_l2_node_name, sizeof(DD_NODE_NAME), 
 	    qldbptr->qeq_l1_ldb_desc.dd_l2_node_name );
 	MEcopy( ldbptr->dd_l3_ldb_name, sizeof(DD_256C), 
 	    qldbptr->qeq_l1_ldb_desc.dd_l3_ldb_name );
-	MEcopy( ldbptr->dd_l4_dbms_name, sizeof(DD_NAME), 
+	MEcopy( ldbptr->dd_l4_dbms_name, DB_TYPE_MAXLEN, 
 	    qldbptr->qeq_l1_ldb_desc.dd_l4_dbms_name );
 	qldbptr->qeq_l1_ldb_desc.dd_l5_ldb_id = ldbptr->dd_l5_ldb_id;	
 	qldbptr->qeq_l1_ldb_desc.dd_l6_flags  = ldbptr->dd_l6_flags;	
@@ -521,8 +523,8 @@ opc_dentry(
 	{
 		OPV_GRV	    *grv_ptr;
 		OPV_IGVARS  gno;
-		DD_NAME	    *tabname;
-		DD_NAME	    *ownername;
+		DD_TAB_NAME *tabname;
+		DD_OWN_NAME *ownername;
 		i2	    namelen;
 		DD_CAPS	    *cap_ptr;
 
@@ -531,17 +533,17 @@ opc_dentry(
 		if (gno >= 0)
 		{
 		    grv_ptr = global->ops_rangetab.opv_base->opv_grv[gno];
-		    tabname = (DD_NAME *) &grv_ptr->opv_relation->
+		    tabname = (DD_TAB_NAME *) &grv_ptr->opv_relation->
 			rdr_obj_desc->dd_o9_tab_info.dd_t1_tab_name[0];
-		    ownername = (DD_NAME *) &grv_ptr->opv_relation->
+		    ownername = (DD_OWN_NAME *) &grv_ptr->opv_relation->
 			rdr_obj_desc->dd_o9_tab_info.dd_t2_tab_owner[0];
 		    cap_ptr = &global->ops_gdist.opd_base->
 			opd_dtable[OPD_TSITE]->opd_dbcap->dd_p3_ldb_caps;
 		}
 		else
 		{
-		    tabname = (DD_NAME *)NULL;
-		    ownername = (DD_NAME *)NULL;
+		    tabname = (DD_TAB_NAME *)NULL;
+		    ownername = (DD_OWN_NAME *)NULL;
 		}		
 
 		/*
@@ -551,15 +553,15 @@ opc_dentry(
 		** allocate space beyond size of DD_NAME.
 		*/
 
-		qp->qp_ddq_cb.qeq_d9_delown = (DD_NAME *) opu_qsfmem( global,
-		    ( (sizeof( DD_NAME ))*2 + 3) );
-		opc_makename( ownername, (DD_NAME *) NULL,
+		qp->qp_ddq_cb.qeq_d9_delown = (DD_OWN_NAME *) opu_qsfmem( global,
+		    ( sizeof(DD_OWN_NAME) + sizeof(DD_TAB_NAME) + 3) );
+		opc_makename( ownername, (DD_TAB_NAME *) NULL,
 		    (char *) qp->qp_ddq_cb.qeq_d9_delown, &namelen , cap_ptr,
 		    (i4)global->ops_qheader->pst_mode, global);
 
-		qp->qp_ddq_cb.qeq_d7_deltable = (DD_NAME *) opu_qsfmem( global,
-		    ( (sizeof( DD_NAME ))*2 + 3) );
-		opc_makename( (DD_NAME *) NULL, tabname,
+		qp->qp_ddq_cb.qeq_d7_deltable = (DD_TAB_NAME *) opu_qsfmem( global,
+		    ( sizeof(DD_OWN_NAME) + sizeof(DD_TAB_NAME) + 3) );
+		opc_makename( (DD_OWN_NAME *) NULL, tabname,
 		    (char *) qp->qp_ddq_cb.qeq_d7_deltable, &namelen , cap_ptr,
 		    (i4)global->ops_qheader->pst_mode, global);
 

@@ -688,6 +688,8 @@ NO_OPTIM = dr6_us5
 **	21-Apr-2009 (drivi01)
 **	    Cleanup warnings in effort to port to Visual Studio 2008 
 **	    compiler.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*
@@ -3664,7 +3666,7 @@ i4	    ckp_sequence)
     i4			dev_in_use = 0;
     PTR			tptr;
     char		tbuf[2*MAX_LOC];
-    char		username[DB_MAXNAME+1];
+    char		username[DB_OWN_MAXNAME+1];
     char		*cp = &username[0];
     i4			*err_code = &jsx->jsx_dberr.err_code;
 
@@ -3821,7 +3823,7 @@ i4	    ckp_sequence)
 	if (jsx->jsx_dberr.err_code == I_DM116D_CPP_NOT_DEF_TEMPLATE)
 	{
 	    i4	l; 
-    	    char defowner[DB_MAXNAME+1]; /* effective user of process */
+    	    char defowner[DB_OWN_MAXNAME+1]; /* effective user of process */
 	    char *def_cp = &defowner[0];
 	    
 	    MEfill(sizeof(tbuf), '\0', tbuf);
@@ -4926,14 +4928,14 @@ i4		    *abort_xact_lgid)
 	    	   */
 		   if ((MEcmp(&relation.relid,
 			&jsx->jsx_tbl_list[i].tbl_name.db_tab_name,
-			DB_MAXNAME)) == 0)
+			DB_TAB_MAXNAME)) == 0)
 		    {
                if (STbcompare((char *)&jsx->jsx_tbl_list[i].tbl_owner.db_own_name,
                                          0,"", 0, 0) != 0)
                     {
                         if ((MEcmp (&relation.relowner.db_own_name,
                                 &jsx->jsx_tbl_list[i].tbl_owner.db_own_name
-                                ,DB_MAXNAME)) == 0)
+                                ,DB_OWN_MAXNAME)) == 0)
                         {
                                 found = TRUE;
                         }
@@ -5766,7 +5768,7 @@ bool		    dflag)
 
 	for (i = 0; dcb->dcb_jnl->logical.db_loc_name[i] != ' '; i++)
 	    ;
-	i > DB_MAXNAME ? i = DB_MAXNAME : i;
+	i > DB_LOC_MAXNAME ? i = DB_LOC_MAXNAME : i;
 	logical_text.count = i;
 	MEcopy((PTR)&dcb->dcb_jnl->logical, 
 		sizeof(logical_text.logical), (PTR)logical_text.logical);
@@ -5787,7 +5789,7 @@ bool		    dflag)
 
 	for (i = 0; dcb->dcb_dmp->logical.db_loc_name[i] != ' '; i++)
 	    ;
-	i > DB_MAXNAME ? i = DB_MAXNAME : i;
+	i > DB_LOC_MAXNAME ? i = DB_LOC_MAXNAME : i;
 	logical_text.count = i;
 	MEcopy((PTR)&dcb->dcb_dmp->logical, 
 		sizeof(logical_text.logical), (PTR)logical_text.logical);
@@ -5808,7 +5810,7 @@ bool		    dflag)
 
 	for (i = 0; dcb->dcb_ckp->logical.db_loc_name[i] != ' '; i++)
 	    ;
-	i > DB_MAXNAME ? i = DB_MAXNAME : i;
+	i > DB_LOC_MAXNAME ? i = DB_LOC_MAXNAME : i;
 	logical_text.count = i;
 	MEcopy((PTR)&dcb->dcb_ckp->logical, 
 		sizeof(logical_text.logical), (PTR)logical_text.logical);
@@ -6496,10 +6498,10 @@ DMP_DCB		    *dcb)
 	    jsp_set_case(jsx, 
 		    jsx->jsx_tbl_list[i].tbl_delim ? 
 			jsx->jsx_delim_case : jsx->jsx_reg_case,
-		    DB_MAXNAME, (char *)&jsx->jsx_tbl_list[i].tbl_name, 
+		    DB_TAB_MAXNAME, (char *)&jsx->jsx_tbl_list[i].tbl_name, 
 		    tmp_name);
 
-	    MEcopy(tmp_name, DB_MAXNAME, 
+	    MEcopy(tmp_name, DB_TAB_MAXNAME, 
 		    (char *)&jsx->jsx_tbl_list[i].tbl_name);
 
           if (STbcompare((char *)&jsx->jsx_tbl_list[i].tbl_owner.db_own_name,
@@ -6508,10 +6510,10 @@ DMP_DCB		    *dcb)
                 jsp_set_case(jsx,
                         jsx->jsx_tbl_list[i].tbl_delim ?
                         jsx->jsx_delim_case : jsx->jsx_reg_case,
-                        DB_MAXNAME, (char *)&jsx->jsx_tbl_list[i].tbl_owner.db_own_name,
+                        DB_OWN_MAXNAME, (char *)&jsx->jsx_tbl_list[i].tbl_owner.db_own_name,
                         tmp_name);
 
-                MEcopy(tmp_name, DB_MAXNAME,
+                MEcopy(tmp_name, DB_OWN_MAXNAME,
                         (char *)&jsx->jsx_tbl_list[i].tbl_owner.db_own_name);
             }
 	}
@@ -6802,7 +6804,7 @@ DMP_DCB             *dcb)
         {
             if ((MEcmp (&tblcb->tblcb_table_name,
                         &jsx->jsx_tbl_list[i].tbl_name.db_tab_name,
-			DB_MAXNAME)) == 0)
+			DB_TAB_MAXNAME)) == 0)
             {
                 /*
                 ** Table found, check if this is a system catalog
@@ -6813,7 +6815,7 @@ DMP_DCB             *dcb)
                 /* Check for owner name */
                         if((MEcmp (tblcb->tblcb_table_owner.db_own_name,
                                 &jsx->jsx_tbl_list[i].tbl_owner.db_own_name
-                                                       ,DB_MAXNAME)) == 0)
+                                                       ,DB_OWN_MAXNAME)) == 0)
                         {
                                 tblcb->tblcb_table_status |= CPP_USER_SPECIFIED;
                                 tblcb->tblcb_table_status |= CPP_CKPT_TABLE;
@@ -7124,7 +7126,7 @@ DMF_JSX             *jsx )
             continue;
 
 	TRformat( dmf_put_line, 0, line_buffer, sizeof(line_buffer),
-		       " %~t\n", DB_MAXNAME, &tblcb->tblcb_table_name );
+		   " %~t\n", DB_TAB_MAXNAME, &tblcb->tblcb_table_name );
 
 	none = FALSE;
 
@@ -7206,7 +7208,7 @@ DMF_JSX             *jsx )
 	none = FALSE;
 
 	TRformat( dmf_put_line, 0, line_buffer, sizeof(line_buffer),
-		       " %~t\n", DB_MAXNAME, &tblcb->tblcb_table_name );
+		   " %~t\n", DB_TAB_MAXNAME, &tblcb->tblcb_table_name );
 
     }
 
@@ -7279,7 +7281,7 @@ DMF_JSX             *jsx )
 
 	TRformat( dmf_put_line, 0, line_buffer, sizeof(line_buffer),
 		       "    %~t - err_code: %d\n",
-		       DB_MAXNAME, &tblcb->tblcb_table_name,
+		       DB_TAB_MAXNAME, &tblcb->tblcb_table_name,
 		       tblcb->tblcb_table_err_code );
 
     }
@@ -7397,15 +7399,15 @@ DMP_DCB		    *dcb)
 
 	    if ((MEcmp (&tblcb->tblcb_table_name,
 			&jsx->jsx_tbl_list[i].tbl_name.db_tab_name,
-			DB_MAXNAME)) == 0)
+			DB_TAB_MAXNAME)) == 0)
             {
                 if (STbcompare((char *)&jsx->jsx_tbl_list[i].tbl_owner.db_own_name,
                                        0,"", 0, 0) != 0)
                 {
                 /* Check for owner name */
                         if((MEcmp (tblcb->tblcb_table_owner.db_own_name,
-                                &jsx->jsx_tbl_list[i].tbl_owner.db_own_name
-                                                       ,DB_MAXNAME)) == 0)
+                                &jsx->jsx_tbl_list[i].tbl_owner.db_own_name,
+						   DB_OWN_MAXNAME)) == 0)
                         {
                                 table_found = TRUE;
                         }
@@ -8255,7 +8257,7 @@ i4		ckpseq)
 
 	    }
 
-	    MEcopy (&tblcb->tblcb_table_name, DB_MAXNAME, 
+	    MEcopy (&tblcb->tblcb_table_name, DB_TAB_MAXNAME, 
 		&table_list[i].db_tab_name);
 
 	    if (++i == TBLLST_MAX_TAB)

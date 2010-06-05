@@ -197,6 +197,8 @@
 **          Block SET NOLOGGING if DCB_S_MUST_LOG is set.
 **	19-Aug-2009 (kschendel) 121804
 **	    Need cx.h for proper CX declarations (gcc 4.3).
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /* Forward and static declarations. */
@@ -1474,7 +1476,7 @@ i4	    mode)
 	    MEmove(10, ERx("$DMC_ALTER"), ' ', 
 				sizeof(DB_OWN_NAME), (PTR) &user_name);
 	    status = LGbegin(LG_NOPROTECT, dcb->dcb_log_id, &tran_id, &log_id,
-			DB_MAXNAME, user_name.db_own_name, 
+			DB_OWN_MAXNAME, user_name.db_own_name, 
 			(DB_DIS_TRAN_ID*)NULL, &sys_err);
 	    if (status != E_DB_OK)
 	    {

@@ -278,6 +278,8 @@
 **	    SIR 120874: Remove last vestiges of CL_SYS_ERR
 **	10-Nov-2009 (kschendel) SIR 122757
 **	    Pass (aligned) buffer to LG_write_log_headers.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 #undef LG_DUAL_LOGGING_TESTBED 
@@ -1771,7 +1773,7 @@ struct _LXB
     i4		    lxb_l_user_name;	/* Length of the user name. */
     u_i8    	    lxb_reserved_space;	/* Logfile space reserved by xact */
     SIZE_TYPE	    lxb_lfb_offset;	/* logfile for this transaction */
-    char	    lxb_user_name[DB_MAXNAME]; /* User name of the transaction. */
+    char	    lxb_user_name[DB_OWN_MAXNAME]; /* User name of the transaction. */
 
     /* The next 6 fields are used when status & LXB_SHARED */
     LXBQ	    lxb_slxb;		/* LGD queue of SHARED LXBs */

@@ -96,6 +96,8 @@
 **	24-Aug-2009 (kschendel) 121804
 **	    Fix up warnings.
 **	    Need uls.h to satisfy gcc 4.3.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 */
 
@@ -535,8 +537,8 @@ opc_rdfname(
 	OPCUDNAME	   *name,
 	i4		   qmode )
 {
-    DD_NAME	*ownername;
-    DD_NAME	*tabname;
+    DD_OWN_NAME	*ownername;
+    DD_TAB_NAME	*tabname;
     DD_CAPS	*cap_ptr;
     OPD_ISITE	site;
     OPD_SITE	*sitedesc;
@@ -546,7 +548,7 @@ opc_rdfname(
     char	quotec[6];
     char	*quote_char;
     bool	use_owner_name;
-    u_i4	unorm_len = DB_MAXNAME*2+2;
+    u_i4	unorm_len = (DB_OWN_MAXNAME + DB_TAB_MAXNAME) + 2;
     DB_STATUS	status;
     DB_ERROR	error;
 
@@ -571,9 +573,9 @@ opc_rdfname(
     sitedesc = textcb->state->ops_gdist.opd_base->opd_dtable[site];
     cap_ptr =  &sitedesc->opd_dbcap->dd_p3_ldb_caps ;
     quote_char = quotec;
-    ownername = (DD_NAME *) &grv_ptr->opv_relation->rdr_obj_desc->
+    ownername = (DD_OWN_NAME *) &grv_ptr->opv_relation->rdr_obj_desc->
 	    dd_o9_tab_info.dd_t2_tab_owner[0];
-    ownnamesize = opt_noblanks((i4)DB_MAXNAME, (char *) ownername);
+    ownnamesize = opt_noblanks((i4)DB_OWN_MAXNAME, (char *) ownername);
     bufptr = (PTR) &name->buf[0];
 
     if (cap_ptr->dd_c1_ldb_caps & DD_8CAP_DELIMITED_IDS)
@@ -606,16 +608,16 @@ opc_rdfname(
 	}
     }
 
-    tabname = (DD_NAME *) &grv_ptr->opv_relation->rdr_obj_desc->
+    tabname = (DD_TAB_NAME *) &grv_ptr->opv_relation->rdr_obj_desc->
 	dd_o9_tab_info.dd_t1_tab_name[0];
-    tabnamesize = opt_noblanks( (i4)DB_MAXNAME, (char *)tabname);
+    tabnamesize = opt_noblanks( (i4)DB_TAB_MAXNAME, (char *)tabname);
 
     MEcopy( (PTR)tabname, tabnamesize, (PTR)bufptr );
 
     if (cap_ptr->dd_c1_ldb_caps & DD_8CAP_DELIMITED_IDS)
     {
 	/* Unnormalize and delimit tablename */
-	unorm_len = DB_MAXNAME*2+2;
+	unorm_len = (DB_OWN_MAXNAME + DB_TAB_MAXNAME) + 2;
 	status = cui_idunorm( (u_char *)tabname, (u_i4*)&tabnamesize,
 		    (u_char *)bufptr, &unorm_len, CUI_ID_DLM, &error);
 	if (DB_FAILURE_MACRO(status))
@@ -1529,8 +1531,8 @@ OPO_CO              *cop )
 */
 VOID
 opc_makename(
-	DD_NAME		*ownername,
-	DD_NAME		*tabname,
+	DD_OWN_NAME	*ownername,
+	DD_TAB_NAME	*tabname,
 	char		*bufptr,
 	i2		*length,
 	DD_CAPS		*cap_ptr,
@@ -1539,7 +1541,7 @@ opc_makename(
 {
     i4                  tabnamesize;
     i4		    	ownnamesize;
-    u_i4		unorm_len = DB_MAXNAME*2+2;
+    u_i4		unorm_len = (DB_OWN_MAXNAME + DB_TAB_MAXNAME) + 2;
     bool		quote_it;
     char		*quote_char;
     DB_STATUS	    	status;
@@ -1557,7 +1559,7 @@ opc_makename(
 
 	if (cap_ptr->dd_c1_ldb_caps & DD_8CAP_DELIMITED_IDS)
 	{
-	    ownnamesize = opt_noblanks( (i4)DB_MAXNAME, (char *)ownername );
+	    ownnamesize = opt_noblanks( (i4)DB_OWN_MAXNAME, (char *)ownername );
 	    /* Unnormalize and delimit ownername */
 	    status = cui_idunorm( (u_char *)ownername, (u_i4 *)&ownnamesize,
 			(u_char *)bufptr, &unorm_len, CUI_ID_DLM, &error);
@@ -1576,7 +1578,7 @@ opc_makename(
 				global->ops_adfcb->adf_qlang, &quote_char )
 		)
 	{
-	    ownnamesize = opt_noblanks( (i4)DB_MAXNAME, (char *)ownername );
+	    ownnamesize = opt_noblanks( (i4)DB_OWN_MAXNAME, (char *)ownername );
 
 	    if (quote_char != NULL)
 	    {    
@@ -1600,12 +1602,12 @@ opc_makename(
     }
     if (tabname != NULL)
     {
-	tabnamesize = opt_noblanks( (i4)DB_MAXNAME, (char *)tabname);
+	tabnamesize = opt_noblanks( (i4)DB_TAB_MAXNAME, (char *)tabname);
 
 	if (cap_ptr->dd_c1_ldb_caps & DD_8CAP_DELIMITED_IDS)
 	{
 	    /* Unnormalize and delimit tablename */
-	    unorm_len=DB_MAXNAME*2+2;
+	    unorm_len = (DB_OWN_MAXNAME + DB_TAB_MAXNAME) + 2;
 	    status = cui_idunorm( (u_char *)tabname, (u_i4*)&tabnamesize,
 			(u_char *)bufptr, &unorm_len, CUI_ID_DLM, &error);
 	    if (DB_FAILURE_MACRO(status)) opx_verror(E_DB_ERROR, 
@@ -1767,15 +1769,15 @@ opc_treetext(
 	    */
 		OPV_GRV	    *grv_ptr;
 		OPV_IGVARS  gno;
-		DD_NAME	    *tabname;
-		DD_NAME	    *ownername;
+		DD_TAB_NAME *tabname;
+		DD_OWN_NAME *ownername;
 		DD_CAPS	    *cap_ptr;
 
 		tabname = NULL;
 		ownername = NULL;
 		if ( mode == PSQ_RETINTO )
 		{
-		    tabname = (DD_NAME *) &global->ops_qheader->pst_distr->
+		    tabname = (DD_TAB_NAME *) &global->ops_qheader->pst_distr->
 			pst_ddl_info->qed_d6_tab_info_p->dd_t1_tab_name[0];
 		}
 		else
@@ -1785,9 +1787,9 @@ opc_treetext(
 		    if (gno >= 0)
 		    {
 			grv_ptr = global->ops_rangetab.opv_base->opv_grv[gno];
-			tabname = (DD_NAME *) &grv_ptr->opv_relation->
+			tabname = (DD_TAB_NAME *) &grv_ptr->opv_relation->
 			    rdr_obj_desc->dd_o9_tab_info.dd_t1_tab_name[0];
-			ownername = (DD_NAME *) &grv_ptr->opv_relation->
+			ownername = (DD_OWN_NAME *) &grv_ptr->opv_relation->
 			    rdr_obj_desc->dd_o9_tab_info.dd_t2_tab_owner[0];
 		    }
 		}

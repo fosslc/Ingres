@@ -806,6 +806,8 @@ NO_OPTIM = dr6_us5
 **	    SIR 120874: dma_? auditing functions converted to DB_ERROR *
 **      04-aug-2009 (stial01)
 **          rfp_check_lsn_waiter() Fixed DB_ERROR param to dm2u_load_table
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*
@@ -2642,7 +2644,7 @@ DMP_DCB		    *dcb)
     i4		i;
     DB_STATUS		status;
     char		line_buffer[132];
-    char	        local_buffer[ER_MAX_LEN];
+    char	        local_buffer[ER_MAX_LEN + DB_DB_MAXNAME];
     i4			loc_error;
     i4			error;
 
@@ -2695,8 +2697,8 @@ DMP_DCB		    *dcb)
 	/*
 	** Log message indicating that recovery is not retryable.
 	*/
-	STncpy( local_buffer, dcb->dcb_name.db_db_name, DB_MAXNAME);
-	local_buffer[ DB_MAXNAME ] = '\0';
+	STncpy( local_buffer, dcb->dcb_name.db_db_name, DB_DB_MAXNAME);
+	local_buffer[ DB_DB_MAXNAME ] = '\0';
 	STtrmwhite(local_buffer);
 	uleFormat(NULL, E_DM1346_RFP_NOLOGGING, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
 	    (char *)NULL, (i4)0, (i4 *)NULL, &loc_error, 1,
@@ -2726,8 +2728,8 @@ DMP_DCB		    *dcb)
 	/*
 	** Log message indicating that this recovery may leave db inconsistent.
 	*/
-	STncpy( local_buffer, dcb->dcb_name.db_db_name, DB_MAXNAME);
-	local_buffer[ DB_MAXNAME ] = '\0';
+	STncpy( local_buffer, dcb->dcb_name.db_db_name, DB_DB_MAXNAME);
+	local_buffer[ DB_DB_MAXNAME ] = '\0';
 	STtrmwhite(local_buffer);
 	uleFormat(NULL, E_DM1347_RFP_NOROLLBACK, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
 	    (char *)NULL, (i4)0, (i4 *)NULL, &loc_error, 1,
@@ -9968,7 +9970,7 @@ DMP_DCB		    *dcb)
     i4		i;
     RFP_LOC_MASK	*lm =0;
     i4		size;
-    char                tmp_name[DB_MAXNAME];
+    char                tmp_name[DB_MAXNAME]; /* for owner or table name */
     i4			error;
     DB_ERROR		local_dberr;
 
@@ -9988,10 +9990,10 @@ DMP_DCB		    *dcb)
 	    jsp_set_case(jsx, 
 		    jsx->jsx_tbl_list[i].tbl_delim ? 
 			jsx->jsx_delim_case : jsx->jsx_reg_case,
-		    DB_MAXNAME, (char *)&jsx->jsx_tbl_list[i].tbl_name, 
+		    DB_TAB_MAXNAME, (char *)&jsx->jsx_tbl_list[i].tbl_name, 
 		    tmp_name);
 
-	    MEcopy(tmp_name, DB_MAXNAME, 
+	    MEcopy(tmp_name, DB_TAB_MAXNAME, 
 		    (char *)&jsx->jsx_tbl_list[i].tbl_name);
 
             if (STbcompare((char *)&jsx->jsx_tbl_list[i].tbl_owner.db_own_name,
@@ -10000,10 +10002,10 @@ DMP_DCB		    *dcb)
                 jsp_set_case(jsx,
                 jsx->jsx_tbl_list[i].tbl_delim ?
                         jsx->jsx_delim_case : jsx->jsx_reg_case,
-                DB_MAXNAME, (char *)&jsx->jsx_tbl_list[i].tbl_owner.db_own_name,
+                DB_OWN_MAXNAME, (char *)&jsx->jsx_tbl_list[i].tbl_owner.db_own_name,
                 tmp_name);
 
-                MEcopy(tmp_name, DB_MAXNAME,
+                MEcopy(tmp_name, DB_OWN_MAXNAME,
                         (char *)&jsx->jsx_tbl_list[i].tbl_owner.db_own_name);
             }
 	}
@@ -10478,7 +10480,7 @@ i4		    jnl_history_no)
 	    uleFormat(NULL, E_DM135F_RFP_NO_TBL_RECOV, (CL_ERR_DESC *)NULL,
 		ULE_LOG, NULL,
 		error_buffer, ER_MAX_LEN, &error_length, &error, 1,
-                DB_MAXNAME, tblcb->tblcb_table_name.db_tab_name);
+                DB_TAB_MAXNAME, tblcb->tblcb_table_name.db_tab_name);
 	    dmf_put_line(0, error_length, error_buffer);
 	    if ((tblcb->tblcb_table_status & RFP_USER_SPECIFIED) == 0)
 		SETDBERR(&jsx->jsx_dberr, 0, E_DM1370_RFP_NO_SEC_INDEX);
@@ -10499,7 +10501,7 @@ i4		    jnl_history_no)
 	    uleFormat(NULL, E_DM135F_RFP_NO_TBL_RECOV, (CL_ERR_DESC *)NULL,
 		ULE_LOG, NULL,
 		error_buffer, ER_MAX_LEN, &error_length, &error, 1,
-                DB_MAXNAME, tblcb->tblcb_table_name.db_tab_name);
+                DB_TAB_MAXNAME, tblcb->tblcb_table_name.db_tab_name);
 	    dmf_put_line(0, error_length, error_buffer);
 	    if ((tblcb->tblcb_table_status & RFP_USER_SPECIFIED) == 0)
 		SETDBERR(&jsx->jsx_dberr, 0, E_DM1370_RFP_NO_SEC_INDEX);
@@ -10535,14 +10537,14 @@ i4		    jnl_history_no)
 
 	    if ((MEcmp (tblcb->tblcb_table_name.db_tab_name,
 			&jsx->jsx_tbl_list[i].tbl_name.db_tab_name,
-			DB_MAXNAME)) == 0)
+			DB_TAB_MAXNAME)) == 0)
             {
                if (STbcompare((char *)&jsx->jsx_tbl_list[i].tbl_owner.db_own_name,
                         0,"", 0, 0) != 0)
                 {
                     if ((MEcmp (tblcb->tblcb_table_owner.db_own_name,
                         &jsx->jsx_tbl_list[i].tbl_owner.db_own_name
-                        ,DB_MAXNAME)) == 0)
+                        ,DB_OWN_MAXNAME)) == 0)
                         table_found = TRUE;
                 }
                 else
@@ -10554,7 +10556,7 @@ i4		    jnl_history_no)
 	    uleFormat(NULL, E_DM1360_RFP_TBL_NOTFOUND, (CL_ERR_DESC *)NULL, 
 		ULE_LOG, NULL,
 		error_buffer, ER_MAX_LEN, &error_length, &error, 1,
-		DB_MAXNAME, &jsx->jsx_tbl_list[i].tbl_name.db_tab_name);
+		DB_TAB_MAXNAME, &jsx->jsx_tbl_list[i].tbl_name.db_tab_name);
 	    dmf_put_line(0, error_length, error_buffer);
 	    SETDBERR(&jsx->jsx_dberr, 0, E_DM135E_RFP_USR_INVALID_TABLE);
 	    return (E_DB_ERROR);
@@ -10614,7 +10616,7 @@ int		    dmp_phys_length)
     TBLLST_CTX		tblctx;
     char        	error_buffer[ER_MAX_LEN];
     i4     	error_length;
-    char		table_name[DB_MAXNAME + 1];
+    char		table_name[DB_TAB_MAXNAME + 1];
     i4		local_err;
     i4             i;
     i4			error;
@@ -10694,7 +10696,7 @@ int		    dmp_phys_length)
 	    		    break;
 
 	    		if ((MEcmp(tblcb->tblcb_table_name.db_tab_name,
-		    		table_list[i].db_tab_name, DB_MAXNAME)) == 0)
+			    table_list[i].db_tab_name, DB_TAB_MAXNAME)) == 0)
             		{
 	    			tblcb->tblcb_table_status |= RFP_FOUND_TABLE;
 				break;
@@ -10719,8 +10721,8 @@ int		    dmp_phys_length)
 			== RFP_RECOVER_TABLE)
 		{
 	    	    STncpy( table_name, tblcb->tblcb_table_name.db_tab_name,
-				DB_MAXNAME);
-		    table_name[ DB_MAXNAME ] = '\0';
+				DB_TAB_MAXNAME);
+		    table_name[ DB_TAB_MAXNAME ] = '\0';
 	    	    STtrmwhite(table_name);
 	    	    uleFormat(NULL, E_DM1364_RFP_NO_TBL_CHKPT, (CL_ERR_DESC *)NULL, 
 			ULE_LOG, NULL,
@@ -11973,7 +11975,7 @@ DMF_JSX             *jsx )
             continue;
 
 	TRformat( dmf_put_line, 0, line_buffer, sizeof(line_buffer),
-		       " %~t\n", DB_MAXNAME, &tblcb->tblcb_table_name );
+		       " %~t\n", DB_TAB_MAXNAME, &tblcb->tblcb_table_name );
 
 	none = FALSE;
 
@@ -12055,7 +12057,7 @@ DMF_JSX             *jsx )
 	none = FALSE;
 
 	TRformat( dmf_put_line, 0, line_buffer, sizeof(line_buffer),
-		       " %~t\n", DB_MAXNAME, &tblcb->tblcb_table_name );
+		       " %~t\n", DB_TAB_MAXNAME, &tblcb->tblcb_table_name );
 
     }
 
@@ -12130,8 +12132,8 @@ DMF_JSX             *jsx )
 
 	TRformat( dmf_diag_put_line, 0, line_buffer, sizeof(line_buffer),
 		       "Invalid table %~t owned by %~t (%d,%d) - err_code: %d\n",
-		       DB_MAXNAME, tblcb->tblcb_table_name.db_tab_name,
-		       DB_MAXNAME, tblcb->tblcb_table_owner.db_own_name,
+		       DB_TAB_MAXNAME, tblcb->tblcb_table_name.db_tab_name,
+		       DB_OWN_MAXNAME, tblcb->tblcb_table_owner.db_own_name,
 		       tblcb->tblcb_table_id.db_tab_base,
 		       tblcb->tblcb_table_id.db_tab_index,
 		       tblcb->tblcb_table_err_code );
@@ -12184,7 +12186,7 @@ DMP_DCB             *dcb)
     DMCKP_CB  *d = &rfp->rfp_dmckp;
     PTR       tptr;
     char      tbuf[2*MAX_LOC];
-    char      username[DB_MAXNAME];
+    char      username[DB_OWN_MAXNAME];
     char      *cp = username;
     char      line_buffer[132];
     i4	      error;
@@ -12209,7 +12211,7 @@ DMP_DCB             *dcb)
     if ((status != E_DB_OK) && (jsx->jsx_dberr.err_code == I_DM1369_RFP_NOT_DEF_TEMPLATE))
     {
 	i4	l;
-	char defowner[DB_MAXNAME+1]; /* owner of cktmplt.def */
+	char defowner[DB_OWN_MAXNAME+1]; /* owner of cktmplt.def */
 	char *def_cp = &defowner[0];
 
 
@@ -12844,7 +12846,7 @@ DMP_DCB             *dcb)
 		    ** Delete the file
 		    */
 		    d->dmckp_tab_name = tblcb->tblcb_table_name.db_tab_name;
-		    d->dmckp_l_tab_name = DB_MAXNAME;
+		    d->dmckp_l_tab_name = DB_TAB_MAXNAME;
 
 		    status = dmckp_delete_file( d, &error );
 		    if ( status != E_DB_OK )
@@ -12902,7 +12904,7 @@ DMP_DCB             *dcb)
 		    ** Restore the file
 		    */
 		    d->dmckp_tab_name = tblcb->tblcb_table_name.db_tab_name;
-		    d->dmckp_l_tab_name = DB_MAXNAME;
+		    d->dmckp_l_tab_name = DB_TAB_MAXNAME;
 		    d->dmckp_raw_start = ext->ext_entry[i].raw_start;
 		    d->dmckp_raw_blocks = ext->ext_entry[i].raw_blocks;
 		    d->dmckp_raw_total_blocks = ext->ext_entry[i].raw_total_blocks;
@@ -14231,7 +14233,7 @@ DMP_DCB             *dcb)
         {
             if ((MEcmp (tblcb->tblcb_table_name.db_tab_name,
                         &jsx->jsx_tbl_list[i].tbl_name.db_tab_name,
-			DB_MAXNAME)) == 0)
+			DB_TAB_MAXNAME)) == 0)
             {
                 /*
                 ** Table found, check if this is a system catalog
@@ -14241,7 +14243,7 @@ DMP_DCB             *dcb)
                 {
                         if ((MEcmp (tblcb->tblcb_table_owner.db_own_name,
                                 &jsx->jsx_tbl_list[i].tbl_owner.db_own_name
-                                ,DB_MAXNAME)) == 0)
+                                ,DB_OWN_MAXNAME)) == 0)
                         {
                                 tblcb->tblcb_table_status |= RFP_USER_SPECIFIED;
                                 tblcb->tblcb_table_status |= RFP_RECOVER_TABLE;

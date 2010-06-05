@@ -92,6 +92,8 @@ static SXA_MSG_DESC *mroot=NULL;
 **	    replace nat and longnat with i4
 **      24-Feb-2004 (kodse01)
 **          Removed gwxit.h inclusion which is not required.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 
@@ -156,8 +158,8 @@ gwsxa_sxf_to_ingres(GWX_RCB *gwx_rcb, SXF_AUDIT_REC *sxf_record)
     EX_CONTEXT	    context;
     i4	    bas_rec_length;
     char	    tmpdesc[SXA_MAX_DESC_LEN+1];
-    char	    tmpobjtype[DB_MAXNAME+1];
-    char	    tmpacctype[DB_MAXNAME+1];
+    char	    tmpobjtype[DB_TYPE_MAXLEN+1]; /* objecttype char(24)*/
+    char	    tmpacctype[DB_TYPE_MAXLEN+1]; /* auditevent char(24) */
     char	    tmppriv[SXA_MAX_PRIV_LEN+1];
     char	    audittmstr[26];
     i4	    ing_record_length;
@@ -165,9 +167,9 @@ gwsxa_sxf_to_ingres(GWX_RCB *gwx_rcb, SXF_AUDIT_REC *sxf_record)
     bool	    aligned;
     PTR	            align_save;
     /*
-    **	256 bytes of aligned output buffer
+    **	aligned output buffer big enough for any column in iiaudit
     */
-    ALIGN_RESTRICT  alignbuffer[256/sizeof(ALIGN_RESTRICT)];
+    ALIGN_RESTRICT  alignbuffer[256/sizeof(ALIGN_RESTRICT) + DB_OBJ_MAXNAME];
 
     adfcb = rsb->gwrsb_session->gws_adf_cb;
     
@@ -196,7 +198,7 @@ gwsxa_sxf_to_ingres(GWX_RCB *gwx_rcb, SXF_AUDIT_REC *sxf_record)
 	return (E_DB_ERROR);
     }
     /*
-    ** Loop over all columns doing the conversion
+    ** Loop over all columns in iiaudit doing the conversion
     */
     for (i = 0; i < column_count; i++, gw_attr++)
     {
@@ -554,7 +556,7 @@ gwsxa_sxf_to_ingres(GWX_RCB *gwx_rcb, SXF_AUDIT_REC *sxf_record)
 	*/
 	if (aligned==FALSE)
 	{
-		MECOPY_VAR_MACRO((PTR)alignbuffer, ing_value.db_length, align_save);
+	    MECOPY_VAR_MACRO((PTR)alignbuffer, ing_value.db_length, align_save);
 	}
 
 	/*

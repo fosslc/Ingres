@@ -117,6 +117,8 @@
 **	    thanks to the parallel query changes.)
 **      20-Apr-2009 (horda03) Bug 121826
 **          Abort if a message send is interrupted by user.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*	static functions	*/
@@ -303,7 +305,7 @@ bool		iserror )
     i4	msgnumber;
     SCF_CB	scf_cb;
     SCF_SCI	sci_list[1];
-    char	username[DB_MAXNAME+1];
+    char	username[DB_OWN_MAXNAME+1];
     i4		scf_type = iserror ? SCC_RSERROR : SCC_MESSAGE;
     struct  {
 	i2	msglength;
@@ -415,7 +417,7 @@ bool		iserror )
     {
 	scf_cb.scf_ptr_union.scf_sci = (SCI_LIST *)sci_list;
 	scf_cb.scf_len_union.scf_ilength = 1;
-	sci_list[0].sci_length	= DB_MAXNAME;
+	sci_list[0].sci_length	= DB_OWN_MAXNAME;
 	sci_list[0].sci_code	= SCI_USERNAME;
 	sci_list[0].sci_aresult = (char *)username;
 	sci_list[0].sci_rlength = NULL;
@@ -427,7 +429,7 @@ bool		iserror )
 	}
 	else
 	{
-	    username[DB_MAXNAME] = '\0';
+	    username[DB_OWN_MAXNAME] = '\0';
 	    _VOID_ STtrmwhite(username);
 	    (VOID)qef_error(E_QE0300_USER_MSG, 0L, E_DB_OK, 
 			&error, &local_error, 4,

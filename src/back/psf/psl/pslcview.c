@@ -108,6 +108,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -391,7 +393,7 @@ psl_cv1_create_view(
     DMT_ATT_ENTRY       *attribute;
     i4             err_code;
     PSS_RNGTAB		*rngtabp;
-    char		tid[DB_MAXNAME];
+    char		tid[DB_ATT_MAXNAME];
     char		*name;
     PST_PROCEDURE	*pnode;
     bool		sqlview = sess_cb->pss_lang == DB_SQL;
@@ -695,7 +697,7 @@ psl_cv1_create_view(
 
     /* Normalize the attribute name */
     STmove(((*sess_cb->pss_dbxlate & CUI_ID_REG_U) ? "TID" : "tid"),
-	   ' ', DB_MAXNAME, tid);
+	   ' ', DB_ATT_MAXNAME, tid);
 
     for (resdom = query_expr->pst_left;
 	 (   resdom != (PST_QNODE *) NULL
@@ -711,11 +713,11 @@ psl_cv1_create_view(
 	name = resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname;
 
 	/* Is the name equal to "tid" */
-	if (!MEcmp(name, tid, DB_MAXNAME))
+	if (!MEcmp(name, tid, DB_ATT_MAXNAME))
 	{
 	    (VOID) psf_error(2052L, 0L, PSF_USERERR, &err_code,
 		&psq_cb->psq_error, 1,
-		psf_trmwhite(DB_MAXNAME, name), name);
+		psf_trmwhite(DB_ATT_MAXNAME, name), name);
 	    
 	    status = E_DB_ERROR;
 	    goto cleanup;
@@ -728,20 +730,20 @@ psl_cv1_create_view(
 
 	attr = attrs[colno];
 	/* Put in attribute name */
-	MEcopy((PTR) name, DB_MAXNAME, (PTR) attr->attr_name.db_att_name);
+	MEcopy((PTR) name, DB_ATT_MAXNAME, (PTR) attr->attr_name.db_att_name);
 
 	/* check for duplicate attribute names */
 	for (i = colno + 1, attr_pp = attrs + i;
 	     i < sess_cb->pss_rsdmno;
 	     i++, attr_pp++)
 	{
-	    if (!MEcmp((PTR) name, (PTR) &(*attr_pp)->attr_name, DB_MAXNAME))
+	    if (!MEcmp((PTR) name, (PTR) &(*attr_pp)->attr_name, DB_ATT_MAXNAME))
 	    {
 		if (sqlview)
 		{
 		    (VOID) psf_error(2013L, 0L, PSF_USERERR, &err_code,
 			&psq_cb->psq_error, 1,
-			psf_trmwhite(DB_MAXNAME, name), name);
+			psf_trmwhite(DB_ATT_MAXNAME, name), name);
 		}
 		else
 		{
@@ -749,7 +751,7 @@ psl_cv1_create_view(
 			&psq_cb->psq_error, 2,
 			sizeof(dmu_cb->dmu_table_name),
 			(char *) &dmu_cb->dmu_table_name,
-			psf_trmwhite(DB_MAXNAME, name), name);
+			psf_trmwhite(DB_ATT_MAXNAME, name), name);
 		}
 
 		status = E_DB_ERROR;
@@ -799,7 +801,7 @@ psl_cv1_create_view(
 	    {
 		(VOID) psf_error(E_PS0909_NO_RANGE_ENTRY, 0L, PSF_INTERR,
 		    &err_code, &psq_cb->psq_error, 1,
-		    psf_trmwhite(DB_MAXNAME, name), name);
+		    psf_trmwhite(DB_ATT_MAXNAME, name), name);
 		goto cleanup;
 	    }
 
@@ -812,7 +814,7 @@ psl_cv1_create_view(
 	    {
 		(VOID) psf_error(E_PS090A_NO_ATTR_ENTRY, 0L, PSF_INTERR,
 		    &err_code, &psq_cb->psq_error, 1,
-		    psf_trmwhite(DB_MAXNAME, name), name);
+		    psf_trmwhite(DB_ATT_MAXNAME, name), name);
 		goto cleanup;
 	    }
 
@@ -1736,7 +1738,7 @@ psl_cv2_viewstmnt(
     if (status != E_DB_OK)
 	return (status);
 
-    STmove("$default", ' ', DB_MAXNAME,
+    STmove("$default", ' ', DB_LOC_MAXNAME,
 	(char *) dmu_cb->dmu_location.data_address);
     dmu_cb->dmu_location.data_in_size = sizeof(DB_LOC_NAME);
 

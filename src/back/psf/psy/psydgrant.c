@@ -193,6 +193,8 @@
 **      13-Mar-2003 (hanal04) Bug 109786 INGSRV 2122
 **          Prevent invalid privileges being set on VIEWs when a GRANT ALL
 **          is issued.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -3824,7 +3826,7 @@ psy_dbp_ev_seq_perm(
     }
     else if (psy_cb->psy_grant == PSY_EVGRANT)
     {
-	DB_NAME		*ev_name = (DB_NAME *) &psy_tbl->psy_tabnm;
+	DB_EVENT_NAME	*ev_name = (DB_EVENT_NAME *) &psy_tbl->psy_tabnm;
 
 	STRUCT_ASSIGN_MACRO(*ev_name, rdf_rb->rdr_name.rdr_evname);
     }

@@ -431,6 +431,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -1030,7 +1032,7 @@ DB_ERROR	    *errcb)
     DMPP_ACC_PLV	*loc_plv;
     LG_LSN		lsn;
     bool		upcase;
-    char		tempstr[DB_MAXNAME];
+    char		temptab[DB_TAB_MAXNAME];
     char		*tempstr2;
     i4		tbl_lk_mode;
     bool		concurrent_index = FALSE;
@@ -1728,17 +1730,16 @@ DB_ERROR	    *errcb)
     {
 	for (k= 0;k < sizeof(systab)/sizeof(systab[0]); k++)
 	{
-	    (VOID)STmove(systab[k].catstr, ' ', sizeof(tempstr), &tempstr[0]);
+	    (VOID)STmove(systab[k].catstr, ' ', sizeof(temptab), &temptab[0]);
 	    if (upcase)
 	    {
-		for (tempstr2 = tempstr;
-		     tempstr2 < &tempstr[DB_MAXNAME];
+		for (tempstr2 = temptab;
+		     tempstr2 < &temptab[DB_TAB_MAXNAME];
 		     tempstr2++)
 		    CMtoupper(tempstr2,tempstr2);
 	    }
 	    compare = STncmp((char *)table_name->db_tab_name,
-				 (char *)tempstr,
-				 DB_MAXNAME );
+				 (char *)temptab, DB_TAB_MAXNAME );
 	    if (compare == 0)
 	    {
 		STRUCT_ASSIGN_MACRO(systab[k].tab_id, ntab_id);
@@ -1842,7 +1843,7 @@ DB_ERROR	    *errcb)
     
 	        if (extension)
 	        {
-		    char	    etab_name[DB_MAXNAME+1];
+		    char	    etab_name[DB_TAB_MAXNAME+1];
 		    /* Then create the table's name */
     
 		    STprintf(etab_name, "iietab_%x_%x", tbl_id->db_tab_base,

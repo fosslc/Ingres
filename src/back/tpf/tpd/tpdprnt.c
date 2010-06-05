@@ -105,6 +105,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 GLOBALREF   struct _TPD_SV_CB   *Tpf_svcb_p;
@@ -848,7 +850,7 @@ tpd_p8_prt_ddbdesc(
 	bool		    i_to_log)
 {
     TPD_SS_CB   *sscb_p = (TPD_SS_CB *) v_tpr_p->tpr_session;
-    char	namebuf[DB_MAXNAME + 1];
+    char	namebuf[DB_MAXNAME + 100]; /* big enough for any name */
     char	*cbuf = v_tpr_p->tpr_trfmt;
     i4		cbufsize = v_tpr_p->tpr_trsize;
 
@@ -883,15 +885,12 @@ tpd_p8_prt_ddbdesc(
 	}
         return;
     }
-    tpd_u0_trimtail(
-	i_starcdb_p->i1_1_ddb_name,
-        (i4) DB_MAXNAME,
-        namebuf);
+    tpd_u0_trimtail( i_starcdb_p->i1_1_ddb_name, (i4) DB_DB_MAXNAME, namebuf);
     if (i_to_log)
     {
 	if (Tpf_svcb_p->tsv_4_flags & TSV_01_IN_RECOVERY)
 	    tp2_put( I_TP024B_DDB_NAME, 0, 1,
-		sizeof(namebuf), namebuf,
+		DB_DB_MAXNAME, namebuf,
 		0, (PTR)0,
 		0, (PTR)0,
 		0, (PTR)0,
@@ -918,15 +917,12 @@ tpd_p8_prt_ddbdesc(
 	tpf_u0_tprintf(v_tpr_p, cbufsize, cbuf);
     }
 
-    tpd_u0_trimtail(
-	i_starcdb_p->i1_2_ddb_owner,
-        (i4) DB_MAXNAME,
-        namebuf);
+    tpd_u0_trimtail( i_starcdb_p->i1_2_ddb_owner, (i4) DB_OWN_MAXNAME, namebuf);
     if (i_to_log)
     {
 	if (Tpf_svcb_p->tsv_4_flags & TSV_01_IN_RECOVERY)
 	    tp2_put( I_TP024C_DDB_OWNER, 0, 1,
-		sizeof(namebuf), namebuf,
+		DB_OWN_MAXNAME, namebuf,
 		0, (PTR)0,
 		0, (PTR)0,
 		0, (PTR)0,
@@ -954,15 +950,12 @@ tpd_p8_prt_ddbdesc(
 	tpf_u0_tprintf(v_tpr_p, cbufsize, cbuf);
     }
 
-    tpd_u0_trimtail(
-	i_starcdb_p->i1_3_cdb_name,
-        (i4) DB_MAXNAME,
-        namebuf);
+    tpd_u0_trimtail( i_starcdb_p->i1_3_cdb_name, (i4) DB_DB_MAXNAME, namebuf);
     if (i_to_log)
     {
 	if (Tpf_svcb_p->tsv_4_flags & TSV_01_IN_RECOVERY)
 	    tp2_put( I_TP024D_CDB_NAME, 0, 1,
-		sizeof(namebuf), namebuf,
+		DB_DB_MAXNAME, namebuf,
 		0, (PTR)0,
 		0, (PTR)0,
 		0, (PTR)0,
@@ -990,15 +983,12 @@ tpd_p8_prt_ddbdesc(
 	tpf_u0_tprintf(v_tpr_p, cbufsize, cbuf);
     }
 
-    tpd_u0_trimtail(
-	i_starcdb_p->i1_5_cdb_node,
-        (i4) DB_MAXNAME,
-        namebuf);
+    tpd_u0_trimtail( i_starcdb_p->i1_5_cdb_node, (i4) DB_NODE_MAXNAME, namebuf);
     if (i_to_log)
     {
 	if (Tpf_svcb_p->tsv_4_flags & TSV_01_IN_RECOVERY)
 	    tp2_put( I_TP024E_CDB_NODE, 0, 1,
-		sizeof(namebuf), namebuf,
+		DB_NODE_MAXNAME, namebuf,
 		0, (PTR)0,
 		0, (PTR)0,
 		0, (PTR)0,
@@ -1025,15 +1015,12 @@ tpd_p8_prt_ddbdesc(
 	tpf_u0_tprintf(v_tpr_p, cbufsize, cbuf);
     }
 
-    tpd_u0_trimtail(
-	i_starcdb_p->i1_6_cdb_dbms,
-        (i4) DB_MAXNAME,
-        namebuf);
+    tpd_u0_trimtail( i_starcdb_p->i1_6_cdb_dbms, (i4) DB_TYPE_MAXLEN, namebuf);
     if (i_to_log)
     {
 	if (Tpf_svcb_p->tsv_4_flags & TSV_01_IN_RECOVERY)
 	    tp2_put( I_TP024F_CDB_DBMS, 0, 1,
-		sizeof(namebuf), namebuf,
+		DB_TYPE_MAXLEN, namebuf,
 		0, (PTR)0,
 		0, (PTR)0,
 		0, (PTR)0,
@@ -1100,7 +1087,7 @@ tpd_p9_prt_ldbdesc(
 {
     DB_STATUS	status = E_DB_OK;
     TPD_SS_CB   *sscb_p = (TPD_SS_CB *) v_tpr_p->tpr_session;
-    char	namebuf[DB_MAXNAME + 1];
+    char	namebuf[DB_MAXNAME + 100]; /* big enough for any name */
     char	*cbuf = v_tpr_p->tpr_trfmt;
     i4		cbufsize = v_tpr_p->tpr_trsize;
 
@@ -1136,16 +1123,13 @@ tpd_p9_prt_ldbdesc(
 
 	return(tpd_u2_err_internal(v_tpr_p));
     }
-    tpd_u0_trimtail(
-	i_ldb_p->dd_l2_node_name,
-        (i4) DB_MAXNAME,
-        namebuf);
+    tpd_u0_trimtail( i_ldb_p->dd_l2_node_name, (i4) DB_NODE_MAXNAME, namebuf);
 
     if (i_to_log)
     {
 	if (Tpf_svcb_p->tsv_4_flags & TSV_01_IN_RECOVERY)
 	    tp2_put( I_TP0250_NODE, 0, 1,
-		sizeof(namebuf), namebuf,
+		DB_NODE_MAXNAME, namebuf,
 		0, (PTR)0,
 		0, (PTR)0,
 		0, (PTR)0,
@@ -1172,15 +1156,12 @@ tpd_p9_prt_ldbdesc(
 	tpf_u0_tprintf(v_tpr_p, cbufsize, cbuf);
     }
 
-    tpd_u0_trimtail(
-	i_ldb_p->dd_l3_ldb_name,
-        (i4) DB_MAXNAME,
-        namebuf);
+    tpd_u0_trimtail( i_ldb_p->dd_l3_ldb_name, (i4) DB_DB_MAXNAME, namebuf);
     if (i_to_log)
     {
 	if (Tpf_svcb_p->tsv_4_flags & TSV_01_IN_RECOVERY)
 	    tp2_put( I_TP0251_LDB, 0, 1,
-		sizeof(namebuf), namebuf,
+		DB_DB_MAXNAME, namebuf,
 		0, (PTR)0,
 		0, (PTR)0,
 		0, (PTR)0,
@@ -1207,15 +1188,12 @@ tpd_p9_prt_ldbdesc(
 	tpf_u0_tprintf(v_tpr_p, cbufsize, cbuf);
     }
 
-    tpd_u0_trimtail(
-	i_ldb_p->dd_l4_dbms_name,
-        (i4) DB_MAXNAME,
-        namebuf);
+    tpd_u0_trimtail( i_ldb_p->dd_l4_dbms_name, (i4) DB_TYPE_MAXLEN, namebuf);
     if (i_to_log)
     {
 	if (Tpf_svcb_p->tsv_4_flags & TSV_01_IN_RECOVERY)
 	    tp2_put( I_TP0252_DBMS, 0, 1,
-		sizeof(namebuf), namebuf,
+		DB_TYPE_MAXLEN, namebuf,
 		0, (PTR)0,
 		0, (PTR)0,
 		0, (PTR)0,

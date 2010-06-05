@@ -274,6 +274,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **	30-Mar-2010 (kschendel)
 **	    Fix a couple new compiler warnings.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -4562,14 +4564,14 @@ opc_proc_insert_target_list(
 	    attr = attr_list[decl_param_no];
 	    if (MEcmp((PTR) attr->attr_name.db_att_name,
 		      (PTR) resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
-		      DB_MAXNAME) == 0) found = TRUE;
+		      DB_ATT_MAXNAME) == 0) found = TRUE;
 	}
 	if (!found)
 	{	/* flag error */
 	    OPT_NAME	elem_name;
 	    STncpy((char *)&elem_name,
-		resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname, DB_MAXNAME);
-	    ((char *)(&elem_name))[ DB_MAXNAME ] = '\0';
+		resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname, DB_ATT_MAXNAME);
+	    ((char *)(&elem_name))[ DB_ATT_MAXNAME ] = '\0';
 	    opx_1perror(E_OP08B1_PARAM_INVALID, (PTR)&elem_name);
 	}
     }
@@ -4593,7 +4595,7 @@ opc_proc_insert_target_list(
 		resdom = root;
 	    if (MEcmp((PTR) attr->attr_name.db_att_name,
 		      (PTR) resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
-		      DB_MAXNAME) == 0)
+		      DB_ATT_MAXNAME) == 0)
 	    {
 		ops[0].opr_dt = ops[1].opr_dt = attr->attr_type;
 		ops[0].opr_prec = attr->attr_precision;
@@ -4617,8 +4619,8 @@ opc_proc_insert_target_list(
 	    {
 		OPT_NAME	elem_name;
 		STncpy((char *)&elem_name,
-		    (char *)&attr->attr_name.db_att_name, DB_MAXNAME);
-		((char *)(&elem_name))[ DB_MAXNAME ] = '\0';
+		    (char *)&attr->attr_name.db_att_name, DB_ATT_MAXNAME);
+		((char *)(&elem_name))[ DB_ATT_MAXNAME ] = '\0';
 		opx_1perror(E_OP08B0_NODEFAULT, (PTR)&elem_name);
 	    }
 
@@ -5887,10 +5889,10 @@ opc_crupcurs1(
 	    else param = &opc_pst->opc_stmtahd->qhd_obj.qhd_callproc.
 		ahd_params[root->pst_sym.pst_value.pst_s_rsdm.pst_rsno - 1];
 
-	    param->ahd_parm.parm_name = (char *) opu_qsfmem(global, DB_MAXNAME);
-	    MEcopy(root->pst_sym.pst_value.pst_s_rsdm.pst_rsname, DB_MAXNAME,
+	    param->ahd_parm.parm_name = (char *) opu_qsfmem(global, DB_PARM_MAXNAME);
+	    MEcopy(root->pst_sym.pst_value.pst_s_rsdm.pst_rsname, DB_PARM_MAXNAME,
 		   param->ahd_parm.parm_name);
-	    param->ahd_parm.parm_nlen = DB_MAXNAME;
+	    param->ahd_parm.parm_nlen = DB_PARM_MAXNAME;
 	    param->ahd_parm.parm_flags = 0;
 	    if (is_byref)
 		param->ahd_parm.parm_flags = QEF_IS_BYREF;
@@ -6467,9 +6469,9 @@ opc_seq_setup(
     {
 	wseqp = linkp->qs_qsptr;
 	if (MEcmp((PTR)&wseqp->qs_seqname, (PTR)&nodep->pst_seqname, 
-		DB_MAXNAME) == 0 &&
+		DB_SEQ_MAXNAME) == 0 &&
 	    MEcmp((PTR)&wseqp->qs_owner, (PTR)&nodep->pst_owner, 
-		DB_MAXNAME) == 0 &&
+		DB_OWN_MAXNAME) == 0 &&
 	    (nodep->pst_seqflag & PST_SEQOP_NEXT && wseqp->qs_flag & QS_NEXTVAL ||
 	    nodep->pst_seqflag & PST_SEQOP_CURR && wseqp->qs_flag == 0))
 	    break;		/* got a match */
@@ -6488,9 +6490,9 @@ opc_seq_setup(
 		wseqp = wseqp->qs_qpnext)
     {
 	if (MEcmp((PTR)&wseqp->qs_seqname, (PTR)&nodep->pst_seqname, 
-		DB_MAXNAME) == 0 &&
+		DB_SEQ_MAXNAME) == 0 &&
 	    MEcmp((PTR)&wseqp->qs_owner, (PTR)&nodep->pst_owner, 
-		DB_MAXNAME) == 0 &&
+		DB_OWN_MAXNAME) == 0 &&
 	    (nodep->pst_seqflag & PST_SEQOP_NEXT && wseqp->qs_flag & QS_NEXTVAL ||
 	    nodep->pst_seqflag & PST_SEQOP_CURR && wseqp->qs_flag == 0))
 	    break;		/* got a match */

@@ -94,6 +94,8 @@
 **          Replace i4 with SIZE_TYPE for memory pool > 2Gig.
 **      24-Feb-2004 (kodse01)
 **          Removed gwxit.h inclusion which is not required.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*
@@ -376,7 +378,7 @@ gws_init( GW_RCB *gw_rcb )
 
 	/*@FIX_ME@ What if the case of the username changes??? */
 
-	session->gws_username[DB_MAXNAME] = '\0';
+	session->gws_username[DB_OWN_MAXNAME] = '\0';
 	/*
 	**	Blank out trace vectors
 	*/

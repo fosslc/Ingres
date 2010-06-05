@@ -83,6 +83,8 @@
 **	    Add a variety of collID's.
 **      05-feb-2009 (joea)
 **          Rename CM_ischarsetUTF8 to CMischarset_utf8.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -309,13 +311,13 @@ QEC_LINK	*v_lnk_p )
 	    **	key_id, column_name, key_sequence)] values 
 	    **	(c32, c32, i4, c32, i2); */
 	
-	    altcols_p->l2_1_tab_name[DB_MAXNAME] = EOS;
+	    altcols_p->l2_1_tab_name[DB_TAB_MAXNAME] = EOS;
 	    STtrmwhite(altcols_p->l2_1_tab_name);
 
-	    altcols_p->l2_2_tab_owner[DB_MAXNAME] = EOS;
+	    altcols_p->l2_2_tab_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(altcols_p->l2_2_tab_owner);
 
-	    altcols_p->l2_4_col_name[DB_MAXNAME] = EOS;
+	    altcols_p->l2_4_col_name[DB_ATT_MAXNAME] = EOS;
 	    STtrmwhite(altcols_p->l2_4_col_name);
 
 	    STprintf(
@@ -353,16 +355,16 @@ QEC_LINK	*v_lnk_p )
 	
 	    /* trim trailing white spaces */
 
-	    columns_p->l3_1_tab_name[DB_MAXNAME] = EOS;
+	    columns_p->l3_1_tab_name[DB_TAB_MAXNAME] = EOS;
 	    STtrmwhite(columns_p->l3_1_tab_name);
 
-	    columns_p->l3_2_tab_owner[DB_MAXNAME] = EOS;
+	    columns_p->l3_2_tab_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(columns_p->l3_2_tab_owner);
 
-	    columns_p->l3_3_col_name[DB_MAXNAME] = EOS;
+	    columns_p->l3_3_col_name[DB_ATT_MAXNAME] = EOS;
 	    STtrmwhite(columns_p->l3_3_col_name);
 
-	    columns_p->l3_4_data_type[DB_MAXNAME] = EOS;
+	    columns_p->l3_4_data_type[DB_TYPE_MAXLEN] = EOS;
 	    STtrmwhite(columns_p->l3_4_data_type);
 
 	    columns_p->l3_7_nulls[QEK_8_CHAR_SIZE] = EOS;
@@ -374,7 +376,7 @@ QEC_LINK	*v_lnk_p )
 	    columns_p->l3_11_sort_dir[QEK_8_CHAR_SIZE] = EOS;
 	    STtrmwhite(columns_p->l3_11_sort_dir);
 
-	    columns_p->l3_13_internal_datatype[DB_MAXNAME] = EOS;
+	    columns_p->l3_13_internal_datatype[DB_TYPE_MAXLEN] = EOS;
 	    STtrmwhite(columns_p->l3_13_internal_datatype);
 
 	    columns_p->l3_16_system_maintained[QEK_8_CHAR_SIZE] = EOS;
@@ -444,10 +446,10 @@ QEC_LINK	*v_lnk_p )
 	    ** ldb_longname, ldb_id, ldb_user, ldb_dba, ldb_dbaname)] values 
 	    ** (c32, c32, c32, c8, i4, c8, c8, c32); */
 	
-	    ldbids_p->d2_1_ldb_node[DB_MAXNAME] = EOS;
+	    ldbids_p->d2_1_ldb_node[DB_NODE_MAXNAME] = EOS;
 	    STtrmwhite(ldbids_p->d2_1_ldb_node);
 
-	    ldbids_p->d2_2_ldb_dbms[DB_MAXNAME] = EOS;
+	    ldbids_p->d2_2_ldb_dbms[DB_TYPE_MAXLEN] = EOS;
 	    STtrmwhite(ldbids_p->d2_2_ldb_dbms);
 
 	    ldbids_p->d2_3_ldb_database[DD_256_MAXDBNAME] = EOS;
@@ -462,7 +464,7 @@ QEC_LINK	*v_lnk_p )
 	    ldbids_p->d2_7_ldb_dba[QEK_8_CHAR_SIZE] = EOS;
 	    STtrmwhite(ldbids_p->d2_7_ldb_dba);
 
-	    ldbids_p->d2_8_ldb_dbaname[DB_MAXNAME] = EOS;
+	    ldbids_p->d2_8_ldb_dbaname[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(ldbids_p->d2_8_ldb_dbaname);
 
 	    STprintf(
@@ -495,7 +497,7 @@ QEC_LINK	*v_lnk_p )
 	    ** values (i4, i4, c32, i4);
 	    */	
 
-	    ldbcols_p->d3_2_lcl_name[DB_MAXNAME] = EOS;
+	    ldbcols_p->d3_2_lcl_name[DB_ATT_MAXNAME] = EOS;
 	    STtrmwhite(ldbcols_p->d3_2_lcl_name);
 
 	    STprintf(
@@ -522,10 +524,10 @@ QEC_LINK	*v_lnk_p )
 	    /*	insert into iidd_ldb_dbcaps [(ldb_id, cap_capability, 
 	    **	cap_value, cap_level)] values (i4, c32, c32, i4); */
 	
-	    ldb_dbcaps_p->d4_2_cap_cap[DB_MAXNAME] = EOS;
+	    ldb_dbcaps_p->d4_2_cap_cap[DB_CAP_MAXLEN] = EOS;
 	    STtrmwhite(ldb_dbcaps_p->d4_2_cap_cap);
 
-	    ldb_dbcaps_p->d4_3_cap_val[DB_MAXNAME] = EOS;
+	    ldb_dbcaps_p->d4_3_cap_val[DB_CAPVAL_MAXLEN] = EOS;
 	    STtrmwhite(ldb_dbcaps_p->d4_3_cap_val);
 
 	    STprintf(
@@ -557,7 +559,7 @@ QEC_LINK	*v_lnk_p )
 	    long_p->d5_1_ldb_name[DD_256_MAXDBNAME] = EOS;
 	    STtrmwhite(long_p->d5_1_ldb_name);
 
-	    long_p->d5_3_ldb_alias[DB_MAXNAME] = EOS;
+	    long_p->d5_3_ldb_alias[DB_DB_MAXNAME] = EOS;
 	    STtrmwhite(long_p->d5_3_ldb_alias);
 
 	    STprintf(
@@ -625,10 +627,10 @@ QEC_LINK	*v_lnk_p )
 	    tabinfo_p->d9_2_lcl_type[QEK_8_CHAR_SIZE] = EOS;
 	    STtrmwhite(tabinfo_p->d9_2_lcl_type);
 
-	    tabinfo_p->d9_3_tab_name[DB_MAXNAME] = EOS;
+	    tabinfo_p->d9_3_tab_name[DB_TAB_MAXNAME] = EOS;
 	    STtrmwhite(tabinfo_p->d9_3_tab_name);
 
-	    tabinfo_p->d9_4_tab_owner[DB_MAXNAME] = EOS;
+	    tabinfo_p->d9_4_tab_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(tabinfo_p->d9_4_tab_owner);
 
 	    tabinfo_p->d9_9_col_mapped[QEK_8_CHAR_SIZE] = EOS;
@@ -666,16 +668,16 @@ QEC_LINK	*v_lnk_p )
 	    /*  insert into iidd_ddb_ldb_indexes | iidd_indexes values 
 	    **	(c32, c32, c25, c32, c32, c16, c8, c8); */
 	
-		indexes_p->l6_1_ind_name[DB_MAXNAME] = EOS;
+		indexes_p->l6_1_ind_name[DB_TAB_MAXNAME] = EOS;
 		STtrmwhite(indexes_p->l6_1_ind_name);	
 
-		indexes_p->l6_2_ind_owner[DB_MAXNAME] = EOS;	
+		indexes_p->l6_2_ind_owner[DB_OWN_MAXNAME] = EOS;	
 		STtrmwhite(indexes_p->l6_2_ind_owner);	
 
-		indexes_p->l6_4_base_name[DB_MAXNAME] = EOS;
+		indexes_p->l6_4_base_name[DB_TAB_MAXNAME] = EOS;
 		STtrmwhite(indexes_p->l6_4_base_name);
 
-		indexes_p->l6_5_base_owner[DB_MAXNAME] = EOS;
+		indexes_p->l6_5_base_owner[DB_OWN_MAXNAME] = EOS;
 		STtrmwhite(indexes_p->l6_5_base_owner);
 
 		indexes_p->l6_6_storage[QEK_16_STOR_SIZE] = EOS;
@@ -719,13 +721,13 @@ QEC_LINK	*v_lnk_p )
 	    **	[(index_name, index_owner, column_name, key_sequence,
 	    **	sort_direction)] values (c32, c32, c32, i4, c8); */
 	
-	    ndx_cols_p->l7_1_ind_name[DB_MAXNAME] = EOS;
+	    ndx_cols_p->l7_1_ind_name[DB_TAB_MAXNAME] = EOS;
 	    STtrmwhite(ndx_cols_p->l7_1_ind_name);
 
-	    ndx_cols_p->l7_2_ind_owner[DB_MAXNAME] = EOS;
+	    ndx_cols_p->l7_2_ind_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(ndx_cols_p->l7_2_ind_owner);	
 
-	    ndx_cols_p->l7_3_col_name[DB_MAXNAME] = EOS;
+	    ndx_cols_p->l7_3_col_name[DB_ATT_MAXNAME] = EOS;
 	    STtrmwhite(ndx_cols_p->l7_3_col_name);  
 
 	    ndx_cols_p->l7_5_sort_dir[QEK_8_CHAR_SIZE] = EOS;
@@ -785,10 +787,10 @@ QEC_LINK	*v_lnk_p )
 
 	    /* generate first of 4 query text portions */
 
-	    tables_p->l16_1_tab_name[DB_MAXNAME] = EOS;
+	    tables_p->l16_1_tab_name[DB_TAB_MAXNAME] = EOS;
 	    STtrmwhite(tables_p->l16_1_tab_name);
 
-	    tables_p->l16_2_tab_owner[DB_MAXNAME] = EOS;
+	    tables_p->l16_2_tab_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(tables_p->l16_2_tab_owner);
 
 	    tables_p->l16_5_tab_type[QEK_8_CHAR_SIZE] = EOS;
@@ -1072,13 +1074,13 @@ QEC_LINK	*v_lnk_p )
 	    **	[(table_name, table_owner, column_name, text_sequence,
 	    **	text_segment)] values (c32, c32, c32, i4, c228); */
 	
-	    histos_p->l5_1_tab_name[DB_MAXNAME] = EOS;
+	    histos_p->l5_1_tab_name[DB_TAB_MAXNAME] = EOS;
 	    STtrmwhite(histos_p->l5_1_tab_name);
 
-	    histos_p->l5_2_tab_owner[DB_MAXNAME] = EOS;
+	    histos_p->l5_2_tab_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(histos_p->l5_2_tab_owner);
 
-	    histos_p->l5_3_col_name[DB_MAXNAME] = EOS;
+	    histos_p->l5_3_col_name[DB_ATT_MAXNAME] = EOS;
 	    STtrmwhite(histos_p->l5_3_col_name);
 
 	    STprintf(
@@ -1120,10 +1122,10 @@ QEC_LINK	*v_lnk_p )
 	    **	(c32, c32, c8, c8, c8, i4, ~V );
 	    */	
 
-	    regs_p->l14_1_obj_name[DB_MAXNAME] = EOS;
+	    regs_p->l14_1_obj_name[DB_OBJ_MAXNAME] = EOS;
 	    STtrmwhite(regs_p->l14_1_obj_name);
 
-	    regs_p->l14_2_obj_owner[DB_MAXNAME] = EOS;
+	    regs_p->l14_2_obj_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(regs_p->l14_2_obj_owner);
 
 	    regs_p->l14_3_dml[QEK_8_CHAR_SIZE] = EOS;
@@ -1176,10 +1178,10 @@ QEC_LINK	*v_lnk_p )
 	    **	(c32, c32, c25, c8, i4, ~V );
 	    */	
 
-	    proc_p->l18_1_proc_name[DB_MAXNAME] = EOS;
+	    proc_p->l18_1_proc_name[DB_DBP_MAXNAME] = EOS;
 	    STtrmwhite(proc_p->l18_1_proc_name);
 
-	    proc_p->l18_2_proc_owner[DB_MAXNAME] = EOS;
+	    proc_p->l18_2_proc_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(proc_p->l18_2_proc_owner);
 
 	    proc_p->l18_4_proc_subtype[QEK_8_CHAR_SIZE] = EOS;
@@ -1226,13 +1228,13 @@ QEC_LINK	*v_lnk_p )
 	    **	(c32, c32, c32, c25, ~V , ~V , c8, ~V , i4, i4, c8, c8, i4);
 	    */	
 
-	    stats_p->l15_1_tab_name[DB_MAXNAME] = EOS;
+	    stats_p->l15_1_tab_name[DB_TAB_MAXNAME] = EOS;
 	    STtrmwhite(stats_p->l15_1_tab_name);
 
-	    stats_p->l15_2_tab_owner[DB_MAXNAME] = EOS;
+	    stats_p->l15_2_tab_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(stats_p->l15_2_tab_owner);
 
-	    stats_p->l15_3_col_name[DB_MAXNAME] = EOS;
+	    stats_p->l15_3_col_name[DB_ATT_MAXNAME] = EOS;
 	    STtrmwhite(stats_p->l15_3_col_name);
 
 	    stats_p->l15_7_has_uniq[QEK_8_CHAR_SIZE] = EOS;
@@ -1312,10 +1314,10 @@ QEC_LINK	*v_lnk_p )
 	    **	(c32, c32, c8, c8, i4, ~V );
 	    */	
 
-	    views_p->l17_1_tab_name[DB_MAXNAME] = EOS;
+	    views_p->l17_1_tab_name[DB_TAB_MAXNAME] = EOS;
 	    STtrmwhite(views_p->l17_1_tab_name);
 
-	    views_p->l17_2_tab_owner[DB_MAXNAME] = EOS;
+	    views_p->l17_2_tab_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(views_p->l17_2_tab_owner);
 
 	    views_p->l17_3_dml[QEK_8_CHAR_SIZE] = EOS;

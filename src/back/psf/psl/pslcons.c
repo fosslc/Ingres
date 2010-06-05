@@ -177,6 +177,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /* function prototypes for static functions
@@ -905,7 +907,7 @@ psl_ver_cons_columns(
 
 		MEfill(sizeof(DMT_ATT_ENTRY), (u_char)0, 
 					(PTR)att_array[attcolno]);
-		MEcopy((char *)&(attrs[colno-1])->attr_name, DB_MAXNAME,
+		MEcopy((char *)&(attrs[colno-1])->attr_name, DB_ATT_MAXNAME,
 			(char *)&(att_array[attcolno])->att_name);
 		(att_array[attcolno])->att_type = (attrs[colno-1])->attr_type;
 		(att_array[attcolno])->att_width = (attrs[colno-1])->attr_size;
@@ -1140,7 +1142,7 @@ psl_cons_text(
 		    /* Build text from index name and add to text string. */
 		    col_name = (u_char *)&cons->pss_restab.
 						pst_resname.db_tab_name;
-		    col_nm_len = psf_trmwhite(DB_MAXNAME,
+		    col_nm_len = psf_trmwhite(DB_TAB_MAXNAME,
 			cons->pss_restab.pst_resname.db_tab_name);
 		    status = psl_norm_id_2_delim_id(&col_name, &col_nm_len,
 				delim_id, err_blk);
@@ -1304,7 +1306,7 @@ psl_cons_text(
 		    /* Build text from index name and add to text string. */
 		    col_name = (u_char *)&cons->pss_restab.
 						pst_resname.db_tab_name;
-		    col_nm_len = psf_trmwhite(DB_MAXNAME,
+		    col_nm_len = psf_trmwhite(DB_TAB_MAXNAME,
 			cons->pss_restab.pst_resname.db_tab_name);
 		    status = psl_norm_id_2_delim_id(&col_name, &col_nm_len,
 				delim_id, err_blk);
@@ -1378,7 +1380,7 @@ psl_cons_text(
 	col = (PSY_COL *) cons->pss_cons_colq.q_next;
 
 	col_name   = (u_char *) col->psy_colnm.db_att_name;
-	col_nm_len = psf_trmwhite(DB_MAXNAME, col->psy_colnm.db_att_name);
+	col_nm_len = psf_trmwhite(DB_ATT_MAXNAME, col->psy_colnm.db_att_name);
 
 	status = psl_norm_id_2_delim_id(&col_name, &col_nm_len, 
 					delim_id, err_blk);
@@ -1470,7 +1472,7 @@ psl_add_col_list(
     col = (PSY_COL *) colq->q_next;
 
     col_name   = (u_char *) col->psy_colnm.db_att_name;
-    col_nm_len = psf_trmwhite(DB_MAXNAME, col->psy_colnm.db_att_name);
+    col_nm_len = psf_trmwhite(DB_ATT_MAXNAME, col->psy_colnm.db_att_name);
 
     if (~col->psy_col_flags & PSY_REGID_COLSPEC)
     {
@@ -1495,7 +1497,7 @@ psl_add_col_list(
 	    return (status);
 
 	col_name   = (u_char *) col->psy_colnm.db_att_name;
-	col_nm_len = psf_trmwhite(DB_MAXNAME, col->psy_colnm.db_att_name);
+	col_nm_len = psf_trmwhite(DB_ATT_MAXNAME, col->psy_colnm.db_att_name);
 	    
 	/* If it's not a regular ident, unnormalize it
 	** (i.e. put delimiters around it).
@@ -1575,7 +1577,7 @@ psl_add_schema_table(
 		    sizeof(ownname->db_own_name)) != NULL)
     {
 	name     = (u_char *) ownname->db_own_name;
-	name_len = psf_trmwhite(DB_MAXNAME, ownname->db_own_name);
+	name_len = psf_trmwhite(DB_OWN_MAXNAME, ownname->db_own_name);
 
 	if (!ownname_is_regid)
 	{
@@ -1603,7 +1605,7 @@ psl_add_schema_table(
     ** delimiting it if necessary
     */
     name     = (u_char *) tabname->db_tab_name;
-    name_len = psf_trmwhite(DB_MAXNAME, tabname->db_tab_name);
+    name_len = psf_trmwhite(DB_TAB_MAXNAME, tabname->db_tab_name);
     
     if (!tabname_is_regid)
     {
@@ -2512,15 +2514,15 @@ psl_ver_ref_cons(
 	if (ref_obj_name->pss_objspec_flags & PSS_OBJSPEC_EXPL_SCHEMA)
 	{
 	    if ((MEcmp(ref_obj_name->pss_obj_name.db_tab_name,
-		       dmu_cb->dmu_table_name.db_tab_name, DB_MAXNAME) == 0)
+		       dmu_cb->dmu_table_name.db_tab_name, DB_TAB_MAXNAME) == 0)
 		&& (MEcmp(ref_obj_name->pss_owner.db_own_name,
-			  dmu_cb->dmu_owner.db_own_name, DB_MAXNAME) == 0))
+			  dmu_cb->dmu_owner.db_own_name, DB_OWN_MAXNAME) == 0))
 	    {
 		self_ref = TRUE;
 	    }
 	}
 	else if (MEcmp(ref_obj_name->pss_obj_name.db_tab_name,
-		       dmu_cb->dmu_table_name.db_tab_name, DB_MAXNAME) == 0)
+		       dmu_cb->dmu_table_name.db_tab_name, DB_TAB_MAXNAME) == 0)
 	{
 	    self_ref = TRUE;
 	    MEcopy((PTR) &dmu_cb->dmu_owner, 
@@ -2939,7 +2941,7 @@ psl_ver_ref_cons(
 	(void) psf_error(E_PS0484_REF_NUM_COL, 0L, PSF_USERERR, 
 			 &err_code, err_blk, 2,
 			 length, command,
-			 psf_trmwhite(DB_MAXNAME, tabname), tabname);
+			 psf_trmwhite(DB_TAB_MAXNAME, tabname), tabname);
 
 	/* print out constraint name, if user specified one
 	 */
@@ -2947,7 +2949,7 @@ psl_ver_ref_cons(
 	{
 	    (void) psf_error(E_PS0494_CONS_NAME, 0L, PSF_USERERR, 
 			     &err_code, err_blk, 1,
-			     psf_trmwhite(DB_MAXNAME,
+			     psf_trmwhite(DB_CONS_MAXNAME,
 				    integ_tup->dbi_consname.db_constraint_name),
 			     integ_tup->dbi_consname.db_constraint_name);
 	}
@@ -3354,7 +3356,7 @@ psl_ver_ref_priv(
     ** we don't need to look up privileges
     */
     if (MEcmp(rngvar->pss_ownname.db_own_name,
-	      sess_cb->pss_user.db_own_name, DB_MAXNAME) == 0)
+	      sess_cb->pss_user.db_own_name, DB_OWN_MAXNAME) == 0)
 	return (E_DB_OK);
     
     /* set up parameters to function for checking privileges.
@@ -3386,10 +3388,10 @@ psl_ver_ref_priv(
     {
 	(void) psf_error(E_PS04A1_NO_REF_PRIV, 0L, PSF_USERERR,
 			 &err_code, err_blk, 2,
-			 psf_trmwhite(DB_MAXNAME,
+			 psf_trmwhite(DB_TAB_MAXNAME,
 				      rngvar->pss_tabname.db_tab_name),
 			 rngvar->pss_tabname.db_tab_name,
-			 psf_trmwhite(DB_MAXNAME,
+			 psf_trmwhite(DB_OWN_MAXNAME,
 				      rngvar->pss_ownname.db_own_name),
 			 rngvar->pss_ownname.db_own_name);
 
@@ -3401,7 +3403,7 @@ psl_ver_ref_priv(
 
 	    (void) psf_error(E_PS0494_CONS_NAME, 0L, PSF_USERERR, 
 			     &err_code, err_blk, 1,
-			     psf_trmwhite(DB_MAXNAME,
+			     psf_trmwhite(DB_CONS_MAXNAME,
 				    integ_tup->dbi_consname.db_constraint_name),
 			     integ_tup->dbi_consname.db_constraint_name);
 	}
@@ -4968,13 +4970,13 @@ psl_compare_multi_cons(
 	    (void) psf_error(E_PS0480_UNIQUE_NOT_NULL, 0L, PSF_USERERR, 
 			     &err_code, err_blk, 2,
 			     length, command,
-			     psf_trmwhite(DB_MAXNAME, tabname), tabname);
+			     psf_trmwhite(DB_TAB_MAXNAME, tabname), tabname);
 
 	    if (name1_spec)
 	    {
 		(void) psf_error(E_PS0494_CONS_NAME, 0L, PSF_USERERR, 
 				 &err_code, err_blk, 1,
-				 psf_trmwhite(DB_MAXNAME,
+				 psf_trmwhite(DB_CONS_MAXNAME,
 				   integ_tup1->dbi_consname.db_constraint_name),
 				 integ_tup1->dbi_consname.db_constraint_name);
 	    }
@@ -5203,13 +5205,13 @@ psl_compare_agst_table(
 	(void) psf_error(E_PS0480_UNIQUE_NOT_NULL, 0L, PSF_USERERR, 
 			 &err_code, err_blk, 2,
 			 length, command,
-			 psf_trmwhite(DB_MAXNAME, tabname), tabname);
+			 psf_trmwhite(DB_TAB_MAXNAME, tabname), tabname);
 
 	if (name_specified) 
 	{
 	    (void) psf_error(E_PS0494_CONS_NAME, 0L, PSF_USERERR, 
 			     &err_code, err_blk, 1,
-			     psf_trmwhite(DB_MAXNAME,
+			     psf_trmwhite(DB_CONS_MAXNAME,
 				   integ_tup->dbi_consname.db_constraint_name),
 			     integ_tup->dbi_consname.db_constraint_name);
 	}
@@ -5397,7 +5399,7 @@ psl_compare_agst_schema(
 	STRUCT_ASSIGN_MACRO(cr_integ->pst_integrityTuple->dbi_consname,
 			    rdf_cb.rdf_rb.rdr_name.rdr_cnstrname);
 	MEcopy(cr_integ->pst_integritySchemaName.db_schema_name,
-	       DB_MAXNAME, rdf_cb.rdf_rb.rdr_owner.db_own_name);
+	       DB_OWN_MAXNAME, rdf_cb.rdf_rb.rdr_owner.db_own_name);
 
 	status = rdf_call(RDF_GETINFO, (PTR) &rdf_cb);
 
@@ -5412,12 +5414,12 @@ psl_compare_agst_schema(
 	    */
 	    (void) psf_error(E_PS0495_DUPL_CONS_NAME, 0L, PSF_USERERR, 
 			     &err_code, err_blk, 2,
-			     psf_trmwhite(DB_MAXNAME,
+			     psf_trmwhite(DB_CONS_MAXNAME,
 					  cr_integ->pst_integrityTuple->
 			      		      dbi_consname.db_constraint_name),
 			     cr_integ->pst_integrityTuple->
 			         dbi_consname.db_constraint_name,
-			     psf_trmwhite(DB_MAXNAME,
+			     psf_trmwhite(DB_SCHEMA_MAXNAME,
 			      cr_integ->pst_integritySchemaName.db_schema_name),
 			     cr_integ->pst_integritySchemaName.db_schema_name);
 	    return(E_DB_ERROR);
@@ -5765,7 +5767,7 @@ psl_print_colq(PSF_QUEUE *q)
 	 col !=(PSY_COL *) q;
 	 col = (PSY_COL *) col->queue.q_next)
     {
-	SIprintf("\t\t col name = '%*s'\n", DB_MAXNAME, 
+	SIprintf("\t\t col name = '%*s'\n", DB_ATT_MAXNAME, 
 		                            col->psy_colnm.db_att_name);
     }
 }  /* end psl_print_colq */
@@ -5778,7 +5780,7 @@ psl_print_cons(PSS_CONS *cons)
     SIprintf("\t cons type = 0x%lx\n", cons->pss_cons_type);
 
     if (cons->pss_cons_type & PSS_CONS_NAME_SPEC)
-	SIprintf("\t cons name = '%*s'\n", DB_MAXNAME, 
+	SIprintf("\t cons name = '%*s'\n", DB_CONS_MAXNAME, 
 		     cons->pss_cons_name.db_constraint_name);
     else
 	SIprintf("\t cons name = <none>\n");
@@ -5814,9 +5816,9 @@ psl_print_cons(PSS_CONS *cons)
 
     if (cons->pss_cons_type & PSS_CONS_REF)
     {
-	SIprintf("\t Referenced table name = '%*s'\n", DB_MAXNAME,
+	SIprintf("\t Referenced table name = '%*s'\n", DB_TAB_MAXNAME,
 		 cons->pss_ref_tabname.pss_obj_name.db_tab_name);
-	SIprintf("\t\t Owner name = '%*s'\n", DB_MAXNAME,
+	SIprintf("\t\t Owner name = '%*s'\n", DB_OWN_MAXNAME,
 		 cons->pss_ref_tabname.pss_owner.db_own_name);
 	SIprintf("\t\t Original table name = '%s'\n", 
 		 cons->pss_ref_tabname.pss_orig_obj_name);

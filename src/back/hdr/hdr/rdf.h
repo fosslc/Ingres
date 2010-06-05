@@ -155,6 +155,8 @@
 **          Add RDR2_DBDEPENDS to access iidbdepends by key.
 **	6-Jul-2006 (kschendel)
 **	    Remove RDF_UCB, not used anywhere.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /* 
@@ -861,7 +863,7 @@ typedef struct _RDD_QRYMOD
 typedef struct _RDD_CLUSTER_INFO
 {
 	struct _RDD_CLUSTER_INFO    *rdd_1_nextnode;	/* point to next node */
-	DD_NAME			    rdd_2_node; 
+	DD_NODE_NAME		    rdd_2_node; 
 							/* null terminated node name */
 } RDD_CLUSTER_INFO;
 
@@ -1205,7 +1207,7 @@ typedef struct _RDR_RB
 	    DB_TAB_NAME	rdr_tabname;	/* Table name. */
 	    DB_DBP_NAME	rdr_prcname;	/* procedure name. */
 	    DB_NAME	rdr_rlname;	/* rule name */
-	    DB_NAME	rdr_evname;	/* Event name - used with rdr_owner
+	    DB_EVENT_NAME rdr_evname;   /* Event_name - used with rdr_owner
 					** for event tuple retrieval */
 	    DB_NAME	rdr_seqname;	/* sequence name */
 	    DB_CONSTRAINT_NAME

@@ -144,6 +144,8 @@
 **          Added include <psyaudit.h> for prototype of psy_secaudit()
 **	15-Feb-2004 (schka24)
 **	    Don't allow partitions.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -1686,9 +1688,9 @@ pst_ldbtab_desc(
 		*/
 		psf_error(E_PS091D_PROC_MAPPED_COLS, 0L, PSF_USERERR, &err_code,
 		    err_blk, 3,
-		    psf_trmwhite(sizeof(DD_NAME), ldb_tab_info->dd_t1_tab_name),
+		    psf_trmwhite(sizeof(DD_TAB_NAME), ldb_tab_info->dd_t1_tab_name),
 		    ldb_tab_info->dd_t1_tab_name,
-		    psf_trmwhite(sizeof(DD_NAME), ldb_desc->dd_l2_node_name),
+		    psf_trmwhite(sizeof(DD_NODE_NAME), ldb_desc->dd_l2_node_name),
 		    ldb_desc->dd_l2_node_name,
 		    psf_trmwhite(sizeof(DD_256C), ldb_desc->dd_l3_ldb_name),
 		    ldb_desc->dd_l3_ldb_name);
@@ -1748,11 +1750,12 @@ pst_ldbtab_desc(
        )
     {
 	psf_error(E_PS0917_CANNOT_CONNECT, 0L, PSF_USERERR, &err_code, err_blk,
-		3, psf_trmwhite(sizeof(DD_NAME), ldb_desc->dd_l2_node_name),
+		3, psf_trmwhite(sizeof(DD_NODE_NAME), ldb_desc->dd_l2_node_name),
     		ldb_desc->dd_l2_node_name,
     		psf_trmwhite(sizeof(DD_256C), ldb_desc->dd_l3_ldb_name),
     		ldb_desc->dd_l3_ldb_name,
-    		psf_trmwhite(sizeof(DD_NAME), ldb_desc->dd_l4_dbms_name),
+    		psf_trmwhite(sizeof(ldb_desc->dd_l4_dbms_name), 
+			ldb_desc->dd_l4_dbms_name),
     		ldb_desc->dd_l4_dbms_name);
 	return(status);
     }		
@@ -1778,7 +1781,7 @@ pst_ldbtab_desc(
     {
 	psf_error(E_PS091E_INCOMPAT_CASE_MAPPING, 0L, PSF_USERERR, &err_code,
 		err_blk, 1, 
-		psf_trmwhite(sizeof(DD_NAME), ldb_tab_info->dd_t1_tab_name),
+		psf_trmwhite(sizeof(DD_TAB_NAME), ldb_tab_info->dd_t1_tab_name),
 		ldb_tab_info->dd_t1_tab_name);
 	return (E_DB_ERROR);
     }
@@ -1805,26 +1808,30 @@ pst_ldbtab_desc(
 		    /* no ldb procedure */
 		    psf_error(E_PS1203_NO_LDB_PROC, 0L, PSF_USERERR, &err_code,
 		    	err_blk, 4,
-		    	psf_trmwhite(sizeof(DD_NAME), ldb_tab_info->dd_t1_tab_name),
+		    	psf_trmwhite(sizeof(DD_TAB_NAME),
+				ldb_tab_info->dd_t1_tab_name),
 		    	ldb_tab_info->dd_t1_tab_name,
-		    	psf_trmwhite(sizeof(DD_NAME), ldb_desc->dd_l2_node_name),
+		    	psf_trmwhite(sizeof(DD_NODE_NAME),
+				ldb_desc->dd_l2_node_name),
 		    	ldb_desc->dd_l2_node_name,
 		    	psf_trmwhite(sizeof(DD_256C), ldb_desc->dd_l3_ldb_name),
 		    	ldb_desc->dd_l3_ldb_name,
-		    	psf_trmwhite(sizeof(DD_NAME), ldb_desc->dd_l4_dbms_name),
+		    	psf_trmwhite(sizeof(ldb_desc->dd_l4_dbms_name), 
+				ldb_desc->dd_l4_dbms_name),
 		    	ldb_desc->dd_l4_dbms_name);
 		}
 		else
 		{
 		    psf_error(E_PS090D_NO_LDB_TABLE, 0L, PSF_USERERR, &err_code,
 		    	err_blk, 4,
-		    	psf_trmwhite(sizeof(DD_NAME), ldb_tab_info->dd_t1_tab_name),
+		    	psf_trmwhite(sizeof(DD_TAB_NAME), ldb_tab_info->dd_t1_tab_name),
 		    	ldb_tab_info->dd_t1_tab_name,
-		    	psf_trmwhite(sizeof(DD_NAME), ldb_desc->dd_l2_node_name),
+		    	psf_trmwhite(sizeof(DD_NODE_NAME), ldb_desc->dd_l2_node_name),
 		    	ldb_desc->dd_l2_node_name,
 		    	psf_trmwhite(sizeof(DD_256C), ldb_desc->dd_l3_ldb_name),
 		    	ldb_desc->dd_l3_ldb_name,
-		    	psf_trmwhite(sizeof(DD_NAME), ldb_desc->dd_l4_dbms_name),
+		    	psf_trmwhite(sizeof(ldb_desc->dd_l4_dbms_name),
+				ldb_desc->dd_l4_dbms_name),
 		    	ldb_desc->dd_l4_dbms_name);
 		}
 
@@ -1846,7 +1853,7 @@ pst_ldbtab_desc(
 	    {
 		psf_error(E_PS0911_BAD_LDB_USER, 0L, PSF_USERERR, &err_code,
 		    err_blk,2,
-		    psf_trmwhite(sizeof(DD_NAME), ldb_desc->dd_l2_node_name),
+		    psf_trmwhite(sizeof(DD_NODE_NAME), ldb_desc->dd_l2_node_name),
 		    ldb_desc->dd_l2_node_name,
 		    psf_trmwhite(sizeof(DD_256C), ldb_desc->dd_l3_ldb_name),
 		    ldb_desc->dd_l3_ldb_name);
@@ -1866,9 +1873,9 @@ pst_ldbtab_desc(
     {
 	psf_error(E_PS0910_DUP_LDB_TABLE, 0L, PSF_USERERR, &err_code,
 		err_blk, 3,
-	    	psf_trmwhite(sizeof(DD_NAME), ldb_tab_info->dd_t1_tab_name),
+	    	psf_trmwhite(sizeof(DD_TAB_NAME), ldb_tab_info->dd_t1_tab_name),
 	    	ldb_tab_info->dd_t1_tab_name,
-	    	psf_trmwhite(sizeof(DD_NAME), ldb_desc->dd_l2_node_name),
+	    	psf_trmwhite(sizeof(DD_NODE_NAME), ldb_desc->dd_l2_node_name),
 	    	ldb_desc->dd_l2_node_name,
 	    	psf_trmwhite(sizeof(DD_256C), ldb_desc->dd_l3_ldb_name),
 	    	ldb_desc->dd_l3_ldb_name);

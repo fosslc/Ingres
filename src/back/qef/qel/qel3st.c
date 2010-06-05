@@ -93,6 +93,8 @@
 **	    replace nat and longnat with i4
 **	30-mar-04 (toumi01)
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 GLOBALREF   char	IIQE_42_ing_60[];
@@ -266,13 +268,9 @@ QEC_LINK	*v_lnk_p )
 
     /* 1.  set up to retrieve from IITABLES */
 
-    qed_u0_trimtail(
-		    tabinfo_p->dd_t1_tab_name,
-		    (u_i4) DB_MAXNAME,
+    qed_u0_trimtail( tabinfo_p->dd_t1_tab_name, (u_i4) DB_TAB_MAXNAME,
 		    tables_p->l16_1_tab_name);
-    qed_u0_trimtail(
-		    tabinfo_p->dd_t2_tab_owner,
-		    (u_i4) DB_MAXNAME,
+    qed_u0_trimtail( tabinfo_p->dd_t2_tab_owner, (u_i4) DB_OWN_MAXNAME,
 		    tables_p->l16_2_tab_owner);
 
     sel_p->qeq_c1_can_id = SEL_117_II_TABLES;
@@ -350,14 +348,10 @@ QEC_LINK	*v_lnk_p )
 
     /* 3.  set up tuple for insertion */
 
-    l_obj = (u_i4)qed_u0_trimtail(
-		ddl_p->qed_d1_obj_name,
-		(u_i4) DB_MAXNAME,
+    l_obj = (u_i4)qed_u0_trimtail( ddl_p->qed_d1_obj_name, (u_i4)DB_OBJ_MAXNAME,
 		tables_p->l16_1_tab_name);
 
-    qed_u0_trimtail(
-		ddl_p->qed_d2_obj_owner,
-		(u_i4) DB_MAXNAME,
+    qed_u0_trimtail( ddl_p->qed_d2_obj_owner, (u_i4) DB_OWN_MAXNAME,
 		tables_p->l16_2_tab_owner);
 
     STcopy(v_lnk_p->qec_24_cur_time, 
@@ -522,13 +516,9 @@ QEC_LINK	*v_lnk_p )
 
     /* 1.  set up for looping through each retrieved local column */
 
-    qed_u0_trimtail(
-		    ldbtab_p->dd_t1_tab_name,
-		    (u_i4) DB_MAXNAME,
+    qed_u0_trimtail( ldbtab_p->dd_t1_tab_name, (u_i4) DB_TAB_MAXNAME,
 		    ddcolumns_p->l3_1_tab_name);
-    qed_u0_trimtail(
-		    ldbtab_p->dd_t2_tab_owner,
-		    (u_i4) DB_MAXNAME,
+    qed_u0_trimtail( ldbtab_p->dd_t2_tab_owner, (u_i4) DB_OWN_MAXNAME,
 		    ddcolumns_p->l3_2_tab_owner);
 
     sel_p->qeq_c1_can_id = SEL_102_II_COLUMNS;
@@ -571,9 +561,7 @@ QEC_LINK	*v_lnk_p )
 
 	    /* substitue the link column name for inserting into IIDD_COLUMNS */
 
-	    qed_u0_trimtail(
-			name_p->dd_c1_col_name,
-			(u_i4) DB_MAXNAME,
+	    qed_u0_trimtail( name_p->dd_c1_col_name, (u_i4) DB_ATT_MAXNAME,
 			ddcolumns_p->l3_3_col_name);
 	}
 	else
@@ -591,7 +579,7 @@ QEC_LINK	*v_lnk_p )
 	{
 	    /* copy internal type, length, ingtype into external for 6.2 cats */
 	    MEcopy((PTR)ddcolumns_p->l3_13_internal_datatype,
-		   DB_MAXNAME +1,
+		   DB_TYPE_MAXLEN +1,
 		   (PTR)ddcolumns_p->l3_4_data_type);
 	    ddcolumns_p->l3_5_length = ddcolumns_p->l3_14_internal_length;
 	    ddcolumns_p->l3_12_ing_datatype =
@@ -602,13 +590,9 @@ QEC_LINK	*v_lnk_p )
 
 	/* 5.  replace with link name, link owner, and link creation date */
 
-	qed_u0_trimtail(
-			ddl_p->qed_d1_obj_name,
-			(u_i4) DB_MAXNAME,
+	qed_u0_trimtail( ddl_p->qed_d1_obj_name, (u_i4) DB_OBJ_MAXNAME,
 			ddcolumns_p->l3_1_tab_name);
-	qed_u0_trimtail(
-			ddl_p->qed_d2_obj_owner,
-			(u_i4) DB_MAXNAME,
+	qed_u0_trimtail( ddl_p->qed_d2_obj_owner, (u_i4) DB_OWN_MAXNAME,
 			ddcolumns_p->l3_2_tab_owner);
 
 	/* 6.  insert into IIDD_COLUMNS */
@@ -738,13 +722,9 @@ QEC_LINK	*v_lnk_p )
 
     /* 1.  set up for looping through each retrieved IIALT_COLUMNS tuple */
 
-    qed_u0_trimtail(
-		    ldbtab_p->dd_t1_tab_name,
-		    (u_i4) DB_MAXNAME,
+    qed_u0_trimtail( ldbtab_p->dd_t1_tab_name, (u_i4) DB_TAB_MAXNAME,
 		    altcols_p->l2_1_tab_name);
-    qed_u0_trimtail(
-		    ldbtab_p->dd_t2_tab_owner,
-		    (u_i4) DB_MAXNAME,
+    qed_u0_trimtail( ldbtab_p->dd_t2_tab_owner, (u_i4) DB_OWN_MAXNAME,
 		    altcols_p->l2_2_tab_owner);
 
     sel_p->qeq_c1_can_id = SEL_101_II_ALT_COLUMNS;
@@ -773,13 +753,9 @@ QEC_LINK	*v_lnk_p )
     {
 	/* 3.  replace with link name and link owner */
 
-	qed_u0_trimtail(
-			ddl_p->qed_d1_obj_name,
-			(u_i4) DB_MAXNAME,
+	qed_u0_trimtail( ddl_p->qed_d1_obj_name, (u_i4) DB_OBJ_MAXNAME,
 			altcols_p->l2_1_tab_name);
-	qed_u0_trimtail(
-			ddl_p->qed_d2_obj_owner,
-			(u_i4) DB_MAXNAME,
+	qed_u0_trimtail( ddl_p->qed_d2_obj_owner, (u_i4) DB_OWN_MAXNAME,
 			altcols_p->l2_2_tab_owner);
 	
 	/* 4.  do column mapping if necessary */
@@ -788,9 +764,7 @@ QEC_LINK	*v_lnk_p )
 	{
 	    /* substitute link col name from inserting into IIDD_ALT_COLUMNS */
 
-	    qed_u0_trimtail(
-			from_p->dd_c1_col_name,
-			(u_i4) DB_MAXNAME,
+	    qed_u0_trimtail( from_p->dd_c1_col_name, (u_i4) DB_ATT_MAXNAME,
 			altcols_p->l2_4_col_name);
 	}
 	else
@@ -916,14 +890,10 @@ QEC_LINK	*v_lnk_p )
 
     /* 1.  set up constant values for all entries */
 
-    qed_u0_trimtail(
-	ddl_p->qed_d1_obj_name, 
-	(u_i2) DB_MAXNAME,
+    qed_u0_trimtail( ddl_p->qed_d1_obj_name, (u_i2) DB_OBJ_MAXNAME,
 	regs_p->l14_1_obj_name);
 
-    qed_u0_trimtail(
-	ddl_p->qed_d2_obj_owner, 
-	(u_i2) DB_MAXNAME,
+    qed_u0_trimtail( ddl_p->qed_d2_obj_owner, (u_i2) DB_OWN_MAXNAME,
 	regs_p->l14_2_obj_owner);
 
     if (qry_p->qed_q2_lang == DB_SQL)
@@ -993,14 +963,10 @@ QEC_LINK	*v_lnk_p )
     /* if a registered procedure, update iiprocedures */
     if (tab_p->dd_t3_tab_type == DD_5OBJ_REG_PROC)
     {
-	qed_u0_trimtail(
-	    ddl_p->qed_d1_obj_name, 
-	    (u_i2) DB_MAXNAME,
+	qed_u0_trimtail( ddl_p->qed_d1_obj_name, (u_i2) DB_OBJ_MAXNAME,
 	    proc_p->l18_1_proc_name);
 
-	qed_u0_trimtail(
-	    ddl_p->qed_d2_obj_owner, 
-	    (u_i2) DB_MAXNAME,
+	qed_u0_trimtail( ddl_p->qed_d2_obj_owner, (u_i2) DB_OWN_MAXNAME,
 	    proc_p->l18_2_proc_owner);
 
 	STcopy(v_lnk_p->qec_24_cur_time, proc_p->l18_3_cre_date);

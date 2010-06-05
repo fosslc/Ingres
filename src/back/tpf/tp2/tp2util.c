@@ -88,6 +88,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 GLOBALREF   char            *IITP_00_tpf_p;
@@ -413,7 +415,7 @@ tp2_u4_init_odx_sess(
 	
     dxcb_p->tdx_id.dd_dx_id1 = dxlog_p->d1_1_dx_id1;
     dxcb_p->tdx_id.dd_dx_id2 = dxlog_p->d1_2_dx_id2;
-    STmove(dxlog_p->d1_3_dx_name, ' ', (u_i4) DB_MAXNAME,
+    STmove(dxlog_p->d1_3_dx_name, ' ', (u_i4) DB_DB_MAXNAME,
 	dxcb_p->tdx_id.dd_dx_name);
 	
 
@@ -535,9 +537,9 @@ tp2_u6_cdcb_to_ldb(
     MEfill(sizeof(*o1_cdb_p), '\0', (PTR) o1_cdb_p);
 
     o1_cdb_p->dd_l1_ingres_b = TRUE;
-    STmove(i1_cdcb_p->tcd_1_starcdbs.i1_5_cdb_node, ' ', (u_i4) DB_MAXNAME,
+    STmove(i1_cdcb_p->tcd_1_starcdbs.i1_5_cdb_node, ' ', (u_i4) DB_NODE_MAXNAME,
 		o1_cdb_p->dd_l2_node_name);
-    STmove(i1_cdcb_p->tcd_1_starcdbs.i1_6_cdb_dbms, ' ', (u_i4) DB_MAXNAME,
+    STmove(i1_cdcb_p->tcd_1_starcdbs.i1_6_cdb_dbms, ' ', (u_i4) DB_TYPE_MAXLEN,
 		o1_cdb_p->dd_l4_dbms_name);
     STmove(i1_cdcb_p->tcd_1_starcdbs.i1_3_cdb_name, ' ', 
 		(u_i4) DD_256_MAXDBNAME, o1_cdb_p->dd_l3_ldb_name);

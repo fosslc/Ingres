@@ -490,6 +490,8 @@
 **	    SIR 120874: dm0p_? functions converted to DB_ERROR *
 **      22-dec-2008 (stegr01)
 **          Itanium VMS port
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs, db_buffer holds (dbname, owner.. )
 */
 
 
@@ -5737,20 +5739,20 @@ DMF_JSX		*jsx)
     ** size of the buffer to make sure it actually holds what
     ** we expect it to.
     */
-    i4_ptr = (i4 *) &db.db_buffer[2 * DB_MAXNAME + 4];
+    i4_ptr = (i4 *) &db.db_buffer[DB_DB_MAXNAME + DB_OWN_MAXNAME + 4];
     I4ASSIGN_MACRO(*i4_ptr, path_len);
-    if (db.db_l_buffer < (2 * DB_MAXNAME + path_len + 8))
+    if (db.db_l_buffer < (DB_DB_MAXNAME + DB_OWN_MAXNAME + path_len + 8))
     {
 	TRdisplay(ERx("%@ CPP %d %d::%x: %w(%d) LGshow DB buffer size mismatch (%d vs %d)\n"),
 	    __LINE__, ckp_msg->ckp.ckp_node, ckp_msg->ckp.dbid,
 	    CKP_PHASE_NAME, ckp_msg->ckp.phase,
 	    ckp_msg->ckp.phase,
-	    (2 * DB_MAXNAME + path_len + 8), db.db_l_buffer);
+	    (DB_DB_MAXNAME + DB_OWN_MAXNAME + path_len + 8), db.db_l_buffer);
 	return (E_DB_ERROR);
     }
 
     dbname = (DB_DB_NAME *) &db.db_buffer[0];
-    dbowner = (DB_OWN_NAME *) &db.db_buffer[DB_MAXNAME];
+    dbowner = (DB_OWN_NAME *) &db.db_buffer[DB_DB_MAXNAME];
     TRdisplay(ERx("%@ CPP %d %d::%x: %w(%d) Init context for %~t\n"),
 	    __LINE__, ckp_msg->ckp.ckp_node, ckp_msg->ckp.dbid,
 	    CKP_PHASE_NAME, ckp_msg->ckp.phase,

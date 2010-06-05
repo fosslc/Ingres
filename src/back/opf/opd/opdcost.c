@@ -91,6 +91,8 @@
 **	    Bug 100335: A bad comparison of a float and a float sum was
 **	    allowing a comparison to pass where it shouldn't have. Put
 **	    in a temp floating point to get around this.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **
 [@history_line@]...
 [@history_template@]...
@@ -1288,9 +1290,8 @@ opd_idistributed(
 	    if (factorp->opd_intcosts[target_site] < 0)
 		factorp->opd_intcosts[target_site] = 
 		- factorp->opd_intcosts[target_site];
-	    if ((*targetnodep == *sourcenodep)
-		&&
-		!MEcmp((PTR)targetnodep, (PTR)sourcenodep, sizeof(DD_NAME)))
+	    if ((*targetnodep == *sourcenodep) &&
+		!MEcmp((PTR)targetnodep, (PTR)sourcenodep, sizeof(DD_NODE_NAME)))
 		/* LDBs are on the same sites so use smaller network cost */
 		factorp->opd_intcosts[target_site] = samesite;
 	    else
@@ -1940,7 +1941,7 @@ opd_cluster(
 	clusterp; clusterp = clusterp->rdd_1_nextnode)
     {
 	if (   !MEcmp((PTR)namep, (PTR)&clusterp->rdd_2_node[0], 
-		    sizeof(DD_NAME))
+		    sizeof(DD_NODE_NAME))
 	    )
 	    /* found the node name in the cluster */
 	    return(TRUE);
@@ -1988,11 +1989,11 @@ opd_machineinfo(
 	OPD_SITE           *sitep,
 	bool		   target)
 {
-    DD_NAME	    *nodenamep;
+    DD_NODE_NAME	    *nodenamep;
     bool	    server_cpu;		/* TRUE if this is a node in the
 					** ingres cluster upon which titan
 					** will run */
-    nodenamep = (DD_NAME *)sitep->opd_ldbdesc->dd_l2_node_name;
+    nodenamep = (DD_NODE_NAME *)sitep->opd_ldbdesc->dd_l2_node_name;
     server_cpu = opd_cluster(global, (char *)nodenamep);
     {	/* find the CPU costs */
 	DD_NODELIST        *nodecostp; /* ptr to list of node descriptors */

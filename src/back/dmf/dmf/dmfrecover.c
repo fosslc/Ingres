@@ -561,6 +561,8 @@
 **	    Need cx.h for proper CX declarations (gcc 4.3).
 **	04-Feb-2010 (jonj)
 **	    SIR 121619 MVCC: Add bufid parameter to dm0l_read().
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs, db_buffer holds (dbname, owner.. )
 **/
 /*
 ** Forward function references and global definitions
@@ -1328,7 +1330,7 @@ RCP		*rcp)
 	    if ((rcp->rcp_verbose) && (! (db.db_status & DB_NOTDB)))
 	    {
 		TRdisplay("\t    %~t: No REDO recovery needed.\n",
-			DB_MAXNAME, db.db_buffer);
+			DB_DB_MAXNAME, db.db_buffer);
 	    }
 	    continue;
 	}
@@ -1339,20 +1341,20 @@ RCP		*rcp)
 	** size of the buffer to make sure it actually holds what
 	** we expect it to.
 	*/
-	i4_ptr = (i4 *) &db.db_buffer[2 * DB_MAXNAME + 4];
+	i4_ptr = (i4 *) &db.db_buffer[DB_DB_MAXNAME + DB_OWN_MAXNAME + 4];
 	I4ASSIGN_MACRO(*i4_ptr, path_len);
-	if (db.db_l_buffer < (2 * DB_MAXNAME + path_len + 8))
+	if (db.db_l_buffer < (DB_DB_MAXNAME + DB_OWN_MAXNAME + path_len + 8))
 	{
 	    TRdisplay("LGshow DB buffer size mismatch (%d vs %d)\n",
-		(2 * DB_MAXNAME + path_len + 8), db.db_l_buffer);
+		(DB_DB_MAXNAME + DB_OWN_MAXNAME + path_len + 8), db.db_l_buffer);
 	    SETDBERR(&rcp->rcp_dberr, 0, E_DM940E_RCP_RCPRECOVER);
 	    status = E_DB_ERROR;
 	    break;
 	}
 
 	dbname = (DB_DB_NAME *) &db.db_buffer[0];
-	dbowner = (DB_OWN_NAME *) &db.db_buffer[DB_MAXNAME];
-	dbpath = (DM_PATH *) &db.db_buffer[2 * DB_MAXNAME + 8];
+	dbowner = (DB_OWN_NAME *) &db.db_buffer[DB_DB_MAXNAME];
+	dbpath = (DM_PATH *) &db.db_buffer[DB_DB_MAXNAME + DB_OWN_MAXNAME + 8];
 
 	/*
 	** Format RDB flags based on db status.
@@ -1556,20 +1558,20 @@ RCP		*rcp)
 	    ** size of the buffer to make sure it actually holds what
 	    ** we expect it to.
 	    */
-	    i4_ptr = (i4 *) &db.db_buffer[2 * DB_MAXNAME + 4];
+	    i4_ptr = (i4 *) &db.db_buffer[DB_DB_MAXNAME + DB_OWN_MAXNAME + 4];
 	    I4ASSIGN_MACRO(*i4_ptr, path_len);
-	    if (db.db_l_buffer < (2 * DB_MAXNAME + path_len + 8))
+	    if (db.db_l_buffer < (DB_DB_MAXNAME + DB_OWN_MAXNAME + path_len + 8))
 	    {
 		TRdisplay("LGshow DB buffer size mismatch (%d vs %d)\n",
-		    (2 * DB_MAXNAME + path_len + 8), db.db_l_buffer);
+		    (DB_DB_MAXNAME + DB_OWN_MAXNAME + path_len + 8), db.db_l_buffer);
 		SETDBERR(&rcp->rcp_dberr, 0, E_DM940E_RCP_RCPRECOVER);
 		status = E_DB_ERROR;
 		break;
 	    }
 
 	    dbname = (DB_DB_NAME *) &db.db_buffer[0];
-	    dbowner = (DB_OWN_NAME *) &db.db_buffer[DB_MAXNAME];
-	    dbpath = (DM_PATH *) &db.db_buffer[2 * DB_MAXNAME + 8];
+	    dbowner = (DB_OWN_NAME *) &db.db_buffer[DB_DB_MAXNAME];
+	    dbpath = (DM_PATH *) &db.db_buffer[DB_DB_MAXNAME + DB_OWN_MAXNAME + 8];
 
 	    /*
 	    ** Format RDB flags based on db status.
@@ -2347,7 +2349,7 @@ RCP		*rcp)
 
 #if defined(conf_CLUSTER_BUILD)
 		TRdisplay("%@ RCP-P1: Prepare %~t for node %d\n",
-		    DB_MAXNAME, (PTR)&add.ad_dbname,
+		    DB_DB_MAXNAME, (PTR)&add.ad_dbname,
 		    lctx->lctx_node_id);
 
 		if (lctx->lctx_node_id != CXnode_number(NULL))
@@ -7728,7 +7730,7 @@ char		*user_name)
     STRUCT_ASSIGN_MACRO(*last_lga, rtx->rtx_last_lga);
     STRUCT_ASSIGN_MACRO(*first_lga, rtx->rtx_first_lga);
     STRUCT_ASSIGN_MACRO(*cp_lga, rtx->rtx_cp_lga);
-    MEcopy((PTR) user_name, DB_MAXNAME, (PTR) rtx->rtx_user_name.db_own_name);
+    MEcopy((PTR) user_name, DB_OWN_MAXNAME, (PTR) rtx->rtx_user_name.db_own_name);
     rtx->rtx_id = lx_id;
     rtx->rtx_rdb = rdb;
     rtx->rtx_recover_type = RTX_REDO_UNDO;
@@ -9041,10 +9043,10 @@ DM0L_HEADER	*record)
 	"WARNING The RCP encountered an error and is waiting for input.\n");
 	TRdisplay("Valid input is:\n");
 	TRdisplay("rcpconfig -rcp_continue_ignore_db=%~t\n",
-		DB_MAXNAME, &rdb->rdb_name);
+		DB_DB_MAXNAME, rdb->rdb_name.db_db_name);
 	TRdisplay("OR\n");
 	TRdisplay("rcpconfig -rcp_continue_ignore_table=%~t\n",
-		DB_MAXNAME, tabname.db_tab_name);
+		DB_TAB_MAXNAME, tabname.db_tab_name);
 	TRdisplay("OR\n");
 	TRdisplay("rcpconfig -rcp_continue_ignore_lsn=%d,%d\n",
 		record->lsn.lsn_high, record->lsn.lsn_low);
@@ -9105,13 +9107,13 @@ DM0L_HEADER	*record)
 	if (recover_show.lg_flag == LG_A_RCP_IGNORE_DB)
 	{
 	    TRdisplay("RCP wakeup by rcpconfig -rcp_continue_ignore_db=%~t\n",
-		DB_MAXNAME, &rdb->rdb_name);
+		DB_DB_MAXNAME, rdb->rdb_name.db_db_name);
 	    return (E_DB_ERROR);
 	}
 	else if (recover_show.lg_flag == LG_A_RCP_IGNORE_TABLE)
 	{
 	    TRdisplay("RCP wakeup by rcpconfig -rcp_continue_ignore_table\n",
-		DB_MAXNAME, tabname.db_tab_name);
+		DB_TAB_MAXNAME, tabname.db_tab_name);
 	    rtbl_flag = RTBL_IGNORE_TABLE;
 	    /* Fall through and add this table to invalid tables list */
 	}

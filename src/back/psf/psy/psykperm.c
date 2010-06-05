@@ -63,6 +63,8 @@
 **      16-sep-93 (smc)
 **          Added/moved <cs.h> for CS_SID. Added history_template so we
 **          can automate this next time.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -269,7 +271,7 @@ psy_kpermit(
     }
     else if (psy_cb->psy_grant == PSY_EVDROP)	    /* dropping perm on event */
     {
-	DB_NAME		*evname = (DB_NAME *)psy_cb->psy_tabname;
+	DB_EVENT_NAME		*evname = (DB_EVENT_NAME *)psy_cb->psy_tabname;
 
 	/* Save event name and owner for RDF */
 	STRUCT_ASSIGN_MACRO(*evname, rdf_rb->rdr_name.rdr_evname); 

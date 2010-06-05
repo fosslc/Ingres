@@ -100,6 +100,8 @@
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
 **      09-jan-2009 (stial01)
 **          Fix buffers that are dependent on DB_MAXNAME
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 GLOBALREF   char        *IIQE_27_cap_names[];
@@ -303,24 +305,24 @@ QEC_LINK	*v_lnk_p )
     char	    *cat_name_p = NULL,		/* must initialize to NULL */
 		    *cap_cap_p = NULL,		/* must initialize to NULL */
 		    *where_p = NULL,		/* force case setting */
-		    obj_name[DB_MAXNAME + 1],
-		    obj_owner[DB_MAXNAME + 1],
-		    tab_name[DB_MAXNAME + 1],
-		    tab_owner[DB_MAXNAME + 1],
-		    proc_name[DB_MAXNAME + 1],
-		    proc_owner[DB_MAXNAME + 1],
+		    obj_name[DB_OBJ_MAXNAME + 1],
+		    obj_owner[DB_OWN_MAXNAME + 1],
+		    tab_name[DB_TAB_MAXNAME + 1],
+		    tab_owner[DB_OWN_MAXNAME + 1],
+		    proc_name[DB_DBP_MAXNAME + 1],
+		    proc_owner[DB_OWN_MAXNAME + 1],
 
 		    /* BASE_NAME and BASE_OWNER WHERE clause */
-		    base_where[QEK_200_LEN + (2*DB_MAXNAME)],
+		    base_where[QEK_200_LEN + DB_TAB_MAXNAME + DB_OWN_MAXNAME],
 
 		    /* OBJECT_NAME and OBJECT_OWNER WHERE clause */
-		    obj_where[QEK_200_LEN + (2*DB_MAXNAME)],
+		    obj_where[QEK_200_LEN + DB_OBJ_MAXNAME + DB_OWN_MAXNAME],
 
 		    /* TABLE_NAME and TABLE_OWNER WHERE clause */
-		    tab_where[QEK_200_LEN + (2*DB_MAXNAME)],
+		    tab_where[QEK_200_LEN + DB_TAB_MAXNAME + DB_OWN_MAXNAME],
 
 		    /* PROCEDURE_NAME and PROCEDURE_OWNER WHERE clause */
-		    proc_where[QEK_200_LEN + (2*DB_MAXNAME)],
+		    proc_where[QEK_200_LEN + DB_DBP_MAXNAME + DB_OWN_MAXNAME],
 
 		    qrytxt[QEK_900_LEN + (2*DB_MAXNAME)];
 
@@ -352,8 +354,8 @@ QEC_LINK	*v_lnk_p )
 
 	/* assume object name and owner available */
 
-	qed_u0_trimtail(ddl_p->qed_d1_obj_name, (u_i4) DB_MAXNAME, obj_name);
-	qed_u0_trimtail(ddl_p->qed_d2_obj_owner, (u_i4) DB_MAXNAME, obj_owner);
+	qed_u0_trimtail(ddl_p->qed_d1_obj_name, (u_i4)DB_OBJ_MAXNAME, obj_name);
+	qed_u0_trimtail(ddl_p->qed_d2_obj_owner, (u_i4)DB_OWN_MAXNAME, obj_owner);
 
 	STprintf(
 	    obj_where,
@@ -378,9 +380,9 @@ QEC_LINK	*v_lnk_p )
 	if (can_id == SEL_019_DD_PROCEDURES)
 	{
 	    qed_u0_trimtail(v_lnk_p->qec_13_objects_p->d6_1_obj_name, 
-			    (u_i4) DB_MAXNAME, proc_name);
+			    (u_i4) DB_OBJ_MAXNAME, proc_name);
 	    qed_u0_trimtail(v_lnk_p->qec_13_objects_p->d6_2_obj_owner,
-			    (u_i4) DB_MAXNAME, proc_owner);
+			    (u_i4) DB_OWN_MAXNAME, proc_owner);
 	    STprintf(
 		proc_where,
 		"%s %s = '%s' %s %s = '%s'",
@@ -401,14 +403,10 @@ QEC_LINK	*v_lnk_p )
 	    ** WHERE clause for TABLE_NAME and TABLE_OWNER 
 	    */
 
-	    qed_u0_trimtail(
-		l_tabinfo_p->dd_t1_tab_name,
-		(u_i4) DB_MAXNAME,
+	    qed_u0_trimtail( l_tabinfo_p->dd_t1_tab_name, (u_i4) DB_TAB_MAXNAME,
 		tab_name);
 
-	    qed_u0_trimtail(
-		l_tabinfo_p->dd_t2_tab_owner,
-		(u_i4) DB_MAXNAME,
+	    qed_u0_trimtail( l_tabinfo_p->dd_t2_tab_owner, (u_i4)DB_OWN_MAXNAME,
 		tab_owner);
 
 	    STprintf(
@@ -459,17 +457,17 @@ QEC_LINK	*v_lnk_p )
 
 	    /* set up column types and sizes for fetching with RQF */
 
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_TAB_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) altcols_p->l2_1_tab_name;
-	    altcols_p->l2_1_tab_name[DB_MAXNAME] = EOS;
+	    altcols_p->l2_1_tab_name[DB_TAB_MAXNAME] = EOS;
 
 	    bind_p++;				/* point to next element */
     
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_OWN_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) altcols_p->l2_2_tab_owner;
-	    altcols_p->l2_2_tab_owner[DB_MAXNAME] = EOS;
+	    altcols_p->l2_2_tab_owner[DB_OWN_MAXNAME] = EOS;
 
 	    bind_p++;				/* point to next element */
     
@@ -479,10 +477,10 @@ QEC_LINK	*v_lnk_p )
 
 	    bind_p++;				/* point to next element */
     
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_ATT_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) altcols_p->l2_4_col_name;
-	    altcols_p->l2_4_col_name[DB_MAXNAME] = EOS;
+	    altcols_p->l2_4_col_name[DB_ATT_MAXNAME] = EOS;
 
 	    bind_p++;				/* point to next element */
     
@@ -495,10 +493,10 @@ QEC_LINK	*v_lnk_p )
 	    **	where table_name | object_name = 'c32' and table_owner |
 	    **	object_owner = 'c32'; */
 
-	    altcols_p->l2_1_tab_name[DB_MAXNAME] = EOS;
+	    altcols_p->l2_1_tab_name[DB_TAB_MAXNAME] = EOS;
 	    STtrmwhite(altcols_p->l2_1_tab_name);
 
-	    altcols_p->l2_2_tab_owner[DB_MAXNAME] = EOS;
+	    altcols_p->l2_2_tab_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(altcols_p->l2_2_tab_owner);
 
 	    STprintf(
@@ -543,31 +541,31 @@ QEC_LINK	*v_lnk_p )
 
 	    /* set up column types and sizes for fetching with RQF */
 
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_TAB_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) cols_p->l3_1_tab_name;
-	    cols_p->l3_1_tab_name[DB_MAXNAME] = EOS;
+	    cols_p->l3_1_tab_name[DB_TAB_MAXNAME] = EOS;
 
 	    bind_p++;				/* point to next element */
     
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_OWN_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) cols_p->l3_2_tab_owner;
-	    cols_p->l3_2_tab_owner[DB_MAXNAME] = EOS;
+	    cols_p->l3_2_tab_owner[DB_OWN_MAXNAME] = EOS;
 
 	    bind_p++;				/* point to next element */
 
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_ATT_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) cols_p->l3_3_col_name;
-	    cols_p->l3_3_col_name[DB_MAXNAME] = EOS;
+	    cols_p->l3_3_col_name[DB_ATT_MAXNAME] = EOS;
 
 	    bind_p++;				/* point to next element */
     
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_TYPE_MAXLEN;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) cols_p->l3_4_data_type;
-	    cols_p->l3_4_data_type[DB_MAXNAME] = EOS;
+	    cols_p->l3_4_data_type[DB_TYPE_MAXLEN] = EOS;
 
 	    bind_p++;				/* point to next element */
     
@@ -625,10 +623,10 @@ QEC_LINK	*v_lnk_p )
 
 		bind_p++;			    /* point to next element */
 
-		bind_p->rqb_length = DB_MAXNAME;
+		bind_p->rqb_length = DB_TYPE_MAXLEN;
 		bind_p->rqb_dt_id = DB_CHA_TYPE;
 		bind_p->rqb_addr = (PTR) cols_p->l3_13_internal_datatype;
-		cols_p->l3_13_internal_datatype[DB_MAXNAME] = EOS;
+		cols_p->l3_13_internal_datatype[DB_TYPE_MAXLEN] = EOS;
 						/* must null terminate */
 		bind_p++;	    		/* point to next element */
 
@@ -711,10 +709,10 @@ QEC_LINK	*v_lnk_p )
 	    ** ldb_node = 'c32' and ldb_dbms = 'c32' and ldb_database 
 	    ** = 'c32'; */
 
-		ldbids_p->d2_1_ldb_node[DB_MAXNAME] = EOS;
+		ldbids_p->d2_1_ldb_node[DB_NODE_MAXNAME] = EOS;
 		STtrmwhite(ldbids_p->d2_1_ldb_node);
 
-		ldbids_p->d2_2_ldb_dbms[DB_MAXNAME] = EOS;
+		ldbids_p->d2_2_ldb_dbms[DB_TYPE_MAXLEN] = EOS;
 		STtrmwhite(ldbids_p->d2_2_ldb_dbms);
 
 		ldbids_p->d2_3_ldb_database[DD_256_MAXDBNAME] = EOS;
@@ -748,24 +746,25 @@ QEC_LINK	*v_lnk_p )
 
 	    /* set up column types and sizes for fetching with RQF */
 
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_NODE_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) ldbids_p->d2_1_ldb_node;
-	    ldbids_p->d2_1_ldb_node[DB_MAXNAME] = EOS;
+	    ldbids_p->d2_1_ldb_node[DB_NODE_MAXNAME] = EOS;
 
 	    bind_p++; 
 
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_TYPE_MAXLEN;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) ldbids_p->d2_2_ldb_dbms;
-	    ldbids_p->d2_2_ldb_dbms[DB_MAXNAME] = EOS;
+	    ldbids_p->d2_2_ldb_dbms[DB_TYPE_MAXLEN] = EOS;
 
 	    bind_p++; 
 
-	    bind_p->rqb_length = DB_MAXNAME;	/* include null space */
+	    /* should this have been DD_256_MAXDBNAME ?? */
+	    bind_p->rqb_length = DB_DB_MAXNAME;	/* include null space */
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) ldbids_p->d2_3_ldb_database;
-	    ldbids_p->d2_3_ldb_database[DB_MAXNAME] = EOS;
+	    ldbids_p->d2_3_ldb_database[DB_DB_MAXNAME] = EOS;
     
 	    bind_p++; 
 
@@ -796,10 +795,10 @@ QEC_LINK	*v_lnk_p )
 
 	    bind_p++; 
 
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_OWN_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) ldbids_p->d2_8_ldb_dbaname;
-	    ldbids_p->d2_8_ldb_dbaname[DB_MAXNAME] = EOS;
+	    ldbids_p->d2_8_ldb_dbaname[DB_OWN_MAXNAME] = EOS;
 
 	    /*  select * from iidd_ddb_ldb_ids where ldb_id = i4; */
 
@@ -836,10 +835,10 @@ QEC_LINK	*v_lnk_p )
     
 	    bind_p++;	/* 3rd item */
 	
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_ATT_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) ldbcols_p->d3_2_lcl_name;
-	    ldbcols_p->d3_2_lcl_name[DB_MAXNAME] = EOS;
+	    ldbcols_p->d3_2_lcl_name[DB_ATT_MAXNAME] = EOS;
     
 	    bind_p++;	/* 4th item */
 	
@@ -852,10 +851,10 @@ QEC_LINK	*v_lnk_p )
 	    /* select * from iidd_ddb_ldb_columns where ldb_node = <node> and
 	    ** ldb_dbms = <dbms> and ldb_database = <ldb>; */
 
-		ldb_p->dd_l2_node_name[DB_MAXNAME] = EOS;
+		ldb_p->dd_l2_node_name[DB_NODE_MAXNAME] = EOS;
 		STtrmwhite(ldb_p->dd_l2_node_name);
 
-		ldb_p->dd_l4_dbms_name[DB_MAXNAME] = EOS;
+		ldb_p->dd_l4_dbms_name[DB_TYPE_MAXLEN] = EOS;
 		STtrmwhite(ldb_p->dd_l4_dbms_name);
 
 		ldb_p->dd_l3_ldb_name[DD_256_MAXDBNAME] = EOS;
@@ -979,10 +978,10 @@ QEC_LINK	*v_lnk_p )
 
 	    /* set up column types and sizes for fetching with RQF */
 
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_DB_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) long_p->d5_3_ldb_alias;
-	    long_p->d5_3_ldb_alias[DB_MAXNAME] = EOS;
+	    long_p->d5_3_ldb_alias[DB_DB_MAXNAME] = EOS;
 
 	    /* select long_ldbalias from iidd_ddb_long_ldbnames where 
 	    ** long_ldbname = <long_ldbname>; */
@@ -1008,10 +1007,10 @@ QEC_LINK	*v_lnk_p )
 	    QEC_D6_OBJECTS	*objects_p = 
 		sel_p->qeq_c3_ptr_u.d6_objects_p;
 
-	    objects_p->d6_1_obj_name[DB_MAXNAME] = EOS;
+	    objects_p->d6_1_obj_name[DB_OBJ_MAXNAME] = EOS;
 	    STtrmwhite(objects_p->d6_1_obj_name);
 
-	    objects_p->d6_2_obj_owner[DB_MAXNAME] = EOS;
+	    objects_p->d6_2_obj_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(objects_p->d6_2_obj_owner);
 
 	    STprintf(
@@ -1052,16 +1051,16 @@ QEC_LINK	*v_lnk_p )
 	    }
 	    /* set up column types and sizes for fetching with RQF */
 
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_OBJ_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) objects_p->d6_1_obj_name;
-	    objects_p->d6_1_obj_name[DB_MAXNAME] = EOS;
+	    objects_p->d6_1_obj_name[DB_OBJ_MAXNAME] = EOS;
 					    /* must null terminate */
 	    bind_p++;	
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_OWN_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) objects_p->d6_2_obj_owner;
-	    objects_p->d6_2_obj_owner[DB_MAXNAME] = EOS;
+	    objects_p->d6_2_obj_owner[DB_OWN_MAXNAME] = EOS;
 					    /* must null terminate */
 	    bind_p++;	
 	    bind_p->rqb_length = sizeof(i4);
@@ -1186,16 +1185,16 @@ QEC_LINK	*v_lnk_p )
 	    tableinfo_p->d9_2_lcl_type[QEK_8_CHAR_SIZE] = EOS;
 
 	    bind_p++;
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_TAB_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) tableinfo_p->d9_3_tab_name;
-	    tableinfo_p->d9_3_tab_name[DB_MAXNAME] = EOS;
+	    tableinfo_p->d9_3_tab_name[DB_TAB_MAXNAME] = EOS;
 					    /* must null terminate */
 	    bind_p++;	
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_OWN_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) tableinfo_p->d9_4_tab_owner;
-	    tableinfo_p->d9_4_tab_owner[DB_MAXNAME] = EOS;
+	    tableinfo_p->d9_4_tab_owner[DB_OWN_MAXNAME] = EOS;
 					    /* must null terminate */
 	    bind_p++;
 	    bind_p->rqb_length = DD_25_DATE_SIZE;
@@ -1287,16 +1286,16 @@ QEC_LINK	*v_lnk_p )
 
 	    /* set up column types and sizes for fetching with RQF */
 
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_TAB_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) indexes_p->l6_1_ind_name;
-	    indexes_p->l6_1_ind_name[DB_MAXNAME] = EOS;
+	    indexes_p->l6_1_ind_name[DB_TAB_MAXNAME] = EOS;
 					    /* must null terminate */
 	    bind_p++;	
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_OWN_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) indexes_p->l6_2_ind_owner;
-	    indexes_p->l6_2_ind_owner[DB_MAXNAME] = EOS;
+	    indexes_p->l6_2_ind_owner[DB_OWN_MAXNAME] = EOS;
 					    /* must null terminate */
 	    bind_p++;				/* point to next element */
 	    bind_p->rqb_length = DD_25_DATE_SIZE;
@@ -1305,16 +1304,16 @@ QEC_LINK	*v_lnk_p )
 	    indexes_p->l6_3_cre_date[DD_25_DATE_SIZE] = EOS;
 
 	    bind_p++;				/* point to next element */
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_TAB_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) indexes_p->l6_4_base_name;
-	    indexes_p->l6_1_ind_name[DB_MAXNAME] = EOS;
+	    indexes_p->l6_1_ind_name[DB_TAB_MAXNAME] = EOS;
 					    /* must null terminate */
 	    bind_p++;	
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_OWN_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) indexes_p->l6_5_base_owner;
-	    indexes_p->l6_2_ind_owner[DB_MAXNAME] = EOS;
+	    indexes_p->l6_2_ind_owner[DB_OWN_MAXNAME] = EOS;
 					    /* must null terminate */
 	    bind_p++;	
 	    bind_p->rqb_length = QEK_16_STOR_SIZE;
@@ -1349,10 +1348,10 @@ QEC_LINK	*v_lnk_p )
 	    **	where base_name = 'c32' and base_owner = 'c32'; */
 
 
-	    indexes_p->l6_4_base_name[DB_MAXNAME] = EOS;
+	    indexes_p->l6_4_base_name[DB_TAB_MAXNAME] = EOS;
 	    STtrmwhite(indexes_p->l6_4_base_name);
 
-	    indexes_p->l6_5_base_owner[DB_MAXNAME] = EOS;
+	    indexes_p->l6_5_base_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(indexes_p->l6_5_base_owner);
 
 	    STprintf(
@@ -1407,22 +1406,22 @@ QEC_LINK	*v_lnk_p )
 
 	    /* set up column types and sizes for fetching with RQF */
 
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_TAB_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) ndxcols_p->l7_1_ind_name;
-	    ndxcols_p->l7_1_ind_name[DB_MAXNAME] = EOS;
+	    ndxcols_p->l7_1_ind_name[DB_TAB_MAXNAME] = EOS;
 					    /* must null terminate */
 	    bind_p++;	
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_OWN_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) ndxcols_p->l7_2_ind_owner;
-	    ndxcols_p->l7_2_ind_owner[DB_MAXNAME] = EOS;
+	    ndxcols_p->l7_2_ind_owner[DB_OWN_MAXNAME] = EOS;
 					    /* must null terminate */
 	    bind_p++;
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_ATT_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) ndxcols_p->l7_3_col_name;
-	    ndxcols_p->l7_3_col_name[DB_MAXNAME] = EOS;
+	    ndxcols_p->l7_3_col_name[DB_ATT_MAXNAME] = EOS;
 					    /* must null terminate */
 	    bind_p++;	
 	    bind_p->rqb_length = sizeof(i4);
@@ -1439,10 +1438,10 @@ QEC_LINK	*v_lnk_p )
 	    /*  select from iiindex_columns | iidd_index_columns 
 	    **	where index_name = 'c32' and index_owner = 'c32'; */
 
-		ndxcols_p->l7_1_ind_name[DB_MAXNAME] = EOS;
+		ndxcols_p->l7_1_ind_name[DB_TAB_MAXNAME] = EOS;
 		STtrmwhite(ndxcols_p->l7_1_ind_name);
 
-		ndxcols_p->l7_2_ind_owner[DB_MAXNAME] = EOS;
+		ndxcols_p->l7_2_ind_owner[DB_OWN_MAXNAME] = EOS;
 		STtrmwhite(ndxcols_p->l7_2_ind_owner);
 
 	    STprintf(
@@ -1471,16 +1470,16 @@ QEC_LINK	*v_lnk_p )
 
 	    /* set up column types and sizes for fetching with RQF */
 
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_CAP_MAXLEN;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) caps_p->l4_1_cap_cap;
-	    caps_p->l4_1_cap_cap[DB_MAXNAME] = EOS;
+	    caps_p->l4_1_cap_cap[DB_CAP_MAXLEN] = EOS;
 					    /* must null terminate */
 	    bind_p++;	
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_CAPVAL_MAXLEN;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) caps_p->l4_2_cap_val;
-	    caps_p->l4_2_cap_val[DB_MAXNAME] = EOS;
+	    caps_p->l4_2_cap_val[DB_CAPVAL_MAXLEN] = EOS;
 					    /* must null terminate */
 
 	    /*  select cap_capability, cap_value from iidbcapabilities; */
@@ -1507,16 +1506,16 @@ QEC_LINK	*v_lnk_p )
 
 	    /* set up column types and sizes for fetching with RQF */
 
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_OWN_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) consts_p->l1_1_usr_name;
-	    consts_p->l1_1_usr_name[DB_MAXNAME] = EOS;
+	    consts_p->l1_1_usr_name[DB_OWN_MAXNAME] = EOS;
 					    /* must null terminate */
 	    bind_p++;	
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_OWN_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) consts_p->l1_2_dba_name;
-	    consts_p->l1_2_dba_name[DB_MAXNAME] = EOS;
+	    consts_p->l1_2_dba_name[DB_OWN_MAXNAME] = EOS;
 					    /* must null terminate */
 
 	    /*  select from iidbconstants; */
@@ -1540,22 +1539,22 @@ QEC_LINK	*v_lnk_p )
 
 	    /* set up column types and sizes for fetching with RQF */
 
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_TAB_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) histos_p->l5_1_tab_name;
-	    histos_p->l5_1_tab_name[DB_MAXNAME] = EOS;
+	    histos_p->l5_1_tab_name[DB_TAB_MAXNAME] = EOS;
 					    /* must null terminate */
 	    bind_p++;	
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_OWN_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) histos_p->l5_2_tab_owner;
-	    histos_p->l5_2_tab_owner[DB_MAXNAME] = EOS;
+	    histos_p->l5_2_tab_owner[DB_OWN_MAXNAME] = EOS;
 					    /* must null terminate */
 	    bind_p++;	
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_ATT_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) histos_p->l5_3_col_name;
-	    histos_p->l5_3_col_name[DB_MAXNAME] = EOS;
+	    histos_p->l5_3_col_name[DB_ATT_MAXNAME] = EOS;
 					    /* must null terminate */
 	    bind_p++;	
 	    bind_p->rqb_length = sizeof(i4);
@@ -1599,22 +1598,22 @@ QEC_LINK	*v_lnk_p )
 
 	    /* set up column types and sizes for fetching with RQF */
 
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_TAB_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) stats_p->l15_1_tab_name;
-	    stats_p->l15_1_tab_name[DB_MAXNAME] = EOS;
+	    stats_p->l15_1_tab_name[DB_TAB_MAXNAME] = EOS;
 					    /* must null terminate */
 	    bind_p++;	
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_OWN_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) stats_p->l15_2_tab_owner;
-	    stats_p->l15_2_tab_owner[DB_MAXNAME] = EOS;
+	    stats_p->l15_2_tab_owner[DB_OWN_MAXNAME] = EOS;
 					    /* must null terminate */
 	    bind_p++;	
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_ATT_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) stats_p->l15_3_col_name;
-	    stats_p->l15_3_col_name[DB_MAXNAME] = EOS;
+	    stats_p->l15_3_col_name[DB_ATT_MAXNAME] = EOS;
 					    /* must null terminate */
 	    bind_p++;	
 	    bind_p->rqb_length = DD_25_DATE_SIZE;
@@ -1735,17 +1734,17 @@ QEC_LINK	*v_lnk_p )
 		/* set up column types and sizes for fetching with RQF */
 
 		colcnt++;
-		bind_p->rqb_length = DB_MAXNAME;
+		bind_p->rqb_length = DB_TAB_MAXNAME;
 		bind_p->rqb_dt_id = DB_CHA_TYPE;
 		bind_p->rqb_addr = (PTR) tables_p->l16_1_tab_name;
-		tables_p->l16_1_tab_name[DB_MAXNAME] = EOS;
+		tables_p->l16_1_tab_name[DB_TAB_MAXNAME] = EOS;
 					    /* must null terminate */
 		colcnt++;
 		bind_p++;	
-		bind_p->rqb_length = DB_MAXNAME;
+		bind_p->rqb_length = DB_OWN_MAXNAME;
 		bind_p->rqb_dt_id = DB_CHA_TYPE;
 		bind_p->rqb_addr = (PTR) tables_p->l16_2_tab_owner;
-		tables_p->l16_2_tab_owner[DB_MAXNAME] = EOS;
+		tables_p->l16_2_tab_owner[DB_OWN_MAXNAME] = EOS;
 					    /* must null terminate */
 		colcnt++;
 		bind_p++;	
@@ -2079,17 +2078,17 @@ QEC_LINK	*v_lnk_p )
 		** iiphysical_tables */
 
 		colcnt++;
-		bind_p->rqb_length = DB_MAXNAME;
+		bind_p->rqb_length = DB_TAB_MAXNAME;
 		bind_p->rqb_dt_id = DB_CHA_TYPE;
 		bind_p->rqb_addr = (PTR) tables_p->l16_1_tab_name;
-		tables_p->l16_1_tab_name[DB_MAXNAME] = EOS;
+		tables_p->l16_1_tab_name[DB_TAB_MAXNAME] = EOS;
 					    /* must null terminate */
 		colcnt++;
 		bind_p++;	
-		bind_p->rqb_length = DB_MAXNAME;
+		bind_p->rqb_length = DB_OWN_MAXNAME;
 		bind_p->rqb_dt_id = DB_CHA_TYPE;
 		bind_p->rqb_addr = (PTR) tables_p->l16_2_tab_owner;
-		tables_p->l16_2_tab_owner[DB_MAXNAME] = EOS;
+		tables_p->l16_2_tab_owner[DB_OWN_MAXNAME] = EOS;
 					    /* must null terminate */
 		colcnt++;
 		bind_p++;
@@ -2227,17 +2226,17 @@ QEC_LINK	*v_lnk_p )
 	    /* set up column types and sizes for fetching with RQF */
 
 	    colcnt++;
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_TAB_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) tables_p->l16_1_tab_name;
-	    tables_p->l16_1_tab_name[DB_MAXNAME] = EOS;
+	    tables_p->l16_1_tab_name[DB_TAB_MAXNAME] = EOS;
 					/* must null terminate */
 	    colcnt++;
 	    bind_p++;	
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_OWN_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) tables_p->l16_2_tab_owner;
-	    tables_p->l16_2_tab_owner[DB_MAXNAME] = EOS;
+	    tables_p->l16_2_tab_owner[DB_OWN_MAXNAME] = EOS;
 					/* must null terminate */
 	    colcnt++;
 	    bind_p++;	
@@ -2290,17 +2289,17 @@ QEC_LINK	*v_lnk_p )
 	    /* set up column types and sizes for fetching with RQF */
 
 	    colcnt++;
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_DBP_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) regproc_p->l18_1_proc_name,
-	    regproc_p->l18_1_proc_name[DB_MAXNAME] = EOS;
+	    regproc_p->l18_1_proc_name[DB_DBP_MAXNAME] = EOS;
 					/* must null terminate */
 	    colcnt++;
 	    bind_p++;	
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_OWN_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) regproc_p->l18_2_proc_owner,
-	    regproc_p->l18_2_proc_owner[DB_MAXNAME] = EOS;
+	    regproc_p->l18_2_proc_owner[DB_OWN_MAXNAME] = EOS;
 					/* must null terminate */
 
 	    /*  select (procedure_name, procedure_owner) from iiprocedures
@@ -2354,10 +2353,10 @@ QEC_LINK	*v_lnk_p )
 
 	    /* set up column types and sizes for fetching with RQF */
 
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_ATT_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) cols_p->l3_3_col_name;
-	    cols_p->l3_3_col_name[DB_MAXNAME] = EOS;
+	    cols_p->l3_3_col_name[DB_ATT_MAXNAME] = EOS;
 
 	    bind_p++;
 
@@ -2515,17 +2514,17 @@ QEC_LINK	*v_lnk_p )
 
 	    bind_p++;	
 
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_CAP_MAXLEN;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) ldbcaps_p->d4_2_cap_cap;
-	    ldbcaps_p->d4_2_cap_cap[DB_MAXNAME] = EOS;
+	    ldbcaps_p->d4_2_cap_cap[DB_CAP_MAXLEN] = EOS;
 					    /* must null terminate */
 	    bind_p++;	
 
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_CAPVAL_MAXLEN;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) ldbcaps_p->d4_3_cap_val;
-	    ldbcaps_p->d4_3_cap_val[DB_MAXNAME] = EOS;
+	    ldbcaps_p->d4_3_cap_val[DB_CAPVAL_MAXLEN] = EOS;
 					    /* must null terminate */
 	    bind_p++;	
 

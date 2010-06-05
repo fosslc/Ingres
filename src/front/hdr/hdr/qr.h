@@ -104,6 +104,8 @@
 **	11-nov-2009 (wanfr01) b122875
 **	    Added paramter to qrinit
 **	    Added Outisterm to QRB
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -238,6 +240,7 @@ typedef struct {
 
 	bool	tm;			/* true if program is TM */
 	i4	casecnt;		/* count of outstanding "case" funcs */
+	i4	col_maxname;		/* for formatting < DB_MAXNAME */
 } QRB;
 
 

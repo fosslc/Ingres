@@ -154,6 +154,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 		
 static DB_STATUS psl_validate_rtree(
@@ -1035,7 +1037,7 @@ psl_ci4_indexcol(
     DMT_ATT_ENTRY	*attribute;
     DMU_KEY_ENTRY	**key;
     i4			i;
-    char		tid[DB_MAXNAME];
+    char		tid[DB_ATT_MAXNAME];
 
     /* Count index columns and give error if too many */
     if (sess_cb->pss_rsdmno == DB_MAXKEYS)
@@ -1071,14 +1073,14 @@ psl_ci4_indexcol(
 
     /* Normalize the `tid' attribute name */
     STmove(((*sess_cb->pss_dbxlate & CUI_ID_REG_U) ? "TID" : "tid"),
-	   ' ', DB_MAXNAME, tid);
+	   ' ', DB_ATT_MAXNAME, tid);
 
     /* Is the name equal to "tid" */
-    if (!MEcmp(attname.db_att_name, tid, DB_MAXNAME))
+    if (!MEcmp(attname.db_att_name, tid, DB_ATT_MAXNAME))
     {
 	_VOID_ psf_error(2105L, 0L, PSF_USERERR, &err_code, err_blk, 2,
 	    sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-	    psf_trmwhite(DB_MAXNAME, (char *) &attname), &attname);
+	    psf_trmwhite(DB_ATT_MAXNAME, (char *) &attname), &attname);
 	return (E_DB_ERROR);
     }
 
@@ -1108,7 +1110,7 @@ psl_ci4_indexcol(
     {
 	_VOID_ psf_error(2180L, 0L, PSF_USERERR, &err_code, err_blk, 2,
 	    sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-	    psf_trmwhite(DB_MAXNAME, (char *) &attname), &attname);
+	    psf_trmwhite(DB_ATT_MAXNAME, (char *) &attname), &attname);
 	return (status);
     }
 
@@ -1523,7 +1525,7 @@ psl_lst_elem(
 
 	lim = (DB_LOC_NAME *) (locdesc->data_address + locdesc->data_in_size);
 
-	STmove(element, ' ', (u_i4) DB_MAXNAME, (char *) lim);
+	STmove(element, ' ', (u_i4) DB_LOC_MAXNAME, (char *) lim);
 	locdesc->data_in_size += sizeof(DB_LOC_NAME);
 
 	/* See if not a duplicate */
@@ -1534,7 +1536,7 @@ psl_lst_elem(
 		/* A duplicate was found */
 		(VOID) psf_error(2116L, 0L, PSF_USERERR, &err_code, err_blk, 2,
 		    sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-		    psf_trmwhite(DB_MAXNAME, element), element);
+		    psf_trmwhite(DB_LOC_MAXNAME, element), element);
 		return (E_DB_ERROR);
 	    }
 	}
@@ -2218,7 +2220,7 @@ psl_validate_options(
 			     &err_code, err_blk, 3,
 			     qry_len, qry,
 			     5L, typename,
-			     psf_trmwhite(DB_MAXNAME, tabname), tabname);
+			     psf_trmwhite(DB_TAB_MAXNAME, tabname), tabname);
 	    return (E_DB_ERROR);
 	}
 

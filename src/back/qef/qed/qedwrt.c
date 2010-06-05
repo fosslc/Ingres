@@ -104,6 +104,8 @@
 **	    replace nat and longnat with i4
 **	30-mar-04 (toumi01)
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 GLOBALREF   char     IIQE_33_integer[];
@@ -211,7 +213,7 @@ DD_LDB_DESC	*i_ldb_p )
 {
     DB_STATUS	    status = E_DB_OK;
     QEF_CB	    *qecb_p = v_qer_p->qef_cb;
-    char	    namebuf[DB_MAXNAME + 1];
+    char	    namebuf[DB_MAXNAME + 1]; /* ANY name */
     char	    *cbuf = v_qer_p->qef_cb->qef_trfmt;
     i4		    cbufsize = v_qer_p->qef_cb->qef_trsize;
 
@@ -225,8 +227,7 @@ DD_LDB_DESC	*i_ldb_p )
 
 	return(qed_u1_gen_interr(& v_qer_p->error));
     }
-    qed_u0_trimtail(i_ldb_p->dd_l2_node_name,
-	(u_i4) DB_MAXNAME,
+    qed_u0_trimtail(i_ldb_p->dd_l2_node_name, (u_i4) DB_NODE_MAXNAME,
 	namebuf);
 
     STprintf(cbuf, "%s %p: ...   1) NODE   %s\n",
@@ -235,8 +236,7 @@ DD_LDB_DESC	*i_ldb_p )
 	namebuf);
     qec_tprintf(v_qer_p, cbufsize, cbuf);
 
-    qed_u0_trimtail(i_ldb_p->dd_l3_ldb_name,
-	(u_i4) DB_MAXNAME,
+    qed_u0_trimtail(i_ldb_p->dd_l3_ldb_name, (u_i4) DB_DB_MAXNAME,
 	namebuf);
 
     STprintf(cbuf, "%s %p: ...   2) LDB    %s\n",
@@ -245,8 +245,7 @@ DD_LDB_DESC	*i_ldb_p )
 	namebuf);
     qec_tprintf(v_qer_p, cbufsize, cbuf);
 
-    qed_u0_trimtail(i_ldb_p->dd_l4_dbms_name,
-	(u_i4) DB_MAXNAME,
+    qed_u0_trimtail(i_ldb_p->dd_l4_dbms_name, (u_i4) DB_TYPE_MAXLEN,
 	namebuf);
 
     STprintf(cbuf, "%s %p: ...   3) DBMS   %s\n",

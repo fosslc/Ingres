@@ -207,6 +207,8 @@
 **	10-Sep-2008 (jonj)
 **	    SIR 120874: Use CLRDBERR, SETDBERR to value scf_error structure.
 **	    Use new form sc0ePut().
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /* External and Forward declarations */
@@ -2465,19 +2467,19 @@ sce_free_node(i4		dealloc,
 VOID
 sce_trname(i4 to_sc0e, char *header, DB_ALERT_NAME  *aname )
 {
-    char	anm[DB_MAXNAME + 1]; 	/* Buffers for name parts */
-    char	onm[DB_MAXNAME + 1];
-    char	dnm[DB_MAXNAME + 1];
+    char	anm[DB_EVENT_MAXNAME + 1]; 	/* Buffers for name parts */
+    char	onm[DB_OWN_MAXNAME + 1];
+    char	dnm[DB_DB_MAXNAME + 1];
     char	stbuf[SC0E_FMTSIZE]; /* last char for `\n' */
 
-    MEcopy((PTR)&aname->dba_alert, DB_MAXNAME, (PTR)anm);
-    anm[DB_MAXNAME] = EOS; 
+    MEcopy((PTR)&aname->dba_alert, DB_EVENT_MAXNAME, (PTR)anm);
+    anm[DB_EVENT_MAXNAME] = EOS; 
     STtrmwhite(anm);
-    MEcopy((PTR)&aname->dba_owner, DB_MAXNAME, (PTR)onm);
-    onm[DB_MAXNAME] = EOS; 
+    MEcopy((PTR)&aname->dba_owner, DB_OWN_MAXNAME, (PTR)onm);
+    onm[DB_OWN_MAXNAME] = EOS; 
     STtrmwhite(onm);
-    MEcopy((PTR)&aname->dba_dbname, DB_MAXNAME, (PTR)dnm);
-    dnm[DB_MAXNAME] = EOS; 
+    MEcopy((PTR)&aname->dba_dbname, DB_DB_MAXNAME, (PTR)dnm);
+    dnm[DB_DB_MAXNAME] = EOS; 
     STtrmwhite(dnm);
     if( to_sc0e )
     	sc0e_trace(STprintf(stbuf, "%s: (%s, %s, %s)\n",

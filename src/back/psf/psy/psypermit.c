@@ -400,6 +400,8 @@ NO_OPTIM=nc4_us5
 **	    Added PSQ_REPDYN to all PSQ_DEFCURS tests for cached dynamic.
 **      17-dec-2008 (joea)
 **          Replace READONLY/WSCREADONLY by const.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -5269,12 +5271,8 @@ psy_do_alarm_fail(
 		    evtxtptr= (char*)&almtup->dba_eventtext;
 		    evtxtlen=sizeof(almtup->dba_eventtext);
 		}
-		psy_evraise(sess_cb,
-				  (DB_NAME*)&evtuple.dbe_name,
-				  (DB_OWN_NAME*)&evtuple.dbe_owner,
-				  evtxtptr,
-				  evtxtlen,
-				  err_blk);
+		psy_evraise(sess_cb, &evtuple.dbe_name, &evtuple.dbe_owner,
+				  evtxtptr, evtxtlen, err_blk);
 	    }
 	}
     } /* end while loop */
@@ -6441,7 +6439,7 @@ psy_check_permits(
 			** displaying QEP-related info
 			*/
 			MEcopy((PTR) &ptree->pst_rangetab[i]->pst_corr_name,
-			    DB_MAXNAME, (PTR) newrngvar->pss_rgname);
+			    DB_TAB_MAXNAME, (PTR) newrngvar->pss_rgname);
 		    }
 		    else
 		    {

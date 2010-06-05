@@ -81,6 +81,8 @@
 **	06-Jul-06 (kiria01) b116230
 **	    psl_print becomes PSL_RS_PRINT bit in new field psl_rsflags
 **	    to allow for extra flags in PST_RSDM_NODE
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -159,7 +161,7 @@ ulc_bld_descriptor( PST_QNODE *target_list, i4  names, QSF_RCB *qsf_rb,
     if (names & GCA_NAMES_MASK)
     {
 	/* Allow for a maximum sized name */
-	attsize += DB_MAXNAME;
+	attsize += DB_ATT_MAXNAME;
     }
     /* Make sure enough space is allowed for GCA_COL_ATT's to be aligned */
     attsize += sizeof(ALIGN_RESTRICT) - 1;
@@ -307,8 +309,8 @@ ulc_att_bld( i4  *modifier, PST_QNODE *target_list, GCA_COL_ATT *sqlatts,
 	if (*modifier & GCA_NAMES_MASK)
 	{
 	    MEcopy(target_list->pst_sym.pst_value.pst_s_rsdm.pst_rsname, 
-					    DB_MAXNAME, sqlatts->gca_attname);
-	    l_attname = STtrmnwhite(sqlatts->gca_attname,DB_MAXNAME);
+				    DB_ATT_MAXNAME, sqlatts->gca_attname);
+	    l_attname = STtrmnwhite(sqlatts->gca_attname, DB_ATT_MAXNAME);
 	}
 	else
 	{

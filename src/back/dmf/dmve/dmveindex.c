@@ -196,6 +196,8 @@
 **	    Log record now has actual compression type in it, fix here.
 **	5-Nov-2009 (kschendel) SIR 122739
 **	    Fix outrageous name confusion re acount vs kcount.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 static DB_STATUS dmv_reindex(
@@ -478,6 +480,7 @@ DM0L_INDEX 	*log_rec)
     i4                  tup_cnt = 0;
     i4			*err_code = &dmve->dmve_error.err_code;
     DB_ERROR		local_dberr;
+    DB_ATTS		*a;
 
     CLRDBERR(&dmve->dmve_error);
 	
@@ -541,8 +544,9 @@ DM0L_INDEX 	*log_rec)
 	{
 	    keyptrs[i] = curentry = keyentry++;
 	    curentry->key_order = DMU_ASCENDING;
-	    STRUCT_ASSIGN_MACRO(t->tcb_atts_ptr[log_rec->dui_key[i]].name, 
-		curentry->key_attr_name);
+	    a = &t->tcb_atts_ptr[log_rec->dui_key[i]];
+	    MEmove(a->attnmlen, a->attnmstr, ' ',
+		DB_ATT_MAXNAME, curentry->key_attr_name.db_att_name);
 	}
 
 	/* Close the table */

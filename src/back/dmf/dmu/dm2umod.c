@@ -683,6 +683,8 @@ NO_OPTIM=dr6_us5 i64_aix
 **	03-Mar-2010 (jonj)
 **	    SIR 121619 MVCC: Blob support. Consistently use tcb_extended
 **	    instead of relstat2 & TCB2_EXTENSION.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs, fix error handling
 **/
 
 /*
@@ -1529,6 +1531,9 @@ DB_ERROR        *dberr)
     DMP_RCB		*input_rcb = (DMP_RCB *)0;
     i4			OnlyKeyLen = 0;	/* The size of just the key atts */
     DB_ERROR		local_dberr;
+    i4			attnmsz;
+    char		*nextattname;
+    DB_ATTS		*curatt;
 
     CLRDBERR(dberr);
 		
@@ -2391,14 +2396,12 @@ DB_ERROR        *dberr)
                       (mcb->mcb_structure != TCB_HASH) || 
                       (mcb->mcb_unique != 0) ||
 		      (mcb->mcb_kcount != 2) || 
-                      (MEcmp((char *)&t->tcb_atts_ptr[DM_1_DEVICE_KEY].name, 
+                      (MEcmp(t->tcb_atts_ptr[DM_1_DEVICE_KEY].attnmstr, 
 			(char *)&mcb->mcb_key[0]->key_attr_name,
-			sizeof(mcb->mcb_key[0]->key_attr_name)) != 0) ||
-                      (MEcmp((char *)&t->tcb_atts_ptr[DM_2_DEVICE_KEY].name, 
+			t->tcb_atts_ptr[DM_1_DEVICE_KEY].attnmlen) != 0 ||
+                      (MEcmp(t->tcb_atts_ptr[DM_2_DEVICE_KEY].attnmstr, 
 			(char *)&mcb->mcb_key[1]->key_attr_name,
-			sizeof(mcb->mcb_key[1]->key_attr_name)) != 0)
-			 )
-		   )	    
+			t->tcb_atts_ptr[DM_2_DEVICE_KEY].attnmlen) != 0))))	    
 		{
 		    uleFormat(dberr, E_DM00D1_BAD_SYSCAT_MOD, NULL, ULE_LOG, NULL, 
 			    NULL, 0, NULL,
@@ -2862,6 +2865,9 @@ DB_ERROR        *dberr)
 	size_align = ((t->tcb_rel.relatts + 1) * sizeof(i4));
 	size_align = DB_ALIGN_MACRO(size_align);
 
+	attnmsz = (mcb->mcb_kcount + 1) * sizeof(DB_ATT_STR);
+	attnmsz = DB_ALIGN_MACRO(attnmsz);
+
 	/* Allocate zero-filled memory */
 	status = dm0m_allocate(sizeof(DM2U_MXCB) +
 	    ((mcb->mcb_kcount + 1) * sizeof(DB_ATTS)) + 
@@ -2871,6 +2877,7 @@ DB_ERROR        *dberr)
 	    data_cmpcontrol_size +
 	    leaf_cmpcontrol_size +
 	    index_cmpcontrol_size +
+	    attnmsz +
 	    (cmplist_count * sizeof(DB_CMP_LIST)) + 
 	    sizeof(ALIGN_RESTRICT) +
 	    (sources * (sizeof(DM2U_SPCB) + 1 * buf_size)) +
@@ -2924,6 +2931,16 @@ DB_ERROR        *dberr)
 	    m->mx_index_rac.control_count = index_cmpcontrol_size;
 	    p += index_cmpcontrol_size;
 	}
+
+	nextattname = p;
+	p += attnmsz;
+	for (curatt = m->mx_atts_ptr, i = 0; i < (mcb->mcb_kcount + 1); 
+			i++, curatt++)
+	{
+	    curatt->attnmstr = nextattname;
+	    nextattname += sizeof(DB_ATT_STR);
+	}
+
 	/* cmpcontrol areas are size aligned to align-restrict, so p is
 	** still aligned...
 	*/
@@ -3528,11 +3545,16 @@ DB_ERROR        *dberr)
 
 	    for (i = 0; i < t->tcb_rel.relatts - 1; i++)
 	    {
+		DB_ATT_NAME tmpattnm;
+
 		/*  Index keys are always a prefix of the index attributes. */ 
 
 		if (i < mcb->mcb_kcount)
 		{
-		    if (MEcmp((char *)&t->tcb_atts_ptr[i + 1].name, 
+		    MEmove(t->tcb_atts_ptr[i + 1].attnmlen,
+			t->tcb_atts_ptr[i + 1].attnmstr, ' ',
+			DB_ATT_MAXNAME, tmpattnm.db_att_name);
+		    if (MEcmp(tmpattnm.db_att_name, 
 			(char *)&mcb->mcb_key[i]->key_attr_name,
 			sizeof(mcb->mcb_key[i]->key_attr_name)))
 		    {
@@ -3696,9 +3718,15 @@ DB_ERROR        *dberr)
 
 	    for (i = 0; i < mcb->mcb_kcount; i++)
 	    {
+		DB_ATT_NAME tmpattnm;
+
 		for (j = 1; j <= t->tcb_rel.relatts; j++)
 		{
-		    if ((MEcmp((char *)&t->tcb_atts_ptr[j].name, 
+		    MEmove(t->tcb_atts_ptr[j].attnmlen,
+			t->tcb_atts_ptr[j].attnmstr, ' ',
+			DB_ATT_MAXNAME, tmpattnm.db_att_name);
+
+		    if ((MEcmp(tmpattnm.db_att_name, 
 			 (char *)&mcb->mcb_key[i]->key_attr_name,
 			 sizeof(mcb->mcb_key[i]->key_attr_name)) == 0) && 
 			(t->tcb_atts_ptr[j].ver_altcol == 0) &&
@@ -5186,7 +5214,8 @@ DB_ERROR	*dberr)
 	    /*	AttlPtr added to work-around VAX optimizer bug */
 	    AttlPtr = AttList[i-1];
 
-	    STRUCT_ASSIGN_MACRO(att_ptr->name, AttlPtr->attr_name);
+	    MEmove(att_ptr->attnmlen, att_ptr->attnmstr, ' ',
+		DB_ATT_MAXNAME, AttlPtr->attr_name.db_att_name);
 	    AttlPtr->attr_type  = att_ptr->type;	    
 	    AttlPtr->attr_size  = att_ptr->length;	    
 	    AttlPtr->attr_precision  = att_ptr->precision;	    
@@ -5207,7 +5236,8 @@ DB_ERROR	*dberr)
 	    /* Load key descriptors here. */
 
 	    att_ptr = t->tcb_key_atts[i];
-	    STRUCT_ASSIGN_MACRO(att_ptr->name, key_list[i]->key_attr_name);
+	    MEmove(att_ptr->attnmlen, att_ptr->attnmstr, ' ',
+		DB_ATT_MAXNAME, key_list[i]->key_attr_name.db_att_name);
 	    key_list[i]->key_order = DM2U_ASCENDING;
 	
 	}
@@ -5352,7 +5382,8 @@ DB_ERROR	*dberr)
 		/* Load key descriptors here. */
 
 		att_ptr = t->tcb_key_atts[i];
-		STRUCT_ASSIGN_MACRO(att_ptr->name, key_list[i]->key_attr_name);
+		MEmove(att_ptr->attnmlen, att_ptr->attnmstr, ' ',
+		    DB_ATT_MAXNAME, key_list[i]->key_attr_name.db_att_name);
 		key_list[i]->key_order = DM2U_ASCENDING;
 	
 	    }
@@ -6844,7 +6875,9 @@ DB_ERROR      	    *dberr)
 	for ( i = 0; i < t->tcb_rel.relatts; i++ )
 	{
 	    attr_array[i] = &attrs[i];
-	    STRUCT_ASSIGN_MACRO(t->tcb_atts_ptr[i+1].name, attrs[i].attr_name);
+	    MEmove(t->tcb_atts_ptr[i+1].attnmlen,
+		t->tcb_atts_ptr[i+1].attnmstr, ' ',
+		DB_ATT_MAXNAME, attrs[i].attr_name.db_att_name);
 	    attrs[i].attr_type = t->tcb_atts_ptr[i+1].type;
 	    attrs[i].attr_size = t->tcb_atts_ptr[i+1].length;
 	    attrs[i].attr_precision = t->tcb_atts_ptr[i+1].precision;
@@ -6861,7 +6894,9 @@ DB_ERROR      	    *dberr)
 	for ( i = 0; i < mct->mct_keys; i++ )
 	{
 	    key_array[i] = &keys[i];
-	    STRUCT_ASSIGN_MACRO(m->mx_i_key_atts[i]->name, keys[i].key_attr_name);
+	    MEmove(m->mx_i_key_atts[i]->attnmlen,
+		m->mx_i_key_atts[i]->attnmstr, ' ',
+		DB_ATT_MAXNAME, keys[i].key_attr_name.db_att_name);
 	    if (m->mx_i_key_atts[i]->flag & ATT_DESCENDING) 
 		keys[i].key_order = DM2T_DESCENDING;
 	    else
@@ -8443,8 +8478,8 @@ DB_ERROR	    *dberr)
     DB_TAB_NAME		table_name;
     DB_OWN_NAME		table_owner;
     DB_TAB_NAME		newtab_name;
-    char		mastertab_name[DB_MAXNAME + 1];
-    char		newparttab_name[DB_MAXNAME + 30];
+    char		mastertab_name[DB_TAB_MAXNAME + 1];
+    char		newparttab_name[DB_TAB_MAXNAME + 30];
     DB_TAB_NAME		newix_name;
     DB_OWN_NAME		owner;
     DB_TAB_NAME		index_name;
@@ -8675,7 +8710,10 @@ DB_ERROR	    *dberr)
 	for ( i = 0; i < t->tcb_rel.relatts; i++ )
 	{
 	    attr_ptrs[i] = &attrs[i];
-	    STRUCT_ASSIGN_MACRO(t->tcb_atts_ptr[i+1].name, attrs[i].attr_name);
+	    MEmove( t->tcb_atts_ptr[i+1].attnmlen, 
+		t->tcb_atts_ptr[i+1].attnmstr,  ' ',
+		DB_ATT_MAXNAME, attrs[i].attr_name.db_att_name);
+
 	    attrs[i].attr_type = t->tcb_atts_ptr[i+1].type;
 	    attrs[i].attr_size = t->tcb_atts_ptr[i+1].length;
 	    attrs[i].attr_precision = t->tcb_atts_ptr[i+1].precision;
@@ -8691,7 +8729,9 @@ DB_ERROR	    *dberr)
 		** btree non-key atts will show up otherwise 
 		*/
 		key_ptrs[i] = &keys[i];
-		STRUCT_ASSIGN_MACRO(t->tcb_atts_ptr[i+1].name, keys[i].key_attr_name);
+		MEmove(t->tcb_atts_ptr[i+1].attnmlen, 
+		    t->tcb_atts_ptr[i+1].attnmstr, ' ',
+		    DB_ATT_MAXNAME, keys[i].key_attr_name.db_att_name);
 	    }
 	}
 
@@ -8811,8 +8851,8 @@ DB_ERROR	    *dberr)
 	/* create $online partitions */
         if (m->mx_spcb_count > 1)
         {
-	    MEcopy(newtab_name.db_tab_name, DB_MAXNAME, mastertab_name);
-	    mastertab_name[DB_MAXNAME] = '\0';
+	    MEcopy(newtab_name.db_tab_name, DB_TAB_MAXNAME, mastertab_name);
+	    mastertab_name[DB_TAB_MAXNAME] = '\0';
 	    for ( sp = m->mx_spcb_next;
 		  sp && status == E_DB_OK;
 		  sp = sp->spcb_next )
@@ -10566,10 +10606,10 @@ DB_ERROR	    *dberr)
 	    if (pos_opcb->opcb_rcb)
 	    {
 		local_status = dm2t_close(pos_opcb->opcb_rcb, DM2T_NOPURGE,
-				dberr);
+				&local_dberr);
 		if (local_status != E_DB_OK)
 		{
-		    uleFormat(dberr, 0, (CL_ERR_DESC *)NULL,
+		    uleFormat(&local_dberr, 0, (CL_ERR_DESC *)NULL,
 			    ULE_LOG, NULL, (char *)NULL, (i4)0,
 			    (i4 *)NULL, &error, 0);
 		    status = local_status;
@@ -10737,8 +10777,14 @@ for pg = %d  pgstat=0x%x\n",
 	{
 	    if (src_part_list[i].opcb_rcb)
 	    {
-		status = dm2t_close(src_part_list[i].opcb_rcb, 
-				DM2T_NOPURGE, dberr);
+		local_status = dm2t_close(src_part_list[i].opcb_rcb, 
+				DM2T_NOPURGE, &local_dberr);
+		if (local_status)
+		{
+		    uleFormat(&local_dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL, 
+			(char *)NULL, (i4)0, (i4 *)NULL, &local_error, 0);
+		   status = local_status;
+		}
 	    }
 	}
 	dm0m_deallocate((DM_OBJECT **)&fpsrc_misc_cb);
@@ -11607,11 +11653,11 @@ DB_ERROR		*dberr)
     DB_TAB_ID		temp_tabid;
     DB_TAB_ID		newpart_tabid;
     DB_TAB_ID		newpart_ixid;
-    char                mastertab_name[DB_MAXNAME + 1];
-    char                newparttab_name[DB_MAXNAME + 30];
+    char                mastertab_name[DB_TAB_MAXNAME + 1];
+    char                newparttab_name[DB_TAB_MAXNAME + 30];
 
-    MEcopy(tabname->db_tab_name, DB_MAXNAME, mastertab_name);
-    mastertab_name[DB_MAXNAME] = '\0';
+    MEcopy(tabname->db_tab_name, DB_TAB_MAXNAME, mastertab_name);
+    mastertab_name[DB_TAB_MAXNAME] = '\0';
 	
     relstat &= ~TCB_IS_PARTITIONED;
     relstat2 |= TCB2_PARTITION;

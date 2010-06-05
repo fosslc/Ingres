@@ -120,6 +120,8 @@
 **      30-aug-06 (thaju02)
 **          In psy_rules(), if delete query and PSS_RULE_DEL_PREFETCH, 
 **          then set PST_DEL_PREFETCH bit in the pst_pmask. (B116355)
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -1553,8 +1555,7 @@ psy_rules(
 		cps->pst_pmask = PST_CPRULE;
 		/* Fill in rule name for tracing */
 		STRUCT_ASSIGN_MACRO(rtup->dbr_name, cps->pst_rulename);
-		STRUCT_ASSIGN_MACRO(*((DB_NAME *) &rtup->dbr_owner),
-				    cps->pst_ruleowner);
+		STRUCT_ASSIGN_MACRO(rtup->dbr_owner, cps->pst_ruleowner);
 		cps->pst_procname.qso_n_id.db_cursor_id[0] =
 		    cps->pst_procname.qso_n_id.db_cursor_id[1] = 0;
 		

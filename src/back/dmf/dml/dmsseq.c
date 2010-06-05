@@ -84,6 +84,8 @@
 **	    SIR 120874: dm0m_? functions converted to DB_ERROR *
 **	24-Aug-2009 (kschendel) 121804
 **	    Need mh.h to satisfy gcc 4.3.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -447,14 +449,14 @@ PTR        dms_cb)
 		    else
 		    {
 			char	sem_name[CS_SEM_NAME_LEN*2];
-			char	seq_name[DB_MAXNAME+1];
+			char	seq_name[DB_SEQ_MAXNAME+1];
 
 			s->seq_q_next = (DML_SEQ*)NULL;
 			s->seq_q_prev = (DML_SEQ*)NULL;
 
 			MEcopy((PTR)&dms_seq->seq_name,
-				DB_MAXNAME, seq_name);
-			seq_name[DB_MAXNAME] = EOS;
+				DB_SEQ_MAXNAME, seq_name);
+			seq_name[DB_SEQ_MAXNAME] = EOS;
 			STtrmwhite(seq_name);
 			STpolycat(2, "SeqGen ", seq_name, sem_name);
 			dm0s_minit(&s->seq_mutex, sem_name);

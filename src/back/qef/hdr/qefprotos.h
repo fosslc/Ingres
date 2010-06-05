@@ -241,6 +241,8 @@
 **	    reservation routines.
 **	17-Nov-2009 (kschendel) SIR 122890
 **	    Merge put and load into put.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*	QEC functions	*/
@@ -935,7 +937,7 @@ qel_26_ndx_name(
 QEF_RCB		*i_qer_p,
 QEC_LINK	*v_lnk_p,
 i4		i_ndx_ord,
-DD_NAME		*o_given_p );
+DD_TAB_NAME	*o_given_p );
 
 FUNC_EXTERN DB_STATUS
 qel_31_std_cats(
@@ -3111,7 +3113,7 @@ FUNC_EXTERN DB_STATUS
 qeu_db_exists(
 QEF_CB	*qef_cb,
 QEUQ_CB *qeuq_cb,
-DB_NAME *dbname,
+DB_DB_NAME *dbname,
 i4	access,
 DB_OWN_NAME *dbowner
 );

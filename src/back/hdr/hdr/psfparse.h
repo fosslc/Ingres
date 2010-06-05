@@ -673,6 +673,8 @@
 **	    Added E_PS03AF_SUBSEL_ORDERBY_WITH_UNION
 **	30-Mar-2010 (kschendel) SIR 123485
 **	    Re-type psq_call to use the proper struct pointer.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -1967,8 +1969,8 @@ typedef struct _PSQ_TRPARMS
 */
 typedef struct _PSQ_STMT_INFO
 {
-    char		psq_stmt_tabname[DB_MAXNAME+1];
-    char		psq_stmt_ownname[DB_MAXNAME+1];
+    char		psq_stmt_tabname[DB_TAB_MAXNAME+1];
+    char		psq_stmt_ownname[DB_OWN_MAXNAME+1];
     i4			psq_stmt_blob_cnt;
     i4			psq_stmt_blob_colno;
 } PSQ_STMT_INFO;
@@ -3862,7 +3864,7 @@ typedef struct _PST_RSDM_NODE
 					** either one will be set, but not
 					** both
 					*/
-    char	    pst_rsname[DB_MAXNAME]; /* name of result column */
+    char	    pst_rsname[DB_ATT_MAXNAME]; /* name of result column */
     DB_DEF_ID	    pst_defid;		/* used during RETRIEVE INTO and CREATE
 					** TABLE AS SELECT, in order to preserve
 					** default values in the new table
@@ -6191,7 +6193,7 @@ typedef struct _PST_CPROCSTMT
 					** nested procedure call) then this
 					** field is cleared.
 					*/
-    DB_NAME		pst_ruleowner;	/* Owner of rule for security audit. */
+    DB_OWN_NAME		pst_ruleowner;	/* Owner of rule for security audit. */
     QSO_NAME		pst_procname;
     i4			pst_pmask;	/* Tag differentiates between
 					** usages of this node:	

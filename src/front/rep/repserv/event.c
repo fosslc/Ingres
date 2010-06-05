@@ -68,6 +68,8 @@
 **      22-Nov-2007 (kibro01) b119245
 **          Add a flag to requiet a server if it was previously quiet
 **          but has been unquieted for a connection retry.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 # define NLKUP_EVENTS		10	/* number of server lookup events */
@@ -128,7 +130,7 @@ RSdbevents_register()
 {
 	i4			i;
 	i4			end_array;
-	char			stmt[100];
+	char			stmt[100 + DB_MAXNAME];
 	RS_CONN			*conn = &RSconns[NOTIFY_CONN];
 	IIAPI_DATAVALUE		cdv[3];
 	IIAPI_STATUS		status;

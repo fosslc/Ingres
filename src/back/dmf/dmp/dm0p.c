@@ -1842,6 +1842,8 @@ NO_OPTIM=dr6_us5 i64_aix
 **         SIR 123296
 **         Add LSB option, writable files are stored under ADMIN, logs under
 **         LOG and read-only under FILES location.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -3902,9 +3904,9 @@ DB_ERROR            *dberr)
 	( shrbuf_init ) ? cache_name : "LOCAL_CACHE");
 
     if ((flags & DM0P_SHARED_BUFMGR) && (cache_name != NULL))
-	STmove(cache_name, ' ', DB_MAXNAME, bm_common->bmcb_name.db_name);
+	STmove(cache_name, ' ', DB_DB_MAXNAME, bm_common->bmcb_name.db_name);
     else
-	STmove("LOCAL_CACHE", ' ', DB_MAXNAME, bm_common->bmcb_name.db_name);
+	STmove("LOCAL_CACHE", ' ', DB_DB_MAXNAME, bm_common->bmcb_name.db_name);
 
     bm_common->bmcb_id = bm_lock_list;
     bm_common->bmcb_dbcsize = dbc_size;
@@ -3936,7 +3938,7 @@ DB_ERROR            *dberr)
 	*/
 	if (segment_ix != 0)
 	    bmsegp->bms_tblcache = bmsegp->bms_dbcache = 0;
-	STmove(bm_common->bmcb_name.db_name, ' ', DB_MAXNAME,
+	STmove(bm_common->bmcb_name.db_name, ' ', DB_DB_MAXNAME,
 		bmsegp->bms_name.db_name);
 	for (cache_ix = 0; cache_ix < DM_MAX_CACHE; cache_ix++)
 	{
@@ -6330,8 +6332,6 @@ DB_ERROR	*dberr)
     CL_ERR_DESC      sys_err;
     char            *tbl_name;
     char            *dbs_name;
-    char            tbl_buf[DB_MAXNAME];
-    char            dbs_buf[DB_MAXNAME];
     i4		    restarts;
     /* For debugging RedoLSN */
     bool RedoLSNDebug = FALSE;
@@ -13046,8 +13046,8 @@ DB_ERROR            *dberr)
                                                    foreign BM */
     char	    *tbl_name,
 		    *dbs_name;
-    char	    tbl_buf[DB_MAXNAME];
-    char	    dbs_buf[DB_MAXNAME];
+    char	    tbl_buf[40]; /* "TABLE_ID (%d,%d)" */
+    char	    dbs_buf[40];  /* "DATABASE_ID (%d,%d)" */
     bool	    beyond_eof = FALSE;
     i4		    *err_code = &dberr->err_code;
 
@@ -23189,7 +23189,7 @@ dm0p_count_connections(void)
 	{
 	    uleFormat(NULL, E_DM937D_BM_CONNECTIONS, &sys_err, ULE_LOG, NULL,
 		(char *)NULL, (i4)0, (i4 *)NULL, &error, 3,
-		DB_MAXNAME, bm_common->bmcb_name.db_name,
+		DB_DB_MAXNAME, bm_common->bmcb_name.db_name,
 		0, bm_common->bmcb_srv_count, 0, new_count);
 	    dmd_check(E_DMF025_BM_CONNECT_COUNT);
 	}
@@ -25996,8 +25996,8 @@ TRdisplay("        NAME                    OFFSET  TYPE    LENGTH PREC KEY KOFFS
 	TRdisplay("%#.#{%8* %.#s  %4.2d  %8.2w  %4.2d %4.2d %3.2d    %4.2d\n%}",
 	    tcb->tcb_rel.relatts, 
 	    sizeof(DB_ATTS), &tcb->tcb_atts_ptr[1], 
-	    sizeof(((DB_ATTS *)NULL)->name),
-	    &((DB_ATTS *)NULL)->name, &((DB_ATTS *)NULL)->offset, 
+	    32, ((DB_ATTS *)NULL)->attnmstr,
+	    &((DB_ATTS *)NULL)->offset, 
 	    ",,,DATE,,MONEY,,,,,,,,,,,,,,,CHAR,VCHAR,,,,,,,,,INT,FLOAT,CHAR,,,,,TEXT",
 	     &((DB_ATTS *)NULL)->type,
 	    &((DB_ATTS *)NULL)->length, &((DB_ATTS *)NULL)->precision, 
@@ -26009,7 +26009,8 @@ TRdisplay("        NAME                    OFFSET  TYPE    LENGTH PREC KEY KOFFS
 	    TRdisplay("        NAME                    OFFSET  TYPE    LENGTH PREC KEY KOFFSET\n"); 
 	    TRdisplay("%#[%8* %.#s  %4.2d  %8.2w  %4.2d %4.2d %3.2d    %4.2d\n%]",
 		tcb->tcb_rel.relkeys, tcb->tcb_key_atts,
-		sizeof(((DB_ATTS *)NULL)->name), &((DB_ATTS *)NULL)->name, &((DB_ATTS *)NULL)->offset, 
+		32, ((DB_ATTS *)NULL)->attnmstr,
+		&((DB_ATTS *)NULL)->offset, 
 		",,,DATE,,MONEY,,,,,,,,,,,,,,,CHAR,VCHAR,,,,,,,,,INT,FLOAT,CHAR,,,,,TEXT",
 		&((DB_ATTS *)NULL)->type,
 		&((DB_ATTS *)NULL)->length, &((DB_ATTS *)NULL)->precision, &((DB_ATTS *)NULL)->key,
@@ -30022,8 +30023,8 @@ DB_ERROR *dberr)
     i4	    	    next_buf, prev_buf;
     char            *tbl_name,
                     *dbs_name;
-    char            tbl_buf[DB_MAXNAME],
-                    dbs_buf[DB_MAXNAME];
+    char	    tbl_buf[40]; /* "TABLE_ID (%d,%d)" */
+    char	    dbs_buf[40];  /* "DATABASE_ID (%d,%d)" */
     i4		    buf_is_on_state_queue;
     DB_ERROR        orig_dberr = *dberr;
     i4		    action, i;

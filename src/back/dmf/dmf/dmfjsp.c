@@ -604,6 +604,8 @@
 **          Fix call to jsp_log_info (b121547)
 **	11-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **	    
 */
 /*
@@ -825,7 +827,7 @@ char		    *argv[];
     CL_ERR_DESC         cl_err;
     DB_OWN_NAME 	eusername;
     EX_CONTEXT		context;
-    char		dbname[DB_MAXNAME+1];
+    char		dbname[DB_DB_MAXNAME+1];
     char		NodeName[CX_MAX_NODE_NAME_LEN +1];
     i4			error;
     DB_ERROR		local_dberr;
@@ -1003,8 +1005,8 @@ char		    *argv[];
 	    /* Set global context */
 	    dmf_jsp_dcb = dcb;
 
-	    STncpy( dbname, dcb->dcb_name.db_db_name, DB_MAXNAME);
-	    dbname[ DB_MAXNAME ] = '\0';
+	    STncpy( dbname, dcb->dcb_name.db_db_name, DB_DB_MAXNAME);
+	    dbname[ DB_DB_MAXNAME ] = '\0';
 	    STtrmwhite(dbname);
 
 	    /*  Start an SXF audit session */
@@ -1424,7 +1426,7 @@ DMF_JSX		    *journal_context)
     char	error_buffer[ER_MAX_LEN];
     i4	    	error_length;
     u_i4	len_trans;
-    u_char	unpad_name[DB_MAXNAME + 1];
+    u_char	unpad_owner[DB_OWN_MAXNAME + 1];
     i4		c_buffers[DM_MAX_CACHE];
     i4		dmf_cache_size[DM_MAX_CACHE];
     i4		cache_ix;
@@ -2040,8 +2042,9 @@ DMF_JSX		    *journal_context)
 			    ** Delimited id found.  Normalize w/o case xlation,
 			    ** which is per-database and performed later.
 			    */
+			    len_trans = DB_OWN_MAXNAME;
 			    status = jsp_normalize(jsx, 0,
-				(u_char *)&argv[i][2], &len_trans, unpad_name);
+				(u_char *)&argv[i][2], &len_trans, unpad_owner);
 			    if (status != E_DB_OK)
 			    {
 				dmfWriteMsg(&jsx->jsx_dberr, 0, 0);
@@ -2050,8 +2053,8 @@ DMF_JSX		    *journal_context)
 			    else
 			    {
 				jsx->jsx_aname_delim = TRUE;
-				MEmove(len_trans, (char *)unpad_name, ' ',
-				    DB_MAXNAME,
+				MEmove(len_trans, (char *)unpad_owner, ' ',
+				    DB_OWN_MAXNAME,
 				    (char *)jsx->jsx_a_name.db_own_name);
 			    }
 			}
@@ -2347,7 +2350,7 @@ DMF_JSX		    *journal_context)
 			{
 			    CVlower(&argv[i][14]);
 			    MEmove(STlength(&argv[i][14]), &argv[i][14], ' ',
-				DB_MAXNAME, (char *)&jsx->jsx_newdbname);
+				DB_DB_MAXNAME, (char *)&jsx->jsx_newdbname);
 			    jsx->jsx_status1 |= JSX_DB_RELOC;
 			}
 		    }
@@ -2745,8 +2748,9 @@ DMF_JSX		    *journal_context)
 		    ** Normalize without case translation.  Case xlation is
 		    ** per-database and is performed later.
 		    */
+		    len_trans = DB_OWN_MAXNAME;
 		    status = jsp_normalize(jsx, 0, (u_char *)&argv[i][2],
-			&len_trans, unpad_name);
+			&len_trans, unpad_owner);
 		    if (status != E_DB_OK)
 		    {
 			dmfWriteMsg(&jsx->jsx_dberr, 0, 0);
@@ -2755,8 +2759,8 @@ DMF_JSX		    *journal_context)
 		    else
 		    {
 			jsx->jsx_username_delim = TRUE;
-			MEmove(len_trans, (char *)unpad_name, ' ',
-			    DB_MAXNAME,
+			MEmove(len_trans, (char *)unpad_owner, ' ',
+			    DB_OWN_MAXNAME,
 			    (char *)jsx->jsx_username.db_own_name);
 		    }
 		}
@@ -3906,7 +3910,7 @@ DMF_JSX             *journal_context)
 	cased_username.db_own_name[0] = 0;
 	if (jsx->jsx_status & JSX_UNAME)
 	{
-	    jsp_set_case(jsx, jsx->jsx_reg_case, DB_MAXNAME,
+	    jsp_set_case(jsx, jsx->jsx_reg_case, DB_OWN_MAXNAME,
 		(char *)&jsx->jsx_username, (char *)&cased_username);
 	}
 
@@ -3914,7 +3918,7 @@ DMF_JSX             *journal_context)
 	** User names obtained from the operating system
 	** must have "real user case" applied.
 	*/
-	jsp_set_case(jsx, jsx->jsx_real_user_case, DB_MAXNAME,
+	jsp_set_case(jsx, jsx->jsx_real_user_case, DB_OWN_MAXNAME,
 		(char *)&username, (char *)&cased_realuser);
 
 	/*
@@ -4063,7 +4067,7 @@ DMF_JSX             *journal_context)
     cased_username.db_own_name[0] = 0;
     if (jsx->jsx_status & JSX_UNAME)
     {
-	jsp_set_case(jsx, jsx->jsx_reg_case, DB_MAXNAME,
+	jsp_set_case(jsx, jsx->jsx_reg_case, DB_OWN_MAXNAME,
 	    (char *)&jsx->jsx_username, (char *)&cased_username);
     }
 
@@ -4071,7 +4075,7 @@ DMF_JSX             *journal_context)
     ** User names obtained from the operating system
     ** must have "real user case" applied.
     */
-    jsp_set_case(jsx, jsx->jsx_real_user_case, DB_MAXNAME,
+    jsp_set_case(jsx, jsx->jsx_real_user_case, DB_OWN_MAXNAME,
 	    (char *)&username, (char *)&cased_realuser);
 
     /*
@@ -4454,6 +4458,8 @@ DMF_JSX             *journal_context)
 
 		SETDBERR(&jsx->jsx_dberr, 0, E_DM1011_JSP_DB_NOTFOUND);
 		key_list[0].attr_value = (char *)&ndcb->dcb_name;
+		key_list[0].attr_operator = DM2R_EQ;
+		key_list[0].attr_number = DM_1_DATABASE_KEY;
 		status = dm2r_position(rcb, DM2R_QUAL, key_list,
                                        1, &tid, &jsx->jsx_dberr);
 		if (status == E_DB_OK)
@@ -4785,7 +4791,7 @@ DMP_LOC_ENTRY	    *location)
     i4		    i;
     char	    *cp;
     LOCATION	    loc;
-    char	    db_name[DB_MAXNAME+1];
+    char	    db_name[DB_DB_MAXNAME+1];
     char	    area[256];
     DB_STATUS	    status;
 
@@ -5027,11 +5033,12 @@ DMF_JSX		*jsx)
 ** Inputs:
 **      jsx                     jsx context
 **      untrans_len		Length of object, or zero if null terminated 
+**      trans_len		max length of translated object
 **      obj			object to be masticated, null terminated
 **
 ** Outputs:
 **      obj			translated object 
-**      trans_len		length of translated object
+**      trans_len		actual length of translated object
 **	err_code		reason for DB_STATUS != E_DB_OK
 **
 ** Side Effects:
@@ -5055,8 +5062,8 @@ u_char		*unpad_obj)
 
     /*
     ** Normalize the delimited name, leave the case as is.
+    ** Caller has initialized trans_len 
     */
-    *trans_len = DB_MAXNAME;
     status = cui_idxlate(obj, &untrans_len, unpad_obj, trans_len, 
 	CUI_ID_DLM_M, &ret_mode, &jsx->jsx_dberr);
     if (DB_FAILURE_MACRO(status))
@@ -5116,7 +5123,7 @@ char		*cmd_line)
     u_i4		len_trans;
     u_char		*tmp_end;
     u_char		*src = (u_char *)cmd_line;
-    u_char		unpad_name[(2*DB_MAXNAME) + 20];
+    u_char		unpad_name[(DB_TAB_MAXNAME + DB_OWN_MAXNAME) + 20];
     bool    		comma_found;
     char		error_buffer[ER_MAX_LEN];
     i4		error_length;
@@ -5170,12 +5177,13 @@ char		*cmd_line)
 
             if (dot_found == TRUE)
             {
+		len_trans = DB_OWN_MAXNAME;
                 status = jsp_normalize(jsx, own_name_len, (u_char *)src,
 					&len_trans, unpad_name);
                 if (status != E_DB_OK)
 		    break;
 
-                MEmove(len_trans, (char *)unpad_name, ' ', DB_MAXNAME,
+                MEmove(len_trans, (char *)unpad_name, ' ', DB_OWN_MAXNAME,
                 (char *)jsx->jsx_tbl_list[i].tbl_owner.db_own_name);
 
                 src = src + own_name_len + 1;
@@ -5201,12 +5209,13 @@ char		*cmd_line)
 	    /*
 	    ** Normalize and save the name, flag it as delimited. 
 	    */
+	    len_trans = DB_TAB_MAXNAME;
 	    status = jsp_normalize(jsx, tbl_name_len, (u_char *)src, 
 		&len_trans, unpad_name);
 	    if (status != E_DB_OK)
 		break;
 
-	    MEmove(len_trans, (char *)unpad_name, ' ', DB_MAXNAME, 
+	    MEmove(len_trans, (char *)unpad_name, ' ', DB_TAB_MAXNAME, 
 		(char *)jsx->jsx_tbl_list[i].tbl_name.db_tab_name);
 
 	    jsx->jsx_tbl_list[i].tbl_delim = TRUE;
@@ -5255,7 +5264,8 @@ char		*cmd_line)
                  own_name_len = 0;
               }
 
-            if ((tbl_name_len > DB_MAXNAME) || (own_name_len > DB_MAXNAME))
+            if ((tbl_name_len > DB_TAB_MAXNAME) 
+			|| (own_name_len > DB_OWN_MAXNAME))
 	    {
 		status = E_DB_ERROR;
 		SETDBERR(&jsx->jsx_dberr, 0, E_DM104F_JSP_NAME_LEN);
@@ -5264,7 +5274,7 @@ char		*cmd_line)
 
             if(own_name_len != 0)
             {
-                MEmove(own_name_len, (char *)src, ' ', DB_MAXNAME,
+                MEmove(own_name_len, (char *)src, ' ', DB_OWN_MAXNAME,
                    (char *)jsx->jsx_tbl_list[i].tbl_owner.db_own_name);
                 src += own_name_len + 1;
             }
@@ -5274,7 +5284,7 @@ char		*cmd_line)
 			(char *)jsx->jsx_tbl_list[i].tbl_owner.db_own_name );
 	    }
 
-	    MEmove(tbl_name_len, (char *)src, ' ', DB_MAXNAME, 
+	    MEmove(tbl_name_len, (char *)src, ' ', DB_TAB_MAXNAME, 
 		(char *)jsx->jsx_tbl_list[i].tbl_name.db_tab_name);
 
 	    jsx->jsx_tbl_list[i].tbl_delim = FALSE;
@@ -5599,7 +5609,7 @@ audit_jsp_action(
     /*
     ** construct database name
     */
-    MEcopy(obj_name, DB_MAXNAME, dbname.db_db_name);
+    MEcopy(obj_name, DB_DB_MAXNAME, dbname.db_db_name);
 
     if (succeed)
 	access = SXF_A_SUCCESS;
@@ -5680,7 +5690,7 @@ jsp_chk_priv(
 char *user_name, 
 char *priv_name )
 {
-	char	pmsym[128+DB_MAXNAME], userbuf[DB_MAXNAME+1], *value, *valueptr ;
+	char	pmsym[128+DB_MAXNAME], userbuf[DB_OWN_MAXNAME+1], *value, *valueptr ;
 	char	*strbuf = 0;
 	int	priv_len;
 
@@ -5692,8 +5702,8 @@ char *priv_name )
 	**  	    MONITOR,TRUSTED
         */
 
-	STncpy( userbuf, user_name, DB_MAXNAME );
-	userbuf[ DB_MAXNAME ] = '\0';
+	STncpy( userbuf, user_name, DB_OWN_MAXNAME );
+	userbuf[ DB_OWN_MAXNAME ] = '\0';
 	STtrmwhite( userbuf );
 	STprintf(pmsym, "$.$.privileges.user.%s", userbuf);
 	
@@ -5802,7 +5812,7 @@ i4          maxloc)
 	else
 	    loc_name_len = tmp_end - src;
 
-	if (loc_name_len > DB_MAXNAME)
+	if (loc_name_len > DB_LOC_MAXNAME)
 	{
 	    status = E_DB_ERROR;
 	    SETDBERR(&jsx->jsx_dberr, 0, E_DM104F_JSP_NAME_LEN);
@@ -5816,7 +5826,7 @@ i4          maxloc)
 	    break;
 	}
 
-	MEmove(loc_name_len, (char *)src, ' ', DB_MAXNAME, 
+	MEmove(loc_name_len, (char *)src, ' ', DB_LOC_MAXNAME, 
 		(char *)loc_list[i].loc_name.db_loc_name);
 
 	/*

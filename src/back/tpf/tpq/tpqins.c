@@ -28,6 +28,10 @@
 #include    <tpfqry.h>
 #include    <tpfproto.h>
 
+/* buffer size for insert into TPC_D1_DXLOG or TPC_D2_DXLDBS */
+#define INS_MAX_QRY (sizeof(TPC_D2_DXLDBS) > sizeof(TPC_D1_DXLOG) ? \
+		sizeof(TPC_D2_DXLDBS) : sizeof(TPC_D1_DXLOG))
+
 /**
 **  Name: TPQINS.C - Utility routines for inserting into CDB catalogs
 **
@@ -55,6 +59,8 @@
 **	    replace nat and longnat with i4
 **	04-Oct-2001 (jenjo02)
 **	    #include tpfproto.h for typing tpd_u2_err_internal macro.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -115,7 +121,7 @@ tpq_i1_insert(
                     trace_err_104 = FALSE;
     i4         i4_1,
                     i4_2;
-    char	    qrytxt[1000];
+    char	    qrytxt[1000 + INS_MAX_QRY];
 
 
     if (ult_check_macro(& ss_p->tss_3_trace_vector, TSS_TRACE_QUERIES_102,
@@ -224,9 +230,9 @@ tpq_i2_query(
 {
     DB_STATUS	status;
     i4		can_id = v_qcb_p->qcb_1_can_id;
-    char	seg1[100],
-		seg2[100],
-		seg3[100];    	    
+    char	seg1[100 + DB_DB_MAXNAME + DB_NODE_MAXNAME],
+		seg2[100 + DB_DB_MAXNAME + DB_NODE_MAXNAME],
+		seg3[100 + DB_DB_MAXNAME + DB_NODE_MAXNAME];    	    
 	    
 	    
 
@@ -240,7 +246,7 @@ tpq_i2_query(
 	    /*	insert into iidd_ddb_dxlog values (i4, i4, i4, i4, i4, 
 		date, date, i4, i4, 32c, 256c, 32c, i4); */
 	
-	    dxlog_p->d1_3_dx_name[DB_MAXNAME] = EOS;
+	    dxlog_p->d1_3_dx_name[DB_DB_MAXNAME] = EOS;
 	    STtrmwhite(dxlog_p->d1_3_dx_name);
 
 	    dxlog_p->d1_6_dx_create[DD_25_DATE_SIZE] = EOS;
@@ -249,13 +255,13 @@ tpq_i2_query(
 	    dxlog_p->d1_7_dx_modify[DD_25_DATE_SIZE] = EOS;
 	    STtrmwhite(dxlog_p->d1_7_dx_modify);
 
-	    dxlog_p->d1_10_dx_ddb_node[DB_MAXNAME] = EOS;
+	    dxlog_p->d1_10_dx_ddb_node[DB_NODE_MAXNAME] = EOS;
 	    STtrmwhite(dxlog_p->d1_10_dx_ddb_node);
 
 	    dxlog_p->d1_11_dx_ddb_name[DD_256_MAXDBNAME] = EOS;
 	    STtrmwhite(dxlog_p->d1_11_dx_ddb_name);
 
-	    dxlog_p->d1_12_dx_ddb_dbms[DB_MAXNAME] = EOS;
+	    dxlog_p->d1_12_dx_ddb_dbms[DB_TYPE_MAXLEN] = EOS;
 	    STtrmwhite(dxlog_p->d1_12_dx_ddb_dbms);
 
 	    STprintf(
@@ -302,16 +308,16 @@ tpq_i2_query(
 	    ** (i4, i4, c32, c32, c256, i4, i4, i4, i4); 
 	    */
 	
-	    dxldbs_p->d2_3_ldb_node[DB_MAXNAME] = EOS;
+	    dxldbs_p->d2_3_ldb_node[DB_NODE_MAXNAME] = EOS;
 	    STtrmwhite(dxldbs_p->d2_3_ldb_node);
 
 	    dxldbs_p->d2_4_ldb_name[DD_256_MAXDBNAME] = EOS;
 	    STtrmwhite(dxldbs_p->d2_4_ldb_name);
 
-	    dxldbs_p->d2_5_ldb_dbms[DB_MAXNAME] = EOS;
+	    dxldbs_p->d2_5_ldb_dbms[DB_TYPE_MAXLEN] = EOS;
 	    STtrmwhite(dxldbs_p->d2_5_ldb_dbms);
 
-	    dxldbs_p->d2_10_ldb_lxname[DB_MAXNAME] = EOS;
+	    dxldbs_p->d2_10_ldb_lxname[DB_DB_MAXNAME] = EOS;
 	    STtrmwhite(dxldbs_p->d2_10_ldb_lxname);
 
 	    if (dxldbs_p->d2_11_ldb_lxflags & TPC_LX_02FLAG_2PC)

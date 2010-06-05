@@ -155,6 +155,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 
@@ -727,7 +729,7 @@ psl_col_user_default(
 	}
 	
 	/* if datatype cannot hold all possible usernames
-	** (i.e. is not a text datatype of at least DB_MAXNAME bytes),
+	** (i.e. is not a text datatype of at least DB_OWN_MAXNAME bytes),
 	** return an error.
 	** 
 	** Note that we have to adjust for the null byte,
@@ -745,14 +747,14 @@ psl_col_user_default(
 	    || (dtype == DB_TXT_TYPE))
 	    size -= DB_CNTSIZE;		/* adjust for count field */
 
-	if (!datetime &&  (((size < DB_MAXNAME) && (dtype != DB_LVCH_TYPE))
+	if (!datetime &&  (((size < DB_OWN_MAXNAME) && (dtype != DB_LVCH_TYPE))
 	    || (   (dtype != DB_CHR_TYPE)
 		&& (dtype != DB_TXT_TYPE)
 		&& (dtype != DB_CHA_TYPE)
 		&& (dtype != DB_VCH_TYPE)
 		&& (dtype != DB_LVCH_TYPE))))
 	{
-	    size = DB_MAXNAME;
+	    size = DB_OWN_MAXNAME;
 	    
 	    (void) psf_error(E_PS0498_DEFAULT_USER_SIZE, 0L, PSF_USERERR, 
 			     &err_code, err_blk, 2,
@@ -767,7 +769,7 @@ psl_col_user_default(
     }  /* end if def_node == PST_COP */
     else if (def_node->pst_sym.pst_type == PST_SEQOP)
     {
-	char own[DB_MAXNAME+1], name[DB_MAXNAME+1];
+	char own[DB_OWN_MAXNAME+1], name[DB_MAXNAME+1];
 	i4 abstype;
 
 	/* Allow "next value for <sequence>" as a default.
@@ -911,7 +913,7 @@ psl_col_user_default(
 			     &err_code, err_blk, 2,
 			     sizeof(ERx("CREATE TABLE"))-1,
 			     ERx("CREATE TABLE"),
-			     psf_trmwhite(DB_MAXNAME,
+			     psf_trmwhite(DB_ATT_MAXNAME,
 					  attr->attr_name.db_att_name),
 			     attr->attr_name.db_att_name);
 	    return(status);
@@ -2269,7 +2271,7 @@ psl_check_defaults(
 
 	/* Fill out resdom with attribute info
 	 */
-	MEcopy((char *) att->att_name.db_att_name, DB_MAXNAME,
+	MEcopy((char *) att->att_name.db_att_name, DB_ATT_MAXNAME,
 	       (char *) resdom.pst_rsname);
 	resdom.pst_rsno      = att->att_number;
 	resdom.pst_ntargno   = att->att_number;

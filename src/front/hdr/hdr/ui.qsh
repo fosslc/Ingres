@@ -133,6 +133,8 @@
 **	24-Feb-2010 (frima01) Bug 122490
 **	    Update return types and add header files as neccessary
 **	    to eliminate gcc 4.3 warnings.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
  
 #ifndef UI_HDR_INCLUDED
@@ -345,8 +347,8 @@ typedef i4 DBSTATUS;
 
 ##typedef struct
 ##{
-##	char    table_name[DB_MAXNAME + 1];
-##	char    table_owner[DB_MAXNAME + 1];
+##	char    table_name[DB_TAB_MAXNAME + 1];
+##	char    table_owner[DB_OWN_MAXNAME + 1];
 ##	char    create_date[26];
 ##	char    alter_date[26];
 ##	char    table_type[9];
@@ -368,8 +370,8 @@ typedef i4 DBSTATUS;
  
 ##typedef struct
 ##{
-##	char    name[DB_MAXNAME+1];
-##	char    owner[DB_MAXNAME+1];
+##	char    name[DB_TAB_MAXNAME+1];
+##	char    owner[DB_OWN_MAXNAME+1];
 ##	DATE    create_date;
 ##	DATE    alter_date;
 ##	char    version[9];
@@ -380,8 +382,8 @@ typedef i4 DBSTATUS;
  
 ##typedef struct
 ##{
-##	char    table_name[DB_MAXNAME+1];
-##	char    table_owner[DB_MAXNAME+1];
+##	char    table_name[DB_TAB_MAXNAME+1];
+##	char    table_owner[DB_OWN_MAXNAME+1];
 ##	char    create_date[UI_DATESIZE+1];
 ##	char    alter_date[UI_DATESIZE+1];
 ##	char    table_type[2];
@@ -407,7 +409,7 @@ typedef i4 DBSTATUS;
 ##	char    is_journalled[2];
 ##	char    multi_locations[2];
 ##	char    view_base[2];
-##	char    location_name[DB_MAXNAME + 1];
+##	char    location_name[DB_LOC_MAXNAME + 1];
 ##	char 	key_is_compressed[2];
 ##      i4      page_size;
 ##	i4	rel_version;
@@ -431,9 +433,9 @@ typedef i4 DBSTATUS;
  
 ##typedef struct
 ##{
-##	char    table_name[DB_MAXNAME+1];
-##	char    owner[DB_MAXNAME+1];
-##	char    column_name[DB_MAXNAME+1];
+##	char    table_name[DB_TAB_MAXNAME+1];
+##	char    owner[DB_OWN_MAXNAME+1];
+##	char    column_name[DB_ATT_MAXNAME+1];
 ##	DATE    create_date;
 ##	DATE    alter_date;
 ##	char    type[DB_IITYPE_LEN+1];

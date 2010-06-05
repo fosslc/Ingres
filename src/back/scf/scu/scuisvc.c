@@ -270,6 +270,8 @@
 **          Added support for dbmsinfo('pagetype_v5')
 **	30-Mar-2010 (kschendel) SIR 123485
 **	    Re-type some ptr's as the proper struct pointer.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*
@@ -401,12 +403,12 @@ static  const SCI_INFO_TABLE Sci_info_table[] = {
     { SCI_USTAT, sizeof(i4) } ,
     { SCI_DSTAT, sizeof(i4) } ,
     { SCI_ERRORS, sizeof(i4) } ,
-    { SCI_IVERSION, DB_MAXNAME } ,
+    { SCI_IVERSION, DB_TYPE_MAXLEN } ,
     { SCI_COMMTYPE, sizeof(i4) } ,
     { SCI_SCFVERSION, 4 } ,
     { SCI_MEMORY, sizeof(i4) },
     { SCI_NOUSERS, sizeof(i4) },
-    { SCI_SNAME, DB_MAXNAME } ,
+    { SCI_SNAME, DB_TYPE_MAXLEN } ,
     { SCI_CPUTIME, sizeof(i4) } ,
     { SCI_PFAULTS, sizeof(i4) } ,
     { SCI_DIOCNT, sizeof(i4) },

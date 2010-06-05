@@ -145,6 +145,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -401,6 +403,7 @@ DB_ERROR	*dberr)
     DB_TAB_ID		idx_tabid;
     i4			max;
     DB_ERROR		local_dberr;
+    DB_ATT_NAME		tmpattnm;
 
     CLRDBERR(dberr);
     CLRDBERR(&log_err);
@@ -761,8 +764,11 @@ DB_ERROR	*dberr)
             {
 	       for (i = 1; i <= t->tcb_rel.relatts; i++)
 	       {
+		   MEmove(t->tcb_atts_ptr[i].attnmlen,
+		       t->tcb_atts_ptr[i].attnmstr,
+		       ' ', DB_ATT_MAXNAME, tmpattnm.db_att_name);
 		   if (t->tcb_atts_ptr[i].ver_dropped == 0 &&
-		       MEcmp((PTR)&t->tcb_atts_ptr[i].name,
+		       MEcmp(tmpattnm.db_att_name,
 				(PTR)&attr_entry[0]->attr_name,
 				sizeof(DB_ATT_NAME) ) == 0)
 		   {
@@ -870,9 +876,13 @@ DB_ERROR	*dberr)
 	      /* search the attribute to alter */
               for (i = 1; i <= t->tcb_rel.relatts; i++)
               {
+		MEmove(t->tcb_atts_ptr[i].attnmlen,
+		    t->tcb_atts_ptr[i].attnmstr,
+		    ' ', DB_ATT_MAXNAME, tmpattnm.db_att_name);
+
                   if (t->tcb_atts_ptr[i].ver_altcol == 0 &&
                       t->tcb_atts_ptr[i].ver_dropped == 0 &&
-                       MEcmp((PTR)&t->tcb_atts_ptr[i].name,
+                       MEcmp(tmpattnm.db_att_name,
                                 (PTR)&attr_entry[0]->attr_name,
                                 sizeof(DB_ATT_NAME) ) == 0)
                   {
@@ -881,12 +891,10 @@ DB_ERROR	*dberr)
                     ADI_DT_NAME     coltype_name;
                     ADI_DT_NAME     restype_name;
 		    ADI_DT_BITMASK  typeset;
-		    char 	    colname[DB_MAXNAME];
 
 		    /* Check if the column is a key in the table */
                     if (t->tcb_atts_ptr[i].key)
                     {
-                        STcopy (t->tcb_atts_ptr[i].name.db_att_name, colname);
                         uleFormat(dberr, E_DM019C_ACOL_KEY_NOT_ALLOWED, 
 					(CL_ERR_DESC *)NULL, ULE_LOG,
                                            NULL, (char *)NULL, (i4)0,
@@ -894,7 +902,8 @@ DB_ERROR	*dberr)
                           sizeof(DB_OWN_NAME), t->tcb_rel.relowner.db_own_name,
                           sizeof(DB_TAB_NAME), t->tcb_rel.relid.db_tab_name,
                           sizeof(DB_DB_NAME), t->tcb_dcb_ptr->dcb_name.db_db_name,
-                          STtrmwhite(colname), colname);
+			  t->tcb_atts_ptr[i].attnmlen,
+			  t->tcb_atts_ptr[i].attnmstr);
 			SETDBERR(&log_err, 0, E_DM9028_ATTR_UPDATE_ERR);
                         status = E_DB_ERROR;
                         break;
@@ -918,8 +927,6 @@ DB_ERROR	*dberr)
                         status = adi_tyname(&adf_scb, coltype, &coltype_name);
                         status = adi_tyname(&adf_scb, restype, &restype_name);
 
-			STcopy (t->tcb_atts_ptr[i].name.db_att_name, colname);
-
                         uleFormat(dberr, E_DM019B_INVALID_ALTCOL_PARAM, 
 					(CL_ERR_DESC *)NULL, ULE_LOG,
                                            NULL, (char *)NULL, (i4)0,
@@ -928,7 +935,8 @@ DB_ERROR	*dberr)
 					   &coltype_name, 
 					   STtrmwhite((char *)&restype_name), 
 					   &restype_name,
-					   STtrmwhite(colname), colname);
+					   t->tcb_atts_ptr[i].attnmlen,
+					   t->tcb_atts_ptr[i].attnmstr);
 			SETDBERR(&log_err, 0, E_DM9028_ATTR_UPDATE_ERR);
                         status = E_DB_ERROR;
                         break;
@@ -938,8 +946,6 @@ DB_ERROR	*dberr)
 			      (attr_entry[0]->attr_type > 0) )
 		    {
 			/* nullable to non-nullable */
-                       STcopy (t->tcb_atts_ptr[i].name.db_att_name, colname);
-
                         uleFormat(dberr, E_DM019B_INVALID_ALTCOL_PARAM, 
 					(CL_ERR_DESC *)NULL, ULE_LOG,
                                            NULL, (char *)NULL, (i4)0,
@@ -948,7 +954,8 @@ DB_ERROR	*dberr)
                                            "nullable",
                                            sizeof("non-nullable"),
                                            "non-nullable",
-                                           STtrmwhite(colname), colname);
+					   t->tcb_atts_ptr[i].attnmlen,
+					   t->tcb_atts_ptr[i].attnmstr);
 			SETDBERR(&log_err, 0, E_DM9028_ATTR_UPDATE_ERR);
                         status = E_DB_ERROR;
                         break;
@@ -1427,12 +1434,16 @@ DB_ERROR	    *dberr)
 {
     i4	i;
     DMP_TCB	*it;
+    DB_ATT_NAME tmpattnm;
 
     CLRDBERR(dberr);
 
     for (i = 0; i < t->tcb_rel.relatts; i++)
     {
-	if (MEcmp(&t->tcb_data_rac.att_ptrs[i]->name,
+	MEmove(t->tcb_data_rac.att_ptrs[i]->attnmlen,
+	    t->tcb_data_rac.att_ptrs[i]->attnmstr,
+	    ' ', DB_ATT_MAXNAME, tmpattnm.db_att_name);
+	if (MEcmp(tmpattnm.db_att_name,
 		    &attribute[0]->attr_name,
 		    sizeof(attribute[0]->attr_name)) == 0)
 	{
@@ -1460,7 +1471,10 @@ DB_ERROR	    *dberr)
     {
 	for (i = 0; i < it->tcb_rel.relatts; i++)
 	{
-	    if (MEcmp(&it->tcb_data_rac.att_ptrs[i]->name,
+	    MEmove(it->tcb_data_rac.att_ptrs[i]->attnmlen,
+		it->tcb_data_rac.att_ptrs[i]->attnmstr,
+		' ', DB_ATT_MAXNAME, tmpattnm.db_att_name);
+	    if (MEcmp(tmpattnm.db_att_name,
 			&attribute[0]->attr_name,
 			sizeof(attribute[0]->attr_name)) == 0)
 	    {
@@ -1543,6 +1557,7 @@ DB_ERROR	    *dberr)
     i4			nofiles = 0;
     i4			found = 0;
     DB_ERROR		local_dberr;
+    DB_ATT_NAME		tmpattnm;
 
     static struct index_array
     {
@@ -1614,7 +1629,10 @@ DB_ERROR	    *dberr)
 		    {
 			for (i = 0; i < it->tcb_rel.relatts; i++)
 			{
-			    if (MEcmp(&it->tcb_data_rac.att_ptrs[i]->name,
+			    MEmove(it->tcb_data_rac.att_ptrs[i]->attnmlen,
+				it->tcb_data_rac.att_ptrs[i]->attnmstr,
+				' ', DB_ATT_MAXNAME, tmpattnm.db_att_name);
+			    if (MEcmp(tmpattnm.db_att_name,
 					&attribute[0]->attr_name,
 					sizeof(attribute[0]->attr_name)) == 0)
 			    {

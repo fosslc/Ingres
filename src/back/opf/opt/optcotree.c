@@ -345,6 +345,8 @@
 **	    Improve trace point op188.
 **	22-Mar-2010 (smeke01) b123454
 **	    Add pst_opno translation to trace point op170.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 struct	tab
 {
@@ -3693,10 +3695,10 @@ opt_coprintGuts(
 	if (rdf_infop)
 	{
 	    i4		tabnamesize;
-	    DD_NAME		*tabname;
+	    DD_TAB_NAME		*tabname;
             if (rdf_infop->rdr_obj_desc)
 	    {
-		tabname = (DD_NAME *)rdf_infop->rdr_obj_desc->dd_o9_tab_info.dd_t1_tab_name;
+		tabname = (DD_TAB_NAME *)rdf_infop->rdr_obj_desc->dd_o9_tab_info.dd_t1_tab_name;
 		tabnamesize = opt_noblanks( sizeof(*tabname), (char *)tabname ); /* number of significant chars*/
 		if ((tabnamesize > 0)
 		    &&
@@ -7194,18 +7196,18 @@ opt_sdump()
     maxsite = global->ops_gdist.opd_dv;
     for (site = 0; site < maxsite; site++)
     {
-	char	    nodename[DB_MAXNAME+1];
-	char	    ldbname[DB_MAXNAME+1];
+	char	    nodename[DB_NODE_MAXNAME+1];
+	char	    ldbname[DB_DB_MAXNAME+1];
 
 	MEcopy((PTR)global->ops_gdist.opd_base->opd_dtable[site]->
 		opd_ldbdesc->dd_l2_node_name,
-	    DB_MAXNAME, (PTR)&nodename[0]);
-	nodename[DB_MAXNAME] = 0;
+	    DB_NODE_MAXNAME, (PTR)&nodename[0]);
+	nodename[DB_NODE_MAXNAME] = 0;
 	(VOID)STtrmwhite(&nodename[0]);
 	MEcopy((PTR)global->ops_gdist.opd_base->opd_dtable[site]->
 		opd_ldbdesc->dd_l3_ldb_name,
-	    DB_MAXNAME, (PTR)&ldbname[0]);
-	ldbname[DB_MAXNAME] = 0;
+	    DB_DB_MAXNAME, (PTR)&ldbname[0]);
+	ldbname[DB_DB_MAXNAME] = 0;
 	(VOID)STtrmwhite(&ldbname[0]);
 	TRformat(opt_scc, (i4 *)NULL,
 	    (char *)&global->ops_trace.opt_trformat[0],

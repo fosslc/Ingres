@@ -158,6 +158,8 @@
 **	    Compiler warning fixes.
 **	30-May-2009 (kiria01) SIR 121665
 **	    Update GCA API to LEVEL 5
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*
@@ -242,7 +244,7 @@ static DBMS_INFO_DESC dbms_info_items[] =
 				sizeof(DB_OWN_NAME),	DB_CHR_TYPE },
 
     { "_VERSION",	SCI_IVERSION,	0,	0, /* 10 */
-			DB_MAXNAME,	DB_CHR_TYPE },
+			DB_TYPE_MAXLEN,	DB_CHR_TYPE },
 
     { "DATABASE",	SCI_DBNAME,	0,	0, /* 11 */
 			sizeof(DB_DB_NAME),	DB_CHR_TYPE },
@@ -272,10 +274,10 @@ static DBMS_INFO_DESC dbms_info_items[] =
 			sizeof(i4     ),	DB_INT_TYPE },
 
     { "GROUP",	SCI_GROUP,	0,	0, /* 19 */
-				sizeof(DB_NAME),	DB_CHR_TYPE },
+				sizeof(DB_OWN_NAME),	DB_CHR_TYPE },
 
     { "ROLE",	SCI_APLID,	0,	0, /* 20 */
-				sizeof(DB_NAME),	DB_CHR_TYPE },
+				sizeof(DB_OWN_NAME),	DB_CHR_TYPE },
 
     { "QUERY_IO_LIMIT",		SCI_QDIO_LIMIT,	0,	0, /* 21 */
 				sizeof(i4     ),	DB_INT_TYPE },
@@ -349,22 +351,22 @@ static DBMS_INFO_DESC dbms_info_items[] =
 			sizeof(DB_OWN_NAME),	DB_CHR_TYPE },
 
     { "ON_ERROR_STATE",	SC_ONERROR_STATE,	0,	0,
-			sizeof(DB_NAME),	DB_CHR_TYPE },
+			32,			DB_CHR_TYPE },
 
     { "ON_ERROR_SAVEPOINT",	SC_SVPT_ONERROR,	0,	0,
-			sizeof(DB_NAME),	DB_CHR_TYPE },
+			32,			DB_CHR_TYPE },
 
     { "SECURITY_AUDIT_LOG",	SCI_AUDIT_LOG,	0,	0,
-			sizeof(DB_NAME),	DB_CHR_TYPE },
+			32,			DB_CHR_TYPE },
 
     { "IMA_VNODE",	SCI_IMA_VNODE,	0,	0,	
-			DB_MAXNAME * 2,	DB_CHR_TYPE },
+			64,			DB_CHR_TYPE },
 
     { "IMA_SERVER",	SCI_IMA_SERVER,	0,	0,	
-			DB_MAXNAME * 2,	DB_CHR_TYPE },
+			64,			DB_CHR_TYPE },
 
     { "IMA_SESSION",	SCI_IMA_SESSION,	0,	0,	
-			DB_MAXNAME,	DB_CHR_TYPE },
+			32,			DB_CHR_TYPE },
 
     { "SECURITY_PRIV",	SCI_SECURITY,	0,	0,
     			1,		DB_CHR_TYPE },
@@ -388,7 +390,7 @@ static DBMS_INFO_DESC dbms_info_items[] =
 			sizeof(i4     ),	DB_INT_TYPE },
 
     { "SECURITY_AUDIT_STATE",	SCI_AUDIT_STATE,	0,	0,
-			sizeof(DB_NAME),	DB_CHR_TYPE },
+			32,			DB_CHR_TYPE },
 
     { "DB_REAL_USER_CASE",	SCI_REAL_USER_CASE,	0,	0,
     			5,	DB_CHR_TYPE },

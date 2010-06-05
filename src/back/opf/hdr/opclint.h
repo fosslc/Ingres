@@ -131,6 +131,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 	/* # ifndef OPC_XADF */
@@ -1099,8 +1101,8 @@
 
 	FUNC_EXTERN VOID
 	opc_makename(
-		DD_NAME		*ownername,
-		DD_NAME		*tabname,
+		DD_OWN_NAME	*ownername,
+		DD_TAB_NAME	*tabname,
 		char		*bufptr,
 		i2		*length,
 		DD_CAPS		*cap_ptr,

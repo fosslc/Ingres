@@ -303,6 +303,8 @@
 **	    Replace DMPP_PAGE* with DMP_PINFO* as needed.
 **	23-Feb-2010 (stial01)
 **          dmve_bid_check() pass rcb to dm1cxclean, dont clean unless needed
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs, move consistency check to dmveutil
 */
 
 /*
@@ -558,15 +560,8 @@ DMVE_CB		*dmve)
 
     for (;;)
     {
-	/*
-	** Consistency Check:  check for illegal log records.
-	*/
-	if ((log_rec->btp_header.type != DM0LBTPUT) ||
-	    (log_rec->btp_header.length != 
-		(sizeof(DM0L_BTPUT) - 
-			(DM1B_MAXLEAFLEN - log_rec->btp_key_size) -
-			(DB_MAXNAME - log_rec->btp_tab_size) -
-			(DB_MAXNAME - log_rec->btp_own_size))))
+	/* Consistency Check:  check for illegal log records */
+	if (log_rec->btp_header.type != DM0LBTPUT)
 	{
 	    SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
 	    break;
@@ -2546,6 +2541,9 @@ DM_OBJECT           **misc_buffer)
     i4			*err_code = &dmve->dmve_error.err_code;
     DMP_PINFO		*pinfo = *pinfoP;
     DMPP_PAGE		**page = &pinfo->page;
+    i4			attnmsz;
+    char		*attnames;
+    char		*nextattname;
 
     MEfill(sizeof(DMVE_BT_ATTS), 0, btatts);
 
@@ -2567,7 +2565,9 @@ DM_OBJECT           **misc_buffer)
 	** tidp is a key).
 	** Allow one extra att entry in case we need a jiggered tidp att.
 	*/
-	size_needed = DB_ALIGN_MACRO((leafattcnt+1) * sizeof(DB_ATTS))
+	attnmsz = (leafattcnt+1) * 32; /* generated att names */
+	size_needed = DB_ALIGN_MACRO(attnmsz +
+		+ (leafattcnt+1) * sizeof(DB_ATTS))
 		+ DB_ALIGN_MACRO((leafattcnt * sizeof(DB_ATTS *)))
 		+ DB_ALIGN_MACRO((leafattcnt * sizeof(DB_ATTS *)))
 		+ DB_ALIGN_MACRO((leafattcnt * sizeof(DB_ATTS *)));
@@ -2605,9 +2605,10 @@ DM_OBJECT           **misc_buffer)
 	}
 
 	buffer = ME_ALIGN_MACRO(buffer, sizeof(PTR));
-	btatts->bt_leaf_rac.att_ptrs = (DB_ATTS **)buffer;
-	btatts->bt_leafkeys = btatts->bt_leaf_rac.att_ptrs 
-			+ leafattcnt;
+	attnames = (char *) buffer;
+	nextattname = attnames;
+	btatts->bt_leaf_rac.att_ptrs = (DB_ATTS **)(buffer + attnmsz);
+	btatts->bt_leafkeys = btatts->bt_leaf_rac.att_ptrs + leafattcnt;
 	btatts->bt_rngkeys = btatts->bt_leafkeys + leafattcnt;
 	atr = (DB_ATTS *)(btatts->bt_rngkeys + leafattcnt);
 	for (attno = 0; attno < leafattcnt; attno++)
@@ -2635,8 +2636,10 @@ DM_OBJECT           **misc_buffer)
 	    /*
 	    ** Init attr name so dm1cxformat can compare atts with keys
 	    */
-	    MEfill(sizeof (atr->name), (u_char)0, (char *)&atr->name);
-	    MEcopy((char *)&attno, sizeof (attno), (char *)&atr->name);
+	    atr->attnmstr = nextattname;
+	    STprintf(atr->attnmstr, "%d", attno);
+	    atr->attnmlen = STlength(atr->attnmstr);
+	    nextattname += (atr->attnmlen + 1);
 
 	    DM1B_VPT_GET_ATTR(t->tcb_rel.relpgtype, t->tcb_rel.relpgsize, 			*page, (attno+1), &attdesc);
 	    atr->precision = 0;

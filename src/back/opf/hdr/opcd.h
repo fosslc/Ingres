@@ -29,6 +29,8 @@
 **	01-mar-93 (barbara)
 **	    Lengthened opcudname to allow both owner and table names
 **	    to be unnormalized and delimited.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_line@]...
 [@history_template@]...
 **/
@@ -183,7 +185,7 @@ struct _opccolhd
 */
 struct _opctabhd
 {
-    DD_NAME     opq_t1_rname;		    /* temp table range name */
+    DD_TAB_NAME opq_t1_rname;		    /* temp table range name */
     i4		opq_t2_tnum;		    /* temp table number */
     DD_LDB_DESC	*opq_t3_ldb;		    /* ldb where table resides */
     OPCTABHD	*opq_t4_tnext;		    /* next table in query */

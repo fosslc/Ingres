@@ -972,6 +972,8 @@ NO_OPTIM=dr6_us5 i64_aix
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Replace DMPP_PAGE* with DMP_PINFO* where needed.
 **	    sensitized to crow_locking().
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 static DB_STATUS BuildRtreeRecord(
@@ -2754,7 +2756,7 @@ dm2r_delete(
 		    uleFormat(NULL, E_DM9582_REP_NON_JNL, (CL_ERR_DESC *)NULL,
 			   ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
 			   &local_err_code, 1,
-			   DB_MAXNAME, t->tcb_rel.relid.db_tab_name);
+			   DB_TAB_MAXNAME, t->tcb_rel.relid.db_tab_name);
 		    SETDBERR(dberr, 0, E_DM008D_ERROR_DELETING_RECORD);
 		    status = E_DB_ERROR;
 		}
@@ -3167,7 +3169,6 @@ dm2r_get(
 
     if (status == E_DB_OK)
     {
-
 	r->rcb_s_get++;
 
 	/*
@@ -5125,11 +5126,11 @@ dm2r_put(
 	    /* get offset of local_db */
 	    for (i = 1; i <= t->tcb_rel.relatts; i++)
 	    {
-		if (MEcmp(t->tcb_atts_ptr[i].name.db_att_name,
+		if (STcompare(t->tcb_atts_ptr[i].attnmstr,
 		    (rcb->rcb_xcb_ptr && rcb->rcb_xcb_ptr->xcb_scb_ptr &&
 		    rcb->rcb_xcb_ptr->xcb_scb_ptr->scb_dbxlate &&
 		    (*rcb->rcb_xcb_ptr->xcb_scb_ptr->scb_dbxlate & CUI_ID_REG_U)) ?
-		    "LOCAL_DB" : "local_db", 8) == 0)
+		    "LOCAL_DB" : "local_db") == 0)
 			break;
 	    }
 	    if (i == t->tcb_rel.relatts)
@@ -5335,7 +5336,7 @@ dm2r_put(
 		    uleFormat(NULL, E_DM9582_REP_NON_JNL, (CL_ERR_DESC *)NULL,
 			   ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
 			   &local_err_code, 1,
-			   DB_MAXNAME, t->tcb_rel.relid.db_tab_name);
+			   DB_TAB_MAXNAME, t->tcb_rel.relid.db_tab_name);
 		    SETDBERR(dberr, 0, E_DM008B_ERROR_PUTTING_RECORD);
 		    status = E_DB_ERROR;
 		}
@@ -6207,7 +6208,7 @@ DB_ERROR	    *dberr )
 		    uleFormat(NULL, E_DM9582_REP_NON_JNL, (CL_ERR_DESC *)NULL,
 			   ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
 			   &local_err_code, 1,
-			   DB_MAXNAME, t->tcb_rel.relid.db_tab_name);
+			   DB_TAB_MAXNAME, t->tcb_rel.relid.db_tab_name);
 		    SETDBERR(dberr, 0, E_DM008C_ERROR_REPLACING_RECORD);
 		    status = E_DB_ERROR;
 		}

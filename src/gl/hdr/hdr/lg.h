@@ -761,6 +761,8 @@
 **	17-Feb-2010 (jonj)
 **	    SIR 121619 MVCC: Add LG_A_RBBLOCKS, LG_A_RFBLOCKS, LG_S_RBBLOCKS,
 **	    LG_S_RFBLOCKS for buffered log reads.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -882,7 +884,7 @@ LOGFULL,FREEBUF,LASTBUF,FORCED_IO,EVENT,WRITEIO,MINI,COMMIT"
 **      log record to be written by the server PLUS size of LG_RECORD
 */
 
-#define			LG_MAX_RSZ	    131080
+#define			LG_MAX_RSZ	    (131080 + DB_MAXNAME)
 
 #define			LG_MAX_CTX	    256
 
@@ -906,13 +908,13 @@ LOGFULL,FREEBUF,LASTBUF,FORCED_IO,EVENT,WRITEIO,MINI,COMMIT"
 **      This constant allows room for the following information in the
 **      add database info block.
 **
-**          Database name       DB_MAXNAME
-**          Database Owner      DB_MAXNAME
+**          Database name       DB_DB_MAXNAME
+**          Database Owner      DB_OWN_MAXNAME
 **          Database Path       DB_AREA_MAX
 **          Length of pathname
 **          Database ID
 */
-#define                 LG_DBINFO_MAX       (DB_MAXNAME+DB_MAXNAME+DB_AREA_MAX+24)
+#define                 LG_DBINFO_MAX       (DB_DB_MAXNAME+DB_OWN_MAXNAME+DB_AREA_MAX+24)
 
 /*
 **	Return status constants.
@@ -2042,7 +2044,7 @@ NORESERVE,ORPHAN,WAIT_LBB,SHARED,HANDLE,ET,PREPARED,IN_MINI,1PC,ILOG"
     LG_LSN	    tr_wait_lsn;	/* LSN to wait upon */
     i4		    tr_wait_buf;	/* Buffer if TR_WAIT_LBB */
     i4	    	    tr_l_user_name;	/* Length of the user name. */
-    char	    tr_user_name[DB_MAXNAME]; /* User name of the transaction. */
+    char	    tr_user_name[DB_OWN_MAXNAME]; /* User name of transaction */
     DB_DIS_TRAN_ID  tr_dis_id;		/* Distributed transaction id. */
     u_i8	    tr_reserved_space;	/* Logfile space reserved by xact. */
     i4		    tr_handle_count;	/* if TR_SHARED, number of connected
@@ -2300,8 +2302,8 @@ typedef struct
 {
     i4		    lg_flag;
     LG_LSN	    lg_lsn;
-    char	    lg_tabname[DB_MAXNAME];
-    char	    lg_dbname[DB_MAXNAME];
+    char	    lg_tabname[DB_TAB_MAXNAME];
+    char	    lg_dbname[DB_DB_MAXNAME];
 } LG_RECOVER;
 
 /*

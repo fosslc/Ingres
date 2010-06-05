@@ -168,6 +168,8 @@ NO_DBLOPTIM = su4_us5 su4_u42 dr6_us5
 **	    Added "help permit on sequence".
 **      28-jan-2009 (stial01)
 **          Use DB_MAXNAME for database objects.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /* # define's */
@@ -230,7 +232,7 @@ static		FE_RSLV_NAME 	objectcb =
 				};
 static		char		ownerbuf[ DB_MAXNAME + 1 + 1 ];
 static		char		objectbuf[ DB_MAXNAME + 1 + 1 ];
-static		char		orig_name[ FE_UNRML_MAXNAME ];
+static		char		orig_name[ DB_MAX_DELIMID ];
 static		bool		oname_sz_too_long = FALSE;
 static		char		*oname_ptr;
 static		char		nilstr = EOS;

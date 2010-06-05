@@ -145,6 +145,8 @@
 **         SIR 123296
 **         Add LSB option, writable files are stored under ADMIN, logs under
 **         LOG and read-only under FILES location.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -708,8 +710,8 @@ dmckp_determine_cktmpl(
     char	*s;
     STATUS	status = OK;
     FILE	*fp;
-    char	username[DB_MAXNAME+1];
-    char	instowner[DB_MAXNAME+1];
+    char	username[DB_OWN_MAXNAME+1];
+    char	instowner[DB_OWN_MAXNAME+1];
     char	*cp = &username[0];
     char	*def_cp = &instowner[0];
 

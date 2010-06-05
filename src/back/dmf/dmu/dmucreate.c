@@ -250,6 +250,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs (remove temp code added 24-aug-2009)
 **/
 
 /*
@@ -983,20 +985,6 @@ dmu_create(DMU_CB        *dmu_cb)
 	    pgtype_flags = DM1C_CREATE_ETAB;
 	else
 	    pgtype_flags = DM1C_CREATE_DEFAULT;
-
-	if ((dmu->dmu_table_name.db_tab_name[0] == 'i' &&
-	    dmu->dmu_table_name.db_tab_name[1] == 'i') && !extension)
-	{
-	    pgtype_flags |= DM1C_CREATE_CATALOG;
-	    if (page_size < 8192  &&
-		(2*DB_MAXNAME) > DM1B_COMPAT_KEYLENGTH &&
-		dm0p_has_buffers(8192) &&
-		(!MEcmp(dmu->dmu_table_name.db_tab_name, "iiprocedure", 11) ||
-		!MEcmp(dmu->dmu_table_name.db_tab_name, "iiusergroup", 11) ||
-		!MEcmp(dmu->dmu_table_name.db_tab_name, "iirolegrant", 11) ||
-		!MEcmp(dmu->dmu_table_name.db_tab_name, "iidbpriv", 8)))
-		page_size = 8192; /* temporary fix !!! */
-	}
 
 	/*  Make sure a structure was given. */
 	if (structure == 0)

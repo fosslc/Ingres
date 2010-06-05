@@ -283,6 +283,9 @@
 **	    SIR 120874: dm1p_? functions converted to DB_ERROR *
 **      04-feb-2010 (stial01)
 **          dmm_init_catalog_templates() Init ucore from core
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs Init varchar lengths in core catalogs
+**          Use more readable variable names
 */
 
 /* core table ids */
@@ -1414,10 +1417,12 @@ DB_ERROR	*dberr)
 	{
 	    /*
 	    **	Add real location name to iirelation records.
+	    **  Check base AND index id
 	    */
 
 	    MEcopy(r, record_size, tuple);
-	    if (table_id->db_tab_base == 1)
+	    if (table_id->db_tab_base == DM_B_RELATION_TAB_ID &&
+		table_id->db_tab_index == DM_I_RELATION_TAB_ID)
 		((DMP_RELATION *)tuple)->relloc = *location_name;
 
 	    relrecord=(DMP_RELATION*)tuple;
@@ -2254,12 +2259,12 @@ struct	catalogStats
 DB_STATUS 
 dmm_init_catalog_templates( )
 {
-    DMP_RELATION	*iirelationRecord;
-    DMP_ATTRIBUTE	*iiattributeRecord;
-    DMP_RINDEX		*iirelidxRecord;
-    DMP_RELATION	*iirelationuRecord;
-    DMP_ATTRIBUTE	*iiattributeuRecord;
-    DMP_RINDEX		*iirelidxuRecord;
+    DMP_RELATION	*rel;
+    DMP_ATTRIBUTE	*att;
+    DMP_RINDEX		*ridx;
+    DMP_RELATION	*u_rel;
+    DMP_ATTRIBUTE	*u_att;
+    DMP_RINDEX		*u_ridx;
     i4			tuplesInIIRELATION;
     i4			tuplesInIIATTRIBUTE;
     i4			tuplesInIIRELIDX;
@@ -2297,23 +2302,23 @@ dmm_init_catalog_templates( )
       ** For each core catalog, count its number of attributes.
       */
 
-      for (	iiattributeRecord = DM_core_attributes,
-		iiattributeuRecord = DM_ucore_attributes, i = 0;
+      for (	att = DM_core_attributes,
+		u_att = DM_ucore_attributes, i = 0;
 		i < tuplesInIIATTRIBUTE;
-		iiattributeRecord++,
-		iiattributeuRecord++, i++
+		att++,
+		u_att++, i++
 	  )
       {
-	    STRUCT_ASSIGN_MACRO(*iiattributeRecord, *iiattributeuRecord);
-	    CVupper(iiattributeuRecord->attname.db_att_name);
+	    STRUCT_ASSIGN_MACRO(*att, *u_att);
+	    CVupper(u_att->attname.db_att_name);
 
-	    if ( SAME_TABLE( iiattributeRecord->attrelid, IIRELATION_TABLE ) )
+	    if ( SAME_TABLE( att->attrelid, IIRELATION_TABLE ) )
 		catalogStats = &iirelationStats;
-	    else if ( SAME_TABLE( iiattributeRecord->attrelid, IIREL_IDX_TABLE ) )
+	    else if ( SAME_TABLE( att->attrelid, IIREL_IDX_TABLE ) )
 		catalogStats = &iirelidxStats;
-	    else if ( SAME_TABLE( iiattributeRecord->attrelid, IIATTRIBUTE_TABLE ) )
+	    else if ( SAME_TABLE( att->attrelid, IIATTRIBUTE_TABLE ) )
 		catalogStats = &iiattributeStats;
-	    else if ( SAME_TABLE( iiattributeRecord->attrelid, IIINDEX_TABLE ) )
+	    else if ( SAME_TABLE( att->attrelid, IIINDEX_TABLE ) )
 		catalogStats = &iiindexStats;
 	    else
 	    {
@@ -2321,45 +2326,45 @@ dmm_init_catalog_templates( )
 		break;
 	    }
 
-	    if ( catalogStats->tupleWidth != iiattributeRecord->attoff )
+	    if ( catalogStats->tupleWidth != att->attoff )
 	    {
 		status = E_DB_FATAL;
 		break;
 	    }
 
 	    catalogStats->columnCount++;
-	    catalogStats->tupleWidth += iiattributeRecord->attfml;
-	    iiattributeRecord->attid = catalogStats->columnCount;
-	    iiattributeuRecord->attid = catalogStats->columnCount;
-	    iiattributeRecord->attintl_id = catalogStats->columnCount;
-	    iiattributeuRecord->attintl_id = catalogStats->columnCount;
-	    iiattributeRecord->attver_added = 0;
-	    iiattributeuRecord->attver_added = 0;
-	    iiattributeRecord->attver_dropped = 0;
-	    iiattributeuRecord->attver_dropped = 0;
-	    iiattributeRecord->attval_from = 0;
-	    iiattributeuRecord->attval_from = 0;
-	    iiattributeRecord->attver_altcol = 0;
-	    iiattributeuRecord->attver_altcol = 0;
-	    iiattributeRecord->attcollID = -1;
-	    iiattributeuRecord->attcollID = -1;
-	    iiattributeRecord->attgeomtype = -1;
-	    iiattributeuRecord->attgeomtype = -1;
-	    iiattributeRecord->attsrid = -1;
-	    iiattributeuRecord->attsrid = -1;
+	    catalogStats->tupleWidth += att->attfml;
+	    att->attid = catalogStats->columnCount;
+	    u_att->attid = catalogStats->columnCount;
+	    att->attintl_id = catalogStats->columnCount;
+	    u_att->attintl_id = catalogStats->columnCount;
+	    att->attver_added = 0;
+	    u_att->attver_added = 0;
+	    att->attver_dropped = 0;
+	    u_att->attver_dropped = 0;
+	    att->attval_from = 0;
+	    u_att->attval_from = 0;
+	    att->attver_altcol = 0;
+	    u_att->attver_altcol = 0;
+	    att->attcollID = -1;
+	    u_att->attcollID = -1;
+	    att->attgeomtype = -1;
+	    u_att->attgeomtype = -1;
+	    att->attsrid = -1;
+	    u_att->attsrid = -1;
 
-	    MEfill(sizeof(iiattributeRecord->attfree), 0,
-		    iiattributeRecord->attfree);
-	    MEfill(sizeof(iiattributeuRecord->attfree), 0,
-		    iiattributeuRecord->attfree);
+	    MEfill(sizeof(att->attfree), 0,
+		    att->attfree);
+	    MEfill(sizeof(u_att->attfree), 0,
+		    u_att->attfree);
 
 	    /* pad the attribute  name */
-	    STmove( iiattributeRecord->attname.db_att_name, ' ',
-		    sizeof( iiattributeRecord->attname.db_att_name ),
-		    iiattributeRecord->attname.db_att_name );
-	    STmove( iiattributeuRecord->attname.db_att_name, ' ',
-		    sizeof( iiattributeuRecord->attname.db_att_name ),
-		    iiattributeuRecord->attname.db_att_name );
+	    STmove( att->attname.db_att_name, ' ',
+		    sizeof( att->attname.db_att_name ),
+		    att->attname.db_att_name );
+	    STmove( u_att->attname.db_att_name, ' ',
+		    sizeof( u_att->attname.db_att_name ),
+		    u_att->attname.db_att_name );
 
       }	/* end for (end of tour through IIATTRIBUTE */
       if ( status != E_DB_OK ) break;
@@ -2399,34 +2404,34 @@ dmm_init_catalog_templates( )
       ** Also use server default page size
       */
 
-      for ( iirelationRecord = DM_core_relations,
-	    iirelationuRecord = DM_ucore_relations, i = 0;
+      for ( rel = DM_core_relations,
+	    u_rel = DM_ucore_relations, i = 0;
 	    i < tuplesInIIRELATION;
-	    iirelationRecord++,
-	    iirelationuRecord++, i++
+	    rel++,
+	    u_rel++, i++
 	  )
       {
-	    STRUCT_ASSIGN_MACRO(*iirelationRecord, *iirelationuRecord);
-	    CVupper(iirelationuRecord->relid.db_tab_name);
-	    CVupper(iirelationuRecord->relowner.db_own_name);
-	    CVupper(iirelationuRecord->relloc.db_loc_name);
+	    STRUCT_ASSIGN_MACRO(*rel, *u_rel);
+	    CVupper(u_rel->relid.db_tab_name);
+	    CVupper(u_rel->relowner.db_own_name);
+	    CVupper(u_rel->relloc.db_loc_name);
 
-	    if ( SAME_TABLE( iirelationRecord->reltid, IIRELATION_TABLE ) )
+	    if ( SAME_TABLE( rel->reltid, IIRELATION_TABLE ) )
 	    {
 		catalogStats = &iirelationStats;
 		tupleCount = tuplesInIIRELATION;
 	    }
-	    else if ( SAME_TABLE( iirelationRecord->reltid, IIREL_IDX_TABLE ) )
+	    else if ( SAME_TABLE( rel->reltid, IIREL_IDX_TABLE ) )
 	    {
 		catalogStats = &iirelidxStats;
 		tupleCount = tuplesInIIRELIDX;
 	    }
-	    else if ( SAME_TABLE( iirelationRecord->reltid, IIATTRIBUTE_TABLE ) )
+	    else if ( SAME_TABLE( rel->reltid, IIATTRIBUTE_TABLE ) )
 	    {
 		catalogStats = &iiattributeStats;
 		tupleCount = tuplesInIIATTRIBUTE;
 	    }
-	    else if ( SAME_TABLE( iirelationRecord->reltid, IIINDEX_TABLE ) )
+	    else if ( SAME_TABLE( rel->reltid, IIINDEX_TABLE ) )
 	    {
 		catalogStats = &iiindexStats;
 		tupleCount = tuplesInIIINDEX;
@@ -2437,47 +2442,47 @@ dmm_init_catalog_templates( )
 		break;
 	    }
 
-	    if (iirelationRecord->relwid != catalogStats->tupleWidth ||
-		iirelationuRecord->relwid != catalogStats->tupleWidth)
+	    if (rel->relwid != catalogStats->tupleWidth ||
+		u_rel->relwid != catalogStats->tupleWidth)
 	    {
 		status = E_DB_FATAL;
 		break;
 	    }
 
-	    MEfill(sizeof(iirelationRecord->relfree), 0,
-		    iirelationRecord->relfree);
-	    MEfill(sizeof(iirelationuRecord->relfree), 0,
-		    iirelationuRecord->relfree);
+	    MEfill(sizeof(rel->relfree), 0,
+		    rel->relfree);
+	    MEfill(sizeof(u_rel->relfree), 0,
+		    u_rel->relfree);
 
 	    /* Fill in the relcreate field */
 
-	    iirelationRecord->relcreate = TMsecs();
-	    iirelationuRecord->relcreate = iirelationRecord->relcreate;
-	    iirelationRecord->relatts = catalogStats->columnCount;
-	    iirelationuRecord->relatts = catalogStats->columnCount;
-	    iirelationRecord->reltups = tupleCount;
-	    iirelationuRecord->reltups = tupleCount;
+	    rel->relcreate = TMsecs();
+	    u_rel->relcreate = rel->relcreate;
+	    rel->relatts = catalogStats->columnCount;
+	    u_rel->relatts = catalogStats->columnCount;
+	    rel->reltups = tupleCount;
+	    u_rel->reltups = tupleCount;
 
 	    /* space pad the character strings */
 
-	    STmove( iirelationRecord->relid.db_tab_name, ' ',
-		    sizeof( iirelationRecord->relid.db_tab_name ),
-		    iirelationRecord->relid.db_tab_name );
-	    STmove( iirelationuRecord->relid.db_tab_name, ' ',
-		    sizeof( iirelationuRecord->relid.db_tab_name ),
-		    iirelationuRecord->relid.db_tab_name );
-	    STmove( iirelationRecord->relowner.db_own_name, ' ',
-		    sizeof( iirelationRecord->relowner.db_own_name ),
-		    iirelationRecord->relowner.db_own_name );
-	    STmove( iirelationuRecord->relowner.db_own_name, ' ',
-		    sizeof( iirelationuRecord->relowner.db_own_name ),
-		    iirelationuRecord->relowner.db_own_name );
-	    STmove( iirelationRecord->relloc.db_loc_name, ' ',
-		    sizeof( iirelationRecord->relloc.db_loc_name ),
-		    iirelationRecord->relloc.db_loc_name );
-	    STmove( iirelationuRecord->relloc.db_loc_name, ' ',
-		    sizeof( iirelationuRecord->relloc.db_loc_name ),
-		    iirelationuRecord->relloc.db_loc_name );
+	    STmove( rel->relid.db_tab_name, ' ',
+		    sizeof( rel->relid.db_tab_name ),
+		    rel->relid.db_tab_name );
+	    STmove( u_rel->relid.db_tab_name, ' ',
+		    sizeof( u_rel->relid.db_tab_name ),
+		    u_rel->relid.db_tab_name );
+	    STmove( rel->relowner.db_own_name, ' ',
+		    sizeof( rel->relowner.db_own_name ),
+		    rel->relowner.db_own_name );
+	    STmove( u_rel->relowner.db_own_name, ' ',
+		    sizeof( u_rel->relowner.db_own_name ),
+		    u_rel->relowner.db_own_name );
+	    STmove( rel->relloc.db_loc_name, ' ',
+		    sizeof( rel->relloc.db_loc_name ),
+		    rel->relloc.db_loc_name );
+	    STmove( u_rel->relloc.db_loc_name, ' ',
+		    sizeof( u_rel->relloc.db_loc_name ),
+		    u_rel->relloc.db_loc_name );
 
       }	/* end for (tour of IIRELATION) */
       if ( status != E_DB_OK ) break;
@@ -2487,29 +2492,29 @@ dmm_init_catalog_templates( )
       ** in IIRELIDX.
       */
 
-      for (	iirelidxRecord = core_rindex,
-		iirelidxuRecord = ucore_rindex, i = 0;
+      for (	ridx = core_rindex,
+		u_ridx = ucore_rindex, i = 0;
 		i < tuplesInIIRELIDX;
-		iirelidxRecord++,
-		iirelidxuRecord++, i++
+		ridx++,
+		u_ridx++, i++
 	  )
       {
-	    STRUCT_ASSIGN_MACRO(*iirelidxRecord, *iirelidxuRecord);
-	    CVupper(iirelidxuRecord->relname.db_tab_name);
-	    CVupper(iirelidxuRecord->relowner.db_own_name);
+	    STRUCT_ASSIGN_MACRO(*ridx, *u_ridx);
+	    CVupper(u_ridx->relname.db_tab_name);
+	    CVupper(u_ridx->relowner.db_own_name);
 
-	    STmove( iirelidxRecord->relname.db_tab_name, ' ',
-		    sizeof( iirelidxRecord->relname.db_tab_name ),
-		    iirelidxRecord->relname.db_tab_name );
-	    STmove( iirelidxuRecord->relname.db_tab_name, ' ',
-		    sizeof( iirelidxuRecord->relname.db_tab_name ),
-		    iirelidxuRecord->relname.db_tab_name );
-	    STmove( iirelidxRecord->relowner.db_own_name, ' ',
-		    sizeof( iirelidxRecord->relowner.db_own_name ),
-		    iirelidxRecord->relowner.db_own_name );
-	    STmove( iirelidxuRecord->relowner.db_own_name, ' ',
-		    sizeof( iirelidxuRecord->relowner.db_own_name ),
-		    iirelidxuRecord->relowner.db_own_name );
+	    STmove( ridx->relname.db_tab_name, ' ',
+		    sizeof( ridx->relname.db_tab_name ),
+		    ridx->relname.db_tab_name );
+	    STmove( u_ridx->relname.db_tab_name, ' ',
+		    sizeof( u_ridx->relname.db_tab_name ),
+		    u_ridx->relname.db_tab_name );
+	    STmove( ridx->relowner.db_own_name, ' ',
+		    sizeof( ridx->relowner.db_own_name ),
+		    ridx->relowner.db_own_name );
+	    STmove( u_ridx->relowner.db_own_name, ' ',
+		    sizeof( u_ridx->relowner.db_own_name ),
+		    u_ridx->relowner.db_own_name );
 
       }	/* end for (tour of IIINDEX) */
 

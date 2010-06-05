@@ -123,6 +123,8 @@
 **	    Fix a null/0 mixup causing compiler warnings.
 **	13-May-2009 (kschendel) b122041
 **	    Another of the same.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /* Forward references */
@@ -1333,7 +1335,7 @@ pst_modhdr(
 	    /*
 	    ** copy the range variable name
 	    */
-	    MEcopy((PTR) usrrange->pss_rgname, DB_MAXNAME,
+	    MEcopy((PTR) usrrange->pss_rgname, DB_TAB_MAXNAME,
 		   (PTR) &headrng->pst_corr_name);
 
 	    /* copy the inner and the outer relation maps */
@@ -1481,7 +1483,7 @@ pst_cdb_cat(
 	** iidd_dbconstants , so return FALSE.
 	*/
 	if (*c2 == EOS
-	    && (c2 - ldb_tab_info->dd_t1_tab_name == sizeof(DD_NAME)
+	    && (c2 - ldb_tab_info->dd_t1_tab_name == sizeof(DD_TAB_NAME)
 		|| CMspace(c1)
 		)
 	    )
@@ -1582,7 +1584,7 @@ pst_proc_rngentry(
     /*
     ** copy the range variable name
     */
-    MEcopy((PTR) usrrange->pss_rgname, DB_MAXNAME,
+    MEcopy((PTR) usrrange->pss_rgname, DB_TAB_MAXNAME,
            (PTR) &headrng->pst_corr_name);
 
     /* copy the inner and the outer relation maps */

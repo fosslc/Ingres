@@ -29,6 +29,8 @@
 **	26-oct-1992	- Added IISQLHDLR structure (kathryn).
 **	19-Aug-2009 (kschendel) 121804
 **	   Allow repeated inclusion (e.g. by runtime.h)
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -90,7 +92,7 @@ typedef struct {
 	i2	*sqlind;	/* Address of null indicator */
 	struct {		/* Varying length result column name */
 	    i2	 sqlnamel;	/* Length of following column name */
-# define IISQD_NAMELEN	34
+# define IISQD_NAMELEN	258
 	    char sqlnamec[IISQD_NAMELEN];	/* Result column name */
 	} sqlname;
     } sqlvar[1];		/* Bogus array, allocated and initialized

@@ -91,13 +91,15 @@ LIBRARY = IMPDMFLIBDATA
 **	    explicit no-dup-checking puts into these catalogs.
 **      04-feb-2010 (stial01)
 **          Use macros reldef, attdef* and init ucore from core (in dmmcre.c)
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs, varchar names in catalogs
 */
 
 /* dmmcre.c */
 /*
 **  This table contains the initialized IIRELATION records for the
 **  core system tables.  At server startup, we space pad names to
-**  DB_MAXNAME positions and fill in the number of attributes per relation.
+**  DB_TAB_MAXNAME positions and fill in the number of attributes per relation.
 */
 
 /* core table ids */
@@ -137,7 +139,7 @@ LIBRARY = IMPDMFLIBDATA
     1, /* relmain */\
     0, /* relsave */\
     {0, 0}, /* relstamp1,2 */\
-    {"$default"},\
+    {"$default"}, /* relloc */\
     DMF_T_VERSION, /* relcmptlvl */\
     0, /* relcreate */\
     0, /* relqid1 */\
@@ -196,18 +198,22 @@ GLOBALDEF DMP_RELATION DM_ucore_relations[4];
 **  This table contains the initialized IIATTRIBUTE records for the
 **  core system tables.
 */
-#define attdef_int(tabid, name, offset, len, iskey) tabid, DUMMY_ATTRIBUTE_NUMBER, 0, {name}, offset, len, iskey, 0, {DB_DEF_ID_0}, 0, 0,0,0, ATT_INT
+#define attdef_int(tabid, name, offset, len, iskey)\
+ tabid, DUMMY_ATTRIBUTE_NUMBER, 0, name, offset, len, iskey, 0, {DB_DEF_ID_0}, 0, 0,0,0, ATT_INT, 0,0,0,0,0, {' '}
 
-#define attdef_cha(tabid, name, offset, len, iskey) tabid, DUMMY_ATTRIBUTE_NUMBER, 0, {name}, offset, len, iskey, 0, {DB_DEF_ID_BLANK}, 0, 0,0,0, ATT_CHA
+#define attdef_cha(tabid, name, offset, len, iskey)\
+tabid, DUMMY_ATTRIBUTE_NUMBER, 0, name, offset, len, iskey, 0, {DB_DEF_ID_BLANK}, 0, 0,0,0, ATT_CHA, 0,0,0,0,0, {' '}
 
-#define attdef_free(tabid, name, offset, len, iskey) tabid, DUMMY_ATTRIBUTE_NUMBER, 0, {name}, offset, len, iskey, 0, {DB_DEF_ID_0}, 0, 0,0,0, ATT_CHA
+#define attdef_free(tabid, name, offset, len, iskey)\
+tabid, DUMMY_ATTRIBUTE_NUMBER, 0, name, offset, len, iskey, 0, {DB_DEF_ID_0}, 0, 0,0,0, ATT_CHA, 0,0,0,0,0, {' '}
 
 GLOBALDEF DMP_ATTRIBUTE DM_core_attributes[] =
 {
+    /* NOTE!!! if you add/delete entries, adjust sizeof DM_ucore_attributes */
     { attdef_int(REL_TAB_ID, "reltid", REL_OFFSET(reltid.db_tab_base), 4, 1) },
     { attdef_int(REL_TAB_ID, "reltidx", REL_OFFSET(reltid.db_tab_index), 4, 0) },
-    { attdef_cha(REL_TAB_ID, "relid", REL_OFFSET(relid), DB_MAXNAME, 0) },
-    { attdef_cha(REL_TAB_ID, "relowner", REL_OFFSET(relowner), DB_MAXNAME, 0) },
+    { attdef_cha(REL_TAB_ID, "relid", REL_OFFSET(relid), DB_TAB_MAXNAME, 0) },
+    { attdef_cha(REL_TAB_ID, "relowner", REL_OFFSET(relowner), DB_OWN_MAXNAME, 0) },
     { attdef_int(REL_TAB_ID, "relatts", REL_OFFSET(relatts), 2, 0) },
     { attdef_int(REL_TAB_ID, "reltcpri", REL_OFFSET(reltcpri), 2, 0) },
     { attdef_int(REL_TAB_ID, "relkeys", REL_OFFSET(relkeys), 2, 0) },
@@ -220,7 +226,7 @@ GLOBALDEF DMP_ATTRIBUTE DM_core_attributes[] =
     { attdef_int(REL_TAB_ID, "relsave", REL_OFFSET(relsave), 4, 0) },
     { attdef_int(REL_TAB_ID, "relstamp1", REL_OFFSET(relstamp12.db_tab_high_time), 4, 0) },
     { attdef_int(REL_TAB_ID, "relstamp2", REL_OFFSET(relstamp12.db_tab_low_time), 4, 0) },
-    { attdef_cha(REL_TAB_ID, "relloc", REL_OFFSET(relloc), DB_MAXNAME, 0) },
+    { attdef_cha(REL_TAB_ID, "relloc", REL_OFFSET(relloc), DB_LOC_MAXNAME, 0) },
     { attdef_int(REL_TAB_ID, "relcmptlvl", REL_OFFSET(relcmptlvl), 4, 0) },
     { attdef_int(REL_TAB_ID, "relcreate", REL_OFFSET(relcreate), 4, 0) },
     { attdef_int(REL_TAB_ID, "relqid1", REL_OFFSET(relqid1), 4, 0) },
@@ -251,14 +257,14 @@ GLOBALDEF DMP_ATTRIBUTE DM_core_attributes[] =
     { attdef_int(REL_TAB_ID, "relnparts", REL_OFFSET(relnparts), 2, 0) },
     { attdef_int(REL_TAB_ID, "relnpartlevels", REL_OFFSET(relnpartlevels), 2, 0) },
     { attdef_free(REL_TAB_ID, "relfree", REL_OFFSET(relfree), 8, 0) },
-    { attdef_cha(RIDX_TAB_ID, "relid", RIDX_OFFSET(relname), DB_MAXNAME, 1) },
-    { attdef_cha(RIDX_TAB_ID, "relowner", RIDX_OFFSET(relowner), DB_MAXNAME, 2) },
+    { attdef_cha(RIDX_TAB_ID, "relid", RIDX_OFFSET(relname), DB_TAB_MAXNAME, 1) },
+    { attdef_cha(RIDX_TAB_ID, "relowner", RIDX_OFFSET(relowner), DB_OWN_MAXNAME, 2) },
     { attdef_int(RIDX_TAB_ID, "tidp", RIDX_OFFSET(tidp), 4, 0) },
     { attdef_int(ATT_TAB_ID, "attrelid", ATT_OFFSET(attrelid.db_tab_base), 4, 1) },
     { attdef_int(ATT_TAB_ID, "attrelidx", ATT_OFFSET(attrelid.db_tab_index), 4, 2) },
     { attdef_int(ATT_TAB_ID, "attid", ATT_OFFSET(attid), 2, 0) },
     { attdef_int(ATT_TAB_ID, "attxtra", ATT_OFFSET(attxtra), 2, 0) },
-    { attdef_cha(ATT_TAB_ID, "attname", ATT_OFFSET(attname), DB_MAXNAME, 0) },
+    { attdef_cha(ATT_TAB_ID, "attname", ATT_OFFSET(attname), DB_ATT_MAXNAME, 0) },
     { attdef_int(ATT_TAB_ID, "attoff", ATT_OFFSET(attoff), 4, 0) },
     { attdef_int(ATT_TAB_ID, "attfrml", ATT_OFFSET(attfml), 4, 0) },
     { attdef_int(ATT_TAB_ID, "attkdom", ATT_OFFSET(attkey), 2, 0) },

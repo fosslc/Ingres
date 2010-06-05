@@ -79,6 +79,8 @@
 **	    Short-circuit calls to psy_secaudit() if not C2SECURE.
 **      15-Apr-2003 (bonro01)
 **          Added include <psyaudit.h> for prototype of psy_secaudit()
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -135,7 +137,7 @@ psy_alarm(
     DB_STATUS		status=E_DB_OK;
     i4		err_code;
     i4			user_status;
-    char		dbname[DB_MAXNAME];
+    char		dbname[DB_DB_MAXNAME];
     SCF_CB		scf_cb;
     SCF_SCI		sci_list[2];
     bool		loop=FALSE;
@@ -218,7 +220,7 @@ psy_alarm(
 	    local_status = psy_secaudit(FALSE, sess_cb,
 			    (char *)&alarm->dba_objname,
 			    (DB_OWN_NAME *)NULL,
-			    sizeof(DB_NAME),
+			    sizeof(alarm->dba_objname),
 			    evtype,
 			    msgid,
 			    SXF_A_CONTROL|SXF_A_FAIL,
@@ -644,8 +646,8 @@ psy_kalarm(
 	      psy_obj  = (PSY_OBJ *)  psy_obj->queue.q_next
 	    )
 	    {
-	     	MEcopy((PTR)&psy_obj->psy_objnm,sizeof(DB_NAME),
-			(PTR)&atuple->dba_alarmname);
+	     	MEcopy((PTR)&psy_obj->psy_objnm,
+		    sizeof(atuple->dba_alarmname), (PTR)&atuple->dba_alarmname);
 	     	atuple->dba_alarmno=0;
 	     	status = rdf_call(RDF_UPDATE, (PTR) &rdf_cb);/* Destroy alarm */
 	     	if (status != E_DB_OK)

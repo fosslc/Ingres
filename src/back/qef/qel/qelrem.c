@@ -73,6 +73,8 @@
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
 **      09-jan-2009 (stial01)
 **          Fix buffers that are dependent on DB_MAXNAME
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -178,10 +180,10 @@ QEC_LINK	*v_lnk_p )
 	    /*	delete from IIDD_ALT_COLUMNS where table_name = c32 and
 	    **  table_owner = c32; */
 
-	    altcols_p->l2_1_tab_name[DB_MAXNAME] = EOS;
+	    altcols_p->l2_1_tab_name[DB_TAB_MAXNAME] = EOS;
 	    STtrmwhite(altcols_p->l2_1_tab_name);
 
-	    altcols_p->l2_2_tab_owner[DB_MAXNAME] = EOS;
+	    altcols_p->l2_2_tab_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(altcols_p->l2_2_tab_owner);
 
 	    STprintf(
@@ -209,10 +211,10 @@ QEC_LINK	*v_lnk_p )
 	    /*	delete from IIDD_COLUMNS where table_name = c32 and
 	    **  table_owner = c32; */
 
-	    cols_p->l3_1_tab_name[DB_MAXNAME] = EOS;
+	    cols_p->l3_1_tab_name[DB_TAB_MAXNAME] = EOS;
 	    STtrmwhite(cols_p->l3_1_tab_name);
 
-	    cols_p->l3_2_tab_owner[DB_MAXNAME] = EOS;
+	    cols_p->l3_2_tab_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(cols_p->l3_2_tab_owner);
 
 	    STprintf(
@@ -354,10 +356,10 @@ QEC_LINK	*v_lnk_p )
 	    /*	delete from IIDD_DDB_OBJECTS where 
 	    **  object_name = c32 and object_owner = c32; */
 
-	    objects_p->d6_1_obj_name[DB_MAXNAME] = EOS;
+	    objects_p->d6_1_obj_name[DB_OBJ_MAXNAME] = EOS;
 	    STtrmwhite(objects_p->d6_1_obj_name);
 
-	    objects_p->d6_2_obj_owner[DB_MAXNAME] = EOS;
+	    objects_p->d6_2_obj_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(objects_p->d6_2_obj_owner);
 
 	    STprintf(
@@ -435,10 +437,10 @@ QEC_LINK	*v_lnk_p )
 	    /*	delete from IIDD_HISTOGRAMS where 
 	    **  table_name = c32 and table_owner = c32; */
 
-	    histos_p->l5_1_tab_name[DB_MAXNAME] = EOS;
+	    histos_p->l5_1_tab_name[DB_TAB_MAXNAME] = EOS;
 	    STtrmwhite(histos_p->l5_1_tab_name);
 
-	    histos_p->l5_2_tab_owner[DB_MAXNAME] = EOS;
+	    histos_p->l5_2_tab_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(histos_p->l5_2_tab_owner);
 
 	    STprintf(
@@ -467,10 +469,10 @@ QEC_LINK	*v_lnk_p )
 	    /*	delete from IIDD_INDEXES where base_name = c32 and
 	    **  base_owner = c32; */
 
-	    indexes_p->l6_4_base_name[DB_MAXNAME] = EOS;
+	    indexes_p->l6_4_base_name[DB_TAB_MAXNAME] = EOS;
 	    STtrmwhite(indexes_p->l6_4_base_name);
 
-	    indexes_p->l6_5_base_owner[DB_MAXNAME] = EOS;
+	    indexes_p->l6_5_base_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(indexes_p->l6_5_base_owner);
 
 	    STprintf(
@@ -499,10 +501,10 @@ QEC_LINK	*v_lnk_p )
 	    /*	delete from IIDD_INDEX_COLUMNS where index_name = c32 and
 	    **  index_owner = c32; */
 
-	    ndxcols_p->l7_1_ind_name[DB_MAXNAME] = EOS;
+	    ndxcols_p->l7_1_ind_name[DB_TAB_MAXNAME] = EOS;
 	    STtrmwhite(ndxcols_p->l7_1_ind_name);
 
-	    ndxcols_p->l7_2_ind_owner[DB_MAXNAME] = EOS;
+	    ndxcols_p->l7_2_ind_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(ndxcols_p->l7_2_ind_owner);
 
 	    STprintf(
@@ -529,10 +531,10 @@ QEC_LINK	*v_lnk_p )
 	    /*	delete from IIDD_PROCEDURES where 
 	    **  procedure_name = c32 and procedure_owner = c32; */
 
-	    regproc_p->l18_1_proc_name[DB_MAXNAME] = EOS;
+	    regproc_p->l18_1_proc_name[DB_DBP_MAXNAME] = EOS;
 	    STtrmwhite(regproc_p->l18_1_proc_name);
 
-	    regproc_p->l18_2_proc_owner[DB_MAXNAME] = EOS;
+	    regproc_p->l18_2_proc_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(regproc_p->l18_2_proc_owner);
 
 	    STprintf(
@@ -561,10 +563,10 @@ QEC_LINK	*v_lnk_p )
 	    /*	delete from IIDD_REGISTRATIONS where 
 	    **  object_name = c32 and object_owner = c32; */
 
-	    regs_p->l14_1_obj_name[DB_MAXNAME] = EOS;
+	    regs_p->l14_1_obj_name[DB_OBJ_MAXNAME] = EOS;
 	    STtrmwhite(regs_p->l14_1_obj_name);
 
-	    regs_p->l14_2_obj_owner[DB_MAXNAME] = EOS;
+	    regs_p->l14_2_obj_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(regs_p->l14_2_obj_owner);
 
 	    STprintf(
@@ -593,10 +595,10 @@ QEC_LINK	*v_lnk_p )
 	    /*	delete from IIDD_STATS where table_name = c32 and
 	    **  table_owner = c32; */
 
-	    stats_p->l15_1_tab_name[DB_MAXNAME] = EOS;
+	    stats_p->l15_1_tab_name[DB_TAB_MAXNAME] = EOS;
 	    STtrmwhite(stats_p->l15_1_tab_name);
 
-	    stats_p->l15_2_tab_owner[DB_MAXNAME] = EOS;
+	    stats_p->l15_2_tab_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(stats_p->l15_2_tab_owner);
 
 	    STprintf(
@@ -625,10 +627,10 @@ QEC_LINK	*v_lnk_p )
 	    /*	delete from IIDD_TABLES where table_name = c32 and
 	    **  table_owner = c32; */
 
-	    tables_p->l16_1_tab_name[DB_MAXNAME] = EOS;
+	    tables_p->l16_1_tab_name[DB_TAB_MAXNAME] = EOS;
 	    STtrmwhite(tables_p->l16_1_tab_name);
 
-	    tables_p->l16_2_tab_owner[DB_MAXNAME] = EOS;
+	    tables_p->l16_2_tab_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(tables_p->l16_2_tab_owner);
 
 	    STprintf(
@@ -657,10 +659,10 @@ QEC_LINK	*v_lnk_p )
 	    /*	delete from IIDD_VIEWS where table_name = c32 and
 	    **  table_owner = c32; */
 
-	    views_p->l17_1_tab_name[DB_MAXNAME] = EOS;
+	    views_p->l17_1_tab_name[DB_TAB_MAXNAME] = EOS;
 	    STtrmwhite(views_p->l17_1_tab_name);
 
-	    views_p->l17_2_tab_owner[DB_MAXNAME] = EOS;
+	    views_p->l17_2_tab_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(views_p->l17_2_tab_owner);
 
 	    STprintf(

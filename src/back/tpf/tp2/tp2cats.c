@@ -74,6 +74,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 GLOBALREF   char                *IITP_02_commit_p;
@@ -152,13 +154,13 @@ tp2_c0_log_lx(
     dxldbs_p->d2_1_ldb_dxid1 = i1_dxcb_p->tdx_id.dd_dx_id1;
     dxldbs_p->d2_2_ldb_dxid2 = i1_dxcb_p->tdx_id.dd_dx_id2;
 
-    STmove(i2_lxcb_p->tlx_site.dd_l2_node_name, ' ', (u_i4) DB_MAXNAME,
+    STmove(i2_lxcb_p->tlx_site.dd_l2_node_name, ' ', (u_i4) DB_NODE_MAXNAME,
 	dxldbs_p->d2_3_ldb_node);
 	
     STmove(i2_lxcb_p->tlx_site.dd_l3_ldb_name, ' ', (u_i4) DD_256_MAXDBNAME,
 	dxldbs_p->d2_4_ldb_name);
 
-    STmove(i2_lxcb_p->tlx_site.dd_l4_dbms_name, ' ', (u_i4) DB_MAXNAME,
+    STmove(i2_lxcb_p->tlx_site.dd_l4_dbms_name, ' ', (u_i4) DB_TYPE_MAXLEN,
 	dxldbs_p->d2_5_ldb_dbms);
 
     dxldbs_p->d2_6_ldb_id = i2_lxcb_p->tlx_site.dd_l5_ldb_id;
@@ -166,7 +168,7 @@ tp2_c0_log_lx(
     dxldbs_p->d2_8_ldb_lxid1 = i2_lxcb_p->tlx_23_lxid.dd_dx_id1;
     dxldbs_p->d2_9_ldb_lxid2 = i2_lxcb_p->tlx_23_lxid.dd_dx_id2;
 
-    STmove(i2_lxcb_p->tlx_23_lxid.dd_dx_name, ' ', (u_i4) DB_MAXNAME,
+    STmove(i2_lxcb_p->tlx_23_lxid.dd_dx_name, ' ', (u_i4) DB_DB_MAXNAME,
 	dxldbs_p->d2_10_ldb_lxname);
 
     if (i2_lxcb_p->tlx_20_flags & LX_02FLAG_2PC)
@@ -277,7 +279,7 @@ tp2_c1_log_dx(
     dxlog_p->d1_1_dx_id1 = i1_dxcb_p->tdx_id.dd_dx_id1;
     dxlog_p->d1_2_dx_id2 = i1_dxcb_p->tdx_id.dd_dx_id2;
     
-    STmove(i1_dxcb_p->tdx_id.dd_dx_name, ' ', (u_i4) DB_MAXNAME,
+    STmove(i1_dxcb_p->tdx_id.dd_dx_name, ' ', (u_i4) DB_DB_MAXNAME,
 	dxlog_p->d1_3_dx_name);
 
     dxlog_p->d1_4_dx_flags = 0;
@@ -294,13 +296,13 @@ tp2_c1_log_dx(
     dxlog_p->d1_8_dx_starid1 = 0;
     dxlog_p->d1_9_dx_starid2 = 0;
 
-    STmove(cdb_p->dd_l2_node_name, ' ', (u_i4) DB_MAXNAME,
+    STmove(cdb_p->dd_l2_node_name, ' ', (u_i4) DB_NODE_MAXNAME,
 	dxlog_p->d1_10_dx_ddb_node);
 
-    STmove(ddb_p->dd_d1_ddb_name, ' ', (u_i4) DB_MAXNAME,
+    STmove(ddb_p->dd_d1_ddb_name, ' ', (u_i4) DB_DB_MAXNAME,
 	dxlog_p->d1_11_dx_ddb_name);
 
-    STmove(cdb_p->dd_l4_dbms_name, ' ', (u_i4) DB_MAXNAME,
+    STmove(cdb_p->dd_l4_dbms_name, ' ', (u_i4) DB_TYPE_MAXLEN,
 	dxlog_p->d1_12_dx_ddb_dbms);
 
     dxlog_p->d1_13_dx_ddb_id = ddb_p->dd_d7_uniq_id;

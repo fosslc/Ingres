@@ -834,6 +834,8 @@ NO_OPTIM =
 **          GCA_PROTOCOL_LEVEL_68.
 **	30-Mar-2010 (kschendel) SIR 123485
 **	    Re-type some ptr's as the proper struct pointer.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -1400,6 +1402,8 @@ scs_initiate(SCD_SCB *scb )
     SCF_CB		scf_cb;
     i4		        access;
     DB_STATUS           local_status;
+    char                dbstr[DB_DB_MAXNAME+1];
+    char                typestr[DB_TYPE_MAXLEN+1];
     char                tempstr[DB_MAXNAME+1];
     DD_COM_FLAGS        star_comflags;
     bool                cdb_deferred = FALSE;
@@ -2261,9 +2265,9 @@ scs_initiate(SCD_SCB *scb )
 		    /* Fold database name to lower case */
 		    MEmove(l_value,
 			flag->gca_p_value.gca_value,
-			' ', sizeof(tempstr)-1, tempstr);
-		    tempstr[sizeof(tempstr)-1] = '\0';
-		    CVlower(tempstr);
+			' ', sizeof(dbstr)-1, dbstr);
+		    dbstr[sizeof(dbstr)-1] = '\0';
+		    CVlower(dbstr);
 
 		    if (scb->scb_sscb.sscb_flags & SCS_STAR)
 		    {
@@ -2271,15 +2275,14 @@ scs_initiate(SCD_SCB *scb )
 
 			star_comflags.dd_co0_active_flags--;
 			/* For Star, strip off the "/d" or "/star" */
-			ptr = STrindex(tempstr, "/", l_value);
+			ptr = STrindex(dbstr, "/", l_value);
 			if (ptr != NULL)
 			{
-			    MEfill(&tempstr[sizeof(tempstr)-1] - ptr,
-				   ' ',
-				   ptr);
+			    MEfill(&dbstr[sizeof(dbstr)-1] - ptr,
+				   ' ', ptr);
 			}
 		    }
-		    MEmove(sizeof(tempstr)-1, tempstr, ' ',
+		    MEmove(sizeof(dbstr)-1, dbstr, ' ',
 			sizeof(scb->scb_sscb.sscb_ics.ics_dbname),
 			(PTR)&scb->scb_sscb.sscb_ics.ics_dbname);
 		    break;
@@ -2340,17 +2343,17 @@ scs_initiate(SCD_SCB *scb )
 		case    GCA_TIMEZONE:
 		    I4ASSIGN_MACRO(flag->gca_p_value.gca_value[0], flag_value);
 		    if(flag_value > 0)
-			STprintf(tempstr, "GMT-%dM", flag_value);
+			STprintf(typestr, "GMT-%dM", flag_value);
 		    else if(flag_value < 0)
-			STprintf(tempstr, "GMT%dM", abs(flag_value));
+			STprintf(typestr, "GMT%dM", abs(flag_value));
 		    else
-			STcopy("GMT", tempstr);
-		    MEcopy(tempstr, STlength(tempstr)+1,
+			STcopy("GMT", typestr);
+		    MEcopy(typestr, STlength(typestr)+1,
 			   scb->scb_sscb.sscb_ics.ics_tz_name);
 		    if (scb->scb_sscb.sscb_flags & SCS_STAR)
 		    {
 			star_comflags.dd_co31_timezone = (i4)flag_value;
-			MEcopy(tempstr, STlength(tempstr)+1,
+			MEcopy(typestr, STlength(typestr)+1,
 			       star_comflags.dd_co34_tz_name);
 		    }
 		    timezone_recd = TRUE;
@@ -2360,10 +2363,11 @@ scs_initiate(SCD_SCB *scb )
 		{
 		    i4  tmp_value;
 			
-		    if(l_value < DB_MAXNAME)
+		    /* ics_tz_name is size DB_TYPE_MAXLEN */
+		    if(l_value < DB_TYPE_MAXLEN)
 			tmp_value = l_value;
 		    else
-			tmp_value = DB_MAXNAME-1;
+			tmp_value = DB_TYPE_MAXLEN-1;
 		    MEcopy(flag->gca_p_value.gca_value, tmp_value,
 			   scb->scb_sscb.sscb_ics.ics_tz_name);
 		    scb->scb_sscb.sscb_ics.ics_tz_name[tmp_value] = EOS;
@@ -2908,12 +2912,13 @@ scs_initiate(SCD_SCB *scb )
                 case    GCA_DATE_ALIAS:
                 {
                     i4  tmp_value;
-                    char  tmp_chars[DB_MAXNAME];
+                    char  tmp_chars[DB_TYPE_MAXLEN];
 
-                    if(l_value < DB_MAXNAME)
+		    /* dd_co42_date_alias is size DB_TYPE_MAXLEN */
+                    if(l_value < DB_TYPE_MAXLEN)
                         tmp_value = l_value;
                     else
-                        tmp_value = DB_MAXNAME-1;
+                        tmp_value = DB_TYPE_MAXLEN-1;
 
                     MEcopy(flag->gca_p_value.gca_value, tmp_value, tmp_chars);
                     tmp_chars[tmp_value] = EOS;
@@ -5131,7 +5136,8 @@ scs_icsxlate(SCD_SCB	*scb ,
 {
     u_i4	xlate_temp;
     u_i4	l_id;
-    char	tempstr[DB_MAXNAME];
+    char	ownstr[DB_OWN_MAXNAME];
+    char	dbstr[DB_DB_MAXNAME + 1];
     u_i4	templen;
     DB_STATUS	status;
     DMC_CB      *dm_ccb;
@@ -5223,7 +5229,7 @@ scs_icsxlate(SCD_SCB	*scb ,
     ** Translate the real userid
     */
     l_id = sizeof(scb->scb_sscb.sscb_ics.ics_xrusername);
-    templen = DB_MAXNAME;
+    templen = DB_OWN_MAXNAME;
 
     xlate_temp = CUI_ID_DLM | CUI_ID_NORM | CUI_ID_STRIP;
     if (scb->scb_sscb.sscb_ics.ics_dbserv & DU_REAL_USER_MIXED)
@@ -5234,7 +5240,7 @@ scs_icsxlate(SCD_SCB	*scb ,
 	xlate_temp |= CUI_ID_DLM_L;
 
     status = cui_idxlate((u_char *)&scb->scb_sscb.sscb_ics.ics_xrusername,
-			 &l_id, (u_char *)tempstr, &templen, xlate_temp,
+			 &l_id, (u_char *)ownstr, &templen, xlate_temp,
 			 (u_i4 *)NULL, error);
     if (DB_FAILURE_MACRO(status))
     {
@@ -5248,7 +5254,7 @@ scs_icsxlate(SCD_SCB	*scb ,
 		  0, (PTR)0 );
 	return(status);
     }
-    MEmove(templen, (PTR)tempstr, ' ',
+    MEmove(templen, (PTR)ownstr, ' ',
 		 sizeof(scb->scb_sscb.sscb_ics.ics_rusername),
                  (PTR)&scb->scb_sscb.sscb_ics.ics_rusername);
     /*
@@ -5257,7 +5263,7 @@ scs_icsxlate(SCD_SCB	*scb ,
     if (scb->scb_sscb.sscb_ics.ics_xmap & SCS_XEGRP_SPECIFIED)
     {
 	l_id = sizeof(scb->scb_sscb.sscb_ics.ics_xeusername);
-	templen = DB_MAXNAME;
+	templen = DB_OWN_MAXNAME;
 	if (scb->scb_sscb.sscb_ics.ics_xmap & SCS_XDLM_EUSER)
 	    xlate_temp = scb->scb_sscb.sscb_ics.ics_dbxlate | CUI_ID_DLM
 							    | CUI_ID_NORM
@@ -5267,7 +5273,7 @@ scs_icsxlate(SCD_SCB	*scb ,
 							    | CUI_ID_NORM
 							    | CUI_ID_STRIP;
 	status = cui_idxlate((u_char *)&scb->scb_sscb.sscb_ics.ics_xeusername,
-			     &l_id, (u_char *)tempstr, &templen, xlate_temp,
+			     &l_id, (u_char *)ownstr, &templen, xlate_temp,
 			     (u_i4 *)NULL, error);
 	if (DB_FAILURE_MACRO(status))
 	{
@@ -5281,7 +5287,7 @@ scs_icsxlate(SCD_SCB	*scb ,
 		      0, (PTR)0);
 	    return(status);
 	}
-	MEmove(templen, (PTR)tempstr, ' ',
+	MEmove(templen, (PTR)ownstr, ' ',
 		     sizeof(scb->scb_sscb.sscb_ics.ics_susername),
                      (PTR)&scb->scb_sscb.sscb_ics.ics_susername);
     }
@@ -5304,7 +5310,7 @@ scs_icsxlate(SCD_SCB	*scb ,
 	     ) != 0)
     {
 	l_id = sizeof(scb->scb_sscb.sscb_ics.ics_xegrpid);
-	templen = DB_MAXNAME;
+	templen = DB_OWN_MAXNAME;
 	if (scb->scb_sscb.sscb_ics.ics_xmap & SCS_XDLM_EGRPID)
 	    xlate_temp = scb->scb_sscb.sscb_ics.ics_dbxlate | CUI_ID_DLM
 							    | CUI_ID_NORM
@@ -5314,7 +5320,7 @@ scs_icsxlate(SCD_SCB	*scb ,
 							    | CUI_ID_NORM
 							    | CUI_ID_STRIP;
 	status = cui_idxlate((u_char *)&scb->scb_sscb.sscb_ics.ics_xegrpid,
-			     &l_id, (u_char *)tempstr, &templen, xlate_temp,
+			     &l_id, (u_char *)ownstr, &templen, xlate_temp,
 			     (u_i4 *)NULL, error);
 	if (DB_FAILURE_MACRO(status))
 	{
@@ -5328,7 +5334,7 @@ scs_icsxlate(SCD_SCB	*scb ,
 		      0, (PTR)0);
 	    return(status);
 	}
-	MEmove(templen, (PTR)tempstr, ' ',
+	MEmove(templen, (PTR)ownstr, ' ',
 		 sizeof(scb->scb_sscb.sscb_ics.ics_egrpid),
                  (PTR)&scb->scb_sscb.sscb_ics.ics_egrpid);
     }
@@ -5341,7 +5347,7 @@ scs_icsxlate(SCD_SCB	*scb ,
 	     ) != 0)
     {
 	l_id = sizeof(scb->scb_sscb.sscb_ics.ics_xeaplid);
-	templen = DB_MAXNAME;
+	templen = DB_OWN_MAXNAME;
 	if (scb->scb_sscb.sscb_ics.ics_xmap & SCS_XDLM_EAPLID)
 	    xlate_temp = scb->scb_sscb.sscb_ics.ics_dbxlate | CUI_ID_DLM
 							    | CUI_ID_NORM
@@ -5351,7 +5357,7 @@ scs_icsxlate(SCD_SCB	*scb ,
 							    | CUI_ID_NORM
 							    | CUI_ID_STRIP;
 	status = cui_idxlate((u_char *)&scb->scb_sscb.sscb_ics.ics_xeaplid,
-			     &l_id, (u_char *)tempstr, &templen, xlate_temp,
+			     &l_id, (u_char *)ownstr, &templen, xlate_temp,
 			     (u_i4 *)NULL, error);
 	if (DB_FAILURE_MACRO(status))
 	{
@@ -5365,7 +5371,7 @@ scs_icsxlate(SCD_SCB	*scb ,
 		      0, (PTR)0);
 	    return(status);
 	}
-	MEmove(templen, (PTR)tempstr, ' ',
+	MEmove(templen, (PTR)ownstr, ' ',
 		 sizeof(scb->scb_sscb.sscb_ics.ics_eaplid),
                  (PTR)&scb->scb_sscb.sscb_ics.ics_eaplid);
     }
@@ -5388,7 +5394,7 @@ scs_icsxlate(SCD_SCB	*scb ,
     **  to do the translation.)
     */
     l_id = sizeof(scb->scb_sscb.sscb_ics.ics_xdbowner);
-    templen = DB_MAXNAME;
+    templen = DB_OWN_MAXNAME;
     xlate_temp = CUI_ID_DLM | CUI_ID_NORM | CUI_ID_STRIP;
 
     if (scb->scb_sscb.sscb_ics.ics_dbserv & DU_REAL_USER_MIXED)
@@ -5399,7 +5405,7 @@ scs_icsxlate(SCD_SCB	*scb ,
 	xlate_temp |= CUI_ID_DLM_L;
 
     status = cui_idxlate((u_char *)&scb->scb_sscb.sscb_ics.ics_xdbowner,
-			 &l_id, (u_char *)tempstr, &templen, xlate_temp,
+			 &l_id, (u_char *)ownstr, &templen, xlate_temp,
 			 (u_i4 *)NULL, error);
     if (DB_FAILURE_MACRO(status))
     {
@@ -5413,7 +5419,7 @@ scs_icsxlate(SCD_SCB	*scb ,
 		  0, (PTR)0 );
 	return(status);
     }
-    MEmove(templen, (PTR)tempstr, ' ',
+    MEmove(templen, (PTR)ownstr, ' ',
 		 sizeof(scb->scb_sscb.sscb_ics.ics_dbowner),
                  (PTR)&scb->scb_sscb.sscb_ics.ics_dbowner);
 
@@ -5423,7 +5429,7 @@ scs_icsxlate(SCD_SCB	*scb ,
     if (scb->scb_sscb.sscb_stype != SCS_SMONITOR)
     {
 	l_id = sizeof(scb->scb_sscb.sscb_ics.ics_dbname);
-	templen = DB_MAXNAME;
+	templen = DB_DB_MAXNAME;
 	/*
 	** Database names are case-insensitive;
 	** translate to lower case
@@ -5431,7 +5437,7 @@ scs_icsxlate(SCD_SCB	*scb ,
 	xlate_temp = CUI_ID_REG | CUI_ID_REG_L | CUI_ID_NORM | CUI_ID_STRIP;
 
     	status = cui_idxlate((u_char *)&scb->scb_sscb.sscb_ics.ics_dbname,
-			     &l_id, (u_char *)tempstr, &templen, xlate_temp,
+			     &l_id, (u_char *)dbstr, &templen, xlate_temp,
 			     (u_i4 *)NULL, error);
     	if (DB_FAILURE_MACRO(status))
     	{
@@ -5445,7 +5451,7 @@ scs_icsxlate(SCD_SCB	*scb ,
 		      0, (PTR)0);
 	    return(status);
     	}
-    	MEmove(templen, (PTR)tempstr, ' ',
+    	MEmove(templen, (PTR)dbstr, ' ',
 		     sizeof(scb->scb_sscb.sscb_ics.ics_dbname),
                      (PTR)&scb->scb_sscb.sscb_ics.ics_dbname);
     }
@@ -5454,12 +5460,12 @@ scs_icsxlate(SCD_SCB	*scb ,
     ** Set the catalog owner name
     */
     l_id = sizeof(DB_INGRES_NAME)-1;
-    templen = DB_MAXNAME;
+    templen = DB_OWN_MAXNAME;
     xlate_temp = scb->scb_sscb.sscb_ics.ics_dbxlate | CUI_ID_REG
 						    | CUI_ID_NORM
 						    | CUI_ID_STRIP;
     status = cui_idxlate((u_char *)DB_INGRES_NAME,
-			 &l_id, (u_char *)tempstr, &templen, xlate_temp,
+			 &l_id, (u_char *)ownstr, &templen, xlate_temp,
 			 (u_i4 *)NULL, error);
     if (DB_FAILURE_MACRO(status))
     {
@@ -5473,7 +5479,7 @@ scs_icsxlate(SCD_SCB	*scb ,
 		  0, (PTR)0 );
 	return(status);
     }
-    MEmove(templen, (PTR)tempstr, ' ',
+    MEmove(templen, (PTR)ownstr, ' ',
 		 sizeof(scb->scb_sscb.sscb_ics.ics_cat_owner),
 		 (PTR)&scb->scb_sscb.sscb_ics.ics_cat_owner);
 
@@ -6978,7 +6984,7 @@ scs_dbdb_info(SCD_SCB *scb ,
 		struct
 		{
 		    i2		dbl_length;
-		    char	dbl_loc[DB_MAXNAME];
+		    char	dbl_loc[DB_LOC_MAXNAME];
 		}	db_location;
 		PTR	place;
 

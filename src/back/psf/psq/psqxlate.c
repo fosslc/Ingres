@@ -71,6 +71,8 @@
 **	    Removed redeclarations of psq_x_new(), psq_x_add(),
 **	    properly prototyped in pshparse.h.
 **	    Added PSS_SESSCB* parameter to psq_prt_tabname().
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -460,15 +462,16 @@ psq_same_site(
 	DD_LDB_DESC	    *ldb_desc2)
 {
     if (MEcmp((PTR) ldb_desc1->dd_l2_node_name,
-	      (PTR) ldb_desc2->dd_l2_node_name, sizeof(DD_NAME))
+	      (PTR) ldb_desc2->dd_l2_node_name, sizeof(DD_NODE_NAME))
 	||
 
 	MEcmp((PTR) ldb_desc1->dd_l3_ldb_name, 
 	      (PTR) ldb_desc2->dd_l3_ldb_name, sizeof(DD_256C))
 	||
 
-	STbcompare(ldb_desc1->dd_l4_dbms_name, (u_i4) sizeof(DD_NAME),
-		   ldb_desc2->dd_l4_dbms_name, (u_i4) sizeof(DD_NAME),
+	STbcompare(
+	    ldb_desc1->dd_l4_dbms_name, sizeof(ldb_desc1->dd_l4_dbms_name),
+	    ldb_desc2->dd_l4_dbms_name, sizeof(ldb_desc2->dd_l4_dbms_name),
 		   (i4) TRUE))
     {
 	return FALSE;
@@ -541,14 +544,13 @@ psq_prt_tabname(
     bool		use_owner = TRUE;
     u_i4		name_len;
                 
-    name_len = psf_trmwhite(sizeof(DD_NAME),
-					ldb_tab_info->dd_t2_tab_owner);
+    name_len = psf_trmwhite(sizeof(DD_OWN_NAME), ldb_tab_info->dd_t2_tab_owner);
 
     if (ldb_tab_info->dd_t9_ldb_p->dd_i2_ldb_plus.dd_p3_ldb_caps.
 				dd_c1_ldb_caps & DD_8CAP_DELIMITED_IDS)
     {
 	/* if LDB > 605, okay to delimit names */
-	unorm_len = DB_MAXNAME *2 +2;
+	unorm_len = DB_OWN_MAXNAME *2 +2;
 	status = cui_idunorm((u_char *)ldb_tab_info->dd_t2_tab_owner, &name_len,
 			    unorm_buf, &unorm_len, CUI_ID_DLM, err_blk);
 	if (DB_FAILURE_MACRO(status))
@@ -593,12 +595,12 @@ psq_prt_tabname(
 	    return(status);
     }
 
-    name_len = psf_trmwhite(sizeof(DD_NAME), ldb_tab_info->dd_t1_tab_name);
+    name_len = psf_trmwhite(sizeof(DD_TAB_NAME), ldb_tab_info->dd_t1_tab_name);
 
     if (ldb_tab_info->dd_t9_ldb_p->dd_i2_ldb_plus.dd_p3_ldb_caps.
 				dd_c1_ldb_caps & DD_8CAP_DELIMITED_IDS)
     {
-	unorm_len = DB_MAXNAME *2 +2;
+	unorm_len = DB_TAB_MAXNAME *2 +2;
 	status = cui_idunorm((u_char *)ldb_tab_info->dd_t1_tab_name, &name_len,
 				unorm_buf, &unorm_len, CUI_ID_DLM, err_blk);
 

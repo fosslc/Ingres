@@ -97,6 +97,8 @@
 **	    already been run. This change implements SIR 117405.
 **	24-Aug-2009 (kschendel) 121804
 **	    Add missing prototypes.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 # define	NAMELEN		DB_GW1_MAXNAME
@@ -206,54 +208,6 @@
 
 
 /*}
-** Name: OPQ_NAME - define a db name, with room for a null character
-**
-** Description:
-**      Defines memory for a name, with room for a null terminating character
-**
-** History:
-**      9-dec-86 (seputis)
-**          initial creation
-[@history_template@]...
-*/
-
-typedef struct _OPQ_NAME
-{
-    union 
-    {
-	    DB_ATT_NAME	   attname;         /* room for attribute name */
-	    DB_OWN_NAME    ownname;         /* room for owner name */
-            DB_DB_NAME	   dbname;          /* room for data base name */
-            DB_TAB_NAME	   tabname;	    /* room for table name */
-            char           maxname[DB_GW1_MAXNAME];
-    }   nametype;
-    char	    nullchar;		    /* room for a null character */
-} OPQ_NAME;
-
-/*}
-** Name: OPQ_DELIM - define a tab name, with room for a null character
-**
-** Description:
-**      Defines memory for a table name, with room for a null 
-**	terminating character
-**
-** History:
-**	25-march-1997 (angusm)
-**	derived from OPQ_NAME
-[@history_template@]...
-*/
-
-typedef struct _OPQ_DELIM
-{
-    union 
-    {
-            DB_TAB_NAME	   tabname;	    /* room for table name */
-            char           maxname[DB_MAX_DELIMID];
-    }   nametype;
-    char	    nullchar;		    /* room for a null character */
-} OPQ_DELIM;
-
-/*}
 ** Name: OPQ_RLIST - relation desciptor on which to find statistics
 **
 ** Description:
@@ -290,16 +244,16 @@ typedef struct _OPQ_DELIM
 */
 typedef struct _OPQ_RLIST
 {
-	OPQ_NAME	relname;	/* relation name with room for
+	DB_TAB_STR	relname;	/* relation name with room for
                                         ** null terminator character */
-	OPQ_DELIM	delimname;	/* Delimited relation name (dquotes
+	DB_DELIM_STR	delimname;	/* Delimited relation name (dquotes
 					** added if needed); null-terminated */
-	OPQ_DELIM	argname;	/* Relation name exactly as given on
+	DB_DELIM_STR	argname;	/* Relation name exactly as given on
 					** the command line */
 	i4		ntups;		/* number of tuples in relation */
-	OPQ_DELIM	samplename;	/* relation name with sample data */
+	DB_DELIM_STR	samplename;	/* relation name with sample data */
 	i4		nsample;	/* number of sample tuples */
-	OPQ_NAME	ownname;	/* owner name with room for
+	DB_OWN_STR	ownname;	/* owner name with room for
                                         ** null terminator character */
 	i4		reltid;		/* 1st part of Ingres relation id */
 	i4		reltidx;	/* 2nd part of Ingres relation id */
@@ -346,12 +300,12 @@ typedef struct _OPQ_ALIST
                                         ** calculation */
 	DB_DATA_VALUE   hist_dt;	/* histogram datatype */
 	DB_ATT_ID	attrno;         /* attribute id */
-	OPQ_NAME	attname;        /* attribute name with room for
+	DB_ATT_STR	attname;        /* attribute name with room for
                                         ** null terminating character */
-	OPQ_DELIM	delimname;      /* Delimited attribute name with 
+	DB_DELIM_STR	delimname;      /* Delimited attribute name with 
 					** room for null terminating 
 					** character */
-	OPQ_NAME	typename;	/* name of column data type */
+	DB_TYPE_STR	typename;	/* name of column data type */
 	char		nullable;	/* Y/N */
 	i2		scale;		/* column scale */
 	i2		collID;		/* column collation ID */
@@ -616,8 +570,8 @@ typedef struct _OPQ_GLOBAL
 {
     char	*opq_utilid;	/* Name of the utility */
     char	*opq_dbname;	/* Name of the database */
-    OPQ_NAME	opq_owner;	/* Owner of the database. */
-    OPQ_NAME	opq_dba;	/* DBA of the database */
+    DB_OWN_STR	opq_owner;	/* Owner of the database. */
+    DB_OWN_STR	opq_dba;	/* DBA of the database */
     OPQ_DBCAPS	opq_dbcaps;	/* capabilities info */
     OPQ_DBMS	opq_dbms;	/* dbms info */
     OPQ_LANG	opq_lang;	/* language info */

@@ -589,6 +589,8 @@
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: replace LG_LSN i/o parameter with LG_LRI,
 **	    initialize new DM0L_CRHEADER in appropriate log records.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*
@@ -1355,8 +1357,8 @@ DB_ERROR	*dberr)
     ** owner name and table name.
     */
     log.put_header.length = sizeof(DM0L_PUT) + size -
-				(DB_MAXNAME - name_len) -
-				(DB_MAXNAME - owner_len);
+				(DB_TAB_MAXNAME - name_len) -
+				(DB_OWN_MAXNAME - owner_len);
 
     log.put_header.type   = DM0LPUT;
     log.put_header.flags  = flag;
@@ -1493,8 +1495,8 @@ DB_ERROR	*dberr)
     /*
     ** The length of the record reflects the owner name and table name length.
     */
-    log.nofull_header.length = sizeof(DM0L_NOFULL) - (DB_MAXNAME - name_len) -
-				(DB_MAXNAME - owner_len);
+    log.nofull_header.length = sizeof(DM0L_NOFULL) - (DB_TAB_MAXNAME - name_len)
+				- (DB_OWN_MAXNAME - owner_len);
 
     log.nofull_header.type = DM0LNOFULL;
     log.nofull_header.flags = flag;
@@ -1638,8 +1640,8 @@ DB_ERROR	*dberr)
     ** owner name and table name.
     */
     log.del_header.length = sizeof(DM0L_DEL) + size -
-				(DB_MAXNAME - name_len) -
-				(DB_MAXNAME - owner_len);
+				(DB_TAB_MAXNAME - name_len) -
+				(DB_OWN_MAXNAME - owner_len);
 
     log.del_header.type   = DM0LDEL;
     log.del_header.flags  = flag;
@@ -1873,8 +1875,8 @@ DB_ERROR	*dberr)
     */
     log.rep_header.length = sizeof(DM0L_REP) +
 				comp_odata_len + comp_ndata_len -
-				(DB_MAXNAME - name_len) -
-				(DB_MAXNAME - owner_len);
+				(DB_TAB_MAXNAME - name_len) -
+				(DB_OWN_MAXNAME - owner_len);
     log.rep_header.type    = DM0LREP;
     log.rep_header.flags   = flag;
     if (flag & DM0L_CLR)
@@ -4654,9 +4656,9 @@ dm0l_allocate(
 	    DB_TRAN_ID		tran_id;
 	    i4		event;
 
-	    STmove((PTR)DB_ARCHIVER_INFO, ' ', DB_MAXNAME,
+	    STmove((PTR)DB_ARCHIVER_INFO, ' ', DB_DB_MAXNAME,
 		(PTR) &add_info.ad_dbname);
-	    MEcopy((PTR)DB_INGRES_NAME, DB_MAXNAME,
+	    MEcopy((PTR)DB_INGRES_NAME, DB_OWN_MAXNAME,
 		(PTR) &add_info.ad_dbowner);
 	    MEcopy((PTR)"None", 4, (PTR) &add_info.ad_root);
 	    add_info.ad_dbid = 0;
@@ -4861,9 +4863,9 @@ dm0l_allocate(
 	    i4		lx_id;
 	    DB_TRAN_ID		tran_id;
 
-	    STmove((PTR)DB_RECOVERY_INFO, ' ', DB_MAXNAME,
+	    STmove((PTR)DB_RECOVERY_INFO, ' ', DB_DB_MAXNAME,
 			(PTR) &add_info.ad_dbname);
-	    MEcopy((PTR)DB_INGRES_NAME, DB_MAXNAME,
+	    MEcopy((PTR)DB_INGRES_NAME, DB_OWN_MAXNAME,
 			(PTR) &add_info.ad_dbowner);
 	    MEcopy((PTR)"None", 4, (PTR) &add_info.ad_root);
 	    add_info.ad_dbid = 0;
@@ -5315,7 +5317,7 @@ dm0l_bcp(
 				(PTR) &(bcp->bcp_subtype.type_tx[i].tx_first));
 	    MEcopy((PTR) &(tr.tr_last), sizeof(tr.tr_last),
 				(PTR) &(bcp->bcp_subtype.type_tx[i].tx_last));
-	    MEcopy((PTR) tr.tr_user_name, DB_MAXNAME,
+	    MEcopy((PTR) tr.tr_user_name, DB_OWN_MAXNAME,
 		    (PTR) bcp->bcp_subtype.type_tx[i].tx_user_name.db_own_name);
 	    i++;
 	    if (i >= count)
@@ -7803,8 +7805,8 @@ dm0l_assoc(
     /*
     ** The length of the record reflects the owner name and table name length.
     */
-    log.ass_header.length = sizeof(DM0L_ASSOC) - (DB_MAXNAME - name_len) -
-				(DB_MAXNAME - owner_len);
+    log.ass_header.length = sizeof(DM0L_ASSOC) - (DB_TAB_MAXNAME - name_len) -
+				(DB_OWN_MAXNAME - owner_len);
 
     log.ass_header.type = DM0LASSOC;
     log.ass_header.flags = flag;
@@ -7932,8 +7934,8 @@ DB_ERROR	*dberr)
     */
 
     log.all_header.length = sizeof(DM0L_ALLOC) -
-				(DB_MAXNAME - name_len) -
-				(DB_MAXNAME - owner_len);
+				(DB_TAB_MAXNAME - name_len) -
+				(DB_OWN_MAXNAME - owner_len);
     log.all_header.type = DM0LALLOC;
     log.all_header.flags = flag;
     if (flag & DM0L_CLR)
@@ -8064,8 +8066,8 @@ DB_ERROR        *dberr)
     */
 
     log.dall_header.length = sizeof(DM0L_DEALLOC) -
-				(DB_MAXNAME - name_len) -
-				(DB_MAXNAME - owner_len);
+				(DB_TAB_MAXNAME - name_len) -
+				(DB_OWN_MAXNAME - owner_len);
     log.dall_header.type = DM0LDEALLOC;
     log.dall_header.flags = flag;
     if (flag & DM0L_CLR)
@@ -8345,8 +8347,8 @@ dm0l_ovfl(
     ** removed.  "name_len" and "owner_len" reflect these lengths.
     */
 
-    log.ovf_header.length = sizeof(DM0L_OVFL) - (DB_MAXNAME - name_len) -
-				(DB_MAXNAME - owner_len);
+    log.ovf_header.length = sizeof(DM0L_OVFL) - (DB_TAB_MAXNAME - name_len) -
+				(DB_OWN_MAXNAME - owner_len);
     log.ovf_header.type = DM0LOVFL;
     log.ovf_header.flags = flag;
     if (flag & DM0L_CLR)
@@ -8716,8 +8718,8 @@ DB_ERROR	*dberr)
     */
     log.btp_header.length = sizeof(DM0L_BTPUT) -
 				(DM1B_MAXLEAFLEN - key_length) -
-				(DB_MAXNAME - name_len) -
-				(DB_MAXNAME - owner_len);
+				(DB_TAB_MAXNAME - name_len) -
+				(DB_OWN_MAXNAME - owner_len);
 
     log.btp_header.type = DM0LBTPUT;
     log.btp_header.flags = flag;
@@ -8874,8 +8876,8 @@ DB_ERROR	*dberr)
     */
     log.btd_header.length = sizeof(DM0L_BTDEL) -
 				(DM1B_MAXLEAFLEN - key_length) -
-				(DB_MAXNAME - name_len) -
-				(DB_MAXNAME - owner_len);
+				(DB_TAB_MAXNAME - name_len) -
+				(DB_OWN_MAXNAME - owner_len);
 
     log.btd_header.type = DM0LBTDEL;
     log.btd_header.flags = flag;
@@ -9723,8 +9725,8 @@ DB_ERROR	*dberr)
 				(RCB_MAX_RTREE_LEVEL * sizeof(DM_TID) -
 				 stack_length) -
 				(DB_MAXRTREE_KEY - key_length) -
-				(DB_MAXNAME - name_len) -
-				(DB_MAXNAME - owner_len);
+				(DB_TAB_MAXNAME - name_len) -
+				(DB_OWN_MAXNAME - owner_len);
 
     log.rtd_header.type = DM0LRTDEL;
     log.rtd_header.flags = flag;
@@ -9869,8 +9871,8 @@ DB_ERROR	*dberr)
 				(RCB_MAX_RTREE_LEVEL * sizeof(DM_TID) -
 				 stack_length) -
 				(DB_MAXRTREE_KEY - key_length) -
-				(DB_MAXNAME - name_len) -
-				(DB_MAXNAME - owner_len);
+				(DB_TAB_MAXNAME - name_len) -
+				(DB_OWN_MAXNAME - owner_len);
 
     log.rtp_header.type = DM0LRTPUT;
     log.rtp_header.flags = flag;
@@ -10020,8 +10022,8 @@ DB_ERROR	*dberr)
 				(RCB_MAX_RTREE_LEVEL * sizeof(DM_TID) -
 				 stack_length) -
 				((DB_MAXRTREE_KEY - key_length) * 2)-
-				(DB_MAXNAME - name_len) -
-				(DB_MAXNAME - owner_len);
+				(DB_TAB_MAXNAME - name_len) -
+				(DB_OWN_MAXNAME - owner_len);
 
     log.rtr_header.type = DM0LRTREP;
     log.rtr_header.flags = flag;
@@ -10634,7 +10636,7 @@ DB_DB_NAME *db_name_ptr)
     STATUS  status;
     i4 err_code;
 
-	sci_list[0].sci_length = DB_MAXNAME;
+	sci_list[0].sci_length = DB_DB_MAXNAME;
         sci_list[0].sci_code = SCI_DBNAME;
 	sci_list[0].sci_aresult = (PTR) db_name_ptr;
 	sci_list[0].sci_rlength = 0;

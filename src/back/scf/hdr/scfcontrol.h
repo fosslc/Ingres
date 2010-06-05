@@ -170,6 +170,8 @@
 **	    Added sc_date_type_alias.
 **	10-Mar-2009 (kiria01) SIR 121665
 **	    Update GCA API to LEVEL 5
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -566,7 +568,7 @@ CSP_SERVER,LIC_VIOL_REJECT,IS_MT"
 #define         SC_DATE_NONE        0x04  /* Date is set to disallow "date" */
     i4		    sc_errors[DB_MAX_FACILITY+1];
     DB_STATUS	    (*sc_sxf_cptr)();	/* Pointer to the sxf_call() routine */
-    char	    sc_cname[DB_MAXNAME]; /* node name if cluster */
+    char	    sc_cname[DB_NODE_MAXNAME]; /* node name if cluster */
     char	    sc_sname[18];	/* name of the server */
     SCS_MCB	    *sc_mcb_list;	/* list of all known mcb's in system */
     CS_SEMAPHORE    sc_mcb_semaphore;	/* semaphore for updating this list */
@@ -599,7 +601,7 @@ CSP_SERVER,LIC_VIOL_REJECT,IS_MT"
     i4	    sc_gwbytes;
     PTR		    sc_gwvcb;
     PTR		    sc_dbdb_loc;
-    char	    sc_iversion[DB_MAXNAME];
+    char	    sc_iversion[DB_TYPE_MAXLEN];
     CS_SEMAPHORE    sc_misc_semaphore;
     PTR		    sc_gca_cb;		    /* GCA_API_LEVEL_5 cb */
     GCA_LS_PARMS    sc_gcls_parms;
@@ -628,7 +630,7 @@ CSP_SERVER,LIC_VIOL_REJECT,IS_MT"
     i4		    sc_events;		    /* Corresponds to user /EVENTS */
     i4              sc_event_priority;      /* Priority of Event Thread */
     /* Star additions */
-    DD_NAME	    sc_ii_vnode;	    /* Save install node name */
+    DD_NODE_NAME    sc_ii_vnode;	    /* Save install node name */
     i4		    sc_prt_gcaf;	    /* Controls dumping of GCA msgs */
     DD_CLUSTER_INFO sc_clustered_nodes;	    /* Nodes in this cluster */
     i4		    sc_no_star_cluster;	    /* Do cluster optimizations if

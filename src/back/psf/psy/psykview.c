@@ -97,6 +97,8 @@
 **	    Supply session's SID to QSF in qsf_sid.
 **	19-Oct-2005 (schka24)
 **	    Delete alter-timestamp routine, done inside QEF these days.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -260,7 +262,7 @@ psy_kview(
     ** that the object name will be followed with a blank) if DROPping STAR
     ** object along with underlying LDB table
     */
-    char		str[14 + sizeof(DD_NAME)*2];
+    char		str[14 + sizeof(DD_TAB_NAME)*2];
     char		*tbl_name = str + sizeof("drop table ") -1;
     PSS_LTBL_INFO	*next_tbl = (PSS_LTBL_INFO *) psy_cb->psy_tblq.q_next;
     u_i4 		unorm_len, norm_len;
@@ -288,7 +290,7 @@ psy_kview(
     if ((sess_cb->pss_distrib & DB_3_DDB_SESS) &&
 	(next_tbl != (PSS_LTBL_INFO *) NULL))
     {
-	MEcopy((PTR) sess_cb->pss_user.db_own_name, sizeof(DD_NAME),
+	MEcopy((PTR) sess_cb->pss_user.db_own_name, sizeof(DD_OWN_NAME),
 	       (PTR) ddl_info.qed_d2_obj_owner);
 
 	if ((qry_info.qed_q2_lang = sess_cb->pss_lang) == DB_SQL)
@@ -315,7 +317,7 @@ psy_kview(
 	ldb_tab_info.dd_t9_ldb_p = &ldb_info;
 
 	/* make sure the last char in the buffer is a space */
-	CMcpychar(" ", (tbl_name + sizeof(DD_NAME)));
+	CMcpychar(" ", (tbl_name + sizeof(DD_TAB_NAME)));
     }
 
     for (i = 0; i < psy_cb->psy_numtabs; i++)
@@ -340,7 +342,7 @@ psy_kview(
 		char	*objtype;
 
 		MEcopy((PTR) psy_cb->psy_tabname[i].db_tab_name,
-		    sizeof(DD_NAME), (PTR) ddl_info.qed_d1_obj_name);
+		    sizeof(DD_TAB_NAME), (PTR) ddl_info.qed_d1_obj_name);
 		STRUCT_ASSIGN_MACRO(psy_cb->psy_tables[i],
 					ddl_info.qed_d7_obj_id);
 
@@ -362,9 +364,9 @@ psy_kview(
 
 		if (next_tbl->pss_delim_tbl)
 		{
-		    norm_len = (u_i4) psf_trmwhite(sizeof(DD_NAME),
+		    norm_len = (u_i4) psf_trmwhite(sizeof(DD_TAB_NAME),
 					next_tbl->pss_tbl_name);
-    		    unorm_len = DB_MAXNAME*2 +2;
+    		    unorm_len = DB_TAB_MAXNAME*2 +2;
 		    status = cui_idunorm( (u_char*)next_tbl->pss_tbl_name,
 					&norm_len, (u_char *)tbl_name,
 					&unorm_len, CUI_ID_DLM, 
@@ -388,10 +390,10 @@ psy_kview(
 		}
 		else
 		{
-		    MEcopy((PTR) next_tbl->pss_tbl_name, sizeof(DD_NAME),
+		    MEcopy((PTR) next_tbl->pss_tbl_name, sizeof(DD_TAB_NAME),
 			(PTR) tbl_name);
-	    	    packet.dd_p1_len   = sizeof(DD_NAME) + 11 + CMbytecnt(" ");
-	    	    CMcpychar(" ", (tbl_name + sizeof(DD_NAME)));
+	    	    packet.dd_p1_len = sizeof(DD_TAB_NAME) + 11 + CMbytecnt(" ");
+	    	    CMcpychar(" ", (tbl_name + sizeof(DD_TAB_NAME)));
 		}
 		
 		STRUCT_ASSIGN_MACRO(next_tbl->pss_ldb_desc,
@@ -753,14 +755,15 @@ psy_kregproc(
 
     /* Identify the object first */
     dbp_curs_id.db_cursor_id[0] = dbp_curs_id.db_cursor_id[1] = 0;
-    MEcopy((PTR)procname, DB_MAXNAME, (PTR)dbp_curs_id.db_cur_name);
+    MEcopy((PTR)procname, DB_DBP_MAXNAME, (PTR)dbp_curs_id.db_cur_name);
+
     MEcopy((PTR) &dbp_curs_id, sizeof(DB_CURSOR_ID), (PTR) dbpid);
 
-    MEcopy((PTR) &sess_cb->pss_user, DB_MAXNAME,
+    MEcopy((PTR) &sess_cb->pss_user, DB_OWN_MAXNAME,
         (PTR) (dbpid + sizeof(DB_CURSOR_ID)));
 
     I4ASSIGN_MACRO(sess_cb->pss_udbid,
-        *(i4 *) (dbpid + sizeof(DB_CURSOR_ID) + DB_MAXNAME));
+        *(i4 *) (dbpid + sizeof(DB_CURSOR_ID) + DB_OWN_MAXNAME));
 
     MEcopy((PTR) dbpid, sizeof(dbpid),
         (PTR) qsf_rb.qsf_feobj_id.qso_name);

@@ -68,6 +68,8 @@
 **	24-Aug-2009 (maspa05) SIR 122324, trac 397
 **	    new "truly silent" mode - does not output 'box' lines etc
 **          In silent mode don't output leading and trailing separators
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 GLOBALREF	bool	TrulySilent;
@@ -534,8 +536,8 @@ i4	count = 0;
 	    ** will blank pad correctly.
 	    */
 
-	    if (count == 1 && data_end == 1 && seglen < GL_MAXNAME)
-		qriob->dbv.db_length = GL_MAXNAME;
+	    if (count == 1 && data_end == 1 && seglen < qriob->qrb->col_maxname)
+		qriob->dbv.db_length = qriob->qrb->col_maxname;
 	    else
 	    	qriob->dbv.db_length = seglen;
 	    printatt( qriob->qrb, &(qriob->dbv), TRUE );
@@ -560,7 +562,8 @@ i4	count = 0;
 					** must be padded or truncated to fit.
 					** data_end is not mnemonic here!!
 					*/
-	for( data_end = ( DB_MAXNAME - seglen ); data_end > 0; data_end -- )
+	for( data_end = ( qriob->qrb->col_maxname - seglen );
+			data_end > 0; data_end -- )
 	    qrputc(qriob->qrb, ' ');
     }
     return;

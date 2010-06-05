@@ -176,6 +176,8 @@ GLOBALREF   char     IIQE_63_qperror[];     /* string "QP ERROR detected!"
 **	    replace nat and longnat with i4
 **	24-feb-04 (inkdo01)
 **	    Changed dsh_ddb_cb from QEE_DDB_CB instance to ptr.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -1264,18 +1266,18 @@ QEF_AHD		*i_act_p )
     }
 
     /* 3.1 If ldb supports temp tables, modify table name by prefixing 
-    **     'session.'. It will fit because sizof(DD_NAME) is allocated, but 
-    **     name is only 10 for open sql.
+    ** 'session.'. It will fit because sizof(DD_TAB_NAME) is allocated, but 
+    ** name is only 10 for open sql.
     */
 
     if (tmp_p->qeq_q5_ldb_p->dd_l6_flags & DD_04FLAG_TMPTBL)
     {
-	char    tmpdd[sizeof(DD_NAME) * 2];
+	char    tmpdd[sizeof(DD_TAB_NAME) * 2];
 	char    *tmpnm = (char *)(qee_p->qee_d1_tmp_p + temp_id);
 
-	tmpnm[sizeof(DD_NAME)-1] = EOS;
+	tmpnm[sizeof(DD_TAB_NAME)-1] = EOS;
 	STpolycat( 3, "session", ".", tmpnm, tmpdd );
-	STmove( tmpdd, (char)' ', sizeof(DD_NAME), tmpnm );
+	STmove( tmpdd, (char)' ', sizeof(DD_TAB_NAME), tmpnm );
     }
 
     /* 4. execute transfer action */
@@ -2374,7 +2376,7 @@ QEE_DSH		*i_dsh_p )
 **	rqr_own_name	    - Owner of procedure at local site
 **	rqr_qid             - Ldb procedure identifier,     DB_CURSOR_ID
 **        .db_cursor_id     - Ldb procedure id,		    array of 2 i4s
-**        .db_cur_name      - Ldb procedure name,	    char[DB_MAXNAME]
+**        .db_cur_name      - Ldb procedure name,    char[DB_CURSOR_MAXNAME]
 **	rqr_tupdesc_p       - Tuple descriptor description  *SCF_TD_CB
 **                          NULL if not byref
 **        ->scf_ldb_tp_p  - Where to put LDB TDESCR	    *GCA_TD_DATA
@@ -2384,7 +2386,7 @@ QEE_DSH		*i_dsh_p )
 **	---------------------
 **	rqr_qid             - Ldb procedure identifier,     DB_CURSOR_ID
 **        .db_cursor_id   - Ldb procedure id,		    array of 2 i4s
-**        .db_cur_name    - Ldb procedure name,		    char[DB_MAXNAME]
+**        .db_cur_name    - Ldb procedure name,	    char[DB_CURSOR_MAXNAME]
 **	rqr_dbp_rstat       - Ldb return status,            i4
 **	rqr_ldb_abort       - Ldb abort status,             bool
 **                          TRUE if ldb aborted

@@ -111,6 +111,8 @@
 **	    thanks to the parallel query changes.)
 **      09-jan-2009 (stial01)
 **          Fix buffers that are dependent on DB_MAXNAME
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 
@@ -340,14 +342,14 @@ QEE_DSH		*dsh )
 	  case E_SC002B_EVENT_REGISTERED:
 	    _VOID_ qef_error(E_QE020C_EV_REGISTER_EXISTS, 0L, status, &err,
 			     &dsh->dsh_error, 2,
-			     qec_trimwhite(DB_MAXNAME, onm), onm,
-			     qec_trimwhite(DB_MAXNAME, enm), enm);
+			     qec_trimwhite(DB_OWN_MAXNAME, onm), onm,
+			     qec_trimwhite(DB_EVENT_MAXNAME, enm), enm);
 	    break;
 	  case E_SC002C_EVENT_NOT_REGISTERED:
 	    _VOID_ qef_error(E_QE020D_EV_REGISTER_ABSENT, 0L, status, &err,
 			     &dsh->dsh_error, 2,
-			     qec_trimwhite(DB_MAXNAME, onm), onm,
-			     qec_trimwhite(DB_MAXNAME, enm), enm);
+			     qec_trimwhite(DB_OWN_MAXNAME, onm), onm,
+			     qec_trimwhite(DB_EVENT_MAXNAME, enm), enm);
 	    break;
 	  default:
 	    _VOID_ qef_error(E_QE020F_EVENT_SCF_FAIL, 0L, status, &err,
@@ -355,8 +357,8 @@ QEE_DSH		*dsh )
 			     (i4)STlength(errstr), errstr,
 			     (i4)sizeof(i4),
 					(PTR)&scf_cb.scf_error.err_code,
-			     qec_trimwhite(DB_MAXNAME, onm), onm,
-			     qec_trimwhite(DB_MAXNAME, enm), enm);
+			     qec_trimwhite(DB_OWN_MAXNAME, onm), onm,
+			     qec_trimwhite(DB_EVENT_MAXNAME, enm), enm);
 	    break;
 	}
 	dsh->dsh_error.err_code = E_QE0025_USER_ERROR;
@@ -380,7 +382,7 @@ QEE_DSH		*dsh )
 	audit_status = qeu_secaudit(FALSE, qef_cb->qef_ses_id,
 	    		(char *)&ev->ahd_event.dba_alert,
 			&ev->ahd_event.dba_owner,
-	    		sizeof(DB_NAME), SXF_E_EVENT,
+	    		DB_EVENT_MAXNAME, SXF_E_EVENT,
 	      		audit_msg, access_type, &e_error);
 
 	if ((audit_status != E_DB_OK) && (status == E_DB_OK))
@@ -457,9 +459,9 @@ char		*txt )
     dnm = (char *)&alert->dba_dbname;
     STprintf(buf, "%s: RAISE '%.*s', owned by '%.*s', in database '%.*s'",
 	     print == QEF_T_EVENTS ? "PRINTEVENTS" : "LOGEVENTS",
-	     qec_trimwhite(DB_MAXNAME, enm), enm,
-	     qec_trimwhite(DB_MAXNAME, onm), onm,
-	     qec_trimwhite(DB_MAXNAME, dnm), dnm);
+	     qec_trimwhite(DB_EVENT_MAXNAME, enm), enm,
+	     qec_trimwhite(DB_OWN_MAXNAME, onm), onm,
+	     qec_trimwhite(DB_DB_MAXNAME, dnm), dnm);
     if (print == QEF_T_EVENTS)	/* Print RAISE + values */
     {
 	STprintf(cbuf, "%s\n", buf);

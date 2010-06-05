@@ -339,6 +339,8 @@
 **	    index log record, don't want confusion from the old one.)
 **	04-Feb-2010 (jonj)
 **	    SIR 121619 MVCC: Add bufid parameter to dm0l_read() prototype.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -392,7 +394,7 @@
 ** arrays across rawdata chunks.  Make sure our arbitrary size is large
 ** enough!  (At present it's enough for some 500- locations in one array.)
 */
-#if MAX_RAWDATA_SIZE < (DM_LOC_MAX * DB_MAXNAME)
+#if MAX_RAWDATA_SIZE < (DM_LOC_MAX * DB_LOC_MAXNAME)
     XXXX XXXX MAX_RAWDATA_SIZE is too small!
 #endif
 
@@ -1043,7 +1045,7 @@ typedef struct
     u_i2		put_row_version;/* Row Version #*/
     DMPP_SEG_HDR	put_seg_hdr;	/* Segment header */
     i2                  put_comptype;   /* compression type */
-    char		put_vbuf[(DB_MAXNAME * 2)];
+    char		put_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME)];
 }   DM0L_PUT;
 
 /*}
@@ -1086,7 +1088,7 @@ typedef struct
     i2                  del_comptype;   /* compression type */
     u_i2		del_olg_id;	/* lg_id of prev change to row */
     u_i4		del_otran_id;	/* tran_id of prev change to row */
-    char		del_vbuf[(DB_MAXNAME * 2)];
+    char		del_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME)];
 }   DM0L_DEL;
 
 /*}
@@ -1169,7 +1171,7 @@ typedef struct
     i2                  rep_comptype;    /* compression type */
     u_i2		rep_olg_id;	/* lg_id of prev change to row */
     u_i4		rep_otran_id;	/* tran_id of prev change to row */
-    char		rep_vbuf[(DB_MAXNAME * 2)];
+    char		rep_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME)];
 }   DM0L_REP;
 
 /*}
@@ -2299,7 +2301,7 @@ typedef struct
     i4             ass_new_data;	/* New associated data page. */
     i2			ass_tab_size;	/* Size of table name field */
     i2			ass_own_size;	/* Size of owner name field */
-    char		ass_vbuf[(DB_MAXNAME * 2)]; /* Table & owner name */
+    char		ass_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME)];
 }   DM0L_ASSOC;
 
 /*}
@@ -2337,7 +2339,7 @@ typedef struct
     BITFLD		all_bits_free:30;
     i2			all_tab_size;	    /* Size of table name field */
     i2			all_own_size;	    /* Size of owner name field */
-    char		all_vbuf[(DB_MAXNAME * 2)]; /* Table & owner name */
+    char		all_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME)]; 
 }   DM0L_ALLOC;
 
 /*}
@@ -2374,7 +2376,7 @@ typedef struct
     BITFLD		dall_bits_free:31;
     i2			dall_tab_size;	    /* Size of table name field */
     i2			dall_own_size;	    /* Size of owner name field */
-    char		dall_vbuf[(DB_MAXNAME * 2)]; /* Table & owner name */
+    char		dall_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME)]; 
 }   DM0L_DEALLOC;
 
 /*}
@@ -2466,7 +2468,7 @@ typedef struct
     DM_PAGENO		ovf_main_ptr;	/* Root's old main pointer. */
     i2			ovf_tab_size;	/* Size of table name field */
     i2			ovf_own_size;	/* Size of owner name field */
-    char		ovf_vbuf[(DB_MAXNAME * 2)]; /* Table & owner name */
+    char		ovf_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME)]; 
 }   DM0L_OVFL;
 
 /*}
@@ -2499,7 +2501,7 @@ typedef struct
     DM_PAGENO		nofull_pageno;	/* page number */
     i2			nofull_tab_size;	/* Size of table name field */
     i2			nofull_own_size;	/* Size of owner name field */
-    char		nofull_vbuf[(DB_MAXNAME * 2)]; /* Table & owner names */
+    char		nofull_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME)]; 
 } DM0L_NOFULL;
 
 /*}
@@ -2630,7 +2632,7 @@ typedef struct
 #define DM0L_BT_DUPS_ON_OVFL	0x0004		/* Btree uses leaf level
 						** overflow for duplicates */
 
-    char		btp_vbuf[(DB_MAXNAME * 2) + DM1B_MAXLEAFLEN];
+    char		btp_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME) + DM1B_MAXLEAFLEN];
 }   DM0L_BTPUT;
 
 /*}
@@ -2672,7 +2674,7 @@ typedef struct
     i2			btd_bid_child;  /* del pos may be > 512 on INDEX page */
     i2			btd_partno;	/* Partition number */
     u_i2		btd_btflags;	/* BTREE flags, see btp_btflags */
-    char		btd_vbuf[(DB_MAXNAME * 2) + DM1B_MAXLEAFLEN];
+    char		btd_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME) + DM1B_MAXLEAFLEN];
 }   DM0L_BTDEL;
 
 /*}
@@ -2892,7 +2894,7 @@ typedef struct
     i2			rtd_own_size;	/* Size of owner name field */
     i2			rtd_stack_size;	/* Size of ancestor stack */
     i2			rtd_key_size;	/* Size of key entry */
-    char		rtd_vbuf[(DB_MAXNAME * 2) + DB_MAXRTREE_KEY +
+    char		rtd_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME) + DB_MAXRTREE_KEY +
 				 (RCB_MAX_RTREE_LEVEL * sizeof(DM_TID))];
 }   DM0L_RTDEL;
 
@@ -2923,7 +2925,7 @@ typedef struct
     i2			rtp_own_size;	/* Size of owner name field */
     i2			rtp_stack_size;	/* Size of ancestor stack */
     i2			rtp_key_size;	/* Size of key entry */
-    char		rtp_vbuf[(DB_MAXNAME * 2) + DB_MAXRTREE_KEY +
+    char		rtp_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME) + DB_MAXRTREE_KEY +
     				 (RCB_MAX_RTREE_LEVEL * sizeof(DM_TID))];
 }   DM0L_RTPUT;
 
@@ -2957,7 +2959,7 @@ typedef struct
     i2			rtr_stack_size;	/* Size of ancestor stack */
     i2			rtr_okey_size;	/* Size of old key entry */
     i2			rtr_nkey_size;	/* Size of new key entry */
-    char		rtr_vbuf[(DB_MAXNAME * 2) + (DB_MAXRTREE_KEY * 2) +
+    char		rtr_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME) + (DB_MAXRTREE_KEY * 2) +
     				 (RCB_MAX_RTREE_LEVEL * sizeof(DM_TID))];
 }   DM0L_RTREP;
 

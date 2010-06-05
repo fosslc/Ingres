@@ -319,6 +319,8 @@ exec sql include SQLCA;     /* Embedded SQL Communications Area */
 **          Fixed iidbcapabilities rows that are dependent on DB_MAXNAME
 **	 1-Oct-09 (gordy)
 **	    Added SQL_MAX_PROCEDURE_NAME_LEN capability row.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*
@@ -849,6 +851,7 @@ DUC_MODE_VECT   *duc_modes;
 {
 	i4	col, nchar_set;
 	char	namelen[10]; 
+	char	user_namelen[10]; 
 	char	capvalue[10];
 
 	/*
@@ -888,6 +891,7 @@ DUC_MODE_VECT   *duc_modes;
 	duc_create_catalog("iidbcapabilities");
 
 	STprintf(namelen, "%d", DB_MAXNAME);
+	STprintf(user_namelen, "%d", DB_OWN_MAXNAME);
 	duc_ins_capabilities(DU_DB1_QUEL_LEVEL, DU_DB1_CUR_QUEL_LEVEL);
 	duc_ins_capabilities(DU_DB2_SQL_LEVEL, DU_DB2_CUR_SQL_LEVEL);
 	duc_ins_capabilities("DISTRIBUTED", "N");
@@ -923,11 +927,11 @@ DUC_MODE_VECT   *duc_modes;
 	duc_ins_capabilities("SQL_MAX_VCHR_COLUMN_LEN", "32000");
 	duc_ins_capabilities("SQL_MAX_NCHR_COLUMN_LEN", "16000");
 	duc_ins_capabilities("SQL_MAX_NVCHR_COLUMN_LEN", "16000");
-	duc_ins_capabilities("SQL_MAX_SCHEMA_NAME_LEN", namelen);
+	duc_ins_capabilities("SQL_MAX_SCHEMA_NAME_LEN", user_namelen);
 	duc_ins_capabilities("SQL_MAX_PROCEDURE_NAME_LEN", namelen);
 	duc_ins_capabilities("SQL_MAX_TABLE_NAME_LEN", namelen);
 	duc_ins_capabilities("SQL_MAX_COLUMN_NAME_LEN", namelen);
-	duc_ins_capabilities("SQL_MAX_USER_NAME_LEN", namelen);
+	duc_ins_capabilities("SQL_MAX_USER_NAME_LEN", user_namelen);
 	duc_ins_capabilities("SQL_MAX_ROW_LEN", "262144");
 	duc_ins_capabilities("SQL_MAX_STATEMENTS", "0");
 	STprintf(capvalue, "%d", DB_MAX_DECPREC);
@@ -1357,7 +1361,6 @@ DU_ENV		*duc_dbenv;
 		du_error(duc_errcb, E_DU2105_BAD_LOCALDISCONNECT, 0);
 		return DB_ERROR;
 	    }
-
 	    EXEC SQL connect :ddb_name identified by :dba_name
 	    options = :appl_flag;
 

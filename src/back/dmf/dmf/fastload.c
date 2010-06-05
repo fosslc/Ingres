@@ -190,6 +190,8 @@
 **	    SIR 120874: dm0p_? functions converted to DB_ERROR *
 **      18-feb-2009 (stial01)
 **          fixed format string for i8
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 /* forward and/or static references */
 static DB_STATUS
@@ -405,7 +407,7 @@ dmffload( DMF_JSX	*jsx,
 	return (E_DB_ERROR);
     }
     table = jsx->jsx_tbl_list[0].tbl_name.db_tab_name;
-    MEcopy(owner, DB_MAXNAME, tab_owner.db_own_name);
+    MEcopy(owner, DB_OWN_MAXNAME, tab_owner.db_own_name);
 
     if (jsx->jsx_fname_cnt < 1)
     {
@@ -436,7 +438,7 @@ dmffload( DMF_JSX	*jsx,
     dml_scb.scb_state = 0;
     dml_scb.scb_loc_masks = NULL;
     dml_scb.scb_audit_state = SCB_A_FALSE;
-    MEcopy(DB_INGRES_NAME, DB_MAXNAME, cat_owner.db_own_name);
+    MEcopy(DB_INGRES_NAME, DB_OWN_MAXNAME, cat_owner.db_own_name);
     MEcopy((PTR) &jsx->jsx_username, sizeof(DB_OWN_NAME), (PTR) &dml_scb.scb_user);
     dml_scb.scb_cat_owner = &cat_owner;
     dml_scb.scb_tran_iso = DMC_C_SYSTEM;
@@ -691,7 +693,7 @@ dmffload( DMF_JSX	*jsx,
 	/*
 	** get table ID from name
 	*/
-    	MEcopy(table, DB_MAXNAME, tab_name.db_tab_name);
+    	MEcopy(table, DB_TAB_MAXNAME, tab_name.db_tab_name);
 
 	status = dml_get_tabid(dcb, &tab_name, &tab_owner, &tab_id, &jsx->jsx_dberr);
 	if (status != E_DB_OK)
@@ -1354,8 +1356,8 @@ dml_get_tabid (	DMP_DCB		*dcb,
     DMP_RINDEX          rindexrecord;
     i4		local_err;
     DB_STATUS		local_stat;
-    char		pad_tab_name[DB_MAXNAME];
-    char		pad_own_name[DB_MAXNAME];
+    char		pad_tab_name[DB_TAB_MAXNAME];
+    char		pad_own_name[DB_OWN_MAXNAME];
     DB_ERROR		local_dberr;
     i4			*err_code = &dberr->err_code;
 
@@ -1381,9 +1383,9 @@ dml_get_tabid (	DMP_DCB		*dcb,
 	** find iirelation entry using iirel_idx
 	*/
 	MEmove(STlength(table_name->db_tab_name), table_name->db_tab_name,
-	    ' ', DB_MAXNAME, pad_tab_name);
+	    ' ', DB_TAB_MAXNAME, pad_tab_name);
 	MEmove(STlength(table_owner->db_own_name), table_owner->db_own_name,
-	    ' ', DB_MAXNAME, pad_own_name);
+	    ' ', DB_OWN_MAXNAME, pad_own_name);
 	key_desc[0].attr_operator = DM2R_EQ;
 	key_desc[0].attr_number = DM_1_RELIDX_KEY;
 	key_desc[0].attr_value = pad_tab_name;

@@ -130,6 +130,8 @@
 **          Use DB_MAXNAME for db objects, DB_IITYPE_LEN for iitypename() result
 **	26-Aug-2009 (kschendel) b121804
 **	    Remove function defns now in headers.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /* # define's */
@@ -754,16 +756,27 @@ register QRB *qrb;
 	FE_REL_INFO rel_info;
 	DB_STATUS   rval;
 	char	    type[DB_IITYPE_LEN+1];    /* DB object type:e.g, tbl,view */
+EXEC SQL BEGIN DECLARE SECTION;
+	i4      tbl_maxname;
+EXEC SQL END DECLARE SECTION;
 
         qrb->norowmsg = FALSE;          /* Bug 4816 */
 
+	EXEC SQL select max(length(trim(table_name)))
+	INTO :tbl_maxname FROM iitables;
+
+	if (tbl_maxname < DB_OLDMAXNAME_32)
+	    tbl_maxname = DB_OLDMAXNAME_32; 
+	else if (tbl_maxname > DB_TAB_MAXNAME)
+	    tbl_maxname = DB_TAB_MAXNAME; 
+
 	/*
 	** The following printf format must match the current value
-	** for DB_MAXNAME for both 'name' and 'owner'.
+	** for tbl_maxname for 'name' and DB_OWN_MAXNAME for 'owner'.
 	*/
 	qrprintf(qrb, ERx("%-*s %-*s %-s\n"),
-		(i4)(DB_MAXNAME + 2), ERget(F_QR0053_name),
-		(i4)(DB_MAXNAME + 2), ERget(F_QR0054_owner), ERget(F_QR0055_type));
+		(i4)(tbl_maxname + 2), ERget(F_QR0053_name),
+		(i4)(DB_OWN_MAXNAME + 2), ERget(F_QR0054_owner), ERget(F_QR0055_type));
 	qrprintf(qrb, ERx("\n"));
 
 	/*
@@ -805,9 +818,9 @@ register QRB *qrb;
 
 			/* throw the mess into the qrb */
 		    	qrdiprintf( QRARG2 | QRARG4, qrb,
-			    ERx("%-*s %-*s %-s\n"), (i4)(DB_MAXNAME + 2),
-			    rel_info.name, (i4)(DB_MAXNAME + 2),
-			    rel_info.owner, type );
+			    ERx("%-*s %-*s %-s\n"),
+			    (i4)(tbl_maxname + 2), rel_info.name,
+			    (i4)(DB_OWN_MAXNAME + 2), rel_info.owner, type );
 		    	/*
 		    	** If putfunc 'flush' function has been set, then
 		    	** call it for every line of output.  This prevents

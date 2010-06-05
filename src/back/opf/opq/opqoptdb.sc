@@ -459,6 +459,8 @@ exec sql declare c1 cursor for s;
 **	    rather than as char. Otherwise interpretation of hex strings as
 **	    2-byte utf8 characters can cause incorrect and possibly invalid
 **	    (not monotonically increasing) histograms.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*
@@ -552,7 +554,7 @@ static i4		compare_values(
 			    ADF_CB		*adfcb,
 			    DB_DATA_VALUE	*datavalue1,
 			    DB_DATA_VALUE	*datavalue2,
-			    OPQ_NAME		*columnname);
+			    DB_ATT_STR		*columnname);
 static bool		new_unique(
 			    i4			cellinexact,
 			    OPQ_ALIST		*attrp,
@@ -1102,7 +1104,7 @@ char		    **argv)
 		    i4		attcount;   /* number of tuples associated
                                             ** with attribute 
                                             */
-		    OPQ_NAME	atnameptr;  /* Attribute name being analyzed */
+		    DB_ATT_STR	atnameptr;  /* Attribute name being analyzed */
 
 		    bool isudt = FALSE;	    /* on if column datatype is UDT */
 		    bool ishistogrammable = TRUE; /* OFF if column datatype is 
@@ -1132,7 +1134,7 @@ char		    **argv)
 		    {
 			exec sql begin declare section;
 			    char	*es_atname;
-			    char        es_type[DB_GW1_MAXNAME+1];
+			    char        es_type[DB_TYPE_MAXLEN+1];
 			    char        es_nulls[8+1];
 			    i2		es_ingtype;
 			    i4          es_len;
@@ -1527,7 +1529,7 @@ char		    **argv)
     {
 	exec sql begin declare section;
 	    char	*es1_atname;
-	    char	es1_type[DB_GW1_MAXNAME+1];
+	    char	es1_type[DB_TYPE_MAXLEN+1];
 	    char	es1_nulls[8+1];
 	    i2		es1_ingtype;
 	    i4          es1_len;
@@ -1539,9 +1541,10 @@ char		    **argv)
 	    char	*es1_rowner;
 	exec sql end declare section;
 
-        OPQ_NAME    tempname;
+        DB_ATT_STR	tempname;
 
         es1_atname = (char *) &tempname;
+	tempname[DB_ATT_MAXNAME] = 0;
 	es1_rname = (char *) &relp->relname;
 	es1_rowner = (char *) &relp->ownname;
 
@@ -1971,7 +1974,7 @@ char		    **argv)
     {
 	exec sql begin declare section;
 	    char	*es2_atname;
-	    char        es2_type[DB_GW1_MAXNAME+1];
+	    char        es2_type[DB_TYPE_MAXLEN + 1];
 	    char        es2_nulls[8+1];
 	    i2		es2_ingtype;
 	    i4          es2_len;
@@ -1982,8 +1985,9 @@ char		    **argv)
 	    char	*es2_rowner;
 	exec sql end declare section;
 
-	OPQ_NAME    itempname;
+	DB_ATT_STR    itempname;
 
+	itempname[DB_ATT_MAXNAME] = 0;
         es2_atname = (char *) &itempname;
 	es2_rname = (char *) &relp->relname;
 	es2_rowner = (char *) &relp->ownname;
@@ -3974,7 +3978,7 @@ OPQ_ALIST       *attlst[])
 	return;
     }
 
-    if (relp->samplename.nametype.tabname.db_tab_name[0] != EOS)
+    if (relp->samplename[0] != EOS)
     {
 	sample = (bool)TRUE;
 
@@ -4007,13 +4011,13 @@ OPQ_ALIST       *attlst[])
 	register i4  len;
 
 	len = sizeof("select count(*), ") - 1;
-	len += relp->attcount * (sizeof("min()") + DB_GW1_MAXNAME - 1
+	len += relp->attcount * (sizeof("min()") + DB_ATT_MAXNAME - 1
 			    + 4 /* ", " and possible quotes */
-			    + sizeof("max()") + DB_GW1_MAXNAME - 1
+			    + sizeof("max()") + DB_ATT_MAXNAME - 1
 			    + 4 /* ", " and possible quotes*/);
 
 	len += sizeof("from ") - 1;
-	len += sizeof(sestbl) + DB_GW1_MAXNAME+2; /* relation name */
+	len += sizeof(sestbl) + DB_TAB_MAXNAME+2; /* relation name */
 
 	opq_bufalloc((PTR)g->opq_utilid, (PTR *)&stmt, (i4)len, &opq_sbuf);
     }
@@ -4030,7 +4034,7 @@ OPQ_ALIST       *attlst[])
 
 	for (attlstp = &attlst[0], firstelem = TRUE; *attlstp; attlstp++)
 	{
-	    char    elem[sizeof("min(%s), max(%s)") + 2 * DB_GW1_MAXNAME +4];
+	    char    elem[sizeof("min(%s), max(%s)") + 2 * DB_ATT_MAXNAME +4];
 
 	    if (!firstelem)
 	    {
@@ -4048,16 +4052,16 @@ OPQ_ALIST       *attlst[])
 	}
 
 	{
-	    char   elem[sizeof(" from %s") + sizeof(sestbl) + DB_GW1_MAXNAME+2];
+	    char   elem[sizeof(" from %s") + sizeof(sestbl) + DB_ATT_MAXNAME+2];
 	    char   *name;
 
 	    if (sample == (bool)TRUE)
 	    {
-		name = &relp->samplename.nametype.maxname[0];
+		name = (char *)&relp->samplename;
 	    }
 	    else
 	    {
-		name = &relp->delimname.nametype.maxname[0];
+		name = (char *)&relp->delimname;
 	    }
 
 	    if (sample == (bool)TRUE)
@@ -4452,7 +4456,7 @@ compare_values(
 ADF_CB		*adfcb,
 DB_DATA_VALUE	*datavalue1,
 DB_DATA_VALUE	*datavalue2,
-OPQ_NAME	*columnname)
+DB_ATT_STR	*columnname)
 {
     DB_STATUS	status;
     i4		adc_cmp_result;
@@ -6752,7 +6756,7 @@ bool		sample)
     DB_DATA_VALUE	prev_hdt;	    /* used to describe the histo data 
 					    ** value previously scanned */
     DB_STATUS		tstat;
-    char		*selexpr = &attrp->delimname.nametype.maxname[0];  
+    char		*selexpr = (char *)&attrp->delimname;  
 					      /* ptr to column name
 					      ** or composite expression which
 					      ** goes in select statement */
@@ -6967,7 +6971,7 @@ bool		sample)
 	   /* 4*(...) because there are 4 items, +2 for quotes if required */
 	    opq_bufalloc((PTR)g->opq_utilid, (PTR *)&stmt,
 	        (i4)(sizeof("select %s from %s%s order by hex(%s)")) +
-	        4 * (DB_GW1_MAXNAME+2), &opq_sbuf);
+	        4 * (DB_ATT_MAXNAME+2), &opq_sbuf);
 	}
 
 	if (sample)
@@ -6975,7 +6979,7 @@ bool		sample)
 		STprintf(stmt, "select %s from %s%s order by %s%s%s",
 		    selexpr,
 		    sestbl,
-		    relp->samplename.nametype.maxname,
+		    relp->samplename,
 		    use_hex?"hex(":"",
 		    use_hex?selexpr:"1",
 		    use_hex?")":"");
@@ -6985,7 +6989,7 @@ bool		sample)
 	{
 		STprintf(stmt, "select %s from %s order by %s%s%s",
 		    selexpr,
-		    relp->delimname.nametype.maxname,
+		    relp->delimname,
 		    use_hex?"hex(":"",
 		    use_hex?selexpr:"1",
 		    use_hex?")":"");
@@ -7501,7 +7505,7 @@ bool		tempt)
     bool		exact_histo;	/* Is final histogram exact? */
     OPQ_BMCHARSET	charsets;	/* Pointer to array of character set
 					** bitmaps */
-    char		*selexpr = &attrp->delimname.nametype.maxname[0];  
+    char		*selexpr = (char *)&attrp->delimname;  
 					      /* ptr to column name
 					      ** or composite expression which
 					      ** goes in select statement */
@@ -7691,7 +7695,7 @@ bool		tempt)
 	    (i4)1000, &opq_sbuf);
 	else opq_bufalloc((PTR)g->opq_utilid, (PTR *)&stmt,
 	    (i4)(sizeof("select %s, count(*) from %s group by 1 order by 1") +
-	    2 * DB_GW1_MAXNAME+4), &opq_sbuf);
+	    2 * DB_ATT_MAXNAME+4), &opq_sbuf);
 
 	/* Build "select" statement to produce distinct column values and counts.
 	** The select is simply "select column, count(*) from table group by 1 
@@ -7703,9 +7707,9 @@ bool		tempt)
 	{
 	    char    *name;
 
-	    name = &relp->delimname.nametype.maxname[0];
+	    name = (char *)&relp->delimname;
 	    if (sample)
-		name = &relp->samplename.nametype.maxname[0];
+		name = (char *)&relp->samplename;
 	    if (use_hex)
 	    {
 		STprintf(stmt, 
@@ -8209,13 +8213,13 @@ char	    **argv)
     bool		found;
     i4			acnt;
     char		dname[DB_GW1_MAXNAME+1],
-			iversion[DB_GW1_MAXNAME+1],
-			tname[DB_GW1_MAXNAME+1],
-			cname[DB_GW1_MAXNAME+1],
-			typename[DB_GW1_MAXNAME+1],
-			nullable[DB_GW1_MAXNAME+1],
-			*version,
-			iuflag;
+			iversion[DB_GW1_MAXNAME+1];
+    DB_TAB_STR		tname;
+    DB_ATT_STR		cname;
+    DB_TYPE_STR		typename;
+    DB_TYPE_STR		nullable;
+    char		*version;
+    char 		iuflag;
     i4			userlen, scale;
     bool		wrong_histo;
     bool		empty_histo;
@@ -9084,7 +9088,7 @@ char	    **argv)
 		dv1.db_data = (PTR)(exacthist + i * histlength);
 		dv2.db_data = (PTR)((OPH_CELLS)dv1.db_data + histlength);
 		
-		res = compare_values(g->opq_adfcb, &dv1, &dv2, (OPQ_NAME *)cname);
+		res = compare_values(g->opq_adfcb, &dv1, &dv2, &cname);
 
 		if (res < 0)
 		{
@@ -9344,7 +9348,7 @@ f8		samplepct)
 	{
 	    i4	    	len;
 	    char    	buf[DB_GW1_MAXNAME/2 + 1];
-	    OPQ_NAME	tempname;
+	    DB_TAB_STR	tempname;
 
 	    len = STlength((char *)&relp->relname);
 
@@ -9583,10 +9587,10 @@ OPQ_RLIST       *relp)
 	exec sql begin declare section;
 	    char	*es_objname;
 	    char	*es_objowner;
-	    char	es_node[DB_GW1_MAXNAME + 1];
-	    char	es_dbms[DB_GW1_MAXNAME + 1];
-	    char	es_database[DB_GW1_MAXNAME + 1];
-	    char	es_locname[DB_GW1_MAXNAME + 1];
+	    char	es_node[DB_NODE_MAXNAME + 1];
+	    char	es_dbms[DB_TYPE_MAXLEN + 1];
+	    char	es_database[DB_DB_MAXNAME + 1];
+	    char	es_locname[DB_LOC_MAXNAME + 1];
 	exec sql end declare section;
 
 	char	    es_delimname[DB_GW1_MAXNAME+2+1];

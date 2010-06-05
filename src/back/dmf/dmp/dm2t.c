@@ -1046,6 +1046,8 @@ NO_OPTIM=dr6_us5
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 static VOID		locate_tcb(
@@ -2540,7 +2542,7 @@ DB_ERROR            *dberr)
 	    ** filled so we just work back until we find the first non-space
 	    ** and add shadow and archive identifiers to the end of the name.
 	    ** This is O.K. since tabnames are less than (not equal to)
-	    ** DB_MAXNAME chars, otherwhise we could not replicate them
+	    ** DB_TAB_MAXNAME chars, otherwhise we could not replicate them
 	    **
 	    ** FIX_ME: This could be done more efficiently in build_tcb()
 	    ** for the base table, we are scroling round iirelation there anyway
@@ -2548,13 +2550,13 @@ DB_ERROR            *dberr)
 	    ** tables, that way it only gets done once per TCB rathar than
 	    ** once per RCB.
 	    */
-	    MEcopy(tcb->tcb_rel.relid.db_tab_name, DB_MAXNAME,
+	    MEcopy(tcb->tcb_rel.relid.db_tab_name, DB_TAB_MAXNAME,
 		rep_shad_tab.db_tab_name);
-	    MEcopy(tcb->tcb_rel.relid.db_tab_name, DB_MAXNAME,
+	    MEcopy(tcb->tcb_rel.relid.db_tab_name, DB_TAB_MAXNAME,
 		rep_arch_tab.db_tab_name);
-	    MEcopy(tcb->tcb_rel.relid.db_tab_name, DB_MAXNAME,
+	    MEcopy(tcb->tcb_rel.relid.db_tab_name, DB_TAB_MAXNAME,
 		rep_shad_idx.db_tab_name);
-	    for (idx = DB_MAXNAME - 1; rep_shad_tab.db_tab_name[idx] == ' ';
+	    for (idx = DB_TAB_MAXNAME - 1; rep_shad_tab.db_tab_name[idx] == ' ';
 		idx--);
 	    idx++;
 	    /*
@@ -2565,9 +2567,9 @@ DB_ERROR            *dberr)
 	    */
 	    if (idx > 10)
 	    {
-		MEfill(DB_MAXNAME - 10, ' ', rep_arch_tab.db_tab_name + 10);
-		MEfill(DB_MAXNAME - 10, ' ', rep_shad_tab.db_tab_name + 10);
-		MEfill(DB_MAXNAME - 10, ' ', rep_shad_idx.db_tab_name + 10);
+		MEfill(DB_TAB_MAXNAME - 10, ' ', rep_arch_tab.db_tab_name + 10);
+		MEfill(DB_TAB_MAXNAME - 10, ' ', rep_shad_tab.db_tab_name + 10);
+		MEfill(DB_TAB_MAXNAME - 10, ' ', rep_shad_idx.db_tab_name + 10);
 		idx = 10;
 	    }
 	    /*
@@ -2637,9 +2639,9 @@ DB_ERROR            *dberr)
 	    	MEcopy("sx1", 3, rep_shad_idx.db_tab_name + idx + 5);
 	    }
 	    MEcopy(tcb->tcb_rep_info->dd_reg_tables.prio_lookup_table,
-		DB_MAXNAME, rep_prio_lookup.db_tab_name);
+		DB_TAB_MAXNAME, rep_prio_lookup.db_tab_name);
 	    MEcopy(tcb->tcb_rep_info->dd_reg_tables.cdds_lookup_table,
-		DB_MAXNAME, rep_cdds_lookup.db_tab_name);
+		DB_TAB_MAXNAME, rep_cdds_lookup.db_tab_name);
 	    /*
 	    ** get tab ids, table owner is assumed to be the DBA
 	    */
@@ -5229,6 +5231,8 @@ DB_ERROR	*dberr)
 
 	    dm0s_mrelease(&it->tcb_et_mutex);
 	    dm0s_mrelease(&it->tcb_mutex);
+	    if (it->tcb_atts_o_misc)
+		dm0m_deallocate((DM_OBJECT **)&it->tcb_atts_o_misc);
 	    dm0m_deallocate((DM_OBJECT **)&it);
 	}
 	if (status != E_DB_OK)
@@ -5314,6 +5318,8 @@ DB_ERROR	*dberr)
 	dm0s_mrelease(&t->tcb_et_mutex);
 	dm0s_mrelease(&t->tcb_mutex);
 	/* deallocate and obliterate caller's TCB pointer */
+	if (t->tcb_atts_o_misc)
+	    dm0m_deallocate((DM_OBJECT **)&t->tcb_atts_o_misc);
 	dm0m_deallocate((DM_OBJECT **)tcb);
 	/* Return with hash mutex still locked */
 	return (E_DB_OK);
@@ -6657,6 +6663,9 @@ bool		    from_online_modify)
     bool		ok_data_loc;
     DB_ERROR		local_dberr;
     i4		    *err_code = &dberr->err_code;
+    i4			alen;
+    DB_ATTS		*a;
+    PTR			nextattname;
 
     CLRDBERR(dberr);
 
@@ -6748,6 +6757,7 @@ bool		    from_online_modify)
 	/*
 	** Build extent information for this table's location(s):
 	*/
+    	nextattname = t->tcb_atts_names;
 	for (k = 0; k < t->tcb_table_io.tbio_loc_count; k++)
 	{
 	    t->tcb_table_io.tbio_location_array[k].loc_id = k;
@@ -6819,35 +6829,66 @@ bool		    from_online_modify)
 
 	for ( i = 1; i <= attr_count; i++)
 	{
-	    STRUCT_ASSIGN_MACRO(attr_array[i-1]->attr_name,
-					    t->tcb_atts_ptr[i].name);
-	    t->tcb_atts_ptr[i].type = attr_array[i-1]->attr_type;
-	    t->tcb_atts_ptr[i].length = attr_array[i-1]->attr_size;
-	    t->tcb_atts_ptr[i].precision = attr_array[i-1]->attr_precision;
-	    t->tcb_atts_ptr[i].flag = attr_array[i-1]->attr_flags_mask;
-	    COPY_DEFAULT_ID( attr_array[i-1]->attr_defaultID,
-		    t->tcb_atts_ptr[i].defaultID );
-	    t->tcb_atts_ptr[i].defaultTuple = 0;
-	    t->tcb_atts_ptr[i].collID = attr_array[i-1]->attr_collID;
-	    t->tcb_atts_ptr[i].geomtype = attr_array[i-1]->attr_geomtype;
-	    t->tcb_atts_ptr[i].srid = attr_array[i-1]->attr_srid;
-	    t->tcb_atts_ptr[i].replicated = FALSE;
-	    t->tcb_atts_ptr[i].rep_key_seq = 0;
-	    t->tcb_atts_ptr[i].key = 0;
-	    t->tcb_atts_ptr[i].offset = offset;
-	    t->tcb_atts_ptr[i].intl_id = i;
-	    t->tcb_atts_ptr[i].ordinal_id = i;
-	    t->tcb_atts_ptr[i].ver_added = 0;
-	    t->tcb_atts_ptr[i].ver_dropped = 0;
-	    t->tcb_atts_ptr[i].val_from = 0;
-	    t->tcb_atts_ptr[i].ver_altcol = 0;
+	    a = &(t->tcb_atts_ptr[i]);
+	    for (alen = DB_ATT_MAXNAME;  
+		attr_array[i-1]->attr_name.db_att_name[alen-1] == ' ' 
+			&& alen >= 1; alen--);
+
+	    /* see if we need more space for attribute name */
+	    if (t->tcb_atts_used + alen + 1 > t->tcb_atts_size)
+	    {
+		i4	attnmsz;
+#ifdef xDEBUG
+TRdisplay("Alloc overflow name buf for %~t\n", 
+DB_TAB_MAXNAME, t->tcb_rel.relid.db_tab_name);
+#endif
+
+		attnmsz = ((attr_count - i) + 1) * sizeof(DB_ATT_STR);
+		status = dm0m_allocate( sizeof(DMP_MISC) + attnmsz,
+		    (i4)DM0M_LONGTERM, (i4)MISC_CB, (i4)MISC_ASCII_ID,
+		    (char *)t, (DM_OBJECT **)&t->tcb_atts_o_misc, dberr);
+		if (status != E_DB_OK)
+		    break;
+	        t->tcb_atts_o_names = (char*)t->tcb_atts_o_misc + 
+			sizeof(DMP_MISC);
+	        t->tcb_atts_o_size = attnmsz;
+		nextattname = t->tcb_atts_o_names;
+	    }
+
+	    a->attnmlen = alen;
+	    a->attnmstr = nextattname;
+	    MEcopy(attr_array[i-1]->attr_name.db_att_name, alen, nextattname);
+	    nextattname += alen;
+	    *nextattname = '\0';
+	    nextattname++;
+	    t->tcb_atts_used += (alen + 1);
+
+	    a->type = attr_array[i-1]->attr_type;
+	    a->length = attr_array[i-1]->attr_size;
+	    a->precision = attr_array[i-1]->attr_precision;
+	    a->flag = attr_array[i-1]->attr_flags_mask;
+	    COPY_DEFAULT_ID( attr_array[i-1]->attr_defaultID, a->defaultID );
+	    a->defaultTuple = 0;
+	    a->collID = attr_array[i-1]->attr_collID;
+	    a->geomtype = attr_array[i-1]->attr_geomtype;
+	    a->srid = attr_array[i-1]->attr_srid;
+	    a->replicated = FALSE;
+	    a->rep_key_seq = 0;
+	    a->key = 0;
+	    a->offset = offset;
+	    a->intl_id = i;
+	    a->ordinal_id = i;
+	    a->ver_added = 0;
+	    a->ver_dropped = 0;
+	    a->val_from = 0;
+	    a->ver_altcol = 0;
 
 	    /*
 	    ** Set up list of pointers to attribute info for use in
 	    ** data compression. Note that the tcb_data_rac and
 	    ** tcb_key_atts lists are indexed from 0, not from 1.
 	    */
-	    t->tcb_data_rac.att_ptrs[i - 1] = &(t->tcb_atts_ptr[i]);
+	    t->tcb_data_rac.att_ptrs[i - 1] = a;
 
 	    offset = offset + attr_array[i-1]->attr_size;
 	}
@@ -6868,7 +6909,13 @@ bool		    from_online_modify)
 	    compare = FALSE;
 	    for ( j = 1; j <= attr_count; j++ )
 	    {
-		if (MEcmp((char *)&t->tcb_atts_ptr[j].name,
+		DB_ATT_NAME tmpattnm;
+
+		MEmove(t->tcb_atts_ptr[j].attnmlen,
+		    t->tcb_atts_ptr[j].attnmstr, ' ',
+		    DB_ATT_MAXNAME, tmpattnm.db_att_name);
+
+		if (MEcmp(tmpattnm.db_att_name,
 		  (char *)&key_array[i]->key_attr_name,
 		  sizeof(key_array[i]->key_attr_name)) == 0)
 		{
@@ -7197,6 +7244,8 @@ bool		    from_online_modify)
 	/* TCB mutexes must be destroyed */
 	dm0s_mrelease(&t->tcb_mutex);
 	dm0s_mrelease(&t->tcb_et_mutex);
+	if (t->tcb_atts_o_misc)
+	    dm0m_deallocate((DM_OBJECT **)&t->tcb_atts_o_misc);
 	dm0m_deallocate((DM_OBJECT **)&t);
     }
     return (E_DB_ERROR);
@@ -8753,7 +8802,7 @@ DB_ERROR	*dberr)
     DB_STATUS		status;
     DB_STATUS		local_status;
     i4		local_error;
-    char		sem_name[CS_SEM_NAME_LEN + DB_MAXNAME + 10];
+    char		sem_name[CS_SEM_NAME_LEN + DB_TAB_MAXNAME + 10];
     char		*cptr;
     i4			i;
     DB_ERROR		local_dberr;
@@ -8973,13 +9022,13 @@ DB_ERROR	*dberr)
 	** Compute blank-stripped lengths of table and owner names,
 	** save those lengths in the TCB:
 	*/
-	for ( cptr = (char *)&tcb->tcb_rel.relid.db_tab_name + DB_MAXNAME - 1,
-		     i = DB_MAXNAME;
+	for ( cptr = (char *)&tcb->tcb_rel.relid.db_tab_name + DB_TAB_MAXNAME - 1,
+		     i = DB_TAB_MAXNAME;
 	      cptr >= (char *)&tcb->tcb_rel.relid.db_tab_name && *cptr == ' ';
 	      cptr--, i-- );
 	tcb->tcb_relid_len = i;
-	for ( cptr = (char *)&tcb->tcb_rel.relowner.db_own_name + DB_MAXNAME - 1,
-		     i = DB_MAXNAME;
+	for ( cptr = (char *)&tcb->tcb_rel.relowner.db_own_name + DB_OWN_MAXNAME - 1,
+		     i = DB_OWN_MAXNAME;
 	      cptr >= (char *)&tcb->tcb_rel.relowner.db_own_name && *cptr == ' ';
 	      cptr--, i-- );
 	tcb->tcb_relowner_len = i;
@@ -9233,6 +9282,8 @@ DB_ERROR	*dberr)
 	/* TCB mutexes must be destroyed */
 	dm0s_mrelease(&tcb->tcb_mutex);
 	dm0s_mrelease(&tcb->tcb_et_mutex);
+	if (tcb->tcb_atts_o_misc)
+	    dm0m_deallocate((DM_OBJECT **)&tcb->tcb_atts_o_misc);
 	dm0m_deallocate((DM_OBJECT **)&tcb);
     }
 
@@ -11015,6 +11066,8 @@ DB_ERROR	*dberr)
 		    /* TCB mutexes must be destroyed */
 		    dm0s_mrelease(&tcb_ptr->tcb_mutex);
 		    dm0s_mrelease(&tcb_ptr->tcb_et_mutex);
+		    if (tcb->tcb_atts_o_misc)
+			dm0m_deallocate((DM_OBJECT **)&tcb->tcb_atts_o_misc);
 		    dm0m_deallocate((DM_OBJECT **)&tcb_ptr);
 		}
 	    }
@@ -11151,9 +11204,9 @@ DB_ERROR	*dberr)
 		    MEcopy(rep_rec, sizeof(rep_info->dd_reg_tables.tabno),
 		        (char *)&rep_info->dd_reg_tables.tabno);
 		    MEcopy(rep_rec + rep_tcb->tcb_atts_ptr[2].offset,
-			DB_MAXNAME, rep_info->dd_reg_tables.tab_name);
+			DB_TAB_MAXNAME, rep_info->dd_reg_tables.tab_name);
 		    MEcopy(rep_rec + rep_tcb->tcb_atts_ptr[3].offset,
-			DB_MAXNAME, rep_info->dd_reg_tables.tab_owner);
+			DB_OWN_MAXNAME, rep_info->dd_reg_tables.tab_owner);
 		    MEcopy(rep_rec + rep_tcb->tcb_atts_ptr[4].offset,
 		        sizeof(rep_info->dd_reg_tables.reg_date),
 		        rep_info->dd_reg_tables.reg_date);
@@ -11167,11 +11220,11 @@ DB_ERROR	*dberr)
 		        sizeof(rep_info->dd_reg_tables.cdds_no),
 		        (char *)&rep_info->dd_reg_tables.cdds_no);
 		    MEcopy(rep_rec + rep_tcb->tcb_atts_ptr[8].offset,
-			DB_MAXNAME, rep_info->dd_reg_tables.cdds_lookup_table);
+			DB_TAB_MAXNAME, rep_info->dd_reg_tables.cdds_lookup_table);
 		    MEcopy(rep_rec + rep_tcb->tcb_atts_ptr[9].offset,
-		    	DB_MAXNAME, rep_info->dd_reg_tables.prio_lookup_table);
+		    	DB_TAB_MAXNAME, rep_info->dd_reg_tables.prio_lookup_table);
 		    MEcopy(rep_rec + rep_tcb->tcb_atts_ptr[10].offset,
-			DB_MAXNAME, rep_info->dd_reg_tables.index_used);
+			DB_TAB_MAXNAME, rep_info->dd_reg_tables.index_used);
 		    /*
 		    ** Open dd_regist_columns and get rows for this table
 		    ** then set the replicate field in tcb atts
@@ -11219,19 +11272,27 @@ DB_ERROR	*dberr)
 			    == 0)
 			    /* col is not replicated */
 			    continue;
-		        for(j = 1;
-			    MEcmp(base_tcb->tcb_atts_ptr[j].name.db_att_name,
-			    reg_col_rec + 4, DB_MAXNAME) &&
-			    j <= base_tcb->tcb_rel.relatts; j++);
+		        for(j = 1; j <= base_tcb->tcb_rel.relatts; j++)
+			{
+			    DB_ATT_NAME tmpattnm;
+
+			    MEmove(base_tcb->tcb_atts_ptr[j].attnmlen,
+				base_tcb->tcb_atts_ptr[j].attnmstr, ' ',
+				DB_ATT_MAXNAME, tmpattnm.db_att_name);
+
+			    if (!MEcmp(tmpattnm.db_att_name, reg_col_rec + 4, 
+					DB_ATT_MAXNAME))
+				break;
+			}
 		        if (j > base_tcb->tcb_rel.relatts)
 		        {
 			    /* no attribute found */
         		    uleFormat(dberr, E_DM9552_REP_NO_ATTRIBUTE, 
 				(CL_ERR_DESC *)NULL, ULE_LOG,
             		        (DB_SQLSTATE *)NULL, (char *)NULL, (i4)0,
-			        (i4 *)NULL, err_code, (i4)2, DB_MAXNAME,
-			        reg_col_rec + 2, DB_MAXNAME,
-			        base_tcb->tcb_rel.relid);
+			        (i4 *)NULL, err_code, (i4)2, 
+				DB_ATT_MAXNAME, reg_col_rec + 2,
+				DB_TAB_MAXNAME, base_tcb->tcb_rel.relid);
 			    status = E_DB_ERROR;
 			    break;
 		        }
@@ -11335,6 +11396,8 @@ DB_ERROR	*dberr)
 	if (dummy_tcb->tcb_status & TCB_WAIT)
 	    dm0s_erelease(lock_id, DM0S_TCBWAIT_EVENT,
 		dummy_tcb->tcb_unique_id);
+	if (dummy_tcb->tcb_atts_o_misc)
+	    dm0m_deallocate((DM_OBJECT **)&dummy_tcb->tcb_atts_o_misc);
 	dm0m_deallocate((DM_OBJECT **)&dummy_tcb);
 
 	/*
@@ -11521,6 +11584,8 @@ DB_ERROR	*dberr)
 
 	dm0s_mrelease(&tcb->tcb_et_mutex);
 	dm0s_mrelease(&tcb->tcb_mutex);
+	if (tcb->tcb_atts_o_misc)
+	    dm0m_deallocate((DM_OBJECT **)&tcb->tcb_atts_o_misc);
 	dm0m_deallocate((DM_OBJECT **)&tcb);
     }
 
@@ -11554,6 +11619,8 @@ DB_ERROR	*dberr)
 	if (dummy_tcb->tcb_status & TCB_WAIT)
 	    dm0s_erelease(lock_id, DM0S_TCBWAIT_EVENT,
 		dummy_tcb->tcb_unique_id);
+	if (dummy_tcb->tcb_atts_o_misc)
+	    dm0m_deallocate((DM_OBJECT **)&dummy_tcb->tcb_atts_o_misc);
 	dm0m_deallocate((DM_OBJECT **)&dummy_tcb);
     }
 
@@ -11949,6 +12016,8 @@ DB_ERROR	*dberr)
     DB_STATUS		local_status;
     DB_ERROR		local_dberr;
     i4		    *err_code = &dberr->err_code;
+    i4			alen;
+    PTR			nextattname = t->tcb_atts_names;
 
     CLRDBERR(dberr);
 
@@ -12336,7 +12405,41 @@ DB_ERROR	*dberr)
 	    }
 
 	    a = &t->tcb_atts_ptr[attribute.attintl_id];
-	    a->name = attribute.attname;
+
+	    /* Compute blank-stripped length of attribute name */
+	    for (alen = DB_ATT_MAXNAME;  
+		attribute.attname.db_att_name[alen-1] == ' ' && alen >= 1; 
+			alen--);
+
+	    /* see if we need more space for attribute name */
+	    if (t->tcb_atts_used + alen + 1 > t->tcb_atts_size)
+	    {
+		i4	attnmsz;
+#ifdef xDEBUG
+TRdisplay("Alloc overflow name buf for %~t\n", 
+DB_TAB_MAXNAME, t->tcb_rel.relid.db_tab_name);
+#endif
+
+		attnmsz = ((t->tcb_rel.relatts - att_count) + 1) * sizeof(DB_ATT_STR);
+		status = dm0m_allocate( sizeof(DMP_MISC) + attnmsz,
+		    (i4)DM0M_LONGTERM, (i4)MISC_CB, (i4)MISC_ASCII_ID,
+		    (char *)t, (DM_OBJECT **)&t->tcb_atts_o_misc, dberr);
+		if (status != E_DB_OK)
+		    break;
+	        t->tcb_atts_o_names = (char*)t->tcb_atts_o_misc + 
+			sizeof(DMP_MISC);
+	        t->tcb_atts_o_size = attnmsz;
+		nextattname = t->tcb_atts_o_names;
+	    }
+
+	    a->attnmlen = alen;
+	    a->attnmstr = nextattname;
+	    MEcopy(attribute.attname.db_att_name, alen, nextattname);
+	    nextattname += alen;
+	    *nextattname = '\0';
+	    nextattname++;
+	    t->tcb_atts_used += (alen + 1);
+
 	    a->offset = attribute.attoff;
 	    a->type = attribute.attfmt;
 	    a->length = attribute.attfml;
@@ -13135,6 +13238,8 @@ DB_ERROR	*dberr)
 		    /* TCB mutexes must be destroyed */
 		    dm0s_mrelease(&t->tcb_mutex);
 		    dm0s_mrelease(&t->tcb_et_mutex);
+		    if (t->tcb_atts_o_misc)
+			dm0m_deallocate((DM_OBJECT **)&t->tcb_atts_o_misc);
 		    dm0m_deallocate((DM_OBJECT **)&t);
 		}
 	    }
@@ -15262,7 +15367,7 @@ rep_catalog(
 
 	/* tabname matches unpadded string, make sure the rest is blanks */
 	if ((STskipblank(tabname + Rep_cats[i].namelen,
-		DB_MAXNAME - Rep_cats[i].namelen)) == NULL)
+		DB_TAB_MAXNAME - Rep_cats[i].namelen)) == NULL)
 	    return(TRUE);
     }
     return(FALSE);
@@ -15373,10 +15478,13 @@ DB_ERROR	*dberr)
     i4			leaf_cmpcontrol_size = 0;
     i4			rtree_size = 0;
     i4			pp_size = 0;
+    i4			attnmsz = 0;
     char		*next_slot;
-    char		sem_name[CS_SEM_NAME_LEN + DB_MAXNAME + 10];
+    char		sem_name[CS_SEM_NAME_LEN + DB_TAB_MAXNAME + 10];
     bool                blobs = FALSE;
     char		*cptr;
+    DB_ATTS		*a;
+    i4			avg_nmsz;
 
     /*
     ** Compute the sizes of all the extensions to the TCB.
@@ -15393,6 +15501,17 @@ DB_ERROR	*dberr)
 	    if (rel->relatts)
 	    {
 		atts_size      = (rel->relatts + 1) * sizeof(DB_ATTS);
+
+		if (rel->relstat & TCB_CONCUR)
+		    avg_nmsz = 16; /* MUST be big enough, no overflow */
+		else if (rel->relstat & TCB_CATALOG)
+		    avg_nmsz = 24; 
+		else
+		    avg_nmsz = 32; /* might not be big enough */
+
+		attnmsz = (rel->relatts + 1) * avg_nmsz;
+		attnmsz = DB_ALIGN_MACRO(attnmsz);
+
 		data_atts_size = (rel->relatts * sizeof(DB_ATTS *));
 		data_cmpcontrol_size = dm1c_cmpcontrol_size(rel->relcomptype,
 			rel->relatts, rel->relversion);
@@ -15523,6 +15642,7 @@ DB_ERROR	*dberr)
     */
     status = dm0m_allocate((i4)(sizeof(DMP_TCB) +
 	atts_size +
+	attnmsz +
 	key_ixs_size +
 	data_atts_size +
 	data_cmpcontrol_size +
@@ -15555,19 +15675,41 @@ DB_ERROR	*dberr)
     MEfill(sizeof(DMP_ROWACCESS), 0, (PTR) &t->tcb_data_rac);
     MEfill(sizeof(DMP_ROWACCESS), 0, (PTR) &t->tcb_index_rac);
     MEfill(sizeof(DMP_ROWACCESS), 0, (PTR) &t->tcb_leaf_rac);
+    t->tcb_atts_names = NULL;
+    t->tcb_atts_size = 0;
+    t->tcb_atts_used = 0;
     if (data_atts_size)
     {
 	t->tcb_atts_ptr = (DB_ATTS*)next_slot;
 	/* Zero-fill the first DB_ATTS, normally unused */
 	MEfill(sizeof(DB_ATTS), 0, next_slot);
+
 	next_slot += atts_size;
 	t->tcb_data_rac.att_ptrs = (DB_ATTS**)next_slot;
 	next_slot += data_atts_size;
+
+	t->tcb_atts_names = next_slot;
+	t->tcb_atts_size = attnmsz;
+/*
+	if (rel->relstat & TCB_CONCUR)
+	{
+	    char	*nextattname = t->tcb_atts_names;
+	    for (i = 0, a = t->tcb_atts_ptr; i <= rel->relatts; i++, a++)
+	    {
+		a->attnmstr = nextattname;
+		nextattname += AVG_NAME_SIZE + 1;
+	    }
+	}
+*/
+
+	next_slot += attnmsz;
 	t->tcb_data_rac.att_count = rel->relatts;
     }
     else
     {
 	t->tcb_atts_ptr = (DB_ATTS*)NULL;
+	t->tcb_atts_names = NULL;
+	t->tcb_atts_size = 0;
     }
 
     t->tcb_leafkeys = (DB_ATTS **)NULL;
@@ -15584,6 +15726,12 @@ DB_ERROR	*dberr)
     t->tcb_rng_rac = NULL;
     t->tcb_rngkeys = NULL;
     t->tcb_rngklen = 0;
+
+    t->tcb_atts_used = 0;
+    t->tcb_atts_o_misc = NULL;
+    t->tcb_atts_o_names = NULL;
+    t->tcb_atts_o_size = 0;
+    t->tcb_atts_o_used = 0;
 
     if (data_cmpcontrol_size)
     {
@@ -15783,13 +15931,13 @@ DB_ERROR	*dberr)
 	** Compute blank-stripped lengths of table and owner names,
 	** save those lengths in the TCB:
 	*/
-	for ( cptr = (char *)&t->tcb_rel.relid.db_tab_name + DB_MAXNAME - 1,
-		     i = DB_MAXNAME;
+	for ( cptr = (char *)&t->tcb_rel.relid.db_tab_name + DB_TAB_MAXNAME - 1,
+		     i = DB_TAB_MAXNAME;
 	      cptr >= (char *)&t->tcb_rel.relid.db_tab_name && *cptr == ' ';
 	      cptr--, i-- );
 	t->tcb_relid_len = i;
-	for ( cptr = (char *)&t->tcb_rel.relowner.db_own_name + DB_MAXNAME - 1,
-		     i = DB_MAXNAME;
+	for ( cptr = (char *)&t->tcb_rel.relowner.db_own_name + DB_OWN_MAXNAME - 1,
+		     i = DB_OWN_MAXNAME;
 	      cptr >= (char *)&t->tcb_rel.relowner.db_own_name && *cptr == ' ';
 	      cptr--, i-- );
 	t->tcb_relowner_len = i;
@@ -16354,26 +16502,24 @@ bool	*leaf_setup)
 	for (i = 0; i < t->tcb_leaf_rac.att_count; i++)
 	{
 	    a = t->tcb_leaf_rac.att_ptrs[i];
-	    TRdisplay("ATT %t (%d %d)\n", sizeof(DB_ATT_NAME),
-	    &a->name.db_att_name, a->offset, a->key_offset);
+	    TRdisplay("ATT %s (%d %d)\n", a->attnmstr,
+		a->offset,a->key_offset);
 	}
 	for (i = 0; i < t->tcb_keys; i++)
-	    TRdisplay("KEY %t (%d %d)\n", sizeof(DB_ATT_NAME),
-	    &t->tcb_leafkeys[i]->name.db_att_name,
-	    t->tcb_leafkeys[i]->offset, t->tcb_leafkeys[i]->key_offset);
+	    TRdisplay("KEY %s (%d %d)\n", t->tcb_leafkeys[i]->attnmstr,
+		t->tcb_leafkeys[i]->offset, t->tcb_leafkeys[i]->key_offset);
 
 	TRdisplay("INDEX atts %d entrylen %d, keys %d\n",
 		    t->tcb_index_rac.att_count, t->tcb_ixklen, t->tcb_keys);
 	for (i = 0; i < t->tcb_index_rac.att_count; i++)
 	{
 	    a = t->tcb_index_rac.att_ptrs[i];
-	    TRdisplay("ATT %t (%d %d)\n", sizeof(DB_ATT_NAME),
-	    &a->name.db_att_name, a->offset, a->key_offset);
+	    TRdisplay("ATT %s (%d %d)\n", a->attnmstr, 
+		a->offset, a->key_offset);
 	}
 	for (i = 0; i < t->tcb_keys; i++)
-	    TRdisplay("KEY %t (%d %d)\n", sizeof(DB_ATT_NAME),
-	    &t->tcb_ixkeys[i]->name.db_att_name,
-	    t->tcb_ixkeys[i]->offset, t->tcb_ixkeys[i]->key_offset);
+	    TRdisplay("KEY %s (%d %d)\n", t->tcb_ixkeys[i]->attnmstr,
+		t->tcb_ixkeys[i]->offset, t->tcb_ixkeys[i]->key_offset);
 	TRdisplay("RANGE entries match %s\n",
 	    (t->tcb_rng_rac == &t->tcb_index_rac) ? "index" : "leaf (data)");
     }

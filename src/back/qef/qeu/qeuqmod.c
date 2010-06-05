@@ -422,6 +422,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 FUNC_EXTERN char	    *STskipblank();
@@ -11710,7 +11712,7 @@ DMT_TBL_ENTRY	*tbl_entry)
 	** on the object to be deleted.
 	*/
 
-	MEmove(4, "base", ' ', DB_MAXNAME,
+	MEmove(4, "base", ' ', DB_ATT_MAXNAME,
              (char *)&attr_array[0].attr_name);
 	attr_array[0].attr_type = DB_INT_TYPE;
 	attr_array[0].attr_size = 4;
@@ -11724,17 +11726,17 @@ DMT_TBL_ENTRY	*tbl_entry)
 
 	for (i =1; i < TEMP_TBL_DEGREE; i++)
 	    STRUCT_ASSIGN_MACRO(attr_array[0], attr_array[i]);
-	MEmove(5, "index", ' ', DB_MAXNAME,
+	MEmove(5, "index", ' ', DB_ATT_MAXNAME,
                  (char *)&attr_array[1].attr_name);
-	MEmove(6, "qryid1", ' ', DB_MAXNAME,
+	MEmove(6, "qryid1", ' ', DB_ATT_MAXNAME,
                   (char *)&attr_array[2].attr_name);
-	MEmove(6, "qryid2", ' ', DB_MAXNAME,
+	MEmove(6, "qryid2", ' ', DB_ATT_MAXNAME,
                   (char *)&attr_array[3].attr_name);
-	MEmove(5, "i_qid", ' ', DB_MAXNAME,
+	MEmove(5, "i_qid", ' ', DB_ATT_MAXNAME,
                   (char *)&attr_array[4].attr_name);
-	MEmove(sizeof("flags") - 1, "flags", ' ', DB_MAXNAME,
+	MEmove(sizeof("flags") - 1, "flags", ' ', DB_ATT_MAXNAME,
 	    (char *)&attr_array[5].attr_name);
-	MEmove(sizeof("objtype") - 1, "objtype", ' ', DB_MAXNAME,
+	MEmove(sizeof("objtype") - 1, "objtype", ' ', DB_ATT_MAXNAME,
 	    (char *)&attr_array[6].attr_name);
 
 	attr_array[6].attr_size = sizeof(DB_QMODE);
@@ -19624,7 +19626,7 @@ i4			*error)
 
 	/* first attribute - privilege map */
 	MEmove(sizeof("priv") - 1, "priv", ' ',
-	    DB_MAXNAME, (char *) &temp_array[0].attr_name);
+	    DB_ATT_MAXNAME, (char *) &temp_array[0].attr_name);
 
 	/* 
 	** second attribute - number of traversal during which a row was
@@ -19632,18 +19634,18 @@ i4			*error)
 	*/
 	temp_array[1].attr_size = 2;
 	MEmove(sizeof("depth") - 1, "depth", ' ',
-	    DB_MAXNAME, (char *) &temp_array[1].attr_name);
+	    DB_ATT_MAXNAME, (char *) &temp_array[1].attr_name);
 
 	/* third attribute - grantee type */
 	temp_array[2].attr_size = 2;
 	MEmove(sizeof("grantee_type") - 1, "grantee_type", ' ',
-	    DB_MAXNAME, (char *) &temp_array[2].attr_name);
+	    DB_ATT_MAXNAME, (char *) &temp_array[2].attr_name);
 
 	/* fourth attribute - auth id that is expected to possess a privilege */
 	temp_array[3].attr_type = DB_CHA_TYPE;
 	temp_array[3].attr_size = sizeof(DB_OWN_NAME);
 	MEmove(sizeof("auth_id") - 1, "auth_id", ' ',
-	    DB_MAXNAME, (char *) &temp_array[3].attr_name);
+	    DB_ATT_MAXNAME, (char *) &temp_array[3].attr_name);
 
 	/* 
 	** fifth atribute - offset into the list supplied by the caller
@@ -19651,12 +19653,12 @@ i4			*error)
 	*/
 	temp_array[4].attr_size = 2;
 	MEmove(sizeof("offset") - 1, "offset", ' ',
-	    DB_MAXNAME, (char *) &temp_array[4].attr_name);
+	    DB_ATT_MAXNAME, (char *) &temp_array[4].attr_name);
 
 	/* sixth attribute -  informational flags */
 	temp_array[5].attr_size = 2;
 	MEmove(sizeof("flags") - 1, "flags", ' ',
-	    DB_MAXNAME, (char *) &temp_array[5].attr_name);
+	    DB_ATT_MAXNAME, (char *) &temp_array[5].attr_name);
 
 	/* attributes 7-16 constitute an attribute map */
 	{
@@ -19671,7 +19673,7 @@ i4			*error)
 	    {
 		(*p)++;
 		MEmove((sizeof("attmrapa") - 1), c, ' ',
-		    DB_MAXNAME, (char *) &temp_array[i].attr_name);
+		    DB_ATT_MAXNAME, (char *) &temp_array[i].attr_name);
 	    }
 	}
 
@@ -21642,31 +21644,31 @@ QEU_PDI_TBL_DESCR	*pdi_tbl_descr)
 
 	/* first attribute - first half of object id */
 	MEmove((sizeof("id_base") - 1), "id_base", ' ',
-	    DB_MAXNAME, (char *) &temp_array[0].attr_name);
+	    DB_ATT_MAXNAME, (char *) &temp_array[0].attr_name);
 
 	/* second attribute - second half of object id */
 	MEmove((sizeof("id_idx") - 1), "id_idx", ' ',
-	    DB_MAXNAME, (char *) &temp_array[1].attr_name);
+	    DB_ATT_MAXNAME, (char *) &temp_array[1].attr_name);
 
 	/* third attribute - privilege map */
 	MEmove((sizeof("priv_map") - 1), "priv_map", ' ',
-	    DB_MAXNAME, (char *) &temp_array[2].attr_name);
+	    DB_ATT_MAXNAME, (char *) &temp_array[2].attr_name);
 
 	/* fourth attribute - flag field */
 	temp_array[3].attr_size = 2;
 	MEmove((sizeof("flags") - 1), "flags", ' ',
-	    DB_MAXNAME, (char *) &temp_array[3].attr_name);
+	    DB_ATT_MAXNAME, (char *) &temp_array[3].attr_name);
 
 	/* fifth atribute - authorization id type */
 	temp_array[4].attr_size = 2;
 	MEmove((sizeof("auth_type") - 1), "auth_type", ' ',
-	    DB_MAXNAME, (char *) &temp_array[4].attr_name);
+	    DB_ATT_MAXNAME, (char *) &temp_array[4].attr_name);
 
 	/* sixth attribute - authorization id */
 	temp_array[5].attr_type = DB_CHA_TYPE;
 	temp_array[5].attr_size = sizeof(DB_OWN_NAME);
 	MEmove((sizeof("auth_id") - 1), "auth_id", ' ',
-	    DB_MAXNAME, (char *) &temp_array[5].attr_name);
+	    DB_ATT_MAXNAME, (char *) &temp_array[5].attr_name);
 
 	/* attributes 7-16 constitute an attribute map */
 	{
@@ -21681,7 +21683,7 @@ QEU_PDI_TBL_DESCR	*pdi_tbl_descr)
 	    {
 		(*p)++;
 		MEmove((sizeof("attmrapa") - 1), c, ' ',
-		    DB_MAXNAME, (char *) &temp_array[i].attr_name);
+		    DB_ATT_MAXNAME, (char *) &temp_array[i].attr_name);
 	    }
 	}
 
@@ -22443,13 +22445,13 @@ QEU_PDI_TBL_DESCR	*pdi_tbl_descr)
 			    }
 			    else if (prot_tuple->dbp_obtype == DBOB_EVENT)
 			    {
-				DB_NAME	    *p;
+				DB_EVENT_NAME	    *p;
 
 				dprot_qeuqcb.qeuq_permit_mask |=
 				    QEU_EV_PROTECTION;
 				    
 				dprot_qeuqcb.qeuq_uld_tup = &dprot_ev_qefdata;
-				p = (DB_NAME *) &prot_tuple->dbp_obname;
+				p = (DB_EVENT_NAME *) &prot_tuple->dbp_obname;
 				
 				STRUCT_ASSIGN_MACRO((*p),
 				    ev_dprot_tuple->dbe_name);
@@ -23225,13 +23227,13 @@ QEU_PDI_TBL_DESCR	*pdi_tbl_descr)
 			    }
 			    else if (prot_tuple->dbp_obtype == DBOB_EVENT)
 			    {
-				DB_NAME	    *p;
+				DB_EVENT_NAME	    *p;
 
 				dprot_qeuqcb.qeuq_permit_mask |=
 				    QEU_EV_PROTECTION;
 				    
 				dprot_qeuqcb.qeuq_uld_tup = &dprot_ev_qefdata;
-				p = (DB_NAME *) &prot_tuple->dbp_obname;
+				p = (DB_EVENT_NAME *) &prot_tuple->dbp_obname;
 				
 				STRUCT_ASSIGN_MACRO((*p),
 				    ev_dprot_tuple->dbe_name);
@@ -30064,27 +30066,27 @@ qeu_crt_pdi_tbl(
 
     /* first attribute - misc. flags */
     MEmove((sizeof("flags") - 1), "flags", ' ',
-        DB_MAXNAME, (char *) &attr_p[0].attr_name);
+        DB_ATT_MAXNAME, (char *) &attr_p[0].attr_name);
 
     /* second attribute - aggregate privilege depth prior to recalculation */
     MEmove((sizeof("old_depth") - 1), "old_depth", ' ',
-        DB_MAXNAME, (char *) &attr_p[1].attr_name);
+        DB_ATT_MAXNAME, (char *) &attr_p[1].attr_name);
 
     /* third atribute - recomputed aggregate privilege depth */
     MEmove((sizeof("new_depth") - 1), "new_depth", ' ',
-        DB_MAXNAME, (char *) &attr_p[2].attr_name);
+        DB_ATT_MAXNAME, (char *) &attr_p[2].attr_name);
 
     /* fourth atribute - grantee type */
     MEmove((sizeof("gtype") - 1), "gtype", ' ',
-        DB_MAXNAME, (char *) &attr_p[3].attr_name);
+        DB_ATT_MAXNAME, (char *) &attr_p[3].attr_name);
 
     /* fifth attribute - grantee of the permit */
     MEmove((sizeof("auth_id") - 1), "auth_id", ' ',
-        DB_MAXNAME, (char *) &attr_p[4].attr_name);
+        DB_ATT_MAXNAME, (char *) &attr_p[4].attr_name);
     
     /* sixth attribute - privilege specified in the permit */
     MEmove((sizeof("priv") - 1), "priv", ' ',
-        DB_MAXNAME, (char *) &attr_p[5].attr_name);
+        DB_ATT_MAXNAME, (char *) &attr_p[5].attr_name);
     
     /* attributes 7-16 constitute an attribute map */
     {
@@ -30100,7 +30102,7 @@ qeu_crt_pdi_tbl(
         {
 	    (*p)++;
 	    MEmove((sizeof("attmrapa") - 1), c, ' ',
-	        DB_MAXNAME, (char *) &attr_p[i].attr_name);
+	        DB_ATT_MAXNAME, (char *) &attr_p[i].attr_name);
         }
     }
 
@@ -30896,7 +30898,7 @@ qeu_destr_dbp_qp(
 	DB_ERROR	*err_blk)
 {
     QSF_RCB         dbp_qsf_rb;
-    char	    dbp_fe_id[sizeof(DB_CURSOR_ID) + DB_MAXNAME + sizeof(i4)];
+    char	    dbp_fe_id[sizeof(DB_CURSOR_ID) + DB_OWN_MAXNAME + sizeof(i4)];
     DB_CURSOR_ID    *fe_idp = (DB_CURSOR_ID *) dbp_fe_id;
     DB_STATUS	    status;
     i4	    error;

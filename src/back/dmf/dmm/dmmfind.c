@@ -141,6 +141,8 @@ Problems --
 **	    SIR 120874: dm2t_?, dm2r_? functions converted to DB_ERROR *
 **	12-Nov-2009 (kschendel) SIR 122882
 **	    cmptlvl is an integer now.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -168,7 +170,10 @@ static DB_STATUS    getloc(
 				i4	    *bad_50db,
 				i4	    *error);
 
-static VOID	    getuser (LOGDB_CB *logdb_cb, char *code, char *name);
+static VOID	    getuser (
+				LOGDB_CB *logdb_cb,
+				char *code,
+				DB_OWN_NAME *name);
 static STATUS	    log_db(
 				LOGDB_CB	*logdb_cb,
 				char		*dirname,
@@ -393,7 +398,7 @@ struct _LOGDB_CB
 	/*****************/
 	char	    dir_name[DB_MAXNAME+1];	/* null terminated dir name */
 	char	    filename[DB_MAXNAME+1];	/* optional name of file */
-	char	    loc_name[DB_MAXNAME+1];	/* null terminated logical name 
+	char	    loc_name[DB_LOC_MAXNAME+1];	/* null terminated logical name 
 						** of search location */
 	char	    loc_path[DB_AREA_MAX+1];	/* null terminated pathname that
 						** loc_name translates to */
@@ -726,9 +731,9 @@ DMM_CB    *dmm_cb)
 	logdb_cb.loc_path[dmm->dmm_db_location.data_in_size] = '\0';
 	(VOID)STzapblank(logdb_cb.loc_path,logdb_cb.loc_path);	/* eleminate 
 								** whitespace*/
-	MEcopy( (PTR)dmm->dmm_location_name.db_loc_name, DB_MAXNAME,
+	MEcopy( (PTR)dmm->dmm_location_name.db_loc_name, DB_LOC_MAXNAME,
 		(PTR)logdb_cb.loc_name);
-	logdb_cb.loc_name[DB_MAXNAME]='\0';	/* null terminate */
+	logdb_cb.loc_name[DB_LOC_MAXNAME]='\0';	/* null terminate */
 	(VOID)STzapblank(logdb_cb.loc_name,logdb_cb.loc_name);	/* eleminate 
 								** whitespace*/
 
@@ -1460,9 +1465,9 @@ i4	    *error)
 	DB_STATUS	locstat;
 	i4	locerror;
 
-	MEcopy( (PTR)tcb->tcb_rel.relid.db_tab_name, DB_MAXNAME, 
+	MEcopy( (PTR)tcb->tcb_rel.relid.db_tab_name, DB_TAB_MAXNAME, 
 		(PTR)logdb_cb->filename);
-	logdb_cb->filename[DB_MAXNAME] = '\0'; /* null terminate */
+	logdb_cb->filename[DB_TAB_MAXNAME] = '\0'; /* null terminate */
 
 	locstat = dm2t_close(rcb, DM2T_NOPURGE, &local_dberr);
 	rcb = (DMP_RCB *) NULL;
@@ -1524,7 +1529,7 @@ static VOID
 getuser (
 LOGDB_CB    *logdb_cb,
 char	    *code,
-char	    *name)
+DB_OWN_NAME    *name)
 {
     DML_XCB		*xcb= logdb_cb->xcb;
     DML_ODCB		*odcb = (DML_ODCB *) xcb->xcb_odcb_ptr;
@@ -1540,20 +1545,20 @@ char	    *name)
     i4		tupcnt=0;
     DUF_CODEMAP		tuple;
     char		code_key[4];
-    char		name_buf[DB_MAXNAME+1];
+    char		own_buf[DB_OWN_MAXNAME+1];
     DB_STATUS		ret_stat;
     bool		found = FALSE;
     i4		error,err_code,locerr;
     DB_ERROR		local_dberr;
 
     /* first blank pad the name */
-    MEfill(DB_MAXNAME, ' ', (PTR) name);
+    MEfill(DB_OWN_MAXNAME, ' ', (PTR) name->db_own_name);
     
     if (logdb_cb->flags & NOCODEMAP)
     {
 	/* just set owner name to "UNKNOWN" */
-	STcopy ("UNKNOWN",name_buf);
-	MEcopy ( (PTR) name_buf, STlength(name_buf), (PTR) name);
+	STcopy ("UNKNOWN", own_buf);
+	MEcopy ( (PTR) own_buf, STlength(own_buf), (PTR) name->db_own_name);
 	return;
     }
 
@@ -1658,7 +1663,7 @@ char	    *name)
 	    if (++tupcnt == 1)
 	    {
 	    	found = TRUE;
-		MEcopy ((PTR)tuple.uname, UNAME_LEN, (PTR)name);
+		MEcopy ((PTR)tuple.uname, UNAME_LEN, (PTR)name->db_own_name);
 	    }
 	}
 	if (ret_stat != E_DB_OK)
@@ -1694,9 +1699,9 @@ char	    *name)
     if (rcb)
     {
 
-	MEcopy( (PTR)tcb->tcb_rel.relid.db_tab_name, DB_MAXNAME, 
+	MEcopy( (PTR)tcb->tcb_rel.relid.db_tab_name, DB_TAB_MAXNAME, 
 		(PTR)logdb_cb->filename);
-	logdb_cb->filename[DB_MAXNAME] = '\0'; /* null terminate */
+	logdb_cb->filename[DB_TAB_MAXNAME] = '\0'; /* null terminate */
 
 	ret_stat = dm2t_close(rcb, DM2T_NOPURGE, &local_dberr);
 	rcb = (DMP_RCB *) NULL;
@@ -2247,37 +2252,37 @@ DMM_CB			*dmm)
 	*/
 	dv = (DB_DATA_VALUE *) logdb_cb->insdb_dvs;
 	/* NAME */
-	dv[NAME].db_length = DB_MAXNAME;
+	dv[NAME].db_length = DB_DB_MAXNAME;
 	dv[NAME].db_datatype = (DB_DT_ID) DB_CHA_TYPE;
 	dv[NAME].db_data = &iidatabase->du_dbname[0];
 	dv[NAME].db_prec = 0;
 	dv[NAME].db_collID = -1;
 	/* OWN */
-	dv[OWN].db_length = DB_MAXNAME;
+	dv[OWN].db_length = DB_OWN_MAXNAME;
 	dv[OWN].db_datatype = (DB_DT_ID) DB_CHA_TYPE;
 	dv[OWN].db_data = (PTR) &iidatabase->du_own;
 	dv[OWN].db_prec = 0;
 	dv[OWN].db_collID = -1;
 	/* DBDEV */
-	dv[DBDEV].db_length = DB_MAXNAME;
+	dv[DBDEV].db_length = DB_LOC_MAXNAME;
 	dv[DBDEV].db_datatype = (DB_DT_ID) DB_CHA_TYPE;
 	dv[DBDEV].db_data = (PTR) &iidatabase->du_dbloc;
 	dv[DBDEV].db_prec = 0;
 	dv[DBDEV].db_collID = -1;
 	/* CKPDEV */
-	dv[CKPDEV].db_length = DB_MAXNAME;
+	dv[CKPDEV].db_length = DB_LOC_MAXNAME;
 	dv[CKPDEV].db_datatype = (DB_DT_ID) DB_CHA_TYPE;
 	dv[CKPDEV].db_data = (PTR) &iidatabase->du_ckploc;
 	dv[CKPDEV].db_prec = 0;
 	dv[CKPDEV].db_collID = -1;
 	/* JNLDEV */
-	dv[JNLDEV].db_length = DB_MAXNAME;
+	dv[JNLDEV].db_length = DB_LOC_MAXNAME;
 	dv[JNLDEV].db_datatype = (DB_DT_ID) DB_CHA_TYPE;
 	dv[JNLDEV].db_data = (PTR) &iidatabase->du_jnlloc;
 	dv[JNLDEV].db_prec = 0;
 	dv[JNLDEV].db_collID = -1;
 	/* SORTDEV */
-	dv[SORTDEV].db_length = DB_MAXNAME;
+	dv[SORTDEV].db_length = DB_LOC_MAXNAME;
 	dv[SORTDEV].db_datatype = (DB_DT_ID) DB_CHA_TYPE;
 	dv[SORTDEV].db_data = (PTR) &iidatabase->du_workloc;
 	dv[SORTDEV].db_prec = 0;
@@ -2313,7 +2318,7 @@ DMM_CB			*dmm)
 	dv[DB_ID].db_prec = 0;
 	dv[DB_ID].db_collID = -1;
 	/* DMPDEV */
-	dv[DMPDEV].db_length = DB_MAXNAME;
+	dv[DMPDEV].db_length = DB_LOC_MAXNAME;
 	dv[DMPDEV].db_datatype = (DB_DT_ID) DB_CHA_TYPE;
 	dv[DMPDEV].db_data = (PTR) &iidatabase->du_dmploc;
 	dv[DMPDEV].db_prec = 0;
@@ -2576,13 +2581,13 @@ DMM_CB			*dmm)
 
 	dv = (DB_DATA_VALUE *) logdb_cb->insext_dvs;
 	/* lname */
-	dv[LNAME].db_length = DB_MAXNAME;
+	dv[LNAME].db_length = DB_LOC_MAXNAME;
 	dv[LNAME].db_datatype = (DB_DT_ID) DB_CHA_TYPE;
 	dv[LNAME].db_data = &iiextend->du_lname[0];
 	dv[LNAME].db_prec = 0;
 	dv[LNAME].db_collID = -1;
 	/* dname */
-	dv[DNAME].db_length = DB_MAXNAME;
+	dv[DNAME].db_length = DB_DB_MAXNAME;
 	dv[DNAME].db_datatype = (DB_DT_ID) DB_CHA_TYPE;
 	dv[DNAME].db_data = &iiextend->du_dname[0];
 	dv[DNAME].db_prec = 0;
@@ -2676,7 +2681,6 @@ i4	    *ret_err)
 {
 
     char		buf[DM_PG_SIZE+1];	/* buffer to read page into */
-    char		temp[DB_MAXNAME+1];	/* work buffer */
     DU_DATABASE		*iidatabase= &logdb_cb->iidatabase;	/* contains 
 						** iiphys_database info */
     DU_EXTEND		*iiextend= &logdb_cb->iiextend;		/* contains 
@@ -2712,18 +2716,18 @@ i4	    *ret_err)
 
     /* copy relevent information from header and build iidatabase tuple */
 	/* name */
-    MEfill(DB_MAXNAME, ' ', iidatabase->du_dbname);
+    MEfill(DB_DB_MAXNAME, ' ', iidatabase->du_dbname);
     MEcopy(logdb_cb->dir_name, STlength(logdb_cb->dir_name),
 	  iidatabase->du_dbname);
 	/* own */
-    MEfill(DB_MAXNAME, ' ', iidatabase->du_own.db_own_name);
-    getuser(logdb_cb, admin_hdr->ah_owner, iidatabase->du_own.db_own_name);
+    MEfill(DB_OWN_MAXNAME, ' ', iidatabase->du_own.db_own_name);
+    getuser(logdb_cb, admin_hdr->ah_owner, &iidatabase->du_own);
 	/* dbdev */
-    MEfill(DB_MAXNAME, ' ', iidatabase->du_dbloc.db_loc_name);
+    MEfill(DB_LOC_MAXNAME, ' ', iidatabase->du_dbloc.db_loc_name);
     MEcopy(logdb_cb->loc_name, STlength(logdb_cb->loc_name),
 	   iidatabase->du_dbloc.db_loc_name);
 	/* jnldev */
-    MEfill(DB_MAXNAME, ' ', iidatabase->du_jnlloc.db_loc_name);
+    MEfill(DB_LOC_MAXNAME, ' ', iidatabase->du_jnlloc.db_loc_name);
     ret_stat = getloc(logdb_cb, DMMFIND_JNL, admin_hdr->ah_jnlarea, 
 		     iidatabase->du_jnlloc.db_loc_name, &bad_loc, &error);
     if (ret_stat != E_DB_OK)
@@ -2739,7 +2743,7 @@ i4	    *ret_err)
     };
 
 	/* ckpdev */
-    MEfill(DB_MAXNAME, ' ', iidatabase->du_ckploc.db_loc_name);
+    MEfill(DB_LOC_MAXNAME, ' ', iidatabase->du_ckploc.db_loc_name);
     ret_stat = getloc(logdb_cb, DMMFIND_CKP, admin_hdr->ah_ckparea,
 		      iidatabase->du_ckploc.db_loc_name, &bad_loc, &error);
     if (ret_stat != E_DB_OK)
@@ -2754,7 +2758,7 @@ i4	    *ret_err)
 	return (E_DB_OK);	
     };
 	/* sortdev */
-    MEfill(DB_MAXNAME, ' ', iidatabase->du_workloc.db_loc_name);
+    MEfill(DB_LOC_MAXNAME, ' ', iidatabase->du_workloc.db_loc_name);
     MEcopy (WORK_DEFAULT, LWORK_DEFAULT, iidatabase->du_workloc.db_loc_name);
 	/* access */
     iidatabase->du_access = (logdb_cb->flags & PRIV_50DBS) ? DU_CONVERTING : 
@@ -2768,13 +2772,13 @@ i4	    *ret_err)
 	/* dbid */
     iidatabase->du_dbid = TMsecs();  /* give database a unique identifier */
 	/* dmpdev */
-    MEfill(DB_MAXNAME, ' ', iidatabase->du_dmploc.db_loc_name);
+    MEfill(DB_LOC_MAXNAME, ' ', iidatabase->du_dmploc.db_loc_name);
     MEcopy (DMP_DEFAULT, LDMP_DEFAULT, iidatabase->du_dmploc.db_loc_name);
 
     /* build iiextend tuple for this database */
-    MEfill(DB_MAXNAME, ' ', iiextend->du_lname);
+    MEfill(DB_LOC_MAXNAME, ' ', iiextend->du_lname);
     MEcopy(logdb_cb->loc_name,STlength(logdb_cb->loc_name),iiextend->du_lname);
-    MEfill(DB_MAXNAME, ' ', iiextend->du_dname);
+    MEfill(DB_DB_MAXNAME, ' ', iiextend->du_dname);
     MEcopy(logdb_cb->dir_name,STlength(logdb_cb->dir_name),iiextend->du_dname);
     iiextend->du_status = DU_EXT_OPERATIVE;    
 
@@ -3034,7 +3038,7 @@ i4	    *ret_err)
 
 	/* build the static part of the iiphys_extend tuple entry.  The
 	** lname portion will be filled in dynamically */
-	MEfill(DB_MAXNAME, ' ', iiextend->du_dname);
+	MEfill(DB_DB_MAXNAME, ' ', iiextend->du_dname);
 	MEcopy(logdb_cb->dir_name,STlength(logdb_cb->dir_name),
 	       iiextend->du_dname);
 	iiextend->du_status = DU_EXT_OPERATIVE;    	

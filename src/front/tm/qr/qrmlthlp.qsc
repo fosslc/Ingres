@@ -101,6 +101,8 @@
 **          Use DB_MAXNAME for database objects.
 **	26-May-2009 (kschendel) b122041
 **	    Compiler warning fixes: update loop-init-obj prototype.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /* # define's */
@@ -141,7 +143,7 @@ FUNC_EXTERN     VOID    IIQReno_EventNmOwner();
 FUNC_EXTERN     VOID    IIQRond_DatabaseNmOwner();
 FUNC_EXTERN     FE_RSLV_NAME  *loop_init_obj();
 
-static	char	pobjname[FE_UNRML_MAXNAME]; /* Used for help comment column */
+static	char	pobjname[DB_MAX_DELIMID]; /* Used for help comment column */
 
 static	bool	qrisrighttype( QRB *qrb, i4  help_type, char *object );
 static	VOID	qrdethelp( QRB *qrb, char *object, char *owner, i4  help_type,

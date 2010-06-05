@@ -70,6 +70,8 @@
 **          Added QEQP_NEED_TRANSACTION (b109101)
 **      12-Apr-2004 (stial01)
 **          Define qp_length as SIZE_TYPE.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*
@@ -99,7 +101,7 @@
 */
 typedef struct _QEF_DBP_PARAM
 {
-    char		dbp_name[DB_MAXNAME];	/* name of the parameter */
+    char		dbp_name[DB_PARM_MAXNAME];	/* name of the parameter */
     i4			dbp_rowno;		/* DSH buffer row # */
     i4			dbp_offset;		/* DSH buffer offset */
     DB_DATA_VALUE	dbp_dbv;		/* DBV of the parameter */
@@ -153,7 +155,7 @@ typedef struct _QEQ_DDQ_CB
 					    ** of LDBs participating in the
 					    ** QP; should never be NULL */
     i4		     qeq_d3_elt_cnt;	    /* number of elements (each a 
-					    ** DD_NAME) of array to contain
+					    ** DD_TAB_NAME) of array to contain
 					    ** temporary-table names and
 					    ** attribute types for the QP;
 					    ** QEF must allocate space for
@@ -163,13 +165,13 @@ typedef struct _QEQ_DDQ_CB
     i4               qeq_d5_fixed_cnt;	    /* number of parameters supplied
 					    ** with user query */
     DB_DATA_VALUE   *qeq_d6_fixed_data;	    /* data supplied with user query */
-    DD_NAME	    *qeq_d7_deltable;	    /* for a cursor, this would be a ptr
+    DD_TAB_NAME	    *qeq_d7_deltable;	    /* for a cursor, this would be a ptr
 					    ** to the translated name for the
 					    ** target table to be deleted, used
 					    ** only on a delete cursor action */
     i4		    qeq_d8_mask;	    /* mask field containing various
 					    ** booleans */
-    DD_NAME	    *qeq_d9_delown;	    /* for a cursor, pointer to the
+    DD_OWN_NAME	    *qeq_d9_delown;	    /* for a cursor, pointer to the
 					    ** LDB owner of the table to be
 					    ** deleted, used on delete cursor
 					    ** action. */

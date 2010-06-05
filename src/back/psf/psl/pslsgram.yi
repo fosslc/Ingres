@@ -3488,6 +3488,8 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **      31-Mar-2010 (horda03) b123416
 **          Don't perform Constant folding for boolean operators (AND or OR)
 **          here, it is done in pst_node().
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 %{
 
@@ -6916,7 +6918,7 @@ create_event:	crev_kwd obj_spec
 	/* add the event name to the text
 	 */
 	name     = (u_char *) $2->pss_obj_name.db_tab_name;
-	name_len = psf_trmwhite(DB_MAXNAME, $2->pss_obj_name.db_tab_name);
+	name_len = psf_trmwhite(DB_TAB_MAXNAME, $2->pss_obj_name.db_tab_name);
 
 	if ($Yid_type != PSS_ID_REG)
 	{
@@ -7081,7 +7083,7 @@ drop_schema:	    DROP SCHEMA
 	    return(E_DB_ERROR);
 	}
 
-	if (MEcmp((PTR) &schema_name, (PTR) &cb->pss_user, DB_MAXNAME))
+	if (MEcmp((PTR) &schema_name, (PTR) &cb->pss_user, sizeof(schema_name)))
 	{
 	    /* can't drop a schema owned by a different user */
 	    (void) psf_error(E_PS0573_CANT_DROP_OTHERS_SCHEMA, 0L, PSF_USERERR,
@@ -7737,7 +7739,7 @@ crl_tbl_name:		obj_spec
 		** convert owner name to a delimited identifier
 		** (obj_owner pointer gets overwritten)
 		*/
-		name_len = psf_trmwhite(DB_MAXNAME, (char *) actual_obj_owner);
+		name_len = psf_trmwhite(DB_OWN_MAXNAME, (char *) actual_obj_owner);
 
 	        status = psl_norm_id_2_delim_id(&actual_obj_owner,
 		    &name_len, delim_id, &psq_cb->psq_error);
@@ -7768,7 +7770,7 @@ crl_tbl_name:		obj_spec
 		** convert table name to a delimited identifier
 		** (actual_tbl pointer gets overwritten)
 		*/
-		name_len = psf_trmwhite(DB_MAXNAME, (char *) actual_tbl);
+		name_len = psf_trmwhite(DB_TAB_MAXNAME, (char *) actual_tbl);
 
 	        status = psl_norm_id_2_delim_id(&actual_tbl, &name_len, 
 		    delim_id, &psq_cb->psq_error);
@@ -8731,12 +8733,12 @@ newcolspec:	    LPAREN newcollist RPAREN
 	    {	    
 		if ((MEcmp((PTR) name,
 			   (PTR) node1->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
-			   DB_MAXNAME) == 0)
+			   DB_ATT_MAXNAME) == 0)
 		   )
 		{
 		    (VOID) psf_error(2013L, 0L, PSF_USERERR, &err_code,
 			&psq_cb->psq_error, 1, 
-			psf_trmwhite(DB_MAXNAME, (char*) name), (char*) name);
+			psf_trmwhite(DB_ATT_MAXNAME, (char*) name), (char*) name);
 		     return (E_DB_ERROR); 
 		}
 	    }
@@ -12454,7 +12456,7 @@ cdbp_procname:	    obj_spec
 	        tempstr = "IIROWCOUNT";
             else
 	        tempstr = "iirowcount";
-	    STmove(tempstr, ' ', DB_MAXNAME, (char *) &varname);
+	    STmove(tempstr, ' ', DB_PARM_MAXNAME, (char *) &varname);
 
 	    /* Allocate memory for the var entry */
 	    status = psf_malloc(cb, &cb->pss_ostream, (i4) sizeof(PSS_DECVAR), 
@@ -12482,7 +12484,7 @@ cdbp_procname:	    obj_spec
 	        tempstr = "IIERRORNUMBER";
             else
 	        tempstr = "iierrornumber";
-	    STmove(tempstr, ' ', DB_MAXNAME, (char *) &varname);
+	    STmove(tempstr, ' ', DB_PARM_MAXNAME, (char *) &varname);
 
 	    /* Allocate memory for the var entry */
 	    status = psf_malloc(cb, &cb->pss_ostream, (i4) sizeof(PSS_DECVAR), 
@@ -12608,12 +12610,12 @@ cdbp_parmspec:	    /* empty */
 				/* SET OF call w. scalar plist? */
 			_VOID_ psf_error(2442L, 0L, PSF_USERERR, 
 				 &err_code, &psq_cb->psq_error, 1,
-				 psf_trmwhite(DB_MAXNAME, dbpname),
+				 psf_trmwhite(DB_DBP_MAXNAME, dbpname),
 				 dbpname);
 		else 		/* just plain didn't find it! */
 			_VOID_ psf_error(2405L, 0L, PSF_USERERR, 
 				 &err_code, &psq_cb->psq_error, 1,
-				 psf_trmwhite(DB_MAXNAME, dbpname),
+				 psf_trmwhite(DB_DBP_MAXNAME, dbpname),
 				 dbpname);
 		return(E_DB_ERROR);
 	    }
@@ -12720,7 +12722,7 @@ cdbp_varname:	    cdbp_parmmode generic_ident
 	ch2 = ch1 + CMbytecnt(ch1);
 # endif /* ifndef DOUBLEBYTE */
 
-	STmove($2, ' ', DB_MAXNAME, (char *) &varname);
+	STmove($2, ' ', DB_PARM_MAXNAME, (char *) &varname);
 
 	/* Name must not start with 'ii'... */
 	/*
@@ -12888,7 +12890,7 @@ cdbp_named_rowelem:	generic_ident
 	PSS_DECVAR	*var;
 	QUEUE		*varq;
 
-	STmove($1, ' ', DB_MAXNAME, (char *) &varname);
+	STmove($1, ' ', DB_PARM_MAXNAME, (char *) &varname);
 
 	/* Name must not start with '$'. */
 	if (PSL_IS_RESERVED_IDENT($1, cb, psq_cb, TRUE))
@@ -14664,7 +14666,7 @@ cdbp_retval:	    int2_int4
 	i4		    err_code;
 	register PSS_DECVAR *var;
 
-	STmove($1, ' ', DB_MAXNAME, varname.db_parm_name);
+	STmove($1, ' ', DB_PARM_MAXNAME, varname.db_parm_name);
 
 	/* Find local var/parm by the specified name. */
 	for (var = (PSS_DECVAR *) $Ydbpinfo->pss_varq.q_next;
@@ -14829,7 +14831,7 @@ cdbp_retrow_spec1:  LPAREN
 	PST_QNODE	*node;
 	DB_STATUS	status;
 	i4		err_code;
-	char		colname[DB_MAXNAME + 2];
+	char		colname[DB_ATT_MAXNAME + 2];
 
 	if ($Ydbpinfo->pss_resrowno <= 0)
 	{
@@ -15060,7 +15062,7 @@ cdbp_mesparm:	    int2_int4
 	i4		err_code;
 	register PSS_DECVAR *var;
 
-	STmove($1, ' ', DB_MAXNAME, varname.db_parm_name);
+	STmove($1, ' ', DB_PARM_MAXNAME, varname.db_parm_name);
 
 	/* Find local var/parm by the specified name. */
 	for (var = (PSS_DECVAR *) $Ydbpinfo->pss_varq.q_next;
@@ -15136,7 +15138,7 @@ cdbp_parmlvar:	    COLON generic_ident
 	    return (E_DB_ERROR);	    
 	}
 
-	STmove($2, ' ', DB_MAXNAME, varname.db_parm_name);
+	STmove($2, ' ', DB_PARM_MAXNAME, varname.db_parm_name);
 
 	/* Find local var/parm by the specified name. */
 	for (var = (PSS_DECVAR *) $Ydbpinfo->pss_varq.q_next;
@@ -15401,7 +15403,7 @@ cdbp_assignstmt:    cdbp_lhs_asgn
 	{
 	    (VOID) psf_error(2777L, 0L, PSF_USERERR, &err_code,
 		     &psq_cb->psq_error, 1,
-		     psf_trmwhite(DB_MAXNAME, var->pss_varname.db_parm_name),
+		     psf_trmwhite(DB_PARM_MAXNAME, var->pss_varname.db_parm_name),
 		     var->pss_varname.db_parm_name);
 	    return (E_DB_ERROR);
 	}
@@ -15568,7 +15570,7 @@ cdbp_exec_dbproc:	execute_dbproc
 	{
 	    (VOID) psf_error(E_US0987_2439_EXEC_TYPE, 0L, PSF_USERERR,
 	         &err_code, &psq_cb->psq_error, 1,
-		 psf_trmwhite(DB_MAXNAME, (char *) &res_var->pss_varname),
+		 psf_trmwhite(DB_PARM_MAXNAME, (char *) &res_var->pss_varname),
 		 &res_var->pss_varname);
 	    return (E_DB_ERROR);
 	}
@@ -15585,7 +15587,7 @@ cdbp_exec_dbproc:	execute_dbproc
 	resdom->pst_rsupdt    = FALSE;
 	resdom->pst_rsflags   = PST_RS_PRINT;
 	resdom->pst_dmuflags  = 0;
-	MEcopy((char *)&res_var->pss_varname, DB_MAXNAME, resdom->pst_rsname);
+	MEcopy((char *)&res_var->pss_varname, DB_ATT_MAXNAME, resdom->pst_rsname);
 
 	$$ = stmt_cp;
     }
@@ -15609,7 +15611,7 @@ cdbp_exec_dbproc:	execute_dbproc
          {
              (VOID) psf_error(E_US0987_2439_EXEC_TYPE, 0L, PSF_USERERR,
                   &err_code, &psq_cb->psq_error, 1,
-                  psf_trmwhite(DB_MAXNAME, (char *) &res_var->pss_varname),
+                  psf_trmwhite(DB_PARM_MAXNAME, (char *) &res_var->pss_varname),
                   &res_var->pss_varname);
              return (E_DB_ERROR);
          }
@@ -15626,7 +15628,7 @@ cdbp_exec_dbproc:	execute_dbproc
          resdom->pst_rsupdt    = FALSE;
          resdom->pst_rsflags   = PST_RS_PRINT;
          resdom->pst_dmuflags  = 0;
-         MEcopy((char *)&res_var->pss_varname, DB_MAXNAME, resdom->pst_rsname);
+         MEcopy((char *)&res_var->pss_varname, DB_ATT_MAXNAME, resdom->pst_rsname);
   
          $$ = stmt_cp;
      }
@@ -15777,7 +15779,7 @@ cursor_close:	    CLOSE QUERYID
 	    (VOID) psf_error(2205L, 0L, PSF_USERERR,
 		&err_code, &psq_cb->psq_error, 2,
 		sizeof(cb->pss_lineno), &cb->pss_lineno,
-		psf_trmwhite(DB_MAXNAME, $2->db_cur_name),
+		psf_trmwhite(DB_CURSOR_MAXNAME, $2->db_cur_name),
 		$2->db_cur_name);
 	    return (E_DB_ERROR);
 	}
@@ -15810,7 +15812,7 @@ cursor_fetch:	    FETCH QUERYID
 	    (VOID) psf_error(2205L, 0L, PSF_USERERR,
 		&err_code, &psq_cb->psq_error, 2,
 		sizeof(cb->pss_lineno), &cb->pss_lineno,
-		psf_trmwhite(DB_MAXNAME, $2->db_cur_name),
+		psf_trmwhite(DB_CURSOR_MAXNAME, $2->db_cur_name),
 		$2->db_cur_name);
 	    return (E_DB_ERROR);
 	}
@@ -15889,7 +15891,7 @@ cursor_open:	    curop_ini query for_rdonly
 		(VOID) psf_error(2231L, 0L, PSF_USERERR,
 		    &err_code, &psq_cb->psq_error, 2,
 		    sizeof(cb->pss_lineno), &cb->pss_lineno,
-		    psf_trmwhite(DB_MAXNAME, $1->psc_curid.db_cur_name),
+		    psf_trmwhite(DB_CURSOR_MAXNAME, $1->psc_curid.db_cur_name),
 		    $1->psc_curid.db_cur_name);
 		return(E_DB_ERROR);
 	     }
@@ -15910,7 +15912,7 @@ cursor_open:	    curop_ini query for_rdonly
 		(VOID) psf_error(2232L, 0L, PSF_USERERR,
 		    &err_code, &psq_cb->psq_error, 2,
 		    sizeof(cb->pss_lineno), &cb->pss_lineno,
-		    psf_trmwhite(DB_MAXNAME, $1->psc_curid.db_cur_name),
+		    psf_trmwhite(DB_CURSOR_MAXNAME, $1->psc_curid.db_cur_name),
 		    $1->psc_curid.db_cur_name);
 		return(E_DB_ERROR);
 	    }
@@ -15924,7 +15926,7 @@ cursor_open:	    curop_ini query for_rdonly
 		(VOID) psf_error(2229L, 0L, PSF_USERERR,
 		    &err_code, &psq_cb->psq_error, 2,
 		    sizeof(cb->pss_lineno), &cb->pss_lineno,
-		    psf_trmwhite(DB_MAXNAME, $1->psc_curid.db_cur_name),
+		    psf_trmwhite(DB_CURSOR_MAXNAME, $1->psc_curid.db_cur_name),
 		    $1->psc_curid.db_cur_name);
 		psl_nonupdt_err(psq_cb, cb, reason, &err_code);
 		return(E_DB_ERROR);
@@ -15941,7 +15943,7 @@ cursor_open:	    curop_ini query for_rdonly
 		(VOID) psf_error(2307L, 0L, PSF_USERERR,
 		    &err_code, &psq_cb->psq_error, 2,
 		    sizeof(cb->pss_lineno), &cb->pss_lineno,
-		    psf_trmwhite(DB_MAXNAME, $1->psc_curid.db_cur_name),
+		    psf_trmwhite(DB_CURSOR_MAXNAME, $1->psc_curid.db_cur_name),
 		    $1->psc_curid.db_cur_name);
 		return(E_DB_ERROR);
 	    }
@@ -15956,7 +15958,7 @@ cursor_open:	    curop_ini query for_rdonly
 		
 		(VOID) psf_error(E_PS0404_REP_CURS_NOT_FOR_RDONLY, 0L,
 		    PSF_USERERR, &err_code, &psq_cb->psq_error, 1,
-		    psf_trmwhite(DB_MAXNAME, $1->psc_curid.db_cur_name),
+		    psf_trmwhite(DB_CURSOR_MAXNAME, $1->psc_curid.db_cur_name),
 		    $1->psc_curid.db_cur_name);
 	        return(E_DB_ERROR);
 	    }
@@ -16005,7 +16007,7 @@ curop_ini_1:	    OPEN QUERYID scrollopt CURSOR FOR
 	PSC_CURBLK	       *curblk;
 	i4		       err_code;
 	u_i4			l_id;
-	char			tempstr[DB_MAXNAME];
+	char			tempstr[DB_CURSOR_MAXNAME];
 	u_i4			templen;
 	u_i4		mode;
 
@@ -16045,7 +16047,8 @@ curop_ini_1:	    OPEN QUERYID scrollopt CURSOR FOR
 	    (VOID) psf_error(2201L, 0L, PSF_USERERR,
 		&err_code, &psq_cb->psq_error, 2,
 		sizeof(cb->pss_lineno), &cb->pss_lineno,
-		psf_trmwhite(DB_MAXNAME, $2->db_cur_name), $2->db_cur_name);
+		psf_trmwhite(DB_CURSOR_MAXNAME, $2->db_cur_name),
+		$2->db_cur_name);
 	    return (E_DB_ERROR);
 	}
 
@@ -16068,7 +16071,7 @@ curop_ini_2:	DEFQRY OPEN CURSOR QUERYID scrollopt FOR
 	PSC_CURBLK	       *curblk;
 	i4		       err_code;
 	u_i4			l_id;
-	char			tempstr[DB_MAXNAME];
+	char			tempstr[DB_CURSOR_MAXNAME];
 	u_i4			templen;
 	u_i4		mode;
 
@@ -16126,7 +16129,8 @@ curop_ini_2:	DEFQRY OPEN CURSOR QUERYID scrollopt FOR
 	    (VOID) psf_error(2210L, 0L, PSF_USERERR,
 		&err_code, &psq_cb->psq_error, 2,
 		sizeof(cb->pss_lineno), &cb->pss_lineno,
-		psf_trmwhite(DB_MAXNAME, $4->db_cur_name), $4->db_cur_name);
+		psf_trmwhite(DB_CURSOR_MAXNAME, $4->db_cur_name),
+		$4->db_cur_name);
 	    return (E_DB_ERROR);
 	}
 
@@ -16308,7 +16312,7 @@ repdyn0:
 		(VOID) psf_error(2231L, 0L, PSF_USERERR,
 		    &err_code, &psq_cb->psq_error, 2,
 		    sizeof(cb->pss_lineno), &cb->pss_lineno,
-		    psf_trmwhite(DB_MAXNAME, $1->psc_curid.db_cur_name),
+		    psf_trmwhite(DB_CURSOR_MAXNAME, $1->psc_curid.db_cur_name),
 		    $1->psc_curid.db_cur_name);
 		return(E_DB_ERROR);
 	     }
@@ -16330,7 +16334,7 @@ repdyn0:
 		(VOID) psf_error(2232L, 0L, PSF_USERERR,
 		    &err_code, &psq_cb->psq_error, 2,
 		    sizeof(cb->pss_lineno), &cb->pss_lineno,
-		    psf_trmwhite(DB_MAXNAME, $1->psc_curid.db_cur_name),
+		    psf_trmwhite(DB_CURSOR_MAXNAME, $1->psc_curid.db_cur_name),
 		    $1->psc_curid.db_cur_name);
 		return(E_DB_ERROR);
 	    }
@@ -16344,7 +16348,7 @@ repdyn0:
 		(VOID) psf_error(2229L, 0L, PSF_USERERR,
 		    &err_code, &psq_cb->psq_error, 2,
 		    sizeof(cb->pss_lineno), &cb->pss_lineno,
-		    psf_trmwhite(DB_MAXNAME, $1->psc_curid.db_cur_name),
+		    psf_trmwhite(DB_CURSOR_MAXNAME, $1->psc_curid.db_cur_name),
 		    $1->psc_curid.db_cur_name);
 		psl_nonupdt_err(psq_cb, cb, reason, &err_code);
 		return(E_DB_ERROR);
@@ -16361,7 +16365,7 @@ repdyn0:
 		(VOID) psf_error(2307L, 0L, PSF_USERERR,
 		    &err_code, &psq_cb->psq_error, 2,
 		    sizeof(cb->pss_lineno), &cb->pss_lineno,
-		    psf_trmwhite(DB_MAXNAME, $1->psc_curid.db_cur_name),
+		    psf_trmwhite(DB_CURSOR_MAXNAME, $1->psc_curid.db_cur_name),
 		    $1->psc_curid.db_cur_name);
 		return(E_DB_ERROR);
 	    }
@@ -16504,7 +16508,7 @@ curop_ini_dsql:	    curop_ini_1 generic_ident for_rdonly
 	    ** will not do as a correlation name
 	    */
 	    MEcopy((PTR) &tree->pst_rangetab[i]->pst_corr_name,
-		DB_MAXNAME, (PTR) rngvar->pss_rgname);
+		DB_TAB_MAXNAME, (PTR) rngvar->pss_rgname);
 
 	    /*
 	    ** copy inner and outer join maps into the new range table
@@ -18204,7 +18208,7 @@ drop_obj:	    obj_spec opt_drop_behaviour
 
 			/* store LDB table name */
 			MEcopy((PTR) obj_desc->dd_o9_tab_info.dd_t1_tab_name,
-			       sizeof(DD_NAME),
+			       sizeof(DD_TAB_NAME),
 			       (PTR) ltbl_info->pss_tbl_name);
 
 			/* store LDB object type; will be TABLE, VIEW or INDEX */
@@ -18795,7 +18799,7 @@ drop_dbproc:	    ddbp_drpkwd obj_spec
 	    psf_error(E_US18AB_6315_NOT_DROPPABLE, 0L, PSF_USERERR,
 		      &err_code, &psq_cb->psq_error, 2,
 		      sizeof(ERx("DROP PROCEDURE"))-1, ERx("DROP PROCEDURE"),
-		      psf_trmwhite(DB_MAXNAME, dbpname.db_dbp_name),
+		      psf_trmwhite(DB_DBP_MAXNAME, dbpname.db_dbp_name),
 		      dbpname.db_dbp_name);
 	    return(E_DB_ERROR);
 	}
@@ -19023,8 +19027,9 @@ execute_dbproc:	exdbp_kword exdbp_name exdbp_arguments
 	cps->pst_procname.qso_n_id.db_cursor_id[0] =
 	    cps->pst_procname.qso_n_id.db_cursor_id[1] = 0;
 
-	MEcopy((PTR)&$2->pss_ptuple.db_dbpname, DB_MAXNAME,
-	       (PTR)cps->pst_procname.qso_n_id.db_cur_name);
+	/* DB_DBP_MAXNAME = DB_CURSOR_MAXNAME */
+	MEcopy((PTR)&$2->pss_ptuple.db_dbpname, 
+	    DB_CURSOR_MAXNAME, (PTR)cps->pst_procname.qso_n_id.db_cur_name);
 	STRUCT_ASSIGN_MACRO($2->pss_ptuple.db_owner,
 			    cps->pst_procname.qso_n_own);
 	cps->pst_procname.qso_n_dbid = cb->pss_udbid;
@@ -19315,7 +19320,7 @@ exdbp_name:	obj_spec
 		    (void) psf_error(E_PS049E_CANT_EXEC_SYSGEN_PROC, 
 				 0L, PSF_USERERR,
 				 &err_code, &psq_cb->psq_error, 1,
-				 psf_trmwhite(DB_MAXNAME,
+				 psf_trmwhite(DB_DBP_MAXNAME,
 				       dbp->pss_ptuple.db_dbpname.db_dbp_name),
 				 dbp->pss_ptuple.db_dbpname.db_dbp_name);
 		    return(E_DB_ERROR);
@@ -21183,6 +21188,16 @@ db_loc_obj:		    generic_ident
 	bool		found = FALSE;
 	DB_TAB_NAME	db_name;
 
+	/* Check location name */
+	if (cui_chk3_locname($1) != OK)
+	{
+	    i4 max = DB_LOC_MAXNAME;
+	    i4 err_code;
+
+	    (VOID) psf_error(2733, 0L, PSF_USERERR, &err_code,
+		&psq_cb->psq_error, 3, 8, "LOCATION", 0, $1, sizeof(max), &max);
+	    return E_DB_ERROR;
+	}
 
 	STmove($1, ' ', sizeof(DB_TAB_NAME), (char *) &db_name);
 
@@ -21192,7 +21207,7 @@ db_loc_obj:		    generic_ident
 	
     	psy_cb = (PSY_CB *) cb->pss_object;
 
-	/* Check if database is being specified for the first time. */
+	/* Check if location is being specified for the first time. */
 	for (psy_tbl = (PSY_TBL *) psy_cb->psy_tblq.q_next;
 	     psy_tbl != (PSY_TBL *) &psy_cb->psy_tblq;
 	     psy_tbl = (PSY_TBL *) psy_tbl->queue.q_next
@@ -21826,7 +21841,7 @@ dbproc_priv_obj:	    obj_spec
 	    {
 		psf_error(E_PS04A3_NO_GRANT, 0L, PSF_USERERR,
 			  &err_code, &psq_cb->psq_error, 1,
-			  psf_trmwhite(DB_MAXNAME,
+			  psf_trmwhite(DB_DBP_MAXNAME,
 			       $Ydbpinfo->pss_ptuple.db_dbpname.db_dbp_name),
 			  $Ydbpinfo->pss_ptuple.db_dbpname.db_dbp_name);
 		return(E_DB_ERROR);
@@ -23115,7 +23130,7 @@ crt_alm_name:		generic_ident
 	if (PSL_IS_RESERVED_IDENT($1, cb, psq_cb, TRUE))
 	    return(E_DB_ERROR);
 
-	STmove($1, ' ', sizeof(DB_NAME),
+	STmove($1, ' ', DB_ALARM_MAXNAME,
 	      (char *)&((PSY_CB *)cb->pss_object)->psy_tuple.psy_alarm.dba_alarmname);
     }
     |
@@ -25048,6 +25063,16 @@ auth_user:	    user_ident
 	DB_STATUS   status;
 	DB_OWN_NAME username;
 
+	if (STlength($1) > DB_OWN_MAXNAME)
+	{
+	    i4 max = DB_OWN_MAXNAME;
+	    i4 err_code;
+
+	    (VOID) psf_error(2733, 0L, PSF_USERERR, &err_code,
+		&psq_cb->psq_error, 3, 4, "USER", 0, $1, sizeof(max), &max);
+	    return E_DB_ERROR;
+	}
+
 	psy_cb = (PSY_CB *) cb->pss_object;
 
 	/* Normalize the user name */
@@ -25122,15 +25147,17 @@ auth_obj:	    auth_ident
 
 	/*
 	** Check if object specified for the first time.
+	** The 'object' is a auth_ident, size DB_OWN_NAME 
+	** although it has been put into psy_tabnm, size DB_TAB_NAME
 	*/
 	for (psy_tbl  = (PSY_TBL *) psy_cb->psy_tblq.q_next;
 	     psy_tbl != (PSY_TBL *)&psy_cb->psy_tblq;
 	     psy_tbl  = (PSY_TBL *) psy_tbl->queue.q_next
 	    )
 	{
+	    /* Note using psy_tabnm to hold a DB_OWN_NAME */
 	    if (MEcmp((PTR) &objname, (PTR) &psy_tbl->psy_tabnm,
-		sizeof(psy_tbl->psy_tabnm)) == 0
-	       )
+		sizeof(DB_OWN_NAME)) == 0)
 	    {
 		found = TRUE;
 		break;
@@ -25826,7 +25853,7 @@ drop_sequence:	    drp_seq_kwd obj_spec drp_seq_behaviour
 	    psf_error(E_US18AB_6315_NOT_DROPPABLE, 0L, PSF_USERERR,
 		      &err_code, &psq_cb->psq_error, 2,
 		      sizeof(ERx("DROP SEQUENCE"))-1, ERx("DROP SEQUENCE"),
-		      psf_trmwhite(DB_MAXNAME, oldseq.dbs_name.db_name),
+		      psf_trmwhite(DB_SEQ_MAXNAME, oldseq.dbs_name.db_name),
 		      oldseq.dbs_name.db_name);
 	    return(E_DB_ERROR);
 	}
@@ -26581,12 +26608,12 @@ incollist:	    incol
 	{
 	    if (!MEcmp((char *) rsname,
 		(char *) node->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
-		DB_MAXNAME)
+		DB_ATT_MAXNAME)
 	       )
 	    {
 		(VOID) psf_error(2774L, 0L, PSF_USERERR,
 		    &err_code, &psq_cb->psq_error, 1,
-		    psf_trmwhite(DB_MAXNAME, rsname), rsname);
+		    psf_trmwhite(DB_ATT_MAXNAME, rsname), rsname);
 		return (E_DB_ERROR);
 	    }
 	}
@@ -26854,7 +26881,7 @@ inexpr:		    select_expr
 	    /* nonnullable data type */
 	    (VOID) psf_error(2777L, 0L, PSF_USERERR, &err_code,
 		&psq_cb->psq_error, 1,
-		psf_trmwhite(DB_MAXNAME,
+		psf_trmwhite(DB_ATT_MAXNAME,
 		    node->pst_sym.pst_value.pst_s_rsdm.pst_rsname),
 		node->pst_sym.pst_value.pst_s_rsdm.pst_rsname);
 	    return (E_DB_ERROR);
@@ -27395,7 +27422,7 @@ execute:	    exe_stmnt using_list
 	    else if (psq_cb->psq_mode == PSQ_SET_SESS_AUTH_ID)
 	    {
 		DB_TEXT_STRING  *str;
-		u_i4		len, save_len, id_len = DB_MAXNAME;
+		u_i4		len, save_len, id_len = DB_OWN_MAXNAME;
 		i4		leading_blanks;
 		char		*c;
 		DB_DT_ID	totype;
@@ -27458,9 +27485,9 @@ execute:	    exe_stmnt using_list
 		}
 
 		/* fill the rest of psq_cb->psq_user with blanks */
-		if (id_len < DB_MAXNAME)
+		if (id_len < DB_OWN_MAXNAME)
 		{
-		    MEfill(DB_MAXNAME - id_len, (u_char) ' ',
+		    MEfill(DB_OWN_MAXNAME - id_len, (u_char) ' ',
 			(PTR) ((char *) &psq_cb->psq_user + id_len));
 		}
 	    }
@@ -27727,8 +27754,7 @@ query:		query_with query_expr query_clause query_hint_with
 			    continue;
 
 			MEcopy((PTR) (*attribute)->att_name.db_att_name,
-			    DB_MAXNAME,
-			    (PTR) resdom.pst_rsname);
+			    DB_ATT_MAXNAME, (PTR) resdom.pst_rsname);
 
 			resdom.pst_rsno = (i4) 1;
 			resdom.pst_ntargno = (i4) 0;
@@ -27783,7 +27809,7 @@ query:		query_with query_expr query_clause query_hint_with
 			(VOID) psf_error(2102L, 0L, PSF_USERERR, &err_code,
 			    &psq_cb->psq_error, 2,
 			    (i4) sizeof(cb->pss_lineno), &cb->pss_lineno,
-			    (i4) psf_trmwhite(DB_MAXNAME, name), name);
+			    (i4) psf_trmwhite(DB_ATT_MAXNAME, name), name);
 			return (E_DB_ERROR);
 		    }
 
@@ -28569,7 +28595,7 @@ query_expr:	    query_expr_1
 			(VOID) psf_error(2412L, 0L, PSF_USERERR,
 			    &err_code, &psq_cb->psq_error, 2,
 			    sizeof(cb->pss_lineno), &cb->pss_lineno,
-			    psf_trmwhite(DB_MAXNAME,
+			    psf_trmwhite(DB_ATT_MAXNAME,
 				res->pst_sym.pst_value.pst_s_rsdm.pst_rsname),
 			    res->pst_sym.pst_value.pst_s_rsdm.pst_rsname);
 			return (E_DB_ERROR);
@@ -28584,7 +28610,7 @@ query_expr:	    query_expr_1
 			(VOID) psf_error(2430L, 0L, PSF_USERERR,
 			    &err_code, &psq_cb->psq_error, 2,
 			    sizeof(cb->pss_lineno), &cb->pss_lineno,
-			    psf_trmwhite(DB_MAXNAME,
+			    psf_trmwhite(DB_ATT_MAXNAME,
 				res->pst_sym.pst_value.pst_s_rsdm.pst_rsname),
 			    res->pst_sym.pst_value.pst_s_rsdm.pst_rsname);
 			return (E_DB_ERROR);
@@ -28895,8 +28921,8 @@ subselect:	    select first_n distinct target_spec into_clause from
 	PST_RT_NODE	    root;
 	PST_STK		    stk;
 	i4		    err_code;
-	char		    emptycol[DB_MAXNAME];
-	char		    colname[DB_MAXNAME + 2];
+	char		    emptycol[DB_ATT_MAXNAME];
+	char		    colname[DB_ATT_MAXNAME + 2];
 	i4		    tcount, hcount;
 	YYAGG_NODE_PTR	    *agg_node,
 			    *cur_agg_list =
@@ -28962,7 +28988,7 @@ subselect:	    select first_n distinct target_spec into_clause from
 	/*
 	** Make sure that all resdoms have a name.
 	*/
-	(VOID) MEfill(DB_MAXNAME, ' ', (PTR) emptycol);
+	(VOID) MEfill(DB_ATT_MAXNAME, ' ', (PTR) emptycol);
 
 	for (resdomnode = $4; /*target_spec*/
 	     (resdomnode != (PST_QNODE *) NULL) &&
@@ -28971,12 +28997,11 @@ subselect:	    select first_n distinct target_spec into_clause from
 	    )
 	{
 	    if(MEcmp((PTR)(resdomnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname),
-		(PTR) emptycol, DB_MAXNAME) == 0)
+		(PTR) emptycol, DB_ATT_MAXNAME) == 0)
 	    {
 		STprintf(colname, "col%d",
 		    resdomnode->pst_sym.pst_value.pst_s_rsdm.pst_rsno);
-		MEmove(STlength(colname), (PTR)colname, ' ',
-		    DB_MAXNAME,
+		MEmove(STlength(colname), (PTR)colname, ' ', DB_ATT_MAXNAME,
 		    (PTR) resdomnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname); 
 	    }
 	    /* Normalise for comparisons */
@@ -29036,14 +29061,14 @@ subselect:	    select first_n distinct target_spec into_clause from
 		if (status != E_DB_OK) return(status);
 		if (dt_status & AD_NOSORT)
 		{
-		    char	name[DB_MAXNAME + 1];
+		    char	name[DB_ATT_MAXNAME + 1];
 		    i4		err_code;
 		    /* Copy column name (if any) and issue message. */
-		    name[0] = name[DB_MAXNAME] = 0x0;
+		    name[0] = name[DB_ATT_MAXNAME] = 0x0;
 		    if (gptr->pst_right->pst_sym.pst_type == PST_VAR)
 	        	MEcopy((PTR)&gptr->pst_right->pst_sym.pst_value.
 			    pst_s_var.pst_atname,
-	                    DB_MAXNAME, (PTR)&name);
+	                    DB_ATT_MAXNAME, (PTR)&name);
 	            (VOID) psf_error(2181L, 0L, PSF_USERERR, &err_code,
 	                &psq_cb->psq_error, 1,(i4) STtrmwhite(name), name);
 	            return (E_DB_ERROR);
@@ -29623,7 +29648,7 @@ cdbp_lvar:		colon generic_ident
 	i4		err_code;
 	register PSS_DECVAR *var;
 
-	STmove($2, ' ', DB_MAXNAME, varname.db_parm_name);
+	STmove($2, ' ', DB_PARM_MAXNAME, varname.db_parm_name);
 
 	/* Find local var/parm by the specified name. */
 	for (var = (PSS_DECVAR *) $Ydbpinfo->pss_varq.q_next;
@@ -30423,7 +30448,7 @@ from_list_item:	    obj_spec corr_name
 		    /* convert owner name to a delimited identifier
 		    ** (obj_owner pointer gets overwritten)
 		    */
-		    name_len = psf_trmwhite(DB_MAXNAME, 
+		    name_len = psf_trmwhite(DB_OWN_MAXNAME, 
 			(char *) actual_obj_owner);
 
 		    status = psl_norm_id_2_delim_id(&actual_obj_owner,
@@ -30463,7 +30488,7 @@ from_list_item:	    obj_spec corr_name
 		    /* convert table name to a delimited identifier
 		    ** (actual_tbl pointer gets overwritten)
 		    */
-		    name_len = psf_trmwhite(DB_MAXNAME, (char *) actual_tbl);
+		    name_len = psf_trmwhite(DB_TAB_MAXNAME, (char *) actual_tbl);
 
 		    status = psl_norm_id_2_delim_id(&actual_tbl, 
 						    &name_len, delim_id,
@@ -30768,13 +30793,13 @@ table_proc:	exdbp_name LPAREN
 	    (VOID) psf_error(2167L, 0L, PSF_USERERR,
 		&err_code, &psq_cb->psq_error, 2,
 		sizeof(cb->pss_lineno), &cb->pss_lineno,
-		psf_trmwhite(DB_MAXNAME, (char *)&$1->pss_ptuple.
+		psf_trmwhite(DB_DBP_MAXNAME, (char *)&$1->pss_ptuple.
 			db_dbpname.db_dbp_name[0]),
 		&$1->pss_ptuple.db_dbpname.db_dbp_name[0]);
 	    else (VOID) psf_error(2166L, 0L, PSF_USERERR,
 		&err_code, &psq_cb->psq_error, 2,
 		sizeof(cb->pss_lineno), &cb->pss_lineno,
-		psf_trmwhite(DB_MAXNAME, (char *)&$1->pss_ptuple.
+		psf_trmwhite(DB_DBP_MAXNAME, (char *)&$1->pss_ptuple.
 			db_dbpname.db_dbp_name[0]),
 		&$1->pss_ptuple.db_dbpname.db_dbp_name[0]);
 	    return (E_DB_ERROR);
@@ -31149,7 +31174,7 @@ from_item:		obj_spec corr_name
 		    /* convert owner name to a delimited identifier
 		    ** (obj_owner pointer gets overwritten)
 		    */
-		    name_len = psf_trmwhite(DB_MAXNAME, 
+		    name_len = psf_trmwhite(DB_OWN_MAXNAME, 
 			(char *) actual_obj_owner);
 
 		    status = psl_norm_id_2_delim_id(&actual_obj_owner,
@@ -31189,7 +31214,7 @@ from_item:		obj_spec corr_name
 		    /* convert table name to a delimited identifier
 		    ** (actual_tbl pointer gets overwritten)
 		    */
-		    name_len = psf_trmwhite(DB_MAXNAME, (char *) actual_tbl);
+		    name_len = psf_trmwhite(DB_TAB_MAXNAME, (char *) actual_tbl);
 
 		    status = psl_norm_id_2_delim_id(&actual_tbl, 
 						    &name_len, delim_id,
@@ -31609,7 +31634,7 @@ natural_join:	    from_list_item NATURAL join_type from_list_item
 
 			(VOID) psf_error(E_PS03A5_MULT_COMMON_COLS, 0L, PSF_USERERR,
 	        	    &err_code, &psq_cb->psq_error, 2, sizeof(cb->pss_lineno),
-			    &cb->pss_lineno, psf_trmwhite(DB_MAXNAME, 
+			    &cb->pss_lineno, psf_trmwhite(DB_ATT_MAXNAME, 
 			    (char *)&(*left_attr)->att_name),
 			    (char *)&(*left_attr)->att_name);
 			return (E_DB_ERROR);
@@ -31998,7 +32023,7 @@ named_column:		generic_ident
 	{
 	    /* First, look for the column in the left join source. */
 	    left_rel = $Yrng_vars[left];
-	    STmove($1, ' ', DB_MAXNAME, (char *)&colname);
+	    STmove($1, ' ', DB_ATT_MAXNAME, (char *)&colname);
 	    left_attr = pst_coldesc(left_rel, &colname);
 	    if (left_attr == NULL)
 		continue;
@@ -32109,7 +32134,7 @@ named_column:		generic_ident
 
 	    (VOID) psf_error(E_PS03AC_MISSING_COLUMN, 0L, PSF_USERERR,
 	        &err_code, &psq_cb->psq_error, 2, sizeof(cb->pss_lineno),
-		&cb->pss_lineno, psf_trmwhite(DB_MAXNAME, (char *)&colname),
+		&cb->pss_lineno, psf_trmwhite(DB_ATT_MAXNAME, (char *)&colname),
 		&colname);
 	    return (E_DB_ERROR);
 	}
@@ -32528,7 +32553,7 @@ cname:			col_ref
                             resdomp = resdomp->pst_left)
                         if (!MEcmp((char *)&colname, 
                             (char *)&resdomp->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
-                            DB_MAXNAME))
+                            DB_ATT_MAXNAME))
                         {
                             found_resdom = TRUE;  /* got matching RESDOM */
                             
@@ -32845,7 +32870,8 @@ cname:			col_ref
 		    (VOID) psf_error(2102L, 0L, PSF_USERERR, &err_code,
 			&psq_cb->psq_error, 2, (i4) sizeof(cb->pss_lineno),
 			&cb->pss_lineno,
-			psf_trmwhite(DB_MAXNAME, fwdvar.pst_atname.db_att_name),
+			psf_trmwhite(DB_ATT_MAXNAME,
+				fwdvar.pst_atname.db_att_name),
 			fwdvar.pst_atname);
 		    return E_DB_ERROR;
 		}
@@ -32878,7 +32904,7 @@ cname:			col_ref
 			(VOID) psf_error(E_PS03A4_NOT_A_JREL, 0L, PSF_USERERR,
 			    &err_code, &psq_cb->psq_error, 2,
 			    sizeof(cb->pss_lineno), &cb->pss_lineno,
-			    psf_trmwhite(DB_MAXNAME, rngvar->pss_rgname),
+			    psf_trmwhite(DB_TAB_MAXNAME, rngvar->pss_rgname),
 			    rngvar->pss_rgname);
 			return(E_DB_ERROR);
 		    }
@@ -38700,7 +38726,7 @@ ras_ev_value:	/* No optional text */
 	}
 
 	/* Find local var/parm by the specified name */
-	STmove($2, ' ', DB_MAXNAME, varname.db_parm_name);
+	STmove($2, ' ', DB_PARM_MAXNAME, varname.db_parm_name);
 
 	for (var = (PSS_DECVAR *)$Ydbpinfo->pss_varq.q_next;
 	     var != (PSS_DECVAR *)&$Ydbpinfo->pss_varq;
@@ -42686,7 +42712,7 @@ update:	    updatekwd from_item from_u
 		tidvar.pst_vno = $2->pss_rgno;
 		tidvar.pst_atno.db_att_id = 0;	    /* tid is always column 0 */
 		STmove(((*cb->pss_dbxlate & CUI_ID_REG_U) ? "TID" : "tid"),
-			' ', DB_MAXNAME, tidvar.pst_atname.db_att_name);
+			' ', DB_ATT_MAXNAME, tidvar.pst_atname.db_att_name);
 
 		status = pst_node(cb, &cb->pss_ostream, (PST_QNODE *) NULL,
 		    (PST_QNODE *) NULL, PST_VAR, (char *) &tidvar, sizeof(tidvar),
@@ -42740,7 +42766,8 @@ update:	    updatekwd from_item from_u
 	    {
 		(VOID) psf_error(2217L, 0L, PSF_USERERR,
 		    &err_code, &psq_cb->psq_error, 1,
-		    psf_trmwhite(DB_MAXNAME, cursor->psc_blkid.db_cur_name),
+		    psf_trmwhite(DB_CURSOR_MAXNAME, 
+			cursor->psc_blkid.db_cur_name),
 		    cursor->psc_blkid.db_cur_name);
 		return (E_DB_ERROR);
 	    }
@@ -42803,9 +42830,10 @@ update:	    updatekwd from_item from_u
 		    (VOID) psf_error(2207L, 0L, PSF_USERERR,
 			&err_code, &psq_cb->psq_error, 3,
 			sizeof(cb->pss_lineno), &cb->pss_lineno,
-			psf_trmwhite(DB_MAXNAME, cursor->psc_blkid.db_cur_name),
+			psf_trmwhite(DB_CURSOR_MAXNAME,
+			    cursor->psc_blkid.db_cur_name),
 			cursor->psc_blkid.db_cur_name,
-			psf_trmwhite(DB_MAXNAME,
+			psf_trmwhite(DB_ATT_MAXNAME,
 			    rsdmnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname),
 			rsdmnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname);
 		    return (E_DB_ERROR);
@@ -42839,7 +42867,7 @@ update:	    updatekwd from_item from_u
 			psf_trmwhite((u_i4) sizeof(cursor->psc_tabnm),
 			    cursor->psc_tabnm.db_tab_name),
 			(PTR) cursor->psc_tabnm.db_tab_name,
-			psf_trmwhite((u_i4) DB_MAXNAME,
+			psf_trmwhite(DB_CURSOR_MAXNAME,
 			    cursor->psc_blkid.db_cur_name),
 			(PTR) cursor->psc_blkid.db_cur_name);
 		    return(E_DB_ERROR);
@@ -42867,7 +42895,7 @@ update:	    updatekwd from_item from_u
 			psf_trmwhite((u_i4) sizeof(cursor->psc_tabnm),
 			    cursor->psc_tabnm.db_tab_name),
 			(PTR) cursor->psc_tabnm.db_tab_name,
-			psf_trmwhite((u_i4) DB_MAXNAME,
+			psf_trmwhite(DB_CURSOR_MAXNAME,
 			    cursor->psc_blkid.db_cur_name),
 			(PTR) cursor->psc_blkid.db_cur_name);
 		    return(E_DB_ERROR);
@@ -43424,7 +43452,7 @@ where_cur:	    where
 	    (VOID) psf_error(2205L, 0L, PSF_USERERR,
 		&err_code, &psq_cb->psq_error, 2,
 		sizeof(cb->pss_lineno), &cb->pss_lineno,
-		psf_trmwhite(DB_MAXNAME, $4->db_cur_name), $4->db_cur_name);
+		psf_trmwhite(DB_CURSOR_MAXNAME, $4->db_cur_name), $4->db_cur_name);
 	    return (E_DB_ERROR);
 	}
 
@@ -43438,7 +43466,7 @@ where_cur:	    where
 		(VOID) psf_error(2211L, 0L, PSF_USERERR,
 		    &err_code, &psq_cb->psq_error, 2,
 		    sizeof(cb->pss_lineno), &cb->pss_lineno,
-		    psf_trmwhite(DB_MAXNAME, $4->db_cur_name), $4->db_cur_name);
+		    psf_trmwhite(DB_CURSOR_MAXNAME, $4->db_cur_name), $4->db_cur_name);
 		return (E_DB_ERROR);
 	    }
 	}
@@ -43469,7 +43497,9 @@ cursor_id:	QUERYID
 	*/
 	psq_cb->psq_cursid.db_cursor_id[0] = 0;
 	psq_cb->psq_cursid.db_cursor_id[1] = 0;
-	STmove((char *)$1, ' ', DB_MAXNAME, psq_cb->psq_cursid.db_cur_name);
+	STmove((char *)$1, ' ', DB_CURSOR_MAXNAME, 
+		psq_cb->psq_cursid.db_cur_name);
+
 	$$ = &psq_cb->psq_cursid;
     }
 ;
@@ -44049,18 +44079,18 @@ set_sess_auth_id:	    SETSESSION AUTHORIZATION
 eff_user_id_spec:	generic_ident
     {
 	/* store new user id in PSQ_CB */
-	STmove($1, ' ', DB_MAXNAME, (char *) &psq_cb->psq_user);
+	STmove($1, ' ', DB_OWN_MAXNAME, (char *) &psq_cb->psq_user);
     }
 		|	DBA
     {
 	/* will reset the effective user identifier to the value of $DBA */
-	STmove(cb->pss_dbaname, ' ', DB_MAXNAME, (char *) &psq_cb->psq_user);
+	STmove(cb->pss_dbaname, ' ', DB_OWN_MAXNAME, (char *) &psq_cb->psq_user);
     }
 		|	INGRES
     {
 	/* will reset the effective user identifier to $ingres */
 	MEmove(sizeof(*cb->pss_cat_owner), (PTR)cb->pss_cat_owner, ' ',
-		DB_MAXNAME, (PTR) &psq_cb->psq_user);
+		DB_OWN_MAXNAME, (PTR) &psq_cb->psq_user);
     }
 		|	USER
     {
@@ -44095,7 +44125,7 @@ eff_user_id_spec:	generic_ident
     }
 		|	SCONST
     {
-	u_i4	    len, save_len, id_len = DB_MAXNAME;
+	u_i4	    len, save_len, id_len = DB_OWN_MAXNAME;
 	i4	    leading_blanks;
 	char	    *c = (char *) $1->db_t_text;
 	DB_STATUS   status;
@@ -44134,9 +44164,9 @@ eff_user_id_spec:	generic_ident
 	}
 
 	/* fill the rest of psq_cb->psq_user with blanks */
-	if (id_len < DB_MAXNAME)
+	if (id_len < DB_OWN_MAXNAME)
 	{
-	    MEfill((DB_MAXNAME - id_len), (u_char) ' ',
+	    MEfill((DB_OWN_MAXNAME - id_len), (u_char) ' ',
 		(PTR) ((char *) &psq_cb->psq_user + id_len));
 	}
     }
@@ -44144,7 +44174,7 @@ eff_user_id_spec:	generic_ident
     {
 	DB_TEXT_STRING	    *str;
 	DB_STATUS	    status;
-	u_i4		    len, save_len, id_len = DB_MAXNAME;
+	u_i4		    len, save_len, id_len = DB_OWN_MAXNAME;
 	i4		    leading_blanks;
 	char		    *c;
 	DB_DT_ID	    totype;
@@ -44197,9 +44227,9 @@ eff_user_id_spec:	generic_ident
 	}
 
 	/* fill the rest of psq_cb->psq_user with blanks */
-	if (id_len < DB_MAXNAME)
+	if (id_len < DB_OWN_MAXNAME)
 	{
-	    MEfill((DB_MAXNAME - id_len), (u_char) ' ',
+	    MEfill((DB_OWN_MAXNAME - id_len), (u_char) ' ',
 		(PTR) ((char *) &psq_cb->psq_user + id_len));
 	}
     }
@@ -44276,7 +44306,7 @@ reg_distr_tv:	reg_keywd reg_name link_cols as_link_or_native from_ldb_obj
 
 from_ldb_obj:	    from_ldb_wd internal_ident
     {
-	STmove($2, ' ', sizeof(DD_NAME),
+	STmove($2, ' ', sizeof(DD_TAB_NAME),
 	  ((QED_DDL_INFO *) cb->pss_object)->qed_d6_tab_info_p->dd_t1_tab_name);
 
 	cb->pss_distr_sflags |= PSS_LDB_TABLE;
@@ -44294,8 +44324,8 @@ from_ldb_obj:	    from_ldb_wd internal_ident
 	DD_2LDB_TAB_INFO	*ldb_tab_info =
 	                   ((QED_DDL_INFO *) cb->pss_object)->qed_d6_tab_info_p;
 			   
-	STmove($2, ' ', sizeof(DD_NAME), ldb_tab_info->dd_t2_tab_owner);
-	STmove($4, ' ', sizeof(DD_NAME), ldb_tab_info->dd_t1_tab_name);
+	STmove($2, ' ', sizeof(DD_OWN_NAME), ldb_tab_info->dd_t2_tab_owner);
+	STmove($4, ' ', sizeof(DD_TAB_NAME), ldb_tab_info->dd_t1_tab_name);
 
 	cb->pss_distr_sflags |= PSS_LDB_TABLE;
 
@@ -45607,7 +45637,7 @@ reg_gateway_idx:    reg_idx reg_idx_name ON indexrel
                     }
                     else
                     {
-                        idx_att[i]->attr_name.db_att_name[DB_MAXNAME-1] = EOS;
+                        idx_att[i]->attr_name.db_att_name[DB_ATT_MAXNAME-1] = EOS;
 	                    _VOID_ psf_error(5302L, 0L, PSF_USERERR, &err_code,
 	                     &psq_cb->psq_error, 1,
                              STtrmwhite(idx_att[i]->attr_name.db_att_name),
@@ -45625,11 +45655,11 @@ reg_gateway_idx:    reg_idx reg_idx_name ON indexrel
                 }
                 if (mismatch)
                 {
-                    char colname[DB_MAXNAME];
+                    char colname[DB_ATT_MAXNAME];
 
                     MEcopy(idx_att[i]->attr_name.db_att_name,
-                           (u_i4)DB_MAXNAME, colname);
-                    colname[DB_MAXNAME-1] = EOS;
+                           (u_i4)DB_ATT_MAXNAME, colname);
+                    colname[DB_ATT_MAXNAME-1] = EOS;
 		    psf_error(W_PS1110_REG_TAB_IDX_MULTI_COL,
                                  0L, PSF_USERERR, &err_code,
                                  &psq_cb->psq_error, 1,
@@ -46314,7 +46344,7 @@ col_spec2:	col_ref
 	    (VOID) psf_error(2102L, 0L, PSF_USERERR, &err_code,
 		&psq_cb->psq_error, 2, (i4) sizeof(cb->pss_lineno),
 		&cb->pss_lineno,
-		psf_trmwhite(DB_MAXNAME, fwdvar.pst_atname.db_att_name),
+		psf_trmwhite(DB_ATT_MAXNAME, fwdvar.pst_atname.db_att_name),
 		fwdvar.pst_atname);
 	    return E_DB_ERROR;
 	}
@@ -46636,9 +46666,9 @@ psl_fatt(
 	    ** This is a problem only if the range definition differs from
 	    ** our current one.
 	    */
-	    if (MEcmp(rngvar->pss_rgname, t_rngvar->pss_rgname, DB_MAXNAME) ||
-		MEcmp(rngvar->pss_tabname.db_tab_name, 
-		      t_rngvar->pss_tabname.db_tab_name, DB_MAXNAME))
+	    if (MEcmp(rngvar->pss_rgname, t_rngvar->pss_rgname, DB_TAB_MAXNAME)
+		 || MEcmp(rngvar->pss_tabname.db_tab_name, 
+		      t_rngvar->pss_tabname.db_tab_name, DB_TAB_MAXNAME))
 	    {
 		att_c_match_count++;
 	    }
@@ -46661,7 +46691,7 @@ psl_fatt(
 		(VOID) psf_error(E_PS03A3_COL_NOT_IN_JREL, 0L, PSF_USERERR,
 		    &err_code, &psq_cb->psq_error, 2,
 		    (i4) sizeof(cb->pss_lineno), &cb->pss_lineno,
-		    psf_trmwhite(DB_MAXNAME, att_name->db_att_name),
+		    psf_trmwhite(DB_ATT_MAXNAME, att_name->db_att_name),
 		    att_name->db_att_name);
 		return(E_DB_ERROR);
 	    }
@@ -46675,7 +46705,7 @@ psl_fatt(
 		_VOID_ psf_error(E_PS0483_CONS_NO_COL, 0L,
 		    PSF_USERERR, &err_code, &psq_cb->psq_error, 3,
 		    length, command,
-		    psf_trmwhite(DB_MAXNAME, att_name->db_att_name),
+		    psf_trmwhite(DB_ATT_MAXNAME, att_name->db_att_name),
 		    att_name->db_att_name,
 		    sizeof(ERx("CHECK")) - 1, ERx("CHECK"));
 	    }
@@ -46685,7 +46715,7 @@ psl_fatt(
 		(VOID) psf_error(2102L, 0L, PSF_USERERR, &err_code,
 		    &psq_cb->psq_error, 2, (i4) sizeof(cb->pss_lineno),
 		    &cb->pss_lineno,
-		    psf_trmwhite(DB_MAXNAME, att_name->db_att_name),
+		    psf_trmwhite(DB_ATT_MAXNAME, att_name->db_att_name),
 		    att_name->db_att_name);
 	    }
 	    else
@@ -46723,7 +46753,7 @@ psl_fatt(
 	    (VOID) psf_error(2233L, 0L, PSF_USERERR, &err_code,
 		&psq_cb->psq_error, 2, (i4) sizeof(cb->pss_lineno),
 		&cb->pss_lineno,
-		psf_trmwhite(DB_MAXNAME, att_name->db_att_name),
+		psf_trmwhite(DB_ATT_MAXNAME, att_name->db_att_name),
 		att_name->db_att_name);
 	    return (E_DB_ERROR);
 	}
@@ -46740,7 +46770,7 @@ psl_fatt(
 	    (VOID) psf_error(2101L, 0L, PSF_USERERR, &err_code,
 		&psq_cb->psq_error, 2, (i4) sizeof(cb->pss_lineno),
 		&cb->pss_lineno,
-		psf_trmwhite(DB_MAXNAME, att_name->db_att_name),
+		psf_trmwhite(DB_ATT_MAXNAME, att_name->db_att_name),
 		att_name->db_att_name);
 	}
 	return (E_DB_ERROR);
@@ -46767,7 +46797,7 @@ psl_fatt(
 	    (VOID) psf_error(2168L, 0L, PSF_USERERR, &err_code,
 		&psq_cb->psq_error, 2, (i4) sizeof(cb->pss_lineno),
 		&cb->pss_lineno,
-		psf_trmwhite(DB_MAXNAME, att_name->db_att_name),
+		psf_trmwhite(DB_ATT_MAXNAME, att_name->db_att_name),
 		att_name->db_att_name);
 	    return(E_DB_ERROR);
 	}
@@ -48705,7 +48735,7 @@ psl_crsopen(
 		    DB_ATT_NAME	    att_name;
 
 		    MEcopy((PTR) qnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
-			DB_MAXNAME, (PTR) &att_name);
+			DB_ATT_MAXNAME, (PTR) &att_name);
 			
 		    nonupdt_col = psq_ccol(crblk, &att_name);
 		    if (nonupdt_col == (PSC_RESCOL *) NULL)
@@ -48740,10 +48770,10 @@ psl_crsopen(
 		    (VOID) psf_error(2224L, 0L, PSF_USERERR,
 			&err_code, &psq_cb->psq_error, 3,
 			sizeof(cb->pss_lineno), &cb->pss_lineno,
-			psf_trmwhite(DB_MAXNAME,
+			psf_trmwhite(DB_CURSOR_MAXNAME,
 			    cb->pss_crsr->psc_blkid.db_cur_name),
 			cb->pss_crsr->psc_blkid.db_cur_name,
-			psf_trmwhite(DB_MAXNAME,
+			psf_trmwhite(DB_ATT_MAXNAME,
 			    qnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname),
 			qnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname);
 		    return (E_DB_ERROR);
@@ -48760,7 +48790,7 @@ psl_crsopen(
 		    DB_ATT_NAME	    att_name;
 
 		    MEcopy((PTR) qnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
-			DB_MAXNAME, (PTR) &att_name);
+			DB_ATT_MAXNAME, (PTR) &att_name);
 			
 		    nonupdt_col = psq_ccol(crblk, &att_name);
 		    if (nonupdt_col == (PSC_RESCOL *) NULL)
@@ -48956,7 +48986,7 @@ psl_crsopen(
 	tidvar.pst_vno = cb->pss_resrng->pss_rgno;
 	tidvar.pst_atno.db_att_id = 0;	    /* tid is always column 0 */
 	STmove(((*cb->pss_dbxlate & CUI_ID_REG_U) ? "TID" : "tid"),
-		' ', DB_MAXNAME, tidvar.pst_atname.db_att_name);
+		' ', DB_ATT_MAXNAME, tidvar.pst_atname.db_att_name);
 
 	status = pst_node(cb, &cb->pss_ostream, (PST_QNODE *) NULL,
 	    (PST_QNODE *) NULL, PST_VAR, (char *) &tidvar, sizeof(tidvar),
@@ -48971,7 +49001,7 @@ psl_crsopen(
 	rsdm.pst_rsno = 0;
 	rsdm.pst_rsupdt = FALSE;
 	rsdm.pst_rsflags = 0; /* no PST_RS_PRINT */
-	MEcopy((PTR)&tidvar.pst_atname.db_att_name, DB_MAXNAME,
+	MEcopy((PTR)&tidvar.pst_atname.db_att_name, DB_ATT_MAXNAME,
 		(PTR)&rsdm.pst_rsname);
 
 	status = pst_node(cb, &cb->pss_ostream, (PST_QNODE *) NULL, tidnode,
@@ -49057,7 +49087,8 @@ psl_crsopen(
 	if (ult_check_macro(&cb->pss_trace, 13, &val1, &val2))
 	{
 	    (VOID) pst_display("\n\nCursor `%t' characteristics for:\n\t%s\n",
-		psf_trmwhite(DB_MAXNAME, cb->pss_crsr->psc_blkid.db_cur_name),
+		psf_trmwhite(DB_CURSOR_MAXNAME, 
+			cb->pss_crsr->psc_blkid.db_cur_name),
 		cb->pss_crsr->psc_blkid.db_cur_name, cb->pss_bgnstmt);
 	    if (tree->pst_delete == FALSE)
 		(VOID) pst_display("\n\ttree header: delete = FALSE");
@@ -49132,9 +49163,9 @@ psl_crskeyflag(
 	pst_rdfcb_init(rdf_cb, cb);
 	rdf_rb->rdr_types_mask = RDR_RELATION | RDR_ATTRIBUTES |
 	    RDR_BLD_PHYS | RDR_INDEXES | RDR_BY_NAME;
-	MEcopy(tree->pst_restab.pst_resname.db_tab_name, DB_MAXNAME,
+	MEcopy(tree->pst_restab.pst_resname.db_tab_name, DB_TAB_MAXNAME,
 	    rdf_rb->rdr_name.rdr_tabname.db_tab_name);
-	MEcopy(tree->pst_restab.pst_resown.db_own_name, DB_MAXNAME,
+	MEcopy(tree->pst_restab.pst_resown.db_own_name, DB_OWN_MAXNAME,
 	    rdf_rb->rdr_owner.db_own_name);
 	rdf_rb->rdr_rec_access_id = NULL;
 	rdf_cb->rdf_info_blk = NULL;
@@ -49244,7 +49275,7 @@ psl_crskeyflag(
 		    RDR_RB	*ixrdf_rb = &ixrdf_cb->rdf_rb;
 
 		    STRUCT_ASSIGN_MACRO(rdfcb, ixrdfcb);
-		    MEcopy(idx_entry[i].idx_name.db_tab_name, DB_MAXNAME,
+		    MEcopy(idx_entry[i].idx_name.db_tab_name, DB_TAB_MAXNAME,
 			ixrdf_rb->rdr_name.rdr_tabname.db_tab_name);
 		    ixrdf_rb->rdr_rec_access_id = NULL;
 		    ixrdf_cb->rdf_info_blk = NULL;
@@ -49359,7 +49390,10 @@ psl_nonupdt_err(
 	i4	reason,
 	i4	*err_code)
 {
+    i4	name_len;
 
+    name_len = psf_trmwhite(DB_CURSOR_MAXNAME,
+			cb->pss_crsr->psc_blkid.db_cur_name);
 
     /* Switch the reason code and issue the error. */
 	    switch (reason)
@@ -49373,49 +49407,37 @@ psl_nonupdt_err(
 		/* Error if duplicates removed at the outermost scope. */
 		(VOID) psf_error(2219L, 0L, PSF_USERERR, err_code, 
 		    &psq_cb->psq_error, 2, sizeof(cb->pss_lineno), &cb->pss_lineno,
-		    psf_trmwhite(DB_MAXNAME,
-			cb->pss_crsr->psc_blkid.db_cur_name),
-		    cb->pss_crsr->psc_blkid.db_cur_name);
+		    name_len, cb->pss_crsr->psc_blkid.db_cur_name);
 		break;
 	    case 3:
 		/* Error if UNION at the outermost scope. */
 		(VOID) psf_error(2220L, 0L, PSF_USERERR, err_code, 
 		    &psq_cb->psq_error, 2, sizeof(cb->pss_lineno), &cb->pss_lineno,
-		    psf_trmwhite(DB_MAXNAME,
-			cb->pss_crsr->psc_blkid.db_cur_name),
-		    cb->pss_crsr->psc_blkid.db_cur_name);
+		    name_len, cb->pss_crsr->psc_blkid.db_cur_name);
 		break;
 	    case 4:
 		/* Error if other than one range var at the outermost scope. */
 		(VOID) psf_error(2203L, 0L, PSF_USERERR, err_code, 
 		    &psq_cb->psq_error, 2, sizeof(cb->pss_lineno), &cb->pss_lineno,
-		    psf_trmwhite(DB_MAXNAME,
-			cb->pss_crsr->psc_blkid.db_cur_name),
-		    cb->pss_crsr->psc_blkid.db_cur_name);
+		    name_len, cb->pss_crsr->psc_blkid.db_cur_name);
 		break;
 	    case 5:
 		/* Error if the only range var is a non-mergeable view. */
 		(VOID) psf_error(2221L, 0L, PSF_USERERR, err_code, 
 		    &psq_cb->psq_error, 2, sizeof(cb->pss_lineno),&cb->pss_lineno,
-		    psf_trmwhite(DB_MAXNAME,
-			cb->pss_crsr->psc_blkid.db_cur_name),
-		    cb->pss_crsr->psc_blkid.db_cur_name);
+		    name_len, cb->pss_crsr->psc_blkid.db_cur_name);
 		break;
 	    case 6:
 		/* Error if index */
 		(VOID) psf_error(2222L, 0L, PSF_USERERR, err_code,
 		    &psq_cb->psq_error, 2, sizeof(cb->pss_lineno), &cb->pss_lineno,
-		    psf_trmwhite(DB_MAXNAME,
-			cb->pss_crsr->psc_blkid.db_cur_name),
-		    cb->pss_crsr->psc_blkid.db_cur_name);
+		    name_len, cb->pss_crsr->psc_blkid.db_cur_name);
 		break;
 	    case 7:
 		/* Error if aggregate in target list */
 		(VOID) psf_error(2223L, 0L, PSF_USERERR, err_code, 
 		    &psq_cb->psq_error, 2, sizeof(cb->pss_lineno), &cb->pss_lineno,
-		    psf_trmwhite(DB_MAXNAME,
-			cb->pss_crsr->psc_blkid.db_cur_name),
-		    cb->pss_crsr->psc_blkid.db_cur_name);
+		    name_len, cb->pss_crsr->psc_blkid.db_cur_name);
 		break;
 	    }
 
@@ -49806,8 +49828,8 @@ psl_p_tlist(
 				    &psq_cb->psq_error, 2, 
 				    (i4)sizeof(cb->pss_lineno),
 				    &cb->pss_lineno,
-				    psf_trmwhite(DB_MAXNAME, (*attribute)->
-							    att_name.db_att_name),
+				    psf_trmwhite(DB_ATT_MAXNAME, 
+					(*attribute)-> att_name.db_att_name),
 				    (*attribute)->att_name.db_att_name);
 				return(E_DB_ERROR);
 			    }
@@ -50155,7 +50177,6 @@ psl_p_tlist(
     cb->pss_stmt_flags &= ~PSS_PARSING_TARGET_LIST;
     return status;
 }
-
 
 /**********************************************************************/
 /*
@@ -51003,7 +51024,7 @@ psl_p_telem(
 			    &ctx->psq_cb->psq_error, 2,
 			    (i4) sizeof(ctx->cb->pss_lineno),
 			    &ctx->cb->pss_lineno,
-			    psf_trmwhite(DB_MAXNAME, colname->db_att_name),
+			    psf_trmwhite(DB_ATT_MAXNAME, colname->db_att_name),
 			    colname->db_att_name);
 			status = E_DB_ERROR;
 			break;
@@ -55330,7 +55351,7 @@ psl_reserved_ident(
 	*/
 	if ((psq_cb->psq_mode == PSQ_CUSER)
 	    && (MEcmp(name, 
-		      sess_cb->pss_cat_owner->db_own_name, DB_MAXNAME) == 0))
+	      sess_cb->pss_cat_owner->db_own_name, DB_OWN_MAXNAME) == 0))
 	    return(FALSE);
 
 	psl_command_string(psq_cb->psq_mode, 
@@ -57267,7 +57288,7 @@ psl_prepend_schemaname(
     /* convert schema name to a delimited identifier
     ** (schema_name pointer gets overwritten)
     */
-    schema_len = psf_trmwhite(DB_MAXNAME, (char *) schema_name);
+    schema_len = psf_trmwhite(DB_OWN_MAXNAME, (char *) schema_name);
 
     status = psl_norm_id_2_delim_id((u_char **) &schema_name, &schema_len, 
 				    delim_id, err_blk);

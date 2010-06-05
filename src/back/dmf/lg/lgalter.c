@@ -342,6 +342,8 @@ NO_OPTIM = r64_us5
 **          Fixes for II_DMFRCP_PROMPT_ON_INCONS_DB / Db_incons_prompt
 **      18-jun-2009 (stial01) b121849
 **          LG_A_XA_DISASSOC compare GTRID only if looking for other branches
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*
@@ -5581,8 +5583,8 @@ TRdisplay("Signal RCP recovery event %d:\n-rcp_continue_ignore_lsn=%d,%d\n-rcp_c
 	    flag,
 	    lgd->lgd_recover.lg_lsn.lsn_high,
 	    lgd->lgd_recover.lg_lsn.lsn_low,
-	    DB_MAXNAME, &lgd->lgd_recover.lg_tabname[0],
-	    DB_MAXNAME, &lgd->lgd_recover.lg_dbname[0],
+	    DB_TAB_MAXNAME, &lgd->lgd_recover.lg_tabname[0],
+	    DB_DB_MAXNAME, &lgd->lgd_recover.lg_dbname[0],
 	    lgd->lgd_recover.lg_lsn.lsn_high,
 	    lgd->lgd_recover.lg_lsn.lsn_low);
 #endif
@@ -5602,7 +5604,7 @@ TRdisplay("Signal RCP recovery event %d:\n-rcp_continue_ignore_lsn=%d,%d\n-rcp_c
 	}
 	else if (flag == LG_A_RCP_IGNORE_TABLE &&
 		MEcmp(&recov_struct->lg_tabname[0],
-		&lgd->lgd_recover.lg_tabname[0], DB_MAXNAME))
+		&lgd->lgd_recover.lg_tabname[0], DB_TAB_MAXNAME))
 	{
 	    STRUCT_ASSIGN_MACRO(lgd->lgd_recover, *recov_struct);
 	    (VOID)LG_unmutex(&lgd->lgd_mutex);
@@ -5610,7 +5612,7 @@ TRdisplay("Signal RCP recovery event %d:\n-rcp_continue_ignore_lsn=%d,%d\n-rcp_c
 	}
 	else if (flag == LG_A_RCP_IGNORE_DB &&
 		MEcmp(&recov_struct->lg_dbname[0],
-		&lgd->lgd_recover.lg_dbname[0], DB_MAXNAME))
+		&lgd->lgd_recover.lg_dbname[0], DB_DB_MAXNAME)) 
 	{
 	    STRUCT_ASSIGN_MACRO(lgd->lgd_recover, *recov_struct);
 	    (VOID)LG_unmutex(&lgd->lgd_mutex);

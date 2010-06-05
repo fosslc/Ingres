@@ -76,6 +76,8 @@
 **	    replace nat and longnat with i4
 **	30-mar-04 (toumi01)
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -254,14 +256,10 @@ QEC_LINK	*v_lnk_p )
 
     /* 1.  set up keying information */
 
-    qed_u0_trimtail(
-		objects_p->d6_1_obj_name,
-		(u_i4) DB_MAXNAME,
+    qed_u0_trimtail( objects_p->d6_1_obj_name, (u_i4) DB_OBJ_MAXNAME,
 		tables_p->l16_1_tab_name);
 
-    qed_u0_trimtail(
-		objects_p->d6_2_obj_owner,
-		(u_i4) DB_MAXNAME,
+    qed_u0_trimtail( objects_p->d6_2_obj_owner, (u_i4) DB_OWN_MAXNAME,
 		tables_p->l16_2_tab_owner);
 
     /* 2.  send DELETE query */
@@ -327,14 +325,10 @@ QEC_LINK	*v_lnk_p )
 
     /* 1.  set up keying information */
 
-    qed_u0_trimtail(
-		objects_p->d6_1_obj_name,
-		(u_i4) DB_MAXNAME,
+    qed_u0_trimtail( objects_p->d6_1_obj_name, (u_i4) DB_OBJ_MAXNAME,
 		cols_p->l3_1_tab_name);
 
-    qed_u0_trimtail(
-		objects_p->d6_2_obj_owner,
-		(u_i4) DB_MAXNAME,
+    qed_u0_trimtail( objects_p->d6_2_obj_owner, (u_i4) DB_OWN_MAXNAME,
 		cols_p->l3_2_tab_owner);
 
     del_p->qeq_c1_can_id = DEL_502_DD_COLUMNS;
@@ -397,14 +391,10 @@ QEC_LINK	*v_lnk_p )
 
     /* 1.  set up for deleting from IIDD_ALT_COLUMNS */
 
-    qed_u0_trimtail(
-		objects_p->d6_1_obj_name,
-		(u_i4) DB_MAXNAME,
+    qed_u0_trimtail( objects_p->d6_1_obj_name, (u_i4) DB_OBJ_MAXNAME,
 		altcols_p->l2_1_tab_name);
 
-    qed_u0_trimtail(
-		objects_p->d6_2_obj_owner,
-		(u_i4) DB_MAXNAME,
+    qed_u0_trimtail( objects_p->d6_2_obj_owner, (u_i4) DB_OWN_MAXNAME,
 		altcols_p->l2_2_tab_owner);
 
     del_p->qeq_c1_can_id = DEL_501_DD_ALT_COLUMNS;

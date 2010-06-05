@@ -236,6 +236,8 @@
 **          add_with_dups() limit range of leaf with overflow pages
 **	15-Jan-2010 (jonj,stial01)
 **	    SIR 121619 MVCC: Replace DMPP_PAGE* with DMP_PINFO* where needed.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -430,11 +432,11 @@ DB_ERROR         *dberr)
 	    if ((i + 1 == mct->mct_keys) && atts[i]->key_offset != klen)
 	    {
 		/* Consistency check for tidp/TIDP */
-		if (MEcmp("tidp ", atts[i]->name.db_att_name, 5) &&
-		    MEcmp("TIDP ", atts[i]->name.db_att_name, 5))
+		if (STcompare("tidp", atts[i]->attnmstr) &&
+		    STcompare("TIDP", atts[i]->attnmstr))
 		{
-		    TRdisplay("%@ dm1bbbegin att %d is %~t instead of tidp, table %~t\n",
-			i, sizeof(DB_ATT_NAME), &atts[i]->name.db_att_name,
+		    TRdisplay("%@ dm1bbbegin att %d is %s instead of tidp, table %~t\n",
+			i, atts[i]->attnmstr,
 			sizeof(DB_TAB_NAME), &t->tcb_rel.relid);
 		    return(E_DB_ERROR);
 		}
@@ -533,26 +535,26 @@ DB_ERROR         *dberr)
 	TRdisplay("dm1bbuild: LEAF atts %d entrylen %d \n", 
 		mct->mct_leaf_rac.att_count, mct->mct_klen);
 	for (i = 0; i < mct->mct_leaf_rac.att_count; i++)
-	    TRdisplay("ATT %t (%d %d)\n", sizeof(DB_ATT_NAME),
-	    &mct->mct_leaf_rac.att_ptrs[i]->name.db_att_name,
+	    TRdisplay("ATT %s (%d %d)\n",
+	    mct->mct_leaf_rac.att_ptrs[i]->attnmstr,
 	    mct->mct_leaf_rac.att_ptrs[i]->offset, 
 	    mct->mct_leaf_rac.att_ptrs[i]->key_offset);
 	for (i = 0; i < mct->mct_keys; i++)
-	    TRdisplay("KEY %t (%d %d)\n", sizeof(DB_ATT_NAME),
-	    &mct->mct_leaf_keys[i]->name.db_att_name,
+	    TRdisplay("KEY %s (%d %d)\n",
+	    mct->mct_leaf_keys[i]->attnmstr,
 	    mct->mct_leaf_keys[i]->offset, 
 	    mct->mct_leaf_keys[i]->key_offset);
 
 	TRdisplay("dm1bbuild: INDEX atts %d entrylen %d \n", 
 		mct->mct_index_rac.att_count, mct->mct_ixklen);
 	for (i = 0; i < mct->mct_index_rac.att_count; i++)
-	    TRdisplay("ATT %t (%d %d)\n", sizeof(DB_ATT_NAME),
-	    &mct->mct_index_rac.att_ptrs[i]->name.db_att_name,
+	    TRdisplay("ATT %s (%d %d)\n",
+	    mct->mct_index_rac.att_ptrs[i]->attnmstr,
 	    mct->mct_index_rac.att_ptrs[i]->offset, 
 	    mct->mct_index_rac.att_ptrs[i]->key_offset);
 	for (i = 0; i < mct->mct_keys; i++)
-	    TRdisplay("KEY %t (%d %d)\n", sizeof(DB_ATT_NAME),
-	    &mct->mct_ix_keys[i]->name.db_att_name,
+	    TRdisplay("KEY %s (%d %d)\n",
+	    mct->mct_ix_keys[i]->attnmstr,
 	    mct->mct_ix_keys[i]->offset, 
 	    mct->mct_ix_keys[i]->key_offset);
     }

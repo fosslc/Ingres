@@ -158,6 +158,8 @@
 **	    Fix a couple annoying int == NULL warnings.
 **	12-Apr-2008 (kschendel)
 **	    Revise DMF qualification interface
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -1944,7 +1946,7 @@ DU_USER		*ustuple)
 	*/
 
 	if ((user == NULL) ||
-	    (STskipblank(user, (i4)DB_MAXNAME) == NULL)
+	    (STskipblank(user, (i4)DB_OWN_MAXNAME) == NULL)
 	   )
 	{
 	    qeu.qeu_klen = 0;
@@ -1952,7 +1954,7 @@ DU_USER		*ustuple)
 	}
 	else
 	{
-	    MEmove(DB_MAXNAME, (PTR) user, (char)' ',
+	    MEmove(DB_OWN_MAXNAME, (PTR) user, (char)' ',
 		   sizeof(qualtuple.du_name), (PTR)&qualtuple.du_name);
 	    qeu.qeu_klen = 1;
 	    qeu.qeu_key = key_ptr_array;
@@ -1970,7 +1972,7 @@ DU_USER		*ustuple)
 	}
 	else
 	{
-	    MEmove(DB_MAXNAME, (PTR) group, (char)' ',
+	    MEmove(DB_OWN_MAXNAME, (PTR) group, (char)' ',
 		   sizeof(qualtuple.du_group), (PTR)&qualtuple.du_group);
 	    qparams.qeu_qparms[0] = (PTR) &qualtuple;
 	    qeu.qeu_qual = qeu_quser;

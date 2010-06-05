@@ -50,6 +50,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 
@@ -120,7 +122,7 @@ typedef struct _PST_2RSDM_NODE
 					** user should not see result of
 					** resdom.
 					*/
-    char	    pst_rsname[DB_MAXNAME]; /* name of result column */
+    char	    pst_rsname[DB_ATT_MAXNAME]; /* name of result column */
 } PST_2RSDM_NODE;
 
 /*}
@@ -133,7 +135,7 @@ typedef struct _PST_2RSDM_NODE
 **     23-feb-93 (teresa)
 **          initial creation
 */
-#define RD8DB_MAXNAME   32  /* dbmaxname at creation time of this structure */
+#define RD8DB_MAXNAME   32  /* dbmaxname at creation time of PST_7RSDM_NODE */
 
 typedef struct _PST_7RSDM_NODE
 {

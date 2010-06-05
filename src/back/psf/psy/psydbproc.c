@@ -115,6 +115,8 @@
 **	28-Jan-2004 (schka24)
 **	    Don't lie about which memory pool runs out.  If it's QSF,
 **	    say so.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -524,15 +526,15 @@ exit:
 
 	/* Identify the object first */
 	dbp_curs_id.db_cursor_id[0] = dbp_curs_id.db_cursor_id[1] = 0;
-	(VOID) MEcopy((PTR)&psy_cb->psy_tabname[0], DB_MAXNAME,
+	(VOID) MEcopy((PTR)&psy_cb->psy_tabname[0], DB_TAB_MAXNAME,
 	    (PTR)dbp_curs_id.db_cur_name);
 	MEcopy((PTR) &dbp_curs_id, sizeof(DB_CURSOR_ID), (PTR) dbpid);
 
-	(VOID) MEcopy((PTR) &sess_cb->pss_user, DB_MAXNAME,
+	(VOID) MEcopy((PTR) &sess_cb->pss_user, DB_OWN_MAXNAME,
 	    (PTR) (dbpid + sizeof(DB_CURSOR_ID)));
 
 	I4ASSIGN_MACRO(sess_cb->pss_udbid,
-		       *(i4 *) (dbpid + sizeof(DB_CURSOR_ID) + DB_MAXNAME));
+		       *(i4 *) (dbpid + sizeof(DB_CURSOR_ID) + DB_OWN_MAXNAME));
 
 	(VOID)MEcopy((PTR) dbpid, sizeof(dbpid),
 	    (PTR) qsf_rb.qsf_feobj_id.qso_name);
@@ -668,15 +670,15 @@ psy_kproc(
 
 	/* Identify the object first */
 	dbp_curs_id.db_cursor_id[0] = dbp_curs_id.db_cursor_id[1] = 0;
-	(VOID) MEcopy((PTR)&psy_cb->psy_tabname[0], DB_MAXNAME,
+	(VOID) MEcopy((PTR)&psy_cb->psy_tabname[0], DB_TAB_MAXNAME,
 	    (PTR)dbp_curs_id.db_cur_name);
 	MEcopy((PTR) &dbp_curs_id, sizeof(DB_CURSOR_ID), (PTR) dbpid);
 
-	(VOID) MEcopy((PTR) &sess_cb->pss_user, DB_MAXNAME,
+	(VOID) MEcopy((PTR) &sess_cb->pss_user, DB_OWN_MAXNAME,
 	    (PTR) (dbpid + sizeof(DB_CURSOR_ID)));
 
 	I4ASSIGN_MACRO(sess_cb->pss_udbid,
-		       *(i4 *) (dbpid + sizeof(DB_CURSOR_ID) + DB_MAXNAME));
+		       *(i4 *) (dbpid + sizeof(DB_CURSOR_ID) + DB_OWN_MAXNAME));
 
 	(VOID)MEcopy((PTR) dbpid, sizeof(dbpid),
 	    (PTR) qsf_rb.qsf_feobj_id.qso_name);
@@ -952,7 +954,7 @@ psy_gproc(
 	if (gproc_mask & PSS_INGDBP)
 	{
 	    MEmove(sizeof(*sess_cb->pss_cat_owner), (PTR)sess_cb->pss_cat_owner,
-		   ' ', DB_MAXNAME, (PTR) &rdf_cb->rdf_rb.rdr_owner); 
+		   ' ', DB_OWN_MAXNAME, (PTR) &rdf_cb->rdf_rb.rdr_owner); 
 	}
 	else
 	{

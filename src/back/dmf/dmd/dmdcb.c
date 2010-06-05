@@ -282,6 +282,8 @@
 **	    Display seq_cache instead of redundant seq_version.
 **      09-feb-2007 (stial01)
 **          Display xccb_blob_temp_flags (new)
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -808,7 +810,7 @@ TRdisplay("\n%.4s Control Block @0x%p..0x%p owned by 0x%x for %d bytes.\n\n",
 	*/
 	bm_common = (DM0P_BM_COMMON *)lbmcb->lbm_bm_common;
 	if (MEcmp(bm_common->bmcb_name.db_name, 
-		dmf_svcb->svcb_bmseg[0]->bms_name.db_name, DB_MAXNAME))
+		dmf_svcb->svcb_bmseg[0]->bms_name.db_name, DB_DB_MAXNAME))
 	    break;
 
 	TRdisplay("    Buffer Manager Name: '%t'\n",
@@ -1483,7 +1485,8 @@ TRdisplay("\n%.4s Control Block @0x%p..0x%p owned by 0x%x for %d bytes.\n\n",
 TRdisplay("        NAME                    OFFSET  TYPE    LENGTH PREC KEY KOFFSET\n"); 
         TRdisplay("%#[%8* %.#s  %4.2d  %8.2w  %4.2d %4.2d %3.2d    %4.2d\n%]",
 	    mxcb->mx_ab_count, mxcb->mx_b_key_atts,
-	    sizeof(((DB_ATTS *)0)->name), &((DB_ATTS *)0)->name, &((DB_ATTS *)0)->offset, 
+	    32, ((DB_ATTS *)0)->attnmstr,
+	    &((DB_ATTS *)0)->offset, 
 	    ",,,DATE,,MONEY,,,,,DECIMAL,OBJECT_KEY,TABLE_KEY,,,,,,,,CHAR,VCHAR,,,,,,,,,INT,FLOAT,CHAR,,,,,TEXT",
 	    &((DB_ATTS *)0)->type,
 	    &((DB_ATTS *)0)->length, &((DB_ATTS *)0)->precision, &((DB_ATTS *)0)->key,
@@ -1492,7 +1495,8 @@ TRdisplay("        NAME                    OFFSET  TYPE    LENGTH PREC KEY KOFFS
 TRdisplay("        NAME                    OFFSET  TYPE    LENGTH PREC KEY KOFFSET\n"); 
         TRdisplay("%#[%8* %.#s  %4.2d  %8.2w  %4.2d %4.2d %3.2d    %4.2d\n%]",
 	    mxcb->mx_ai_count, mxcb->mx_i_key_atts,
-	    sizeof(((DB_ATTS *)0)->name), &((DB_ATTS *)0)->name, &((DB_ATTS *)0)->offset, 
+	    32, ((DB_ATTS *)0)->attnmstr,
+	    &((DB_ATTS *)0)->offset, 
 	    ",,,DATE,,MONEY,,,,,DECIMAL,OBJECT_KEY,TABLE_KEY,,,,,,,,CHAR,VCHAR,,,,,,,,,INT,FLOAT,CHAR,,,,,TEXT",
 	    &((DB_ATTS *)0)->type,
 	    &((DB_ATTS *)0)->length, &((DB_ATTS *)0)->precision, &((DB_ATTS *)0)->key,
@@ -1954,8 +1958,8 @@ TRdisplay("        NAME                    OFFSET  TYPE    LENGTH PREC KEY KOFFS
 	    TRdisplay("%#.#{%8* %.#s  %4.2d  %8.2w  %4.2d %4.2d %3.2d    %4.2d\n%}",
 		tcb->tcb_rel.relatts, 
 		sizeof(DB_ATTS), &tcb->tcb_atts_ptr[1], 
-		sizeof(((DB_ATTS *)0)->name),
-		&((DB_ATTS *)0)->name, &((DB_ATTS *)0)->offset, 
+		32, ((DB_ATTS *)0)->attnmstr,
+		&((DB_ATTS *)0)->offset, 
 		",,,DATE,ADATE,MONEY,TMWO,TMW,TME,TSWO,DECIMAL,OBJECT_KEY,TABLE_KEY,,,,,,TSW,TSTMP,CHAR,VCHAR,LVCH,BYTE,VBYTE,LBYTE,NCHAR,NVCHR,LNVCHR,,INT,FLOAT,C,,,,,TEXT,BOOL",
 		 &((DB_ATTS *)0)->type,
 		&((DB_ATTS *)0)->length, &((DB_ATTS *)0)->precision, 
@@ -1969,7 +1973,8 @@ TRdisplay("        NAME                    OFFSET  TYPE    LENGTH PREC KEY KOFFS
 	    TRdisplay("        NAME                            OFFSET  TYPE    LENGTH PREC KEY KOFFSET\n"); 
 	    TRdisplay("%#[%8* %.#s  %4.2d  %8.2w  %4.2d %4.2d %3.2d    %4.2d\n%]",
 		tcb->tcb_rel.relkeys, tcb->tcb_key_atts,
-		sizeof(((DB_ATTS *)0)->name), &((DB_ATTS *)0)->name, &((DB_ATTS *)0)->offset, 
+		32, ((DB_ATTS *)0)->attnmstr,
+		&((DB_ATTS *)0)->offset, 
 		",,,DATE,ADATE,MONEY,TMWO,TMW,TME,TSWO,DECIMAL,OBJECT_KEY,TABLE_KEY,,,,,,TSW,TSTMP,CHAR,VCHAR,LVCH,BYTE,VBYTE,LBYTE,NCHAR,NVCHR,LNVCHR,,INT,FLOAT,C,,,,,TEXT,BOOL",
 		&((DB_ATTS *)0)->type,
 		&((DB_ATTS *)0)->length, &((DB_ATTS *)0)->precision, &((DB_ATTS *)0)->key,

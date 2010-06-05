@@ -240,6 +240,8 @@
 **	    unused ahd-key.
 **	17-Sep-2009 (bonro01) b122118
 **	    Fix syntax error caused by last change. Fails on Windows and Solaris
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -3181,7 +3183,12 @@ opc_procvalid(
 			pst_rangetab[grv->opv_qrt]->pst_rngvar.db_tab_index;
 	qr_proc->qr_dbpalias.qr_crsr_id.db_cursor_id[0] = 0;
 	qr_proc->qr_dbpalias.qr_crsr_id.db_cursor_id[1] = 0;
-	MEcopy((char *)&grv->opv_relation->rdr_rel->tbl_name, sizeof(DB_DBP_NAME),
+
+	/*
+	** The following MEcopy works because
+	** DB_TAB_MAXNAME=DB_CURSOR_MAXNAME
+	*/
+	MEcopy((char *)&grv->opv_relation->rdr_rel->tbl_name, DB_CURSOR_MAXNAME,
 			(char *)&qr_proc->qr_dbpalias.qr_crsr_id.db_cur_name);
 	MEcopy((char *)&grv->opv_relation->rdr_rel->tbl_owner, sizeof(DB_OWN_NAME),
 			(char *)&qr_proc->qr_dbpalias.qr_user);

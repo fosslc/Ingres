@@ -97,6 +97,8 @@
 **	    Add use_ingresdate parameter to rqu_putformat
 **	10-Mar-2009 (kiria01) SIR 121665
 **	    Update GCA API to LEVEL 5
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 
@@ -494,8 +496,8 @@ FUNC_EXTERN VOID rqu_putformat(		DB_DATA_VALUE   *input,
 					char		*buffer,
 					bool		use_ingresdate);
 FUNC_EXTERN VOID rqu_cluster_info(	i4		*flags, 
-					DD_NAME		*alt_node_name,
-					DD_NAME		*node_name);
+					DD_NODE_NAME	*alt_node_name,
+					DD_NODE_NAME	*node_name);
 FUNC_EXTERN RQL_ASSOC  *rqu_new_assoc(	RQR_CB		*rqr_cb,
 					RQS_CB		*session,
 					DD_LDB_DESC	*ldb,
@@ -512,8 +514,8 @@ FUNC_EXTERN i4  rqu_get_reply(		RQL_ASSOC	*assoc,
 FUNC_EXTERN DB_ERRTYPE rqu_create_tmp(	RQL_ASSOC	*src_assoc,
 					RQL_ASSOC	*dest_assoc,
 					i4		lang,
-					DD_NAME		**col_name_tab,
-					DD_NAME		*table_name,
+					DD_ATT_NAME	**col_name_tab,
+					DD_TAB_NAME	*table_name,
 					i4		pagesize);
 FUNC_EXTERN STATUS rqu_xsend(		RQL_ASSOC	*assoc,
 					GCA_SD_PARMS	*send);
@@ -572,7 +574,7 @@ FUNC_EXTERN DB_ERRTYPE rqu_put_qtxt(	RQL_ASSOC	*assoc,
 					i4		qlanguage,
 					i4		qmodifier,
 					DD_PACKET	*ddpkt,
-					DD_NAME		*tmpnm);
+					DD_TAB_NAME	*tmpnm);
 FUNC_EXTERN DB_ERRTYPE rqu_put_parms(	RQL_ASSOC	*assoc,
 					i4		count,
 					DB_DATA_VALUE	*dv);

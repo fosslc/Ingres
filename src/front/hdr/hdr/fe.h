@@ -112,6 +112,8 @@
 **	24-Feb-2010 (frima01) Bug 122490
 **	    Add function prototypes as neccessary
 **	    to eliminate gcc 4.3 warnings.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 #ifndef FE_HDR_INCLUDED
@@ -932,8 +934,13 @@ typedef struct	s_DATE
 **  New front end constant that defines the maximum name
 **  length of front end objects (e.g., form/field names)
 **  when in un-normalized form.
+**  FE_UNRML_MAXNAME is mostly used for stack buffers, so make sure
+**  it is big enough for database names
 */
+/*
 #define		FE_UNRML_MAXNAME ((FE_MAXNAME * 2) + 2)
+*/
+#define		FE_UNRML_MAXNAME DB_MAX_DELIMID
 /*
 **  This constant defines the maximum size of a table reference.
 **  Table references can be "table", or a fully qualified "owner.table",

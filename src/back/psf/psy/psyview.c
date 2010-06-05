@@ -221,6 +221,8 @@
 **	    to allow for extra flags in PST_RSDM_NODE
 **	13-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -2148,9 +2150,9 @@ psy_view(
 		*/
 		(VOID) psf_error(2225L, 0L, PSF_USERERR,
 		    &err_code, err_blk, 2, 
-		    psf_trmwhite(DB_MAXNAME, cursor->psc_blkid.db_cur_name),
+		    psf_trmwhite(DB_CURSOR_MAXNAME, cursor->psc_blkid.db_cur_name),
 		    cursor->psc_blkid.db_cur_name,
-		    psf_trmwhite(DB_MAXNAME,
+		    psf_trmwhite(DB_TAB_MAXNAME,
 			(char *) &sess_cb->pss_resrng->pss_tabname),
 		    &sess_cb->pss_resrng->pss_tabname);
 		status = E_DB_ERROR;
@@ -2251,7 +2253,7 @@ psy_view(
 			{
 			    (VOID) psf_error(E_PS0913_SCHEMA_MISMATCH, 0L, 
 				PSF_USERERR, &err_code, err_blk, 1, 
-				psf_trmwhite(DB_MAXNAME,
+				psf_trmwhite(DB_TAB_MAXNAME,
 		                        (char *) rngvar->pss_rgname),
         		        rngvar->pss_rgname);
 			}
@@ -2382,7 +2384,7 @@ psy_view(
 		    ** info
 		    */
 		    MEcopy((PTR) &vtree->pst_rangetab[i]->pst_corr_name,
-			DB_MAXNAME, (PTR) newrngvar->pss_rgname);
+			DB_TAB_MAXNAME, (PTR) newrngvar->pss_rgname);
 
 		    /*
 		    ** we may need to update the mask indicating in which (if
@@ -2510,7 +2512,7 @@ psy_view(
 		    {
 			(VOID) psf_error(E_PS0913_SCHEMA_MISMATCH, 0L, 
 			    PSF_USERERR, &err_code, err_blk, 1, 
-			    psf_trmwhite(DB_MAXNAME, (char *) rngvar->pss_rgname), 
+			    psf_trmwhite(DB_TAB_MAXNAME, (char *) rngvar->pss_rgname), 
 				rngvar->pss_rgname);
 		    }
 		    goto exit;
@@ -2576,7 +2578,7 @@ psy_view(
 		** info
 		*/
 
-		MEcopy((PTR) &corr_name, DB_MAXNAME,
+		MEcopy((PTR) &corr_name, DB_TAB_MAXNAME,
 		       (PTR) rngvar->pss_rgname);
 
 		/*

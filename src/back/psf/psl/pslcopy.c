@@ -151,6 +151,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **	    
 */
 
@@ -560,15 +562,15 @@ psl_cp1_copy(
                  cpdom_desc != NULL;
                  cpdom_desc = cpdom_desc->cp_next)
             {
-		char tmp_name[DB_MAXNAME+1];
+		char tmp_name[DB_ATT_MAXNAME+1];
                 if (cpdom_desc->cp_type == CPY_DUMMY_TYPE) continue;
 
 		/* Space-pad the parsed name, since otherwise it will only
 	 	** check it as a prefix in STbcompare. (kibro01) b121642
 		*/
 		STmove(cpdom_desc->cp_domname, ' ', sizeof(tmp_name), tmp_name);
-                if (STbcompare(tmp_name, DB_MAXNAME,
-			att_entry->att_name.db_att_name, DB_MAXNAME,
+                if (STbcompare(tmp_name, DB_ATT_MAXNAME,
+			att_entry->att_name.db_att_name, DB_ATT_MAXNAME,
 			FALSE) == 0)
                    break;
             }
@@ -980,6 +982,31 @@ psl_cp1_copy(
 
 	    if (cpdom_desc->cp_type == CPY_DUMMY_TYPE)
 	    {
+		if (STlength(cpdom_desc->cp_domname) > GCA_MAXNAME)
+		{
+		    i4 max = GCA_MAXNAME;
+
+		    /*
+		    ** In scscopy.c we build the gca_row_desc and
+		    ** copy up to GCA_MAXNAME bytes of the cp_domname.
+		    ** 
+		    ** If DB_ATT_MXNAME > GCA_MAXNAME, cp_domname is truncated.
+		    ** This is ok because the truncated cp_domname is mostly
+		    ** used in iicopy.c for error notifications.
+		    **
+		    ** The only exception is cp_domname for dummy columns.
+		    ** In this case the dummy column name cannot be truncated,
+		    ** so below we limit the size of dummy column names to
+		    ** GCA_MAXNAME.
+		    */
+		    (VOID) psf_error(2733, 0L, PSF_USERERR, &err_code,
+			&psq_cb->psq_error, 3, 12, "DUMMY COLUMN",
+			psf_trmwhite(DB_ATT_MAXNAME, cpdom_desc->cp_domname),
+				cpdom_desc->cp_domname,
+			sizeof(max), &max);
+		    return (E_DB_ERROR);
+		}
+
 		/* BUG 2684:
 		** set cp_cvlen to 0 so IICOPY correctly computes
 		** the total length of the file row.
@@ -1078,7 +1105,7 @@ psl_cp1_copy(
 		    &dest_dtname);
 		(VOID) psf_error(5830L, 0L, PSF_USERERR, &err_code,
 		    err_blk, 3,
-		    psf_trmwhite(DB_MAXNAME, cpdom_desc->cp_domname),
+		    psf_trmwhite(DB_ATT_MAXNAME, cpdom_desc->cp_domname),
 		    cpdom_desc->cp_domname,
 		    psf_trmwhite(sizeof(src_dtname), (char *) &src_dtname),
 		    &src_dtname,
@@ -1622,7 +1649,7 @@ psl_cp4_coparam(
 	if (status != E_DB_OK)
 	    return(status);
 
-	STmove((char *) &att_entry->att_name, '\0', DB_MAXNAME,
+	STmove((char *) &att_entry->att_name, '\0', DB_ATT_MAXNAME,
 	     cpdom_desc->cp_domname);
 
 	cpdom_desc->cp_tupmap = att_entry->att_number - 1;
@@ -1814,8 +1841,7 @@ psl_cp5_cospecs(
 				dd_c1_ldb_caps & DD_8CAP_DELIMITED_IDS)
 	    {
 	        /* Delimit and unnormalize column name */
-	        name_len = (u_i4) psf_trmwhite(sizeof(DD_NAME),
-					attr_name);
+	        name_len = (u_i4) psf_trmwhite(sizeof(DD_ATT_NAME), attr_name);
 		unorm_len = sizeof(unorm_buf) - 1;
 
 	        status = cui_idunorm((u_char *)attr_name, &name_len,
@@ -1964,7 +1990,7 @@ psl_cp6_entname(
     if (status != E_DB_OK)
 	return (status);
 
-    STmove(entname, '\0', DB_MAXNAME, cpdom_desc->cp_domname);
+    STmove(entname, '\0', DB_ATT_MAXNAME, cpdom_desc->cp_domname);
     /* zero out unused fields */
     cpdom_desc->cp_next = NULL;
     cpdom_desc->cp_type = 0;

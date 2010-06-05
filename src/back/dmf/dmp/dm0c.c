@@ -311,6 +311,8 @@
 **	    Re-interpret cmptlvl as u_i4 instead of char[4].
 **	16-Nov-2009 (kschendel) SIR 122890
 **	    Don't include dudbms when not needed.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -1109,12 +1111,12 @@ DB_ERROR	    *dberr)
 	    	** A readonly database's .cnf file is in the II_DATABASE area.
 	    	*/
 	    	LOCATION	db_location;
-    	    	char		db_name[DB_MAXNAME+1];
+    	    	char		db_name[DB_DB_MAXNAME+1];
     	    	char		*physical_name;
 
 	    	loc = &rdloc;
-    	    	STncpy(db_name, dcb->dcb_name.db_db_name, DB_MAXNAME );
-		db_name[ DB_MAXNAME ] = '\0';
+    	    	STncpy(db_name, dcb->dcb_name.db_db_name, DB_DB_MAXNAME );
+		db_name[ DB_DB_MAXNAME ] = '\0';
     	    	STtrmwhite(db_name);
 	    	LOingpath(ING_DBDIR, db_name, LO_DB, &db_location);
 	    	LOtos(&db_location, &physical_name);
@@ -2230,7 +2232,7 @@ DB_ERROR	    *dberr)
     i4			i, space_needed;
     char		*path_str;
     char		*end_ptr;
-    char		db_name[DB_MAXNAME+1];
+    char		db_name[DB_DB_MAXNAME+1];
     i4			*err_code = &dberr->err_code;
 
     CLRDBERR(dberr);
@@ -2727,7 +2729,7 @@ DB_ERROR	    *dberr)
 	   )
 	{
 	    LOCATION	work_loc;
-	    char	db_name[DB_MAXNAME+1];
+	    char	db_name[DB_DB_MAXNAME+1];
 	    char	*path_str;
 
 	    /* Fill in II_WORK info... */

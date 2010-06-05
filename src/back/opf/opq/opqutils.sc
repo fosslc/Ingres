@@ -226,6 +226,8 @@ exec sql declare c1 cursor for s;
 **        Disallow multiple -r flags with the same table name
 **      11-Feb-2010 (maspa05) b123140
 **        Missing parameter in STxcompare in the above change
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 
@@ -3099,7 +3101,7 @@ OPQ_RLIST   *rp)
 	(i4)0, (PTR)&rp->relname);
 
     STprintf(stmt, OPQ_CQRY1,
-	&rp->delimname.nametype.maxname[0]);
+	&rp->delimname[0]);
     sqlda->sqln = 1;
     /* FIXME (schka24) This is really doing it the hard way.
     ** Use execute immediate instead.
@@ -3555,7 +3557,7 @@ bool		statdump)
 	    exec sql begin;
 		/* Trim trailing white space and save table info */
 		(VOID) STtrmwhite((char *)&rp->relname);
-		rp->samplename.nametype.tabname.db_tab_name[0] = EOS;
+		rp->samplename[0] = EOS;
 		(VOID) STtrmwhite((char *)&rp->ownname);
 		if (!exrel)
 		{	/* No need for this if we're excluding the table. */
@@ -3843,7 +3845,7 @@ OPQ_GLOBAL *g)
 	char     *es_collation;
     exec sql end declare section;    
 
-    OPQ_NAME	collation_name;	/* Name of collation sequence */
+    DB_COLLATION_STR    collation_name;	/* Name of collation sequence */
     STATUS	status;		/* Returned from aducolinit() */
     ADULTABLE	*tbl;		/* Collation table */
     CL_SYS_ERR  sys_err;	/* OS-specific error information */
@@ -3914,7 +3916,7 @@ OPQ_GLOBAL *g)
 	char     *es_collation;
     exec sql end declare section;    
 
-    OPQ_NAME	collation_name;	/* Name of collation sequence */
+    DB_COLLATION_STR	collation_name;	/* Name of collation sequence */
     STATUS	status;		/* Returned from aducolinit() */
     ADUUCETAB	*utbl;		/* Collation table */
     PTR		uvtbl;		/* var chunk of Unicode table */
@@ -4025,13 +4027,11 @@ OPQ_GLOBAL *g)
 	    */
 	    if (g->opq_dbcaps.tblname_case == (i4)OPQ_LOWER)
 	    {
-		STcopy("$ingres",
-		    (char *)&g->opq_dba.nametype.ownname.db_own_name[0]);
+		STcopy("$ingres", (char *)&g->opq_dba);
 	    }
 	    else
 	    {
-		STcopy("$INGRES",
-		    (char *)&g->opq_dba.nametype.ownname.db_own_name[0]);
+		STcopy("$INGRES", (char *)&g->opq_dba);
 	    }
 	}
 	else
@@ -4041,8 +4041,7 @@ OPQ_GLOBAL *g)
 	    ** what to assume regarding catalog ownership.
 	    ** Let's assume they are owned by DBA.
 	    */
-	    STcopy(es_dba,
-		(char *)&g->opq_dba.nametype.ownname.db_own_name[0]);
+	    STcopy(es_dba, (char *)&g->opq_dba);
 	}
     }
     else
@@ -4050,7 +4049,7 @@ OPQ_GLOBAL *g)
 	/*
 	** If a non-dba user, process his own tables only .
 	*/
-	g->opq_dba.nametype.ownname.db_own_name[0] = EOS;
+	g->opq_dba[0] = EOS;
     }
 }
 
@@ -4103,7 +4102,7 @@ OPQ_GLOBAL *g)
 {
     exec sql begin declare section;
 	char	es_type[8 + 1];
-	char	es_tblname[DB_GW1_MAXNAME + 1];
+	char	es_tblname[DB_TAB_MAXNAME + 1];
 	char	iistats[DB_GW1_MAXNAME + 1];
 	char	iihistograms[DB_GW1_MAXNAME + 1];
 	char	iitables[DB_GW1_MAXNAME + 1];
@@ -4231,8 +4230,8 @@ OPQ_GLOBAL  *g)
 # define OPQ_CQRY2 "select cap_capability, cap_value from iidbcapabilities"
 
     exec sql begin declare section;
-	char	es_cap[DB_GW1_MAXNAME + 1];
-	char	es_val[DB_GW1_MAXNAME + 1];
+	char	es_cap[DB_CAP_MAXLEN + 1];
+	char	es_val[DB_CAPVAL_MAXLEN + 1];
 	char    stmt[sizeof(OPQ_CQRY2)+ 1];
 	char    es_tblstats[9];
     exec sql end declare section;
@@ -4557,7 +4556,7 @@ OPQ_ALIST 	*attrp)
     ADI_DT_NAME typename;
     DB_DT_ID 	datatype;
 
-    STmove(es_type, EOS, DB_MAXNAME, typename.adi_dtname);
+    STmove(es_type, EOS, DB_TYPE_MAXLEN, typename.adi_dtname);
     
     status = adi_tyid(adfcb, &typename, &datatype);
     
@@ -4693,13 +4692,13 @@ bool		statdump)
     i4		i;
     bool	overrun = FALSE;
     bool	exclude = (ex_rellst != NULL);
-    OPQ_NAME    trelname;
-    OPQ_NAME	townname;
+    DB_TAB_STR	trelname;
+    DB_OWN_STR  townname;
 
     es_ownr = (char *)&g->opq_owner;
     es_dba = (char *)&g->opq_dba;
-    es_ownname = (char *)&townname.nametype.ownname;
-    es_relname = (char *)&trelname.nametype.tabname;
+    es_ownname = (char *)&townname;
+    es_relname = (char *)&trelname;
 
     if (g->opq_cats)
     {
@@ -4762,11 +4761,11 @@ bool		statdump)
 	    for (i = 0, exclude = FALSE; !exclude && ex_rellst[i]; i++)
 	    {
 		OPQ_RLIST   *rp;
-		OPQ_NAME	tabname;
-		OPQ_NAME	ownname;
+		DB_TAB_STR	tabname;
+		DB_OWN_STR	ownname;
 		rp = ex_rellst[i];
-		tabname.nullchar = 0;
-		ownname.nullchar = 0;
+		tabname[DB_TAB_MAXNAME] = 0;
+		ownname[DB_OWN_MAXNAME] = 0;
 		MEcopy(es_relname, sizeof(DB_TAB_NAME), (char *)&tabname);
 		MEcopy(es_ownname, sizeof(DB_OWN_NAME), (char *)&ownname);
 		(VOID) STtrmwhite((char *) &tabname);
@@ -4807,7 +4806,7 @@ bool		statdump)
 		/* Unnormalize table name, put result in rp->delimname */
 		opq_idunorm((char *)&rp->relname, (char *)&rp->delimname);
 		STcopy((char *) &rp->delimname, (char *)&rp->argname);
-		rp->samplename.nametype.tabname.db_tab_name[0] = EOS;
+		rp->samplename[0] = EOS;
 		STcopy((char *) &townname, (char *)&rp->ownname);
 		rp->nsample = (i4)0;
 		rp->reltid  = es_reltid;

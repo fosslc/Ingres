@@ -590,10 +590,11 @@
 **          Add DB_STATVERS_6DBV1000 for 10.0 release. 
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Add DB_PG_V6, DB_PG_V7
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 #define                 DB_OLDMAXNAME   24
-#define			DB_OLDMAXNAME_32    32
 
 #define			DB_NDINGRES_NAME    "ingres                          "
 #define                 DB_INGRES_NAME	    "$ingres                         "
@@ -665,7 +666,7 @@
 #define	DB_DIST_DEADLOCK_THREAD " <CSP Deadlock Thread>"
 #define	DB_GLC_SUPPORT_THREAD   " <GLC Support Thread>"
 
-#define	DB_SYN_MAXNAME  32  /* for synonyms */
+#define	DB_SYN_MAXNAME  DB_MAXNAME  /* for synonyms */
 #define DB_MAX_CACHE     6  /* Max # buffer caches */
 			    /* One for each page size */
 #define DB_MIN_PAGESIZE  2048L  /* Min page size available */
@@ -725,7 +726,7 @@ typedef struct _DB_SYNNAME
 */
 typedef struct _DB_SYNOWN
 {
-    char        db_syn_own[DB_SYN_MAXNAME];
+    char        db_syn_own[DB_OWN_MAXNAME];
 } DB_SYNOWN;
 
 /*}
@@ -740,8 +741,23 @@ typedef struct _DB_SYNOWN
 */
 typedef struct _DB_OWN_NAME
 {
-    char            db_own_name[DB_MAXNAME];    /* Owner login name */
+    char            db_own_name[DB_OWN_MAXNAME];    /* Owner login name */
 } DB_OWN_NAME;
+
+/*}
+** Name: DB_EVENT_NAME - Event name
+**
+** Description:
+**      This structure defines an event name.
+**
+** History:
+**     xx-mar-2010 (stial01)
+**          written
+*/
+typedef struct _DB_EVENT_NAME
+{
+    char            db_ev_name[DB_EVENT_MAXNAME];    /* Event name */
+} DB_EVENT_NAME;
 
 /*}
 ** Name: DB_PASSWORD - Ingres Password 
@@ -773,7 +789,7 @@ typedef struct _DB_PASSWORD
 */
 typedef struct _DB_LOC_NAME
 {
-    char            db_loc_name[DB_MAXNAME];    /* location id */
+    char            db_loc_name[DB_LOC_MAXNAME];    /* location id */
 }  DB_LOC_NAME;
 
 /*}
@@ -840,7 +856,7 @@ typedef struct
 */
 typedef struct _DB_DB_NAME
 {
-    char            db_db_name[DB_MAXNAME];      /* database name */
+    char            db_db_name[DB_DB_MAXNAME];      /* database name */
 } DB_DB_NAME;
 
 /*}
@@ -878,7 +894,7 @@ typedef struct _DB_DB_OWNER
 */
 typedef struct _DB_ALERT_NAME
 {
-    DB_NAME	dba_alert;		/* Name of the alert/event */
+    DB_EVENT_NAME dba_alert;		/* Name of the alert/event */
     DB_OWN_NAME	dba_owner;		/* Owner of the alert/event */
     DB_DB_NAME	dba_dbname;		/* Database of the alert/event */
 } DB_ALERT_NAME;
@@ -994,7 +1010,7 @@ typedef struct _DB_ALERT_NAME
 */
 typedef struct _DB_DBP_NAME
 {
-    char            db_dbp_name[DB_MAXNAME];    /* procedure name */
+    char            db_dbp_name[DB_DBP_MAXNAME];    /* procedure name */
 } DB_DBP_NAME;
 
 /*}
@@ -1024,7 +1040,7 @@ typedef struct _DB_AREANAME
 */
 typedef struct _DB_PARM_NAME
 {
-    char            db_parm_name[DB_MAXNAME];    /* db proc parm name */
+    char            db_parm_name[DB_PARM_MAXNAME];    /* db proc parm name */
 } DB_PARM_NAME;
 
 
@@ -1040,7 +1056,7 @@ typedef struct _DB_PARM_NAME
 */
 typedef struct _DB_TAB_NAME
 {
-    char            db_tab_name[DB_MAXNAME];    /* table name */
+    char            db_tab_name[DB_TAB_MAXNAME];    /* table name */
 } DB_TAB_NAME;
 
 /*}
@@ -1212,7 +1228,7 @@ typedef i4  DB_DISTRIB;
 */
 typedef struct _DB_RPT_NAME
 {
-    char            db_tab_name[DB_MAXNAME]; /* Repeat query name */
+    char            db_tab_name[DB_TAB_MAXNAME]; /* Repeat query name */
 }   DB_RPT_NAME;
 
 #endif /* NOT_NEEDED */
@@ -1275,7 +1291,7 @@ typedef struct _DB_TREE_ID
 */
 typedef struct _DB_CONSTRAINT_NAME
 {
-    char	db_constraint_name[ DB_MAXNAME ];
+    char	db_constraint_name[ DB_CONS_MAXNAME ];
 }   DB_CONSTRAINT_NAME;
 
 
@@ -1971,7 +1987,7 @@ typedef struct _DB_APPLICATION_ID
 */
 typedef struct _DB_PRIVILEGES
 {
-	DB_OWN_NAME	    dbpr_database;	/* Database name:
+	DB_DB_NAME	    dbpr_database;	/* Database name:
 						** blank for installation
 						** default
 						*/
@@ -2211,7 +2227,7 @@ typedef struct _DB_IIRULEIDX1
 */
 typedef struct _DB_IIEVENT
 {
-    DB_NAME	dbe_name;		/* Name of the event */
+    DB_EVENT_NAME dbe_name;		/* Name of the event */
     DB_OWN_NAME	dbe_owner;		/* Owner of the event */
     DB_DATE	dbe_create;		/* Date when this event was created */
     i4		dbe_type;		/* Detailed type of this event */
@@ -2281,6 +2297,7 @@ typedef struct _DB_IISEQUENCE
 	char	decval[DB_IISEQUENCE_DECLEN];		/* decimal sequence value */
 	i8	intval;			/* integer sequence value */
     } dbs_incr;
+# define R_RAAT
     struct {				/* Next value of sequence */
 	char	decval[DB_IISEQUENCE_DECLEN];		/* decimal sequence value */
 	i8	intval;			/* integer sequence value */
@@ -2821,6 +2838,14 @@ typedef struct _DB_IIPARTNAME {
 
 /* Table id follows */
 #define			DB_TBL_ID	14
+
+/*
+** Cursor Name
+** There are assumptions in cursor related code that
+** DB_CURSOR_MAXNAME = DB_TAB_MAXNAME = DB_DBP_MAXNAME (e.g. psqrecr.c)
+*/
+#define    DB_CURSOR_MAXNAME    DB_DBP_MAXNAME /* cursor name */
+
 
 /*}
 ** Name: DB_CURSOR_ID - A cursor id
@@ -2829,6 +2854,14 @@ typedef struct _DB_IIPARTNAME {
 **      A cursor id is a timestamp assigned to a cursor by a pre-processor.
 **	It also contains the cursor name, for error reporting purposes.
 **
+** DB_CURSOR_ID is used to build a qso_name
+** There is code that assumes that a DB_CURSOR_ID is (i4+i4+NAME)
+** For example, qso_hash assumes that the name be right after 2*sizeof(i4)
+**
+** Code that builds a qso_name will copy sizeof(DB_CURSOR_ID) into qso_name.
+** If there are any compiler added PAD bytes they must be EXPLICITYLY defined
+** AFTER the name, and they must be initialized before copying into a qso_name.
+**
 ** History:
 **     18-may-86 (jeff)
 **          written
@@ -2836,8 +2869,19 @@ typedef struct _DB_IIPARTNAME {
 typedef struct _DB_CURSOR_ID
 {
     i4              db_cursor_id[2];		/* A timestamp is 2 i4s */
-    char	    db_cur_name[DB_MAXNAME];	/* Name of the cursor */
+    char	    db_cur_name[DB_CURSOR_MAXNAME]; /* Name of the cursor */
 }   DB_CURSOR_ID;
+
+/*
+** DB_CURSOR_ID: name MUST be right after db_cursor_id
+** DB_CURSOR_ID: compiler added pad bytes MUST be explicitly defined 
+** pad bytes added MUST be init whenever db_cursor_id is init.
+** If you change this, you must change all the code that is building 
+** qso_names
+*/
+#define DB_CURSOR_ID_OFFSET  ( CL_OFFSETOF( DB_CURSOR_ID, db_cursor_id ) )
+#define DB_CUR_NAME_OFFSET  ( CL_OFFSETOF( DB_CURSOR_ID, db_cur_name ) )
+
 
 /*}
 ** Name: DB_STAT_VERSION - statistics version as stored in iistatistics
@@ -3692,7 +3736,7 @@ typedef struct _DB_SHR_RPTQRY_INFO
 */
 typedef struct _DB_SCHEMA_NAME
 {
-  char          db_schema_name[DB_MAXNAME];     /* schema name */
+  char          db_schema_name[DB_SCHEMA_MAXNAME];     /* schema name */
 } DB_SCHEMA_NAME;
 
 /*}
@@ -3768,7 +3812,7 @@ typedef struct _DB_IIREL_IDX
 typedef struct _DB_SECALARM
 {
     
-    DB_NAME	    dba_alarmname;	/* Name of alarm */
+    DB_EVENT_NAME   dba_alarmname;	/* Name of alarm */
     i4		    dba_alarmno;	/* Number of alarm */
     DB_TAB_ID       dba_objid;          /* Object id (if table etc)*/
     DB_NAME	    dba_objname;	/* Object name */
@@ -3779,7 +3823,6 @@ typedef struct _DB_SECALARM
 #define	    DBA_DBEVENT			0x001  /* Alarm has event info */
 #define	    DBA_DBEVTEXT		0x002  /* Alarm has event text */
 #define	    DBA_ALL_DBS			0x004  /* Alarm on all dbs     */
-
     DB_QRY_ID	    dba_txtid;		/* Query text id of alarm statement */
     i4		    dba_popctl;		/* Bit map of defined   operations */
     i4		    dba_popset;		/* Bit map of permitted operations */
@@ -3829,7 +3872,7 @@ typedef struct _DB_ROLEGRANT
 #define DBRG_ADMIN_OPTION	0x01	/* WITH ADMIN OPTION */
     i2		    rgr_gtype;		/* grantee type */
     DB_OWN_NAME	    rgr_grantee;	/* grantee name */
-    char	    rgr_reserve[32];	/* Reserved			*/
+    char	    rgr_reserve[34];	/* Reserved			*/
 }   DB_ROLEGRANT;
 
 /*
@@ -3865,13 +3908,11 @@ typedef struct _DB_IIINDEX
 **	06-jan-09 (stial01)
 **          created
 */
-#define DB_CAPNAME 32
-#define DB_CAPVAL  32
 
 typedef struct _DB_DBCAPABILITIES
 {
-    char	cap_capability[DB_CAPNAME];
-    char	cap_value[DB_CAPVAL];
+    char	cap_capability[DB_CAP_MAXLEN];
+    char	cap_value[DB_CAPVAL_MAXLEN];
 } DB_DBCAPABILITIES;
 
 

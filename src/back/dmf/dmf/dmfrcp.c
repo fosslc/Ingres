@@ -400,6 +400,8 @@
 **          Fixes for II_DMFRCP_PROMPT_ON_INCONS_DB / Db_incons_prompt
 **      15-jun-2009 (stial01)
 **          Changes for Redo/undo error handling
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -812,8 +814,9 @@ dmr_rcp_init(LG_LGID	*recovery_log_id)
 
 	/* Add. */
 
-	STmove((PTR)DB_RECOVERY_INFO, ' ', DB_MAXNAME, (PTR) &add_info.ad_dbname);
-	MEcopy((PTR)DB_INGRES_NAME, DB_MAXNAME, (PTR) &add_info.ad_dbowner);
+	STmove((PTR)DB_RECOVERY_INFO, ' ', DB_DB_MAXNAME,
+			(PTR) &add_info.ad_dbname);
+	MEcopy((PTR)DB_INGRES_NAME, DB_OWN_MAXNAME, (PTR) &add_info.ad_dbowner);
 	MEcopy((PTR)"None", 4, (PTR) &add_info.ad_root);
 	add_info.ad_dbid = 0;
 	add_info.ad_l_root = 4;

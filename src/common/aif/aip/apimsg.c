@@ -84,6 +84,8 @@
 **	    Use intermediate storage when copying GCA four byte integers
 **	    into API two byte values.  Fix protocol level for database
 **	    procedure output parameters.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 
@@ -3342,7 +3344,7 @@ IIapi_createMsgFetch( IIAPI_HNDL *handle, GCA_ID *gca_id, i2 rowCount )
 	    id.gca_index[0] = gca_id->gca_index[0];
 	    id.gca_index[1] = gca_id->gca_index[1];
 	    MEcopy( gca_id->gca_name, GCA_MAXNAME, id.gca_name );
-	    CVna( (i4)rowCount, &id.gca_name[ DB_GW1_MAXNAME ] );
+	    CVna( (i4)rowCount, &id.gca_name[ DB_GW1_MAXNAME_32 ] );
 
 	    formatGCAId( msgBuff, &id );
 	}

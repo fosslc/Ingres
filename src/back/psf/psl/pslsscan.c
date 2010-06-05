@@ -501,6 +501,8 @@
 **	18-Mar-2010 (kiria01) b123438
 **	    Avoid editing the sorted token list directly. See
 **	    pslscanprep.awk.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -3508,7 +3510,7 @@ digits:
 			    db_cursid->db_cursor_id[1]);
 			db_val = pss_cb->pss_qrydata[++dval_num];
 			MEmove(db_val->db_length, db_val->db_data, ' ',
-			    DB_MAXNAME, (PTR) db_cursid->db_cur_name);
+			    DB_CURSOR_MAXNAME, (PTR) db_cursid->db_cur_name);
 			dval_num++;
 			ret_val = QUERYID;
 		    }

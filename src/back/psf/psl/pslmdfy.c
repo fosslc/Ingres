@@ -188,6 +188,8 @@
 **	    In psl_md3_modstorage change DMU char to the with-option
 **	    form of unique_scope to facilitate distinguishing catalog
 **	    only modifies from table structure changes.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 */
 
@@ -1559,7 +1561,7 @@ psl_md5_modkeys(
 
 	    (VOID) psf_error(2179L, 0L, PSF_USERERR, &err_code, err_blk, 2,
 		sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-		psf_trmwhite(DB_MAXNAME, (char *) &(*key)->key_attr_name),
+		psf_trmwhite(DB_ATT_MAXNAME, (char *) &(*key)->key_attr_name),
 		&(*key)->key_attr_name);
 	    return (E_DB_ERROR);
 	}
@@ -1812,7 +1814,7 @@ psl_md7_modkeyname(
     {
 	(VOID) psf_error(2179L, 0L, PSF_USERERR, &err_code, err_blk, 2,
 	    sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-	    psf_trmwhite(DB_MAXNAME, (char *) &attname), &attname);
+	    psf_trmwhite(DB_ATT_MAXNAME, (char *) &attname), &attname);
 	return (status);
     }
 
@@ -2674,7 +2676,7 @@ static DB_STATUS
 psl_md_reconstruct(PSS_SESBLK *sess_cb, DMU_CB *dmucb,
 	PSS_YYVARS *yyvarsp, DB_ERROR *err_blk)
 {
-    char colname[DB_MAXNAME+1];		/* Possible "tidp" */
+    char colname[DB_ATT_MAXNAME+1];	/* Possible "tidp" */
     DB_STATUS status;			/* Called routine status */
     DMT_ATT_ENTRY **table_atts;		/* Table's attribute pointer array */
     DMT_TBL_ENTRY *tblinfo;		/* Table information area */
@@ -2743,9 +2745,8 @@ psl_md_reconstruct(PSS_SESBLK *sess_cb, DMU_CB *dmucb,
 	    ** an add-on, if we include it here DMF complains.
 	    */
 	    MEcopy(&(table_atts[keycol_ptr[keycount-1]])->att_name,
-		DB_MAXNAME,
-		&colname[0]);
-	    colname[DB_MAXNAME] = '\0';
+		DB_ATT_MAXNAME, &colname[0]);
+	    colname[DB_ATT_MAXNAME] = '\0';
 	    STtrmwhite(colname);
 	    if (STcasecmp(colname,"tidp") == 0)
 		-- keycount;

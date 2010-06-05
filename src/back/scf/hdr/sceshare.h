@@ -38,6 +38,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -47,7 +49,7 @@
 */
 #define	    SCEV_NAME_MAX	sizeof(DB_ALERT_NAME)
 
-#define	    SCEV_BLOCK_MAX 	640
+#define	    SCEV_BLOCK_MAX	(640 + DB_EVENT_MAXNAME) /* max event data */
 
 /*}
 ** Name: SCEV_EVENT - For communicating with the cross-server event subsystem.

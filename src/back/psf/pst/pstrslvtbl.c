@@ -70,6 +70,8 @@
 **	    psf_malloc(), psf_mclose(), psf_mroot(), psf_mchtyp().
 **	    Changed psf_sesscb() prototype to return PSS_SESBLK* instead
 **	    of DB_STATUS.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 */
 
@@ -184,17 +186,17 @@ pst_resolve_table(
     
     /*
     ** if obj_owner or obj_name or out is NULL, or
-    **    length of object name not in [1, DB_MAXNAME], or
-    **	  length of owner name not in [0, DB_MAXNAME],
+    **    length of object name not in [1, DB_TAB_MAXNAME], or
+    **	  length of owner name not in [0, DB_OWN_MAXNAME],
     **	just return error
     **  Don't need to test count < 0, it's unsigned.
     */
     if (   obj_owner		    == (DB_TEXT_STRING *) NULL
         || obj_name		    == (DB_TEXT_STRING *) NULL
 	|| out			    == (DB_TEXT_STRING *) NULL
-	|| obj_owner->db_t_count    >  DB_MAXNAME
+	|| obj_owner->db_t_count    >  DB_OWN_MAXNAME
 	|| obj_name->db_t_count     <  1
-	|| obj_name->db_t_count     >  DB_MAXNAME
+	|| obj_name->db_t_count     >  DB_TAB_MAXNAME
        )
     {
 	status = E_DB_ERROR;

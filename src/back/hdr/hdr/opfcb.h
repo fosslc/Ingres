@@ -164,6 +164,8 @@
 **	    Add .opf_inlist_thresh for control of eq keys on large inlists.
 **	01-Feb-2010 (maspa05) b123140
 **	    Added E_OP0994 error for multiple -r flags on optimizedb/statdump
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*}
@@ -671,7 +673,7 @@ typedef struct _OPF_CB
 					** database, only required for session
 					** startup, ptr will be saved in OPF's
                                         ** session control block */
-    DD_NAME	    *opf_ddbsite;       /* this is the node name for the
+    DD_NODE_NAME    *opf_ddbsite;       /* this is the node name for the
 					** distributed server, which may be
 					** different from that in
 					** opf_coordinator, this is the

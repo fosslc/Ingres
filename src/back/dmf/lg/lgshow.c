@@ -239,6 +239,8 @@ NO_OPTIM = r64_us5
 **      28-Jan-2010 (ashco01) Bug 122492
 **          Setup lpbb_table & lpb in LG_S_COMMIT_WILLING and LG_S_ROLLBACK_WILLING
 **          cases also. 
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs, db_buffer holds (dbname, owner.. )
 */
 
 /*
@@ -3402,9 +3404,9 @@ LG_debug_wacky_ldb_found(LGD *lgd, LDB *wacky_ldb)
     {
 	TRdisplay("   ID=%x DB=%x (%~t,%~t,%t)\n",
 		wacky_ldb->ldb_id, wacky_ldb->ldb_database_id,
-		DB_MAXNAME, &wacky_ldb->ldb_buffer[0],
-		DB_MAXNAME, &wacky_ldb->ldb_buffer[DB_MAXNAME],
-		50, &wacky_ldb->ldb_buffer[DB_MAXNAME + DB_MAXNAME + 8]);
+		DB_DB_MAXNAME, &wacky_ldb->ldb_buffer[0],
+		DB_OWN_MAXNAME, &wacky_ldb->ldb_buffer[DB_DB_MAXNAME],
+		50, &wacky_ldb->ldb_buffer[DB_DB_MAXNAME + DB_OWN_MAXNAME + 8]);
 	TRdisplay("   Status: (%x) %v\n",
 		wacky_ldb->ldb_status,
 "ACTIVE,JOURNAL,INVALID,NOTDB,PURGE,OPEN_DB_PEND,CLOSE_DB_PEND,RECOVER,\
@@ -3447,9 +3449,9 @@ TRdisplay("Now we'll walk the ldb list:\n");
 
 	TRdisplay("   ID=%x DB=%x (%~t,%~t,%t)\n",
 		ldb->ldb_id, ldb->ldb_database_id,
-		DB_MAXNAME, &ldb->ldb_buffer[0],
-		DB_MAXNAME, &ldb->ldb_buffer[DB_MAXNAME],
-		50, &ldb->ldb_buffer[DB_MAXNAME + DB_MAXNAME + 8]);
+		DB_DB_MAXNAME, &ldb->ldb_buffer[0],
+		DB_OWN_MAXNAME, &ldb->ldb_buffer[DB_DB_MAXNAME],
+		50, &ldb->ldb_buffer[DB_DB_MAXNAME + DB_OWN_MAXNAME + 8]);
 	TRdisplay("   Status: (%x) %v\n",
 		ldb->ldb_status,
 "ACTIVE,JOURNAL,INVALID,NOTDB,PURGE,OPEN_DB_PEND,CLOSE_DB_PEND,RECOVER,\
@@ -3469,9 +3471,9 @@ TRdisplay("And, finally, we'll walk the ldbb table:\n");
 	    TRdisplay(" Block %d is an LDB: \n", i);
 	    TRdisplay("   ID=%x DB=%x (%~t,%~t,%t)\n",
 		ldb->ldb_id, ldb->ldb_database_id,
-		DB_MAXNAME, &ldb->ldb_buffer[0],
-		DB_MAXNAME, &ldb->ldb_buffer[DB_MAXNAME],
-		50, &ldb->ldb_buffer[DB_MAXNAME + DB_MAXNAME + 8]);
+		DB_DB_MAXNAME, &ldb->ldb_buffer[0],
+		DB_OWN_MAXNAME, &ldb->ldb_buffer[DB_DB_MAXNAME],
+		50, &ldb->ldb_buffer[DB_DB_MAXNAME + DB_OWN_MAXNAME + 8]);
 	    TRdisplay("   Status: (%x) %v\n",
 		ldb->ldb_status,
 "ACTIVE,JOURNAL,INVALID,NOTDB,PURGE,OPEN_DB_PEND,CLOSE_DB_PEND,RECOVER,\

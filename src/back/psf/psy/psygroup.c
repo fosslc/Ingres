@@ -99,6 +99,8 @@
 **	    Supply session id to SCF instead of DB_NOSESSION.
 **	17-Jan-2001 (jenjo02)
 **	    Short-circuit calls to psy_secaudit() if not C2SECURE.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -173,7 +175,7 @@ psy_group(
 {
     DB_STATUS		status = E_DB_OK;
     i4		err_code;
-    char		dbname[DB_MAXNAME];
+    char		dbname[DB_DB_MAXNAME];
     SCF_CB		scf_cb;
     SCF_SCI		sci_list[1];
     bool		leave_loop = TRUE;

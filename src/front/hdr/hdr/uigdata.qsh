@@ -33,6 +33,8 @@
 **	    replace nat and longnat with i4
 **      28-jan-2009 (stial01)
 **          Use DB_MAXNAME for database objects.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 #ifndef UIGDATA_INCLUDE
@@ -93,12 +95,12 @@ EXEC SQL BEGIN EXCLUDE SECTION;
 	bool	connected;		/* Whether connect to DB */
 EXEC SQL END EXCLUDE SECTION;
 
-##	char	dba[DB_MAXNAME+1];	/* DBA's name */
-##	char	user[DB_MAXNAME+1];	/* user's name */
-## 	char	sdba[DB_MAXNAME+1];	/* DBA's name  (as in iidbconstants) */
-##	char	suser[DB_MAXNAME+1];	/* user's name (as in iidbconstants) */
+##	char	dba[DB_OWN_MAXNAME+1];	/* DBA's name */
+##	char	user[DB_OWN_MAXNAME+1];	/* user's name */
+## 	char	sdba[DB_OWN_MAXNAME+1];	/* DBA's name  (as in iidbconstants) */
+##	char	suser[DB_OWN_MAXNAME+1];/* user's name (as in iidbconstants) */
 ##	char  	database[FE_MAXDBNM+1];	/* Database name */
-##	char  	catowner[DB_MAXNAME+1];	/* Owner of system catalogs */
+##	char  	catowner[DB_OWN_MAXNAME+1];	/* Owner of system catalogs */
 ##	char	ingsql_level[VER_SIZE+1];	/* INGRES SQL Level */
 ##	char	opensql_level[VER_SIZE+1];	/* Open/SQL Level */
 ##	char	catalog_level[VER_SIZE+1];	/* Standard Catalog Level */

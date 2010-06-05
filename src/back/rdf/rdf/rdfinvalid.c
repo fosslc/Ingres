@@ -107,6 +107,8 @@
 **          that the caller can not continue to reference freed memory.
 **	19-Aug-2009 (kschendel) 121804
 **	    Need cx.h for proper CX declarations (gcc 4.3).
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /* forward declaration */
@@ -178,8 +180,8 @@ static DB_STATUS name_invalidate(
 **		    tree_type (i4 - DB_PROTECT, DB_INTG)
 **		    database id (i4)
 **		b) to specify a rule:
-**		    rule name   (DB_MAXNAME)
-**		    rule owner  (DB_MAXNAME)
+**		    rule name   (DB_RULE_MAXNAME)
+**		    rule owner  (DB_OWN_MAXNAME)
 **		    database id (i4)
 **		To use this option, the rdf_cb.rdf_info_blk must be set to NULL
 **		and the RDR2_ALIAS bit must be set in rdf_rb.rdr_2types_mask,
@@ -1400,8 +1402,8 @@ rdf_inv_alert( RDR_RB *rdr_rb )
     scf_cb.scf_ptr_union.scf_alert_parms = &scfa;
  
     MEfill(sizeof(DB_ALERT_NAME), 0, &aname.dba_alert);
-    STmove( RDF_INV_ALERT_NAME, ' ', sizeof(DB_NAME), 
-	    aname.dba_alert.db_name );
+    STmove(RDF_INV_ALERT_NAME, ' ', 
+	DB_EVENT_MAXNAME, aname.dba_alert.db_ev_name);
     scfa.scfa_name = &aname;
     scfa.scfa_text_length = RDF_SCE_DATASIZE;
     PCpid(&pid);

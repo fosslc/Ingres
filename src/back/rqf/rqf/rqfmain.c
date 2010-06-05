@@ -286,6 +286,8 @@
 **          Fix buffers that are dependent on DB_MAXNAME
 **	10-Mar-2009 (kiria01) SIR 121665
 **	    Update GCA API to LEVEL 5
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 GLOBALREF	RQF_CB	*Rqf_facility;
@@ -1937,7 +1939,7 @@ rqf_continue(
 	assoc->rql_described = FALSE;
 
 	status = rqu_put_qtxt(assoc, GCA_QUERY, rcb->rqr_q_language, qmodifier, 
-			(DD_PACKET *)dc->sdc_client_msg, (DD_NAME *)NULL);
+			(DD_PACKET *)dc->sdc_client_msg, (DD_TAB_NAME *)NULL);
 	if (status == E_RQ0000_OK)
 	    status = rqu_putflush(assoc, TRUE);
 
@@ -3039,12 +3041,12 @@ rqf_transfer(
     QEQ_D1_QRY	    *create_q	= &qeq_xfr->qeq_x2_temp;
     DB_ERRTYPE	    status;
     GCA_AK_DATA	    *ack;
-    DD_NAME	    *table_name;
+    DD_TAB_NAME	    *table_name;
     RQR_CB	    rqr_block;
     RQR_CB	    *dest_cb	= &rqr_block;
     i4		    reply, reply_type;
     GCA_TD_DATA     *td_data	= (GCA_TD_DATA *)NULL;
-    DD_NAME	    tmp_table;
+    DD_TAB_NAME	    tmp_table;
     RQS_CB	    *rqs = (RQS_CB *)src_cb->rqr_session;
     ULM_RCB 	    ulm;
 
@@ -3128,13 +3130,13 @@ rqf_transfer(
 	MEcopy((PTR)table_name, sizeof(tmp_table), tmp_table); 
 	/*
 	** QEF produces a table name from a timestamp, it is 
-	** always less that DB_MAXNAME, we can safely terminate.
+	** always less than sizeof DD_TAB_NAME, we can safely terminate.
 	*/
-	tmp_table[DB_MAXNAME - 1] = EOS;
+	tmp_table[DB_TAB_MAXNAME - 1] = EOS;
 	status = rqu_create_tmp(src_assoc, dest_assoc,
 				dest_cb->rqr_q_language,
 				create_q->qeq_q7_col_pp,
-				(DD_NAME *)tmp_table,
+				(DD_TAB_NAME *)tmp_table,
 				create_q->qeq_q14_page_size);
     }
 
@@ -3159,10 +3161,11 @@ rqf_transfer(
     ** execute destination "copy from" query 
     */
     {
-	char	copy_qry[100 + sizeof(DD_NAME)];
+	char	copy_qry[100 + sizeof(DD_TAB_NAME)];
 	char	format[80];
 
-	STprintf(format,"copy table %%.%ds () from 'IISTAR';", sizeof(DD_NAME));
+	STprintf(format,"copy table %%.%ds () from 'IISTAR';", 
+		sizeof(DD_TAB_NAME));
 	STprintf(copy_qry, format, tmp_table);
 	dest_cb->rqr_dv_cnt = 0;
 	dest_cb->rqr_msg.dd_p1_len = (i4)STlength(copy_qry);

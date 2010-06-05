@@ -85,6 +85,8 @@
 **	    replace nat and longnat with i4
 **	24-feb-04 (inkdo01)
 **	    Change dsh_ddb_cb to ptr rather than instance.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 GLOBALREF   char	IIQE_61_qefsess[];	/* string "QEF session" */
@@ -195,13 +197,12 @@ qee_p1_dsh_gen(
     DB_STATUS	    status = E_DB_OK;
     QEF_QP_CB	    *qp_p = i_dsh_p->dsh_qp_ptr;    /* debugging aid */
     QEE_DDB_CB	    *dde_p = i_dsh_p->dsh_ddb_cb;
-    char	    qryname[DB_MAXNAME + 1];
+    char	    cur_name[DB_CURSOR_MAXNAME + 1];
     char	    *cbuf = v_qer_p->qef_cb->qef_trfmt;
     i4		    cbufsize = v_qer_p->qef_cb->qef_trsize;
 
 
-    qed_u0_trimtail(i_dsh_p->dsh_qp_id.db_cur_name, (u_i4) DB_MAXNAME,
-	qryname);
+    qed_u0_trimtail(i_dsh_p->dsh_qp_id.db_cur_name, DB_CURSOR_MAXNAME, cur_name);
 
     STprintf(cbuf, 
 	"%s %p: ...    query id: %x %x %s\n",
@@ -209,7 +210,7 @@ qee_p1_dsh_gen(
 	(PTR) v_qer_p->qef_cb,
 	i_dsh_p->dsh_qp_id.db_cursor_id[0],
 	i_dsh_p->dsh_qp_id.db_cursor_id[1],
-	qryname);
+	cur_name);
     qec_tprintf(v_qer_p, cbufsize, cbuf);
 
     if (i_dsh_p->dsh_qp_status & DSH_QP_LOCKED)
@@ -287,10 +288,11 @@ qee_p2_dsh_ddb(
     QEF_QP_CB	    *qp_p = i_dsh_p->dsh_qp_ptr;    /* debugging aid */
     QEQ_DDQ_CB	    *ddq_p = & qp_p->qp_ddq_cb;
     QEE_DDB_CB	    *dde_p = i_dsh_p->dsh_ddb_cb;
-    DD_NAME	    *tmptbl_p = (DD_NAME *) NULL;
+    DD_TAB_NAME	    *tmptbl_p = (DD_TAB_NAME *) NULL;
     i4	    *sts_p = (i4 *) NULL;
     i4		    i;
-    char	    namebuf[DB_MAXNAME + 1];
+    char	    namebuf[DB_TAB_MAXNAME + 1];
+    char	    cur_name[DB_CURSOR_MAXNAME + 1];
     char	    *cbuf = v_qer_p->qef_cb->qef_trfmt;
     i4		    cbufsize = v_qer_p->qef_cb->qef_trsize;
 
@@ -336,7 +338,7 @@ qee_p2_dsh_ddb(
 		i++, tmptbl_p++, sts_p++)
 	    if (*sts_p & QEE_01M_CREATED)
 	    {
-		qed_u0_trimtail((char *) tmptbl_p, (u_i4) DB_MAXNAME, namebuf);
+		qed_u0_trimtail((char *) tmptbl_p, DB_TAB_MAXNAME, namebuf);
 		STprintf(cbuf, 
 		    "%s %p: ...     %d) %s\n",
 		    IIQE_61_qefsess,
@@ -407,9 +409,8 @@ qee_p2_dsh_ddb(
     {
 	/* null-terminate name part for printing */
 
-	qed_u0_trimtail(dde_p->qee_d4_given_qid.db_cur_name, 
-	    (u_i4) DB_MAXNAME,
-	    namebuf);
+	qed_u0_trimtail( dde_p->qee_d4_given_qid.db_cur_name, DB_CURSOR_MAXNAME,
+	    cur_name);
 
 	STprintf(cbuf, 
 	    "%s %p: ...     DDB query id: %x %x %s\n",
@@ -417,7 +418,7 @@ qee_p2_dsh_ddb(
 	    (PTR) v_qer_p->qef_cb,
 	    dde_p->qee_d4_given_qid.db_cursor_id[0],
 	    dde_p->qee_d4_given_qid.db_cursor_id[1],
-	    namebuf);
+	    cur_name);
         qec_tprintf(v_qer_p, cbufsize, cbuf);
     }
 
@@ -425,9 +426,8 @@ qee_p2_dsh_ddb(
     {
 	/* null-terminate name part for printing */
 
-	qed_u0_trimtail(dde_p->qee_d5_local_qid.db_cur_name, 
-	    (u_i4) DB_MAXNAME,
-	    namebuf);
+	qed_u0_trimtail( dde_p->qee_d5_local_qid.db_cur_name, DB_CURSOR_MAXNAME,
+	    cur_name);
 
 	STprintf(cbuf, 
 	    "%s %p: ...     LDB (sub)query id: %x %x %s\n",
@@ -435,7 +435,7 @@ qee_p2_dsh_ddb(
 	    (PTR) v_qer_p->qef_cb,
 	    dde_p->qee_d5_local_qid.db_cursor_id[0],
 	    dde_p->qee_d5_local_qid.db_cursor_id[1],
-	    namebuf);
+	    cur_name);
         qec_tprintf(v_qer_p, cbufsize, cbuf);
     }
 
@@ -535,7 +535,7 @@ qee_p3_qry_id(
 */
     QEE_DDB_CB      *qee_p = i_dsh_p->dsh_ddb_cb;
     DB_CURSOR_ID    *qid_p = & qee_p->qee_d4_given_qid;
-    char	    cur_name[DB_MAXNAME + 1];
+    char	    cur_name[DB_CURSOR_MAXNAME + 1];
     char	    *cbuf = v_qer_p->qef_cb->qef_trfmt;
     i4		    cbufsize = v_qer_p->qef_cb->qef_trsize;
 
@@ -560,7 +560,7 @@ qee_p3_qry_id(
 	qid_p->db_cursor_id[1]);
     qec_tprintf(v_qer_p, cbufsize, cbuf);
 
-    qed_u0_trimtail(qid_p->db_cur_name, (u_i4) DB_MAXNAME, cur_name);
+    qed_u0_trimtail(qid_p->db_cur_name, DB_CURSOR_MAXNAME, cur_name);
 
     STprintf(cbuf, 
 	"%s %p: ...   3) DB_CUR_NAME     %s\n",
@@ -617,7 +617,7 @@ qee_p4_ldb_qid(
 */
     QEE_DDB_CB      *qee_p = i_dsh_p->dsh_ddb_cb;
     DB_CURSOR_ID    *ldb_qid_p = & qee_p->qee_d5_local_qid;
-    char	    cur_name[DB_MAXNAME + 1];
+    char	    cur_name[DB_CURSOR_MAXNAME + 1];
     char	    *cbuf = v_qer_p->qef_cb->qef_trfmt;
     i4		    cbufsize = v_qer_p->qef_cb->qef_trsize;
 
@@ -642,7 +642,7 @@ qee_p4_ldb_qid(
 	ldb_qid_p->db_cursor_id[1]);
     qec_tprintf(v_qer_p, cbufsize, cbuf);
 
-    qed_u0_trimtail(ldb_qid_p->db_cur_name, (u_i4) DB_MAXNAME, cur_name);
+    qed_u0_trimtail(ldb_qid_p->db_cur_name, DB_CURSOR_MAXNAME, cur_name);
 
     STprintf(cbuf, 
 	"%s %p: ...   3) DB_CUR_NAME     %s\n",

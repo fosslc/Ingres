@@ -90,6 +90,8 @@
 **	    Support WITH PASSWORD=X'<encrypted>'. 
 **      20-nov-2008 (stial01)
 **          psy_kaplid is using wrong size when initializing dbap_aplid
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -158,7 +160,7 @@ psy_aplid(
 {
     DB_STATUS		status;
     i4		err_code;
-    char		dbname[DB_MAXNAME];
+    char		dbname[DB_DB_MAXNAME];
     SCF_CB		scf_cb;
     SCF_SCI		sci_list[1];
     bool		leave_loop = TRUE;

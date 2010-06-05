@@ -61,6 +61,8 @@
 **	    replace nat and longnat with i4
 **	04-Oct-2001 (jenjo02)
 **	    #include tpfproto.h for typing tpd_u2_err_internal macro.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -188,10 +190,10 @@ tpq_s1_select(
 
 	    bind_p++;				/* point to next element */
     
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_DB_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) dxlog_p->d1_3_dx_name;
-	    dxlog_p->d1_3_dx_name[DB_MAXNAME] = EOS;
+	    dxlog_p->d1_3_dx_name[DB_DB_MAXNAME] = EOS;
 
 	    bind_p++;				/* point to next element */
     
@@ -233,10 +235,10 @@ tpq_s1_select(
 
 	    bind_p++;				/* point to next element */
     
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_NODE_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) dxlog_p->d1_10_dx_ddb_node;
-	    dxlog_p->d1_10_dx_ddb_node[DB_MAXNAME] = EOS;
+	    dxlog_p->d1_10_dx_ddb_node[DB_NODE_MAXNAME] = EOS;
 
 	    bind_p++;				/* point to next element */
     
@@ -247,10 +249,10 @@ tpq_s1_select(
 
 	    bind_p++;				/* point to next element */
     
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_TYPE_MAXLEN;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) dxlog_p->d1_12_dx_ddb_dbms;
-	    dxlog_p->d1_12_dx_ddb_dbms[DB_MAXNAME] = EOS;
+	    dxlog_p->d1_12_dx_ddb_dbms[DB_TYPE_MAXLEN] = EOS;
 
 	    bind_p++;				/* point to next element */
     
@@ -315,10 +317,10 @@ tpq_s1_select(
 
 	    bind_p++;				/* point to next element */
     
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_NODE_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) dxldbs_p->d2_3_ldb_node;
-	    dxldbs_p->d2_3_ldb_node[DB_MAXNAME] = EOS;
+	    dxldbs_p->d2_3_ldb_node[DB_NODE_MAXNAME] = EOS;
 
 	    bind_p++;				/* point to next element */
     
@@ -329,10 +331,10 @@ tpq_s1_select(
 
 	    bind_p++;				/* point to next element */
     
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_TYPE_MAXLEN;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) dxldbs_p->d2_5_ldb_dbms;
-	    dxldbs_p->d2_5_ldb_dbms[DB_MAXNAME] = EOS;
+	    dxldbs_p->d2_5_ldb_dbms[DB_TYPE_MAXLEN] = EOS;
 
 	    bind_p++;				/* point to next element */
     
@@ -360,10 +362,10 @@ tpq_s1_select(
 
 	    bind_p++;				/* point to next element */
     
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_DB_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) dxldbs_p->d2_10_ldb_lxname;
-	    dxldbs_p->d2_10_ldb_lxname[DB_MAXNAME] = EOS;
+	    dxldbs_p->d2_10_ldb_lxname[DB_DB_MAXNAME] = EOS;
 
 	    bind_p++;				/* point to next element */
     
@@ -416,66 +418,66 @@ tpq_s1_select(
 
 	    /* set up column types and sizes for fetching with RQF */
 
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_DB_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) starcdbs_p->i1_1_ddb_name;
-	    starcdbs_p->i1_1_ddb_name[DB_MAXNAME] = EOS;
+	    starcdbs_p->i1_1_ddb_name[DB_DB_MAXNAME] = EOS;
 
 	    bind_p++;				/* point to next element */
     
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_OWN_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) starcdbs_p->i1_2_ddb_owner;
-	    starcdbs_p->i1_2_ddb_owner[DB_MAXNAME] = EOS;
+	    starcdbs_p->i1_2_ddb_owner[DB_OWN_MAXNAME] = EOS;
 
 	    bind_p++;				/* point to next element */
     
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_DB_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) starcdbs_p->i1_3_cdb_name;
-	    starcdbs_p->i1_3_cdb_name[DB_MAXNAME] = EOS;
+	    starcdbs_p->i1_3_cdb_name[DB_DB_MAXNAME] = EOS;
 
 	    bind_p++;				/* point to next element */
     
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_OWN_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) starcdbs_p->i1_4_cdb_owner;
-	    starcdbs_p->i1_4_cdb_owner[DB_MAXNAME] = EOS;
+	    starcdbs_p->i1_4_cdb_owner[DB_OWN_MAXNAME] = EOS;
 
 	    bind_p++;				/* point to next element */
     
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_NODE_MAXNAME;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) starcdbs_p->i1_5_cdb_node;
-	    starcdbs_p->i1_5_cdb_node[DB_MAXNAME] = EOS;
+	    starcdbs_p->i1_5_cdb_node[DB_NODE_MAXNAME] = EOS;
 
 	    bind_p++;				/* point to next element */
     
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_TYPE_MAXLEN;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) starcdbs_p->i1_6_cdb_dbms;
-	    starcdbs_p->i1_6_cdb_dbms[DB_MAXNAME] = EOS;
+	    starcdbs_p->i1_6_cdb_dbms[DB_TYPE_MAXLEN] = EOS;
 
 	    bind_p++;				/* point to next element */
     
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_TYPE_MAXLEN;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) starcdbs_p->i1_7_scheme_desc;
-	    starcdbs_p->i1_7_scheme_desc[DB_MAXNAME] = EOS;
+	    starcdbs_p->i1_7_scheme_desc[DB_TYPE_MAXLEN] = EOS;
 
 	    bind_p++;				/* point to next element */
     
-	    bind_p->rqb_length = DD_25_DATE_SIZE;
+	    bind_p->rqb_length = DB_DATE_OUTLENGTH;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) starcdbs_p->i1_8_create_date;
-	    starcdbs_p->i1_8_create_date[DD_25_DATE_SIZE] = EOS;
+	    starcdbs_p->i1_8_create_date[DB_DATE_OUTLENGTH] = EOS;
 
 	    bind_p++;				/* point to next element */
     
-	    bind_p->rqb_length = TPC_8_CHAR_SIZE;
+	    bind_p->rqb_length = DB_TYPE_MAXLEN;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) starcdbs_p->i1_9_original;
-	    starcdbs_p->i1_9_original[TPC_8_CHAR_SIZE] = EOS;
+	    starcdbs_p->i1_9_original[DB_TYPE_MAXLEN] = EOS;
 
 	    bind_p++;				/* point to next element */
     
@@ -507,17 +509,17 @@ tpq_s1_select(
 
 	    /* set up column types and sizes for fetching with RQF */
     
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_CAP_MAXLEN;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) dbcaps_p->l1_1_cap_cap;
-	    dbcaps_p->l1_1_cap_cap[DB_MAXNAME] = EOS;
+	    dbcaps_p->l1_1_cap_cap[DB_CAP_MAXLEN] = EOS;
 
 	    bind_p++;				/* point to next element */
     
-	    bind_p->rqb_length = DB_MAXNAME;
+	    bind_p->rqb_length = DB_CAPVAL_MAXLEN;
 	    bind_p->rqb_dt_id = DB_CHA_TYPE;
 	    bind_p->rqb_addr = (PTR) dbcaps_p->l1_2_cap_val;
-	    dbcaps_p->l1_2_cap_val[DB_MAXNAME] = EOS;
+	    dbcaps_p->l1_2_cap_val[DB_CAPVAL_MAXLEN] = EOS;
 
 	    STprintf(
 		qrytxt,

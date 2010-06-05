@@ -453,6 +453,8 @@
 #           and cloaked ADFI_165_LOCATE_UNISTR_UNISTR. C to VARCHAR
 #           coercion was stripping trailing from p2 which is not the
 #           documented behaviour.
+#       0l-apr-2010 (stial01)
+#           Changes for Long IDs
 
 
 group ADI_COMPARISON
@@ -4209,7 +4211,7 @@ group ADI_NORM_FUNC
 	fi ADFI_211_DBA
 	    description c  :  dba()
 	    flags ADI_F1_VARFI
-	    lenspec ADI_FIXED DB_MAXNAME
+	    lenspec ADI_FIXED DB_OWN_MAXNAME
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_CHR_TYPE
 
@@ -5647,7 +5649,7 @@ group ADI_NORM_FUNC
 	fi ADFI_212_USERNAME
 	    description c  :  username()
 	    flags ADI_F1_VARFI
-	    lenspec ADI_FIXED DB_MAXNAME
+	    lenspec ADI_FIXED DB_OWN_MAXNAME
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_CHR_TYPE
 
@@ -6293,7 +6295,7 @@ group ADI_NORM_FUNC
 	fi ADFI_618_SESSUSER
 	    description char  :  session_user()
 	    flags ADI_F1_VARFI
-	    lenspec ADI_FIXED DB_MAXNAME
+	    lenspec ADI_FIXED DB_OWN_MAXNAME
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_CHA_TYPE
 
@@ -6302,7 +6304,7 @@ group ADI_NORM_FUNC
 	fi ADFI_596_SYSUSER
 	    description char  :  system_user()
 	    flags ADI_F1_VARFI
-	    lenspec ADI_FIXED DB_MAXNAME
+	    lenspec ADI_FIXED DB_OWN_MAXNAME
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_CHA_TYPE
 
@@ -6311,7 +6313,7 @@ group ADI_NORM_FUNC
 	fi ADFI_651_INITUSER
 	    description char  :  initial_user()
 	    flags ADI_F1_VARFI
-	    lenspec ADI_FIXED DB_MAXNAME
+	    lenspec ADI_FIXED DB_OWN_MAXNAME
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_CHA_TYPE
 

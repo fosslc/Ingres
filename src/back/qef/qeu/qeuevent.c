@@ -114,6 +114,8 @@
 **	    Inited a couple of collID's.
 **	13-Feb-2006 (kschendel)
 **	    Fix a couple annoying int == NULL warnings.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 static DB_STATUS
@@ -475,7 +477,7 @@ QEUQ_CB		    *qeuq_cb)
 	if ( Qef_s_cb->qef_state & QEF_S_C2SECURE )
 	{
 	    status = qeu_secaudit(FALSE, qef_cb->qef_ses_id, 
-		  evtuple->dbe_name.db_name, &evtuple->dbe_owner, DB_MAXNAME,
+		  evtuple->dbe_name.db_ev_name, &evtuple->dbe_owner, DB_EVENT_MAXNAME,
 		  SXF_E_EVENT, I_SX2032_EVENT_CREATE, 
 		  SXF_A_SUCCESS | SXF_A_CREATE, &e_error);
 
@@ -803,7 +805,7 @@ QEUQ_CB		*qeuq_cb)
     {
 	DB_ERROR    e_error;
 	status = qeu_secaudit(FALSE, qef_cb->qef_ses_id, 
-	      evtuple->dbe_name.db_name, &evtuple->dbe_owner, DB_MAXNAME,
+	      evtuple->dbe_name.db_ev_name, &evtuple->dbe_owner, DB_EVENT_MAXNAME,
 	      SXF_E_EVENT, I_SX203C_EVENT_DROP, SXF_A_SUCCESS | SXF_A_DROP,
 	      &e_error);
     }
@@ -977,8 +979,8 @@ qeu_evraise(
 			     (i4)STlength(errstr), errstr,
 			     (i4)sizeof(i4),
 					(PTR)&scf_cb.scf_error.err_code,
-			     qec_trimwhite(DB_MAXNAME, onm), onm,
-			     qec_trimwhite(DB_MAXNAME, enm), enm);
+			     qec_trimwhite(DB_OWN_MAXNAME, onm), onm,
+			     qec_trimwhite(DB_EVENT_MAXNAME, enm), enm);
 	    break;
 	}
 	qef_rcb->error.err_code = E_QE0025_USER_ERROR;

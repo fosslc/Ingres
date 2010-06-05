@@ -69,6 +69,8 @@
 **	    when in use, has its own qsb_sem.
 **	23-Feb-2005 (schka24)
 **	   Fix up obj dumper a little;  kill "brief" dumpers.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 static void trdisp_objname(char *str, QSO_OBID *obid);
@@ -267,14 +269,14 @@ static void trdisp_objname(char *title, QSO_OBID *obid)
 	n2 = (int *)ptr;
 	ptr += (sizeof(i4));
 	len = obid->qso_lname - (2 * sizeof(i4));
-	len1 = len;  if (len1 > DB_MAXNAME) len1 = DB_MAXNAME;
+	len1 = len;  if (len1 > DB_CURSOR_MAXNAME) len1 = DB_CURSOR_MAXNAME;
 	TRdisplay(" (%d,%d) %~t", *n1, *n2, len1, ptr);
 	if (len > len1)
 	{
 	    /* repeat query ID or dbp name -- probably an alias id */
 	    /* Probably a dbp name */
-	    len -= DB_MAXNAME;
-	    ptr += DB_MAXNAME;
+	    len -= DB_CURSOR_MAXNAME;
+	    ptr += DB_CURSOR_MAXNAME;
 	    if (len == sizeof(i4))
 	    {
 		/* Probably a repeat query id: DB_CURSOR_ID + dbid */
@@ -285,10 +287,10 @@ static void trdisp_objname(char *title, QSO_OBID *obid)
 	    {
 		/* dbp is DB_CURSOR_ID + owner_text + dbid */
 		num = 0;
-		if (len > DB_MAXNAME)
+		if (len > DB_OWN_MAXNAME)
 		{
-		    len = DB_MAXNAME;
-		    num = *(i4 *) (ptr + DB_MAXNAME);
+		    len = DB_OWN_MAXNAME;
+		    num = *(i4 *) (ptr + DB_OWN_MAXNAME);
 		}
 		TRdisplay(" %~t (0x%x)",len,ptr,num);
 	    }

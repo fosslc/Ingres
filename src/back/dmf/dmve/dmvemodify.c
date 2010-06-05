@@ -210,6 +210,8 @@
 **	    SIR 120874: dm1p_? functions converted to DB_ERROR *
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Replace DMPP_PAGE* with DMP_PINFO* where needed.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 static DB_STATUS dmv_remodify(
@@ -616,6 +618,7 @@ DM0L_MODIFY 	*log_rec)
     DM2U_MOD_CB		local_mcb, *mcb = &local_mcb;
     i4			*err_code = &dmve->dmve_error.err_code;
     DB_ERROR		local_dberr;
+    DB_ATTS		*a;
 
     CLRDBERR(&dmve->dmve_error);
 
@@ -708,8 +711,9 @@ DM0L_MODIFY 	*log_rec)
 	    for (i = 0; i < kcount; i++)
 	    {
 		keyptrs[i] = curentry = keyentry++;
-		STRUCT_ASSIGN_MACRO(t->tcb_atts_ptr[log_rec->dum_key[i]].name, 
-		    curentry->key_attr_name);
+		a = &t->tcb_atts_ptr[log_rec->dum_key[i]];
+		MEmove(a->attnmlen, a->attnmstr, ' ',
+		    DB_ATT_MAXNAME, curentry->key_attr_name.db_att_name);
 		if (log_rec->dum_order[i])
 		    curentry->key_order = DMU_DESCENDING;
 		else

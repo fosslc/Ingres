@@ -126,6 +126,8 @@ typedef struct _ULD_TSTATE
 **	    Added casts to quite compiler warnings
 **	07-jan-2002 (toumi01)
 **	    Replace DD_300_MAXCOLUMN with DD_MAXCOLUMN (1024).
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_line@]...
 [@history_template@]...
 */
@@ -2748,7 +2750,7 @@ opcu_target(
 {
     OPC_TTCB	    *textcb;
     PST_QNODE	    *resdomp;
-    char	    namebuf[DB_MAXNAME*2+3];    
+    char	    namebuf[DB_ATT_MAXNAME*2+3];    
     char	    *namep = namebuf;
     bool	    first_2;
     bool	    first_time;
@@ -4406,8 +4408,8 @@ opc_resdom(
 		CVla( (i4)resdomp->pst_sym.pst_value.pst_s_rsdm.pst_rsno,
 		    (char *) &resdomp->pst_sym.pst_value.pst_s_rsdm.pst_rsname[1] );
 		MEcopy( (PTR) resdomp->pst_sym.pst_value.pst_s_rsdm.
-			pst_rsname, DB_MAXNAME, (PTR) namep );
-		length = opt_noblanks(DB_MAXNAME, namep);
+			pst_rsname, DB_ATT_MAXNAME, (PTR) namep );
+		length = opt_noblanks(DB_ATT_MAXNAME, namep);
 		namep[ length ] = '\0';
 	    }
 	    else if ( handle->qryhdr->opq_q11_duplicate == OPQ_1DUP )
@@ -4424,8 +4426,8 @@ opc_resdom(
 		handle->qnodes.resnode.pst_right = resdomp->pst_right;
 		resdomp = &handle->qnodes.resnode;
 		MEcopy( (PTR) resdomp->pst_sym.pst_value.pst_s_rsdm.
-			pst_rsname, DB_MAXNAME, (PTR) namep );
-		length = opt_noblanks(DB_MAXNAME, namep);
+			pst_rsname, DB_ATT_MAXNAME, (PTR) namep );
+		length = opt_noblanks(DB_ATT_MAXNAME, namep);
 		namep[ length ] = '\0';
 
 	    }
@@ -4440,8 +4442,8 @@ opc_resdom(
 		CVla( (i4)resdomp->pst_sym.pst_value.pst_s_rsdm.pst_rsno,
 		    (char *) &resdomp->pst_sym.pst_value.pst_s_rsdm.pst_rsname[1] );
 		MEcopy( (PTR) resdomp->pst_sym.pst_value.pst_s_rsdm.
-			pst_rsname, DB_MAXNAME, (PTR) namep );
-		length = opt_noblanks(DB_MAXNAME, namep);
+			pst_rsname, DB_ATT_MAXNAME, (PTR) namep );
+		length = opt_noblanks(DB_ATT_MAXNAME, namep);
 		namep[ length ] = '\0';
 	    }
 	    else if (base_colname == TRUE)
@@ -4494,7 +4496,7 @@ opc_resdom(
 		    /* copy/unnormalize name of resdom into caller's buffer */
 		    char	*result_name = resdomp->pst_sym.pst_value.
 				    pst_s_rsdm.pst_rsname;
-		    length = opt_noblanks(DB_MAXNAME, result_name);
+		    length = opt_noblanks(DB_ATT_MAXNAME, result_name);
 		    status = cui_idunorm( (u_char *)result_name,
 			    (u_i4 *)&length, (u_char *)namep, &unorm_len,
 			    CUI_ID_DLM, &error);
@@ -4507,8 +4509,8 @@ opc_resdom(
 		{
 		    /* copy name of resdom into caller's buffer */
 		    MEcopy( (PTR) resdomp->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
-			    DB_MAXNAME, (PTR) namep );
-		    length = opt_noblanks(DB_MAXNAME, namep);
+			    DB_ATT_MAXNAME, (PTR) namep );
+		    length = opt_noblanks(DB_ATT_MAXNAME, namep);
 		    namep[ length ] = '\0';
 		}
 	    }
@@ -4541,8 +4543,8 @@ opc_resdom(
 	    /* copy name of resdom into caller's buffer */
 	    rescolp = &handle->qnodes.resnode.pst_sym.
 			pst_value.pst_s_rsdm.pst_rsname[0];
-	    MEcopy( (PTR) rescolp, DB_MAXNAME, (PTR) namep );
-	    length = opt_noblanks(DB_MAXNAME, namep);
+	    MEcopy( (PTR) rescolp, DB_ATT_MAXNAME, (PTR) namep );
+	    length = opt_noblanks(DB_ATT_MAXNAME, namep);
 	    namep[ length ] = '\0';
 	    handle->qnodes.resnode.pst_sym.pst_value.pst_s_rsdm.pst_rsno 
 		= handle->reqcls;

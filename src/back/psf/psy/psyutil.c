@@ -65,6 +65,8 @@
 **	    psf_malloc(), psf_mclose(), psf_mroot(), psf_mchtyp().
 **	    Changed psf_sesscb() prototype to return PSS_SESBLK* instead
 **	    of DB_STATUS.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -431,8 +433,8 @@ psy_error(
 	PTR		   p6)
 */
 {
-    char                tabname[DB_MAXNAME + 1];
-    char		ownname[DB_MAXNAME + 1];
+    char                tabname[DB_TAB_MAXNAME + 1];
+    char		ownname[DB_OWN_MAXNAME + 1];
     char		*modestr;
     i4			err_code;
     DB_STATUS		status;
@@ -480,10 +482,10 @@ psy_error(
     }
 
     /* Get the table name. */
-    STncpy(tabname, rngvar->pss_tabname.db_tab_name, DB_MAXNAME);
-    tabname[ DB_MAXNAME ] = '\0';
-    STncpy(ownname, rngvar->pss_ownname.db_own_name, DB_MAXNAME);
-    ownname[ DB_MAXNAME ] = '\0';
+    STncpy(tabname, rngvar->pss_tabname.db_tab_name, DB_TAB_MAXNAME);
+    tabname[ DB_TAB_MAXNAME ] = '\0';
+    STncpy(ownname, rngvar->pss_ownname.db_own_name, DB_OWN_MAXNAME);
+    ownname[ DB_OWN_MAXNAME ] = '\0';
 
     if (qmode >= 0)
     {

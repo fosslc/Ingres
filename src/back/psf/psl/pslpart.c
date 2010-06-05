@@ -113,6 +113,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /* Local routine prototypes */
@@ -506,7 +508,7 @@ psl_partdef_nonval(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
     }
     else
     {
-	char generated_name[DB_MAXNAME + 1];
+	char generated_name[DB_TAB_MAXNAME + 1];
 
 	/* No names at all, make some up.
 	** Names are generated with the form iipartNN, where NN is an
@@ -692,7 +694,8 @@ psl_partdef_oncol(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
 
     /* Looks OK, add this column to the list */
     yyvarsp->part_cols[dim_ptr->ncols] = att_number;
-    STcopy(colname,&yyvarsp->part_col_names[dim_ptr->ncols * (DB_MAXNAME+1)]);
+    STcopy(colname,
+	&yyvarsp->part_col_names[dim_ptr->ncols * (DB_ATT_MAXNAME+1)]);
     ++ dim_ptr->ncols;
 
     return (E_DB_OK);
@@ -1098,8 +1101,8 @@ psl_partdef_start(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PSS_YYVARS *yyvarsp)
 	return (status);
 
     /* Do the same for column names, which are a bit larger, but oh well. */
-    status = ppd_malloc(DB_MAX_COLS * (DB_MAXNAME+1), &yyvarsp->part_col_names,
-			sess_cb, psq_cb);
+    status = ppd_malloc(DB_MAX_COLS * (DB_ATT_MAXNAME+1), 
+		&yyvarsp->part_col_names, sess_cb, psq_cb);
     if (DB_FAILURE_MACRO(status))
 	return (status);
 
@@ -1366,7 +1369,7 @@ psl_partdef_value(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
     adfcb = sess_cb->pss_adfcb;
 
     part_entry_ptr = &dim_ptr->part_list[yyvarsp->textptrs_cur];
-    col_name = &yyvarsp->part_col_names[yyvarsp->textptrs_cur * (DB_MAXNAME+1)];
+    col_name = &yyvarsp->part_col_names[yyvarsp->textptrs_cur * (DB_ATT_MAXNAME+1)];
 
     /* Check for NULL first, and handle it specially. */
     if (value == NULL)
@@ -2218,7 +2221,7 @@ ppd_new_break(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
 	PSS_YYVARS *yyvarsp, DB_PART_DIM *dim_ptr)
 {
 
-    char generated_name[DB_MAXNAME + 1]; /* Place for partition name */
+    char generated_name[DB_TAB_MAXNAME + 1]; /* Place for partition name */
     DB_PART_BREAKS *breaks_ptr;		/* Ptr to new breaks table entry */
     DB_PART_BREAKS *new_breaks;		/* Relocated/bigger breaks area */
     DB_STATUS status;			/* Called routine status */

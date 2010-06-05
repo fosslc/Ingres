@@ -192,6 +192,8 @@
 **	10-Dec-2008 (jonj)
 **	    SIR 120874: Remove last vestiges of CL_SYS_ERR,
 **	    old form uleFormat.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 /*
 ** internal function protos
@@ -348,7 +350,7 @@ dm2rep_capture(
     {
 	uleFormat(dberr, E_DM9553_REP_NO_SHADOW, (CL_ERR_DESC *)NULL, ULE_LOG,
             (DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, (i4 *)NULL,
-            err_code, (i4)1, DB_MAXNAME, tcb->tcb_rel.relid.db_tab_name);
+            err_code, (i4)1, DB_TAB_MAXNAME, tcb->tcb_rel.relid.db_tab_name);
 	return(E_DB_ERROR);
     }
     shad_tcb = rcb->rep_shad_rcb->rcb_tcb_ptr;
@@ -488,7 +490,7 @@ dm2rep_capture(
     {
 	uleFormat(NULL, E_DM9581_REP_SHADOW_DUPLICATE, NULL, ULE_LOG, 
 		(DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 
-		(i4)1, DB_MAXNAME, tcb->tcb_rel.relid.db_tab_name);
+		(i4)1, DB_TAB_MAXNAME, tcb->tcb_rel.relid.db_tab_name);
 	SETDBERR(dberr, 0, E_DM0046_DUPLICATE_RECORD);
     }
     else if (status != E_DB_OK && dberr->err_code > E_DM_INTERNAL)
@@ -752,13 +754,13 @@ find_shadow(
 	    {
 	        for (i = 1; i <= shad_idx_tcb->tcb_rel.relatts; i++)
 	        {
-	            if (MEcmp(
+	            if (STcompare(
 		        (base_rcb->rcb_xcb_ptr && 
 		          base_rcb->rcb_xcb_ptr->xcb_scb_ptr &&
 		          base_rcb->rcb_xcb_ptr->xcb_scb_ptr->scb_dbxlate &&
 		          (*base_rcb->rcb_xcb_ptr->xcb_scb_ptr->scb_dbxlate &
 			      CUI_ID_REG_U)) ? "IN_ARCHIVE" : "in_archive", 
-		        shad_idx_tcb->tcb_atts_ptr[i].name.db_att_name, 10) == 0) 
+		        shad_idx_tcb->tcb_atts_ptr[i].attnmstr) == 0) 
 	            {
 		        /* this is the in_archive field */
 		        MEcopy(shad_idx_rec + shad_idx_tcb->tcb_atts_ptr[i].offset,
@@ -1009,9 +1011,8 @@ build_archive(
 	    */
 	    for (j = 1; j <= arch_tcb->tcb_rel.relatts; j++)
 	    {
-		if (MEcmp(arch_tcb->tcb_atts_ptr[j].name.db_att_name,
-		    base_tcb->tcb_atts_ptr[i].name.db_att_name, DB_MAXNAME) 
-		    == 0)
+		if (STcompare(arch_tcb->tcb_atts_ptr[j].attnmstr,
+		    base_tcb->tcb_atts_ptr[i].attnmstr) == 0)
 	 	    break;
 	    }
 	    if (j > arch_tcb->tcb_rel.relatts)
@@ -1020,7 +1021,7 @@ build_archive(
 		uleFormat(dberr, E_DM956F_REP_NO_ARCH_COL, (CL_ERR_DESC *)NULL, ULE_LOG,
             	    (DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, (i4 *)NULL,
             	    err_code, (i4)2, 0, 
-		    base_tcb->tcb_atts_ptr[i].name.db_att_name, 0,
+		    base_tcb->tcb_atts_ptr[i].attnmstr, 0,
 		    base_tcb->tcb_rel.relid.db_tab_name);
 		MEfree(archive_rec);
 		return (E_DB_ERROR);
@@ -1186,18 +1187,16 @@ build_archive(
 		}
 		if (status > E_DB_INFO)
 		{
-		    char	att_name[DB_MAXNAME + 1];
-		    char	tab_name[DB_MAXNAME + 1];
+		    char	tab_name[DB_TAB_MAXNAME + 1];
 
-		    MEcopy(base_tcb->tcb_atts_ptr[i].name.db_att_name, 
-			DB_MAXNAME, att_name);
-		    att_name[DB_MAXNAME] = EOS;
 		    MEcopy(base_tcb->tcb_rel.relid.db_tab_name, 
-			DB_MAXNAME, tab_name);
-		    tab_name[DB_MAXNAME] = EOS;
+			DB_TAB_MAXNAME, tab_name);
+		    tab_name[DB_TAB_MAXNAME] = EOS;
 		    uleFormat(dberr, E_DM9576_REP_CPN_CONVERT, (CL_ERR_DESC *)NULL, ULE_LOG,
             		(DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, (i4 *)NULL,
-            		err_code, (i4)2, STtrmwhite(att_name), att_name, 
+             		err_code, (i4)2,
+			base_tcb->tcb_atts_ptr[i].attnmlen, 
+			base_tcb->tcb_atts_ptr[i].attnmstr, 
 			STtrmwhite(tab_name), tab_name);
 		    break;
 		}
@@ -1335,12 +1334,12 @@ update_shadow(
     */
     for(i = 1; i <= shad_tcb->tcb_rel.relatts; i++)
     {
-	if (MEcmp(shad_tcb->tcb_atts_ptr[i].name.db_att_name, 
+	if (STcompare(shad_tcb->tcb_atts_ptr[i].attnmstr, 
 		(base_rcb->rcb_xcb_ptr && 
 		  base_rcb->rcb_xcb_ptr->xcb_scb_ptr &&
 		  base_rcb->rcb_xcb_ptr->xcb_scb_ptr->scb_dbxlate &&
 		  (*base_rcb->rcb_xcb_ptr->xcb_scb_ptr->scb_dbxlate &
-		  CUI_ID_REG_U)) ? "IN_ARCHIVE" : "in_archive", 10) == 0)
+		  CUI_ID_REG_U)) ? "IN_ARCHIVE" : "in_archive") == 0)
 	{
 	    offset = shad_tcb->tcb_atts_ptr[i].offset;
 	    break;
@@ -1351,7 +1350,7 @@ update_shadow(
 	/* can't find in_archive field */
 	uleFormat(dberr, E_DM9559_REP_NO_IN_ARCH, (CL_ERR_DESC *)NULL, ULE_LOG,
             (DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, (i4 *)NULL,
-            err_code, (i4)1, DB_MAXNAME, base_tcb->tcb_rel.relid);
+            err_code, (i4)1, DB_TAB_MAXNAME, base_tcb->tcb_rel.relid);
 	return (E_DB_ERROR);
     }
     /*
@@ -1493,11 +1492,11 @@ build_shadow(
     if (shad_head == NULL && trans_type != DM2REP_INSERT && !fake) 
     {
 	/* no shadow record to work from */
-	char	shad_tab[DB_MAXNAME +1], base_tab[DB_MAXNAME +1];
+	char	shad_tab[DB_TAB_MAXNAME +1], base_tab[DB_TAB_MAXNAME +1];
 
-	MEcopy(shad_tcb->tcb_rel.relid.db_tab_name, DB_MAXNAME, shad_tab);
-	MEcopy(base_tcb->tcb_rel.relid.db_tab_name, DB_MAXNAME, base_tab);
-	shad_tab[DB_MAXNAME] = base_tab[DB_MAXNAME] = EOS;
+	MEcopy(shad_tcb->tcb_rel.relid.db_tab_name, DB_TAB_MAXNAME, shad_tab);
+	MEcopy(base_tcb->tcb_rel.relid.db_tab_name, DB_TAB_MAXNAME, base_tab);
+	shad_tab[DB_TAB_MAXNAME] = base_tab[DB_TAB_MAXNAME] = EOS;
 	uleFormat(dberr, E_DM9573_REP_NO_SHAD, (CL_ERR_DESC *)NULL, ULE_LOG,
             (DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, (i4 *)NULL,
             err_code, (i4)2, STtrmwhite(shad_tab), shad_tab,
@@ -1532,8 +1531,8 @@ build_shadow(
 	*/
 	for (j = 0; j < shad_tcb->tcb_rel.relatts; j++)
 	{
-	    if (MEcmp(shad_tcb->tcb_data_rac.att_ptrs[j]->name.db_att_name, 
-		base_tcb->tcb_data_rac.att_ptrs[i]->name.db_att_name, DB_MAXNAME) == 0)
+	    if (STcompare(shad_tcb->tcb_data_rac.att_ptrs[j]->attnmstr, 
+		base_tcb->tcb_data_rac.att_ptrs[i]->attnmstr) == 0)
 		break;
 	}
 	if (j == shad_tcb->tcb_rel.relatts)
@@ -1542,7 +1541,7 @@ build_shadow(
 	    uleFormat(dberr, E_DM956D_REP_NO_SHAD_KEY_COL, (CL_ERR_DESC *)NULL, ULE_LOG,
                 (DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, (i4 *)NULL,
                 err_code, (i4)2, 0, base_tcb->tcb_rel.relid.db_tab_name,
-		0, base_keyatts[i]->name.db_att_name);
+		0, base_keyatts[i]->attnmstr);
 	    MEfree(shad_rec);
 	    return(E_DB_ERROR);
     	}
@@ -1553,7 +1552,7 @@ build_shadow(
 	    uleFormat(dberr, E_DM956E_REP_BAD_KEY_SIZE, (CL_ERR_DESC *)NULL, ULE_LOG,
                 (DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, (i4 *)NULL,
                 err_code, (i4)4, 0, 
-		base_keyatts[i]->name.db_att_name, 0,
+		base_keyatts[i]->attnmstr, 0,
 		base_tcb->tcb_rel.relid.db_tab_name, sizeof(i4), 
 		&(base_keyatts[i]->length), sizeof(i4),
 		&(shad_tcb->tcb_data_rac.att_ptrs[j]->length));
@@ -1731,18 +1730,17 @@ build_shadow(
 		continue;
 	    else
 	    {
-		char	tabname[DB_MAXNAME +1];
-		char	dbname[DB_MAXNAME +1];
+		char	tabname[DB_TAB_MAXNAME +1];
+		char	dbname[DB_DB_MAXNAME +1];
 	    	/*
 	    	** if we got here, then we have many unarchived shadow
 	    	** records, log a warning
 	    	*/
 		MEcopy(base_tcb->tcb_rel.relid.db_tab_name, 
-		    DB_MAXNAME, tabname);
-		MEcopy(dcb->dcb_name.db_db_name, DB_MAXNAME,
-		    dbname);
-		tabname[DB_MAXNAME] = 0;
-		dbname[DB_MAXNAME] = 0;
+		    DB_TAB_MAXNAME, tabname);
+		MEcopy(dcb->dcb_name.db_db_name, DB_DB_MAXNAME, dbname);
+		tabname[DB_TAB_MAXNAME] = 0;
+		dbname[DB_DB_MAXNAME] = 0;
 	    	uleFormat(dberr, W_DM9579_REP_MULTI_SHADOW, (CL_ERR_DESC *)NULL, ULE_LOG,
 		    (DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, (i4 *)NULL,
 		    err_code, (i4)3, STtrmwhite(tabname), tabname,
@@ -1755,11 +1753,11 @@ build_shadow(
 	    status = adc_compare(cmp_scb, &adc_dv1, &adc_dv2, &comp);
     	    if (status != E_DB_OK)
     	    {
-		char	tabname[DB_MAXNAME +1];
+		char	tabname[DB_TAB_MAXNAME +1];
 
 		MEcopy(base_tcb->tcb_rel.relid.db_tab_name, 
-		    DB_MAXNAME, tabname);
-		tabname[DB_MAXNAME] = 0;
+		    DB_TAB_MAXNAME, tabname);
+		tabname[DB_TAB_MAXNAME] = 0;
 		uleFormat(dberr, E_DM957A_REP_BAD_DATE_CMP, (CL_ERR_DESC *)NULL, ULE_LOG,
             	    (DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, (i4 *)NULL,
             	    err_code, (i4)2, 
@@ -2450,11 +2448,11 @@ dm2rep_qman(
 			    &diff);
 			if (status != E_DB_OK)
 			{
-			    char	dbname[DB_MAXNAME + 1];
+			    char	dbname[DB_DB_MAXNAME + 1];
 
-			    MEcopy(dcb->dcb_name.db_db_name, DB_MAXNAME,
+			    MEcopy(dcb->dcb_name.db_db_name, DB_DB_MAXNAME,
 				dbname);
-			    dbname[DB_MAXNAME] = 0;
+			    dbname[DB_DB_MAXNAME] = 0;
 			    uleFormat(dberr, E_DM957B_REP_BAD_DATE, (CL_ERR_DESC *)NULL, 
 				ULE_LOG, (DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, 
 				(i4 *)NULL, err_code, (i4)2, 
@@ -2717,10 +2715,10 @@ dm2rep_qman(
 		 */
 		 if (trans_time == (HRSYSTIME *)-1 && !mdwarn)
 		 {
-		     char	dbname[DB_MAXNAME + 1];
+		     char	dbname[DB_DB_MAXNAME + 1];
 
-		     MEcopy(dcb->dcb_name.db_db_name, DB_MAXNAME, dbname);
-		     dbname[DB_MAXNAME] = 0;
+		     MEcopy(dcb->dcb_name.db_db_name, DB_DB_MAXNAME, dbname);
+		     dbname[DB_DB_MAXNAME] = 0;
 	    	     uleFormat(dberr, W_DM956A_REP_MANUAL_DIST, (CL_ERR_DESC *)NULL, 
 			 ULE_LOG,
             		(DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, (i4 *)NULL,
@@ -2808,10 +2806,10 @@ dm2rep_qman(
 		    DM2R_BYTID, dist_q_rec, dberr);
 		if (status != E_DB_OK)
 		{
-		    char	dbname[DB_MAXNAME + 1];
+		    char	dbname[DB_DB_MAXNAME + 1];
 
-		    MEcopy(dcb->dcb_name.db_db_name, DB_MAXNAME, dbname);
-		    dbname[DB_MAXNAME] = 0;
+		    MEcopy(dcb->dcb_name.db_db_name, DB_DB_MAXNAME, dbname);
+		    dbname[DB_DB_MAXNAME] = 0;
 		    uleFormat(NULL, E_DM957C_REP_GET_ERROR, (CL_ERR_DESC *)NULL, 
 			ULE_LOG, 
 			(DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, (i4 *)NULL, 
@@ -2845,11 +2843,10 @@ dm2rep_qman(
 		}
 		if (no_prev_entry)
 		{
-		    char	dbname[DB_MAXNAME + 1];
+		    char	dbname[DB_DB_MAXNAME + 1];
 
-		    MEcopy(dcb->dcb_name.db_db_name, DB_MAXNAME,
-			dbname);
-		    dbname[DB_MAXNAME] = 0;
+		    MEcopy(dcb->dcb_name.db_db_name, DB_DB_MAXNAME, dbname);
+		    dbname[DB_DB_MAXNAME] = 0;
 		    uleFormat(dberr, E_DM957D_REP_NO_DISTQ, (CL_ERR_DESC *)NULL, 
 			ULE_LOG, 
 			(DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, (i4 *)NULL, 
@@ -2869,11 +2866,10 @@ dm2rep_qman(
 		    DM2R_BYTID, dist_q_rec, (char *)NULL, dberr);
 		if (status != E_DB_OK)
 		{
-		    char	dbname[DB_MAXNAME + 1];
+		    char	dbname[DB_DB_MAXNAME + 1];
 
-		    MEcopy(dcb->dcb_name.db_db_name, DB_MAXNAME,
-			dbname);
-		    dbname[DB_MAXNAME] = 0;
+		    MEcopy(dcb->dcb_name.db_db_name, DB_DB_MAXNAME, dbname);
+		    dbname[DB_DB_MAXNAME] = 0;
 		    uleFormat(NULL, E_DM957E_REP_DISTQ_UPDATE, (CL_ERR_DESC *)NULL, 
 			ULE_LOG, 
 			(DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, (i4 *)NULL, 
@@ -3167,13 +3163,12 @@ check_priority(
 	    for (i = 1; i <= prio_tcb->tcb_rel.relatts; i++)
 	    {
 		no_match = TRUE;
-		if (MEcmp(prio_tcb->tcb_atts_ptr[i].name.db_att_name, 
+		if (STcompare(prio_tcb->tcb_atts_ptr[i].attnmstr, 
 		      (base_rcb->rcb_xcb_ptr && 
 		  	base_rcb->rcb_xcb_ptr->xcb_scb_ptr &&
 		  	base_rcb->rcb_xcb_ptr->xcb_scb_ptr->scb_dbxlate &&
 		  	(*base_rcb->rcb_xcb_ptr->xcb_scb_ptr->scb_dbxlate &
-		  	CUI_ID_REG_U)) ? 
-		      "DD_PRIORITY" : "dd_priority", 11) == 0)
+		  	CUI_ID_REG_U)) ?  "DD_PRIORITY" : "dd_priority") == 0)
 		{
 		    MEcopy(prio_rec + prio_tcb->tcb_atts_ptr[i].offset,
 			prio_tcb->tcb_atts_ptr[i].length, (char *)&int_pri);
@@ -3181,32 +3176,29 @@ check_priority(
 		}
 		for (j = 1; j <= base_tcb->tcb_rel.relatts; j++)
 		{
-		    if (MEcmp(prio_tcb->tcb_atts_ptr[i].name.db_att_name,
-			base_tcb->tcb_atts_ptr[j].name.db_att_name, 
-			DB_MAXNAME) == 0)
+		    if (STcompare(prio_tcb->tcb_atts_ptr[i].attnmstr,
+			base_tcb->tcb_atts_ptr[j].attnmstr) == 0)
 		    {
 			i2	base_size;
 
 			if (prio_tcb->tcb_atts_ptr[i].length !=
 			    base_tcb->tcb_atts_ptr[j].length)
 			{
-			    char	prio_fld[DB_MAXNAME +1];
-			    char	prio_name[DB_MAXNAME +1];
-			    char	base_name[DB_MAXNAME +1];
+			    char	prio_name[DB_TAB_MAXNAME +1];
+			    char	base_name[DB_TAB_MAXNAME +1];
 
-			    MEcopy(prio_tcb->tcb_atts_ptr[i].name.db_att_name,
-				DB_MAXNAME, prio_fld);
 			    MEcopy(prio_tcb->tcb_rel.relid.db_tab_name,
-				DB_MAXNAME, prio_name);
+				DB_TAB_MAXNAME, prio_name);
 			    MEcopy(base_tcb->tcb_rel.relid.db_tab_name,
-				DB_MAXNAME, base_name);
-			    prio_fld[DB_MAXNAME] = prio_name[DB_MAXNAME] = 
-				base_name[DB_MAXNAME] = EOS;
+				DB_TAB_MAXNAME, base_name);
+			    prio_name[DB_TAB_MAXNAME] = EOS;
+			    base_name[DB_TAB_MAXNAME] = EOS;
 			    uleFormat(dberr, E_DM9565_REP_BAD_PRIO_LOOKUP, 
 				(CL_ERR_DESC *)NULL, ULE_LOG,
             		        (DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, 
 			        (i4 *)NULL, err_code, (i4)5, 
-				STtrmwhite(prio_fld), prio_fld, 
+				prio_tcb->tcb_atts_ptr[i].attnmlen,
+				prio_tcb->tcb_atts_ptr[i].attnmstr,
 			        STtrmwhite(prio_name), prio_name, (i4)0,
 			        prio_tcb->tcb_atts_ptr[i].length, 
 				STtrmwhite(base_name), base_name, (i4)0,
@@ -3218,23 +3210,21 @@ check_priority(
 			    prio_tcb->tcb_atts_ptr[i].type)
 			{
 			    /* fields are not of the same type */
-			    char	prio_fld[DB_MAXNAME +1];
-			    char	prio_name[DB_MAXNAME +1];
-			    char	base_name[DB_MAXNAME +1];
+			    char	prio_name[DB_TAB_MAXNAME +1];
+			    char	base_name[DB_TAB_MAXNAME +1];
 
-			    MEcopy(prio_tcb->tcb_atts_ptr[i].name.db_att_name,
-				DB_MAXNAME, prio_fld);
 			    MEcopy(prio_tcb->tcb_rel.relid.db_tab_name,
-				DB_MAXNAME, prio_name);
+				DB_TAB_MAXNAME, prio_name);
 			    MEcopy(base_tcb->tcb_rel.relid.db_tab_name,
-				DB_MAXNAME, base_name);
-			    prio_fld[DB_MAXNAME] = prio_name[DB_MAXNAME] = 
-				base_name[DB_MAXNAME] = EOS;
+				DB_TAB_MAXNAME, base_name);
+			    prio_name[DB_TAB_MAXNAME] = EOS;
+			    base_name[DB_TAB_MAXNAME] = EOS;
 			    uleFormat(dberr, E_DM9575_REP_BAD_PRIO_TYPE, 
 				(CL_ERR_DESC *)NULL, ULE_LOG,
             		        (DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, 
 			        (i4 *)NULL, err_code, (i4)3,
-				STtrmwhite(prio_fld), prio_fld,
+				prio_tcb->tcb_atts_ptr[i].attnmlen,
+				prio_tcb->tcb_atts_ptr[i].attnmstr,
 				STtrmwhite(prio_name), prio_name,
 				STtrmwhite(prio_name), prio_name);
 			    status = E_DB_ERROR;
@@ -3267,10 +3257,11 @@ check_priority(
 		    uleFormat(dberr, E_DM9566_REP_NO_PRIO_MATCH, 
 			(CL_ERR_DESC *)NULL, ULE_LOG,
             		(DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, 
-			(i4 *)NULL, err_code, (i4)3, DB_MAXNAME,
-			prio_tcb->tcb_atts_ptr[i].name.db_att_name, 
-			DB_MAXNAME, prio_tcb->tcb_rel.relid, 
-			DB_MAXNAME, base_tcb->tcb_rel.relid);
+			(i4 *)NULL, err_code, (i4)3,
+			prio_tcb->tcb_atts_ptr[i].attnmlen, 
+			prio_tcb->tcb_atts_ptr[i].attnmstr, 
+			DB_TAB_MAXNAME, prio_tcb->tcb_rel.relid, 
+			DB_TAB_MAXNAME, base_tcb->tcb_rel.relid);
 		    status = E_DB_ERROR;
 		    break;
 		}
@@ -3392,13 +3383,12 @@ cdds_lookup(
 	    for (i = 1; i <= cdds_tcb->tcb_rel.relatts; i++)
 	    {
 		no_match = TRUE;
-		if (MEcmp(cdds_tcb->tcb_atts_ptr[i].name.db_att_name, 
+		if (STcompare(cdds_tcb->tcb_atts_ptr[i].attnmstr, 
 		      (base_rcb->rcb_xcb_ptr && 
 		  	base_rcb->rcb_xcb_ptr->xcb_scb_ptr &&
 		  	base_rcb->rcb_xcb_ptr->xcb_scb_ptr->scb_dbxlate &&
 		  	(*base_rcb->rcb_xcb_ptr->xcb_scb_ptr->scb_dbxlate &
-		  	CUI_ID_REG_U)) ? 
-		      "CDDS_NO" : "cdds_no", 7) == 0)
+		  	CUI_ID_REG_U)) ?  "CDDS_NO" : "cdds_no") == 0)
 		{
 		    MEcopy(cdds_rec + cdds_tcb->tcb_atts_ptr[i].offset,
 			cdds_tcb->tcb_atts_ptr[i].length, (char *)&int_cdds);
@@ -3406,32 +3396,29 @@ cdds_lookup(
 		}
 		for (j = 1; j <= base_tcb->tcb_rel.relatts; j++)
 		{
-		    if (MEcmp(cdds_tcb->tcb_atts_ptr[i].name.db_att_name,
-			base_tcb->tcb_atts_ptr[j].name.db_att_name, 
-			DB_MAXNAME) == 0)
+		    if (STcompare(cdds_tcb->tcb_atts_ptr[i].attnmstr,
+			base_tcb->tcb_atts_ptr[j].attnmstr) == 0)
 		    {
 			i2	base_size;
 
 			if (cdds_tcb->tcb_atts_ptr[i].length !=
 			    base_tcb->tcb_atts_ptr[j].length)
 			{
-			    char	cdds_fld[DB_MAXNAME +1];
-			    char	cdds_name[DB_MAXNAME +1];
-			    char	base_name[DB_MAXNAME +1];
+			    char	cdds_name[DB_TAB_MAXNAME +1];
+			    char	base_name[DB_TAB_MAXNAME +1];
 
-			    MEcopy(cdds_tcb->tcb_atts_ptr[i].name.db_att_name,
-				DB_MAXNAME, cdds_fld);
 			    MEcopy(cdds_tcb->tcb_rel.relid.db_tab_name,
-				DB_MAXNAME, cdds_name);
+				DB_TAB_MAXNAME, cdds_name);
 			    MEcopy(base_tcb->tcb_rel.relid.db_tab_name,
-				DB_MAXNAME, base_name);
-			    cdds_fld[DB_MAXNAME] = cdds_name[DB_MAXNAME] = 
-				base_name[DB_MAXNAME] = EOS;
+				DB_TAB_MAXNAME, base_name);
+			    cdds_name[DB_TAB_MAXNAME] =  EOS;
+			    base_name[DB_TAB_MAXNAME] = EOS;
 			    uleFormat(dberr, E_DM956B_REP_BAD_CDDS_LOOKUP, 
 				(CL_ERR_DESC *)NULL, ULE_LOG,
             		        (DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, 
 			        (i4 *)NULL, err_code, (i4)5, 
-				STtrmwhite(cdds_fld), cdds_fld, 
+				cdds_tcb->tcb_atts_ptr[i].attnmlen,
+				cdds_tcb->tcb_atts_ptr[i].attnmstr,
 			        STtrmwhite(cdds_name), cdds_name, (i4)0,
 			        cdds_tcb->tcb_atts_ptr[i].length,
 				STtrmwhite(base_name), base_name, (i4)0,
@@ -3443,23 +3430,21 @@ cdds_lookup(
 			    cdds_tcb->tcb_atts_ptr[i].type)
 			{
 			    /* fields are not of the same type */
-			    char	cdds_fld[DB_MAXNAME +1];
-			    char	cdds_name[DB_MAXNAME +1];
-			    char	base_name[DB_MAXNAME +1];
+			    char	cdds_name[DB_TAB_MAXNAME +1];
+			    char	base_name[DB_TAB_MAXNAME +1];
 
-			    MEcopy(cdds_tcb->tcb_atts_ptr[i].name.db_att_name,
-				DB_MAXNAME, cdds_fld);
 			    MEcopy(cdds_tcb->tcb_rel.relid.db_tab_name,
-				DB_MAXNAME, cdds_name);
+				DB_TAB_MAXNAME, cdds_name);
 			    MEcopy(base_tcb->tcb_rel.relid.db_tab_name,
-				DB_MAXNAME, base_name);
-			    cdds_fld[DB_MAXNAME] = cdds_name[DB_MAXNAME] = 
-				base_name[DB_MAXNAME] = EOS;
+				DB_TAB_MAXNAME, base_name);
+			    cdds_name[DB_TAB_MAXNAME] = EOS; 
+			    base_name[DB_TAB_MAXNAME] = EOS;
 			    uleFormat(dberr, E_DM9574_REP_BAD_CDDS_TYPE, 
 				(CL_ERR_DESC *)NULL, ULE_LOG,
             		        (DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, 
 			        (i4 *)NULL, err_code, (i4)3,
-				STtrmwhite(cdds_fld), cdds_fld,
+				cdds_tcb->tcb_atts_ptr[i].attnmlen,
+				cdds_tcb->tcb_atts_ptr[i].attnmstr,
 				STtrmwhite(cdds_name), cdds_name,
 				STtrmwhite(base_name), base_name);
 			    status = E_DB_ERROR;
@@ -3492,10 +3477,11 @@ cdds_lookup(
 		    uleFormat(dberr, E_DM956C_REP_NO_CDDS_MATCH, 
 			(CL_ERR_DESC *)NULL, ULE_LOG,
             		(DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, 
-			(i4 *)NULL, err_code, (i4)3, DB_MAXNAME,
-			cdds_tcb->tcb_atts_ptr[i].name.db_att_name, 
-			DB_MAXNAME, cdds_tcb->tcb_rel.relid, 
-			DB_MAXNAME, base_tcb->tcb_rel.relid);
+			(i4 *)NULL, err_code, (i4)3,
+			cdds_tcb->tcb_atts_ptr[i].attnmlen, 
+			cdds_tcb->tcb_atts_ptr[i].attnmstr, 
+			DB_TAB_MAXNAME, cdds_tcb->tcb_rel.relid, 
+			DB_TAB_MAXNAME, base_tcb->tcb_rel.relid);
 		    status = E_DB_ERROR;
 		    break;
 		}

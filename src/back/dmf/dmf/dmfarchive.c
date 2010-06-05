@@ -514,6 +514,8 @@
 **	    SIR 120874: dm0l_? functions converted to DB_ERROR *
 **	19-Aug-2009 (kschendel) 121804
 **	    Need cx.h for proper CX declarations (gcc 4.3).
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs, db_buffer holds (dbname, owner.. )
 **/
 
 /*
@@ -1478,12 +1480,12 @@ ACB	*acb)
 	    ** size of the buffer to make sure it actually holds what
 	    ** we expect it to.
 	    */
-	    i4_ptr = (i4 *) &db.db_buffer[2 * DB_MAXNAME + 4];
+	    i4_ptr = (i4 *) &db.db_buffer[DB_DB_MAXNAME + DB_OWN_MAXNAME + 4];
 	    I4ASSIGN_MACRO(*i4_ptr, path_len);
-	    if (db.db_l_buffer < (2 * DB_MAXNAME + path_len + 8))
+	    if (db.db_l_buffer < (DB_DB_MAXNAME + DB_OWN_MAXNAME + path_len + 8))
 	    {
 		TRdisplay("LGshow DB buffer size mismatch (%d vs %d)\n",
-		    (2 * DB_MAXNAME + path_len + 8), db.db_l_buffer);
+		    (DB_DB_MAXNAME + DB_OWN_MAXNAME + path_len + 8), db.db_l_buffer);
 		SETDBERR(&a->acb_dberr, 0, E_DM9842_ARCH_SOC);
 		lgerror = TRUE;
 		status = E_DB_ERROR;
@@ -1491,8 +1493,8 @@ ACB	*acb)
 	    }
 
 	    dbname = (DB_DB_NAME *) &db.db_buffer[0];
-	    dbowner = (DB_OWN_NAME *) &db.db_buffer[DB_MAXNAME];
-	    dbpath = (DM_PATH *) &db.db_buffer[2 * DB_MAXNAME + 8];
+	    dbowner = (DB_OWN_NAME *) &db.db_buffer[DB_DB_MAXNAME];
+	    dbpath = (DM_PATH *) &db.db_buffer[DB_DB_MAXNAME + DB_OWN_MAXNAME + 8];
 
 	    status = dma_alloc_dbcb(a, db.db_database_id, db.db_id,
 		dbname, dbowner, dbpath, path_len, 
@@ -2287,7 +2289,7 @@ ACB	    *acb)
     i4			log_recs_read;
     i4			log_recs_written;
     i4			backup_status;
-    char		jnlerr_db[DB_MAXNAME+1];
+    char		jnlerr_db[DB_DB_MAXNAME+1];
     char		jnlerr_dir[DB_AREA_MAX+1];
     SIDEFILE		*sf = 0;
 
@@ -2760,8 +2762,8 @@ ACB	    *acb)
 		*/
 		a->acb_error_code = E_DM9852_ACP_JNL_WRITE_EXIT;
 		STRUCT_ASSIGN_MACRO(db->dbcb_dcb.dcb_name, a->acb_errdb);
-		STncpy( jnlerr_db, db->dbcb_dcb.dcb_name.db_db_name,DB_MAXNAME);
-		jnlerr_db[ DB_MAXNAME ] = '\0';
+		STncpy( jnlerr_db, db->dbcb_dcb.dcb_name.db_db_name,DB_DB_MAXNAME);
+		jnlerr_db[ DB_DB_MAXNAME ] = '\0';
 		STtrmwhite(jnlerr_db);
 		STncpy( jnlerr_dir, db->dbcb_j_path.name, DB_AREA_MAX);
 		jnlerr_dir[DB_AREA_MAX] = '\0';
@@ -2934,8 +2936,7 @@ ACB	    *acb)
 	    uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP,
 		(DB_SQLSTATE *)NULL, a->acb_errtext, 
 		sizeof(a->acb_errtext), &a->acb_errltext, 
-		&error, 1, DB_MAXNAME, 
-		db->dbcb_dcb.dcb_name.db_db_name);
+		&error, 1, DB_DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
 
 	    break;
 	}
@@ -2979,7 +2980,7 @@ ACB	    *acb)
 		    ULE_LOOKUP, (DB_SQLSTATE *)NULL, a->acb_errtext, 
 		    sizeof(a->acb_errtext),
 		    &a->acb_errltext, &error, 1,
-		    DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
+		    DB_DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
 
 		return (error_translate(E_DM9842_ARCH_SOC, &a->acb_dberr));
 	    }
@@ -3057,8 +3058,7 @@ ACB	    *acb)
 	    uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP,
 		(DB_SQLSTATE *)NULL, a->acb_errtext, 
 		sizeof(a->acb_errtext), &a->acb_errltext, 
-		&error, 1, DB_MAXNAME, 
-		db->dbcb_dcb.dcb_name.db_db_name);
+		&error, 1, DB_DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
 
 	    SETDBERR(&a->acb_dberr, 0, E_DM9838_ARCH_DB_BAD_LA);
 	    return (error_translate(E_DM9842_ARCH_SOC, &a->acb_dberr));
@@ -3109,7 +3109,7 @@ ACB	    *acb)
 	    uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP,
 		(DB_SQLSTATE *)NULL, a->acb_errtext, 
 		sizeof(a->acb_errtext), &a->acb_errltext, &error, 1,
-		DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
+		DB_DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
 
 	    return (error_translate(E_DM9842_ARCH_SOC, &a->acb_dberr));
 	}       	
@@ -3330,7 +3330,7 @@ ACB	    *acb)
     i4		jnl_sequence = 0;
     i4		dmp_sequence = 0;
     i4		error;
-    char		jnlerr_db[DB_MAXNAME+1];
+    char		jnlerr_db[DB_DB_MAXNAME+1];
     char		jnlerr_dir[DB_AREA_MAX+1];
     CL_ERR_DESC		sys_err;
     DB_STATUS		status;
@@ -3397,8 +3397,8 @@ ACB	    *acb)
 		a->acb_error_code = E_DM9854_ACP_JNL_ACCESS_EXIT;
 		STRUCT_ASSIGN_MACRO(dbcb->dbcb_dcb.dcb_name, a->acb_errdb);
 		STncpy( jnlerr_db, dbcb->dbcb_dcb.dcb_name.db_db_name,
-		    DB_MAXNAME);
-		jnlerr_db[DB_MAXNAME] = '\0';
+		    DB_DB_MAXNAME);
+		jnlerr_db[DB_DB_MAXNAME] = '\0';
 		STtrmwhite(jnlerr_db);
 		STncpy( jnlerr_dir, dbcb->dbcb_j_path.name, DB_AREA_MAX);
 		jnlerr_dir[DB_AREA_MAX] = '\0';
@@ -3426,8 +3426,8 @@ ACB	    *acb)
 		a->acb_error_code = E_DM9854_ACP_JNL_ACCESS_EXIT;
 		STRUCT_ASSIGN_MACRO(dbcb->dbcb_dcb.dcb_name, a->acb_errdb);
 		STncpy( jnlerr_db, dbcb->dbcb_dcb.dcb_name.db_db_name,
-		    DB_MAXNAME);
-		jnlerr_db[ DB_MAXNAME ] = '\0';
+		    DB_DB_MAXNAME);
+		jnlerr_db[ DB_DB_MAXNAME ] = '\0';
 		STtrmwhite(jnlerr_db);
 		STncpy( jnlerr_dir, dbcb->dbcb_j_path.name, DB_AREA_MAX);
 		jnlerr_dir[ DB_AREA_MAX ] = '\0';
@@ -3457,7 +3457,7 @@ ACB	    *acb)
 		uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP,
 		    (DB_SQLSTATE *)NULL, a->acb_errtext, sizeof(a->acb_errtext),
 		    &a->acb_errltext, &error, 1,
-		    DB_MAXNAME, dbcb->dbcb_dcb.dcb_name.db_db_name);
+		    DB_DB_MAXNAME, dbcb->dbcb_dcb.dcb_name.db_db_name);
 
 		return (error_translate(E_DM9844_ARCH_EOC, &a->acb_dberr));
 	    }
@@ -3473,7 +3473,7 @@ ACB	    *acb)
 		uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP, 
 		    (DB_SQLSTATE *)NULL, a->acb_errtext, 
 		    sizeof(a->acb_errtext), &a->acb_errltext, &error, 1,
-		DB_MAXNAME, dbcb->dbcb_dcb.dcb_name.db_db_name);
+		DB_DB_MAXNAME, dbcb->dbcb_dcb.dcb_name.db_db_name);
 
 		return (error_translate(E_DM9844_ARCH_EOC, &a->acb_dberr));
 	    }
@@ -3523,7 +3523,7 @@ ACB	    *acb)
 	    uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP,
 		(DB_SQLSTATE *)NULL, a->acb_errtext, sizeof(a->acb_errtext),
 		&a->acb_errltext, &error, 1,
-		DB_MAXNAME, dbcb->dbcb_dcb.dcb_name.db_db_name);
+		DB_DB_MAXNAME, dbcb->dbcb_dcb.dcb_name.db_db_name);
 
 	    return (error_translate(E_DM9844_ARCH_EOC, &a->acb_dberr));
 	}
@@ -3590,7 +3590,7 @@ ACB	    *acb)
 	    uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP,
 		(DB_SQLSTATE *)NULL, a->acb_errtext, sizeof(a->acb_errtext),
 		&a->acb_errltext, &error, 1,
-		DB_MAXNAME, dbcb->dbcb_dcb.dcb_name.db_db_name);
+		DB_DB_MAXNAME, dbcb->dbcb_dcb.dcb_name.db_db_name);
 
 	    return (error_translate(E_DM9844_ARCH_EOC, &a->acb_dberr));
 	}
@@ -4195,7 +4195,7 @@ DBCB	    *db)
     i4		blk_seq;
     i4		blk_cnt;
     i4		cur_entry;
-    char		jnlerr_db[DB_MAXNAME+1];
+    char		jnlerr_db[DB_DB_MAXNAME+1];
     char		jnlerr_dir[DB_AREA_MAX+1];
     DM0C_EXT    	*ext;
     DM0C_CNF		*config;
@@ -4221,8 +4221,7 @@ DBCB	    *db)
 	uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP,
 	    (DB_SQLSTATE *)NULL, a->acb_errtext, 
 	    sizeof(a->acb_errtext), &a->acb_errltext, 
-	    &error, 1, DB_MAXNAME, 
-	    db->dbcb_dcb.dcb_name.db_db_name);
+	    &error, 1, DB_DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
 
 	return (error_translate(E_DM9835_ARCH_NEW_JNL_ERROR, &a->acb_dberr));
     }
@@ -4321,8 +4320,8 @@ DBCB	    *db)
 	    a->acb_error_code = E_DM9854_ACP_JNL_ACCESS_EXIT;
 	    STRUCT_ASSIGN_MACRO(db->dbcb_dcb.dcb_name, a->acb_errdb);
 
-	    STncpy( jnlerr_db, db->dbcb_dcb.dcb_name.db_db_name, DB_MAXNAME);
-	    jnlerr_db[ DB_MAXNAME ] = '\0';
+	    STncpy( jnlerr_db, db->dbcb_dcb.dcb_name.db_db_name, DB_DB_MAXNAME);
+	    jnlerr_db[ DB_DB_MAXNAME ] = '\0';
 	    STtrmwhite(jnlerr_db);
 	    STncpy(jnlerr_dir, db->dbcb_j_path.name, DB_AREA_MAX);
 	    jnlerr_dir[ DB_AREA_MAX ] = '\0';
@@ -4425,8 +4424,8 @@ DBCB	    *db)
 	    ** Fill in exit error information for archiver exit handler.
 	    ** On dm0j_create error, report out-of-disk-space.
 	    */
-	    STncpy( jnlerr_db, db->dbcb_dcb.dcb_name.db_db_name, DB_MAXNAME);
-	    jnlerr_db[ DB_MAXNAME ] = '\0';
+	    STncpy( jnlerr_db, db->dbcb_dcb.dcb_name.db_db_name, DB_DB_MAXNAME);
+	    jnlerr_db[ DB_DB_MAXNAME ] = '\0';
 	    STtrmwhite(jnlerr_db);
 	    STncpy( jnlerr_dir, db->dbcb_j_path.name, DB_AREA_MAX);
 	    jnlerr_dir[ DB_AREA_MAX] = '\0';
@@ -4492,8 +4491,8 @@ DBCB	    *db)
 	    */
 	    a->acb_error_code = E_DM9854_ACP_JNL_ACCESS_EXIT;
 	    STRUCT_ASSIGN_MACRO(db->dbcb_dcb.dcb_name, a->acb_errdb);
-	    STncpy(jnlerr_db, db->dbcb_dcb.dcb_name.db_db_name, DB_MAXNAME);
-	    jnlerr_db[ DB_MAXNAME ] = '\0';
+	    STncpy(jnlerr_db, db->dbcb_dcb.dcb_name.db_db_name, DB_DB_MAXNAME);
+	    jnlerr_db[ DB_DB_MAXNAME ] = '\0';
 	    STtrmwhite(jnlerr_db);
 	    STncpy(jnlerr_dir, db->dbcb_j_path.name, DB_AREA_MAX);
 	    jnlerr_dir[ DB_AREA_MAX ] = '\0';
@@ -4523,7 +4522,7 @@ DBCB	    *db)
 	STRUCT_ASSIGN_MACRO(db->dbcb_dcb.dcb_name, a->acb_errdb);
 	uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP, 
 	    (DB_SQLSTATE *)NULL, a->acb_errtext, sizeof(a->acb_errtext), 
-	    &a->acb_errltext, &error, 1, DB_MAXNAME, 
+	    &a->acb_errltext, &error, 1, DB_DB_MAXNAME, 
 	    db->dbcb_dcb.dcb_name.db_db_name);
 
 	return (error_translate(E_DM9835_ARCH_NEW_JNL_ERROR, &a->acb_dberr));
@@ -4639,7 +4638,7 @@ i4	    blk_seq)
     i4	i;
     DB_STATUS	status;
     i4		error;
-    char	jnlerr_db[DB_MAXNAME+1];
+    char	jnlerr_db[DB_DB_MAXNAME+1];
     char	jnlerr_dir[DB_AREA_MAX+1];
     DM0C_CNF	*config;
     DB_ERROR	local_dberr;
@@ -4662,8 +4661,7 @@ i4	    blk_seq)
 	uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP,
 	    (DB_SQLSTATE *)NULL, a->acb_errtext, 
 	    sizeof(a->acb_errtext), &a->acb_errltext, 
-	    &error, 1, DB_MAXNAME, 
-	    db->dbcb_dcb.dcb_name.db_db_name);
+	    &error, 1, DB_DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
 
 	return (error_translate(E_DM9825_ARCH_INIT_DUMP, &a->acb_dberr));
     }
@@ -4743,7 +4741,7 @@ i4	    blk_seq)
 	    uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP, 
 		(DB_SQLSTATE *)NULL, a->acb_errtext, sizeof(a->acb_errtext), 
 		&a->acb_errltext, &error, 1,
-		DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
+		DB_DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
 
 	    return (error_translate(E_DM9825_ARCH_INIT_DUMP, &a->acb_dberr));
 	}
@@ -4811,8 +4809,8 @@ i4	    blk_seq)
 	    */
 	    a->acb_error_code = E_DM985C_ACP_DMP_WRITE_EXIT;
 	    STRUCT_ASSIGN_MACRO(db->dbcb_dcb.dcb_name, a->acb_errdb);
-	    STncpy( jnlerr_db, db->dbcb_dcb.dcb_name.db_db_name, DB_MAXNAME);
-	    jnlerr_db[ DB_MAXNAME ] = '\0';
+	    STncpy( jnlerr_db, db->dbcb_dcb.dcb_name.db_db_name, DB_DB_MAXNAME);
+	    jnlerr_db[ DB_DB_MAXNAME ] = '\0';
 	    STtrmwhite(jnlerr_db);
 	    STncpy( jnlerr_dir, db->dbcb_d_path.name, DB_AREA_MAX);
 	    jnlerr_dir[ DB_AREA_MAX ] = '\0';
@@ -4864,7 +4862,7 @@ i4	    blk_seq)
 	    uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP, 
 		(DB_SQLSTATE *)NULL, a->acb_errtext, sizeof(a->acb_errtext), 
 		&a->acb_errltext, &error, 1,
-		DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
+		DB_DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
 
 	    return (error_translate(E_DM9825_ARCH_INIT_DUMP, &a->acb_dberr));
 	}
@@ -4887,7 +4885,7 @@ i4	    blk_seq)
 	uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP, 
 	    (DB_SQLSTATE *)NULL, a->acb_errtext, sizeof(a->acb_errtext), 
 	    &a->acb_errltext, &error, 1,
-	    DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
+	    DB_DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
 
 	return (error_translate(E_DM9825_ARCH_INIT_DUMP, &a->acb_dberr));
     }
@@ -4982,7 +4980,7 @@ DM0L_HEADER	*record)
 	    uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP, 
 		(DB_SQLSTATE *)NULL, a->acb_errtext, sizeof(a->acb_errtext),
 		&a->acb_errltext, &error, 1,
-		DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
+		DB_DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
 
 	    SETDBERR(&a->acb_dberr, 0, E_DM9829_ARCH_BAD_LOG_TYPE);
 	    return (error_translate(E_DM9826_ARCH_COPY_DUMP, &a->acb_dberr));
@@ -5065,7 +5063,7 @@ LG_LA	    *la)
     DB_STATUS	status;
     LG_LA	*tran_id;
     i4		error;
-    char	jnlerr_db[DB_MAXNAME+1];
+    char	jnlerr_db[DB_DB_MAXNAME+1];
     char	jnlerr_dir[DB_AREA_MAX+1];
 
     CLRDBERR(&a->acb_dberr);
@@ -5094,8 +5092,8 @@ LG_LA	    *la)
 	    TRdisplay("ACP LOG_2_DUMP: INIT_DUMP failed\n");
 	    a->acb_error_code = E_DM985C_ACP_DMP_WRITE_EXIT;
 	    STRUCT_ASSIGN_MACRO(db->dbcb_dcb.dcb_name, a->acb_errdb);
-	    STncpy( jnlerr_db, db->dbcb_dcb.dcb_name.db_db_name, DB_MAXNAME);
-	    jnlerr_db[ DB_MAXNAME ] = '\0';
+	    STncpy( jnlerr_db, db->dbcb_dcb.dcb_name.db_db_name, DB_DB_MAXNAME);
+	    jnlerr_db[ DB_DB_MAXNAME ] = '\0';
 	    STtrmwhite(jnlerr_db);
 	    STncpy( jnlerr_dir, db->dbcb_d_path.name, DB_AREA_MAX);
 	    jnlerr_dir[ DB_AREA_MAX ] = '\0';
@@ -5131,8 +5129,8 @@ LG_LA	    *la)
 	*/
 	a->acb_error_code = E_DM985C_ACP_DMP_WRITE_EXIT;
 	STRUCT_ASSIGN_MACRO(db->dbcb_dcb.dcb_name, a->acb_errdb);
-	STncpy( jnlerr_db, db->dbcb_dcb.dcb_name.db_db_name, DB_MAXNAME);
-	jnlerr_db[ DB_MAXNAME ] = '\0';
+	STncpy( jnlerr_db, db->dbcb_dcb.dcb_name.db_db_name, DB_DB_MAXNAME);
+	jnlerr_db[ DB_DB_MAXNAME ] = '\0';
 	STtrmwhite(jnlerr_db);
 	STncpy( jnlerr_dir, db->dbcb_d_path.name, DB_AREA_MAX);
 	jnlerr_dir[ DB_AREA_MAX ] = '\0';
@@ -5531,7 +5529,7 @@ ACB	    *acb)
 		uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP, 
 		    (DB_SQLSTATE *)NULL, a->acb_errtext,
 		    sizeof(a->acb_errtext), &a->acb_errltext, &error, 1,
-		    DB_MAXNAME, dbcb->dbcb_dcb.dcb_name.db_db_name);
+		    DB_DB_MAXNAME, dbcb->dbcb_dcb.dcb_name.db_db_name);
 
 		SETDBERR(&a->acb_dberr, 0, E_DM980D_ARCH_LOG_ALTER);
 		return (error_translate(E_DM9844_ARCH_EOC, &a->acb_dberr));
@@ -5677,7 +5675,7 @@ DM0L_HEADER	*record)
     i4		fil_seq;
     i4		blk_seq;
     i4			error;
-    char		jnlerr_db[DB_MAXNAME+1];
+    char		jnlerr_db[DB_DB_MAXNAME+1];
     char		jnlerr_dir[DB_AREA_MAX+1];
     bool		jnl_empty;
 
@@ -5741,7 +5739,7 @@ DM0L_HEADER	*record)
 	uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP, 
 	    (DB_SQLSTATE *)NULL, a->acb_errtext, sizeof(a->acb_errtext), 
 	    &a->acb_errltext, &error, 1,
-	    DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
+	    DB_DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
 
 	return (error_translate(E_DM9831_ARCH_JWRITE, &a->acb_dberr));
     }
@@ -5809,7 +5807,7 @@ DM0L_HEADER	*record)
 	    uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP, 
 		(DB_SQLSTATE *)NULL, a->acb_errtext, sizeof(a->acb_errtext), 
 		&a->acb_errltext, &error, 1,
-		DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
+		DB_DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
 
 	    return (error_translate(E_DM9831_ARCH_JWRITE, &a->acb_dberr));
 	}
@@ -5859,7 +5857,7 @@ DM0L_HEADER	*record)
 	    uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP, 
 		(DB_SQLSTATE *)NULL, a->acb_errtext, sizeof(a->acb_errtext), 
 		&a->acb_errltext, &error, 1,
-		DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
+		DB_DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
 
 	    return (error_translate(E_DM9831_ARCH_JWRITE, &a->acb_dberr));
 	}
@@ -5882,7 +5880,7 @@ DM0L_HEADER	*record)
 	uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP, 
 	    (DB_SQLSTATE *)NULL, a->acb_errtext, sizeof(a->acb_errtext), 
 	    &a->acb_errltext, &error, 1,
-	    DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
+	    DB_DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
 
 	return (error_translate(E_DM9831_ARCH_JWRITE, &a->acb_dberr));
     }
@@ -5907,7 +5905,7 @@ DM0L_HEADER	*record)
 	uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP, 
 	    (DB_SQLSTATE *)NULL, a->acb_errtext, sizeof(a->acb_errtext), 
 	    &a->acb_errltext, &error, 1,
-	    DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
+	    DB_DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
 
 	return (error_translate(E_DM9831_ARCH_JWRITE, &a->acb_dberr));
     }
@@ -5948,8 +5946,8 @@ DM0L_HEADER	*record)
 	STRUCT_ASSIGN_MACRO(db->dbcb_dcb.dcb_name, a->acb_errdb);
 	if (a->acb_dberr.err_code != E_DM9839_ARCH_JNL_SEQ_ZERO)
 	{
-	    STncpy( jnlerr_db, db->dbcb_dcb.dcb_name.db_db_name, DB_MAXNAME);
-	    jnlerr_db[ DB_MAXNAME ] = '\0';
+	    STncpy( jnlerr_db, db->dbcb_dcb.dcb_name.db_db_name, DB_DB_MAXNAME);
+	    jnlerr_db[ DB_DB_MAXNAME ] = '\0';
 	    STtrmwhite(jnlerr_db);
 	    STncpy( jnlerr_dir, db->dbcb_j_path.name, DB_AREA_MAX);
 	    jnlerr_dir[ DB_AREA_MAX ] = '\0';
@@ -5967,7 +5965,7 @@ DM0L_HEADER	*record)
 	    uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP, 
 		NULL, a->acb_errtext, sizeof(a->acb_errtext), 
 		&a->acb_errltext, &error, 1,
-		DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
+		DB_DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
 	}
 
 	return (error_translate(E_DM9831_ARCH_JWRITE, &a->acb_dberr));
@@ -5991,7 +5989,7 @@ DM0L_HEADER	*record)
 	uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP, 
 	    NULL, a->acb_errtext, sizeof(a->acb_errtext), 
 	    &a->acb_errltext, &error, 1,
-	    DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
+	    DB_DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
 
 	return (error_translate(E_DM9831_ARCH_JWRITE, &a->acb_dberr));
     }
@@ -6025,7 +6023,7 @@ DM0L_HEADER	*record)
 	uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP, 
 	    (DB_SQLSTATE *)NULL, a->acb_errtext, sizeof(a->acb_errtext), 
 	    &a->acb_errltext, &error, 1,
-	    DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
+	    DB_DB_MAXNAME, db->dbcb_dcb.dcb_name.db_db_name);
 
 	return (error_translate(E_DM9831_ARCH_JWRITE, &a->acb_dberr));
     }
@@ -6112,7 +6110,7 @@ DM0L_SBACKUP    *record)
 	STRUCT_ASSIGN_MACRO(dcb->dcb_name, a->acb_errdb);
 	uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP, 
 	    (DB_SQLSTATE *)NULL, a->acb_errtext, sizeof(a->acb_errtext), 
-	    &a->acb_errltext, &error, 1, DB_MAXNAME, dcb->dcb_name.db_db_name);
+	    &a->acb_errltext, &error, 1, DB_DB_MAXNAME, dcb->dcb_name.db_db_name);
 
 	return (error_translate(E_DM9835_ARCH_NEW_JNL_ERROR, &a->acb_dberr));
     }
@@ -6137,7 +6135,7 @@ DM0L_SBACKUP    *record)
 	    uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP, 
 		(DB_SQLSTATE *)NULL, a->acb_errtext, sizeof(a->acb_errtext), 
 		&a->acb_errltext, &error, 1, 
-		DB_MAXNAME, dcb->dcb_name.db_db_name);
+		DB_DB_MAXNAME, dcb->dcb_name.db_db_name);
 
 	    return (error_translate(E_DM9835_ARCH_NEW_JNL_ERROR, &a->acb_dberr));
 	}
@@ -6226,7 +6224,7 @@ DM0L_SBACKUP    *record)
 	STRUCT_ASSIGN_MACRO(dcb->dcb_name, a->acb_errdb);
 	uleFormat(NULL, a->acb_error_code, (CL_ERR_DESC *)NULL, ULE_LOOKUP, 
 	    (DB_SQLSTATE *)NULL, a->acb_errtext, sizeof(a->acb_errtext), 
-	    &a->acb_errltext, &error, 1, DB_MAXNAME, dcb->dcb_name.db_db_name);
+	    &a->acb_errltext, &error, 1, DB_DB_MAXNAME, dcb->dcb_name.db_db_name);
 
 	return (error_translate(E_DM9835_ARCH_NEW_JNL_ERROR, &a->acb_dberr));
     }

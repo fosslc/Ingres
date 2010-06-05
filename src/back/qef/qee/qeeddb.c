@@ -131,6 +131,8 @@
 **          qee_d3_agg() alloc aligned db_data memory for agg results (b116627)
 **      09-jan-2009 (stial01)
 **          Fix buffers that are dependent on DB_MAXNAME
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -175,7 +177,7 @@ qee_d1_qid(
     char	    hi_ascii[QEK_015_LEN],
 		    lo_ascii[QEK_015_LEN],
 		    pid_ascii[QEK_015_LEN],
-		    temp[QEK_050_LEN+DB_MAXNAME]; /* must be > DB_MAXNAME */
+		    temp[QEK_050_LEN + DB_CURSOR_MAXNAME];
     PID		    pid;		/* an i4 */
 
 
@@ -189,16 +191,15 @@ qee_d1_qid(
     csr_p->db_cursor_id[1] = tm_now.TM_msecs;
     CVla(tm_now.TM_secs, hi_ascii);
     CVla(tm_now.TM_msecs, lo_ascii);
-	
     STpolycat((i4) 4,			/* 4 constituent pieces */
 	"dd", lo_ascii, hi_ascii, pid_ascii, temp);
     MEmove(STlength(temp), temp, ' ', 
-	DB_MAXNAME, csr_p->db_cur_name);
+	DB_CURSOR_MAXNAME, csr_p->db_cur_name);
 
     csr_p = & qee_p->qee_d5_local_qid;
     csr_p->db_cursor_id[0] = 0;
     csr_p->db_cursor_id[1] = 0;
-    MEfill(DB_MAXNAME, ' ', (PTR) csr_p->db_cur_name);
+    MEfill(DB_CURSOR_MAXNAME, ' ', (PTR) csr_p->db_cur_name);
 
     return;
 }
@@ -268,7 +269,7 @@ qee_d2_tmp(
 		    pid_ascii[QEK_015_LEN],
 */
 		    temp[QEK_050_LEN+DB_MAXNAME];/* must be > DB_MAXNAME */
-	DD_NAME	    *name_p;
+	DD_TAB_NAME    *name_p;
 	i4	    *long_p;
 /*
 	PID	    pid;		** an i4 **
@@ -287,9 +288,9 @@ qee_d2_tmp(
 	/* allocate space for array of temporary-table names and 
 	** generate their names */
 
-	/* 1.  allocate array for DD_NAMEs */
+	/* 1.  allocate array for DD_TAB_NAMEs */
 
-	ulm->ulm_psize = ddq_p->qeq_d3_elt_cnt * sizeof(DD_NAME);
+	ulm->ulm_psize = ddq_p->qeq_d3_elt_cnt * sizeof(DD_TAB_NAME);
 	if (status = qec_malloc(ulm))
 	{
 	    qef_rcb->error.err_code = ulm->ulm_error.err_code;
@@ -297,8 +298,8 @@ qee_d2_tmp(
 	    return(status);
 	}
 
-	qee_p->qee_d1_tmp_p = (DD_NAME *) ulm->ulm_pptr;
-					/* ptr to array of DD_NAMEs */
+	qee_p->qee_d1_tmp_p = (DD_TAB_NAME *) ulm->ulm_pptr;
+					/* ptr to array of DD_TAB_NAMEs */
 	/* 2.  allocate array for i4 status */
 
 	ulm->ulm_psize = ddq_p->qeq_d3_elt_cnt * sizeof(i4);
@@ -360,7 +361,7 @@ qee_d2_tmp(
 	    if (tmp_len > QEE_10SQL_NAME_LEN)
 		tmp_len = QEE_10SQL_NAME_LEN;
 	    
-	    MEmove(tmp_len, temp, ' ', sizeof(DD_NAME), 
+	    MEmove(tmp_len, temp, ' ', sizeof(DD_TAB_NAME), 
 		   (char *)name_p);
 
 	    STRUCT_ASSIGN_MACRO(tm_now, tm_last);
@@ -375,7 +376,7 @@ qee_d2_tmp(
     } 
     else
     {
-	qee_p->qee_d1_tmp_p = (DD_NAME *) NULL;
+	qee_p->qee_d1_tmp_p = (DD_TAB_NAME *) NULL;
 	qee_p->qee_d2_sts_p = (i4 *) NULL;
     }
 
@@ -390,13 +391,13 @@ qee_d2_tmp(
 	csr_p = & qee_p->qee_d4_given_qid;
 	csr_p->db_cursor_id[0] = 0;
 	csr_p->db_cursor_id[1] = 0;
-	MEfill(DB_MAXNAME, ' ', (PTR) csr_p->db_cur_name);
+	MEfill(DB_CURSOR_MAXNAME, ' ', (PTR) csr_p->db_cur_name);
     }
 
     csr_p = & qee_p->qee_d5_local_qid;
     csr_p->db_cursor_id[0] = 0;
     csr_p->db_cursor_id[1] = 0;
-    MEfill(DB_MAXNAME, ' ', (PTR) csr_p->db_cur_name);
+    MEfill(DB_CURSOR_MAXNAME, ' ', (PTR) csr_p->db_cur_name);
 
     return(status);
 }

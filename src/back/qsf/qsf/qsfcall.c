@@ -110,6 +110,8 @@
 **	    Backed out above change.
 **	10-Sep-2008 (jonj)
 **	    SIR 120874: Use CLRDBERR, SETDBERR to value DB_ERROR structure.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs, just a comment about qso_names
 **/
 
 
@@ -328,6 +330,27 @@ qsf_call( i4 qsf_operation, QSF_RCB *qsf_rb )
     {
       case QSR_STARTUP:
 	status = qsr_startup(qsf_rb);
+	if (DB_CURSOR_ID_OFFSET != 0 || DB_CUR_NAME_OFFSET != 2*sizeof(i4)
+			|| sizeof(DB_CURSOR_ID) % 4 != 0)
+	{
+	    /*
+	    ** DB_CURSOR_ID is used to build a qso_name
+	    ** There is code that assumes that a DB_CURSOR_ID is (i4+i4+NAME)
+	    ** and that the name is right after the 2 i4s. e.g. qso_hash()
+	    **
+	    ** Code that builds a qso_name will sometimes copy 
+	    ** sizeof(DB_CURSOR_ID) into the qso_name.
+	    ** If there are any compiler added PAD bytes in the DB_CURSOR_ID,
+	    ** they must be EXPLICITYLY defined AFTER the name 
+	    **
+	    ** ALL fields in DB_CURSOR_ID must be initalized before
+	    ** copying into a qso_name.
+	    **
+	    ** See dbdbms.h
+	    */
+	    SETDBERR(&qsf_rb->qsf_error, 0, E_QS9999_INTERNAL_ERROR);
+	    status = E_DB_FATAL;
+	}
 	break;
 
       case QSR_SHUTDOWN:

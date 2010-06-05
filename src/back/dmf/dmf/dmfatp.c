@@ -549,6 +549,8 @@
 **	19-Nov-2009 (kschendel) SIR 122890
 **	    uleFormat doesn't necessarily return a null terminated string;
 **	    the returned string has to be null terminated by hand.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -4157,8 +4159,8 @@ PTR	    record)
     DM0L_HEADER	    *h = (DM0L_HEADER *)record;
     char	    *table_name = (char *)NULL;
     char	    *owner_name = (char *)NULL;
-    i4	    table_size = DB_MAXNAME;
-    i4	    owner_size = DB_MAXNAME;
+    i4	    table_size = DB_TAB_MAXNAME;
+    i4	    owner_size = DB_OWN_MAXNAME;
     char	    *sys_owner = "$ingres";
     bool	    index = FALSE;
     bool	    is_partition = FALSE;
@@ -4325,10 +4327,10 @@ bool	    is_partition)
 {
 
     i4	i;
-    char        lbuf1[DB_MAXNAME];
-    char        *buf_ptr1;
-    char        lbuf2[DB_MAXNAME];
-    char        *buf_ptr2;
+    char        tablebuf[DB_TAB_MAXNAME];
+    char        *table;
+    char        ownerbuf[DB_OWN_MAXNAME];
+    char        *owner;
 
     if (is_partition)
     {
@@ -4342,38 +4344,38 @@ bool	    is_partition)
 	}
     }
 
-    if (tbl_len < DB_MAXNAME)
+    if (tbl_len < DB_TAB_MAXNAME)
     {
-        MEfill(DB_MAXNAME, ' ', lbuf1);
-        MEcopy(tbl_name, tbl_len, lbuf1);
-        buf_ptr1 = lbuf1;
+        MEfill(DB_TAB_MAXNAME, ' ', tablebuf);
+        MEcopy(tbl_name, tbl_len, tablebuf);
+        table = tablebuf;
     }
     else
     {
-        buf_ptr1 = tbl_name;
+        table = tbl_name;
     }
 
-    if (own_len < DB_MAXNAME)
+    if (own_len < DB_OWN_MAXNAME)
     {
-        MEfill(DB_MAXNAME, ' ', lbuf2);
-        MEcopy(own_name, own_len, lbuf2);
-        buf_ptr2 = lbuf2;
+        MEfill(DB_OWN_MAXNAME, ' ', ownerbuf);
+        MEcopy(own_name, own_len, ownerbuf);
+        owner = ownerbuf;
     }
     else
     {
-        buf_ptr2 = own_name;
+        owner = own_name;
     }
 
     for (i = 0; i < atp->atp_jsx->jsx_tbl_cnt; i++)
     {
 	if (MEcmp((char *)&atp->atp_jsx->jsx_tbl_list[i].tbl_name,
-		buf_ptr1, DB_MAXNAME) == 0)
+		table, DB_TAB_MAXNAME) == 0)
 	{
 	if (STbcompare((char *)&atp->atp_jsx->jsx_tbl_list[i].tbl_owner.db_own_name,
                                              0,"", 0, 0) != 0)
               {
                    if(MEcmp((char *)&atp->atp_jsx->jsx_tbl_list[i].tbl_owner,
-                                              buf_ptr2, DB_MAXNAME) == 0)
+                                              owner, DB_OWN_MAXNAME) == 0)
                    return (TRUE);
                }
                else
@@ -5138,13 +5140,12 @@ DMP_DCB	    *dcb)
 	{
 	    for (i = 0; i < jsx->jsx_tbl_cnt; i++)
 	    {
-		jsp_set_case(jsx, 
-		    jsx->jsx_tbl_list[i].tbl_delim ? 
-			jsx->jsx_delim_case : jsx->jsx_reg_case,
-		    DB_MAXNAME, (char *)&jsx->jsx_tbl_list[i].tbl_name, 
+		jsp_set_case(jsx, jsx->jsx_tbl_list[i].tbl_delim ? 
+		    jsx->jsx_delim_case : jsx->jsx_reg_case,
+		    DB_TAB_MAXNAME, (char *)&jsx->jsx_tbl_list[i].tbl_name, 
 		    tmp_name);
 
-		MEcopy(tmp_name, DB_MAXNAME, 
+		MEcopy(tmp_name, DB_TAB_MAXNAME, 
 		    (char *)&jsx->jsx_tbl_list[i].tbl_name);
 
 		/* owner name should also be adjusted, if it exists */
@@ -5154,10 +5155,10 @@ DMP_DCB	    *dcb)
 		    jsp_set_case(jsx, 
 	 	       jsx->jsx_tbl_list[i].tbl_delim ? 
 			jsx->jsx_delim_case : jsx->jsx_reg_case,
-		       DB_MAXNAME, (char *)&jsx->jsx_tbl_list[i].tbl_owner, 
+		       DB_OWN_MAXNAME, (char *)&jsx->jsx_tbl_list[i].tbl_owner, 
 		       tmp_name);
 		
-		    MEcopy(tmp_name, DB_MAXNAME, 
+		    MEcopy(tmp_name, DB_OWN_MAXNAME, 
 			(char *)&jsx->jsx_tbl_list[i].tbl_owner);
 		}
 	    }
@@ -5165,21 +5166,20 @@ DMP_DCB	    *dcb)
 
 	if (jsx->jsx_status & JSX_UNAME) 
 	{
-	    jsp_set_case(jsx, 
-		jsx->jsx_username_delim ? 
-		    jsx->jsx_delim_case : jsx->jsx_reg_case,
-		DB_MAXNAME, (char *)&jsx->jsx_username.db_own_name, tmp_name);
+	    jsp_set_case(jsx, jsx->jsx_username_delim ? 
+		jsx->jsx_delim_case : jsx->jsx_reg_case,
+		DB_OWN_MAXNAME, (char *)&jsx->jsx_username.db_own_name, tmp_name);
 
-	    MEcopy(tmp_name, DB_MAXNAME, (char *)&jsx->jsx_username);
+	    MEcopy(tmp_name, DB_OWN_MAXNAME, (char *)&jsx->jsx_username);
 	}
 
 	if (jsx->jsx_status & JSX_ANAME) 
 	{
 	    jsp_set_case(jsx, 
 		jsx->jsx_aname_delim ? jsx->jsx_delim_case : jsx->jsx_reg_case,
-		DB_MAXNAME, (char *)&jsx->jsx_a_name, tmp_name);
+		DB_OWN_MAXNAME, (char *)&jsx->jsx_a_name, tmp_name);
 
-	    MEcopy(tmp_name, DB_MAXNAME, (char *)&jsx->jsx_a_name);
+	    MEcopy(tmp_name, DB_OWN_MAXNAME, (char *)&jsx->jsx_a_name);
 	}
 
 
@@ -5217,8 +5217,7 @@ DMP_DCB	    *dcb)
 		**	just a name.
 		*/
 		local_status = dma_write_audit(SXF_E_TABLE, access,
-		    jsx->jsx_tbl_list[i].tbl_name.db_tab_name,
-		    DB_MAXNAME,
+		    jsx->jsx_tbl_list[i].tbl_name.db_tab_name, DB_TAB_MAXNAME,
 		    NULL, 	  	       	  /* Object owner */
 		    I_SX270A_AUDITDB_TABLE,	  /*  Message */
 		    TRUE,			  /* Force */
@@ -5423,8 +5422,8 @@ DMP_DCB	    *dcb)
 		    {
 			STncpy( tmp_name,
 			    jsx->jsx_tbl_list[i].tbl_name.db_tab_name, 
-			    DB_MAXNAME);
-			tmp_name[ DB_MAXNAME ] = '\0';
+			    DB_TAB_MAXNAME);
+			tmp_name[ DB_TAB_MAXNAME ] = '\0';
 			STtrmwhite(tmp_name);
 			uleFormat(NULL, E_DM1215_ATP_TBL_NONEXIST,
 			    (CL_ERR_DESC *)NULL, ULE_LOOKUP, (DB_SQLSTATE *)0, 
@@ -5456,8 +5455,8 @@ DMP_DCB	    *dcb)
 		{
 		    STncpy( tmp_name,
 			jsx->jsx_tbl_list[i].tbl_name.db_tab_name, 
-			DB_MAXNAME);
-		    tmp_name[ DB_MAXNAME ] = '\0';
+			DB_TAB_MAXNAME);
+		    tmp_name[ DB_TAB_MAXNAME ] = '\0';
 		    STtrmwhite(tmp_name);
 		    uleFormat(NULL, E_DM1215_ATP_TBL_NONEXIST,
 			(CL_ERR_DESC *)NULL, ULE_LOOKUP, (DB_SQLSTATE *)0, 
@@ -5743,12 +5742,12 @@ char		*trl_filename)
     char	*tmp_ptr;
     char	tmp_char;
     i4	i = 0;
-    i4	tbl_name_len  = DB_MAXNAME;
+    i4	tbl_name_len  = DB_TAB_MAXNAME;
 
     /*
     ** Find length of the table name.
     */
-    tmp_ptr = tbl_name + DB_MAXNAME - 1;
+    tmp_ptr = tbl_name + DB_TAB_MAXNAME - 1;
     while (tmp_ptr >= tbl_name && *tmp_ptr-- == ' ')
 	--tbl_name_len;
 
@@ -6564,6 +6563,12 @@ DB_TAB_ID   *table_id)
     i2			attid;
     i4			idx;
     DB_ERROR		local_dberr;
+    i4			attnmsz;
+    char		*nextattname;
+    DB_ATTS		*curatt;
+    char		*p;
+    i4			alen;
+
 
     CLRDBERR(&jsx->jsx_dberr);
 
@@ -6730,10 +6735,15 @@ DB_TAB_ID   *table_id)
 	/* *Note* New compression type?  add a trial for it too. */
 
 	data_cmpcontrol_size = DB_ALIGN_MACRO(data_cmpcontrol_size);
+
+	attnmsz = (td->data_rac.att_count + 1) * sizeof(DB_ATT_STR);
+	attnmsz = DB_ALIGN_MACRO(attnmsz);
+
 	mem_needed = sizeof(DMP_MISC) + 
 		((td->data_rac.att_count + 1) * sizeof(DB_ATTS)) + 
 		(td->data_rac.att_count * sizeof(DB_ATTS *)) +
-		data_cmpcontrol_size;
+		data_cmpcontrol_size + 
+		attnmsz;
 
 	status = dm0m_allocate(mem_needed, (i4)0, (i4)MISC_CB, 
 	    (i4)MISC_ASCII_ID, (char *)NULL, (DM_OBJECT**)&mem_ptr, &jsx->jsx_dberr);
@@ -6751,13 +6761,16 @@ DB_TAB_ID   *table_id)
 	mem_ptr->misc_data = (char*)td->att_array;
 	td->data_rac.att_ptrs = (DB_ATTS **) ((char *)td->att_array +
 			((td->data_rac.att_count + 1) * sizeof(DB_ATTS)));
+	p = (char *) td->data_rac.att_ptrs + 
+				td->data_rac.att_count * sizeof(DB_ATTS *);
 	if (data_cmpcontrol_size > 0)
 	{
-	    td->cmp_control = (PTR) td->data_rac.att_ptrs +
-				td->data_rac.att_count * sizeof(DB_ATTS *);
+	    td->cmp_control = (PTR) p;
 	    td->control_size = data_cmpcontrol_size;
+	    p += data_cmpcontrol_size;
 	}
 
+	nextattname = p;
 
 	/**************************************************************
 	**
@@ -6842,7 +6855,15 @@ DB_TAB_ID   *table_id)
 
 	    att = &td->att_array[attid];
 
-	    att->name = attrrecord.attname;
+	    for (alen = DB_ATT_MAXNAME;  
+		attrrecord.attname.db_att_name[alen-1] == ' ' 
+			&& alen >= 1; alen--);
+	    att->attnmlen = alen;
+	    att->attnmstr = nextattname;
+	    MEcopy(attrrecord.attname.db_att_name, alen, att->attnmstr);
+	    att->attnmstr[alen] = '\0';
+	    nextattname += (alen + 1);
+
 	    att->offset = attrrecord.attoff;
 	    att->type = attrrecord.attfmt;
 	    att->length = attrrecord.attfml;

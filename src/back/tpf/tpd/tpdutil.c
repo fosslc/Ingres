@@ -84,6 +84,8 @@
 **	    replace nat and longnat with i4
 **	13-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 GLOBALREF   char	*IITP_00_tpf_p;
@@ -629,9 +631,9 @@ tpd_u6_new_cb(
     ULM_RCB	ulm;
     SYSTIME	tm_now1,
 		tm_now2;
-    char	hi_ascii[DB_MAXNAME],
-		lo_ascii[DB_MAXNAME],
-		buff[DB_MAXNAME + DB_MAXNAME];
+    char	hi_ascii[100], /* ascii timestamp */
+		lo_ascii[100], /* ascii timestamp */
+		buff[200]; /* to hold 'll_' + lo_ascii + hi_ascii */
     i4		psize;
 
 
@@ -758,7 +760,7 @@ tpd_u6_new_cb(
 					** timestamp */
 	"ll_", lo_ascii, hi_ascii, buff);
 	MEmove(STlength(buff), buff, ' ', 
-	    DB_MAXNAME, lxcb_p->tlx_23_lxid.dd_dx_name);
+	    DB_DB_MAXNAME, lxcb_p->tlx_23_lxid.dd_dx_name);
 
 	/* append the CB to the list hanging off the TPD_LM_CB */
 
@@ -1539,9 +1541,9 @@ tpd_u11_term_assoc(
 **	i1_cdb_p			ptr to DD_LDB_DESC
 **	
 ** Outputs:
-**	o1_cdb_node			ptr to char buffer[DB_MAXNAME + 1]
-**	o2_cdb_name			ptr to char buffer[DB_MAXNAME + 1]
-**	o3_cdb_dbms			ptr to char buffer[DB_MAXNAME + 1]
+**	o1_cdb_node			ptr to DB_NODE_STR
+**	o2_cdb_name			ptr to DB_DB_STR
+**	o3_cdb_dbms			ptr to DB_TYPE_STR
 **
 **	Returns:
 **	    nothing
@@ -1565,16 +1567,16 @@ tpd_u12_trim_cdbstrs(
 	char	    *o2_cdb_name,
 	char	    *o3_cdb_dbms)
 {
-    MEcopy(i1_cdb_p->dd_l2_node_name, DB_MAXNAME, o1_cdb_node);
-    o1_cdb_node[DB_MAXNAME] = EOS;
+    MEcopy(i1_cdb_p->dd_l2_node_name, DB_NODE_MAXNAME, o1_cdb_node);
+    o1_cdb_node[DB_NODE_MAXNAME] = EOS;
     STtrmwhite(o1_cdb_node);
 
-    MEcopy(i1_cdb_p->dd_l3_ldb_name, DB_MAXNAME, o2_cdb_name);
-    o2_cdb_name[DB_MAXNAME] = EOS;
+    MEcopy(i1_cdb_p->dd_l3_ldb_name, DB_DB_MAXNAME, o2_cdb_name);
+    o2_cdb_name[DB_DB_MAXNAME] = EOS;
     STtrmwhite(o2_cdb_name);
 
-    MEcopy(i1_cdb_p->dd_l4_dbms_name, DB_MAXNAME, o3_cdb_dbms);
-    o3_cdb_dbms[DB_MAXNAME] = EOS;
+    MEcopy(i1_cdb_p->dd_l4_dbms_name, DB_TYPE_MAXLEN, o3_cdb_dbms);
+    o3_cdb_dbms[DB_TYPE_MAXLEN] = EOS;
     STtrmwhite(o3_cdb_dbms);
 }
 
@@ -1590,12 +1592,12 @@ tpd_u12_trim_cdbstrs(
 **	i1_starcdb_p			ptr to TPC_I1_STAR_CDBS
 **	
 ** Outputs:
-**	o1_ddb_name			ptr to char buffer[DB_MAXNAME + 1]
-**	o2_ddb_owner			ptr to char buffer[DB_MAXNAME + 1]
-**	o3_cdb_name			ptr to char buffer[DB_MAXNAME + 1]
-**	o4_cdb_owner			ptr to char buffer[DB_MAXNAME + 1]
-**	o5_cdb_dbms			ptr to char buffer[DB_MAXNAME + 1]
-**	o6_cdb_node			ptr to char buffer[DB_MAXNAME + 1]
+**	o1_ddb_name			ptr to DB_DB_STR
+**	o2_ddb_owner			ptr to DB_OWN_STR
+**	o3_cdb_name			ptr to DB_DB_STR
+**	o4_cdb_owner			ptr to DB_OWN_STR
+**	o5_cdb_dbms			ptr to DB_TYPE_STR 
+**	o6_cdb_node			ptr to DB_NODE_STR
 **
 **	Returns:
 **	    nothing
@@ -1614,32 +1616,31 @@ tpd_u12_trim_cdbstrs(
 
 VOID
 tpd_u13_trim_ddbstrs(
-	TPC_I1_STARCDBS	    
-    *i1_starcdb_p,
+	TPC_I1_STARCDBS	*i1_starcdb_p,
 	char	    *o1_ddb_name,
 	char	    *o2_ddb_owner,
 	char	    *o3_cdb_name,
 	char	    *o4_cdb_node,
 	char	    *o5_cdb_dbms)
 {
-    MEcopy(i1_starcdb_p->i1_1_ddb_name, DB_MAXNAME, o1_ddb_name);
-    o1_ddb_name[DB_MAXNAME] = EOS;
+    MEcopy(i1_starcdb_p->i1_1_ddb_name, DB_DB_MAXNAME, o1_ddb_name);
+    o1_ddb_name[DB_DB_MAXNAME] = EOS;
     STtrmwhite(o1_ddb_name);
 
-    MEcopy(i1_starcdb_p->i1_2_ddb_owner, DB_MAXNAME, o2_ddb_owner);
-    o2_ddb_owner[DB_MAXNAME] = EOS;
+    MEcopy(i1_starcdb_p->i1_2_ddb_owner, DB_OWN_MAXNAME, o2_ddb_owner);
+    o2_ddb_owner[DB_OWN_MAXNAME] = EOS;
     STtrmwhite(o2_ddb_owner);
 
-    MEcopy(i1_starcdb_p->i1_3_cdb_name, DB_MAXNAME, o3_cdb_name);
-    o3_cdb_name[DB_MAXNAME] = EOS;
+    MEcopy(i1_starcdb_p->i1_3_cdb_name, DB_DB_MAXNAME, o3_cdb_name);
+    o3_cdb_name[DB_DB_MAXNAME] = EOS;
     STtrmwhite(o3_cdb_name);
 
-    MEcopy(i1_starcdb_p->i1_5_cdb_node, DB_MAXNAME, o4_cdb_node);
-    o4_cdb_node[DB_MAXNAME] = EOS;
+    MEcopy(i1_starcdb_p->i1_5_cdb_node, DB_NODE_MAXNAME, o4_cdb_node);
+    o4_cdb_node[DB_NODE_MAXNAME] = EOS;
     STtrmwhite(o4_cdb_node);
 
-    MEcopy(i1_starcdb_p->i1_6_cdb_dbms, DB_MAXNAME, o5_cdb_dbms);
-    o5_cdb_dbms[DB_MAXNAME] = EOS;
+    MEcopy(i1_starcdb_p->i1_6_cdb_dbms, DB_TYPE_MAXLEN, o5_cdb_dbms);
+    o5_cdb_dbms[DB_TYPE_MAXLEN] = EOS;
     STtrmwhite(o5_cdb_dbms);
 }
 

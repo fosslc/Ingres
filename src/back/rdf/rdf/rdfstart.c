@@ -89,6 +89,8 @@ static DB_STATUS rdf_rcluster(	RDF_GLOBAL	*global,
 **	    SIR 120874: Use CLRDBERR, SETDBERR to value DB_ERROR structure.
 **	    Pass pointer to facilities DB_ERROR instead of just its err_code
 **	    in rdu_ferror().
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*{
@@ -742,11 +744,11 @@ rdf_rcluster(	RDF_GLOBAL	*global,
 
 		/*
 		** Currently the size of the node name in the cluster.cnf
-		** file is 16 chars and the buffer its read into is DB_MAXNAME
+		** file is 16 chars and the buf its read into is DB_NODE_MAXNAME
 		** So blank fill the buffer 
 		*/
 		temp_p = (RDD_CLUSTER_INFO *)ulmrcb->ulm_pptr;
-		MEfill(DB_MAXNAME, (u_char)' ', temp_p->rdd_2_node); 
+		MEfill(DB_NODE_MAXNAME, (u_char)' ', temp_p->rdd_2_node); 
 
 		/* 
 		** convert cluster node name to lower case --

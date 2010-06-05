@@ -134,6 +134,8 @@
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
 **	11-Apr-2008 (kschendel)
 **	    Revise DMF-qualification call sequence.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -689,14 +691,14 @@ QEU_CB		*qeu_cb)
 		if ( !(qeuq_cb->qeuq_agid_mask & QEU_PGROUP) )
 		    status = qeu_secaudit(FALSE, qef_cb->qef_ses_id,
 		    ugtuple->dbug_group.db_own_name, (DB_OWN_NAME *)NULL, 
-		    DB_MAXNAME, SXF_E_SECURITY, I_SX2007_GROUP_CREATE, 
+		    DB_OWN_MAXNAME, SXF_E_SECURITY, I_SX2007_GROUP_CREATE, 
 		    SXF_A_SUCCESS | SXF_A_CREATE,
 		    &e_error);
 	    }
 	    else
 	    {
 		status = qeu_secaudit(FALSE, qef_cb->qef_ses_id,
-		  ugtuple->dbug_group.db_own_name, (DB_OWN_NAME *)NULL, DB_MAXNAME,
+		  ugtuple->dbug_group.db_own_name, (DB_OWN_NAME *)NULL, DB_OWN_MAXNAME,
 		  SXF_E_SECURITY,I_SX2008_GROUP_MEM_CREATE,
 		  SXF_A_SUCCESS | SXF_A_ALTER,
 		  &e_error);
@@ -1111,7 +1113,7 @@ QEU_CB		*qeu_cb)
 		    }
 		    status = qeu_secaudit(FALSE, qef_cb->qef_ses_id,
 		       ugtuple->dbug_group.db_own_name, (DB_OWN_NAME *)NULL, 
-		       DB_MAXNAME, SXF_E_SECURITY, 
+		       DB_OWN_MAXNAME, SXF_E_SECURITY, 
 		       msg_id, accessmask,
 		       &e_error);
 		}
@@ -1119,7 +1121,7 @@ QEU_CB		*qeu_cb)
 		{
 		    status = qeu_secaudit(FALSE, qef_cb->qef_ses_id,
 		       ugtuple->dbug_group.db_own_name, (DB_OWN_NAME *)NULL, 
-		       DB_MAXNAME, SXF_E_SECURITY, I_SX200A_GROUP_MEM_DROP,
+		       DB_OWN_MAXNAME, SXF_E_SECURITY, I_SX200A_GROUP_MEM_DROP,
 		       SXF_A_SUCCESS | SXF_A_ALTER, 
 		       &e_error);
 		}
@@ -1264,7 +1266,7 @@ DB_USERGROUP	*ugtuple)
 	    MEfill(sizeof(qualtuple.dbug_member), (u_char)' ',
 		   (PTR)&qualtuple.dbug_member);
 	else
-	    MEmove(DB_MAXNAME, (PTR) member, (char)' ',
+	    MEmove(DB_OWN_MAXNAME, (PTR) member, (char)' ',
 		   sizeof(qualtuple.dbug_member),
 		   (PTR)&qualtuple.dbug_member);
 
@@ -1274,7 +1276,7 @@ DB_USERGROUP	*ugtuple)
 	*/
 
 	if ((group == NULL) ||
-	    (STskipblank(group, (i4)DB_MAXNAME) == NULL)
+	    (STskipblank(group, (i4)DB_OWN_MAXNAME) == NULL)
 	   )
 	{
 	    qeu.qeu_klen = 0;
@@ -1287,7 +1289,7 @@ DB_USERGROUP	*ugtuple)
 	}
 	else
 	{
-	    MEmove(DB_MAXNAME, (PTR) group, (char)' ',
+	    MEmove(DB_OWN_MAXNAME, (PTR) group, (char)' ',
 		   sizeof(qualtuple.dbug_group),
 		   (PTR)&qualtuple.dbug_group);
 	    qeu.qeu_klen = 2;
@@ -1463,7 +1465,7 @@ char		*member)
 	MEfill(sizeof(DB_OWN_NAME), (u_char)' ',
 	       (PTR)&qualtuple.dbug_group);
 
-	MEmove(DB_MAXNAME, (PTR) member, (char)' ',
+	MEmove(DB_OWN_MAXNAME, (PTR) member, (char)' ',
 	       sizeof(qualtuple.dbug_member),
 	       (PTR)&qualtuple.dbug_member);
 
@@ -1576,7 +1578,7 @@ qeu_qgroup(
 	DB_ERROR	e_error;
 
 	status = qeu_secaudit(FALSE, qef_cb->qef_ses_id,
-                group_tuple->dbug_group.db_own_name,(DB_OWN_NAME *)NULL, DB_MAXNAME,
+                group_tuple->dbug_group.db_own_name,(DB_OWN_NAME *)NULL, DB_OWN_MAXNAME,
                 SXF_E_SECURITY, I_SX200A_GROUP_MEM_DROP,
 		SXF_A_SUCCESS | SXF_A_ALTER, 
 		&e_error);

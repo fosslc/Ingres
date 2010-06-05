@@ -259,6 +259,8 @@
 **	    SIR 121619 MVCC: Replace dm0p_mutex/unmutex with dmveMutex/Unmutex
 **	    macros.
 **	    Replace DMPP_PAGE* with DMP_PINFO* as needed.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs, move consistency check to dmveutil
 */
 
 
@@ -406,19 +408,12 @@ DMVE_CB		*dmve)
 
     for (;;)
     {
-	/*
-	** Consistency Check:  check for illegal log records.
-	*/
-	if ((log_rec->del_header.type != DM0LDEL) ||
-	    (log_rec->del_header.length != 
-		(sizeof(DM0L_DEL) + log_rec->del_rec_size -
-			(DB_MAXNAME - log_rec->del_tab_size) -
-			(DB_MAXNAME - log_rec->del_own_size))))
+	/* Consistency Check:  check for illegal log records */
+	if (log_rec->del_header.type != DM0LDEL)
 	{
 	    SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
 	    break;
 	}
-
 
 	/*
 	** Get handle to a tableio control block with which to read
@@ -781,9 +776,10 @@ DMP_PINFO	    *pinfo)
 			(i4)log_rec->del_tid.tid_tid.tid_line, &record_size);
 
     compare_size = record_size;
-    if (log_rec->del_tbl_id.db_tab_base == DM_1_RELATION_KEY ||
-        log_rec->del_tbl_id.db_tab_base == DM_B_SEQ_TAB_ID)
-	compare_size = DB_MAXNAME + 16;
+    if (log_rec->del_tbl_id.db_tab_base == DM_1_RELATION_KEY)
+	compare_size = DB_TAB_MAXNAME + 16;
+    else if (log_rec->del_tbl_id.db_tab_base == DM_B_SEQ_TAB_ID)
+	compare_size = DB_SEQ_MAXNAME + 16;
     else
 	compare_size = record_size;
 

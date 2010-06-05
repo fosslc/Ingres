@@ -55,6 +55,8 @@
 **	    replace nat and longnat with i4
 **      05-Dec-2001 (hanal04) Bug 105723, INGSTR 42.
 **          Added rqb_prec and rqb_r_prec to RQB_BIND.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -217,11 +219,11 @@ typedef struct _RQR_CB
     DD_COM_FLAGS *rqr_com_flags;    /* FE command flags */
 				    /* RQR_XFER parameters start here */
     PTR		rqr_xfr;	    /* transfer parameters. RQR_XFR */
-    DD_NAME	*rqr_tmp;	    /* transfer temprorary names. RQR_XFR */
-    DD_NAME	*rqr_tabl_name;	    /* the name of the table to send */
+    DD_TAB_NAME	*rqr_tmp;	    /* transfer temprorary names. RQR_XFR */
+    DD_TAB_NAME	*rqr_tabl_name;	    /* the name of the table to send */
 				    /*  to the LBD for the cursor delete */
 
-    DD_NAME	*rqr_own_name;	    /* owner name for cursor/procedure 
+    DD_OWN_NAME	*rqr_own_name;	    /* owner name for cursor/procedure 
 				    ** delete */
     PTR		rqr_dc_blkp;	    /* direct connect control block pointer */
     bool	rqr_dc_txn;	    /* direct connect transaction mode */

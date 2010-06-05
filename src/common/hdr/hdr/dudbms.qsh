@@ -180,6 +180,8 @@
 **	10-Jun-2009 (hweho01)
 **	    Changed database level and standard catalog level for 
 **          10.0 release.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -348,7 +350,7 @@ EXEC SQL END DECLARE SECTION;
 */
 typedef struct _DU_DATABASE
 {
-    char	    du_dbname[DB_MAXNAME];  /* The database name. */
+    char	    du_dbname[DB_DB_MAXNAME];  /* The database name. */
     DB_OWN_NAME	    du_own;		/* Database's owner's name. */
     DB_LOC_NAME	    du_dbloc;		/* Database's default location. */
     DB_LOC_NAME	    du_ckploc;		/* Database's checkpoint location. */
@@ -600,8 +602,8 @@ typedef struct _DU_DBACCESS
     DB_OWN_NAME     du_usrname;         /* The Ingres user name of someone who
 					** has access to this database.
 					*/
-    char	    du_dbname[DB_MAXNAME]; /* The name of an Ingres database. */
-    char	    du_xtra[DB_MAXNAME]; /* Extra space for futures. */
+    char	    du_dbname[DB_DB_MAXNAME]; /* The name of an Ingres database. */
+    char	    du_xtra[32]; /* Extra space for futures. */
 }   DU_DBACCESS;
 
 /*}
@@ -633,9 +635,9 @@ typedef struct _DU_DBACCESS
 typedef struct _DU_EXTEND
 {
     i2		    du_l_length;	/* Length of database's locationname. */
-    char	    du_lname[DB_MAXNAME]; /* A database's location name. */
+    char	    du_lname[DB_LOC_MAXNAME]; /* A database's location name. */
     i2		    du_d_length;	/* Length of database's name. */
-    char	    du_dname[DB_MAXNAME];   /* Database name. */
+    char	    du_dname[DB_DB_MAXNAME];   /* Database name. */
     i4		    du_status;		/* Status of database's extension.
 					** This field is bit-mapped as follows:
 					*/
@@ -703,7 +705,7 @@ typedef struct _DU_LOCATIONS
 #define		DU_RDONLY_LOC	0x2000	/* Besides above: READONLY */
 
     i2		    du_l_lname;		/* length of ... */
-    char	    du_lname[DB_MAXNAME]; /* A location name. */
+    char	    du_lname[DB_LOC_MAXNAME]; /* A location name. */
     i2		    du_l_area;		/* length of ... */
     char	    du_area[DB_AREA_MAX];   /* The location's corresponding
 					    ** area name.

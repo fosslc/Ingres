@@ -426,6 +426,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /* static functions and constants declaration */
@@ -577,7 +579,7 @@ psl_ct1_create_table(
     {
 	(void) psf_error(E_PS04A5_NO_COLUMNS, 0L, PSF_USERERR,
 			 &err_code, err_blk, 1,
-			 psf_trmwhite(DB_MAXNAME,
+			 psf_trmwhite(DB_TAB_MAXNAME,
 				      dmu_cb->dmu_table_name.db_tab_name),
 			 dmu_cb->dmu_table_name.db_tab_name);
 	return(E_DB_ERROR);
@@ -1110,8 +1112,8 @@ psl_ct2s_crt_tbl_as_select(
     PST_RESKEY	    *reskey, *rkey;
     i4	    err_code;
     i4	    err_num;
-    char	    tid[DB_MAXNAME];
-    char	    secattname[DB_MAXNAME];
+    char	    tid[DB_ATT_MAXNAME];
+    char	    secattname[DB_ATT_MAXNAME];
     i4         qrymod_resp_mask;
     char	    *name;
     bool	    found;
@@ -1180,7 +1182,7 @@ psl_ct2s_crt_tbl_as_select(
 		name = ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname;
 
 		/* Is the name equal to _ii_sec_tabkey */
-		if (!MEcmp(name, secattname, DB_MAXNAME))
+		if (!MEcmp(name, secattname, DB_ATT_MAXNAME))
 		{
 			got_seckey_attr=TRUE;
 			break;
@@ -1278,7 +1280,7 @@ psl_ct2s_crt_tbl_as_select(
 
     /* Normalize the `tid' attribute name */
     STmove(((*sess_cb->pss_dbxlate & CUI_ID_REG_U) ? "TID" : "tid"),
-	   ' ', DB_MAXNAME, tid);
+	   ' ', DB_ATT_MAXNAME, tid);
 
     for (ssnode = query_expr->pst_left, sess_cb->pss_rsdmno=0;
 	 ssnode->pst_sym.pst_type != PST_TREE;
@@ -1288,10 +1290,10 @@ psl_ct2s_crt_tbl_as_select(
 	name = ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname;
 
 	/* Is the name equal to "tid" */
-	if (!MEcmp(name, tid, DB_MAXNAME))
+	if (!MEcmp(name, tid, DB_ATT_MAXNAME))
 	{
 	    (VOID) psf_error(2012L, 0L, PSF_USERERR, &err_code,
-		&psq_cb->psq_error, 1, psf_trmwhite(DB_MAXNAME, name), name);
+		&psq_cb->psq_error, 1, psf_trmwhite(DB_ATT_MAXNAME, name), name);
 	    return (E_DB_ERROR);
 	}
 
@@ -1302,11 +1304,11 @@ psl_ct2s_crt_tbl_as_select(
 	    )
 	{
 	    if (MEcmp(node->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
-		name, DB_MAXNAME) == 0
+		name, DB_ATT_MAXNAME) == 0
 	       )
 	    {
 		(VOID) psf_error(2013L, 0L, PSF_USERERR, &err_code,
-		    &psq_cb->psq_error, 1, psf_trmwhite(DB_MAXNAME, name),
+		    &psq_cb->psq_error, 1, psf_trmwhite(DB_ATT_MAXNAME, name),
 		    name);
 		return (E_DB_ERROR);
 	    }
@@ -1354,7 +1356,7 @@ psl_ct2s_crt_tbl_as_select(
 	    {
 		(VOID) psf_error(E_PS0909_NO_RANGE_ENTRY, 0L, PSF_INTERR,
 		    &err_code, &psq_cb->psq_error, 1,
-		    psf_trmwhite(DB_MAXNAME, name), name);
+		    psf_trmwhite(DB_ATT_MAXNAME, name), name);
 		return (E_DB_ERROR);
 	    }
 
@@ -1369,7 +1371,7 @@ psl_ct2s_crt_tbl_as_select(
 	    {
 		(VOID) psf_error(E_PS090A_NO_ATTR_ENTRY, 0L, PSF_INTERR,
 		    &err_code, &psq_cb->psq_error, 1,
-		    psf_trmwhite(DB_MAXNAME, name), name);
+		    psf_trmwhite(DB_ATT_MAXNAME, name), name);
 		return (E_DB_ERROR);
 	    }
 	    if (attribute->att_flags & (DMU_F_IDENTITY_ALWAYS |
@@ -1417,7 +1419,7 @@ psl_ct2s_crt_tbl_as_select(
 				PSS_GENERATE_NOT_NULL_CONS, &val1, &val2)))
 	{
 	    MEcopy(ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
-		   DB_MAXNAME, cur_col.psy_colnm.db_att_name);
+		   DB_ATT_MAXNAME, cur_col.psy_colnm.db_att_name);
 
 	    status = psl_ct19s_constraint(sess_cb, 
 		       (i4) PSS_CONS_CHECK|PSS_CONS_COL|PSS_CONS_NOT_NULL,
@@ -1655,7 +1657,7 @@ psl_ct2s_crt_tbl_as_select(
 	    	    return (status);
 
 		STmove((char *) node->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
-			' ', sizeof(DD_NAME),
+			' ', sizeof(DD_ATT_NAME),
 			ddl_info->qed_d4_ddb_cols_pp[count--]->dd_c1_col_name);
 	    }
 	}
@@ -4722,7 +4724,7 @@ psl_ct8_cr_lst_elem(
 	lim = (DB_LOC_NAME *) (dmdata_ptr->data_address +
 		dmdata_ptr->data_in_size);
 
-	STmove(element, ' ', (u_i4) DB_MAXNAME, (char *) lim);
+	STmove(element, ' ', (u_i4) DB_LOC_MAXNAME, (char *) lim);
 	dmdata_ptr->data_in_size += sizeof(DB_LOC_NAME);
 
 	/* See if not a duplicate */
@@ -4737,7 +4739,7 @@ psl_ct8_cr_lst_elem(
 		(VOID) psf_error(2116L, 0L, PSF_USERERR,
 		    &err_code, err_blk, 2,
 		    sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-		    psf_trmwhite(DB_MAXNAME, element), element);
+		    psf_trmwhite(DB_LOC_MAXNAME, element), element);
 		return (E_DB_ERROR);
 	    }
 	}
@@ -5039,6 +5041,7 @@ psl_ct9_new_loc_name(
     QEU_CB              *qeu_cb;
     DMU_CB		*dmu_cb;
     DB_STATUS		status = E_DB_OK;
+    i4			err_code;
 
     qeu_cb = (QEU_CB *) sess_cb->pss_object;
     dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
@@ -5047,6 +5050,17 @@ psl_ct9_new_loc_name(
 
     if (loc_name)
     {
+	/* Check location name */
+	if (cui_chk3_locname(loc_name) != OK)
+	{
+	    i4 max = DB_LOC_MAXNAME;
+
+	    (VOID) psf_error(2733, 0L, PSF_USERERR, &err_code,
+		&psq_cb->psq_error, 3, 8, "LOCATION", 0, loc_name, 
+		sizeof(max), &max);
+	    return E_DB_ERROR;
+	}
+	
 	/*
 	** rememebr that we have seen a location; user will be prevented from
 	** specifying location in the WITH clause if the new table name was
@@ -5439,7 +5453,7 @@ psl_ct10_crt_tbl_kwd(
 	if (status != E_DB_OK)
 	    return (status);
 
-	MEcopy((char *)sess_cb->pss_user.db_own_name, sizeof(DD_NAME),
+	MEcopy((char *)sess_cb->pss_user.db_own_name, sizeof(DD_OWN_NAME),
 	       (char *) ddl_info->qed_d2_obj_owner);
 
 	/*
@@ -5484,7 +5498,7 @@ psl_ct10_crt_tbl_kwd(
 
 	ldb_tab_info = ddl_info->qed_d6_tab_info_p;
 	
-	MEfill(sizeof (DD_NAME), (u_char) ' ',
+	MEfill(sizeof (DD_TAB_NAME), (u_char) ' ',
 	       (PTR) ldb_tab_info->dd_t2_tab_owner);
 	ldb_tab_info->dd_t3_tab_type =
 				  ddl_info->qed_d8_obj_type = DD_2OBJ_TABLE;
@@ -5746,7 +5760,7 @@ psl_ct12_crname(
     DB_STATUS	    status, local_status = E_DB_OK;
     PSS_RNGTAB	    *resrange;
     char	    *ch1, *ch2;
-    char	    tempstr[DB_MAXNAME];
+    char	    tempstr[DB_TAB_MAXNAME];
     char	    qry[PSL_MAX_COMM_STRING];
     i4	    qry_len;
     i4		    rngvar_info;
@@ -6010,7 +6024,7 @@ psl_ct12_crname(
 		(void) psf_error(E_PS045F_WRONG_CASE, 0L, PSF_USERERR,
 			     &err_code, &psq_cb->psq_error, 3,
 			     qry_len, qry,
-			     psf_trmwhite(DB_MAXNAME,
+			     psf_trmwhite(DB_TAB_MAXNAME,
 					  tbl_spec->pss_obj_name.db_tab_name),
 			     tbl_spec->pss_obj_name.db_tab_name,
 			     STlength(SystemCatPrefix), SystemCatPrefix);
@@ -6064,7 +6078,7 @@ psl_ct12_crname(
 		dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
 	    }
 	    
-	    MEcopy((PTR)sess_cb->pss_cat_owner, DB_MAXNAME,
+	    MEcopy((PTR)sess_cb->pss_cat_owner, DB_OWN_MAXNAME,
 		   (PTR)dmu_cb->dmu_owner.db_own_name);
 	}
     }
@@ -6298,8 +6312,8 @@ psl_ct13_newcolname(
     i4			i;
     DB_ERROR		*err_blk = &psq_cb->psq_error;
     DMU_GWATTR_ENTRY	**gwattrs;
-    u_char		unorm_col[DB_MAXNAME *2 +2];
-    u_i4		unorm_len = DB_MAXNAME *2 +2;
+    u_char		unorm_col[DB_ATT_MAXNAME *2 +2];
+    u_i4		unorm_len = DB_ATT_MAXNAME *2 +2;
 
     colno = sess_cb->pss_rsdmno;
     /* Count columns, error if too many */
@@ -6466,7 +6480,7 @@ psl_ct13_newcolname(
 	if (status != E_DB_OK)
 	    return (status);
 
-	STmove(column_name, ' ', sizeof(DD_NAME),
+	STmove(column_name, ' ', sizeof(DD_ATT_NAME),
 		ddl_info->qed_d4_ddb_cols_pp[*count]->dd_c1_col_name);
 
 	/*
@@ -6755,7 +6769,7 @@ psl_ct14_typedesc(
 			 PSF_USERERR, &err_code,
                          &psq_cb->psq_error, 4, 
 			 sizeof(i4), &userlen,
-	    		 psf_trmwhite(DB_MAXNAME, 
+	    		 psf_trmwhite(DB_ATT_MAXNAME, 
 					(char *) &cur_attr->attr_name),
 	    		 (char *) &cur_attr->attr_name,
 	    		 STtrmwhite(type_name), type_name,
@@ -6767,7 +6781,7 @@ psl_ct14_typedesc(
 	    ? E_PS110B_TBL_COLFORMAT : 2014L,
 	    0L, PSF_USERERR, &err_code, &psq_cb->psq_error, 2,
 	    STtrmwhite(type_name), type_name,
-	    psf_trmwhite(DB_MAXNAME, (char *) &cur_attr->attr_name),
+	    psf_trmwhite(DB_ATT_MAXNAME, (char *) &cur_attr->attr_name),
 	    (char *) &cur_attr->attr_name);
 
 	return(status);
@@ -6793,7 +6807,7 @@ psl_ct14_typedesc(
 	    /* Identity column must be exact numeric scale 0. */
 	    _VOID_ psf_error(E_PS04B7_BAD_IDENTITY_TYPE, 0L, PSF_USERERR,
 		&err_code, &psq_cb->psq_error, 1,
-		psf_trmwhite(DB_MAXNAME, (char *) &cur_attr->attr_name),
+		psf_trmwhite(DB_ATT_MAXNAME, (char *) &cur_attr->attr_name),
 		&cur_attr->attr_name);
 	    return (E_DB_ERROR);
 	}
@@ -6803,7 +6817,7 @@ psl_ct14_typedesc(
 	    /* Can't mix identity with other default clause. */
 	    _VOID_ psf_error(E_PS04B8_IDENTITY_DEFAULT, 0L, PSF_USERERR,
 		&err_code, &psq_cb->psq_error, 1,
-		psf_trmwhite(DB_MAXNAME, (char *) &cur_attr->attr_name),
+		psf_trmwhite(DB_ATT_MAXNAME, (char *) &cur_attr->attr_name),
 		&cur_attr->attr_name);
 	    return (E_DB_ERROR);
 	}
@@ -6899,7 +6913,7 @@ psl_ct14_typedesc(
     {
 	_VOID_ psf_error(5559L, 0L, PSF_USERERR,
 		&err_code, &psq_cb->psq_error, 1,
-		psf_trmwhite(DB_MAXNAME, (char *) &cur_attr->attr_name),
+		psf_trmwhite(DB_ATT_MAXNAME, (char *) &cur_attr->attr_name),
 		&cur_attr->attr_name);
 	return (E_DB_ERROR);
     }
@@ -6917,7 +6931,7 @@ psl_ct14_typedesc(
 	{
 	    _VOID_ psf_error(5560L, 0L, PSF_USERERR,
 		&err_code, &psq_cb->psq_error, 1,
-		psf_trmwhite(DB_MAXNAME, (char *) &cur_attr->attr_name),
+		psf_trmwhite(DB_ATT_MAXNAME, (char *) &cur_attr->attr_name),
 		&cur_attr->attr_name);
 	    return (E_DB_ERROR);
 	}
@@ -7063,7 +7077,7 @@ psl_ct14_typedesc(
 	    (VOID) psf_error(E_US1901_6401_BAD_SYSMNT, 0L, PSF_USERERR,
 		&err_code, &psq_cb->psq_error, 2,
 		STtrmwhite(type_name), type_name,
-		psf_trmwhite(DB_MAXNAME, (char *) &cur_attr->attr_name),
+		psf_trmwhite(DB_ATT_MAXNAME, (char *) &cur_attr->attr_name),
 		&cur_attr->attr_name);
 	    return (E_DB_ERROR);
 	}
@@ -7172,7 +7186,7 @@ psl_ct15_distr_with(
     if (STcompare(name, "node") == 0)
     {
 	sess_cb->pss_distr_sflags |= PSS_NODE;
-	STmove(value, ' ', sizeof(DD_NAME), ldb_desc->dd_l2_node_name);
+	STmove(value, ' ', sizeof(DD_NODE_NAME), ldb_desc->dd_l2_node_name);
 	return (E_DB_OK);
     }
 
@@ -7188,7 +7202,8 @@ psl_ct15_distr_with(
 	sess_cb->pss_distr_sflags |= PSS_DBMS;
 	if (!quoted_val)
 	    (VOID) CVupper(value);
-	STmove(value, ' ', sizeof(DD_NAME), ldb_desc->dd_l4_dbms_name);
+	STmove(value, ' ', sizeof(ldb_desc->dd_l4_dbms_name), 
+		ldb_desc->dd_l4_dbms_name);
 	return (E_DB_OK);
     }
 
@@ -7232,7 +7247,7 @@ psl_ct15_distr_with(
 	if (quoted_val)
 	    sess_cb->pss_distr_sflags |= PSS_QUOTED_TBLNAME;
 
-	STmove(value, ' ', sizeof(DD_NAME), ldb_tab_info->dd_t1_tab_name);
+	STmove(value, ' ', sizeof(DD_TAB_NAME), ldb_tab_info->dd_t1_tab_name);
     }
 
     else if (qmode == PSQ_0_CRT_LINK)
@@ -7420,7 +7435,7 @@ psl_ct16_distr_create(
     /* if TABLE was not specified, default to link_name */
     if (~ldb_flags & PSS_LDB_TABLE)
     {
-	MEcopy((PTR) ddl_info->qed_d1_obj_name, sizeof(DD_NAME),
+	MEcopy((PTR) ddl_info->qed_d1_obj_name, sizeof(DD_TAB_NAME),
 	       (PTR) ldb_tab_info->dd_t1_tab_name);
     }
 
@@ -7516,9 +7531,9 @@ psl_ct16_distr_create(
 	u_i2		len = (u_i2) STlength("create table ");
 	i4		pkt_len;
 	char		*c1 = " ";
-    	u_char		unorm_tab[DB_MAXNAME *2 +2];
+    	u_char		unorm_tab[DB_TAB_MAXNAME *2 +2];
 	char		*bufp;
-    	u_i4		unorm_len=DB_MAXNAME *2 +2;
+    	u_i4		unorm_len=DB_TAB_MAXNAME *2 +2;
 	u_i4		name_len;
 
 	status = psf_malloc(sess_cb, &sess_cb->pss_ostream, sizeof(DD_PACKET),
@@ -7536,7 +7551,7 @@ psl_ct16_distr_create(
     	** it checked the table's existence.
 	*/
 
-	name_len = (u_i4) psf_trmwhite(sizeof(DD_NAME),
+	name_len = (u_i4) psf_trmwhite(sizeof(DD_TAB_NAME),
 						ldb_tab_info->dd_t1_tab_name);
 	if (ldb_tab_info->dd_t9_ldb_p->dd_i2_ldb_plus.dd_p3_ldb_caps.
 				dd_c1_ldb_caps & DD_8CAP_DELIMITED_IDS)
@@ -7862,7 +7877,7 @@ psl_ct18s_type_qual(
 	_VOID_ psf_error(E_PS0479_DUP_COL_QUAL, 0L, PSF_USERERR,
 			 &err_code, err_blk, 2,
 			 length, command,
-			 psf_trmwhite(DB_MAXNAME, colname), colname);
+			 psf_trmwhite(DB_ATT_MAXNAME, colname), colname);
 	return (E_DB_ERROR);
     }
     
@@ -7889,7 +7904,7 @@ psl_ct18s_type_qual(
 	_VOID_ psf_error(E_PS047A_CONFLICT_COL_QUAL, 0L, PSF_USERERR, 
 			 &err_code, err_blk, 2,
 			 length, command,
-			 psf_trmwhite(DB_MAXNAME, colname), colname);
+			 psf_trmwhite(DB_ATT_MAXNAME, colname), colname);
 	return (E_DB_ERROR);
     }
     
@@ -8054,7 +8069,7 @@ psl_ct19s_constraint(
 	    
 	    (void) psf_error(2715L, 0L, PSF_USERERR, &err_code,
 			     err_blk, 2, (i4) sizeof(lineno), &lineno,
-			     psf_trmwhite(DB_MAXNAME,
+			     psf_trmwhite(DB_OWN_MAXNAME,
 					  ref_tabname->pss_owner.db_own_name),
 			     ref_tabname->pss_owner.db_own_name);
 	    return(E_DB_ERROR);

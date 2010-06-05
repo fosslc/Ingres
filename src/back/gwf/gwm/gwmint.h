@@ -73,6 +73,8 @@
 **	    Removed special 'is' clause list to put in back/hdr/hdr/gwf.h
 **	10-Mar-2009 (kiria01) SIR 121665
 **	    Update GCA API to LEVEL 5
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*----------------------------------------------------------------
@@ -250,6 +252,7 @@ typedef struct
 {
     DB_TAB_ID	xatt_tblid;
     i2		xatt_attnum;
+    i2		xatt_c_len;
     char	xatt_classid[ GM_MIB_CLASSID_LEN ];
 } GM_XATT_TUPLE;
 
@@ -275,6 +278,7 @@ typedef struct
 {
     DB_TAB_ID	xatt_tblid;
     i2		xatt_attnum;
+    i2		xatt_c_len;
     char	xatt_classid[ GM_MIB_CLASSID_LEN ];
 } GM_XIDX_TUPLE;
 

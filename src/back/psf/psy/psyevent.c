@@ -89,6 +89,8 @@
 **	    psl_rptqry_tblids(), psl_cons_text(), psl_gen_alter_text(),
 **	    psq_tmulti_out(), psq_1rptqry_out(), psq_tout(),
 **	    psy_check_objprivs(), psy_insert_objpriv().
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -492,7 +494,7 @@ psy_gevent(
     {
 	rdf_ev.rdf_rb.rdr_types_mask = RDR_EVENT | RDR_BY_NAME;
 	MEmove(sizeof(DB_TAB_NAME), (PTR) event_name, ' ',
-	    sizeof(DB_NAME), (PTR) &rdf_ev.rdf_rb.rdr_name.rdr_evname);
+	    DB_EVENT_MAXNAME, (PTR) &rdf_ev.rdf_rb.rdr_name.rdr_evname);
 
 	if (ev_mask & PSS_USREVENT)
 	{
@@ -597,7 +599,7 @@ psy_gevent(
 	    }
 	    else
 	    {
-	        char        ev_name[DB_MAXNAME], *evname_p;
+	        char        ev_name[DB_EVENT_MAXNAME], *evname_p;
 	        i4	    evname_len;
 
 	        if (ev_mask & PSS_EV_BY_ID)
@@ -1124,7 +1126,7 @@ saw_the_perms:
 		    psf_trmwhite(sizeof(DB_OWN_NAME), 
 			(char *) &alert_name->dba_owner),
 		    &alert_name->dba_owner,
-		    psf_trmwhite(sizeof(DB_NAME),
+		    psf_trmwhite(sizeof(alert_name->dba_alert),
 			(char *) &alert_name->dba_alert),
 		    &alert_name->dba_alert);
 	    }
@@ -1134,7 +1136,7 @@ saw_the_perms:
 		_VOID_ psf_error(E_PS0551_INSUF_PRIV_GRANT_OBJ, 0L, PSF_USERERR,
 		    &err_code, err_blk, 3,
 		    STlength(buf), buf,
-		    psf_trmwhite(sizeof(DB_NAME), 
+		    psf_trmwhite(sizeof(alert_name->dba_alert), 
 			(char *) &alert_name->dba_alert),
 		    &alert_name->dba_alert,
 		    psf_trmwhite(sizeof(DB_OWN_NAME), 
@@ -1146,7 +1148,7 @@ saw_the_perms:
 		/* user entered GRANT ALL [PRIVILEGES] */
 		_VOID_ psf_error(E_PS0563_NOPRIV_ON_GRANT_EV, 0L, PSF_USERERR,
 		    &err_code, err_blk, 2,
-		    psf_trmwhite(sizeof(DB_NAME), 
+		    psf_trmwhite(sizeof(alert_name->dba_alert), 
 			(char *) &alert_name->dba_alert),
 		    &alert_name->dba_alert,
 		    psf_trmwhite(sizeof(DB_OWN_NAME), 
@@ -1165,7 +1167,8 @@ saw_the_perms:
 
 	    _VOID_ psf_error(E_PS0557_DBPGRANT_LACK_EVPRIV, 0L, PSF_USERERR,
 		&err_code, err_blk, 4,
-		psf_trmwhite(sizeof(DB_NAME), (char *) &alert_name->dba_alert),
+		psf_trmwhite(sizeof(alert_name->dba_alert),
+		    (char *) &alert_name->dba_alert),
 		&alert_name->dba_alert,
 		psf_trmwhite(sizeof(DB_OWN_NAME), 
 		    (char *) &alert_name->dba_owner),
@@ -1202,7 +1205,7 @@ saw_the_perms:
 		&err_code, err_blk, 4, 
 		STlength(op), op, 
 		STlength(buf), buf,
-		psf_trmwhite(sizeof(DB_NAME), 
+		psf_trmwhite(sizeof(alert_name->dba_alert), 
 		    (char *) &alert_name->dba_alert),
 		&alert_name->dba_alert,
 		psf_trmwhite(sizeof(DB_OWN_NAME), 
@@ -1270,9 +1273,9 @@ evperm_exit:
 		break;
 	}
 	stat = psy_secaudit(FALSE, sess_cb, 
-		ev_info->pss_alert_name.dba_alert.db_name, 
+		ev_info->pss_alert_name.dba_alert.db_ev_name, 
 		&ev_info->pss_alert_name.dba_owner,
-		sizeof(ev_info->pss_alert_name.dba_alert.db_name),
+		sizeof(ev_info->pss_alert_name.dba_alert.db_ev_name),
 		SXF_E_EVENT, msg_id, accessmask, 
 		&e_error);
 	if (stat > status)
@@ -1314,7 +1317,7 @@ evperm_exit:
 DB_STATUS
 psy_evraise(
 	PSS_SESBLK *sess_cb,
-	DB_NAME     *evname,
+	DB_EVENT_NAME *evname,
 	DB_OWN_NAME *evowner,
 	char	    *evtext,
 	i4	    ev_l_text,

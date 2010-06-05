@@ -410,6 +410,8 @@
 **          Check if table has segmented rows (instead of if pagetype supports)
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Replace DMPP_PAGE* with DMP_PINFO* where needed.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 #define MAXUI2    (2 * MAXI2 + 1)    /* Largest u_i2 */
@@ -5038,13 +5040,9 @@ DB_ERROR	*dberr)
 		    &under_dv);
 		if (status != E_DB_OK)
 		{
-		    char	att_name[DB_MAXNAME +1];
-		    MEcopy(t->tcb_atts_ptr[i].name.db_att_name, 
-			DB_MAXNAME, att_name);
-		    att_name[DB_MAXNAME] = 0;
-		    (VOID)STtrmwhite(att_name);
 		    dm1u_talk(dm1u,E_DM911A_NO_UNDER_DV, 2, 
-			STlength(att_name), att_name);
+			t->tcb_atts_ptr[i].attnmlen,
+			t->tcb_atts_ptr[i].attnmstr);
 		    SETDBERR(dberr, 0, E_DM911A_NO_UNDER_DV);
 		    status = E_DB_OK;
 		    continue;
@@ -5052,13 +5050,9 @@ DB_ERROR	*dberr)
 		status = adi_dtinfo(adf_cb, under_dv.db_datatype, &dtinfo);
 		if (status != E_DB_OK)
 		{
-		    char	att_name[DB_MAXNAME +1];
-		    MEcopy(t->tcb_atts_ptr[i].name.db_att_name, 
-			DB_MAXNAME, att_name);
-		    att_name[DB_MAXNAME] = 0;
-		    (VOID)STtrmwhite(att_name);
 		    dm1u_talk(dm1u,E_DM911B_NO_DT_INFO, 2, 
-			STlength(att_name), att_name);
+			t->tcb_atts_ptr[i].attnmlen,
+			t->tcb_atts_ptr[i].attnmstr);
 		    SETDBERR(dberr, 0, E_DM911B_NO_DT_INFO);
 		    status = E_DB_OK;
 		    continue;
@@ -5107,13 +5101,9 @@ DB_ERROR	*dberr)
 		    status = adc_isnull(adf_cb, &coupon_dv, &null_value);
 		    if (status != E_DB_OK)
 		    {
-			char	att_name[DB_MAXNAME +1];
-			MEcopy(t->tcb_atts_ptr[i].name.db_att_name, 
-			    DB_MAXNAME, att_name);
-			att_name[DB_MAXNAME] = 0;
-			(VOID)STtrmwhite(att_name);
 			dm1u_talk(dm1u,E_DM911D_NO_NULL_INFO, 2, 
-			    STlength(att_name), att_name);
+			    t->tcb_atts_ptr[i].attnmlen,
+			    t->tcb_atts_ptr[i].attnmstr);
 			SETDBERR(dberr, 0, E_DM911D_NO_NULL_INFO);
 			status = E_DB_OK;
 			continue;
@@ -5126,15 +5116,12 @@ DB_ERROR	*dberr)
 			if (cbuf.coupon.per_length1 != 0)
 			{
 			    /* table doesn't exist */
-			    char	att_name[DB_MAXNAME +1];
-			    MEcopy(t->tcb_atts_ptr[i].name.db_att_name, 
-				DB_MAXNAME, att_name);
-			    att_name[DB_MAXNAME] = 0;
-			    (VOID)STtrmwhite(att_name);
 			    dm1u_talk( dm1u,W_DM505E_NO_ETAB_TABLE, 
 				6, sizeof(dmf_coupon->cpn_etab_id),
-				&dmf_coupon->cpn_etab_id, STlength(att_name),
-				att_name, sizeof(rcb->rcb_currenttid.tid_i4),
+				&dmf_coupon->cpn_etab_id,
+				t->tcb_atts_ptr[i].attnmlen,
+				t->tcb_atts_ptr[i].attnmstr,
+				sizeof(rcb->rcb_currenttid.tid_i4),
 				&rcb->rcb_currenttid.tid_i4);
 			}
 			status = E_DB_OK;
@@ -5158,15 +5145,11 @@ DB_ERROR	*dberr)
 			    if (dberr->err_code == E_DM0055_NONEXT)
 			    {
 				/* table doesn't exist */
-				char	att_name[DB_MAXNAME +1];
-				MEcopy(t->tcb_atts_ptr[i].name.db_att_name, 
-				    DB_MAXNAME, att_name);
-				att_name[DB_MAXNAME] = 0;
-				(VOID)STtrmwhite(att_name);
 				dm1u_talk( dm1u,W_DM505E_NO_ETAB_TABLE, 
 				    6, sizeof(dmf_coupon->cpn_etab_id),
 				    &dmf_coupon->cpn_etab_id, 
-				    STlength(att_name), att_name, 
+				    t->tcb_atts_ptr[i].attnmlen,
+				    t->tcb_atts_ptr[i].attnmstr,
 				    sizeof(rcb->rcb_currenttid.tid_i4),
 				    &rcb->rcb_currenttid.tid_i4);
 				CLRDBERR(dberr);
@@ -5190,15 +5173,11 @@ DB_ERROR	*dberr)
 			    if (dberr->err_code == E_DM0055_NONEXT)
 			    {
 				/* table doesn't exist */
-				char	att_name[DB_MAXNAME +1];
-				MEcopy(t->tcb_atts_ptr[i].name.db_att_name, 
-				    DB_MAXNAME, att_name);
-				att_name[DB_MAXNAME] = 0;
-				(VOID)STtrmwhite(att_name);
 				dm1u_talk( dm1u,W_DM505E_NO_ETAB_TABLE, 
 				    6, sizeof(dmf_coupon->cpn_etab_id),
 				    &dmf_coupon->cpn_etab_id, 
-				    STlength(att_name), att_name, 
+				    t->tcb_atts_ptr[i].attnmlen,
+				    t->tcb_atts_ptr[i].attnmstr,
 				    sizeof(rcb->rcb_currenttid.tid_i4),
 				    &rcb->rcb_currenttid.tid_i4);
 				CLRDBERR(dberr);
@@ -5265,17 +5244,13 @@ DB_ERROR	*dberr)
 			    if (dberr->err_code == E_DM0055_NONEXT)
 			    {
 				/* can't find segment */
-				char	att_name[DB_MAXNAME +1];
-				MEcopy(t->tcb_atts_ptr[i].name.db_att_name, 
-				    DB_MAXNAME, att_name);
-				att_name[DB_MAXNAME] = 0;
-				(VOID)STtrmwhite(att_name);
 				bad_segments++;
 				dm1u_talk( dm1u,W_DM5060_NO_ETAB_SEGMENT, 
 				    8, sizeof(segno), &segno,
 				    sizeof(dmf_coupon->cpn_etab_id),
 				    &dmf_coupon->cpn_etab_id,
-				    STlength(att_name), att_name, 
+				    t->tcb_atts_ptr[i].attnmlen,
+				    t->tcb_atts_ptr[i].attnmstr,
 				    sizeof(rcb->rcb_currenttid.tid_i4),
 				    &rcb->rcb_currenttid.tid_i4);
 				SETDBERR(dberr, 0, W_DM5060_NO_ETAB_SEGMENT);
@@ -5289,7 +5264,8 @@ DB_ERROR	*dberr)
 				    dm1u_talk( dm1u,W_DM505F_TOO_MANY_BAD_SEGS, 
 					6, sizeof(dmf_coupon->cpn_etab_id),
 					&dmf_coupon->cpn_etab_id, 
-					STlength(att_name), att_name, 
+					t->tcb_atts_ptr[i].attnmlen,
+					t->tcb_atts_ptr[i].attnmstr,
 					sizeof(rcb->rcb_currenttid.tid_i4),
 					&rcb->rcb_currenttid.tid_i4);
 				    SETDBERR(dberr, 0, W_DM505F_TOO_MANY_BAD_SEGS);
@@ -5315,17 +5291,13 @@ DB_ERROR	*dberr)
 			    if (dberr->err_code == E_DM0055_NONEXT)
 			    {
 				/* can't find segment */
-				char	att_name[DB_MAXNAME +1];
-				MEcopy(t->tcb_atts_ptr[i].name.db_att_name, 
-				    DB_MAXNAME, att_name);
-				att_name[DB_MAXNAME] = 0;
-				(VOID)STtrmwhite(att_name);
 				bad_segments++;
 				dm1u_talk( dm1u,W_DM5060_NO_ETAB_SEGMENT, 
 				    8, sizeof(segno), &segno,
 				    sizeof(dmf_coupon->cpn_etab_id),
 				    &dmf_coupon->cpn_etab_id,
-				    STlength(att_name), att_name, 
+				    t->tcb_atts_ptr[i].attnmlen,
+				    t->tcb_atts_ptr[i].attnmstr,
 				    sizeof(rcb->rcb_currenttid.tid_i4),
 				    &rcb->rcb_currenttid.tid_i4);
 				SETDBERR(dberr, 0, W_DM5060_NO_ETAB_SEGMENT);
@@ -5339,7 +5311,8 @@ DB_ERROR	*dberr)
 				    dm1u_talk( dm1u,W_DM505F_TOO_MANY_BAD_SEGS, 
 					6, sizeof(dmf_coupon->cpn_etab_id),
 					&dmf_coupon->cpn_etab_id, 
-					STlength(att_name), att_name, 
+					t->tcb_atts_ptr[i].attnmlen,
+					t->tcb_atts_ptr[i].attnmstr,
 					sizeof(rcb->rcb_currenttid.tid_i4),
 					&rcb->rcb_currenttid.tid_i4);
 				    SETDBERR(dberr, 0, W_DM505F_TOO_MANY_BAD_SEGS);
@@ -5376,13 +5349,9 @@ DB_ERROR	*dberr)
 		    /* check total blob length */
 		    if (blob_length && blob_length != cbuf.coupon.per_length1)
 		    {
-			char	att_name[DB_MAXNAME +1];
-			MEcopy(t->tcb_atts_ptr[i].name.db_att_name, 
-			    DB_MAXNAME, att_name);
-			att_name[DB_MAXNAME] = 0;
-			(VOID)STtrmwhite(att_name);
-			dm1u_talk( dm1u,W_DM5061_WRONG_BLOB_LENGTH, 
-			    8, STlength(att_name), att_name,
+			dm1u_talk( dm1u,W_DM5061_WRONG_BLOB_LENGTH, 8, 
+			    t->tcb_atts_ptr[i].attnmlen,
+			    t->tcb_atts_ptr[i].attnmstr,
 			    sizeof(rcb->rcb_currenttid.tid_i4),
 			    &rcb->rcb_currenttid.tid_i4, sizeof(u_i4),
 			    &cbuf.coupon.per_length1, sizeof(u_i4),

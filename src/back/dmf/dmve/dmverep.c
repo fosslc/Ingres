@@ -269,6 +269,8 @@
 **	    SIR 121619 MVCC: Replace dm0p_mutex/unmutex with dmveMutex/Unmutex
 **	    macros.
 **	    Replace DMPP_PAGE* with DMP_PINFO* as needed.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs, move consistency check to dmveutil
 */
 
 static DB_STATUS	dmv_rerep(
@@ -421,16 +423,8 @@ DMVE_CB		*dmve_cb)
 
     for (;;)
     {
-	/*
-	** Consistency Check:  check for illegal log records.
-	*/
-	if ((log_rec->rep_header.type != DM0LREP) ||
-	    (log_rec->rep_header.length != 
-		(sizeof(DM0L_REP) + 
-			log_rec->rep_odata_len +
-			log_rec->rep_ndata_len -
-			(DB_MAXNAME - log_rec->rep_tab_size) -
-			(DB_MAXNAME - log_rec->rep_own_size))))
+	/* Consistency Check:  check for illegal log records */
+	if (log_rec->rep_header.type != DM0LREP)
 	{
 	    SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
 	    break;
@@ -998,9 +992,10 @@ char	    	    *new_row_buf)
 	/*
 	** Compare the logged old row with the one on the page.
 	*/
-	if (log_rec->rep_tbl_id.db_tab_base == DM_1_RELATION_KEY ||
-	    log_rec->rep_tbl_id.db_tab_base == DM_B_SEQ_TAB_ID)
-	    compare_size = DB_MAXNAME + 16;
+	if (log_rec->rep_tbl_id.db_tab_base == DM_1_RELATION_KEY)
+	    compare_size = DB_TAB_MAXNAME + 16;
+	else if (log_rec->rep_tbl_id.db_tab_base == DM_B_SEQ_TAB_ID)
+	    compare_size = DB_SEQ_MAXNAME + 16;
 	else
 	    compare_size = record_size;
 
@@ -1617,7 +1612,9 @@ char	    	    *new_row_buf)
     if (newrow_page && log_rec->rep_nrec_size)
     {
 	if (log_rec->rep_tbl_id.db_tab_base == DM_1_RELATION_KEY)
-	    compare_size = DB_MAXNAME + 16;
+	    compare_size = DB_TAB_MAXNAME + 16;
+	else if (log_rec->rep_tbl_id.db_tab_base == DM_B_SEQ_TAB_ID)
+	    compare_size = DB_SEQ_MAXNAME + 16;
 	else
 	    compare_size = record_size;
 

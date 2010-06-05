@@ -209,6 +209,8 @@ typedef struct
 **	    error without needed message params.
 **	26-Nov-2008 (jonj)
 **	    SIR 120874: dm2t_?, dm2r_? functions converted to DB_ERROR *
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **
 **/
 
@@ -2611,9 +2613,9 @@ i4              lock_id)
     struct
     {
 	i2              count;              /* length of ... */
-	char            name[DB_MAXNAME];   /* A dbname. */
+	char            name[DB_DB_MAXNAME];   /* A dbname. */
     }                   d_name;
-    char		pad_lname[DB_MAXNAME];
+    char		loc_name[DB_LOC_MAXNAME];
     char buf[1000];
     i4			*err_code = &jsx->jsx_dberr.err_code;
 
@@ -2622,8 +2624,8 @@ i4              lock_id)
     key_list[0].attr_number = DM_1_EXTEND_KEY;
     key_list[0].attr_operator = DM2R_EQ;
     key_list[0].attr_value = (char *)&d_name;
-    MEcopy( (PTR)dbname, DB_MAXNAME, (PTR)d_name.name);
-    d_name.count = DB_MAXNAME;
+    MEcopy( (PTR)dbname, DB_DB_MAXNAME, (PTR)d_name.name);
+    d_name.count = DB_DB_MAXNAME;
 
     if (jsx->jsx_status & JSX_VERBOSE)
     {
@@ -2651,10 +2653,10 @@ i4              lock_id)
 	    }
 
 	    /* varchar extend->du_lname must be padded before comparing */
-	    MEfill(DB_MAXNAME, ' ', pad_lname);
-	    MEcopy(extend->du_lname, extend->du_l_length, pad_lname);
-	    if ( (MEcmp((char *)(lname->db_loc_name), pad_lname,
-			DB_MAXNAME) == 0)
+	    MEfill(DB_LOC_MAXNAME, ' ', loc_name);
+	    MEcopy(extend->du_lname, extend->du_l_length, loc_name);
+	    if ( (MEcmp((char *)(lname->db_loc_name), loc_name,
+			DB_LOC_MAXNAME) == 0)
 		 && (extend->du_status & ext_flags))
 	      break;
 	}

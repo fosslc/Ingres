@@ -376,6 +376,8 @@
 **      12-mar-2010 (joea)
 **          In rqu_new_assoc, set gca_peer_protocol to GCA_PROTOCOL_LEVEL_68
 **          if AD_BOOLEAN_PROTO bit set in adf_proto_level.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 GLOBALREF i4  ss5000g_dbproc_message;
@@ -1871,7 +1873,7 @@ rqu_put_qtxt(
 	i4		qlanguage,
 	i4		qmodifier,
 	DD_PACKET	*ddpkt,
-	DD_NAME		*tmpnm)
+	DD_TAB_NAME	*tmpnm)
 {
     DB_ERRTYPE	   status = E_RQ0000_OK;
     RQS_CB	   *rqs = (RQS_CB *)assoc->rql_rqr_cb->rqr_session;
@@ -1885,7 +1887,7 @@ rqu_put_qtxt(
     
     for (pkt = ddpkt; pkt != NULL; pkt = pkt->dd_p3_nxt_p)
 	gdv.gca_l_value += 
-		((pkt->dd_p2_pkt_p) ? pkt->dd_p1_len : sizeof(DD_NAME));
+		((pkt->dd_p2_pkt_p) ? pkt->dd_p1_len : sizeof(DD_TAB_NAME));
 
     do
     {
@@ -1919,7 +1921,7 @@ rqu_put_qtxt(
 	}
 	else
 	{
-	    gdv.gca_l_value = sizeof(DD_NAME);
+	    gdv.gca_l_value = sizeof(DD_TAB_NAME);
 	    data_ptr = (char *)(tmpnm + pkt->dd_p4_slot);
 	}
 	status = rqu_put_data(assoc, data_ptr, gdv.gca_l_value);
@@ -2734,8 +2736,8 @@ rqu_putformat(DB_DATA_VALUE *orig_input,
 VOID
 rqu_cluster_info(
 	i4	    *flags,
-	DD_NAME	    *alt_node_name,
-	DD_NAME	    *node_name)
+	DD_NODE_NAME *alt_node_name,
+	DD_NODE_NAME *node_name)
 {
     DD_NODENAMES	*cluster_info;
     i4			string_flag;
@@ -2745,8 +2747,8 @@ rqu_cluster_info(
     if (  (STbcompare( (char *) node_name, (u_i4)sizeof(*node_name),
 		    Rqf_facility->rqf_vnode, 
 		    Rqf_facility->rqf_len_vnode, TRUE ) == 0)
-	||  (STbcompare( (char *) node_name, (u_i4)sizeof(DD_NAME),
-		    DB_ABSENT_NAME, (u_i4)DB_MAXNAME, TRUE ) == 0))
+	||  (STbcompare( (char *) node_name, (u_i4)sizeof(DD_NODE_NAME),
+		    DB_ABSENT_NAME, (u_i4)sizeof(DB_ABSENT_NAME)-1, TRUE ) == 0))
     {
 	/* Matches current node or is absent. NO PASS RQD, and NO ALIAS */
 	*flags = (*flags & ~RQF_PASS_REQUIRED) | RQF_NOALIAS_NODE;
@@ -2924,7 +2926,7 @@ rqu_new_assoc(
     char   	    dbname[ sizeof(ldb->dd_l3_ldb_name) + 1 ];
     char	    *uname, *passw;
     STATUS	    status;
-    DD_NAME	    alt_node_name, *node_name;
+    DD_NODE_NAME    alt_node_name, *node_name;
     i4	    con_flags=0;
     i4		    log_error_only;
     RQS_CB	    *rqs = (RQS_CB *)rqr_cb->rqr_session;
@@ -2949,7 +2951,7 @@ rqu_new_assoc(
     STncpy(dbname, ldb->dd_l3_ldb_name, sizeof(ldb->dd_l3_ldb_name));
     dbname[ sizeof(ldb->dd_l3_ldb_name) ] = '\0';
     STtrmwhite(dbname);
-    node_name = (DD_NAME *)ldb->dd_l2_node_name;
+    node_name = (DD_NODE_NAME *)ldb->dd_l2_node_name;
 
     /* Allocate most needed for node::dbname/type,username,password */
     ulm.ulm_psize = sizeof(ldb->dd_l2_node_name)    /* node */
@@ -3023,7 +3025,7 @@ rqu_new_assoc(
     } /* password */	
 
     /* Compute number of attempts. If an alias exists 2, 1 otherwise. */
-    rqu_cluster_info(&con_flags, (DD_NAME *)alt_node_name, node_name);
+    rqu_cluster_info(&con_flags, (DD_NODE_NAME *)alt_node_name, node_name);
     it = (con_flags & RQF_NOALIAS_NODE) ? 1 : 2;
     while (it > 0)
     {
@@ -3035,14 +3037,14 @@ rqu_new_assoc(
 	{
 	    /* Use actual node and print errors. */
 	    assoc->rql_noerror = FALSE;
-	    node_name = (DD_NAME *)ldb->dd_l2_node_name;
+	    node_name = (DD_NODE_NAME *)ldb->dd_l2_node_name;
 	    log_error_only = FALSE;
 	}
 	else /* it == 2 */
 	{
 	    /* Use alias node but do not print errors. */
 	    assoc->rql_noerror = TRUE;
-	    node_name = (DD_NAME *)alt_node_name;
+	    node_name = (DD_NODE_NAME *)alt_node_name;
 	    log_error_only = TRUE;
 	}
 	it--;
@@ -3919,8 +3921,8 @@ rqu_create_tmp(
 	RQL_ASSOC	*src_assoc,
 	RQL_ASSOC	*dest_assoc,
 	i4		lang,
-	DD_NAME		**col_name_tab,
-	DD_NAME		*table_name,
+	DD_ATT_NAME	**col_name_tab,
+	DD_TAB_NAME	*table_name,
 	i4		pagesize)
 {
     GCA_TD_DATA		tup_desc;
@@ -3929,7 +3931,8 @@ rqu_create_tmp(
     DB_ERRTYPE		status;
     char		create_header_format[100]; 
     char		col_descr_format[20];
-    char		qbuffer[100 + sizeof(DD_NAME)]; /* buf for create qry */
+    char		qbuffer[100 + sizeof(DD_TAB_NAME) 
+			    + sizeof(DD_ATT_NAME)]; /* buf for create qry */
     RQS_CB	        *rqs = (RQS_CB *)src_assoc->rql_rqr_cb->rqr_session;
     DD_PACKET		ddpkt;
     bool		use_tmptbl = FALSE;
@@ -3981,18 +3984,18 @@ rqu_create_tmp(
     }
 
     if (use_tmptbl == FALSE)
-        STprintf(create_header_format,"create table %%.%ds(", sizeof(DD_NAME));
+        STprintf(create_header_format,"create table %%.%ds(", sizeof(DD_TAB_NAME));
     else
 	STprintf(create_header_format,
-		 "declare global temporary table %%.%ds(",  sizeof(DD_NAME));
+		 "declare global temporary table %%.%ds(",  sizeof(DD_TAB_NAME));
 
     if (lang == DB_QUEL)
     {
-	STprintf(col_descr_format," %%.%ds = ", sizeof(DD_NAME));
+	STprintf(col_descr_format," %%.%ds = ", sizeof(DD_ATT_NAME));
     }
     else
     {
-	STprintf(col_descr_format," %%.%ds ", sizeof(DD_NAME));
+	STprintf(col_descr_format," %%.%ds ", sizeof(DD_ATT_NAME));
     }
 
     STprintf(qbuffer, create_header_format, table_name);
@@ -4003,7 +4006,7 @@ rqu_create_tmp(
     ddpkt.dd_p4_slot  = DD_NIL_SLOT;
 
     status = rqu_put_qtxt(dest_assoc, GCA_QUERY, lang, 0,
-			  &ddpkt, (DD_NAME *)NULL);
+			  &ddpkt, (DD_TAB_NAME *)NULL);
 
     for (col_idx = 0;
        col_idx < tup_desc.gca_l_col_desc && status == E_RQ0000_OK;

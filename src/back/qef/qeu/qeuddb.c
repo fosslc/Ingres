@@ -101,6 +101,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -256,10 +258,8 @@ QEF_RCB		*v_qer_p)
 /*
     ** this call wipes out the next field dd_t3_tab_type!!! **
 
-    qed_u0_trimtail(
-		dbconsts.l1_2_dba_name, 
-		(u_i4) DB_MAXNAME,
-		ddl_p->qed_d6_tab_info_p->dd_t2_tab_owner);
+    qed_u0_trimtail( dbconsts.l1_2_dba_name, DB_OWN_MAXNAME,
+	    ddl_p->qed_d6_tab_info_p->dd_t2_tab_owner);
 */
     /* 3.  create the link */
 
@@ -575,8 +575,8 @@ QEUQ_CB		*i_quq_p)
     qer_p->qef_r3_ddb_req.qer_d13_ctl_info = QEF_00DD_NIL_INFO;
     qef_cb->qef_rcb = qer_p;
 
-    MEfill(sizeof(DD_NAME), ' ', ddl_p->qed_d1_obj_name);
-    MEfill(sizeof(DD_NAME), ' ', ddl_p->qed_d2_obj_owner);
+    MEfill(sizeof(DD_OBJ_NAME), ' ', ddl_p->qed_d1_obj_name);
+    MEfill(sizeof(DD_OWN_NAME), ' ', ddl_p->qed_d2_obj_owner);
     ddl_p->qed_d3_col_count = 0;
     ddl_p->qed_d4_ddb_cols_pp = NULL;
     ddl_p->qed_d5_qry_info_p = NULL;
@@ -845,27 +845,19 @@ DMT_CB		*i_dmt_p)
 
     * 5.  set up to update TABLE_STATS and MODIFY_DATE of IIDD_TABLES *
 
-    qed_u0_trimtail(
-	objs_p->d6_1_obj_name, 
-	(u_i4) DB_MAXNAME, 
+    qed_u0_trimtail( objs_p->d6_1_obj_name, DB_OBJ_MAXNAME,
 	tabs_p->l16_1_tab_name);
 
-    qed_u0_trimtail(
-	objs_p->d6_2_obj_owner, 
-	(u_i4) DB_MAXNAME, 
+    qed_u0_trimtail( objs_p->d6_2_obj_owner, DB_OWN_MAXNAME, 
 	tabs_p->l16_2_tab_owner);
 */
 
     /* 3.  set up to update TABLE_STATS and MODIFY_DATE of IIDD_TABLES */
 
-    qed_u0_trimtail(
-	(char *) & i_dmt_p->dmt_table,
-	(u_i4) DB_MAXNAME, 
+    qed_u0_trimtail( (char *) & i_dmt_p->dmt_table, DB_TAB_MAXNAME,
 	tabs_p->l16_1_tab_name);
 
-    qed_u0_trimtail(
-	(char *) & i_dmt_p->dmt_owner,
-	(u_i4) DB_MAXNAME, 
+    qed_u0_trimtail( (char *) & i_dmt_p->dmt_owner, DB_OWN_MAXNAME,
 	tabs_p->l16_2_tab_owner);
 
     status = qed_u8_gmt_now(v_qer_p, tabs_p->l16_21_mod_date);
@@ -1055,7 +1047,7 @@ QEUQ_CB		*i_quq_p)
     lnk_p->qec_2_tableinfo_p = NULL;
     lnk_p->qec_3_ldb_id = 0;			
     lnk_p->qec_4_col_cnt = 0;
-    MEfill(DB_MAXNAME, ' ', lnk_p->qec_5_ldb_alias);
+    MEfill(DB_DB_MAXNAME, ' ', lnk_p->qec_5_ldb_alias);
     lnk_p->qec_6_select_p = & sel;
     lnk_p->qec_7_ldbids_p = NULL;
     lnk_p->qec_8_longnames_p = NULL;

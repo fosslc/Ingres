@@ -28,6 +28,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -56,7 +58,7 @@
 #pragma pointer_size long
 #endif
 
-# define	RD_MAXNAME	32
+# define	RD_MAXNAME	256
 
 typedef struct s_ROW_COLNAME {
     i2  	rd_nmlen;		/* 0 <= Length of name <= RD_MAXNAME */

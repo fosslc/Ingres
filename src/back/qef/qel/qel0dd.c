@@ -100,6 +100,8 @@
 **	    replace nat and longnat with i4
 **	30-mar-04 (toumi01)
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 GLOBALREF	char	IIQE_c0_usr_ingres[];
@@ -309,15 +311,11 @@ QEC_LINK	*v_lnk_p )
 
     /* 1.  set up insert information */
 
-    l_obj = (u_i4)qed_u0_trimtail(
-	        ddl_p->qed_d1_obj_name, 
-		(u_i2) DB_MAXNAME, 
-		objects_p->d6_1_obj_name);
+    l_obj = (u_i4)qed_u0_trimtail( ddl_p->qed_d1_obj_name, 
+		(u_i2) DB_OBJ_MAXNAME, objects_p->d6_1_obj_name);
 
-    l_own = (u_i4)qed_u0_trimtail(
-		ddl_p->qed_d2_obj_owner, 
-		(u_i2) DB_MAXNAME, 
-		objects_p->d6_2_obj_owner);
+    l_own = (u_i4)qed_u0_trimtail( ddl_p->qed_d2_obj_owner, 
+		(u_i2) DB_OWN_MAXNAME, objects_p->d6_2_obj_owner);
 
     l_ing = STlength( IIQE_c0_usr_ingres );
 
@@ -686,17 +684,13 @@ QEC_LINK	*v_lnk_p )
     {
 	/* 1.1  set up data */
 
-	qed_u0_trimtail(
-		ldb_p->dd_l3_ldb_name,
-		(u_i4) DD_256_MAXDBNAME,
+	qed_u0_trimtail( ldb_p->dd_l3_ldb_name, (u_i4) DD_256_MAXDBNAME,
 		names_p->d5_1_ldb_name);
 
 	names_p->d5_2_ldb_id = v_lnk_p->qec_3_ldb_id;	
 
-	qed_u0_trimtail(
-		v_lnk_p->qec_5_ldb_alias, 
-		(u_i4) DB_MAXNAME,
-		names_p->d5_3_ldb_alias);
+	qed_u0_trimtail( v_lnk_p->qec_5_ldb_alias, (u_i4) DB_DB_MAXNAME,
+		 names_p->d5_3_ldb_alias);
 
 	/* 1.3  insert the tuple */
 
@@ -711,21 +705,15 @@ QEC_LINK	*v_lnk_p )
 
     /* 2.  insert into IIDD_DDB_LDBIDS */
 
-    qed_u0_trimtail(
-		ldb_p->dd_l2_node_name,
-		(u_i4) DB_MAXNAME,
+    qed_u0_trimtail( ldb_p->dd_l2_node_name, (u_i4) DB_NODE_MAXNAME,
 		ldbids_p->d2_1_ldb_node);
 
-    qed_u0_trimtail(
-		ldb_p->dd_l4_dbms_name,
-		(u_i4) DB_MAXNAME,
+    qed_u0_trimtail( ldb_p->dd_l4_dbms_name, (u_i4) DB_TYPE_MAXLEN,
 		ldbids_p->d2_2_ldb_dbms);
 
     if (v_lnk_p->qec_10_haves & QEC_04_LONG_LDBNAME)
     {
-	qed_u0_trimtail(
-	    names_p->d5_3_ldb_alias,
-	    (u_i4) DB_MAXNAME,
+	qed_u0_trimtail( names_p->d5_3_ldb_alias, (u_i4) DB_DB_MAXNAME,
 	    ldbids_p->d2_3_ldb_database);
 
 	ldbids_p->d2_4_ldb_longname[0] = 'Y';
@@ -733,9 +721,7 @@ QEC_LINK	*v_lnk_p )
     }
     else
     {
-	qed_u0_trimtail(
-	    ldb_p->dd_l3_ldb_name,
-	    (u_i4) DB_MAXNAME,
+	qed_u0_trimtail( ldb_p->dd_l3_ldb_name, (u_i4) DB_DB_MAXNAME,
 	    ldbids_p->d2_3_ldb_database);
 
 	ldbids_p->d2_4_ldb_longname[0] = 'N';
@@ -890,13 +876,9 @@ QEC_LINK	*v_lnk_p )
     if (!tabinfo_p->dd_t6_mapped_b)
     {
 	/* Set up for looping through local columns from iicolumns */
-	qed_u0_trimtail(
-			tabinfo_p->dd_t1_tab_name,
-			(u_i4) DB_MAXNAME,
+	qed_u0_trimtail( tabinfo_p->dd_t1_tab_name, (u_i4) DB_TAB_MAXNAME,
 			ddcolumns_p->l3_1_tab_name);
-	qed_u0_trimtail(
-			tabinfo_p->dd_t2_tab_owner,
-			(u_i4) DB_MAXNAME,
+	qed_u0_trimtail( tabinfo_p->dd_t2_tab_owner, (u_i4) DB_OWN_MAXNAME,
 			ddcolumns_p->l3_2_tab_owner);
 				
 	sel_p->qeq_c1_can_id = SEL_121_II_COLNAMES;
@@ -944,8 +926,7 @@ QEC_LINK	*v_lnk_p )
 	    ldb_colname = ddcolumns_p->l3_3_col_name;
 	}
 
-	qed_u0_trimtail(
-		    ldb_colname, (u_i4) DB_MAXNAME,
+	qed_u0_trimtail( ldb_colname, (u_i4) DB_ATT_MAXNAME,
 		    ldbcols_p->d3_2_lcl_name);
 
 	ldbcols_p->d3_3_seq_in_row = tupcnt + 1;
@@ -1097,19 +1078,13 @@ QEC_LINK	*v_lnk_p )
 	insert_b = FALSE;
 
 	/* copy data from iicaps to ddcaps */
-
-	MEcopy(
-	    iicaps_p->l4_1_cap_cap,
-	    sizeof(iicaps_p->l4_1_cap_cap),
+	MEcopy( iicaps_p->l4_1_cap_cap, DB_CAP_MAXLEN,
 	    ddcaps_p->d4_2_cap_cap);
 	    
-	MEcopy(
-	    iicaps_p->l4_2_cap_val,
-	    sizeof(iicaps_p->l4_2_cap_val),
+	MEcopy( iicaps_p->l4_2_cap_val, DB_CAPVAL_MAXLEN,
 	    ddcaps_p->d4_3_cap_val);
-	    
 
-	ddcaps_p->d4_2_cap_cap[DB_MAXNAME] = EOS;	/* null terminate */
+	ddcaps_p->d4_2_cap_cap[DB_CAP_MAXLEN] = EOS;	/* null terminate */
 	cap_code = qek_c1_str_to_code(iicaps_p->l4_1_cap_cap);
 
 	/* 2.  convert cap_value to cap_level if necessary */
@@ -1121,7 +1096,7 @@ QEC_LINK	*v_lnk_p )
 	case QEK_7CAP_INGRESSQL_LEVEL:
 	case QEK_15CAP_OPENSQL_LEVEL:
 
-	    ddcaps_p->d4_3_cap_val[DB_MAXNAME] = EOS;	
+	    ddcaps_p->d4_3_cap_val[DB_CAPVAL_MAXLEN] = EOS;	
 						/* null terminate */
 	    ddcaps_p->d4_4_cap_lvl = 
 		(i4) qek_c2_val_to_code(ddcaps_p->d4_3_cap_val);

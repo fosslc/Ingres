@@ -287,6 +287,8 @@ static DB_STATUS parse_lsn(
 **	26-Aug-2009 (kschendel) 121804
 **	    Need lgdef.h to satisfy gcc 4.3.  Quickie hack to "build file
 **	    name" call args, to conform to lgdef.h and the rest of lg.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*
@@ -886,10 +888,10 @@ char		    *argv[])
 	    "WARNING The RCP encountered an error and is waiting for input.\n");
 		TRdisplay("Valid input is:\n");
 		TRdisplay("rcpconfig -rcp_continue_ignore_db=%~t\n",
-		    DB_MAXNAME, recov_struct.lg_dbname);
+		    DB_DB_MAXNAME, recov_struct.lg_dbname);
 		TRdisplay("OR\n");
 		TRdisplay("rcpconfig -rcp_continue_ignore_table=%~t\n",
-		    DB_MAXNAME, recov_struct.lg_tabname);
+		    DB_TAB_MAXNAME, recov_struct.lg_tabname);
 		TRdisplay("OR\n");
 		TRdisplay("rcpconfig -rcp_continue_ignore_lsn=%d,%d\n",
 		    recov_struct.lg_lsn.lsn_high,
@@ -1666,8 +1668,10 @@ i4		logs_to_erase)
      if (db_id == (LG_DBID *)0)
 	return (OK);
 
-     STmove((PTR)DB_RCPCONFIG_INFO, ' ', DB_MAXNAME, (PTR) &add_info.ad_dbname);
-     MEcopy((PTR)DB_INGRES_NAME, DB_MAXNAME, (PTR) &add_info.ad_dbowner);
+     STmove((PTR)DB_RCPCONFIG_INFO, ' ', DB_DB_MAXNAME, 
+		(PTR) add_info.ad_dbname.db_db_name);
+     MEcopy((PTR)DB_INGRES_NAME, DB_OWN_MAXNAME, 
+		(PTR) add_info.ad_dbowner.db_own_name);
      MEcopy((PTR)"None", 4, (PTR) &add_info.ad_root);
      add_info.ad_dbid = 0;
      add_info.ad_l_root = 4;

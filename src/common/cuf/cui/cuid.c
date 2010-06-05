@@ -59,6 +59,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*
@@ -1171,7 +1173,7 @@ char               *dbname;
     p	= dbname;
 
     /* check string length */
-    if ((STlength(p) > DB_MAXNAME) || (*p == EOS))
+    if ((STlength(p) > DB_DB_MAXNAME) || (*p == EOS))
 	return (FAIL);
 
     /* lowercase the database name */
@@ -1234,7 +1236,7 @@ cui_chk3_locname(cp)
 register char	*cp;
 {
 
-    if ((STlength(cp) > DB_MAXNAME) || (*cp == EOS))
+    if ((STlength(cp) > DB_LOC_MAXNAME) || (*cp == EOS))
 	return(FAIL);
 
     if(!CMnmstart(cp))

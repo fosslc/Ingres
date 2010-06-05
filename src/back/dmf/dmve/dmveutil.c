@@ -161,6 +161,8 @@
 **          Added  dmve_fix_page, dmve_unfix_page
 **	23-Oct-2009 (kschendel) SIR 122739
 **	    Use get-plv instead of getaccessors.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -846,6 +848,15 @@ i4		*location_count)
 	{
 	    DM0L_PUT	*put_rec = (DM0L_PUT *)dmve->dmve_log_rec;
 
+	    if (put_rec->put_header.length != 
+		    (sizeof(DM0L_PUT) + put_rec->put_rec_size -
+			    (DB_TAB_MAXNAME - put_rec->put_tab_size) -
+			    (DB_OWN_MAXNAME - put_rec->put_own_size)))
+	    {
+		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
+		break;
+	    }
+
 	    tab_name_ptr = &put_rec->put_vbuf[0];
 	    own_name_ptr = &put_rec->put_vbuf[put_rec->put_tab_size];
 
@@ -871,6 +882,14 @@ i4		*location_count)
 	{
 	    DM0L_DEL	*del_rec = (DM0L_DEL *)dmve->dmve_log_rec;
 
+	    if (del_rec->del_header.length != 
+		(sizeof(DM0L_DEL) + del_rec->del_rec_size -
+			(DB_TAB_MAXNAME - del_rec->del_tab_size) -
+			(DB_OWN_MAXNAME - del_rec->del_own_size)))
+	    {
+		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
+		break;
+	    }
 	    tab_name_ptr = &del_rec->del_vbuf[0];
 	    own_name_ptr = &del_rec->del_vbuf[del_rec->del_tab_size];
 
@@ -895,6 +914,17 @@ i4		*location_count)
 	case DM0LREP:
 	{
 	    DM0L_REP	*rep_rec = (DM0L_REP *)dmve->dmve_log_rec;
+
+	    if (rep_rec->rep_header.length != 
+		(sizeof(DM0L_REP) + 
+			rep_rec->rep_odata_len +
+			rep_rec->rep_ndata_len -
+			(DB_TAB_MAXNAME - rep_rec->rep_tab_size) -
+			(DB_OWN_MAXNAME - rep_rec->rep_own_size)))
+	    {
+		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
+		break;
+	    }
 
 	    tab_name_ptr = &rep_rec->rep_vbuf[0];
 	    own_name_ptr = &rep_rec->rep_vbuf[rep_rec->rep_tab_size];
@@ -977,6 +1007,15 @@ i4		*location_count)
 	{
 	    DM0L_ASSOC	*assoc_rec = (DM0L_ASSOC *)dmve->dmve_log_rec;
 
+	    if (assoc_rec->ass_header.length != (sizeof(DM0L_ASSOC) -
+		(DB_TAB_MAXNAME - assoc_rec->ass_tab_size) -
+		(DB_OWN_MAXNAME - assoc_rec->ass_own_size)))
+	    {
+		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
+		status = E_DB_ERROR;
+		break;
+	    }
+
 	    tab_name_ptr = &assoc_rec->ass_vbuf[0];
 	    own_name_ptr = &assoc_rec->ass_vbuf[assoc_rec->ass_tab_size];
 
@@ -1024,6 +1063,13 @@ i4		*location_count)
 	{
 	    DM0L_ALLOC	*all_rec = (DM0L_ALLOC *)dmve->dmve_log_rec;
 
+	    if (all_rec->all_header.length != (sizeof(DM0L_ALLOC) -
+		    (DB_TAB_MAXNAME - all_rec->all_tab_size) -
+		    (DB_OWN_MAXNAME - all_rec->all_own_size)))
+	    {
+		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
+		break;
+	}
 	    tab_name_ptr = &all_rec->all_vbuf[0];
 	    own_name_ptr = &all_rec->all_vbuf[all_rec->all_tab_size];
 
@@ -1066,6 +1112,14 @@ i4		*location_count)
 	case DM0LDEALLOC:
 	{
 	    DM0L_DEALLOC    *dall_rec = (DM0L_DEALLOC *)dmve->dmve_log_rec;
+
+	    if (dall_rec->dall_header.length != (sizeof(DM0L_DEALLOC) -
+		    (DB_TAB_MAXNAME - dall_rec->dall_tab_size) -
+		    (DB_OWN_MAXNAME - dall_rec->dall_own_size)))
+	    {
+		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
+		break;
+	    }
 
 	    tab_name_ptr = &dall_rec->dall_vbuf[0];
 	    own_name_ptr = &dall_rec->dall_vbuf[dall_rec->dall_tab_size];
@@ -1198,6 +1252,14 @@ i4		*location_count)
 	{
 	    DM0L_OVFL	*ovf_rec = (DM0L_OVFL *)dmve->dmve_log_rec;
 
+	    if (ovf_rec->ovf_header.length != (sizeof(DM0L_OVFL) - 
+		(DB_TAB_MAXNAME - ovf_rec->ovf_tab_size) -
+		(DB_OWN_MAXNAME - ovf_rec->ovf_own_size)))
+	    {
+		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
+		break;
+	    }
+
 	    tab_name_ptr = &ovf_rec->ovf_vbuf[0];
 	    own_name_ptr = &ovf_rec->ovf_vbuf[ovf_rec->ovf_tab_size];
 
@@ -1233,6 +1295,13 @@ i4		*location_count)
 	{
 	    DM0L_NOFULL	*nofull_rec = (DM0L_NOFULL *)dmve->dmve_log_rec;
 
+	    if (nofull_rec->nofull_header.length != (sizeof(DM0L_NOFULL) - 
+		(DB_TAB_MAXNAME - nofull_rec->nofull_tab_size) -
+		(DB_OWN_MAXNAME - nofull_rec->nofull_own_size)))
+	    {
+		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
+		break;
+	    }
 	    tab_name_ptr = &nofull_rec->nofull_vbuf[0];
 	    own_name_ptr = 
 		&nofull_rec->nofull_vbuf[nofull_rec->nofull_tab_size];
@@ -1327,6 +1396,15 @@ i4		*location_count)
 	    i4	l_id; 
 	    i4	put_loc_id = -1;
 
+	    if (put_rec->btp_header.length != (sizeof(DM0L_BTPUT) - 
+		(DM1B_MAXLEAFLEN - put_rec->btp_key_size) -
+		(DB_TAB_MAXNAME - put_rec->btp_tab_size) -
+		(DB_OWN_MAXNAME - put_rec->btp_own_size)))
+	    {
+		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
+		break;
+	    }
+
 	    tab_name_ptr = &put_rec->btp_vbuf[0];
 	    own_name_ptr = &put_rec->btp_vbuf[put_rec->btp_tab_size];
 
@@ -1375,6 +1453,15 @@ i4		*location_count)
 	    DM0L_BTDEL	*del_rec = (DM0L_BTDEL *)dmve->dmve_log_rec;
 	    i4	l_id; 
 	    i4	del_loc_id = -1;
+
+	    if (del_rec->btd_header.length != (sizeof(DM0L_BTDEL) - 
+		(DM1B_MAXLEAFLEN - del_rec->btd_key_size) -
+		(DB_TAB_MAXNAME - del_rec->btd_tab_size) -
+		(DB_OWN_MAXNAME - del_rec->btd_own_size)))
+	    {
+		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
+		break;
+	    }
 
 	    tab_name_ptr = &del_rec->btd_vbuf[0];
 	    own_name_ptr = &del_rec->btd_vbuf[del_rec->btd_tab_size];
@@ -1579,6 +1666,17 @@ i4		*location_count)
 	    i4	l_id; 
 	    i4	put_loc_id = -1;
 
+	    if (put_rec->rtp_header.length !=  (i4)(sizeof(DM0L_RTPUT) - 
+		(DB_MAXRTREE_KEY - put_rec->rtp_key_size) -
+		(RCB_MAX_RTREE_LEVEL * sizeof(DM_TID) - 
+		put_rec->rtp_stack_size) -
+		(DB_TAB_MAXNAME - put_rec->rtp_tab_size) -
+		(DB_OWN_MAXNAME - put_rec->rtp_own_size)))
+	    {
+		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
+		break;
+	    }
+
 	    tab_name_ptr = &put_rec->rtp_vbuf[0];
 	    own_name_ptr = &put_rec->rtp_vbuf[put_rec->rtp_tab_size];
 
@@ -1628,6 +1726,17 @@ i4		*location_count)
 	    i4	l_id; 
 	    i4	del_loc_id = -1;
 
+	    if (del_rec->rtd_header.length != (sizeof(DM0L_RTDEL) - 
+		(RCB_MAX_RTREE_LEVEL * sizeof(DM_TID) -
+		del_rec->rtd_stack_size) -
+		(DB_MAXRTREE_KEY - del_rec->rtd_key_size) -
+		(DB_TAB_MAXNAME - del_rec->rtd_tab_size) -
+		(DB_OWN_MAXNAME - del_rec->rtd_own_size)))
+	    {
+		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
+		break;
+	    }
+
 	    tab_name_ptr = &del_rec->rtd_vbuf[0];
 	    own_name_ptr = &del_rec->rtd_vbuf[del_rec->rtd_tab_size];
 
@@ -1676,6 +1785,17 @@ i4		*location_count)
 	    DM0L_RTREP	*rep_rec = (DM0L_RTREP *)dmve->dmve_log_rec;
 	    i4	l_id; 
 	    i4	rep_loc_id = -1;
+
+	    if (rep_rec->rtr_header.length != (i4) (sizeof(DM0L_RTREP) - 
+		(DB_MAXRTREE_KEY - rep_rec->rtr_okey_size) -
+		(DB_MAXRTREE_KEY - rep_rec->rtr_nkey_size) -
+		(RCB_MAX_RTREE_LEVEL * sizeof(DM_TID) - rep_rec->rtr_stack_size) -
+		(DB_TAB_MAXNAME - rep_rec->rtr_tab_size) -
+		(DB_OWN_MAXNAME - rep_rec->rtr_own_size)))
+	    {
+		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
+		break;
+	    }
 
 	    tab_name_ptr = &rep_rec->rtr_vbuf[0];
 	    own_name_ptr = &rep_rec->rtr_vbuf[rep_rec->rtr_tab_size];

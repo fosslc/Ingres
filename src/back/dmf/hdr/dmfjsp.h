@@ -322,6 +322,8 @@
 **	    Add missing prototype for dmffload.
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Added E_DM1411, E_DM1412, E_DM1413, E_DM1414.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -1039,7 +1041,7 @@ typedef struct _DMF_JSX
     char		jsx_fname_list[JSX_MAX_TBLS][DI_PATH_MAX];
 						/*  List of .trl files. */
     i4		jsx_dev_cnt;		/*  Number of devices. */
-    char        jsx_ucollation[DB_MAXNAME + 4]; /*For Unicode*/
+    char        jsx_ucollation[DB_COLLATION_MAXNAME + 4]; /*For Unicode*/
     struct _JSX_DEVICE
     {
 	char		dev_name[DI_PATH_MAX];  /*  CPP or RFP device. */

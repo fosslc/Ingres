@@ -162,6 +162,8 @@ static DB_STATUS rdu_default_bld(RDF_GLOBAL *global );
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*{
@@ -879,8 +881,7 @@ rdu_cache(  RDF_GLOBAL	*global,
 	obj_alias.db_id = rdfcb->rdf_rb.rdr_unique_dbid;
 	STRUCT_ASSIGN_MACRO(rdfcb->rdf_rb.rdr_name.rdr_tabname, 
 						obj_alias.tab_name);
-	STRUCT_ASSIGN_MACRO(rdfcb->rdf_rb.rdr_owner,
-						obj_alias.tab_owner);
+	STRUCT_ASSIGN_MACRO(rdfcb->rdf_rb.rdr_owner, obj_alias.tab_owner);
 	status = ulh_getalias(&global->rdf_ulhcb, (unsigned char *) &obj_alias, 
 	    sizeof(obj_alias));
 	if (DB_FAILURE_MACRO(status))
@@ -1217,7 +1218,7 @@ rdu_cache(  RDF_GLOBAL	*global,
 		    ||
 		    MEcmp((PTR)&global->rdf_trel.tbl_owner,
 		    (PTR)&rdfcb->rdf_rb.rdr_owner,
-		    sizeof(rdfcb->rdf_rb.rdr_name.rdr_tabname))
+		    sizeof(rdfcb->rdf_rb.rdr_owner))
 		    )
 		{
 		    rdu_ierror(global, E_DB_SEVERE, E_RD0134_INVALID_SECONDARY);

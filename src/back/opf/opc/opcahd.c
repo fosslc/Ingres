@@ -349,6 +349,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -2237,7 +2239,7 @@ opc_saggopt(
 	    if (rdrdesc->rdr_keys == NULL || MEcmp((PTR)
 		varp->pst_sym.pst_value.pst_s_var.pst_atname.db_att_name,
 		(PTR)rdrdesc->rdr_attr[rdrdesc->rdr_keys->key_array[0]]
-		->att_name.db_att_name, DB_MAXNAME) != 0)
+		->att_name.db_att_name, DB_ATT_MAXNAME) != 0)
 		   return;	/* this checks if max/min column is 
 				** 1st column of index (comparing 
 				** name of column in PST_VAR with 
@@ -5434,11 +5436,10 @@ opc_gtt_proc_parm(
     ** set of parameter definitions match EXACTLY. */
 
     STncpy( (char *)&proc_name, (char *)&cps->pst_procname.qso_n_id.db_cur_name,
-	DB_MAXNAME);
-    ((char *)(&proc_name))[ DB_MAXNAME ] = '\0';
-    STncpy((char *)&gtt_name, (char *)&tabnode->pst_tabname,
-	sizeof(DB_TAB_NAME));
-    ((char *)(&gtt_name))[ sizeof(DB_TAB_NAME) ] = '\0';
+	DB_DBP_MAXNAME);
+    ((char *)(&proc_name))[ DB_DBP_MAXNAME ] = '\0';
+    STncpy((char *)&gtt_name, (char *)&tabnode->pst_tabname, DB_TAB_MAXNAME);
+    ((char *)(&gtt_name))[ DB_TAB_MAXNAME ] = '\0';
 
     /* First, get the temp table information. */
     /* No need for keys/physical stuff here, can't be partitioned */
@@ -5939,8 +5940,8 @@ opc_build_proc_insert_ahd(
     {
 	/* Statement level rule must invoke a "set of" procedure. */
 	OPT_NAME	proc_name;
-	STncpy((char *)&proc_name, (char *)&ptuple->db_dbpname, DB_MAXNAME);
-	((char *)(&proc_name))[ DB_MAXNAME ] = '\0';
+	STncpy((char *)&proc_name, (char *)&ptuple->db_dbpname, DB_DBP_MAXNAME);
+	((char *)(&proc_name))[ DB_DBP_MAXNAME ] = '\0';
 	opx_1perror(E_OP08AE_NOTSETI_PROC, (PTR)&proc_name);
     }
 

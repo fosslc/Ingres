@@ -58,6 +58,8 @@
 **	    Added *PSS_SELBLK parm to psf_mopen(), psf_mlock(), psf_munlock(),
 **	    psf_malloc(), psf_mclose(), psf_mroot(), psf_mchtyp(),
 **	    psl_rptqry_tblids().
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 [@history_template@]...
 **/
 
@@ -201,7 +203,7 @@ psq_dlcsrrow(
 	(VOID) psf_error(2205L, 0L, PSF_USERERR, &err_code, 
 	    &psq_cb->psq_error, 2,
 	    sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-	    psf_trmwhite(DB_MAXNAME, psq_cb->psq_cursid.db_cur_name),
+	    psf_trmwhite(DB_CURSOR_MAXNAME, psq_cb->psq_cursid.db_cur_name),
 	    psq_cb->psq_cursid.db_cur_name);
 	return (E_DB_ERROR);
     }
@@ -215,7 +217,7 @@ psq_dlcsrrow(
 	(VOID) psf_error(2211L, 0L, PSF_USERERR, &err_code, 
 	    &psq_cb->psq_error, 2,
 	    sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-	    psf_trmwhite(DB_MAXNAME, psq_cb->psq_cursid.db_cur_name),
+	    psf_trmwhite(DB_CURSOR_MAXNAME, psq_cb->psq_cursid.db_cur_name),
 	    psq_cb->psq_cursid.db_cur_name);
 	return (E_DB_ERROR);
     }
@@ -313,20 +315,20 @@ psq_dlcsrrow(
 
 	}
 
-	if (MEcmp((PTR) &psq_cb->psq_tabname, (PTR) &csr->psc_tabnm, DB_MAXNAME)
+	if (MEcmp((PTR) &psq_cb->psq_tabname, (PTR) &csr->psc_tabnm, DB_TAB_MAXNAME)
 	    ||
 	    MEcmp((PTR) &psq_cb->psq_als_owner, (PTR) &csr->psc_ownnm,
-		  DB_MAXNAME))
+		  DB_OWN_MAXNAME))
 	{
 	    (VOID) psf_error(2227L, 0L, PSF_USERERR, &err_code, 
 		&psq_cb->psq_error, 4,
-		psf_trmwhite(DB_MAXNAME, (char *)&csr->psc_tabnm),
+		psf_trmwhite(DB_TAB_MAXNAME, (char *)&csr->psc_tabnm),
 		&csr->psc_tabnm,
-		psf_trmwhite(DB_MAXNAME, (char *)&csr->psc_ownnm),
+		psf_trmwhite(DB_OWN_MAXNAME, (char *)&csr->psc_ownnm),
 		&csr->psc_ownnm,
-		psf_trmwhite(DB_MAXNAME, (char *)&psq_cb->psq_tabname),
+		psf_trmwhite(DB_TAB_MAXNAME, (char *)&psq_cb->psq_tabname),
 		&psq_cb->psq_tabname,
-		psf_trmwhite(DB_MAXNAME, (char *)&psq_cb->psq_als_owner),
+		psf_trmwhite(DB_OWN_MAXNAME, (char *)&psq_cb->psq_als_owner),
 		&psq_cb->psq_als_owner);
 	    status = E_DB_ERROR;
 	    goto exit;

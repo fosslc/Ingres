@@ -146,6 +146,8 @@
 **	23-Jan-2006 (kschendel)
 **	    Swap audit-mechanism strings so that INGRES is the default
 **	    and CA is the old deprecated keyword.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 
@@ -332,7 +334,7 @@ typedef  struct  _SXF_AUDIT_REC
                                         */
     SXF_ACCESS      sxf_accesstype;     /* Access type of audit operation */
     DB_OWN_NAME     sxf_objectowner;    /* Owner of object being accessed */
-    char            sxf_object[DB_MAXNAME];
+    char            sxf_object[DB_OBJ_MAXNAME];
                                         /* Name of object being accessed */
 # define SXF_DETAIL_TXT_LEN  256        /* Size of sxf_detail_txt */
     char	    *sxf_detail_txt;	/* Text of detail, may be NULL */

@@ -98,6 +98,8 @@
 **	    about anyway. This is something of a hack, but it's STAR.
 **	01-May-2002 (bonro01)
 **	    Fix overlay caused by using wrong variable to set EOS
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -341,13 +343,13 @@ tp2_r1_recover_all_ddbs(
     TPD_SS_CB	*sscb_p = (TPD_SS_CB *) v_tpr_p->tpr_session;
     TPD_LM_CB	*lmcb_p = & Tpf_svcb_p->tsv_8_cdb_ulmcb;
     TPD_CD_CB	*cdcb_p = (TPD_CD_CB *) NULL;	    /* ptr to cdb CB */
-    char	ddb_name[DB_MAXNAME + 1];
+    DB_DB_STR	ddb_name;
 /*
-		ddb_owner[DB_MAXNAME + 1],
-		cdb_name[DB_MAXNAME + 1],
-		cdb_owner[DB_MAXNAME + 1],
-		cdb_dbms[DB_MAXNAME + 1],
-		cdb_node[DB_MAXNAME + 1];
+    DB_OWN_STR	ddb_owner;
+    DB_DB_STR   cdb_name;
+    DB_OWN_STR	cdb_owner;
+    DB_TYPE_STR	cdb_dbms;
+    DB_NODE_STR cdb_node;
 */
 
 
@@ -362,28 +364,28 @@ tp2_r1_recover_all_ddbs(
 	    (! (cdcb_p->tcd_2_flags & TPD_2CD_RECOVERED)))
 	{
 	    MEcopy(cdcb_p->tcd_1_starcdbs.i1_1_ddb_name,
-		DB_MAXNAME, ddb_name);
-	    ddb_name[DB_MAXNAME] = EOS;
+		DB_DB_MAXNAME, ddb_name);
+	    ddb_name[DB_DB_MAXNAME] = EOS;
 	    STtrmwhite(ddb_name);
 /*
 	    MEcopy(cdcb_p->tcd_1_starcdbs.i1_2_ddb_owner,
-		DB_MAXNAME, ddb_owner);
-	    ddb_owner[DB_MAXNAME] = EOS;
+		DB_OWN_MAXNAME, ddb_owner);
+	    ddb_owner[DB_OWN_MAXNAME] = EOS;
 	    STtrmwhite(ddb_owner);
 
 	    MEcopy(cdcb_p->tcd_1_starcdbs.i1_3_cdb_name,
-		DB_MAXNAME, cdb_name);
-	    cdb_name[DB_MAXNAME] = EOS;
+		DB_DB_MAXNAME, cdb_name);
+	    cdb_name[DB_DB_MAXNAME] = EOS;
 	    STtrmwhite(cdb_name);
 
 	    MEcopy(cdcb_p->tcd_1_starcdbs.i1_5_cdb_node,
-		DB_MAXNAME, cdb_node);
-	    cdb_node[DB_MAXNAME] = EOS;
+		DB_NODE_MAXNAME, cdb_node);
+	    cdb_node[DB_NODE_MAXNAME] = EOS;
 	    STtrmwhite(cdb_node);
 
 	    MEcopy(cdcb_p->tcd_1_starcdbs.i1_6_cdb_dbms,
-		DB_MAXNAME, cdb_dbms);
-	    cdb_dbms[DB_MAXNAME] = EOS;
+		DB_TYPE_MAXLEN, cdb_dbms);
+	    cdb_dbms[DB_TYPE_MAXLEN] = EOS;
 	    STtrmwhite(cdb_dbms);
 */
 	    tp2_put(E_TP0204_BEGIN_DDB_REC, 0, 1, sizeof(ddb_name), (PTR)ddb_name,
@@ -519,12 +521,12 @@ tp2_r2_recover_1_ddb(
 		*qcb_p = & qcb;
     i4		dxlog_cnt;
 /*
-    char	ddb_name[DB_MAXNAME + 1],
-		ddb_owner[DB_MAXNAME + 1],
-		cdb_name[DB_MAXNAME + 1],
-		cdb_owner[DB_MAXNAME + 1],
-		cdb_dbms[DB_MAXNAME + 1],
-		cdb_node[DB_MAXNAME + 1];
+    DB_DB_STR	ddb_name;
+    DB_OWN_STR	ddb_owner;
+    DB_DB_STR   cdb_name;
+    DB_OWN_STR	cdb_owner;
+    DB_TYPE_STR	cdb_dbms;
+    DB_NODE_STR cdb_node;
 */
 
 
@@ -556,24 +558,24 @@ tp2_r2_recover_1_ddb(
     {
 	** generate a warning message **
 
-	MEcopy(cdcb_p->tcd_1_starcdbs.i1_1_ddb_name, DB_MAXNAME, ddb_name);
-	ddb_name[DB_MAXNAME] = EOS;
+	MEcopy(cdcb_p->tcd_1_starcdbs.i1_1_ddb_name, DB_DB_MAXNAME, ddb_name);
+	ddb_name[DB_DB_MAXNAME] = EOS;
 	STtrmwhite(ddb_name);
 
-	MEcopy(cdcb_p->tcd_1_starcdbs.i1_2_ddb_owner, DB_MAXNAME, ddb_owner);
-	ddb_owner[DB_MAXNAME] = EOS;
+	MEcopy(cdcb_p->tcd_1_starcdbs.i1_2_ddb_owner, DB_OWN_MAXNAME, ddb_owner);
+	ddb_owner[DB_OWN_MAXNAME] = EOS;
 	STtrmwhite(ddb_owner);
 
-	MEcopy(cdcb_p->tcd_1_starcdbs.i1_3_cdb_name, DB_MAXNAME, cdb_name);
-	cdb_name[DB_MAXNAME] = EOS;
+	MEcopy(cdcb_p->tcd_1_starcdbs.i1_3_cdb_name, DB_DB_MAXNAME, cdb_name);
+	cdb_name[DB_DB_MAXNAME] = EOS;
 	STtrmwhite(cdb_name);
 
-	MEcopy(cdcb_p->tcd_1_starcdbs.i1_5_cdb_node, DB_MAXNAME, cdb_node);
-	cdb_node[DB_MAXNAME] = EOS;
+	MEcopy(cdcb_p->tcd_1_starcdbs.i1_5_cdb_node, DB_NODE_MAXNAME, cdb_node);
+	cdb_node[DB_NODE_MAXNAME] = EOS;
 	STtrmwhite(cdb_node);
 
-	MEcopy(cdcb_p->tcd_1_starcdbs.i1_6_cdb_dbms, DB_MAXNAME, cdb_dbms);
-	cdb_dbms[DB_MAXNAME] = EOS;
+	MEcopy(cdcb_p->tcd_1_starcdbs.i1_6_cdb_dbms, DB_TYPE_MAXLEN, cdb_dbms);
+	cdb_dbms[DB_TYPE_MAXLEN] = EOS;
 	STtrmwhite(cdb_dbms);
 
 	tp2_u13_log("%s: ...2PC catalogs NOT found for DDB %s:\n",
@@ -998,7 +1000,7 @@ tp2_r4_bld_odx_list(
 		*dxlog_p = & dxlog;
     TPQ_QRY_CB	qcb,
 		*qcb_p = & qcb;
-    char	ddb_name[DB_MAXNAME + 1];
+    DB_DB_STR   ddb_name;
 
 
     if (lmcb_p->tlm_1_streamid != (PTR) NULL)
@@ -1022,8 +1024,8 @@ tp2_r4_bld_odx_list(
 
     dx_cnt = qcb_p->qcb_10_total_cnt;
 
-    MEcopy(v1_cdcb_p->tcd_1_starcdbs.i1_1_ddb_name, DB_MAXNAME, ddb_name);
-    ddb_name[DB_MAXNAME] = EOS;
+    MEcopy(v1_cdcb_p->tcd_1_starcdbs.i1_1_ddb_name, DB_DB_MAXNAME, ddb_name);
+    ddb_name[DB_DB_MAXNAME] = EOS;
     STtrmwhite(ddb_name);
 
     tp2_put( E_TP020C_ORPHAN_DX_FOUND, 0, 2, sizeof( dx_cnt ), (PTR)&dx_cnt,
@@ -1266,7 +1268,7 @@ tp2_r5_bld_lx_list(
 		*dxldbs_p = & dxldbs;
     TPQ_QRY_CB	qcb,
 		*qcb_p = & qcb;
-    char	cdb_node[DB_MAXNAME + 1],
+    char	cdb_node[DB_NODE_MAXNAME + 1],
 		cdb_name[DD_256_MAXDBNAME + 1];
 
 
@@ -1351,8 +1353,8 @@ tp2_r5_bld_lx_list(
 	    0, (PTR)0,
 	    0, (PTR)0 );
 
-	MEcopy(cdb_p->dd_l2_node_name, DB_MAXNAME, cdb_node);
-	cdb_node[DB_MAXNAME] = EOS;
+	MEcopy(cdb_p->dd_l2_node_name, DB_NODE_MAXNAME, cdb_node);
+	cdb_node[DB_NODE_MAXNAME] = EOS;
 	STtrmwhite(cdb_node);
 	
 	MEcopy(cdb_p->dd_l3_ldb_name, DD_256_MAXDBNAME, cdb_name);
@@ -1390,11 +1392,11 @@ tp2_r5_bld_lx_list(
 	    lxcb_p->tlx_write = TRUE;
 	    lxcb_p->tlx_sp_cnt = 0;
 	    lxcb_p->tlx_site.dd_l1_ingres_b = TRUE; /* must connect as STAR */
-	    STmove(dxldbs_p->d2_3_ldb_node, ' ', (u_i4) DB_MAXNAME,
+	    STmove(dxldbs_p->d2_3_ldb_node, ' ', (u_i4) DB_NODE_MAXNAME,
 	    	lxcb_p->tlx_site.dd_l2_node_name);
 	    STmove(dxldbs_p->d2_4_ldb_name, ' ', (u_i4) DD_256_MAXDBNAME,
 	    	lxcb_p->tlx_site.dd_l3_ldb_name); 
-	    STmove(dxldbs_p->d2_5_ldb_dbms, ' ', (u_i4) DB_MAXNAME,
+	    STmove(dxldbs_p->d2_5_ldb_dbms, ' ', (u_i4) DB_TYPE_MAXLEN,
 	    	lxcb_p->tlx_site.dd_l4_dbms_name);
 	    lxcb_p->tlx_site.dd_l5_ldb_id = dxldbs_p->d2_6_ldb_id;
 	    lxcb_p->tlx_site.dd_l6_flags = LX_01FLAG_REG;
@@ -1404,7 +1406,7 @@ tp2_r5_bld_lx_list(
 
 	    lxcb_p->tlx_23_lxid.dd_dx_id1 = dxldbs_p->d2_8_ldb_lxid1;
 	    lxcb_p->tlx_23_lxid.dd_dx_id2 = dxldbs_p->d2_9_ldb_lxid2;
-	    STmove(dxldbs_p->d2_10_ldb_lxname, ' ', (u_i4) DB_MAXNAME,
+	    STmove(dxldbs_p->d2_10_ldb_lxname, ' ', (u_i4) DB_DB_MAXNAME,
 	    	lxcb_p->tlx_23_lxid.dd_dx_name);
 
 	    lxcb_p->tlx_ldb_status = LX_09LDB_ASSOC_LOST;
@@ -2000,11 +2002,12 @@ tp2_r7_close_all_lxs(
     bool	done = TRUE;	/* assume */
     char	*state_p = (char *) NULL;
 /*
-		ddb_name[DB_MAXNAME + 1],
-		ddb_owner[DB_MAXNAME + 1],
-		ldb_name[DD_256_MAXDBNAME + 1],
-		ldb_dbms[DB_MAXNAME + 1],
-		ldb_node[DB_MAXNAME + 1];
+    DB_DB_STR	ddb_name;
+    DB_OWN_STR	ddb_owner;
+    DB_DB_STR   cdb_name;
+    DB_OWN_STR	cdb_owner;
+    DB_TYPE_STR	cdb_dbms;
+    DB_NODE_STR cdb_node;
 */
 
     if (i2_commit_b)
@@ -2021,16 +2024,16 @@ tp2_r7_close_all_lxs(
 	if (lxcb_p->tlx_20_flags & LX_01FLAG_REG)   /* a registered LX */
 	{
 /*
-	    MEcopy(lxcb_p->tlx_site.dd_l2_node_name, DB_MAXNAME, ldb_node);
-	    ldb_node[DB_MAXNAME] = EOS;
+	    MEcopy(lxcb_p->tlx_site.dd_l2_node_name, DB_NODE_MAXNAME, ldb_node);
+	    ldb_node[DB_NODE_MAXNAME] = EOS;
 	    STtrmwhite(ldb_node);
 
 	    MEcopy(lxcb_p->tlx_site.dd_l3_ldb_name, DD_256_MAXDBNAME, ldb_name);
 	    ldb_name[DD_256_MAXDBNAME] = EOS;
 	    STtrmwhite(ldb_name);
 
-	    MEcopy(lxcb_p->tlx_site.dd_l4_dbms_name, DB_MAXNAME, ldb_dbms);
-	    ldb_dbms[DB_MAXNAME] = EOS;
+	    MEcopy(lxcb_p->tlx_site.dd_l4_dbms_name, DB_TYPE_MAXLEN, ldb_dbms);
+	    ldb_dbms[DB_TYPE_MAXLEN] = EOS;
 	    STtrmwhite(ldb_dbms);
 */
 	    if (! lxcb_p->tlx_write)		    /* must be an updater */
@@ -2541,13 +2544,13 @@ tp2_r10_get_dx_cnts(
     TPQ_QRY_CB	qcb,
 		*qcb_p = & qcb;
     bool	strs_ok = FALSE;	    /* must initialize */
-    char	ddb_name[DB_MAXNAME + 1];
+    DB_DB_STR	ddb_name;
 /*
-		ddb_owner[DB_MAXNAME + 1],
-		cdb_name[DB_MAXNAME + 1],
-		cdb_owner[DB_MAXNAME + 1],
-		cdb_dbms[DB_MAXNAME + 1],
-		cdb_node[DB_MAXNAME + 1];
+    DB_OWN_STR	ddb_owner;
+    DB_DB_STR   cdb_name;
+    DB_OWN_STR	cdb_owner;
+    DB_TYPE_STR	cdb_dbms;
+    DB_NODE_STR cdb_node;
 */
 
     *o1_recovery_p = FALSE;  /* assume */
@@ -2580,25 +2583,25 @@ tp2_r10_get_dx_cnts(
 
 	    dxlog_cnt = qcb_p->qcb_10_total_cnt;
 	}
-	MEcopy(cdcb_p->tcd_1_starcdbs.i1_1_ddb_name, DB_MAXNAME, ddb_name);
-	ddb_name[DB_MAXNAME] = EOS;
+	MEcopy(cdcb_p->tcd_1_starcdbs.i1_1_ddb_name, DB_DB_MAXNAME, ddb_name);
+	ddb_name[DB_DB_MAXNAME] = EOS;
 	STtrmwhite(ddb_name);
 
 /*
-	MEcopy(cdcb_p->tcd_1_starcdbs.i1_2_ddb_owner, DB_MAXNAME, ddb_owner);
-	ddb_owner[DB_MAXNAME] = EOS;
+	MEcopy(cdcb_p->tcd_1_starcdbs.i1_2_ddb_owner, DB_OWN_MAXNAME, ddb_owner);
+	ddb_owner[DB_OWN_MAXNAME] = EOS;
 	STtrmwhite(ddb_owner);
 
-	MEcopy(cdcb_p->tcd_1_starcdbs.i1_3_cdb_name, DB_MAXNAME, cdb_name);
-	cdb_name[DB_MAXNAME] = EOS;
+	MEcopy(cdcb_p->tcd_1_starcdbs.i1_3_cdb_name, DB_DB_MAXNAME, cdb_name);
+	cdb_name[DB_DB_MAXNAME] = EOS;
 	STtrmwhite(cdb_name);
 
-	MEcopy(cdcb_p->tcd_1_starcdbs.i1_5_cdb_node, DB_MAXNAME, cdb_node);
-	cdb_node[DB_MAXNAME] = EOS;
+	MEcopy(cdcb_p->tcd_1_starcdbs.i1_5_cdb_node, DB_NODE_MAXNAME, cdb_node);
+	cdb_node[DB_NODE_MAXNAME] = EOS;
 	STtrmwhite(cdb_node);
 
-	MEcopy(cdcb_p->tcd_1_starcdbs.i1_6_cdb_dbms, DB_MAXNAME, cdb_dbms);
-	cdb_dbms[DB_MAXNAME] = EOS;
+	MEcopy(cdcb_p->tcd_1_starcdbs.i1_6_cdb_dbms, DB_TYPE_MAXLEN, cdb_dbms);
+	cdb_dbms[DB_TYPE_MAXLEN] = EOS;
 	STtrmwhite(cdb_dbms);
 */
 	if (dxlog_cnt <= 0)
@@ -2961,8 +2964,7 @@ tp2_r12_set_ddb_recovered(
     while (cdcb_p != (TPD_CD_CB *) NULL)
     {
 	if (MEcmp(i1_cdcb_p->tcd_1_starcdbs.i1_1_ddb_name,
-	    cdcb_p->tcd_1_starcdbs.i1_1_ddb_name,
-	    DB_MAXNAME) == 0)
+	    cdcb_p->tcd_1_starcdbs.i1_1_ddb_name, DB_DB_MAXNAME) == 0)
 	{
 	    /* have a match */
 
@@ -3035,9 +3037,9 @@ tp2_r13_resecure_all_ldbs(
     TPD_LX_CB	*lxcb_p = (TPD_LX_CB *) NULL;
     i4		lx_cnt;
     RQR_CB	rqr_cb;
-    char	node_name[DB_MAXNAME + 1],
-		ldb_name[DD_256_MAXDBNAME + 1],
-		dbms_name[DB_MAXNAME + 1];
+    DB_NODE_STR node_name;
+    char	ldb_name[DD_256_MAXDBNAME + 1];
+    DB_TYPE_STR dbms_name;
 
 
     *o1_willing_p = FALSE;			/* assume */
@@ -3077,16 +3079,16 @@ tp2_r13_resecure_all_ldbs(
 	    lxcb_p->tlx_state == LX_7STATE_ACTIVE)
 */
 	{
-	    MEcopy(lxcb_p->tlx_site.dd_l2_node_name, DB_MAXNAME, node_name);
-	    node_name[DB_MAXNAME] = EOS;
+	    MEcopy(lxcb_p->tlx_site.dd_l2_node_name, DB_NODE_MAXNAME, node_name);
+	    node_name[DB_NODE_MAXNAME] = EOS;
 	    STtrmwhite(node_name);
 		
 	    MEcopy(lxcb_p->tlx_site.dd_l3_ldb_name, DD_256_MAXDBNAME, ldb_name);
 	    ldb_name[DD_256_MAXDBNAME] = EOS;
 	    STtrmwhite(ldb_name);
 		
-	    MEcopy(lxcb_p->tlx_site.dd_l4_dbms_name, DB_MAXNAME, dbms_name);
-	    dbms_name[DB_MAXNAME] = EOS;
+	    MEcopy(lxcb_p->tlx_site.dd_l4_dbms_name, DB_TYPE_MAXLEN, dbms_name);
+	    dbms_name[DB_TYPE_MAXLEN] = EOS;
 	    STtrmwhite(dbms_name);
 
 	    /* set the LX state before polling */

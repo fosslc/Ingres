@@ -81,6 +81,8 @@ static	bool	IIUGdic_ChkdlmChar();
 **	    replace nat and longnat with i4
 **	24-Aug-2009 (kschendel) 121804
 **	    Update some of the function declarations to fix gcc 4.3 problems.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 
@@ -132,7 +134,7 @@ static	bool	IIUGdic_ChkdlmChar();
 **	identifiers.
 **
 **	This routine diagnoses unbalanced delimiting and/or escaped quotes
-**	and input/resultant strings greater than FE_UNRML_MAXNAME/FE_MAXNAME.
+**	and input/resultant strings greater than DB_MAX_DELIMID/DB_MAXNAME.
 **  In these cases it returns indication that the identifier is invalid.
 **
 **	If is_nrml is FALSE, then unless the string is explicitly delimited,
@@ -149,7 +151,7 @@ static	bool	IIUGdic_ChkdlmChar();
 ** Input:
 **	name		Character pointer to NULL terminated string which is the
 **				identifier to be checked and optionally resolved.
-**	strip_name	Character pointer to a buffer of at least (FE_MAXNAME + 1)
+**	strip_name	Character pointer to a buffer of at least (DB_MAXNAME + 1)
 **				or NULL.
 **	is_nrml		If TRUE, then the name is in normalized form.  In that case,
 **				any quotes found are expected to represent non-escaped embedded
@@ -248,8 +250,8 @@ IIUGdlm_ChkdlmBEobject(name,strip_name,is_nrml)
 			bool	is_dlm;
 			bool	start_quote;
 			bool	no_delim_id;
-			char	s_name[(FE_UNRML_MAXNAME + 1)];
-			char	w_name[(FE_MAXNAME + 1)];
+			char	s_name[DB_MAX_DELIMID + 1];
+			char	w_name[(DB_MAXNAME + 1)];
 
 	
 	i_ptr = name;
@@ -271,7 +273,7 @@ IIUGdlm_ChkdlmBEobject(name,strip_name,is_nrml)
 	** "special" and consider the identifier to be delimited.
 	*/
 	if  ((i_ptr == NULL) || (*i_ptr == EOS) ||
-		 ((w_lgth = STtrmwhite(i_ptr)) > FE_UNRML_MAXNAME))
+		 ((w_lgth = STtrmwhite(i_ptr)) > DB_MAX_DELIMID))
 	{
 		return(UI_BOGUS_ID);
 	}
@@ -422,7 +424,7 @@ IIUGdlm_ChkdlmBEobject(name,strip_name,is_nrml)
 	*/
 	*o_ptr = EOS;
 	w_lgth = STtrmwhite(&s_name[0]);
-	if  (w_lgth > FE_MAXNAME)
+	if  (w_lgth > DB_MAXNAME)
 	{
 		return(UI_BOGUS_ID);
 	}
@@ -651,7 +653,7 @@ IIUGdbo_dlmBEobject(obj_name,is_dlm)
 **	if that name will be compared with an object name as present
 **	in the standard catalogs. 
 **	e.g. -
-*		char  table_name[FE_MAXNAME];
+*		char  table_name[DB_MAXNAME];
 **	
 **		IIUFask("enter table name", TRUE, table_name, 0);
 **		IIUGlbo_lowerBEobject(table_name);
@@ -706,7 +708,7 @@ IIUGlbo_lowerBEobject(obj_name)
 ** Description:
 **	Re-quotes a delimited identifier and re-escapes any embedded double quotes.
 **	The string is not expected to have extraneous trailing blanks, is not
-**	expected to exceed FE_MAXNAME in length, and is	expected to be NULL
+**	expected to exceed DB_MAXNAME in length, and is	expected to be NULL
 **	terminated.
 **
 **	It would be nice to migrate this routine to ST and have it
@@ -715,11 +717,11 @@ IIUGlbo_lowerBEobject(obj_name)
 ** Input:
 **	in_str		Character pointer to the NULL terminated string to be
 **				quoted.  Assumed to reside in a buffer of max length
-**				(FE_MAXNAME + 1).
+**				(DB_MAXNAME + 1).
 **	out_str		Character pointer to the buffer in which to place the
 **				result string, which will be delimited and have double
 **				quote characters escaped.  Assumed to go into a buffer with
-**				a minimum of (FE_UNRML_MAXNAME + 1) available length.
+**				a minimum of (DB_MAX_DELIMID + 1) available length.
 **
 ** Output:
 **	out_str		The re-quoted string representation of the input.  A NULL
@@ -807,7 +809,7 @@ IIUGrqd_Requote_dlm(in_str,out_str)
 ** Input:
 **	id			Pointer to the identifier to be un-normalized.
 **	result_id	Pointer to a field in which to place the un-normalized
-**				identifier.  This should be at least (FE_UNRML_MAXNAME + 1)
+**				identifier.  This should be at least (DB_MAX_DELIMID + 1)
 **				bytes in length.
 ** Output:
 **	result_id	Set to the un-normalized identifier or EOS if id

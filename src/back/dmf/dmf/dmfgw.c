@@ -29,6 +29,7 @@
 #include    <dmftrace.h>
 #include    <dm1c.h>	    /* need DM1C_BYTID, DM1C_GETNEXT flag values */
 #include    <gwf.h>
+#include    <me.h>
 #include    <dmfgw.h>
 #include    <dm0m.h>
 /**
@@ -207,6 +208,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /* Static function prototype defintions. */
@@ -964,7 +967,8 @@ DB_ERROR	    *dberr)
     for (i = 0; i < tcb->tcb_rel.relatts; i++)
     {
 	attr_ptr = &tcb->tcb_atts_ptr[i + 1];
-	STRUCT_ASSIGN_MACRO(attr_ptr->name, column_array[i].att_name);
+	MEmove(attr_ptr->attnmlen, attr_ptr->attnmstr, ' ',
+	    DB_ATT_MAXNAME, column_array[i].att_name.db_att_name);
 	column_array[i].att_number = i + 1;
 	column_array[i].att_offset = attr_ptr->offset;
 	column_array[i].att_type = attr_ptr->type;

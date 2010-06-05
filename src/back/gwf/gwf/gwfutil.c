@@ -118,6 +118,8 @@
 **          Replace i4 with SIZE_TYPE for memory pool > 2Gig.
 **      24-Feb-2004 (kodse01)
 **          Removed gwxit.h inclusion which is not required.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 static DB_STATUS gwu_xattr_build_info( GW_TCB	    *tlist,
@@ -261,13 +263,13 @@ gwu_copen(DMT_CB	*dmt,
 	/*
 	** fill in catalog name & owner -- must be blank padded
 	*/
-	STmove((char *)&cat_name->db_tab_name[0], ' ', (i4)DB_MAXNAME,
+	STmove((char *)&cat_name->db_tab_name[0], ' ', (i4)DB_TAB_MAXNAME,
 	       (char *)&shw_cb.dmt_name.db_tab_name[0]);
 	if( (gw_sess = gws_gt_gw_sess()) == NULL )
-	    STmove(DU_DBA_DBDB, ' ', (i4)DB_MAXNAME,
+	    STmove(DU_DBA_DBDB, ' ', (i4)DB_OWN_MAXNAME,
 			(char *)&shw_cb.dmt_owner);
 	else
-	    (VOID)MEcopy(gw_sess->gws_cat_owner, DB_MAXNAME,
+	    (VOID)MEcopy(gw_sess->gws_cat_owner, DB_OWN_MAXNAME,
 			(char *)&shw_cb.dmt_owner);
 
 	if ((status = (*Dmf_cptr)(DMT_SHOW, &shw_cb)) != E_DB_OK)

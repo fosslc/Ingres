@@ -262,6 +262,8 @@
 **	    thanks to the parallel query changes.)
 **	11-Apr-2008 (kschendel)
 **	    new style dmf-level row qualification.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*	definitions needed by the static function declarations	*/
@@ -4439,7 +4441,7 @@ textVerifyingCheckConstraint(
 
 	/* "schemaName"."tablename" */
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_SCHEMA_MAXNAME,
 		NO_PUNCTUATION, NO_QUOTES );
 
 	ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_MAXNAME,
@@ -4581,7 +4583,7 @@ makeCheckConstraintRuleText(
 	addString( &evolvingString, createRule,
 		   STlength( createRule ), NO_PUNCTUATION, NO_QUOTES );
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_SCHEMA_MAXNAME,
 		NO_PUNCTUATION, NO_QUOTES );
 
 	ADD_UNNORMALIZED_NAME( &evolvingString, internalConstraintName,
@@ -4620,7 +4622,7 @@ makeCheckConstraintRuleText(
 
 	/* "schemaName"."tablename" */
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_SCHEMA_MAXNAME,
 		NO_PUNCTUATION, NO_QUOTES );
 
 	ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_MAXNAME,
@@ -4812,7 +4814,7 @@ stringInColumnList(
 	else
 	{
 	    columnName = currentAttribute->att_name.db_att_name;
-	    ADD_UNNORMALIZED_NAME( evolvingString, columnName, DB_MAXNAME,
+	    ADD_UNNORMALIZED_NAME( evolvingString, columnName, DB_ATT_MAXNAME,
 			punctuation, NO_QUOTES );
 	}
 
@@ -5131,7 +5133,7 @@ compareColumnLists(
 	    leftColumnName =
 	      (leftTableAttributeArray[ ( i4) leftColumnID->col_id.db_att_id])
 			->att_name.db_att_name;
-	    ADD_UNNORMALIZED_NAME( evolvingString, leftColumnName, DB_MAXNAME,
+	    ADD_UNNORMALIZED_NAME( evolvingString, leftColumnName, DB_ATT_MAXNAME,
 			leadPeriod, NO_QUOTES );
 	}
 
@@ -5166,7 +5168,7 @@ compareColumnLists(
 	    rightColumnName =
 	      (rightTableAttributeArray[ (i4)rightColumnID->col_id.db_att_id])
 			->att_name.db_att_name;
-	    ADD_UNNORMALIZED_NAME( evolvingString, rightColumnName, DB_MAXNAME,
+	    ADD_UNNORMALIZED_NAME( evolvingString, rightColumnName, DB_ATT_MAXNAME,
 			leadPeriod, NO_QUOTES );
 	}
 
@@ -5983,7 +5985,7 @@ lookupProcedureIDs(
 
     for ( i = 0; i < count; i++ )
     {
-	STmove( procedureNames[ i ], ' ', DB_MAXNAME, dbpName.db_dbp_name );
+	STmove( procedureNames[ i ], ' ', DB_DBP_MAXNAME, dbpName.db_dbp_name );
      
 	status = qeu_get(qef_cb, &qeu);
         if (status != E_DB_OK)
@@ -6133,8 +6135,8 @@ lookupRuleIDs(
 	for ( i = 0; i < count; i++ )
 	{
 	    if	( STbcompare( ruleNames[ i ]->db_name,
-			      DB_MAXNAME, tuple.dbr_name.db_name, DB_MAXNAME,
-			      TRUE ) == 0
+		      DB_RULE_MAXNAME, tuple.dbr_name.db_name, DB_RULE_MAXNAME,
+		      TRUE ) == 0
 		)
 	    {
 		MEcopy( ( PTR ) &tuple.dbr_ruleID, sizeof( DB_TAB_ID ),
@@ -6436,7 +6438,7 @@ textOfIndexOnRefingTable(
     char		*tableName = ( char * ) &details->qci_cons_tabname;
     char		*schemaName = ( char * ) &details->qci_cons_ownname;
     bool		indexNameUsed;
-    char		preferredIndexName[ DB_MAXNAME + 1 ];
+    char		preferredIndexName[ DB_TAB_MAXNAME + 1 ];
     char		*actualIndexName = ( char * ) NULL;
     i4			unpaddedLength;
     i4			pass;
@@ -6488,10 +6490,10 @@ textOfIndexOnRefingTable(
 	    addString( &evolvingString, modifyTable1,
 		   STlength( modifyTable1 ), NO_PUNCTUATION, NO_QUOTES );
 
-	    ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_MAXNAME,
+	    ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_SCHEMA_MAXNAME,
 		NO_PUNCTUATION, NO_QUOTES );
 
-	    ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_MAXNAME,
+	    ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_TAB_MAXNAME,
 		    LEAD_PERIOD, NO_QUOTES );
 
 	    /* TO BTREE ON (column list) */
@@ -6522,21 +6524,21 @@ textOfIndexOnRefingTable(
 
 	    /* "schemaName"."indexName" */
 
-	    ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_MAXNAME,
+	    ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_SCHEMA_MAXNAME,
 		NO_PUNCTUATION, NO_QUOTES );
 
  	    ADD_UNNORMALIZED_NAME( &evolvingString, actualIndexName,
-		DB_MAXNAME, LEAD_PERIOD, NO_QUOTES );
+		DB_TAB_MAXNAME, LEAD_PERIOD, NO_QUOTES );
 
 	    /* ON "schemaName"."tableName" ( */
 
 	    addString( &evolvingString, on,
 		   STlength( on ), NO_PUNCTUATION, NO_QUOTES );
 
-	    ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_MAXNAME,
+	    ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_SCHEMA_MAXNAME,
 		NO_PUNCTUATION, NO_QUOTES );
 
-	    ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_MAXNAME,
+	    ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_TAB_MAXNAME,
 		    LEAD_PERIOD | APPEND_OPEN_PARENTHESIS, NO_QUOTES );
 
 	    /* referringColumnList */
@@ -6570,12 +6572,12 @@ textOfIndexOnRefingTable(
     ** later */
 
     if (details->qci_flags & QCI_TABLE_STRUCT)
-	MEcopy((char *)tableName, DB_MAXNAME, indexName);
+	MEcopy((char *)tableName, DB_TAB_MAXNAME, indexName);
     else
     {
 	unpaddedLength = STlength( actualIndexName );
 	MEmove( ( u_i2 ) unpaddedLength, ( PTR ) actualIndexName, ' ',
-	    ( u_i2 ) DB_MAXNAME, ( PTR ) indexName );
+	    ( u_i2 ) DB_TAB_MAXNAME, ( PTR ) indexName );
     }
 
     return( status );
@@ -6630,10 +6632,10 @@ doesTableWithConsNameExist(
     */
 
     preferredIndexName[ 0 ] = '$';
-    MEcopy( ( PTR ) constraintName, DB_MAXNAME - 1,
+    MEcopy( ( PTR ) constraintName, DB_TAB_MAXNAME - 1,
 	    ( PTR ) &preferredIndexName[ 1 ] );
 
-    MEcopy( ( PTR ) preferredIndexName, DB_MAXNAME,
+    MEcopy( ( PTR ) preferredIndexName, DB_TAB_MAXNAME,
 	    ( PTR ) tableName.db_tab_name );
 
     /* OK.  does it exist? */
@@ -6904,11 +6906,11 @@ textsOfModifyRefingProcedures(
 
 	/* schemaName.procedureName ( */
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, constraintSchemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, constraintSchemaName, DB_SCHEMA_MAXNAME,
 		    NO_PUNCTUATION, NO_QUOTES );
 
 	ADD_UNNORMALIZED_NAME( &evolvingString, procedureName,
-		DB_MAXNAME, LEAD_PERIOD | APPEND_OPEN_PARENTHESIS, NO_QUOTES );
+	    DB_DBP_MAXNAME, LEAD_PERIOD | APPEND_OPEN_PARENTHESIS, NO_QUOTES );
 
 	/* "$A" */
 
@@ -6948,9 +6950,9 @@ textsOfModifyRefingProcedures(
 	/* "referredSchemaName"."referredTablename" */
 
 	ADD_UNNORMALIZED_NAME( &evolvingString, referredSchemaName,
-		DB_MAXNAME, NO_PUNCTUATION, NO_QUOTES );
+		DB_SCHEMA_MAXNAME, NO_PUNCTUATION, NO_QUOTES );
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, referredTableName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, referredTableName, DB_TAB_MAXNAME,
 		LEAD_PERIOD, NO_QUOTES );
 
 	/* "$REFED" ON */
@@ -7112,11 +7114,11 @@ textOfSelect(
 
 	/* schemaName.referringTableName */
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, referringSchemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, referringSchemaName, DB_SCHEMA_MAXNAME,
 		    NO_PUNCTUATION, NO_QUOTES );
 
 	ADD_UNNORMALIZED_NAME( &evolvingString, referringTableName,
-		DB_MAXNAME, LEAD_PERIOD , NO_QUOTES );
+		DB_TAB_MAXNAME, LEAD_PERIOD , NO_QUOTES );
 
 	/* "$REFING" LEFT JOIN */
 
@@ -7126,9 +7128,9 @@ textOfSelect(
 	/* "referredSchemaName"."referredTablename" */
 
 	ADD_UNNORMALIZED_NAME( &evolvingString, referredSchemaName,
-		DB_MAXNAME, NO_PUNCTUATION, NO_QUOTES );
+		DB_SCHEMA_MAXNAME, NO_PUNCTUATION, NO_QUOTES );
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, referredTableName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, referredTableName, DB_TAB_MAXNAME,
 		LEAD_PERIOD, NO_QUOTES );
 
 	/* "$REFED" ON */
@@ -7331,11 +7333,11 @@ textOfDeleteRefedProcedure(
 
 	/* schemaName.procedureName ( */
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, constraintSchemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, constraintSchemaName, DB_SCHEMA_MAXNAME,
 		NO_PUNCTUATION, NO_QUOTES );
 
 	ADD_UNNORMALIZED_NAME( &evolvingString, nameOfDeleteRefedProcedure,
-		   DB_MAXNAME, LEAD_PERIOD | APPEND_OPEN_PARENTHESIS,
+		   DB_DBP_MAXNAME, LEAD_PERIOD | APPEND_OPEN_PARENTHESIS,
 		   NO_QUOTES );
 
 	/* "$A" */
@@ -7375,10 +7377,10 @@ textOfDeleteRefedProcedure(
 
 	/* "constrainedSchemaName"."constraineedTablename" */
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_SCHEMA_MAXNAME,
 		NO_PUNCTUATION, NO_QUOTES );
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_TAB_MAXNAME,
 		LEAD_PERIOD, NO_QUOTES );
 
 	/* "$REFING" ON */
@@ -7548,11 +7550,11 @@ textOfDeleteCascadeRefedProcedure(
 
 	/* schemaName.procedureName ( */
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, constraintSchemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, constraintSchemaName, DB_SCHEMA_MAXNAME,
 		NO_PUNCTUATION, NO_QUOTES );
 
 	ADD_UNNORMALIZED_NAME( &evolvingString, nameOfDeleteRefedProcedure,
-		   DB_MAXNAME, LEAD_PERIOD | APPEND_OPEN_PARENTHESIS,
+		   DB_DBP_MAXNAME, LEAD_PERIOD | APPEND_OPEN_PARENTHESIS,
 		   NO_QUOTES );
 
 	/* "$A" */
@@ -7581,10 +7583,10 @@ textOfDeleteCascadeRefedProcedure(
 
 	/* "constrainedSchemaName"."constraineedTablename" */
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_SCHEMA_MAXNAME,
 		NO_PUNCTUATION, NO_QUOTES );
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_TAB_MAXNAME,
 		LEAD_PERIOD, NO_QUOTES );
 
 	/* "$REFING" WHERE EXISTS (SELECT * FROM " */
@@ -7733,12 +7735,12 @@ textOfDeleteSetNullRefedProcedure(
 
 	/* schemaName.procedureName ( */
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, constraintSchemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, constraintSchemaName, DB_SCHEMA_MAXNAME,
 		NO_PUNCTUATION, NO_QUOTES );
 
 	ADD_UNNORMALIZED_NAME( &evolvingString, nameOfDeleteRefedProcedure,
-		   DB_MAXNAME, LEAD_PERIOD | APPEND_OPEN_PARENTHESIS,
-		   NO_QUOTES );
+	       DB_DBP_MAXNAME, LEAD_PERIOD | APPEND_OPEN_PARENTHESIS,
+	       NO_QUOTES );
 
 	/* "$A" */
 
@@ -7766,10 +7768,10 @@ textOfDeleteSetNullRefedProcedure(
 
 	/* "constrainedSchemaName"."constraineedTablename" */
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_SCHEMA_MAXNAME,
 		NO_PUNCTUATION, NO_QUOTES );
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_TAB_MAXNAME,
 		LEAD_PERIOD, NO_QUOTES );
 
 	/* "$REFING" SET */
@@ -7983,12 +7985,12 @@ textOfUpdateRefedProcedure(
 
 	/* schemaName.procedureName ( */
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, constraintSchemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, constraintSchemaName, DB_SCHEMA_MAXNAME,
 		    NO_PUNCTUATION, NO_QUOTES );
 
 	ADD_UNNORMALIZED_NAME( &evolvingString, nameOfUpdateRefedProcedure,
-		   DB_MAXNAME, LEAD_PERIOD | APPEND_OPEN_PARENTHESIS,
-		   NO_QUOTES );
+	       DB_DBP_MAXNAME, LEAD_PERIOD | APPEND_OPEN_PARENTHESIS,
+	       NO_QUOTES );
 
 	/* "$A" */
 
@@ -8027,10 +8029,10 @@ textOfUpdateRefedProcedure(
 
 	/* "referringSchemaName"."referringTableName" */
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_SCHEMA_MAXNAME,
 		NO_PUNCTUATION, NO_QUOTES );
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_TAB_MAXNAME,
 		LEAD_PERIOD, NO_QUOTES );
 
 	/* "$REFING", ( */
@@ -8225,11 +8227,11 @@ textOfUpdateCascadeRefedProcedure(
 
 	/* schemaName.procedureName ( */
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, constraintSchemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, constraintSchemaName, DB_SCHEMA_MAXNAME,
 		    NO_PUNCTUATION, NO_QUOTES );
 
 	ADD_UNNORMALIZED_NAME( &evolvingString, nameOfUpdateRefedProcedure,
-		   DB_MAXNAME, LEAD_PERIOD | APPEND_OPEN_PARENTHESIS,
+		   DB_DBP_MAXNAME, LEAD_PERIOD | APPEND_OPEN_PARENTHESIS,
 		   NO_QUOTES );
 
 	/* "$A" */
@@ -8268,10 +8270,10 @@ textOfUpdateCascadeRefedProcedure(
 
 	/* "referringSchemaName"."referringTableName" */
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_SCHEMA_MAXNAME,
 		NO_PUNCTUATION, NO_QUOTES );
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_TAB_MAXNAME,
 		LEAD_PERIOD, NO_QUOTES );
 
 	/* "$REFING" FROM "$A" "$REFED" SET  */
@@ -8426,12 +8428,12 @@ textOfUpdateSetNullRefedProcedure(
 
 	/* schemaName.procedureName ( */
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, constraintSchemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, constraintSchemaName, DB_SCHEMA_MAXNAME,
 		    NO_PUNCTUATION, NO_QUOTES );
 
 	ADD_UNNORMALIZED_NAME( &evolvingString, nameOfUpdateRefedProcedure,
-		   DB_MAXNAME, LEAD_PERIOD | APPEND_OPEN_PARENTHESIS,
-		   NO_QUOTES );
+	       DB_DBP_MAXNAME, LEAD_PERIOD | APPEND_OPEN_PARENTHESIS,
+	       NO_QUOTES );
 
 	/* "$A" */
 
@@ -8469,10 +8471,10 @@ textOfUpdateSetNullRefedProcedure(
 
 	/* "referringSchemaName"."referringTableName" */
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_SCHEMA_MAXNAME,
 		NO_PUNCTUATION, NO_QUOTES );
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_TAB_MAXNAME,
 		LEAD_PERIOD, NO_QUOTES );
 
 	/* "$REFING" FROM "$A" "$REFED" SET  */
@@ -8617,11 +8619,11 @@ textOfInsertRefingRule(
 
 	/* schemaName.ruleName */ 
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_SCHEMA_MAXNAME,
 		NO_PUNCTUATION, NO_QUOTES );
 
 	ADD_UNNORMALIZED_NAME( &evolvingString, (char *) nameOfInsertRefingRule,
-		DB_MAXNAME, LEAD_PERIOD, NO_QUOTES );
+		DB_RULE_MAXNAME, LEAD_PERIOD, NO_QUOTES );
 
 	/* AFTER INSERT INTO */
 
@@ -8630,10 +8632,10 @@ textOfInsertRefingRule(
 
 	/* "schemaName"."tablename" */
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_SCHEMA_MAXNAME,
 		NO_PUNCTUATION, NO_QUOTES );
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_TAB_MAXNAME,
 		LEAD_PERIOD, NO_QUOTES );
 
 	/* WHERE */
@@ -8659,7 +8661,7 @@ textOfInsertRefingRule(
 
 	ADD_UNNORMALIZED_NAME( &evolvingString,
 		   ( char * ) nameOfInsertRefingProcedure,
-		   DB_MAXNAME, APPEND_OPEN_PARENTHESIS, NO_QUOTES );
+		   DB_DBP_MAXNAME, APPEND_OPEN_PARENTHESIS, NO_QUOTES );
 
 	/* assign new.columns to parameters */
 
@@ -8795,11 +8797,11 @@ textOfUpdateRefingRule(
 
 	/* schemaName.ruleName */ 
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_SCHEMA_MAXNAME,
 		NO_PUNCTUATION, NO_QUOTES );
 
 	ADD_UNNORMALIZED_NAME( &evolvingString, nameOfUpdateRefingRule,
-		DB_MAXNAME, LEAD_PERIOD, NO_QUOTES );
+		DB_RULE_MAXNAME, LEAD_PERIOD, NO_QUOTES );
 
 	/* AFTER UPDATE( */
 
@@ -8822,10 +8824,10 @@ textOfUpdateRefingRule(
 
 	/* "schemaName"."tablename" */
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_SCHEMA_MAXNAME,
 		NO_PUNCTUATION, NO_QUOTES );
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_SCHEMA_MAXNAME,
 		LEAD_PERIOD, NO_QUOTES );
 
 	/* WHERE */
@@ -8889,7 +8891,7 @@ textOfUpdateRefingRule(
 
 	ADD_UNNORMALIZED_NAME( &evolvingString,
 		( char * ) nameOfUpdateRefingProcedure,
-		DB_MAXNAME, APPEND_OPEN_PARENTHESIS, NO_QUOTES );
+		DB_DBP_MAXNAME, APPEND_OPEN_PARENTHESIS, NO_QUOTES );
 
 	/* assign new.columns to parameters */
 
@@ -9009,11 +9011,11 @@ textOfDeleteRefedRule(
 
 	/* schemaName.ruleName */ 
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, referredSchemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, referredSchemaName, DB_SCHEMA_MAXNAME,
 		    NO_PUNCTUATION, NO_QUOTES );
 
 	ADD_UNNORMALIZED_NAME( &evolvingString, nameOfDeleteRefedRule,
-		DB_MAXNAME, LEAD_PERIOD, NO_QUOTES );
+		DB_RULE_MAXNAME, LEAD_PERIOD, NO_QUOTES );
 
 	/* AFTER DELETE FROM */
 
@@ -9022,10 +9024,10 @@ textOfDeleteRefedRule(
 
 	/* "schemaName"."tablename" */
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_SCHEMA_MAXNAME,
 		NO_PUNCTUATION, NO_QUOTES );
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_TAB_MAXNAME,
 		LEAD_PERIOD, NO_QUOTES );
 
 	/* WHERE */
@@ -9051,7 +9053,7 @@ textOfDeleteRefedRule(
 
 	ADD_UNNORMALIZED_NAME( &evolvingString,
 		( char * ) nameOfDeleteRefedProcedure,
-		DB_MAXNAME, APPEND_OPEN_PARENTHESIS, NO_QUOTES );
+		DB_DBP_MAXNAME, APPEND_OPEN_PARENTHESIS, NO_QUOTES );
 
 	/* assign old.refedColumns to parameters */
 
@@ -9179,11 +9181,11 @@ textOfUpdateRefedRule(
 
 	/* schemaName.ruleName */ 
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, referredSchemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, referredSchemaName, DB_SCHEMA_MAXNAME,
 		    NO_PUNCTUATION, NO_QUOTES );
 
 	ADD_UNNORMALIZED_NAME( &evolvingString, nameOfUpdateRefedRule,
-		DB_MAXNAME, LEAD_PERIOD, NO_QUOTES );
+		DB_RULE_MAXNAME, LEAD_PERIOD, NO_QUOTES );
 
 	/* AFTER UPDATE( */
 
@@ -9206,10 +9208,10 @@ textOfUpdateRefedRule(
 
 	/* "schemaName"."tablename" */
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_SCHEMA_MAXNAME,
 		NO_PUNCTUATION, NO_QUOTES );
 
-	ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_MAXNAME,
+	ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_TAB_MAXNAME,
 		LEAD_PERIOD, NO_QUOTES );
 
 	/* WHERE */
@@ -9255,7 +9257,7 @@ textOfUpdateRefedRule(
 
 	ADD_UNNORMALIZED_NAME( &evolvingString,
 		( char * ) nameOfUpdateRefedProcedure,
-		DB_MAXNAME, APPEND_OPEN_PARENTHESIS, NO_QUOTES );
+		DB_DBP_MAXNAME, APPEND_OPEN_PARENTHESIS, NO_QUOTES );
 
 	/* assign new.refedColumns and old.refedColumns to parameters */
 
@@ -9371,7 +9373,7 @@ textOfUniqueIndex(
     i4			unnormalizedNameLength;
     char		*actualIndexName = ( char * ) NULL;
     bool		indexNameUsed;
-    char		preferredIndexName[ DB_MAXNAME + 1 ];
+    char		preferredIndexName[ DB_TAB_MAXNAME + 1 ];
 
     /*
     ** $constraintName
@@ -9418,10 +9420,10 @@ textOfUniqueIndex(
 	    addString( &evolvingString, modifyTable2,
 		   STlength( modifyTable2 ), NO_PUNCTUATION, NO_QUOTES );
 
-	    ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_MAXNAME,
+	    ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_SCHEMA_MAXNAME,
 		NO_PUNCTUATION, NO_QUOTES );
 
-	    ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_MAXNAME,
+	    ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_TAB_MAXNAME,
 		    LEAD_PERIOD, NO_QUOTES );
 
 	    /* TO BTREE UNIQUE UNIQUE_SCOPE = STATEMENT ON column list */
@@ -9449,21 +9451,21 @@ textOfUniqueIndex(
 
 	    /* "schemaName"."indexName" */
 
-	    ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_MAXNAME,
+	    ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_SCHEMA_MAXNAME,
 		NO_PUNCTUATION, NO_QUOTES );
 
  	    ADD_UNNORMALIZED_NAME( &evolvingString, actualIndexName,
-		DB_MAXNAME, LEAD_PERIOD, NO_QUOTES );
+		DB_TAB_MAXNAME, LEAD_PERIOD, NO_QUOTES );
 
 	    /* ON "schemaName"."tableName" ( */
 
 	    addString( &evolvingString, on,
 		   STlength( on ), NO_PUNCTUATION, NO_QUOTES );
 
-	    ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_MAXNAME,
+	    ADD_UNNORMALIZED_NAME( &evolvingString, schemaName, DB_SCHEMA_MAXNAME,
 		NO_PUNCTUATION, NO_QUOTES );
 
-	    ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_MAXNAME,
+	    ADD_UNNORMALIZED_NAME( &evolvingString, tableName, DB_TAB_MAXNAME,
 		    LEAD_PERIOD | APPEND_OPEN_PARENTHESIS, NO_QUOTES );
 
 	    /* uniqueColumnList */
@@ -9494,12 +9496,12 @@ textOfUniqueIndex(
     ** later */
 
     if (details->qci_flags & QCI_TABLE_STRUCT)
-	MEcopy((char *)tableName, DB_MAXNAME, indexName);
+	MEcopy((char *)tableName, DB_TAB_MAXNAME, indexName);
     else
     {
-	unpaddedLength = STnlength( DB_MAXNAME, actualIndexName );
+	unpaddedLength = STnlength( DB_TAB_MAXNAME, actualIndexName );
 	MEmove( ( u_i2 ) unpaddedLength, ( PTR ) actualIndexName, ' ',
-	    ( u_i2 ) DB_MAXNAME, ( PTR ) indexName );
+	    ( u_i2 ) DB_TAB_MAXNAME, ( PTR ) indexName );
     }
 
     return( status );
@@ -9906,7 +9908,7 @@ lookupSchemaID(
 		error = E_QE0304_SCHEMA_DOES_NOT_EXIST;
 		(VOID) qef_error( E_QE0304_SCHEMA_DOES_NOT_EXIST, 0L,
 				 status, &error, &dsh->dsh_error, 1,
-				 qec_trimwhite( DB_MAXNAME, 
+				 qec_trimwhite( DB_SCHEMA_MAXNAME, 
 					( char *)schemaName ), schemaName );
 	    }
 	    else
@@ -10019,7 +10021,7 @@ reportIntegrityViolation(
         /* constraintName */
 
         ADD_UNNORMALIZED_NAME( evolvingString, constraintName,
-		DB_MAXNAME, NO_PUNCTUATION, SINGLE_QUOTE );
+		DB_CONS_MAXNAME, NO_PUNCTUATION, SINGLE_QUOTE );
 
         /* , p3 = */
 
@@ -10028,7 +10030,7 @@ reportIntegrityViolation(
 
         /* tableName ) */
 
-        ADD_UNNORMALIZED_NAME( evolvingString, tableName, DB_MAXNAME,
+        ADD_UNNORMALIZED_NAME( evolvingString, tableName, DB_TAB_MAXNAME,
 	    CLOSE_PARENTHESIS, SINGLE_QUOTE );
 
 	break;
@@ -10124,7 +10126,7 @@ reportRefConsViolation(
 
         /* activetableName */
 
-        ADD_UNNORMALIZED_NAME( evolvingString, activeTableName, DB_MAXNAME,
+        ADD_UNNORMALIZED_NAME( evolvingString, activeTableName, DB_TAB_MAXNAME,
 	    NO_PUNCTUATION, SINGLE_QUOTE );
 
         /* , p2 = */
@@ -10134,7 +10136,7 @@ reportRefConsViolation(
 
         /* passiveTableName */
 
-        ADD_UNNORMALIZED_NAME( evolvingString, passiveTableName, DB_MAXNAME,
+        ADD_UNNORMALIZED_NAME( evolvingString, passiveTableName, DB_TAB_MAXNAME,
 	    NO_PUNCTUATION, SINGLE_QUOTE );
 
         /* , p3 = */
@@ -10145,7 +10147,7 @@ reportRefConsViolation(
         /* constraintName ) */
 
         ADD_UNNORMALIZED_NAME( evolvingString, constraintName,
-		DB_MAXNAME, CLOSE_PARENTHESIS, SINGLE_QUOTE );
+		DB_CONS_MAXNAME, CLOSE_PARENTHESIS, SINGLE_QUOTE );
 
 	break;
     }	/* end of code block */
@@ -10253,14 +10255,14 @@ qea_cor_text(
 	    sizeof("create rule ") - 1, NO_PUNCTUATION, NO_QUOTES );
 
 	/* add schema */
-	status = addUnnormalizedName(schema_name->db_own_name, DB_MAXNAME,
+	status = addUnnormalizedName(schema_name->db_own_name, DB_OWN_MAXNAME,
 	    unnormalizedName, &unnormalizedNameLength, &evolvingString,
 	    NO_PUNCTUATION, NO_QUOTES, dsh);
 	if (DB_FAILURE_MACRO(status))
 	    break;
 	
 	/* add .rule_name */
-	status = addUnnormalizedName(rule_name->db_name, DB_MAXNAME,
+	status = addUnnormalizedName(rule_name->db_name, DB_RULE_MAXNAME,
 	    unnormalizedName, &unnormalizedNameLength, &evolvingString,
 	    LEAD_PERIOD, NO_QUOTES, dsh);
 	if (DB_FAILURE_MACRO(status))
@@ -10365,7 +10367,7 @@ qea_cor_text(
 		att_entry = att_array[i];
 
 		status = addUnnormalizedName(att_entry->att_name.db_att_name,
-		    DB_MAXNAME, unnormalizedName, &unnormalizedNameLength,
+		    DB_ATT_MAXNAME, unnormalizedName, &unnormalizedNameLength,
 		    &evolvingString, NO_PUNCTUATION, NO_QUOTES, dsh);
 		if (DB_FAILURE_MACRO(status))
 		    break;
@@ -10379,7 +10381,7 @@ qea_cor_text(
 		    att_entry = att_array[i];
 
 		    status = addUnnormalizedName(
-			att_entry->att_name.db_att_name, DB_MAXNAME,
+			att_entry->att_name.db_att_name, DB_ATT_MAXNAME,
 			unnormalizedName, &unnormalizedNameLength,
 			&evolvingString, LEAD_COMMA, NO_QUOTES, dsh);
 		    if (DB_FAILURE_MACRO(status))
@@ -10400,14 +10402,14 @@ qea_cor_text(
 	
 	/* add schema */
 	status = addUnnormalizedName(schema_name->db_own_name,
-	    DB_MAXNAME, unnormalizedName, &unnormalizedNameLength,
+	    DB_OWN_MAXNAME, unnormalizedName, &unnormalizedNameLength,
 	    &evolvingString, NO_PUNCTUATION, NO_QUOTES, dsh);
 	if (DB_FAILURE_MACRO(status))
 	    break;
 
 	/* add .view_name */
 	status = addUnnormalizedName(view_name->db_tab_name,
-	    DB_MAXNAME, unnormalizedName, &unnormalizedNameLength,
+	    DB_TAB_MAXNAME, unnormalizedName, &unnormalizedNameLength,
 	    &evolvingString, LEAD_PERIOD, NO_QUOTES, dsh);
 	if (DB_FAILURE_MACRO(status))
 	    break;
@@ -10434,14 +10436,14 @@ qea_cor_text(
 	
 	/* add schema */
 	status = addUnnormalizedName(schema_name->db_own_name,
-	    DB_MAXNAME, unnormalizedName, &unnormalizedNameLength,
+	    DB_OWN_MAXNAME, unnormalizedName, &unnormalizedNameLength,
 	    &evolvingString, NO_PUNCTUATION, NO_QUOTES, dsh);
 	if (DB_FAILURE_MACRO(status))
 	    break;
 
 	/* add .dbp_name */
 	status = addUnnormalizedName(dbp_name->db_dbp_name,
-	    DB_MAXNAME, unnormalizedName, &unnormalizedNameLength,
+	    DB_DBP_MAXNAME, unnormalizedName, &unnormalizedNameLength,
 	    &evolvingString, LEAD_PERIOD, NO_QUOTES, dsh);
 	if (DB_FAILURE_MACRO(status))
 	    break;
@@ -10571,14 +10573,14 @@ qea_cop_text(
 	    sizeof("create procedure ") - 1, NO_PUNCTUATION, NO_QUOTES );
 
 	/* add schema */
-	status = addUnnormalizedName(schema_name->db_own_name, DB_MAXNAME,
+	status = addUnnormalizedName(schema_name->db_own_name, DB_OWN_MAXNAME,
 	    unnormalizedName, &unnormalizedNameLength, &evolvingString,
 	    NO_PUNCTUATION, NO_QUOTES, dsh);
 	if (DB_FAILURE_MACRO(status))
 	    break;
 	
 	/* add .dbp_name( */
-	status = addUnnormalizedName(dbp_name->db_dbp_name, DB_MAXNAME,
+	status = addUnnormalizedName(dbp_name->db_dbp_name, DB_DBP_MAXNAME,
 	    unnormalizedName, &unnormalizedNameLength, &evolvingString,
 	    LEAD_PERIOD | APPEND_OPEN_PARENTHESIS, NO_QUOTES, dsh);
 	if (DB_FAILURE_MACRO(status))
@@ -10603,14 +10605,14 @@ qea_cop_text(
 		NO_PUNCTUATION, NO_QUOTES );
 
 	    /* add schema */
-	    status = addUnnormalizedName(schema_name->db_own_name, DB_MAXNAME,
+	    status = addUnnormalizedName(schema_name->db_own_name, DB_OWN_MAXNAME,
 		unnormalizedName, &unnormalizedNameLength, &evolvingString,
 		NO_PUNCTUATION, NO_QUOTES, dsh);
 	    if (DB_FAILURE_MACRO(status))
 		break;
 	    
 	    /* add .view_name */
-	    status = addUnnormalizedName(view_name->db_tab_name, DB_MAXNAME,
+	    status = addUnnormalizedName(view_name->db_tab_name, DB_TAB_MAXNAME,
 		unnormalizedName, &unnormalizedNameLength, &evolvingString,
 		LEAD_PERIOD, NO_QUOTES, dsh);
 	    if (DB_FAILURE_MACRO(status))
@@ -10639,7 +10641,7 @@ qea_cop_text(
 	    */
 	    
 	    /* add "set_name"; same as the procedure name */
-	    status = addUnnormalizedName(dbp_name->db_dbp_name, DB_MAXNAME,
+	    status = addUnnormalizedName(dbp_name->db_dbp_name, DB_DBP_MAXNAME,
 		unnormalizedName, &unnormalizedNameLength, &evolvingString,
 		NO_PUNCTUATION, NO_QUOTES, dsh);
 	    if (DB_FAILURE_MACRO(status))
@@ -10659,7 +10661,7 @@ qea_cop_text(
 		NO_PUNCTUATION, NO_QUOTES );
 	    
 	    /* add <set name> */
-	    status = addUnnormalizedName(dbp_name->db_dbp_name, DB_MAXNAME,
+	    status = addUnnormalizedName(dbp_name->db_dbp_name, DB_DBP_MAXNAME,
 		unnormalizedName, &unnormalizedNameLength, &evolvingString,
 		NO_PUNCTUATION, NO_QUOTES, dsh);
 	    if (DB_FAILURE_MACRO(status))
@@ -10678,14 +10680,14 @@ qea_cop_text(
 		    NO_PUNCTUATION, NO_QUOTES );
 		
 		/* add schema */
-		status = addUnnormalizedName(schema_name->db_own_name, DB_MAXNAME,
+		status = addUnnormalizedName(schema_name->db_own_name, DB_OWN_MAXNAME,
 		    unnormalizedName, &unnormalizedNameLength, &evolvingString,
 		    NO_PUNCTUATION, NO_QUOTES, dsh);
 		if (DB_FAILURE_MACRO(status))
 		    break;
 		
 		/* add .view_name */
-		status = addUnnormalizedName(view_name->db_tab_name, DB_MAXNAME,
+		status = addUnnormalizedName(view_name->db_tab_name, DB_TAB_MAXNAME,
 		    unnormalizedName, &unnormalizedNameLength, &evolvingString,
 		    LEAD_PERIOD, NO_QUOTES, dsh);
 		if (DB_FAILURE_MACRO(status))
@@ -10714,14 +10716,14 @@ qea_cop_text(
 		    NO_PUNCTUATION, NO_QUOTES);
 		
 		/* add schema */
-		status = addUnnormalizedName(schema_name->db_own_name, DB_MAXNAME,
+		status = addUnnormalizedName(schema_name->db_own_name, DB_OWN_MAXNAME,
 		    unnormalizedName, &unnormalizedNameLength, &evolvingString,
 		    NO_PUNCTUATION, NO_QUOTES, dsh);
 		if (DB_FAILURE_MACRO(status))
 		    break;
 		
 		/* add .view_name */
-		status = addUnnormalizedName(view_name->db_tab_name, DB_MAXNAME,
+		status = addUnnormalizedName(view_name->db_tab_name, DB_TAB_MAXNAME,
 		    unnormalizedName, &unnormalizedNameLength, &evolvingString,
 		    LEAD_PERIOD, NO_QUOTES, dsh);
 		if (DB_FAILURE_MACRO(status))

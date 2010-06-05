@@ -176,6 +176,8 @@
 **	    Update GCA API to LEVEL 5
 **	30-Mar-2010 (kschendel) SIR 123485
 **	    Re-type some ptr's as the proper struct pointer.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -899,7 +901,7 @@ scs_monitor( i4 mode, CS_SCB *scb, i4 *nmode, char *command,
         {
            ule_format( I_SC051E_IIMONITOR_CMD, 0, ULE_LOG, NULL, 0, 0, 0, &local_error,
                        3, STlength(command), command,
-                       DB_MAXNAME, &((SCD_SCB *)scb)->scb_sscb.sscb_ics.ics_rusername,
+                       DB_OWN_MAXNAME, &((SCD_SCB *)scb)->scb_sscb.sscb_ics.ics_rusername,
                        sizeof(DB_TERM_NAME), &((SCD_SCB *)scb)->scb_sscb.sscb_ics.ics_terminal, 
                        0, 0);
         }

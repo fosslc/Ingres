@@ -95,6 +95,8 @@
 **	17-Feb-2009 (wanfr01)
 **	    Bug 121543
 **	    Added qsf_flags to identify if QSF object is dbp or repeated query
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 
@@ -303,7 +305,7 @@ typedef struct _QSO_OBID
     i4              qso_lname;          /* Number of characters in name;
 					** zero implies an unnamed object.
 					*/
-    char            qso_name[sizeof(DB_CURSOR_ID) + DB_MAXNAME + sizeof(i4)]; 
+    char            qso_name[sizeof(DB_CURSOR_ID) + DB_OWN_MAXNAME + sizeof(i4)]; 
 					/* Name this object is known by.
                                         ** Only the first qso_lname characters
 					** will be relevant to the object name.

@@ -101,6 +101,8 @@
 **	    location areas to have embedded spaces.
 **      24-aug-2009 (stial01)
 **          psy_cloc() Use DB_MAXNAME stack buffer for location name
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -162,7 +164,7 @@ psy_loc(
     DB_STATUS		status, local_status;
     DB_ERROR		e_error;
     i4		err_code;
-    char		dbname[DB_MAXNAME];
+    char		dbname[DB_DB_MAXNAME];
     SCF_CB		scf_cb;
     SCF_SCI		sci_list[1];
 
@@ -357,7 +359,7 @@ psy_cloc(
     PSY_TBL		*psy_obj;
 
     char		area_name[DB_AREA_MAX+1];
-    char		loc_name[DB_MAXNAME+1];
+    char		loc_name[DB_LOC_MAXNAME+1];
 
     /* This code is called for SQL only */
 
@@ -402,7 +404,8 @@ psy_cloc(
 	 psy_obj  = (PSY_TBL *)  psy_obj->queue.q_next
 	)
     {
-	MEmove(	sizeof(psy_obj->psy_tabnm), (PTR)&psy_obj->psy_tabnm,
+	/* using psy_tabnm for location name */
+	MEmove(	DB_LOC_MAXNAME, (PTR)&psy_obj->psy_tabnm,
 		'\0', sizeof(loc_name), (PTR)loc_name);
 
 	lotup->du_l_lname = STtrmwhite(loc_name);
@@ -486,7 +489,7 @@ psy_aloc(
     DU_LOCATIONS	lotuple;
     register DU_LOCATIONS   *lotup = &lotuple;
     PSY_TBL		*psy_obj;
-    char		tempstr[DB_MAXNAME+1];
+    char		tempstr[DB_LOC_MAXNAME+1];
 
     /* This code is called for SQL only */
 
@@ -515,7 +518,8 @@ psy_aloc(
 	 psy_obj  = (PSY_TBL *)  psy_obj->queue.q_next
 	)
     {
-	MEmove(	sizeof(psy_obj->psy_tabnm), (PTR)&psy_obj->psy_tabnm,
+	/* using psy_tabnm for location name */
+	MEmove(	DB_LOC_MAXNAME, (PTR)&psy_obj->psy_tabnm,
 		'\0', sizeof(tempstr), (PTR)tempstr);
 
 	lotup->du_l_lname = STtrmwhite(tempstr);
@@ -598,7 +602,7 @@ psy_kloc(
     DU_LOCATIONS	lotuple;
     register DU_LOCATIONS   *lotup = &lotuple;
     PSY_TBL		*psy_obj;
-    char		tempstr[DB_MAXNAME+1];
+    char		templocstr[DB_LOC_MAXNAME+1];
 
     /* This code is called for SQL only */
 
@@ -627,12 +631,13 @@ psy_kloc(
 	 psy_obj  = (PSY_TBL *)  psy_obj->queue.q_next
 	)
     {
-	MEmove(	sizeof(psy_obj->psy_tabnm), (PTR)&psy_obj->psy_tabnm,
-		'\0', sizeof(tempstr), (PTR)tempstr);
+	/* using psy_tabnm for location name */
+	MEmove(	DB_LOC_MAXNAME, (PTR)&psy_obj->psy_tabnm,
+		'\0', sizeof(templocstr), (PTR)templocstr);
 
-	lotup->du_l_lname = STtrmwhite(tempstr);
+	lotup->du_l_lname = STtrmwhite(templocstr);
 
-	MEmove(	lotup->du_l_lname, (PTR)tempstr,
+	MEmove(	lotup->du_l_lname, (PTR)templocstr,
 		' ', sizeof(lotup->du_lname), (PTR) lotup->du_lname);
 
 	stat = rdf_call(RDF_UPDATE, (PTR) &rdf_cb);

@@ -295,6 +295,8 @@ NO_OPTIM=dr6_us5 dgi_us5 int_lnx int_rpl ibm_lnx i64_aix a64_lnx
 **          Removed define for IIDBDB_ID, now located in dmf.h.
 **	30-Mar-2010 (kschendel) SIR 123485
 **	    Re-type some ptr's as the proper struct pointer.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -468,7 +470,7 @@ scs_dbopen(DB_DB_NAME *db_name,
     LK_LOCK_KEY         cf_lockkey;
     i4			i;
     char 		**vec;
-    char  		dbname[DB_MAXNAME + 1];
+    char  		dbname[DB_DB_MAXNAME + 1];
 
     if (db_name == 0)
     {
@@ -738,7 +740,7 @@ scs_dbopen(DB_DB_NAME *db_name,
             vec = (char **)MustLog_DB_Lst.dblist;
             if(MustLog_DB_Lst.dbcount)
             {
-                STlcopy(db_name->db_db_name, dbname, DB_MAXNAME);
+                STlcopy(db_name->db_db_name, dbname, DB_DB_MAXNAME);
                 STtrmwhite(dbname);
             }
             for( i = 0 ; i < MustLog_DB_Lst.dbcount ; i++ )
@@ -2138,7 +2140,7 @@ scs_ddbdb_info(SCD_SCB *scb,
     */
     ddb_descp = &dbdbcb->db_ddb_desc;
     scb->scb_sscb.sscb_ics.ics_dbserv = (i4)ddb_descp->dd_d6_dbservice;
-    MEcopy(ddb_descp->dd_d2_dba_desc.dd_u1_usrname, sizeof(DD_NAME),
+    MEcopy(ddb_descp->dd_d2_dba_desc.dd_u1_usrname, sizeof(DD_OWN_NAME),
 		&scb->scb_sscb.sscb_ics.ics_dbowner);
     STRUCT_ASSIGN_MACRO(scb->scb_sscb.sscb_ics.ics_dbowner,
 		scb->scb_sscb.sscb_ics.ics_xdbowner);
@@ -2252,7 +2254,7 @@ scs_ddbdb_info(SCD_SCB *scb,
     ** the DDB before opening the privileged connection with the CDB.
     */
     scb->scb_sscb.sscb_ics.ics_dbserv = (i4)ddb_descp->dd_d6_dbservice;
-    MEcopy((PTR)&ddb_descp->dd_d2_dba_desc.dd_u1_usrname, sizeof(DD_NAME),
+    MEcopy((PTR)&ddb_descp->dd_d2_dba_desc.dd_u1_usrname, sizeof(DD_OWN_NAME),
 		(PTR)&scb->scb_sscb.sscb_ics.ics_dbowner);
     STRUCT_ASSIGN_MACRO(scb->scb_sscb.sscb_ics.ics_dbowner,
 		scb->scb_sscb.sscb_ics.ics_xdbowner);
@@ -2387,11 +2389,11 @@ scs_ddbdb_info(SCD_SCB *scb,
     {
 	u_i4   xlate_temp;
 	u_i4       l_id;
-	char        tempstr[DB_MAXNAME];
+	char        tempstr[DB_OWN_MAXNAME];
 	u_i4       templen;
 
 	l_id = sizeof(DB_INGRES_NAME)-1;
-	templen = DB_MAXNAME;
+	templen = DB_OWN_MAXNAME;
 	xlate_temp = scb->scb_sscb.sscb_ics.ics_dbxlate | CUI_ID_REG
 						    | CUI_ID_STRIP;
 	MEfill(sizeof(tempstr), ' ', tempstr);
@@ -2474,8 +2476,7 @@ scs_audit_thread( SCD_SCB *scb )
 		db_name.db_db_name);
 
 	STmove(DB_INGRES_NAME, ' ', 
-		DB_MAXNAME, 
-		db_owner.db_db_owner.db_own_name);
+		DB_OWN_MAXNAME, db_owner.db_db_owner.db_own_name);
 
 	STRUCT_ASSIGN_MACRO(*((SCV_LOC *) Sc_main_cb->sc_dbdb_loc), db_loc);
 
@@ -3207,7 +3208,7 @@ scs_reg_alert( SCD_SCB *scb, char *alert_name )
     scf_cb.scf_ptr_union.scf_alert_parms = &scfa;
 
     MEfill( sizeof(DB_ALERT_NAME), 0, &aname.dba_alert );
-    STmove( alert_name, ' ', sizeof(DB_NAME), aname.dba_alert.db_name );
+    STmove( alert_name, ' ', sizeof(DB_EVENT_NAME), aname.dba_alert.db_ev_name );
     scfa.scfa_name = &aname;
     scfa.scfa_text_length = 0;
     scfa.scfa_user_text = NULL;

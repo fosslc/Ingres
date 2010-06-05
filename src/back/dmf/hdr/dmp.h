@@ -509,6 +509,8 @@
 **	03-Mar-2010 (jonj)
 **	    SIR 121619 MVCC, blob support:
 **	    Add NeedPhysLock macro.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*
@@ -922,8 +924,8 @@ MVCC,MVCC_DISABLED,MVCC_TRACE,MVCC_JTRACE,MUST_LOG,HAS_RAW"
     PTR		    dcb_uvcollation;	    /* Unicode collation table 
 					    ** (variable part) */
 # define    DCB_COL 666		/* collation tag for allocator */
-    char	    dcb_colname[DB_MAXNAME];	    /* collation name */
-    char	    dcb_ucolname[DB_MAXNAME]; /* unicode collation name */
+    char	    dcb_colname[DB_COLLATION_MAXNAME];	  /* collation name */
+    char	    dcb_ucolname[DB_COLLATION_MAXNAME]; /* unicode collation */
     DM_MUTEX	    dcb_mutex;		    /* Synchronization mutex. */
     PTR	            dcb_tzcb;	            /* Timezone in which DB resides */
     i4	    dcb_wrkspill_idx;	    /* Which work loc to use next */
@@ -3164,6 +3166,15 @@ struct _DMP_TCB
 
 
     /* Info about all attributes, key and non-key: */
+    PTR		    tcb_atts_names;
+    i4		    tcb_atts_size;
+    i4		    tcb_atts_used;
+
+    DMP_MISC	    *tcb_atts_o_misc;
+    PTR		    tcb_atts_o_names;
+    i4		    tcb_atts_o_size;
+    i4		    tcb_atts_o_used;
+
     DMP_ROWACCESS   tcb_data_rac;	    /* Row access info for base data
 					    ** row;  including att pointer
 					    ** array and number of atts
@@ -3923,15 +3934,15 @@ struct _DMP_REP_INFO
     struct _DMP_DD_REGIST_TABLES
     {
 	i4	tabno;
-	char	tab_name[DB_MAXNAME];
-	char	tab_owner[DB_MAXNAME];
+	char	tab_name[DB_TAB_MAXNAME];
+	char	tab_owner[DB_OWN_MAXNAME];
 	char	reg_date[25];
 	char	sup_obs_cre_date[25];
 	char	rules_cre_date[25];
 	i2	cdds_no;
-	char	cdds_lookup_table[DB_MAXNAME];
-	char	prio_lookup_table[DB_MAXNAME];
-	char	index_used[DB_MAXNAME];
+	char	cdds_lookup_table[DB_TAB_MAXNAME];
+	char	prio_lookup_table[DB_TAB_MAXNAME];
+	char	index_used[DB_TAB_MAXNAME];
     } dd_reg_tables;
 };
 

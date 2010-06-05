@@ -158,6 +158,8 @@
 **	    MOlongout/MOulongout now take i8/u_i8 parameter.
 **      10-Feb-2010 (smeke01) b123249
 **          Changed MOintget to MOuintget for unsigned integer values.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*
@@ -1281,13 +1283,13 @@ static MO_CLASS_DEF LGmo_ldb_classes[] =
 	MOstrget, MOnoset, (PTR)0, LGmo_ldb_index
     },
     {0, "exp.dmf.lg.ldb_db_name",
-	DB_MAXNAME, MO_READ, ldb_index,
+	DB_DB_MAXNAME, MO_READ, ldb_index,
 	CL_OFFSETOF(LDB, ldb_buffer[0]),
 	MOstrget, MOnoset, (PTR)0, LGmo_ldb_index
     },
-    {0, "exp.dmf.lg.ldb_db_owner",
-	DB_MAXNAME, MO_READ, ldb_index,
-	CL_OFFSETOF(LDB, ldb_buffer[DB_MAXNAME]),
+    {0, "exp.dmf.lg.ldb_db_owner",  /* owner is after dbname */
+	DB_OWN_MAXNAME, MO_READ, ldb_index,
+	CL_OFFSETOF(LDB, ldb_buffer[DB_DB_MAXNAME]),
 	MOstrget, MOnoset, (PTR)0, LGmo_ldb_index
     },
     {0, "exp.dmf.lg.ldb_j_first_la",
@@ -1825,13 +1827,13 @@ char *userbuf )
     LXB		*lxb = (LXB *)object;
     LPD		*lpd;
     LDB		*ldb;
-    char	format_buf [DB_MAXNAME + 1];
+    char	format_buf [DB_DB_MAXNAME + 1];
 
     lpd = (LPD *)LGK_PTR_FROM_OFFSET(lxb->lxb_lpd);
     ldb = (LDB *)LGK_PTR_FROM_OFFSET(lpd->lpd_ldb);
 
-    MEcopy(&ldb->ldb_buffer[0], DB_MAXNAME, format_buf);
-    format_buf[DB_MAXNAME] = 0;
+    MEcopy(&ldb->ldb_buffer[0], DB_DB_MAXNAME, format_buf);
+    format_buf[DB_DB_MAXNAME] = 0;
 
     return (MOstrout( MO_VALUE_TRUNCATED, format_buf, luserbuf, userbuf ));
 }
@@ -1870,13 +1872,14 @@ char *userbuf )
     LXB		*lxb = (LXB *)object;
     LPD		*lpd;
     LDB		*ldb;
-    char	format_buf [DB_MAXNAME + 1];
+    char	format_buf [DB_OWN_MAXNAME + 1];
 
     lpd = (LPD *)LGK_PTR_FROM_OFFSET(lxb->lxb_lpd);
     ldb = (LDB *)LGK_PTR_FROM_OFFSET(lpd->lpd_ldb);
 
-    MEcopy(&ldb->ldb_buffer[DB_MAXNAME], DB_MAXNAME, format_buf);
-    format_buf[DB_MAXNAME] = 0;
+    /* owner is after db name */
+    MEcopy(&ldb->ldb_buffer[DB_DB_MAXNAME], DB_OWN_MAXNAME, format_buf);
+    format_buf[DB_OWN_MAXNAME] = 0;
 
     return (MOstrout( MO_VALUE_TRUNCATED, format_buf, luserbuf, userbuf ));
 }
@@ -1915,7 +1918,7 @@ char *userbuf )
     LXB		*lxb = (LXB *)object;
     LPD		*lpd;
     LDB		*ldb;
-    char	format_buf [DB_MAXNAME + 1];
+    char	format_buf [40]; /* for CVLA long to ascii */
 
     lpd = (LPD *)LGK_PTR_FROM_OFFSET(lxb->lxb_lpd);
     ldb = (LDB *)LGK_PTR_FROM_OFFSET(lpd->lpd_ldb);
@@ -1959,7 +1962,7 @@ char *userbuf )
     LXB		*lxb = (LXB *)object;
     LPD		*lpd;
     LPB		*lpb;
-    char	format_buf [DB_MAXNAME + 1];
+    char	format_buf [40]; /* for CVLA long to ascii */
 
     lpd = (LPD *)LGK_PTR_FROM_OFFSET(lxb->lxb_lpd);
     lpb = (LPB *)LGK_PTR_FROM_OFFSET(lpd->lpd_lpb);

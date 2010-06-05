@@ -166,6 +166,8 @@ static DB_STATUS openTempTable(
 **	    references.  (This simplifies the code, eliminating many
 **	    RCB references, and reflects the new primacy of the DSH
 **	    thanks to the parallel query changes.)
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*{
@@ -363,7 +365,7 @@ i4		    state )		/* Unused */
 	    {
 		char	*rn = act->qhd_obj.qhd_callproc.ahd_rulename.db_name;
 		STprintf(cbuf, "PRINTRULES: Rule '%.*s' suppressed\n",
-			    qec_trimwhite(DB_MAXNAME, rn), rn);
+			    qec_trimwhite(DB_RULE_MAXNAME, rn), rn);
         	qec_tprintf(qef_rcb, cbufsize, cbuf);
 	    }
 	    call_dsh->dsh_error.err_code = E_QE0125_RULES_INHIBIT;
@@ -382,11 +384,11 @@ i4		    state )		/* Unused */
 	   )
 	{
 	    status = qeu_secaudit(FALSE, qef_cb->qef_ses_id,
-	    		act->qhd_obj.qhd_callproc.ahd_rulename.db_name,
-			(DB_OWN_NAME *)&act->qhd_obj.qhd_callproc.ahd_ruleowner,
-	    		sizeof(DB_NAME), SXF_E_RULE,
-	      		I_SX202F_RULE_ACCESS, SXF_A_SUCCESS | SXF_A_EXECUTE,
-	      		&e_error);
+		    act->qhd_obj.qhd_callproc.ahd_rulename.db_name,
+		    (DB_OWN_NAME *)&act->qhd_obj.qhd_callproc.ahd_ruleowner,
+		    sizeof(act->qhd_obj.qhd_callproc.ahd_rulename), SXF_E_RULE,
+		    I_SX202F_RULE_ACCESS, SXF_A_SUCCESS | SXF_A_EXECUTE,
+		    &e_error);
 
 	    if (status != E_DB_OK)
 	    {
@@ -446,8 +448,8 @@ i4		    state )		/* Unused */
 		STprintf(cbuf, *rn == EOS ?
 		     "PRINTRULES 1: Executing procedure '%.*s'\n" :
 		     "PRINTRULES 1: Executing procedure '%.*s' from rule '%.*s'\n",
-		     qec_trimwhite(DB_MAXNAME, pn), pn,
-		     qec_trimwhite(DB_MAXNAME, rn), rn);
+		     qec_trimwhite(DB_DBP_MAXNAME, pn), pn,
+		     qec_trimwhite(DB_RULE_MAXNAME, rn), rn);
         	qec_tprintf(qef_rcb, cbufsize, cbuf);
 		STprintf(cbuf,
 		     "PRINTRULES 2: Rule/procedure depth = %d/%d, parameters passed = %d\n",
@@ -607,12 +609,12 @@ i4		    state )		/* Unused */
 		if (call_dsh->dsh_error.err_code == E_QE030B_RULE_PROC_MISMATCH)
 		    qef_error(E_QE030B_RULE_PROC_MISMATCH, 0L, status, &err,
 		    &call_dsh->dsh_error, 1,
-		    /* qec_trimwhite(DB_MAXNAME, rn), rn, */
-		    qec_trimwhite(DB_MAXNAME, pn), pn);
+		    /* qec_trimwhite(DB_RULE_MAXNAME, rn), rn, */
+		    qec_trimwhite(DB_DBP_MAXNAME, pn), pn);
 		else qef_error(E_QE0199_CALL_ALLOC, 0L, status, &err,
 		    &call_dsh->dsh_error, 3,
-		    qec_trimwhite(DB_MAXNAME, pn), pn,
-		    qec_trimwhite(DB_MAXNAME, rn), rn,
+		    qec_trimwhite(DB_DBP_MAXNAME, pn), pn,
+		    qec_trimwhite(DB_RULE_MAXNAME, rn), rn,
 		    sizeof(qef_rcb->qef_context_cnt),&qef_rcb->qef_context_cnt);
 		call_dsh->dsh_error.err_code = E_QE0122_ALREADY_REPORTED;
 	    }
@@ -637,7 +639,7 @@ i4		    state )		/* Unused */
 	    pn = act->qhd_obj.qhd_callproc.ahd_dbpalias.als_crsr_id.db_cur_name;
 	    qef_error(E_QE030D_NESTED_ROWPROCS, 0L, E_DB_ERROR, &err,
 		&call_dsh->dsh_error, 1,
-		qec_trimwhite(DB_MAXNAME, pn), pn);
+		qec_trimwhite(DB_DBP_MAXNAME, pn), pn);
 	    status = E_DB_ERROR;
 	    break;
 	}

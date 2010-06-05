@@ -206,6 +206,8 @@
 **	    efforts to port to Visual Studio 2008.
 **	12-Nov-2009 (kschendel) SIR 122882
 **	    cmptlvl is now an integer, fix update-config proc defn here.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -362,8 +364,8 @@ static  DB_STATUS   rdu_cnstr_integ(RDF_GLOBAL    *global);
 static const struct 
 {
     char    *proc_name;	    /* name of special mapped internal procedure,
-			    ** which should be DB_MAXNAME characters long */
-    char    *proc_own;	    /* owner of procedure, which should be DB_MAXNAME 
+			    ** which should be DB_DBP_MAXNAME characters long */
+    char    *proc_own;	    /* owner of procedure, which should be DB_OWN_MAXNAME 
 			    ** characters long */
     char    *proc_txt[10];    /* array of 50 char substrings of qry */
     i4	    txt_cnt;	    /* number of strings in array */
@@ -1290,10 +1292,12 @@ rdu_qopen(  RDF_GLOBAL	    *global,
 	    break;
 	}
 	case RD_IIEVENT:
+	{
 	    /* Can't be the by-tid case, key is event name & owner */
 	    *key1 = (char *) &rdf_rb->rdr_name.rdr_evname;
 	    *key2 = (char *) &rdf_rb->rdr_owner;
 	    break;
+	}
 	case RD_IIINTEGRITYIDX:
 	{
 	    /* "data" points to a DB_SCHEMA_ID */
@@ -1335,16 +1339,17 @@ rdu_qopen(  RDF_GLOBAL	    *global,
 	    /* build key for iisynonym tuple.  NOTE: the synonym_name and
 	    **  synonym_owner fields may be longer than DB_MAXNAME, so blank
 	    **  pad and then fill in the PSF supplied names, which are
-	    **  guaranteed to be DB_MAXNAME long at this point in time.
+	    **  guaranteed to be DB_TAB_MAXNAME, DB_OWN_MAXNAME.
 	    ** (I think this comment is obsolete - synonym names are now
 	    ** the same as a db_name - schka24)
 	    */
 	    MEfill( sizeof(DB_SYNNAME), ' ', (PTR) &global->rd_syn_name);
 	    MEfill( sizeof(DB_SYNOWN), ' ', (PTR) &global->rd_syn_own);
-	    MEcopy( (PTR) &rdf_rb->rdr_name.rdr_tabname,
-		    DB_MAXNAME, (PTR) &global->rd_syn_name);
+	    MEcopy( (PTR) &rdf_rb->rdr_name.rdr_tabname, DB_TAB_MAXNAME,
+		    (PTR)&global->rd_syn_name);
+
 	    MEcopy( (PTR) &rdf_rb->rdr_owner,
-		    DB_MAXNAME, (PTR) &global->rd_syn_own);
+		    DB_OWN_MAXNAME, (PTR) &global->rd_syn_own);
 	    *key1 = (char *) &global->rd_syn_name;
 	    *key2 = (char *) &global->rd_syn_own;
 	    break;
@@ -4655,8 +4660,8 @@ rdu_qtclass(	RDF_GLOBAL  *global,
 **		tree_type (i4 - DB_RULE, DB_PROTECT, DB_INTG)
 **		database id (i4)
 **	    for rules:
-**		rule name   (DB_MAXNAME)
-**		rule owner  (DB_MAXNAME)
+**		rule name   (DB_RULE_MAXNAME)
+**		rule owner  (DB_OWN_MAXNAME)
 **		database id (i4)
 **
 ** Inputs:
@@ -4738,15 +4743,15 @@ rdu_qtalias(	RDF_GLOBAL  *global,
     {
 	/* this is a rule */
 	MEcopy ((PTR) &global->rdfcb->rdf_rb.rdr_name, 
-		DB_MAXNAME, (PTR) alias_name);
-	alias_name += DB_MAXNAME;
+		DB_RULE_MAXNAME, (PTR) alias_name);
+	alias_name += DB_RULE_MAXNAME;
 	MEcopy ((PTR) &global->rdfcb->rdf_rb.rdr_owner,
-		DB_MAXNAME, (PTR) alias_name);
-	alias_name += DB_MAXNAME;
+		DB_OWN_MAXNAME, (PTR) alias_name);
+	alias_name += DB_OWN_MAXNAME;
 	MEcopy((PTR)&global->rdfcb->rdf_rb.rdr_unique_dbid, 
 	    sizeof(i4),
 	    (PTR)alias_name);
-	*len = DB_MAXNAME + DB_MAXNAME + sizeof(i4);
+	*len = DB_RULE_MAXNAME + DB_OWN_MAXNAME + sizeof(i4);
 
     }	/* endif */
 }
@@ -6367,27 +6372,27 @@ static i4
 rdu_special_proc( char *prcname, char *owner, bool upcase)
 {
     i4	i;
-    char	special_name[DB_MAXNAME];
-    char	special_own[DB_MAXNAME];
+    char	special_name[DB_DBP_MAXNAME];
+    char	special_own[DB_OWN_MAXNAME];
 
     for (i=1; i < SPECIAL_CNT; i++)
     {
-	STmove((PTR)special_proc[i].proc_name, ' ', DB_MAXNAME, special_name);
-	STmove((PTR)special_proc[i].proc_own, ' ', DB_MAXNAME, special_own);
+	STmove((PTR)special_proc[i].proc_name, ' ', DB_DBP_MAXNAME, special_name);
+	STmove((PTR)special_proc[i].proc_own, ' ', DB_OWN_MAXNAME, special_own);
 	if (upcase)
 	{
-	   if (STbcompare((PTR)prcname, DB_MAXNAME,
-				special_name, DB_MAXNAME, 1))
+	   if (STbcompare((PTR)prcname, DB_DBP_MAXNAME,
+				special_name, DB_DBP_MAXNAME, 1))
 	     continue;
-	   if (STbcompare((PTR)owner, DB_MAXNAME, 
-				special_own, DB_MAXNAME, 1))
+	   if (STbcompare((PTR)owner, DB_OWN_MAXNAME, 
+				special_own, DB_OWN_MAXNAME, 1))
 	     continue;
 	}
 	else
 	{
-	   if (MEcmp((PTR)prcname, special_name, DB_MAXNAME))
+	   if (MEcmp((PTR)prcname, special_name, DB_DBP_MAXNAME))
 	   	continue;
-	   if (MEcmp((PTR) owner, special_own, DB_MAXNAME))
+	   if (MEcmp((PTR) owner, special_own, DB_OWN_MAXNAME))
 	        continue;
 	}
 	return ( special_proc[i].proc_id );
@@ -6698,14 +6703,14 @@ rdu_procedure(	RDF_GLOBAL         *global,
 	** of using the iiprocedure catalog tuple
 	*/
 	/*
-	STmove( (PTR) special_proc[special_id].proc_name, ' ', DB_MAXNAME,
+	STmove( (PTR) special_proc[special_id].proc_name, ' ', DB_DBP_MAXNAME,
 		(PTR) &proc_tuple.db_dbpname);
-	STmove( (PTR)  special_proc[special_id].proc_own, ' ', DB_MAXNAME,
+	STmove( (PTR)  special_proc[special_id].proc_own, ' ', DB_OWN_MAXNAME,
 		(PTR) &proc_tuple.db_owner);
 	*/
 	MEcopy( (PTR) rdfcb->rdf_rb.rdr_name.rdr_prcname.db_dbp_name, 
-		DB_MAXNAME, (PTR) &proc_tuple.db_dbpname);
-	MEcopy( (PTR) rdfcb->rdf_rb.rdr_owner.db_own_name, DB_MAXNAME,
+		DB_DBP_MAXNAME, (PTR) &proc_tuple.db_dbpname);
+	MEcopy( (PTR) rdfcb->rdf_rb.rdr_owner.db_own_name, DB_OWN_MAXNAME,
 		(PTR) &proc_tuple.db_owner);
 	proc_tuple.db_txtlen = special_proc[special_id].txt_len;
 	proc_tuple.db_mask[0] = DB_IPROC | DB_DBPGRANT_OK | DB_ACTIVE_DBP;

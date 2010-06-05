@@ -52,6 +52,8 @@
 **	    Include guard against repeated inclusion.
 **      18-nov-2009 (joea)
 **          Add IISQ_BOO_TYPE.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 /*
@@ -64,7 +66,7 @@ typedef struct sqlvar_ {
 	short	*sqlind;
 	struct {
 	    short sqlnamel;
-	    char  sqlnamec[34];
+	    char  sqlnamec[258];
 	} sqlname;
 } IISQLVAR;
 

@@ -96,6 +96,8 @@
 **	    SIR 120874: dm2t_?, dm2r_? functions converted to DB_ERROR *
 **      06-Jan-2009 (stial01)
 **          jsp_get_case() use DB_DBCAPABITLITIES instead of local struct
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*
@@ -172,7 +174,7 @@ DMF_JSX		*jsx)
     i4		loc_status;
     i4		loc_err;
     i4		i;
-    char		dbcap_name[DB_MAXNAME];
+    char		dbcap_name[DB_TAB_MAXNAME]; /* iidbcapabilities */
     char		dollar_ingres_name[DB_MAXNAME];
     char		*cptr;
     DB_DBCAPABILITIES	iidbc; /* iidbcapabilities structure */
@@ -224,7 +226,7 @@ DMF_JSX		*jsx)
 	    MEmove(sizeof(DU_DBA_DBDB) - 1, DU_DBA_DBDB, ' ', DB_MAXNAME, 
 		dollar_ingres_name);
 	    MEmove(sizeof(LOWER_DBCAP_NAME) - 1, LOWER_DBCAP_NAME, ' ', 
-		DB_MAXNAME, dbcap_name);
+		DB_TAB_MAXNAME, dbcap_name);
 
 	    key_desc[0].attr_operator = DM2R_EQ;
 	    key_desc[0].attr_number = DM_1_RELIDX_KEY;
@@ -257,10 +259,10 @@ DMF_JSX		*jsx)
 	    if (jsx->jsx_dberr.err_code == E_DM0055_NONEXT)
 	    {
 		MEmove(sizeof(UPPER_DBCAP_NAME) - 1, UPPER_DBCAP_NAME, ' ', 
-		    DB_MAXNAME, dbcap_name);
+		    DB_TAB_MAXNAME, dbcap_name);
 
 	        cptr = dollar_ingres_name;
-		for (i = 0; i < DB_MAXNAME; i++)
+		for (i = 0; i < DB_OWN_MAXNAME; i++)
 		{
 		    CMtoupper(cptr, cptr);
 		    CMnext(cptr);
@@ -996,8 +998,8 @@ bool		fully_delete)
 	char		error_buffer[ER_MAX_LEN];
 	i4		error_length;
 
-	STncpy( line_buffer, dcb->dcb_name.db_db_name, DB_MAXNAME);
-	line_buffer[ DB_MAXNAME ] = '\0';
+	STncpy( line_buffer, dcb->dcb_name.db_db_name, DB_DB_MAXNAME);
+	line_buffer[ DB_DB_MAXNAME ] = '\0';
 	STtrmwhite(line_buffer);
 
 	uleFormat(NULL, E_DM1405_ALT_CKP_DELETED, (CL_ERR_DESC *)NULL, ULE_LOOKUP, 

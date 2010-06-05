@@ -197,6 +197,8 @@
 **          Changed IIQE_42_ing_60 to "II9.4" for new release.
 **	10-Jun-2009 (hweho01)
 **          Changed IIQE_42_ing_60 to "II10.0" for new release.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -572,7 +574,7 @@ GLOBALDEF const  QEK_K1_STR_CODE	*IIQE_18_str_tab[QEK_18MAX_LENGTH]
 **  and return its code if successful.
 **
 ** Inputs:
-**	    i_str_p			string of length DB_MAXNAME
+**	    i_str_p			string of length DB_CAPVAL_MAXLEN
 **
 ** Outputs:
 **	Returns:
@@ -596,13 +598,13 @@ i4
 qek_c1_str_to_code(
 char		*i_str_p )
 {
-    char		in_str[DB_MAXNAME + 1];
+    char		in_str[DB_CAPVAL_MAXLEN + 1];
     i4			len;
     QEK_K1_STR_CODE    *entry_p;
     bool		eot_b;		/* used to determine if end of a table
 					** is reached */
 
-    len = qed_u0_trimtail(i_str_p, (u_i4) DB_MAXNAME, in_str);
+    len = qed_u0_trimtail(i_str_p, (u_i4) DB_CAPVAL_MAXLEN, in_str);
 
     /* index to get pointer to subtable */
 
@@ -642,7 +644,7 @@ char		*i_str_p )
 **  code if successful.
 **
 ** Inputs:
-**	    i_str_p			string of length DB_MAXNAME
+**	    i_str_p			string of length DB_CAPVAL_MAXLEN
 **
 ** Outputs:
 **	Returns:
@@ -663,13 +665,13 @@ i4
 qek_c2_val_to_code(
 char		*i_str_p )
 {
-    char	in_str[DB_MAXNAME + 1];
+    char	in_str[DB_CAPVAL_MAXLEN + 1];
     char	*digit_p;		/* used to point to above */
     i4		len;
     i4		lvl_code;
     
 
-    len = qed_u0_trimtail(i_str_p, (u_i4) DB_MAXNAME, in_str);
+    len = qed_u0_trimtail(i_str_p, (u_i4) DB_CAPVAL_MAXLEN, in_str);
 
     for (digit_p = in_str, lvl_code = 0; len > 0; len--, digit_p++)
     {

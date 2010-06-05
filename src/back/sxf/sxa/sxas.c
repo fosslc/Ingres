@@ -141,6 +141,8 @@
 **          dmx_commit(). Correct the typo error in status assignment.
 **	13-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 /*
 ** Forward function references.
@@ -2143,7 +2145,8 @@ sxas_abort(
 	dmx.length = sizeof (dmx);
 	dmx.dmx_tran_id = sxas_dmf->dm_tran_id;
 	dmx.dmx_option = 0;
-	MEfill(DB_MAXNAME, 0, (PTR)dmx.dmx_savepoint_name.db_sp_name);
+	MEfill(sizeof(dmx.dmx_savepoint_name.db_sp_name), 0, 
+		(PTR)dmx.dmx_savepoint_name.db_sp_name);
 
 	status = (*Sxf_svcb->sxf_dmf_cptr)(DMX_ABORT, &dmx);
 	if (status != E_DB_OK)

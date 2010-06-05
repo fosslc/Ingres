@@ -115,6 +115,8 @@ NO_OPTIM = nc4_us5
 **         Before updating the sxf_sxap hold the 
 **         sxap_semaphore to ensure the sxap_curr_rscb
 **         has a valid value. Prevents an ACCVIO or E_SX102C.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 /*
@@ -2036,21 +2038,21 @@ compress_record(
 		(PTR)p);
 	p += sizeof(SYSTIME);
 
-	l = comp_field_len(rec->sxf_ruserid.db_own_name, DB_MAXNAME);
+	l = comp_field_len(rec->sxf_ruserid.db_own_name, DB_OWN_MAXNAME);
 	if (p - orig + l + 1 > *length)
 	    break;
 	*(p++) = (char)l;
 	MEcopy((PTR)rec->sxf_ruserid.db_own_name, l, (PTR)p);
 	p += l;
 
-	l = comp_field_len(rec->sxf_euserid.db_own_name, DB_MAXNAME);
+	l = comp_field_len(rec->sxf_euserid.db_own_name, DB_OWN_MAXNAME);
 	if (p - orig + l + 1> *length)
 	    break;
 	*(p++) = (char)l;
 	MEcopy((PTR)rec->sxf_euserid.db_own_name, l, (PTR)p);
 	p += l;
 
-	l = comp_field_len(rec->sxf_dbname.db_db_name, DB_MAXNAME);
+	l = comp_field_len(rec->sxf_dbname.db_db_name, DB_DB_MAXNAME);
 	if (p - orig + l + 1> *length)
 	    break;
 	*(p++) = (char)l;
@@ -2097,14 +2099,14 @@ compress_record(
 		(PTR)p);
 	p += sizeof(SXF_ACCESS);
 
-	l = comp_field_len(rec->sxf_objectowner.db_own_name, DB_MAXNAME);
+	l = comp_field_len(rec->sxf_objectowner.db_own_name, DB_OWN_MAXNAME);
 	if (p - orig + l + 1> *length)
 	    break;
 	*(p++) = (char)l;
 	MEcopy((PTR)rec->sxf_objectowner.db_own_name, l, (PTR)p);
 	p += l;
 
-	l = comp_field_len(rec->sxf_object, DB_MAXNAME);
+	l = comp_field_len(rec->sxf_object, DB_OBJ_MAXNAME);
 	if (p - orig + l + 1 > *length)
 	    break;
 	*(p++) = (char)l;
@@ -2241,27 +2243,18 @@ uncompress_record(
 	p += sizeof (SYSTIME);
 
 	field_length = (u_i2) *p++;
-	MEmove(field_length, 
-	    (PTR) p, 
-	    ' ', 
-	    DB_MAXNAME, 
-	    (PTR) rec->sxf_ruserid.db_own_name);
+	MEmove(field_length, (PTR) p, ' ', 
+	    DB_OWN_MAXNAME, (PTR) rec->sxf_ruserid.db_own_name);
 	p += field_length;
 
 	field_length = (u_i2) *p++;
-	MEmove(field_length, 
-	    (PTR) p, 
-	    ' ', 
-	    DB_MAXNAME, 
-	    (PTR) rec->sxf_euserid.db_own_name);
+	MEmove(field_length, (PTR) p, ' ', 
+	    DB_OWN_MAXNAME, (PTR) rec->sxf_euserid.db_own_name);
 	p += field_length;
 
 	field_length = (u_i2) *p++;
-	MEmove(field_length, 
-	    (PTR) p, 
-	    ' ', 
-	    DB_MAXNAME, 
-	    (PTR) rec->sxf_dbname.db_db_name);
+	MEmove(field_length, (PTR) p, ' ', 
+	    DB_DB_MAXNAME, (PTR) rec->sxf_dbname.db_db_name);
 	p += field_length;
 
 	MECOPY_CONST_MACRO(
@@ -2295,19 +2288,13 @@ uncompress_record(
 	p += sizeof (SXF_ACCESS);
 
 	field_length = (u_i2) *p++;
-	MEmove(field_length, 
-	    (PTR) p, 
-	    ' ', 
-	    DB_MAXNAME, 
-	    (PTR) rec->sxf_objectowner.db_own_name);
+	MEmove(field_length, (PTR) p, ' ', 
+	    DB_OWN_MAXNAME, (PTR) rec->sxf_objectowner.db_own_name);
 	p += field_length;
 
 	field_length = (u_i2) *p++;
-	MEmove(field_length, 
-	    (PTR) p, 
-	    ' ', 
-	    DB_MAXNAME, 
-	    (PTR) rec->sxf_object);
+	MEmove(field_length, (PTR) p, ' ', 
+	    DB_OBJ_MAXNAME, (PTR) rec->sxf_object);
 	p += field_length;
 
 	/*

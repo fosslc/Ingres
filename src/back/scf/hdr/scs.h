@@ -281,6 +281,8 @@
 **	    Update GCA API to LEVEL 5
 **	25-Mar-2010 (kschendel) SIR 123485
 **	    Add sequencer action enum, COPY sequencer prototypes.
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 */
 
 
@@ -530,8 +532,8 @@ typedef struct _SCS_ICS
     DB_OWN_NAME	    *ics_eusername;	/* effective user name	*/
     DB_OWN_NAME	    ics_susername;	/* SQL-session <auth id> */
     DB_OWN_NAME	    ics_musername;	/* <module auth id> */
-    char    	    ics_collation[DB_MAXNAME];	/* collation sequence in use */
-    char	    ics_ucollation[DB_MAXNAME]; /* Unicode collation sequence */
+    char    	    ics_collation[DB_COLLATION_MAXNAME];/* collation name */
+    char	    ics_ucollation[DB_COLLATION_MAXNAME]; /* Unicode collation */
 
     /* now, some info about the database */
 
@@ -562,7 +564,7 @@ typedef struct _SCS_ICS
     DB_DATE_FMT	    ics_date_format;	/* date format of choice */
     i4		    ics_year_cutoff;	/* date_century cutoff */
     DB_MONY_FMT     ics_money_format;	/* money format/currency symbol */
-    char            ics_tz_name[DB_MAXNAME];       /* time zone of front end */
+    char            ics_tz_name[DB_TYPE_MAXLEN]; /* time zone of front end */
     i4		    ics_language;
     i4		    ics_parser_compat;	/* Parser compatibility settings.
 					** See psq_parser_compat in psfparse.h
@@ -1046,7 +1048,7 @@ struct _SCS_ALARM
 	i4		scal_tag;
 #define                 SCA_TAG         CV_C_CONST_MACRO('s','c','a','_')
 	DB_SECALARM alarm;	/* Alarm tuple  info */
-	DB_NAME	    event_name;	/* Event name */
+	DB_EVENT_NAME event_name;	/* Event name */
 	DB_OWN_NAME event_owner; /* Event owner */
 } ;
 

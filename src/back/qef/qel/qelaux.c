@@ -73,6 +73,8 @@
 **	    replace nat and longnat with i4
 **	30-mar-04 (toumi01)
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
+**      01-apr-2010 (stial01)
+**          Changes for Long IDs
 **/
 
 
@@ -145,7 +147,7 @@ DD_COLUMN_DESC	**o_coldesc_pp )
     {
 	ldbdesc_p = *ldbcols_pp;	    /* ptr to column descriptor */
 
-	if (MEcmp(i_name_p, ldbdesc_p->dd_c1_col_name, DB_MAXNAME)
+	if (MEcmp(i_name_p, ldbdesc_p->dd_c1_col_name, DB_ATT_MAXNAME)
 	    == 0)
 	{
 	    found_b = TRUE;
@@ -398,7 +400,7 @@ char		*i_colptr,
 u_i4	i_xlate,
 DD_CAPS		*i_ldb_caps)
 {
-    char	*last = i_colptr + sizeof(DD_NAME) -1,
+    char	*last = i_colptr + sizeof(DD_ATT_NAME) -1,
 		*colptr = i_colptr;
 
     if (i_xlate & CUI_ID_DLM_U)             /* upper delimiter */
