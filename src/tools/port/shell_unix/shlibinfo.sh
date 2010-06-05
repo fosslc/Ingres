@@ -347,6 +347,8 @@
 #	    Fix up build flags for kerberos
 #           Add support for LSB builds which use versioned shared libraries
 #	    and unique build ids
+#	12-Apr-2010 (frima01) SIR 122138
+#	    Re-added -lrt to shlink_opts for *_lnx
 #
 
 CMD=`basename /$0`
@@ -659,10 +661,10 @@ case "$config" in
 	    if [ -n "$conf_DISSL_ENABLED" ]
 	    then
 
-		shlink32_opts=" -lm -lc   -lpthread -ldl -lcrypt -lssl -lcrypto -L/usr/local/ssl/lib "
+		shlink32_opts=" -lrt -lm -lc   -lpthread -ldl -lcrypt -lssl -lcrypto -L/usr/local/ssl/lib "
 		LD_LIBRARY_PATH="/usr/local/ssl/lib:/usr/local/ssl/lib/engines:/lib:/usr/lib:$ING_BUILD/lib"
 	    else
-		shlink32_opts=" -lm -lc   -lpthread -ldl -lcrypt "
+		shlink32_opts=" -lrt -lm -lc   -lpthread -ldl -lcrypt "
 		LD_LIBRARY_PATH="/lib:/usr/lib:$ING_BUILD/lib"
 	    fi
 	    shlink64_opts="$shlink32_opts"
