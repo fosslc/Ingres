@@ -257,6 +257,11 @@
 **          However ID gets linked to frontend programs so we use pointers
 **          which if not initialized in LGKinitialize to the shared memory 
 **          version, are set to a process-specific variable here. 
+**      19-Apr-2010 (maspa05) b123595
+**          ID_UUID_SEM_INIT was defined as CS_synch_init rather than 
+**          CS_cp_synch_init and this caused cross-process mutex hangs.
+**          Changed the definition but CS_cp_synch_init requires a status
+**          parameter
 */
 
 /* UnDefine TYPE_LONGLONG_OK for platforms that */
@@ -425,8 +430,10 @@ IDuuid_time()
 
     if (!ID_uuid_sem_ptr )
     {
+	    STATUS id_stat;
+
 	    ID_uuid_sem_ptr = &ID_uuid_sem;
-	    ID_UUID_SEM_INIT(ID_uuid_sem_ptr,CS_SEM_SINGLE,"uuid sem");
+	    ID_UUID_SEM_INIT(ID_uuid_sem_ptr,CS_SEM_SINGLE,"uuid sem",&id_stat);
     }
 
     if (!ID_uuid_last_time_ptr)

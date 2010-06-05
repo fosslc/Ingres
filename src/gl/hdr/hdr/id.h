@@ -37,6 +37,9 @@
 **          version depending on whether we're a server or not. 
 **          Also defined ID_UUID_SEM* since we need to use different semaphore
 **          types on VMS than unix
+**      19-apr-2010 (maspa05) bug 1235595
+**          ID_UUID_SEM_INIT now defined as CS_cp_synch_object to avoid cross-
+**          process mutex hangs. This means we need to add a status parameter
 **/
 
 #ifndef IDgroup
@@ -108,12 +111,12 @@ FUNC_EXTERN VOID IDsetsys(
 
 #ifdef VMS
 #define ID_UUID_SEM_TYPE                     CS_SEMAPHORE
-#define ID_UUID_SEM_INIT(mutex,scope,name)   CSw_semaphore(mutex,scope,name)
+#define ID_UUID_SEM_INIT(mutex,scope,name,status)   CSw_semaphore(mutex,scope,name)
 #define ID_UUID_SEM_LOCK(exclusive,mutex)    CSp_semaphore(exclusive,mutex)
 #define ID_UUID_SEM_UNLOCK(mutex)            CSv_semaphore(mutex)
 #else
 #define ID_UUID_SEM_TYPE                     CS_SYNCH
-#define ID_UUID_SEM_INIT(mutex,scope,name)   CS_synch_init(mutex)
+#define ID_UUID_SEM_INIT(mutex,scope,name,status)   CS_cp_synch_init(mutex,status)
 #define ID_UUID_SEM_LOCK(exclusive,mutex)    CS_synch_lock(mutex)
 #define ID_UUID_SEM_UNLOCK(mutex)            CS_synch_unlock(mutex)
 #endif

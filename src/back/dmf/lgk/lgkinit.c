@@ -165,6 +165,9 @@
 **      14-Dec-2009 (maspa05) bug 122642
 **          #ifdef out the above change for Windows. The rest of the change
 **          does not apply to Windows so the variables aren't defined.
+**      19-apr-2010 (maspa05) bug 123595
+**          Changed ID_UUID_SEM_INIT for unix to use cross-process routine
+**          CS_cp_synch_init, which requires a status parameter.
 **          
 */
 
@@ -716,11 +719,16 @@ char		*lgk_info)
 	    /* set up the uuid mutex and last time pointers to
 	     * reference the objects in shared memory */
 
-	    ID_uuid_sem_ptr=&lgk_mem->id_uuid_sem;
-            ID_uuid_last_time_ptr=&lgk_mem->uuid_last_time;
-            ID_uuid_last_cnt_ptr=&lgk_mem->uuid_last_cnt;
-	    *ID_uuid_last_cnt_ptr=0;
-	    ID_UUID_SEM_INIT(ID_uuid_sem_ptr,CS_SEM_MULTI,"uuid sem");
+	    {
+	        STATUS id_stat;
+
+	        ID_uuid_sem_ptr=&lgk_mem->id_uuid_sem;
+                ID_uuid_last_time_ptr=&lgk_mem->uuid_last_time;
+                ID_uuid_last_cnt_ptr=&lgk_mem->uuid_last_cnt;
+	        *ID_uuid_last_cnt_ptr=0;
+	        ID_UUID_SEM_INIT(ID_uuid_sem_ptr,CS_SEM_MULTI,"uuid sem",
+				&id_stat);
+	    }
 #endif
 
 	    /* ... then initialize the mutex */
