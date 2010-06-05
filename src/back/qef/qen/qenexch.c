@@ -1915,6 +1915,9 @@ qen_exchange_child(SCF_FTX *ftxcb)
 **	    Hash join pointer things are QEF_HASH_DUP * now, fix here.
 **	06-Oct-2009 (smeke01) b122346
 **	    Added call to qen_dsh_fixup.
+**      05-Feb-2010 (huazh01)
+**          Add codes so that RootDSH and ChildDSH don't share one
+**          key attribute array. (b123064)
 */
 
 DB_STATUS
@@ -1941,7 +1944,7 @@ DB_ERROR	*error)
     i4		i, ix, j, ax, hold_ax, h;
     DB_STATUS	status = E_DB_OK;
     QEE_TEMP_TABLE *tt, *Dtt;
-    DMR_CB	*dmr;
+    DMR_CB	*dmr, *srcDmr;
     DMT_CB	*dmt;
     DMH_CB	*dmh;
     QEN_HOLD	*hold, *Dhold;
@@ -1949,6 +1952,8 @@ DB_ERROR	*error)
     QEF_VALID	*vl;
     i4		np;
     i4		shdCnt;
+    DMR_ATTR_ENTRY **srcAttr, **destAttr;
+    i4          objSize;
 
     /* Extract Root DSH from EXCH_CB */
     RootDSH = exch_cb->dsh;
@@ -2590,6 +2595,47 @@ DB_ERROR	*error)
 		    MEcopy((PTR)RootDSH->dsh_cbs[j],
 				sizeof(DMR_CB), (PTR)dmr);
 		    dmr->dmr_access_id = NULL;
+
+                    /* b123064:
+                    ** the key attr array, which is used to qualify records,
+                    ** can't be shared between root and child thread(s).
+                    ** it could cause wrong result problem.
+                    */
+                    if (dmr->dmr_attr_desc.ptr_in_count)
+                    {
+                       srcDmr = (DMR_CB *)RootDSH->dsh_cbs[j];
+
+                       objSize = DB_ALIGN_MACRO(dmr->dmr_attr_desc.ptr_size); 
+                       ulm.ulm_psize =
+                           dmr->dmr_attr_desc.ptr_in_count * objSize +
+                           sizeof(PTR) * dmr->dmr_attr_desc.ptr_in_count + 
+                           DB_ALIGN_SZ;
+
+                       if (status = qec_malloc(&ulm))
+                       {
+                          break;
+                       }
+
+                       ptrs = (PTR)ME_ALIGN_MACRO(ulm.ulm_pptr, DB_ALIGN_SZ);
+                       dmr->dmr_attr_desc.ptr_address = ptrs;
+
+                       srcAttr = (DMR_ATTR_ENTRY**)srcDmr->dmr_attr_desc.ptr_address;
+                       destAttr= (DMR_ATTR_ENTRY**)dmr->dmr_attr_desc.ptr_address;
+
+                       ptrs += dmr->dmr_attr_desc.ptr_in_count * sizeof(PTR);
+
+                       for (h = 0; h < dmr->dmr_attr_desc.ptr_in_count; h++)
+                       {
+
+                         destAttr[h] = (DMR_ATTR_ENTRY*)ptrs;
+                         MEcopy( srcAttr[h], 
+                                 dmr->dmr_attr_desc.ptr_size,
+                                 ptrs);
+                         ptrs = (PTR)ME_ALIGN_MACRO(ptrs + objSize, DB_ALIGN_SZ);
+
+                       }
+                    }
+                    
 		}
 
 		/* Remaining DMT_CB structures. */
