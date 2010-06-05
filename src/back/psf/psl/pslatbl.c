@@ -1183,6 +1183,8 @@ psl_alt_tbl_col_add(
 ** History:
 **	10-apr-2010 (gupsh01)
 **	    Created.  
+**	21-apr-2010 (gupsh01)
+**	    Fixed the variable declaration for attr0 and attr1.
 */
 DB_STATUS
 psl_alt_tbl_col_rename(
@@ -1208,6 +1210,8 @@ psl_alt_tbl_col_rename(
     PST_STATEMENT  	*rename_stmt; 
     PST_RENAME		*pst_rename; 
     DB_ATT_ID		att_id;
+    DMF_ATTR_ENTRY	*attr0;
+    DMF_ATTR_ENTRY 	*attr1;
     
     qeu_cb = (QEU_CB *) sess_cb->pss_object;
     dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
@@ -1254,8 +1258,8 @@ psl_alt_tbl_col_rename(
         return (status);
 
     /* NOW Init the dummy attribute for passing the new column name.*/
-    DMF_ATTR_ENTRY	*attr0 = dmu_attr[0];
-    DMF_ATTR_ENTRY 	*attr1 = dmu_attr[1];
+    attr0 = dmu_attr[0];
+    attr1 = dmu_attr[1];
 
     /* Copy the name of the attribute. */
     MEcopy(newattname->db_att_name, (u_i4)DB_ATT_MAXNAME, attr1->attr_name.db_att_name);
