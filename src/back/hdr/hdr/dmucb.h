@@ -133,6 +133,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**     22-apr-2010 (stial01)
+**          Removed unreferenced DMU_EXTFMT_ENTRY
 **/
 
 /*}
@@ -653,20 +655,6 @@ typedef struct _DMU_GWATTR_ENTRY
 #define	    DMGW_F_EXTFMT   0x01
 #define	    DMGW_F_VARIANT  0x02 
  
-/*
-** Name:  DMU_extfmt_entry- Description of gateway extfmt array able.
-**
-** Description:
-**
-** History:
-*/
- 
-typedef struct _DMU_EXTFMT_ENTRY
-{
-    i4         extfmt_size;
-    char            extfmt_buffer[DMU_MAXSIZE_EXTFMT];
-}   DMU_EXTFMT_ENTRY;
-
 /*
 ** Name:  DMU_from_path_entry - Description of gateway from, path
 **        array table

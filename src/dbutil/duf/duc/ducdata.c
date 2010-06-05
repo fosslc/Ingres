@@ -62,6 +62,8 @@
 **          In terms of this bug it allows me to call duc_modify_catalog for
 **          all TCB2_PHYSLOCK_CONCUR catalogs (including iirel_idx) if needed
 **          from upgradedb and verifydb
+**     22-apr-2010 (stial01)
+**          Use DB_EXTFMT_SIZE for register table newcolname IS 'ext_format'
 */
 
 /* ducommon.qsc */
@@ -347,7 +349,7 @@ NULL  /* index 2 */
 " attid smallint not null,"
 " auditid smallint not null,"
 " attname char(##DB_MAXNAME##) not null,"
-" auditname char(##DB_MAXNAME##) not null)"
+" auditname char(##DB_EXTFMT_SIZE##) not null)"
 " with noduplicates",
 "MODIFY iigw06_attribute to hash on reltid, reltidx",
 NULL, /* index 1 */
@@ -949,7 +951,7 @@ NULL  /* index 2 */
 " tblid integer not null not default,"
 " tblidx integer not null not default,"
 " attnum smallint not null not default,"
-" classid char(##DB_CLASSID_MAXNAME##) not null not default)"
+" classid char(##DB_EXTFMT_SIZE##) not null not default)"
 " with duplicates",
 "MODIFY iigw07_attribute to btree on tblid, tblidx, attnum",
 NULL, /* index 1 */
@@ -965,7 +967,7 @@ NULL  /* index 2 */
 " tblid integer not null not default,"
 " tblidx integer not null not default,"
 " attnum smallint not null not default,"
-" classid char(##DB_CLASSID_MAXNAME##) not null not default)"
+" classid char(##DB_EXTFMT_SIZE##) not null not default)"
 " with duplicates",
 "MODIFY iigw07_index to btree on tblid, tblidx, attnum",
 NULL, /* index 1 */

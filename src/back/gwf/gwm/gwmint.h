@@ -75,6 +75,9 @@
 **	    Update GCA API to LEVEL 5
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**     22-apr-2010 (stial01)
+**          Fixed GM_XATT_TUPLE(iigw07_attribute), GM_XIND_TUPLE(iigw07_index)
+**          Use DB_EXTFMT_SIZE for register table newcolname IS 'ext_format'
 */
 
 /*----------------------------------------------------------------
@@ -84,9 +87,9 @@
 
 /* value on max key lens -- FIXME values are wrong, but handy now. */
 
-# define GM_MIB_PLACE_LEN	(DB_MAXNAME * 2)
-# define GM_MIB_CLASSID_LEN	(DB_MAXNAME * 2)
-# define GM_MIB_INSTANCE_LEN	(DB_MAXNAME * 2)
+# define GM_MIB_PLACE_LEN	DB_EXTFMT_SIZE
+# define GM_MIB_CLASSID_LEN	DB_EXTFMT_SIZE
+# define GM_MIB_INSTANCE_LEN	DB_EXTFMT_SIZE
 # define GM_MIB_VALUE_LEN	DB_MAXTUP
 
 /* Number of pages to say any oepn gateway table has at open */
@@ -252,7 +255,6 @@ typedef struct
 {
     DB_TAB_ID	xatt_tblid;
     i2		xatt_attnum;
-    i2		xatt_c_len;
     char	xatt_classid[ GM_MIB_CLASSID_LEN ];
 } GM_XATT_TUPLE;
 
@@ -278,7 +280,6 @@ typedef struct
 {
     DB_TAB_ID	xatt_tblid;
     i2		xatt_attnum;
-    i2		xatt_c_len;
     char	xatt_classid[ GM_MIB_CLASSID_LEN ];
 } GM_XIDX_TUPLE;
 

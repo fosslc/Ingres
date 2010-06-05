@@ -379,6 +379,8 @@ EXEC SQL include SQLCA;
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
 **          Also, iitree.treetree should be varbyte (not varchar)
+**     22-apr-2010 (stial01)
+**          Use DB_EXTFMT_SIZE for register table newcolname IS 'ext_format'
 */
 
 
@@ -6510,10 +6512,13 @@ duc_fix_maxname(char *b)
 	CVla((i4)DB_DB_MAXNAME, tempbuf);
 	MEmove(STlength(tempbuf), tempbuf, ' ', 17, b);
     }
-    else if (!MEcmp(b, "##DB_CLASSID_MAXNAME##", 22))
+    else if (!MEcmp(b, "##DB_EXTFMT_SIZE##", 18))
     {
-	CVla((i4)DB_CLASSID_MAXNAME, tempbuf);
-	MEmove(STlength(tempbuf), tempbuf, ' ', 22, b);
+	CVla((i4)DB_EXTFMT_SIZE, tempbuf);
+	MEmove(STlength(tempbuf), tempbuf, ' ', 18, b);
+	/* iigw07_attribute.classid gwmint.h */
+	if (DB_NODE_MAXNAME >= DB_EXTFMT_SIZE)
+	    printf("Internal error creating gateway catalog \n");
     }
     else if (!MEcmp(b, "##DB_TYPE_MAXLEN##", 18))
     {

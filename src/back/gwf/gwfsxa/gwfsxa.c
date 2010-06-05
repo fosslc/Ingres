@@ -109,6 +109,8 @@
 **          Redefine sxf_data as string and then blank pad to name size.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**     22-apr-2010 (stial01)
+**          Use DB_EXTFMT_SIZE for register table newcolname IS 'ext_format'
 */
 
 GLOBALREF	GW_FACILITY	*Gwf_facility;
@@ -310,7 +312,7 @@ gwsxa_tabf( GWX_RCB     *gwx_rcb )
     char		*auditfile;
     i2			auditflen;
     i2			colnum;
-    char		extname[SXA_ATTR_NAME_LEN];
+    char		extname[DB_EXTFMT_SIZE];
     SXF_RCB 		sxfrcb;
     CS_SID  		scf_session_id;
     char		trbuf[GWF_MAX_MSGLEN + 1]; /* last char for `\n' */

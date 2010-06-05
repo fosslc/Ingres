@@ -418,6 +418,8 @@ EXEC SQL include SQLCA;
 **          Added -m flag for MustLog. If specified the database must always
 **          be logged. This is stored by adding DU_MUSTLOG to the du_access 
 **          mask.
+**     22-apr-2010 (stial01)
+**          Fix create/modify statement used for iigw07
 **
 NEEDLIBS =	DBUTILLIB SHEMBEDLIB COMPATLIB 
 
@@ -5595,48 +5597,14 @@ DU_STATUS
 duc_create_IMA_tables()
 {
 
-EXEC SQL BEGIN DECLARE SECTION; 
-	char	errbuf[64];				/* for reporting errors */
-EXEC SQL END   DECLARE SECTION;
-
-EXEC SQL
-    CREATE TABLE iigw07_relation (
-        tblid  integer not null not default,
-        tblidx integer not null not default,
-        flags  integer not null not default
-    );
+    duc_create_catalog("iigw07_relation");
+    duc_create_catalog("iigw07_attribute");
+    duc_create_catalog("iigw07_index");
+    duc_modify_catalog("iigw07_relation");
+    duc_modify_catalog("iigw07_attribute");
+    duc_modify_catalog("iigw07_index");
  
-EXEC SQL
-    CREATE TABLE iigw07_attribute (
-        tblid   integer  not null not default,
-        tblidx  integer  not null not default,
-        attnum  i2       not null not default,
-        classid char(64) not null not default
-    );
- 
-EXEC SQL
-    CREATE TABLE iigw07_index     (
-        tblid   integer  not null not default,
-        tblidx  integer  not null not default,
-        attnum  i2       not null not default,
-        classid char(64) not null not default
-    );
-
-EXEC SQL
-	MODIFY iigw07_relation  to btree unique on tblid, tblidx;
-
-EXEC SQL
-	MODIFY iigw07_attribute to btree unique on tblid, tblidx, attnum;
-
-EXEC SQL
-	MODIFY iigw07_index     to btree unique on tblid, tblidx, attnum;
-
-	if (sqlca.sqlcode != 0) {
-		EXEC SQL INQUIRE_SQL (:errbuf = errortext);
-		SIfprintf(stdout,"%s\n",errbuf);
-	}
-
-	 return(E_DU_OK);
+     return(E_DU_OK);
 }
 /*
 ** Name:    duc_val_loc - check location names 

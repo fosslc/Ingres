@@ -154,6 +154,8 @@
 **        to be hard-coded to 24
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**     22-apr-2010 (stial01)
+**          Use DB_EXTFMT_SIZE for register table newcolname IS 'ext_format'
 **/
 
 #define                  P2K		 2048
@@ -170,7 +172,10 @@
 #define    DB_MAXVARS		128 /* Max vars in a single query */
 
 #define	   DB_MAXNAME		GL_MAXNAME
-#define	   DB_CLASSID_MAXNAME	(2 * DB_MAXNAME)
+#define	   DB_EXTFMT_SIZE	64 /* IMA iigw07_attribute.classid  */
+				   /* SXA iigw06_attribute.auditname */
+				   /* register table colname IS 'ext_format' */
+				   /* a reserved name identifying metadata */
 
 #define	   DB_OBJ_MAXNAME	DB_MAXNAME /* object name (can be table) */
 #define	   DB_TAB_MAXNAME	DB_MAXNAME /* table name */

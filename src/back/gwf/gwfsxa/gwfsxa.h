@@ -20,6 +20,8 @@
 **          Add prototype for gwsxa_rightTrimBlank()
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**     22-apr-2010 (stial01)
+**          Use DB_EXTFMT_SIZE for register table newcolname IS 'ext_format'
 */
 
 # define	SXA_CURRENT_SAL  "current"
@@ -32,11 +34,6 @@
 **	be registered.
 **/
 # define	SXA_MAX_COLUMNS	14
-/*
-**	Maximum length of an attribute name [Will need to be increased if
-**	we ever go to longer names]
-*/
-# define SXA_ATTR_NAME_LEN DB_ATT_MAXNAME
 
 /*
 **	Maximum length of an audit file name
@@ -71,8 +68,8 @@ typedef struct _GWSXA_XATT {
 	DB_TAB_ID xatt_tab_id;
 	i2	attid;
 	i2	audid;
-	char    attname[SXA_ATTR_NAME_LEN];
-	char	audname[SXA_ATTR_NAME_LEN];
+	char    attname[DB_ATT_MAXNAME];
+	char	audname[DB_EXTFMT_SIZE];
 } GWSXA_XATT;
 
 /*
