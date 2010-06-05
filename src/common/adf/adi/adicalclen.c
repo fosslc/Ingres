@@ -1094,6 +1094,9 @@ i4                 *adi_rlen;
 **	    ADI_LONGER and ADI_SHORTER are amongst the modifers that require
 **	    BOP operands to match in datatype (though not necessarily in prec
 **	    or length).
+**	13-May-2010 (gupsh01) 
+**	    Fixed the minimum length for an nchar/nvarchar data type. This length
+**	    should not be at least sizeof(UCS2) not 1.
 */
 
 # ifdef ADF_BUILD_WITH_PROTOS
@@ -1133,6 +1136,12 @@ DB_DATA_VALUE      *adi_dvr;
     i4			i;
     PTR			data[ADI_MAX_OPERANDS];
     bool		nullable = FALSE;
+    i4 			min_length;
+    
+    if (abs(adi_dvr->db_datatype == DB_NVCHR_TYPE) || (adi_dvr->db_datatype == DB_NCHR_TYPE))
+        min_length = sizeof(UCS2);
+    else
+        min_length = sizeof(char);
 
 
     MEfill(sizeof(ADI_LENSPEC), (u_char) 0, (char *)&local_lenspec);
@@ -1440,9 +1449,9 @@ DB_DATA_VALUE      *adi_dvr;
 	    else
 		if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) && 
 		    (abs(adi_dv[0]->db_datatype) != DB_BYTE_TYPE))
-		  rlen = min(DB_UTF8_MAXSTRING, max(1, (len[0] + len[1])));
+		  rlen = min(DB_UTF8_MAXSTRING, max(min_length, (len[0] + len[1])));
 		else
-		  rlen = min(DB_CHAR_MAX, max(1, (len[0] + len[1])));
+		  rlen = min(DB_CHAR_MAX, max(min_length, (len[0] + len[1])));
 	    break;
 
 	case ADI_SUMV:
@@ -1488,9 +1497,9 @@ DB_DATA_VALUE      *adi_dvr;
 		rlen = ADE_LEN_UNKNOWN;
 	    else
 		if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
-		  rlen = min(DB_UTF8_MAXSTRING, max(1, ((len[0] + len[1]) - DB_CNTSIZE)));
+		  rlen = min(DB_UTF8_MAXSTRING, max(min_length, ((len[0] + len[1]) - DB_CNTSIZE)));
 		else
-		  rlen = min(DB_CHAR_MAX, max(1, ((len[0] + len[1]) - DB_CNTSIZE)));
+		  rlen = min(DB_CHAR_MAX, max(min_length, ((len[0] + len[1]) - DB_CNTSIZE)));
 	    break;
 
 	case ADI_SUMT:
@@ -1638,11 +1647,11 @@ DB_DATA_VALUE      *adi_dvr;
 	    rprec = 0;
 	    if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
 	      rlen = (len[0] != ADE_LEN_UNKNOWN
-				? min(DB_UTF8_MAXSTRING, max(1, (len[0] - DB_CNTSIZE)))
+				? min(DB_UTF8_MAXSTRING, max(min_length, (len[0] - DB_CNTSIZE)))
 				: ADE_LEN_UNKNOWN);
 	    else
 	      rlen = (len[0] != ADE_LEN_UNKNOWN
-				? min(DB_CHAR_MAX, max(1, (len[0] - DB_CNTSIZE)))
+				? min(DB_CHAR_MAX, max(min_length, (len[0] - DB_CNTSIZE)))
 				: ADE_LEN_UNKNOWN);
 	    break;
 
