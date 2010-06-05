@@ -7,6 +7,8 @@
 #	07-feb-2005 (abbjo03)
 #	    On VMS, the sep executable is named septool. Build with individual
 #	    libraries instead of LIBINGRES.
+#	12-May-2010 (bonro01)
+#	    Build sep.1 for Unix and Windows
 
 SubDir ING_SRC testtool sep sep ;
 
@@ -40,7 +42,7 @@ else
     IINEEDLIBS peditor : LIBINGRES ;
 }
 
-if $(UNIX)
+if ! $(VMS)
 {
     IITMANFILES sep.1 ;
 }
