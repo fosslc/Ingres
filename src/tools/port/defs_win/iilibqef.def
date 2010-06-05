@@ -29,6 +29,8 @@
 ;	    Added new partition-qual functions.
 ;	30-Nov-2009 (kschendel) SIR 122890
 ;	    Remove qea_load.
+;	18-May-2010 (kschendel) b123565
+;	    Remove qeq_validate.
 ;
 EXPORTS
     qec_alter                       @100
@@ -437,7 +439,7 @@ EXPORTS
 ;    qeq_ade_base                    @513
 ;    qeq_iterate                     @514
     qeq_ksort                       @515
-    qeq_validate                    @516
+;    qeq_validate                    @516
     qet_abort                       @517
     qet_autocommit                  @518
     qet_begin                       @519
