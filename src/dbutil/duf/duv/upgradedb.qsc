@@ -76,6 +76,7 @@ EXEC SQL end declare section;
 #define		DU_RELSTAT_DUPLICATES		0x00200000L
 
 /*
+
 **  Name: UPGRADEDB.QSC - Convert 6.x INGRES database or installation to the
 **			  current ingres release level.
 **
@@ -619,6 +620,13 @@ EXEC SQL end declare section;
 **      14-dec-2009 (joea)
 **          Add changed_for_r10 to handle 10.0 conversions.  Change call
 **          to duc_init_iidefaults in new_for_65_syscats.
+**      10-Feb-2010 (maspa05) b122651
+**          New flag has been added to relstat2 TCB2_PHYSLOCK_CONCUR
+**          This is being set by the set_mand_relflags function - which
+**          is a generic "set mandatory relstat, relstat2" function
+**          Also added modify_physlock_tbls which modifies
+**          TCB2_PHYSLOCK_CONCUR tables back to their intended 
+**          hash structure
 */
  
 /*
@@ -645,6 +653,7 @@ PROGRAM =       upgradedb
 /*
 ** global variables 
 */
+
 GLOBALREF DU_UPGRADE_CB	upgr_cb;	/* upgradedb control block */
 static  char vnode[DB_MAXNAME+1];
 
@@ -807,6 +816,8 @@ static bool tbl_lacks_col(char *tname, char *cname);
 
 #define DISCONNECT_WAIT_TIME	20000
 
+static DU_STATUS set_mand_relflags();
+static DU_STATUS modify_physlock_tbls();
 
 /*{
 ** Name: main	- Entry point for UPGRADEDB
@@ -1755,7 +1766,7 @@ i4	*userstatp;
          identified by :DU_DBA_DBDB options = '+w' ;
     else
 	EXEC SQL connect :iidbdbname session :DBDB_SESSIONID
-	 identified by :DU_DBA_DBDB options = '-A6', '+w' ;
+	 identified by :DU_DBA_DBDB options = '-A6', '-l', '+U', '+w';
 
     /* *Note* The above connect will cause the server to upgrade
     ** the database config file (if needed) and the core catalogs.
@@ -2416,7 +2427,6 @@ i4	*userstatp;
 
     } /* endif db_convert is true */
 
-
     /* Jump here if iidbdb was already current version.  We might still have
     ** to upgrade trees if switching 64-bit-ness, or if -tree.  Note: do
     ** not attempt to upgrade FE cats unless we upgraded iidbdb itself, or
@@ -2426,6 +2436,20 @@ i4	*userstatp;
     */
 
 exit_cv_iidbdb1:
+
+    /* set TCB2_PHYSLOCK_CONCUR for those tables that need it */
+    du_status=set_mand_relflags();
+
+    if (du_status != E_DB_OK)
+        upgr_exit(__LINE__, DU_FAIL_EXIT, E_DU601B_CANT_SET_RELFLAGS);
+    else
+    {
+        /* Modify TCB2_PHYSLOCK_CONCUR tables back to hash */
+        du_status= modify_physlock_tbls();
+        if (du_status != E_DB_OK)
+            upgr_exit(__LINE__, DU_FAIL_EXIT, E_DU601C_CANT_MAKE_CATS_HASH);
+    }
+
     /* See if we need to convert imadb, icedb, icesvr, icetutor */
     EXEC SQL select count(*) into :imadb_cnt from iidatabase 
 	where lowercase(name)='imadb';
@@ -4125,6 +4149,19 @@ cv_upgrade()
 	    exec sql execute immediate 'set session authorization $ingres';
 	}
     } while (0);     /* end of control loop */
+
+    /* set TCB2_PHYSLOCK_CONCUR for those tables that need it */
+    du_status=set_mand_relflags();
+
+    if (du_status != E_DB_OK)
+        upgr_exit(__LINE__, DU_FAIL_EXIT, E_DU601B_CANT_SET_RELFLAGS);
+    else
+    {
+        /* Modify TCB2_PHYSLOCK_CONCUR tables back to hash */
+        du_status= modify_physlock_tbls();
+        if (du_status != E_DB_OK)
+            upgr_exit(__LINE__, DU_FAIL_EXIT, E_DU601C_CANT_MAKE_CATS_HASH);
+    }
 
 
     /* Issue message to indicate whether or not the database was converted */
@@ -14023,4 +14060,198 @@ duv_upgrade_be_catalog()
 	    SIfprintf(upgr_cb.du_dbg.du_file, "QRY %s\n", qry);
     }
     return (status);
+}
+
+/*}
+** Name: set_mand_relflags 
+**
+** Description:
+**      Sets mandatory relstat, relstat2 flags for tables that ought to have 
+**      them. Uses dub_mandflags defined in dubdata.c.
+**
+** Inputs:
+**      none
+**
+** Outputs:
+**      none
+**
+** History
+**	28-Oct-2009 (maspa05)
+**          created.
+*/
+static DU_STATUS 
+set_mand_relflags()
+{
+    i2	i;
+
+    EXEC SQL BEGIN DECLARE SECTION;
+        char relid[DB_MAXNAME + 1];
+	i4 relstat;
+	i4 relstat2;
+    EXEC SQL END DECLARE SECTION;
+
+    for (i= 0;i < dub_num_mandflags; i++)
+        {
+	    STcopy(dub_mandflags[i].du_relname,relid);
+
+	    EXEC SQL select relstat,relstat2 into :relstat, :relstat2 
+                from iirelation 
+		where relid = :relid;
+	    check_sql(sqlca.sqlcode);
+	    if (sqlca.sqlcode < 0)
+	    {
+	        SIprintf("Error reading iirelation for %s\n",relid);
+                return(E_DB_ERROR);
+	    }
+	    /* only update if a row was returned */
+	    if (sqlca.sqlcode != GE_NO_MORE_DATA)
+            {
+	        relstat |= dub_mandflags[i].du_relstat;
+	        relstat2 |= dub_mandflags[i].du_relstat2;
+
+                if (upg_dbg_out)
+                {
+	            SIfprintf(upgr_cb.du_dbg.du_file,
+	              "]==> Setting mandatory relstat(0x%x) and relstat2(0x%x)"
+                      " flags for %s\n", 
+                      dub_mandflags[i].du_relstat,
+                      dub_mandflags[i].du_relstat2,
+                      relid);
+	            SIfprintf(upgr_cb.du_dbg.du_file,
+	              "]==>   new relstat(0x%x) and relstat2(0x%x) values"
+                      " for %s\n", relstat,
+                       relstat2,relid);
+                }
+
+	        EXEC SQL update iirelation 
+                   set relstat=:relstat, relstat2 = :relstat2 
+		   where relid = :relid;
+	        check_sql(sqlca.sqlcode);
+	        if (sqlca.sqlcode < 0)
+	        {
+	            SIprintf("Error setting mandatory flags for %s\n",relid);
+	            SIprintf("(sql error %s)\n",sqlca.sqlerrm.sqlerrmc);
+                    return(E_DB_ERROR);
+	        }
+                EXEC SQL commit;
+	    }
+	}
+
+    return(E_DB_OK);
+
+}
+
+/*}
+** Name: modify_physlock_tbls 
+**
+** Description:
+**      modifies TCB2_PHYSLOCK_CONCUR tables back to their intended
+**      structure - which should be HASH.
+**      TCB2_PHYSLOCK_CONCUR implies physical locks which will only
+**      guarantee consistency if the structure is HASH
+**
+** Inputs:
+**      none
+**
+** Outputs:
+**      none
+**
+** History
+**	10-Feb-2010 (maspa05)
+**          created.
+*/
+static DU_STATUS 
+modify_physlock_tbls()
+{
+    i2	i,j=-1;
+    DU_STATUS retval=E_DB_OK;
+
+    /* array to collect catalogs we need to modify
+       should be <= DU_1MAXDBMS_CATDEFS i.e. number of
+       non-core DBMS catalogs */
+    char cats_to_mod[DU_1MAXDBMS_CATDEFS][DB_MAXNAME+1];
+
+    EXEC SQL BEGIN DECLARE SECTION;
+        char relid[DB_MAXNAME + 1];
+	i4 relstat2;
+	i2 relspec;
+    EXEC SQL END DECLARE SECTION;
+
+    EXEC SQL select relid,relstat2 ,relspec
+                       into :relid, :relstat2 , :relspec
+                from iirelation ;
+    EXEC SQL BEGIN;
+    
+    if (( relstat2 & TCB2_PHYSLOCK_CONCUR ) && ( relspec != TCB_HASH ))
+    {
+        /* this should be made HASH but if we're in concurrent mode it
+           will fail */
+
+        if (upg_concurrent)
+        {
+            SIprintf("ERROR: %s needs to be modified back to its intended"
+                     " structure, but it cannot be modified in concurrent mode"
+                     "\n   Please re-run upgradedb without the -c flag.\n",
+                       relid);
+            retval=E_DB_ERROR;
+            EXEC SQL ENDSELECT;
+        }
+
+        if (upg_dbg_out)
+        {
+            SIfprintf(upgr_cb.du_dbg.du_file,
+	              "]==> Modifying catalog %s back to intended structure"
+                      " since it is TCB2_PHYSLOCK_CONCUR\n",
+                      relid);
+        }
+
+	if ( ++j <= DU_1MAXDBMS_CATDEFS )
+        {
+	    i=STtrmwhite(relid);
+	    STcopy(relid,cats_to_mod[j]);
+        }
+        else
+	{
+            SIprintf("ERROR: found more than %d TCB2_PHYSLOCK_CONCUR catalogs"
+              "\n   which is more than the total number of catalogs.\n"
+              "\n   Check to see if any of the following are user tables:\n",
+                    DU_1MAXDBMS_CATDEFS);
+            for (;j >= 0; j--)
+                SIprintf("     %s\n",cats_to_mod[j]);
+            retval=E_DB_ERROR;
+            EXEC SQL ENDSELECT;
+	}
+    }
+
+    EXEC SQL END;
+
+    if (retval != E_DB_OK)
+        return (retval);
+
+    check_sql(sqlca.sqlcode);
+    if (sqlca.sqlcode < 0)
+    {
+        SIprintf("Error reading iirelation checking for TCB2_PHYSLOCK_CONCUR\n");
+	SIprintf("(sql error: %s)\n",sqlca.sqlerrm.sqlerrmc);
+        return(E_DB_ERROR);
+    }
+
+    for (;j >= 0; j--)
+    {
+        duc_modify_catalog(cats_to_mod[j]);
+        /* duc_modify_catalog returns no status but we can check sqlcode */
+        check_sql(sqlca.sqlcode);
+        if (sqlca.sqlcode < 0 )
+        {
+            SIprintf("Error modifying %s\n",cats_to_mod[j]);
+	    SIprintf("(sql error %s)\n",sqlca.sqlerrm.sqlerrmc);
+            return(E_DB_ERROR);
+        }
+    }
+      
+
+    EXEC SQL commit;
+
+    return(E_DB_OK);
+
 }

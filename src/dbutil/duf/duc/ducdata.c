@@ -54,6 +54,14 @@
 **	    It's redundant and key-uniqueness suffices.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**     10-feb-2010 (maspa05) b122651
+**          Add Duc_equiv_cats - list of equivalent catalogs for the 
+**          purposes of modify. This is where modifying the 'equivalent'
+**          catalog also modifies the required one e.g. modifying iirelation
+**          to re-create/re-modify iirel_idx . Used by duc_modify_catalog.
+**          In terms of this bug it allows me to call duc_modify_catalog for
+**          all TCB2_PHYSLOCK_CONCUR catalogs (including iirel_idx) if needed
+**          from upgradedb and verifydb
 */
 
 /* ducommon.qsc */
@@ -2119,4 +2127,10 @@ NULL,
 NULL
 }
 
+};
+
+GLOBALDEF DUC_CATEQV Duc_equivcats[] = 
+{
+	{"iirel_idx","iirelation"},
+	{NULL, NULL}
 };

@@ -93,6 +93,9 @@ LIBRARY = IMPDMFLIBDATA
 **          Use macros reldef, attdef* and init ucore from core (in dmmcre.c)
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs, varchar names in catalogs
+**      10-Feb-2010 (maspa05) b122651
+**          Added TCB2_PHYSLOCK_CONCUR as this is now how we check for
+**          the need to use physical locks
 */
 
 /* dmmcre.c */
@@ -124,7 +127,7 @@ LIBRARY = IMPDMFLIBDATA
 #define DUMMY_ATTRIBUTE_NUMBER  -1
 #define DUMMY_TUPLE_COUNT       -1
 
-#define reldef(tabid, relid, relwid, relkeys, relidxcount, relstat, relmin)\
+#define reldef(tabid, relid, relwid, relkeys, relidxcount, relstat, relstat2, relmin)\
     tabid, /* reltid,reltidx */\
     {relid},\
     {"$ingres"},\
@@ -161,7 +164,7 @@ LIBRARY = IMPDMFLIBDATA
     DM_TBL_DEFAULT_EXTEND, /* relextend */\
     TCB_C_NONE, /*relcomptype */\
     TCB_PG_V1, /* relpgtype */\
-    0, /* relstat2 */\
+    relstat2, /* relstat2 */\
     { ' ' }, /* relfree1 */\
     1, /* relloccount */\
     0, /* relversion */\
@@ -173,20 +176,19 @@ LIBRARY = IMPDMFLIBDATA
 
 #define CORE_RELSTAT (TCB_CATALOG | TCB_NOUPDT | TCB_CONCUR | TCB_PROALL | TCB_SECURE | TCB_DUPLICATES)
 GLOBALDEF DMP_RELATION DM_core_relations[] =
-
 {
     {
 	/* reltid, relid, relwid, relkeys, relidxcount, relstat, relmin */
-	reldef(REL_TAB_ID, "iirelation", sizeof(DMP_RELATION), 1, 1, CORE_RELSTAT | TCB_IDXD, 16)
+	reldef(REL_TAB_ID, "iirelation", sizeof(DMP_RELATION), 1, 1, CORE_RELSTAT | TCB_IDXD, TCB2_PHYSLOCK_CONCUR, 16)
     },
     {
-	reldef(RIDX_TAB_ID, "iirel_idx", sizeof(DMP_RINDEX), 2, 0, CORE_RELSTAT | TCB_INDEX, 8)
+	reldef(RIDX_TAB_ID, "iirel_idx", sizeof(DMP_RINDEX), 2, 0, CORE_RELSTAT | TCB_INDEX, TCB2_PHYSLOCK_CONCUR, 8)
     },
     {
-	reldef(ATT_TAB_ID, "iiattribute", sizeof(DMP_ATTRIBUTE), 2, 0, CORE_RELSTAT, 32)
+	reldef(ATT_TAB_ID, "iiattribute", sizeof(DMP_ATTRIBUTE), 2, 0, CORE_RELSTAT, TCB2_PHYSLOCK_CONCUR, 32)
     },
     {
-	reldef(IND_TAB_ID, "iiindex", DMP_INDEX_SIZE, 1, 0, CORE_RELSTAT, 8)
+	reldef(IND_TAB_ID, "iiindex", DMP_INDEX_SIZE, 1, 0, CORE_RELSTAT, TCB2_PHYSLOCK_CONCUR, 8)
     },
 };
 

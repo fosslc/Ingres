@@ -511,6 +511,17 @@
 **	    Add NeedPhysLock macro.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      10-Feb-2010 (maspa05) bug 122651, trac 442
+**          Added TCB2_PHYSLOCK_CONCUR - Table uses physical locks but is not
+**          a TCB_CONCUR table. Implies that the table must remain hash 
+**          (otherwise recovery could fail) and this is enforced in dm2u_modify
+**          Note that dmt_set_lock_values uses the table id instead of relstat2 
+**          since relstat2 is not available at the time. 
+**          If you add a new table with this flag, or add this flag to an 
+**          existing table, YOU MUST add equivalent checks in 
+**          dmt_set_lock_values also. You'll also need to update/add to 
+**          dub_mandflags in dubdata.c which is the list of tables with 
+**          mandatory flags
 */
 
 /*
@@ -3761,6 +3772,21 @@ SYNONYM,VGRANT_OK,SECURE,80000000"
 					    /*
 					    ** This table has security alarms
 					    */
+#define 		TCB2_PHYSLOCK_CONCUR	0x00020000L
+					    /* Table uses physical locks 
+					    ** Implies that the table must 
+					    ** remain hash and this is enforced 
+					    ** in dm2u_modify
+					    ** Note dmt_set_lock_values uses the
+					    ** table id instead of relstat2 
+					    ** since it's not available at the 
+					    ** time. If you add a new
+					    ** table with this flag, or add this
+					    ** flag to an existing table, YOU 
+					    ** MUST change dmt_set_lock_values 
+					    ** accordingly and change 
+					    ** dub_mandflags in dubdata.c 
+					    */
 #define 		TCB_SESSION_TEMP	0x02000000L
 					    /* This table is a session-wide
 					    ** temporary table.
@@ -3773,7 +3799,7 @@ SYNONYM,VGRANT_OK,SECURE,80000000"
 EXTENTION,HAS_EXTENSIONS,PERSISTENT,SUPPORTS_CONSTRAINT,SYS_GEN,\
 NOT_DROPPABLE,STMT_LEVEL_UNIQUE,READONLY,CONCURRENT,PHYS_INCONSIST,\
 LOG_INCONSIST,NO_TBL_RECOV,ALTERED,PARALLEL_IDX,NOT_UNIQUE,PARTITION,\
-GLOBAL_INDEX,20000,40000,80000,100000,200000,400000,ROW_AUDIT,ALARM,\
+GLOBAL_INDEX,PHYSLOCK_CONCUR,40000,80000,100000,200000,400000,ROW_AUDIT,ALARM,\
 SESSION_TEMP,BSWAP"
      char	     relfree1[8];	    /* Reserved for future use */
      i2              relloccount;	    /* Number of locations. */

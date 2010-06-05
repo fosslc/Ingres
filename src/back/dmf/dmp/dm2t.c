@@ -1048,6 +1048,12 @@ NO_OPTIM=dr6_us5
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      10-Feb-2010 (maspa05) bug 122651, trac 442
+**          set tcb_sysrel for TCB2_PHYSLOCK_CONCUR tables so that physical 
+**          locks are used consistently - they were being used during creation 
+**          but not rollback. 
+**          Change tests for TCB_CONCUR (for locking) to TCB2_PHYSLOCK_CONCUR
+**          as all TCB_CONCUR now have TCB2_PHYSLOCK_CONCUR as well
 */
 
 static VOID		locate_tcb(
@@ -2357,7 +2363,12 @@ DB_ERROR            *dberr)
 		r->rcb_lk_limit = 20;
 	    }
 	}
-	else if (((tcb->tcb_rel.relstat & TCB_CONCUR) &&
+	/* we don't strictly need check for both TCB_CONCUR and 
+	 * TCB2_PHYSLOCK_CONCUR - but it's better to keep it in case the user
+	 * didn't upgradedb their database (which creates the TCB2 flag)
+	 */
+	else if ((((tcb->tcb_rel.relstat & TCB_CONCUR) || 
+		   (tcb->tcb_rel.relstat2 & TCB2_PHYSLOCK_CONCUR)) &&
 	    (dcb->dcb_status & DCB_S_EXCLUSIVE) == 0))
 	{
 	    /*
@@ -3354,8 +3365,10 @@ DB_ERROR	*dberr)
 	** (like view-base or statistics).  Since these core catalog tcb's
 	** cannot be tossed and are never revalidated, this information may not
 	** be propogated to other servers.
+	**
+	** do not disable PURGE for iidevices (DM_B_DEVICE_TAB_ID) 
 	*/
-	if ((tcb->tcb_sysrel) &&
+	if ((tcb->tcb_rel.relstat & TCB_CONCUR) && 
 	    (tcb->tcb_rel.reltid.db_tab_base != DM_B_DEVICE_TAB_ID))
 	{
 	    unfix_flags &= ~(DM2T_PURGE);
@@ -9072,14 +9085,16 @@ DB_ERROR	*dberr)
 	tcb->tcb_table_io.tbio_reltid = tcb->tcb_rel.reltid;
 
 	/*
-	** Sequence Generator catalog needs physical locking,
-	** so must set "sysrel".
+	** set "sysrel" for tables needing physical locks.
+	** testing for both TCB2_PHYSLOCK_CONCUR and DM_SCONCUR_MAX is
+	** really redundant but leave the later test in case the user
+	** didn't run upgradedb to create the TCB2 flag in their existing DBs
 	**
 	** However, exclude temp tables from sysrel.
 	*/
 	if ( (table_id->db_tab_base > 0 &&
 	      table_id->db_tab_base <= DM_SCONCUR_MAX) ||
-	     table_id->db_tab_base == DM_B_SEQ_TAB_ID )
+       	     tcb->tcb_rel.relstat2 & TCB2_PHYSLOCK_CONCUR )
 	    tcb->tcb_table_io.tbio_sysrel = TRUE;
 	else
 	    tcb->tcb_table_io.tbio_sysrel = FALSE;
@@ -15995,8 +16010,26 @@ DB_ERROR	*dberr)
 	** time in dm2d and have their tcb's initialized there.  This check
 	** should currently only occur for iidevices which is a core catalog
 	** but which is opened through dm2t_open like all other tables.)
+	**
+	** iisequence uses Physical locks and so needs to
+	** be treated as a 'sysrel' table also. If tcb_sysrel is set then
+	** the DM0L_PHYS_LOCK flag is set in the log record which means
+	** physical locks are taken during undo (see dm1r)
+	** previously this wasn't happening but physical locks were taken
+	** during the transaction itself - this could lead to a problem
+	** recovering as you may not be able to get the locks during
+	** undo
+	**
+	** test for this is for TCB2_PHYSLOCK_CONCUR which is a new flag
+	** assigned to iisequence for tables other than TCB_CONCURs that
+	** need physical locks
+	** All TCB_CONCUR tables should also have TCB2_PHYSLOCK_CONCUR 
+	** but leave that test in case the user didn't run upgradedb
+	** (which is what creates the TCB2 flag)
+	** (b122651)
 	*/
-	if (rel->relstat & TCB_CONCUR)
+	if (rel->relstat & TCB_CONCUR || 
+	    rel->relstat2 & TCB2_PHYSLOCK_CONCUR)
 	    t->tcb_sysrel = TCB_SYSTEM_REL;
 
 	/*
@@ -16072,10 +16105,6 @@ DB_ERROR	*dberr)
     t->tcb_table_io.tbio_temporary = FALSE;
     t->tcb_table_io.tbio_sysrel = t->tcb_sysrel;
     
-    /* Must set "sysrel" so physical locking can be used */
-    if ( t->tcb_table_io.tbio_reltid.db_tab_base == DM_B_SEQ_TAB_ID )
-	t->tcb_table_io.tbio_sysrel = TRUE;
-
     t->tcb_table_io.tbio_dbname = &dcb->dcb_name;
     t->tcb_table_io.tbio_relid = &t->tcb_rel.relid;
     t->tcb_table_io.tbio_relowner = &t->tcb_rel.relowner;
@@ -16264,6 +16293,9 @@ rep_lockmode(
 **	    Pass requested lock level as a parameter.
 **	    Include dm2d_row_lock here, allow
 **	    MVCC (crow) locking on blob extension tables.
+**	10-Feb-2010 (maspa05)
+**	    Changed test for TCB_CONCUR to TCB2_PHYSLOCK_CONCUR
+**          There are now catalogs which are not 'core' but use physical locks
 */
 bool
 dm2t_row_lock(
@@ -16284,6 +16316,10 @@ DMP_TCB         *tcb, i4 lockLevel)
     **
     ** Crow locking has the same restrictions, except that
     ** blob etabs are supported.
+    **
+    ** strictly speaking all TCB_CONCUR tables are also TCB2_PHYSLOCK_CONCUR
+    ** but user may not have run upgradedb to add the TCB2 flag to their
+    ** existing DBs
     */
     if ( (lockLevel == RCB_K_ROW || lockLevel == RCB_K_CROW) &&
             dm2d_row_lock(t->tcb_dcb_ptr) &&
@@ -16292,6 +16328,7 @@ DMP_TCB         *tcb, i4 lockLevel)
 	    t->tcb_rel.relspec != TCB_RTREE &&
 	    t->tcb_table_type != TCB_TAB_GATEWAY &&
 	    !(t->tcb_rel.relstat & TCB_CONCUR) &&
+	    !(t->tcb_rel.relstat2 & TCB2_PHYSLOCK_CONCUR) &&
 	    !t->tcb_seg_rows &&
 	    (!t->tcb_extended || lockLevel == RCB_K_CROW) &&
 	    !(t->tcb_rel.relstat & TCB_CLUSTERED) )

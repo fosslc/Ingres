@@ -974,6 +974,9 @@ NO_OPTIM=dr6_us5 i64_aix
 **	    sensitized to crow_locking().
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      10-Feb-2010 (maspa05) bug 122651, trac 442
+**          Changed test for iisequence for physical locking to a more
+**          generic one using a new relstat2 flag, TCB2_PHYSLOCK_CONCUR
 */
 
 static DB_STATUS BuildRtreeRecord(
@@ -1775,9 +1778,11 @@ DB_ERROR	    *dberr )
     ** Set locking actions based on the table type.
     */
 
-    /* Also use physical locking for Sequence Generator catalog */
+    /* use physical locking for core catalogs and those
+    ** specifically flagged for physical locking
+    */
     if (t->tcb_rel.relstat & TCB_CONCUR ||
-	t->tcb_rel.reltid.db_tab_base == DM_B_SEQ_TAB_ID)
+        t->tcb_rel.relstat2 & TCB2_PHYSLOCK_CONCUR)
 	r->rcb_k_duration = RCB_K_PHYSICAL;
 
     if (t->tcb_dcb_ptr->dcb_status & DCB_S_EXCLUSIVE ||

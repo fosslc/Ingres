@@ -5,6 +5,18 @@
 # include	<compat.h>
 # include	<duucatdef.h>
 
+#include	<iicommon.h>
+#include	<dbdbms.h>
+#include	<adf.h> 
+#include	<er.h>
+#include	<pc.h>
+#include	<cs.h>
+#include	<lg.h>
+#include	<lk.h>
+#include	<dm.h>
+#include	<dmf.h>
+#include	<dmp.h>
+
 /*
 ** Name:        dubdata.c
 **
@@ -34,6 +46,8 @@
 **	    Add modify statements for gw07 tables
 **      17-dec-2008 (joea)
 **          Replace READONLY/WSCREADONLY by const.
+**      10-Feb-2010 (maspa05) b122651
+**          Added dub_mandflags and dub_num_mandflags
 */
 
 GLOBALDEF   char        *Dub_00corecat_commands[]       =
@@ -327,3 +341,25 @@ column_sequence",
 
 GLOBALDEF   DUU_CATDEF  Dub_41ddbcat_defs[DU_4MAXDDB_CATDEFS+1] ZERO_FILL;
 
+/* dub_mandflags[] - list of mandatory relstat, relstat2 flags. These get
+** enforced by upgradedb and checked/fixed by verifydb.
+**
+** For each element
+**
+**     du_relname - name of the catalog
+**     du_relstat - a bitmask for the mandatory relstat flags
+**     du_relstat2 - a bitmask for the mandatory relstat2 flags
+**
+*/
+
+GLOBALDEF DUU_MANDFLAGS dub_mandflags[]=
+{
+        {"iirelation", 0, TCB2_PHYSLOCK_CONCUR },
+        {"iirel_idx", 0, TCB2_PHYSLOCK_CONCUR },
+        {"iiattribute", 0, TCB2_PHYSLOCK_CONCUR },
+        {"iiindex", 0, TCB2_PHYSLOCK_CONCUR },
+        {"iidevices", 0, TCB2_PHYSLOCK_CONCUR },
+        {"iisequence", 0, TCB2_PHYSLOCK_CONCUR }
+};
+
+GLOBALDEF i4 dub_num_mandflags = (i4) (sizeof(dub_mandflags)/sizeof(DUU_MANDFLAGS));

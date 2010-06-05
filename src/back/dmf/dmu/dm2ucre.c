@@ -433,6 +433,9 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      10-Feb-2010 (maspa05) b122651
+**          Added TCB2_PHYSLOCK_CONCUR to iidevices and iisequence as this is 
+**          how we check for the need for physical locks now
 **/
 
 /*
@@ -1060,7 +1063,7 @@ DB_ERROR	    *errcb)
     {
         {"iidevices",
 	    {DM_B_DEVICE_TAB_ID, DM_I_DEVICE_TAB_ID},
-	    TCB_CATALOG | TCB_PROALL | TCB_CONCUR, 0},
+	    TCB_CATALOG | TCB_PROALL | TCB_CONCUR, TCB2_PHYSLOCK_CONCUR},
 	{"iiqrytext",
 	    {DM_B_QRYTEXT_TAB_ID, DM_I_QRYTEXT_TAB_ID},
 	    TCB_CATALOG | TCB_NOUPDT | TCB_PROALL,   0},
@@ -1216,7 +1219,7 @@ DB_ERROR	    *errcb)
 	    TCB_CATALOG | TCB_NOUPDT | TCB_PROALL, 0},
         {"iisequence",
 	    {DM_B_SEQ_TAB_ID, DM_I_SEQ_TAB_ID},
-	    TCB_CATALOG | TCB_NOUPDT | TCB_PROALL, 0},
+	    TCB_CATALOG | TCB_NOUPDT | TCB_PROALL, TCB2_PHYSLOCK_CONCUR},
         {"iidistscheme",
 	    {DM_B_DSCHEME_TAB_ID, DM_I_DSCHEME_TAB_ID},
 	    TCB_CATALOG | TCB_NOUPDT | TCB_PROALL, 0},

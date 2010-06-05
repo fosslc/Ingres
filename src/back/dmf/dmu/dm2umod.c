@@ -685,6 +685,17 @@ NO_OPTIM=dr6_us5 i64_aix
 **	    instead of relstat2 & TCB2_EXTENSION.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs, fix error handling
+**      10-Feb-2010 (maspa05) bug 122651, trac 442
+**          Disallow modify of TCB2_PHYSLOCK_CONCUR tables (e.g. iisequence) to
+**          anything other than their default structure (HASH). 
+**          Since we use physical (i.e. transient) locks it can cause problems 
+**          if the row moves or we have a btree split etc because session A may 
+**          insert or update a row and then release the lock meanwhile session 
+**          B may cause the row to move making session A's log record invalid. 
+**          If session A then needs to rollback we have a problem. So treat 
+**          TCB2_PHYSLOCK_CONCUR the same as S_CONCUR and throw
+**          E_DM005A if a modify to anything other than HASH is attempted
+**          This gets reported as E_US159D to the frontend.
 **/
 
 /*
@@ -1864,6 +1875,10 @@ DB_ERROR        *dberr)
 		mcb->mcb_relstat2 |= TCB2_ALTERED;
 
 
+	/* preserve the relstat2 bit for physical locking */
+	if (t->tcb_rel.relstat2 & TCB2_PHYSLOCK_CONCUR)
+		mcb->mcb_relstat2 |= TCB2_PHYSLOCK_CONCUR;
+
 	/* Get current duplicates value.  If duplicates are
         ** allowed and we asked to turn them off, set duplicates 
         ** off.  If off and we asked to turn them on, then 
@@ -2278,8 +2293,12 @@ DB_ERROR        *dberr)
         ** opened exclusively, and you cannot modify to 
         ** anything but hash.
 	** (no scb if rollforward, was checked the first time)
+	**
+	** also disallow modify of iisequence (DM_B_SEQ_TAB_ID)
+	** to anything other than hash (b122651)
 	*/
-	if ((t->tcb_rel.relstat & TCB_CONCUR) 
+	if (((t->tcb_rel.relstat & TCB_CONCUR) ||
+	     (t->tcb_rel.relstat2 & TCB2_PHYSLOCK_CONCUR))
 	    && (dcb->dcb_status & DCB_S_ROLLFORWARD) == 0
             && ((scb->scb_oq_next->odcb_lk_mode != ODCB_X)
 		|| t->tcb_rel.relstat & TCB_INDEX
@@ -5187,9 +5206,14 @@ DB_ERROR	*dberr)
 	    mcb->mcb_modoptions |= DM2U_DUPLICATES;
 	}
 
-	/* for now, just use the relstat2 from the unmodified relation */
+	/* for now, just use the relstat2 from the unmodified relation 
+	** but do *not* copy the TCB2_PHYSLOCK_CONCUR flag otherwise
+	** we end up treating iirtemp as a concur table and don't
+	** journal changes to it - so a rollforward of a sysmod will
+	** fail
+	**/
 
-	relstat2 = t->tcb_rel.relstat2;
+	relstat2 = (t->tcb_rel.relstat2 & (~TCB2_PHYSLOCK_CONCUR));
 
 	status = dm0m_allocate(sizeof(DMP_MISC) + (NumAtts *
 			    (sizeof(DMF_ATTR_ENTRY*) + sizeof(DMF_ATTR_ENTRY))),

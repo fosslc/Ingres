@@ -195,6 +195,11 @@
 **      07-dec-2009 (joea)
 **          Add E_DU241C_SELECT_ERR_UPGR_IIDEFAULT and
 **          E_DU241D_INSERT_ERR_UPGR_IIDEFAULT.
+**      10-Feb-2010 (maspa05) b122651
+**          Add S_DU025A_SET_MAND_RELFLAGS, S_DU025B_MAKE_PHYSL_TBL_HASH,
+**          S_DU045A_MAND_RELFLAGS_SET, S_DU045B_PHYSL_TBL_MADE_HASH,
+**          S_DU1760_MAND_FLAGS_INCORRECT, S_DU1761_PHYSL_TBL_NOT_HASH,
+**          E_DU601B_CANT_SET_RELFLAGS and E_DU601C_CANT_MAKE_CATS_HASH
 */
 
 
@@ -3091,6 +3096,53 @@ S_DU0259_CLEAR_VGRANT_OK
 **	tuple describing a view indicates that it does not depend
 **	on any privileges, record(s) describing such dependencies
 **	were found by examining IIPRIV.
+**
+**	The user will be prompted to give yes/no permission.  If yes is given,
+**	verifydb will take the the recommended action.  If no is given, verifydb
+**	will proceed to the next test.
+**
+**	NOTE: This message will also be displayed in REPORT mode, but the
+**	user will not be given the opportunity to input yes/no permission.
+**
+** System Status:
+**	This is an informational message; processing continues.  
+**
+** Recommendation:
+**	Enter Y(ES) or N(O).
+*/
+S_DU025A_SET_MAND_RELFLAGS
+"Recommended action is to set the flags in IIRELATION.relstat and 
+\nrelstat2 which are mandatory for %0c."
+/*%
+** Parameters:
+**	%0c - system catalog name
+**
+** Explanation:
+**	verifydb discovered that a system catalog defined to have mandatory
+**	flags for relstat and/or relstat2 does not have the correct flags.
+**
+**	The user will be prompted to give yes/no permission.  If yes is given,
+**	verifydb will take the the recommended action.  If no is given, verifydb
+**	will proceed to the next test.
+**
+**	NOTE: This message will also be displayed in REPORT mode, but the
+**	user will not be given the opportunity to input yes/no permission.
+**
+** System Status:
+**	This is an informational message; processing continues.  
+**
+** Recommendation:
+**	Enter Y(ES) or N(O).
+*/
+S_DU025B_MAKE_PHYSL_TBL_HASH
+"Recommended action is to modify %0c back to its intended structure."
+/*%
+** Parameters:
+**	%0c - system catalog name
+**
+** Explanation:
+**	verifydb discovered that a system catalog with TCB2_PHYSLOCK_CONCUR
+**	was not hash.
 **
 **	The user will be prompted to give yes/no permission.  If yes is given,
 **	verifydb will take the the recommended action.  If no is given, verifydb
@@ -7253,6 +7305,39 @@ S_DU0459_CLEARED_VGRANT_OK
 **	tuple describing a view indicates that it does not depend
 **	on any privileges, record(s) describing such dependencies
 **	were found by examining IIPRIV.
+**
+** System Status:
+**	This is an informational message; processing continues.
+**
+** Recommendation:
+**	None.
+*/
+S_DU045A_MAND_RELFLAGS_SET
+"IIRELATION.relstat and IIRELATION.relstat2 have been updated to
+\ninclude mandatory flags."
+/*%
+** Parameters:
+**	None.
+**
+** Explanation:
+**	verifydb discovered that a system catalog defined to have mandatory
+**	flags for relstat and/or relstat2 does not have the correct flags.
+**
+** System Status:
+**	This is an informational message; processing continues.
+**
+** Recommendation:
+**	None.
+*/
+S_DU045B_PHYSL_TBL_MADE_HASH
+"The catalog %0c has been modified to its intended hash table structure."
+/*%
+** Parameters:
+**	%0c - system catalog name
+**
+** Explanation:
+**	verifydb discovered that a system catalog with TCB2_PHYSLOCK_CONCUR
+**	was not hash.
 **
 ** System Status:
 **	This is an informational message; processing continues.
@@ -13627,7 +13712,53 @@ S_DU1755_LABEL_ROW_CNT
 ** Recommendation:
 **	None.
 */
-
+S_DU1760_MAND_FLAGS_INCORRECT
+"Mandatory flags for catalog %0c are incorrect.\n
+ relstat is %1d and should be %2d, relstat2 is %3d and should be %4d"
+/*%
+** Parameters:
+**	%0 - catalog table name
+**	%1 - expected value of relstat
+**	%2 - actual value of relstat
+**	%3 - expected value of relstat2
+**	%4 - actual value of relstat2
+**
+** Explanation:
+**	Verifydb found that the relstat and/or relstat2 columns in iirelation
+**	were missing some mandatory flags. Certain system catalogs have to 
+**      have certain flags set in order to function correctly.
+**
+** System Status:
+**	The verifydb process continues.
+**
+** Recommendation:
+**	verifydb will proceed to ask whether the user wants to set the
+**      mandatory flags for relstat and relstat2 
+**
+**	No correction can be made if verifydb is in REPORT mode. (See DU045A.)
+*/
+S_DU1761_PHYSL_TBL_NOT_HASH
+"Catalog %0c has TCB2_PHYSLOCK_CONCUR set which means its structure must be\n
+ HASH but it is not."
+/*%
+** Parameters:
+**	%0 - catalog table name
+**
+** Explanation:
+**	Verifydb found that the TCB2_PHYSLOCK_CONCUR bit was set in relstat2
+**	and that relspec indicated a structure other than hash. 
+**      TCB2_PHYSLOCK_CONCUR allows transient physical locking on the catalog
+**      but consistency can only be guaranteed if the structue is hash.
+**
+** System Status:
+**	The verifydb process continues.
+**
+** Recommendation:
+**	verifydb will proceed to ask whether the user wants to modify the
+**      catalog to its default storage structure.
+**
+**	No correction can be made if verifydb is in REPORT mode. (See DU045B.)
+*/
 S_DU17FC_TABLE_PATCH_WARNING
 "WARNING:\n\n
   VERIFYDB operation TABLE (or XTABLE) can result in loss of user data when\n
@@ -17851,7 +17982,39 @@ or an undersized transaction log file."
 **	such other problem as may be indicated by the error code and
 **	error log.  Then, re-run upgradedb for this database.
 */
-
+E_DU601B_CANT_SET_RELFLAGS
+"Could not set mandatory relstat, relstat2 flags for system catalogs"
+/*%
+** Parameters:
+**	none
+**
+** Explanation:
+**      Upgradedb failed to set the mandatory iirelation flags for 
+**      certain system catalogs that require them.
+**
+** System Status:
+**	upgradedb exits, and the database is not upgraded.
+**
+** Recommendation:
+**      Check any SQL error messages and act accordingly
+*/
+E_DU601C_CANT_MAKE_CATS_HASH
+"Could not modify some or all TCB2_PHYSLOCK_CONCUR tables back to HASH"
+/*%
+** Parameters:
+**	none
+**
+** Explanation:
+**      Upgradedb failed to modify some or all of the tables defined as
+**      TCB2_PHYSLOCK_CONCUR back to their intended HASH table structure.
+**
+** System Status:
+**	upgradedb exits, and the database is not upgraded.
+**
+** Recommendation:
+**      Check any SQL error messages and act accordingly. A sysmod may
+**      also help.
+*/
 
 E_DU6500_FAIL_UCTR_COMASST_LOAD
 "Failed loading tables for Unicenter Common Asset products. \n"

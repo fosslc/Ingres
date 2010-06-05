@@ -81,6 +81,12 @@
 **          Added DUC_CATDEF size to verify catalog size = structure size
 **     07-apr-2008 (stial01)
 **          Added columns to DUC_CATDEF (for upgradedb)
+**     10-Feb-2010 (maspa05) b122651
+**          Added DUU_MANDFLAGS - a structure for a list of relstat,relstat2 
+**          flags that must be set. The list itself dub_mand_relflags is 
+**          defined in dubdata.c
+**          Added DUC_CATEQV - a structure for a list of 'equivalent' catalogs
+**          for the purposes of modify. See ducdata.c for list Duc_equivcats
 [@history_template@]...
 **/
 /*
@@ -179,3 +185,48 @@ GLOBALREF DUU_CATDEF	Dub_11dbmscat_defs[];
 GLOBALREF DUU_CATDEF	Dub_31iidbdbcat_defs[];
 GLOBALREF DUU_CATDEF	Dub_41ddbcat_defs[];
 GLOBALREF DUU_CATDEF	Dui_51scicat_defs[];
+
+/*
+** Name: DUC_CATEQV - 'equivalent' catalogs for the purposes of modify
+**
+** Description:
+**     A list of pairs of catalog and equivalent catalog where you can modify
+**     the equivalent to indirectly modify the intended e.g. modify iirelation
+**     to modify iirel_idx
+**
+** History:
+**     10-Feb-2010 (maspa05)
+**          Created.
+**
+*/
+typedef struct _DUC_CATEQV
+{
+	char *catname;
+	char *equiv_catname;
+} DUC_CATEQV;
+
+GLOBALREF DUC_CATEQV Duc_equivcats[];
+
+
+/*
+** Name: DUU_MANDFLAGS - mandatory relstat flags for system catalogs
+**
+** Description:
+**     A list of relstat, relstat2 flags that are mandatory.
+**
+** History:
+**     16-mar-2010 (maspa05)
+**          Created.
+**
+*/
+typedef struct _DUU_MANDFLAGS
+{
+    char            *du_relname;      /* Catalog name */
+    i4              du_relstat;       /* bitmask for relstat mandatory flags */
+    i4              du_relstat2;      /* bitmask for relstat2 mandatory flags */
+}  DUU_MANDFLAGS;
+
+GLOBALREF DUU_MANDFLAGS dub_mandflags[];
+
+GLOBALREF i4 dub_num_mandflags;
+

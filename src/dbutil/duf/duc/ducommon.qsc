@@ -6180,6 +6180,9 @@ duc_create_catalog(char *catalog)
 ** History:
 **      24-oct-2008 (stial01)
 **       Created.
+**      09-Feb-2010 (maspa05) b122651
+**       added Duc_equivcats - a list of equivalent catalogs for the purposes
+**       of modify. Prime (so far only) instance is iirelation for iirel_idx
 */
 VOID
 duc_modify_catalog(char *catalog)
@@ -6188,11 +6191,24 @@ duc_modify_catalog(char *catalog)
     char *qry;
     EXEC SQL END DECLARE SECTION;
     DUC_CATDEF *catdef;
+    DUC_CATEQV *cateqv;
+    char *eqv_catalog=catalog;
+
+    /* find 'equivalent' catalog if any */
+
+    for (cateqv = &Duc_equivcats[0]; cateqv->catname; cateqv++)
+    {
+	if (!STcmp(cateqv->catname, catalog))
+        {
+           eqv_catalog=cateqv->equiv_catname;
+	   break;
+	}
+    }
 
     qry = NULL;
     for (catdef = &Duc_catdef[0]; catdef->catname; catdef++)
     {
-	if (!STcmp(catdef->catname, catalog))
+	if (!STcmp(catdef->catname, eqv_catalog))
 	    break;
     }
 
