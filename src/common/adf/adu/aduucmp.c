@@ -62,6 +62,12 @@
 **          A standard interface is expected by fcn lookup / execute
 **          operations. Force NFC normalization is now achieved by temporarily
 **          updating the adf_uninorm_flag in the ADF_CB.
+**	27-Apr-2010 (kiria01) b123632
+**	    combent entries in the in-memory tables were being skipped if
+**	    they were the last in the list. This had a knock on effect in
+**	    adu_pat_MakeCEchar where not executing this loop at all could
+**	    result in an infinite loop with the source string pointer never
+**	    advancing.
 */
 
 /* forward refs */
@@ -1219,7 +1225,7 @@ MakeCE(
 	    bool	variable = FALSE;
 
 	    for (combent = cetable[*sptr].combent; 
-		 combent->next_combent != NULL;
+		 combent;
 		 combent = combent->next_combent)
 	    {
 		match = TRUE;
@@ -2382,7 +2388,7 @@ adu_pat_MakeCEchar(
 	    i4 match_size = 0;
 
 	    for (combent = cetable[*sptr].combent; 
-		 combent->next_combent != NULL;
+		 combent;
 		 combent = combent->next_combent)
 	    {
 		i4 i;
@@ -2424,15 +2430,17 @@ adu_pat_MakeCEchar(
 		    }
 		}
 	    }
-
-	    if (pat_flags & AD_PAT_DIACRIT_OFF)
-		ce[1] = 0;
-	    if (pat_flags & AD_PAT_WO_CASE)
-		MakeCEcaseFold(&ce[2]);
-	    ce += max_levels;
-	    /* move past substring */
-	    sptr += match_size;
-	    continue;
+	    if (match_size)
+	    {
+		if (pat_flags & AD_PAT_DIACRIT_OFF)
+		    ce[1] = 0;
+		if (pat_flags & AD_PAT_WO_CASE)
+		    MakeCEcaseFold(&ce[2]);
+		ce += max_levels;
+		/* move past substring */
+		sptr += match_size;
+		continue;
+	    }
 	}
 	/* 
 	** at this point we didn't find a combining entry. If we have a CE list 
@@ -2575,7 +2583,7 @@ adu_pat_MakeCElen(
 	    i4 match_size = 0;
 
 	    for (combent = cetable[*sptr].combent; 
-		 combent->next_combent != NULL;
+		 combent;
 		 combent = combent->next_combent)
 	    {
 		i4 i;
@@ -2595,9 +2603,12 @@ adu_pat_MakeCElen(
 		}
 	    }
 
-	    /* move past substring */
-	    sptr += match_size;
-	    continue;
+	    if (match_size)
+	    {
+		/* move past substring */
+		sptr += match_size;
+		continue;
+	    }
 	}
 no_match:
 	if (cetable[*sptr].flags & CE_HASMATCH)
