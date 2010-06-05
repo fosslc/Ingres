@@ -98,6 +98,8 @@ package	com.ingres.gcf.dam;
 **	    of the batch processing support, so the client-to-server
 **	    concatenation capability is now limited to ML protocol
 **	    level 7 or higher.  
+**	19-May-10 (gordy)
+**	    Don't flush when splitting messages.
 */
 
 import	java.io.InputStream;
@@ -369,6 +371,8 @@ connect( String host, String portID )
 **	    Added MSG layer ID connection parameter.
 **	 5-Dec-07 (gordy)
 **	    Extracted from constructor.
+**	19-May-10 (gordy)
+**	    Flush method renamed to send() with flush indicator.
 */
 
 protected void
@@ -410,7 +414,7 @@ sendCR( byte msg_cp[] )
 	    out.write( msg_cp, 0, msg_cp.length );
 	}
 
-	out.flush();
+	out.send( true );
     }
     catch( SQLException ex )
     {
@@ -492,6 +496,8 @@ disconnect()
 **	    Created.
 **	17-Nov-99 (gordy)
 **	    Extracted output functionality from DbConn.
+**	19-May-10 (gordy)
+**	    Flush method renamed to send() with flush indicator.
 */
 
 protected void
@@ -504,7 +510,7 @@ close()
     {
 	out.clear();    // Clear partial messages from buffer.
 	out.begin( DAM_TL_DR, 0 );
-	out.flush();
+	out.send( true );
     }
     catch( Exception ignore ) {}
 
@@ -2241,6 +2247,8 @@ done( boolean flush )
 **	    Extracted from done( boolean ).
 **	13-May-10 (gordy)
 **	    Save EOG indicator when message group is flushed.
+**	19-May-10 (gordy)
+**	    Flush method renamed to send() with flush indicator.
 */
 
 public void
@@ -2270,7 +2278,7 @@ done( byte flags )
 	try 
 	{ 
 	    out_eog = true;
-	    out.flush(); 
+	    out.send( true ); 
 	}
 	catch( SQLException ex )
 	{
@@ -2306,6 +2314,9 @@ done( byte flags )
 **	    Created.
 **	20-Dec-02 (gordy)
 **	    Header ID protocol level dependent.
+**	19-May-10 (gordy)
+**	    Flush method renamed to send() with flush indicator.
+**	    Don't flush split buffers.
 */
 
 private void
@@ -2329,9 +2340,9 @@ split()
 	    out.write( out_hdr_pos + 7, (byte)0 );
 
 	    /*
-	    ** Flush current TL packet and begin new packet.
+	    ** Send current TL packet and begin new packet.
 	    */
-	    out.flush();
+	    out.send( false );
 	    out.begin( DAM_TL_DT, 8 );
 
 	    /*

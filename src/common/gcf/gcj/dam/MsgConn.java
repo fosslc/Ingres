@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1999, 2009 Ingres Corporation All Rights Reserved.
+** Copyright (c) 1999, 2010 Ingres Corporation All Rights Reserved.
 */
 
 package	com.ingres.gcf.dam;
@@ -74,6 +74,8 @@ package	com.ingres.gcf.dam;
 **          JDBC 4.0 SQLException hierarchy.
 **	 5-May-09 (gordy)
 **	    Support multiple host/port list targets.
+**	19-May-10 (gordy)
+**	    Renamed OutBuff.flush() to send() with flush indicator.
 */
 
 import	java.util.Random;
@@ -409,6 +411,8 @@ close()
 **	    Created.
 **	26-Dec-02 (gordy)
 **	    Allocate cncl buffer on first request.
+**	19-May-10 (gordy)
+**	    Flush method renamed to send() with flush indicator.
 */
 
 public synchronized void
@@ -439,7 +443,7 @@ cancel()
 	if ( trace.enabled( 2 ) )
 	    trace.write( title + ": interrupt network connection" );
 	cncl.begin( DAM_TL_INT, 0 );
-	cncl.flush();
+	cncl.send( true );
     }
     catch( SQLException ex )
     {

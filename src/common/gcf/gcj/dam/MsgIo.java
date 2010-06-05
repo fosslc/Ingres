@@ -71,6 +71,16 @@ package	com.ingres.gcf.dam;
 **	    Cleanup related to problems reported by the findbugs utility.
 **	25-Mar-10 (gordy)
 **	    Added batch message.
+**	19-May-10 (gordy)
+**	    Enable TCP-IP NoDelay option.  The driver does its own
+**	    buffering and only flushes buffers when full or the
+**	    message group is complete.  With NoDelay disabled, there
+**	    is a noticable impact on batch processing when the batch
+**	    fills the first buffer and overflows just a few bytes
+**	    into the next buffer.  Under this send-send condition,
+**	    TCP will delay sending the second buffer in case there 
+**	    is more data to be sent.  Enabling NoDelay will eliminate 
+**	    this (unnecessary) delay.
 */
 
 import	java.net.InetAddress;
@@ -290,6 +300,10 @@ MsgIo( TraceLog log )
 **	    Try connecting to ALL IP @s for target host rather than just 1st.
 **	 5-Dec-07 (gordy)
 **	    Extracted from constructor.
+**	19-May-10 (gordy)
+**	    Enable the TCP NoDelay option to avoid a delay in sending
+**	    the overflow buffer when a message is slightly longer than
+**	    what fits in the current buffer.
 */
 
 protected void
@@ -324,6 +338,8 @@ connect( String host, String portID )
 	try
 	{
 	    socket = new Socket( addr[i], port );
+	    socket.setTcpNoDelay( true );
+
 	    if ( trace.enabled( 3 ) )
 		trace.write(title + ": connected to " + hostAddr + "," + port);
 	    return;

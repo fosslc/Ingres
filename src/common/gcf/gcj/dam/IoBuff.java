@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1999, 2009 Ingres Corporation All Rights Reserved.
+** Copyright (c) 1999, 2010 Ingres Corporation All Rights Reserved.
 */
 
 package	com.ingres.gcf.dam;
@@ -43,6 +43,8 @@ package	com.ingres.gcf.dam;
 **          JDBC 4.0 SQLException hierarchy.
 **	 9-Jan-09 (gordy)
 **	    Cleanup related to problems reported by the findbugs utility.
+**	19-May-10 (gordy)
+**	    Add option to flush() to indicate if output should be forced.
 */
 
 import	java.io.InputStream;
@@ -516,10 +518,10 @@ begin( int size )
 ** Name: flush
 **
 ** Description:
-**	Send output buffer to server.
+**	Send output buffer to server with option to flush.
 **
 ** Input:
-**	None.
+**	force	Should buffer be flushed?
 **
 ** Output:
 **	None.
@@ -532,17 +534,19 @@ begin( int size )
 **	    Created.
 **	29-Sep-99 (gordy)
 **	    Moved socket flush to flushBuffer().
+**	19-May-10 (gordy)
+**	    Added flush indicator.
 */
 
 protected synchronized void
-flush()
+flush( boolean force )
     throws SQLException
 {
     if ( closed  ||  out == null )
 	throw SqlExFactory.get( ERR_GC4004_CONNECTION_CLOSED );
 
     setSegSize();	// Update current segment length.
-    flushBuffer( true );
+    flushBuffer( force );
     return;
 } // flush
 

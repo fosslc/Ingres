@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1999, 2002 Ingres Corporation All Rights Reserved.
+** Copyright (c) 1999, 2010 Ingres Corporation All Rights Reserved.
 */
 
 package	com.ingres.gcf.dam;
@@ -45,6 +45,8 @@ package	com.ingres.gcf.dam;
 **          Replaced SqlEx references with SQLException or SqlExFactory
 **          depending upon the usage of it. SqlEx becomes obsolete to support
 **          JDBC 4.0 SQLException hierarchy.
+**	19-May-10 (gordy)
+**	    Rename flush() to send() with flush indicator.
 */
 
 import	java.io.OutputStream;
@@ -70,10 +72,10 @@ import	com.ingres.gcf.util.TraceLog;
 **
 **	A message is created by first invoking the begin() method,
 **	followed by any number of calls to write the body of the
-**	message, and finished by invoking the flush() method.  It
+**	message, and finished by invoking the send() method.  It
 **	is the callers responsibility to provide multi-threaded
 **	protection from just prior to invoking begin() until after
-**	the invocation of flush().
+**	the invocation of send().
 **
 **  Public Methods:
 **
@@ -81,7 +83,7 @@ import	com.ingres.gcf.util.TraceLog;
 **	avail	    Returns amount of remaining space in buffer.
 **	position    Current position in output buffer.
 **	write	    Append/write values to output buffer.
-**	flush	    Send output buffer to server.
+**	send	    Send output buffer to server.
 **
 **  Protected Data
 **
@@ -200,7 +202,7 @@ begin( short type, int size )
 ** Description:
 **	Determine amount of unused space in output buffer.
 **	Information returned is only valid after calling
-**	begin() and prior to calling flush().
+**	begin() and prior to calling send().
 **
 ** Input:
 **	None.
@@ -229,7 +231,7 @@ avail()
 ** Description:
 **	Returns the current position in the output buffer.
 **	Position is only valid after calling begin() and
-**	prior to calling flush().  An appending write()
+**	prior to calling send().  An appending write()
 **	call may also invalidate the position (if length 
 **	written exceeds avail() amount).
 **
@@ -715,8 +717,8 @@ write( int position, double value )
 ** Description:
 **	Append a byte array to the output buffer.  This
 **	routine does not split arrays across buffers, the
-**	current buffer is flushed and the array must fit
-**	in the new buffer, or an exception is thrown.
+**	current buffer is sent and the array must fit in 
+**	the new buffer, or an exception is thrown.
 **
 ** Input:
 **	value	    Byte array.
@@ -761,8 +763,8 @@ write( byte value[], int offset, int length )
 **	Number of bytes copied from ByteArray may be limited 
 **	by current length of the array and requested position.  
 **	This routine does not split arrays across buffers, the 
-**	current buffer is flushed and the array must fit in 
-**	the new buffer, or an exception is thrown.
+**	current buffer is sent and the array must fit in the 
+**	new buffer, or an exception is thrown.
 **
 ** Input:
 **	bytes	ByteArray.
@@ -800,13 +802,13 @@ write( ByteArray bytes, int offset, int length )
 
 
 /*
-** Name: flush
+** Name: send
 **
 ** Description:
 **	Send buffer to server.
 **
 ** Input:
-**	None.
+**	force	Should buffer be flushed.
 **
 ** Output:
 **	None.
@@ -817,16 +819,18 @@ write( ByteArray bytes, int offset, int length )
 ** History:
 **	16-Jun-99 (gordy)
 **	    Created.
+**	19-May-10 (gordy)
+**	    Renamed to send() and added flush indicator.
 */
 
 public void
-flush()
+send( boolean force )
     throws SQLException
 {
     if ( trace.enabled( 3 ) )  trace.write( title + ": sending TL packet" );
-    super.flush();
+    flush( force );
     return;
-} // flush
+} // send
 
 
 /*
@@ -835,7 +839,7 @@ flush()
 ** Description:
 **	Make sure enough room is available in the output
 **	buffer for an object of the requested size.  If 
-**	the current buffer is full, it will be flushed and 
+**	the current buffer is full, it will be sent and 
 **	a new DATA message started.
 **
 ** Input:
@@ -850,6 +854,8 @@ flush()
 ** History:
 **	16-Jun-99 (gordy)
 **	    Created.
+**	19-May-10 (gordy)
+**	    Flush method renamed to send() with flush indicator.
 */
 
 private boolean
@@ -858,7 +864,7 @@ need( int size )
 {
     if ( (data_ptr + size) > data_end )
     {
-	flush();
+	send( false );
 	begin( DAM_TL_DT, size );
     }
 
