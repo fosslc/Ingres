@@ -50,6 +50,11 @@
 **		memory segments, but the privileges will be stripped in
 **		this file to ensure individual commands run with lower
 **		privileges.
+**	07-Apr-2010 (drivi01)
+**		Update the script to work on x64, by adding routines
+**		to get around shell execution errors, updating 
+**		allocated_pages datatype to SIZE_TYPE to be consistent
+**		with ME parameters and cleanup the general warnings.
 */
 /*
 DEST = TOOLS
@@ -89,6 +94,12 @@ char *vistaParamExcept[] = {
 	NULL
 };
 
+char *win64Except[] = {
+	"sh",
+	"sh.exe",
+	NULL
+};
+
 main(argc,argv)
 i4  argc;
 char **argv;
@@ -96,7 +107,7 @@ char **argv;
 register i4             i;
 char                    shm_name[20];
 struct shm_struct       *childenv_ptr;
-int                     allocated_pages;
+SIZE_TYPE               allocated_pages;
 CL_ERR_DESC             err_code;
 STATUS                  mem_status;
 char                    full_prog_name[256];
@@ -110,12 +121,14 @@ char                    *pArgLine;
 BOOL                    blStatus = FALSE;
 DWORD                   dwAttrib = 0;
 BOOL			bSkip = 0;
+int			dwRet;
+char *prog_name;
+
     /*
     **  Initialise security attributes for use with handle creation and
     **  duplication.
     */
     iimksec(&sa);
-
     /*
     **  Remove the shared memory name from the list of arguments.
     */
@@ -280,9 +293,9 @@ BOOL			bSkip = 0;
 
     if (SearchPath (NULL, stParams.prog_name, ".com",
                     sizeof(full_prog_name),full_prog_name, NULL)==0)
-        if (SearchPath (NULL, stParams.prog_name, ".exe",
+		if (SearchPath (NULL, stParams.prog_name, ".bat",
                         sizeof(full_prog_name),full_prog_name, NULL)==0)
-            if (SearchPath (NULL, stParams.prog_name, ".bat",
+			if (SearchPath (NULL, stParams.prog_name, ".exe",
                             sizeof(full_prog_name),full_prog_name, NULL)==0)
                 if (SearchPath (NULL, stParams.prog_name, ".cmd",
                                 sizeof(full_prog_name),full_prog_name, NULL)==0)
@@ -294,6 +307,35 @@ BOOL			bSkip = 0;
         _exit(509);
     }
 
+#ifdef WIN64
+	/*
+	** 05-Aug-2009 (drivi01)
+	** Sep is having trouble executing sh.exe from cygwin on x64.
+	** I suspect the errors are due to the fact that this program is 
+	** compiled as 64-bit on x64 and sh.exe is 32-bit cygwin exe
+	** and it's having trouble running 32-bit application from a
+	** 64-bit application, but if the full program path is moved
+	** to command line buffer instead as a 2nd argument to 
+	** CreateProcess and first argument which is the app name set
+	** to NULL, then the CreateProcess should succeed.
+	** This bit of code moves the arguments to CreateProcess around
+	** to have successfully executed shell program.
+	*/
+	for (i=0; win64Except[i]; i++)
+		if (STstrindex (stParams.prog_name, win64Except[i], 0, TRUE) != NULL)
+		{
+			char *ptr;
+			char tmp[MAX_CMD_LENGTH];
+
+			ptr=pArgLine+STlength(win64Except[i]);
+			MEcopy(ptr, MAX_CMD_LENGTH-STlength(win64Except[i]), &tmp);
+			*pArgLine='\0';
+			STpolycat(2, full_prog_name, tmp, pArgLine);
+			*full_prog_name='\0';
+			break;
+		}
+#endif //WIN64
+	
 	for (i = 0; vistaException[i]; i++)
 		if (STstrindex (full_prog_name, vistaException[i], 0, TRUE) != NULL)
 		{
@@ -307,6 +349,8 @@ BOOL			bSkip = 0;
 			break;
 		}
 
+	prog_name = (*full_prog_name) ? full_prog_name : NULL;
+	
 	if (GVvista() && !bSkip)
 	{
 		DWORD errnum;
@@ -338,12 +382,14 @@ BOOL			bSkip = 0;
 			else
 				hToken2 = linked_token.LinkedToken;
 		}
-		
+
 		if (hToken2)
 		{
-			if (CreateProcessAsUser (hToken2, full_prog_name, pArgLine, NULL, NULL, TRUE,
-                CREATE_NEW_PROCESS_GROUP|NORMAL_PRIORITY_CLASS,NULL,
-				NULL,&si,&pi) == TRUE)
+			dwRet = CreateProcessAsUser (hToken2, 
+					prog_name, pArgLine, NULL, NULL, TRUE,
+        		        	CREATE_NEW_PROCESS_GROUP|NORMAL_PRIORITY_CLASS,NULL,
+					NULL,&si,&pi);
+			if ( dwRet == TRUE)
 			{  /* Child was created successfully */
 				if (hConIO[1])
 					CloseHandle(hConIO[1]);
@@ -371,15 +417,15 @@ BOOL			bSkip = 0;
 				if (hConIO[3] && hConIO[3] != hConIO[2])
 					CloseHandle(hConIO[3]);
 				if (rw == PC_ELEVATION_REQUIRED)
-					_exit(rw);
+					exit(rw);
 				_exit(509);
 			}
 		}
 	}
 	else
 	{
-    if (CreateProcess (
-                        full_prog_name,
+	dwRet = CreateProcess (
+                        prog_name,
                         pArgLine,
                         NULL,
                         NULL,
@@ -388,8 +434,9 @@ BOOL			bSkip = 0;
                         NULL,
                         NULL,
                         &si,
-                        &pi) == 0)
-    {
+                        &pi);
+	if (dwRet==0)
+    	{
         STprintf(buf, "CreateProcess failed %d", GetLastError());
         SIfprintf(stderr, "%s\n", buf);
         SIflush(stderr);

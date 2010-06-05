@@ -22,6 +22,8 @@ NEEDLIBS = ICETRANSLATELIB ICECONFLIB SHXERCESLIB
 **	    Updated to support Xerces 2.3. 
 **	07-Jul-2004 (hanje04)
 **	    Move main() so that mkjams/mkming does its job
+**	29-Mar-2010 (drivi01)
+**	    Clean up the warnings.
 */
 /*
  * The Apache Software License, Version 1.1
@@ -117,7 +119,7 @@ NEEDLIBS = ICETRANSLATELIB ICECONFLIB SHXERCESLIB
 //		Indicates if the output should expand the namespaces Alias with
 //		their URI's, defaults to false, can be set via the command line -e
 // ---------------------------------------------------------------------------
-static const char*              encodingName    = "LATIN1";
+static const INGXMLCh*              encodingName    = (INGXMLCh *)"LATIN1";
 static XMLFormatter::UnRepFlags unRepFlags      = XMLFormatter::UnRep_CharRef;
 static char*                    xmlFile         = 0;
 static SAX2XMLReader::ValSchemes valScheme      = SAX2XMLReader::Val_Auto;
@@ -221,7 +223,7 @@ main(int argC, char* argV[])
               ||  !strncmp(argV[parmInd], "-X=", 3))
         {
             // Get out the encoding name
-            encodingName = &argV[parmInd][3];
+            encodingName = (INGXMLCh *)&argV[parmInd][3];
         }
          else if (!strncmp(argV[parmInd], "-u=", 3)
               ||  !strncmp(argV[parmInd], "-U=", 3))

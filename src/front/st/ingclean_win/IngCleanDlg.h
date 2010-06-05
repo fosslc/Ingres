@@ -9,6 +9,10 @@
 **
 **	23-Sep-2003 (penga03)
 **	    Created.
+**	06-Apr-2010 (drivi01)
+**	    Update OnTimer to take UINT_PTR as a parameter as UINT_PTR
+**	    will be unsigned int on x86 and unsigned int64 on x64.
+**	    This will cleanup warnings.
 */
 
 #if !defined(AFX_INGCLEANDLG_H__EB908B05_5DD5_4306_BBE9_6BFC1BA34EB7__INCLUDED_)
@@ -52,7 +56,7 @@ protected:
 	virtual BOOL OnInitDialog();
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
-	afx_msg void OnTimer(UINT nIDEvent);
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	virtual void OnCancel();
 	afx_msg void OnUninstall();
 	afx_msg void OnClose();

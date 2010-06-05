@@ -128,6 +128,9 @@
 **	     Force elevation on Vista in this module.
 **	02-Oct-2009 (bonro01)
 **	    Increase sleep to eliminate 100% cpu use
+**	07-Apr-2010 (drivi01)
+**	    update allocated_pages datatype to be SIZE_TYPE to account for
+**	    x64 port.  Add better error checking.
 */
 
 GLOBALREF bool batchMode;
@@ -165,7 +168,7 @@ SEPspawn(i4 argc,char **argv,bool wait_for_child,LOCATION *in_loc,LOCATION *out_
     char		shm_name[20];
     char		*delimptr, *delimptr2;
     CL_ERR_DESC		err_code;
-    int			allocated_pages;
+    SIZE_TYPE		allocated_pages;
     STATUS		mem_status;
 	int			try_count=100;
     struct shm_struct	*childenv_ptr ZERO_FILL;
@@ -207,7 +210,7 @@ SEPspawn(i4 argc,char **argv,bool wait_for_child,LOCATION *in_loc,LOCATION *out_
 	** Check error code returned from MEget_pages, do not
 	** assume that MEget_pages will always be successful
 	*/
-	while (mem_status == ME_ALREADY_EXISTS && try_count-->0)
+	while ((mem_status == ME_ALREADY_EXISTS || err_code.errnum == ME_ALREADY_EXISTS ) && try_count-->0)
 	{
 		/*
 		** If memory segment already exists, it's possible the segment hasn't
@@ -222,13 +225,13 @@ SEPspawn(i4 argc,char **argv,bool wait_for_child,LOCATION *in_loc,LOCATION *out_
 						ME_MZERO_MASK|ME_IO_MASK|ME_SSHARED_MASK|ME_CREATE_MASK,
 						1, shm_name, &childenv_ptr, &allocated_pages, &err_code);
 	}
-	if ((mem_status != ME_ALREADY_EXISTS && mem_status != 0) || childenv_ptr==NULL)
+	if ( ((mem_status != 0) && (mem_status != ME_ALREADY_EXISTS || err_code.errnum != ME_ALREADY_EXISTS)) || (childenv_ptr == NULL) )
 	{
  		char	buf[MAX_PATH+64];
 		int	errnum;
 
 		errnum = GetLastError();
-		STprintf(buf, "Couldn't allocate shared memory, errno %d and mem_status %d", errnum, mem_status);
+		STprintf(buf, "Couldn't allocate shared memory, errno %d and mem_status %d, err_code.errnum %d", errnum, mem_status, err_code.errnum);
 		SIfprintf(stderr, "%s\n", buf);
 		SIflush(stderr);
 		ret_val = FAIL;

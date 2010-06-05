@@ -15,6 +15,10 @@
 **		once the operation is completed.
 **	25-Jul-2007 (drivi01)
 **		Add a variable to track timer event.
+**	06-Apr-2010 (drivi01)
+**		Update OnTimer to take UINT_PTR as a parameter as UINT_PTR
+**		will be unsigned int on x86 and unsigned int64 on x64.
+**		This will cleanup warnings.
 **
 */ 
 
@@ -103,7 +107,7 @@ protected:
 	afx_msg HCURSOR OnQueryDragIcon();
 	virtual void OnCancel();
 	afx_msg void OnStart();
-	afx_msg void OnTimer(UINT nIDEvent);
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnStartAsService();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()

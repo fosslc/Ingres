@@ -277,7 +277,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/machine:AMD64"
-				AdditionalDependencies="msi.lib version.lib clusapi.lib bufferoverflowu.lib"
+				AdditionalDependencies="msi.lib version.lib clusapi.lib "
 				OutputFile="DebugAMD64/setup.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
@@ -289,14 +289,14 @@
 				SubSystem="2"
 				RandomizedBaseAddress="1"
 				DataExecutionPrevention="0"
-				TargetMachine="0"
+				TargetMachine="17"
 			/>
 			<Tool
 				Name="VCALinkTool"
 			/>
 			<Tool
 				Name="VCManifestTool"
-				AdditionalManifestFiles="res\rt_manif.bin"
+				AdditionalManifestFiles="res\rt_manif64.bin"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -578,7 +578,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/machine:AMD64"
-				AdditionalDependencies="msi.lib version.lib clusapi.lib bufferoverflowu.lib"
+				AdditionalDependencies="msi.lib version.lib clusapi.lib "
 				OutputFile="ReleaseAMD64/setup.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
@@ -588,14 +588,14 @@
 				SubSystem="2"
 				RandomizedBaseAddress="1"
 				DataExecutionPrevention="0"
-				TargetMachine="0"
+				TargetMachine="17"
 			/>
 			<Tool
 				Name="VCALinkTool"
 			/>
 			<Tool
 				Name="VCManifestTool"
-				AdditionalManifestFiles="res\rt_manif.bin"
+				AdditionalManifestFiles="res\rt_manif64.bin"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"

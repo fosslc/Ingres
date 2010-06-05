@@ -118,6 +118,9 @@
 **     08-Feb-2010 (Ralph Loen) SIR 123266
 **          In SetDescDefaultsFromType(), add support for IIAPI_BOOL_TYPE 
 **          (boolean).
+**     29-Mar-2010 (drivi01)
+**	    Update lenValuePtr to point to pxxd->OctetLength to avoid
+**          SEGVs as the current pointer causes SEGVs on x64.
 */
 
 /*
@@ -1124,7 +1127,7 @@ SQLRETURN  SQL_API SQLGetDescField_InternalCall (
 
                 default:
 #ifdef _WIN64
-                    *lenValuePtr  = pird->OctetLength;
+                    *lenValuePtr  = pxxd->OctetLength;
 #else
                     i4temp = pxxd->OctetLength;
                     I4ASSIGN_MACRO(i4temp, *i4ValuePtr);

@@ -25,6 +25,8 @@
 ;	19-Jun-2006 (drivi01)
 ;	    As per change #481600 bug #115704
 ;	    Removed F_inquote
+;	21-May-2009 (drivi01)
+;	    We should have been exporting eq along with _eq all along.
 ;
 EXPORTS
 IILIBQgdata		@1	DATA			
@@ -95,3 +97,4 @@ IIscale		@67	DATA
 ;_IILIBQgdata		@68	DATA
 Afe_agtab		@69	DATA	
 ;sqlca				@97	DATA
+eq			@98	DATA

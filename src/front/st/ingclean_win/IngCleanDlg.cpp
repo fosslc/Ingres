@@ -9,6 +9,10 @@
 **
 **	23-Sep-2003 (penga03)
 **	    Created.
+**	06-Apr-2010 (drivi01)
+**	    Update OnTimer to take UINT_PTR as a parameter as UINT_PTR
+**	    will be unsigned int on x86 and unsigned int64 on x64.
+**	    This will cleanup warnings.
 */
 
 #include "stdafx.h"
@@ -113,7 +117,7 @@ HCURSOR CIngCleanDlg::OnQueryDragIcon()
 	return (HCURSOR) m_hIcon;
 }
 
-void CIngCleanDlg::OnTimer(UINT nIDEvent) 
+void CIngCleanDlg::OnTimer(UINT_PTR nIDEvent) 
 {
 	if (!theUninst.IsRunning())
 	{

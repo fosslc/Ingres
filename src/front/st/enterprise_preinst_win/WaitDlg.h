@@ -9,6 +9,10 @@
 **
 **	05-Jun-2001 (penga03)
 **	    Created.
+**	06-Apr-2010 (drivi01)
+**	    Update OnTimer to take UINT_PTR as a parameter as UINT_PTR
+**	    will be unsigned int on x86 and unsigned int64 on x64.
+**	    This will cleanup warnings.
 */
 
 #if !defined(AFX_WAITDLG_H__C084473E_A9B0_4AC2_970F_2DD3DF95067B__INCLUDED_)
@@ -51,7 +55,7 @@ protected:
 	// Generated message map functions
 	//{{AFX_MSG(CWaitDlg)
 	virtual BOOL OnInitDialog();
-	afx_msg void OnTimer(UINT nIDEvent);
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };

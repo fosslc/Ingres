@@ -12,6 +12,9 @@
 		<Platform
 			Name="Win32"
 		/>
+		<Platform
+			Name="x64"
+		/>
 	</Platforms>
 	<ToolFiles>
 	</ToolFiles>
@@ -88,6 +91,103 @@
 				RandomizedBaseAddress="1"
 				DataExecutionPrevention="0"
 				TargetMachine="1"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+				Description="Copying result to II_SYSTEM..."
+				CommandLine="copy $(OutDir)\wincluster.exe %II_SYSTEM%\ingres\bin"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug64|x64"
+			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
+			ConfigurationType="1"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
+			UseOfMFC="1"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="_DEBUG"
+				MkTypLibCompatible="true"
+				SuppressStartupBanner="true"
+				TargetEnvironment="3"
+				TypeLibraryName=".\Debug64/wincluster.tlb"
+				HeaderFileName=""
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				AdditionalOptions="/Wp64 "
+				Optimization="0"
+				AdditionalIncludeDirectories=""
+				PreprocessorDefinitions="WIN64;_DEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS"
+				RuntimeLibrary="1"
+				PrecompiledHeaderFile=".\Debug64/wincluster.pch"
+				AssemblerListingLocation=".\Debug64/"
+				ObjectFile=".\Debug64/"
+				ProgramDataBaseFileName=".\Debug64/"
+				WarningLevel="3"
+				SuppressStartupBanner="true"
+				DebugInformationFormat="3"
+				CompileAs="0"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1033"
+				AdditionalIncludeDirectories="$(ING_SRC)\cl\clf\gv"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalOptions="/machine:IA64"
+				AdditionalDependencies="msi.lib version.lib"
+				LinkIncremental="1"
+				SuppressStartupBanner="true"
+				AdditionalLibraryDirectories=""
+				GenerateDebugInformation="true"
+				ProgramDatabaseFile=".\Debug64/install.pdb"
+				SubSystem="2"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
+				TargetMachine="17"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -211,12 +311,12 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="DebugAMD64|Win32"
-			OutputDirectory=".\DebugAMD64"
-			IntermediateDirectory=".\DebugAMD64"
+			Name="Release|x64"
+			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
-			UseOfMFC="1"
+			UseOfMFC="2"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
 			>
@@ -234,27 +334,28 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				PreprocessorDefinitions="_DEBUG"
+				PreprocessorDefinitions="NDEBUG"
 				MkTypLibCompatible="true"
 				SuppressStartupBanner="true"
-				TargetEnvironment="1"
-				TypeLibraryName=".\DebugAMD64/wincluster.tlb"
+				TargetEnvironment="3"
+				TypeLibraryName=".\Release/wincluster.tlb"
 				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="/Wp64 "
-				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(ING_SRC)\cl\hdr\hdr&quot;;&quot;$(ING_SRC)\cl\hdr\hdr_unix_win&quot;;&quot;$(ING_SRC)\gl\hdr\hdr&quot;;&quot;$(ING_SRC)\cl\clf\hdr_unix_win&quot;;&quot;$(ING_SRC)\cl\hdr\hdr_win&quot;"
-				PreprocessorDefinitions="WIN64;_DEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile=".\DebugAMD64/wincluster.pch"
-				AssemblerListingLocation=".\DebugAMD64/"
-				ObjectFile=".\DebugAMD64/"
-				ProgramDataBaseFileName=".\DebugAMD64/"
+				Optimization="2"
+				InlineFunctionExpansion="1"
+				AdditionalIncludeDirectories=""
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS,SECURITY_WIN32,WINVER=0x0501;_CRT_SECURE_NO_WARNINGS"
+				StringPooling="true"
+				RuntimeLibrary="2"
+				EnableFunctionLevelLinking="true"
+				PrecompiledHeaderFile=".\Release/wincluster.pch"
+				AssemblerListingLocation=".\Release/"
+				ObjectFile=".\Release/"
+				ProgramDataBaseFileName=".\Release/"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
-				DebugInformationFormat="3"
 				CompileAs="0"
 			/>
 			<Tool
@@ -262,7 +363,7 @@
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
+				PreprocessorDefinitions="NDEBUG"
 				Culture="1033"
 				AdditionalIncludeDirectories="$(ING_SRC)\cl\clf\gv"
 			/>
@@ -271,17 +372,16 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalOptions="/machine:AMD64"
-				AdditionalDependencies="msi.lib version.lib bufferoverflowu.lib"
+				AdditionalDependencies="libingres.lib clusapi.lib secur32.lib resutils.lib version.lib iilibutil.lib libconfig.lib"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
-				AdditionalLibraryDirectories=""
-				GenerateDebugInformation="true"
-				ProgramDatabaseFile=".\DebugAMD64/install.pdb"
+				AdditionalLibraryDirectories="&quot;$(II_SYSTEM)\ingres\lib&quot;"
+				IgnoreDefaultLibraryNames="LIBCMT"
+				ProgramDatabaseFile=".\Release/install.pdb"
 				SubSystem="2"
 				RandomizedBaseAddress="1"
 				DataExecutionPrevention="0"
-				TargetMachine="0"
+				TargetMachine="17"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -378,6 +478,102 @@
 				RandomizedBaseAddress="1"
 				DataExecutionPrevention="0"
 				TargetMachine="1"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+				Description="Copying result to II_SYSTEM..."
+				CommandLine="copy $(OutDir)\wincluster.exe %II_SYSTEM%\ingres\bin"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug|x64"
+			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
+			ConfigurationType="1"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
+			UseOfMFC="2"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="_DEBUG"
+				MkTypLibCompatible="true"
+				SuppressStartupBanner="true"
+				TargetEnvironment="3"
+				TypeLibraryName=".\Debug/wincluster.tlb"
+				HeaderFileName=""
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				AdditionalIncludeDirectories=""
+				PreprocessorDefinitions="WIN32,_DEBUG,_WINDOWS,SECURITY_WIN32,WINVER=0x0501;_CRT_SECURE_NO_WARNINGS"
+				BasicRuntimeChecks="3"
+				RuntimeLibrary="3"
+				PrecompiledHeaderFile=".\Debug/wincluster.pch"
+				AssemblerListingLocation=".\Debug/"
+				ObjectFile=".\Debug/"
+				ProgramDataBaseFileName=".\Debug/"
+				WarningLevel="3"
+				SuppressStartupBanner="true"
+				DebugInformationFormat="3"
+				CompileAs="0"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1033"
+				AdditionalIncludeDirectories="&quot;$(ING_SRC)\cl\clf\gv_unix_win&quot;;&quot;$(ING_SRC)\cl\clf\gv_win&quot;"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="libingres.lib clusapi.lib secur32.lib resutils.lib version.lib iilibutil.lib libconfig.lib"
+				LinkIncremental="1"
+				SuppressStartupBanner="true"
+				AdditionalLibraryDirectories="&quot;$(II_SYSTEM)\ingres\lib&quot;"
+				IgnoreDefaultLibraryNames="LIBCMTD"
+				GenerateDebugInformation="true"
+				SubSystem="2"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
+				TargetMachine="17"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -502,18 +698,15 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="ReleaseAMD64|Win32"
-			OutputDirectory=".\ReleaseAMD64"
-			IntermediateDirectory=".\ReleaseAMD64"
+			Name="Release64|x64"
+			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
 			UseOfMFC="1"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
 			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
 			<Tool
 				Name="VCCustomBuildTool"
 			/>
@@ -533,19 +726,40 @@
 				HeaderFileName=""
 			/>
 			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="NDEBUG"
+				MkTypLibCompatible="true"
+				SuppressStartupBanner="true"
+				TargetEnvironment="3"
+				TypeLibraryName=".\Release64/wincluster.tlb"
+				HeaderFileName=""
+			/>
+			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/Wp64 "
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="&quot;$(ING_SRC)\cl\hdr\hdr&quot;;&quot;$(ING_SRC)\cl\hdr\hdr_unix_win&quot;;&quot;$(ING_SRC)\gl\hdr\hdr&quot;;&quot;$(ING_SRC)\cl\clf\hdr_unix_win&quot;;&quot;$(ING_SRC)\cl\hdr\hdr_win&quot;"
+				AdditionalIncludeDirectories=""
 				PreprocessorDefinitions="WIN64;NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS"
 				StringPooling="true"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\ReleaseAMD64/wincluster.pch"
-				AssemblerListingLocation=".\ReleaseAMD64/"
-				ObjectFile=".\ReleaseAMD64/"
-				ProgramDataBaseFileName=".\ReleaseAMD64/"
+				PrecompiledHeaderFile=".\Release64/wincluster.pch"
+				AssemblerListingLocation=".\Release64/"
+				ObjectFile=".\Release64/"
+				ProgramDataBaseFileName=".\Release64/"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
 				CompileAs="0"
@@ -564,16 +778,16 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalOptions="/machine:AMD64"
-				AdditionalDependencies="msi.lib version.lib bufferoverflowu.lib"
+				AdditionalOptions="/machine:IA64"
+				AdditionalDependencies="msi.lib version.lib"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				AdditionalLibraryDirectories=""
-				ProgramDatabaseFile=".\ReleaseAMD64/install.pdb"
+				ProgramDatabaseFile=".\Release64/install.pdb"
 				SubSystem="2"
 				RandomizedBaseAddress="1"
 				DataExecutionPrevention="0"
-				TargetMachine="0"
+				TargetMachine="17"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -695,6 +909,101 @@
 			/>
 		</Configuration>
 		<Configuration
+			Name="DebugIA64|x64"
+			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
+			ConfigurationType="1"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
+			UseOfMFC="1"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="_DEBUG"
+				MkTypLibCompatible="true"
+				SuppressStartupBanner="true"
+				TargetEnvironment="3"
+				TypeLibraryName=".\DebugAMD64/wincluster.tlb"
+				HeaderFileName=""
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				AdditionalOptions="/Wp64 "
+				Optimization="0"
+				AdditionalIncludeDirectories="&quot;$(ING_SRC)\cl\hdr\hdr&quot;;&quot;$(ING_SRC)\cl\hdr\hdr_unix_win&quot;;&quot;$(ING_SRC)\gl\hdr\hdr&quot;;&quot;$(ING_SRC)\cl\clf\hdr_unix_win&quot;;&quot;$(ING_SRC)\cl\hdr\hdr_win&quot;"
+				PreprocessorDefinitions="WIN64;_DEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS"
+				RuntimeLibrary="1"
+				PrecompiledHeaderFile=".\DebugIA64/wincluster.pch"
+				AssemblerListingLocation=".\DebugIA64/"
+				ObjectFile=".\DebugIA64/"
+				ProgramDataBaseFileName=".\DebugIA64/"
+				WarningLevel="3"
+				SuppressStartupBanner="true"
+				DebugInformationFormat="3"
+				CompileAs="0"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1033"
+				AdditionalIncludeDirectories="$(ING_SRC)\cl\clf\gv"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalOptions="/machine:IA64"
+				AdditionalDependencies="msi.lib version.lib bufferoverflowu.lib"
+				LinkIncremental="1"
+				SuppressStartupBanner="true"
+				AdditionalLibraryDirectories=""
+				GenerateDebugInformation="true"
+				ProgramDatabaseFile=".\DebugIA64/install.pdb"
+				SubSystem="2"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
+				TargetMachine="17"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
 			Name="ReleaseIA64|Win32"
 			OutputDirectory="$(ConfigurationName)"
 			IntermediateDirectory="$(ConfigurationName)"
@@ -790,6 +1099,489 @@
 				Name="VCPostBuildEventTool"
 			/>
 		</Configuration>
+		<Configuration
+			Name="ReleaseIA64|x64"
+			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
+			ConfigurationType="1"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
+			UseOfMFC="1"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="NDEBUG"
+				MkTypLibCompatible="true"
+				SuppressStartupBanner="true"
+				TargetEnvironment="3"
+				TypeLibraryName=".\ReleaseAMD64/wincluster.tlb"
+				HeaderFileName=""
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				AdditionalOptions="/Wp64 "
+				Optimization="2"
+				InlineFunctionExpansion="1"
+				AdditionalIncludeDirectories="&quot;$(ING_SRC)\cl\hdr\hdr&quot;;&quot;$(ING_SRC)\cl\hdr\hdr_unix_win&quot;;&quot;$(ING_SRC)\gl\hdr\hdr&quot;;&quot;$(ING_SRC)\cl\clf\hdr_unix_win&quot;;&quot;$(ING_SRC)\cl\hdr\hdr_win&quot;"
+				PreprocessorDefinitions="WIN64;NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS"
+				StringPooling="true"
+				RuntimeLibrary="0"
+				EnableFunctionLevelLinking="true"
+				PrecompiledHeaderFile=".\ReleaseIA64/wincluster.pch"
+				AssemblerListingLocation=".\ReleaseIA64/"
+				ObjectFile=".\ReleaseIA64/"
+				ProgramDataBaseFileName=".\ReleaseIA64/"
+				WarningLevel="3"
+				SuppressStartupBanner="true"
+				CompileAs="0"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+				AdditionalIncludeDirectories="$(ING_SRC)\cl\clf\gv"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalOptions="/machine:IA64"
+				AdditionalDependencies="msi.lib version.lib bufferoverflowu.lib"
+				LinkIncremental="1"
+				SuppressStartupBanner="true"
+				AdditionalLibraryDirectories=""
+				ProgramDatabaseFile=".\ReleaseIA64/install.pdb"
+				SubSystem="2"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
+				TargetMachine="17"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="ReleaseAMD64|Win32"
+			OutputDirectory="$(ConfigurationName)"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="1"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
+			UseOfMFC="2"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="NDEBUG"
+				MkTypLibCompatible="true"
+				SuppressStartupBanner="true"
+				TargetEnvironment="1"
+				TypeLibraryName=".\Release/wincluster.tlb"
+				HeaderFileName=""
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="2"
+				InlineFunctionExpansion="1"
+				AdditionalIncludeDirectories=""
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS,SECURITY_WIN32,WINVER=0x0501;_CRT_SECURE_NO_WARNINGS"
+				StringPooling="true"
+				RuntimeLibrary="2"
+				EnableFunctionLevelLinking="true"
+				PrecompiledHeaderFile=".\Release/wincluster.pch"
+				AssemblerListingLocation=".\Release/"
+				ObjectFile=".\Release/"
+				ProgramDataBaseFileName=".\Release/"
+				WarningLevel="3"
+				SuppressStartupBanner="true"
+				CompileAs="0"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+				AdditionalIncludeDirectories="$(ING_SRC)\cl\clf\gv"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="libingres.lib clusapi.lib secur32.lib resutils.lib version.lib iilibutil.lib libconfig.lib"
+				LinkIncremental="1"
+				SuppressStartupBanner="true"
+				AdditionalLibraryDirectories="&quot;$(II_SYSTEM)\ingres\lib&quot;"
+				IgnoreDefaultLibraryNames="LIBCMT"
+				ProgramDatabaseFile=".\Release/install.pdb"
+				SubSystem="2"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
+				TargetMachine="1"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+				Description="Copying result to II_SYSTEM..."
+				CommandLine="copy $(OutDir)\wincluster.exe %II_SYSTEM%\ingres\bin"
+			/>
+		</Configuration>
+		<Configuration
+			Name="ReleaseAMD64|x64"
+			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
+			ConfigurationType="1"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
+			UseOfMFC="2"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="NDEBUG"
+				MkTypLibCompatible="true"
+				SuppressStartupBanner="true"
+				TargetEnvironment="3"
+				TypeLibraryName=".\Release/wincluster.tlb"
+				HeaderFileName=""
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="2"
+				InlineFunctionExpansion="1"
+				AdditionalIncludeDirectories="..\inc_win;&quot;$(ING_SRC)\cl\hdr\hdr&quot;;&quot;$(ING_SRC)\cl\hdr\hdr_unix_win&quot;;&quot;$(ING_SRC)\cl\hdr\hdr_win&quot;;&quot;$(ING_SRC)\cl\clf\hdr_unix_win&quot;;&quot;$(ING_SRC)\cl\clf\hdr_win&quot;;&quot;$(ING_SRC)\gl\hdr\hdr&quot;;&quot;$(ING_SRC)\common\hdr\hdr&quot;;&quot;$(ING_SRC)\front\hdr\hdr&quot;;&quot;$(ING_SRC)\front\st\config&quot;;&quot;$(ING_SRC)\front\st\hdr&quot;"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS,SECURITY_WIN32,WINVER=0x0501;_CRT_SECURE_NO_WARNINGS;NT_GENERIC"
+				StringPooling="true"
+				RuntimeLibrary="2"
+				EnableFunctionLevelLinking="true"
+				PrecompiledHeaderFile="$(OutDir)\wincluster.pch"
+				AssemblerListingLocation="$(OutDir)\"
+				ObjectFile="$(OutDir)\"
+				ProgramDataBaseFileName="$(OutDir)\"
+				WarningLevel="3"
+				SuppressStartupBanner="true"
+				CompileAs="0"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+				AdditionalIncludeDirectories="$(ING_SRC)\cl\clf\gv"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="libingres.lib clusapi.lib secur32.lib resutils.lib version.lib iilibutil.lib libconfig.lib"
+				LinkIncremental="1"
+				SuppressStartupBanner="true"
+				AdditionalLibraryDirectories="&quot;$(II_SYSTEM)\ingres\lib&quot;"
+				IgnoreDefaultLibraryNames="LIBCMT"
+				ProgramDatabaseFile="$(OutDir)\install.pdb"
+				SubSystem="2"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
+				TargetMachine="17"
+				DelaySign="false"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+				Description="Copying result to II_SYSTEM..."
+				CommandLine="copy $(OutDir)\wincluster.exe %II_SYSTEM%\ingres\bin"
+			/>
+		</Configuration>
+		<Configuration
+			Name="DebugAMD64|Win32"
+			OutputDirectory="$(ConfigurationName)"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="1"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
+			UseOfMFC="2"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="_DEBUG"
+				MkTypLibCompatible="true"
+				SuppressStartupBanner="true"
+				TargetEnvironment="1"
+				TypeLibraryName=".\Debug/wincluster.tlb"
+				HeaderFileName=""
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				AdditionalIncludeDirectories=""
+				PreprocessorDefinitions="WIN32,_DEBUG,_WINDOWS,SECURITY_WIN32,WINVER=0x0501;_CRT_SECURE_NO_WARNINGS"
+				BasicRuntimeChecks="3"
+				RuntimeLibrary="3"
+				PrecompiledHeaderFile=".\Debug/wincluster.pch"
+				AssemblerListingLocation=".\Debug/"
+				ObjectFile=".\Debug/"
+				ProgramDataBaseFileName=".\Debug/"
+				WarningLevel="3"
+				SuppressStartupBanner="true"
+				DebugInformationFormat="3"
+				CompileAs="0"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1033"
+				AdditionalIncludeDirectories="&quot;$(ING_SRC)\cl\clf\gv_unix_win&quot;;&quot;$(ING_SRC)\cl\clf\gv_win&quot;"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="libingres.lib clusapi.lib secur32.lib resutils.lib version.lib iilibutil.lib libconfig.lib"
+				LinkIncremental="1"
+				SuppressStartupBanner="true"
+				AdditionalLibraryDirectories="&quot;$(II_SYSTEM)\ingres\lib&quot;"
+				IgnoreDefaultLibraryNames="LIBCMTD"
+				GenerateDebugInformation="true"
+				SubSystem="2"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
+				TargetMachine="1"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+				Description="Copying result to II_SYSTEM..."
+				CommandLine="copy $(OutDir)\wincluster.exe %II_SYSTEM%\ingres\bin"
+			/>
+		</Configuration>
+		<Configuration
+			Name="DebugAMD64|x64"
+			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
+			ConfigurationType="1"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
+			UseOfMFC="2"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="_DEBUG"
+				MkTypLibCompatible="true"
+				SuppressStartupBanner="true"
+				TargetEnvironment="3"
+				TypeLibraryName=".\Debug/wincluster.tlb"
+				HeaderFileName=""
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				AdditionalIncludeDirectories="..\inc_win;&quot;$(ING_SRC)\cl\hdr\hdr&quot;;&quot;$(ING_SRC)\cl\hdr\hdr_unix_win&quot;;&quot;$(ING_SRC)\cl\hdr\hdr_win&quot;;&quot;$(ING_SRC)\cl\clf\hdr_unix_win&quot;;&quot;$(ING_SRC)\cl\clf\hdr_win&quot;;&quot;$(ING_SRC)\gl\hdr\hdr&quot;;&quot;$(ING_SRC)\common\hdr\hdr&quot;;&quot;$(ING_SRC)\front\hdr\hdr&quot;;&quot;$(ING_SRC)\front\st\config&quot;;&quot;$(ING_SRC)\front\st\hdr&quot;"
+				PreprocessorDefinitions="WIN32,_DEBUG,_WINDOWS,SECURITY_WIN32,WINVER=0x0501;_CRT_SECURE_NO_WARNINGS;NT_GENERIC"
+				BasicRuntimeChecks="3"
+				RuntimeLibrary="3"
+				PrecompiledHeaderFile="$(OutDir)\wincluster.pch"
+				AssemblerListingLocation="$(OutDir)\"
+				ObjectFile="$(OutDir)\"
+				ProgramDataBaseFileName="$(OutDir)\"
+				WarningLevel="3"
+				SuppressStartupBanner="true"
+				DebugInformationFormat="3"
+				CompileAs="0"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1033"
+				AdditionalIncludeDirectories="&quot;$(ING_SRC)\cl\clf\gv_unix_win&quot;;&quot;$(ING_SRC)\cl\clf\gv_win&quot;"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="libingres.lib clusapi.lib secur32.lib resutils.lib version.lib iilibutil.lib libconfig.lib"
+				LinkIncremental="1"
+				SuppressStartupBanner="true"
+				AdditionalLibraryDirectories="&quot;$(II_SYSTEM)\ingres\lib&quot;"
+				IgnoreDefaultLibraryNames="LIBCMTD"
+				GenerateDebugInformation="true"
+				SubSystem="2"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
+				TargetMachine="17"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+				Description="Copying result to II_SYSTEM..."
+				CommandLine="copy $(OutDir)\wincluster.exe %II_SYSTEM%\ingres\bin"
+			/>
+		</Configuration>
 	</Configurations>
 	<References>
 	</References>
@@ -812,6 +1604,16 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="Debug64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="Release|Win32"
 					>
 					<Tool
@@ -822,17 +1624,28 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="DebugAMD64|Win32"
+					Name="Release|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-						Optimization="0"
+						Optimization="2"
 						AdditionalIncludeDirectories=""
 						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -853,7 +1666,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="ReleaseAMD64|Win32"
+					Name="Release64|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -873,7 +1686,109 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="DebugIA64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="ReleaseIA64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseIA64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -900,7 +1815,61 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories="..\hdr;..\..\..\cl\hdr\hdr_win;..\..\..\cl\hdr\hdr;..\..\..\cl\hdr\hdr_unix_win;..\..\..\cl\clf\hdr_unix_win;..\..\..\gl\hdr\hdr;..\..\..\common\hdr\hdr;..\..\..\front\hdr\hdr"
+						PreprocessorDefinitions="NT_INTEL,INCLUDE_ALL_CL_PROTOS,NT_GENERIC,SEP,SEPDEBUG,xCL_NO_AUTH_STRING_EXISTS,xCL_CA_LICENSE_CHECK,INGRESII"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories="..\hdr;..\..\..\cl\hdr\hdr_win;..\..\..\cl\hdr\hdr;..\..\..\cl\hdr\hdr_unix_win;..\..\..\cl\clf\hdr_unix_win;..\..\..\gl\hdr\hdr;..\..\..\common\hdr\hdr;..\..\..\front\hdr\hdr"
+						PreprocessorDefinitions="NT_INTEL,INCLUDE_ALL_CL_PROTOS,NT_GENERIC,SEP,SEPDEBUG,xCL_NO_AUTH_STRING_EXISTS,xCL_CA_LICENSE_CHECK,INGRESII"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories="..\hdr;..\..\..\cl\hdr\hdr_win;..\..\..\cl\hdr\hdr;..\..\..\cl\hdr\hdr_unix_win;..\..\..\cl\clf\hdr_unix_win;..\..\..\gl\hdr\hdr;..\..\..\common\hdr\hdr;..\..\..\front\hdr\hdr"
+						PreprocessorDefinitions="NT_INTEL,INCLUDE_ALL_CL_PROTOS,NT_GENERIC,SEP,SEPDEBUG,xCL_NO_AUTH_STRING_EXISTS,xCL_CA_LICENSE_CHECK,INGRESII"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories="..\hdr;..\..\..\cl\hdr\hdr_win;..\..\..\cl\hdr\hdr;..\..\..\cl\hdr\hdr_unix_win;..\..\..\cl\clf\hdr_unix_win;..\..\..\gl\hdr\hdr;..\..\..\common\hdr\hdr;..\..\..\front\hdr\hdr"
+						PreprocessorDefinitions="NT_INTEL,INCLUDE_ALL_CL_PROTOS,NT_GENERIC,SEP,SEPDEBUG,xCL_NO_AUTH_STRING_EXISTS,xCL_CA_LICENSE_CHECK,INGRESII"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories="..\hdr;..\..\..\cl\hdr\hdr_win;..\..\..\cl\hdr\hdr;..\..\..\cl\hdr\hdr_unix_win;..\..\..\cl\clf\hdr_unix_win;..\..\..\gl\hdr\hdr;..\..\..\common\hdr\hdr;..\..\..\front\hdr\hdr"
+						PreprocessorDefinitions="NT_INTEL,INCLUDE_ALL_CL_PROTOS,NT_GENERIC,SEP,SEPDEBUG,xCL_NO_AUTH_STRING_EXISTS,xCL_CA_LICENSE_CHECK,INGRESII"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories="..\hdr;..\..\..\cl\hdr\hdr_win;..\..\..\cl\hdr\hdr;..\..\..\cl\hdr\hdr_unix_win;..\..\..\cl\clf\hdr_unix_win;..\..\..\gl\hdr\hdr;..\..\..\common\hdr\hdr;..\..\..\front\hdr\hdr"
+						PreprocessorDefinitions="NT_INTEL,INCLUDE_ALL_CL_PROTOS,NT_GENERIC,SEP,SEPDEBUG,xCL_NO_AUTH_STRING_EXISTS,xCL_CA_LICENSE_CHECK,INGRESII"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -931,6 +1900,16 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="Debug64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="Release|Win32"
 					>
 					<Tool
@@ -941,17 +1920,28 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="DebugAMD64|Win32"
+					Name="Release|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-						Optimization="0"
+						Optimization="2"
 						AdditionalIncludeDirectories=""
 						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -972,7 +1962,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="ReleaseAMD64|Win32"
+					Name="Release64|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -992,7 +1982,109 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="DebugIA64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="ReleaseIA64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseIA64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1020,6 +2112,16 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="Debug64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="Release|Win32"
 					>
 					<Tool
@@ -1030,17 +2132,28 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="DebugAMD64|Win32"
+					Name="Release|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-						Optimization="0"
+						Optimization="2"
 						AdditionalIncludeDirectories=""
 						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1061,7 +2174,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="ReleaseAMD64|Win32"
+					Name="Release64|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1081,7 +2194,109 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="DebugIA64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="ReleaseIA64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseIA64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1104,7 +2319,61 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories="..\hdr;..\..\..\cl\hdr\hdr_win;..\..\..\cl\hdr\hdr;..\..\..\cl\hdr\hdr_unix_win;..\..\..\cl\clf\hdr_unix_win;..\..\..\gl\hdr\hdr;..\..\..\common\hdr\hdr;..\..\..\front\hdr\hdr"
+						PreprocessorDefinitions="NT_INTEL,INCLUDE_ALL_CL_PROTOS,NT_GENERIC,SEP,SEPDEBUG,xCL_NO_AUTH_STRING_EXISTS,xCL_CA_LICENSE_CHECK,INGRESII"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories="..\hdr;..\..\..\cl\hdr\hdr;..\..\..\cl\hdr\hdr_win;..\..\..\cl\hdr\hdr_unix_win;..\..\..\cl\clf\hdr_unix_win;..\..\..\gl\hdr\hdr;..\..\..\common\hdr\hdr;..\..\..\front\hdr\hdr"
+						PreprocessorDefinitions="NT_INTEL,INCLUDE_ALL_CL_PROTOS,NT_GENERIC,SEP,SEPDEBUG,xCL_NO_AUTH_STRING_EXISTS,xCL_CA_LICENSE_CHECK,INGRESII"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories="..\hdr;..\..\..\cl\hdr\hdr;..\..\..\cl\hdr\hdr_win;..\..\..\cl\hdr\hdr_unix_win;..\..\..\cl\clf\hdr_unix_win;..\..\..\gl\hdr\hdr;..\..\..\common\hdr\hdr;..\..\..\front\hdr\hdr"
+						PreprocessorDefinitions="NT_INTEL,INCLUDE_ALL_CL_PROTOS,NT_GENERIC,SEP,SEPDEBUG,xCL_NO_AUTH_STRING_EXISTS,xCL_CA_LICENSE_CHECK,INGRESII"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories="..\hdr;..\..\..\cl\hdr\hdr_win;..\..\..\cl\hdr\hdr;..\..\..\cl\hdr\hdr_unix_win;..\..\..\cl\clf\hdr_unix_win;..\..\..\gl\hdr\hdr;..\..\..\common\hdr\hdr;..\..\..\front\hdr\hdr"
+						PreprocessorDefinitions="NT_INTEL,INCLUDE_ALL_CL_PROTOS,NT_GENERIC,SEP,SEPDEBUG,xCL_NO_AUTH_STRING_EXISTS,xCL_CA_LICENSE_CHECK,INGRESII"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories="..\hdr;..\..\..\cl\hdr\hdr_win;..\..\..\cl\hdr\hdr;..\..\..\cl\hdr\hdr_unix_win;..\..\..\cl\clf\hdr_unix_win;..\..\..\gl\hdr\hdr;..\..\..\common\hdr\hdr;..\..\..\front\hdr\hdr"
+						PreprocessorDefinitions="NT_INTEL,INCLUDE_ALL_CL_PROTOS,NT_GENERIC,SEP,SEPDEBUG,xCL_NO_AUTH_STRING_EXISTS,xCL_CA_LICENSE_CHECK,INGRESII"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories="..\hdr;..\..\..\cl\hdr\hdr;..\..\..\cl\hdr\hdr_win;..\..\..\cl\hdr\hdr_unix_win;..\..\..\cl\clf\hdr_unix_win;..\..\..\gl\hdr\hdr;..\..\..\common\hdr\hdr;..\..\..\front\hdr\hdr"
+						PreprocessorDefinitions="NT_INTEL,INCLUDE_ALL_CL_PROTOS,NT_GENERIC,SEP,SEPDEBUG,xCL_NO_AUTH_STRING_EXISTS,xCL_CA_LICENSE_CHECK,INGRESII"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1127,6 +2396,16 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="Debug64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="Release|Win32"
 					>
 					<Tool
@@ -1137,17 +2416,28 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="DebugAMD64|Win32"
+					Name="Release|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-						Optimization="0"
+						Optimization="2"
 						AdditionalIncludeDirectories=""
 						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1168,7 +2458,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="ReleaseAMD64|Win32"
+					Name="Release64|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1188,7 +2478,109 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="DebugIA64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="ReleaseIA64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseIA64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1214,6 +2606,18 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="Debug64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						UsePrecompiledHeader="1"
+						PrecompiledHeaderThrough="stdafx.h"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="Release|Win32"
 					>
 					<Tool
@@ -1226,11 +2630,11 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="DebugAMD64|Win32"
+					Name="Release|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-						Optimization="0"
+						Optimization="2"
 						AdditionalIncludeDirectories=""
 						PreprocessorDefinitions=""
 						UsePrecompiledHeader="1"
@@ -1239,6 +2643,19 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						UsePrecompiledHeader="1"
+						PrecompiledHeaderThrough="stdafx.h"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1263,7 +2680,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="ReleaseAMD64|Win32"
+					Name="Release64|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1287,7 +2704,129 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="DebugIA64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						UsePrecompiledHeader="1"
+						PrecompiledHeaderThrough="stdafx.h"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="ReleaseIA64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						UsePrecompiledHeader="1"
+						PrecompiledHeaderThrough="stdafx.h"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseIA64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						UsePrecompiledHeader="1"
+						PrecompiledHeaderThrough="stdafx.h"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						UsePrecompiledHeader="1"
+						PrecompiledHeaderThrough="stdafx.h"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						UsePrecompiledHeader="1"
+						PrecompiledHeaderThrough="stdafx.h"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						UsePrecompiledHeader="1"
+						PrecompiledHeaderThrough="stdafx.h"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						UsePrecompiledHeader="1"
+						PrecompiledHeaderThrough="stdafx.h"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						UsePrecompiledHeader="1"
+						PrecompiledHeaderThrough="stdafx.h"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						UsePrecompiledHeader="1"
+						PrecompiledHeaderThrough="stdafx.h"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						UsePrecompiledHeader="1"
+						PrecompiledHeaderThrough="stdafx.h"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1313,6 +2852,16 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="Debug64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="Release|Win32"
 					>
 					<Tool
@@ -1323,17 +2872,28 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="DebugAMD64|Win32"
+					Name="Release|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-						Optimization="0"
+						Optimization="2"
 						AdditionalIncludeDirectories=""
 						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1354,7 +2914,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="ReleaseAMD64|Win32"
+					Name="Release64|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1374,7 +2934,109 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="DebugIA64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="ReleaseIA64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseIA64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1398,6 +3060,16 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="Debug64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="Release|Win32"
 					>
 					<Tool
@@ -1408,18 +3080,25 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="DebugAMD64|Win32"
+					Name="Release|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
+						Optimization="2"
+						AdditionalIncludeDirectories="..\hdr;..\..\..\cl\hdr\hdr;..\..\..\cl\hdr\hdr_win;..\..\..\cl\hdr\hdr_unix_win;..\..\..\cl\clf\hdr_unix_win;..\..\..\gl\hdr\hdr;..\..\..\common\hdr\hdr;..\..\..\front\hdr\hdr"
+						PreprocessorDefinitions="NT_INTEL,INCLUDE_ALL_CL_PROTOS,NT_GENERIC,xCL_NO_AUTH_STRING_EXISTS,xCL_CA_LICENSE_CHECK,INGRESII"
 					/>
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|Win32"
 					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories="..\hdr;..\..\..\cl\hdr\hdr;..\..\..\cl\hdr\hdr_win;..\..\..\cl\hdr\hdr_unix_win;..\..\..\cl\clf\hdr_unix_win;..\..\..\gl\hdr\hdr;..\..\..\common\hdr\hdr;..\..\..\front\hdr\hdr"
+						PreprocessorDefinitions="NT_INTEL,INCLUDE_ALL_CL_PROTOS,NT_GENERIC,SEP,SEPDEBUG,xCL_NO_AUTH_STRING_EXISTS,xCL_CA_LICENSE_CHECK,INGRESII"
+						BasicRuntimeChecks="3"
+					/>
 					<Tool
 						Name="VCCLCompilerTool"
 						Optimization="0"
@@ -1439,7 +3118,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="ReleaseAMD64|Win32"
+					Name="Release64|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1459,7 +3138,109 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="DebugIA64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="ReleaseIA64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseIA64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories="..\hdr;..\..\..\cl\hdr\hdr;..\..\..\cl\hdr\hdr_win;..\..\..\cl\hdr\hdr_unix_win;..\..\..\cl\clf\hdr_unix_win;..\..\..\gl\hdr\hdr;..\..\..\common\hdr\hdr;..\..\..\front\hdr\hdr"
+						PreprocessorDefinitions="NT_INTEL,INCLUDE_ALL_CL_PROTOS,NT_GENERIC,xCL_NO_AUTH_STRING_EXISTS,xCL_CA_LICENSE_CHECK,INGRESII"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories="..\hdr;..\..\..\cl\hdr\hdr;..\..\..\cl\hdr\hdr_win;..\..\..\cl\hdr\hdr_unix_win;..\..\..\cl\clf\hdr_unix_win;..\..\..\gl\hdr\hdr;..\..\..\common\hdr\hdr;..\..\..\front\hdr\hdr"
+						PreprocessorDefinitions="NT_INTEL,INCLUDE_ALL_CL_PROTOS,NT_GENERIC,xCL_NO_AUTH_STRING_EXISTS,xCL_CA_LICENSE_CHECK,INGRESII"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories="..\hdr;..\..\..\cl\hdr\hdr;..\..\..\cl\hdr\hdr_win;..\..\..\cl\hdr\hdr_unix_win;..\..\..\cl\clf\hdr_unix_win;..\..\..\gl\hdr\hdr;..\..\..\common\hdr\hdr;..\..\..\front\hdr\hdr"
+						PreprocessorDefinitions="NT_INTEL,INCLUDE_ALL_CL_PROTOS,NT_GENERIC,SEP,SEPDEBUG,xCL_NO_AUTH_STRING_EXISTS,xCL_CA_LICENSE_CHECK,INGRESII"
+						BasicRuntimeChecks="3"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories="..\hdr;..\..\..\cl\hdr\hdr;..\..\..\cl\hdr\hdr_win;..\..\..\cl\hdr\hdr_unix_win;..\..\..\cl\clf\hdr_unix_win;..\..\..\gl\hdr\hdr;..\..\..\common\hdr\hdr;..\..\..\front\hdr\hdr"
+						PreprocessorDefinitions="NT_INTEL,INCLUDE_ALL_CL_PROTOS,NT_GENERIC,SEP,SEPDEBUG,xCL_NO_AUTH_STRING_EXISTS,xCL_CA_LICENSE_CHECK,INGRESII"
+						BasicRuntimeChecks="3"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="2"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1482,6 +3263,15 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="Debug64|x64"
+					>
+					<Tool
+						Name="VCResourceCompilerTool"
+						PreprocessorDefinitions=""
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="Release|Win32"
 					>
 					<Tool
@@ -1491,7 +3281,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="DebugAMD64|Win32"
+					Name="Release|x64"
 					>
 					<Tool
 						Name="VCResourceCompilerTool"
@@ -1509,6 +3299,15 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCResourceCompilerTool"
+						PreprocessorDefinitions=""
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="Release64|Win32"
 					>
 					<Tool
@@ -1518,7 +3317,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="ReleaseAMD64|Win32"
+					Name="Release64|x64"
 					>
 					<Tool
 						Name="VCResourceCompilerTool"
@@ -1536,7 +3335,97 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="DebugIA64|x64"
+					>
+					<Tool
+						Name="VCResourceCompilerTool"
+						PreprocessorDefinitions=""
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="ReleaseIA64|Win32"
+					>
+					<Tool
+						Name="VCResourceCompilerTool"
+						PreprocessorDefinitions=""
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseIA64|x64"
+					>
+					<Tool
+						Name="VCResourceCompilerTool"
+						PreprocessorDefinitions=""
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|Win32"
+					>
+					<Tool
+						Name="VCResourceCompilerTool"
+						PreprocessorDefinitions=""
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|x64"
+					>
+					<Tool
+						Name="VCResourceCompilerTool"
+						PreprocessorDefinitions=""
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|Win32"
+					>
+					<Tool
+						Name="VCResourceCompilerTool"
+						PreprocessorDefinitions=""
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|x64"
+					>
+					<Tool
+						Name="VCResourceCompilerTool"
+						PreprocessorDefinitions=""
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|Win32"
+					>
+					<Tool
+						Name="VCResourceCompilerTool"
+						PreprocessorDefinitions=""
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|Win32"
+					>
+					<Tool
+						Name="VCResourceCompilerTool"
+						PreprocessorDefinitions=""
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="DebugAMD64|x64"
+					>
+					<Tool
+						Name="VCResourceCompilerTool"
+						PreprocessorDefinitions=""
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseAMD64|x64"
 					>
 					<Tool
 						Name="VCResourceCompilerTool"

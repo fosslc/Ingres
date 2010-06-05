@@ -86,6 +86,10 @@ REM	    - Use windows NUL: rather than MK C:/nul.
 REM	    - Only set II_JDK_HOME stuff in include/lib paths if it's set
 REM	    (by the outside, it's not normally set).
 REM	    - .NET stuff is now in dotnet2_win, fix here.
+REM	07-Apr-2010 (drivi01)
+REM	     Add routines for setting up environment on x64.
+REM	     Use cygwin shell for the build instead of MKS shell.  MKS shell
+REM	     gets an error.
 REM
 
 :TRUNK_LOOP
@@ -115,9 +119,13 @@ if "%MSVCDir%"=="" SET INCLUDE=
 if "%MSVCDir%"=="" SET LIB=
 if "%MSVCDir%"=="" SET /P MSVCLoc=Root location of the Microsoft Visual Studio 2008 compiler (default is C:\Program Files\Microsoft Visual Studio 9.0): 
 if "%MSVCLoc%"=="" SET MSVCLoc=C:\Program Files\Microsoft Visual Studio 9.0
-if "%MSVCDir%"=="" call "%MSVCLoc%\Common7\Tools\vsvars32.bat"& set MSVCLoc=
-REM mt.exe seems to be there upon default vs2008 install
-if "%MT%"=="" SET MT="%WindowsSdkDir%\bin\mt.exe"
+if "%PROCESSOR_ARCHITECTURE%"=="AMD64" if not exist "%MSVCLoc%\VC\vcvarsall.bat" echo Invalid compiler path specified. & goto MSVC_LOOP
+if "%PROCESSOR_ARCHITECTURE%"=="AMD64" if "%MSVCDir%"=="" call "%MSVCLoc%\VC\vcvarsall.bat" amd64 & set MSVCLoc=
+if "%PROCESSOR_ARCHITECTURE%"=="x86" if not exist "%MSVCLoc%\Common7\Tools\vsvars32.bat" echo Invalid compiler path specified. & goto MSVC_LOOP
+if "%PROCESSOR_ARCHITECTURE%"=="x86" if "%MSVCDir%"=="" call "%MSVCLoc%\Common7\Tools\vsvars32.bat"& set MSVCLoc=
+@echo on
+if NOT "%WindowsSdkDir%"=="" if x%MT%==x SET MT="%WindowsSdkDir%\bin\mt.exe" & set PATH=%WindowsSdkDir%\bin;%PATH%
+@echo off
 goto OTHERS
 
 :OTHERS
@@ -173,13 +181,18 @@ goto SHELL_SET
 :GET_UNXLOC
 SET /P MKSLOC=Root location of the UNIX tools: 
 if not exist "%MKSLOC%\ls.exe" echo This location does not contain the appropriate set of UNIX tools.& goto GET_UNXLOC
-SET PATH=%MKSLOC%;%PATH%
+SET PATH=%WindowsSdkDir%\bin;%MKSLOC%;%PATH%
 
 :SHELL_SET
+@echo on
+if "%PROCESSOR_ARCHITECTURE%"=="AMD64" if "%USE_CYGWIN%"=="" SET /P SHELL=Full path to the cygwin shell (default C:\cygwin\bin\sh.exe):
+if "%PROCESSOR_ARCHITECTURE%"=="AMD64" if "%USE_CYGWIN%"=="" if "%SHELL%"=="" set SHELL=c:\cygwin\bin\sh.exe & goto AWK_SET
+if "%PROCESSOR_ARCHITECTURE%"=="AMD64" if "%USE_CYGWIN%"=="" if NOT "%SHELL%"=="" goto AWK_SET
 if exist "%MKSLOC%\sh.exe" SET SHELL=%MKSLOC%\sh.exe& goto AWK_SET
 if exist "%MKSLOC%\zsh.exe" SET SHELL=%MKSLOC%\zsh.exe
 
 :AWK_SET
+@echo off
 REM prefer gawk, as awk.exe on Cygwin is a symlink and cmd doesn't like it.
 if exist "%MKSLOC%\gawk.exe" SET AWK_CMD=gawk& goto MISC
 if exist "%MKSLOC%\awk.exe" SET AWK_CMD=awk

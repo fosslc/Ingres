@@ -1312,8 +1312,7 @@
 #	    cause gcc to generate -aux-info into <source>.aux.  (Obviously
 #	    this is a gcc extension.)  The aux-info data lists all function
 #	    declarations and definitions, and can be processed into a
-#	    massive cross-check of function typing across the system.
-#		
+#	    massive cross-check of function typing across the system.		
 #	24-Aug-2009 (bonro01)
 #	    Make the VERS override file optional.
 #	25-Aug-2009 (hanje04)
@@ -1382,6 +1381,10 @@
 #	    or REFERENCE_IN_DLL flags on individual files. The rule should be
 #	    called from Jamfiles/MANIFEST files and eliminates the need
 #	    for file specific cases in a switch statement in IILIBRARY.
+#	26-Apr-2010 (drivi01)
+#	    Add new rules for possible reverse-hybrid build on Windows
+#	    in a future and for pure 64-bit build.
+#	    Port existing rules that are reused to work on Windows.
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -1786,7 +1789,7 @@ rule IICOLFILES
     if $(NT)
     {
         IIBULKCOPY $(INGCOL) : $(<) ;
-	Clean clean : $(INGCOL)/$(<) ;
+	Clean clean : $(INGCOL)$(DFS)$(<) ;
     }
     else
     {
@@ -1795,10 +1798,10 @@ rule IICOLFILES
     }
    if $(VERSHB)
    {
-        BULK $(INGCOL)/$(SUFHB)		: $(<) ;
-        Depends $(<) : $(INGCOL)/$(SUFHB) ;
-        MkDir $(INGCOL)/$(SUFHB) ;
-        Clean clean : $(INGCOL)/$(SUFHB)/$(<) ;
+        BULK $(INGCOL)$(DFS)$(SUFHB)		: $(<) ;
+        Depends $(<) : $(INGCOL)$(DFS)$(SUFHB) ;
+        MkDir $(INGCOL)$(DFS)$(SUFHB) ;
+        Clean clean : $(INGCOL)$(DFS)$(SUFHB)$(DFS)$(<) ;
    }
 }
 
@@ -2330,7 +2333,7 @@ rule IIBINEXE
 			}
 			switch $(_o:S)
 			{
-			case *cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) $(WCHART) ;
+			case *cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) ;
 			case * : CCFLAGS on $(_g) += $(CMPORTS) ;
 			}
 		}
@@ -2344,6 +2347,59 @@ rule IIBINEXE
 	Clean clean : $(<:S=.$(EXESFX)) $(<:S=.map) 
                       $(<:S=.$(LIBSFX)) $(<:S=.exp)
 		      $(<:S=.pdb) $(<:S=.ilk) $(<:S=.$(EXESFX)).manifest ;
+
+	if $(VERSHB)
+	{
+    	  	MainHB $(<) : $(>) ;
+		local _o _g ;
+		for _o in $(>)	
+		{
+			_g = [ FGristFiles $(SUFHB)$(DFS)$(_o:S=$(SUFOBJ)) ] ;
+			switch $(_g)
+			{
+				case *front*abf*impexp*	   	: CMPORTS = $(PORTIMP) ;
+				case *front*embed*cobol*        : CMPORTS = $(PORTIMP) ;
+				case *testtool*sep*listexec* 	: CMPORTS = $(PORTIMP) ;
+				case *testtool*sep*sep*		: CMPORTS = $(PORTIMP) ;
+				case *common*aif*demo*          : CMPORTS = $(PORTIMP) ;
+				case *common*aif*ait*		: CMPORTS = $(PORTIMP) ;
+				case *common*gcf*gcd*		: CMPORTS = $(PORTIMP) ;
+				case *common*gcf*gcc*		: CMPORTS = $(PORTIMP) ;
+				case *back*ascf*ascd*		: CMPORTS = $(PORTREF) ;
+			        case *front*misc*impxml*	: CMPORTS = $(PORTIMP) ;
+				case *dbutil*duf*		: CMPORTS = $(PORTIMP) ;
+				case *front*dict*dictutil*	: CMPORTS = $(PORTIMP) ;
+				case *front*st*ipm*		: CMPORTS = $(PORTIMP) ;
+				case *front*misc*		: CMPORTS = $(PORTIMP) ;
+				case *front*tm*			: CMPORTS = $(PORTIMP) ;
+				case *cl*clf*er*		: CMPORTS = $(PORTIMP) ;
+				case *				: CMPORTS = "" ;
+			}
+			switch $(_o:S)
+			{
+			case *cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) ;
+			case * : CCFLAGS on $(_g) += $(CMPORTS) ;
+			}
+		}
+
+	LINK on $(SUFHB)$(DFS)$(<:S=$(SUFEXE)) = $(LINK32) ;
+	LINKFLAGS on $(SUFHB)$(DFS)$(<:S=$(SUFEXE)) = $(LINKFLAGS32) ;
+	LIBP on $(SUFHB)$(DFS)$(<:S=$(SUFEXE)) = $(LIB32) $(SDK32) ;
+	LINKLIBS on $(SUFHB)$(DFS)$(<:S=$(SUFEXE)) = $(LINKLIBS32) ;
+
+	LOCATE on $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) = $(INGBIN) ; 
+	LOCATE on $(SUFHB)$(DFS)$(<:S=.map) = $(INGBIN) ; 
+	LOCATE on $(SUFHB)$(DFS)$(<:S=.$(LIBSFX)) = $(INGBIN) ; 
+	LOCATE on $(SUFHB)$(DFS)$(<:S=.exp) = $(INGBIN) ; 
+	LOCATE on $(SUFHB)$(DFS)$(<:S=.pdb) = $(INGBIN) ; 
+	LOCATE on $(SUFHB)$(DFS)$(<:S=.ilk) = $(INGBIN) ; 
+	LOCATE on $(SUFHB)$(DFS)$(<:S=.$(EXESFX)).manifest = $(INGBIN) ; 
+	Clean clean : $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) $(SUFHB)$(DFS)$(<:S=.map) 
+                      $(SUFHB)$(DFS)$(<:S=.$(LIBSFX)) $(SUFHB)$(DFS)$(<:S=.exp)
+		      $(SUFHB)$(DFS)$(<:S=.pdb) $(SUFHB)$(DFS)$(<:S=.ilk) 
+		      $(SUFHB)$(DFS)$(<:S=.$(EXESFX)).manifest ;
+
+	}
 	}
 	else	
 	{
@@ -2369,36 +2425,36 @@ rule IIBINEXE
           }
 	}
 
-       if $(VERSHB)
+       if $(VERSHB) && ! $(NT)
        {
     	  MainHB $(<) : $(>) ;
           if $(<) = icesvr && $(VERS64) = r64_us5
           {
-          LINKFLAGS on $(SUFHB)/$(<) = $(CCLDMACHHB) $(LD_ICE_FLAGS) ;
+          LINKFLAGS on $(SUFHB)$(DFS)$(<) = $(CCLDMACHHB) $(LD_ICE_FLAGS) ;
           }
-    	  LOCATE on $(SUFHB)/$(<) = $(INGBIN) ;
+    	  LOCATE on $(SUFHB)$(DFS)$(<) = $(INGBIN) ;
           for _p in $(>)
           {
-              local _s = [ FGristFiles $(SUFHB)/$(_p) ] ;
+              local _s = [ FGristFiles $(SUFHB)$(DFS)$(_p) ] ;
               OPTIM on $(_s:S=$(SUFOBJ)) ?= $(IIOPTIM) ;
           }
-    	  IICCFLAGS $(SUFHB)/$(>:S=$(SUFOBJ)) : CCPICFLAG ;
-    	  Depends $(SUFHB)/$(<) : $(INGBIN)/$(SUFHB) ;
-    	  MkDir $(INGBIN)/$(SUFHB) ;
+    	  IICCFLAGS $(SUFHB)$(DFS)$(>:S=$(SUFOBJ)) : CCPICFLAG ;
+    	  Depends $(SUFHB)$(DFS)$(<) : $(INGBIN)$(DFS)$(SUFHB) ;
+    	  MkDir $(INGBIN)$(DFS)$(SUFHB) ;
 
     	  switch $(>:S)
     	  {
     		case .cpp :
-		LINK on $(SUFHB)/$(<) = $(C++) ;
+		LINK on $(SUFHB)$(DFS)$(<) = $(C++) ;
      	  }
 	}
 }
 
 rule MainHB
 {
-    MainFromObjects $(SUFHB)/$(<) : $(SUFHB)/$(>:S=$(SUFOBJ)) ;
-    ObjectsHB $(SUFHB)/$(>) ;
-    LINKFLAGS on $(SUFHB)/$(<:$(SUFOBJ)) += $(CCLDMACHHB) $(LDLIBMACHHB) ;
+    MainFromObjects $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(>:S=$(SUFOBJ)) ;
+    ObjectsHB $(SUFHB)$(DFS)$(>) ;
+    LINKFLAGS on $(SUFHB)$(DFS)$(<:$(SUFOBJ)) += $(CCLDMACHHB) $(LDLIBMACHHB) ;
 }
 
 rule IIICEBINEXE
@@ -2420,18 +2476,26 @@ rule IIICEBINEXE
         }
 	IICCFLAGS $(>:S=$(SUFOBJ)) : CCPICFLAG ;
 
-	if $(VERSHB)
+	if $(VERSHB) && ! $(NT)
 	{
     	MainHB $(<) : $(>) ;
-    	LOCATE on $(SUFHB)/$(<) = $(INGICE)/bin ;
+    	LOCATE on $(SUFHB)$(DFS)$(<) = $(INGICE)$(DFS)bin ;
         for _p in $(>)
         {
-           local _s = [ FGristFiles $(SUFHB)/$(_p) ] ;
+           local _s = [ FGristFiles $(SUFHB)$(DFS)$(_p) ] ;
            OPTIM on $(_s:S=$(SUFOBJ)) ?= $(IIOPTIM) ;
         }
-    	IICCFLAGS $(SUFHB)/$(>:S=$(SUFOBJ)) : CCPICFLAG ;
-    	Depends $(<) : $(INGICE)/bin/$(SUFHB) ;
-    	MkDir $(INGICE)/bin/$(SUFHB) ;
+    	IICCFLAGS $(SUFHB)$(DFS)$(>:S=$(SUFOBJ)) : CCPICFLAG ;
+    	Depends $(<) : $(INGICE)$(DFS)bin$(DFS)$(SUFHB) ;
+    	MkDir $(INGICE)$(DFS)bin$(DFS)$(SUFHB) ;
+
+	if $(NT) 
+	{
+	LINK on $(SUFHB)$(DFS)$(<:S=$(SUFEXE)) = $(LINK32) ;
+	LINKFLAGS on $(SUFHB)$(DFS)$(<:S=$(SUFEXE)) = $(LINKFLAGS32) ;
+	LINKLIBS on $(SUFHB)$(DFS)$(<:S=$(SUFEXE)) = $(LINKLIBS32) ;
+	LIBP on $(SUFHB)$(DFS)$(<:S=$(SUFEXE)) = $(LIB32) $(SDK32) ;
+	}
 	}
 }
 
@@ -2529,7 +2593,7 @@ rule IITOOLSEXE
 		}
 		switch $(_o:S)
 		{
-		case *.cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) $(WCHART) ;
+		case *.cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) ;
 		case * : CCFLAGS on $(_g) += $(CMPORTS) ;
 		}
 	}
@@ -2555,10 +2619,18 @@ rule IITOOLSEXE
 
    if $(VERSHB)
    {
-     MainHB $(<) : $(>) ;
-     LOCATE on $(SUFHB)/$(<:S=$(SUFEXE)) = $(INGTOOLSBIN) ;
-     Depends $(<) : $(INGTOOLSBIN)/$(SUFHB) ;
-     MkDir $(INGTOOLSBIN)/$(SUFHB) ;
+     MainHB $(<:S=$(SUFEXE)) : $(>) ;
+     LOCATE on $(SUFHB)$(DFS)$(<:S=$(SUFEXE)) = $(INGTOOLSBIN) ;
+     Depends $(SUFHB)$(DFS)$(<:S=$(SUFEXE)) : $(INGTOOLSBIN)$(DFS)$(SUFHB) ;
+     MkDir $(INGTOOLSBIN)$(DFS)$(SUFHB) ;
+
+     if $(NT)
+     {
+	LINK on $(SUFHB)$(DFS)$(<:S=$(SUFEXE)) = $(LINK32) ;
+	LINKFLAGS on $(SUFHB)$(DFS)$(<:S=$(SUFEXE)) = $(LINKFLAGS32) ;
+	LIBP on $(SUFHB)$(DFS)$(<:S=$(SUFEXE)) = $(LIB32) $(SDK32) ;
+	LINKLIBS on $(SUFHB)$(DFS)$(<:S=$(SUFEXE)) = $(LINKLIBS32) ;
+     }
    }
 
 }
@@ -2601,7 +2673,7 @@ rule IIUTILEXE
 		}
 		switch $(_o:S)
 		{
-		case *.cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) $(WCHART) ;
+		case *.cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) ;
 		case * : CCFLAGS on $(_g) += $(CMPORTS) ;
 		}
 		
@@ -2616,6 +2688,62 @@ rule IIUTILEXE
 	Clean clean : $(<:S=.$(EXESFX)) $(<:S=.map) 
                       $(<:S=.$(LIBSFX)) $(<:S=.exp)
 		      $(<:S=.pdb) $(<:S=.ilk) $(<:S=.$(EXESFX)).manifest ;
+
+
+	if $(VERSHB)
+	{
+		local _o _g ;	
+		MainHB $(<) : $(>) ;
+		switch $(<)
+		{
+		case aducompile*	: DEPENDS $(SUFHB)$(DFS)$(<) : $(SHULFLIBHB) $(SHULFLIBDATAHB) 
+							$(SHSCFLIBHB) $(SHSCFLIBDATAHB) 
+							$(SHDMFLIBHB) $(SHDMFLIBDATAHB) 
+							$(SHPSFLIBHB) ;
+		case compform*		: DEPENDS $(SUFHB)$(DFS)$(<) : $(SHDMFLIBHB) $(SHDMFLIBDATAHB) 
+							$(SHPSFLIBHB) ;
+		}	
+
+		for _o in $(>)	
+		{
+			_g = [ FGristFiles $(SUFHB)$(DFS)$(_o:S=$(SUFOBJ)) ] ;
+			switch $(_g)
+			{
+			case *common*adf*adl*	   : CMPORTS = $(PORTIMP) ;
+			case UNI*		   : C++ on $(SUFHB)$(DFS)$(_g:S=$(SUFOBJ)) = $(CC32) ;
+			case *			   : CMPORTS = $(PORTIMP) ;
+	
+			}
+			switch $(_o:S)
+			{
+			case *.cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) ;
+				     C++ on $(_g) = $(CC32) ;
+			case * : CCFLAGS on $(_g) += $(CMPORTS) ;
+			}
+		
+		}
+		DEPENDS $(SUFHB)$(DFS)$(<:S=$(SUFEXE)) : $(INGUTIL)$(DFS)$(SUFHB) ;
+		MkDir $(INGUTIL)$(DFS)$(SUFHB) ;
+		LINK on $(SUFHB)$(DFS)$(<:S=$(SUFEXE)) = $(LINK32) ;
+		LINKFLAGS on $(SUFHB)$(DFS)$(<:S=$(SUFEXE)) = $(LINKFLAGS32) ;
+		LIBP on $(SUFHB)$(DFS)$(<:S=$(SUFEXE)) = $(LIB32) $(SDK32) ;
+		LINKLIBS on $(SUFHB)$(DFS)$(<:S=$(SUFEXE)) = $(LINKLIBS32) ; 
+
+		LOCATE on $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) = $(INGUTIL) ; 
+		LOCATE on $(SUFHB)$(DFS)$(<:S=.map) = $(INGUTIL) ; 
+		LOCATE on $(SUFHB)$(DFS)$(<:S=.$(LIBSFX)) = $(INGUTIL) ; 
+		LOCATE on $(SUFHB)$(DFS)$(<:S=.exp) = $(INGUTIL) ; 
+		LOCATE on $(SUFHB)$(DFS)$(<:S=.pdb) = $(INGUTIL) ; 
+		LOCATE on $(SUFHB)$(DFS)$(<:S=.ilk) = $(INGUTIL) ; 
+		LOCATE on $(SUFHB)$(DFS)$(<:S=.$(EXESFX)).manifest = $(INGUTIL) ; 
+		Clean clean : $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) $(SUFHB)$(DFS)$(<:S=.map) 
+                      $(SUFHB)$(DFS)$(<:S=.$(LIBSFX)) $(SUFHB)$(DFS)$(<:S=.exp)
+		      $(SUFHB)$(DFS)$(<:S=.pdb) $(SUFHB)$(DFS)$(<:S=.ilk) 
+		      $(SUFHB)$(DFS)$(<:S=.$(EXESFX)).manifest ;
+
+
+	}
+
 	}
 	else
 	{
@@ -2638,23 +2766,23 @@ rule IIUTILEXE
           }
 	}
 
-	if $(VERSHB)
+	if $(VERSHB) && ! $(NT)
 	{
     	  MainHB $(<) : $(>) ;
-    	  LOCATE on $(SUFHB)/$(<) = $(INGUTIL) ;
+    	  LOCATE on $(SUFHB)$(DFS)$(<) = $(INGUTIL) ;
           for _p in $(>)
           {
-              local _s = [ FGristFiles $(SUFHB)/$(_p) ] ;
+              local _s = [ FGristFiles $(SUFHB)$(DFS)$(_p) ] ;
               OPTIM on $(_s:S=$(SUFOBJ)) ?= $(IIOPTIM) ;
           }
-    	  IICCFLAGS $(SUFHB)/$(>:S=$(SUFOBJ)) : CCPICFLAG ;
-    	  Depends $(<) : $(INGUTIL)/$(SUFHB) ;
-    	  MkDir $(INGUTIL)/$(SUFHB) ;
+    	  IICCFLAGS $(SUFHB)$(DFS)$(>:S=$(SUFOBJ)) : CCPICFLAG ;
+    	  Depends $(<) : $(INGUTIL)$(DFS)$(SUFHB) ;
+    	  MkDir $(INGUTIL)$(DFS)$(SUFHB) ;
 
     	  switch $(>:S)
     	  {
     	    case .cpp :
-		LINK on $(SUFHB)/$(<) = $(C++) ;
+		LINK on $(SUFHB)$(DFS)$(<) = $(C++) ;
     	  }
 	}
 }
@@ -2674,7 +2802,7 @@ rule IITOOLSWNTEXE
 		}
 		switch $(_o:S)
 		{
-		case *cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) $(WCHART) ;
+		case *cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) ;
 		case * : CCFLAGS on $(_g) += $(CMPORTS) ;
 		}
 	}
@@ -2887,6 +3015,16 @@ rule IIKRB5OBJECTS
              LIBOBJECT $(_t) : $(i) ;
              LOCATE on $(_t) = $(INGLIB) ;
              Clean clean : $(_t) ;
+
+	     if $(VERSHB)
+	     {
+		local _t = $(SUFHB)$(DFS)$(i:S=$(SUFOBJ)) ;
+		CCFLAGS on $(_t) += $(PORTREF) ;
+		DEPENDS files : $(_t) ;
+		LIBOBJECT $(_t) : $(i) ;
+		LOCATE on $(_t) = $(INGLIB) ;
+		Clean clean : $(_t) ;
+	     }
         }
     }
 }
@@ -3355,6 +3493,208 @@ rule IINEEDLIBS
 			     LIBS $(<) : $($(l)) ;
 
  		}
+
+		if $(VERSHB)
+		{
+			switch $(l)
+			{  
+			case DMFLIB :
+			     local SUFLIB = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l):S=.$(SLSFX)) ;
+	  	             INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l)DATA:S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)DATA) ;
+			case ULFLIB :
+			     local SUFLIB = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l):S=.$(SLSFX)) ;
+	  	             INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l)DATA:S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)DATA) ;
+			case SCFLIB :
+			     local SUFLIB = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l):S=.$(SLSFX)) ;
+	  	             INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l)DATA:S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)DATA) ;
+			case QEFLIB :
+			     local SUFLIB = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l):S=.$(SLSFX)) ;
+	  	             INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l)DATA:S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)DATA) ;
+			case GCFLIB :
+			     local SUFLIB = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l):S=.$(SLSFX)) ;
+	  	             INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l)DATA:S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)DATA) ;
+			case SXFLIB :
+			     local SUFLIB = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l):S=.$(SLSFX)) ;
+	  	             INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l)DATA:S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)DATA) ;
+			case GWFLIB :
+			     local SUFLIB = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l):S=.$(SLSFX)) ;
+	  	             INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l)DATA:S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)DATA) ;
+			case OPFLIB :
+			     local SUFLIB = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l):S=.$(SLSFX)) ;
+	  	             INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l)DATA:S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)DATA) ;
+			case QSFLIB :
+			     local SUFLIB = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(SH$(l):S=.$(SLSFX)) ;
+	  	             INCLUDES $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(SH$(l)DATA:S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)DATA) ;
+			case RDFLIB :
+			     local SUFLIB = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l):S=.$(SLSFX)) ;
+	  	             INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l)DATA:S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)DATA) ;
+			case TPFLIB :
+			     local SUFLIB = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l):S=.$(SLSFX)) ;
+	  	             INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l)DATA:S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)DATA) ;
+			case RQFLIB :
+			     local SUFLIB = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l):S=.$(SLSFX)) ;
+	  	             INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l)DATA:S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)DATA) ;
+			case PSFLIB :
+			     local SUFLIB = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l):S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)) ;
+ 			case APILIB :
+ 			     local SUFLIB = .$(LIBSFX) ;
+ 			     switch $(_g)
+ 			     {
+ 				case *common*aif*demo* : DEPENDS $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$($(l)) ;
+     			 			         LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$($(l)) ;
+ 				case * : INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l):S=.$(SLSFX)) ;
+			     		 LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)) ;
+ 			     }
+			case ICELIB :
+			     local SUFLIB = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l):S=.$(SLSFX)) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l)DATA:S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)DATA) ;
+ 			case ICEAPILIB :
+			     local SUFLIB = .$(LIBSFX) ;
+ 			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l):S=.$(SLSFX)) ;
+ 			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)) ;	
+			case ADFLIB : 
+			     local SUFLIB = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l):S=.$(SLSFX)) ;
+	  	             INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l)DATA:S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)DATA) ;
+			case ULFLIB :
+			     local SUFLIB = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l):S=.$(SLSFX)) ;
+	  	             INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l)DATA:S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)DATA) ;
+			case CUFLIB :
+			     local SUFLIB = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l):S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMP$(l)) ;
+			case COMPAT :
+			     local SUFLIB  = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l):S=.$(SLSFX)) ;
+	  	             INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l)DATA:S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(SH$(l)) ;
+ 			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(SH$(l)DATA) ;
+			case COMPAT* :	     
+			     local SUFLIB  = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l):S=.$(SLSFX)) ;
+	  	             INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$(SH$(l)DATA:S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(SH$(l)) ;
+ 			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(SH$(l)DATA) ;
+
+ 			case C_APILIB : LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$($(l)) ;
+			case NETAPILIB : LIBS $(SUFHB)$(DFS)$(<) : $($(l)) ;
+			case *APILIB :
+			     local SUFLIB  = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$($(l):S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$($(l)) ;
+			case *PSFLIB :
+			     local SUFLIB  = .$(LIBSFX) ;
+     			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$($(l):S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$($(l)) ;
+			case *CUFLIB :
+			     local SUFLIB  = .$(LIBSFX) ;
+     			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$($(l):S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$($(l)) ;
+			case *NEWORDERLIB :
+			     local SUFLIB  = .$(LIBSFX) ;
+     			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$($(l):S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$($(l)) ;
+			case SHXERCESLIB :
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$($(l)) ;
+			case SH*LIB* : 
+			     local SUFLIB  = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$($(l)DATA:S=.$(SLSFX)) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$($(l):S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$($(l)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$($(l)DATA) ;
+			     SEARCH on $(SUFHB)$(DFS)$($(l)) = $(INGBIN) ;
+			     SEARCH on $(SUFHB)$(DFS)$($(l)DATA) = $(INGBIN) ;
+			     SEARCH on $(SUFHB)$(DFS)$($(l):S=.$(LIBSFX)) = $(INGLIB) ;
+			     SEARCH on $(SUFHB)$(DFS)$($(l)DATA:S=.$(LIBSFX)) = $(INGLIB) ;
+			case IMP*DATA :
+			     local SUFLIB = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$($(l)) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$($(l):S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$($(l)) ;
+			case IMPEXPLIB : 
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$($(l)) ;
+			case IMPXMLLIB :
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$($(l)) ;
+			case IMP* :
+			     local SUFLIB = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$($(l)) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$($(l):S=.$(SLSFX)) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$($(l):B)data.$(SLSFX) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$($(l)) ;
+			case *32* : LIBS $(SUFHB)$(DFS)$(<) : $($(l)) ;
+			case MSILIB : LIBS $(SUFHB)$(DFS)$(<) : $($(l)) ;
+			case ODBCLIB* : LIBS $(SUFHB)$(DFS)$(<) : $($(l)) ;
+			case GDILIB : LIBS $(SUFHB)$(DFS)$(<) : $($(l)) ;
+			case VERSIONLIB : LIBS $(SUFHB)$(DFS)$(<) : $($(l)) ;
+			case NETAPILIB : LIBS $(SUFHB)$(DFS)$(<) : $($(l)) ;
+			case RPCLIB : LIBS $(SUFHB)$(DFS)$(<) : $($(l)) ;
+			case HTMLHELPLIB : LIBS $(SUFHB)$(DFS)$(<) : $($(l)) ;
+			case CLUSAPI : LIBS $(SUFHB)$(DFS)$(<) : $($(l)) ;
+			case MORELIB : LIBS $(SUFHB)$(DFS)$(<) : $($(l)) ;
+			case SYS*LIB : LIBS $(SUFHB)$(DFS)$(<) : $($(l)) ;
+			case *MMLIB : LIBS $(<) : $($(l)) ;
+			case *LIB :
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$($(l)) ;
+			case * :
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$($(l)) ;
+
+			SEARCH on $(SUFHB)$(DFS)$(SH$(l):S=.$(SLSFX)) = $(INGBIN) ;
+			SEARCH on $(SUFHB)$(DFS)$(SH$(l)DATA:S=.$(SLSFX)) = $(INGBIN) ;
+			SEARCH on $(SUFHB)$(DFS)$(SH$(l)) = $(INGLIB) ;
+			SEARCH on $(SUFHB)$(DFS)$(SH$(l)DATA) = $(INGLIB) ;
+			SEARCH on $(SUFHB)$(DFS)$(SH$(l):S=.$(LIBSFX)) = $(INGLIB) ;
+			SEARCH on $(SUFHB)$(DFS)$(SH$(l)DATA:S=.$(LIBSFX)) = $(INGLIB) ;
+		        SEARCH on $(SUFHB)$(DFS)$(l) = $(INGBIN) ;
+
+ 		}
+		}
+
 			SEARCH on $(SH$(l):S=.$(SLSFX)) = $(INGBIN) ;
 			SEARCH on $(SH$(l)DATA:S=.$(SLSFX)) = $(INGBIN) ;
 			SEARCH on $(SH$(l)) = $(INGLIB) ;
@@ -3540,6 +3880,31 @@ rule IINEEDLIBSW
 			     LIBS $(<) : $($(l)) ;
 
 		} #switch $(l)
+
+
+		if $(VERSHB)
+		{
+ 	    		_g = [ FGristFiles $(SUFHB)$(DFS)$(l:S=$(SUFOBJ)) ] ;
+	    		if ! $(l) { ECHO $(l) "UNDEFINED" ; }
+	
+			switch $(l)
+			{
+			case SHCUFLIB* :
+			     local SUFLIB  = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$($(l)DATA:S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$($(l)) ;
+			case SH*LIB* : 
+			     local SUFLIB  = .$(LIBSFX) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$($(l)DATA:S=.$(SLSFX)) ;
+			     INCLUDES $(SUFHB)$(DFS)$(<:S=.$(EXESFX)) : $(SUFHB)$(DFS)$($(l):S=.$(SLSFX)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$($(l)) ;
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$($(l)DATA) ;
+			case * :
+			     LIBS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$($(l)) ;
+
+			} #switch $(l)
+		} #if $(VERSHB)
+
 	    }  #for l in $(>) 
 
 	} #if $(NT)
@@ -3559,9 +3924,19 @@ rule IINEEDOBJ
 			case *dll : _m = $(<:S=.$(SLSFX)) ;
 			case * 	  : _m = $(<:S=.$(EXESFX)) ;
 		}
-	DEPENDS $(_m) : $(_t:S=$(SUFOBJ)) ;
-	NEEDOBJ on $(_m) += $(_t:S=$(SUFOBJ):G=) ;
-	SEARCH on $(_t:S=$(SUFOBJ):G=) = $(INGLIB) ;
+		DEPENDS $(_m) : $(_t:S=$(SUFOBJ)) ;
+		NEEDOBJ on $(_m) += $(_t:S=$(SUFOBJ):G=) ;
+		SEARCH on $(_t:S=$(SUFOBJ):G=) = $(INGLIB) ;
+		if $(VERSHB)
+		{
+		DEPENDS $(SUFHB)$(DFS)$(_m) : $(SUFHB)$(DFS)$(_t:S=$(SUFOBJ)) ;
+		NEEDOBJ on $(SUFHB)$(DFS)$(_m) += $(SUFHB)$(DFS)$(_t:S=$(SUFOBJ):G=) ;
+		SEARCH on $(SUFHB)$(DFS)$(_t:S=$(SUFOBJ):G=) = $(INGLIB) ;
+		DEPENDS obj : $(SUFHB)$(DFS)$(_t:S=$(SUFOBJ)) ;
+		
+		CC on $(SUFHB)$(DFS)$(_t:S=$(SUFOBJ)) = $(CC32) ;
+		CCFLAGS on $(SUFHB)$(DFS)$(_t:S=$(SUFOBJ)) = $(CCFLAGSHB) ;
+		}
 	}
 
      }
@@ -4009,7 +4384,7 @@ rule IILIBRARY
 			}
 			switch $(_o:S)
 			{
-			case *cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) $(WCHART) ;
+			case *cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) ;
 			case * : CCFLAGS on $(_g) += $(CMPORTS) ;
 			}
 			CMPORTS = "" ;
@@ -4040,6 +4415,101 @@ rule IILIBRARY
 	LOCATE on $($(<)) = $(INGLIB) ;
 	MODE on $($(<)) = $(LIBMODE) ;
 	Chmod $($(<)) ;
+
+
+	if $(VERSHB) && $(<) != "COMMONMMLIB"
+	{
+		local _o _g ;
+		
+
+	    	if ! $($(<)HB) { ECHO $(<)HB "UNDEFINED" ; }
+
+		switch $(<)
+		{
+				case IMP*DATA : 
+						DEPENDS $(SUFHB)$(DFS)$($(<)) : $(SUFHB)$(DFS)$($(<)L) ;
+						ImpLibraryHB $(SUFHB)$(DFS)$($(<)) : $(SUFHB)$(DFS)$(>) ;
+						RegLibraryHB $(SUFHB)$(DFS)$($(<)L) : $(SUFHB)$(DFS)$(>) ; 
+                		                Clean clean : $(SUFHB)$(DFS)$($(<)) $(SUFHB)$(DFS)$($(<)L) ;
+						LOCATE on $(SUFHB)$(DFS)$($(<)L) = $(INGLIB) ;
+						SEARCH on $(SUFHB)$(DFS)$($(<)L) = $(INGLIB) ;
+						SEARCH on $(SUFHB)$(DFS)$($(<)) = $(INGLIB) ;
+				
+				case ODBC* : 
+						LINKLIBS on $($(<)HB) = $(DLLFLAGSNV) ;
+						LibraryHB $(<) : $(>) ;
+						Clean clean : $(SUFHB)$(DFS)$($(<)) ;		
+
+				case * : 
+						LibraryHB $(<) : $(>) ;
+                                    		Clean clean : $(<) ;
+		}
+
+
+		for _o in $(>)	
+		{
+			_g = [ FGristFiles $(SUFHB)$(DFS)$(_o:S=$(SUFOBJ)) ] ;
+			if $($(_g)) != TRUE
+			{
+			switch $(_g)
+			{
+			case *front*st*enterprise_dll_win*	: CMPORTS = $(PORTIMP) ;
+			case *cl*clf*		   : CMPORTS = $(PORTREF) ;
+			case *gl*glf*		   : CMPORTS = $(PORTREF) ;
+			case *dbutil*duf*duc* 	   : CMPORTS = $(PORTIMP) ;
+
+			case *common*aif*ait*	   : CMPORTS = $(PORTIMP) ;
+ 			case *common*aif*demo*     : CMPORTS = $(PORTIMP) ;	
+			case *common*odbc*driver*  : CMPORTS = $(PORTIMP) ;
+			case *common*odbc*manager*  : CMPORTS = $(PORTIMP) ;
+			case *common*gcf*gcn*gcnsreg*		: CMPORTS = $(PORTREF) ; 
+			case *common*gcf*gcn* 	   : CMPORTS = $(PORTIMP) ; 
+			case *common*gcf*gcd* 	   : CMPORTS = $(PORTIMP) ; 
+			case *common*gcf*gcc* 	   : CMPORTS = $(PORTIMP) ; 
+			case *common*ddf*	   : CMPORTS = $(PORTIMP) ; 
+			case *common*		   : CMPORTS = $(PORTREF) ;
+
+			case *back*psf*yacc*	   : CMPORTS = $(PORTIMP) ;		
+			case *back*		   : CMPORTS = $(PORTREF) ;
+		
+			case *front*embed*equel*   : CMPORTS = $(PORTREF) ;
+			case *front*embed*libq*	   : CMPORTS = $(PORTREF) ;
+			case *front*embed*ada*	   : CMPORTS = $(PORTIMP) ;
+			case *front*embed*fortran* : CMPORTS = $(PORTIMP) ;
+			case *front*abf*quel*	   : CMPORTS = $(PORTREF) ;
+			case *front*abf*impexp*	   : CMPORTS = $(PORTIMP) ;
+			case *front*abf*osl*	   : CMPORTS = $(PORTREF) ;
+			case *front*abf*abfrt*util* : CMPORTS = $(PORTIMP) ;
+			case *front*abf*sql*sql*   : CMPORTS = $(PORTREF) ;
+			case *front*embed*copy*	   : CMPORTS = $(PORTREF) ;
+			case *front*embed*c*	   : CMPORTS = $(PORTIMP) ; 
+			case *front*embed* 	   : CMPORTS = $(PORTREF) ; 
+			case *front*frontcl*	   : CMPORTS = $(PORTREF) ;
+			case *front*tm*qr*	   : CMPORTS = $(PORTREF) ;
+			case *front*utils*	   : CMPORTS = $(PORTREF) ; 
+			case *front*frame*compfrm* : CMPORTS = $(PORTIMP) ;
+			case *front*frame*	   : CMPORTS = $(PORTREF) ;
+			case *gateway*  : CMPORTS = $(PORTIMP) ;
+			case *front*st*install*			: CMPORTS = $(PORTIMP) ;
+								  HDRS on $(_g) += $(SEARCH_SOURCE) ;
+			case *			   : CMPORTS = $(PORTIMP) ;
+				
+			}
+			}
+			switch $(_o:S)
+			{
+			case *cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) ;
+			case * : CCFLAGS on $(_g) += $(CMPORTS) ;
+
+			}
+			CMPORTS = "" ;
+		}
+
+	LOCATE on $($(<)HB) = $(INGLIB) ;
+	SEARCH on $($(<)HB) = $(INGLIB) ;
+	MODE on $($(<)HB) = $(LIBMODE) ;
+	Chmod $($(<)) ;
+	}
 	
 	}
 	else
@@ -4102,7 +4572,9 @@ rule IILIBRARY
             IICCFLAGS $(>:S=$(SUFOBJ)) : CCPICFLAG ;
 	}
 
-	if $(VERSHB)
+	if ! $(NT)
+	{
+	if $(VERSHB) 
 	{
 #	    LibraryHB $(<) : $(>) ;
 	    switch $(<)
@@ -4155,20 +4627,35 @@ rule IILIBRARY
 	    }
 		IICCFLAGS $(SUFHB)/$(>:S=$(SUFOBJ)) : CCPICFLAG ;
 	}
+	}
 
 }
 
 rule LibraryHB
 {
-	LibraryFromObjects $($(<)HB) : $(SUFHB)/$(>:S=$(SUFOBJ)) ;
-        if $(VERS64) = r64_us5
-        {
-          AR on $($(<)HB)  = ar -X64 ru ;
-          RANLIB on $($(<)HB) = ranlib -X64 ;
-        }
-	ObjectsHB $(SUFHB)/$(>) ;
-	Depends $($(<)HB) : $($(<)HB:D) ;
-	MkDir $($(<)HB:D) ;
+	if $(NT)
+	{
+		LibraryFromObjects $($(<)HB) : $(SUFHB)$(DFS)$(>:S=$(SUFOBJ)) ;
+		if $(VERS32) = int_w32
+		{
+			AR on $($(<)HB) = $(AR32) ;
+		}
+		ObjectsHB $(SUFHB)$(DFS)$(>) ;
+		Depends $($(<)HB) : $(INGLIBHB) ;
+		MkDir $(INGLIBHB) ;
+	}
+	else
+	{
+		LibraryFromObjects $($(<)HB) : $(SUFHB)$(DFS)$(>:S=$(SUFOBJ)) ;
+        	if $(config_string) = r64_us5
+        	{
+          	  AR on $($(<)HB) = ar -X64 ru ;
+          	  RANLIB on $($(<)HB) = ranlib -X64 ;
+        	}
+		ObjectsHB $(SUFHB)$(DFS)$(>) ;
+		Depends $($(<)HB) : $($(<)HB:D) ;
+		MkDir $($(<)HB:D) ;
+	}
 }
 
 rule ObjectsHB
@@ -4178,6 +4665,11 @@ rule ObjectsHB
         for _i in [ FGristFiles $(<) ]
         {
                 Object $(_i:S=$(SUFOBJ)) : <$(SOURCE_GRIST)!$(SUFHB)>$(_i:BS) ;
+		if $(VERS32) = int_w32
+		{
+	  	  CC on $(_i:S=$(SUFOBJ)) = $(CC32) ;
+		  C++ on $(_i:S=$(SUFOBJ)) = $(CC32) ;
+		}
                 Depends obj : $(_i:S=$(SUFOBJ)) ;
 		switch $(_i:S)
 		{
@@ -4216,8 +4708,8 @@ rule ObjectsHB
 		case .cpp :
 		    C++FLAGS on $(_i:S=$(SUFOBJ)) = $(C++FLAGSHB) ;
 		}
-		Depends $(_i:S=$(SUFOBJ)) : $(SEARCH_SOURCE)/$(SUFHB) ;
-		MkDir $(SEARCH_SOURCE)/$(SUFHB) ;
+		Depends $(_i:S=$(SUFOBJ)) : $(SEARCH_SOURCE)$(DFS)$(SUFHB) ;
+		MkDir $(SEARCH_SOURCE)$(DFS)$(SUFHB) ;
         }
 }
 
@@ -4481,18 +4973,28 @@ rule IICOPY
 rule IICPDLL
 {
 	local _t = $(INGBIN)$(DFS)$(<) ;
-	if "$(<:D)" != ""
+	if "$(<:D)" != "" && $(<:D) != $(SUFHB)
 	{
 		_t = $(<) ;
 		_IICPDLL $(<) : $(>) ;
 	}
 	else
 	{
+		if "$(<:D)" != "" && $(<:D) = $(SUFHB)
+		{
+		_IICPDLLBINHB $(<) : $(>) ;
+		}
+		else
+		{
 		_IICPDLLBIN $(<) : $(>) ;
+		}
 		DEPENDS $(_t) : $(>) ;
+		DEPENDS $(_t) : $(_t:D) ;
+		MkDir $(_t:D) ;
 	}
 	DEPENDS shlibs : $(<) ;
 	SEARCH on $(>) = $(INGLIB) ;
+	#LOCATE on $(<) = $(INGBIN) ;
 
 	Clean clean : $(_t) ;
 }
@@ -4566,18 +5068,25 @@ rule IICOLDATA
 
 if $(VERSHB)
 {
+	if $(NT)
+	{
+	_COLDATAHBW $(SUFHB)/$(<) : $(>) ;
+	}
+	else
+	{
 	_COLDATAHB $(SUFHB)/$(<) : $(>) ;
-	_USETOOL $(SUFHB)/$(<) : $(SUFHB)/aducompile$(SUFEXE) ;
+	}
+	_USETOOL $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)aducompile$(SUFEXE) ;
 	switch $(>) 
 	{
-	    case *uce : ADUCOMPFLAGS on $(SUFHB)/$(<:D=) = $(_uflag) ;
+	    case *uce : ADUCOMPFLAGS on $(SUFHB)$(DFS)$(<:D=) = $(_uflag) ;
 	}
-	DEPENDS files : $(SUFHB)/$(<) ;
-	DEPENDS $(SUFHB)/$(<) : $(>) ;
-	LOCATE on $(SUFHB)/$(<) = $(INGCOL) ;
+	DEPENDS files : $(SUFHB)$(DFS)$(<) ;
+	DEPENDS $(SUFHB)$(DFS)$(<) : $(>) ;
+	LOCATE on $(SUFHB)$(DFS)$(<) = $(INGCOL) ;
 	SEARCH on $(>) = $(SEARCH_SOURCE) ;
-	Depends $(SUFHB)/$(<) : $(INGCOL)/$(SUFHB) ;
-	MkDir $(INGCOL)/$(SUFHB) ;
+	Depends $(SUFHB)$(DFS)$(<) : $(INGCOL)$(DFS)$(SUFHB) ;
+	MkDir $(INGCOL)$(DFS)$(SUFHB) ;
 }
 }
 
@@ -4729,12 +5238,19 @@ rule IIFORM
 
 if $(VERSHB)
 {
- 	    _FORMHB $(T) : $(S) ;
- 	    DEPENDS forms : $(_path)/$(SUFHB)/rtiforms.fnx ;
- 	    DEPENDS $(T) : $(_path)/$(SUFHB) ;
- 	    Depends $(_path)/$(SUFHB)/rtiforms.fnx : $(_path)/$(SUFHB) ;
- 	    MkDir $(_path)/$(SUFHB) ;
-	    RTIFORMHB on $(T) = $(_path)/$(SUFHB)/rtiforms.fnx ;
+	    if $(NT)
+	    {
+		_FORMHBW $(T) : $(S) ;
+	    }
+	    else
+	    {
+		_FORMHB $(T) : $(S) ;
+	    }
+ 	    DEPENDS forms : $(_path)$(DFS)$(SUFHB)$(DFS)rtiforms.fnx ;
+ 	    DEPENDS $(T) : $(_path)$(DFS)$(SUFHB) ;
+ 	    Depends $(_path)$(DFS)$(SUFHB)$(DFS)rtiforms.fnx : $(_path)$(DFS)$(SUFHB) ;
+ 	    MkDir $(_path)$(DFS)$(SUFHB) ;
+	    RTIFORMHB on $(T) = $(_path)$(DFS)$(SUFHB)$(DFS)rtiforms.fnx ;
 }
 	}
 	LOCATE on $(_f:S=.efr) = $(LOCATE_TARGET) ;
@@ -4917,6 +5433,17 @@ rule IIIMPLIBRARY
       	Clean clean : $(<) ;
 	LOCATE on $(<) = $(INGLIB) ;
 	SEARCH on $(>) = $(INGLIB) ;
+	if $(VERSHB)
+	{
+		DEPENDS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(>) ;
+		ImpArchive $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(>) ;
+		Clean clean : $(SUFHB)$(DFS)$(<) ;
+		LOCATE on $(SUFHB)(DFS)$(<) = $(INGLIB) ;
+		SEARCH on $(SUFHB)$(DFS)$(>) = $(INGLIB) ;
+
+
+		AR on $(SUFHB)$(DFS)$(<) = $(AR32) ;
+	}
 
 
 }
@@ -4951,7 +5478,7 @@ rule IISHLIBRARY
 		case *odbc*	        : SharedLibLinkNoImp $(<) : $(_list) ;
 
 		case iilibutil*		: DEPENDS $(<:S=.$(LIBSFX)) : $(<) ;
-					LINKLIBS on $(<) = $(MSILIB) $(ADVAPILIB) $(BUFFERLIB) $(C_LIB) ;
+					LINKLIBS on $(<) = $(MSILIB) $(ADVAPILIB) $(C_LIB) ;
 					SharedLibLink $(<) : $(_list) ;
 		
 		case iipfctrs*		: DEPENDS $(<:S=.$(LIBSFX)) : $(<) ;
@@ -5008,6 +5535,117 @@ rule IISHLIBRARY
 		      $(INGLIB)/$(<).manifest ;
 	MODE on $(<) = $(DLLMODE) ;
 	Chmod $(<) ;
+
+
+	if $(VERSHB) && $(<:D=) != $(SHAPACHELIB) && $(<:D=) != $(SHICEMSLIB)
+	{
+	local _o _list ;
+
+	LINK on $(SUFHB)$(DFS)$(<) = $(LINK32) ;
+	LINKFLAGS on $(SUFHB)$(DFS)$(<) = $(LINKFLAGS32) ;
+	LIBP on $(SUFHB)$(DFS)$(<) = $(LIB32) $(SDK32) ;
+	LINKLIBS on $(SUFHB)$(DFS)$(<) = $(LINKLIBS32) ;
+
+	for _o in $(>)
+	{
+		switch $(_o)
+		{
+			case odbc*.lib : _list += $(_o:S=.$(LIBSFX)) ;	 
+			case html*.lib : _list += $(_o:S=.$(LIBSFX)) ;	
+			case *32.lib : _list += $(_o:S=.$(LIBSFX)) ;	
+			case *	: _list += $(SUFHB)$(DFS)$(_o:S=.$(LIBSFX)) ;
+		}
+		
+		switch $(_o)
+		{
+			case *iilib*.dll : DEPENDS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(_o:S=.$(LIBSFX)) ;
+			case odbc*.lib   : DEPENDS $(SUFHB)$(DFS)$(<) : $(_o) ;
+			case gss*32.lib   : DEPENDS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(_o) ;
+			case *32.lib   : DEPENDS $(SUFHB)$(DFS)$(<) : $(_o) ;
+			case html*.lib   : DEPENDS $(SUFHB)$(DFS)$(<) : $(_o) ;
+			case *.lib 	: DEPENDS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(_o) ;
+			case *		: DEPENDS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(_o) ;
+		}
+	}
+	switch $(<)
+	{		
+                case iilibgcskrb*       : SharedLibLinkNoImp $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(>) ;
+                                        LOCATE on $(SUFHB)$(DFS)$(SHGSSAPILIB) = $(INGLIB) ;
+                                        RmTemps $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(SHGSSAPILIB) ;
+                                        RmTemps $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(IMPGSSAPILIB) ;
+
+                case gssapi*            : DEPENDS $(SUFHB)$(DFS)$(<:S=.$(LIBSFX)) : $(SUFHB)$(DFS)$(<) ;
+                                        SharedLibLink $(SUFHB)$(DFS)$(<) : $(_list) ;
+
+		case *caii*		: SharedLibLinkNoImp $(SUFHB)$(DFS)$(<) : $(_list) ;
+
+		case *odbc*	        : SharedLibLinkNoImp $(SUFHB)$(DFS)$(<) : $(_list) ;
+
+		case iilibutil*		: DEPENDS $(SUFHB)$(DFS)$(<:S=.$(LIBSFX)) : $(SUFHB)$(DFS)$(<) ;
+					LINKLIBS on $(SUFHB)$(DFS)$(<) = $(MSILIB) $(ADVAPILIB) $(C_LIB) ;
+					SharedLibLink $(SUFHB)$(DFS)$(<) : $(_list) ;
+		
+		case iipfctrs*		: DEPENDS $(SUFHB)$(DFS)$(<:S=.$(LIBSFX)) : $(SUFHB)$(DFS)$(<) ;
+					SharedLibLink $(SUFHB)$(DFS)$(<) : $(_list) ;
+
+ 		case *NewOrder* 	: DEPENDS $(SUFHB)$(DFS)$(<:S=.$(LIBSFX)) : $(SUFHB)$(DFS)$(<) ;
+ 				  	SharedLibLinkNoDef $(SUFHB)$(DFS)$(<) : $(_list) ;
+ 
+ 		case *data* 		: NOUPDATE $(SUFHB)$(DFS)$(<:S=.$(LIBSFX)) ;
+ 					SharedLibLink $(SUFHB)$(DFS)$(<) : $(_list) ;
+
+		case *libscf*		: NOUPDATE $(SUFHB)$(DFS)$(<:S=.$(LIBSFX)) ;
+ 					SharedLibLink $(SUFHB)$(DFS)$(<) : $(_list) ;
+
+		case *libdmf*		: NOUPDATE $(SUFHB)$(DFS)$(<:S=.$(LIBSFX)) ;
+ 					SharedLibLink $(SUFHB)$(DFS)$(<) : $(_list) ;
+
+		case *libqef*		: NOUPDATE $(SUFHB)$(DFS)$(<:S=.$(LIBSFX)) ;
+ 					SharedLibLink $(SUFHB)$(DFS)$(<) : $(_list) ;
+
+		case *librdf*		: NOUPDATE $(SUFHB)$(DFS)$(<:S=.$(LIBSFX)) ;
+ 					SharedLibLink $(SUFHB)$(DFS)$(<) : $(_list) ;
+
+		case *libgcf*		: NOUPDATE $(SUFHB)$(DFS)$(<:S=.$(LIBSFX)) ;
+ 					SharedLibLink $(SUFHB)$(DFS)$(<) : $(_list) ;
+
+		case *libulf*		: NOUPDATE $(SUFHB)$(DFS)$(<:S=.$(LIBSFX)) ;
+ 					SharedLibLink $(SUFHB)$(DFS)$(<) : $(_list) ;
+
+		case *libpsf*		: NOUPDATE $(SUFHB)$(DFS)$(<:S=.$(LIBSFX)) ;
+ 					SharedLibLink $(SUFHB)$(DFS)$(<) : $(_list) ;
+ 
+ 		case * 			: DEPENDS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(<:B)data.$(LIBSFX) ;
+ 			 		NOUPDATE $(SUFHB)$(DFS)$(<:S=.$(LIBSFX)) ;
+ 		         		DEPENDS $(SUFHB)$(DFS)$(<:S=.$(LIBSFX)) : $(SUFHB)$(DFS)$(<) ;
+ 					SharedLibLink $(SUFHB)$(DFS)$(<) : $(_list) ;
+	}
+	LOCATE on $(SUFHB)$(DFS)$(<) = $(INGLIB) ;
+	LOCATE on $(SUFHB)$(DFS)$(<:B).lib = $(INGLIB) ;
+	#SEARCH on $(SUFHB)$(DFS)$(<:B).lib = $(INGLIB) ;
+	SEARCH on $(SUFHB)$(DFS)$(>) = $(INGLIB) ;
+	DEPENDS $(SUFHB)$(DFS)$(<) : $(INGBIN)$(DFS)$(SUFHB) ;
+	MkDir $(INGBIN)$(DFS)$(SUFHB) ;
+
+
+	DEPENDS shlibs : $(SUFHB)$(DFS)$(<) ;
+	_USETOOL $(SUFHB)$(DFS)$(<) : binaddr.txt updcoffbf.exe ;
+
+	if $(<:D=) != $(SHAPACHELIB) && $(<:D=) != $(SHICEMSLIB) && $(<:D=) != $(SHGSSAPILIB)
+	{
+	IICPDLL $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(<) ;
+	}
+	IIREBASE $(SUFHB)$(DFS)$(<) ;
+
+        Clean clean : $(SUFHB)$(DFS)$(<) $(INGLIBHB)$(DFS)$(<:S=.exp:D=) $(INGLIBHB)$(DFS)$(<:S=.map:D=) 
+                      $(INGLIBHB)$(DFS)$(<:S=.$(LIBSFX):D=) $(INGBINHB)$(DFS)$(<:D=) 
+		      $(INGLIBHB)$(DFS)$(<:S=.ilk:D=) $(INGLIBHB)$(DFS)$(<:S=.pdb:D=) 
+		      $(INGLIBHB)$(DFS)$(<).manifest ;
+	MODE on $(SUFHB)$(DFS)$(<) = $(DLLMODE) ;
+	Chmod $(SUFHB)$(DFS)$(<) ;
+
+	}
+
     }
     else if $(VMS)
     {
@@ -5210,8 +5848,16 @@ rule IISHLIBRARYLCL
 
 rule IIREBASE
 {
+	if $(<:D) = "lp32"
+	{
+	DEPENDS shlibs : $(<) ;
+	RebaseHB $(<) ;
+	}
+	else
+	{
 	DEPENDS shlibs : $(<) ;
 	Rebase $(<) ;
+	}
 
 }
 
@@ -5254,14 +5900,14 @@ rule IISVRSHLIBRARY
 
     if $(VERSHB)
     {
-	_MKSVRSHLIBS $(SUFHB)/$(<) ;
+	_MKSVRSHLIBS $(SUFHB)$(DFS)$(<) ;
 
 	DEPENDS shlibs : $(SUFHB)/$(<) ;
 	PARMLPHB on $(SUFHB)/$(<) = -$(SUFHB) ;
 	SHLIB on $(SUFHB)/$(<) = $(shlib) ;
 	LOCATE on $(SUFHB)/$(<) = $(INGBIN) ;
 
-	_USETOOL $(SUFHB)/$(<) : mksvrshlibs mkshlibs$(SUFXSH) shlibinfo$(SUFXSH) readvers$(SUFXSH) 
+	_USETOOL $(SUFHB)$(DFS)$(<) : mksvrshlibs mkshlibs$(SUFXSH) shlibinfo$(SUFXSH) readvers$(SUFXSH) 
 			iidsfree ensure iisysdep ;
     }
 
@@ -5752,19 +6398,19 @@ rule IIQSHHDR
 	Clean clean : $(<) $(<:S=.sh) ;
 if $(VERSHB)
 {
-	Eqh $(SUFHB)/$(<:S=.sh) : $(>) ;
-	Esqh $(SUFHB)/$(<) : $(SUFHB)/$(<:S=.sh) ;
+	Eqh $(SUFHB)$(DFS)$(<:S=.sh) : $(>) ;
+	Esqh $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(<:S=.sh) ;
 
-	DEPENDS $(SUFHB)/$(<) : $(>) ;
-	DEPENDS hdrs : $(SUFHB)/$(<) ;
+	DEPENDS $(SUFHB)$(DFS)$(<) : $(>) ;
+	DEPENDS hdrs : $(SUFHB)$(DFS)$(<) ;
 
-	EQCFLAGS on $(SUFHB)/$(<:S=.sh) = $(QSHTOSHFLAGS) ;
-	LOCATE on $(SUFHB)/$(<) $(<:S=.sh) = $(SEARCH_SOURCE) ;
-	SEARCH on $(SUFHB)/$(>) = $(SEARCH_SOURCE) ;
-	Depends $(SUFHB)/$(<:S=.sh) : $(SEARCH_SOURCE)/$(SUFHB) ;
-	MkDir $(SEARCH_SOURCE)/$(SUFHB) ;
+	EQCFLAGS on $(SUFHB)$(DFS)$(<:S=.sh) = $(QSHTOSHFLAGS) ;
+	LOCATE on $(SUFHB)$(DFS)$(<) $(<:S=.sh) = $(SEARCH_SOURCE) ;
+	SEARCH on $(SUFHB)$(DFS)$(>) = $(SEARCH_SOURCE) ;
+	Depends $(SUFHB)$(DFS)$(<:S=.sh) : $(SEARCH_SOURCE)$(DFS)$(SUFHB) ;
+	MkDir $(SEARCH_SOURCE)$(DFS)$(SUFHB) ;
 
-	Clean clean : $(SUFHB)/$(<) $(<:S=.sh)/$(SUFHB) ;
+	Clean clean : $(SUFHB)$(DFS)$(<) $(<:S=.sh)$(DFS)$(SUFHB) ;
 }
 }
 
@@ -5896,14 +6542,14 @@ rule IITIMEZONE
 
 if $(VERSHB)
 {
-	T = $(INGZONE)/$(SUFHB)/tz.stamp ; S = $(<) ;
+	T = $(INGZONE)$(DFS)$(SUFHB)$(DFS)tz.stamp ; S = $(<) ;
 	_TIMEZONEHB $(T) : $(S) ;
-	_USETOOL $(T) : $(SUFHB)/iizic$(SUFEXE) ; 
+	_USETOOL $(T) : $(SUFHB)$(DFS)iizic$(SUFEXE) ; 
 	DEPENDS files : $(T) ;
 	DEPENDS $(T) : $(S) ;
 	SEARCH on $(S) = $(SEARCH_SOURCE) ;
-	Depends $(T) : $(INGZONE)/$(SUFHB) ;
-	MkDir $(INGZONE)/$(SUFHB) ;
+	Depends $(T) : $(INGZONE)$(DFS)$(SUFHB) ;
+	MkDir $(INGZONE)$(DFS)$(SUFHB) ;
 }
 }
 
@@ -5942,13 +6588,20 @@ if $(VERSHB)
 {
 	for i in $(<)
 	{
-	    DEPENDS files : $(SUFHB)/$(i:S=$(SUFOBJ)) ;
-	    UDTOBJECT $(SUFHB)/$(i:S=$(SUFOBJ)) : $(i) ;
-	    DEPENDS $(SUFHB)/$(i:S=$(SUFOBJ)) : $(INGFILES)/iiadd.h $(UDTDEMO)/udt.h ;
-	    LOCATE on $(SUFHB)/$(i:S=$(SUFOBJ)) = $(UDTDEMO) ;
-	    CCFLAGS on $(SUFHB)/$(i:S=$(SUFOBJ)) = $(CCFLAGSHB) ;
-	    Depends $(SUFHB)/$(i:S=$(SUFOBJ)) : $(UDTDEMO)/$(SUFHB) ;
-	    MkDir $(UDTDEMO)/$(SUFHB) ;
+	    DEPENDS files : $(SUFHB)$(DFS)$(i:S=$(SUFOBJ)) ;
+	    UDTOBJECT $(SUFHB)$(DFS)$(i:S=$(SUFOBJ)) : $(i) ;
+	    if ! $(NT)
+	    {
+	    	DEPENDS $(SUFHB)$(DFS)$(i:S=$(SUFOBJ)) : $(INGFILES)$(DFS)iiadd.h $(UDTDEMO)$(DFS)udt.h ;
+	    }
+	    else
+	    {
+		DEPENDS $(SUFHB)$(DFS)$(i:S=$(SUFOBJ)) : $(UDTDEMO)/iiadd.h <common!adf!admin>udt.h ;		
+	    }
+	    LOCATE on $(SUFHB)$(DFS)$(i:S=$(SUFOBJ)) = $(UDTDEMO) ;
+	    CCFLAGS on $(SUFHB)$(DFS)$(i:S=$(SUFOBJ)) = $(CCFLAGSHB) ;
+	    Depends $(SUFHB)$(DFS)$(i:S=$(SUFOBJ)) : $(UDTDEMO)$(DFS)$(SUFHB) ;
+	    MkDir $(UDTDEMO)$(DFS)$(SUFHB) ;
 	}
 }
 }
@@ -5968,7 +6621,23 @@ rule IILIBOBJECT
 		DEPENDS files : $(_t) ;
 		LIBOBJECT $(_t) : $(i) ;
 		LOCATE on $(_t) = $(INGLIB) ;
-		Clean clean : $(_t) ;	
+		Clean clean : $(_t) ;
+
+		if $(VERSHB)
+		{
+			_t = $(SUFHB)$(DFS)$(i:S=$(SUFOBJ):G=) ;
+			switch $(i)
+			{
+				case $(SUFHB)$(DFS)oosymbol* : i = [ FGristFile $(SUFHB)$(DFS)$(i) ] ;
+			}
+			DEPENDS files : $(_t) ;
+			LIBOBJECT $(_t) : $(i) ;
+			LOCATE on $(_t) = $(INGLIB) ;
+			CC on $(_t) = $(CC32) ;
+			CCFLAGS on $(_t) = $(CCFLAGSHB) ;
+
+			Clean clean : $(_t) ;
+		}	
 	}
      }
 
@@ -6040,31 +6709,31 @@ rule IIUdtShLib
 
     MainHB $(_t) : $(>) ;
 
-    IICCFLAGS $(SUFHB)/$(_o) : OPTIM ;
-    IICCFLAGS $(SUFHB)/$(_o) : CCPICFLAG ;
-    IICCFLAGS $(SUFHB)/$(_o) : CCVERSFLAGHB ;
+    IICCFLAGS $(SUFHB)$(DFS)$(_o) : OPTIM ;
+    IICCFLAGS $(SUFHB)$(DFS)$(_o) : CCPICFLAG ;
+    IICCFLAGS $(SUFHB)$(DFS)$(_o) : CCVERSFLAGHB ;
 
     if $(CCSHLDMACHHB) = ""
     {
 	echo "CCSHLDMACHHB is not set, please set CCSHLDMACH64 or" ;
 	echo "CCSHLDMACH32 in Jamdefs.$(PLATFORM_JAMDEFS)" ;
     }
-    LINKFLAGS on $(SUFHB)/$(_t) = $(CCSHLDMACHHB) ;
+    LINKFLAGS on $(SUFHB)$(DFS)$(_t) = $(CCSHLDMACHHB) ;
 
-    LINK on $(SUFHB)/$(_t) = $(SHLIBLD) ;
+    LINK on $(SUFHB)$(DFS)$(_t) = $(SHLIBLD) ;
 
     if ( $(<) = SHSPATLIB ) && $(VERS64) = r64_us5
     {
-      LINKLIBS on $(SUFHB)/$(_t) = $(LDLIBMACHHB) ;
+      LINKLIBS on $(SUFHB)$(DFS)$(_t) = $(LDLIBMACHHB) ;
     }
 
-    DEPENDS $(SUFHB)/$(_o) : $(UDTDEMO)/$(SUFHB) ;
-    MkDir $(UDTDEMO)/$(SUFHB) ;
+    DEPENDS $(SUFHB)$(DFS)$(_o) : $(UDTDEMO)$(DFS)$(SUFHB) ;
+    MkDir $(UDTDEMO)$(DFS)$(SUFHB) ;
 
     switch $(<)
     {
-	case *SPAT* : LOCATE on $(SUFHB)/$(_t) = $(INGLIB) ;
-        case * : LOCATE on $(SUFHB)/$(_t) = $(UDTDEMO) ;
+	case *SPAT* : LOCATE on $(SUFHB)$(DFS)$(_t) = $(INGLIB) ;
+        case * : LOCATE on $(SUFHB)$(DFS)$(_t) = $(UDTDEMO) ;
     }
 
     }
@@ -6155,16 +6824,22 @@ rule IIUSERADT
 
 	if $(VERSHB)
 	{
-	Object $(SUFHB)/$(_t) : $(_s) ;
-
+	Object $(SUFHB)$(DFS)$(_t) : $(_s) ;
+	if ! $(NT)
+	{
 	DEPENDS $(SUFHB)/iimerge : $(SUFHB)/$(_t) ;
-	CCFLAGS on $(SUFHB)/$(_t) = $(CCFLAGSHB) ;
-	LOCATE on $(SUFHB)/$(_t) = $(INGLIB) ; # override LOCATE done by Object
-	MODE on $(SUFHB)/$(_t) = $(LIBMODE) ;
+	}
+	else
+	{
+	DEPENDS $(SHUDTLIBHB) : $(SUFHB)$(DFS)$(_t) ;
+	}
+	CCFLAGS on $(SUFHB)$(DFS)$(_t) = $(CCFLAGSHB) ;
+	LOCATE on $(SUFHB)$(DFS)$(_t) = $(INGLIB) ; # override LOCATE done by Object
+	MODE on $(SUFHB)$(DFS)$(_t) = $(LIBMODE) ;
 
-	Chmod $(SUFHB)/$(_t) ;
-	Depends $(SUFHB)/$(_t) : $(INGLIB)/$(SUFHB) ;
-	MkDir $(INGLIB)/$(SUFHB) ;
+	Chmod $(SUFHB)$(DFS)$(_t) ;
+	Depends $(SUFHB)$(DFS)$(_t) : $(INGLIB)$(DFS)$(SUFHB) ;
+	MkDir $(INGLIB)$(DFS)$(SUFHB) ;
 	}
 }
 
@@ -6188,16 +6863,22 @@ rule IICLSADT
 
 	if $(VERSHB)
 	{
-	Object $(SUFHB)/$(_t) : $(_s) ;
-
+	Object $(SUFHB)$(DFS)$(_t) : $(_s) ;
+	if ! $(NT)
+	{
 	DEPENDS $(SUFHB)/iimerge : $(SUFHB)/$(_t) ;
-	CCFLAGS on $(SUFHB)/$(_t) = $(CCFLAGSHB) ;
-	LOCATE on $(SUFHB)/$(_t) = $(INGLIB) ; # override LOCATE done by Object
-	MODE on $(SUFHB)/$(_t) = $(LIBMODE) ;
+	}
+	else
+	{
+	DEPENDS $(SHUDTLIBHB) : $(SUFHB)$(DFS)$(_t) ;
+	}
+	CCFLAGS on $(SUFHB)$(DFS)$(_t) = $(CCFLAGSHB) ;
+	LOCATE on $(SUFHB)$(DFS)$(_t) = $(INGLIB) ; # override LOCATE done by Object
+	MODE on $(SUFHB)$(DFS)$(_t) = $(LIBMODE) ;
 
-	Chmod $(SUFHB)/$(_t) ;
-	Depends $(SUFHB)/$(_t) : $(INGLIB)/$(SUFHB) ;
-	MkDir $(INGLIB)/$(SUFHB) ;
+	Chmod $(SUFHB)$(DFS)$(_t) ;
+	Depends $(SUFHB)$(DFS)$(_t) : $(INGLIB)$(DFS)$(SUFHB) ;
+	MkDir $(INGLIB)$(DFS)$(SUFHB) ;
 	}
 }
 
@@ -6311,6 +6992,45 @@ rule _USETOOL
       }
     }
   }
+
+  if $(NT) && $(VERSHB) && $(>:S) = $(SUFEXE)
+  {
+  DEPENDS tools : $(SUFHB)$(DFS)$(>) ;
+
+  if $(USETOOL) != "false"
+  {
+    DEPENDS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(>) ;
+
+    SEARCH on $(SUFHB)$(DFS)$(>) = $(INGTOOLSBIN) $(INGBIN) $(INGUTIL) $(VECBIN) ;
+    #SEARCH on VERS = $(CONFDIR) ;
+    #SEARCH on CONFIG = $(CONFDIR) ;
+    if $(NOREBUILD) { NOUPDATE $(SUFHB)$(DFS)$(<) ; }
+    #NOUPDATE VERS ;
+
+    # some tools require other tools and files
+    # eqc actually generates files that include eqdef.h
+    for t in $(>)
+    {
+      switch $(t)
+      {
+	case align*    : DEPENDS align : generic.h ;
+	case mksecret* : DEPENDS $(SUFHB)$(DFS)$(<) : VERS ;
+	case mkgeneric* : DEPENDS $(SUFHB)$(DFS)$(<) : VERS ;
+	case readvers* : DEPENDS $(SUFHB)$(DFS)$(<) : VERS ;
+        case inglink* : DEPENDS $(SUFHB)$(DFS)$(<) : VERS ;
+        case eqmerge* : DEPENDS $(SUFHB)$(DFS)$(<) : $(IYACCPAR) ;
+        case byacc*   : DEPENDS $(SUFHB)$(DFS)$(<) : $(BYACCPAR) ;
+        case iyacc*   : DEPENDS $(SUFHB)$(DFS)$(<) : $(IYACCPAR) ;
+        case esqlc*   : DEPENDS $(SUFHB)$(DFS)$(<) : $(SLOWMNX) $(FASTMNX) msghdrs ;
+        case eqc*     : DEPENDS $(SUFHB)$(DFS)$(<) : $(SLOWMNX) $(FASTMNX) msghdrs ;
+                       INCLUDES $(SUFHB)$(DFS)$(<) : $(EQDEF) ; 
+        case ccpp*   : if $(NT) { DEPENDS $(SUFHB)$(DFS)$(<) : readvers.bat CONFIG ; }
+		       else { DEPENDS $(SUFHB)$(DFS)$(<) : readvers$(SUFXSH) CONFIG ; }
+		       DEPENDS $(SUFHB)$(DFS)$(t) : VERS ;
+      }
+    }
+  }
+  }
 }
 
 
@@ -6330,6 +7050,7 @@ rule UserObject
 	  case *.sy : CC $(<) : $(<:S=.c) ; CCSY $(<:S=.c) : $(>) ;
 	  case *.yf : CC $(<) : $(<:S=.c) ; CCIYACC $(<:S=.c) : $(>) ;
 	  case *.yi : CC $(<) : $(<:S=.c) ; CCBYACC $(<:S=.c) : $(>) ;
+	  #case *.lex : CC $(<) : $(<:S=.c) ; if $(NT) { if "$(<:D)" != "" && $(<:D) = $(SUFHB) { CCLEXWHB $(<:S=.c) : $(>) ; } else { CCLEXW $(<:S=.c) : $(>) ; } } else { Lex $(<:S=.c) : $(>) ; }
 	  case *.lex : CC $(<) : $(<:S=.c) ; if $(NT) { CCLEXW $(<:S=.c) : $(>) ; } else { Lex $(<:S=.c) : $(>) ; }
 	  #case *.lex : CC $(<) : $(<:S=.c) ; if $(NT) { CCLEXW $(<:S=.c) : $(>) ; } else { CCLEX $(<:S=.c) : $(>) ; }
 	  case *.lfm : Clean clean : $(<:S=.c) ; CC $(<) : $(<:S=.c) ; CCLFM $(<:S=.c) : $(>) ;
@@ -6348,9 +7069,9 @@ rule CCROC
 
 	CCFLAGS on $(<) += $(CMPORTS) $(RROC) ;
 	Clean clean : $(>:S=.c) ;
-	if $(VERSHB)
+	if $(VERSHB) 
 	{
-	    RmTemps $(<) : $(>:S=.c) ;
+	    if ! $(NT) { RmTemps $(<) : $(>:S=.c) ; }
 	}
 
 }
@@ -6567,17 +7288,25 @@ rule CCBYACC
 rule CCIYACC
 {
 	h = $(<:BS=.h) ;
-
+	local _t ;
 	if $(NT)
 	{
 		_USETOOL $(<) $(h) : iyacc.exe yycase.exe ;
+		if "$(<:D)" != "" && $(<:D) = $(SUFHB)
+		{
+		CCIYACC1WHB $(<) $(h) : $(>) ;
+		}
+		else
+		{
 		CCIYACC1W $(<) $(h) : $(>) ;
+		}
 	}
 	else
 	{
 		_USETOOL $(<) $(h) : iyacc$(SUFEXE) yycase$(SUFEXE) ;
 		CCIYACC1 $(<) $(h) : $(>) ;
 	}
+
 	DEPENDS $(<) $(h) : $(>) ;
 
 	INCLUDES $(<) : $(h) ;
@@ -6585,6 +7314,8 @@ rule CCIYACC
 	LOCATE on $(<) = $(LOCATE_TARGET) ;
 	LOCATE on $(>) = $(LOCATE_TARGET) ;
 	Clean clean : $(<) $(h) ;
+
+
 }
 
 
@@ -6593,6 +7324,10 @@ rule CCLEXW
 {
 	DEPENDS $(<) : $(>) ;
 	LOCATE on $(<) = $(LOCATE_TARGET) ;
+	if "$(<:D)" != "" && $(<:D) = $(SUFHB)
+	{
+		CCLEXWHB $(<) : $(>) ;
+	}
 }
 
 rule CCLFM
@@ -6677,6 +7412,7 @@ rule CCEQMRGW
 	}
 	HDRM on $(<) = $(HDRM) ;
 	LOCATE on $(<) = $(LOCATE_TARGET) ;
+	Clean clean : $(<) ;
 }
 
 rule VMSMsg
@@ -6764,7 +7500,6 @@ rule IILIBINGRES
   else
   {
   DEPENDS $($(<)) : $(INGRES_LIBS) ;
-
   }
   if ! $(NT)
   {
@@ -6779,8 +7514,19 @@ rule IILIBINGRES
   Clean clean : $($(<)) ;
   }
   
-
+  if $(NT)
+  {
   if $(VERSHB)
+  {
+	DEPENDS files : $($(<)HB) ;
+	DEPENDS $($(<)HB) : $(SUFHB)$(DFS)$(INGRES_LIBS) ;
+
+	_LIBINGRESW $($(<)HB) : $(SUFHB)$(DFS)$(INGRES_LIBS) $(SUFHB)$(DFS)$(TERMDR) ;
+	LOCATE on $($(<)HB) = $(INGLIB) ;
+	Clean clean : $($(<)HB) ;
+  }
+  }
+  if $(VERSHB) && ! $(NT)
   {
   	DEPENDS files : $($(<)HB) ;
 	if $(BUILD_ICE)
@@ -6947,10 +7693,10 @@ rule IIUCHARFILES
 
 if $(VERSHB)
 {
-	BULK $(INGFILES)/ucharmaps/$(SUFHB) : $(<) ;
-    	Depends $(<) : $(INGFILES)/ucharmaps/$(SUFHB) ;
-    	MkDir $(INGFILES)/ucharmaps/$(SUFHB) ;
-	Clean clean : $(INGFILES)/ucharmaps/$(SUFHB)/$(<) ;
+	BULK $(INGFILES)$(DFS)ucharmaps$(DFS)$(SUFHB) : $(<) ;
+    	Depends $(<) : $(INGFILES)$(DFS)ucharmaps$(DFS)$(SUFHB) ;
+    	MkDir $(INGFILES)$(DFS)ucharmaps$(DFS)$(SUFHB) ;
+	Clean clean : $(INGFILES)$(DFS)ucharmaps$(DFS)$(SUFHB)$(DFS)$(<) ;
 }
 }
 
@@ -6968,17 +7714,24 @@ rule IIUCHARMAP
 
 if $(VERSHB)
 {
-	local _t64 = $(SUFHB)/$(<:B) ;
+	local _t64 = $(SUFHB)$(DFS)$(<:B) ;
 	DEPENDS files : $(_t64) ;
 	DEPENDS $(_t64) : $(>) ;
 
-	Depends $(_t64) : $(<:D)/$(SUFHB) ;
-	MkDir $(<:D)/$(SUFHB) ;
+	Depends $(_t64) : $(<:D)$(DFS)$(SUFHB) ;
+	MkDir $(<:D)$(DFS)$(SUFHB) ;
 
-	LOCATE on $(_t64) = $(INGFILES)/ucharmaps ;
+	LOCATE on $(_t64) = $(INGFILES)$(DFS)ucharmaps ;
 	SEARCH on $(>) = $(SEARCH_SOURCE) ;
 
-	_USETOOL $(_t64) : $(SUFHB)/unimapcompile ;
+	if $(NT)
+	{
+	_USETOOL $(_t64) : $(SUFHB)$(DFS)unimapcompile$(SUFEXE) ;
+	}
+	else
+	{
+	_USETOOL $(_t64) : $(SUFHB)$(DFS)unimapcompile ;
+	}
 
 	_IIUCHARMAPHB $(_t64) : $(>) ;
 
@@ -6997,17 +7750,17 @@ rule IIUCHARALIAS
 	Clean clean : $(<) ;
 if $(VERSHB)
 {
-	local _t64 = $(SUFHB)/$(<:B) ;
+	local _t64 = $(SUFHB)$(DFS)$(<:B) ;
 	DEPENDS files : $(_t64) ;
 	DEPENDS $(_t64) : $(>) ;
 
-	Depends $(_t64) : $(<:D)/$(SUFHB) ;
-	MkDir $(<:D)/$(SUFHB) ;
+	Depends $(_t64) : $(<:D)$(DFS)$(SUFHB) ;
+	MkDir $(<:D)$(DFS)$(SUFHB) ;
 
-	LOCATE on $(_t64) = $(INGFILES)/ucharmaps ;
+	LOCATE on $(_t64) = $(INGFILES)$(DFS)ucharmaps ;
 	SEARCH on $(>) = $(SEARCH_SOURCE) ;
 
-	_USETOOL $(_t64) : $(SUFHB)/unialscompile ;
+	_USETOOL $(_t64) : $(SUFHB)$(DFS)unialscompile$(EXESUF) ;
 
 	_IIUCHARALIASHB $(_t64) : $(>) ;
 
@@ -7063,6 +7816,28 @@ rule IIXERCLIB
 
 	    Clean clean : $(XERCESCLIB) $(SHXERCESLIB) ;
 			  #$(INGBIN)/$(SHXERCESLIB) $(INGLIB)/$(XERCESCLIB) ;		
+
+
+	    if $(VERSHB)
+	    {
+
+	    # Following 3 statements may be removed if the files 
+	    # are not required in these locations.
+	    _IICOPYFILE $(SUFHB)$(DFS)$(XERCESCLIB:BS) : $(XERCESCROOT32)$(DFS)bin$(DFS)$(XERCESCLIB:BS) ;
+	    _IICOPYFILE $(SUFHB)$(DFS)$(SHXERCESLIB:BS) : $(XERCESLOC32)$(DFS)$(SHXERCESLIB:BS) ;
+
+		DEPENDS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(XERCESCLIB) ;
+		LOCATE on $(SUFHB)$(DFS)$(<) = $(INGLIB) ;
+		LOCATE on $(SUFHB)$(DFS)$(XERCESCLIB) = $(INGBIN) ;
+
+		NOUPDATE $(SUFHB)$(DFS)$(XERCESCLIB) ;
+		NOUPDATE $(SUFHB)$(DFS)$(SHXERCESLIB) ;
+
+	    Clean clean : $(SUFHB)$(DFS)$(XERCESCLIB) $(SUFHB)$(DFS)$(SHXERCESLIB) ;
+			  #$(INGBIN)$(DFS)$(SHXERCESLIB) $(INGLIB)$(DFS)$(XERCESCLIB) ;		
+
+		
+	    }
 	}	
 
 	if ! $(NT)
@@ -7073,7 +7848,7 @@ rule IIXERCLIB
 
 	Clean clean : $(<) $(<:S=.$(SLSFX).$(XERCVERS) $(INGLIB)/$(XERCESCLIB) ;
 
-	if $(VERSHB)
+	if $(VERSHB && !$(NT))
 	{
 		# Jamdefs should have figured out a xerceslochb.
 		XERCESCHBLIB = $(XERCESCLIB:G=hb) ;
@@ -7100,12 +7875,38 @@ rule IMPLIBRARY
     IMPLIBRARYFROMOBJECTS $(<) : $(>:S=$(SUFOBJ)) ;
     Objects $(>) ;
     Clean clean : $(<) ;
+
+    #if $(VERSHB)
+    #{
+    #	IMPLIBRARYFROMOBJECTS $(SUFHB)$(DFS)$(<) : $(>:S=$(SUFOBJ)) ;
+    #	ObjectsHB $(SUFOBJ)$(DFS)$(>) ;
+    #	Clean clean : $(SUFOBJ)$(DFS)$(<) ;
+    #}
 }
 
+rule ImpLibraryHB
+{
+    IMPLIBRARYFROMOBJECTS $(<) : $(>:S=$(SUFOBJ)) ;
+    AR on $(<) = $(AR32) ;
+    ObjectsHB $(>) ;
+    Clean clean : $(<) ;
+
+}
 
 rule REGLIBRARY
 {
     REGLIBRARYFROMOBJECTS $(<) : $(>:S=$(SUFOBJ)) ;
+    #if $(VERSHB)
+    #{
+    #	AR on $(<) = $(AR32) ;
+    #	REGLIBRARYFROMOBJECTS $(SUFHB)$(DFS)$(<) : $(SUFHB)$(DFS)$(>:S=$(SUFOBJ)) ;
+    #}
+}
+
+rule RegLibraryHB
+{
+    REGLIBRARYFROMOBJECTS $(<) : $(>:S=$(SUFOBJ)) ;
+    AR on $(<) = $(AR32) ;
 }
 
 rule IMPLIBRARYFROMOBJECTS 
@@ -7463,6 +8264,10 @@ rule IISLN
 		ALWAYS $(<) ;
 
 	}
+	#if $(MSDEV_CONFIG) = "DebugAMD64" || $(MSDEV_CONFIG) = "ReleaseAMD64"
+	#{
+	#	C++ on $(<) = $(CC32) ;
+	#}
         local _temp_suf = $(<:S) ;
         switch $(_temp_suf:L)
         {
@@ -7505,6 +8310,14 @@ rule IISLN
 				   LOCATE on $(INGVSDESIGN2) = $(INGDOTNET2) ;
 				   LOCATE on $(INGSUPPORT2) = $(INGDOTNET2) ;
 				   LOCATE on $(INGINSTALL2) = $(INGDOTNET2) ;
+				   if $(MSDEV_CONFIG) = "ReleaseAMD64" 
+				   {
+					MSDEV_CONFIG on $(<) = "Release" ;
+				   }
+				   if $(MSDEV_CONFIG) = "DebugAMD64"
+				   {
+					MSDEV_CONFIG on $(<) = "Debug" ;
+				   }
 	    case *front*IngresDemoApp* : LOCATE on $(<) = $(INGCSHDEMO) ;
             case * : LOCATE on $(<) = $(INGBIN) ;
 	}
@@ -7522,6 +8335,14 @@ rule IISLN
 		_csharpdemo = TRUE ;
 		DEPENDS $(<) : $(INGCLIENTDLL2) ;
 		SEARCH on $(INGCLIENTDLL2) = $(INGDOTNET2) ;
+   	        if $(MSDEV_CONFIG) = "ReleaseAMD64" 
+		{
+			MSDEV_CONFIG on $(<) = "Release" ;
+		}
+		if $(MSDEV_CONFIG) = "DebugAMD64"
+		{
+			MSDEV_CONFIG on $(<) = "Debug" ;
+		}
 
             case *front*st*iilink* :
                 DEPENDS $(<) : $(IMPCOMPATLIB) $(IMPCOMPATLIBDATA) $(IMPGCFLIB)
@@ -8376,8 +9197,14 @@ actions _IICPDLL
 
 actions _IICPDLLBIN
 {
-	rm -f $(<:D=$(INGBIN))
+	rm -f $(<:D=$(INGBIN)) 
 	$(CP) $(>) $(<:D=$(INGBIN))
+}
+
+actions _IICPDLLBINHB
+{
+	rm -f $(<:D=$(INGBIN)$(DFS)$(SUFHB)) 
+	$(CP) $(>) $(<:D=$(INGBIN)$(DFS)$(SUFHB)) 
 }
 
 actions COPY
@@ -8590,6 +9417,15 @@ actions _COLDATAHB
 	chmod $(FILEMODE) $(<)
 }
 
+actions _COLDATAHBW
+{
+	set II_CONFIG=$(ING_BUILD)$(DFS)files 
+	set $(HB_ENABLE_VAR)=TRUE
+	aducompile $(>) $(<:D=) $(ADUCOMPFLAGS:D=)
+	sleep 1
+	chmod $(FILEMODE) $(<)
+}
+
 actions _FORM bind RTIFORM
 {
 	$(PIPE) formindex $(RTIFORM) $(>) && $(TOUCH) $(<) &&
@@ -8605,7 +9441,14 @@ actions _FORMW bind RTIFORM
 
 actions _FORMHB bind RTIFORMHB
 {
-	$(INGBIN)/$(SUFHB)/formindex $(RTIFORMHB) $(>) && $(TOUCH) $(<) &&
+	$(INGBIN)$(DFS)$(SUFHB)$(DFS)formindex $(RTIFORMHB) $(>) && $(TOUCH) $(<) &&
+	chmod $(FILEMODE) $(RTIFORMHB)
+}
+
+actions _FORMHBW bind RTIFORMHB
+{
+	$(INGBIN)$(DFS)$(SUFHB)$(DFS)formindex.$(EXESFX) $(RTIFORMHB) $(>) 
+	$(TOUCH) $(<) 
 	chmod $(FILEMODE) $(RTIFORMHB)
 }
 
@@ -8850,7 +9693,7 @@ actions _TIMEZONE
 
 actions _TIMEZONEHB
 {
-	$(INGUTIL)/$(SUFHB)/iizic -d $(INGZONE)/$(SUFHB) $(>) && $(TOUCH) $(<)
+	$(INGUTIL)$(DFS)$(SUFHB)$(DFS)iizic -d $(INGZONE)$(DFS)$(SUFHB) $(>) && $(TOUCH) $(<)
 	chmod $(FILEMODE) $(<)
 }
 
@@ -9115,6 +9958,14 @@ actions CCIYACC1W bind HDREMBEDM
 	rm -f y.tab.c
 }
 
+actions CCIYACC1WHB bind HDREMBEDM
+{
+	$(CD) $(<[1]:D)
+	iyacc $(IYACCFLAGS) -d $(>)
+	yycase y.tab.c $(<[1])	
+	mv y.tab.h $(<[2])
+	rm -f y.tab.c
+}
 
 actions CCSY2YFW
 {
@@ -9129,6 +9980,15 @@ actions CCLEXW
 	$(CD) $(>:D)
 	$(FLEX) $(>) 
 	copy lex.yy.c $(>:S=.c)
+}
+
+actions CCLEXWHB
+{
+
+	$(CD) $(>:D)
+	$(FLEX) $(>) 
+	copy lex.yy.c $(>:S=.c)
+	$(CP) $(>:S=.c) $(SUFHB)
 }
 
 if $(VMS)
@@ -9290,10 +10150,20 @@ if $(VERS64) = r64_us5
 {
 actions _IIUCHARMAPHB
 {
-	II_CONFIG=$(ING_BUILD)/files; export II_CONFIG
+	II_CONFIG=$(ING_BUILD)$(DFS)files; export II_CONFIG
 	II_LP64_ENABLED=TRUE; export II_LP64_ENABLED
-        LIBPATH=$(ING_BUILD)/lib/$(SUFHB):$LIBPATH; export LIBPATH
-	$(INGUTIL)/$(SUFHB)/unimapcompile -o=$(<:D=) $(>)
+        LIBPATH=$(ING_BUILD)$(DFS)lib$(DFS)$(SUFHB):$LIBPATH; export LIBPATH
+	$(INGUTIL)$(DFS)$(SUFHB)$(DFS)unimapcompile -o=$(<:D=) $(>)
+	chmod $(FILEMODE) $(<) 
+}
+}
+else if $(NT)
+{
+actions _IIUCHARMAPHB
+{
+	set II_CONFIG=$(ING_BUILD)$(DFS)files
+	set $(HB_ENABLE_VAR)=TRUE && echo '%$(HB_ENABLE_VAR)%'
+	$(INGUTIL)$(DFS)$(SUFHB)$(DFS)unimapcompile$(SUFEXE) -o=$(<:D=) $(>)
 	chmod $(FILEMODE) $(<) 
 }
 }
@@ -9301,9 +10171,9 @@ else
 {
 actions _IIUCHARMAPHB
 {
-	II_CONFIG=$(ING_BUILD)/files; export II_CONFIG
+	II_CONFIG=$(ING_BUILD)$(DFS)files; export II_CONFIG
 	$(HB_ENABLE_VAR)=TRUE; export $(HB_ENABLE_VAR)
-	$(INGUTIL)/$(SUFHB)/unimapcompile -o=$(<:D=) $(>)
+	$(INGUTIL)$(DFS)$(SUFHB)$(DFS)unimapcompile -o=$(<:D=) $(>)
 	chmod $(FILEMODE) $(<) 
 }
 }
@@ -9318,10 +10188,20 @@ if $(VERS64) = r64_us5
 {
 actions _IIUCHARALIASHB
 {
-	II_CONFIG=$(ING_BUILD)/files; export II_CONFIG
+	II_CONFIG=$(ING_BUILD)$(DFS)files; export II_CONFIG
 	II_LP64_ENABLED=TRUE; export II_LP64_ENABLED
-        LIBPATH=$(ING_BUILD)/lib/$(SUFHB):$LIBPATH; export LIBPATH
-	$(INGUTIL)/$(SUFHB)/unialscompile -o=$(<:D=) $(>)
+        LIBPATH=$(ING_BUILD)$(DFS)lib$(DFS)$(SUFHB):$LIBPATH; export LIBPATH
+	$(INGUTIL)$(DFS)$(SUFHB)$(DFS)unialscompile -o=$(<:D=) $(>)
+	chmod $(FILEMODE) $(<) 
+}
+}
+else if $(NT)
+{
+actions _IIUCHARALIASHB
+{
+	set II_CONFIG=$(ING_BUILD)$(DFS)files
+	set $(HB_ENABLE_VAR)=TRUE
+	$(INGUTIL)$(DFS)$(SUFHB)$(DFS)unialscompile$(EXESFX) -o=$(<:D=) $(>)
 	chmod $(FILEMODE) $(<) 
 }
 }
@@ -9329,9 +10209,9 @@ else
 {
 actions _IIUCHARALIASHB
 {
-	II_CONFIG=$(ING_BUILD)/files; export II_CONFIG
+	II_CONFIG=$(ING_BUILD)$(DFS)files; export II_CONFIG
 	$(HB_ENABLE_VAR)=TRUE; export $(HB_ENABLE_VAR)
-	$(INGUTIL)/$(SUFHB)/unialscompile -o=$(<:D=) $(>)
+	$(INGUTIL)$(DFS)$(SUFHB)$(DFS)unialscompile -o=$(<:D=) $(>)
 	chmod $(FILEMODE) $(<) 
 }
 }
@@ -9385,37 +10265,37 @@ if $(NT)
 
 	if $(DEBUG) = "ON"
 	{
-		actions together SharedLibLink bind NEEDLIBS NEEDOBJ NEEDRES
+		actions together SharedLibLink bind NEEDLIBS NEEDOBJ NEEDRES LIBP
 		{
-		$(LINK) /DLL $(LINKFLAGS) /DEF:$(INGDEFS)/$(<:B).$(DEFSFX) /IMPLIB:$(INGLIB)/$(<:B).$(LIBSFX) /out:$(<) $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS) $(NEEDOBJ) $(NEEDRES)
+		$(LINK) /DLL $(LINKFLAGS) /DEF:$(INGDEFS)/$(<:B).$(DEFSFX) /IMPLIB:$(<:S=.$(LIBSFX)) /LIBPATH:"$(LIBP)" /out:$(<) $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS) $(NEEDOBJ) $(NEEDRES)
 		if errorlevel 1 EXIT
 		if exist $(MT) if exist $(<:D=$(<[1]:D)).manifest $(MT) -nologo -manifest $(<:D=$(<[1]:D)).manifest -outputresource:$(<);#2
 		Chmod $(DLLMODE) $(<)
 		}
 	
-		actions SharedLibLinkLcl bind NEEDLIBS NEEDOBJ NEEDRES NODEFAULTLIB
+		actions SharedLibLinkLcl bind NEEDLIBS NEEDOBJ NEEDRES NODEFAULTLIB LIBP
 		{
-		$(LINK) /DLL $(LINKFLAGS) /DEF:$(<:S=.$(DEFSFX)) $(NODEFAULTLIB) $(<:S=$(SUFOBJ)) /out:$(<) $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS) $(NEEDOBJ) $(NEEDRES)
+		$(LINK) /DLL $(LINKFLAGS) /DEF:$(<:S=.$(DEFSFX)) $(NODEFAULTLIB) $(<:S=$(SUFOBJ)) /LIBPATH:"$(LIBP)" /out:$(<) $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS) $(NEEDOBJ) $(NEEDRES)
 		if errorlevel 1 EXIT
 		if exist $(MT) if exist $(<:D=$(<[1]:D)).manifest $(MT) -nologo -manifest $(<:D=$(<[1]:D)).manifest -outputresource:$(<);#2
 		}
-	 	actions SharedLibLinkNoDef bind NEEDLIBS NEEDOBJ NEEDRES
+	 	actions SharedLibLinkNoDef bind NEEDLIBS NEEDOBJ NEEDRES LIBP
  		{
-	 	$(LINK) /DLL $(LINKFLAGS) /IMPLIB:$(INGLIB)/$(<:B).$(LIBSFX) /out:$(<) $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS) $(NEEDOBJ) $(NEEDRES)
+	 	$(LINK) /DLL $(LINKFLAGS) /IMPLIB:$(<:S=.$(LIBSFX)) /LIBPATH:"$(LIBP)" /out:$(<) $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS) $(NEEDOBJ) $(NEEDRES)
 		if errorlevel 1 EXIT
 		if exist $(MT) if exist $(<:D=$(<[1]:D)).manifest $(MT) -nologo -manifest $(<:D=$(<[1]:D)).manifest -outputresource:$(<);#2
 		Chmod $(DLLMODE) $(<)
 		}
-	 	actions SharedLibLinkNoImp bind NEEDLIBS NEEDOBJ NEEDRES
+	 	actions SharedLibLinkNoImp bind NEEDLIBS NEEDOBJ NEEDRES LIBP
 	 	{
-		$(LINK) /DLL $(LINKFLAGS) /DEF:$(INGDEFS)/$(<:B).$(DEFSFX) /out:$(<) $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS) $(NEEDOBJ) $(NEEDRES)
+		$(LINK) /DLL $(LINKFLAGS) /DEF:$(INGDEFS)/$(<:B).$(DEFSFX) /LIBPATH:"$(LIBP)" /out:$(<) $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS) $(NEEDOBJ) $(NEEDRES)
 		if errorlevel 1 EXIT
 		if exist $(MT) if exist $(<:D=$(<[1]:D)).manifest $(MT) -nologo -manifest $(<:D=$(<[1]:D)).manifest -outputresource:$(<);#2
 		Chmod $(DLLMODE) $(<)
 		}
 	    	actions Link bind NEEDLIBS NEEDOBJ NEEDRES 
     		{
-    		$(LINK) $(LINKFLAGS) /out:$(<) $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS) $(NEEDOBJ) $(NEEDRES)
+    		$(LINK) $(LINKFLAGS) /LIBPATH:"$(LIBP)" /out:$(<) $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS) $(NEEDOBJ) $(NEEDRES)
 		if errorlevel 1 EXIT
 		if exist $(MT) if exist $(<:D=$(<[1]:D)).manifest $(MT) -nologo -manifest $(<:D=$(<[1]:D)).manifest -outputresource:$(<);#1
     		}
@@ -9423,36 +10303,36 @@ if $(NT)
 	}
 	else
 	{
-		actions together SharedLibLink bind NEEDLIBS NEEDOBJ NEEDRES
+		actions together SharedLibLink bind NEEDLIBS NEEDOBJ NEEDRES LIBP
 		{
-		$(LINK) /DLL $(LINKFLAGS) /DEF:$(INGDEFS)/$(<:B).$(DEFSFX) /IMPLIB:$(INGLIB)/$(<:B).$(LIBSFX) /out:$(<) /PDB:$(<:S=.$(PDBSFX)) $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS) $(NEEDOBJ) $(NEEDRES)
+		$(LINK) /DLL $(LINKFLAGS) /DEF:$(INGDEFS)/$(<:B).$(DEFSFX) /IMPLIB:$(<:S=.$(LIBSFX)) /LIBPATH:"$(LIBP)" /out:$(<) /PDB:$(<:S=.$(PDBSFX)) $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS) $(NEEDOBJ) $(NEEDRES)
 		if errorlevel 1 EXIT
 		if exist $(MT) if exist $(<:D=$(<[1]:D)).manifest $(MT) -nologo -manifest $(<:D=$(<[1]:D)).manifest -outputresource:$(<);#2
 		Chmod $(DLLMODE) $(<)
 		}
-		actions SharedLibLinkLcl bind NEEDLIBS NEEDOBJ NEEDRES NODEFAULTLIB
+		actions SharedLibLinkLcl bind NEEDLIBS NEEDOBJ NEEDRES NODEFAULTLIB LIBP
 		{
-		$(LINK) /DLL $(LINKFLAGS) /DEF:$(<:S=.$(DEFSFX)) $(NODEFAULTLIB) $(<:S=$(SUFOBJ)) /out:$(<) /PDB:$(<:S=.$(PDBSFX)) $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS) $(NEEDOBJ) $(NEEDRES)
+		$(LINK) /DLL $(LINKFLAGS) /DEF:$(<:S=.$(DEFSFX)) $(NODEFAULTLIB) $(<:S=$(SUFOBJ)) /LIBPATH:"$(LIBP)" /out:$(<) /PDB:$(<:S=.$(PDBSFX)) $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS) $(NEEDOBJ) $(NEEDRES)
 		if errorlevel 1 EXIT
 		if exist $(MT) if exist $(<:D=$(<[1]:D)).manifest $(MT) -nologo -manifest $(<:D=$(<[1]:D)).manifest -outputresource:$(<);#2
 		}
-	 	actions SharedLibLinkNoDef bind NEEDLIBS NEEDOBJ NEEDRES
+	 	actions SharedLibLinkNoDef bind NEEDLIBS NEEDOBJ NEEDRES LIBP
  		{
- 		$(LINK) /DLL $(LINKFLAGS) /IMPLIB:$(INGLIB)/$(<:B).$(LIBSFX) /out:$(<) /PDB:$(<:S=.$(PDBSFX)) $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS) $(NEEDOBJ) $(NEEDRES)
+ 		$(LINK) /DLL $(LINKFLAGS) /IMPLIB:$(<:S=.$(LIBSFX)) /LIBPATH:"$(LIBP)" /out:$(<) /PDB:$(<:S=.$(PDBSFX)) $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS) $(NEEDOBJ) $(NEEDRES)
 		if errorlevel 1 EXIT
 		if exist $(MT) if exist $(<:D=$(<[1]:D)).manifest $(MT) -nologo -manifest $(<:D=$(<[1]:D)).manifest -outputresource:$(<);#2
 		Chmod $(DLLMODE) $(<)
 		}
- 		actions SharedLibLinkNoImp bind NEEDLIBS NEEDOBJ NEEDRES
+ 		actions SharedLibLinkNoImp bind NEEDLIBS NEEDOBJ NEEDRES LIBP
 	 	{
-		$(LINK) /DLL $(LINKFLAGS) /DEF:$(INGDEFS)/$(<:B).$(DEFSFX) /out:$(<) /PDB:$(<:S=.$(PDBSFX)) $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS) $(NEEDOBJ) $(NEEDRES)
+		$(LINK) /DLL $(LINKFLAGS) /DEF:$(INGDEFS)/$(<:B).$(DEFSFX) /LIBPATH:"$(LIBP)" /out:$(<) /PDB:$(<:S=.$(PDBSFX)) $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS) $(NEEDOBJ) $(NEEDRES)
 		if errorlevel 1 EXIT
 		if exist $(MT) if exist $(<:D=$(<[1]:D)).manifest $(MT) -nologo -manifest $(<:D=$(<[1]:D)).manifest -outputresource:$(<);#2
 		Chmod $(DLLMODE) $(<)
 		}
 	    	actions Link bind NEEDLIBS NEEDOBJ NEEDRES 
     		{
-    		$(LINK) $(LINKFLAGS) /out:$(<) /PDB:$(<:S=.$(PDBSFX)) $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS) $(NEEDOBJ) $(NEEDRES)
+    		$(LINK) $(LINKFLAGS) /LIBPATH:"$(LIBP)" /out:$(<) /PDB:$(<:S=.$(PDBSFX)) $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS) $(NEEDOBJ) $(NEEDRES)
 		if errorlevel 1 EXIT
 		if exist $(MT) if exist $(<:D=$(<[1]:D)).manifest $(MT) -nologo -manifest $(<:D=$(<[1]:D)).manifest -outputresource:$(<);#1
     		}
@@ -9464,15 +10344,21 @@ if $(NT)
 	if %errorlevel%==0 $(RM) $(INGTOOLSBIN)\binaddr.txt & $(REBASE) -b 0x70000000 -e 10000 -C $(INGTOOLSBIN)\binaddr.txt $(INGBIN)\*.$(SLSFX) 
 	if %errorlevel% GEQ 1 if exist $(INGTOOLSBIN)\binaddr.txt if exist $(INGBIN)\$(<:D=) $(REBASE) -s -b 0x70000000 $(INGBIN)\$(<:D=)|$(AWK) '{print $7}'|sed s:)::>$(INGBIN)\$(<:S=.sz:D=) & if exist $(INGBIN)\updcoffbf.exe updcoffbf.exe $(INGTOOLSBIN)\binaddr.txt $(<:D=) $(INGBIN)\$(<:S=.sz:D=) & $(REBASE) -v -i $(INGTOOLSBIN)\binaddr.txt $(INGBIN)\$(<:D=) 
 	}
+	actions RebaseHB
+	{
+	$(REBASE) -b 0x70000000 -e 10000 $(INGBIN)$(DFS)$(SUFHB)$(DFS)*.$(SLSFX)
+	if %errorlevel%==0 $(RM) $(INGTOOLSBIN)$(DFS)$(SUFHB)$(DFS)binaddr.txt & $(REBASE) -b 0x70000000 -e 10000 -C $(INGTOOLSBIN)$(DFS)$(SUFHB)$(DFS)binaddr.txt $(INGBIN)$(DFS)$(SUFHB)$(DFS)*.$(SLSFX) 
+	if %errorlevel% GEQ 1 if exist $(INGTOOLSBIN)$(DFS)$(SUFHB)$(DFS)binaddr.txt if exist $(INGBIN)$(DFS)$(SUFHB)$(DFS)$(<:D=) $(REBASE) -s -b 0x70000000 $(INGBIN)$(DFS)$(SUFHB)$(DFS)$(<:D=)|$(AWK) '{print $7}'|sed s:)::>$(INGBIN)$(DFS)$(SUFHB)$(DFS)$(<:S=.sz:D=) & if exist $(INGBIN)$(DFS)$(SUFHB)$(DFS)updcoffbf.exe updcoffbf.exe $(INGTOOLSBIN)$(DFS)$(SUFHB)$(DFS)binaddr.txt $(<:D=) $(INGBIN)$(DFS)$(SUFHB)$(DFS)$(<:S=.sz:D=) & $(REBASE) -v -i $(INGTOOLSBIN)$(DFS)$(SUFHB)$(DFS)binaddr.txt $(INGBIN)$(DFS)$(SUFHB)$(DFS)$(<:D=) 
+	}
 
 	actions updated together ImpArchiveOnly
 	{
-		$(AR) /nologo /DEF:$(INGDEFS)/$(<:B).$(DEFSFX) /out:$(<:D)/$(<:B).$(LIBSFX)
+		$(AR) /nologo /DEF:$(INGDEFS)$(DFS)$(<:B).$(DEFSFX) /out:$(<:D)$(DFS)$(<:B).$(LIBSFX)
 	}
 
 	actions together ImpArchive
 	{
-		   $(AR) /nologo /DEF:$(INGDEFS)/$(<:B).$(DEFSFX) /out:$(<:D)/$(<:B).$(LIBSFX) $(>) 
+		   $(AR) /nologo /DEF:$(INGDEFS)$(DFS)$(<:B).$(DEFSFX) /out:$(<:D)$(DFS)$(<:B).$(LIBSFX) $(>) 
 			
 	}
 
@@ -9561,13 +10447,27 @@ actions _IIVERSREL
     $(RM) $(RMFLAGS) $(<)$(ALLREVS) 
     $(PIPE) genrelid > $(<) 
 }
+if $(config_string) = "a64_win"
+{
+actions _IIVERSRELW
+{
+    rm -rf $(<)
+    call genrelid.bat INGRES > verstmp.rel 
+    $(SHELL) -c "sed $(SEDARGS) 's/\"//g' verstmp.rel > $(<)"
+    rm verstmp.rel
 
+}
+}
+else
+{
 actions _IIVERSRELW
 {
     rm -rf $(<)
     call genrelid.bat INGRES > verstmp.rel 
     sh -c "sed $(SEDARGS) 's/\"//g' verstmp.rel > $(<)"
     rm verstmp.rel
+
+}
 }
 
 actions _SLNDOTNET

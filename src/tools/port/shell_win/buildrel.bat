@@ -309,6 +309,11 @@ REM	     Replace /kp flag with /pa flag to ensure compatibility with
 REM	     different version of signtool.  /pa flag ensures the signature
 REM	     is verified using the "Default Authenticode" verification
 REM	     policy.
+REM	06-Mar-2010 (drivi01)
+REM	     Update the script to roll pure 64-bit image.
+REM	07-Apr-2010 (drivi01)
+REM	     Temporarily remove VDBA dependecies, as VDBA is not being
+REM	     distributed for the moment.
 REM	
 
 set SUFFIX=
@@ -321,7 +326,7 @@ set DOTNET_STATUS=SKIPPED
 set DBA_STATUS=SKIPPED
 
 
-if "%CPU%" == "IA64" set SUFFIX=64
+REM if "%CPU%" == "IA64" set SUFFIX=64
 if "%CPU%" == "AMD64" set SUFFIX=64
 
 if not x%II_RELEASE_DIR%==x goto CHECK1
@@ -426,12 +431,7 @@ rm -f buildrel_report.txt
 if "%II_RELEASE_LMTD%" == "ON" rm -rf %II_RELEASE_DIR%\IngresIIi18n %II_RELEASE_DIR%\IngresIIDoc %II_RELEASE_DIR%\IngresII\*
 msidepcheck IngresIIDBMS%SUFFIX%.ism 
 msidepcheck IngresIIDBMSIce%SUFFIX%.ism 
-if "%DOUBLEBYTE%" == "ON" goto AUDIT_DBL1
-msidepcheck IngresIIDBMSNet%SUFFIX%.ism 
-goto AUDIT_CONT_1
-:AUDIT_DBL1
-msidepcheck IngresIIDBMSNet_DBL.ism 
-:AUDIT_CONT_1
+msidepcheck IngresIIDBMSNet_DBL%SUFFIX%.ism 
 msidepcheck IngresIIDBMSNetIce%SUFFIX%.ism 
 msidepcheck IngresIIDBMSNetTools%SUFFIX%.ism 
 msidepcheck IngresIIDBMSNetVision%SUFFIX%.ism 
@@ -439,19 +439,19 @@ msidepcheck IngresIIDBMSReplicator%SUFFIX%.ism
 msidepcheck IngresIIDBMSTools%SUFFIX%.ism 
 msidepcheck IngresIIDBMSVdba%SUFFIX%.ism 
 msidepcheck IngresIIDBMSVision%SUFFIX%.ism 
-if NOT "%II_RELEASE_LMTD%" == "ON" msidepcheck IngresIIDoc%SUFFIX%.ism
-if NOT "%II_RELEASE_LMTD%" == "ON" msidepcheck IngresIIi18n%SUFFIX%.ism 
+if NOT "%II_RELEASE_LMTD%" == "ON" if "%SUFFIX%" == "" msidepcheck IngresIIDoc%SUFFIX%.ism
+if NOT "%II_RELEASE_LMTD%" == "ON" if "%SUFFIX%" == "" msidepcheck IngresIIi18n%SUFFIX%.ism 
 msidepcheck IngresIIEsqlC%SUFFIX%.ism 
 msidepcheck IngresIIEsqlCEsqlCobol%SUFFIX%.ism 
 msidepcheck IngresIIIce%SUFFIX%.ism 
 msidepcheck IngresIIJdbc%SUFFIX%.ism 
 msidepcheck IngresIIODBC%SUFFIX%.ism 
-msidepcheck IngresIIVdba%SUFFIX%.ism 
+if "%SUFFIX" == "" msidepcheck IngresIIVdba%SUFFIX%.ism 
 msidepcheck IngresIINet%SUFFIX%.ism 
 msidepcheck IngresIINetTools%SUFFIX%.ism 
-msidepcheck IngresIIDotNETDataProvider.ism 
-msidepcheck IngresIIDBMSDotNETDataProvider.ism
-msidepcheck MSRedists.ism 
+if "%SUFFIX%" == "" msidepcheck IngresIIDotNETDataProvider.ism 
+msidepcheck IngresIIDBMSDotNETDataProvider%SUFFIX%.ism
+msidepcheck MSRedists%SUFFIX%.ism 
 if "%EVALBUILD%" == "ON" goto AUDIT_SDK1
 msidepcheck IngresIIEsqlCobol%SUFFIX%.ism 
 msidepcheck IngresIIEsqlFortran%SUFFIX%.ism 
@@ -463,22 +463,17 @@ msidepcheck IngresIIVision%SUFFIX%.ism
 if NOT "x%II_RELEASE_NODOC%"=="xON" msidepcheck IngresII_Doc.ism
 if NOT "x%II_RELEASE_NODOTNET%"=="xON" msidepcheck IngresII_DotNETDataProvider.ism
 @echo Auditing Ingres setup package...
-if "%DOUBLEBYTE%" == "ON" goto AUDIT_DBL2
-msidepcheck IngresII%SUFFIX%.ism 
-goto AUDIT_CONT_2
-:AUDIT_DBL2
 if "%II_RELEASE_LMTD%" == "ON" goto AUDIT_CONT_LMTD
-msidepcheck IngresII_DBL.ism 
+msidepcheck IngresII_DBL%SUFFIX%.ism 
 goto AUDIT_CONT_2
 :AUDIT_SDK1
 msidepcheck IngresSDK.ism 
-
 :AUDIT_CONT_LMTD
 msidepcheck IngresII_DBL_LMTD.ism
 goto AUDIT_CONT_2
 
 :AUDIT_CONT_2
-if exist buildrel_report.txt msidepcheck IngresIISpat.ism
+if exist buildrel_report.txt msidepcheck IngresIISpat%SUFFIX%.ism
 if exist buildrel_report.txt mv buildrel_report.txt %ING_SRC%\buildrel_report.txt
 if exist %ING_SRC%\buildrel_report.txt echo There are some files missing or zero length:& echo.
 if exist %ING_SRC%\buildrel_report.txt type %ING_SRC%\buildrel_report.txt& echo.
@@ -486,7 +481,7 @@ if exist %ING_SRC%\buildrel_report.txt echo A log of these missing files has bee
 
 :AUDIT_CONT_3
 if NOT exist %ING_SRC%\front\st\enterprise_is_win\IngresIISpat.ism set NOSPAT=ON
-msidepcheck IngresIISpat.ism
+msidepcheck IngresIISpat%SUFFIX%.ism
 if exist buildrel_report.txt mv buildrel_report.txt %ING_SRC%\buildrel_report.txt
 if exist %ING_SRC%\buildrel_report.txt echo There are some files missing from spatial distribution.& echo.
 if exist %ING_SRC%\buildrel_report.txt type %ING_SRC%\buildrel_report.txt& echo.
@@ -579,22 +574,17 @@ echo.
 echo Building Merge Modules...
 call gd enterprise_is_win
 call chmod 777 *.ism
+REM set SUFFIX=64
 ISCmdBld.exe -x -p IngresIIDBMS%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIDBMS
 if errorlevel 1 goto ERROR
+REM set SUFFIX=
 @echo.
 ISCmdBld.exe -x -p IngresIIDBMSIce%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIDBMSIce
 if errorlevel 1 goto ERROR
 @echo.
-if "%DOUBLEBYTE%" == "ON" goto DBL1
-ISCmdBld.exe -x -p IngresIIDBMSNet%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIDBMSNet
+ISCmdBld.exe -x -p IngresIIDBMSNet_DBL%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIDBMSNet
 if errorlevel 1 goto ERROR
 @echo.
-goto CONT2_1
-:DBL1
-ISCmdBld.exe -x -p IngresIIDBMSNet_DBL.ism -b %II_RELEASE_DIR%\IngresIIDBMSNet
-if errorlevel 1 goto ERROR
-@echo.
-:CONT2_1
 ISCmdBld.exe -x -p IngresIIDBMSNetIce%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIDBMSNetIce
 if errorlevel 1 goto ERROR
 @echo.
@@ -616,10 +606,10 @@ if errorlevel 1 goto ERROR
 ISCmdBld.exe -x -p IngresIIDBMSVision%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIDBMSVision
 if errorlevel 1 goto ERROR
 @echo.
-if NOT "%II_RELEASE_LMTD%" == "ON" ISCmdBld.exe -x -p IngresIIDoc%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIDoc
+if NOT "%II_RELEASE_LMTD%" == "ON" if "%SUFFIX%" == "" ISCmdBld.exe -x -p IngresIIDoc%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIDoc
 if errorlevel 1 goto ERROR
 @echo.
-if NOT "%II_RELEASE_LMTD%" == "ON" ISCmdBld.exe -x -p IngresIIi18n%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIi18n
+if NOT "%II_RELEASE_LMTD%" == "ON" if "%SUFFIX%" == "" ISCmdBld.exe -x -p IngresIIi18n%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIi18n
 if errorlevel 1 goto ERROR
 @echo.
 ISCmdBld.exe -x -p IngresIIEsqlC%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIEsqlC
@@ -637,8 +627,8 @@ if errorlevel 1 goto ERROR
 ISCmdBld.exe -x -p IngresIIODBC%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIODBC
 if errorlevel 1 goto ERROR
 @echo.
-ISCmdBld.exe -x -p IngresIIVdba%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIVdba
-if errorlevel 1 goto ERROR
+If "%SUFFIX%" == "" ISCmdBld.exe -x -p IngresIIVdba%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIVdba
+If "%SUFFIX%" == "" if errorlevel 1 goto ERROR
 @echo.
 ISCmdBld.exe -x -p IngresIINet%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIINet
 if errorlevel 1 goto ERROR
@@ -646,13 +636,10 @@ if errorlevel 1 goto ERROR
 ISCmdBld.exe -x -p IngresIINetTools%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIINetTools
 if errorlevel 1 goto ERROR
 @echo.
-ISCmdBld.exe -x -p IngresIIDotNETDataProvider.ism -b %II_RELEASE_DIR%\IngresIIDotNETDataProvider
-if errorlevel 1 goto ERROR
-@echo.
 ISCmdBld.exe -x -p IngresIIDBMSDotNETDataProvider.ism -b %II_RELEASE_DIR%\IngresIIDBMSDotNETDataProvider
 if errorlevel 1 goto ERROR
 @echo.
-ISCmdBld.exe -x -p MSRedists.ism -b %II_RELEASE_DIR%\MSRedists
+ISCmdBld.exe -x -p MSRedists%SUFFIX%.ism -b %II_RELEASE_DIR%\MSRedists
 if errorlevel 1 goto ERROR
 @echo.
 if "%EVALBUILD%" == "ON" goto SDK1
@@ -677,19 +664,14 @@ if errorlevel 1 goto ERROR
 ISCmdBld.exe -x -p IngresIIVision%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIVision
 if errorlevel 1 goto ERROR
 @echo.
-if x%NOSPAT%==x ISCmdBld.exe -x -p IngresIISpat.ism -b %II_RELEASE_DIR%\IngresIISpat
+if x%NOSPAT%==x ISCmdBld.exe -x -p IngresIISpat%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIISpat
 if errorlevel 1 goto ERROR
 @echo.
 @echo Building Ingres setup package...
-if "%DOUBLEBYTE%" == "ON" goto DBL2
-ISCmdBld.exe -x -p IngresII%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresII
-if errorlevel 1 goto ERROR
 @echo.
-goto CONT
-:DBL2
 if "%II_RELEASE_LMTD%" == "ON" goto DBL2_LMTD
-if x%NOSPAT%==x ISCmdBld.exe -x -p IngresII_DBL.ism -f "Spat" -b %II_RELEASE_DIR%\IngresII
-if x%NOSPAT%==xON ISCmdBld.exe -x -p IngresII_DBL.ism -f "NoFlag" -b %II_RELEASE_DIR%\IngresII
+if x%NOSPAT%==x ISCmdBld.exe -x -p IngresII_DBL%SUFFIX%.ism -f "Spat" -b %II_RELEASE_DIR%\IngresII
+if x%NOSPAT%==xON ISCmdBld.exe -x -p IngresII_DBL%SUFFIX%.ism -f "NoFlag" -b %II_RELEASE_DIR%\IngresII
 if errorlevel 1 goto ERROR
 @echo.
 goto CONT
@@ -716,60 +698,61 @@ cp -p -v %ING_BUILD%\bin\msiupd.exe %II_MM_DIR%
 echo.
 echo Update version in mergemodules
 echo.
-msiversupdate %II_MM_DIR%\IngresIIDBMS.msm
+msiversupdate %II_MM_DIR%\IngresIIDBMS%SUFFIX%.msm
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIDBMSIce.msm
+msiversupdate %II_MM_DIR%\IngresIIDBMSIce%SUFFIX%.msm
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIDBMSNet_DBL.msm
+msiversupdate %II_MM_DIR%\IngresIIDBMSNet_DBL%SUFFIX%.msm
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIDBMSNetIce.msm
+msiversupdate %II_MM_DIR%\IngresIIDBMSNetIce%SUFFIX%.msm
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIDBMSNetTools.msm
+msiversupdate %II_MM_DIR%\IngresIIDBMSNetTools%SUFFIX%.msm
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIDBMSNetVision.msm
+msiversupdate %II_MM_DIR%\IngresIIDBMSNetVision%SUFFIX%.msm
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIDBMSReplicator.msm
+msiversupdate %II_MM_DIR%\IngresIIDBMSReplicator%SUFFIX%.msm
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIDBMSTools.msm
+msiversupdate %II_MM_DIR%\IngresIIDBMSTools%SUFFIX%.msm
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIDBMSVdba.msm
+msiversupdate %II_MM_DIR%\IngresIIDBMSVdba%SUFFIX%.msm
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIDBMSVision.msm
+msiversupdate %II_MM_DIR%\IngresIIDBMSVision%SUFFIX%.msm
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIEsqlC.msm
+msiversupdate %II_MM_DIR%\IngresIIEsqlC%SUFFIX%.msm
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIEsqlCEsqlCobol.msm  
+msiversupdate %II_MM_DIR%\IngresIIEsqlCEsqlCobol%SUFFIX%.msm  
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIIce.msm 
+msiversupdate %II_MM_DIR%\IngresIIIce%SUFFIX%.msm 
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIJdbc.msm
+msiversupdate %II_MM_DIR%\IngresIIJdbc%SUFFIX%.msm
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIODBC.msm
+msiversupdate %II_MM_DIR%\IngresIIODBC%SUFFIX%.msm
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIVdba.msm
+if "%SUFFIX%" == "" msiversupdate %II_MM_DIR%\IngresIIVdba%SUFFIX%.msm
+if "%SUFFIX%" == "" if errorlevel 1 goto ERROR3
+msiversupdate %II_MM_DIR%\IngresIINet%SUFFIX%.msm 
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIINet.msm 
+msiversupdate %II_MM_DIR%\IngresIINetTools%SUFFIX%.msm 
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIINetTools.msm 
+msiversupdate %II_MM_DIR%\IngresIIEsqlCobol%SUFFIX%.msm 
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIEsqlCobol.msm 
+msiversupdate %II_MM_DIR%\IngresIIEsqlFortran%SUFFIX%.msm 
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIEsqlFortran.msm 
+msiversupdate %II_MM_DIR%\IngresIIReplicator%SUFFIX%.msm  
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIReplicator.msm  
+msiversupdate %II_MM_DIR%\IngresIIStar%SUFFIX%.msm 
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIStar.msm 
+msiversupdate %II_MM_DIR%\IngresIITools%SUFFIX%.msm 
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIITools.msm 
+msiversupdate %II_MM_DIR%\IngresIIToolsVision%SUFFIX%.msm
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIToolsVision.msm
+msiversupdate %II_MM_DIR%\IngresIIVision%SUFFIX%.msm 
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIVision.msm 
+if xNOSPAT==x msiversupdate %II_MM_DIR%\IngresIISpat%SUFFIX%.msm 
 if errorlevel 1 goto ERROR3
-if xNOSPAT==x msiversupdate %II_MM_DIR%\IngresIISpat.msm 
+if "%SUFFIX%"=="" msiversupdate %II_MM_DIR%\IngresIIDoc.msm
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIDoc.msm
-if errorlevel 1 goto ERROR3
+echo FINISHED with msiversupdate
 
 echo Creating cdimage...
 if not exist %II_CDIMAGE_DIR% mkdir %II_CDIMAGE_DIR%
@@ -786,8 +769,8 @@ msiversupdate %II_CDIMAGE_DIR%\files\Ingres.msi
 if errorlevel 1 goto ERROR3
 
 rm -rf %II_CDIMAGE_DIR%\files\setup.*
-if "%CPU%" == "IA64" cp -p -v %ING_SRC%\front\st\enterprise_preinst\Release64\setup.exe %II_CDIMAGE_DIR%& goto CONT5
-if "%CPU%" == "AMD64" cp -p -v %ING_SRC%\front\st\enterprise_preinst\ReleaseAMD64\setup.exe %II_CDIMAGE_DIR%& goto CONT5
+if "%CPU%" == "IA64" cp -p -v %ING_SRC%\front\st\enterprise_preinst_win\Release64\setup.exe %II_CDIMAGE_DIR%& goto CONT5
+if "%CPU%" == "AMD64" cp -p -v %ING_SRC%\front\st\enterprise_preinst_win\ReleaseAMD64\setup.exe %II_CDIMAGE_DIR%& goto CONT5
 cp -p -v %ING_SRC%\front\st\enterprise_preinst_win\Release\setup.exe %II_CDIMAGE_DIR%
 :CONT5
 cp -p -v %ING_SRC%\front\st\enterprise_preinst_win\AUTORUN.INF %II_CDIMAGE_DIR%
@@ -913,7 +896,8 @@ if not ERRORLEVEL 0 goto DIGSIG_ERROR4
 call iisign %II_CDIMAGE_DIR%\files\dotnet\setup.exe
 if not ERRORLEVEL 0 goto DIGSIG_ERROR4
 if "%II_RELEASE_DOTNET%" == "ON" goto CONT4
-goto DBA_TOOLS
+if "%SUFFIX%"=="" goto DBA_TOOLS
+goto CONT3
 
 :DBA_TOOLS
 echo.
@@ -965,7 +949,7 @@ if "%2" == "-s" goto LISTSOL
 goto LISTALL_1
 
 :LISTSOL
-msidepcheck -p IngresIISpat.ism 
+msidepcheck -p IngresIISpat%SUFFIX%.ism 
 goto CONT4_0
 
 :LISTALL_1
@@ -975,7 +959,7 @@ if "%DOUBLEBYTE%" == "ON" goto LISTALL_DBL1
 msidepcheck -p IngresIIDBMSNet%SUFFIX%.ism 
 goto LISTALL_CONT_1
 :LISTALL_DBL1
-msidepcheck -p IngresIIDBMSNet_DBL.ism 
+msidepcheck -p IngresIIDBMSNet_DBL%SUFFIX%.ism 
 :LISTALL_CONT_1
 msidepcheck -p IngresIIDBMSNetIce%SUFFIX%.ism 
 msidepcheck -p IngresIIDBMSNetTools%SUFFIX%.ism 
@@ -984,18 +968,18 @@ msidepcheck -p IngresIIDBMSReplicator%SUFFIX%.ism
 msidepcheck -p IngresIIDBMSTools%SUFFIX%.ism 
 msidepcheck -p IngresIIDBMSVdba%SUFFIX%.ism 
 msidepcheck -p IngresIIDBMSVision%SUFFIX%.ism 
-msidepcheck -p IngresIIDoc%SUFFIX%.ism 
+if "%SUFFIX%" == "" msidepcheck -p IngresIIDoc.ism 
 msidepcheck -p IngresIIEsqlC%SUFFIX%.ism 
 msidepcheck -p IngresIIEsqlCEsqlCobol%SUFFIX%.ism 
 msidepcheck -p IngresIIIce%SUFFIX%.ism 
 msidepcheck -p IngresIIJdbc%SUFFIX%.ism 
 msidepcheck -p IngresIIODBC%SUFFIX%.ism 
-msidepcheck -p IngresIIVdba%SUFFIX%.ism 
+if "%SUFFIX%" == ""  msidepcheck -p IngresIIVdba%SUFFIX%.ism 
 msidepcheck -p IngresIINet%SUFFIX%.ism 
 msidepcheck -p IngresIINetTools%SUFFIX%.ism 
-msidepcheck -p IngresIIDotNETDataProvider.ism 
-msidepcheck -p IngresIIDBMSDotNETDataProvider.ism
-msidepcheck -p MSRedists.ism 
+if "%SUFFIX%" == "" msidepcheck -p IngresIIDotNETDataProvider.ism 
+msidepcheck -p IngresIIDBMSDotNETDataProvider%SUFFIX%.ism
+msidepcheck -p MSRedists%SUFFIX%.ism 
 msidepcheck -p IngresII_Doc.ism
 msidepcheck -p IngresII_DotNETDataProvider.ism
 if "%EVALBUILD%" == "ON" goto LISTALL_SDK1
@@ -1006,12 +990,12 @@ msidepcheck -p IngresIIStar%SUFFIX%.ism
 msidepcheck -p IngresIITools%SUFFIX%.ism 
 msidepcheck -p IngresIIToolsVision%SUFFIX%.ism 
 msidepcheck -p IngresIIVision%SUFFIX%.ism 
-msidepcheck -p IngresIISpat.ism
+msidepcheck -p IngresIISpat%SUFFIX%.ism
 if "%DOUBLEBYTE%" == "ON" goto LISTALL_DBL2
 msidepcheck -p IngresII%SUFFIX%.ism 
 goto CONT4_0
 :LISTALL_DBL2
-msidepcheck -p IngresII_DBL.ism 
+msidepcheck -p IngresII_DBL%SUFFIX%.ism 
 goto CONT4_0
 :LISTALL_SDK1
 msidepcheck -p IngresSDK.ism 
@@ -1129,7 +1113,8 @@ goto DOTNET_IMAGE
 echo.
 set SIGNED=FALSE
 if "%II_RELEASE_DOTNET%"=="ON" goto CONT4
-goto DBA_TOOLS
+if "%SUFFIX%"=="" goto DBA_TOOLS
+goto CONT3
 
 
 :DONE

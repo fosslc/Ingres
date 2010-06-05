@@ -282,6 +282,9 @@
 **	    Apply J's change to all "sys_page_map" platforms, not just linux.
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	29-Mar-2010 (drivi01)
+**	    Update pages to be of type SIZE_TYPE for consistency with
+**          function definitions.
 */
 
 # ifndef CLCONFIG_H_INCLUDED
@@ -869,7 +872,7 @@ ME_tls_destroyall( STATUS *status );
 FUNC_EXTERN STATUS MEshared_free(
 #ifdef CL_PROTOTYPED
 		PTR         *addr,
-		i4         *pages,
+		SIZE_TYPE         *pages,
 		CL_ERR_DESC *err_code
 #endif
 );

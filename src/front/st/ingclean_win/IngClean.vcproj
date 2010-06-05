@@ -159,7 +159,7 @@
 				ProgramDataBaseFileName=".\Debug/"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -275,7 +275,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/Machine:AMD64"
-				AdditionalDependencies="msi.lib shlwapi.lib bufferoverflowu.lib"
+				AdditionalDependencies="msi.lib shlwapi.lib"
 				OutputFile=".\ReleaseAMD64/IngClean.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
@@ -292,7 +292,7 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
-				AdditionalManifestFiles="res\rt_manif.bin"
+				AdditionalManifestFiles="res\rt_manif64.bin"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -556,6 +556,7 @@
 				ProgramDataBaseFileName=".\DebugAMD64/"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -572,12 +573,13 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/Machine:AMD64"
-				AdditionalDependencies="msi.lib shlwapi.lib bufferoverflowu.lib"
+				AdditionalDependencies="msi.lib shlwapi.lib "
 				OutputFile=".\DebugAMD64/IngClean.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				AdditionalManifestDependencies=""
 				UACExecutionLevel="2"
+				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\DebugAMD64/IngClean.pdb"
 				SubSystem="2"
 				RandomizedBaseAddress="1"
@@ -589,7 +591,7 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
-				AdditionalManifestFiles="res\rt_manif.bin"
+				AdditionalManifestFiles="res\rt_manif64.bin"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"

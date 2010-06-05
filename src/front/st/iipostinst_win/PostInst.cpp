@@ -89,6 +89,11 @@
 **		DBA Tools installer is a simplified package of Ingres install
 **		containing only NET and Visual tools component.  
 **		Adjust the wording on the dialogs to fit DBA Tools installation.
+**	06-Apr-2010 (drivi01)
+**	    Update OnTimer to take UINT_PTR as a parameter as UINT_PTR
+**	    will be unsigned int on x86 and unsigned int64 on x64.
+**	    This will cleanup warnings.
+
 **		
 */
 
@@ -202,7 +207,7 @@ CPostInst::OnWizardNext()
 }
 
 void
-CPostInst::OnTimer(UINT nIDEvent) 
+CPostInst::OnTimer(UINT_PTR nIDEvent) 
 {
     CWnd *hAniWnd = GetDlgItem(IDC_ANIMATE1);
 

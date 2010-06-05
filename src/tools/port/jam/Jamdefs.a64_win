@@ -27,11 +27,16 @@
 #	   Eliminated need for -DKRB5_SYSTYPES__
 #	15-Oct-2008 (whiro01)
 #	    Added /nologo to linker flags; took off /PDB:none and /WARN.
+#	08-Apr-2010 (drivi01)
+#	    Setup environment and variables for 64-bit port.
 #
-#VARS
 #
 # Tell Jamdefs that this include worked:
 JAMDEFS_INCLUDED = true ;
+
+
+#VERS32	= "int_w32" ;
+VERS64	= "a64_win" ;
 
 MISCFLAGS	default = "/nologo" ;
 THREADS		= "-D_DLL -D_MT" ;
@@ -54,14 +59,16 @@ CLUSAPI  	default = clusapi.lib ;
 ODBC32LIB	default = odbccp32.lib ;
 ODBCLIBS	default = odbc32.lib odbccp32.lib comctl32.lib ;
 VERSIONLIB	default = version.lib ;
+PSAPILIB      	default = psapi.lib ;
+HTMLHELPLIB	default = htmlhelp.lib ;
 BUFFERLIB	default = bufferoverflowu.lib ;
 GV     		default = \"$(ING_SRC)/cl/clf/gv/gver.obj\" ;
+GV32   		default = \"$(ING_SRC)/cl/clf/gv/lp32/gver.obj\" ;
 APACHECORE	default = $(ING_SRC)/front/ice/lib/ApacheCoreAMD64.lib ;
-#TERMDR		default = $(ING_SRC)/front/frontcl/termdr/termdr.obj ;
 OO		default = $(ING_SRC)/front/utils/oo/oosymbol.obj ;
 PORTREF		= "-DREFERENCE_IN_DLL" ;
 PORTIMP		= "-DIMPORT_DLL_DATA" ;
-EHFLAG		= "/EHsc" ;
+EHFLAG		= "/EHsc " ;
 NOARSCAN 	= true ;
 CD		= "cd /d" ;
 CP		= "cp -f" ;
@@ -71,40 +78,20 @@ FLEX		= flex ;
 LEX 		= flex ;
 AWK		= $(AWK_CMD) ;
 REBASE		= rebase ;
+platform_string = "Microsoft Windows 64-bit" ;  #Equal to GV_ENV val 
+extension_string = $(config_string) ;
+CMPORTS		default = "" ;
 
-
-#
-#ODBC object files
-#
-#ODBCOBJ1 = \"$(ING_SRC)/common/odbc/winspecials_win/dllmai32.obj\" ;
-#ODBCOBJ2 = \"$(ING_SRC)/common/odbc/driver/getrw.obj\" ;
-#ODBCOBJ3 = \"$(ING_SRC)/common/odbc/driver/encrypt.obj\" ;
-#ODBCOBJ4 = \"$(ING_SRC)/common/odbc/config_win/caiioc32.obj\" ;
-#ODBCRES = caiiodbc.res ;
-#ODBCRES2 = caiioc32.res ;
-
-#
-#TESTS res files
-#
-#ACSRES = acstart.res ;
-
-#
-#EMBED OBJECTS
-#
-#EQDATA = eqdata.obj ;
-#EQGLOBS = eqglobs.obj ;
-#CGCDATA = cgcdata.obj ;
-#IIGLOBAL = iiglobal.obj ;
-
-#
-#TNGRES = \"$(ING_SRC)/front/st/tngapi_win/tngmsg.res\" ;
-#PFCRES = \"$(ING_SRC)/front/st/perfmon_win/pfctrmsg.res\" ;
 #
 #set CPUFLAGS
 #
 if $(CPU) = i386
 {
-CPUFLAGS	default = "/G7 -Di386=1 -D_X86_" ;
+CPUFLAGS	default = "-Di386=1 -D_X86_" ;
+}
+if $(CPU) = AMD64
+{
+CPUFLAGS32	default = "-Di386=1" ;
 }
 
 #
@@ -149,9 +136,8 @@ LIBSUFFIX	default = "64" ;
 }
 if $(CPU) = AMD64
 {
-LIBSUFFIX	default = "64" ;
-PLATFORM	default = "/Wp64 -DNT_AMD64 -D_AMD64_=1 -DWIN64 -D_WIN64  -DWIN32 -D_WIN32" ;
-# PLATFORM	default = "/Wp64 -DNT_AMD64 -D_AMD64_=1 -DWIN32 -D_WIN32" ;
+PLATFORM	default = "-DNT_AMD64 -D_AMD64_=1 -DWIN64 -D_WIN64  -DWIN32 -D_WIN32" ;
+PLATFORM32	default = "-DNT_INTEL -DWIN32 -D_WIN32" ;
 }
 if $(CPU) = ALPHA
 {
@@ -226,7 +212,8 @@ if $(CPU) = IA64
 
 if $(CPU) = AMD64
 {
-	MACH 	default = /MACHINE:AMD64 ;
+	MACH 	default = /MACHINE:x64 ;
+	MACH32 	default = /MACHINE:x86 ;
 }
 
 if $(CPU) = ALPHA
@@ -237,22 +224,32 @@ if $(CPU) = ALPHA
 #
 #set DLLFLAGS
 #
-DLLFLAGSNV = /DEBUG:FULL /DEBUGTYPE:CV /MAP $(MACH) ;
 if $(DEBUG) = ON
 {
+	DLLFLAGSNV = /DEBUG /DEBUGTYPE:CV /MAP $(MACH) ;
 	if $(CPU) = IA64 || $(CPU) = AMD64
 	{
-		DLLFLAGS 	default = /DEBUG:FULL /DEBUGTYPE:CV /MAP $(MACH) /LARGEADDRESSWARE 
-					  $(VERSINFO) ;
+		DLLFLAGS 	default = /DEBUG /DEBUGTYPE:CV /MAP $(MACH) 
+					  /LARGEADDRESSAWARE $(VERSINFO) ;
 	}
 	else
 	{
-		DLLFLAGS 	default = /DEBUG:FULL /DEBUGTYPE:CV /MAP $(MACH) 					  $(VERSINFO) ;
+		DLLFLAGS 	default = /DEBUG /DEBUGTYPE:CV /MAP $(MACH) 
+					  $(VERSINFO) ;
 	}
 }
 else
 {
-	DLLFLAGS = /MAP /DEBUG /INCREMENTAL:NO $(MACH) $(VERSINFO) ;
+	DLLFLAGSNV = /MAP /DEBUG /INCREMENTAL:NO $(MACH) ;
+	if $(CPU) = IA64 || $(CPU) = AMD64
+	{
+		DLLFLAGS	default = /MAP /DEBUG /INCREMENTAL:NO $(MACH) 
+					  /LARGEADDRESSAWARE $(VERSINFO) ;
+	}
+	else
+	{
+		DLLFLAGS = /MAP /DEBUG /INCREMENTAL:NO $(MACH) $(VERSINFO) ;
+	}
 }
 
 if $(DEBUG) != ON
@@ -293,29 +290,55 @@ else
 
 }
 
+
+#
+# set MANIFEST UI Level
+#
+ADMIN_MANIFEST	default = "/MANIFESTUAC:\"level='requireAdministrator' uiAccess='false'\"" ;
+
+#
+# set MISC FLAGS
+#
+RMWARNINGS	default = -D_CRT_SECURE_NO_WARNINGS ;
+
+
+
 #
 #Variables
 #
-VERS	default = "a64_win" ;
-CCMACH	default = $(CPUFLAGS) $(CDEBUG) $(RUNTIME) $(ERR_LVL) $(PLATFORM) $(PREPROCESS) -DDESKTOP -DDEVIL -DWIN32 -DINCLUDE_ALL_CL_PROTOS -DNT_GENERIC -DSEP -DSEPDEBUG -DDOUBLEBYTE -DxCL_NO_AUTH_STRING_EXISTS -DINGRESII $(DBFLAG) $(EDFLAG) $(DECFLAG) $(DEVFLAGS) $(THREADS) ;
+CCMACH64	default = -DBUILD_ARCH64 $(CPUFLAGS) $(CDEBUG) $(RUNTIME) $(ERR_LVL) $(PLATFORM) $(PREPROCESS) -DDESKTOP -DDEVIL -DINCLUDE_ALL_CL_PROTOS -DNT_GENERIC -DSEP -DSEPDEBUG -DDOUBLEBYTE -DxCL_NO_AUTH_STRING_EXISTS -DINGRESII $(DBFLAG) $(EDFLAG) $(DECFLAG) $(DEVFLAGS) $(THREADS) $(RMWARNINGS) ;
+CCMACH32	default = -DBUILD_ARCH32 $(CMPORTS) $(CPUFLAGS) $(CDEBUG) $(RUNTIME) $(ERR_LVL) $(PLATFORM32) $(PREPROCESS) -DDESKTOP -DDEVIL -DINCLUDE_ALL_CL_PROTOS -DNT_GENERIC -DSEP -DSEPDEBUG -DDOUBLEBYTE -DxCL_NO_AUTH_STRING_EXISTS -DINGRESII $(DBFLAG) $(EDFLAG) $(DECFLAG) $(DEVFLAGS) $(THREADS) $(RMWARNINGS) ;
 WINNT	default = -D_WIN32_WINNT=0x0500 ;
 # CC	default = "CC" ;
 JAMSHELL = cmd /C % ;
-VISUALC  = "C:/Program Files (x86)/Microsoft Visual Studio .NET 2003/VC7" ;
-PSDK     = "C:/Program Files/Microsoft Platform SDK" ;
-# C++ 	 = \"$(VISUALC)/bin/cl.exe\" ;
-# LINK 	 = \"$(VISUALC)/bin/link.exe\" ;
-# AR 	 = \"$(VISUALC)/bin/lib.exe\" ;
+VISUALC  = "" ;
+C++ 	 = cl.exe ;
+CC32	 ?= \"%VSINSTALLDIR%\\VC\\bin\\cl.exe\" ;
+LINK 	 = link.exe ;
+LINK32 	 ?= \"%VSINSTALLDIR%\\VC\\bin\\link.exe\" ;
+AR32 	 ?= "\"%VSINSTALLDIR%\\VC\\bin\\lib.exe\"  /MACHINE:x86" ;
+LIB32	 ?= "%VSINSTALLDIR%\\VC\\lib" ;
+SDK32	 ?= "%WindowsSdkDir%\lib" ;
+if $(CPU) != IA64 && $(CPU) != AMD64
+{
+	AR = "lib /MACHINE:x86" ;
+}
+else
+{
+	AR = "lib /MACHINE:x64" ;
+}
 LDLIBMACH = /nologo $(DLLFLAGS) ;
-LINKFLAGS = /nologo $(DLLFLAGS) ;
+LDLIBMACH64 = /nologo $(DLLFLAGS) ;
+LINKFLAGS = /nologo $(MISCFLAGS) $(MACH) $(DLLFLAGS) ;
+LINKFLAGS32 = /nologo $(MISCFLAGS) $(MACH32) $(DLLFLAGS) ;
 CCLDMACH  = /nologo $(DLLFLAGS) ;
+CCLDMACH64  = /nologo $(DLLFLAGS) ;
 
-#LINKLIBS = $(SYSLIBS) $(ADVAPILIB) $(NETAPILIB) $(USERLIB) $(GDILIB) $(MORELIB) $(RPCLIB) $(CLUSAPI) $(GV) ;
-LINKLIBS = $(SYSLIBS) $(ADVAPILIB) $(NETAPILIB) $(USERLIB) $(GDILIB) $(MORELIB) $(RPCLIB) $(CLUSAPI) $(BUFFERLIB) $(GV) ;
-STDHDRS  = \"$(PSDK)\\include\\crt\" ;
+LINKLIBS = $(SYSLIBS) $(ADVAPILIB) $(NETAPILIB) $(USERLIB) $(GDILIB) $(MORELIB) $(RPCLIB) $(CLUSAPI) $(PSAPILIB) $(GV) ;
+LINKLIBS32 = $(SYSLIBS) $(ADVAPILIB) $(NETAPILIB) $(USERLIB) $(GDILIB) $(MORELIB) $(RPCLIB) $(CLUSAPI) $(PSAPILIB) $(GV32) ;
 KEEPOBJ = true ;
 SHELLHEADER = "" ;
-AR = "lib /MACHINE:AMD64" ;
+
 
 #
 # File suffixes
@@ -323,9 +346,10 @@ AR = "lib /MACHINE:AMD64" ;
 LIBSFX	default = lib ;
 SLSFX	default = dll ;
 DEFSFX	default = def ;
+PDBSFX	default = pdb ;
 EXESFX	default = exe ;
 OBJSFX	default = obj ;
-PDBSFX	default = pdb ;
+CHMSFX	default = chm ;
 
 #
 #ICE File extensions

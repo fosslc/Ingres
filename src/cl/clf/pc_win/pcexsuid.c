@@ -117,6 +117,14 @@
 **	10-Nov-2009 (drivi01)
 **	    Process should be run by a service if it wasn't launched by the
 **	    Admin user.  This primarily applies to Vista and above.
+**	04-Apr-2010 (drivi01)
+**	    MEget_pages and ME in general has inconsistently replaced i4
+**	    with SIZE_TYPE, SIZE_TYPE is 8 bytes on 64-bit OS which 
+**	    inconsistently assigns datatypes of SIZE_TYPE to DWORD or i4.
+**	    PCexec_suid also makes call to MEget_pages where allocated_pages
+**	    is being passed in as i4.
+**	    Fix allocated_pages to be declared as SIZE_TYPE to stay consistent
+**	    with the definitions within ME.
 **	    
 */
 
@@ -334,7 +342,7 @@ PCexec_suid(char *cmdbuf)
 	    ** to run the command.
 	    */
 	    PTR	shmem;
-	    i4	allocated_pages;
+	    SIZE_TYPE	allocated_pages=0;
 	    STATUS status;
 
 	    if((status = MEget_pages(ME_MSHARED_MASK, 1, "lglkdata.mem",
@@ -384,7 +392,7 @@ PCexec_suid(char *cmdbuf)
 	if (!SetuidDbCmd)
 	{
 	    PTR	shmem;
-	    i4	allocated_pages;
+	    SIZE_TYPE	allocated_pages=0;
 	    STATUS	status;
 
 	    if (((status = MEget_pages(ME_MSHARED_MASK, 1, "lglkdata.mem",
@@ -394,6 +402,7 @@ PCexec_suid(char *cmdbuf)
 	    {
 		if (status != ME_NO_SUCH_SEGMENT)
 		    MEfree_pages(shmem, allocated_pages, &err_code);
+		
 		return( PCcmdline( (LOCATION *) NULL, cmdbuf, PC_WAIT,
 			(LOCATION *) NULL, &err_code) );
 	    }

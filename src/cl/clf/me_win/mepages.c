@@ -70,6 +70,15 @@
 **          chunks than calloc. 
 **      09-Feb-2010 (smeke01) b123226, b113797 
 **	    MOlongout/MOulongout now take i8/u_i8 parameter.
+**	04-Apr-2010 (drivi01)
+**	    MEget_pages and ME in general has inconsistently replaced i4
+**	    with SIZE_TYPE, SIZE_TYPE is 8 bytes on 64-bit OS which 
+**	    inconsistently assigns datatypes of SIZE_TYPE to DWORD or i4.
+**	    PCexec_suid also makes call to MEget_pages where allocated_pages
+**	    is being passed in as i4.
+**	    Fix allocated_pages to be declared as SIZE_TYPE to stay consistent
+**	    with the definitions within ME. 
+**          Clean up warnings by removing unused variables.
 **
 ******************************************************************************/
 
@@ -105,9 +114,9 @@ GLOBALREF i4     MEmax_alloc;
 
 /* call counters for MO */
 
-static i4	ME_getcount	ZERO_FILL;
-static i4	ME_freecount	ZERO_FILL;
-static i4	ME_allocd_pages ZERO_FILL;
+static SIZE_TYPE	ME_getcount	ZERO_FILL;
+static SIZE_TYPE	ME_freecount	ZERO_FILL;
+static SIZE_TYPE	ME_allocd_pages ZERO_FILL;
 
 /* 
 **  Debug stuff
@@ -209,7 +218,6 @@ ME_init(CL_ERR_DESC *err_code)
     i4		allocsize;
     char	*locator;
     bool	KeepGoing = TRUE;
-	STATUS	status;
 
     QUinit(&ME_segpool);
 
@@ -474,8 +482,8 @@ MEget_pages(i4          flag,
 	    */
 
 	    SYSTEM_INFO si;
-	    DWORD maxlockbytes;
-	    DWORD lockbytes;
+	    SIZE_TYPE maxlockbytes;
+	    SIZE_TYPE lockbytes;
 		
 	    GetSystemInfo(&si);
 	    maxlockbytes = 30 * si.dwPageSize;
@@ -550,8 +558,6 @@ ME_alloc_brk(i4          flag,
              CL_ERR_DESC *err_code)
 {
 	DWORD          status;
-	i4             pageno;
-	char           *dummy;
 
 	status = OK;
 	CLEAR_ERR(err_code);

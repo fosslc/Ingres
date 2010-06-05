@@ -553,6 +553,10 @@
 #        4-Feb-2010 (hanal04) Bug 123216
 #           Resolve intermittent build failures caused bu HDRGTK being already
 #           set without xml2 header location.
+#	15-Mar-2010 (drivi01)
+#	    Update Xerces to 3.0.
+#	    Add Windows specific libraries and dependencies for 
+#	    potential hybrid build.
 #	
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE DEFINITIONS and EXCEPTIONS
@@ -1243,6 +1247,22 @@ SEPLIB		= libsep$(SUFLIB) ;
 SEPCLLIB	= libsepcl$(SUFLIB) ;
 SEPDIFFLIB	= libsepdiff$(SUFLIB) ;
 YACCLIB		= libyacc$(SUFLIB) ;
+
+ACHILLESLIBHB	= $(SUFHB)$(DFS)libachilles$(SUFLIB) ;
+ACHSCLIBHB	= $(SUFHB)$(DFS)libach$(SUFLIB) ;
+AMTSLIBHB	= $(SUFHB)$(DFS)libamts$(SUFLIB) ;
+BYACCLIBHB	= $(SUFHB)$(DFS)libbyacc$(SUFLIB) ;
+CALLTLIBHB	= $(SUFHB)$(DFS)libcallt$(SUFLIB) ;
+CPPLIBHB	= $(SUFHB)$(DFS)libcpp$(SUFLIB) ;
+CTSLIBHB	= $(SUFHB)$(DFS)libcts$(SUFLIB) ;
+GTARLIBHB 	= $(SUFHB)$(DFS)libgtar$(SUFLIB) ;
+LEXLIBHB	= $(SUFHB)$(DFS)liblex$(SUFLIB) ;
+LISTEXECLIBHB	= $(SUFHB)$(DFS)liblistexec$(SUFLIB) ;
+MTSLIBHB	= $(SUFHB)$(DFS)libmts$(SUFLIB) ;
+SEPLIBHB	= $(SUFHB)$(DFS)libsep$(SUFLIB) ;
+SEPCLLIBHB	= $(SUFHB)$(DFS)libsepcl$(SUFLIB) ;
+SEPDIFFLIBHB	= $(SUFHB)$(DFS)libsepdiff$(SUFLIB) ;
+YACCLIBHB	= $(SUFHB)$(DFS)libyacc$(SUFLIB) ;
 }
 else
 {
@@ -1463,6 +1483,184 @@ WVIEWLIB	= libwview$(SUFLIB) ;
 XFERDBLIB	= libxferdb$(SUFLIB) ;
 XTERMR4LIB	= libxtermr4$(SUFLIB) ;
 SPATLIB 	= libspat$(SUFLIB) ;
+
+COMPATLIBHB	= $(SUFHB)$(DFS)libcompat$(SUFLIB) ;
+COMPATLIBDATAHB = $(SUFHB)$(DFS)libcompatdata$(SUFLIB) ;
+ABFIMAGELIBHB	= $(SUFHB)$(DFS)libabfimage$(SUFLIB) ;
+ABFLIBHB	= $(SUFHB)$(DFS)libabf$(SUFLIB) ;
+ABFRTLIBHB	= $(SUFHB)$(DFS)libabfrt$(SUFLIB) ;
+ABFRTLIBSUBHB	= $(SUFHB)$(DFS)libabfrtsub$(SUFLIB) ;
+ABFRTSLIBHB	= $(SUFHB)$(DFS)libabfrts$(SUFLIB) ;
+ACMLIBHB	= $(SUFHB)$(DFS)libacm$(SUFLIB) ;
+ADALIBHB	= $(SUFHB)$(DFS)libada$(SUFLIB) ;
+ADASQLIBHB	= $(SUFHB)$(DFS)libadasq$(SUFLIB) ;
+ADFLIBHB	= $(SUFHB)$(DFS)libadf$(SUFLIB) ;
+ADFLIBDATAHB	= $(SUFHB)$(DFS)libadfdata$(SUFLIB) ;
+AFELIBHB	= $(SUFHB)$(DFS)libafe$(SUFLIB) ;
+AIFLIBHB	= $(SUFHB)$(DFS)libaif$(SUFLIB) ;
+APILIBHB	= $(SUFHB)$(DFS)libapi$(SUFLIB) ;
+APACHELIBHB	= $(SUFHB)$(DFS)libapapi$(SUFLIB) ;
+AITLIBHB	= $(SUFHB)$(DFS)libait$(SUFLIB) ;
+ASCFLIBHB	= $(SUFHB)$(DFS)libascf$(SUFLIB) ;
+AWSFLIBHB	= $(SUFHB)$(DFS)libawsf$(SUFLIB) ;
+C_APILIBHB	= $(SUFHB)$(DFS)libicecapi$(SUFLIB) ;
+CAUTILLIBHB	= $(SUFHB)$(DFS)libcautil$(SUFLIB) ;
+CLIBHB		= $(SUFHB)$(DFS)libembedc$(SUFLIB) ;
+COBOLLIBHB	= $(SUFHB)$(DFS)libcobol$(SUFLIB) ;
+COBOLSQLIBHB	= $(SUFHB)$(DFS)libcobolsq$(SUFLIB) ;
+CODEGENLIBHB	= $(SUFHB)$(DFS)libcodegen$(SUFLIB) ;
+COMPFRMLIBHB	= $(SUFHB)$(DFS)libcompfrm$(SUFLIB) ;
+CONFIGLIBHB	= $(SUFHB)$(DFS)libconfig$(SUFLIB) ;
+COPYAPPLIBHB	= $(SUFHB)$(DFS)libcopyappl$(SUFLIB) ;
+COPYFORMLIBHB	= $(SUFHB)$(DFS)libcopyform$(SUFLIB) ;
+COPYGRLIBHB	= $(SUFHB)$(DFS)libcopygr$(SUFLIB) ;
+COPYLIBHB	= $(SUFHB)$(DFS)libcopy$(SUFLIB) ;
+COPYREPLIBHB	= $(SUFHB)$(DFS)libcopyrep$(SUFLIB) ;
+COPYUTILLIBHB	= $(SUFHB)$(DFS)libcopyutil$(SUFLIB) ;
+CSQLIBHB	= $(SUFHB)$(DFS)libcsq$(SUFLIB) ;
+CUFLIBHB	= $(SUFHB)$(DFS)libcuf$(SUFLIB) ;
+CUFLIBDATAHB	= $(SUFHB)$(DFS)libcufdata$(SUFLIB) ;
+DATALDRLIBHB	= $(SUFHB)$(DFS)libdataldr$(SUFLIB) ;
+DBUTILLIBHB	= $(SUFHB)$(DFS)libdbutil$(SUFLIB) ;
+DBUTILLIBDATAHB	= $(SUFHB)$(DFS)libdbutildata$(SUFLIB) ;
+DDFLIBHB	= $(SUFHB)$(DFS)libddf$(SUFLIB) ;
+DDFCOMLIBHB	= $(SUFHB)$(DFS)libddfcom$(SUFLIB) ;
+DDILIBHB	= $(SUFHB)$(DFS)libddi$(SUFLIB) ;
+DELETERLIBHB	= $(SUFHB)$(DFS)libdeleter$(SUFLIB) ;
+DELOBJLIBHB	= $(SUFHB)$(DFS)libdelobj$(SUFLIB) ;
+DIAGLIBHB	= $(SUFHB)$(DFS)libdiag$(SUFLIB) ;
+DICTUTILLIBHB	= $(SUFHB)$(DFS)libdictutil$(SUFLIB) ;
+DMFLIBHB	= $(SUFHB)$(DFS)libdmf$(SUFLIB) ;
+DMFLIBDATAHB	= $(SUFHB)$(DFS)libdmfdata$(SUFLIB) ;
+DPLIBHB		= $(SUFHB)$(DFS)libdp$(SUFLIB) ;
+DUVLIBHB	= $(SUFHB)$(DFS)libduv$(SUFLIB) ;
+DUSLIBHB	= $(SUFHB)$(DFS)libdus$(SUFLIB) ;
+EMBEDLIBHB	= $(SUFHB)$(DFS)libembed$(SUFLIB) ;
+EMBEDLIBDATAHB	= $(SUFHB)$(DFS)libembeddata$(SUFLIB) ;
+EQUELLIBHB	= $(SUFHB)$(DFS)libequel$(SUFLIB) ;
+FDLIBHB		= $(SUFHB)$(DFS)libfd$(SUFLIB) ;
+FEDSLIBHB	= $(SUFHB)$(DFS)libfeds$(SUFLIB) ;
+FGLIBHB		= $(SUFHB)$(DFS)libfg$(SUFLIB) ;
+FMTLIBHB	= $(SUFHB)$(DFS)libfmt$(SUFLIB) ;
+FORMINDEXLIBHB	= $(SUFHB)$(DFS)libformindex$(SUFLIB) ;
+FORTRANLIBHB	= $(SUFHB)$(DFS)libfortran$(SUFLIB) ;
+FORTRANSQLIBHB	= $(SUFHB)$(DFS)libfortransq$(SUFLIB) ;
+FRAMELIBDATAHB	= $(SUFHB)$(DFS)libframedata$(SUFLIB) ;
+FSTMLIBHB	= $(SUFHB)$(DFS)libfstm$(SUFLIB) ;
+FTLIBHB		= $(SUFHB)$(DFS)libft$(SUFLIB) ;
+GCCLIBHB	= $(SUFHB)$(DFS)libiigcc$(SUFLIB) ;
+GCDLIBHB	= $(SUFHB)$(DFS)libgcd$(SUFLIB) ;
+GCFLIBHB	= $(SUFHB)$(DFS)libgcf$(SUFLIB) ;
+GCFLIBDATAHB	= $(SUFHB)$(DFS)libgcfdata$(SUFLIB) ;
+GCNLIBHB	= $(SUFHB)$(DFS)libgcn$(SUFLIB) ;
+GCNEXTLIBHB	= $(SUFHB)$(DFS)libgcnext$(SUFLIB) ;
+GENERATELIBHB	= $(SUFHB)$(DFS)libgenerate$(SUFLIB) ;
+GNLIBHB		= $(SUFHB)$(DFS)libgn$(SUFLIB) ;
+GRAFLIBHB	=  ;
+GTLIBHB		= $(SUFHB)$(DFS)libgt$(SUFLIB) ;
+GWFLIBHB	= $(SUFHB)$(DFS)libgwf$(SUFLIB) ;
+GWFLIBDATAHB	= $(SUFHB)$(DFS)libgwfdata$(SUFLIB) ;
+IAOMLIBHB	= $(SUFHB)$(DFS)libiaom$(SUFLIB) ;
+ICECLILIBHB	= $(SUFHB)$(DFS)libiceclient$(SUFLIB) ;
+ICECONFLIBHB	= $(C_APILIBHB) ;
+ICELIBHB	= $(SUFHB)$(DFS)libice$(SUFLIB) ;
+ICELIBDATAHB	= $(SUFHB)$(DFS)libicedata$(SUFLIB) ;
+ICETRANSLATELIBHB = $(SUFHB)$(DFS)libicetrans$(SUFLIB) ;
+ILGLIBHB	= $(SUFHB)$(DFS)libilg$(SUFLIB) ;
+ILRFLIBHB	= $(SUFHB)$(DFS)libilrf$(SUFLIB) ;
+SIGIMPLIBHB	= $(SUFHB)$(DFS)libsigimp$(SUFLIB) ;
+IPMLIBHB	= $(SUFHB)$(DFS)ipm$(SUFLIB) ;
+IMPXMLLIBHB	= $(SUFHB)$(DFS)libimpxml$(SUFLIB) ;
+IMPEXPLIBHB	= $(SUFHB)$(DFS)libimpexp$(SUFLIB) ;
+INGCNTRLLIBHB	= $(SUFHB)$(DFS)libingcntrl$(SUFLIB) ;
+INGMENULIBHB	= $(SUFHB)$(DFS)libingmenu$(SUFLIB) ;
+INGRESLIBHB	= $(SUFHB)$(DFS)libingres$(SUFLIB) ;
+LIBINGRESHB	= $(INGRESLIBHB) ;
+INSTALLLIBHB	= $(SUFHB)$(DFS)libinstall$(SUFLIB) ;
+INTERPLIBHB	= $(SUFHB)$(DFS)libinterp$(SUFLIB) ;
+INTERPLIBDATAHB	= $(SUFHB)$(DFS)libinterpdata$(SUFLIB) ;
+IOILIBHB	= $(SUFHB)$(DFS)libioi$(SUFLIB) ;
+IPMLIBHB	= $(SUFHB)$(DFS)libipm$(SUFLIB) ;
+JDBCLIBHB	= $(SUFHB)$(DFS)libjdbc$(SUFLIB) ;
+JNILIBHB	= $(SUFHB)$(DFS)libjni$(SUFLIB) ;
+LIBQGCALIBHB	= $(SUFHB)$(DFS)libqgca$(SUFLIB) ;
+LIBQLIBHB	= $(SUFHB)$(DFS)libq$(SUFLIB) ;
+LIBQLIBDATAHB	= $(SUFHB)$(DFS)libqdata$(SUFLIB) ;
+LIBQSYSLIBHB	= $(SUFHB)$(DFS)libqsys$(SUFLIB) ;
+LIBQTXXALIBHB	= $(SUFHB)$(DFS)libqtxxa$(SUFLIB) ;
+LIBQXALIBHB	= $(SUFHB)$(DFS)libqxa$(SUFLIB) ;
+MICROSOFTLIBHB	= $(SUFHB)$(DFS)libmicrosoft$(SUFLIB) ;
+MONITORLIBHB	= $(SUFHB)$(DFS)libmonitor$(SUFLIB) ;
+MTLIBHB		= $(SUFHB)$(DFS)libmt$(SUFLIB) ;
+NETUTILLIBHB	= $(SUFHB)$(DFS)libnetutil$(SUFLIB) ;
+NETSCAPELIBHB	= $(SUFHB)$(DFS)libnsapi$(SUFLIB) ;
+NEWORDERLIBHB	= $(SUFHB)$(DFS)libplay_NewOrder$(SUFLIB) ;
+OOLIBHB		= $(SUFHB)$(DFS)liboo$(SUFLIB) ;
+OPFLIBHB	= $(SUFHB)$(DFS)libopf$(SUFLIB) ;
+OPFLIBDATAHB	= $(SUFHB)$(DFS)libopfdata$(SUFLIB) ;
+OSLLIBHB	= $(SUFHB)$(DFS)libosl$(SUFLIB) ;
+ODBCLIBHB	= $(SUFHB)$(DFS)libodbc$(SUFLIB) ;
+ODBCCFGLIBHB	= $(SUFHB)$(DFS)libodbccfg$(SUFLIB) ;
+ODBCMGRLIBHB	= $(SUFHB)$(DFS)libodbccli$(SUFLIB) ;
+ODBCDRIVERLIBHB	= $(SUFHB)$(DFS)libodbcdriver$(SUFLIB) ;
+PERFMONLIBHB	= $(SUFHB)$(DFS)libperfmon$(SUFLIB) ;
+PRINTFORMLIBHB	= $(SUFHB)$(DFS)libprintform$(SUFLIB) ;
+PSFLIBHB	= $(SUFHB)$(DFS)libpsf$(SUFLIB) ;
+PSFLIBDATAHB	= $(SUFHB)$(DFS)libpsfdata$(SUFLIB) ;
+PATCHLIBHB	= $(SUFHB)$(DFS)libpatch$(SUFLIB) ;
+QBFLIBHB	= $(SUFHB)$(DFS)libqbf$(SUFLIB) ;
+QEFLIBHB	= $(SUFHB)$(DFS)libqef$(SUFLIB) ;
+QEFLIBDATAHB	= $(SUFHB)$(DFS)libqefdata$(SUFLIB) ;
+QRLIBHB		= $(SUFHB)$(DFS)libqr$(SUFLIB) ;
+QSFLIBHB	= $(SUFHB)$(DFS)libqsf$(SUFLIB) ;
+QSFLIBDATAHB	= $(SUFHB)$(DFS)libqsfdata$(SUFLIB) ;
+QUELLIBHB	= $(SUFHB)$(DFS)libquel$(SUFLIB) ;
+RAATLIBHB	= $(SUFHB)$(DFS)libraat$(SUFLIB) ;
+RBFLIBHB	= $(SUFHB)$(DFS)librbf$(SUFLIB) ;
+RDFLIBHB	= $(SUFHB)$(DFS)librdf$(SUFLIB) ;
+RDFLIBDATAHB	= $(SUFHB)$(DFS)librdfdata$(SUFLIB) ;
+REPORTLIBHB	= $(SUFHB)$(DFS)libreport$(SUFLIB) ;
+REPCOMNLIBHB	= $(SUFHB)$(DFS)librepcomn$(SUFLIB) ;
+REPMGRLIBHB	= $(SUFHB)$(DFS)librepmgr$(SUFLIB) ;
+REPSERVLIBHB	= $(SUFHB)$(DFS)librepserv$(SUFLIB) ;
+RFVIFREDLIBHB	= $(SUFHB)$(DFS)librfvifred$(SUFLIB) ;
+RMCMDLIBHB	= $(SUFHB)$(DFS)librmcmd$(SUFLIB) ;
+RQFLIBHB	= $(SUFHB)$(DFS)librqf$(SUFLIB) ;
+RQFLIBDATAHB	= $(SUFHB)$(DFS)librqfdata$(SUFLIB) ;
+RUNGRAPHLIBHB	= $(SUFHB)$(DFS)librungraph$(SUFLIB) ;
+RUNSYSLIBHB	= $(SUFHB)$(DFS)librunsys$(SUFLIB) ;
+RUNTIMELIBHB	= $(SUFHB)$(DFS)libruntime$(SUFLIB) ;
+SAWLIBHB        = $(SUFHB)$(DFS)libsaw$(SUFLIB) ;
+SCFLIBHB	= $(SUFHB)$(DFS)libscf$(SUFLIB) ;
+SCFLIBDATAHB	= $(SUFHB)$(DFS)libscfdata$(SUFLIB) ;
+SDLIBHB		= $(SUFHB)$(DFS)libsd$(SUFLIB) ;
+SETUPLIBHB	= $(SUFHB)$(DFS)libsetup$(SUFLIB) ;
+SIGLIBHB	= $(SUFHB)$(DFS)libsig$(SUFLIB) ;
+SQLCALIBHB	= $(SUFHB)$(DFS)libsqlca$(SUFLIB) ;
+SQLLIBHB	= $(SUFHB)$(DFS)libsql$(SUFLIB) ;
+SREPORTLIBHB	= $(SUFHB)$(DFS)libsreport$(SUFLIB) ;
+STARVIEWLIBHB	= $(SUFHB)$(DFS)libstarview$(SUFLIB) ;
+SXFLIBHB	= $(SUFHB)$(DFS)libsxf$(SUFLIB) ;
+SXFLIBDATAHB	= $(SUFHB)$(DFS)libsxfdata$(SUFLIB) ;
+TBLUTILLIBHB	= $(SUFHB)$(DFS)libtblutil$(SUFLIB) ;
+TNGAPILIBHB	= $(SUFHB)$(DFS)libtngapi$(SUFLIB) ;
+TPFLIBHB	= $(SUFHB)$(DFS)libtpf$(SUFLIB) ;
+TPFLIBDATAHB	= $(SUFHB)$(DFS)libtpfdata$(SUFLIB) ;
+UDTLIBHB	= $(SUFHB)$(DFS)libudt$(SUFLIB) ;
+UFLIBHB		= $(SUFHB)$(DFS)libuf$(SUFLIB) ;
+UGLIBHB		= $(SUFHB)$(DFS)libug$(SUFLIB) ;
+UILIBHB		= $(SUFHB)$(DFS)libui$(SUFLIB) ;
+ULFLIBHB	= $(SUFHB)$(DFS)libulf$(SUFLIB) ;
+ULFLIBDATAHB	= $(SUFHB)$(DFS)libulfdata$(SUFLIB) ;
+UTILLIBHB	= $(SUFHB)$(DFS)libutil$(SUFLIB) ;
+VIFREDLIBHB	= $(SUFHB)$(DFS)libvifred$(SUFLIB) ;
+VIGRAPHLIBHB	= $(SUFHB)$(DFS)libvigraph$(SUFLIB) ;
+VQLIBHB		= $(SUFHB)$(DFS)libvq$(SUFLIB) ;
+VTLIBHB		= $(SUFHB)$(DFS)libvt$(SUFLIB) ;
+WVIEWLIBHB	= $(SUFHB)$(DFS)libwview$(SUFLIB) ;
+XFERDBLIBHB	= $(SUFHB)$(DFS)libxferdb$(SUFLIB) ;
+XTERMR4LIBHB	= $(SUFHB)$(DFS)libxtermr4$(SUFLIB) ;
+SPATLIBHB 	= $(SUFHB)$(DFS)libspat$(SUFLIB) ;
 }
 else
 {
@@ -1825,6 +2023,49 @@ SHDDFLIBDATA	= iilibddfdata.$(SLSFX) ;
 SHDDILIB	= oiddi.$(SLSFX) ;
 SHDDILIBDATA	= oiddidata.$(SLSFX) ;
 
+SHICELIBHB	= $(SUFHB)$(DFS)iilibice.$(SLSFX) ;
+SHICEHB		= $(SUFHB)$(DFS)ice.$(SLSFX) ;
+SHICELIBDATAHB	= $(SUFHB)$(DFS)iilibicedata.$(SLSFX) ;	
+SHICEAPILIBHB	= $(SUFHB)$(DFS)iiiceapi.$(SLSFX) ;
+SHICEAPILIBDATAHB = $(SUFHB)$(DFS)iiiceapidata.$(SLSFX) ;
+SHADFLIBHB   	= $(SUFHB)$(DFS)iilibadf.$(SLSFX) ;
+SHADFLIBDATAHB 	= $(SUFHB)$(DFS)iilibadfdata.$(SLSFX) ;
+SHDMFLIBHB   	= $(SUFHB)$(DFS)iilibdmf.$(SLSFX) ;
+SHDMFLIBDATAHB 	= $(SUFHB)$(DFS)iilibdmfdata.$(SLSFX) ;
+SHSCFLIBHB      = $(SUFHB)$(DFS)iilibscf.$(SLSFX) ;
+SHSCFLIBDATAHB  = $(SUFHB)$(DFS)iilibscfdata.$(SLSFX) ;
+SHQEFLIBHB	= $(SUFHB)$(DFS)iilibqef.$(SLSFX) ;
+SHQEFLIBDATAHB	= $(SUFHB)$(DFS)iilibqefdata.$(SLSFX) ;
+SHPSFLIBHB      = $(SUFHB)$(DFS)iilibpsf.$(SLSFX) ;
+SHPSFLIBDATAHB  = $(SUFHB)$(DFS)iilibpsfdata.$(SLSFX) ;
+SHOPFLIBHB      = $(SUFHB)$(DFS)iilibopf.$(SLSFX) ;
+SHOPFLIBDATAHB  = $(SUFHB)$(DFS)iilibopfdata.$(SLSFX) ;
+SHRDFLIBHB      = $(SUFHB)$(DFS)iilibrdf.$(SLSFX) ;
+SHRDFLIBDATAHB  = $(SUFHB)$(DFS)iilibrdfdata.$(SLSFX) ;
+SHQSFLIBHB      = $(SUFHB)$(DFS)iilibqsf.$(SLSFX) ;
+SHQSFLIBDATAHB  = $(SUFHB)$(DFS)iilibqsfdata.$(SLSFX) ;
+SHTPFLIBHB      = $(SUFHB)$(DFS)iilibtpf.$(SLSFX) ;
+SHTPFLIBDATAHB  = $(SUFHB)$(DFS)iilibtpfdata.$(SLSFX) ;
+SHRQFLIBHB      = $(SUFHB)$(DFS)iilibrqf.$(SLSFX) ;
+SHRQFLIBDATAHB  = $(SUFHB)$(DFS)iilibrqfdata.$(SLSFX) ;
+SHGCFLIBHB      = $(SUFHB)$(DFS)iilibgcf.$(SLSFX) ;
+SHGCFLIBDATAHB  = $(SUFHB)$(DFS)iilibgcfdata.$(SLSFX) ;
+SHGWFLIBHB      = $(SUFHB)$(DFS)iilibgwf.$(SLSFX) ;
+SHGWFLIBDATAHB  = $(SUFHB)$(DFS)iilibgwfdata.$(SLSFX) ;
+SHSXFLIBHB      = $(SUFHB)$(DFS)iilibsxf.$(SLSFX) ;
+SHSXFLIBDATAHB  = $(SUFHB)$(DFS)iilibsxfdata.$(SLSFX) ;
+SHCUFLIBHB      = $(SUFHB)$(DFS)iilibcuf.$(SLSFX) ;
+SHCUFLIBDATAHB  = $(SUFHB)$(DFS)iilibcufdata.$(SLSFX) ;
+SHDBUTILLIBHB   = $(SUFHB)$(DFS)iilibdbutil.$(SLSFX) ;
+SHDBUTILLIBDATAHB = $(SUFHB)$(DFS)iilibdbutildata.$(SLSFX) ;
+SHULFLIBHB      = $(SUFHB)$(DFS)iilibulf.$(SLSFX) ;
+SHULFLIBDATAHB  = $(SUFHB)$(DFS)iilibulfdata.$(SLSFX) ;
+SHDDFLIBHB	= $(SUFHB)$(DFS)iilibddf.$(SLSFX) ;
+SHDDFLIBDATAHB	= $(SUFHB)$(DFS)iilibddfdata.$(SLSFX) ;
+SHDDILIBHB	= $(SUFHB)$(DFS)oiddi.$(SLSFX) ;
+SHDDILIBDATAHB	= $(SUFHB)$(DFS)oiddidata.$(SLSFX) ;
+
+
 #
 #import libraries
 #
@@ -1861,13 +2102,55 @@ IMPSXFLIBDATA	= iilibsxfdata$(SUFLIB) ;
 IMPCUFLIB	= iilibcuf$(SUFLIB) ;
 IMPCUFLIBDATA	= iilibcufdata$(SUFLIB) ;
 IMPDBUTILLIB	= iilibdbutil$(SUFLIB) ;
-IMPDBUTILLIBDATA	= iilibdbutildata$(SUFLIB) ;
+IMPDBUTILLIBDATA = iilibdbutildata$(SUFLIB) ;
 IMPULFLIB	= iilibulf$(SUFLIB) ;
 IMPULFLIBDATA	= iilibulfdata$(SUFLIB) ;
 IMPDDFLIB	= iilibddf$(SUFLIB) ;
 IMPDDFLIBDATA	= iilibddfdata$(SUFLIB) ;
 IMPDDILIB	= oiddi$(SUFLIB) ;
 IMPDDILIBDATA	= oiddidata$(SUFLIB) ;
+
+IMPICELIBHB	= $(SUFHB)$(DFS)iilibice$(SUFLIB) ;
+IMPICELIBDATAHB	= $(SUFHB)$(DFS)iilibicedata$(SUFLIB) ;
+IMPICEAPILIBHB	= $(SUFHB)$(DFS)iiiceapi$(SUFLIB) ;
+IMPICEAPILIBDATAHB = $(SUFHB)$(DFS)iiiceapidata$(SUFLIB) ;
+IMPADFLIBHB	= $(SUFHB)$(DFS)iilibadf$(SUFLIB) ;
+IMPADFLIBDATAHB	= $(SUFHB)$(DFS)iilibadfdata$(SUFLIB) ;
+IMPDMFLIBHB	= $(SUFHB)$(DFS)iilibdmf$(SUFLIB) ;
+IMPDMFLIBDATAHB	= $(SUFHB)$(DFS)iilibdmfdata$(SUFLIB) ;
+IMPSCFLIBHB	= $(SUFHB)$(DFS)iilibscf$(SUFLIB) ;
+IMPSCFLIBDATAHB	= $(SUFHB)$(DFS)iilibscfdata$(SUFLIB) ;
+IMPQEFLIBHB	= $(SUFHB)$(DFS)iilibqef$(SUFLIB) ;
+IMPQEFLIBDATAHB	= $(SUFHB)$(DFS)iilibqefdata$(SUFLIB) ;
+IMPPSFLIBHB	= $(SUFHB)$(DFS)iilibpsf$(SUFLIB) ;
+IMPPSFLIBDATAHB	= $(SUFHB)$(DFS)iilibpsfdata$(SUFLIB) ;
+IMPOPFLIBHB	= $(SUFHB)$(DFS)iilibopf$(SUFLIB) ;
+IMPOPFLIBDATAHB	= $(SUFHB)$(DFS)iilibopfdata$(SUFLIB) ;
+IMPRDFLIBHB	= $(SUFHB)$(DFS)iilibrdf$(SUFLIB) ;
+IMPRDFLIBDATAHB	= $(SUFHB)$(DFS)iilibrdfdata$(SUFLIB) ;
+IMPQSFLIBHB	= $(SUFHB)$(DFS)iilibqsf$(SUFLIB) ;
+IMPQSFLIBDATAHB	= $(SUFHB)$(DFS)iilibqsfdata$(SUFLIB) ;
+IMPTPFLIBHB	= $(SUFHB)$(DFS)iilibtpf$(SUFLIB) ;
+IMPTPFLIBDATAHB	= $(SUFHB)$(DFS)iilibtpfdata$(SUFLIB) ;
+IMPRQFLIBHB	= $(SUFHB)$(DFS)iilibrqf$(SUFLIB) ;
+IMPRQFLIBDATAHB	= $(SUFHB)$(DFS)iilibrqfdata$(SUFLIB) ;
+IMPGCFLIBHB	= $(SUFHB)$(DFS)iilibgcf$(SUFLIB) ;
+IMPGCFLIBDATAHB	= $(SUFHB)$(DFS)iilibgcfdata$(SUFLIB) ;
+IMPGWFLIBHB	= $(SUFHB)$(DFS)iilibgwf$(SUFLIB) ;
+IMPGWFLIBDATAHB	= $(SUFHB)$(DFS)iilibgwfdata$(SUFLIB) ;
+IMPSXFLIBHB	= $(SUFHB)$(DFS)iilibsxf$(SUFLIB) ;
+IMPSXFLIBDATAHB	= $(SUFHB)$(DFS)iilibsxfdata$(SUFLIB) ;
+IMPCUFLIBHB	= $(SUFHB)$(DFS)iilibcuf$(SUFLIB) ;
+IMPCUFLIBDATAHB	= $(SUFHB)$(DFS)iilibcufdata$(SUFLIB) ;
+IMPDBUTILLIBHB	= $(SUFHB)$(DFS)iilibdbutil$(SUFLIB) ;
+IMPDBUTILLIBDATAHB	= $(SUFHB)$(DFS)iilibdbutildata$(SUFLIB) ;
+IMPULFLIBHB	= $(SUFHB)$(DFS)iilibulf$(SUFLIB) ;
+IMPULFLIBDATAHB	= $(SUFHB)$(DFS)iilibulfdata$(SUFLIB) ;
+IMPDDFLIBHB	= $(SUFHB)$(DFS)iilibddf$(SUFLIB) ;
+IMPDDFLIBDATAHB	= $(SUFHB)$(DFS)iilibddfdata$(SUFLIB) ;
+IMPDDILIBHB	= $(SUFHB)$(DFS)oiddi$(SUFLIB) ;
+IMPDDILIBDATAHB	= $(SUFHB)$(DFS)oiddidata$(SUFLIB) ;
+
 #
 #LOOP BACK
 #
@@ -1927,6 +2210,7 @@ IMPESQLCMM	= esqlcmm$(SUFLIB) ;
 IMPVDBAMM	= vdbamm$(SUFLIB) ;
 
 COMMONMMLIB	= commonmm$(SUFLIB) ;
+COMMONMMLIBHB	= commonmm$(SUFLIB) ;
 
 }
 else
@@ -2064,6 +2348,44 @@ SHGCSKRBLIB     = iilibgcskrb.$(SLSFX) ;
 SHGSSAPILIB     = gssapi32.$(SLSFX) ;
 SHGSSAPILIBDATA = gssapi32data.$(SLSFX) ;
 
+
+SHAPILIBHB	= $(SUFHB)$(DFS)iilibapi.$(SLSFX) ;
+SHAPILIBDATAHB	= $(SUFHB)$(DFS)iilibapidata.$(SLSFX) ;
+SHCOMPATLIBHB	= $(SUFHB)$(DFS)iilibcompat.$(SLSFX) ;
+SHCOMPATLIBDATAHB = $(SUFHB)$(DFS)iilibcompatdata.$(SLSFX) ;
+SHEMBEDLIBHB	= $(SUFHB)$(DFS)iilibembed.$(SLSFX) ;
+SHEMBEDLIBDATAHB = $(SUFHB)$(DFS)iilibembeddata.$(SLSFX) ;
+SHLIBQLIBHB	= $(SUFHB)$(DFS)iilibq.$(SLSFX) ;
+SHQLIBHB	= $(SHLIBQLIBHB) ;
+SHLIBQLIBDATAHB	= $(SUFHB)$(DFS)iilibqdata.$(SLSFX) ;
+SHQLIBDATAHB	= $(SHLIBQLIBDATA) ;
+SHFRAMELIBHB    = $(SUFHB)$(DFS)iilibframe.$(SLSFX) ;
+SHFRAMELIBDATAHB = $(SUFHB)$(DFS)iilibframedata.$(SLSFX) ;
+SHINTERPLIBHB   = $(SUFHB)$(DFS)iilibinterp.$(SLSFX) ;
+SHINTERPLIBDATAHB = $(SUFHB)$(DFS)iilibinterpdata.$(SLSFX) ;
+SHNEWORDERLIBHB	= $(SUFHB)$(DFS)play_NewOrder.$(SLSFX) ;
+SHNEWORDERLIBDATAHB = $(SUFHB)$(DFS)play_NewOrderdata.$(SLSFX) ;
+SHODBCDRIVERLIBHB = $(SUFHB)$(DFS)caiiod35.$(SLSFX) ;
+SHODBCCFGLIBHB	= $(SUFHB)$(DFS)caiioc35.$(SLSFX) ;
+SHODBCMGRLIBHB	= $(SUFHB)$(DFS)ingodbc.$(SLSFX) ;
+SHODBCTRACELIBHB = $(SUFHB)$(DFS)caiiodtr.$(SLSFX) ;
+SHODBCROLIBHB	= $(SUFHB)$(DFS)caiiro35.$(SLSFX) ;
+SHAPACHELIBHB	= $(SUFHB)$(DFS)iiiceapapi.$(SLSFX) ;
+SHICEMSLIBHB	= $(SUFHB)$(DFS)iiicems.$(SLSFX) ;
+SHAPACHELIBDATAHB = $(SUFHB)$(DFS)iiiceapapidata.$(SLSFX) ;
+SHGENICEHB	= $(SUFHB)$(DFS)oiice.$(SLSFX) ;
+SHUDTLIBHB	= $(SUFHB)$(DFS)iilibudt.$(SLSFX) ;
+SHUDTLIBDATAHB	= $(SUFHB)$(DFS)iilibudtdata.$(SLSFX) ;
+SHTNGAPILIBHB 	= $(SUFHB)$(DFS)iilibutil.$(SLSFX) ;
+SHTNGAPILIBDATAHB = $(SUFHB)$(DFS)iilibutildata.$(SLSFX) ;
+SHXALIBHB	= $(SUFHB)$(DFS)iilibxa.$(SLSFX) ;
+SHXALIBDATAHB   = $(SUFHB)$(DFS)iilibxadata.$(SLSFX) ;
+SHPERFMONLIBHB	= $(SUFHB)$(DFS)iipfctrs.$(SLSFX) ;
+SHPERFMONLIBDATAHB = $(SUFHB)$(DFS)iipfctrsdata.$(SLSFX) ;
+SHGCSKRBLIBHB   = $(SUFHB)$(DFS)iilibgcskrb.$(SLSFX) ;
+SHGSSAPILIBHB   = $(SUFHB)$(DFS)gssapi32.$(SLSFX) ;
+SHGSSAPILIBDATAHB = $(SUFHB)$(DFS)gssapi32data.$(SLSFX) ;
+
 #
 #import libraries
 #
@@ -2104,6 +2426,44 @@ IMPPERFMONLIBDATA 	= iipfctrsdata$(SUFLIB) ;
 IMPGCSKRBLIB            = iilibgcskrb$(SUFLIB) ;
 IMPGSSAPILIB            = gssapi32$(SUFLIB) ;
 IMPGSSAPILIBDATA        = gssapi32data$(SUFLIB) ;
+
+IMPAPILIBHB		= $(SUFHB)$(DFS)iilibapi$(SUFLIB) ;
+IMPAPILIBDATAHB		= $(SUFHB)$(DFS)iilibapidata$(SUFLIB) ;
+IMPCOMPATLIBHB		= $(SUFHB)$(DFS)iilibcompat$(SUFLIB) ;
+IMPCOMPATLIBDATAHB	= $(SUFHB)$(DFS)iilibcompatdata$(SUFLIB) ;
+IMPEMBEDLIBHB		= $(SUFHB)$(DFS)iilibembed$(SUFLIB) ;
+IMPEMBEDLIBDATAHB	= $(SUFHB)$(DFS)iilibembeddata$(SUFLIB) ;
+IMPLIBQLIBHB		= $(SUFHB)$(DFS)iilibq$(SUFLIB) ;
+IMPQLIBHB		= $(IMPLIBQLIBHB) ;
+IMPLIBQLIBDATAHB	= $(SUFHB)$(DFS)iilibqdata$(SUFLIB) ;
+IMPQLIBDATAHB		= $(IMPLIBQLIBDATAHB) ;
+IMPFRAMELIBHB		= $(SUFHB)$(DFS)iilibframe$(SUFLIB) ;
+IMPFRAMELIBDATAHB	= $(SUFHB)$(DFS)iilibframedata$(SUFLIB) ;
+IMPINTERPLIBHB     	= $(SUFHB)$(DFS)iilibinterp$(SUFLIB) ;
+IMPINTERPLIBDATAHB     	= $(SUFHB)$(DFS)iilibinterpdata$(SUFLIB) ;
+IMPNEWORDERLIBHB	= $(SUFHB)$(DFS)play_NewOrder$(SUFLIB) ;
+IMPNEWORDERLIBDATAHB	= $(SUFHB)$(DFS)play_NewOrderdata$(SUFLIB) ;
+IMPODBCDRIVERLIBHB 	= $(SUFHB)$(DFS)caiiod35$(SUFLIB) ;
+IMPODBCCFGLIBHB		= $(SUFHB)$(DFS)caiioc35$(SUFLIB) ;
+IMPODBCMGRLIBHB		= $(SUFHB)$(DFS)ingodbc$(SUFLIB) ;
+IMPODBCTRACELIBHB  	= $(SUFHB)$(DFS)caiiodtr$(SUFLIB) ;
+IMPODBCROLIBHB		= $(SUFHB)$(DFS)caiiodro$(SUFLIB) ;
+IMPAPACHELIBHB		= $(SUFHB)$(DFS)iiiceapapi$(SUFLIB) ;
+IMPAPACHELIBDATAHB	= $(SUFHB)$(DFS)iiiceapapidata$(SUFLIB) ;
+IMPICEMSLIBHB		= $(SUFHB)$(DFS)iiicems$(SUFLIB) ;
+IMPICEMSLIBDATAHB	= $(SUFHB)$(DFS)iiicemsdata$(SUFLIB) ;
+IMPGENICEHB		= $(SUFHB)$(DFS)oiice$(SUFLIB) ;
+IMPUDTLIBHB		= $(SUFHB)$(DFS)iilibudt$(SUFLIB) ;
+IMPUDTLIBDATAHB		= $(SUFHB)$(DFS)iilibudtdata$(SUFLIB) ;
+IMPTNGAPILIBHB 		= $(SUFHB)$(DFS)iilibutil$(SUFLIB) ;
+IMPTNGAPILIBDATAHB 	= $(SUFHB)$(DFS)iilibutildata$(SUFLIB) ;
+IMPXALIBHB		= $(SUFHB)$(DFS)iilibxa$(SUFLIB) ;
+IMPXALIBDATAHB     	= $(SUFHB)$(DFS)iilibxadata$(SUFLIB) ;		
+IMPPERFMONLIBHB		= $(SUFHB)$(DFS)iipfctrs$(SUFLIB) ;
+IMPPERFMONLIBDATAHB 	= $(SUFHB)$(DFS)iipfctrsdata$(SUFLIB) ;
+IMPGCSKRBLIBHB          = $(SUFHB)$(DFS)iilibgcskrb$(SUFLIB) ;
+IMPGSSAPILIBHB          = gssapi32$(SUFLIB) ;
+IMPGSSAPILIBDATAHB      = gssapi32data$(SUFLIB) ;
 #
 #due to windows complicated dependencies these used to loop back to regular libraries.
 #
@@ -2295,7 +2655,7 @@ if ! $(NT)
 }
 else
 {
-    XERCVERS ?= 2_7 ;
+    XERCVERS ?= 3_0 ;
     XERCESCLIB = xerces-c_$(XERCVERS).$(SLSFX) ;
     switch $(XERCVERS)
     {
@@ -2305,6 +2665,7 @@ else
 	case *  : SHXERCESLIB = xerces-c_2.lib ;
     }
 }
+
 
 # HDRSAX uses Xerces definitions, can define now.
 if $(VMS)
@@ -2686,6 +3047,33 @@ NOCARE $(IMPDDFLIBDATA) ;
 NOCARE $(IMPDDILIBDATA) ;
 NOCARE $(SHGSSAPILIBDATA) ;
 NOCARE $(IMPGSSAPILIBDATA) ;
+
+NOCARE $(CUFLIBDATAHB) ;
+NOCARE $(IMPCUFLIBDATAHB) ;
+NOCARE $(SHCUFLIBDATAHB) ;
+NOCARE $(APILIBDATAHB) ;
+NOCARE $(IMPAPILIBDATAHB) ;
+NOCARE $(SHAPILIBDATAHB) ;
+NOCARE $(NEWORDERLIBDATAHB) ;
+NOCARE $(IMPNEWORDERLIBDATAHB) ;
+NOCARE $(SHNEWORDERLIBDATAHB) ;
+NOCARE $(IMPICEAPLIBDATAHB) ;
+NOCARE $(SHICEAPLIBDATAHB) ;
+NOCARE $(IMPAPACHELIBDATAHB) ;
+NOCARE $(SHAPACHELIBDATAHB) ;
+NOCARE $(SHICEMSLIBDATAHB) ;
+NOCARE $(IMPICEMSLIBDATAHB) ;
+NOCARE $(IMPICEAPILIBDATAHB) ;
+NOCARE $(SHICEAPILIBDATAHB) ;
+NOCARE $(IMPUDTLIBDATAHB) ;
+NOCARE $(SHUDTLIBDATAHB) ;
+NOCARE $(IMPTNGAPILIBDATAHB) ;
+NOCARE $(IMPXALIBDATAHB) ;
+NOCARE $(IMPPERFMONLIBDATAHB) ;
+NOCARE $(IMPDDFLIBDATAHB) ;
+NOCARE $(IMPDDILIBDATAHB) ;
+NOCARE $(SHGSSAPILIBDATAHB) ;
+NOCARE $(IMPGSSAPILIBDATAHB) ;
 #
 # System libraries that should already be in a path
 # this loop is here to prevent jam from complaining that it doesn't
@@ -2704,5 +3092,8 @@ if $(NT)
 	NOCARE $(MORELIB) ;
 	NOCARE $(RPCLIB) ;
 	NOCARE $(HTMLHELPLIB) ;
+	NOCARE $(LIB32) ;
+	NOCARE $(SDK32) ;
+	NOCARE $(AR32) ;
 }
 

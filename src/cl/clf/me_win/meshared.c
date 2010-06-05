@@ -90,6 +90,15 @@
 **	  Added FlushFileBuffer function before we close handle
 **	  to the file and map to speed up deletion of shared
 **	  memory to avoid left over references to non-existing object.
+**	04-Apr-2010 (drivi01)
+**	  MEget_pages and ME in general has inconsistently replaced i4
+**	  with SIZE_TYPE, SIZE_TYPE is 8 bytes on 64-bit OS which 
+**	  inconsistently assigns datatypes of SIZE_TYPE to DWORD or i4.
+**	  PCexec_suid also makes call to MEget_pages where allocated_pages
+**	  is being passed in as i4.
+**	  Fix allocated_pages to be declared as SIZE_TYPE to stay consistent
+**	  with the definitions within ME.
+**	  Clean up warnings by prototyping imported functions.
 */
 
 /******************************************************************************
@@ -98,6 +107,8 @@
 
 ME_SEG_INFO *ME_find_seg();
 QUEUE       *ME_rem_seg();
+VOID GVshobj(char **shPrefix);
+STATUS iimksecdacl(SECURITY_ATTRIBUTES *sa);
 
 FUNC_EXTERN BOOL GVosvers(char *OSVersionString);
 
@@ -350,7 +361,7 @@ ME_alloc_shared(i4          flag,
         if ((flag & ME_CREATE_MASK) ||
             !(flag & (ME_SSHARED_MASK | ME_MSHARED_MASK)))
         {
-	    pages = (i4)(memsize / ME_MPAGESIZE);
+	    pages = (SIZE_TYPE)(memsize / ME_MPAGESIZE);
         }
         else
         {

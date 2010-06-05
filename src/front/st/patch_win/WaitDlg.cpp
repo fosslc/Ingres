@@ -83,7 +83,7 @@ BOOL CWaitDlg::OnInitDialog()
 	return TRUE;
 }
 
-void CWaitDlg::OnTimer(UINT nIDEvent) 
+void CWaitDlg::OnTimer(UINT_PTR nIDEvent) 
 {
 	if(nIDEvent==1)
 	{ 

@@ -79,7 +79,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/machine:AMD64"
-				AdditionalDependencies="$(II_SYSTEM)\ingres\lib\libperfmon.lib $(II_SYSTEM)\ingres\lib\iilibapi.lib $(II_SYSTEM)\ingres\lib\libingres.lib bufferoverflowu.lib htmlhelp.lib"
+				AdditionalDependencies="$(II_SYSTEM)\ingres\lib\libperfmon.lib $(II_SYSTEM)\ingres\lib\iilibapi.lib $(II_SYSTEM)\ingres\lib\libingres.lib  htmlhelp.lib"
 				OutputFile=".\DebugAMD64/perfwiz.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
@@ -96,7 +96,7 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
-				AdditionalManifestFiles="res\rt_manif.bin"
+				AdditionalManifestFiles="res\rt_manif64.bin"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -112,7 +112,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="copy DebugAMD64\perfwiz.exe %II_SYSTEM%\ingres\bin&#x0D;&#x0A;copy perfwiz.bin %II_SYSTEM%\ingres\bin\perfwiz.chm&#x0D;&#x0A;"
+				CommandLine="copy $(OutDir)\perfwiz.exe %II_SYSTEM%\ingres\bin&#x0D;&#x0A;copy perfwiz.bin %II_SYSTEM%\ingres\bin\perfwiz.chm&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -580,7 +580,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/Machine:AMD64"
-				AdditionalDependencies="$(II_SYSTEM)\ingres\lib\libperfmon.lib $(II_SYSTEM)\ingres\lib\iilibapi.lib $(II_SYSTEM)\ingres\lib\libingres.lib bufferoverflowu.lib htmlhelp.lib"
+				AdditionalDependencies="$(II_SYSTEM)\ingres\lib\libperfmon.lib $(II_SYSTEM)\ingres\lib\iilibapi.lib $(II_SYSTEM)\ingres\lib\libingres.lib  htmlhelp.lib"
 				OutputFile=".\ReleaseAMD64/perfwiz.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
@@ -596,7 +596,7 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
-				AdditionalManifestFiles="res\rt_manif.bin"
+				AdditionalManifestFiles="res\rt_manif64.bin"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -612,7 +612,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="copy .\ReleaseAMD64/perfwiz.exe %II_SYSTEM%\ingres\bin&#x0D;&#x0A;copy perfwiz.bin %II_SYSTEM%\ingres\bin\perfwiz.chm&#x0D;&#x0A;"
+				CommandLine="copy $(OutDir)\perfwiz.exe %II_SYSTEM%\ingres\bin&#x0D;&#x0A;copy perfwiz.bin %II_SYSTEM%\ingres\bin\perfwiz.chm&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration

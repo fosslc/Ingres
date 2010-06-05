@@ -2,11 +2,24 @@
 #	20-Jun-2009 SIR 122138
 #	    Implement new Datallegro-style VERS file format which can
 #	    control jam variables as well as shell/compile options.
+#	29-Mar-2010 (drivi01)
+#	    Add Variable to build ice and setup for potential hybrid
+#	    builds, right now hybrid builds are turned off in 
+#	    platform specific Jamdefs.
 
+#set: config32 int_w32
 #set: config a64_win
 #set: build 00
 
 # Any jam definitions go here, e.g. VAR = value ;
 # Don't forget spaces around the = and before the ;
+BUILD_ICE = "TRUE" ;	#set: option BUILD_ICE
+
+
+# Hybridization...
+# a64_win normally builds reverse hybrid
+BUILD_ARCH = "64+32" ;   #set: arch 64+32
+XERCES_ARCH ?= 64 ;
 
 PLATFORM_JAMDEFS = a64_win ;
+

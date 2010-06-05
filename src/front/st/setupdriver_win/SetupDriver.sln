@@ -5,13 +5,19 @@ EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
+		DebugAMD64|Win32 = DebugAMD64|Win32
 		Release|Win32 = Release|Win32
+		ReleaseAMD64|Win32 = ReleaseAMD64|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{3C145860-C14A-42F9-98FC-35A0D92A1B5C}.Debug|Win32.ActiveCfg = Debug|Win32
 		{3C145860-C14A-42F9-98FC-35A0D92A1B5C}.Debug|Win32.Build.0 = Debug|Win32
+		{3C145860-C14A-42F9-98FC-35A0D92A1B5C}.DebugAMD64|Win32.ActiveCfg = DebugAMD64|x64
+		{3C145860-C14A-42F9-98FC-35A0D92A1B5C}.DebugAMD64|Win32.Build.0 = DebugAMD64|x64
 		{3C145860-C14A-42F9-98FC-35A0D92A1B5C}.Release|Win32.ActiveCfg = Release|Win32
 		{3C145860-C14A-42F9-98FC-35A0D92A1B5C}.Release|Win32.Build.0 = Release|Win32
+		{3C145860-C14A-42F9-98FC-35A0D92A1B5C}.ReleaseAMD64|Win32.ActiveCfg = ReleaseAMD64|x64
+		{3C145860-C14A-42F9-98FC-35A0D92A1B5C}.ReleaseAMD64|Win32.Build.0 = ReleaseAMD64|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

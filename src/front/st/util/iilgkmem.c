@@ -94,6 +94,10 @@ static STATUS	_iilgkmem(i4 argc,char *argv[]);
 ** History:
 **      18-jan-94 (joplin)
 **          created.
+**	29-Mar-2010 (drivi01)
+**	    Update alloc_pages to be of type SIZE_TYPE b/c 
+**	    MEget_pages stores allocated pages in SIZE_TYPE variable.
+**          This was causing SEGV on x64.
 */
 
 VOID
@@ -119,7 +123,7 @@ char		    *argv[])
     i4      bytes;
     char    *key = ERx("IILGKMEM.TMP");
     PTR     memory;
-    i4      alloc_pages;
+    SIZE_TYPE      alloc_pages;
     STATUS  stat;
     CL_SYS_ERR err_code;
     i4 os_error;

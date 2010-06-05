@@ -9,6 +9,10 @@
 **
 **	23-Sep-2003 (penga03)
 **	    Created.
+**	06-Apr-2010 (drivi01)
+**	    Update OnTimer to take UINT_PTR as a parameter as UINT_PTR
+**	    will be unsigned int on x86 and unsigned int64 on x64.
+**	    This will cleanup warnings.
 */
 
 #include "stdafx.h"
@@ -82,7 +86,7 @@ BOOL CWaitDlg::OnInitDialog()
 	              // EXCEPTION: OCX Property Pages should return FALSE
 }
 
-void CWaitDlg::OnTimer(UINT nIDEvent) 
+void CWaitDlg::OnTimer(UINT_PTR nIDEvent) 
 {
 	// TODO: Add your message handler code here and/or call default
 	if (nIDEvent == 1)

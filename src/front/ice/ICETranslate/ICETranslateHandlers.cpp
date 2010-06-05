@@ -64,6 +64,8 @@
 **          Updated to support Xerces 2.3. 
 **	1-Feb-2010 (kschendel for drivi01) B123194
 **	    Update writeChars to use INGXMLSize_t for Xerces 3.
+**	29-Mar-2010 (drivi01)
+**	    Port ice to x64.
 */
 /*
  * The Apache Software License, Version 1.1
@@ -209,7 +211,7 @@ extern int printout( const char* outstr )
 // ---------------------------------------------------------------------------
 //  SAX2ICETranslate: Constructors and Destructor
 // ---------------------------------------------------------------------------
-SAX2ICETranslate::SAX2ICETranslate( const  char *const encodingName
+SAX2ICETranslate::SAX2ICETranslate( const INGXMLCh *const encodingName
                                 , const XMLFormatter::UnRepFlags unRepFlags
 				, const bool expandNamespaces) :
 

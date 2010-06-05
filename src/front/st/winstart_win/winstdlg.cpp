@@ -127,6 +127,10 @@
 **	if one attempts to start Ingres on Vista without 
 **	service.  However, the error should not show up
 **	when Ingres is being shut down.
+**  06-Apr-2010 (drivi01)
+**	Update OnTimer to take UINT_PTR as a parameter as UINT_PTR
+**	will be unsigned int on x86 and unsigned int64 on x64.
+**	This will cleanup warnings.
 **	
 */
 
@@ -774,7 +778,7 @@ void CWinstartDlg::OnStart()
 
 }
 
-void CWinstartDlg::OnTimer(UINT nIDEvent) 
+void CWinstartDlg::OnTimer(UINT_PTR nIDEvent) 
 {
 	// TODO: Add your message handler code here and/or call default
 	
@@ -795,7 +799,7 @@ void CWinstartDlg::OnTimer(UINT nIDEvent)
 	}
 	LeaveCriticalSection(&m_cs);
 
-	m_timerEvent = nIDEvent;
+	m_timerEvent = (UINT)nIDEvent;
 	CDialog::OnTimer(nIDEvent);
 
 }

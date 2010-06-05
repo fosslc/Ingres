@@ -148,6 +148,9 @@
 **	    length records are not supported.  Length of data items
 **	    are restricted to the original limits - processing fails
 **	    if a longer item is found.
+**	29-Mar-2010 (drivi01)
+**	    Update the buffer size of lk_hdr to prevent SEGVs on x64
+**          because the buffer isn't large enough.
 */
 
 
@@ -2559,7 +2562,7 @@ is_other_cvtwintcp_up()
     i4		n;
     char	DELIM=';';
     i4		lk_hdr_len;
-    char	lk_hdr[80];
+    char	lk_hdr[MAX_PATH+80];
     char	lk_record[1024];
     char	*lk_record_end;		/* pointer to end of lk_record read */
     char	*lk_audit_info;		/* misc audit info */

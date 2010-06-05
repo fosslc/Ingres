@@ -81,6 +81,8 @@
 **         Modified for supporting Xerces 2.3. 
 **	1-Feb-2010 (kschendel for drivi01) b123194
 **	    Define INGXMLSize_t for Xerces 3.x compatibility.
+**	29-Mar-2010 (drivi01)
+**	    Port ice to x64.
 ** 
 */
 	
@@ -119,6 +121,12 @@ typedef const unsigned int INGXMLSize_t;
 typedef const XMLSize_t INGXMLSize_t;
 #endif
 
+#if WIN64
+typedef XMLCh INGXMLCh;
+#else
+typedef char INGXMLCh;
+#endif
+
 XERCES_CPP_NAMESPACE_USE
 
 class SAX2ICETranslate : public DefaultHandler, private XMLFormatTarget
@@ -129,7 +137,7 @@ public:
     // -----------------------------------------------------------------------
     SAX2ICETranslate
     (
-        const   char* const                 encodingName
+        const INGXMLCh *const encodingName
         , const XMLFormatter::UnRepFlags    unRepFlags
 		, const bool						expandNamespaces
     );

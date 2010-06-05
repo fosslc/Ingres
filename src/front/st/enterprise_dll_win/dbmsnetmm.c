@@ -1578,6 +1578,9 @@ ingres_set_dbmsnet_reg_entries (MSIHANDLE ihnd)
 **	    Compensate for the renaming of the service in DBA Tools
 **	    and recognize the change in title in ingconfig when installing
 **	    DBA Tools.
+**	04-Apr-2010 (drivi01)
+**	    Add additional check to make sure DBATools property query returned
+**          something.
 */
 
 UINT __stdcall
@@ -1599,7 +1602,7 @@ ingres_start_ingres_service (MSIHANDLE ihnd)
 
 	bServiceStartsIipost=bAdminUser=bVersionNT=FALSE;
 	dwSize = sizeof(tchValue);
-	if (MsiGetProperty( ihnd, "DBATools", tchValue, &dwSize)==ERROR_SUCCESS)
+	if ((MsiGetProperty( ihnd, "DBATools", tchValue, &dwSize)==ERROR_SUCCESS) && tchValue[0])
 		isDBATools=TRUE;
 
     dwSize = sizeof(tchII_INSTALLATION);

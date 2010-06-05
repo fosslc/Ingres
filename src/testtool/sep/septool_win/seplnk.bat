@@ -40,6 +40,11 @@ REM	04-May-2009 (drivi01)
 REM		Update this script to build manifest files into binaries.
 REM		After the manifest files are built into binaries they
 REM		will be removed by this script.
+REM	28-Jul-2009 (drivi01)
+REM		Remove bufferoverflowu.lib dependency as the library was 
+REM		removed in Visual Studio 2008 compiler and also for pure 
+REM		64-bit use libingres.lib instead of ingres64.lib or 
+REM		libapi64.lib.
 REM
 set CMD=seplnk
 setlocal
@@ -188,18 +193,15 @@ if "%arg%"=="" goto ENDLOOP3
 if "%do_it%"=="true" if "%cflag%"=="true" if exist %filnam%.exe set do_it=false
 
 if not "%do_it%"=="true" goto DONE
-  if "%CPU%"=="IA64" set libingfiles=%II_SYSTEM%\ingres\lib\ingres64.lib %II_SYSTEM%\ingres\lib\iilibapi64.lib& goto RUNCC
-  if "%CPU%"=="AMD64" set libingfiles=%II_SYSTEM%\ingres\lib\ingres64.lib %II_SYSTEM%\ingres\lib\iilibapi64.lib& goto RUNCC
-  set libingfiles=%II_SYSTEM%\ingres\lib\libingres.lib %II_SYSTEM%\ingres\lib\iilibapi.lib
+set libingfiles=%II_SYSTEM%\ingres\lib\libingres.lib %II_SYSTEM%\ingres\lib\iilibapi.lib
 
-:RUNCC
-  if "%CPU%"=="IA64" set bufferlib=bufferoverflowu.lib
-  if "%CPU%"=="AMD64" set bufferlib=bufferoverflowu.lib
-
+REM :RUNCC
   %CC% /nologo -DNT_GENERIC %cc_sw% -Fe%filnam%.exe %cfilnam% %libingfiles% msvcrt.lib kernel32.lib user32.lib advapi32.lib %bufferlib%
+
   if not exist %filnam%.exe.manifest goto DONE
   if not "%WindowsSdkDir%"=="" if x%MT%==x set MT="%WindowsSdkDir:\\=\%bin\mt.exe"
   if not x%MT%==x if exist %filnam%.exe %MT% -nologo -manifest %filnam%.exe.manifest -outputresource:%filnam%.exe;#1
   if not ERRORLEVEL 1 if not x%MT%==x del %filnam%.exe.manifest
+
 :DONE
 endlocal

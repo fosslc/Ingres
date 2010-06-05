@@ -12,6 +12,10 @@
 **  History:
 **	29-apr-2004 (wonst02)
 **	    Created; cloned from similar enterprise_preinst directory.
+**	06-Apr-2010 (drivi01)
+**	    Update OnTimer to take UINT_PTR as a parameter as UINT_PTR
+**	    will be unsigned int on x86 and unsigned int64 on x64.
+**	    This will cleanup warnings.
 */
 
 #ifndef _SPLASH_SCRN_
@@ -57,7 +61,7 @@ protected:
     //{{AFX_MSG(CSplashWnd)
     afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
     afx_msg void OnPaint();
-    afx_msg void OnTimer(UINT nIDEvent);
+    afx_msg void OnTimer(UINT_PTR nIDEvent);
     afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
     afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
     afx_msg void OnKillFocus(CWnd* pNewWnd);

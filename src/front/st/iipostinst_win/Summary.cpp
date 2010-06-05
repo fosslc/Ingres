@@ -24,6 +24,8 @@
 **		if these tools are ever to be translated.
 **  31-Jul-2008 (drivi01)
 **	     Cleaned up warnings in Visual Studio 2008.
+**	06-Apr-2010 (drivi01)
+**	    Clean up the warning by typcasting.	   
 */
 
 
@@ -32,7 +34,7 @@
 #include "Summary.h"
 #include ".\summary.h"
 
-DWORD __stdcall MEditStreamInCallback( DWORD dwCookie,
+DWORD __stdcall MEditStreamInCallback( DWORD_PTR dwCookie,
                                        LPBYTE pbBuff,
                                        LONG cb,
                                        LONG *pcb);
@@ -267,8 +269,8 @@ Summary::OnSetActive()
 			EDITSTREAM es;
 			m_rtf.ShowWindow(SW_SHOW);
 	
-			es.dwCookie = (DWORD)&file;
-			es.pfnCallback = MEditStreamInCallback;
+			es.dwCookie = (DWORD_PTR)&file;
+			es.pfnCallback = (EDITSTREAMCALLBACK)MEditStreamInCallback;
 	
 			m_rtf.StreamIn(SF_RTF,es);
 			}
@@ -288,7 +290,7 @@ Summary::OnSetActive()
 	return res;
 }
 
-DWORD __stdcall MEditStreamInCallback( DWORD dwCookie,
+DWORD __stdcall MEditStreamInCallback( DWORD_PTR dwCookie,
                                        LPBYTE pbBuff,
                                        LONG cb,
                                        LONG *pcb)

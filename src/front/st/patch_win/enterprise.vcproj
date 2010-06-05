@@ -273,7 +273,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/machine:AMD64"
-				AdditionalDependencies="msi.lib version.lib clusapi.lib bufferoverflowu.lib"
+				AdditionalDependencies="msi.lib version.lib clusapi.lib"
 				OutputFile="DebugAMD64/PatchUpdate.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
@@ -290,7 +290,7 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
-				AdditionalManifestFiles="res\rt_manif.bin"
+				AdditionalManifestFiles="res\rt_manif64.bin"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -570,7 +570,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/machine:AMD64"
-				AdditionalDependencies="msi.lib version.lib clusapi.lib bufferoverflowu.lib"
+				AdditionalDependencies="msi.lib version.lib clusapi.lib "
 				OutputFile="ReleaseAMD64/PatchUpdate.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
@@ -586,7 +586,7 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
-				AdditionalManifestFiles="res\rt_manif.bin"
+				AdditionalManifestFiles="res\rt_manif64.bin"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"

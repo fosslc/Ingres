@@ -27,9 +27,14 @@
 **	    Re-added the running of the clock.
 **	06-mar-2002 (penga03)
 **	    Added m_msg.
-**  15-Nov-2006 (drivi01)
-**      SIR 116599
-**      Enhanced post-installer in effort to improve installer usability.
+**	15-Nov-2006 (drivi01)
+**          SIR 116599
+**          Enhanced post-installer in effort to improve installer usability.
+**	06-Apr-2010 (drivi01)
+**	    Update OnTimer to take UINT_PTR as a parameter as UINT_PTR
+**	    will be unsigned int on x86 and unsigned int64 on x64.
+**	    This will cleanup warnings.
+
 */
 
 /*
@@ -67,7 +72,7 @@ protected:
 	/* Generated message map functions */
     //{{AFX_MSG(CPostInst)
     virtual BOOL OnInitDialog();
-    afx_msg void OnTimer(UINT nIDEvent);
+    afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg LRESULT OnWizardNext();
     //}}AFX_MSG
     DECLARE_MESSAGE_MAP()

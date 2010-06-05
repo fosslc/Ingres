@@ -9,6 +9,10 @@
 **
 **	05-Jun-2001 (penga03)
 **	    Created.
+**	06-Apr-2010 (drivi01)
+**	    Update OnTimer to take UINT_PTR as a parameter as UINT_PTR
+**	    will be unsigned int on x86 and unsigned int64 on x64.
+**	    This will cleanup warnings.
 */
 
 #include "stdafx.h"
@@ -81,7 +85,7 @@ BOOL CWaitDlg::OnInitDialog()
 	return TRUE;
 }
 
-void CWaitDlg::OnTimer(UINT nIDEvent) 
+void CWaitDlg::OnTimer(UINT_PTR nIDEvent) 
 {
 	if(nIDEvent==1)
 	{ 

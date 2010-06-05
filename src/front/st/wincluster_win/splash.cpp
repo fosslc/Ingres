@@ -16,6 +16,10 @@
 **		Removed Licensing.
 **  29-Apr-2008 (drivi01)
 **    	    Update the location of copyright notice on the splash screen.
+**	06-Apr-2010 (drivi01)
+**	    Update OnTimer to take UINT_PTR as a parameter as UINT_PTR
+**	    will be unsigned int on x86 and unsigned int64 on x64.
+**	    This will cleanup warnings.
 */
 
 #include "stdafx.h"
@@ -330,7 +334,7 @@ CSplashWnd::OnPaint()
 }
 
 void
-CSplashWnd::OnTimer(UINT nIDEvent)
+CSplashWnd::OnTimer(UINT_PTR nIDEvent)
 {
     /* Destroy the splash screen window. */
     HideSplashScreen();

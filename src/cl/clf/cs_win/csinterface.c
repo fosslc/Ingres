@@ -327,7 +327,13 @@
 **      Minor correction as part of performance investigations.
 **      28-Jan-2010 (horda03) Bug 121811
 **          Enable Evidence Sets on Windows.
+**	06-Apr-2010 (drivi01)
+**	    Turn off optimization in this module to avoid
+**          segmentation violations on x64.
 */
+#ifdef WIN64
+#pragma optimize ("",off)
+#endif
 
 /****************************************************************************
 **
