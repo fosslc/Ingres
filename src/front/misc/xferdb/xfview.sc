@@ -106,6 +106,8 @@ EXEC SQL INCLUDE <xf.sh>;
 **          "with check option" in query text.     
 **      28-jan-2009 (stial01)
 **          Use DB_MAXNAME for database objects.
+**      12-Jan-2009 (coomi01) Bug 123136
+**          Add reltid parameter to writeview;
 **/
 
 /* # define's */
@@ -125,7 +127,8 @@ static void writeview( TXT_HANDLE	**tfdp,
 	i4	*viewcount,
 	i4	*regcount,
 	char	*text_segment,
-	char    *check_option);
+	char    *check_option,
+        int     reltid );
 
 /*{
 ** Name:	xfviews - write statements to create views and set permits.
@@ -257,7 +260,8 @@ EXEC SQL END DECLARE SECTION;
 	{
 	    writeview( &tfd, &vi, dml, subtype,
 		    permit_grantor, permit_number, 
-		    text_sequence, &viewcount, &regcount, text_segment, check_option);
+		    text_sequence, &viewcount, &regcount, 
+		    text_segment, check_option, reltid);
 	}
 	EXEC SQL END;
     }
@@ -310,7 +314,8 @@ EXEC SQL END DECLARE SECTION;
 	{
 	    writeview( &tfd, &vi, dml, subtype, 
 		    permit_grantor, permit_number, 
-		    text_sequence, &viewcount, &regcount, text_segment, check_option);
+		    text_sequence, &viewcount, &regcount, text_segment, 
+		    check_option, reltid);
 
 	}
 	EXEC SQL END;
@@ -350,8 +355,11 @@ EXEC SQL END DECLARE SECTION;
 **	Returns:
 ** History:
 **      13-Jun-2008 (coomi01) Bug 110708
-**      Add new parameter, check_option.
-**      Check and squash check_option before any flushes as required.
+**          Add new parameter, check_option.
+**          Check and squash check_option before any flushes as required.
+**      12-Jan-2009 (coomi01) Bug 123136
+**          Add reltid parameter to writeview; We now use this to trigger
+**          creation of output text stream.
 */
 
 static void
@@ -366,14 +374,37 @@ writeview(
 	i4	*viewcount,
 	i4	*regcount,
 	char	*text_segment,
-	char    *check_option
+	char    *check_option,
+        i4      reltid
     )
 {
+    static i4 oldRelTid = -1;
+
     xfread_id(vi->name);
     if (!xfselected(vi->name)) 
 	return; 
 
     xfread_id(vi->owner);
+
+    /*
+    ** Whenever prospective view ident changes, incl. first time around
+    ** examin the text stream, and ensure it is opened.
+    */
+    if ( oldRelTid != reltid )
+    {
+ 	if (*tfdp == NULL)
+	{
+	    /*
+	    ** First time called.  Write informative comment, open text handle. 
+	    */
+
+	    xfwritehdr(VIEWS_COMMENT);
+	    *tfdp = xfreopen(Xf_in, TH_IS_BUFFERED);
+	    xfflush(*tfdp);
+	}
+
+	oldRelTid = reltid;
+    }
 
     if (permit_number == -1 && text_sequence == 1)
     {
@@ -387,28 +418,17 @@ writeview(
 	else
 	    (*regcount)++;
 
-	if (*tfdp == NULL)
+	if ( 'N' == *check_option )
 	{
-	    /*
-	    ** First time called.  Write informative comment, open text handle. 
-	    */
-
-	    xfwritehdr(VIEWS_COMMENT);
-	    *tfdp = xfreopen(Xf_in, TH_IS_BUFFERED);
+	    /* Squash any check option */
+	    xfreplace(*tfdp, 1, 1, "with check option", "");	
 	}
-	else
-	{
-	    if ( 'N' == *check_option )
-	    {
-		/* Squash any check option */
-		xfreplace(*tfdp, 1, 1, "with check option", "");	
-	    }
-	    xfflush(*tfdp);
-	}
+	xfflush(*tfdp);
+    
 
 	/* Does user id have to be reset? */
 	xfsetauth(*tfdp, vi->owner);
-
+    
 	xfsetlang(*tfdp, *dml == 'Q' ? DB_QUEL : DB_SQL);
     }
     else if (permit_number == 0)
