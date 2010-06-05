@@ -1,0 +1,10 @@
+APPLICATION_DEVELOPMENT_4 1 'Windows 4GL Unicode FCS'
+END
+CREATE TABLE ii_stored_nstrings
+    (
+    	string_id         integer not null,
+		row_sequence      integer not null,
+		text_total        integer not null,
+		text_value        nvarchar(893) not null
+	)
+    	

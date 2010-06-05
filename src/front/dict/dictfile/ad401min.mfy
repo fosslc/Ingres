@@ -1,0 +1,1 @@
+modify ii_stored_nstrings to btree on string_id, row_sequence

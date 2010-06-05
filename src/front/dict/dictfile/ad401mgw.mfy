@@ -1,0 +1,6 @@
+IGNORE_NEXT_ERROR ALL
+
+DROP INDEX ii_nstrings_mod
+
+CREATE INDEX ii_nstrings_mod 
+on ii_stored_nstrings (string_id, row_sequence)

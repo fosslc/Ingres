@@ -1,0 +1,16 @@
+## Copyright (c) 2010 Ingres Corporation 
+## Name:
+##      dayfile.dst
+##
+## Usage:
+##      $II_CONFIG/dayfile
+##
+## Description:
+##      Message of the day file for terminal monitor
+##
+## History:
+##      20-Apr-2010 (hanje04)
+##          SIR 123609
+##          Created.
+Enter \g to execute commands, "help help\g" for help, \q to quit
+
