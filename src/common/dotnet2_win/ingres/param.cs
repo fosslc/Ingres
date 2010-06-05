@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2002, 2007 Ingres Corporation. All Rights Reserved.
+** Copyright (c) 2002, 2010 Ingres Corporation. All Rights Reserved.
 */
 
 #define DBPARAMETER_ENABLED
@@ -42,6 +42,8 @@ namespace Ingres.Client
 	**	    Added DbConnection base class.
 	**	21-Mar-07 (thoda04)
 	**	    Added IntervalDayToSecond, IntervalYearToMonth.
+	**	29-apr-10 (thoda04) Bug 123662
+	**	    Add IngresParameterCollection.AddWithValue() method.
 	*/
 
 	/*
@@ -1098,6 +1100,18 @@ public sealed class IngresParameter :
 		this.AddRange((Array)values);
 	}
 #endif  // DBPARAMETERCOLLECTION_ENABLED
+
+	/// <summary>
+	/// Create a new IngresParameter object with a parameter name and value,
+	/// and add it to the IngresParameterCollection.
+	/// </summary>
+	/// <param name="parameterName"></param>
+	/// <param name="value"></param>
+	/// <returns>The new IngresParameter created in the collection.</returns>
+	public IngresParameter AddWithValue(string parameterName, object value)
+	{	// value is the Value property for the new Parameter
+		return Add(new IngresParameter(parameterName, value));
+	}
 
 	/// <summary>
 	/// Clear all items from the parameter collection.
