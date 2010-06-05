@@ -99,6 +99,9 @@ LIBRARY = IMPDMFLIBDATA
 **	01-apr-2010 (toumi01) SIR 122403
 **	    For encryption add reldatawid, reltotdatawid, relencflags,
 **	    relencver, relenckey, attencflags, attencwid.
+**	28-apr-2010 (miket) SIR 122403
+**	    Change relenckey from char to byte, maybe not critical to do
+**	    but better represents the nature of the stored data.
 */
 
 /* dmmcre.c */
@@ -214,6 +217,9 @@ GLOBALDEF DMP_RELATION DM_ucore_relations[4];
 #define attdef_cha(tabid, name, offset, len, iskey)\
 tabid, DUMMY_ATTRIBUTE_NUMBER, 0, name, offset, len, iskey, 0, {DB_DEF_ID_BLANK}, 0, 0,0,0, ATT_CHA, 0,0,0,0,0,0,0, {' '}
 
+#define attdef_byte(tabid, name, offset, len, iskey)\
+tabid, DUMMY_ATTRIBUTE_NUMBER, 0, name, offset, len, iskey, 0, {DB_DEF_ID_BLANK}, 0, 0,0,0, ATT_BYTE, 0,0,0,0,0,0,0, {' '}
+
 #define attdef_free(tabid, name, offset, len, iskey)\
 tabid, DUMMY_ATTRIBUTE_NUMBER, 0, name, offset, len, iskey, 0, {DB_DEF_ID_0}, 0, 0,0,0, ATT_CHA, 0,0,0,0,0,0,0, {' '}
 
@@ -270,7 +276,7 @@ GLOBALDEF DMP_ATTRIBUTE DM_core_attributes[] =
     { attdef_int(REL_TAB_ID, "relnpartlevels", REL_OFFSET(relnpartlevels), 2, 0) },
     { attdef_int(REL_TAB_ID, "relencflags", REL_OFFSET(relencflags), 2, 0) },
     { attdef_int(REL_TAB_ID, "relencver", REL_OFFSET(relencver), 2, 0) },
-    { attdef_cha(REL_TAB_ID, "relenckey", REL_OFFSET(relenckey), 64, 0) },
+    { attdef_byte(REL_TAB_ID, "relenckey", REL_OFFSET(relenckey), 64, 0) },
     { attdef_free(REL_TAB_ID, "relfree", REL_OFFSET(relfree), 12, 0) },
     { attdef_cha(RIDX_TAB_ID, "relid", RIDX_OFFSET(relname), DB_TAB_MAXNAME, 1) },
     { attdef_cha(RIDX_TAB_ID, "relowner", RIDX_OFFSET(relowner), DB_OWN_MAXNAME, 2) },

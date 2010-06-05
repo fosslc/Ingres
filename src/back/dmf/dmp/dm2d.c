@@ -3543,6 +3543,8 @@ dm2d_del_db(
 **	    to set that information in LG's context.
 **	16-Mar-2010 (frima01) SIR 121619
 **	    Make use of IIDBDB_ID macro.
+**	28-apr-2010 (miket) SIR 122403
+**	    Init new relation encryption columns.
 */
 DB_STATUS
 dm2d_open_db(
@@ -13230,6 +13232,11 @@ i4		dsc_status)
 	    rel_v9.reltotwid = old_rel_v8->reltotwid;
 	    rel_v9.relnparts = old_rel_v8->relnparts;
 	    rel_v9.relnpartlevels = old_rel_v8->relnpartlevels;
+	    rel_v9.reldatawid = rel_v8.relwid;
+	    rel_v9.reltotdatawid = rel_v8.reltotwid;
+	    rel_v9.relencflags = 0;
+	    rel_v9.relencver = 0;
+	    MEfill (sizeof(rel_v9.relenckey), (u_char)0, rel_v9.relenckey);
 	    MEfill (sizeof(rel_v9.relfree), (u_char)0, rel_v9.relfree);
 
 	    /* now the row is DSC_V9 */	

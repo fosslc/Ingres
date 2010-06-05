@@ -1684,6 +1684,8 @@ typedef struct _DM_PTR
 **	    Added flags for identity columns.
 **	29-Sept-2009 (troal01)
 **	    Added attgeomtype and attsrid.
+**	28-apr_2010 (miket) SIR 122403
+**	    Add ATT_BYTE and ATT_VBYTE.
 */
 struct _DM_COLUMN
 {
@@ -1763,6 +1765,8 @@ struct _DM_COLUMN
 #define                  ATT_MNY            DB_MNY_TYPE
 #define			 ATT_CHA	    DB_CHA_TYPE
 #define			 ATT_VCH            DB_VCH_TYPE
+#define			 ATT_BYTE	    DB_BYTE_TYPE
+#define			 ATT_VBYTE	    DB_VBYTE_TYPE
 #define			 ATT_SECID          DB_SECID_TYPE
      i2              attfmp;		    /* Precision for unsigned integer.*/
      u_i2	     attver_altcol;         /* version row altered */
