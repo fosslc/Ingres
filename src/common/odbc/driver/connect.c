@@ -336,6 +336,10 @@
 **     22-Apr-2010 (Ralph Loen) Bug 123614
 **         Moved BuildVnodeList(), BuildVnodeQueue() and hasVnode() to reside
 **         within NT_GENERIC precompiler definition.
+**     22-Apr-2010 (Ralph Loen) Bug 123614
+**         Prior changes for Bug 123614 inadvertently deleted the 
+**         FileDoesExist() function for non-Windows.  Added FileDoesExist()
+**         for non-Windows.  Remove unused IIGetPrivateProfileString().
 ** 
 */
 
@@ -390,6 +394,7 @@ static VOID BuildVnodeQueue( II_PTR connHandle, II_PTR tranHandle,
 static BOOL hasVnode( II_PTR connHandle, II_PTR tranHandle, char *queryText );
 #endif
 #ifndef NT_GENERIC
+static BOOL          FileDoesExist(char *, BOOL);
 char *getAltPath();
 char * getFileEntry(char *p, char * szToken, bool ignoreBracket);
 #endif
@@ -2970,8 +2975,6 @@ static BOOL             ConProcError (
 #endif
     return TRUE;
 }
-
-
 /*
 **  ResetDbc
 **
@@ -3709,69 +3712,6 @@ static char * FindEntry(
     return pVal;
 }
 
-#ifdef INCLUDE_IIxxxPrivateProfileString
-/*
-**  GetPrivateProfileString
-**
-**  Get string value from ini file.
-**
-**  On entry: szSection-->ini file [<section>]
-**            szEntry  -->ini section key=
-**            szDefault-->default value
-**            szBuffer -->return buffer
-**            cbBuffer  = size of return buffer
-**            szFile   -->ini file name
-**
-**  Returns:  length of value returned in szBuffer
-**
-*/
-DWORD IIGetPrivateProfileString(
-    LPCSTR  szSection,
-    LPCSTR  szEntry,
-    LPCSTR  szDefault,
-    LPSTR   szBuffer,
-    DWORD     cbBuffer,
-    LPCSTR  szFile)
-{
-    LPCSTR  p;
-    DWORD   len;
-    char    szWork[256];       /* returned FindEntry entry value held here */
-
-    p = FindEntry (szSection, szEntry, szFile, szWork);
-    if (!p) 
-         p = szDefault;
-    len = STlength(p);
-    if (len > (cbBuffer - 1))
-        len = (cbBuffer - 1);
-    if (len)
-       MEcopy(p, len, szBuffer);
-    *(szBuffer + len) = 0;
-    return STlength (szBuffer);
-}
-
-/*
-**  IIWritePrivateProfileString
-**
-**  Write string value to ini file.
-**
-**  On entry: szSection-->ini file [<section>]
-**            szEntry  -->ini section key=
-**            szString -->string to be written
-**            szFile   -->ini file name
-**
-**  Returns:  length of value returned in szBuffer
-**
-*/
-BOOL IIWritePrivateProfileString(
-    LPCSTR  szSection,
-    LPCSTR  szEntry,
-    LPCSTR  szString,
-    LPCSTR  szFile)
-{
-    return TRUE;   /* WritePrivateProfileString stubbed out */
-}
-#endif /* INCLUDE_IIxxxPrivateProfileString */
-
 /*
 **  SetODBCINIlocation
 **
@@ -3858,6 +3798,47 @@ SetODBCINIlocation()
     STcopy(" ", ODBCINIfilename);  /* make that odbc.ini is unknown */
 
     return;
+}
+
+/*
+**  FileDoesExist
+**
+**  Check for the existence of a file, and, optionally, whether or not the file
+**      has a size greater than zero.
+**
+**  On entry: szPath -->location for environment handle.
+**            check_size -->whether or not to check the size.
+**
+**  Returns:  TRUE if the file exists, FALSE otherwise.
+**
+**  History:
+**
+**  22-Apr-2003 (loera01) SIR 109643
+**      Added description and history.  Added check for file size.
+**
+*/
+static
+BOOL FileDoesExist(char * szPath, BOOL check_size)
+{
+    LOCATION      loc;
+    LOINFORMATION locinfo;
+    i4            flags = 0;
+
+    if ( check_size)
+        flags |= LO_I_TYPE | LO_I_SIZE;
+    else
+        flags |= LO_I_TYPE;
+
+    if (LOfroms(PATH & FILENAME, szPath, &loc) == OK)
+       if (LOinfo(&loc, &flags, &locinfo) == OK)
+           if ((flags & LO_I_TYPE)  &&  locinfo.li_type == LO_IS_FILE)
+           {
+               if (!check_size)
+                   return(TRUE);
+               else if ((flags & LO_I_SIZE) && locinfo.li_size)
+                   return(TRUE);
+           }
+    return(FALSE);
 }
 
 /*

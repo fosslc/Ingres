@@ -347,6 +347,8 @@
 **         max_procedure_name_length to tDBC.
 **     23-Mar-2010 (Ralph Loen) SIR 123465
 **         Add function definition odbc_hexdump().
+**     22-Apr-2010 (Ralph Loen) Bug 123614
+**         Remove unused IIGetPrivateProfileString().
 */
 #ifndef _INC_IDMSODBC
 #define _INC_IDMSODBC
@@ -449,19 +451,6 @@ typedef long  (__cdecl *LONGPROC)();
 
 SQLINTEGER  INSTAPI SQLGetPrivateProfileString( LPCSTR, LPCSTR, LPCSTR, 
     LPSTR, int, LPCSTR);
-
-#ifdef INCLUDE_IIGetPrivateProfileString
-DWORD
-IIGetPrivateProfileString(
-    LPCSTR lpAppName,
-    LPCSTR lpKeyName,
-    LPCSTR lpDefault,
-    LPSTR lpReturnedString,
-    DWORD nSize,
-    LPCSTR lpFileName
-    );
-#endif /* INCLUDE_IIGetPrivateProfileString */
-
 
 /*
 **  SQL STATE values returned by driver itself:
