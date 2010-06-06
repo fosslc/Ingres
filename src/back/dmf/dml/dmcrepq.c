@@ -209,6 +209,8 @@ GLOBALREF	DMC_REP		*Dmc_rep; /* replicator shared memory segment */
 **
 **	    Don't signal idling repq threads using REP_FULLQ - no one is waiting
 **	    on such an event. Use REP_READQ instead.
+**	20-May-2010 (thaju02) Bug 123427
+**	    Add lk_id param to dm2rep_qman().
 */
 DB_STATUS
 dmc_repq(DMC_CB		*dmc_cb)
@@ -395,7 +397,7 @@ dmc_repq(DMC_CB		*dmc_cb)
 	    db_open = TRUE;
 	    /* process the input queue records */
 	    status = dm2rep_qman(next_dcb,
-		repq[i].tx_id, &repq[i].trans_time, NULL, &dmc->error, FALSE);
+		repq[i].tx_id, &repq[i].trans_time, NULL, 0,&dmc->error, FALSE);
 	    if (status != E_DB_OK && status != E_DB_WARN)
 	    {
 		CSp_semaphore(TRUE, &Dmc_rep->rep_sem);

@@ -366,6 +366,8 @@ GLOBALREF	DMC_REP		*Dmc_rep;
 **	    Release xccb list mutex when all done.
 **	13-Apr-2010 (kschendel) SIR 123485
 **	    Force LOB query-end upon commit.
+**	20-May-2010 (thaju02) Bug 123427
+**	    Pass xcb->xcb_lk_id to dm2rep_qman().
 */
 DB_STATUS
 dmx_commit(
@@ -487,7 +489,8 @@ DMX_CB    *dmx_cb)
 		status = dm2rep_qman(dcb,
 		    xcb->xcb_rep_remote_tx ? xcb->xcb_rep_remote_tx :
 			(i4)xcb->xcb_tran_id.db_low_tran,
-		    &curtime, xcb->xcb_rep_input_q, &dmx->error, FALSE);
+		    &curtime, xcb->xcb_rep_input_q, xcb->xcb_lk_id, 
+		    &dmx->error, FALSE);
 		if (status != E_DB_OK)
 		{
 		    if (dmx->error.err_code > E_DM004A_INTERNAL_ERROR)

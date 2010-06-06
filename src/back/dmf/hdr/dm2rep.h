@@ -34,6 +34,8 @@
 **          a hijacked open_db.
 **	01-Dec-2008 (jonj)
 **	    SIR 120874: dm2rep_? functions converted to DB_ERROR *
+**	20-May-2010 (thaju02) Bug 123427
+**	    Add lk_id param to dm2rep_qman().
 */
 
 /*
@@ -67,6 +69,7 @@ FUNC_EXTERN DB_STATUS		dm2rep_qman(
         				i4         tx_id,
         				HRSYSTIME       *trans_time,
 					DMP_RCB		*input_q_rcb,
+					i4		lk_id,
         				DB_ERROR        *dberr,
 					bool		from_open);
 

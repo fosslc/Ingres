@@ -171,6 +171,8 @@ GLOBALREF	DMC_REP		*Dmc_rep;
 **          is no replication transaction queue at all for asynchronous
 **          distribution, so always do the distribution synchronously and
 **          don't check the Dmc_rep list or semaphore.
+**	20-May-2010 (thaju02) Bug 123427
+**	    Pass xcb->xcb_lk_id to dm2rep_qman().
 */
 
 DB_STATUS
@@ -348,7 +350,8 @@ DMX_CB    *dmx_cb)
 		status = dm2rep_qman(xcb->xcb_odcb_ptr->odcb_dcb_ptr,
 		    xcb->xcb_rep_remote_tx ? xcb->xcb_rep_remote_tx :
 			(i4)xcb->xcb_tran_id.db_low_tran,
-		    &curtime, xcb->xcb_rep_input_q, &dmx->error, FALSE);
+		    &curtime, xcb->xcb_rep_input_q, xcb->xcb_lk_id, 
+		    &dmx->error, FALSE);
 		if (status != E_DB_OK)
 		{
 		    if (dmx->error.err_code > E_DM004A_INTERNAL_ERROR)

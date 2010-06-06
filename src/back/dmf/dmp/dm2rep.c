@@ -2125,6 +2125,12 @@ add_input_queue(
 **	    After dmxe_abort-ing the transaction, note that we no longer
 **	    have one so we don't try to commit/abort again and get unnerving
 **	    E_DM9017_BAD_LOG_SHOW errors.
+**	20-May-2010 (thaju02) Bug 123427
+**	    If opening input_queue and user just updated input_queue, then 
+**	    open table with same lock id used for user update, to avoid
+**	    dm2rep_qman hanging, waiting on input_queue table lock which 
+**	    was previously granted to this session on user's xaction lock 
+**	    list.
 */
 DB_STATUS
 dm2rep_qman(
@@ -2132,6 +2138,7 @@ dm2rep_qman(
 	i4		tx_id,
 	HRSYSTIME	*trans_time,
 	DMP_RCB		*in_q_rcb,
+	i4		user_lk_id,
 	DB_ERROR	*dberr,
 	bool		open_db)
 {
@@ -2249,7 +2256,10 @@ dm2rep_qman(
 	{
     	    status = dm2t_open(dcb, &dcb->rep_input_q, rep_iq_lock,
 	        DM2T_UDIRECT, DM2T_A_WRITE, (i4)0, rep_maxlocks,
-	        (i4)0, log_id, lock_id, (i4)0, (i4)0,
+	        (i4)0, log_id, 
+		((in_q_rcb == (DMP_RCB *)-1) && user_lk_id) ? 
+		    user_lk_id : lock_id, 
+		(i4)0, (i4)0,
 	        (i4)0, &tran_id, &timestamp, &input_q_rcb, (DML_SCB *)NULL, 
 	        dberr);
     	    if (status != E_DB_OK)

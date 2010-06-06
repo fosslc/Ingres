@@ -2297,6 +2297,8 @@ dm2d_add_db(
 **	    keep trying if deadlocks occur.
 **	6-Nov-2009 (kschendel) SIR 122757
 **	    Track count of DB's with raw locns.
+**	20-May-2010 (thaju02) Bug 123427
+**	    Add lk_id param to dm2rep_qman().
 */
 DB_STATUS
 dm2d_close_db(
@@ -2400,7 +2402,7 @@ dm2d_close_db(
                     (DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, (i4 *)NULL,
                     err_code, (i4)1, DB_DB_MAXNAME, dcb->dcb_name.db_db_name);
 		status = dm2rep_qman(dcb, repq[i].tx_id, &repq[i].trans_time, 
-		    NULL, dberr, TRUE);
+		    NULL, 0, dberr, TRUE);
                 if (status != E_DB_OK && status != E_DB_WARN)
                 {
                     /* TX will have been backed out, reset active and leave
@@ -3547,6 +3549,8 @@ dm2d_del_db(
 **	    Replace version specific conversion-done flags with A/B
 **	    scheme, so that we don't have to keep adding more flags
 **	    indefinitely.
+**	20-May-2010 (thaju02) Bug 123427
+**	    Add lk_id param to dm2rep_qman().
 */
 DB_STATUS
 dm2d_open_db(
@@ -5331,7 +5335,7 @@ dm2d_open_db(
                     (DB_SQLSTATE *)NULL, (char *)NULL, (i4)0, (i4 *)NULL,
                     err_code, (i4)1, DB_DB_MAXNAME, dcb->dcb_name.db_db_name);
 		status = dm2rep_qman(dcb, repq[i].tx_id, &repq[i].trans_time, 
-		    NULL, dberr, TRUE);
+		    NULL, 0, dberr, TRUE);
                 if (status != E_DB_OK && status != E_DB_WARN)
                 {
                     /* TX will have been backed out, reset active and leave
@@ -5401,7 +5405,7 @@ dm2d_open_db(
 		** check for remaining entries (only be there if the system
 		** crashed and we have no transaction queue entry for them).
 		*/
-		status = dm2rep_qman(dcb, -1, (HRSYSTIME *)-1, NULL, dberr,
+		status = dm2rep_qman(dcb, -1, (HRSYSTIME *)-1, NULL, 0, dberr,
 			TRUE);
 		/*
 		** warning means deadlock coming out, which is OK in a 
