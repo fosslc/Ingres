@@ -349,6 +349,10 @@
 #	    and unique build ids
 #	12-Apr-2010 (frima01) SIR 122138
 #	    Re-added -lrt to shlink_opts for *_lnx
+#	28-May-2010 (hanje04)
+#	    BUG 123830
+#	    Add -z noexecstack to remove "needs executable stack" bit from
+#	    shared libraries as this causes issues with SELinux on x86.
 #
 
 CMD=`basename /$0`
@@ -636,11 +640,17 @@ case "$config" in
       axp_lnx)
 	use_shared_libs=true
 	use_kerberos=true
+	if [ $config = "int_lnx" -o $config = "a64_lnx" ]
+	then
+            noexecstack="-z noexecstack"
+	else
+            noexecstack=""
+	fi
 	[ "$conf_LSB_BUILD" ] &&
 	    slvers=`ccpp -s ING_VER | sed -e 's/.* //g' -e 's,/,.,g'`
 	if [ -z "$build_arch" ] ; then
 	    # non-hybrid-capable,  must be int_rpl, force 32-bit
-	    shlink_cmd="ld -shared -melf_i386 -L/lib -L/usr/lib "
+	    shlink_cmd="ld -shared -melf_i386 $noexecstack -L/lib -L/usr/lib "
 	    shlink_opts="-lrt -lm -lc -lpthread -ldl -lcrypt"
 	    [ "$conf_LSB_BUILD" ] && shlink_cmd="$shlink_cmd --build-id"
 	    
@@ -648,8 +658,8 @@ case "$config" in
 	    krblink_cmd="$shlink_cmd"
 	    krblink_opts="$shlink_opts"
 	else
-	    shlink32_cmd="ld -shared -melf_i386 -L/lib -L/usr/lib "
-	    shlink64_cmd="ld -shared -melf_x86_64 -L/lib64 -L/usr/lib64 "
+	    shlink32_cmd="ld -shared -melf_i386 $noexecstack -L/lib -L/usr/lib "
+	    shlink64_cmd="ld -shared -melf_x86_64 $noexecstack -L/lib64 -L/usr/lib64 "
 	    [ "$conf_LSB_BUILD" ] &&
 	    {
 		 shlink32_cmd="$shlink32_cmd --build-id"
