@@ -2619,6 +2619,9 @@ static char execproc_syntax2[] = " = session.";
 **	    Use preset internal savepoint name in QEF server block.
 **	29-apr-2010 (stephenb)
 **	    Batch flags are now on psq_flag2. Add case for PSQ_SETBATCHCOPYOPTIM.
+**	28-may-2010 (stephenb)
+**	    add sanity check for no query text case; make sure the number of 
+**	    parameters provided by GCA is the number expected for the saved query
 */
 DB_STATUS
 scs_sequencer(i4 op_code,
@@ -3904,6 +3907,27 @@ scs_sequencer(i4 op_code,
 			sscb->sscb_tsize =
 				sscb->sscb_tnleft = qs_ccb->qsf_sz_piece;
 		    }
+		    /*
+		    ** Sanity check; make sure that GCA gave us the right
+		    ** number of parameters for this query. If we got the query
+		    ** text, this would be checked in the parser.
+		    */
+		    if (scb->scb_sscb.sscb_cquery.cur_qry_parms !=
+			    ((PSQ_QDESC *) scb->scb_sscb.sscb_troot)->psq_dnum)
+		    {
+			sc0e_0_uput(E_SC0206_CANNOT_PROCESS, 0);
+			sc0e_put(E_SC02A1_INCORRECT_QUERY_PARMS, 0, 2,
+				 sizeof(((PSQ_QDESC *) scb->scb_sscb.sscb_troot)->psq_dnum), 
+				 (PTR)&((PSQ_QDESC *) scb->scb_sscb.sscb_troot)->psq_dnum,
+				 sizeof(scb->scb_sscb.sscb_cquery.cur_qry_parms), 
+				 (PTR)&scb->scb_sscb.sscb_cquery.cur_qry_parms,
+				 0, (PTR)0,
+				 0, (PTR)0,
+				 0, (PTR)0,
+				 0, (PTR)0);
+			qry_status = GCA_FAIL_MASK;
+			break;
+		    }
 		    /* copy the text in */
 		    MEcopy(
 			    sscb->sscb_cquery.cur_qtxt + sizeof(SC0M_OBJECT),
@@ -3920,6 +3944,10 @@ scs_sequencer(i4 op_code,
 		    if (sscb->sscb_flags & SCS_INSERT_OPTIM)
 			notext_copy_optim = TRUE;
 		}
+		else
+		    /* we got query text, so save number of parms for sanity check */
+		    scb->scb_sscb.sscb_cquery.cur_qry_parms = 
+			((PSQ_QDESC *) scb->scb_sscb.sscb_troot)->psq_dnum;
 
 		if (notext_copy_optim)
 		{
@@ -15780,6 +15808,7 @@ scs_qt_fetch(SCD_SCB      *scb,
 		scb->scb_sscb.sscb_cquery.cur_qtxt + sizeof(SC0M_OBJECT));
 	scb->scb_sscb.sscb_cquery.cur_qtxt_len = 
 		((PSQ_QDESC *)scb->scb_sscb.sscb_troot)->psq_qrysize;
+
     }
     return(ret_val);
 }

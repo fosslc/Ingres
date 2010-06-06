@@ -158,6 +158,8 @@ SQLSTATE_MAPPING_REQUIRED
 **	    Added E_SC039B_VAR_LEN_INCORRECT
 **	Jan 2010 (stephenb)
 **	    Batch processing add E_SC02A0_NO_QUERY_TEXT.
+**	28-may-2010 (stephenb)
+**	    Add E_SC02A1_INCORRECT_QUERY_PARMS.
 */
 
 #define _SC_CLASS  9
@@ -2029,6 +2031,31 @@ been set. Please inform your technical support representative."
 **	only send queries without text when they believe it is valid to
 **	do so. This is likely to be a driver logic or GCA communication
 **	error. Please inform your technical support representative.
+*/
+E_SC02A1_INCORRECT_QUERY_PARMS:SS50000_MISC_ERRORS
+"A query has been sent without query text, but the number of query
+parameters (%0d) does not match the number of parameters stored
+for this query (%1d). The query will be aborted."
+/*%
+** Parameters:
+**	%0d - Number of parameters provided by the application
+**	%1d - Number of parameters in DBMS stored query
+**
+** Explanation:
+**	A query has been sent from the client without query text; in
+**	this case the DBMS will re-execute the last query executed for
+**	this session again with the new set of query parameters. The
+**	DBMS performs a check that the number of query parameters sent
+**	for this query matches the number of parameters defined
+**	for the last query. If the parameters do not match, the
+**	query cannot be executed and this error is produced.
+**
+** Recommendation:
+**	This is likely to be a programming error. Queries are usually
+**	sent to the DBMS without query text when a prepared query is
+**	executed several times in succession in a batch. If the
+**	query parameters are not refreshed for each execution it may
+**	lead to this problem. Check your program and correct appropriately.
 */
 
 

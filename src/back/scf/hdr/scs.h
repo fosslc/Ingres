@@ -892,6 +892,11 @@ typedef struct _SCSCURSOR
 **	    Add cur_scrollable.
 **	Jan 2010 (stephenb)
 **	   Batch processing: add cur_qtxt_len and cur_qtxt.
+**	28-may02010 (stephenb)
+**	    Add cur_qry_parms to provide a sanity check that
+**	    GCA sent us the right number of parameters for
+**	    queries without text (it may not be checked in
+**	    the parser)
 */
 typedef struct _SCS_CURRENT
 {
@@ -965,6 +970,7 @@ typedef struct _SCS_CURRENT
 					** producing procedure */
     bool	    cur_scrollable;	/* scrollable cursor */
     i4		    cur_qtxt_len;	/* size of cur_qtxt buffer */
+    i4		    cur_qry_parms; 	/* number of parameters in current query */
     char	    *cur_qtxt;		/* saved query text, used if GCA 
 					** does not provide query text */
 }   SCS_CURRENT;

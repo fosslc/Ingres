@@ -302,6 +302,8 @@
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Add support for dbmsinfo('pagetype_v6')
 **	    dbmsinfo('pagetype_v7')
+**	28-may-2010 (stephenb)
+**	    Add message E_SC02A1_INCORRECT_QUERY_PARMS
 */
 
 /*
@@ -715,6 +717,7 @@ typedef struct _SCF_CB SCF_CB;
 
 
 #define			E_SC02A0_NO_QUERY_TEXT		    (E_SC_MASK + 0x2A0L)
+#define			E_SC02A1_INCORRECT_QUERY_PARMS	    (E_SC_MASK + 0x2A1L)
 
 /*
 **  SCF errors related to start or stop of cluster threads.
