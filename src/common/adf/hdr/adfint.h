@@ -413,6 +413,8 @@
 **	aug-2009 (stephenb)
 **		Remove aduErrorFcn(), it's already called outside ADF and needs
 **		to be prototyped elsewhere
+**      01-Aug-2009 (martin bowes) SIR122320
+**          Added soundex_dm (Daitch-Mokotoff soundex)
 **      05-oct-2009 (joea)
 **          Add prototype for adc_bool_compare.
 **/
@@ -523,9 +525,16 @@
 #define		AD_16LIKE_COLON ((u_char)':')  /* SIMILAR TO set embellishment */
 
 /*
-**	This is the coustants section dealing with the Soundex code
+**	This is the constants section dealing with the Soundex code
 */
 #define		AD_LEN_SOUNDEX	4
+
+#define         AD_LEN_SOUNDEX_DM         6
+#define         AD_SOUNDEX_DM_INT_BUFFER 64
+#define         AD_SOUNDEX_DM_PAD_BUFFER 20
+#define         AD_SOUNDEX_DM_MAX_OUTPUT 16
+#define         AD_SOUNDEX_DM_MAX_ENCODE 20
+#define         AD_SOUNDEX_DM_OUTPUT_LEN     sizeof(i2) + AD_LEN_SOUNDEX_DM  + ((AD_SOUNDEX_DM_MAX_OUTPUT - 1) * (AD_LEN_SOUNDEX_DM + 1))
 
 /*
 **	This is the coustants section dealing with the IPADDR code

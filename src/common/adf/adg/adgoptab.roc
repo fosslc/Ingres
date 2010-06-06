@@ -267,6 +267,8 @@
 **  22-Apr-2009 (Marty Bowes) SIR 121969
 **      Add generate_digit() and validate_digit() for the generation
 **      and validation of checksum values.
+**      1-Aug-2009 (martin bowes) SIR 122320
+**          Added soundex_dm (Daitch-Mokotoff soundex)
 **	9-sp-2009 (stephenb)
 **	    Add last_identity function.
 **      25-sep-2009 (joea)
@@ -1407,6 +1409,10 @@ GLOBALDEF   const	ADI_OPRATION    Adi_2RO_operations[] = {
 { {"aes_encrypt"},	ADI_AES_ENCRYPT_OP,   ADI_NORM_FUNC,	    ADI_PREFIX,
 	DB_SQL|DB_QUEL,     ADI_INGRES_6                 ,  
 		ADO_AES_ENCRYPT_CNT,    ADZ_AES_ENCRYPT_FIIDX},
+
+{ {"soundex_dm"},	ADI_SOUNDEX_DM_OP,  ADI_NORM_FUNC,	    ADI_PREFIX,
+	DB_SQL|DB_QUEL,     ADI_INGRES_6                 ,  
+		ADO_SOUNDEX_DM_CNT,  	    ADZ_SOUNDEX_DM_FIIDX},
 
 { {""},			ADI_NOOP,	-1,		    -1,
 	      0       ,                     0            ,  

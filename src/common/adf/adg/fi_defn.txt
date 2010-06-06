@@ -385,9 +385,10 @@
 #	    afterall. That includes the locator forms as input too.
 #	9-sep-2009 (stephenb)
 #		Add last_identity function.
-#
 #	23-Jun-2009 (kibro01) b122225
 #	    Use ADE_2CXI_SKIP for nullable stddev and var functions.
+#       01-Aug-2009 (martin bowes) SIR122320
+#           Added soundex_dm (Daitch-Mokotoff soundex)
 #	31-Aug-2009 (kschendel) b122510
 #	    Add FI's for string(ucode,n) type conversions.  The (all,n)
 #	    FI's have skip-unicode set, and call the wrong coercion wrapper.
@@ -8914,7 +8915,16 @@ group ADI_NORM_FUNC
 	    result DB_VBYTE_TYPE
 	    operands DB_VBYTE_TYPE DB_VBYTE_TYPE
 	    routine adu_aesencrypt
+	    
+    operator ADI_SOUNDEX_DM_OP
 
+	fi ADFI_1470_SOUNDEX_DM
+	    description varchar  :  soundex_dm(varchar)
+	    lenspec ADI_FIXED AD_SOUNDEX_DM_OUTPUT_LEN
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_VCH_TYPE
+	    operands DB_VCH_TYPE
+	    routine adu_soundex_dm
 
 group ADI_COPY_COERCION
 

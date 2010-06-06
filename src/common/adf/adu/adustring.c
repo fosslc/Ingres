@@ -57,6 +57,7 @@
 **                          "yyyy_mm_dd hh:mm:ss GMT"
 **	adu_lvch_move() -- Move a long varchar string to any other string type
 **      adu_19strsoundex() -- Gets the soundex code from the string.
+**      adu_soundex_dm() -- Gets the Daitch-Mokotoff soundex code from a string.
 **	adu_20substr	--  Substring ( char FROM int )
 **	adu_21substrlen	--  Substring ( char FROM int FOR int )
 **	adu_22charlength() -- Returns the ANSI char_length function value
@@ -201,6 +202,8 @@
 **          Add adu_strgenerate_digit() and adu_strvalidate_digit()
 **	11-May-2009 (kschendel) b122041
 **	    Compiler caught value instead of pointer being pass to adu-error.
+**      01-Aug-2009 (martin bowes) SIR122320
+**          Added soundex_dm (Daitch-Mokotoff soundex)
 **      03-Sep-2009 (coomi01) b122473
 **          Add adu_3alltobyte as a wrapper around adu_2alltobyte allowing a
 **          output length parameter to be specified.
@@ -4363,6 +4366,1428 @@ DB_DATA_VALUE		*rdv)
 
     return (E_DB_OK);
 }
+
+/*
+** Name: adu_soundex_dm()
+**       Gets the Daitch-Mokotoff (D-M) soundex code from a string.
+**
+** Description:
+**    This file contains an implementation of the Daitch-Mokotoff Soundex
+**  algorithm (see http://www.avotaynu.com/soundex.html)
+**
+** It returns one or more 6 character digits in a comma seperated list. Each
+** element may have leading zeroes. The list is not sorted, but each element is
+** unique.
+** For example:
+**     Word         soundex_dm(Word)
+**     Moskowitz    645740
+**     Peterson     739460,734600
+**     Jackson      154600,454600,145460,445460
+**
+**  Rules on words:
+**  - The words are converted to uppercase for the soundex generation.
+**  - Leading and embedded whitespace is ignored. This allows for multiple
+**    word surnames such as 'De Souza', which would be treated as 'desouza'.
+**  - With the exception of the hyphen '-', apostrophe and period '.' character,
+**    the word(s) are terminated by the first non alpha character encountered.
+**    These exceptions allow for common punctuation encountered in many names
+**    and place names. For example:
+**        smyth-brown would be treated as smythbrown.
+**        O'brien would be treated as obrien
+**        St.Kilda would be treated as Stkilda
+**    The first occurence of any of these chractes is ignored, but a
+**    subsequent occurrence would terminate the word.
+**
+** Inputs:
+**    adf_scb                Pointer to an ADF session control block.
+**        .adf_errcb            ADF_ERROR struct.
+**        .ad_ebuflen        The length, in bytes, of the buffer
+**                    pointed to by ad_errmsgp.
+**        .ad_errmsgp        Pointer to a buffer to put formatted
+**                    error message in, if necessary.
+**    string                  DB_DATA_VALUE containing string to read
+**        .db_datatype        Its datatype (must be a string type).
+**        .db_length          Its length.
+**        .db_data            Ptr to the data.
+**
+**    rdv                     DB_DATA_VALUE for result.
+**        .db_datatype        Datatype of the result.
+**        .db_length          Length of the result.
+**
+** Outputs:
+**    adf_scb                Pointer to an ADF session control block.
+**        .adf_errcb            ADF_ERROR struct.  If an
+**                    error occurs the following fields will
+**                    be set.  NOTE: if .ad_ebuflen = 0 or
+**                    .ad_errmsgp = NULL, no error message
+**                    will be formatted.
+**        .ad_errcode        ADF error code for the error.
+**        .ad_errclass        Signifies the ADF error class.
+**        .ad_usererr        If .ad_errclass is ADF_USER_ERROR,
+**                    this field is set to the corresponding
+**                    user error which will either map to
+**                    an ADF error code or a user-error code.
+**        .ad_emsglen        The length, in bytes, of the resulting
+**                    formatted error message.
+**        .adf_errmsgp        Pointer to the formatted error message.
+**    rdv
+**        .db_data            Ptr to area to hold the result string.
+**
+**    Returns:
+**        The following DB_STATUS codes may be returned:
+**        E_DB_OK, E_DB_WARN, E_DB_ERROR, E_DB_SEVERE, E_DB_FATAL
+**
+**        If a DB_STATUS code other than E_DB_OK is returned, the caller
+**        can look in the field adf_scb.adf_errcb.ad_errcode to determine
+**        the ADF error code.  The following is a list of possible ADF error
+**        codes that can be returned by this routine:
+**
+**        E_AD0000_OK            Routine completed successfully.
+**          E_AD9998_INTERNAL_ERROR
+**              The internal buffer used in the soundex_dm calculation would
+**              overflow. This is extremely unlikely!
+**
+**  History:
+**    01-Mar-2009 (Martin Bowes) Created.
+*/
+DB_STATUS
+adu_soundex_dm(
+    ADF_CB                      *adf_scb,
+    DB_DATA_VALUE               *string, 
+    DB_DATA_VALUE               *rdv
+    )
+{
+    /* Sundry initialisation */
+    i4          hyphen = 0;
+    i4          start_word = 0;
+    i4          oi, ei = 0, encoded = 0;
+    i4          before_a_vowel = 0;
+    i4          total_choices;
+    i4          choice, total_routes, unique;
+    i4          i, j, true_length;
+    char        a_char;
+
+    /* The internal buffer to hold the uppercase'd and stripped input string.
+    ** This is sized to more than easily allow for enough characters to 
+    ** generate the 6 character D-M soundex value
+    */
+    char        buffer[AD_SOUNDEX_DM_INT_BUFFER + AD_SOUNDEX_DM_PAD_BUFFER]; 
+
+    /* These are fixed codes used in the D-M soundex algorithm */
+    char        FourtyThree[]   = "43";
+    char        FourtyFive[]    = "45";
+    char        FiftyFour[]     = "54";
+    char        SixtySix[]      = "66";
+    char        NinetyFour[]    = "94";
+
+    /* Define the structures for the encoding array and the buffer of possible
+     * output values
+     */
+    struct _dm_element_bit
+    {
+        i2 length;
+        char  string[2];
+    };
+
+    struct _dm_element
+    {
+        enum _dm_element_source
+        {character, phrase} source; /* On occasion we need to know the source of
+                                    ** the element. This is for characters with
+                                    ** two possible sounds, where we must allow
+                                    ** for the chance of two successive 
+                                    ** characters with the same sound number.
+                                    ** See following note on Rule 4.
+                                    */
+        i2             choice_mask; /* If non zero, there are two choices.
+                                    ** The mask is a bit pattern, essentially 
+                                    ** indicating the choice number as a power
+                                    ** of two, which allows the following task
+                                    ** of printing all choices to navigate the
+                                    ** encoded array.
+                                    */
+        struct _dm_element_bit left;
+        struct _dm_element_bit right;
+    };
+
+    struct _dm_prior_element /* This is used in some specialised handling */
+    {
+        enum _dm_element_source source;
+        i2 length;
+        char  string[2];
+    } prior;
+
+    struct _dm_element encode[AD_SOUNDEX_DM_MAX_ENCODE];
+    /* I'm not going to initialise all elements of the encode[] array. This will
+    ** save time but we have to be careful when processing the array later!
+    */
+    char output[AD_SOUNDEX_DM_MAX_OUTPUT][AD_LEN_SOUNDEX_DM];
+
+    /* Confirm input is a varchar */
+    switch (abs(string->db_datatype))
+    {
+      case DB_VCH_TYPE:
+        break;
+
+      default:
+	return (adu_error(adf_scb, E_AD5001_BAD_STRING_TYPE, 0));
+    }
+
+    /* Confirm output is a correctly sized varchar */
+    if (rdv->db_datatype != DB_VCH_TYPE || rdv->db_length != AD_SOUNDEX_DM_OUTPUT_LEN)
+    {
+	return (adu_error(adf_scb, E_AD5001_BAD_STRING_TYPE, 0));
+    }
+
+    /* Pad the internal buffer with spaces */
+    for (i = 0; i < AD_SOUNDEX_DM_INT_BUFFER + AD_SOUNDEX_DM_PAD_BUFFER; i++)
+        buffer[i] = ' ';
+
+    /* Preprocess: Fill internal buffer[]
+    ** Point to first alpha char in input. None? Return an error!
+    ** Convert char to upper until first non-alpha. If non-alpha is one or more
+    ** blanks then skip these and continue. Ignore first occurrence of hyphen
+    ** apostrophe or period characters.
+    */
+    true_length = *(i2 *)string->db_data;
+    for (i = 0,j = 0; i < true_length && j < AD_SOUNDEX_DM_INT_BUFFER; i++)
+    {
+        /*ignore spaces*/
+        if (isblank(*(char *)(string->db_data + sizeof(i2) + i))) continue;
+
+        /* Ignore first hyphen, apostrophe or period only */
+        if ((*(char *)(string->db_data + sizeof(i2) + i) == '-'
+          || *(char *)(string->db_data + sizeof(i2) + i) == '\''
+          || *(char *)(string->db_data + sizeof(i2) + i) == '.')
+          && hyphen == 0)
+        {
+            hyphen = 1;
+            continue;
+        }
+
+        /* Process Alpha characters */
+        if (isalpha(*(char *)(string->db_data + sizeof(i2) + i))) 
+        {
+            /* Convert to uppercase and store in buffer */
+            a_char = (char )toupper((i4 )(*(char *)(string->db_data + sizeof(i2) + i)));
+            buffer[j] = a_char;
+            start_word = 1; j++;
+            continue;
+        }
+        break; /* Anything else breaks the pre-process loop */
+    } /* For */
+
+    if (!start_word)
+    {
+        *(i2 *)(rdv->db_data) = 6;
+        MEfill(AD_LEN_SOUNDEX_DM, '0', (PTR)(rdv->db_data + sizeof(i2)));
+        return (E_DB_OK); /* Nothing to do, return "000000" */
+    }
+
+    buffer[j] = '\0'; /* Terminate the buffer */
+#ifdef xDEBUG
+    TRdisplay("soundex_dm(): Called on %s\n", buffer);
+#endif
+    /* Now process the data stored in the buffer[].
+     * This for loop loads the encode array with the list of possibilities.
+     */
+
+    /* Sundry Initialisation */
+    start_word = 1; total_choices =0;
+    for (i = 0, ei = 0; 
+        i < j && ei < AD_SOUNDEX_DM_MAX_ENCODE && encoded <= AD_LEN_SOUNDEX_DM + 1;
+        ei++, start_word = 0
+        )
+    {
+#ifdef xDEBUG
+        TRdisplay("soundex_dm(): Consider string starting at %c\n", buffer[i]);
+#endif
+        /* The most likely settings, which will be overridden when required */
+        encode[ei].choice_mask     = 0;
+        encode[ei].source          = phrase;
+        encode[ei].left.length     = 1;       /* Most likely one char long */
+        encode[ei].right.length    = 1;
+        encode[ei].right.string[0] = '-'; /*'-' means 'Not Coded' */
+
+        /* The most likely 'before a vowel' scenario, which will be restetd if 
+        ** required
+        */
+        before_a_vowel = soundex_dm_vowelage(&buffer, i, j, 1);
+
+        /* The 'A' cases... */
+        if (!STncmp((char *)(buffer +i), "AI", 2)
+         || !STncmp((char *)(buffer +i), "AJ", 2)
+         || !STncmp((char *)(buffer +i), "AY", 2))
+        {
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '0';
+                encoded++;
+            }
+            else
+            {
+                before_a_vowel = soundex_dm_vowelage(&buffer, i, j, 2);
+                if (before_a_vowel)
+                {
+                    encode[ei].left.string[0] = '1';
+                    encoded++;
+                }
+                else
+                {
+                    encode[ei].left.string[0] = '-';
+                }
+            }
+            i += 2;
+            continue;
+        }
+    
+        if (!STncmp((char *)(buffer +i), "AU", 2))
+        {
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '0';
+                encoded++;
+            }
+            else
+            {
+                before_a_vowel = soundex_dm_vowelage(&buffer, i, j, 2);
+                if (before_a_vowel)
+                {
+                    encode[ei].left.string[0] = '7';
+                    encoded++;
+                }
+                else
+                {
+                    encode[ei].left.string[0] = '-';
+                }
+            }
+            i += 2;
+            continue;
+        }
+
+        if (buffer[i] == 'A')
+        {
+            encode[ei].source = character;
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '0';
+                encoded++;
+            }
+            else
+            {
+                encode[ei].left.string[0] = '-';
+            }
+            i++;
+            continue;
+        }
+
+        /* The 'B', 'V', 'W' cases... */
+        if (buffer[i] == 'B' || buffer[i] == 'V' || buffer[i] == 'W')
+        {
+            encode[ei].source = character;
+            encode[ei].left.string[0] = '7';
+            encoded++;
+            i++;
+            continue;
+        }
+
+        /* The 'C' cases... */
+        if (!STncmp((char *)(buffer +i), "CHS", 3))
+        {
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '5';
+            }
+            else 
+            {
+                encode[ei].left.length = 2;
+                MEcopy((PTR )FiftyFour, 2, (PTR )(encode[ei].left.string));
+            }
+            encoded++;
+            i += 3;
+            continue;
+        }
+    
+        if (!STncmp((char *)(buffer +i), "CSZ", 3)
+          || !STncmp((char *)(buffer +i), "CZS", 3))
+        {
+            encode[ei].left.string[0] = '4';
+            encoded++;
+            i += 3;
+            continue;
+        }
+
+        if (!STncmp((char *)(buffer +i), "CH", 2)) /* Try KH(5) and TCH(4) */
+        {
+            encode[ei].choice_mask = 1 << total_choices;
+            total_choices++;
+            encode[ei].left.string[0]  = '5'; /* As KH */
+            encode[ei].right.string[0] = '4'; /* As TCH */
+            encoded++;
+            i += 2;
+            continue;
+        }
+
+        if (!STncmp((char *)(buffer +i), "CK", 2)) /* Try K(5) and TSK(45) */
+        {
+            encode[ei].choice_mask = 1 << total_choices;
+            total_choices++;
+            encode[ei].left.string[0] = '5'; /* As K */
+            encode[ei].right.length = 2;
+            MEcopy((PTR )FourtyFive, 2, (PTR )(encode[ei].right.string));
+            encoded++;
+            i += 2;
+            continue;
+        }
+
+        if (!STncmp((char *)(buffer +i), "CS", 2) 
+         || !STncmp((char *)(buffer +i), "CZ", 2))
+        {
+            encode[ei].left.string[0] = '4';
+            encoded++;
+            i += 2;
+            continue;
+        }
+    
+        if (buffer[i] == 'C') /* Try K(5) and TZ(4) */
+        {
+            encode[ei].source = character;
+            encode[ei].choice_mask = 1 << total_choices;
+            total_choices++;
+            encode[ei].left.string[0]  = '5'; /* As K */
+            encode[ei].right.string[0] = '4'; /* As TZ */
+            encoded++;
+            i++;
+            continue;
+        }
+
+        /* The 'D' cases... */
+        if (!STncmp((char *)(buffer +i), "DRZ", 3)
+         || !STncmp((char *)(buffer +i), "DRS", 3)
+         || !STncmp((char *)(buffer +i), "DSH", 3)
+         || !STncmp((char *)(buffer +i), "DSZ", 3)
+         || !STncmp((char *)(buffer +i), "DZH", 3)
+         || !STncmp((char *)(buffer +i), "DZS", 3))
+        {
+            encode[ei].left.string[0] = '4';
+            encoded++;
+            i += 3;
+            continue;
+        }
+    
+        if (!STncmp((char *)(buffer +i), "DS", 2) 
+         || !STncmp((char *)(buffer +i), "DZ", 2))
+        {
+            encode[ei].left.string[0] = '4';
+            encoded++;
+            i += 2;
+            continue;
+        }
+    
+        if (!STncmp((char *)(buffer +i), "DT", 2))
+        {
+            encode[ei].left.string[0] = '3';
+            encoded++;
+            i += 2;
+            continue;
+        }
+    
+        if (buffer[i] == 'D')
+        {
+            encode[ei].source = character;
+            encode[ei].left.string[0] = '3';
+            encoded++;
+            i++;
+            continue;
+        }
+
+        /* The 'E' cases... */
+        if (!STncmp((char *)(buffer +i), "EI", 2)
+         || !STncmp((char *)(buffer +i), "EJ", 2)
+         || !STncmp((char *)(buffer +i), "EY", 2))
+        {
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '0';
+                encoded++;
+                }
+            else
+            {
+                before_a_vowel = soundex_dm_vowelage(&buffer, i, j, 2);
+                if (before_a_vowel)
+                {
+                    encode[ei].left.string[0] = '1';
+                    encoded++;
+                }
+                else
+                {
+                    encode[ei].left.string[0] = '-';
+                }
+            }
+            i += 2;
+            continue;
+        }
+    
+        if (!STncmp((char *)(buffer +i), "EU", 2))
+        {
+            before_a_vowel = soundex_dm_vowelage(&buffer, i, j, 2);
+            if (start_word || before_a_vowel)
+            {
+                encode[ei].left.string[0] = '1';
+                encoded++;
+            }
+            else
+            {
+                encode[ei].left.string[0] = '-';
+            }
+            i += 2;
+            continue;
+        }
+
+        if (buffer[i] =='E')
+        {
+            encode[ei].source = character;
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '0';
+                encoded++;
+            }
+            else
+            {
+                encode[ei].left.string[0] = '-';
+            }
+            i++;
+            continue;
+        }
+
+        /* The 'F' cases... */
+        if (!STncmp((char *)(buffer +i), "FB", 2))
+        {
+            encode[ei].left.string[0] = '7';
+            encoded++;
+            i += 2;
+            continue;
+        }
+    
+        if (buffer[i] =='F')
+        {
+            encode[ei].source = character;
+            encode[ei].left.string[0] = '7';
+            encoded++;
+            i++;
+            continue;
+        }
+
+        /* The 'G' and 'Q' cases... */
+        if (buffer[i] =='G' || buffer[i] =='Q')
+        {
+            encode[ei].source = character;
+            encode[ei].left.string[0] = '5';
+            encoded++;
+            i++;
+            continue;
+        }
+
+        /* The 'H' cases... */
+        if (buffer[i] =='H')
+        {
+            encode[ei].source = character;
+            if (start_word || before_a_vowel)
+            {
+                encode[ei].left.string[0] = '5';
+                encoded++;
+            }
+            else
+            {
+                encode[ei].left.string[0] = '-';
+            }
+            i++;
+            continue;
+        }
+
+        /* The 'I' cases... */
+        if (!STncmp((char *)(buffer +i), "IA", 2)
+         || !STncmp((char *)(buffer +i), "IE", 2)
+         || !STncmp((char *)(buffer +i), "IO", 2)
+         || !STncmp((char *)(buffer +i), "IU", 2))
+        {
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '1';
+                encoded++;
+            }
+            else
+            {
+                encode[ei].left.string[0] = '-';
+            }
+            i += 2;
+            continue;
+        }
+    
+        if (buffer[i] =='I')
+        {
+            encode[ei].source = character;
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '0';
+                encoded++;
+            }
+            else
+            {
+                encode[ei].left.string[0] = '-';
+            }
+            i++;
+            continue;
+        }
+
+        /* The 'J' cases... */
+        if (buffer[i] =='J') /* Try Y(1) and DZH(4) */
+        {
+            encode[ei].source = character;
+            encode[ei].choice_mask = 1 <<total_choices;
+            total_choices++;
+            encode[ei].right.string[0] = '4'; /* As DZH(4) */
+            if (start_word) 
+            {
+                encode[ei].left.string[0] = '1'; /* As Y(1) */
+                encoded++;
+            }
+            else
+            {
+                encode[ei].left.string[0] = '-'; /* ie. Not Coded */
+            }
+            i++;
+            continue;
+        }
+
+        /* The 'K' cases... */
+        if (!STncmp((char *)(buffer +i), "KS", 2))
+        {
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '5';
+            }
+            else 
+            {
+                encode[ei].left.length = 2;
+                MEcopy((PTR )FiftyFour, 2, (PTR )(encode[ei].left.string));
+            }
+            encoded++;
+            i += 2;
+            continue;
+        }
+    
+        if (!STncmp((char *)(buffer +i), "KH", 2))
+        {
+            encode[ei].left.string[0] = '5';
+            encoded++;
+            i += 2;
+            continue;
+        }
+    
+        if (buffer[i] =='K')
+        {
+            encode[ei].source = character;
+            encode[ei].left.string[0] = '5';
+            encoded++;
+            i++;
+            continue;
+        }
+
+        /* The 'L' cases... */
+        if (buffer[i] =='L')
+        {
+            encode[ei].source = character;
+            encode[ei].left.string[0] = '8';
+            encoded++;
+            i++;
+            continue;
+        }
+
+        /* The 'M' cases... */
+        if (!STncmp((char *)(buffer +i), "MN", 2))
+        {
+            encode[ei].left.length = 2;
+            MEcopy((PTR )SixtySix, 2, (PTR )(encode[ei].left.string));
+            encoded++;
+            i += 2;
+            continue;
+        }
+    
+        if (buffer[i] =='M')
+        {
+            encode[ei].source = character;
+            encode[ei].left.string[0] = '6';
+            encoded++;
+            i++;
+            continue;
+        }
+
+        /* The 'N' cases... */
+        if (!STncmp((char *)(buffer +i), "NM", 2))
+        {
+            encode[ei].left.length = 2;
+            MEcopy((PTR )SixtySix, 2, (PTR )(encode[ei].left.string));
+            encoded++;
+            i += 2;
+            continue;
+        }
+    
+        if (buffer[i] =='N')
+        {
+            encode[ei].source = character;
+            encode[ei].left.string[0] = '6';
+            encoded++;
+            i++;
+            continue;
+        }
+
+        /* The 'O' cases... */
+        if (!STncmp((char *)(buffer +i), "OI", 2)
+         || !STncmp((char *)(buffer +i), "OJ", 2)
+         || !STncmp((char *)(buffer +i), "OY", 2))
+        {
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '0';
+                encoded++;
+            }
+            else
+            {
+                before_a_vowel = soundex_dm_vowelage(&buffer, i, j, 2);
+                if (before_a_vowel)
+                {
+                    encode[ei].left.string[0] = '1';
+                    encoded++;
+                }
+                else
+                {
+                    encode[ei].left.string[0] = '-';
+                }
+            }
+            i += 2;
+            continue;
+        }
+    
+        if (buffer[i] =='O')
+        {
+            encode[ei].source = character;
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '0';
+                encoded++;
+            }
+            else
+            {
+                encode[ei].left.string[0] = '-';
+            }
+            i++;
+            continue;
+        }
+
+        /* The 'P' cases... */
+        if (!STncmp((char *)(buffer +i), "PF", 2)
+         || !STncmp((char *)(buffer +i), "PH", 2))
+        {
+            encode[ei].left.string[0] = '7';
+            encoded++;
+            i += 2;
+            continue;
+        }
+    
+        if (buffer[i] =='P')
+        {
+            encode[ei].source = character;
+            encode[ei].left.string[0] = '7';
+            encoded++;
+            i++;
+            continue;
+        }
+
+        /* The 'R' cases... */
+        if (!STncmp((char *)(buffer +i), "RTZ", 3))
+        {
+            encode[ei].left.length = 2;
+            MEcopy((PTR )NinetyFour, 2, (PTR )(encode[ei].left.string));
+            encoded++;
+            i += 3;
+            continue;
+        }
+
+        if (!STncmp((char *)(buffer +i), "RS", 2) /* Try RTZ(94) and ZH(4) */
+         || !STncmp((char *)(buffer +i), "RZ", 2))
+        {
+            encode[ei].choice_mask = 1 << total_choices;
+            total_choices++;
+            encode[ei].left.length = 2;
+            MEcopy((PTR )NinetyFour, 2, (PTR )(encode[ei].left.string)); /* Try RTZ(94) */
+
+            encode[ei].right.string[0] = '4'; /* Try ZH(4) */
+
+            encoded++;
+            i += 2;
+            continue;
+        }
+
+        if (buffer[i] =='R')
+        {
+            encode[ei].source = character;
+            encode[ei].left.string[0] = '9';
+            encoded++;
+            i++;
+            continue;
+        }
+
+        /* The 'S' cases... */
+        if (!STncmp((char *)(buffer +i), "SCHTSCH", 7))
+        {
+            encode[ei].source = phrase;
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '2';
+            }
+            else 
+            {
+                encode[ei].left.string[0] = '4';
+            }
+            encoded++;
+            i += 7;
+            continue;
+        }
+    
+        if (!STncmp((char *)(buffer +i), "SCHTSH", 6)
+         || !STncmp((char *)(buffer +i), "SCHTCH", 6))
+        {
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '2';
+            }
+            else 
+            {
+                encode[ei].left.string[0] = '4';
+            }
+            encoded++;
+            i += 6;
+            continue;
+        }
+
+        if (!STncmp((char *)(buffer +i), "SHTCH", 5)
+         || !STncmp((char *)(buffer +i), "SHTSH", 5)
+         || !STncmp((char *)(buffer +i), "STSCH", 5))
+        {
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '2';
+            }
+            else 
+            {
+                encode[ei].left.string[0] = '4';
+            }
+            encoded++;
+            i += 5;
+            continue;
+        }
+
+        if (!STncmp((char *)(buffer +i), "SHCH", 4)
+         || !STncmp((char *)(buffer +i), "STRZ", 4)
+         || !STncmp((char *)(buffer +i), "STRS", 4)
+         || !STncmp((char *)(buffer +i), "STSH", 4))
+        {
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '2';
+            }
+            else 
+            {
+                encode[ei].left.string[0] = '4';
+            }
+            encoded++;
+            i += 4;
+            continue;
+        }
+
+        if (!STncmp((char *)(buffer +i), "SCHT", 4)
+         || !STncmp((char *)(buffer +i), "SCHD", 4))
+        {
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '2';
+            }
+            else 
+            {
+                encode[ei].left.length = 2;
+                MEcopy((PTR )FourtyThree, 2, (PTR )(encode[ei].left.string));
+            }
+            encoded++;
+            i += 4;
+            continue;
+        }
+
+        if (!STncmp((char *)(buffer +i), "STCH", 4)
+         || !STncmp((char *)(buffer +i), "SZCZ", 4)
+         || !STncmp((char *)(buffer +i), "SZCS", 4))
+        {
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '2';
+            }
+            else 
+            {
+                encode[ei].left.string[0] = '4';
+            }
+            encoded++;
+            i += 4;
+            continue;
+        }
+
+        if (!STncmp((char *)(buffer +i), "SCH", 3))
+        {
+            encode[ei].left.string[0] = '4';
+            encoded++;
+            i += 3;
+            continue;
+        }
+
+        if (!STncmp((char *)(buffer +i), "SHT", 3)
+         || !STncmp((char *)(buffer +i), "SZT", 3)
+         || !STncmp((char *)(buffer +i), "SHD", 3)
+         || !STncmp((char *)(buffer +i), "SZD", 3))
+        {
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '2';
+            }
+            else 
+            {
+                encode[ei].left.length = 2;
+                MEcopy((PTR )FourtyThree, 2, (PTR )(encode[ei].left.string));
+            }
+            encoded++;
+            i += 3;
+            continue;
+        }
+
+        if (!STncmp((char *)(buffer +i), "SH", 2)
+         || !STncmp((char *)(buffer +i), "SZ", 2))
+        {
+            encode[ei].left.string[0] = '4';
+            encoded++;
+            i += 2;
+            continue;
+        }
+
+        if (!STncmp((char *)(buffer +i), "SC", 2))
+        {
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '2';
+            }
+            else 
+            {
+                encode[ei].left.string[0] = '4';
+            }
+            encoded++;
+            i += 2;
+            continue;
+        }
+
+        if (!STncmp((char *)(buffer +i), "ST", 2)
+         || !STncmp((char *)(buffer +i), "SD", 2))
+        {
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '2';
+            }
+            else 
+            {
+                encode[ei].left.length = 2;
+                MEcopy((PTR )FourtyThree, 2, (PTR )(encode[ei].left.string));
+            }
+            encoded++;
+            i += 2;
+            continue;
+        }
+
+        if (buffer[i] =='S')
+        {
+            encode[ei].source = character;
+            encode[ei].left.string[0] = '4';
+            encoded++;
+            i++;
+            continue;
+        }
+
+        /* The 'T' cases... */
+        if (!STncmp((char *)(buffer +i), "TTSCH", 5))
+        {
+            encode[ei].left.string[0] = '4';
+            encoded++;
+            i += 5;
+            continue;
+        }
+
+        if (!STncmp((char *)(buffer +i), "TTCH", 4)
+         || !STncmp((char *)(buffer +i), "TSCH", 4)
+         || !STncmp((char *)(buffer +i), "TTSZ", 4))
+        {
+            encode[ei].left.string[0] = '4';
+            encoded++;
+            i += 4;
+            continue;
+        }
+
+        if (!STncmp((char *)(buffer +i), "TSK", 3))
+        {
+            encode[ei].left.length = 2;
+            MEcopy((PTR )FourtyFive, 2, (PTR )(encode[ei].left.string));
+            encoded++;
+            i += 3;
+            continue;
+        }
+
+        if (!STncmp((char *)(buffer +i), "TCH", 3)
+         || !STncmp((char *)(buffer +i), "TRZ", 3)
+         || !STncmp((char *)(buffer +i), "TRS", 3)
+         || !STncmp((char *)(buffer +i), "TSH", 3)
+         || !STncmp((char *)(buffer +i), "TTS", 3)
+         || !STncmp((char *)(buffer +i), "TTZ", 3)
+         || !STncmp((char *)(buffer +i), "TSZ", 3)
+         || !STncmp((char *)(buffer +i), "TZS", 3))
+        {
+            encode[ei].left.string[0] = '4';
+            encoded++;
+            i += 3;
+            continue;
+        }
+
+        if (!STncmp((char *)(buffer +i), "TH", 2))
+        {
+            encode[ei].left.string[0] = '3';
+            encoded++;
+            i += 2;
+            continue;
+        }
+    
+        if (!STncmp((char *)(buffer +i), "TC", 2)
+         || !STncmp((char *)(buffer +i), "TZ", 2)
+         || !STncmp((char *)(buffer +i), "TS", 2))
+        {
+            encode[ei].left.string[0] = '4';
+            encoded++;
+            i += 2;
+            continue;
+        }
+    
+        if (buffer[i] =='T')
+        {
+            encode[ei].source = character;
+            encode[ei].left.string[0] = '3';
+            encoded++;
+            i++;
+            continue;
+        }
+
+        /* The 'U' cases... */
+        if (!STncmp((char *)(buffer +i), "UI", 2)
+         || !STncmp((char *)(buffer +i), "UJ", 2)
+         || !STncmp((char *)(buffer +i), "UY", 2))
+        {
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '0';
+                encoded++;
+            }
+            else
+            {
+                before_a_vowel = soundex_dm_vowelage(&buffer, i, j, 2);
+                if (before_a_vowel)
+                {
+                    encode[ei].left.string[0] = '1';
+                    encoded++;
+                }
+                else
+                {
+                    encode[ei].left.string[0] = '-';
+                }
+            }
+            i += 2;
+            continue;
+        }
+    
+        if (!STncmp((char *)(buffer +i), "UE", 2))
+        {
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '0';
+                encoded++;
+            }
+            else
+            {
+                encode[ei].left.string[0] = '-';
+            }
+            i += 2;
+            continue;
+        }
+
+        if (buffer[i] =='U')
+        {
+            encode[ei].source = character;
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '0';
+                encoded++;
+            }
+            else
+            {
+                encode[ei].left.string[0] = '-';
+            }
+            i++;
+            continue;
+        }
+
+        /* The 'X' cases... */
+        if (buffer[i] =='X')
+        {
+            encode[ei].source = character;
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '5';
+            }
+            else
+            {
+                encode[ei].left.length = 2;
+                MEcopy((PTR )FiftyFour, 2, (PTR )(encode[ei].left.string));
+            }
+            encoded++;
+            i++;
+            continue;
+        }
+
+        /* The 'Y' cases... */
+        if (buffer[i] =='Y')
+        {
+            encode[ei].source = character;
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '1';
+                encoded++;
+            }
+            else
+            {
+                encode[ei].left.string[0] = '-';
+            }
+            i++;
+            continue;
+        }
+
+        /* The 'Z' cases... */
+        if (!STncmp((char *)(buffer +i), "ZHDZH", 5))
+        {
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '2';
+            }
+            else
+            {
+                encode[ei].left.string[0] = '4';
+            }
+            encoded++;
+            i += 5;
+            continue;
+        }
+
+        if (!STncmp((char *)(buffer +i), "ZDZH", 4))
+        {
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '2';
+            }
+            else
+            {
+                encode[ei].left.string[0] = '4';
+            }
+            encoded++;
+            i += 4;
+            continue;
+        }
+
+        if (!STncmp((char *)(buffer +i), "ZSCH", 4))
+        {
+            encode[ei].left.string[0] = '4';
+            encoded++;
+            i += 4;
+            continue;
+        }
+    
+        if (!STncmp((char *)(buffer +i), "ZDZ", 3))
+        {
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '2';
+            }
+            else
+            {
+                encode[ei].left.string[0] = '4';
+            }
+            encoded++;
+            i += 3;
+            continue;
+        }
+
+        if (!STncmp((char *)(buffer +i), "ZHD", 3))
+        {
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '2';
+            }
+            else 
+            {
+                encode[ei].left.length = 2;
+                MEcopy((PTR )FourtyThree, 2, (PTR )(encode[ei].left.string));
+            }
+            encoded++;
+            i += 3;
+            continue;
+        }
+    
+        if (!STncmp((char *)(buffer +i), "ZSH", 3))
+        {
+            encode[ei].left.string[0] = '4';
+            encoded++;
+            i += 3;
+            continue;
+        }
+    
+        if (!STncmp((char *)(buffer +i), "ZD", 2))
+        {
+            if (start_word)
+            {
+                encode[ei].left.string[0] = '2';
+            }
+            else 
+            {
+                encode[ei].left.length = 2;
+                MEcopy((PTR )FourtyThree, 2, (PTR )(encode[ei].left.string));
+            }
+            encoded++;
+            i += 2;
+            continue;
+        }
+    
+        if (!STncmp((char *)(buffer +i), "ZH", 2)
+         || !STncmp((char *)(buffer +i), "ZS", 2))
+        {
+            encode[ei].left.string[0] = '4';
+            encoded++;
+            i += 2;
+            continue;
+        }
+    
+        if (buffer[i] =='Z')
+        {
+            encode[ei].source = character;
+            encode[ei].left.string[0] = '4';
+            encoded++;
+            i++;
+            continue;
+        }
+    } /* For each character in string */
+
+#ifdef xDEBUG
+    TRdisplay("soundex_dm(): commence processing encode array\n");
+    for (i = 0; i <ei; i++)
+    {
+        TRdisplay("encode[%d].choice_mask %d\n", i, encode[i].choice_mask);
+        TRdisplay("encode[%d].left %c", i, encode[i].left.string[0]);
+        if (encode[i].left.length>1)
+            TRdisplay("%c", encode[i].left.string[1]);
+        TRdisplay("\n");
+        TRdisplay("encode[%d].right %c", i, encode[i].right.string[0]);
+        if (encode[i].right.length>1)
+            TRdisplay("%c", encode[i].right.string[1]);
+        TRdisplay("\n");
+    }
+#endif
+    /* Process the encode array into the output array.
+    ** 
+    ** Note that ei is the index of the last element in the encode array plus 1.
+    ** 
+    ** At this point we do the final weed of adjacent characters with the same
+    ** sound code. 
+    */
+    total_routes = (i4 )1 << total_choices;
+#ifdef xDEBUG
+    TRdisplay("soundex_dm(): There are %d routes through encode array\n", total_routes);
+#endif
+    for (oi = 0; oi < total_routes && oi < AD_SOUNDEX_DM_MAX_OUTPUT; oi++)
+    {
+#ifdef xDEBUG
+        TRdisplay("Process route %d\n", oi);
+#endif
+        MEfill(AD_LEN_SOUNDEX_DM, '0', (PTR) output[oi]);
+        j = 0;                 /* j is character position in output[oi] */
+        prior.source = phrase; /* init 'prior' case */
+        prior.length = 1;
+        prior.string[0] = '-';
+        for (i = 0; i < ei; i++) /* i is index of encoded array */
+        {
+            if (encode[i].choice_mask == 0)
+            {
+#ifdef xDEBUG
+                TRdisplay("No choice at encode[%d]\n", i);
+#endif
+                if (encode[i].left.string[0] != '-')
+                {
+                    if (encode[i].source == character
+                     && prior.source == character
+                     && !STncmp(prior.string, encode[i].left.string,
+                         encode[i].left.length))
+                    {
+                        continue;
+                    }
+                    /* Otherwise....*/
+                    output[oi][j++] = encode[i].left.string[0];
+                    if (encode[i].left.length > 1 && j < AD_LEN_SOUNDEX_DM)
+                        output[oi][j++] = encode[i].left.string[1];
+                }
+                /* Save left as 'prior' case */
+                prior.source = encode[i].source;
+                prior.length = encode[i].left.length;
+                MEcopy(encode[i].left.string, prior.length, prior.string);
+            }
+            else
+            {
+                choice = oi & encode[i].choice_mask;
+                /* Left if choice = 0, Right if choice = 1 */
+#ifdef xDEBUG
+                TRdisplay("oi (%d) & choice_mask (%d) at encode[%d] = %d\n", oi, encode[i].choice_mask, i, choice);
+#endif
+                if (!choice)
+                {
+#ifdef xDEBUG
+                    TRdisplay("Went left\n");
+#endif
+                    if (encode[i].left.string[0] != '-')
+                    {
+                        if (encode[i].source == character
+                         && prior.source == character
+                         && !STncmp(prior.string, encode[i].left.string,
+                             encode[i].left.length))
+                        {
+                            continue;
+                        }
+                        /* Otherwise....*/
+                        output[oi][j++] = encode[i].left.string[0];
+                        if (encode[i].left.length > 1 && j < AD_LEN_SOUNDEX_DM)
+                            output[oi][j++] = encode[i].left.string[1];
+                    }
+                    /* Save left as 'prior' case */
+                    prior.source = encode[i].source;
+                    prior.length = encode[i].left.length;
+                    MEcopy(encode[i].left.string, prior.length, prior.string);
+                }
+                else
+                {
+#ifdef xDEBUG
+                    TRdisplay("Went right\n");
+#endif
+                    if (encode[i].right.string[0] != '-')
+                    {
+                        if (encode[i].source == character
+                         && prior.source == character
+                         && !STncmp(prior.string, encode[i].right.string,
+                             encode[i].right.length))
+                        {
+                            continue;
+                        }
+                        /* Otherwise....*/
+                        output[oi][j++] = encode[i].right.string[0];
+                        if (encode[i].right.length > 1 && j < AD_LEN_SOUNDEX_DM)
+                            output[oi][j++] = encode[i].right.string[1];
+                    }
+                    /* Save right as 'prior' case */
+                    prior.source = encode[i].source;
+                    prior.length = encode[i].right.length;
+                    MEcopy(encode[i].right.string, prior.length, prior.string);
+                }
+            }
+        } /* for each element in encoded array */
+    } /* For each possible route through the array */
+
+#ifdef xDEBUG
+    TRdisplay("soundex_dm(): Output array is:\n");
+    for (i = 0; i < oi; i++)
+    {
+        TRdisplay("output[%d]: ", i);
+        for (j = 0; j < AD_LEN_SOUNDEX_DM; j++) TRdisplay("%c", output[i][j]);
+        TRdisplay("\n");
+    }
+    TRdisplay("soundex_dm(): Now build return string\n");
+#endif
+    /* Build the rdv->data from the output array, removing duplicates along
+    ** the way.
+    */
+    MEcopy(output[0], AD_LEN_SOUNDEX_DM, (PTR)(rdv->db_data + sizeof(i2)));
+    *(i2 *)(rdv->db_data) = AD_LEN_SOUNDEX_DM;
+    for (i = 1; i < oi; i++)
+    {
+        unique = 1;
+        for (j = 0; j < i; j++) /* check for duplicates */
+        {
+            if (!STncmp(output[j], output[i], AD_LEN_SOUNDEX_DM))
+            {
+#ifdef xDEBUG
+                TRdisplay("output[%d] == output[%d]\n", i,j);
+#endif
+                unique = 0;
+                break;
+            }
+        }
+
+        if (unique)
+        {
+            if (rdv->db_length >= (*(i2 *)rdv->db_data + AD_LEN_SOUNDEX_DM + 1))
+            {
+                *(char *)(rdv->db_data + sizeof(i2) + *(i2 *)rdv->db_data) = ',';
+                MEcopy(output[i], AD_LEN_SOUNDEX_DM,
+                    (PTR)(rdv->db_data + sizeof(i2) + *(i2 *)rdv->db_data) + 1);
+                *(i2 *)rdv->db_data += AD_LEN_SOUNDEX_DM + 1;
+            }
+            else
+            {
+                return(adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2,
+                    0, "soundex_dm(): unexpected overflow in return string length."));
+            }
+        }
+    }
+    return (E_DB_OK);
+} /* adu_soundex_dm */
+
+/* soundex_dm_vowelage:
+**     Simply checks if the current code set is before a vowel.
+**     In this case a vowel is in the set: A, E, I, O, U, J and Y
+*/
+i4
+soundex_dm_vowelage (
+    char *buffer,   /* The buffer of characters to check  */
+    i4  b_ptr,     /* The current position in the buffer */
+    i4  b_len,     /* The length of the buffer           */
+    i4  skip       /* How far ahead to check for a vowel */
+    )
+{
+    /* return (0) if we have exhausted the buffer */
+    if (b_ptr + skip >= b_len) {return (0);}
+
+    /* return (1) if before a vowel */
+    if (buffer[b_ptr + skip] == 'A' || buffer[b_ptr + skip] == 'E'
+     || buffer[b_ptr + skip] == 'I' || buffer[b_ptr + skip] == 'O'
+     || buffer[b_ptr + skip] == 'U' || buffer[b_ptr + skip] == 'J'
+     || buffer[b_ptr + skip] == 'Y')
+    {return (1);}
+
+    /* return (0) if NOT before a vowel */
+    return (0);
+} /* soundex_dm_vowelage */
 
 /*
 ** Name: adu_20substr() - Return the substring from a string.

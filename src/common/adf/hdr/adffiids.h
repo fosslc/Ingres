@@ -365,6 +365,8 @@
 **      22-Apr-2009 (Marty Bowes) SIR 121969
 **          Add generate_digit() and validate_digit() for the generation
 **          and validation of checksum values.
+**      01-Aug-2009 (martin bowes) SIR122320
+**          Added soundex_dm (Daitch-Mokotoff) soundex
 **	31-Aug-2009 (kschendel) b122510
 **	    Add FI's for character(ucode,n) type conversions.  We can't use
 **	    the (all,n) FI's for these because they call the wrong
@@ -1759,4 +1761,4 @@
 #define ADFI_1467_VARCHAR_DIV_MONEY	(ADI_FI_ID)1467 /* varchar / money */
 #define ADFI_1468_MONEY_MUL_VARCHAR	(ADI_FI_ID)1468 /* money * varchar */
 #define ADFI_1469_VARCHAR_MUL_MONEY	(ADI_FI_ID)1469 /* varchar * money */
-
+#define ADFI_1470_SOUNDEX_DM	        (ADI_FI_ID)1470 /* soundex_dm() */

@@ -151,6 +151,8 @@
 **      22-Apr-2009 (Marty Bowes) SIR 121969
 **          Add adu_strgenerate_digit() and adu_strvalidate_digit()
 **          for the generation and validation of checksum values.
+**      01-Aug-2009 (martin bowes) SIR122320
+**          Added soundex_dm (Daitch-Mokotoff soundex)
 **	aug-2009 (stephenb)
 **		Remove various protos that are called outside ADF and
 **		prototype them in a more public location.
@@ -624,6 +626,9 @@ FUNC_EXTERN ADU_NORM1_FUNC adu_18cvrt_gmt;  /* Routine to perform the
                                             */
 FUNC_EXTERN ADU_NORM1_FUNC adu_lvch_move;   /* Move to/from blob */
 FUNC_EXTERN ADU_NORM1_FUNC adu_19strsoundex;/* Routine to perform soundex()
+                                            ** on any string data value.
+                                            */
+FUNC_EXTERN ADU_NORM1_FUNC adu_soundex_dm;  /* Routine to perform soundex_dm()
                                             ** on any string data value.
                                             */
 FUNC_EXTERN ADU_NORM2_FUNC adu_strgenerate_digit;

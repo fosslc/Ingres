@@ -129,6 +129,8 @@
 **	22-Apr-2009 (Marty Bowes) SIR 121969
 **          Add generate_digit() and validate_digit() for the generation
 **          and validation of checksum values.
+**      01-Aug-2009 (martin bowes) SIR122320
+**          Added soundex_dm (Daitch-Mokotoff soundex)
 **	9-sep-2009 (stephenb)
 **	    Add last_identity
 **      25-sep-2009 (joea)
@@ -417,6 +419,7 @@ _DEFINE(VALIDATEDIGIT, 237  /* validate_digit()        */)\
 _DEFINE(SINGLETON,     238  /* singleton               */)\
 _DEFINE(AES_DECRYPT,   239  /* aes_decrypt             */)\
 _DEFINE(AES_ENCRYPT,   240  /* aes_encrypt             */)\
+_DEFINE(SOUNDEX_DM,    241  /* soundex_dm              */)\
 _DEFINEEND
 
 
