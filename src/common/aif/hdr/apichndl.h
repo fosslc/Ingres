@@ -75,6 +75,8 @@
 **	    Added IIAPI_SP_DATE_ALIAS.
 **	25-Mar-10 (gordy)
 **	    Added message buffer queues to the connection handle.
+**	26-May-10 (gordy)
+**	    Write DBMS trace message to log.
 */
 
 # ifndef __APICHNDL_H__
@@ -374,6 +376,8 @@ typedef struct _IIAPI_SESSIONPARM
 **          This contains target info with supressed login info(user,pwd).
 **	25-Mar-10 (gordy)
 **	    Added message buffer queues.
+**	26-May-10 (gordy)
+*8	    Added flag to indicate processing of GCA_TRACE message group.
 */ 
 
 struct _IIAPI_CONNHNDL
@@ -401,6 +405,7 @@ struct _IIAPI_CONNHNDL
 #define IIAPI_CH_MSG_CONTINUED		0x0004	/* GCA Message Continued */
 #define IIAPI_CH_DESCR_REQ		0x0008	/* GCA Het-Net descriptors */
 #define IIAPI_CH_LT_LOCAL 		0x0010	/* login type is local */
+#define	IIAPI_CH_TRACE_ACTIVE		0x0020	/* Processing GCA_TRACE */
 
     /*
     ** Object queues

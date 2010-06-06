@@ -4,7 +4,12 @@
 
 # include <compat.h>
 # include <gl.h>
+# include <cm.h>
+# include <er.h>
+# include <lo.h>
 # include <me.h>
+# include <mu.h>
+# include <si.h>
 # include <st.h>
 # include <nm.h>
 # include <cv.h>
@@ -24,6 +29,8 @@
 **
 **	IIapi_initTrace		Initialize tracing.
 **	IIapi_termTrace		Shutdown tracing.
+**	IIapi_printTrace	Print DBMS trace message.
+**	IIapi_flushTrace	Flush DBMS trace output.
 **	IIapi_printEvent	Convert event number to ASCII string.
 **	IIapi_printStatus	Convert status to ASCII string.
 **	IIapi_printID		Convert number to ASCII string through a table.
@@ -113,7 +120,12 @@
 **	    Use PM to check for API trace settings when used in servers.
 **	25-Mar-10 (gordy)
 **	    Added batch processing events.
+**	26-May-10 (gordy)
+**	    Log DBMS trace messages.
 */
+
+#define	HEADER	ERx("---------- Connection %p ------------------------------------\n")
+#define	FOOTER	ERx("-------------------------------------------------------------------\n")
 
 #define	CHAR_ARRAY_SIZE( array )	(sizeof(array)/sizeof(array[0]))
 
@@ -153,6 +165,8 @@ static i4	init_count = 0;
 **	    writing all preceding.
 **	 6-Jun-03 (gordy)
 **	    Use PM to check for API trace settings when used in servers.
+**	26-May-10 (gordy)
+**	    Initialize DBMS trace handling.
 */
 
 II_EXTERN II_VOID
@@ -163,6 +177,14 @@ IIapi_initTrace( II_VOID )
     CL_ERR_DESC	err_code;
     
     if ( ! IIapi_static )  return;
+
+    IIapi_static->api_trace_level = 0;
+    IIapi_static->api_trace_file = NULL;
+    IIapi_static->api_dbms_file = NULL;
+    IIapi_static->api_trace_handle = NULL;
+    IIapi_static->api_trace_flags = 0;
+
+    if ( MUi_semaphore( &IIapi_static->api_trace_sem ) != OK )  return;
 
     NMgtAt( "II_API_TRACE", &retVal );
     if ( ! (retVal && *retVal)  && 
@@ -183,6 +205,64 @@ IIapi_initTrace( II_VOID )
 		    STlength( IIapi_static->api_trace_file ), &err_code );
     }
     
+    NMgtAt( "II_API_SET", &retVal );
+
+    if ( retVal  &&  *retVal )
+    {
+	char    *cp, buff[ ER_MAX_LEN + 1 ];
+	char    *tracefile = NULL;
+	i4	tflen;
+
+	STlcopy( retVal, buff, ER_MAX_LEN );
+
+	for( cp = buff; *cp; cp++ )
+	{
+	    while( CMwhite( cp ) )  CMnext( cp );
+	    if ( *cp == EOS )  break;
+
+	    if ( STbcompare( ERx("printtrace"), 0, cp, 10, TRUE ) == 0 )
+		IIapi_static->api_trace_flags |= IIAPI_TRACE_DBMS;
+	    else  if ( STbcompare( ERx("tracefile"), 0, cp, 9, TRUE ) == 0 )
+	    {
+		cp += 9;
+	        while( CMwhite( cp ) )  CMnext( cp );
+
+		if ( *cp != EOS  &&  *cp != ';' )  
+		{
+		    tracefile = cp;
+		    CMnext( cp );
+
+		    while( *cp != EOS  &&  *cp != ';'  &&  ! CMwhite( cp ) )
+			CMnext( cp );
+
+		    tflen = cp - tracefile;
+		}
+	    }
+
+	    if ( ! (cp = STindex( cp, ERx(";"), 0 )) )  break;
+	}
+
+	if ( IIapi_static->api_trace_flags & IIAPI_TRACE_DBMS )
+	{
+	    LOCATION	loc;
+	    STATUS	status;
+	    
+	    if ( tracefile == NULL )
+	    	tracefile = ERx("iiprttrc.log");
+	    else
+		tracefile[ tflen ] = EOS;
+
+	    LOfroms( FILENAME, tracefile, &loc );
+	    status = SIopen( &loc, ERx("w"), &IIapi_static->api_dbms_file );
+
+	    if ( status != OK )
+	    {
+		IIapi_static->api_trace_flags &= ~IIAPI_TRACE_DBMS;
+		IIapi_static->api_dbms_file = NULL;
+	    }
+	}
+    }
+
     return;
 }
 
@@ -208,6 +288,8 @@ IIapi_initTrace( II_VOID )
 **	    Close the actual trace file.
 **	19-Jan-96 (gordy)
 **	    Moved trace info to global data structure.
+**	26-May-10 (gordy)
+**	    Terminate DBMS tracing.
 */
 
 II_EXTERN II_VOID
@@ -217,17 +299,126 @@ IIapi_termTrace( II_VOID )
     
     if ( IIapi_static )
     {
+        if ( IIapi_static->api_trace_flags & IIAPI_TRACE_DBMS )
+	{
+	    /*
+	    ** If DBMS tracing has occured (trace handle has been changed),
+	    ** write a final separation line to the trace file.
+	    */
+	    if ( IIapi_static->api_trace_handle != NULL )
+	    {
+		SIfprintf( IIapi_static->api_dbms_file, FOOTER );
+		SIflush( IIapi_static->api_dbms_file );
+	    }
+
+	    SIclose( IIapi_static->api_dbms_file );
+	}
+
+	/*
+	** Close the trace file.
+	*/
 	if ( IIapi_static->api_trace_file )
 	    TRset_file( TR_F_CLOSE, IIapi_static->api_trace_file, 
 			STlength( IIapi_static->api_trace_file ), &err_code );
 
 	IIapi_static->api_trace_level = 0;
 	IIapi_static->api_trace_file = NULL;
+	IIapi_static->api_dbms_file = NULL;
+	IIapi_static->api_trace_handle = NULL;
+	IIapi_static->api_trace_flags = 0;
+
+	MUr_semaphore( &IIapi_static->api_trace_sem );
     }
 
     return;
 }
 
+
+
+/*
+** Name: IIapi_printTrace
+**
+** Description:
+**	Write DBMS trace message to trace log.
+**
+** Input:
+**	handle	Handle associated with trace message (may be NULL).
+**	first	Is this the first trace of current group.
+**	str	Message to be written.
+**	length	Length of message, < 0 if EOS terminated string.
+**
+** Output:
+**	None.
+**
+** Returns:
+**	VOID
+**
+** History:
+**	26-May-10 (gordy)
+**	    Created.
+*/
+
+II_EXTERN II_VOID
+IIapi_printTrace( PTR handle, bool first, char *str, i4 length )
+{
+    if ( ! (IIapi_static->api_trace_flags & IIAPI_TRACE_DBMS) )  return;
+    MUp_semaphore( &IIapi_static->api_trace_sem );
+
+    /*
+    ** Write trace header when new connection begins 
+    ** tracing.  A separator is written when a new
+    ** group of trace messages is started for the 
+    ** active connection.
+    */
+    if ( handle  &&  handle != IIapi_static->api_trace_handle )
+	SIfprintf( IIapi_static->api_dbms_file, HEADER, handle );
+    else  if ( first )
+	SIfprintf( IIapi_static->api_dbms_file, FOOTER );
+
+    IIapi_static->api_trace_handle = handle;
+
+    if ( length < 0 )
+	SIfprintf( IIapi_static->api_dbms_file, str );
+    else  if ( length > 0 )
+    {
+	i4 dummy;
+
+        SIwrite( length, str, &dummy, IIapi_static->api_dbms_file );
+    }
+
+    MUv_semaphore( &IIapi_static->api_trace_sem );
+    return;
+}
+
+
+
+/*
+** Name: IIapi_flushTrace
+**
+** Description:
+**	Flush the trace message written to the trace log.
+**
+** Input:
+**	None.
+**
+** Output:
+**	None.
+**
+** Returns:
+**	VOID.
+**
+** History:
+**	26-May-10 (gordy)
+**	    Created.
+*/
+
+II_EXTERN II_VOID
+IIapi_flushTrace( II_VOID )
+{
+    if ( IIapi_static->api_trace_flags & IIAPI_TRACE_DBMS )
+	SIflush( IIapi_static->api_dbms_file );
+    return;
+}
 
 
 

@@ -28,6 +28,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	26-May-10 (gordy)
+**	    Log DBMS trace messages.
 */
 
 # ifndef __APITRACE_H__
@@ -107,10 +109,8 @@
     
 II_EXTERN II_VOID	IIapi_initTrace( II_VOID );
 II_EXTERN II_VOID	IIapi_termTrace( II_VOID );
-II_EXTERN char		*IIapi_printCState( IIAPI_STATE stateNum );
-II_EXTERN char		*IIapi_printTState( IIAPI_STATE stateNum );
-II_EXTERN char		*IIapi_printSState( IIAPI_STATE stateNum );
-II_EXTERN char		*IIapi_printEState( IIAPI_STATE stateNum );
+II_EXTERN II_VOID	IIapi_printTrace( PTR, bool, char *, i4 );
+II_EXTERN II_VOID	IIapi_flushTrace( II_VOID );
 II_EXTERN char		*IIapi_printEvent( IIAPI_EVENT evntNo );
 II_EXTERN char		*IIapi_printStatus( IIAPI_STATUS status );
 II_EXTERN char		*IIapi_printID( i4  id, i4  id_cnt, char **ids );

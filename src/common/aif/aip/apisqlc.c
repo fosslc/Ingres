@@ -89,6 +89,8 @@
 **	25-Mar-10 (gordy)
 **	    Support batch processing.  Replaced GCA formatted interface
 **	    with byte stream.  Enhanced parameter memory block handling.
+**	26-May-10 (gordy)
+**	    Write DBMS trace message to log.
 */
 
 /*
@@ -764,6 +766,8 @@ IIapi_sql_cinit( VOID )
 **	25-Mar-10 (gordy)
 **	    Replaced GCA formatted interface with byte stream.  
 **	    Enhanced parameter memory block handling.
+**	26-May-10 (gordy)
+**	    Turn of DBMS trace flag when any other message is received.
 */
 
 static IIAPI_SM_OUT *
@@ -786,6 +790,37 @@ sm_evaluate
 	( "%s evaluate: evaluating event %s in state %s\n",
 	  sql_conn_sm.sm_id, IIAPI_PRINTEVENT( event ),
 	  IIAPI_PRINT_ID( state, SQL_CS_CNT, sql_cs_id ) );
+
+    /*
+    ** Need to turn off the DBMS trace flag when anything
+    ** else other than a GCA_TRACE message is received.
+    */
+    switch( event )
+    {
+    case IIAPI_EV_ACCEPT_RCVD :
+    case IIAPI_EV_CFROM_RCVD :
+    case IIAPI_EV_CINTO_RCVD :
+    case IIAPI_EV_DONE_RCVD :
+    case IIAPI_EV_ERROR_RCVD :
+    case IIAPI_EV_EVENT_RCVD :
+    case IIAPI_EV_IACK_RCVD :
+    case IIAPI_EV_NPINTERUPT_RCVD :
+    case IIAPI_EV_PROMPT_RCVD :
+    case IIAPI_EV_QCID_RCVD :
+    case IIAPI_EV_REFUSE_RCVD :
+    case IIAPI_EV_REJECT_RCVD :
+    case IIAPI_EV_RELEASE_RCVD :
+    case IIAPI_EV_RESPONSE_RCVD :
+    case IIAPI_EV_RETPROC_RCVD :
+    case IIAPI_EV_TDESCR_RCVD :
+    case IIAPI_EV_TUPLE_RCVD :
+	if ( connHndl->ch_flags & IIAPI_CH_TRACE_ACTIVE )
+	{
+	    connHndl->ch_flags &= ~IIAPI_CH_TRACE_ACTIVE;
+	    IIapi_flushTrace();
+	}
+	break;
+    }
 
     /*
     ** Static evaluations depend solely on the current state and event.
@@ -1118,6 +1153,8 @@ sm_evaluate
 **	25-Mar-10 (gordy)
 **	    Replaced GCA formatted interface with byte stream.  
 **	    Enhanced parameter memory block handling.
+**	26-May-10 (gordy)
+**	    Write DBMS trace message to log.
 */
 
 static II_BOOL
@@ -1453,15 +1490,20 @@ sm_execute
 	{
             IIAPI_ENVHNDL	*envHndl = connHndl->ch_envHndl;
 	    IIAPI_USRPARM	*usrParm = &envHndl->en_usrParm;
+	    IIAPI_MSG_BUFF	*msgBuff = (IIAPI_MSG_BUFF *)parmBlock;
+	    bool		first = ! (connHndl->ch_flags & 
+	    				   IIAPI_CH_TRACE_ACTIVE);
 
-	    /*
-	    ** Send GCA error message to the application if it
-	    ** had been requested.
-	    */
+	    connHndl->ch_flags |= IIAPI_CH_TRACE_ACTIVE;
+	    IIapi_printTrace( (PTR)connHndl, 
+	    		      first, msgBuff->data, msgBuff->length );
+
 	    if ( ( usrParm->up_mask1 & IIAPI_UP_TRACE_FUNC ) )
 	    {
+		/*
+		** Send GCA trace message to the application.
+		*/
 		IIAPI_TRACEPARM	traceParm;
-		IIAPI_MSG_BUFF	*msgBuff = (IIAPI_MSG_BUFF *)parmBlock;
 
 		IIAPI_TRACE( IIAPI_TR_INFO )
 			("sm_execute: Application trace func callback...\n");
@@ -1470,27 +1512,42 @@ sm_execute
 		traceParm.tr_envHandle = (envHndl == IIapi_defaultEnvHndl())
 					 ? NULL : envHndl;
 
-		traceParm.tr_message = MEreqmem( 0, msgBuff->length + 1,
-						 TRUE, NULL );
-		if ( ! traceParm.tr_message )
+		/*
+		** Terminate string in place if possible, otherwise 
+		** allocate buffer to hold terminated string.
+		*/
+		if ( (msgBuff->data + msgBuff->length) < 
+		     (msgBuff->buffer + msgBuff->size) )
 		{
-		    IIAPI_TRACE( IIAPI_TR_ERROR )
-			( "%s: can't allocate memory for message...\n",
-			  sql_conn_sm.sm_id );
-
-		    success = FALSE;
+		    msgBuff->data[ msgBuff->length ] = EOS;
+		    traceParm.tr_message = msgBuff->data;
 		}
 		else
 		{
+		    traceParm.tr_message = MEreqmem( 0, msgBuff->length + 1,
+						 TRUE, NULL );
+		    if ( ! traceParm.tr_message )
+		    {
+			IIAPI_TRACE( IIAPI_TR_ERROR )
+			    ( "%s: can't allocate memory for message...\n",
+			      sql_conn_sm.sm_id );
+
+			success = FALSE;
+			break;
+		    }
+
 		    MEcopy( msgBuff->data, 
 			    msgBuff->length, traceParm.tr_message );
-		    traceParm.tr_message[ traceParm.tr_length ] = EOS;
-		    traceParm.tr_length = msgBuff->length;
-		    msgBuff->length = 0;
-
-		    (*usrParm->up_trace_func)( &traceParm );
-		    MEfree( (PTR)traceParm.tr_message );
+		    traceParm.tr_message[ msgBuff->length ] = EOS;
 		}
+
+		traceParm.tr_length = msgBuff->length;
+		msgBuff->length = 0;
+
+		(*usrParm->up_trace_func)( &traceParm );
+
+		if ( (u_i1 *)traceParm.tr_message != msgBuff->data )
+		    MEfree( (PTR)traceParm.tr_message );
 	    }
 	}
 	break;

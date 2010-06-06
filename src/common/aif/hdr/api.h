@@ -76,6 +76,8 @@
 **	    Support date type alias.
 **	25-Mar-10 (gordy)
 **	    Added support for batch query processing.
+**	26-May-10 (gordy)
+**	    Write DBMS trace messages to log.
 */
 
 # ifndef __API_H__
@@ -84,6 +86,7 @@
 # include <me.h>
 # include <mu.h>
 # include <qu.h>
+# include <si.h>
 
 # include <gca.h>
 
@@ -291,32 +294,27 @@ typedef II_BOOL		(*IIAPI_SM_ACT)( IIAPI_ACTION action,
 **	Structure defining the global data for API.
 **
 **	api_semaphore		Semaphore protecting this structure.
-**
 **	api_thread		Thread-local-storage object key.
-**
 **	api_env_q		Queue for environment handles.
-**
 **	api_env_default		Default environment for IIAPI_VERSION_1.
-**
 **	api_adf_cb		ADF control block.
-**
 **	api_date_alias		Date type alias.
-**
 **	api_dfmt		Default date format.
-**
 **	api_mfmt		Default money format.
-**
 **	api_decimal		Default decimal character.
-**
 **	api_tz_cb		Default timezone control block.
-**
 **	api_timezone		Default timezone name.
-**
 **	api_year_cutoff		Default century boundary year cutoff.
-**
+**	api_slang		Default spoken language.
 **	api_trace_level		Output trace level, 0 = no tracing.
-**
 **	api_trace_file		Name of the output trace file.
+**	api_trace_sem		Trace semaphore.
+**	api_dbms_file		DBMS trace output file.
+**	api_trace_handle	Tracing handle.
+**	api_trace_flags		Tracing flags.
+**	api_unicol_init		Unicode initialized.
+**	api_ucode_ctbl		Unicode collation table.
+**	api_ucode_cvtbl		Unicode table.
 **
 ** History:
 **	19-Jan-96 (gordy)
@@ -337,6 +335,8 @@ typedef II_BOOL		(*IIAPI_SM_ACT)( IIAPI_ACTION action,
 **          the collation table is already initiated.
 **	 8-Aug-7 (gordy)
 **	    Added date type alias.
+**	26-May-10 (gordy)
+**	    Added trace info for DBMS trace messages.
 */
 
 struct _IIAPI_STATIC
@@ -356,12 +356,18 @@ struct _IIAPI_STATIC
     PTR			api_tz_cb;
     char 		*api_timezone;
     i4			api_year_cutoff;
-    i4			api_slang;			/* Spoken Lang */
+    i4			api_slang;
 
     II_LONG		api_trace_level;		/* Tracing */
     char		*api_trace_file;
-    II_BOOL		api_unicol_init;		/* Unicode collation 
-						        ** is initialized. */
+    MU_SEMAPHORE	api_trace_sem;
+    FILE		*api_dbms_file;
+    PTR			api_trace_handle;
+    u_i4		api_trace_flags;
+
+#define	IIAPI_TRACE_DBMS	0x01
+
+    II_BOOL		api_unicol_init;		/* Unicode collation */
     PTR			api_ucode_ctbl;
     PTR			api_ucode_cvtbl;
 };
