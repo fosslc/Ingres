@@ -6868,6 +6868,11 @@ opc_expranal(
 **	26-Apr-2010 (kschendel) b123636
 **	    + (concat) isn't commutative if it's string concatenation.
 **	    Don't optimize blobs, see comments inline.
+**	25-May-2010 (kiria01) b123805
+**	    Don't treat as the same two sub-expressions that differ in their
+**	    result type, length, precision or collation ID. This will speed up
+**	    most checks as well as sifting out a genuine mis-match that would
+**	    otherwise slip through.
 */
 
 static bool
@@ -6932,6 +6937,23 @@ opc_exprsrch(
 	    (opno = srchp->pst_sym.pst_value.pst_s_op.pst_opno) != 
 		nodep->pst_sym.pst_value.pst_s_op.pst_opno)
 	    return(FALSE);
+
+	/* Also check for identical result datatypes, lengths and
+	** precisions. Partly as this will often summarize mismatched
+	** sub-expression but specifically needed if an explicit coercion
+	** has used that pinned the result type. Usually, the result types
+	** will follow from the operands and operator but cast operators
+	** may have the result type/len set to match attribute type/len
+	** in default processing and similar contexts. */
+	if (srchp->pst_sym.pst_dataval.db_datatype !=
+			nodep->pst_sym.pst_dataval.db_datatype ||
+	    srchp->pst_sym.pst_dataval.db_length !=
+			nodep->pst_sym.pst_dataval.db_length ||
+	    srchp->pst_sym.pst_dataval.db_prec !=
+			nodep->pst_sym.pst_dataval.db_prec ||
+	    srchp->pst_sym.pst_dataval.db_collID !=
+			nodep->pst_sym.pst_dataval.db_collID)
+	    break;
 
 	/* Check for functions that must be executed individually
 	** (random(), uuid()). */
