@@ -46,6 +46,7 @@
 **	    qso_just_trans() - Translate an alias (but don't define it).
 **          qso_chtype() - Change type of a QSF object.
 **	    qso_rmvobj() - Remove an object from the object list.
+**	    qso_ses_commit() - Commit named objects created by this session.
 **
 **      This file also contains the following internal routines, which are
 **	declared "static" and are therefore not visible outside of this file:
@@ -226,6 +227,11 @@
 **	    created the object, stopped before producing a query plan, and is
 **	    now coming along with another object with the same text using
 **	    dynamic query caching.
+**	26-May-2010 (kschendel) b123814
+**	    Add "session commit" and session-named-objects list so that
+**	    uncommitted session-created named objects can be accurately
+**	    rolled back if need be.  The old way depended on an object-session
+**	    that could become stale and bogus.
 */
 
 
@@ -3116,6 +3122,52 @@ qso_chtype( QSF_RCB *qsf_rb )
 }
 
 
+/*
+** Name: qso_ses_commit - Commit objects created by this session.
+**
+** Description:
+**	When named objects are created by a session, they are placed on
+**	an object list headed by the QSF session CB (qsf-cb).  This is
+**	done so that those objects can be easily tossed if the creating
+**	transaction rolls back.  If the session commits, though, this
+**	routine is called which very simply wipes the session-toss list.
+**	The QSR-psem mutex is taken to protect against concurrent
+**	object removes by another session.
+**
+** Inputs:
+**	qsf_rb			QSF request block
+**	    .qsf_sid		Session ID supplied by caller
+**	    .qsf_scb		Session QSF_CB supplied by qsf-call
+**
+** Outputs:
+**	None.
+**	Returns E_DB_OK or error status.
+**
+** History:
+**	26-May-2010 (kschendel) b123814
+**	    Written.
+*/
+
+DB_STATUS
+qso_ses_commit(QSF_RCB *qsf_rb)
+{
+    QSF_CB *scb = qsf_rb->qsf_scb;	/* The session control block */
+    QSO_OBJ_HDR *obj, *next;
+
+    CSp_semaphore(TRUE, &Qsr_scb->qsr_psem);
+    obj = scb->qss_snamed_list;
+    while (obj != NULL)
+    {
+	next = obj->qso_snamed_list;
+	obj->qso_snamed_list = NULL;	/* Not on a list any more */
+	obj = next;
+    }
+    scb->qss_snamed_list = NULL;	/* No more list */
+    CSv_semaphore(&Qsr_scb->qsr_psem);
+
+    return (E_DB_OK);
+} /* qso_ses_commit */
+
 /*{
 ** Name: qso_rmvobj - Remove an object from QSF.
 **
@@ -3210,6 +3262,9 @@ qso_chtype( QSF_RCB *qsf_rb )
 **      17-feb-09 (wanfr01) b121543
 **          Remove the object from the appropriate IMA list as determined by
 **	    the QSF object's qso_type
+**	26-May-2010 (kschendel) b123814
+**	    If a named object, see if it's on the session
+**	    uncommitted list, if so take it off.
 */
 
 DB_STATUS
@@ -3281,6 +3336,34 @@ i4 		*err_code )
 	}
 	/* Now, update the statistics */
 	Qsr_scb->qsr_no_named--;
+
+	/* If object might be on some session's uncommitted object list,
+	** take it off.  (Session end wipes qso-session, so if there is
+	** no qso-session, it can't be on a session list.)
+	*/
+	if (obj->qso_session != NULL)
+	{
+	    QSF_CB *obj_scb;
+	    QSO_OBJ_HDR *p1, *p2;	/* Singly linked list */
+
+	    obj_scb = obj->qso_session;
+	    p1 = NULL;
+	    p2 = obj_scb->qss_snamed_list;
+	    while (p2 != NULL && p2 != obj)
+	    {
+		p1 = p2;
+		p2 = p2->qso_snamed_list;
+	    }
+	    if (p2 != NULL)
+	    {
+		/* Found it, take it off */
+		if (p1 == NULL)
+		    obj_scb->qss_snamed_list = p2->qso_snamed_list;
+		else
+		    p1->qso_snamed_list = p2->qso_snamed_list;
+	    }
+	    obj->qso_snamed_list = NULL;
+	}
 	CSv_semaphore(&Qsr_scb->qsr_psem);
 
 	obj->qso_lrnext = (QSO_OBJ_HDR *) NULL;
@@ -3355,7 +3438,7 @@ i4 		*err_code )
 
     /* Remove the object from the session's orphan list.  Shareable
     ** named objects are never put on the list, don't try to take
-    ** them off (qso_session may be completely obsolete).
+    ** them off (qso_session is unreliable).
     */
 
     if (!shareable)
@@ -3835,6 +3918,10 @@ i4		*err_code )
 **	    desired object.  Don't set master's qsmo_type until after we
 **	    get past all the clrmem poop and are safely holding the master
 **	    mutex again.
+**	26-May-2010 (kschendel) b123814
+**	    Put named objects on a session list headed in the qsf-cb
+**	    for easier / more accurate delete when the objects are
+**	    rolled-back instead of committed.
 */
 static DB_STATUS
 qso_mkobj( 
@@ -3963,6 +4050,7 @@ i4		*err_code )
 	new_obj->qso_decaying_usage = 0;
 	new_obj->qso_size = 0;
 	new_obj->qso_lrprev = (QSO_OBJ_HDR *) NULL;
+	new_obj->qso_session = scb;
 
 	if (new_obj->qso_obid.qso_lname > 0)
 	{
@@ -3992,7 +4080,13 @@ i4		*err_code )
 
 	    if (++Qsr_scb->qsr_no_named > Qsr_scb->qsr_mx_named)
 		Qsr_scb->qsr_mx_named = Qsr_scb->qsr_no_named;
+	    /* Add this object to the session named-object list before
+	    ** dropping the qsr psem.
+	    */
+	    new_obj->qso_snamed_list = scb->qss_snamed_list;
+	    scb->qss_snamed_list = new_obj;
 	    CSv_semaphore(&Qsr_scb->qsr_psem);
+
 	}
 	else
 	{
@@ -4000,12 +4094,11 @@ i4		*err_code )
 	    new_obj->qso_lrnext = (QSO_OBJ_HDR *) NULL;
 	    new_obj->qso_mobject = (QSO_MASTER_HDR *) NULL;
 	    new_obj->qso_moprev = (QSO_OBJ_HDR *) NULL;
+	    new_obj->qso_snamed_list = NULL;
 	    if (++Qsr_scb->qsr_no_unnamed > Qsr_scb->qsr_mx_unnamed)
 		Qsr_scb->qsr_mx_unnamed = Qsr_scb->qsr_no_unnamed;
 	}
 	new_obj->qso_monext = (QSO_OBJ_HDR *) NULL;
-
-	new_obj->qso_session = scb;
 
 	/* Maintain some statistics */
 	if (++Qsr_scb->qsr_nobjs > Qsr_scb->qsr_mxobjs)

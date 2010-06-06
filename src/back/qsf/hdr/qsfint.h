@@ -296,6 +296,9 @@
 **	17-Feb-2009 (wanfr01)
 **          Bug 121543
 **	    Add QSOBJ_DBP_TYPE
+**	26-May-2010 (kschendel) b123814
+**	    Add qso-snamed-list, list of uncommitted objects owned by a
+**	    session.  The list is used for deleting rolled-back objects.
 */
 typedef struct _QSO_OBJ_HDR
 {
@@ -360,6 +363,11 @@ typedef struct _QSO_OBJ_HDR
 					** semantically identical query plans.
                                         */
     struct _QSO_MASTER_HDR *qso_mobject;/* Master object that owns this obj. */
+    struct _QSO_OBJ_HDR *qso_snamed_list; /* Ptr to next object in list of
+					** named QSF objects that belong to
+					** this session, and haven't been
+					** committed yet.
+					*/
     QSO_OBID        qso_obid;           /* Id for the object.
 					*/
     PTR             qso_streamid;       /* The ULM memory stream id for
@@ -372,7 +380,16 @@ typedef struct _QSO_OBJ_HDR
 					** likely to be useful to the outside
 					** world (eg parse tree root, etc).
                                         */
-    QSF_CB	   *qso_session;	/* Session that created this object. */
+    QSF_CB	    *qso_session;	/* Session that created this object.
+					** Nulled out for persistent (shareable,
+					** named) objects after the creating
+					** session exits.
+					** It will be valid for at least until
+					** qso_root is set (ie if qso_root is
+					** null, qso_session will be set).
+					** qso_session will also be set for
+					** an object on an snamed_list.
+					*/
     i4              qso_lk_state;       /* Lock state the object is in.  This
                                         ** will always be one of the following
                                         ** symbolically defined constants (these
@@ -750,7 +767,7 @@ FUNC_EXTERN bool	qst_trcheck		( QSF_CB *scb, i4  xtp );
 
 FUNC_EXTERN STATUS	qsf_attach_inst		( QSO_OBID obid, i2 type );
 FUNC_EXTERN i4		qsf_clrmem		( QSF_CB *scb );
-FUNC_EXTERN i4		qsf_clrsesobj		( void );
+FUNC_EXTERN DB_STATUS	qsf_clrsesobj		( QSF_RCB *qsf_rb );
 FUNC_EXTERN STATUS	qsf_detach_inst		( QSO_OBID obid, i2 type );
 FUNC_EXTERN STATUS	qsf_mo_attach		( void );
 FUNC_EXTERN STATUS	qsf_decay_set		( i4  decay_factor );
@@ -778,6 +795,7 @@ FUNC_EXTERN DB_STATUS	qso_palloc		( QSF_RCB *qsf_rb );
 FUNC_EXTERN DB_STATUS	qso_rmvobj		( QSO_OBJ_HDR **qso_obj,
 						  QSO_MASTER_HDR **master,
 						  i4 *err_code );
+FUNC_EXTERN DB_STATUS	qso_ses_commit		( QSF_RCB *qsf_rb );
 FUNC_EXTERN DB_STATUS	qso_setroot		( QSF_RCB *qsf_rb );
 FUNC_EXTERN DB_STATUS	qso_trans_or_define	( QSF_RCB *qsf_rb );
 FUNC_EXTERN DB_STATUS	qso_unlock		( QSF_RCB *qsf_rb );

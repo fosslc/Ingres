@@ -140,7 +140,7 @@ QSO_SETROOT,\
 QSO_INFO,\
 QSO_PALLOC,\
 QSO_GETHANDLE,\
-QSO_unused,\
+QSO_SES_COMMIT,\
 QSD_OBJ_DUMP,\
 QSD_OBQ_DUMP,\
 QSO_CHTYPE,\
@@ -247,6 +247,9 @@ E_DB_FATAL";
 **      18-Feb-2005 (hanal04) Bug 112376 INGSRV2837
 **          Added qsf_clrsesobj() which allows a session to flush any
 **          objects it owns in the QSF cache.
+**	26-May-2010 (kschendel) b123814
+**	    Add session-commit call to complement the session-rollback
+**	    entry point (clrsesobj).
 */
 
 DB_STATUS
@@ -427,8 +430,12 @@ qsf_call( i4 qsf_operation, QSF_RCB *qsf_rb )
 	status = qso_getnext(qsf_rb);
 	break;
 
+      case QSO_SES_COMMIT:
+	status = qso_ses_commit(qsf_rb);
+	break;
+
       case QSF_SES_FLUSH_LRU:
-        status = qsf_clrsesobj();
+        status = qsf_clrsesobj(qsf_rb);
         break;
 
       default:

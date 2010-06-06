@@ -229,17 +229,18 @@ qsf_clrmem( QSF_CB *scb )
 **
 ** Description:
 **      This routine runs through the QSF object queue clearing out any 
-**	objects owned by the session.
+**	(named) objects owned by the session.
 **        
 ** Inputs:
-**      none
+**      qsf_rb		QSF request block
+**	    qsf_sid	Session ID, to be set by caller.
+**	    qsf_scb	QSF session CB, set by qsf-call.
 **
 ** Outputs:
 **	none
 **
 **	Returns:
-**	    status	status of underlying attempts to lock and destroy
-**			objects.
+**	E_DB_OK or error status.
 **
 **	Exceptions:
 **	    none
@@ -263,84 +264,67 @@ qsf_clrmem( QSF_CB *scb )
 **          due to various changes that has been made into
 **          QSF, those ingres 2.6 changes are not compatible 
 **          on 9.x code line. (bug 120240). 
+**	26-May-2010 (kschendel) b123814
+**	    Run this via the uncommitted session objects list.
 */
 
-i4
-qsf_clrsesobj( void )
+DB_STATUS
+qsf_clrsesobj( QSF_RCB *qsf_rb )
 {
-    QSO_OBJ_HDR         *obj;
-    i4			status = E_DB_OK;
-    CS_SID              sid;
-    QSF_CB              *scb;
+    QSO_OBJ_HDR         *obj, *prev;
+    QSF_CB              *scb = qsf_rb->qsf_scb;
     QSF_RCB		qsf_rcb;
     i4			error;
 
-    CSget_sid(&sid);
-    scb = GET_QSF_CB(sid);
-
-    /* Freeze the LRU queue */
-    CSp_semaphore((i4) TRUE, &Qsr_scb->qsr_psem);
-
-    obj = Qsr_scb->qsr_1st_lru;
-
-    while ( obj )
+    for (;;)
     {
-        if ((obj->qso_session != scb) || 
-                 (obj->qso_status & QSO_DEFERRED_DESTROY))
-        {
-	    obj = obj->qso_lrnext;
-        }
-        else
-        {
-            qsf_rcb.qsf_obj_id = obj->qso_obid;
-            CSv_semaphore(&Qsr_scb->qsr_psem);
-            qsf_rcb.qsf_lk_state = QSO_SHLOCK;
-            qsf_rcb.qsf_sid = sid;
-            qsf_rcb.qsf_scb = scb;
-            status = qso_gethandle(&qsf_rcb);
-            if (DB_FAILURE_MACRO(status))
-            {
-                if(qsf_rcb.qsf_error.err_code != E_QS0019_UNKNOWN_OBJ)
-                {
-                    ule_format( qsf_rcb.qsf_error.err_code, NULL, (i4) ULE_LOG,
-                            NULL, NULL, (i4) 0, NULL, &error, 0);
-                }
-            }
-            else
-            { 
-                if ((obj->qso_session == scb) && 
-                     ((obj->qso_status & QSO_DEFERRED_DESTROY) == 0))
-                {
-                    qsf_rcb.qsf_lk_id  = obj->qso_lk_id;
-                    status = qso_destroy(&qsf_rcb);
-                    if (DB_FAILURE_MACRO(status))
-                    {
-                        ule_format( qsf_rcb.qsf_error.err_code, NULL,
-                                (i4) ULE_LOG, NULL, NULL, (i4) 0, NULL, 
-                                &error, 0);
-                    }
-                }
-                else
-                {
-                    status = qso_unlock(&qsf_rcb);
-                    if (DB_FAILURE_MACRO(status))
-                    {
-                        ule_format( qsf_rcb.qsf_error.err_code, NULL,
-                                (i4) ULE_LOG, NULL, NULL, (i4) 0, NULL, 
-                                &error, 0);
-                    }
-                }
-            }
-            CSp_semaphore((i4) TRUE, &Qsr_scb->qsr_psem);
-            /* Start fresh because we released the LRU list mutex */
-            obj = Qsr_scb->qsr_1st_lru;
-        }
+	/* Freeze the list so some other session trying a clrmem
+	** doesn't sneak in.
+	*/
+	CSp_semaphore((i4) TRUE, &Qsr_scb->qsr_psem);
+
+	obj = scb->qss_snamed_list;
+	prev = NULL;
+	while ( obj != NULL )
+	{
+	    if ((obj->qso_status & (QSO_DEFERRED_DESTROY | QSO_LRU_DESTROY)) == 0)
+		break;
+	    prev = obj;
+	    obj = obj->qso_snamed_list;
+	}
+	if (obj == NULL)
+	    break;
+	/* Unlink the victim while the list is frozen */
+	if (prev == NULL)
+	    scb->qss_snamed_list = obj->qso_snamed_list;
+	else
+	    prev->qso_snamed_list = obj->qso_snamed_list;
+	obj->qso_snamed_list = NULL;
+
+	/* If we have a victim, mark it while mutexed, so that a
+	** simultaneous destroy or clrmem in another session won't pick
+	** this object at the same time.  This also ensures that if
+	** the object can't be removed right now (maybe someone else
+	** has already seen / is using it), it won't last long,
+	** and won't cause an infinite loop here.
+	*/
+	obj->qso_status |= QSO_LRU_DESTROY;
+	CSv_semaphore(&Qsr_scb->qsr_psem);
+	/* Ignore delete error */
+	(void) qso_rmvobj(&obj, NULL, &error);
+
+	/* Loop back to start over, a clrmem session might have taken
+	** other stuff off our list.
+	*/
     }
 
-    /* Unlock the LRU queue */
+    /* Loop exits with psem held if the list is empty (or everything on
+    ** it is already targeted for deletion by other sessions).
+    */
+    scb->qss_snamed_list = NULL;
     CSv_semaphore(&Qsr_scb->qsr_psem);
 
-    return (status);
+    return (E_DB_OK);
 }
 
 /*{

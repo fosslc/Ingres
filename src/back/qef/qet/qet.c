@@ -171,6 +171,9 @@
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
 **      01-jun-05 (stial01)
 **          qet_xa_abort() Init dmx_db_id
+**	26-May-2010 (kschendel) b123814
+**	    Call QSF at commit time to flush the uncommitted-objects list.
+**	    Delete some 20 year old comment headers with no code.
 **/
 
 
@@ -864,6 +867,10 @@ QEF_CB     *qef_cb)
 **	    subsequent DBP calls. This change fixes bug 102123.
 **	03-Jul-2006 (jonj)
 **	    Handle QET_XA_END, too.
+**	26-May-2010 (kschendel) b123814
+**	    Call QSF with "session commit" so that it can dump its internal
+**	    uncommitted-session-objects list.  (More or less the opposite of
+**	    the FLUSH call done by qef rollback.)
 */
 DB_STATUS
 qet_commit(
@@ -871,7 +878,8 @@ QEF_CB     *qef_cb)
 {
     i4     err;
     DB_STATUS   status, local_status;
-    DMX_CB      dmx_cb;             /* dmf transaction control block */
+    DMX_CB      dmx_cb;		/* dmf transaction control block */
+    QSF_RCB     qsf_rb;		/* QSF request block */
 
     /* 
     ** make sure that this is a legal QEF call
@@ -900,6 +908,29 @@ QEF_CB     *qef_cb)
 	}
 	qef_cb->qef_rcb->error.err_code = E_QE0000_OK;
 	return (E_DB_OK);
+    }
+
+    /* Tell QSF that the transaction is committing, no need to remember
+    ** potentially uncommitted objects any more.  Don't do this if an
+    ** internal transaction is being committed, though;  the QSF object
+    ** for a DB procedure is created during the initial parse, which might
+    ** be using an internal transaction;  the actual DBP (including
+    ** catalog entries) happens during the "real" transaction, but in
+    ** the meantime the sequencer has committed the internal transaction...
+    */
+    if (qef_cb->qef_stat != QEF_ITRAN)
+    {
+	qsf_rb.qsf_type = QSFRB_CB;
+	qsf_rb.qsf_ascii_id = QSFRB_ASCII_ID;
+	qsf_rb.qsf_length = sizeof(QSF_RCB);
+	qsf_rb.qsf_owner = (PTR) DB_QEF_ID;
+	qsf_rb.qsf_sid = qef_cb->qef_ses_id;
+	local_status = qsf_call(QSO_SES_COMMIT, &qsf_rb);
+	if(local_status)
+	{
+	    TRdisplay("%@ qet_commit(): QSF-commit failed for sid(%ld).\n", qef_cb->qef_ses_id);
+	    /* but keep going anyway */
+	}
     }
 
     /* DMF closes all cursors on commit. All queries have ended.
@@ -1002,56 +1033,6 @@ QEF_CB     *qef_cb)
     qef_cb->qef_rcb->error.err_code = E_QE0000_OK;
     return (E_DB_OK);
 }
-
-/*{
-** Name: QET_ROLLBACK - abort to savepoint
-**
-** External QEF call:   status = qef_call(QET_ROLLBACK, &qef_rcb);
-**
-** Description:
-**      A transaction is aborted to a savepoint or to the
-** beginning of the transaction (at which point the transaction is
-** closed). It is, of course, an error for a transaction to not
-** be in progress or for the savepoint not to exist. 
-**
-** Inputs:
-**      qef_rcb
-**	    .qef_cb		session control block
-**	    .qef_eflag		designate error handling semantis
-**				for user errors.
-**		QEF_INTERNAL	return error code.
-**		QEF_EXTERNAL	send message to user.
-**          .qef_spoint         name of user defined savepoint
-**                              A null string or zero value 
-**                              indicates abort to beginning of 
-**                              transaction and then end
-**                              transaction.
-**
-** Outputs:
-**      qef_rcb
-**          .error.err_code         One of the following:
-**                                  E_QE0000_OK
-**                                  E_QE0017_BAD_CB
-**                                  E_QE0018_BAD_PARAM_IN_CB
-**                                  E_QE0019_NON_INTERNAL_FAIL
-**                                  E_QE0002_INTERNAL_ERROR
-**                                  E_QE0004_NO_TRANSACTION
-**                                  E_QE0005_NO_SAVEPOINT
-**				    E_QE0032_BAD_SAVEPOINT_NAME
-**      Returns:
-**          E_DB_OK                 
-**          E_DB_ERROR              caller error
-**          E_DB_FATAL              internal error
-**      Exceptions:
-**          none
-**
-** Side Effects:
-**          none
-**
-** History:
-**      3-feb-87 (daved)
-**          written
-*/
 
 /*{
 ** Name: QET_SAVEPOINT  - set a savepoint
@@ -1261,81 +1242,6 @@ QEF_CB         *qef_cb)
     qef_cb->qef_rcb->error.err_code = E_QE0000_OK;
     return (E_DB_OK);
 }
-
-/*{
-** Name: QET_SCOMMIT     - commit the current SQL transaction
-**
-** External QEF call:   status = qef_call(QET_SCOMMIT, &qef_rcb);
-**
-** Description:
-**      All changes are now committed to the database.
-** All open cursors are closed. 
-**
-** Inputs:
-**      qef_rcb
-**	    .qef_eflag		designate error handling semantis
-**				for user errors.
-**		QEF_INTERNAL	return error code.
-**		QEF_EXTERNAL	send message to user.
-**	    .qef_cb		session control block
-**
-** Outputs:
-**      qef_rcb
-**          .error.err_code         One of the following:
-**                                  E_QE0000_OK
-**                                  E_QE0017_BAD_CB
-**                                  E_QE0018_BAD_PARAM_IN_CB
-**                                  E_QE0019_NON_INTERNAL_FAIL
-**                                  E_QE0002_INTERNAL_ERROR
-**                                  E_QE0004_NO_TRANSACTION
-**      Returns:
-**          E_DB_OK                 
-**          E_DB_ERROR              caller error
-**          E_DB_FATAL              internal error
-**      Exceptions:
-**          none
-**
-** Side Effects:
-**          none
-**
-** History:
-**      3-feb-87 (daved)
-**          written
-*/
-
-/*{
-** Name: QET_ESCALATE - make an internal transaction into a MST or SST
-**
-** Description:
-**	An internal transaction is converted into a SST or MST as determined
-**  by the autocommit flag. This is required in the case that a facility
-**  has begun a ITRAN for an operation and QEF needs to convert the ITRAN
-**  to an SST or MST so that, in SQL, correct transaction semantics are
-**  observed. As an MST, the QEU_ETRAN call that a QEF user makes
-**  will not cause an EOT for the user.
-**
-** Inputs:
-**	qef_cb			    session control block
-**
-** Outputs:
-**	qef_cb
-**	    .qef_stat		    modified to MST if necessary
-**      Returns:
-**          E_DB_OK                 
-**      Exceptions:
-**          none
-**
-** Side Effects:
-**          none
-**
-** History:
-**      6-may-87 (daved)
-**          written
-**	20-jan-88 (puree)
-**	    qet_escalate can be called without qef_rcb. Cannot return 
-**	    error code.  Remove qet_escalate().  All calls to qet_escalate
-**	    have been converted to in-line code.
-*/
 
 /*{
 ** Name: QET_SECURE - Secure a transaction to end the first phase of a 

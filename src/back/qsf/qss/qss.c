@@ -143,6 +143,8 @@
 **	    qss_memory structure.  Set the owner of the QSF semaphore.
 **	14-jul-93 (ed)
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
+**	26-May-2010 (kschendel) b123814
+**	    Initialize uncommitted objects list.
 */
 
 DB_STATUS
@@ -174,6 +176,7 @@ qss_bgn_session( QSF_RCB *qsf_rb )
     /* ---------------------------------------- */
     scb->qss_obj_list = (QSO_OBJ_HDR *) NULL;
     scb->qss_master = (QSO_MASTER_HDR *) NULL;
+    scb->qss_snamed_list = (QSO_OBJ_HDR *) NULL;
 
     /* Init the tracing vector */
     /* ----------------------- */
@@ -344,6 +347,10 @@ exit:
 **	    Add extra parameter to qso_destroy
 **	11-feb-2008 (smeke01) b113972
 **	    Back out above change.
+**	26-May-2010 (kschendel) b123814
+**	    Flush uncommitted session-owned objects.  There shouldn't be any
+**	    at this point, but do it anyway to make sure.  Clear qso_session
+**	    from any LRU-able persistent objects that this session created.
 */
 
 DB_STATUS
@@ -352,7 +359,9 @@ qss_end_session( QSF_RCB *qsf_rb)
     STATUS		 status = E_DB_OK;
     i4             *err_code = &qsf_rb->qsf_error.err_code;
     QSF_CB		*scb = qsf_rb->qsf_scb;
+    QSF_RCB		int_qsf_rb;
     QSO_OBJ_HDR		*objects = (QSO_OBJ_HDR *) scb->qss_obj_list;
+    QSO_OBJ_HDR		*obj;
     i4		 error;
     i4		 count;
 #ifdef    xDEBUG
@@ -361,6 +370,14 @@ qss_end_session( QSF_RCB *qsf_rb)
     i4			 trace_003;
 #endif /* xDEBUG */
 
+    /* Toss any uncommitted named session-owned objects first.
+    ** There shouldn't be any, if QEF did its job right, but who knows.
+    ** The important thing is that we NOT have objects pretending to be
+    ** on a session list when the session has ended.
+    */
+    int_qsf_rb.qsf_sid = qsf_rb->qsf_sid;
+    int_qsf_rb.qsf_scb = scb;
+    (void) qsf_clrsesobj(&int_qsf_rb);
 
     /*
     ** Look for orphaned objects that should not exist and destroy unshareable
@@ -371,7 +388,6 @@ qss_end_session( QSF_RCB *qsf_rb)
     {
 	STATUS		status;	
 	QSO_OBJ_HDR	*current_obj = objects;
-	QSF_RCB		int_qsf_rb;
 
 	objects = objects->qso_obnext;
 
@@ -460,6 +476,20 @@ qss_end_session( QSF_RCB *qsf_rb)
 	*err_code = E_QS0008_SEMWAIT;
 	/* Return now, instead of attempting to do a v() */
 	return (E_DB_ERROR);
+    }
+
+    /* Do a quick run through the global LRU-able (persistent) object list
+    ** and clear the session if it's us.  This indicates that the object
+    ** is not on any session list, and prevents someone else from believing
+    ** a stale qso_session.
+    */
+
+    obj = Qsr_scb->qsr_1st_lru;
+    while (obj != NULL)
+    {
+	if (obj->qso_session == scb)
+	    obj->qso_session = NULL;
+	obj = obj->qso_lrnext;
     }
 
     /* Now remove this session from QSF's server CB */

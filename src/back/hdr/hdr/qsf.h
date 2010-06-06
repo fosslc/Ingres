@@ -97,6 +97,10 @@
 **	    Added qsf_flags to identify if QSF object is dbp or repeated query
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	26-May-2010 (kschendel) b123814
+**	    Add "session commit", session uncommitted object list to more
+**	    correctly handle the problem of deleting named objects that
+**	    are rolled-back instead of committed.
 */
 
 
@@ -121,7 +125,7 @@
 #define                 QSO_INFO	    10
 #define                 QSO_PALLOC	    11
 #define                 QSO_GETHANDLE	    12
-/*	unused, was rename			13 */
+#define			QSO_SES_COMMIT	    13
 #define                 QSD_OBJ_DUMP	    14
 #define                 QSD_OBQ_DUMP	    15
 #define                 QSO_CHTYPE	    16
@@ -179,6 +183,9 @@ typedef struct _QSF_TRSTRUCT
 **     05-nov-1993 (smc)
 **          Bug #58635
 **          Made l_reserved & owner elements PTR for consistency with DM_SVCB.
+**	26-May-2010 (kschendel) b123814
+**	    Add named-list to allow deletion of uncommitted session objects
+**	    without the problematic reliance on qso_session.
 */
 typedef struct _QSF_CB
 {
@@ -204,6 +211,12 @@ typedef struct _QSF_CB
     QSF_TRSTRUCT	 qss_trstruct;	/* QSF's session trace vector.  */
     struct _QSO_OBJ_HDR	*qss_obj_list;	/* List of unshared objects owned by
 					** this session.
+					*/
+    struct _QSO_OBJ_HDR *qss_snamed_list; /* List of named objects created by
+					** this session.  Used for deleting
+					** objects that aren't committed.
+					** The Qsr_scb qsr_psem is to be
+					** held while manipulating the list.
 					*/
     struct _QSO_MASTER_HDR *qss_master;	/* Master object of QP being created by
 					** this session.
