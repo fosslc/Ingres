@@ -31,6 +31,13 @@
 **	    Added support for BOOLEAN data type.
 **	 3-Mar-10 (thoda04)  SIR 123368
 **	    Added support for IngresType.IngresDate parameter data type.
+**	26-May-10 (thoda04)  Bug 123815
+**	    GetSchema("MetaDataCollection") should return
+**	    ProcedureParameters, not ProcedureColumns.
+**	26-May-10 (thoda04)  Bug 123816
+**	    GetSchema("DataSourceInformation") returned
+**	    incorrect or incomplete regular expression
+**	    match patterns and DataSourceProductVersion.
 */
 
 using System;
@@ -157,7 +164,7 @@ namespace Ingres.Client
 
 		private static RestrictionCollection
 			procedureParametersRestrictionCollection =
-				new RestrictionCollection("ProcedureColumns", 4, new Restriction[]
+				new RestrictionCollection("ProcedureParameters", 4, new Restriction[]
 				{
 					new Restriction("PROCEDURE_CATALOG", null, 1),
 					new Restriction("PROCEDURE_SCHEMA",  null, 2, "procedure_owner"),
@@ -305,21 +312,33 @@ namespace Ingres.Client
 				new DataColumn("SupportedJoinOperators",typeof(SupportedJoinOperators)),
 			};
 
+			// conn.ServerVersion is similar to
+			// "09.03.0001 II 9.3.1 (int.w32/101)"
+			// find the end of "09.03.0001" substring
+			int    i = conn.ServerVersion.IndexOf(' ');
+
+			// set the product version, e.g. "09.03.0001"
+			string productVersion = (i==-1)?
+				"03.00.0000":
+				conn.ServerVersion.Substring(0,i);
+
 			Object[] values = new Object[]
 			{
 				new Object[] {   // just one row in the DataTable
-					"",                       // IdentifierSeparatorPattern
+					@"\.",                    // IdentifierSeparatorPattern
 					"Ingres",                 // ProductName
-					"03.00.2000",             // ProductVersion
-					"03.00.2000",             // ProductVersionNormalized
+					productVersion,           // ProductVersion
+					productVersion,           // ProductVersionNormalized
 					GroupByBehavior.MustContainAll,// GroupByBehavior
-					@"([a-zA-Z_@#$]+)",       // IdentifierPattern
+					@"(^[\p{Ll}\p{Lu}\p{Lo}_]"+ // IdentifierPattern
+					  @"[\p{Ll}\p{Lu}\p{Lo}\p{Nd}_@#$]*$)|"+
+					@"(^\""([^\""\0]|\""\"")+\""$)",
 					IdentifierCase.Insensitive,//IdentifierCase
 					false,                    // OrderByColumnsInSelect
 					"?",                      // ParameterMarkerFormat
-					"?",                      // ParameterMarkerPattern
+					@"\?",                    // ParameterMarkerPattern
 					0,                        // ParameterNameMaxLength
-					"",                       // ParameterNamePattern
+					DBNull.Value,             // ParameterNamePattern
 					"\"(([^\"]|\"\")*)\"",    // QuotedIdentifierPattern
 					IdentifierCase.Insensitive,//QuotedIdentifierCase
 					"",                       // StatementSeparatorPattern
