@@ -52,9 +52,9 @@
 #include     <kpbdef.h>
 #include     <lib_bigpage.h>
 #include     <exe_routines.h>
+#endif
 extern u_i4  MMG$GL_PAGE_SIZE;
 extern u_i4  SGN$GL_KSTACKPAG;
-#endif
 
 #include    "cslocal.h"
 #include    "cssampler.h"
@@ -341,6 +341,8 @@ extern u_i4  SGN$GL_KSTACKPAG;
 **      28-apr-2010 (joea)
 **          Replace the stack allocation scheme for KPS threads by a modified
 **          version of the one used for internal threads.
+**      14-may-2010 (joea)
+**          Make MMG$GL_PAGE_SIZE and SGN$GL_KSTACKPAG always visible.
 **/
 
 /*

@@ -46,6 +46,8 @@ $!!         Also the built files will be purged if BLD_PURGE defined.
 $!!     14-jan-2010 (joea)
 $!!         Use /sysexe=selective on IA64 or if requested via the logical
 $!!         BUILD_WITH_KPS.
+$!!     14-may-2010 (joea)
+$!!         Always use /sysexe=selective.
 $!!
 $ shlib = p1
 $ if shlib .eqs. "COMPAT"
@@ -102,14 +104,7 @@ $ orig_wd = f$env("default")
 $ set def ING_SRC:['dir']
 $ pipe sed -e "s/INGLIB:/ING_BUILD:[library]/g" 'libname'.lot > 'libname'.opt
 $ arch_name   = f$edit(f$getsyi("ARCH_NAME"),"upcase")
-$ kps = f$trnlnm("BUILD_WITH_KPS")
-$ sysexe_flag = ""
-$ if kps .or. arch_name .eqs. "IA64"
-$ then
-$    sysexe_flag = "/sysexe=selective"
-$ else
-$    sysexe_flag = ""
-$ endif
+$ sysexe_flag = "/sysexe=selective"
 $ on warning then goto err_exit
 $ link 'LINKFLAGS' 'sysexe_flag' /share/section_binding/replace/notraceback -
 	/map='libname'.map/full /symb=ING_BUILD:[debug]'libname'.stb -

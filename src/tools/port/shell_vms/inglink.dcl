@@ -90,6 +90,8 @@ $!!	11-jun-2009 (joea)
 $!!	    Replace BUILD_WITH_INTERNAL_THREADS with BUILD_WITH_POSIX_THREADS.
 $!!     14-jan-2010 (joea)
 $!!         On IA64, the new default is to build with KPS.
+$!!     14-may-2010 (joea)
+$!!         Link with /sysexe=selective for most executables.
 $!!
 $skip:
 $ exe := 'p1
@@ -177,6 +179,10 @@ $ mainobj=objpath+objname
 $ pipe sed -e "s/INGLIB:/ING_BUILD:[library]/g" -e "s/INGTOOLSLIB:/ING_TOOLS:[lib]/g" -
            -e "s/MAINOBJ/''mainobj'/" opttempl > optpath:'exename'.opt
 $ on warning then goto err_exit
+$ if sysexe_flag .eqs. ""
+$ then
+$     sysexe_flag = "/sysexe=selective"
+$ endif
 $ link 'LINKFLAGS' 'sysexe_flag' /exec='exe' 'stb' 'mapf' 'dsff' 'te_flags' -
 	optpath:'exename'.opt/options
 $ if mapf_copy .nes. ""
