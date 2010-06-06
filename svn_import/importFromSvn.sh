@@ -32,20 +32,21 @@
 # TODO:
 # Generic improvements:
 # =====================
-# - better handling for binaries: detect them in the patch,
-#   and svn export them to copy them to git. particularly for mixed
-#   source & binary patches
-# - better handling for new files: use git status to detect &
-#   add new files automatically
+# Urgent
+# ------
+# - for each file in the svn revision
+# - svn export it at the revision to copy it to git
+# - git add it
+
+# Minor
+# -----
 # - getopts for option handling
+# - config file for defaults
 # - add help/usage
 # - consider syslog for logging
 
 # Ingres specific improvements:
 # =============================
-# - find a way to deal with checked in files that also have the same extension
-#   as those in .gitingore
-# - detect if we're running from trunk
 # - better handling for content under tst: detect and ignore it (since the test cases in tst and pdfs in techpub are not being copied to github)
 
 URL="http://code.ingres.com/ingres/main"
