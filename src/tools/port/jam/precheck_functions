@@ -244,26 +244,6 @@ check_for_pax ()
   return 0
 }
 
-check_for_cplusplus ()
-{
-  check_for_availability c++  ||
-  {
-    compose_msg gcc-c++ gcc-c++ c++ gcc-c++ gcc-c++ 
-    return 1 
-  }
-  return 0
-}
-
-check_for_gcc ()
-{
-  check_for_availability gcc  ||
-  {
-    compose_msg gcc gcc gcc gcc gcc 
-    return 1 
-  }
-  return 0
-}
-
 check_for_flex ()
 {
   check_for_availability flex  ||
@@ -408,12 +388,6 @@ precheck ()
 
   # jam
   check_for_jam
-
-  # gcc
-  check_for_gcc
-
-  # c++
-  check_for_cplusplus
 
   # flex
   check_for_flex
