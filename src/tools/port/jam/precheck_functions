@@ -22,6 +22,8 @@
 ##       4-Feb-2010 (hanal04) Bug 123216
 ##          Resolve intermittent build failures caused bu HDRGTK being already
 ##          set without xml2 header location.
+##       2-Jun-2010 (maspa05)
+##          Check for minimum version of gtk (2.4)
 
 # check_for_file ENVVARIABLE string1 string2 ...
 # checks whether one of the given strings is a file
@@ -356,9 +358,18 @@ check_for_gtk ()
       GTKCCLD="`pkg-config --libs gtk+-2.0 gthread-2.0` ${xml2ccld}"
       [ $? != 0 ] || export GTKCCLD
     }
-    if [ -z "${HDRGTK}" ] || [ -z "${GTKCCLD}" ] ; then
+
+    pkg-config --atleast-version=2.4 gtk+-2.0
+    MINVEROK=$?
+    GTKVER=`pkg-config --modversion gtk+-2.0`
+    if [ $MINVEROK -ne 0 ] || [ -z "${HDRGTK}" ] || [ -z "${GTKCCLD}" ] ; then
       compose_msg pkg-config pkg-config pkg-config pkg-config pkgconfig
-      compose_msg "gtk2 >= 2.4" gtk2 libgtk2.0-0 gtk2 gtk2
+      if [ "_$GTKVER" = "_" ]
+      then 
+        compose_msg "gtk2 >= 2.4" gtk2 libgtk2.0-0 gtk2 gtk2
+      else
+        compose_msg "gtk2 >= 2.4 (version $GTKVER found)" gtk2 libgtk2.0-0 gtk2 gtk2
+      fi
       compose_msg "gtk2-devel >= 2.4" gtk2-devel libgtk2.0-dev \
                  gtk2-devel gtk2-devel
       compose_msg pango-devel pango-devel libpango1.0-dev pango-devel \
