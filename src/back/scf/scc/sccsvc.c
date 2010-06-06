@@ -918,6 +918,13 @@ scc_trace( SCF_CB *scf_cb, SCD_SCB *scb )
 **	    such as from a remove session request from IPM.
 **	November 2009 (stephenb)
 **	    Set GCA_EOG/GCA_NOT_EOG appropriately for batch processing
+**	24-may-2010 (stephenb)
+**	    Don't force GCA_EOG for messages other than GCA_RESPONSE and
+**	    GCA_ERROR because it causes GCA to flush. We will leave the
+**	    value unset (neither GCA_EOG nor GCA_NOT_EOG), this will
+**	    effectively ask GCA to decide based on messages type, allowing
+**	    it to optimize message sending. This makes for more effecient
+**	    communications.
 [@history_template@]...
 */
 STATUS
@@ -1367,7 +1374,8 @@ scc_send( SCD_SCB *scb, i4  sync )
 		    scb->scb_cscb.cscb_batch_count--;
 	    }
 	}
-	else
+	else if (cmsg->scg_mtype == GCA_RESPONSE ||
+		cmsg->scg_mtype == GCA_ERROR)
 	    scb->scb_cscb.cscb_gco.gca_modifiers = GCA_EOG;
 	if (batch_count <= 0)
 	    scb->scb_cscb.cscb_in_group = FALSE;
