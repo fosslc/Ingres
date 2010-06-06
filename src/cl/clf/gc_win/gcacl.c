@@ -951,6 +951,13 @@ GLOBALREF HANDLE    GCshutdownEvent;
 **
 **	    Change default pipe size from 4096 to 12288 to match Unix and
 **	    new tcp_ip packet size (for performance).
+**	28-May-2010 (Bruce Lunsford) Bug 123827
+**	    Fix for minor problem in last change for sir 122679.
+**	    Lowercase the pipe owner since userid is not case-sensitive
+**	    on Windows (and to be consistent with GCusername).  Otherwise,
+**	    can get a trace WARNING in listen complete when pipe owner
+**	    doesn't match the user sent by the client when Ingres run
+**	    as a service (SYSTEM vs system).
 */
 
 /******************************************************************************
@@ -3042,6 +3049,12 @@ GClisten(SVC_PARMS *svc_parms)
 **	    by a driver listen at the end of its processing,
 **	    as well as by the inline pipe processing below.
 **	    Cleaned up handling of Overlapped.hEvent.
+**	28-May-2010 (Bruce Lunsford) Bug 123827
+**	    Lowercase the pipe owner since userid is not case-sensitive
+**	    on Windows (and to be consistent with GCusername).  Otherwise,
+**	    can get a trace WARNING in listen complete when pipe owner
+**	    doesn't match the user sent by the client when Ingres run
+**	    as a service (SYSTEM vs system).
 ******************************************************************************/
 VOID
 GClisten2() 
@@ -3207,6 +3220,7 @@ GClisten2()
                       NULL,
                       asipc->ClientSysUserName,
                       GC_USERNAME_MAX + 1);
+	_strlwr(asipc->ClientSysUserName);
 
 	/*
 	** Advise user of optimum size *
