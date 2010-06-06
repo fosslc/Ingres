@@ -21,6 +21,10 @@ To get the latest code:
 svn co http://code.ingres.com/ingres/main ~/ingres/server
 (this will create a copy of the latest code in ~/ingres/server)
 
+or
+
+git clone http://github.com/ingres/Ingres.git ~/ingres/server
+
 To run the build (the easy way):
 ================================
 
