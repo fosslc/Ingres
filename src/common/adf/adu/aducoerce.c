@@ -817,6 +817,8 @@ DB_DATA_VALUE	    *rdv)
 **	29-Aug-2007 (gupsh01)
 **	    Limit the length of intermediate coercion data types used 
 **	    for each of nchar/nvarchr types to avoid unexpected results.
+**	27-May-2010 (kiria01) b123822
+**	    Correct sence of length calculation of prior change.
 */
 
 DB_STATUS
@@ -847,8 +849,7 @@ DB_DATA_VALUE	    *rdv)
         if (dv->db_length > DB_MAXTUP)
             return(adu_error(adf_scb, E_AD5004_OVER_MAXTUP, 0));
 	else
-            cdata.db_length = (dv->db_length - DB_CNTSIZE)/sizeof(UCS2) 
-				+ DB_CNTSIZE;
+            cdata.db_length = dv->db_length/sizeof(UCS2);
       }
       else if (dv->db_datatype == DB_NVCHR_TYPE)
       {
@@ -858,7 +859,8 @@ DB_DATA_VALUE	    *rdv)
         if (count * sizeof(UCS2) + DB_CNTSIZE > DB_MAXTUP)
             return(adu_error(adf_scb, E_AD5004_OVER_MAXTUP, 0));
 	else
-            cdata.db_length = dv->db_length/sizeof(UCS2);
+            cdata.db_length = (dv->db_length - DB_CNTSIZE)/sizeof(UCS2) 
+				+ DB_CNTSIZE;
       }
 
       cdata.db_data = (PTR) utemp;
