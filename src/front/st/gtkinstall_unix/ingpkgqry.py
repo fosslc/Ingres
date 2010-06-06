@@ -45,6 +45,10 @@
 ##	    Continue if we fail to load the XML libraries. Only fail after 
 ##	    trying to import the rpm/apt libraries too, so we can report both
 ##	    errors if neccessary.	
+##	20-May-2010 (hanje04)
+##	    SIR 123791
+##	    Add 'product' variable and use it to define exectution mode for
+##	    installer. Passed to GUI as attribute of saveset element.
 
 
 # load external modules
@@ -56,7 +60,17 @@ import getopt
 # define globals
 Debug = False
 pprint = False
-pkg_basename = 'ingres'
+ingres = False
+vectorwise = False
+# define product here as 'ingres' or 'vecorwise' to
+# dictate which path is followed through the installer
+product = 'ingres'
+if product == 'ingres': 
+    pkg_basename = 'ingres'
+    ingres = True
+elif product == 'vectorwise':
+    pkg_basename = 'ingresvw'
+    vectorwise = True
 filesloc = 'ingres/files'
 symtbl='symbol.tbl'
 cfgdat='config.dat'
@@ -78,8 +92,13 @@ ingpkgsdict = dict( zip( ingpkgs, range( 0, len( ingpkgs ) ) ) )
 # WARNING! Correct generation of XML is dependent on the order of dblocnames
 # entires matching EXACTLY those defined be location_index in front!st!hdr gip.h
 # DO NOT ALTER UNLESS location_index unless has also been changed
-dblocnames = ( 'II_DATABASE', 'II_CHECKPOINT', 'II_JOURNAL', \
+if vectorwise:
+    dblocnames = ( 'II_DATABASE', 'II_CHECKPOINT', 'II_JOURNAL', \
+	'II_WORK', 'II_DUMP', 'II_VWDATA' ) 
+else:
+    dblocnames = ( 'II_DATABASE', 'II_CHECKPOINT', 'II_JOURNAL', \
 	'II_WORK', 'II_DUMP' ) 
+
 dblocdict = dict( zip( dblocnames, range( 1, len( dblocnames ) ) ) )
 
 # search masks
@@ -100,8 +119,8 @@ FAIL_GET_DBLOCS = "ERROR: Failed to determine DB locations"
 FAIL_GET_LOGLOCS = "ERROR: Failed to determine log locations"
 FAIL_WRITE_XML="ERROR: Failed to write XML to: %s\n%s\n"
 FAIL_SSET_QRY="ERROR: Failed to query %s saveset"
-INVALID_PKG_NAME = "ERROR: %(name)s-%(version)s-%(release)s-%(arch)s.rpm is\n \
-not a valid package.\nAborting"
+INVALID_PKG_NAME = "ERROR: %(name)s-%(version)s-%(release)s-%(arch)s.rpm is not a valid package.\nAborting"
+FAIL_MODE_NOT_SET = "ERROR: Execution mode must be set to 'ingres' or 'vectorwise'\nAborting..."
 
 def usage():
     print "Usage:\n    %s -s <pkgdir> [-o <filename>][-p]" % sys.argv[0].split('/')[-1]
@@ -154,6 +173,7 @@ def genXML( instlist, ssinfo ):
 
     # Saveset element
     saveset = instdoc.createElement("saveset")
+    saveset.setAttribute( "product", product )
     pkginfo.appendChild( saveset )
 
     # Instances element
@@ -426,6 +446,10 @@ def searchDEBDB():
 		instlist.append( instinfo )
 
 # Main body of script
+if not ingres and not vectorwise:
+    print FAIL_MODE_NOT_SET
+    usage()
+
 if len(sys.argv) < 3:
     usage()
 

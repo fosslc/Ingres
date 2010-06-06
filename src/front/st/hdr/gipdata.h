@@ -32,6 +32,9 @@
 **	08-Jul-2009 (hanje04)
 **	    SIR 122309
 **	    Add GLOBALREF for ing_config_type.
+**	19-May-2010 (hanje04)
+**	    SIR 123791
+**	    Add GLOBALREFs for new VW config structures and stages.
 */
 
 /* Global refs */
@@ -48,6 +51,10 @@ GLOBALREF location *dblocations[];
 
 /* transaction log */
 GLOBALREF log_info txlog_info;
+
+/* vectorwise config */
+GLOBALREF vw_cfg *vw_cfg_info[];
+GLOBALREF char vw_cfg_units[];
 
 /* misc options */
 GLOBALREF misc_op_info *misc_ops_info[];
@@ -120,8 +127,10 @@ GLOBALREF i4 debug_trace;
 
 /* Stage info */
 GLOBALREF stage_info *adv_stages[];
+GLOBALREF stage_info *adv_ivw_stages[];
 GLOBALREF stage_info *adv_nodbms_stages[];
 GLOBALREF stage_info *basic_stages[];
+GLOBALREF stage_info *basic_ivw_stages[];
 GLOBALREF stage_info *rfgen_lnx_stages[];
 GLOBALREF stage_info *rfgen_win_stages[];
 GLOBALREF stage_info *ug_stages[];

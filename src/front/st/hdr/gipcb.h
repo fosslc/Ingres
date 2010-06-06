@@ -48,6 +48,10 @@
 **	08-Jul-2009 (hanje04)
 **	    SIR 122309
 **	    Add prototype for on_ing_config_radio changed()
+**	19-May-2010 (hanje04)
+**	    SIR 123791
+**	    Add prototypes for new license acceptence and VW config dialog,
+**	    callback functions
 */
 
 /*
@@ -567,4 +571,65 @@ on_ing_config_cm_radio_selected         (GtkRadioButton  *radiobutton,
 void
 on_ing_config_classic_radio_selected    (GtkRadioButton  *radiobutton,
                                         gpointer         user_data);
+void
+on_lic_accept_toggled            (GtkToggleButton *togglebutton,
+                                        gpointer         user_data);
+void
+on_ii_vwdata_changed                 (GtkEditable     *editable,
+                                        gpointer         user_data);
+void
+on_browse_iivwdat_clicked		(GtkButton       *button,
+                                        gpointer         user_data);
+void
+on_ivw_loc_iidb_default_toggled           (GtkToggleButton *togglebutton,
+                                        gpointer         user_data);
+void
+on_ivw_maxdb_chk_toggled           (GtkToggleButton *togglebutton,
+                                        gpointer         user_data);
+void
+on_ivw_blksz_chk_toggled           (GtkToggleButton *togglebutton,
+                                        gpointer         user_data);
+void
+on_ivw_blkgrp_sz_toggled           (GtkToggleButton *togglebutton,
+                                        gpointer         user_data);
+void
+on_ivw_prcmem_chk_toggled           (GtkToggleButton *togglebutton,
+                                        gpointer         user_data);
+void
+on_ivw_buffpool_chk_toggled           (GtkToggleButton *togglebutton,
+                                        gpointer         user_data);
+void
+on_ivw_cfg_blkgrpsz_val_change         (GtkSpinButton	*spinbutton,
+                                        gpointer         user_data);
 
+void
+on_ivw_cfg_blksz_val_change            (GtkSpinButton	*spinbutton,
+                                        gpointer         user_data);
+
+void
+on_ivw_cfg_blksz_unit_changed          (GtkComboBox     *combobox,
+                                        gpointer         user_data);
+
+void
+on_ivw_cfg_maxdata_val_change          (GtkSpinButton	*spinbutton,
+                                        gpointer         user_data);
+
+void
+on_ivw_cfg_maxdata_unit_changed        (GtkComboBox     *combobox,
+                                        gpointer         user_data);
+
+void
+on_ivw_cfg_procmem_val_change          (GtkSpinButton	*spinbutton,
+                                        gpointer         user_data);
+
+void
+on_ivw_cfg_procmem_unit_changed        (GtkComboBox     *combobox,
+                                        gpointer         user_data);
+
+void
+on_ivw_cfg_buffpoolmem_val_change      (GtkSpinButton	*spinbutton,
+                                        gpointer         user_data);
+
+void
+on_ivw_cfg_buffpoolmem_unit_changed    (GtkComboBox	*combobox,
+                                        gpointer         user_data);

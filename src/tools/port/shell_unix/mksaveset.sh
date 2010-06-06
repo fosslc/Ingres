@@ -203,6 +203,11 @@
 ##	    because it is not defined for the non-hybrid-capables port.  
 ##	29-Mar-2010 (bonro01)
 ##	    Add -docrpm option to create the optional documentation rpm.
+##	21-May-2010 (hanje04)
+##	    SIR 123791
+##	    License acceptence dialog is now part of the GUI, so just include
+##	    the LICENSE file in the root of the saveset instead of
+##	    ingres-LICENSE
 ##	
 ##                                         
 . readvers
@@ -543,7 +548,7 @@ then
     ##		|
     ##		+--ingres_express_install
     ##		|
-    ##		+--ingres-LICENSE
+    ##		+--LICENSE
     ##		|
     ##		+--md5sum.txt
     ##		|
@@ -624,17 +629,34 @@ EOF
 
 	}
     else
-	# Just rebuild the license RPM to keep mklicense happy
+	Just rebuild the license RPM to keep mklicense happy
 	buildrel -r -l ${lictype}
 	iirpmbuild LICENSE
     fi
 
     # licensing
-    mklicense -l ${lictype} ||
-    {
-    	echo "Failed to create ingres-LICENSE"
-    	exit 1
-    }
+    # mklicense -l ${lictype} ||
+    #{
+    #	echo "Failed to create ingres-LICENSE"
+    #	exit 1
+    #}
+    # License now displayed by GUI, just copy license file into place
+    if [ -r $ING_SRC/LICENSE.${lictype} ]
+    then
+	cp $ING_SRC/LICENSE.${lictype} ./LICENSE || exit 1
+    else
+	cat << EOF
+Error
+Cannot locate license file:
+
+	\$ING_SRC/LICENSE.${lictype}
+
+The license file is required to before a saveset can be built
+
+EOF
+	exit 1
+    fi
+
 
     # Copy RPMS
     cp ${II_RPM_BUILDROOT}/${arch}/${baserpm} rpm || exit 1

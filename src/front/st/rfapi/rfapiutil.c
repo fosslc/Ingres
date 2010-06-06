@@ -30,6 +30,10 @@
 **	    Add section headers to make response file more user readable.
 **	    Format used is Windows .ini file and lines are "commented" on 
 **	    Linux and UNIX.
+**	20-May-2010 (hanje04)
+**	    SIR 123791
+**	    Write VW config to response file if set.
+**	    (See rfapidata.c for full description)
 ** 
 */
 
@@ -270,6 +274,12 @@ rfapi_writeRFParams( II_RFAPI_HANDLE *handle,
 	return( rfrc );
 
     rfrc = rfapi_doWrite( handle, sys_var, fd );
+    if ( rfrc != II_RF_ST_OK )
+	return( rfrc );
+
+    /* vectorwise config */
+    rfrc = rfapi_writeSecHeader( handle, RFAPI_SEC_IVW_CONFIG, fd );
+    rfrc = rfapi_doWrite( handle, ivw_cfg_ops, fd );
     if ( rfrc != II_RF_ST_OK )
 	return( rfrc );
 

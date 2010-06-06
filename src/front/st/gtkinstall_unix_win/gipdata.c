@@ -102,6 +102,17 @@
 **	10-Aug-2009 (hanje04)
 **	    BUG 122571
 **	    Remove duplicate defn. of new_pkgs_info.
+**	17-May-2010 (hanje04)
+**	    SIR 123791
+**	    Add new license dialog to "stages" structures (NI_LIC for new
+**	    install, UG_LIC for upgrade).
+**	    Add new vectorwise screen to "stages" structure, NI_VWCFG and
+**	    define basic_ivw_stages() and adv_ivw_stages() arrays to control
+**	    execution for new IVW_INSTALL mode.
+**	    Add iivwdata as new location for IVWM_INSTALL mode.
+**	    Add new vw_cfg structures to define and store info relating to
+**	    vectorwise configuration parameters.
+**	    Add vw_cfg_info array to store new param info.
 */
 
 
@@ -156,6 +167,13 @@ static location iidump = {
 		II_RF_DUMP,
 		RFAPI_LNX_DEFAULT_INST_LOC
 		};
+static location iivwdata = {
+		"VectorWise",
+		"II_VWDATA",
+		"vectorwise",
+		II_RF_VWDATA,
+		RFAPI_LNX_DEFAULT_INST_LOC
+		};
 GLOBALDEF location *dblocations[] = {
 	&iisystem,
 	&iidatabase,
@@ -163,6 +181,7 @@ GLOBALDEF location *dblocations[] = {
 	&iijournal,
 	&iiwork,
 	&iidump,
+	&iivwdata,
 	NULL
 };
 
@@ -185,6 +204,91 @@ GLOBALDEF log_info txlog_info = {
 	(SIZE_TYPE)RFAPI_DEFAULT_TXLOG_SIZE_MB_INT,
 	FALSE
 } ;
+
+/*
+**  Vectorwise config parameters
+**
+**  vw_cfg structure defined in gip.h
+**
+**   typedef struct _vw_cfg {
+**         VWCFG bit;
+**         II_RFAPI_PNAME rfapi_name;
+**         const char *descrip;
+**         const char *field_prefix;
+**         SIZE_TYPE value;
+**         SIZE_TYPE dfval;
+**         VWUNIT unit;
+**         VWUNIT dfunit;
+**   } vw_cfg ;
+**  
+*/
+/* lookup for VWUNIT */
+GLOBALDEF char vw_cfg_units[] = {'K', 'M', 'G', 'T', '\0'};
+
+static vw_cfg ivw_max_memory = {
+	GIP_VWCFG_MAX_MEMORY,
+	II_VWCFG_MAX_MEMORY,
+	"Processing memory",
+	"ivw_cfg_procmem",
+	RFAPI_DEFAULT_VWCFG_MAX_MEMORY_GB_INT,
+	RFAPI_DEFAULT_VWCFG_MAX_MEMORY_GB_INT,
+	VWGB,
+	VWGB,
+};
+
+static vw_cfg ivw_bufferpool = {
+	GIP_VWCFG_BUFFERPOOL,
+	II_VWCFG_BUFFERPOOL,
+	"Buffer pool memory",
+	"ivw_cfg_buffpoolmem",
+	RFAPI_DEFAULT_VWCFG_BUFFERPOOL_GB_INT,
+	RFAPI_DEFAULT_VWCFG_BUFFERPOOL_GB_INT,
+	VWGB,
+	VWGB,
+};
+
+static vw_cfg ivw_columnspace = {
+	GIP_VWCFG_COLUMNSPACE,
+	II_VWCFG_COLUMNSPACE,
+	"Maximum database size",
+	"ivw_cfg_maxdata",
+	RFAPI_DEFAULT_VWCFG_COLUMNSPACE_GB_INT,
+	RFAPI_DEFAULT_VWCFG_COLUMNSPACE_GB_INT,
+	VWGB,
+	VWGB,
+};
+
+static vw_cfg ivw_block_size = {
+	GIP_VWCFG_BLOCK_SIZE,
+	II_VWCFG_BLOCK_SIZE,
+	"Block size",
+	"ivw_cfg_blksz",
+	RFAPI_DEFAULT_VWCFG_BLOCK_SIZE_MB_INT,
+	RFAPI_DEFAULT_VWCFG_BLOCK_SIZE_MB_INT,
+	VWMB,
+	VWMB,
+};
+
+static vw_cfg ivw_group_size = {
+	GIP_VWCFG_GROUP_SIZE,
+	II_VWCFG_GROUP_SIZE,
+	"Block group size",
+	"ivw_cfg_blkgrpsz",
+	RFAPI_DEFAULT_VWCFG_GROUP_SIZE_INT,
+	RFAPI_DEFAULT_VWCFG_GROUP_SIZE_INT,
+	VWNOUNIT, /* no unit for group size */
+	VWNOUNIT, /* no unit for group size */
+};
+
+GLOBALDEF vw_cfg *vw_cfg_info[] = {
+	&ivw_max_memory,
+	&ivw_bufferpool,
+	&ivw_columnspace,
+	&ivw_block_size,
+	&ivw_group_size,
+	NULL
+};
+
 
 /* Misc options  */
 static misc_op_info sql92 = {
@@ -940,11 +1044,13 @@ static stage_info install_stages[] = {
 	{ RF_START, "prog_welcome", ST_COMPLETE },
 	{ RF_PLATFORM, "rf_platform", ST_INIT },
 	{ NI_START, "prog_welcome", ST_COMPLETE },
+	{ NI_LIC, "prog_lic", ST_INIT },
 	{ NI_CFG, "prog_cfg", ST_INIT },
 	{ NI_EXP, "prog_exp", ST_INIT },
 	{ NI_INSTID, "prog_instid", ST_INIT },
 	{ NI_PKGSEL, "prog_pkgsel", ST_INIT },
 	{ NI_DBLOC, "prog_dbloc", ST_INIT },
+	{ NI_VWCFG, "prog_vwcfg", ST_INIT },
 	{ NI_LOGLOC, "prog_logloc", ST_INIT },		
 	{ NI_LOCALE, "prog_locale", ST_INIT },
 	{ NI_MISC,	"prog_misc", ST_INIT },
@@ -960,6 +1066,7 @@ static stage_info install_stages[] = {
 static stage_info upgrade_stages[] = {
 	/* install frame detail */
 	{ UG_START, "upgrade_welcome", ST_COMPLETE },
+	{ UG_LIC, "upgrade_license", ST_INIT },
 	{ UG_SSAME, "upgrade_inst_mod", ST_INIT },
 	{ UG_SOLD,"upgrade_inst_ug", ST_INIT },
 	{ UG_MULTI,"upgrade_inst_multi", ST_INIT },
@@ -977,6 +1084,7 @@ static stage_info upgrade_stages[] = {
 
 GLOBALDEF stage_info *adv_stages[] = { 
 	&install_stages[NI_START], /* start screen (WELCOME_TO_INSTALL) */
+	&install_stages[NI_LIC], /* license agreement (WELCOME_TO_INSTALL) */
 	&install_stages[NI_CFG], /* config type (CHOOSE_CONFIG_TYPE)*/
 	&install_stages[NI_EXP], /* experience level (CHOOSE_INSTALL_TYPE)*/
 	&install_stages[NI_INSTID], /* advanced config (ADVANCED_INSTALL) */
@@ -992,8 +1100,26 @@ GLOBALDEF stage_info *adv_stages[] = {
 	NULL /* end of array */
 	};
 					
+GLOBALDEF stage_info *adv_ivw_stages[] = { 
+	&install_stages[NI_START], /* start screen (WELCOME_TO_INSTALL) */
+	&install_stages[NI_LIC], /* license agreement (WELCOME_TO_INSTALL) */
+	&install_stages[NI_EXP], /* experience level (CHOOSE_INSTALL_TYPE)*/
+	&install_stages[NI_INSTID], /* advanced config (ADVANCED_INSTALL) */
+	&install_stages[NI_PKGSEL], /* basic config (BASIC_INSTALL) */
+	&install_stages[NI_DBLOC],  /* advanced config (ADVANCED_INSTALL) */
+	&install_stages[NI_VWCFG],  /* vectorwise config */
+	&install_stages[NI_LOGLOC],  /* advanced config (ADVANCED_INSTALL) */
+	&install_stages[NI_MISC], /* advanced config (ADVANCED_INSTALL) */
+	&install_stages[NI_SUMMARY], /* pre installation summary (SUMMARY_SCREEN) */
+	&install_stages[NI_INSTALL], /* actual installation (INSTALL_SCREEN) */
+	&install_stages[NI_DONE], /* finish screen (FINISH_INSTALL) */
+	&install_stages[NI_FAIL], /* failure screen (FINISH_INSTALL) */
+	NULL /* end of array */
+	};
+					
 GLOBALDEF stage_info *adv_nodbms_stages[] = { 
 	&install_stages[NI_START], /* start screen (WELCOME_TO_INSTALL) */
+	&install_stages[NI_LIC], /* license agreement (WELCOME_TO_INSTALL) */
 	&install_stages[NI_EXP], /* experience level (CHOOSE_INSTALL_TYPE)*/
 	&install_stages[NI_INSTID], /* advanced config (ADVANCED_INSTALL) */
 	&install_stages[NI_PKGSEL], /* basic config (BASIC_INSTALL) */
@@ -1010,11 +1136,13 @@ GLOBALDEF stage_info *adv_nodbms_stages[] = {
 GLOBALDEF stage_info *rfgen_lnx_stages[] = { 
 	&install_stages[RF_START], /* start screen  */
 	&install_stages[RF_PLATFORM], /* deployment platform  */
+	&install_stages[NI_LIC], /* config type (CHOOSE_CONFIG_TYPE)*/
 	&install_stages[NI_CFG], /* config type (CHOOSE_CONFIG_TYPE)*/
 	&install_stages[NI_EXP], /* experience level (CHOOSE_INSTALL_TYPE)*/
 	&install_stages[NI_INSTID], /* advanced config (ADVANCED_INSTALL) */
 	&install_stages[NI_PKGSEL], /* basic config (BASIC_INSTALL) */
 	&install_stages[NI_DBLOC],  /* advanced config (ADVANCED_INSTALL) */
+	&install_stages[NI_VWCFG],  /* vectorwise config */
 	&install_stages[NI_LOGLOC],  /* advanced config (ADVANCED_INSTALL) */
 	&install_stages[NI_LOCALE],
 	&install_stages[NI_MISC], /* advanced config (ADVANCED_INSTALL) */
@@ -1041,6 +1169,7 @@ GLOBALDEF stage_info *rfgen_win_stages[] = {
 					
 GLOBALDEF stage_info *basic_stages[] = { 
 	&install_stages[NI_START], /* start screen (WELCOME_TO_INSTALL) */
+	&install_stages[NI_LIC], /* license agreement (WELCOME_TO_INSTALL) */
 	&install_stages[NI_CFG], /* config type (CHOOSE_CONFIG_TYPE)*/
 	&install_stages[NI_EXP], /* experience level (CHOOSE_INSTALL_TYPE)*/
 	&install_stages[NI_PKGSEL], /* basic config (BASIC_INSTALL) */
@@ -1050,10 +1179,24 @@ GLOBALDEF stage_info *basic_stages[] = {
 	&install_stages[NI_FAIL], /* failure screen (FINISH_INSTALL) */
 	NULL /* end of array */
 	};	
+
+GLOBALDEF stage_info *basic_ivw_stages[] = { 
+	&install_stages[NI_START], /* start screen (WELCOME_TO_INSTALL) */
+	&install_stages[NI_LIC], /* license agreement (WELCOME_TO_INSTALL) */
+	&install_stages[NI_EXP], /* experience level (CHOOSE_INSTALL_TYPE)*/
+	&install_stages[NI_PKGSEL], /* basic config (BASIC_INSTALL) */
+	&install_stages[NI_SUMMARY], /* pre installation summary (SUMMARY_SCREEN) */
+	&install_stages[NI_INSTALL], /* actual installation (INSTALL_SCREEN) */
+	&install_stages[NI_DONE], /* finish screen (FINISH_INSTALL) */
+	&install_stages[NI_FAIL], /* failure screen (FINISH_INSTALL) */
+	NULL /* end of array */
+	};	
+
 GLOBALDEF stage_info **stage_names = basic_stages;
 
 GLOBALDEF stage_info *ug_stages[] = {
 			&upgrade_stages[UG_START],
+			&upgrade_stages[UG_LIC],
 			&upgrade_stages[UG_SSAME],
 			&upgrade_stages[UG_SOLD],
 			&upgrade_stages[UG_MULTI],

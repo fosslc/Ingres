@@ -36,6 +36,10 @@
 **	    BUG 123358
 **	    Make sure startup mode is set correctly when only "ignored"
 **	    instances are found (greater in version than saveset)
+**	20-May-2010 (hanje04)
+**	    SIR 123791
+**	    Retrieve new 'product' attribute from 'saveset' element. Used
+*	    to determin execution mode.
 */
 
 /*
@@ -295,6 +299,11 @@ static void
 gipParseSaveSet( xmlDocPtr doc, xmlNodePtr cur )
 {
     xmlChar *ele_text;
+    xmlChar	*attrib;
+
+    attrib = xmlGetProp(cur, "product"); /* ingres or vectorwise */
+    STlcopy(attrib, new_pkgs_info.product, MAX_REL_LEN);
+    DBG_PRINT("Parsing saveset: product=%s\n",new_pkgs_info.product);
 
     cur = cur->xmlChildrenNode;
     while (cur != NULL)
@@ -351,7 +360,6 @@ gipParseSaveSet( xmlDocPtr doc, xmlNodePtr cur )
 	}
 	else if ( ! xmlStrcmp( cur->name, (const xmlChar *)"package" ) )
 	{
-	    xmlChar	*attrib;
 	    u_char	idxstr[5];
 
 	    ele_text = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);

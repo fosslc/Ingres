@@ -20,6 +20,7 @@
 # include <st.h>
 # include <si.h>
 # include <erclf.h>
+# include <cm.h>
 
 # include <gtk/gtk.h>
 
@@ -167,6 +168,13 @@
 **	    SIR 123296
 **	    Config is now run post install from RC scripts. Update installation
 **	    commands appropriately.
+**	18-May-2010 (hanje04)
+**	    SIR 123791
+**	    Update installer for Vectorwise support.
+**	     - Add new IVW_INSTALL "mode" and VW specific initialization.
+**	     - Add init_ivw_cfg() to handle most of this
+**	     - Add get_sys_mem() funtion to get the system memory for
+**	       determining memory dependent defaults
 */
 
 # define RF_VARIABLE "export II_RESPONSE_FILE"
@@ -192,7 +200,6 @@ gipImportPkgInfo( LOCATION *xmlfileloc, UGMODE *state, i4 *count );
 
 
 
-
 int
 main (int argc, char *argv[])
 {
@@ -200,11 +207,14 @@ main (int argc, char *argv[])
     char	pixmapdir[MAX_LOC];
     char	pkginfofile[MAX_LOC];
     char	tmpbuf[MAX_LOC];
+    char	licfile[MAX_LOC];
     char	*known_instance_loc=NULL;
     char	*binptr=NULL;
     char	*tracevar;
     LOCATION	pkginfoloc;
+    LOCATION	licfileloc;
     GtkListStore prog_list_store;
+    GtkTextBuffer *lic_text_buff;
     GtkWidget	*widget_ptr; 
     i4		i=0;
     STATUS	rc;
@@ -342,6 +352,20 @@ main (int argc, char *argv[])
 	  return( FAIL );
     }
   
+    /* load license file */
+    STprintf( licfile, "%s/%s", exedir, "LICENSE" );
+    LOfroms(PATH|FILENAME, licfile, &licfileloc);
+    if (LOexist(&licfileloc) == OK)
+    {
+	widget_ptr=lookup_widget(IngresInstall, "inst_lic_view");
+	lic_text_buff=gtk_text_view_get_buffer(GTK_TEXT_VIEW(widget_ptr));
+	write_file_to_text_buffer(licfile, lic_text_buff);
+    }
+    else
+# define ERROR_LICENSE_NOT_FOUND "Error: %s does not exist\n"
+	SIprintf(ERROR_LICENSE_NOT_FOUND, licfile);
+
+    
     /* If we found other installations then we're in upgrade mode */
     if ( inst_state & UM_TRUE )
     {
@@ -362,8 +386,14 @@ main (int argc, char *argv[])
 	    printf( ERROR_UPGRADE_INIT_FAIL );
 	    return( FAIL );
 	}
+
+	/* load upgrade license file */
+	widget_ptr=lookup_widget(IngresInstall, "upg_lic_view");
+	lic_text_buff=gtk_text_view_get_buffer(GTK_TEXT_VIEW(widget_ptr));
+	write_file_to_text_buffer(licfile, lic_text_buff);
     }
 
+    /* load license file */
     /* set the correct starting screen */
     set_screen(START_SCREEN);
 
@@ -395,16 +425,34 @@ gint
 init_new_install_mode(void)
 {
     GtkWidget	*widget_ptr;
+    GtkWidget	*locale_box;
+    GtkWidget	*db_config_type;
+    GtkWidget	*ing_misc_ops;
+    GtkWidget	*ivw_misc_ops;
+    GtkWidget	*ivw_cfg_box;
+
     char	*IDptr;
     gchar	textbuf[10];
     i4 		i = 1;
 
-# define RFGEN_TITLE "Ingres Installation Wizard"
-    gtk_window_set_title( GTK_WINDOW( IngresInstall ), RFGEN_TITLE );
 
     /* set mode */
     runmode = MA_INSTALL;
     instmode = BASIC_INSTALL;
+
+    /* check which product we're installing */
+    if ( STcompare("vectorwise", new_pkgs_info.product) == OK )
+    {	
+# define RFGEN_IVW_TITLE "Ingres Vectorwise Installation Wizard"
+	gtk_window_set_title( GTK_WINDOW( IngresInstall ), RFGEN_IVW_TITLE );
+	instmode |= IVW_INSTALL;
+	stage_names = basic_ivw_stages;
+    }
+    else
+    {
+# define RFGEN_TITLE "Ingres Installation Wizard"
+	gtk_window_set_title( GTK_WINDOW( IngresInstall ), RFGEN_TITLE );
+    }
 
     /* check installation ID */
     STprintf( textbuf, "Ingres %s", dfltID );
@@ -434,7 +482,11 @@ init_new_install_mode(void)
     /* Create dialogs to act as combo boxes */
     /* timezones */
     TimezoneTreeModel = initialize_timezones();
-    widget_ptr = lookup_widget( IngresInstall, "TimezoneEntry" );
+    if ( instmode & IVW_INSTALL )
+	widget_ptr = lookup_widget( IngresInstall, "IVWTimezoneEntry" );
+    else
+	widget_ptr = lookup_widget( IngresInstall, "TimezoneEntry" );
+
     TimezoneDialog = create_text_view_dialog_from_model( TimezoneTreeModel,
 							widget_ptr,
 							timezone_iter );
@@ -442,7 +494,11 @@ init_new_install_mode(void)
 
     /* charsets */
     CharsetTreeModel = initialize_charsets( linux_charsets );
-    widget_ptr = lookup_widget( IngresInstall, "CharsetEntry" );
+    if ( instmode & IVW_INSTALL )
+	widget_ptr = lookup_widget( IngresInstall, "IVWCharsetEntry" );
+    else
+	widget_ptr = lookup_widget( IngresInstall, "CharsetEntry" );
+
     CharsetDialog = create_text_view_dialog_from_model( CharsetTreeModel,
 							widget_ptr,
 							charset_iter );
@@ -477,6 +533,34 @@ init_new_install_mode(void)
     create_summary_tags( gtk_text_view_get_buffer( 
 			 	GTK_TEXT_VIEW( widget_ptr ) ) );
 							
+    /* initialize vectorwise config */
+    locale_box=lookup_widget(IngresInstall, "locale_box");
+    db_config_type=lookup_widget(IngresInstall, "config_type_box");
+    ing_misc_ops=lookup_widget(IngresInstall, "ing_misc_ops_frame");
+    ivw_misc_ops=lookup_widget(IngresInstall, "ivw_misc_ops_frame");
+    ivw_cfg_box=lookup_widget(IngresInstall, "ivw_cfg_box");
+
+    if ( instmode & IVW_INSTALL )
+    {
+
+	/* hide/show vectorwise related config in train */
+	gtk_widget_hide(locale_box);
+	gtk_widget_hide(db_config_type);
+	gtk_widget_hide(ing_misc_ops);
+	gtk_widget_show(ivw_misc_ops);
+	gtk_widget_show(ivw_cfg_box);
+
+	init_ivw_cfg();
+    }
+    else
+    {
+	gtk_widget_show(locale_box);
+	gtk_widget_show(db_config_type);
+	gtk_widget_show(ing_misc_ops);
+	gtk_widget_hide(ivw_misc_ops);
+	gtk_widget_hide(ivw_cfg_box);
+    }
+
     /* Set default config type */
     widget_ptr=lookup_widget(IngresInstall, "ing_cfg_type_radio_tx");
     gtk_button_clicked(GTK_BUTTON(widget_ptr));
@@ -1731,6 +1815,119 @@ get_rename_cmd_len( PKGLST pkglst )
     return( len );
 }
 
+STATUS
+get_sys_mem(SIZE_TYPE *sysmemkb)
+{
+    char	meminfo[] = "/proc/meminfo";
+# define MB_SIZE 29
+    char	membuf[MB_SIZE];
+    LOCATION	meminfo_loc;
+    FILE	*meminfo_f;
+
+    LOfroms(PATH|FILENAME, meminfo, &meminfo_loc);
+    if (LOexist(&meminfo_loc) != OK)
+	return FAIL;
+
+    DBG_PRINT("Reading %s\n", meminfo);
+    if (SIopen(&meminfo_loc, "r", &meminfo_f) != OK )
+	return FAIL;
+
+    while(SIgetrec(membuf, MB_SIZE, meminfo_f) != ENDFILE)
+    {
+	char *ptr;
+	/*
+        ** line we're looking for looks like this:
+        ** MemTotal:         510264 kB
+	*/
+	if ( (ptr = STstrindex(membuf, "MemTotal:", 0, TRUE)) != NULL )
+	{
+	    char *memval;
+
+	    /* find the value */
+	    while(! CMdigit(ptr))
+		ptr++;
+	    memval=ptr;
+
+	    /* find the end */
+	    while(CMdigit(ptr))
+		ptr++;
+	    *ptr='\0';
+
+	    /* pass it back */
+	    *sysmemkb=atoi(memval);
+	    DBG_PRINT("System memory detected as %sKb, returned as %dKb\n",
+			memval, *sysmemkb);
+	}
+    }
+    SIclose(meminfo_f);
+    return(OK);
+}
+    
+STATUS
+init_ivw_cfg()
+{
+    GtkWidget *widget_ptr;
+    i4	i = 0;
+    char field_buf[100];
+    SIZE_TYPE	sysmemkb;
+
+    DBG_PRINT("Checking system memory\n");
+    if (get_sys_mem(&sysmemkb) != OK)
+	sysmemkb=0;
+
+    /* initialize vectorwise config */
+    while (vw_cfg_info[i])
+    {
+	vw_cfg *param=vw_cfg_info[i];
+
+	/*
+	**  if we can, use the amount of system memory to set default for
+	** memory parameters
+        */
+	if ( sysmemkb > 0 && param->bit &
+		 (GIP_VWCFG_MAX_MEMORY|GIP_VWCFG_BUFFERPOOL) )
+	{
+	    if (param->bit & GIP_VWCFG_MAX_MEMORY)
+	    {
+		/* default to 50% of system memory */
+		param->dfval = sysmemkb/(1024 * 2);
+		param->dfunit = VWMB;
+	    }
+	    if (param->bit & GIP_VWCFG_BUFFERPOOL)
+	    {
+		/* default to 25% of system memory */
+		param->dfval = sysmemkb/(1024 * 4);
+		param->dfunit = VWMB;
+	    }
+
+	    /* find a sensible unit */
+	    if (param->dfval > 1024)
+	    {
+		param->dfval = param->dfval/1024;
+	 	param->dfunit = VWGB;
+	    }
+	    param->value=param->dfval;
+	    param->unit=param->dfunit;
+	   
+	}
+		
+	/* set field value */
+	STprintf(field_buf, "%s_val", param->field_prefix);
+	widget_ptr=lookup_widget(IngresInstall, field_buf);
+	DBG_PRINT("Setting %s to %d\n", field_buf, param->value);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(widget_ptr), param->value);
+
+	/* set units */
+	if (param->unit != VWNOUNIT)
+	{
+	    STprintf(field_buf, "%s_unit", param->field_prefix);
+	    DBG_PRINT("Setting default unit for %s\n", field_buf);
+	    widget_ptr=lookup_widget(IngresInstall, field_buf);
+	    gtk_combo_box_set_active(GTK_COMBO_BOX(widget_ptr), param->unit);
+	}
+	i++;
+    }
+}
 # else /* xCL_GTK_EXISTS & xCL_RPM_EXISTS */
 
 /*

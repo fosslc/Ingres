@@ -196,6 +196,12 @@
 **	    BUG 121580
 **	    Reset modify dialog when selecting instance to modify so that
 **	    installed components are correctly initialized.
+**	19-May-2010 (hanje04)
+**	    SIR 123791
+**	    Add callback funtions for new VW dialogs
+**	    Add new stages to on_master_next/back_clicked()
+**	    instmode now bitmap to allow multi-mode operation for IVW support
+**	    Update how value is checked and set.
 **   
 */
 
@@ -257,9 +263,12 @@ on_basic_install_checked               (GtkButton       *button,
     GtkWidget	*adv_db_config;
 	
     DBG_PRINT("on_basic_install_checked called\n");
-    instmode=BASIC_INSTALL;
+    instmode = BASIC_INSTALL|(instmode&~ADVANCED_INSTALL);
     /* point stage_names to the right array */
-    stage_names=basic_stages;	
+    if (instmode & IVW_INSTALL)
+        stage_names=basic_ivw_stages;	
+    else
+        stage_names=basic_stages;	
 	
     /* hide the advanced progress items */
     adv_config=lookup_widget(IngresInstall, "adv_config");
@@ -279,9 +288,13 @@ on_adv_install_clicked                 (GtkButton       *button,
     GtkWidget	*adv_db_config;
 	
     DBG_PRINT("on_adv_install_clicked called\n");
-    instmode=ADVANCED_INSTALL;
+    instmode = ADVANCED_INSTALL|(instmode&~BASIC_INSTALL);
+
     /* point stage_names to the right array */
-    stage_names=adv_stages;
+    if ( instmode & IVW_INSTALL )
+	stage_names=adv_ivw_stages;
+    else
+	stage_names=adv_stages;
 	
     /* activate advanced progress items */
     adv_config=lookup_widget(IngresInstall, "adv_config");
@@ -392,6 +405,14 @@ on_iisystem_changed                    (GtkEditable     *editable,
 	    gtk_entry_set_text(GTK_ENTRY(widget), iisystem_ptr);
 	else
 	    on_ii_dump_changed( GTK_EDITABLE( widget ), NULL );
+	/* II_DUMP */
+	widget=lookup_widget(IngresInstall, ug_mode & UM_INST ?
+				"ii_vwdata" : "ii_vwdata" );
+	if ( STcompare( gtk_entry_get_text( GTK_ENTRY(widget) ),
+						iisystem_ptr ) )
+	    gtk_entry_set_text(GTK_ENTRY(widget), iisystem_ptr);
+	else
+	    on_ii_vwdata_changed( GTK_EDITABLE( widget ), NULL );
 	
     }
 
@@ -575,7 +596,7 @@ on_checkdbmspkg_toggled                (GtkToggleButton *togglebutton,
 	inst_pkg_sel( DBMS ) : inst_pkg_rmv( DBMS ) ;
 
     /* may need to skip panes in advanced mode */
-    if ( instmode == ADVANCED_INSTALL )
+    if ( instmode & ADVANCED_INSTALL )
     {
 	/* skip DBMS config panes if DBMS not selected */
 	stage_names = pkgs_to_install & PKG_DBMS ? 
@@ -586,10 +607,15 @@ on_checkdbmspkg_toggled                (GtkToggleButton *togglebutton,
 	gtk_widget_set_sensitive( db_loc_frame, pkgs_to_install & PKG_DBMS ?
 						TRUE : FALSE );
 
-	db_ansi_config = lookup_widget( IngresInstall, "db_ansi_config" );
-	gtk_widget_set_sensitive( db_ansi_config, pkgs_to_install & PKG_DBMS ?
+	if ( ! (instmode & IVW_INSTALL) )
+	{
+	    db_ansi_config = lookup_widget( IngresInstall, "db_ansi_config" );
+	    gtk_widget_set_sensitive( db_ansi_config,
+						pkgs_to_install & PKG_DBMS ?
 						TRUE : FALSE );
+	}
 
+	
 	adv_db_config = lookup_widget( IngresInstall, "adv_db_config" );
 	if ( pkgs_to_install & PKG_DBMS )
 	    gtk_widget_show( adv_db_config );
@@ -1286,15 +1312,26 @@ on_ii_database_changed                 (GtkEditable     *editable,
                                         gpointer         user_data)
 {
     char	*iisystem_ptr;
+    GtkWidget   *widget_ptr;
 
     iisystem_ptr = ug_mode & UM_INST ? iisystem.path :
 					selected_instance->inst_loc ;
 
     if ( update_location_entry( INST_II_DATABASE,
 				GTK_ENTRY( editable ) ) == OK  )
+    {
 	DBG_PRINT(
 	"on_ii_database_changed called: II_SYSTEM=%s\n\t\tII_DATABASE=%s\n",
 			iisystem_ptr, dblocations[INST_II_DATABASE]->path );
+        widget_ptr=lookup_widget( IngresInstall, "ivw_loc_iidb_default" );
+	if ( gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget_ptr)) )
+	{
+	    /* II_VWDATA defaults to II_DATABASE */
+	    widget_ptr=lookup_widget(IngresInstall, "ii_vwdata");
+	    gtk_entry_set_text(GTK_ENTRY(widget_ptr),
+				 dblocations[INST_II_DATABASE]->path);
+	}
+    }
 }
 
 void
@@ -1524,8 +1561,8 @@ on_master_next_clicked                 (GtkButton       *button,
 	{
 	    GtkWidget	*widget_ptr;
 			
-	    case UG_START:
-		DBG_PRINT("On UG_START, moving to");
+	    case UG_LIC:
+		DBG_PRINT("On UG_LIC, moving to");
 		if ( inst_state & UM_MOD && inst_state & UM_UPG )
 		{
 		   next_stage=current_stage=UG_MULTI;
@@ -1624,7 +1661,12 @@ on_master_next_clicked                 (GtkButton       *button,
 	*/
 	/* switch runmode */
 	runmode = ( runmode == MA_INSTALL ? MA_UPGRADE : MA_INSTALL ) ;
-	set_screen( START_SCREEN + 1 ); /* skip the welcome screen */
+	set_screen(LIC_SCREEN + 1); /* skip the welcome and lic screens */
+	/* mark lic done for new mode too we can't get here if it isn't */
+	gtk_widget_set_sensitive(lookup_widget(IngresInstall,
+					stage_names[LIC_SCREEN]->stage_name),
+					TRUE);
+	stage_names[LIC_SCREEN]->status = ST_COMPLETE;
     }
     else
     {
@@ -1662,7 +1704,7 @@ on_master_back_clicked                 (GtkButton       *button,
 	    case UG_SSAME:
 	    case UG_SOLD:
 	    case UG_MULTI:
-		prev_stage=current_stage=UG_START;
+		prev_stage=current_stage=UG_LIC;
 		break;
 	    case UG_SELECT:
 		if ( inst_state & UM_MOD && inst_state & UM_UPG )
@@ -1695,7 +1737,7 @@ on_master_back_clicked                 (GtkButton       *button,
     }
     else
     {
-	if ( current_stage == ( START_SCREEN + 1 )	
+	if ( current_stage == ( LIC_SCREEN + 1 )	
 				 && (ug_mode & UM_TRUE) )	
 	    switch_run_mode=TRUE;
 	else
@@ -1896,18 +1938,27 @@ set_screen(gint stage_num)
 	current_notebook=upgrade_notebook;
 	stage_names=ug_stages;
     }
+    else if ( instmode & IVW_INSTALL )
+    {
+	current_notebook=install_notebook;
+	if (instmode & BASIC_INSTALL )
+	    stage_names=basic_ivw_stages;
+	else if ( instmode & ADVANCED_INSTALL )
+	    stage_names=adv_ivw_stages;
+    }
     else
     {
 	current_notebook=install_notebook;
-	if (instmode == BASIC_INSTALL )
+	if (instmode & BASIC_INSTALL )
 	    stage_names=basic_stages;
-	else if ( instmode == ADVANCED_INSTALL )
+	else if ( instmode & ADVANCED_INSTALL )
 	    stage_names=adv_stages;
 	else if ( instmode == RFGEN_LNX )
 	    stage_names=rfgen_lnx_stages;
 	else if ( instmode == RFGEN_WIN )
 	    stage_names=rfgen_win_stages;
     }
+
     /* lookup the master notebook */
     master_notebook=lookup_widget(IngresInstall, "master_notebook");
     gtk_notebook_set_current_page(GTK_NOTEBOOK(master_notebook), runmode );
@@ -3029,4 +3080,376 @@ on_ing_config_classic_radio_selected            (GtkRadioButton  *radiobutton,
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(date_alias_radio), TRUE);
 }
 
+void
+on_lic_accept_toggled            (GtkToggleButton *togglebutton,
+                                        gpointer         user_data)
+{
+    GtkWidget	*next_button;
+    char	*button_list[] = {"ug_next_button", "next_button", NULL};
+    i4		i = 0;
+    
+    while (button_list[i])
+    {
+	next_button=lookup_widget(IngresInstall, button_list[i]);
+	if (gtk_toggle_button_get_active(togglebutton) == TRUE)
+	    gtk_widget_set_sensitive(next_button, TRUE);
+	else
+	    gtk_widget_set_sensitive(next_button, FALSE);
+	i++;
+    }
+}
+
+void
+on_ivw_loc_iidb_default_toggled           (GtkToggleButton *togglebutton,
+                                        gpointer         user_data)
+{
+    GtkWidget	*widget_ptr;
+    bool	use_default=gtk_toggle_button_get_active(togglebutton);
+
+    widget_ptr=lookup_widget(IngresInstall, "iivwdata_box");
+ 
+    gtk_widget_set_sensitive(widget_ptr, !use_default);
+    if (use_default)
+    {
+	widget_ptr=lookup_widget(IngresInstall, "ii_vwdata");
+	gtk_entry_set_text(GTK_ENTRY(widget_ptr),
+			 dblocations[INST_II_DATABASE]->path);
+    }
+}
+
+void
+on_ii_vwdata_changed                 (GtkEditable     *editable,
+                                        gpointer         user_data)
+{
+    char	*iidatabase_ptr;
+
+    iidatabase_ptr = dblocations[INST_II_DATABASE]->path ;
+
+    if ( update_location_entry( INST_II_VWDATA,
+				GTK_ENTRY( editable ) ) == OK )
+	DBG_PRINT(
+	"on_ii_vwdata_changed called: II_DATABASE=%s\n\t\tII_VWDATA=%s\n",
+			iidatabase_ptr, dblocations[INST_II_VWDATA]->path );
+}
+
+void
+get_selected_vwdata		( GtkWidget *widget,
+					gpointer user_data )
+{
+    GtkWidget *location_entry;
+    GtkWidget *file_selector;
+	
+    file_selector = GTK_WIDGET( user_data );
+
+    /* update the text fields which will update II_SYSTEM */
+    location_entry = lookup_widget(IngresInstall, "ii_vwdata"); 
+    gtk_entry_set_text( GTK_ENTRY( location_entry ),
+			    gtk_file_selection_get_filename(
+				GTK_FILE_SELECTION(  file_selector ) ) );
+
+}
+void
+on_browse_iivwdat_clicked		(GtkButton       *button,
+                                gpointer         user_data)
+{
+    GtkWidget *location_entry;
+
+    /* get current value and pass it the browser as the default*/
+    location_entry = lookup_widget(IngresInstall, "ii_vwdata");
+
+    /*
+    ** not supported until GTK 2.6
+    ** browse_location( "primary_log_file_loc" );
+    */
+    browse_location_gtk22( G_CALLBACK( get_selected_vwdata ),
+				location_entry,
+				FALSE );
+}
+
+void
+set_ivw_cfg_default(VWCFG pbit)
+{
+    GtkWidget	*widget_ptr;
+    i4 i = 0;
+
+    while(vw_cfg_info[i] && vw_cfg_info[i]->bit != pbit)
+        i++;
+
+    if (vw_cfg_info[i])
+    {
+	char tmpbuf[100];
+
+	/* found the param, now reset the value and unit in the GUI */
+	STprintf(tmpbuf, "%s_val", vw_cfg_info[i]->field_prefix);
+	widget_ptr=lookup_widget(IngresInstall, tmpbuf);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(widget_ptr),
+						 vw_cfg_info[i]->dfval);
+	if (vw_cfg_info[i]->unit != VWNOUNIT )
+	{
+	    STprintf(tmpbuf, "%s_unit", vw_cfg_info[i]->field_prefix);
+	    widget_ptr=lookup_widget(IngresInstall, tmpbuf);
+	    gtk_combo_box_set_active(GTK_COMBO_BOX(widget_ptr),
+						 vw_cfg_info[i]->dfunit);
+	}
+	DBG_PRINT("Reset defaults:\n\t%s_val = %d\n\t%s_unit = %cb\n",
+			vw_cfg_info[i]->field_prefix,
+			vw_cfg_info[i]->dfval,
+			vw_cfg_info[i]->field_prefix,
+			vw_cfg_units[vw_cfg_info[i]->dfunit]);
+    }
+}
+
+void
+on_ivw_maxdb_chk_toggled           (GtkToggleButton *togglebutton,
+                                        gpointer         user_data)
+{
+    GtkWidget    *widget_ptr;
+
+    widget_ptr=lookup_widget(IngresInstall, "ivw_cfg_maxdata_box");
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(togglebutton)))
+        gtk_widget_set_sensitive(widget_ptr, TRUE);
+    else
+    {
+	set_ivw_cfg_default(GIP_VWCFG_COLUMNSPACE);
+        gtk_widget_set_sensitive(widget_ptr, FALSE);
+    }
+}
+
+void
+on_ivw_blksz_chk_toggled           (GtkToggleButton *togglebutton,
+                                        gpointer         user_data)
+{
+    GtkWidget    *widget_ptr;
+
+    widget_ptr=lookup_widget(IngresInstall, "ivw_cfg_blksz_box");
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(togglebutton)))
+        gtk_widget_set_sensitive(widget_ptr, TRUE);
+    else
+    {
+	set_ivw_cfg_default(GIP_VWCFG_BLOCK_SIZE);
+        gtk_widget_set_sensitive(widget_ptr, FALSE);
+    }
+}
+
+void
+on_ivw_blkgrp_sz_toggled           (GtkToggleButton *togglebutton,
+                                        gpointer         user_data)
+{
+    GtkWidget    *widget_ptr;
+
+    widget_ptr=lookup_widget(IngresInstall, "ivw_cfg_blkgrpsz_box");
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(togglebutton)))
+        gtk_widget_set_sensitive(widget_ptr, TRUE);
+    else
+    {
+	set_ivw_cfg_default(GIP_VWCFG_GROUP_SIZE);
+        gtk_widget_set_sensitive(widget_ptr, FALSE);
+    }
+}
+
+void
+on_ivw_prcmem_chk_toggled           (GtkToggleButton *togglebutton,
+                                        gpointer         user_data)
+{
+    GtkWidget    *widget_ptr;
+
+    widget_ptr=lookup_widget(IngresInstall, "ivw_cfg_procmem_box");
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(togglebutton)))
+        gtk_widget_set_sensitive(widget_ptr, TRUE);
+    else
+    {
+	set_ivw_cfg_default(GIP_VWCFG_MAX_MEMORY);
+        gtk_widget_set_sensitive(widget_ptr, FALSE);
+    }
+}
+
+void
+on_ivw_buffpool_chk_toggled           (GtkToggleButton *togglebutton,
+                                        gpointer         user_data)
+{
+    GtkWidget    *widget_ptr;
+
+    widget_ptr=lookup_widget(IngresInstall, "ivw_cfg_buffpoolmem_box");
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(togglebutton)))
+        gtk_widget_set_sensitive(widget_ptr, TRUE);
+    else
+    {
+	set_ivw_cfg_default(GIP_VWCFG_BUFFERPOOL);
+        gtk_widget_set_sensitive(widget_ptr, FALSE);
+    }
+    
+}
+
+void
+on_ivw_cfg_blkgrpsz_val_change         (GtkSpinButton   *spinbutton,
+                                        gpointer         user_data)
+{
+    i4		i=0;
+
+    while(vw_cfg_info[i]->bit != GIP_VWCFG_GROUP_SIZE)
+	i++;
+
+    vw_cfg_info[i]->value = gtk_spin_button_get_value(spinbutton);
+    DBG_PRINT("%s_value set to = %d\n",
+		vw_cfg_info[i]->field_prefix,
+		vw_cfg_info[i]->value);
+	
+
+}
+
+void
+on_ivw_cfg_blksz_val_change            (GtkSpinButton   *spinbutton,
+                                        gpointer         user_data)
+{
+    vw_cfg	*param;
+    i4		i=0;
+
+    while(vw_cfg_info[i]->bit != GIP_VWCFG_BLOCK_SIZE)
+	i++;
+
+    vw_cfg_info[i]->value = gtk_spin_button_get_value(spinbutton);
+    DBG_PRINT("%s_value set to = %d\n",
+		vw_cfg_info[i]->field_prefix,
+		vw_cfg_info[i]->value);
+}
+
+
+void
+on_ivw_cfg_blksz_unit_changed          (GtkComboBox     *combobox,
+                                        gpointer         user_data)
+{
+    i4		i=0;
+    i4		unit;
+
+    unit = gtk_combo_box_get_active(combobox);
+    if ( VWNOUNIT < unit < 0 )
+	return;
+
+    while(vw_cfg_info[i]->bit != GIP_VWCFG_BLOCK_SIZE)
+	i++;
+
+    vw_cfg_info[i]->unit = unit;
+    DBG_PRINT("%s_unit set to = %cb\n",
+		vw_cfg_info[i]->field_prefix,
+		vw_cfg_units[vw_cfg_info[i]->unit]);
+
+}
+
+
+void
+on_ivw_cfg_maxdata_val_change          (GtkSpinButton   *spinbutton,
+                                        gpointer         user_data)
+{
+    vw_cfg	*param;
+    i4		i=0;
+
+    while(vw_cfg_info[i]->bit != GIP_VWCFG_COLUMNSPACE)
+	i++;
+
+    vw_cfg_info[i]->value = gtk_spin_button_get_value(spinbutton);
+    DBG_PRINT("%s_value set to = %d\n",
+		vw_cfg_info[i]->field_prefix,
+		vw_cfg_info[i]->value);
+
+}
+
+
+void
+on_ivw_cfg_maxdata_unit_changed        (GtkComboBox     *combobox,
+                                        gpointer         user_data)
+{
+    i4		i=0;
+    i4		unit;
+
+    unit = gtk_combo_box_get_active(combobox);
+    if ( VWNOUNIT < unit < 0 )
+	return;
+
+    while(vw_cfg_info[i]->bit != GIP_VWCFG_COLUMNSPACE)
+	i++;
+
+    vw_cfg_info[i]->unit = unit;
+    DBG_PRINT("%s_unit set to = %cb\n",
+		vw_cfg_info[i]->field_prefix,
+		vw_cfg_units[vw_cfg_info[i]->unit]);
+
+}
+
+
+void
+on_ivw_cfg_procmem_val_change          (GtkSpinButton   *spinbutton,
+                                        gpointer         user_data)
+{
+    vw_cfg	*param;
+    i4		i=0;
+
+    while(vw_cfg_info[i]->bit != GIP_VWCFG_MAX_MEMORY)
+	i++;
+
+    vw_cfg_info[i]->value = gtk_spin_button_get_value(spinbutton);
+    DBG_PRINT("%s_value set to = %d\n",
+		vw_cfg_info[i]->field_prefix,
+		vw_cfg_info[i]->value);
+
+}
+
+
+void
+on_ivw_cfg_procmem_unit_changed        (GtkComboBox     *combobox,
+                                        gpointer         user_data)
+{
+    i4		i=0;
+    i4		unit;
+
+    unit = gtk_combo_box_get_active(combobox);
+    if ( VWNOUNIT < unit < 0 )
+	return;
+
+    while(vw_cfg_info[i]->bit != GIP_VWCFG_MAX_MEMORY)
+	i++;
+
+    vw_cfg_info[i]->unit = unit;
+    DBG_PRINT("%s_unit set to = %cb\n",
+		vw_cfg_info[i]->field_prefix,
+		vw_cfg_units[vw_cfg_info[i]->unit]);
+}
+
+
+void
+on_ivw_cfg_buffpoolmem_val_change      (GtkSpinButton   *spinbutton,
+                                        gpointer         user_data)
+{
+    vw_cfg	*param;
+    i4		i=0;
+
+    while(vw_cfg_info[i]->bit != GIP_VWCFG_BUFFERPOOL)
+	i++;
+
+    vw_cfg_info[i]->value = gtk_spin_button_get_value(spinbutton);
+    DBG_PRINT("%s_value set to = %d\n",
+		vw_cfg_info[i]->field_prefix,
+		vw_cfg_info[i]->value);
+}
+
+
+void
+on_ivw_cfg_buffpoolmem_unit_changed    (GtkComboBox     *combobox,
+                                        gpointer         user_data)
+{
+    i4		i=0;
+    i4		unit;
+
+    unit = gtk_combo_box_get_active(combobox);
+    if ( VWNOUNIT < unit < 0 )
+	return;
+
+    while(vw_cfg_info[i]->bit != GIP_VWCFG_BUFFERPOOL)
+	i++;
+
+    vw_cfg_info[i]->unit = unit;
+    DBG_PRINT("%s_unit set to = %cb\n",
+		vw_cfg_info[i]->field_prefix,
+		vw_cfg_units[vw_cfg_info[i]->unit]);
+
+}
 # endif /* xCL_GTK_EXISTS */

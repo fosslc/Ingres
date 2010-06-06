@@ -192,6 +192,17 @@
 **	    instance structure.
 **	24-Nov-2009 (frima01) Bug 122490
 **	    Added include of unistd.h to eliminate gcc 4.3 warnings.
+**	10-May-2010 (hanje04)
+**	    SIR 123791
+**	    Add "check" logic for new License acceptance dialog
+**	    Add GIPdoValidation() to reduce code duplication for database
+**	    location validation.
+**	    Add logic for II_VWDATA location. 
+**	    instmode now bit mask for vectorwise support, update checks 
+**	    propriately.
+**	    Remove unwanted misc_ops entries and add VW specific parameters
+**	    to/from summary for IVW_INSTALL mode.
+**	    Add VW config parameters to response file.
 **	
 */
 
@@ -490,7 +501,7 @@ write_installation_summary(GtkTextBuffer *buffer)
 
 
     /* Give more of a summary for the advanced install */
-    if ( instmode != BASIC_INSTALL )
+    if ( ! instmode & BASIC_INSTALL )
     {
 	if ( pkgs_to_install & PKG_DBMS )
 	{
@@ -504,6 +515,12 @@ write_installation_summary(GtkTextBuffer *buffer)
 
 	    for ( i = 1 ; dblocations[i] ; i++ )
 	    {
+		if ( i == INST_II_VWDATA &&  (! instmode & IVW_INSTALL) )
+		{
+		    i++;
+		    continue; /* skip if it's not Vectorwise */
+		}
+
 		STprintf( tmpbuf,
 			"%s (%s): ",
 			dblocations[i]->name, 
@@ -520,6 +537,36 @@ write_installation_summary(GtkTextBuffer *buffer)
 						NULL);
 		gtk_text_buffer_insert(buffer, &iter, "\n", -1);
 	    }
+
+	    /* Vectorwise Config */
+	    if ( instmode & IVW_INSTALL )
+	    {
+		i=0;
+
+		gtk_text_buffer_insert_with_tags_by_name(buffer,
+						&iter,
+						"\nVectorwise Configuration:\n",
+						-1,
+						"bold",
+						NULL);	
+		while(vw_cfg_info[i])
+		{
+		    vw_cfg *param=vw_cfg_info[i];
+		    STprintf( tmpbuf, "%s: ", param->descrip);
+	            gtk_text_buffer_insert(buffer, &iter, tmpbuf, -1);
+		    STprintf( tmpbuf, "%d%cB\n",
+			     param->value, vw_cfg_units[param->unit] );
+	            gtk_text_buffer_insert_with_tags_by_name(buffer,
+						&iter,
+						tmpbuf,
+						-1,
+						"monospace",
+						NULL);
+		    i++;
+		}
+		gtk_text_buffer_insert(buffer, &iter, "\n", -1);
+	    }
+
 	    /* Tx log info */
 	    gtk_text_buffer_insert_with_tags_by_name(buffer,
 						&iter,
@@ -568,40 +615,42 @@ write_installation_summary(GtkTextBuffer *buffer)
 				"Dual logging disabled\n",
 				-1 );
 
-	gtk_text_buffer_insert_with_tags_by_name(buffer,
+	    gtk_text_buffer_insert_with_tags_by_name(buffer,
 						&iter,
 						"\nDatabase server options:\n",
 						-1,
 						"bold",
 						NULL);	
-	/* SQL92 Compliance */
-	gtk_text_buffer_insert(buffer,
+	    /* SQL92 Compliance */
+	    if ( ! instmode & IVW_INSTALL )
+	    {
+	        gtk_text_buffer_insert(buffer,
 				&iter,
 				"Strict SQL-92 Compliance: ",
 				-1);
-	gtk_text_buffer_insert_with_tags_by_name(buffer,
+	        gtk_text_buffer_insert_with_tags_by_name(buffer,
 						&iter,
 						misc_ops & GIP_OP_SQL92 ?
 						"Yes" : "No" ,
 						-1,
 						"monospace",
 						NULL);
-	gtk_text_buffer_insert(buffer, &iter, "\n", -1);
+	        gtk_text_buffer_insert(buffer, &iter, "\n", -1);
 
-	/* Date Type Alias */
-	gtk_text_buffer_insert(buffer,
-				&iter,
+	        /* Date Type Alias */
+	        gtk_text_buffer_insert(buffer,
+	    			&iter,
 				"\"DATE\" type alias: ",
 				-1);
-	gtk_text_buffer_insert_with_tags_by_name(buffer,
+	        gtk_text_buffer_insert_with_tags_by_name(buffer,
 						&iter,
 						date_type_alias.values[date_type_alias.val_idx],
 						-1,
 						"monospace",
 						NULL);
-	gtk_text_buffer_insert(buffer, &iter, "\n", -1);
-
-	}
+	        gtk_text_buffer_insert(buffer, &iter, "\n", -1);
+	    }
+        }
 		
 	/* timezone info */	
 	gtk_text_buffer_insert_with_tags_by_name(buffer,
@@ -661,7 +710,7 @@ write_installation_summary(GtkTextBuffer *buffer)
 						NULL);	
 	gtk_text_buffer_insert(buffer,
 				&iter,
-				"Start Ingres with computer: ",
+				"Start instance with computer: ",
 				-1);
 	gtk_text_buffer_insert_with_tags_by_name(buffer,
 						&iter, 
@@ -672,32 +721,35 @@ write_installation_summary(GtkTextBuffer *buffer)
 						NULL);
 	gtk_text_buffer_insert(buffer, &iter, "\n", -1);
 
-	gtk_text_buffer_insert(buffer,
+	if ( ! instmode & IVW_INSTALL )
+	{
+	    gtk_text_buffer_insert(buffer,
 				&iter,
 				"Create a demo database: ",
 				-1);
-	gtk_text_buffer_insert_with_tags_by_name(buffer,
+	    gtk_text_buffer_insert_with_tags_by_name(buffer,
 						&iter,
 						misc_ops & GIP_OP_INSTALL_DEMO ?
 						"Yes" : "No" ,
 						-1,
 						"monospace",
 						NULL);
-	gtk_text_buffer_insert(buffer, &iter, "\n", -1);
+	    gtk_text_buffer_insert(buffer, &iter, "\n", -1);
 # ifdef CREATE_DT_FOLDER
-	gtk_text_buffer_insert(buffer,
+	    gtk_text_buffer_insert(buffer,
 				&iter,
 				"Create Ingres folder on Desktop: ",
 				-1);
-	gtk_text_buffer_insert_with_tags_by_name(buffer,
+	    gtk_text_buffer_insert_with_tags_by_name(buffer,
 						&iter, 
 						misc_ops & GIP_OP_DESKTOP_FOLDER ?
 						"Yes" : "No" ,
 						-1,
 						"monospace",
 						NULL);
-	gtk_text_buffer_insert(buffer, &iter, "\n", -1);
+	    gtk_text_buffer_insert(buffer, &iter, "\n", -1);
 # endif
+        }
    }
 		
 }
@@ -971,6 +1023,12 @@ gen_install_response_file( II_RFAPI_STRING rflocstring )
 	i = 1;
 	while ( dblocations[i] != NULL )
 	{
+	    if ( i == INST_II_VWDATA &&  (! instmode & IVW_INSTALL) )
+	    {
+		i++;
+		continue; /* skip if it's not Vectorwise */
+	    }
+
 	    param.name = dblocations[i]->rfapi_name; /* variable name */
 	    param.value = dblocations[i]->path; /* value */
 	    param.vlen = STlen( dblocations[i]->path ); /* size */	
@@ -988,6 +1046,34 @@ gen_install_response_file( II_RFAPI_STRING rflocstring )
 	    }
 
 	    i++;
+	}
+
+	/* Vectorwise config */
+	if ( instmode & IVW_INSTALL )
+	{
+	    i=0;
+	    while(vw_cfg_info[i])
+	    {
+		vw_cfg *vwparam=vw_cfg_info[i];
+		param.name=vwparam->rfapi_name;
+		param.value = STprintf( tmpbuf, "%d%c",
+				 vwparam->value, vw_cfg_units[vwparam->unit] );
+		param.vlen = STlen(tmpbuf);
+		rfstat = IIrfapi_addParam( &rfhandle, &param );
+
+		if ( rfstat != II_RF_ST_OK )
+		{
+		    DBG_PRINT(
+			"Failed adding '%s' to response file.\nError: %s\n",
+			    vwparam->descrip,
+			    IIrfapi_errString( rfstat ) );
+		    if ( rfhandle != NULL )
+			IIrfapi_cleanup( &rfhandle );
+		    return( rfstat );
+		}
+
+		i++;
+	    }
 	}
 
 	/* Transaction Log */
@@ -1544,6 +1630,14 @@ increment_wizard_progress(void)
 			
 	    case UG_START:
 		gtk_widget_set_sensitive(back_button, FALSE);
+		gtk_widget_set_sensitive(next_button, TRUE);
+		break;
+	    case UG_LIC:
+		widget_ptr=lookup_widget(IngresInstall, "upg_lic_accept" );
+		gtk_widget_set_sensitive(back_button, TRUE);
+    		if ( gtk_toggle_button_get_active(
+			GTK_TOGGLE_BUTTON(widget_ptr)) != TRUE )
+		    gtk_widget_set_sensitive(next_button, FALSE);
 		break;
 	    case UG_SELECT:
 		gtk_widget_show(next_button);
@@ -1668,6 +1762,7 @@ increment_wizard_progress(void)
 	    case NI_START:
 		gtk_widget_set_sensitive(back_button, (ug_mode & UM_TRUE) ?
 							TRUE : FALSE );
+		gtk_widget_set_sensitive(next_button, TRUE);
 		break;
 	    case NI_INSTID:
 		/* validate instID entry */
@@ -2362,6 +2457,54 @@ prompt_shutdown( void )
 }
 
 /*
+** Name: GIPdoValidation
+**
+** Description:
+**	Check whether LOCATION is valid and set next/back buttons
+**	appropriately
+**
+** Inputs:
+**	LOCATION loc - LOCATION to check
+**	GtkWidget *next_button - Pointer to next button to change
+**	GtkWidget *back_button - Pointer to back button to change
+**
+** Outputs:
+**
+**	None
+**
+** Returns:
+**	STATUS OK or FAIL
+**
+** History:
+**	18-May-2010 (hanje04)
+**	    Created.
+*/
+STATUS
+GIPdoValidation(LOCATION *loc, GtkWidget *next_button, GtkWidget *back_button)
+{
+    /*
+    ** Check we've got a full path.
+    ** For installer (not package manager) check the database locations
+    ** also exist. II_SYSTEM doesn't have to.
+    */
+    if ( ( ! GIPpathFull( loc ) ) || 
+	( instmode != RFGEN_LNX &&
+ 	    instmode != RFGEN_WIN &&
+	    ( ! LOexist( loc ) == OK ) ) )
+    {
+	gtk_widget_set_sensitive( next_button, FALSE );
+	gtk_widget_set_sensitive( back_button, FALSE );
+	return( FAIL );
+    }
+    else
+    {
+	gtk_widget_set_sensitive( next_button, TRUE );
+	gtk_widget_set_sensitive( back_button, TRUE );
+    }
+    return(OK);
+}
+
+/*
 ** Name: GIPpathFull
 **
 ** Description:
@@ -2450,6 +2593,7 @@ GIPvalidateLocs( char *iisystem )
     GtkWidget	*back_button;
     GtkWidget	*db_loc_iisys_default;
     GtkWidget	*log_loc_iisys_default;
+    GtkWidget	*ivw_loc_iidb_default;
     LOCATION	locloc;
 
     /* lookup the widgets we're going to act on */
@@ -2465,20 +2609,25 @@ GIPvalidateLocs( char *iisystem )
     log_loc_iisys_default=lookup_widget( IngresInstall, ug_mode & UM_INST ?
 						"log_loc_iisys_default" :
 						"mod_log_loc_iisys_default" );
+    ivw_loc_iidb_default=lookup_widget( IngresInstall, "ivw_loc_iidb_default" );
     /*
     ** If there is an invalid location, disable the next button and return
     ** If it's the same as II_SYSTEM it's OK so skip the validation
     */
     if ( gtk_toggle_button_get_active( 
-			GTK_TOGGLE_BUTTON( db_loc_iisys_default ) ) == FALSE )
+		GTK_TOGGLE_BUTTON( db_loc_iisys_default ) ) == FALSE )
     {
 	int	i = 1; /* skip II_SYSTEM */
 
 	/* database locations */
 	while( dblocations[i] != NULL )
 	{
-	    /* if it's the same and II_SYSTEM it's OK so skip it */
-	    if ( ! STcompare( iisystem, dblocations[i]->path) )
+	    /* 
+	    ** if it's the same as II_SYSTEM it's OK so skip it
+	    ** same goes for II_VWDATA as we check it later
+	    */
+	    if (i == INST_II_VWDATA ||
+		( ! STcompare( iisystem, dblocations[i]->path) ))
 	    {
 		i++;
 		continue;
@@ -2490,26 +2639,20 @@ GIPvalidateLocs( char *iisystem )
 	    ** For installer (not package manager) check the database locations
 	    ** also exist. II_SYSTEM doesn't have to.
 	    */
-	    if ( ( ! GIPpathFull( &locloc ) ) || 
-		( instmode != RFGEN_LNX &&
-		    instmode != RFGEN_WIN &&
-		( ! LOexist( &locloc ) == OK ) ) )
+	    if ( GIPdoValidation(&locloc, next_button, back_button) != OK )
 	    {
 		DBG_PRINT( "New path %s for location %s is not valid\n", 
 			dblocations[i]->path,
 			dblocations[i]->name );
-		gtk_widget_set_sensitive( next_button, FALSE );
-		gtk_widget_set_sensitive( back_button, FALSE );
 		return( FAIL );
 	    }
-	    else
-	    {
-		gtk_widget_set_sensitive( next_button, TRUE );
-		gtk_widget_set_sensitive( back_button, TRUE );
-	    }
-	    
 	    i++;
 	}
+    }
+    else
+    {
+	gtk_widget_set_sensitive( next_button, TRUE );
+	gtk_widget_set_sensitive( back_button, TRUE );
     }
 
     /* primary log */
@@ -2519,25 +2662,12 @@ GIPvalidateLocs( char *iisystem )
     {
 	LOfroms( PATH, txlog_info.log_loc.path, &locloc ) != OK;
 
-	if ( ( ! GIPpathFull( &locloc ) ) || 
-		( instmode != RFGEN_LNX &&
-		    instmode != RFGEN_WIN &&
-		( ! LOexist( &locloc ) == OK ) ) )
+        if ( GIPdoValidation(&locloc, next_button, back_button ) != OK )
 	{
-	    gtk_widget_set_sensitive( next_button, FALSE );
-	    gtk_widget_set_sensitive( back_button, FALSE );
+	    DBG_PRINT( "New path %s for txlog is not valid\n", 
+			txlog_info.log_loc.path);
 	    return( FAIL );
 	}
-	else
-	{
-	    gtk_widget_set_sensitive( next_button, TRUE );
-	    gtk_widget_set_sensitive( back_button, TRUE );
-	}
-    }
-    else
-    {
-	gtk_widget_set_sensitive( next_button, TRUE );
-	gtk_widget_set_sensitive( back_button, TRUE );
     }
 
     /* dual log */
@@ -2547,28 +2677,32 @@ GIPvalidateLocs( char *iisystem )
 	{
 	    LOfroms( PATH, txlog_info.dual_loc.path, &locloc ) != OK;
 
-	    if ( ( ! GIPpathFull( &locloc ) ) || 
-		( instmode != RFGEN_LNX &&
-		    instmode != RFGEN_WIN &&
-		( ! LOexist( &locloc ) == OK ) ) )
+	    if ( GIPdoValidation(&locloc, next_button, back_button) != OK )
 	    {
-	        gtk_widget_set_sensitive( next_button, FALSE );
-	        gtk_widget_set_sensitive( back_button, FALSE );
-	        return( FAIL );
-	    }
-	    else
-	    {
-		gtk_widget_set_sensitive( next_button, TRUE );
-		gtk_widget_set_sensitive( back_button, TRUE );
+	        DBG_PRINT( "New path %s for txlog is not valid\n", 
+			txlog_info.dual_loc.path);
+		return( FAIL );
 	    }
 	}
     }
-    else
-    {
-	gtk_widget_set_sensitive( next_button, TRUE );
-	gtk_widget_set_sensitive( back_button, TRUE );
-    }
 
+    /* vectorwise data */
+    if ( gtk_toggle_button_get_active( 
+		GTK_TOGGLE_BUTTON( ivw_loc_iidb_default ) ) == FALSE &&
+		 STcompare( dblocations[INST_II_DATABASE]->path,
+				dblocations[INST_II_VWDATA]->path ) != 0 &&
+		 STcompare( iisystem, dblocations[INST_II_VWDATA]->path) ) 
+    {
+	LOfroms( PATH, dblocations[INST_II_VWDATA]->path, &locloc ) != OK;
+
+        if ( GIPdoValidation(&locloc, next_button, back_button )!= OK )
+	{
+	    DBG_PRINT( "New path %s for %s is not valid\n", 
+			dblocations[INST_II_VWDATA]->path,
+			dblocations[INST_II_VWDATA]->name);
+	    return( FAIL );
+	}
+    }
     return( OK );
 }
 
@@ -2821,7 +2955,6 @@ GIPAddLogLoc(instance *inst, i4 type, const char *path)
     return(OK);
 }
 
-     
 /*
 ** ATTENTION:
 **	 only static functions below this line

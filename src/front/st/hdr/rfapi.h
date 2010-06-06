@@ -59,6 +59,15 @@
 **	    Add new response file variable II_CONFIG_TYPE which 
 **	    controls which configuration settings are applied to an
 **	    instance at install time.
+**	20-May-2010 (hanje04)
+**	    SIR 123791
+**	    Add new parameters and defaults for Vectorwise configuration
+**	    - II_VWDATA: Vectorwise data location
+**	    - IIVWCFG_MAX_MEMORY: Processing memory for VW server
+**	    - IIVWCFG_BUFFERPOOL: Buffer memory for VW server
+**	    - IIVWCFG_COLUMNSPACE: Max size for VW database
+**	    - IIVWCFG_BLOCK_SIZE: Block size for VW data
+**	    - IIVWCFG_GROUP_SIZE: Block group size for VW data
 ** 
 */
 
@@ -98,6 +107,7 @@ typedef enum _II_RFAPI_PNAME {
 		II_RF_JOURNAL,
 		II_RF_WORK,
 		II_RF_DUMP,
+		II_RF_VWDATA,
 		II_RF_LOG_FILE,
 		II_RF_DUAL_LOG,
 		II_LOCATION_DOTNET,
@@ -130,6 +140,13 @@ typedef enum _II_RFAPI_PNAME {
 # define RFAPI_SEC_UPGRADE_OPTIONS "Ingres Upgrade Options"
 		II_UPGRADE_USER_DB,
 		II_REMOVE_ALL_FILES,
+		/* Ingre Vectorwise Config */
+# define RFAPI_SEC_IVW_CONFIG "Vectorwise Configuration"
+		II_VWCFG_MAX_MEMORY,
+		II_VWCFG_BUFFERPOOL,
+		II_VWCFG_COLUMNSPACE,
+		II_VWCFG_BLOCK_SIZE,
+		II_VWCFG_GROUP_SIZE,
 		/* CA MDB Options */
 # define RFAPI_SEC_MDB_OPTIONS "CA MDB Options"
 		II_MDB_INSTALL,
@@ -279,6 +296,11 @@ struct _RFAPI_VAR {
 # define RFAPI_LNX_DEFAULT_TIMEZONE "NA-PACIFIC"
 # define RFAPI_WIN_DEFAULT_DOTNET_LOC RFAPI_WIN_DEFAULT_INST_LOC"\\Ingres .Net Data Provider" 
 # define RFAPI_WIN_DEFAULT_DOCUMENTATION_LOC RFAPI_WIN_DEFAULT_INST_LOC"\\Ingres Documentation"
+# define RFAPI_DEFAULT_VWCFG_MAX_MEMORY_GB_INT 1
+# define RFAPI_DEFAULT_VWCFG_BUFFERPOOL_GB_INT 2
+# define RFAPI_DEFAULT_VWCFG_COLUMNSPACE_GB_INT 512
+# define RFAPI_DEFAULT_VWCFG_BLOCK_SIZE_MB_INT 512
+# define RFAPI_DEFAULT_VWCFG_GROUP_SIZE_INT 8
 
 /* function prototypes */
 II_RFAPI_STATUS

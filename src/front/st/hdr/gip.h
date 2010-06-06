@@ -89,6 +89,15 @@
 **          SIR 123296
 **          Config is now run post install from RC scripts. Update installation
 **          commands appropriately.
+**	18-May-2010 (hanje04)
+**	    SIR 123791
+**	    Add support for VW installs:
+**	     - Make instmode values bitmask, to handle multi-mode execution
+**	     - Define new dialogs to GUI (NI_LIC, UG_LIC for license 
+**	       acceptance; NI_VWCFG for Vectorwise config)
+**	     - Define new Vectorwise config parameters
+**	     - Define vw_cfg structure for hold parameter info.
+**	    Remove PKG_BASENAME, no longer used.
 ** 
 */
 
@@ -96,10 +105,6 @@
 # include <rfapi.h>
 
 /* Default Install Information */
-#define BASIC_INSTALL 0
-#define ADVANCED_INSTALL 1
-#define RFGEN_LNX 2
-#define RFGEN_WIN 3
 #define DEFAULT_CHAR_SET 17 /* iso88591 */
 #define RESPONSE_FILE_NAME "iirfinstall"
 #define STDOUT_LOGFILE_NAME "/tmp/iiinstall_stdout"
@@ -121,18 +126,29 @@
 #define INGCONFIG_CMD "/etc/init.d/ingres%s configure %s"
 #define OUTPUT_READSIZE 5
 
+enum {
+	BASIC_INSTALL=0x01,
+	ADVANCED_INSTALL=0x02,
+	IVW_INSTALL=0x4,
+	RFGEN_LNX=0x08,
+	RFGEN_WIN=0x10,
+};
+
 /* screen names */
 #define START_SCREEN 0
+#define LIC_SCREEN (START_SCREEN + 1)
 enum {
 	RF_START,
 	RF_PLATFORM,
 	NI_START,
 	/* install frames */
+	NI_LIC,
 	NI_CFG,
 	NI_EXP,
 	NI_INSTID,
 	NI_PKGSEL,	
 	NI_DBLOC,
+	NI_VWCFG,
 	NI_LOGLOC,
 	NI_LOCALE,
 	NI_MISC,
@@ -149,6 +165,7 @@ enum {
 enum {
 	/* upgrade frames */
 	UG_START,
+	UG_LIC,
 	UG_SSAME,
 	UG_SOLD,
 	UG_MULTI,
@@ -215,6 +232,7 @@ enum {
     INST_II_JOURNAL,
     INST_II_WORK,
     INST_II_DUMP,
+    INST_II_VWDATA,
     NUM_LOCS
 } location_index;
 
@@ -245,6 +263,33 @@ typedef struct _locale_info {
 	char *timezone ;
 	char *charset ;
 	} ing_locale ;
+
+typedef enum {
+	GIP_VWCFG_MAX_MEMORY = 0x01,
+	GIP_VWCFG_BUFFERPOOL = 0x02,
+	GIP_VWCFG_COLUMNSPACE = 0x04,
+	GIP_VWCFG_BLOCK_SIZE = 0x08,
+	GIP_VWCFG_GROUP_SIZE = 0x10,
+	} VWCFG ;
+
+typedef enum {
+	VWKB,
+	VWMB,
+	VWGB,
+	VWTB,
+	VWNOUNIT,
+	} VWUNIT ;
+
+typedef struct _vw_cfg {
+	VWCFG bit;
+	II_RFAPI_PNAME rfapi_name;
+	const char *descrip;
+	const char *field_prefix;
+	SIZE_TYPE value;
+	SIZE_TYPE dfval;
+	VWUNIT unit;
+	VWUNIT dfunit;
+} vw_cfg ;
 
 typedef enum {
 	GIP_OP_SQL92 = 0x001,
@@ -320,7 +365,6 @@ typedef u_i4 PKGLST;
 ** so represent them with GIP_OBS_PKG
 */
 #define GIP_OBS_PKG (NUM_PKGS + 1)
-#define PKG_BASENAME "ingres"
 
 typedef struct _package {
 		PKGLST	bit;
@@ -383,6 +427,7 @@ typedef struct _instance {
 	} instance ;
 	
 typedef struct _saveset {
+		char	product[MAX_REL_LEN];
 		char	pkg_basename[MAX_REL_LEN];
 		char	version[MAX_VERS_LEN];
 # define MAX_ARCH_LEN 8

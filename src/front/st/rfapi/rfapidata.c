@@ -43,6 +43,15 @@
 **          Add new response file variable II_CONFIG_TYPE which 
 **          controls which configuration settings are applied to an
 **          instance at install time.
+**      20-May-2010 (hanje04)
+**	    SIR 123791
+**	    Add new parameters and defaults for Vectorwise configuration
+**	    - II_VWDATA: Vectorwise data location
+**	    - IIVWCFG_MAX_MEMORY: Processing memory for VW server
+**	    - IIVWCFG_BUFFERPOOL: Buffer memory for VW server
+**	    - IIVWCFG_COLUMNSPACE: Max size for VW database
+**	    - IIVWCFG_BLOCK_SIZE: Block size for VW data
+**	    - IIVWCFG_GROUP_SIZE: Block group size for VW data
 **
 */
 
@@ -103,6 +112,15 @@ static RFAPI_VAR ii_dump = {
 			RFAPI_LNX_DEFAULT_INST_LOC,
 			RFAPI_WIN_DEFAULT_INST_LOC,
 			};
+static RFAPI_VAR ii_vwdata = {
+			II_RF_VWDATA,
+			"II_VWDATA",
+			"Vectorwise",
+			II_RF_DP_ALL,
+			II_RF_DP_ALL,
+			RFAPI_LNX_DEFAULT_INST_LOC,
+			RFAPI_WIN_DEFAULT_INST_LOC,
+			};
 static RFAPI_VAR ii_log_file = {
 			II_RF_LOG_FILE,
 			"II_LOG_FILE",
@@ -147,6 +165,7 @@ GLOBALDEF RFAPI_VAR *loc_info[] = {
 		&ii_journal,
 		&ii_work,
 		&ii_dump,
+		&ii_vwdata,
 		&ii_log_file,
 		&ii_dual_log,
 		&ii_location_dotnet,
@@ -439,6 +458,66 @@ GLOBALDEF RFAPI_VAR *inst_ops[] = {
 		&ii_install_demo,
 		&ii_create_folder,
 		NULL };
+
+/* Ingres Vectorwise Options */
+static RFAPI_VAR ii_vwcfg_max_memory = {
+			II_VWCFG_MAX_MEMORY,
+			"II_VWCFG_MAX_MEMORY",
+			"Processing memory for server",
+			II_RF_DP_ALL,
+			II_RF_DP_ALL,
+			"1G",
+			"1G"
+			};
+
+static RFAPI_VAR ii_vwcfg_bufferpool = {
+			II_VWCFG_BUFFERPOOL,
+			"II_VWCFG_BUFFERPOOL",
+			"Buffer pool size for server",
+			II_RF_DP_ALL,
+			II_RF_DP_ALL,
+			"2G",
+			"2G"
+			};
+
+static RFAPI_VAR ii_vwcfg_columnspace = {
+			II_VWCFG_COLUMNSPACE,
+			"II_VWCFG_COLUMNSPACE",
+			"Max size for Vectorwise Database",
+			II_RF_DP_ALL,
+			II_RF_DP_ALL,
+			"512G",
+			"512G"
+			};
+
+static RFAPI_VAR ii_vwcfg_block_size = {
+			II_VWCFG_BLOCK_SIZE,
+			"II_VWCFG_BLOCK_SIZE",
+			"Block size",
+			II_RF_DP_ALL,
+			II_RF_DP_ALL,
+			"512K",
+			"512K"
+			};
+
+static RFAPI_VAR ii_vwcfg_group_size = {
+			II_VWCFG_GROUP_SIZE,
+			"II_VWCFG_GROUP_SIZE",
+			"Block group size",
+			II_RF_DP_ALL,
+			II_RF_DP_ALL,
+			"8",
+			"8"
+			};
+
+GLOBALDEF RFAPI_VAR *ivw_cfg_ops[] = {
+			&ii_vwcfg_max_memory,
+			&ii_vwcfg_bufferpool,
+			&ii_vwcfg_columnspace,
+			&ii_vwcfg_block_size,
+			&ii_vwcfg_group_size,
+			NULL
+			};
 
 /* Windows connectivity options */
 static RFAPI_VAR ii_enable_wintcp = {

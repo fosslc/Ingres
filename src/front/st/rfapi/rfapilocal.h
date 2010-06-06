@@ -15,16 +15,19 @@
 **	the rfapi module. 
 **
 ** History:
-**    16-Sep-2006 (hanje04)
-**	SIR 116907
+**	16-Sep-2006 (hanje04)
+**	    SIR 116907
 **	    Created.
 **	13-Nov-2006 (hanje04)
 **	    SIR 116907
 **	    Add section headers to make response file more user readable.
 **	    Format used is Windows .ini file and lines are "commented" on 
 **	    Linux and UNIX.
-**    02-feb-2007 (upake01)
-**	Include si.h for VMS.
+**	02-feb-2007 (upake01)
+**	    Include si.h for VMS.
+**	20-May-2010 (hanje04)
+**	    SIR 123791
+**	    Add GLOBALREF for VW config array ivw_cfg_ops[]
 */
 
 /* Macros */
@@ -92,6 +95,7 @@
 /* Variable arrays */
 GLOBALREF RFAPI_VAR *loc_info[];
 GLOBALREF RFAPI_VAR *sys_var[];
+GLOBALREF RFAPI_VAR *ivw_cfg_ops[];
 GLOBALREF RFAPI_VAR *inst_ops[];
 GLOBALREF RFAPI_VAR *wincon_ops[];
 GLOBALREF RFAPI_VAR *upg_ops[];

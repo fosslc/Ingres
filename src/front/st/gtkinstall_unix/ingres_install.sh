@@ -51,6 +51,10 @@
 ##	    BUG 122944
 ##	    Make sure license is displayed and accepted before launching
 ##	    installer.
+##	20-May-2010 (hanje04)
+##	    SIR 123791
+##	    License acceptance now part of GUI, no need to run ingres-LICENSE
+##	    Leave in check for LICENSE file though.
 
 
 # useful variables
@@ -58,7 +62,7 @@ unamep=`uname -p`
 self=`basename $0`
 instloc=`dirname $0`
 instexe=${instloc}/bin/inginstgui
-inglic=${instloc}/ingres-LICENSE
+inglic=${instloc}/LICENSE
 pkgqry=${instloc}/bin/ingpkgqry
 pkginfo=/tmp/ingpkg$$.xml
 uid=`id -u`
@@ -176,8 +180,16 @@ then
     noexe ${pkgqry}
 fi
 
-# Dump license, bail if not accecpted
-${inglic} || exit 3
+# check license, bail if it's not there
+[ -r ${inglic} ] ||
+{
+    cat << EOF
+ERROR: Cannot locate LICENSE file. For further assistance contact
+Ingres Corporation Technical Support at http://servicedesk.ingres.com
+
+EOF
+exit 3
+}
 
 # Gather saveset and install info
 ${pkgqry} -s ${instloc} -o ${pkginfo}
