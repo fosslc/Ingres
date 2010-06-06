@@ -335,6 +335,8 @@
 **	    cribs.
 **	23-Mar-2010 (kschendel) SIR 123448
 **	    XCB's XCCB list now has to be mutex protected, init mutex.
+**	02-Jun-2010 (jonj) BUG 123787
+**	    "UseMVCC" even if DMX_USER_TRAN is not asserted.
 */
 DB_STATUS
 dmx_begin(
@@ -562,10 +564,17 @@ DMX_CB    *dmx_cb)
 		btflags |= DMXE_JOURNAL;
 
 	    /*
-	    ** If starting a user transaction in a MVCC-capable 
+	    ** If starting a transaction in a MVCC-capable 
 	    ** database, include space for a LG_CRIB and xid_array,
 	    ** but only if any lock level that might be picked
 	    ** for this transaction is MVCC.
+	    **
+	    ** QEF uses "internal" transactions (here missing
+	    ** the DMX_USER_TRAN option) when getting ready to
+	    ** run a readonly or dbproc statement, so in that
+	    ** context "internal" doesn't really mean "internal"
+	    ** so we can't make that distinction here - just
+	    ** go ahead and allocate the CRIB if MVCC is indicated.
 	    **
 	    ** By the time a transaction is started, all of this
 	    ** set lockmode stuff has been figured out and can't be
@@ -578,7 +587,6 @@ DMX_CB    *dmx_cb)
 	    memsize = sizeof(DML_XCB);
 
 	    if ( odcb->odcb_dcb_ptr->dcb_status & DCB_S_MVCC &&
-	         dmx->dmx_option & DMX_USER_TRAN &&
 		 !(btflags & DMXE_CONNECT) )
 	    {
 		/* Check system default or session override */
