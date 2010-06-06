@@ -3540,6 +3540,9 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	20-May-2010 (kiria01) b123770
 **	    Status checked too late fron psl_subsel_compare resulting in
 **	    unsafe de-reference.
+**	20-May-2010 (kiria01) b123773
+**	    Detect and flag error for the case when user attempts to update a column
+**	    from the FROM set of tables using aliases.
 */
 %{
 
@@ -46695,7 +46698,7 @@ col_spec2:	col_ref
 	    $1->pss_tab_name = cb->pss_resrng->pss_rgname;
 	    $1->pss_flags |= PSS_TBL_SPECIFIED;
 	}
-
+	
 	/* [schema.]table.column was specified or had been supplemented */
 	MEfill(sizeof(fwdvar), '\0', (PTR)&fwdvar);
 	fwdvar.pst_atno.db_att_id = -1;
@@ -46729,6 +46732,18 @@ col_spec2:	col_ref
 		fwdvar.pst_atname);
 	    return E_DB_ERROR;
 	}
+	
+	if (cb->pss_resrng != fwdvar.pst_rngvar)
+	{
+	    /* Any table reference must be that of update alias */
+	    (VOID) psf_error(2560L, 0L, PSF_USERERR, &err_code,
+		&psq_cb->psq_error, 2, (i4) sizeof(cb->pss_lineno),
+		&cb->pss_lineno,
+		psf_trmwhite(DB_TAB_MAXNAME, $1->pss_tab_name),
+		$1->pss_tab_name);
+	    return E_DB_ERROR;
+	}
+
 	/* Look up the attribute */
 	if (!(attribute = pst_coldesc(fwdvar.pst_rngvar, &fwdvar.pst_atname)))
 	{

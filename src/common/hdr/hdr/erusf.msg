@@ -459,6 +459,8 @@ SQLSTATE_MAPPING_REQUIRED
 **	    Added E_US2494_9364, E_US2495_9365 for rename table/columns.
 **	21-apr-2010 (toumi01) SIR 122403
 **	    Added messages for encryption.
+**	20-May-2010 (kiria01) b123773
+**	    Added E_US0A00_2560 and corrected column alias syntax in error text.
 */
 
 #define _US_CLASS   0
@@ -1519,7 +1521,7 @@ E_US0891_2193_INACCESSIBLE_SEQ:SS42000_SYN_OR_ACCESS_ERR
 \nsequence '%2c' or you lack privileges on that sequence
 \nwhich are required in order to execute this statement."
 /*%
-** Parameters:
+* Parameters:
 **	%0c - query the user attempted to execute
 **	%1c - schema name
 **	%2c - sequence name
@@ -2103,12 +2105,12 @@ E_US09C8_2504:SS42000_SYN_OR_ACCESS_ERR
 "line %0d, Syntax error on '%1c'.  The correct syntax is:
 \n UPDATE table [alias]
 \n   [FROM table {, ... }]
-\n   SET column = expression|NULL {, ... }
+\n   SET [alias.]column = expression|NULL {, ... }
 \n   [WHERE search_condition]
 \n or:
 \n UPDATE table [alias]
 \n   [FROM table {, ... }]
-\n   SET (column,column,...) = (SELECT expr,expr,... FROM ... )
+\n   SET ([alias.]column,[alias.]column,...) = (SELECT expr,expr,... FROM ... )
 \n   [WHERE search_condition]"
 E_US09C9_2505:SS42000_SYN_OR_ACCESS_ERR
 "line %0d, Syntax error on '%1c'.  The correct syntax is:
@@ -2298,6 +2300,10 @@ E_US09FE_2558:SS42000_SYN_OR_ACCESS_ERR
 \n SET RESULT_STRUCTURE
 \n   \"heap | cheap | heapsort | cheapsort | hash
 \n   | chash | isam | cisam | btree | cbtree\""
+E_US0A00_2560:SS5000A_QUERY_ERROR
+"line %0d, If a table reference is used to qualify a SET column,
+it must refer to the update table. This SET clause uses '%1c' which is
+a reference to a table in the FROM clause."
 E_US0A01_2561:SS42000_SYN_OR_ACCESS_ERR
 "line %0d, Syntax error on '%1c'.  The correct syntax is:
 \n SET [NO]STATISTICS"
