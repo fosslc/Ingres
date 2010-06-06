@@ -1,0 +1,29 @@
+/#-- Copyright (c) 2010 Ingres Corporation
+
+  The online_error_action parameter specifies how the RCP should handle
+  errors during pass abort processing.
+
+  If a dbms server gets an error during rollback, it sends a pass abort 
+  signal to the RCP. The RCP then attempts to rollback the transaction.
+
+  This parameter specifies how the RCP should handle errors that occur 
+  during pass abort processing.
+  
+  Valid values are: 
+
+  continue_ignore_db: Mark the database inconsistent, do not bring down the 
+		      installation. A database rollforward will be required
+		      to make the database consistent.
+
+  stop:               Bring down the installation rather than mark any
+		      database inconsistent. 
+		      Use this value to avoid database rollforward.
+		     
+		      Error messages in the error log and the RCP log file
+		      may help diagnose the recovery problems. If the problem
+		      is resource or environment related, the problem should
+		      be fixed before the installation is restarted.
+
+		      Also, recovery errors can be better handled during
+		      RCP startup because offline recovery supports
+		      offline_error_action: continue_ignore_table.

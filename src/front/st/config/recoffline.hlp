@@ -1,0 +1,24 @@
+/#-- Copyright (c) 2010 Ingres Corporation
+
+  The offline_error_action parameter specifies how the RCP should handle
+  errors during RCP startup, offline REDO/UNDO recovery processing,
+  after an abnormal shutdown.
+
+  Valid values are: 
+
+  continue_ignore_table: Mark the table inconsistent and continue recovery on
+		         all other tables in the database. The database will
+			 be marked TABLE/INDEX inconsistent.
+		         A table rollforward will be required to make the
+		         database consistent.
+
+  continue_ignore_db:    Mark the database inconsistent, do not bring down the 
+		         installation. A database rollforward will be required
+		         to make the database consistent.
+
+  stop:                  Bring down the installation rather than mark any
+		         database inconsistent. Messages in the error log
+		         and the RCP log file may help diagnose the recovery 
+		         problems. If the problem is resource or environment
+		         related, the problem should be fixed before the
+		         installation is restarted.
