@@ -23,6 +23,7 @@
 #include "lists.h"
 #include "msgs.h" 
 #include "dba.h"
+#include "me.h"
 
 /*
 **  File: dsplogdb.qc
@@ -75,6 +76,8 @@
 **	    front end mudules.
 **      22-apr-2010 (stial01)
 **          Changes for Long Ids
+**      24-May-2010 (stial01)
+**          Fixed above change.
 */
 
 #define		LOC_MAXSIZE		(DB_LOC_MAXNAME * 2)
@@ -299,13 +302,36 @@ printlgdb()
 	/* do formatting for display */
 	STprintf(db_id, "%x", ldb->db_id);
 
-	/* info is a substr of str */
- 	string_move(db_name, (PTR) ldb->db_buffer, (i4) INGSIZE);
- 	db_name[INGSIZE] = EOS;
+	/*
+	** Database info is in db_buffer as follows
+	** 
+	** Database name 
+	** Database Owner 
+	** Database ID
+	** Length of pathname
+	** Database Path
+	** 
+	** We got the LG database information from LGshow in gtlklgst.qsc
+	** A better way would have been to connect to the imadb and
+	** select db_name,db_owner from ima_log_databases
+	** (this would require that we add the area name to this ima table)
+	** IMA is the preferred way to access information in server 
+	** control blocks.
+	** 
+	** One side note is that connecting from imadb to select 
+	** LG database information will always return an entry for imadb
+	** (that would not necessarily be there if you did LGshow).
+	*/
+	bufptr = &ldb->db_buffer[0];
+	MEmove(DB_DB_MAXNAME, bufptr, ' ', sizeof(db_name), db_name);
+	db_name[sizeof(db_name)-1] = EOS;
 
- 	bufptr = (PTR)&ldb->db_buffer[INGSIZE];	/* move pointer to next item */
- 	string_move(db_own, (PTR) bufptr, (i4) INGSIZE);
- 	db_own[INGSIZE] = EOS;
+	bufptr += DB_DB_MAXNAME; /* move pointer to the next item */
+
+	MEmove(DB_OWN_MAXNAME, bufptr, ' ', sizeof(db_own), db_own);
+	db_own[sizeof(db_own)-1] = EOS;
+
+	bufptr += DB_OWN_MAXNAME; /* move pointer to the next item */
 
 	stat_decode(db_stat, Lgdbstat, (u_i4) ldb->db_status);
 
