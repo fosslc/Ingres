@@ -189,6 +189,8 @@ GLOBALREF	PSF_SERVBLK	*Psf_srvblk;
 **	    Add PSF_CACHEDYN flag to reflect CBF "cache_dynamic" parm.
 **      15-Feb-2010 (maspa05)
 **          Added server_class so SC930 can output it
+**	19-May-2010 (kiria01) b123766
+**	    Set cardinality check flag into server block
 */
 DB_STATUS
 psq_startup(
@@ -418,6 +420,10 @@ psq_startup(
     if (psq_cb->psq_flag & PSQ_CACHEDYN)
     {
 	Psf_srvblk->psf_flags |= PSF_CACHEDYN;
+    }
+    if (psq_cb->psq_flag & PSQ_NOCHK_SINGLETON_CARD)
+    {
+	Psf_srvblk->psf_flags |= PSF_NOCHK_SINGLETON_CARD;
     }
 
 

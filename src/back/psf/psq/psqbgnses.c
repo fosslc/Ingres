@@ -364,6 +364,8 @@
 **          Init batch_copy_optim.
 **	04-may-2010 (miket) SIR 122403
 **	    Init new sess_cb->pss_stmt_flags2.
+**	19-May-2010 (kiria01) b123766
+**	    Get cardinality check default from server block not psq_cb
 */
 DB_STATUS
 psq_bgn_session(
@@ -741,8 +743,8 @@ psq_bgn_session(
 	sess_cb->pss_ses_flag |= PSS_RUNNING_UPGRADEDB;
 
     /* Pick up serverwide default for card check */
-    if (psq_cb->psq_flag & PSQ_NOCHK_SINGLETON_CARD)
-	sess_cb->pss_ses_flag |=  PSS_NOCHK_SINGLETON_CARD;
+    if (Psf_srvblk->psf_flags & PSF_NOCHK_SINGLETON_CARD)
+	sess_cb->pss_ses_flag |= PSS_NOCHK_SINGLETON_CARD;
 
         /* Initialize pss_project. */
     sess_cb->pss_ses_flag |= PSS_PROJECT;	/* pss_project = TRUE */
