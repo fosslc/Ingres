@@ -241,12 +241,17 @@ static DB_STATUS adu_strextract(
 #define ADU_UTF8_CASE_TOUPPER	1
 #define ADU_UTF8_CASE_TOLOWER	2
 
-static	DB_STATUS
-ad0_utf8_casetranslate(
-ADF_CB            *adf_scb,
-DB_DATA_VALUE     *src_dv,
-DB_DATA_VALUE     *rdv, 
-i4		  flag);
+static	DB_STATUS ad0_utf8_casetranslate (
+	ADF_CB            *adf_scb,
+	DB_DATA_VALUE     *src_dv,
+	DB_DATA_VALUE     *rdv, 
+	i4		  flag);
+
+static bool soundex_dm_vowelage (
+	const char *buffer,
+	i4	b_ptr,
+	i4	b_len,
+	i4	skip);
 
 /*{
 ** Name: adu_1cvrt_date() - Convert internal time to a date string in
@@ -4448,7 +4453,12 @@ DB_DATA_VALUE		*rdv)
 **              overflow. This is extremely unlikely!
 **
 **  History:
-**    01-Mar-2009 (Martin Bowes) Created.
+**	01-Mar-2009 (Martin Bowes)
+**	    Created.
+**	28-May-2010 (kiria01) b122320
+**	    Bring in line with CL for CM character handling. Made char constant
+**	    buffers static const and identified the bools.
+**
 */
 DB_STATUS
 adu_soundex_dm(
@@ -4458,27 +4468,26 @@ adu_soundex_dm(
     )
 {
     /* Sundry initialisation */
-    i4          hyphen = 0;
-    i4          start_word = 0;
+    bool        hyphen = FALSE;
+    bool        start_word = FALSE;
     i4          oi, ei = 0, encoded = 0;
-    i4          before_a_vowel = 0;
+    bool        before_a_vowel = FALSE;
     i4          total_choices;
-    i4          choice, total_routes, unique;
-    i4          i, j, true_length;
-    char        a_char;
+    i4          choice, total_routes;
+    i4          i, j;
 
     /* The internal buffer to hold the uppercase'd and stripped input string.
     ** This is sized to more than easily allow for enough characters to 
-    ** generate the 6 character D-M soundex value
+    ** generate the 6 character D-M soundex value (AD_LEN_SOUNDEX_DM)
     */
     char        buffer[AD_SOUNDEX_DM_INT_BUFFER + AD_SOUNDEX_DM_PAD_BUFFER]; 
 
     /* These are fixed codes used in the D-M soundex algorithm */
-    char        FourtyThree[]   = "43";
-    char        FourtyFive[]    = "45";
-    char        FiftyFour[]     = "54";
-    char        SixtySix[]      = "66";
-    char        NinetyFour[]    = "94";
+    static const char FourtyThree[]   = "43";
+    static const char FourtyFive[]    = "45";
+    static const char FiftyFour[]     = "54";
+    static const char SixtySix[]      = "66";
+    static const char NinetyFour[]    = "94";
 
     /* Define the structures for the encoding array and the buffer of possible
      * output values
@@ -4522,6 +4531,7 @@ adu_soundex_dm(
     ** save time but we have to be careful when processing the array later!
     */
     char output[AD_SOUNDEX_DM_MAX_OUTPUT][AD_LEN_SOUNDEX_DM];
+    char *chp, *endp;
 
     /* Confirm input is a varchar */
     switch (abs(string->db_datatype))
@@ -4540,8 +4550,7 @@ adu_soundex_dm(
     }
 
     /* Pad the internal buffer with spaces */
-    for (i = 0; i < AD_SOUNDEX_DM_INT_BUFFER + AD_SOUNDEX_DM_PAD_BUFFER; i++)
-        buffer[i] = ' ';
+    MEfill(sizeof(buffer), ' ', buffer);
 
     /* Preprocess: Fill internal buffer[]
     ** Point to first alpha char in input. None? Return an error!
@@ -4549,29 +4558,28 @@ adu_soundex_dm(
     ** blanks then skip these and continue. Ignore first occurrence of hyphen
     ** apostrophe or period characters.
     */
-    true_length = *(i2 *)string->db_data;
-    for (i = 0,j = 0; i < true_length && j < AD_SOUNDEX_DM_INT_BUFFER; i++)
+    chp = (char*)string->db_data + sizeof(i2);
+    endp = chp + *(i2 *)string->db_data;
+    for (j = 0; chp < endp && j < AD_SOUNDEX_DM_INT_BUFFER; CMnext(chp))
     {
         /*ignore spaces*/
-        if (isblank(*(char *)(string->db_data + sizeof(i2) + i))) continue;
+        if (CMwhite(chp)) continue;
 
         /* Ignore first hyphen, apostrophe or period only */
-        if ((*(char *)(string->db_data + sizeof(i2) + i) == '-'
-          || *(char *)(string->db_data + sizeof(i2) + i) == '\''
-          || *(char *)(string->db_data + sizeof(i2) + i) == '.')
-          && hyphen == 0)
+        if ((*chp == '-' || *chp == '\'' || *chp == '.') &&
+	    !hyphen)
         {
-            hyphen = 1;
+            hyphen = TRUE;
             continue;
         }
 
         /* Process Alpha characters */
-        if (isalpha(*(char *)(string->db_data + sizeof(i2) + i))) 
+        if (CMalpha(chp)) 
         {
             /* Convert to uppercase and store in buffer */
-            a_char = (char )toupper((i4 )(*(char *)(string->db_data + sizeof(i2) + i)));
-            buffer[j] = a_char;
-            start_word = 1; j++;
+	    CMtoupper(chp, &buffer[j]);
+            start_word = TRUE;
+	    j++;
             continue;
         }
         break; /* Anything else breaks the pre-process loop */
@@ -4579,12 +4587,12 @@ adu_soundex_dm(
 
     if (!start_word)
     {
-        *(i2 *)(rdv->db_data) = 6;
+        *(i2 *)(rdv->db_data) = AD_LEN_SOUNDEX_DM;
         MEfill(AD_LEN_SOUNDEX_DM, '0', (PTR)(rdv->db_data + sizeof(i2)));
         return (E_DB_OK); /* Nothing to do, return "000000" */
     }
 
-    buffer[j] = '\0'; /* Terminate the buffer */
+    buffer[j] = EOS; /* Terminate the buffer */
 #ifdef xDEBUG
     TRdisplay("soundex_dm(): Called on %s\n", buffer);
 #endif
@@ -4593,10 +4601,10 @@ adu_soundex_dm(
      */
 
     /* Sundry Initialisation */
-    start_word = 1; total_choices =0;
+    total_choices = 0;
     for (i = 0, ei = 0; 
         i < j && ei < AD_SOUNDEX_DM_MAX_ENCODE && encoded <= AD_LEN_SOUNDEX_DM + 1;
-        ei++, start_word = 0
+        ei++, start_word = FALSE
         )
     {
 #ifdef xDEBUG
@@ -4612,12 +4620,12 @@ adu_soundex_dm(
         /* The most likely 'before a vowel' scenario, which will be restetd if 
         ** required
         */
-        before_a_vowel = soundex_dm_vowelage(&buffer, i, j, 1);
+        before_a_vowel = soundex_dm_vowelage(buffer, i, j, 1);
 
         /* The 'A' cases... */
-        if (!STncmp((char *)(buffer +i), "AI", 2)
-         || !STncmp((char *)(buffer +i), "AJ", 2)
-         || !STncmp((char *)(buffer +i), "AY", 2))
+        if (!STncmp((char *)(buffer + i), "AI", 2)
+         || !STncmp((char *)(buffer + i), "AJ", 2)
+         || !STncmp((char *)(buffer + i), "AY", 2))
         {
             if (start_word)
             {
@@ -4626,7 +4634,7 @@ adu_soundex_dm(
             }
             else
             {
-                before_a_vowel = soundex_dm_vowelage(&buffer, i, j, 2);
+                before_a_vowel = soundex_dm_vowelage(buffer, i, j, 2);
                 if (before_a_vowel)
                 {
                     encode[ei].left.string[0] = '1';
@@ -4641,7 +4649,7 @@ adu_soundex_dm(
             continue;
         }
     
-        if (!STncmp((char *)(buffer +i), "AU", 2))
+        if (!STncmp((char *)(buffer + i), "AU", 2))
         {
             if (start_word)
             {
@@ -4650,7 +4658,7 @@ adu_soundex_dm(
             }
             else
             {
-                before_a_vowel = soundex_dm_vowelage(&buffer, i, j, 2);
+                before_a_vowel = soundex_dm_vowelage(buffer, i, j, 2);
                 if (before_a_vowel)
                 {
                     encode[ei].left.string[0] = '7';
@@ -4692,7 +4700,7 @@ adu_soundex_dm(
         }
 
         /* The 'C' cases... */
-        if (!STncmp((char *)(buffer +i), "CHS", 3))
+        if (!STncmp((char *)(buffer + i), "CHS", 3))
         {
             if (start_word)
             {
@@ -4708,8 +4716,8 @@ adu_soundex_dm(
             continue;
         }
     
-        if (!STncmp((char *)(buffer +i), "CSZ", 3)
-          || !STncmp((char *)(buffer +i), "CZS", 3))
+        if (!STncmp((char *)(buffer + i), "CSZ", 3)
+          || !STncmp((char *)(buffer + i), "CZS", 3))
         {
             encode[ei].left.string[0] = '4';
             encoded++;
@@ -4717,7 +4725,7 @@ adu_soundex_dm(
             continue;
         }
 
-        if (!STncmp((char *)(buffer +i), "CH", 2)) /* Try KH(5) and TCH(4) */
+        if (!STncmp((char *)(buffer + i), "CH", 2)) /* Try KH(5) and TCH(4) */
         {
             encode[ei].choice_mask = 1 << total_choices;
             total_choices++;
@@ -4728,7 +4736,7 @@ adu_soundex_dm(
             continue;
         }
 
-        if (!STncmp((char *)(buffer +i), "CK", 2)) /* Try K(5) and TSK(45) */
+        if (!STncmp((char *)(buffer + i), "CK", 2)) /* Try K(5) and TSK(45) */
         {
             encode[ei].choice_mask = 1 << total_choices;
             total_choices++;
@@ -4740,8 +4748,8 @@ adu_soundex_dm(
             continue;
         }
 
-        if (!STncmp((char *)(buffer +i), "CS", 2) 
-         || !STncmp((char *)(buffer +i), "CZ", 2))
+        if (!STncmp((char *)(buffer + i), "CS", 2) 
+         || !STncmp((char *)(buffer + i), "CZ", 2))
         {
             encode[ei].left.string[0] = '4';
             encoded++;
@@ -4762,12 +4770,12 @@ adu_soundex_dm(
         }
 
         /* The 'D' cases... */
-        if (!STncmp((char *)(buffer +i), "DRZ", 3)
-         || !STncmp((char *)(buffer +i), "DRS", 3)
-         || !STncmp((char *)(buffer +i), "DSH", 3)
-         || !STncmp((char *)(buffer +i), "DSZ", 3)
-         || !STncmp((char *)(buffer +i), "DZH", 3)
-         || !STncmp((char *)(buffer +i), "DZS", 3))
+        if (!STncmp((char *)(buffer + i), "DRZ", 3)
+         || !STncmp((char *)(buffer + i), "DRS", 3)
+         || !STncmp((char *)(buffer + i), "DSH", 3)
+         || !STncmp((char *)(buffer + i), "DSZ", 3)
+         || !STncmp((char *)(buffer + i), "DZH", 3)
+         || !STncmp((char *)(buffer + i), "DZS", 3))
         {
             encode[ei].left.string[0] = '4';
             encoded++;
@@ -4775,8 +4783,8 @@ adu_soundex_dm(
             continue;
         }
     
-        if (!STncmp((char *)(buffer +i), "DS", 2) 
-         || !STncmp((char *)(buffer +i), "DZ", 2))
+        if (!STncmp((char *)(buffer + i), "DS", 2) 
+         || !STncmp((char *)(buffer + i), "DZ", 2))
         {
             encode[ei].left.string[0] = '4';
             encoded++;
@@ -4784,7 +4792,7 @@ adu_soundex_dm(
             continue;
         }
     
-        if (!STncmp((char *)(buffer +i), "DT", 2))
+        if (!STncmp((char *)(buffer + i), "DT", 2))
         {
             encode[ei].left.string[0] = '3';
             encoded++;
@@ -4802,9 +4810,9 @@ adu_soundex_dm(
         }
 
         /* The 'E' cases... */
-        if (!STncmp((char *)(buffer +i), "EI", 2)
-         || !STncmp((char *)(buffer +i), "EJ", 2)
-         || !STncmp((char *)(buffer +i), "EY", 2))
+        if (!STncmp((char *)(buffer + i), "EI", 2)
+         || !STncmp((char *)(buffer + i), "EJ", 2)
+         || !STncmp((char *)(buffer + i), "EY", 2))
         {
             if (start_word)
             {
@@ -4813,7 +4821,7 @@ adu_soundex_dm(
                 }
             else
             {
-                before_a_vowel = soundex_dm_vowelage(&buffer, i, j, 2);
+                before_a_vowel = soundex_dm_vowelage(buffer, i, j, 2);
                 if (before_a_vowel)
                 {
                     encode[ei].left.string[0] = '1';
@@ -4828,9 +4836,9 @@ adu_soundex_dm(
             continue;
         }
     
-        if (!STncmp((char *)(buffer +i), "EU", 2))
+        if (!STncmp((char *)(buffer + i), "EU", 2))
         {
-            before_a_vowel = soundex_dm_vowelage(&buffer, i, j, 2);
+            before_a_vowel = soundex_dm_vowelage(buffer, i, j, 2);
             if (start_word || before_a_vowel)
             {
                 encode[ei].left.string[0] = '1';
@@ -4861,7 +4869,7 @@ adu_soundex_dm(
         }
 
         /* The 'F' cases... */
-        if (!STncmp((char *)(buffer +i), "FB", 2))
+        if (!STncmp((char *)(buffer + i), "FB", 2))
         {
             encode[ei].left.string[0] = '7';
             encoded++;
@@ -4906,10 +4914,10 @@ adu_soundex_dm(
         }
 
         /* The 'I' cases... */
-        if (!STncmp((char *)(buffer +i), "IA", 2)
-         || !STncmp((char *)(buffer +i), "IE", 2)
-         || !STncmp((char *)(buffer +i), "IO", 2)
-         || !STncmp((char *)(buffer +i), "IU", 2))
+        if (!STncmp((char *)(buffer + i), "IA", 2)
+         || !STncmp((char *)(buffer + i), "IE", 2)
+         || !STncmp((char *)(buffer + i), "IO", 2)
+         || !STncmp((char *)(buffer + i), "IU", 2))
         {
             if (start_word)
             {
@@ -4961,7 +4969,7 @@ adu_soundex_dm(
         }
 
         /* The 'K' cases... */
-        if (!STncmp((char *)(buffer +i), "KS", 2))
+        if (!STncmp((char *)(buffer + i), "KS", 2))
         {
             if (start_word)
             {
@@ -4977,7 +4985,7 @@ adu_soundex_dm(
             continue;
         }
     
-        if (!STncmp((char *)(buffer +i), "KH", 2))
+        if (!STncmp((char *)(buffer + i), "KH", 2))
         {
             encode[ei].left.string[0] = '5';
             encoded++;
@@ -5005,7 +5013,7 @@ adu_soundex_dm(
         }
 
         /* The 'M' cases... */
-        if (!STncmp((char *)(buffer +i), "MN", 2))
+        if (!STncmp((char *)(buffer + i), "MN", 2))
         {
             encode[ei].left.length = 2;
             MEcopy((PTR )SixtySix, 2, (PTR )(encode[ei].left.string));
@@ -5024,7 +5032,7 @@ adu_soundex_dm(
         }
 
         /* The 'N' cases... */
-        if (!STncmp((char *)(buffer +i), "NM", 2))
+        if (!STncmp((char *)(buffer + i), "NM", 2))
         {
             encode[ei].left.length = 2;
             MEcopy((PTR )SixtySix, 2, (PTR )(encode[ei].left.string));
@@ -5043,9 +5051,9 @@ adu_soundex_dm(
         }
 
         /* The 'O' cases... */
-        if (!STncmp((char *)(buffer +i), "OI", 2)
-         || !STncmp((char *)(buffer +i), "OJ", 2)
-         || !STncmp((char *)(buffer +i), "OY", 2))
+        if (!STncmp((char *)(buffer + i), "OI", 2)
+         || !STncmp((char *)(buffer + i), "OJ", 2)
+         || !STncmp((char *)(buffer + i), "OY", 2))
         {
             if (start_word)
             {
@@ -5054,7 +5062,7 @@ adu_soundex_dm(
             }
             else
             {
-                before_a_vowel = soundex_dm_vowelage(&buffer, i, j, 2);
+                before_a_vowel = soundex_dm_vowelage(buffer, i, j, 2);
                 if (before_a_vowel)
                 {
                     encode[ei].left.string[0] = '1';
@@ -5086,8 +5094,8 @@ adu_soundex_dm(
         }
 
         /* The 'P' cases... */
-        if (!STncmp((char *)(buffer +i), "PF", 2)
-         || !STncmp((char *)(buffer +i), "PH", 2))
+        if (!STncmp((char *)(buffer + i), "PF", 2)
+         || !STncmp((char *)(buffer + i), "PH", 2))
         {
             encode[ei].left.string[0] = '7';
             encoded++;
@@ -5105,7 +5113,7 @@ adu_soundex_dm(
         }
 
         /* The 'R' cases... */
-        if (!STncmp((char *)(buffer +i), "RTZ", 3))
+        if (!STncmp((char *)(buffer + i), "RTZ", 3))
         {
             encode[ei].left.length = 2;
             MEcopy((PTR )NinetyFour, 2, (PTR )(encode[ei].left.string));
@@ -5114,8 +5122,8 @@ adu_soundex_dm(
             continue;
         }
 
-        if (!STncmp((char *)(buffer +i), "RS", 2) /* Try RTZ(94) and ZH(4) */
-         || !STncmp((char *)(buffer +i), "RZ", 2))
+        if (!STncmp((char *)(buffer + i), "RS", 2) /* Try RTZ(94) and ZH(4) */
+         || !STncmp((char *)(buffer + i), "RZ", 2))
         {
             encode[ei].choice_mask = 1 << total_choices;
             total_choices++;
@@ -5139,7 +5147,7 @@ adu_soundex_dm(
         }
 
         /* The 'S' cases... */
-        if (!STncmp((char *)(buffer +i), "SCHTSCH", 7))
+        if (!STncmp((char *)(buffer + i), "SCHTSCH", 7))
         {
             encode[ei].source = phrase;
             if (start_word)
@@ -5155,8 +5163,8 @@ adu_soundex_dm(
             continue;
         }
     
-        if (!STncmp((char *)(buffer +i), "SCHTSH", 6)
-         || !STncmp((char *)(buffer +i), "SCHTCH", 6))
+        if (!STncmp((char *)(buffer + i), "SCHTSH", 6)
+         || !STncmp((char *)(buffer + i), "SCHTCH", 6))
         {
             if (start_word)
             {
@@ -5171,9 +5179,9 @@ adu_soundex_dm(
             continue;
         }
 
-        if (!STncmp((char *)(buffer +i), "SHTCH", 5)
-         || !STncmp((char *)(buffer +i), "SHTSH", 5)
-         || !STncmp((char *)(buffer +i), "STSCH", 5))
+        if (!STncmp((char *)(buffer + i), "SHTCH", 5)
+         || !STncmp((char *)(buffer + i), "SHTSH", 5)
+         || !STncmp((char *)(buffer + i), "STSCH", 5))
         {
             if (start_word)
             {
@@ -5188,10 +5196,10 @@ adu_soundex_dm(
             continue;
         }
 
-        if (!STncmp((char *)(buffer +i), "SHCH", 4)
-         || !STncmp((char *)(buffer +i), "STRZ", 4)
-         || !STncmp((char *)(buffer +i), "STRS", 4)
-         || !STncmp((char *)(buffer +i), "STSH", 4))
+        if (!STncmp((char *)(buffer + i), "SHCH", 4)
+         || !STncmp((char *)(buffer + i), "STRZ", 4)
+         || !STncmp((char *)(buffer + i), "STRS", 4)
+         || !STncmp((char *)(buffer + i), "STSH", 4))
         {
             if (start_word)
             {
@@ -5206,8 +5214,8 @@ adu_soundex_dm(
             continue;
         }
 
-        if (!STncmp((char *)(buffer +i), "SCHT", 4)
-         || !STncmp((char *)(buffer +i), "SCHD", 4))
+        if (!STncmp((char *)(buffer + i), "SCHT", 4)
+         || !STncmp((char *)(buffer + i), "SCHD", 4))
         {
             if (start_word)
             {
@@ -5223,9 +5231,9 @@ adu_soundex_dm(
             continue;
         }
 
-        if (!STncmp((char *)(buffer +i), "STCH", 4)
-         || !STncmp((char *)(buffer +i), "SZCZ", 4)
-         || !STncmp((char *)(buffer +i), "SZCS", 4))
+        if (!STncmp((char *)(buffer + i), "STCH", 4)
+         || !STncmp((char *)(buffer + i), "SZCZ", 4)
+         || !STncmp((char *)(buffer + i), "SZCS", 4))
         {
             if (start_word)
             {
@@ -5240,7 +5248,7 @@ adu_soundex_dm(
             continue;
         }
 
-        if (!STncmp((char *)(buffer +i), "SCH", 3))
+        if (!STncmp((char *)(buffer + i), "SCH", 3))
         {
             encode[ei].left.string[0] = '4';
             encoded++;
@@ -5248,10 +5256,10 @@ adu_soundex_dm(
             continue;
         }
 
-        if (!STncmp((char *)(buffer +i), "SHT", 3)
-         || !STncmp((char *)(buffer +i), "SZT", 3)
-         || !STncmp((char *)(buffer +i), "SHD", 3)
-         || !STncmp((char *)(buffer +i), "SZD", 3))
+        if (!STncmp((char *)(buffer + i), "SHT", 3)
+         || !STncmp((char *)(buffer + i), "SZT", 3)
+         || !STncmp((char *)(buffer + i), "SHD", 3)
+         || !STncmp((char *)(buffer + i), "SZD", 3))
         {
             if (start_word)
             {
@@ -5267,8 +5275,8 @@ adu_soundex_dm(
             continue;
         }
 
-        if (!STncmp((char *)(buffer +i), "SH", 2)
-         || !STncmp((char *)(buffer +i), "SZ", 2))
+        if (!STncmp((char *)(buffer + i), "SH", 2)
+         || !STncmp((char *)(buffer + i), "SZ", 2))
         {
             encode[ei].left.string[0] = '4';
             encoded++;
@@ -5276,7 +5284,7 @@ adu_soundex_dm(
             continue;
         }
 
-        if (!STncmp((char *)(buffer +i), "SC", 2))
+        if (!STncmp((char *)(buffer + i), "SC", 2))
         {
             if (start_word)
             {
@@ -5291,8 +5299,8 @@ adu_soundex_dm(
             continue;
         }
 
-        if (!STncmp((char *)(buffer +i), "ST", 2)
-         || !STncmp((char *)(buffer +i), "SD", 2))
+        if (!STncmp((char *)(buffer + i), "ST", 2)
+         || !STncmp((char *)(buffer + i), "SD", 2))
         {
             if (start_word)
             {
@@ -5318,7 +5326,7 @@ adu_soundex_dm(
         }
 
         /* The 'T' cases... */
-        if (!STncmp((char *)(buffer +i), "TTSCH", 5))
+        if (!STncmp((char *)(buffer + i), "TTSCH", 5))
         {
             encode[ei].left.string[0] = '4';
             encoded++;
@@ -5326,9 +5334,9 @@ adu_soundex_dm(
             continue;
         }
 
-        if (!STncmp((char *)(buffer +i), "TTCH", 4)
-         || !STncmp((char *)(buffer +i), "TSCH", 4)
-         || !STncmp((char *)(buffer +i), "TTSZ", 4))
+        if (!STncmp((char *)(buffer + i), "TTCH", 4)
+         || !STncmp((char *)(buffer + i), "TSCH", 4)
+         || !STncmp((char *)(buffer + i), "TTSZ", 4))
         {
             encode[ei].left.string[0] = '4';
             encoded++;
@@ -5336,7 +5344,7 @@ adu_soundex_dm(
             continue;
         }
 
-        if (!STncmp((char *)(buffer +i), "TSK", 3))
+        if (!STncmp((char *)(buffer + i), "TSK", 3))
         {
             encode[ei].left.length = 2;
             MEcopy((PTR )FourtyFive, 2, (PTR )(encode[ei].left.string));
@@ -5345,14 +5353,14 @@ adu_soundex_dm(
             continue;
         }
 
-        if (!STncmp((char *)(buffer +i), "TCH", 3)
-         || !STncmp((char *)(buffer +i), "TRZ", 3)
-         || !STncmp((char *)(buffer +i), "TRS", 3)
-         || !STncmp((char *)(buffer +i), "TSH", 3)
-         || !STncmp((char *)(buffer +i), "TTS", 3)
-         || !STncmp((char *)(buffer +i), "TTZ", 3)
-         || !STncmp((char *)(buffer +i), "TSZ", 3)
-         || !STncmp((char *)(buffer +i), "TZS", 3))
+        if (!STncmp((char *)(buffer + i), "TCH", 3)
+         || !STncmp((char *)(buffer + i), "TRZ", 3)
+         || !STncmp((char *)(buffer + i), "TRS", 3)
+         || !STncmp((char *)(buffer + i), "TSH", 3)
+         || !STncmp((char *)(buffer + i), "TTS", 3)
+         || !STncmp((char *)(buffer + i), "TTZ", 3)
+         || !STncmp((char *)(buffer + i), "TSZ", 3)
+         || !STncmp((char *)(buffer + i), "TZS", 3))
         {
             encode[ei].left.string[0] = '4';
             encoded++;
@@ -5360,7 +5368,7 @@ adu_soundex_dm(
             continue;
         }
 
-        if (!STncmp((char *)(buffer +i), "TH", 2))
+        if (!STncmp((char *)(buffer + i), "TH", 2))
         {
             encode[ei].left.string[0] = '3';
             encoded++;
@@ -5368,9 +5376,9 @@ adu_soundex_dm(
             continue;
         }
     
-        if (!STncmp((char *)(buffer +i), "TC", 2)
-         || !STncmp((char *)(buffer +i), "TZ", 2)
-         || !STncmp((char *)(buffer +i), "TS", 2))
+        if (!STncmp((char *)(buffer + i), "TC", 2)
+         || !STncmp((char *)(buffer + i), "TZ", 2)
+         || !STncmp((char *)(buffer + i), "TS", 2))
         {
             encode[ei].left.string[0] = '4';
             encoded++;
@@ -5388,9 +5396,9 @@ adu_soundex_dm(
         }
 
         /* The 'U' cases... */
-        if (!STncmp((char *)(buffer +i), "UI", 2)
-         || !STncmp((char *)(buffer +i), "UJ", 2)
-         || !STncmp((char *)(buffer +i), "UY", 2))
+        if (!STncmp((char *)(buffer + i), "UI", 2)
+         || !STncmp((char *)(buffer + i), "UJ", 2)
+         || !STncmp((char *)(buffer + i), "UY", 2))
         {
             if (start_word)
             {
@@ -5399,7 +5407,7 @@ adu_soundex_dm(
             }
             else
             {
-                before_a_vowel = soundex_dm_vowelage(&buffer, i, j, 2);
+                before_a_vowel = soundex_dm_vowelage(buffer, i, j, 2);
                 if (before_a_vowel)
                 {
                     encode[ei].left.string[0] = '1';
@@ -5414,7 +5422,7 @@ adu_soundex_dm(
             continue;
         }
     
-        if (!STncmp((char *)(buffer +i), "UE", 2))
+        if (!STncmp((char *)(buffer + i), "UE", 2))
         {
             if (start_word)
             {
@@ -5481,7 +5489,7 @@ adu_soundex_dm(
         }
 
         /* The 'Z' cases... */
-        if (!STncmp((char *)(buffer +i), "ZHDZH", 5))
+        if (!STncmp((char *)(buffer + i), "ZHDZH", 5))
         {
             if (start_word)
             {
@@ -5496,7 +5504,7 @@ adu_soundex_dm(
             continue;
         }
 
-        if (!STncmp((char *)(buffer +i), "ZDZH", 4))
+        if (!STncmp((char *)(buffer + i), "ZDZH", 4))
         {
             if (start_word)
             {
@@ -5511,7 +5519,7 @@ adu_soundex_dm(
             continue;
         }
 
-        if (!STncmp((char *)(buffer +i), "ZSCH", 4))
+        if (!STncmp((char *)(buffer + i), "ZSCH", 4))
         {
             encode[ei].left.string[0] = '4';
             encoded++;
@@ -5519,7 +5527,7 @@ adu_soundex_dm(
             continue;
         }
     
-        if (!STncmp((char *)(buffer +i), "ZDZ", 3))
+        if (!STncmp((char *)(buffer + i), "ZDZ", 3))
         {
             if (start_word)
             {
@@ -5534,7 +5542,7 @@ adu_soundex_dm(
             continue;
         }
 
-        if (!STncmp((char *)(buffer +i), "ZHD", 3))
+        if (!STncmp((char *)(buffer + i), "ZHD", 3))
         {
             if (start_word)
             {
@@ -5550,7 +5558,7 @@ adu_soundex_dm(
             continue;
         }
     
-        if (!STncmp((char *)(buffer +i), "ZSH", 3))
+        if (!STncmp((char *)(buffer + i), "ZSH", 3))
         {
             encode[ei].left.string[0] = '4';
             encoded++;
@@ -5558,7 +5566,7 @@ adu_soundex_dm(
             continue;
         }
     
-        if (!STncmp((char *)(buffer +i), "ZD", 2))
+        if (!STncmp((char *)(buffer + i), "ZD", 2))
         {
             if (start_word)
             {
@@ -5574,8 +5582,8 @@ adu_soundex_dm(
             continue;
         }
     
-        if (!STncmp((char *)(buffer +i), "ZH", 2)
-         || !STncmp((char *)(buffer +i), "ZS", 2))
+        if (!STncmp((char *)(buffer + i), "ZH", 2)
+         || !STncmp((char *)(buffer + i), "ZS", 2))
         {
             encode[ei].left.string[0] = '4';
             encoded++;
@@ -5731,7 +5739,7 @@ adu_soundex_dm(
     *(i2 *)(rdv->db_data) = AD_LEN_SOUNDEX_DM;
     for (i = 1; i < oi; i++)
     {
-        unique = 1;
+        bool unique = TRUE;
         for (j = 0; j < i; j++) /* check for duplicates */
         {
             if (!STncmp(output[j], output[i], AD_LEN_SOUNDEX_DM))
@@ -5739,7 +5747,7 @@ adu_soundex_dm(
 #ifdef xDEBUG
                 TRdisplay("output[%d] == output[%d]\n", i,j);
 #endif
-                unique = 0;
+                unique = FALSE;
                 break;
             }
         }
@@ -5767,26 +5775,27 @@ adu_soundex_dm(
 **     Simply checks if the current code set is before a vowel.
 **     In this case a vowel is in the set: A, E, I, O, U, J and Y
 */
-i4
+static bool
 soundex_dm_vowelage (
-    char *buffer,   /* The buffer of characters to check  */
+    char const *buffer,   /* The buffer of characters to check  */
     i4  b_ptr,     /* The current position in the buffer */
     i4  b_len,     /* The length of the buffer           */
     i4  skip       /* How far ahead to check for a vowel */
     )
 {
     /* return (0) if we have exhausted the buffer */
-    if (b_ptr + skip >= b_len) {return (0);}
+    if (b_ptr + skip >= b_len) 
+	return FALSE;
 
+    buffer += b_ptr + skip;
     /* return (1) if before a vowel */
-    if (buffer[b_ptr + skip] == 'A' || buffer[b_ptr + skip] == 'E'
-     || buffer[b_ptr + skip] == 'I' || buffer[b_ptr + skip] == 'O'
-     || buffer[b_ptr + skip] == 'U' || buffer[b_ptr + skip] == 'J'
-     || buffer[b_ptr + skip] == 'Y')
-    {return (1);}
-
-    /* return (0) if NOT before a vowel */
-    return (0);
+    return (*buffer == 'A' ||
+	    *buffer == 'E' ||
+	    *buffer == 'I' || 
+	    *buffer == 'O' ||
+	    *buffer == 'U' ||
+	    *buffer == 'J' ||
+	    *buffer == 'Y');
 } /* soundex_dm_vowelage */
 
 /*
@@ -7294,7 +7303,7 @@ generate_cd_scheme(char *scheme_name)
     if (!STcasecmp(scheme_name, "verhoeffnr")) return VERHOEFFNR;
 
     return UNKNOWN_SCHEME;
-};
+}
 
 DB_STATUS
 adu_strgenerate_digit(
@@ -7323,13 +7332,14 @@ adu_strgenerate_digit(
 
     /* Confirm scheme is supported */
     scheme_length=*(i2 *)scheme->db_data;
-    if (scheme_length > CHECK_DIGIT_SCHEME_LENGTH) {
+    if (scheme_length > CHECK_DIGIT_SCHEME_LENGTH)
+    {
         STncpy(scheme_name, (char *)scheme->db_data + sizeof(i2), CHECK_DIGIT_SCHEME_LENGTH);
         scheme_name[CHECK_DIGIT_SCHEME_LENGTH] = EOS;
         return(adu_error(adf_scb, E_AD2055_CHECK_DIGIT_SCHEME, 2,
             CHECK_DIGIT_SCHEME_LENGTH, scheme_name
             ));
-        };
+    }
     /* Whinge if input string is empty.  */
     string_length=*(i2 *)string->db_data;
     if (string_length == 0)
@@ -7383,8 +7393,8 @@ adu_strgenerate_digit(
         /* Houston, we have a problem! */
         return(adu_error(adf_scb, E_AD2055_CHECK_DIGIT_SCHEME, 2,
             scheme_length, scheme_name));
-    };
-}; /* adu_strgenerate_digit */
+    }
+} /* adu_strgenerate_digit */
 
 /*
 **    (int1 ) validate_digit((varchar )scheme, (varchar )string);
@@ -7435,7 +7445,7 @@ adu_strvalidate_digit(
         scheme_name[CHECK_DIGIT_SCHEME_LENGTH] = EOS;
         return(adu_error(adf_scb, E_AD2055_CHECK_DIGIT_SCHEME, 2,
             CHECK_DIGIT_SCHEME_LENGTH, scheme_name));
-    };
+    }
 
     /* Whinge if input string is empty. */
     string_length=*(i2 *)string->db_data;
@@ -7491,8 +7501,8 @@ adu_strvalidate_digit(
         /* Houston, we have a problem! */
         return(adu_error(adf_scb, E_AD2055_CHECK_DIGIT_SCHEME, 2,
             scheme_length, scheme_name));
-    };
-}; /* validate_digit */
+    }
+} /* validate_digit */
 
 DB_STATUS
 generate_isXn_digit(
@@ -7516,7 +7526,6 @@ generate_isXn_digit(
     */
     u_i2 length_of_int, valid_length = isXn_length;
     i4 i, n, char_number, sum;
-    char c;
 
     *(i2 *)rdv->db_data = 1; /* this is a single character check digit */
 
@@ -7530,14 +7539,14 @@ generate_isXn_digit(
       i >=0;
       --i, char_number++)
     {
-        c = *(char *)(p1->db_data+sizeof(i2)+i);
-        if (!isdigit(c))
-            return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, &c));
+	char *c = (char *)(p1->db_data+sizeof(i2) + i);
+        if (!CMdigit(c))
+            return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, c));
         else
-            n = (i4 )c - (i4 )'0';
+            n = (i4 )*c - (i4 )'0';
 
         sum += char_number*n;
-    }; /* for each character */
+    } /* for each character */
 
     sum--;
     n = (i4 )(10 - (sum % 11));
@@ -7546,7 +7555,7 @@ generate_isXn_digit(
     else 
         *(rdv->db_data + sizeof(i2)) = (char )(n + (i4 )'0');
     return(E_DB_OK);
-}; /* generate_isXn_digit */
+} /* generate_isXn_digit */
 
 DB_STATUS
 validate_isXn_digit(
@@ -7564,7 +7573,6 @@ validate_isXn_digit(
     */
     u_i2 length_of_int, valid_length = isXn_length;
     i4 i, n, char_number, sum;
-    char c;
 
     length_of_int = *(u_i2 *)p1->db_data;
     if (length_of_int != valid_length)
@@ -7576,21 +7584,21 @@ validate_isXn_digit(
       i >=0;
       --i, char_number++)
     {
-        c = *(char *)(p1->db_data+sizeof(i2)+i);
-        if (!isdigit(c))
+	char *c = (char *)(p1->db_data+sizeof(i2)+i);
+        if (!CMdigit(c))
         {
-            if (char_number == 1 && (c == 'X' || c == 'x'))
+            if (char_number == 1 && (*c == 'X' || *c == 'x'))
                 n = 10; /* ie. 'X' or 'x' in the rightmost position */
             else
-                return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, &c));
+                return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, c));
         }
         else
         {
-            n = (i4 )c - (i4 )'0';
-        };
+            n = (i4 )*c - (i4 )'0';
+        }
 
         sum += char_number*n;
-    }; /* for each character */
+    } /* for each character */
 
     if (sum % 11 == 0)
         *(rdv->db_data) = (u_char )1;
@@ -7598,7 +7606,7 @@ validate_isXn_digit(
         *(rdv->db_data) = (u_char )0;
 
     return(E_DB_OK);
-}; /* validate_isXn_digit */
+} /* validate_isXn_digit */
 
 DB_STATUS
 generate_ean_digit(
@@ -7621,7 +7629,6 @@ generate_ean_digit(
     */
     u_i2 length_of_int;
     i4 i, n, alternate, sum, weighting;
-    char c;
 
     *(i2 *)rdv->db_data = 1; /* this is a single character check digit */
 
@@ -7640,15 +7647,15 @@ generate_ean_digit(
     {
         weighting = 3;
         alternate = 1;
-    };
+    }
 
     for (sum = 0, i = length_of_int - 1; i >=0; i--)
     {
-        c = *(char *)(p1->db_data+sizeof(i2)+i);
-        if (!isdigit(c))
-            return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, &c));
+	char *c = (char *)(p1->db_data+sizeof(i2)+i);
+        if (!CMdigit(c))
+            return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, c));
         else
-            n = (i4 )c - (i4 )'0';
+            n = (i4 )*c - (i4 )'0';
 
         if (alternate) n *= weighting;
         sum += n;
@@ -7659,10 +7666,11 @@ generate_ean_digit(
                 weighting = 9;
             else
                 weighting = 3;
-        };
-    }; /* for each character */
+        }
+    } /* for each character */
 
-    if (ean_length == 2) {
+    if (ean_length == 2)
+    {
         n = sum % 4;
     }
     else
@@ -7670,10 +7678,10 @@ generate_ean_digit(
         n = sum % 10;
         if (n != 0 && ean_length !=5)
             n = 10-n;
-    };
+    }
     *(rdv->db_data + sizeof(i2)) = (char )(n + (i4 )'0');
     return(E_DB_OK);
-}; /* generate_ean_digit */
+} /* generate_ean_digit */
 
 DB_STATUS
 validate_ean_digit(
@@ -7703,7 +7711,6 @@ validate_ean_digit(
     */
     u_i2 length_of_int, valid_length = ean_length;
     i4 i, n, alternate, sum;
-    char c;
 
     length_of_int = *(u_i2 *)p1->db_data;
     if (length_of_int != valid_length)
@@ -7713,23 +7720,23 @@ validate_ean_digit(
 
     for (alternate = 0, sum = 0, i = length_of_int - 1; i >=0; --i)
     {
-        c = *(char *)(p1->db_data+sizeof(i2)+i);
-        if (!isdigit(c))
-            return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, &c));
+	char *c = (char *)(p1->db_data+sizeof(i2)+i);
+        if (!CMdigit(c))
+            return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, c));
         else
-            n = (i4 )c - (i4 )'0';
+            n = (i4 )*c - (i4 )'0';
 
         if (alternate) n*=3;
         sum += n;
         alternate = !alternate;
-    }; /* for each character */
+    } /* for each character */
 
     if (sum % 10 == 0 || ean_length == 2 || ean_length == 5)
         *(rdv->db_data) = (u_char )1;
     else
         *(rdv->db_data) = (u_char )0;
     return(E_DB_OK);
-}; /* validate_ean_digit */
+} /* validate_ean_digit */
 
 DB_STATUS
 generate_luhn_digit(
@@ -7751,7 +7758,6 @@ generate_luhn_digit(
 {
     u_i2  length_of_int;
     i4    i, x, y, n, alternate, sum;
-    char  c;
 
     *(i2 *)rdv->db_data = 1; /* this is a single character check digit */
 
@@ -7759,24 +7765,24 @@ generate_luhn_digit(
 
     for (alternate = 1, sum = 0, i = length_of_int - 1; i >= 0; --i)
     {
-        c = *(char *)(p1->db_data+sizeof(i2)+i);
-        if (!isdigit(c))
+	char *c = (char *)(p1->db_data+sizeof(i2)+i);
+        if (!CMdigit(c))
         {
             if (!permit_alphas)
             {
-                return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, &c));
-            };
-            if (isupper(c))
+                return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, c));
+            }
+            if (CMupper(c))
             {
-                n = (i4)c - (i4)'A' + 10;
+                n = (i4)*c - (i4)'A' + 10;
             }
             else
             {
-                if (islower(c))
-                    n = (i4)c - (i4)'a' + 10;
+                if (CMlower(c))
+                    n = (i4)*c - (i4)'a' + 10;
                 else
                     return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, &c));
-            };
+            }
             y = (i4)n/10;
             x = n - 10*y; /* ie n==yx */
             if (alternate)
@@ -7790,17 +7796,19 @@ generate_luhn_digit(
                 y *= 2;
                 if (y > 9) y = y-9;
                 sum += x+y;
-            };
+            }
         }
         else
         { /* A numeric character */
-            n = (i4)c - (i4)'0';
-            if (alternate) {n *= 2;};
-            if (n > 9) {n = n-9;};
+            n = (i4)*c - (i4)'0';
+            if (alternate)
+		n *= 2;
+            if (n > 9)
+		n = n-9;
             sum += n;
             alternate = !alternate;
-        };
-    }; /* foreach character in string */
+        }
+    } /* foreach character in string */
 
     /*
     ** Build the rdv...
@@ -7810,7 +7818,7 @@ generate_luhn_digit(
     if (n != 0) n = 10-n;
     *(rdv->db_data + sizeof(i2)) = (char)(n + (i4)'0');
     return(E_DB_OK);
-}; /* generate_luhn_digit */
+} /* generate_luhn_digit */
 
 DB_STATUS
 validate_luhn_digit(
@@ -7827,27 +7835,26 @@ validate_luhn_digit(
 {
     i2   length_of_int;
     i4   i, x, y, n, alternate, sum;
-    char c;
 
     length_of_int=*(i2 *)p1->db_data;
     for (alternate = 0, sum = 0, i = length_of_int - 1; i >=0; --i) 
     {
-        c = *(char *)(p1->db_data+sizeof(i2)+i);
-        if (!isdigit(c))
+	char *c = (char *)(p1->db_data+sizeof(i2)+i);
+        if (!CMdigit(c))
         {
             if (!permit_alphas)
-                return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, &c));
-            if (isupper(c))
+                return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, c));
+            if (CMupper(c))
             {
-                n = (i4)c - (i4)'A' + 10;
+                n = (i4)*c - (i4)'A' + 10;
             }
             else
             {
-                if (islower(c))
-                    n = (i4)c - (i4)'a' + 10;
+                if (CMlower(c))
+                    n = (i4)*c - (i4)'a' + 10;
                 else
-                    return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, &c));
-            };
+                    return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, c));
+            }
 
             y = (i4)n/10; x = n - 10*y; /* ie n==yx */
             if (alternate)
@@ -7861,24 +7868,24 @@ validate_luhn_digit(
                 y *= 2;
                 if (y > 9) y = y-9;
                 sum += x+y;
-            };
+            }
         }
         else
         { /* A numeric character */
-            n = (i4)c - (i4)'0';
+            n = (i4)*c - (i4)'0';
             if (alternate) n *= 2;
             if (n > 9) n = n - 9;
             sum += n;
             alternate = !alternate;
-        };
-    }; /* Foreach character in string */
+        }
+    } /* Foreach character in string */
 
     if (sum % 10 == 0)
         *(rdv->db_data) = (u_char)1;
     else
         *(rdv->db_data) = (u_char)0;
     return(E_DB_OK);
-}; /* validate_luhn_digit */
+} /* validate_luhn_digit */
 
 DB_STATUS
 generate_upce_digit(
@@ -8007,14 +8014,14 @@ generate_upce_digit(
     default:
         return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, &c));
         break;
-    }; /*switch*/
+    } /*switch*/
 
     /*
     ** Call the generate_ean_digit() to get the correct check digit, 
     ** pass that routines return code and result back up the line.
     */    
     return(generate_ean_digit(adf_scb, &workv, rdv, (short )11));
-}; /* generate_upce_digit */
+} /* generate_upce_digit */
 
 DB_STATUS
 validate_upce_digit(
@@ -8033,7 +8040,6 @@ validate_upce_digit(
     */
     u_i2 length_of_int, upce_length = 6;
     i4 i;
-    char c;
 
     length_of_int = *(u_i2 *)p1->db_data;
     if (length_of_int != upce_length)
@@ -8047,13 +8053,13 @@ validate_upce_digit(
         *(rdv->db_data)=(u_char )1;
         for (i = 0; i < 6; i++)
         {
-            c = *(char *)(p1->db_data + sizeof(i2) + i);
-            if (!isdigit(c))
-                return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, &c));
-        };
-    };
+	    char *c = (char *)(p1->db_data + sizeof(i2) + i);
+            if (!CMdigit(c))
+                return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, c));
+        }
+    }
     return(E_DB_OK);
-}; /* validate_upce_digit */
+} /* validate_upce_digit */
 
 DB_STATUS
 generate_verhoeff_digit(
@@ -8064,7 +8070,7 @@ generate_verhoeff_digit(
 {
     u_i2   length_of_int;
     i4   i, j, k, m, n_digit;
-    char c, *data;
+    char *data;
 
     static const i4 F[8][10]=
     { /* The permutations of each number */
@@ -8124,23 +8130,24 @@ generate_verhoeff_digit(
     ** Note that we start from the right of the input string and work to the
     ** left.
     */
-    for (i = length_of_int-1; i >= 0; i--) {
-        c = *(char *)(data + i);
-        if (isdigit(c))
+    for (i = length_of_int-1; i >= 0; i--)
+    {
+        char *c = (char *)(data + i);
+        if (CMdigit(c))
         {
-            n_digit = (i4)c - (i4)'0';
+            n_digit = (i4)*c - (i4)'0';
             k = d[k][ F[7 & m++][n_digit] ];
         }
         else
         {
-            return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, &c));
-        };
-    };
+            return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, c));
+        }
+    }
 
     /* Build the rdv...*/
     *(rdv->db_data + sizeof(i2)) = inv[k];
     return(E_DB_OK);
-}; /* generate_verhoeff_digit */
+} /* generate_verhoeff_digit */
 
 DB_STATUS
 validate_verhoeff_digit(
@@ -8188,9 +8195,9 @@ validate_verhoeff_digit(
             *(rdv->db_data) = (u_char)1;
         else
             *(rdv->db_data) = (u_char)0;
-    };
+    }
     return(gen_return);
-}; /* validate_verhoeff_digit */
+} /* validate_verhoeff_digit */
 
 DB_STATUS
 generate_verhoeffNR_digit(
@@ -8251,25 +8258,26 @@ generate_verhoeffNR_digit(
     */
     for (i = 0; i < length_of_int; i++)
     {
-        if (isdigit(*(char *)(data + i))) {
-            c=(i4 )(*(char *)(data + i));
-            k = ij[k][ ip[(c+2) % 10][7 & m++] ];
+	char *c = (char *)(data + i);
+        if (CMdigit(c))
+	{
+            k = ij[k][ ip[((i4)*c+2) % 10][7 & m++] ];
         }
         else
         {
-            return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, &c));
-        };
-    };
+            return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, c));
+        }
+    }
 
     for ( j = 0; j < 10; j++ ) 
     {
         if ( ! ij[k][ ip[j][ m&7 ] ] ) break;
-    };
+    }
 
     /* And build the rdv... */
     *(rdv->db_data + sizeof(i2)) = (char )( j + (i4) '0' );
     return(E_DB_OK);
-}; /* generate_verhoeffNR_digit */
+} /* generate_verhoeffNR_digit */
 
 DB_STATUS
 validate_verhoeffNR_digit(
@@ -8318,9 +8326,9 @@ validate_verhoeffNR_digit(
         else
             *(rdv->db_data) = (u_char)0;
         return(E_DB_OK); 
-    };
+    }
     return(E_DB_ERROR);
-}; /* validate_verhoeffNR_digit */
+} /* validate_verhoeffNR_digit */
 /*{
 ** Name: adu_27lpad() - Prepends blanks into dv1 to length dv2.
 **
@@ -8476,7 +8484,8 @@ DB_DATA_VALUE       *rdv)
 	maxsize -= DB_CNTSIZE;
 
     /* Load result length. */
-    switch (dv2->db_length) {
+    switch (dv2->db_length)
+    {
       case 1:
 	outlen = I1_CHECK_MACRO(*(i1 *) dv1->db_data);
 	break;
@@ -8695,7 +8704,8 @@ DB_DATA_VALUE       *rdv)
 	maxsize -= DB_CNTSIZE;
 
     /* Load result length. */
-    switch (dv2->db_length) {
+    switch (dv2->db_length)
+    {
       case 1:
 	outlen = I1_CHECK_MACRO(*(i1 *) dv1->db_data);
 	break;
