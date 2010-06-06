@@ -6695,6 +6695,8 @@ DB_ERROR	*dberr)
 **	    where the table it will replace exists).
 **	29-Sept-2009 (troal01)
 **		Added support for geospatial.
+**	27-May-2010 (gupsh01) BUG 123823
+**	    Fix error handling for error E_DM0075_BAD_ATTRIBUTE_ENTRY. 
 */
 DB_STATUS
 dm2t_temp_build_tcb(
@@ -6920,6 +6922,7 @@ bool		    from_online_modify)
 	    if (t->tcb_atts_used + alen + 1 > t->tcb_atts_size)
 	    {
 		SETDBERR(dberr, 0, E_DM0075_BAD_ATTRIBUTE_ENTRY);
+		status = E_DB_ERROR;
 		break;
 	    }
 
@@ -6961,10 +6964,14 @@ bool		    from_online_modify)
 	    offset = offset + attr_array[i-1]->attr_size;
 	}
 
+	if ( status )
+	    break;
+
 	if (t->tcb_keys != t->tcb_rel.relkeys ||
 	    attr_count != t->tcb_rel.relatts)
 	{
 	    SETDBERR(dberr, 0, E_DM0075_BAD_ATTRIBUTE_ENTRY);
+	    status = E_DB_ERROR;
 	    break;
 	}
 
@@ -12076,6 +12083,8 @@ copy_from_master(DMP_TCB *tcb, DMP_TCB *master_tcb)
 **		Add support for geospatial.
 **	29-Oct-2009 (kschendel) SIR 122739
 **	    Set flag for btree-leaf-uses-overflow-for-duplicates.
+**	27-May-2010 (gupsh01) BUG 123823
+**	    Fix error handling for error E_DM0075_BAD_ATTRIBUTE_ENTRY. 
 */
 
 static DB_STATUS
@@ -12510,6 +12519,7 @@ DB_ERROR	*dberr)
 	    if (t->tcb_atts_used + alen + 1 > t->tcb_atts_size)
 	    {
 		SETDBERR(dberr, 0, E_DM0075_BAD_ATTRIBUTE_ENTRY);
+	        status = E_DB_ERROR;
 		break;
 	    }
 

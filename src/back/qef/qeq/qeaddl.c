@@ -10941,6 +10941,8 @@ makeObjectName(
 ** History:
 **	19-Mar-2010 (gupsh01) SIR 123444
 **	    Written.
+**	27-May-2010 (gupsh01) Bug 123823
+**	    Fix error handling code.
 */
 DB_STATUS
 qea_renameExecute(
@@ -10990,7 +10992,6 @@ qea_renameExecute(
 							qhd_rename.qrnm_ahd_qeuCB;
 	int		    opcode = qeu_cb->qeu_d_op;
 	i4		    iter;
-	i4                  err = E_QE0000_OK;
 
 	result = &out_txt;
 	MEfill(sizeof(old_name), 0, (PTR)&old_name);
@@ -11065,7 +11066,7 @@ qea_renameExecute(
         status =  dmf_call(DMT_SHOW, &dmt_show);
         if (status != E_DB_OK)
 	{
-               err = dmt_show.error.err_code;
+               error = dmt_show.error.err_code;
 	       qef_error( error, 0L, status, &error, &dsh->dsh_error, 0 );   
 	       return (status);
 	}

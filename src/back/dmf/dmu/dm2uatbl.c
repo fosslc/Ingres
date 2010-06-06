@@ -159,7 +159,11 @@
 **	    Fix net-change logic for width for ALTER TABLE.
 **      14-May-2010 (stial01)
 **          Alloc/maintain exact size of column names (iirelation.relattnametot)
-**          
+**	25-May-2010 (gupsh01) BUG 123823
+**	    Update relattnametot in case of the rename column. Also need 
+**	    to update the iirelation row for any dependent indexes, hence break 
+**	    out handling of rename columns for dependent indexes into new 
+**	    routine si_rencol_adjust().
 **/
 
 /*
@@ -199,7 +203,13 @@ static DB_STATUS    pt_adddrop_adjust(
 			i4		db_lockmode,
 			i2		dropped_col,
 			DB_ERROR	    *dberr);
-
+static DB_STATUS   si_rencol_adjust(
+			DMP_TCB		*tcb,
+			DMF_ATTR_ENTRY **attr_entry,
+			DMP_RCB		*rel_rcb,
+			DMP_RCB		*attr_rcb,
+			DB_ERROR        *dberr,
+			DB_ERROR        *log_err);
 
 /*
 ** Name: dm2u_atable - Alter a table's column's structure.
@@ -352,6 +362,10 @@ static DB_STATUS    pt_adddrop_adjust(
 **	26-Apr-2010 (gupsh01) SIR 123444
 **	    In case of column rename updated the attribute name
 **	    of dependent indexes.
+**	25-May-2010 (gupsh01) BUG 123823
+**	    Update relattnametot in iirelation in case of the rename column.
+**	    Call si_rencol_adjust() to update the iirelation row for any 
+**	    dependent indexes.
 */
 
 DB_STATUS
@@ -1325,10 +1339,24 @@ DB_ERROR	*dberr)
 			    /* Copy everything from old record to new record, 
 			    ** except substitue the name to new column name. 
 			    */
-			    
+			    int nsz_p;
+
                             MEcopy((PTR)&att_rec, sizeof(DMP_ATTRIBUTE), (PTR)&att_rec_tmp);
+
+			    /* Maintain the relattnametot for iirelation tuple */
+			    for (nsz_p = DB_ATT_MAXNAME; 
+				att_rec_tmp.attname.db_att_name[nsz_p-1] == ' '
+                            	&& nsz_p >= 1; nsz_p--);
+                	    relrecord.relattnametot -= nsz_p;
+
                             STRUCT_ASSIGN_MACRO(attr_entry[1]->attr_name,
                                         att_rec_tmp.attname);
+
+			    for (nsz = DB_ATT_MAXNAME; 
+				att_rec_tmp.attname.db_att_name[nsz-1] == ' '
+                            	&& nsz >= 1; nsz--);
+                	    relrecord.relattnametot += nsz;
+
                             status = dm2r_replace(attr_rcb, &attrtid,
                                           DM2R_BYPOSITION, (char *)&att_rec_tmp,
                                           (char *)0, dberr);
@@ -1356,87 +1384,6 @@ DB_ERROR	*dberr)
                   }
 	      } /* end for ;; */
 
-	      /* Fix the attribute names for any secondry indexes */
-	      for (it = t->tcb_iq_next;
-        		it != (DMP_TCB*) &t->tcb_iq_next;
-        		it = it->tcb_q_next)
-    	      {
-		bool 		found = FALSE;
-		DB_TAB_ID	index_id;
-
-		for (i = 0; i <= t->tcb_rel.relatts; i++)
-                {
-                  MEmove(it->tcb_atts_ptr[i].attnmlen,
-                    it->tcb_atts_ptr[i].attnmstr,
-                    ' ', DB_ATT_MAXNAME, tmpattnm.db_att_name);
-
-                  if (MEcmp(tmpattnm.db_att_name,
-                           (PTR)&attr_entry[0]->attr_name,
-                                sizeof(DB_ATT_NAME) ) == 0)
-                  {
-		    found = TRUE; /* keyed on renamed attribute */
-                    break;
-                  }
-                }
-
-		if (found)
-		{ 
-                   att_key_desc[1].attr_operator = DM2R_EQ;
-                   att_key_desc[1].attr_number = DM_2_ATTRIBUTE_KEY;
-                   att_key_desc[1].attr_value = (char *) &it->tcb_rel.reltid.db_tab_index;
-
-	           status = dm2r_position(attr_rcb, DM2R_QUAL, att_key_desc, 
-				(i4)2, (DM_TID *)0, dberr);
-                   if (status != E_DB_OK)
-                     break;
-
-		   for (;;)
-		   {
-	             /* Get the iiattribute record for this index */
-                      status = dm2r_get(attr_rcb, &attrtid, DM2R_GETNEXT,
-                                     (char *)&att_rec, dberr);
-                      if (status == E_DB_OK)
-                      {
-                        if ((att_rec.attrelid.db_tab_base == table_id.db_tab_base) &&
-                            (att_rec.attrelid.db_tab_index == it->tcb_rel.reltid.db_tab_index) 
-			    )
-		        { 
-			  if (MEcmp((PTR) &(attr_entry[0]->attr_name.db_att_name), 
-					(PTR) &(att_rec.attname), 
-					sizeof(DB_ATT_NAME)) == 0 )
-			  {
-			    /* substitue the column name. */
-                            MEcopy((PTR)&att_rec, sizeof(DMP_ATTRIBUTE), (PTR)&att_rec_tmp);
-                            STRUCT_ASSIGN_MACRO(attr_entry[1]->attr_name,
-                                        att_rec_tmp.attname);
-                            status = dm2r_replace(attr_rcb, &attrtid,
-                                          DM2R_BYPOSITION, (char *)&att_rec_tmp,
-                                          (char *)0, dberr);
-                            if (status != E_DB_OK)
-                            {
-                               uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG,
-                                           NULL, (char *)NULL, (i4)0,
-                                           (i4 *)NULL, &local_error, 0);
-			       SETDBERR(&log_err, 0, E_DM9028_ATTR_UPDATE_ERR);
-                               break;
-                            }
-		            error = 0;
-			    status = E_DB_OK;
-			  } 
-		        } 
-		    }
-		    else
-                    {
-		      if (dberr->err_code == E_DM0055_NONEXT)
-                      {
-                          status = E_DB_OK;
-                          CLRDBERR(dberr);
-                      }
-                      break;
-                    }
-	          } /* go through attribute records for this index */
-		} /* Done with the index */
-    	      }
 	    }
 	    else if ( operation == DMU_C_ALTTBL_RENAME ) /* ALTER TABLE RENAME TO ... */
 	    {
@@ -1531,6 +1478,17 @@ DB_ERROR	*dberr)
 		if (status != E_DB_OK)
 		    break;
 	    }
+
+	    /* If doing a column rename and the table has secondry indexes, 
+	    ** Fix the index entries in iirelation and iiattributes catalogs */
+	    if (( operation == DMU_C_ALTCOL_RENAME ) && 
+		(t->tcb_iq_next != (DMP_TCB*) &t->tcb_iq_next))
+	    {
+ 	        status = si_rencol_adjust( t, attr_entry, rel_rcb, 
+					attr_rcb, dberr, &log_err);
+		if (status != E_DB_OK)
+		    break;
+  	    }
 
             /*
             ** Log the alter operation - unless logging is disabled.
@@ -2412,4 +2370,202 @@ pt_adddrop_adjust(
 
     return(status);
 
+}
+
+/*{
+** Name: si_rencol_adjust - Fix the iiattribute and iirelation tuples for 
+**			    secondry index after column rename.
+**
+** Description:
+**	This routine updates index iirelation and iiattribute rows 
+**	to fix the attnametotal values and the attribute column name
+**	after rename of a column.
+**
+** Inputs:
+**	tcb		TCB for the table being altered.
+**	attr_entry	Points to the new column name.
+**	rel_rcb		RCB for iirelation.
+**	attr_rcb	RCB for iiattribute.
+**	dberr      	pointer to hold error if any.
+**	log_err    	pointer to hold error for logging. 
+** Outputs:
+**
+**	Returns:
+**	    DB_STATUS
+**	    dberr      set with error if any.
+**	    log_err    set with error for logging. 
+**	    None
+**
+** History:
+**	26-May-2010 (gupsh01)
+**	    Created.
+*/
+static DB_STATUS
+si_rencol_adjust(
+	DMP_TCB		*tcb,
+	DMF_ATTR_ENTRY **attr_entry,
+	DMP_RCB		*rel_rcb,
+	DMP_RCB		*attr_rcb,
+	DB_ERROR        *dberr,
+	DB_ERROR        *log_err)
+{
+    DB_STATUS 		status = E_DB_OK;
+    DMP_TCB		*it;
+    DM2R_KEY_DESC       rel_key_desc[2];
+    DM2R_KEY_DESC	att_key_desc[2];
+    DMP_RELATION	relrecord;
+    DM_TID		reltid;
+    DB_ATT_NAME		tmpattnm;
+    DB_TAB_ID		index_id;
+    DMP_ATTRIBUTE	att_rec;
+    DMP_ATTRIBUTE	att_rec_tmp;
+    DM_TID		attrtid;
+    i4			local_error = 0;
+    i4			i;
+
+    CLRDBERR(dberr);
+    CLRDBERR(log_err);
+
+    /* Fix the attribute names for any secondry indexes */
+    for (it = tcb->tcb_iq_next;
+        	it != (DMP_TCB*) &tcb->tcb_iq_next;
+        	it = it->tcb_q_next)
+    {
+	bool 		found = FALSE;
+
+	for (i = 0; i <= it->tcb_rel.relatts; i++)
+        {
+           MEmove(it->tcb_atts_ptr[i].attnmlen,
+                    it->tcb_atts_ptr[i].attnmstr,
+                    ' ', DB_ATT_MAXNAME, tmpattnm.db_att_name);
+
+           if (MEcmp(tmpattnm.db_att_name,
+                           (PTR)&attr_entry[0]->attr_name,
+                                sizeof(DB_ATT_NAME) ) == 0)
+           {
+		    STRUCT_ASSIGN_MACRO (it->tcb_rel.reltid, index_id);
+		    found = TRUE; /* keyed on renamed attribute */
+                    break;
+           }
+        }
+
+	if (found)  
+	{ 
+	  /* index has the renamed attribute
+	  ** iirelation and iiattribute record for 
+	  ** this index need to be fixed. 
+	  */
+
+	  /* Position on iirelation for the index being changed */
+	  rel_key_desc[0].attr_operator = DM2R_EQ;
+	  rel_key_desc[0].attr_number = DM_1_RELATION_KEY;
+	  rel_key_desc[0].attr_value = (char *) &index_id.db_tab_base;
+
+	  status = dm2r_position(rel_rcb, DM2R_QUAL, rel_key_desc, (i4)1,
+                                   (DM_TID *)0, dberr);
+          if (status != E_DB_OK)
+               break;
+
+          for (;;)
+          {
+	      status = dm2r_get(rel_rcb, &reltid, DM2R_GETNEXT,
+                                  (char *)&relrecord, dberr);
+	      if (status != E_DB_OK)
+                 break;
+
+	      if ((relrecord.reltid.db_tab_base == index_id.db_tab_base) &&
+                  (relrecord.reltid.db_tab_index == index_id.db_tab_index))
+                 break;
+          }
+	  if (status != E_DB_OK)
+       	      return(status);
+
+	  att_key_desc[0].attr_operator = DM2R_EQ;
+	  att_key_desc[0].attr_number = DM_1_ATTRIBUTE_KEY;
+	  att_key_desc[0].attr_value = (char *) &index_id.db_tab_base;
+
+	  att_key_desc[1].attr_operator = DM2R_EQ;
+	  att_key_desc[1].attr_number = DM_2_ATTRIBUTE_KEY;
+	  att_key_desc[1].attr_value = (char *) &it->tcb_rel.reltid.db_tab_index;
+
+	  status = dm2r_position(attr_rcb, DM2R_QUAL, att_key_desc, 
+				(i4)2, (DM_TID *)0, dberr);
+          if (status != E_DB_OK)
+              break;
+
+	  for (;;)
+	  {
+	      /* Get the iiattribute record for this index */
+              status = dm2r_get(attr_rcb, &attrtid, DM2R_GETNEXT,
+                                     (char *)&att_rec, dberr);
+              if (status == E_DB_OK)
+              {
+                  if ((att_rec.attrelid.db_tab_base == index_id.db_tab_base) &&
+                      (att_rec.attrelid.db_tab_index == it->tcb_rel.reltid.db_tab_index) 
+		      )
+		  { 
+		      if (MEcmp((PTR) &(attr_entry[0]->attr_name.db_att_name), 
+					(PTR) &(att_rec.attname), 
+					sizeof(DB_ATT_NAME)) == 0 )
+		      {
+			int nsz_p, nsz;
+
+			/* substitue the column name. */
+			MEcopy((PTR)&att_rec, sizeof(DMP_ATTRIBUTE), (PTR)&att_rec_tmp);
+			
+			/* Maintain the relattnametot for iirelation tuple */
+                        for (nsz_p = DB_ATT_MAXNAME;
+                                att_rec_tmp.attname.db_att_name[nsz_p-1] == ' '
+                                && nsz_p >= 1; nsz_p--);
+                            relrecord.relattnametot -= nsz_p;
+
+                        STRUCT_ASSIGN_MACRO(attr_entry[1]->attr_name,
+                                        att_rec_tmp.attname);
+
+                        for (nsz = DB_ATT_MAXNAME;
+                                att_rec_tmp.attname.db_att_name[nsz-1] == ' '
+                                && nsz >= 1; nsz--);
+                            relrecord.relattnametot += nsz;
+
+                        status = dm2r_replace(attr_rcb, &attrtid,
+                                          DM2R_BYPOSITION, (char *)&att_rec_tmp,
+                                          (char *)0, dberr);
+                        if (status != E_DB_OK)
+                        {
+                               uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG,
+                                           NULL, (char *)NULL, (i4)0,
+                                           (i4 *)NULL, &local_error, 0);
+			       SETDBERR(log_err, 0, E_DM9028_ATTR_UPDATE_ERR);
+                               break;
+                        }
+			status = E_DB_OK;
+
+			/* Replace the modified iirelation row */
+			status = dm2r_replace (rel_rcb, &reltid,
+                                          DM2R_BYPOSITION, (char *)&relrecord,
+                                          (char *)0, dberr);
+ 			if (status != E_DB_OK)
+            		{
+                	    uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
+                    		(char *)NULL, (i4)0, (i4 *)NULL, &local_error, 0);
+                	    SETDBERR(log_err, 0, E_DM9026_REL_UPDATE_ERR);
+            		}
+			break;
+		      } 
+		  } 
+	      }
+	      else
+              {
+		  if (dberr->err_code == E_DM0055_NONEXT)
+                  {
+                      status = E_DB_OK;
+                      CLRDBERR(dberr);
+                  }
+                  break;
+              }
+	  } /* go through attribute records for this index */
+	} /* Done with this index */
+   } /* end for loop */
+
+   return (status);
 }
