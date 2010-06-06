@@ -86,6 +86,8 @@
 **	    Need mh.h to satisfy gcc 4.3.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      27-May-2010 (stial01)
+**          Don't assume CS_SEM_NAME_LEN >= DB_SEQ_MAXNAME
 **/
 
 
@@ -448,17 +450,40 @@ PTR        dms_cb)
 		    }
 		    else
 		    {
-			char	sem_name[CS_SEM_NAME_LEN*2];
+			char	sem_name[CS_SEM_NAME_LEN + DB_SEQ_MAXNAME + 10];
 			char	seq_name[DB_SEQ_MAXNAME+1];
+			DB_TAB_ID	sem_id;
+
+			if (dms_seq->seq_id.db_tab_base == -1)
+			{
+			    /* use low tran to make sem_name unique */
+			    sem_id.db_tab_base = 0;
+			    sem_id.db_tab_index = xcb->xcb_tran_id.db_low_tran;
+			}
+			else
+			{
+			    /* seq_id is unique, so sem_name is unique */
+			    sem_id.db_tab_base = dms_seq->seq_id.db_tab_base;
+			    sem_id.db_tab_index = 0;
+			}
 
 			s->seq_q_next = (DML_SEQ*)NULL;
 			s->seq_q_prev = (DML_SEQ*)NULL;
 
-			MEcopy((PTR)&dms_seq->seq_name,
+			/*
+			** CS will truncate the name to CS_SEM_NAME_LEN
+			** Since sequence name may be > CS_SEM_NAME_LEN, 
+			** use sequence id to make the semaphore name unique,
+			** plus as much of the sequence name as we can fit
+			*/
+			MEcopy((PTR)&dms_seq->seq_name, 
 				DB_SEQ_MAXNAME, seq_name);
 			seq_name[DB_SEQ_MAXNAME] = EOS;
 			STtrmwhite(seq_name);
-			STpolycat(2, "SeqGen ", seq_name, sem_name);
+
+			STprintf(sem_name, "SeqGen %x %x %s", 
+			    sem_id.db_tab_base, sem_id.db_tab_index, seq_name);
+
 			dm0s_minit(&s->seq_mutex, sem_name);
 		    }
 		}
