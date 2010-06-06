@@ -1,0 +1,21 @@
+-- Copyright (c) 2004 Ingres Corporation
+--
+-- File: io_interface.alsys
+-- This file defines the input/output interface for Alsys-Ada programs.
+-- It is unsupported by Ingres but referenced in the Appendices in the
+-- EQUEL and Embedded SQL Companion Guides.
+-- 
+-- History:
+--    31-jul-90		Created.  (gurdeep rahi)
+--
+
+with text_io;
+package io_interface is
+ package int_io is new text_io.integer_io(integer);
+ package short_int_io is new text_io.integer_io(short_integer);
+ package long_int_io is new text_io.integer_io(long_integer);
+ package float_io is new text_io.float_io(float);
+ package long_float_io is new text_io.float_io(long_float);
+end io_interface;
+package body io_interface is
+end;
