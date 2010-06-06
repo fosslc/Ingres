@@ -192,6 +192,10 @@
 **	24-Nov-2009 (frima01) Bug 122490
 **	    Added include of nm.h and static declaration of
 **	    update_location_entry to eliminate gcc 4.3 warnings.
+**	13-Apr-2010 (hanje04) 
+**	    BUG 121580
+**	    Reset modify dialog when selecting instance to modify so that
+**	    installed components are correctly initialized.
 **   
 */
 
@@ -2271,6 +2275,10 @@ instance_selection_changed (GtkTreeSelection *selection,
 	widget_ptr = lookup_widget( IngresInstall, "mod_db_config" );
 	gtk_widget_hide( widget_ptr );
 
+	/* reset component dialog */
+        widget_ptr = lookup_widget ( IngresInstall, "modify_inst_comp");
+	gtk_button_clicked( GTK_BUTTON( widget_ptr ));
+        
 	/* free temporary storage */
        	g_free(inst_name);
 	g_free(version);
