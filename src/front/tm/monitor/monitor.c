@@ -193,6 +193,11 @@
 **	05-May-2010 (hanje04)
 **		SIR 123622
 **	   	HistoryRecall now enabled for all UNIX.
+**      03-Jun-2010 (maspa05) bug 123860
+**              \silent resets delimiter to space even if \vdelim was used
+**              check whether \vdelim is in force and do not reset if so
+**              Also when resetting to default make it space (as documented)
+**              rather than \t
 */
 
 FUNC_EXTERN i4		getch();
@@ -246,6 +251,7 @@ bool include_file;
         static char     vdelim_desc[VDELIM_SIZE+1]="|"; /* descriptive version of vdelim, will either
 					       be the char or SPACE, TAB or NONE */
 	bool		vdelim_warn=TRUE; /* need to warn about excess chars for \vdelim */
+	static bool	vdelim_in_force=FALSE; /* a \vdelim is in force */
 
 
 #ifdef WIN16
@@ -588,7 +594,7 @@ bool include_file;
 						STlcopy(Uservchar,vdelim_str,VDELIM_SIZE);
 					else 
 						if (TrulySilent)
-							STcopy("\t",vdelim_str);
+							STcopy(" ",vdelim_str);
 						else
 						{
 							STcopy("|",vdelim_str);
@@ -597,6 +603,7 @@ bool include_file;
 						}
 					if (!TrulySilent)
 						putprintf(ERget(F_MO0049_vdelim_reset));
+					vdelim_in_force=FALSE;
 				}
 				else
 				{
@@ -630,6 +637,8 @@ bool include_file;
 
 
 	                        	IIMOupcUsePrintChars = TRUE;
+
+					vdelim_in_force=TRUE;
 				}
                                 ITsetvl(vdelim_str);
 				continue;
@@ -642,11 +651,14 @@ bool include_file;
 				TrulySilent = TRUE;
 				Nodayfile = -1;
 				Userdflag = -1;
-				if (Uservflag)
-					STlcopy(Uservchar,vdelim_str,VDELIM_SIZE);
-				else
+
+				/* default delimiter for silent mode is space 
+				 * unless -v or \vdelim has been used */
+				if (!Uservflag && !vdelim_in_force)
+				{
 					STlcopy(" ",vdelim_str,VDELIM_SIZE);
-                                ITsetvl(vdelim_str);
+                                        ITsetvl(vdelim_str);
+				}
 				continue;
 
 			  case C_NOSILENT:
@@ -654,17 +666,24 @@ bool include_file;
 				** vdelim character appropriately
 				*/
 				putprintf(ERget(F_MO0047_Silent_off));
-				if (Uservflag)
+
+				/* only change vdelim if a \vdelim is not in
+				 * force */
+				if (!vdelim_in_force)
 				{
-	                        	IIMOupcUsePrintChars = TRUE;
-					STlcopy(Uservchar,vdelim_str,VDELIM_SIZE);
-                                	ITsetvl(vdelim_str);
-				}
-				else
-				{
-                                	vdelim_str[0] = '|';
-                                	ITsetvl(vdelim_str);
-	                        	IIMOupcUsePrintChars = FALSE;
+				        if (Uservflag)
+				        {
+	                                     IIMOupcUsePrintChars = TRUE;
+					     STlcopy(Uservchar,vdelim_str,
+							     VDELIM_SIZE);
+                                	     ITsetvl(vdelim_str);
+				        }
+					else
+				        {
+                                	     vdelim_str[0] = '|';
+                                	     ITsetvl(vdelim_str);
+	                        	     IIMOupcUsePrintChars = FALSE;
+				        }
 				}
 				TrulySilent = FALSE;
 				Nodayfile = 0;
