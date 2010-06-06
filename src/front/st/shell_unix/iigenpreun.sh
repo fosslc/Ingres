@@ -31,6 +31,9 @@
 ##	    Set upgrade=false as default
 ##	    Run package removals as one script
 ##	    Correct rccmd for LSB builds
+##	02-Jun-2010 (hanje04)
+##	    BUG 123856
+##	    Use su if we can't find runuser
 
 (LSBENV)
 
@@ -108,6 +111,15 @@ inst_log=""
 }
 export ECHO CAT
 
+# Get command for user switching, user runuser if its there
+if [ -x /sbin/runuser ] 
+then
+    runuser=/sbin/runuser
+else
+    runuser=/bin/su
+fi
+export runuser
+ 
     if [ -x $II_SYSTEM/ingres/utility/iisysdep ] ; then
 	. iishlib
 	. iisysdep
@@ -163,7 +175,7 @@ else
     done 
     IFS=$ifssave
 
-    runuser -m -c "sh ${rmscript}" $II_USERID $inst_log
+    $runuser -m -c "sh ${rmscript}" $II_USERID $inst_log
     rm -f $rmscript
     $ECHO "Removing ${relname} ${pkgname}..."
     sleep 5

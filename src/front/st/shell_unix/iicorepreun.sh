@@ -26,6 +26,9 @@
 ##	14-Feb-2010 (hanje04)
 ##	    SIR 123296
 ##	    Add support for LSB builds
+##	02-Jun-2010 (hanje04)
+##	    BUG 123856
+##	    Use su if we can't find runuser
 
 (LSBENV)
 
@@ -88,6 +91,15 @@ done
 ECHO=true
 CAT=true
 
+# Get command for user switching, user runuser if its there
+if [ -x /sbin/runuser ] 
+then
+    runuser=/sbin/runuser
+else
+    runuser=/bin/su
+fi
+export runuser
+ 
 # Keep silent unless explicitly told not to
 [ -x $II_SYSTEM/ingres/utility/iiread_response ] && \
         [ -r "$II_RESPONSE_FILE" ] &&
@@ -159,7 +171,7 @@ else
 	eval homedir="~"$II_USERID
 	for file in `ls -1 $homedir/.ing${inst_id}* 2> /dev/null`
 	do
-	    runuser -m -c "rm -f $file" $II_USERID
+	    $runuser -m -c "rm -f $file" $II_USERID
 	done
 
 	for file in `ls -1 ${II_SYSTEM}/.ing${inst_id}* 2> /dev/null`

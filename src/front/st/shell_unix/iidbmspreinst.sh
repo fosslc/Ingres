@@ -26,6 +26,9 @@
 ##	14-Feb-2010 (hanje04)
 ##	    SIR 123296
 ##	    Add support for LSB builds
+##	02-Jun-2010 (hanje04)
+##	    BUG 123856
+##	    Use su if we can't find runuser
 
 (LSBENV)
 
@@ -52,7 +55,7 @@ Cannot locate response file.
 
 	# Check response file is readable by specified installation owner.
 	# If not abort the install before it starts.
-	if runuser -m -c "! test -r $II_RESPONSE_FILE" $II_USERID ; then
+	if $runuser -m -c "! test -r $II_RESPONSE_FILE" $II_USERID ; then
             rc=2
             cat << !
 Response file is not readable by user $II_USERID
@@ -94,7 +97,7 @@ EOF
 # If location is not the same as $II_SYSTEM, check it's writable,
 # by Ingres install userid. If not, return an error
         [ ! "`dirname $1/.`" = "`dirname $II_SYSTEM/.`" ] && \
-            runuser -m -c "! test -w $1/." $II_USERID && \
+            $runuser -m -c "! test -w $1/." $II_USERID && \
                 return 1
     fi
 
@@ -384,6 +387,15 @@ if [ ! "$II_USERID" -o ! "$II_GROUPID" ] ; then
     exit 1
 fi
 
+# Get command for user switching, user runuser if its there
+if [ -x /sbin/runuser ] 
+then
+    runuser=/sbin/runuser
+else
+    runuser=/bin/su
+fi
+export runuser
+ 
 inst_id=`ingprenv II_INSTALLATION`
 rcfile=$ETCRCFILES/ingres${inst_id}
 if which invoke-rc.d > /dev/null 2>&1 ; then

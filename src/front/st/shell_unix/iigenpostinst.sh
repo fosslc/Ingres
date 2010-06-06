@@ -25,6 +25,9 @@
 ##          Created from SPEC file templates.
 ##	10-Jan-2010 (hanje04)
 ##	    Updated for setup to be done from rc script instead of RPM install
+##	02-Jun-2010 (hanje04)
+##	    BUG 123856
+##	    Use su if we can't find runuser
 
 ## Need II_SYSTEM to be set
 [ -z "$II_SYSTEM" ] &&
@@ -86,6 +89,15 @@ ECHO=echo
 CAT=cat
 PRINTF=printf
 
+# Get command for user switching, user runuser if its there
+if [ -x /sbin/runuser ] 
+then
+    runuser=/sbin/runuser
+else
+    runuser=/bin/su
+fi
+export runuser
+ 
 # If we're not installing using a response file we
 # won't be doing any setup so skip the re-install checks
 [ -x $II_SYSTEM/ingres/utility/iiread_response ] && \
@@ -128,7 +140,7 @@ IFS=:
 for script in ${suscr}
 do
     [ -z "${pkgname}" ] && $PRINTF "\t%-65s" "Running ${script}..."
-    runuser -m -c "${script} $IISUFLAG" $II_USERID
+    $runuser -m -c "${script} $IISUFLAG" $II_USERID
     rc=$?
     [ $rc != 0 ] && break
 done

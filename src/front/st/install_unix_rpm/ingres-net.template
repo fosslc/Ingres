@@ -53,7 +53,7 @@ rc=0 # initialize return code
 
 	# Set II_SHADOW_PWD if we need to
 	[ -f /etc/shadow ] && \
-	    ingsetenv II_SHADOW_PWD $II_SYSTEM/ingres/bin/ingvalidpw
+	    $II_SYSTEM/ingres/bin/ingsetenv II_SHADOW_PWD $II_SYSTEM/ingres/bin/ingvalidpw
     fi
 
     # If ingvalidpw exists then it needs to be owned by root

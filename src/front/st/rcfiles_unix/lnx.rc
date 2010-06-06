@@ -83,6 +83,9 @@
 ##	    be the default method for running setup from RPM and DEBs packages.
 ##	    Fix up script to run correctly in chroot environment too which was
 ##	    mainly replacing su calls with runuser.
+##	02-Jun-2010 (hanje04)
+##	    BUG 123856
+##	    Use su if we can't find runuser
 ##
 #
 # /etc/init.d/ingresINST_ID
@@ -179,6 +182,15 @@ II_GROUPID=`iigetres ii.${CONFIG_HOST}.setup.owner.group` ||
 }
 export II_USERID II_GROUPID
 
+# Get command for user switching, user runuser if its there
+if [ -x /sbin/runuser ] 
+then
+    runuser=/sbin/runuser
+else
+    runuser=/bin/su
+fi
+export runuser
+ 
 uid=`id | cut -d= -f2 | cut -d\( -f1`
 if [ $uid != 0 ] ; then
     echo "Only 'root' can control this service"
@@ -190,16 +202,16 @@ fi
 cd $II_SYSTEM/ingres >> /dev/null 2>&1
 
 # Check all need ingres utilities are present and correct
-test -x $II_SYSTEM/ingres/utility/ingstart  && INGSTART="/sbin/runuser -m -c \"$II_SYSTEM/ingres/utility/ingstart\" $II_USERID"
+test -x $II_SYSTEM/ingres/utility/ingstart  && INGSTART="$runuser -m -c \"$II_SYSTEM/ingres/utility/ingstart\" $II_USERID"
 test "$INGSTART" || { echo "$II_SYSTEM/ingres/utility/ingstart does not exist"; save_status -v 5 ; $exit ; }
 
-test -x $II_SYSTEM/ingres/utility/ingstop  && INGSTOP="/sbin/runuser -m -c \"$II_SYSTEM/ingres/utility/ingstop -kill\" $II_USERID"
+test -x $II_SYSTEM/ingres/utility/ingstop  && INGSTOP="$runuser -m -c \"$II_SYSTEM/ingres/utility/ingstop -kill\" $II_USERID"
 test "$INGSTOP" || { echo " $II_SYSTEM/ingres/utility/ingstop does not exist"; save_status -v 5 ; $exit ; }
 
-test -x $II_SYSTEM/ingres/utility/syscheck  && SYSCHECK="/sbin/runuser -m -c \"$II_SYSTEM/ingres/utility/syscheck\" $II_USERID"
+test -x $II_SYSTEM/ingres/utility/syscheck  && SYSCHECK="$runuser -m -c \"$II_SYSTEM/ingres/utility/syscheck\" $II_USERID"
 test "$SYSCHECK" || { echo "$II_SYSTEM/ingres/utility/syscheck does not exist"; save_status -v 5 ; $exit ; }
 
-test -x $II_SYSTEM/ingres/utility/ingstatus && INGSTATUS="/sbin/runuser -m -c \"$II_SYSTEM/ingres/utility/ingstatus\" $II_USERID"
+test -x $II_SYSTEM/ingres/utility/ingstatus && INGSTATUS="$runuser -m -c \"$II_SYSTEM/ingres/utility/ingstatus\" $II_USERID"
 test "$INGSTATUS" || { echo "$II_SYSTEM/ingres/utility/ingstatus does not exist"; save_status -v 5 ; $exit ; }
 
 # Check if we're setup

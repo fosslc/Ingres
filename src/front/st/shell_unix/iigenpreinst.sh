@@ -26,6 +26,9 @@
 ##	14-Feb-2010 (hanje04)
 ##	    SIR 123296
 ##	    Add support for LSB builds
+##	02-Jun-2010 (hanje04)
+##	    BUG 123856
+##	    Use su if we can't find runuser
 
 (LSBENV)
 
@@ -106,6 +109,15 @@ CAT=true
 }
 export ECHO CAT
 
+# Get command for user switching, user runuser if its there
+if [ -x /sbin/runuser ] 
+then
+    runuser=/sbin/runuser
+else
+    runuser=/bin/su
+fi
+export runuser
+ 
 #Check for install userid, groupid
 CONFIG_HOST=`iipmhost`
 [ "$CONFIG_HOST" ] && 
@@ -163,7 +175,7 @@ exit $rc
 
 # Check response file is readable by specified installation owner.
 # If not abort the install before it starts.
-    if runuser -m -c "test ! -r $II_RESPONSE_FILE" $II_USERID ; then
+    if $runuser -m -c "test ! -r $II_RESPONSE_FILE" $II_USERID ; then
 	rc=4
         cat << !
 Response file is not readable by user $II_USERID

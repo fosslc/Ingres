@@ -32,6 +32,9 @@
 ##	   SIR 123296
 ##	   Remove references to iisudo as it no longer exists. Note,
 ##	   this script is no longer used by the RPM install process
+##	02-Jun-2010 (hanje04)
+##	    BUG 123856
+##	    Use su if we can't find runuser
 
 ## Need II_SYSTEM to be set
 [ -z "$II_SYSTEM" ] &&
@@ -88,6 +91,15 @@ done
 }
 export ECHO CAT
 
+# Get command for user switching, user runuser if its there
+if [ -x /sbin/runuser ] 
+then
+    runuser=/sbin/runuser
+else
+    runuser=/bin/su
+fi
+export runuser
+ 
 parse_response()
 {
 
@@ -143,12 +155,12 @@ check_env()
 
     if ! $upgrade
     then
-        runuser -m -c "touch $II_SYSTEM/ingres/files/config.dat" $II_USERID
+        $runuser -m -c "touch $II_SYSTEM/ingres/files/config.dat" $II_USERID
 
 	#Check for user defined installation ID otherwise default to II
 	[ -z "$II_INSTALLATION" ] && II_INSTALLATION=`ingprenv II_INSTALLATION`
 	[ -z "$II_INSTALLATION" ] && II_INSTALLATION=II
-	runuser -m -c "$II_SYSTEM/ingres/bin/ingsetenv II_INSTALLATION $II_INSTALLATION" $II_USERID
+	$runuser -m -c "$II_SYSTEM/ingres/bin/ingsetenv II_INSTALLATION $II_INSTALLATION" $II_USERID
 
 	$CAT << !
 II_INSTALLATION configured as $II_INSTALLATION.
@@ -157,11 +169,11 @@ II_INSTALLATION configured as $II_INSTALLATION.
 	[ -z "$II_HOSTNAME" ] && II_HOSTNAME=`ingprenv II_HOSTNAME`
 	[ -z "$II_HOSTNAME" ] && II_HOSTNAME=localhost
 
-	runuser -m -c "$II_SYSTEM/ingres/bin/ingsetenv II_HOSTNAME $II_HOSTNAME" $II_USERID
+	$runuser -m -c "$II_SYSTEM/ingres/bin/ingsetenv II_HOSTNAME $II_HOSTNAME" $II_USERID
 
         CONFIG_HOST=`iipmhost`
-	runuser -m -c "$II_SYSTEM/ingres/utility/iisetres \"ii.${CONFIG_HOST}.setup.owner.user\" $II_USERID" $II_USERID
-	runuser -m -c "$II_SYSTEM/ingres/utility/iisetres \"ii.${CONFIG_HOST}.setup.owner.group\" $II_GROUPID" $II_GROUPID
+	$runuser -m -c "$II_SYSTEM/ingres/utility/iisetres \"ii.${CONFIG_HOST}.setup.owner.user\" $II_USERID" $II_USERID
+	$runuser -m -c "$II_SYSTEM/ingres/utility/iisetres \"ii.${CONFIG_HOST}.setup.owner.group\" $II_GROUPID" $II_GROUPID
     fi
 
 }
@@ -223,14 +235,14 @@ do_setup()
     genenv
 
     # Run setup
-    runuser -m -c "$II_SYSTEM/ingres/utility/iisutm $IISUFLAG || ( echo 'Setup of ${relname} Base Package failed.' && echo 'See $II_LOG/install.log for more info.' )" $II_USERID || rc=2
+    $runuser -m -c "$II_SYSTEM/ingres/utility/iisutm $IISUFLAG || ( echo 'Setup of ${relname} Base Package failed.' && echo 'See $II_LOG/install.log for more info.' )" $II_USERID || rc=2
 
     eval homedir="~"$II_USERID
     [ -d "$homedir" ] && [ -w "$homedir" ] || eval homedir=$II_SYSTEM
 
     # Copy it to home directory if we can
     [ "$homedir" != "$II_SYSTEM" ] && \
-	runuser -m -c "cp -f $II_SYSTEM/.ing*sh $homedir" $II_USERID >> /dev/null 2>&1
+	$runuser -m -c "cp -f $II_SYSTEM/.ing*sh $homedir" $II_USERID >> /dev/null 2>&1
 
     # Install startup scripts under /etc/rc.d
     [ -x $II_SYSTEM/ingres/utility/mkrc ] &&

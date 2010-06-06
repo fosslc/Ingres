@@ -138,6 +138,15 @@ letter, the second character can be a letter or a number.
 }
 export ECHO CAT
 
+# Get command for user switching, user runuser if its there
+if [ -x /sbin/runuser ] 
+then
+    runuser=/sbin/runuser
+else
+    runuser=/bin/su
+fi
+export runuser
+ 
 #Check for install userid, groupid; default to ingres
 iiuser=`iiread_response II_USERID $II_RESPONSE_FILE`
 II_USERID=${iiuser:-ingres}
@@ -184,7 +193,7 @@ $cruser &&
             /usr/sbin/useradd -g $II_GROUPID -s /bin/bash \
                 -c 'Ingres Super User' $II_USERID
             # Ensure new user owns it's home directory
-            runuser -m -c "test -O ~$II_USERID" $II_USERID || chown -R $II_USERID "$dflt_hdir/$II_USERID"
+            $runuser -m -c "test -O ~$II_USERID" $II_USERID || chown -R $II_USERID "$dflt_hdir/$II_USERID"
         else
             /usr/sbin/useradd -g $II_GROUPID -s /bin/bash \
                 -c 'Ingres Super User' -m $II_USERID
@@ -227,7 +236,7 @@ EOF
 
 # Check response file is readable by specified installation owner.
 # If not abort the install before it starts. 
-    if runuser -m -c "[ ! -r \"$II_RESPONSE_FILE\" ]" $II_USERID ; then
+    if $runuser -m -c "[ ! -r \"$II_RESPONSE_FILE\" ]" $II_USERID ; then
         rc=6
         $CAT << !
 Response file is not readable by user $II_USERID
@@ -247,7 +256,7 @@ while [ "$inst_path" != "/" ]
 do
     [ -d "$inst_path" ] &&
     {
-        if runuser  -m -c "[ ! -r \"$inst_path\" ]" $II_USERID ; then
+        if $runuser  -m -c "[ ! -r \"$inst_path\" ]" $II_USERID ; then
             rc=7
             $CAT << !
 The following location is not completely readable by user $II_USERID
@@ -262,7 +271,7 @@ installation to proceed.
             exit $rc
         fi
 
-        if runuser -m -c "[ ! -x \"$inst_path\" ]" $II_USERID ; then
+        if $runuser -m -c "[ ! -x \"$inst_path\" ]" $II_USERID ; then
             rc=8
             $CAT << !
 User $II_USERID does NOT have execute permission for following location
