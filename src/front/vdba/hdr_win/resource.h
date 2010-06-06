@@ -3889,6 +3889,7 @@
 #define IDS_E_CREATE_TEMPORARY_FILE     8337
 #define IDM_ONLINESUPPORT               8400
 #define IDM_SQLERRORS                   8501
+#define IDI_TREE_VW_TABLE		8502
 #define IDM_DOMDOC_CHANGEVNODE          10001
 #define IDC_CG_USERLIST                 10100
 #define IDC_CG_DATABASES                10101

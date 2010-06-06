@@ -61,7 +61,8 @@
 **    Update DOMUpdateDisplayData2, add tblType variable which will
 **    contain information about table type if it is a Vectorwise table.
 **    For Ingres Vectorwise tables the tree will look very different.
-
+**  20-May-2010 (drivi01)
+**    Add a case statement to return Ingres VectorWise table type.
 ********************************************************************/
 
 //
@@ -8795,6 +8796,9 @@ int GetStaticType(int iobjecttype)
 
     case OT_TABLE:
       recType  = OT_STATIC_TABLE; // parentstrings[0] = base name
+      break;
+    case OT_VW_TABLE:
+      recType = OT_VW_TABLE;
       break;
     case OT_VIEW:
       recType  = OT_STATIC_VIEW;  // parentstrings[0] = base name

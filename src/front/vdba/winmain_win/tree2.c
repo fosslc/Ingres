@@ -24,6 +24,10 @@
 **  11-Apr-2005 (lazro01)
 **   (bug 114273) Optimized code changes for finding the id of the 
 **   the immediate child of a branch during Forced Refresh.
+**  20-May-2010 (drivi01)
+**   Update the code to check lpRecord for Ingres VectorWise table
+**   type.  If the table happens to be Ingres VectorWise return
+**   the Ingres VectorWise type instead of just OT_TABLE.
 ********************************************************************/
 
 //
@@ -31,6 +35,7 @@
 //
 // esql and so forth management
 #include "dba.h"
+#include "dbaset.h"
 #include "domdata.h"
 #include "domdisp.h"
 #include "dbaginfo.h"
@@ -3158,7 +3163,14 @@ int GetItemDisplayObjType(LPDOMDATA lpDomData, DWORD dwItem)
         case OT_TABLE:
           switch (getint(lpRecord->szComplim+STEPSMALLOBJ)) {
             case OBJTYPE_NOTSTAR:
-              return OT_TABLE;
+		switch(getint(lpRecord->szComplim+STEPSMALLOBJ+STEPSMALLOBJ))
+		{
+		  case IDX_VW:
+		  case IDX_VWIX:
+			return OT_VW_TABLE;
+		  default:
+			return OT_TABLE;
+		}
             case OBJTYPE_STARNATIVE:
               return OT_STAR_TBL_NATIVE;
             case OBJTYPE_STARLINK:

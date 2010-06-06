@@ -11,6 +11,9 @@
 **   (sir 99596) removal of obsolete code and resources
 **  18-Mar-2003 (schph01)
 **   sir 107523 management of sequences
+**  20-May-2010 (drivi01)
+**   Add OT_VW_TABLE to differentiate Ingres tables from
+**   Ingres VectorWise tables for a custom icon.
 ********************************************************************/
 
 #ifndef __TREE_INCLUDED__
@@ -411,6 +414,11 @@ typedef struct  _sTreeRecord
 
 #define OT_STATIC_R_DBGRANT_CRESEQY        675
 #define OT_STATIC_R_DBGRANT_CRESEQN        676
+
+//
+// OT_TABLE for Ingres VectorWise icons
+//
+#define OT_VW_TABLE	677
 
 /********* WARNING: values after 1000 are used in dba.h ***************/
 

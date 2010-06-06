@@ -61,6 +61,9 @@
 **    This is because on non-Unicode builds, T2A uses the original pointer, resulting
 **    in the above functions unintentionally altering the stored virtual node name, which
 **    in turn can cause bug 121764.
+** 20-May-2010 (drivi01)
+**    Add a case statement for Ingres Vectorwise tables to load
+**    a slightly modified tree icon.
 */
 
 #include "stdafx.h"
@@ -893,6 +896,9 @@ HICON LoadIconInCache(int type)
     case OT_STAR_TBL_LINK:
       hIcon1 = IconCacheLoadIcon(IDI_TREE_STAR_TBL_LINK);
       break;
+	case OT_VW_TABLE:
+	  hIcon1 = IconCacheLoadIcon(IDI_TREE_VW_TABLE);
+	  break;
 
     // views:
     case OT_STAR_VIEW_NATIVE:

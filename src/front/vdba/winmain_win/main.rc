@@ -24,6 +24,8 @@
 **    Integrate Export assistant into vdba
 ** 02-Aug-2004 (kodse01)
 **    Changed #include "..\hdr\resource.h" to #include "..\hdr_win\resource.h"
+** 20-May-2010 (drivi01)
+**    Add a new graphic for Ingres VectorWise tables in the tree.
 ********************************************************************/
 #include "..\hdr_win\resource.h"
 
@@ -96,6 +98,11 @@ IDI_TREE_STAR_VIEW_NATIVE       ICON  DISCARDABLE   "starvina.ico"
 IDI_TREE_STAR_VIEW_LINK         ICON  DISCARDABLE   "starviln.ico"
 IDI_TREE_STAR_PROCEDURE         ICON  DISCARDABLE   "starproc.ico"
 IDI_TREE_STAR_INDEX             ICON  DISCARDABLE   "staridx.ico"
+
+//
+// Ingres VectorWise table icons
+//
+IDI_TREE_VW_TABLE		ICON  DISCARDABLE   "table_vw.ico"
 
 //
 // ICE
