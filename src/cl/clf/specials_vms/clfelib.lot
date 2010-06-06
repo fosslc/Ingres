@@ -586,7 +586,7 @@ SYMBOL_VECTOR=(MOptrout=PROCEDURE, -
                 SPARE, -		! IISTtrmnwhite
                 IISTxcompare=PROCEDURE, -
 		MHround=PROCEDURE, -
-		CM_isDBL=DATA,
+		CM_isDBL=DATA, -
 		CV_fvp=DATA, -
 		ST_fvp=DATA)
 INGLIB:libcompat/library
