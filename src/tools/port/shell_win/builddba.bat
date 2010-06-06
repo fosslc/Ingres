@@ -57,6 +57,11 @@ REM	     Replace /kp flag with /pa flag to ensure compatibility with
 REM	     different version of signtool.  /pa flag ensures the signature
 REM	     is verified using the "Default Authenticode" verification
 REM	     policy.
+REM	13-May-2010 (drivi01)
+REM	     Add -VW flag which will enable builddba script to roll a
+REM	     DBA Tools image for Ingres VectorWise installations.
+REM	     The VW DBA Tools image will differ from Ingres image
+REM	     with graphics.
 REM	
 
 set SUFFIX=
@@ -113,6 +118,7 @@ goto CONT0_9
 :CHECK8
 if "%1" == "-?" goto CONT0_9
 if "%1" == "-help"  goto CONT0_9
+if "%1" == "-VW" set VW_IMAGE=TRUE
 goto CONT1
 
 
@@ -215,6 +221,13 @@ goto CONT_IMAGE
 @echo.
 echo Building DBA Tools image...
 call gd enterprise_is_win
+@echo off
+@echo.
+echo Copy the installer images in place
+@echo.
+@echo on
+if "%VW_IMAGE%"=="TRUE" copy /y resource\Block01_VW.bmp resource\Block01_img.bmp & copy /y resource\install_top_VW.bmp resource\install_top_img.bmp
+if not "%VW_IMAGE%"=="TRUE" copy /y resource\Block01.bmp resource\Block01_img.bmp & copy /y resource\install_top.bmp resource\install_top_img.bmp
 @echo off
 call chmod 777 IngresII_DBA_DBL.ism
 REM call chmod 777 MSRedists.ism 
