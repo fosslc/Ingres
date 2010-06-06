@@ -106,6 +106,12 @@
 **	06-apr-2004 (somsa01)
 **	    In NMstIngAt(), added logging of update operation. In
 **	    NMwritesyms(), added backup of symbol.tbl logic.
+**	06-May-2010 (hanje04)
+**	    Bug 123694
+**	    In NMstIngAt() add check to see if symbol.tbl has been updated
+**	    since it was last read. This prevents stale info being written
+**	    out in the rare event that prior calls to NMgtIngAt() don't
+**	    cause the in memory copy to be flushed.
 **/
 
 /* # defines */
@@ -345,11 +351,13 @@ register char	*value;
 	register bool	changed = FALSE;
 	register SYM	*sp;
 	register SYM	*lastsp;
+	register i4	rval = OK;
  
 	char	buf[ MAXLINE ];
 	char	newname[ MAXLINE ];
 	bool	sym_added = FALSE;
 	char	*oldval = NULL;
+	SYSTIME		thistime;
 
     	if ( STncmp( name, "II", 2 ) == OK )
             STpolycat( 2, SystemVarPrefix, name+2, newname );
@@ -376,13 +384,32 @@ register char	*value;
 	}
 
 	/* Read the symbol table file once */
- 
 	if ( s_list == NULL && OK != (status = NMreadsyms()) )
 	{
 		MUv_semaphore( &NM_static.Sem );
 		NMlogOperation("", NULL, NULL, NULL, status);
 		NMunlocksyms();
 		return (status);
+	}
+	else
+	{
+		/* test if symbol table file was modified ? */
+		LOlast(&NMSymloc, &thistime);
+		if(MEcmp((PTR)&thistime, (PTR)&NMtime, sizeof(NMtime)) != 0)
+		{
+		    NMflushIng();
+		    rval = NMreadsyms();
+		    if(rval == OK)
+		        LOlast(&NMSymloc, &NMtime);
+		    else
+		    {
+			MUv_semaphore( &NM_static.Sem );
+			NMlogOperation("", NULL, NULL, NULL, status);
+			NMunlocksyms();
+			return (status);
+		    }
+			
+		}
 	}
  
 	/*
