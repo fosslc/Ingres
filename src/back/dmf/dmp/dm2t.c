@@ -3660,6 +3660,8 @@ DB_ERROR	*dberr)
 **	    Check for busy Master if partition TCB is itself not busy.
 **	14-Aug-2008 (kschendel) b120791
 **	    Init "built" in the loop, since there is a continue statement.
+**	28-May-2010 (jonj)
+**	    If partition not found, wait for busy master before building.
 */
 DB_STATUS
 dm2t_fix_tcb(
@@ -3682,8 +3684,9 @@ DB_ERROR            *dberr)
     DB_STATUS		status;
     i4		built;
     i4		sync_flag;
-    DMP_HASH_ENTRY	*h;
+    DMP_HASH_ENTRY	*h, *master_h;
     i4		    *err_code = &dberr->err_code;
+    DB_TAB_ID		master_tabid;
 
     CLRDBERR(dberr);
 
@@ -3722,6 +3725,29 @@ DB_ERROR            *dberr)
 		SETDBERR(dberr, 0, W_DM9C50_DM2T_FIX_NOTFOUND);
 		status = E_DB_WARN;
 		break;
+	    }
+
+	    /*
+	    ** If seeking a partition, check if its Master
+	    ** is being constructed or deconstructed - 
+	    ** if so, wait/retry.
+	    **
+	    ** Master may be releasing all of its partitions and has
+	    ** released this one, so we don't want to rebuild it
+	    ** referencing a Master that's soon to be deallocated.
+	    */
+	    if ( table_id->db_tab_index & DB_TAB_PARTITION_MASK )
+	    {
+	        master_tabid.db_tab_base = table_id->db_tab_base;
+		master_tabid.db_tab_index = 0;
+
+		locate_tcb(db_id, &master_tabid, &t, &master_h, &hash_mutex);
+
+		if ( t && t->tcb_status & (TCB_BUSY | TCB_BEING_RELEASED) )
+		{
+		    dm2t_wait_for_tcb(t, lock_list);
+		    continue;
+		}
 	    }
 
 	    /*
@@ -4813,6 +4839,7 @@ DB_ERROR	*dberr)
 					lock_list, log_id, dberr);
 	    }
 	}
+
 	/* Unbusy master. We'll wake up waiters below */
 	t->tcb_status &= ~TCB_BUSY;
     }
@@ -4950,9 +4977,11 @@ DB_ERROR	*dberr)
 	    /* Pin the TCB, update iirelation */
 	    t->tcb_ref_count++;
 
-            /* Indicate that the TCB is being released.
+            /* Indicate that the TCB is being released,
+	    ** if it will be released.
             */
-            t->tcb_status |= TCB_BEING_RELEASED;
+	    if ( !(flag & DM2T_KEEP) )
+		t->tcb_status |= TCB_BEING_RELEASED;
 	    dm0s_munlock(t->tcb_hash_mutex_ptr);
 
     	    update_rel(t, lock_list, &InvalidateTCB, dberr);
@@ -5323,7 +5352,6 @@ DB_ERROR	*dberr)
 	if (status != E_DB_OK)
 	    break;
 
-
 	/*
 	** Release the TCB validation lock if this database is multiply served.
 	** If a PURGE operation was requested, then bump the lock value first,
@@ -5405,7 +5433,6 @@ DB_ERROR	*dberr)
 	uleFormat(dberr, 0, NULL, ULE_LOG, NULL, NULL, 0, NULL, err_code, 0);
 	SETDBERR(dberr, 0, E_DM9270_RELEASE_TCB);
     }
-
     /* Wake up any sessions waiting on this TCB */
     if ( t->tcb_status & TCB_WAIT )
 	dm2t_awaken_tcb(t, lock_list);
@@ -7510,8 +7537,11 @@ DB_ERROR            *dberr)
 	    DestTCB = (DMP_TCB*)NULL;
 
 	    /* If caller is destroying Base table, destroy it and all indexes */
-	    if ( table_id->db_tab_index <= 0 )
+	    if ( table_id->db_tab_index == 0 ||
+	         table_id->db_tab_index & DB_TAB_PARTITION_MASK )
+	    {
 		DestTCB = t;
+	    }
 	    else
 	    {
 		for ( it = t->tcb_iq_next; it != (DMP_TCB*)&t->tcb_iq_next; )
@@ -8995,7 +9025,7 @@ DB_ERROR	*dberr)
 	    ** the base table).  Pass in already-held mutex.
 	    */
 
-	    if (table_id->db_tab_index < 0)
+	    if ( table_id->db_tab_index & DB_TAB_PARTITION_MASK )
 		locate_tcb(dcb->dcb_id, &base_table_id, &base_tcb, &toss_h, &tcb_hm);
 	    if (base_tcb == NULL)
 	    {
@@ -9150,10 +9180,11 @@ DB_ERROR	*dberr)
 	    tcb->tcb_parent_tcb_ptr = base_tcb;
 	    tcb->tcb_lkid_ptr = &base_tcb->tcb_lk_id;
 	}
-	else if (table_id->db_tab_index < 0)
+	else if (table_id->db_tab_index & DB_TAB_PARTITION_MASK )
 	{
 	    tcb->tcb_pmast_tcb = base_tcb;
 	    tcb->tcb_lkid_ptr = &base_tcb->tcb_lk_id;
+	    /* NB: relstat2 & TCB2_PARTITION is not set, by design */
 	}
 
 	/*
@@ -9198,7 +9229,8 @@ DB_ERROR	*dberr)
 	** The tcb is marked busy during the process since the hcb mutex
 	** must be released.
 	*/
-	if (table_id->db_tab_index <= 0)
+	if ( table_id->db_tab_index == 0 ||
+	     table_id->db_tab_index & DB_TAB_PARTITION_MASK )
 	{
 	    /*
 	    ** Get TCB validation lock.
@@ -9454,6 +9486,9 @@ DB_ERROR	*dberr)
 **	    add is already in the TABLE_IO cb, we should just return. What
 **	    was happening was status was set to OK, we break out of for loop,
 **	    and fall into error handler, which returns E_DM9C71. bug 91079.
+**	20-May-2010 (jonj)
+**	    dm2t_wt_tabio_ptr() parameters "mode" and "lock_id" in wrong order,
+**	    negating DM2T_EXCLUSIVE.
 */
 DB_STATUS
 dm2t_add_tabio_file(
@@ -9569,7 +9604,7 @@ DB_ERROR	*dberr)
 	    if (status != E_DB_OK)
 		break;
 
-	    dm2t_wt_tabio_ptr(dcb->dcb_id, table_id, lock_id, DM2T_EXCLUSIVE);
+	    dm2t_wt_tabio_ptr(dcb->dcb_id, table_id, DM2T_EXCLUSIVE, lock_id);
 
 	    continue;
 	}
@@ -9762,6 +9797,9 @@ DB_ERROR	*dberr)
 **	    (introduced by change 491612 for clusters).
 **	    Don't loop back to locate_tcb() unless mode
 **	    is DM2T_EXCLUSIVE.
+**	20-May-2010 (jonj)
+**	    Wasn't looping back to locate_tcb() as expected,
+**	    ensure hash mutex is released before return.
 */
 VOID
 dm2t_wt_tabio_ptr(
@@ -9798,12 +9836,23 @@ i4		lock_id)
 		/* dm2t_wait_for_tcb() will release TCB's hash_mutex */
 	        dm2t_wait_for_tcb(tcb->tcb_pmast_tcb, lock_id);
 	    }
+	    else
+	    {
+		/* TCB is not busy */
+
+		/* Ensure hash mutex is released */
+	        dm0s_munlock(hash_mutex);
+		return;
+	    }
+
 	    if ( mode != DM2T_EXCLUSIVE )
 	       return;
 	}
-
-	dm0s_munlock(hash_mutex);
-	break;
+	else
+	{
+	    dm0s_munlock(hash_mutex);
+	    break;
+	}
     }
 
     return;
@@ -14050,6 +14099,9 @@ DB_ERROR	*dberr)
 **      Conditionally add LK_LOCAL flag if database/table is confined to one node.
 **	04-Apr-2008 (jonj)
 **	    Cleaned up the code to better deal with DMCM issues.
+**	28-May-2010 (jonj)
+**	    Partition check must be on db_tab_index, not relstat2 & TCB2_PARTITION.
+**	    relstat2 may not be initialized during some recovery operations.
 */
 static DB_STATUS
 lock_tcb(
@@ -14073,7 +14125,7 @@ DB_ERROR	*dberr)
     ** to this partition's tbio.
     ** Only Master TCB's are verified/invalidated.
     */
-    if ( tcb->tcb_rel.relstat2 & TCB2_PARTITION )
+    if ( tcb->tcb_rel.reltid.db_tab_index & DB_TAB_PARTITION_MASK )
     {
 	tcb->tcb_table_io.tbio_cache_valid_stamp = 
 	    tcb->tcb_pmast_tcb->tcb_table_io.tbio_cache_valid_stamp;
@@ -14197,6 +14249,9 @@ DB_ERROR	*dberr)
 **          it's illegal to update tcb-status without the hash mutex, and
 **          since we're not holding the hash mutex here, don't bother with
 **          the status update.
+**	28-May-2010 (jonj)
+**	    Partition check must be on db_tab_index, not relstat2 & TCB2_PARTITION.
+**	    relstat2 may not be initialized during some recovery operations.
 */
 static DB_STATUS
 unlock_tcb(
@@ -14211,7 +14266,7 @@ DB_ERROR	*dberr)
     CLRDBERR(dberr);
 
     /* Partitions are never cached locked, only Master. */
-    if ( !(tcb->tcb_rel.relstat2 & TCB2_PARTITION) )
+    if ( !(tcb->tcb_rel.reltid.db_tab_index & DB_TAB_PARTITION_MASK) )
     {
 	stat = LKrelease((i4)0, dmf_svcb->svcb_lock_list, tcb->tcb_lkid_ptr, 
 			    0, (LK_VALUE * ) NULL, &sys_err);
@@ -14282,6 +14337,9 @@ DB_ERROR	*dberr)
 **	    incorporating their functionalities into this function.
 **	22-Apr-2009 (kschendel) SIR 122890
 **	    TCB-less bumplock wasn't incrementing the lock value. (?)
+**	28-May-2010 (jonj)
+**	    Partition check must be on db_tab_index, not relstat2 & TCB2_PARTITION.
+**	    relstat2 may not be initialized during some recovery operations.
 */
 DB_STATUS
 dm2t_bumplock_tcb(
@@ -14309,7 +14367,7 @@ DB_ERROR	*dberr)
     */
     if ( !(dcb->dcb_status & (DCB_S_RECOVER | DCB_S_ROLLFORWARD))
 	&& (!tcb || (tcb->tcb_lkid_ptr->lk_unique &&
-		   !(tcb->tcb_rel.relstat2 & TCB2_PARTITION))) )
+            !(tcb->tcb_rel.reltid.db_tab_index & DB_TAB_PARTITION_MASK))) )
     {
 	if ( tcb )
 	{
