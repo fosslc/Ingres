@@ -195,6 +195,15 @@ psl_project_corr_vars (
 **	    then the aggregate could see more rows than it should. The
 **	    AGHEAD qualifier is now treated with psl_float_vars to make
 **	    sure that only the required floating happens.
+**	25-May-2010 (kschendel) b123796
+**	    A query such as:
+**	    select ... where a1 < (select a1 from t1 where a1='' and a2=''
+**	      and a3='' and a4='' and ...)
+**	    loses all but the last two conditions out of the subselect.
+**	    The cause was premature variable initialization; psl-float-factors
+**	    will rearrange the qtree fragment with the ANDs, and the
+**	    rearranged qtree is what needs to be attached to the generated
+**	    aghead, not a pointer to the original qtree.
 */
 
 static DB_STATUS
@@ -654,7 +663,7 @@ psl_flatten1(
 			!rt_node))
 		{
 		    PST_QNODE **varp = NULL;
-		    PST_QNODE *par = pst_parent_node(stk, NULL);
+
 		    /* If we get through with a WHERE clause and we are singleton,
 		    ** we won't be needing opmeta set unless we have a GROUP BY in an
 		    ** uncorrelated aggregate. This latter case presents an awkward problem
@@ -708,7 +717,7 @@ psl_flatten1(
 				** joins but in other cases we may need the operator to force
 				** the real error. */
 				if (tmp_dv.db_datatype > 0 &&
-					abs(par->pst_sym.pst_dataval.db_datatype) == DB_BOO_TYPE)
+					abs(parent->pst_sym.pst_dataval.db_datatype) == DB_BOO_TYPE)
 				{
 				    tmp_dv.db_datatype = -tmp_dv.db_datatype;
 				    tmp_dv.db_length++;
@@ -1167,21 +1176,30 @@ psl_flatten1(
 		    }
 		    else if (~subsel->pst_sym.pst_value.pst_s_root.pst_mask1 & PST_3GROUP_BY)
 		    {
-			PST_QNODE *v = subsel->pst_right; /* 1st AGH gets original */
+			PST_QNODE *v;
 
-			/* Move bool factors up that require tables outside of this
-			** scope - from subsel to rt_node - if we can. */
+			/* Move bool factors up that require tables outside of
+			** this scope - from subsel to rt_node - if we can.
+			** This also may rearrange the qtree into a more
+			** canonical form.
+			*/
 			if (rt_node &&
 				(status = psl_float_factors(cb, psq_cb, subsel, rt_node)))
 			    return status;
 
+			/* Attach the qual to the AGHEAD, and to any other
+			** AGHEAD's in the subselect.  The first AGHEAD gets
+			** the "original" (possibly rearranged) qual, any
+			** later ones get a copy.
+			*/
+			v = subsel->pst_right;	/* First AGH gets original */
 			do
 			{
 			    /* Same for AGHs */
 			    if (rt_node &&
 				    (status = psl_float_factors(cb, psq_cb, *agheadp, rt_node)))
 				return status;
-			    if (!v)
+			    if (v == NULL)
 			    {
 				/* ... and copies thereof to any other ag-WHERE
 				** clause in this subsel */
@@ -1200,7 +1218,7 @@ psl_flatten1(
 			    if (status = psy_apql(cb, &cb->pss_ostream,
 					v, *agheadp, &psq_cb->psq_error))
 				return status;
-			    v = NULL;
+			    v = NULL;	/* Ask for copies now */
 			    while (psl_find_node((*agheadp)->pst_left, &v, PST_VAR))
 			    {
 				if (!BTtest(v->pst_sym.pst_value.pst_s_var.pst_vno,
@@ -1885,10 +1903,11 @@ psl_retarget_vars(
 }
 
 /*
-** Name:	psl_retarget_vars
+** Name:	psl_float_factors
 **
 ** Description:	this function moves predicates whose scope is not wholly 
-**		satisfied by the current scope.
+**		satisfied by the current scope.  It may also rearrange
+**		the subtree even if no predicates are relocated.
 **		The 'from' predicate is treated as a list of AND nodes
 **		in partial CNF. The normalisation is performed ad-hoc sf
 **		needed during the single pass.
