@@ -56,6 +56,9 @@
 **	    SIR 123791
 **	    gtk_label_set_eillipsize not available for GTK 2.4 (build platform
 **	    version). Null out for now.
+**	25-May-2010 (hanje04)
+**	    SIR 123791
+**	    Correct typo, ellipsize not eillipsize. grrrr!
 */
 
 /*
@@ -66,7 +69,7 @@
 # define gtk_button_set_focus_on_click
 # define gtk_event_box_set_visible_window
 # define gtk_text_view_set_accepts_tab
-# define gtk_label_set_eillipsize
+# define gtk_label_set_ellipsize
 
 void
 on_basic_install_checked               (GtkButton       *button,
