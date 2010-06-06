@@ -63,6 +63,12 @@
 **    For Ingres Vectorwise tables the tree will look very different.
 **  20-May-2010 (drivi01)
 **    Add a case statement to return Ingres VectorWise table type.
+**  26-May-2010 (drivi01)
+**    For Ingres VectorWise table type, skip the error message check
+**    after AddStaticSubItem call by encasing the call and the error
+**    check in the brackets.
+**    Removed Replication from the Database tree for Ingres
+**    VectorWise installations.  Replication is not supported.
 ********************************************************************/
 
 //
@@ -1728,6 +1734,8 @@ int DOMUpdateDisplayData2 (int hnodestruct, int iobjecttype, int level, LPUCHAR 
             // Add sub-subitem REPLICATION with sub dummy collapsed
             // we put the database name in the extra data of the record
             // 19/9/95 : store db owner for call to GetReplicInstallStatus
+          if (!IsVW())
+          {
             idChildObj = AddStaticSubItem(lpDomData, idAnchorObj,
                           lpRecord->objName, NULL, NULL,
                           lpRecord->parentDbType,
@@ -1736,6 +1744,7 @@ int DOMUpdateDisplayData2 (int hnodestruct, int iobjecttype, int level, LPUCHAR 
                           TRUE, TRUE);
             if (idChildObj==0)
               return MergeResStatus(iretGlob, RES_ERR);   // Fatal
+          }
             
             //
             //  Beginning of DBALARMS full tree creation code
@@ -2668,6 +2677,7 @@ int DOMUpdateDisplayData2 (int hnodestruct, int iobjecttype, int level, LPUCHAR 
           // Add sub-subitems with sub dummies collapsed
             // Add sub-subitem INTEGRITY with sub dummy collapsed
           if (tblType == 0)
+          {
             idChild2Obj = AddStaticSubItem(lpDomData, idAnchorObj,
                           aparentsResult[0],
                           buf2,       // schema - instead of aparentsResult[1]
@@ -2679,10 +2689,12 @@ int DOMUpdateDisplayData2 (int hnodestruct, int iobjecttype, int level, LPUCHAR 
                           IDS_TREE_INTEGRITY_STATIC, TRUE, TRUE);
             if (idChild2Obj==0)
               return MergeResStatus(iretGlob, RES_ERR);   // Fatal
+          }
 
           // Add sub-subitem RULE with sub dummy collapsed
           if (tblType == 0)
-	    idChild2Obj = AddStaticSubItem(lpDomData, idAnchorObj,
+          {
+	        idChild2Obj = AddStaticSubItem(lpDomData, idAnchorObj,
                           aparentsResult[0],
                           buf2,       // schema - instead of aparentsResult[1]
                           aparentsResult[2],
@@ -2693,14 +2705,16 @@ int DOMUpdateDisplayData2 (int hnodestruct, int iobjecttype, int level, LPUCHAR 
                           IDS_TREE_RULE_STATIC, TRUE, TRUE);
           if (idChild2Obj==0)
             return MergeResStatus(iretGlob, RES_ERR);   // Fatal
+          }
 
             //
             //  Beginning of SECURITY full tree creation code
             //
             
             // Add sub-subitem SECURITY ALARMS on one level only
-            if (tblType == 0)
-				idChild2Obj = AddStaticSubItem(lpDomData, idAnchorObj,
+          if (tblType == 0)
+          {
+	    idChild2Obj = AddStaticSubItem(lpDomData, idAnchorObj,
                           aparentsResult[0],
                           aparentsResult[1],
                           aparentsResult[2],
@@ -2711,6 +2725,7 @@ int DOMUpdateDisplayData2 (int hnodestruct, int iobjecttype, int level, LPUCHAR 
                           IDS_TREE_SECURITY_STATIC, FALSE, TRUE);
             if (idChild2Obj==0)
               return MergeResStatus(iretGlob, RES_ERR);   // Fatal
+          }
             
             idChild3Obj = idChild2Obj;  // for minimum changes in the source
             
@@ -2828,6 +2843,7 @@ int DOMUpdateDisplayData2 (int hnodestruct, int iobjecttype, int level, LPUCHAR 
 
           // Add sub-subitem INDEX with sub dummy collapsed
           if (tblType == 0)
+          {
 	    idChild2Obj = AddStaticSubItem(lpDomData, idAnchorObj,
                         aparentsResult[0],
                         buf2,       // schema - instead of aparentsResult[1]
@@ -2837,12 +2853,14 @@ int DOMUpdateDisplayData2 (int hnodestruct, int iobjecttype, int level, LPUCHAR 
                         bufOwner,               // table schema
                         OT_STATIC_INDEX,
                         IDS_TREE_INDEX_STATIC, TRUE, TRUE);
-          if (idChild2Obj==0)
-            return MergeResStatus(iretGlob, RES_ERR);   // Fatal
+            if (idChild2Obj==0)
+              return MergeResStatus(iretGlob, RES_ERR);   // Fatal
+          }
 
             // Add sub-subitem TABLELOCATION with sub dummy collapsed
-            if (tblType == 0)
-	            idChild2Obj = AddStaticSubItem(lpDomData, idAnchorObj,
+          if (tblType == 0)
+          {
+	      idChild2Obj = AddStaticSubItem(lpDomData, idAnchorObj,
                           aparentsResult[0],
                           aparentsResult[1],
                           aparentsResult[2],
@@ -2851,9 +2869,9 @@ int DOMUpdateDisplayData2 (int hnodestruct, int iobjecttype, int level, LPUCHAR 
                           bufOwner,               // table schema
                           OT_STATIC_TABLELOCATION,
                           IDS_TREE_TABLELOCATION_STATIC, TRUE, TRUE);
-            if (idChild2Obj==0)
-              return MergeResStatus(iretGlob, RES_ERR);   // Fatal
-
+              if (idChild2Obj==0)
+                return MergeResStatus(iretGlob, RES_ERR);   // Fatal
+          }
           //
           //  Beginning of TABLEGRANTEES full tree creation code
           //
@@ -3016,7 +3034,8 @@ int DOMUpdateDisplayData2 (int hnodestruct, int iobjecttype, int level, LPUCHAR 
 
             // Add sub-subitem CDDS ON TABLE with sub dummy collapsed,
             // with full collapse
-		  if (tblType == 0)
+          if (tblType == 0)
+          {
             idChild2Obj = AddStaticSubItem(lpDomData, idAnchorObj,
                           aparentsResult[0],
                           aparentsResult[1],
@@ -3028,7 +3047,7 @@ int DOMUpdateDisplayData2 (int hnodestruct, int iobjecttype, int level, LPUCHAR 
                           IDS_TREE_R_REPLIC_TABLE_CDDS_STATIC, TRUE, FALSE);
             if (idChild2Obj==0)
               return MergeResStatus(iretGlob, RES_ERR);   // Fatal
-
+          }
           break;
         case OT_SEQUENCE:
 
