@@ -13859,6 +13859,18 @@ scs_gca_error(DB_STATUS status,
 **	    blob copy optim data for the copy.
 **	    Execute of prepared statement has table ID now, easier on dmpe.
 **	    "Blob workspace" is always allocated with the lowksp now.
+**	26-May-2010 (kschendel) b123798
+**	    Repair minor goofs in INSERT detection, need to pass a blank-
+**	    padded table name to DMF.
+**	    (Later) Having actually gotten blob put optimization working,
+**	    turn it off.  :-(  OPF likes to compile in LVCH-to-LVCH
+**	    coercions, apparently for little or no reason (nullability
+**	    difference is one reason I found).  If the input to dmpe_move
+**	    is a "final" optimized coupon, things fall apart, because
+**	    data ends up in the etab twice with the same sequence number.
+**	    Turn off optimization until we can convince OPF to not do that.
+**	    (blob optim for COPY can remain, as opf doesn't get its grubby
+**	    paws on it.)
 */
 DB_STATUS
 scs_blob_fetch(SCD_SCB *scb,
@@ -13976,6 +13988,35 @@ scs_blob_fetch(SCD_SCB *scb,
 		blob_info->base_attid = qeu_copy->qeu_cp_cur_att+1;
 		blob_info->flags = BLOBWKSP_ACCESSID | BLOBWKSP_ATTID;
 	    }
+#if 0
+/* ************* START OF DISABLED CODE
+**	Having actually gotten blob put optimization working,
+**	turn it off.  :-(  OPF likes to compile in LVCH-to-LVCH
+**	coercions, apparently for little or no reason (nullability
+**	difference is one reason I found).  If the input to dmpe_move
+**	is a "final" optimized coupon, things fall apart; dmpe_move copies
+**	the LOB to a temp (*), and the final put copies it back, and now
+**	we have the data in the etab twice (with the same sequence number).
+**	Turn off optimization until we can convince OPF to not do that.
+**	(blob optim for COPY can remain, as opf doesn't get its grubby
+**	paws on it.)
+**
+**	Please note that simply "fixing" opc to pass most put-optimized
+**	LOB's directly to DMF is not good enough.  We must *guarantee*
+**	that no coercion is compiled in, and that probably involves
+**	tagging the statement in some manner to say that coercion is
+**	disallowed.  (Or, in the execute prepared statement case, the
+**	already-compiled statement would have to be tagged to show that
+**	there is no coercion in the QP.)  Yet another alternative would be
+**	for DMF (dmpe_move) to detect the situation, somehow, magically,
+**	and simply copy the coupon instead of moving the data.
+**
+**	note (*): actually, dmpe_move falls over because the input put-
+**	optimized coupon doesn't have the proper "get" information, but
+**	if that were to be fixed, double data would be the result.
+**
+**	THE END OF THE #if 0 IS ABOUT 200 LINES DOWN ...
+*/
 	    else if (STncasecmp(query, "execute ", 8) == 0 &&
 		    STncasecmp(query + 8, "procedure ", 11 != 0))
 	    {
@@ -14033,7 +14074,8 @@ scs_blob_fetch(SCD_SCB *scb,
 
 	    else if (STncasecmp(query, "insert into ", 12) == 0)
 	    {
-		char	*name_start, *name_end, *pos;
+		char	*name_start, *name_end, *pos, *putter;
+		char	buf[DB_MAXNAME + 1];
 		i4		offset = 0;
 		i4          skip;
 
@@ -14046,6 +14088,7 @@ scs_blob_fetch(SCD_SCB *scb,
 		if (*query == 'i' || *query == 'I')
 		    skip = 11;
 		/* query is realy "insert into", find table name */
+		MEfill(DB_OWN_MAXNAME, ' ', blob_info->table_owner.db_own_name);
 		for (query += skip; *query == ' '; query++); /* skip blanks */
 		pos = query;
 		for (;;)
@@ -14053,15 +14096,18 @@ scs_blob_fetch(SCD_SCB *scb,
 		    /* check for delimited name */
 		    if (*pos == '"') /* delimited name */
 		    {
-			name_start = pos;
+			name_start = ++pos;
+			putter = &buf[0];
 			for (;;)
 			{
 			    for (;*pos != '"' && offset <= DB_MAXNAME; 
-				 pos++, offset++); /* get next quote */
+				 pos++, offset++)
+				*putter++ = *pos;
 			    if (offset > DB_MAXNAME)
 				break; /* can't find quote, bail here */
-			    if (*pos == '"') /* quoted quote, skip it */
+			    if (*(pos+1) == '"') /* quoted quote, skip it */
 			    {
+				*putter++ = '"';	/* Just one */
 				pos++;
 				offset++;
 				continue;
@@ -14074,7 +14120,6 @@ scs_blob_fetch(SCD_SCB *scb,
 			}
 			if (!name_found)
 			    break; /* name not found, bail */
-			name_end = pos - 1;
 			/* skip spaces */
 			for (;*pos == ' ' && offset <= DB_MAXNAME; pos++, offset++);
 			/* check for owner name */
@@ -14085,13 +14130,18 @@ scs_blob_fetch(SCD_SCB *scb,
 			    pos++;
 			}
 			/* ditch trailing spaces */
-			for (;*name_end == ' '; name_end--, offset--);
+			--putter;
+			while (*putter == ' ' && putter >= &buf[0])
+			    --putter;
+			*++putter = EOS;
 		    }
 		    else
 		    {
 			name_start = pos;
-			for (;*pos != ' ' && *pos != '(' && offset <= DB_MAXNAME;
-			     pos++, offset++);
+			while (*pos != ' ' && *pos != '.' && *pos != '(' && offset <= DB_MAXNAME)
+			{
+			    ++pos;  ++offset;
+			}
 			if (offset > DB_MAXNAME)
 			    break; /* can't find space, bail here */
 			else
@@ -14105,33 +14155,28 @@ scs_blob_fetch(SCD_SCB *scb,
 			    name_found = FALSE;
 			    pos++;
 			}
+			MEcopy(name_start, name_end-name_start, buf);
+			buf[name_end-name_start] = EOS;
 		    }
 		    if (!name_found && owner_found)
 		    {
-			char	buf[DB_MAXNAME + 1];
 
-			MEcopy(name_start, name_end - name_start, buf);
-			buf[name_end - name_start] = '\0';
 			if (sscb->sscb_ics.ics_dbserv & DU_NAME_UPPER)
 			    CVupper(buf);
 			else
 			    CVlower(buf);
-			MEcopy(buf, name_end - name_start, 
-			    blob_info->table_owner.db_own_name);
+			MEmove(STlength(buf), buf, ' ',
+				DB_OWN_MAXNAME, blob_info->table_owner.db_own_name);
 			continue;
 		    }
 		    else if (name_found)
 		    {
-			char	buf[DB_MAXNAME + 1];
-
-			MEcopy(name_start, name_end - name_start, buf);
-			buf[name_end - name_start] = '\0';
 			if (sscb->sscb_ics.ics_dbserv & DU_NAME_UPPER)
 			    CVupper(buf);
 			else
 			    CVlower(buf);
-			MEcopy(buf, name_end - name_start, 
-			    blob_info->table_name.db_tab_name);
+			MEmove(STlength(buf), buf, ' ',
+				DB_TAB_MAXNAME, blob_info->table_name.db_tab_name);
 		    }
 		    else
 			break;
@@ -14173,6 +14218,8 @@ scs_blob_fetch(SCD_SCB *scb,
 		    blob_info->source_dt = sscb->sscb_gcadv.gca_type;
 		}		
 	    }
+#endif
+/* ********* END OF #if 0 from way above */
 	} /* dmm == 0 */
 
 	segment_dv.db_datatype = sscb->sscb_gcadv.gca_type;

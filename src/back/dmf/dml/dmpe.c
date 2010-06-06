@@ -3773,6 +3773,11 @@ dmpe_deallocate(DMPE_PCB      *pcb )
 **	    Clear base-id when an attempt at optimizing a put coupon fails
 **	    for some valid reason (e.g. multiple blob atts).  Otherwise,
 **	    the later cross-check gets confused.
+**	26-May-2010 (kschendel) b123798
+**	    More HOQA fixing:  don't do the second (attribute-info) DMT SHOW
+**	    if no base table resolution is available.  If the attribute SHOW
+**	    is indeed done, feed it the proper base table ID, not garbage,
+**	    and give it the proper ptr-size as well.
 */
 
 static DB_STATUS
@@ -3951,7 +3956,7 @@ dmpe_begin_dml(ADP_POP_CB *pop_cb, DMPE_PCB **pcbp, bool is_put)
 		dmt_shw.type = DMT_SH_CB;
 		dmt_shw.length = sizeof(DMT_SHW_CB);
 		dmt_shw.dmt_char_array.data_in_size = 0;
-		dmt_shw.dmt_flags_mask = DMT_M_TABLE | DMT_M_ATTR | DMT_M_NAME;
+		dmt_shw.dmt_flags_mask = DMT_M_TABLE | DMT_M_NAME;
 		dmt_shw.dmt_table.data_address = (PTR) &dmt_tbl_entry;
 		dmt_shw.dmt_table.data_in_size = sizeof(DMT_TBL_ENTRY);
 		dmt_shw.dmt_char_array.data_address = NULL;
@@ -4000,7 +4005,7 @@ dmpe_begin_dml(ADP_POP_CB *pop_cb, DMPE_PCB **pcbp, bool is_put)
 	    }
 	    if (att_num == 0 && wksp->flags & BLOBWKSP_ATTID)
 		att_num = wksp->base_attid;
-	    if (att_num == 0 || wksp->flags & BLOBWKSP_COERCE)
+	    if (base_id != 0 && (att_num == 0 || wksp->flags & BLOBWKSP_COERCE))
 	    {
 		DMT_ATT_ENTRY *att, *base_att, **ptrs, **base;
 		DMT_SHW_CB dmt_shw;
@@ -4015,6 +4020,8 @@ dmpe_begin_dml(ADP_POP_CB *pop_cb, DMPE_PCB **pcbp, bool is_put)
 		*/
 		if (natts == 0)
 		    natts = DB_MAX_COLS;	/* Not worth an extra show */
+		/* +1 because atts are 1-origin */
+		++natts;
 		size = natts * (sizeof(DMT_ATT_ENTRY) + sizeof(DMT_ATT_ENTRY *));
 		base = NULL;
 
@@ -4038,6 +4045,8 @@ dmpe_begin_dml(ADP_POP_CB *pop_cb, DMPE_PCB **pcbp, bool is_put)
 
 		    dmt_shw.type = DMT_SH_CB;
 		    dmt_shw.length = sizeof(DMT_SHW_CB);
+		    dmt_shw.dmt_tab_id.db_tab_base = base_id;
+		    dmt_shw.dmt_tab_id.db_tab_index = 0;
 		    dmt_shw.dmt_char_array.data_in_size = 0;
 		    dmt_shw.dmt_flags_mask = DMT_M_ATTR;
 		    dmt_shw.dmt_table.data_address = NULL;
@@ -4046,6 +4055,7 @@ dmpe_begin_dml(ADP_POP_CB *pop_cb, DMPE_PCB **pcbp, bool is_put)
 		    dmt_shw.dmt_char_array.data_in_size = 0;
 		    dmt_shw.dmt_char_array.data_out_size  = 0;
 		    dmt_shw.dmt_attr_array.ptr_address = (PTR) base;
+		    dmt_shw.dmt_attr_array.ptr_size = sizeof(DMT_ATT_ENTRY);
 		    dmt_shw.dmt_attr_array.ptr_in_count = natts;
 		    dmt_shw.dmt_attr_array.ptr_out_count = 0;
 		    dmt_shw.error.err_code = 0;
@@ -4062,8 +4072,8 @@ dmpe_begin_dml(ADP_POP_CB *pop_cb, DMPE_PCB **pcbp, bool is_put)
 		    */
 		    if (att_num == 0)
 		    {
-			att = base_att;
-			i = natts;
+			att = base_att+1;	/* The 1-origin thing again */
+			i = natts-1;
 			do
 			{
 			    if (att->att_flags & DMU_F_PERIPHERAL)
@@ -4074,7 +4084,7 @@ dmpe_begin_dml(ADP_POP_CB *pop_cb, DMPE_PCB **pcbp, bool is_put)
 				    att_num = 0;
 				    break;
 				}
-				att_num = (att - base_att) + 1;
+				att_num = att - base_att;
 			    }
 			    ++att;
 			} while (--i > 0);
@@ -4088,7 +4098,7 @@ dmpe_begin_dml(ADP_POP_CB *pop_cb, DMPE_PCB **pcbp, bool is_put)
 			DB_DT_ID source_under, att_under;
 			i4 dt_bits;
 
-			att = base_att + att_num - 1;
+			att = base_att + att_num;
 			abs_source = abs(wksp->source_dt);
 			abs_att = abs(att->att_type);
 			if (abs_source != abs_att)
