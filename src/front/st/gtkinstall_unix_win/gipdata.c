@@ -113,6 +113,9 @@
 **	    Add new vw_cfg structures to define and store info relating to
 **	    vectorwise configuration parameters.
 **	    Add vw_cfg_info array to store new param info.
+**	25-May-2010 (hanje04)
+**	    SIR 123791
+**	    Correct typo in ivw_block_size. Unit should be VWKB not VWMB.
 */
 
 
@@ -265,8 +268,8 @@ static vw_cfg ivw_block_size = {
 	"ivw_cfg_blksz",
 	RFAPI_DEFAULT_VWCFG_BLOCK_SIZE_MB_INT,
 	RFAPI_DEFAULT_VWCFG_BLOCK_SIZE_MB_INT,
-	VWMB,
-	VWMB,
+	VWKB,
+	VWKB,
 };
 
 static vw_cfg ivw_group_size = {

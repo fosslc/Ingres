@@ -208,7 +208,9 @@
 ##	    License acceptence dialog is now part of the GUI, so just include
 ##	    the LICENSE file in the root of the saveset instead of
 ##	    ingres-LICENSE
-##	
+##	25-May-2010 (hanje04)
+##	    SIR 123791
+##	    Re-add '#' accidentally removed by previous change
 ##                                         
 . readvers
 . (PROG1PRFX)sysdep
@@ -629,7 +631,7 @@ EOF
 
 	}
     else
-	Just rebuild the license RPM to keep mklicense happy
+	# Just rebuild the license RPM to keep mklicense happy
 	buildrel -r -l ${lictype}
 	iirpmbuild LICENSE
     fi

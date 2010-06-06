@@ -175,6 +175,9 @@
 **	     - Add init_ivw_cfg() to handle most of this
 **	     - Add get_sys_mem() funtion to get the system memory for
 **	       determining memory dependent defaults
+**	25-May-2010 (hanje04)
+**	    SIR 123791
+**	    Vectorwise installs should default to VW instead of II
 */
 
 # define RF_VARIABLE "export II_RESPONSE_FILE"
@@ -447,6 +450,7 @@ init_new_install_mode(void)
 	gtk_window_set_title( GTK_WINDOW( IngresInstall ), RFGEN_IVW_TITLE );
 	instmode |= IVW_INSTALL;
 	stage_names = basic_ivw_stages;
+	STcopy("VW", dfltID);
     }
     else
     {
