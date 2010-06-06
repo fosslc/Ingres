@@ -16,6 +16,8 @@
 #           Remove the IINOOPTIM entries that were generated incorrectly.
 #       18-Feb-2010 (horda03)
 #          Build scfdiag.c on VMS too.
+#       26-May=2010 (horda03)
+#          Corrected iidbms.exe NEEDLIBS for VMS
 
 SubDir ING_SRC back scf scd ;
 
@@ -62,7 +64,7 @@ else
     {
         IIBINEXE iidbms : scdmain.c ;
         IINEEDLIBS iidbms : SCFLIB QEFLIB DMFLIB OPFLIB PSFLIB QSFLIB RDFLIB GWFLIB 
-                            SXFLIB ADFLIB ULFLIB GCLIB CUFLIB QRFLIB TPFLIB COMPATLIB ;
+                            SXFLIB ADFLIB ULFLIB GCFLIB CUFLIB RQFLIB TPFLIB COMPATLIB ;
 
         IIBINEXE iirms : scdmain.c ;
         IINEEDLIBS iirms : SCFLIB QEFLIB DMFLIB OPFLIB PSFLIB QSFLIB RDFLIB GWRMSLIB 
