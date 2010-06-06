@@ -558,6 +558,9 @@
 #	    Add Windows specific libraries and dependencies for 
 #	    potential hybrid build.
 #	
+#       25-May-2010 (horda03)
+#           On VMS LIBFELIB.EXE is built using RAATLIB and ABFRTLIB, so include
+#           these in LIBQ_LIBS.
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE DEFINITIONS and EXCEPTIONS
 #
@@ -2807,6 +2810,10 @@ LIBQ_LIBS     = $(LIBQSYSLIB) $(UILIB) $(LIBQLIB) $(COPYLIB) $(LIBQGCALIB)
 if ! $(VMS)
 {
     LIBQ_LIBS += $(SQLCALIB) $(LIBQXALIB) ;
+}
+else
+{
+    LIBQ_LIBS += $(RAATLIB) $(ABFRTLIB) ;
 }
 
 COMPAT_LIBS   = $(COMPATLIB) ;
