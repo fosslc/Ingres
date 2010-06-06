@@ -1,4 +1,50 @@
 #!/bin/sh
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#  Description:
+#  ============
+#    This tool is a very simple tool for automatically propping code
+#    from subversion to git. Doing so allows people to choose their
+#    choice of an either centralized or distributed model to work with
+#    Ingres code. Particularly, git allows local branching, local commit
+#    and thus lends itself well to experimental work and working offline.
+#
+#    This tool keeps a manifest of revisions it has successfully merged
+#    and thus preserves state through comitting this file in the repository.
+#
+# History:
+# ========
+#      Jun-6-2010 (rosan01 - Andrew Ross)
+#          Initial version.
+
+# TODO:
+# Generic improvements:
+# =====================
+# - better handling for binaries: detect them in the patch,
+#   and svn export them to copy them to git. particularly for mixed
+#   source & binary patches
+# - better handling for new files: use git status to detect &
+#   add new files automatically
+# - getopts for option handling
+# - add help/usage
+# - consider syslog for logging
+
+# Ingres specific improvements:
+# =============================
+# - detect if we're running from trunk
+# - better handling for content under tst: detect and ignore it (since the test cases in tst and pdfs in techpub are not being copied to github)
 
 URL="http://code.ingres.com/ingres/main"
 SVNLatest=`svn info ${URL} | grep "Last Changed Rev:" | awk '{print $4}'`
@@ -16,6 +62,7 @@ else
   if [ ${GitLatest} -gt ${SVNLatest} ]
   then
     echo "Error: Git is being reported as ahead of svn"
+    exit 1
   else
     echo "Stepping through svn updates to update git"
     CurrentRev=${GitLatest}
@@ -55,4 +102,5 @@ else
   fi
 fi
 
+echo "Done! Successuful. Until next time you need to update."
 exit 0
