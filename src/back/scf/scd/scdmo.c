@@ -703,6 +703,9 @@ scd_stop_set( i4  offset, i4  lsbuf, char *sbuf, i4  size, PTR object)
 ** History:
 **	23-aug-1999 (somsa01)
 **	    Created.
+**      27-May-2010 (hanal04) Bug 123810
+**          Don't pass command strings as constants to CSmonitor(). A call to
+**          CVlower() will SEGV. Use a local variable instead.
 */
 
 STATUS
@@ -711,8 +714,9 @@ scd_start_sampler_set(i4 offset, i4 lsbuf, char *sbuf, i4 size, PTR object)
     CS_SCB		*scb  = (CS_SCB *) object;
     i4			nmode;
     STATUS		stat;
+    char		cmd[15] = "start sampling";
 
-    stat = CSmonitor(CS_INPUT, scb, &nmode, "start sampling", 1, NULL);
+    stat = CSmonitor(CS_INPUT, scb, &nmode, cmd, 1, NULL);
     return(stat);
 }
 
@@ -744,6 +748,9 @@ scd_start_sampler_set(i4 offset, i4 lsbuf, char *sbuf, i4 size, PTR object)
 ** History:
 **	23-aug-1999 (somsa01)
 **	    Created.
+**      27-May-2010 (hanal04) Bug 123810
+**          Don't pass command strings as constants to CSmonitor(). A call to
+**          CVlower() will SEGV. Use a local variable instead.
 */
 
 STATUS
@@ -752,8 +759,9 @@ scd_stop_sampler_set(i4 offset, i4 lsbuf, char *sbuf, i4 size, PTR object)
     CS_SCB	*scb = (CS_SCB *) object;
     i4		nmode;
     STATUS	stat;
+    char		cmd[14] = "stop sampling";
 
-    stat = CSmonitor(CS_INPUT, scb, &nmode, "stop sampling", 1, NULL);
+    stat = CSmonitor(CS_INPUT, scb, &nmode, cmd, 1, NULL);
     return(stat);
 }
 
