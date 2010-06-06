@@ -371,6 +371,11 @@ pst_get_union_resdom_type(
 **	02-May-2010: (kiria01) b123672
 **	    Split length check from datatype to avoid the inevitable but
 **	    overlooked clash between BYTE(64) and I8 etc!
+**      19-May-2010 (hanal04) Bug 123764
+**          IFNULL aggregate handling was taking place without checking for
+**          and earlier failure in adi_resolve(). This lead to a SIGSEGV
+**          instead of the expected error report. Move the IFNULL aggregate
+**          down below the error check.
 */
 DB_STATUS
 pst_resolve(
@@ -533,37 +538,6 @@ pst_resolve(
     else
 	status = adi_resolve(adf_scb, &adi_rslv_blk, FALSE);
 
-    /*
-    ** for flattening we care if we have one or multiple ifnulls with
-    ** aggregates, so use two flags as a two-bit counter indicating that
-    ** we have none, one, or more than one
-    */
-    if ( sess_cb && adi_rslv_blk.adi_op_id == ADI_IFNUL_OP )
-    {
-	if ( (opnode->pst_left->pst_sym.pst_type == PST_AGHEAD )
-             ||
-             /* b115593, INGSRV3530 
-             ** do not flatten the query if the PST_AGHEAD is under
-             ** a PST_BOP node.
-             */
-             (
-              (opnode->pst_left->pst_sym.pst_type == PST_BOP) &&
-              (
-                 (opnode->pst_left->pst_left->pst_sym.pst_type ==
-                   PST_AGHEAD) 
-                 ||
-                 (opnode->pst_left->pst_right->pst_sym.pst_type ==
-                   PST_AGHEAD)
-              )
-             )
-           )
-	{
-	    if (sess_cb->pss_flattening_flags & PSS_IFNULL_AGHEAD)
-                sess_cb->pss_flattening_flags |= PSS_IFNULL_AGHEAD_MULTI;
-	    sess_cb->pss_flattening_flags |= PSS_IFNULL_AGHEAD;
-	}
-    }
-
     if (status != E_DB_OK)
     {
 	/* Complain if no applicable function found */
@@ -595,6 +569,37 @@ pst_resolve(
 
 	error->err_code = E_PS0C05_BAD_ADF_STATUS;
 	return (E_DB_ERROR);
+    }
+
+    /*
+    ** for flattening we care if we have one or multiple ifnulls with
+    ** aggregates, so use two flags as a two-bit counter indicating that
+    ** we have none, one, or more than one
+    */
+    if ( sess_cb && adi_rslv_blk.adi_op_id == ADI_IFNUL_OP )
+    {
+	if ( (opnode->pst_left->pst_sym.pst_type == PST_AGHEAD )
+             ||
+             /* b115593, INGSRV3530 
+             ** do not flatten the query if the PST_AGHEAD is under
+             ** a PST_BOP node.
+             */
+             (
+              (opnode->pst_left->pst_sym.pst_type == PST_BOP) &&
+              (
+                 (opnode->pst_left->pst_left->pst_sym.pst_type ==
+                   PST_AGHEAD) 
+                 ||
+                 (opnode->pst_left->pst_right->pst_sym.pst_type ==
+                   PST_AGHEAD)
+              )
+             )
+           )
+	{
+	    if (sess_cb->pss_flattening_flags & PSS_IFNULL_AGHEAD)
+                sess_cb->pss_flattening_flags |= PSS_IFNULL_AGHEAD_MULTI;
+	    sess_cb->pss_flattening_flags |= PSS_IFNULL_AGHEAD;
+	}
     }
 
     /* we now have the "best" fi descriptor */
