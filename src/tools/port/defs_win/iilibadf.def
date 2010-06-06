@@ -126,6 +126,8 @@
 ;	    adu_rijndaelEncrypt adu_rijndaelDecrypt
 ;	10-May-2010 (kschendel) b123712
 ;	    Add floating trunc, ceil, floor.
+;	01-Jun-2010 (bonro01)
+;	    Add adu_soundex_dm for change 504949 for bug 122320
 
 EXPORTS
 adb_breakpoint		@1				
@@ -658,3 +660,4 @@ adu_rijndaelDecrypt	@538
 adu_flttrunc		@539
 adu_fltceil		@540
 adu_fltfloor		@541
+adu_soundex_dm		@542
