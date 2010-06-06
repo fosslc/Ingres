@@ -1118,6 +1118,13 @@ opc_qnatts(
 **          with the current eqcls in fatts_eqcmp, and don't overwrite 
 **          it if it is in the attrmap. 
 **          (bug 118363)
+**      27-May-2010 (hanal04) Bug 123258
+**          opc_adend() may allocate more dsh rows for QEN_PARMs etc.
+**          The allocated row is indexed bu qp_row_cnt which is incremented
+**          in the call to opc_ptrow(). After grabbing a row for the
+**          fatts make sure the call to opc_ptrow() occurs before the call
+**          opc_adend() to avoid the same row being used for fatts being
+**          used by QEN_PARMS etc.
 [@history_line@]...
 [@history_template@]...
 */
@@ -1474,11 +1481,11 @@ opc_fatts(
 	    ops[0].opr_offset += ops[1].opr_len + align;
 	}
 
-	/* end the adf compilation; */
-	opc_adend(global, &cadf);
-
 	opc_ptrow(global, &rowno, ops[0].opr_offset);
 	qn->qen_frow = rowno;
+
+	/* end the adf compilation; */
+	opc_adend(global, &cadf);
     }
 }
 
