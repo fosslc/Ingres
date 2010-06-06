@@ -562,6 +562,8 @@ DM0L_CREATE 	*log_rec)
 **      13-Mar-2010 (hanal04) Bug 123423
 **          Invalidate the RDF cache entry for a a table when we UNDO
 **          a create.
+**	26-May-2010 (kschendel)
+**	    ... but not if we're the RCP.
 */
 static DB_STATUS
 dmv_uncreate(
@@ -602,12 +604,16 @@ DM0L_CREATE 	*log_rec)
         /* Invalidate the RDF reference to the table. Ignore any error 
         ** on this RDF invalidate, not much can be done.
         */
-        MEfill(sizeof(RDF_CB), 0, &rdfcb);
-        STRUCT_ASSIGN_MACRO(log_rec->duc_tbl_id, rdfcb.rdf_rb.rdr_tabid);
-        rdfcb.rdf_rb.rdr_session_id = DB_NOSESSION;
-        rdfcb.rdf_rb.rdr_unique_dbid = log_rec->duc_header.database_id;
-        rdfcb.rdf_rb.rdr_db_id = (PTR)dmve->dmve_dcb_ptr;
-        (void) rdf_call(RDF_INVALIDATE, &rdfcb);
+
+	if ((dmf_svcb->svcb_status & SVCB_RCP) == 0)
+	{
+	    MEfill(sizeof(RDF_CB), 0, &rdfcb);
+	    STRUCT_ASSIGN_MACRO(log_rec->duc_tbl_id, rdfcb.rdf_rb.rdr_tabid);
+	    rdfcb.rdf_rb.rdr_session_id = DB_NOSESSION;
+	    rdfcb.rdf_rb.rdr_unique_dbid = log_rec->duc_header.database_id;
+	    rdfcb.rdf_rb.rdr_db_id = (PTR)dmve->dmve_dcb_ptr;
+	    (void) rdf_call(RDF_INVALIDATE, &rdfcb);
+	}
 
 	/*
 	** Write the CLR if necessary.
