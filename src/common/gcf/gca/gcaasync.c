@@ -7,6 +7,7 @@
 
 #include    <erglf.h>
 
+#include    <at.h>
 #include    <cs.h>
 #include    <cv.h>
 #include    <gc.h>
@@ -509,6 +510,14 @@
 **	    GCA_FS_MAX_DATA), and at SAV_PARMS time, if the size-advise
 **	    is now larger than the normal buffer, reallocate to the new
 **	    larger size.
+**      02-Jun-2010 (horda03) b123840
+**          Include at.h to gain access to atomic instructions.
+**          If GCA_ATOMIC_INCREMENT_STATE defined then use atomic instruction 
+**          to increment state variable. The svc_parms->state parameter on VMS
+**          can be updated by code running within an AST at the same time that
+**          the session is updating it - this then causes the session to hang.
+**      04-Jun-2010 (horda03) b123840
+**          Reworked change for b123840 so that #ifdef done in gc.h and not here.
 */
 
 /*
@@ -1780,6 +1789,7 @@ gca_service( PTR closure )
     bool	  	branch;
     i4			len;
     bool                send_active_set = FALSE;
+    i4                  state;
 
     if ( acb )
     {
@@ -1800,19 +1810,21 @@ gca_service( PTR closure )
 							E_GCFFFF_IN_PROCESS;
 top:
 
+    state = GCA_INCREMENT_STATE( svc_parms->state );
+
     /*
     ** Peform this state's action.
     */
-    if ( gca_states[ svc_parms->state ].action != SA_LABEL )
+    if ( gca_states[ state ].action != SA_LABEL )
 	GCA_DEBUG_MACRO(3)( "%04d     GCA %s status %x (%d)\n",
 			    (i4)(acb ? acb->assoc_id : -1),
-			    gca_names[ gca_states[ svc_parms->state ].action ],
+			    gca_names[ gca_states[ state ].action ],
 			    svc_parms->gc_parms.status,
-			    svc_parms->state );
+			    state );
 
     branch = FALSE;
 
-    switch( gca_states[ svc_parms->state++ ].action )
+    switch( gca_states[ state ].action )
     {
     case SA_NOOP:
 	/* Do nothing */
@@ -1876,7 +1888,7 @@ top:
 	    */
 	    svc_parms->call_parms->call_parms = svc_parms;
 	    svc_parms->call_parms->state = 
-		labels[ gca_states[ svc_parms->state - 1 ].label ];
+		labels[ gca_states[ state ].label ];
 	    svc_parms->call_parms->service_code = svc_parms->service_code;
 	    svc_parms->call_parms->parameter_list = svc_parms->parameter_list;
 	    svc_parms->call_parms->gc_parms.gca_cl_completion = 
@@ -1972,7 +1984,7 @@ top:
 	}
 
 	svc_parms->call_parms->state = 
-	    labels[ gca_states[ svc_parms->state - 1 ].label ];
+	    labels[ gca_states[ state ].label ];
 	svc_parms->call_parms->gc_parms.gca_cl_completion = gca_service;
 	svc_parms->call_parms->gc_parms.closure = (PTR)svc_parms->call_parms;
 	svc_parms->call_parms->gc_parms.flags.run_sync = FALSE;

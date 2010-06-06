@@ -188,6 +188,12 @@
 **	27-Aug-09 (gordy)
 **	    Include gccl.h to get platform dependent definitions for
 **	    GC_HOSTNAME_MAX and GC_USERNAME_MAX.
+**      02-Jun-2010 (horda03) b123840
+**          On VMS the svc_parms->state variable in gcaasync need to be
+**          updated atomically. So define GCA_ATOMIC_INCREMENT_STATE
+**      04-Jun-2010 (horda03) b123840
+**          Define GCA_INCREMENT_STATE according to GCA_ATOMIC_INCREMENT_STATE
+**          in this header file, rather than have the #ifdef in gcaasync.
 **/
 
 /*
@@ -237,6 +243,31 @@
 ** Buffer space to provide when calling GCsave().
 */
 # define	GCA_MAX_CL_SAVE_SIZE	1024
+
+/* Define GCA_ATOMIC_INCREMENT_STATE on platforms where the
+** svc_parms->state in gca_service() needs to be updated
+** atomically.
+**
+** Currently atomic update of "state" required on VMS.
+** When defining GCA_ATOMIC_INCREMENT_STATE on other platforms
+** you need to ensure the AT_ATOMIC_INCREMENT_I4 macro is defined.
+*/
+#ifdef VMS
+
+#define GCA_ATOMIC_INCREMENT_STATE
+
+#endif
+
+
+#ifdef GCA_ATOMIC_INCREMENT_STATE
+
+#define GCA_INCREMENT_STATE(s) AT_ATOMIC_INCREMENT_I4(s)
+
+#else
+
+#define GCA_INCREMENT_STATE(s) (s)++
+
+#endif
 
 /*
 ** Name Server's Listen ID functions for use with GCnsid()
