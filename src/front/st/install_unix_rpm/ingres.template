@@ -308,11 +308,18 @@ exit $rc
 #Set environment
 [ -z "$RPM_INSTALL_PREFIX" ] && RPM_INSTALL_PREFIX=%prefix
 export II_SYSTEM=$RPM_INSTALL_PREFIX
-export II_INSTALLATION=II # set default value so the iirpmrename can change it
 rc=0 # initialize return code
+if [ $1 = 0 ] ; then
+    # set default value so the iirpmrename can change it
+    [ -z "$II_INSTALLATION" ] && II_INSTALLATION=II
+    export II_INSTALLATION
 
-$II_SYSTEM/ingres/utility/iicorepostinst -r %rpm_basename% \
-    -v %rpm_version% | :
+    $II_SYSTEM/ingres/utility/iicorepostinst -r %rpm_basename% \
+	-v %rpm_version% | :
+else
+    $II_SYSTEM/ingres/utility/iicorepostinst -u -r %rpm_basename% \
+	-v %rpm_version% | :
+fi
 
 exit 0
 
