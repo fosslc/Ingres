@@ -1,6 +1,8 @@
 #
 # Jamfile file for cl!clf!cs_win
 #
+#       21-May-2010 (bonro01)
+#           Add conditional compilation for ICE
 
 SubDir ING_SRC cl clf cs_win ;
 
@@ -28,8 +30,11 @@ IINEEDLIBS oi12svc :  COMPATLIB ;
 IIUTILEXE iirun : iirunnt.c ;
 IINEEDLIBS iirun : COMPATLIB ;
 
+if $(BUILD_ICE)
+{
 IIUTILEXE iirunice : iirunicent.c ;
 IINEEDLIBS iirunice : COMPATLIB ;
+}
 
 IIUTILEXE iirundbms : iirundbmsnt.c ;
 IINEEDLIBS iirundbms : COMPATLIB ;

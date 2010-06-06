@@ -1,11 +1,17 @@
 #
 # Jamfile file for common!ddf!ddi
 #
+# History:
+#       21-May-2010 (bonro01)
+#           Add conditional compilation for ICE
 
 SubDir ING_SRC common ddf ddi ;
 
 IISUBSYS common ddf ddi ;
 
 
+if $(BUILD_ICE)
+{
 IILIBRARY DDILIB : drviiutil.c drviidb.c drvii.c ;
+}
 

@@ -1,6 +1,9 @@
 #
 # Jamfile file for front!st!shell_unix
 #
+# History:
+#       21-May-2010 (bonro01)
+#           Add conditional compilation for ICE
 
 SubDir ING_SRC front st shell_unix ;
 
@@ -27,7 +30,6 @@ IIUTILSH iisudas : iisudas.sh ;
 IIUTILSH iisudb2udb : iisudb2udb.sh ;
 IIUTILSH iisudbms64 : iisudbms64.sh ;
 IIUTILSH iisudbms : iisudbms.sh ;
-IIUTILSH iisuice : iisuice.sh ;
 IIUTILSH iisukerberos : iisukerberos.sh ;
 IIUTILSH iisulib : iisulib.sh ;
 IIUTILSH iisumdb : iisumdb.sh ;
@@ -64,4 +66,8 @@ IIUTILSH iidbmspreinst : iidbmspreinst.sh ;
 IIUTILSH iiapplcfg : iiapplcfg.sh ;
 IIUTILSH setupingres : setupingres.sh ;
 
+if $(BUILD_ICE)
+{
+IIUTILSH iisuice : iisuice.sh ;
+}
 

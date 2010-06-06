@@ -6,6 +6,8 @@
 #		Created.
 #	12-Mar-2008 (drivi01)
 #		Add code for copying cazipxp to II_SYSTEM.
+#       21-May-2010 (bonro01)
+#           Add conditional compilation for ICE
 #
 
 SubDir ING_SRC front ice specials_win ;
@@ -13,6 +15,8 @@ SubDir ING_SRC front ice specials_win ;
 IISUBSYS back opf specials_win ;
 
 
+if $(BUILD_ICE)
+{
 IISHLIBRARY $(SHICELIBDATA) : $(SHICELIB) $(ICELIBDATA) $(IMPCOMPATLIB) ;
 
 IISHLIBRARY $(SHICELIB) : $(IMPICELIBDATA) $(ASCFLIB) $(URSLIB)
@@ -26,5 +30,5 @@ IICPEXE $(INGICEBIN)/$(SHICELIB) : $(SHICELIB) ;
 
 
 IIBFILES bin : $(CAZIPXP)$(DFS)cazipxp.exe ;
-
+}
 

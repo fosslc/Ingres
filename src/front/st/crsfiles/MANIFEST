@@ -15,6 +15,8 @@
 #           Remove kerberos.crs.  Kerberos information moved to all.crs.
 #	15-Aug-2007 (drivi01)
 #	    Remove kerberos.crs from windows section.
+#       21-May-2010 (bonro01)
+#           Add conditional compilation for ICE
 
 SubDir ING_SRC front st crsfiles ;
 
@@ -22,7 +24,7 @@ IISUBSYS front st crsfiles ;
 
 if ! $(NT)
 {
-IICRS all.crs bridge.crs das.crs db2udb.crs dbms.crs ice.crs icesvr.crs
+IICRS all.crs bridge.crs das.crs db2udb.crs dbms.crs 
 	informix.crs net.crs oracle.crs rdb.crs rms.crs
 	secure.crs star.crs sybase.crs tng.crs tz.crs ;
 }
@@ -30,7 +32,18 @@ else
 {
 IICRSW all.crs dbms.crs net.crs secure.crs star.crs
 	tz.crs bridge.crs oracle.crs informix.crs sybase.crs
-	mssql.crs odbc.crs icesvr.crs tng.crs db2udb.crs 
+	mssql.crs odbc.crs tng.crs db2udb.crs 
 	das.crs ;
 }
 
+if $(BUILD_ICE)
+{
+  if ! $(NT)
+  {
+  IICRS ice.crs icesvr.crs ;
+  }
+  else
+  {
+  IICRSW icesvr.crs ;
+  }
+}

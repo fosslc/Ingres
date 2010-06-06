@@ -5,6 +5,8 @@
 #	20-Jun-2009 SIR 122138
 #	    Implement new Datallegro-style VERS file format which can
 #	    control jam variables as well as shell/compile options.
+#       21-May-2010 (bonro01)
+#           Remove ICE from standard builds
 
 
 #set: config32 su4_us5
@@ -19,7 +21,7 @@
 # Don't forget spaces around the = and before the ;
 
 SVR_ARLIB = "TRUE" ;	#set: option SVR_AR
-BUILD_ICE = "TRUE" ; 	#set: option BUILD_ICE
+#BUILD_ICE = "" ; 	##set: option BUILD_ICE (off)
 
 # Hybridization...
 # This is a 32+64 bit hybrid build.

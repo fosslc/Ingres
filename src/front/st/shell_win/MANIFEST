@@ -6,11 +6,18 @@
 #   Add iisudemo.bat
 #   03-Aug-2007 (Ralph Loen) SIR 118898
 #       Add iisukerberos.bat.
+#       21-May-2010 (bonro01)
+#           Add conditional compilation for ICE
 
 IISUBSYS front st shell_win ;
 
 IIBINBAT ipprecal.bat iitouch.bat ipset.bat iisustrt.bat ;
 
 IIUTILBAT iisudbms.bat iisunet.bat iisubr.bat iisustar.bat iisutm.bat
-	iisuabf.bat iisuc2.bat iisuice.bat iisurep.bat iisudemo.bat 
+	iisuabf.bat iisuc2.bat iisurep.bat iisudemo.bat 
         iisukerberos.bat ;
+
+if $(BUILD_ICE)
+{
+IIUTILBAT iisuice.bat ;
+}

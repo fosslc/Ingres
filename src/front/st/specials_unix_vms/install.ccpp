@@ -395,6 +395,8 @@
 **	    Deliver ii_installs.com from ING_BUILD/install.
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Hybrid add-on symbol changed, fix here.
+**	21-May-2010 (bonro01)
+**	    Add conditional compilation for ICE
 */
 
 
@@ -443,8 +445,10 @@ DIRECTORY (PROD2NAME)!install
 # ifdef R_FORTUNOFF
       FILE fortunoff.hlp
 # endif /* R_FORTUNOFF */
+# if defined(conf_BUILD_ICE)
       FILE ice.hlp
       FILE ice64.hlp
+# endif /* conf_BUILD_ICE */
       FILE ingbase.hlp
 # ifndef VMS 
       FILE ingbuild.hlp

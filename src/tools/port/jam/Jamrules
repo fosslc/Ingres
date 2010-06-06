@@ -1400,6 +1400,8 @@
 #	    Fix actions IIRemRCComments for Windows.
 #	13-May-2010 (bonro01)
 #	    Fix typo in IIUCHARALIAS rule from change 504046.
+#       21-May-2010 (bonro01)
+#           Add conditional compilation for ICE
 #
 #
 #####
@@ -7502,25 +7504,15 @@ rule IILIBINGRES
   {
 	# ULFLIB (libulf.a) is needed because mergelibs extracts ultrace.o
 	# from it -- the rest of libulf is backend stuff.
+	DEPENDS $($(<)) : $(ABFRTLIB) $(ADFLIB) $(AFELIB) $(COMPATLIB)
+                    $(CUFLIB) $(FDLIB) $(FEDSLIB) $(FMTLIB) $(FTLIB) $(GCFLIB)
+                    $(GENERATELIB) $(IAOMLIB) $(ILRFLIB) $(MTLIB) $(APILIB)
+                    $(IOILIB) $(INTERPLIB) $(RAATLIB) $(LIBQLIB) $(LIBQGCALIB)
+                    $(LIBQSYSLIB) $(LIBQXALIB) $(RUNSYSLIB) $(RUNTIMELIB)
+                    $(SQLCALIB) $(UFLIB) $(UGLIB) $(UILIB) $(OOLIB) $(ULFLIB) ;
 	if $(BUILD_ICE)
 	{
-	    DEPENDS $($(<)) : $(ABFRTLIB) $(ADFLIB) $(AFELIB) $(COMPATLIB)
-                    $(CUFLIB) $(FDLIB) $(FEDSLIB) $(FMTLIB) $(FTLIB) $(GCFLIB)
-                    $(GENERATELIB) $(IAOMLIB) $(ILRFLIB) $(MTLIB) $(APILIB)
-                    $(IOILIB) $(INTERPLIB) $(RAATLIB) $(LIBQLIB) $(LIBQGCALIB)
-                    $(LIBQSYSLIB) $(LIBQXALIB) $(RUNSYSLIB) $(RUNTIMELIB)
-                    $(SQLCALIB) $(UFLIB) $(UGLIB) $(UILIB) $(OOLIB) $(ULFLIB)
-		    $(DDFLIB) $(ICECLILIB) ;
-	}
-	else
-	{
-	    DEPENDS $($(<)) : $(ABFRTLIB) $(ADFLIB) $(AFELIB) $(COMPATLIB)
-                    $(CUFLIB) $(FDLIB) $(FEDSLIB) $(FMTLIB) $(FTLIB) $(GCFLIB)
-                    $(GENERATELIB) $(IAOMLIB) $(ILRFLIB) $(MTLIB) $(APILIB)
-                    $(IOILIB) $(INTERPLIB) $(RAATLIB) $(LIBQLIB) $(LIBQGCALIB)
-                    $(LIBQSYSLIB) $(LIBQXALIB) $(RUNSYSLIB) $(RUNTIMELIB)
-                    $(SQLCALIB) $(UFLIB) $(UGLIB) $(UILIB) $(OOLIB) $(ULFLIB)
-		    ;
+	    DEPENDS $($(<)) : $(DDFLIB) $(ICECLILIB) ;
 	}
   }
   else
@@ -7555,25 +7547,15 @@ rule IILIBINGRES
   if $(VERSHB) && ! $(NT)
   {
   	DEPENDS files : $($(<)HB) ;
-	if $(BUILD_ICE)
-	{
-	    DEPENDS $($(<)HB) : $(ABFRTLIBHB) $(ADFLIBHB) $(AFELIBHB) $(COMPATLIBHB)
-		$(CUFLIBHB) $(FDLIBHB) $(FEDSLIBHB) $(FMTLIBHB) $(FTLIBHB) $(GCFLIBHB)
-                $(GENERATELIBHB) $(IAOMLIBHB) $(ILRFLIBHB) $(MTLIBHB) $(APILIBHB)
-                $(IOILIBHB) $(INTERPLIBHB) $(RAATLIBHB) $(LIBQLIBHB) $(LIBQGCALIBHB)
-                $(LIBQSYSLIBHB) $(LIBQXALIBHB) $(RUNSYSLIBHB) $(RUNTIMELIBHB)
-                $(SQLCALIBHB) $(UFLIBHB) $(UGLIBHB) $(UILIBHB) $(OOLIBHB) $(ULFLIBHB)
-		$(DDFLIBHB) $(ICECLILIBHB) ;
-	}
-	else
-	{
-	    DEPENDS $($(<)HB) : $(ABFRTLIBHB) $(ADFLIBHB) $(AFELIBHB) $(COMPATLIBHB)
+	DEPENDS $($(<)HB) : $(ABFRTLIBHB) $(ADFLIBHB) $(AFELIBHB) $(COMPATLIBHB)
 		$(CUFLIBHB) $(FDLIBHB) $(FEDSLIBHB) $(FMTLIBHB) $(FTLIBHB) $(GCFLIBHB)
 		$(GENERATELIBHB) $(IAOMLIBHB) $(ILRFLIBHB) $(MTLIBHB) $(APILIBHB)
 		$(IOILIBHB) $(INTERPLIBHB) $(RAATLIBHB) $(LIBQLIBHB) $(LIBQGCALIBHB)
 		$(LIBQSYSLIBHB) $(LIBQXALIBHB) $(RUNSYSLIBHB) $(RUNTIMELIBHB)
-		$(SQLCALIBHB) $(UFLIBHB) $(UGLIBHB) $(UILIBHB) $(OOLIBHB) $(ULFLIBHB)
-		;
+		$(SQLCALIBHB) $(UFLIBHB) $(UGLIBHB) $(UILIBHB) $(OOLIBHB) $(ULFLIBHB) ;
+	if $(BUILD_ICE)
+	{
+	    DEPENDS $($(<)HB) : $(DDFLIBHB) $(ICECLILIBHB) ;
 	}
 
 	  _USETOOL $($(<)HB) : mergelibs ;

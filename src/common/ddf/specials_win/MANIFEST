@@ -1,11 +1,17 @@
 #
 # Jamfile file for common!ddf!specials_win
 #
+# History:
+#       21-May-2010 (bonro01)
+#           Add conditional compilation for ICE
 
 SubDir ING_SRC common ddf specials_win ;
 
 IISUBSYS common ddf specials_win ;
 
+if $(BUILD_ICE)
+{
 IISHLIBRARY $(SHDDFLIB) : $(IMPCOMPATLIB) $(IMPCOMPATLIBDATA) $(DDFLIB) $(IMPICELIBDATA) ;
 
 IISHLIBRARY $(SHDDILIB) : $(IMPCOMPATLIB) $(IMPCOMPATLIBDATA) $(DDILIB) $(IMPAPILIB) $(DDFCOMLIB) ;
+}

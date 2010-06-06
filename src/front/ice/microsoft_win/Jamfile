@@ -1,13 +1,19 @@
 #
 # Jamfile file for front!ice!microsoft
 #
+# History:
+#       21-May-2010 (bonro01)
+#           Add conditional compilation for ICE
 
 SubDir ING_SRC front ice microsoft_win ;
 
 IISUBSYS front ice microsoft_win ;
 
 
+if $(BUILD_ICE)
+{
 IILIBRARY MICROSOFTLIB : isapi.c ;
 
 IISHICEMS $(SHICEMSLIB) : $(MICROSOFTLIB) $(IMPGCFLIB) $(IMPGCFLIBDATA) 
 	$(IMPCOMPATLIB)	$(IMPCOMPATLIBDATA) $(DDFLIB) $(ICECLILIB) ;
+}

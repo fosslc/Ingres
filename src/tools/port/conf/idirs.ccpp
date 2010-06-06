@@ -201,6 +201,8 @@
 **	04-Mar-2010 (hanje04)
 **	    SIR 123296
 **	    Add files/srpmflists for source RPM file lists.
+**	21-May-2010 (bonro01)
+**	    Add conditional compilation for ICE
 **
 ** NOTE: When deleting directories, please move them to either the
 **       DIR_OINSTALL or DIR_OSRC list at the end of the file.
@@ -506,8 +508,10 @@
 
 # if defined(DIR_OSRC)
 755 ./files/charsets/koi
+# if defined(conf_BUILD_ICE)
 755 ./ice/tutorials
 755 ./ice/tutorials/dsql
 755 ./ice/tutorials/macro
+# endif /* conf_BUILD_ICE */
 # endif /* DIR_OSRC */
 

@@ -5,6 +5,8 @@
 #       13-Jul-2004 (hanje04)
 #           SIR 112651
 #           Added to build Ingres r3 with jam for Open Source.
+#	21-May-2010 (bonro01)
+#	    Add conditional compilation for ICE.
 
 
 SubDir ING_SRC common specials specials_unix ;
@@ -20,5 +22,8 @@ IINEEDLIBS $(SHODBCDRIVERLIB) : ODBCDRIVERLIB ;
 IISHLIBRARY $(SHODBCMGRLIB) ;
 IINEEDLIBS $(SHODBCMGRLIB) : ODBCMGRLIB ;
 
+if $(BUILD_ICE)
+{
 IISHLIBRARY $(SHOIDDILIB) ;
 IINEEDLIBS $(OIDDILIB) : DDILIB ;
+}

@@ -582,6 +582,8 @@
 #	23-Feb-2010 (hanje04)
 #	    SIR 123296
 #	    Add support for LSB builds which use versioned shared libraries
+#	21-May-2010 (bonro01)
+#	    Remove ICE from builds
 #
 
 if [ -n "$ING_VERS" ] ; then
@@ -729,7 +731,11 @@ do
 	oinodesmgr)   	do_oinodesmgr=true; shift ;;
 	oijniquery)     do_oijniquery=true; shift ;;
 	oiutil)   	do_oiutil=true; shift ;;
-        *)	echo "Usage: $0 [-lp32|-lp64] [compat] [libq] [frame] [interp] [api] \n\t[oiddi] [oiicens] [oiiceap] [neworder] [kerberos] [odbc] [cli] [trace] [oiutil]"; exit 1 ;;
+        *)	echo "Usage: mkshlibs [-lp32|-lp64] [compat] [libq] [frame] [interp] [api]"
+		echo "       [oiddi] [kerberos] [odbc] [cli] [trace] [oiutil]"
+		[ -n "$conf_BUILD_ICE" ] && echo "       [oiicens] [oiiceap] [neworder]"
+		exit 1
+		;;
     esac
 done
 

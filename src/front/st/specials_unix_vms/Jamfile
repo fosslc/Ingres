@@ -47,6 +47,8 @@
 #       19-Apr-2010 (hanje04)
 #           SIR 123296
 #           Add logrotate.ccpp
+#       21-May-2010 (bonro01)
+#           Add conditional compilation for ICE
 
 SubDir ING_SRC front st specials_unix_vms ;
 
@@ -80,8 +82,8 @@ IIPRT zoneinfo64.ccpp zoneinfo.ccpp wview.ccpp w4v3cats.ccpp
 	namesrv.ccpp mwvdba.ccpp mwruntime.ccpp montools64.ccpp
 	montools.ccpp messages64.ccpp messages.ccpp lib64.ccpp lib.ccpp
 	kitinstal-msgs.ccpp kerberos.ccpp install.ccpp
-	ingmenu.ccpp ingenv.ccpp iievutil.ccpp ice64.ccpp
-	ice.ccpp inglogs.ccpp gateway.ccpp frs.ccpp
+	ingmenu.ccpp ingenv.ccpp iievutil.ccpp 
+	inglogs.ccpp gateway.ccpp frs.ccpp
 	fortunoff.ccpp formtools.ccpp fmterrlog.ccpp fegeneric.ccpp
 	errhelp.ccpp emb-pascal.ccpp emb-ftn.ccpp emb-cc.ccpp
 	emb-cbl.ccpp emb-c.ccpp emb-basic.ccpp emb-ada.ccpp dual.ccpp
@@ -100,7 +102,7 @@ IIINSTALLHLP abf.hlp advisor.hlp api.hlp api64.hlp
 	dbmsstar.hlp documentation.hlp edbcfull.hlp edbctypical.hlp
 	esql.hlp esql64.hlp esqlada.hlp esqlbas.hlp esqlc.hlp
 	esqlcc.hlp esqlcob.hlp esqlfor.hlp esqlpas.hlp fortunoff.hlp
-	ice.hlp ice64.hlp ingbase.hlp ingbuild.hlp
+	ingbase.hlp ingbuild.hlp
 	installf.hlp mwvisualtools.hlp net.hlp
 	netclient.hlp odbc.hlp oldmsg.hlp ome.hlp ome64.hlp oracle.hlp
 	oraclepackage.hlp ordev.hlp ordevpkg.hlp orrun.hlp orrunpkg.hlp
@@ -111,3 +113,8 @@ IIINSTALLHLP abf.hlp advisor.hlp api.hlp api64.hlp
 	vigraph.hlp vision.hlp vispro.hlp wview.hlp odbc64.hlp i18n.hlp
 	supp32.hlp i18n64.hlp ;
 
+if $(BUILD_ICE)
+{
+IIPRT ice.ccpp ice64.ccpp ;
+IIINSTALLHLP ice.hlp ice64.hlp ;
+}

@@ -9,6 +9,8 @@
 #           Remove optimisation on Tru64, axp_osf
 #       03-Feb-2009 (coomi01) Bug 121587
 #           Put a significant space in front of semi-colon after axp_osf.
+#       21-May-2010 (bonro01)
+#           Add conditional compilation for ICE
 
 SubDir ING_SRC cl clf cs_unix ;
 
@@ -55,7 +57,6 @@ IIUTILEXE cscastst : cscastst.c ;
 IINEEDLIBS cscastst :  COMPATLIB ;
 
 IIUTILSH iirundbms : iirundbms.sh ;
-IIUTILSH iirunice : iirunice.sh ;
 
 IITMANFILES csspintest.1 ;
 
@@ -64,3 +65,7 @@ IILIBRARY COMPATLIB : csll.s cssl.c csshmem.c cssem.c
 	csmoscb.c csmonitor.c csmomon.c csmocnd.c csmo.c csinterface.c
 	cshl.c csev.c csef.c csdiag.c cscpres.c cscp.c csclock.c ;
 
+if $(BUILD_ICE)
+{
+IIUTILSH iirunice : iirunice.sh ;
+}

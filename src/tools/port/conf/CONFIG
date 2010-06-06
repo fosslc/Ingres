@@ -766,6 +766,8 @@
 **	18-Mar-2010 (hanje04)
 **	    SIR 123296
 **	    No R_PACKMAN for LSB builds
+**	21-May-2010 (bonro01)
+**	    Add conditional compilation for ICE
 */
 
 /*
@@ -834,7 +836,9 @@
 # define R_RAAT
 #endif
 # define R_MIT_KERBEROS
+#if defined(conf_BUILD_ICE)
 # define R_APACHE
+#endif /* conf_BUILD_ICE */
 #if defined(conf_MAINWIN_VDBA)
 # define R_MAINWIN_VDBA
 #endif
@@ -914,7 +918,9 @@
 # define R_REPLIC
 # define R_SHLIBS
 # define R_OS_THREADS
+#if defined(conf_BUILD_ICE)
 # define R_APACHE
+#endif /* conf_BUILD_ICE */
 # define RLS_COMP false
 # define RLS_DISTSIZE 80000
 # define RLS_TAPE CART=/dev/rmt1l CARTN=/dev/nrmt1l CARTL=/dev/rmt1l \
@@ -1059,7 +1065,9 @@
 # define RLS_TAPE CART=/dev/rmt0.4 CARTN=/dev/rmt0.5 CARTL=/dev/rmt0 \
 		  CCMD=cpio CBLOCK=20 CSKIP="tctl -f /dev/rmt0.5 fsf 1" \
 		  CREWIND="tctl -f /dev/rmt0.5 rewind"
+#if defined(conf_BUILD_ICE)
 # define R_APACHE
+#endif /* conf_BUILD_ICE */
 # define R_RAAT
 #if defined(conf_MAINWIN_VDBA)
 # define R_MAINWIN_VDBA
@@ -1102,7 +1110,9 @@
 # define GV_ENV " SPARC SOLARIS"
 # define R_RAAT
 # define R_MIT_KERBEROS
+#if defined(conf_BUILD_ICE)
 # define R_APACHE
+#endif /* conf_BUILD_ICE */
 # define R_SUN_HACLUSTER
 # define R_VERITAS_HACLUSTER
 #else
@@ -1129,7 +1139,9 @@
 # define R_REPLIC
 # define R_HAS_DL
 # define R_MIT_KERBEROS
+#if defined(conf_BUILD_ICE)
 # define R_APACHE
+#endif /* conf_BUILD_ICE */
 # define R_PAM
 # endif /* a64_sol */
 
@@ -1220,7 +1232,9 @@
 # define R_OS_THREADS
 # define R_FORTRAN
 # define R_MIT_KERBEROS
+#if defined(conf_BUILD_ICE)
 # define R_APACHE
+#endif /* conf_BUILD_ICE */
 # endif /* sgi_us5 */
 
 # ifdef nc4_us5 /* NCR Unix System V Port Kit */
@@ -1275,7 +1289,9 @@
 # define R_REPLIC
 # define R_SHLIBS
 # define R_OS_THREADS
+#if defined(conf_BUILD_ICE)
 # define R_APACHE
+#endif /* conf_BUILD_ICE */
 # undef R_ODBC	/* not supported yet */
 # endif /* usl_us5 */
 
@@ -1311,7 +1327,9 @@
 # define R_SHADOW
 # define R_MIT_KERBEROS
 # define R_PAM
+#if defined(conf_BUILD_ICE)
 # define R_APACHE
+#endif /* conf_BUILD_ICE */
 #if (defined(int_lnx) || defined(int_rpl)) && defined(conf_CLUSTER_BUILD)
 # define R_CLUSTER
 #endif
