@@ -5404,6 +5404,7 @@ opa_bop(
 ** Outputs:
 **      Returns:
 **          TRUE - means all the children of this node have been process
+**	    FALSE - means allow caller to handle left (only) tree
 **      Exceptions:
 **          none
 **
@@ -5415,6 +5416,12 @@ opa_bop(
 **          initial creation
 **      9-feb-93 (ed)
 **          - fix b49317 - access violation when outer joins are flattened
+**	21-May-2010 (kiria01) b123786
+**	    Do not restore .opa_demorgan to TRUE once any negation applied.
+**	    The bug only arises if there is a LHS tree with a non-terminal
+**	    such as an operator, which tries to apply the opa_not again.
+**	    This might seem more likely to happen but it needs both a boolean
+**	    UOP (IS NULL, IS DECIMAL etc) AND the parameter must be an expression
 [@history_template@]...
 */
 static bool
@@ -5422,13 +5429,10 @@ opa_uop(
         OPA_RECURSION       *gstate,
         PST_QNODE          **agg_qnode)
 {
-    PST_QNODE       *q;
-    OPS_STATE       *global;
-    bool            ret_val;
-    bool            save_demorgan;
+    PST_QNODE       *q = *agg_qnode;
+    OPS_STATE       *global = gstate->opa_global;
+    bool            ret_val = FALSE;
 
-    global = gstate->opa_global;
-    q = *agg_qnode;
     if (gstate->opa_joinid == OPL_NOINIT)
         gstate->opa_joinid = q->pst_sym.pst_value.pst_s_op.pst_joinid; /* get
                                         ** joinid to be used for view
@@ -5439,11 +5443,15 @@ opa_uop(
 	    opx_error(E_OP039F_BOOLFACT);  /* check that joinid's are consistent
                                         ** with other nodes */
     }
-    ret_val = FALSE;
-    save_demorgan = gstate->opa_demorgan;
-    if (save_demorgan)
-    {   /* EXISTS requires special handling because ADF doesn't define
-        ** any functions for it.
+
+    if (gstate->opa_demorgan)
+    {
+	/* We have a pending NOT to apply which should amount to
+	** switching the operator to its complement.
+	/* EXISTS requires special handling because ADF doesn't define
+        ** any functions for it - specifically there is no fdesc to
+	** hold the complement and so we apply the pending NOT now
+	** outside the more general opa_not() routine.
         */
         gstate->opa_demorgan = FALSE;
         if (    q->pst_sym.pst_value.pst_s_op.pst_opno 
@@ -5457,9 +5465,13 @@ opa_uop(
             q->pst_sym.pst_value.pst_s_op.pst_opno
                 = global->ops_cb->ops_server->opg_exists;
         else
+	{
             opa_not(global, q); /* complement the operator
                                 ** to complete application of
                                 ** demorgan's law */
+	}
+	/* As we have now applied the NOT, .opa_demorgan 
+	** should remain FALSE for the immediate sub-tree. */
     }
     if (    (q->pst_sym.pst_value.pst_s_op.pst_opno 
             == 
@@ -5494,9 +5506,6 @@ opa_uop(
                                 ** which case the children have already
                                 ** been processed */
     }
-    gstate->opa_demorgan = save_demorgan; /* since NOT was flattened into the
-                                ** operator, the indicator needs to
-                                ** be reset */
     return(ret_val);
 }
 
