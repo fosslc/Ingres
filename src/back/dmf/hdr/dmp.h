@@ -527,6 +527,9 @@
 **          mandatory flags
 **      14-May-2010 (stial01)
 **          Added relattnametot to iirelation
+**	14-May-2010 (thaju02) Bug 123709
+**	    Add LOG_ESC_MACRO to determine if lock escalation msgs are to 
+**	    be suppressed. 
 */
 
 /*
@@ -4564,3 +4567,12 @@ struct _DMP_RNL_ONLINE {
      (r->rcb_tcb_ptr->tcb_extended && \
       !crow_locking(r) && \
       r->rcb_lk_type != RCB_K_TABLE) )
+
+#define LOG_ESC_MACRO(t, dmf_svcb)                                      \
+	((((t->tcb_rel.relstat & TCB_CATALOG) != 0) &&                  \
+	  ((DMZ_LCK_MACRO(5)) ||                                        \
+	   (dmf_svcb->svcb_log_err & SVCB_LOG_LPR_SC))) ||              \
+	 (((t->tcb_rel.relstat & TCB_CATALOG) == 0) &&                  \
+	  ((DMZ_LCK_MACRO(6)) ||                                        \
+	   (dmf_svcb->svcb_log_err & SVCB_LOG_LPR_UT))))
+

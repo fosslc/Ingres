@@ -4781,6 +4781,9 @@ DB_ERROR       *dberr)
 **	    lock conversions.
 **      16-Jun-2009 (hanal04) Bug 122117
 **          Check for new LK_INTR_FA error.
+**	14-May-2010 (thaju02) Bug 123709
+**	    Suppress lock escalation msgs (E_DMA00D, E_DM004B, E_DM9041) if 
+**	    log_esc_* config param is off. 
 */
 DB_STATUS
 dm1r_lock_row(
@@ -4815,6 +4818,7 @@ DB_ERROR	*dberr)
     bool	cs_locked_tid = FALSE;
     DB_TAB_ID	row_reltid;
     DB_TAB_NAME *relid;
+    bool	log_esc = FALSE;
     DB_ERROR	local_dberr;
     i4		local_err;
     i4		    *err_code = &dberr->err_code;
@@ -5017,6 +5021,12 @@ DB_ERROR	*dberr)
 	r->rcb_csrr_flags |= RCB_CS_BASEDATA;
     }
 
+    /* check if lock escalation msgs are to be output */
+    if (LOG_ESC_MACRO(t, dmf_svcb))
+	log_esc = TRUE;
+    else
+	lk_flags |= LK_QUIET_TOO_MANY;
+
     lock_list = r->rcb_lk_id;
  
     lock_key->lk_type = LK_ROW;
@@ -5087,8 +5097,9 @@ DB_ERROR	*dberr)
 
     if (cl_status == LK_NOLOCKS)
     {
-        uleFormat(NULL, E_DM004B_LOCK_QUOTA_EXCEEDED, &sys_err, ULE_LOG, NULL,
-            (char *)NULL, (i4)0, (i4 *)NULL, err_code, 0);
+	if (log_esc)
+	    uleFormat(NULL, E_DM004B_LOCK_QUOTA_EXCEEDED, &sys_err, 
+		ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 0);
 	SETDBERR(dberr, 0, E_DM004B_LOCK_QUOTA_EXCEEDED);
         msgid = I_SX2739_LOCK_LIMIT;
     }
@@ -5241,8 +5252,9 @@ DB_ERROR	*dberr)
     ** Escalate to table level locking because 
     ** 'locks per transaction' limit exceeded.
     */
-    uleFormat(NULL, E_DM9041_LK_ESCALATE_TABLE, (CL_ERR_DESC *)NULL, ULE_LOG, 
-               NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 
+    if (log_esc)
+	uleFormat(NULL, E_DM9041_LK_ESCALATE_TABLE, (CL_ERR_DESC *)NULL, 
+	       ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 
                2, sizeof(DB_TAB_NAME), relid, 
                sizeof(DB_DB_NAME), &d->dcb_name);
 
@@ -6511,6 +6523,9 @@ dm1r_cvt_row(
 **          Created.
 **      01-jul-2000 (stial01)
 **          Re-written... page type dependent code moved to dmpp_allocate
+**	14-May-2010 (thaju02) Bug 123709
+**	    Suppress lock escalation msgs (E_DMA00D, E_DM004B, E_DM9041) if
+**	    log_esc_* config param is off.
 */
 DB_STATUS
 dm1r_allocate(
@@ -6631,8 +6646,9 @@ dm1r_allocate(
 		/* Unlock buffer before escalation */
 		dm0pUnlockBuf(r, pinfo);
 
-		uleFormat(NULL, E_DM9041_LK_ESCALATE_TABLE, (CL_ERR_DESC *)NULL, 
-			   ULE_LOG, 
+		if (LOG_ESC_MACRO(t, dmf_svcb))
+		    uleFormat(NULL, E_DM9041_LK_ESCALATE_TABLE, 
+			   (CL_ERR_DESC *)NULL, ULE_LOG, 
 			   NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 
 			   2, sizeof(DB_TAB_NAME), &t->tcb_rel.relid, 
 			   sizeof(DB_DB_NAME), &t->tcb_dcb_ptr->dcb_name);
