@@ -704,6 +704,8 @@ NO_OPTIM=dr6_us5 i64_aix
 **          dm2u_sysmod iirelation, iirel_idx, iiattribute with compression
 **      10-may-2010 (stephenb)
 **          Cast new i8 reltups to i4.
+**      27-May-2010 (stial01)
+**          Set DM1C_CORE_CATALOG for iidevices,iisequence which use phys locks
 **/
 
 /*
@@ -2216,6 +2218,10 @@ DB_ERROR        *dberr)
 
 	if (syscat)
 	    pgtype_flags |= DM1C_CREATE_CATALOG;
+
+	/* set DM1C_CREATE_CORE for SCONCUR including iidevices,iisequence */
+	if (t->tcb_rel.relstat2 & TCB2_PHYSLOCK_CONCUR)
+	    pgtype_flags |= DM1C_CREATE_CORE;
 
 	/* Clustered can't have V1 page type */
 	if ( mcb->mcb_clustered )

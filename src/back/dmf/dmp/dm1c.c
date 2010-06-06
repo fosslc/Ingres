@@ -242,6 +242,8 @@
 **	    and blob query context (BQCB).
 **      29-Apr-2010 (stial01)
 **          Do not create V1 catalogs (they might use data compression)
+**      27-May-2010 (stial01)
+**          Limit above change to SCONCUR catalogs which use phys locking
 */
 
 
@@ -578,11 +580,12 @@ dm1c_getpgtype(
     {
 	/*
 	** DM1C_CREATE_DEFAULT, DM1C_CREATE_CORE comes here
-	** No more V1 catalogs!
+	** No more V1 CORE (sconcur) catalogs
+	** (now that they are compressed, dm1cn routines can't 
+	** correctly reserve space for undo when physical locking)
 	*/ 
 	if (page_size == DM_COMPAT_PGSIZE && (config_pgtypes & SVCB_CONFIG_V1) &&
 			(create_flags & DM1C_CREATE_CLUSTERED) == 0 &&
-			(create_flags & DM1C_CREATE_CATALOG) == 0 &&
 			(create_flags & DM1C_CREATE_CORE) == 0)
 	    *page_type = TCB_PG_V1;
 	else if ((config_pgtypes & SVCB_CONFIG_V7) &&

@@ -254,6 +254,9 @@
 **          Changes for Long IDs (remove temp code added 24-aug-2009)
 **	01-apr-2010 (toumi01) SIR 122403
 **	    Add support for column encryption.
+**      27-May-2010 (stial01)
+**          Put back some code mistakenly deleted on 01-apr-2010
+**          Set DM1C_CORE_CATALOG for iidevices,iisequence which use phys locks
 **/
 
 /*
@@ -988,6 +991,17 @@ dmu_create(DMU_CB        *dmu_cb)
 	    pgtype_flags = DM1C_CREATE_ETAB;
 	else
 	    pgtype_flags = DM1C_CREATE_DEFAULT;
+
+	if ((dmu->dmu_table_name.db_tab_name[0] == 'i' &&
+	    dmu->dmu_table_name.db_tab_name[1] == 'i') && !extension)
+	    pgtype_flags |= DM1C_CREATE_CATALOG;
+
+	if ( !STncasecmp(dmu->dmu_table_name.db_tab_name, "iidevices ", 10) ||
+	    !STncasecmp(dmu->dmu_table_name.db_tab_name, "iisequence ", 11))
+	{
+	    /* other CONCUR catalogs are created in dmmcre */
+	    pgtype_flags |= DM1C_CREATE_CORE;
+	}
 
 	/*  Make sure a structure was given. */
 	if (structure == 0)
