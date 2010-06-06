@@ -8,6 +8,7 @@
 #include    <cs.h>
 #include    <di.h>
 #include    <me.h>
+#include    <mh.h>
 #include    <pc.h>
 #include    <sr.h>
 #include    <tm.h>
@@ -441,6 +442,8 @@
 **          how we check for the need for physical locks now
 **      14-May-2010 (stial01)
 **          Alloc/maintain exact size of column names (iirelation.relattnametot)
+**	25-May-2010 (kschendel)
+**	    Add missing mh include.
 **/
 
 /*

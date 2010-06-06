@@ -7,7 +7,7 @@
 #include    <cs.h>
 #include    <me.h>
 #include    <pc.h>
-#include    <sl.h>
+#include    <mh.h>
 #include    <iicommon.h>
 #include    <dbdbms.h>
 #include    <lg.h>
@@ -38,7 +38,8 @@ GLOBALREF	DMC_CRYPT	*Dmc_crypt;
 **  History:
 **      14 feb-2010 (toumi01) SIR 122403
 **	    Created.
-[@history_template@]...
+**	25-May-2010 (kschendel)
+**	    Add missing MH include.
 **/
 
 /*{

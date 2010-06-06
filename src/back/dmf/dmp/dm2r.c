@@ -10,6 +10,7 @@ NO_OPTIM=dr6_us5 i64_aix
 #include    <cs.h>
 #include    <di.h>
 #include    <me.h>
+#include    <mh.h>
 #include    <pc.h>
 #include    <sd.h>
 #include    <sr.h>
@@ -983,6 +984,8 @@ NO_OPTIM=dr6_us5 i64_aix
 **          generic one using a new relstat2 flag, TCB2_PHYSLOCK_CONCUR
 **      14-May-2010 (stial01)
 **          More changes for Long IDs
+**	25-May-2010 (kschendel)
+**	    Add missing mh include.
 */
 
 static DB_STATUS BuildRtreeRecord(

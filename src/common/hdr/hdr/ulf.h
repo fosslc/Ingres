@@ -102,6 +102,8 @@
 **      15-feb-2010 (maspa05) Sir 123293
 **          Bump sc930 version number for format change - added server_class
 **           output.
+**	25-May-2010 (kschendel)
+**	    Add ult-trace-qep decl.
 **/
 #ifndef TR_HDR_INCLUDED
 #include <tr.h>
@@ -693,10 +695,11 @@ FUNC_EXTERN DB_STATUS ult_clrval( ULT_TVECT *vector, i4  flag );
 **   ult_close_tracefile - close the trace file
 */
 
-FUNC_EXTERN bool ult_always_trace();
+FUNC_EXTERN bool ult_always_trace(void);
 FUNC_EXTERN void *ult_open_tracefile(void *);
 FUNC_EXTERN void ult_print_tracefile(void *,i2 ,char *);
 FUNC_EXTERN void ult_close_tracefile(void *);
+FUNC_EXTERN bool ult_trace_qep(void);
 
 #define	SC930_VERSION		6	/* version of SC930 output */
 /* SC930 output line types */

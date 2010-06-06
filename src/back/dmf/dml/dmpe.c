@@ -3769,6 +3769,10 @@ dmpe_deallocate(DMPE_PCB      *pcb )
 ** History:
 **	15-Apr-2010 (kschendel) SIR 123485
 **	    Written.
+**	24-May-2010 (kschendel) b123798
+**	    Clear base-id when an attempt at optimizing a put coupon fails
+**	    for some valid reason (e.g. multiple blob atts).  Otherwise,
+**	    the later cross-check gets confused.
 */
 
 static DB_STATUS
@@ -4148,8 +4152,10 @@ dmpe_begin_dml(ADP_POP_CB *pop_cb, DMPE_PCB **pcbp, bool is_put)
 	if ((bqcb == NULL && base_id == 0) || att_num == 0)
 	{
 	    /* Don't know where it's going, send to temp.  Clean out
-	    ** any junk in the coupon too.
+	    ** any junk in the coupon too.  Zero the base-id so that
+	    ** the cross-check immediately below doesn't puke.
 	    */
+	    base_id = 0;
 	    MEfill(sizeof(DMPE_COUPON), 0, (PTR) cpn);
 	    cpn->cpn_flags = DMPE_CPN_TEMP;
 	    if (pop_cb->pop_temporary == ADP_POP_PERMANENT)
@@ -4158,6 +4164,7 @@ dmpe_begin_dml(ADP_POP_CB *pop_cb, DMPE_PCB **pcbp, bool is_put)
 		** result but didn't pass enough info to figure it out.
 		** For GET, it doesn't matter, but for PUT it certainly does.
 		*/
+		TRdisplay("%@ dmpe_begin_dml: Holding temp but caller asked for ADP_POP_PERMANENT\n");
 		SETDBERR(&pop_cb->pop_error, 0, E_AD700B_ADP_BAD_POP_CB);
 		return (E_DB_ERROR);
 	    }

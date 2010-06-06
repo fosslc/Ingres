@@ -5,6 +5,7 @@
 #include    <compat.h>
 #include    <gl.h>
 #include    <cs.h>
+#include    <cm.h>
 #include    <di.h>
 #include    <me.h>
 #include    <pc.h>
@@ -165,6 +166,8 @@
 **          Changes for Long IDs
 **      29-Apr-2010 (stial01)
 **          Added new routines for iirelation/iisequence recovery        
+**	25-May-2010 (kschendel)
+**	    Add missing CM inclusion, required for bool declarations.
 **/
 
 /*

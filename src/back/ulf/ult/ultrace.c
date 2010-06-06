@@ -52,6 +52,8 @@
 **          Change the last field separator for QUEL, QUERY, REQUEL and
 **          REQUERY from ':' to '?'. This allows lexical parsers to
 **          tokenize everything after the '?' as query text.
+**	25-May-2010 (kschendel)
+**	    Tighten up declarations a little, () -> (void).
 **/
 
 /*{
@@ -242,7 +244,7 @@ ult_clrval( ULT_TVECT *vector, i4  flag )
 static bool always_tracing = FALSE;
 static i4 ult_pid = 0;
 bool
-ult_always_trace()
+ult_always_trace(void)
 {
       return (always_tracing);
 }
@@ -337,7 +339,7 @@ ult_set_trace_qep(bool value)
 */
 
 bool
-ult_trace_qep()
+ult_trace_qep(void)
 {
 	return (trace_qep);
 }
@@ -398,7 +400,7 @@ ult_set_tracefile(char *newvalue)
 */
 
 static LOCATION *
-ult_tracefile_loc()
+ult_tracefile_loc(void)
 {
 	char *tmp = NULL;
 	if (tracefile)
