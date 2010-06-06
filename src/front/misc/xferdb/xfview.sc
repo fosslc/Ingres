@@ -110,6 +110,8 @@ EXEC SQL INCLUDE <xf.sh>;
 **          Add reltid parameter to writeview;
 **	04-May-2010 (thaju02) Bug 123674
 **	    In xfdrop_views(), generate drop stmt for selected views.
+**      18-May-2010 (frima01) Bug 123753
+**          Check for views created as link in order to drop them correctly.
 **/
 
 /* # define's */
@@ -607,10 +609,12 @@ xfdrop_views()
 	i4	table_reltid;
 	char	table_name[DB_MAXNAME + 1];
 	char	table_owner[DB_MAXNAME + 1];
+	char	subtype[2];
+
     EXEC SQL END DECLARE SECTION;
 
-    EXEC SQL SELECT table_reltid, table_name, table_owner
-    INTO :table_reltid, :table_name, :table_owner
+    EXEC SQL SELECT table_reltid, table_name, table_owner, table_subtype
+    INTO :table_reltid, :table_name, :table_owner, :subtype
     FROM iitables 
     WHERE table_type = 'V'
     ORDER BY table_reltid DESC;
@@ -623,7 +627,10 @@ xfdrop_views()
 	    xfread_id(&table_name[0]);
 	    xfread_id(&table_owner[0]);
 	    xfsetauth(Xf_in, table_owner);
-	    xfwrite(Xf_in, ERx("drop view "));
+	    if (*subtype == 'L')
+	    	xfwrite(Xf_in, ERx("drop link "));
+	    else
+	    	xfwrite(Xf_in, ERx("drop view "));
 	    xfwrite_id(Xf_in, table_name);
 	    xfwrite(Xf_in, GO_STMT);
 	}

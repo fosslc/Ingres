@@ -251,6 +251,8 @@
 **          E_DU601B_CANT_SET_RELFLAGS and E_DU601C_CANT_MAKE_CATS_HASH
 **	3-May-2010 (kschendel) SIR 123639
 **	    Delete a bunch of obsolete info msgs.  Not comprehensive!
+**	26-May-2010 (frima01) Bug 123753
+**	    Add W_DU1874_UPGR_NOT_STAR_OWNER.
 **/
 
 typedef	i4	DU_STATUS;
@@ -1237,6 +1239,7 @@ typedef	i4	DU_STATUS;
 #define			W_DU1871_CONS_UPGRADE		(E_DUF_MASK + 0x1871L)
 #define			W_DU1872_UPGRADEDB_TREE_DB	(E_DUF_MASK + 0x1872L)
 #define			W_DU1873_UPGRADEDB_TREE		(E_DUF_MASK + 0x1873L)
+#define			W_DU1874_UPGR_NOT_STAR_OWNER	(E_DUF_MASK + 0x1874L)
 
 /* Internal error numbers range from 0x2000 to 0x2FFF */
 #define			E_DU2000_BAD_ERLOOKUP		(E_DUF_MASK + 0x2000L)

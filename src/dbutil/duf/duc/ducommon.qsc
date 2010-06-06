@@ -392,6 +392,8 @@ EXEC SQL include SQLCA;
 **	    Allow DB_COL_BYTES in table and dbproc definitions;
 **	    change iiprotect, iiintegrity to sql definition to allow
 **	    byte-izing the bitmap columns.
+**	10-May-2010 (frima01) Bug 123753
+**	    Update duc_iilgmo to recreate lgmo_xa_reduced_reg.
 */
 
 
@@ -2165,7 +2167,7 @@ DU_ERROR	*duc_errcb;
     {
 	exec sql drop view lgmo_xa_dis_tran_ids;
     }
-    if (rel_exists("lgmo_xa_dis_tran_ids"))
+    if (rel_exists("lgmo_lgd"))
     {
 	exec sql remove lgmo_lgd;
     }
@@ -2180,6 +2182,10 @@ DU_ERROR	*duc_errcb;
     if (rel_exists("lgmo_ldb"))
     {
 	exec sql remove lgmo_ldb;
+    }
+    if (rel_exists("lgmo_xa_reduced_reg"))
+    {
+	exec sql remove lgmo_xa_reduced_reg;
     }
 
     duc_register_table("lgmo_lgd");

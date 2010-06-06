@@ -202,6 +202,8 @@
 **          E_DU601B_CANT_SET_RELFLAGS and E_DU601C_CANT_MAKE_CATS_HASH
 **	3-May-2010 (kschendel) SIR 123639
 **	    Drop some unused information msgs, change DU00A1.
+**	26-May-2010 (frima01) Bug 123753
+**	    Add W_DU1874_UPGR_NOT_STAR_OWNER.
 */
 
 
@@ -14475,6 +14477,28 @@ W_DU1873_UPGRADEDB_TREE
 ** Recommendation:
 **	The user should determine why the registration failed (e.g., out of
 **	disk space).  The user may have to add the missing registration by hand.
+*/
+W_DU1874_UPGR_NOT_STAR_OWNER
+"Database '%0c' is a star database.\n
+It is recommended to upgrade a star database as the database owner\n
+to ensure access to vnodes of distributed databases.\n
+Please re-run upgradedb '%0c' while logged in as user '%1c'."
+/*%
+** Parameters:
+**	%0c - distributed database name
+**	%1c - database owner
+**
+** Explanation:
+**	upgradedb cannot upgrade query trees for views registered as links to local
+**	databases on private vnodes unless run as the database or vnode owner respectively.
+**
+** System Status:
+**	The upgrade of this database is skipped, but upgradedb continues to the
+**	next database in the target list (if any).
+**
+** Recommendation:
+**	The user should re-run upgradedb for the star database as the actual
+**	owner of the database.
 */
 E_DU2000_BAD_ERLOOKUP
 "  Unknown database utility error number '%0x'."

@@ -957,6 +957,11 @@ char	*argv[];
 **	    Added major 9.0 (Release 3), minor 0.
 **	12-Nov-2009 (kschendel) SIR 122882
 **	    Rework for integerized dbcmptlvl.
+**	18-May-2010 (frima01) Bug 123753
+**	    In fix_dbservice skip update of config file for distributed
+**	    database, cause there is none. Set tree_convert to true,
+**	    fixing qry trees is neccessary for Ingres 10. Only allow star db
+**	    owner to upgrade a star db to ensure access to private vnodes.
 */
 i4
 set_cmptlvl(u_i4 cmptlvl, i4 minorlvl)
@@ -2698,6 +2703,14 @@ i4	superuser;
 		    STzapblank(dbname_tmp, ddbname_tmp);
 		    STzapblank(cdbname_tmp,dbname_tmp);
 		    _VOID_ STtrmwhite (cdbname_tmp);
+		    /* Ensure that current system user is db owner */
+		    _VOID_ STtrmwhite (dba);
+		    if (STcmp(upgr_cb.duowner, dba) != 0)
+		    {
+		    	du_talk(__LINE__,  DU_MODESENS, &upgr_cb, W_DU1874_UPGR_NOT_STAR_OWNER, 4,
+				0, ddbname_tmp, 0, dba );
+		    	continue;
+		    }
 		}
 		else
 		{
@@ -2817,6 +2830,14 @@ i4	superuser;
 		STzapblank(cdbname_tmp,dbname_tmp);
 		_VOID_ STtrmwhite (cdbname_tmp);
 		star_flag = TRUE;		    
+		/* Ensure that current system user is db owner */
+		_VOID_ STtrmwhite (dba);
+		if (STcmp(upgr_cb.duowner, dba) != 0)
+		{
+		    du_talk(__LINE__,  DU_MODESENS, &upgr_cb, W_DU1874_UPGR_NOT_STAR_OWNER, 4,
+				0, ddbname_tmp, 0, dba );
+		    upgr_exit(__LINE__, DU_FAIL_EXIT, 0);
+		}
 	    }
 	    else
 	    {
@@ -9126,7 +9147,9 @@ EXEC SQL end declare section;
 
 	    (void) setauth("$ingres");
 
-	    /* Update the dbservice field in the config file */
+	    if (! upgr_cb.Dbname_ptr->star_flag && !STcmp(dbname_ptr,upgr_cb.Dbname_ptr->ddbname) == 0)
+	    {
+	    /* Update the dbservice field in the config file - for non DDBs only */
 	    proc_instruction = QEA_UPD_SERVICE;
 	    if (upg_dbg_out)
 	    {
@@ -9143,6 +9166,7 @@ EXEC SQL end declare section;
 		du_talk(__LINE__,  DU_MODESENS, &upgr_cb, W_DU1862_CNF_UPDATE_FAIL,
 			  2, 0, upgr_cb.du_opendb);
 		upgr_cb.Dbname_ptr->errors = TRUE;
+	    }
 	    }
 
 	    /* Update iidatabase.dbservice */
@@ -10519,9 +10543,8 @@ do_early_updates(DBNAME_NODE *dbinfo)
 	exec sql commit;
     }
 
-    /* Signal for tree conversion if pre-R3 database. */
-    if (dbinfo->level < V30_LEVEL)
-	dbinfo->tree_convert = TRUE;
+    /* Signal for tree conversion - neccessary for Ingres 10 */
+    dbinfo->tree_convert = TRUE;
 
 } /* do_early_updates */
 
