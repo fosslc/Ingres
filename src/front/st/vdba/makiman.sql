@@ -121,6 +121,9 @@
 ##	    Corrected name of sc_avgrows to sc_totrows and IMA field to total_rows.
 ##	04-jun-2008 (joea)
 ##	    Correct datatype of lkd_status.
+##  27-May-2010 (hanal04) Bug 123810
+##      Bump server_id from 32 to 64 characters to bring it in line with
+##      the server code.
 */
 
 set autocommit on;
@@ -1858,7 +1861,7 @@ end;
 /* before the servers stops */
 drop  procedure ima_shut_server
 \p\g
-create procedure ima_shut_server(server_id varchar(32) not null) as
+create procedure ima_shut_server(server_id varchar(64) not null) as
 begin
 
 	update ima_mib_objects set value = :server_id
@@ -1877,7 +1880,7 @@ end;
 /* Turn off listen, disble new user connections */
 drop  procedure ima_close_server
 \p\g
-create procedure ima_close_server(server_id varchar(32) not null) as
+create procedure ima_close_server(server_id varchar(64) not null) as
 begin
 
 	update ima_mib_objects set value = '0'
@@ -1896,7 +1899,7 @@ end;
 /* Turn on listen, re-enble new user connections */
 drop  procedure ima_open_server
 \p\g
-create procedure ima_open_server(server_id varchar(32) not null) as
+create procedure ima_open_server(server_id varchar(64) not null) as
 begin
 
 	update ima_mib_objects set value = :server_id
@@ -1916,7 +1919,7 @@ end;
 drop  procedure ima_remove_session
 \p\g
 create procedure ima_remove_session(session_id varchar(32) not null,
-				server_id varchar(32) not null) as
+				server_id varchar(64) not null) as
 declare
 session_ref varchar(32) not null;
 begin
@@ -2044,7 +2047,7 @@ end;
 /* Turn on Sampler thread for server */
 drop  procedure ima_start_sampler
 \p\g
-create procedure ima_start_sampler(server_id varchar(32) not null) as
+create procedure ima_start_sampler(server_id varchar(64) not null) as
 begin
 
 	update ima_mib_objects set value = '0'
@@ -2060,7 +2063,7 @@ end;
 /* Turn off Sampler thread for server */
 drop  procedure ima_stop_sampler
 \p\g
-create procedure ima_stop_sampler(server_id varchar(32) not null) as
+create procedure ima_stop_sampler(server_id varchar(64) not null) as
 begin
 
 	update ima_mib_objects set value = '0'
