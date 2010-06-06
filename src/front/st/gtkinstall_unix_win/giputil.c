@@ -1,5 +1,5 @@
 /*
-** Copyright 2006 Ingres Corporation. All rights reserved 
+** Copyright 2006, 2010 Ingres Corporation. All rights reserved 
 */
 
 #ifdef HAVE_CONFIG_H
@@ -203,6 +203,14 @@
 **	    Remove unwanted misc_ops entries and add VW specific parameters
 **	    to/from summary for IVW_INSTALL mode.
 **	    Add VW config parameters to response file.
+**	26-May-2010 (hanje04)
+**	    SIR 123791
+**	    Make sure next button is initially greyed out for lic dialog in
+**	    "new install" mode too.
+**	    Don't set II_CONFIG_TYPE for IVW_INSTALL response file or display
+**	    in the summary.
+**	    IVW blocksize and groupsize need to be rounded to the next 
+**	    power of 2, add GIPnextPow2() to do this.
 **	
 */
 
@@ -458,20 +466,23 @@ write_installation_summary(GtkTextBuffer *buffer)
 						NULL);
     }
 
-    /* Configuration type */
-    gtk_text_buffer_insert_with_tags_by_name(buffer,
+    if ( ! instmode & IVW_INSTALL )
+    {
+	/* Configuration type */
+	gtk_text_buffer_insert_with_tags_by_name(buffer,
 					&iter,
 					"Configuration Type:\n\t",
 					-1,
 					"bold",
 					NULL);
-    gtk_text_buffer_insert_with_tags_by_name(buffer,
+	gtk_text_buffer_insert_with_tags_by_name(buffer,
 					&iter,
 					ing_config_type.descrip[ing_config_type.val_idx],
 						-1,
 						"monospace",
 						NULL);
-    gtk_text_buffer_insert(buffer, &iter, "\n\n", -1);
+	gtk_text_buffer_insert(buffer, &iter, "\n\n", -1);
+    }
 	
     gtk_text_buffer_insert_with_tags_by_name(buffer,
 					&iter,
@@ -501,7 +512,7 @@ write_installation_summary(GtkTextBuffer *buffer)
 
 
     /* Give more of a summary for the advanced install */
-    if ( ! instmode & BASIC_INSTALL )
+    if ( ! (instmode & BASIC_INSTALL) )
     {
 	if ( pkgs_to_install & PKG_DBMS )
 	{
@@ -545,7 +556,7 @@ write_installation_summary(GtkTextBuffer *buffer)
 
 		gtk_text_buffer_insert_with_tags_by_name(buffer,
 						&iter,
-						"\nVectorwise Configuration:\n",
+						"\nVectorWise Configuration:\n",
 						-1,
 						"bold",
 						NULL);	
@@ -615,15 +626,15 @@ write_installation_summary(GtkTextBuffer *buffer)
 				"Dual logging disabled\n",
 				-1 );
 
-	    gtk_text_buffer_insert_with_tags_by_name(buffer,
+	    if ( ! (instmode & IVW_INSTALL) )
+	    {
+	        gtk_text_buffer_insert_with_tags_by_name(buffer,
 						&iter,
 						"\nDatabase server options:\n",
 						-1,
 						"bold",
 						NULL);	
-	    /* SQL92 Compliance */
-	    if ( ! instmode & IVW_INSTALL )
-	    {
+	        /* SQL92 Compliance */
 	        gtk_text_buffer_insert(buffer,
 				&iter,
 				"Strict SQL-92 Compliance: ",
@@ -969,19 +980,22 @@ gen_install_response_file( II_RFAPI_STRING rflocstring )
     }
 
     /* Config Type */
-    param.name = II_CONFIG_TYPE;
-    param.value = 
-	(II_RFAPI_STRING)ing_config_type.values[ing_config_type.val_idx];
-    param.vlen = STlen(param.value);
-    rfstat = IIrfapi_addParam( &rfhandle, &param );
-    if ( rfstat != II_RF_ST_OK )
+    if ( ! instmode & IVW_INSTALL )
     {
-	DBG_PRINT(
-	    "Failed adding II_CONFIG_TYPE to response file with error:\n %s\n",
+	param.name = II_CONFIG_TYPE;
+	param.value = 
+	    (II_RFAPI_STRING)ing_config_type.values[ing_config_type.val_idx];
+	param.vlen = STlen(param.value);
+	rfstat = IIrfapi_addParam( &rfhandle, &param );
+	if ( rfstat != II_RF_ST_OK )
+	{
+	    DBG_PRINT(
+	      "Failed adding II_CONFIG_TYPE to response file with error:\n %s\n",
 			IIrfapi_errString( rfstat ) );
-	if ( rfhandle != NULL )
-	    IIrfapi_cleanup( &rfhandle );
-	return( rfstat );
+	    if ( rfhandle != NULL )
+		IIrfapi_cleanup( &rfhandle );
+	    return( rfstat );
+	}
     }
 
     /* locale info */
@@ -1763,6 +1777,13 @@ increment_wizard_progress(void)
 		gtk_widget_set_sensitive(back_button, (ug_mode & UM_TRUE) ?
 							TRUE : FALSE );
 		gtk_widget_set_sensitive(next_button, TRUE);
+		break;
+	    case NI_LIC:
+		widget_ptr=lookup_widget(IngresInstall, "inst_lic_accept" );
+		gtk_widget_set_sensitive(back_button, TRUE);
+    		if ( gtk_toggle_button_get_active(
+			GTK_TOGGLE_BUTTON(widget_ptr)) != TRUE )
+		    gtk_widget_set_sensitive(next_button, FALSE);
 		break;
 	    case NI_INSTID:
 		/* validate instID entry */
@@ -2955,6 +2976,45 @@ GIPAddLogLoc(instance *inst, i4 type, const char *path)
     return(OK);
 }
 
+/*
+** Name: GIPnextPow2()
+**
+** Description:
+**
+**	Find the next power of 2 for any given number, taken from:
+**	http://graphics.stanford.edu/~seander/bithacks.html (public domain)
+**
+** Inputs:
+**	
+**	i4		num - Number to round up
+**
+** Outputs:
+**
+**	None
+**
+** Returns:
+**
+**	Next power of 2 on success
+**
+** History:
+**	27-May-2010 (hanje04)
+**	    SIR 123791
+**	    Created.
+*/
+i4
+GIPnextPow2(i4  num)
+{
+    
+    num--;
+    num |= num >> 1;
+    num |= num >> 2;
+    num |= num >> 4;
+    num |= num >> 8;
+    num |= num >> 16;
+    num++;
+ 
+   return(num);
+}
 /*
 ** ATTENTION:
 **	 only static functions below this line

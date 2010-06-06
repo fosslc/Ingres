@@ -178,6 +178,10 @@
 **	25-May-2010 (hanje04)
 **	    SIR 123791
 **	    Vectorwise installs should default to VW instead of II
+**	26-May-2010 (hanje04)
+**	    SIR 123791
+**	    Set pkgs_to_install=TYPICAL_VECTORWISE when initializing for
+**	    IVW_INSTALL
 */
 
 # define RF_VARIABLE "export II_RESPONSE_FILE"
@@ -446,10 +450,11 @@ init_new_install_mode(void)
     /* check which product we're installing */
     if ( STcompare("vectorwise", new_pkgs_info.product) == OK )
     {	
-# define RFGEN_IVW_TITLE "Ingres Vectorwise Installation Wizard"
+# define RFGEN_IVW_TITLE "Ingres VectorWise Installation Wizard"
 	gtk_window_set_title( GTK_WINDOW( IngresInstall ), RFGEN_IVW_TITLE );
 	instmode |= IVW_INSTALL;
 	stage_names = basic_ivw_stages;
+	pkgs_to_install=TYPICAL_VECTORWISE;
 	STcopy("VW", dfltID);
     }
     else

@@ -98,6 +98,9 @@
 **	     - Define new Vectorwise config parameters
 **	     - Define vw_cfg structure for hold parameter info.
 **	    Remove PKG_BASENAME, no longer used.
+**	26-May-2010 (hanje04)
+**	    SIR 123791
+**	    Define TYPICAL_VECTORWISE set of packages to be installed.
 ** 
 */
 
@@ -357,6 +360,7 @@ typedef u_i4 PKGLST;
 #define PKG_LEVAL	0x0200000
 #define PKG_DOC		0x1000000 /* always the last package */
 #define TYPICAL_SERVER (PKG_CORE|PKG_DBMS|PKG_NET|PKG_ODBC|PKG_ABF)
+#define TYPICAL_VECTORWISE (PKG_CORE|PKG_DBMS|PKG_NET|PKG_ODBC)
 #define TYPICAL_CLIENT (PKG_CORE|PKG_NET|PKG_ODBC)
 #define FULL_INSTALL (PKG_CORE|PKG_DBMS|PKG_NET|PKG_ODBC|PKG_REP|PKG_ABF| \
 					 PKG_STAR)					 

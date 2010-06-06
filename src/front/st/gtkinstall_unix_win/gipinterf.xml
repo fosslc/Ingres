@@ -884,7 +884,7 @@ Click Next to begin.</property>
 				  <child>
 				    <widget class="GtkLabel" id="label474">
 				      <property name="visible">True</property>
-				      <property name="label" translatable="yes">&lt;b&gt;Welcome to the Ingres Installation wizard&lt;/b&gt;</property>
+				      <property name="label" translatable="yes">&lt;b&gt;Welcome to the Ingres Installation Wizard&lt;/b&gt;</property>
 				      <property name="use_underline">False</property>
 				      <property name="use_markup">True</property>
 				      <property name="justify">GTK_JUSTIFY_LEFT</property>
@@ -7490,7 +7490,7 @@ To exit click &quot;Finish&quot;</property>
 				  <child>
 				    <widget class="GtkLabel" id="ivw_cfg">
 				      <property name="visible">True</property>
-				      <property name="label" translatable="yes">Vectorwise Configuration</property>
+				      <property name="label" translatable="yes">VectorWise Configuration</property>
 				      <property name="use_underline">False</property>
 				      <property name="use_markup">False</property>
 				      <property name="justify">GTK_JUSTIFY_LEFT</property>
@@ -7612,6 +7612,33 @@ To exit click &quot;Finish&quot;</property>
 				  </child>
 
 				  <child>
+				    <widget class="GtkLabel" id="config_label">
+				      <property name="visible">True</property>
+				      <property name="label" translatable="yes">Additional Configuration</property>
+				      <property name="use_underline">False</property>
+				      <property name="use_markup">False</property>
+				      <property name="justify">GTK_JUSTIFY_LEFT</property>
+				      <property name="wrap">False</property>
+				      <property name="selectable">False</property>
+				      <property name="xalign">0</property>
+				      <property name="yalign">0.5</property>
+				      <property name="xpad">0</property>
+				      <property name="ypad">0</property>
+				      <property name="ellipsize">PANGO_ELLIPSIZE_END</property>
+				      <property name="width_chars">-1</property>
+				      <property name="single_line_mode">False</property>
+				      <property name="angle">0</property>
+				    </widget>
+				    <packing>
+				      <property name="left_attach">1</property>
+				      <property name="right_attach">2</property>
+				      <property name="top_attach">1</property>
+				      <property name="bottom_attach">2</property>
+				      <property name="y_options"></property>
+				    </packing>
+				  </child>
+
+				  <child>
 				    <widget class="GtkHBox" id="locale_box">
 				      <property name="visible">True</property>
 				      <property name="homogeneous">False</property>
@@ -7667,33 +7694,6 @@ To exit click &quot;Finish&quot;</property>
 				      <property name="bottom_attach">1</property>
 				      <property name="x_options">fill</property>
 				      <property name="y_options">shrink</property>
-				    </packing>
-				  </child>
-
-				  <child>
-				    <widget class="GtkLabel" id="config_label">
-				      <property name="visible">True</property>
-				      <property name="label" translatable="yes">Additional Configuration</property>
-				      <property name="use_underline">False</property>
-				      <property name="use_markup">False</property>
-				      <property name="justify">GTK_JUSTIFY_LEFT</property>
-				      <property name="wrap">False</property>
-				      <property name="selectable">False</property>
-				      <property name="xalign">0</property>
-				      <property name="yalign">0.5</property>
-				      <property name="xpad">0</property>
-				      <property name="ypad">0</property>
-				      <property name="ellipsize">PANGO_ELLIPSIZE_END</property>
-				      <property name="width_chars">-1</property>
-				      <property name="single_line_mode">False</property>
-				      <property name="angle">0</property>
-				    </widget>
-				    <packing>
-				      <property name="left_attach">1</property>
-				      <property name="right_attach">2</property>
-				      <property name="top_attach">1</property>
-				      <property name="bottom_attach">2</property>
-				      <property name="y_options"></property>
 				    </packing>
 				  </child>
 				</widget>
@@ -11903,8 +11903,8 @@ NOTE: This location must exist and be writable by the instance owner.</property>
 				  <child>
 				    <widget class="GtkLabel" id="label5">
 				      <property name="visible">True</property>
-				      <property name="label" translatable="yes">Vectorwise specific option can be configured here.
-To accept the default values, simply click next</property>
+				      <property name="label" translatable="yes">VectorWise-specific options can be configured here
+To accept the default values,click Next</property>
 				      <property name="use_underline">False</property>
 				      <property name="use_markup">False</property>
 				      <property name="justify">GTK_JUSTIFY_LEFT</property>
@@ -11979,7 +11979,11 @@ To accept the default values, simply click next</property>
 						  <child>
 						    <widget class="GtkEventBox" id="eventbox147">
 						      <property name="visible">True</property>
-						      <property name="tooltip" translatable="yes">Location where Ingres will be installed</property>
+						      <property name="tooltip" translatable="yes">The VectorWise Database Location
+
+The Ingres VectorWise variable II_VWDATA stores the default location used to store the VectorWise database files.
+
+NOTE: This location must exist and be writable by the instance owner.</property>
 						      <property name="visible_window">True</property>
 						      <property name="above_child">False</property>
 
@@ -12007,7 +12011,7 @@ To accept the default values, simply click next</property>
 						  <child>
 						    <widget class="GtkLabel" id="label8">
 						      <property name="visible">True</property>
-						      <property name="label" translatable="yes">Vectorwise Data</property>
+						      <property name="label" translatable="yes">VectorWise Data</property>
 						      <property name="use_underline">False</property>
 						      <property name="use_markup">False</property>
 						      <property name="justify">GTK_JUSTIFY_LEFT</property>
@@ -12181,63 +12185,6 @@ To accept the default values, simply click next</property>
 					      <property name="column_spacing">1</property>
 
 					      <child>
-						<widget class="GtkImage" id="image14">
-						  <property name="visible">True</property>
-						  <property name="pixbuf">info_16_2.ico</property>
-						  <property name="xalign">0.5</property>
-						  <property name="yalign">0.5</property>
-						  <property name="xpad">5</property>
-						  <property name="ypad">0</property>
-						</widget>
-						<packing>
-						  <property name="left_attach">2</property>
-						  <property name="right_attach">3</property>
-						  <property name="top_attach">1</property>
-						  <property name="bottom_attach">2</property>
-						  <property name="x_padding">5</property>
-						  <property name="x_options"></property>
-						</packing>
-					      </child>
-
-					      <child>
-						<widget class="GtkImage" id="image15">
-						  <property name="visible">True</property>
-						  <property name="pixbuf">info_16_2.ico</property>
-						  <property name="xalign">0.5</property>
-						  <property name="yalign">0.5</property>
-						  <property name="xpad">5</property>
-						  <property name="ypad">0</property>
-						</widget>
-						<packing>
-						  <property name="left_attach">2</property>
-						  <property name="right_attach">3</property>
-						  <property name="top_attach">2</property>
-						  <property name="bottom_attach">3</property>
-						  <property name="x_padding">5</property>
-						  <property name="x_options"></property>
-						</packing>
-					      </child>
-
-					      <child>
-						<widget class="GtkImage" id="image16">
-						  <property name="visible">True</property>
-						  <property name="pixbuf">info_16_2.ico</property>
-						  <property name="xalign">0.5</property>
-						  <property name="yalign">0.5</property>
-						  <property name="xpad">5</property>
-						  <property name="ypad">0</property>
-						</widget>
-						<packing>
-						  <property name="left_attach">2</property>
-						  <property name="right_attach">3</property>
-						  <property name="top_attach">3</property>
-						  <property name="bottom_attach">4</property>
-						  <property name="x_padding">5</property>
-						  <property name="x_options"></property>
-						</packing>
-					      </child>
-
-					      <child>
 						<widget class="GtkCheckButton" id="ivw_maxdb_chk">
 						  <property name="visible">True</property>
 						  <property name="can_focus">True</property>
@@ -12309,7 +12256,7 @@ To accept the default values, simply click next</property>
 					      <child>
 						<widget class="GtkLabel" id="label796">
 						  <property name="visible">True</property>
-						  <property name="label" translatable="yes">Click check-box to change values from default</property>
+						  <property name="label" translatable="yes">Select an option to change its value from the default</property>
 						  <property name="use_underline">False</property>
 						  <property name="use_markup">False</property>
 						  <property name="justify">GTK_JUSTIFY_LEFT</property>
@@ -12348,11 +12295,11 @@ To accept the default values, simply click next</property>
 						      <property name="can_focus">True</property>
 						      <property name="climb_rate">1</property>
 						      <property name="digits">0</property>
-						      <property name="numeric">False</property>
+						      <property name="numeric">True</property>
 						      <property name="update_policy">GTK_UPDATE_ALWAYS</property>
 						      <property name="snap_to_ticks">False</property>
 						      <property name="wrap">False</property>
-						      <property name="adjustment">8 2 64 1 8 0</property>
+						      <property name="adjustment">8 1 1024 1 8 0</property>
 						      <signal name="value_changed" handler="on_ivw_cfg_blkgrpsz_val_change" last_modification_time="Thu, 20 May 2010 17:28:32 GMT"/>
 						    </widget>
 						    <packing>
@@ -12400,9 +12347,9 @@ To accept the default values, simply click next</property>
 						      <property name="digits">0</property>
 						      <property name="numeric">True</property>
 						      <property name="update_policy">GTK_UPDATE_ALWAYS</property>
-						      <property name="snap_to_ticks">False</property>
+						      <property name="snap_to_ticks">True</property>
 						      <property name="wrap">False</property>
-						      <property name="adjustment">8 1 2048 32 256 0</property>
+						      <property name="adjustment">8 1 16384 1 32 0</property>
 						      <signal name="value_changed" handler="on_ivw_cfg_blksz_val_change" last_modification_time="Thu, 20 May 2010 17:28:16 GMT"/>
 						    </widget>
 						    <packing>
@@ -12415,12 +12362,12 @@ To accept the default values, simply click next</property>
 						  <child>
 						    <widget class="GtkComboBox" id="ivw_cfg_blksz_unit">
 						      <property name="visible">True</property>
-						      <property name="items">Kb
-Mb
-Gb
+						      <property name="items">KB
+MB
+GB
 </property>
 						      <property name="add_tearoffs">False</property>
-						      <property name="focus_on_click">True</property>
+						      <property name="focus_on_click">False</property>
 						      <signal name="changed" handler="on_ivw_cfg_blksz_unit_changed" last_modification_time="Thu, 20 May 2010 03:28:38 GMT"/>
 						    </widget>
 						    <packing>
@@ -12454,9 +12401,9 @@ Gb
 						      <property name="digits">0</property>
 						      <property name="numeric">True</property>
 						      <property name="update_policy">GTK_UPDATE_ALWAYS</property>
-						      <property name="snap_to_ticks">False</property>
+						      <property name="snap_to_ticks">True</property>
 						      <property name="wrap">False</property>
-						      <property name="adjustment">1 1 2048 64 512 0</property>
+						      <property name="adjustment">1 1 16384 1 512 0</property>
 						      <signal name="value_changed" handler="on_ivw_cfg_maxdata_val_change" last_modification_time="Thu, 20 May 2010 17:28:07 GMT"/>
 						    </widget>
 						    <packing>
@@ -12469,12 +12416,12 @@ Gb
 						  <child>
 						    <widget class="GtkComboBox" id="ivw_cfg_maxdata_unit">
 						      <property name="visible">True</property>
-						      <property name="items">Kb
-Mb
-Gb
-Tb</property>
+						      <property name="items">KB
+MB
+GB
+TB</property>
 						      <property name="add_tearoffs">False</property>
-						      <property name="focus_on_click">True</property>
+						      <property name="focus_on_click">False</property>
 						      <signal name="changed" handler="on_ivw_cfg_maxdata_unit_changed" last_modification_time="Thu, 20 May 2010 03:28:31 GMT"/>
 						    </widget>
 						    <packing>
@@ -12490,6 +12437,111 @@ Tb</property>
 						  <property name="top_attach">1</property>
 						  <property name="bottom_attach">2</property>
 						  <property name="y_options"></property>
+						</packing>
+					      </child>
+
+					      <child>
+						<widget class="GtkEventBox" id="eventbox149">
+						  <property name="visible">True</property>
+						  <property name="tooltip" translatable="yes">VectorWise Data Configuration - Maximum Database Size
+
+Specifies the maximum database size in bytes.
+
+Used to set the default value for columnspace_size in the Ingres VectorWise configuration file.
+
+For more information, see the Ingres VectorWise User guide.
+
+Default: 512G</property>
+						  <property name="visible_window">True</property>
+						  <property name="above_child">False</property>
+
+						  <child>
+						    <widget class="GtkImage" id="image14">
+						      <property name="visible">True</property>
+						      <property name="pixbuf">info_16_2.ico</property>
+						      <property name="xalign">0.5</property>
+						      <property name="yalign">0.5</property>
+						      <property name="xpad">5</property>
+						      <property name="ypad">0</property>
+						    </widget>
+						  </child>
+						</widget>
+						<packing>
+						  <property name="left_attach">2</property>
+						  <property name="right_attach">3</property>
+						  <property name="top_attach">1</property>
+						  <property name="bottom_attach">2</property>
+						  <property name="x_options"></property>
+						</packing>
+					      </child>
+
+					      <child>
+						<widget class="GtkEventBox" id="eventbox150">
+						  <property name="visible">True</property>
+						  <property name="tooltip" translatable="yes">VectorWise Data Configuration - Data Block Size
+
+Specifies the minimum I/O granularity. This option is the most important for I/O performance.
+
+Used to set the default value for block_size in the Ingres VectorWise configuration file.
+
+For more information, see the Ingres VectorWise User guide. 
+
+Default: 512K</property>
+						  <property name="visible_window">True</property>
+						  <property name="above_child">False</property>
+
+						  <child>
+						    <widget class="GtkImage" id="image15">
+						      <property name="visible">True</property>
+						      <property name="pixbuf">info_16_2.ico</property>
+						      <property name="xalign">0.5</property>
+						      <property name="yalign">0.5</property>
+						      <property name="xpad">5</property>
+						      <property name="ypad">0</property>
+						    </widget>
+						  </child>
+						</widget>
+						<packing>
+						  <property name="left_attach">2</property>
+						  <property name="right_attach">3</property>
+						  <property name="top_attach">2</property>
+						  <property name="bottom_attach">3</property>
+						  <property name="x_options"></property>
+						</packing>
+					      </child>
+
+					      <child>
+						<widget class="GtkEventBox" id="eventbox151">
+						  <property name="visible">True</property>
+						  <property name="tooltip" translatable="yes">VectorWise Data Configuration - Data Block Group Size
+
+Specifies the number of blocks to handle in every disk request.
+
+Used to set the default value for group_size in the Ingres VectorWise configuration file.
+
+For more information, see the Ingres VectorWise User guide.
+
+Default: 8 blocks</property>
+						  <property name="visible_window">True</property>
+						  <property name="above_child">False</property>
+
+						  <child>
+						    <widget class="GtkImage" id="image16">
+						      <property name="visible">True</property>
+						      <property name="pixbuf">info_16_2.ico</property>
+						      <property name="xalign">0.5</property>
+						      <property name="yalign">0.5</property>
+						      <property name="xpad">5</property>
+						      <property name="ypad">0</property>
+						    </widget>
+						  </child>
+						</widget>
+						<packing>
+						  <property name="left_attach">2</property>
+						  <property name="right_attach">3</property>
+						  <property name="top_attach">3</property>
+						  <property name="bottom_attach">4</property>
+						  <property name="x_options"></property>
 						</packing>
 					      </child>
 					    </widget>
@@ -12557,44 +12609,6 @@ Tb</property>
 					      <property name="column_spacing">0</property>
 
 					      <child>
-						<widget class="GtkImage" id="image17">
-						  <property name="visible">True</property>
-						  <property name="pixbuf">info_16_2.ico</property>
-						  <property name="xalign">0.5</property>
-						  <property name="yalign">0.5</property>
-						  <property name="xpad">5</property>
-						  <property name="ypad">0</property>
-						</widget>
-						<packing>
-						  <property name="left_attach">2</property>
-						  <property name="right_attach">3</property>
-						  <property name="top_attach">1</property>
-						  <property name="bottom_attach">2</property>
-						  <property name="x_padding">5</property>
-						  <property name="x_options"></property>
-						</packing>
-					      </child>
-
-					      <child>
-						<widget class="GtkImage" id="image18">
-						  <property name="visible">True</property>
-						  <property name="pixbuf">info_16_2.ico</property>
-						  <property name="xalign">0.5</property>
-						  <property name="yalign">0.5</property>
-						  <property name="xpad">5</property>
-						  <property name="ypad">0</property>
-						</widget>
-						<packing>
-						  <property name="left_attach">2</property>
-						  <property name="right_attach">3</property>
-						  <property name="top_attach">2</property>
-						  <property name="bottom_attach">3</property>
-						  <property name="x_padding">5</property>
-						  <property name="x_options"></property>
-						</packing>
-					      </child>
-
-					      <child>
 						<widget class="GtkCheckButton" id="ivw_prcmem_chk">
 						  <property name="visible">True</property>
 						  <property name="can_focus">True</property>
@@ -12641,7 +12655,7 @@ Tb</property>
 					      <child>
 						<widget class="GtkLabel" id="label808">
 						  <property name="visible">True</property>
-						  <property name="label" translatable="yes">Click check-box to change values from default</property>
+						  <property name="label" translatable="yes">Select an option to change its value from the default</property>
 						  <property name="use_underline">False</property>
 						  <property name="use_markup">False</property>
 						  <property name="justify">GTK_JUSTIFY_LEFT</property>
@@ -12680,11 +12694,11 @@ Tb</property>
 						      <property name="can_focus">True</property>
 						      <property name="climb_rate">1</property>
 						      <property name="digits">0</property>
-						      <property name="numeric">False</property>
+						      <property name="numeric">True</property>
 						      <property name="update_policy">GTK_UPDATE_ALWAYS</property>
-						      <property name="snap_to_ticks">False</property>
+						      <property name="snap_to_ticks">True</property>
 						      <property name="wrap">False</property>
-						      <property name="adjustment">1 1 1024 32 256 0</property>
+						      <property name="adjustment">1 1 16384 1 256 0</property>
 						      <signal name="value_changed" handler="on_ivw_cfg_procmem_val_change" last_modification_time="Thu, 20 May 2010 17:28:47 GMT"/>
 						    </widget>
 						    <packing>
@@ -12697,11 +12711,11 @@ Tb</property>
 						  <child>
 						    <widget class="GtkComboBox" id="ivw_cfg_procmem_unit">
 						      <property name="visible">True</property>
-						      <property name="items">Kb
-Mb
-Gb</property>
+						      <property name="items">KB
+MB
+GB</property>
 						      <property name="add_tearoffs">False</property>
-						      <property name="focus_on_click">True</property>
+						      <property name="focus_on_click">False</property>
 						      <signal name="changed" handler="on_ivw_cfg_procmem_unit_changed" last_modification_time="Thu, 20 May 2010 03:28:47 GMT"/>
 						    </widget>
 						    <packing>
@@ -12733,11 +12747,11 @@ Gb</property>
 						      <property name="can_focus">True</property>
 						      <property name="climb_rate">1</property>
 						      <property name="digits">0</property>
-						      <property name="numeric">False</property>
+						      <property name="numeric">True</property>
 						      <property name="update_policy">GTK_UPDATE_ALWAYS</property>
-						      <property name="snap_to_ticks">False</property>
+						      <property name="snap_to_ticks">True</property>
 						      <property name="wrap">False</property>
-						      <property name="adjustment">32 1 1024 32 256 0</property>
+						      <property name="adjustment">32 1 16384 1 256 0</property>
 						      <signal name="value_changed" handler="on_ivw_cfg_buffpoolmem_val_change" last_modification_time="Thu, 20 May 2010 17:28:57 GMT"/>
 						    </widget>
 						    <packing>
@@ -12750,9 +12764,9 @@ Gb</property>
 						  <child>
 						    <widget class="GtkComboBox" id="ivw_cfg_buffpoolmem_unit">
 						      <property name="visible">True</property>
-						      <property name="items">Kb
-Mb
-Gb</property>
+						      <property name="items">KB
+MB
+GB</property>
 						      <property name="add_tearoffs">False</property>
 						      <property name="focus_on_click">True</property>
 						      <signal name="changed" handler="on_ivw_cfg_buffpoolmem_unit_changed" last_modification_time="Thu, 20 May 2010 03:28:52 GMT"/>
@@ -12770,6 +12784,78 @@ Gb</property>
 						  <property name="top_attach">2</property>
 						  <property name="bottom_attach">3</property>
 						  <property name="y_options"></property>
+						</packing>
+					      </child>
+
+					      <child>
+						<widget class="GtkEventBox" id="eventbox152">
+						  <property name="visible">True</property>
+						  <property name="tooltip" translatable="yes">VectorWise Memory Configuration - Processing Memory
+
+Specifies the amount of the total memory used for query execution.
+
+Used to set the default value for max_memory_size in the Ingres VectorWise configuration file.
+
+For more information, see the Ingres VectorWise User guide.
+
+Default: 50% of the physical system memory
+
+</property>
+						  <property name="visible_window">True</property>
+						  <property name="above_child">False</property>
+
+						  <child>
+						    <widget class="GtkImage" id="image17">
+						      <property name="visible">True</property>
+						      <property name="pixbuf">info_16_2.ico</property>
+						      <property name="xalign">0.5</property>
+						      <property name="yalign">0.5</property>
+						      <property name="xpad">5</property>
+						      <property name="ypad">0</property>
+						    </widget>
+						  </child>
+						</widget>
+						<packing>
+						  <property name="left_attach">2</property>
+						  <property name="right_attach">3</property>
+						  <property name="top_attach">1</property>
+						  <property name="bottom_attach">2</property>
+						  <property name="x_options"></property>
+						</packing>
+					      </child>
+
+					      <child>
+						<widget class="GtkEventBox" id="eventbox153">
+						  <property name="visible">True</property>
+						  <property name="tooltip" translatable="yes">VectorWise Memory Configuration - Buffer Pool Memory
+
+Specifies the buffer pool size in bytes (that is, disk cache). The setting can be changed without reloading data.
+
+Used to set the default value for bufferpool_size in the Ingres VectorWise configuration file
+
+For more information, see the Ingres VectorWise User guide.
+
+Default: 25% of the physical system memory</property>
+						  <property name="visible_window">True</property>
+						  <property name="above_child">False</property>
+
+						  <child>
+						    <widget class="GtkImage" id="image18">
+						      <property name="visible">True</property>
+						      <property name="pixbuf">info_16_2.ico</property>
+						      <property name="xalign">0.5</property>
+						      <property name="yalign">0.5</property>
+						      <property name="xpad">5</property>
+						      <property name="ypad">0</property>
+						    </widget>
+						  </child>
+						</widget>
+						<packing>
+						  <property name="left_attach">2</property>
+						  <property name="right_attach">3</property>
+						  <property name="top_attach">2</property>
+						  <property name="bottom_attach">3</property>
+						  <property name="x_options"></property>
 						</packing>
 					      </child>
 					    </widget>

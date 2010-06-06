@@ -49,6 +49,9 @@
 ##	    SIR 123791
 ##	    Add 'product' variable and use it to define exectution mode for
 ##	    installer. Passed to GUI as attribute of saveset element.
+##	25-May-2010 (hanje04)
+##	    SIR 123791
+##	    Make sure we get ALL the locations in dblocdict
 
 
 # load external modules
@@ -99,7 +102,7 @@ else:
     dblocnames = ( 'II_DATABASE', 'II_CHECKPOINT', 'II_JOURNAL', \
 	'II_WORK', 'II_DUMP' ) 
 
-dblocdict = dict( zip( dblocnames, range( 1, len( dblocnames ) ) ) )
+dblocdict = dict( zip( dblocnames, range( 0, len( dblocnames ) ) ) )
 
 # search masks
 rnm = '[A-Z]([A-Z]|[0-9])' # rename mask

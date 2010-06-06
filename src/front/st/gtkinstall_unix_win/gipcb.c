@@ -1,5 +1,5 @@
 /*
-** Copyright 2006 Ingres Corporation. All rights reserved 
+** Copyright 2006, 2010 Ingres Corporation. All rights reserved 
 */
 
 
@@ -202,7 +202,12 @@
 **	    Add new stages to on_master_next/back_clicked()
 **	    instmode now bitmap to allow multi-mode operation for IVW support
 **	    Update how value is checked and set.
-**   
+**	26-May-2010 (hanje04)
+**	    SIR 123791
+**  	    Use TYPICAL_VECTORWISE to set selected packages 
+**	    in on_typical_inst_clicked() for IVW_INSTALL mode
+**	    IVW blocksize and groupsize need to be rounded to the next 
+**	    power of 2. Use GIPnextPow2() to do this.
 */
 
 static STATUS update_location_entry( i4 locidx, GtkEntry *entry );
@@ -441,7 +446,10 @@ on_typical_inst_clicked                (GtkButton       *button,
 	return;
 
     DBG_PRINT("on_typical_inst_clicked called\n");
-    pkgs_to_install=TYPICAL_SERVER;
+    if ( instmode & IVW_INSTALL )
+	pkgs_to_install=TYPICAL_VECTORWISE;
+    else
+	pkgs_to_install=TYPICAL_SERVER;
     /* set package check buttons correctly */
     set_inst_pkg_check_buttons( );
 	
@@ -3285,11 +3293,22 @@ on_ivw_cfg_blkgrpsz_val_change         (GtkSpinButton   *spinbutton,
                                         gpointer         user_data)
 {
     i4		i=0;
+    i4		val;
 
     while(vw_cfg_info[i]->bit != GIP_VWCFG_GROUP_SIZE)
 	i++;
 
-    vw_cfg_info[i]->value = gtk_spin_button_get_value(spinbutton);
+    val = gtk_spin_button_get_value(spinbutton);
+    if ( val == vw_cfg_info[i]->value && GIPisPow2(val) )
+        return; /* nothing to do */
+    else if ( val < vw_cfg_info[i]->value && val > vw_cfg_info[i]->value/2)
+        val=((val + 1) >> 1); /* drop value by at least 1/2 */
+
+    /* need to round up to powers of two */
+    vw_cfg_info[i]->value = GIPnextPow2(val);
+    gtk_spin_button_set_value(spinbutton,  vw_cfg_info[i]->value);
+
+    vw_cfg_info[i]->value = val;
     DBG_PRINT("%s_value set to = %d\n",
 		vw_cfg_info[i]->field_prefix,
 		vw_cfg_info[i]->value);
@@ -3303,11 +3322,21 @@ on_ivw_cfg_blksz_val_change            (GtkSpinButton   *spinbutton,
 {
     vw_cfg	*param;
     i4		i=0;
+    i4		val;
 
     while(vw_cfg_info[i]->bit != GIP_VWCFG_BLOCK_SIZE)
 	i++;
 
-    vw_cfg_info[i]->value = gtk_spin_button_get_value(spinbutton);
+    val = gtk_spin_button_get_value(spinbutton);
+    if ( val == vw_cfg_info[i]->value && GIPisPow2(val) )
+        return; /* nothing to do */
+    else if ( val < vw_cfg_info[i]->value && val > vw_cfg_info[i]->value/2)
+        val=((val + 1) >> 1); /* drop value by at least 1/2 */
+
+    /* need to round up to powers of two */
+    vw_cfg_info[i]->value = GIPnextPow2(val);
+    gtk_spin_button_set_value(spinbutton,  vw_cfg_info[i]->value);
+
     DBG_PRINT("%s_value set to = %d\n",
 		vw_cfg_info[i]->field_prefix,
 		vw_cfg_info[i]->value);

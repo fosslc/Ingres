@@ -59,17 +59,34 @@
 **	25-May-2010 (hanje04)
 **	    SIR 123791
 **	    Correct typo, ellipsize not eillipsize. grrrr!
+**	27-May-2010 (hanje04)
+**	    SIR 123791
+**	    add define for gtk_combo_box_set_focus_on_click
+**	    Only null out gtk_ functions if they're not defined at build time
 */
 
 /*
 ** NULL out unsupported gtk functions. Need to support GTK version 2.2
 ** but GUI was designed originally against 2.8
 */
-# define gtk_alignment_set_padding
-# define gtk_button_set_focus_on_click
-# define gtk_event_box_set_visible_window
-# define gtk_text_view_set_accepts_tab
-# define gtk_label_set_ellipsize
+# ifndef gtk_alignment_set_padding
+    # define gtk_alignment_set_padding
+# endif
+# ifndef gtk_button_set_focus_on_click
+    # define gtk_button_set_focus_on_click
+# endif
+# ifndef gtk_event_box_set_visible_window
+    # define gtk_event_box_set_visible_window
+# endif
+# ifndef gtk_text_view_set_accepts_tab
+    # define gtk_text_view_set_accepts_tab
+# endif
+# ifndef gtk_label_set_ellipsize
+    # define gtk_label_set_ellipsize
+# endif
+# ifndef gtk_combo_box_set_focus_on_click
+    # define gtk_combo_box_set_focus_on_click
+# endif
 
 void
 on_basic_install_checked               (GtkButton       *button,

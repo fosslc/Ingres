@@ -42,6 +42,9 @@
 **	    instance structure.
 **	24-Nov-2009 (frima01) Bug 122490
 **	    Added prototype for write_file_to_text_buffer.
+**	27-May-2010 (hanje04)
+**	    SIR 123791
+**	    Add prototype for GIPnextPow2(), GIPisPow2 macro.
 */
 
 /* MACROS */
@@ -60,6 +63,10 @@
 # define TMPDIR "."
 # define TMPVAR "TEMP"
 # endif
+# ifndef GIPisPow2
+# define GIPisPow2(x) ((x & (x - 1)) == 0)
+# endif
+
 
 	
 
@@ -148,11 +155,18 @@ STATUS
 GIPValidatePkgName			( char *pkgname, char *format );
 
 STATUS
-GIPAddDBLoc(instance *inst, i4 type, const char *path);
+GIPAddDBLoc				(instance *inst,
+					 i4 type,
+					 const char *path);
 
 STATUS
-GIPAddLogLoc(instance *inst, i4 type, const char *path);
+GIPAddLogLoc				(instance *inst,
+					 i4 type,
+					 const char *path);
 
 int
-write_file_to_text_buffer(char *fileloc, GtkTextBuffer *buffer);
+write_file_to_text_buffer		(char *fileloc,
+					 GtkTextBuffer *buffer);
 
+i4
+GIPnextPow2				(i4  num);
