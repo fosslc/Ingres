@@ -13676,6 +13676,9 @@ DB_ERROR	*dberr)
 **	    DMP_RELATION structure, use new CSadjust_i8counter to peform
 **	    atomic counter adjustment. Also, restrict actual values to
 **	    MAXI4 until we can handle larger numbers.
+**      25-May-2010 (thaju02) Bug 122261
+**          Readdress of prior change for b122261 which was wrong and 
+**          resulted in too frequent tcb invalidation.
 */
 static DB_STATUS
 update_rel(
@@ -13791,8 +13794,15 @@ DB_ERROR	    *dberr)
 	         && !(*InvalidateTCB)
                  && dcb->dcb_served == DCB_MULTIPLE
 		 && !(dcb->dcb_status & (DCB_S_RECOVER | DCB_S_ROLLFORWARD))
-                 && ((abs(t->tcb_rel.relpages - relrecord.relpages) > 25000) ||
-                  ((2 * t->tcb_rel.relpages + 5) > relrecord.relpages)) )
+		 && (((relrecord.relpages <= 4) &&
+			    (abs(t->tcb_page_adds) > 12)) ||
+		     ((relrecord.relpages < 500) &&
+			    (abs(t->tcb_page_adds) >= 50)) ||
+		     ((relrecord.relpages < 5000) &&
+			    (abs(t->tcb_page_adds) >= 250)) ||
+		     ((relrecord.relpages < 20000) &&
+			    (abs(t->tcb_page_adds) >= 1000)) ||
+		     (abs(t->tcb_page_adds) >= 5000)) )
             {
                *InvalidateTCB = TRUE;
             }
