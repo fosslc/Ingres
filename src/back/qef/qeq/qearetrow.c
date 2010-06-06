@@ -162,6 +162,8 @@
 **	16-May-2010 (kschendel) b123565
 **	    Caller must pass DSH to make parallel query + table procs
 **	    work properly.
+**	21-May-2010 (kschendel) b123775
+**	    Delete unused sfinit segment test.
 */
 DB_STATUS
 qea_retrow(
@@ -207,83 +209,74 @@ i4		function )
     */
     for (;;)
     {
-	if (ade_excb->excb_seg == ADE_SFINIT)
+	/* materialize row into output buffer.
+	** Aim output row (uoutput) at caller supplied output buffer.
+	** If there are blobs, tell adf that it's the blob area.
+	*/
+	ade_excb->excb_seg = ADE_SMAIN;
+	ade_excb->excb_limited_base = ADE_NOBASE;
+	if (qen_adf->qen_uoutput >= 0)
 	{
-	    dsh->dsh_error.err_code = E_QE0015_NO_MORE_ROWS;
-	    ade_excb->excb_seg = ADE_SMAIN;
-	    status = E_DB_WARN;
-	}
-	else
-	{
-	    /* materialize row into output buffer.
-	    ** Aim output row (uoutput) at caller supplied output buffer.
-	    ** If there are blobs, tell adf that it's the blob area.
-	    */
-	    ade_excb->excb_seg = ADE_SMAIN;
-	    ade_excb->excb_limited_base = ADE_NOBASE;
-	    if (qen_adf->qen_uoutput >= 0)
+	    if (qen_adf->qen_mask & QEN_HAS_PERIPH_OPND)
+		ade_excb->excb_limited_base = qen_adf->qen_uoutput;
+	    if (dsh->dsh_qp_ptr->qp_status & QEQP_GLOBAL_BASEARRAY)
 	    {
+		dsh->dsh_row[qen_adf->qen_uoutput] = output->dt_data;
+	    }
+	    else
+	    {
+		/* old-fashioned way, uoutput is local base, bias it
+		** for blobs, set output pointer where old way wants it
+		*/
 		if (qen_adf->qen_mask & QEN_HAS_PERIPH_OPND)
-		    ade_excb->excb_limited_base = qen_adf->qen_uoutput;
-		if (dsh->dsh_qp_ptr->qp_status & QEQP_GLOBAL_BASEARRAY)
-		{
-		    dsh->dsh_row[qen_adf->qen_uoutput] = output->dt_data;
-		}
-		else
-		{
-		    /* old-fashioned way, uoutput is local base, bias it
-		    ** for blobs, set output pointer where old way wants it
-		    */
-		    if (qen_adf->qen_mask & QEN_HAS_PERIPH_OPND)
-			ade_excb->excb_limited_base += ADE_ZBASE;
-		    ade_excb->excb_bases[ADE_ZBASE+qen_adf->qen_uoutput] =
-							    output->dt_data;
-		}
-		ade_excb->excb_size = output->dt_size;
+		    ade_excb->excb_limited_base += ADE_ZBASE;
+		ade_excb->excb_bases[ADE_ZBASE+qen_adf->qen_uoutput] =
+							output->dt_data;
 	    }
+	    ade_excb->excb_size = output->dt_size;
+	}
 
-	    /* process the tuples */
+	/* process the tuples */
 
-	    status = ade_execute_cx(dsh->dsh_adf_cb, ade_excb);
-	    if (status != E_DB_OK)
-	    {
+	status = ade_execute_cx(dsh->dsh_adf_cb, ade_excb);
+	if (status != E_DB_OK)
+	{
 #ifdef xDEBUG
-		(VOID) qe2_chk_qp(dsh);
+	    (VOID) qe2_chk_qp(dsh);
 #endif
-		if ((status == E_DB_INFO) &&
-			    (dsh->dsh_adf_cb->adf_errcb.ad_errcode ==
-					E_AD0002_INCOMPLETE))
-		{
-		    /* Caught in mid-BLOB. */
-		    dsh->dsh_error.err_code = E_AD0002_INCOMPLETE;
-		    ++ bufs_used;
-		    if (qen_adf->qen_uoutput >= 0)
-		    {
-			output->dt_size = ade_excb->excb_size;
-			ade_excb->excb_limited_base = ADE_NOBASE;
-			if (output->dt_next != NULL)
-			{
-			    output = output->dt_next;
-			    /* There's room left, loop back and output more */
-			    continue;
-			}
-		    }
-		    break;
-		}
-		else if ((status = qef_adf_error(
-			    &dsh->dsh_adf_cb->adf_errcb, status,
-			    qef_cb, &dsh->dsh_error)) != E_DB_OK)
-		{
-		    break;
-		}
-	    }
-	    bufs_used += 1;
-
-	    if (qen_adf->qen_uoutput >= 0)
+	    if ((status == E_DB_INFO) &&
+			(dsh->dsh_adf_cb->adf_errcb.ad_errcode ==
+				    E_AD0002_INCOMPLETE))
 	    {
-		output->dt_size = ade_excb->excb_size;
-		ade_excb->excb_limited_base = ADE_NOBASE;
+		/* Caught in mid-BLOB. */
+		dsh->dsh_error.err_code = E_AD0002_INCOMPLETE;
+		++ bufs_used;
+		if (qen_adf->qen_uoutput >= 0)
+		{
+		    output->dt_size = ade_excb->excb_size;
+		    ade_excb->excb_limited_base = ADE_NOBASE;
+		    if (output->dt_next != NULL)
+		    {
+			output = output->dt_next;
+			/* There's room left, loop back and output more */
+			continue;
+		    }
+		}
+		break;
 	    }
+	    else if ((status = qef_adf_error(
+			&dsh->dsh_adf_cb->adf_errcb, status,
+			qef_cb, &dsh->dsh_error)) != E_DB_OK)
+	    {
+		break;
+	    }
+	}
+	bufs_used += 1;
+
+	if (qen_adf->qen_uoutput >= 0)
+	{
+	    output->dt_size = ade_excb->excb_size;
+	    ade_excb->excb_limited_base = ADE_NOBASE;
 	}
 	break;
     }

@@ -863,6 +863,10 @@ GLOBALREF QEF_S_CB		*Qef_s_cb;
 **	13-May-2010 (kschendel) b123565
 **	    Split validate into two pieces.  This piece is for opening tables
 **	    at the "top" action of a query.
+**	20-May-2010 (kschendel) b123775
+**	    Restore the setting of dsh-act-ptr for tprocs, that's the
+**	    query resume point if the tproc needs loaded.  My bad for
+**	    taking it out.
 */
 
 DB_STATUS
@@ -953,6 +957,13 @@ bool		init_action)
 
 	    status = qeq_load_tproc_qp(qef_rcb, dsh, &qsf_rcb, qefresource);
 
+	    /* If we have to reload the tproc, set the dsh current
+	    ** action now, so that when the sequencer resumes the
+	    ** query, QEF knows which action caused the reload.
+	    ** If the tproc is there, we'll clear dsh-act-ptr and
+	    ** let things get thru the subplan init as usual.
+	    */
+	    dsh->dsh_act_ptr = action;
 	    if (status == E_DB_OK &&                     /* tproc QP cached */
 		!(qp->qp_status & QEQP_ISDBP) &&               /* top query */
 		!(qef_rcb->qef_intstate & QEF_DBPROC_QP)/* not QEF callback */
@@ -1004,6 +1015,10 @@ bool		init_action)
 		MEcopy((PTR)qsf_rcb.qsf_obj_id.qso_name,
 		       sizeof(DB_CURSOR_ID),
 		       (PTR)&qefresource->qr_resource.qr_proc.qr_dbpalias);
+		/* Don't need action saved, null it out, will be set
+		** again if subplan-init is happy with things.
+		*/
+		dsh->dsh_act_ptr = NULL;
 	    }
 
 	    continue;
@@ -3326,12 +3341,22 @@ PTR		   *param )
 **
 ** Description:
 **	This is a possibly repeated query startup initialization.
-**	It does two things:
+**	It does these things:
 **	- sets up ADE_EXCB bases that depend on user parameters, which
 **	  obviously can change from execution to execution.  If
 **	  ADE scratch space for VLT/VLUP is needed, it's (re)allocated here.
 **
 **	- runs the VIRGIN code segment of the CX, if there is one.
+**
+**	- resets the CX selector to MAIN.  While this is in general just
+**	  a convenience, in a couple situations it's essential.  One
+**	  example is the GET action with no QP (e.g. an assignment stmt
+**	  in a DBproc, or a GET to return a SAGG result).  These GETs
+**	  fiddle the CX select to be FINIT, so that if called back without
+**	  reset, the GET can indicate EOF.  (There is no place for
+**	  actions to store runtime status, unlike nodes.)  The reset
+**	  ends up here where we reset the CX selector to allow the
+**	  GET to be executed again.
 **
 ** Inputs:
 **      dsh                             current data segment header
@@ -3387,6 +3412,12 @@ PTR		   *param )
 **	    param arg was always dsh_param, get rid of it so that we can
 **	    share call sequence with qee_ade.  (Will be useful for the
 **	    extended partition qualification stuff, later on.)
+**	21-May-2010 (kschendel) b122775
+**	    Leave CX segment at main.  This is called from reset and it's
+**	    reasonable to expect CX segment selectors to be reset too.
+**	    In the case of GET, it's essential, since QP-less GET fiddles
+**	    the CX segment to "FINIT" to indicate EOF (there is no other
+**	    place for an action to keep state, unlike nodes).
 */
 DB_STATUS
 qeq_ade(
@@ -3403,15 +3434,16 @@ QEN_ADF            *qen_adf)
     DB_STATUS			status = E_DB_OK;
     ULM_RCB			ulm;
 
-    if (qen_adf == NULL || 
-	    (qen_adf->qen_mask & (QEN_SVIRGIN | QEN_HAS_PARAMS)) == 0
-	)
+    if (qen_adf == NULL)
+	return (E_DB_OK);	/* No CX */
+
+    ade_excb = (ADE_EXCB*) dsh->dsh_cbs[qen_adf->qen_pos];
+    ade_excb->excb_seg = ADE_SMAIN;	/* Reset to MAIN */
+    if ( (qen_adf->qen_mask & (QEN_SVIRGIN | QEN_HAS_PARAMS)) == 0 )
     {
-	/* Either no CX or nothing to do */
 	return (E_DB_OK);
     }
 
-    ade_excb = (ADE_EXCB*) dsh->dsh_cbs[qen_adf->qen_pos];
     excb_bases  = &ade_excb->excb_bases[ADE_ZBASE];
     qen_base = qen_adf->qen_base;
     if (dsh->dsh_qp_ptr->qp_status & QEQP_GLOBAL_BASEARRAY)
@@ -3510,6 +3542,7 @@ QEN_ADF            *qen_adf)
 			  status, dsh->dsh_qefcb, &dsh->dsh_error)) != E_DB_OK)
 		return (status);
 	}
+	ade_excb->excb_seg = ADE_SMAIN;		/* Reset to MAIN */
     }
 
     return (status);

@@ -109,13 +109,16 @@
 **      19-Mar-2010 (horda03) B122979
 **          Handle scrollable cursor temp. tables where a rows spans multiple
 **          pages. Also replaced the use of 511 with the appropriate macro.
+**	21-May-2010 (kschendel) b123775
+**	    Make a couple local routines static.
+**	    Ensure that qep-less fetch only happens once, even if not cursor.
 **/
 
 
 GLOBALREF QEF_S_CB *Qef_s_cb;
 
 /* Local functions. */
-DB_STATUS qea_fetch_position(
+static DB_STATUS qea_fetch_position(
 QEF_AHD		*action,
 QEF_RCB		*qef_rcb,
 QEE_DSH		*dsh,
@@ -126,7 +129,7 @@ i4		position,
 bool		fetchlast,
 bool		*pre_read);
 
-DB_STATUS qea_fetch_readqep(
+static DB_STATUS qea_fetch_readqep(
 QEF_AHD		*action,
 QEF_RCB		*qef_rcb,
 QEE_DSH		*dsh,
@@ -136,7 +139,7 @@ i4		*open_flag,
 bool		doing_offset,
 bool		*gotarow );
 
-DB_STATUS qea_fetch_readtemp(
+static DB_STATUS qea_fetch_readtemp(
 QEF_AHD		*action,
 QEF_RCB		*qef_rcb,
 QEE_DSH		*dsh,
@@ -150,7 +153,7 @@ PTR		buf1p,
 PTR		buf2p,
 i4		*result);
 
-DB_STATUS qea_fetch_writetemp(
+static DB_STATUS qea_fetch_writetemp(
 QEF_AHD		*action,
 QEF_RCB		*qef_rcb,
 QEE_DSH		*dsh,
@@ -796,7 +799,8 @@ err_exit:
 **          is 0 and an exception occurs.
 */
 
-DB_STATUS qea_fetch_position(
+static DB_STATUS
+qea_fetch_position(
 QEF_AHD		*action,
 QEF_RCB		*qef_rcb,
 QEE_DSH		*dsh,
@@ -976,7 +980,8 @@ bool		*pre_read)
 **	    Return TIDs from updateable KEYSET cursors.
 */
 
-DB_STATUS qea_fetch_readtemp(
+static DB_STATUS
+qea_fetch_readtemp(
 QEF_AHD		*action,
 QEF_RCB		*qef_rcb,
 QEE_DSH		*dsh,
@@ -1169,7 +1174,8 @@ i4		*rowstat)
 **	    Written to handle keyset scrollable cursors.
 */
 
-static DB_STATUS qea_fetch_keycomp(
+static DB_STATUS
+qea_fetch_keycomp(
 QEE_DSH		*dsh,
 QEF_SCROLL	*scrollp,
 PTR		buf1p,
@@ -1266,9 +1272,16 @@ i4		*result)
 **	16-Nov-2009 (thaju02) B122848
 **	    Added doing_offset param.
 **	    If doing_offset, do not write tuple to result set spool file.
+**	21-May-2010 (kschendel) b123775
+**	    For QP-less case, jigger the CX segment to ensure that multiple
+**	    fetches really do return EOF even if caller ignores the signal
+**	    from the first fetch.  (QP-less fetch can be from e.g. a SAGG,
+**	    and it's inconvenient to remember the pending-EOF status from
+**	    multiple nested for-GET's in tprocs or rowprocs.)
 */
 
-DB_STATUS qea_fetch_readqep(
+static DB_STATUS
+qea_fetch_readqep(
 QEF_AHD		*action,
 QEF_RCB		*qef_rcb,
 QEE_DSH		*dsh,
@@ -1469,9 +1482,10 @@ bool		*gotarow)
 	/* Constant query - no data to read, just execute ahd_current. */
 	if (ade_excb->excb_seg == ADE_SFINIT)
 	{
-	    /* We've already projected the constant row. */
+	    /* We've already projected the constant row.
+	    ** Just stick here until someone resets this GET action.
+	    */
 	    dsh->dsh_error.err_code = E_QE0015_NO_MORE_ROWS;
-	    ade_excb->excb_seg = ADE_SMAIN;
 	    return(E_DB_WARN);
 	}
 	else
@@ -1548,11 +1562,11 @@ bool		*gotarow)
 		ade_excb->excb_seg = ADE_SMAIN;
 		status = E_DB_WARN;
 	    }
-	    else
-	    {
-		/* set up to allow return for eof */
-		ade_excb->excb_seg = ADE_SFINIT;
-	    }
+	    /* Jigger the CX segment to indicate EOF if caller doesn't
+	    ** manage to remember the pending no-more-rows status, and
+	    ** calls the GET again.
+	    */
+	    ade_excb->excb_seg = ADE_SFINIT;
 	    if (qen_adf->qen_uoutput >= 0)
 	    {
 		output->dt_size = ade_excb->excb_size;
@@ -1623,7 +1637,8 @@ bool		*gotarow)
 **	    adu_maxstring.
 */
 
-DB_STATUS qea_fetch_writetemp(
+static DB_STATUS
+qea_fetch_writetemp(
 QEF_AHD		*action,
 QEF_RCB		*qef_rcb,
 QEE_DSH		*dsh,

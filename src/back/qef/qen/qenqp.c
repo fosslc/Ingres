@@ -252,6 +252,9 @@
 **	14-May-2010 (kschendel) b123565
 **	    Validation was split into two;  QP nodes only need the
 **	    subplan-init part.
+**	19-May-2010 (kschendel) b123775
+**	    Define a real flag for "reset all actions".  (I had thoughts of
+**	    integrating with tproc, but that turned out not to be needed.)
 */
 DB_STATUS
 qen_qp(
@@ -380,7 +383,7 @@ i4		function)
 	act = (QEF_AHD *)NULL;
 	qen_status->node_status = QEN0_INITIAL;
 	/* indicate reset status for subsequent calls */
-	qen_status->node_u.node_join.node_inner_status = QEN10_ROWS_AVAILABLE;
+	qen_status->node_access |= QEN_RESET_ACTIONS;
     }
     else
     {
@@ -399,6 +402,10 @@ i4		function)
 	{
 	    if (qen_status->node_status == QEN4_NO_MORE_ROWS)
 	    {
+		/* Last call indicated no-more but returned a row,
+		** so real no-more-rows indication is deferred until
+		** this call.
+		*/
 		dsh->dsh_error.err_code = E_QE0015_NO_MORE_ROWS;
 		status = E_DB_WARN;
 		dsh->dsh_qef_rowcount = 0;   /* be sure not left over */
@@ -456,8 +463,7 @@ i4		function)
 	    goto exit;
     }
     
-
-    /* process each action */
+    /* No previous action, or it completed, do the next action */
     for(;;)
     {
 	/* First check for parallel union - if so, find action header
@@ -481,22 +487,22 @@ i4		function)
 	else
 	{
 	    act = act->ahd_next;	/* otherwise just get next */
-	    if(qen_status->node_u.node_join.node_inner_status == QEN10_ROWS_AVAILABLE)
-		{
-		/* if we were originally called with reset, pass reset
-		** to this (if any) action */
-		reset = TRUE;
-		function |= FUNC_RESET;
-		}
 	}
 
 	if (!act)
 	{
 	    /* end of actions:  set off reset status */
-	    qen_status->node_u.node_join.node_inner_status = QEN0_INITIAL;
+	    qen_status->node_access &= ~QEN_RESET_ACTIONS;
 	    break;
 	}
 	dsh->dsh_act_ptr = act;		/* Record where we are */
+	if (qen_status->node_access & QEN_RESET_ACTIONS)
+	{
+	    /* if we were originally called with reset, pass reset
+	    ** to this (if any) action */
+	    reset = TRUE;
+	    function |= FUNC_RESET;
+	}
 
 	old_output = (PTR) dsh->dsh_qef_output;
 	dsh->dsh_qef_output = &qef_data;
@@ -720,7 +726,8 @@ exit:
     if (status)
     {
 	act = (QEF_AHD *)NULL;
-	qen_status->node_u.node_join.node_inner_status = QEN0_INITIAL;  /* cancel reset status */
+	/* Cancel reset-everything status */
+	qen_status->node_access &= ~QEN_RESET_ACTIONS;
     }
     qen_status->node_ahd_ptr = act;
     /* restore value that existed when we entered this routine */

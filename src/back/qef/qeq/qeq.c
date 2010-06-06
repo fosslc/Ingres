@@ -599,11 +599,6 @@ qeq_prqen(
 PTR	p,
 PTR	control );
 
-static DB_STATUS
-qeq_closeTempTables(
-	QEE_DSH		*dsh
-);
-
 static void
 qeq_restore(
         QEF_RCB         *qeq_rcb,
@@ -1997,6 +1992,11 @@ QEF_RCB		*qef_rcb )
 **	    Added support for rename table/columns.
 **	14-May-2010 (kschendel) b123565
 **	    Validation split into two parts now, fix here.
+**	21-May-2010 (kschendel) b123775
+**	    If tproc validation / load interrupts an action that is itself
+**	    a FOR-GET, e.g. in a rowproc, make sure that the continuation is
+**	    done properly.
+**	    Fix a little bad indentation.
 */
 
 DB_STATUS
@@ -2115,28 +2115,40 @@ i4		mode )
 
 	if (dsh != (QEE_DSH *)NULL)	/* Avoid AV is dsh null */
 	{
-	   if ((qef_rcb->qef_intstate & QEF_DBPROC_QP) != 0)
-	   {
-	      qeq_rcb = *(dsh->dsh_saved_rcb);
+	    if ((qef_rcb->qef_intstate & QEF_DBPROC_QP) != 0)
+	    {
+		qeq_rcb = *(dsh->dsh_saved_rcb);
 
-	     /* we do not want to restore the qp handle if we are dealing
-	     ** with QEA_EXEC_IMM type of action.
-	     */ 
-             qef_rcb->qef_qso_handle = qeq_rcb.qef_qso_handle;
-	   }
-	   else
-	     qeq_rcb = *(dsh->dsh_exeimm_rcb);
+		/* we do not want to restore the qp handle if we are dealing
+		** with QEA_EXEC_IMM type of action.
+		*/ 
+		qef_rcb->qef_qso_handle = qeq_rcb.qef_qso_handle;
+	    }
+	    else
+		qeq_rcb = *(dsh->dsh_exeimm_rcb);
 
-           qef_rcb->qef_rowcount= qeq_rcb.qef_rowcount;
+            qef_rcb->qef_rowcount= qeq_rcb.qef_rowcount;
 
-	   qeq_restore(&qeq_rcb, qef_rcb, dsh, &mode, &act, &rowcount, &qp,
+	    qeq_restore(&qeq_rcb, qef_rcb, dsh, &mode, &act, &rowcount, &qp,
 			&cbs, &iirowcount);
 
-	   if (qp->qp_oerrorno_offset == -1)
-	      iierrorno = (i4 *)NULL;
-	   else
-	      iierrorno = (i4 *)(dsh->dsh_row[qp->qp_rerrorno_row] + 
+	    if (qp->qp_oerrorno_offset == -1)
+		iierrorno = (i4 *)NULL;
+	    else
+		iierrorno = (i4 *)(dsh->dsh_row[qp->qp_rerrorno_row] + 
 			       qp->qp_oerrorno_offset);
+	    /* If resume action was a FOR-GET, and we're resuming from
+	    ** a dbproc load, it pretty much has to be a tproc, and
+	    ** also has to be the first execution of that GET (else we
+	    ** wouldn't have been revalidating it.)  Turn on the prevfor
+	    ** flag to show later code that this is the first time thru
+	    ** this FOR-GET driven for loop.
+	    */
+	    if (act != NULL /* just in case! */
+	      && act->ahd_atype == QEA_GET
+	      && act->qhd_obj.qhd_qep.ahd_qepflag & AHD_FORGET
+	      && qef_rcb->qef_intstate & QEF_DBPROC_QP)
+		prevfor = TRUE;
 	}
 	else
 	{
@@ -5865,7 +5877,7 @@ bool	    release )
 **	    Created.
 **
 */
-static DB_STATUS
+DB_STATUS
 qeq_closeTempTables(
 	QEE_DSH		*dsh
 )

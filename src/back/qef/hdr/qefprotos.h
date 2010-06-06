@@ -249,6 +249,8 @@
 **	    Update qee-resolve-xaddrs prototype for ||-union resolution.
 **	    Split validate into two pieces.
 **	    Pass dsh to retrow action.
+**	19-May-2010 (kschendel) b123775
+**	    Make close-temp-tables utility global for tprocs.
 */
 
 /*	QEC functions	*/
@@ -1978,6 +1980,10 @@ qeq_qp_apropos(
 QEF_VALID      	*vl,
 i4		page_count,
 bool		care_if_smaller);
+
+FUNC_EXTERN DB_STATUS
+qeq_closeTempTables(
+	QEE_DSH		*dsh);
 
 FUNC_EXTERN VOID
 qeq_release_dsh_resources(

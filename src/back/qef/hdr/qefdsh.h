@@ -896,6 +896,9 @@ typedef struct _QEA_FIRSTN {
 **	    Add substructure for table procedures.
 **	30-Jun-2008 (kschendel) b122118
 **	    Add fast-getnext flags for orig.
+**	19-May-2010 (kschendel) b123775
+**	    Make the flags in node-access not overlap;  define a real flag
+**	    for "reset all actions" instead of redefining an inner status.
 */
 typedef struct _QEN_STATUS  
 {
@@ -962,27 +965,33 @@ typedef struct _QEN_STATUS
 	** we'll light the "key won't probe" flag as a better hint.
 	*/
 
-#define	QEN_THIS_KEY_WONT_PROBE	0x40
+#define	QEN_THIS_KEY_WONT_PROBE	0x20
 	/* the last outer tuple failed to key into the inner relation */
 	/* For a partitioned inner, this key is not in any partition. */
 
 	/*
 	** The above values are used for Key joins.
-	** Instead, the following flags in node_access are used for merge
-	** joins:
+	** Merge joins use the below set of flags in node-access:
 	*/
-#define	QEN_READ_NEXT_OUTER		1
-#define	QEN_READ_NEXT_INNER		2
-#define	QEN_LOOKING_FOR_RIGHT_JOINS	4
-#define	QEN_OUTER_HAS_JOINED		8
-#define	QEN_RESCAN_MARKED		0x10
-#define QEN_TID_FILE_EOF		0x20
+#define	QEN_READ_NEXT_OUTER		0x40
+#define	QEN_READ_NEXT_INNER		0x80
+#define	QEN_LOOKING_FOR_RIGHT_JOINS	0x100
+#define	QEN_OUTER_HAS_JOINED		0x200
+#define	QEN_RESCAN_MARKED		0x400
+#define QEN_TID_FILE_EOF		0x800
 
 	/*
 	** To complete the confusion, the following flag in node_access is 
 	** used in ORIG nodes, to guide topsort-less descending sorts.
 	*/
-#define QEN_READ_PREV			1
+#define QEN_READ_PREV			0x1000
+
+	/* QP nodes use a node_access flag to indicate that
+	** a reset was received from above, and needs to be passed to
+	** each action until we've run through all the actions in
+	** the QP.
+	*/
+#define QEN_RESET_ACTIONS		0x2000
 
     i4		node_status_flags;    /* bit flags for accumulating info
 				     ** (introduced during parallel query
