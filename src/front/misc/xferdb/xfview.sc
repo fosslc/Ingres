@@ -112,12 +112,18 @@ EXEC SQL INCLUDE <xf.sh>;
 **	    In xfdrop_views(), generate drop stmt for selected views.
 **      18-May-2010 (frima01) Bug 123753
 **          Check for views created as link in order to drop them correctly.
+**       3-Jun-2010 (hanal04) Bug 123861
+**          Updated xfdrop_sequences() so that it will create
+**          DROP SEQUENCE for the specified Obj_list or all
+**          sequences if Obj_list is not set.
 **/
 
 /* # define's */
 /* GLOBALDEF's */
 GLOBALREF bool With_sequences;
 GLOBALREF bool With_comments;
+GLOBALREF i4   Objcount;
+GLOBALREF PTR  Obj_list;
 /* extern's */
 
 /* static's */
@@ -497,15 +503,50 @@ xfdrop_sequences()
     EXEC SQL BEGIN DECLARE SECTION;
 	char	seq_name[DB_MAXNAME + 1];
 	char	seq_owner[DB_MAXNAME + 1];
+    	char    *obj_name;
     EXEC SQL END DECLARE SECTION;
+
+    char        *entry_key;
+    DB_STATUS   status;
 
     if (!With_sequences)
 	return;
 
-    EXEC SQL SELECT DISTINCT seq_name, seq_owner
-    INTO :seq_name, :seq_owner
-    FROM iisequences;
+    EXEC SQL DECLARE GLOBAL TEMPORARY TABLE
+        session.seq_list AS SELECT seq_name, seq_owner
+        FROM iisequences
+        WHERE (1 = 0)
+        ON COMMIT PRESERVE ROWS WITH NORECOVERY;
 
+    if (Objcount && Obj_list)
+    {
+        status = IIUGhsHtabScan(Obj_list, FALSE, &entry_key, &obj_name);
+        while(status)
+        {
+            EXEC SQL INSERT into session.seq_list SELECT seq_name, seq_owner
+                FROM iisequences, iicolumns
+                WHERE ( (seq_owner = :Owner OR '' = :Owner) AND
+                        (table_name = :obj_name) AND
+                        (column_default_val like 'next value for%') AND
+                        (seq_name = substring (column_default_val from
+                                    ( locate(column_default_val, '.') + 2 )
+                                    for ( length(column_default_val) -
+                                    locate(column_default_val, '.') - 2 ) ) ) );
+
+            status = IIUGhsHtabScan(Obj_list, TRUE, &entry_key, &obj_name);
+        }
+    }
+    else
+    {
+        EXEC SQL INSERT into session.seq_list SELECT DISTINCT seq_name, 
+                             seq_owner FROM iisequences;
+    }
+
+    /* SELECT DISTINCT as Objlist may have generated duplicates */
+    EXEC SQL REPEATED SELECT DISTINCT seq_name, seq_owner
+        INTO :seq_name, :seq_owner
+        FROM session.seq_list
+        ORDER BY seq_owner, seq_name;
     EXEC SQL BEGIN;
     {
 	xfread_id(&seq_name[0]);
@@ -516,6 +557,8 @@ xfdrop_sequences()
 	xfwrite(Xf_in, GO_STMT);
     }
     EXEC SQL END;
+
+    EXEC SQL DROP session.seq_list;
 }
 
 void xfdrop_rules(i4 output_flags)

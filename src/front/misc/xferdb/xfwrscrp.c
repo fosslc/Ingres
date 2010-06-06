@@ -333,6 +333,11 @@ FUNC_EXTERN char	*IIUGdmlStr();
 **          to FALSE.
 **	04-May-2010 (thaju02) Bug 123674
 **	    Drop view stmts generated for selected views.
+**       3-Jun-2010 (hanal04) Bug 123861
+**          If XF_DROP_INCLUDE is set call xfdrop_sequences() unless
+**          XF_NO_SEQUENCES is set. When -add_drop was used for tables
+**          that use sequences we were failing to add a DROP befor the
+**          generated CREATE SEQUENCE.
 */
 void
 xfcrscript(char *owner, char *progname, char *dbaname, bool portable, 
@@ -532,7 +537,8 @@ xfcrscript(char *owner, char *progname, char *dbaname, bool portable,
     	xfwrite(Xf_in, ERx("\\continue\n"));
 
     }
-    if ((output_flags & XF_SEQUENCE_ONLY) && (output_flags & XF_DROP_INCLUDE))
+
+    if (!(output_flags2 & XF_NO_SEQUENCES) && (output_flags & XF_DROP_INCLUDE))
 	xfdrop_sequences();
 
     if ((output_flags & XF_RULES_ONLY) && (output_flags & XF_DROP_INCLUDE))
