@@ -34,12 +34,17 @@
 #	-p		Pretty print to stdout
 #			(ingpkginfo.xml will still be written)
 #
-# History:
-#	06-Aug-2009 (hanje04)
-#	   BUG 122571
-#	   Created from 2007 prototype
-#	15-Apr-2010 (bonro01)
-#	    Updated to detect Ingres vectorwise installs
+## History:
+##	06-Aug-2009 (hanje04)
+##	    BUG 122571
+##	    Created from 2007 prototype
+##	15-Apr-2010 (bonro01)
+##	    Updated to detect Ingres vectorwise installs
+##	13-Apr-2010 (hanje04)
+##	    BUG 123788
+##	    Continue if we fail to load the XML libraries. Only fail after 
+##	    trying to import the rpm/apt libraries too, so we can report both
+##	    errors if neccessary.	
 
 
 # load external modules
@@ -60,6 +65,7 @@ sslocation=None
 instlist = []
 ssinfo = { 'basename' : [ pkg_basename ], 'version' : '', 'arch' : '', \
 	'format' : '', 'location' : '', 'package' : [] } 
+xmlok=False
 
 # WARNING! Correct generation of XML is dependent on the order of ingpkgs
 # entires matching EXACTLY those defined be PKGIDX in front!st!hdr gip.h
@@ -448,9 +454,9 @@ if sslocation is None:
 # import xml module if we can
 try:
     from xml.dom.minidom import Document
+    xmlok=True
 except ImportError:
     print FAIL_IMPORT_XML
-    sys.exit(-2)
 
 # Which Linux are we on?
 if os.path.isfile('/etc/debian_version'):
@@ -467,13 +473,19 @@ if mode == "DEB":
 	print FAIL_IMPORT_APT
 	sys.exit(-2)
 
-    searchDEBDB()
+    if xmlok:
+        searchDEBDB()
+    else:
+	sys.exit(-2)
 else:
     # Load rpm module to query the repository
     try:
 	import rpm
-	print "Querying saveset..."
-        sshdr = getRPMSaveSetInfo( sslocation )
+	if xmlok:
+	    print "Querying saveset..."
+            sshdr = getRPMSaveSetInfo( sslocation )
+	else:
+	   sys.exit(-2)
     except OSError, e:
 	print FAIL_SSET_QRY % mode
 	print str(e)
