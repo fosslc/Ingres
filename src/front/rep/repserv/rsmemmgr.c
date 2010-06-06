@@ -16,6 +16,8 @@
 ** History:
 **      24-Feb-03 (inifa01)
 **              Created.
+**      24-May-2010 (stial01)
+**              Added buf5 param to RSmem_free()
 **/
 
 /*{
@@ -61,7 +63,8 @@ RSmem_free(
 char *buf1,
 char *buf2,
 char *buf3,
-char *buf4)
+char *buf4,
+char *buf5)
 {
 	if(buf1)
 	   MEfree((PTR)buf1);
@@ -74,5 +77,8 @@ char *buf4)
 	
 	if(buf4)
 	   MEfree((PTR)buf4);
+
+	if(buf5)
+	   MEfree((PTR)buf5);
 
 }

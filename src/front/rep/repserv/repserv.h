@@ -69,6 +69,8 @@
 **		Added RSmem_allocate() and RSmem_free().
 **      22-Aug-2005 (hweho01)
 **              Increased the default row buffer size to be DB_MAXSTRING+8192. 
+**      24-May-2010 (stial01)
+**              Added buf5 param to RSmem_free()
 **/
 
 # define READ_Q_MUST_BREAK_DFLT		5000
@@ -154,5 +156,5 @@ FUNC_EXTERN STATUS RSpdp_PrepDbprocParams(char *proc_name, RS_TARGET *target,
 	IIAPI_DATAVALUE *paramValue);
 
 FUNC_EXTERN char * RSmem_allocate(i4 row_width, i4 num_cols,i4 colname_space,i4 overhead);
-FUNC_EXTERN void RSmem_free(char *buf1, char *buf2, char *buf3, char *buf4);
+FUNC_EXTERN void RSmem_free(char *buf1, char *buf2, char *buf3, char *buf4, char *buf5);
 # endif

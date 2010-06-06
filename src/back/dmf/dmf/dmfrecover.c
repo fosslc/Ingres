@@ -563,6 +563,8 @@
 **	    SIR 121619 MVCC: Add bufid parameter to dm0l_read().
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs, db_buffer holds (dbname, owner.. )
+**      24-May-2010 (stial01)
+**          Minor change to TRdisplay
 **/
 /*
 ** Forward function references and global definitions
@@ -3334,7 +3336,7 @@ i4		num_nodes)
 		    sizeof(DB_DB_NAME), &db->rdb_name);
 		if (db->rdb_status & RDB_TABLE_RECOVERY_ERROR)
 		{
-		    TRdisplay("However, since recovery failed for some index(s), database %~t has been marked inconsistent\n",
+		    TRdisplay("However, since recovery failed for some table/index, database %~t has been marked inconsistent\n",
 		    sizeof(DB_DB_NAME), &db->rdb_name);
 		}
 

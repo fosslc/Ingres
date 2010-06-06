@@ -166,6 +166,8 @@
 **	04-Aug-2005 (sheco02)
 **		Fixed x-integration 478013 problem by adding getQinfoParm as 
 **	        input parameter to IIsw_selectSingleton and RSerror_check calls..
+**      24-May-2010 (stial01)
+**              Added buf5 param to RSmem_free()
 **/
 
 # define LONG_AGO	ERx("01-jan-1980")
@@ -455,14 +457,14 @@ bool	*collision_processed)
 	where_clause = RSmem_allocate(row_width,num_cols,DB_MAXNAME+11,0); 
 	if (where_clause == NULL)
 	{
-		RSmem_free(name_clause,insert_value_clause,NULL,NULL);
+		RSmem_free(name_clause,insert_value_clause,NULL,NULL,NULL);
 		return (FAIL);
 	}
 	
 	stmt = RSmem_allocate(row_width,num_cols,DB_MAXNAME+11,256);
 	if (stmt == NULL)
 	{
-		RSmem_free(name_clause,insert_value_clause,where_clause,NULL); 
+		RSmem_free(name_clause,insert_value_clause,where_clause,NULL,NULL); 
 		return (FAIL);
 	}
 	messageit(5, 1034, "resolve");
@@ -473,12 +475,12 @@ bool	*collision_processed)
 			where_clause, name_clause, insert_value_clause, NULL);
 		if (err)
 		{
-			RSmem_free(name_clause,insert_value_clause,where_clause,stmt); 
+			RSmem_free(name_clause,insert_value_clause,where_clause,stmt,NULL); 
 			return (err);
 		}
 		if (!base_row_exists(where_clause))
 		{
-			RSmem_free(name_clause,insert_value_clause,where_clause,stmt); 
+			RSmem_free(name_clause,insert_value_clause,where_clause,stmt,NULL); 
 			return (OK);
 		}
 		STprintf(stmt, ERx("SELECT CHAR(MAX(trans_time)), dd_priority, \
@@ -494,7 +496,7 @@ MIN(sourcedb) FROM %s t WHERE %s GROUP BY dd_priority"),
 			&getQinfoParm, &errParm, &row_count);
 		if (status != OK)
 		{
-			RSmem_free(name_clause,insert_value_clause,where_clause,stmt); 
+			RSmem_free(name_clause,insert_value_clause,where_clause,stmt,NULL); 
 			return (status);
 		}
 		SW_CHA_TERM(rem_trans_time, cdata[0]);
@@ -522,7 +524,7 @@ MIN(sourcedb) FROM %s t WHERE %s GROUP BY dd_priority"),
 			break;
 
 		default:
-			RSmem_free(name_clause,insert_value_clause,where_clause,stmt);
+			RSmem_free(name_clause,insert_value_clause,where_clause,stmt,NULL);
 			return (OK);
 		}
 
@@ -537,7 +539,7 @@ MIN(sourcedb) FROM %s t WHERE %s GROUP BY dd_priority"),
 			where_clause, name_clause, insert_value_clause, NULL);
 		if (err)
 		{
-			RSmem_free(name_clause,insert_value_clause,where_clause,stmt); 
+			RSmem_free(name_clause,insert_value_clause,where_clause,stmt,NULL); 
 			return (err);
 		}
 		if (!old_trans_archived())
@@ -546,7 +548,7 @@ MIN(sourcedb) FROM %s t WHERE %s GROUP BY dd_priority"),
 					(target->type == TARG_PROT_READ &&
 					base_row_exists(where_clause)))
 			{
-				RSmem_free(name_clause,insert_value_clause,where_clause,stmt); 
+				RSmem_free(name_clause,insert_value_clause,where_clause,stmt,NULL); 
 				return (OK);
 			}
 		}
@@ -558,7 +560,7 @@ MIN(sourcedb) FROM %s t WHERE %s GROUP BY dd_priority"),
 		*/
 		if (old_trans_new_key() && base_row_exists(where_clause))
 		{
-			RSmem_free(name_clause,insert_value_clause,where_clause,stmt); 
+			RSmem_free(name_clause,insert_value_clause,where_clause,stmt,NULL); 
 			return (OK);
 		}
 
@@ -581,13 +583,13 @@ MIN(sourcedb) FROM %s t WHERE %s GROUP BY dd_priority"),
 			break;
 
 		default:
-			RSmem_free(name_clause,insert_value_clause,where_clause,stmt); 
+			RSmem_free(name_clause,insert_value_clause,where_clause,stmt,NULL); 
 			return (OK);
 		}
 
 		if (*collision_processed)
 		{
-			RSmem_free(name_clause,insert_value_clause,where_clause,stmt);
+			RSmem_free(name_clause,insert_value_clause,where_clause,stmt,NULL);
 			return (err);
 		}
 
@@ -612,7 +614,7 @@ MIN(sourcedb) FROM %s t WHERE %s GROUP BY dd_priority"),
 			where_clause, name_clause, insert_value_clause, NULL);
 		if (err)
 		{
-			RSmem_free(name_clause,insert_value_clause,where_clause,stmt); 
+			RSmem_free(name_clause,insert_value_clause,where_clause,stmt,NULL); 
 			return (err);
 		}
 		if (!old_trans_archived())
@@ -621,7 +623,7 @@ MIN(sourcedb) FROM %s t WHERE %s GROUP BY dd_priority"),
 					(target->type == TARG_PROT_READ &&
 					base_row_exists(where_clause)))
 			{
-				RSmem_free(name_clause,insert_value_clause,where_clause,stmt);
+				RSmem_free(name_clause,insert_value_clause,where_clause,stmt,NULL);
 				return (OK);
 			}
 		}
@@ -633,7 +635,7 @@ MIN(sourcedb) FROM %s t WHERE %s GROUP BY dd_priority"),
 		*/
 		if (old_trans_new_key() && base_row_exists(where_clause))
 		{
-			RSmem_free(name_clause,insert_value_clause,where_clause,stmt);
+			RSmem_free(name_clause,insert_value_clause,where_clause,stmt,NULL);
 			return (OK);
 		}
 
@@ -656,7 +658,7 @@ MIN(sourcedb) FROM %s t WHERE %s GROUP BY dd_priority"),
 			break;
 
 		default:
-			RSmem_free(name_clause,insert_value_clause,where_clause,stmt); 
+			RSmem_free(name_clause,insert_value_clause,where_clause,stmt,NULL); 
 			return (OK);
 		}
 
@@ -667,7 +669,7 @@ MIN(sourcedb) FROM %s t WHERE %s GROUP BY dd_priority"),
 		break;
 	}
 
-	RSmem_free(name_clause,insert_value_clause,where_clause,stmt); 
+	RSmem_free(name_clause,insert_value_clause,where_clause,stmt,NULL); 
 	return (err);
 }
 
@@ -1044,7 +1046,7 @@ bool	*collision_processed)
 		NULL, NULL, NULL);
 	if (err)
 	{
-		RSmem_free(stmt,old_wc,NULL,NULL); 
+		RSmem_free(stmt,old_wc,NULL,NULL,NULL); 
 		return (err);
 	}
 	STprintf(stmt, ERx("SELECT COUNT(*) FROM %s t WHERE %s"),
@@ -1069,7 +1071,7 @@ bool	*collision_processed)
 			&getQinfoParm, &errParm, NULL, tbl->shadow_table, old_wc);
 		if (status != OK)
 		{
-			RSmem_free(stmt,old_wc,NULL,NULL); 
+			RSmem_free(stmt,old_wc,NULL,NULL,NULL); 
 			return (status);
 		}
 		SW_CHA_TERM(rem_trans_time, cdata[0]);
@@ -1078,7 +1080,7 @@ bool	*collision_processed)
 			row->trans_type = RS_INSERT;
 			err = RSinsert(target, row);
 			*collision_processed = TRUE;
-			RSmem_free(stmt,old_wc,NULL,NULL); 
+			RSmem_free(stmt,old_wc,NULL,NULL,NULL); 
 			return (err);
 		}
                 STprintf(stmt,
@@ -1093,7 +1095,7 @@ bool	*collision_processed)
                         &getQinfoParm, &errParm, NULL, tbl->shadow_table, old_wc);
                 if (status != OK)
                 {
-                        RSmem_free(stmt,old_wc,NULL,NULL);
+                        RSmem_free(stmt,old_wc,NULL,NULL,NULL);
                         return (status);
                 }
                 STprintf(stmt,
@@ -1108,7 +1110,7 @@ bool	*collision_processed)
                         &getQinfoParm, &errParm, NULL, tbl->shadow_table, old_wc);
                 if (status != OK)
                 {
-                        RSmem_free(stmt,old_wc,NULL,NULL);
+                        RSmem_free(stmt,old_wc,NULL,NULL,NULL);
                         return (status);
                 }
 		STprintf(stmt, ERx("SELECT trans_type, dd_priority, sourcedb, \
@@ -1127,7 +1129,7 @@ sequence_no = %d AND transaction_id = %d "),
 			&getQinfoParm, &errParm, NULL, tbl->shadow_table, old_wc);
 		if (status != OK)
 		{
-			RSmem_free(stmt,old_wc,NULL,NULL); 
+			RSmem_free(stmt,old_wc,NULL,NULL,NULL); 
 			return (status);
 		}
 		if (trans_type == RS_DELETE)	/* delete */
@@ -1159,7 +1161,7 @@ dd_priority, sourcedb, transaction_id, sequence_no FROM %s WHERE old_sourcedb \
 				old_key.seq_no);
 			if (status != OK)
 			{
-				RSmem_free(stmt,old_wc,NULL,NULL); 
+				RSmem_free(stmt,old_wc,NULL,NULL,NULL); 
 				return (status);
 			}
 			SW_CHA_TERM(rem_trans_time, cdata[0]);
@@ -1174,7 +1176,7 @@ dd_priority, sourcedb, transaction_id, sequence_no FROM %s WHERE old_sourcedb \
 			where_clause, NULL, insert_value_clause, NULL);
 		if (err)
 		{
-			RSmem_free(stmt,old_wc,NULL,NULL); 
+			RSmem_free(stmt,old_wc,NULL,NULL,NULL); 
 			return (err);
 		}
 	}
@@ -1183,11 +1185,11 @@ dd_priority, sourcedb, transaction_id, sequence_no FROM %s WHERE old_sourcedb \
 		row->trans_type = RS_INSERT;
 		err = RSinsert(target, row);
 		*collision_processed = TRUE;
-		RSmem_free(stmt,old_wc,NULL,NULL); 
+		RSmem_free(stmt,old_wc,NULL,NULL,NULL); 
 		return (err);
 	}
 
-	RSmem_free(stmt,old_wc,NULL,NULL);
+	RSmem_free(stmt,old_wc,NULL,NULL,NULL);
 	return (OK);
 }
 
@@ -1655,19 +1657,19 @@ char	*insert_value_clause)
 	stmt1 = RSmem_allocate(row_width,num_cols,3*DB_MAXNAME + 22,3070);
 	if (stmt1 == NULL)
 	{
-		RSmem_free(wc,select_stmt,NULL,NULL); 
+		RSmem_free(wc,select_stmt,NULL,NULL,NULL); 
 		return (FAIL);
 	}
 	stmt2 = RSmem_allocate(row_width,num_cols,3*DB_MAXNAME + 22,3070);
         if (stmt2 == NULL)
         {
-                RSmem_free(wc,select_stmt,stmt1,NULL);
+                RSmem_free(wc,select_stmt,stmt1,NULL,NULL);
                 return (FAIL);
         }
 	tmp = RSmem_allocate(row_width,num_cols*2,1,1024);
 	if (tmp == NULL)
 	{
-		RSmem_free(wc,select_stmt,stmt1,stmt2); 
+		RSmem_free(wc,select_stmt,stmt1,stmt2,NULL); 
 		return (FAIL);
 	}
 	/*
@@ -1718,8 +1720,7 @@ s.sequence_no"),
         		 &getQinfoParm, &errParm, NULL);
                 if (status != OK)
                 {
-                        RSmem_free(wc,select_stmt,stmt1,tmp);
-                        MEfree((PTR)stmt2);
+                        RSmem_free(wc,select_stmt,stmt1,tmp,stmt2);
                         return (status);
 
                 }
@@ -1740,8 +1741,7 @@ s.sequence_no"),
 			&getQinfoParm, &errParm, NULL);
 		if (status != OK)
 		{
-			RSmem_free(wc,select_stmt,stmt1,tmp);
-			MEfree((PTR)stmt2);
+			RSmem_free(wc,select_stmt,stmt1,tmp,stmt2);
 			return (status);
 
 		}
@@ -1755,8 +1755,7 @@ in_archive = 0 AND trans_type != 3 AND CHAR(trans_time) = '%s'  AND sourcedb= %d
 			&getQinfoParm, &errParm, NULL, tbl->table_owner, tbl->table_name);
 		if (status != OK)
 		{
-			RSmem_free(wc,select_stmt,stmt1,tmp); 
-			MEfree((PTR)stmt2);
+			RSmem_free(wc,select_stmt,stmt1,tmp,stmt2); 
 			return (status);
 		}
 	}
@@ -1780,8 +1779,7 @@ DATE('now'), 0, %d, %d, %d, 0, %d, %d, %d)"),
 		&errParm, NULL, tbl->table_owner, tbl->table_name);
 	if (status != OK)
 	{
-		RSmem_free(wc,select_stmt,stmt1,tmp); 
-		MEfree((PTR)stmt2);
+		RSmem_free(wc,select_stmt,stmt1,tmp,stmt2); 
 		return (status);
 	}
 
@@ -1797,8 +1795,7 @@ DATE('now'), 0, %d, %d, %d, 0, %d, %d, %d)"),
 	status = RSerror_check(1386, ROWS_ZERO_OR_ONE, stmtHandle, &getQinfoParm,
 		&errParm, NULL, tbl->table_owner, tbl->table_name);
 	
-	RSmem_free(wc,select_stmt,stmt1,tmp); 
-	MEfree((PTR)stmt2);
+	RSmem_free(wc,select_stmt,stmt1,tmp,stmt2); 
 	return (status);
 }
 

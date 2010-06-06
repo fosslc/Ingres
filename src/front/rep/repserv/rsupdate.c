@@ -66,6 +66,8 @@
 **		Call RSmem_free() to free multiple temp buffers.
 **	30-mar-2004 (gupsh01)
 **		Added getQinfoParm as input parameter to II_sw... functions.
+**      24-May-2010 (stial01)
+**              Added buf5 param to RSmem_free(), alloc DB_MAX_COLS names
 **/
 
 /*{
@@ -95,14 +97,14 @@ RS_TRANS_ROW	*row)
 	char			*col_list=NULL;
 	char			*val_list=NULL;
 	char			*where_list=NULL;
-	char			*proc_name;
+	char			*proc_name = NULL;
 	STATUS			status;
 	bool			collision_processed = FALSE;
 	RS_TBLDESC		*tbl = row->tbl_desc;
 	II_INT2			nparams;
 	IIAPI_DESCRIPTOR	pdesc[DB_MAX_COLS*2+1];
 	IIAPI_DATAVALUE		pdata[DB_MAX_COLS*2+1];
-	char			pnames[DB_MAX_COLS+1][DB_MAX_DELIMID+1];
+	DB_DELIM_STR		*pnames = NULL;
 	RS_CONN			*conn = &RSconns[target->conn_no];
 	II_LONG			procRet;
 	II_PTR			stmtHandle;
@@ -138,13 +140,13 @@ RS_TRANS_ROW	*row)
 	stmt = RSmem_allocate(2*row_width,num_cols,DB_MAXNAME*2+14,2048);
 	if (stmt == NULL)
 	{
-		RSmem_free(col_list,val_list,NULL,NULL); 
+		RSmem_free(col_list,val_list,NULL,NULL,NULL); 
 		return (FAIL);
 	}
 	where_list = RSmem_allocate(row_width,tbl->num_key_cols,2*DB_MAXNAME+14,0); 
 	if (where_list == NULL)
 	{
-		RSmem_free(col_list,val_list,stmt,NULL); 
+		RSmem_free(col_list,val_list,stmt,NULL,NULL); 
 		return (FAIL);
 	}
 	/*
@@ -180,7 +182,7 @@ RS_TRANS_ROW	*row)
 			row->old_trans_time, col_list, val_list, pdesc, pdata);
 		if (status != OK)
 		{
-			RSmem_free(col_list,val_list,stmt,where_list); 
+			RSmem_free(col_list,val_list,stmt,where_list,NULL); 
 			return (status);
 		}
 	}
@@ -238,7 +240,7 @@ s.transaction_id = ~V AND s.sequence_no = ~V AND in_archive = 0"),
 			target->db_no, tbl->table_name);
 		if (status != OK)
 		{
-			RSmem_free(col_list,val_list,stmt,where_list); 
+			RSmem_free(col_list,val_list,stmt,where_list,NULL); 
 			return (status);
 		}
 	}
@@ -332,7 +334,7 @@ s.transaction_id = ~V AND s.sequence_no = ~V AND in_archive = 0"),
 			target->db_no, tbl->table_name);
 		if (status != OK)
 		{
-			RSmem_free(col_list,val_list,stmt,where_list); 
+			RSmem_free(col_list,val_list,stmt,where_list,NULL); 
 			return (status);
 		}
 		/*
@@ -388,7 +390,7 @@ s.transaction_id = ~V AND s.sequence_no = ~V AND in_archive = 0"),
 				tbl->table_name);
 			if (status != OK)
 			{
-				RSmem_free(col_list,val_list,stmt,where_list); 
+				RSmem_free(col_list,val_list,stmt,where_list,NULL); 
 				return (status);
 			}
 		}
@@ -418,7 +420,7 @@ in_archive = 0 AND sourcedb = ~V AND transaction_id = ~V AND sequence_no = ~V"),
 			target->db_no, tbl->table_name);
 		if (status != OK)
 		{
-			RSmem_free(col_list,val_list,stmt,where_list); 
+			RSmem_free(col_list,val_list,stmt,where_list,NULL); 
 			return (status);
 		}
 		/*
@@ -448,7 +450,7 @@ in_archive = 0 AND sourcedb = ~V AND transaction_id = ~V AND sequence_no = ~V"),
 			col_list, val_list, pdesc, pdata);
 		if (status != OK)
 		{	
-			RSmem_free(col_list,val_list,stmt,where_list);
+			RSmem_free(col_list,val_list,stmt,where_list,NULL);
 			return (status);
 		}
 		/*
@@ -463,7 +465,7 @@ in_archive = 0 AND sourcedb = ~V AND transaction_id = ~V AND sequence_no = ~V"),
 				row->priority, row->trans_time, FALSE);
 			if (status != OK)
 			{
-				RSmem_free(col_list,val_list,stmt,where_list); 
+				RSmem_free(col_list,val_list,stmt,where_list,NULL); 
 				return (status);
 			}
 		}
@@ -474,18 +476,26 @@ in_archive = 0 AND sourcedb = ~V AND transaction_id = ~V AND sequence_no = ~V"),
 	*/
 	else if (target->type != TARG_UNPROT_READ)
 	{
+		pnames = (DB_DELIM_STR *)RSmem_allocate(0, DB_MAX_COLS+1,
+			  sizeof(*pnames),0); 
+		if (pnames == NULL)
+		{
+		   RSmem_free(col_list,val_list,stmt,where_list,NULL); 
+		   return (FAIL);
+		}
+
 		proc_name = pnames[0];
 		if (RPtblobj_name(tbl->table_name, row->table_no,
 			TBLOBJ_REM_UPD_PROC, proc_name) != OK)
 		{
 			messageit(1, 1816, ERx("RSupdate"), tbl->table_name);
-			RSmem_free(col_list,val_list,stmt,where_list); 
+			RSmem_free(col_list,val_list,stmt,where_list,(char *)pnames); 
 			return (RS_INTERNAL_ERR);
 		}
 		if (RSpdp_PrepDbprocParams(proc_name, target, tbl, row, pnames,
 				&nparams, pdesc, pdata) != OK)
 		{
-			RSmem_free(col_list,val_list,stmt,where_list); 
+			RSmem_free(col_list,val_list,stmt,where_list,(char *)pnames); 
 			return (RS_INTERNAL_ERR);
 		}
 		status = IIsw_execProcedure(conn->connHandle,
@@ -495,7 +505,7 @@ in_archive = 0 AND sourcedb = ~V AND transaction_id = ~V AND sequence_no = ~V"),
 			 &getQinfoParm, &errParm, NULL, proc_name);
 		if (status != OK)
 		{
-			RSmem_free(col_list,val_list,stmt,where_list); 
+			RSmem_free(col_list,val_list,stmt,where_list,(char *)pnames); 
 			return (status);
 		}
 		if (procRet)
@@ -503,12 +513,12 @@ in_archive = 0 AND sourcedb = ~V AND transaction_id = ~V AND sequence_no = ~V"),
 			messageit(1, procRet, row->rep_key.src_db,
 				row->rep_key.trans_id, row->rep_key.seq_no,
 				target->db_no, tbl->table_name);
-			RSmem_free(col_list,val_list,stmt,where_list); 
+			RSmem_free(col_list,val_list,stmt,where_list,(char *)pnames); 
 			return (procRet);
 		}
 	}
 
-	RSmem_free(col_list,val_list,stmt,where_list); 
+	RSmem_free(col_list,val_list,stmt,where_list,(char *)pnames); 
 
 	RSstats_update(target->db_no, tbl->table_no, RS_UPDATE);
 	if (target->type != TARG_UNPROT_READ)

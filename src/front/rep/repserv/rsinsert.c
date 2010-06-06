@@ -82,6 +82,8 @@
 **		Call RSmem_free() to free multiple temp buffers.
 **	30-Mar-2004 (gupsh01)
 **		Added getQinfoParm as input parameter to II_sw... functions.
+**      24-May-2010 (stial01)
+**              Added buf5 param to RSmem_free(), alloc DB_MAX_COLS names
 **/
 
 GLOBALREF bool	RSonerror_norollback_target;
@@ -121,7 +123,7 @@ RS_TRANS_ROW	*row)
 	II_INT2			nparams;
 	IIAPI_DESCRIPTOR	pdesc[DB_MAX_COLS+13];
 	IIAPI_DATAVALUE		pdata[DB_MAX_COLS+13];
-	char			pnames[DB_MAX_COLS+1][DB_MAX_DELIMID+1];
+	DB_DELIM_STR		*pnames = NULL;
 	RS_CONN			*conn = &RSconns[target->conn_no];
 	II_LONG			procRet;
 	II_PTR			stmtHandle;
@@ -149,7 +151,7 @@ RS_TRANS_ROW	*row)
 	stmt = RSmem_allocate(row_width,num_cols,DB_MAXNAME+6,128); 
 	if (stmt == NULL)
 	{
-		RSmem_free(col_list,val_list,NULL,NULL);
+		RSmem_free(col_list,val_list,NULL,NULL,NULL);
 		return (FAIL);
 	}
 	messageit(5, 1258, row->rep_key.src_db, row->rep_key.trans_id,
@@ -171,7 +173,7 @@ RS_TRANS_ROW	*row)
 		}
 		if (status != OK || collision_processed)
 		{
-			RSmem_free(col_list,val_list,stmt,NULL); 
+			RSmem_free(col_list,val_list,stmt,NULL,NULL); 
 			return (status);
 		}
 	}
@@ -256,7 +258,7 @@ RS_TRANS_ROW	*row)
 			target->db_no, tbl->table_name);
 		if (status != OK)
 		{
-			RSmem_free(col_list,val_list,stmt,NULL); 
+			RSmem_free(col_list,val_list,stmt,NULL,NULL); 
 			return (status);
 		}
 	}
@@ -311,7 +313,7 @@ RS_TRANS_ROW	*row)
 			where_list = RSmem_allocate(row_width,tbl->num_key_cols,DB_MAXNAME+8,0); 
 			if (where_list == NULL)
 			{
-				RSmem_free(col_list,val_list,stmt,NULL); 
+				RSmem_free(col_list,val_list,stmt,NULL,NULL); 
 				return (FAIL);
 			}
 			/*
@@ -346,7 +348,7 @@ WHERE %s AND trans_type = %d AND in_archive = 0"),
 			MEfree((PTR)where_list);
 			if (status != OK)
 			{
-				RSmem_free(col_list,val_list,stmt,NULL); 
+				RSmem_free(col_list,val_list,stmt,NULL,NULL); 
 				return (status);
 			}
 		}
@@ -357,7 +359,7 @@ WHERE %s AND trans_type = %d AND in_archive = 0"),
 			pdesc, pdata);
 		if (status != OK)
 		{
-			RSmem_free(col_list,val_list,stmt,NULL); 
+			RSmem_free(col_list,val_list,stmt,NULL,NULL); 
 			return (status);
 		}
 		/*
@@ -372,7 +374,7 @@ WHERE %s AND trans_type = %d AND in_archive = 0"),
 				row->priority, row->trans_time, FALSE);
 			if (status != OK)
 			{
-				RSmem_free(col_list,val_list,stmt,NULL); 
+				RSmem_free(col_list,val_list,stmt,NULL,NULL); 
 				return (status);
 			}
 		}
@@ -383,18 +385,26 @@ WHERE %s AND trans_type = %d AND in_archive = 0"),
 	*/
 	else if (target->type != TARG_UNPROT_READ)
 	{
+		pnames = (DB_DELIM_STR *)RSmem_allocate(0, DB_MAX_COLS+1,
+			  sizeof(*pnames),0); 
+		if (pnames == NULL)
+		{
+		   RSmem_free(col_list,val_list,stmt,NULL,NULL); 
+		   return (FAIL);
+		}
+
 		proc_name = pnames[0];
 		if (RPtblobj_name(tbl->table_name, row->table_no,
 			TBLOBJ_REM_INS_PROC, proc_name) != OK)
 		{
 			messageit(1, 1816, ERx("RSinsert"), tbl->table_name);
-			RSmem_free(col_list,val_list,stmt,NULL); 
+			RSmem_free(col_list,val_list,stmt,(char *)pnames,NULL); 
 			return (RS_INTERNAL_ERR);
 		}
 		if (RSpdp_PrepDbprocParams(proc_name, target, tbl, row,
 				pnames, &nparams, pdesc, pdata) != OK)
 		{
-			RSmem_free(col_list,val_list,stmt,NULL); 
+			RSmem_free(col_list,val_list,stmt,(char *)pnames,NULL); 
 			return (RS_INTERNAL_ERR);
 		}
 
@@ -408,12 +418,12 @@ WHERE %s AND trans_type = %d AND in_archive = 0"),
 		if (status != OK && target->collision_mode != COLLMODE_PRIORITY
 				&& target->collision_mode != COLLMODE_TIME)
 		{
-			RSmem_free(col_list,val_list,stmt,NULL); 
+			RSmem_free(col_list,val_list,stmt,(char *)pnames,NULL); 
 			return (status);
 		}
 		if (status != OK && procRet != 114)
 		{
-			RSmem_free(col_list,val_list,stmt,NULL); 
+			RSmem_free(col_list,val_list,stmt,(char *)pnames,NULL); 
 			return (status);
 		}
 		if (procRet)
@@ -439,7 +449,7 @@ WHERE %s AND trans_type = %d AND in_archive = 0"),
 			if (status == OK && !collision_processed)
 			{
 				status = RSinsert(target, row);
-				RSmem_free(col_list,val_list,stmt,NULL); 
+				RSmem_free(col_list,val_list,stmt,(char *)pnames,NULL); 
 				return (status);
 			}
 			else
@@ -456,13 +466,13 @@ WHERE %s AND trans_type = %d AND in_archive = 0"),
 			}
 			if (status != OK || collision_processed)
 			{
-				RSmem_free(col_list,val_list,stmt,NULL); 
+				RSmem_free(col_list,val_list,stmt,(char *)pnames,NULL); 
 			    	return (status);
 			}
 		    }
 		    else 
 			{
-				RSmem_free(col_list,val_list,stmt,NULL); 
+				RSmem_free(col_list,val_list,stmt,(char *)pnames,NULL); 
 				return (procRet);
 			}
 		}
@@ -475,6 +485,6 @@ WHERE %s AND trans_type = %d AND in_archive = 0"),
 	RSmonitor_notify(&RSlocal_conn, RS_OUT_INSERT, target->db_no,
 		tbl->table_name, tbl->table_owner);
 
-	RSmem_free(col_list,val_list,stmt,NULL); 
+	   RSmem_free(col_list,val_list,stmt,(char *)pnames,NULL); 
 	return (OK);
 }

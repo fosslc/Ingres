@@ -90,6 +90,8 @@
 **	    try again.
 **      28-Apr-2009 (coomi01) b121984
 **          Add IIAPI_DATE_TYPE to support ANSI Dates.
+**      24-May-2010 (stial01)
+**          Added buf5 param to RSmem_free()
 **/
 
 # define ALRES_BYTES	sizeof(ALIGN_RESTRICT)
@@ -217,7 +219,7 @@ RS_TRANS_ROW	*row)
 		STcat(col_list, col->col_name);
 		if (set_dataval(&col->coldesc, &pd, cdv) != OK)
 		{
-			RSmem_free(col_list,stmt,NULL,NULL); 
+			RSmem_free(col_list,stmt,NULL,NULL,NULL); 
 			return (RS_MEM_ERR);
 		}
 		if (col->key_sequence)
@@ -260,7 +262,7 @@ RS_TRANS_ROW	*row)
 
             	if (status != OK)
                 {
-                	RSmem_free(col_list,stmt,NULL,NULL);
+                	RSmem_free(col_list,stmt,NULL,NULL,NULL);
                 	return (status);
             	}
 
@@ -275,7 +277,7 @@ RS_TRANS_ROW	*row)
 		         row->rep_key.seq_no, row->tbl_desc->table_name);
 		if (status != OK)
 		{
-			RSmem_free(col_list,stmt,NULL,NULL); 
+			RSmem_free(col_list,stmt,NULL,NULL,NULL); 
 			return (status);
 		}
 	}
@@ -353,7 +355,7 @@ AND sequence_no = ~V"));
 		** immediately to release shared lock on base table 
 		*/
 		IIsw_commit(&RSlocal_conn_nlr.tranHandle, &errParm);
-		RSmem_free(col_list,stmt,NULL,NULL); 
+		RSmem_free(col_list,stmt,NULL,NULL,NULL); 
 	}
 	else
         {
@@ -371,7 +373,7 @@ AND sequence_no = ~V"));
         	status = RSerror_check(msg_num, ROWS_SINGLE_ROW, stmtHandle, &getQinfoParm, &errParm,
                          NULL, row->rep_key.src_db, row->rep_key.trans_id,
                          row->rep_key.seq_no, row->tbl_desc->table_name);
-        	RSmem_free(col_list,stmt,NULL,NULL);
+        	RSmem_free(col_list,stmt,NULL,NULL,NULL);
         }
 	return (status);
 }

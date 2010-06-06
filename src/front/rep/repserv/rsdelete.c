@@ -64,6 +64,8 @@
 **              replicated tables row_width and number of replicated columns.
 **	30-mar-2004 (gupsh01)
 **		Added getQinfoParm as input parameter to II_sw... functions.
+**      24-May-2010 (stial01)
+**              Added buf5 param to RSmem_free(), alloc DB_MAX_COLS names
 **/
 
 /*{
@@ -96,7 +98,7 @@ RS_TRANS_ROW	*row)
 	II_INT2			nparams;
 	IIAPI_DESCRIPTOR	pdesc[DB_MAX_COLS+1];
 	IIAPI_DATAVALUE		pdata[DB_MAX_COLS+1];
-	char			pnames[DB_MAX_COLS+1][DB_MAX_DELIMID+1];
+	DB_DELIM_STR		*pnames = NULL;
 	RS_CONN			*conn = &RSconns[target->conn_no];
 	II_LONG			procRet;
 	II_PTR			stmtHandle;
@@ -186,19 +188,27 @@ RS_TRANS_ROW	*row)
 	/* For FP and PRO targets, call the remote database procedure. */
 	else
 	{
+	      pnames = (DB_DELIM_STR *)RSmem_allocate(0, DB_MAX_COLS+1,
+			sizeof(*pnames),0); 
+	      if (pnames == NULL)
+	      {
+		 MEfree((PTR)stmt);
+		 return (FAIL);
+	      }
+
 		proc_name = pnames[0];
 		if (RPtblobj_name(tbl->table_name, row->table_no,
 			TBLOBJ_REM_DEL_PROC, proc_name) != OK)
 		{
 			messageit(1, 1816, ERx("RSdelete"), tbl->table_name);
-			MEfree((PTR)stmt);
+			RSmem_free(stmt, (char *)pnames, NULL, NULL, NULL);
 			return (RS_INTERNAL_ERR);
 		}
 
 		if (RSpdp_PrepDbprocParams(proc_name, target, tbl, row, pnames,
 				&nparams, pdesc, pdata) != OK)
 		{
-			MEfree((PTR)stmt);
+			RSmem_free(stmt, (char *)pnames, NULL, NULL, NULL);
 			return (RS_INTERNAL_ERR);
 		}
 		status = IIsw_execProcedure(conn->connHandle,
@@ -208,7 +218,7 @@ RS_TRANS_ROW	*row)
 			&getQinfoParm, &errParm, NULL, proc_name);
 		if (status != OK)
 		{
-			MEfree((PTR)stmt);
+			RSmem_free(stmt, (char *)pnames, NULL, NULL, NULL);
 			return (status);
 		}
 		if (procRet)
@@ -216,7 +226,7 @@ RS_TRANS_ROW	*row)
 			messageit(1, procRet, row->rep_key.src_db,
 				row->rep_key.trans_id, row->rep_key.seq_no,
 				target->db_no, tbl->table_name);
-			MEfree((PTR)stmt);
+			RSmem_free(stmt, (char *)pnames, NULL, NULL, NULL);
 			return (procRet);
 		}
 	}
@@ -228,6 +238,6 @@ RS_TRANS_ROW	*row)
 	RSmonitor_notify(&RSlocal_conn, RS_OUT_DELETE, target->db_no,
 		tbl->table_name, tbl->table_owner);
 
-	MEfree((PTR)stmt);
+	RSmem_free(stmt, (char *)pnames, NULL, NULL, NULL);
 	return (OK);
 }
