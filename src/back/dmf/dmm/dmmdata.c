@@ -124,6 +124,11 @@ LIBRARY = IMPDMFLIBDATA
 **  This table contains the initialized IIRELATION records for the
 **  core system tables.  At server startup, we space pad names to
 **  DB_TAB_MAXNAME positions and fill in the number of attributes per relation.
+**  
+**  *** WARNING WARNING WARNING *****
+**  If you make alterations to any core catalogs you must alter the
+**  verifydb versions of their structures in the various SQL
+**  header files in dbutil!duf!hdr
 */
 
 /* core table ids */
@@ -160,6 +165,8 @@ LIBRARY = IMPDMFLIBDATA
 ** the database is opened. If you move either of these
 ** fields or add new fields in front of them (more likely),
 ** remember to update the definitions.
+** NOTE: any changes to iirelation must be reflected in the
+** verifydb version of the structure in dbutil!duf!hdr duverel.sh
 ** DUMMY fields are initialized in dmm_init_catalog_templates()
 */
 #define reldef(tabid, relid, relwid, relkeys, relidxcount, relstat, relmin, relcomptype)\
@@ -244,6 +251,8 @@ GLOBALDEF DMP_RELATION DM_ucore_relations[DM_CORE_REL_CNT];
 /*
 **  This table contains the initialized IIATTRIBUTE records for the
 **  core system tables.
+**  NOTE: Any changes to iiattribute must be reflected in the 
+**  verifydb structure in dbutil!duf!hdr duveatt.sh
 **  DUMMY fields are initialized in dmm_init_catalog_templates()
 */
 #define attdef(tabid, type, name, offset, len, kdom)\

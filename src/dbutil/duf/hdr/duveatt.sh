@@ -4,7 +4,6 @@
 	 attrelidx	integer not null,
 	 attid	smallint not null,
 	 attxtra	smallint not null,
-	 attname	char(32) not null,
 	 attoff	integer not null,
 	 attfrml	integer not null,
 	 attkdom	smallint not null,
@@ -23,14 +22,14 @@
 	 attgeomtype	smallint not null,
 	 attencflags	smallint not null,
 	 attencwid	integer not null,
-	 attfree	char(4) not null);
+	 attfree	byte(4) not null,
+	 attname	char(256) not null);
 
   struct att_tbl_ {
 	i4	attrelid;
 	i4	attrelidx;
 	i2	attid;
 	i2	attxtra;
-	char	attname[33];
 	i4	attoff;
 	i4	attfrml;
 	i2	attkdom;
@@ -47,7 +46,8 @@
 	i2	attcollid;
 	i4	attsrid;
 	i2	attgeomtype;
-	u_i2	attencflags;
+	i2	attencflags;
 	i4	attencwid;
 	char	attfree[4];
+	char	attname[257];
   } att_tbl;
