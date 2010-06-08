@@ -12,10 +12,14 @@
 **          Created.
 **	23-Jan-2006 (drivi01)
 **	    Included io.h header.
+**	04-Jun-2010 (drivi01)
+**	    Add Windows version.
 */
 
 #if !defined(AFX_STDAFX_H__FABC208B_6DB7_4ADA_AC18_F3B2DFF8CF9E__INCLUDED_)
 #define AFX_STDAFX_H__FABC208B_6DB7_4ADA_AC18_F3B2DFF8CF9E__INCLUDED_
+
+#define WINVER 0x0500
 
 #if _MSC_VER > 1000
 #pragma once
@@ -47,8 +51,8 @@
 #include <afxcmn.h>			// MFC support for Windows Common Controls
 #endif // _AFX_NO_AFXCMN_SUPPORT
 
-
 //{{AFX_INSERT_LOCATION}}
 // Microsoft Visual C++ will insert additional declarations immediately before the previous line.
 
 #endif // !defined(AFX_STDAFX_H__FABC208B_6DB7_4ADA_AC18_F3B2DFF8CF9E__INCLUDED_)
+
