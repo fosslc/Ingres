@@ -291,7 +291,7 @@ static void OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 
 static BOOL OnDrawItem(HWND hwnd, const DRAWITEMSTRUCT FAR* lpDrawItem)
 {
-	char szText[256];
+	char szText[BUFSIZE];
 
 	// Check for items in the list box.
 	if (lpDrawItem->itemID == -1)

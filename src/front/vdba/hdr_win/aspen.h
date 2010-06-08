@@ -15,6 +15,9 @@
 //	07-May-2009 (drivi01)
 //	    Undefine MAXUINT because it's already
 //	    defined in Visual Studio 2008.
+//      02-Jun-2010 (drivi01)
+//	    Redefine INT if mecl.h is included b/c we want
+//          the definition in this file to persist in Visual tools.
 ********************************************************************/
 //
 //
@@ -63,7 +66,10 @@
 //
 
 #define CHAR                char            /* ch           */
+#ifdef INT
+#undef INT
 #define INT                 int             /* i or nothing */
+#endif
 #define SHORT               short           /* s            */
 
 typedef WORD                SEL;            /* sel          */

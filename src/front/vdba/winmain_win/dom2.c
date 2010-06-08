@@ -97,6 +97,8 @@
 **    dialog for the newly added "Create Index" menu. 
 ** 04-Jun-2010 (horda03) b123227
 **    Allow GRANT on SEQUENCES to be dropped.
+** 05-Jun-2010 (drivi01)
+**    Remove hard corded buffer sizes.
 ************************************************************************/
 
 //
@@ -4061,7 +4063,7 @@ BOOL DomDropObject(HWND hwndMdi, LPDOMDATA lpDomData, WPARAM wParam, LPARAM lPar
            {
                DROPOBJECTSTRUCT drop;
                PROFILEPARAMS p;
-               char szTitle [256];
+               char szTitle [MAXOBJECTNAME*4+256];
                ZEROINIT (p);
                ZEROINIT (drop);
                level = 0;
@@ -4098,7 +4100,7 @@ BOOL DomDropObject(HWND hwndMdi, LPDOMDATA lpDomData, WPARAM wParam, LPARAM lPar
 
                 if (VDBA_GroupHasUsers())
                 {
-                     TCHAR tchszMessage [256];
+                     TCHAR tchszMessage [MAXOBJECTNAME*4+256];
                      // "The group %s contains user(s).\nDo you wish to continue ?"
                      wsprintf (tchszMessage, ResourceString(IDS_ERR_GROUP_CONTAINS_USER), objName);
                      if (MessageBox (GetFocus(), tchszMessage, ResourceString(IDS_TITLE_CONFIRM), MB_ICONQUESTION|MB_YESNO) == IDYES)
@@ -5527,7 +5529,7 @@ VOID DomModifyObjectStruct (HWND hwndMdi, LPDOMDATA lpDomData, WPARAM wParam, LP
    int     cpt;
    LPTREERECORD  lpRecord;
    FINDCURSOR findcursor;
-   TCHAR tchszNode[256];
+   TCHAR tchszNode[MAXOBJECTNAME*4];
    BOOL bHasGWSuffix;
    TCHAR tchszGateway[200];
    UINT nExistOpenCursor = 0;
@@ -5667,7 +5669,7 @@ VOID DomModifyObjectStruct (HWND hwndMdi, LPDOMDATA lpDomData, WPARAM wParam, LP
            tableparams.StorageParams.bReadOnly = tableparams.bReadOnly;
            if ((TCHAR)tableparams.StorageParams.objectname[0] == '$' || (TCHAR)tableparams.StorageParams.objectowner[0] == '$')
            {
-               TCHAR tchszMessage [256];
+               TCHAR tchszMessage [MAXOBJECTNAME*4];
                // "Cannot modify system object %s."
                wsprintf (tchszMessage, ResourceString(IDS_ERR_MODIFY_SYSTEM_OBJECT), tableparams.StorageParams.TableName);
                MessageBox( GetFocus(), tchszMessage, NULL, MB_ICONEXCLAMATION | MB_OK | MB_TASKMODAL);
@@ -5701,7 +5703,7 @@ VOID DomModifyObjectStruct (HWND hwndMdi, LPDOMDATA lpDomData, WPARAM wParam, LP
            indexparams.nObjectType      =  OT_INDEX;
            if ((TCHAR)indexparams.objectname[0] == '$' || (TCHAR)indexparams.objectowner[0] == '$')
            {
-               TCHAR tchszMessage [256];
+               TCHAR tchszMessage [MAXOBJECTNAME*4];
                wsprintf (tchszMessage, ResourceString(IDS_ERR_MODIFY_SYSTEM_OBJECT), indexparams.TableName);
                MessageBox( GetFocus(), tchszMessage, NULL, MB_ICONEXCLAMATION | MB_OK | MB_TASKMODAL);
                FreeAttachedPointers (&indexparams,  OT_INDEX);

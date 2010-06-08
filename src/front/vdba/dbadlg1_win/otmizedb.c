@@ -43,6 +43,8 @@
 **    of controls exposed to the user when dialog is initially displayed.
 **    Add "Show/Hide Advanced" button to see more/less options in the 
 **    dialog.  Updated some default values for several controls.
+**  02-Jun-2010 (drivi01)
+**    Remove hard coded buffer sizes.
 */
 
 #include "dll.h"
@@ -711,10 +713,10 @@ static void EnableDisableOKButton (HWND hwnd)
 
 static BOOL FillStructureFromControls (HWND hwnd)
 {
-   char szGreatBuffer   [3000];
+   char szGreatBuffer   [MAXOBJECTNAME*10];
    char szBuffer        [_MAX_PATH];
-   char buf1            [64];
-   char buftemp         [200];
+   char buf1            [MAXOBJECTNAME];
+   char buftemp         [MAXOBJECTNAME*4];
 
    HWND hwnd_zfParamFile = GetDlgItem (hwnd, IDC_OPTIMIZEDB_PARAMFILE);
    HWND hwnd_iFileName   = GetDlgItem (hwnd, IDC_OPTIMIZEDB_STATFILE);

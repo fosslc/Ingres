@@ -70,6 +70,10 @@
 **    Save the VectorWise type in one of the fields in CaLLQueryInfo.
 **    VectorWise is not journaled and therefore shouldn't allow users
 **    to view journals.
+** 27-May-2010 (drivi01)
+**    Add iicommon.h to the headers to include GL_MAXNAME constant definition
+**    in constdef.h.
+
 **/
 
 #include "stdafx.h"
@@ -108,6 +112,7 @@ extern "C"
 #include <compat.h>
 #include <cm.h>
 #include <st.h>
+#include <iicommon.h>
 
 EXEC SQL INCLUDE SQLCA;
 EXEC SQL INCLUDE SQLDA;

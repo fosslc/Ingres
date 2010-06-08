@@ -80,6 +80,11 @@
 ** 01-Dec-2004 (uk$so01)
 **    VDBA BUG #113548 / ISSUE #13768610 
 **    Fix the problem of serialization.
+**  02-Jun-2010 (drivi01)
+**    Removed BUFSIZE redefinition.  It's not needed here anymore.
+**    the constant is defined in main.h now. and main.h is included
+**    in dom.h.
+**    Remove hard coded buffer size.
 */
 
 #include "stdafx.h"
@@ -91,9 +96,6 @@
 #include "font.h"
 #include "property.h"
 //#define USES_DOM_FONT // Force the sql control to use the same font as Tree in left pane.
-#if !defined (BUFSIZE)
-#define BUFSIZE 256
-#endif
 
 extern "C"
 {
@@ -450,7 +452,7 @@ long CuDlgDomPropTableRows::OnQueryOpenCursor(WPARAM wParam, LPARAM lParam)
 	{
 		BOOL bCompareServer = FALSE;
 		TCHAR tchszGateway[200];
-		TCHAR tchszNode[256];
+		TCHAR tchszNode[MAXOBJECTNAME*4];
 		CString strNode = (LPCTSTR)(LPTSTR)GetVirtNodeName (m_nHNode);
 		GetGWClassNameFromString((LPUCHAR)(LPCTSTR)strNode, (LPUCHAR)tchszGateway);
 		lstrcpy (tchszNode, strNode);

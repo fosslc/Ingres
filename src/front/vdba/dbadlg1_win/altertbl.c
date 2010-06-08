@@ -109,6 +109,8 @@
 **    Update alter table dialog to not allow add/drop columns
 **    functionality for Ingres VectorWise tables.
 **    Disable column selection for Ingres VectorWise tables.
+** 02-Jun-2010 (drivi01)
+**    Remove hard coded buffer sizes.
 *******************************************************************************/
 
 // NOTE:
@@ -603,7 +605,7 @@ BOOL CALLBACK EXPORT VDBA2xAlterTableDlgProc(HWND hwnd, UINT message, WPARAM wPa
 static BOOL OnInitDialog(HWND hwnd, HWND hwndFocus, LPARAM lParam)
 {
     TCHAR tchszFormat [128];
-    TCHAR tchszTitle  [128];
+    TCHAR tchszTitle  [MAXOBJECTNAME*2+128];
     LPCNTINFO lpcntInfo;
     BOOL bEnabled = FALSE;
     LPTABLEPARAMS lptbl = (LPTABLEPARAMS)lParam;
@@ -4178,7 +4180,7 @@ static BOOL  VDBA20xTableDataValidate (HWND hwnd, LPTABLEPARAMS lpTS)
             lpCol = (LPCOLUMNPARAMS)ls->lpObject;
             if (lpCol->bUnique && lstrcmpi (lpCol->szColumn, list1->lpszString) == 0)
             {
-                TCHAR msg [256];
+                TCHAR msg [MAXOBJECTNAME*2+256];
                 wsprintf (msg, ResourceString(IDS_ERR_DUPKEY), lpCol->szColumn);
                 MessageBox (NULL, msg, NULL, MB_ICONSTOP|MB_OK);
                 return FALSE;
@@ -4207,7 +4209,7 @@ static BOOL  VDBA20xTableDataValidate (HWND hwnd, LPTABLEPARAMS lpTS)
             }
             if (Equal)
             {
-                TCHAR msg [256];
+                TCHAR msg [MAXOBJECTNAME*2+256];
                 wsprintf (msg, ResourceString(IDS_ERR_DUPKEY), lx->tchszConstraint);
                 MessageBox (NULL, msg, NULL, MB_ICONSTOP|MB_OK);
                 return FALSE;

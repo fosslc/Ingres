@@ -9,6 +9,11 @@
 //    Author   : UK Sotheavut                       .                                  //
 //                                                                                     //
 //    Purpose  : Popup Dialog Box for the Constraint Enhancement (Index Option)        //
+//    History:                                                                         //
+//      02-Jun-2010 (drivi01)                                                          //
+//        Removed BUFSIZE redefinition.  It's not needed here anymore.                 //
+//        the constant is defined in main.h now. and main.h is included                //
+//        in dom.h.                                                                    //
 ****************************************************************************************/
 #include "stdafx.h"
 #include "mainmfc.h"
@@ -18,9 +23,6 @@
 // use the function Table_QueryStatisticColumns to get base table columns:
 #include "parse.h"
 
-#if !defined (BUFSIZE)
-#define BUFSIZE 256
-#endif
 extern "C"
 {
 #include "dbaset.h"

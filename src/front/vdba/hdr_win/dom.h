@@ -23,10 +23,15 @@
 **  11-May-2010 (drivi01)
 **     Add DomCreateIndex function which adds support for 
 **     "Create Index" menu functionality. 
+**  02-Jun-2010 (drivi01)
+**    Removed BUFSIZE redefinition.  It's not needed here anymore.
+**    the constant is defined in main.h now. and main.h is included
+**    in dom.h.
 ********************************************************************/
 
 #ifndef __DOM_INCLUDED__
 #define __DOM_INCLUDED__
+#include <main.h>
 
 //
 // Constants define
