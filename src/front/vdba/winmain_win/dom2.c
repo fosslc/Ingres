@@ -95,6 +95,8 @@
 **    to tblType in DMLCREATESTRUCT.
 **    Add DomCreateIndex function which will bring up "Create Index"
 **    dialog for the newly added "Create Index" menu. 
+** 04-Jun-2010 (horda03) b123227
+**    Allow GRANT on SEQUENCES to be dropped.
 ************************************************************************/
 
 //
@@ -4844,6 +4846,12 @@ BOOL DomDropObject(HWND hwndMdi, LPDOMDATA lpDomData, WPARAM wParam, LPARAM lPar
 		}
 		break;
  
+        case OT_SEQUGRANT_NEXT_USER:
+                {
+                   level = 2;
+                }
+                break;
+
        default:
        MessageBox(GetFocus(),ResourceString ((UINT)IDS_I_DROP_NOTDEFINED),
                   NULL, MB_ICONEXCLAMATION | MB_OK | MB_TASKMODAL);
