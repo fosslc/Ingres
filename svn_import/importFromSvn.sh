@@ -43,6 +43,8 @@
 
 # Ingres specific improvements:
 # =============================
+# - find a way to deal with checked in files that also have the same extension
+#   as those in .gitingore
 # - detect if we're running from trunk
 # - better handling for content under tst: detect and ignore it (since the test cases in tst and pdfs in techpub are not being copied to github)
 
