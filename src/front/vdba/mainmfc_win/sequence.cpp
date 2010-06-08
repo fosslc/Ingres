@@ -12,6 +12,8 @@
 **
 ** 26-Mar-2003 (schph01)
 **    SIR #107523 created, Management to Create and Alter the Database Sequences.
+** 07-Jun-2010 (drivi01)
+**    Set sequence limit in the edit box.
 ****************************************************************************************/
 
 #include "stdafx.h"
@@ -118,6 +120,7 @@ BOOL CxDlgDBSequence::OnInitDialog()
 		                (char*)m_StructSequenceInfo->DBName);
 		SetWindowText(csTitle);
 		PushHelpId(HELPID_IDD_CREATEDB_SEQUENCE);
+		m_ctrlEditName.SetLimitText(MAXOBJECTNAME-1);
 	}
 	else
 	{
