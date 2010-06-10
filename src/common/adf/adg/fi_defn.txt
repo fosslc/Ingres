@@ -340,6 +340,9 @@
 #	    the erroneous flag setting from ADFI_1270_ANSIDATE_SUB_ANSIDATE
 #	12-Dec-2008 (kiria01) b121297
 #	    Added ADFI_1396_DATE_ADD_VCH for relaxed dates
+#	17-Dec-2008 (macde01)
+#	    Added ADFI_1397_POINT_TO_C to ADFI_1414_POINT_POINT (inclusive)
+#	    for DB_PT_TYPE.
 #       28-jan-2009 (stial01)
 #           Use defines for iitypename(), iistructure() result
 #	12-Feb-2009 (kiria01) SIR 121012
@@ -351,8 +354,12 @@
 #	02-Mar-2008 (kiria01) b121420
 #	    Increased the workspace amounts for long operations to include
 #	    enough for two segments plus the ADP_LO_WKSP itself.
+#   28-Feb-2009 (thich01)
+#       Added fromtext operators for spatial
 #	05-Mar-2009 (kiria01) b121520
 #	    Make BYTEEXTRACT return BYTE(1) instead of CHAR(1)
+#   06-Mar-2009 (thich01)
+#       Make distinct routines for each spatial fromText type.
 #	12-Mar-2009 (kiria01) SIR121788
 #	    Added ADFI_1397_LNVCHR_TO_LVCH, ADFI_1398_LVCH_TO_LNVCHR,
 #	    ADFI_1399_LVCH_LNVCHR, ADFI_1400_LNVCHR_LVCH,
@@ -360,6 +367,8 @@
 #	    ADFI_1403_LNVCHR_CHAR, ADFI_1404_LNVCHR_C,
 #	    ADFI_1405_LNVCHR_TEXT, ADFI_1406_LNVCHR_VARCHAR and
 #	    ADFI_1407_LNVCHR_LTXT
+#   13-Mar-2009 (thich01)
+#       Added asText and asBinary operators
 #	17-Mar-2009 (kiria01) SIR121788
 #	    Added ADFI_1408_LCLOC_TO_LBYTE, ADFI_1409_LCLOC_TO_LNVCHR,
 #	    ADFI_1410_LBLOC_TO_LVCH and ADFI_1411_LNLOC_TO_LVCH
@@ -373,6 +382,8 @@
 #	    routine from adu_lvch_move to adu_long_coerce where a
 #	    dmf move was not appropriate. Corrected the adu_lvch_move
 #	    operations that erronously used ADI_RESLEN, ADI_O1 etc.
+#   20-Mar-2009 (thich01)
+#       Added fromwkb operators for spatial
 #	15-Apr-2009 (kiria01) SIR121788
 #	    Move the LBYTE<>LVCH to use adu_long_coerce as conversion
 #	    needed after all.
@@ -383,6 +394,10 @@
 #	    Revert previous change as LBYTE<>LVCH can be done more
 #	    efficiently without the conversion which is not needed
 #	    afterall. That includes the locator forms as input too.
+#   20-Aug-2009 (thich01)
+#       Change the functions to the new distinct spatial types.
+#   25-Aug-2009 (troal01)
+#       Added geomname and geomdimen operators for spatial
 #	9-sep-2009 (stephenb)
 #		Add last_identity function.
 #	23-Jun-2009 (kibro01) b122225
@@ -421,6 +436,8 @@
 #       28-oct-2009 (joea)
 #           Add BOO_CHAR, BOO_VCH, BOO_C, BOO_TEXT, CHAR_TO_BOO, C_TO_BOO,
 #           TEXT_TO_BOO, I_TO_BOO and BOO_I.
+#   05-Nov-2009(thich01)
+#   	Change from text to take long varchar.    
 #	12-Nov-2009 (kschendel) SIR 122882
 #	    Add iicmptversion.
 #	14-Nov-2009 (kiria01) SIR 122894
@@ -442,6 +459,12 @@
 #	    ADI_DECBLEND functionality is now in ADI_LONGER.
 #       05-mar-2010 (joea)
 #           Add BOO_BOO.
+#       09-Mar-2010 (thich01)
+#           Moved overlaps and inside out of comparisions to match OGC
+#           expectations.  Moved function numbers due to removal of the 
+#           complimenting functions. Adjusted size of hilbert and nbr for
+#           rtree indexing.  Add perimeter and union ops and remove geom op
+#           for spatial operator consistency.
 #	10-Mar-2010 (toumi01) SIR 122403
 #	    Added ADI_AES_DECRYPT_OP and ADI_AES_ENCRYPT_OP.
 #	13-Mar-2010 (kiria01) b123422
@@ -450,6 +473,14 @@
 #	    to reduce confusion.
 #	18-Mar-2010 (kiria01) b123438
 #	    Added SINGLETON aggregate for scalar sub-query support.
+#	23-Mar-2010 (iwawong)
+#		Added issimple isempty x y numpoints
+#		for the coordinate space.
+#       25-Mar-2010 (thich01)
+#           Fixed ordering of numpoints.
+#       02-Apr-2010 (thich01)
+#           Fixed inside to call with the proper order of arguments.
+#
     
 #       23-Mar-2010 (hanal04) Bug 122436
 #           Change ADFI_164_LOCATE_STR_STR to ADFI_164_LOCATE_ALL_ALL
@@ -678,6 +709,14 @@ group ADI_COMPARISON
 	    null_preinst ADE_3CXI_CMP_SET_SKIP
 	    result DB_BOO_TYPE
 	    operands DB_NVCHR_TYPE DB_NVCHR_TYPE
+
+	fi ADFI_1607_POINT_NE_POINT
+	    description boolean  : point != point
+	    complement ADFI_1606_POINT_EQ_POINT
+	    lenspec ADI_FIXED sizeof(bool)
+	    null_preinst ADE_3CXI_CMP_SET_SKIP
+	    result DB_BOO_TYPE
+	    operands DB_PT_TYPE DB_PT_TYPE
 
     operator ADI_LT_OP
 
@@ -1277,6 +1316,14 @@ group ADI_COMPARISON
 	    null_preinst ADE_3CXI_CMP_SET_SKIP
 	    result DB_BOO_TYPE
 	    operands DB_LTXT_TYPE DB_LTXT_TYPE
+
+	fi ADFI_1606_POINT_EQ_POINT
+	    description boolean  :  point = point
+	    complement ADFI_1607_POINT_NE_POINT
+	    lenspec ADI_FIXED sizeof(bool)
+	    null_preinst ADE_3CXI_CMP_SET_SKIP
+	    result DB_BOO_TYPE
+	    operands DB_PT_TYPE DB_PT_TYPE
 
     operator ADI_GT_OP
 
@@ -8926,6 +8973,786 @@ group ADI_NORM_FUNC
 	    operands DB_VCH_TYPE
 	    routine adu_soundex_dm
 
+
+    operator ADI_POINT_OP
+
+	fi ADFI_1608_POINT_FROM_STR
+	    description point  : point(text)
+	    lenspec ADI_FIXED 16
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_PT_TYPE
+	    operands DB_TXT_TYPE
+	    routine adu_strtopt
+
+	fi ADFI_1615_POINT_FROM_FLOATS
+	    description point  : point(float,float)
+	    lenspec ADI_FIXED 16
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_PT_TYPE
+	    operands DB_FLT_TYPE DB_FLT_TYPE
+	    routine adu_2flt_to_pt
+
+	fi ADFI_1617_POINT_POINT
+	    description point  :  point(point)
+	    lenspec ADI_FIXED 16
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_PT_TYPE
+	    operands DB_PT_TYPE
+	    routine adu_pt_to_pt
+
+    operator ADI_X_OP
+
+	fi ADFI_1604_POINT_X
+	    description double  : x(point)
+	    lenspec ADI_FIXED 8
+	    null_preinst ADE_0CXI_IGNORE
+	    result DB_FLT_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_point_x
+
+    operator ADI_Y_OP
+
+	fi ADFI_1605_POINT_Y
+	    description double  : y(point)
+	    lenspec ADI_FIXED 8
+	    null_preinst ADE_0CXI_IGNORE
+	    result DB_FLT_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_point_y
+
+    operator ADI_BPOINT_OP
+
+    fi ADFI_1618_POINT_FROM_TEXT
+        description bpoint    : pointfromtext(text)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_POINT_TYPE
+	    operands DB_LVCH_TYPE
+	    routine adu_point_fromText
+        
+    fi ADFI_1619_POINT_FROM_WKB
+        description bpointbin    : pointfromwkb(lbyte)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_POINT_TYPE
+	    operands DB_LBYTE_TYPE
+	    routine adu_point_fromWKB
+        
+    fi ADFI_1679_POINT_S_FROM_TEXT
+        description bpoint    : pointfromtext(text, int)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_POINT_TYPE
+	    operands DB_LVCH_TYPE DB_INT_TYPE
+	    routine adu_point_srid_fromText
+        
+    fi ADFI_1680_POINT_S_FROM_WKB
+        description bpointbin    : pointfromwkb(lbyte, int)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_POINT_TYPE
+	    operands DB_LBYTE_TYPE DB_INT_TYPE
+	    routine adu_point_srid_fromWKB
+        
+    operator ADI_LINE_OP
+
+    fi ADFI_1620_LINE_FROM_TEXT
+        description line    : linefromtext(text)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_LINE_TYPE
+	    operands DB_LVCH_TYPE
+	    routine adu_linestring_fromText
+        
+    fi ADFI_1621_LINE_FROM_WKB
+        description linebin    : linefromwkb(lbyte)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_LINE_TYPE
+	    operands DB_LBYTE_TYPE
+	    routine adu_linestring_fromWKB
+        
+    fi ADFI_1681_LINE_S_FROM_TEXT
+        description line    : linefromtext(text, int)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_LINE_TYPE
+	    operands DB_LVCH_TYPE DB_INT_TYPE
+	    routine adu_linestring_srid_fromText
+        
+    fi ADFI_1682_LINE_S_FROM_WKB
+        description linebin    : linefromwkb(lbyte, int)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_LINE_TYPE
+	    operands DB_LBYTE_TYPE DB_INT_TYPE
+	    routine adu_linestring_srid_fromWKB
+        
+    operator ADI_POLY_OP
+
+    fi ADFI_1622_POLY_FROM_TEXT
+        description poly    : polyfromtext(text)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_POLY_TYPE
+	    operands DB_LVCH_TYPE
+	    routine adu_polygon_fromText
+        
+    fi ADFI_1623_POLY_FROM_WKB
+        description polybin    : polyfromwkb(geom)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_POLY_TYPE
+	    operands DB_LBYTE_TYPE
+	    routine adu_polygon_fromWKB
+        
+    fi ADFI_1683_POLY_S_FROM_TEXT
+        description poly    : polyfromtext(text, int)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_POLY_TYPE
+	    operands DB_LVCH_TYPE DB_INT_TYPE
+	    routine adu_polygon_srid_fromText
+        
+    fi ADFI_1684_POLY_S_FROM_WKB
+        description polybin    : polyfromwkb(geom, int)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_POLY_TYPE
+	    operands DB_LBYTE_TYPE DB_INT_TYPE
+	    routine adu_polygon_srid_fromWKB
+        
+    operator ADI_MPOINT_OP
+
+    fi ADFI_1624_MPOINT_FROM_TEXT
+        description mpoint    : mpointfromtext(text)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_MPOINT_TYPE
+	    operands DB_LVCH_TYPE
+	    routine adu_multipoint_fromText
+        
+    fi ADFI_1625_MPOINT_FROM_WKB
+        description mpointbin    : mpointfromwkb(lbyte)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_MPOINT_TYPE
+	    operands DB_LBYTE_TYPE
+	    routine adu_multipoint_fromWKB
+        
+    fi ADFI_1685_MPOINT_S_FROM_TEXT
+        description mpoint    : mpointfromtext(text, int)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_MPOINT_TYPE
+	    operands DB_LVCH_TYPE DB_INT_TYPE
+	    routine adu_multipoint_srid_fromText
+        
+    fi ADFI_1686_MPOINT_S_FROM_WKB
+        description mpointbin    : mpointfromwkb(lbyte, int)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_MPOINT_TYPE
+	    operands DB_LBYTE_TYPE DB_INT_TYPE
+	    routine adu_multipoint_srid_fromWKB
+        
+    operator ADI_MLINE_OP
+
+    fi ADFI_1626_MLINE_FROM_TEXT
+        description mline    : mlinefromtext(text)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_MLINE_TYPE
+	    operands DB_LVCH_TYPE
+	    routine adu_multilinestring_fromText
+        
+    fi ADFI_1627_MLINE_FROM_WKB
+        description mlinebin    : mlinefromwkb(lbyte)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_MLINE_TYPE
+	    operands DB_LBYTE_TYPE
+	    routine adu_multilinestring_fromWKB
+        
+    fi ADFI_1687_MLINE_S_FROM_TEXT
+        description mline    : mlinefromtext(text, int)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_MLINE_TYPE
+	    operands DB_LVCH_TYPE DB_INT_TYPE
+	    routine adu_multilinestring_srid_fromText
+        
+    fi ADFI_1688_MLINE_S_FROM_WKB
+        description mlinebin    : mlinefromwkb(lbyte, int)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_MLINE_TYPE
+	    operands DB_LBYTE_TYPE DB_INT_TYPE
+	    routine adu_multilinestring_srid_fromWKB
+        
+    operator ADI_MPOLY_OP
+
+    fi ADFI_1628_MPOLY_FROM_TEXT
+        description mpoly    : mpolyfromtext(text)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_MPOLY_TYPE
+	    operands DB_LVCH_TYPE
+	    routine adu_multipolygon_fromText
+        
+    fi ADFI_1629_MPOLY_FROM_WKB
+        description mpolybin    : mpolyfromwkb(lbyte)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_MPOLY_TYPE
+	    operands DB_LBYTE_TYPE
+	    routine adu_multipolygon_fromWKB
+        
+    fi ADFI_1689_MPOLY_S_FROM_TEXT
+        description mpoly    : mpolyfromtext(text, int)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_MPOLY_TYPE
+	    operands DB_LVCH_TYPE DB_INT_TYPE
+	    routine adu_multipolygon_srid_fromText
+        
+    fi ADFI_1690_MPOLY_S_FROM_WKB
+        description mpolybin    : mpolyfromwkb(lbyte, int)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_MPOLY_TYPE
+	    operands DB_LBYTE_TYPE DB_INT_TYPE
+	    routine adu_multipolygon_srid_fromWKB
+        
+    operator ADI_GEOMWKT_OP
+
+    fi ADFI_1630_GEOM_AS_TEXT
+        description geom    : asText(geom)
+        lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+        null_preinst ADE_1CXI_SET_SKIP
+        result DB_LVCH_TYPE
+        operands DB_GEOM_TYPE
+        routine adu_geom_asText
+        
+    fi ADFI_1695_GEOM_AS_TEXT_ROUND
+        description geom    : asTextRound(geom, i)
+        lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+        null_preinst ADE_1CXI_SET_SKIP
+        result DB_LVCH_TYPE
+        operands DB_GEOM_TYPE DB_INT_TYPE
+        routine adu_geom_asTextRound
+    
+    fi ADFI_1641_GEOM_FROM_TEXT
+        description geom    : geometryfromtext(text)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_GEOM_TYPE
+	    operands DB_LVCH_TYPE
+	    routine adu_geometry_fromText
+        
+    fi ADFI_1691_GEOM_S_FROM_TEXT
+        description geom    : geometryfromtext(text, int)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_GEOM_TYPE
+	    operands DB_LVCH_TYPE DB_INT_TYPE
+	    routine adu_geometry_srid_fromText
+        
+    operator ADI_GEOMWKB_OP
+
+    fi ADFI_1631_GEOM_AS_BINARY
+        description geom    : asBinary(geom)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_LBYTE_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_geom_asBinary
+
+    fi ADFI_1642_GEOM_FROM_WKB
+        description geombin    : geomfromwkb(lbyte)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_GEOM_TYPE
+	    operands DB_LBYTE_TYPE
+	    routine adu_geometry_fromWKB
+        
+    fi ADFI_1692_GEOM_S_FROM_WKB
+        description geombin    : geomfromwkb(lbyte, int)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_GEOM_TYPE
+	    operands DB_LBYTE_TYPE DB_INT_TYPE
+	    routine adu_geometry_srid_fromWKB
+        
+    operator ADI_NBR_OP
+
+    fi ADFI_1633_NBR
+        description geom    : nbr(geom, geom)
+	    lenspec ADI_FIXED 16
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_NBR_TYPE
+	    operands DB_GEOM_TYPE DB_GEOM_TYPE
+	    routine adu_geom_nbr
+
+    operator ADI_HILBERT_OP
+
+    fi ADFI_1634_HILBERT
+        description geom    : hilbert(geom)
+	    lenspec ADI_FIXED 8 
+	    null_preinst ADE_1CXI_SET_SKIP
+            result DB_INT_TYPE
+	    operands DB_NBR_TYPE
+	    routine adu_geom_hilbert
+
+    operator ADI_OVERLAPS_OP
+
+    fi ADFI_1635_OVERLAPS
+        description boolean    : overlaps(geom, geom)
+	    lenspec ADI_FIXED sizeof(i4)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_INT_TYPE
+	    operands DB_GEOM_TYPE DB_GEOM_TYPE
+	    routine adu_geom_overlaps
+
+    operator ADI_INSIDE_OP
+
+    fi ADFI_1636_INSIDE
+        description boolean    : inside(geom, geom)
+	    lenspec ADI_FIXED sizeof(i4)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_INT_TYPE
+	    operands DB_GEOM_TYPE DB_GEOM_TYPE
+	    routine adu_inside
+
+    operator ADI_PERIMETER_OP
+
+    fi ADFI_1637_PERIMETER
+        description geom    : perimeter(geom)
+	    lenspec ADI_FIXED sizeof(f8)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_FLT_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_geom_perimeter
+
+    operator ADI_GEOMNAME_OP
+
+    fi ADFI_1643_GEOM_NAME
+        description char    : iigeomname(i)
+	    lenspec ADI_FIXED DB_IITYPE_LEN
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_CHA_TYPE
+	    operands DB_INT_TYPE
+	    routine adu_geom_name
+
+    operator ADI_GEOMDIMEN_OP
+
+    fi ADFI_1644_GEOM_DIMEN
+        description int    : iigeomdimensions(i)
+	    lenspec ADI_FIXED 2
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_INT_TYPE
+	    operands DB_INT_TYPE
+	    routine adu_geom_dimensions
+
+	operator ADI_DIMENSION_OP
+
+    fi ADFI_1645_DIMENSION
+        description i    : dimension(geom)
+	    lenspec ADI_FIXED 2
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_INT_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_dimension
+
+	operator ADI_GEOMETRY_TYPE_OP
+
+    fi ADFI_1646_GEOMETRY_TYPE
+        description varchar : geometrytype(geom)
+	    lenspec ADI_FIXED 32
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_VCH_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_geometry_type
+	    
+	operator ADI_BOUNDARY_OP
+
+    fi ADFI_1647_BOUNDARY
+        description geom : boundary(geom)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_0CXI_IGNORE
+	    result DB_GEOM_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_boundary
+
+	operator ADI_ENVELOPE_OP
+
+    fi ADFI_1648_ENVELOPE
+        description geom : envelope(geom)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_GEOM_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_envelope
+
+	operator ADI_EQUALS_OP
+
+    fi ADFI_1649_EQUALS
+        description int : equals(geom, geom)
+	    lenspec ADI_FIXED sizeof(i4)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_INT_TYPE
+	    operands DB_GEOM_TYPE DB_GEOM_TYPE
+	    routine adu_equals
+
+	operator ADI_DISJOINT_OP
+
+    fi ADFI_1650_DISJOINT
+        description int : disjoint(geom, geom)
+	    lenspec ADI_FIXED sizeof(i4)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_INT_TYPE
+	    operands DB_GEOM_TYPE DB_GEOM_TYPE
+	    routine adu_disjoint
+
+	operator ADI_INTERSECTS_OP
+
+    fi ADFI_1651_INTERSECTS
+        description int : intersects(geom, geom)
+	    lenspec ADI_FIXED sizeof(i4)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_INT_TYPE
+	    operands DB_GEOM_TYPE DB_GEOM_TYPE
+	    routine adu_intersects
+
+	operator ADI_TOUCHES_OP
+
+    fi ADFI_1652_TOUCHES
+        description int : touches(geom, geom)
+	    lenspec ADI_FIXED sizeof(i4)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_INT_TYPE
+	    operands DB_GEOM_TYPE DB_GEOM_TYPE
+	    routine adu_touches
+
+	operator ADI_CROSSES_OP
+
+    fi ADFI_1653_CROSSES
+        description int : crosses(geom, geom)
+	    lenspec ADI_FIXED sizeof(i4)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_INT_TYPE
+	    operands DB_GEOM_TYPE DB_GEOM_TYPE
+	    routine adu_crosses
+
+	operator ADI_WITHIN_OP
+
+    fi ADFI_1654_WITHIN
+        description int : within(geom, geom)
+	    lenspec ADI_FIXED sizeof(i4)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_INT_TYPE
+	    operands DB_GEOM_TYPE DB_GEOM_TYPE
+	    routine adu_within
+
+	operator ADI_CONTAINS_OP
+
+    fi ADFI_1655_CONTAINS
+        description int : contains(geom, geom)
+	    lenspec ADI_FIXED sizeof(i4)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_INT_TYPE
+	    operands DB_GEOM_TYPE DB_GEOM_TYPE
+	    routine adu_contains
+
+	operator ADI_RELATE_OP
+
+    fi ADFI_1656_RELATE
+        description int : relate(geom, geom, char)
+	    lenspec ADI_FIXED sizeof(i4)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_INT_TYPE
+	    operands DB_GEOM_TYPE DB_GEOM_TYPE DB_CHR_TYPE
+	    routine adu_relate
+
+	operator ADI_DISTANCE_OP
+
+    fi ADFI_1657_DISTANCE
+        description f : distance(geom, geom)
+	    lenspec ADI_FIXED sizeof(f8)
+	    null_preinst ADE_0CXI_IGNORE
+	    result DB_FLT_TYPE
+	    operands DB_GEOM_TYPE DB_GEOM_TYPE
+	    routine adu_distance
+
+	operator ADI_INTERSECTION_OP
+
+    fi ADFI_1658_INTERSECTION
+        description geom : intersection(geom, geom)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_GEOM_TYPE
+	    operands DB_GEOM_TYPE DB_GEOM_TYPE
+	    routine adu_intersection
+
+	operator ADI_DIFFERENCE_OP
+
+    fi ADFI_1659_DIFFERENCE
+        description geom : difference(geom, geom)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_GEOM_TYPE
+	    operands DB_GEOM_TYPE DB_GEOM_TYPE
+	    routine adu_difference
+
+	operator ADI_SYMDIFF_OP
+
+    fi ADFI_1660_SYMDIFF
+        description geom : symdifference(geom, geom)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_GEOM_TYPE
+	    operands DB_GEOM_TYPE DB_GEOM_TYPE
+	    routine adu_sym_difference
+
+	operator ADI_BUFFER_OP
+
+    fi ADFI_1661_BUFFER_ONE
+        description geom : buffer(geom, f)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_GEOM_TYPE
+	    operands DB_GEOM_TYPE DB_FLT_TYPE
+	    routine adu_buffer_one
+
+    fi ADFI_1662_BUFFER_TWO
+        description geom : buffer(geom, f, vch)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_GEOM_TYPE
+	    operands DB_GEOM_TYPE DB_FLT_TYPE DB_VCH_TYPE
+	    routine adu_buffer_two
+
+	operator ADI_CONVEXHULL_OP
+
+    fi ADFI_1663_CONVEXHULL
+        description geom : convexhull(geom)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_GEOM_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_convexhull
+
+	operator ADI_POINTN_OP
+
+    fi ADFI_1664_POINTN
+        description geom : pointn(geom, i)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_0CXI_IGNORE
+	    result DB_GEOM_TYPE
+	    operands DB_GEOM_TYPE DB_INT_TYPE
+	    routine adu_pointn
+
+	operator ADI_STARTPOINT_OP
+
+    fi ADFI_1665_STARTPOINT
+        description geom : startpoint(geom)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_0CXI_IGNORE
+	    result DB_GEOM_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_startpoint
+
+	operator ADI_ENDPOINT_OP
+
+    fi ADFI_1666_ENDPOINT
+        description geom : endpoint(geom)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_0CXI_IGNORE
+	    result DB_GEOM_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_endpoint
+
+	operator ADI_ISCLOSED_OP
+
+    fi ADFI_1667_ISCLOSED
+        description i : isclosed(geom)
+	    lenspec ADI_FIXED sizeof(i4)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_INT_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_isclosed
+
+	operator ADI_ISRING_OP
+
+    fi ADFI_1668_ISRING
+        description i : isring(geom)
+	    lenspec ADI_FIXED sizeof(i4)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_INT_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_isring
+
+	operator ADI_STLENGTH_OP
+
+    fi ADFI_1669_STLENGTH
+        description f : st_length(geom)
+	    lenspec ADI_FIXED sizeof(f8)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_FLT_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_stlength
+
+	operator ADI_CENTROID_OP
+
+    fi ADFI_1670_CENTROID
+        description geom : centroid(geom)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_GEOM_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_centroid
+
+	operator ADI_PNTONSURFACE_OP
+
+    fi ADFI_1671_PNTONSURFACE
+        description geom : pointonsurface(geom)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_GEOM_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_pointonsurface
+
+	operator ADI_AREA_OP
+
+    fi ADFI_1672_AREA
+        description f : area(geom)
+	    lenspec ADI_FIXED sizeof(f8)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_FLT_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_area
+
+	operator ADI_EXTERIORRING_OP
+
+    fi ADFI_1673_EXTERIORRING
+        description geom : exteriorring(geom)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_GEOM_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_exteriorring
+
+	operator ADI_NINTERIORRING_OP
+
+    fi ADFI_1674_NINTERIORRING
+        description i : numinteriorring(geom)
+	    lenspec ADI_FIXED sizeof(i4)
+	    null_preinst ADE_0CXI_IGNORE
+	    result DB_INT_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_numinteriorring
+
+	operator ADI_INTERIORRINGN_OP
+
+    fi ADFI_1675_INTERIORRINGN
+        description geom : interiorringn(geom, i)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_0CXI_IGNORE
+	    result DB_GEOM_TYPE
+	    operands DB_GEOM_TYPE DB_INT_TYPE
+	    routine adu_interiorringn
+
+	operator ADI_NUMGEOMETRIES_OP
+
+    fi ADFI_1676_NUMGEOMETRIES
+        description i : numgeometries(geom)
+	    lenspec ADI_FIXED sizeof(i4)
+	    null_preinst ADE_0CXI_IGNORE
+	    result DB_INT_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_numgeometries
+
+	operator ADI_GEOMETRYN_OP
+
+    fi ADFI_1677_GEOMETRYN
+        description geom : geometryn(geom, i)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_0CXI_IGNORE
+	    result DB_GEOM_TYPE
+	    operands DB_GEOM_TYPE DB_INT_TYPE
+	    routine adu_geometryn
+
+    operator ADI_ISEMPTY_OP
+
+    fi ADFI_1639_ISEMPTY
+        description i : isempty(geom) : int - 1 = TRUE, 0 = FALSE, -1 = OTHERWISE
+	    lenspec ADI_FIXED sizeof(i4)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_INT_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_isempty
+	
+    operator ADI_ISSIMPLE_OP
+
+    fi ADFI_1640_ISSIMPLE
+        description i : issimple(geom) : int - 1 = TRUE, 0 = FALSE, -1 = OTHERWISE
+	    lenspec ADI_FIXED sizeof(i4)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_INT_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_issimple
+
+    operator ADI_UNION_OP
+
+    fi ADFI_1638_UNION
+        description geom    : union(geom, geom)
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_GEOM_TYPE
+	    operands DB_GEOM_TYPE DB_GEOM_TYPE
+	    routine adu_geom_union
+
+    operator ADI_SRID_OP
+
+    fi ADFI_1678_SRID
+        description i : srid(geom)
+	    lenspec ADI_FIXED sizeof(i4)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_INT_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_srid
+	
+    operator ADI_NUMPOINTS_OP
+
+    fi ADFI_1693_NUMPOINTS
+	description i : numpoints(geom) : integer
+    	    lenspec ADI_FIXED sizeof(i4)
+    	    null_preinst ADE_0CXI_IGNORE
+    	    result DB_INT_TYPE
+    	    operands DB_GEOM_TYPE
+    	    routine adu_numpoints
+
+    operator ADI_TRANSFORM_OP
+
+    fi ADFI_1696_TRANSFORM
+        description geom : transform(geom,srid) 
+	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_GEOM_TYPE
+	    operands DB_GEOM_TYPE DB_INT_TYPE
+	    routine adu_transform
+	    
+	operator ADI_GEOMWKTRAW_OP
+
+    fi ADFI_1694_GEOM_AS_TEXT_RAW
+        description geom    : asTextRaw(geom)
+        lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
+        null_preinst ADE_1CXI_SET_SKIP
+        result DB_LVCH_TYPE
+        operands DB_GEOM_TYPE
+        routine adu_geom_asTextRaw
+	
+
 group ADI_COPY_COERCION
 
     operator ADI_NOOP
@@ -9314,6 +10141,42 @@ group ADI_COPY_COERCION
 	    operands DB_UTF8_TYPE
 	    routine adu_nvchr_strutf8conv
 
+	fi ADFI_1611_POINT_COPYTO_C
+	    description c  :  point -copy-> c
+	    flags ADI_F1_VARFI
+	    lenspec ADI_FIXED 35
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_CHR_TYPE
+	    operands DB_PT_TYPE
+	    routine adu_pttostr
+
+	fi ADFI_1612_POINT_COPYTO_CHAR
+	    description char  :  point -copy-> char
+	    flags ADI_F1_VARFI
+	    lenspec ADI_FIXED 35
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_CHA_TYPE
+	    operands DB_PT_TYPE
+	    routine adu_pttostr
+
+	fi ADFI_1613_POINT_COPYTO_TEXT
+	    description text  :  point -copy-> text
+	    flags ADI_F1_VARFI
+	    lenspec ADI_FIXED 35+DB_CNTSIZE
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_TXT_TYPE
+	    operands DB_PT_TYPE
+	    routine adu_pttostr
+
+	fi ADFI_1614_POINT_COPYTO_VARCHAR
+	    description varchar  :  point -copy-> varchar
+	    flags ADI_F1_VARFI
+	    lenspec ADI_FIXED 35+DB_CNTSIZE
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_VCH_TYPE
+	    operands DB_PT_TYPE
+	    routine adu_pttostr
+   
 group ADI_COERCION
 
     operator ADI_NOOP
@@ -11540,3 +12403,69 @@ group ADI_COERCION
 	    operands DB_LBYTE_TYPE
 	    routine adu_long_coerce
 
+
+	fi ADFI_1600_POINT_TO_C
+	    description c  :  point -> c
+	    flags ADI_F1_VARFI
+	    lenspec ADI_FIXED 35
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_CHR_TYPE
+	    operands DB_PT_TYPE
+	    routine adu_pttostr
+
+	fi ADFI_1601_POINT_TO_TEXT
+	    description text  :  point -> text
+	    flags ADI_F1_VARFI
+	    lenspec ADI_FIXED 35
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_TXT_TYPE
+	    operands DB_PT_TYPE
+	    routine adu_pttostr
+
+	fi ADFI_1602_C_TO_POINT
+	    description point  :  c -> point
+	    lenspec ADI_FIXED 16
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_PT_TYPE
+	    operands DB_CHR_TYPE
+	    routine adu_strtopt
+
+	fi ADFI_1603_TEXT_TO_POINT
+	    description point  :  text -> point
+	    lenspec ADI_FIXED 16
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_PT_TYPE
+	    operands DB_TXT_TYPE
+	    routine adu_strtopt
+
+	fi ADFI_1609_VARCHAR_TO_POINT
+	    description point  :  varchar -> point
+	    lenspec ADI_FIXED 16
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_PT_TYPE
+	    operands DB_VCH_TYPE
+	    routine adu_strtopt
+
+	fi ADFI_1610_POINT_TO_VARCHAR
+	    description varchar  :  point -> varchar
+	    lenspec ADI_FIXED 35
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_VCH_TYPE
+	    operands DB_PT_TYPE
+	    routine adu_pttostr
+
+	fi ADFI_1616_POINT_TO_POINT
+	    description point  :  point -> point
+	    lenspec ADI_RESLEN
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_PT_TYPE
+	    operands DB_PT_TYPE
+	    routine adu_pt_to_pt
+
+    fi ADFI_1632_GEOM_TO_GEOM
+	    description geom  :  geom -> geom
+	    lenspec ADI_RESLEN
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_GEOM_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_lvch_move

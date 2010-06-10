@@ -537,6 +537,8 @@
 #	    BUG 122571
 #	    Remove RPMHDR and RPMCCLD defs, no longer need. (using python
 #	    module)
+#	19-Nov-2009 (thich01)
+#	    Added HDRGEOS for GEOS geospatial headers.
 #	25-Jan-2010 (kschendel) b123194
 #	    INGICE and XERCVERS used before definition, fix.
 #	    Always set XERCVERS with default-assign (windows wasn't) since
@@ -970,6 +972,8 @@ HDRODBC		= [ FDirName $(ING_SRC) common odbc hdr ] ;
 HDRTOOLS	= [ FDirName $(ING_SRC) tools port hdr_unix_vms ] ;
 
 HDRSTRESS	= [ FDirName $(ING_SRC) tst stress gcf esql ] ;
+
+HDRGEOS		= $(GEOS_INC) ;
 
 #
 #set HDRPATTERN

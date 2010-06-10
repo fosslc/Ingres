@@ -525,6 +525,11 @@ SQLSTATE_MAPPING_REQUIRED
 **	    E_DM1411, E_DM1412, E_DM1413, E_DM1414, E_DM0012, E_DM0013,E_DM9691
 **	08-feb-2010 (thaju02) Bug 122328
 **	    Added E_DM1171_CKP_DISALLOW_INCR_ROLLDB.
+**	24-Feb-2010 (troal01)
+**	    Add E_DM5423_SRID_MISMATCH error for when SRID in data
+**	    and iiattribute do not match.
+**	    Add E_DM5424_SPATIAL_VERSION_ERROR for when the correct
+**	    storage version couldn't be found in the data.
 **	02-Apr-2010 (jonj)
 **	    SIR 121619 MVCC:
 **	    Add useful information to E_DM0028_UNABLE_TO_MAKE_CONSISTENT
@@ -9166,6 +9171,9 @@ I_DM5421_50DB_FOUND:SS5000B_INTERNAL_ERROR
 W_DM5422_IIDBDB_NOT_JOURNALED:SS5000B_INTERNAL_ERROR
 "WARNING: The iidbdb is being opened but journaling is not enabled; this is \
 not recommended."
+
+E_DM5423_SRID_MISMATCH:SS50000_MISC_ERRORS
+"SRID specified does not match column SRID. Data was not saved."
 /*%
 ** Parameters:
 **      None.

@@ -417,6 +417,8 @@
 **          Added soundex_dm (Daitch-Mokotoff soundex)
 **      05-oct-2009 (joea)
 **          Add prototype for adc_bool_compare.
+**      10-mar-2010
+**          Remove overlaps and inside since they are no longer comparison.
 **/
 
 

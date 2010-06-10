@@ -345,6 +345,10 @@
 **	    Added ADFI_1395_DATE_SUB_VCH for relaxed dates
 **	12-Dec-2008 (kiria01) b121297
 **	    Added ADFI_1396_DATE_ADD_VCH for relaxed dates
+**      17-Dec-2008 (macde01)
+**          Added FI's for DB_PT_TYPE (POINT datatype).
+**  28-Feb-2009 (thich01)
+**      Added FI's for fromtext spatial ops
 **	12-Mar-2009 (kiria01) SIR121788
 **	    Added ADFI_1397_LNVCHR_TO_LVCH, ADFI_1398_LVCH_TO_LNVCHR,
 **	    ADFI_1399_LVCH_LNVCHR, ADFI_1400_LNVCHR_LVCH,
@@ -352,6 +356,8 @@
 **	    ADFI_1403_LNVCHR_CHAR, ADFI_1404_LNVCHR_C,
 **	    ADFI_1405_LNVCHR_TEXT, ADFI_1406_LNVCHR_VARCHAR and
 **	    ADFI_1407_LNVCHR_LTXT
+**  13-Mar-2009 (thich01)
+**      Added FI's for asText and asBinary
 **	17-Mar-2009 (kiria01) SIR121788
 **	    Added ADFI_1408_LCLOC_TO_LBYTE, ADFI_1409_LCLOC_TO_LNVCHR,
 **	    ADFI_1410_LBLOC_TO_LVCH and ADFI_1411_LNLOC_TO_LVCH
@@ -362,11 +368,19 @@
 **	    which is also fixed).
 **	19-Mar-2009 (kiria01) SIR121788
 **	    Added the missing long byte coercions.
+**  20-Mar-2009 (thich01)
+**      Added FI's for fromwkb spatial ops
 **      22-Apr-2009 (Marty Bowes) SIR 121969
 **          Add generate_digit() and validate_digit() for the generation
 **          and validation of checksum values.
+**  16-Jun-2009 (thich01)
+**      Added FI for GEOM to GEOM.
 **      01-Aug-2009 (martin bowes) SIR122320
 **          Added soundex_dm (Daitch-Mokotoff) soundex
+**  20-Aug-2009 (thich01)
+**      Add generic geom from text and from wkb.
+**  25-Aug-2009 (troal01)
+**      Added FI for GEOMNAME and GEOMDIMEN
 **	31-Aug-2009 (kschendel) b122510
 **	    Add FI's for character(ucode,n) type conversions.  We can't use
 **	    the (all,n) FI's for these because they call the wrong
@@ -396,6 +410,10 @@
 **			Replaced multiple NVL2 fi's with a single ALL datatype
 **     05-mar-2010 (joea)
 **         Add BOO_BOO.
+**      09-Mar-2010 (thich01)
+**          Remove NOT_INSIDE and DOES_NOT_OVERLAP due to moving the OVERLAPS
+**          and INSIDE out of comparision operations.  Renumber spatial
+**          functions accordingly.
 **	13-Mar-2010 (kiria01) b123422
 **	    Added ADFI_1461_REPL_NVCH_NVCH_NVCH & ADFI_1462_REPL_VBYT_VBYT_VBYT
 **	    and corrected the symbols for some of the longtext functions whoes
@@ -409,6 +427,9 @@
 **          documented behaviour. 
 **	25-Mar-2010 (toumi01) SIR 122403
 **	    Add ADFI_1464_AES_DECRYPT_VARBYTE and ADFI_1465_AES_ENCRYPT_VARBYTE.
+**	xx-Apr-2010 (iwawong)
+**		Added issimple isempty overlaps x y numpoints
+**		for the coordinate space.
 **	10-May-2010 (kschendel) b123712
 **	    FI's for floating trunc, ceil, floor.
 **      10-May-2010 (horda03) B123704
@@ -1762,3 +1783,101 @@
 #define ADFI_1468_MONEY_MUL_VARCHAR	(ADI_FI_ID)1468 /* money * varchar */
 #define ADFI_1469_VARCHAR_MUL_MONEY	(ADI_FI_ID)1469 /* varchar * money */
 #define ADFI_1470_SOUNDEX_DM	        (ADI_FI_ID)1470 /* soundex_dm() */
+/* Spatial starts at 1600 */
+#define ADFI_1600_POINT_TO_C            (ADI_FI_ID)1600 /* point -> c      */
+#define ADFI_1601_POINT_TO_TEXT         (ADI_FI_ID)1601 /* point -> text   */
+#define ADFI_1602_C_TO_POINT            (ADI_FI_ID)1602 /* c -> point      */
+#define ADFI_1603_TEXT_TO_POINT         (ADI_FI_ID)1603 /* text -> point   */
+#define ADFI_1604_POINT_X               (ADI_FI_ID)1604 /* x(point)        */
+#define ADFI_1605_POINT_Y               (ADI_FI_ID)1605 /* y(point)        */
+#define ADFI_1606_POINT_EQ_POINT        (ADI_FI_ID)1606 /* point = point    */
+#define ADFI_1607_POINT_NE_POINT        (ADI_FI_ID)1607 /* point != point   */
+#define ADFI_1608_POINT_FROM_STR        (ADI_FI_ID)1608 /* point(text)      */
+#define ADFI_1609_VARCHAR_TO_POINT      (ADI_FI_ID)1609 /* varchar -> point */
+#define ADFI_1610_POINT_TO_VARCHAR      (ADI_FI_ID)1610 /* point -> varchar */
+#define ADFI_1611_POINT_COPYTO_C        (ADI_FI_ID)1611 /* point -copy-> c */
+#define ADFI_1612_POINT_COPYTO_CHAR     (ADI_FI_ID)1612 /* point -copy-> char */
+#define ADFI_1613_POINT_COPYTO_TEXT     (ADI_FI_ID)1613 /* point -copy-> text */
+#define ADFI_1614_POINT_COPYTO_VARCHAR  (ADI_FI_ID)1614 /* point -copy-> varchar*/
+#define ADFI_1615_POINT_FROM_FLOATS     (ADI_FI_ID)1615 /* point(float,float) */
+#define ADFI_1616_POINT_TO_POINT        (ADI_FI_ID)1616 /* point -> point     */
+#define ADFI_1617_POINT_POINT           (ADI_FI_ID)1617 /* point(point)       */
+#define ADFI_1618_POINT_FROM_TEXT       (ADI_FI_ID)1618 /* pointfromtext(text) */
+#define ADFI_1619_POINT_FROM_WKB        (ADI_FI_ID)1619 /* pointfromwkb(bin) */
+#define ADFI_1620_LINE_FROM_TEXT        (ADI_FI_ID)1620 /* linefromtext(text) */
+#define ADFI_1621_LINE_FROM_WKB         (ADI_FI_ID)1621 /* linefromwkb(bin) */
+#define ADFI_1622_POLY_FROM_TEXT        (ADI_FI_ID)1622 /* polyfromtext(text) */
+#define ADFI_1623_POLY_FROM_WKB         (ADI_FI_ID)1623 /* polyfromwkb(bin) */
+#define ADFI_1624_MPOINT_FROM_TEXT      (ADI_FI_ID)1624 /* mpointfromtext(text) */
+#define ADFI_1625_MPOINT_FROM_WKB       (ADI_FI_ID)1625 /* mpointfromwkb(bin) */
+#define ADFI_1626_MLINE_FROM_TEXT       (ADI_FI_ID)1626 /* mlinefromtext(text) */
+#define ADFI_1627_MLINE_FROM_WKB        (ADI_FI_ID)1627 /* mlinefromwkb(bin) */
+#define ADFI_1628_MPOLY_FROM_TEXT       (ADI_FI_ID)1628 /* mpolyfromtext(text) */
+#define ADFI_1629_MPOLY_FROM_WKB        (ADI_FI_ID)1629 /* mpolyfromwkb(bin) */
+#define ADFI_1630_GEOM_AS_TEXT          (ADI_FI_ID)1630 /* asText(lbyte) */
+#define ADFI_1631_GEOM_AS_BINARY        (ADI_FI_ID)1631 /* asBinary(lbyte) */
+#define ADFI_1632_GEOM_TO_GEOM          (ADI_FI_ID)1632 /* geom -> geom */
+#define ADFI_1633_NBR                   (ADI_FI_ID)1633 /* nbr */
+#define ADFI_1634_HILBERT               (ADI_FI_ID)1634 /* hilbert */
+#define ADFI_1635_OVERLAPS              (ADI_FI_ID)1635 /* overlaps(geom, geom) */
+#define ADFI_1636_INSIDE                (ADI_FI_ID)1636 /* inside */
+#define ADFI_1637_PERIMETER             (ADI_FI_ID)1637 /* Perimeter */
+#define ADFI_1638_UNION                 (ADI_FI_ID)1638 /* Union */
+#define ADFI_1639_ISEMPTY               (ADI_FI_ID)1639 /* isempty(geom) */
+#define ADFI_1640_ISSIMPLE              (ADI_FI_ID)1640 /* issimple(geom) */
+#define ADFI_1641_GEOM_FROM_TEXT        (ADI_FI_ID)1641 /* geomfromtext(text) */
+#define ADFI_1642_GEOM_FROM_WKB         (ADI_FI_ID)1642 /* geomfromwkb(bin) */
+#define ADFI_1643_GEOM_NAME             (ADI_FI_ID)1643 /* iigeomname(i) */
+#define ADFI_1644_GEOM_DIMEN            (ADI_FI_ID)1644 /* iigeomdimensions(i) */
+#define ADFI_1645_DIMENSION             (ADI_FI_ID)1645 /* dimension(geom) */
+#define ADFI_1646_GEOMETRY_TYPE         (ADI_FI_ID)1646 /* geometrytype(geom) */
+#define ADFI_1647_BOUNDARY              (ADI_FI_ID)1647 /* boundary(geom) */
+#define ADFI_1648_ENVELOPE              (ADI_FI_ID)1648 /* envelope(geom) */
+#define ADFI_1649_EQUALS                (ADI_FI_ID)1649 /* equals(geom, geom) */
+#define ADFI_1650_DISJOINT              (ADI_FI_ID)1650 /* disjoint(geom, geom) */
+#define ADFI_1651_INTERSECTS            (ADI_FI_ID)1651 /* intersects(geom, geom) */
+#define ADFI_1652_TOUCHES               (ADI_FI_ID)1652 /* touches(geom, geom) */
+#define ADFI_1653_CROSSES               (ADI_FI_ID)1653 /* crosses(geom, geom) */
+#define ADFI_1654_WITHIN                (ADI_FI_ID)1654 /* within(geom, geom) */
+#define ADFI_1655_CONTAINS              (ADI_FI_ID)1655 /* contains(geom, geom) */
+#define ADFI_1656_RELATE                (ADI_FI_ID)1656 /* relate(geom, geom, char) */
+#define ADFI_1657_DISTANCE              (ADI_FI_ID)1657 /* distance(geom, geom) */
+#define ADFI_1658_INTERSECTION          (ADI_FI_ID)1658 /* intersection(geom, geom) */
+#define ADFI_1659_DIFFERENCE            (ADI_FI_ID)1659 /* difference(geom, geom) */
+#define ADFI_1660_SYMDIFF               (ADI_FI_ID)1660 /* symdifference(geom, geom) */
+#define ADFI_1661_BUFFER_ONE            (ADI_FI_ID)1661 /* buffer(geom, f) */
+#define ADFI_1662_BUFFER_TWO            (ADI_FI_ID)1662 /* buffer(geom, f, vch) */
+#define ADFI_1663_CONVEXHULL            (ADI_FI_ID)1663 /* convexhull(geom) */
+#define ADFI_1664_POINTN                (ADI_FI_ID)1664 /* pointn(linestring, i) */
+#define ADFI_1665_STARTPOINT            (ADI_FI_ID)1665 /* startpoint(curve) */
+#define ADFI_1666_ENDPOINT              (ADI_FI_ID)1666 /* endpoint(curve) */
+#define ADFI_1667_ISCLOSED              (ADI_FI_ID)1667 /* isclosed(curve) */
+#define ADFI_1668_ISRING                (ADI_FI_ID)1668 /* isring(curve) */
+#define ADFI_1669_STLENGTH              (ADI_FI_ID)1669 /* st_length(curve) */
+#define ADFI_1670_CENTROID              (ADI_FI_ID)1670 /* centroid(surface) */
+#define ADFI_1671_PNTONSURFACE          (ADI_FI_ID)1671 /* pointonsurface(surface) */
+#define ADFI_1672_AREA                  (ADI_FI_ID)1672 /* area(surface) */
+#define ADFI_1673_EXTERIORRING          (ADI_FI_ID)1673 /* exteriorring(polygon) */
+#define ADFI_1674_NINTERIORRING         (ADI_FI_ID)1674 /* numinterriorring(polygon) */
+#define ADFI_1675_INTERIORRINGN         (ADI_FI_ID)1675 /* interiorringn(polygon) */
+#define ADFI_1676_NUMGEOMETRIES         (ADI_FI_ID)1676 /* numgeometries(geomcoll) */
+#define ADFI_1677_GEOMETRYN             (ADI_FI_ID)1677 /* geometryn(geomcoll, i) */
+#define ADFI_1678_SRID                  (ADI_FI_ID)1678 /* srid(geom) */
+#define ADFI_1679_POINT_S_FROM_TEXT     (ADI_FI_ID)1679 /* pointfromtext(text, int) */
+#define ADFI_1680_POINT_S_FROM_WKB      (ADI_FI_ID)1680 /* pointfromwkb(bin, int) */
+#define ADFI_1681_LINE_S_FROM_TEXT      (ADI_FI_ID)1681 /* linefromtext(text, int) */
+#define ADFI_1682_LINE_S_FROM_WKB       (ADI_FI_ID)1682 /* linefromwkb(bin, int) */
+#define ADFI_1683_POLY_S_FROM_TEXT      (ADI_FI_ID)1683 /* polyfromtext(text, int) */
+#define ADFI_1684_POLY_S_FROM_WKB       (ADI_FI_ID)1684 /* polyfromwkb(bin, int) */
+#define ADFI_1685_MPOINT_S_FROM_TEXT    (ADI_FI_ID)1685 /* mpointfromtext(text, int) */
+#define ADFI_1686_MPOINT_S_FROM_WKB     (ADI_FI_ID)1686 /* mpointfromwkb(bin, int) */
+#define ADFI_1687_MLINE_S_FROM_TEXT     (ADI_FI_ID)1687 /* mlinefromtext(text, int) */
+#define ADFI_1688_MLINE_S_FROM_WKB      (ADI_FI_ID)1688 /* mlinefromwkb(bin, int) */
+#define ADFI_1689_MPOLY_S_FROM_TEXT     (ADI_FI_ID)1689 /* mpolyfromtext(text, int) */
+#define ADFI_1690_MPOLY_S_FROM_WKB      (ADI_FI_ID)1690 /* mpolyfromwkb(bin, int) */
+#define ADFI_1691_GEOM_S_FROM_TEXT      (ADI_FI_ID)1691 /* geomfromtext(text, int) */
+#define ADFI_1692_GEOM_S_FROM_WKB       (ADI_FI_ID)1692 /* geomfromwkb(bin,int) */
+#define ADFI_1693_NUMPOINTS             (ADI_FI_ID)1693 /* NUMPOINTS(linestring) */
+#define ADFI_1694_GEOM_AS_TEXT_RAW      (ADI_FI_ID)1694 /* AsTextRaw(geom) */
+#define ADFI_1695_GEOM_AS_TEXT_ROUND    (ADI_FI_ID)1695 /* AsTextRound(geom, int) */
+#define ADFI_1696_TRANSFORM             (ADI_FI_ID)1696 /* transform(geom,srid) */

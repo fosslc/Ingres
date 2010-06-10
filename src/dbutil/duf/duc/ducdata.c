@@ -52,6 +52,8 @@
 **	16-Nov-2009 (kschendel) SIR 122890
 **	    Remove NODUPLICATES from any catalogs with unique keys already.
 **	    It's redundant and key-uniqueness suffices.
+**	15-Mar-2010 (troal01)
+**	    Added spatial_ref_sys to Duc_catdef.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
 **     10-feb-2010 (maspa05) b122651
@@ -1732,6 +1734,21 @@ DB_MAXNAME+DB_OWN_MAXNAME+8+8+4+258,
 " with noduplicates",
 "MODIFY iidd_views to hash on table_name, table_owner, text_sequence with compression",
 NULL,
+NULL
+},
+{
+4+259+5+2051+1027,
+0,
+"spatial_ref_sys",
+5,
+"CREATE TABLE spatial_ref_sys("
+"srid INTEGER NOT NULL,"
+"auth_name VARCHAR(256),"
+"auth_srid INTEGER,"
+"srtext VARCHAR(2048),"
+"proj4text VARCHAR(1024))",
+"MODIFY spatial_ref_sys TO BTREE UNIQUE on srid"
+" WITH PAGE_SIZE=8192, COMPRESSION = (data)",
 NULL
 },
 

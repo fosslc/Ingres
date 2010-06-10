@@ -163,6 +163,10 @@
 **	    length of passed string.
 **      10-sep-2008 (gupsh01,stial01)
 **          Fixed calclen for ADI_O1UNIDBL, Added calclen for ADI_O1UNORM
+**  16-Jun-2009 (thich01)
+**      Treat GEOM type the same as LBYTE.
+**  20-Aug-2009 (thich01)
+**      Treat all spatial types the same as LBYTE.
 **	24-Aug-2009 (kschendel) 121804
 **	    Need me.h to satisfy gcc 4.3.
 **	12-Mar-2010 (toumi01) SIR 122403
@@ -2535,6 +2539,13 @@ ADI_LENSPEC        *out_lenspec)
 	    break;
 	  case DB_LVCH_TYPE:
 	  case DB_LBYTE_TYPE:
+	  case DB_GEOM_TYPE:
+          case DB_POINT_TYPE:
+          case DB_MPOINT_TYPE:
+          case DB_LINE_TYPE:
+          case DB_MLINE_TYPE:
+          case DB_POLY_TYPE:
+          case DB_MPOLY_TYPE:
 	  case DB_LNVCHR_TYPE:
 	    out_lenspec->adi_lncompute = ADI_COUPON;
 	    break;
@@ -2629,6 +2640,13 @@ ADI_LENSPEC        *out_lenspec)
 	    break;
 	  case DB_LVCH_TYPE:      
 	  case DB_LBYTE_TYPE:      
+	  case DB_GEOM_TYPE:
+          case DB_POINT_TYPE:
+          case DB_MPOINT_TYPE:
+          case DB_LINE_TYPE:
+          case DB_MLINE_TYPE:
+          case DB_POLY_TYPE:
+          case DB_MPOLY_TYPE:
 	  case DB_LNVCHR_TYPE:
 	    out_lenspec->adi_lncompute = ADI_COUPON;
 	    break;
@@ -2721,6 +2739,13 @@ ADI_LENSPEC        *out_lenspec)
             break;
           case DB_LVCH_TYPE:
           case DB_LBYTE_TYPE:
+          case DB_GEOM_TYPE:
+          case DB_POINT_TYPE:
+          case DB_MPOINT_TYPE:
+          case DB_LINE_TYPE:
+          case DB_MLINE_TYPE:
+          case DB_POLY_TYPE:
+          case DB_MPOLY_TYPE:
           case DB_LNVCHR_TYPE:
             out_lenspec->adi_lncompute = ADI_COUPON;
             break;
@@ -2807,6 +2832,13 @@ ADI_LENSPEC        *out_lenspec)
             break;
           case DB_LVCH_TYPE:
           case DB_LBYTE_TYPE:
+          case DB_GEOM_TYPE:
+          case DB_POINT_TYPE:
+          case DB_MPOINT_TYPE:
+          case DB_LINE_TYPE:
+          case DB_MLINE_TYPE:
+          case DB_POLY_TYPE:
+          case DB_MPOLY_TYPE:
           case DB_LNVCHR_TYPE:
             out_lenspec->adi_lncompute = ADI_COUPON;
             break;

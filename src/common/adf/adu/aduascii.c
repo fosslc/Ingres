@@ -73,6 +73,10 @@
 **	19-feb-2009 (joea)
 **	    Remove #ifdefs from 5-mar-2008 fix to adu_copascii so that it's
 **	    visible on all platforms.
+**  16-Jun-2009 (thich01)
+**      Treat GEOM type the same as LBYTE.
+**  20-Aug-2009 (thich01)
+**      Treat all spatial types the same as LBYTE.
 **      31-aug-2009 (joea)
 **          Add case for DB_BOO_TYPE in adu_ascii.
 **/
@@ -326,6 +330,13 @@ DB_DATA_VALUE		*rdv)
 
       case DB_LVCH_TYPE:
       case DB_LBYTE_TYPE:
+      case DB_GEOM_TYPE:
+      case DB_POINT_TYPE:
+      case DB_MPOINT_TYPE:
+      case DB_LINE_TYPE:
+      case DB_MLINE_TYPE:
+      case DB_POLY_TYPE:
+      case DB_MPOLY_TYPE:
       case DB_LNVCHR_TYPE:
       case DB_LCLOC_TYPE:
       case DB_LBLOC_TYPE:

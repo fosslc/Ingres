@@ -345,6 +345,8 @@
 **          Added E_DM016B_LOCK_INTR_FA
 **	15-feb-2010 (toumi01)
 **	    Add attribute fields and messages for column encryption.
+**	24-Feb-2010 (troal01)
+**	    Add E_DM5423_SRID_MISMATCH
 **      14-May-2010 (stial01)
 **          Make attname the last col in iiattribute (DM_COLUMN)
 [@history_template@]...
@@ -1156,7 +1158,7 @@ typedef struct _DM_ERR
 
 /* Misc. warning and informational messages */
 #define		    W_DM5422_IIDBDB_NOT_JOURNALED	(E_DM_MASK + 0x5422L)
-
+#define		    E_DM5423_SRID_MISMATCH  		(E_DM_MASK + 0x5423L)
 #define             E_DM9D00_IISEQUENCE_NOT_FOUND	(E_DM_MASK + 0x9D00L)
 #define             E_DM9D01_SEQUENCE_EXCEEDED 		(E_DM_MASK + 0x9D01L)
 #define             E_DM9D02_SEQUENCE_NOT_FOUND		(E_DM_MASK + 0x9D02L)

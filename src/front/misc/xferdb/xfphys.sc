@@ -423,6 +423,10 @@ i4	output_flags2;
 ** Outputs:
 **
 **	Returns:
+** History:
+**  15-Mar-2010 (troal01)
+**      Check t->becat and t->fecat instead of the first two letters.
+**      Change necessary for spatial_ref_sys.
 */
 
 void
@@ -436,7 +440,7 @@ XF_TABINFO	*t;
        used to journal system catalogs.
     */
     if ((t->journaled[0] == 'Y' || t->journaled[0] == 'C') &&
-       (STbcompare (t->name,2,ERx("ii"),2,TRUE))) 
+       (!t->becat) && (!t->fecat))
     {
 	xfwrite(Xf_in, ERx("set journaling on "));
 	xfwrite_id(Xf_in, t->name);

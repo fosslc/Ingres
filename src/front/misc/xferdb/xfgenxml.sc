@@ -611,8 +611,12 @@ static	char lfmt[] = "%ld";
 **	    Added support for ANSI date/time types.
 **      21-Jan-2009 (coomi01) b121370
 **          Add support for unicode datatypes NCHAR, NVARCHAR and LONG NVARCHAR.
+**  16-Jun-2009 (thich01)
+**      Add GEOM type.
 **      30-Jul-2009 (coomi01) b122370
 **          Use xfxmlwrite() to send default value correctly.
+**  20-Aug-2009 (thich01)
+**      Add all spatial types.
 **      28-Oct-2009 (coomi01) b122786
 **          Add test to ensure no attempt to deref a null pointer on default value.
 */
@@ -739,6 +743,27 @@ xmlprintcols (XF_TABINFO *tp)
         case DB_LBYTE_TYPE:
             xfwrite(Xf_out, ERx("\"LONG BYTE\""));
             break;
+        case DB_GEOM_TYPE:
+            xfwrite(Xf_out, ERx("\"GEOM\""));
+            break;
+        case DB_POINT_TYPE:
+            xfwrite(Xf_out, ERx("\"POINT\""));
+            break;
+        case DB_MPOINT_TYPE:
+            xfwrite(Xf_out, ERx("\"MPOINT\""));
+            break;
+        case DB_LINE_TYPE:
+            xfwrite(Xf_out, ERx("\"LINE\""));
+            break;
+        case DB_MLINE_TYPE:
+            xfwrite(Xf_out, ERx("\"MLINE\""));
+            break;
+        case DB_POLY_TYPE:
+            xfwrite(Xf_out, ERx("\"POLY\""));
+            break;
+        case DB_MPOLY_TYPE:
+            xfwrite(Xf_out, ERx("\"MPOLY\""));
+            break;
         case DB_NCHR_TYPE:
             xfwrite(Xf_out, ERx("\"NCHAR\""));
             break;
@@ -804,6 +829,13 @@ xmlprintcols (XF_TABINFO *tp)
         case DB_LBIT_TYPE:
         case DB_DTE_TYPE:
         case DB_LBYTE_TYPE:
+        case DB_GEOM_TYPE:
+        case DB_POINT_TYPE:
+        case DB_MPOINT_TYPE:
+        case DB_LINE_TYPE:
+        case DB_MLINE_TYPE:
+        case DB_POLY_TYPE:
+        case DB_MPOLY_TYPE:
 	default:
             break;
         }

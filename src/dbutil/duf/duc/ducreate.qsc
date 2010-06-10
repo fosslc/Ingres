@@ -412,6 +412,10 @@ EXEC SQL include SQLCA;
 **	    Compiler warning fixes.
 **	12-Nov-2009 (kschendel) SIR 122882
 **	    cmptlvl is now integer, fix here.
+**  15-Mar-2010 (troal01)
+**      Added -geo and -nogeo flags, -geo is the default
+**      These flags allow or restrict the pre-loading
+**      of EPSG data into spatial_ref_sys.
 **	16-Mar-2010 (frima01) SIR 121619
 **	    Changed DU_DBIDDBDB to IIDBDB_ID, located in dmf.h.
 **      14-Apr-2010 (hanal04) SIR 123574
@@ -838,6 +842,12 @@ char	    *argv[];
                             0, ERx("Createdb"));
             break;
 	}
+	
+	/*
+	 * If dbdb is being created, turn off geo
+	 */
+    if(duc_modes.duc_dbdb_flag)
+        duc_dbenv.du_geo_flag = FALSE;
 
 	/* Issue an informative message to the user that the database is being
 	** created.  This also marks the point of no return.  At this point
@@ -1931,6 +1941,7 @@ DU_STATUS
 	i4		try_cnt;
 
 #define		DU_DBID_MAXTRYS		100
+#define		DU_DBIDDBDB		  1
 #define		DU_DBIDMIN		  2
 #define		DLOCK_WAIT_INTERVAL	((u_i4) 2000)
 
@@ -1977,7 +1988,7 @@ DU_STATUS
 	    if (!STcompare(du_dbenv->du_ddbname, DU_DBDBNAME))
 	    {
 		/* The database database has a special id. */
-		du_dbenv->du_dbid   = IIDBDB_ID;
+		du_dbenv->du_dbid   = DU_DBIDDBDB;
 	    	if (no_upd)
 		    break;
 	    }
@@ -1985,7 +1996,7 @@ DU_STATUS
 	    {
 		du_dbenv->du_dbid   = TMsecs();
 
-		if (du_dbenv->du_dbid <= IIDBDB_ID)
+		if (du_dbenv->du_dbid <= DU_DBIDDBDB)
 		    du_dbenv->du_dbid	= DU_DBIDMIN;
 	    }
 
@@ -3985,7 +3996,23 @@ in duc_db_evinit()
 		}
 		break;
 	
+	      case 'g':
+	      if(STncasecmp(&p[1], "geo", 3) == 0)
+	      {
+	          duc_dbenv->du_geo_flag = TRUE;
+	          break;
+	      }
+	      else
+	      {
+	      		return(du_error(duc_errcb, E_DU3121_UNKNOWN_FLAG_CR, 2, 0, p));
+	      }
+	      break;
 	      case 'n':
+	      if(STncasecmp(&p[1], "nogeo", 5) == 0)
+	      {
+	          duc_dbenv->du_geo_flag = FALSE;
+	          break;
+	      }
 	      case 'i':
 		duc_modes->duc_national_flag = TRUE;
 
@@ -4695,6 +4722,7 @@ DU_ERROR		*duc_errcb;
     /* Initialize the system utility environment */
     du_envinit(duc_dbenv);
     Duc_dbenv		= duc_dbenv;
+    duc_dbenv->du_geo_flag = TRUE;
 
     /* Initialize the system utility error-handling struct */
     du_reset_err(duc_errcb);

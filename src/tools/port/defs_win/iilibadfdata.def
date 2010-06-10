@@ -47,3 +47,5 @@ Adu_monthtab		@33	DATA
 ;Adu_multi_tmplts	@34	DATA			
 Adu_weekdays		@35	DATA			
 Adu_date_format_list	@36	DATA			
+geom_type_mapping	@37 DATA
+geometry_types		@38 DATA

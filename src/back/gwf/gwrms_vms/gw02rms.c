@@ -110,6 +110,10 @@
 **	    from RMS GW code as the use is no longer allowed
 **	24-feb-2005 (abbjo03)
 **	    Remove include of obsolete gwxit.h.
+**  16-Jun-2009 (thich01)
+**      Treat GEOM type the same as LBYTE.
+**  20-Aug-2009 (thich01)
+**      Treat all spatial types the same as LBYTE.
 **	12-feb-2010 (abbjo03, wanfr01) Bug 123139
 **	    cv.h needs to be added for function definitions
 */
@@ -772,6 +776,13 @@ gw02__fmt
 	    break;
 	case	DB_LVCH_TYPE:
 	case	DB_LBYTE_TYPE:
+	case	DB_GEOM_TYPE:
+        case    DB_POINT_TYPE:
+        case    DB_MPOINT_TYPE:
+        case    DB_LINE_TYPE:
+        case    DB_MLINE_TYPE:
+        case    DB_POLY_TYPE:
+        case    DB_MPOLY_TYPE:
 	    xatt->glength = att->att_width;
             break;
 	default:
@@ -793,6 +804,13 @@ gw02__fmt
 	case	DB_BYTE_TYPE:
 	case	DB_VBYTE_TYPE:
 	case	DB_LBYTE_TYPE:
+	case	DB_GEOM_TYPE:
+        case    DB_POINT_TYPE:
+        case    DB_MPOINT_TYPE:
+        case    DB_LINE_TYPE:
+        case    DB_MLINE_TYPE:
+        case    DB_POLY_TYPE:
+        case    DB_MPOLY_TYPE:
 	    xatt->gtype = RMSGW_NL_FIXSTR;
 	    break;
 

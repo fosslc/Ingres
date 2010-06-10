@@ -103,6 +103,10 @@
 **	    from RMS GW code as the use is no longer allowed
 **      22-dec-2008 (stegr01)
 **          Itanium VMS port.
+**  16-Jun-2009 (thich01)
+**      Treat GEOM type the same as LBYTE.
+**  20-Aug-2009 (thich01)
+**      Treat all spatial types the same as LBYTE.
 **      24-nov-2009 (stegr01)
 **          Replace ALPHA and IA64 by axm_vms and i64_vms
 [@history_template@]...
@@ -1618,6 +1622,13 @@ rms_istrcvt
 	    case    RMSGW_NL_FIXSTR:
 	    case    RMSGW_NL_VARSTR:
                 if ( outdv->db_datatype != DB_BYTE_TYPE &&
+                     outdv->db_datatype != DB_GEOM_TYPE &&
+                     outdv->db_datatype != DB_POINT_TYPE &&
+                     outdv->db_datatype != DB_MPOINT_TYPE &&
+                     outdv->db_datatype != DB_LINE_TYPE &&
+                     outdv->db_datatype != DB_MLINE_TYPE &&
+                     outdv->db_datatype != DB_POLY_TYPE &&
+                     outdv->db_datatype != DB_MPOLY_TYPE &&
                      outdv->db_datatype != DB_LBYTE_TYPE )
                 {
                     /*

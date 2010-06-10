@@ -125,6 +125,8 @@
 **          be compatible with 32 bit Ingres.
 **          The code within the #ifdef and #endif is only required for 
 **          platforms that support 64-bit Ingres.
+**  16-Jun-2009 (thich01)
+**      Treat GEOM type the same as LBYTE.
 **	24-Aug-2009 (stephenb/kschendel) 121804
 **	    Update some of the function declarations to fix gcc 4.3 problems.
 **/
@@ -1194,6 +1196,7 @@ PTR     data;                           /* union of data type ptrs */
 	    switch (abs(tmpnat))
 	    {
 		case DB_LBYTE_TYPE:
+		case DB_GEOM_TYPE:
 		case DB_LVCH_TYPE:
 		case DB_LBIT_TYPE:
 			IIlbqcb->ii_lq_lodata.ii_lo_datatype = tmpnat;

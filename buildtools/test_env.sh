@@ -124,6 +124,10 @@ do
     esac
 done
 
+# Clear $1 argument parms so that they are not passed
+# to sourced scripts.
+set --
+
 if [ -f ${BUILDTOOLS}/set_env.sh ]
 then
     if [ "$noclear" ] 

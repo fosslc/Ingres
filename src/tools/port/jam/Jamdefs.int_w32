@@ -140,6 +140,8 @@
 #	    Correct build problem caused by previous change. 
 #	    Don't eliminate WCHART.  Make /Zc:wchar_t- the default for xerces
 #	    2.7 and make the default unset for all newer xerces versions.
+#	22-Mar-2010 (troal01)
+#	    Add GEOSLIB for geospatial.
 #       15-May-2010 (maspa05)
 #           Set FLEX to include FLEX_FLAG which for later versions (>=2.5.31)
 #           of flex should be --nounistd and earlier ones should be an empty
@@ -188,6 +190,7 @@ ODBCLIBS	default = odbc32.lib odbccp32.lib comctl32.lib ;
 VERSIONLIB	default = version.lib ;
 PSAPILIB      	default = psapi.lib ;
 HTMLHELPLIB	default = htmlhelp.lib ;
+GEOSLIB		default = $(GEOS_LOC)/geos_c_i.lib ;
 GV     		default = \"$(ING_SRC)/cl/clf/gv/gver.obj\" ;
 APACHECORE	default = $(ING_SRC)/front/ice/lib/ApacheCore.lib ;
 #TERMDR		default = $(ING_SRC)/front/frontcl/termdr/termdr.obj ;
@@ -460,7 +463,7 @@ LDLIBMACH = /nologo $(DLLFLAGS) ;
 LINKFLAGS = /nologo $(MISCFLAGS) $(DLLFLAGS) ;
 CCLDMACH  = /nologo $(DLLFLAGS) ;
 
-LINKLIBS = $(SYSLIBS) $(ADVAPILIB) $(NETAPILIB) $(USERLIB) $(GDILIB) $(MORELIB) $(RPCLIB) $(CLUSAPI) $(GV) $(PSAPILIB) ;
+LINKLIBS = $(SYSLIBS) $(ADVAPILIB) $(NETAPILIB) $(USERLIB) $(GDILIB) $(MORELIB) $(RPCLIB) $(CLUSAPI) $(GV) $(PSAPILIB) $(GEOSLIB) ;
 STDHDRS  = \"$(VISUALC)\\include\" ;
 KEEPOBJ = true ;
 SHELLHEADER = "" ;

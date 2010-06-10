@@ -207,6 +207,10 @@
 **	    Modify 1994 fix for i4's long vs. int decision to prefer int.
 **      28-jan-2009 (stial01)
 **          Use DB_MAXNAME for database objects, LNAME_MAX for language
+**  16-Jun-2009 (thich01)
+**      Treat GEOM type the same as LBYTE.
+**  20-Aug-2009 (thich01)
+**      Treat all spatial types the same as LBYTE.
 **      18-feb-2010 (joea)
 **          Add support for DB_BOO_TYPE.  Remove obsolete PL/I code.
 */
@@ -460,6 +464,13 @@ dc_dumpdesc()
 	if (datatype == DB_DEC_TYPE
 	    || datatype == DB_LVCH_TYPE
 	    || datatype == DB_LBYTE_TYPE
+	    || datatype == DB_GEOM_TYPE
+	    || datatype == DB_POINT_TYPE
+	    || datatype == DB_MPOINT_TYPE
+	    || datatype == DB_LINE_TYPE
+	    || datatype == DB_MLINE_TYPE
+	    || datatype == DB_POLY_TYPE
+	    || datatype == DB_MPOLY_TYPE
 	    || datatype == DB_LBIT_TYPE)
 	    adflength = atinfo.extern_length;
 	else

@@ -202,6 +202,10 @@ FUNC_EXTERN DB_STATUS	    adi_resolve();
 **	    Remove dead code, unused adbase parameters.
 **	04-May-2010 (kiria01) b123680
 **	    Correct the bad stack referencing code in dt_family processing
+**  16-Jun-2009 (thich01)
+**      Treat GEOM type the same as LBYTE.
+**  20-Aug-2009 (thich01)
+**      Treat all spatial types the same as LBYTE.
 [@history_template@]...
 **/
 
@@ -860,7 +864,10 @@ opc_adinstr(
     {
 	tempdt = abs(ops[opno].opr_dt);
 	if (tempdt == DB_LVCH_TYPE || tempdt == DB_LBYTE_TYPE || 
-			tempdt == DB_LNVCHR_TYPE )
+			tempdt == DB_LNVCHR_TYPE || tempdt == DB_GEOM_TYPE   ||
+                        tempdt == DB_POINT_TYPE  || tempdt == DB_MPOINT_TYPE ||
+                        tempdt == DB_LINE_TYPE   || tempdt == DB_MLINE_TYPE  ||
+                        tempdt == DB_POLY_TYPE   || tempdt == DB_MPOLY_TYPE  )
 	{
 	    qadf->qen_mask |= QEN_HAS_PERIPH_OPND;
 	    break;
@@ -1500,7 +1507,8 @@ opc_bsmap(
 **	06-jan-2009 (gupsh01)
 **	    On UTF-8 installations, when coercing between a LOB-Locator 
 **	    and a long type do not introduce Unicode normalization.
-**
+**      24-mar-2010 (thich01)
+**          Add a check for DB_GEOM_TYPE when src and res types are not equal.
 */
 VOID
 opc_adtransform(
@@ -1667,7 +1675,11 @@ opc_adtransform(
        ** the special case of non-comparison operators).
        */
 
-       if (abs_srctype != abs_restype
+       /* Check if both types are in the GEOM Family */
+       /* If so, the types are effectively equal. */
+       if ((abs_srctype != abs_restype &&
+           !(adi_dtfamily_retrieve(abs_srctype) == DB_GEOM_TYPE &&
+             adi_dtfamily_retrieve(abs_restype) == DB_GEOM_TYPE))
                || (resop->opr_len == OPC_UNKNOWN_LEN))
        {
        	  PTR	 dataptr = NULL;

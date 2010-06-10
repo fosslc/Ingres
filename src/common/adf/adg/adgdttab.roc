@@ -194,17 +194,40 @@ LIBRARY = IMPADFLIBDATA
 **	    Added DB_PAT_TYPE datatype for PATCOMP support.
 **      18-dec-2008 (joea)
 **          Replace READONLY/WSCREADONLY by const.
+**      25-Nov-08 (macde01)
+**          Add new spatial datatype POINT (DB_PT_TYPE).
+**  27-Feb-2009 (thich01)
+**      Add the spatial types as blob synonyms.
 **	09-Apr-2009 (kiria01) b121903
 **	    Add boolean compare to allow tree compares to cope
 **	    with boolean nodes.
+**  16-Jun-2009 (thich01)
+**      Add a new GEOM type to be treated as an LBYTE.  Change the spatial type
+**      from blob synonyms to geom synonyms.  The GEOM type will be index-able.
+**  06-Jul-2009 (thich01)
+**      Add a generic geometry type before all the spatial synonyms.  This will
+**      make the help output more intuitive.
+**  20-Aug-2009 (thich01)
+**      Change the spatial types to distinct types and create the DB_GEOM_TYPE
+**      family.  Move Denise's type to PointNative.
 **      05-oct-2009 (joea)
 **          Change "boolean" row of Adi_1RO_datatypes array to allow BOOLEAN
 **          to be stored in tables (AD_INDB flag), and add functions to the
 **          "boolean" adi_dt_com_vect (common datatype functions).
 **      12-Nov-2009 (coomi01) Bug 122840
 **          Add compare funtion, adu_longcmp, for long byte
+**  16-Feb-2010 (thich01)
+**      Added geometry as a DB_GEOM_TYPE synonym.
+**      09-mar-2010 (thich01)
+**          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.  Add NOSORT
+**          and NOKEY back to GEOM types.  There is an exception in pslindx.c
+**          for GEOM family now.
 **	18-Mar-2010 (kiria01) b123438
 **	    Add the missing initialiser to placate the compiler.
+**      25-Mar-2010 (thich01)
+**          Added geometry and geometerycollection to the DB_GEOM_FAMILY
+**      02-Apr-2010 (thich01)
+**          Added a rtree-cmp function to the spatial types for indexing.
 **/
 
 
@@ -1243,6 +1266,166 @@ GLOBALCONSTDEF	 ADI_DATATYPE     Adi_1RO_datatypes[] = {
 		adc_2tmcvt_rti,     NULL,               NULL,
 		NULL
 	    }
+    },
+/*
+** point (native version)
+*/
+    { { "pointNative" },    DB_PT_TYPE, 0, AD_INDB, 0,
+        { 0, }, { 0, }, NULL, { FALSE, FALSE, 0, 0, 0 }, 0,
+            {   adc_1lenchk_rti,    adu_1pt_cmp,        adu_mbldkey,
+                adc_1getempty_rti,  adc_1klen_rti,      adc_2kcvt_rti,
+                adc_1valchk_rti,    adc_inplace_hashprep, adc_1helem_rti,
+                adc_1hmin_rti,      adc_1hmax_rti,      adc_2dhmin_rti,
+                adc_1dhmax_rti,     adc_1isminmax_rti,  NULL,
+                adc_1hg_dtln_rti,   NULL,               adc_1minmaxdv_rti,
+                NULL,               NULL,               adc_1tmlen_rti,
+                adc_2tmcvt_rti,     NULL,               NULL,
+                NULL }
+    },
+/* GeometryCollection type - to be treated the same as LBYTE */
+    { { "GeometryCollection" },    DB_GEOM_TYPE, DB_GEOM_TYPE,
+            (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
+                AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
+    { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,
+            /*  { embed#, (#), def len, scale, prec } */
+        {   adc_1lenchk_rti,    adu_rtree_cmp,           NULL,
+        adc_1getempty_rti,  NULL,               NULL,
+        adc_1valchk_rti,    NULL,               NULL,
+        NULL,               NULL,               NULL,
+        NULL,               NULL,               adc_lvch_xform,
+        NULL,               NULL,               NULL,
+        NULL,           NULL,       adc_1tmlen_rti,
+        adc_2tmcvt_rti,     adc_1dbtoev_ingres, NULL,
+        NULL }
+    },
+/* Geometry type - synonym of Geometry Collection.  
+   To be treated the same as LBYTE */
+    { { "Geometry" },    DB_GEOM_TYPE, DB_GEOM_TYPE,
+            (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
+                AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
+    { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,
+            /*  { embed#, (#), def len, scale, prec } */
+        {   adc_1lenchk_rti,    adu_rtree_cmp,           NULL,
+        adc_1getempty_rti,  NULL,               NULL,
+        adc_1valchk_rti,    NULL,               NULL,
+        NULL,               NULL,               NULL,
+        NULL,               NULL,               adc_lvch_xform,
+        NULL,               NULL,               NULL,
+        NULL,           NULL,       adc_1tmlen_rti,
+        adc_2tmcvt_rti,     adc_1dbtoev_ingres, NULL,
+        NULL }
+    },
+/* Point in the geometry family */
+    { { "Point" },    DB_POINT_TYPE, DB_GEOM_TYPE,
+            (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
+                AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
+    { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,
+            /*  { embed#, (#), def len, scale, prec } */
+        {   adc_1lenchk_rti,    adu_rtree_cmp,           NULL,
+        adc_1getempty_rti,  NULL,               NULL,
+        adc_1valchk_rti,    NULL,               NULL,
+        NULL,               NULL,               NULL,
+        NULL,               NULL,               adc_lvch_xform,
+        NULL,               NULL,               NULL,
+        NULL,           NULL,       adc_1tmlen_rti,
+        adc_2tmcvt_rti,     adc_1dbtoev_ingres, NULL,
+        NULL }
+    },
+/* MultiPoint in the geometry family */
+    { { "MultiPoint" },    DB_MPOINT_TYPE, DB_GEOM_TYPE,
+            (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
+                AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
+    { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,
+            /*  { embed#, (#), def len, scale, prec } */
+        {   adc_1lenchk_rti,    adu_rtree_cmp,           NULL,
+        adc_1getempty_rti,  NULL,               NULL,
+        adc_1valchk_rti,    NULL,               NULL,
+        NULL,               NULL,               NULL,
+        NULL,               NULL,               adc_lvch_xform,
+        NULL,               NULL,               NULL,
+        NULL,           NULL,       adc_1tmlen_rti,
+        adc_2tmcvt_rti,     adc_1dbtoev_ingres, NULL,
+        NULL }
+    },
+/* LineString in the geometry family*/
+    { { "LineString" },    DB_LINE_TYPE, DB_GEOM_TYPE,
+            (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
+                AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
+    { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,
+            /*  { embed#, (#), def len, scale, prec } */
+        {   adc_1lenchk_rti,    adu_rtree_cmp,           NULL,
+        adc_1getempty_rti,  NULL,               NULL,
+        adc_1valchk_rti,    NULL,               NULL,
+        NULL,               NULL,               NULL,
+        NULL,               NULL,               adc_lvch_xform,
+        NULL,               NULL,               NULL,
+        NULL,           NULL,       adc_1tmlen_rti,
+        adc_2tmcvt_rti,     adc_1dbtoev_ingres, NULL,
+        NULL }
+    },
+/* MultiLineString in the geometry family*/
+    { { "MultiLineString" },    DB_MLINE_TYPE, DB_GEOM_TYPE,
+            (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
+                AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
+    { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,
+            /*  { embed#, (#), def len, scale, prec } */
+        {   adc_1lenchk_rti,    adu_rtree_cmp,           NULL,
+        adc_1getempty_rti,  NULL,               NULL,
+        adc_1valchk_rti,    NULL,               NULL,
+        NULL,               NULL,               NULL,
+        NULL,               NULL,               adc_lvch_xform,
+        NULL,               NULL,               NULL,
+        NULL,           NULL,       adc_1tmlen_rti,
+        adc_2tmcvt_rti,     adc_1dbtoev_ingres, NULL,
+        NULL }
+    },
+/* Polygon in the geometry family */
+    { { "Polygon" },    DB_POLY_TYPE, DB_GEOM_TYPE,
+            (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
+                AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
+    { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,
+            /*  { embed#, (#), def len, scale, prec } */
+        {   adc_1lenchk_rti,    adu_rtree_cmp,           NULL,
+        adc_1getempty_rti,  NULL,               NULL,
+        adc_1valchk_rti,    NULL,               NULL,
+        NULL,               NULL,               NULL,
+        NULL,               NULL,               adc_lvch_xform,
+        NULL,               NULL,               NULL,
+        NULL,           NULL,       adc_1tmlen_rti,
+        adc_2tmcvt_rti,     adc_1dbtoev_ingres, NULL,
+        NULL }
+    },
+/* MultiPolygon in the geometry family */
+    { { "MultiPolygon" },    DB_MPOLY_TYPE, DB_GEOM_TYPE,
+            (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
+                AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
+    { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,
+            /*  { embed#, (#), def len, scale, prec } */
+        {   adc_1lenchk_rti,    adu_rtree_cmp,           NULL,
+        adc_1getempty_rti,  NULL,               NULL,
+        adc_1valchk_rti,    NULL,               NULL,
+        NULL,               NULL,               NULL,
+        NULL,               NULL,               adc_lvch_xform,
+        NULL,               NULL,               NULL,
+        NULL,           NULL,       adc_1tmlen_rti,
+        adc_2tmcvt_rti,     adc_1dbtoev_ingres, NULL,
+        NULL }
+    },
+/* NBR type - DB_GEOM_TYPE family for indexing, but not a typcial geom type.*/
+    { { "NBR" },    DB_NBR_TYPE, DB_GEOM_TYPE,
+			(AD_INTR | AD_INDB | AD_CONDEXPORT | AD_NOSORT | 
+                         AD_NOKEY),  0,
+	{ 0, }, { 0, },	    NULL,	{ FALSE, TRUE, 1, 0, 0 }, 0,
+			/*	{ embed#, (#), def len, scale, prec } */
+	    {   adc_1lenchk_rti,    adu_rtree_cmp,	adu_bitbldkey,
+		adc_1getempty_rti,  adc_1klen_rti,	adc_2kcvt_rti,
+		adc_1valchk_rti,    adc_inplace_hashprep, adc_1helem_rti,
+		adc_1hmin_rti, 	    adc_1hmax_rti,	adc_2dhmin_rti,
+		adc_1dhmax_rti,	    adc_1isminmax_rti,  NULL,
+		adc_1hg_dtln_rti,   NULL,	        adc_1minmaxdv_rti,
+		NULL,		    NULL,		adc_1tmlen_rti,
+		adc_2tmcvt_rti,     adc_1dbtoev_ingres, NULL,
+        NULL }
     },
 /*
 ** END OF DATA TYPES

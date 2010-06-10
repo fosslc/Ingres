@@ -1697,6 +1697,12 @@ E_AD5512_BAD_DTID2_FOR_ESCAPE:SS5000B_INTERNAL_ERROR
 E_AD5513_BAD_DTLEN2_FOR_ESCAPE:SS5000B_INTERNAL_ERROR
 "The 2nd operand's length for the ADE_ESC_CHAR instruction must be 2."
 
+E_AD5600_GEOSPATIAL_USER:SS50000_MISC_ERRORS
+"An error has occured in Ingres Geospatial: %0c"
+E_AD5601_GEOSPATIAL_INTERNAL:SS5000B_INTERNAL_ERROR
+"An internal error has occured in Ingres Geospatial: %0c"
+E_AD5602_SPATIAL_VERSION:SS5000B_INTERNAL_ERROR
+"An invalid spatial data version was found."
 E_AD6000_BAD_MATH_ARG:SS5000B_INTERNAL_ERROR
 "Invalid argument in call to math function."
 E_AD6001_BAD_MATHOPT:SS5000B_INTERNAL_ERROR

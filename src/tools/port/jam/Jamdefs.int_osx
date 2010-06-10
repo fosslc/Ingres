@@ -65,6 +65,7 @@ DIRENT default = -DDIRENT ;
 DIRFUNC default = -DDIRFUNC ;
 NO_DIRFUNC default = -DNO_DIRFUNC ;
 SYS5 default = -DSYS5 ;
+SVR_ARLIB = "TRUE" ;
 CXX	= "g++" ;
 CXX_DEFS	= "" ;
 UNDEFFLAG  = "-u _" ;

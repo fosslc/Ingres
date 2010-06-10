@@ -410,6 +410,9 @@
 **          Check if table has segmented rows (instead of if pagetype supports)
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Replace DMPP_PAGE* with DMP_PINFO* where needed.
+**	26-Feb-2010 (troal01)
+**	    Changes related to the added union cpn_temp_storage to DMPE_COUPON
+** TODO: The above all went out need to revisit.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
 **	4-May-2010 (kschendel)

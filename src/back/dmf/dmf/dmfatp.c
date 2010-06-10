@@ -549,6 +549,8 @@
 **	19-Nov-2009 (kschendel) SIR 122890
 **	    uleFormat doesn't necessarily return a null terminated string;
 **	    the returned string has to be null terminated by hand.
+**	16-Mar-2010 (troal01)
+**	    Added dmf_get_srs FEXI.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
 **/
@@ -5624,6 +5626,7 @@ DMP_DCB	    *dcb)
 	{
 	    FUNC_EXTERN DB_STATUS	dmf_tbl_info();
 	    FUNC_EXTERN DB_STATUS	dmf_last_id();
+	    FUNC_EXTERN DB_STATUS	dmf_get_srs();
  
 	    status = adg_add_fexi(&adf_cb, ADI_01PERIPH_FEXI, dmpe_call);
 	    if (status != E_DB_OK)
@@ -5660,7 +5663,15 @@ DMP_DCB	    *dcb)
 		SETDBERR(&jsx->jsx_dberr, 0, E_DM120C_ATP_ADF_ERROR);
 		break;
 	    }
-
+	    status = adg_add_fexi(&adf_cb, ADI_08GETSRS_FEXI,
+				  dmf_get_srs );
+	    if (status != E_DB_OK)
+	    {
+		uleFormat(&adf_cb.adf_errcb.ad_dberror, 0,
+		    0, ULE_LOG, NULL, NULL, 0, NULL, &local_err, 0);
+		SETDBERR(&jsx->jsx_dberr, 0, E_DM120C_ATP_ADF_ERROR);
+		break;
+	    }
 	}
 	
 	/*

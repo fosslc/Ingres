@@ -104,6 +104,10 @@
 **	    Add 8-byte int case.
 **      3-aug-2005 (jenjo02)
 **          Check for representation change if d1_isnull && d2_isnull (b114887)
+**  16-Jun-2009 (thich01)
+**      Treat GEOM type the same as LBYTE.
+**  20-Aug-2009 (thich01)
+**      Treat all spatial types the same as LBYTE.
 **/
 
 
@@ -339,6 +343,13 @@ i4		    *adt_nkey_change)	/* Place to put cmp result. */
 	      case DB_CHA_TYPE:
 	      case DB_LVCH_TYPE:
 	      case DB_LBYTE_TYPE:
+	      case DB_GEOM_TYPE:
+              case DB_POINT_TYPE:
+              case DB_MPOINT_TYPE:
+              case DB_LINE_TYPE:
+              case DB_MLINE_TYPE:
+              case DB_POLY_TYPE:
+              case DB_MPOLY_TYPE:
 	      case DB_LNVCHR_TYPE:
 	      case DB_BYTE_TYPE:
 	      case DB_TABKEY_TYPE:

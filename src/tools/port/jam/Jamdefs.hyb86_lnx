@@ -71,6 +71,8 @@
 #	    19-Jun edit broke large-file-awareness on 32-bit;  fix.
 #	    Delete even more Datallegro stuff that isn't supposed to be
 #	    in here (yet).
+#	19-Nov-2009 (thich01)
+#	    Add GEOS_LOC and GEOS64_LOC for geospatial library locations
 #	11-Jan-2010 (bonro01)
 #	    Replace -lgcc_s with -shared-libgcc in LDLIBMACH32.
 #	    The RHEL4 gcc 32bit build environmnt does not have a 32bit shared
@@ -154,8 +156,8 @@ CGISFX = cgi ;
 LDLIBPATH64 = /usr/local/ssl/lib /lib64 /usr/lib64 /usr/local/lib64 ;
 LDLIBPATH32 = /lib /usr/lib /usr/local/lib ;
 LIBMACH = ;
-LDLIBMACH64 = -lpthread -lrt -lm -lc -lcrypt -ldl -lgcc_s ;
-LDLIBMACH32 = -lpthread -lrt -lm -lc -lcrypt -ldl -shared-libgcc ;
+LDLIBMACH64 = -L $(GEOS_LOC) -lpthread -lrt -lm -lc -lcrypt -ldl -lgcc_s -lgeos_c ;
+LDLIBMACH32 = -L $(GEOS_LOC) -L $(GEOS64_LOC) -lpthread -lrt -lm -lc -lcrypt -ldl -shared-libgcc -lgeos_c ;
 LD_ICE_FLAGS = ;
 ICE_EXT               = so ;
 CGI_EXT               = cgi ;

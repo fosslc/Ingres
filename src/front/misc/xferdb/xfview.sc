@@ -393,6 +393,13 @@ writeview(
     xfread_id(vi->name);
     if (!xfselected(vi->name)) 
 	return; 
+	
+	/*
+	 * Don't add geometry_columns definition to copy.in,
+	 * it is already created by createdb.
+	 */
+	if(!STncasecmp(vi->name, "geometry_columns", 16))
+		return;
 
     xfread_id(vi->owner);
 

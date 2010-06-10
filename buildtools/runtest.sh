@@ -70,7 +70,7 @@ then
   if [ -d ./buildtools ]
   then 
     BUILDTOOLS="${PWD}/buildtools"
-  elif [ `/bin/basename ${PWD}` == "buildtools" ]
+  elif [ `basename ${PWD}` == "buildtools" ]
   then
     BUILDTOOLS=${PWD}
   else

@@ -33,6 +33,9 @@
 **	    varchar input to be placed in a long varchar coupon.  Again,
 **	    this allows testing of most of the functionality for I/O of blobs
 **	    before FE support is available.
+**      17-Dec-2008 (macde01)
+**          Added trace point ADF_013_PT_TRACE associated with the new
+**          native POINT datatype (DB_PT_TYPE).
 **/
 
 
@@ -87,5 +90,11 @@
 #define			ADF_011_RDM_TO_V_STYLE	11
 #define			ADF_012_VCH_TO_LVCH	12
 
-#define                 ADF_MAXTRACE	       12
+/*
+**  Define trace points associated with POINT datatype (DB_PT_TYPE)
+*/
+#define                 ADF_013_PT_TRACE        13
+
+
+#define                 ADF_MAXTRACE	       13
 /*  [@defined_constants@]...	*/

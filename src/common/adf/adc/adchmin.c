@@ -10,6 +10,7 @@
 #include    <ulf.h>
 #include    <adfint.h>
 #include    <adfhist.h>
+#include    <aduspatial.h>
 
 /**
 **
@@ -83,6 +84,8 @@
 **	    Fix AD_UTF8_ENABLED flag test && vs. & typo.
 **      14-aug-2009 (joea)
 **          	Add cases for DB_BOO_TYPE in adc_1hmin_rti and adc_2dhmin_rti.
+**      09-mar-2010 (thich01)
+**          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
 **/
 
 
@@ -628,6 +631,8 @@ DB_DATA_VALUE	    *adc_min_dvhg;
 **	    Timestamp histogram elements are only i4's.
 **	15-may-2007 (dougi)
 **	    Add support for UTF8-enabled server.
+**      17-Dec-2008 (macde01)
+**          Add support for DB_PT_TYPE.
 */
 
 DB_STATUS
@@ -747,6 +752,7 @@ DB_DATA_VALUE	    *adc_min_dvdhg)
 
       case DB_BYTE_TYPE:
       case DB_VBYTE_TYPE:
+      case DB_NBR_TYPE:
 	cp = (u_char *) adc_min_dvdhg->db_data;
 	for (i = adc_min_dvdhg->db_length; i; i--)
 	    *cp++ = AD_BYTE2_DHMIN_VAL;
@@ -763,6 +769,11 @@ UTF8merge:
 	for (i = II_COUNT_ITEMS(adc_min_dvdhg->db_length, UCS2); i; i--)
 	    *cpuni++ = AD_NCHR2_DHMIN_VAL;
 	break;
+
+      case DB_PT_TYPE:
+        ((AD_PT_INTRNL *) adc_min_dvdhg->db_data)->x = -FMAX;
+        ((AD_PT_INTRNL *) adc_min_dvdhg->db_data)->y = -FMAX;
+        break;
 
       default:
 	db_stat = adu_error(adf_scb, E_AD9999_INTERNAL_ERROR, 0);
@@ -873,6 +884,8 @@ UTF8merge:
 **	    Timestamp histogram elements are only i4's.
 **	15-may-2007 (dougi)
 **	    Add support for UTF8-enabled server.
+**      17-Dec-2008 (macde01)
+**          Add support for DB_PT_TYPE.
 */
 
 DB_STATUS
@@ -992,6 +1005,7 @@ DB_DATA_VALUE	    *adc_min_dvhg)
 
       case DB_BYTE_TYPE:
       case DB_VBYTE_TYPE:
+      case DB_NBR_TYPE:
 	cp = (u_char *) adc_min_dvhg->db_data;
 	for (i = adc_min_dvhg->db_length; i; i--)
 	    *cp++ = AD_BYTE3_HMIN_VAL;
@@ -1004,6 +1018,10 @@ UTF8merge:
 	for (i = II_COUNT_ITEMS(adc_min_dvhg->db_length, UCS2); i; i--)
 	    *cpuni++ = AD_NCHR3_HMIN_VAL;
 	break;
+
+      case DB_PT_TYPE:
+        TRdisplay("Error:  adc_1hmin_rti for DB_PT_TYPE, not coded\n");
+        break;
 
       default:
 	db_stat = adu_error(adf_scb, E_AD9999_INTERNAL_ERROR, 0);

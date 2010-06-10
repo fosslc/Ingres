@@ -372,6 +372,28 @@ check_for_libxml2 ()
     compose_msg "libxml2-devel" "libxml2-devel" "libxml2-devel" "libxml2-devel" "libxml2-devel"
 }
 
+check_for_geos ()
+{
+    #If GEOS locations aren't specified, set them to defaults
+    [ -z "$GEOS_LOC" ] && 
+    {
+        export GEOS_LOC="/usr/local/lib"
+        echo "GEOS_LOC was not set, using /usr/local/lib"
+    }
+    [ -z "$GEOS_INC" ] && 
+    {
+        export GEOS_INC="/usr/local/include"
+        echo "GEOS_INC was not set, using /usr/local/include"
+    }
+    [ $geos64_need = "true" ] &&
+    [ -z "$GEOS64_LOC" ] && 
+    {
+        export GEOS64_LOC="/usr/local/32bit/lib"
+        echo "GEOS64_LOC was not set, using /usr/local/32bit/lib"
+    }
+}
+
+
 precheck ()
 {
   # Root of build/src tree. Must be set by hand
@@ -397,6 +419,9 @@ precheck ()
 
   # cross compiler if needed
   check_for_xcc
+
+  # check for GEOS
+  [ "$geos_need" = "true" ] && check_for_geos
 
   # gtk if needed
   [ "$gtk_need" = "true" ] && check_for_gtk

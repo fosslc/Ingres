@@ -1988,6 +1988,8 @@ QEF_RCB		*qef_rcb )
 **	15-Jan-2010 (jonj)
 **	    In QEA_CALLPROC, check ahd_flags & QEF_CP_CONSTRAINT; not all
 **	    procedures that are constraints have parameters.
+**	15-Mar-2010 (troal01)
+**	    Propagate the E_QE5424_INVALID_SRID error to user.
 **	19-Mar-2010 (gupsh01) SIR 123444
 **	    Added support for rename table/columns.
 **	14-May-2010 (kschendel) b123565
@@ -3245,6 +3247,8 @@ i4		mode )
                 }
 		
 		if (  qef_rcb->error.err_code  == E_DM006A_TRAN_ACCESS_CONFLICT )
+			break;
+		if (  qef_rcb->error.err_code  == E_QE5424_INVALID_SRID )
 			break;
 
 		qef_rcb->error.err_code=qeu_cb->error.err_code;

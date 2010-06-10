@@ -645,6 +645,10 @@ PACKAGE basic
    PART collation
       DEFINITION collation.prt
 
+   PART geo
+      DEFINITION geo.prt
+
+   DIRECTORY ingres!files
 #ifdef conf_LSB_BUILD
 	DIRECTORY usr!share!ingres!files
 #else

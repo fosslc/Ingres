@@ -956,6 +956,8 @@ NO_OPTIM=su4_cmw i64_aix
 **  	Add geospatial support
 **	6-Nov-2009 (kschendel) SIR 122757
 **	    Ask for direct IO if config says to.
+**	15-Mar-2010 (troal01)
+**	    Treat spatial_ref_sys and geometry_columns as system catalogs.
 **	01-apr-2010 (toumi01) SIR 122403
 **	    Support for column encryption. Start passing dmu.
 **	13-may-2010 (miket) SIR 122403
@@ -1404,12 +1406,18 @@ DB_ERROR	    *errcb)
         ** All catalogs start with ii.  If it is the name of
         ** a system catalog then need to be in a special
         ** session to create.
-	** Etabs and partitions have ii-names but they are NOT catalogs.
+        ** Etabs and partitions have ii-names but they are NOT catalogs.
+        ** spatial_ref_sys and geometry_columns should be treated as
+        ** catalogs hence it has to be added to the check.
         */
 
 	if (!extension && (relstat2 & TCB2_PARTITION) == 0)
 	    compare = STncasecmp((char *)table_name->db_tab_name,
-				 "ii", 2 );
+				 "ii", 2 ) &&
+				  STncasecmp((char *)table_name->db_tab_name,
+				 "spatial_ref_sys", 15) &&
+				  STncasecmp((char *)table_name->db_tab_name,
+				 "geometry_columns", 16);
 	else
 	    compare = 1;
 

@@ -375,6 +375,9 @@ EXEC SQL include SQLCA;
 **          Rewrite duc_init_iidefault so that it can be used by both createdb
 **          and upgradedb and can be more easily updated if additional defaults
 **          become necessary.
+**  15-Mar-2010 (troal01)
+**      Added duc_init_srs and spatial_ref_sys system catalog.
+**      Also added geometry_columns view.
 **	01-apr-2010 (toumi01) SIR 122403
 **	    For the encryption project add columns to
 **	    iitables: table_reldatawid, table_reltotdatawid, encrypted_columns,
@@ -413,6 +416,7 @@ FUNC_EXTERN	void		duc_init_iisectype();
 FUNC_EXTERN	DU_STATUS	duc_iigwsxa(DU_ERROR *);
 FUNC_EXTERN	DU_STATUS	duc_iisecuritystate();
 FUNC_EXTERN DB_STATUS duc_init_iidefault(bool is_upgrade, DU_ERROR *errcb);
+FUNC_EXTERN DB_STATUS   duc_init_srs();
 FUNC_EXTERN	VOID		duc_iischema();
 FUNC_EXTERN	VOID		duc_iilgmo( DU_ERROR *duc_errcb );
 FUNC_EXTERN	VOID 		duc_init_iiprofile();
@@ -503,6 +507,7 @@ static		VOID		duc_fix_maxname(char *b);
 #define DU_IILPARTITIONS	154
 #define DU_IIOTABLES		155	/* Deprecated, but still in existence */
 #define DU_IIOCOLUMNS		156	/* Ditto */
+#define DU_GEOM_COLS		157
 
 typedef struct _DU_OBJ
 {
@@ -567,7 +572,8 @@ DU_OBJ Du_stdcat [] = {
 { "iidistcols",		DU_IIDISTCOLS,		DU_ALL},
 { "iilpartitions",	DU_IILPARTITIONS,	DU_ALL},
 { "iiotables",		DU_IIOTABLES,		DU_ALL},
-{ "iiocolumns",		DU_IIOCOLUMNS,		DU_ALL}
+{ "iiocolumns",		DU_IIOCOLUMNS,		DU_ALL},
+{ "geometry_columns",DU_GEOM_COLS,	DU_ALL},
 };
 
 #define MAX_STDCAT_VIEWS sizeof(Du_stdcat)/sizeof(DU_OBJ)
@@ -720,6 +726,9 @@ static DU_STATUS duc_find_cats();
 **	    Add create, modify for iicolcompare catalog.
 **	25-oct-2006 (dougi)
 **	    Disable calls to create, modify iicolcompare 'til we're ready.
+**  15-Mar-2010 (troal01)
+**      Add create, modify for spatial_ref_sys, also check if we want to
+**      pre-load it.
 */
 DU_STATUS
 ##duc_dbms_bld(duc_errcb, dbenv, convert_flag)
@@ -803,6 +812,15 @@ bool		convert_flag;
 	duc_create_catalog("iidistval");
 	duc_create_catalog("iipartname");
 
+	/* spatial_ref_sys for Ingres Geospatial */
+	if(dbenv->du_geo_flag && STncasecmp(dbenv->du_dbname, "imadb", 5))
+	{
+        duc_create_catalog("spatial_ref_sys");
+	    duc_init_srs();
+        /* spatial_ref_sys to hash on srid */
+        duc_modify_catalog("spatial_ref_sys");
+    }
+	
 	/* Print an informational message. */
 	if ((du_error(duc_errcb, I_DU0203_MOD_DBMS_CATS, 0))
 	    != E_DU_OK
@@ -2120,6 +2138,48 @@ duc_init_iidefault(
     return OK;
 } /* end duc_init_iidefault */
 
+/*{
+** Name:  duc_init_srs() -- init spatial_ref_sys
+**
+** Description:
+**     Populates the spatial_ref_sys catalog with the EPSG data.
+**
+** Inputs:
+**     none
+** Outputs:
+**     none
+** Exceptions:
+**	   none
+** Side Effects:
+**	   none
+**
+** History:
+**	8-Mar-2010 (troal01)
+**	   Initial creation.
+*/
+DB_STATUS
+duc_init_srs()
+{
+    LOCATION srs_loc;
+    exec sql begin declare section;
+    char *srs_file;
+    exec sql end declare section;
+    
+    exec sql whenever sqlerror call duc_sqlerror;
+    
+	NMloc(FILES, FILENAME & PATH, (char *) NULL, &srs_loc);
+	LOfaddpath(&srs_loc, "geo", &srs_loc);
+	LOfstfile("srs.dat", &srs_loc);
+	srs_file = srs_loc.path;
+	exec sql copy table spatial_ref_sys(
+    srid= c0tab,
+    auth_name= varchar(0)tab with null(']^NULL^['),
+    auth_srid= c0tab with null(']^NULL^['),
+    srtext= varchar(0)tab with null(']^NULL^['),
+    proj4text= varchar(0)nl with null(']^NULL^['),
+    nl= d0nl)
+	from :srs_file;
+} /* end duc_init_srs */
 
 /*{
 ** Name:  duc_iilgmo() -- register IMA table and define view on it for 2PC
@@ -3956,7 +4016,8 @@ bool		star_flag)
 STATUS
 duc_create_stdcat_views(
 char            *dbname,
-bool		upcase)
+bool		upcase,
+bool        geo)
 {
     bool	is_iidbdb;
     i4		i;
@@ -3970,6 +4031,8 @@ bool		upcase)
     for (i = 0; i < MAX_STDCAT_VIEWS; i++)
     {
 	if (Du_stdcat[i].du_dbflag == DU_IIDBDB && !is_iidbdb)
+	    continue;
+	if (Du_stdcat[i].du_obj_id == DU_GEOM_COLS && !geo)
 	    continue;
 	/* Star views get created AFTER star catalogs */
 	if (Du_stdcat[i].du_dbflag == DU_STAR)
@@ -4860,6 +4923,27 @@ bool		upcase)
 	    break;
 	}
 
+	case DU_GEOM_COLS:
+	{
+	    exec sql CREATE VIEW geometry_columns (f_table_schema,
+	    	f_table_name,
+			f_geometry_column,
+			geometry_type,
+			coord_dimension,
+			srid)
+	    AS SELECT VARCHAR(r.relowner, 256),
+	    VARCHAR(r.relid, 256),
+		VARCHAR(a.attname, 256),
+		VARCHAR(iigeomname(a.attgeomtype), 32),
+		iigeomdimensions(a.attgeomtype),
+		a.attsrid
+	    FROM iirelation r, iiattribute a
+	    WHERE r.reltid = a.attrelid and r.reltidx = a.attrelidx
+	    and a.attver_dropped = 0 and a.attgeomtype > -1;
+
+	    break;
+	}
+	
 	case DU_IIHISTOGRAMS:
 	{
 

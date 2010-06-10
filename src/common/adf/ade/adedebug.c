@@ -131,6 +131,14 @@
 **	    byte data as a stream of hex digits.
 **	27-Oct-2008 (kiria01) SIR120473
 **	    Added DB_PAT_TYPE types to display
+**      07-Jan-2009 (macde01)
+**          Added DB_PT_TYPE type to display.
+**  16-Jun-2009 (thich01)
+**      Add GEOM type.
+**      Treat GEOM type the same as LBYTE.
+**  20-Aug-2009 (thich01)
+**      Add and treat all spatial types the same as LBYTE.  Moving SEC and SECID
+**      to where their numbers are, according to adfint.h
 **      04-dec-2009 (joea)
 **          Change location of DB_BOO_TYPE in type_name array.
 **/
@@ -192,10 +200,10 @@ static char	*type_name[] = {
     NULL,	    "DB_LTXT_TYPE", NULL,	    NULL,
     NULL,	    NULL,	    NULL,	    NULL,
     NULL,	    NULL,	    NULL,	    NULL,
-    NULL,	    NULL,	    "DB_LOGKEY_TYPE", "DB_TABKEY_TYPE",
-    NULL,	    NULL,	    NULL,	    NULL,
+    NULL,	    NULL,	    "DB_LOGKEY_TYPE", "DB_PT_TYPE",
+    "DB_GEOM_TYPE", "DB_POINT_TYPE", "DB_MPOINT_TYPE",	"DB_LINE_TYPE",
 /* 60 - 79 */
-    "DB_SEC_TYPE", "DB_SECID_TYPE",	    NULL,	    NULL,
+    "DB_MLINE_TYPE", "DB_POLY_TYPE", "DB_MPOLY_TYPE",	    NULL,
     NULL,	    NULL,	    NULL,	    NULL,
     NULL,	    NULL,	    NULL,	    NULL,
     NULL,	    NULL,	    NULL,	    NULL,
@@ -205,7 +213,7 @@ static char	*type_name[] = {
     NULL,	    NULL,	    NULL,	    NULL,
     NULL,	    NULL,	    NULL,	    NULL,
     NULL,	    NULL,	    NULL,	    NULL,
-    NULL,	    NULL,	    NULL,	    NULL
+    NULL,	    NULL,	    "DB_SEC_TYPE",	    "DB_SECID_TYPE" 
 };
 
 
@@ -1387,6 +1395,13 @@ DB_DATA_VALUE      *db_dv)
 	  case DB_LBIT_TYPE:
 	  case DB_CPN_TYPE:
 	  case DB_LBYTE_TYPE:
+	  case DB_GEOM_TYPE:
+          case DB_POINT_TYPE:
+          case DB_MPOINT_TYPE:
+          case DB_LINE_TYPE:
+          case DB_MLINE_TYPE:
+          case DB_POLY_TYPE:
+          case DB_MPOLY_TYPE:
 	  case DB_LNVCHR_TYPE:
 	  case DB_LVCH_TYPE:
 	  case DB_LNLOC_TYPE:

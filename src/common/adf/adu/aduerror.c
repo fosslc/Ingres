@@ -731,6 +731,7 @@ i4		    pcnt,
       case E_AD5511_BAD_DTLEN_FOR_ESCAPE:
       case E_AD5512_BAD_DTID2_FOR_ESCAPE:
       case E_AD5513_BAD_DTLEN2_FOR_ESCAPE:
+      case E_AD5601_GEOSPATIAL_INTERNAL:
       case E_AD6001_BAD_MATHOPT:
       case E_AD7000_ADP_BAD_INFO:
       case E_AD7001_ADP_NONEXT:
@@ -1095,6 +1096,7 @@ i4		    pcnt,
       case E_AD5090_DATE_MUL:
       case E_AD5091_DATE_DIV:
       case E_AD50A0_BAD_UUID_PARM:
+      case E_AD5600_GEOSPATIAL_USER:
       case E_AD8999_FUNC_NOT_IMPLEMENTED:
 	adf_errcb->ad_usererr	= adf_errorcode;
 	break;

@@ -737,6 +737,8 @@
 ##	    Add support for Intel OS X
 ##      25-mar-2008 (bolke01)
 ##          Added definitions for LIB_BLD and LIB_TGT
+##  28-Feb-2009 (thich01)
+##      Added -lgeos_c to compile in GEOS library for spatial operations
 ##      17-Mar-2009 (hweho01)
 ##          On AIX, increase CCLDSERVER to "-bmaxdata:0x40000000" for  
 ##          Ingres 9.2 release.
@@ -756,6 +758,8 @@
 ##	    Neeed for 64bit builds
 ##	23-Sept-2009 (frima01) SIR 122138
 ##	    Correct CCLDMACH64, XTERMLIB and ldlibpath64 for i64.lnx.
+##	19-Nov-2009 (thich01)
+##	    Added GEOS_LOC and GEOS64_LOC to library locations for geospatial
 ##	19-Apr-2010 (hweho01)
 ##	    For Solaris/Sparc, prepare runtime compiler and linker 
 ##	    settings with flags that are introduced in Studio 12.
@@ -1604,7 +1608,7 @@ case $vers in
 	    suffix="-lpthread -lfpe -lmutex -lm -lc -lcurses "
 	    ;;
      *_lnx|\
-    int_rpl) suffix="-lpthread -lrt -lm -lc -lcrypt -ldl -lgcc_s"
+    int_rpl) suffix="-L$GEOS_LOC -L$GEOS64_LOC -lpthread -lrt -lm -lc -lcrypt -ldl -lgcc_s -lgeos_c"
 	    ;; 
    *_osx) suffix="-bind_at_load -framework CoreServices -framework DirectoryService -framework Security"
 	    [ -f /usr/lib/libcc_dynamic.a ] && suffix="-lcc_dynamic $suffix"

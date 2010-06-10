@@ -150,8 +150,15 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	6-Jun-2010 (kschendel)
+**	    Allow alter table alter column with lob only if type doesn't change.
 */
 
+static DB_STATUS psl_atbl_alter_lob(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	DMT_ATT_ENTRY *dmt_att,
+	DMF_ATTR_ENTRY *dmu_att);
 
 /*
 ** Name: psl_alter_table  - verify that constraint for an ALTER TABLE statement
@@ -1102,6 +1109,11 @@ psl_alt_tbl_col_add(
 	status = psl_atbl_partcheck(sess_cb, psq_cb, dmt_attr);
 	if (status != E_DB_OK)
 	    return (status);
+
+	/* verify that if LOBs are involved, it's ok */
+	status = psl_atbl_alter_lob(sess_cb, psq_cb, dmt_attr, *dmu_attr);
+	if (status != E_DB_OK)
+	    return (status);
     }
 
     if (cons_list != (PSS_CONS *) NULL)
@@ -1457,4 +1469,71 @@ psl_atbl_partcheck(
       }
 
     return(E_DB_OK);
+}
+
+/*
+** Name: psl_atbl_alter_lob - Check for LOB's and alter column
+**
+** Description:
+**	Alter table alter column is not permitted if either the new or old
+**	types are LOB types -- *unless* the type change is innocuous in the
+**	sense that underlying etab segments are untouched.  This basically
+**	means a null alter (e.g. long varchar -> long varchar), or
+**	(the important one) an SRID-changing alter.
+**
+**	It's plausible to allow long varchar <--> long byte here, as
+**	the two are essentially equivalent;  however the underlying
+**	etab segment types are different, and allowing this would lead
+**	to a discrepancy between the base table and the etab.  I don't
+**	thing anything checks, and this restriction could be relaxed
+**	if necessary / desirable.
+**
+**	The reason that LOB types aren't alter-able is that DMF can't
+**	deal with it on-the-fly.  Consider a long varchar -> varchar alter,
+**	if a row were re-written with the (new) varchar value, something
+**	has to delete the etab rows belonging to the original row value.
+**	There is no linkage to detect or allow that.
+**
+** Inputs:
+**	sess_cb		Session parser control block
+**	psq_cb		Query parse control block
+**	dmt_att		Pointer to current attribute description
+**	dmu_att		Pointer to new attribute description
+**
+** Outputs:
+**	Returns E_DB_OK or error status.
+**
+** History:
+**	6-Jun-2010 (kschendel)
+**	    Prevent alter table alter column with lobs, except for degenerate
+**	    and SRID cases.
+*/
+
+static DB_STATUS
+psl_atbl_alter_lob(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
+	DMT_ATT_ENTRY *dmt_att, DMF_ATTR_ENTRY *dmu_att)
+{
+    DB_STATUS status;
+    i4 err_code;
+    i4 old_bits, new_bits;	/* Data type info bits */
+
+    status = adi_dtinfo(sess_cb->pss_adfcb, dmt_att->att_type, &old_bits);
+    if (status != E_DB_OK)
+	return (status);
+    status = adi_dtinfo(sess_cb->pss_adfcb, dmu_att->attr_type, &new_bits);
+    if (status != E_DB_OK)
+	return (status);
+    if ((old_bits & AD_PERIPHERAL) == 0 && (new_bits & AD_PERIPHERAL) == 0)
+	return (E_DB_OK);
+
+    /* One or the other is a blob.  If both are, check the types to make
+    ** sure they are the same.  If they are, allow the alter.  Any other
+    ** combination rejects the alter.
+    */
+    if (old_bits & AD_PERIPHERAL && new_bits & AD_PERIPHERAL
+      && dmt_att->att_type == dmu_att->attr_type)
+	return (E_DB_OK);
+
+    (void) psf_error(3859, 0, PSF_USERERR, &err_code, &psq_cb->psq_error, 0);
+    return (E_DB_ERROR);
 }

@@ -76,6 +76,8 @@
 **	    remove dbdbms.h
 **      13-aug-2009 (joea)
 **          Add cases for DB_BOO_TYPE in adc_1klen_rti and adc_2kcvt_rti.
+**      09-mar-2010 (thich01)
+**          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
 **/
 
 
@@ -565,6 +567,8 @@ i4		    *adc_buflen;
 **	    can can be upto four bytes long. Use CMbytecnt to ensure
 **	    we do not assume that a multbyte string can only be a maximum
 **	    of two bytes long. (Bug 120865)
+**      17-Dec-2008 (macde01)
+**          Add support for DB_PT_TYPE.
 */
 
 DB_STATUS
@@ -731,6 +735,7 @@ i4		    *adc_width)
       case DB_LTXT_TYPE:
       case DB_BYTE_TYPE:
       case DB_VBYTE_TYPE:
+      case DB_NBR_TYPE:
 	{
 	    u_char		*endp;
 	    register i4	inbytes;
@@ -740,6 +745,7 @@ i4		    *adc_width)
 	    if (    adc_dv->db_datatype == DB_CHA_TYPE
 		||  adc_dv->db_datatype == DB_CHR_TYPE
 		||  adc_dv->db_datatype == DB_BYTE_TYPE
+                ||  adc_dv->db_datatype == DB_NBR_TYPE
 	       )
 	    {
 		p = f;
@@ -876,6 +882,10 @@ i4		    *adc_width)
 	*adc_width = length + 3;
 	break;
 
+      case DB_PT_TYPE:
+        TRdisplay("Error: adc_1klen_rti for DB_PT_TYPE - not coded yet\n");
+        break;
+
       default:
 	db_stat = adu_error(adf_scb, E_AD2004_BAD_DTID, 0);
 	break;
@@ -996,6 +1006,9 @@ i4		    *adc_width)
 **          Added byte string datatypes.
 **	12-may-04 (inkdo01)
 **	    Added support for bigint.
+**      17-Dec-2008 (macde01)
+**          Add support for DB_PT_TYPE.
+[@history_template@]...
 */
 
 DB_STATUS
@@ -1140,6 +1153,7 @@ i4		    *adc_buflen)
       case DB_LTXT_TYPE:
       case DB_BYTE_TYPE:
       case DB_VBYTE_TYPE:
+      case DB_NBR_TYPE:
 	{
 	    u_char		*startp;
 	    u_char		*endp;
@@ -1148,6 +1162,7 @@ i4		    *adc_buflen)
 	    if (    adc_dv->db_datatype == DB_CHA_TYPE
 		||  adc_dv->db_datatype == DB_CHR_TYPE
 		||  adc_dv->db_datatype == DB_BYTE_TYPE
+                ||  adc_dv->db_datatype == DB_NBR_TYPE
 	       )
 	    {
 		p = f;
@@ -1339,6 +1354,9 @@ i4		    *adc_buflen)
 	break;
       }
       
+      case DB_PT_TYPE:
+        TRdisplay("Error: adc_2kcvt_rti for DB_PT_TYPE -- not coded yet\n");
+        break;
 
       default:
 	db_stat = adu_error(adf_scb, E_AD2004_BAD_DTID, 0);

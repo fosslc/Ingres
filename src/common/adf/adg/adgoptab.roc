@@ -262,13 +262,27 @@
 **	    Added patcomp.
 **      18-dec-2008 (joea)
 **          Replace READONLY/WSCREADONLY by const.
+**      07-Jan-2009 (macde01)
+**          Added point, x, and y operators for DB_PT_TYPE.
+**  28-Feb-2009 (thich01)
+**      Added the fromtext operators for spatial types.
 **	12-Mar-2009 (kiria01) SIR121788
 **	    Added ADI_LNVCHR_OP long_nvarchar
+**  13-Mar-2009 (thich01)
+**      Added asText and asBinary operators.
+**    12-Mar-2009 (kiria01) SIR121788
+**        Added ADI_LNVCHR_OP long_nvarchar
+**  20-Mar-2009 (thich01)
+**      Added fromwkb operators.
 **  22-Apr-2009 (Marty Bowes) SIR 121969
 **      Add generate_digit() and validate_digit() for the generation
 **      and validation of checksum values.
 **      1-Aug-2009 (martin bowes) SIR 122320
 **          Added soundex_dm (Daitch-Mokotoff soundex)
+**  25-Aug-2009 (troal01)
+**      Added geomname and geomdimen operators.
+**  03-Sep-2009 (troal01)
+**      Added geometryfromtext for generic geometry collection processing.
 **	9-sp-2009 (stephenb)
 **	    Add last_identity function.
 **      25-sep-2009 (joea)
@@ -283,10 +297,17 @@
 **	07-Dec-2009 (drewsturgiss) SIR 122882
 **	    Added NVL and NVL2, with NVL being an alias of adu_ifnull and NVL2
 **	    being a new function.
+**  24-Feb-2010 (thich01)
+**      geometryfromtext was renamed.  Create it again for consistency.
+**  09-Mar-2010 (thich01)
+**      Overlaps and inside changed to norm funcs as per OGC Spec.
 **	18-Mar-2010 (kiria01) b123438
 **	    Added SINGLETON aggregate for scalar sub-query support.
 **	25-Mar-2010 (toumi01) SIR 122403
 **	    Added "aes_decrypt" and "aes_encrypt".
+**	xx-Apr-2010 (iwawong)
+**		Added issimple isempty x y numpoints 
+**		for the coordinate space.
 **      19-apr-2010 (huazh01) 
 **          change the definition of SINGLETON aggregate from 
 **          ADI_NORM_FUNC to ADI_AGG_FUNC. (b123597)
@@ -869,6 +890,506 @@ GLOBALDEF   const	ADI_OPRATION    Adi_2RO_operations[] = {
 	DB_SQL        ,     ADI_INGRES_6|ADI_ANSI|ADI_DB2,  
 		ADO_LIKE_CNT,  		    ADZ_LIKE_FIIDX},
 
+{ {"pointfromtext"},       ADI_BPOINT_OP,    ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_BPOINT_CNT,   ADZ_BPOINT_FIIDX},
+
+{ {"st_pointfromtext"},       ADI_BPOINT_OP,    ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_BPOINT_CNT,   ADZ_BPOINT_FIIDX},
+
+{ {"pointfromwkb"},        ADI_BPOINT_OP,    ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_BPOINT_CNT,   ADZ_BPOINT_FIIDX},
+
+{ {"st_pointfromwkb"},        ADI_BPOINT_OP,    ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_BPOINT_CNT,   ADZ_BPOINT_FIIDX},
+
+{ {"linefromtext"},        ADI_LINE_OP,      ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_LINE_CNT,     ADZ_LINE_FIIDX},
+
+{ {"st_linefromtext"},        ADI_LINE_OP,      ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_LINE_CNT,     ADZ_LINE_FIIDX},
+
+{ {"linefromwkb"},         ADI_LINE_OP,      ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_LINE_CNT,     ADZ_LINE_FIIDX},
+
+{ {"st_linefromwkb"},         ADI_LINE_OP,      ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_LINE_CNT,     ADZ_LINE_FIIDX},
+
+{ {"polyfromtext"},        ADI_POLY_OP,      ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_POLY_CNT,     ADZ_POLY_FIIDX},
+
+{ {"st_polyfromtext"},        ADI_POLY_OP,      ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_POLY_CNT,     ADZ_POLY_FIIDX},
+
+{ {"polyfromwkb"},         ADI_POLY_OP,      ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_POLY_CNT,     ADZ_POLY_FIIDX},
+
+{ {"st_polyfromwkb"},         ADI_POLY_OP,      ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_POLY_CNT,     ADZ_POLY_FIIDX},
+
+{ {"mpointfromtext"},      ADI_MPOINT_OP,    ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_MPOINT_CNT,   ADZ_MPOINT_FIIDX},
+
+{ {"st_mpointfromtext"},      ADI_MPOINT_OP,    ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_MPOINT_CNT,   ADZ_MPOINT_FIIDX},
+
+{ {"mpointfromwkb"},       ADI_MPOINT_OP,    ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_MPOINT_CNT,   ADZ_MPOINT_FIIDX},
+
+{ {"st_mpointfromwkb"},       ADI_MPOINT_OP,    ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_MPOINT_CNT,   ADZ_MPOINT_FIIDX},
+
+{ {"mlinefromtext"},       ADI_MLINE_OP,     ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_MLINE_CNT,    ADZ_MLINE_FIIDX},
+
+{ {"st_mlinefromtext"},       ADI_MLINE_OP,     ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_MLINE_CNT,    ADZ_MLINE_FIIDX},
+
+{ {"mlinefromwkb"},        ADI_MLINE_OP,     ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_MLINE_CNT,    ADZ_MLINE_FIIDX},
+
+{ {"st_mlinefromwkb"},        ADI_MLINE_OP,     ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_MLINE_CNT,    ADZ_MLINE_FIIDX},
+
+{ {"mpolyfromtext"},       ADI_MPOLY_OP,     ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_MPOLY_CNT,    ADZ_MPOLY_FIIDX},
+
+{ {"st_mpolyfromtext"},       ADI_MPOLY_OP,     ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_MPOLY_CNT,    ADZ_MPOLY_FIIDX},
+
+{ {"mpolyfromwkb"},        ADI_MPOLY_OP,     ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_MPOLY_CNT,    ADZ_MPOLY_FIIDX},
+
+{ {"st_mpolyfromwkb"},        ADI_MPOLY_OP,     ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_MPOLY_CNT,    ADZ_MPOLY_FIIDX},
+
+{ {"geomcollfromtext"},    ADI_GEOMWKT_OP,   ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_GEOMWKT_CNT,  ADZ_GEOMWKT_FIIDX},
+
+{ {"st_geomcollfromtext"},    ADI_GEOMWKT_OP,   ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_GEOMWKT_CNT,  ADZ_GEOMWKT_FIIDX},
+
+{ {"geomcollfromwkb"},     ADI_GEOMWKB_OP,   ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_GEOMWKB_CNT,  ADZ_GEOMWKB_FIIDX},
+
+{ {"st_geomcollfromwkb"},     ADI_GEOMWKB_OP,   ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_GEOMWKB_CNT,  ADZ_GEOMWKB_FIIDX},
+
+{ {"geometryfromtext"},    ADI_GEOMWKT_OP,   ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_GEOMWKT_CNT,  ADZ_GEOMWKT_FIIDX},
+
+{ {"st_geometryfromtext"},    ADI_GEOMWKT_OP,   ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_GEOMWKT_CNT,  ADZ_GEOMWKT_FIIDX},
+
+{ {"geometryfromwkb"},     ADI_GEOMWKB_OP,   ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_GEOMWKB_CNT,  ADZ_GEOMWKB_FIIDX},
+
+{ {"st_geometryfromwkb"},     ADI_GEOMWKB_OP,   ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_GEOMWKB_CNT,  ADZ_GEOMWKB_FIIDX},
+
+{ {"asText"},              ADI_GEOMWKT_OP,   ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_GEOMWKT_CNT,  ADZ_GEOMWKT_FIIDX},
+
+{ {"st_asText"},              ADI_GEOMWKT_OP,   ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_GEOMWKT_CNT,  ADZ_GEOMWKT_FIIDX},
+
+{ {"asTextRaw"},           ADI_GEOMWKTRAW_OP,   ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_GEOMWKTRAW_CNT,  ADZ_GEOMWKTRAW_FIIDX},
+
+{ {"st_asTextRaw"},        ADI_GEOMWKTRAW_OP,   ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_GEOMWKTRAW_CNT,  ADZ_GEOMWKTRAW_FIIDX},
+
+{ {"asTextRound"},         ADI_GEOMWKT_OP,   ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_GEOMWKT_CNT,  ADZ_GEOMWKT_FIIDX},
+
+{ {"st_asTextRound"},      ADI_GEOMWKT_OP,   ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_GEOMWKT_CNT,  ADZ_GEOMWKT_FIIDX},
+
+{ {"asBinary"},            ADI_GEOMWKB_OP,   ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_GEOMWKB_CNT,  ADZ_GEOMWKB_FIIDX},
+
+{ {"st_asBinary"},            ADI_GEOMWKB_OP,   ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_GEOMWKB_CNT,  ADZ_GEOMWKB_FIIDX},
+
+{ {"iigeomname"},          ADI_GEOMNAME_OP,  ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_GEOMNAME_CNT, ADZ_GEOMNAME_FIIDX},
+
+{ {"iigeomdimensions"},    ADI_GEOMDIMEN_OP,  ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_GEOMDIMEN_CNT, ADZ_GEOMDIMEN_FIIDX},
+
+{ {"nbr"},                 ADI_NBR_OP,       ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_NBR_CNT,      ADZ_NBR_FIIDX},
+
+{ {"hilbert"},             ADI_HILBERT_OP,   ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_HILBERT_CNT,  ADZ_HILBERT_FIIDX},
+
+{ {"overlaps"},            ADI_OVERLAPS_OP,  ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_OVERLAPS_CNT, ADZ_OVERLAPS_FIIDX},
+
+{ {"st_overlaps"},            ADI_OVERLAPS_OP,  ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_OVERLAPS_CNT, ADZ_OVERLAPS_FIIDX},
+
+{ {"inside"},              ADI_INSIDE_OP,    ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_INSIDE_CNT,   ADZ_INSIDE_FIIDX},
+
+{ {"st_inside"},              ADI_INSIDE_OP,    ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_INSIDE_CNT,   ADZ_INSIDE_FIIDX},
+
+{ {"perimeter"},           ADI_PERIMETER_OP,  ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,            ADI_INGRES_6                 ,
+                           ADO_PERIMETER_CNT, ADZ_PERIMETER_FIIDX},
+
+{ {"st_perimeter"},           ADI_PERIMETER_OP,  ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,            ADI_INGRES_6                 ,
+                           ADO_PERIMETER_CNT, ADZ_PERIMETER_FIIDX},
+
+{ {"union"},               ADI_UNION_OP,     ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_UNION_CNT,    ADZ_UNION_FIIDX},
+
+{ {"st_union"},               ADI_UNION_OP,     ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_UNION_CNT,    ADZ_UNION_FIIDX},
+
+{ {"dimension"},           ADI_DIMENSION_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_DIMENSION_CNT,ADZ_DIMENSION_FIIDX},
+
+{ {"st_dimension"},           ADI_DIMENSION_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_DIMENSION_CNT,ADZ_DIMENSION_FIIDX},
+
+{ {"geometrytype"},        ADI_GEOMETRY_TYPE_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_GEOMETRY_TYPE_CNT,ADZ_GEOMETRY_TYPE_FIIDX},
+
+{ {"st_geometrytype"},        ADI_GEOMETRY_TYPE_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_GEOMETRY_TYPE_CNT,ADZ_GEOMETRY_TYPE_FIIDX},
+
+{ {"boundary"},            ADI_BOUNDARY_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_BOUNDARY_CNT,ADZ_BOUNDARY_FIIDX},
+
+{ {"st_boundary"},            ADI_BOUNDARY_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_BOUNDARY_CNT,ADZ_BOUNDARY_FIIDX},
+
+{ {"envelope"},            ADI_ENVELOPE_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_ENVELOPE_CNT,ADZ_ENVELOPE_FIIDX},
+
+{ {"st_envelope"},            ADI_ENVELOPE_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_ENVELOPE_CNT,ADZ_ENVELOPE_FIIDX},
+
+{ {"equals"},              ADI_EQUALS_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_EQUALS_CNT,ADZ_EQUALS_FIIDX},
+
+{ {"st_equals"},              ADI_EQUALS_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_EQUALS_CNT,ADZ_EQUALS_FIIDX},
+
+{ {"disjoint"},            ADI_DISJOINT_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_DISJOINT_CNT,ADZ_DISJOINT_FIIDX},
+
+{ {"st_disjoint"},            ADI_DISJOINT_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_DISJOINT_CNT,ADZ_DISJOINT_FIIDX},
+
+{ {"intersects"},              ADI_INTERSECTS_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_INTERSECTS_CNT,ADZ_INTERSECTS_FIIDX},
+
+{ {"st_intersects"},              ADI_INTERSECTS_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_INTERSECTS_CNT,ADZ_INTERSECTS_FIIDX},
+
+{ {"touches"},             ADI_TOUCHES_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_TOUCHES_CNT,ADZ_TOUCHES_FIIDX},
+
+{ {"st_touches"},             ADI_TOUCHES_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_TOUCHES_CNT,ADZ_TOUCHES_FIIDX},
+
+{ {"crosses"},             ADI_CROSSES_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_CROSSES_CNT,ADZ_CROSSES_FIIDX},
+
+{ {"st_crosses"},             ADI_CROSSES_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_CROSSES_CNT,ADZ_CROSSES_FIIDX},
+
+{ {"within"},              ADI_WITHIN_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_WITHIN_CNT,ADZ_WITHIN_FIIDX},
+
+{ {"st_within"},              ADI_WITHIN_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_WITHIN_CNT,ADZ_WITHIN_FIIDX},
+
+{ {"contains"},            ADI_CONTAINS_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_CONTAINS_CNT,ADZ_CONTAINS_FIIDX},
+
+{ {"st_contains"},            ADI_CONTAINS_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_CONTAINS_CNT,ADZ_CONTAINS_FIIDX},
+
+{ {"relate"},              ADI_RELATE_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_RELATE_CNT,ADZ_RELATE_FIIDX},
+
+{ {"st_relate"},              ADI_RELATE_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_RELATE_CNT,ADZ_RELATE_FIIDX},
+
+{ {"distance"},            ADI_DISTANCE_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_DISTANCE_CNT,ADZ_DISTANCE_FIIDX},
+
+{ {"st_distance"},            ADI_DISTANCE_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_DISTANCE_CNT,ADZ_DISTANCE_FIIDX},
+
+{ {"intersection"},        ADI_INTERSECTION_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_INTERSECTION_CNT,ADZ_INTERSECTION_FIIDX},
+
+{ {"st_intersection"},        ADI_INTERSECTION_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_INTERSECTION_CNT,ADZ_INTERSECTION_FIIDX},
+
+{ {"difference"},          ADI_DIFFERENCE_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_DIFFERENCE_CNT,ADZ_DIFFERENCE_FIIDX},
+
+{ {"st_difference"},          ADI_DIFFERENCE_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_DIFFERENCE_CNT,ADZ_DIFFERENCE_FIIDX},
+
+{ {"symdifference"},       ADI_SYMDIFF_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_SYMDIFF_CNT,ADZ_SYMDIFF_FIIDX},
+
+{ {"st_symdifference"},       ADI_SYMDIFF_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_SYMDIFF_CNT,ADZ_SYMDIFF_FIIDX},
+
+{ {"buffer"},              ADI_BUFFER_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_BUFFER_CNT,ADZ_BUFFER_FIIDX},
+
+{ {"st_buffer"},              ADI_BUFFER_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_BUFFER_CNT,ADZ_BUFFER_FIIDX},
+
+{ {"convexhull"},          ADI_CONVEXHULL_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_CONVEXHULL_CNT,ADZ_CONVEXHULL_FIIDX},
+
+{ {"st_convexhull"},          ADI_CONVEXHULL_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_CONVEXHULL_CNT,ADZ_CONVEXHULL_FIIDX},
+
+{ {"pointn"},              ADI_POINTN_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_POINTN_CNT,ADZ_POINTN_FIIDX},
+
+{ {"st_pointn"},              ADI_POINTN_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_POINTN_CNT,ADZ_POINTN_FIIDX},
+
+{ {"startpoint"},          ADI_STARTPOINT_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_STARTPOINT_CNT,ADZ_STARTPOINT_FIIDX},
+
+{ {"st_startpoint"},          ADI_STARTPOINT_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_STARTPOINT_CNT,ADZ_STARTPOINT_FIIDX},
+
+{ {"endpoint"},            ADI_ENDPOINT_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_ENDPOINT_CNT,ADZ_ENDPOINT_FIIDX},
+
+{ {"st_endpoint"},            ADI_ENDPOINT_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_ENDPOINT_CNT,ADZ_ENDPOINT_FIIDX},
+
+{ {"isclosed"},            ADI_ISCLOSED_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_ISCLOSED_CNT,ADZ_ISCLOSED_FIIDX},
+
+{ {"st_isclosed"},            ADI_ISCLOSED_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_ISCLOSED_CNT,ADZ_ISCLOSED_FIIDX},
+
+{ {"isring"},              ADI_ISRING_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_ISRING_CNT,ADZ_ISRING_FIIDX},
+
+{ {"st_isring"},              ADI_ISRING_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_ISRING_CNT,ADZ_ISRING_FIIDX},
+
+{ {"st_length"},           ADI_STLENGTH_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_STLENGTH_CNT,ADZ_STLENGTH_FIIDX},
+
+{ {"centroid"},            ADI_CENTROID_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_CENTROID_CNT,ADZ_CENTROID_FIIDX},
+
+{ {"st_centroid"},            ADI_CENTROID_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_CENTROID_CNT,ADZ_CENTROID_FIIDX},
+
+{ {"pointonsurface"},      ADI_PNTONSURFACE_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_PNTONSURFACE_CNT,ADZ_PNTONSURFACE_FIIDX},
+
+{ {"st_pointonsurface"},      ADI_PNTONSURFACE_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_PNTONSURFACE_CNT,ADZ_PNTONSURFACE_FIIDX},
+
+{ {"area"},                ADI_AREA_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_AREA_CNT,ADZ_AREA_FIIDX},
+
+{ {"st_area"},                ADI_AREA_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_AREA_CNT,ADZ_AREA_FIIDX},
+
+{ {"exteriorring"},        ADI_EXTERIORRING_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_EXTERIORRING_CNT,ADZ_EXTERIORRING_FIIDX},
+
+{ {"st_exteriorring"},        ADI_EXTERIORRING_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_EXTERIORRING_CNT,ADZ_EXTERIORRING_FIIDX},
+
+{ {"numinteriorring"},     ADI_NINTERIORRING_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_NINTERIORRING_CNT,ADZ_NINTERIORRING_FIIDX},
+
+{ {"st_numinteriorring"},     ADI_NINTERIORRING_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_NINTERIORRING_CNT,ADZ_NINTERIORRING_FIIDX},
+
+{ {"interiorringn"},       ADI_INTERIORRINGN_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_INTERIORRINGN_CNT,ADZ_INTERIORRINGN_FIIDX},
+
+{ {"st_interiorringn"},       ADI_INTERIORRINGN_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_INTERIORRINGN_CNT,ADZ_INTERIORRINGN_FIIDX},
+
+{ {"numgeometries"},       ADI_NUMGEOMETRIES_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_NUMGEOMETRIES_CNT,ADZ_NUMGEOMETRIES_FIIDX},
+
+{ {"st_numgeometries"},       ADI_NUMGEOMETRIES_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_NUMGEOMETRIES_CNT,ADZ_NUMGEOMETRIES_FIIDX},
+
+{ {"geometryn"},           ADI_GEOMETRYN_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_GEOMETRYN_CNT,ADZ_GEOMETRYN_FIIDX},
+
+{ {"st_geometryn"},           ADI_GEOMETRYN_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_GEOMETRYN_CNT,ADZ_GEOMETRYN_FIIDX},
+
+{ {"isempty"},             ADI_ISEMPTY_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_ISEMPTY_CNT, ADZ_ISEMPTY_FIIDX},
+
+{ {"st_isempty"},             ADI_ISEMPTY_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_ISEMPTY_CNT, ADZ_ISEMPTY_FIIDX},
+
+{ {"issimple"},            ADI_ISSIMPLE_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_ISSIMPLE_CNT, ADZ_ISSIMPLE_FIIDX},
+
+{ {"st_issimple"},            ADI_ISSIMPLE_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_ISSIMPLE_CNT, ADZ_ISSIMPLE_FIIDX},
+
+{ {"numpoints"},           ADI_NUMPOINTS_OP, ADI_NORM_FUNC, ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6,
+                           ADO_NUMPOINTS_CNT, ADZ_NUMPOINTS_FIIDX},
+
+{ {"st_numpoints"},        ADI_NUMPOINTS_OP, ADI_NORM_FUNC, ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6,  
+			   ADO_NUMPOINTS_CNT, ADZ_NUMPOINTS_FIIDX},
+
+{ {"srid"},                ADI_SRID_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_SRID_CNT,ADZ_SRID_FIIDX},
+
+{ {"st_srid"},                ADI_SRID_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_SRID_CNT,ADZ_SRID_FIIDX},
+
+{ {"transform"},           ADI_TRANSFORM_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_TRANSFORM_CNT,ADZ_TRANSFORM_FIIDX},
+
+{ {"st_transform"},           ADI_TRANSFORM_OP, ADI_NORM_FUNC,      ADI_PREFIX,
+                           DB_SQL,           ADI_INGRES_6                 ,
+                           ADO_TRANSFORM_CNT,ADZ_TRANSFORM_FIIDX},
+
 { {"ln"},		ADI_LOG_OP,	ADI_NORM_FUNC,	    ADI_PREFIX,
 	DB_SQL|DB_QUEL,     ADI_INGRES_6                 ,  
 		ADO_LOG_CNT,  		    ADZ_LOG_FIIDX},
@@ -949,6 +1470,10 @@ GLOBALDEF   const	ADI_OPRATION    Adi_2RO_operations[] = {
 { {"pi"},		ADI_PI_OP,	ADI_NORM_FUNC,	    ADI_PREFIX,
 	DB_SQL|DB_QUEL,     ADI_INGRES_6                 ,  
 		ADO_PI_CNT,  		    ADZ_PI_FIIDX},
+
+{ {"point"},         ADI_POINT_OP,     ADI_NORM_FUNC,      ADI_PREFIX,
+       DB_SQL,             ADI_INGRES_6                 ,
+               ADO_POINT_CNT,                ADZ_POINT_FIIDX},
 
 { {"position"},		ADI_POS_OP,	ADI_NORM_FUNC,	    ADI_PREFIX,
 	DB_SQL,     	    ADI_INGRES_6                 ,  
@@ -1246,6 +1771,22 @@ GLOBALDEF   const	ADI_OPRATION    Adi_2RO_operations[] = {
 { {"xyzzy"},		ADI_XYZZY_OP,	ADI_NORM_FUNC,	    ADI_PREFIX,
 	DB_SQL|DB_QUEL,     ADI_INGRES_6                 ,  
 		ADO_XYZZY_CNT,		    ADZ_XYZZY_FIIDX},
+ 
+{ {"x"},                ADI_X_OP,       ADI_NORM_FUNC,      ADI_PREFIX,
+        DB_SQL,             ADI_INGRES_6                 ,
+                ADO_X_CNT,                    ADZ_X_FIIDX},
+ 
+{ {"y"},                ADI_Y_OP,         ADI_NORM_FUNC,      ADI_PREFIX,
+        DB_SQL,             ADI_INGRES_6                 ,
+                ADO_Y_CNT,                    ADZ_Y_FIIDX},
+                
+{ {"st_x"},                ADI_X_OP,       ADI_NORM_FUNC,      ADI_PREFIX,
+        DB_SQL,             ADI_INGRES_6                 ,
+                ADO_X_CNT,                    ADZ_X_FIIDX},
+ 
+{ {"st_y"},                ADI_Y_OP,         ADI_NORM_FUNC,      ADI_PREFIX,
+        DB_SQL,             ADI_INGRES_6                 ,
+                ADO_Y_CNT,                    ADZ_Y_FIIDX},
 
 
 { {"session_user"},	ADI_SESSUSER_OP, ADI_NORM_FUNC,	    ADI_PREFIX,

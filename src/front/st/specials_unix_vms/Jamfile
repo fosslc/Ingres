@@ -94,7 +94,7 @@ IIPRT zoneinfo64.ccpp zoneinfo.ccpp wview.ccpp w4v3cats.ccpp
 	api64.ccpp api.ccpp advisor.ccpp accessdb.ccpp abfdemo.ccpp
 	abf_patch.ccpp abf.ccpp i18n.ccpp i18n64.ccpp supp32.ccpp
 	zoneinfo32.ccpp collation32.ccpp ucharmaps32.ccpp packman.ccpp
-	demodb.ccpp logrotate.ccpp ;
+	demodb.ccpp logrotate.ccpp geo.ccpp ;
 
 IIINSTALLHLP abf.hlp advisor.hlp api.hlp api64.hlp
 	bridge.hlp c2audit.hlp currform.hlp custominst.hlp das.hlp

@@ -207,10 +207,14 @@
 **          Add output_flag2 parameter to xffilltable() to allow check.
 **      28-jan-2009 (stial01)
 **          Use DB_MAXNAME for database objects.
+**  16-Jun-2009 (thich01)
+**      Add GEOM type.
 **      25-feb-2010 (joea)
 **          Add case for DB_BOO_TYPE in writecopy.
 **	21-apr-2010 (toumi01) SIR 122403
 **	    Add encryption support.
+**  20-Aug-2009 (thich01)
+**      Add all other spatial types.
 **/
 /* # define's */
 /* GLOBALDEF's */
@@ -951,6 +955,34 @@ writecopy(XF_TABINFO *tp, i4 output_flags, char *cpfile)
                ** bug 84828 : handle long varchars
                */
                xfwrite(Xf_both, ERx("long byte(0)"));
+               break;
+
+           case DB_GEOM_TYPE:
+               xfwrite(Xf_both, ERx("geom(0)"));
+               break;
+
+           case DB_POINT_TYPE:
+               xfwrite(Xf_both, ERx("point(0)"));
+               break;
+
+           case DB_MPOINT_TYPE:
+               xfwrite(Xf_both, ERx("multipoint(0)"));
+               break;
+
+           case DB_LINE_TYPE:
+               xfwrite(Xf_both, ERx("line(0)"));
+               break;
+
+           case DB_MLINE_TYPE:
+               xfwrite(Xf_both, ERx("multiline(0)"));
+               break;
+
+           case DB_POLY_TYPE:
+               xfwrite(Xf_both, ERx("polygon(0)"));
+               break;
+
+           case DB_MPOLY_TYPE:
+               xfwrite(Xf_both, ERx("multipolygon(0)"));
                break;
 
 	   case DB_NCHR_TYPE:

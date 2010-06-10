@@ -7966,6 +7966,9 @@ chmod_data_600()
 **	    is run on VMS.    
 **	14-May-2009 (kschendel) 122041
 **	    Compiler warning fixes.
+**	15-Mar-2010 (troal01)
+**	    A geo indicator needs to be passed to duc_create_stdcat_views
+**	    set to FALSE on upgrades.
 */
 
 /*
@@ -8166,7 +8169,7 @@ char *dbname, char *conn_dbname, bool star_db, i4 level)
 	** Re-create Star views if this is a Star CDB.
 	*/
 	du_talk(__LINE__, DU_MODESENS, &upgr_cb, I_DU0103_RECREATING_STDCAT_VIEWS, 0);
-	duc_create_stdcat_views(dbname, upgr_cb.Dbname_ptr->upcase);
+	duc_create_stdcat_views(dbname, upgr_cb.Dbname_ptr->upcase, FALSE);
 
 	if (upgr_cb.Dbname_ptr->star_flag)
 	    duc_create_star_views(dbname, upgr_cb.Dbname_ptr->upcase);

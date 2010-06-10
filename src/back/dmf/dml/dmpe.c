@@ -58,6 +58,7 @@
 #include    <sxf.h>
 #include    <dmd.h>
 
+#include    <spatial.h>
 /**
 **
 **  Name: DMPE.C - DMF routines to aid in large object management
@@ -512,6 +513,9 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Prototype changes for dmpp_get/put/delete
+**	24-Feb-2010 (troal01)
+**	    Changes to facilitate the SRID stored inline in geometries.
+** TODO: Again with the above changes being removed.
 **	26-Mar-2010 (toumi01) SIR 122403
 **	    For encryption project add attr_encflags, attr_encwid.
 **	12-Apr-2010 (kschendel) SIR 123485
@@ -1102,6 +1106,38 @@ dmpe_put(ADP_POP_CB	*pop_cb)
 	}
 	att_id = pcb->pcb_att_id;
 
+	/*
+	 * Validate the SRID in the data if this is a geospatial data type
+	 * and a permanent move. Only use the most current version of DB_ATTS
+	 */
+	if(pop_cb->pop_temporary == 0 &&
+			pcb->pcb_tcb->tcb_atts_ptr[att_id].geomtype != GEOM_TYPE_UNDEFINED)
+	{
+		i2 version;
+		i4 srid = SRID_UNDEFINED;
+		i4 find_bqcb_att;
+
+		GEOM_VERS_ASSIGN_MACRO(pop_cb->pop_segment->db_data, version);
+		if(version == SPATIAL_DATA_V1)
+		{
+			GEOM_SRID_ASSIGN_MACRO(pop_cb->pop_segment->db_data, srid);
+		}
+
+		for(find_bqcb_att = 0; find_bqcb_att < pcb->pcb_bqcb->bqcb_natts;
+				find_bqcb_att++)
+		{
+			if(pcb->pcb_bqcb->bqcb_atts[find_bqcb_att].bqcb_att_id == att_id)
+				break;
+		}
+
+		if(srid != pcb->pcb_bqcb->bqcb_atts[find_bqcb_att].bqcb_srid)
+		{	    	/* Check failed */
+			status = E_DB_ERROR;
+			SETDBERR(&pop_cb->pop_error, 0, E_DM5423_SRID_MISMATCH);
+			break;
+		}
+
+	}
 	/* Build the tuple based on the pointers in the pcb */
 
 	/*
@@ -2077,6 +2113,46 @@ dmpe_get(i4	  op_code ,
 
 	if (status == E_DB_OK)
 	{
+		/*
+		 * If the ADP_C_MOVE_MASK is set that means dmpe_get was called from
+		 * dmpe_move and we should not try to rewrite the SRID, only for a true
+		 * get should this be done.
+		 */
+		if(op_code == ADP_GET && !(pop_cb->pop_continuation & ADP_C_MOVE_MASK) &&
+				db_datatype_is_geom(pop_cb->pop_coupon->db_datatype) &&
+				pcb->pcb_bqcb != NULL)
+		{
+			i2 geo_vers;
+			i4 srid_tcb;
+			i4 srid_data;
+			i4 find_bqcb_att;
+			GEOM_VERS_ASSIGN_MACRO(pcb->pcb_record->prd_user_space, geo_vers);
+			for(find_bqcb_att = 0; find_bqcb_att < pcb->pcb_bqcb->bqcb_natts;
+					find_bqcb_att++)
+			{
+				if(pcb->pcb_bqcb->bqcb_atts[find_bqcb_att].bqcb_att_id == input->cpn_att_id)
+					break;
+			}
+			srid_tcb = pcb->pcb_bqcb->bqcb_atts[find_bqcb_att].bqcb_srid;
+			/*
+			 * We have an SRID in there, so this must be a geospatial col
+			 */
+			switch(geo_vers)
+			{
+			case SPATIAL_DATA_V1:
+				GEOM_SRID_ASSIGN_MACRO(pcb->pcb_record->prd_user_space, srid_data);
+				if(srid_tcb != srid_data)
+				{
+					GEOM_SRID_COPY_MACRO(pcb->pcb_record->prd_user_space, srid_tcb);
+				}
+				break;
+			default:
+				status = E_DB_ERROR;
+				SETDBERR(&pop_cb->pop_error, 0, E_AD5602_SPATIAL_VERSION);
+				break;
+			}
+		}
+
 	    if (DMZ_SES_MACRO(11))
 	    {
 		dmd_petrace("DMPE_GET", pcb->pcb_record,
@@ -2524,8 +2600,8 @@ dmpe_move(ADP_POP_CB *pop_cb, bool cleanup_source)
 	get_pop->pop_coupon = pop_cb->pop_segment;
 	get_pop->pop_segment = &seg_dv;
 	put_pop->pop_segment = &seg_dv;
-	get_pop->pop_continuation = ADP_C_BEGIN_MASK;
-	put_pop->pop_continuation = ADP_C_BEGIN_MASK;
+	get_pop->pop_continuation = ADP_C_BEGIN_MASK | ADP_C_MOVE_MASK;
+	put_pop->pop_continuation = ADP_C_BEGIN_MASK | ADP_C_MOVE_MASK;
 	CLRDBERR(&get_pop->pop_error);
 	CLRDBERR(&put_pop->pop_error);
 	STRUCT_ASSIGN_MACRO(under_dv, seg_dv);

@@ -161,6 +161,10 @@
 **	    replace nat and longnat with i4
 **      24-Feb-2004 (kodse01)
 **          Removed gwxit.h inclusion which is not required.
+**  16-Jun-2009 (thich01)
+**      Add GEOM type.
+**  20-Aug-2009 (thich01)
+**      Add all other spatial types.
 */
 
 /* forwards */
@@ -1302,6 +1306,13 @@ GM_attr_type( i4  type )
     case DB_BYTE_TYPE:		t = ERx("byte"); break;
     case DB_VBYTE_TYPE:		t = ERx("byte varying"); break;
     case DB_LBYTE_TYPE:		t = ERx("long byte"); break;
+    case DB_GEOM_TYPE:		t = ERx("geometry"); break;
+    case DB_POINT_TYPE:         t = ERx("point"); break;
+    case DB_MPOINT_TYPE:        t = ERx("multipoint"); break;
+    case DB_LINE_TYPE:          t = ERx("line"); break;
+    case DB_MLINE_TYPE:         t = ERx("multiline"); break;
+    case DB_POLY_TYPE:          t = ERx("polygon"); break;
+    case DB_MPOLY_TYPE:         t = ERx("multipolygon"); break;
     default:			t = "unknown type"; break;
     }
     return( t );

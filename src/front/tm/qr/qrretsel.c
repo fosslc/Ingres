@@ -65,6 +65,10 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**      16-Jun-2009 (thich01)
+**          Treat GEOM type the same as LBYTE.
+**      20-Aug-2009 (thich01)
+**          Treat all spatial types the same as LBYTE.
 **	24-Aug-2009 (maspa05) SIR 122324, trac 397
 **	    new "truly silent" mode - does not output 'box' lines etc
 **          In silent mode don't output leading and trailing separators
@@ -330,6 +334,13 @@ QRIOB		qriob	= {
 			    */
 		case DB_LVCH_TYPE:
 		case DB_LBYTE_TYPE:
+		case DB_GEOM_TYPE:
+                case DB_POINT_TYPE:
+                case DB_MPOINT_TYPE:
+                case DB_LINE_TYPE:
+                case DB_MLINE_TYPE:
+                case DB_POLY_TYPE:
+                case DB_MPOLY_TYPE:
 		case DB_LBIT_TYPE:
 		case DB_LNVCHR_TYPE:
 		    if ( qrlvcolret( &qriob, &flushed ) == FAIL )

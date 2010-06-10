@@ -975,6 +975,8 @@ NO_OPTIM=dr6_us5 i64_aix
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Replace DMPP_PAGE* with DMP_PINFO* where needed.
 **	    sensitized to crow_locking().
+**	24-Feb-2010 (troal01)
+**	    Propagate E_DM5423_SRID_MISMATCH errors.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
 **	01-apr-2010 (toumi01) SIR 122403
@@ -5075,7 +5077,8 @@ dm2r_put(
 			    dberr);
 	if ( status && dberr->err_code != E_DM0065_USER_INTR
 	  && dberr->err_code != E_DM010C_TRAN_ABORTED 
-          && dberr->err_code != E_DM016B_LOCK_INTR_FA)
+          && dberr->err_code != E_DM016B_LOCK_INTR_FA
+          && dberr->err_code != E_DM5423_SRID_MISMATCH)
 	{
 	    /* 
 	    ** User interrupts are now a possibility, since dmpe
@@ -6350,7 +6353,8 @@ DB_ERROR	    *dberr )
 	    {
 		if (dberr->err_code != E_DM0065_USER_INTR
 		  && dberr->err_code != E_DM010C_TRAN_ABORTED
-                  && dberr->err_code != E_DM016B_LOCK_INTR_FA)
+                  && dberr->err_code != E_DM016B_LOCK_INTR_FA
+                  && dberr->err_code != E_DM5423_SRID_MISMATCH)
 		{
 		    /*
 		    ** User interrupts are now a possibility, since dmpe
@@ -7832,7 +7836,8 @@ dm2r_load(
 		    {
 			if (dberr->err_code != E_DM0065_USER_INTR
 			  && dberr->err_code != E_DM010C_TRAN_ABORTED
-			  && dberr->err_code != E_DM016B_LOCK_INTR_FA)
+			  && dberr->err_code != E_DM016B_LOCK_INTR_FA
+              && dberr->err_code != E_DM5423_SRID_MISMATCH)
 			{
 			    /*
 			    ** User interrupts are now a

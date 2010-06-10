@@ -120,6 +120,9 @@
 ;	    Add adu_29replace_raw and adu_29replace_uni
 ;	22-Mar-2010 (bonro01) b123422
 ;	    Fix previous change which used the wrong function numbers
+;	22-Mar-2010 (troal01)
+;	    Add all external geospatial symbols
+;
 ;	20-Apr-2010 (toumi01) SIR 122403
 ;	    Add for encryption: adu_aesdecrypt adu_aesencrypt
 ;	    adu_rijndaelSetupEncrypt adu_rijndaelSetupDecrypt
@@ -661,3 +664,93 @@ adu_flttrunc		@539
 adu_fltceil		@540
 adu_fltfloor		@541
 adu_soundex_dm		@542
+adu_1pt_cmp     @543
+adu_transform   @544
+adu_geometry_srid_fromWKB       @545
+adu_geometry_srid_fromText      @546
+adu_multipolygon_srid_fromWKB   @547
+adu_multipolygon_srid_fromText  @548
+adu_multilinestring_srid_fromWKB        @549
+adu_multilinestring_srid_fromText       @550
+adu_multipoint_srid_fromWKB     @551
+adu_multipoint_srid_fromText    @552
+adu_polygon_srid_fromWKB        @553
+adu_polygon_srid_fromText       @554
+adu_linestring_srid_fromWKB     @555
+adu_linestring_srid_fromText    @556
+adu_point_srid_fromWKB  @557
+adu_point_srid_fromText @558
+adu_srid        @559
+adu_geometryn   @560
+adu_numgeometries       @561
+adu_interiorringn       @562
+adu_numinteriorring     @563
+adu_exteriorring        @564
+adu_area        @565
+adu_pointonsurface      @566
+adu_centroid    @567
+adu_stlength    @568
+adu_isring      @569
+adu_isclosed    @570
+adu_endpoint    @571
+adu_startpoint  @572
+adu_pointn      @573
+adu_convexhull  @574
+adu_buffer_two  @575
+adu_buffer_one  @576
+adu_sym_difference      @577
+adu_difference  @578
+adu_intersection        @579
+adu_distance    @580
+adu_relate      @581
+adu_within      @582
+adu_crosses     @583
+adu_touches     @584
+adu_intersects  @585
+adu_disjoint    @586
+adu_equals      @587
+adu_envelope    @588
+adu_boundary    @589
+adu_geometry_type       @590
+adu_dimension   @591
+adu_geom_dimensions     @592
+adu_geom_name   @593
+adu_geometry_fromWKB    @594
+adu_geometry_fromText   @595
+adu_issimple    @596
+adu_isempty     @597
+adu_geom_union  @598
+adu_geom_perimeter      @599
+adu_contains    @600
+adu_geom_overlaps       @601
+adu_geom_hilbert        @602
+adu_geom_nbr    @603
+adu_geom_asBinary       @604
+adu_geom_asText @605
+adu_multipolygon_fromWKB        @606
+adu_multipolygon_fromText       @607
+adu_multilinestring_fromWKB     @608
+adu_multilinestring_fromText    @609
+adu_multipoint_fromWKB  @610
+adu_multipoint_fromText @611
+adu_polygon_fromWKB     @612
+adu_polygon_fromText    @613
+adu_linestring_fromWKB  @614
+adu_linestring_fromText @615
+adu_point_fromWKB       @616
+adu_point_fromText      @617
+adu_pt_to_pt    @618
+adu_2flt_to_pt  @619
+adu_point_y     @620
+adu_point_x     @621
+adu_strtopt     @622
+adu_pttostr     @623
+db_datatype_is_geom @624
+adt_key_incr		@625
+adt_key_decr		@626
+adi_dtfamily_retrieve	@627
+adu_rtree_cmp		@628
+adu_numpoints		@629
+adu_inside			@630
+adu_geom_asTextRaw  @631
+adu_geom_asTextRound @632

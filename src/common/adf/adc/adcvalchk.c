@@ -102,8 +102,14 @@
 **	18-Feb-2008 (kiria01) b120004
 **	    Consolidate timezone handling. Updated adu_6to_dtntrnl
 **	    to new form adu_6to_dtntrnl for inteface change.
+**  16-Jun-2009 (thich01)
+**      Treat GEOM type the same as LBYTE.
 **      13-aug-2009 (joea)
 **          Add case for DB_BOO_TYPE in adc_1valchk_rti.
+**  20-Aug-2009 (thich01)
+**      Treat all spatial types the same as LBYTE.
+**      09-mar-2010 (thich01)
+**          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
 **/
 
 
@@ -386,11 +392,19 @@ DB_DATA_VALUE	    *adc_dv)
       case DB_LBIT_TYPE:
       case DB_BYTE_TYPE:
       case DB_LBYTE_TYPE:
+      case DB_GEOM_TYPE:
+      case DB_POINT_TYPE:
+      case DB_MPOINT_TYPE:
+      case DB_LINE_TYPE:
+      case DB_MLINE_TYPE:
+      case DB_POLY_TYPE:
+      case DB_MPOLY_TYPE:
       case DB_NCHR_TYPE:
       case DB_LNVCHR_TYPE:
       case DB_LBLOC_TYPE:
       case DB_LCLOC_TYPE:
       case DB_LNLOC_TYPE:
+      case DB_NBR_TYPE:
 	/* All bit patterns will be legal for these datatypes */
 	break;
 
@@ -676,6 +690,13 @@ DB_DATA_VALUE	    *adc_dv)
                 break;
             }
             break;
+
+      case DB_PT_TYPE:
+        /* Currently all ranges of x and y are valid, since it is    */
+        /* dependent on the projection used, and should be validated */
+        /* against that when its ready (PROJ.4 library?)             */
+        break;
+
 
       default:
 	return (adu_error(adf_scb, E_AD9999_INTERNAL_ERROR, 0));

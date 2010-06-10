@@ -337,7 +337,7 @@
 #include <windows.h>
 #endif
 
-# include         <bzarch.h>
+#include <bzarch.h>
 
 #ifdef xde
 #include <windows.h>

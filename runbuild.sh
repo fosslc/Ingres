@@ -28,7 +28,7 @@ Usage: -a to force a rebuild (i.e. jam -a)
 STOP
 }
 
-while getopts "acgh" options; do
+while getopts "acghn" options; do
   case $options in
      a ) REBUILDOPT="-a";;
      c ) CLEANOPT="clean";;
@@ -56,6 +56,10 @@ if [ ! -d ${LOGDIR} ]
 then
   mkdir -p ${LOGDIR}
 fi
+
+# Clear $1 argument parms so that they are not passed
+# to sourced scripts.
+set --
 
 # if we're starting fresh, set up the environment
 if [ -f ${BUILDTOOLS}/set_env.sh ]

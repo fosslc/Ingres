@@ -30,6 +30,10 @@
 **  History:    $Log-for RCS$
 **      10-jan-2002 (inkdo01)
 **          Initial creation.
+**  16-Jun-2009 (thich01)
+**      Treat GEOM type the same as LBYTE.
+**  20-Aug-2009 (thich01)
+**      Treat all spatial types the same as LBYTE.
 **      23-oct-2009 (joea)
 **          Add case for DB_BOO_TYPE in adi_castid.
 **/
@@ -227,6 +231,13 @@ DB_DATA_VALUE	   *adi_castdv)
 	break;
 
       case DB_LBYTE_TYPE:
+      case DB_GEOM_TYPE:
+      case DB_POINT_TYPE:
+      case DB_MPOINT_TYPE:
+      case DB_LINE_TYPE:
+      case DB_MLINE_TYPE:
+      case DB_POLY_TYPE:
+      case DB_MPOLY_TYPE:
 	*adi_oid = ADI_LONG_BYTE;
 	break;
 

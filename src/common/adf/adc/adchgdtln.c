@@ -81,6 +81,8 @@
 **	    replace nat and longnat with i4
 **      14-aug-2009 (joea)
 **          Add case for DB_BOO_TYPE in adc_1hg_dtln_rti.
+**      09-mar-2010 (thich01)
+**          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
 **/
 
 
@@ -424,6 +426,8 @@ DB_DATA_VALUE	    *adc_hgdv;
 **	    to be treated as raw collation data alongside DB_CHA_TYPE.
 **	    If this is not done, CE entries get compated using CHAR semantics
 **	    which is so wrong.
+**      17-Dec-2008 (macde01)
+**          Added support for DB_PT_TYPE.
 */
 
 DB_STATUS
@@ -560,6 +564,7 @@ DB_DATA_VALUE	    *adc_hgdv)
       }
 
       case DB_BYTE_TYPE:
+      case DB_NBR_TYPE:
 	adc_hgdv->db_datatype	= DB_BYTE_TYPE;
 	adc_hgdv->db_prec	= 0;
 	if (adc_hgdv->db_length <= 0)
@@ -602,6 +607,12 @@ UTF8merge:
 	    adc_hgdv->db_length = DB_MAX_HIST_LENGTH;
 	break;
 	
+      case DB_PT_TYPE:
+        adc_hgdv->db_datatype   = adc_fromdv->db_datatype;
+        adc_hgdv->db_prec       = 0;
+        adc_hgdv->db_length     = adc_fromdv->db_length;
+        break;
+
       default:
 	return(adu_error(adf_scb, E_AD9999_INTERNAL_ERROR, 0));
 

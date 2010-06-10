@@ -130,6 +130,8 @@
 **	    types to 16000. 
 **      10-sep-2008 (gupsh01)
 **          Added utf8 expansion factors
+**      25-Nov-2008 (macde01)
+**          Add point datatype (DB_PT_TYPE).
 **    21-Jan-2009 (horda03) Bug 121519
 **        Due to the way filenames are constructed for table IDs, the range
 **        of possible table_id's (for permanent tables) is 0 to 0x4643C824. 
@@ -139,6 +141,10 @@
 **        the max table id.
 **      28-jan-2009 (stial01)
 **          Added DB_IITYPE_LEN, DB_IISTRUCT_LEN
+**  16-Jun-2009 (thich01)
+**      Add GEOM type for spatial.
+**  20-Aug-2009 (thich01)
+**      Add POINT, MPOINT, LINE, MLINE, POLY, and MPOLY spatial types.
 **      06-oct-2009 (joea)
 **          Change DB_DT_ID_MACRO to provide SQL and QUEL precedence values for
 **          BOOLEAN.  Add db_booltype member to DB_ANYTYPE union and defines
@@ -152,6 +158,8 @@
 **      22-Feb-2010 (maspa05) 123293
 **        added SVR_CLASS_MAXNAME for the size of a server_class name, used
 **        to be hard-coded to 24
+**      09-Mar-2010 (thich01)
+**          Add NBR type.
 **	25-Mar-2010 (toumi01) SIR 122403
 **	    Add DB_ATTS fields encflags and encwid and definitions for
 **	    encryption.
@@ -944,6 +952,9 @@ typedef i2 DB_DT_ID;
 **        DB_LCLOC_TYPE   36        lvchar locator
 **        DB_BOO_TYPE     38        "boolean"
 **
+** New types for spatial datatypes **
+**        DB_PT_TYPE      55        spatial point
+**
 ** The following types are not stored in relations **
 **
 **
@@ -1046,6 +1057,8 @@ typedef i2 DB_DT_ID;
 **
 **        DB_NQTXT_TYPE       54  Type for qry text containing a nchar
 **                                or nvarchar text when send thru GCF
+**
+**        DB_PT_TYPE          55  Type for spatial POINT
 **
 **/
 
@@ -1181,6 +1194,15 @@ _DEFINE(QTXT,   51, CHAR, BASE,  0,  0,  0,  0  /* Type for qry text  */)\
 _DEFINE(TFLD,   52, CHAR, BASE,  0,  0,  0,  0  /* Type for table     */)\
 _DEFINE(DEC_CHR,53, NUMB, BASE,  0,  0,  0,  0  /* Type for decimal literal */)\
 _DEFINE(NQTXT,  54, NCHAR,PAD,   0,  0,  0,  0  /* Type for qry text */)\
+_DEFINE(PT,     55, NUMB, BASE,  0,  0,  0,  0  /* Type for spatial point */)\
+_DEFINE(GEOM,   56, BYTE, LV,   18, 18, 18, 18  /* Spatial Long Byte */)\
+_DEFINE(POINT,  57, BYTE, LV,   18, 18, 18, 18  /* Point Long Byte */)\
+_DEFINE(MPOINT, 58, BYTE, LV,   18, 18, 18, 18  /* MPoint Long Byte */)\
+_DEFINE(LINE,   59, BYTE, LV,   18, 18, 18, 18  /* Line Long Byte */)\
+_DEFINE(MLINE,  60, BYTE, LV,   18, 18, 18, 18  /* MLine Long Byte */)\
+_DEFINE(POLY,   61, BYTE, LV,   18, 18, 18, 18  /* Poly Long Byte */)\
+_DEFINE(MPOLY,  62, BYTE, LV,   18, 18, 18, 18  /* MPoly Long Byte */)\
+_DEFINE(NBR,    63, BYTE, BASE,  0,  0,  0,  0  /* NBR type for Rtree */)\
 _DEFINEEND
 
 /*

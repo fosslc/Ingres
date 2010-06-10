@@ -22,6 +22,14 @@
 ##	GTKHDR - Headers needed to build GTK appllications. (uses pkg-config)
 ##	PAXLOC - Location pax binary
 ##
+##      Geospatial Ingres uses the GEOS library.  The following variables can
+##      be used to specify the GEOS location.
+##
+##      GEOS_INC - Location of the GEOS headers.
+##      GEOS_LOC - Location of the GEOS libraries.
+##      GEOS64_LOC - If building in 64 bit, both 64 and 32 bit versions of 
+##                   the GEOS libraries are required.
+##
 ########################################################3
 ##
 ##	History:
@@ -142,6 +150,8 @@
 ##    10-Aug-2009 (hanje04)
 ##	  Bug 122571
 ##	  Fix for Fedora 10 and up as part of RPM 4.6+ installer changes
+##    20-Nov-2009 (thich01)
+##        Added locations for GEOS library and headers for geospatial.
 ##	19-feb-2010 (stephenb)
 ##		Don't re-set ING_TST if it's set already; this allows using
 ##		alternate tests or test location.
@@ -167,6 +177,8 @@ PATH=$PATH:/usr/local/bin
 
 xvers=27 # Xerces version
 config_string=unknown
+geos_need=false
+geos64_need=false
 gtk_need=false
 rpm_need=false
 libxml2_need=false
@@ -261,7 +273,8 @@ case ${unames} in
 	gtk_need=true
 	libxml2_need=true
 	include_flag=-I
-	
+        geos_need=true
+
 	case ${unamem} in
           i*86)
 		unamem=i386
@@ -272,10 +285,12 @@ case ${unames} in
 		xcc_need=i686-unknown-linux-gnu
 		xcc_name=${xcc_need}-gcc
 		rhybrid=true
+                geos64_need=true
 		;;
         x86_64)
 		config_string=a64_lnx
 		rhybrid=true
+                geos64_need=true
 		;;
         ppc64)
 		config_string=ppc_lnx

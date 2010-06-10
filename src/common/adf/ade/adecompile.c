@@ -281,6 +281,10 @@ NO_OPTIM = nc4_us5
 **	    I like ifdef better than ifndef, flip 'em around.
 **	29-Aug-2005 (schka24)
 **	    More minor post-generation optimizations.
+**  16-Jun-2009 (thich01)
+**      Treat GEOM type the same as LBYTE.
+**  20-Aug-2009 (thich01)
+**      Treat all spatial types the same as LBYTE.
 */
 
 /*
@@ -2679,7 +2683,9 @@ i4                 *ade_unaligned)
 	{
 	    j = abs(tmp_opr.opr_dt);
 	    if (j == DB_LVCH_TYPE || j == DB_LBYTE_TYPE || j == DB_LNVCHR_TYPE
-	      || tmp_opr.opr_len == ADE_LEN_UNKNOWN)
+	      || j == DB_GEOM_TYPE || j == DB_POINT_TYPE || j == DB_MPOINT_TYPE
+              || j == DB_LINE_TYPE || j == DB_MLINE_TYPE || j == DB_POLY_TYPE
+              || j == DB_MPOLY_TYPE || tmp_opr.opr_len == ADE_LEN_UNKNOWN)
 	    cxseg->seg_flags |= ADE_CXSEG_FANCY;
 	}
 	ADE_SET_OPERAND_MACRO(&tmp_opr, optr);

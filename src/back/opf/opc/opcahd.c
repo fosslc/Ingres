@@ -27,6 +27,7 @@
 #include    <qefrcb.h>
 #include    <rdf.h>
 #include    <psfparse.h>
+#include    <spatial.h>
 #include    <qefnode.h>
 #include    <qefact.h>
 #include    <qefqp.h>
@@ -349,6 +350,9 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**	24-Feb-2010 (troal01)
+**	    Fix opc_dmuahd to properly set geomtype and srid when a geospatial
+**	    column is part of a CREATE TABLE AS SELECT
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
 [@history_template@]...
@@ -2787,6 +2791,9 @@ opc_chktarget(
 **	16-Jan-2007 (kschendel)
 **	    Fix stupid in last change:  automatic partitioning doesn't have
 **	    any column info, caused segv.
+**	24-Feb-2010 (troal01)
+**	    Propagate geomtype and SRID properly when a geospatial column is
+**	    part of a CREATE TABLE AS SELECT statement.
 */
 static QEF_AHD *
 opc_dmuahd(
@@ -2821,6 +2828,7 @@ opc_dmuahd(
     OPC_PST_STATEMENT	*opc_pst;
     QEF_RESOURCE	*resource;
     i4			char_array_idx;
+    i4 			i;
 
     if (structure == DB_SORT_STORE)
     {
@@ -3147,6 +3155,51 @@ opc_dmuahd(
 	    attr->attr_collID    = att->att_collID;
 	    attr->attr_flags_mask =att->att_flags;
 	    attr->attr_defaultTuple = (DB_IIDEFAULT *) NULL;
+	    /*
+	     * First set geospatial attributes to something reasonable
+	     */
+	    attr->attr_srid = SRID_UNDEFINED;
+	   	for(i = 0; geom_type_mapping[i].geom_type != GEOM_TYPE_UNDEFINED; i++)
+	   	{
+	   		if(geom_type_mapping[i].db_type == abs(attr->attr_type))
+	   		{
+	   			break;
+	   		}
+	   	}
+	    attr->attr_geomtype = geom_type_mapping[i].geom_type;
+
+	    /*
+	     * Do we have an SRID that we can look for?
+	     */
+	    if(resdom->pst_right->pst_sym.pst_type == PST_VAR &&
+	    		global->ops_rangetab.opv_base->opv_grv
+	    		[resdom->pst_right->pst_sym.pst_value.pst_s_var.pst_vno]->opv_relation != NULL)
+	    {
+	    	i4 vno = resdom->pst_right->pst_sym.pst_value.pst_s_var.pst_vno;
+	    	i4 attr_count = global->ops_rangetab.opv_base->opv_grv[vno]->opv_relation->rdr_no_attr;
+	    	/*
+	    	 * Find attribute number
+	    	 */
+	    	for(i = 1;
+	    			i <= attr_count;
+	    			i++)
+	    	{
+	    		if(!strncmp(resdom->pst_right->pst_sym.pst_value.pst_s_fwdvar.pst_atname.db_att_name,
+	    				global->ops_rangetab.opv_base->opv_grv[vno]->opv_relation->rdr_attr[i]->att_name.db_att_name,
+	    				DB_MAXNAME))
+	    		{
+	    			break;
+	    		}
+	    	}
+	    	/*
+	    	 * If attribute is found, let's fix the new DMF_ATTR_ENTRY
+	    	 */
+	    	if(i <= attr_count)
+	    	{
+				attr->attr_srid =
+						global->ops_rangetab.opv_base->opv_grv[vno]->opv_relation->rdr_attr[i]->att_srid;
+	    	}
+	    }
 
 	    /* copy default id from resdom
 	     */

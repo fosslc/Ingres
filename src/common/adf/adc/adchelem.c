@@ -83,6 +83,8 @@ NO_OPTIM = usl_us5
 **	    Added support for unicode nchar and nvarchar type.
 **      13-aug-2009 (joea)
 **          Add case for DB_BOO_TYPE in adc_1helem_rti.
+**      09-mar-2010 (thich01)
+**          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
 **/
 
 
@@ -512,9 +514,11 @@ DB_DATA_VALUE       *adc_dvhg;
 **	14-Jan-08 (kiria01) b119738
 **	    Corrected the buffer lengths for unicode and utf8 data and
 **	    eliminated the unused pair of null bytes from collation data.
-**	17-Mar-2009 (toumi01) b121809
-**	    Stop treating BYTE data as CHAR, which causes problems with
-**	    utf8 data.
+**      17-Dec-2008 (macde01)
+**          Put in placeholder for DB_PT_TYPE.
+**    17-Mar-2009 (toumi01) b121809
+**        Stop treating BYTE data as CHAR, which causes problems with
+**        utf8 data.
 **       8-Mar-2010 (hanal04) Bug 122974
 **          Removed nfc_flag from adu_nvchr_fromutf8() and adu_unorm(). 
 **          A standard interface is expected by fcn lookup / execute 
@@ -565,6 +569,7 @@ DB_DATA_VALUE      *adc_dvhg)
 	break;
 
       case DB_BYTE_TYPE:
+      case DB_NBR_TYPE:
         fromp    = (u_char *) adc_dvfrom->db_data;
 	top      = (u_char *) adc_dvhg->db_data;
 	fromendp = fromp + adc_dvfrom->db_length;
@@ -778,6 +783,9 @@ DB_DATA_VALUE      *adc_dvhg)
 	             adc_dvhg->db_data+txt->db_t_count);
 	    break;
      }
+      case DB_PT_TYPE:
+        TRdisplay("Error: adc_1helem_rti for DB_PT_TYPE, not coded\n");
+        break;
 
       default:
 	return(adu_error(adf_scb, E_AD9999_INTERNAL_ERROR, 0));

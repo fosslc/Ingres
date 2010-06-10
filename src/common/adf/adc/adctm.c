@@ -17,6 +17,7 @@
 #include    <aduint.h>
 #include    <adudate.h>
 #include    <adumoney.h>
+#include    <aduspatial.h>
 
 
 #include <clfloat.h>
@@ -119,11 +120,15 @@
 **	29-jun-2005 (thaju02)
 **	    adc_2tmcvt_rti(): For nvchr, use length of coerced data to 
 **	    determine endp. (B114780)
-**	19-feb-2009 (joea)
-**	    Remove #ifdefs from 5-mar-2008 fix to adc_2tmcvt_rti so that it's
-**	    visible on all platforms.
+**      05-Jan-2009 (macde01)
+**          Added support for the DB_PT_TYPE datatype.
+**  19-feb-2009 (joea)
+**      Remove #ifdefs from 5-mar-2008 fix to adc_2tmcvt_rti so that it's
+**      visible on all platforms.
 **      22-sep-2009 (joea)
 **          Add cases for DB_BOO_TYPE in adc_1tmlen_rti and adc_2tmcvt_rti.
+**      09-mar-2010 (thich01)
+**          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
 **/
 
 
@@ -665,6 +670,8 @@ i4		    *adc_outlen;
 **	    Fixed output results for nchar and nvarchar types.
 **	17-jul-2006 (gupsh01)
 **	    Added support for new ANSI datetime types.
+**      05-Jan-2009 (macde01)
+**          Added support for DB_PT_TYPE.
 */
 
 DB_STATUS
@@ -744,6 +751,7 @@ i4                  *adc_worstwid)
       case DB_CHR_TYPE:
       case DB_CHA_TYPE:
       case DB_BYTE_TYPE:
+      case DB_NBR_TYPE:
 	*adc_defwid   = max(len, adf_scb->adf_outarg.ad_c0width);
 	/* worst case is 4 times longer in case of \000 format on output */
 	*adc_worstwid = max((len * 4), *adc_defwid);
@@ -849,6 +857,12 @@ i4                  *adc_worstwid)
 		max(bit_len, adf_scb->adf_outarg.ad_c0width);
 	    break;
 	}
+
+      case DB_PT_TYPE:
+        {
+            *adc_defwid = *adc_worstwid = AD_1PT_OUTLENGTH; 
+            break;
+        }
 
       default:
 	db_stat = adu_error(adf_scb, E_AD2004_BAD_DTID, 0);
@@ -1036,6 +1050,9 @@ i4                  *adc_worstwid)
 **          Check f4 case for boundary condition at +/- FLT_MAX
 **          here we must make a slight adjustment to ensure rounding
 **          does not cause overflow.
+**      05-Jan-2009 (macde01)
+**          Added support for DB_PT_TYPE.
+**	
 **	15-Nov-2009 (kschendel) SIR 122890
 **	    Don't lose error status from a failed NVCHAR coercion.
 */
@@ -1353,6 +1370,7 @@ i4		    *adc_outlen)
       case DB_VCH_TYPE:
       case DB_LTXT_TYPE:
       case DB_BYTE_TYPE:
+      case DB_NBR_TYPE:
       case DB_VBYTE_TYPE:
 	{
 	    i2	    i2tmp;
@@ -1362,6 +1380,7 @@ i4		    *adc_outlen)
 	    {
 	    case DB_CHA_TYPE:
 	    case DB_BYTE_TYPE:
+            case DB_NBR_TYPE:
 		p = f;
 		i = length;
 		length = max(length, adf_scb->adf_outarg.ad_c0width);
@@ -1590,6 +1609,26 @@ i4		    *adc_outlen)
 		max(length, adf_scb->adf_outarg.ad_c0width);
 	adu_bit2str(adf_scb, adc_dv, &fake_dv);
 	break;
+      }
+
+      case DB_PT_TYPE:
+      {
+        double      x, y;
+        char        buf[ADI_OUTMXFIELD];
+        i4          buflen;
+
+        F8ASSIGN_MACRO(((AD_PT_INTRNL *)f)->x, x);
+        F8ASSIGN_MACRO(((AD_PT_INTRNL *)f)->y, y);
+
+        // STprintf does not handle commas properly in the middle
+        // of the format string.
+        sprintf(buf,"(%f,%f)", x, y);
+        buflen = STlength(buf);
+        *adc_outlen = max(buflen, AD_1PT_OUTLENGTH);
+        ad0_printfatt(buf, buflen, *adc_outlen,
+                      (char *)adc_tmdv->db_data);
+
+        break;
       }
 
       default:

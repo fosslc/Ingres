@@ -52,7 +52,7 @@
 
 usage()
 {
-    echo "Usage: buildAndTest.sh [-noclean] [-nobuild] [-testloc <location>] [<installation_code>]"
+    echo "Usage: buildAndTest.sh [-noclean] [-nobuild] [-keepenv] [-testloc <location>] [<installation_code>]"
     echo "Where:"
     echo "	-nobuild - Do not build the code"
     echo "	-noclean - Do not delete existing build test and installation directories"
@@ -133,6 +133,10 @@ then
   fi
 fi
 export BUILDTOOLS
+
+# Clear $1 argument parms so that they are not passed
+# to sourced scripts.
+set --
 
 if [ -f ${BUILDTOOLS}/set_env.sh ]
 then

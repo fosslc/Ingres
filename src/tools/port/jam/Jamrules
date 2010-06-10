@@ -1329,6 +1329,8 @@
 #           on VMS when PTOOLSBIN is not in use.
 #	18-Oct-2009 (bonro01) Bug 116245
 #	    Add MkDir to IISIGFILES to make destination dir if necessary.
+#	19-Nov-2009 (thich01)
+#	    Added HDRGEOS and src/common/adf/adu to IISUBSYS for geospatial.
 #	24-Nov-2009 (bonro01)
 #	    Fix Windows link problem caused by change 501221 bug 122875
 #	17-Dec-2009 (bonro01)
@@ -3261,6 +3263,8 @@ rule IISUBSYS
 			}
 	case common/adf/adl   :
 			HDRS = $(HDRS) $(HDRICE) $(HDRFRONT) $(HDRSAX) ;
+        case common/adf/adu  :
+			HDRS = $(HDRS) $(HDRGEOS) ;
 	case common/adf/ads   :
 			if $(NT)
 			{

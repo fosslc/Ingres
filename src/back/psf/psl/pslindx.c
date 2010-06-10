@@ -154,6 +154,9 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      10-Mar-2010 (thich01)
+**          Allow GEOM family an exception for rtree indexing, but only for
+**          rtrees.  Still disallow other index types.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
 */
@@ -247,6 +250,8 @@ psl_ci1_create_index(
     i4			    i;
     DMT_ATT_ENTRY	    *att_entry;
     i4			    dcomptype = (i4)FALSE;
+    DMU_KEY_ENTRY **key;
+    DB_ATT_NAME attrname;
 
     qeu_cb = (QEU_CB *) sess_cb->pss_object;
     dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
@@ -377,6 +382,20 @@ psl_ci1_create_index(
 
     /* verify that the specified combination of options was legal */
     /* Note that indexes can't be partitioned (yet) */
+    /* Check for GEOM family and only allow rtrees */
+    key = (DMU_KEY_ENTRY **)dmu_cb->dmu_key_array.ptr_address;
+    STmove((char *) &(*key)->key_attr_name, ' ', sizeof(DB_ATT_NAME),
+           (char *)&attrname);
+    att_entry = pst_coldesc(sess_cb->pss_resrng, &attrname);
+    if(adi_dtfamily_retrieve(att_entry->att_type) == DB_GEOM_TYPE && 
+       sstruct != DB_RTRE_STORE )
+    {
+        //GEOM types can only be rtrees.
+        _VOID_ psf_error(2180L, 0L, PSF_USERERR, &err_code, err_blk, 2,
+                sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
+                psf_trmwhite(DB_ATT_MAXNAME, (char *) &attrname), &attrname);
+        return E_DB_ERROR;
+    }
     status = psl_validate_options(sess_cb, PSQ_INDEX, with_clauses, sstruct,
 	minp, maxp,
 	dcomptype,
@@ -1105,8 +1124,11 @@ psl_ci4_indexcol(
 	}
     }
 
+    /* Allow GEOM family types to get past the check key as an exception for
+     * rtree indexing. */
     status = psl_check_key(sess_cb, err_blk, (DB_DT_ID) attribute->att_type);
-    if (DB_FAILURE_MACRO(status))
+    if (DB_FAILURE_MACRO(status) && 
+        adi_dtfamily_retrieve(attribute->att_type) != DB_GEOM_TYPE)
     {
 	_VOID_ psf_error(2180L, 0L, PSF_USERERR, &err_code, err_blk, 2,
 	    sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,

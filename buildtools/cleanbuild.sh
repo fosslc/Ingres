@@ -48,6 +48,11 @@ then
   fi
 fi
 export BUILDTOOLS
+
+# Clear $1 argument parms so that they are not passed
+# to sourced scripts.
+set --
+
 # if we're starting fresh, set up the environment
 if [ -f ${BUILDTOOLS}/set_env.sh ]
 then

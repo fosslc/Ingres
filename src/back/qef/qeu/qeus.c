@@ -54,6 +54,7 @@
 #include    <qefqry.h>
 #include    <qefcat.h>
 #include    <qefprotos.h>
+#include    <spatial.h>
 
 /*
 ** NO_OPTIM = rs4_us5 ris_u64 i64_aix
@@ -423,6 +424,9 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**	15-Mar-2010 (troal01)
+**	    Add qeu_valid_srid to check whether and SRID is valid, when creating
+**	    a geometry column.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
 **	22-apr-2010 (toumi01) SIR 122403
@@ -629,6 +633,11 @@ static i4 createTblErrXlate(
 	i4		dmf_errcode,
 	DB_STATUS	status);
 
+static bool
+qeu_valid_srid(
+    DMU_CB *dmu,
+    QEF_CB *qef,
+    i4 *errcode);
 
 /* definitions needed for the characteristics compiler */
 
@@ -1786,6 +1795,19 @@ ddb_refresh:
 		     goto exit; 
 		}
 	    }
+
+	    /*
+	     * If there is an invalid SRID specified for one of the columns,
+	     * abort the create table statement.
+	     */
+	    if(!qeu_valid_srid(dmu_ptr, qef_cb, &err))
+	    {
+	    	/*
+	    	 * Not a valid SRID! Let's tell the user as much.
+	    	 */
+	    	status = E_DB_ERROR;
+	    	goto exit;
+	    }
 	    /* Other create-table callers don't have a qeu cb, so set an
 	    ** rcb flag meaning "temporary table" (even if that isn't
 	    ** what the name looks like...)
@@ -2194,6 +2216,20 @@ ddb_refresh:
 		status = qeu_modify_prep(qeu_cb, dmu_ptr, &ulm, &pp_array, &err);
 		if (DB_FAILURE_MACRO(status))
 		    goto exit;
+	    }
+	    /*
+	     * If it's an alter table and the valid SRID check fails
+	     * we need to abort.
+	     */
+	    if(opcode == DMU_ALTER_TABLE &&
+	    		(dmu_atbl_addcol || dmu_atbl_altcol) &&
+	    		!qeu_valid_srid(dmu_ptr, qef_cb, &err))
+	    {
+	    	/*
+	    	 * Not a valid SRID! Let's tell the user as much.
+	    	 */
+	    	status = E_DB_ERROR;
+	    	goto exit;
 	    }
 
 	    /* now do the actual DMF operation */
@@ -7337,3 +7373,165 @@ suppress_rowcount(
     return( result );
 }
 
+
+/*{
+** Name: qeu_valid_srd - ensure given SRID for new geometry col is valid
+**
+** Description:
+**  Will query the spatial_ref_sys table to determine whether specified
+**  SRID is valid. If it does not exist in the table this function will
+**  return FALSE. If for some reason any operation fails it will return
+**  FALSE with the proper error code.
+**
+** History:
+**	15-Mar-2010 (troal01)
+**	    Created.
+**
+*/
+
+static bool
+qeu_valid_srid(
+    DMU_CB *dmu,
+    QEF_CB *qef,
+    i4 *errcode
+)
+{
+    QEU_CB qeu_cb, *qeu = &qeu_cb;
+    DMR_ATTR_ENTRY key, *key_ptr = &key;
+    DB_STATUS status = E_DB_OK;
+    DB_TAB_NAME srs_name;
+    DB_OWN_NAME srs_owner;
+    DMT_SHW_CB show;
+    DMT_TBL_ENTRY srs_table;
+    DMF_ATTR_ENTRY **attr_list, *attr;
+    QEF_DATA qdata;
+    i4 i;
+    bool geom_found = FALSE;
+    SRS_ROW row;
+
+    /*
+     * First we need to exclude non geospatial columns from this search
+     */
+	attr_list = (DMF_ATTR_ENTRY **) dmu->dmu_attr_array.ptr_address;
+	for(i = 0; i < dmu->dmu_attr_array.ptr_in_count; i++)
+	{
+		attr = attr_list[i];
+		if(db_datatype_is_geom(attr->attr_type) && attr->attr_srid != SRID_UNDEFINED)
+		{
+			geom_found = TRUE;
+			break;
+		}
+	}
+	/*
+	 * No geometry found, skip the rest.
+	 */
+	if(!geom_found)
+	{
+		return TRUE;
+	}
+	/*
+	 * Next we need to find spatial_ref_sys
+	 * table id
+	 */
+	MEfill(sizeof(DB_TAB_NAME), ' ', &srs_name);
+	MEfill(sizeof(DB_OWN_NAME), ' ', &srs_owner);
+	STncpy(srs_name.db_tab_name, "spatial_ref_sys", STlen("spatial_ref_sys"));
+	STncpy(srs_owner.db_own_name, "$ingres", STlen("$ingres"));
+	show.type = DMT_SH_CB;
+	show.length = sizeof(DMT_SHW_CB);
+	show.dmt_session_id = qef->qef_ses_id;
+	show.dmt_db_id = qef->qef_dbid;
+	show.dmt_flags_mask = DMT_M_NAME | DMT_M_TABLE;
+	MEcopy(srs_name.db_tab_name, sizeof(DB_TAB_NAME), &show.dmt_name);
+	MEcopy(srs_owner.db_own_name, sizeof(DB_OWN_NAME), &show.dmt_owner);
+	show.dmt_char_array.data_address = (PTR) NULL;
+	show.dmt_char_array.data_in_size = 0;
+	show.dmt_char_array.data_out_size = 0;
+	show.dmt_table.data_address = (PTR) &srs_table;
+	show.dmt_table.data_in_size = sizeof(DMT_TBL_ENTRY);
+
+	status = dmf_call(DMT_SHOW, &show);
+	if(status != E_DB_OK)
+	{
+		//something went wrong
+		*errcode = E_QE0092_ERROR_SHOWING_TABLE;
+		return FALSE;
+	}
+
+	/*
+	 * Set up the qeu_cb and open the table
+	 */
+	qeu->qeu_type = QEUCB_CB;
+	qeu->qeu_length = sizeof(QEUCB_CB);
+	qeu->qeu_db_id = qef->qef_dbid;
+	qeu->qeu_lk_mode = DMT_IS;
+	qeu->qeu_flag = DMT_U_DIRECT;
+	qeu->qeu_access_mode = DMT_A_READ;
+	qeu->qeu_mask = 0;
+	qeu->qeu_qual = 0;
+	qeu->qeu_qarg = 0;
+	qeu->qeu_f_qual = 0;
+	qeu->qeu_f_qarg = 0;
+	qeu->qeu_klen = 1;
+	qeu->qeu_tab_id.db_tab_base = srs_table.tbl_id.db_tab_base;
+	qeu->qeu_tab_id.db_tab_index = srs_table.tbl_id.db_tab_index;
+	qeu->qeu_output = &qdata;
+	qeu->qeu_tup_length = sizeof(row);
+	qeu->qeu_count = 1;
+	qeu->qeu_getnext = QEU_REPO;
+	qdata.dt_next = 0;
+	qdata.dt_size = sizeof(row);
+	qdata.dt_data = (PTR) &row;
+	status = qeu_open(qef, qeu);
+
+	if(status != E_DB_OK)
+	{
+		*errcode = qeu->error.err_code;
+		return FALSE;
+	}
+
+	for(i = 0; i < dmu->dmu_attr_array.ptr_in_count; i++ )
+    {
+		attr = attr_list[i];
+		/*
+		 * SRID of -1 is always allowed
+		 */
+		if(attr->attr_srid == SRID_UNDEFINED)
+		{
+			continue;
+		}
+
+		key.attr_number = SRS_SRID_COL; //SRID column
+		key.attr_operator = DMR_OP_EQ;
+		key.attr_value = (char *) &attr->attr_srid;
+		qeu->qeu_key = &key_ptr;
+		status = qeu_get(qef, qeu);
+
+		if(status != E_DB_OK)
+		{
+			/*
+			 * Row wasn't found, invalid SRID!
+			 */
+			qeu_close(qef, qeu);
+			if(qeu->error.err_code == E_QE0015_NO_MORE_ROWS)
+			{
+				*errcode = E_QE5424_INVALID_SRID;
+				return FALSE;
+			}
+			/*
+			 * Some other error occured.
+			 */
+			else
+			{
+				*errcode = qeu->error.err_code;
+				return FALSE;
+			}
+		}
+    }
+
+	/*
+	 * Everything is okay, clean up and return TRUE
+	 */
+	qeu_close(qef, qeu);
+    return TRUE;
+}

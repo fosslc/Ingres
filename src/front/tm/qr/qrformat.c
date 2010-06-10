@@ -64,6 +64,10 @@
 **		13-mar-2001 (somsa01)
 **			The worst width could potentially be bigger than
 **			an i2 now.
+**              16-Jun-2009 (thich01)
+**                     Treat GEOM type the same as LBYTE.
+**              20-Aug-2009 (thich01)
+**                     Treat all spatial types the same as LBYTE.
 **		11-aug-2009 (maspa05) trac 397, SIR 122324
 **			in silent mode don't output a vertical separator
 **                      at beginning and end of line for column header
@@ -294,6 +298,13 @@ qrinitsz(
 	    qrdatatype = abs( qrb->rd->RD_DBVS_MACRO(i).db_datatype );
 	    if ( qrdatatype == DB_LVCH_TYPE ||
 	         qrdatatype == DB_LBYTE_TYPE ||
+	         qrdatatype == DB_GEOM_TYPE ||
+	         qrdatatype == DB_POINT_TYPE ||
+	         qrdatatype == DB_MPOINT_TYPE ||
+	         qrdatatype == DB_LINE_TYPE ||
+	         qrdatatype == DB_MLINE_TYPE ||
+	         qrdatatype == DB_POLY_TYPE ||
+	         qrdatatype == DB_MPOLY_TYPE ||
 	         qrdatatype == DB_LBIT_TYPE  || 
 		 qrdatatype == DB_LNVCHR_TYPE )
 	    {

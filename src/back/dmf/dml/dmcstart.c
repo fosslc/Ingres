@@ -861,6 +861,8 @@ static STATUS dmcm_lkinit(
 **	    Add page types V6, V7
 **	08-Mar-2010 (thaju02)
 **	    Removed max_tuple_length.
+**	16-Mar-2010 (troal01)
+**	    Added dmf_get_srs to ADF FEXI.
 */
 
 DB_STATUS
@@ -2687,6 +2689,7 @@ DB_VPT_SIZEOF_TUPLE_HDR(TCB_PG_V4), DMPP_VPT_SIZEOF_TUPLE_HDR_MACRO(TCB_PG_V4));
 	    ADF_CB		    adf_scb;
 	    FUNC_EXTERN DB_STATUS   dmf_tbl_info();
 	    FUNC_EXTERN DB_STATUS   dmf_last_id();
+	    FUNC_EXTERN DB_STATUS   dmf_get_srs();
 
 	    MEfill(sizeof(ADF_CB),0,(PTR)&adf_scb);
 
@@ -2721,6 +2724,15 @@ DB_VPT_SIZEOF_TUPLE_HDR(TCB_PG_V4), DMPP_VPT_SIZEOF_TUPLE_HDR_MACRO(TCB_PG_V4));
 	    
 	    status = adg_add_fexi(&adf_scb, ADI_07LASTID_FEXI, 
 				  dmf_last_id );
+	    if (status != E_DB_OK)
+	    {
+		uleFormat(&adf_scb.adf_errcb.ad_dberror, 0,
+		    0, ULE_LOG, NULL, NULL, 0, NULL, &err_code, 0);
+		SETDBERR(&dmc->error, 0, E_DM007F_ERROR_STARTING_SERVER);
+		break;
+	    }
+	    status = adg_add_fexi(&adf_scb, ADI_08GETSRS_FEXI,
+				  dmf_get_srs );
 	    if (status != E_DB_OK)
 	    {
 		uleFormat(&adf_scb.adf_errcb.ad_dberror, 0,

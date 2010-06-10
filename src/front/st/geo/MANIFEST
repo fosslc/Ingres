@@ -1,0 +1,10 @@
+#
+# YAM MANIFEST file for front!st!geo
+#
+# History:
+#       13-Jul-2004 (hanje04)
+#           Added
+
+IISUBSYS front st geo ;
+
+IIDFILES geo : srs.dat ;

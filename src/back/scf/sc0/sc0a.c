@@ -82,6 +82,10 @@
 **	10-Sep-2008 (jonj)
 **	    SIR 120874: include sc0e.h to get function prototypes.
 **	    Use new forms of sc0ePut(), uleFormat().
+**  16-Jun-2009 (thich01)
+**      Treat GEOM type the same as LBYTE.
+**  20-Aug-2009 (thich01)
+**      Treat all spatial types the same as LBYTE.
 */
 GLOBALREF SC_MAIN_CB	*Sc_main_cb;
 /*
@@ -621,7 +625,9 @@ sc0a_qrytext_param(
 
 	bdt=abs(qrydata->db_datatype); /* Allow for nullable types */
 
-	if(bdt==DB_LVCH_TYPE || bdt==DB_LBYTE_TYPE  ||
+	if(bdt==DB_LVCH_TYPE || bdt==DB_LBYTE_TYPE  || bdt==DB_GEOM_TYPE  ||
+	   bdt==DB_POINT_TYPE || bdt==DB_MPOINT_TYPE || bdt==DB_LINE_TYPE ||
+	   bdt==DB_MLINE_TYPE || bdt==DB_POLY_TYPE || bdt==DB_MPOLY_TYPE ||
 	   bdt==DB_LBIT_TYPE
 	   || qrydata->db_length+name_len+15>sizeof(qrytext))
 	{

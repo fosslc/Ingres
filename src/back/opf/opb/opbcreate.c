@@ -1990,6 +1990,8 @@ opb_nulljoin(
 **	    Correct loop logic with the quick scan for pre-sorted data in the inlist.
 **	    The loop previously exited one iteration too soon thereby missing the
 **	    last element.
+**      02-Apr-2010 (thich01)
+**          Add an exception for GEOM family when checking for Peripherals. 
 */
 bool
 opb_bfinit(
@@ -2612,10 +2614,12 @@ notsorted:	;
                 {
                     i4          dtmask = 0;
  
-                    /* Check that VAR's are NOT long types. */
+                    /* Check that VAR's are NOT long types. 
+                       Unless the long type is a member of the GEOM family.*/
                     status = adi_dtinfo(subquery->ops_global->ops_adfcb,
                         lvar->pst_sym.pst_dataval.db_datatype, &dtmask);
-                    if (status != E_DB_OK || (dtmask & AD_PERIPHERAL))
+                    if (status != E_DB_OK || 
+                        ((dtmask & AD_PERIPHERAL) && adi_dtfamily_retrieve(lvar->pst_sym.pst_dataval.db_datatype) != DB_GEOM_TYPE))
                         break;
  
                     if (lvar->pst_sym.pst_type == PST_VAR &&
@@ -2623,7 +2627,8 @@ notsorted:	;
                     {
                         status = adi_dtinfo(subquery->ops_global->ops_adfcb,
                             rvar->pst_sym.pst_dataval.db_datatype, &dtmask);
-                        if (status != E_DB_OK || (dtmask & AD_PERIPHERAL))
+                        if (status != E_DB_OK || 
+                            ((dtmask & AD_PERIPHERAL) && adi_dtfamily_retrieve(rvar->pst_sym.pst_dataval.db_datatype) != DB_GEOM_TYPE))
                             break;      /* check 2nd operand, too */
  
                         bfp->opb_mask |= OPB_SPATJ;

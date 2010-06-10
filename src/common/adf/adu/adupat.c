@@ -34,6 +34,10 @@
 **	06-Jan-2009 (kiria01) SIR120473
 **	    Handle the escape char as a proper DBV so that Unicode endian
 **	    issues are avoided.
+**  16-Jun-2009 (thich01)
+**      Treat GEOM type the same as LBYTE.
+**  20-Aug-2009 (thich01)
+**      Treat all spatial types the same as LBYTE.
 **	19-Aug-2009 (drivi01)
 **	    Repalce extern ADU_pat_legacy with GLOBALDEF to fix
 **	    a bug with uninitialized extern in parser in
@@ -336,6 +340,13 @@ adu_like_all(
 	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
 	    form = LIKE_UNICODE;
     case DB_LBYTE_TYPE:
+    case DB_GEOM_TYPE:
+    case DB_POINT_TYPE:
+    case DB_MPOINT_TYPE:
+    case DB_LINE_TYPE:
+    case DB_MLINE_TYPE:
+    case DB_POLY_TYPE:
+    case DB_MPOLY_TYPE:
     case DB_LBLOC_TYPE:
 	long_seen = 1;
     case DB_BYTE_TYPE:
@@ -435,6 +446,13 @@ adu_like_all(
     case DB_LVCH_TYPE:
     case DB_LCLOC_TYPE:
     case DB_LBYTE_TYPE:
+    case DB_GEOM_TYPE:
+    case DB_POINT_TYPE:
+    case DB_MPOINT_TYPE:
+    case DB_LINE_TYPE:
+    case DB_MLINE_TYPE:
+    case DB_POLY_TYPE:
+    case DB_MPOLY_TYPE:
     case DB_LBLOC_TYPE:
     case DB_BYTE_TYPE:
     case DB_VBYTE_TYPE:

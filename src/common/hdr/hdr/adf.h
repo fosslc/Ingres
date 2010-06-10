@@ -768,6 +768,8 @@
 **          A standard interface is expected by fcn lookup / execute
 **          operations. Force NFC normalization is now achieved by temporarily
 **          updating the adf_uninorm_flag in the ADF_CB.
+**      09-Mar-2009 (thich01)
+**          Add adi_dtfamily_retrieve
 **	11-Mar-2010 (jonj)
 **	    SIR 121619 MVCC, blob support:
 **	    Add E_AD7016_ADP_MVCC_INCOMPAT
@@ -775,6 +777,9 @@
 **          Add AD_BOOLEAN_PROTO define for adf_proto_level in ADF_CB.
 **	18-Mar-2010 (kiria01) b123438
 **	    Added SINGLETON aggregate error E_AD1028_NOT_ZEROONE_ROWS
+**      16-Mar-2010 (troal01)
+**          Add INVALID_SRID, SRS_NONEXISTENT, and NO_TRANSACTION for FEXI
+**          GETSRS.
 **	30-Mar-2010 (kschendel) SIR 123485
 **	    Update adu-valuetomystr prototype.
 **      01-apr-2010 (stial01)
@@ -1125,6 +1130,13 @@
 #define                 E_AD5512_BAD_DTID2_FOR_ESCAPE	(E_AD_MASK + 0x5512L)
 #define                 E_AD5513_BAD_DTLEN2_FOR_ESCAPE	(E_AD_MASK + 0x5513L)
 
+/* geospatial error codes */
+#define			E_AD5600_GEOSPATIAL_USER			(E_AD_MASK + 0x5600L)
+#define			E_AD5601_GEOSPATIAL_INTERNAL		(E_AD_MASK + 0x5601L)
+#define			E_AD5602_SPATIAL_VERSION	(E_AD_MASK + 0x5602L)
+#define			E_AD5603_NO_TRANSACTION		(E_AD_MASK + 0x5603L)
+#define			E_AD5604_SRS_NONEXISTENT	(E_AD_MASK + 0x5604L)
+#define			E_AD5605_INVALID_SRID		(E_AD_MASK + 0x5605L)
 #define			E_AD6000_BAD_MATH_ARG		(E_AD_MASK + 0x6000L)
 #define			E_AD6001_BAD_MATHOPT		(E_AD_MASK + 0x6001L)
 
@@ -1484,8 +1496,9 @@
 #define		ADI_04OVERFLOW_FEXI		    4
 #define		ADI_06TABLEINFO_FEXI		    6
 #define		ADI_07LASTID_FEXI		    7
+#define		ADI_08GETSRS_FEXI		    8
 
-#define		ADI_SZ_FEXI			    8
+#define		ADI_SZ_FEXI			    9
 
 
 /*}
@@ -4115,6 +4128,8 @@ FUNC_EXTERN DB_STATUS adi_need_dtfamily_resolve(
 				  ADI_FI_DESC         *infidesc,
 				  ADI_RSLV_BLK        *adi_rslv_blk,
 				  i2		      *need);
+FUNC_EXTERN DB_DT_ID adi_dtfamily_retrieve( DB_DT_ID input );
+
 FUNC_EXTERN ADP_COMPARE_FUNC adc_compare;
 FUNC_EXTERN ADP_DBTOEV_FUNC adc_dbtoev;
 FUNC_EXTERN ADP_GETEMPTY_FUNC adc_getempty;
