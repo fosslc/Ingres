@@ -65,12 +65,37 @@ else
 fi
 
 # Call jam clean to remove compiled objects.
-cd $ING_SRC
-jam clean
 cd $ING_ROOT
+runbuild.sh -c
 
 # Remove all binaries and other build results at the directory level.
 rm -rf build
 rm -rf install
 rm -rf release
 rm -rf tools
+rm -rf src/man1
+rm -rf src/lib
+rm -rf src/bin
+rm -rf src/sig/inglogs/Jamdbg
+rm -rf src/sig/inglogs/Jamfile
+rm -rf src/sig/inglogs/inglogs/Jamdbg
+rm -rf src/sig/inglogs/inglogs/Jamfile
+rm -rf src/common/odbc/hdr/sql.h
+rm -rf src/common/odbc/hdr/sqlext.h
+rm -rf src/common/hdr/oldmsg_unix_vmsv2_generic.h
+rm -rf src/common/hdr/oldmsg_unix_vmsv2_other.h
+rm -rf src/common/hdr/hdr/fe.cat.msg
+rm -rf src/front/ice/plays/src/play_NewOrder.h
+rm -rf src/ha/Jamdbg
+rm -rf src/ha/Jamfile
+rm -rf src/ha/sc/Jamdbg
+rm -rf src/ha/sc/Jamfile
+rm -rf src/ha/sc/specials/Jamdbg
+rm -rf src/ha/sc/specials/Jamfile
+rm -rf src/ha/sc/shell/Jamdbg
+rm -rf src/ha/sc/shell/Jamfile
+rm -rf src/ha/sc/util/Jamdbg
+rm -rf src/ha/sc/util/Jamfile
+rm -rf src/front/st/geo/Jamdbg
+rm -rf src/front/st/geo/Jamfile
+
