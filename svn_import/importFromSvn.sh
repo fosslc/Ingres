@@ -69,7 +69,7 @@ else
   else
     echo "Stepping through svn updates to update git"
     CurrentRev=${GitLatest}
-    while [ ${CurrentRev} -le ${SVNLatest} ]
+    while [ ${CurrentRev} < ${SVNLatest} ]
     do
       PreviousRev=${CurrentRev}
       CurrentRev=`expr ${CurrentRev} + 1` 

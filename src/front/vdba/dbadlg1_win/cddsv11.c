@@ -47,6 +47,8 @@
 **    table are already registered.
 **  02-Apr-2009 (drivi01)
 **    Clean up warnings in this file.
+**  02-Jun-2010 (drivi01)
+**    Remove hard coded buffer sizes.
 ********************************************************************/
 
 #include <stddef.h>
@@ -1965,7 +1967,7 @@ static HWND CreatePathCombo(HWND hwnd,HWND hwndCnt)
 
 static void InitializeContainers(HWND hwnd)
 {
-    char szTitle[64];
+    char szTitle[MAXOBJECTNAME+64];
     LPFIELDINFO lpFI;
     WORD wIndex   = 0;
     HFONT hFont   = GetWindowFont(hwnd);
@@ -3032,7 +3034,7 @@ static BOOL OnInitDialog (HWND hwnd, HWND hwndFocus, LPARAM lParam)
 {
     LPREPCDDS lpcdds = (LPREPCDDS) lParam;
     LPREPCDDS lpnew  = (LPREPCDDS) ESL_AllocMem(sizeof(REPCDDS));
-    UCHAR   szTitle[100];
+    UCHAR   szTitle[MAXOBJECTNAME*2+100];
     DWORD     dwErrModeSelect,dwCollisionModeSelect,nbIndex;
 
     SetWindowLong(hwnd,DWL_USER,(LONG) lpnew);

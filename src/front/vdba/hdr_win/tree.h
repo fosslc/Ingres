@@ -14,6 +14,10 @@
 **  20-May-2010 (drivi01)
 **   Add OT_VW_TABLE to differentiate Ingres tables from
 **   Ingres VectorWise tables for a custom icon.
+**  02-Jun-2010 (drivi01)
+**   Increase the extra buffers in LPTREERECORD structure
+**   b/c parent tree elements could be prefixed with username
+**   which requires double the space of the table name.
 ********************************************************************/
 
 #ifndef __TREE_INCLUDED__
@@ -31,9 +35,9 @@ typedef struct  _sTreeRecord
   int   recType;                    // record type
   BOOL  bSubValid;                  // if has sub branch, is sub data valid?
   BOOL  bToBeDeleted;               // marqued as "to be deleted" ?
-  UCHAR extra[MAXOBJECTNAME];       // extra info: parenthood of level 1
-  UCHAR extra2[MAXOBJECTNAME];      // extra info: parenthood of level 2
-  UCHAR extra3[MAXOBJECTNAME];      // extra info: parenthood of level 3
+  UCHAR extra[MAXOBJECTNAME*2];       // extra info: parenthood of level 1
+  UCHAR extra2[MAXOBJECTNAME*2];      // extra info: parenthood of level 2
+  UCHAR extra3[MAXOBJECTNAME*2];      // extra info: parenthood of level 3
   UCHAR objName[MAXOBJECTNAME];     // Object name (caption may be different)
   UCHAR ownerName[MAXOBJECTNAME];   // Object's owner name
   UCHAR szComplim[MAXOBJECTNAME];   // Complimentary data received (maxio,...)

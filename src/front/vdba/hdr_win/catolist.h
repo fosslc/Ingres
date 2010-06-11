@@ -7,7 +7,9 @@
 //    Source   : catolist.h
 //
 //     
-//
+//    History:
+//      07-Jun-2010 (drivi01)
+//        Add main.h to define BUFSIZE within catolist.dll.
 ********************************************************************/
 #ifndef _CATOLIST_H
 #define _CATOLIST_H
@@ -15,6 +17,10 @@
 #ifndef _INC_WINDOWS
 #include <windows.h>
 #endif
+#include <compat.h>
+#include <iicommon.h>
+#include "main.h"
+
 
 #ifdef WIN32
     #ifndef _DEV

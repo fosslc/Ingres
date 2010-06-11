@@ -61,6 +61,11 @@
 **     that running backups/restores for the whole database
 **     that contains Ingres VectorWise tables could result
 **     in inconsistent catalog data.
+**  25-May-2010 (drivi01) Bug 123817
+**    Expand tampoo buffer to double the MAXOBJECTNAME
+**    to account for delimeted ids such as username.table_name.
+**  02-Jun-2010 (drivi01)
+**    Remove hard coded buffer sizes.
 **/
 
 #include "stdafx.h"
@@ -221,7 +226,7 @@ static CString MakeFullNameWithParents(LPDOMDATA lpDomData, LPTREERECORD lpRecor
       if (lpRecord->objName[0]) {
         if (HasOwner(CurItemObjType)) {
           // objName may contain schema.objname
-          UCHAR tampoo[MAXOBJECTNAME];
+          UCHAR tampoo[MAXOBJECTNAME*2];
           StringWithOwner(lpRecord->objName, lpRecord->ownerName, tampoo);
           csObject = tampoo;
         }
@@ -357,7 +362,7 @@ extern "C" void UpdateGlobalStatusForDom(LPDOMDATA lpDomData, LPARAM lParam, LPT
         if (lpRecord->objName[0]) {
           if (HasOwner(lpRecord->recType)) {
             // objName may contain schema.objname
-            UCHAR tampoo[MAXOBJECTNAME];
+            UCHAR tampoo[MAXOBJECTNAME*2];
             StringWithOwner(lpRecord->objName, lpRecord->ownerName, tampoo);
             csObject = tampoo;
           }
@@ -1056,12 +1061,12 @@ BOOL CChildFrame::SpecialCmdAddAlterDrop(CuDomObjDesc* pObjDesc)
 
 	BOOL bFound = FALSE;
 	HTREEITEM hItem  = TreeView_GetRoot(hTreeCtrl);
-	TCHAR szBuffer[128];
+	TCHAR szBuffer[MAXOBJECTNAME*2];
 	TVITEM tvitem;
 	memset (&tvitem, 0, sizeof(tvitem));
 	tvitem.mask  = TVIF_TEXT;
 	tvitem.pszText = szBuffer;
-	tvitem.cchTextMax = 128;
+	tvitem.cchTextMax = MAXOBJECTNAME*2;
 
 	while (!bFound && hItem)
 	{

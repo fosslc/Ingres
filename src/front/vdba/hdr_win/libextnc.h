@@ -30,6 +30,8 @@
 ** 03-Feb-2004 (uk$so01)
 **    SIR #106648, Split vdba into the small component ActiveX or COM:
 **    Integrate Export assistant into vdba
+** 02-Jun-2010 (drivi01)
+**    Remove more hardcoded constants for buffer allocations.
 **/
 
 #if !defined(LIB_EXTERNC_CALL_HEADER)
@@ -39,6 +41,8 @@ extern "C"
 {
 #endif
 #include "constdef.h"
+#include <compat.h>
+#include <iicommon.h>
 
 /*
 ** Import Assistant Interfaces:
@@ -46,12 +50,12 @@ extern "C"
 */
 typedef struct tagIIASTRUCT
 {
-	WCHAR wczNode [64 +1];
-	WCHAR wczServerClass [64 +1];
-	WCHAR wczDatabase [64 +1];
-	WCHAR wczTable [64 +1];
-	WCHAR wczTableOwner [64 +1];
-	WCHAR wczNewTable [64 +1];
+	WCHAR wczNode [DBOBJECTLEN];
+	WCHAR wczServerClass [DBOBJECTLEN];
+	WCHAR wczDatabase [DBOBJECTLEN];
+	WCHAR wczTable [DBOBJECTLEN];
+	WCHAR wczTableOwner [DBOBJECTLEN];
+	WCHAR wczNewTable [DBOBJECTLEN];
 	WCHAR wczSessionDescription [256];
 
 	WCHAR wczParamFile  [_MAX_PATH];
@@ -108,9 +112,9 @@ int Ingres_ImportAssistantWithParam(HWND hwndCaller, IIASTRUCT* pStruct);
 */
 typedef struct tagIEASTRUCT
 {
-	WCHAR wczNode [64 +1];
-	WCHAR wczServerClass [64 +1];
-	WCHAR wczDatabase [64 +1];
+	WCHAR wczNode [DBOBJECTLEN];
+	WCHAR wczServerClass [DBOBJECTLEN];
+	WCHAR wczDatabase [DBOBJECTLEN];
 	WCHAR wczSessionDescription [256];
 	BSTR  lpbstrStatement; // The caller must take care of allocate & free this member
 	WCHAR wczExportFile [_MAX_PATH];
@@ -159,8 +163,8 @@ int Ingres_ExportAssistantWithParam(HWND hwndCaller, IEASTRUCT* pStruct);
 */
 typedef struct tagTOBJECTLIST
 {
-	WCHAR wczObject      [64 +1];
-	WCHAR wczObjectOwner [64 +1];
+	WCHAR wczObject      [DBOBJECTLEN];
+	WCHAR wczObjectOwner [DBOBJECTLEN];
 
 	int   nObjType;
 	struct tagTOBJECTLIST* pNext;
@@ -171,10 +175,10 @@ TOBJECTLIST* TOBJECTLIST_Done(TOBJECTLIST* lpList);
 
 typedef struct tagSQLASSISTANTSTRUCT
 {
-	WCHAR wczNode [64 +1];
-	WCHAR wczServerClass [64 +1];
-	WCHAR wczDatabase [64 +1];
-	WCHAR wczUser [64 +1];
+	WCHAR wczNode [DBOBJECTLEN];
+	WCHAR wczServerClass [DBOBJECTLEN];
+	WCHAR wczDatabase [DBOBJECTLEN];
+	WCHAR wczUser [DBOBJECTLEN];
 	WCHAR wczConnectionOption [512];
 	WCHAR wczSessionDescription [256];
 

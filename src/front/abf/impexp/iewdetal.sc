@@ -132,6 +132,11 @@ EXEC SQL WHENEVER SQLERROR CALL SQLPRINT;
 **	07-mar-1994 (daver)
 **		Add "4GL procedure" to the list of objects we have to
 **		create an ILCODE object for. Fixes bug 60025.
+**       6-Jun-2010 (hanal04) Bug 122969
+**              Imported object may change all manner of things such
+**              the return types of callprocs etc. Set APC_RECOMPILE
+**              for each object (and it's dependents) to force a recompilation
+**              of the objects in the same application.
 */
 STATUS
 IIIEwao_WriteIIAbfObjects(objrec, appid, appowner, inbuf, fp)
@@ -160,6 +165,7 @@ FILE		*fp;
 	char	*abf_arg5;
 	char	*abf_arg6;
 	i4	abf_flags;
+        i4      apc_recompile = APC_RECOMPILE; /* Do not mask in other values */
 	EXEC SQL END DECLARE SECTION;
 
 	STATUS 	rval;
@@ -236,6 +242,8 @@ FILE		*fp;
 
 	if (objrec->update)
 	{
+                abf_flags |= APC_RECOMPILE;
+
 		EXEC SQL UPDATE ii_abfobjects SET
 			abf_source = :abf_source, 
 			abf_symbol = :abf_symbol,
@@ -257,6 +265,17 @@ FILE		*fp;
 		rval = FEinqerr();
 		if (rval != OK)
 			return rval;
+
+                EXEC SQL UPDATE ii_abfobjects dep FROM ii_abfdependencies upd
+                        SET abf_flags = dep.abf_flags + :apc_recompile
+                        WHERE upd.object_id = :objid
+                        AND dep.applid = upd.abfdef_applid
+                        AND mod(dep.abf_flags / :apc_recompile, 2) = 0;
+
+		rval = FEinqerr();
+		if (rval != OK)
+			return rval;
+                
 	}
 	else
 	{

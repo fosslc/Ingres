@@ -136,6 +136,15 @@
 **	06-Aug-2009 (drivi01)
 **	    Remove FD_SETSIZE definition b/c it is defined in winsock2.h
 **	    and is not used in this application.
+**	04-Jun-2010 (drivi01)
+**	    Remove II_GCNapi_ModifyNode API for creating virtual nodes
+**	    for DBA package b/c II_GCNapi_ModifyNode is no longer supported
+**	    and stopped working due to long ids change.
+**	    This change replaces the obsolete API call with a range of
+**	    supported open API calls.
+**	    Added 2 new functions to handle new API calls: CreateVirtualNode
+**	    and CheckAPIError.
+**
 */
 
 #define MAX_COMP_LEN 256
@@ -143,6 +152,7 @@
 
 #include <winsock2.h>
 #include "process.h"
+#include <iiapi.h>
 
 #define LOGNTFILE               "\\LogWatNT.exe"
 #define SERVICENAME             "LogWatch"
@@ -269,6 +279,8 @@ public:
     BOOL OfflineResource();
     BOOL RegisterCluster();
     BOOL AddVirtualNodes();
+    int  CreateVirtualNode(CString vnodename, CString hostname, CString protocol, CString listenaddress, CString username, CString password);
+    void CheckAPIError( IIAPI_GENPARM	*genParm);
     BOOL GetLocalizedAdminName();
     int InstallMDB();
     unsigned int RegisterClusterService(LPSTR *sharedDisk, INT sharedDiskCount, LPSTR lpszResourceName, LPSTR lpszInstallCode);

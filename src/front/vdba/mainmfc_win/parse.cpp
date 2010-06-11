@@ -73,6 +73,8 @@
 **   unrecognised pagetypes that may happen in future, by displaying a '?'  
 **   symbol. Improved error message handling so that an explanatory text  
 **   message is displayed instead of "System Error 34".
+**  02-Jun-2010 (drivi01)
+**   Remove hard coded buffer sizes.
 */
 
 #include "stdafx.h"
@@ -1099,9 +1101,9 @@ static char * szvalue      = "value:";
 // Query the statistic for a given column <pColumn->m_strColumn>:
 static BOOL Table_GetStatistics1 (CaTableStatisticColumn* pColumn, CaTableStatistic& ts)
 {
-   char szcmdbuf[200];
-   char szusernamebuf[200];
-   char buf[500];
+   char szcmdbuf[BUFSIZE];
+   char szusernamebuf[BUFSIZE];
+   char buf[BUFSIZE*2];
    char * CurLine;
    char *pc, *pc1;
    int ires;

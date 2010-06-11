@@ -17,17 +17,22 @@
 **    bug 106086 add prototype of GetVdbaHelpStatus () function.
 **  28-Mar-2002 (noifr01)
 **    (sir 99596) removed additional unused resources/sources
+**  02-Jun-2010 (drivi01)
+**    Increase the size of BUFSIZE and use DB_MAXNAME to define it
+**    instead of hardcoded value.  It looks like DB_MAXNAME
+**    is used to store table names and other objects, i believe
+**    4 times the object size should be big enough and consistent
+**    with what was there before.
 ********************************************************************/
 
 #ifndef __MAIN_INCLUDED__
 #define __MAIN_INCLUDED__
-
 #include "port.h"
-
+#include "dba.h"
 //
 // constants definition
 //
-#define BUFSIZE     256   // size of buffers
+#define BUFSIZE     MAXOBJECTNAME*4 // size of buffers
 #define WINDOWMENU  6     // position of window menu in the menu bar
 
 // Document type

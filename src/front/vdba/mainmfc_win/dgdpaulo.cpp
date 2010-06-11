@@ -14,6 +14,10 @@
 **    Created.
 ** 26-Fev-2002 (uk$so01)
 **    SIR #106648, Integrate ipm.ocx.
+** 02-Jun-2010 (drivi01)
+**    Removed BUFSIZE redefinition.  It's not needed here anymore.
+**    the constant is defined in main.h now. and main.h is included
+**    in dom.h.
 */
 
 #include "stdafx.h"
@@ -21,9 +25,7 @@
 #include "dgdpaulo.h"
 #include "domseri.h"
 #include "vtree.h"
-#if !defined (BUFSIZE)
-#define BUFSIZE 256
-#endif
+
 extern "C"
 {
 #include "dbaginfo.h"

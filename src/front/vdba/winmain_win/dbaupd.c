@@ -85,6 +85,11 @@
 **    two checkboxes corresponding to each normalization, including all
 **    expected functionlity.
 **    Added command line flag for NFC normalization.
+**  25-May-2010 (drivi01) Bug 123817
+**    Expand bufrequest buffer to MAXOBJECTNAME * 3 + 400.
+**    For the types of strings this buffer is used it needs to be at least
+**    three times MAXOBJECTNAME to account for long ids and also
+**    big enough to contain some SQL query language.
 ******************************************************************************/
 
 #include <fcntl.h> 
@@ -397,7 +402,7 @@ int DBAAddObjectLL(LPUCHAR lpVirtNode,int iobjecttype, void *lpparameters, ...)
    va_list ap;          /* argument pointer */ 
    char connectname[2*MAXOBJECTNAME+2+1];
    int iret, Sesshdl;
-   char bufrequest[400];
+   char bufrequest[(MAXOBJECTNAME * 3) + 400];
    char bufcomma[2];
    UCHAR *pSQLstm;
    int ilocsession;

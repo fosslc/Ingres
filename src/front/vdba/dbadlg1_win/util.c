@@ -48,6 +48,8 @@
 **     Add ComboBoxFillTablesFiltered which will load combo box
 **     of tables with either Ingres or VW tables depending
 **     on which are requested.
+**    02-Jun-2010 (drivi01)
+**     Remove hard coded buffer sizes.
 ********************************************************************/
 
 #include "dll.h"
@@ -104,7 +106,7 @@ BOOL OccupyComboBoxControl (HWND hwndCtl, LPCTLDATA lpdata)
 
 	while (lpdata[i].nId != -1)
 	{
-		char szBuffer[256];
+		char szBuffer[MAXOBJECTNAME*4];
 		int nIdx;
 
 		if (LoadString(hResource, lpdata[i].nStringId, szBuffer, sizeof(szBuffer)) == 0)

@@ -30,7 +30,9 @@
 **    for DBA Tools installations.s
 ** 12-Sep-2009 (hweho01)
 **    Avoid linking errors when several visual tools are built such   
-**    as vdbamon.exe, include function IsDBATools.    
+**    as vdbamon.exe, include function IsDBATools. 
+** 27-May-2010 (drivi01)
+**    Clean up the warning, remove unreferenced buf.   
 **/
 
 #include "stdafx.h"
@@ -296,7 +298,6 @@ BOOL SaveStreamInit (IUnknown* pUnk, LPCTSTR lpszStreamName, IStorage* pStorage)
 	BOOL bFound = FALSE;
 	BOOL bOK = TRUE;
 	char *ii_installation;
-	char buf[MAX_PATH];
 	try
 	{
 		DWORD grfMode1 = STGM_DIRECT|STGM_READWRITE|STGM_SHARE_EXCLUSIVE;
@@ -400,7 +401,6 @@ BOOL OpenStreamInit (IUnknown* pUnk, LPCTSTR lpszStreamName, IStorage* pStorage)
 	IStorage* pActiveXStorage = NULL;
 	IStream* pStream = NULL;
 	char *ii_installation;
-	char buf[MAX_PATH];
 
 	try
 	{
@@ -496,7 +496,6 @@ BOOL OpenStreamInit (IUnknown* pUnk, LPCTSTR lpszStreamName, IStorage* pStorage)
 CaPersistentStreamState::CaPersistentStreamState(LPCTSTR lpszStreamName, BOOL bLoad)
 {
 	char *ii_installation;
-	char buf[MAX_PATH];
 
 	m_bStateOk = FALSE;
 	TCHAR* pEnv;

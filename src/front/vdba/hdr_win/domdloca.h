@@ -22,6 +22,9 @@
 **  11-May-2010 (drivi01)
 **   Add TableVWType to TableData structure to mark 
 **   Ingres VectorWise table structures.
+** 02-June-2010 (drivi01)
+**   Update TableData table name field to be double the size
+**   to account for table names prefixed with owner name.
 ********************************************************************/
 
 #ifndef LIBMON_HEADER
@@ -450,7 +453,7 @@ struct DBEventData {
 };
 
 struct TableData {
-   UCHAR TableName[MAXOBJECTNAME];
+   UCHAR TableName[MAXOBJECTNAME*2];
    UCHAR TableOwner[MAXOBJECTNAME];
    long  Tableid;
    int   TableStarType;

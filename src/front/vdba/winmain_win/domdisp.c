@@ -69,6 +69,10 @@
 **    check in the brackets.
 **    Removed Replication from the Database tree for Ingres
 **    VectorWise installations.  Replication is not supported.
+**  02-Jun-2010 (drivi01)
+**    Update DOMUpdateDisplayData2 to allocate buffers for tree
+**    items that are double the size b/c the tree items could be
+**    prefixed with owner name.
 ********************************************************************/
 
 //
@@ -734,9 +738,9 @@ int DOMUpdateDisplayData2 (int hnodestruct, int iobjecttype, int level, LPUCHAR 
   UCHAR         bufComplim[MAXOBJECTNAME];
   LPUCHAR       aparents[MAXPLEVEL];      // array of parent strings
   LPUCHAR       aparentsTemp[MAXPLEVEL];  // temporary aparents
-  UCHAR         bufPar0[MAXOBJECTNAME];   // parent string of level 0
-  UCHAR         bufPar1[MAXOBJECTNAME];   // parent string of level 1
-  UCHAR         bufPar2[MAXOBJECTNAME];   // parent string of level 2
+  UCHAR         bufPar0[MAXOBJECTNAME*2];   // parent string of level 0
+  UCHAR         bufPar1[MAXOBJECTNAME*2];   // parent string of level 1
+  UCHAR         bufPar2[MAXOBJECTNAME*2];   // parent string of level 2
   UCHAR         bufRs[BUFSIZE];           // resource string
   LPDOMDATA     lpDomData;
   LPTREERECORD  lpRecord  = NULL;
@@ -748,9 +752,9 @@ int DOMUpdateDisplayData2 (int hnodestruct, int iobjecttype, int level, LPUCHAR 
   LPUCHAR       lpowner;            // for DOMGetFirstObject
   DWORD         idTop;              // Top item, for expand display problem
   LPUCHAR       aparentsResult[MAXPLEVEL];  // result aparents for OTR_ obj.
-  UCHAR         bufParResult0[MAXOBJECTNAME];   // result parent level 0
-  UCHAR         bufParResult1[MAXOBJECTNAME];   // result parent level 1
-  UCHAR         bufParResult2[MAXOBJECTNAME];   // result parent level 2
+  UCHAR         bufParResult0[MAXOBJECTNAME*2];   // result parent level 0
+  UCHAR         bufParResult1[MAXOBJECTNAME*2];   // result parent level 1
+  UCHAR         bufParResult2[MAXOBJECTNAME*2];   // result parent level 2
   int           resultType;
   int           expandType;
   int           resultLevel;
@@ -774,9 +778,9 @@ int DOMUpdateDisplayData2 (int hnodestruct, int iobjecttype, int level, LPUCHAR 
 
   // for DOMGetObject
   LPUCHAR aparentsResult2[MAXPLEVEL];
-  UCHAR   bufParResult02[MAXOBJECTNAME];
-  UCHAR   bufParResult12[MAXOBJECTNAME];
-  UCHAR   bufParResult22[MAXOBJECTNAME];
+  UCHAR   bufParResult02[MAXOBJECTNAME*2];
+  UCHAR   bufParResult12[MAXOBJECTNAME*2];
+  UCHAR   bufParResult22[MAXOBJECTNAME*2];
 
   // for root item management
   BOOL    bRootItem;     // non-static item as a root on the tree?

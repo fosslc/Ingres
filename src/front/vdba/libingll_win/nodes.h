@@ -38,6 +38,10 @@
 **    Update NodeCheckConnection to return STATUS code instead of BOOL.
 **    The error code will be used to get the error from ERlookup.
 **    Add new function INGRESII_ERLookup to retrieve an error message.
+**  25-May-2010 (drivi01) Bug 123817
+**    Fix the object length to allow for long IDs.
+**    Remove hard coded constants, use DB_MAXNAME instead.
+
 */
 #if !defined (_NODES_C_HEADER_FILE_)
 #define _NODES_C_HEADER_FILE_
@@ -51,6 +55,7 @@ extern "C"
 #include <string.h>
 #include <time.h>
 #include <compat.h>
+#include <iicommon.h>
 
 typedef HWND DISPWND;
 #ifndef MAINWIN
@@ -58,7 +63,7 @@ typedef unsigned char UCHAR;
 #endif  /* MAINWIN */
 typedef unsigned char * LPUCHAR;
 
-#define MAXOBJECTNAME   (32 + 1 + 32 + 1)
+#define MAXOBJECTNAME   (DB_MAXNAME*2 + 3)
 #define RES_ERR                 0
 #define RES_SUCCESS             1
 #define RES_TIMEOUT             2

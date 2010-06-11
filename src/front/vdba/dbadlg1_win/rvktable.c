@@ -12,6 +12,9 @@
 ** 28-Mar-2003 (schph01)
 **   SIR 107523 used this dialog also for "NEXT ON SEQUENCE" grant
 **   sequences.
+** 04-Jun-2010 (horda03) b123227
+**   Syntax for drop grant on sequence incorrect.
+**   Need to display the CASCASE *& RESTRICT buttons.
 ********************************************************************/
 
 
@@ -264,16 +267,14 @@ static BOOL OnInitDialog (HWND hwnd, HWND hwndFocus, LPARAM lParam)
    {
       //Hide control the controls not used for sequences
       ShowWindow( GetDlgItem (hwnd,IDC_REVOKE_TABLE_GRANT_OPTION) ,SW_HIDE); // Hided "With grant Option" control
-      ShowWindow( GetDlgItem (hwnd,IDC_REVOKE_TABLE_CASCADE)      ,SW_HIDE);
-      ShowWindow( GetDlgItem (hwnd,IDC_REVOKE_TABLE_RESTRICT)     ,SW_HIDE);
       ShowWindow( GetDlgItem (hwnd,IDC_REVOKE_TABLE_PRIVILEGE)    ,SW_HIDE); 
       ShowWindow( GetDlgItem (hwnd,102)                           ,SW_HIDE);
       ShowWindow( GetDlgItem (hwnd,5020)                          ,SW_HIDE);
       // Unchecked the controls not used
       Button_SetCheck (GetDlgItem (hwnd, IDC_REVOKE_TABLE_PRIVILEGE),    FALSE);
-      Button_SetCheck (GetDlgItem (hwnd, IDC_REVOKE_TABLE_CASCADE),      FALSE);
+      Button_SetCheck (GetDlgItem (hwnd, IDC_REVOKE_TABLE_CASCADE),      TRUE);
+      Button_SetCheck (GetDlgItem (hwnd, IDC_REVOKE_TABLE_RESTRICT),     FALSE);
       Button_SetCheck (GetDlgItem (hwnd, IDC_REVOKE_TABLE_GRANT_OPTION), FALSE);
-      Button_SetCheck (GetDlgItem (hwnd, IDC_REVOKE_TABLE_PRIVILEGE),    FALSE);
    }
    else
    {
