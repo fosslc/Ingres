@@ -333,6 +333,9 @@ EXEC SQL END DECLARE SECTION;
 **	    Remove was-journaling, add did-bootstrap.
 **	2-May-2010 (kschendel) SIR 123639
 **	    Don't need did-bootstrap any more.
+**      27-may-2010 (maspa05) SIR 123793
+**          Added reset_apps flag to force re-compile if
+**          upgrading from int.lnx to a64.lnx (or vice-versa)
 */
 
 typedef struct _dbname_node
@@ -355,6 +358,8 @@ typedef struct _dbname_node
     bool	star_flag;		    /* true if db is a STAR db*/
     bool	upcase;   		    /* true for FIPS db */
     bool	first_open;		    /* First-time flag for open msgs */
+    bool        reset_apps;                 /* forces re-generation of IL for
+                                               ABF apps and full re-compile */
     struct _dbname_node	*nextdb;	    /* link pointer */
 } DBNAME_NODE;
 
