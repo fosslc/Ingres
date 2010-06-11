@@ -636,12 +636,19 @@ EXEC SQL end declare section;
 **	    little routines that check for specific changes.  Adapt Alison's
 **	    be catalog updater so that it can be used for nearly all the
 **	    updates.
+**	18-May-2010 (frima01) Bug 123753
+**	    In fix_dbservice skip update of config file for distributed
+**	    database, cause there is none. Set tree_convert to true,
+**	    fixing qry trees is neccessary for Ingres 10. Only allow star db
+**	    owner to upgrade a star db to ensure access to private vnodes.
 **      27-may-2010 (maspa05) SIR 123793
 **          Delete from ii_encodings and ii_encoded_forms. This means that
 **          when upgrading from int.lnx to a64.lnx encoded IL will get 
 **          re-created when the applications are re-compiled. Also
 **          update the alter_date in ii_objects to force re-compile of
 **          all application components
+**	03-Jun-2010 (frima01) Bug 123753
+**	    Have iistats updated for Ingres 10 distributed databases.
 */
  
 /*
@@ -963,11 +970,6 @@ char	*argv[];
 **	    Added major 9.0 (Release 3), minor 0.
 **	12-Nov-2009 (kschendel) SIR 122882
 **	    Rework for integerized dbcmptlvl.
-**	18-May-2010 (frima01) Bug 123753
-**	    In fix_dbservice skip update of config file for distributed
-**	    database, cause there is none. Set tree_convert to true,
-**	    fixing qry trees is neccessary for Ingres 10. Only allow star db
-**	    owner to upgrade a star db to ensure access to private vnodes.
 */
 i4
 set_cmptlvl(u_i4 cmptlvl, i4 minorlvl)
@@ -2977,7 +2979,8 @@ convert_dbs()
 	    du_talk(__LINE__, DU_MODESENS, &upgr_cb, I_DU00B6_DB_IDENTIFIER, 2,
 		     0, target_name);
 
-	upgrade_iidd_stats = FALSE;
+	/* Have iistats updated for Ingres 10 distributed databases. */
+	upgrade_iidd_stats = TRUE;
 
 	/* Prequalify for FE conversion here.... */
 	upgr_cb.Dbname_ptr->fe_convert = TRUE;		/* Always convert */

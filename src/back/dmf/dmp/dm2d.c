@@ -782,6 +782,8 @@ NO_OPTIM=dr6_us5 pym_us5
 **	    used the old style updaters.
 **      14-May-2010 (stial01)
 **          upgrade_iirel_row() init relattnametot
+**      04-Jun-2010 (frima01) Bug 123753
+**          Correct setting of rel_v9.reldatawid and rel_v9.reltotdatawid.
 */
 
 /*
@@ -12296,8 +12298,8 @@ DM0C_CNF	*cnf)
 	    rel_v9.reltotwid = old_rel_v8->reltotwid;
 	    rel_v9.relnparts = old_rel_v8->relnparts;
 	    rel_v9.relnpartlevels = old_rel_v8->relnpartlevels;
-	    rel_v9.reldatawid = rel_v8.relwid;
-	    rel_v9.reltotdatawid = rel_v8.reltotwid;
+	    rel_v9.reldatawid = old_rel_v8->relwid;
+	    rel_v9.reltotdatawid = old_rel_v8->reltotwid;
 	    rel_v9.relencflags = 0;
 	    rel_v9.relencver = 0;
 	    rel_v9.relattnametot = old_rel_v8->relatts * DB_OLDMAXNAME_32;
