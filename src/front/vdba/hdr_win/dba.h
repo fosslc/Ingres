@@ -29,6 +29,9 @@
 **    Added function CanObjectExistInVectorWise which returns
 **    TRUE or FALSE depending on if the object supported by
 **    VectorWise.
+**  25-May-2010 (drivi01) Bug 123817
+**    Fix the object length to allow for long IDs.
+**    Remove hard coded constants, use DB_MAXNAME instead.
 ********************************************************************/
 
 #ifndef DBA_HEADER
@@ -38,6 +41,7 @@
 #include <compat.h>
 #include <cm.h>
 #include <st.h>
+#include <iicommon.h>
 
 #ifndef LIBMON_HEADER
 //#ifndef UNIX
@@ -81,10 +85,10 @@ typedef unsigned char * LPUCHAR;
 #define MAXSESSIONS 40
 
 //#define MAXOBJECTNAME   (32 + 1)
-#define MAXOBJECTNAME   (32 + 1 + 32 + 1)
-#define MAXOBJECTNAMENOSCHEMA  (32 + 1)
+#define MAXOBJECTNAME   (DB_MAXNAME*2 + 3)
+#define MAXOBJECTNAMENOSCHEMA  DB_MAXNAME + 1
 #define MAXDBNAME       (MAXOBJECTNAME)   /* but must be unique on 24 chars*/
-#define EXTRADATASIZE   (2 * MAXOBJECTNAME)
+#define EXTRADATASIZE   (MAXOBJECTNAME*2)
 #define MAXPLEVEL 3
 #define MAXAREANAME     (128+1)
 #define MAXDATELEN      32                

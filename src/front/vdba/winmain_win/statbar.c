@@ -12,6 +12,8 @@
 // History:
 // uk$so01 (20-Jan-2000, Bug #100063)
 //         Eliminate the undesired compiler's warning
+// 01-Jun-2010 (drivi01)
+//	Update SB_MAXTEXT length to accomodate long ids.
 ********************************************************************/
 
 #ifdef __BORLANDC__
@@ -37,8 +39,8 @@
 
 
 #define SB_CLASSNAME  "CASTATBAR"
-#define SB_MAXTEXT    1500  // Changed from 512 by Emb 21/3/95
-			    // TO BE FINISHED : OVERFLOW OF BUFFER NOT TESTED
+#define SB_MAXTEXT    MAXOBJECTNAME*12  // Changed from 1500 by drivi01 June 1, 2010
+			    		// Unexplained BUFFER OVERFLOW.
 
 typedef struct tagstatfield
 {

@@ -19,6 +19,20 @@
 **   Add ComboBoxFillTablesFiltered which will load combo box
 **   of tables with either Ingres or VW tables depending
 **   on which are requested.
+**  27-May-2010 (drivi01) Bug 123817
+**   Update MAX_TEXT_EDIT to be able to handle statements with 
+**   long ids.  MAX_TEXT_EDIT is used to allocate character
+**   limit on the multi-line edit boxes.  2000 is too small
+**   when dealing with long IDs.  For example if you were to 
+**   write select statement of 5 out of 10 columns where each
+**   column is 256 characters and the table name is 256 with
+**   a where clause, 2000 is way too small for all that.
+**   The new buffer length will be based on MAXOBJECTNAME
+**   multiplied by 60, this should create a large enough
+**   buffer for some extreme cases.
+**   Keep in mind that here we're getting dangerously close
+**   to blowing a stack, so this should be the first place to look
+**   if that happens.
 ********************************************************************/
 
 #ifndef _DLL_H
@@ -37,8 +51,8 @@
 #include "dbaset.h"
 #include "main.h"
 
-#define MAX_TITLEBAR_LEN   180         // Max text length of Dialog box title
-#define MAX_TEXT_EDIT      2000        // Max text length of Multi-line edit
+#define MAX_TITLEBAR_LEN   MAXOBJECTNAME+180 // Max text length of Dialog box title
+#define MAX_TEXT_EDIT      MAXOBJECTNAME*60  // Max text length of Multi-line edit
 //
 // We define an array of 8 strings whose lenght is 580 characters
 //

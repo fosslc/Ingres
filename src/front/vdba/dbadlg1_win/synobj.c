@@ -1,12 +1,18 @@
 /********************************************************************
 //
-//  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+//  Copyright (C) 2005-2010 Ingres Corporation. All Rights Reserved.
 //
 //    Project  : CA/OpenIngres Visual DBA
 //
 //    Source   : synobj.c
 //
 //    Dialog box for creating a synonym with cross reference
+//
+//    History:
+//      27-May-2010 (drivi01) Bug 123817
+//        Expand szSynonymName to allocate buffer of size MAXOBJECTNAME
+//        otherwise we end up with buffer overrun b/c the rest of the
+//        buffers are of size MAXOBJECTNAME.
 //
 ********************************************************************/
 
@@ -158,7 +164,7 @@ static void OnCommand (HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
    {
        case IDOK:
        {
-           char szSynonymName [MAXOBJECTNAME -1];
+           char szSynonymName [MAXOBJECTNAME];
            HWND hwndSynonymName = GetDlgItem (hwnd, IDC_SYNONYM_ONOBJECT_NAME);
 
            Edit_GetText (hwndSynonymName, szSynonymName, MAXOBJECTNAME);

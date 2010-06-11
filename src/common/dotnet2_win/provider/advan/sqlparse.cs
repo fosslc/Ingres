@@ -87,6 +87,11 @@ namespace Ingres.ProviderInternals
 	**	    for escaped functions.
 	**	12-apr-10 (thoda04)  SIR 123585
 	**	    Add named parameter marker support.
+	**	 4-jun-10 (thoda04)  Bug 123873
+	**	    CREATE PROCEDURE should not have named parameter markers.
+	**	    Don't try to replace ":myvar" host variables with "?".
+	**	    Added 'CREATE PROCEDURE' to getQueryType().
+	**	    Added keyword 'KW_CREATE'.  Added queryType 'QT_CREATE_PROC'.
 	*/
 
 
@@ -105,6 +110,7 @@ namespace Ingres.ProviderInternals
 	**	QT_UPDATE	    Update (cursor) query.
 	**	QT_PRODECURE	    Execute procedure (ODBC syntax).
 	**	QT_NATIVE_PROC	    Execute procedure (Ingres syntax).
+	**	QT_CREATE_PROC	    Create procedure.
 	**
 	**  Public Methods:
 	**
@@ -228,6 +234,7 @@ namespace Ingres.ProviderInternals
 		public const int	QT_UPDATE   = 3;
 		public const int	QT_PROCEDURE= 4;
 		public const int	QT_NATIVE_PROC = 5;
+		public const int	QT_CREATE_PROC = 6;
 
 		/*
 		** General classification for tokens in SQL statements.
@@ -277,13 +284,14 @@ namespace Ingres.ProviderInternals
 		private const int	KW_SESSION  = 11;
 		private const int	KW_UPDATE   = 12;
 		private const int	KW_WHERE    = 13;
+		private const int	KW_CREATE   = 14;
 
 		private static String[]	keywords =
 		{
 		"CALLPROC",	"CURRENT",	"DELETE",	"EXECUTE",	
 		"FOR",		"FROM",		"INTO",		"OF", 		
 		"PROCEDURE", 	"READONLY",	"SELECT",	"SESSION",	
-		"UPDATE",	"WHERE"
+		"UPDATE",	"WHERE",	"CREATE"
 		};
 
 		/*
@@ -754,6 +762,17 @@ namespace Ingres.ProviderInternals
 								token_end, keywords ) == KW_PROCEDURE )
 								query_type = QT_NATIVE_PROC;
 							break;
+
+						case KW_CREATE :    // CREATE PROCEDURE
+							if ( nextToken( false ) == IDENT  &&
+								keyword( text, token_beg, 
+								token_end, keywords ) == KW_PROCEDURE )
+								query_type = QT_CREATE_PROC;
+							break;
+
+						case KW_PROCEDURE : // [CREATE] PROCEDURE w/o noise word
+								query_type = QT_CREATE_PROC;
+							break;
 					}
 						break;
 
@@ -1153,6 +1172,8 @@ namespace Ingres.ProviderInternals
 						break;
 
 					case P_QMARK:
+						if (query_type == QT_CREATE_PROC)  // don't touch host vars
+							break;                         // if CREATE PROCEDURE
 						parameterMarker =
 							new String(text, token_beg, token_end - token_beg);
 						ValidateParameterMarker(parameterMarker, parameterMarkers);

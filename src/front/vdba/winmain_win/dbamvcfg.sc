@@ -12,6 +12,8 @@
 **   08-Jul-2002 (schph01)
 **     BUG #108199 In insert statements, ensure there is a space after the
 **     comma sign that separates the contains of two columns.
+**   02-Jun-2010 (drivi01)
+**     Remove yet another hardcoded buffer size.  
 ********************************************************************/
 #include <stdarg.h>
 #include <stdlib.h>
@@ -357,8 +359,8 @@ static int Create_Replication_Objects(LPUCHAR lpTargetNode,
    exec sql end declare section;
 
    int iAnswer;
-   UCHAR szTxt[2048]; // TO BE FINISHED string should be loaded from res.
-   UCHAR szTxt2[128];
+   UCHAR szTxt[MAXOBJECTNAME*6]; // TO BE FINISHED string should be loaded from res.
+   UCHAR szTxt2[MAXOBJECTNAME*3];
    UCHAR tmpusername[MAXOBJECTNAME];
    HWND  hwndParent;  // Emb Sep. 13, 95: parent needed for message box...
 
@@ -996,7 +998,7 @@ int SendEvent(char *vnode, char *dbname,char *evt_name,char *flag_name,char *svr
     UCHAR szVnodeName[2*MAXOBJECTNAME+2];
     UCHAR szMess[2*MAXOBJECTNAME+2];
     EXEC SQL BEGIN DECLARE SECTION;
-    char    stmt[256];
+    char    stmt[MAXOBJECTNAME*4];
     EXEC SQL END DECLARE SECTION;
     iret = RES_SUCCESS;
 
@@ -1100,7 +1102,7 @@ int MonitorReplicatorStopSvr ( int hdl, int svrNo ,LPUCHAR lpDbName  )
 int GetCddsNumInLookupTblAndFillCtrl(int hdl, LPUCHAR lpDbName, LPUCHAR cdds_lookup_tbl,HWND hWndComboCdds)
 {
 	EXEC SQL BEGIN DECLARE SECTION;
-	char	stmt[256];
+	char	stmt[MAXOBJECTNAME*4];
 	char	cdds_name[MAXOBJECTNAME];
 	long	cdds_no;
 	EXEC SQL END DECLARE SECTION;
@@ -1139,7 +1141,7 @@ int GetVnodeDatabaseAndFillCtrl(int hdl, LPUCHAR lpDbName,HWND hWndCAlistBox)
 	EXEC SQL BEGIN DECLARE SECTION;
 	int db_no;
 	char vnode_name[MAXOBJECTNAME];
-	char db_name[MAXOBJECTNAME];
+	char db_name[MAXOBJECTNAME*4];
 	EXEC SQL END DECLARE SECTION;
 	UCHAR szConnectName[2*MAXOBJECTNAME];
 	char full_db_name[(MAXOBJECTNAME*2)+3]; // 3 for db_no space.
@@ -1181,7 +1183,7 @@ int GetVnodeDatabaseAndFillCtrl(int hdl, LPUCHAR lpDbName,HWND hWndCAlistBox)
 int GetCddsName (int hdl ,LPUCHAR lpDbName, int cdds_num ,LPUCHAR lpcddsname)
 {
 	EXEC SQL BEGIN DECLARE SECTION;
-	char	stmt[256];
+	char	stmt[MAXOBJECTNAME*4];
 	char	cdds_name[MAXOBJECTNAME];
 	EXEC SQL END DECLARE SECTION;
 	UCHAR szConnectName[2*MAXOBJECTNAME];
@@ -1215,7 +1217,7 @@ int FilledSpecialRunNode( long hdl,  LPRESOURCEDATAMIN pResDtaMin,
 						  LPREPLICSERVERDATAMIN pReplSvrDtaAfterRunNode)
 {
 	int ires,iSession;
-	char	stmt[256];
+	char	stmt[MAXOBJECTNAME*4];
 	BOOL bStatementNecessary;
 	UCHAR szConnectName[2*MAXOBJECTNAME];
 	REPLICSERVERDATAMIN ReplSvrDta;
@@ -1279,7 +1281,7 @@ int GenerateSql4changeAccessDB( BOOL bDBPublic ,LPUCHAR DBname,LPUCHAR VnodeName
 		long		bit_n = DB_GLOBAL;
 		long		bit; /* specifies default access DB_PRIVATE */
 		char	sbuffer[256];
-		char	db_name[256];
+		char	db_name[MAXOBJECTNAME];
 	EXEC SQL END DECLARE SECTION;
 	UCHAR szConnectName[2*MAXOBJECTNAME];
 	int ires,iSession;
@@ -1342,10 +1344,10 @@ int GetReplicatorTableNumber (int hdl ,LPUCHAR lpDbName,
 					LPUCHAR lpTableName,LPUCHAR lpTableOwner, int *nTableNum)
 {
 	EXEC SQL BEGIN DECLARE SECTION;
-	char	stmt[256];
+	char	stmt[MAXOBJECTNAME*4];
 	int		Tbl_num;
 	EXEC SQL END DECLARE SECTION;
-	UCHAR szConnectName[2*MAXOBJECTNAME];
+	UCHAR szConnectName[MAXOBJECTNAME*2];
 	int ires,iret,iSession;
 
 	wsprintf(szConnectName,"%s::%s",GetVirtNodeName(hdl), lpDbName);

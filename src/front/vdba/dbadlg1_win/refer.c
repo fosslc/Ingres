@@ -33,6 +33,8 @@
 **    slightly.  ComboBoxFillTablesFiltered will fill the
 **    combo box with VectorWise tables if 3rd parameter
 **    is set to True and Ingres tables if parameter is FALSE.
+** 02-Jun-2010 (drivi01)
+**    Remove hard coded buffer sizes.
 **/
 
 #include "dll.h"
@@ -708,9 +710,9 @@ static void OnDropConstraint (HWND hwnd, BOOL bCascade)
 {
     int   nCount, index;
     TCHAR tchszConstraint [MAXOBJECTNAME];
-    TCHAR szMessage[256];
-    TCHAR szTitle[256];
-    TCHAR szOutput[256];
+    TCHAR szMessage[MAXOBJECTNAME*4+256];
+    TCHAR szTitle[MAXOBJECTNAME*4+256];
+    TCHAR szOutput[MAXOBJECTNAME*4+256];
     HWND  hwndConstraintName   = GetDlgItem (hwnd, IDC_LIST3);
     LPFKEYSTRUCT lpFk;
     LPTABLEPARAMS     lpTable  =  (LPTABLEPARAMS)GetDlgProp (hwnd);
@@ -783,7 +785,7 @@ static void OnReferencedTbSelChange (HWND hwnd)
     LPFKEYSTRUCT      lpFk;
     LPTABLEPARAMS     lpTS;
     LPTABLEPARAMS     lpTable  =  (LPTABLEPARAMS)GetDlgProp (hwnd);
-    TCHAR tchszParentTbName  [128];
+    TCHAR tchszParentTbName  [MAXOBJECTNAME*2];
     TCHAR tchszConstraint    [MAXOBJECTNAME];
     HWND  hwndConstraintName   = GetDlgItem (hwnd, IDC_LIST3);
     HWND  hwndReferencedTable  = GetDlgItem (hwnd, IDC_COMBO2);
@@ -1839,7 +1841,7 @@ static BOOL UpdateReference (HWND hwnd, LPFKEYSTRUCT lpFk)
     HWND  hwndConstraintName   = GetDlgItem (hwnd, IDC_LIST3);
     LPTABLEPARAMS     lpTable  = (LPTABLEPARAMS)GetDlgProp (hwnd);
     LPSTRINGLIST lx = NULL;
-    TCHAR tchszTable  [128];
+    TCHAR tchszTable  [MAXOBJECTNAME*2];
     TCHAR tchszColumn [MAXOBJECTNAME];
     HWND  hwndPkeyCols         = GetDlgItem (hwnd, IDC_LIST2);
     HWND  hwndReferencedTable  = GetDlgItem (hwnd, IDC_COMBO2);

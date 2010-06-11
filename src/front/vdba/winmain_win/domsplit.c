@@ -110,6 +110,8 @@
 ** 12-May-2010 (drivi01)
 **    Disable menus for Ingres VectorWise tables for unsupported
 **    features.
+** 02-Jun-2010 (drivi01)
+**    Remove hardcoded buffer sizes.
 */
 
 //
@@ -2098,7 +2100,7 @@ BOOL Populate(HWND hwndMdi, LPDOMDATA lpDomData)
 	DWORD   dwCurSel;
 	int     CurItemObjType;
 	LPTREERECORD lpRecord;
-	char szgateway[200];
+	char szgateway[MAXOBJECTNAME*4];
 	IIASTRUCT iiparam;
 	FINDCURSOR findcursor;
 	BOOL bLenOK = TRUE;
@@ -2207,16 +2209,16 @@ BOOL Export(HWND hwndMdi, LPDOMDATA lpDomData)
 	DWORD   dwCurSel;
 	int     CurItemObjType;
 	LPTREERECORD lpRecord;
-	char szgateway[200];
-	WCHAR wchStatement[500];
-	WCHAR wchTable[128];
-	WCHAR wchTableOwner[128];
+	char szgateway[MAXOBJECTNAME*4];
+	WCHAR wchStatement[MAXOBJECTNAME*8];
+	WCHAR wchTable[MAXOBJECTNAME*2];
+	WCHAR wchTableOwner[MAXOBJECTNAME*2];
 	IEASTRUCT iiparam;
 	FINDCURSOR findcursor;
 	BOOL bLenOK = TRUE;
 	UINT nExistOpenCursor = 0;
-	const int nBuffLen = 64;
-	TCHAR tchszNode[256];
+	const int nBuffLen = MAXOBJECTNAME;
+	TCHAR tchszNode[MAXOBJECTNAME*4];
 	LPUCHAR  vnodeName = GetVirtNodeName (lpDomData->psDomNode->nodeHandle);
 	BOOL bHasGWSuffix = GetGWClassNameFromString(vnodeName, szgateway);
 	lstrcpy (tchszNode, vnodeName);

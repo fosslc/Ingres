@@ -136,6 +136,8 @@
 **    The function will enable/disable supported options and
 **    set Table parameter structure bCreateVectorWise option
 **    appropriately.
+** 02-Jun-2010 (drivi01)
+**    Remove hard coded buffer sizes.
 *****************************************************************************/
 
 
@@ -2729,7 +2731,7 @@ static void AddContainerColumn(HWND hwnd)
    if (CntFindField(hwndCnt, szColumn))
    {
       // Field already exists in container.
-      char szError[256];
+      char szError[MAXOBJECTNAME*4+256];
       char szTitle[BUFSIZE];
       HWND currentFocus = GetFocus();
 
@@ -3283,7 +3285,7 @@ static void EnableOKButton(HWND hwnd)
 
 static void CreateDlgTitle(HWND hwnd)
 {
-    char szTitle[256];
+    char szTitle[MAXOBJECTNAME*4+256];
     
     LPTABLEPARAMS lptbl = GetDlgProp(hwnd);
     LPSTR lpszNode = GetVirtNodeName(GetCurMdiNodeHandle());
@@ -3712,7 +3714,7 @@ static BOOL  VDBA20xTableDataValidate (HWND hwnd, LPTABLEPARAMS lpTS)
             lpCol = (LPCOLUMNPARAMS)ls->lpObject;
             if (lpCol->bUnique && lstrcmpi (lpCol->szColumn, list1->lpszString) == 0)
             {
-                TCHAR msg [256];//"Duplicate Keys :\nThe primary key and unique key (%s)"
+                TCHAR msg [MAXOBJECTNAME*4+256];//"Duplicate Keys :\nThe primary key and unique key (%s)"
                 wsprintf (msg, ResourceString(IDS_F_DUPLICATE_KEY), lpCol->szColumn);
                 MessageBox (NULL, msg, NULL, MB_ICONSTOP|MB_OK);
                 return FALSE;
@@ -3741,7 +3743,7 @@ static BOOL  VDBA20xTableDataValidate (HWND hwnd, LPTABLEPARAMS lpTS)
             }
             if (Equal)
             {
-                TCHAR msg [256];//"Duplicate Keys :\nThe primary key and unique key <%s>,"
+                TCHAR msg [MAXOBJECTNAME*4+256];//"Duplicate Keys :\nThe primary key and unique key <%s>,"
                 wsprintf (msg, ResourceString(IDS_F_DUPLICATE_KEY), lx->tchszConstraint);
                 MessageBox (NULL, msg, NULL, MB_ICONSTOP|MB_OK);
                 return FALSE;

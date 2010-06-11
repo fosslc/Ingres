@@ -22,6 +22,8 @@
 ** 11-May-2010 (drivi01)
 **   Add vectorwise_ix storage structure to the list of 
 **   possible structures for index.
+** 02-Jun-2010 (drivi01)
+**   Remove hard coded buffer sizes.
 **/
 
 #include "dll.h"
@@ -2039,7 +2041,7 @@ static BOOL IsKeyFieldValid(LPRECORDCORE lpRC, LPFIELDINFO lpFI)
 
 static void CreateDlgTitle(HWND hwnd)
 {
-   char szTitle[256];
+   char szTitle[MAXOBJECTNAME*4+256];
    char szBuf[100];
    char buffer   [MAXOBJECTNAME];
    LPUCHAR parentstrings [MAXPLEVEL];

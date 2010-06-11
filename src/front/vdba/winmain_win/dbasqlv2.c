@@ -65,6 +65,8 @@
 **      (SIR 112514) Add management for Alter column syntax.
 **    23-Mar-2010 (drivi01)
 **      Add routine for creation of VectorWise table.
+**    02-Jun-2010 (drivi01)
+**      Update szCol to use MAXOBJECTNAME instead of hardcoded value.
 *******************************************************************************/
 #include <assert.h>
 #include "dba.h"
@@ -887,7 +889,7 @@ LPTSTR VDBA20xColumnFormat (LPCOLUMNPARAMS lpCol, LPOBJECTLIST lpReferences, LPT
             lpRefCol = (LPREFERENCECOLS)list->lpObject;
             if (lstrcmpi (lpRefCol->szRefingColumn, lpCol->szColumn) == 0)
             {
-                TCHAR szCol [64];
+                TCHAR szCol [MAXOBJECTNAME];
                 wsprintf (szCol, " (%s)", lpRefCol->szRefedColumn);
                 if (lpRef->szConstraintName [0] && lpRef->szConstraintName [0] != '<')
                 {
@@ -1839,7 +1841,7 @@ static LPTSTR VDBA20xPrimaryKeySyntax (PRIMARYKEYSTRUCT* pPrimaryKey, int* m)
 static LPTSTR VDBA20xForeignKeySyntax (LPTSTR lpszTbName, LPOBJECTLIST  lpReferences, int* m)
 {
     int err, err2;
-    TCHAR tchszActionRule [64];
+    TCHAR tchszActionRule [MAXOBJECTNAME];
     BOOL bOneFKey = TRUE, bOneCol = TRUE;
     LPREFERENCEPARAMS lpRef;
     LPREFERENCECOLS lpRefCol;

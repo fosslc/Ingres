@@ -10,6 +10,11 @@
 //                                                                                     //
 //                                                                                     //
 //    Purpose  : Enable/Disable of Install Security Auditing Level ( IISECURITY_STATE) //
+//    History:                                                                         //
+//      02-Jun-2010 (drivi01)                                                          //
+//        Removed BUFSIZE redefinition.  It's not needed here anymore.                 //
+//        the constant is defined in main.h now. and main.h is included                //
+//        in dom.h.                                                                    //
 ****************************************************************************************/
 
 #include "stdafx.h"
@@ -23,10 +28,6 @@ extern BOOL INGRESII_QuerySecurityState (CTypedPtrList<CObList, CaAuditEnabledLe
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
-#endif
-
-#if !defined (BUFSIZE)
-#define BUFSIZE 256
 #endif
 
 extern "C"

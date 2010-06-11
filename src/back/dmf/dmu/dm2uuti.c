@@ -741,6 +741,8 @@ i4 dm2uu_tab_id_warn_now  = DM2UU_TAB_ID_WARN_NOW;
 **	    threads ALWAYS call dm0m_destroy before exiting. 
 **	12-Apr-2010 (kschendel) SIR 123485
 **	    No need to set no-coupon in RCB, access mode does it now.
+**	03-June-2010 (thaju02) Bug 122698
+**	    If thread erred, set *dberr to mx_dberr.
 */
 
 DB_STATUS
@@ -889,7 +891,7 @@ DB_ERROR	    *dberr)
 	    ** (If it was symmetric, they did everything.)
 	    */
 	    status = m->mx_status;
-	    m->mx_dberr = *dberr;
+	    *dberr = m->mx_dberr;
 	    CSv_semaphore(&m->mx_cond_sem);
 	}
 	else
@@ -1102,7 +1104,7 @@ DB_ERROR	    *dberr)
 
 	/* The collective status */
 	status = m->mx_status;
-	m->mx_dberr = *dberr;
+	*dberr = m->mx_dberr;
 
 	CSv_semaphore(&m->mx_cond_sem);
         CScnd_free(&m->mx_cond);
@@ -3478,6 +3480,10 @@ SCF_FTX		*ftx)
 **	    Free the source memory if we get an error with the target but
 **	    haven't finished the source read yet - otherwise the parent
 **	    will find the pointer and try to free it later (in dmse_end_serial).
+**	19-May-2010 (thaju02) Bug 122698
+**	    If writing to a sort work file fails, DMUSource/cut_write_buf
+**	    hangs waiting for something to write. Instead signal cut buffer
+**	    threads that an error has occurred. 
 */
 DB_STATUS
 DMUTarget(
@@ -3931,7 +3937,10 @@ SCF_FTX		*ftx)
     /* Detach CUT, ignore error status; reset CUT status first to assure
     ** that termination will always work.
     */
-    (void) cut_signal_status(NULL, E_DB_OK, &cut_error);
+    if (m->mx_state & MX_ABORT)
+	(void) cut_signal_status(NULL, E_DB_ERROR, &cut_error);
+    else
+	(void) cut_signal_status(NULL, E_DB_OK, &cut_error);
     (void) cut_thread_term(TRUE, &cut_error);
 
     /* If we connected to a log context, disconnect */

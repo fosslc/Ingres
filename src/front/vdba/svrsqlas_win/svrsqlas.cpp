@@ -25,6 +25,8 @@
 ** 15-Mar-2004 (uk$so01)
 **    SIR #111701, Use Compiled HTML Help (.chm file)
 **    Now the help context IDs are available.
+** 07-Jun-2010 (drivi01)
+**    Remove a hard coded buffer definition.
 **/
 
 
@@ -35,6 +37,11 @@
 #include "libguids.h"
 #include "ingobdml.h"
 #include "tkwait.h"
+extern "C"
+{
+#include <compat.h>
+#include <iicommon.h>
+}
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -429,8 +436,8 @@ int CSvrsqlasApp::ExitInstance()
 BOOL CSvrsqlasApp::UnicodeOk()
 {
 	BOOL bOk = TRUE;
-	TCHAR tchszUserName[256];
-	DWORD dwSize = 256;
+	TCHAR tchszUserName[DBOBJECTLEN*4];
+	DWORD dwSize = DBOBJECTLEN*4;
 
 	if (!GetUserName(tchszUserName, &dwSize))
 		bOk = ERROR_CALL_NOT_IMPLEMENTED == GetLastError() ? FALSE : TRUE;

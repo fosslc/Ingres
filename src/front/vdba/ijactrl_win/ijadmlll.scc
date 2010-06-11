@@ -26,6 +26,9 @@
 **    SIR #106648, Integrate libraries libwctrl.lib, libingll.lib in Ija
 ** 13-May-2004 (schph01)
 **    SIR #111507 Add management for new column type bigint
+** 25-May-2010 (drivi01) Bug 123817
+**    Fix the object length to allow for long IDs.
+**    Remove hard coded constants, use DB_MAXNAME instead.
 **/
 
 
@@ -60,8 +63,8 @@ EXEC SQL INCLUDE SQLDA;
 }
 #endif
 
-#define USERNAMELEN (32+1)
-#define OBJNAMELEN (32+1)
+#define USERNAMELEN (DB_MAXNAME + 1)
+#define OBJNAMELEN (DB_MAXNAME + 1)
 static TCHAR DefaultDecSeparartor[2]=_T(".");
 static TCHAR bufIIDecimal[2]=_T(".");
 static BOOL bDecimalRead  = FALSE;
@@ -351,7 +354,7 @@ CLOSE_CURSOR:
 BOOL GetTempAuditTableName( CString& csResultString, LPCTSTR lpSourceTableName, LPCTSTR lpSchemaName)
 {
 	EXEC SQL BEGIN DECLARE SECTION;
-		char  sztablename [OBJNAMELEN];
+		char  sztablename [OBJNAMELEN+20]; //We are writing more than a table name to this buffer
 		char szSchema     [USERNAMELEN];
 		int icount;
 	EXEC SQL END DECLARE SECTION;

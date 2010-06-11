@@ -44,6 +44,9 @@
 **    %ALLUSERSPROFILE%\Ingres\Ingres<II_INSTALLATION>\files on Vista only.
 ** 08-Sep-2009 (drivi01)
 **    Add consttchszDBATools and consttchszIngresProd constants.
+** 25-May-2010 (drivi01) Bug 123817
+**    Fix the object length to allow for long IDs.
+**    Remove hard coded constants, use DB_MAXNAME instead.
 **/
 
 #if !defined (CONSTANT_DEFINED_HEADER)
@@ -52,7 +55,7 @@
 #define GUID_SIZE         128
 #define MAX_STRING_LENGTH 256
 
-#define DBOBJECTLEN    64 
+#define DBOBJECTLEN    (DB_MAXNAME*2 + 3) 
 #define MAXDATELEN     32 
 #define MAXSQLERROR (1024 +1)
 

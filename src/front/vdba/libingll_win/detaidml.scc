@@ -51,6 +51,9 @@
 **    BUG #113119, Remove the unnecessary statements.
 ** 20-Aug-2008 (whiro01)
 **    Remove redundant <afx...> includes (already in stdafx.h)
+** 27-May-2010 (drivi01)
+**    Add iicommon.h to the headers to include GL_MAXNAME constant definition
+**    in constdef.h.
 */
 
 #include "constdef.h"
@@ -69,6 +72,8 @@ extern "C"
 {
 EXEC SQL INCLUDE SQLCA;
 EXEC SQL INCLUDE SQLDA;
+#include <compat.h>
+#include <iicommon.h>
 }
 
 static BOOL QueryDetailUser      (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CaUser* pObject);

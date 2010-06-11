@@ -16,16 +16,19 @@
 **	    Include windows.h and windowsx.h, removed typedefs.h .
 ** 05-Aug-2003 (uk$so01)
 **    SIR #106648, Remove printer setting
+** 02-Jun-2010 (drivi01)
+**    Remove stdlib.h.  Move up main.h.  Main.h now defines BUFSIZE
+**    with MAXOBJECTNAME and includes dba.h.
 **/
 
 #define SYS_WIN16
 #define WIN32_LEAN_AND_MEAN
 //#define STRICT
 
-#include <stdlib.h>    // Moved Emb before aspen.h
+//#include <stdlib.h>    // Moved Emb before aspen.h
 #include <windows.h>
 #include <windowsx.h>
-
+#include "main.h"
 #include "aspen.h"
 
 #include        "nanmem.e"
@@ -48,7 +51,6 @@
 #include        <time.h>
 
 #include "port.h"
-
 // TO BE FINISHED: the following typedef is in dba.h but there may be some
 // interferences with other includes for this source
 
@@ -60,7 +62,6 @@ typedef HWND DISPWND;
 //
 // Emb added 9/3/95
 //
-#include "main.h"
 #undef APP_INST
 #define APP_INST()   hInst
 #undef MALLOCSTR

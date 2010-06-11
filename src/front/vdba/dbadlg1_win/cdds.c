@@ -12,6 +12,8 @@
 **         Eliminate the undesired compiler's warning
 **  26-May-2000
 **    bug #99242 . cleanup for DBCS compliance
+**  02-Jun-2010 (drivi01)
+**    Remove hard coded buffer sizes.
 ********************************************************************/
 
 #include <stddef.h>
@@ -1670,7 +1672,7 @@ static void FillPropagationPath(HWND hwnd,HWND hwndCtl, LPREPCDDS lpcdds)
 
 static BOOL FillControlsFromStructure (HWND hdlg, LPREPCDDS lpcdds)
 {
-    char    szWork[256];
+    char    szWork[MAXOBJECTNAME*4];
     int     hdl = GetCurMdiNodeHandle ();
 
     /* Fill CDDS number */
@@ -1728,7 +1730,7 @@ static BOOL OnInitDialog (HWND hwnd, HWND hwndFocus, LPARAM lParam)
 {
     LPREPCDDS lpcdds = (LPREPCDDS) lParam;
     LPREPCDDS lpnew  = (LPREPCDDS) ESL_AllocMem(sizeof(REPCDDS));
-    UCHAR   szTitle[100];
+    UCHAR   szTitle[MAXOBJECTNAME*3+100];
 
     SetWindowLong(hwnd,DWL_USER,(LONG) lpnew);
 

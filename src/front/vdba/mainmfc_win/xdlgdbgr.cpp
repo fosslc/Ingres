@@ -20,6 +20,10 @@
 **    new features provided in this version. replaced references
 **    to 2.65 with refereces to 3  in #define definitions for
 **    better readability in the future
+**  02-Jun-2010 (drivi01)
+**    Removed BUFSIZE redefinition.  It's not needed here anymore.
+**    the constant is defined in main.h now. and main.h is included
+**    in dom.h.
 **/
 
 #include "stdafx.h"
@@ -30,9 +34,6 @@
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
-#endif
-#if !defined (BUFSIZE)
-#define BUFSIZE 256
 #endif
 
 extern "C"

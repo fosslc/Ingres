@@ -8,6 +8,10 @@
 //
 //    Sub Dialog box for Display SQL option for the Dlg box Optimize db & statdump 
 //
+//    History:
+//      02-Jun-2010 (drivi01)
+//        Remove hard coded buffer sizes.
+//
 ********************************************************************/
 
 #include <stdio.h>
@@ -431,11 +435,11 @@ static BOOL FillStructureFromControls (HWND hwnd)
    char szGreatBuffer   [3000];
    char szSQLOptionFlag [200];
    char szZFlag         [200];
-   char szBuffer        [100];
+   char szBuffer        [MAXOBJECTNAME*2];
    char szTxC           [2000];
-   char szBufferFile    [64];
-   char buf1            [64];
-   char buf2            [64];
+   char szBufferFile    [MAXOBJECTNAME];
+   char buf1            [MAXOBJECTNAME];
+   char buf2            [MAXOBJECTNAME];
 //   char buftemp         [200];
 
    HWND hwnd_cN  = GetDlgItem (hwnd, IDC_DISPLAY_CHARCOLWIDTH_N);

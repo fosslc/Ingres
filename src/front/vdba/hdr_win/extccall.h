@@ -41,6 +41,8 @@
 **    Add tblType to DMLCREATESTRUCT for "Create Index" dialog.
 **    So that in "Create Index" dialog the available storage structures for
 **    the index reflect the storage structures available for the table type.
+** 07-Jun-2010 (drivi01)
+**    Redefine FINDCURSORLEN constant to use MAXOBJECTNAME.
 */
 
 #if !defined (EXTERN_C_CALL_HEADER)
@@ -315,14 +317,14 @@ typedef struct tagREQUESTMDIINFO
 	UINT nInfo;   // Information.
 } REQUESTMDIINFO;
 
-#define FINDCURSORLEN 64
+#define FINDCURSORLEN MAXOBJECTNAME
 typedef struct tagFINDCURSOR
 {
-	TCHAR tchszNode      [FINDCURSORLEN+1];
-	TCHAR tchszServer    [FINDCURSORLEN+1];
-	TCHAR tchszDatabase  [FINDCURSORLEN+1];
-	TCHAR tchszTable     [FINDCURSORLEN+1];
-	TCHAR tchszTableOwner[FINDCURSORLEN+1];
+	TCHAR tchszNode      [FINDCURSORLEN];
+	TCHAR tchszServer    [FINDCURSORLEN];
+	TCHAR tchszDatabase  [FINDCURSORLEN];
+	TCHAR tchszTable     [FINDCURSORLEN];
+	TCHAR tchszTableOwner[FINDCURSORLEN];
 
 	BOOL  bCloseCursor;  // TRUE to indicate the function 'IsExistOpenCursor()' to close the cursor.
 

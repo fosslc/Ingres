@@ -18,8 +18,12 @@
 ** 02-Jun-2005 (lakvi01)
 **    BUG 114599, added RES_HDL_NOTGRANTED as an error when the user does
 **    not have priviliges for rmcmd.
+** 25-May-2010 (drivi01) Bug 123817
+**    Fix the object length to allow for long IDs.
+**    Remove hard coded constants, use DB_MAXNAME instead.
 **/
-
+#include <compat.h>
+#include <iicommon.h>
 
 #if !defined (REMOTE_RMCMDCLIENT_HEADER)
 #define REMOTE_RMCMDCLIENT_HEADER
@@ -41,7 +45,7 @@
 #define RMCMDSTATUS_SERVERPRESENT     4
 #define RMCMDSTATUS_REQUEST4TERMINATE 5
 
-#define MAXOBJECTNAME (32+1+32+1)
+#define MAXOBJECTNAME (DB_MAXNAME*2 + 3)
 
 #define RMSUPERUSER "INGRES" /*TO BE FINISHED to avoid multiple occurences*/
 

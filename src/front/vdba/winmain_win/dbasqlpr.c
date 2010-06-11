@@ -51,6 +51,9 @@
 **    12-May-2010 (drivi01)
 **      Upddated BuildSQLCreIdx function with VECTORWISE_IX 
 **      index storage structure.
+**    04-Jun-2010 (horda03) b123227
+**      Syntax for drop grant on sequence incorrect. "next" is missing as is the
+**      CASCADE/RESTRICT text at the end.
 ******************************************************************************/
 #include "dba.h"
 #include "dbaset.h"
@@ -2718,7 +2721,10 @@ LPREVOKEPARAMS revokeparm;
    }
 
    if (revokeparm->ObjectType!=OT_ROLE) {
-      if(revokeparm->ObjectType!=OT_SEQUENCE) {
+      if(revokeparm->ObjectType==OT_SEQUENCE) {
+         pstm=ConcatStr(pstm, " next ", &freebytes);
+      }
+      else {
           /* generates the privileges to be dropped  */
           One_Found=FALSE;
           for (i=0; i<GRANT_MAX_PRIVILEGES; i++) {
@@ -2792,8 +2798,7 @@ LPREVOKEPARAMS revokeparm;
 
    /* generates the cascade / restrict parameter */
    if (revokeparm->ObjectType!=OT_DATABASE &&
-       revokeparm->ObjectType!=OT_ROLE     &&
-       revokeparm->ObjectType!=OT_SEQUENCE) {
+       revokeparm->ObjectType!=OT_ROLE) {
       if (revokeparm->cascade) 
          pstm=ConcatStr(pstm, " cascade", &freebytes);
       else

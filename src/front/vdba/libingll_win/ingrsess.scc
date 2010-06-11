@@ -98,6 +98,10 @@
 **    possible future versions since the functionality is not expected to 
 **    change.  Add handling of VectorWise installations by settings
 **    dbms type to VW.
+** 27-May-2010 (drivi01)
+**    Add iicommon.h to the headers to include GL_MAXNAME constant definition
+**    in constdef.h.
+
 **/
 /* Turn off POSIX warning for this file until Microsoft fixes this bug */
 #pragma warning(disable: 4996)
@@ -119,6 +123,8 @@ extern "C"
 EXEC SQL INCLUDE SQLCA;
 EXEC SQL INCLUDE SQLDA;
 extern int IILQucolinit( int );
+#include <compat.h>
+#include <iicommon.h>
 }
 
 
