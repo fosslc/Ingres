@@ -26,6 +26,8 @@
 ## History:
 ##	21-May-2009 (hanje04)
 ##	    Added license, updated for OSX
+##  08-Jun-2010 (thich01)
+##     Added set -- to clear passed in arguments
 
 
 # we should set BUILDTOOLS so we know where the other tools are
@@ -48,6 +50,11 @@ then
   fi
 fi
 export BUILDTOOLS
+
+# Clear $1 argument parms so that they are not passed
+# to sourced scripts.
+set --
+
 # if we're starting fresh, set up the environment
 if [ -f ${BUILDTOOLS}/set_env.sh ]
 then
