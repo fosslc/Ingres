@@ -12,6 +12,10 @@
 **    BUG #113511 replace Compare function by Collate according to the
 **    LC_COLLATE category setting of the locale code page currently in
 **    use.
+** 09-Jun-2010 (drivi01)
+**    Update constructor with tbltype field which will reflect
+**    Ingres VectorWise table structures, pass the table type to
+**    CuMultFlag constructor.
 ****************************************************************************************/
 
 #include "stdafx.h"
@@ -272,8 +276,8 @@ CuNameWithOwner::CuNameWithOwner(LPCTSTR name)
   m_csOwner = _T("");
 }
 
-CuNameWithOwner::CuNameWithOwner(LPCTSTR name, LPCTSTR owner, BOOL bFlag)
-  : CuMultFlag(name, FALSE)
+CuNameWithOwner::CuNameWithOwner(LPCTSTR name, LPCTSTR owner, int tbltype, BOOL bFlag)
+  : CuMultFlag(name, FALSE, tbltype)
 {
   InitialAllocateFlags(NB_NAMEWITHOWNER_COLUMNS);
 

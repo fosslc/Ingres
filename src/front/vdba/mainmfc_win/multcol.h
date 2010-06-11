@@ -12,6 +12,11 @@
 //    Name With Integer value,                                                         //
 //    etc.                                                                             //
 //                                                                                     //
+// History:                                                                            //
+//   09-Jun-2010 (drivi01)                                                             //
+//    Update constructor with tbltype field which will reflect                         //
+//    Ingres VectorWise table structures, pass the table type to                       //
+//    CuMultFlag constructor.                                                          //
 ****************************************************************************************/
 
 #ifndef MULTCOL_HEADER
@@ -126,7 +131,7 @@ class CuNameWithOwner: public CuMultFlag
   DECLARE_SERIAL (CuNameWithOwner)
 
 public:
-  CuNameWithOwner(LPCTSTR name, LPCTSTR owner, BOOL bFlag = FALSE);
+  CuNameWithOwner(LPCTSTR name, LPCTSTR owner, int tbltype = 0, BOOL bFlag = FALSE);
   CuNameWithOwner(const CuNameWithOwner* pRefNameWithOwner);
   CuNameWithOwner(LPCTSTR originalName);    // Error/No item
   virtual ~CuNameWithOwner() {}
