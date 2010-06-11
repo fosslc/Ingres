@@ -253,6 +253,8 @@
 **	    Delete a bunch of obsolete info msgs.  Not comprehensive!
 **	26-May-2010 (frima01) Bug 123753
 **	    Add W_DU1874_UPGR_NOT_STAR_OWNER.
+**      27-may-2010 (maspa05) sir 123793
+**          Add message W_DU1875_UPGRADEDB_ENC, W_DU1876_UPGRADEDB_ABF
 **/
 
 typedef	i4	DU_STATUS;
@@ -1240,6 +1242,8 @@ typedef	i4	DU_STATUS;
 #define			W_DU1872_UPGRADEDB_TREE_DB	(E_DUF_MASK + 0x1872L)
 #define			W_DU1873_UPGRADEDB_TREE		(E_DUF_MASK + 0x1873L)
 #define			W_DU1874_UPGR_NOT_STAR_OWNER	(E_DUF_MASK + 0x1874L)
+#define			W_DU1875_UPGRADEDB_ENC		(E_DUF_MASK + 0x1875L)
+#define			W_DU1876_UPGRADEDB_ABF		(E_DUF_MASK + 0x1876L)
 
 /* Internal error numbers range from 0x2000 to 0x2FFF */
 #define			E_DU2000_BAD_ERLOOKUP		(E_DUF_MASK + 0x2000L)

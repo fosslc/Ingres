@@ -48,6 +48,8 @@
 ##		Don't copy test directory, create sym link instead.
 ##		Have noclean depending on nobuild.
 ##		Removed function keyword - not supported on all systems.
+##  08-Jun-2010 (thich01)
+##     Added set -- to clear passed in arguments
 
 
 usage()
@@ -133,6 +135,10 @@ then
   fi
 fi
 export BUILDTOOLS
+
+# Clear $1 argument parms so that they are not passed
+# to sourced scripts.
+set --
 
 if [ -f ${BUILDTOOLS}/set_env.sh ]
 then

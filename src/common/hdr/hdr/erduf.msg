@@ -204,6 +204,8 @@
 **	    Drop some unused information msgs, change DU00A1.
 **	26-May-2010 (frima01) Bug 123753
 **	    Add W_DU1874_UPGR_NOT_STAR_OWNER.
+**      27-may-2010 (maspa05) sir 123793
+**          Added message W_DU1875_UPGRADEDB_ENC, W_DU1876_UPGRADEDB_ABF
 */
 
 
@@ -14499,6 +14501,50 @@ Please re-run upgradedb '%0c' while logged in as user '%1c'."
 ** Recommendation:
 **	The user should re-run upgradedb for the star database as the actual
 **	owner of the database.
+*/
+W_DU1875_UPGRADEDB_ENC
+"Warning: UPGRADEDB failed to remove rows from %0c.
+\nSQL error message was:\n\n %1c\n
+\nCheck errlog.log for further information.
+After resolving the errors, you may need to copy out, drop and copy back in
+your applications.\n"
+/*%
+** Parameters:
+**	None.
+**
+** Explanation:
+**	upgradedb couldn't remove rows from ii_encodings or ii_encoded_forms
+**
+** System Status:
+**	Warning message; processing continues.
+**
+** Recommendation:
+**	The user should determine why the delete failed (check the SQL error
+**      message given). 
+**      Once resolved the recommended action is to copy out and copy back in
+**      any ABF applications. 
+*/
+W_DU1876_UPGRADEDB_ABF
+"Warning: UPGRADEDB failed to update ABF objects.
+\nSQL error message was:\n\n %0c\n
+\nCheck errlog.log for further information.
+After resolving the errors, you may need to re-compile your applications
+with the -f flag.\n"
+/*%
+** Parameters:
+**	None.
+**
+** Explanation:
+**	upgradedb couldn't update the objects relating to ABF components
+**
+** System Status:
+**	Warning message; processing continues.
+**
+** Recommendation:
+**	The user should determine why the update failed (check the SQL error
+**      message given). 
+**      Once resolved the recommended action is to re-compile with
+**      imageapp -f , forcing all components to be re-compiled.
 */
 E_DU2000_BAD_ERLOOKUP
 "  Unknown database utility error number '%0x'."

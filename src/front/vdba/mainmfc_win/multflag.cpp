@@ -8,6 +8,11 @@
 //                                                                                     //
 //    base classes for lists of objects with multiple flags                            //
 //                                                                                     //
+// History:                                                                            //
+//   09-Jun-2010 (drivi01)                                                             //
+//     Update constructor for CuMultFlag to take additional parameter                  //
+//     for table type.  Update Duplicate option to also duplicate table                //
+//     type and initialize table type in the constructor.                              //
 ****************************************************************************************/
 
 #include "stdafx.h"
@@ -111,9 +116,10 @@ CuMultFlag::CuMultFlag()
   m_aValues = NULL;         // For numeric values associated with flags
 }
 
-CuMultFlag::CuMultFlag(LPCTSTR name, BOOL bSpecialItem)
+CuMultFlag::CuMultFlag(LPCTSTR name, BOOL bSpecialItem, int tbltype)
 {
   m_bSpecialItem        = bSpecialItem;
+  m_iTblType		= tbltype;
 
   // Name can be NULL! (unnamed object)
   if (name[0])
@@ -148,6 +154,7 @@ CuMultFlag::CuMultFlag(const CuMultFlag* pRefFlag)
 
   m_bSpecialItem        = pRefFlag->m_bSpecialItem      ;
   m_strName             = pRefFlag->m_strName           ;
+  m_iTblType			= pRefFlag->m_iTblType			;
 
   m_nbFlags = pRefFlag->m_nbFlags;
   m_aFlags = new BOOL[m_nbFlags];

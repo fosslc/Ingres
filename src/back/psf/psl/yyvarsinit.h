@@ -115,6 +115,9 @@
 **		be initialised properly in any roueing that copies the block
 **		such as psl_push_yyvars() - otherwise their will point into
 **		stack that will get corrupted!
+**      02-Jun-2010 (coomi01) b123821
+**           Init save_seq_ops array.
+**     
 **/
 
 
@@ -164,6 +167,7 @@ yyvars.first_n_ok_depth	= 1;
 yyvars.first_n		= (PST_QNODE *) NULL;
 yyvars.offset_n		= (PST_QNODE *) NULL;
 yyvars.seq_ops		= FALSE;
+(VOID)MEfill(sizeof(yyvars.save_seq_ops), 0, (char *)&yyvars.save_seq_ops);
 yyvars.in_case_function = 0;
 yyvars.dynqp_comp	= FALSE;
 yyvars.repeat_dyn	= FALSE;

@@ -4923,6 +4923,8 @@ typedef struct _PSS_WITH_CLAUSE
 **	    for SINGLETON support.
 **	23-Mar-2010 (kiria01) b123438
 **	    Added first_n_ok_depth
+**      02-Jun-2010 (coomi01) b123821
+**          Add save_seq_ops[] of bool to PSS_YYVARS.
 **/
 
 /* For passing opflags to arg_stack users */
@@ -5537,6 +5539,7 @@ blow chunks now!
     PST_QNODE	    *union_head;	/* Head of UNION tree if applicable */
     PST_QNODE	    *tlist_stack[MAX_NESTING]; /* same depth as from list */
 
+    bool            save_seq_ops[MAX_NESTING]; /* set of flags used for seq_op indicators */
 }   PSS_YYVARS;
 
 
