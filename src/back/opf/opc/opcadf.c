@@ -202,6 +202,9 @@ FUNC_EXTERN DB_STATUS	    adi_resolve();
 **	    Remove dead code, unused adbase parameters.
 **	04-May-2010 (kiria01) b123680
 **	    Correct the bad stack referencing code in dt_family processing
+**      08-Jun-2010 (horda03) b123878
+**          For nullable string to decimal transformation, need to increase the
+**          length of the datatype by 1, otherwise E_OP0791 gets reported.
 [@history_template@]...
 **/
 
@@ -1501,6 +1504,9 @@ opc_bsmap(
 **	    On UTF-8 installations, when coercing between a LOB-Locator 
 **	    and a long type do not introduce Unicode normalization.
 **
+**      07-Jun-2010 (horda03) b123878
+**          For nullable decimal transforms, add 1 to the length (for the null
+**          byte).
 */
 VOID
 opc_adtransform(
@@ -1699,6 +1705,12 @@ opc_adtransform(
 		resop->opr_prec = saved_prec;
 		resop->opr_len =
 			    DB_PREC_TO_LEN_MACRO(DB_P_DECODE_MACRO(saved_prec));
+
+                if (resop->opr_dt < 0)
+                {
+                   /* Don't forget the NULL byte */
+                   resop->opr_len++;
+                }
 	  }
        }	
 
