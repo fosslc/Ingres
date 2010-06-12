@@ -3550,6 +3550,8 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	20-May-2010 (kiria01) b123773
 **	    Detect and flag error for the case when user attempts to update a column
 **	    from the FROM set of tables using aliases.
+**      02-Jun-2010 (coomi01) b123821
+**          Relax exclusive test for distinct combined with seq-ops.
 */
 %{
 
@@ -11923,6 +11925,7 @@ create_view:		viewclause newcolspec
 #ifdef	xDEBUG
 	psl_debug();
 #endif
+
 	if ($Yseq_ops)
 	{
 	    /* No use of sequences in view definitions. */
@@ -26680,6 +26683,7 @@ insertkwd:         INSERT INTO
 	    */
 	    $Ydbpinfo->pss_flags |= PSS_1SUB_SEEN;
 	}
+
 	MEfill(sizeof(PST_J_MASK), 0, (char *)&$Yflists[++cb->pss_qualdepth]);
 	
 	/* Adjust first_n depth in line with cb->pss_qualdepth */
@@ -28490,6 +28494,7 @@ order_clause:	    ORDER BY
 	$Ynonupdt_reason |= PSS_ORDER_BY_IN_OUTERMOST_SUBSEL;
 	$Yin_orderby = FALSE;
 	psq_cb->psq_ret_flag &= ~PSQ_PARSING_ORDER_BY;	/* needed for FIRST */
+
 	cb->pss_qualdepth--;
 	$$ = 0;
     }
@@ -29148,7 +29153,10 @@ subselect:	    select first_n distinct target_spec into_clause from
 	    }
 	}
 
-	if ($Yseq_ops && $3 /*distinct*/)
+        /* Detect combined presence of sequence and distict 
+        ** with the scope of the current subselect
+        */
+	if ($Ysave_seq_ops[cb->pss_qualdepth] && $3 /*distinct*/)
 	{
 	    /* No use of sequences in distinct selects. */
 	    (void)psf_error(6319L, 0L, PSF_USERERR,
@@ -29695,6 +29703,7 @@ subselect:	    select first_n distinct target_spec into_clause from
 	}
 
 	cb->pss_rsdmno = $Ysave_pss_rsdmno[cb->pss_qualdepth];	/* restore */
+
 	cb->pss_qualdepth--;
 
 	/* if no set function and a group by clause, add the group by clause
@@ -30027,6 +30036,7 @@ select:			SELECT
 	** already has been. Note that we skip an extra scope level
 	** as ORDER BY is processed after the associated SELECT query
 	** has been seen and the pss_qualdepth decremented */
+
 	cb->pss_qualdepth++;
 
 	/*
@@ -30107,6 +30117,8 @@ select:			SELECT
 	    $Ypss_join_info.pss_join[$Ypss_join_info.depth].join_id = PST_NOJOIN;
 	else
 	    $Ypss_join_info.pss_join[$Ypss_join_info.depth].join_id = ++$Yjoin_id;
+
+        $Ysave_seq_ops[cb->pss_qualdepth] = FALSE;
     }
 ;
 
@@ -38352,7 +38364,7 @@ ansi_seqop:		aseqopwd obj_spec
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
 
-	$Yseq_ops = TRUE;
+	$Yseq_ops = $Ysave_seq_ops[cb->pss_qualdepth] = TRUE;
 	$$ = newnode;
     }
 ;
@@ -38418,7 +38430,7 @@ oracle_seqop:		generic_ident PERIOD generic_ident PERIOD oseqopwd
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
 
-	$Yseq_ops = TRUE;
+	$Yseq_ops = $Ysave_seq_ops[cb->pss_qualdepth] = TRUE;
 	$$ = newnode;
     }
 		|	generic_ident PERIOD oseqopwd
@@ -38476,7 +38488,7 @@ oracle_seqop:		generic_ident PERIOD generic_ident PERIOD oseqopwd
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
 
-	$Yseq_ops = TRUE;
+	$Yseq_ops = $Ysave_seq_ops[cb->pss_qualdepth] = TRUE;
 	$$ = newnode;
     }
 ;
@@ -59551,3 +59563,4 @@ psl_mk_const_similar(
     }
     return status;
 }
+

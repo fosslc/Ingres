@@ -26,6 +26,8 @@
 ## History:
 ##	21-May-2009 (hanje04)
 ##	    Added license, updated for OSX
+##  08-Jun-2010 (thich01)
+##     Added set -- to clear passed in arguments
 
 
 # we should set BUILDTOOLS so we know where the other tools are

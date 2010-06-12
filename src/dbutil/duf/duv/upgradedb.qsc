@@ -636,6 +636,19 @@ EXEC SQL end declare section;
 **	    little routines that check for specific changes.  Adapt Alison's
 **	    be catalog updater so that it can be used for nearly all the
 **	    updates.
+**	18-May-2010 (frima01) Bug 123753
+**	    In fix_dbservice skip update of config file for distributed
+**	    database, cause there is none. Set tree_convert to true,
+**	    fixing qry trees is neccessary for Ingres 10. Only allow star db
+**	    owner to upgrade a star db to ensure access to private vnodes.
+**      27-may-2010 (maspa05) SIR 123793
+**          Delete from ii_encodings and ii_encoded_forms. This means that
+**          when upgrading from int.lnx to a64.lnx encoded IL will get 
+**          re-created when the applications are re-compiled. Also
+**          update the alter_date in ii_objects to force re-compile of
+**          all application components
+**	03-Jun-2010 (frima01) Bug 123753
+**	    Have iistats updated for Ingres 10 distributed databases.
 */
  
 /*
@@ -957,11 +970,6 @@ char	*argv[];
 **	    Added major 9.0 (Release 3), minor 0.
 **	12-Nov-2009 (kschendel) SIR 122882
 **	    Rework for integerized dbcmptlvl.
-**	18-May-2010 (frima01) Bug 123753
-**	    In fix_dbservice skip update of config file for distributed
-**	    database, cause there is none. Set tree_convert to true,
-**	    fixing qry trees is neccessary for Ingres 10. Only allow star db
-**	    owner to upgrade a star db to ensure access to private vnodes.
 */
 i4
 set_cmptlvl(u_i4 cmptlvl, i4 minorlvl)
@@ -2971,7 +2979,8 @@ convert_dbs()
 	    du_talk(__LINE__, DU_MODESENS, &upgr_cb, I_DU00B6_DB_IDENTIFIER, 2,
 		     0, target_name);
 
-	upgrade_iidd_stats = FALSE;
+	/* Have iistats updated for Ingres 10 distributed databases. */
+	upgrade_iidd_stats = TRUE;
 
 	/* Prequalify for FE conversion here.... */
 	upgr_cb.Dbname_ptr->fe_convert = TRUE;		/* Always convert */
@@ -3821,6 +3830,96 @@ cv_upgrade()
 	}
     } while (0);     /* end of control loop */
 
+    /* check if we need to force re-generation of the IL encodings in the
+       system catalogs and force re-compilation of all
+       application components */
+
+    if (upgr_cb.Dbname_ptr->reset_apps)
+    {
+
+        /* remove entries from ii_encodings, ii_encoded_forms */
+    
+        /* check if catalog exists (could be a nofeclients db) */
+        if (rel_exists("ii_encoded_forms"))
+        {
+    	    if (upg_dbg_out)
+    	        SIfprintf(upgr_cb.du_dbg.du_file, 
+                   "]==> Upgrade requires reset of ABF catalog information\n");
+
+            exec sql delete from ii_encoded_forms;
+            check_sql(sqlca.sqlcode);
+            if (sqlca.sqlcode < 0)
+            {
+    	        du_talk(__LINE__, DU_MODESENS, &upgr_cb, W_DU1875_UPGRADEDB_ENC,
+                         4, 0, "ii_encoded_forms", 0, sqlca.sqlerrm.sqlerrmc);
+    	        if (upg_dbg_out)
+    	            SIfprintf(upgr_cb.du_dbg.du_file, 
+                      "]==> Failed deleting rows from ii_encoded_forms\nSQL Error:%s\n",
+                       sqlca.sqlerrm.sqlerrmc);
+            }
+    	    else 
+            {
+                if (upg_dbg_out)
+    	            SIfprintf(upgr_cb.du_dbg.du_file, 
+                        "]==> deleted %d rows from ii_encoded_forms\n",
+                         sqlca.sqlerrd[2]);
+            }
+    
+            exec sql commit;
+        }
+        if (rel_exists("ii_encodings"))
+        {
+            exec sql delete from ii_encodings;
+            check_sql(sqlca.sqlcode);
+            if (sqlca.sqlcode < 0)
+            {
+    	        du_talk(__LINE__, DU_MODESENS, &upgr_cb, W_DU1875_UPGRADEDB_ENC,
+                         4, 0, "ii_encodings", 0, sqlca.sqlerrm.sqlerrmc);
+    	        if (upg_dbg_out)
+    	            SIfprintf(upgr_cb.du_dbg.du_file, 
+                      "]==> Failed deleting rows from ii_encodings\nSQL Error:%s\n",
+                       sqlca.sqlerrm.sqlerrmc);
+            }
+    	    else 
+            {
+                if (upg_dbg_out)
+    	            SIfprintf(upgr_cb.du_dbg.du_file, 
+                        "]==> deleted %d rows from ii_encodings\n",
+                         sqlca.sqlerrd[2]);
+            }
+    
+            exec sql commit;
+        }
+    
+        /* update alter date for application objects - causes next imageapp to
+         * be a -f one i.e. forces everything to re-compile */
+        if (rel_exists("ii_abfobjects"))
+        {
+    
+            exec sql update ii_objects
+                     set alter_date=date_gmt(date('now'));
+            check_sql(sqlca.sqlcode);
+            if (sqlca.sqlcode < 0)
+            {
+    	        du_talk(__LINE__, DU_MODESENS, &upgr_cb, W_DU1876_UPGRADEDB_ABF,
+                         2, 0,  sqlca.sqlerrm.sqlerrmc);
+    	        if (upg_dbg_out)
+    	            SIfprintf(upgr_cb.du_dbg.du_file, 
+                      "]==> Failed updating ii_objects\nSQL Error:%s\n",
+                       sqlca.sqlerrm.sqlerrmc);
+            }
+    	    else 
+            {
+                if (upg_dbg_out)
+    	            SIfprintf(upgr_cb.du_dbg.du_file, 
+                        "]==> updated %d rows in ii_objects\n",
+                         sqlca.sqlerrd[2]);
+            }
+    
+            exec sql commit;
+        }
+    }
+
     /* Issue message to indicate whether or not the database was converted */
     if (upgr_cb.Dbname_ptr->be_convert)
     {    
@@ -4347,6 +4446,21 @@ i4		dbservice;
     {
 	temp->tree_convert = FALSE;
     }
+
+    temp->reset_apps = FALSE;
+
+#ifdef LITTLE_ENDIAN_INT
+
+    /* if this is a 64bit server but the DB was 32bit or vice-versa then
+       set flag to say force re-generation of encoded forms
+       and IL and force re-compile of applications */
+
+    if ((upgr_cb.dbmsinfo_lp64 == 'Y' && (dbservice & DU_LP64) == 0)
+	|| (upgr_cb.dbmsinfo_lp64 != 'Y' && (dbservice & DU_LP64)) )
+    {
+        temp->reset_apps = TRUE;
+    }
+#endif
 
     p = upgr_cb.Dbname_head;
     if (p == NULL)

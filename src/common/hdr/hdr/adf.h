@@ -790,6 +790,9 @@
 **	    the same thing, but slowly).
 **	21-apr-2010 (toumi01) SIR 122403
 **	    Add ADI_O1AES for encryption.
+**      08-Jun-2010 (horda03)
+**          When xDEBUG defined build fails due to : at end of prototype
+**          definition. And adu_unorm interface wrong.
 */
 
 #ifndef ADF_HDR_INCLUDED
@@ -4177,10 +4180,11 @@ FUNC_EXTERN DB_STATUS adu_nvchr_toutf8(ADF_CB	*adf_scb,
 					DB_DATA_VALUE *rdv);  
 FUNC_EXTERN DB_STATUS adu_nvchr_fromutf8(ADF_CB	*adf_scb, 
 					DB_DATA_VALUE *dv,
-					DB_DATA_VALUE *rdv):
+					DB_DATA_VALUE *rdv);
 FUNC_EXTERN DB_STATUS adu_unorm(ADF_CB	*adf_scb,
 				DB_DATA_VALUE  *dst_dv,
-				DB_DATA_VALUE  *src_dv);
+				DB_DATA_VALUE  *src_dv,
+				i4              nfc_flag);
 FUNC_EXTERN DB_STATUS adu_setnfc(ADF_CB	*adf_scb, 
 					DB_DATA_VALUE *dv,
 					DB_DATA_VALUE *rdv);  

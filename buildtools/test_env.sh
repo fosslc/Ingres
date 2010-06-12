@@ -34,6 +34,8 @@
 ##	    environment following LSB changes.
 ##	24-Mar-2010 (frima01)
 ##	    Removed function keyword - not supported on all systems.
+##  08-Jun-2010 (thich01)
+##     Added set -- to clear passed in arguments
 
 # we should set BUILDTOOLS so we know where the other tools are
 PWD=`pwd`

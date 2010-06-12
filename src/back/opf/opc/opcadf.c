@@ -202,10 +202,13 @@ FUNC_EXTERN DB_STATUS	    adi_resolve();
 **	    Remove dead code, unused adbase parameters.
 **	04-May-2010 (kiria01) b123680
 **	    Correct the bad stack referencing code in dt_family processing
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**      16-Jun-2009 (thich01)
+**          Treat GEOM type the same as LBYTE.
+**      20-Aug-2009 (thich01)
+**          Treat all spatial types the same as LBYTE.
+**      08-Jun-2010 (horda03) b123878
+**          For nullable string to decimal transformation, need to increase the
+**          length of the datatype by 1, otherwise E_OP0791 gets reported.
 [@history_template@]...
 **/
 
@@ -1509,6 +1512,9 @@ opc_bsmap(
 **	    and a long type do not introduce Unicode normalization.
 **      24-mar-2010 (thich01)
 **          Add a check for DB_GEOM_TYPE when src and res types are not equal.
+**      07-Jun-2010 (horda03) b123878
+**          For nullable decimal transforms, add 1 to the length (for the null
+**          byte).
 */
 VOID
 opc_adtransform(
@@ -1711,6 +1717,12 @@ opc_adtransform(
 		resop->opr_prec = saved_prec;
 		resop->opr_len =
 			    DB_PREC_TO_LEN_MACRO(DB_P_DECODE_MACRO(saved_prec));
+
+                if (resop->opr_dt < 0)
+                {
+                   /* Don't forget the NULL byte */
+                   resop->opr_len++;
+                }
 	  }
        }	
 

@@ -93,6 +93,9 @@
 **    Amend code in CfSqlQueryFrame::ParseStatement() to ensure that comments 
 **    and spaces embedded in quotes are not removed. Also corrected check for 
 **    whether the statement is a 'select' or not.
+** 08-Jun-2010 (horda03) B122579
+**    For a CREATE PROCEDURE command, 'end' can be used for CASE statements
+**    now. So keep track of the BEGIN, CASE and ENDs.
 **/
 
 #include "stdafx.h"
@@ -302,11 +305,12 @@ static void MarkCommentEnd (const CString& strText, int i, int& nCommentEnd)
 static int Find (const CString& strText, TCHAR chFind, int nStart, BOOL bIgnoreInsideBeginEnd)
 {
 	int   nBeginCount = 0;
+	int   nCaseCount = 0;
+	int   nEndCount = 0;
 	int   nCommentStart = 0; // 1: '/*'and 2: '--'.
 	int   nCommentEnd   = 0; // 1: '*/'and 2: '\n'.
 	BOOL  bSQuote = FALSE; 
 	BOOL  bDQuote = FALSE;
-	BOOL  bBegin  = FALSE;
 	BOOL  bDeclare= FALSE;
 	TCHAR cChar;
 	ASSERT (chFind != _T('\"'));
@@ -397,11 +401,10 @@ static int Find (const CString& strText, TCHAR chFind, int nStart, BOOL bIgnoreI
 				}
 			}
 
-			if (!bBegin && (cChar == _T('B') || cChar == _T('b')))
+			if (cChar == _T('B') || cChar == _T('b'))
 			{
 				if (NextWord (strText, i, _T("BEGIN")))
 				{
-					bBegin = TRUE;
 					bDeclare = FALSE;
 					nBeginCount++;
 					i += _tcslen (_T("BEGI")); // i += strlen (_T("BEGIN")) -1;
@@ -409,29 +412,12 @@ static int Find (const CString& strText, TCHAR chFind, int nStart, BOOL bIgnoreI
 				}
 			}
 			
-			if (bBegin)
+			if (cChar == _T('E') || cChar == _T('e'))
 			{
-				//
-				// Nesting of Begin ?
-				if (cChar == _T('B') || cChar == _T('b'))
+				if (NextWord (strText, i, _T("END")))
 				{
-					if (NextWord (strText, i, _T("BEGIN")))
-					{
-						nBeginCount++;
-						i += _tcslen (_T("BEGI")); // i += strlen (_T("BEGIN")) -1;
-						continue;
-					}
-				}
-			
-				if (cChar == _T('E') || cChar == _T('e'))
-				{
-					if (NextWord (strText, i, _T("END")))
-					{
-						nBeginCount--;
-						if (nBeginCount == 0)
-							bBegin = FALSE;
-						i += _tcslen (_T("EN")); // i += strlen (_T("END")) -1;
-					}
+					nEndCount++;
+					i += _tcslen (_T("EN")); // i += strlen (_T("END")) -1;
 				}
 				//
 				// Ignore the character after the word <BEGIN>, ie do not
@@ -444,6 +430,24 @@ static int Find (const CString& strText, TCHAR chFind, int nStart, BOOL bIgnoreI
 				//
 				// Ignore the character after the word <DECLARE>, ie do not
 				// find the ';' inside the declare ... begin.
+				continue;
+			}
+
+			if (cChar == _T('C') || cChar == _T('c'))
+			{
+				if (NextWord (strText, i, _T("CASE")))
+				{
+					nCaseCount++;
+					i += _tcslen (_T("CAS")); // i += strlen (_T("CASE")) -1;
+				}
+				//
+				// Keep count of the CASE...END sequences
+				continue;
+			}
+
+			if (nBeginCount + nCaseCount != nEndCount)
+			{
+				// Ignore the character until BEGIN...END and CASE...END tally.
 				continue;
 			}
 		}

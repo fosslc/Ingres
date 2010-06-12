@@ -154,6 +154,9 @@
 **	    output is not going to standard out.  
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      09-jun-2010 (maspa05) b123885
+**          Since vertical delimiter can now be blank, check for this so we
+**          don't send a string beginning with EOS to SEP. 
 */
 
 # define	QRSTMTSIZ	500
@@ -1009,6 +1012,10 @@ qraddstr(void *qrb, char *str)
 **	11-dec-2009 (wanfr01) b122959
 **	    Extend Bug 106667 for doublebyte platforms.  Overestimate buffer
 **	    space needed rather than performing an expensive STlength check.
+**      09-jun-2010 (maspa05) b123885
+**          \vdelim NONE means that we could end up with an EOS char in
+**          drchtbl[DRQK].prchar - avoid adding this to the buffer (which 
+**          causes problems for SEP) 
 **
 */
 VOID
@@ -1087,7 +1094,8 @@ char	c;
 
 	}
 
-	*qrb->outp++ = c;
+        if (c != EOS)
+	   *qrb->outp++ = c;
 	*qrb->outp = EOS;
 	return;
 }

@@ -257,6 +257,11 @@
 **    when querying the information about table.  Set the storage structure
 **    in the Table parameters structure so it's always available 
 **    when table parameters sturcture is available.
+** 09-Jun-2010 (drivi01)
+**    Initialize ExtraData in pcur structure prior to storing data
+**    in the structure to avoid left over garbage in the memory 
+**    be picked up by tables. Primarily this is done to zero out
+**    Ingres Vectorwise storage structure type.
 ******************************************************************************/
 
 #include <time.h>
@@ -3118,6 +3123,7 @@ cont_getlocks:
 					exec sql endselect;
 				}
 
+               ZEROINIT(pcur->ExtraData);
                fstrncpy(pcur->Name,singlename,MAXOBJECTNAME);
                fstrncpy(pcur->OwnerName,singleownername,MAXOBJECTNAME);
                fstrncpy(pcur->ExtraData,name3,MAXOBJECTNAME);
@@ -3162,6 +3168,7 @@ cont_getlocks:
                iresselect = RES_ERR;
                exec sql endselect;
              }
+             ZEROINIT(pcur->ExtraData);
              suppspacebutleavefirst(singlename);
              suppspace(singleownername);
              fstrncpy(pcur->Name,(LPTSTR)Quote4DisplayIfNeeded(singlename),MAXOBJECTNAME);

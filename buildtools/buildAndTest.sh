@@ -48,6 +48,8 @@
 ##		Don't copy test directory, create sym link instead.
 ##		Have noclean depending on nobuild.
 ##		Removed function keyword - not supported on all systems.
+##  08-Jun-2010 (thich01)
+##     Added set -- to clear passed in arguments
 
 
 usage()

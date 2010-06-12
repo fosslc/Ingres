@@ -1,4 +1,7 @@
 #!/bin/sh
+##  08-Jun-2010 (thich01)
+##     Added set -- to clear passed in arguments
+
 # This is a simple script to help you run the build with less overhead.
 # It will automatically set up your environment and run the build.
 # It will log all logs to a timestamped log file.

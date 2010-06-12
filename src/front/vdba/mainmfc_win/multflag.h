@@ -8,6 +8,11 @@
 //                                                                                     //
 //    base classes for lists of objects with multiple flags                            //
 //                                                                                     //
+// History:                                                                            //
+//   09-Jun-2010 (drivi01)                                                             //
+//     Update constructor for CuMultFlag to take additional parameter                  //
+//     for table type.  Update Duplicate option to also duplicate table                //
+//     type and initialize table type in the constructor.                              //
 ****************************************************************************************/
 #ifndef MULTFLAG_HEADER
 #define MULTFLAG_HEADER
@@ -65,7 +70,7 @@ class CuMultFlag: public CObject
   DECLARE_SERIAL (CuMultFlag)
 
 public:
-  CuMultFlag(LPCTSTR name, BOOL bSpecialItem);
+  CuMultFlag(LPCTSTR name, BOOL bSpecialItem, int tbltype = 0);
   CuMultFlag(const CuMultFlag* pRefFlag);
   virtual ~CuMultFlag();
 
@@ -75,6 +80,7 @@ public:
 
 // access to members
   BOOL    IsSpecialItem()         { return m_bSpecialItem; }
+  int	  GetTableType()	  { return m_iTblType; }
   CString GetStrName()            { return m_strName; } 
   virtual int IndexFromFlagType(int FlagType) { ASSERT (FALSE); return -1; }
 
@@ -99,6 +105,7 @@ public:
 
 private:
   BOOL    m_bSpecialItem;     // TRUE if error/none, FALSE if regular
+  int	  m_iTblType;
 
 protected:
   CString m_strName;          // Name
