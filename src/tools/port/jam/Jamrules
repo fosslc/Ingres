@@ -1404,6 +1404,9 @@
 #           Add conditional compilation for ICE
 #       14-Jun-2010 (horda03) b123914
 #           Add dependancies to VERS and VERS.<platform> for VMS' kitinstal.data
+#       15-Jun-2010 (horda03) b123914
+#           Use VERSFILE rather than VERS and VERS.<platform> for kitinstal.data
+#           dependancy
 #
 #
 #####
@@ -8877,8 +8880,7 @@ rule PBCopyFile
 rule IIKitInstalData
 {
 	Depends files : $(<) ;
-	Depends $(<) : $(CONFDIR)$(DFS)VERS $(CONFDIR)$(DFS)VERS.$(VERS) ;
-	NOCARE $(CONFDIR)$(DFS)VERS VERS ;
+	Depends $(<) : $(VERSFILE) ;
 
 	_USETOOL $(<) : genrelid$(SUFXSH) mkkitinstal$(SUFXSH) ;
 	LOCATE on $(<) = $(INSTLVMS) ;
