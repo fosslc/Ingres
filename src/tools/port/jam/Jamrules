@@ -1402,6 +1402,8 @@
 #	    Fix typo in IIUCHARALIAS rule from change 504046.
 #       21-May-2010 (bonro01)
 #           Add conditional compilation for ICE
+#       14-Jun-2010 (horda03) b123914
+#           Add dependancies to VERS and VERS.<platform> for VMS' kitinstal.data
 #
 #
 #####
@@ -8875,6 +8877,9 @@ rule PBCopyFile
 rule IIKitInstalData
 {
 	Depends files : $(<) ;
+	Depends $(<) : $(CONFDIR)$(DFS)VERS $(CONFDIR)$(DFS)VERS.$(VERS) ;
+	NOCARE $(CONFDIR)$(DFS)VERS VERS ;
+
 	_USETOOL $(<) : genrelid$(SUFXSH) mkkitinstal$(SUFXSH) ;
 	LOCATE on $(<) = $(INSTLVMS) ;
 	Clean clean : $(<) ;
