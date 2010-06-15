@@ -2198,6 +2198,9 @@ tokreturn:
 ** History:
 **	10-sep-2008 (gupsh01,stial01)
 **          Created from psl_unorm (minus UCONST which is not defined in quel.
+**	28-May-2010 (gupsh01)
+**	    For extra long strings, truncate to the maximum length
+**	    length allowed.
 */
 static i4 
 psl_quel_unorm(
@@ -2232,6 +2235,8 @@ i4	    token)
     i4			size = 0;
     i4			val1, val2;
     i4			error;
+    i4			maxlen;
+    i4			utf8;
 
     save_symnext = pss_cb->pss_symnext;
     adf_cb = (ADF_CB*) pss_cb->pss_adfcb;
@@ -2247,6 +2252,29 @@ i4	    token)
 	dv1.db_length = text->db_t_count + DB_CNTSIZE;
 	dv1.db_data = (PTR)text;
 	rdv.db_datatype = DB_VCH_TYPE;
+
+	utf8 = (((ADF_CB*) pss_cb->pss_adfcb)->adf_utf8_flag & AD_UTF8_ENABLED);
+	if (utf8)
+	    maxlen = DB_UTF8_MAXSTRING; 
+        else
+	    maxlen = DB_MAXSTRING; 
+
+        if (dv1.db_length > (maxlen + DB_CNTSIZE))
+	{
+	    if (adf_cb->adf_strtrunc_opt != ADF_IGN_STRTRUNC)
+            {
+               int lineno = pss_cb->pss_lineno;
+               _VOID_ psf_error(9412L, 0L, PSF_USERERR, &error,
+                               &psq_cb->psq_error, 2, (i4) sizeof(lineno), &lineno,
+                               (i4) sizeof(maxlen),  &maxlen);
+
+	       if (adf_cb->adf_strtrunc_opt == ADF_ERR_STRTRUNC)
+                  return (-1);
+            }
+	    /* truncate the length to max allowed length */
+	    dv1.db_length = maxlen;
+	    ((DB_TEXT_STRING *)dv1.db_data)->db_t_count = maxlen;
+  	}
     }
     else if (token == QDATA)
     {
