@@ -196,6 +196,10 @@ FUNC_EXTERN	STATUS	  dms_exhandler(EX_ARGS	*ex_args);
 **	    cache. Dropped use of seq_version.
 **      16-Jun-2009 (hanal04) Bug 122117
 **          Check for new LK_INTR_FA error.
+**	09-Jun-2010 (jonj) SD 134198, Bug 123896
+**	    Sequence id is now always provided by QEF, even on CREATE.
+**	    Use it in lock key instead of too-long owner + sequence_name
+**	    to ensure uniqueness. Add dmd_lock trace of locks.
 */
 DB_STATUS
 dms_open_seq(
@@ -315,17 +319,26 @@ PTR        dms_cb)
 	else
 	    timeout = odcb->odcb_scb_ptr->scb_timeout;
 
+	/* Sequence locks are database id and db_tab_base of sequence id */
 	lock_key.lk_type = LK_SEQUENCE;
 	lock_key.lk_key1 = dcb->dcb_id;
+	lock_key.lk_key2 = 0;
+	lock_key.lk_key3 = 0;
+	lock_key.lk_key4 = 0;
+	lock_key.lk_key5 = 0;
+	lock_key.lk_key6 = 0;
 
 	/* Place appropriate lock on each Sequence */
 	for ( dms_seq; count; dms_seq++, count-- )
 	{
-	    MEcopy((char *)&dms_seq->seq_owner, 8, (char *)&lock_key.lk_key2); 
-	    MEcopy((char *)&dms_seq->seq_name, 12, (char *)&lock_key.lk_key4);
+	    lock_key.lk_key2 = dms_seq->seq_id.db_tab_base;
+
+	    if ( DMZ_SES_MACRO(1) )
+	        dmd_lock(&lock_key, xcb->xcb_lk_id, LK_REQUEST, lock_flags,
+			 lock_mode, timeout, xcb->xcb_tran_id,
+			 &dms_seq->seq_name, &dcb->dcb_name);
 
 	    dms_seq->seq_status = 0;
-
 
 	    if ( (cl_status = LKrequest(lock_flags,
 		    xcb->xcb_lk_id,
@@ -413,19 +426,6 @@ PTR        dms_cb)
 
 	    dm0s_mlock(&dcb->dcb_mutex);
 
-	    /*
-	    ** CREATE doesn't yet know the sequence id.
-	    ** Set it to an invalid value (-1,0).
-	    ** The correct id will be supplied when
-	    ** the CREATE completes successfully
-	    ** (dms_close_seq()).
-	    */
-	    if ( dms->dms_flags_mask == DMS_CREATE )
-	    {
-		dms_seq->seq_id.db_tab_base  = -1;
-		dms_seq->seq_id.db_tab_index = 0;
-	    }
-
 	    /* Find by db_id, name, owner */
 	    if ( !(s = FindSeq(xcb, dms_seq)) )
 	    {
@@ -454,18 +454,9 @@ PTR        dms_cb)
 			char	seq_name[DB_SEQ_MAXNAME+1];
 			DB_TAB_ID	sem_id;
 
-			if (dms_seq->seq_id.db_tab_base == -1)
-			{
-			    /* use low tran to make sem_name unique */
-			    sem_id.db_tab_base = 0;
-			    sem_id.db_tab_index = xcb->xcb_tran_id.db_low_tran;
-			}
-			else
-			{
-			    /* seq_id is unique, so sem_name is unique */
-			    sem_id.db_tab_base = dms_seq->seq_id.db_tab_base;
-			    sem_id.db_tab_index = 0;
-			}
+			/* seq_id is unique, so sem_name is unique */
+			sem_id.db_tab_base = dms_seq->seq_id.db_tab_base;
+			sem_id.db_tab_index = 0;
 
 			s->seq_q_next = (DML_SEQ*)NULL;
 			s->seq_q_prev = (DML_SEQ*)NULL;
@@ -738,12 +729,8 @@ PTR        dms_cb)
 	}
 	else
 	{
-	    /* If CREATE succeeded, fill in sequence id */
-	    if ( dms->dms_flags_mask == DMS_CREATE )
-		s->seq_id = dms_seq->seq_id.db_tab_base;
-
 	    /* If DROP succeeded, vacate the DML_SEQ */
-	    else if ( dms->dms_flags_mask == DMS_DROP )
+	    if ( dms->dms_flags_mask == DMS_DROP )
             {
                 DML_CSEQ	*cs;
 

@@ -127,6 +127,11 @@
 **     12-Apr-2010 (maspa05) bug 123560
 **          SIdofrmt unable to handle long strings (such as those passed by
 **          SC930) because realwidth was an i2. Make it an i4.
+**	4-Jun-2010 (kschendel)
+**	    Fix constant CMcpychar's to be *ptr++ = c instead.  Otherwise,
+**	    the double-byte macro might refer past the end of a constant, and
+**	    indeed past the end of an object section, causing "local relocation
+**	    in section __text does not target section __const" on MacOS x86_64.
 */
 
 # define	LEFTADJUST	0x01
@@ -511,10 +516,7 @@ va_list		ap;
 			                    if ( putfunc == PUTC )
 						 SIputc(c, outfile);
 			                    else
-			                    {
-				                CMcpychar((uchar *) &c, outchar);
-                                                CMnext(outchar);
-			                    }
+						*outchar++ = c;
 					} while (realwidth < --width);
 				}
 
@@ -558,10 +560,7 @@ va_list		ap;
 			            if ( putfunc == PUTC )
 					SIputc(' ', outfile);
 			            else
-			            {
-				        CMcpychar((uchar *) " ", outchar);
-                                        CMnext(outchar);
-			            }
+					*outchar++ = ' ';
 				}
 			}
 
@@ -571,7 +570,7 @@ va_list		ap;
 		if (*p == EOS)
 			break;
 	}	/* end for */
-	if( putfunc != PUTC )	
-	    CMcpychar((uchar *) "\0", outchar);
+	if( putfunc != PUTC )
+	    *outchar = '\0';
 }
 

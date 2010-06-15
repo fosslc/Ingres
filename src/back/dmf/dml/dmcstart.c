@@ -863,6 +863,8 @@ static STATUS dmcm_lkinit(
 **	    Removed max_tuple_length.
 **	16-Mar-2010 (troal01)
 **	    Added dmf_get_srs to ADF FEXI.
+**	11-Jun-2010 (jonj)
+**	    svcb_xid_lg_id_max is sizeof(u_i4), not sizeof(u_i4 *)
 */
 
 DB_STATUS
@@ -2025,7 +2027,7 @@ DB_VPT_SIZEOF_TUPLE_HDR(TCB_PG_V4), DMPP_VPT_SIZEOF_TUPLE_HDR_MACRO(TCB_PG_V4));
 		break;
 	    }
 	    /* Compute the highest lg_id bound of the array */
-	    svcb->svcb_xid_lg_id_max = svcb->svcb_xid_array_size / sizeof(u_i4 *);
+	    svcb->svcb_xid_lg_id_max = svcb->svcb_xid_array_size / sizeof(u_i4);
 
 	    TRdisplay("%@ dmc_start_server:%d svcb xid_array %p, size %d, lg_id_max %x\n",
 	    		__LINE__,

@@ -738,6 +738,8 @@ dmd_petrace(
 **          only 4 characters were avaialble.
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: added LK_TBL_MVCC
+**	11-Jun-2010 (jonj) Bug 123896
+**	    Add LK_SEQUENCE
 */
 VOID
 dmd_lkrqst_trace(
@@ -849,6 +851,15 @@ DB_DB_NAME   *database_name)
 		LK_LOCK_MODE_MEANING, lock_mode, asctimeout,
 		sizeof(*database_name),database_name,
 		sizeof(*table_name), table_name);
+	else if (lock_key->lk_type == LK_SEQUENCE)
+	    TRformat(format_routine, 0, buffer, sizeof(buffer) - 1,
+		"    %s:   SEQ   %24v Mode: %3w Timeout: %s\n            Key: (%~t,%~t,%d)\n",
+		rtype,
+		LK_REQ_FLAG_4CH, request_flag,
+		LK_LOCK_MODE_MEANING, lock_mode, asctimeout,
+		sizeof(*database_name),database_name,
+		sizeof(*table_name), table_name,
+		lock_key->lk_key2);
 	}
 	break;
 
@@ -915,6 +926,12 @@ DB_DB_NAME   *database_name)
                         "    UNLOCK:   MVCC   Key: (%~t,%~t)\n",
                         sizeof(*database_name),database_name,
                         sizeof(*table_name), table_name);
+               else if (lock_key->lk_type == LK_SEQUENCE)
+                    TRformat(format_routine, 0, buffer, sizeof(buffer) - 1,
+                        "    UNLOCK: SEQ   Key: (%~t,%~t,%d)\n",
+                        sizeof(*database_name),database_name,
+                        sizeof(*table_name), table_name,
+			lock_key->lk_key2);
 	    }
        }
        break;

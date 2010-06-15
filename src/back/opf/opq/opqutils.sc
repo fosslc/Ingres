@@ -4663,6 +4663,10 @@ OPQ_ALIST 	*attrp)
 **    02-sep-08 (hayke02)
 **        Repair change for SIR 117405 so that we init and set statset
 **        correctly.
+**      10-Jun-2010 (hanal04) Bug 123898
+**          Do not try to access iirelation. It does not exist in a Star
+**          database. Use iitables.table_subtype <> 'I' to eliminate
+**          gateway tables from the table list.
 */
 bool
 r_rel_list_from_rel_rel(
@@ -4740,14 +4744,11 @@ bool		statdump)
 	     :es_reltid, :es_xreltid, :es_pages,
 	     :es_ovflow, :es_relwid, :es_tabtype,
 	     :es_tstat
-	from iitables t, iirelation i
+	from iitables t
 	where   t.table_owner in (:es_ownr, :es_dba) and
 		t.table_name  not like :es_pattern and
 		t.table_type  in ('T', 'I') and
-		t.table_reltid = i.reltid and
-		t.table_name = i.relid and
-		t.table_reltidx = i.reltidx and
-		i.relgwid <> :es_gwid and
+		t.table_subtype <> 'I' and
 		(t.table_name <> 'remotecmdlock' or 
 		 t.table_owner <> '$ingres')
 	order by t.table_name;

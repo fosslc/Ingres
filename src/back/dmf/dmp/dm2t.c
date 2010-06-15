@@ -1059,6 +1059,9 @@ NO_OPTIM=dr6_us5
 **          as all TCB_CONCUR now have TCB2_PHYSLOCK_CONCUR as well
 **      14-May-2010 (stial01)
 **          Alloc/maintain exact size of column names (iirelation.relattnametot)
+**      09-Jun-2010 (stial01) (B123906)
+**          init_bt_si_tcb() currently, range entries same as leaf entries
+**          even if the index has non-key columns
 */
 
 GLOBALREF	DMC_CRYPT	*Dmc_crypt;
@@ -16531,6 +16534,7 @@ bool	*leaf_setup)
     i4			 i,j, tidp_i;
     i4			 LeafTidSize;
     DB_ATTS              **ixkeys;
+    bool		bld_rng_with_keys_only = FALSE;
 
     LeafTidSize = (t->tcb_rel.relstat2 & TCB2_GLOBAL_INDEX)
 			? sizeof(DM_TID8) : sizeof(DM_TID);
@@ -16679,10 +16683,16 @@ bool	*leaf_setup)
 	}
     }
 
-    /* cmptlvl < old-version means T10 and newer. */
-    if (t->tcb_rel.relcmptlvl == DMF_T8_VERSION
-      || t->tcb_rel.relcmptlvl == DMF_T9_VERSION
-      || t->tcb_rel.relcmptlvl < DMF_T_OLD_VERSION)
+    /*
+    ** cmptlvl < old-version means T10 and newer. 
+    **
+    ** Currently dm1bbuild never builds range entries with keys only
+    ** ... even if the index has non-key columns
+    ** (code for this was submitted and backed out of dm1bbuild.c)
+    */
+    bld_rng_with_keys_only = FALSE;
+    if (bld_rng_with_keys_only && 
+		(t->tcb_rel.relcmptlvl < DMF_T_OLD_VERSION))
     {
 	/* New style (>= v8) secondary LEAF range entries just have keys */
 	t->tcb_rngkeys = t->tcb_ixkeys;

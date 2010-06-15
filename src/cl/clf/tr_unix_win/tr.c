@@ -11,6 +11,7 @@
 #include    <lo.h>
 #include    <si.h>
 #include    <st.h>
+#include    <pc.h>
 #include    <tm.h>
 #include    <me.h>
 #include    <clconfig.h>
@@ -247,6 +248,8 @@ NO_OPTIM = dg8_us5
 **	17-Sep-2009 (hanje04)
 **	    Add OSX to defns for p because of gcc 3.xx issues with va_list
 **	    defns.
+**       9-Jun-2010 (hanal04) Bug 123886
+**          Add %^ format specifier to include pid, tid information.
 */
 
 /*}
@@ -454,6 +457,8 @@ STATUS tr_handler(EX_ARGS *exargs);
 **	   following the * is copied to the output.
 **
 **	%  Print a '%'.
+**
+**      ^  Print the Pid/Tid. Tid not printed if OS_THREADS_USED not defined.
 **
 **	[  Start array of pointers.  Width is used to tell how many pointers
 **	   to follow.  The first parameter is the address of the array of
@@ -812,6 +817,7 @@ struct argmng	    *marg;
     i4	    length = buffer_length;
     i4	    format_length;
     char	    *format_buffer;
+    char    fmt[20];
     PTR		    base_address;
     i4	    width;
     bool	    noprecision;	    /* TRUE if no precision specified */
@@ -992,6 +998,7 @@ struct argmng	    *marg;
 	    continue;
 
 	case '[':
+	    format_length = 0;
 	    SET_ARG(base_address,p,PTR);
 	    if (type > IN_REPEAT)
 		/* base_address is a structure offset */
@@ -1139,6 +1146,21 @@ struct argmng	    *marg;
 		format_buffer = format_item;
 	    }
 	    break;
+
+        case '^':
+            {
+                PID	pid;
+
+                PCpid(&pid);
+# ifdef OS_THREADS_USED
+                STprintf(format_item, "[%d,%d]", pid, TRcontext_tid);
+# else
+                STprintf(format_item, "[%d]", pid);
+# endif
+                format_length = STlength(format_item);
+                format_buffer = format_item;
+            }
+            break;
 
 	case 'c':
 	    format_length = 1;

@@ -461,6 +461,8 @@ SQLSTATE_MAPPING_REQUIRED
 **	    Added messages for encryption.
 **	20-May-2010 (kiria01) b123773
 **	    Added E_US0A00_2560 and corrected column alias syntax in error text.
+**	09-Jun-2010 (gupsh01) b123841.
+**	    Added error E_US24C4_9412.
 */
 
 #define _US_CLASS   0
@@ -11592,5 +11594,8 @@ E_US24C3_9411:SS5000A_QUERY_ERROR
 "Invalid encrypted index. An encrypted index must: (1) contain only one
 column, (2) that column must be encrypted with NOSALT, (3) the index
 must be of structure HASH."
+E_US24C4_9412:SS50000_MISC_ERRORS
+"line '%0d', string constant supplied exceeds the maximum limit of '%1d' for
+UTF8 installation."
 
 NO_SQLSTATE_MAPPING
