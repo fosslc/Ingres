@@ -17804,6 +17804,11 @@ DMP_PINFO	*pinfo)
 **          dm0p_unmutex: zero out buf_lock_id when buffer is unlocked
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Rewritten with pinlocks in mind.
+**	11-Jun-2010 (jonj)
+**	    If Root has been modified, force rematerialization of
+**	    any CR pages built by this transaction with serializable
+**	    isolation; changes made by this transaction must be visible
+**	    to the transaction.
 */
 VOID
 dm0pUnmutex(
@@ -17823,7 +17828,8 @@ DMP_PINFO	*pinfo)
     i4	    	    err_code;
     i4		    PageType = tbio->tbio_page_type;
     i4		    PageStat;
-    DM0P_BUFFER	    *CRbuffer;
+    i4		    next_buf;
+    DM0P_BUFFER	    *CRbuf;
 
     if ((dmf_svcb->svcb_status & SVCB_SINGLEUSER) == 0)
     {
@@ -17902,6 +17908,31 @@ DMP_PINFO	*pinfo)
 	/* Keep buf_page_lsn, _tranid in sync with what's on page */
 	b->buf_page_lsn = DMPP_VPT_GET_PAGE_LSN_MACRO(PageType, pinfo->page);
 	b->buf_page_tranid = DMPP_VPT_GET_PAGE_TRAN_ID_MACRO(PageType, pinfo->page);
+
+	/*
+	** If Root has been modified, invalidate any CR pages built
+	** for this transaction that were built with SERIALIZABLE
+	** isolation; SERIALIZABLE has to be able to see the changes
+	** made by the transaction.
+	*/
+	if ( PageStat & DMPP_MODIFY )
+	{
+	    next_buf = b->buf_cr_next;
+
+	    while ( next_buf != BUF_ENDLIST )
+	    {
+	        CRbuf = &buf_array[next_buf];
+
+		if ( CRbuf->buf_page_tranid.db_low_tran == b->buf_page_tranid.db_low_tran &&
+		     CRbuf->buf_cr_iso == RCB_SERIALIZABLE )
+		{
+		    /* This will cause rematerialize of the CR page */
+		    CRbuf->buf_cr_iso = 0;
+		}
+		next_buf = CRbuf->buf_cr_next;
+	    }
+	}
+
 
 	/* Unpin buffer if requested and caller has pinned it */
 
