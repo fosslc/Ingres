@@ -88,6 +88,9 @@
 **	    Replace mg5_osx with generic OSX
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	4-Jun-2010 (kschendel)
+**	    OSX wants sys/ucontext.h, ucontext.h spews warnings about
+**	    deprecated routines.
 */
 # ifndef CLCONFIG_H_INCLUDED
         # error "didn't include clconfig.h before clsigs.h"
@@ -125,7 +128,11 @@
 # include <signal.h>
 # include <sys/regset.h>
 # endif /* sos_us5 */
+#ifdef OSX
+# include <sys/ucontext.h>
+#else
 # include <ucontext.h>
+#endif
 # endif /* xCL_071_UCONTEXT_H_EXISTS */
 
 
