@@ -503,6 +503,8 @@ GLOBALREF	DMC_CRYPT	*Dmc_crypt;
 **	5-May-2010 (kschendel)
 **	    It's kind of silly to try to open iidevices when dropping
 **	    iidevices, so don't do it.
+**	09-Jun-2010 (jonj) SIR 121123
+**	    Adapt hash of owner, table_name to long names.
 */
 DB_STATUS
 dm2u_destroy(
@@ -1026,6 +1028,13 @@ DB_ERROR	*dberr)
 	*/
 	if (tbl_id->db_tab_index >= 0)
 	{
+	    i4		olen, orem, nlen, nrem;
+
+	    olen = sizeof(owner_name) / 2;
+	    orem = sizeof(owner_name) - olen;
+	    nlen = sizeof(table_name) / 3;
+	    nrem = sizeof(table_name) - (nlen * 2);
+
 	    lockkey.lk_type = LK_CREATE_TABLE; 
 	    lockkey.lk_key1 = dcb->dcb_id;    /* till were done deleteing it */
 	    /* There are 5 i4's == 20 bytes of key to work with.
@@ -1038,26 +1047,26 @@ DB_ERROR	*dberr)
 		if (*tempstr2 == ' ')
 		    break;
 	    }		
-	    if (i < 9)        
+	    if (i < 9)
 		MEcopy((PTR)&owner_name, 8, (PTR)&lockkey.lk_key2);
 	    else
-	    {	
-	       lockkey.lk_key2 = HSH_char((PTR)&owner_name, 16);
-	       lockkey.lk_key3 = HSH_char((PTR)&owner_name + 16, 16);
+	    {
+	       lockkey.lk_key2 = HSH_char((PTR)&owner_name, olen);
+	       lockkey.lk_key3 = HSH_char((PTR)&owner_name + olen, orem);
 	    }
 	    tempstr2 = (char *)&table_name;  /* see if table fits in 12 bytes */
-	    for (i = 0; i < 12; i++, tempstr2++)
+	    for (i = 0; i < 13; i++, tempstr2++)
 	    {
 		if (*tempstr2 == ' ')
 		    break;
-	    }		
-	    if (i < 12)        
+	    }
+	    if (i < 13)
 		MEcopy((PTR)&table_name, 12, (PTR)&lockkey.lk_key4);
 	    else
 	    {	
-		lockkey.lk_key4 = HSH_char((PTR)&table_name, 10);
-		lockkey.lk_key5 = HSH_char((PTR)&table_name + 10, 11);
-		lockkey.lk_key6 = HSH_char((PTR)&table_name + 21, 11);
+		lockkey.lk_key4 = HSH_char((PTR)&table_name, nlen);
+		lockkey.lk_key5 = HSH_char((PTR)&table_name + nlen, nlen);
+		lockkey.lk_key6 = HSH_char((PTR)&table_name + 2*nlen, nrem);
 	    }
 	    MEfill(sizeof(LK_LKID), 0, &lockid);
 

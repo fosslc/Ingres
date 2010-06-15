@@ -960,6 +960,8 @@ NO_OPTIM=su4_cmw i64_aix
 **	    Support for column encryption. Start passing dmu.
 **	13-may-2010 (miket) SIR 122403
 **	    Fix net-change logic for width for ALTER TABLE.
+**	09-Jun-2010 (jonj) SIR 121123
+**	    Adapt hash of owner, table_name to long names.
 */
 
 /* ****FIXME THIS parameter list is simply ridiculous.  Just pass
@@ -1507,6 +1509,13 @@ DB_ERROR	    *errcb)
 	*/
 	if (!extension && (relstat2 & TCB2_PARTITION) == 0)
 	{
+	    i4		olen, orem, nlen, nrem;
+
+	    olen = sizeof(*owner) / 2;
+	    orem = sizeof(*owner) - olen;
+	    nlen = sizeof(*table_name) / 3;
+	    nrem = sizeof(*table_name) - (nlen * 2);
+
 	    lockkey.lk_type = LK_CREATE_TABLE;
 	    lockkey.lk_key1 = dcb->dcb_id;  /* till were done deleteing it */
 	    /* There are 5 i4's == 20 bytes of key to work with.
@@ -1523,22 +1532,22 @@ DB_ERROR	    *errcb)
 		MEcopy((PTR)owner, 8, (PTR)&lockkey.lk_key2);
 	    else
 	    {	
-	       lockkey.lk_key2 = HSH_char((PTR)owner, 16);
-	       lockkey.lk_key3 = HSH_char((PTR)owner + 16, 16);
+	       lockkey.lk_key2 = HSH_char((PTR)owner, olen);
+	       lockkey.lk_key3 = HSH_char((PTR)owner + olen, orem);
 	    }
 	    tempstr2 = (char *)table_name;  /* see if table fits in 12 bytes */
-	    for (i = 0; i < 12; i++, tempstr2++)
+	    for (i = 0; i < 13; i++, tempstr2++)
 	    {
 		if (*tempstr2 == ' ')
 		    break;
 	    }		
-	    if (i < 12)        
+	    if (i < 13)        
 		MEcopy((PTR)table_name, 12, (PTR)&lockkey.lk_key4);
 	    else
 	    {	
-		lockkey.lk_key4 = HSH_char((PTR)table_name, 10);
-		lockkey.lk_key5 = HSH_char((PTR)table_name + 10, 11);
-		lockkey.lk_key6 = HSH_char((PTR)table_name + 21, 11);
+		lockkey.lk_key4 = HSH_char((PTR)table_name, nlen);
+		lockkey.lk_key5 = HSH_char((PTR)table_name + nlen, nlen);
+		lockkey.lk_key6 = HSH_char((PTR)table_name + 2*nlen, nrem);
 	    }
 
 
