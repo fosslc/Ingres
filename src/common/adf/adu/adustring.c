@@ -212,6 +212,11 @@
 **          A standard interface is expected by fcn lookup / execute
 **          operations. Force NFC normalization is now achieved by temporarily
 **          updating the adf_uninorm_flag in the ADF_CB.
+**	04-Jun-2010 (kiria01) b123879 i144946
+**	    Don't return unnecessary errors for i8 values that are outside of
+**	    i4 range when later logic would have adjusted the parameter anyway.
+**	    Examples include the CHAREXTRACT first paramter where any negative
+**	    should return an empty string.
 **/
 
 
@@ -1222,10 +1227,12 @@ DB_DATA_VALUE		*rdv)
 	i8len = *(i8 *) dv2->db_data;
 
 	 /* limit to i4 values */
-	if ( i8len > MAXI4 || i8len < MINI4LL )
-	    return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "strleft len overflow"));
-
-	len = (i4) i8len;
+	if (i8len > MAXI4)
+	    len = MAXI4;
+	else if (i8len < 0)
+	    len = 0;
+	else
+	    len = (i4)i8len;
 	break;
       default:
 	return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "strleft len length"));
@@ -2051,10 +2058,12 @@ DB_DATA_VALUE          *rdv)
 	i8len = *(i8 *) dv2->db_data;
 
 	 /* limit to i4 values */
-	if ( i8len > MAXI4 || i8len < MINI4LL )
-	    return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "strright len overflow"));
-
-	len = (i4) i8len;
+	if (i8len > MAXI4)
+	    len = MAXI4;
+	else if (i8len < 0)
+	    len = 0;
+	else
+	    len = (i4)i8len;
 	break;
       default:
 	return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "strright len length"));
@@ -2197,10 +2206,12 @@ DB_DATA_VALUE	    *rdv)
 	i8shift = *(i8 *) dv2->db_data;
 
 	 /* limit to i4 values */
-	if ( i8shift > MAXI4 || i8shift < MINI4LL )
-	    return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "strshift shift overflow"));
-
-	nshift = (i4) i8shift;
+	if (i8shift > MAXI4)
+	    nshift = MAXI4;
+	else if (i8shift < MINI4LL)
+	    nshift = MINI4;
+	else
+	    nshift = (i4) i8shift;
 	break;
       default:
 	return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "strshift shift length"));
@@ -2907,9 +2918,8 @@ DB_DATA_VALUE	    *rdv)
         case 8:
             r8len = *(i8 *)dv2->db_data;
 	    /* limit to i4 values */
-	    if ( r8len > MAXI4 || r8len < MINI4LL )
-		return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "byte value overflow"));
-
+	    if (r8len > DB_MAXSTRING || r8len < 1)
+		return (adu_error(adf_scb, E_AD2005_BAD_DTLEN, 0));
             /* Safe to cast downwards */
             r4len = (i4)r8len;
             break;
@@ -3369,10 +3379,12 @@ DB_DATA_VALUE	    *rdv)
 	i8pos = *(i8 *) dv2->db_data;
 
 	/* limit to i4 values */
-	if ( i8pos > MAXI4 || i8pos < MINI4LL )
-	    return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "strindex start overflow"));
-
-	startpos = (i4) i8pos;
+	if (i8pos > MAXI4)
+	    startpos = MAXI4;
+	else if (i8pos < 0)
+	    startpos = 0;
+	else
+	    startpos = (i4)i8pos;
 	break;
       default:
 	return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "strindex start length"));
@@ -3501,9 +3513,9 @@ DB_DATA_VALUE	    *rdv)
 
 	    /* limit to i4 values */
 	    if ( i8temp > MAXI4 || i8temp < MINI4LL )
-		return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "struct relspec overflow"));
-
-	    relspec = (i4) i8temp;
+		relspec = -1; /* Force a bad relspec */
+	    else
+		relspec = (i4) i8temp;
 	    break;
 	default:
 	    return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "struct relspec length"));
@@ -5907,10 +5919,12 @@ DB_DATA_VALUE	*rdv)
 	i8pos = *(i8 *) dv2->db_data;
 
 	/* limit to i4 values */
-	if ( i8pos > MAXI4 || i8pos < MINI4LL )
-	    return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "substr start overflow"));
-
-	startpos = (i4) i8pos;
+	if ( i8pos > MAXI4 )
+	    startpos = MAXI4;
+	else if (i8pos < 0)
+	    startpos = 1;
+	else
+	    startpos = (i4)i8pos;
 	break;
       default:
 	return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "substr start length"));
@@ -6050,10 +6064,12 @@ DB_DATA_VALUE	*rdv)
 	    i8temp  = *(i8 *)dv2->db_data;
 
 	    /* limit to i4 values */
-	    if ( i8temp > MAXI4 || i8temp < MINI4LL )
-		return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "asubstr start overflow"));
-
-	    startpos = (i4) i8temp;
+	    if (i8temp > MAXI4)
+		startpos = MAXI4;
+	    else if (i8temp < 0)
+		startpos = 0;
+	    else
+		startpos = (i4)i8temp;
 	    break;
 	default:
 	    return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "asubstr start length"));
@@ -6075,10 +6091,12 @@ DB_DATA_VALUE	*rdv)
 	    i8temp  = *(i8 *)dv3->db_data;
 
 	    /* limit to i4 values */
-	    if ( i8temp > MAXI4 || i8temp < MINI4LL )
-		return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "asubstr for overflow"));
-
-	    forlen = (i4) i8temp;
+	    if (i8temp > MAXI4)
+		forlen = MAXI4;
+	    else if (i8temp < 0)
+		forlen = -1;
+	    else
+		forlen = (i4)i8temp;
 	    break;
 	default:
 	    return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "asubstr for length"));
@@ -8496,7 +8514,9 @@ DB_DATA_VALUE       *rdv)
 	outlen = *((i4 *)dv2->db_data);
 	break;
       case 8:
-	outlen = *((i8 *)dv2->db_data);
+	if (*((u_i8 *)dv2->db_data) > (u_i8)maxsize)
+	    return(adu_error(adf_scb, E_AD20A0_BAD_LEN_FOR_PAD, 0));
+	outlen = (i4)*((i8 *)dv2->db_data);
 	break;
     }
 
@@ -8692,7 +8712,7 @@ DB_DATA_VALUE       *rdv)
     if (dv3 == (DB_DATA_VALUE *) 0)
     {
 	size3 = 1;
-	ptemp = (char *)&" ";
+	ptemp = " ";
     }
     else if ((db_stat = adu_lenaddr(adf_scb, dv3, &size3, &ptemp)) != E_DB_OK)
 	return (db_stat);
@@ -8716,7 +8736,9 @@ DB_DATA_VALUE       *rdv)
 	outlen = *((i4 *)dv2->db_data);
 	break;
       case 8:
-	outlen = *((i8 *)dv2->db_data);
+	if (*((u_i8 *)dv2->db_data) > (u_i8)maxsize)
+	    return(adu_error(adf_scb, E_AD20A0_BAD_LEN_FOR_PAD, 0));
+	outlen = (i4)*((i8 *)dv2->db_data);
 	break;
     }
 
