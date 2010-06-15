@@ -2188,6 +2188,8 @@ fill_in_stat_block( LK_STAT *stat, i4  info_size, u_i4 *info_result, LKD *lkd )
 **	    "-lk_key3" instead of a large negative number.
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Add LK_CROW, LK_TBL_MVCC lock types.
+**	11-Jun-2010 (jonj) Bug 123896
+**	    Add distinct display of LK_SEQUENCE.
 */
 char *
 LKkey_to_string( LK_LOCK_KEY *key, char *buffer )
@@ -2495,6 +2497,11 @@ LKkey_to_string( LK_LOCK_KEY *key, char *buffer )
 	STprintf(bp, "CHAN=%d,%s", key->lk_key1 >> 2,
                  ((key->lk_key1 & 3) == 0) ? "HELLO"
                  : ((key->lk_key1 & 3) == 1) ? "GOODBYE" : "SEND");
+	break;
+
+    case LK_SEQUENCE:
+	STprintf(bp,"DB=%x,SEQUENCE=%d", 
+	key->lk_key1, key->lk_key2);
 	break;
 
     default:
