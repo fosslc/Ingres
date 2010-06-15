@@ -986,6 +986,10 @@ NO_OPTIM=dr6_us5 i64_aix
 **          More changes for Long IDs
 **	25-May-2010 (kschendel)
 **	    Add missing mh include.
+**      09-Jun-2010 (stial01) (B123905)
+**          dm2r_position() use logical value locks if not releasing
+**          dm2r_put() release value lock after put (not after allocate)
+**          base_delete_put() release value lock after put (not after allocate)
 */
 
 static DB_STATUS BuildRtreeRecord(
@@ -4085,11 +4089,11 @@ flag |= DM2R_ALL;
 
         /*
         ** If row locking get value locks if when we position .
+	** Request LOGICAL value lock, it's not going to get released
         */
         if ((row_locking(r)) && (r->rcb_iso_level == RCB_SERIALIZABLE))
         {
-	    status = dm1r_lock_value(rcb, 
-			(i4)(DM1R_LK_PHYSICAL | DM1R_PHANPRO_VALUE), 
+	    status = dm1r_lock_value(rcb, (i4)(DM1R_PHANPRO_VALUE), 
 			r->rcb_record_ptr, dberr);
 	    if (status != E_DB_OK)
 	        return (status);
@@ -4768,8 +4772,10 @@ dm2r_put(
     i4			loc_err;
     DB_TAB_TIMESTAMP	local_timestamp;
     i4			rcb_si_flags;
+    DB_STATUS		local_status;
     DB_ERROR		local_dberr;
     i4		    *err_code = &dberr->err_code;
+    bool		value_lock = FALSE;
 
     CLRDBERR(dberr);
 
@@ -5013,6 +5019,8 @@ dm2r_put(
 	    && (row_locking(r) || crow_locking(r)) )
     {
 	status = dm1r_lock_value(r, (i4)DM1R_LK_PHYSICAL, record, dberr);
+	if (status == E_DB_OK)
+	    value_lock = TRUE;
     }
 
     /*	Allocate space for the new record. */
@@ -5050,13 +5058,6 @@ dm2r_put(
     default:;
     }
  
-    /* Once the record is on the page we can release the value lock */
-    if ( status == E_DB_OK && (row_locking(r) || crow_locking(r)) 
-    		&& t->tcb_rel.relkeys )
-    {
-	status = dm1r_unlock_value(r, record, dberr);
-    }
-
     if (status == E_DB_OK && (t->tcb_rel.relstat2 & TCB2_HAS_EXTENSIONS)
 			&& (flag & DM2R_REDO_SF) == 0)
     {
@@ -5238,6 +5239,23 @@ dm2r_put(
 	 t->tcb_update_idx )
     {
 	status = dm2r_unfix_pages(r, dberr);
+    }
+
+    /*
+    ** Release the value lock (after the put)
+    ** Previously we were releasing after the allocate, before the put
+    ** causing btree errors because dm1b_dupcheck DM1B_SKIP_DELETED_KEY_MACRO
+    ** was true for another transaction trying to insert the same key
+    ** (t1-alloc, t2-alloc-uses-t1-reserved-leaf-entry, t2-put, t1-put-error)
+    ** Since the btree reserved key entry doesn't have a valid tid to 
+    ** waitlock on, hold the value lock until after the put.
+    */
+    if ( value_lock ) 
+    {
+	local_status = dm1r_unlock_value(r, record, &local_dberr);
+	if (local_status)
+	    uleFormat(&local_dberr, 0, NULL, ULE_LOG, NULL, 
+			    NULL, 0, NULL, &loc_err, 0);
     }
 
     if (status != E_DB_OK)
@@ -11750,6 +11768,10 @@ base_delete_put(
     LK_LKID             newval_lkid;
     char		*crec = (PTR)0;
     i4		    *err_code = &dberr->err_code;
+    i4			loc_err;
+    DB_STATUS		local_status;
+    DB_ERROR		local_dberr;
+    bool		new_value_lock = FALSE;
 
     CLRDBERR(dberr);
 
@@ -11778,6 +11800,7 @@ base_delete_put(
 	
 	/* Save the lkid so we don't have to rehash to unlock */
 	STRUCT_ASSIGN_MACRO(r->rcb_val_lkid, newval_lkid);
+	new_value_lock = TRUE;
     }
 
     /*
@@ -11911,17 +11934,6 @@ base_delete_put(
 	    break;
     }
 
-    /* 
-    ** Once the record is on the page we can release the value lock.
-    ** We may be holding value locks during dup checking which can be 
-    ** released too.
-    */
-    if (status == E_DB_OK && (t->tcb_rel.relkeys))
-    {
-	STRUCT_ASSIGN_MACRO(newval_lkid, r->rcb_val_lkid);
-        status = dm1r_unlock_value(r, newrecord, dberr);
-    }
-
     if (status != E_DB_OK)
     {
 	if (dberr->err_code == E_DM0045_DUPLICATE_KEY &&
@@ -11950,6 +11962,24 @@ base_delete_put(
 			newrecord, r->rcb_s_key_ptr, newlength,
 			(i4)DM1C_MREPLACE, dberr);
 	    break;
+    }
+
+    /* 
+    ** Release the value lock (after the put)
+    ** Previously we were releasing after the allocate, before the put
+    ** causing btree errors because dm1b_dupcheck DM1B_SKIP_DELETED_KEY_MACRO
+    ** was true for another transaction trying to insert the same key
+    ** (t1-alloc, t2-alloc-uses-t1-reserved-leaf-entry, t2-put, t1-put-error)
+    ** Since the btree reserved key entry doesn't have a valid tid to 
+    ** waitlock on, hold the value lock until after the put.
+    */
+    if ( new_value_lock )
+    {
+	STRUCT_ASSIGN_MACRO(newval_lkid, r->rcb_val_lkid);
+        local_status = dm1r_unlock_value(r, newrecord, &local_dberr);
+	if (local_status)
+	    uleFormat(&local_dberr, 0, NULL, ULE_LOG, NULL, 
+			    NULL, 0, NULL, &loc_err, 0);
     }
 
     /* rcb update */
