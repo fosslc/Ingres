@@ -104,6 +104,7 @@ else
 
       # Add the revision number to the log
       echo "${CurrentRev}" >> ${RevLog}
+      git add ${RevLog}
 
       # Commit, with the same commit message
       git commit -F ${CommitMessage}
