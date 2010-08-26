@@ -32,20 +32,21 @@
 # TODO:
 # Generic improvements:
 # =====================
-# - better handling for binaries: detect them in the patch,
-#   and svn export them to copy them to git. particularly for mixed
-#   source & binary patches
-# - better handling for new files: use git status to detect &
-#   add new files automatically
+# Urgent
+# ------
+# - for each file in the svn revision
+# - svn export it at the revision to copy it to git
+# - git add it
+
+# Minor
+# -----
 # - getopts for option handling
+# - config file for defaults
 # - add help/usage
 # - consider syslog for logging
 
 # Ingres specific improvements:
 # =============================
-# - find a way to deal with checked in files that also have the same extension
-#   as those in .gitingore
-# - detect if we're running from trunk
 # - better handling for content under tst: detect and ignore it (since the test cases in tst and pdfs in techpub are not being copied to github)
 
 URL="http://code.ingres.com/ingres/main"
@@ -53,6 +54,7 @@ SVNLatest=`svn info ${URL} | grep "Last Changed Rev:" | awk '{print $4}'`
 RevLog="svn_import/imported_revisions.txt"
 GitLatest=`tail -1 ${RevLog}`
 NOW=`date +"%h%d-%Y-%H%M"`
+OriginalDir=`pwd`
 
 echo "Now: ${NOW} svn: rev >${SVNLatest}< git: rev >${GitLatest}<"
 
@@ -79,28 +81,34 @@ else
       PatchFile="${CurrentRev}.patch"
       CommitMessage="${CurrentRev}.message"
       # Generate a patchfile from svn
-      svn diff -r${PreviousRev}:${CurrentRev} ${URL} > ${PatchFile}
+
+      # Get a list of affected files for this revision
+      # and update each one in turn
+      svn diff -r${PreviousRev}:${CurrentRev} ${URL} |\
+      grep Index | awk '{print $2}' |\
+      while read File
+      do
+        TargetDir=`dirname ${File}`
+        Target="${URL}/${File}"
+        JustFileName=`basename ${File}`
+        cd ${TargetDir}
+        
+        # Get the file from subversion and overwrite the local copy
+        svn export -r ${CurrentRev} ${Target}
+        git add ${JustFileName}
+        cd ${OriginalDir}
+      done # Looping for each changed file
 
       # Grab the commit message
       svn log -r${PreviousRev}:${CurrentRev} ${URL} > ${CommitMessage}
-
-      #echo "Applying patch"
-      patch -p0 < ${PatchFile}
-      
-      if [ $? != 0 ]
-      then
-        echo "ERROR: patch failed for ${CurrentRev}"
-        echo "Cannot continue. Exiting"
-        exit 1
-      fi
 
       # Add the revision number to the log
       echo "${CurrentRev}" >> ${RevLog}
 
       # Commit, with the same commit message
-      git commit -a -F ${CommitMessage}
+      git commit -F ${CommitMessage}
 
-    done
+    done # Looping for each revision
   fi
 fi
 
