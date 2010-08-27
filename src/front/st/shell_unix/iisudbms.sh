@@ -676,7 +676,11 @@
 ##	23-Jun-2010 (frima01) SIR 123296
 ##	    Move defining createdb to the init section so it will be present
 ##	    everywhere in this script.
-##
+##	08-Jul-2010 (hanje04)
+##	    SD 144213
+##	    BUG 124055
+##	    Make II_CONFIG_TYPE=TRAD a no-op as it just refers to the default
+##	    Ingres configuration and causes an error in install.log
 ##	    
 #----------------------------------------------------------------------------
 . iisysdep
@@ -3949,7 +3953,7 @@ Shutting down the Ingres server...
     CONFIG_TYPE=''
     $READ_RESPONSE && \
 	CONFIG_TYPE=`iiread_response II_CONFIG_TYPE $RESINFILE`
-    if [ "$CONFIG_TYPE" ] ; then
+    if [ "$CONFIG_TYPE" -a "$CONFIG_TYPE" != "TRAD" ] ; then
 	$DOIT iiapplcfg -t $CONFIG_TYPE ||
 	{
 	    NONFATAL_ERROR=Y
