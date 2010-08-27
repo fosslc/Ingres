@@ -540,6 +540,9 @@ SQLSTATE_MAPPING_REQUIRED
 **	25-Jun-2010 (frima01) BUG 123753
 **	    Change DM9580_CONFIG_DBSERVICE_ERROR to be a warning indicating
 **	    mismatch of dbservice with lp64 server setting.
+**	04-aug-2010 (miket) SIR 122403
+**	    Change encryption activation terminology from
+**	    enabled/disabled to unlock/locked.
 */
 
 #define _DM_CLASS  3
@@ -2246,23 +2249,23 @@ E_DM0171_BAD_CACHE_PROTOCOL:SS5000B_INTERNAL_ERROR
  the DMCM protocol."
 E_DM0172_DMCM_LOCK_FAIL:SS5000B_INTERNAL_ERROR
 "An attempt to request or convert the DMCM control lock failed."
-E_DM0174_ENCRYPT_NOT_ENABLED:SS50000_MISC_ERRORS
-"Encryption is not enabled for the table."
+E_DM0174_ENCRYPT_LOCKED:SS50000_MISC_ERRORS
+"Encryption is locked for the table."
 E_DM0175_ENCRYPT_FLAG_ERROR:SS5000B_INTERNAL_ERROR
 "Internal encryption error: invalid encrytion options flags."
 E_DM0176_ENCRYPT_CRC_ERROR:SS5000B_INTERNAL_ERROR
 "Internal encryption error: CRC mismatch decrypting data."
 E_DM0177_RECORD_NOT_ENCRYPTED:SS50000_MISC_ERRORS
-"A command has been issue to enable encryption for non-encrypted table."
+"A command has been issue to unlock encryption for non-encrypted table."
 E_DM0178_PASSPHRASE_FAILED_CRC:SS50000_MISC_ERRORS
 "The user-specified passphrase was used to decrypt a stored AES key and
 failed the CRC check. This usually indicates a user error."
 E_DM0179_DMC_CRYPT_SLOTS_EXHAUSTED:SS50002_LIMIT_EXCEEDED
 "The %0d encryption key slots in shared memory segment Dmc_crypt are
 exhausted. One slot is needed for each base table for which encryption
-is enabled. The value can be configured (ii.*.dbms.*.dmf_crypt_maxkeys)
+is unlocked. The value can be configured (ii.*.dbms.*.dmf_crypt_maxkeys)
 to increase the limit. Either increase the limit and restart the server,
-or use the MODIFY command to disable encryption for tables that are not
+or use the MODIFY command to relock encryption for tables that are not
 actively being used."
 /*%
 ** Parameters:

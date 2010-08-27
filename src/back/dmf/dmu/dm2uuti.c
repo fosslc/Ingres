@@ -6447,11 +6447,11 @@ DB_ERROR            *dberr)
 }
 
 /*{
-** Name: dm2u_modify_encrypt -  Enable encryption and perhaps modify
+** Name: dm2u_modify_encrypt -  Unlock encryption and perhaps modify
 **				the encryption passphrase.
 **
 ** Description:
-**	Most commonly we will be here to enable encryption for a table.
+**	Most commonly we will be here to unlock encryption for a table.
 **	In that case we just ensure that the table exists, the user has
 **	access to it, and the user knows the encryption passphrase. An
 **	encryption key to process user data will be posted to shared memory
@@ -6487,7 +6487,7 @@ DB_ERROR            *dberr)
 **	    none
 **
 ** Side Effects:
-**	    enables/disable table's encryption key in shared memory
+**	    unlocks/locks table's encryption key in shared memory
 **
 ** History:
 **	16-apr-2010 (toumi01) SIR 122403
@@ -6498,6 +6498,9 @@ DB_ERROR            *dberr)
 **	    Improve dmf_crypt_maxkeys handling.
 **	    Fix counter limit checking (was increment before test -
 **	    should be test and if okay increment else error).
+**	04-Aug-2010 (miket) SIR 122403
+**	    Change encryption activation terminology from
+**	    enabled/disabled to unlock/locked.
 */
 DB_STATUS
 dm2u_modify_encrypt(
@@ -6817,7 +6820,7 @@ DB_ERROR	*dberr)
 	/*
 	** A linear search. Not elegant, but we only have to look through
 	** memory at active slots, one per table with encryption that has
-	** been enabled, matching on base reltid. Should be fast.
+	** been unlocked, matching on base reltid. Should be fast.
 	*/
 	for ( cp = (DMC_CRYPT_KEY *)((PTR)Dmc_crypt + sizeof(DMC_CRYPT)),
 		i = 0 ;
@@ -6833,7 +6836,7 @@ DB_ERROR	*dberr)
 		cp_inactive = cp;
 	}
 	/*
-	** Are we here just to disable encryption because PASSPHRASE=''
+	** Are we here just to relock encryption because PASSPHRASE=''
 	** was specified? If so and we found our man, clear him out!
 	** Otherwise, encryption was already off for the table.
 	*/

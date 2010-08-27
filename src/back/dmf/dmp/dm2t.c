@@ -1613,6 +1613,10 @@ static READONLY struct
 **	    LOB's in the table, find or create BQCB, save in RCB.
 **	27-Jul-2010 (toumi01) BUG 124133
 **	    Store shm encryption keys by dbid/relid, not just relid! Doh!
+**	04-Aug-2010 (miket) SIR 122403
+**	    Change encryption activation terminology from
+**	    enabled/disabled to unlock/locked.
+**	    Change rcb_enckey_slot base from 0 to 1 for sanity checking.
 */
 DB_STATUS
 dm2t_open(
@@ -2793,7 +2797,7 @@ DB_ERROR            *dberr)
 
 	/* If this is an encrypted table, locate its key in Dmc_crypt and
 	** save the slot number in the RCB. Will not find it if encryption
-	** is not enabled yet. Indices inherit the encryption of the parent.
+	** is not unlocked yet. Indices inherit the encryption of the parent.
 	*/
 	r->rcb_enckey_slot = 0;
 	if ( (Dmc_crypt != NULL) &&
@@ -2810,7 +2814,7 @@ DB_ERROR            *dberr)
 		if ( cp->db_id == dcb->dcb_id &&
 		     cp->db_tab_base == tcb->tcb_rel.reltid.db_tab_base )
 		{
-		    r->rcb_enckey_slot = i;
+		    r->rcb_enckey_slot = i+1;	/* slot is 1-based */
 		    break;
 		}
 	    }

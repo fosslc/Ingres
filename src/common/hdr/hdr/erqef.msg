@@ -120,6 +120,9 @@ SQLSTATE_MAPPING_REQUIRED
 **	    E_QE0083_ERROR_MODIFYING_TABLE:SS50000_MISC_ERRORS can
 **	    be caused by user error setting dmf_crypt_maxkeys, so hint
 **	    that the error log would be a good place to look.
+**	04-aug-2010 (miket) SIR 122403
+**	    Change encryption activation terminology from
+**	    enabled/disabled to unlock/locked.
 */
 
 
@@ -1625,10 +1628,10 @@ E_QE0181_RENAME_COL_HAS_OBJS:SS42000_SYN_OR_ACCESS_ERR
 "Rename of column %0c for table %1c owned by %2c, is not permitted as 
 one or more objects eg procedures, views, or non grant compatible permits
 depend on it. Check the error log (errlog.log) for details."
-E_QE0190_ENCRYPTION_DISABLED:SS42000_SYN_OR_ACCESS_ERR
-"Encryption is not enabled for the table."
+E_QE0190_ENCRYPTION_LOCKED:SS42000_SYN_OR_ACCESS_ERR
+"Encryption is locked for the table."
 E_QE0191_RECORD_NOT_ENCRYPTED:SS42000_SYN_OR_ACCESS_ERR
-"An attempt was made to enable encryption for a non-encrypted table."
+"An attempt was made to unlock encryption for a non-encrypted table."
 E_QE0192_PASSPHRASE_FAILED_CRC:SS42000_SYN_OR_ACCESS_ERR
 "The user-specified passphrase was used to decrypt a stored AES key and failed the CRC check. This usually indicates a user error specifying the passphrase."
 /*%

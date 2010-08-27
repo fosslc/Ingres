@@ -161,6 +161,9 @@
 **	    rename support. 
 **	21-apr-2010 (toumi01) SIR 122403
 **	    Qef_err_map changes for column encryption.
+**	04-Aug-2010 (miket) SIR 122403
+**	    Change encryption activation terminology from
+**	    enabled/disabled to unlock/locked.
 */
 
 /* Jam hints
@@ -440,7 +443,7 @@ GLOBALDEF const QEF_ERR_MAP Qef_err_map[] =
     E_DM0169_ALTER_TABLE_SUPP, 	    E_QE009D_ALTER_TABLE_SUPP,      -1,     0,
     E_DM016B_LOCK_INTR_FA,	    E_QE0022_QUERY_ABORTED,	    4708,   1,
     E_DM0170_READONLY_TABLE_INDEX_ERR,I_QE2034_READONLY_TABLE_ERR,  5355,   1,
-    E_DM0174_ENCRYPT_NOT_ENABLED,   E_QE0190_ENCRYPT_NOT_ENABLED,   9407,   1,
+    E_DM0174_ENCRYPT_LOCKED,        E_QE0190_ENCRYPT_LOCKED,        9407,   1,
     E_DM0177_RECORD_NOT_ENCRYPTED,  E_QE0191_RECORD_NOT_ENCRYPTED,  9408,   1,
     E_DM0178_PASSPHRASE_FAILED_CRC, E_QE0192_PASSPHRASE_FAILED_CRC, 9409,   1,
     E_DM0181_PROD_MODE_ERR,         E_QE7612_PROD_MODE_ERR,         -1,     1,

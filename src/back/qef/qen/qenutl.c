@@ -2315,6 +2315,8 @@ u_i4	   		tid )
 **
 **	20-Oct-2006 (kschendel) b122118
 **	    Unify the half-dozen places that do this, so that it's right.
+**	05-Aug-2010 (miket) SIR 122403
+**	    Bail out if we find a locked encrypted table.
 **
 */
 
@@ -2325,6 +2327,11 @@ qen_openAndLink(DMT_CB *dmtcb, QEE_DSH *dsh)
     DB_STATUS status;
 
     status = dmf_call(DMT_OPEN, dmtcb);
+    if (dmtcb->dmt_enc_locked)
+    {
+	status = E_DB_ERROR;
+	dmtcb->error.err_code = E_QE0190_ENCRYPT_LOCKED;
+    }
     if (status != E_DB_OK)
     {
 	dsh->dsh_error.err_code = dmtcb->error.err_code;

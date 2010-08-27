@@ -502,6 +502,9 @@ typedef struct
 **	    Add manual-blob-logkey-gen and multi-row flags.  Both of these
 **	    are for the new BLOB logic that uses the BQCB for context during
 **	    the query lifetime.
+**	04-Aug-2010 (miket) SIR 122403
+**	    Add dmt_enc_locked to provide feedback to callers about the
+**	    lock status of encrypted tables.
 */
 typedef struct _DMT_CB
 {
@@ -656,6 +659,7 @@ typedef struct _DMT_CB
 #define                 DMT_U_DIRECT        2L
     bool            dmt_mustlock;           /* flag indicating query is an
                                             ** update - disables noreadlock */
+    bool            dmt_enc_locked;         /* table is encrypted and locked */
 
     DB_TAB_TIMESTAMP
 		    dmt_timestamp;	    /* Date of that structural change.*/

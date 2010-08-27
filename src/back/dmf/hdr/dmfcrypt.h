@@ -19,11 +19,14 @@
 ** Name: DMC_CRYPT - encryption global control block
 **
 ** Description:
-**	contains enabled keys for encryption
+**	contains active unlocked keys for encryption
 **
 ** History:
 **	13-apr-2010 (toumi01) SIR 122403
 **	    Created.
+**	04-Aug-2010 (miket) SIR 122403
+**	    Change encryption activation terminology from
+**	    enabled/disabled to unlock/locked.
 */
 typedef struct _DMC_CRYPT
 {
@@ -36,7 +39,7 @@ typedef struct _DMC_CRYPT
 ** Name: DMC_CRYPT_KEY
 **
 ** Description:
-**	contains individual enabled key entries
+**	contains individual active unlocked key entries
 **
 ** History:
 **	13-apr-2010 (toumi01) SIR 122403

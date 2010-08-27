@@ -370,6 +370,9 @@
 **	    Added E_QE016C_RENAME_TAB_HAS_OBJS.
 **	21-apr-2010 (toumi01) SIR 122403
 **	    Add messages for column encryption.
+**	04-Aug-2010 (miket) SIR 122403
+**	    Change encryption activation terminology from
+**	    enabled/disabled to unlock/locked.
 **/
 
 /*
@@ -723,7 +726,7 @@ typedef struct _QEF_FUNC QEF_FUNC;
 #define	E_QE0180_RENAME_TAB_HAS_INTEGRITY	(E_QEF_MASK + 0x0180L)
 #define	E_QE0181_RENAME_COL_HAS_OBJS	(E_QEF_MASK + 0x0181L)
 
-#define	E_QE0190_ENCRYPT_NOT_ENABLED	(E_QEF_MASK + 0x0190L)
+#define	E_QE0190_ENCRYPT_LOCKED		(E_QEF_MASK + 0x0190L)
 #define	E_QE0191_RECORD_NOT_ENCRYPTED	(E_QEF_MASK + 0x0191L)
 #define	E_QE0192_PASSPHRASE_FAILED_CRC	(E_QEF_MASK + 0x0192L)
 

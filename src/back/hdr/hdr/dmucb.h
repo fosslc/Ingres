@@ -137,6 +137,9 @@
 **	    Add support for column encryption.
 **     22-apr-2010 (stial01)
 **          Removed unreferenced DMU_EXTFMT_ENTRY
+**	04-aug-2010 (miket) SIR 122403
+**	    Change encryption activation terminology from
+**	    enabled/disabled to unlock/locked.
 **/
 
 /*}
@@ -438,7 +441,7 @@ typedef struct _DMU_CB
     u_char	    dmu_enc_passphrase[AES_256_BYTES];
     /* For CREATE TABLE the encryption key bits is specified, but for
     ** MODIFY we don't know when we are parsing what we'll find when we
-    ** go to enable or modify the encryption. Bummer. Just prepare 128,
+    ** go to unlock or modify the encryption. Bummer. Just prepare 128,
     ** 192, and 256 bit versions, computationally cheaper than looking
     ** up the catalog info. Sure is ugly, though! :-(
     */

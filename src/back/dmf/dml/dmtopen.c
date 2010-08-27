@@ -608,6 +608,9 @@ static STATUS check_char(
 **	    dmpe now sets dmt_sequence to the current statement's value,
 **	    which may well differ from the sequence on which the CRIB
 **	    was formed.
+**	04-Aug-2010 (miket) SIR 122403
+**	    Give callers fair warning about an encrypted table that is
+**	    locked. They may or may not want to continue.
 */
 
 DB_STATUS
@@ -1378,6 +1381,13 @@ DMT_CB   *dmt_cb)
 	    dmt->dmt_page_count = 1;
 
 	dmt->dmt_record_access_id = (char *)r;
+
+	/* fair warning to caller of locked encrypted table */
+	if ((t->tcb_rel.relencflags & TCB_ENCRYPTED) &&
+	    (r->rcb_enckey_slot == 0))
+	    dmt->dmt_enc_locked = TRUE;
+	else
+	    dmt->dmt_enc_locked = FALSE;
 
 #ifdef xDEBUG
         r->rcb_xcb_ptr->xcb_s_open++;

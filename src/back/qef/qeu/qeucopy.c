@@ -412,6 +412,8 @@ static DB_STATUS copy_into_child(SCF_FTX *ftx);
 **	    Add intelligence to cope with small copies. If the copy is
 **	    very small, we won't use the loader or create threads. Currently
 **	    this flag is only set for the insert to copy optimization
+**	04-aug-2010 (miket) 122403
+**	    Trap attempt to copy a locked encrypted table.
 */
 
 DB_STATUS
@@ -598,6 +600,12 @@ QEF_RCB       *qef_rcb)
 	}
 
 	status = dmf_call(DMT_OPEN, &copy_ctl->dmtcb);
+	/* bail out if this is a locked encrypted table */
+	if (copy_ctl->dmtcb.dmt_enc_locked)
+	{
+	    status = E_DB_ERROR;
+	    copy_ctl->dmtcb.error.err_code = E_QE0190_ENCRYPT_LOCKED;
+	}
 	if (status == E_DB_OK)
 	{
 	    /* 
