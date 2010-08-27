@@ -204,7 +204,10 @@ static void qen_exch_pqual_init(
 **	11-May-2010 (kschendel) b123565
 **	    Snapshot the parent DSH, not the root DSH.  If we're a 1:1
 **	    exch under a 1:N parallel union, parent and root are different
-**          (and parent is the correct one).
+**	    (and parent is the correct one).
+**      21-jul-2010 (huazh01)
+**          handle the case where child thread returns E_DB_WARN together
+**          with E_CU0204. (b124094)
 **      12-Aug-2010 (horda03) b124109
 **          Exception occurs if the cut_read_buf returns a WARNING and
 **          there are no (<0) cells to process. In this circumstance, 
@@ -959,7 +962,8 @@ i4		    function )
 	    ** kids because it encountered some unexpected problem.
 	    ** In either case or if there are <0 cells, this query is toast.
 	    */
-	    if (DB_FAILURE_MACRO(status) || ( status && CurChild->cells_remaining < 0) )
+	    if (DB_FAILURE_MACRO(status) || ( status && CurChild->cells_remaining < 0) ||
+                   (status == E_DB_WARN && error.err_code == E_CU0204_ASYNC_STATUS))
 	    {
 		if ( exch_cb->trace )
 		    TRdisplay("%@ %p %2d %s %s cut_read_buf status %d %x\n",
@@ -986,6 +990,15 @@ i4		    function )
 		    }
 		    (VOID)cut_signal_status(CommRcb, status, &error);
 		}
+
+                if (status == E_DB_WARN && error.err_code == E_CU0204_ASYNC_STATUS)
+                {
+                   /* We're probably a child thread, return OK for async status
+                   ** signalled by another, let parent thread figure it all out.
+                   */
+                   dsh->dsh_error.err_code = E_QE0000_OK;
+                }
+
 		/*
 		** Reset our CUT thread status so we can continue to
 		** use other CUT buffers if we're running under a Child.
@@ -1239,6 +1252,9 @@ i4		    function )
 **	    root thread;  rename RootXxx to ParentXxx
 **	    Don't return QE0015 as a cut signal status, return "ok" at
 **	    child exit unless something really went wrong.
+**      21-jul-2010 (huazh01)
+**          don't log E_DM0065_USER_INTR error for parallel query child 
+**          thread. (b124094)
 **/
 DB_STATUS
 qen_exchange_child(SCF_FTX *ftxcb)
@@ -1631,7 +1647,8 @@ qen_exchange_child(SCF_FTX *ftxcb)
 	i4	local_error;
 	/* Tell all about our failure */
 
-	if ( error.err_code && error.err_code != E_CU0204_ASYNC_STATUS )
+	if ( error.err_code && error.err_code != E_CU0204_ASYNC_STATUS &&
+             error.err_code != E_DM0065_USER_INTR )
 	    ule_format(error.err_code,
 		       (CL_ERR_DESC*)0, ULE_LOG, NULL,
 		       (char*)0, 0L, (i4*)0, &local_error, 0);
