@@ -350,6 +350,9 @@
 **          Do not negate the values of Ingresdate' intervals when the
 **          interval is negative. '-11 hrs -22 mins' is being stored as
 **          '-10 hrs 38 mins'.
+**      30-Jun-2010 (horda03) B124003
+**          INTERVAL function reports E_US10DC when used on an INTERVAL YTOM or
+**          INTERVAL DTOS.
 */
 
 /*  Static variable references	*/
@@ -7659,6 +7662,9 @@ AD_NEWDTNTRNL  *datep)
 **	03-oct-06 (toumi01)
 **	    Correct interval computation - need AD_40DTE_SECPERDAY multiplier.
 **	    Remove unused variable tlowday.
+**      30-Jun-2010 (horda03) B124003
+**          Only report E_AD505E_NOABSDATES for ABSOLUTE
+**          DATE values.
 */
 
 DB_STATUS
@@ -7686,13 +7692,7 @@ DB_DATA_VALUE  *result)
 
         res	= (f8 *)result->db_data;
 
-        if ((
-	     (datep->dn_dttype == DB_DTE_TYPE) &&
-	     (datep->dn_status & AD_DN_ABSOLUTE)
-	    )
-         || (datep->dn_dttype == DB_INYM_TYPE)
-         || (datep->dn_dttype == DB_INDS_TYPE)
-        )
+        if (datep->dn_status & AD_DN_ABSOLUTE)
 	    return(adu_error(adf_scb, E_AD505E_NOABSDATES, 0));
 
 	if (datep->dn_status == AD_DN_NULL)
