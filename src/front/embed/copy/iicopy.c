@@ -6459,6 +6459,9 @@ IIcp_isnull(II_CP_MAP *cmap, u_char *val_start, i4 vallen)
 **	10-Mar-2010 (kschendel) SIR 122974
 **	    Spiff up a bit more by not maintaining byte-left, just compare
 **	    against a buffer end guard.
+**	5-Aug-2010 (kschendel) b124197
+**	    Turn off "continue" when we get an error here, since continuing
+**	    would be worse than fruitless.
 */
 
 static i4
@@ -6475,13 +6478,14 @@ cp_refill(u_char **dataend_p, u_char **rowptr_p, II_CP_STRUCT *copy_blk)
 
     if (copy_blk->cp_at_eof)
     {
-	if (copy_blk->cp_refill_control == COPY_REFILL_EOF_FAILS)
-	    return (COPY_FAIL);
-	else if (copy_blk->cp_refill_control == COPY_REFILL_EOF_NL)
+	if (copy_blk->cp_refill_control == COPY_REFILL_EOF_NL)
 	{
 	    ++ *rowptr_p;
 	    return ('\n');
 	}
+	copy_blk->cp_continue = FALSE;
+	if (copy_blk->cp_refill_control == COPY_REFILL_EOF_FAILS)
+	    return (COPY_FAIL);
 	else
 	    return (COPY_EOF);
     }
@@ -6495,7 +6499,10 @@ cp_refill(u_char **dataend_p, u_char **rowptr_p, II_CP_STRUCT *copy_blk)
 	{
 	    len = val_end - copy_blk->cp_valstart + 1;
 	    if (len > copy_blk->cp_rbuf_worksize)
+	    {
+		copy_blk->cp_continue = FALSE;
 		return (COPY_FAIL);		/* Issue message here??? */
+	    }
 	    MEcopy((PTR) copy_blk->cp_valstart, len, copy_blk->cp_readbuf-len);
 	}
 	copy_blk->cp_valstart = (u_char *) copy_blk->cp_readbuf - len;
@@ -6539,6 +6546,7 @@ cp_refill(u_char **dataend_p, u_char **rowptr_p, II_CP_STRUCT *copy_blk)
 		if (copy_blk->cp_program)
 		    err = E_CO003C_PROG_READ_ERR;
 		IIlocerr(GE_LOGICAL_ERROR, err, II_ERR, 1, err_buf);
+		copy_blk->cp_continue = FALSE;
 		return (COPY_FAIL);
 	    }
 	}
@@ -6557,17 +6565,20 @@ cp_refill(u_char **dataend_p, u_char **rowptr_p, II_CP_STRUCT *copy_blk)
 	copy_blk->cp_at_eof = TRUE;
 	if (fillptr == (u_char *) copy_blk->cp_readbuf)
 	{
-	    if (copy_blk->cp_refill_control == COPY_REFILL_EOF_FAILS)
-		return (COPY_FAIL);
-	    else if (copy_blk->cp_refill_control == COPY_REFILL_EOF_NL)
+	    if (copy_blk->cp_refill_control == COPY_REFILL_EOF_NL)
 	    {
+		/* Leave "continue" alone for this one case */
 		*dataend_p = rowptr;
 		*rowptr_p = rowptr;
 		return ('\n');
 	    }
+	    copy_blk->cp_continue = FALSE;
+	    if (copy_blk->cp_refill_control == COPY_REFILL_EOF_FAILS)
+		return (COPY_FAIL);
 	    else
 		return (COPY_EOF);
 	}
+	copy_blk->cp_continue = FALSE;
 	return (COPY_FAIL);
     }
 

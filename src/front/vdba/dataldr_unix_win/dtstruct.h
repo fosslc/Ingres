@@ -55,6 +55,9 @@
 **       'SI_MAX_TXT_REC'. on i64_hpu, restrict DT_SI_MAX_TXT_REC to
 **       SI_MAX_TXT_REC/2. This prevents 'dataldr' from stack overflow.
 **    Bug 119835.
+**	5-Aug-2010 (kschendel) b124197
+**	    Update for long names;  since dataldr doesn't use iicommon (!!!)
+**	    it has to be hand coded here.
 */
 
 #if !defined (MAIN_DATALOADER_STRUCTURE_HEADER)
@@ -95,9 +98,14 @@ extern i4 g_lCpuEnded;
 #define COLACT_LOBFILE   0x00000010
 #define COLACT_LNOB      0x00000020
 
+#define DB_ATT_MAXNAME	256
+#define DB_TAB_MAXNAME	256
+#define DB_OWN_MAXNAME	32
+#define DB_SEQ_MAXNAME	256
+
 typedef struct tagFIELD
 {
-	char szColumnName [32 + EXTRA];
+	char szColumnName [DB_ATT_MAXNAME + EXTRA];
 	char szTerminator[16];   /* if this one is set, it override the one of table level */
 	int  nDataType;          /* DT_CHAR, DT_INTEGER */
 	int  nFiller;            /* 1: FILLER key word is set */
@@ -105,7 +113,7 @@ typedef struct tagFIELD
 	int  pos2;
 	int  nColAction;         /* COLACT_WITHNULL, COLACT_LTRIM, COLACT_TODATE */
 	char szNullValue[64];    /* valide only if bWithNULL = 1. NULL Condition */
-	char szSequenceName[64]; /* valide only if (nColAction & COLACT_SEQUENCE) != 0  */
+	char szSequenceName[DB_SEQ_MAXNAME+1]; /* valide only if (nColAction & COLACT_SEQUENCE) != 0  */
 	char szLobfileName[1024];/* valide only if (nColAction & COLACT_LOBFILE) != 0  */
 	char szQuoting[16];      /* if set, overrides the table level one */
 	int  iKeepTrailingBlanks;/* keep traiing blanks if not 0 */
@@ -140,7 +148,7 @@ typedef struct tagDTSTRUCT
 	int nFileCount;          /* Number of elements in the arrayFiles */
 	int nCurrent;            /* The current INFILE being handled */
 	INFILES* arrayFiles;     /* list of {INFILE, [BADFILE], [DISCARDFILE]}*/
-	char  szTableName[128];  /* in the format [owner.]tableName */
+	char  szTableName[DB_TAB_MAXNAME+DB_OWN_MAXNAME+1+1];  /* in the format [owner.]tableName */
 	i4  lDiscardMax;
 	int   nFixLength;
 	FIELDSTRUCT fields;
