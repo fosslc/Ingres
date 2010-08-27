@@ -2910,6 +2910,10 @@ DB_ERROR	*error)
 **	    Fix X-integration, bcost begin/end are void in main.
 **	    Run subplan init, since it stops at an exchange even when the
 **	    exchange is disabled via trace point.
+**      24-Jun-2010 (hanal04) Bug 123961
+**          If the node is being opened we must do open processing for the 
+**          rest of the query tree because qen_exchange_child threads are not
+**          being spawned to do it for us.
 */
 static
 DB_STATUS
@@ -2956,6 +2960,9 @@ i4		    function )
 
 	/* Initialize the query plan under the exchange node */
 	status = qeq_subplan_init(rcb, dsh, NULL, node, NULL);
+
+        if(status == E_DB_OK)
+            status = (*out_node->qen_func)(out_node, rcb, dsh, MID_OPEN);
 
 	/*
 	 * now we go back so that other query processing can proceed -
