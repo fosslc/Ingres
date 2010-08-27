@@ -204,6 +204,11 @@ psl_project_corr_vars (
 **	    will rearrange the qtree fragment with the ANDs, and the
 **	    rearranged qtree is what needs to be attached to the generated
 **	    aghead, not a pointer to the original qtree.
+**	29-Jun-2010 (kiria01) b123988
+**	    Correct the maintenance of qual_depth with PST_ROOT otherwise
+**	    subsequent PST_ROOT nodes from unions appear at ever deeper parse
+**	    depths resulting in setting bits out of range in in_WHERE and
+**	    has_COUNT.
 */
 
 static DB_STATUS
@@ -1333,6 +1338,11 @@ psl_flatten1(
 	    else
 		correl = FALSE;
 
+	    break;
+
+	case PST_ROOT:
+	    /* Usually not significant except in the context of unions! */
+	    qual_depth--;
 	    break;
 
 	case PST_AGHEAD:
