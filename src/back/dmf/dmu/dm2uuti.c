@@ -6501,6 +6501,10 @@ DB_ERROR            *dberr)
 **	04-Aug-2010 (miket) SIR 122403
 **	    Change encryption activation terminology from
 **	    enabled/disabled to unlock/locked.
+**	06-Aug-2010 (miket) SIR 122403
+**	    Modify of catalog-stored AES keys is encrypting for
+**	    128/192/256 bits 3/3/4 blocks, but it should be 2/2/3
+**	    (see dm2u_create code and lengthy comment).
 */
 DB_STATUS
 dm2u_modify_encrypt(
@@ -6652,7 +6656,7 @@ DB_ERROR	*dberr)
 	    {
 		keybits = AES_128_BITS;
 		keybytes = AES_128_BYTES;
-		blocks = 3;
+		blocks = 2;
 		oldkey = dmu->dmu_enc_old128pass;
 		newkey = dmu->dmu_enc_new128pass;
 	    }
@@ -6661,7 +6665,7 @@ DB_ERROR	*dberr)
 	    {
 		keybits = AES_192_BITS;
 		keybytes = AES_192_BYTES;
-		blocks = 3;
+		blocks = 2;
 		oldkey = dmu->dmu_enc_old192pass;
 		newkey = dmu->dmu_enc_new192pass;
 	    }
@@ -6670,7 +6674,7 @@ DB_ERROR	*dberr)
 	    {
 		keybits = AES_256_BITS;
 		keybytes = AES_256_BYTES;
-		blocks = 4;
+		blocks = 3;
 		oldkey = dmu->dmu_enc_old256pass;
 		newkey = dmu->dmu_enc_new256pass;
 	    }
