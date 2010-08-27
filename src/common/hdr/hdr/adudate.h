@@ -83,6 +83,9 @@
 **	12-Feb-2009 (frima01) b120004
 **	    Changed AD_TZ_HOURSNEW to use abs() since it didn't
 **	    work properly with negative values on Unixware.
+**	13-jun-2010 (stephenb)
+**	    Add ADU_BIGGEST_MACRO to support expanding date lengths
+**	    in aducalclen
 **/
 
 
@@ -441,6 +444,12 @@ typedef struct _AD_AGGDATE
 **  MACRO to tell how many days in a given year ... leap year calculation:
 */
 #define ADU_DYSIZE_MACRO(x) (((x)%4==0 && (x)%100!=0 || (x)%400==0) ? 366 : 365)
+/*
+** MACRO for biggest of 3 values, used to calculate output length
+** in adicalclen
+*/
+#define ADU_BIGGEST_MACRO(a, b, c) \
+(a > b && a > c) ? a : ((b > a && b > c) ? b : c)
 
 
 /*

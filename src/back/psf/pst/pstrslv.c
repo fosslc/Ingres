@@ -376,6 +376,10 @@ pst_get_union_resdom_type(
 **          and earlier failure in adi_resolve(). This lead to a SIGSEGV
 **          instead of the expected error report. Move the IFNULL aggregate
 **          down below the error check.
+**      7-jun-2010 (stephenb)
+**          correct error handling for bad return of adi_dtfamilty_resolve,
+**          it may produce various type and operand errors that need to be 
+**          returned as user errors. (Bug 123884)
 */
 DB_STATUS
 pst_resolve(
@@ -636,7 +640,35 @@ pst_resolve(
 					  best_fidesc, &adi_rslv_blk);
 	    if (status != E_DB_OK)
 	    {
-		return (status);
+		/* Complain if no applicable function found */
+		if (	adf_scb->adf_errcb.ad_errcode == E_AD2062_NO_FUNC_FOUND)
+		{
+		    if (children == 1)
+			error->err_code = 2907L;
+		    else
+			error->err_code = 2908L;
+		    return (E_DB_ERROR);
+		}
+
+		/* Complain if parameter count is wrong. */
+		if (  	adf_scb->adf_errcb.ad_errcode == E_AD2061_BAD_OP_COUNT)
+		{
+		    error->err_code = 2903L;
+		    return(E_DB_ERROR);
+		}
+
+		/* Complain if ambiguous function found */
+		if (adf_scb->adf_errcb.ad_errcode == E_AD2063_FUNC_AMBIGUOUS)
+		{
+		    if (children == 1)
+			error->err_code = 2909L;
+		    else
+			error->err_code = 2910L;
+		    return (E_DB_ERROR);
+		}
+
+		error->err_code = E_PS0C05_BAD_ADF_STATUS;
+		return (E_DB_ERROR);
 	    }
 	}
     }

@@ -479,6 +479,9 @@
 #           is a string, so these FI have either ADI_F65536_PAR1MATCH or
 #           ADI_F131072_PAR2MATCH flag set, meaning that they will only be
 #           considered if the appropriate parameter is MONEY.
+#	3-jun-2010 (stephenb)
+#		Fix ADFI_1457_NVL2_ANY with correct return type and new
+#		lenspec. (Bug 123880)
 
 group ADI_COMPARISON
 
@@ -8870,9 +8873,9 @@ group ADI_NORM_FUNC
 	fi ADFI_1457_NVL2_ANY
 	    description all  :  nvl2(all,all,all)
 	    flags ADI_F32768_IFNULL
-	    lenspec ADI_LONGER
+	    lenspec ADI_LONGER23RES
 	    null_preinst ADE_0CXI_IGNORE
-	    result DB_CHR_TYPE
+	    result DB_ALL_TYPE
 	    operands DB_ALL_TYPE DB_ALL_TYPE DB_ALL_TYPE
 	    routine adu_nvl2
 	    

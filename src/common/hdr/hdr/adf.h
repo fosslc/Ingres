@@ -2388,6 +2388,8 @@ typedef struct
 **	    Added ADI_MINADD1 (At least 'fixed bytes' and then add 1 extra.
 **	27-Oct-2008 (kiria01) SIR120473
 **	    Added ADI_PATCOMP & ADI_PATCOMPU for pattern compiler.
+**	4-jun-2008 (stephenb)
+**	    Add ADI_LONGER23RES for nvl2 support. (Bug 123880)
 [@history_template@]...
 */
 
@@ -2667,6 +2669,15 @@ typedef struct _ADI_LENSPEC
 #define			ADI_PATCOMP	61	/* Est pat len */
 #define			ADI_PATCOMPU	62	/* Est unicode pat len */
 #define			ADI_O1AES	63	/* padded for block crypto */
+
+/*
+** Special for 3 operand functions where we need the length
+** of the longest of parameters 2 and 3
+*/
+#define			ADI_LONGER23RES	64	/* longer of parms 2 and 3
+						** taking the result into 
+						** account. 
+						*/
 
 /*
 ** ADI_LEN_INDIRECT is introduced to support the DB_ALL_TYPE and

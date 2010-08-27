@@ -3779,6 +3779,8 @@ DB_DATA_VALUE     *rdv)
 **	25-Apr-2009 (kiria01) SIR121788
 **	    Re-add LBYTE <-> LVCH with no translation as there are benefits
 **	    in performance.
+**	7-jun-2010 (stephenb)
+**	    Add missing case for DB_LTXT_TYPE in long->not-long 
 */
 DB_STATUS
 adu_lvch_move(
@@ -4035,6 +4037,7 @@ DB_DATA_VALUE	   *dv_out)
 	    
 	    	    case DB_VCH_TYPE:
 	    	    case DB_TXT_TYPE:
+	    	    case DB_LTXT_TYPE:
 	    	    case DB_VBYTE_TYPE:
 	    	    case DB_UTF8_TYPE:
 		    case DB_NVCHR_TYPE:
@@ -4068,6 +4071,7 @@ DB_DATA_VALUE	   *dv_out)
 
 		case DB_VCH_TYPE:
 		case DB_TXT_TYPE:
+		case DB_LTXT_TYPE:
 		case DB_VBYTE_TYPE:
 		case DB_NVCHR_TYPE:
 		    res_dv = dv_out;
