@@ -170,6 +170,8 @@
 **	    Add missing CM inclusion, required for bool declarations.
 **	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
 **          Remove table name,owner from log records.
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          dmve_get_tabinfo() copy table name only if tabname not null
 **/
 
 /*
@@ -2774,15 +2776,16 @@ DB_OWN_NAME	    *ownname)
 
     if (log_tabid)
 	STRUCT_ASSIGN_MACRO(*log_tabid, *tabid);
-    if (log_tabname)
+    if (log_tabname && log_ownname)
     {
-	STRUCT_ASSIGN_MACRO(*log_tabname, *tabname);
-	if (log_ownname)
+	if (tabname)
+	    STRUCT_ASSIGN_MACRO(*log_tabname, *tabname);
+	if (ownname)
 	    STRUCT_ASSIGN_MACRO(*log_ownname, *ownname);
 	return;
     }
 
-    if (tabname)
+    if (tabname && ownname)
     {
 	/*
 	** Lookup table name/owner
