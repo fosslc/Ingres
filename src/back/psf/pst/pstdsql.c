@@ -4417,6 +4417,9 @@ error_exit:
 **	    algorithmn to handle the depth first needs of the original code.
 **	    The stack used is initially in the frame of the function but if needed
 **	    can expand into session heap.
+**	10-Aug-2010 (kiria01) b124227
+**	    Address in-list constants. Although we did descend them - they didn't
+**	    generally tie to the BOP for the LHS expression.
 */
 
 static DB_STATUS
@@ -4433,6 +4436,7 @@ pst_descinput_walk(
     i4 err_code;		/* Junk */
     i4 parm_no;			/* Parameter marker number */
     bool descend = TRUE;
+    PST_QNODE *inlist_bop = NULL;
 
     PST_STK_INIT(stk, sess_cb);
 
@@ -4457,6 +4461,27 @@ pst_descinput_walk(
 			(PTR)&node->pst_sym.pst_value.pst_s_root.pst_union.pst_next);
 		    /* Mark that the top node needs descending (and allocating) */
 		    pst_push_item(&stk, (PTR)PST_DESCEND_MARK);
+		}
+		break;
+	    case PST_BOP:
+		if ((node->pst_sym.pst_value.pst_s_op.pst_flags & PST_INLIST) &&
+			node->pst_right &&
+			node->pst_right->pst_sym.pst_type == PST_CONST)
+		{
+		    /* We have that the RHS is a compact list of constants
+		    ** and the LHS is arbitrary. For this node we will switch
+		    ** the traverse order so that RHS is traversed before LHS
+		    ** allowing us to readily scope the RHS of the BOP */
+		    inlist_bop = node;
+		    pst_push_item(&stk, (PTR)nodep);
+		    /* Delay LHS */
+		    pst_push_item(&stk, (PTR)&node->pst_left);
+		    if (node->pst_left->pst_right ||
+				node->pst_left->pst_left)
+			/* Mark that the top node needs descending */
+			pst_push_item(&stk, (PTR)PST_DESCEND_MARK);
+		    nodep = &node->pst_right;
+		    continue;
 		}
 		break;
 	    }
@@ -4489,6 +4514,7 @@ pst_descinput_walk(
 	    i4 parm_no = node->pst_sym.pst_value.pst_s_cnst.pst_parm_no - 1;
 	    if (parm_no >= 0)
 	    {
+		PST_QNODE *parent = pst_parent_node(&stk, NULL);
 		if (parm_no > proto->pst_maxparm)
 		{
 		    TRdisplay("%@ psf_descinput_walk: param marker ix %d higher than max %d at node %p\n",
@@ -4498,7 +4524,20 @@ pst_descinput_walk(
 		    return (E_DB_ERROR);
 		}
 		desc = (GCA_COL_ATT *)((char *)desc_base + (parm_no * GCA_COL_ATT_SIZE));
-		if (desc->gca_attdbv.db_datatype == DB_NODT)
+		if (desc->gca_attdbv.db_datatype == DB_NODT &&
+		    inlist_bop)
+		{
+		    DB_DATA_VALUE *dv = &inlist_bop->pst_left->pst_sym.pst_dataval;
+		    /* case 2 - in-list */
+		    desc->gca_attdbv.db_datatype = dv->db_datatype;
+		    desc->gca_attdbv.db_length = dv->db_length;
+		    desc->gca_attdbv.db_prec = dv->db_prec;
+		    /* If the inlist_bop is also the parent then we are at the end of
+		    ** the list of constants (descended first) */
+		    if (inlist_bop == parent)
+			inlist_bop = NULL;
+		}
+		else if (desc->gca_attdbv.db_datatype == DB_NODT)
 		{
 		    /* Need to try guess the likely datatype based on one of the
 		    ** patterns below:
@@ -4535,7 +4574,6 @@ pst_descinput_walk(
 		    **   \
 		    **    ?
 		    */
-		    PST_QNODE *parent = pst_parent_node(&stk, NULL);
 		    PST_QNODE *pparent = !parent ? NULL : pst_parent_node(&stk, parent);
 		    DB_DATA_VALUE *dv = &parent->pst_sym.pst_dataval;
 		    desc->gca_attdbv.db_datatype = 0;
