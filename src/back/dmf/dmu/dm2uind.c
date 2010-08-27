@@ -824,6 +824,8 @@
 **	    Use no-coupon access modes.
 **	10-may-2010 (stephenb)
 **	    Cast new i8 reltups back to i4
+**	16-Jul-2010 (kschendel) SIR 123450
+**	    Really pass the compression type(s) in the log record.
 */
 DB_STATUS
 dm2u_index(
@@ -1668,6 +1670,8 @@ DM2U_INDEX_CB   *index_cb)
 		index_cb->indxcb_idx_key, index_cb->indxcb_kcount,
 		index_cb->indxcb_allocation, index_cb->indxcb_extend, 
 		m->mx_page_type, m->mx_page_size, 
+		index_cb->indxcb_compressed,
+		index_cb->indxcb_index_compressed ? TCB_C_STD_OLD : TCB_C_NONE,
 		name_id, name_gen,
 		m->mx_dimension, m->mx_hilbertsize,(f8 *)&m->mx_range,  
 		(LG_LSN*)0, &lsn, dberr);

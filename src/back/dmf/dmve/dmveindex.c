@@ -198,6 +198,8 @@
 **	    Fix outrageous name confusion re acount vs kcount.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	16-Jul-2010 (kschendel) SIR 123450
+**	    Log record now has actual compression types in it.
 **/
 
 static DB_STATUS dmv_reindex(
@@ -571,15 +573,11 @@ DM0L_INDEX 	*log_rec)
 	indx_cb->indxcb_l_fill = log_rec->dui_lfill;
 	indx_cb->indxcb_d_fill = log_rec->dui_dfill;
 
-	if (log_rec->dui_status & TCB_COMPRESSED)
-	    indx_cb->indxcb_compressed = TCB_C_DEFAULT;
-	else
-	    indx_cb->indxcb_compressed = TCB_C_NONE;
-
-	if (log_rec->dui_status & TCB_INDEX_COMP)
-	    indx_cb->indxcb_index_compressed = 1;
-	else
-	    indx_cb->indxcb_index_compressed = 0;
+	indx_cb->indxcb_compressed = log_rec->dui_comptype;
+	/* FIXME we need another pass on key compression type to make
+	** sure everyone in dmp knows it's a type not just a flag!
+	*/
+	indx_cb->indxcb_index_compressed = (log_rec->dui_ixcomptype != TCB_C_NONE);
 
 	if (log_rec->dui_status & TCB_UNIQUE)
 	    indx_cb->indxcb_unique = 1;
@@ -761,6 +759,7 @@ DM0L_INDEX 	*log_rec)
 			log_rec->dui_allocation, log_rec->dui_extend, 
 			log_rec->dui_pg_type,
 			log_rec->dui_page_size,
+			log_rec->dui_comptype, log_rec->dui_ixcomptype,
 			log_rec->dui_name_id,
 			log_rec->dui_name_gen, 
 			log_rec->dui_dimension,

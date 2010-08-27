@@ -3931,6 +3931,8 @@ dm0l_modify(
 **	    for support of indexes on Clustered tables.
 **	5-Nov-2009 (kschendel) SIR 122739
 **	    Fix outrageous name confusion re acount vs kcount.
+**	16-Jul-2010 (kschendel) SIR 123450
+**	    Pass data/key compression type to log record.
 */
 DB_STATUS
 dm0l_index(
@@ -3958,6 +3960,8 @@ dm0l_index(
     i4		    extend,
     i4              pg_type,
     i4		    page_size,
+    i2		    comptype,
+    i2		    ixcomptype,
     i2		    name_id,
     i4		    name_gen,
     i4			    dimension,
@@ -3999,6 +4003,8 @@ dm0l_index(
     log.dui_reltups = reltups;
     log.dui_buckets = buckets;
     log.dui_kcount = kcount;
+    log.dui_comptype = comptype;
+    log.dui_ixcomptype = ixcomptype;
     log.dui_allocation = allocation;
     log.dui_extend = extend;
     log.dui_page_size = page_size;

@@ -1800,6 +1800,8 @@ typedef struct
 **	    dui_key dimension changed from DB_MAXKEYS to DB_MAXIXATTS
 **	5-Nov-2009 (kschendel) SIR 122739
 **	    Rename acount to kcount since that's what it is.
+**	16-Jul-2010 (kschendel) SIR 123450
+**	    Squeeze in data, key compression types.
 */
 typedef struct
 {
@@ -1817,7 +1819,8 @@ typedef struct
     i4			dui_ifill;	    /* Index Fill Factor. */
     i4			dui_dfill;	    /* Data Fill Factor. */
     i4			dui_lfill;	    /* Leaf Fill Factor. */
-    i4			dui_kcount;	    /* Key attribute count. */
+    i2			dui_kcount;	    /* Key attribute count. */
+    i2			dui_comptype;	    /* Data compression type if any */
     i4			dui_reltups;	    /* # of rows in secondary index */
     i4             	dui_allocation;     /* Allocation amount. */
     i4             	dui_extend;         /* Extend amount. */
@@ -1832,7 +1835,8 @@ typedef struct
 					    */
     i4			dui_buckets;	    /* # of main hash bucket pages if
 					    ** index is of HASH structure */
-    i4			dui_dimension;      /* RTREE dimension */
+    i2			dui_ixcomptype;	    /* Index (key) compression type */
+    i2			dui_dimension;      /* RTREE dimension */
     i4			dui_hilbertsize;    /* RTREE hilbertsize */
     DM_ATT		dui_key[DB_MAXIXATTS]; /* Attribute position .vs.
 					    ** key position map. */
@@ -3514,6 +3518,8 @@ FUNC_EXTERN DB_STATUS dm0l_index(
 			i4             extend,
 			i4		    pg_type,
 			i4		    page_size,
+			i2		    comptype,
+			i2		    ixcomptype,
 			i2		    name_id,
 			i4		    name_gen,
 			i4		    dimension,
