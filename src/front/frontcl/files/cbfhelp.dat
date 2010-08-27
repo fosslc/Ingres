@@ -211,6 +211,12 @@ dbms.buf_caches.title:    		'DBMS Buffer Caches'
 dbms.cache_dynamic.file:		dbmscady.hlp
 dbms.cache_dynamic.title:		'DBMS Dynamic Query Cache'
 
+dbms.batch_copy_optim.file:			dbmscpop.hlp
+dbms.batch_copy_optim.title:		'DBMS Batch Copy Optimization'
+
+dbms.table_auto_structure.file:		dbmstbst.hlp
+dbms.table_auto_structure.title:	'DBMS Automatic Table Structure'
+
 *.cache_name.file:			cachname.hlp
 dbms.cache_name.title:			'DBMS Cache Name'
 rms.cache_name.title:			'RMS Cache Name'
@@ -343,6 +349,7 @@ rms.log_readnolock.title:              'Log errors for readlock nolock'
 *.mechanisms.file:                      mechanisms.hlp
 *.mechanisms.title:			'Dynamically-loaded Mechanism List'
 
+*.name_service.file:			dbmsname.hlp
 dbms.name_service.title:		'DBMS Name Service'
 star.name_service.title:		'Star Name Service'
 recovery.name_service.title:		'Recovery Server Name Service'

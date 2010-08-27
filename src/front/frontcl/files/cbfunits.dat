@@ -9,6 +9,7 @@
 *.*.*.*.*.*:				unknown
 *.*.*.*.active_limit:			connections
 *.*.*.*.async_io:			boolean
+*.*.*.*.batch_copy_optim:		boolean
 *.*.*.*.blob_data:                      string
 *.*.*.*.blob_len:                     bytes
 *.*.*.*.cache_dynamic:			boolean

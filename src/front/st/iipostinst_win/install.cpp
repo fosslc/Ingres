@@ -3076,6 +3076,9 @@ CInstallation::CleanSharedMemory()
 **          and online_error_action.
 **  24-May-2010 (drivi01)
 **		Remove Ice, leave the code.
+**	13-Aug-2010 (drivi01)
+** 	    For upgrade scenarios, added a big list of parameters
+**	    that should be added to config.dat on upgrade.
 */
 BOOL
 CInstallation::SetConfigDat()
@@ -3171,6 +3174,66 @@ CInstallation::SetConfigDat()
 		   (LPCSTR)m_installPath);
 	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
 	cmd.Format("-keep table_auto_structure \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep batch_copy_optim \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep cardinality_check \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep degree_of_parallelism \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep fallocate \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep opf_inlist_thresh \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep opf_pq_partthreads \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep psf_vch_prec \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep qef_max_mem_sleep \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep qef_no_dependency_chk \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep result_structure \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep rule_del_prefetch \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep qef_memory \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep sole_cache \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep optimize_writes \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep readbackward_blocks \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep readforward_blocks \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep dmf_crypt_maxkeys \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep create_compression \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep default_journaling \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep sole_server \"%s\\ingres\\files\\dbms.rfm",
 		   (LPCSTR)m_installPath);
 	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
 	
@@ -3331,6 +3394,20 @@ CInstallation::SetConfigDat()
 		AppendToFile(temp, value2.GetBuffer());
 		bset_direct_io = TRUE;
 	}
+	ConfigKey.Format("ii.%s.dbms.*.direct_io_log", Host);
+	if (Local_PMget(ConfigKey, value) && !value.IsEmpty())
+	{
+		CString value2;
+		value2.Format("ii.$.config.direct_io_log:\t%s;\n", value.GetBuffer());
+		AppendToFile(temp, value2.GetBuffer());
+	}
+	ConfigKey.Format("ii.%s.dbms.*.direct_io_load", Host);
+	if (Local_PMget(ConfigKey, value) && !value.IsEmpty())
+	{
+		CString value2;
+		value2.Format("ii.$.config_direct_load:\t%s;\n", value.GetBuffer());
+		AppendToFile(temp, value2.GetBuffer());
+	}
 
 	temp2.Format("%s\\ingres\\files\\dbms.rfm", (LPCSTR)m_installPath);
 	temp3.Format("%s\\ingres\\temp\\rfmtemp", (LPCSTR)m_installPath);
@@ -3374,10 +3451,22 @@ CInstallation::SetConfigDat()
 		cmd.Format("-keep direct_io \"%s\\ingres\\temp\\rfmtemp",
 			   (LPCSTR)m_installPath);
 		Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+		cmd.Format("-keep direct_io_log \"%s\\ingres\\temp\\rfmtemp",
+			   (LPCSTR)m_installPath);
+		Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+		cmd.Format("-keep direct_io_load \"%s\\ingres\\temp\\rfmtemp",
+			   (LPCSTR)m_installPath);
+		Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
 	}
 	else
 	{
 		cmd.Format("-keep direct_io \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+		Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+		cmd.Format("-keep direct_io_log \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+		Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+		cmd.Format("-keep direct_io_load \"%s\\ingres\\files\\dbms.rfm",
 		   (LPCSTR)m_installPath);
 		Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
 	}
