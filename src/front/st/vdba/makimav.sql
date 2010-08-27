@@ -73,6 +73,10 @@
 ##  27-May-2010 (hanal04) Bug 123810
 ##      Bump server_id from 32 to 64 characters to bring it in line with
 ##      the server code.
+##  13-Aug-2010 (horda03) b124248
+##      Increase client_info in ima_server_sessions from 62 to 200. Note, the
+##      the theoretical maximum for this parameter is IIsqpMAX_PARM_SIZE (see
+##      IIsqParms()) for the GCA_GW_PARM message.
 */
 
 set autocommit on;
@@ -414,7 +418,7 @@ register table ima_server_sessions (
 		is 'exp.scf.scs.scb_client_user',
 	client_connect_string varchar(64) not null not default
 		is 'exp.scf.scs.scb_client_connect',
-	client_info varchar(64) not null not default
+	client_info varchar(200) not null not default
 		is 'exp.scf.scs.scb_client_info',
 	application_code integer4 not null not default
     is 'exp.scf.scs.scb_appl_code',
