@@ -1746,6 +1746,9 @@ pst_non_const_core(
 **	02-Nov-2009 (kiria01) 
 **	    Created to normalise an expression so that equivalents
 **	    are more cheaply found.
+**	15-Jun-2010 (kschendel) b123921
+**	    Don't reference past the end of *node when copying to fake.
+**	    Most parse tree nodes aren't as large as the full PST_QNODE.
 */
 
 DB_STATUS
@@ -1789,7 +1792,12 @@ pst_qtree_norm(
 		PST_QNODE *l, *c, **p = nodep;
 		bool reresolve = FALSE;
 
-		fake = **nodep;
+		/* *Not* fake = **nodep since the node will be allocated
+		** exact-size, and we mustn't copy past the end of *nodep.
+		*/
+		MEcopy((PTR) (*nodep),
+			sizeof(PST_QNODE) - sizeof(PST_SYMVALUE) + sizeof(PST_OP_NODE),
+			(PTR) &fake);
 		if ((*p)->pst_sym.pst_value.pst_s_op.pst_fdesc)
 		{
 		    (*p)->pst_sym.pst_value.pst_s_op.pst_fdesc = NULL;
@@ -1935,7 +1943,13 @@ pst_qtree_norm(
 	case PST_OR:
 	    {
 		PST_QNODE *l, *c, **p = nodep;
-		fake = **nodep;
+
+		/* *Not* fake = **nodep since the node will be allocated
+		** exact-size, and we mustn't copy past the end of *nodep.
+		*/
+		MEcopy((PTR) (*nodep),
+			sizeof(PST_QNODE) - sizeof(PST_SYMVALUE) + sizeof(PST_OP_NODE),
+			(PTR) &fake);
 		do
 		{
 		    while ((l = (*p)->pst_left) &&
