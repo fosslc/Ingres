@@ -8201,6 +8201,8 @@ bool		tempt)
 **	    Initialise the ADF_FN_BLK.adf_pat_flags.
 **	23-Sep-2009 (kiria01) b122578
 **	    Initialise the ADF_FN_BLK .adf_fi_desc and adf_dv_n members.
+**      09-Jul-2010 (coomi01) b124051
+**          Allow hex strings to be absorbed from stats file.
 */
 static
 DB_STATUS
@@ -8225,6 +8227,7 @@ char	    **argv)
     bool		empty_histo;
     bool		complete_flag;
     bool		rfpercell;
+    bool                hexFlag;
     OPS_DTLENGTH        histlength;	/* Length of a histogram element */
 
     /* opq_scanf requires f8 for floats, and i4 for regular ints */
@@ -8894,6 +8897,8 @@ char	    **argv)
 		i4	    	lnum;
 		bool	    	pmchars;
 		DB_DATA_VALUE 	idt;
+		DB_DATA_VALUE 	unpackedHex;
+		OPQ_IO_VALUE    unpack;
 		ADI_FI_ID   	fid;
 		DB_STATUS   	s;
 
@@ -8934,9 +8939,21 @@ char	    **argv)
 
 		m = 'v';
 		p = STchr(opq_line, m);
+
+		/*
+		** Look to see if hex encoded buffer value
+		*/
+		hexFlag = (0 == STncmp(p,"value HEX",9));		
+
+		/*
+		** Now move pointer upto the value itself.
+		*/
 		m = ':';
 		p = STchr(p, m);
 		p++;
+
+
+
 		dlen = STlength(p);
 		dlen--;
 		MEcopy((PTR)p, dlen,
@@ -8947,35 +8964,97 @@ char	    **argv)
 		idt.db_length = dlen + DB_CNTSIZE;
 		idt.db_prec = 0;
 
-		reqs = ADI_DO_BACKSLASH | ADI_DO_MOD_LEN;
-		s = adi_pm_encode(g->opq_adfcb, reqs,
-		    &idt, &lnum, &pmchars);
-
-		if (DB_FAILURE_MACRO(s))
-		    opq_adferror(g->opq_adfcb, (i4)E_OP0980_ADI_PM_ENCODE,
-				(i4)0, (PTR)cname, (i4)0, (PTR)tname);
-
-		s = adi_ficoerce(g->opq_adfcb, idt.db_datatype, 
-		    (*attrp)->hist_dt.db_datatype, &fid);
-
-		if (DB_FAILURE_MACRO(s))
-		    opq_adferror(g->opq_adfcb, (i4)E_OP0981_ADI_FICOERCE, 
-				(i4)0, (PTR)cname, (i4)0, (PTR)tname);
-
+		if (hexFlag)
 		{
-		    ADF_FN_BLK fblk;
+		    /* 
+		    ** first unpack the hex
+		    */
+		    unpackedHex.db_data     = (PTR)&unpack;
+		    unpackedHex.db_datatype = DB_LTXT_TYPE;
+		    unpackedHex.db_prec     = 0;	
+		    unpackedHex.db_collID   = 0;
 
-		    fblk.adf_fi_id = fid;
-		    fblk.adf_fi_desc = NULL;
-		    STRUCT_ASSIGN_MACRO((*attrp)->hist_dt, fblk.adf_r_dv);
-		    STRUCT_ASSIGN_MACRO(idt, fblk.adf_1_dv);
-		    fblk.adf_dv_n = 1;
-		    fblk.adf_pat_flags = AD_PAT_NO_ESCAPE;
-		    s = adf_func(g->opq_adfcb, &fblk);
+		    /*
+		    ** Do the work, and check result code.
+		    */
+		    s = adu_unhex(g->opq_adfcb, &idt, &unpackedHex);
+		    if (DB_FAILURE_MACRO(s))
+		    {
+			opq_adferror(g->opq_adfcb, (i4)E_AD5007_BAD_HEX_CHAR,
+				     (i4)0, (PTR)cname, (i4)0, (PTR)tname);
+		    }
+
+		    /*
+		    ** Read the length produced in the un-pack process
+		    */
+		    unpackedHex.db_length = ((DB_TEXT_STRING *)unpackedHex.db_data)->db_t_count + DB_CNTSIZE;
+
+		    /*
+		    ** Look up coercion
+		    */
+		    s = adi_ficoerce(g->opq_adfcb, idt.db_datatype,
+                                     (*attrp)->hist_dt.db_datatype, &fid);
+		    if (DB_FAILURE_MACRO(s))
+		    {
+			opq_adferror(g->opq_adfcb, (i4)E_OP0981_ADI_FICOERCE, 
+				     (i4)0, (PTR)cname, (i4)0, (PTR)tname);
+		    }
+
+		    {
+			/*
+			** Set up the coercion
+			*/
+			ADF_FN_BLK fblk;
+			fblk.adf_fi_id = fid;
+			fblk.adf_fi_desc = NULL;
+			STRUCT_ASSIGN_MACRO((*attrp)->hist_dt, fblk.adf_r_dv);
+			STRUCT_ASSIGN_MACRO(unpackedHex, fblk.adf_1_dv);
+			fblk.adf_dv_n = 1;
+			fblk.adf_pat_flags = AD_PAT_NO_ESCAPE;
+
+			/*
+			** Now do the coercion
+			*/
+			s = adf_func(g->opq_adfcb, &fblk);
+		    }
+
+		    if (DB_FAILURE_MACRO(s))
+			opq_adferror(g->opq_adfcb,(i4)E_OP0982_ADF_FUNC, 
+				     (i4)0, (PTR)cname, (i4)0, (PTR)tname);
 		}
-		if (DB_FAILURE_MACRO(s))
-		    opq_adferror(g->opq_adfcb,(i4)E_OP0982_ADF_FUNC, 
-				(i4)0, (PTR)cname, (i4)0, (PTR)tname);
+		else
+		{
+		    reqs = ADI_DO_BACKSLASH | ADI_DO_MOD_LEN;
+		    s = adi_pm_encode(g->opq_adfcb, reqs,
+				      &idt, &lnum, &pmchars);
+
+		    if (DB_FAILURE_MACRO(s))
+			opq_adferror(g->opq_adfcb, (i4)E_OP0980_ADI_PM_ENCODE,
+				     (i4)0, (PTR)cname, (i4)0, (PTR)tname);
+
+		    s = adi_ficoerce(g->opq_adfcb, idt.db_datatype, 
+				     (*attrp)->hist_dt.db_datatype, &fid);
+
+		    if (DB_FAILURE_MACRO(s))
+			opq_adferror(g->opq_adfcb, (i4)E_OP0981_ADI_FICOERCE, 
+				     (i4)0, (PTR)cname, (i4)0, (PTR)tname);
+
+		    {
+			ADF_FN_BLK fblk;
+
+			fblk.adf_fi_id = fid;
+			fblk.adf_fi_desc = NULL;
+			STRUCT_ASSIGN_MACRO((*attrp)->hist_dt, fblk.adf_r_dv);
+			STRUCT_ASSIGN_MACRO(idt, fblk.adf_1_dv);
+			fblk.adf_dv_n = 1;
+			fblk.adf_pat_flags = AD_PAT_NO_ESCAPE;
+			s = adf_func(g->opq_adfcb, &fblk);
+		    }
+		    if (DB_FAILURE_MACRO(s))
+			opq_adferror(g->opq_adfcb,(i4)E_OP0982_ADF_FUNC, 
+				     (i4)0, (PTR)cname, (i4)0, (PTR)tname);
+		}
+
 
 		/* The value produced by operations above
 		** should correspond to what adc_helem would

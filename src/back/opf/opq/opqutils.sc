@@ -2401,6 +2401,8 @@ bool		*nosample)
 **	9-nov-05 (inkdo01)
 **	    Optionally support hex output as directed by "-zhex" option.
 **	    Note, this can't be reloaded with optimizedb -i <filename>.
+**      09-Jul-2010 (coomi01) b124051
+**          Additionally use hex strings for byte data types.
 */
 VOID
 prelem(
@@ -2412,7 +2414,10 @@ FILE		   *outf)
     i4	default_width;
     i4  worst_width;
 
-    if (g->opq_hexout)
+    /*
+    ** Swtch on hex output if data type is byte, or the user has requested it.
+    */
+    if ((DB_BYTE_TYPE == datatype->db_datatype) || g->opq_hexout)
     {
 	/* Call adu_hex() to generate the hex string, then printf it. */
 	DB_STATUS	status;
@@ -2712,6 +2717,8 @@ char		*out)
 **      08-July-2010 (coomi01) b124029
 **          When looking for monotone problems, compare histogram keys
 **          directly.
+**      09-Jul-2010 (coomi01) b124051
+**          Detect byte datatypes, and then use hex strings to export values.
 */
 VOID
 opq_print_stats(
@@ -2737,6 +2744,10 @@ FILE		*outf,
 bool		verbose,
 bool		quiet)
 {
+    /*
+    ** Flag hex production by either command line, or use of a Byte data type
+    */
+    bool hexOut = g->opq_hexout || (DB_BYTE_TYPE == attrp->hist_dt.db_datatype);
     char histval_copy[DB_MAXSTRING+1]={0};
 
     /* Print information from iistatistics */
@@ -2908,7 +2919,10 @@ bool		quiet)
 
 	if (sizeof(OPN_PERCENT) == sizeof(f8))
 	{
-	    STprintf(text7o_fmt, TEXT7O1,
+	    /*
+	    ** Create a output formatter incorporating hex values if required.
+	    */
+	    STprintf(text7o_fmt, hexOut ? TEXT7O1_hex : TEXT7O1 ,
 		     g->opq_adfcb->adf_outarg.ad_f8width,
 		     g->opq_adfcb->adf_outarg.ad_f8prec, 
 		     g->opq_adfcb->adf_outarg.ad_f8width,
@@ -2916,7 +2930,7 @@ bool		quiet)
 	}
 	else
 	{
-	    STprintf(text7o_fmt, TEXT7O1,
+	    STprintf(text7o_fmt, hexOut ? TEXT7O1_hex : TEXT7O1,
 		     g->opq_adfcb->adf_outarg.ad_f4width,
 		     g->opq_adfcb->adf_outarg.ad_f4prec, 
 		     g->opq_adfcb->adf_outarg.ad_f4width,
@@ -2936,7 +2950,7 @@ bool		quiet)
 	    {
 		extra_len = ( (i4)MHlog10( (f8)cell_repf[cell] ) ) - 6;
 
-		STprintf(text7o_fmt, TEXT7O1,
+		STprintf(text7o_fmt, hexOut ? TEXT7O1_hex : TEXT7O1,
 			 g->opq_adfcb->adf_outarg.ad_f4width,
 			 g->opq_adfcb->adf_outarg.ad_f4prec,
 			 g->opq_adfcb->adf_outarg.ad_f4width ,
@@ -2971,10 +2985,12 @@ bool		quiet)
 			0, cell,
 			STlen(histval_copy), histval_copy);
 	    }
+
 	    /*
 	    ** Copy entire key to histval_copy
 	    */
 	    MEcopy(opq_convbuf.buf.value, value_length, histval_copy);
+
 
 	    curr_value += value_length;	/* Point to next boundary value */
 	}		

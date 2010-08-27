@@ -99,6 +99,8 @@
 **	    Add missing prototypes.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**  12-jul-2010 (coomi01) b124051 
+**      Create Hex value strings for stats
 */
 
 # define	NAMELEN		DB_GW1_MAXNAME
@@ -174,6 +176,12 @@
 # define TEXT7I "\ncell:%d    count:%f    value:"
 # define TEXT7O1 "\ncell:%%5d    count:%%-%d.%df    repf:%%-%d.%df    value:"
 # define TEXT7I1 "\ncell:%d    count:%f    repf:%f    value:"
+
+# define TEXT7O_hex  "\ncell:%%5d    count:%%-%d.%df    value HEX:"
+# define TEXT7I_hex  "\ncell:%d    count:%f    value HEX:"
+# define TEXT7O1_hex "\ncell:%%5d    count:%%-%d.%df    repf:%%-%d.%df    value HEX:"
+# define TEXT7I1_hex "\ncell:%d    count:%f    repf:%f    value HEX:"
+
 # define TEXT8 	"%s"
 # define TEXT9O	"\nunique chars: "
 # define TEXT9I	"\nunique chars: %d"
