@@ -463,6 +463,8 @@ SQLSTATE_MAPPING_REQUIRED
 **	    Added E_US0A00_2560 and corrected column alias syntax in error text.
 **	09-Jun-2010 (gupsh01) b123841.
 **	    Added error E_US24C4_9412.
+**      23-Jun-2010 (coomi01) b123763
+**	    Add error E_US18E8_6376 for attempts to alter iidbdb locations.
 **      01-Jul-2010 (horda03) B123234
 **          Altered the E_US10D9 message as date_trunc only works on absolute dates,
 **          the date_part function may/may not work on an Interval, it depends on
@@ -8968,6 +8970,22 @@ returned by the Ingres password encryption routine."
 */
 E_US18E7_6375:SS5000A_QUERY_ERROR
 "%0c: This operation is not allowed."
+/*%
+** Parameters:
+**	none
+**
+** Explanation:
+**	The user attempted to adapt location details for iidbdb.
+**	This could give rise chicken/egg problems as dbms comes up. 
+**
+** System Status:
+**	The statement is aborted.
+**
+** Recommendation:
+**	There should be no reason for the user to attempt this.
+*/
+E_US18E8_6376_EXT_IIDBDB_LOC:SS50000_MISC_ERRORS
+"Locations for IIDBDB may not be adjusted."
 /*%
 ** Parameters: 
 **	%0c - specified operation

@@ -3202,6 +3202,8 @@ QEE_DSH			*dsh )
 **      28-Jan-2008 (hanal04) Bug 119760
 **          Change that prevented location from being used for work and awork
 **          blocked previously allowed work, work combination.
+**      23-Jun-2010 (coomi01) b123763 
+**          Do not allow iidbdb locations to be extended
 **	   
 [@history_template@]...
 */
@@ -3337,6 +3339,14 @@ QEE_DSH			*dsh )
 	break;
     }
 
+    /*
+    **  Bar adjustments to iidbdb
+    */
+    if (0 == STncasecmp(dmm_cb.dmm_db_name.db_db_name, DU_DBDBNAME, STlength(DU_DBDBNAME)))
+    {
+	dsh->dsh_error.err_code = E_US18E8_6376_EXT_IIDBDB_LOC;
+	return(E_DB_ERROR);
+    }
 
     {
 	/*  Get record from iidatabase for this database. */
@@ -3893,6 +3903,8 @@ QEE_DSH			*dsh )
 **	    Forgive not finding IIEXTEND and go on to check
 **	    config file for extension before giving "not extended"
 **	    error.
+**      23-Jun-2010 (coomi01) b123763 
+**          Do not allow iidbdb locations to be adjusted
 */
 
 DB_STATUS 
@@ -4028,6 +4040,14 @@ qea_5del_location(
 	break;
     }
 
+    /*
+    **  Bar adjustments to iidbdb
+    */
+    if (0 == STncasecmp(dmm_cb.dmm_db_name.db_db_name, DU_DBDBNAME, STlength(DU_DBDBNAME)))
+    {
+	dsh->dsh_error.err_code = E_US18E8_6376_EXT_IIDBDB_LOC;
+	return(E_DB_ERROR);
+    }
 
     {
 	/*  Get record from iidatabase for this database. */
