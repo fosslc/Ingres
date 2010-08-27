@@ -418,6 +418,9 @@
 **          'string' / 'string' (char and c) add
 **       13-May-2010 (horda03) B123704
 **          Removed ADFI_1470_VARCHAR_DIV_VARCHAR and ADFI_1471_VARCHAR_MUL_VARCHAR
+**      15-Jun-2010 (horda030 B123926
+**          Add ADFI_1471_IFNULL_LVCH_LVCH, ADFI_1472_IFNULL_LBYTE_LBYTE and
+**          ADFI_1473_IFNULL_LNVCH_LNVCH
 **/
 
 
@@ -1762,3 +1765,6 @@
 #define ADFI_1468_MONEY_MUL_VARCHAR	(ADI_FI_ID)1468 /* money * varchar */
 #define ADFI_1469_VARCHAR_MUL_MONEY	(ADI_FI_ID)1469 /* varchar * money */
 #define ADFI_1470_SOUNDEX_DM	        (ADI_FI_ID)1470 /* soundex_dm() */
+#define ADFI_1471_IFNULL_LVCH_LVCH	(ADI_FI_ID)1471 /* ifnull(lvarchar, lvarchar) */
+#define ADFI_1472_IFNULL_LBYTE_LBYTE	(ADI_FI_ID)1472 /* ifnull(lbyte, lbyte) */
+#define ADFI_1473_IFNULL_LNVCH_LNVCH	(ADI_FI_ID)1473 /* ifnull(lnvarchar,long_nvarchar) */

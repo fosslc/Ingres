@@ -4371,6 +4371,9 @@ IIcpfrom_init (
 **          Having called adu_unorm() to convert to NFD/NFC we need to copy
 **          the result to the tuple that is being inserted, not the
 **          copy buffer that's being read.
+**      21-Jun-2010 (horda03) b123926
+**          Because adu_unorm() and adu_utf8_unorm() are also called via 
+**          adu_lo_filter() change parameter order.
 */
 
 static STATUS
@@ -4519,7 +4522,7 @@ IIcpfrom_binary(II_THR_CB *thr_cb, II_CP_STRUCT *copy_blk,
 	    MEcopy (tup_ptr, rowlen, cmap->cp_srcbuf);
 		
 	    if ((status = 
-		adu_unorm(IIlbqcb->ii_lq_adf, &dst_dv, &src_dv, 0)) != E_DB_OK)
+		adu_unorm(IIlbqcb->ii_lq_adf, &src_dv, &dst_dv)) != E_DB_OK)
 	    {
 		char err_buf[15];
 		CVla(copy_blk->cp_rowcount + 1, err_buf);

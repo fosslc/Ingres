@@ -68,6 +68,15 @@
 **	    adu_pat_MakeCEchar where not executing this loop at all could
 **	    result in an infinite loop with the source string pointer never
 **	    advancing.
+**      15-Jun-2010 (horda03) b123926
+**          ifnull(lnvchar,lnvchar) calls adu_utf8_unorm with the LNVCHAR
+**          datatype, so handle this type.
+**      18-Jun-2010 (horda03) b123926
+**          After testing in main found that the calls to adu_long_unorm
+**          supplied the parameters in the wrong order.
+**      21-Jun-2010 (horda03) b123926
+**          Because adu_unorm() and adu_utf8_unorm() are also called via 
+**          adu_lo_filter() change parameter order.
 */
 
 /* forward refs */
@@ -1580,11 +1589,13 @@ MakeCE(
 **      15-May-2009 (hanal04) Bug 121850
 **          If nfc_flag then reCompose the output as stated in the function
 **          description.
+**      18-Jun-2010 (horda03) b123926
+**          Swap order of dst_dv and src_dv in adu_long_unorm.
 */
 DB_STATUS
 adu_unorm(ADF_CB		*adf_scb,
-	DB_DATA_VALUE	*dst_dv,
-	DB_DATA_VALUE	*src_dv) 
+	DB_DATA_VALUE	*src_dv, 
+	DB_DATA_VALUE	*dst_dv)
 {
     ADUUCETAB		*cetable = (ADUUCETAB *)adf_scb->adf_ucollation;
     DB_STATUS		db_stat = E_DB_OK;
@@ -1611,7 +1622,7 @@ adu_unorm(ADF_CB		*adf_scb,
 
     if (src_dv->db_datatype == DB_LNVCHR_TYPE ||
 	src_dv->db_datatype == DB_LNLOC_TYPE)
-	return adu_long_unorm (adf_scb, dst_dv, src_dv);
+	return adu_long_unorm (adf_scb, src_dv, dst_dv);
 
    if ( src_dv->db_datatype != DB_NCHR_TYPE && 
 	src_dv->db_datatype != DB_NVCHR_TYPE )
@@ -1929,11 +1940,15 @@ adu_unorm(ADF_CB		*adf_scb,
 **          Set the nfc_flag passed to adu_nvchr_fromutf8() based on the
 **          dst_dv->db_datatype. For non-unicode types we should not
 **          reCombine characters.
+**      15-Jun-2010 (horda03) b123
+**          Don't error if DB_LNVCHR_TYPE paramaeter supplied.
+**      18-Jun-2010 (horda03) b123926
+**          Swap order of dst_dv and src_dv in adu_long_unorm.
 */
 DB_STATUS
 adu_utf8_unorm(ADF_CB	*adf_scb,
-	DB_DATA_VALUE	*dst_dv,
-	DB_DATA_VALUE	*src_dv)
+	DB_DATA_VALUE	*src_dv,
+	DB_DATA_VALUE	*dst_dv)
 {
     DB_STATUS		db_stat = E_DB_OK;
     DB_DATA_VALUE	temp_dv;
@@ -1946,8 +1961,10 @@ adu_utf8_unorm(ADF_CB	*adf_scb,
     u_i2		saved_uninorm_flag;
 
     if (src_dv->db_datatype == DB_LVCH_TYPE ||
-	src_dv->db_datatype == DB_LCLOC_TYPE)
-	return adu_long_unorm (adf_scb, dst_dv, src_dv);
+	src_dv->db_datatype == DB_LCLOC_TYPE ||
+        src_dv->db_datatype == DB_LNVCHR_TYPE ||
+        src_dv->db_datatype == DB_LNLOC_TYPE)
+	return adu_long_unorm (adf_scb, src_dv, dst_dv);
 
     if ((src_dv->db_datatype != DB_CHR_TYPE) && 
        (src_dv->db_datatype != DB_TXT_TYPE) && 

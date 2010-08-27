@@ -485,6 +485,9 @@ NO_OPTIM = rs4_us5 su4_u42 su4_cmw i64_aix r64_us5
 **          Add cases for BOO_ISFALSE, BOO_NOFALSE, BOO_ISTRUE, BOO_NOTRUE,
 **          BOO_EQ_BOO, BOO_NE_BOO, BOO_GT_BOO, BOO_LE_BOO, BOO_LT_BOO,
 **          BOO_GE_BOO, BOO_ISUNKN and BOO_NOUNKN in ade_execute_cx.
+**      21-Jun-2010 (horda03) b123926
+**          Because adu_unorm() and adu_utf8_unorm() are also called via 
+**          adu_lo_filter() change parameter order.
 **/
 
 
@@ -1345,6 +1348,9 @@ i4                 *ade_needed;
 **          updating the adf_uninorm_flag in the ADF_CB.
 **	18-Mar-2010 (kiria01) b123438
 **	    Added SINGLETON aggregate for scalar sub-query support.
+**      21-Jun-2010 (horda03) b123926
+**          Because adu_unorm() and adu_utf8_unorm() are also called via 
+**          adu_lo_filter() change parameter order.
 */
 
 
@@ -2036,9 +2042,9 @@ if (f->ins_icode >= 0) adfi_counts[f->ins_icode]++;
 
 		if ((dv[0].db_datatype == DB_NVCHR_TYPE) || 
 		    (dv[0].db_datatype == DB_NCHR_TYPE))
-		    db_stat = adu_unorm(adf_scb, &dv[0], &dv[1]);
+		    db_stat = adu_unorm(adf_scb, &dv[1], &dv[0]);
 		else
-		    db_stat = adu_utf8_unorm(adf_scb, &dv[0], &dv[1]);
+		    db_stat = adu_utf8_unorm(adf_scb, &dv[1], &dv[0]);
 
 		if (db_stat != E_DB_OK)
 		  return(db_stat);

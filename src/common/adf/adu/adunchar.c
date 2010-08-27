@@ -177,6 +177,9 @@ ad0_nvchr_casemap(
 **          A standard interface is expected by fcn lookup / execute
 **          operations. Force NFC normalization is now achieved by temporarily
 **          updating the adf_uninorm_flag in the ADF_CB.
+**      21-Jun-2010 (horda03) b123926
+**          Because adu_unorm() and adu_utf8_unorm() are also called via 
+**          adu_lo_filter() change parameter order.
 */
 
 /*{
@@ -647,9 +650,9 @@ ADC_KEY_BLK	*key_block)
 	{
 	    result = adu_nvchr_coerce(scb, &key_block->adc_kdv, &normdv);
 	    if (key_block->adc_lokey.db_data && result == E_DB_OK)
-		result = adu_unorm(scb, &key_block->adc_lokey, &normdv);
+		result = adu_unorm(scb, &normdv, &key_block->adc_lokey);
 	    if (key_block->adc_hikey.db_data && result == E_DB_OK)
-		result = adu_unorm(scb, &key_block->adc_hikey, &normdv);
+		result = adu_unorm(scb, &normdv, &key_block->adc_hikey);
 	}
 	break;
 
@@ -660,7 +663,7 @@ ADC_KEY_BLK	*key_block)
 	{
 	    result = adu_nvchr_coerce(scb, &key_block->adc_kdv, &normdv);
 	    if (result == E_DB_OK)
-		result = adu_unorm(scb, &key_block->adc_hikey, &normdv);
+		result = adu_unorm(scb, &normdv, &key_block->adc_hikey);
 	}
 	break;
 
@@ -671,7 +674,7 @@ ADC_KEY_BLK	*key_block)
 	{
 	    result = adu_nvchr_coerce(scb, &key_block->adc_kdv, &normdv);
 	    if (result == E_DB_OK)
-		result = adu_unorm(scb, &key_block->adc_lokey, &normdv);
+		result = adu_unorm(scb, &normdv, &key_block->adc_lokey);
 	}
 	break;
 
@@ -725,7 +728,7 @@ ADC_KEY_BLK	*key_block)
 	    /* We coerce the pattern into a temporary buffer which will be normallised*/
 	    result = adu_nvchr_coerce(scb, &key_block->adc_kdv, &normdv);
 	    if (result == E_DB_OK)
-		result = adu_unorm(scb, &normdv2, &normdv);
+		result = adu_unorm(scb, &normdv, &normdv2);
 
 	    /* Now we must scan pattern and split into high and low */
 	    if (result == E_DB_OK)
@@ -1097,9 +1100,9 @@ ADC_KEY_BLK	*key_block)
 	{
 	    result = adu_nvchr_coerce(scb, &key_block->adc_kdv, &normdv);
 	    if (key_block->adc_lokey.db_data && result == E_DB_OK)
-		result = adu_unorm(scb, &key_block->adc_lokey, &normdv);
+		result = adu_unorm(scb, &normdv, &key_block->adc_lokey);
 	    if (key_block->adc_hikey.db_data && result == E_DB_OK)
-		result = adu_unorm(scb, &key_block->adc_hikey, &normdv);
+		result = adu_unorm(scb, &normdv, &key_block->adc_hikey);
 	}
 	break;
 
@@ -1110,7 +1113,7 @@ ADC_KEY_BLK	*key_block)
 	{
 	    result = adu_nvchr_coerce(scb, &key_block->adc_kdv, &normdv);
 	    if (result == E_DB_OK)
-		result = adu_unorm(scb, &key_block->adc_hikey, &normdv);
+		result = adu_unorm(scb, &normdv, &key_block->adc_hikey);
 	}
 	break;
 
@@ -1121,7 +1124,7 @@ ADC_KEY_BLK	*key_block)
 	{
 	    result = adu_nvchr_coerce(scb, &key_block->adc_kdv, &normdv);
 	    if (result == E_DB_OK)
-		result = adu_unorm(scb, &key_block->adc_lokey, &normdv);
+		result = adu_unorm(scb, &normdv, &key_block->adc_lokey);
 	}
 	break;
 
@@ -1162,7 +1165,7 @@ ADC_KEY_BLK	*key_block)
 	    /* We coerce the pattern into a temporary buffer which will be normallised*/
 	    result = adu_nvchr_coerce(scb, &key_block->adc_kdv, &normdv);
 	    if (result == E_DB_OK)
-		result = adu_unorm(scb, &normdv2, &normdv);
+		result = adu_unorm(scb, &normdv, &normdv2);
 
 	    /* Now we must scan pattern and split into high and low */
 	    if (result == E_DB_OK)
@@ -3714,7 +3717,7 @@ DB_DATA_VALUE     *rdv)
 
     if ((db_stat = adu_moveunistring (adf_scb, outstr, retlen, &tempdb) 
 		!= E_DB_OK) || 
-        (db_stat = adu_unorm (adf_scb, rdv, &tempdb)
+        (db_stat = adu_unorm (adf_scb, &tempdb, rdv)
 		!= E_DB_OK))
     {
 	if (bigbuf != NULL)
@@ -5470,7 +5473,7 @@ i4		    caseflag
     tempdb.db_collID = rdv->db_collID;
     db_stat = adu_moveunistring (adf_scb, outstr, resultlen, &tempdb); 
 
-    if (db_stat = adu_unorm (adf_scb, rdv, &tempdb) != E_DB_OK)
+    if (db_stat = adu_unorm (adf_scb, &tempdb, rdv) != E_DB_OK)
         return (db_stat);
     if (bigbuf != NULL)
 	MEfree((PTR) bigbuf);

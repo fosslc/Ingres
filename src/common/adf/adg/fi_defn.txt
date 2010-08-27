@@ -482,6 +482,8 @@
 #	3-jun-2010 (stephenb)
 #		Fix ADFI_1457_NVL2_ANY with correct return type and new
 #		lenspec. (Bug 123880)
+#       15-Jun-2010 (horda03) B123926
+#           Add IFNULL FI for LONG VARCHAR and LONG BYTE.
 
 group ADI_COMPARISON
 
@@ -5901,6 +5903,34 @@ group ADI_NORM_FUNC
 	    result DB_VCH_TYPE
 	    operands DB_VCH_TYPE DB_VCH_TYPE
 	    routine adu_ifnull
+
+        fi ADFI_1473_IFNULL_LNVCH_LNVCH
+            description lnvchr : ifnull(lnvchr,lnvchr)
+	    flags ADI_F32768_IFNULL
+            lenspec ADI_LONGER
+            null_preinst ADE_0CXI_IGNORE
+            result DB_LNVCHR_TYPE
+            operands DB_LNVCHR_TYPE DB_LNVCHR_TYPE
+            routine adu_ifnull
+
+        fi ADFI_1471_IFNULL_LVCH_LVCH
+            description all : ifnull(lvch,lvch)
+	    flags ADI_F32768_IFNULL
+            lenspec ADI_LONGER
+            null_preinst ADE_0CXI_IGNORE
+            result DB_LVCH_TYPE
+            operands DB_LVCH_TYPE DB_LVCH_TYPE
+            routine adu_ifnull
+
+        fi ADFI_1472_IFNULL_LBYTE_LBYTE
+            description all : ifnull(lbyte,lbyte)
+	    flags ADI_F32768_IFNULL
+            lenspec ADI_LONGER
+            null_preinst ADE_0CXI_IGNORE
+            result DB_LBYTE_TYPE
+            operands DB_LBYTE_TYPE DB_LBYTE_TYPE
+            routine adu_ifnull
+
 
     operator ADI_STRUC_OP
 
