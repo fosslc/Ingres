@@ -3583,6 +3583,8 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	    Batch up mass IN lists into upto MAXI2-1 elements, the maximum
 **	    supported. This was previously only done for the sorted form but
 **	    the unsort will benefit too later if the optimiser orders later on.
+**	27-Jul-2010 (wanfr01) b124132
+**	    'Next valid <sequence>' is not allowed in an order by clause.
 **      28-Jul-2010 (horda03) B123414
 **          Need to allow "...HAVING <constant>" expressions, as with
 **          Constant Folding the list of restrictions can be reduced
@@ -38554,7 +38556,7 @@ ansi_seqop:		aseqopwd obj_spec
 	/* Verify it's ok to issue next/current value. */
 	if ($Yin_groupby_clause || $Yinhaving || ($Ynonupdt &&
 	    ($Ynonupdt_reason & PSS_UNION_IN_OUTERMOST_SUBSEL)) ||
-	    $Yin_where_clause)
+	    $Yin_where_clause || $Yin_orderby)
 	{
 	    (void)psf_error(6319L, 0L, PSF_USERERR,
 		&err_code, &psq_cb->psq_error, 0);
@@ -38629,7 +38631,7 @@ oracle_seqop:		generic_ident PERIOD generic_ident PERIOD oseqopwd
 	/* Verify it's ok to issue next/current value. */
 	if ($Yin_groupby_clause || $Yinhaving || ($Ynonupdt &&
 	    ($Ynonupdt_reason & PSS_UNION_IN_OUTERMOST_SUBSEL)) ||
-	    $Yin_where_clause)
+	    $Yin_where_clause || $Yin_orderby)
 	{
 	    (void)psf_error(6319L, 0L, PSF_USERERR,
 		&err_code, &psq_cb->psq_error, 0);
@@ -38684,7 +38686,7 @@ oracle_seqop:		generic_ident PERIOD generic_ident PERIOD oseqopwd
 	/* Verify it's ok to issue next/current value. */
 	if ($Yin_groupby_clause || $Yinhaving || ($Ynonupdt &&
 	    ($Ynonupdt_reason & PSS_UNION_IN_OUTERMOST_SUBSEL)) ||
-	    $Yin_where_clause)
+	    $Yin_where_clause || $Yin_orderby)
 	{
 	    (void)psf_error(6319L, 0L, PSF_USERERR,
 		&err_code, &psq_cb->psq_error, 0);
