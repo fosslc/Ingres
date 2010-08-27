@@ -12,7 +12,7 @@ using System.Runtime.CompilerServices;
 
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Ingres Corporation")]
-[assembly: AssemblyCopyright("© 2006, 2009 Ingres Corporation. All Rights Reserved.")]
+[assembly: AssemblyCopyright("© 2006, 2010 Ingres Corporation. All Rights Reserved.")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]  // culture neutral
 [assembly: System.Runtime.InteropServices.ComVisible(false)]
@@ -30,7 +30,7 @@ using System.Runtime.CompilerServices;
 // by using the '*' as shown below:
 
 [assembly: AssemblyVersion(    "2.1.0.0000")]
-[assembly: AssemblyFileVersion("2.1.1000.20")]
+[assembly: AssemblyFileVersion("2.1.1010.20")]
 
 //
 // In order to sign your assembly you must specify a key to use. Refer to the 
