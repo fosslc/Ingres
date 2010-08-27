@@ -1491,6 +1491,9 @@ static DB_STATUS test_redo(
 **	03-Aug-2010 (miket) SIR 122403
 **	    Trap attempt to change the structure of an encrypted index;
 **	    only HASH is valid. Also remove unreferenced input_is_index.
+**	09-Aug-2010 (miket) SIR 122403
+**	    Fix check for attempt to make an encrypted column a primary
+**	    key by moving the code to the correct loop location.
 */
 DB_STATUS
 dm2u_modify(
@@ -3879,14 +3882,6 @@ DB_ERROR        *dberr)
 			t->tcb_atts_ptr[j].attnmstr, ' ',
 			DB_ATT_MAXNAME, tmpattnm.db_att_name);
 
-		    /* Only encrypted hash secondary indices are allowed
-		    ** for encrypted columns.
-		    */
-		    if (t->tcb_atts_ptr[j].encflags & ATT_ENCRYPT)
-		    {
-			SETDBERR(dberr, 0, E_DM0066_BAD_KEY_TYPE);
-			break;
-		    }
 		    if ((MEcmp(tmpattnm.db_att_name, 
 			 (char *)&mcb->mcb_key[i]->key_attr_name,
 			 sizeof(mcb->mcb_key[i]->key_attr_name)) == 0) && 
@@ -3901,6 +3896,15 @@ DB_ERROR        *dberr)
 			if ((key_map[j >> 5] & (1 << (j & 0x1f))))
 			{
 			    SETDBERR(dberr, 0, E_DM001C_BAD_KEY_SEQUENCE);
+			    break;
+			}
+
+			/* Only encrypted hash secondary indices are allowed
+			** for encrypted columns.
+			*/
+			if (t->tcb_atts_ptr[j].encflags & ATT_ENCRYPT)
+			{
+			    SETDBERR(dberr, 0, E_DM0066_BAD_KEY_TYPE);
 			    break;
 			}
 
