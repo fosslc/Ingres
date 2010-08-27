@@ -65,7 +65,6 @@ extern "C"{
 #include <compat.h>
 #include <cs.h>
 #include <pc.h>
-#include <cx.h>
 }
 
 #include "mainfrm.h"

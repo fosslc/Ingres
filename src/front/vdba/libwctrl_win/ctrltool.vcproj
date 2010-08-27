@@ -507,7 +507,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\Inc_win;..\Inc4res_win"
+				AdditionalIncludeDirectories="..\Inc_win;..\Inc4res_win;&quot;$(ING_SRC)\cl\hdr\hdr&quot;;&quot;$(ING_SRC)\cl\hdr\hdr_unix_win&quot;;&quot;$(ING_SRC)\cl\hdr\hdr_win&quot;;&quot;$(ING_SRC)\cl\clf\hdr_unix_win&quot;;&quot;$(ING_SRC)\cl\clf\hdr_win&quot;;&quot;$(ING_SRC)\gl\hdr\hdr&quot;;$(ING_SRC)\common\hdr\hdr"
 				PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;_CRT_SECURE_NO_WARNINGS"
 				StringPooling="true"
 				RuntimeLibrary="2"
@@ -969,7 +969,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\Inc_win;..\Inc4res_win"
+				AdditionalIncludeDirectories="..\Inc_win;..\Inc4res_win;&quot;$(ING_SRC)\cl\hdr\hdr&quot;;&quot;$(ING_SRC)\cl\hdr\hdr_unix_win&quot;;&quot;$(ING_SRC)\cl\hdr\hdr_win&quot;;&quot;$(ING_SRC)\cl\clf\hdr_unix_win&quot;;&quot;$(ING_SRC)\cl\clf\hdr_win&quot;;&quot;$(ING_SRC)\gl\hdr\hdr&quot;;$(ING_SRC)\common\hdr\hdr"
 				PreprocessorDefinitions="_DEBUG;WIN32;_WINDOWS;_CRT_SECURE_NO_WARNINGS"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
