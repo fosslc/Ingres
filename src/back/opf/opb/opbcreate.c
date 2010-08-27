@@ -1993,6 +1993,9 @@ opb_nulljoin(
 **	24-Jul-2010 (kiria01) b124124
 **	    Don't just check for pre-sorted - perform sort, biased to pre-sorted
 **	    data.
+**	28-Jul-2010 (kiria01) b124138
+**	    REPEATABLE queries with parameters in the IN list should block attempts
+**	    to pre-sort for ADE_COMPAREN.
 */
 bool
 opb_bfinit(
@@ -2408,8 +2411,10 @@ opb_bfinit(
 		{
 		    DB_DATA_VALUE *pd = &(*p)->pst_sym.pst_dataval;
 		    q = (*p)->pst_left;
-		    if (!pd->db_data)
-			/* Give up - nodata to work with */
+		    if (!pd->db_data ||
+			(*p)->pst_sym.pst_type != PST_CONST ||
+			(*p)->pst_sym.pst_value.pst_s_cnst.pst_tparmtype == PST_RQPARAMNO)
+			/* Give up - nodata to work with or a REPEAT parameter */
 			goto notsorted;
 
 		    if (pd->db_datatype < 0 && pd->db_length >= 0)
