@@ -1420,6 +1420,13 @@ i4	    (*user_routine)();		/* Function to get/put rows */
 **	    Allow Windows to specify a filetype so that advanced users can
 **	    control the file interpretation mode.  (CRLF conversion, control-Z
 **	    as EOF.)
+**	4-Aug-2010 (kschendel) b124193
+**	    Re-enable the error-log file if copy from program.
+**	    At one point, I had thought to implement this by seeking the
+**	    input (since COPY no longer constructs an entire input row).
+**	    This would have been impossible for copy from program.
+**	    This was changed to copy on the fly to an error row buffer, but
+**	    logging was never turned back on for program.  Fix.
 */
 
 static STATUS
@@ -2670,7 +2677,7 @@ IIcpinit( II_LBQ_CB *IIlbqcb, II_CP_STRUCT *copy_blk, i4  msg_type )
     ** Don't however log if there are LOB's, too hard.
     */
     copy_blk->cp_rowlog = (copy_blk->cp_logname != NULL);
-    if (copy_blk->cp_program || copy_blk->cp_has_blobs )
+    if (copy_blk->cp_has_blobs )
 	copy_blk->cp_rowlog = FALSE;
     if (copy_blk->cp_rowlog && copy_blk->cp_direction == CPY_FROM)
     {
