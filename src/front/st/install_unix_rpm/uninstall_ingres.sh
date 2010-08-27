@@ -95,6 +95,14 @@
 ##      11-Aug-2008 (hweho01)
 ##	   Change package name from ingres2006 to ingres for 9.2 release,
 ##	   use (PROD_PKGNAME) which will be substituted by jam during build.
+##	07-Jul-2010 (hanje04)
+##	   BUG 124047
+##	   Tighten up search patten so we don't pick up ingresvw when looking
+##	   for ingres-... packages.
+##	   Script seems to be quite badly broken for Ingres 10 in a number of
+##	   places, (-a would miss non-renamed packages) so fix up to find all
+##	   (PROD_PKGNAME) packages (including ingres2006 and ca-ingres, when
+##	   PROD_PKGNAME is ingres).
 ##
 self=`basename $0`
 host=`hostname`
@@ -209,16 +217,18 @@ remove_installation()
 	case "$1" in
 	  [A-Z][A-Z]|\
           [A-Z][0-9])
-			pkglist=`rpm -qa | egrep "(PROD_PKGNAME).*${1}" |\
-					grep -v license`
-			# If we're cleaning out everything get II_SYSTEM
-			$clean && ii_sys=`get_prefix (PROD_PKGNAME)-$1`
+			pkglist=`rpm -qa | \
+				     egrep "(PROD_PKGNAME)(2006)*-.*${1}" |\
+				     grep -v license`
+			core=`rpm -qa | \
+				egrep "(PROD_PKGNAME)(2006)*-${1}-[1-9][0-9]*\."`
 			;;
 	   ingres)
-			pkglist=`rpm -qa | grep (PROD_PKGNAME) | \
-			grep -v [[:upper:]] | egrep -v "license|documentation"`
-			# If we're cleaning out everything get II_SYSTEM
-			$clean && ii_sys=`get_prefix (PROD_PKGNAME)`
+			pkglist=`rpm -qa | egrep "(PROD_PKGNAME)(2006)*-" | \
+				    grep -v [[:upper:]] | \
+				    egrep -v "license|documentation"`
+			core=`rpm -qa | \
+				egrep "(PROD_PKGNAME)(2006)*-[1-9][0-9]*\."`
 			;;
 	     *)
 			echo "$1 in an invalid identifier, skipping..."
@@ -238,6 +248,9 @@ EOF
 	    shift
 	    continue
 	}
+
+	# If we're cleaning out everything get II_SYSTEM
+	$clean && ii_sys=`get_prefix $core`
 
 	$prompt &&
 	{
@@ -326,13 +339,13 @@ EOF
     # Get RPM package list ignoring ingres-license
     echo "Generating list of installations..."
     rpm -qa | grep -v license | \
-	grep "(PROD_PKGNAME)-\([[:upper:]]\|[[:digit:]]\.[[:digit:]]\)" |\
+	egrep "(PROD_PKGNAME)(2006)*-([[:upper:]]|[[:digit:]]+\.[[:digit:]])" |\
 	 sort > $instlst
     
     # Remove each installation in turn
     for pkg in `cat $instlst`
     do
- 	inst=`echo "$pkg" | cut -d- -f3`
+ 	inst=`echo "$pkg" | cut -d- -f2`
 	case $inst in
 	    # Renamed installation
 	    [A-Z][A-Z]|\
@@ -340,6 +353,7 @@ EOF
 			remove_installation $inst
 			;;
 	    # 'Vanilla' installation
+   1[0-9].[0-9]\.[0-9]|\
    [3-9]\.[0-9]\.[0-9])
 			remove_installation (PROD_PKGNAME)
 			;;
