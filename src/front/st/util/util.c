@@ -123,6 +123,9 @@
 **	    Include cv.h for function defintions
 **	27-Jul-2010 (frima01) Bug 124137
 **	   Evaluate return code of NMloc to avoid using corrupt pointers.
+**      04-Aug-2010 (horda03) B124182
+**          Correct len when first character is a '-' when testing for an
+**          integer value.
 */
 
 #ifndef NT_GENERIC
@@ -299,7 +302,10 @@ char *s;
 		return( FALSE );
 	len = STlength( s );
 	if( CMcmpcase( s, ERx( "-" ) ) == 0 )
+        {
 		s = CMnext( s ); 
+                len--;
+        }
 	for( c = s; c < s + len; c = CMnext( c ) ) 
 	{
 		if( ! CMdigit( c ) )
