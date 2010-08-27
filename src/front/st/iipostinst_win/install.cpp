@@ -916,6 +916,16 @@
 **      and stopped working due to long ids change.
 **      This change replaces the obsolete API call with a range of
 **      supported open API calls.
+**  24-Jun-2010 (frima01) Bug 123753
+**      Move LoadDemodb after and StarPostInstallation before UpgradeDatabases.
+**  30-Jun-2010 (drivi01) Bug 123753
+**      Add function StartOneServer to avoid having to recycle
+**      the whole installation and save time during post installation.
+**      Remove Sleep from LoadDemodb, don't think it's needed.
+**      Start Star server after installation only in case of upgrade
+**      to ensure the star databases are upgraded, otherwise it isn't
+**      needed, save time and don't start.
+**      
 **      
 **	    
 */
@@ -3926,6 +3936,32 @@ CInstallation::StartServer(BOOL Comment/*=TRUE*/)
 }
 
 BOOL
+CInstallation::StartOneServer(char *server_name)
+{
+     BOOL error = FALSE;
+	
+     if (m_bClusterInstall)
+     {
+	/* In case of cluster, we have to bring the whole cluster down and then up
+        ** assuming Star or server was setup properly and will come up.
+	** The counter of the server at this point has to be set to 1, ensure that
+	** it is the case.
+	*/
+	if (!OfflineResource())
+	    error = TRUE;
+	if (!OnlineResource())
+	    error = TRUE;
+     }
+     else
+     {
+	if (Exec(m_installPath + "\\ingres\\utility\\ingstart.exe", server_name))
+	    error = TRUE;
+     }
+
+return (!error);
+}
+
+BOOL
 CInstallation::StopServer(BOOL echo)
 {
     BOOL error = FALSE;
@@ -4286,9 +4322,6 @@ CInstallation::ThreadPostInstallation()
 
     if (bret && dbms->m_selected)	
 	bret = ServerPostInstallation();
-
-    if (bret && star->m_selected)	
-	bret = StarPostInstallation();
 
     if (bret && replicat->m_selected)	
 	bret = ReplicatPostInstallation();
@@ -4721,6 +4754,7 @@ CInstallation::ServerPostInstallation()
     BOOL	bret = TRUE;
     CString	strBuffer;
     CComponent	*dbms = GetDBMS();
+    CComponent	*star = GetStar();
     CString cmd;
     BOOL silent;
 
@@ -4806,13 +4840,19 @@ CInstallation::ServerPostInstallation()
     if (bret && !LoadIMA())
 	bret = FALSE;
 
-	if (bret && DatabaseExists("demodb") && !LoadDemodb())
-	bret = FALSE;
-
     CComponent *ice = theInstall.GetICE();
     if ((ice) && (ice->m_selected))
     {
 	if (bret && !LoadICE())
+	    bret = FALSE;
+    }
+    
+    /* Finish star server configuration and start it for the upgrade */
+    if (bret && star->m_selected)	
+    {
+	bret = StarPostInstallation();
+	/* drivi01: Start only star server here not to waste time recycling the whole installation */
+	if (bret && m_DBMSupgrade && !StartOneServer("-iistar"))
 	    bret = FALSE;
     }
 
@@ -4830,7 +4870,10 @@ CInstallation::ServerPostInstallation()
 	m_attemptedUDBupgrade = TRUE;
     }
 
-	StopServer(TRUE);
+    if (bret && DatabaseExists("demodb") && !LoadDemodb())
+    bret = FALSE;
+
+    StopServer(TRUE);
 
     if (bret)
     {
@@ -5419,7 +5462,6 @@ CInstallation::LoadDemodb()
 
     SetStdHandle(STD_INPUT_HANDLE, SaveStdin);
     CloseHandle(newstdin);
-    Sleep (1500);
 
 	if (i == 0)
 		if(!CheckpointOneDatabase("-j demodb"))
