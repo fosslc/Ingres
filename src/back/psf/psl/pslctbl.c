@@ -545,6 +545,9 @@ static char * psl_seckey_attr_name(
 **	    Check for anatomically incorrect encryption specifications.
 **	20-Jul-2010 (kschendel) SIR 124104
 **	    Pass in with-clauses, check for compression, use default.
+**	28-Jul-2010 (kschendel) SIR 124104
+**	    Also set pst_compress in the create table header so that it
+**	    can be passed along to auto-structure.
 */
 DB_STATUS
 psl_ct1_create_table(
@@ -752,8 +755,24 @@ psl_ct1_create_table(
 	chr->char_id = DMU_COMPRESSED;
 	chr->char_value = sess_cb->pss_create_compression;
 	dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
+	if (sess_cb->pss_create_compression == DMU_C_ON)
+	    sess_cb->pss_restab.pst_compress = PST_DATA_COMP;
+	else if (sess_cb->pss_create_compression == DMU_C_HIGH)
+	    sess_cb->pss_restab.pst_compress = PST_HI_DATA_COMP;
+	else
+	    sess_cb->pss_restab.pst_compress = 0;
     }
-	
+
+    /* Stuff compression into create-table node header too, makes it easy
+    ** for opc to find and pass to QEF.
+    */
+
+    if (sess_cb->pss_crt_tbl_stmt)
+    {
+	sess_cb->pss_crt_tbl_stmt->pst_specific.pst_createTable.pst_compress =
+		sess_cb->pss_restab.pst_compress;
+    }
+
 #ifdef	xDEBUG
     {
 	i4		val1;
@@ -5778,10 +5797,10 @@ psl_ct10_crt_tbl_kwd(
 	/*
 	**  in the REGISTER TABLE command the storage structure is never
 	**  compressed, so the variable sess_cb->pss_restab.pst_compress is
-	**  initiated as FALSE
+	**  initiated as 0.
 	*/
  
-	sess_cb->pss_restab.pst_compress = FALSE;    /* no compressed structure   */
+	sess_cb->pss_restab.pst_compress = 0;    /* no compressed structure   */
 						/* in REGISTER TABLE command */
 	sess_cb->pss_restab.pst_struct = 0L;
     }

@@ -673,6 +673,10 @@ static	DB_STATUS   create_temporary_table(
 **	    Initialise ADF_CB structure
 **	20-Jul-2010 (kschendel) SIR 124104
 **	    Allow compression to be passed in.
+**	28-Jul-2010 (kschendel) SIR 124104
+**	    Fix up the above change so that we select the proper page size
+**	    and type based on the worst-case-expanded row width, not the
+**	    unexpanded row width.
 */
 DB_STATUS
 dmu_create(DMU_CB        *dmu_cb)
@@ -701,6 +705,7 @@ dmu_create(DMU_CB        *dmu_cb)
     i4         	    db_lockmode;
     i4         	    ntab_width;
     i4         	    ntab_data_width;
+    i4		    worstcase_width;
     DB_DATA_VALUE   adc_dv1;
     DB_STATUS       s;
     ADF_CB          adf_cb;
@@ -1142,7 +1147,52 @@ dmu_create(DMU_CB        *dmu_cb)
 	    break;	    	
 	}
 
-	if (ntab_width > DM_TUPLEN_MAX_V5)
+	worstcase_width = ntab_width;
+	if (compression != TCB_C_NONE)
+	{
+	    DB_ATTS *att_array;
+	    DB_ATTS **attptrs, **attpp;
+	    DMF_ATTR_ENTRY **dmfatt;
+	    DMP_MISC *misc;
+	    i4 size, row_expansion;
+
+	    /* Well, this is a pain.  We need DB_ATTS style attributes for
+	    ** computing the worst-case expansion, but what we have are
+	    ** DMF_ATT_ENTRY's.  Build a temporary copy of the attributes
+	    ** in DB_ATTS form.  Only the type info needs to be filled in.
+	    */
+	    size = attr_count * (DB_ALIGN_MACRO(sizeof(DB_ATTS)) + DB_ALIGN_MACRO(sizeof(DB_ATTS *)) );
+	    status = dm0m_allocate(size + sizeof(DMP_MISC), DM0M_ZERO,
+			MISC_CB, MISC_ASCII_ID, NULL,
+			(DM_OBJECT **) &misc, &dmu->error);
+	    if (status != E_DB_OK)
+		break;
+	    att_array = (DB_ATTS *)((char *) misc + sizeof(DMP_MISC));
+	    misc->misc_data = (char *) att_array;
+	    attptrs = (DB_ATTS **)((char *) att_array + attr_count * DB_ALIGN_MACRO(sizeof(DB_ATTS)));
+	    i = attr_count;
+	    attpp = attptrs;
+	    dmfatt = attr_entry;
+	    while (--i >= 0)
+	    {
+		att_array->length = (*dmfatt)->attr_size;
+		att_array->type = (*dmfatt)->attr_type;
+		att_array->precision = (*dmfatt)->attr_precision;
+		att_array->encflags = (*dmfatt)->attr_encflags;
+		att_array->encwid = (*dmfatt)->attr_encwid;
+		/* Other members including versions are pre-zeroed */
+		*attpp++ = att_array++;
+		++dmfatt;
+	    }
+	    /* All of that just so that we can do this: */
+	    row_expansion = dm1c_compexpand(compression, attptrs, attr_count);
+	    worstcase_width += row_expansion;
+
+	    /* Drop the temp atts now */
+	    dm0m_deallocate((DM_OBJECT **)&misc);
+	}
+
+	if (worstcase_width > DM_TUPLEN_MAX_V5)
 	{
 	    SETDBERR(&dmu->error, 0, E_DM0103_TUPLE_TOO_WIDE);
 	    break;
@@ -1150,7 +1200,7 @@ dmu_create(DMU_CB        *dmu_cb)
 
 	/* choose page type */
 	status = dm1c_getpgtype(page_size, pgtype_flags,
-			ntab_width, &page_type);
+			worstcase_width, &page_type);
 
 	if (status != E_DB_OK)
 	{
@@ -1169,7 +1219,7 @@ dmu_create(DMU_CB        *dmu_cb)
 	** look for a bigger page size that will hold the row
 	*/
 	if ((status != E_DB_OK ||
-		ntab_width > dm2u_maxreclen(page_type, page_size))
+		worstcase_width > dm2u_maxreclen(page_type, page_size))
 		&& used_default_page_size)
 	{
 	    i4 pgsize;
@@ -1186,10 +1236,10 @@ dmu_create(DMU_CB        *dmu_cb)
 
 		/* choose page type */
 		status = dm1c_getpgtype(pgsize, pgtype_flags, 
-			    ntab_width, &pgtype);
+			    worstcase_width, &pgtype);
 
 		if (status != E_DB_OK ||
-			ntab_width > dm2u_maxreclen(pgtype, pgsize))
+			worstcase_width > dm2u_maxreclen(pgtype, pgsize))
 		    continue;
 
 		page_size = pgsize;
@@ -1219,7 +1269,7 @@ dmu_create(DMU_CB        *dmu_cb)
 	** because duplicate row checking will only be done if 
 	** this table is later modified to non unique btree/hash/isam
 	*/
-	if (ntab_width > dm2u_maxreclen(page_type, page_size) &&
+	if (worstcase_width > dm2u_maxreclen(page_type, page_size) &&
 						!duplicates && !view)
 	{
 	    SETDBERR(&dmu->error, 0, E_DM0159_NODUPLICATES);

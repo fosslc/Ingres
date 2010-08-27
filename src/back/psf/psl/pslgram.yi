@@ -766,6 +766,10 @@
 **	    so that opf can deal with them in a consistent manner.
 **	20-Jul-2010 (kschendel) SIR 124104
 **	    Pass with-clauses to create table.
+**	28-Jul-2010 (kschendel) SIR 124104
+**	    Fix up code that thinks pst_compress is a boolean.  It hasn't
+**	    been boolean for a while.  It has worked by accident since
+**	    the relevant flag happens to be 1, just like TRUE.
 */
 
 %{
@@ -6716,7 +6720,7 @@ rt_nm_eq_nm:	    nonkeyword ISOP nonkeyword
 	    }
 
 	    cb->pss_restab.pst_struct   = storestruct;
-	    cb->pss_restab.pst_compress = compressed;
+	    cb->pss_restab.pst_compress = compressed ? PST_DATA_COMP : 0;
 	}
 	else
 	{

@@ -7601,6 +7601,9 @@ opc_createIntegrityAHD(
 **	3-may-2007 (dougi)
 **	    Added flag to force base table structure to btree on constrained
 **	    columns, instead of building secondary index.
+**	28-Jul-2010 (kschendel) SIR 124104
+**	    Pass along compression setting, so that it can be maintained
+**	    if qef decides to do a modify (e.g. for autostruct).
 */
 
 #define	COPY_STRUCT( a, b )	\
@@ -7765,6 +7768,9 @@ copyIntegrityDetails(
 	qefDetails->qci_idx_extend  = psfDetails->pst_indexopts.pst_extend;
 	qefDetails->qci_idx_struct  = psfDetails->pst_indexopts.pst_struct;
     }
+
+    /* Copy the compression setting, just in case we have autostruct */
+    qefDetails->qci_compress = psfDetails->pst_compress;
 
     return;
 } /* copyIntegrityDetails */

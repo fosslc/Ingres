@@ -6381,6 +6381,8 @@ typedef	struct	_PST_COL_ID
 **	    Alter table Add/Drop column create table flags.
 **	15-oct-2009 (gupsh01)
 **	    Fix define values. 
+**	28-Jul-2010 (kschendel) SIR 124104
+**	    Add compression so that auto structure can maintain compression.
 */
 typedef	struct	_PST_CREATE_TABLE
 {
@@ -6392,8 +6394,14 @@ typedef	struct	_PST_CREATE_TABLE
 #define       PST_ATBL_ALTER_COLUMN   5L     /* alter table alter column */
                                   /* may eventually allow temp tables,etc */
 
-    i4	pst_autostruct;		/* flag field for auto structure options */
+    i2	pst_autostruct;		/* flag field for auto structure options */
 				/* Flags defined in PST_RESTAB */
+    i2	pst_compress;		/* Compression flags, same as PST_RESTAB */
+				/* OPF doesn't care much about this, it depends
+				** on the pst_restab or DMU char stuff, but
+				** it does pass this along to the create
+				** integrity action for use by auto-structure
+				*/
     struct _QEU_CB	*pst_createTableQEUCB;	 
 				 /* the DMU_CB in this QEUCB describes table */
 }	PST_CREATE_TABLE;
@@ -6629,6 +6637,8 @@ typedef	struct	_PST_CREATE_PROCEDURE
 **	3-may-2007 (dougi)
 **	    Added flag to force base table structure to btree on constrained
 **	    columns.
+**	28-Jul-2010 (kschendel) SIR 124104
+**	    Add compression so that auto structure can maintain compression.
 */
 typedef	struct	_PST_CREATE_INTEGRITY
 {
@@ -6748,8 +6758,17 @@ typedef	struct	_PST_CREATE_INTEGRITY
     PST_COL_ID	      *pst_key_collist;
 		/* linked list of column ids to be turned into index
 		*/
-    i4		      pst_key_count;
+    i2		      pst_key_count;
 		/* count of columns in key column list */
+    i2		      pst_compress;
+		/* Compression indicator, same as PST_RESTAB.  The path to
+		** get here is sess_cb->pss_restab.pst_compress is copied
+		** to pst_createTable.pst_compress is copied (by opc) to
+		** pst_createIntegrity.pst_compress.  Goofy, but it's the
+		** simplest way to do it.
+		** Note that the compression indicator is only set when
+		** auto-structure is asked for.
+		*/
     PST_RESTAB	      pst_indexopts;
 		/* constraint index options */
 

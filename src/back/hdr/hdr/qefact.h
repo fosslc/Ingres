@@ -1158,6 +1158,9 @@ typedef	struct	_QEF_RENAME_STATEMENT
 **	3-may-2007 (dougi)
 **	    Added flag to force table to btree on constrained columns (instead
 **	    of building secondary index).
+**	28-Jul-2010 (kschendel) SIR 124104
+**	    Add compression flags (same as PST_RESTAB pst_compress flags)
+**	    so that autostruct can keep compression.
 */
 typedef	struct	_QEF_CREATE_INTEGRITY_STATEMENT
 {
@@ -1326,6 +1329,7 @@ typedef	struct	_QEF_CREATE_INTEGRITY_STATEMENT
     i4		qci_idx_alloc;    /* alloc (from with) */
     i4		qci_idx_extend;   /* extend (from with) */
     i4		qci_idx_struct;   /* ix structure (from with) */
+    i2		qci_compress;	/* pst_compress style compression flags */
 
     /*
     ** The following fields are the DSH row numbers of data that is filled
