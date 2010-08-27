@@ -1416,6 +1416,10 @@ i4	    (*user_routine)();		/* Function to get/put rows */
 **	10-May-2010 (kschendel) SIR 122974
 **	    Very large binary (non-converting) COPY FROM needs an unusually
 **	    large read size.
+**	7-Jul-2010 (kschendel) SIR 124038
+**	    Allow Windows to specify a filetype so that advanced users can
+**	    control the file interpretation mode.  (CRLF conversion, control-Z
+**	    as EOF.)
 */
 
 static STATUS
@@ -2509,6 +2513,7 @@ IIcpinit( II_LBQ_CB *IIlbqcb, II_CP_STRUCT *copy_blk, i4  msg_type )
     */
     if ((copy_blk->cp_status & CPY_PROGRAM) == 0)
     {
+	copy_blk->cp_filetype = -1;	/* Not chosen yet */
 #ifdef VMS 
 	/*
 	** VMS only: Check if filename includes the file type. 
@@ -2578,8 +2583,40 @@ IIcpinit( II_LBQ_CB *IIlbqcb, II_CP_STRUCT *copy_blk, i4  msg_type )
 		return (E_CO0019_NOBINARY);
 	    }
 	}
-	else
-#endif /* VMS */
+#elif NT_GENERIC
+	/* Windows:  allow B or T as filetypes.  Note that unlike VMS,
+	** which has historically allowed ,binary etc (or even ,booger
+	** since it only checks the first letter), for Windows I'll
+	** require a single letter at the end of the filename.
+	** No spaces between comma and filetype.  E.g.
+	** 'foo.dat,T' is correct.  'foo.dat, t' is not and will cause
+	** 'foo.dat, t' to be used as the filename.
+	** "fname_length" is set up above, it INCLUDES the trailing null.
+	*/
+	--fname_length;		/* Don't include null */
+	cp = &copy_blk->cp_filename[fname_length-1];
+	if (fname_length > 2 && *(cp-1) == ',')
+	{
+	    if (*cp == 't' || *cp == 'T')
+	    {
+		/* Text mode requested */
+
+		*(cp-1) = '\0';
+		copy_blk->cp_filetype = SI_TXT;
+	    }
+	    else if (*cp == 'b' || *cp == 'B')
+	    {
+		/* Binary mode requested */
+		/* Unlike VMS, Windows has no restriction on using binary;
+		** it's really a translation mode, not a true file type.
+		*/
+
+		*(cp-1) = '\0';
+		copy_blk->cp_filetype = SI_BIN;
+	    }
+	}
+#endif /* VMS or Windows */
+	if (copy_blk->cp_filetype == -1)
 	{
 	    /*
 	    ** Use default filetypes.
