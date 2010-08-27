@@ -685,6 +685,8 @@
 ##	    Add create_compression to the upgrade list.
 ##	3-Aug-2010 (kschendel) SIR 122757
 ##	    Change that added config.direct_io should include direct_io_log.
+##	03-Aug-2010 (miket) SIR 124154
+##	    Add dmf_crypt_maxkeys to the upgrade list.
 ##	    
 #----------------------------------------------------------------------------
 . iisysdep
@@ -1439,7 +1441,8 @@ update_parameters()
     for param in system_lock_level di_zero_bufsize fd_affinity dmf_build_pages \
 		fallocate opf_new_enum opf_greedy_factor \
 		qef_hash_rbsize qef_hash_wbsize qef_hash_cmp_threshold \
-		qef_hashjoin_min qef_hashjoin_max create_compression
+		qef_hashjoin_min qef_hashjoin_max create_compression \
+		dmf_crypt_maxkeys
     do
 	x=`iigetres "ii.$CONFIG_HOST.dbms.*.$param"`
 	if [ -z "$x" ] ; then
