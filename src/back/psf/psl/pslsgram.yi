@@ -3579,6 +3579,10 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	    Add length check for objects that don't support long identifiers.
 **	20-Jul-2010 (kschendel) SIR 124104
 **	    Pass with-clauses to create table postprocessing.
+**	24-Jul-2010 (kiria01) b124124
+**	    Batch up mass IN lists into upto MAXI2-1 elements, the maximum
+**	    supported. This was previously only done for the sorted form but
+**	    the unsort will benefit too later if the optimiser orders later on.
 */
 %{
 
@@ -3894,7 +3898,7 @@ psl_mk_const_similar(
 static i4
 psl_checklen( 
 	char		*ident,
-	i4		max,
+	u_i4		max,
 	char		*objstr,
 	DB_ERROR	*psq_error);
 
@@ -33258,7 +33262,6 @@ cname:			col_ref
 		else
 		{
 		    /* Should be known at this point */
-		    /* IKTBS err E_US0836_2102 */
 		    (VOID) psf_error(2102L, 0L, PSF_USERERR, &err_code,
 			&psq_cb->psq_error, 2, (i4) sizeof(cb->pss_lineno),
 			&cb->pss_lineno,
@@ -34760,7 +34763,7 @@ predicate:		select_expr comparison select_expr
 	PST_J_ID	    join_id;
 	i4		    pst_node_flags;
 	bool		    use_inlist = TRUE;
-	i4		    cnt = 0;
+	i4		    scnt = 0, ucnt = 0;
 	bool		    str_num = FALSE;
 
 	/* 
@@ -34967,7 +34970,21 @@ predicate:		select_expr comparison select_expr
 		valnode->pss_expr->pst_sym.pst_value.pst_s_cnst.pst_tparmtype == PST_RQPARAMNO))
 	    {
 		bool handled;
-		if (/* A parameter constant ... */
+		if (valnode->pss_expr->pst_sym.pst_dataval.db_datatype < 0 &&
+		    valnode->pss_expr->pst_sym.pst_dataval.db_data &&
+		    ((u_char*)valnode->pss_expr->pst_sym.pst_dataval
+				.db_data)[valnode->pss_expr->pst_sym.pst_dataval
+					.db_length-1] == ADF_NVL_BIT)
+		{
+		    opnode.pst_opno = ADI_IIFALSE_OP;
+		    opnode.pst_joinid = join_id;
+		    status = pst_node(cb, &cb->pss_ostream, NULL, NULL,
+				PST_COP, (char *) &opnode, sizeof(opnode), DB_NODT, (i2) 0,
+				(i4) 0, (DB_ANYTYPE *) NULL, &resultnode, &psq_cb->psq_error,
+				pst_node_flags|PSS_JOINID_PRESET);
+		    break;
+		}
+		else if (/* A parameter constant ... */
 		    valnode->pss_expr->pst_sym.pst_value.pst_s_cnst.pst_parm_no != 0 ||
 		    /* or failed to mk_similar ... */
 		    (status = psl_mk_const_similar(cb, &cb->pss_ostream, &$1->pst_sym.pst_dataval,
@@ -34989,6 +35006,14 @@ predicate:		select_expr comparison select_expr
 			/* Just add to head of list */
 			valnode->pss_expr->pst_left = *t;
 			*t = valnode->pss_expr;
+			if (++ucnt >= MAXI2-2)
+			{
+			    /* We have 32K-1 entries - the limit for the
+			    ** bulk compares - simply reset the insorted
+			    ** pointer and start a new batch. */
+			    inlisted = NULL;
+			    ucnt = 0;
+			}
 			continue;
 		    }
 		}
@@ -35004,7 +35029,7 @@ predicate:		select_expr comparison select_expr
 		else if (handled)
 		{
 		    /* Entries that are not handled we can quietly ignore
-		    ** as these would not be matched against including NULL. */
+		    ** as these would not be matched against except NULL. */
 		    PST_QNODE **t = &insorted->pst_right;
 		    i4 cmp = -1;
 		    /* Add const entry into sorted list dropping duplicates.
@@ -35035,13 +35060,13 @@ predicate:		select_expr comparison select_expr
 			continue;
 		    valnode->pss_expr->pst_left = *t;
 		    *t = valnode->pss_expr;
-		    if (++cnt >= MAXI2-2)
+		    if (++scnt >= MAXI2-2)
 		    {
-			/* We have 32K-2 entries - the limit for the
+			/* We have 32K-1 entries - the limit for the
 			** bulk compares - simply reset the insorted
 			** pointer and start a new batch. */
 			insorted = NULL;
-			cnt = 0;
+			scnt = 0;
 		    }
 		    continue;
 		}
@@ -35093,7 +35118,15 @@ predicate:		select_expr comparison select_expr
 		MEfill(sizeof(op), 0, &op);
 		op.pst_pat_flags = AD_PAT_DOESNT_APPLY;
 		op.pst_joinid = join_id;
-		
+		if ((resultnode->pst_sym.pst_value.pst_s_op.pst_flags|PST_INLIST) ||
+		    (newnode->pst_sym.pst_value.pst_s_op.pst_flags|PST_INLIST))
+		{
+		    /* Mark the OR (or AND for not in) if it contains a likely
+		    ** INLIST continuation in a further operator - this will propagate
+		    ** up the list of conjunctions */
+		    op.pst_flags = PST_INLIST;
+	    	    pst_node_flags |= PSS_FLAGS_PRESET;
+		}		
 		status = pst_node(cb, &cb->pss_ostream, resultnode, newnode,
 		    $2?PST_OR:PST_AND, (PTR) &op, sizeof(op), DB_NODT, (i2) 0,
 		    (i4) 0, (DB_ANYTYPE *) NULL, &ornode, &psq_cb->psq_error,
@@ -47003,7 +47036,6 @@ col_spec2:	col_ref
 	if (!fwdvar.pst_rngvar)
 	{
 	    /* Should be known at this point */
-	    /* IKTBS err E_US0836_2102 */
 	    (VOID) psf_error(2102L, 0L, PSF_USERERR, &err_code,
 		&psq_cb->psq_error, 2, (i4) sizeof(cb->pss_lineno),
 		&cb->pss_lineno,
@@ -59882,7 +59914,7 @@ psl_mk_const_similar(
 **	19-Jul-2010 (frima01) Bug 124098
 **	    Added to check max length of non-long identifiers.
 */
-i4 psl_checklen( char *ident , i4 max , char *objstr, DB_ERROR *psq_error)
+i4 psl_checklen( char *ident , u_i4 max , char *objstr, DB_ERROR *psq_error)
 {
         if (STlength(ident) > max)
         {
