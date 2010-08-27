@@ -3152,6 +3152,8 @@ pst_execute(
 **	22-Jan-2009 (kibro01) b120460
 **	    Don't recurse over constants in case this is a huge
 **	    IN-clause.
+**      06-jul-2010 (huazh01)
+**          Flatten recursive call on pst_prmsub(). (b124031)
 */
 DB_STATUS
 pst_prmsub(
@@ -3169,11 +3171,18 @@ pst_prmsub(
     DB_DT_ID		adatatype;
     DB_DT_ID		dtype;
     i4			err_code;
-    PST_QNODE		*node = *nodep;
-    bool		bval;
+ 
+    PST_QNODE		*node;
 
-    while (node)
+    bool		bval;
+    PST_STK             stk;
+    bool                descend = TRUE;
+
+    PST_STK_INIT(stk, sess_cb);
+
+    while (nodep && *nodep)
     {
+      node = *nodep; 
 
       /*
       ** If the current node is a constant node and its param number
@@ -3181,30 +3190,30 @@ pst_prmsub(
       ** parameter list in pst_dataval and zero out the param number.
       */
       if (node->pst_sym.pst_type == PST_CONST &&
-	(parm_no = node->pst_sym.pst_value.pst_s_cnst.pst_parm_no) > 0)
+        (parm_no = node->pst_sym.pst_value.pst_s_cnst.pst_parm_no) > 0)
       {
-	--parm_no;
-	MEcopy((PTR) plist[parm_no], sizeof(DB_DATA_VALUE),
-		(PTR) &node->pst_sym.pst_dataval);
+        --parm_no;
+        MEcopy((PTR) plist[parm_no], sizeof(DB_DATA_VALUE),
+                (PTR) &node->pst_sym.pst_dataval);
 
-	if ((status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
-		    (i4)(plist[parm_no]->db_length),
-		    &node->pst_sym.pst_dataval.db_data,
-		    &psq_cb->psq_error)) != E_DB_OK)
-	    return (status);
+        if ((status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
+                    (i4)(plist[parm_no]->db_length),
+                    &node->pst_sym.pst_dataval.db_data,
+                    &psq_cb->psq_error)) != E_DB_OK)
+            return (status);
 
-	MEcopy(plist[parm_no]->db_data, plist[parm_no]->db_length,
-		node->pst_sym.pst_dataval.db_data);
+        MEcopy(plist[parm_no]->db_data, plist[parm_no]->db_length,
+                node->pst_sym.pst_dataval.db_data);
 
-	/* See if it has to be a VLUP. */
-	if (repeat_dyn && 
-		((dtype = abs(plist[parm_no]->db_datatype)) == DB_VCH_TYPE ||
-		dtype == DB_NVCHR_TYPE || dtype == DB_VBYTE_TYPE ||
-		dtype == DB_TXT_TYPE))
-	{
-	    node->pst_sym.pst_dataval.db_length = ADE_LEN_UNKNOWN;
-	    node->pst_sym.pst_value.pst_s_cnst.pst_tparmtype = PST_RQPARAMNO;
-	}
+        /* See if it has to be a VLUP. */
+        if (repeat_dyn &&
+                ((dtype = abs(plist[parm_no]->db_datatype)) == DB_VCH_TYPE ||
+                dtype == DB_NVCHR_TYPE || dtype == DB_VBYTE_TYPE ||
+                dtype == DB_TXT_TYPE))
+        {
+            node->pst_sym.pst_dataval.db_length = ADE_LEN_UNKNOWN;
+            node->pst_sym.pst_value.pst_s_cnst.pst_tparmtype = PST_RQPARAMNO;
+        }
 
 	/* If not repeat query, reset parm no. */
 	if (!repeat_dyn)
@@ -3214,31 +3223,33 @@ pst_prmsub(
 	    /* remember that this was a user provided constant */
 	}
       }
-      /*
-      ** If there is the right child, recursively process it.
-      */
 
-      if (node->pst_right)
+      if (descend && 
+          (node->pst_left || node->pst_right))
       {
-	if ((status = pst_prmsub(psq_cb, sess_cb, &node->pst_right, plist,
-			repeat_dyn)) != E_DB_OK)
-	    return (status);
+         pst_push_item(&stk, (PTR)nodep);
+
+         if (node->pst_left)
+         {
+            if (node->pst_right)
+	    {
+		/* Delay right sub-tree */
+		pst_push_item(&stk, (PTR)&node->pst_right);
+		if (node->pst_right->pst_right ||
+			node->pst_right->pst_left)
+		    /* Mark that node just pushed will need descending */
+		    pst_push_item(&stk, (PTR)PST_DESCEND_MARK);
+	    }
+            nodep = &node->pst_left; 
+            continue; 
+         }
+         else if (node->pst_right)
+         {
+            nodep = &node->pst_right; 
+            continue; 
+         }
       }
 
-      /*
-      ** If there is the left child, recursively process it.
-      */
-
-      if (node->pst_left && (
-	(node->pst_left->pst_sym.pst_type != PST_CONST) ||
-	(!node->pst_left->pst_left) ||
-	(node->pst_left->pst_left->pst_sym.pst_type != PST_CONST)
-	) )
-      {
-	if ((status = pst_prmsub(psq_cb, sess_cb, &node->pst_left, plist,
-			repeat_dyn)) != E_DB_OK)
-	    return (status);
-      }
 
       /*
       ** If the node is AGHEAD, and we are parsing OPEN CURSOR for parameterized
@@ -3278,18 +3289,17 @@ pst_prmsub(
 		node->pst_sym.pst_dataval.db_prec = src_dbval->db_prec;
 	    }
 	    
-	    break;
+	    /*FALLTHROUGH*/
 	}
 	case PST_ROOT:
 	{
 	    if (node->pst_sym.pst_value.pst_s_root.pst_union.pst_next)
 	    {
-		if ((status = pst_prmsub(psq_cb, sess_cb,
-			&node->pst_sym.pst_value.pst_s_root.pst_union.pst_next,
-			plist, repeat_dyn)) != E_DB_OK)
-		    return (status);
+                pst_push_item(&stk, 
+                   (PTR)&node->pst_sym.pst_value.pst_s_root.pst_union.pst_next);
+		/* Mark that the union will need descending */
+		pst_push_item(&stk, (PTR)PST_DESCEND_MARK);
 	    }
-
 	    break;
 	}
 	case PST_UOP:
@@ -3351,10 +3361,10 @@ pst_prmsub(
 	    if (pst_is_const_bool(node->pst_left, &bval))
 	    {
 		*(bool*)node->pst_left->pst_sym.pst_dataval.db_data = bval ? 0 : 1;
-		*nodep = node->pst_left;
+		node = node->pst_left;
 	    }
 	    else if (node->pst_left && node->pst_left->pst_sym.pst_type == PST_NOT)
-		*nodep = node->pst_left->pst_left;
+		node = node->pst_left->pst_left;
 	    break;
 
 	case PST_WHLIST:
@@ -3366,10 +3376,10 @@ pst_prmsub(
 		{
 		    /* make this the else and drop the rest */
 		    node->pst_right->pst_left = NULL;
-		    (*nodep)->pst_left = NULL;
+		    node->pst_left = NULL;
 		}
 		else
-		    *nodep = node->pst_left;
+		    node = node->pst_left;
 	    }
 	    break;
 
@@ -3380,7 +3390,7 @@ pst_prmsub(
 		    node->pst_left->pst_right->pst_sym.pst_type == PST_WHOP &&
 		    !node->pst_left->pst_right->pst_left)
 	    {
-		*nodep = node->pst_left->pst_right->pst_right;
+		node = node->pst_left->pst_right->pst_right;
 	    }
 	    break;
 
@@ -3457,16 +3467,22 @@ pst_prmsub(
 	    break;
 	}
       }
-      if (node->pst_left && node->pst_left->pst_left && 
-	node->pst_left->pst_sym.pst_type == PST_CONST &&
-	node->pst_left->pst_left->pst_sym.pst_type == PST_CONST)
+
       {
-	node = node->pst_left;
-      } else
-      {
-	break;
+        nodep = (PST_QNODE**)pst_pop_item(&stk); 
+ 
+        if (nodep == PST_DESCEND_MARK)
+        {
+            descend = TRUE; 
+            nodep = (PST_QNODE**)pst_pop_item(&stk);
+            continue; 
+        }
+	else
+	    descend = FALSE; 
       }
     }
+
+    pst_pop_all(&stk);
 
     return (E_DB_OK);
 }
