@@ -221,6 +221,8 @@
 **         SIR 123296
 **         Add LSB option, writable files are stored under ADMIN, logs under
 **         LOG and read-only under FILES location.
+**     27-Jul-2010 (frima01) Bug 124137
+**         Evaluate return code of NMloc to avoid using corrupt pointers.
 **
 /*
 PROGRAM =	(PROG0PRFX)cbf
@@ -1151,23 +1153,28 @@ main( i4  argc, char *argv[] )
 	}
 #endif
 	/* prepare LOCATION for config.dat */
-	NMloc( ADMIN, FILENAME, ERx( "config.dat" ), &config_file );
+	if (NMloc( ADMIN, FILENAME, ERx( "config.dat" ), &config_file ) != OK )
+		PCexit(FAIL);
 	LOcopy( &config_file, config_buf, &config_file );
 
 	/* prepare LOCATION for protect.dat */
-	NMloc( ADMIN, FILENAME, ERx( "protect.dat" ), &protect_file );
+	if (NMloc( ADMIN, FILENAME, ERx( "protect.dat" ), &protect_file ) != OK )
+		PCexit(FAIL);
 	LOcopy( &protect_file, protect_buf, &protect_file );
 
 	/* prepare LOCATION for cbfunits.dat */
-	NMloc( FILES, FILENAME, ERx( "cbfunits.dat" ), &units_file );
+	if (NMloc( FILES, FILENAME, ERx( "cbfunits.dat" ), &units_file ) != OK )
+		PCexit(FAIL);
 	LOcopy( &units_file, units_buf, &units_file );
 
 	/* prepare LOCATION for cbfhelp.dat */
-	NMloc( FILES, FILENAME, ERx( "cbfhelp.dat" ), &help_file );
+	if (NMloc( FILES, FILENAME, ERx( "cbfhelp.dat" ), &help_file ) != OK )
+		PCexit(FAIL);
 	LOcopy( &help_file, help_buf, &help_file );
 
 	/* prepare LOCATION for config.log */
-	NMloc( LOG, FILENAME, ERx( "config.log" ), &change_log_file );
+	if (NMloc( LOG, FILENAME, ERx( "config.log" ), &change_log_file ) != OK )
+		PCexit(FAIL);
 	LOcopy( &change_log_file, change_log_buf, &change_log_file );
 
 	/* load cbfhelp.dat */
@@ -1286,8 +1293,9 @@ main( i4  argc, char *argv[] )
 		/* prepare LOCATION for default key files */
 		exec frs inquire_frs frs(:tty_type = terminal);
 		if (STbcompare(tty_type, 2, ERx("vt"), 2, TRUE) == 0) {
-			NMloc( FILES, FILENAME, ERx( "cbf.map" ), 
-				&key_map_file);
+			if (NMloc( FILES, FILENAME, ERx( "cbf.map" ), 
+				&key_map_file) != OK )
+				PCexit(FAIL);
 			STcopy(key_map_file.string,key_map_filename);
 			exec frs set_frs frs (mapfile = :key_map_filename);
 		}

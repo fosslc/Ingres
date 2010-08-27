@@ -118,6 +118,8 @@
 **         SIR 123296
 **         Use ADMIN not FILES for accessing ucharmaps. For LSB builds
 **         ADMIN is the writable location, no net effect for regular builds.
+**     27-Jul-2010 (frima01) Bug 124137
+**         Evaluate return codes of NMloc to avoid using corrupt pointers.
 **/
 
 
@@ -171,15 +173,17 @@ FUNC_EXTERN bool cer_issem();
 **	ploc		fully initialized LOCATION for this collation file
 **
 ** Returns:
-**	void
+**	OK
+**	FAIL
 **
 ** Side Effects:
 **	No obvious ones ;)
 */
-static void
+static STATUS
 setuplocation(char *colname, i4 loctype, LOCATION* ploc)
 {
-    NMloc(ADMIN, PATH, (char *)NULL, ploc);
+    if ( NMloc(ADMIN, PATH, (char *)NULL, ploc) != OK )
+      return FAIL;
     if (loctype == CM_UCHARMAPS_LOC)
       LOfaddpath(ploc, "ucharmaps", ploc);
     else if (loctype == CM_COLLATION_LOC)
@@ -202,6 +206,7 @@ setuplocation(char *colname, i4 loctype, LOCATION* ploc)
     }
 #endif /* reverse hybrid */
     LOfstfile(colname, ploc);
+    return OK;
 }
 
 static CMCOLDFLE *get_coldfle(int create)
@@ -315,7 +320,8 @@ i4		loctype;
     }
 # endif /* !DESKTOP */
 
-    setuplocation(colname, loctype, &loc);
+    if (setuplocation(colname, loctype, &loc) != OK )
+	return FAIL;
 
     if ((status = SIopen(&loc,
 # ifdef DESKTOP
@@ -507,7 +513,8 @@ i4		loctype;
     int		desc;
 # endif
 
-    setuplocation(colname, loctype, &loc);
+    if ( setuplocation(colname, loctype, &loc) != OK )
+	return FAIL;
     LOtos(&loc, &chrp);
 
 # ifdef DESKTOP

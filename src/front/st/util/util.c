@@ -121,6 +121,8 @@
 **         LOG and read-only under FILES location.
 **	13-Jan-2010 (wanfr01) Bug 123139
 **	    Include cv.h for function defintions
+**	27-Jul-2010 (frima01) Bug 124137
+**	   Evaluate return code of NMloc to avoid using corrupt pointers.
 */
 
 #ifndef NT_GENERIC
@@ -210,7 +212,8 @@ lock_config_data( char *application )
 # endif /* VMS */
 
 	/* prepare mutex file LOCATION */
-	NMloc( ADMIN, FILENAME, MUTEX_FILE, &mutex_loc );
+	if ( NMloc( ADMIN, FILENAME, MUTEX_FILE, &mutex_loc ) != OK )
+		return FAIL;
 	LOcopy( &mutex_loc, mutex_locbuf, &mutex_loc );
 	LOtos( &mutex_loc, &mutex_file );
 

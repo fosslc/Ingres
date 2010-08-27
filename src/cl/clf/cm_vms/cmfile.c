@@ -60,6 +60,8 @@
 **	    at install time.
 **	11-nov-2008 (joea)
 **	    Use CL_CLEAR_ERR to initialize CL_ERR_DESC.
+**	27-Jul-2010 (frima01) Bug 124137
+**	    Evaluate return codes of NMloc to avoid using corrupt pointers.
 **/
 
 FUNC_EXTERN bool cer_issem();
@@ -127,7 +129,15 @@ i4		loctype)
 	(*file.sems->er_p_semaphore)(TRUE, &file.sems->er_sem);
     }
 
-    NMloc(FILES, PATH, (char *)NULL, &loc);
+    if ( NMloc(FILES, PATH, (char *)NULL, &loc) != OK )
+    {
+	if (file.sems)
+	{
+	    (*file.sems->er_v_semaphore)(&file.sems->er_sem);
+	}
+	return FAIL;
+    }
+
     if (loctype == CM_UCHARMAPS_LOC)
 	LOfaddpath(&loc, "ucharmaps", &loc);
     else if (loctype == CM_COLLATION_LOC)
@@ -306,7 +316,8 @@ i4		loctype)
     STATUS	status;
 
     CL_CLEAR_ERR(syserr);
-    NMloc(FILES, PATH, (char *)NULL, &loc);
+    if ( NMloc(FILES, PATH, (char *)NULL, &loc) != OK )
+	return FAIL;
     if (loctype == CM_UCHARMAPS_LOC)
 	LOfaddpath(&loc, "ucharmaps", &loc);
     else if (loctype == CM_COLLATION_LOC)

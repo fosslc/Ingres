@@ -47,6 +47,9 @@ static VOID	so_clean_up();
 **	    b116674.
 **	26-Aug-2009 (kschendel) b121804
 **	    Bool prototypes to keep gcc 4.3 happy.
+**	27-Jul-2010 (frima01) Bug 124137
+**	    Add exit if no argument has been passed to avoid
+**	    segmentation violation when accessing arguments.
 **/
 
 FUNC_EXTERN bool        IIDDigIsGateway();
@@ -80,6 +83,9 @@ main(argc, argv)
 i4	argc;
 char	**argv;
 {
+
+    if (argc < 2)
+	PCexit(FAIL);
 
 char	*largv[10], *chp = NULL;
 int i;

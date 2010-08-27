@@ -52,6 +52,9 @@ static VOID	so_clean_up();
 **	29-Sep-2004 (drivi01)
 **	    Updated NEEDLIBS to link dynamic library SHQLIB to replace
 **	    its static libraries.
+**	27-Jul-2010 (frima01) Bug 124137
+**	    Add exit if no argument has been passed to avoid
+**	    segmentation violation when accessing arguments.
 **/
 
 
@@ -110,6 +113,9 @@ int i;
 char	*colon_ptr;
 char	*vnode_ptr;
 char	vnode[DB_MAXNAME+1];
+
+	if ( argc < 2 )
+		PCexit(FAIL);
 
 EXEC SQL begin declare section;
   char     dbname[DB_MAXNAME+1];
