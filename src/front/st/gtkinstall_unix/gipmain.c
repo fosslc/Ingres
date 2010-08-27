@@ -205,6 +205,10 @@
 **	    BUG 124256
 **	    Stop miss reporting errors whilst cleaning up temporary
 **	    files. Also don't give up first error, process the whole list.
+**	01-Jul-2010 (hanje04)
+**	    BUG 123942
+**	    If only renamed instance exist, UM_RENAME won't be set so
+**	    test for UM_TRUE also when creating temp rename location.
 */
 
 # define RF_VARIABLE "export II_RESPONSE_FILE"
@@ -400,7 +404,7 @@ main (int argc, char *argv[])
 # define ERROR_LICENSE_NOT_FOUND "Error: %s does not exist\n"
 	SIprintf(ERROR_LICENSE_NOT_FOUND, licfile);
 
-    if ( inst_state & UM_RENAME )
+    if ( inst_state & UM_RENAME|UM_TRUE )
     {
 	/* 
 	** We have a non-renamed instance so we'll need to
