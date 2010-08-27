@@ -96,6 +96,24 @@
 **	    var nodes become SINGLECHK(SINGLETON(var)). The split to derived
 **	    tables then pulls these apart leaving the SINGLECHK() in the tree
 **	    referenceing the derived table to check at run time. 
+**	05-Aug-2010 (kiria01) b124208
+**	    Track containing subsel/root as well as subsel to allow for seeing
+**	    when a join will span beyond the containing select.
+**	    In the PST_BOP handling we now use the tvrm maps of the subselect
+**	    and parent subselect to categorise the joins better and identify
+**	    whether the subselect's joinid should be used.
+**	    If the var nodes are contained in both from lists and both from
+**	    lists are referenced then we have a LEFT OUTER or INNER JOIN
+**	    depending on target list vs WHERE context respectivly. In these
+**	    case the join id will be used.
+**	    If all the vars are in the parent then these will float outward
+**	    and have no joinid. If all the vars are in the local set then these
+**	    will float inward and have no joinid.
+**	    The particular case where a deeper span is found does not trigger
+**	    an inner or outer to be set at this point as the actual join will
+**	    be recorded against the exported inner, maybe exported multiple
+**	    levels and the final export will be picked up later when the
+**	    updated BOP is seen in the tree higher up.
 */
 
 
@@ -106,9 +124,10 @@
 enum _FLAT_CAP {
     FLAT_CAP_OFF =	0x00, /* disables SS flattening */
     FLAT_CAP_NOMETA =	0x01, /* leaves WHERE clause to OPF*/
-    FLAT_CAP_01 =	0x02, /* handles WHERE clause except ANY, ALL, IN, EXISTS *
+    FLAT_CAP_01 =	0x02, /* handles WHERE clause except ANY,
+			      ** ALL, IN, NOT IN, EXISTS */
     /*experimental*/
-    FLAT_CAP_ANY =	0x04, /* handles WHERE clause except ALL, IN, EXISTS */
+    FLAT_CAP_ANY =	0x04, /* handles WHERE clause except ALL,NOT IN, EXISTS */
     FLAT_CAP_UNCORR =	0x08, /* fold uncorellated as CP */
 };
 
@@ -147,14 +166,14 @@ static VOID
 psl_retarget_vars(
 	PSS_SESBLK	*cb,
       PST_QNODE		*tree,
-      PST_QNODE		*dtroot,
-      PSS_RNGTAB	*resrange);
+      PSS_RNGTAB	*dt_rng);
 
 static DB_STATUS
 psl_float_factors(
 	PSS_SESBLK	*cb,
 	PSQ_CB		*psq_cb,
 	PST_QNODE	*from,
+	PSS_RNGTAB	*dt_rng,
 	PST_QNODE	*to);
 
 static DB_STATUS
@@ -169,6 +188,16 @@ psl_project_corr_vars (
 	PST_QNODE	*srctree,
 	PST_QNODE	*desttree);
 
+static VOID
+psl_analyse_vars(
+	PST_STK		*stk,
+	PST_QNODE	*tree,
+	char		*map,
+	i4		dtvno,
+	u_i4		*pseen);
+#define SEEN_INNER	1
+#define SEEN_OUTER	2
+#define SEEN_DTVNO	4
 
 /*
 ** Name: psl_flatten1 - flattens out singleton sub-selects from 1 tree.
@@ -192,7 +221,7 @@ psl_project_corr_vars (
 **	    FROM iirelation AS o;
 **
 **	Which we then flatten by factoring out the aggregate (in this case
-**	the introduced SINGLETON agg but could be ang agg) into a derived
+**	the introduced SINGLETON agg but could be any agg) into a derived
 **	table with appropriate grouping to support the join columns:
 **
 **	    SELECT o.reltid, SINGLECHK(dt1.relid) AS relid
@@ -265,6 +294,7 @@ psl_flatten1(
     bool		descend = TRUE;
     bool		correl = FALSE;
     PST_QNODE		*subsel = NULL;
+    PST_QNODE		*psubsel = NULL;
     i4			err_code;
     DB_STATUS		status = E_DB_OK;
     PST_STK		norm_stk;
@@ -296,6 +326,7 @@ psl_flatten1(
 	    case PST_WHLIST: whlist_count++; break;
 	    case PST_ROOT:
 	    case PST_SUBSEL:
+		psubsel = subsel;
 		subsel = node;
 		correl = FALSE;
 		/* Temporarily reset the validity flag and have it shadow
@@ -412,6 +443,10 @@ psl_flatten1(
 		if (opinfo.adi_optype != ADI_COMPARISON)
 		    break;
 
+		/* If not in a subselect - no correlation possible */
+		if (!psubsel)
+		    break;
+
 		if (node->pst_sym.pst_value.pst_s_op.pst_joinid != PST_NOJOIN ||
 		    (Psf_ssflatten &
 			opmeta_unsupp[node->pst_sym.pst_value.pst_s_op.pst_opmeta]))
@@ -435,12 +470,8 @@ psl_flatten1(
 		    /* Special processing for when post-processing an enclosing scope
 		    ** i.e. we have a PST_SUBSEL above somewhere. */
 		    i4 l_vno = l->pst_sym.pst_value.pst_s_var.pst_vno;
-		    i4 l_hidepth = yyvarsp->rng_vars[l_vno]->pss_rgparent;
 		    i4 r_vno = r->pst_sym.pst_value.pst_s_var.pst_vno;
-		    i4 r_hidepth = yyvarsp->rng_vars[r_vno]->pss_rgparent;
-		    i4 l_lodepth = l_hidepth;
-		    i4 r_lodepth = r_hidepth;
-		    i4 inner, outer, depth, card;
+		    i4 inner, outer, card;
 		    PST_J_MASK masks[2]; /* left, right */
 		    PSS_1JOIN *join_info;
 		    DB_JNTYPE jtype;
@@ -454,41 +485,87 @@ psl_flatten1(
 		    while (psl_find_node(node->pst_left, &l, PST_VAR))
 		    {
 			i4 vno = l->pst_sym.pst_value.pst_s_var.pst_vno;
-			i4 depth = yyvarsp->rng_vars[vno]->pss_rgparent;
 			BTset(vno, (char *)(masks[0].pst_j_mask));
-			l_hidepth = max(l_hidepth, depth);
-			l_lodepth = min(l_lodepth, depth);
 		    }
 		    while (psl_find_node(node->pst_right, &r, PST_VAR))
 		    {
 			i4 vno = r->pst_sym.pst_value.pst_s_var.pst_vno;
-			i4 depth = yyvarsp->rng_vars[vno]->pss_rgparent;
 			BTset(vno, (char *)(masks[1].pst_j_mask));
-			r_hidepth = max(r_hidepth, depth);
-			r_lodepth = min(r_lodepth, depth);
 		    }
-		    /* Usual case is easy - one in each but if there are
-		    ** more they may be inconsistant for an outer join */
-		    if (l_hidepth < r_lodepth)
+		    if (BTsubset((char *)masks[0].pst_j_mask,
+			    (char *)&psubsel->pst_sym.pst_value.pst_s_root.pst_tvrm,
+			    BITS_IN(PST_J_MASK)) &&
+			BTsubset((char *)masks[1].pst_j_mask,
+			    (char *)&subsel->pst_sym.pst_value.pst_s_root.pst_tvrm,
+			    BITS_IN(PST_J_MASK)))
 		    {
 			/* expr(sup-vars) .cf. expr(inf-vars) */
-			depth = l_lodepth;
 			outer = 0; /* is left */
 			inner = 1; /* is right */
 			jtype = DB_LEFT_JOIN;
 			card = PST_CARD_01R;
 		    }
-		    else if (r_hidepth < l_lodepth)
+		    else if (BTsubset((char *)masks[0].pst_j_mask,
+			    (char *)&subsel->pst_sym.pst_value.pst_s_root.pst_tvrm,
+			    BITS_IN(PST_J_MASK)) &&
+			BTsubset((char *)masks[1].pst_j_mask,
+			    (char *)&psubsel->pst_sym.pst_value.pst_s_root.pst_tvrm,
+			    BITS_IN(PST_J_MASK)))
 		    {
 			/* expr(inf-var) .cf. expr(sup-var) */
-			depth = r_lodepth;
 			outer = 1; /* is right */
 			inner = 0; /* is left */
 			jtype = DB_RIGHT_JOIN;
 			card = PST_CARD_01L;
 		    }
 		    else
-			break;
+		    {
+			PST_J_MASK from = psubsel->pst_sym.pst_value.pst_s_root.pst_tvrm;
+			PST_J_MASK vars = masks[0];
+			BTor(BITS_IN(PST_J_MASK),
+				(char *)masks[1].pst_j_mask,
+				(char *)&vars);
+			BTor(BITS_IN(PST_J_MASK),
+				(char *)&subsel->pst_sym.pst_value.pst_s_root.pst_tvrm,
+				(char *)&from);
+			if (BTsubset((char *)&vars,
+				(char*)&subsel->pst_sym.pst_value.pst_s_root.pst_tvrm,
+				BITS_IN(PST_J_MASK)) ||
+			    BTsubset((char *)&vars,
+				(char*)&psubsel->pst_sym.pst_value.pst_s_root.pst_tvrm,
+				BITS_IN(PST_J_MASK)))
+			{
+			    /* Either wholly inner or wholly outer - not a join */
+			    break;
+			}
+			else if (BTsubset((char *)&vars, (char*)&from, BITS_IN(PST_J_MASK)))
+			{
+			    /* The comparison is mixed so the sense indeterminate but
+			    ** we can determine the join direction. We have found that
+			    ** all the vnos are present in the from list of the current
+			    ** or its parent so fixup masks for the join */
+			    outer = 0; /* is left */
+			    inner = 1; /* is right */
+			    jtype = DB_LEFT_JOIN;
+			    card = 0;
+			    masks[0] = vars;
+			    masks[1] = vars;
+			    BTand(BITS_IN(PST_J_MASK),
+				    (char *)&psubsel->pst_sym.pst_value.pst_s_root.pst_tvrm,
+				    (char *)masks[outer].pst_j_mask);
+			    BTand(BITS_IN(PST_J_MASK),
+				    (char *)&subsel->pst_sym.pst_value.pst_s_root.pst_tvrm,
+				    (char *)masks[inner].pst_j_mask);
+			}
+			else
+			{
+			    /* a vno specified that is outside of the parent scope */
+			    correl = TRUE;
+			    subsel->pst_sym.pst_value.pst_s_root.pst_mask1 |=
+							    PST_1CORR_VAR_FLAG_VALID;
+			    break;
+			}
+		    }
 
 		    /* This can't be uncorrelated after all */
 		    if (!correl && subsel)
@@ -506,7 +583,8 @@ psl_flatten1(
 			node->pst_sym.pst_value.pst_s_op.pst_opmeta = card;
 			if (~rt_node->pst_sym.pst_value.pst_s_root.pst_mask1
 				& PST_9SINGLETON)
-			    BTor(sizeof(PST_J_MASK), (char *)(masks[outer].pst_j_mask),
+			    BTor(BITS_IN(PST_J_MASK),
+				(char *)masks[outer].pst_j_mask,
 				(char *)&rt_node->pst_sym.pst_value.pst_s_root.pst_tvrm);
 		    }
 		    if (subsel && subsel->pst_sym.pst_type == PST_SUBSEL)
@@ -524,7 +602,10 @@ psl_flatten1(
 			}
 			else
 			{
-			    psl_set_jrel(&masks[inner], NULL,
+			    BTor(BITS_IN(PST_J_MASK),
+				(char *)masks[1].pst_j_mask,
+				(char *)masks[0].pst_j_mask);
+			    psl_set_jrel(&masks[0], NULL,
 				    node->pst_sym.pst_value.pst_s_op.pst_joinid,
 				    yyvarsp->rng_vars, DB_INNER_JOIN);
 			}
@@ -642,8 +723,6 @@ psl_flatten1(
 	    {
 		PST_QNODE *rt_node = pst_antecedant_by_3types(
 					stk, NULL, PST_SUBSEL, PST_AGHEAD, PST_ROOT);
-		PST_QNODE *psubsel = pst_antecedant_by_2types(
-					stk, NULL, PST_SUBSEL, PST_ROOT);
 		PST_QNODE *parent = pst_parent_node(stk, NULL);
 		PST_QNODE *residue = subsel->pst_left;
 		PST_QNODE **agheadp = NULL;
@@ -757,23 +836,20 @@ psl_flatten1(
 			    {
 				PST_OP_NODE opnode;
 				DB_DATA_VALUE tmp_dv = var_node->pst_sym.pst_dataval;
-				MEfill(sizeof(opnode), 0, &opnode);
 
-				/* SINGLETON may introduce nullability where there wasn't expected
-				** used in either a context where nullability would be handled
-				** such as comparison, where it cannot be is like in assignment.
-				** Thus if the result will be passed to a compare, we enable
-				** nullability and allow the testing for such support as outer
-				** joins but in other cases we may need the operator to force
-				** the real error. */
-				if (tmp_dv.db_datatype > 0 &&
-					abs(parent->pst_sym.pst_dataval.db_datatype) == DB_BOO_TYPE)
+				/* SINGLETON must return nullable to support the
+				** ADF_SING_BIT */
+				if (tmp_dv.db_datatype > 0)
 				{
 				    tmp_dv.db_datatype = -tmp_dv.db_datatype;
 				    tmp_dv.db_length++;
 				}
-				opnode.pst_opno = ADI_SINGLETON_OP;
 
+				MEfill(sizeof(opnode), 0, &opnode);
+				opnode.pst_opno = ADI_SINGLETON_OP;
+				opnode.pst_retnull = TRUE;
+				opnode.pst_opmeta = PST_NOMETA;
+				opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
 				if (!correl)
 				{
 				    /* Move the distinct into the operator & off the subsel */
@@ -781,20 +857,13 @@ psl_flatten1(
 					opnode.pst_distinct = PST_DISTINCT;
 				    subsel->pst_sym.pst_value.pst_s_root.pst_dups = PST_ALLDUPS;
 				}
-
-				opnode.pst_retnull = TRUE;
-				opnode.pst_opmeta = PST_NOMETA;
-				opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-				opnode.pst_joinid = correl
-					? subsel->pst_sym.pst_value.pst_s_root.pst_ss_joinid
-					: PST_NOJOIN;
 				if (status = pst_node(cb, &cb->pss_ostream, var_node, NULL, 
 						PST_AOP, (PTR) &opnode, sizeof(opnode), 
 						tmp_dv.db_datatype,
 						tmp_dv.db_prec, 
 						tmp_dv.db_length, 
 						(DB_ANYTYPE *) NULL, &aop,
-						&psq_cb->psq_error, PSS_JOINID_PRESET))
+						&psq_cb->psq_error, 0))
 				    return status;
 			    }
 			    {
@@ -827,19 +896,30 @@ psl_flatten1(
 			    }
 			    {
 				PST_OP_NODE opnode;
+				DB_DATA_VALUE tmp_dv = aop->pst_sym.pst_dataval;
+				/* SINGLECHK may introduce nullability where there wasn't expected
+				** used in either a context where nullability would be handled
+				** such as comparison, where it cannot be is like in assignment.
+				** Thus if the result will be passed to a compare, we enable
+				** nullability and allow the testing for such support as outer
+				** joins but in other cases we may need the operator to force
+				** the real error. */
+				if (tmp_dv.db_datatype > 0 &&
+					abs(parent->pst_sym.pst_dataval.db_datatype) == DB_BOO_TYPE)
+				{
+				    tmp_dv.db_datatype = -tmp_dv.db_datatype;
+				    tmp_dv.db_length++;
+				}
 				MEfill(sizeof(opnode), 0, &opnode);
 				opnode.pst_opno = ADI_SINGLECHK_OP;
 				opnode.pst_retnull = TRUE;
 				opnode.pst_opmeta = PST_NOMETA;
 				opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-				opnode.pst_joinid = correl
-					? subsel->pst_sym.pst_value.pst_s_root.pst_ss_joinid
-					: PST_NOJOIN;
 				if (status = pst_node(cb, &cb->pss_ostream, *varp, NULL, 
 						PST_UOP, (PTR) &opnode, sizeof(opnode), 
-						aop->pst_sym.pst_dataval.db_datatype,
-						aop->pst_sym.pst_dataval.db_prec, 
-						aop->pst_sym.pst_dataval.db_length, 
+						tmp_dv.db_datatype,
+						tmp_dv.db_prec, 
+						tmp_dv.db_length, 
 						(DB_ANYTYPE *) NULL, varp,
 						&psq_cb->psq_error, 0))
 				    return status;
@@ -855,6 +935,15 @@ psl_flatten1(
 				(char *)&subsel->pst_sym.pst_value.pst_s_root.pst_tvrm));
 		    }
 		}
+		else if ((~subsel->pst_sym.pst_value.pst_s_root.pst_mask1 & PST_9SINGLETON) &&
+		    parent->pst_sym.pst_type == PST_BOP &&
+		    parent->pst_sym.pst_value.pst_s_op.pst_opmeta == PST_CARD_ANY &&
+		    (Psf_ssflatten & FLAT_CAP_ANY) &&
+		    (parent->pst_sym.pst_value.pst_s_op.pst_flags & PST_INLIST))
+		{
+		    has_DISTINCT = TRUE;
+		    subsel->pst_sym.pst_value.pst_s_root.pst_dups = PST_NODUPS;
+		}
 		if (psl_find_nodep(&residue->pst_right, &agheadp, PST_AGHEAD) ||
 		    has_DISTINCT)
 		{
@@ -862,7 +951,7 @@ psl_flatten1(
 		    {
 			PST_QNODE *aghead = NULL;
 			PST_QNODE *v;
-			PSS_RNGTAB *resrange;
+			PSS_RNGTAB *dt_rng;
 			PST_RSDM_NODE resdom;
 			i4 n;
 
@@ -1016,15 +1105,15 @@ psl_flatten1(
 			    /* Now we have a locally unique name we can build the drtable.
 			    ** With its vno, we can fixup the references to it */
 			    if (status = psl_drngent(&cb->pss_auxrng, qual_depth, 
-				    tmptbl, cb, &resrange, subsel, PST_DRTREE, &psq_cb->psq_error))
+				    tmptbl, cb, &dt_rng, subsel, PST_DRTREE, &psq_cb->psq_error))
 				return status;
 			    subsel->pst_sym.pst_value.pst_s_root.pst_mask1 &=
 					    ~(PST_2CORR_VARS_FOUND|PST_8FLATN_SUBSEL);
 			    subsel->pst_sym.pst_value.pst_s_root.pst_mask1 |=
 					    PST_3GROUP_BY;
 			    cb->pss_ses_flag |= PSS_DERTAB_INQ;
-			    resrange->pss_var_mask |= PSS_EXPLICIT_CORR_NAME;
-			    yyvarsp->rng_vars[resrange->pss_rgno] = resrange;
+			    dt_rng->pss_var_mask |= PSS_EXPLICIT_CORR_NAME;
+			    yyvarsp->rng_vars[dt_rng->pss_rgno] = dt_rng;
 			}
 
 			/* If has_DISTINCT then the next loop is a no-ops as there
@@ -1091,19 +1180,23 @@ psl_flatten1(
 			    }
 			    /* Float non-local factors from the aggregate - will not leave
 			    ** AGH qual unterminated */
-			    if (status = psl_float_factors(cb, psq_cb, aghead, subsel))
+			    if (status = psl_float_factors(cb, psq_cb, aghead, dt_rng, subsel))
 				return status;
 			}
 			/* Retarget any HAVING vars or qual var nodes just added
-			** to refer to drtab */
-			psl_retarget_vars(cb, subsel->pst_right, subsel, resrange);
+			** to refer to drtab. This will not descriminate those that should
+			** remain local - these get switched back in psl_float_factors */
+			psl_retarget_vars(cb, subsel->pst_right, dt_rng);
 
 
 			/* We need to retarget the inner rels for joinid in rng_vars. */
 			if ((joinid = subsel->pst_sym.pst_value.pst_s_root.pst_ss_joinid) != PST_NOJOIN)
 			{
-			    u_i4 i;
-			    for (i = 0; i < PST_NUMVARS; i++)
+			    i4 i;
+			    bool seen = FALSE;
+			    for (i = -1; (i = BTnext(i,
+				    (char*)&subsel->pst_sym.pst_value.pst_s_root.pst_tvrm,
+				    BITS_IN(PST_J_MASK))) >= 0;)
 			    {
 				PSS_RNGTAB *rngvar = &cb->pss_auxrng.pss_rngtab[i];
 				if (rngvar->pss_used && rngvar->pss_rgno >= 0 &&
@@ -1111,17 +1204,22 @@ psl_flatten1(
 				{
 				    BTclear(joinid, (char*)&rngvar->pss_inner_rel);
 				    if (!BTcount((char *)&rngvar->pss_inner_rel,
-					    BITS_IN(rngvar->pss_inner_rel)))
+					    BITS_IN(PST_J_MASK)))
 					rngvar->pss_var_mask &= ~PSS_INNER_RNGVAR;
+				    seen = TRUE;
 				}
 			    }
-			    BTset(joinid, (char*)&resrange->pss_inner_rel);
-			    resrange->pss_var_mask |= PSS_INNER_RNGVAR;
+			    if (seen)
+			    {
+				BTset(joinid, (char*)&dt_rng->pss_inner_rel);
+				dt_rng->pss_var_mask |= PSS_INNER_RNGVAR;
+			    }
 			}
 
 			/* Setup a VAR node to refer to each agg dr result and any
 			** stray vars - first each agg */
-			while (agheadp = psl_find_nodep(&residue->pst_right, NULL, PST_AGHEAD))
+			agheadp = NULL;
+			while (psl_find_nodep(&residue->pst_right, &agheadp, PST_AGHEAD))
 			{
 			    PST_VAR_NODE varnode;
 			    PST_QNODE *ag_resdom = subsel->pst_left;
@@ -1130,6 +1228,7 @@ psl_flatten1(
 			    PST_STK_CMP cmp_ctx;
 
 			    PST_STK_CMP_INIT(cmp_ctx, cb, NULL);
+
 			    /* Find the agg resdom in question - remember that 
 			    ** both the original and the new pointed to the same AGH */
 			    while (ag_resdom->pst_sym.pst_type == PST_RESDOM)
@@ -1141,7 +1240,7 @@ psl_flatten1(
 			    }
 			    if (!ag_resdom || ag_resdom->pst_sym.pst_type != PST_RESDOM)
 				psl_bugbp();/*FIXME error*/
-			    varnode.pst_vno = resrange->pss_rgno;
+			    varnode.pst_vno = dt_rng->pss_rgno;
 			    varnode.pst_atno.db_att_id =
 					ag_resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsno;
 			    MEcopy((PTR)ag_resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
@@ -1197,18 +1296,57 @@ psl_flatten1(
 			    /* Force the rescan */
 			    agheadp = NULL;
 			}
-			
+
 			/* Retarget any naked VARs in the residue */
-			psl_retarget_vars(cb, residue, subsel, resrange);
+			psl_retarget_vars(cb, residue, dt_rng);
 
 			/* Scan the combined list and move bool factors up that require
 			** tables outside of this scope - from subsel to rt_node. */
-			if (status = psl_float_factors(cb, psq_cb, subsel, rt_node))
+			if (status = psl_float_factors(cb, psq_cb, subsel, dt_rng, rt_node))
 			    return status;
 
 			/* Now the same for the VARs (skipping those already fixed) */
-			psl_retarget_vars(cb, rt_node->pst_right, subsel, resrange);
+			psl_retarget_vars(cb, rt_node->pst_right, dt_rng);
 
+			/* Time to reapply the subsel qualifier (or what remains of it)
+			** to the aggregate(s). First gets the real tree, any others a
+			** copy */
+			agheadp = NULL;
+			v = subsel->pst_right;
+			while (psl_find_nodep(&subsel->pst_left, &agheadp, PST_AGHEAD))
+			{
+			    if (v == NULL)
+			    {
+				/* ... and copies thereof to any other ag-WHERE
+				** clause in this subsel */
+				PSS_DUPRB dup_rb;
+				dup_rb.pss_tree = subsel->pst_right;
+				dup_rb.pss_dup = &v;
+				dup_rb.pss_1ptr = NULL;
+				dup_rb.pss_op_mask = 0;
+				dup_rb.pss_num_joins = PST_NOJOIN;
+				dup_rb.pss_tree_info = NULL;
+				dup_rb.pss_mstream = &cb->pss_ostream;
+				dup_rb.pss_err_blk = &psq_cb->psq_error;
+				if (status = pst_treedup(cb, &dup_rb))
+				    return(status);
+			    }
+			    if (status = psy_apql(cb, &cb->pss_ostream,
+					v, *agheadp, &psq_cb->psq_error))
+				return status;
+			    v = NULL;	/* Ask for copies now */
+			}
+			if (!v)
+			{
+			    /* If there were no agheads the qualifier is left in place.
+			    ** Otherwise subsel qual moved to agheads so is now invalid
+			    ** & nees a QLEND. */
+			    subsel->pst_right = NULL;
+			    status = pst_node(cb, &cb->pss_ostream, NULL, NULL,
+					PST_QLEND, NULL, 0, DB_NODT, 0, 0,
+					(DB_ANYTYPE *)NULL, &subsel->pst_right,
+					&psq_cb->psq_error, 0);
+			}
 			/* Now we have the residual tree which was the sub-select
 			** expression and now has the aggregates set to VAR nodes
 			** and any 'stray' vars all waiting to be re-targetted. */
@@ -1219,11 +1357,11 @@ psl_flatten1(
 			    PST_QNODE *ag_resdom = subsel->pst_left;
 			    PST_QNODE *res = NULL;
 			    PST_QNODE **p;
-			    if (v->pst_sym.pst_value.pst_s_var.pst_vno == resrange->pss_rgno)
+			    if (v->pst_sym.pst_value.pst_s_var.pst_vno == dt_rng->pss_rgno)
 				continue; /* Already done */
 			    if (p = psl_lu_resdom_var(cb, &subsel->pst_left, v))
 			    {
-				v->pst_sym.pst_value.pst_s_var.pst_vno = resrange->pss_rgno;
+				v->pst_sym.pst_value.pst_s_var.pst_vno = dt_rng->pss_rgno;
 				v->pst_sym.pst_value.pst_s_var.pst_atno.db_att_id =
 					(*p)->pst_sym.pst_value.pst_s_rsdm.pst_rsno;
 				MEcopy((PTR)(*p)->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
@@ -1235,14 +1373,14 @@ psl_flatten1(
 			** we now slot in the fixed up residual tree. */
 			*nodep = residue->pst_right;
 
-			BTset(resrange->pss_rgno,
+			BTset(dt_rng->pss_rgno,
 			    (char*)&rt_node->pst_sym.pst_value.pst_s_root.pst_tvrm);
-			BTclearmask(sizeof(PST_J_MASK),
+			BTclearmask(BITS_IN(PST_J_MASK),
 			    (char*)&subsel->pst_sym.pst_value.pst_s_root.pst_tvrm,
 			    (char*)&rt_node->pst_sym.pst_value.pst_s_root.pst_tvrm);
 			rt_node->pst_sym.pst_value.pst_s_root.pst_tvrc =
 			    BTcount((char *)&rt_node->pst_sym.pst_value.pst_s_root.pst_tvrm,
-			    BITS_IN(rt_node->pst_sym.pst_value.pst_s_root.pst_tvrm));
+			    BITS_IN(PST_J_MASK));
 		    }
 		    else if (~subsel->pst_sym.pst_value.pst_s_root.pst_mask1 & PST_3GROUP_BY)
 		    {
@@ -1254,7 +1392,7 @@ psl_flatten1(
 			** canonical form.
 			*/
 			if (rt_node &&
-				(status = psl_float_factors(cb, psq_cb, subsel, rt_node)))
+				(status = psl_float_factors(cb, psq_cb, subsel, NULL, rt_node)))
 			    return status;
 
 			/* Attach the qual to the AGHEAD, and to any other
@@ -1267,7 +1405,7 @@ psl_flatten1(
 			{
 			    /* Same for AGHs */
 			    if (rt_node &&
-				    (status = psl_float_factors(cb, psq_cb, *agheadp, rt_node)))
+				    (status = psl_float_factors(cb, psq_cb, *agheadp, NULL, rt_node)))
 				return status;
 			    if (v == NULL)
 			    {
@@ -1319,7 +1457,7 @@ psl_flatten1(
 			** scope - from subsel to rt_node - if we can. */
 			if (rt_node)
 			{
-			    if (status = psl_float_factors(cb, psq_cb, subsel, rt_node))
+			    if (status = psl_float_factors(cb, psq_cb, subsel, NULL, rt_node))
 				return status;
 
 			    /* and copies thereof to any other ag-WHERE clause in this subsel */
@@ -1339,7 +1477,7 @@ psl_flatten1(
 					return E_DB_ERROR;
 				    }
 				}
-				if (status = psl_float_factors(cb, psq_cb, *agheadp, rt_node))
+				if (status = psl_float_factors(cb, psq_cb, *agheadp, NULL, rt_node))
 				    return status;
 			    } while (psl_find_nodep(&residue->pst_right, &agheadp, PST_AGHEAD));
 			}
@@ -1363,12 +1501,12 @@ psl_flatten1(
 		    if (status = psy_apql(cb, &cb->pss_ostream, subsel->pst_right,
 					rt_node, &psq_cb->psq_error))
 			return status;
-		    BTor(sizeof(PST_J_MASK),
+		    BTor(BITS_IN(PST_J_MASK),
 			    (char *)&subsel->pst_sym.pst_value.pst_s_root.pst_tvrm,
 			    (char *)&rt_node->pst_sym.pst_value.pst_s_root.pst_tvrm);
 		    rt_node->pst_sym.pst_value.pst_s_root.pst_tvrc =
 			    BTcount((char *)&rt_node->pst_sym.pst_value.pst_s_root.pst_tvrm,
-			    BITS_IN(rt_node->pst_sym.pst_value.pst_s_root.pst_tvrm));
+			    BITS_IN(PST_J_MASK));
 		}
 		break;
 	    }
@@ -1396,13 +1534,19 @@ psl_flatten1(
 	    subsel->pst_sym.pst_value.pst_s_root.pst_mask1 |=
 			    PST_1CORR_VAR_FLAG_VALID;
 	    /* Reset 'active subsel' */
-	    if ((subsel = pst_antecedant_by_2types(stk, NULL, PST_SUBSEL, PST_ROOT)) &&
-			subsel->pst_sym.pst_type == PST_SUBSEL)
+	    subsel = psubsel;
+	    if (subsel && subsel->pst_sym.pst_type == PST_SUBSEL)
+	    {
 		correl = (subsel->pst_sym.pst_value.pst_s_root.pst_mask1 &
 				PST_1CORR_VAR_FLAG_VALID) != 0;
+		psubsel = pst_antecedant_by_2types(stk, subsel, PST_SUBSEL, PST_ROOT);
+	    }
 	    else
+	    {
 		correl = FALSE;
-
+		psubsel = NULL;
+	    }
+	
 	    break;
 
 	case PST_ROOT:
@@ -1931,12 +2075,13 @@ psl_lu_resdom_var(
 **		relevant attribute fo the dtroot.
 **
 ** Input:
+**	cb			Session CB
 **	tree			Addresss of pointer to tree needing fixup
-**	dtroot			Address of node representing root of new
+**	dt_rng			This will be the range table entry for the
+**				derived table.
+**	dt_rng->pss_qtree	Address of node representing root of new
 **				derived table. Its pst_tvrm will be set
 **				correctly and the resdoms will be the columns.
-**	resrange		This will be the range table entry for the
-**				derived table.
 **
 ** Output:
 **	indirectly tree		Its var nodes will be updated.
@@ -1955,12 +2100,13 @@ psl_lu_resdom_var(
 static VOID
 psl_retarget_vars(
 	PSS_SESBLK	*cb,
-      PST_QNODE		*tree,
-      PST_QNODE		*dtroot,
-      PSS_RNGTAB	*resrange)
+	PST_QNODE	*tree,
+	PSS_RNGTAB	*dt_rng)
 {
     PST_QNODE *v = NULL;
+    PST_QNODE *dtroot = dt_rng->pss_qtree;
     /* Renaming HAVING var nodes to refer to drtab */
+
     while (psl_find_node(tree, &v, PST_VAR))
     {
 	i4 vno = v->pst_sym.pst_value.pst_s_var.pst_vno;
@@ -1970,7 +2116,7 @@ psl_retarget_vars(
 	    PST_QNODE **p = psl_lu_resdom_var(cb, &dtroot->pst_left->pst_left, v);
 	    if (p)
 	    {
-		v->pst_sym.pst_value.pst_s_var.pst_vno = resrange->pss_rgno;
+		v->pst_sym.pst_value.pst_s_var.pst_vno = dt_rng->pss_rgno;
 		v->pst_sym.pst_value.pst_s_var.pst_atno.db_att_id =
 			    (*p)->pst_sym.pst_value.pst_s_rsdm.pst_rsno;
 		MEcopy((PTR)(*p)->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
@@ -1994,6 +2140,8 @@ psl_retarget_vars(
 **	cb			Address of session cb
 **	psq_cb			Address of parser cb
 **	from			Address of the source predicate tree
+**	dt_rng			This will be the range table entry for the
+**				derived table.
 **	to			Address or recipient predicate tree
 **
 ** Output:
@@ -2011,6 +2159,18 @@ psl_retarget_vars(
 ** History:
 **	01-Apr-2010 (kiria01)
 **	    Created to reduce code repetition.
+**	05-Aug-2010 (kiria01) b124208
+**	    Add in the derived table range so that we can identify those
+**	    vars which were in the local from list but which at this point
+**	    have been changed to vars referencing the derived table - exported
+**	    so to speak. We need to make a distinction of these as depending
+**	    on their context they could be either a local or an external.
+**	    if the factor contains an outer then the dtvno var will be treated
+**	    as external. Otherwise, we switch it back to internal as it can
+**	    restrict the derived table closer to source.
+**	    Making the decision to float out means that the joinid should be
+**	    set whereas floating inward requires that the joinid be cleared
+**	    as the comparands can be sorted out within the derived table.
 */
 
 static DB_STATUS
@@ -2018,11 +2178,22 @@ psl_float_factors(
 	PSS_SESBLK	*cb,
 	PSQ_CB		*psq_cb,
 	PST_QNODE	*from,
+	PSS_RNGTAB	*dt_rng,
 	PST_QNODE	*to)
 {
     DB_STATUS status = E_DB_OK;
     PST_QNODE **andp = &from->pst_right;
+    PST_QNODE *root = NULL;
+    i4 dtvno = -1; /* Illegal vno */
+    PST_STK stk;
 
+    PST_STK_INIT(stk, cb);
+
+    if (dt_rng)
+    {
+	root = dt_rng->pss_qtree;
+	dtvno = dt_rng->pss_rgno;
+    }
     /* This outer loop will be passed once per 'factor' as if
     ** the list were constructed:
     **        AND
@@ -2037,6 +2208,7 @@ psl_float_factors(
     {
 	PST_QNODE *v = NULL;
 	PST_QNODE *a;
+	u_i4 seen;
 
 	/* The above structure (CNF) may not be what we are passed
 	** but the following loop forces this into happening as needed
@@ -2082,33 +2254,143 @@ psl_float_factors(
 
 	/* Having identified the next 'boolean factor', scan the
 	** segment for non-local VAR nodes and if found, cause this segment
-	** to move to the outer scope - in effect for later restruction. */
-	while (psl_find_node(a, &v, PST_VAR))
+	** to move to the outer scope - in effect for later restriction. */
+	psl_analyse_vars(&stk, a, 
+		(char*)&from->pst_sym.pst_value.pst_s_root.pst_tvrm,
+		dtvno, &seen);
+
+	if (seen & SEEN_OUTER)
 	{
-	    if (!BTtest(v->pst_sym.pst_value.pst_s_var.pst_vno,
-		(char*)&from->pst_sym.pst_value.pst_s_root.pst_tvrm))
+	    if (seen & SEEN_INNER)
 	    {
-		/* Non-local VAR found - add to the 'to' predicate list */
-		if (status = psy_apql(cb, &cb->pss_ostream, a, to,
-					&psq_cb->psq_error))
-		    return status;
-		break;
+		/* Will need floating out of DT and as INNER seen joinid will need
+		** setting as both outer and inner present. We do not set joinid
+		** if SEEN_DTVNO but not SEEN_INNER as this will indicate that
+		** the var has been exported and this is will remain a DT reference. */
+		v = a;
+		while (v)
+		{
+		    switch (v->pst_sym.pst_type)
+		    {
+		    case PST_VAR:
+		    case PST_CONST:
+		    case PST_AGHEAD:
+		    case PST_SUBSEL:
+		    case PST_ROOT:
+			/* Don't descend */
+			break;
+		    case PST_COP:
+		    case PST_UOP:
+		    case PST_BOP:
+		    case PST_MOP:
+		    case PST_AOP:
+		    case PST_AND:
+		    case PST_OR:
+			/* Set joinid potentially */
+			if (v->pst_sym.pst_value.pst_s_op.pst_joinid == PST_NOJOIN)
+			    v->pst_sym.pst_value.pst_s_op.pst_joinid =
+				    root->pst_sym.pst_value.pst_s_root.pst_ss_joinid;
+			/*FALLTHROUGH*/
+		    default:
+			/* 'recurse' top down */
+			if (v->pst_left)
+			{
+			    if (v->pst_right)
+				pst_push_item(&stk, (PTR)v->pst_right);
+			    v = v->pst_left;
+			    continue;
+			}
+			else if (v->pst_right)
+			{
+			    v = v->pst_right;
+			    continue;
+			}
+		    }
+		    v = (PST_QNODE*)pst_pop_item(&stk);
+		}
 	    }
-	}
-	if (!v)
-	{
-	    /* Didn't trip BTtest so will be local. We will leave this factor
-	    ** in place and to do so we either step over it if it was on LHS of
-	    ** AND or break out if at RHS (a == *andp) */
-	    if (a == *andp)
-		break;
-	    andp = &(*andp)->pst_right;
-	}
-	else
-	{
+	    if (status = psy_apql(cb, &cb->pss_ostream, a, to,
+				    &psq_cb->psq_error))
+		return status;
+
 	    /* The segment has been moved so we remove from the from list
 	    ** thus: (The NULL will also trigger loop exit.)*/
 	    *andp = (a == *andp) ? NULL : (*andp)->pst_right;
+	}
+	else /* Just inners of dtvno's to unexport */
+	{
+	    /* If a boolean factor contained no outer vars then any inner vars
+	    ** that got updated to be dt column references will need to be undone
+	    ** now. */
+	    v = a;
+	    while (v)
+	    {
+		switch (v->pst_sym.pst_type)
+		{
+		case PST_VAR:
+		    if (v->pst_sym.pst_value.pst_s_var.pst_vno == dtvno)
+		    {
+			/* Reset this back to the real var that was here
+			** before psl_retarget_vars promoted it. */
+			PST_QNODE *rsd = root->pst_left->pst_left;
+			/* First find the resdom that that we need */
+			while (rsd && rsd->pst_sym.pst_type == PST_RESDOM)
+			{
+			    PST_QNODE *v1;
+			    if (rsd->pst_sym.pst_value.pst_s_rsdm.pst_rsno ==
+				    v->pst_sym.pst_value.pst_s_var.pst_atno.db_att_id &&
+				    (v1 = rsd->pst_right) &&
+				    v1->pst_sym.pst_type == PST_VAR)
+			    {
+				v->pst_sym.pst_value.pst_s_var =
+					v1->pst_sym.pst_value.pst_s_var;
+				break;
+			    }
+			    rsd = rsd->pst_left;
+			}
+		    }
+		    break;
+		case PST_CONST:
+		case PST_AGHEAD:
+		case PST_SUBSEL:
+		case PST_ROOT:
+		    /* Don't descend */
+		    break;
+		case PST_COP:
+		case PST_UOP:
+		case PST_BOP:
+		case PST_MOP:
+		case PST_AOP:
+		case PST_AND:
+		case PST_OR:
+		    /* Reset joinid potentially */
+		    if (root &&
+			v->pst_sym.pst_value.pst_s_op.pst_joinid ==
+				root->pst_sym.pst_value.pst_s_root.pst_ss_joinid)
+			v->pst_sym.pst_value.pst_s_op.pst_joinid = PST_NOJOIN;
+		    /*FALLTHROUGH*/
+		default:
+		    /* 'recurse' top down */
+		    if (v->pst_left)
+		    {
+			if (v->pst_right)
+			    pst_push_item(&stk, (PTR)v->pst_right);
+			v = v->pst_left;
+			continue;
+		    }
+		    else if (v->pst_right)
+		    {
+			v = v->pst_right;
+			continue;
+		    }
+		}
+		v = (PST_QNODE*)pst_pop_item(&stk);
+	    }
+	    /* We will leave this factor in place and to do so we either step
+	    ** over it if it was on LHS of AND or break out if at RHS (a == *andp) */
+	    if (a == *andp)
+		break;
+	    andp = &(*andp)->pst_right;
 	}
     }
     /* If we floated all - don't leave a NULL list */
@@ -2211,6 +2493,9 @@ psl_project_corr_vars (
 {
     DB_STATUS status = E_DB_OK;
     PST_QNODE **andp = &srctree->pst_right;
+    PST_STK stk;
+
+    PST_STK_INIT(stk, cb);
 
     /* Scan the passed predicate and 'cut' into 'boolean factors'.
     ** See psl_float_factors() for algorithm description. */
@@ -2218,8 +2503,7 @@ psl_project_corr_vars (
     {
 	PST_QNODE *v = NULL;
 	PST_QNODE *a;
-	bool inner_seen = FALSE;
-	bool outer_seen = FALSE;
+	u_i4 seen;
 
 	while ((a = *andp)->pst_sym.pst_type == PST_AND)
 	{
@@ -2240,7 +2524,7 @@ psl_project_corr_vars (
 		else
 		    break; /* a is the expression */
 	    }
-	    else /* <> AND x -> x*/
+	    else /* <> AND x -> x */
 		*andp = (*andp)->pst_right;
 	}
 
@@ -2255,15 +2539,12 @@ psl_project_corr_vars (
 	** case we err on the causious side and project anyway. We could project
 	** all the locals but this would cause the tendancy to restrict later
 	** than we could. */
-	while (psl_find_node(a, &v, PST_VAR))
-	{
-	    if (BTtest(v->pst_sym.pst_value.pst_s_var.pst_vno,
-		(char*)&desttree->pst_sym.pst_value.pst_s_root.pst_tvrm))
-		inner_seen = TRUE;
-	    else
-		outer_seen = TRUE;
-	}
-	if (inner_seen && outer_seen)
+
+	psl_analyse_vars(&stk, a, 
+		(char*)&desttree->pst_sym.pst_value.pst_s_root.pst_tvrm,
+		-1, &seen);
+
+	if ((seen & (SEEN_INNER|SEEN_OUTER)) == (SEEN_INNER|SEEN_OUTER))
 	{
 	    /* factor features local and non-local - project local */
 	    while (psl_find_node(a, &v, PST_VAR))
@@ -2282,3 +2563,82 @@ psl_project_corr_vars (
     }
     return status;
 }
+
+/*
+** Name:	psl_analyse_vars
+**
+** Description:	this function scans the sub-tree to determine the presence
+**		or inner or outer vars and report this.
+** Input:
+**	stk		Address of recursion stack block
+**	tree		Address of the sub-tree
+**	dtvno		This will be the range table index for the derived table.
+**	map		from list bitmap
+**
+** Output:
+**	seen		Bit map for presence of inner, dtvno or outer var seen
+**			returning bits: SEEN_INNER, SEEN_OUTER and SEEN_DTVNO
+**
+** Side effects:
+**	None
+**
+** Returns:
+**	void
+**
+** History:
+**	05-Aug-2010 (kiria01) b124208
+**	    Created to aid classification of boolean factors so that
+**	    the deeper spanning correlations are not treated like simple
+**	    single depth inner-outers.
+*/
+
+static VOID
+psl_analyse_vars(
+	PST_STK		*stk,
+	PST_QNODE	*tree,
+	char		*map,
+	i4		dtvno,
+	u_i4		*pseen)
+{
+    DB_STATUS status = E_DB_OK;
+    register PST_QNODE *v = tree;
+    register seen = 0;
+
+    while (v)
+    {
+	switch (v->pst_sym.pst_type)
+	{
+	case PST_VAR:
+	    if (v->pst_sym.pst_value.pst_s_var.pst_vno == dtvno)
+		seen |= SEEN_DTVNO;
+	    else if (BTtest(v->pst_sym.pst_value.pst_s_var.pst_vno, map))
+		seen |= SEEN_INNER;
+	    else
+		seen |= SEEN_OUTER;
+	    break;
+	case PST_CONST:
+	case PST_AGHEAD:
+	case PST_SUBSEL:
+	case PST_ROOT:
+	    /* Don't descend */
+	    break;
+	default:
+	    /* 'recurse' top down */
+	    if (v->pst_left)
+	    {
+		if (v->pst_right)
+		    pst_push_item(stk, (PTR)v->pst_right);
+		v = v->pst_left;
+		continue;
+	    }
+	    else if (v->pst_right)
+	    {
+		v = v->pst_right;
+		continue;
+	    }
+	}
+	v = (PST_QNODE*)pst_pop_item(stk);
+    }
+    *pseen = seen;
+}
+

@@ -3598,6 +3598,8 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	    "the canonical manner".
 **	    Fix psl-mk-const-similar to generate a coercion op with the
 **	    standard joinid (which was the point of 124170 in the first place).
+**	05-Aug-2010 (kiria01) b124208
+**	    Allow SINGLETON to return nullable regardless of argument.
 */
 %{
 
@@ -29611,8 +29613,10 @@ subselect:	    select first_n distinct target_spec into_clause from
 		    agopnode->pst_left->pst_sym.pst_dataval.db_datatype > 0 &&
 		    agopnode->pst_sym.pst_dataval.db_datatype < 0 &&
 		    agopnode->pst_right == NULL &&
-		    agopnode->pst_sym.pst_value.pst_s_op.pst_opinst !=
-			ADFI_845_STDDEV_SAMP_FLT)
+		    agopnode->pst_sym.pst_value.pst_s_op.pst_opno !=
+			ADI_STDDEV_SAMP_OP &&
+		    agopnode->pst_sym.pst_value.pst_s_op.pst_opno !=
+			ADI_SINGLETON_OP)
 		{
 		    agopnode->pst_sym.pst_dataval.db_datatype =
 			abs(agopnode->pst_sym.pst_dataval.db_datatype);
