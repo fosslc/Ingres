@@ -67,6 +67,9 @@
 **          Implemented extended symbolic port range mapping algorithm.
 **          Implemented support for explicit port rollup indicator for
 **          symbolic and numeric ports.
+**       13-May-2010 (Ralph Loen) Bug 120552
+**          Add a new output argument to GC_tcp_addr() which returns the
+**          "actual" symbolic port (base port plus subport).
 */
 
 u_long
@@ -272,14 +275,15 @@ struct sockaddr_in *s;
 **	    Implemented support for explicit port rollup indicator for
 **	    symbolic and numeric ports.
 */
-
 STATUS
-GC_tcp_port( pin, subport, pout )
+GC_tcp_port( pin, subport, pout, pout_symbolic )
 char	*pin;
 i4	subport;
 char	*pout;
+char    *pout_symbolic;
 {
     u_i2 portid, offset;
+    
     /*
     ** Check for symbolic port ID format: aa or an
     **
@@ -361,7 +365,13 @@ char	*pout;
 		    | (baseport & 0x07);
 
 	CVla( (u_i4)portid, pout );
-
+	/* Suppress 0 when displaying the actual symbolic port. 
+	** Windows don't display subport value of 0... 
+	*/
+	if( baseport == 0 )
+	    STprintf(pout_symbolic, "%c%c", pin[0], pin[1]);
+	else
+	    STprintf(pout_symbolic, "%c%c%d", pin[0], pin[1], baseport);
 	return( OK );
     } 
 
@@ -384,6 +394,7 @@ char	*pout;
 	*/
 	if ( subport > 15 )  return( FAIL );
 	CVla( portid + subport, pout );
+	STcopy(pout, pout_symbolic);
 	return( OK );
     }
 
@@ -393,6 +404,8 @@ char	*pout;
     */
     if( subport )  return( FAIL );
     STcopy( pin, pout );
+    STcopy(pin, pout_symbolic);
+
     return( OK );
 }
 

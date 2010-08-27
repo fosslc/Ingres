@@ -113,6 +113,7 @@ typedef struct _GC_DCB
 	char		lsn_port[64];	/* untranslated listen port */
 	char		lsn_bcb[ BS_MAX_LBCBSIZE ];
     	char		portbuf[ GCC_L_NODE + GCC_L_PORT + 5 ];
+        char            actual_portID[GCC_L_PORT];
 	BS_PARMS	bsp;		/* for accepts */
 } GC_DCB;
 
@@ -314,14 +315,15 @@ top:
 	** usable listen subports.
 	*/
 
-	if( (*bsd->portmap)( dcb->lsn_port, dcb->subport, dcb->portbuf ) != OK )
+	if( (*bsd->portmap)( dcb->lsn_port, dcb->subport, dcb->portbuf,
+            dcb->actual_portID ) != OK )
 	{
 	    parms->generic_status = dcb->last_status;
 	    goto complete;
 	}
 
-	GCTRACE(1)("GC%s: %x listening at %s\n", 
-	    parms->pce->pce_pid, parms, dcb->portbuf );
+	GCTRACE(1)("GC%s: %x listening at %s (%s)\n", 
+	    parms->pce->pce_pid, parms, dcb->portbuf, dcb->actual_portID );
 
 	/* Extend listen with BS listen. */
 
@@ -350,13 +352,13 @@ top:
 	    STprintf( dcb->lsn_port + STlength( dcb->lsn_port ), 
 		    "%d", dcb->subport );
 
-	STprintf( dcb->lsn_port + STlength( dcb->lsn_port ), "(%s)", bsp->buf );
+        STcopy(bsp->buf, dcb->lsn_port);
 
 	GCTRACE(1)("GC%s: Listen port [%s]\n",
 		parms->pce->pce_pid, dcb->lsn_port );
 
 	parms->function_parms.open.lsn_port = dcb->lsn_port;
-
+        parms->function_parms.open.actual_port_id = dcb->actual_portID;
 	goto complete;
 
     case GC_LSN:
@@ -455,7 +457,7 @@ top:
 
 	if( portname && *portname )
 	    (void)(*bsd->portmap)( portname, 0,
-		    dcb->portbuf + STlength( dcb->portbuf ) );
+		    dcb->portbuf, dcb->actual_portID );
 
 	GCTRACE(1)("GC%s: %x connecting to %s\n",
 	    parms->pce->pce_pid, parms, dcb->portbuf );
