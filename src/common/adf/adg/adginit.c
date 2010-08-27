@@ -396,6 +396,8 @@ static  DB_STATUS   adg_outargs();      /* Init/set ADF_OUTARG struct */
 **	    Fix error is setting the db_maxstring on UTF8 installation.
 **      19-nov-2008 (huazh01)
 **          Remove 'ad_1rsvd_cnt'. (b121246).
+**      24-Jun-2010 (horda03) B123987 
+**          Initialise adf_misc_flags 
 */
 
 # ifdef ADF_BUILD_WITH_PROTOS
@@ -585,6 +587,9 @@ ADF_CB  *adf_scb;
 	(adf_scb->adf_utf8_flag & AD_UTF8_ENABLED))
         adf_scb->adf_maxstring = DB_UTF8_MAXSTRING;
     */
+
+    /* Initialise the adf_misc_flags */
+    adf_scb->adf_misc_flags = 0;
 
     return (E_DB_OK);
 }

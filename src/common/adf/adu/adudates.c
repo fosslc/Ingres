@@ -3653,6 +3653,11 @@ i4		    *tzoff)
 **          Legacy, empty INGRES date values may be interpreted as an
 **          interval. Check AD_DN_LENGTH is set before assuming we have
 **          an interval.
+**      24-Jun-2010 (horda03) B123987
+**          An ingresdate interval string can be longer than AD_1DTE_OUTLENGTH,
+**          (at this time around 57 characters). So only limit the length of
+**          the output to the size of the (temp) buffer used to construct the
+**          interval string.
 */
 
 DB_STATUS
@@ -3669,7 +3674,7 @@ DB_DATA_VALUE	    *str_dv)
 			ns;
     i4			signmult;
     char		tmpbuffer[15];
-    char		temp[128];
+    char		temp[AD_11_MAX_STRING_LEN+1];
     i4			max_str_len;
     AD_NEWDTNTRNL	ndatev;
     DB_DATA_VALUE	str2_dv;
@@ -3706,22 +3711,9 @@ DB_DATA_VALUE	    *str_dv)
     /* max length of date output string */
     MEfill ((u_i2) sizeof(temp), NULLCHAR, (PTR) &temp);
 
-    /* for interval types set the max length */
-    switch (date_dv->db_datatype)
-    {
-	case DB_DTE_TYPE:
-    	    if (max_str_len > AD_1DTE_OUTLENGTH)
-	        max_str_len = AD_1DTE_OUTLENGTH;
-	    break;
-	case DB_INYM_TYPE:
-    	    if (max_str_len > AD_9INYM_OUTLENGTH)
-	        max_str_len = AD_9INYM_OUTLENGTH;
-	    break;
-	case DB_INDS_TYPE:
-    	    if (max_str_len > AD_10INDS_OUTLENGTH)
-	        max_str_len = AD_10INDS_OUTLENGTH;
-	    break;
-    }
+    /* Limit the output string to the size of temp */
+    if (max_str_len > sizeof(temp))
+       max_str_len = sizeof(temp);
 
     nd = &ndatev;
     if (db_stat = adu_6to_dtntrnl (adf_scb, date_dv, nd))

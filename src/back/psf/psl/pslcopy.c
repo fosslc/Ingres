@@ -153,6 +153,11 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      24-Jun-2010 (horda03) B123987
+**          For an Ingresdate tuple copied into a string for a
+**          COPY INTO change the string's length to be
+**          AD_11_MAX_STRING_LEN to cater for maximum interval
+**          length. 
 **	    
 */
 
@@ -1107,9 +1112,13 @@ qe_copy->qeu_tup_length = qe_copy->qeu_tup_physical;
 		    }
 		    else
 		    {
+                        u_i4 old_flags = adf_scb->adf_misc_flags;
+
+                        adf_scb->adf_misc_flags |= ADF_LONG_DATE_STRINGS;
 			status = adi_0calclen(adf_scb, 
 				    &adi_fdesc->adi_lenspec, 1,
 				    &src_dbv, dest_dbv);
+                        adf_scb->adf_misc_flags = old_flags;
 		    }
 		    cpdom_desc->cp_cvprec = dest_dbv->db_prec;
 		    cpdom_desc->cp_cvlen  = (i4) dest_dbv->db_length;

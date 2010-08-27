@@ -788,6 +788,10 @@
 **      08-Jun-2010 (horda03)
 **          When xDEBUG defined build fails due to : at end of prototype
 **          definition. And adu_unorm interface wrong.
+**      24-Jun-2010 (horda03) B123987
+**          Add adf_misc_flags to so that DATE->STRING conversion of
+**          greater than 25 chars can be signalled (used for Ascii
+**          copy into).
 */
 
 #ifndef ADF_HDR_INCLUDED
@@ -2014,6 +2018,10 @@ typedef struct _ADK_CONST_BLK
 **      26-Nov-2009 (hanal04) Bug 122938
 **          Added adf_max_decprec to hold the maximum decimal precision
 **          supported by the client.
+**      24-Jun-2010 (horda03) B123987
+**          Add adf_misc_flags, and ADF_LONG_DATE_STRINGS to signal a
+**          String of AD_11_MAX_STRING_LEN length should be returned
+**          for a DATE->CHAR conversion.
 */
 
 typedef struct _ADF_CB
@@ -2118,6 +2126,8 @@ typedef struct _ADF_CB
 						** into atring needing a substitution
 						** char supplemented -> not constant.
 						** See ADI_F16384_CHKVARFI */
+   u_i4             adf_misc_flags;
+#define ADF_LONG_DATE_STRINGS 0x00000001    /* Date strings of AD_11_MAX_STRING_LEN required */
 }   ADF_CB;
 
 

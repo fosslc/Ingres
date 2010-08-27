@@ -167,6 +167,9 @@
 **	    Need me.h to satisfy gcc 4.3.
 **	12-Mar-2010 (toumi01) SIR 122403
 **	    Added ADI_O1AES for encryption.
+**      24-Jun-2010 (horda03) B123987
+**          For DATE->STRING if ADF_LONG_DATE_STRINGS specified, then return
+**          the longer length.
 **/
 
 /*
@@ -182,6 +185,7 @@
 
 /* Create LENSPEC based on input datatypes */
 static DB_STATUS adi_1len_indirect(ADI_OP_ID          fiopid,
+                                   u_i4               flag,
 				   DB_DATA_VALUE      *dv1,
 				   DB_DATA_VALUE      *dv2,
 				   ADI_LENSPEC        *out_lenspec);
@@ -1217,6 +1221,7 @@ DB_DATA_VALUE      *adi_dvr;
 		break;
 	    case ADI_LEN_INDIRECT:
 		status = adi_1len_indirect( fi_desc->adi_fiopid, 
+                                           adf_scb->adf_misc_flags,
 					   adi_dv[0], adi_dv[1], 
 					   &local_lenspec);
 	    }
@@ -2590,6 +2595,7 @@ DB_DATA_VALUE      *adi_dvr;
 ** Inputs:
 **      fiopid                          Operator ID for this function 
 **                                      instance.
+**      flag                            adf_cb's adf_misc_flags.
 **      dv1                             Ptr to DB_DATA_VALUE for first input
 **                                      operand.  (Only used as a convenient
 **                                      mechanism for supplying a datatype and
@@ -2653,10 +2659,14 @@ DB_DATA_VALUE      *adi_dvr;
 **	    Correct the NCHAR(NVARCHAR) and NVARCHAR(NCHAR) codes - the
 **	    TC & CT were the wrong way round!
 **	    Also made NVARCHAR(NVARCHAR) use ADI_O1 as it should.
+**      24-Jun-2010 (horda03) B123987
+**          For DATE->STRING if ADF_LONG_DATE_STRINGS specified, then return
+**          the longer length.
 */
 static DB_STATUS
 adi_1len_indirect( 
 ADI_OP_ID          fiopid,
+u_i4               flag,
 DB_DATA_VALUE      *dv1,
 DB_DATA_VALUE      *dv2,
 ADI_LENSPEC        *out_lenspec) 
@@ -2686,7 +2696,12 @@ ADI_LENSPEC        *out_lenspec)
 	    break;
 	  case DB_DTE_TYPE:
 	    out_lenspec->adi_lncompute = ADI_FIXED;
-	    out_lenspec->adi_fixedsize = AD_1DTE_OUTLENGTH + DB_CNTSIZE;
+            if (flag & ADF_LONG_DATE_STRINGS)
+            {
+	       out_lenspec->adi_fixedsize = AD_11DTE_INTRV_OUTLENGTH + DB_CNTSIZE;
+            }
+            else
+	       out_lenspec->adi_fixedsize = AD_1DTE_OUTLENGTH + DB_CNTSIZE;
 	    break;
           case DB_ADTE_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
@@ -2780,7 +2795,12 @@ ADI_LENSPEC        *out_lenspec)
 	    break;
 	  case DB_DTE_TYPE:
 	    out_lenspec->adi_lncompute = ADI_FIXED;
-	    out_lenspec->adi_fixedsize = AD_1DTE_OUTLENGTH;
+            if (flag & ADF_LONG_DATE_STRINGS)
+            {
+               out_lenspec->adi_fixedsize = AD_11DTE_INTRV_OUTLENGTH;
+            }
+            else
+	       out_lenspec->adi_fixedsize = AD_1DTE_OUTLENGTH;
 	    break;
           case DB_ADTE_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
@@ -2872,7 +2892,12 @@ ADI_LENSPEC        *out_lenspec)
             break;
           case DB_DTE_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = AD_1DTE_OUTLENGTH * sizeof(UCS2);
+            if (flag & ADF_LONG_DATE_STRINGS)
+            {
+               out_lenspec->adi_fixedsize = AD_11DTE_INTRV_OUTLENGTH * sizeof(UCS2);
+            }
+            else
+               out_lenspec->adi_fixedsize = AD_1DTE_OUTLENGTH * sizeof(UCS2);
             break;
           case DB_ADTE_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
@@ -2958,7 +2983,12 @@ ADI_LENSPEC        *out_lenspec)
             break;
           case DB_DTE_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = AD_1DTE_OUTLENGTH * sizeof(UCS2);
+            if (flag & ADF_LONG_DATE_STRINGS)
+            {
+               out_lenspec->adi_fixedsize = AD_11DTE_INTRV_OUTLENGTH * sizeof(UCS2);
+            }
+            else
+               out_lenspec->adi_fixedsize = AD_1DTE_OUTLENGTH * sizeof(UCS2);
             break;
           case DB_ADTE_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;

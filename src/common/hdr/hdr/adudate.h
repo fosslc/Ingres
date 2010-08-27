@@ -86,6 +86,11 @@
 **	13-jun-2010 (stephenb)
 **	    Add ADU_BIGGEST_MACRO to support expanding date lengths
 **	    in aducalclen
+**      24-Jun-2010 (horda03) B123987
+**          Added AD_11DTE_INTRN_OUTLENGTH for the length of an Ingredate
+**          Interval (when coverted to a string. Also added
+**          AD_11_MAX_STRING_LEN which is set to the maximum length
+**          a string for a DATE (ANSI or INGRESDATE) will take.
 **/
 
 
@@ -476,6 +481,12 @@ typedef struct _AD_AGGDATE
 					    /* Max string '9999 yrs 12 mos' */
 #define     AD_10INDS_OUTLENGTH       45    /* string length of INDS output */
       /* Max string '3649635 days 23 hrs 59 mins 59.999999999 secs' */
+#define     AD_11DTE_INTRV_OUTLENGTH  57    /* string length of an ingresdate interval */
+      /* Max string '-9999 yrs -11 mos -3600000 days -19 hrs -39 mins -30 secs' */
+#define     AD_11_MAX_STRING_LEN      AD_11DTE_INTRV_OUTLENGTH
+                                            /* Maximum string length of
+                                            ** any date type.
+                                            */
 
 
 #define	    AD_2DTE_MSPERSEC	    1000.0  /* # msecs in a second (as flt) */
