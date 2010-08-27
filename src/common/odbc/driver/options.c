@@ -155,6 +155,8 @@
 **         SQLGetConnectAttr().  Addd support for SQL_MAX_ROWS in 
 **         SQLGetConnectAttr().  Deprecate support for statement-level
 **         attributes if version is SQL_OV_ODBC3 or later.
+**	31-Jul-3010 (kschendel) 124131
+**	   Fix above for gcc 4.4 compiler complaints.
 */
 
 RETCODE EnlistInDTC(LPDBC pdbc, VOID * pITransaction);
@@ -1760,7 +1762,8 @@ RETCODE SQL_API SQLSetStmtAttr_InternalCall(
         ** Number of rows returned by SQLFetch or SQLFetchScroll.
         ** Default rowset size is 1. 
         */
-        pstmt->crowFetchMax = (UWORD)pstmt->pARD->ArraySize = (UWORD)vParamulen;
+        pstmt->pARD->ArraySize = vParamulen;
+        pstmt->crowFetchMax = (UWORD)vParamulen;
         pstmt->crowMax = 0;
         break;
 
@@ -1812,7 +1815,8 @@ RETCODE SQL_API SQLSetStmtAttr_InternalCall(
     case SQL_ROWSET_SIZE:
 
         /* number of rows in 2.x SQLExtendedFetch rowset (default=1) */
-        pstmt->crowFetchMax = (UWORD)pstmt->pARD->ArraySize = (UWORD)vParamulen;
+        pstmt->pARD->ArraySize = vParamulen;
+        pstmt->crowFetchMax = (UWORD)vParamulen;
         pstmt->crowMax = 0;
         break;
 
