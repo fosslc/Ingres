@@ -225,6 +225,9 @@ static DB_STATUS dmv_do_sm1_rename(DMVE_CB *dmve_cb);
 **          must be done using the correct page size in the tcb and tbio.
 **          Reset config file status.
 **          Init loc_status in DMP_LOC structure.
+**	6-Jun-2010 (kschendel)
+**	    After fixing a typo in tab_name init, discover it's not used at
+**	    all, delete it.
 */
 DB_STATUS
 dmve_sm1_rename(
@@ -253,7 +256,6 @@ DMVE_CB		*dmve_cb)
     i4             loc_count = 1;
     DMP_LOC_ENTRY       ext;
     DMP_FCB             fcb;
-    DB_TAB_NAME         tab_name;
     DMP_RCB		*dev_rcb = 0;
     i4		local_error;
     DB_TAB_TIMESTAMP	timestamp;
@@ -280,7 +282,6 @@ DMVE_CB		*dmve_cb)
 	filelength	= sizeof(log_rec->sm1_oldname);
 	tbl_id = &log_rec->sm1_tbl_id;
 
-	MEfill(sizeof(DM_FILE), ' ', tab_name.db_tab_name);
 	fcb.fcb_di_ptr = &di_file;
 	fcb. fcb_last_page = 0;
 	fcb.fcb_location = (DMP_LOC_ENTRY *) 0;
@@ -685,7 +686,6 @@ DMVE_CB		*dmve_cb)
     DB_TAB_TIMESTAMP	timestamp;
     i4		error = E_DB_OK;
     i4		local_error = E_DB_OK;
-    DB_TAB_NAME         tab_name;
     u_i4		db_sync_flag;
     DB_ERROR		local_dberr;
 

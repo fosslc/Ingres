@@ -230,6 +230,8 @@
 **	    Revise to use the compression-control array instead of att by att.
 **	    This should speed things up a bit for runs of non-nullable
 **	    non-compressing columns, plus reduce jumping about slightly.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Add BYTE compression.
 */
 DB_STATUS	
 dm1cn_compress(
@@ -379,6 +381,28 @@ dm1cn_compress(
 	    }
 	    I2ASSIGN_MACRO(i2_len, *(u_i2 *)dst);
 	    dst += sizeof(u_i2) + i2_len*sizeof(UCS2);
+	    src += src_len;
+	    break;
+
+	case DM1CN_OP_BYTE:
+	    /* BYTE type - snip trailing zeros, then store as if varchar */
+	    ptr = src + dst_len - 1;
+	    do
+	    {
+		if (*ptr != '\0')
+		    break;
+	    } while (--ptr >= src);
+	    if (ptr < src)
+	    {
+		i2_len = 0;
+	    }
+	    else
+	    {
+		i2_len = ptr - src + 1;		/* Number of nonblanks */
+		MEcopy(src, i2_len, dst+sizeof(u_i2));
+	    }
+	    I2ASSIGN_MACRO(i2_len, *(u_i2 *)dst);
+	    dst += sizeof(u_i2) + i2_len;
 	    src += src_len;
 	    break;
 
@@ -567,6 +591,9 @@ dm1cn_compress(
 **	29-Aug-2008 (kschendel)
 **	    Set exception ADF cb pointer around cvinto calls to handle
 **	    arithmetic exceptions (e.g. overflow) during conversion.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Add BYTE decompressing, same as CHAR except fills trailing
+**	    zeros instead of trailing spaces.
 */
 
 /* For alter column conversions, keep small held values on the stack,
@@ -797,6 +824,7 @@ dm1cn_uncompress(
 			while (*src++ != '\0')
 			    ;
 			break;
+		    case DM1CN_OP_BYTE:
 		    case DM1CN_OP_CHA:
 		    case DM1CN_OP_VCH:
 			I2ASSIGN_MACRO( *(u_i2 *)src, i2_len);
@@ -940,8 +968,25 @@ dm1cn_uncompress(
 	    dst += dst_len;	/* Skipping any possible null indicator */
 	    break;
 
+	case DM1CN_OP_BYTE:
+	    /* Byte: stored as if varbyte, trailing zeros snipped off */
+	    p1 = dst;
+	    p2 = dst + nnull_len - 1;	/* End of result value */
+	    I2ASSIGN_MACRO(*(u_i2 *)src, i2_len);
+	    src += sizeof(u_i2);
+	    if (i2_len > nnull_len)
+		goto overrun;
+	    MEcopy(src, i2_len, p1);
+	    p1 += i2_len;
+	    while (p1 <= p2)
+		*p1++ = '\0';
+	    src += i2_len;
+	    dst += dst_len;	/* Skipping any possible null indicator */
+	    break;
+
+
 	case DM1CN_OP_VCH:
-	    /* varchar and text stored exact-length */
+	    /* varchar, varbyte, and text stored exact-length */
 	    I2ASSIGN_MACRO(((DB_TEXT_STRING *)src)->db_t_count, i2_len);
 	    i2_len += sizeof(u_i2);
 	    if (i2_len > nnull_len)
@@ -1021,6 +1066,8 @@ overrun:
 **	The worst-case expansion is computed for a current version row.
 **
 ** Inputs:
+**	compression_type		The compression type code (so we can
+**					distinguish new vs old style).
 **      atts_array                      Pointer to an array of attribute 
 **                                      descriptors.
 **      atts_count                      Number of entries in atts_array.
@@ -1049,10 +1096,12 @@ overrun:
 **	    Used MECOPY_VAR_MACRO instead of MEcopy.
 **	20-Feb-2008 (kschendel)
 **	    NCHAR works like CHAR and can add two bytes.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    BYTE now works like CHAR, if it's new-style compression.
 */
 
 i4	
-dm1cn_compexpand(
+dm1cn_compexpand(	i4		compression_type,
 			DB_ATTS		**attpp,
 			i4		att_cnt)
 {
@@ -1070,7 +1119,8 @@ dm1cn_compexpand(
 	abs_type = (att->type < 0) ? -att->type : att->type;
 	if (abs_type == DB_CHR_TYPE)
 	    ++expansion;
-	else if (abs_type == DB_CHA_TYPE || abs_type == DB_NCHR_TYPE)
+	else if (abs_type == DB_CHA_TYPE || abs_type == DB_NCHR_TYPE
+	  || (abs_type == DB_BYTE_TYPE && compression_type == TCB_C_STANDARD) )
 	    expansion += DB_CNTSIZE;
     }
     return expansion;
@@ -1111,6 +1161,9 @@ dm1cn_compexpand(
 **	    pustulent excrescence.
 **	7-May-2010 (kschendel)
 **	    Fix to never compress encrypted columns, not even null-compression.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Add separate opcode table that includes BYTE, VARBYTE.  New-
+**	    style standard compression includes these, old-style doesn't.
 */
 
 /* Define a helper table indexed by (abs) type.
@@ -1118,7 +1171,7 @@ dm1cn_compexpand(
 ** If it weren't for MSVC we could use C99 initializers here, e.g.
 ** [DB_CHA_TYPE] = DM1CN_OP_CHA, etc.  But noooooo....
 */
-static const i4 dm1cn_opcodes[] =
+static const i4 dm1cn_opcodes_old[] =
 {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/* Types 0..9 */
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/* Types 10..19 */
@@ -1126,8 +1179,20 @@ static const i4 dm1cn_opcodes[] =
 	0, DM1CN_OP_NCHR, DM1CN_OP_NVCHR, 0, 0,	/* 25..29 */
 	0, 0, DM1CN_OP_CHR, 0, 0, 0, 0, DM1CN_OP_VCH 	/* 30..37 */
 };
-#define DM1CN_OPTAB_MAX (sizeof(dm1cn_opcodes)/sizeof(i4))
+#define DM1CN_OPTAB_MAX (sizeof(dm1cn_opcodes_old)/sizeof(i4))
 
+/* This table is used for new style compression; it includes BYTE and
+** BYTE VARYING.
+** This table MUST be exactly the same size as the _old table.
+*/
+static const i4 dm1cn_opcodes_new[] =
+{
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/* Types 0..9 */
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/* Types 10..19 */
+	DM1CN_OP_CHA, DM1CN_OP_VCH, 0, DM1CN_OP_BYTE, DM1CN_OP_VCH, /* 20..24 */
+	0, DM1CN_OP_NCHR, DM1CN_OP_NVCHR, 0, 0,	/* 25..29 */
+	0, 0, DM1CN_OP_CHR, 0, 0, 0, 0, DM1CN_OP_VCH 	/* 30..37 */
+};
 
 DB_STATUS
 dm1cn_cmpcontrol_setup(DMP_ROWACCESS *rac)
@@ -1145,10 +1210,14 @@ dm1cn_cmpcontrol_setup(DMP_ROWACCESS *rac)
     i4 cum_length;		/* Accumulated length for COPYN */
     i4 dt_bits;			/* Data type flags */
     i4 opcode;
+    const i4 *opcodes;		/* One of the two above opcode tables */
     i4 toss;
 
     MEfill(sizeof(dummy), 0, (PTR) &dummy);
     dummy.adf_maxstring = DB_MAXSTRING;
+    opcodes = dm1cn_opcodes_new;
+    if (rac->compression_type == TCB_C_STD_OLD)
+	opcodes = dm1cn_opcodes_old;
     attpp = rac->att_ptrs;
     attcount = rac->att_count;
     op = (DM1CN_CMPCONTROL *) rac->cmp_control;
@@ -1284,7 +1353,7 @@ dm1cn_cmpcontrol_setup(DMP_ROWACCESS *rac)
 	}
 	else if (abstype < DM1CN_OPTAB_MAX)
 	{
-	    opcode = dm1cn_opcodes[abstype];
+	    opcode = opcodes[abstype];
 	    if (opcode == 0)
 		opcode = DM1CN_OP_COPYN;
 	}

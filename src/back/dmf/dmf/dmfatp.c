@@ -6536,7 +6536,8 @@ PTR         jrecord)
 **	    initialized attver_altcol to support alter table alter column.
 **	13-Apr-2009 (thaju02) 
 **	    If partition, build table descriptor from master. (B121912)
-[@history_template@]...
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Include new-standard compression when checking for cmpcontrol size.
 */
 static ATP_TD *
 get_table_descriptor(
@@ -6723,6 +6724,10 @@ DB_TAB_ID   *table_id)
 	*/
 	data_cmpcontrol_size = dm1c_cmpcontrol_size(
 			TCB_C_NONE, td->data_rac.att_count, 1);
+	i = dm1c_cmpcontrol_size(
+			TCB_C_STD_OLD, td->data_rac.att_count, 1);
+	if (i > data_cmpcontrol_size)
+	    data_cmpcontrol_size = i;
 	i = dm1c_cmpcontrol_size(
 			TCB_C_STANDARD, td->data_rac.att_count, 1);
 	if (i > data_cmpcontrol_size)

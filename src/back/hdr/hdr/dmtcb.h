@@ -1212,6 +1212,8 @@ typedef struct
 **	01-apr-2010 (toumi01) SIR 122403
 **	    Add tbl_data_width; because of encryption a relation has both
 **	    a physical width and a (possibly smaller) logical width.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Add new standard compression type.
 */
 typedef struct _DMT_TBL_ENTRY
 {
@@ -1329,10 +1331,11 @@ typedef struct _DMT_TBL_ENTRY
     i4	    tbl_temporary;	    /* non-zero means that this table
 					    ** is a temporary table */
     i4		   tbl_comp_type;	    /* Compression scheme */
-#define		       DMT_C_NONE	  0L
-#define		       DMT_C_STANDARD	  1L
-#define		       DMT_C_OLD	  2L
-#define		       DMT_C_HICOMPRESS   7L
+#define		       DMT_C_NONE	  0
+#define		       DMT_C_STD_OLD	  1
+#define		       DMT_C_OLD	  2
+#define		       DMT_C_STANDARD	  3
+#define		       DMT_C_HICOMPRESS   7
     i4		   tbl_pg_type;		    /* The page type for this table */
 #define		       DMT_PG_STANDARD	  0L
 #define		       DMT_PG_SYSCAT	  2L

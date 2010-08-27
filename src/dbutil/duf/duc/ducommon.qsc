@@ -394,6 +394,8 @@ EXEC SQL include SQLCA;
 **	    byte-izing the bitmap columns.
 **	10-May-2010 (frima01) Bug 123753
 **	    Update duc_iilgmo to recreate lgmo_xa_reduced_reg.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Add comment re is_compressed and iitables, no code change.
 */
 
 
@@ -4484,7 +4486,11 @@ bool		upcase)
 	    ** never be more than 4 (even though the mathematical limit is 6). 
 	    ** 4 is the upper limit because the relstat 0x01 and 0x4000 bits 
 	    ** should never be set at the same time as the relstat2 0x10 bit.
-	    **          
+	    ** 
+	    ** Note that all relcomptype's less than 7 translate to "Y"
+	    ** for is_compressed (if TCB_COMPRESSED is set).  This means
+	    ** that iitables does not distinguish between old-style and
+	    ** new-style standard compression, which is just fine.
 	    */
 	    exec sql create view iitables as select
 	    relid table_name,

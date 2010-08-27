@@ -1826,6 +1826,8 @@ DM2U_INDEX_CB   *index_cb)
 **	    new row-accessor stuff.
 **	14-Apr-2010 (kschendel) SIR 123485
 **	    Use no-coupon access modes.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Index btree key compression is wired to old-standard for now.
 */
 
 DB_STATUS
@@ -1937,11 +1939,11 @@ dm2uMakeIndMxcb(DM2U_MXCB **mxcb,
 		index_cb->indxcb_compressed, AllAttsCount+2, 0);
     if (index_cb->indxcb_index_compressed)
     {
-	/* Key compression is wired to "standard" at present */
+	/* Key compression is wired to "old standard" at present */
 	if (index_cb->indxcb_structure == TCB_RTREE)
 	{
 	    index_cmpcontrol_size = dm1c_cmpcontrol_size(
-		TCB_C_STANDARD, AllAttsCount+2, 0);
+		TCB_C_STD_OLD, AllAttsCount+2, 0);
 	}
 	else if (index_cb->indxcb_structure == TCB_BTREE)
 	{
@@ -1949,9 +1951,9 @@ dm2uMakeIndMxcb(DM2U_MXCB **mxcb,
 	    ** Leaf entry is the whole row including any non-key atts.
 	    */
 	    index_cmpcontrol_size = dm1c_cmpcontrol_size(
-		TCB_C_STANDARD, index_cb->indxcb_kcount+1, 0);
+		TCB_C_STD_OLD, index_cb->indxcb_kcount+1, 0);
 	    leaf_cmpcontrol_size = dm1c_cmpcontrol_size(
-		TCB_C_STANDARD, AllAttsCount+1, 0);
+		TCB_C_STD_OLD, AllAttsCount+1, 0);
 	}
     }
     data_cmpcontrol_size = DB_ALIGN_MACRO(data_cmpcontrol_size);
@@ -2263,8 +2265,8 @@ dm2uMakeIndMxcb(DM2U_MXCB **mxcb,
     m->mx_index_comp = index_cb->indxcb_index_compressed;
     if (index_cb->indxcb_index_compressed)
     {
-	m->mx_leaf_rac.compression_type = TCB_C_STANDARD;
-	m->mx_index_rac.compression_type = TCB_C_STANDARD;
+	m->mx_leaf_rac.compression_type = TCB_C_STD_OLD;
+	m->mx_index_rac.compression_type = TCB_C_STD_OLD;
     }
     m->mx_unique = index_cb->indxcb_unique;
     m->mx_dmveredo = index_cb->indxcb_dmveredo;
@@ -2472,6 +2474,8 @@ dm2uMakeIndMxcb(DM2U_MXCB **mxcb,
 **	    RCB's adfcb now typed as such, minor fixes here.
 **	29-Sept-2009 (troal01)
 **		Add geospatial support.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Index btree key compression is wired to old-standard for now.
 */
 DB_STATUS
 dm2uMakeIndAtts(
@@ -3134,7 +3138,7 @@ DB_ERROR	*dberr)
 
 	    adj_leaflen = m->mx_kwidth;
 	    if (index_cb->indxcb_index_compressed)
-		adj_leaflen += dm1c_compexpand(TCB_C_STANDARD,
+		adj_leaflen += dm1c_compexpand(TCB_C_STD_OLD,
 				m->mx_data_rac.att_ptrs,
 				m->mx_data_rac.att_count);
 

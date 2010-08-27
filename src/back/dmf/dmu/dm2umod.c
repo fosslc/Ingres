@@ -1454,6 +1454,9 @@ static DB_STATUS check_archiver(
 **	    SIR 121619 MVCC: Temp tables are not DM_SCONCUR_MAX.
 **	13-may-2010 (miket) SIR 122403
 **	    Fix net-change logic for width for ALTER TABLE.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Index (btree) key compression is hardwired to old-standard for now.
+**	    So are catalogs (if compressed).
 */
 DB_STATUS
 dm2u_modify(
@@ -1731,9 +1734,13 @@ DB_ERROR        *dberr)
 	if (scb && (scb->scb_s_type & SCB_S_FACTOTUM) == 0)
 	    r->rcb_sid = scb->scb_sid;
 
-	/* Silently avoid hidata compression on catalogs. */
+	/* Silently avoid hidata compression on catalogs.  Also ensure that
+	** we use OLD-standard.  Work in dm2d.c would be needed to allow
+	** NEW-standard compression on core catalogs, best to just
+	** avoid the issue.
+	*/
 	if (t->tcb_rel.relstat & TCB_CATALOG && mcb->mcb_compressed != TCB_C_NONE)
-	    mcb->mcb_compressed = TCB_C_STANDARD;
+	    mcb->mcb_compressed = TCB_C_STD_OLD;
 
 	/*
 	** If input is index, this is online modify of secondary index 
@@ -2302,6 +2309,9 @@ DB_ERROR        *dberr)
 	    break;
 	}
 
+	/* Don't ever change core-catalog compression from what it was
+	** originally.  (Fixing this would need work in dm2d, DB open time.)
+	*/
 	if (t->tcb_rel.relstat & TCB_CONCUR)
 	{
 	    mcb->mcb_compressed = t->tcb_rel.relcomptype;
@@ -2870,7 +2880,7 @@ DB_ERROR        *dberr)
 		{
 		    /* Toss in one more for hilbert */
 		    index_cmpcontrol_size = dm1c_cmpcontrol_size(
-			TCB_C_STANDARD, bkey_count+1, 0);
+			TCB_C_STD_OLD, bkey_count+1, 0);
 		}
 		else if (mcb->mcb_structure == TCB_BTREE)
 		{
@@ -2879,9 +2889,9 @@ DB_ERROR        *dberr)
 		    ** keys if not.  ***NEEDS FIXED FOR CLUSTERED).
 		    */
 		    index_cmpcontrol_size = dm1c_cmpcontrol_size(
-			TCB_C_STANDARD, mcb->mcb_kcount+1, 0);
+			TCB_C_STD_OLD, mcb->mcb_kcount+1, 0);
 		    leaf_cmpcontrol_size = dm1c_cmpcontrol_size(
-			TCB_C_STANDARD, bkey_count, 0);
+			TCB_C_STD_OLD, bkey_count, 0);
 		}
 	    }
 	    data_cmpcontrol_size = DB_ALIGN_MACRO(data_cmpcontrol_size);
@@ -3034,9 +3044,9 @@ DB_ERROR        *dberr)
 	m->mx_index_comp = mcb->mcb_index_compressed;
 	if (m->mx_index_comp)
 	{
-	    /* No syntax for key compression type yet, always use STANDARD */
-	    m->mx_leaf_rac.compression_type = TCB_C_STANDARD;
-	    m->mx_index_rac.compression_type = TCB_C_STANDARD;
+	    /* No syntax for key compression type yet, always use OLD STANDARD */
+	    m->mx_leaf_rac.compression_type = TCB_C_STD_OLD;
+	    m->mx_index_rac.compression_type = TCB_C_STD_OLD;
 	}
 	m->mx_unique = mcb->mcb_unique;
 	m->mx_dmveredo = FALSE;
@@ -3582,7 +3592,7 @@ DB_ERROR        *dberr)
 
 	    key_expansion = 0;
 	    if ( mcb->mcb_index_compressed )
-		key_expansion = dm1c_compexpand(TCB_C_STANDARD,
+		key_expansion = dm1c_compexpand(TCB_C_STD_OLD,
 			t->tcb_data_rac.att_ptrs, t->tcb_data_rac.att_count); 
 
 	    for (i = 0; i < t->tcb_rel.relatts - 1; i++)
@@ -3898,7 +3908,7 @@ DB_ERROR        *dberr)
 	    key_expansion = 0;
 	    if ( mcb->mcb_index_compressed )
 	    {
-		key_expansion = dm1c_compexpand(TCB_C_STANDARD,
+		key_expansion = dm1c_compexpand(TCB_C_STD_OLD,
 			m->mx_leaf_rac.att_ptrs, m->mx_leaf_rac.att_count);
 	    }
 
@@ -4324,6 +4334,8 @@ DB_ERROR        *dberr)
 
 		if (mcb->mcb_compressed == TCB_C_HICOMPRESS)
 		    dum_flag |= DM0L_MODIFY_HICOMPRESS;
+		if (mcb->mcb_compressed == TCB_C_STANDARD)
+		    dum_flag |= DM0L_MODIFY_NEWCOMPRESS;
 		/* Other stuff can go here (page compression, etc) */
 		status = logModifyData(log_id, dm0l_jnlflag,
 			mcb->mcb_new_part_def, mcb->mcb_new_partdef_size,
@@ -4552,6 +4564,8 @@ DB_ERROR        *dberr)
 		dum_flag |= DM0L_ONLINE;
 	    if (mcb->mcb_compressed == TCB_C_HICOMPRESS)
 		dum_flag |= DM0L_MODIFY_HICOMPRESS;
+	    if (mcb->mcb_compressed == TCB_C_STANDARD)
+		dum_flag |= DM0L_MODIFY_NEWCOMPRESS;
 
 	    /*
 	    ** Note that when partitioning, the partition location information

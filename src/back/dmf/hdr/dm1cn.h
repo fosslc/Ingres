@@ -78,6 +78,8 @@
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Add lg_id parameter to
 **	    dm1cn_delete, dm1cn_get, dm1cn_put prototypes.
+**	9-Jul-2010 (kschendel) sir 123450
+**	    Add BYTE column compression ops.
 **/
 
 /* Definition of compression / decompression control array.
@@ -124,12 +126,14 @@ typedef struct _DM1CN_CMPCONTROL DM1CN_CMPCONTROL;
 #define DM1CN_OP_COPYN		1	/* Copy N bytes */
 #define DM1CN_OP_CHR		2	/* C type: stored as ASCIZ */
 #define DM1CN_OP_CHA		3	/* CHAR type: stored as varchar */
-#define DM1CN_OP_VCH		4	/* VARCHAR or TEXT: actual length */
+#define DM1CN_OP_VCH		4	/* VARCHAR, VARBYTE, or TEXT:
+					** store actual length */
 #define DM1CN_OP_NCHR		5	/* NCHAR: like char, for unicode */
 #define DM1CN_OP_NVCHR		6	/* NVARCHAR: like varchar for unicode */
-#define DM1CN_OP_VLUDT		7	/* User defined, variable length */
-#define DM1CN_OP_NULLCHK	8	/* Check for null, skip NI if null */
-#define DM1CN_OP_VERSCHK	9	/* Check row-versioning, can skip any
+#define DM1CN_OP_BYTE		7	/* BYTE: like char, zeros not blanks */
+#define DM1CN_OP_VLUDT		8	/* User defined, variable length */
+#define DM1CN_OP_NULLCHK	9	/* Check for null, skip NI if null */
+#define DM1CN_OP_VERSCHK	10	/* Check row-versioning, can skip any
 					** following null-check and NI */
 
 /* Compression control flags */
@@ -306,6 +310,7 @@ FUNC_EXTERN DB_STATUS	dm1cn_uncompress(
 			ADF_CB		*rcb_adf_cb);
 
 FUNC_EXTERN i4		dm1cn_compexpand(
+			i4		compression_type,
 			DB_ATTS		**atts,
 			i4		att_cnt);
 

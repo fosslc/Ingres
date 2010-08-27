@@ -1698,6 +1698,9 @@ typedef struct
 **	    Removed unnecessary dum_rnl_name.
 **	23-Oct-2009 (kschendel) SIR 122739
 **	    Don't lose hidata compression if redoing a modify.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    We now have yet another compression type flag.  (We're at
+**	    10.0 beta release, not the time to change log record format!)
 */
 typedef struct
 {
@@ -1735,6 +1738,8 @@ typedef struct
 ** But for now, just pass a hidata compression flag.
 */
 #define		DM0L_MODIFY_HICOMPRESS		0x04
+/* See FIXME above!  More silliness! */
+#define		DM0L_MODIFY_NEWCOMPRESS		0x08	/* New-standard */
 
     DB_TAB_ID   dum_rnl_tbl_id;
     LG_LSN	dum_bsf_lsn;

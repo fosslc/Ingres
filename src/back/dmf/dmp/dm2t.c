@@ -15637,6 +15637,8 @@ rep_catalog(
 **          bug 117355. 
 **	11-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Index key compression is always pinned to OLD STANDARD.
 */
 
 DB_STATUS
@@ -15740,7 +15742,7 @@ DB_ERROR	*dberr)
 			  rel->relcmptlvl == DMF_T4_VERSION) )
 			keys = rel->relatts;
 		    key_cmpcontrol_size = dm1c_cmpcontrol_size(
-				TCB_C_STANDARD, keys,
+				TCB_C_STD_OLD, keys,
 				rel->relversion);
 		    key_cmpcontrol_size = DB_ALIGN_MACRO(key_cmpcontrol_size);
 		}
@@ -15787,7 +15789,7 @@ DB_ERROR	*dberr)
 		    {
 			/* Key compression hardwired to "standard" for now */
 			leaf_cmpcontrol_size = dm1c_cmpcontrol_size(
-				TCB_C_STANDARD, rel->relatts,
+				TCB_C_STD_OLD, rel->relatts,
 				rel->relversion);
 			leaf_cmpcontrol_size = DB_ALIGN_MACRO(leaf_cmpcontrol_size);
 		    }
@@ -16110,8 +16112,8 @@ DB_ERROR	*dberr)
 	t->tcb_data_rac.compression_type = rel->relcomptype;
 	if (rel->relstat & TCB_INDEX_COMP)
 	{
-	    t->tcb_index_rac.compression_type = TCB_C_STANDARD;
-	    t->tcb_leaf_rac.compression_type = TCB_C_STANDARD;
+	    t->tcb_index_rac.compression_type = TCB_C_STD_OLD;
+	    t->tcb_leaf_rac.compression_type = TCB_C_STD_OLD;
 	}
 
 	/*

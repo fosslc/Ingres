@@ -11990,6 +11990,9 @@ dm2d_upgrade_rewrite_iirel (
 **	    union-ize the old-relation input.
 **	    Include mandatory-flag setting of PHYSLOCK-CONCUR, easier to do
 **	    here than in upgradedb.
+**	5-Jun-2010 (kschendel)
+**	    Enforce no extra bits turned on in relstat, relstat2; makes it
+**	    easier to add flags in the future.
 */
 static VOID
 upgrade_iirel_row(
@@ -12070,7 +12073,7 @@ DM0C_CNF	*cnf)
 	    rel_v8.relpgtype = TCB_PG_V1;
 
 	    if ( rel_v8.relstat & TCB_COMPRESSED )
-		rel_v8.relcomptype = TCB_C_STANDARD;
+		rel_v8.relcomptype = TCB_C_STD_OLD;
 	    else
 		rel_v8.relcomptype = TCB_C_NONE;
 
@@ -12336,12 +12339,19 @@ DM0C_CNF	*cnf)
 	    {
 		rel_v9.relstat2 |= TCB2_PHYSLOCK_CONCUR;
 	    }
+
+	    /* Make sure relstat2 doesn't contain any extra bits! */
+	    rel_v9.relstat2 &= ~TCB2_RELSTAT2_ALL;
+
 	    /* Allow duplicates in iiextended_relation, easier to do here
 	    ** than in upgradedb!
 	    */
 	    if (rel_v9.reltid.db_tab_base == DM_B_ETAB_TAB_ID
 	      && rel_v9.reltid.db_tab_index == DM_I_ETAB_TAB_ID)
 		rel_v9.relstat |= TCB_DUPLICATES;
+
+	    /* Make sure relstat doesn't contain any extra bits! */
+	    rel_v9.relstat &= ~TCB_RELSTAT_ALL;
 
 	    /* To prepare for the possible reclamation of TCB_GATEWAY, make
 	    ** sure that the two gateway-ID columns are zero if TCB_GATEWAY
@@ -12577,6 +12587,8 @@ DM0C_CNF *cnf)
 **	3-May-2010 (kschendel) SIR 123639
 **	    Compression in the core catalogs means we have to compress
 **	    converted iiattribute / iirelation.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    It's always OLD standard compression, not the new one.
 */
 
 static DB_STATUS
@@ -12623,7 +12635,7 @@ build_core_rac(DB_TAB_ID *table_id, DMP_ATTRIBUTE *core_atts,
     ** different type, pass in the reference DMP_RELATION as well so
     ** relcomptype can be examined.)
     */
-    cmpcontrol_size = dm1c_cmpcontrol_size(TCB_C_STANDARD, att_count, 0);
+    cmpcontrol_size = dm1c_cmpcontrol_size(TCB_C_STD_OLD, att_count, 0);
     size = sizeof(DMP_MISC) + DB_ALIGN_MACRO(sizeof(DMP_ROWACCESS))
 		+ att_count * sizeof(DB_ATTS *)
 		+ att_count * sizeof(DB_ATTS)
@@ -12644,7 +12656,7 @@ build_core_rac(DB_TAB_ID *table_id, DMP_ATTRIBUTE *core_atts,
     p = p + att_count * sizeof(DB_ATTS);
     rac->cmp_control = p;
     rac->control_count = cmpcontrol_size;
-    rac->compression_type = TCB_C_STANDARD;
+    rac->compression_type = TCB_C_STD_OLD;
 
     attp = first_att;
     while (--att_count >= 0)

@@ -396,6 +396,8 @@ dm1c_cmpcontrol_size(i4 compression_type,
 ** History:
 **	25-Feb-2008 (kschendel) SIR 122739
 **	    New wrapper for modify's use.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Pass compression type to called routine.
 */
 
 i4
@@ -405,8 +407,8 @@ dm1c_compexpand(i4 compression_type, DB_ATTS **att_ptrs, i4 att_count)
 	return (0);
     else
 	return (
-		(*dm1c_compexpand_v[compression_type])(att_ptrs,
-							att_count)
+		(*dm1c_compexpand_v[compression_type])(compression_type,
+					att_ptrs, att_count)
 		);
 } /* dm1c_compexpand */
 
@@ -444,6 +446,8 @@ dm1c_compexpand(i4 compression_type, DB_ATTS **att_ptrs, i4 att_count)
 ** History:
 **	21-Feb-2008 (kschendel) SIR 122739
 **	    Written for overhauled row-accessor structuring
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Pass compression type to compexpand routine.
 */
 
 DB_STATUS
@@ -457,8 +461,8 @@ dm1c_rowaccess_setup(DMP_ROWACCESS *rac)
 	rac->worstcase_expansion = 0;
     else
 	rac->worstcase_expansion =
-		(*dm1c_compexpand_v[rac->compression_type])(rac->att_ptrs,
-							 rac->att_count);
+		(*dm1c_compexpand_v[rac->compression_type])(
+			rac->compression_type, rac->att_ptrs, rac->att_count);
     if (dm1c_cmpcontrol_setup_v[rac->compression_type] != NULL)
     {
 	status = (*dm1c_cmpcontrol_setup_v[rac->compression_type])(rac);
