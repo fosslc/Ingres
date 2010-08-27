@@ -1329,6 +1329,9 @@ PREC_TY		prec_ty;
 **          how to resolve the type. What we do is use the actual types passed
 **          in parameter 2 and parameter 3 and call adi_resolve() to resolve
 **          those to a common type using the standard type resolution rules. (Bug 123880)
+**	10-Aug-2010 (kiria01) b124217
+**	    Make sure that the secondary ALL params are correctly mapped to
+**	    member type.
 */
 DB_STATUS
 adi_dtfamily_resolve(
@@ -1466,7 +1469,13 @@ ADI_RSLV_BLK	     *adi_rslv_blk
 		  break;
 	    }
           }
-	  else if (family != DB_ALL_TYPE)
+	  else if (family == DB_ALL_TYPE)
+	  {
+	    if (member != 0)
+		newfidesc->adi_dt[i] = member;
+		continue;
+	  }
+	  else
       	    return(adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 0));
 
 	  newfidesc->adi_dt[i]= idts[i];

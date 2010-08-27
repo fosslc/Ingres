@@ -341,6 +341,9 @@ i4 Psf_nfoldbexpr = 0;
 **	3-Aug-2010 (kschendel) b124170
 **	    Add "standard joinid" flag to allow us to set an operator
 **	    node joinid according to current parser state.
+**	10-Aug-2010 (kiria01) b124217
+**	    Added message E_US0B7A_2938 for GREATEST, LEAST, GREATER
+**	    and LESSER functions to display better type mismatch error.
 */
 DB_STATUS
 pst_node(
@@ -891,6 +894,12 @@ pst_node(
 		    return(E_DB_ERROR);		/* case-specific error */
 		else
 		{
+		    if (err_blk->err_code == E_PS0C05_BAD_ADF_STATUS && (
+			symbol->pst_value.pst_s_op.pst_opno == ADI_GREATEST_OP ||
+			symbol->pst_value.pst_s_op.pst_opno == ADI_LEAST_OP ||
+			symbol->pst_value.pst_s_op.pst_opno == ADI_LESSER_OP ||
+			symbol->pst_value.pst_s_op.pst_opno == ADI_GREATER_OP))
+			err_blk->err_code = 2938;
 		    return (pst_rserror(cb->pss_lineno, node, err_blk));
 		}
 	    }

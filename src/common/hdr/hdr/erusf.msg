@@ -476,6 +476,9 @@ SQLSTATE_MAPPING_REQUIRED
 **	    Improve content/format for E_US0F0F, and add encrypt clause.
 **	03-Aug-2010 (miket) SIR 122403
 **	    Add "ENCRYPT" to US1586
+**	10-Aug-2010 (kiria01) b124217
+**	    Added message E_US0B7A_2938 for GREATEST, LEAST, GREATER
+**	    and LESSER functions to display better type mismatch error.
 */
 
 #define _US_CLASS   0
@@ -3216,6 +3219,11 @@ E_US0B78_2936:SS42000_SYN_OR_ACCESS_ERR
 "line %0d, Syntax error. Invalid trim specification value %1c."
 E_US0B79_2937:SS42000_SYN_OR_ACCESS_ERR
 "line %0d, Syntax error. Invalid date/time specification value %1c."
+E_US0B7A_2938:SS42000_SYN_OR_ACCESS_ERR
+"line %0d, The '%1c' function requires that all its parameters must have
+the same datatype as the first or be of a datatype that can be coerced to match.
+In this instance, there is a '%3c' parameter that cannot be coerced to datatype '%2c'."
+
 /*%
 ** Parameters:
 **	%0d  - line number
