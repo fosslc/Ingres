@@ -1420,6 +1420,11 @@
 #	    Remove ICE from build process.
 #	28-Jul-2010 (drivi01)
 #	    Remove hardcoded dependency of VDBA on SHICEAPILIB.
+#	28-Jul-2010 (drivi01)
+#	    When msg file in front facilities get updated.  Mnx files
+#	    aren't rebuilt b/c there is no dependecy on msg files from
+#	    mkfecat script.
+#	    Add dependency of fe.cat.msg file on msg files in front.
 #
 #
 #####
@@ -6019,6 +6024,10 @@ rule IIMSGHDR
 	  DEPENDS hdrs : msghdrs ;
 	  DEPENDS msghdrs : $(T) ;
 	  DEPENDS $(T) : $(S) ;
+	  switch $(_f)
+	  {
+		case *front!* : DEPENDS $(FECATMSG) : $(T) ;
+	  }
 
 	  LOCATE on $(T) = $(SEARCH_SOURCE) ;
 	  SEARCH on $(S) = $(SEARCH_SOURCE) ;
