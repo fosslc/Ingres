@@ -49,7 +49,7 @@ BEGIN
             VALUE "FileDescription", "Ingres RELVER1 Application\0"
             VALUE "FileVersion", "RELVER3, RELVER2, BUILDNUM\0"
             VALUE "InternalName", "Ingres RELVER1 Application\0"
-            VALUE "LegalCopyright", "Copyright (C) 2004 Ingres Corporation\0"
+            VALUE "LegalCopyright", "Copyright (C) YEAR Ingres Corporation\0"
             VALUE "LegalTrademarks", "\0"
             VALUE "OriginalFilename", "\0"
             VALUE "PrivateBuild", "RELVER2\0"
