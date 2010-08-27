@@ -4,7 +4,7 @@
 
 /*
 **    Source   : sqlqryct.cpp : Implementation of the CSqlqueryCtrl ActiveX Control class.
-**    Project  : sqlquery.ocx 
+**    Project  : sqlquery.ocx
 **    Author   : Sotheavut UK (uk$so01)
 **    Purpose  : Control Class for drawing the ocx control
 **
@@ -21,7 +21,7 @@
 ** 13-Jun-2003 (uk$so01)
 **    SIR #106648, Take into account the STAR database for connection.
 ** 03-Oct-2003 (uk$so01)
-**    SIR #106648, Vdba-Split, Additional fix for GATEWAY Enhancement 
+**    SIR #106648, Vdba-Split, Additional fix for GATEWAY Enhancement
 ** 15-Oct-2003 (uk$so01)
 **    SIR #106648, (Integrate 2.65 features for EDBC)
 ** 17-Oct-2003 (uk$so01)
@@ -37,16 +37,16 @@
 **    BUG #112993 Add the try catch statements implement exception handling
 **    in IsCommitEnable() method.
 ** 15-Sep-2004 (uk$so01)
-**    VDBA BUG #113047,  Vdba load/save does not function correctly with the 
+**    VDBA BUG #113047,  Vdba load/save does not function correctly with the
 **    Right Pane of DOM/Table/Rows page.
 ** 22-Sep-2004 (uk$so01)
-**    BUG #113104 / ISSUE 13690527, 
+**    BUG #113104 / ISSUE 13690527,
 **    Add method: short GetConnected(LPCTSTR lpszNode, LPCTSTR lpszDatabase)
 **    that return 1 if there is an SQL Session.
 ** 18-Nov-2004 (uk$so01)
 **    BUG #113491 / ISSUE #13755178: Manage to Release & disconnect the DBMS session.
 ** 19-Jan-2005 (komve01)
-**    BUG #113768 / ISSUE 13913697: 
+**    BUG #113768 / ISSUE 13913697:
 **	  GUI tools display incorrect year in the Copyright Information.
 ** 14-Feb-2006 (drivi01)
 **    Update the year to 2006.
@@ -58,8 +58,12 @@
 **    header file.  This will ensure single point of update
 **    for variable year.
 ** 20-Mar-2009 (smeke01) b121832
-**    Product year is returned by INGRESII_BuildVersionInfo() so does 
+**    Product year is returned by INGRESII_BuildVersionInfo() so does
 **    not need to be set in here.
+** 23-Jun-2010 (maspa05) b123847
+**    In CSqlqueryCtrl::GetConnected amend the check for lpszDatabase == NULL
+**    to check for an empty string instead. In terms of the ocx control the 
+**    parameter is VTS_BSTR where NULL gets treated as an empty string.
 **/
 
 
@@ -197,7 +201,7 @@ END_PROPPAGEIDS(CSqlqueryCtrl)
 
 #if defined (EDBC)
 // {7A9941A3-9987-4914-AB55-F7F630CF8B38}
-IMPLEMENT_OLECREATE_EX(CSqlqueryCtrl, "EDBQUERY.SqlqueryCtrl.1", 
+IMPLEMENT_OLECREATE_EX(CSqlqueryCtrl, "EDBQUERY.SqlqueryCtrl.1",
 	0x7a9941a3, 0x9987, 0x4914, 0xab, 0x55, 0xf7, 0xf6, 0x30, 0xcf, 0x8b, 0x38)
 #else
 // {634C383D-A069-11D5-8769-00C04F1F754A}
@@ -291,7 +295,6 @@ CSqlqueryCtrl::~CSqlqueryCtrl()
 {
 	// TODO: Cleanup your control's instance data here.
 }
-
 
 /////////////////////////////////////////////////////////////////////////////
 // CSqlqueryCtrl::OnDraw - Drawing function
@@ -426,7 +429,7 @@ void CSqlqueryCtrl::AboutBox()
 /////////////////////////////////////////////////////////////////////////////
 // CSqlqueryCtrl message handlers
 
-BOOL CSqlqueryCtrl::Initiate(LPCTSTR lpszNode, LPCTSTR lpszServer, LPCTSTR lpszUser) 
+BOOL CSqlqueryCtrl::Initiate(LPCTSTR lpszNode, LPCTSTR lpszServer, LPCTSTR lpszUser)
 {
 	if (m_pSqlQueryFrame)
 	{
@@ -435,7 +438,7 @@ BOOL CSqlqueryCtrl::Initiate(LPCTSTR lpszNode, LPCTSTR lpszServer, LPCTSTR lpszU
 	return TRUE;
 }
 
-void CSqlqueryCtrl::SetDatabase(LPCTSTR lpszDatabase) 
+void CSqlqueryCtrl::SetDatabase(LPCTSTR lpszDatabase)
 {
 	if (m_pSqlQueryFrame)
 	{
@@ -443,7 +446,7 @@ void CSqlqueryCtrl::SetDatabase(LPCTSTR lpszDatabase)
 	}
 }
 
-void CSqlqueryCtrl::Clear() 
+void CSqlqueryCtrl::Clear()
 {
 	if (m_pSqlQueryFrame)
 	{
@@ -451,7 +454,7 @@ void CSqlqueryCtrl::Clear()
 	}
 }
 
-void CSqlqueryCtrl::Open() 
+void CSqlqueryCtrl::Open()
 {
 	if (m_pSqlQueryFrame)
 	{
@@ -460,7 +463,7 @@ void CSqlqueryCtrl::Open()
 
 }
 
-void CSqlqueryCtrl::Save() 
+void CSqlqueryCtrl::Save()
 {
 	if (m_pSqlQueryFrame)
 	{
@@ -468,7 +471,7 @@ void CSqlqueryCtrl::Save()
 	}
 }
 
-void CSqlqueryCtrl::SqlAssistant() 
+void CSqlqueryCtrl::SqlAssistant()
 {
 	try
 	{
@@ -490,7 +493,7 @@ void CSqlqueryCtrl::SqlAssistant()
 
 
 
-void CSqlqueryCtrl::Run() 
+void CSqlqueryCtrl::Run()
 {
 	try
 	{
@@ -511,7 +514,7 @@ void CSqlqueryCtrl::Run()
 	}
 }
 
-void CSqlqueryCtrl::Qep() 
+void CSqlqueryCtrl::Qep()
 {
 	try
 	{
@@ -532,7 +535,7 @@ void CSqlqueryCtrl::Qep()
 	}
 }
 
-void CSqlqueryCtrl::Xml() 
+void CSqlqueryCtrl::Xml()
 {
 	try
 	{
@@ -560,42 +563,42 @@ void CSqlqueryCtrl::Xml()
 	}
 }
 
-BOOL CSqlqueryCtrl::IsRunEnable() 
+BOOL CSqlqueryCtrl::IsRunEnable()
 {
 	if (!m_pSqlQueryFrame)
 		return FALSE;
 	return m_pSqlQueryFrame->IsRunEnable();
 }
 
-BOOL CSqlqueryCtrl::IsQepEnable() 
+BOOL CSqlqueryCtrl::IsQepEnable()
 {
 	if (!m_pSqlQueryFrame)
 		return FALSE;
 	return m_pSqlQueryFrame->IsQepEnable();
 }
 
-BOOL CSqlqueryCtrl::IsXmlEnable() 
+BOOL CSqlqueryCtrl::IsXmlEnable()
 {
 	if (!m_pSqlQueryFrame)
 		return FALSE;
 	return m_pSqlQueryFrame->IsXmlEnable();
 }
 
-void CSqlqueryCtrl::Print() 
+void CSqlqueryCtrl::Print()
 {
 	if (!m_pSqlQueryFrame)
 		return;
 	m_pSqlQueryFrame->DoPrint();
 }
 
-BOOL CSqlqueryCtrl::IsPrintEnable() 
+BOOL CSqlqueryCtrl::IsPrintEnable()
 {
 	if (!m_pSqlQueryFrame)
 		return FALSE;
 	return m_pSqlQueryFrame->IsPrintEnable();
 }
 
-void CSqlqueryCtrl::EnableTrace() 
+void CSqlqueryCtrl::EnableTrace()
 {
 	if (m_pSqlQueryFrame)
 	{
@@ -603,7 +606,7 @@ void CSqlqueryCtrl::EnableTrace()
 	}
 }
 
-int CSqlqueryCtrl::OnCreate(LPCREATESTRUCT lpCreateStruct) 
+int CSqlqueryCtrl::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
 	if (COleControl::OnCreate(lpCreateStruct) == -1)
 		return -1;
@@ -636,21 +639,21 @@ int CSqlqueryCtrl::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	return 0;
 }
 
-BOOL CSqlqueryCtrl::IsClearEnable() 
+BOOL CSqlqueryCtrl::IsClearEnable()
 {
 	if (!m_pSqlQueryFrame)
 		return FALSE;
 	return m_pSqlQueryFrame->IsClearEnable();
 }
 
-BOOL CSqlqueryCtrl::IsTraceEnable() 
+BOOL CSqlqueryCtrl::IsTraceEnable()
 {
 	if (!m_pSqlQueryFrame)
 		return FALSE;
 	return m_pSqlQueryFrame->IsTraceEnable();
 }
 
-BOOL CSqlqueryCtrl::IsSaveAsEnable() 
+BOOL CSqlqueryCtrl::IsSaveAsEnable()
 {
 	if (!m_pSqlQueryFrame)
 		return FALSE;
@@ -658,26 +661,26 @@ BOOL CSqlqueryCtrl::IsSaveAsEnable()
 }
 
 
-BOOL CSqlqueryCtrl::IsOpenEnable() 
+BOOL CSqlqueryCtrl::IsOpenEnable()
 {
 	return TRUE;
 }
 
-void CSqlqueryCtrl::PrintPreview() 
+void CSqlqueryCtrl::PrintPreview()
 {
 	if (!m_pSqlQueryFrame)
 		return;
 	m_pSqlQueryFrame->DoPrintPreview();
 }
 
-BOOL CSqlqueryCtrl::IsPrintPreviewEnable() 
+BOOL CSqlqueryCtrl::IsPrintPreviewEnable()
 {
 	// TODO: Add your dispatch handler code here
 
 	return TRUE;
 }
 
-BOOL CSqlqueryCtrl::IsUsedTracePage() 
+BOOL CSqlqueryCtrl::IsUsedTracePage()
 {
 	if (!m_pSqlQueryFrame)
 		return FALSE;
@@ -685,7 +688,7 @@ BOOL CSqlqueryCtrl::IsUsedTracePage()
 }
 
 
-SCODE CSqlqueryCtrl::Storing(LPUNKNOWN FAR* ppStream) 
+SCODE CSqlqueryCtrl::Storing(LPUNKNOWN FAR* ppStream)
 {
 	IStream* pSream = NULL;
 	if (m_pSqlQueryFrame)
@@ -727,7 +730,7 @@ SCODE CSqlqueryCtrl::Loading(LPUNKNOWN pStream)
 		{
 			m_pSelectResultPage->NotifyLoad(pData);
 		}
-		
+
 		delete pData;
 	}
 	else
@@ -736,33 +739,33 @@ SCODE CSqlqueryCtrl::Loading(LPUNKNOWN pStream)
 }
 
 
-void CSqlqueryCtrl::SetIniFleName(LPCTSTR lpszFileIni) 
+void CSqlqueryCtrl::SetIniFleName(LPCTSTR lpszFileIni)
 {
 	if (!m_pSqlQueryFrame)
 		return;
 	m_pSqlQueryFrame->SetIniFleName(lpszFileIni);
 }
 
-void CSqlqueryCtrl::SetSessionDescription(LPCTSTR lpszSessionDescription) 
+void CSqlqueryCtrl::SetSessionDescription(LPCTSTR lpszSessionDescription)
 {
 	theApp.GetSessionManager().SetDescription(lpszSessionDescription);
 }
 
-void CSqlqueryCtrl::SetSessionStart(long nStart) 
+void CSqlqueryCtrl::SetSessionStart(long nStart)
 {
 	if (!m_pSqlQueryFrame)
 		return;
 	m_pSqlQueryFrame->SetSessionStart(nStart);
 }
 
-void CSqlqueryCtrl::InvalidateCursor() 
+void CSqlqueryCtrl::InvalidateCursor()
 {
 	if (!m_pSqlQueryFrame)
 		return;
 	m_pSqlQueryFrame->InvalidateCursor();
 }
 
-void CSqlqueryCtrl::Commit(short nCommit) 
+void CSqlqueryCtrl::Commit(short nCommit)
 {
 	if (!m_pSqlQueryFrame)
 		return;
@@ -780,7 +783,7 @@ void CSqlqueryCtrl::Commit(short nCommit)
 	}
 }
 
-BOOL CSqlqueryCtrl::IsCommitEnable() 
+BOOL CSqlqueryCtrl::IsCommitEnable()
 {
 	try
 	{
@@ -794,7 +797,7 @@ BOOL CSqlqueryCtrl::IsCommitEnable()
 	}
 }
 
-void CSqlqueryCtrl::CreateSelectResultPage(LPCTSTR lpszNode, LPCTSTR lpszServer, LPCTSTR lpszUser, LPCTSTR lpszDatabase, LPCTSTR lpszStatement) 
+void CSqlqueryCtrl::CreateSelectResultPage(LPCTSTR lpszNode, LPCTSTR lpszServer, LPCTSTR lpszUser, LPCTSTR lpszDatabase, LPCTSTR lpszStatement)
 {
 	CreateSelectResultPage4Star(lpszNode, lpszServer, lpszUser, lpszDatabase, 0, lpszStatement);
 }
@@ -805,7 +808,7 @@ void CSqlqueryCtrl::ConstructPropertySet(CaSqlQueryProperty& property)
 	// SQL Session:
 	property.SetAutoCommit(m_autoCommit);
 	property.SetReadLock(m_readLock);
-	property.SetTimeout(m_timeOut); 
+	property.SetTimeout(m_timeOut);
 	property.SetSelectMode(m_selectMode);
 	property.SetSelectBlock(m_selectLimit);
 	//
@@ -864,128 +867,128 @@ void CSqlqueryCtrl::NotifySettingChange(UINT nMask)
 }
 
 
-void CSqlqueryCtrl::OnFontChanged() 
+void CSqlqueryCtrl::OnFontChanged()
 {
 	NotifySettingChange(SQLMASK_FONT);
 	COleControl::OnFontChanged();
 }
 
-void CSqlqueryCtrl::OnShowGridChanged() 
+void CSqlqueryCtrl::OnShowGridChanged()
 {
 	NotifySettingChange(SQLMASK_SHOWGRID);
 	SetModifiedFlag();
 }
 
-void CSqlqueryCtrl::OnAutoCommitChanged() 
+void CSqlqueryCtrl::OnAutoCommitChanged()
 {
 	NotifySettingChange(SQLMASK_AUTOCOMMIT);
 	SetModifiedFlag();
 }
 
-void CSqlqueryCtrl::OnReadLockChanged() 
+void CSqlqueryCtrl::OnReadLockChanged()
 {
 	NotifySettingChange(SQLMASK_READLOCK);
 	SetModifiedFlag();
 }
 
-void CSqlqueryCtrl::OnTimeOutChanged() 
+void CSqlqueryCtrl::OnTimeOutChanged()
 {
 	NotifySettingChange(SQLMASK_TIMEOUT);
 	SetModifiedFlag();
 }
 
 
-void CSqlqueryCtrl::OnSelectLimitChanged() 
+void CSqlqueryCtrl::OnSelectLimitChanged()
 {
 	NotifySettingChange(SQLMASK_FETCHBLOCK);
 	SetModifiedFlag();
 }
 
-void CSqlqueryCtrl::OnSelectModeChanged() 
+void CSqlqueryCtrl::OnSelectModeChanged()
 {
 	NotifySettingChange(SQLMASK_FETCHBLOCK);
 	SetModifiedFlag();
 }
 
-void CSqlqueryCtrl::OnMaxTabChanged() 
+void CSqlqueryCtrl::OnMaxTabChanged()
 {
 	NotifySettingChange(SQLMASK_MAXTAB);
 	SetModifiedFlag();
 }
 
-void CSqlqueryCtrl::OnMaxTraceSizeChanged() 
+void CSqlqueryCtrl::OnMaxTraceSizeChanged()
 {
 	NotifySettingChange(SQLMASK_MAXTRACESIZE);
 	SetModifiedFlag();
 }
 
-void CSqlqueryCtrl::OnShowNonSelectTabChanged() 
+void CSqlqueryCtrl::OnShowNonSelectTabChanged()
 {
 	NotifySettingChange(SQLMASK_SHOWNONSELECTTAB);
 	SetModifiedFlag();
 }
 
-void CSqlqueryCtrl::OnTraceTabActivatedChanged() 
+void CSqlqueryCtrl::OnTraceTabActivatedChanged()
 {
 	NotifySettingChange(SQLMASK_TRACETAB);
 	SetModifiedFlag();
 }
 
-void CSqlqueryCtrl::OnTraceTabToTopChanged() 
+void CSqlqueryCtrl::OnTraceTabToTopChanged()
 {
 	NotifySettingChange(SQLMASK_TRACETAB);
 	SetModifiedFlag();
 }
 
-void CSqlqueryCtrl::OnF4WidthChanged() 
+void CSqlqueryCtrl::OnF4WidthChanged()
 {
 	NotifySettingChange(SQLMASK_FLOAT4);
 	SetModifiedFlag();
 }
 
-void CSqlqueryCtrl::OnF4ScaleChanged() 
+void CSqlqueryCtrl::OnF4ScaleChanged()
 {
 	NotifySettingChange(SQLMASK_FLOAT4);
 	SetModifiedFlag();
 }
 
-void CSqlqueryCtrl::OnF4ExponentialChanged() 
+void CSqlqueryCtrl::OnF4ExponentialChanged()
 {
 	NotifySettingChange(SQLMASK_FLOAT4);
 	SetModifiedFlag();
 }
 
-void CSqlqueryCtrl::OnF8WidthChanged() 
+void CSqlqueryCtrl::OnF8WidthChanged()
 {
 	NotifySettingChange(SQLMASK_FLOAT8);
 	SetModifiedFlag();
 }
 
-void CSqlqueryCtrl::OnF8ScaleChanged() 
+void CSqlqueryCtrl::OnF8ScaleChanged()
 {
 	NotifySettingChange(SQLMASK_FLOAT8);
 	SetModifiedFlag();
 }
 
-void CSqlqueryCtrl::OnF8ExponentialChanged() 
+void CSqlqueryCtrl::OnF8ExponentialChanged()
 {
 	NotifySettingChange(SQLMASK_FLOAT8);
 	SetModifiedFlag();
 }
 
-void CSqlqueryCtrl::OnQepDisplayModeChanged() 
+void CSqlqueryCtrl::OnQepDisplayModeChanged()
 {
 	NotifySettingChange(SQLMASK_QEPPREVIEW);
 	SetModifiedFlag();
 }
 
-void CSqlqueryCtrl::OnXmlDisplayModeChanged() 
+void CSqlqueryCtrl::OnXmlDisplayModeChanged()
 {
 	NotifySettingChange(SQLMASK_XMLPREVIEW);
 	SetModifiedFlag();
 }
 
-void CSqlqueryCtrl::SetDatabaseStar(LPCTSTR lpszDatabase, long nFlag) 
+void CSqlqueryCtrl::SetDatabaseStar(LPCTSTR lpszDatabase, long nFlag)
 {
 	if (m_pSqlQueryFrame)
 	{
@@ -993,7 +996,7 @@ void CSqlqueryCtrl::SetDatabaseStar(LPCTSTR lpszDatabase, long nFlag)
 	}
 }
 
-void CSqlqueryCtrl::CreateSelectResultPage4Star(LPCTSTR lpszNode, LPCTSTR lpszServer, LPCTSTR lpszUser, LPCTSTR lpszDatabase, long nDbFlag, LPCTSTR lpszStatement) 
+void CSqlqueryCtrl::CreateSelectResultPage4Star(LPCTSTR lpszNode, LPCTSTR lpszServer, LPCTSTR lpszUser, LPCTSTR lpszDatabase, long nDbFlag, LPCTSTR lpszStatement)
 {
 	try
 	{
@@ -1040,7 +1043,7 @@ void CSqlqueryCtrl::CreateSelectResultPage4Star(LPCTSTR lpszNode, LPCTSTR lpszSe
 		CString strText = e.GetReason();
 		if (!strText.IsEmpty())
 			AfxMessageBox (strText, MB_ICONEXCLAMATION|MB_OK);
-		
+
 	}
 	catch (CeSqlException e)
 	{
@@ -1052,7 +1055,7 @@ void CSqlqueryCtrl::CreateSelectResultPage4Star(LPCTSTR lpszNode, LPCTSTR lpszSe
 	}
 }
 
-BOOL CSqlqueryCtrl::Initiate2(LPCTSTR lpszNode, LPCTSTR lpszServer, LPCTSTR lpszUser, LPCTSTR lpszOption) 
+BOOL CSqlqueryCtrl::Initiate2(LPCTSTR lpszNode, LPCTSTR lpszServer, LPCTSTR lpszUser, LPCTSTR lpszOption)
 {
 	if (m_pSqlQueryFrame)
 	{
@@ -1061,7 +1064,7 @@ BOOL CSqlqueryCtrl::Initiate2(LPCTSTR lpszNode, LPCTSTR lpszServer, LPCTSTR lpsz
 	return TRUE;
 }
 
-void CSqlqueryCtrl::OnDestroy() 
+void CSqlqueryCtrl::OnDestroy()
 {
 	COleControl::OnDestroy();
 	CTypedPtrList < CObList, CaDocTracker* >& ldoc = theApp.GetDocTracker();
@@ -1079,7 +1082,7 @@ void CSqlqueryCtrl::OnDestroy()
 	}
 }
 
-void CSqlqueryCtrl::SetConnectParamInfo(long nSessionVersion) 
+void CSqlqueryCtrl::SetConnectParamInfo(long nSessionVersion)
 {
 	if (m_pSqlQueryFrame && IsWindow (m_pSqlQueryFrame->m_hWnd))
 	{
@@ -1100,7 +1103,7 @@ void CSqlqueryCtrl::SetConnectParamInfo(long nSessionVersion)
 	}
 }
 
-long CSqlqueryCtrl::GetConnectParamInfo() 
+long CSqlqueryCtrl::GetConnectParamInfo()
 {
 	if (m_pSqlQueryFrame && IsWindow (m_pSqlQueryFrame->m_hWnd))
 	{
@@ -1112,7 +1115,7 @@ long CSqlqueryCtrl::GetConnectParamInfo()
 	return -1;
 }
 
-long CSqlqueryCtrl::ConnectIfNeeded(short nDisplayError) 
+long CSqlqueryCtrl::ConnectIfNeeded(short nDisplayError)
 {
 	if (m_pSqlQueryFrame && IsWindow (m_pSqlQueryFrame->m_hWnd))
 		return m_pSqlQueryFrame->ConnectIfNeeded((BOOL)nDisplayError);
@@ -1120,7 +1123,7 @@ long CSqlqueryCtrl::ConnectIfNeeded(short nDisplayError)
 	return 0;
 }
 
-BOOL CSqlqueryCtrl::GetSessionAutocommitState() 
+BOOL CSqlqueryCtrl::GetSessionAutocommitState()
 {
 	if (m_pSqlQueryFrame && IsWindow (m_pSqlQueryFrame->m_hWnd))
 		return m_pSqlQueryFrame->GetTransactionState(1);
@@ -1128,7 +1131,7 @@ BOOL CSqlqueryCtrl::GetSessionAutocommitState()
 	return m_autoCommit;
 }
 
-BOOL CSqlqueryCtrl::GetSessionCommitState() 
+BOOL CSqlqueryCtrl::GetSessionCommitState()
 {
 	if (m_pSqlQueryFrame && IsWindow (m_pSqlQueryFrame->m_hWnd))
 		return m_pSqlQueryFrame->GetTransactionState(2);
@@ -1136,7 +1139,7 @@ BOOL CSqlqueryCtrl::GetSessionCommitState()
 	return TRUE;
 }
 
-BOOL CSqlqueryCtrl::GetSessionReadLockState() 
+BOOL CSqlqueryCtrl::GetSessionReadLockState()
 {
 	if (m_pSqlQueryFrame && IsWindow (m_pSqlQueryFrame->m_hWnd))
 		return m_pSqlQueryFrame->GetTransactionState(3);
@@ -1144,7 +1147,7 @@ BOOL CSqlqueryCtrl::GetSessionReadLockState()
 	return m_readLock;
 }
 
-void CSqlqueryCtrl::SetHelpFile(LPCTSTR lpszFileWithoutPath) 
+void CSqlqueryCtrl::SetHelpFile(LPCTSTR lpszFileWithoutPath)
 {
 	theApp.m_strHelpFile = lpszFileWithoutPath;
 
@@ -1161,7 +1164,10 @@ SHORT CSqlqueryCtrl::GetConnected(LPCTSTR lpszNode, LPCTSTR lpszDatabase)
 	BOOL bDisconnectUnusedSession = TRUE;
 	CaSessionManager& sMgr = theApp.GetSessionManager();
 	CTypedPtrArray< CObArray, CaSession* >&  lss = sMgr.GetListSessions();
-	if (lpszDatabase == NULL)
+
+	CString strDatabase = lpszDatabase;
+
+	if (lpszDatabase == NULL || strDatabase.IsEmpty())
 	{
 		// Check to if there is at least one opened session with any database in the provided vnode:
 		INT_PTR i, nSize = lss.GetSize();
@@ -1181,16 +1187,11 @@ SHORT CSqlqueryCtrl::GetConnected(LPCTSTR lpszNode, LPCTSTR lpszDatabase)
 	}
 	else
 	{
-		CString strDatabase = lpszDatabase;
-		// Not check if the Database is an empty string
-		if (strDatabase.IsEmpty())
-			return 0;
-
 		INT_PTR i, nSize = lss.GetSize();
 		for (i=0; i<nSize; i++)
 		{
 			CaSession* pObj = lss.GetAt(i);
-			if (pObj && pObj->IsConnected() && 
+			if (pObj && pObj->IsConnected() &&
 			    (pObj->GetNode().CompareNoCase(lpszNode) == 0 && pObj->GetDatabase().CompareNoCase(strDatabase) == 0))
 			{
 				if (bDisconnectUnusedSession && pObj->IsReleased())
