@@ -553,6 +553,10 @@
 **          Changes for Long IDs
 **	06-Apr-2010 (gupsh01) SIR 123444
 **	    Added support for ALTER TABLE ..RENAME TABLE/COLUMN.
+**	19-Jun-2010 (kiria01) b123951
+**	    Add extra parameter to psl0_rngent and psl_rngent for WITH
+**	    support. Corrected prototype for psl_set_jrel & dropped
+**	    pst_swelem.
 */
 
 /*
@@ -6285,7 +6289,8 @@ psl_rngent(
 	PSS_RNGTAB	   **rngvar,
 	i4		   query_mode,
 	DB_ERROR	   *err_blk,
-	i4                *caller_info);
+	i4                *caller_info,
+	PST_J_ID	   *pjoin_id);
 FUNC_EXTERN DB_STATUS
 psl_drngent(
 	PSS_USRRANGE       *rngtable,
@@ -6319,7 +6324,8 @@ psl0_rngent(
 	DB_ERROR	*err_blk,
 	i4		tbls_to_lookup,
 	i4		*caller_info,
-	i4		lookup_mask);
+	i4		lookup_mask,
+	PST_J_ID	*pjoin_id);
 FUNC_EXTERN DB_STATUS
 psl_orngent(
 	PSS_USRRANGE    *rngtable,
@@ -6483,7 +6489,7 @@ FUNC_EXTERN VOID
 psl_set_jrel(
 	PST_J_MASK		*inner_rels,
 	PST_J_MASK		*outer_rels,
-	i4			join_id,
+	PST_J_ID		join_id,
 	register PSS_RNGTAB	**rng_vars,
         DB_JNTYPE               join_type);
 FUNC_EXTERN DB_STATUS
@@ -7290,14 +7296,6 @@ pst_slook(
 	PSS_RNGTAB	   **result,
 	DB_ERROR	   *err_blk,
 	bool		   scope_flag);
-FUNC_EXTERN DB_STATUS
-pst_swelem(
-	PSS_SESBLK	   *cb,
-	i4		    scope,
-	PSS_USRRANGE       *rngtable,
-	DB_TAB_NAME	   *tabname,
-	PSS_RNGTAB	   **rngvar,
-	DB_ERROR	   *err_blk);
 FUNC_EXTERN DB_STATUS
 pst_stproc(
 	PSS_USRRANGE       *rngtable,

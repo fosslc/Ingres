@@ -757,6 +757,10 @@
 **	    For encryption project add arg to psl_ct14_typedesc calls.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	19-Jun-2010 (kiria01) b123951
+**	    Add extra parameter to psl0_rngent & psl_rngent for WITH
+**	    support to pass active join_id in case a WITH list element
+**	    needs expanding and joinids need duplicating. 
 */
 
 %{
@@ -1725,7 +1729,7 @@ apprname:	    NAME
 	STmove($1, ' ', sizeof(tabname), tabname.db_tab_name);
 	status = psl0_rngent(&cb->pss_usrrange, -1, "", &tabname, cb,
 	    FALSE, &resrange, psq_cb->psq_mode, &psq_cb->psq_error,
-	    PSS_USRTBL | PSS_DBATBL | PSS_INGTBL, &rngvar_info, 0);
+	    PSS_USRTBL | PSS_DBATBL | PSS_INGTBL, &rngvar_info, 0, NULL);
 	if (status != E_DB_OK)
 	{
 	    return (status);
@@ -1759,7 +1763,7 @@ apprname:	    NAME
 	STmove($3, ' ', sizeof(tabname), tabname.db_tab_name);
 	status = psl0_rngent(&cb->pss_usrrange, -1, "", &tabname, cb,
 	    FALSE, &resrange, psq_cb->psq_mode, &psq_cb->psq_error,
-	    PSS_SESTBL, &rngvar_info, 0);
+	    PSS_SESTBL, &rngvar_info, 0, NULL);
 	if (status != E_DB_OK)
 	{
 	    return (status);
@@ -1897,7 +1901,7 @@ copytable:	    NAME
 	STmove($1, ' ', sizeof(DB_TAB_NAME), (char *) &tabname);
 	status = psl_rngent(&cb->pss_auxrng, -1, "", &tabname, cb,
 	    FALSE, &resrange, psq_cb->psq_mode, &psq_cb->psq_error,
-	    &rngvar_info);
+	    &rngvar_info, NULL);
 	if (status != E_DB_OK)
 	    return (status);
 
@@ -3461,7 +3465,7 @@ destinteg:	    destintegstmnt NAME destqymlist
 	STmove($2, ' ', sizeof(DB_TAB_NAME), (char *) &tabname);
 	status = psl_rngent(&cb->pss_auxrng, -1, "", &tabname, cb,
 	    FALSE, &resrange, psq_cb->psq_mode, &psq_cb->psq_error,
-	    &rngvar_info);
+	    &rngvar_info, NULL);
 	if (status != E_DB_OK)
 	    return (status);
 
@@ -3598,7 +3602,7 @@ destperm:             destpermstmnt NAME destqymlist
 	STmove($2, ' ', sizeof(DB_TAB_NAME), (char *) &tabname);
 	status = psl_rngent(&cb->pss_auxrng, -1, "", &tabname, cb,
 	    FALSE, &resrange, psq_cb->psq_mode, &psq_cb->psq_error,
-	    &rngvar_info);
+	    &rngvar_info, NULL);
 	if (status != E_DB_OK)
 	    return (status);
 
@@ -3751,7 +3755,7 @@ destrname:	    NAME
 
 	status = psl0_rngent(&cb->pss_auxrng, -1, "", &tabname, cb,
 	    TRUE, &resrange, psq_cb->psq_mode, &psq_cb->psq_error,
-	    PSS_USRTBL | PSS_DBATBL | PSS_INGTBL, &rngvar_info, 0);
+	    PSS_USRTBL | PSS_DBATBL | PSS_INGTBL, &rngvar_info, 0, NULL);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return (status);
@@ -5393,7 +5397,7 @@ rngelm:            NAME is NAME
 	STmove($3, ' ', sizeof(tabname), (char *) &tabname);
 	status = psl_rngent(&cb->pss_usrrange, -1, $1, &tabname, cb,
 	    TRUE, &resrange, psq_cb->psq_mode, &psq_cb->psq_error,
-	    &rngvar_info);
+	    &rngvar_info, NULL);
 	if (status != E_DB_OK)
 	{
 	    return (status);
@@ -5410,7 +5414,7 @@ rngelm:            NAME is NAME
 	STmove("null", ' ', sizeof(tabname), (char *) &tabname);
 	status = psl_rngent(&cb->pss_usrrange, -1, $1, &tabname, cb,
 	    TRUE, &resrange, psq_cb->psq_mode, &psq_cb->psq_error,
-	    &rngvar_info);
+	    &rngvar_info, NULL);
 	if (status != E_DB_OK)
 	{
 	    return (status);
@@ -5491,7 +5495,7 @@ relocate:          RELOCATE NAME TO NAME
 	STmove($2, ' ', sizeof(DB_TAB_NAME), (char *) &tabname);
 	status = psl_rngent(&cb->pss_auxrng, -1, "", &tabname, cb,
 	    FALSE, &resrange, psq_cb->psq_mode, &psq_cb->psq_error,
-	    &rngvar_info);
+	    &rngvar_info, NULL);
 	if (status != E_DB_OK)
 	    return (status);
 
@@ -7142,7 +7146,7 @@ sname:		    NAME
 
 	status = psl0_rngent(&cb->pss_auxrng, -1, "", &tabname, cb,
 	    FALSE, &rngtab, psq_cb->psq_mode, &psq_cb->psq_error,
-	    PSS_USRTBL | PSS_DBATBL | PSS_INGTBL, &rngvar_info, 0);
+	    PSS_USRTBL | PSS_DBATBL | PSS_INGTBL, &rngvar_info, 0, NULL);
 	if (status != E_DB_OK)
 	    return (status);
 
@@ -7603,8 +7607,8 @@ setjournal:	    SETJOURNAL
 
 	/* Look up the table id */
 	STmove($3, ' ', sizeof(DB_TAB_NAME), (char *) &tabname);
-	status = psl_rngent(&cb->pss_auxrng, -1, "", &tabname, cb,
-	    FALSE, &rngvar, psq_cb->psq_mode, &psq_cb->psq_error, &rngvar_info);
+	status = psl_rngent(&cb->pss_auxrng, -1, "", &tabname, cb, FALSE,
+	    &rngvar, psq_cb->psq_mode, &psq_cb->psq_error, &rngvar_info, NULL);
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
 
@@ -7935,8 +7939,8 @@ setlockscope:	    nonkeyword
 
 	/* Look up the table id */
 	STmove($2, ' ', sizeof(DB_TAB_NAME), (char *) &tabname);
-	status = psl_rngent(&cb->pss_auxrng, -1, "", &tabname, cb,
-	    FALSE, &rngvar, psq_cb->psq_mode, &psq_cb->psq_error, &rngvar_info);
+	status = psl_rngent(&cb->pss_auxrng, -1, "", &tabname, cb, FALSE,
+	    &rngvar, psq_cb->psq_mode, &psq_cb->psq_error, &rngvar_info, NULL);
 	if (status != E_DB_OK)
 	    return (status);
 	STRUCT_ASSIGN_MACRO(rngvar->pss_tabid, dmc_cb->dmc_table_id);
@@ -8909,8 +8913,8 @@ setstats:	    SETSTATS strsetparam
 
 	/* Look up the table id */
 	STmove($2, ' ', sizeof(DB_TAB_NAME), (char *) &tabname);
-	status = psl_rngent(&cb->pss_auxrng, -1, "", &tabname, cb,
-	    FALSE, &rngvar, psq_cb->psq_mode, &psq_cb->psq_error, &rngvar_info);
+	status = psl_rngent(&cb->pss_auxrng, -1, "", &tabname, cb, FALSE,
+	    &rngvar, psq_cb->psq_mode, &psq_cb->psq_error, &rngvar_info, NULL);
 	if (status != E_DB_OK)
 	    return (status);
 	STRUCT_ASSIGN_MACRO(rngvar->pss_tabid, dmt_cb->dmt_id);
@@ -10781,7 +10785,7 @@ var:               NAME
 	    STmove($1, ' ', sizeof(DB_TAB_NAME), (char *) &tabname);
 	    status = psl_rngent(&cb->pss_usrrange, -1, $1, &tabname, cb,
 		FALSE, &rngtab, psq_cb->psq_mode, &psq_cb->psq_error,
-		&rngvar_info);
+		&rngvar_info, NULL);
 	    if (status != E_DB_OK)
 	    {
 		return (status);

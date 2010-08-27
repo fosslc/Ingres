@@ -6088,6 +6088,8 @@ psl_ct11_tname_name_name(
 **	22-sep-06 (toumi01)
 **	    Check for mixed GTT syntax modes (with and without "session."),
 **	    and forbid this mixing as too confusing in its side effects.
+**	19-Jun-2010 (kiria01) b123951
+**	    Add extra parameter to psl0_rngent for WITH support.
 **	30-jul-10 (gupsh01) bug 124011
 **	    CVupper may cause stack corruption, as it expects null terminated
 **	    string.
@@ -6453,7 +6455,7 @@ psl_ct12_crname(
 	status = psl0_rngent(&sess_cb->pss_auxrng, -1, "",
 			    &tbl_spec->pss_obj_name, sess_cb, TRUE, &resrange,
 			    psq_cb->psq_mode, &psq_cb->psq_error,
-	    		    tbls_to_lookup, &rngvar_info, lookup_mask);
+	    		    tbls_to_lookup, &rngvar_info, lookup_mask, NULL);
     }
     if (DB_FAILURE_MACRO(status))
 	return (status);

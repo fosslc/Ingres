@@ -770,6 +770,8 @@ opa_uview(
 **      1-mar-94 (ed)
 **          - ojid's which have variable defined as inner should be considered
 **          as possible ojid's for where clause labelling 
+**	19-Jun-2010 (kiria01) b123951
+**	    Init joinid to an expected default.
 [@history_template@]...
 */
 static PST_J_ID
@@ -789,7 +791,7 @@ opa_fojid(
     original = viewid;
     subquery = gstate->opa_gfather;
     global = subquery->ops_global;
-    inner = PST_NOJOIN;
+    inner = joinid = PST_NOJOIN;
     for(;(inner = BTnext((i4)-1, (char *)&rangep->pst_inner_rel, (i4)BITS_IN(rangep->pst_inner_rel)))<0;)
     {
         /* look for the view, or view parent which has an

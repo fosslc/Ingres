@@ -209,6 +209,8 @@ psl_project_corr_vars (
 **	    subsequent PST_ROOT nodes from unions appear at ever deeper parse
 **	    depths resulting in setting bits out of range in in_WHERE and
 **	    has_COUNT.
+**	19-Jun-2010 (kiria01) b123951
+**	    Ensure we flatten the WITH-element trees too.
 */
 
 static DB_STATUS
@@ -1470,7 +1472,8 @@ psl_ss_flatten(
 	PSS_RNGTAB *rngvar = &cb->pss_auxrng.pss_rngtab[i];
 	if (rngvar->pss_used &&
 	    rngvar->pss_rgno >= 0 &&
-	    rngvar->pss_rgtype == PST_DRTREE &&
+	    (rngvar->pss_rgtype == PST_DRTREE ||
+	    rngvar->pss_rgtype == PST_WETREE) &&
 	    rngvar->pss_qtree)
 	{
 	    status = psl_flatten1(&rngvar->pss_qtree,

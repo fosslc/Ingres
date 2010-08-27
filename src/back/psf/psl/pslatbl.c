@@ -356,6 +356,8 @@ psl_alter_table(
 **	11-Jun-2010 (kiria01) b123908
 **	    Initialise pointers after psf_mopen would have invalidated any
 **	    prior content.
+**	19-Jun-2010 (kiria01) b123951
+**	    Add extra parameter to psl_rngent for WITH support.
 */
 DB_STATUS
 psl_alt_tbl(
@@ -402,7 +404,7 @@ psl_alt_tbl(
 	status = psl_rngent(&sess_cb->pss_auxrng, sess_cb->pss_qualdepth, 
 			           tbl_spec->pss_orig_obj_name,
 			    &tbl_spec->pss_obj_name, sess_cb, FALSE, rngvarp,
-			    psq_cb->psq_mode, err_blk, &rngvar_info);
+			    psq_cb->psq_mode, err_blk, &rngvar_info, NULL);
 	if (status == E_DB_INFO)	/* oops, we found a session.table */
 	{
 	    (VOID) psf_error(E_PS0BD2_NOT_SUPP_ON_TEMP, 0L, PSF_USERERR,

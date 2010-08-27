@@ -2307,6 +2307,8 @@ psl_ver_unique_cons(
 **	    If psl_rngent returns E_DB_INFO it found a session temporary
 **	    table, which is invalid in this context, so ignore such tables
 **	    (pslsgram will catch this anyway, or at least should!).
+**	19-Jun-2010 (kiria01) b123951
+**	    Add extra parameter to psl_rngent for WITH support.
 */
 static DB_STATUS
 psl_ver_ref_cons(
@@ -2604,7 +2606,7 @@ psl_ver_ref_cons(
     {
 	status = psl_rngent(&sess_cb->pss_auxrng, -1, "", 
 			    &ref_obj_name->pss_obj_name, sess_cb, FALSE, 
-			    &rngvar, qmode, err_blk, &rngvar_info);
+			    &rngvar, qmode, err_blk, &rngvar_info, NULL);
 	if (status == E_DB_INFO)	/* oops, we found a session.table */
 	{
 	    rngvar = (PSS_RNGTAB *) NULL;

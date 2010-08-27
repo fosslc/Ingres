@@ -168,6 +168,8 @@
 **	    specific extension, which is a hinderance to app portability.
 **	    If psl_rngent returns E_DB_INFO it found a session temporary
 **	    table, which is perfectly okay in this context.
+**	19-Jun-2010 (kiria01) b123951
+**	    Add extra parameter to psl_rngent for WITH support.
 */
 
 DB_STATUS
@@ -270,7 +272,7 @@ psq_dlcsrrow(
 		    /* for rules we need to obtain attribute info */
 		((first_descr->psc_tbl_mask & DMT_RULE) == 0L),
 		&resrange, psq_cb->psq_mode, &psq_cb->psq_error,
-		&rngvar_info);
+		&rngvar_info, NULL);
 	    if (status == E_DB_INFO)
 		status = E_DB_OK;	/* session temp tables are okay */
 	}

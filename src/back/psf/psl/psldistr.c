@@ -205,6 +205,8 @@
 **	    Fixup the error parameters.
 **	21-may-1999 (hanch04)
 **	    Replace STbcompare with STcasecmp,STncasecmp,STcmp,STncmp
+**	19-Jun-2010 (kiria01) b123951
+**	    Add extra parameter to psl0_rngent for WITH support.
 */
 DB_STATUS
 psl_rg1_reg_distr_tv(
@@ -375,7 +377,7 @@ psl_rg1_reg_distr_tv(
 
     status = psl0_rngent(&sess_cb->pss_auxrng, -1, rngvar_name, &tabname,
 	sess_cb, TRUE, &resrange, psq_cb->psq_mode, err_blk,
-	tbls_to_lookup, &rngvar_info, lookup_mask);
+	tbls_to_lookup, &rngvar_info, lookup_mask, NULL);
 
 
     if (sess_cb->pss_distr_sflags & PSS_REFRESH)

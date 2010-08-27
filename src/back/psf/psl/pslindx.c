@@ -807,6 +807,8 @@ psl_ci2_index_prefix(
 **	    Allow "session." to be optional when creating index for GTT.
 **	19-Mar-2007 (kibro01) b117391
 **	    Don't allow creation of indices on IMA GW tables
+**	19-Jun-2010 (kiria01) b123951
+**	    Add extra parameter to psl0_rngent for WITH support.
 */
 DB_STATUS
 psl_ci3_indexrel(
@@ -842,7 +844,7 @@ psl_ci3_indexrel(
 	    tbls_to_lookup |= PSS_SESTBL;
 	status = psl0_rngent(&sess_cb->pss_auxrng, -1, "",
 	    &tbl_spec->pss_obj_name, sess_cb, FALSE, &rngtab, PSQ_INDEX,
-	    err_blk, tbls_to_lookup, &rngvar_info, 0);
+	    err_blk, tbls_to_lookup, &rngvar_info, 0, NULL);
 
 	if (DB_SUCCESS_MACRO(status) && !rngtab)
 	{

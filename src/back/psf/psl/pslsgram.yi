@@ -3545,6 +3545,12 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	    from the FROM set of tables using aliases.
 **      02-Jun-2010 (coomi01) b123821
 **          Relax exclusive test for distinct combined with seq-ops.
+**	19-Jun-2010 (kiria01) b123951
+**	    Add extra parameter to psl0_rngent,psl_rngent and psl_tbl_rngent
+**	    for WITH support. Add extra query_with grammar to productions:
+**	    dgtt_stmt, create_table and insert. It was alread present with
+**	    query. Updated query_with production to cater for scoping in
+**	    line with scalar subquery changes.
 **	24-Jun-2010 (kschendel) b123775
 **	    Set the row-proc flag for DBP's regardless of whether we're
 **	    creating for the first time, or re-parsing for a recreate.
@@ -3608,7 +3614,8 @@ static DB_STATUS psl_tbl_rngent(
 	bool		tabonly,
 	bool		stream_ok,
 	PSS_RNGTAB	**rngvarp,
-	i4		*rngvar_info);
+	i4		*rngvar_info,
+	PST_J_ID	*pjoin_id);
 
 static DB_STATUS psl_tbl_ref(
 	PSQ_CB		*psq_cb,
@@ -5486,7 +5493,7 @@ copytable:	    obj_spec
 	PSS_RNGTAB		*resrange;
 
 	status = psl_tbl_rngent(cb, psq_cb, $1, -1, "", FALSE, FALSE,
-			&resrange, &rngvar_info);
+			&resrange, &rngvar_info, NULL);
 
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
@@ -6144,6 +6151,8 @@ integstmnt:        CRTINTEG
 	    if (DB_FAILURE_MACRO(status))
 		return (status);
 	    cb->pss_stk_freelist = NULL;
+	    cb->pss_object = (PTR) 0;
+	    cb->pss_save_qeucb = (PTR) 0;
 	}
 
 	/*
@@ -7686,7 +7695,7 @@ crl_tbl_name:		obj_spec
 	/* Enter into range table as implicit NEW */
 	status = psl_tbl_rngent(cb, psq_cb, $1, cb->pss_qualdepth,
 			$1->pss_orig_obj_name, FALSE, FALSE,
-			&resrange, &rngvar_info);
+			&resrange, &rngvar_info, NULL);
 	
 	if (status != E_DB_OK)
 	    return (status);
@@ -8454,7 +8463,7 @@ create_synonym:	    crt_syn crname
 	DB_IISYNONYM	    *syn_tuple;
 
 	status = psl_tbl_rngent(cb, psq_cb, $5, -1, "",
-			TRUE, FALSE, &resrange, &rngvar_info);
+			TRUE, FALSE, &resrange, &rngvar_info, NULL);
 
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
@@ -8534,13 +8543,14 @@ dgtt_stmt:	dgtt_kwd new_loc_name LPAREN tbl_elem_list RPAREN dgtton tbl_with_cla
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
-	    |	    dgtt_kwd new_loc_name newcolspec AS query_expr
+	    |	    dgtt_kwd new_loc_name newcolspec AS
+			query_with query_expr
 			order_clause result_offset_clause fetch_first_clause
     {
 	DB_STATUS		status;
 
 	/* Flatten singleton sub-selects */
-	if (status = psl_ss_flatten(&$5, yyvarsp, cb, psq_cb))
+	if (status = psl_ss_flatten(&$6, yyvarsp, cb, psq_cb))
 	    return(status);
 
 	/*
@@ -8554,7 +8564,7 @@ dgtt_stmt:	dgtt_kwd new_loc_name LPAREN tbl_elem_list RPAREN dgtton tbl_with_cla
 	/* Even though DGTT doesn't allow partitioning, do the column
 	** name fixup here to stay in sync with "real" create table.
 	*/
-	status = psl_crtas_fixup_columns(cb, $3, $5, psq_cb);
+	status = psl_crtas_fixup_columns(cb, $3, $6, psq_cb);
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
     }
@@ -8563,7 +8573,7 @@ dgtt_stmt:	dgtt_kwd new_loc_name LPAREN tbl_elem_list RPAREN dgtton tbl_with_cla
 	DB_STATUS		status;
 	i4			err_code;
 
-	if ($6 != 0)
+	if ($7 != 0)
 	    $Ysort_list = (PST_QNODE *) NULL;
 
 	/* ORDER BY is only allowed if there is at least an offset or first
@@ -8576,7 +8586,7 @@ dgtt_stmt:	dgtt_kwd new_loc_name LPAREN tbl_elem_list RPAREN dgtton tbl_with_cla
 	    return(E_DB_ERROR);
 	}
 
-	status = psl_ct2s_crt_tbl_as_select(cb, $3, $5, psq_cb, &$Yjoin_id,
+	status = psl_ct2s_crt_tbl_as_select(cb, $3, $6, psq_cb, &$Yjoin_id,
 			&$Yxlated_qry, $Ysort_list, $Yfirst_n, $Yoffset_n);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
@@ -8614,7 +8624,8 @@ create_table:	    crt_tbl_kwd new_loc_name LPAREN tbl_elem_list RPAREN tbl_with_
 		return(status);
 	}
     }
-	    |	    crt_tbl_kwd new_loc_name newcolspec crt_tbl_askwd query_expr
+	    |	    crt_tbl_kwd new_loc_name newcolspec crt_tbl_askwd
+			query_with query_expr
 			order_clause result_offset_clause fetch_first_clause
     {
 	DB_STATUS status;
@@ -8638,7 +8649,7 @@ create_table:	    crt_tbl_kwd new_loc_name LPAREN tbl_elem_list RPAREN tbl_with_
 	}
 
 	/* Flatten singleton sub-selects */
-	if (status = psl_ss_flatten(&$5, yyvarsp, cb, psq_cb))
+	if (status = psl_ss_flatten(&$6, yyvarsp, cb, psq_cb))
 	    return(status);
 
 	/*
@@ -8652,7 +8663,7 @@ create_table:	    crt_tbl_kwd new_loc_name LPAREN tbl_elem_list RPAREN tbl_with_
 	/* Do column name and other fixes before the with clause, so that
 	** partition definition sees a reasonably good set of columns.
 	*/
-	status = psl_crtas_fixup_columns(cb, $3, $5, psq_cb);
+	status = psl_crtas_fixup_columns(cb, $3, $6, psq_cb);
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
 
@@ -8661,7 +8672,7 @@ create_table:	    crt_tbl_kwd new_loc_name LPAREN tbl_elem_list RPAREN tbl_with_
 	** Drop a copy of the tree pointer into the yyvars for partition
 	** definition, so that it can check out column names..
 	*/
-	$Ypart_crtas_qtree = $5;
+	$Ypart_crtas_qtree = $6;
 	
     }
 		    tbl_with_clause
@@ -8669,7 +8680,7 @@ create_table:	    crt_tbl_kwd new_loc_name LPAREN tbl_elem_list RPAREN tbl_with_
 	DB_STATUS		status;
 	i4			err_code;
 
-	if ($6 != 0)
+	if ($7 != 0)
 	    $Ysort_list = (PST_QNODE *) NULL;
 
 	/* ORDER BY is only allowed if there is at least an offset or first
@@ -8682,7 +8693,7 @@ create_table:	    crt_tbl_kwd new_loc_name LPAREN tbl_elem_list RPAREN tbl_with_
 	    return(E_DB_ERROR);
 	}
 
-	status = psl_ct2s_crt_tbl_as_select(cb, $3, $5, psq_cb, &$Yjoin_id,
+	status = psl_ct2s_crt_tbl_as_select(cb, $3, $6, psq_cb, &$Yjoin_id,
 			&$Yxlated_qry, $Ysort_list, $Yfirst_n, $Yoffset_n);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
@@ -11756,7 +11767,7 @@ alter_table:		alt_tbl ADD tbl_constraint
 	/* Validate the new table name */
 	status = psl0_rngent(&cb->pss_auxrng, -1, "", &$4->pss_obj_name, cb,
                 FALSE, &resrange, psq_cb->psq_mode, &psq_cb->psq_error,
-		tbls_to_lookup, &rngvar_info, 0);
+		tbls_to_lookup, &rngvar_info, 0, &$Yjoin_id);
 	if (DB_SUCCESS_MACRO(status) && ! (resrange))
 	{
 	    /* allocate and populate the DMU_CB control block */
@@ -15613,13 +15624,13 @@ cdbp_assignstmt:    cdbp_lhs_asgn
 	/* Open memory stream for allocating query tree,
 	** if not already open.
 	*/
-	if (!cb->pss_ostream.psf_mstream.qso_handle &&
-	    (status = psf_mopen(cb, QSO_QTREE_OBJ, &cb->pss_ostream,
-	    &psq_cb->psq_error)) != E_DB_OK)
+	if (!cb->pss_ostream.psf_mstream.qso_handle)
 	{
-	    return (status);
+	    if (status = psf_mopen(cb, QSO_QTREE_OBJ, &cb->pss_ostream,
+					&psq_cb->psq_error))
+		return (status);
+	    cb->pss_stk_freelist = NULL;
 	}
-	cb->pss_stk_freelist = NULL;
 
 	/* Initialize mode to true mode, PSQ_ASSIGN is
 	** only used for proper recovery from syntax errors.
@@ -17612,7 +17623,7 @@ drop_obj:	    obj_spec opt_drop_behaviour
 		status = psl0_rngent(&cb->pss_auxrng, -1, "",
 		    &$1->pss_obj_name, cb, tabonly, &resrange, psq_cb->psq_mode,
 		    &psq_cb->psq_error, tbls_to_lookup, &rngvar_info,
-		    lookup_mask);
+		    lookup_mask, &$Yjoin_id);
 	    }
 	    
 	    if (DB_FAILURE_MACRO(status))
@@ -18516,7 +18527,7 @@ dropinteg:	    dropintegstmnt obj_spec dropipspec
 	/* Find table id */
 
 	status = psl_tbl_rngent(cb, psq_cb, $2, -1, "",
-			FALSE, FALSE, &resrange, &rngvar_info);
+			FALSE, FALSE, &resrange, &rngvar_info, NULL);
 
 	if (status != E_DB_OK)
 	    return (status);
@@ -18673,7 +18684,7 @@ dropperm:             droppermstmnt ON obj_spec dropipspec
 	/* Find table id */
 
 	status = psl_tbl_rngent(cb, psq_cb, $3, -1, "",
-			FALSE, FALSE, &resrange, &rngvar_info);
+			FALSE, FALSE, &resrange, &rngvar_info, NULL);
 
 	if (status != E_DB_OK)
 	    return (status);
@@ -19361,6 +19372,7 @@ exdbp_kword:	exdbp_xkword
 	    if ((status = psf_mopen(cb, QSO_QTREE_OBJ, &cb->pss_ostream,
 				    &psq_cb->psq_error)) != E_DB_OK)
 		return (status);
+	    cb->pss_stk_freelist = NULL;
 	}
     }
 ;
@@ -19398,7 +19410,7 @@ exdbp_name:	obj_spec
 		    $1->pss_orig_obj_name, &$1->pss_obj_name, 
 		    cb, TRUE, &resrange, psq_cb->psq_mode, &psq_cb->psq_error,
 		    (PSS_USRTBL | PSS_DBATBL | PSS_INGTBL),
-                    &rngvar_info, lookup_mask);
+                    &rngvar_info, lookup_mask, &$Yjoin_id);
 	    }
 
 	    if (DB_FAILURE_MACRO(status))
@@ -21572,7 +21584,7 @@ tbl_priv_obj:	    obj_spec
 	    status = psl0_rngent(&cb->pss_auxrng, -1, $1->pss_orig_obj_name,
 		&$1->pss_obj_name, cb, !colprivs, &resrange,
 		psq_cb->psq_mode, &psq_cb->psq_error,
-		PSS_USRTBL | PSS_DBATBL | PSS_INGTBL, &rngvar_info, 0);
+		PSS_USRTBL | PSS_DBATBL | PSS_INGTBL, &rngvar_info, 0, &$Yjoin_id);
 	}
 
 	if (status != E_DB_OK)
@@ -26308,7 +26320,7 @@ insert:             insertkwd intname incolspec inoverride invalspec
 
 	$$ = tree;
     }
-	    |	    insertkwd intname incolspec inoverride query_expr
+	    |	    insertkwd intname incolspec inoverride query_with query_expr
 			order_clause result_offset_clause fetch_first_clause
     {
 	PST_QNODE		*node, *ssnode, *subsel;
@@ -26335,7 +26347,7 @@ insert:             insertkwd intname incolspec inoverride invalspec
 	    return(E_DB_ERROR);
 	}
 
-	if ($6 != 0)
+	if ($7 != 0)
 	    $Ysort_list = (PST_QNODE *) NULL;
 
 	/* ORDER BY is only allowed if there is at least an offset or first
@@ -26352,7 +26364,7 @@ insert:             insertkwd intname incolspec inoverride invalspec
 	** First we have to determine whether number of resdoms 
 	** and columns is equal.
 	*/
-	for (node = $3, ssnode = $5->pst_left;
+	for (node = $3, ssnode = $6->pst_left;
 	     (node->pst_sym.pst_type == PST_RESDOM &&
 	      ssnode->pst_sym.pst_type == PST_RESDOM);
 	     node = node->pst_left, ssnode = ssnode->pst_left)
@@ -26372,7 +26384,7 @@ insert:             insertkwd intname incolspec inoverride invalspec
 	}
 
 	/* Flatten singleton sub-selects */
-	if (status = psl_ss_flatten(&$5, yyvarsp, cb, psq_cb))
+	if (status = psl_ss_flatten(&$6, yyvarsp, cb, psq_cb))
 	    return(status);
 
 	/*
@@ -26389,7 +26401,7 @@ insert:             insertkwd intname incolspec inoverride invalspec
 	** the table columns resdoms to the select list resdoms,
         */
 
-	for (subsel = $5; subsel;
+	for (subsel = $6; subsel;
 	           subsel = subsel->pst_sym.pst_value.pst_s_root.pst_union.pst_next)
 	{
 	    for (node = $3, ssnode = subsel->pst_left;
@@ -26411,10 +26423,11 @@ insert:             insertkwd intname incolspec inoverride invalspec
 		ssnode->pst_sym.pst_value.pst_s_rsdm.pst_ntargno =
 		    node->pst_sym.pst_value.pst_s_rsdm.pst_rsno;
 
-		if (subsel == $5) /* Dealing with first sub-select list */
+		if (subsel == $6) /* Dealing with first sub-select list */
 		{
 		    /* Note if any of the resdoms are out of sequence */
 		    if (node->pst_left &&
+			    node->pst_left->pst_sym.pst_type == PST_RESDOM &&
 			    node->pst_sym.pst_value.pst_s_rsdm.pst_rsno <
 			    node->pst_left->pst_sym.pst_value.pst_s_rsdm.pst_rsno)
 			sane_order = FALSE;
@@ -26520,7 +26533,7 @@ insert:             insertkwd intname incolspec inoverride invalspec
 		    node = next;
 	    }
 	    /* Next the sub-select(s) */
-	    for (subsel = $5; subsel;
+	    for (subsel = $6; subsel;
 		    subsel = subsel->pst_sym.pst_value.pst_s_root.pst_union.pst_next)
 	    {
 		head = &subsel->pst_left;
@@ -26554,8 +26567,8 @@ insert:             insertkwd intname incolspec inoverride invalspec
 	** Convert the root node of the subselect into the root node
 	** for the query.
 	*/
-	$5->pst_sym.pst_type = PST_ROOT;
-	$5->pst_sym.pst_value.pst_s_root.pst_rtuser = TRUE;
+	$6->pst_sym.pst_type = PST_ROOT;
+	$6->pst_sym.pst_value.pst_s_root.pst_rtuser = TRUE;
 
 	/* More identity column validation. */
 	if ($Yident_attno >= 0)
@@ -26610,7 +26623,7 @@ insert:             insertkwd intname incolspec inoverride invalspec
 	    }
 	}
 
-	status = psl_do_insert(cb, psq_cb, $5, &$Yqp_shareable, &tree, $Yisdbp,
+	status = psl_do_insert(cb, psq_cb, $6, &$Yqp_shareable, &tree, $Yisdbp,
 		$Yjoin_id, &$Yxlated_qry, &$Yshr_qryinfo,
 		$Ysort_list, $Yfirst_n, $Yoffset_n);
 
@@ -26682,7 +26695,7 @@ intname:	    obj_spec
 	{
 	    status = psl_rngent(&cb->pss_auxrng, -1, "", &$1->pss_obj_name, cb,
 		FALSE, &resrange, psq_cb->psq_mode, &psq_cb->psq_error,
-		&rngvar_info);
+		&rngvar_info, &$Yjoin_id);
 	    if (status == E_DB_INFO)
 	    {
 		status = E_DB_OK;
@@ -27802,9 +27815,6 @@ describe_input:	DESCINPUT generic_ident
 
 
 query:		query_with query_expr query_clause query_hint_with
-    /* If (when) the SQL standard "with" clause is supported in Ingres,
-    ** the above rule will become: query_with query_expr query_clause and 
-    ** the $1 and $2 variables will become $2 and $3, respectively. */
     {
 	DB_STATUS	    status;
 	PST_QTREE	    *tree;
@@ -27842,17 +27852,17 @@ query:		query_with query_expr query_clause query_hint_with
 		 res = res->pst_left
 		)
 	    {
-		    i4	    tno;
+		i4	    tno;
 
-		    tno =  res->pst_sym.pst_value.pst_s_rsdm.pst_ntargno;
-		    if ((tno == PST_RCNT || tno == PST_ERNO) &&
-			res->pst_sym.pst_value.pst_s_rsdm.pst_rsflags&PST_RS_PRINT)
-		    {
-			(VOID) psf_error(2434L, 0L, PSF_USERERR,
-			    &err_code, &psq_cb->psq_error, 1,
-			    sizeof(cb->pss_lineno), &cb->pss_lineno);
-			return (E_DB_ERROR);
-		    }
+		tno =  res->pst_sym.pst_value.pst_s_rsdm.pst_ntargno;
+		if ((tno == PST_RCNT || tno == PST_ERNO) &&
+		    res->pst_sym.pst_value.pst_s_rsdm.pst_rsflags&PST_RS_PRINT)
+		{
+		    (VOID) psf_error(2434L, 0L, PSF_USERERR,
+			&err_code, &psq_cb->psq_error, 1,
+			sizeof(cb->pss_lineno), &cb->pss_lineno);
+		    return (E_DB_ERROR);
+		}
 	    }
 
 	    /* Make sure that all UNIONed subselects have target lists
@@ -28203,7 +28213,72 @@ query:		query_with query_expr query_clause query_hint_with
 ** "WITH" clause isn't yet supported. This isn't to be copnfused with the
 ** WITH clause that adds hints to a query. */
 query_with:	/* nuttin' here */
-	|	WITH query_with_list
+	|	withkwd query_with_list
+    {
+	psl_bp(/*endwith*/);
+	cb->pss_qualdepth--;
+	/* Re-scope to enable outer table to be visible for order by sub-selects to
+	** refer to. */
+	pst_rescope(&cb->pss_auxrng, &$Yfrom_list, 2*MAXI1);
+	$Yqual_depth--;
+	$Ysingleton_depth--;
+	$Ypss_join_info.depth--;
+	/* Reset any non-update to ignore the CTEs for the moment */
+	$Ynonupdt = FALSE;
+	$Ynonupdt_reason = 0;
+    }
+;
+
+withkwd:	WITH
+    {
+	PSS_J_QUAL	*join_qual;
+	DB_STATUS	status;
+
+	/* This needs to shadow base level SELECT clause which essentially
+	** should be active from now. In the 'endwith' action we will
+	** arrange that the real base level SELECT will reestablish what we
+	** do here now. */
+	psl_bp(/*withkwd*/);
+
+	/* Open memory stream for allocating query tree, if not already open */
+	if (!cb->pss_ostream.psf_mstream.qso_handle)
+	{
+	    if (status = psf_mopen(cb, QSO_QTREE_OBJ, &cb->pss_ostream,
+					&psq_cb->psq_error))
+		return (status);    /* non-zero return means error */
+	    cb->pss_stk_freelist = NULL;
+	}
+
+	cb->pss_qualdepth++;
+
+	/*
+	** clear the bit that would indicate to us that correlated variables
+	** were being used (Though in this context we won't need this)
+	*/
+	BTclear(cb->pss_qualdepth, (char *) $Ycorrelation_mask);
+
+	$Yagg_list_stack[cb->pss_qualdepth] = (YYAGG_NODE_PTR *)NULL;
+	$Ytlist_stack[cb->pss_qualdepth] = NULL;
+	/* Don't fiddle with $Yin_target_clause as we are not entering one! */
+
+	/* Allocate a header for join_search qualification for this
+	** subselect */
+	if (status = psf_malloc(cb, &cb->pss_ostream, sizeof(PSS_J_QUAL), 
+		 (PTR *) &join_qual, &psq_cb->psq_error))
+	    return (status);
+
+	/* Note that we "grow" the list upward.  Once the entire subselect
+	** is processed, we will shed the PSS_J_QUAL node we just allocated */
+	join_qual->pss_qual = NULL;
+	join_qual->pss_next = $Yj_qual;
+	$Yj_qual = join_qual;
+
+	/* Indicate that we are NOT processing join_search condition */
+	BTclear(++$Yqual_depth, $Yin_join_search);
+	BTclear(++$Ysingleton_depth, $Ysingleton);
+	$Ypss_join_info.pss_join[++$Ypss_join_info.depth].join_type = 0;
+	$Ypss_join_info.pss_join[$Ypss_join_info.depth].join_id = PST_NOJOIN;
+    }
 ;
 
 query_with_list:	with_list_element
@@ -28220,6 +28295,8 @@ with_list_element:	tbl_spec dcollist AS LPAREN
 	if (DB_FAILURE_MACRO(status))
 		return(status);
 	yyvarsp = *yyvarspp;
+	/* note WITH clause in qry */
+	cb->pss_ses_flag |= PSS_WITHELEM_INQ;
     }
 		query_expr RPAREN
     {
@@ -28230,13 +28307,9 @@ with_list_element:	tbl_spec dcollist AS LPAREN
 	/* Add with list element to range table. Note scope is 
 	** pss_qualdepth+1, because the "subselect" production decrements
 	** it before we can add with list element to the range table. */
-	status = psl_drngent(&cb->pss_auxrng, cb->pss_qualdepth+1,
-		$1, cb, &resrange, $6, PST_WETREE, &psq_cb->psq_error);
-
-	if (DB_FAILURE_MACRO(status))
+	if (status = psl_drngent(&cb->pss_auxrng, cb->pss_qualdepth+1,
+		$1, cb, &resrange, $6, PST_WETREE, &psq_cb->psq_error))
 	    return (status);
-
-	cb->pss_ses_flag |= PSS_WITHELEM_INQ;	/* note WITH clause in qry */
 
 	/* And now restore the outer yyvarsp, since recursion is done. 
 	**
@@ -28284,6 +28357,9 @@ with_list_element:	tbl_spec dcollist AS LPAREN
 		    resrange->pss_rgname);
 		return (E_DB_ERROR);
 	    }
+	    /* Reinitialise the dcol_list now that we have done with it
+	    ** as all the attribute names have been applied */
+	    QUinit((QUEUE *)&$Ydcol_list);
 	}
 
 	/*
@@ -28344,6 +28420,9 @@ with_list_element:	tbl_spec dcollist AS LPAREN
 	** the FROM list which involve tables from the same FROM list
 	*/
 	BTor(PST_NUMVARS, (char *)mask, (char *)&$Yjoin_tbls);
+	/* return to the base context ready to be restored in main
+	** SELECT clause */
+	pst_snscope(&cb->pss_auxrng, mask, 2*MAXI1);
     }
 ;
 
@@ -29957,6 +30036,7 @@ select:			SELECT
 	PSS_J_QUAL	       *join_qual;
 	DB_STATUS              status;
 
+	psl_bp(/*select*/);
 	if ($Yin_from_clause &&
 		!BTtest($Yqual_depth, $Yin_join_search))
 	{
@@ -29988,19 +30068,15 @@ select:			SELECT
 		&err_code, &psq_cb->psq_error, 0);
 	    return(E_DB_ERROR);
 	}
-	
-	/* Open memory stream for allocating query tree, if not already
-	** open
-	*/
-	psl_bp(/*select*/);
 
-	if (!cb->pss_ostream.psf_mstream.qso_handle &&
-	    (status = psf_mopen(cb, QSO_QTREE_OBJ, &cb->pss_ostream,
-	    &psq_cb->psq_error)) != E_DB_OK)
+	/* Open memory stream for allocating query tree, if not already open */
+	if (!cb->pss_ostream.psf_mstream.qso_handle)
 	{
-	    return (status);    /* non-zero return means error */
+	    if (status = psf_mopen(cb, QSO_QTREE_OBJ, &cb->pss_ostream,
+					&psq_cb->psq_error))
+		return (status);    /* non-zero return means error */
+	    cb->pss_stk_freelist = NULL;
 	}
-	cb->pss_stk_freelist = NULL;
 
 	/* ORDER BY masks symbol resolution in general but a nested
 	** subselect in the ORDER BY needs it re-instating unless it
@@ -30576,7 +30652,7 @@ from_list_item:	    obj_spec corr_name
 
 	/* IngresStreams would be allowed here (select-stream only) */
 	status = psl_tbl_rngent(cb, psq_cb, $1, cb->pss_qualdepth, corr_name,
-			FALSE, TRUE, &resrange, &rngvar_info);
+			FALSE, TRUE, &resrange, &rngvar_info, &$Yjoin_id);
 
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
@@ -31297,7 +31373,7 @@ from_item:		obj_spec corr_name
 
 	/* IngresStreams would be allowed here (select-stream only) */
 	status = psl_tbl_rngent(cb, psq_cb, $1, cb->pss_qualdepth, corr_name,
-			FALSE, TRUE, &resrange, &rngvar_info);
+			FALSE, TRUE, &resrange, &rngvar_info, &$Yjoin_id);
 
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
@@ -32647,7 +32723,7 @@ cname:			col_ref
 	    }
 
 	    /* If CALLPROC and either not a local var or simple column name */
-	    if (psq_cb->psq_mode == PSQ_CALLPROC && !found_var)
+	    if (psq_cb->psq_mode == PSQ_CALLPROC && !found_var && !$Yqual_depth)
 	    {
 		/* Unknown local variable or isolated column specified */
 		(VOID) psf_error($Yisdbp ? 2403L : E_US0986_2438_EXEC_COL, 0L,
@@ -38613,7 +38689,7 @@ relocate:          RELOCATE obj_spec TO NAME
 
 	/* Look up the table to be relocated */
 	status = psl_tbl_rngent(cb, psq_cb, $2, -1, "",
-			FALSE, FALSE, &resrange, &rngvar_info);
+			FALSE, FALSE, &resrange, &rngvar_info, &$Yjoin_id);
 
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
@@ -38762,7 +38838,7 @@ rename:          rename_tbl TO obj_spec
         /* Validate the new table name */
 	status = psl0_rngent(&cb->pss_auxrng, -1, "", &$3->pss_obj_name, cb,
                     FALSE, &resrange, psq_cb->psq_mode, &psq_cb->psq_error,
-		    tbls_to_lookup, &rngvar_info, 0);
+		    tbls_to_lookup, &rngvar_info, 0, &$Yjoin_id);
 	if (DB_SUCCESS_MACRO(status) && ! (resrange))
 	{
 	    /* allocate and populate the DMU_CB control block */
@@ -39306,7 +39382,7 @@ save_tbl:	    obj_spec
 	i4			duve_len;
 
 	status = psl_tbl_rngent(cb, psq_cb, $1, -1, "",
-			TRUE, FALSE, &rngvar, &rngvar_info);
+			TRUE, FALSE, &rngvar, &rngvar_info, &$Yjoin_id);
 
 	if (DB_FAILURE_MACRO(status))
 	{
@@ -40041,7 +40117,7 @@ setjournal:	    SETJOURNAL
 	}
 
 	status = psl_tbl_rngent(cb, psq_cb, $4, -1, "",
-			FALSE, FALSE, &rngvar, &rngvar_info);
+			FALSE, FALSE, &rngvar, &rngvar_info, &$Yjoin_id);
 
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
@@ -40344,7 +40420,7 @@ setlockscope:	    SESSION
 	dmc_cb->dmc_sl_scope = DMC_SL_TABLE;
 
 	status = psl_tbl_rngent(cb, psq_cb, $2, -1, "",
-			FALSE, FALSE, &rngvar, &rngvar_info);
+			FALSE, FALSE, &rngvar, &rngvar_info, &$Yjoin_id);
 
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
@@ -41727,7 +41803,7 @@ set_stat_tbl:	    QDATA
 	    (char *) &tabname);
 
  	status = psl_rngent(&cb->pss_auxrng, -1, "", &tabname, cb, FALSE, 
-	   &rngvar, psq_cb->psq_mode, &psq_cb->psq_error, &rngvar_info);
+	   &rngvar, psq_cb->psq_mode, &psq_cb->psq_error, &rngvar_info, &$Yjoin_id);
 	if (status == E_DB_INFO)
 	{
 	    status = E_DB_OK;
@@ -41749,7 +41825,7 @@ set_stat_tbl:	    QDATA
 	i4		    rngvar_info;
 
 	status = psl_tbl_rngent(cb, psq_cb, $1, -1, "",
-			FALSE, FALSE, &rngvar, &rngvar_info);
+			FALSE, FALSE, &rngvar, &rngvar_info, &$Yjoin_id);
 
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
@@ -44076,7 +44152,7 @@ comment_obj:	TABLE obj_spec
 	PSS_RNGTAB	*resrange;
 
 	status = psl_tbl_rngent(cb, psq_cb, $2, -1, "",
-			TRUE, FALSE, &resrange, &rngvar_info);
+			TRUE, FALSE, &resrange, &rngvar_info, &$Yjoin_id);
 
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
@@ -52162,7 +52238,7 @@ VOID
 psl_set_jrel(
 	PST_J_MASK		*inner_rels,
 	PST_J_MASK		*outer_rels,
-	i4			join_id,
+	PST_J_ID		join_id,
 	register PSS_RNGTAB	**rng_vars,
 	DB_JNTYPE               join_type)
 {
@@ -52381,7 +52457,7 @@ psl_comment_col(
     {
 	status = psl_rngent(&sess_cb->pss_auxrng, -1, "", &comment_tbl, sess_cb,
 	    FALSE, &resrange, psq_cb->psq_mode, &psq_cb->psq_error,
-	    &rngvar_info);
+	    &rngvar_info, NULL);
 	if (status == E_DB_INFO)
 	{
 	    status = E_DB_OK;
@@ -55110,7 +55186,7 @@ psl_valid_session_schema_use(
 static DB_STATUS
 psl_tbl_rngent(PSS_SESBLK *cb, PSQ_CB *psq_cb, PSS_OBJ_NAME *objname,
 	i4 scope, char *varname, bool tabonly, bool stream_ok,
-	PSS_RNGTAB **rngvarp, i4 *rngvar_info)
+	PSS_RNGTAB **rngvarp, i4 *rngvar_info, PST_J_ID *pjoin_id)
 {
     DB_STATUS status;
 
@@ -55126,7 +55202,8 @@ psl_tbl_rngent(PSS_SESBLK *cb, PSQ_CB *psq_cb, PSS_OBJ_NAME *objname,
 	status = psl_rngent(&cb->pss_auxrng, scope, varname,
 			&objname->pss_obj_name,
 			cb, tabonly, rngvarp,
-			psq_cb->psq_mode, &psq_cb->psq_error, rngvar_info);
+			psq_cb->psq_mode, &psq_cb->psq_error, rngvar_info,
+			pjoin_id);
 	if (status == E_DB_INFO)
 	{
 	    /* Unqualified name was a session object */
