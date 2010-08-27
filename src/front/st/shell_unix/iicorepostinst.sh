@@ -38,6 +38,10 @@
 ##	16-Jun-2010 (hanje04)
 ##	    BUG 123929
 ##	    Run iisetres as $II_USERID not $II_GROUPID
+##	25-Jun-2010 (hanje04)
+##	    BUG 124005
+##	    Run mkrc as $II_USERID so that the generated script is owned by
+##	    $II_USERID and not root
 
 ## Need II_SYSTEM to be set
 [ -z "$II_SYSTEM" ] &&
@@ -252,7 +256,9 @@ do_setup()
     {
 	inst_id=`ingprenv II_INSTALLATION`
 	mkrc -r
-	mkrc && mkrc -i
+	[ -f "$II_SYSTEM/ingres/files/rcfiles/ingres${inst_id}" ] &&
+	    rm -f "$II_SYSTEM/ingres/files/rcfiles/ingres${inst_id}"
+	( $runuser -m -c "mkrc" $II_USERID ) && mkrc -i
 	( [ "$II_START_ON_BOOT" = "NO" ] || [ "$START_ON_BOOT" = "NO" ] ) &&
 	{
 	    if [ -x /usr/sbin/update-rc.d ] ; then
