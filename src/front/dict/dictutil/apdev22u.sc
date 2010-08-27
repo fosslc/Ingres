@@ -55,6 +55,9 @@ FUNC_EXTERN bool        IIDDigIsGateway();
 **	27-Jul-2010 (frima01) Bug 124137
 **	    Add exit if no argument has been passed to avoid
 **	    segmentation violation when accessing arguments.
+**      02-Aug-2010 (bonro01) Bug 124137
+**          Previous change causes compile error on Windows.
+**          Move code after variable definitions.
 */
 
 i4
@@ -71,15 +74,15 @@ char	**argv;
     bool    maybe_star = TRUE;
    
 
-    if (argc < 2)
-	PCexit(FAIL);
- 
     EXEC SQL begin declare section;
       char     dbname[2*DB_MAXNAME+1]; /* double size since it can contain vnode */
       i4       dbservice;
       char	   iidbdbname[DB_MAXNAME+1];
     EXEC SQL end   declare section;
 
+    if (argc < 2)
+	PCexit(FAIL);
+ 
         
     for (i=0; i< argc; i++)
         {
