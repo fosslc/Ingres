@@ -183,6 +183,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**	18-Jun-2010 (kschendel) b123775
+**	    Table procs don't have valid list entries any more, remove code.
 **/
 
 /*}
@@ -595,8 +597,8 @@ opt_qp(
 		OPT_PBLEN, "\ttype: PROCEDURE\n\n");
 	    TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
 		OPT_PBLEN, "\tprocname: %24s  .owner: %24s\n\n",
-		resource->qr_resource.qr_proc.qr_dbpalias.qr_crsr_id.db_cur_name,
-		resource->qr_resource.qr_proc.qr_dbpalias.qr_user);
+		resource->qr_resource.qr_proc.qr_dbpalias.qso_n_id.db_cur_name,
+		resource->qr_resource.qr_proc.qr_dbpalias.qso_n_own);
 	    TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
 		OPT_PBLEN, "\tproc_id1: %9d, proc_id2: %9d\n\n",
 		    resource->qr_resource.qr_proc.qr_procedure_id1,
@@ -635,30 +637,28 @@ opt_qp(
 	    TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
 		    OPT_PBLEN, "\ttemp_id: %5d\n\n", 
 		    resource->qr_resource.qr_tbl.qr_temp_id);
+	    TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
+		OPT_PBLEN,"\tqr_timestamp.high: %d \t qr_timestamp.low: %d\n\n",
+		resource->qr_resource.qr_tbl.qr_timestamp.db_tab_high_time,
+		resource->qr_resource.qr_tbl.qr_timestamp.db_tab_low_time);
 
 	    for (vl = resource->qr_resource.qr_tbl.qr_valid;
 		    vl != NULL;
 		    vl = vl->vl_alt
 		)
 	    {
-		if (!(vl->vl_flags & QEF_TPROC))
-		{
-		    rel = (RDR_INFO *) vl->vl_debug;
+		rel = (RDR_INFO *) vl->vl_debug;
 
-		    TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-			OPT_PBLEN, "\t\t.relname: %24s  .owner: %24s\n\n",
-			rel->rdr_rel->tbl_name.db_tab_name,
-			rel->rdr_rel->tbl_owner.db_own_name);
-		    TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-			OPT_PBLEN, "\t\t.base: %5d \t .index: %5d\n\n",
-			vl->vl_tab_id.db_tab_base, vl->vl_tab_id.db_tab_index);
-		    TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-			OPT_PBLEN, "\t\tdmr_cb: %5d \t dmf_cb: %5d\n\n",
-			vl->vl_dmr_cb, vl->vl_dmf_cb);
-		}
-		else TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-			OPT_PBLEN, "\t\t.base: %5d \t .index: %5d\n\n",
-			vl->vl_tab_id.db_tab_base, vl->vl_tab_id.db_tab_index);
+		TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
+		    OPT_PBLEN, "\t\t.relname: %24s  .owner: %24s\n\n",
+		    rel->rdr_rel->tbl_name.db_tab_name,
+		    rel->rdr_rel->tbl_owner.db_own_name);
+		TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
+		    OPT_PBLEN, "\t\t.base: %5d \t .index: %5d\n\n",
+		    vl->vl_tab_id.db_tab_base, vl->vl_tab_id.db_tab_index);
+		TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
+		    OPT_PBLEN, "\t\tdmr_cb: %5d \t dmf_cb: %5d\n\n",
+		    vl->vl_dmr_cb, vl->vl_dmf_cb);
 	    }
 	    break;
 	}
@@ -1488,18 +1488,12 @@ opt_ahd(
 
     for (i = 0, vl = ahd->ahd_valid; vl != NULL; vl = vl->vl_next, i += 1)
     {
-	if (vl->vl_flags & QEF_TPROC)
-	    continue;			/* skip table procs */
 	rel = (RDR_INFO *) vl->vl_debug;
 
 	TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
 	    OPT_PBLEN, "[%2d] vl_tab_id.relname: %24s  .owner: %24s\n\n",
 	    i, rel->rdr_rel->tbl_name.db_tab_name,
 	    rel->rdr_rel->tbl_owner.db_own_name);
-	TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-	    OPT_PBLEN,"\tvl_timestamp.high: %5d \t\t vl_timestamp.low: %5d\n\n",
-	    vl->vl_timestamp.db_tab_high_time, 
-	    vl->vl_timestamp.db_tab_low_time);
 	TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
 	    OPT_PBLEN, "\tdmr_cb: %5d \t dmf_cb: %5d \t rw: ",
 	    vl->vl_dmr_cb, vl->vl_dmf_cb);
@@ -1534,9 +1528,8 @@ opt_ahd(
 	    OPT_PBLEN, "\t.base: %5d \t .index: %5d\n\n",
 	    vl->vl_tab_id.db_tab_base, vl->vl_tab_id.db_tab_index);
 	TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-	    OPT_PBLEN, "\ttab_id_index: %5d\tresource %5d\tpartition count: %5d\n\n\n",
-	    vl->vl_tab_id_index, vl->vl_resource->qr_id_resource,
-	    vl->vl_partition_cnt);
+	    OPT_PBLEN, "\ttab_id_index: %5d\tpartition count: %5d\n\n\n",
+	    vl->vl_tab_id_index, vl->vl_partition_cnt);
     }
 
     opt_adf(global, ahd->ahd_mkey, "ahd_mkey");
@@ -2963,8 +2956,8 @@ opt_qenode(
 	    OPT_PBLEN, "tproc_pcount: %5d  \t tproc_dshix: %5d \t tproc_flag: %5d\n\n", 
 	    tproc->tproc_pcount, tproc->tproc_dshix, tproc->tproc_flag);
 	TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-	    OPT_PBLEN, "tproc_dbpID: %5d  \t tproc_qpidptr: %p\n\n", 
-	    tproc->tproc_dbpID.db_tab_base, tproc->tproc_qpidptr);
+	    OPT_PBLEN, "tproc_dbpID: %5d  \t tproc_resix: %p\n\n", 
+	    tproc->tproc_dbpID.db_tab_base, tproc->tproc_resix);
 	TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
 	    OPT_PBLEN, "\n\n");
 

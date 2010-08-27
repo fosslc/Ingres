@@ -2627,6 +2627,11 @@ static char execproc_syntax2[] = " = session.";
 **	    terminate the batch. Remove call to QEU_E_COPY when handling
 **	    batch copy optimization errors, the call to scs_copy_error
 **	    does this for us already (Bug 123939)
+**	22-Jun-2010 (kschendel) b123775
+**	    Ensure no bogus rowcount added to running total if query returns
+**	    asking for a tproc recreate, by ensuring that we go through the
+**	    ERROR path and not the WARNING path.  Restore qmode once the
+**	    tproc QP is loaded and before we attempt to re-enter QEF.
 */
 DB_STATUS
 scs_sequencer(i4 op_code,
@@ -5928,14 +5933,24 @@ scs_sequencer(i4 op_code,
 		** as was checked above.
 		*/
 
+		/* If we are retrying after loading a table-proc QP,
+		** restore the original query mode now.
+		*/
+		if (is_tproc_load_qp)
+		{
+		    STRUCT_ASSIGN_MACRO(cur_qp_saved, cquery->cur_qp);
+		    qmode = sscb->sscb_qmode = qmode_saved;
+		    is_tproc_load_qp = FALSE;
+		}
+
                 /* If RETRIEVE or FETCH or row producing procedure, then
 		** determine output buffers.
 		** Don't do this however if this is a return-back for
-		** reloading a QP while in a rowproc, output buffers are
-		** already positioned and we don't want to touch them.
+		** reloading a QP, output buffers are already positioned
+		** and we don't want to touch them.
 		*/
-                if (qmode == PSQ_RETRIEVE || qmode == PSQ_RETCURS ||
-			(rowproc && !qef_wants_ruleqp) )
+                if ((qmode == PSQ_RETRIEVE || qmode == PSQ_RETCURS || rowproc)
+		  && !qef_wants_ruleqp)
 		{
 		    char *row_buf;
 
@@ -6152,16 +6167,11 @@ scs_sequencer(i4 op_code,
 		    	sscb->sscb_ics.ics_db_access_mode == DMC_A_READ)
 			qe_ccb->qef_qacc = QEF_READONLY;
 
-                    if (is_tproc_load_qp)
-                    {
-                        /* restore qp */
-                        STRUCT_ASSIGN_MACRO(cur_qp_saved, cquery->cur_qp);
-                    }
-
 		    status = qef_call(QEQ_QUERY, qe_ccb);
 		}
 
-                if (qe_ccb->error.err_code == E_QE030F_LOAD_TPROC_QP)
+                if (status != E_DB_OK
+		  && qe_ccb->error.err_code == E_QE030F_LOAD_TPROC_QP)
                 {
                     /* Remember tproc qp needs to be recompiled and reloaded */
                     if (!qmode_saved)
@@ -6171,6 +6181,7 @@ scs_sequencer(i4 op_code,
 
                     STRUCT_ASSIGN_MACRO(cquery->cur_qp, cur_qp_saved);
                     is_tproc_load_qp = TRUE;
+		    status = E_DB_ERROR;	/* Eschew warn status */
                 }
 
 		/* Note, this looks slightly premature, but rowprocs can't
@@ -6246,14 +6257,6 @@ scs_sequencer(i4 op_code,
                                         cquery->cur_logkey);
 
                         }
-                    }
-
-                    if (is_tproc_load_qp)
-                    {
-                        /* If reloaing tproc, restore the old qmode
-                         * so that tproc rows can be returned.
-                         */
-                        qmode = sscb->sscb_qmode = qmode_saved;
                     }
 
 		    /* Queue rows for output if row-returning query */
@@ -6358,7 +6361,7 @@ scs_sequencer(i4 op_code,
 			|| (qe_ccb->error.err_code == E_QE0119_LOAD_QP)
 			|| (qe_ccb->error.err_code == E_QE0301_TBL_SIZE_CHANGE)
 			|| (qe_ccb->error.err_code == E_QE0303_PARSE_EXECIMM_QTEXT)
-                        || (qe_ccb->error.err_code == E_QE030F_LOAD_TPROC_QP))
+                        || is_tproc_load_qp)
 		       )
 		    {
 			/* bug 38565 -- don't count table size increase against
@@ -6385,8 +6388,7 @@ scs_sequencer(i4 op_code,
 							E_QE0119_LOAD_QP)
 				    || (qe_ccb->error.err_code ==
 							E_QE0301_TBL_SIZE_CHANGE)
-                                    || (qe_ccb->error.err_code ==
-                                                        E_QE030F_LOAD_TPROC_QP)
+                                    || is_tproc_load_qp
 				   )
 			       )
 			    {
@@ -6412,8 +6414,7 @@ scs_sequencer(i4 op_code,
 				    sscb->sscb_noretries = 0;
 				}
 				/* Save full alias */
-				STRUCT_ASSIGN_MACRO(*(QSO_NAME *)
-						    &qe_ccb->qef_dbpname,
+				STRUCT_ASSIGN_MACRO(qe_ccb->qef_dbpname,
 						    qef_psf_alias);
 			    }
 			    else if (qmode == PSQ_EXEDBP)
@@ -13598,7 +13599,10 @@ scs_input(SCD_SCB *scb,
 **	    prototyped.
 **      21-Jul-1999 (wanya01)
 **          Send E_SC0206_CANNOT_PROCESS to FE. (Bug 98017)
-[@history_template@]...
+**	23-Jun-2010 (kschendel) b123775
+**	    Handle E_QE0122_ALREADY_REPORTED as if it were QE0025, i.e. just
+**	    eat it.  QEF usually translates QE0122 to QE0025, but some
+**	    cases slip through, and it's simpler to fix here than in QEF. :-)
 */
 VOID
 scs_qef_error(DB_STATUS status,
@@ -13608,8 +13612,8 @@ scs_qef_error(DB_STATUS status,
 {
     scd_note(status, DB_QEF_ID);
 
-    if ((err_code == E_QE0025_USER_ERROR) ||
-		    (err_code == E_QE0015_NO_MORE_ROWS))
+    if (err_code == E_QE0025_USER_ERROR || err_code == E_QE0122_ALREADY_REPORTED
+		|| err_code == E_QE0015_NO_MORE_ROWS)
     {
 	/*
 	** These are user errors and

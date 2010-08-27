@@ -2023,6 +2023,8 @@ qen_exchange_child(SCF_FTX *ftxcb)
 **	    Reallocate dsh_vlt area if 1:n exch needs it.
 **	19-May-2010 (kschendel) b123759
 **	    Duplicate runtime QEE_PART_QUAL's under a 1:n exchange.
+**	22-Jun-2010 (kschendel) b123775
+**	    vl-resource gone, fix here, use flag instead.
 */
 
 DB_STATUS
@@ -2318,8 +2320,7 @@ DB_ERROR	*error)
 		{
 		    vl = dmr->dmr_qef_valid;
 		    if (vl != NULL &&
-			vl->vl_resource->qr_resource.
-			qr_tbl.qr_tbl_type == QEQR_REGTBL )
+			vl->vl_flags & QEF_REG_TBL)
 		    {
 			dmr->dmr_access_id = NULL;
 			dmt = (DMT_CB *) ChildDSH->dsh_cbs[vl->vl_dmf_cb];

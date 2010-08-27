@@ -690,7 +690,6 @@ opc_iqp_init(
     global->ops_cstate.opc_rparms = NULL;
     global->ops_cstate.opc_cparms = NULL;
     global->ops_cstate.opc_pvrow_dbp = -1;
-    global->ops_cstate.opc_stmtno = 0;
     global->ops_cstate.opc_flags = 0;
     global->ops_cstate.opc_topdecvar = NULL;
     global->ops_cstate.opc_curnode = NULL;
@@ -819,6 +818,8 @@ opc_iqp_init(
 **	    Support offset/first "n" parameters.
 **	18-mar-2010 (gupsh01) SIR 123444
 **	    Added support for alter table ...rename table/column.
+**	21-Jun-2010 (kschendel) b123775
+**	    Delete unused statement no.
 */
 VOID
 opc_cqp_continue(
@@ -1161,11 +1162,6 @@ opc_cqp_continue(
 	new_ahd->ahd_stmtno = global->ops_statement->pst_lineno;
     else if (new_ahd)
 	new_ahd->ahd_stmtno = -1;
-
-    /* Now that we're finish with this statement, let's increment the statement
-    ** number to get ready for the next one.
-    */
-    global->ops_cstate.opc_stmtno ++;
 
     /* Handle the audit information for each statement. */
     statementp = global->ops_statement;

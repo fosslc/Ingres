@@ -361,6 +361,8 @@ typedef struct _QEQ_DDQ_CB
 **	    Add QEQP_TPROC_RCB for table procedures.
 **	2-mar-2009 (dougi) bug 121773
 **	    Add QEQP_LOCATORS flag for LOB locators & cached dynamic.
+**	22-Jun-2010 (kschendel) b123775
+**	    Rename QP tproc flag for clarity.
 */
 
 struct _QEF_QP_CB
@@ -407,8 +409,13 @@ struct _QEF_QP_CB
 #define QEQP_ISDBP	0x10000		/* this QP is for a procedure */
 #define	QEQP_SCROLL_CURS 0x20000	/* scrollable cursor QP */
 #define	QEQP_REPDYN	0x40000		/* repeat dynamic query */
-#define QEQP_TPROC_RCB	0x80000		/* query plan has tproc - qeq_query()
-					** must set up RCB for proc. */
+#define QEQP_CALLS_TPROC 0x80000	/* query plan calls a table procedure.
+					** Do not confuse this flag with
+					** "query plan IS a table procedure",
+					** there is no flag (except in the DSH)
+					** for the latter.  The QP for a tproc
+					** looks like any other row-returning
+					** procedure QP. */
 #define	QEQP_LOCATORS	0x00100000	/* query plan has at least one LOB
 					** locator result column */
     DB_CURSOR_ID    qp_id;		/* name of query plan */

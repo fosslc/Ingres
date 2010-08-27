@@ -3545,6 +3545,12 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	    from the FROM set of tables using aliases.
 **      02-Jun-2010 (coomi01) b123821
 **          Relax exclusive test for distinct combined with seq-ops.
+**	24-Jun-2010 (kschendel) b123775
+**	    Set the row-proc flag for DBP's regardless of whether we're
+**	    creating for the first time, or re-parsing for a recreate.
+**	    Otherwise the flag can get stuck in the off position (e.g. if
+**	    the dbp was parsed with an error, such as a missing table,
+**	    and then re-parsed after the table is recreated).
 */
 %{
 
@@ -12126,6 +12132,10 @@ create_dbproc:	    cdbp_kwd cdbp_procname cdbp_parmspec
 	    if (DB_FAILURE_MACRO(status))
 	        return (status);
 
+	    /* Identify row producing procedures. */
+	    if ($Ydbpinfo->pss_resrowno > 0)
+		cb->pss_dbp_flags |= PSS_ROW_PROC;
+
 	    if (cb->pss_dbp_flags & PSS_RECREATE)
 	    {
 		/* 
@@ -12162,10 +12172,6 @@ create_dbproc:	    cdbp_kwd cdbp_procname cdbp_parmspec
 
 		STRUCT_ASSIGN_MACRO(cb->pss_tstream.psf_mstream,
 		    psq_cb->psq_txtout);
-
-		/* Identify row producing procedures. */
-		if ($Ydbpinfo->pss_resrowno > 0)
-		    cb->pss_dbp_flags |= PSS_ROW_PROC;
 
 		/* check for a set-input parameter */
 		if (cb->pss_dbp_flags & PSS_SET_INPUT_PARAM)

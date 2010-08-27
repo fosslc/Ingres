@@ -849,6 +849,8 @@ qea_dobj(
 **	    Changed error message to E_QE000D_NO_MEMORY_LEFT.
 **      29-May-2008 (gefei01)
 **          Prototype change for qeq_dsh().
+**	21-Jun-2010 (kschendel) b123775
+**	    Combine in-progress and is-tproc args to qeq-dsh.
 */
 DB_STATUS
 qea_dsh(
@@ -865,7 +867,7 @@ qea_dsh(
         tmp_dsh = dsh;
 
 	/* Find the current DSH structure */
-	status = qeq_dsh(qef_rcb, 0 , &dsh, TRUE, (i4) -1, (bool)FALSE);
+	status = qeq_dsh(qef_rcb, 0 , &dsh, QEQDSH_IN_PROGRESS, (i4) -1);
         if (DB_FAILURE_MACRO(status))
 	{
 	   /*

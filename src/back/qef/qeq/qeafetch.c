@@ -1278,6 +1278,8 @@ i4		*result)
 **	    from the first fetch.  (QP-less fetch can be from e.g. a SAGG,
 **	    and it's inconvenient to remember the pending-EOF status from
 **	    multiple nested for-GET's in tprocs or rowprocs.)
+**	17-Jun-2010 (kschendel) b123775
+**	    Drop a line of dead code left by above edit.
 */
 
 static DB_STATUS
@@ -1559,7 +1561,6 @@ bool		*gotarow)
 	    {
 		/* eof will be returned with rowcount = 1 */
 		dsh->dsh_error.err_code = E_QE0015_NO_MORE_ROWS;
-		ade_excb->excb_seg = ADE_SMAIN;
 		status = E_DB_WARN;
 	    }
 	    /* Jigger the CX segment to indicate EOF if caller doesn't

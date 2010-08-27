@@ -1817,7 +1817,6 @@ qec_trace_immediate(QEF_CB *qef_cb, i4 val_count, i4 val1, i4 val2)
 **			QEF_ON		    auto commit enabled
 **			QEF_OFF		    auto commit disabled
 **			
-**	    .qef_open_count		    number of open cursors
 **	    .error.err_code
 **                                      E_QE0000_OK
 **      Returns:
@@ -1854,7 +1853,10 @@ qec_trace_immediate(QEF_CB *qef_cb, i4 val_count, i4 val1, i4 val2)
 **	21-jan-94 (iyer)
 **	    In qec_info(), copy QEF_CB.qef_tran_id to QEF_RCB.qef_tran_id
 **	    in support of dbmsinfo('db_tran_id').
-[@history_line@]...
+**	24-Jun-2010 (kschendel) b123775
+**	    Drop return of open-count.  No caller cared, and having the
+**	    open count in two places with the same name was just asking
+**	    for trouble.
 */
 DB_STATUS
 qec_info(
@@ -1862,7 +1864,6 @@ QEF_CB       *qef_cb )
 {
 
     qef_cb->qef_rcb->qef_version 	= QEF_VERSION;
-    qef_cb->qef_rcb->qef_open_count 	= qef_cb->qef_open_count;
     qef_cb->qef_rcb->qef_stm_error	= qef_cb->qef_stm_error;
     qef_cb->qef_rcb->qef_spoint		= &qef_cb->qef_savepoint;
     qef_cb->qef_rcb->qef_upd_rowcnt 	= qef_cb->qef_upd_rowcnt; 

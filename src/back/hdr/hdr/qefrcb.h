@@ -3,6 +3,9 @@
 **
 */
 
+/* Make sure we have QSO_NAME defined */
+#include <qsf.h>
+
 /**
 ** Name: QEFRCB.H - data structures for requesting QEF operations.
 **
@@ -717,6 +720,11 @@ typedef struct _QEF_DDB_REQ
 **	    QEF_CB.
 **	24-apr-2007 (dougi)
 **	    Remove scrollable cursor #define's - they're already in gca.h.
+**	22-Jun-2010 (kschendel) b123775
+**	    Make DBP name a real QSO_NAME.
+**	    Delete the open-count, not used for anything and at least one
+**	    place in qeq.c was zeroing the open count here, thinking that
+**	    it was zeroing the qef-cb open count (!).
 */
 struct _QEF_RCB
 {
@@ -736,7 +744,6 @@ struct _QEF_RCB
     i4		qef_stat;	/* This field is used during a QEF_INFO call */
 				/* to return the current transaction status. */
     i4		qef_stm_error;	/* Used to return statement error mode. */
-    i4		qef_open_count;	/* number of open cursors */
     DB_SP_NAME *qef_spoint;     /* name of a savepoint */
     DB_TAB_TIMESTAMP qef_comstamp;/* date of last commit transaction stmt */
     i4          qef_pcount;     /* how many sets of input parameters */
@@ -787,12 +794,7 @@ struct _QEF_RCB
     u_i4	qef_fetch_anchor; /* reference point for scrollable cursor
 				** offset (uses GCA_ANCHOR_xxx values) */
     i4          qef_version;    /* version number */
-    struct
-    {
-	DB_CURSOR_ID	qef_p_crsr_id;
-	char		qef_p_user[DB_OWN_MAXNAME];
-	i4		qef_p_dbid;
-    } qef_dbpname;		/* An alias for a procedure (QP) that QEF    */
+    QSO_NAME	qef_dbpname;	/* An alias for a procedure (QP) that QEF    */
 				/* needs compiled for execution. This value */
 				/* is filled in when QEF returns with the   */
 				/* error code E_QE0119_LOAD_QP. An alias is */

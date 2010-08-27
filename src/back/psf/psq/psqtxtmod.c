@@ -1354,6 +1354,8 @@ psq_tmulti_out(
 **	    (u_char *)'\0' should be (uchar)'\0'
 **      26-Oct-2009 (coomi01) b122714
 **          Move psq_store_text() declarator to pshparse.h and make it public here.
+**	24-Jun-2010 (kschendel) b123775
+**	    Correct a call to trim-whitespace.
 */
 DB_STATUS
 psq_store_text(
@@ -1448,7 +1450,7 @@ psq_store_text(
 		STncpy( (char *)out, " is ", 4);
 		out += 4;
 
-		plen = psf_trmwhite(DB_TAB_MAXNAME, &rngvar->pss_tabname);
+		plen = psf_trmwhite(DB_TAB_MAXNAME, rngvar->pss_tabname.db_tab_name);
 		STncpy( (char *)out, (char *)&rngvar->pss_tabname, plen);
 		out += plen;
 

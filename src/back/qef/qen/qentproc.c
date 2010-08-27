@@ -84,6 +84,10 @@
 **	    Fix action execution order to do the right thing and return
 **	    the right answers, especially with nested FOR loops.
 **	    Fix some nonstandard indentation.
+**	18-Jun-2010 (kschendel) b122755
+**	    More changes, to tproc validation this time.  They are now
+**	    validated when the calling QP is validated, so by the time
+**	    execution reaches the tproc node the tproc QP is known valid.
 **/
 
 /* static function */
@@ -96,7 +100,7 @@ static DB_STATUS
 qen_tproc_close(
 QEN_NODE *node,
 QEF_RCB  *qef_rcb, 
-QEE_DSH  *top_dsh);
+QEE_DSH  *caller_dsh);
 
 
 /*{
@@ -151,6 +155,10 @@ QEE_DSH  *top_dsh);
 **	    Fix up action tracking.  If tprocs are to execute like rowprocs,
 **	    they shouldn't restart at the beginning every time.
 **	    Add a cancel check.
+**	18-Jun-2010 (kschendel) b123775
+**	    Use calling DSH's statement number since in effect we're all
+**	    the same statement.  QP validation will open one tproc DSH,
+**	    use it if it's unused, else create another DSH.
 **/
 
 DB_STATUS
@@ -160,44 +168,56 @@ QEF_RCB		*rcb,
 QEE_DSH		*dsh,
 i4		function)
 {
-    QEE_DSH       *tproc_dsh = (QEE_DSH *)NULL;
-    QEN_STATUS    *qen_status = dsh->dsh_xaddrs[node->qen_num]->qex_status;
-    QEF_CB        *qef_cb = dsh->dsh_qefcb;
-    PTR           *cbs = dsh->dsh_cbs;
-    QEN_TPROC      tproc_node = node->node_qen.qen_tproc;
-    DB_STATUS      status = E_DB_OK;
-    TIMERSTAT	    timerstat;
-    i4		   val1 = 0, val2 = 0;
+    QEE_DSH	*tproc_dsh = (QEE_DSH *)NULL;
+    QEN_STATUS	*qen_status = dsh->dsh_xaddrs[node->qen_num]->qex_status;
+    QEF_CB	*qef_cb = dsh->dsh_qefcb;
+    PTR		*cbs = dsh->dsh_cbs;
+    QEN_TPROC	*tproc_node = &node->node_qen.qen_tproc;
+    DB_STATUS	status = E_DB_OK;
+    TIMERSTAT	timerstat;
+    i4		val1 = 0, val2 = 0;
 
     /* Initialize dsh for tproc at the first execution */
     if (function & (TOP_OPEN | MID_OPEN) )
     {
 	if ((qen_status->node_status_flags & QEN1_NODE_OPEN) == 0)
 	{
-	    DB_CURSOR_ID	tproc_qp_id;
-	    QEF_RCB		tproc_rcb;
+	    QEE_PROC_RESOURCE *res;
 
-	    tproc_rcb = *rcb;
+	    /* See if validation DSH is available */
+	    res = &dsh->dsh_resources[tproc_node->tproc_resix].qer_resource.qer_proc;
+	    if (! res->qer_procdsh_used)
+	    {
+		tproc_dsh = res->qer_proc_dsh;
+		res->qer_procdsh_used = TRUE;
+	    }
+	    else
+	    {
+		QEF_RCB		tproc_rcb;
 
-	    /* Get tproc QP cursor ID for tproc dsh allocation */
-	    MEcopy((PTR)tproc_node.tproc_qpidptr,
-		 sizeof(DB_CURSOR_ID),
-		 (PTR)&tproc_rcb.qef_qp);
+		tproc_rcb = *rcb;
 
-	    /* Setting qef_qso_handle to 0 will trigger
-	    * the use of qef_qp to get the tproc Qp instead of
-	    * the top QP.
-	    */
-	    tproc_rcb.qef_qso_handle = 0;
+		/* Get tproc QP cursor ID for tproc dsh allocation */
+		tproc_rcb.qef_qp = res->qer_proc_cursid;
 
-	    /* Allocate tproc dsh.  Since the tproc was already validated,
-	    ** this really shouldn't fail with "proc not found".
-	    */
-	    status = qeq_dsh(&tproc_rcb, 0, &tproc_dsh, (bool)FALSE,
-		    (i4)-1, (bool)TRUE);
-	    if (status != E_DB_OK)
-		return status;
+		/* Setting qef_qso_handle to 0 will trigger
+		* the use of qef_qp to get the tproc Qp from QSF,
+		* instead of searching for an existing DSH.
+		*/
+		tproc_rcb.qef_qso_handle = NULL;
 
+		/* Allocate tproc dsh.  Since the tproc was already validated,
+		** this really shouldn't fail with "proc not found".
+		** The combination of must_find == 0 with a table
+		** proc QP tells qeq-dsh to get another DSH, don't reuse
+		** one already in use by this query.
+		*/
+		status = qeq_dsh(&tproc_rcb, 0, &tproc_dsh, QEQDSH_TPROC, -1);
+		if (status != E_DB_OK)
+		    return status;
+	    }
+
+	    tproc_dsh->dsh_stmt_no = dsh->dsh_stmt_no;
 	    qen_status->node_ahd_ptr = tproc_dsh->dsh_qp_ptr->qp_ahd;
 	    qen_status->node_u.node_tproc.node_tproc_dsh = tproc_dsh;
 	    qen_status->node_status_flags |= QEN1_NODE_OPEN;
@@ -260,14 +280,13 @@ i4		function)
 
             /* Initialize tproc parameters */
             status = qee_dbparam(rcb, tproc_dsh, dsh,
-                                 tproc_node.tproc_params,
- 			         tproc_node.tproc_pcount,
+                                 tproc_node->tproc_params,
+ 			         tproc_node->tproc_pcount,
                                  TRUE);
 
             if (DB_FAILURE_MACRO(status))
             {
                 STRUCT_ASSIGN_MACRO(tproc_dsh->dsh_error, dsh->dsh_error);
-                qef_cb->qef_open_count--;
                 return status; 
             }
         }
@@ -458,13 +477,16 @@ QEE_DSH   *dsh)
     while (act != (QEF_AHD *)NULL)
     {
 	func = NO_FUNC;
-	/* Reset, revalidate, reinit each action, but not if it's a
+	/* Reset, reopen, reinit each action, but not if it's a
 	** recurring execution of a FOR-GET - see intro.
 	*/
 	if (prevfor || act->ahd_atype != QEA_GET
 	  || (act->qhd_obj.qhd_qep.ahd_qepflag & AHD_FORGET) == 0)
 	{
-	    status = qeq_topact_validate(qef_rcb, dsh, act, TRUE);
+	    /* Note that this "validate" is a pure table-open, validation
+	    ** is already done at this point by the parent QP.
+	    */
+	    status = qeq_topact_validate(qef_rcb, dsh, act, FALSE);
 	    if (status == E_DB_OK)
 	    {
 		status = qeq_subplan_init(qef_rcb, dsh, act, NULL, NULL);
@@ -672,59 +694,53 @@ QEE_DSH   *dsh)
 **         savepoint when open cursor count is not zero.
 **	19-May-2010 (kschendel) b123775
 **	    Drop any temp tables generated by the tproc.
+**	18-Jun-2010 (kschendel) b123775
+**	    Call qeq-cleanup now instead of trying to do it by hand.
+**	    That will do all the right things including releasing the
+**	    tproc DSH.  
 */
 
 static DB_STATUS
 qen_tproc_close(
 QEN_NODE *node,
 QEF_RCB  *qef_rcb, 
-QEE_DSH  *top_dsh)
+QEE_DSH  *caller_dsh)
 {
+    PTR		save_dsh;
     QEE_DSH     *tproc_dsh;
+    QEE_PROC_RESOURCE *res;
+    QEF_CB	*qefcb = caller_dsh->dsh_qefcb;
     QEN_STATUS  *qen_status;
-    DMT_CB      *dmt_cb;
     DB_STATUS    status;
-    i4           open_count;
-    i4           err;
 
     /* Find the tproc dsh */
-    qen_status = top_dsh->dsh_xaddrs[node->qen_num]->qex_status;
+    qen_status = caller_dsh->dsh_xaddrs[node->qen_num]->qex_status;
     tproc_dsh = qen_status->node_u.node_tproc.node_tproc_dsh;
 
     if (!tproc_dsh)
         return E_DB_ERROR;
 
-    /* Set DSH_TPROC_DSH to the top dsh so qeq_cleanup
-     * knows it is a tproc query and calls qet_commit
-     * regardless of the open cursor count.
-     */
-    top_dsh->dsh_qp_status |= DSH_TPROC_DSH;
-
-    /* Drop any temp tables (ignore errors) */
-    (void) qeq_closeTempTables(tproc_dsh);
-
-    /* Close all the tables opened by this tproc */
-    for (dmt_cb = tproc_dsh->dsh_open_dmtcbs; dmt_cb;
-         dmt_cb = (DMT_CB *)(dmt_cb->q_next))
+    /* Probably unnecessary, but clean up the DSH ptr in the status.
+    ** Also, if this was the DSH used for validating this tproc in the
+    ** calling QP, clean up the resource entry.
+    */
+    qen_status->node_u.node_tproc.node_tproc_dsh = NULL;
+    res = &caller_dsh->dsh_resources[node->node_qen.qen_tproc.tproc_resix].qer_resource.qer_proc;
+    if (tproc_dsh == res->qer_proc_dsh)
     {
-        if (dmt_cb->dmt_record_access_id == (PTR) NULL)
-            continue;
-
-	/* Could use closeAndUnlink, but release-resources will nuke the
-	** entire list anyway, don't bother  (it also cleans record-access-id)
-	*/
-        status = dmf_call(DMT_CLOSE, dmt_cb);
-        if (status)
-        {
-    	    qef_error(dmt_cb->error.err_code, 0L, status, &err,
-	    	      &qef_rcb->error, 0);
-
-            return status;
-        }
+	res->qer_proc_dsh = NULL;
+	res->qer_procdsh_used = FALSE;
+	res->qer_procdsh_valid = FALSE;
     }
 
-    /* release tproc dsh */
-    qeq_release_dsh_resources(tproc_dsh);
+    /* Now cleanup and release the tproc dsh itself */
+    save_dsh = qefcb->qef_dsh;
+    qefcb->qef_dsh = (PTR) tproc_dsh;	/* Where qeq-cleanup wants it */
+    status = qeq_cleanup(qef_rcb, E_DB_OK, TRUE);
+    qefcb->qef_dsh = save_dsh;
+    /* It's unclear what exactly to do with a failure of cleanup, ignore
+    ** it for now, too easy to screw up unwinding.
+    */
 
     return E_DB_OK;
 }

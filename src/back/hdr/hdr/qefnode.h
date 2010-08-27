@@ -1670,6 +1670,12 @@ struct _QEN_EXCH
 **          Add tproc_qpix;
 **	8-dec-2008 (dougi)
 **	    Replaced tproc_qpix with tproc_qpidptr.
+**	17-Jun-2010 (kschendel) b123775
+**	    Put qpidptr back to an index (resource entry index).  We'll
+**	    store the translated cursor ID in the DSH resource entry,
+**	    not the QP resource entry.  (Probably can get away with doing
+**	    it in the QP entry, even though it's supposed to be readonly,
+**	    but it's just as easy and less worry in the dsh side.)
 */
 
 struct _QEN_TPROC
@@ -1677,14 +1683,13 @@ struct _QEN_TPROC
     DB_TAB_ID		tproc_dbpID;		/* ID of procedure  */
 
     QEN_ADF		*tproc_parambuild;	/* CX to build actual parms */
-    i4			tproc_pcount;		/* Actual parameter count. */
+    QEN_ADF		*tproc_qual;	    /* qualify tuples */
     struct _QEF_CP_PARAM *tproc_params;		/* Actual parameter list */
+    i4			tproc_pcount;		/* Actual parameter count. */
 
     i4			tproc_dshix;		/* CBs offset of proc DSH ptr */
-    PTR			tproc_qpidptr;		/* ptr to qp cursor ID in
-						** validation structure */
-
-    QEN_ADF		*tproc_qual;	    /* qualify tuples */
+    i4			tproc_resix;		/* Resource entry index, for
+						** storing cursor ID */
     i4			tproc_flag;	    /* flag field */
 };
 
