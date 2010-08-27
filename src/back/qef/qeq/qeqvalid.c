@@ -2440,6 +2440,9 @@ qeq_validate_qp(QEF_RCB *qef_rcb, QEE_DSH *dsh, bool size_check)
 **	    Use DSH pointer as cursorid to dmt_open.
 **	13-May-2010 (kschendel) b123565
 **	    Delete "action" parameter, not real meaningful.
+**	15-Jul-2010 (jonj)
+**	    Reset DMT_FORCE_NOLOCK now that dmt_open no
+**	    longer hoses dmt_flags_mask bits.
 */
 static DB_STATUS
 qeq_vopen(
@@ -2604,6 +2607,8 @@ qeq_vopen(
 	    dmt_cb->dmt_flags_mask |= DMT_FORCE_NOLOCK;
 	    dmt_cb->dmt_lock_mode = DMT_N;
 	    status = qen_openAndLink(dmt_cb, dsh);
+	    /* Reset DMT_FORCE_NOLOCK for future calls. */
+	    dmt_cb->dmt_flags_mask &= ~DMT_FORCE_NOLOCK;
 	}
 
 	/* Reset dmt_char_array for future calls */
