@@ -88,6 +88,8 @@
 #	    Add dbmsccom.hlp.
 #	02-Aug-2010 (miket) SIR 124154
 #	    Add dbmsmxky.hlp
+#	4-Aug-2010 (kschendel) SD 145507
+#	    Add missing help for degree-of-parallelism, sole-cache.
 
 SubDir ING_SRC front st config ;
 
@@ -179,6 +181,7 @@ File $(INGMSG)$(DFS)dbmscrsr.hlp : dbmscrsr.hlp ;
 File $(INGMSG)$(DFS)dbmscrop.hlp : dbmscrop.hlp ;
 File $(INGMSG)$(DFS)dbmscurs.hlp : dbmscurs.hlp ;
 File $(INGMSG)$(DFS)dbmsdefs.hlp : dbmsdefs.hlp ;
+File $(INGMSG)$(DFS)dbmsdegp.hlp : dbmsdegp.hlp ;
 File $(INGMSG)$(DFS)dbmsdlim.hlp : dbmsdlim.hlp ;
 File $(INGMSG)$(DFS)dbmsdlst.hlp : dbmsdlst.hlp ;
 File $(INGMSG)$(DFS)dbmsdmbp.hlp : dbmsdmbp.hlp ;
@@ -277,6 +280,7 @@ File $(INGMSG)$(DFS)dbmsrupd.hlp : dbmsrupd.hlp ;
 File $(INGMSG)$(DFS)dbmsscfr.hlp : dbmsscfr.hlp ;
 File $(INGMSG)$(DFS)dbmssess.hlp : dbmssess.hlp ;
 File $(INGMSG)$(DFS)dbmssiob.hlp : dbmssiob.hlp ;
+File $(INGMSG)$(DFS)dbmssolc.hlp : dbmssolc.hlp ;
 File $(INGMSG)$(DFS)dbmssole.hlp : dbmssole.hlp ;
 File $(INGMSG)$(DFS)dbmssrvr.hlp : dbmssrvr.hlp ;
 File $(INGMSG)$(DFS)dbmsssiz.hlp : dbmsssiz.hlp ;

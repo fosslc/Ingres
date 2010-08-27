@@ -221,6 +221,9 @@
 **	    Add create_compression help.
 **	02-Aug-2010 (miket) SIR 124154
 **	    Add dbmsmxky.hlp.
+**	4-Aug-2010 (kschendel) SD 145507
+**	    Add missing help for degree-of-parallelism, sole-cache.
+**	    
 */
 
 PART   config
@@ -285,6 +288,7 @@ PART   config
       FILE dbmscrop.hlp
       FILE dbmscurs.hlp
       FILE dbmsdefs.hlp
+      FILE dbmsdegp.hlp
       FILE dbmsdlim.hlp
       FILE dbmsdlst.hlp
       FILE dbmsdmbp.hlp
@@ -385,6 +389,7 @@ PART   config
       FILE dbmsscfr.hlp
       FILE dbmssess.hlp
       FILE dbmssiob.hlp
+      FILE dbmssolc.hlp
       FILE dbmssole.hlp
       FILE dbmssrvr.hlp
       FILE dbmsssiz.hlp

@@ -29,6 +29,7 @@
 *.*.*.*.database_limit:		databases
 *.*.*.*.default_journaling:		boolean
 *.*.*.*.define_address:		boolean
+*.*.*.*.degree_of_parallelism:		threads
 *.*.*.direct_io:			boolean
 *.*.*.*.distributed_recovery:		boolean
 *.*.*.*.di_zero_bufsize:		bytes
@@ -123,6 +124,7 @@ ii.*.*.*.psf_vch_prec:                  boolean
 *.*.*.*.server_class:			string
 *.*.*.*.session_accounting:		boolean
 *.*.*.*.size_io_buf:			bytes
+*.*.*.*.sole_cache:			boolean
 *.*.*.*.sole_server:			boolean
 *.*.*.*.stack_size:			bytes
 *.*.*.*.system_isolation:              string

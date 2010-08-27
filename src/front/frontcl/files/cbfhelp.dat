@@ -280,6 +280,9 @@ rms.define_address.title:		'II_DBMS_SERVER Symbol Definition'
 *.default_journaling.file:		dbmsjrnl.hlp	
 dbms.default_journaling.title:		'DBMS Default Journaling'
 
+dbms.degree_of_parallelism.file:	dbmsdegp.hlp
+dbms.degree_of_parallelism.title:	'DBMS Degree of DMF Parallelism'
+
 dbms.dmf_build_pages.file:              dbmsdmbp.hlp
 dbms.dmf_build_pages.title:             'DBMS DMF Build Buffer Size'
 
@@ -606,9 +609,12 @@ rms.session_accounting.title:		'RMS Gateway Session Accounting'
 
 dbms.size_io_buf.file:			dbmssiob.hlp
 dbms.size_io_buf.title:			'DBMS/Slave I/O Buffer Size'
-	  
+
+dbms.sole_cache.file:			dbmssolc.hlp
+dbms.sole_cache.title:			'DBMS Database Sole-Cache Affinity'
+
 *.sole_server.file:			dbmssole.hlp	
-dbms.sole_server.title:			'DBMS Sole Server'
+dbms.sole_server.title:			'DBMS Database Sole Server Affinity'
 star.sole_server.title:			'Star Sole Server'
 rms.sole_server.title:			'RMS Gateway Sole Server'
 
