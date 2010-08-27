@@ -306,6 +306,12 @@
 **	    backward compatibility (even though never documented).
 **	    New names: II_TCPIP_NODELAY    and !.tcp_ip.nodelay.
 **	    Old names: II_WINSOCK2_NODELAY and !.winsock2_nodelay.
+**	16-Aug-2010 (Bruce Lunsford) Bug 124263
+**	    Ingstart.exe may crash or take (up to 30 seconds) longer than it
+**	    should to start Ingres if II_GC_PROT=tcp_ip (from sir 122679).
+**	    (Re)set GCwinsock2_shutting_down to FALSE in GCwinsock2_init()
+**	    to handle applications that may call "init" and "term" multiple
+**	    times, such as ingstart with II_GC_PROT=tcp_ip.
 */
 
 /* FD_SETSIZE is the maximum number of sockets that can be
@@ -653,6 +659,12 @@ VOID		gc_tdump( char *buf, i4 len );
 **	    backward compatibility (even though never documented).
 **	    New names: II_TCPIP_NODELAY    and !.tcp_ip.nodelay.
 **	    Old names: II_WINSOCK2_NODELAY and !.winsock2_nodelay.
+**	16-Aug-2010 (Bruce Lunsford) Bug 124263
+**	    (Re)set GCwinsock2_shutting_down to FALSE to handle
+**	    applications that may call "init" and "term" multiple
+**	    times, such as ingstart with II_GC_PROT=tcp_ip.
+**	    Otherwise, after 2nd or subsequent "init", code still
+**	    thinks the driver is shutting down.
 */
 
 STATUS
@@ -683,6 +695,7 @@ GCwinsock2_init(GCC_PCE * pptr)
 		proto, GCwinsock2_use_count, WSAStartup_called);
 
     GCwinsock2_use_count++;	/* Increment # times init called */
+    GCwinsock2_shutting_down = FALSE;
 
     if (GCwinsock2_startup_WSA() == FAIL)
 	    return FAIL;
