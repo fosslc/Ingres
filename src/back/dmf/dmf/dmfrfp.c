@@ -7957,6 +7957,8 @@ DMP_DCB		*dcb)
 **	    Back out prior change to address bug 123748; readdress.
 **	    Add specific case for EMINI CLR; process log rec if LTE
 **	    EMINI CLR lsn. 
+**	01-Jul-2010 (thaju02) Bug 123981
+**	    For RFP_TX_ABS_JUMP, change LSN_LT to LSN_LTE.
 */
 static DB_STATUS
 undo_journal_records(
@@ -8048,7 +8050,7 @@ DMVE_CB		*dmve)
 	*/
 	if (tx->tx_status & RFP_TX_ABS_JUMP)
 	{
-	    if (LSN_LT(&record->lsn, &tx->tx_clr_lsn))
+	    if (LSN_LTE(&record->lsn, &tx->tx_clr_lsn))
 		tx->tx_status &= ~RFP_TX_ABS_JUMP;
 	    else
 		continue;
