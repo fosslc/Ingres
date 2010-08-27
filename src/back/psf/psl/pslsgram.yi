@@ -3600,6 +3600,8 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	    standard joinid (which was the point of 124170 in the first place).
 **	05-Aug-2010 (kiria01) b124208
 **	    Allow SINGLETON to return nullable regardless of argument.
+**	09-Aug-2010 (toumi01) SIR 122403
+**	    Add missing encryption productions.
 */
 %{
 
@@ -10385,7 +10387,7 @@ typedesc:          tname type_qual_list collate encrypt_spec
 	}
 	$$ = $1;
     }
-	|         tname LPAREN intconst_e COMMA intconst_e RPAREN type_qual_list
+	|         tname LPAREN intconst_e COMMA intconst_e RPAREN type_qual_list encrypt_spec
     {
 	i4			parms[2];
 	DB_STATUS               status;
@@ -10402,14 +10404,14 @@ typedesc:          tname type_qual_list collate encrypt_spec
 	parms[0] = $3;
 	parms[1] = $5;
 	status = psl_ct14_typedesc(cb, $1, 2, parms, $7, 
-			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1, 0);
+			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1, $8);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return(status);
 	}
 	$$ = $1;
     }
-	|	tname dt_wquals tname type_qual_list
+	|	tname dt_wquals tname type_qual_list encrypt_spec
     {
 	DB_STATUS		status;
 	char			*value;
@@ -10434,14 +10436,14 @@ typedesc:          tname type_qual_list collate encrypt_spec
 	}
 
 	status = psl_ct14_typedesc(cb, value, 0, (i4 *) NULL, $4, 
-			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1, 0);
+			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1, $5);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return(status);
 	}
 	$$ = $1;
     }
-	|	tname TO tname type_qual_list
+	|	tname TO tname type_qual_list encrypt_spec
     {
 	DB_STATUS		status;
 	char			*value;
@@ -10467,14 +10469,14 @@ typedesc:          tname type_qual_list collate encrypt_spec
 	}
 
 	status = psl_ct14_typedesc(cb, value, 0, (i4 *) NULL, $4, 
-			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1, 0);
+			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1, $5);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return(status);
 	}
 	$$ = $1;
     }
-	|	tname TO tname LPAREN intconst_e RPAREN type_qual_list
+	|	tname TO tname LPAREN intconst_e RPAREN type_qual_list encrypt_spec
     {
 	DB_STATUS		status;
 	char			*value;
@@ -10501,14 +10503,14 @@ typedesc:          tname type_qual_list collate encrypt_spec
 	}
 
 	status = psl_ct14_typedesc(cb, value, 1, &len, $7,
-			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1, 0);
+			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1, $8);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return(status);
 	}
 	$$ = $1;
     }
-	|	tname LPAREN intconst_e RPAREN dt_wquals tname type_qual_list
+	|	tname LPAREN intconst_e RPAREN dt_wquals tname type_qual_list encrypt_spec
     {
 	DB_STATUS		status;
 	char			*value;
@@ -10534,7 +10536,7 @@ typedesc:          tname type_qual_list collate encrypt_spec
 	}
 
 	status = psl_ct14_typedesc(cb, value, 1, &len, $7, 
-			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1, 0);
+			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1, $8);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return(status);
