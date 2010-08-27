@@ -166,6 +166,8 @@
 **	    Added E_OP0994 error for multiple -r flags on optimizedb/statdump
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	04-Aug-2010 (wanfr01) b124188
+**	    Removed  OPF_ONE_REL_OPT - crossed in accidentally
 **/
 
 /*}
@@ -325,10 +327,6 @@ typedef i4  OPF_STATE;
 #define			OPF_STATS_NOSTATS_MAX	1024
 /* opf_stats_nostats_max - limit tuple estimates for joins between table
 ** with stats and table without by assuming uniform data distribution */
-#define			OPF_ONE_REL_OPT		2048
-/* opf_one_rel_opt - allow enumeration for single relation queries.
-** The default is to only enumerate single relation queries in the
-** presence of 'set qep' - see opn_ovqp() */
 #define			OPF_NOAGGCOMBINE	4096
 /* Set to disable combining aggregates during optimizer retry
 ** as this may invalidate some query plans */

@@ -627,6 +627,8 @@
 --#	    Add dmf_crypt_maxkeys with initial default value of 180, the
 --#	    max keys that fit on one memory page (at least for 64-bit
 --#	    Linux).
+--#	 4-Aug-2010 (wanfr01) b124188
+--#	    Remove opf_one_rel_opt - crossed in accidentally
 
 -- location setup resources
 # ifdef UNIX 
@@ -862,7 +864,6 @@ ii.$.dbms.$.opf_old_jcard:	OFF;
 ii.$.dbms.$.opf_old_cnf:	OFF;
 ii.$.dbms.$.opf_old_idxorder:	OFF;
 ii.$.dbms.$.opf_old_subsel:	OFF;
-ii.$.dbms.$.opf_one_rel_opt:	OFF;
 ii.$.dbms.$.opf_pq_dop:		0, MIN = 0;
 ii.$.dbms.$.opf_pq_threshold:	1000;
 ii.$.dbms.$.opf_pq_partthreads:	8, MIN = 0;
