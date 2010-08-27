@@ -1038,6 +1038,8 @@ i4                  *adc_worstwid)
 **          does not cause overflow.
 **	15-Nov-2009 (kschendel) SIR 122890
 **	    Don't lose error status from a failed NVCHAR coercion.
+**	13-Jul-2010 (coomi01) b124070
+**          Do not use CM macros for Byte data.
 */
 
 DB_STATUS
@@ -1060,6 +1062,7 @@ i4		    *adc_outlen)
     char		unicode_buffer[4096];	
     i2			unibuf_alloc = 0;
     STATUS		stat;
+    bool                overflow = FALSE;
 
     switch (adc_dv->db_datatype)
     {
@@ -1321,6 +1324,190 @@ i4		    *adc_outlen)
 	}
 	break;
 
+      case DB_BYTE_TYPE:
+      case DB_VBYTE_TYPE:
+	{
+	    i2	    i2tmp;
+	    u_char  *endp;
+	    u_char  *endt;
+
+	    if ( DB_BYTE_TYPE == adc_dv->db_datatype )
+		{
+			p = f;
+			i = length;
+			length = max(length, adf_scb->adf_outarg.ad_c0width);
+		}
+	    else
+		{
+			p = f + DB_CNTSIZE;
+			I2ASSIGN_MACRO(*(i2 *)f, i2tmp); 
+			i = i2tmp;
+			length = max(length-DB_CNTSIZE, adf_scb->adf_outarg.ad_t0width);
+		}
+
+	    /* Calculate pointer to end of output, tmdv, buffer */
+	    endt = adc_tmdv->db_data + adc_tmdv->db_length;
+	    endp = p + i;
+
+	    /* Careful, t might progress towards 
+	    ** end of buffer more quickly than p
+	    */
+	    overflow = FALSE;
+	    while (p < endp && !overflow)
+	    {
+		/* If input is less than ASCII(Space)
+		** or has top bit set, we'll escape it
+		*/
+		if ((*p < 0x20)||(0x7F < *p))
+		{
+		    switch (*p)
+		    {
+		      case (u_char)'\n':
+			  if (endt-(u_char *)t > 1)
+			  {
+			      t[0] = '\\';
+			      t[1] = 'n';
+			      t += 2;
+			  }
+			  else
+			  {
+			      /* Not enough space, 
+			      ** Don't overrun the buffer
+			      ** But flag the problem
+			      */
+			      overflow=TRUE;
+			  }
+			break;
+
+		      case (u_char)'\t':
+			  if (endt-(u_char *)t > 1)
+			  {
+			      t[0] = '\\';
+			      t[1] = 't';
+			      t += 2;
+			  }
+			  else
+			  {
+			      overflow=TRUE;
+			  }
+			break;
+
+		      case (u_char)'\b':
+			  if (endt-(u_char *)t > 1)
+			  {
+			      t[0] = '\\';
+			      t[1] = 'b';
+			      t += 2;
+			  }
+			  else
+			  {
+			      overflow=TRUE;
+			  }
+			break;
+
+		      case (u_char)'\r':
+			  if (endt-(u_char *)t > 1)
+			  {
+			      t[0] = '\\';
+			      t[1] = 'r';
+			      t += 2;
+			  }
+			  else
+			  {
+			      overflow=TRUE;
+			  }
+			break;
+
+		      case (u_char)'\f':
+			  if (endt-(u_char *)t > 1)
+			  {
+			      t[0] = '\\';
+			      t[1] = 'f';
+			      t += 2;
+			  }
+			  else
+			  {
+			      overflow=TRUE;
+			  }
+			break;
+
+		      default:
+		      {
+			u_char	curval;
+			int	curpos;
+
+			if (endt-(u_char *)t > 3)
+			{
+			    /* convert the character to \ddd, where
+			    ** the d's are octal digits
+			    */
+			    t[0] = '\\';
+			    curval = *p;
+			    /* while there are more octal digits */
+			    for (curpos = 3; curpos > 0; curpos--)
+			    {
+				/* put the digit in the output string */
+				t[curpos] = (u_char)'0' + (curval % 8);
+				/* remove the digit from the current value */
+				curval /= 8;
+			    }
+			    t += 4;
+			}
+			else
+			{
+			    overflow=TRUE;
+			}
+
+			break;
+		      }
+		    }
+		}
+		else if (*p == (u_char)'\\')
+		{
+		    if (endt-(u_char *)t > 1)
+		    {
+			t[0] = '\\';
+			t[1] = '\\';
+			t += 2;
+		    }
+		    else
+		    {
+			overflow=TRUE;
+		    }
+		}
+		else
+		{
+		     /* 'Ordinary' bytes just get copied straight over 
+		      */
+		    if (endt-(u_char *)t > 0)
+		    {
+			*t = *p;
+			t++;
+		    }
+		    else
+		    {
+			overflow=TRUE;
+		    }		    
+		}
+
+		p++;
+	    }
+
+	    if (overflow)
+	    {
+		/* this should never happen */
+		return(adu_error(adf_scb, E_AD9999_INTERNAL_ERROR, 0));
+	    }
+
+	    length -= t - (char *)adc_tmdv->db_data;
+	    
+	    while (length-- > 0)
+		*t++ = (u_char)' ';
+
+	    *adc_outlen = t - (char *)adc_tmdv->db_data;
+	}
+	break;
+
       case DB_NCHR_TYPE:
       case DB_NVCHR_TYPE:
 	{
@@ -1352,8 +1539,6 @@ i4		    *adc_outlen)
       case DB_TXT_TYPE:
       case DB_VCH_TYPE:
       case DB_LTXT_TYPE:
-      case DB_BYTE_TYPE:
-      case DB_VBYTE_TYPE:
 	{
 	    i2	    i2tmp;
 	    u_char  *endp;
