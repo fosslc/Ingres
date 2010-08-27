@@ -472,6 +472,8 @@ SQLSTATE_MAPPING_REQUIRED
 **          interval. For this latter case, added new error E_US10F5.
 **	29-Jul-2010 (miket) SIR 122403
 **	    Clarify language for msg E_US24BF.
+**	30-Jul-2010 (miket) SIR 122403
+**	    Improve content/format for E_US0F0F, and add encrypt clause.
 */
 
 #define _US_CLASS   0
@@ -4247,16 +4249,16 @@ E_US0F0D_3853:SS42000_SYN_OR_ACCESS_ERR
 **/
 E_US0F0F_3855:SS42000_SYN_OR_ACCESS_ERR
 "line %0d, Syntax error on '%1c'.  The correct syntax is:
-\n CREATE TABLE tablename (
-\n   columnname format [default_clause] [null_clause] 
-[column_constraint]
-\n | table_constraint
-\n   {, ... } )
-\n   [with_clause]
+\n CREATE TABLE tablename
+\n   ( columnname format [default_clause] [null_clause]
+\n     [column_constraint] [collate_clause] [encrypt_clause]
+\n     | table_constraint
+\n     {, ... }
+\n   ) [with_clause]
 \n
 \n CREATE TABLE tablename [(colname_list)]
 \n   AS subselect
-\n   [with_clause] "
+\n      [with_clause]"
 /*%
 ** Parameters:
 **	%0d - line number
