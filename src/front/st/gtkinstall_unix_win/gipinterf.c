@@ -2768,13 +2768,13 @@ create_IngresInstall (void)
   gtk_box_pack_start (GTK_BOX (hbox390), mod_ansi_date_type_radio, FALSE, FALSE, 0);
   gtk_radio_button_set_group (GTK_RADIO_BUTTON (mod_ansi_date_type_radio), mod_ansi_date_type_radio_group);
   mod_ansi_date_type_radio_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (mod_ansi_date_type_radio));
+  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (mod_ansi_date_type_radio), TRUE);
 
   mod_ingres_date_type_radio = gtk_radio_button_new_with_mnemonic (NULL, _("In_gres Date"));
   gtk_widget_show (mod_ingres_date_type_radio);
   gtk_box_pack_start (GTK_BOX (hbox390), mod_ingres_date_type_radio, TRUE, FALSE, 0);
   gtk_radio_button_set_group (GTK_RADIO_BUTTON (mod_ingres_date_type_radio), mod_ansi_date_type_radio_group);
   mod_ansi_date_type_radio_group = gtk_radio_button_get_group (GTK_RADIO_BUTTON (mod_ingres_date_type_radio));
-  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (mod_ingres_date_type_radio), TRUE);
 
   alignment367 = gtk_alignment_new (0.5, 0.5, 1, 1);
   gtk_widget_show (alignment367);
