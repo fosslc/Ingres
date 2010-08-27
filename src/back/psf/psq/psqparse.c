@@ -101,6 +101,9 @@
 **          output server_class in SC930 output as part of "BEGINS" line
 **	30-Mar-2010 (kschendel) SIR 123485
 **	    Re-type adu_valuetomystr param.
+**	01-Jul-2010 (kiria01) b124000
+**	    Initialise pss_stk_freelist when memory streams are created
+**	    in support of flattened recursion for things such as pst_treedup.
 **/
 
 
@@ -658,6 +661,8 @@ psq_cbinit(
     psq_cb->psq_txtout.qso_handle = NULL;
 
     sess_cb->pss_lang = psq_cb->psq_qlang;		/* Query language */
+    sess_cb->pss_stk_freelist = NULL;
+
 
     return (status);
 } /* psq_cbinit */
@@ -735,6 +740,10 @@ psq_cbreturn(
 
     do	/* Something to break out of */
     {
+	/* Clear any cached stack blocks as we're going to
+	** trash the memory stream in here anyway. */
+	sess_cb->pss_stk_freelist = NULL;
+
 	/*
 	** Clear out the user's range table.
 	*/

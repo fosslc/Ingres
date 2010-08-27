@@ -222,6 +222,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	30-Jun-2010 (kiria01) b124000
+**	    Rewrite of pst_descinput_walk to remove the recursive nature.
 */
 
 
@@ -269,11 +271,7 @@ static DB_STATUS pst_descinput_walk(
 	PSQ_CB *psq_cb,
 	PST_PROTO *proto,
 	GCA_COL_ATT *desc_base,
-	PST_QNODE *root,
-	i4 context_type,
-	i4 context_length,
-	i2 context_prec,
-	bool *have_parm);
+	PST_QNODE **root);
 
 /*{
 ** Name: pst_prepare	- Semantic routine for SQL's PREPARE.
@@ -4007,7 +4005,6 @@ DB_STATUS
 pst_descinput(PSQ_CB *psq_cb, PSS_SESBLK *sess_cb, char *sname)
 {
 
-    bool have_parm;			/* See tree walker */
     DB_STATUS status;
     GCA_COL_ATT *desc_base;		/* First param descriptor */
     GCA_TD_DATA *sqlda;			/* Start of sqlda area in QSF */
@@ -4017,7 +4014,6 @@ pst_descinput(PSQ_CB *psq_cb, PSS_SESBLK *sess_cb, char *sname)
     i4 i;
     PST_PROTO *proto;			/* Prepared statement prototype hdr */
     PST_PROCEDURE *prt_pnode;
-    PST_QNODE *prt_root;
     PST_QTREE *prt_qtree;
     PST_RNGENTRY **prt_rangetab;	/* Pointer to range table ptr array */
     PST_STATEMENT *prt_stmt;
@@ -4130,11 +4126,9 @@ pst_descinput(PSQ_CB *psq_cb, PSS_SESBLK *sess_cb, char *sname)
 	    prt_qtree = prt_stmt->pst_specific.pst_create_view.pst_view_tree;
 	else
 	    prt_qtree = prt_stmt->pst_specific.pst_tree;
-	prt_root = prt_qtree->pst_qtree;
 
-	have_parm = FALSE;
 	status = pst_descinput_walk(sess_cb, psq_cb,
-			proto, desc_base, prt_root, 0, 0, 0, &have_parm);
+			proto, desc_base, &prt_qtree->pst_qtree);
 	if (status != E_DB_OK)
 	    goto error_exit;
 	/* Walk qtree's range table entries looking for "derived tables",
@@ -4146,9 +4140,8 @@ pst_descinput(PSQ_CB *psq_cb, PSS_SESBLK *sess_cb, char *sname)
 	    if ((*prt_rangetab)->pst_rgtype == PST_DRTREE ||
 		(*prt_rangetab)->pst_rgtype == PST_WETREE)
 	    {
-		have_parm = FALSE;
 		status = pst_descinput_walk(sess_cb, psq_cb, proto, desc_base,
-			(*prt_rangetab)->pst_rgroot, 0, 0, 0, &have_parm);
+						&(*prt_rangetab)->pst_rgroot);
 		if (status != E_DB_OK)
 		    goto error_exit;
 	    }
@@ -4196,8 +4189,7 @@ error_exit:
 **	for parameter markers (they're in CONST nodes).  If one is found,
 **	and if there's some sort of type context set higher up in the
 **	tree, that type is returned in the parameter marker's SQLDA
-**	entry.  If we have a marker with no type context, a flag
-**	(have_parm) is returned to the caller, so that we can guess at
+**	entry.  If we have a marker with no type context, we guess at
 **	a type for things like "expr OP ?".
 **
 **	The most reliable way to supply type context is from a RESDOM
@@ -4225,15 +4217,9 @@ error_exit:
 **	psq_cb			PSQ_CB * query parse info block
 **	proto			PST_PROTO * pointer to prototype header
 **	desc_base		Pointer to &sqlda.sqlvar[0]
-**	node			PST_QNODE * current query tree node
-**	context_type		Datatype context for this node
-**	context_length		Datatype length for this node
-**	context_prec		Datatype precision for this node
-**	have_parm		bool * (an output)
+**	node			PST_QNODE ** current query tree node
 **
 ** Outputs:
-**	*have_parm		Returned TRUE if node is a parameter marker
-**				and we don't have any current type available
 **	Fills in type info in sqlda
 **	Returns E_DB_OK or error
 **
@@ -4245,203 +4231,336 @@ error_exit:
 **	04-Mar-2009 (kiria01) SIR120473
 **	    With UTF8 active, also dig past any cast operator from
 **	    the PATCOMP fixup.
+**	30-Jun-2010 (kiria01) b124000
+**	    Rewrite of function to remove the recursive nature. The recursion
+**	    is simply replaced by a stack of 'to be done' pointers and a suitable
+**	    algorithmn to handle the depth first needs of the original code.
+**	    The stack used is initially in the frame of the function but if needed
+**	    can expand into session heap.
 */
 
 static DB_STATUS
-pst_descinput_walk(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
-	PST_PROTO *proto, GCA_COL_ATT *desc_base,
-	PST_QNODE *node, i4 context_type, i4 context_length,
-	i2 context_prec, bool *have_parm)
+pst_descinput_walk(
+    PSS_SESBLK *sess_cb,
+    PSQ_CB *psq_cb,
+    PST_PROTO *proto,
+    GCA_COL_ATT *desc_base,
+    PST_QNODE **nodep)
 {
-
-
-    ADI_OPINFO opinfo;		/* Operator info for op node */
-    DB_STATUS op_status;	/* Operator info status */
-    DB_STATUS status;		/* Usual status thing */
+    PST_STK stk;
+    DB_STATUS status = E_DB_OK;
     GCA_COL_ATT *desc;		/* SQLDA entry for parameter */
     i4 err_code;		/* Junk */
     i4 parm_no;			/* Parameter marker number */
-    i4 node_type;		/* The node type */
-    PST_QNODE *left, *right;	/* L & R tree pointers */
+    bool descend = TRUE;
 
-    /* See if we have reached a parameter node with some sort of
-    ** useful type context, if so, note that type in our SQLDA.
-    */
-    node_type = node->pst_sym.pst_type;
-    if (node_type == PST_CONST
-      && (parm_no = node->pst_sym.pst_value.pst_s_cnst.pst_parm_no) > 0)
+    PST_STK_INIT(stk, sess_cb);
+
+    /* We will Descend the source tree via the address of a pointer to the tree.
+    ** Allocations will be done in place and full copies taken of the current node
+    ** and the allocated address written back to the address of a pointer now to
+    ** the top of the new tree. (Immediatly after allocation the left and right
+    ** pointer in the new block will refer to the OLD respective subtrees) */
+    while (nodep)
     {
-	/* Change param number from 1-origin to 0-origin index */
-	parm_no--;
-	if (parm_no > proto->pst_maxparm)
+	PST_QNODE *node = *nodep;
+	/****** Start reduced recursion, depth first tree scan ******/
+	if (descend && (node->pst_left || node->pst_right))
 	{
-	    TRdisplay("%@ psf_descinput_walk: param marker ix %d higher than max %d at node %p\n",
-			parm_no, proto->pst_maxparm, node);
-	    (void) psf_error(E_PS0002_INTERNAL_ERROR, 0,
-			PSF_INTERR, &err_code, &psq_cb->psq_error, 0);
-	    return (E_DB_ERROR);
-	}
-
-	/* Address that parm in the sqlda, see if we've figured a type
-	** for it already.
-	** Caution here, NOT &desc_base[parm_no]!  because of the
-	** screwy way that gca-col-att struct is defined.
-	*/
-
-	desc = (GCA_COL_ATT *) ((char *) desc_base + (parm_no * GCA_COL_ATT_SIZE));
-	if (desc->gca_attdbv.db_datatype != 0)
-	    return (E_DB_OK);
-
-	/* If we have some sort of type available from above, record it.
-	** If not, inform the caller that some help is needed.
-	*/
-
-	if (context_type != 0)
-	{
-	    desc->gca_attdbv.db_datatype = (i2)context_type;
-	    desc->gca_attdbv.db_length = (i2)context_length;
-	    desc->gca_attdbv.db_prec = context_prec;
-	}
-	else
-	{
-	    *have_parm = TRUE;
-	}
-    }
-
-    left = node->pst_left;
-    right = node->pst_right;
-
-    /* If we're an ATT resdom, take the type "context" from the resdom.
-    ** This will help out the simple INSERT and UPDATE cases.
-    ** If we're an ADI_OPERATOR op, leave the type context alone;
-    ** these are things like + and - which are in general not type-
-    ** changing operations.  For anything else, who knows what can
-    ** happen, so don't pass any context down.
-    ** Leave type context alone for CONST nodes;  the only way they
-    ** have children is for IN-lists, and the same context should apply
-    ** to all the IN-elements.
-    */
-    if (node_type == PST_RESDOM)
-    {
-	i4 targtype = node->pst_sym.pst_value.pst_s_rsdm.pst_ttargtype;
-
-	if (targtype == PST_ATTNO || targtype == PST_LOCALVARNO
-	  || targtype == PST_DBPARAMNO || targtype == PST_BYREF_DBPARAMNO
-	  || targtype == PST_RESROW_COL)
-	{
-	    context_type = node->pst_sym.pst_dataval.db_datatype;
-	    context_length = node->pst_sym.pst_dataval.db_length;
-	    context_prec = node->pst_sym.pst_dataval.db_prec;
-	} 
-	else
-	{
-	    context_type = 0; context_length = 0; context_prec = 0;
-	}
-    }
-    else if (node_type == PST_UOP || node_type == PST_BOP
-      || node_type == PST_MOP || node_type == PST_COP)
-    {
-	op_status = adi_op_info(sess_cb->pss_adfcb,
-			node->pst_sym.pst_value.pst_s_op.pst_opno, &opinfo);
-	if (op_status != E_DB_OK || opinfo.adi_optype != ADI_OPERATOR)
-	{
-	    context_type = 0; context_length = 0; context_prec = 0;
-	}
-	/* else leave them alone for operators */
-
-	/* If dealing with LIKE family of operators the parse tree is
-	** likely to have a PATCOMP UOP for 2nd parameter and probably with
-	** a further conversion UOP below. If so, we'll
-	** dereference the rhs to make it appear that the two/three operators
-	** are really just parts of a single operator. */
-	if (op_status == E_DB_OK && right && left &&
-	    (opinfo.adi_opid == ADI_LIKE_OP || opinfo.adi_opid == ADI_NLIKE_OP))
-	{
-	    ADI_OPINFO opinfo2;
-	    if (!adi_op_info(sess_cb->pss_adfcb,
-		    right->pst_sym.pst_value.pst_s_op.pst_opno, &opinfo2) &&
-		    opinfo2.adi_opid == ADI_PATCOMP_OP)
+	    switch (node->pst_sym.pst_type)
 	    {
-		right = right->pst_left;
-		if (right &&
-			right->pst_sym.pst_type == PST_UOP &&
-			right->pst_left)
-		    right = right->pst_left;
+	    case PST_ROOT:
+	    case PST_SUBSEL:
+		if (node->pst_sym.pst_value.pst_s_root.pst_union.pst_next)
+		{
+		    pst_push_item(&stk,
+			(PTR)&node->pst_sym.pst_value.pst_s_root.pst_union.pst_next);
+		    /* Mark that the top node needs descending (and allocating) */
+		    pst_push_item(&stk, (PTR)PST_DESCEND_MARK);
+		}
+		break;
 	    }
-	    if (left->pst_sym.pst_type == PST_UOP)
-		left = left->pst_left;
+	    /* Delay node evaluation */
+	    pst_push_item(&stk, (PTR)nodep);
+	    if (node->pst_left)
+	    {
+		if (node->pst_right)
+		{
+		    /* Delay RHS */
+		    pst_push_item(&stk, (PTR)&node->pst_right);
+		    if (node->pst_right->pst_right ||
+				node->pst_right->pst_left)
+			/* Mark that the top node needs descending */
+			pst_push_item(&stk, (PTR)PST_DESCEND_MARK);
+		}
+		nodep = &node->pst_left;
+		continue;
+	    }
+	    else if (node->pst_right)
+	    {
+		nodep = &node->pst_right;
+		continue;
+	    }
 	}
 
-    }
-    else if (node_type != PST_CONST)
-    {
-	context_type = 0; context_length = 0; context_prec = 0;
-    }
-
-    /* Try left, right subtrees */
-    if (left != NULL)
-    {
-	*have_parm = FALSE;
-	status = pst_descinput_walk(sess_cb, psq_cb, proto, desc_base,
-			left, context_type, context_length,
-			context_prec, have_parm);
-	if (status != E_DB_OK)
-	    return (status);
-	if (*have_parm && node_type == PST_BOP && right != NULL
-	  && op_status == E_DB_OK
-	  && (opinfo.adi_optype == ADI_COMPARISON || opinfo.adi_optype == ADI_OPERATOR)
-	  && right->pst_sym.pst_dataval.db_datatype != 0)
+	/*** Depth first traverse ***/
+	if (node->pst_sym.pst_type == PST_CONST)
 	{
-	    /* We have "? binop expr", take a swing at using expr's type */
-	    status = pst_descinput_walk(sess_cb, psq_cb, proto, desc_base,
-			left,
-			right->pst_sym.pst_dataval.db_datatype,
-			right->pst_sym.pst_dataval.db_length,
-			right->pst_sym.pst_dataval.db_prec,
-			have_parm);
-	    if (status != E_DB_OK)
-		return (status);
-	}
-    }
-    if (right != NULL)
-    {
-	*have_parm = FALSE;
-	status = pst_descinput_walk(sess_cb, psq_cb, proto, desc_base,
-			right, context_type, context_length,
-			context_prec, have_parm);
-	if (status != E_DB_OK)
-	    return (status);
-	if (*have_parm && node_type == PST_BOP && left != NULL
-	  && op_status == E_DB_OK
-	  && (opinfo.adi_optype == ADI_COMPARISON || opinfo.adi_optype == ADI_OPERATOR)
-	  && left->pst_sym.pst_dataval.db_datatype != 0)
-	{
-	    /* We have "expr binop ?", take a swing at using expr's type */
-	    status = pst_descinput_walk(sess_cb, psq_cb, proto, desc_base,
-			right,
-			left->pst_sym.pst_dataval.db_datatype,
-			left->pst_sym.pst_dataval.db_length,
-			left->pst_sym.pst_dataval.db_prec,
-			have_parm);
-	    if (status != E_DB_OK)
-		return (status);
-	}
-    }
+	    i4 parm_no = node->pst_sym.pst_value.pst_s_cnst.pst_parm_no - 1;
+	    if (parm_no >= 0)
+	    {
+		if (parm_no > proto->pst_maxparm)
+		{
+		    TRdisplay("%@ psf_descinput_walk: param marker ix %d higher than max %d at node %p\n",
+				parm_no, proto->pst_maxparm, node);
+		    (void) psf_error(E_PS0002_INTERNAL_ERROR, 0,
+				PSF_INTERR, &err_code, &psq_cb->psq_error, 0);
+		    return (E_DB_ERROR);
+		}
+		desc = (GCA_COL_ATT *)((char *)desc_base + (parm_no * GCA_COL_ATT_SIZE));
+		if (desc->gca_attdbv.db_datatype == DB_NODT)
+		{
+		    /* Need to try guess the likely datatype based on one of the
+		    ** patterns below:
+		    **
+		    ** RSD       1)where RSD is ATTNO,LOCALVARNO,DBPARAMNO,
+		    **   \       BYREF_DBPARAMNO or RESROW_COL. use type of RSD
+		    **    ?
+		    **
+		    **    OP     2)where op is a comparison.
+		    **   /  \    use type of VAR (VAR might be general)
+		    ** VAR   ?
+		    **
+		    **   OP      3)where OP is explicit coercion operator.
+		    **  /  \     use type of OP
+		    ** ?   any
+		    **
+		    **    OP     4)where op is LIKE or NLIKE and UOP is PATCOMP.
+		    **   /  \    use type of VAR (VAR might be general but not ?)
+		    ** VAR  UOP
+		    **      /
+		    **     ?
+		    **
+		    **   OP      5)where op is LIKE or NLIKE and UOP is PATCOMP.
+		    **  /  \     use type of VAR (VAR might be general but not ?)
+		    ** ?   UOP
+		    **     /
+		    **   VAR
+		    **
+		    **     MOP   6)Params of MOPs could be guessed from adi DT info
+		    **     / \
+		    **   OPR  ?
+		    **   / \
+		    ** OPR  ?
+		    **   \
+		    **    ?
+		    */
+		    PST_QNODE *parent = pst_parent_node(&stk, NULL);
+		    PST_QNODE *pparent = !parent ? NULL : pst_parent_node(&stk, parent);
+		    DB_DATA_VALUE *dv = &parent->pst_sym.pst_dataval;
+		    desc->gca_attdbv.db_datatype = 0;
+		    desc->gca_attdbv.db_length = 0;
+		    desc->gca_attdbv.db_prec = 0;
 
-    /* Special case additional walking for special case tree nodes */
-    if (node_type == PST_ROOT
-      && node->pst_sym.pst_value.pst_s_root.pst_union.pst_next != NULL)
-    {
-	status = pst_descinput_walk(sess_cb, psq_cb, proto, desc_base,
-			node->pst_sym.pst_value.pst_s_root.pst_union.pst_next,
-			0, 0, 0, have_parm);
-	if (status != E_DB_OK)
-	    return (status);
-	*have_parm = FALSE;
-    }
-    return (E_DB_OK);
+		    if (pparent &&
+			pparent->pst_sym.pst_type == PST_UOP &&
+			pparent->pst_sym.pst_value.pst_s_op.pst_opno == ADI_PATCOMP_OP)
+			parent = pparent;
 
-} /* pst_descinput_walk */
+		    if (parent->pst_sym.pst_type == PST_RESDOM)
+		    {
+			/* Case 1 */
+			i4 targtype = parent->pst_sym.pst_value.pst_s_rsdm.pst_ttargtype;
+
+			switch (targtype)
+			{
+			case PST_ATTNO:
+			case PST_LOCALVARNO:
+			case PST_DBPARAMNO:
+			case PST_BYREF_DBPARAMNO:
+			case PST_RESROW_COL:
+			    desc->gca_attdbv.db_datatype = dv->db_datatype;
+			    desc->gca_attdbv.db_length = dv->db_length;
+			    desc->gca_attdbv.db_prec = dv->db_prec;
+			    break;
+			}
+		    }
+		    else if (parent->pst_sym.pst_type == PST_UOP &&
+			     parent->pst_sym.pst_value.pst_s_op.pst_opno == ADI_PATCOMP_OP)
+		    {
+			/* Case 4 */
+			parent = pst_parent_node(&stk, parent); /* LIKE? */
+			if (parent->pst_sym.pst_value.pst_s_op.pst_opno == ADI_LIKE_OP ||
+			    parent->pst_sym.pst_value.pst_s_op.pst_opno == ADI_NLIKE_OP)
+			{
+			    dv = &parent->pst_left->pst_sym.pst_dataval;
+			    desc->gca_attdbv.db_datatype = dv->db_datatype;
+			    desc->gca_attdbv.db_length = dv->db_length;
+			    desc->gca_attdbv.db_prec = dv->db_prec;
+			}
+		    }
+		    else if (parent->pst_sym.pst_type == PST_BOP &&
+			     parent->pst_left == node &&
+			     (parent->pst_sym.pst_value.pst_s_op.pst_opno == ADI_LIKE_OP ||
+			      parent->pst_sym.pst_value.pst_s_op.pst_opno == ADI_NLIKE_OP) &&
+			     parent->pst_right->pst_sym.pst_type == PST_UOP &&
+			     parent->pst_right->pst_sym.pst_value.pst_s_op.pst_opno == ADI_PATCOMP_OP)
+		    {
+			/* Case 5 */
+			dv = &parent->pst_right->pst_sym.pst_dataval;
+			desc->gca_attdbv.db_datatype = dv->db_datatype;
+			desc->gca_attdbv.db_length = dv->db_length;
+			desc->gca_attdbv.db_prec = dv->db_prec;
+		    }
+		    else if (parent->pst_sym.pst_type == PST_UOP ||
+			     parent->pst_sym.pst_type == PST_BOP)
+		    {
+			/* Cases 2 or 3 */
+			ADI_OPINFO opinfo;
+			ADI_FI_TAB fi_tab;
+			ADI_OP_ID opno = parent->pst_sym.pst_value.pst_s_op.pst_opno;
+
+			dv = &parent->pst_sym.pst_dataval;
+
+			if (adi_op_info(sess_cb->pss_adfcb, opno, &opinfo) == E_DB_OK &&
+			    adi_fitab(sess_cb->pss_adfcb, opno, &fi_tab) == E_DB_OK)
+			{
+			    PST_QNODE *ot = parent->pst_left;
+			    i4 pn = 1; /* Assume ? on RHS (param 1) */
+			    i4 npar = 2;
+			    if (parent->pst_sym.pst_type == PST_UOP)
+				npar = 1;
+			    if (ot == node)
+			    {
+				ot = parent->pst_right;
+				pn = 0; /* Assumed wrong, ? on LHS */
+			    }
+			    if (opinfo.adi_optype == ADI_COMPARISON)
+			    {
+				/* case 2 */
+				dv = &ot->pst_sym.pst_dataval;
+				desc->gca_attdbv.db_datatype = dv->db_datatype;
+				desc->gca_attdbv.db_length = dv->db_length;
+				desc->gca_attdbv.db_prec = dv->db_prec;
+			    }
+			    else if (opinfo.adi_optype == ADI_NORM_FUNC &&
+				dv->db_datatype != DB_NODT &&
+				dv->db_length != 0)
+			    {
+				/* case 3 */
+				/* Could use awaited EXPL_COERCION info - for the moment
+				** spread net wider  */
+				desc->gca_attdbv.db_datatype = dv->db_datatype;
+				desc->gca_attdbv.db_length = dv->db_length;
+				desc->gca_attdbv.db_prec = dv->db_prec;
+			    }
+			    else if (ot && opinfo.adi_optype == ADI_OPERATOR &&
+				ot->pst_sym.pst_dataval.db_datatype != DB_NODT &&
+				ot->pst_sym.pst_dataval.db_length != 0)
+			    {
+				/* case 3 */
+				/* Could use awaited ASSOC info*/
+				dv = &ot->pst_sym.pst_dataval;
+				desc->gca_attdbv.db_datatype = dv->db_datatype;
+				desc->gca_attdbv.db_length = dv->db_length;
+				desc->gca_attdbv.db_prec = dv->db_prec;
+			    }
+			    else
+			    {
+				i4 i;
+    				DB_DT_ID insp_dt = DB_NODT;
+				ADI_FI_DESC *fi = fi_tab.adi_tab_fi;
+				for (i = 0; i < fi_tab.adi_lntab; i++, fi++)
+				{
+				    if (fi->adi_fiflags & ADI_F4096_SQL_CLOAKED)
+					continue;
+				    if (fi->adi_numargs != npar)
+					continue;
+				    if (insp_dt == DB_NODT)
+					insp_dt = fi->adi_dt[pn];
+				    else if (insp_dt != fi->adi_dt[pn])
+				    {
+					insp_dt = DB_NODT;
+					break;
+				    }
+				}
+				if (insp_dt != DB_NODT && insp_dt != DB_ALL_TYPE)
+				{
+				    desc->gca_attdbv.db_datatype = -insp_dt;
+				    if (insp_dt == DB_INT_TYPE)
+					desc->gca_attdbv.db_length = sizeof(i4)+1;
+				    else if (insp_dt == DB_FLT_TYPE)
+					desc->gca_attdbv.db_length = sizeof(f8)+1;
+				}
+			    }
+			}
+		    }
+		    else if (parent->pst_sym.pst_type == PST_OPERAND ||
+			     parent->pst_sym.pst_type == PST_MOP)
+		    {
+			/* Case 6 */
+			ADI_OPINFO opinfo;
+			ADI_FI_TAB fi_tab;
+			ADI_FI_DESC *fi;
+			ADI_OP_ID opno;
+			pparent = parent;
+			while (pparent->pst_sym.pst_type == PST_OPERAND)
+			    pparent = pst_parent_node(&stk, pparent);
+			opno = pparent->pst_sym.pst_value.pst_s_op.pst_opno;
+			if (adi_op_info(sess_cb->pss_adfcb, opno, &opinfo) == E_DB_OK &&
+			    adi_fitab(sess_cb->pss_adfcb, opno, &fi_tab) == E_DB_OK)
+			{
+			    PST_QNODE *p = pparent;
+			    i4 pn, npar = 0;
+			    i4 i;
+			    DB_DT_ID insp_dt = DB_NODT;
+			    ADI_FI_DESC *fi = fi_tab.adi_tab_fi;
+			    while (p)
+			    {
+				if (p->pst_right == node)
+				    pn = npar;
+				npar++;
+				p = p->pst_left;
+			    }
+			    for (i = 0; i < fi_tab.adi_lntab; i++, fi++)
+			    {
+				if (fi->adi_fiflags & ADI_F4096_SQL_CLOAKED)
+				    continue;
+				if (fi->adi_numargs != npar)
+				    continue;
+				if (insp_dt == DB_NODT)
+				    insp_dt = fi->adi_dt[pn];
+				else if (insp_dt != fi->adi_dt[pn])
+				{
+				    insp_dt = DB_NODT;
+				    break;
+				}
+			    }
+			    if (insp_dt != DB_NODT && insp_dt != DB_ALL_TYPE)
+			    {
+				desc->gca_attdbv.db_datatype = -insp_dt;
+				if (insp_dt == DB_INT_TYPE)
+				    desc->gca_attdbv.db_length = sizeof(i4)+1;
+				else if (insp_dt == DB_FLT_TYPE)
+				    desc->gca_attdbv.db_length = sizeof(f8)+1;
+			    }
+			}
+		    }
+		    else
+		    {
+			/* Future - scan applicable FI_DEFNs to narrow scope */
+			;
+		    }
+		}
+	    }
+	}
+	nodep = (PST_QNODE**)pst_pop_item(&stk);
+	if (descend = (nodep == PST_DESCEND_MARK))
+	    nodep = (PST_QNODE**)pst_pop_item(&stk);
+    }
+    pst_pop_all(&stk);
+    return status;
+}
 
 /*
 ** Name: pst_cpdata - fill out copy buffer's data for "insert to copy" optimization
