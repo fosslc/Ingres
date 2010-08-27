@@ -188,6 +188,10 @@ package com.ingres.gcf.jdbc;
 **	30-Jul-10 (gordy)
 **	    Added connection property 'send_integer_booleans' to allow
 **	    the driver to send boolean values as tinyint.
+**	13-Aug-10 (gordy)
+**	    Bumped version to 4.0.5 for the following fixes and enhancements:
+**	    SIR 124165 - Boolean to tinyint connection property.
+**	    BUG 124214 - Fix isBeforeFirst() and isLast().
 */
 
 import	com.ingres.gcf.dam.MsgConst;
@@ -346,6 +350,8 @@ import	com.ingres.gcf.dam.MsgConst;
 **	30-Jul-10 (gordy)
 **	    Added connection property DRV_CP_SND_INT_BOOL and
 **	    DRV_PROP_SND_INT_BOOL.
+**	13-Aug-10 (gordy)
+**	    Bumped version to 4.0.5
 */
 
 interface
@@ -358,7 +364,7 @@ DrvConst
     String	DRV_VENDOR_NAME		= "Ingres Corporation";
     int		DRV_MAJOR_VERSION	= 4;
     int		DRV_MINOR_VERSION	= 0;
-    int		DRV_PATCH_VERSION	= 4;
+    int		DRV_PATCH_VERSION	= 5;
     String	DRV_JDBC_VERSION	= "JDBC 4.0";
     int		DRV_JDBC_MAJ_VERS	= 4;
     int		DRV_JDBC_MIN_VERS	= 0;
