@@ -186,6 +186,10 @@
 **	    BUG 123942
 **	    Ensure temporary rename dir is always created when rename is
 **	    triggered. Was previously only being created for upgrade mode.
+**	24-Jun-2010 (hanje04)
+**	    BUG 124020
+**	    Use instance ID of the install we're modifying when generating
+**	    stop/star/config command line, not the default instID.
 */
 
 # define RF_VARIABLE "export II_RESPONSE_FILE"
@@ -1244,7 +1248,8 @@ generate_command_line( char **cmd_line )
 	** make sure it's shut down properly
 	*/
 	STcat( *cmd_line, " && ( " );
-	STprintf( tmpbuf, INGCONFIG_CMD, instID, rfnameloc.string );
+	STprintf( tmpbuf, INGCONFIG_CMD, selected_instance->instance_ID,
+			 rfnameloc.string );
  	STcat( *cmd_line, tmpbuf );
 	STcat( *cmd_line, " && " );
 	STprintf( tmpbuf, INGSTART_CMD, selected_instance->instance_ID );
@@ -1433,7 +1438,8 @@ generate_command_line( char **cmd_line )
 		 mod_pkgs_to_remove != PKG_NONE ) )
 	{
 	    STcat( *cmd_line, " && ( " );
-	    STprintf( tmpbuf, INGCONFIG_CMD, instID, rfnameloc.string );
+	    STprintf( tmpbuf, INGCONFIG_CMD, selected_instance->instance_ID,
+			rfnameloc.string );
  	    STcat( *cmd_line, tmpbuf );
 	    STcat( *cmd_line, " && " );
 	    STprintf( tmpbuf, INGSTART_CMD, selected_instance->instance_ID );
