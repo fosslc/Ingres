@@ -1834,6 +1834,10 @@ DM2U_INDEX_CB   *index_cb)
 **	    Use no-coupon access modes.
 **	9-Jul-2010 (kschendel) SIR 123450
 **	    Index btree key compression is wired to old-standard for now.
+**	27-Jul-2010 (kschendel) b124135
+**	    Ask for row-versioning when sizing compression control array.
+**	    We don't know if there are any versioned/altered atts, assume
+**	    the worst rather than the best.
 */
 
 DB_STATUS
@@ -1937,19 +1941,18 @@ dm2uMakeIndMxcb(DM2U_MXCB **mxcb,
     AllAttsCount = index_cb->indxcb_acount + ClusterKeyCount;
 
     /* Guess at (upper limit for) NEW compression control sizes.
-    ** There will be no row versioning in the new stuff.
     ** Throw in a +1 in case tidp ends up part of the key.
     ** Another +1 in case rtree and hilbert.  (It's just an upper limit.)
     */
     data_cmpcontrol_size = dm1c_cmpcontrol_size(
-		index_cb->indxcb_compressed, AllAttsCount+2, 0);
+		index_cb->indxcb_compressed, AllAttsCount+2, t->tcb_rel.relversion);
     if (index_cb->indxcb_index_compressed)
     {
 	/* Key compression is wired to "old standard" at present */
 	if (index_cb->indxcb_structure == TCB_RTREE)
 	{
 	    index_cmpcontrol_size = dm1c_cmpcontrol_size(
-		TCB_C_STD_OLD, AllAttsCount+2, 0);
+		TCB_C_STD_OLD, AllAttsCount+2, t->tcb_rel.relversion);
 	}
 	else if (index_cb->indxcb_structure == TCB_BTREE)
 	{
@@ -1957,9 +1960,9 @@ dm2uMakeIndMxcb(DM2U_MXCB **mxcb,
 	    ** Leaf entry is the whole row including any non-key atts.
 	    */
 	    index_cmpcontrol_size = dm1c_cmpcontrol_size(
-		TCB_C_STD_OLD, index_cb->indxcb_kcount+1, 0);
+		TCB_C_STD_OLD, index_cb->indxcb_kcount+1, t->tcb_rel.relversion);
 	    leaf_cmpcontrol_size = dm1c_cmpcontrol_size(
-		TCB_C_STD_OLD, AllAttsCount+1, 0);
+		TCB_C_STD_OLD, AllAttsCount+1, t->tcb_rel.relversion);
 	}
     }
     data_cmpcontrol_size = DB_ALIGN_MACRO(data_cmpcontrol_size);

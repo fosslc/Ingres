@@ -1481,6 +1481,10 @@ static DB_STATUS test_redo(
 **	    still need to create the partitions that QEU did not.
 **	    Made some static functions static, added function prototypes
 **	    for some that were missing.
+**	27-Jul-2010 (kschendel) b124135
+**	    Ask for row-versioning when sizing compression control array.
+**	    We don't know if there are any versioned/altered atts, assume
+**	    the worst rather than the best.
 **	    
 */
 DB_STATUS
@@ -2956,18 +2960,16 @@ DB_ERROR        *dberr)
 	    /* ...and source TID */
 	    cmplist_count++;
 
-	    /* Guess at (upper limit for) NEW compression control sizes.
-	    ** There will be no row versioning in the new stuff.
-	    */
+	    /* Guess at (upper limit for) NEW compression control sizes. */
 	    data_cmpcontrol_size = dm1c_cmpcontrol_size(
-			mcb->mcb_compressed, t->tcb_data_rac.att_count, 0);
+			mcb->mcb_compressed, t->tcb_data_rac.att_count, t->tcb_rel.relversion);
 	    if (mcb->mcb_index_compressed)
 	    {
 		if (mcb->mcb_structure == TCB_RTREE)
 		{
 		    /* Toss in one more for hilbert */
 		    index_cmpcontrol_size = dm1c_cmpcontrol_size(
-			TCB_C_STD_OLD, bkey_count+1, 0);
+			TCB_C_STD_OLD, bkey_count+1, t->tcb_rel.relversion);
 		}
 		else if (mcb->mcb_structure == TCB_BTREE)
 		{
@@ -2976,9 +2978,9 @@ DB_ERROR        *dberr)
 		    ** keys if not.  ***NEEDS FIXED FOR CLUSTERED).
 		    */
 		    index_cmpcontrol_size = dm1c_cmpcontrol_size(
-			TCB_C_STD_OLD, mcb->mcb_kcount+1, 0);
+			TCB_C_STD_OLD, mcb->mcb_kcount+1, t->tcb_rel.relversion);
 		    leaf_cmpcontrol_size = dm1c_cmpcontrol_size(
-			TCB_C_STD_OLD, bkey_count, 0);
+			TCB_C_STD_OLD, bkey_count, t->tcb_rel.relversion);
 		}
 	    }
 	    data_cmpcontrol_size = DB_ALIGN_MACRO(data_cmpcontrol_size);

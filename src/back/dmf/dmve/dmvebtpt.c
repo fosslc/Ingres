@@ -314,6 +314,10 @@
 **          More mvcc trace output for bid check errors.
 **	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
 **          Remove table name,owner from log records.
+**	27-Jul-2010 (kschendel) b124135
+**	    Ask for row-versioning when sizing compression control array.
+**	    We don't know if there are any versioned/altered atts, assume
+**	    the worst rather than the best.
 */
 
 /*
@@ -2588,14 +2592,14 @@ DM_OBJECT           **misc_buffer)
 	/* Build compression-control arrays for leaf and range keys.
 	** Assume the worst and allocate one for leaf and one for range;
 	** the leaf is larger (if different).
-	** Won't need any row-versioning poop here.
+	** Don't know if we need row-versioning, assume the worst.
 	*/
 	ctl_size = 0;
 	btatts->bt_leaf_rac.compression_type = log_cmp_type;
 	btatts->bt_rng_rac.compression_type = log_cmp_type;
 	if (log_cmp_type != TCB_C_NONE)
 	{
-	    ctl_size = dm1c_cmpcontrol_size(log_cmp_type, leafattcnt, 0);
+	    ctl_size = dm1c_cmpcontrol_size(log_cmp_type, leafattcnt, 1);
 	    ctl_size = DB_ALIGN_MACRO(ctl_size);
 	    size_needed += 2*ctl_size;
 	}
