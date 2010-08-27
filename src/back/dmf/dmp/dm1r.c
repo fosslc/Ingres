@@ -1559,6 +1559,11 @@ delete(
 **	    Change qual-function call to speed up the normal CX case.
 **	14-Apr-2010 (kschendel) SIR 123485
 **	    Updated pget call.
+**	23-Aug-2010 (miket) SIR 122403 SD 145904
+**	    For SIs on encrypted tables preserve the SI tid just beyond the
+**	    encrypted index data value in the buffer, where some lookup code
+**	    expects to find it. Also, avoid unnecessary decryption calls for
+**	    non-encrypted indexes on encrypted tables.
 */
 
 DB_STATUS
@@ -1956,14 +1961,26 @@ dm1r_get(
 	    }
 
 	    /* If there are encrypted table or si columns, decrypt. */
-	    if ( t->tcb_rel.relencflags & TCB_ENCRYPTED ||
-		(t->tcb_parent_tcb_ptr && 
-		 t->tcb_parent_tcb_ptr->tcb_rel.relencflags & TCB_ENCRYPTED) )
+	    if ( (t->tcb_rel.relencflags & TCB_ENCRYPTED ||
+		 (t->tcb_parent_tcb_ptr && 
+		  t->tcb_parent_tcb_ptr->tcb_rel.relencflags & TCB_ENCRYPTED)) &&
+		 (t->tcb_data_rac.encrypted_attrs) )
 	    {
 		s = dm1e_aes_decrypt(r, &t->tcb_data_rac, rec_ptr, record,
 			r->rcb_erecord_ptr, dberr);
 		if (s != E_DB_OK)
 		    return(s);
+		/*
+		** Code below for SI update will expect the index tid
+		** to be right after the ENCRYPTED index column in the
+		** buffer, while code displaying the index will expect
+		** the tid to be right after the DECRYPTED value in the
+		** buffer; replicate it to keep everyone happy.
+		*/
+		if ( opflag & DM1C_GET_SI_UPD )
+		    MEcopy((char*)(rec_ptr + record_size - sizeof(DM_TID)),
+			sizeof(DM_TID),
+			(char*)(record + record_size - sizeof(DM_TID)));
 		rec_ptr = record;
 	    }
 

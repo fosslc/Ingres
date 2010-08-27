@@ -123,6 +123,8 @@ SQLSTATE_MAPPING_REQUIRED
 **	04-aug-2010 (miket) SIR 122403
 **	    Change encryption activation terminology from
 **	    enabled/disabled to unlock/locked.
+**	25-aug-2010 (miket) SIR 122403 SD 145781
+**	    Better msg for alter table not valid for encrypted tables.
 */
 
 
@@ -1634,6 +1636,8 @@ E_QE0191_RECORD_NOT_ENCRYPTED:SS42000_SYN_OR_ACCESS_ERR
 "An attempt was made to unlock encryption for a non-encrypted table."
 E_QE0192_PASSPHRASE_FAILED_CRC:SS42000_SYN_OR_ACCESS_ERR
 "The user-specified passphrase was used to decrypt a stored AES key and failed the CRC check. This usually indicates a user error specifying the passphrase."
+E_QE0193_ENCRYPT_NO_ALTER_TABLE:SS42000_SYN_OR_ACCESS_ERR
+"The ALTER TABLE statement is not supported for encrypted tables."
 /*%
 ** Parameters:
 **	%0c - Column name

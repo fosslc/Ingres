@@ -1494,6 +1494,9 @@ static DB_STATUS test_redo(
 **	09-Aug-2010 (miket) SIR 122403
 **	    Fix check for attempt to make an encrypted column a primary
 **	    key by moving the code to the correct loop location.
+**	25-Aug-2010 (miket) SIR 122403 SD 145902 CRYPT_FIXME
+**	    For now disable modify encrypted index from HASH to HASH
+**	    because it is broken.
 */
 DB_STATUS
 dm2u_modify(
@@ -1853,7 +1856,11 @@ DB_ERROR        *dberr)
 	    mcb->mcb_clustered = FALSE;
 	    /* an encrypted secondary index can ONLY be structure hash */
 	    if (t->tcb_data_rac.encrypted_attrs == TRUE &&
+#if 0
+CRYPT_FIXME This should be allowed, in theory, but creates encryption
+CRC errors right now, so comment out and revisit when time allows.
 		mcb->mcb_structure != TCB_HASH &&
+#endif
 		mcb->mcb_structure != 0)
 	    {
 		status = E_DB_ERROR;

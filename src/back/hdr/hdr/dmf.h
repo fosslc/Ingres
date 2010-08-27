@@ -682,6 +682,8 @@ struct _DM_MDATA
 **	04-Aug-2010 (miket) SIR 122403
 **	    Change encryption activation terminology from
 **	    enabled/disabled to unlock/locked.
+**	25-aug-2010 (miket) SIR 122403 SD 145781
+**	    Better msg for alter table not valid for encrypted tables.
 */
 typedef struct _DM_ERR
 {
@@ -836,6 +838,7 @@ typedef struct _DM_ERR
 #define		    E_DM00AA_BAD_ATT_KEY_COUNT		(E_DM_MASK + 0x00AAL)
 #define		    E_DM00AB_CANT_MAP_SHARED_MEM	(E_DM_MASK + 0x00ABL)
 #define		    E_DM00AC_LOGFULL_COMMIT		(E_DM_MASK + 0x00ACL)
+#define		    E_DM00AD_ENCRYPT_NO_ALTER_TABLE	(E_DM_MASK + 0x00ADL)
 #define		    E_DM00D0_LOCK_MANAGER_ERROR		(E_DM_MASK + 0x00D0L)
 #define		    E_DM00D1_BAD_SYSCAT_MOD		(E_DM_MASK + 0x00D1L)
 #define		    E_DM00E0_BAD_CB_PTR			(E_DM_MASK + 0x00E0L)

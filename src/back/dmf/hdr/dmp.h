@@ -1852,6 +1852,9 @@ struct _DMP_POS_INFO {
 **	    Add bqcb pointer, manual end-of-row flag.
 **	    Delete rcb_row_version, wasn't being set much of the time, and
 **	    isn't really needed.
+**	25-Aug-2010 (miket) SIR 122403 SD 145904
+**	    Add rcb_ehashbuf for computing hashes on encrypted attrs
+**	    in dm1h_newhash.
 */
 
 struct _DMP_RCB
@@ -2356,6 +2359,9 @@ REC_PTR_VALID"
                                             ** allocated on either dm1h_hash,
                                             ** dm1h_newhash, dm1h_keyhash or
                                             ** dm1h_hash_uchar
+                                            */
+    PTR             rcb_ehashbuf;           /* buffer used in dm1h_newhash
+                                            ** for encrypted attrs
                                             */
     i4 	    	    rcb_val_logkey;         /* rcb_logkey is a valid logkey 
 					    ** assigned by an insert if either

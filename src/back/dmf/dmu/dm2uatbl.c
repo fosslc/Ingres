@@ -375,6 +375,8 @@ static DB_STATUS   si_rencol_adjust(
 **	    look like a normal alter column.
 **	    Remove an extra break-out-of for(;;), fix a lot of broken
 **	    indentation.
+**	25-Aug-2010 (miket) SIR 122403 SD 145781
+**	    Better msg for alter table not valid for encrypted tables.
 */
 
 DB_STATUS
@@ -502,10 +504,10 @@ DB_ERROR	*dberr)
         t = r->rcb_tcb_ptr;
         r->rcb_xcb_ptr = xcb;
 
-	/* Can't alter an encrypted table (yet) CRYPT_FIXME */
+	/* Can't alter an encrypted table (yet) */
 	if ( t->tcb_rel.relencflags & TCB_ENCRYPTED )
         {
-	   SETDBERR(dberr, 0, E_DM010A_ERROR_ALTERING_TABLE);
+	   SETDBERR(dberr, 0, E_DM00AD_ENCRYPT_NO_ALTER_TABLE);
 	   status = E_DB_ERROR;
            break;
         }

@@ -479,6 +479,8 @@ SQLSTATE_MAPPING_REQUIRED
 **	10-Aug-2010 (kiria01) b124217
 **	    Added message E_US0B7A_2938 for GREATEST, LEAST, GREATER
 **	    and LESSER functions to display better type mismatch error.
+**	25-aug-2010 (miket) SIR 122403 SD 145781
+**	    Better msg for alter table not valid for encrypted tables.
 */
 
 #define _US_CLASS   0
@@ -11638,5 +11640,7 @@ must be of structure HASH."
 E_US24C4_9412:SS50000_MISC_ERRORS
 "line '%0d', string constant supplied exceeds the maximum limit of '%1d' for
 UTF8 installation."
+E_US24C5_9413:SS50000_MISC_ERRORS
+"The ALTER TABLE statement is not supported for encrypted tables."
 
 NO_SQLSTATE_MAPPING

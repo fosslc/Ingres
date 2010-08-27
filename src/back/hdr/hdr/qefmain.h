@@ -373,6 +373,8 @@
 **	04-Aug-2010 (miket) SIR 122403
 **	    Change encryption activation terminology from
 **	    enabled/disabled to unlock/locked.
+**	25-aug-2010 (miket) SIR 122403 SD 145781
+**	    Better msg for alter table not valid for encrypted tables.
 **/
 
 /*
@@ -729,6 +731,7 @@ typedef struct _QEF_FUNC QEF_FUNC;
 #define	E_QE0190_ENCRYPT_LOCKED		(E_QEF_MASK + 0x0190L)
 #define	E_QE0191_RECORD_NOT_ENCRYPTED	(E_QEF_MASK + 0x0191L)
 #define	E_QE0192_PASSPHRASE_FAILED_CRC	(E_QEF_MASK + 0x0192L)
+#define	E_QE0193_ENCRYPT_NO_ALTER_TABLE	(E_QEF_MASK + 0x0193L)
 
 #define E_QE0199_CALL_ALLOC		(E_QEF_MASK + 0x0199L)
 #define E_QE019A_EVENT_MESSAGE		(E_QEF_MASK + 0x019AL)

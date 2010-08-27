@@ -992,6 +992,9 @@ NO_OPTIM=dr6_us5 i64_aix
 **          base_delete_put() release value lock after put (not after allocate)
 **      12-Jul-2010 (stial01) (SIR 121619 MVCC, B124076)
 **          dm2r_replace() if row/crow_locking, defer_add_new() else dmpp_dput()
+**	20-Aug-2010 (miket) SIR 122403 SD 145904
+**	    Encrypted indexes get the encryption shm slot number from the base
+**	    table parent.
 */
 
 static DB_STATUS BuildRtreeRecord(
@@ -3603,6 +3606,8 @@ dm2r_get(
 **          rcb_ll_op_type and rcb_ll_given so that the respective dm1X_get()
 **          calls can correctly set DMA_ACC_BYKEY, thereby flagging
 **          dma_row_access() to write an audit record for the keyed SELECT.
+**	25-Aug-2010 (miket) SIR 122403
+**	    Remove encryption debugging code and dev-only trace point.
 */
 DB_STATUS
 dm2r_position(
@@ -3825,15 +3830,6 @@ dm2r_position(
         return (status);
     }
 
-/* CRYPT_FIXME hack to (partially) work around bad hash encrypted SI lookup.
-** For some reason (length of plain text vs. encrypted text difference?)
-** we are not hashing to the right page for the lookup, or are building
-** the encrypted SI incorrectly. This change forces us to read the entire
-** index where we do indeed find our match and achieve our TJOIN select.
-*/
-if (t->tcb_parent_tcb_ptr->tcb_rel.relencflags & TCB_ENCRYPTED)
-if (DMZ_REC_MACRO(11))
-flag |= DM2R_ALL;
     /*	Handle the position for full scan case. */
     if (flag & DM2R_ALL)
     {
@@ -10361,6 +10357,8 @@ si_put(
 	    switch (it->tcb_rel.relspec)
 	    {
 	    case TCB_HASH:
+		/* indexes use the base record encryption slot */
+		ir->rcb_enckey_slot = r->rcb_enckey_slot;
 		status = dm1h_allocate(ir, &ir->rcb_data,
 				&ir->rcb_si_newtid, ir->rcb_record_ptr, crec,
 		    		rec_len, alloc_flag, dberr);
@@ -10753,6 +10751,8 @@ si_delete(
 	switch (it->tcb_rel.relspec)
 	{
 	    case TCB_HASH:
+		/* indexes use the base record encryption slot */
+		ir->rcb_enckey_slot = r->rcb_enckey_slot;
 		status = dm1h_search(ir, &ir->rcb_data,
 		    ir->rcb_s_key_ptr, DM1C_FIND_SI_UPD, DM1C_EXACT,
 		    &ir->rcb_lowtid, dberr);
@@ -10819,6 +10819,8 @@ si_delete(
 	    */
 	    tid.tid_i4 = r->rcb_si_oldtid.tid_i4;
 
+	    /* indexes use the base record encryption slot */
+	    ir->rcb_enckey_slot = r->rcb_enckey_slot;
 	    status = dm1r_get(ir, &tid, ir->rcb_record_ptr,
 		DM1C_GETNEXT | DM1C_GET_SI_UPD, dberr);
 	}
@@ -11009,6 +11011,9 @@ si_delete(
 **	28-Apr-2010 (jonj) SD 144272
 **	    Remove indirect references to pinfo.page, use DMP_PINIT to
 **	    fully init pinfos.
+**	24-Aug-2010 (miket) SIR 122403 SD 145904
+**	    Encrypted indexes get the encryption shm slot number from the base
+**	    table parent. Encrypt SIs on replace.
 */
 static DB_STATUS
 si_replace(
@@ -11348,6 +11353,8 @@ si_replace(
 	    switch (it->tcb_rel.relspec)
 	    {
 	    case TCB_HASH:
+		/* indexes use the base record encryption slot */
+		ir->rcb_enckey_slot = r->rcb_enckey_slot;
 		status = dm1h_search(ir, &ir->rcb_data,
 		    ir->rcb_s_key_ptr,
 		    DM1C_FIND_SI_UPD, DM1C_EXACT, &ir->rcb_lowtid, dberr);
@@ -11422,6 +11429,8 @@ si_replace(
 		*/
 		oldtid.tid_i4 = r->rcb_si_oldtid.tid_i4;
 
+		/* indexes use the base record encryption slot */
+		ir->rcb_enckey_slot = r->rcb_enckey_slot;
 		status = dm1r_get(ir, &oldtid, ir->rcb_record_ptr,
 			DM1C_GETNEXT | DM1C_GET_SI_UPD, dberr);
 
@@ -11434,6 +11443,15 @@ si_replace(
 
 	    newrecord = ir->rcb_srecord_ptr;
 	    oldrecord = ir->rcb_record_ptr;
+
+	    /* Encrypt the index if needed. */
+	    if (t->tcb_data_rac.encrypted_attrs)
+	    {
+		status = dm1e_aes_encrypt(r, &it->tcb_data_rac, newrecord,
+			ir->rcb_erecord_ptr, dberr);
+		if (status != E_DB_OK)
+		    return(status);
+	    }
 
 	    /*  Compute the sizes of the old and new records. */
 
@@ -11480,6 +11498,8 @@ si_replace(
 		switch (it->tcb_rel.relspec)
 		{
 		case TCB_HASH:
+		    /* indexes use the base record encryption slot */
+		    ir->rcb_enckey_slot = r->rcb_enckey_slot;
 		    status = dm1h_allocate(ir, &newdataPinfo, &newtid,
 				newrecord, crec, newlength, alloc_flag, dberr);
 		    break;
@@ -11598,6 +11618,10 @@ si_replace(
 	    */
 	    if (it->tcb_rel.relcomptype != TCB_C_NONE)
 		newrecord = crec;
+
+	    /* if encrypted, pass the encrypted record to replace */
+	    if (t->tcb_data_rac.encrypted_attrs)
+		newrecord = ir->rcb_erecord_ptr;
 
 	    /* This is constant */
 	    delta_end = it->tcb_rel.relwid;

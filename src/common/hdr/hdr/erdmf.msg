@@ -543,6 +543,8 @@ SQLSTATE_MAPPING_REQUIRED
 **	04-aug-2010 (miket) SIR 122403
 **	    Change encryption activation terminology from
 **	    enabled/disabled to unlock/locked.
+**	25-aug-2010 (miket) SIR 122403 SD 145781
+**	    Better msg for alter table not valid for encrypted tables.
 */
 
 #define _DM_CLASS  3
@@ -1207,6 +1209,8 @@ E_DM00AB_CANT_MAP_SHARED_MEM:SS5000B_INTERNAL_ERROR
 E_DM00AC_LOGFULL_COMMIT:SS01000_WARNING
 "Transaction %0x%1x in database %2c has been committed through
 log address <%3d,%4d,%5d> to free up log space."
+E_DM00AD_ENCRYPT_NO_ALTER_TABLE:SS50000_MISC_ERRORS
+"The ALTER TABLE statement is not supported for encrypted tables."
 E_DM00D0_LOCK_MANAGER_ERROR:SS5000B_INTERNAL_ERROR
 "Error creating a server lock list."
 E_DM00D1_BAD_SYSCAT_MOD:SS5000B_INTERNAL_ERROR
