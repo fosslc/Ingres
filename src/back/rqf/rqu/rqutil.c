@@ -2906,6 +2906,8 @@ rqu_cluster_info(
 **          support i8s in which case we continue to use 62. It should be
 **          Noted that 62 has never blocked attempts to use unicode through
 **          Star as was intended.
+**      15-jun-2010 (huazh01)
+**          Set protocol level to 66 if ANSI date is enabled. (b123920)
 */
 RQL_ASSOC  *
 rqu_new_assoc(
@@ -3113,7 +3115,12 @@ rqu_new_assoc(
 	gca_req.gca_user_name = uname;
 	gca_req.gca_password = passw;
 	gca_req.gca_assoc_id = -1;
-        if (adf_cb->adf_proto_level & AD_I8_PROTO)
+
+        if (adf_cb->adf_proto_level & AD_ANSIDATE_PROTO)
+        {
+            gca_req.gca_peer_protocol = GCA_PROTOCOL_LEVEL_66;
+        }
+        else if (adf_cb->adf_proto_level & AD_I8_PROTO)
         { 
 	    gca_req.gca_peer_protocol = GCA_PROTOCOL_LEVEL_65;
         }
