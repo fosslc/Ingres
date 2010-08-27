@@ -83,6 +83,11 @@
 ##	    Added attr_srid and attr_geomtype into the RAAT_ATT_ENTRY 
 ##	    structure, so it is consistent with DMT_ATT_ENTRY in  
 ##	    dmtcb.h after change 501821.  
+##	8-Jun-2010 (hweho01) Sir: 121123 and 122403 
+##	    Avoid SEGV in raat tests, update the RAAT control    
+##	    structures, so they match with the fields of control  
+##	    blocks in dmtcb.h after the recent enhancements   
+##	    such as long ID and column encryption supports.
 ##
 */
 
@@ -95,8 +100,10 @@
 # endif
 # endif
 
-# define		RAAT_MAXNAME		32
+# define		RAAT_MAXNAME		256
 # define		RAAT_MAXKEYS		32
+# define		RAAT_LOC_MAXNAME	32
+# define		RAAT_OWN_MAXNAME	32
 
 # define		ME_FASTPATH_ALLOC	3  /* for MEadvise() */
 
@@ -244,6 +251,8 @@ typedef struct
     int		att_collID;	       /* collation ID */
     int         attr_srid;             /* Spatial reference ID */
     short       attr_geomtype;         /* Geometry type code */
+    short       att_encflags;
+    int         att_encwid; 
 }   RAAT_ATT_ENTRY;
 
 /*}
@@ -312,15 +321,16 @@ typedef struct _RAAT_IDX_ENTRY
 */
 typedef struct _RAAT_TBL_ENTRY
 {
-    RAAT_TAB_ID	    tbl_id;		    /* Table identifier. */
-    char            tbl_name[RAAT_MAXNAME];   /* Table name. */
-    char            tbl_owner[RAAT_MAXNAME];  /* Table owner. */
-    int         tbl_loc_count;          /* Count of locations. */
-    char            tbl_location[RAAT_MAXNAME];/* First Table location name. */
-    char	    tbl_filename[RAAT_MAXNAME];/* Table file name. */
+    RAAT_TAB_ID	    tbl_id;		         /* Table identifier. */
+    char            tbl_name[RAAT_MAXNAME];      /* Table name. */
+    char            tbl_owner[RAAT_OWN_MAXNAME]; /* Table owner. */
+    int         tbl_loc_count;                   /* Count of locations. */
+    char        tbl_location[RAAT_LOC_MAXNAME];  /* First Table location name.*/
+    char        tbl_filename[RAAT_LOC_MAXNAME];  /* Table file name. */
     int         tbl_attr_count;         /* Table attribute count. */
     int         tbl_index_count;        /* Count of indexes on table. */
     int         tbl_width;              /* Table record width. */
+    int         tbl_data_width;         /* Table logical data width. */
     int         tbl_storage_type;       /* Table storage structure. */
 #define                RAAT_HEAP_TYPE        3L
 #define                RAAT_ISAM_TYPE        5L
@@ -486,7 +496,11 @@ typedef struct _RAAT_TBL_ENTRY
  
     short	   tbl_nparts;		     /*Number of physical partitions */
     short	   tbl_ndims;	             /*Number of partitioning*/
-
+    short          tbl_encflags;             /* encryption flags .. */
+#define                 DMT_ENCRYPTED   0x0001L /* .. must match relencflags! */
+#define                 DMT_AES128      0x0002L
+#define                 DMT_AES192      0x0004L
+#define                 DMT_AES256      0x0008L
     short          tbl_dimension;            /* RTree dimension         */
     short          tbl_hilbertsize;          /* RTree Hilbertsize       */
     short          tbl_rangesize;            /* RTree Range Size        */
