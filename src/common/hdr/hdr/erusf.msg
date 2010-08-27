@@ -463,6 +463,11 @@ SQLSTATE_MAPPING_REQUIRED
 **	    Added E_US0A00_2560 and corrected column alias syntax in error text.
 **	09-Jun-2010 (gupsh01) b123841.
 **	    Added error E_US24C4_9412.
+**      01-Jul-2010 (horda03) B123234
+**          Altered the E_US10D9 message as date_trunc only works on absolute dates,
+**          the date_part function may/may not work on an Interval, it depends on
+**          the 'unit' being requested (for example 'week' will not work on an
+**          interval. For this latter case, added new error E_US10F5.
 */
 
 #define _US_CLASS   0
@@ -5183,7 +5188,7 @@ E_US10D7_4311:SS22007_INV_DATETIME_FMT
 E_US10D8_4312:SS5000O_INVALID_FUNC_ARG_TYPE
 "function dow (day-of-week) only valid on absolute dates."
 E_US10D9_4313:SS5000O_INVALID_FUNC_ARG_TYPE
-"the date_trunc and date_part functions only work on absolute dates."
+"the date_trunc function will work on absolute dates only."
 E_US10DA_4314:SS22008_DATETIME_FLD_OVFLOW
 "weeks are not implemented in dates."
 E_US10DB_4315:SS5000O_INVALID_FUNC_ARG_TYPE
@@ -5251,6 +5256,8 @@ E_US10F3_DATE_ARITH_NOABS:SS42000_SYN_OR_ACCESS_ERR
 "The operators unary-'+', unary-'-', '*' and '/' cannot be used with absolute dates."
 E_US10F4_ANSISPEC:SS42000_SYN_OR_ACCESS_ERR
 "Incorrect ANSI trim specification. Only one character allowed"
+E_US10F5_4341:SS5000O_INVALID_FUNC_ARG_TYPE
+"The date function/date_part('unit') used is for absolute dates only."
 E_US1130_4400:SS22000_DATA_EXCEPTION
 "illegal character to integer conversion or non-numeric character
 in money field."

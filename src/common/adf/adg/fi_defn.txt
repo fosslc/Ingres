@@ -484,6 +484,8 @@
 #		lenspec. (Bug 123880)
 #       15-Jun-2010 (horda03) B123926
 #           Add IFNULL FI for LONG VARCHAR and LONG BYTE.
+#       01-Jul-2010 (horda03) B123234
+#           Increase size of DAY() result to an i4 (to handle days in an interval.
 
 group ADI_COMPARISON
 
@@ -8273,7 +8275,7 @@ group ADI_NORM_FUNC
 	fi ADFI_1252_DAYPART
 	    description i  :  day(date/time)
 	    flags ADI_F16384_CHKVARFI
-	    lenspec ADI_FIXED 2
+	    lenspec ADI_FIXED 4
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_INT_TYPE
 	    operands DB_DTE_TYPE

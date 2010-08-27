@@ -353,6 +353,11 @@
 **      30-Jun-2010 (horda03) B124003
 **          INTERVAL function reports E_US10DC when used on an INTERVAL YTOM or
 **          INTERVAL DTOS.
+**      01-Jul-2010 (horda03) B123234
+**          Altered the E_US10D9 message as date_trunc only works on absolute dates,
+**          the date_part function may/may not work on an Interval, it depends on
+**          the 'unit' being requested (for example 'week' will not work on an
+**          interval. For this latter case, added new error E_US10F5.
 */
 
 /*  Static variable references	*/
@@ -7663,8 +7668,7 @@ AD_NEWDTNTRNL  *datep)
 **	    Correct interval computation - need AD_40DTE_SECPERDAY multiplier.
 **	    Remove unused variable tlowday.
 **      30-Jun-2010 (horda03) B124003
-**          Only report E_AD505E_NOABSDATES for ABSOLUTE
-**          DATE values.
+**          Allow parts of an Interval to be extracted.
 */
 
 DB_STATUS
@@ -8207,6 +8211,11 @@ DB_DATA_VALUE       *date_result)
 **	    Ensure all TZ adjustments are performed for presentation.
 **	11-May-2008 (kiria01) b120004
 **	    Apply any defered application of time/timezone if needed.
+**      01-Jul-2010 (horda03) B123234
+**          Allow parts of an Interval to be selected.
+**          As Intervals are now allowed, only adjust for GMT when
+**          Absolute date with time used. Note, Quarter, Timezone Hour/Minute,
+**          Week Number and ISO Week number are not permitted on Intervals,
 */
 
 DB_STATUS
@@ -8232,15 +8241,6 @@ DB_DATA_VALUE       *result)
 	/* If `empty date', just return zero */
 	component = 0;
     }
-    else if (((datep->dn_dttype == DB_DTE_TYPE) &&
-	      (!(datep->dn_status & AD_DN_ABSOLUTE))
-	     )
-             || (datep->dn_dttype == DB_INYM_TYPE)
-             || (datep->dn_dttype == DB_INDS_TYPE))
-    {
-	/* ... otherwise, if not an absolute date, return error */
-	return (adu_error(adf_scb, (i4) E_AD505D_DATEABS, 0));
-    }
     else
     {
 	/* ... otherwise, process normally */
@@ -8256,7 +8256,7 @@ DB_DATA_VALUE       *result)
 	    if (db_stat = adu_dtntrnl_pend_time(adf_scb, datep))
 		return (db_stat);
 	}
-	if (datep->dn_status & AD_DN_TIMESPEC)
+	if (datep->dn_status & (AD_DN_ABSOLUTE | AD_DN_TIMESPEC) == (AD_DN_ABSOLUTE | AD_DN_TIMESPEC))
 	{
 	    /*
 	    ** If timespec is selected then the time is GMT.
@@ -8271,6 +8271,21 @@ DB_DATA_VALUE       *result)
 	if (db_stat = ad0_8getdateclass(adf_scb, inter_spec , &dateclass))
 	    return (db_stat);
 
+        if( !(datep->dn_status & AD_DN_ABSOLUTE) )
+        {
+           /* Dealing with an Inverval, so not all date classes apply.
+           ** Verify a supported date class has been specified.
+           */
+           switch (dateclass)
+           {
+              case 'Q':  /* Quarter */
+              case 'R':  /* Timezone Hour */
+              case 'T':  /* Timezone Minute */
+              case 'W':  /* Week Number*/
+              case 'w':  /* ISO Week Number*/
+                 return (adu_error(adf_scb, (i4) E_AD5079_INTERVAL_IN_ABS_FUNC, 0));
+           }
+        }
 	/* select appropriate component to extract */
 	switch (dateclass)
 	{

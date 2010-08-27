@@ -792,6 +792,8 @@
 **          Add adf_misc_flags to so that DATE->STRING conversion of
 **          greater than 25 chars can be signalled (used for Ascii
 **          copy into).
+**      01-Jul-2010 (horda03) B123234
+**          Added new error E_AD5079_INTERVAL_IN_ABS_FUNC.
 */
 
 #ifndef ADF_HDR_INCLUDED
@@ -1098,6 +1100,7 @@
 #define			E_AD5076_ANSIINDS_BADFMT	(E_AD_MASK + 0x5076L)
 #define			E_AD5077_ANSITMZONE_BADFMT	(E_AD_MASK + 0x5077L)
 #define			E_AD5078_ANSITIME_INTVLADD	(E_AD_MASK + 0x5078L)
+#define			E_AD5079_INTERVAL_IN_ABS_FUNC   (E_AD_MASK + 0x5079L)
     /* Numbers 5080 thru 508F are associated with log key function instances */
 #define			E_AD5080_LOGKEY_BAD_CVT_LEN	(E_AD_MASK + 0x5080L)
 #define			E_AD5081_UNICODE_FUNC_PARM 	(E_AD_MASK + 0x5081L)

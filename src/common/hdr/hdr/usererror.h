@@ -200,6 +200,8 @@
 **	    Added SINGLETON aggregate user message E_US1196_NOT_ZEROONE_ROWS
 **      23-Mar-2010 (hanal04) Bug 122436
 **          Added E_US1072_BAD_LOCATE_ARG.
+**      01-Jul-2010 (horda03) B123234
+**          Added new error E_US10F5_INTERVAL_IN_ABS_FUNC.
 **/
 
 /*
@@ -476,6 +478,7 @@
 #define			E_US10F2_DATE_DIV_ANSI_INTV (E_US_MASK + 0x10F2L)
 #define			E_US10F3_DATE_ARITH_NOABS (E_US_MASK + 0x10F3L)
 #define                 E_US10F4_4340_TRIM_SPEC   (E_US_MASK + 0x10F4L)
+#define			E_US10F5_INTERVAL_IN_ABS_FUNC  (E_US_MASK + 0x10F5L)
 
 /*
 **  Define constants for "money" datatype user-errors.  The decimal range
