@@ -33058,6 +33058,8 @@ DB_ERROR	*dberr)
 **	    Read committed, like serializable, sees data committed at the 
 **	    CRIB point in time plus any updates made by the transaction itself,
 **	    minus updates made by the current statement.
+**	23-Aug-2010 (jonj) B124292
+**	    Clear LG's LGC portion of DMP_LCTX before calling dm0l_position().
 */
 static DB_STATUS
 make_consistent(
@@ -33278,6 +33280,9 @@ DB_ERROR	*dberr)
 	    lctx->lctx_bksz = dmf_svcb->svcb_lctx_ptr->lctx_bksz;
 	    lctx->lctx_lgid = 0;
 	    lctx->lctx_status = 0;
+
+	    /* Clear LG's LGC area before calling position */
+	    MEfill(LG_MAX_CTX, 0, lctx->lctx_area);
 
 	    /*
 	    ** Initialize LCTX for reading backwards by LGA.
