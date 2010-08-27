@@ -149,8 +149,10 @@
 **      17-nov-2009 (stegr01)
 **          move a couple of variables to the top of a for loop to avoid 
 **          compiler complaints
-*/
-
+**      16-jun-2010 (joea)
+**          Revert most of the 17-jun-2009 change. Use current chf$signal_array
+**          member names and other changes to eliminate compiler warnings.
+**/
 
 
 int
@@ -158,20 +160,17 @@ EXcatch(struct chf$signal_array *sigs, struct chf$mech_array *mechs)
 {
 #if defined(axm_vms)
 	int		establishers_handle;
-	int64		*jmpbuf;
-#define EXPOP_PARAM 
-#else
-        int64           establishers_handle;
-        int64           establishers_invo_handle;
-        jmp_buf*        jmpbuf;
-#define EXPOP_PARAM excp
-#endif
-	i4		(*handler)();
-	int64		invo_context_fp;
 	int64		establishers_fp;
+	int64		invo_context_fp;
+#elif defined(i64_vms)
+        uint64          establishers_handle;
+        int64           establishers_invo_handle;
+#endif
+	int64		*jmpbuf;
+	i4		(*handler)();
 	unsigned int floovemat = MTH$_FLOOVEMAT;	/* lib$match_cond wants */
 	unsigned int floundmat = MTH$_FLOUNDMAT;	/* these by reference. */
-	int64		invo_value = EX_DECLARE;
+	uint64		invo_value = EX_DECLARE;
 	int		status;
 	int		handler_ret;
 	unsigned int	tst_cond;
@@ -180,12 +179,13 @@ EXcatch(struct chf$signal_array *sigs, struct chf$mech_array *mechs)
 	int		*sig_args_ptr;
 	int		except_summary;
 
-	uint64		invo_mask;			/* lib$put_invo_... */
 	EX_CONTEXT      *env = NULL;
         EX_CONTEXT      **excp;
 
         extern STATUS cs_handler();
 
+#if defined(axm_vms)
+	uint64		invo_mask;			/* lib$put_invo_... */
 	/*
 	** Mask indicating which integer registers we want to restore.  It
 	** includes all of the conventional saved (R2-15), but none of the
@@ -198,6 +198,14 @@ EXcatch(struct chf$signal_array *sigs, struct chf$mech_array *mechs)
 	** It includes only the conventional saved registers (F2-9).
 	*/
 	const uint32	fp_mask = 0X03FCul;
+#elif defined(i64_vms)
+        u_i4 gr_mask[4];           /* general registers mask */
+        u_i4 fr_mask[4];           /* floating point registers mask */
+        int64 pr_mask;
+        int64 br_mask;
+        int i;
+        INVO_CONTEXT_BLK *icb = NULL;
+#endif /* axm_vms */
 
 	/*
 	** Have we seen a problem from which we should not continue?
@@ -210,7 +218,7 @@ EXcatch(struct chf$signal_array *sigs, struct chf$mech_array *mechs)
 
         /* Ignore EXIT_THREAD signals */
 
-        if (lib$match_cond(&sigs->chf$l_sig_name, &CMA$_EXIT_THREAD))
+        if (lib$match_cond((uint *)&sigs->chf$is_sig_name, &CMA$_EXIT_THREAD))
 	    return (SS$_RESIGNAL);
 
 #endif
@@ -229,44 +237,33 @@ EXcatch(struct chf$signal_array *sigs, struct chf$mech_array *mechs)
 	    if (invo_context_fp == establishers_fp)
 		break;
 	}
-#else /* axm_vms */
+#elif defined(i64_vms)
         establishers_invo_handle = mechs->chf$q_mch_invo_handle;
 
         excp = i_EXtop();
         env = excp ? *(excp) : NULL;
         for (; env; env = i_EXnext(env))
         {
-           int64 invo_handle = 0;
-           __int64 *aligned_env;
-           INVO_CONTEXT_BLK* icb;
-           int sts;
+           uint64 invo_handle = 0;
 
-           jmpbuf = &env->iijmpbuf;
+           icb = env->iijmpbuf;
 
-           /* 
-           ** This ghastly kludge is due to the fact that the VMS setjmp and longjmp
-           ** attempts to octaword align the jmp_buf (also known as an INVO_CONTEXT_BLK)
-           ** in order to cope with TIE related ICBS that may not be aligned.
-           ** So if we wish to examine the jmp_buf externally as an INVO_CONTEXT_BLK
-           ** we're going to have to do the same ...
-           **
-           */
+           if (!env->prev_context)
+               break;
 
-           aligned_env = (__int64*)((char*)(env) + sizeof(__int64));
-           aligned_env = (__int64*)((__int64)((char*)(aligned_env) + 15) & ~15);
-           icb = (struct invo_context_blk *) aligned_env;
-           sts = lib$i64_get_invo_handle(icb, &invo_handle);
-           if (!(sts & STS$M_SUCCESS)) /* returns 0 == fail, 1==success */
+           status = lib$i64_get_invo_handle(icb, &invo_handle);
+           if (!(status & STS$M_SUCCESS)) /* returns 0 == fail, 1==success */
            {
               /* if we carry on after this we'll just get an accvio ... so resignal */
               return (SS$_RESIGNAL);
            }
-           if (invo_handle == establishers_invo_handle) break;
+           if (invo_handle == establishers_invo_handle)
+               break;
         }
 
         if (env == NULL)
         {
-           if (sigs->chf$l_sig_name == SS$_UNWIND)
+           if (sigs->chf$is_sig_name == SS$_UNWIND)
            {
               return (SS$_RESIGNAL);
            }
@@ -285,7 +282,7 @@ EXcatch(struct chf$signal_array *sigs, struct chf$mech_array *mechs)
 	*/
 
 	tst_cond = SS$_UNWIND;
-	if (lib$match_cond(&sigs->chf$l_sig_name, &tst_cond))
+	if (lib$match_cond((uint *)&sigs->chf$is_sig_name, &tst_cond))
 	{
 	    exargs.exarg_num = EX_UNWIND;
 	    exargs.exarg_count = 0;
@@ -298,13 +295,13 @@ EXcatch(struct chf$signal_array *sigs, struct chf$mech_array *mechs)
         /* Have we been signalled to dump the current stack ? */
 
 	tst_cond = SS$_IMGDMP;
-	if (lib$match_cond(&sigs->chf$l_sig_name, &tst_cond))
+	if (lib$match_cond((uint *)&sigs->chf$is_sig_name, &tst_cond))
 	{
-	    save_sigs = sigs->chf$l_sig_args;
-	    if ( 3 >= sigs->chf$l_sig_args )
-	       sigs->chf$l_sig_args = 0;
+	    save_sigs = sigs->chf$is_sig_args;
+	    if ( 3 >= sigs->chf$is_sig_args )
+	       sigs->chf$is_sig_args = 0;
 	    else
-	       sigs->chf$l_sig_args -= 3;
+	       sigs->chf$is_sig_args -= 3;
 
             /* Use the cs_handler to dump the stack and display the error messages
             ** as this will correctly identify the process.
@@ -319,16 +316,16 @@ EXcatch(struct chf$signal_array *sigs, struct chf$mech_array *mechs)
 	**  a CL error before calling the user handler.
 	*/
 
-	if (EXTRACT_FACILITY(sigs->chf$l_sig_name) == MTH$_FACILITY)
+	if (EXTRACT_FACILITY(sigs->chf$is_sig_name) == MTH$_FACILITY)
 	{
 	    TRdisplay("EXcatch: MTH$ Facility caused unexpected exception\n");
 
-	    if (lib$match_cond(&sigs->chf$l_sig_name, &floovemat))
-		sigs->chf$l_sig_name = SS$_FLTOVF;
-	    else if (lib$match_cond(&sigs->chf$l_sig_name, &floundmat))
-		sigs->chf$l_sig_name = SS$_FLTUND;
+	    if (lib$match_cond((uint *)&sigs->chf$is_sig_name, &floovemat))
+		sigs->chf$is_sig_name = SS$_FLTOVF;
+	    else if (lib$match_cond((uint *)&sigs->chf$is_sig_name, &floundmat))
+		sigs->chf$is_sig_name = SS$_FLTUND;
 	    else
-		sigs->chf$l_sig_name = MH_BADARG;
+		sigs->chf$is_sig_name = MH_BADARG;
 
 	    /*
 	    ** Do not continue from this error.  We shouldn't EVER get here,
@@ -350,10 +347,10 @@ EXcatch(struct chf$signal_array *sigs, struct chf$mech_array *mechs)
 	*/
 
 	tst_cond = SS$_HPARITH;
-	if (lib$match_cond(&sigs->chf$l_sig_name, &tst_cond))
+	if (lib$match_cond((uint *)&sigs->chf$is_sig_name, &tst_cond))
 	{
-	    sigs->chf$l_sig_args = 1;
-	    sig_args_ptr = &sigs->chf$l_sig_arg1;
+	    sigs->chf$is_sig_args = 1;
+	    sig_args_ptr = &sigs->chf$is_sig_arg1;
 	    except_summary = *(sig_args_ptr + 2);
 
             /* Use the Standard Exception value for the detected
@@ -361,17 +358,17 @@ EXcatch(struct chf$signal_array *sigs, struct chf$mech_array *mechs)
             */
 
 	    if (except_summary & HPARITH_BADARG)
-		sigs->chf$l_sig_name = MH_BADARG;
+		sigs->chf$is_sig_name = MH_BADARG;
 	    else if (except_summary & HPARITH_FLTDIV)
-		sigs->chf$l_sig_name = EXFLTDIV;
+		sigs->chf$is_sig_name = EXFLTDIV;
 	    else if (except_summary & HPARITH_FLTOVF)
-		sigs->chf$l_sig_name = EXFLTOVF;
+		sigs->chf$is_sig_name = EXFLTOVF;
 	    else if (except_summary & HPARITH_FLTUND)
-		sigs->chf$l_sig_name = EXFLTUND;
+		sigs->chf$is_sig_name = EXFLTUND;
 	    else if (except_summary & HPARITH_NOTEXACT)
 		return (SS$_CONTINUE);	    /* Not an error to handle */
 	    else if (except_summary & HPARITH_INTOVF)
-		sigs->chf$l_sig_name = EXINTOVF;
+		sigs->chf$is_sig_name = EXINTOVF;
 
 	    /*
 	    ** Since we can't determine the offending instruction or fixup
@@ -382,29 +379,29 @@ EXcatch(struct chf$signal_array *sigs, struct chf$mech_array *mechs)
 
 
 	/*
-	** The chf$l_sig_args field in the signal argument vector contains
+	** The chf$is_sig_args field in the signal argument vector contains
 	** the number of longwords in the vector not including the
-	** chf$l_sig_args field. This count includes the condition value
+	** chf$is_sig_args field. This count includes the condition value
 	** PSL and PC which are contained in the vector. In order to
 	** transform this into a EX_ARGS structure simply subtract 3 (the 
-	** number of arguments not needed) from the chf$l_sig_args field and 
+	** number of arguments not needed) from the chf$is_sig_args field and 
 	** cast it to the correct type.
 	**
 	** When changing a data structure that is originated from OpenVMS 
 	** system calls and the data is returned to other system calls, the 
 	** data should not be modified unless we know that there will be no 
 	** adverse effect. Beginning with OpenVMS 7.0, not resetting the 
-	** value of sigs->chf$l_sig_args results in access violations in 
+	** value of sigs->chf$is_sig_args results in access violations in 
 	** system routines (contsignal). 
 	*/
 
-	save_sigs = sigs->chf$l_sig_args;
-	if ( 3 >= sigs->chf$l_sig_args )
-	    sigs->chf$l_sig_args = 0;
+	save_sigs = sigs->chf$is_sig_args;
+	if ( 3 >= sigs->chf$is_sig_args )
+	    sigs->chf$is_sig_args = 0;
 	else
-	    sigs->chf$l_sig_args -= 3;
+	    sigs->chf$is_sig_args -= 3;
 	handler_ret = (*handler)((EX_ARGS*)sigs);
-        sigs->chf$l_sig_args = save_sigs;
+        sigs->chf$is_sig_args = save_sigs;
 	/*
 	**  Return to the operating system, passing a return code based on what
 	**  the user's handler returned to us.
@@ -442,7 +439,25 @@ EXcatch(struct chf$signal_array *sigs, struct chf$mech_array *mechs)
 	    /*  Unwind to our establisher, make a non-zero return */
 	    sys$goto_unwind(&establishers_handle, jmpbuf+2, &invo_value, 0);
 #else /* axm_vms */
-            longjmp(jmpbuf, EX_DECLARE);
+            status = lib$i64_get_invo_handle(icb, &establishers_handle);
+            if (!(status & STS$M_SUCCESS))
+                return SS$_RESIGNAL;
+
+            gr_mask[0] = 0x00f0;
+            gr_mask[1] = 0x0fff;
+            gr_mask[2] = gr_mask[3] = 0;
+
+            fr_mask[0] = icb->libicb$l_fr_valid;
+            for (i = 1; i < sizeof(fr_mask) / sizeof(fr_mask[0]); ++i)
+                fr_mask[i] = icb->libicb$ph_f32_f127 ? 0xFFFFFFFF : 0;
+            br_mask = 0x3e;
+            pr_mask = 0x3e;
+
+            status = lib$i64_put_invo_registers(&establishers_handle, icb,
+                                                gr_mask, fr_mask, &br_mask,
+                                                &pr_mask);
+            sys$goto_unwind_64(&establishers_handle,
+                               (void *)&icb->libicb$ih_pc, &invo_value, 0);
 #endif
 	    break;
 

@@ -10,6 +10,8 @@
 #            these two files. 
 #       20-Oct-2009 (hweho01)
 #            Remove the IINOOPTIM entries that were generated incorrectly.
+#       02-jul-2010 (joea)
+#           Compile opnenum.c with NOOPTIM on i64_vms.
 #            
 
 
@@ -19,6 +21,7 @@ IISUBSYS back opf opn ;
 
 IINOOPTIM opncalcost.c : dgi_us5 rs4_us5 sgi_us5 i64_aix ;
 IINOOPTIM opnprleaf.c : rs4_us5 ;
+IINOOPTIM opnenum.c : i64_vms ;
 
 IILIBRARY OPFLIB : opnurn.c opnukey.c opntree.c opntpblk.c opnsrchst.c
 	opnsmemory.c opnsm2.c opnsm1.c opnsavest.c opnro4.c opnro3.c

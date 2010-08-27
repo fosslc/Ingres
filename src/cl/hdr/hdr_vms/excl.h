@@ -91,6 +91,11 @@
 **	29-jun-2009 (joea)
 **	    Properly prototype the handler_address of EX_CONTEXT and EXsetup.
 **	    Make address_check a PTR as on Unix.
+**      16-jun-2010 (joea)
+**          On Itanium, declare iijmpbuf as a pointer to the octaword-aligned
+**          jmp_buf block.  Add 16-byte padding after the latter to account
+**          for octaword re-alignment.  Use lib$i64_get_curr_invo_context in
+**          EXdeclare macro.
 **/
 
 
@@ -98,9 +103,9 @@
 #define		EX_INCLUDED     1
 
 #include <setjmp.h>
-
-#ifdef i64_vms
-extern int decc$setjmp1(__int64 * __env);
+#include <libicb.h>
+#if defined(i64_vms)
+#include <lib$routines.h>
 #endif
 
 /* 
@@ -236,7 +241,7 @@ typedef struct
 {
 	i4		exarg_count;		/* Number of i4's in exarg_array */
 	EX		exarg_num;		/* The exception being raised */
-	SIZE_TYPE	exarg_array[1];		/* arguments */
+	i4		exarg_array[1];		/* arguments */
 } EX_ARGS;
 
 /*
@@ -258,7 +263,13 @@ typedef struct
 
 typedef struct ex_context       /* same as on UNIX */
 {
-        jmp_buf			iijmpbuf;
+#if defined(axm_vms)
+    jmp_buf                 iijmpbuf;
+#elif defined(i64_vms)
+    INVO_CONTEXT_BLK        *iijmpbuf;
+    jmp_buf                 jmpbuf_blk;    
+    char                    pad[16];
+#endif
         PTR			address_check;
         struct ex_context	*prev_context;
         STATUS			(*handler_address)(EX_ARGS *args);
@@ -270,11 +281,11 @@ int EXcatch();
 # define EXdeclare(x,y)		( VAXC$ESTABLISH( EXcatch ),\
 				 EXsetup( x, y ),\
                                  EXgetctx( (y)->iijmpbuf ))
-#else
+#elif defined(i64_vms)
 
 #define EXdeclare(x,y)          ( VAXC$ESTABLISH( EXcatch ),\
                                  EXsetup( x, y ),\
-                                 decc$setjmp1((y)->iijmpbuf ))
+                                 lib$i64_get_curr_invo_context((y)->iijmpbuf))
 
 #endif
 
