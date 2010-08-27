@@ -370,6 +370,10 @@ EXEC SQL END DECLARE SECTION;
 **      12-Jan-2009 (coomi01) Bug 123136
 **          Add reltid parameter to writeview; We now use this to trigger
 **          creation of output text stream.
+**       2-Aug-2010 (hanal04) Bug 124120
+**          Change "first time" code to avoid case where we think we have
+**          already been called because of a STAR/MS-SQL registered view
+**          returns a reltid of -1.
 */
 
 static void
@@ -389,6 +393,7 @@ writeview(
     )
 {
     static i4 oldRelTid = -1;
+    static bool FirstTime = TRUE;
 
     xfread_id(vi->name);
     if (!xfselected(vi->name)) 
@@ -400,7 +405,7 @@ writeview(
     ** Whenever prospective view ident changes, incl. first time around
     ** examin the text stream, and ensure it is opened.
     */
-    if ( oldRelTid != reltid )
+    if (( oldRelTid != reltid ) || FirstTime )
     {
  	if (*tfdp == NULL)
 	{
@@ -414,6 +419,7 @@ writeview(
 	}
 
 	oldRelTid = reltid;
+        FirstTime = FALSE;
     }
 
     if (permit_number == -1 && text_sequence == 1)
