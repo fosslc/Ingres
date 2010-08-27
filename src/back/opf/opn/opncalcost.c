@@ -1943,6 +1943,8 @@ hold file calculation is added at end of routine
 						** makes estimate lower */
                     if ((!sjp->existence_only || sjp->kjeqcls_subset)
                         &&
+			(icop->opo_storage == DB_BTRE_STORE)
+			&&
                         (sjp->key_reptf > icop->opo_cost.opo_tpb))
 			/* adjust estimates due to high duplication factor */
 			opn_highdups(sjp, ocop, icop, probes,
