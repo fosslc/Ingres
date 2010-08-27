@@ -1442,6 +1442,8 @@
 #       17-Aug-2010 (horda03) b124249
 #           Rather than specify VERS or VERS.<platform> use VERSFILE for
 #           version.rel dependency.
+#       19-Aug-2010 (coomi01) b124278
+#           Add IIOPTIM to compile and link stages for rule IITOOLSEXE
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -2665,8 +2667,10 @@ rule IITOOLSEXE
 		case *.cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) $(WCHART) ;
 		case * : CCFLAGS on $(_g) += $(CMPORTS) ;
 		}
+		OPTIM on $(_g) ?= $(IIOPTIM) ;
 	}
 
+    LINKFLAGS on $(<) = $(CCLDMACH) $(IIOPTIM) ;
     MAIN $(<) : $(>) ; 
     if ! $(NT) 
     { 
@@ -4793,10 +4797,13 @@ rule IINOOPTIM
 {
         if ! $(NT)
         {
+
           local _o = [ FGristFiles $(<) ] ;
           local i ;
           local j ;
           local debug = "n" ;
+
+
           for i in $(>)
           {
             if "$(i)" = "$(VERS)" || "$(i)" = "all"
