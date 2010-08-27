@@ -59577,6 +59577,10 @@ psl_patcomp(
 **	    Allow the retension of parse tree when requested such as when
 **	    inserting defaults back into parse tree for integrity processing.
 **	    (Any call following psl_make_default_node)
+**	14-Jul-2010 (kiria01) b124072
+**	    Improve handling of conversion to decimal especially where the
+**	    target precision and length are prescribed. Also preserve
+**	    nullability.
 */
 
 DB_STATUS
@@ -59669,15 +59673,20 @@ psl_mk_const_similar(
 		cconst.pst_cqlang = DB_SQL;
 		cconst.pst_origtxt = (char *) NULL;
 
-		/* Find out best prec/scale to use */
-		if (status = adu_decprec(sess_cb->pss_adfcb, &cdv, &ndv.db_prec))
-		    break;
+		/* Find out best prec/scale to use if we have the option.
+		** If there is no choice, we will cast directly anyway */
+		if (handled)
+		{
+		    if (status = adu_decprec(sess_cb->pss_adfcb, &cdv, &ndv.db_prec))
+			break;
+		}
 		status = pst_node(sess_cb, mstream, (PST_QNODE *)NULL,
 		    (PST_QNODE *)NULL, PST_CONST, (char *)&cconst,
 		    sizeof(cconst), DB_INT_TYPE, (i2) 0, (i4)sizeof(ndv.db_prec),
 		    (DB_ANYTYPE *)&ndv.db_prec, &res_node, err_blk, 0);
 		/* Adjust the length to match the prec */
-		ndv.db_length = DB_PREC_TO_LEN_MACRO(DB_P_DECODE_MACRO(ndv.db_prec));
+		if (handled)
+		    ndv.db_length = DB_PREC_TO_LEN_MACRO(DB_P_DECODE_MACRO(ndv.db_prec));
 		op.pst_opno = ADI_DEC_OP;
 	    }
 	    break;
@@ -59691,16 +59700,26 @@ psl_mk_const_similar(
 	    }
 	    status = adi_castid(sess_cb->pss_adfcb, &op.pst_opno, &ndv);
 	}
-	if (!status && handled && ndv.db_datatype == DB_INT_TYPE)
+	if (handled)
 	{
-	    /* Extra check for integer. Normal string coercion to int
-	    ** will stop at the decimal point without error. We use 'is integer'
-	    ** to see if there would be a problem & if not, we go for it. */
-	    i4 cmp = 0;
-	    if (!(status = adu_isinteger(sess_cb->pss_adfcb, &cdv, &cmp)) &&
-		    cmp == 0)
-		return status;
+	    if (!status && ndv.db_datatype == DB_INT_TYPE)
+	    {
+		/* Extra check for integer. Normal string coercion to int
+		** will stop at the decimal point without error. We use 'is integer'
+		** to see if there would be a problem & if not, we go for it. */
+		i4 cmp = 0;
+		if (!(status = adu_isinteger(sess_cb->pss_adfcb, &cdv, &cmp)) &&
+			cmp == 0)
+		    return status;
+	    }
 	}
+	else if (templ->db_datatype < 0)
+	{
+	    /* Make result nullable if we were requested */
+	    ndv.db_datatype = -ndv.db_datatype;
+	    ndv.db_length++;
+	}
+
 	if (!status &&
 	    !pst_node(sess_cb, mstream, *cst, res_node,
 			res_node ? PST_BOP : PST_UOP,
