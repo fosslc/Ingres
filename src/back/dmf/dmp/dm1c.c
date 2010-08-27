@@ -244,6 +244,8 @@
 **          Do not create V1 catalogs (they might use data compression)
 **      27-May-2010 (stial01)
 **          Limit above change to SCONCUR catalogs which use phys locking
+**      14-Jul-2010 (stial01)
+**          Default is V6, use V7 only when rows span pages
 */
 
 
@@ -543,7 +545,8 @@ dm1c_getpgtype(
 	*/
 	if (page_size == DM_COMPAT_PGSIZE)
 	    *page_type = TCB_PG_V1;
-	else if (config_pgtypes & SVCB_CONFIG_V6)
+	else if (config_pgtypes & (SVCB_CONFIG_V6 | SVCB_CONFIG_V7))
+	    /* ETABS use V6 if V6 or V7 configured */
 	    *page_type = TCB_PG_V6;
 	else if (config_pgtypes & SVCB_CONFIG_V4)
 	    *page_type = TCB_PG_V4;
@@ -571,7 +574,8 @@ dm1c_getpgtype(
 	if (page_size == DM_COMPAT_PGSIZE && (config_pgtypes & SVCB_CONFIG_V1) &&
 			(create_flags & DM1C_CREATE_CLUSTERED) == 0)
 	    *page_type = TCB_PG_V1;
-	else if (config_pgtypes & SVCB_CONFIG_V6)
+	else if (config_pgtypes & (SVCB_CONFIG_V6 | SVCB_CONFIG_V7))
+	    /* INDEX/TEMPS use V6 if V6 or V7 configured */
 	    *page_type = TCB_PG_V6;
 	else if (config_pgtypes & SVCB_CONFIG_V4)
 	    *page_type = TCB_PG_V4;
@@ -592,12 +596,14 @@ dm1c_getpgtype(
 			(create_flags & DM1C_CREATE_CLUSTERED) == 0 &&
 			(create_flags & DM1C_CREATE_CORE) == 0)
 	    *page_type = TCB_PG_V1;
-	else if ((config_pgtypes & SVCB_CONFIG_V7) &&
-	    (create_flags & DM1C_CREATE_CORE) == 0 &&
-	    (create_flags & DM1C_CREATE_CATALOG) == 0)
-	    *page_type = TCB_PG_V7;
+	else if ((create_flags & (DM1C_CREATE_CORE | DM1C_CREATE_CATALOG)) 
+		&& config_pgtypes & (SVCB_CONFIG_V6 | SVCB_CONFIG_V7))
+	    /* CORE/CATALOG use V6 if V6 or V7 configured */
+	    *page_type = TCB_PG_V6;
 	else if (config_pgtypes & SVCB_CONFIG_V6)
 	    *page_type = TCB_PG_V6;
+	else if (config_pgtypes & SVCB_CONFIG_V7)
+	    *page_type = TCB_PG_V7;
 	else if (config_pgtypes & SVCB_CONFIG_V3)
 	    *page_type = TCB_PG_V3;
 	else if (page_size == DM_COMPAT_PGSIZE && (create_flags & DM1C_CREATE_CLUSTERED) == 0)
