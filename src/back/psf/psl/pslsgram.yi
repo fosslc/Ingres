@@ -3602,6 +3602,9 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	    Allow SINGLETON to return nullable regardless of argument.
 **	09-Aug-2010 (toumi01) SIR 122403
 **	    Add missing encryption productions.
+**      11-Aug-2010 (coomi01) b123933
+**          On insert with sort list, when reassigning resdom idents
+**          ensure the sortlist resdom refs are also updated.
 */
 %{
 
@@ -26474,10 +26477,33 @@ insert:             insertkwd intname incolspec inoverride invalspec
 			sizeof(DB_ATT_NAME),
 			(char *) ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname);
     
-		/* copy attribute number */
-		ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsno =
-		    node->pst_sym.pst_value.pst_s_rsdm.pst_rsno;
-    
+		/* copy attribute number, if different */
+		if (ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsno !=
+		    node->pst_sym.pst_value.pst_s_rsdm.pst_rsno )
+		{
+		    if ((PST_QNODE *)NULL != $Ysort_list)
+		    {
+			PST_QNODE *pstSortList = (PST_QNODE *)$Ysort_list;
+			while( NULL != pstSortList )
+			{
+			    if (pstSortList->pst_sym.pst_value.pst_s_sort.pst_srvno == 
+				ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsno)
+			    {
+				/* 
+				** Temporarily update with a negative number
+				** ~ Avoids accidently re-mapping the same item twice.
+				*/
+				pstSortList->pst_sym.pst_value.pst_s_sort.pst_srvno =
+				     -(node->pst_sym.pst_value.pst_s_rsdm.pst_rsno);
+				break;
+			    }
+			    pstSortList = pstSortList->pst_right;
+			}
+		    }
+		    ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsno =
+			node->pst_sym.pst_value.pst_s_rsdm.pst_rsno;
+		}
+
 		/* reinitialize target number (to be equal to resdom number). */
 		ssnode->pst_sym.pst_value.pst_s_rsdm.pst_ntargno =
 		    node->pst_sym.pst_value.pst_s_rsdm.pst_rsno;
@@ -26551,6 +26577,21 @@ insert:             insertkwd intname incolspec inoverride invalspec
 		*/
 		STRUCT_ASSIGN_MACRO(node->pst_sym.pst_dataval,
 						ssnode->pst_sym.pst_dataval);
+	    }
+
+	    if ((PST_QNODE *)NULL != $Ysort_list)
+	    {
+		/* 
+		** Make sure sort-node items all positive
+		*/
+		PST_QNODE *pstSortList = (PST_QNODE *)$Ysort_list;
+		while( NULL != pstSortList )
+		{
+		    pstSortList->pst_sym.pst_value.pst_s_sort.pst_srvno =
+			abs( pstSortList->pst_sym.pst_value.pst_s_sort.pst_srvno );
+		    
+		    pstSortList = pstSortList->pst_right;
+		}
 	    }
 	}
 	/* If we spotted resdoms that were out of order we reorder them so that
