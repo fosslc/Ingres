@@ -73,6 +73,8 @@
 ** 27-May-2010 (drivi01)
 **    Add iicommon.h to the headers to include GL_MAXNAME constant definition
 **    in constdef.h.
+** 23-Jun-2010 (drivi01) 
+**    Fix some hardcoded buffer length for long id change.
 
 **/
 
@@ -2092,8 +2094,8 @@ static BOOL QueryTVIGrantee (CaLLQueryInfo* pQueryInfo, CTypedPtrList< CObList, 
 	POSITION pos = NULL;
 
 	EXEC SQL BEGIN DECLARE SECTION;
-		char  szPermitUser[48];
-		char  szPermitType[128];
+		char  szPermitUser[MAXOBJECTNAME+48];
+		char  szPermitType[MAXOBJECTNAME*2];
 		char  chType[2];
 		char* lpObject = T2A((LPTSTR)(LPCTSTR)strObject);
 		char* lpObjectOwner = T2A((LPTSTR)(LPCTSTR)strObjectOwner);
