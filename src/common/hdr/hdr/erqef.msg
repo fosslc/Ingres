@@ -116,6 +116,10 @@ SQLSTATE_MAPPING_REQUIRED
 **	    Add E_QE016C_RENAME_TAB_HAS_OBJS for rename tables.
 **	21-apr-2010 (toumi01) SIR 122403
 *	    Add messages for encryption.
+**	29-jul-2010 (miket) SIR 122403
+**	    E_QE0083_ERROR_MODIFYING_TABLE:SS50000_MISC_ERRORS can
+**	    be caused by user error setting dmf_crypt_maxkeys, so hint
+**	    that the error log would be a good place to look.
 */
 
 
@@ -386,7 +390,9 @@ E_QE0081_ERROR_OPENING_TABLE:SS50000_MISC_ERRORS
 E_QE0082_ERROR_CLOSING_TABLE:SS50000_MISC_ERRORS
 "Error closing a table."
 E_QE0083_ERROR_MODIFYING_TABLE:SS50000_MISC_ERRORS
-"Error modifying a table."
+"Error modifying a table.
+\n Associated error messages which provide more detailed information about the
+problem can be found in the error log (errlog.log)"
 E_QE0084_ERROR_INDEXING_TABLE:SS50000_MISC_ERRORS
 "Error creating an index for a table."
 E_QE0085_ERROR_SORTING:SS50000_MISC_ERRORS

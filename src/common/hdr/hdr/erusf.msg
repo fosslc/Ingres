@@ -470,6 +470,8 @@ SQLSTATE_MAPPING_REQUIRED
 **          the date_part function may/may not work on an Interval, it depends on
 **          the 'unit' being requested (for example 'week' will not work on an
 **          interval. For this latter case, added new error E_US10F5.
+**	29-Jul-2010 (miket) SIR 122403
+**	    Clarify language for msg E_US24BF.
 */
 
 #define _US_CLASS   0
@@ -11604,8 +11606,10 @@ options are AES128/16 AES192/24 AES256/32."
 **	Correct the syntax error and retry.
 */
 E_US24BF_9407:SS5000A_QUERY_ERROR
-"A query has been issued against an encrypted table for which encryption
-is not enabled. Please contact your system administrator."
+"A query has been issued against a table for which encryption has not
+been unlocked with the MODIFY statement. This unlock statement must be
+issued every time the Ingres installation is restarted. Please contact
+your system administrator."
 E_US24C0_9408:SS5000A_QUERY_ERROR
 "The table is not encrypted."
 E_US24C1_9409:SS5000A_QUERY_ERROR
