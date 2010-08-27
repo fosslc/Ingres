@@ -3608,6 +3608,7 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **      16-Aug-2010 (coomi01) b123934
 **          Delay push of scope from insertkwd: to valueskwd:
 **          This distinguishes INSERT ... SELECT from INSERT ... VALUES.
+**      17-Aug-2010 (horda03) b124274
 */
 %{
 
@@ -4327,7 +4328,7 @@ psl_checklen(
 */
 %token              SCONST SCROLL
 
-%token              SELECT SEMICOLON SERIALIZABLE SESSION SET
+%token              SEGMENTED SELECT SEMICOLON SERIALIZABLE SESSION SET
 
 /*
 ** "set aggregate" taken as a single token.
@@ -41739,7 +41740,41 @@ parconst:   int2_int4_p
     }
 ;
 
-setqep:		    SETQEP
+setqep:		    SETQEP SEGMENTED
+    {
+	DB_STATUS	       status;
+	OPF_CB		       *opf_cb;
+
+	psq_cb->psq_mode = PSQ_SQEP;
+
+	/* Create control block for setting qep factor in OPF */
+	status = psf_mopen(cb, QSO_QP_OBJ, &cb->pss_ostream, &psq_cb->psq_error);
+	if (status != E_DB_OK)
+	    return (status);
+	status = psf_malloc(cb, &cb->pss_ostream, sizeof(OPF_CB), (PTR *) &opf_cb,
+	    &psq_cb->psq_error);
+	if (status != E_DB_OK)
+	    return (status);
+	status = psf_mroot(cb, &cb->pss_ostream, (PTR) opf_cb,
+	    &psq_cb->psq_error);
+	if (status != E_DB_OK)
+	    return (status);
+
+	/* Fill in OPF control block */
+	opf_cb->opf_length = sizeof(opf_cb);
+	opf_cb->opf_type = OPFCB_CB;
+	opf_cb->opf_owner = (PTR)DB_PSF_ID;
+	opf_cb->opf_ascii_id = OPFCB_ASCII_ID;
+	opf_cb->opf_level = OPF_SESSION;
+	if ($1 == PSL_ONSET)
+        {
+	    opf_cb->opf_alter = OPF_QEP;
+            opf_cb->opf_value = 1;
+        }
+	else
+	    opf_cb->opf_alter = OPF_NOQEP;
+    }
+	| SETQEP
     {
 	DB_STATUS	       status;
 	OPF_CB		       *opf_cb;
@@ -41769,6 +41804,7 @@ setqep:		    SETQEP
 	    opf_cb->opf_alter = OPF_QEP;
 	else
 	    opf_cb->opf_alter = OPF_NOQEP;
+        opf_cb->opf_value = 0;
     }
 ;
 

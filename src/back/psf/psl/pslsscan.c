@@ -514,6 +514,8 @@
 **          adu_lo_filter() change parameter order.
 **	21-Jul-2010 (kschendel) SIR 124104
 **	    Add set [no]create_compression.
+**      17-Aug-2010 (horda03) b124274
+**          Add SEGMENTED as a keyword for SET QEP SEGMENTED.
 **/
 
 /*
@@ -1377,7 +1379,8 @@ static const KEYINFO                Key_info[] = {
 /* 214 */              { UNKNCONST,         0,  0,      (SECONDARY *)NULL },
 /* 215 */	       { SINGLETON,	    0,	0,	(SECONDARY *)NULL },
 /* 216 */	       { RENAME,    PSL_GOVAL,	0,	(SECONDARY *)NULL },
-/* 217 */	       { ENCRYPT,	    0,  0,	(SECONDARY *)NULL }
+/* 217 */	       { ENCRYPT,	    0,  0,	(SECONDARY *)NULL },
+/* 218 */              { SEGMENTED,         0,  0,      (SECONDARY *) NULL   }
 };
 
 /* Alternate keyword lists for inside WITH parsing (specifically, when
