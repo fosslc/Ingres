@@ -145,6 +145,13 @@
 **          A new function, ErrGetSqlcaMessageLen(), returns the 
 **          error message length for functions that need to allocate
 **          workspace buffers.
+**    13-Aug-2010 (Ralph Loen) Bug 124235
+**          Renamed SQLLEN field in tsqlca_msg to SQL_MSG_LEN.
+**          SQLLEN is an ODBC definition macro and causes the debugger
+**          in Devstudio to produce confusing information.  Initialized
+**          psqlca pointer to NULL in SQLGetDiagRec_InternalCall() and
+**          GetDiagRec() since code depends on NULL in certain 
+**          circumstances.
 */
 
 /*
@@ -171,10 +178,6 @@ static RETCODE             ErrGetSqlcaMessage(
     SQLINTEGER     * icolCurrent,    /* Current col of row in error*/
     CHAR       * rgbWork);
     
-static WORD             ErrGetSqlcaMessageLen(
-    SQLSMALLINT  RecNumber,
-    LPSQLCA      psqlca);
-
 static SQLRETURN  GetDiagRec ( 
     SQLSMALLINT  HandleType,
     SQLHANDLE    Handle,
@@ -397,7 +400,7 @@ SQLRETURN  SQL_API SQLGetDiagField_InternalCall (
     SQLINTEGER     * pDiagInfolen  = (SQLINTEGER *) pDiagInfoParm;
     SQLUINTEGER    * pDiagInfoulen = (SQLUINTEGER *)pDiagInfoParm;
     RETCODE      rc = SQL_SUCCESS;
-    SQLCA_TYPE * psqlca;
+    SQLCA_TYPE * psqlca = NULL;
     i4           i4temp;
     SQLINTEGER       lentemp;
     CHAR         szFunction[32];
@@ -865,9 +868,10 @@ static SQLRETURN  GetDiagRec (
     LPDESC       pdesc;
     LPSTMT       pstmt;
     RETCODE      rc;
-    CHAR         *rgbWork;
+    CHAR         rgbW[SQL_MAX_MESSAGE_LENGTH],*rgbWork = &rgbW[0];
+    BOOL         dynAlloc = FALSE;
     LPCSTR       szDriver;
-    SQLCA_TYPE * psqlca;
+    SQLCA_TYPE * psqlca = NULL;
 
     SQLSMALLINT len = SQL_MAX_MESSAGE_LENGTH;
 
@@ -929,14 +933,17 @@ static SQLRETURN  GetDiagRec (
     break;
 
     default:
-    if (pTextLength)
-        len = *pTextLength = ErrGetSqlcaMessageLen (
-            RecNumber, psqlca);
-        len += 50;  /* Allow for error msg prefix */
-            break;
+        len = ErrGetSqlcaMessageLen ( RecNumber, psqlca);
+        if (pTextLength)
+             *pTextLength = len;
+       
+        if (len > SQL_MAX_MESSAGE_LENGTH - 50)
+        {
+            dynAlloc = TRUE;
+            rgbWork = MEreqmem(0, len+50, TRUE, NULL);
+        }
+        break;
     }
-
-    rgbWork = MEreqmem(0, len, TRUE, NULL);
     
     rc = SQL_NO_DATA;
 
@@ -948,23 +955,43 @@ static SQLRETURN  GetDiagRec (
             MEcopy (penv->szSqlState, 5, pSqlState);
         szDriver = "";  /* Don't know driver yet for ENV errors... */
         rc = ErrGetDriverMessage (szDriver, penv->szMessage, 
-                pMessageText, BufferLength, pTextLength, rgbWork);
-        UnlockEnv (penv);
-        return rc;
+            pMessageText, BufferLength, pTextLength, rgbWork);
+        goto end;
     }
 
-                               /* return DBC, STMT, DESC errors */
+    /* return DBC, STMT, DESC errors */
     szDriver = pdbc->szDriver;
     rc = ErrGetSqlcaMessage (
-                szDriver, RecNumber, psqlca, pSqlState,
-                pMessageText, BufferLength, pTextLength, pNativeError,
-                pirowCurrent, picolCurrent, rgbWork);
+        szDriver, RecNumber, psqlca, pSqlState,
+        pMessageText, BufferLength, pTextLength, pNativeError,
+        pirowCurrent, picolCurrent, rgbWork);
 
     if (pSqlState  &&  (rc == SQL_SUCCESS || rc == SQL_SUCCESS_WITH_INFO))
         Map3xSqlstateTo2x (pdbc->penvOwner, pSqlState);
 
-    MEfree((PTR)rgbWork);
-    UnlockDbc (pdbc); 
+end:
+    switch (HandleType)
+    {
+    case SQL_HANDLE_ENV:
+        UnlockEnv(penv);
+        break;
+   
+    case SQL_HANDLE_DBC:
+
+        UnlockDbc(pdbc);
+        break;
+
+    case SQL_HANDLE_STMT:
+        UnlockStmt(pstmt);
+        break;
+
+    case SQL_HANDLE_DESC:
+        UnlockDesc(pdesc); 
+        break;
+    }
+
+    if (dynAlloc)
+        MEfree((PTR)rgbWork);
 
     return rc;
 }
@@ -1100,7 +1127,7 @@ static RETCODE             ErrGetDriverMessage(
 **            SQL_NO_DATA_FOUND     no message to return
 */
 
-static RETCODE             ErrGetSqlcaMessage(
+RETCODE             ErrGetSqlcaMessage(
     LPCSTR       szDriver,
     SQLSMALLINT  RecNumber,
     LPSQLCA      psqlca,
@@ -1157,7 +1184,7 @@ static RETCODE             ErrGetSqlcaMessage(
     cbId = (OFFSET_TYPE)STlength (rgbWork);
 
     pMessage = psqlcamsg->SQLERM;        /* pMessage-> len byte and message   */
-    cb = psqlcamsg->SQLLEN;              /* cb = msg len;  pMessage-> message */
+    cb = psqlcamsg->SQL_MSG_LEN;              /* cb = msg len;  pMessage-> message */
     if (cb == 0)                         /* if no msg test for some reason */
     {                                 /*    add some to indicate none   */
         STprintf (&rgbWork[cbId], ERget(F_OD0052_IDS_ERR_NOMESSAGE), 
@@ -1215,7 +1242,7 @@ void FreeSqlcaMsgBuffers(LPSQLCAMSG * lpsqlcamsg)
 }
 
 /*
-** Name: ErrGetMessageLen
+** Name: ErrGetSqlcaMessageLen
 **
 ** Description:
 **      Return the length of the diagnostic message according to the 
@@ -1237,7 +1264,7 @@ void FreeSqlcaMsgBuffers(LPSQLCAMSG * lpsqlcamsg)
 **      Created.
 */
 
-static WORD             ErrGetSqlcaMessageLen(
+WORD             ErrGetSqlcaMessageLen(
     SQLSMALLINT  RecNumber,
     LPSQLCA      psqlca)
 {
@@ -1259,9 +1286,8 @@ static WORD             ErrGetSqlcaMessageLen(
         return SQL_MAX_MESSAGE_LENGTH;
     }
 
-    return (psqlcamsg->SQLLEN ? psqlcamsg->SQLLEN : SQL_MAX_MESSAGE_LENGTH);
+    return (psqlcamsg->SQL_MSG_LEN ? psqlcamsg->SQL_MSG_LEN : SQL_MAX_MESSAGE_LENGTH);
 }
-
 /*
 **  ErrResetDbc
 **
@@ -2085,7 +2111,7 @@ II_VOID InsertSqlcaMsg(LPSQLCA psqlca, II_CHAR *pMsg,
         MEcopy(pSqlState, sizeof(lpsqlcamsg_next->SQLSTATE),
                lpsqlcamsg_next->SQLSTATE);
 
-        lpsqlcamsg_next->SQLLEN = len;
+        lpsqlcamsg_next->SQL_MSG_LEN = len;
         STlcopy(pMsg, lpsqlcamsg_next->SQLERM, len); 
         lpsqlcamsg_next->SQLPTR = NULL;
         

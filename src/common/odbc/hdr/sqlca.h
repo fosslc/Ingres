@@ -18,6 +18,10 @@
 **          added SQLLEN.  For tsqlca_msg, removed obsolete SQLSREL,
 **          SQLLNO, SQLARC, SQLFJB, SQLRS4, SQLRS5, SQLERRP 
 **          and SQLWARN fields.
+**    13-Aug-2010 (Ralph Loen) Bug 124235
+**          Renamed SQLLEN field in tsqlca_msg to SQL_MSG_LEN.
+**          SQLLEN is an ODBC definition macro and causes the debugger
+**          in Devstudio to produce confusing information.
 */
 
  /*******************************************************************
@@ -43,7 +47,7 @@ typedef struct tsqlca_msg * LPSQLCAMSG;
 typedef struct tsqlca_msg
 {
     char           *SQLERM;        /* Text of error message         */
-    WORD           SQLLEN;         /* Length of error message       */
+    WORD           SQL_MSG_LEN;    /* Length of error message       */
     LPSQLCAMSG     SQLPTR;         /* ptr to next sqlca_msg_type    */
     RETCODE        SQLCODE;        /* SQL error code                */
     long           SQLERC;         /* Extended info error code      */

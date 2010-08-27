@@ -356,6 +356,8 @@
 **         Add fServerClassVECTORWISE server class.  Note that a
 **         Vectorwise server is assumed to have the capabilities of an 
 **         Ingres server by default.
+**    13-Aug-2010 (Ralph Loen) Bug 124235
+**         Added ErrGetSqlcaMessageLen().
 */
 #ifndef _INC_IDMSODBC
 #define _INC_IDMSODBC
@@ -1881,6 +1883,7 @@ void    FASTCALL UnlockDbc (LPDBC);
 RETCODE FASTCALL ErrUnlockDbc (UINT, LPDBC);
 RETCODE FASTCALL ErrUnlockDesc (UINT err, LPDESC pdesc);
 RETCODE FASTCALL ErrUnlockStmt (UINT, LPSTMT);
+WORD ErrGetSqlcaMessageLen( SQLSMALLINT, LPSQLCA);
 #define UnlockDesc(p) UnlockDbc ((p)->pdbc)
 #define UnlockStmt(p) UnlockDbc ((p)->pdbcOwner)
 
