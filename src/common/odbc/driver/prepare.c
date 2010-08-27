@@ -504,7 +504,7 @@
 **  25-Jun-2010 (Ralph Loen)    
 **         In ConvertEscAndMarkers(), don't insert the INTERVAL keyword into
 **         the string literal for interval escape sequences.        
-**    14-Jul-1010 (Ralph Loen)  Bug 124079
+**    14-Jul-2010 (Ralph Loen)  Bug 124079
 **         In ParseConvert(), converted date/time scalars to use 
 **         ISO syntax for targets supporting ISO syntax (IIAPI_LEVEL_3 or
 **         later).  The exception is DAYNAME() for Vectorwise, which is 
@@ -518,6 +518,8 @@
 **         a fudge factor of 1,000 bytes.  CountLiteralItems() was re-written
 **         to allow for the largest scalar--currently 550 for DAYOFWEEK().
 **         Added support for TIMESTAMPDIFF(), MONTHNAME() and EXTRACT().
+**   19-Jul-2010 (Ralph Loen) Bug 124101
+**         Added support for comment for slash-asterisk comment delimiters.
 */
 
 typedef enum
@@ -526,6 +528,7 @@ typedef enum
     TOK_ALL,
     TOK_AUTOCOMMIT,
     TOK_ALTER,
+    TOK_BEGIN_COMMENT,
     TOK_COMMIT,
     TOK_COPY,
     TOK_CREATE,
@@ -542,6 +545,7 @@ typedef enum
     TOK_ESC_CALL,
     TOK_ESC_BRACECALL,
     TOK_ESC_TILDEV,
+    TOK_END_COMMENT,
     TOK_GRANT,
     TOK_IDENTIFIER,
     TOK_IDMS,
@@ -612,6 +616,8 @@ RETCODE         SetColVar     (LPSTMT, LPDESCFLD papd, LPDESCFLD pipd);
 
 static const char ODBC_STD_ESC[] = "--(*VENDOR(Microsoft),PRODUCT(ODBC)";
 static BOOL removeEndSemicolon(LPSTR szSqlStr);
+static void editComment(char **pFrom, char **pTo, i4 *length);
+static TOKEN  FetchToken( LPSTR  szToken);
 static const char    nt[] = "\0";
 
 
@@ -2194,12 +2200,60 @@ RETCODE ConvertParmMarkers(
     i2         spaceCount = 0;
     CHAR       bQuote;
     SQLINTEGER     length=*cbSqlStr;
+    BOOL       fComment = FALSE;
+    i4         i;
 
     pFrom = szSqlStr;
     pTo       = szAPISqlStr;
     
     while (*pFrom != EOS  &&  length)
     {
+         /*
+         ** Comments are ignored, but a space is inserted after the beginning
+         ** and end of the comment markers.  This is necessary because
+         ** ParstToken() requires all tokens to separated by spaces.
+         */
+         if (!fComment && (length >= 4) && (!STbcompare(pFrom,2,"/*",2,TRUE)))
+         {
+             fComment = TRUE;
+             CMcpychar(" ", pTo);
+             CMnext(pTo);
+             for (i = 0; i < 2; i++)
+             {
+                 CMcpychar(pFrom, pTo);
+                 CMnext(pFrom);
+                 CMnext(pTo);
+                 length--;
+             }
+             continue;
+         }
+ 
+         if (fComment)
+         {
+             if (length >= 2 && (!STbcompare(pFrom,2,"*/",2,TRUE))) 
+             {
+                 fComment = FALSE;
+                 for (i = 0; i < 2; i++)
+                 {
+                     CMcpychar(pFrom, pTo);
+                     CMnext(pFrom);
+                     CMnext(pTo);
+                     length--;
+                 }
+                 CMcpychar(" ", pTo);
+                 CMnext(pTo);
+             }
+             else
+             {
+                 CMcpychar(pFrom, pTo);
+                 CMnext(pFrom);
+                 CMnext(pTo);
+                 length--;
+             }
+             continue;
+         }
+ 
+
         if (fQuote)   /* ignore chars if in quote */
         {
             if (!CMcmpcase(pFrom,&bQuote))  /* end of literal value */ 
@@ -2320,9 +2374,55 @@ RETCODE ConvertEscAndMarkers(
     i2      spaceCount = 0;
     char    bQuote;
     UWORD   len = 0;
+    BOOL    fComment = FALSE;
      
     while (*pFrom != EOS  && length)
     {
+        /*
+        ** Comments are ignored, but a space is inserted after the beginning
+        ** and end of the comment markers.  This is necessary because
+        ** ParstToken() requires all tokens to separated by spaces.
+        */
+        if (!fComment && (length >= 4) && (!STbcompare(pFrom,2,"/*",2,TRUE)))
+        {
+            fComment = TRUE;
+            CMcpychar(" ", pTo);
+            CMnext(pTo);
+            for (i = 0; i < 2; i++)
+            {
+                CMcpychar(pFrom, pTo);
+                CMnext(pFrom);
+                CMnext(pTo);
+                length--;
+            }
+            continue;
+        }
+
+        if (fComment)
+        {
+            if (length >= 2 && (!STbcompare(pFrom,2,"*/",2,TRUE)))
+            {
+                fComment = FALSE;
+                for (i = 0; i < 2; i++)
+                {
+                    CMcpychar(pFrom, pTo);
+                    CMnext(pFrom);
+                    CMnext(pTo);
+                    length--;
+                }
+                CMcpychar(" ", pTo);
+                CMnext(pTo);
+            }
+            else
+            {
+                CMcpychar(pFrom, pTo);
+                CMnext(pFrom);
+                CMnext(pTo);
+                length--;
+            }
+            continue;
+        }
+
         if (fQuote)   /* ignore chars if in quote */
         {
             if (!CMcmpcase(pFrom,&bQuote))  /* end of literal value */ 
@@ -2917,6 +3017,13 @@ RETCODE ParseCommand(
 	pstmt->fCommand = CMD_DDL;
         pstmt->fStatus |= STMT_CANBEPREPARED; /* can be PREPAREd/EXECUTEd */
 	break;
+
+    case TOK_BEGIN_COMMENT:
+        break;
+
+    case TOK_END_COMMENT:
+        break;
+
 
     case TOK_GRANT:
         /*
@@ -5064,11 +5171,82 @@ static VOID  ParseSpace(
 **  Return id for a syntax token.
 **
 **  On entry: szToken-->SQL syntax token
-**            fUpper  = TRUE if not case sensitive
 **
 **  Returns:  token id
 */
 static TOKEN  ParseToken(
+    LPSTR  szToken)
+{
+    TOKEN   token = TOK_VOID;
+    char    *p = szToken;
+    BOOL fComment = FALSE;
+
+    token = FetchToken(szToken);
+    
+    /*
+    ** If the token is not the beginning of a comment, we're done.
+    */
+    if (token != TOK_BEGIN_COMMENT)
+        goto end;
+    else
+        fComment = TRUE;
+
+    while (p)
+    {
+        p = strtok(NULL, " ");
+        if (!p)
+        {
+            token = TOK_VOID;
+            goto end;
+        }
+
+        /* 
+        ** Swallow multiple "/*" markers.
+        */
+        token = FetchToken(p);
+        if (token == TOK_BEGIN_COMMENT)
+        {
+            fComment = TRUE;
+                continue;
+        }
+
+        if (fComment)
+        {
+            if (token == TOK_END_COMMENT)
+                fComment = FALSE;            
+
+            /*
+            ** Keep looping through the query string until the end comment
+            ** marker is found.
+            */
+            continue;
+        }
+        goto end;
+    }
+
+end:
+    /*
+    ** If no markers are found other than a comment marker, treat as
+    ** invalid syntax.
+    */
+    if (token == TOK_BEGIN_COMMENT || 
+        token == TOK_END_COMMENT)
+        token = TOK_VOID;
+
+    return token;
+}
+
+/*
+**  FetchToken
+**
+**  Return id for a syntax token.
+**
+**  On entry: szToken-->SQL syntax token
+**            fUpper  = TRUE if not case sensitive
+**
+**  Returns:  token id
+*/
+static TOKEN  FetchToken(
     LPSTR  szToken)
 {
     SQLINTEGER  i;
@@ -5084,11 +5262,13 @@ static TOKEN  ParseToken(
     TOK_AUTOCOMMIT,    "AUTOCOMMIT",
     TOK_ALL,           "ALL",
     TOK_ALTER,         "ALTER",
+    TOK_BEGIN_COMMENT, "/*",
     TOK_COMMIT,        "COMMIT",
-    TOK_COPY,          "COPY", 
+    TOK_COPY,          "COPY",
     TOK_CREATE,        "CREATE",
     TOK_DELETE,        "DELETE",
     TOK_DROP,          "DROP",
+    TOK_END_COMMENT,   "*/",
     TOK_ESC_DATE,      "D",
     TOK_ESC_ESCAPE,    "ESCAPE",
     TOK_ESC_FUNCTION,  "FN",
@@ -5121,23 +5301,22 @@ static TOKEN  ParseToken(
     TOK_WRITE,         "WRITE",
     TOK_IDENTIFIER,    ""
     };
-    
+
     if (!szToken || *szToken == EOS)
         return TOK_VOID;
-    
+
     i = STlength(szToken);
     if (i > sizeof(szTokenUpper)-1)
         return TOK_VOID;
     STcopy(szToken, szTokenUpper);   /* copy token to upper case work area */
     CVupper(szTokenUpper);           /* convert token to upper case */
-    
+
     for (i = 0; TOKEN_TABLE[i].token != TOK_IDENTIFIER; i++)
         if (STcompare(TOKEN_TABLE[i].sz, szTokenUpper) == 0)
             break;
 
     return TOKEN_TABLE[i].token;
 }
-
 
 /*
 **  ParseTrace
