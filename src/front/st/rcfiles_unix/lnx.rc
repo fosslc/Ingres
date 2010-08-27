@@ -86,6 +86,10 @@
 ##	02-Jun-2010 (hanje04)
 ##	    BUG 123856
 ##	    Use su if we can't find runuser
+##	17-Jun-2010 (hanje04)
+##	    BUG 123941
+##	    "action" doesn't like "eval" being used on RHEL 4. Seems to be fine
+##	    without it
 ##
 #
 # /etc/init.d/ingresINST_ID
@@ -270,7 +274,7 @@ case "$1" in
 	else
 	    # Start Ingres
 --REDHAT_CFG
-	    action "$startmsg": eval "$INGSTART > /dev/null"
+	    action "$startmsg": "$INGSTART > /dev/null"
 --REDHAT_CFG_END
 --SUSE_CFG
 	    echo $startmsg
@@ -292,7 +296,7 @@ case "$1" in
 	    action "$stpmsg": true
 	    rc=0
 	else
-	    action "$stpmsg": eval "$INGSTOP > /dev/null"
+	    action "$stpmsg": "$INGSTOP > /dev/null"
 	    rc=$?
 	fi
 --REDHAT_CFG_END
