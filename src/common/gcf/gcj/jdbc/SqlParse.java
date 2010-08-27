@@ -778,6 +778,8 @@ getSysFuncs()
 **      11-Feb-10 (rajus01) Bug 123277
 **          Force date/time/timestamp values as INGRESDATE datatype if
 **          'send_ingres_dates' connection property is set.
+**	30-Jul-10 (gordy)
+**	    Changed config item snd_ing_dte to config flag.
 */
 
 public
@@ -785,8 +787,8 @@ SqlParse( String sql, DrvConn conn )
 {
     this.sql = sql;
     this.conn = conn;
-    ansi_date_syntax = (conn.sqlLevel >= DBMS_SQL_LEVEL_ANSI_DT &&
-                        !conn.snd_ing_dte);
+    ansi_date_syntax = (conn.sqlLevel >= DBMS_SQL_LEVEL_ANSI_DT  &&
+                        (conn.cnf_flags & conn.CNF_INGDATE) == 0);
     use_gmt = conn.timeLiteralsInGMT();
     text = sql.toCharArray();
     txt_len = text.length;

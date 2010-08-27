@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1999, 2009 Ingres Corporation All Rights Reserved.
+** Copyright (c) 1999, 2010 Ingres Corporation All Rights Reserved.
 */
 
 package	com.ingres.gcf.jdbc;
@@ -139,6 +139,8 @@ package	com.ingres.gcf.jdbc;
 **	    Cleanup related to problems reported by the findbugs utility.
 **      11-Feb-10 (rajus01) Bug 123277
 **	    Check for 'send_ingres_dates' connection parameter (internal). 
+**	30-Jul-10 (gordy)
+**	    Check for 'send_integer_booleans' connection parameter (internal). 
 */
 
 import	java.util.Hashtable;
@@ -676,6 +678,9 @@ checkLocalUser( Config config )
 **	    Added connection parameter for date alias.
 **      11-Feb-10 (rajus01) Bug 123277
 **          Added connection parameter for 'send_ingres_dates'.
+**	30-Jul-10 (gordy)
+**	    Added connection parameter for 'send_integer_booleans'.
+**	    Converted config item snd_ing_dte to config flag.
 */
 
 private void
@@ -929,13 +934,31 @@ client_parms( Config config )
 	    ** and is not forwarded to the server.
 	    */
 	    if ( value.equalsIgnoreCase( "true" ) ) 
-		conn.snd_ing_dte = true;
+		conn.cnf_flags |= conn.CNF_INGDATE;
 	    else  if ( value.equalsIgnoreCase( "false" ) )
-		conn.snd_ing_dte = false;
+		conn.cnf_flags &= ~conn.CNF_INGDATE;
 	    else
 	    {
 		if ( trace.enabled( 1 ) ) 
 		    trace.write( tr_id + ": send ingres dates '" + value + "'" );
+		throw SqlExFactory.get( ERR_GC4010_PARAM_VALUE );
+	    }
+	    break;
+
+	case DRV_CP_SND_INT_BOOL :
+	    /*
+	    ** This is a local connection property
+	    ** and is not forwarded to the server.
+	    */
+	    if ( value.equalsIgnoreCase( "true" ) ) 
+		conn.cnf_flags |= conn.CNF_INTBOOL;
+	    else  if ( value.equalsIgnoreCase( "false" ) )
+		conn.cnf_flags &= ~conn.CNF_INTBOOL;
+	    else
+	    {
+		if ( trace.enabled( 1 ) ) 
+		    trace.write( tr_id + ": send integer booleans '" + 
+				 value + "'" );
 		throw SqlExFactory.get( ERR_GC4010_PARAM_VALUE );
 	    }
 	    break;

@@ -100,6 +100,9 @@ package	com.ingres.gcf.jdbc;
 **	    'send_ingres_dates' connection property is set.
 **	25-Mar-10 (gordy)
 **	    Added support for batch processing.
+**	30-Jul-10 (gordy)
+**	    Force boolean values as TINYINT datatype if 'send_integer_booleans'
+**	    connection property is set.
 */
 
 
@@ -2247,6 +2250,9 @@ check( int index )
 **	    CLOB has alternate storage depending on UCS2 support.
 **	26-Oct-09 (gordy)
 **	    BOOLEAN supported at API protocol level 6.
+**	30-Jul-10 (gordy)
+**	    Add config flag to force boolean to integer.
+**	    Convert config item snd_ing_dte to config flag.
 */
 
 private boolean
@@ -2260,7 +2266,8 @@ useAltStorage( int sqlType )
     */
     case Types.BIT :
     case Types.BOOLEAN :	
-	return( conn.db_protocol_level < DBMS_API_PROTO_6 );
+	return( conn.db_protocol_level < DBMS_API_PROTO_6  ||
+		(conn.cnf_flags & conn.CNF_INTBOOL) != 0 );
     
     /*
     ** BIGINT is supported starting with API protocol level 3.
@@ -2312,7 +2319,8 @@ useAltStorage( int sqlType )
     case Types.DATE :
     case Types.TIME :
     case Types.TIMESTAMP :
-	return( conn.db_protocol_level < DBMS_API_PROTO_4 || conn.snd_ing_dte );
+	return( conn.db_protocol_level < DBMS_API_PROTO_4  || 
+		(conn.cnf_flags & conn.CNF_INGDATE) != 0 );
     }
 
     return( false );

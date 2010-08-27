@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2001, 2009 Ingres Corporation All Rights Reserved.
+** Copyright (c) 2001, 2010 Ingres Corporation All Rights Reserved.
 */
 
 package	com.ingres.gcf.jdbc;
@@ -69,6 +69,9 @@ package	com.ingres.gcf.jdbc;
 **          Added connection property 'send_ingres_dates' to allow the
 **          driver to send the date/time/timestamp values as INGRESDATE
 **          datatype instead of TS_W_TZ (ANSI TIMESTAMP WITH TIMEZONE).
+**	30-Jul-10 (gordy)
+**	    Added connection property 'send_integer_booleans' to allow the
+**	    driver to send boolean values as TINYINT datatype.
 */
 
 
@@ -125,6 +128,7 @@ import	com.ingres.gcf.util.XaXid;
 **	    moneyPrecision	Money precision.
 **	    dateAlias		Date alias.
 **	    sendIngresDates	Send Ingres Dates.
+**	    sendIntegerBooleans	Send booleans as integer.
 **
 **	Sub-classes must implement the following load methods defined by 
 **	this class to provide driver identity and runtime configuration 
@@ -255,6 +259,7 @@ import	com.ingres.gcf.util.XaXid;
 **	moneyPrecision
 **	dateAlias
 **	sendIngresDates
+**	sendIntegerBooleans
 **
 **	timeout			Connection timeout.
 **
@@ -297,6 +302,8 @@ import	com.ingres.gcf.util.XaXid;
 **	    Added property dateAlias, methods getDateAlias(), setDateAlias().
 **	14-Feb-08 (rajus01) SIR 119917
 **	    Added support for JDBC driver patch version for patch builds.
+**	30-Jul-10 (gordy)
+**	    Added property sendIntegerBooleans.
 */
 
 public abstract class
@@ -353,6 +360,7 @@ JdbcDS
     private	int		moneyPrecision = -1;
     private	String		dateAlias = null;
     private	String		sendIngresDates = null;
+    private	String		sendIntegerBooleans = null;
 
     private	int		timeout = 0;		// Connection timeout
 
@@ -663,6 +671,14 @@ getSendIngresDates()
 public void
 setSendIngresDates( String sendIngresDates )
 { this.sendIngresDates = sendIngresDates; }
+
+public String
+getSendIntegerBooleans()
+{ return( sendIntegerBooleans ); }
+
+public void
+setSendIntegerBooleans( String sendIntegerBooleans )
+{ this.sendIntegerBooleans = sendIntegerBooleans; }
 
 
 /*
@@ -1065,6 +1081,8 @@ getHost()
 **	    dateFormat, moneyFormat and moneyPrecision.
 **	23-Jul-07 (gordy)
 **	    Added property dateAlias.
+**	30-Jul-10 (gordy)
+**	    Added property sendIntegerBooleans.
 */
 
 protected void
@@ -1143,6 +1161,10 @@ initReference( Reference ref )
     if ( sendIngresDates != null )
 	ref.add( new StringRefAddr( "sendIngresDates", sendIngresDates ) );
 
+    if ( sendIntegerBooleans != null )
+	ref.add( new StringRefAddr( "sendIntegerBooleans", 
+				    sendIntegerBooleans ) );
+
     return;
 } // initReference
 
@@ -1179,6 +1201,8 @@ initReference( Reference ref )
 **	    moneyPrecision.
 **	23-Jul-07 (gordy)
 **	    Added property dateAlias.
+**	30-Jul-10 (gordy)
+**	    Added property sendIntegerBooleans.
 */
 
 protected void
@@ -1262,6 +1286,9 @@ initInstance( Reference ref )
 
     if ( (ra = ref.get( "sendIngresDates" )) != null )
 	sendIngresDates = (String)((StringRefAddr)ra).getContent();
+
+    if ( (ra = ref.get( "sendIntegerBooleans" )) != null )
+	sendIntegerBooleans = (String)((StringRefAddr)ra).getContent();
 
     return;
 } // initInstance
@@ -1523,6 +1550,8 @@ decode( byte value[], String key )
 **	    dateFormat, moneyFormat and moneyPrecision.
 **	23-Jul-07 (gordy)
 **	    Added property dateAlias.
+**	30-Jul-10 (gordy)
+**	    Added property sendIntegerBooleans.
 */
 
 private Properties
@@ -1675,8 +1704,17 @@ getProperties( String user, String password )
     if ( sendIngresDates != null )
     {
 	if ( tracing )
-	    trace.write( "     " + DRV_PROP_SND_ING_DTE + ": " + sendIngresDates );
+	    trace.write( "     " + DRV_PROP_SND_ING_DTE + 
+			 ": " + sendIngresDates );
 	info.setProperty( DRV_PROP_SND_ING_DTE, sendIngresDates );
+    }
+
+    if ( sendIntegerBooleans != null )
+    {
+	if ( tracing )
+	    trace.write( "     " + DRV_PROP_SND_INT_BOOL + 
+			 ": " + sendIntegerBooleans );
+	info.setProperty( DRV_PROP_SND_INT_BOOL, sendIntegerBooleans );
     }
 
     return( info );

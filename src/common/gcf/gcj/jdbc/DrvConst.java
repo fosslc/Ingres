@@ -185,6 +185,9 @@ package com.ingres.gcf.jdbc;
 **	    Bumped version to 4.0.3 for batch performance improvements.
 **	20-Jul-10 (gordy)
 **	    Bumped version to 4.0.4 for SQL comment handling.
+**	30-Jul-10 (gordy)
+**	    Added connection property 'send_integer_booleans' to allow
+**	    the driver to send boolean values as tinyint.
 */
 
 import	com.ingres.gcf.dam.MsgConst;
@@ -254,12 +257,13 @@ import	com.ingres.gcf.dam.MsgConst;
 **	DRV_PROP_MNY_PREC	Money precision connection property.
 **	DRV_PROP_DATE_ALIAS	Date alias connection property.
 **	DRV_PROP_SND_ING_DTE	Send Ingres Dates connection property.
+**	DRV_PROP_SND_INT_BOOL	Send integer booleans connection property.
 **
 **	prop_valid_off_on	Valid values for properties which are off/on.
 **	prop_xacm_valid		Valid values for autocommit mode property.
 **	prop_vnode_valid	Valid values for VNODE usage property.
 **	prop_crsr_valid		Valid values for cursor mode property.
-**	prop_valid_true_false	Valid values for send_ingres_dates property.
+**	prop_valid_false_true	Valid values for send_ingres_dates property.
 **
 **  Public Data
 **
@@ -339,6 +343,9 @@ import	com.ingres.gcf.dam.MsgConst;
 **	    Bumped version to 4.0.3 for batch performance improvements.
 **	20-Jul-10 (gordy)
 **	    Bumped version to 4.0.4 for SQL comment handling.
+**	30-Jul-10 (gordy)
+**	    Added connection property DRV_CP_SND_INT_BOOL and
+**	    DRV_PROP_SND_INT_BOOL.
 */
 
 interface
@@ -397,6 +404,7 @@ DrvConst
     short	DRV_CP_CURSOR_MODE	= -2;
     short	DRV_CP_CHAR_ENCODE	= -3;
     short	DRV_CP_SND_ING_DTE	= -4;
+    short	DRV_CP_SND_INT_BOOL	= -5;
 
     /*
     ** Driver connection properties and URL attributes.
@@ -424,12 +432,13 @@ DrvConst
     String	DRV_PROP_MNY_PREC	= "money_precision";
     String	DRV_PROP_DATE_ALIAS	= "date_alias";
     String	DRV_PROP_SND_ING_DTE	= "send_ingres_dates";	
+    String	DRV_PROP_SND_INT_BOOL	= "send_integer_booleans";
 
     String	prop_valid_off_on[]	= { "off", "on" };
     String	prop_xacm_valid[]	= { "dbms", "single", "multi" };
     String	prop_vnode_valid[]	= { "connect", "login" };
     String	prop_crsr_valid[]	= { "dbms", "readonly", "update" };
-    String	prop_valid_true_false[]	= { "true", "false" };
+    String	prop_valid_false_true[]	= { "false", "true" };
     
     PropInfo	propInfo[] =		    // Connection properties
     {
@@ -491,11 +500,17 @@ DrvConst
 	
 	new PropInfo( DRV_PROP_MNY_PREC, false, "Money Precision", null, null,
 			DrvRsrc.RSRC_CP_MNY_PRC, MsgConst.MSG_CP_MNY_PREC ),
+
 	new PropInfo( DRV_PROP_DATE_ALIAS, false, "Date Alias", null, null,
 			DrvRsrc.RSRC_CP_DTE_TYP, MsgConst.MSG_CP_DATE_ALIAS ),
+
 	new PropInfo( DRV_PROP_SND_ING_DTE, false, "Send Ingres Dates",
-			prop_valid_true_false[0], prop_valid_true_false,
+			prop_valid_false_true[0], prop_valid_false_true,
 			DrvRsrc.RSRC_CP_SND_ING_DTE, DRV_CP_SND_ING_DTE ),
+
+	new PropInfo( DRV_PROP_SND_INT_BOOL, false, "Send Integer Booleans",
+			prop_valid_false_true[0], prop_valid_false_true,
+			DrvRsrc.RSRC_CP_SND_INT_BOOL, DRV_CP_SND_INT_BOOL ),
     };
 
     AttrInfo	attrInfo[] =		    // URL Attributes
@@ -519,6 +534,7 @@ DrvConst
 	new AttrInfo( "MNY_PREC", DRV_PROP_MNY_PREC ),
 	new AttrInfo( "DATE", DRV_PROP_DATE_ALIAS ),
 	new AttrInfo( "SEND_INGDATE", DRV_PROP_SND_ING_DTE ),
+	new AttrInfo( "SEND_INTBOOL", DRV_PROP_SND_INT_BOOL ),
     };
 
 
