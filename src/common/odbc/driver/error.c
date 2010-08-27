@@ -136,6 +136,15 @@
 **          error table in ErrState().
 **     23-Apr-2010 (Ralph Loen) Bug 123629
 **          Add SQLSTATE SQL_01S00.
+**    12-Aug-2010 (Ralph Loen) Bug 124235
+**          Remove limit of SQL_MAX_MESSAGE_LENGTH for error messages.
+**          The SQLERM field of SQLCA_MSG_TYPE is now a dynamic pointer,
+**          with a new field, SQLLEN, to track the message length size.
+**          ErrInsertSqlcaMessage() allocates the pointer; 
+**          FreeSqlcaMsgBuffers() and PopSqlcMsg() free the pointer.
+**          A new function, ErrGetSqlcaMessageLen(), returns the 
+**          error message length for functions that need to allocate
+**          workspace buffers.
 */
 
 /*
@@ -161,6 +170,10 @@ static RETCODE             ErrGetSqlcaMessage(
     SQLINTEGER     * irowCurrent,    /* Current row of rowset in error*/
     SQLINTEGER     * icolCurrent,    /* Current col of row in error*/
     CHAR       * rgbWork);
+    
+static WORD             ErrGetSqlcaMessageLen(
+    SQLSMALLINT  RecNumber,
+    LPSQLCA      psqlca);
 
 static SQLRETURN  GetDiagRec ( 
     SQLSMALLINT  HandleType,
@@ -391,10 +404,7 @@ SQLRETURN  SQL_API SQLGetDiagField_InternalCall (
     CHAR         SqlState[SQL_SQLSTATE_SIZE+1]="00000";
     SQLINTEGER   NativeError = 0;
     CHAR       * p;
-
-
-    if (pStringLength)
-        *pStringLength = SQL_MAX_MESSAGE_LENGTH;
+    SQLSMALLINT  stringLength;
 
     switch (HandleType)
     {
@@ -441,6 +451,12 @@ SQLRETURN  SQL_API SQLGetDiagField_InternalCall (
                                return SQL_INVALID_HANDLE;
     }    /* end switch HandleType */
 
+
+    if (psqlca)
+        stringLength = ErrGetSqlcaMessageLen (
+                RecNumber, psqlca);
+    else
+        stringLength = SQL_MAX_MESSAGE_LENGTH;
 
     switch(DiagIdentifier)
     {
@@ -520,7 +536,7 @@ SQLRETURN  SQL_API SQLGetDiagField_InternalCall (
                            &SqlState[0],
                            NULL,
                            NULL,
-                           SQL_MAX_MESSAGE_LENGTH,
+                           stringLength,
                            NULL,
                            NULL,
                            NULL); 
@@ -532,8 +548,10 @@ SQLRETURN  SQL_API SQLGetDiagField_InternalCall (
             p = "ODBC 3.0";
         else
             p = "ISO 9075";
+        
         if (pStringLength && !*pStringLength)
-            *pStringLength = STlength(p) + 1;  
+            *pStringLength = STlength(p) + 1;
+        
         if (pDiagInfo)
             rc = GetChar (NULL, p, pDiagInfo, BufferLength, pStringLength);
         break;
@@ -548,7 +566,7 @@ SQLRETURN  SQL_API SQLGetDiagField_InternalCall (
                            NULL,
                            NULL,
                            NULL,
-                           SQL_MAX_MESSAGE_LENGTH,
+                           stringLength,
                            NULL,
                            NULL,
                            &lentemp);
@@ -578,8 +596,8 @@ SQLRETURN  SQL_API SQLGetDiagField_InternalCall (
                            NULL,
                            NULL,
                            pDiagInfo,
-                           BufferLength,
-                           pStringLength,
+                           stringLength,
+                           NULL,
                            NULL,
                            NULL);
         break;
@@ -593,7 +611,7 @@ SQLRETURN  SQL_API SQLGetDiagField_InternalCall (
                            NULL,
                            &NativeError,
                            NULL,
-                           SQL_MAX_MESSAGE_LENGTH,
+                           stringLength,
                            NULL,
                            NULL,
                            NULL);
@@ -612,7 +630,7 @@ SQLRETURN  SQL_API SQLGetDiagField_InternalCall (
                            NULL,
                            NULL,
                            NULL,
-                           SQL_MAX_MESSAGE_LENGTH,
+                           stringLength,
                            NULL,
                            &lentemp,
                            NULL);
@@ -644,7 +662,7 @@ SQLRETURN  SQL_API SQLGetDiagField_InternalCall (
                            &SqlState[0],
                            NULL,
                            NULL,
-                           SQL_MAX_MESSAGE_LENGTH,
+                           stringLength,
                            NULL,
                            NULL,
                            NULL);
@@ -673,7 +691,7 @@ SQLRETURN  SQL_API SQLGetDiagField_InternalCall (
                            &SqlState[0],
                            NULL,
                            NULL,
-                           SQL_MAX_MESSAGE_LENGTH,
+                           stringLength,
                            NULL,
                            NULL,
                            NULL);
@@ -847,23 +865,22 @@ static SQLRETURN  GetDiagRec (
     LPDESC       pdesc;
     LPSTMT       pstmt;
     RETCODE      rc;
-    CHAR         rgbWork[SQL_MAX_MESSAGE_LENGTH];
+    CHAR         *rgbWork;
     LPCSTR       szDriver;
     SQLCA_TYPE * psqlca;
+
+    SQLSMALLINT len = SQL_MAX_MESSAGE_LENGTH;
 
     switch (HandleType)
     {
     case  SQL_HANDLE_ENV:
-       {
         penv  = (LPENV) Handle;
         if (!penv)
              return SQL_INVALID_HANDLE;
         LockEnv (penv);
         break;
-       }
 
     case  SQL_HANDLE_DBC:
-       {
         pdbc  = (LPDBC) Handle;
         if (!LockDbc (pdbc)) return SQL_INVALID_HANDLE;
 
@@ -871,10 +888,8 @@ static SQLRETURN  GetDiagRec (
         ErrFlushErrorsToSQLCA(pdbc);
            /* Flush DBC errors out of DBC block and into SQLCA error list */
         break;
-       }
 
     case  SQL_HANDLE_STMT:
-       {
         pstmt = (LPSTMT)Handle;
         if (!LockStmt (pstmt)) return SQL_INVALID_HANDLE;
         pdbc  = pstmt->pdbcOwner;
@@ -883,19 +898,16 @@ static SQLRETURN  GetDiagRec (
         ErrFlushErrorsToSQLCA(pstmt);
            /* Flush STMT errors out of STMT block and into SQLCA error list */
         break;
-       }
 
     case  SQL_HANDLE_DESC:
-       {
         pdesc = (LPDESC)Handle;
         if (!LockDesc (pdesc)) return SQL_INVALID_HANDLE;
         pdbc  = pdesc->pdbc;
         psqlca = &pdesc->sqlca;
         break;
-       }
 
     default:
-                               return SQL_INVALID_HANDLE;
+        return SQL_INVALID_HANDLE;
     }    /* end switch HandleType */
 
     /*
@@ -906,14 +918,30 @@ static SQLRETURN  GetDiagRec (
     if (pNativeError)
         *pNativeError = 0;
     if (pMessageText && BufferLength)
-        CMcpychar(nt,pMessageText); 
-    if (pTextLength) 
-        *pTextLength = SQL_MAX_MESSAGE_LENGTH;
+        CMcpychar(nt,pMessageText);
 
+    switch ((SQLSMALLINT)pTextLength)
+    {
+    case SQL_IS_UINTEGER:
+    case SQL_IS_INTEGER:
+    case SQL_IS_USMALLINT:
+    case SQL_IS_SMALLINT:
+    break;
+
+    default:
+    if (pTextLength)
+        len = *pTextLength = ErrGetSqlcaMessageLen (
+            RecNumber, psqlca);
+        len += 50;  /* Allow for error msg prefix */
+            break;
+    }
+
+    rgbWork = MEreqmem(0, len, TRUE, NULL);
+    
     rc = SQL_NO_DATA;
 
     if (HandleType == SQL_HANDLE_ENV)     /* return ENV errors */
-       {
+    {
         if (RecNumber > 1)
             return SQL_NO_DATA;
         if (pSqlState)    /* return SqlState to application */
@@ -923,7 +951,7 @@ static SQLRETURN  GetDiagRec (
                 pMessageText, BufferLength, pTextLength, rgbWork);
         UnlockEnv (penv);
         return rc;
-       }
+    }
 
                                /* return DBC, STMT, DESC errors */
     szDriver = pdbc->szDriver;
@@ -935,6 +963,7 @@ static SQLRETURN  GetDiagRec (
     if (pSqlState  &&  (rc == SQL_SUCCESS || rc == SQL_SUCCESS_WITH_INFO))
         Map3xSqlstateTo2x (pdbc->penvOwner, pSqlState);
 
+    MEfree((PTR)rgbWork);
     UnlockDbc (pdbc); 
 
     return rc;
@@ -1111,34 +1140,34 @@ static RETCODE             ErrGetSqlcaMessage(
         szDriver += 3;   /* skip past "CA-" prefix of driver name */
 
     if (psqlcamsg->isaDriverMsg)
-       {
+    {
         STcopy(ERget(F_OD0107_OPING_ODBC_DRIVER), msgprefix);
         if (MEcmp(msgprefix, "***", 3)==0)  /* if msg not available */
            STcopy("[Ingres][%s ODBC Driver]", msgprefix);
         STprintf (rgbWork, msgprefix, szDriver);
-       }
+    }
     else
-       {
+    {
         STcopy(ERget(F_OD0108_OPING_ODBC_DRIVER1), msgprefix);
         if (MEcmp(msgprefix, "***", 3)==0)  /* if msg not available */
            STcopy("[Ingres][%s ODBC Driver][%s]", msgprefix);
         STprintf (rgbWork,msgprefix, szDriver, szDriver);
-       }
+    }
 
     cbId = (OFFSET_TYPE)STlength (rgbWork);
 
     pMessage = psqlcamsg->SQLERM;        /* pMessage-> len byte and message   */
-    cb = (u_i1)*(pMessage)++;            /* cb = msg len;  pMessage-> message */
+    cb = psqlcamsg->SQLLEN;              /* cb = msg len;  pMessage-> message */
     if (cb == 0)                         /* if no msg test for some reason */
-       {                                 /*    add some to indicate none   */
+    {                                 /*    add some to indicate none   */
         STprintf (&rgbWork[cbId], ERget(F_OD0052_IDS_ERR_NOMESSAGE), 
                                   psqlcamsg->SQLERC);
-       }
+    }
     else                                 /* tack on the msg text to the prefix */
-       {
+    {
         MEcopy (pMessage, cb, &rgbWork[cbId]);  /* copy msg after [Ingres][...] prefix*/
         rgbWork[cbId + cb] = '\0';              /* null term the full message     */
-       }
+    }
     if (szErrorMsg)
         rc = GetChar (NULL, rgbWork, szErrorMsg, cbErrorMsgMax, pcbErrorMsg);
                                             /* return full message to user    */
@@ -1176,11 +1205,61 @@ void FreeSqlcaMsgBuffers(LPSQLCAMSG * lpsqlcamsg)
 	while (lpsqlcamsg_crnt)
 	{
 		lpsqlcamsg_next = lpsqlcamsg_crnt->SQLPTR;
+                if (lpsqlcamsg_crnt->SQLERM)
+                    MEfree((PTR)lpsqlcamsg_crnt->SQLERM);
 		MEfree((PTR)lpsqlcamsg_crnt);
 		lpsqlcamsg_crnt = lpsqlcamsg_next;
 	}
 	*lpsqlcamsg = NULL;
 	return;
+}
+
+/*
+** Name: ErrGetMessageLen
+**
+** Description:
+**      Return the length of the diagnostic message according to the 
+**      record number.
+**
+** Input:                  RecordNumber - diagnostic record number.
+**                         psqlca - pointer to the SQLCA message block.
+**
+** Output:                 None.
+**
+** Return value:           Message length if SQLLEN is set in the message
+**                         block, otherwise SQL_MAX_MESSAGE_LENGTH.
+**
+** Re-entrancy:
+**      This function does not update shared memory.
+**
+** History:
+**   12-Aug-2010 (Ralph Loen) Bug 124235
+**      Created.
+*/
+
+static WORD             ErrGetSqlcaMessageLen(
+    SQLSMALLINT  RecNumber,
+    LPSQLCA      psqlca)
+{
+    LPSQLCAMSG   psqlcamsg;
+
+    if (RecNumber < 1  ||  RecNumber > psqlca->SQLMCT)
+        return SQL_MAX_MESSAGE_LENGTH;
+
+    for (psqlcamsg = psqlca->SQLPTR; psqlcamsg != NULL;
+         psqlcamsg = psqlcamsg->SQLPTR)
+        if (--RecNumber == 0)
+           break;
+
+    if (!psqlcamsg)
+        return SQL_MAX_MESSAGE_LENGTH;
+
+    if (psqlcamsg->isaDriverMsg)
+    {
+        return SQL_MAX_MESSAGE_LENGTH;
+    }
+
+    return (psqlcamsg->SQLLEN ? psqlcamsg->SQLLEN : SQL_MAX_MESSAGE_LENGTH);
 }
 
 /*
@@ -1393,8 +1472,8 @@ RETCODE ErrSetSqlca(
     */
     if (psqlca->SQLMCT > 0)
 	{
-		if (psqlca->SQLPTR)
-            *pMessage = psqlca->SQLPTR->SQLERM;
+            if (psqlca->SQLPTR)
+                *pMessage = psqlca->SQLPTR->SQLERM;
 	}
 
     STcopy (psqlca->SQLSTATE, szSqlState);
@@ -1985,57 +2064,44 @@ static VOID  GetDiagFieldDynamicFunction(
 **
 */
 II_VOID InsertSqlcaMsg(LPSQLCA psqlca, II_CHAR *pMsg,
-	                   II_CHAR * pSqlState, BOOL isaDriverMsg)
+    II_CHAR * pSqlState, BOOL isaDriverMsg)
 {
-	int len;
-	LPSQLCAMSG lpsqlcamsg_next;
-	LPSQLCAMSG lpsqlcamsg_temp;
+    WORD len;
+    LPSQLCAMSG lpsqlcamsg_next;
+    LPSQLCAMSG lpsqlcamsg_temp;
 
-	lpsqlcamsg_next = (LPSQLCAMSG) MEreqmem(0,sizeof(SQLCA_MSG_TYPE),TRUE,NULL);
-	if (lpsqlcamsg_next)
-	{
+    len = (int)STlength(pMsg);
 
-		psqlca->SQLMCT += 1;    /* increment message count */
-		lpsqlcamsg_next->SQLCODE = psqlca->SQLCODE;
-		lpsqlcamsg_next->SQLERC  = psqlca->SQLERC;
-		lpsqlcamsg_next->irowCurrent  = psqlca->irowCurrent;  /* row in error */
-		lpsqlcamsg_next->icolCurrent  = psqlca->icolCurrent;  /* col in error */
-		lpsqlcamsg_next->isaDriverMsg  = isaDriverMsg;
-		MEcopy(pSqlState, sizeof(lpsqlcamsg_next->SQLSTATE),
-		       lpsqlcamsg_next->SQLSTATE);
+    lpsqlcamsg_next = (LPSQLCAMSG) MEreqmem(0,sizeof(SQLCA_MSG_TYPE),TRUE,NULL);
+	lpsqlcamsg_next->SQLERM = (char *) MEreqmem(0,len+1,TRUE,NULL);
+    if (lpsqlcamsg_next && lpsqlcamsg_next->SQLERM)
+    {
+        psqlca->SQLMCT += 1;    /* increment message count */
+        lpsqlcamsg_next->SQLCODE = psqlca->SQLCODE;
+        lpsqlcamsg_next->SQLERC  = psqlca->SQLERC;
+        lpsqlcamsg_next->irowCurrent  = psqlca->irowCurrent;  /* row in error */
+        lpsqlcamsg_next->icolCurrent  = psqlca->icolCurrent;  /* col in error */
+        lpsqlcamsg_next->isaDriverMsg  = isaDriverMsg;
+        MEcopy(pSqlState, sizeof(lpsqlcamsg_next->SQLSTATE),
+               lpsqlcamsg_next->SQLSTATE);
 
-		len = (int)STlength(pMsg);
-		if (len > sizeof(lpsqlcamsg_next->SQLERM) - 2) /* need room for length*/
-		    len = sizeof(lpsqlcamsg_next->SQLERM) - 2; /* byte and null term */
-
-		if (len > 0)
-		{
-		    lpsqlcamsg_next->SQLERM[0] = (u_i1) len;
-		    MEcopy (pMsg, len, (char *)&lpsqlcamsg_next->SQLERM[1]); 
-		}
-		else
-		{
-		    lpsqlcamsg_next->SQLERM[0] = (u_i1) II_SQLSTATE_LEN;
-		    STcopy (pSqlState, (char *)&lpsqlcamsg_next->SQLERM[1]);
-		    len = II_SQLSTATE_LEN;
-		}
-		CMcpychar(nt,&lpsqlcamsg_next->SQLERM[len+1]);
-		lpsqlcamsg_next->SQLPTR = NULL;
-		
-		/* put the new msg ptr in sqlca base */
-		if (!psqlca->SQLPTR) 
-		    psqlca->SQLPTR = lpsqlcamsg_next;
-		else
-		{
-		    lpsqlcamsg_temp = psqlca->SQLPTR;
-		    while(lpsqlcamsg_temp->SQLPTR)
-		        lpsqlcamsg_temp = lpsqlcamsg_temp->SQLPTR;
-		    lpsqlcamsg_temp->SQLPTR = lpsqlcamsg_next;
-		}
-	}
-	return; 
+        lpsqlcamsg_next->SQLLEN = len;
+        STlcopy(pMsg, lpsqlcamsg_next->SQLERM, len); 
+        lpsqlcamsg_next->SQLPTR = NULL;
+        
+        /* put the new msg ptr in sqlca base */
+        if (!psqlca->SQLPTR) 
+            psqlca->SQLPTR = lpsqlcamsg_next;
+        else
+        {
+            lpsqlcamsg_temp = psqlca->SQLPTR;
+            while(lpsqlcamsg_temp->SQLPTR)
+                lpsqlcamsg_temp = lpsqlcamsg_temp->SQLPTR;
+            lpsqlcamsg_temp->SQLPTR = lpsqlcamsg_next;
+        }
+    }
+    return; 
 }
-
 
 /*
 ** Name: PopSqlcaMsg 
@@ -2052,92 +2118,41 @@ VOID PopSqlcaMsg(LPSQLCA psqlca)
 
           /* strip the last message and set SQLCODE, SQLERC, SQLSTATE */
     if (psqlca->SQLMCT > 0)
-       {
-          pmsg = psqlca->SQLPTR;      /* pmsg -> first message */
-          if (psqlca->SQLMCT == 1)    /* if only one message on chain */
-             {
-               psqlca->SQLPTR = NULL; /*     mark the chain as empty */
-               psqlca->SQLCODE = SQL_SUCCESS;
-               psqlca->SQLERC  = 0;
-               MEcopy("00000", sizeof(psqlca->SQLSTATE),psqlca->SQLSTATE);
-             }
-          else  /* find the last and 2nd last messages */
-             { while (pmsg->SQLPTR)
-                  {
-                    priormsg = pmsg;  /* -> message before pmsg */
-                    pmsg     = pmsg->SQLPTR;
-                  }
-               priormsg->SQLPTR = NULL; /* make the 2nd last the last msg */
-               psqlca->SQLCODE = priormsg->SQLCODE;  /* set the SQLCA state */
-               psqlca->SQLERC  = priormsg->SQLERC;
-               MEcopy(priormsg->SQLSTATE,sizeof(psqlca->SQLSTATE),
-                        psqlca->SQLSTATE);
-             }
-          MEfree((PTR)pmsg);  /* free the last message in the chain */
-          psqlca->SQLMCT--;
-       }  /* end if (psqlca->SQLMCT > 0) */
+    {
+        pmsg = psqlca->SQLPTR;      /* pmsg -> first message */
+        if (psqlca->SQLMCT == 1)    /* if only one message on chain */
+        {
+           psqlca->SQLPTR = NULL; /*     mark the chain as empty */
+           psqlca->SQLCODE = SQL_SUCCESS;
+           psqlca->SQLERC  = 0;
+           MEcopy("00000", sizeof(psqlca->SQLSTATE),psqlca->SQLSTATE);
+        }
+        else  /* find the last and 2nd last messages */
+        { 
+            while (pmsg->SQLPTR)
+            {
+                priormsg = pmsg;  /* -> message before pmsg */
+                pmsg     = pmsg->SQLPTR;
+            }
+           priormsg->SQLPTR = NULL; /* make the 2nd last the last msg */
+           psqlca->SQLCODE = priormsg->SQLCODE;  /* set the SQLCA state */
+           psqlca->SQLERC  = priormsg->SQLERC;
+           MEcopy(priormsg->SQLSTATE,sizeof(psqlca->SQLSTATE),
+                    psqlca->SQLSTATE);
+        }
+        MEfree((PTR)pmsg->SQLERM);  /* free the last message in the chain */
+        MEfree((PTR)pmsg);  /* free the last message block in the chain */
+        psqlca->SQLMCT--;
+    }  /* end if (psqlca->SQLMCT > 0) */
 }
-
-#ifdef ROUTINES_NOT_NEEDED_NOW   /* but keep in our back pocket */
-/*
-** Name: SaveSqlca 
-**
-** Description:
-**      Save the current state (selected fields) of the SQLCA block.
-**
-*/
-static VOID SaveSqlca(LPSQLCA psqlca, LPSQLCA pbackup)
-{
-    pbackup->SQLCODE = psqlca->SQLCODE;
-    pbackup->SQLERC  = psqlca->SQLERC;
-    pbackup->SQLMCT  = psqlca->SQLMCT;
-    MEcopy(psqlca->SQLSTATE, sizeof(psqlca->SQLSTATE), pbackup->SQLSTATE);
-}
-
-/*
-** Name: RestoreSqlca 
-**
-** Description:
-**      Restore the state of a SQLCA block.
-**      Strip from the SQLCA any new error messages that were added.
-**
-*/
-static VOID RestoreSqlca(LPSQLCA psqlca, LPSQLCA pbackup)
-{
-    LPSQLCAMSG pmsg, priormsg;
-
-    psqlca->SQLCODE = pbackup->SQLCODE;
-    psqlca->SQLERC  = pbackup->SQLERC;
-    MEcopy(pbackup->SQLSTATE, sizeof(psqlca->SQLSTATE), psqlca->SQLSTATE);
-
-          /* strip just the messages that were added since the backup */
-    while(psqlca->SQLMCT > 0  &&  psqlca->SQLMCT > pbackup->SQLMCT)
-       {
-          pmsg = psqlca->SQLPTR;      /* pmsg -> first message */
-          if (psqlca->SQLMCT == 1)    /* if only one message on chain */
-             {
-               psqlca->SQLPTR = NULL; /*     mark the chain as empty */
-             }
-          else  /* find the last and 2nd last messages */
-             { while (pmsg->SQLPTR)
-                  {
-                    priormsg = pmsg;  /* -> message before pmsg */
-                    pmsg     = pmsg->SQLPTR;
-                  }
-               priormsg->SQLPTR = NULL; /* make the 2nd last the last msg */
-             }
-          UtFree(pmsg, NULL);  /* free the last message in the chain */
-          psqlca->SQLMCT--;
-       }  /* end while loop stripping the newly added messages */
-}
-#endif
 
 static void Map3xSqlstateTo2x (LPENV penv, char * szState)
 {
     typedef struct tagSqlstateMap
-        { char * szState3x;
-          char * szState2x;
-        }  SqlstateMap;
+    { 
+        char * szState3x;
+        char * szState2x;
+    }  SqlstateMap;
 
     static const SqlstateMap sqlstatemap[] =
     {
@@ -2178,19 +2193,21 @@ static void Map3xSqlstateTo2x (LPENV penv, char * szState)
         return;
 
     if (penv->ODBCVersion < SQL_OV_ODBC3)    /* if 2.x or before */
+    {
         for (i=0; i < sizeofSqlstateMap; i++)
-            {
+        {
             if (memcmp(szState, sqlstatemap[i].szState3x, SQL_SQLSTATE_SIZE) == 0)
-               {
+            {
                 memcpy(szState, sqlstatemap[i].szState2x, SQL_SQLSTATE_SIZE);
                 break;
-               }
-            }  /* end for loop */
+            }
+        }  /* end for loop */
+    }
     else                                      /* 3.x or later*/
-       {
+    {
         if (memcmp(szState, "S1094", 5) == 0)  /* map 2.x "invalid scale" */
             memcpy(szState, "HY104", 5);       /* to 3.x "invalid p or s" */
-       }
+    }
 
     return;
 }
