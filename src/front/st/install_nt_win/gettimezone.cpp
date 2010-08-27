@@ -15,6 +15,10 @@
 **	    Recoded to use registry so that auto daylight adjust
 **	    can be correctly determined (GetTimeZoneInformation
 **	    seems to be broken).
+**	22-Jun-2010 (grant.croker@ingres.com)
+**	    Use TimeZoneKeyName instead of StandardName to
+**	    determine the timezone name with Windows Vista,
+**	    Windows 2008 Server and Windows 7.
 */
 
 #define UNICODE
@@ -285,7 +289,7 @@ int main(int argc, char **argv)
 	static WCHAR *BIAS = L"Bias";
 	static WCHAR *DAYLIGHT_BIAS = L"DaylightBias";
 	static WCHAR *DISABLE_AUTO_DAYLIGHT = L"DisableAutoDaylightTimeSet";
-	static WCHAR *STANDARD_NAME = L"StandardName";
+	static WCHAR *WIN_TIMEZONE_NAME_KEY = NULL;
 	HKEY hTZI;
 	LONG lRet;
 	WCHAR valuename[256];
@@ -296,6 +300,23 @@ int main(int argc, char **argv)
 	DWORD activebias, bias, daylightbias;
 	bool autodisable = false;
 	bool couldnotconvert = false;
+
+	OSVERSIONINFO osversioninfo;
+
+	// Windows 7 stores the timezone name in a different key from earlier Windows releases
+	osversioninfo.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+	GetVersionEx(&osversioninfo);
+
+	if (osversioninfo.dwMajorVersion >=6)
+	{
+		WIN_TIMEZONE_NAME_KEY = (WCHAR *)malloc(sizeof(L"TimeZoneKeyName"));
+		swprintf (WIN_TIMEZONE_NAME_KEY,L"%s",L"TimeZoneKeyName");
+	}
+	else
+	{
+		WIN_TIMEZONE_NAME_KEY = (WCHAR *)malloc(sizeof(L"StandardName"));
+		swprintf (WIN_TIMEZONE_NAME_KEY,L"%s",L"StandardName");
+	}
 
 	// Open the registry key for the current timezone information
 	if ((lRet = RegOpenKeyEx(HKEY_LOCAL_MACHINE, REG_LOC, 0, KEY_READ, &hTZI)) != ERROR_SUCCESS)
@@ -335,7 +356,7 @@ int main(int argc, char **argv)
 				if (value == 1)
 					autodisable = true;
 			}
-			else if (wcscmp(valuename, STANDARD_NAME) == 0)
+			else if (wcscmp(valuename, WIN_TIMEZONE_NAME_KEY) == 0)
 			{
 				if (WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)data, -1, os_tz, sizeof(os_tz), NULL, NULL) == 0)
 					ErrorOut();
