@@ -910,23 +910,9 @@
 **	    Set ii.<machine_name>.dbms.*.connect_limit for BI to 64.
 **  23-Oct-2009 (drivi01)
 **	    Update ii.%s.rcp.lock.lock_limit to CM to 325000.
-**  04-Jun-2010 (drivi01)
-**      Remove II_GCNapi_ModifyNode API for creating virtual nodes
-**      for DBA package b/c II_GCNapi_ModifyNode is no longer supported
-**      and stopped working due to long ids change.
-**      This change replaces the obsolete API call with a range of
-**      supported open API calls.
-**  24-Jun-2010 (frima01) Bug 123753
-**      Move LoadDemodb after and StarPostInstallation before UpgradeDatabases.
-**  30-Jun-2010 (drivi01) Bug 123753
-**      Add function StartOneServer to avoid having to recycle
-**      the whole installation and save time during post installation.
-**      Remove Sleep from LoadDemodb, don't think it's needed.
-**      Start Star server after installation only in case of upgrade
-**      to ensure the star databases are upgraded, otherwise it isn't
-**      needed, save time and don't start.
-**      
-**      
+**  20-Jul-2010 (drivi01)
+**	    Add newly exposed configuration parameters to the post installation.
+**	    Handle upgrade cases.
 **	    
 */
 /* Turn off POSIX warning for this file until Microsoft fixes this bug */
@@ -940,6 +926,7 @@
 #include <clusapi.h> 
 extern "C" {
 #include <compat.h>
+#include <gcnapi.h>
 #include <gv.h>
 }
 
@@ -949,6 +936,7 @@ void start_logwatch_service();
 typedef BOOL (WINAPI *PSQLREMOVEDRIVERPROC)(LPCSTR, BOOL, LPDWORD);
 
 BOOL CreateSecurityDescriptor(SECURITY_ATTRIBUTES *sa);
+extern "C" int II_GCNapi_ModifyNode(int, int, char *, char *, char *, char *, char *, char *);
 GLOBALREF ING_VERSION ii_ver;
 
 typedef struct tagENTRY
@@ -3071,7 +3059,7 @@ CInstallation::SetConfigDat()
     DWORD	dw = 0;
     HANDLE	File;
     CComponent	*dbms = theInstall.GetDBMS();
-    CString	temp, BakCrsFile, SetupString;
+    CString	temp, value, BakCrsFile, SetupString;
 
     Host = m_computerName;
     Host.MakeLower();
@@ -3115,15 +3103,49 @@ CInstallation::SetConfigDat()
 
 
 	/* 
-	** New parameters for release 10.0
+	** Newly exposed parameters in release 10.0, may have existing values
+	** especially in future releases. (Upgrade Scenario only)
 	*/
-	cmd.Format("offline_error_action \"%s\\ingres\\files\\dbms.rfm",
+	cmd.Format("-keep offline_error_action \"%s\\ingres\\files\\dbms.rfm",
 		   (LPCSTR)m_installPath);
 	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
-	cmd.Format("online_error_action \"%s\\ingres\\files\\dbms.rfm",
+	cmd.Format("-keep online_error_action \"%s\\ingres\\files\\dbms.rfm",
 		   (LPCSTR)m_installPath);
 	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
-
+	cmd.Format("-keep system_lock_level \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep dmf_build_pages \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep opf_new_enum \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep opf_greedy_factor \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep qef_hash_rbsize \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep qef_hash_wbsize \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep qef_hash_cmp_threshold \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep qef_hashjoin_min \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep qef_hashjoin_max \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep cache_dynamic \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep table_auto_structure \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	
 	/*
 	** Brand new parameters for this release.
 	*/
@@ -3263,6 +3285,7 @@ CInstallation::SetConfigDat()
 	** Compute dmf_tcb_limit from old dmf_hash_size.
 	** The temporary rules have to live in II_CONFIG.
 	*/
+	BOOL bset_direct_io = FALSE;
 	temp.Format("%s\\ingres\\files\\postdbms.crs", (LPCSTR)m_installPath);
 	RemoveFile(temp);
 	AppendToFile(temp, "ii.$.dbms.$.dmf_tcb_limit:\t8 * ii.$.dbms.$.dmf_hash_size, MIN = 2048;\n");
@@ -3272,11 +3295,37 @@ CInstallation::SetConfigDat()
 	AppendToFile(temp, "ii.$.dbms.$.rdf_tbl_cols:	50;\n");
 	AppendToFile(temp, "ii.$.rcp.log.cp_interval_mb:	(ii.$.rcp.file.kbytes * (ii.$.rcp.log.cp_interval / 100) + 512) / 1024, MIN = 1;\n");
 	AppendToFile(temp, "ii.$.rcp.log.cp_interval:	5;\n");
+	ConfigKey.Format("ii.%s.dbms.*.direct_io", Host);
+	if (Local_PMget(ConfigKey, value) && !value.IsEmpty())
+	{
+		CString value2;
+		value2.Format("ii.$.config.direct_io:\t%s;\n", value.GetBuffer());
+		AppendToFile(temp, value2.GetBuffer());
+		bset_direct_io = TRUE;
+	}
 
 	temp2.Format("%s\\ingres\\files\\dbms.rfm", (LPCSTR)m_installPath);
 	temp3.Format("%s\\ingres\\temp\\rfmtemp", (LPCSTR)m_installPath);
 	CopyFile(temp2, temp3, FALSE);
 	AppendToFile(temp3, "rulefile.99: postdbms.crs\n");
+
+	/* Special case: Figure out if dmf_tcb_limit was set to 5000, reset to 10000 if it was
+	** otherwise just keep the old value. If it was not previously set, then just
+	** expose the default value.
+	*/
+	ConfigKey.Format("ii.%s.dbms.*.dmf_tcb_limit", Host);
+	if (Local_PMget(ConfigKey, value) && !value.IsEmpty() && atoi(value) != 5000)
+	{
+		cmd.Format("-keep dmf_tcb_limit \"%s\\ingres\\temp\\rfmtemp",
+ 		   (LPCSTR)m_installPath);
+ 		Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	}
+	else
+	{
+		cmd.Format("dmf_tcb_limit \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+		Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	}
 
 	cmd.Format("-keep qef_dsh_memory \"%s\\ingres\\temp\\rfmtemp",
 		   (LPCSTR)m_installPath);
@@ -3287,9 +3336,24 @@ CInstallation::SetConfigDat()
 	cmd.Format("-keep cp_interval_mb \"%s\\ingres\\temp\\rfmtemp",
 		   (LPCSTR)m_installPath);
 	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
-	cmd.Format("-keep dmf_tcb_limit \"%s\\ingres\\temp\\rfmtemp",
+	
+	/* Special case: Assign the old value of ii.$.dbms.*.direct_io to the new parameter
+	** of ii.$.config.direct_io if it was previously set, if not
+	** just set it to the new value, if exists keep the existing value
+	*/
+	if (bset_direct_io)
+	{
+		cmd.Format("-keep direct_io \"%s\\ingres\\temp\\rfmtemp",
+			   (LPCSTR)m_installPath);
+		Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	}
+	else
+	{
+		cmd.Format("-keep direct_io \"%s\\ingres\\files\\dbms.rfm",
 		   (LPCSTR)m_installPath);
-	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+		Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	}
+
 
 	RemoveFile(temp3);
 	RemoveFile(temp);
@@ -3936,32 +4000,6 @@ CInstallation::StartServer(BOOL Comment/*=TRUE*/)
 }
 
 BOOL
-CInstallation::StartOneServer(char *server_name)
-{
-     BOOL error = FALSE;
-	
-     if (m_bClusterInstall)
-     {
-	/* In case of cluster, we have to bring the whole cluster down and then up
-        ** assuming Star or server was setup properly and will come up.
-	** The counter of the server at this point has to be set to 1, ensure that
-	** it is the case.
-	*/
-	if (!OfflineResource())
-	    error = TRUE;
-	if (!OnlineResource())
-	    error = TRUE;
-     }
-     else
-     {
-	if (Exec(m_installPath + "\\ingres\\utility\\ingstart.exe", server_name))
-	    error = TRUE;
-     }
-
-return (!error);
-}
-
-BOOL
 CInstallation::StopServer(BOOL echo)
 {
     BOOL error = FALSE;
@@ -4322,6 +4360,9 @@ CInstallation::ThreadPostInstallation()
 
     if (bret && dbms->m_selected)	
 	bret = ServerPostInstallation();
+
+    if (bret && star->m_selected)	
+	bret = StarPostInstallation();
 
     if (bret && replicat->m_selected)	
 	bret = ReplicatPostInstallation();
@@ -4754,7 +4795,6 @@ CInstallation::ServerPostInstallation()
     BOOL	bret = TRUE;
     CString	strBuffer;
     CComponent	*dbms = GetDBMS();
-    CComponent	*star = GetStar();
     CString cmd;
     BOOL silent;
 
@@ -4840,19 +4880,13 @@ CInstallation::ServerPostInstallation()
     if (bret && !LoadIMA())
 	bret = FALSE;
 
+	if (bret && DatabaseExists("demodb") && !LoadDemodb())
+	bret = FALSE;
+
     CComponent *ice = theInstall.GetICE();
     if ((ice) && (ice->m_selected))
     {
 	if (bret && !LoadICE())
-	    bret = FALSE;
-    }
-    
-    /* Finish star server configuration and start it for the upgrade */
-    if (bret && star->m_selected)	
-    {
-	bret = StarPostInstallation();
-	/* drivi01: Start only star server here not to waste time recycling the whole installation */
-	if (bret && m_DBMSupgrade && !StartOneServer("-iistar"))
 	    bret = FALSE;
     }
 
@@ -4870,10 +4904,7 @@ CInstallation::ServerPostInstallation()
 	m_attemptedUDBupgrade = TRUE;
     }
 
-    if (bret && DatabaseExists("demodb") && !LoadDemodb())
-    bret = FALSE;
-
-    StopServer(TRUE);
+	StopServer(TRUE);
 
     if (bret)
     {
@@ -5462,6 +5493,7 @@ CInstallation::LoadDemodb()
 
     SetStdHandle(STD_INPUT_HANDLE, SaveStdin);
     CloseHandle(newstdin);
+    Sleep (1500);
 
 	if (i == 0)
 		if(!CheckpointOneDatabase("-j demodb"))
@@ -9464,6 +9496,7 @@ BOOL CInstallation::AddVirtualNodes()
 	char hostname[32], protocol[32], listenaddress[32], vnodename[32], username[32], password[32];
 	int count=0, res=0;
 
+
 	AppendComment(IDS_ADDING_VNODES);
 	AppendToLog(IDS_ADDING_VNODES);
 	while ((count>0 && !m_vhostname.IsEmpty()) || count==0)
@@ -9487,9 +9520,9 @@ BOOL CInstallation::AddVirtualNodes()
 		{
 			str.Format("Adding virtual node for %s with listen address %s", m_vhostname, m_listenaddress);
 			AppendToLog(str);
-			res = CreateVirtualNode(m_vnodename, m_vhostname, 
-				m_protocol, m_listenaddress, m_username, 
-				m_password);
+			res = II_GCNapi_ModifyNode(ADD_NODE, 1, m_vnodename.GetBuffer(), m_vhostname.GetBuffer(), 
+				m_protocol.GetBuffer(), m_listenaddress.GetBuffer(), m_username.GetBuffer(), 
+				m_password.GetBuffer());
 			if (count>1 && res == 0 && bRet != FALSE)
 				bRet = TRUE;
 			else if (count == 1 && res == 0)
@@ -9497,7 +9530,7 @@ BOOL CInstallation::AddVirtualNodes()
 			else
 			{
 				bRet = FALSE;
-				str.Format("Virtual Node was not added because of errors.");
+				str.Format("Failed with error %d, use errhelp to lookup the error", res);
 				AppendToLog(str);
 			}
 		}
@@ -9516,303 +9549,3 @@ BOOL CInstallation::AddVirtualNodes()
 
 	return bRet;
 }
-
-void
-CInstallation::CheckAPIError( IIAPI_GENPARM	*genParm)
-{
-    IIAPI_GETEINFOPARM	getErrParm; 
-    char		type[33];
-	CString errorMsg;
-    
-    /*
-    ** Check API call status.
-    */
-	errorMsg.Format("\tgp_status = %s\n",
-            (genParm->gp_status == IIAPI_ST_SUCCESS) ?  
-      "IIAPI_ST_SUCCESS" :
-            (genParm->gp_status == IIAPI_ST_MESSAGE) ?  
-      "IIAPI_ST_MESSAGE" :
-            (genParm->gp_status == IIAPI_ST_WARNING) ?  
-      "IIAPI_ST_WARNING" :
-            (genParm->gp_status == IIAPI_ST_NO_DATA) ?  
-      "IIAPI_ST_NO_DATA" :
-            (genParm->gp_status == IIAPI_ST_ERROR)   ?  
-      "IIAPI_ST_ERROR"   :
-            (genParm->gp_status == IIAPI_ST_FAILURE) ? 
-      "IIAPI_ST_FAILURE" :
-            (genParm->gp_status == IIAPI_ST_NOT_INITIALIZED) ?
-      "IIAPI_ST_NOT_INITIALIZED" :
-            (genParm->gp_status == IIAPI_ST_INVALID_HANDLE) ?
-      "IIAPI_ST_INVALID_HANDLE"  :
-            (genParm->gp_status == IIAPI_ST_OUT_OF_MEMORY) ?
-      "IIAPI_ST_OUT_OF_MEMORY"   :
-           "(unknown status)" );
-   AppendToLog(errorMsg);
-    
-    /*
-    ** Check for error information.
-    */
-    if ( ! genParm->gp_errorHandle )  return;
-    getErrParm.ge_errorHandle = genParm->gp_errorHandle;
-    
-    do    
-    { 
-        /*
-        ** Invoke API function call.
-        */
-        IIapi_getErrorInfo( &getErrParm );
-    
-        /*
-        ** Break out of the loop if no data or failed.
-        */
-        if ( getErrParm.ge_status != IIAPI_ST_SUCCESS )
-            break;
-    
-        /*
-        ** Process result.
-        */
-        switch( getErrParm.ge_type ) 	{
-            case  IIAPI_GE_ERROR	 : 
-            strcpy( type, "ERROR" ); 	break;
-            
-            case  IIAPI_GE_WARNING :
-            strcpy( type, "WARNING" ); 	break;
-            
-            case  IIAPI_GE_MESSAGE :
-            strcpy(type, "USER MESSAGE");	break;
-            
-            default:
-            sprintf( type, "unknown error type: %d", getErrParm.ge_type);
-            break;
-        }
-    
-		errorMsg.Format("Error Info: %s '%s' 0x%x: %s\n",
-            type, getErrParm.ge_SQLSTATE, getErrParm.ge_errorCode,
-            getErrParm.ge_message ? getErrParm.ge_message : "NULL" );   
-		AppendToLog(errorMsg);
-    } while( 1 );
-    
-    return;
-}
-
-int 
-CInstallation::CreateVirtualNode(CString vnodename, CString hostname, CString protocol, 
-								  CString listenaddress, CString username, CString password)
-{
-
-    II_PTR		connHandle = (II_PTR)NULL;
-    II_PTR		tranHandle = (II_PTR)NULL;
-    IIAPI_INITPARM	initParm;
-    IIAPI_CONNPARM	connParm;
-    IIAPI_AUTOPARM	autoParm;
-    IIAPI_QUERYPARM	queryParm;
-    IIAPI_GETQINFOPARM	getQInfoParm;
-    IIAPI_CLOSEPARM	closeParm;
-    IIAPI_DISCONNPARM	disconnParm;
-    IIAPI_RELENVPARM	relEnvParm;
-    IIAPI_TERMPARM	termParm;
-    IIAPI_WAITPARM	waitParm = { -1 };
-    char connection[] = "create global connection %s %s %s %s";
-    char login[] = "create global login %s %s %s";
-    CString stmt;
-    int ret = 0;
-
-    /* Initialize API */
-    initParm.in_version = IIAPI_VERSION_2;
-    initParm.in_timeout = -1;
-    IIapi_initialize( &initParm);
-
-    /* Connect to local Name Server */
-    connParm.co_genParm.gp_callback = NULL;
-    connParm.co_genParm.gp_closure = NULL;
-    connParm.co_target =  NULL;   
-    connParm.co_type   =  IIAPI_CT_NS;   //Connect to name server
-    connParm.co_connHandle = initParm.in_envHandle; 
-    connParm.co_tranHandle = NULL;
-    connParm.co_username = NULL;
-    connParm.co_password = NULL;
-    connParm.co_timeout = -1;
-
-    IIapi_connect( &connParm );
-
-    while(connParm.co_genParm.gp_completed == FALSE)
-      IIapi_wait( &waitParm );
-
-    while(connParm.co_genParm.gp_status != IIAPI_ST_SUCCESS)
-    {
-		CheckAPIError(&connParm.co_genParm);
-		ret = connParm.co_genParm.gp_status;
-		goto exit;
-    }
-
-    connHandle = connParm.co_connHandle;
-    tranHandle = connParm.co_tranHandle;
-
-
-    /* Enable autocommit */
-    autoParm.ac_genParm.gp_callback = NULL;
-    autoParm.ac_genParm.gp_closure  = NULL;
-    autoParm.ac_connHandle = connHandle;
-    autoParm.ac_tranHandle = NULL;
-
-    IIapi_autocommit( &autoParm );
-
-    while (autoParm.ac_genParm.gp_completed == FALSE )
-		IIapi_wait( &waitParm );
-
-    while(autoParm.ac_genParm.gp_status != IIAPI_ST_SUCCESS)
-    {
-		CheckAPIError(&autoParm.ac_genParm);
-		ret = autoParm.ac_genParm.gp_status;
-		goto exit;
-    }
-
-    tranHandle = autoParm.ac_tranHandle;
-
-    /* Add a connection for the vnode */
-    stmt.Format(connection, vnodename, hostname, protocol, listenaddress);
-    queryParm.qy_genParm.gp_callback = NULL;
-    queryParm.qy_genParm.gp_closure = NULL;
-    queryParm.qy_connHandle = connHandle;
-    queryParm.qy_queryType = IIAPI_QT_QUERY;
-    queryParm.qy_queryText = stmt.GetBuffer();
-    queryParm.qy_parameters = FALSE;
-    queryParm.qy_tranHandle = tranHandle;
-    queryParm.qy_stmtHandle = NULL;
-    queryParm.qy_flags = 0;
-
-    IIapi_query( &queryParm );
-  
-    while( queryParm.qy_genParm.gp_completed == FALSE )
-		IIapi_wait( &waitParm );
-
-    while(queryParm.qy_genParm.gp_status != IIAPI_ST_SUCCESS)
-    {
-		CheckAPIError(&queryParm.qy_genParm);
-		ret = queryParm.qy_genParm.gp_status;
-		goto exit;
-    }
-
-    /* Get query results. */
-    getQInfoParm.gq_genParm.gp_callback = NULL;
-    getQInfoParm.gq_genParm.gp_closure = NULL;
-    getQInfoParm.gq_stmtHandle = queryParm.qy_stmtHandle;
-
-    IIapi_getQueryInfo( &getQInfoParm );
-
-    while (getQInfoParm.gq_genParm.gp_completed == FALSE )
-		IIapi_wait( &waitParm );
-
-
-	/* Close query */
-    closeParm.cl_genParm.gp_callback = NULL;
-    closeParm.cl_genParm.gp_closure = NULL;
-    closeParm.cl_stmtHandle = queryParm.qy_stmtHandle;
-
-    IIapi_close( &closeParm );
-
-    while( closeParm.cl_genParm.gp_completed == FALSE )
-		IIapi_wait( &waitParm );
-
-    while(closeParm.cl_genParm.gp_status != IIAPI_ST_SUCCESS)
-    {
-		CheckAPIError(&closeParm.cl_genParm);
-		ret = closeParm.cl_genParm.gp_status;
-		goto exit;
-    }
-
-    /* Add login for the vnode */
-    stmt.Format(login, vnodename, username, password);
-    queryParm.qy_queryText = stmt.GetBuffer();
-
-    IIapi_query ( &queryParm );
-
-    while( queryParm.qy_genParm.gp_completed == FALSE )
-      IIapi_wait( &waitParm );
-
-    while(queryParm.qy_genParm.gp_status != IIAPI_ST_SUCCESS)
-    {
-		CheckAPIError(&queryParm.qy_genParm);
-		ret = queryParm.qy_genParm.gp_status;
-		goto exit;
-    }
-
-    /* Get query results. */
-    getQInfoParm.gq_genParm.gp_callback = NULL;
-    getQInfoParm.gq_genParm.gp_closure = NULL;
-    getQInfoParm.gq_stmtHandle = queryParm.qy_stmtHandle;
-
-    IIapi_getQueryInfo( &getQInfoParm );
-
-    while (getQInfoParm.gq_genParm.gp_completed == FALSE )
-		IIapi_wait( &waitParm );
-
-
-	/* Close query */
-    closeParm.cl_genParm.gp_callback = NULL;
-    closeParm.cl_genParm.gp_closure = NULL;
-    closeParm.cl_stmtHandle = queryParm.qy_stmtHandle;
-
-    IIapi_close( &closeParm );
-
-    while( closeParm.cl_genParm.gp_completed == FALSE )
-		IIapi_wait( &waitParm );
-
-    while(closeParm.cl_genParm.gp_status != IIAPI_ST_SUCCESS)
-    {
-		CheckAPIError(&closeParm.cl_genParm);
-		ret = closeParm.cl_genParm.gp_status;
-		goto exit;
-    }
-
-	/* Disable autocommit */
-    autoParm.ac_connHandle = NULL;
-    autoParm.ac_tranHandle = tranHandle;
-
-    IIapi_autocommit( &autoParm );
-    
-    while( autoParm.ac_genParm.gp_completed == FALSE )
-       IIapi_wait( &waitParm );
-
-    while(autoParm.ac_genParm.gp_status != IIAPI_ST_SUCCESS)
-    {
-		CheckAPIError(&autoParm.ac_genParm);
-		ret = autoParm.ac_genParm.gp_status;
-		goto exit;
-    }
-
-	/* Disconnect */
-    disconnParm.dc_genParm.gp_callback = NULL;
-    disconnParm.dc_genParm.gp_closure = NULL;
-    disconnParm.dc_connHandle = connHandle;
-    
-    IIapi_disconnect( &disconnParm );
-    
-    while( disconnParm.dc_genParm.gp_completed == FALSE )
-	 IIapi_wait( &waitParm );
-
-    while(disconnParm.dc_genParm.gp_status != IIAPI_ST_SUCCESS)
-    {
-		CheckAPIError(&disconnParm.dc_genParm);
-		ret = disconnParm.dc_genParm.gp_status;
-		goto exit;
-    }
-
-    connHandle = NULL;
-
-	/* Release environment resources and terminate */
-
-    relEnvParm.re_envHandle = initParm.in_envHandle;
-    IIapi_releaseEnv(&relEnvParm);
-    IIapi_terminate( &termParm );
-    initParm.in_envHandle = NULL;
-
-
-exit:
-    return ret;
-
-}
-
-
-
-
