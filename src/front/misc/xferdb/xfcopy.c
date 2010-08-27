@@ -536,6 +536,9 @@ xftables(i4 *tcount, i4 output_flags, i4 output_flags2, XF_TABINFO **list_ptr)
 **      23-Jun-2010 (coomi01) b123927
 **          Where just creating tables, and not copying them, allow
 **          journaling if appropriate.
+**      29-Jun-2010 (coomi01) b123927
+**          Adjust test for former code change to operate in 
+**          the negative
 */
 
 void
@@ -677,8 +680,14 @@ writecreate(XF_TABINFO	*tp, i4 output_flags)
     */
     if (!tp->fecat && !tp->becat && !SetJournaling)
     {
-	if ((output_flags & XF_TAB_CREATEONLY) &&
-	    (tp->journaled[0] == 'Y' || tp->journaled[0] == 'C'))
+	if (((tp->journaled[0] == 'Y' || tp->journaled[0] == 'C')) &&
+	    ( output_flags &&
+	      !((output_flags & XF_PRINT_TOTAL)  ||
+		(output_flags & XF_TAB_COPYONLY) || 
+		(output_flags & XF_ORDER_CCM )   ||
+		(output_flags & XF_XMLFLAG))
+		)
+	    )
 	{
 	    /* 
 	    ** Where NO copy is intended on journaled tables, 
