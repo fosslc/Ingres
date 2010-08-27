@@ -1411,6 +1411,11 @@
 #	    BUG 123943
 #	    Use more restrictive sed mask in IIRemRCComments so it doesn't
 #	    remove the LSB headers
+#       23-Jul-2010 (horda03)
+#           A jam in the genxml directory on NT fails to build the genxml
+#           utility because it is unable to find the iilibadf shared library.
+#           The IINEEDLIBSW rule is missing the search directories for shared
+#           libraries
 #
 #
 #####
@@ -3907,14 +3912,21 @@ rule IINEEDLIBSW
 			     local SUFLIB  = .$(LIBSFX) ;
 			     INCLUDES $(<:S=.$(EXESFX)) : $($(l)DATA:S=.$(SLSFX)) ;
 			     LIBS $(<) : $($(l)) ;
+                             SEARCH on $($(l)) = $(INGBIN) ;
+                             SEARCH on $($(l):S=.$(LIBSFX)) = $(INGLIB) ;
 			case SH*LIB* : 
 			     local SUFLIB  = .$(LIBSFX) ;
 			     INCLUDES $(<:S=.$(EXESFX)) : $($(l)DATA:S=.$(SLSFX)) ;
 			     INCLUDES $(<:S=.$(EXESFX)) : $($(l):S=.$(SLSFX)) ;
 			     LIBS $(<) : $($(l)) ;
 			     LIBS $(<) : $($(l)DATA) ;
+                             SEARCH on $($(l)) = $(INGBIN) ;
+                             SEARCH on $($(l)DATA) = $(INGBIN) ;
+                             SEARCH on $($(l):S=.$(LIBSFX)) = $(INGLIB) ;
+                             SEARCH on $($(l)DATA:S=.$(LIBSFX)) = $(INGLIB) ;
 			case * :
 			     LIBS $(<) : $($(l)) ;
+                             SEARCH on $($(l)) = $(INGLIB) ;
 
 		} #switch $(l)
 
