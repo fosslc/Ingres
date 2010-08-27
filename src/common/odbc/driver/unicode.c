@@ -201,6 +201,11 @@
 **     24-Aug-2010 (Ralph Loen) Bug 124300
 **          In ConvertWCharToChar(), allow for two bytes of the length 
 **          indicator for the returned varchar.
+**     25-Aug-2010 (Ralph Loen) Bug 124307
+**          In ConvertWCharToChar(), multiply the length of source
+**          Unicode string by 2 instead of sizeof(SQLWCHAR), since
+**          this equates to 4 on UCS4 systems, but the string has already
+**          been converted to UCS2.
 */
 
 /*
@@ -476,7 +481,7 @@ RETCODE ConvertWCharToChar(
         ConvertUCS4ToUCS2((u_i4*)szWideValue, (u_i2*)ucs2buf, cbWideValue);
     }
 
-    cbWideValue *= sizeof(SQLWCHAR); 
+    cbWideValue *= sizeof(i2); 
 
     szValue = MEreqmem(0, cbValueMax+2, TRUE, NULL);
 
