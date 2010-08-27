@@ -5553,6 +5553,11 @@ typedef struct _PSF_QUEUE PSF_QUEUE;
 **          has supplied, noprivileges and nodefault_privileges options.
 **	17-nov-2008 (dougi)
 **	    Added psy_idseq_defp[] for identity columns.
+**	27-Jun-2010 (kschendel) b123986
+**	    There isn't any psy-cb for create table, move psy-seqflag
+**	    to a temporary flag in the iisequence tuple.  (The alternative
+**	    of moving it to the YYVARS area was going to be a lot more work!)
+**	    The only flag we needed in psy_seqflag was "decimal seen" anyway.
 */
 typedef struct _PSY_CB
 {
@@ -5605,7 +5610,7 @@ typedef struct _PSY_CB
     i4		    psy_istree;		/* TRUE iff there is an input tree */
     DB_TAB_NAME	    psy_tabname[PSY_MAXTABS]; /* Names of table to work on */
     PST_QNODE	    *psy_idseq_defp[PSY_MAXTABS]; /* IIDEFAULT ids for identity
-					** sequences */
+					** sequences during DROP */
     QSO_OBID	    psy_textout;	/* QSF id for formatted query text */
     i4		    psy_tabprinted;	/* TRUE means tabname has been printed*/
     PTR		    psy_tupptr;		/*
@@ -5741,16 +5746,6 @@ typedef struct _PSY_CB
 #define			PSY_ALMDISCONNECT  0x0400  /* WHEN DISCONNECT */
 #define			PSY_ALMEVENT  	0x0800   /* WITH DBEVENT */
 #define			PSY_ALMEVTEXT  	0x01000  /* WITH DBEVENT TEXT */
-    i4		    psy_seqflag;	/* A flag used in conjunction with
-   					** CREATE/ALTER/DROP SEQUENCE
-   					*/
-#define			PSY_CSEQ	0x01	/* CREATE SEQUENCE */
-#define			PSY_ASEQ	0x02	/* ALTER  SEQUENCE */
-#define			PSY_DSEQ	0x04	/* DROP   SEQUENCE */
-#define			PSY_DECOPT	0x08	/* at least one option is 
-						** decimal constant. */
-#define			PSY_DECTYPE	0x10	/* sequence type declared
-						** decimal */
     i4		    psy_auflag;		/* A flag used in conjuunction with
 					** ENABLE/DISABLE SECURITY_AUDIT
 					*/

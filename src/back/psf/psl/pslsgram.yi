@@ -3551,6 +3551,12 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	    Otherwise the flag can get stuck in the off position (e.g. if
 **	    the dbp was parsed with an error, such as a missing table,
 **	    and then re-parsed after the table is recreated).
+**	27-Jun-2010 (kschendel) b123986
+**	    Fix random segv parsing an identity column declaration:
+**	    for create table, pss-object is a QEU_CB, not a PSY_CB.
+**	    Delete most usages of psy_seqflag as not needed, and move
+**	    the one flag we need (decimal-seen) to a temp flag in
+**	    the iisequence tuple.
 */
 %{
 
@@ -9025,7 +9031,6 @@ type_qual:	    default
 
 identity_spec:	    identity_kwds opt_common_seqopts
     {
-	PSY_CB		*psy_cb;
 	PST_QNODE	*nodep;
 	PST_SEQOP_NODE	seqop;
 	DB_STATUS	status;
@@ -9047,9 +9052,6 @@ identity_spec:	    identity_kwds opt_common_seqopts
 	/* Set default cache size, if needed. */
 	if (($Ysequence.dbs_flag & (DBS_CACHE | DBS_NOCACHE)) == 0)
 	    $Ysequence.dbs_cache = 20;
-
-	psy_cb = (PSY_CB *) cb->pss_object;
-	psy_cb->psy_seqflag = PSY_CSEQ;
     }
 ;
 
@@ -25518,9 +25520,8 @@ crt_seq_kwd:	    CRTSEQ
 
 	/* Set control block and tuple fields to defaults and initial values */
 	psy_cb->psy_istree = FALSE;   		
-	MEfill(sizeof(psy_cb->psy_tuple.psy_sequence), NULLCHAR,
+	MEfill(sizeof(psy_cb->psy_tuple.psy_sequence), 0,
 	       (PTR)&psy_cb->psy_tuple.psy_sequence);
-	psy_cb->psy_seqflag = PSY_CSEQ;		/* first flag value */
 	psy_cb->psy_tuple.psy_sequence.dbs_cache = 20;
 					/* default cache value */
 	$Yseqp = &psy_cb->psy_tuple.psy_sequence;
@@ -25577,9 +25578,6 @@ seq_opt:	AS seq_type
 	$Yseqp->dbs_type = $2->db_datatype;
 	$Yseqp->dbs_length = $2->db_length;
 	$Yseqp->dbs_prec = DB_P_DECODE_MACRO($2->db_prec);
-	if ($2->db_datatype == DB_DEC_TYPE)
-	    psy_cb->psy_seqflag |= PSY_DECTYPE;
-				/* and note declared decimal type */
     }
 		|    common_seq_opt
 ;
@@ -25802,11 +25800,8 @@ common_seq_opt:	    START WITH sign_op number
     }
 		| nonkeyword
     {
-	PSY_CB		*psy_cb;
 	i4                err_code;
 	bool		seql, random;
-
-	psy_cb = (PSY_CB *) cb->pss_object;
 
 	if (STcompare($1, "random") == 0 ||
 		STcompare($1, "unordered") == 0 || STcompare($1, "roy") == 0)
@@ -25824,11 +25819,12 @@ common_seq_opt:	    START WITH sign_op number
 	}
 
 	if (seql)
-	    psy_cb->psy_tuple.psy_sequence.dbs_flag |= DBS_SEQL;
-	else psy_cb->psy_tuple.psy_sequence.dbs_flag |= DBS_UNORDERED;
+	    $Yseqp->dbs_flag |= DBS_SEQL;
+	else
+	    $Yseqp->dbs_flag |= DBS_UNORDERED;
 
-	if (psy_cb->psy_tuple.psy_sequence.dbs_flag & DBS_SEQL &&
-	    psy_cb->psy_tuple.psy_sequence.dbs_flag & DBS_UNORDERED)
+	if ($Yseqp->dbs_flag & DBS_SEQL &&
+	    $Yseqp->dbs_flag & DBS_UNORDERED)
 	{
 	    /* Inconsistent options - RANDOM and SEQUENTIAL. */
 	    (void)psf_error(6317L, 0L, PSF_USERERR,
@@ -26003,9 +25999,8 @@ alt_seq_kwd:	    ALTSEQ
 
 	/* Set control block and tuple fields to defaults and initial values */
 	psy_cb->psy_istree = FALSE;   		
-	MEfill(sizeof(psy_cb->psy_tuple.psy_sequence), NULLCHAR,
+	MEfill(sizeof(psy_cb->psy_tuple.psy_sequence), 0,
 	       (PTR)&psy_cb->psy_tuple.psy_sequence);
-	psy_cb->psy_seqflag = PSY_ASEQ;		/* first flag value */
 	$Yseqp = &psy_cb->psy_tuple.psy_sequence;
 
     }
@@ -26130,10 +26125,8 @@ drp_seq_kwd:	    DROPSEQ
 
 	/* Set control block and tuple fields to defaults and initial values */
 	psy_cb->psy_istree = FALSE;   		
-	MEfill(sizeof(psy_cb->psy_tuple.psy_sequence), NULLCHAR,
+	MEfill(sizeof(psy_cb->psy_tuple.psy_sequence), 0,
 	       (PTR)&psy_cb->psy_tuple.psy_sequence);
-	psy_cb->psy_seqflag = PSY_DSEQ;		/* first flag value */
-
     }
 ;
 
