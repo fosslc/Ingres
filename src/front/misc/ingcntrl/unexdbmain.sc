@@ -69,6 +69,9 @@
 **	15-May-2005 (hanje04)
 **	    GLOBALREF Iidatabase and Iiuser as they're GLOBALDEF's in
 **	    ingdata.sc and Mac OS X doesn't like multiple defn's.
+**      17-Jun-2010 (coomi01) b123913
+**          Add new error message E_IC0052 when an attempt to delete
+**          last remaining work location for a database.
 */
 
 /*
@@ -141,6 +144,8 @@ EXEC SQL BEGIN DECLARE SECTION;
     i4		dbloc_stat=0;
     i4		exusage;
     i4		stat;
+    i4          count;
+    i4          workArea = (DU_EXT_OPERATIVE|DU_EXT_WORK);
     char	sbuffer[1024];
     char	usagebuf[512];
     LOC_INFO	loc_info, *linfo = (LOC_INFO*)&loc_info;
@@ -170,7 +175,8 @@ EXEC SQL END DECLARE SECTION;
 
     char	Ingres_uname[FE_MAXNAME+1];
     char	temp_name[FE_MAXNAME+1];
-    
+    bool        workCheckFailed;
+
     /* Tell EX this is an ingres tool. */
     (void) EXsetclient(EX_INGRES_TOOL);
 
@@ -430,9 +436,81 @@ EXEC SQL END DECLARE SECTION;
 			PCexit(FAIL);
 		}
 
-		/* Now unextend location from one or more databases */
-		for( j = 0 ; numdbs && j < numdbs ; j++ )
+	        /*
+		** We are about to count work locations, before
+		** deleting some. We want to ensure no other process
+		** undermines the count before we get to the delete stage.
+		*/
+	        EXEC SQL COMMIT WORK;
+	        EXEC SQL SET AUTOCOMMIT OFF;
+		EXEC SQL SET LOCKMODE SESSION 
+			     WHERE LEVEL    = TABLE, 
+                                   READLOCK = EXCLUSIVE, 
+                                   TIMEOUT  = 10;  
+
+		/*
+		** First walk over all deletions and make sure
+		** none will leave our database(s) without at least
+		** one work location each.
+		*/
+	        workCheckFailed = FALSE;
+		for( j = 0 ; (!workCheckFailed) && numdbs && j < numdbs ; j++ )
 		{
+			for (i = 0; Loc_usages[i].name != NULL; i++)
+			{
+			    /* 
+			    ** Checkup on work locations only 
+			    */
+			    if ((dbloc_stat & DU_WORK_LOC) && (dbloc_stat & Loc_usages[i].id))
+			    {
+				/* Count work locations OTHER than
+				** the one we hope to remove
+				*/
+				exec sql SELECT count(*) into :count 
+				         FROM   iiextend_info 
+				         WHERE  status = :workArea
+				         AND    database_name = :database_arr[j]
+				         AND    location_name != :locname;
+
+				if ( sqlca.sqlcode < 0 &&
+				     sqlca.sqlcode != (-E_GE0032_WARNING) )
+				{
+				    workCheckFailed = TRUE;
+
+				    /* 
+				    ** On SQL failure proceed no further with loops
+				    */
+				    break;
+				}
+
+
+				/* 
+				** Produce an error report  for each problem encountered
+				*/
+				if ( 0 == count )
+				{
+				    IIUGerr(E_IC0052_Error_last_db_workloc,    
+					    UG_ERR_ERROR,
+					    2, database_arr[j], locname);
+
+				    workCheckFailed = TRUE;
+				}
+
+			    }
+			}			
+		}
+
+		/* 
+		** Do not proceed on request if a problem was detected.
+		*/
+		if (!workCheckFailed)
+		{
+
+		    /* The lock is still there, 
+		    ** Now unextend location from one or more databases 
+		    */
+		    for( j = 0 ; numdbs && j < numdbs ; j++ )
+		    {
 			for (i = 0; Loc_usages[i].name != NULL; i++)
 			{
 				if (dbloc_stat & Loc_usages[i].id)
@@ -447,27 +525,38 @@ EXEC SQL END DECLARE SECTION;
 		
 					if ( sqlca.sqlcode < 0 &&
 						sqlca.sqlcode != (-E_GE0032_WARNING) )
-							IIUGerr(E_IC004C_Errors_unextending_db, UG_ERR_ERROR,
-								2, database_arr[j], locname);
+					{
+					    IIUGerr(E_IC004C_Errors_unextending_db, UG_ERR_ERROR,
+						    2, database_arr[j], locname);
+					}
 				}
 			}
-		}			
-	 }
+		    }
+		}
+
+	} /* If loc exists */
 	else
 	{
 	    IIUGerr(E_IC0045_Error_retrieving_area,
 			UG_ERR_ERROR, 1, locname);
+
 		PCexit(FAIL);
 	}
-	}
+    }
+
     if ( numdbs )
+    {
 	EXEC SQL COMMIT WORK;
+    }
 
     FEing_exit();
 
     EXdelete();
 
-    PCexit(OK);
+    if (workCheckFailed)
+        PCexit(FAIL);
+    else
+	PCexit(OK);
 }
 
 /* check_loc_exists -- check a location name for validity. */
