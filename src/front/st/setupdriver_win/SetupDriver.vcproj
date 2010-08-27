@@ -230,6 +230,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="msi.lib"
 				OutputFile="$(OutDir)/SetupDriver.exe"
 				LinkIncremental="1"
 				UACExecutionLevel="2"
