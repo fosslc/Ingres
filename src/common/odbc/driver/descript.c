@@ -131,6 +131,9 @@
 **     10-Aug-2010 (drivi01)
 **	    Fix pird->OctetLength for 64-bit Windows platform
 **	    because pird isn't defined.  Use pxxd instead.
+**     24-Aug-2010 (Ralph Loen) Bug 124300
+**          In SQLGetDescRec_InternalCall(), don't fill an unreferenced
+**          SubTypePtr.
 */
 
 /*
@@ -1361,7 +1364,7 @@ SQLRETURN  SQL_API SQLGetDescRec (
     SQLHDESC     DescriptorHandle,
     SQLSMALLINT  RecNumber,
     SQLCHAR     *Name,
-    SQLSMALLINT  BufferLength,
+   SQLSMALLINT  BufferLength,
     SQLSMALLINT *StringLengthPtr,
     SQLSMALLINT *TypePtr,
     SQLSMALLINT *SubTypePtr,
@@ -1431,7 +1434,8 @@ SQLRETURN  SQL_API SQLGetDescRec_InternalCall (
         *TypePtr  = pxxd->VerboseType;
 
     /* SQL_DESC_DATETIME_INTERVAL_CODE */
-    *SubTypePtr = pxxd->DatetimeIntervalCode;
+    if (SubTypePtr)
+        *SubTypePtr = pxxd->DatetimeIntervalCode;
 
     /* SQL_DESC_OCTET_LENGTH */
     if ( LengthPtr)

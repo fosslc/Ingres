@@ -198,6 +198,9 @@
 **          replaced ceiling of SQL_MAX_MESSAGE_LENGTH with
 **          the result of ErrGetSqlcaMessageLen().  Unicode conversion
 **          workspaces are not potentially dynamic.
+**     24-Aug-2010 (Ralph Loen) Bug 124300
+**          In ConvertWCharToChar(), allow for two bytes of the length 
+**          indicator for the returned varchar.
 */
 
 /*
@@ -508,13 +511,13 @@ RETCODE ConvertWCharToChar(
         cv.cv_srcValue.dv_length    = (II_UINT2) cbWideValue;
         cv.cv_dstDesc.ds_dataType   = IIAPI_VCH_TYPE;
         cv.cv_dstDesc.ds_nullable   = FALSE;
-        cv.cv_dstDesc.ds_length     = (II_UINT2)cbValueMax;
+        cv.cv_dstDesc.ds_length     = (II_UINT2)cbValueMax+2;
         cv.cv_dstDesc.ds_precision  = 0;
         cv.cv_dstDesc.ds_scale      = 0;
         cv.cv_dstDesc.ds_columnType = IIAPI_COL_TUPLE;
         cv.cv_dstDesc.ds_columnName = NULL;
         cv.cv_dstValue.dv_null      = FALSE;
-        cv.cv_dstValue.dv_length    = (II_UINT2)cbValueMax;
+        cv.cv_dstValue.dv_length    = (II_UINT2)cbValueMax+2;
         cv.cv_dstValue.dv_value     = szValue;
 
         IIapi_convertData(&cv);  

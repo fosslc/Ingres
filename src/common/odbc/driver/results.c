@@ -392,6 +392,9 @@
 **         Set the ArraySize field of the IRD (SQL_DESC_ARRAY_SIZE) to
 **         one if SQLFetch() is invoked, which by definition uses no 
 **         arrays.
+**     24-Aug-2010 (Ralph Loen) Bug 124300
+**         In SQLDescribeCol_InternalCall(), allow for null terminator when
+**         returning the column name argument.
 */
 
 
@@ -686,7 +689,7 @@ RETCODE SQL_API SQLDescribeCol_InternalCall(
     if ( pibScale)
         *pibScale = pird->Scale;
 
-    rc = GetChar (pstmt, pird->Name, (CHAR *)szColName, cbColNameMax, pcbColName);
+    rc = GetChar (pstmt, pird->Name, (CHAR *)szColName, cbColNameMax+1, pcbColName);
 
     UnlockStmt (pstmt);
     return rc;

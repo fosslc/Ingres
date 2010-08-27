@@ -268,6 +268,9 @@
 **         In CatGetDBcapabilities(), add fetch of DBMS_TYPE and set
 **         fServerClassVECTORWISE bit in the fServerType field of the
 **         tDBC structure if the DBMS_TYPE is Vectorwise.
+**     24-Aug-2010 (Ralph Loen) Bug 124300
+**         Add SQL_MAX_PROCEDURE_NAME_LEN to select query in 
+**         CatGetDBCapabilities().
 */
 
 /*
@@ -7044,6 +7047,7 @@ BOOL CatGetDBcapabilities(LPDBC pdbc, LPSTMT pstmtparm)
             "cap_capability = 'SQL_MAX_SCHEMA_NAME_LEN' or "
             "cap_capability = 'SQL_MAX_TABLE_NAME_LEN' or "
             "cap_capability = 'SQL_MAX_COLUMN_NAME_LEN' or "
+            "cap_capability = 'SQL_MAX_PROCEDURE_NAME_LEN' or "        
             "cap_capability = 'SQL_MAX_CHAR_COLUMN_LEN' or "
             "cap_capability = 'SQL_MAX_VCHR_COLUMN_LEN' or "
             "cap_capability = 'SQL_MAX_BYTE_COLUMN_LEN' or "
