@@ -481,6 +481,9 @@ SQLSTATE_MAPPING_REQUIRED
 **	    and LESSER functions to display better type mismatch error.
 **	25-aug-2010 (miket) SIR 122403 SD 145781
 **	    Better msg for alter table not valid for encrypted tables.
+**	26-aug-2010 (miket) SIR 122403 SD 146509
+**	    Clarify msg E_US24C2_9410 - an encrypted index can contain
+**	    only the one encrypted column.
 */
 
 #define _US_CLASS   0
@@ -11632,7 +11635,7 @@ E_US24C2_9410:SS5000A_QUERY_ERROR
 "The key for a modify or index operation is of a datatype which
 is either non-keyable or non-sortable. All key fields must be both
 keyable and sortable and (for primary keys) cannot be encrypted. An
-encrypted index may contain only a single encrypted column."
+encrypted index may contain only the one encrypted column."
 E_US24C3_9411:SS5000A_QUERY_ERROR
 "Invalid encrypted index. An encrypted index must: (1) contain only one
 column, (2) that column must be encrypted with NOSALT, (3) the index
