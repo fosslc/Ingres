@@ -4455,6 +4455,8 @@ IIcpfrom_init (
 **	28-Jun-2010 (kschendel) b123990
 **	    Use column length, not group length, when validating and
 **	    normalizing unicode columns.
+**	20-Aug-2010 (kschendel) b124272
+**	    Fix typo in 124272 fix from earlier this week.  (status -> sts)
 */
 
 static STATUS
@@ -4570,7 +4572,7 @@ IIcpfrom_binary(II_THR_CB *thr_cb, II_CP_STRUCT *copy_blk,
 	if (cmap->cp_unorm)
 	{
 	    sts = IIcp_unorm(IIlbqcb->ii_lq_adf, cmap, tup_ptr, copy_blk);
-	    if (status != OK)
+	    if (sts != OK)
 		return (FAIL);
 	}
 
