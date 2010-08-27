@@ -3583,6 +3583,10 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	    Batch up mass IN lists into upto MAXI2-1 elements, the maximum
 **	    supported. This was previously only done for the sorted form but
 **	    the unsort will benefit too later if the optimiser orders later on.
+**      28-Jul-2010 (horda03) B123414
+**          Need to allow "...HAVING <constant>" expressions, as with
+**          Constant Folding the list of restrictions can be reduced
+**          to a constant.
 */
 %{
 
@@ -48156,7 +48160,8 @@ psl_find_nodep(
 }
 
 /* PSL_HCHECK - make sure that vars in having include atts in the group
-**	by or in different scope. Ignore subselects and aggregates.
+**	by or in different scope. Ignore subselects and aggregates and
+**      constants.
 */
 DB_STATUS
 psl_hcheck(
@@ -48173,9 +48178,12 @@ psl_hcheck(
 
     if (having == (PST_QNODE*) NULL)
 	return (status);
-    /* step over aggregates and subselects, they are checked elsewhere */
+    /* step over aggregates and subselects, they are checked elsewhere.
+    ** Allow COPs, as now the HAVING restrictions could have been folded.
+    */
     if (having->pst_sym.pst_type == PST_AGHEAD ||
-	having->pst_sym.pst_type == PST_SUBSEL)
+	having->pst_sym.pst_type == PST_SUBSEL ||
+        having->pst_sym.pst_type == PST_COP)
 	return (status);
 
     /* Next, check for comparison predicates involving atomic columns (i.e.,
