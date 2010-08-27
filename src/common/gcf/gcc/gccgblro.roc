@@ -106,6 +106,8 @@
 **	    Changed version string to "II 9.4" for new release.
 **	10-Jun-2009 (hweho01)
 **	    Changed version string to "II 10.0" for new release.
+**	12-Jul-2010 (bonro01)
+**	    Changed version string to "II 10.1" for new release.
 **/
 
 
@@ -117,13 +119,13 @@
 ** GCC revision number designation.
 */
 
-GLOBALDEF  const	char	IIGCc_rev_lvl[] = "II 10.0";
+GLOBALDEF  const	char	IIGCc_rev_lvl[] = "II 10.1";
 
 /*
 ** GCB revision number designation.
 */
 
-GLOBALDEF  const	char	IIGCb_rev_lvl[] = "II 10.0";
+GLOBALDEF  const	char	IIGCb_rev_lvl[] = "II 10.1";
 
 /* Define C literal conversion table and constants */
 

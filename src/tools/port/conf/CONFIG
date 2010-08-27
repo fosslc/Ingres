@@ -768,14 +768,16 @@
 **	    No R_PACKMAN for LSB builds
 **	21-May-2010 (bonro01)
 **	    Add conditional compilation for ICE
+**	20-Jul-2010 (bonro01)
+**	    Update version for Ingres 10.1
 */
 
 /*
 ** These are #define'd unless you #undef them explicitly for your box.
 */
 # define FULL_RELEASE
-# define ING_VER	 II 10.0.0
-# define ING_W4GL_VER	 II 10.0.0
+# define ING_VER	 II 10.1.0
+# define ING_W4GL_VER	 II 10.1.0
 # define EA_VER		EA 3.0/1002
 
 # define R_CODE		/* give me the code */

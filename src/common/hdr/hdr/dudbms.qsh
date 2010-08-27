@@ -182,6 +182,8 @@
 **          10.0 release.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	20-Jul-2010 (bonro01)
+**	    Changed version for 10.1.0 release.
 **/
 
 /*
@@ -194,20 +196,20 @@ EXEC SQL BEGIN DECLARE SECTION;
 
    /* the following are the current values for iidbcapabilities values */
 ##define        DU_DB1_QUEL_LEVEL              "QUEL_LEVEL"
-##define        DU_DB1_CUR_QUEL_LEVEL          "II10.0.0"
+##define        DU_DB1_CUR_QUEL_LEVEL          "II10.1.0"
 
 ##define        DU_DB2_SQL_LEVEL               "SQL_LEVEL"
-##define        DU_DB2_CUR_SQL_LEVEL           "II10.0.0"
+##define        DU_DB2_CUR_SQL_LEVEL           "II10.1.0"
 
 ##define        DU_DB3_INGSQL_LEVEL            "INGRES/SQL_LEVEL"
-##define        DU_DB3_CUR_INGSQL_LEVEL        "01000"
+##define        DU_DB3_CUR_INGSQL_LEVEL        "01010"
 
 /* This one is deprecated and doesn't mean much. */
 ##define        DU_DB4_CMNSQL_LEVEL            "COMMON/SQL_LEVEL"
-##define        DU_DB4_CUR_CMNSQL_LEVEL        "01000"
+##define        DU_DB4_CUR_CMNSQL_LEVEL        "01010"
 
 ##define        DU_DB5_INGQUEL_LEVEL           "INGRES/QUEL_LEVEL"
-##define        DU_DB5_CUR_INGQUEL_LEVEL       "01000"
+##define        DU_DB5_CUR_INGQUEL_LEVEL       "01010"
 ##define        DU_DB5_STAR_INGQUEL_LEVEL      "00000"
 
 ##define        DU_DB6_STDCAT_LEVEL            "STANDARD_CATALOG_LEVEL"

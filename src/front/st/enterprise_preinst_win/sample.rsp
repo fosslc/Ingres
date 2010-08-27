@@ -27,7 +27,7 @@ II_DUMP = "C:\Program Files\Ingres\IngresII"
 II_LOG_FILE = "C:\Program Files\Ingres\IngresII"
 II_DUAL_LOG = ""
 II_LOCATION_DOTNET = "C:\Program Files\Ingres\Ingres .NET Data Provider\"
-II_LOCATION_DOCUMENTATION = "C:\Program Files\Ingres\Ingres Documentation 10.0\"
+II_LOCATION_DOCUMENTATION = "C:\Program Files\Ingres\Ingres Documentation 10.1\"
 
 
 [Ingres Configuration]

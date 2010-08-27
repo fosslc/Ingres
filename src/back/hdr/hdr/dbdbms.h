@@ -592,6 +592,8 @@
 **	    SIR 121619 MVCC: Add DB_PG_V6, DB_PG_V7
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	12-Jul-2010 (bonro01)
+**          Add DB_STATVERS_6DBV1010 for 10.1 release. 
 **/
 
 #define                 DB_OLDMAXNAME   24
@@ -2948,6 +2950,7 @@ typedef struct _DB_STAT_VERSION
 # define        DB_STATVERS_6DBV920		"00920   "
 # define        DB_STATVERS_6DBV930		"00930   "
 # define        DB_STATVERS_6DBV1000		"01000   "
+# define        DB_STATVERS_6DBV1010		"01010   "
 
 
 

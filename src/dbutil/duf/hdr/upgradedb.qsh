@@ -108,6 +108,8 @@
 **	    Update server version to "II 10.0.0".
 **	12-Nov-2009 (kschendel) SIR 122882
 **	    cmptlvl is now an integer.
+**	20-Jul-2010 (bonro01)
+**	    Update version to II 10.1.0
 **/
 
 
@@ -264,7 +266,7 @@ EXEC SQL END DECLARE SECTION;
 ** required to run the conversion utility.  It is compared against
 ** the output of dbmsinfo('_version').
 */
-# define SERVER_VERSION	"II 10.0.0"      /* The SERVER_VERSION constant defines 
+# define SERVER_VERSION	"II 10.1.0"      /* The SERVER_VERSION constant defines 
 					** the required server version required
 					** to run the conversion utility.  It 
 					** is compared against the output of
@@ -296,7 +298,8 @@ EXEC SQL BEGIN DECLARE SECTION;
 ##define	V930_LEVEL	930
 ##define	V940_LEVEL	940
 ##define	V1000_LEVEL	1000
-##define	CURRENT_LEVEL   1000
+##define	V1010_LEVEL	1010
+##define	CURRENT_LEVEL   1010
 
 EXEC SQL END DECLARE SECTION;
 

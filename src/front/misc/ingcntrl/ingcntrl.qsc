@@ -203,6 +203,8 @@ fool ming:
 **	    Updated version number to II9.4.0.
 **	10-Jun-2009 (hweho01)
 **	    Updated version number to II10.0.0.
+**	20-Jul-2010 (bonro01)
+**	    Updated version number to II10.1.0.
 */
 
 # ifdef CMS
@@ -445,7 +447,7 @@ char	**argv;
     if (STcompare(IIUIscl_StdCatLevel(), UI_LEVEL_65) < 0)
     {
 	IIUGerr(E_IC0067_BadIngresVersion, UG_ERR_FATAL, 2,
-			(PTR) ERx("II10.0"), (PTR) IIUIscl_StdCatLevel());
+			(PTR) ERx("II10.1"), (PTR) IIUIscl_StdCatLevel());
 	/* NOTREACHED */
     }
 

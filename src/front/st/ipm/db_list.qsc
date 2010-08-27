@@ -126,9 +126,11 @@ i4  get_nextdb();
 **	    Changed the IPM_VER string to "II 10.0" for new release.
 **	24-Nov-2009 (frima01) Bug 122490
 **	    Added include of id.h to eliminate gcc 4.3 warnings.
+**	20-Jul-2010 (bonro01)
+**	    Update release to II 10.1
 */
 
-#define	IPM_VER	"II 10.0"
+#define	IPM_VER	"II 10.1"
 
 VOID
 read_iidbdb()
