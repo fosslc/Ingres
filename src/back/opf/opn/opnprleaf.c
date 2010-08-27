@@ -406,6 +406,13 @@ opn_adfsf(
 **	    Also cleaned up some confused variable usage: replaced dsortcop
 **	    with sortcop; and removed usage of ncop after it has been assigned
 **	    to cop, replacing it with cop.
+**	01-jun-10 (smeke01) b123838
+**	    Prevent oph_origtuples/oph_odefined from being set for the
+**	    histograms of a multi-attribute key when there are no boolean
+**	    factors for the key.  This in turn prevents the
+**	    'delayed multi-attribute' code in oph_jtuples() from being skewed
+**	    by an unreasonably high number for oph_origtuples (up to 50% of
+**	    the number of rows in the base table).
 */
 OPN_STATUS
 opn_prleaf(
@@ -849,6 +856,15 @@ opn_prleaf(
 					    ** for the project restrict
                                             ** node */
 
+    /* In the following condition we check first whether the relation:
+    ** (1) has a multi-attribute key with matching attributes in the
+    ** query (opb_count > 1).
+    ** (2) has a multi-attribute key with at least one matching boolean
+    ** factor in the query (opb_bfcount > 0).
+    ** If either is false then there is either no multi-attribute key,
+    ** or a file scan is preferable to using the multi-attribute key.
+    */
+    if ( varp->opv_mbf.opb_count > 1 && varp->opv_mbf.opb_bfcount > 0 )
     {	/* look at all histograms in the relation and determine which
 	** have a requirement for special processing due to multi-attribute
 	** index restrictivity rules, FIXME, this should be replaced
