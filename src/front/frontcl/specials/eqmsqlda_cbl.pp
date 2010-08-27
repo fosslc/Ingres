@@ -26,8 +26,11 @@
 *     *             Default number of sqlvars increased to 1024.
 *     *         27-sep-2004 (kodse01)
 *     *             Corrected the copyright statement comment.
+*     *         29-Jul-2010 (hweho01) SIR 121123
+*     *             Increased the size of SQLNAMEC to 258, to match 
+*     *             with the IISQD_NAMELEN in IISQLDA (iisqlda.h).
 *     *
-*     * Copyright (c) 2004 Ingres Corporation
+*     * Copyright (c) 2004, 2010 Ingres Corporation
 *-    *
        78 IISQ-MAX-COLS        VALUE 1024.
 
@@ -47,7 +50,7 @@
              07 SQLIND          USAGE POINTER.
              07 SQLNAME.
                 49 SQLNAMEL     PIC S9(4) USAGE COMP-5.
-                49 SQLNAMEC     PIC X(34).
+                49 SQLNAMEC     PIC X(258).
 # ifdef i64_hpu
              07 SQLALIGN2       PIC X(4).
 # endif

@@ -1,5 +1,5 @@
 C
-C Copyright (c) 2005 Ingres Corporation
+C Copyright (c) 2005, 2010 Ingres Corporation
 C
 
 C
@@ -28,6 +28,9 @@ C	 01-Nov-2005 (hanje04) - BUGS 113212, 114839 & 115285.
 C				 Use INTEGER*8 for sqldata & sqlind on 64bit
 C				 Linux.
 C        18-nov-2009 (joea)    - Add IISQ_BOO_TYPE.
+C        29-Jul-2010 (hweho01) - SIR 121123
+C                                Increase the size of sqlnamec from 34 to 258,
+C                                to match with the IISQD_NAMELEN in iisqlda.h.
 C
 
 C
@@ -35,7 +38,7 @@ C IISQLVAR - Single element of SQLDA variable as described in manual.
 C
         structure /IISQLNAME/ 
                 integer*2           sqlnamel
-                 character*34  sqlnamec
+                character*258       sqlnamec
         end structure
         structure /IISQLVAR/
                 integer*2        sqltype

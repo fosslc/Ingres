@@ -1,5 +1,5 @@
 !
-! Copyright (c) 2004 Ingres Corporation
+! Copyright (c) 2004, 2010 Ingres Corporation
 !
 
 !
@@ -27,6 +27,9 @@
 !	    Undo 19-apr-1999 change since int is not a BASIC datatype.
 !       18-nov-2009 (joea)
 !           Add IISQ_BOO_TYPE.
+!       29-jul-2010 (hweho01) SIR 121123
+!           Increased the size of sqlnamec from 34 to 258, to match 
+!           with the IISQD_NAMELEN in IISQLDA (iisqlda.h).
 
 !
 ! IISQ_MAX_COLS - Maximum number of columns returned from INGRES
@@ -52,7 +55,7 @@
 
 		group sqlname
 		    word	sqlnamel
-		    string  	sqlnamec = 34
+		    string  	sqlnamec = 258
 		end group sqlname
 	    
 	    end group sqlvar
