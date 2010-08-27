@@ -6023,6 +6023,11 @@ qeq_closeTempTables(
 **	11-nov-1998 (somsa01)
 **	    We need to make sure that the continuation flag is reset.
 **	    (Bug #94114)
+**      18-Aug-2010 (maspa05) b124108
+**          If we call qeq_dsh to retrieve the same DSH that we already have
+**          in qef_dsh then we will have locked the corresponding QP twice
+**          therefore unlock it so that we don't accumulate locks and 
+**          consequently never free the QP.
 */
 DB_STATUS
 qeq_endret(
@@ -6039,6 +6044,53 @@ QEF_RCB		*qef_rcb )
 
     if (status = qeq_dsh(qef_rcb, 1, &dsh, QEQDSH_NORMAL, -1))
 	return (status);    /* won't go very far without DSH */
+
+    /* if we just retrieved the same dsh that we already have then
+     * unlock it (we'll have locked it twice) */
+
+    if (dsh == (QEE_DSH *)qef_cb->qef_dsh)
+    {
+        QSF_RCB	qsf_rcb;
+
+        qsf_rcb.qsf_next = (QSF_RCB *)NULL;
+        qsf_rcb.qsf_prev = (QSF_RCB *)NULL;
+        qsf_rcb.qsf_length = sizeof(QSF_RCB);
+        qsf_rcb.qsf_type = QSFRB_CB;
+        qsf_rcb.qsf_lk_state = QSO_SHLOCK;
+        qsf_rcb.qsf_owner = (PTR)DB_QEF_ID;
+        qsf_rcb.qsf_ascii_id = QSFRB_ASCII_ID;
+        qsf_rcb.qsf_sid = qef_rcb->qef_cb->qef_ses_id;
+        qsf_rcb.qsf_obj_id.qso_handle = qef_rcb->qef_qso_handle;
+	qsf_rcb.qsf_obj_id.qso_type = QSO_QP_OBJ;
+	qsf_rcb.qsf_obj_id.qso_lname = sizeof (DB_CURSOR_ID);
+	MEcopy((PTR)&qef_rcb->qef_qp, sizeof (DB_CURSOR_ID), 
+	    (PTR)qsf_rcb.qsf_obj_id.qso_name);
+
+	/* can't unlock without a handle */
+	if (!qsf_rcb.qsf_obj_id.qso_handle)
+	{
+            status=qsf_call(QSO_GETHANDLE, &qsf_rcb);   
+	    if (status)
+	    {
+	       qef_rcb->error.err_code = qsf_rcb.qsf_error.err_code;
+	       return (status);
+	    }
+	    /* gethandle adds another lock! so unlock for that */
+            status=qsf_call(QSO_UNLOCK, &qsf_rcb);   
+	    if (status)
+	    {
+	       qef_rcb->error.err_code = qsf_rcb.qsf_error.err_code;
+	       return (status);
+	    }
+	}
+
+	status=qsf_call(QSO_UNLOCK, &qsf_rcb); 
+	if (status)
+	{
+	    qef_rcb->error.err_code = qsf_rcb.qsf_error.err_code;
+	    return (status);
+	}
+    }
 
     /* update count of open query/cursor */
     qef_cb->qef_open_count--;
