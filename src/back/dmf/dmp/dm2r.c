@@ -3832,6 +3832,7 @@ dm2r_position(
 ** index where we do indeed find our match and achieve our TJOIN select.
 */
 if (t->tcb_parent_tcb_ptr->tcb_rel.relencflags & TCB_ENCRYPTED)
+if (DMZ_REC_MACRO(11))
 flag |= DM2R_ALL;
     /*	Handle the position for full scan case. */
     if (flag & DM2R_ALL)
