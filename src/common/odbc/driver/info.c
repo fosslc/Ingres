@@ -248,6 +248,10 @@
 **     05-Mar-2010 (Ralph Loen) SIR 123378
 **         Changed Name field of tdescTypeInfo to OBJECT_NAME_SIZE to
 **         allow for larger names of descriptor info.
+**     28-Jun-2010 (Ralph Loen) Bug 123983 
+**         Adjusted column size in dataTypeInfo to better match ODBC specs.
+**         In SQLGetTypeInfo(), adjust minimum and maximum scale of 
+**         date/time data types to according to specifications. 
 */
 
 static RETCODE SQL_API SQLGetInfo_Common(
@@ -593,30 +597,30 @@ message,modify,permit,relocate,return,save,savepoint,until,while\0",
         20, "", "",           "",SQL_ALL_EXCEPT_LIKE, 0 },
     { IITYPE_ALL,"SMALLINT",    SQL_SMALLINT,          
         5, "", "",           "",SQL_ALL_EXCEPT_LIKE, 0 },
-    { IITYPE_ALL,"FLOAT",       SQL_FLOAT,            
+    { IITYPE_ALL,"FLOAT",       SQL_FLOAT,
         53, "", "",  "precision",SQL_ALL_EXCEPT_LIKE, 0 },
-    { IITYPE_ALL,"REAL",        SQL_REAL,             
+    { IITYPE_ALL,"REAL",        SQL_REAL,
         24, "", "",           "",SQL_ALL_EXCEPT_LIKE, 0 },
     { IITYPE_INGRES_ISODATES,"ANSIDATE",        SQL_DATE,             
-        19, "'","'",          "",SQL_ALL_EXCEPT_LIKE, SQL_CODE_DATE },
+        10, "'","'",          "",SQL_ALL_EXCEPT_LIKE, SQL_CODE_DATE },
     { IITYPE_INGRES_ISODATES,"ANSIDATE",        SQL_TYPE_DATE,        
-        19, "'","'",          "",SQL_ALL_EXCEPT_LIKE, SQL_CODE_DATE },
+        10, "'","'",          "",SQL_ALL_EXCEPT_LIKE, SQL_CODE_DATE },
     { IITYPE_INGRES_ISODATES,"TIMESTAMP",   SQL_TIMESTAMP,        
-        19, "'","'",          "",SQL_ALL_EXCEPT_LIKE, SQL_CODE_TIMESTAMP },
+        29, "'","'",          "",SQL_ALL_EXCEPT_LIKE, SQL_CODE_TIMESTAMP },
     { IITYPE_INGRES_ISODATES,"TIMESTAMP",   SQL_TYPE_TIMESTAMP,   
-        19, "'","'",          "",SQL_ALL_EXCEPT_LIKE, SQL_CODE_TIMESTAMP },
+        29, "'","'",          "",SQL_ALL_EXCEPT_LIKE, SQL_CODE_TIMESTAMP },
     { IITYPE_INGRES_ISODATES,"TIME",        SQL_TIME,             
-        10, "'","'",          "",SQL_ALL_EXCEPT_LIKE, SQL_CODE_TIME },
+        18, "'","'",          "",SQL_ALL_EXCEPT_LIKE, SQL_CODE_TIME },
     { IITYPE_INGRES_ISODATES,"TIME",        SQL_TYPE_TIME,        
-        10, "'","'",          "",SQL_ALL_EXCEPT_LIKE, SQL_CODE_TIME },
+        18, "'","'",          "",SQL_ALL_EXCEPT_LIKE, SQL_CODE_TIME },
     { IITYPE_INGRES_ISODATES,"INTERVAL YEAR TO MONTH",SQL_INTERVAL_YEAR_TO_MONTH,
-        10,"'","'","",SQL_ALL_EXCEPT_LIKE, SQL_CODE_YEAR_TO_MONTH },
+        3,"'","'","",SQL_ALL_EXCEPT_LIKE, SQL_CODE_YEAR_TO_MONTH },
     { IITYPE_INGRES_ISODATES,"INTERVAL DAY TO SECOND",SQL_INTERVAL_DAY_TO_SECOND,
-        10,"'","'",      "",SQL_ALL_EXCEPT_LIKE, SQL_CODE_DAY },
+        19,"'","'",      "",SQL_ALL_EXCEPT_LIKE, SQL_CODE_DAY },
     { IITYPE_ALL,"DATE",    SQL_TYPE_TIMESTAMP,   
-        19, "'","'",        "",SQL_ALL_EXCEPT_LIKE, SQL_CODE_DATE },
+        26, "'","'",        "",SQL_ALL_EXCEPT_LIKE, SQL_CODE_DATE },
     { IITYPE_ALL,"DATE",    SQL_TIMESTAMP,        
-        19, "'","'",        "",SQL_ALL_EXCEPT_LIKE, SQL_CODE_DATE },
+        26, "'","'",        "",SQL_ALL_EXCEPT_LIKE, SQL_CODE_DATE },
     { IITYPE_ALL,"VARCHAR", SQL_VARCHAR,        
         2000, "'","'","max length",SQL_SEARCHABLE, 0 },
     { IITYPE_ALL,"",            0,                     
@@ -1449,7 +1453,6 @@ SQLRETURN  SQL_API SQLGetFunctions(SQLHDBC hdbc,
 {
     LPDBC pdbc = (LPDBC)hdbc;
     i4 i;
-    i4 id;
     i4 supportMask;
  
     if (!LockDbc (pdbc)) 
@@ -1973,16 +1976,6 @@ RETCODE SQL_API SQLGetTypeInfo_InternalCall(
         precision = dataTypeInfo[i].precision;
         switch (dataTypeInfo[i].data_type)
         {
-        case SQL_FLOAT:
-            if (ODBCVersion <= SQL_OV_ODBC2)
-                precision = 15;
-            break;
-        
-        case SQL_REAL:
-            if (ODBCVersion <= SQL_OV_ODBC2)
-                precision = 7;
-            break;
-        
         case SQL_WCHAR:
         case SQL_WVARCHAR:
             if (pdbc->fRelease >= fReleaseRELEASE30) 
@@ -1994,23 +1987,36 @@ RETCODE SQL_API SQLGetTypeInfo_InternalCall(
             break;
         } 
         
-        if (dataTypeInfo[i].data_type == SQL_DECIMAL)
+        switch (dataTypeInfo[i].data_type) 
         {
+        case SQL_DECIMAL:
             maximum_scale = pdbc->max_decprec;
             minimum_scale = 0;
-        }
-        else if (dataTypeInfo[i].data_type == SQL_TIMESTAMP  ||
-            dataTypeInfo[i].data_type == SQL_TYPE_TIMESTAMP)
-        {
-            maximum_scale = 0;
+            break;
+        
+        case SQL_TIMESTAMP:
+        case SQL_TYPE_TIMESTAMP:
+            maximum_scale = APILevel < IIAPI_LEVEL_4 ? 0 : 9;
             minimum_scale = 0;
-        }
-        else   
-        {
+            break;
+
+        case SQL_TIME:
+        case SQL_TYPE_TIME:
+            maximum_scale = APILevel < IIAPI_LEVEL_4 ? 0 : 9;
+            minimum_scale = 0;
+            break;
+
+        case SQL_INTERVAL_DAY_TO_SECOND:
+            maximum_scale = 9;
+            minimum_scale = 0;
+            break;
+            
+        default:  
             maximum_scale = -1;
             minimum_scale = -1;
+            break;
         }
-        
+    
         p += pstmt->cbrow;       /* p->tuple to fill in */
         
         GetTuplePtrs(pstmt, p, QRY_TYPE_TYPE_NAME, &dp, &np);
@@ -2024,7 +2030,11 @@ RETCODE SQL_API SQLGetTypeInfo_InternalCall(
         
         GetTuplePtrs(pstmt, p, QRY_TYPE_PRECISION, &dp, &np);
         i4p  = (i4*) dp;
-        *i4p = precision;
+        if (dataTypeInfo[i].data_type == SQL_NUMERIC ||
+            dataTypeInfo[i].data_type == SQL_DECIMAL)
+            *i4p =  pdbc->max_decprec;
+        else
+            *i4p = precision;
 
         /*
         ** Search the cached values for length as specified in
