@@ -2644,6 +2644,10 @@ static char execproc_syntax2[] = " = session.";
 **	    optimization. We will delay the start of the copy, and only
 **	    call QEF to load the data when PSF tells us it has filled the
 **	    buffer.
+**	7-jul-2010 (stephenb)
+**	    We need to delay sending of GCA messages for all batch
+**	    processing to avoid a send/recieve deadlock. Update message
+**	    handling for batches.
 */
 DB_STATUS
 scs_sequencer(i4 op_code,
@@ -10329,13 +10333,30 @@ massive_for_exit:
 		    && !ult_check_macro(&Sc_main_cb->sc_trace_vector, SCT_NOBYREF,
 				       NULL,NULL)))
 	    {
-		if (sscb->sscb_flags & SCS_INSERT_OPTIM)
+		if (cscb->cscb_in_group)
 		{
 		    /*
-		    ** for the insert to copy optimization we will queue up the
-		    ** messages on cscb_mnext until the copy is done, so we have
-		    ** to allocate memory for each one. Message type will always
-		    ** be GCA_RESPONSE
+		    ** when in batch mode we will queue up the
+		    ** messages on cscb_mnext until the batch is done, so we have
+		    ** to allocate memory for each one.
+		    ** This is here because of the non-async nature of
+		    ** GCA_SEND and the way in which the DAS server works. The DAS
+		    ** server might continue to send messages for a batch without
+		    ** reading the receive queue. If the DBMS sends any
+		    ** responses before DAS is ready to read them, we may end up
+		    ** in a send/receive deadlock where the DBMS has sent a
+		    ** response and is waiting for the DAS server to read it, and
+		    ** the DAS server has sent more queries for the batch and is 
+		    ** waiting for the DBMS to read them.
+		    ** Saving up the responses is not the ideal solution since it
+		    ** imposes on the DBMS processing and continues to eat through
+		    ** the session's SCF memory while the batch is processing, but
+		    ** since GCA has no way to queue the send request and 
+		    ** asynchronously return, we have no choice. If the user's batch
+		    ** is too big, we may exhaust the SCF memory pool, in which case
+		    ** the batch will be terminated and the user will receive an
+		    ** error. If we ever code an async GCA_SEND, we should change this 
+		    ** processing.
 		    */
 		    status = sc0m_allocate(SCU_MZERO_MASK,
 			    sizeof(SCC_GCMSG) + sizeof(GCA_RE_DATA),
@@ -10345,6 +10366,7 @@ massive_for_exit:
 			    (PTR *)&message);
 		    if (status != E_DB_OK)
 		    {
+			cscb->cscb_eog_error = TRUE;
 			sc0e_0_put(status, 0);
 			sc0e_0_uput(status, 0);
 			sc0e_0_uput(E_SC0206_CANNOT_PROCESS, 0);
@@ -10448,15 +10470,15 @@ massive_for_exit:
 	    {
 		*next_op = CS_INPUT;
 	    }
-	    else if (sscb->sscb_flags & SCS_INSERT_OPTIM &&
-		    !(ps_ccb->psq_ret_flag & PSQ_FINISH_COPY) &&
+	    else if (cscb->cscb_in_group &&
+		    !cscb->cscb_gci.gca_end_of_group &&
 		    qry_status != GCA_FAIL_MASK)
 	    {
 		/*
-		** if we are in an insert-to-copy optimization, then
-		** we can't return the result until the copy is done.
+		** if we are in a batch, then
+		** we can't return the result until the batch is done.
 		** The messages are already queued, so we'll just
-		** keep grabbing the next input until the copy is done
+		** keep grabbing the next input until the batch is done
 		*/
 		*next_op = CS_INPUT;
 	    }
