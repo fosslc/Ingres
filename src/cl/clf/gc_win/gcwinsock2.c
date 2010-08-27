@@ -292,6 +292,11 @@
 **	    GCwinsock2_restore() to support GCsave() and GCrestore()
 **	    (and are called by those routines).  These functions are
 **	    only used when running under GCA CL (ie, as local IPC).
+**	14-Jun-2010 (Bruce Lunsford) Bug 123954
+**	    Trace showed bogus value (often very large) for # of bytes
+**	    gotten after reissuing WSARecv() following receipt of a
+**	    partial message.  Fixed by initializing dwBytes to zero.
+**	    Also add explanatory traces when required to reissue recv.
 */
 
 /* FD_SETSIZE is the maximum number of sockets that can be
@@ -5361,6 +5366,11 @@ GCwinsock2_async_completion( GCC_P_PLIST *parm_list )
 **	    connection having been closed (BytesTransferred == 0);
 **	    can be used by caller to detect closed socket.  Also
 **	    clear pcb->tot_rcv if error occurs, as done elsewhere.
+**	14-Jun-2010 (Bruce Lunsford) Bug 123954
+**	    Trace showed bogus value (often very large) for # of bytes
+**	    gotten after reissuing WSARecv() following receipt of a
+**	    partial message.  Fixed by initializing dwBytes to zero.
+**	    Also add explanatory traces when required to reissue recv.
 */
 bool 
 GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS *lpstatus, DWORD BytesTransferred_in, PER_IO_DATA *lpPerIoData)
@@ -5371,7 +5381,7 @@ GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS *lpstatus, DWORD BytesTransfer
     char		*proto;
     PCB2		*pcb;
     int			i;
-    DWORD		dwBytes;
+    DWORD		dwBytes = 0;
     DWORD		dwBytes_wanted;
     i4			len;
     i4			len_prefix = lpPerIoData->block_mode ? 0 : 2;
@@ -5486,10 +5496,15 @@ GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS *lpstatus, DWORD BytesTransfer
     if (pcb->rcv_bptr < parm_list->buffer_ptr)
     {
 	/*
-	** Haven't received the all of the 2-byte length header yet.
+	** Haven't received all of the 2-byte length header yet.
 	** We need to issue another recv to get the rest of the
 	** message (or at least the header).
 	*/
+	GCTRACE(2)( "GCwinsock2_OP_RECV_complete %s %d: %p Partial length hdr recvd(need minimum %d bytes more)...reissue WSARecv() for %d bytes into 0x%p\n",
+		proto, pcb->id, parm_list,
+		parm_list->buffer_ptr - pcb->rcv_bptr,
+		pcb->tot_rcv,
+		pcb->rcv_bptr );
 
 	ZeroMemory(&lpPerIoData->Overlapped, sizeof(OVERLAPPED));
 	lpPerIoData->wbuf.buf = pcb->rcv_bptr;
@@ -5512,8 +5527,8 @@ GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS *lpstatus, DWORD BytesTransfer
 		return TRUE; /* GCC_RECEIVE is done */
 	    }
 	}
-	GCTRACE(4)( "GCwinsock2_OP_RECV_complete %s %d: %p want %d bytes got %d bytes\n",
-		    proto, pcb->id, parm_list, dwBytes_wanted, dwBytes );
+	GCTRACE(2)( "GCwinsock2_OP_RECV_complete %s %d: %p reissued WSARecv() for hdr+msg: Want %d bytes got %d\n",
+		proto, pcb->id, parm_list, dwBytes_wanted, dwBytes );
 
 	return FALSE;  /* GCC_RECEIVE is not yet done...need more data. */
     }  /* End if still need rest of 2-byte length header */
@@ -5555,6 +5570,13 @@ GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS *lpstatus, DWORD BytesTransfer
     if( len < 0 )
     {
 	pcb->tot_rcv = -len;
+	GCTRACE(2)( "GCwinsock2_OP_RECV_complete %s %d: %p Partial message recvd(%d of %d)...reissue WSARecv() for remaining %d bytes into 0x%p\n",
+		proto, pcb->id, parm_list,
+		pcb->rcv_bptr - parm_list->buffer_ptr,
+		parm_list->buffer_lng,
+		pcb->tot_rcv,
+		pcb->rcv_bptr );
+
 	ZeroMemory(&lpPerIoData->Overlapped, sizeof(OVERLAPPED));
 	lpPerIoData->wbuf.buf = pcb->rcv_bptr;
 	lpPerIoData->wbuf.len = dwBytes_wanted = pcb->tot_rcv;
@@ -5575,9 +5597,8 @@ GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS *lpstatus, DWORD BytesTransfer
 		return TRUE; /* GCC_RECEIVE is done */
 	    }
 	}
-	GCTRACE(4)( "GCwinsock2_OP_RECV_complete %s %d: %p Want %d bytes got %d, msg len %d remaining %d\n",
-		proto, pcb->id, parm_list, dwBytes_wanted, dwBytes,
-		parm_list->buffer_lng, -len );
+	GCTRACE(2)( "GCwinsock2_OP_RECV_complete %s %d: %p reissued WSARecv() for msg: Want %d bytes got %d\n",
+		proto, pcb->id, parm_list, dwBytes_wanted, dwBytes );
 	return FALSE;  /* GCC_RECEIVE is not yet done...need more data. */
     }  /* End if len < 0 */
 
