@@ -183,6 +183,8 @@ package com.ingres.gcf.jdbc;
 **	    Bumped version to 4.0.2 for positional DB proc parameters.
 **	 1-Jun-10 (gordy)
 **	    Bumped version to 4.0.3 for batch performance improvements.
+**	20-Jul-10 (gordy)
+**	    Bumped version to 4.0.4 for SQL comment handling.
 */
 
 import	com.ingres.gcf.dam.MsgConst;
@@ -335,6 +337,8 @@ import	com.ingres.gcf.dam.MsgConst;
 **	    Bumped version to 4.0.2 for positional DB proc parameters.
 **	 1-Jun-10 (gordy)
 **	    Bumped version to 4.0.3 for batch performance improvements.
+**	20-Jul-10 (gordy)
+**	    Bumped version to 4.0.4 for SQL comment handling.
 */
 
 interface
@@ -347,7 +351,7 @@ DrvConst
     String	DRV_VENDOR_NAME		= "Ingres Corporation";
     int		DRV_MAJOR_VERSION	= 4;
     int		DRV_MINOR_VERSION	= 0;
-    int		DRV_PATCH_VERSION	= 3;
+    int		DRV_PATCH_VERSION	= 4;
     String	DRV_JDBC_VERSION	= "JDBC 4.0";
     int		DRV_JDBC_MAJ_VERS	= 4;
     int		DRV_JDBC_MIN_VERS	= 0;
