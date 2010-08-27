@@ -60,6 +60,10 @@
 ##	    BUG 124253
 ##	    For non-renamed installs, get installation ID from symbol.tbl as
 ##	    it may not be II
+##	19-Aug-2010 (hanje04)
+##	    BUG 124284
+##	    Only close() cfgfile if we've opened it in findInstID(). Improve
+##	    error meessage too.
 
 
 # load external modules
@@ -225,7 +229,7 @@ def findInstID( instloc ):
     """Read II_INSTALLATION from symbol table of target instance
 	and return it"""
     symtblpath = "%s/%s/%s" % ( instloc, filesloc, symtbl )
-    instid = ""
+    instid = "undefined"
 
     try:
 	cfgfile = file( symtblpath, 'r' )
@@ -245,7 +249,7 @@ def findInstID( instloc ):
 	
 	    # and move on
 	    ent = cfgfile.readline()
-    cfgfile.close()
+	    cfgfile.close()
     return instid
 
 def findAuxLoc( instloc ):
@@ -426,8 +430,8 @@ def searchRPMDB( sshdr ):
 
 	    # sanity check what we got back
 	    if len(instid[0]) != 2:
-		print "Invalid installation ID: %s, found for %s, using II" % \
-						(instid[0], basename[0])
+		print "Invalid installation ID: '%s', found for %s-%s, using II" % \
+					(instid[0], basename[0], version[0])
 		instid[0] = "II"
 
 	    # create dictionary to store info
