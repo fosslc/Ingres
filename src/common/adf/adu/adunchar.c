@@ -5515,6 +5515,9 @@ i4		    caseflag
 **      9-Jul-2010 (hanal04) Bug 124087
 **          Created from adu_nvchr_chattouni. Provide a unicoerce version
 **          of adh_chrcvt() in libq.
+**     13-Aug-2010 (hanal04) Bug 124250
+**          Use AFE_NTEXT_STRING not DB_NVCHR_STRING as AFE_NTEXT_STRING
+**          may be padded by the compiler when a wchar_t is 4 bytes long.
 */
 DB_STATUS
 adu_nvchr_embchartouni (
@@ -5675,7 +5678,7 @@ adu_nvchr_embchartouni (
 
         if (rdv->db_datatype == DB_NVCHR_TYPE)
         {
-            odata = (u_char *)((DB_NVCHR_STRING *)rdv->db_data)->element_array;
+            odata = (u_char *)((AFE_NTEXT_STRING *)rdv->db_data)->afe_t_text;
 
             /* Set the count in the output buffer */
             ((DB_NVCHR_STRING *)rdv->db_data)->count = resultlen;
