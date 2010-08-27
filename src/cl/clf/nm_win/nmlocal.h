@@ -47,6 +47,9 @@
 **	    trunction.
 **	11-Feb-2009 (drivi01)
 **	    Export NMgtEnv().
+**	14-Jun-2010 (whiro01)
+**	    Take out "NMstIngAt" which conflicts (in C++) with the def in
+**	    nmcl.h
 */
  
 # include	<tm.h>
@@ -101,7 +104,6 @@ FUNC_EXTERN VOID	NMgtEnv();
 FUNC_EXTERN FILE	*NMopensyms();
 FUNC_EXTERN STATUS	NMaddsym();
 FUNC_EXTERN STATUS	NMreadsyms();
-FUNC_EXTERN STATUS	NMstIngAt();
 FUNC_EXTERN STATUS	NMwritesyms();
 FUNC_EXTERN STATUS	NMflushIng();
 FUNC_EXTERN STATUS	NM_initsym();
