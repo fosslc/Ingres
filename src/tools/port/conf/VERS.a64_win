@@ -6,6 +6,8 @@
 #	    Add Variable to build ice and setup for potential hybrid
 #	    builds, right now hybrid builds are turned off in 
 #	    platform specific Jamdefs.
+#	10-Aug-2010 (bonro01)
+#	    Remove ICE from x64 and fix the build specification.
 
 #set: config32 int_w32
 #set: config a64_win
@@ -13,12 +15,12 @@
 
 # Any jam definitions go here, e.g. VAR = value ;
 # Don't forget spaces around the = and before the ;
-BUILD_ICE = "TRUE" ;	#set: option BUILD_ICE
+#BUILD_ICE = "" ;	##set: option BUILD_ICE
 
 
 # Hybridization...
 # a64_win normally builds reverse hybrid
-BUILD_ARCH = "64+32" ;   #set: arch 64+32
+BUILD_ARCH = "64" ;   #set: arch 64
 XERCES_ARCH ?= 64 ;
 
 PLATFORM_JAMDEFS = a64_win ;

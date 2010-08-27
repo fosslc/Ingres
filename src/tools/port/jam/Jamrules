@@ -1425,7 +1425,10 @@
 #	    aren't rebuilt b/c there is no dependecy on msg files from
 #	    mkfecat script.
 #	    Add dependency of fe.cat.msg file on msg files in front.
-#
+#	09-Aug-2010 (drivi01)
+#	    Port CCLEXW action to cygwin 1.7.  Add u2d conversions
+#	    to convert all files to DOS format in the intermediate
+#	    steps to avoid syntax errors.
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -10022,8 +10025,10 @@ actions CCSY2YFW
 actions CCLEXW
 {
 	$(CD) $(>:D)
-	$(FLEX) $(>) 
+	$(FLEX) $(>)
+	if NOT "%USE_CYGWIN%"=="" u2d $(>) 
 	copy lex.yy.c $(>:S=.c)
+	if NOT "%USE_CYGWIN%"=="" u2d $(>:S=.c)
 }
 
 actions CCLEXWHB

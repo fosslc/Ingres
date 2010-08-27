@@ -128,6 +128,9 @@
 **     25-Jun-2010 (Ralph Loen)  Bug 122174
 **          Correct SQL_DESC_OCTET_LENGTH, SQL_DESC_LENGTH, and
 **          SQL_DESC_PRECISION for interval types.
+**     10-Aug-2010 (drivi01)
+**	    Fix pird->OctetLength for 64-bit Windows platform
+**	    because pird isn't defined.  Use pxxd instead.
 */
 
 /*
@@ -1164,7 +1167,7 @@ SQLRETURN  SQL_API SQLGetDescField_InternalCall (
 
                 default:
 #ifdef _WIN64
-                    *lenValuePtr  = pird->OctetLength;
+                    *lenValuePtr  = pxxd->OctetLength;
 #else
                     i4temp = pxxd->OctetLength;
                     I4ASSIGN_MACRO(i4temp, *i4ValuePtr);
