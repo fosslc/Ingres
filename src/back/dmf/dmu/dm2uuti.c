@@ -404,6 +404,8 @@
 **	    Add support for column encryption.
 **	10-may-2010 (stephenb)
 **	    Cast new i8 reltups to i4
+**      29-Jul-2009 (stial01) (b124163)
+**          If building mxcb sem name, don't assume CS_SEM_NAME_LEN>=DB_MAXNAME
 **/
 
 GLOBALREF	DMC_CRYPT	*Dmc_crypt;
@@ -2725,7 +2727,7 @@ i4		thread_type)
     SCF_FTC	ftc;
     STATUS	scf_status = OK;
     i4		new_threads;
-    char	sem_name[CS_SEM_NAME_LEN+16];
+    char	sem_name[CS_SEM_NAME_LEN + DB_TAB_MAXNAME + 16];
     char	thread_name[60];
     i4		avail_threads;
     i4		threads, remainder;
@@ -2756,11 +2758,19 @@ i4		thread_type)
 	{
 	    /* Init the MXCB stuff we'll need to sync the threads */
 	    CScnd_init(&m->mx_cond);
+
+	    /*
+	    ** Initialize the MXCB mutexes
+	    ** CS will truncate the name to CS_SEM_NAME_LEN
+	    ** Since table name may be > CS_SEM_NAME_LEN, 
+	    ** use reltid,reltidx to make the semaphore name unique,
+	    ** plus as much of the table name as we can fit
+	    */
 	    CSw_semaphore(&m->mx_cond_sem, CS_SEM_SINGLE,
-			    STprintf(sem_name,
-				    "MXCB %*s",
-				    t->tcb_relid_len,
-				    t->tcb_rel.relid.db_tab_name));
+		      STprintf(sem_name, "MXCB %x %x %*s", 
+			t->tcb_rel.reltid.db_tab_base, 
+			t->tcb_rel.reltid.db_tab_index,
+			t->tcb_relid_len, t->tcb_rel.relid.db_tab_name));
 	    CSget_sid(&m->mx_sid);
 	    m->mx_state |= MX_THREADED;
 
