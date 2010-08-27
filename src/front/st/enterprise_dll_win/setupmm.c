@@ -327,6 +327,13 @@
 **          the code to make sure all the errors are brought on foreground.
 **	16-Jan-2009 (whiro01) SD Issue 132899
 **	    In conjunction with the fix for this issue, fixed a few compiler warnings.
+**      03-Aug-2010 (horda03) B124173
+**          Added ingres_check_rspfile. The function checks
+**          If the file specified INGRES_RSP_FILE exists then prompt user
+**          to confirm that they really want to overwrite the file. If the
+**          file happens to be a directory, then output a warning.
+**          The functions exits with "INGRES_CONTINUE" set to "YES" if the
+**          Response file is to be written, "NO" otherwise.
 */
 #include <windows.h>
 #include <msi.h>
@@ -6239,3 +6246,53 @@ ingres_warn_remove_dbms(MSIHANDLE hInstall)
 	return ERROR_SUCCESS;
 	
 }
+
+UINT __stdcall
+ingres_check_rspfile(MSIHANDLE hInstall)
+{
+        BOOL bAnswer;
+        char buf[MAX_PATH+1], lpText[512];
+        DWORD nret, fattrib;
+
+        MsiSetProperty(hInstall, "INGRES_CONTINUE", "YES");
+
+        nret=sizeof(buf);
+        MsiGetProperty(hInstall, "INGRES_RSP_FILE", buf, &nret);
+        if(!(buf[0]))
+        {
+                MyMessageBox(hInstall, "You must enter a value for the Response File.");
+                MsiSetProperty(hInstall, "INGRES_CONTINUE", "NO");
+                return ERROR_SUCCESS;
+        }
+
+        fattrib = GetFileAttributes(buf);
+
+        if (fattrib==-1)
+        {
+                /* File doeesn't exist so continue */
+
+                return ERROR_SUCCESS;
+        }
+
+        if (fattrib & FILE_ATTRIBUTE_DIRECTORY)
+        {
+                sprintf(lpText, "\"%s\" is a directory. Please enter a valid file name.", buf);
+                MyMessageBox(hInstall, lpText);
+
+                MsiSetProperty(hInstall, "INGRES_CONTINUE", "NO");
+                return ERROR_SUCCESS;
+        }
+
+
+        sprintf(lpText, "\"%s\" exists. Do you wish to overwrite ?", buf);
+
+        bAnswer = AskUserYN(hInstall, lpText);
+
+        if (!bAnswer)
+        {
+                MsiSetProperty(hInstall, "INGRES_CONTINUE", "NO");
+        }
+
+        return ERROR_SUCCESS;
+}
+
