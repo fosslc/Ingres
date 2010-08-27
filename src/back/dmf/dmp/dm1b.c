@@ -11388,6 +11388,8 @@ dm1b_count(
 **          btree_reposition() Set error status where compare != DM1B_SAME
 **	26-Feb-2010 (jonj)
 **	    CRIB now anchored in RCB.
+**	29-Jun-2010 (jonj)
+**	    Add more debug stuff to reposition error reporting.
 */
 static DB_STATUS
 btree_reposition(
@@ -11763,6 +11765,15 @@ btree_reposition(
 
     if (s != E_DB_OK || !key_found) 
     {
+	/* Shut off MVCC tracing to make all of this stuff readable */
+	t->tcb_dcb_ptr->dcb_status &= ~DCB_S_MVCC_TRACE;
+
+	/* Show how we got here */
+	if ( s )
+	    uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
+		       (char *)NULL, (i4)0, (i4 *)NULL, err_code,
+		       0);
+
 	TRdisplay("DM1B-REPOS Session ID 0x%p op %d page 0x%p (%d,%d) %~t\n"
 	    "    pop %d tran %x lgid %d Bid:(%d,%d) status %d \n"
 	    "    POS Bid:(%d,%d) Tid:(%d,%d) LSN=(%x,%x) Line %d\n"
@@ -11776,7 +11787,7 @@ btree_reposition(
 	    bid->tid_tid.tid_page, bid->tid_tid.tid_line, s,
 	    savepos->bid.tid_tid.tid_page, savepos->bid.tid_tid.tid_line,
 	    savepos->tidp.tid_tid.tid_page, savepos->tidp.tid_tid.tid_line,
-	    savepos->lsn.lsn_low, savepos->lsn.lsn_high, savepos->line,
+	    savepos->lsn.lsn_high, savepos->lsn.lsn_low, savepos->line,
 	    savepos->clean_count, savepos->nextleaf,
 	    savepos->page_stat, PAGE_STAT, savepos->page_stat,
 	    savepos->page, savepos->tran.db_low_tran,
@@ -11789,6 +11800,9 @@ btree_reposition(
 	{
 	    /* dmd_prindex prints page header, range entries, kids */
 	    dmd_prindex(r, *leaf, (i4)0);
+	    /* If CR leaf, do likewise */
+	    if ( leafPinfo->CRpage )
+		dmd_prindex(r, leafPinfo->CRpage, (i4)0);
 	    dm0pUnlockBuf(r, leafPinfo);
 	    dm0p_unfix_page(r, DM0P_UNFIX, leafPinfo, dberr);
 	}

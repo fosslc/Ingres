@@ -679,6 +679,8 @@ DM_OBJECT	   *obj)
 **	    for DM0P_BSTAT fields.
 **	16-Apr-2010 (kschendel) SIR 123485
 **	    Add the BQCB.
+**	29-Jun-2010 (jonj)
+**	    Add buf_cr_undo, buf_cr_where to DM0P_BUFFER stuff.
 */
 static STATUS
 ex_handler(
@@ -1231,10 +1233,10 @@ TRdisplay("\n%.4s Control Block @0x%p..0x%p owned by 0x%x for %d bytes.\n\n",
 		TRdisplay("%8* NEXT=0x%x PREV=0x%x VALID_STAMP=%d\n",
 		    b->buf_state.stq_next, b->buf_state.stq_prev, 
 		    b->buf_tcb_stamp);
-		TRdisplay("%8* CRNEXT=%d CRPREV=%d CRROOT=%d\n",
-		    b->buf_cr_next, b->buf_cr_prev, b->buf_cr_root);
-		TRdisplay("%8* CR_NOUNDO=%d CR_ISO=%d\n",
-		    b->buf_cr_noundo, b->buf_cr_iso);
+		TRdisplay("%8* CRNEXT=%d CRPREV=%d CRROOT=%d CR_ISO=%d\n",
+		    b->buf_cr_next, b->buf_cr_prev, b->buf_cr_root, b->buf_cr_iso);
+		TRdisplay("%8* CR_UNDO=%d CR_NOUNDO=%d CR_WHERE=%d\n",
+		    b->buf_cr_undo, b->buf_cr_noundo, b->buf_cr_where );
 		TRdisplay("%8* PINCOUNT=%d MPEND=%d\n",
 		    b->buf_pincount, b->buf_mpend);
 		TRdisplay("%8* TRANB=%5d TRAN=0x%x%x LKID=%x/%x V=%x%x\n",

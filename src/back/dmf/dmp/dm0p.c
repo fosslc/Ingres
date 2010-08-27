@@ -4288,7 +4288,9 @@ DB_ERROR            *dberr)
 	    buffer[i].buf_cr_root = BUF_ENDLIST;
 	    buffer[i].buf_cr_next = BUF_ENDLIST;
 	    buffer[i].buf_cr_prev = BUF_ENDLIST;
+	    buffer[i].buf_cr_undo = 0;
 	    buffer[i].buf_cr_noundo = 0;
+	    buffer[i].buf_cr_where = 0;
 	    buffer[i].buf_create = 0;
 	    buffer[i].buf_page_lsn.lsn_high = 0;
 	    buffer[i].buf_page_lsn.lsn_low = 0;
@@ -4395,7 +4397,9 @@ DB_ERROR            *dberr)
 		    buffer[i].buf_cr_root = BUF_ENDLIST;
 		    buffer[i].buf_cr_next = BUF_ENDLIST;
 		    buffer[i].buf_cr_prev = BUF_ENDLIST;
+		    buffer[i].buf_cr_undo = 0;
 		    buffer[i].buf_cr_noundo = 0;
+		    buffer[i].buf_cr_where = 0;
 		    buffer[i].buf_create = 0;
 		    buffer[i].buf_page_lsn.lsn_high = 0;
 		    buffer[i].buf_page_lsn.lsn_low = 0;
@@ -9405,7 +9409,9 @@ DB_ERROR		*dberr)
     b->buf_cr_next = BUF_ENDLIST;
     b->buf_cr_prev = BUF_ENDLIST;
     b->buf_cr_root = BUF_ENDLIST;
+    b->buf_cr_undo = 0;
     b->buf_cr_noundo = 0;
+    b->buf_cr_where = 0;
     b->buf_cr_clsn.lsn_high = 0;
     b->buf_cr_clsn.lsn_low = 0;
     b->buf_cr_blsn.lsn_high = 0;
@@ -17809,6 +17815,9 @@ DMP_PINFO	*pinfo)
 **	    any CR pages built by this transaction with serializable
 **	    isolation; changes made by this transaction must be visible
 **	    to the transaction.
+**	17-Jun-2010 (jonj)
+**	    As above, but force rematerialization regardless of
+**	    isolation level.
 */
 VOID
 dm0pUnmutex(
@@ -17911,9 +17920,7 @@ DMP_PINFO	*pinfo)
 
 	/*
 	** If Root has been modified, invalidate any CR pages built
-	** for this transaction that were built with SERIALIZABLE
-	** isolation; SERIALIZABLE has to be able to see the changes
-	** made by the transaction.
+	** for this transaction, forcing rematerialization.
 	*/
 	if ( PageStat & DMPP_MODIFY )
 	{
@@ -17923,8 +17930,7 @@ DMP_PINFO	*pinfo)
 	    {
 	        CRbuf = &buf_array[next_buf];
 
-		if ( CRbuf->buf_page_tranid.db_low_tran == b->buf_page_tranid.db_low_tran &&
-		     CRbuf->buf_cr_iso == RCB_SERIALIZABLE )
+		if ( CRbuf->buf_page_tranid.db_low_tran == b->buf_page_tranid.db_low_tran )
 		{
 		    /* This will cause rematerialize of the CR page */
 		    CRbuf->buf_cr_iso = 0;
@@ -32290,6 +32296,8 @@ i4		flags)
 **	    transaction created the CR page and had a crib that matches
 **	    this one, it may have undone changes made by this transaction,
 **	    which must now be visible.
+**	14-Jul-2010 (jonj)
+**	    Added buf_cr_undo, buf_cr_where to assist debugging.
 */
 DB_STATUS 
 dm0pMakeCRpage(
@@ -32689,7 +32697,7 @@ DB_ERROR	*dberr)
 		TRdisplay("%@ dm0pMakeCRpage:%d tran %x %s %~t page %d\n"
 			"\t ROOT: (%d.%d) ptran %x lsn %x stat %v\n"
 			"\t  BUF: (%d.%d) ptran %x lsn %x clsn %x blsn %x\n"
-			"\t       tran %x ref %d pri %d nundo %d sts %v\n"
+			"\t       tran %x ref %d pri %d undo %d nundo %d iso %s sts %v\n"
 			"\t CRIB: bos_tran %x low %x commit %x bos %x\n"
 			"\t       seq %d lg_low %d lg_high %d iso %s %s\n",
 		    WhereFound,
@@ -32709,7 +32717,10 @@ DB_ERROR	*dberr)
 		    b->buf_tran_id.db_low_tran,
 		    b->buf_refcount,
 		    b->buf_priority,
+		    b->buf_cr_undo,
 		    b->buf_cr_noundo,
+		    (b->buf_cr_iso == 0) ? "0" :
+			(b->buf_cr_iso == RCB_READ_COMMITTED) ? "RC" : "SE",
 		    BUF_STS, b->buf_sts,
 		    crib->crib_bos_tranid,
 		    crib->crib_low_lsn.lsn_low,
@@ -32718,12 +32729,15 @@ DB_ERROR	*dberr)
 		    crib->crib_sequence,
 		    crib->crib_lgid_low,
 		    crib->crib_lgid_high,
-		    (b->buf_cr_iso == RCB_READ_COMMITTED) ? "RC" : "SE",
+		    (r->rcb_iso_level == RCB_READ_COMMITTED) ? "RC" : "SE",
 		    (r->rcb_state & RCB_CONSTRAINT) ? "CONSTRAINT" : "");
-
+	    
 	    /* If usable CRbuf, then we're done with Root */
 	    if ( CRbuf )
 		dm0p_munlock(&RootBuf->buf_mutex);
+
+	    /* For debugging, remember WhereFound */
+	    b->buf_cr_where = WhereFound;
 
 	    /* 
 	    ** If buffer is not fixed (on the free queue),
@@ -33039,6 +33053,11 @@ DB_ERROR	*dberr)
 **	09-Apr-2010 (jonj)
 **	    Check status == E_DB_OK before setting UndoComplete lest we loose
 **	    track of, for example, a dmve error.
+**	17-Jun-2010 (jonj)
+**	    Fix interpretation of read-committed isolation.
+**	    Read committed, like serializable, sees data committed at the 
+**	    CRIB point in time plus any updates made by the transaction itself,
+**	    minus updates made by the current statement.
 */
 static DB_STATUS
 make_consistent(
@@ -33084,7 +33103,6 @@ DB_ERROR	*dberr)
     i4			jundo = 0;
     u_i2		RootLg_id;
     u_i4		RootTranid;
-    bool		MyTran;
     bool		UndoComplete;
     bool		ReadFromLog;
     bool		ReadFromJnl;
@@ -33124,6 +33142,7 @@ DB_ERROR	*dberr)
     */
     b->buf_page_lsn = crib->crib_low_lsn;
     b->buf_cr_blsn = crib->crib_bos_lsn;
+    b->buf_cr_undo = 0;
     b->buf_cr_noundo = 0;
 
     dm0p_munlock(&b->buf_mutex);
@@ -33357,12 +33376,13 @@ DB_ERROR	*dberr)
 	    {
 		/*  Read the record at prev_lga, try prev_bufid first */
 		if ( dcb->dcb_status & DCB_S_MVCC_TRACE )
-		    TRdisplay("%@ make_consistent:%d tran %x dm0l_read <%x,%x,%x> buf %d\n",
+		    TRdisplay("%@ make_consistent:%d tran %x dm0l_read <%x,%x,%x> lsn %x buf %d\n",
 		      __LINE__,
 		      tran_id->db_low_tran,
 		      CRhdr->prev_lga.la_sequence,
 		      CRhdr->prev_lga.la_block,
 		      CRhdr->prev_lga.la_offset,
+		      CRhdr->prev_lsn.lsn_low,
 		      CRhdr->prev_bufid);
 
 		/*
@@ -33425,11 +33445,12 @@ DB_ERROR	*dberr)
 	    else
 	    {
 		if ( dcb->dcb_status & DCB_S_MVCC_TRACE )
-		    TRdisplay("%@ make_consistent:%d tran %x dm0j_position to %d,%d\n",
+		    TRdisplay("%@ make_consistent:%d tran %x dm0j_position to %d,%d lsn %x\n",
 			  __LINE__,
 			  tran_id->db_low_tran,
 			  CRhdr->prev_jfa.jfa_filseq,
-			  CRhdr->prev_jfa.jfa_block);
+			  CRhdr->prev_jfa.jfa_block,
+			  CRhdr->prev_lsn.lsn_low);
 			  
 		/*
 		** The first dm0j_position on behalf of this transaction
@@ -33625,15 +33646,23 @@ DB_ERROR	*dberr)
 		    ** may be if isolation level is read-committed.
 		    */
 
-		    /* Note if this record belongs to this transaction */
-		    MyTran = (record->tran_id.db_high_tran == 
-		    		tran_id->db_high_tran &&
-		              record->tran_id.db_low_tran == 
-			      	tran_id->db_low_tran);
-
 		    /*
 		    ** First, figure out what we consider "committed"
 		    ** consistent with our CR needs:
+		    **
+		    ** Regardless of isolation level, updates made by this
+		    ** transaction are not undone.
+		    **
+		    ** Serializable sees data committed at the start
+		    ** of the transaction plus any of its own updates.
+		    **
+		    ** Read Committed sees data committed at the start
+		    ** of the statement plus any updates made since the
+		    ** start of the transaction. However, updates made by
+		    ** the statement itself are not undone but are filtered
+		    ** out or seen, as needed, by dm1r_get(), dm1b_get()
+		    **
+		    ** Stuff from other transactions are not undone when:
 		    **
 		    **	o MINI transaction records below the beginning of
 		    **	  this statement.
@@ -33646,7 +33675,12 @@ DB_ERROR	*dberr)
 		    **	  and its transaction was not active at that time.
 		    */
 
-		    if ( (record->flags & DM0L_MINI &&
+		    if ( (record->tran_id.db_high_tran ==
+		    	    tran_id->db_high_tran &&
+			  record->tran_id.db_low_tran ==
+			    tran_id->db_low_tran)
+			     ||
+		         (record->flags & DM0L_MINI &&
 		          LSN_LTE(&record->lsn, &crib->crib_bos_lsn))
 			     ||
 			  (record->flags & DM0L_MINI &&
@@ -33656,31 +33690,26 @@ DB_ERROR	*dberr)
 			  !CRIB_XID_WAS_ACTIVE(crib, record->lg_id,
 			  	record->tran_id.db_low_tran)) )
 		    {
-			/* Update is committed and consistent with CRIB, no undo */
-		        b->buf_cr_noundo++;
+			/*
+			** Update is consistent with CRIB, no undo.
+			**
+			** This page contains one or more updates
+			** that were not undone.
+			** This CR page is only usable by this transaction
+			** as it may contain one or more uncommitted updates.
+			*/
+			b->buf_cr_noundo++;
 
 			if ( dcb->dcb_status & DCB_S_MVCC_TRACE )
-			    TRdisplay("%@ make_consistent:%d tran %x no undo lg_id %d was %x, not %x\n",
-					    __LINE__,
-					    tran_id->db_low_tran,
-					    record->lg_id,
-					    crib->crib_xid_array[record->lg_id],
-					    record->tran_id.db_low_tran);
-
+			    TRdisplay("%@ make_consistent:%d tran %x skipped undo, lsn %x lg_id %d %x xid %x\n", 
+					__LINE__,
+					tran_id->db_low_tran,
+					record->lsn.lsn_low,
+					record->lg_id,
+					crib->crib_xid_array[record->lg_id],
+					record->tran_id.db_low_tran);
 		    }
-		    /*
-		    ** Whether we undo our own transaction's updates depends
-		    ** on isolation level: Serializable is allowed to see them,
-		    ** others are not.
-		    **
-		    ** Updates made by this transaction's current statement
-		    ** (> crib_bos_lsn) are not undone, but are filtered
-		    ** out or seen, as needed, by dm1r_get(), dm1b_get()
-		    */
-		    else if ( !MyTran 
-		    	       || 
-			      (LSN_LTE(&record->lsn, &crib->crib_bos_lsn) &&
-			       b->buf_cr_iso != RCB_SERIALIZABLE) )
+		    else
 		    {
 			/* Undo the change */
 
@@ -33698,6 +33727,8 @@ DB_ERROR	*dberr)
 				lundo++;
 			    else
 				jundo++;
+
+			    b->buf_cr_undo++;
 
 			    /*
 			    ** Because dmve_logging == FALSE, DMVE will not
@@ -33733,22 +33764,8 @@ DB_ERROR	*dberr)
 				__LINE__,
 				tran_id->db_low_tran,
 				status,
-				DMPP_VPT_GET_LOG_ADDR_LOW_MACRO(page_type, page), lundo+jundo);
-		    }
-		    else
-		    {
-			/*
-			** This page contains one or more transactional updates
-			** that were not undone (SERIALIZABLE)
-			** This CR page is only usable by this transaction
-			** as it contains one or more uncommitted updates.
-			*/
-			b->buf_cr_noundo++;
-
-			if ( dcb->dcb_status & DCB_S_MVCC_TRACE )
-			    TRdisplay("%@ make_consistent:%d tran %x skipped undo\n", 
-					__LINE__,
-					tran_id->db_low_tran);
+				DMPP_VPT_GET_LOG_ADDR_LOW_MACRO(page_type, page),
+				b->buf_cr_undo);
 		    }
 		}
 	    }
@@ -33809,7 +33826,7 @@ DB_ERROR	*dberr)
 		    		"restored page %d (%d.%d) to tran %x LSN %x\n",
 		    __LINE__, 
 		    tran_id->db_low_tran,
-		    lundo + jundo, b->buf_cr_noundo,
+		    b->buf_cr_undo, b->buf_cr_noundo,
 		    b->buf_lock_key.lk_key4,
 		    2048 << b->buf_id.bid_cache, b->buf_id.bid_index,
 		    b->buf_page_tranid.db_low_tran,

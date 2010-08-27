@@ -670,6 +670,8 @@ struct _DM0P_BLQ
 **	    SIR 121619 MVCC: Add buf_page_lsn, buf_page_tranid,
 **	    buf_cr_root, buf_cr_next, buf_cr_prev, buf_cr_iso, buf_cr_noundo,
 **	    buf_create, buf_pincount, buf_mpend.
+**	29-Jun-2010 (jonj)
+**	    Added buf_cr_undo, buf_cr_where to aid debugging.
 */
 struct _DM0P_BUFFER
 {
@@ -761,8 +763,10 @@ INTENT_LK,NULL_TUNFIX,DMCM,GW_QUEUED,MLOCK"
     LG_LSN	    buf_cr_clsn;	/* CR last_commit page restored to */
     LG_LSN	    buf_page_lsn;	/* Copy of page LSN */
     DB_TRAN_ID	    buf_page_tranid;	/* Copy of page transaction id */
-    i4		    buf_cr_noundo;	/* > 0 if CR buffer not sharable */
+    i4		    buf_cr_undo;	/* Count of undos applied */
+    i4		    buf_cr_noundo;	/* Count of skipped undos */
     i4		    buf_cr_iso;		/* CR isolation level when materialized */
+    i4		    buf_cr_where;	/* dm0pMakeCRpage __LINE__ */
     i4	    	    buf_create;		/* dm0p __LINE__ where buf_create set */
 };
 

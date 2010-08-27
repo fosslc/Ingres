@@ -1478,28 +1478,42 @@ ADF_CB		*adf_cb)
 ** History:
 **      09-Jun-2010 (stial01)
 **          Created from similar diags in dm1r_delete.
+**	01-Jul-2010 (jonj)
+**	    Added some more crib stuff, like the contents
+**	    of the xid_array.
 */
 VOID
 dmd_pr_mvcc_info(
 DMP_RCB		*r)
 {
     DMP_TCB		*t;
+    LG_CRIB		*crib = r->rcb_crib_ptr;
+    i4			i;
 
     t = r->rcb_tcb_ptr;
 
-    if ( r->rcb_crib_ptr )
+    if ( crib )
     {
 	TRdisplay(
-	    " MVCC: tbl(%d,%d) \n"
-	    " rcb tranid %x crib_bos_tranid %x\n"
+	    " %@ tran %x MVCC: tbl(%d,%d) \n"
+	    " crib_bos_tranid %x\n"
 	    " log_id %d low_lsn %x commit %x bos %x\n",
-	    t->tcb_rel.reltid.db_tab_base, t->tcb_rel.reltid.db_tab_index,
 	    r->rcb_tran_id.db_low_tran,
-	    r->rcb_crib_ptr->crib_bos_tranid,
+	    t->tcb_rel.reltid.db_tab_base, t->tcb_rel.reltid.db_tab_index,
+	    crib->crib_bos_tranid,
 	    r->rcb_slog_id_id,
-	    r->rcb_crib_ptr->crib_low_lsn.lsn_low,
-	    r->rcb_crib_ptr->crib_last_commit.lsn_low,
-	    r->rcb_crib_ptr->crib_bos_lsn.lsn_low);
+	    crib->crib_low_lsn.lsn_low,
+	    crib->crib_last_commit.lsn_low,
+	    crib->crib_bos_lsn.lsn_low);
+	TRdisplay("%@ tran %x active transactions: %d,%d\n",
+	    r->rcb_tran_id.db_low_tran,
+	    crib->crib_lgid_low, crib->crib_lgid_high);
+	for ( i = crib->crib_lgid_low; i <= crib->crib_lgid_high; i++ )
+	{
+	    if ( crib->crib_xid_array[i] )
+	        TRdisplay("          %4d: 0x%x\n",
+		    i, crib->crib_xid_array[i]);
+	}
     }
 
     /* Additional diagnostics, print page contents */
