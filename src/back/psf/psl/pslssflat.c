@@ -211,6 +211,9 @@ psl_project_corr_vars (
 **	    has_COUNT.
 **	19-Jun-2010 (kiria01) b123951
 **	    Ensure we flatten the WITH-element trees too.
+**	27-Jul-2010 (kiria01) b124129)
+**	    Also catch sub-AGHEAD context where clause conjuctions to propagate
+**	    joinid if needed.
 */
 
 static DB_STATUS
@@ -497,9 +500,12 @@ psl_flatten1(
 	    {
 		PST_QNODE *rt_node;
 		if (node->pst_sym.pst_value.pst_s_op.pst_joinid == PST_NOJOIN &&
-		    BTtest(qual_depth, (PTR)in_WHERE) &&
 		    (rt_node = pst_antecedant_by_3types(
-				stk, NULL, PST_SUBSEL, PST_AGHEAD, PST_ROOT)))
+				stk, NULL, PST_SUBSEL, PST_AGHEAD, PST_ROOT)) &&
+		    (BTtest(qual_depth, (PTR)in_WHERE) ||
+			rt_node->pst_sym.pst_type == PST_AGHEAD &&
+			(rt_node = pst_antecedant_by_2types(
+				stk, rt_node, PST_SUBSEL, PST_ROOT))))
 		{
 		    PST_J_ID joinid = rt_node->pst_sym.pst_value.pst_s_root.pst_ss_joinid;
 		    PST_QNODE *l = node->pst_left;
