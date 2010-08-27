@@ -316,6 +316,9 @@ REM	     Temporarily remove VDBA dependecies, as VDBA is not being
 REM	     distributed for the moment.
 REM	26-Apr-2010 (bonro01)
 REM	     Fix typo caused by previous change.
+REM	13-Aug-2010 (drivi01)
+REM	     B/c 64-bit Ingres on Windows is a new product,
+REM	     exclude ICE feature entirely.
 REM	
 
 set SUFFIX=
@@ -432,9 +435,9 @@ call gd enterprise_is_win
 rm -f buildrel_report.txt
 if "%II_RELEASE_LMTD%" == "ON" rm -rf %II_RELEASE_DIR%\IngresIIi18n %II_RELEASE_DIR%\IngresIIDoc %II_RELEASE_DIR%\IngresII\*
 msidepcheck IngresIIDBMS%SUFFIX%.ism 
-msidepcheck IngresIIDBMSIce%SUFFIX%.ism 
+if "%SUFFIX%"=="" msidepcheck IngresIIDBMSIce%SUFFIX%.ism 
 msidepcheck IngresIIDBMSNet_DBL%SUFFIX%.ism 
-msidepcheck IngresIIDBMSNetIce%SUFFIX%.ism 
+if "%SUFFIX%"=="" msidepcheck IngresIIDBMSNetIce%SUFFIX%.ism 
 msidepcheck IngresIIDBMSNetTools%SUFFIX%.ism 
 msidepcheck IngresIIDBMSNetVision%SUFFIX%.ism 
 msidepcheck IngresIIDBMSReplicator%SUFFIX%.ism 
@@ -445,7 +448,7 @@ if NOT "%II_RELEASE_LMTD%" == "ON" if "%SUFFIX%" == "" msidepcheck IngresIIDoc%S
 if NOT "%II_RELEASE_LMTD%" == "ON" if "%SUFFIX%" == "" msidepcheck IngresIIi18n%SUFFIX%.ism 
 msidepcheck IngresIIEsqlC%SUFFIX%.ism 
 msidepcheck IngresIIEsqlCEsqlCobol%SUFFIX%.ism 
-msidepcheck IngresIIIce%SUFFIX%.ism 
+if "%SUFFIX%"=="" msidepcheck IngresIIIce%SUFFIX%.ism 
 msidepcheck IngresIIJdbc%SUFFIX%.ism 
 msidepcheck IngresIIODBC%SUFFIX%.ism 
 if "%SUFFIX%" == "" msidepcheck IngresIIVdba%SUFFIX%.ism 
@@ -581,13 +584,13 @@ ISCmdBld.exe -x -p IngresIIDBMS%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIDBMS
 if errorlevel 1 goto ERROR
 REM set SUFFIX=
 @echo.
-ISCmdBld.exe -x -p IngresIIDBMSIce%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIDBMSIce
+if "%SUFFIX%"=="" ISCmdBld.exe -x -p IngresIIDBMSIce%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIDBMSIce
 if errorlevel 1 goto ERROR
 @echo.
 ISCmdBld.exe -x -p IngresIIDBMSNet_DBL%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIDBMSNet
 if errorlevel 1 goto ERROR
 @echo.
-ISCmdBld.exe -x -p IngresIIDBMSNetIce%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIDBMSNetIce
+if "%SUFFIX%"=="" ISCmdBld.exe -x -p IngresIIDBMSNetIce%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIDBMSNetIce
 if errorlevel 1 goto ERROR
 @echo.
 ISCmdBld.exe -x -p IngresIIDBMSNetTools%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIDBMSNetTools
@@ -620,7 +623,7 @@ if errorlevel 1 goto ERROR
 ISCmdBld.exe -x -p IngresIIEsqlCEsqlCobol%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIEsqlCEsqlCobol
 if errorlevel 1 goto ERROR
 @echo.
-ISCmdBld.exe -x -p IngresIIIce%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIIce
+if "%SUFFIX%"=="" ISCmdBld.exe -x -p IngresIIIce%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIIce
 if errorlevel 1 goto ERROR
 @echo.
 ISCmdBld.exe -x -p IngresIIJdbc%SUFFIX%.ism -b %II_RELEASE_DIR%\IngresIIJdbc
@@ -702,11 +705,11 @@ echo Update version in mergemodules
 echo.
 msiversupdate %II_MM_DIR%\IngresIIDBMS%SUFFIX%.msm
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIDBMSIce%SUFFIX%.msm
+if "%SUFFIX%"=="" msiversupdate %II_MM_DIR%\IngresIIDBMSIce%SUFFIX%.msm
 if errorlevel 1 goto ERROR3
 msiversupdate %II_MM_DIR%\IngresIIDBMSNet_DBL%SUFFIX%.msm
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIDBMSNetIce%SUFFIX%.msm
+if "%SUFFIX%"=="" msiversupdate %II_MM_DIR%\IngresIIDBMSNetIce%SUFFIX%.msm
 if errorlevel 1 goto ERROR3
 msiversupdate %II_MM_DIR%\IngresIIDBMSNetTools%SUFFIX%.msm
 if errorlevel 1 goto ERROR3
@@ -724,7 +727,7 @@ msiversupdate %II_MM_DIR%\IngresIIEsqlC%SUFFIX%.msm
 if errorlevel 1 goto ERROR3
 msiversupdate %II_MM_DIR%\IngresIIEsqlCEsqlCobol%SUFFIX%.msm  
 if errorlevel 1 goto ERROR3
-msiversupdate %II_MM_DIR%\IngresIIIce%SUFFIX%.msm 
+if "%SUFFIX%"=="" msiversupdate %II_MM_DIR%\IngresIIIce%SUFFIX%.msm 
 if errorlevel 1 goto ERROR3
 msiversupdate %II_MM_DIR%\IngresIIJdbc%SUFFIX%.msm
 if errorlevel 1 goto ERROR3
@@ -956,14 +959,14 @@ goto CONT4_0
 
 :LISTALL_1
 msidepcheck -p IngresIIDBMS%SUFFIX%.ism 
-msidepcheck -p IngresIIDBMSIce%SUFFIX%.ism 
+if "%SUFFIX%"=="" msidepcheck -p IngresIIDBMSIce%SUFFIX%.ism 
 if "%DOUBLEBYTE%" == "ON" goto LISTALL_DBL1
 msidepcheck -p IngresIIDBMSNet%SUFFIX%.ism 
 goto LISTALL_CONT_1
 :LISTALL_DBL1
 msidepcheck -p IngresIIDBMSNet_DBL%SUFFIX%.ism 
 :LISTALL_CONT_1
-msidepcheck -p IngresIIDBMSNetIce%SUFFIX%.ism 
+if "%SUFFIX%"=="" msidepcheck -p IngresIIDBMSNetIce%SUFFIX%.ism 
 msidepcheck -p IngresIIDBMSNetTools%SUFFIX%.ism 
 msidepcheck -p IngresIIDBMSNetVision%SUFFIX%.ism 
 msidepcheck -p IngresIIDBMSReplicator%SUFFIX%.ism 
@@ -973,7 +976,7 @@ msidepcheck -p IngresIIDBMSVision%SUFFIX%.ism
 if "%SUFFIX%" == "" msidepcheck -p IngresIIDoc.ism 
 msidepcheck -p IngresIIEsqlC%SUFFIX%.ism 
 msidepcheck -p IngresIIEsqlCEsqlCobol%SUFFIX%.ism 
-msidepcheck -p IngresIIIce%SUFFIX%.ism 
+if "%SUFFIX%"=="" msidepcheck -p IngresIIIce%SUFFIX%.ism 
 msidepcheck -p IngresIIJdbc%SUFFIX%.ism 
 msidepcheck -p IngresIIODBC%SUFFIX%.ism 
 if "%SUFFIX%" == ""  msidepcheck -p IngresIIVdba%SUFFIX%.ism 

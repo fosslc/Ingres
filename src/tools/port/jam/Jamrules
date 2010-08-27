@@ -1444,6 +1444,10 @@
 #           version.rel dependency.
 #       19-Aug-2010 (coomi01) b124278
 #           Add IIOPTIM to compile and link stages for rule IITOOLSEXE
+#       20-Aug-2010 (horda03)
+#           Added IIAWK rule/action to generate .h files (in psl) from
+#           some source. Also fixed dependencies in other AWK based
+#           rules to ensure correct build order used.
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -1515,6 +1519,7 @@
 # IIFiH adgfi_defn.h : fi_defn.awk fi_defn.txt ;
 # IIAduPatHdr adupatexec_ops.h : adupatexec.awk adupatexec.dotty ;
 # IIAduPatBdy adupatexec_inc.i : adupatexec.awk adupatexec.dotty ;
+# IIAWK target | awk_file source ;
 #
 # IIUTILBAT files ; -- bulk files (bat and others) for $INGUTIL
 # IIBINBAT files ; -- bulk files (bat and others) for $INGBIN
@@ -2892,6 +2897,31 @@ rule IITOOLSWNTEXE
 		      $(<:S=.$(EXESFX)).manifest ;
 }
 
+rule IIAWK
+{
+        local t = [ FGristFiles $(<) ] ;
+        local s = [ FGristFiles $(>) ] ;
+
+        _IIAWK $(t) : $(s) ;
+        DEPENDS $(t) : $(s) ;
+        DEPENDS hdrs : $(t) ;
+
+        LOCATE on $(t) = $(SEARCH_SOURCE) ;
+        SEARCH on $(s) = $(SEARCH_SOURCE) ;
+        DEPENDS $(<) : $(>) ;
+	SEARCH on $(<) = $(SEARCH_SOURCE) ;
+	SEARCH on $(>) = $(SEARCH_SOURCE) ;
+
+        Clean clean : $(t) ; 
+        if $(VERSHB)
+        {
+            DEPENDS <$(SOURCE_GRIST)!$(SUFHB)>$(<) : $(s) ;
+            LOCATE on <$(SOURCE_GRIST)!$(SUFHB)>$(<) = $(SEARCH_SOURCE) ;
+            SEARCH on <$(SOURCE_GRIST)!$(SUFHB)>$(<) = $(SEARCH_SOURCE) ;
+        }
+}
+
+
 rule IIFiRoc
 {
 	local t = [ FGristFiles $(<) ] ;
@@ -2900,9 +2930,12 @@ rule IIFiRoc
 	FiRoc $(t) : $(s) ;
 	DEPENDS $(t) : $(s) ;
 	DEPENDS hdrs : $(t) ;
+        DEPENDS $(<) : $(>) ;
 
 	LOCATE on $(t) = $(SEARCH_SOURCE) ;
 	SEARCH on $(s) = $(SEARCH_SOURCE) ;
+	SEARCH on $(<) = $(SEARCH_SOURCE) ;
+	SEARCH on $(>) = $(SEARCH_SOURCE) ;
 
 	Clean clean : $(t) ;
 	if $(VERSHB)
@@ -2921,9 +2954,12 @@ rule IIFiRocLu
 	FiRocLu $(t) : $(s) ;
 	DEPENDS $(t) : $(s) ;
 	DEPENDS hdrs : $(t) ;
+        DEPENDS $(<) : $(>) ;
 
 	LOCATE on $(t) = $(SEARCH_SOURCE) ;
 	SEARCH on $(s) = $(SEARCH_SOURCE) ;
+	SEARCH on $(<) = $(SEARCH_SOURCE) ;
+	SEARCH on $(>) = $(SEARCH_SOURCE) ;
 
 	Clean clean : $(t) ;
 	if $(VERSHB)
@@ -2942,9 +2978,12 @@ rule IIFiH
 	FiH $(t) : $(s) ;
 	DEPENDS $(t) : $(s) ;
 	DEPENDS hdrs : $(t) ;
+        DEPENDS $(<) : $(>) ;
 
 	LOCATE on $(t) = $(SEARCH_SOURCE) ;
 	SEARCH on $(s) = $(SEARCH_SOURCE) ;
+	SEARCH on $(<) = $(SEARCH_SOURCE) ;
+	SEARCH on $(>) = $(SEARCH_SOURCE) ;
 
 	Clean clean : $(t) ;
 }
@@ -2956,8 +2995,11 @@ rule IIAduPatHdr
 	AduPatHdr $(t) : $(s) ;
 	DEPENDS $(t) : $(s) ;
 	DEPENDS hdrs : $(t) ;
+        DEPENDS $(<) : $(>) ;
 	LOCATE on $(t) = $(SEARCH_SOURCE) ;
 	SEARCH on $(s) = $(SEARCH_SOURCE) ;
+	SEARCH on $(<) = $(SEARCH_SOURCE) ;
+	SEARCH on $(>) = $(SEARCH_SOURCE) ;
 	Clean clean : $(t) ;
 }
 
@@ -2968,8 +3010,11 @@ rule IIAduPatBdy
 	AduPatBdy $(t) : $(s) ;
 	DEPENDS $(t) : $(s) ;
 	DEPENDS hdrs : $(t) ;
+        DEPENDS $(<) : $(>) ;
 	LOCATE on $(t) = $(SEARCH_SOURCE) ;
 	SEARCH on $(s) = $(SEARCH_SOURCE) ;
+	SEARCH on $(<) = $(SEARCH_SOURCE) ;
+	SEARCH on $(>) = $(SEARCH_SOURCE) ;
 	Clean clean : $(t) ;
 }
 
@@ -10643,6 +10688,11 @@ actions EsqlHdr
 
 if $(NT)
 {
+	actions _IIAWK
+	{
+		cd $(>[2]:D)
+                $(AWK) -v OUT=$(<:BS) -f $(>:BS)
+	}
 	actions FiRoc
 	{
 	        cd $(>[2]:D)
@@ -10671,6 +10721,13 @@ if $(NT)
 }
 else if $(VMS)
 {
+	actions _IIAWK
+	{
+	        if f$parse("$(<:D)") .eqs. "" then create /dir $(<:D)
+
+                set default $(<:D)
+		$(AWK) -v OUT=$(<:BS) -f $(>:BS)
+	}
 	actions FiRoc
 	{
 	        if f$parse("$(<:D)") .eqs. "" then create /dir $(<:D)
@@ -10707,6 +10764,10 @@ else if $(VMS)
 }
 else
 {
+	actions _IIAWK
+	{
+		$(AWK) -v OUT=$(<) -f $(>)
+	}
 	actions FiRoc
 	{
 		$(AWK) -v roc_file=$(<) -f $(>)
