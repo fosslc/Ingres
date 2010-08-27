@@ -2099,6 +2099,14 @@ qeq_subplan_init(QEF_RCB *qef_rcb, QEE_DSH *dsh,
 **	    do tproc validation here instead of at action table-open time
 **	    (so that the resource lists don't get mixed up).
 **	    Rename to better reflect what the routine does.
+**	21-jul-2010 (stephenb) b124107
+**	    We need to verify that the iisequnece record with the correct
+**	    sequence ID according to the DSH exists since this may not
+**	    be checked in the parser if the query gets at the sequence through
+**	    devious means. It is possible that the sequence has been dropped,
+**	    and another one with the same name created, and we can get to here
+**	    without noticing. We need to reject the plan if that happens.
+**	    Re-created sequences with have a new sequence ID.
 */
 
 static DB_STATUS
@@ -2342,9 +2350,53 @@ qeq_validate_qp(QEF_RCB *qef_rcb, QEE_DSH *dsh, bool size_check)
     {
 	DMS_CB		*dms_cb;
 	QEF_SEQUENCE	*qseqp;
+	DB_IISEQUENCE	seqtuple;
 
 	for (qseqp = qp->qp_sequences; qseqp; qseqp = qseqp->qs_qpnext)
 	{
+	    /*
+	    ** make sure iisequence record exists for DSH sequence ID. We need
+	    ** to do this here because it may not have been checked already, and
+	    ** it is possible to drop and re-create a sequence with the same name
+	    ** which invalidates the sequence ID in the DSH.
+	    */
+	    qeu_rdfcb_init((PTR) &rdf_cb, qef_cb);
+	    rdf_cb.rdf_rb.rdr_types_mask = RDR_BY_NAME;
+	    rdf_cb.rdf_rb.rdr_2types_mask = RDR2_SEQUENCE;
+	    MEmove(sizeof(DB_NAME), (PTR) &qseqp->qs_seqname, ' ',
+		sizeof(DB_NAME), (PTR) &rdf_cb.rdf_rb.rdr_name.rdr_seqname);
+	    STRUCT_ASSIGN_MACRO(qseqp->qs_owner, rdf_cb.rdf_rb.rdr_owner);
+	    rdf_cb.rdf_rb.rdr_update_op = RDR_OPEN;
+	    rdf_cb.rdf_rb.rdr_qtuple_count = 1;
+	    rdf_cb.rdf_rb.rdr_qrytuple = (PTR)&seqtuple;
+	    status = rdf_call(RDF_GETINFO, (PTR) &rdf_cb);
+	    if (status != E_DB_OK)
+	    {
+		if (rdf_cb.rdf_error.err_code == E_RD0013_NO_TUPLE_FOUND)
+		{
+		    /* no iisequence record, must have been dropped */
+		    dsh->dsh_qp_status |= DSH_QP_OBSOLETE;
+		    dsh->dsh_error.err_code = E_QE0023_INVALID_QUERY;
+		    return(E_DB_WARN);
+		}
+		else
+		{
+		    dsh->dsh_error.err_code = rdf_cb.rdf_error.err_code;
+		    return(status);
+		}
+	    }
+	    else if (seqtuple.dbs_uniqueid.db_tab_base != qseqp->qs_id.db_tab_base ||
+		    seqtuple.dbs_uniqueid.db_tab_index != qseqp->qs_id.db_tab_index)
+	    {
+		/*
+		** found record but it has the wrong sequence ID,
+		** must have been re-created
+		*/
+		dsh->dsh_qp_status |= DSH_QP_OBSOLETE;
+		dsh->dsh_error.err_code = E_QE0023_INVALID_QUERY;
+		return(E_DB_WARN);
+	    }
+
 	    dms_cb = (DMS_CB *)dsh->dsh_cbs[qseqp->qs_cbnum];
 	    dms_cb->dms_tran_id = dsh->dsh_dmt_id;
 	    dms_cb->dms_db_id = qef_rcb->qef_db_id;

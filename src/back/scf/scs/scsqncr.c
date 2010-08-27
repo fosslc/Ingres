@@ -2651,6 +2651,13 @@ static char execproc_syntax2[] = " = session.";
 **	    We need to delay sending of GCA messages for all batch
 **	    processing to avoid a send/recieve deadlock. Update message
 **	    handling for batches.
+**	20-jul-2010 (stephenb)
+**	    During a query re-try, if the sequencer incorrectly re-sets the query
+**	    state, we may end up trying to parse a query that has no query text
+**	    (e.g. a cursor fetch). This should never happen (i.e. it's a code
+**	    error), but we would like to generate a nice error when it occurs
+**	    rather than causing a SEGV; so we should not assume that sscb_troot
+**	    contains anything.
 */
 DB_STATUS
 scs_sequencer(i4 op_code,
@@ -3973,7 +3980,7 @@ scs_sequencer(i4 op_code,
 		    if (sscb->sscb_flags & SCS_INSERT_OPTIM)
 			notext_copy_optim = TRUE;
 		}
-		else
+		else if (scb->scb_sscb.sscb_troot)
 		    /* we got query text, so save number of parms for sanity check */
 		    scb->scb_sscb.sscb_cquery.cur_qry_parms = 
 			((PSQ_QDESC *) scb->scb_sscb.sscb_troot)->psq_dnum;
