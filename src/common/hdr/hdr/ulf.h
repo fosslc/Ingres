@@ -104,6 +104,8 @@
 **           output.
 **	25-May-2010 (kschendel)
 **	    Add ult-trace-qep decl.
+**      23-Jun-2010 (stial01) (B123971)
+**          Increase ULD_TSIZE for Long Ids (SIR 121123)
 **/
 #ifndef TR_HDR_INCLUDED
 #include <tr.h>
@@ -241,11 +243,12 @@ typedef i4 ULF_LOG;
 [@type_definitions@]
 */
 
-#define             ULD_TSIZE           256
+#define             ULD_TSIZE   512 /* Big enough for quoted owner.tablename */
 /* default max length of string in tree to text conversion,
 ** size could be larger for long character strings however, this
 ** constant is used to determine whether a "new line" is needed
 ** but longer strings should be expected
+** ULD_TSIZE must be big enough for  QUOTED "ownername"."tablename" + null
 */
 
 
