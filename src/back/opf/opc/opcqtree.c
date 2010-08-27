@@ -140,6 +140,9 @@
 **	    With PST_INLIST, check for PST_CONST on RHS as the flag
 **	    may be applied to PST_SUBSEL to aid servers to distinguish
 **	    simple = from IN and <> from NOT IN.
+**	04-Aug-2010 (kiria01) b124178
+**	    Allow for the potential of PST_COP nodes which can now be in
+**	    a boolean position with ii_true/ii_false.
 [@history_template@]...
 **/
 
@@ -1071,6 +1074,7 @@ opc_onlyatts(
 	ret = TRUE;
 	break;
 
+     case PST_COP:
      case PST_CONST: 
         ret = FALSE; 
         break;
@@ -2199,6 +2203,7 @@ inlist_break:
 	}
 	break;
 
+     case PST_COP:
      case PST_QLEND:
 	break;
 
