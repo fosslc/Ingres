@@ -211,6 +211,11 @@
 **	    in the summary.
 **	    IVW blocksize and groupsize need to be rounded to the next 
 **	    power of 2, add GIPnextPow2() to do this.
+**	08-Jul-2010 (hanje04)
+**	    SD 145482
+**	    BUG 124054
+**	    Fix exclusion of II_VWDATA from pre/post install summaries for
+**	    non-Vectorwise installs.
 **	
 */
 
@@ -526,11 +531,8 @@ write_installation_summary(GtkTextBuffer *buffer)
 
 	    for ( i = 1 ; dblocations[i] ; i++ )
 	    {
-		if ( i == INST_II_VWDATA &&  (! instmode & IVW_INSTALL) )
-		{
-		    i++;
+		if ( i == INST_II_VWDATA &&  ~instmode&IVW_INSTALL )
 		    continue; /* skip if it's not Vectorwise */
-		}
 
 		STprintf( tmpbuf,
 			"%s (%s): ",
@@ -1037,7 +1039,7 @@ gen_install_response_file( II_RFAPI_STRING rflocstring )
 	i = 1;
 	while ( dblocations[i] != NULL )
 	{
-	    if ( i == INST_II_VWDATA &&  (! instmode & IVW_INSTALL) )
+	    if ( i == INST_II_VWDATA &&  ~instmode&IVW_INSTALL )
 	    {
 		i++;
 		continue; /* skip if it's not Vectorwise */
