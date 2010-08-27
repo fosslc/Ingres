@@ -196,6 +196,11 @@
 **	    overrun when generating command line.
 **	    Also add gipAppendCmdLine() to manage allocated buffer space and
 **	    use it in place of STcat().
+**	13-Jul-2010 (hanje04)
+**	    BUG 124081
+**	    For installs and modifies, save the response file off to 
+**	    /var/lib/ingres/XX so that we can find it for subsequent
+**	    installations and not inadvertantly overwrite config
 */
 
 # define RF_VARIABLE "export II_RESPONSE_FILE"
@@ -965,10 +970,6 @@ install_control_thread( void *arg )
     if ( write_file_to_text_buffer( inst_stderr, inst_err_buffer ) != OK )
 	DBG_PRINT( "ERROR: Failed to write to output buffer\n" );
 
-    /* Install is complete, remove the response file */
-    if ( LOexist( &rfnameloc ) == OK )
-    	LOdelete( &rfnameloc );
-
     if ( childinfo.exit_status != OK )
     {
 	GtkWidget	*FailErrTextView;
@@ -1005,6 +1006,42 @@ install_control_thread( void *arg )
 	     DBG_PRINT( "ERROR: Failed to write to output buffer\n" );
 
     }
+
+    if ( ug_mode & UM_INST|UM_MOD && LOexist( &rfnameloc ) == OK )
+    {
+	char	 rfsavestr[MAX_LOC] = {'\0'};
+	LOCATION rfsaveloc;
+	char	*instid;
+	
+	/* Install was successfull, copy response file to /var/lib/ingres/XX */
+	if ( ug_mode & UM_INST )
+	    instid = instID;
+	else
+	    instid = selected_instance->instance_ID;
+
+	rfstat = gen_rf_save_name( rfsavestr, instid );
+
+	if ( rfstat == OK )
+	    rfstat = LOfroms(PATH & FILENAME, rfsavestr, &rfsaveloc);
+
+	if ( rfstat == OK )
+	    rfstat = SIcopy(&rfnameloc, &rfsaveloc);
+
+	if ( rfstat != OK )
+	{
+	    char warnmsg[MAX_LOC + 50 ];
+
+# define WARN_COULD_NOT_SAVE_RF "Could not save response file: %s"
+	    STprintf( warnmsg, WARN_COULD_NOT_SAVE_RF, rfsavestr );
+	    gdk_threads_enter();
+	    popup_warning_box( warnmsg );
+	    gdk_threads_leave();
+	}
+    }
+	    
+    /* Install is complete, remove the response file */
+    if ( LOexist( &rfnameloc ) == OK )
+    	LOdelete( &rfnameloc );
 
     /* get GTK thread lock again before moving on */
     gdk_threads_enter();

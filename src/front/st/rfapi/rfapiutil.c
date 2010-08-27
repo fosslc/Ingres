@@ -34,17 +34,21 @@
 **	    SIR 123791
 **	    Write VW config to response file if set.
 **	    (See rfapidata.c for full description)
+**	12-Jul-2010 (hanje04)
+**	    BUG 124081
+**	    Add APPEND_HEADER if we're appending
+**	    Make parameter writing more intelligent and check for values
+**	    in each "section" before writing the header, excluding the lot
+**	    if none are set.
+**	    Replace individual option arrays with rfapiopsinfo[] which
+**	    contains everything except camdb_ops[] which has been kept 
+**	    separate as it's a special, rarely used case.
 ** 
 */
 
 /*
 ** global refs for variable arrays
 */
-GLOBALREF RFAPI_VAR *loc_info[]; /* locations */
-GLOBALREF RFAPI_VAR *sys_var[]; /* system variables */
-GLOBALREF RFAPI_VAR *inst_ops[]; /* installation options */
-GLOBALREF RFAPI_VAR *upg_ops[]; /* upgrade options */
-GLOBALREF RFAPI_VAR *pkg_info[]; /* packages */
 GLOBALREF RFAPI_VAR *camdb_ops[]; /* CA MDB Options */
 
 /*
@@ -127,6 +131,9 @@ rfapi_getDateTime( char *dtbuf )
 **	    SD 137277
 **	    Increase size of datebuf to prevent buffer overrun in
 **	    when calling rfapi_GetDateTime() :-(
+**	12-Jul-2010 (hanje04)
+**	    BUG 124081
+**	    Add APPEND_HEADER if we're appending
 */
 II_RFAPI_STATUS
 rfapi_writeRFHeader( II_RFAPI_HANDLE *handle,
@@ -147,7 +154,10 @@ rfapi_writeRFHeader( II_RFAPI_HANDLE *handle,
     rfapi_getDateTime( date_buf );
 
     /* write out header  */
-    SIfprintf( fd, RFAPI_RESPONSE_FILE_HEADER, date_buf );
+    if ( (*handle)->flags & II_RF_OP_APPEND )
+	SIfprintf( fd, RFAPI_RESPONSE_FILE_APPEND_HEADER, date_buf );
+    else
+	SIfprintf( fd, RFAPI_RESPONSE_FILE_HEADER, date_buf );
 
     return( II_RF_ST_OK );
 }
@@ -236,6 +246,17 @@ rfapi_writeSecHeader( II_RFAPI_HANDLE *handle,
 **	    II_RF_ST_EMPTY_HANDLE
 **	    ...
 **	    II_RF_ST_FAIL
+** History:
+**	Sept-2006
+**	    Created.
+**	12-Jul-2010 (hanje04)
+**	    BUG 124081
+**	    Make parameter writing more intelligent and check for values
+**	    in each "section" before writing the header, excluding the lot
+**	    if none are set.
+**	    Replace individual option arrays with rfapiopsinfo[] which
+**	    contains everything except camdb_ops[] which has been kept 
+**	    separate as it's a special, rarely used case.
 */
 II_RFAPI_STATUS
 rfapi_writeRFParams( II_RFAPI_HANDLE *handle,
@@ -243,6 +264,8 @@ rfapi_writeRFParams( II_RFAPI_HANDLE *handle,
 {
     II_RFAPI_STATUS	rfrc;
     i4	i = 0;
+    i4	j = 0;
+    bool foundops = FALSE;
 
     /* check handle is valid */
     if ( (*handle) == NULL  )
@@ -250,68 +273,30 @@ rfapi_writeRFParams( II_RFAPI_HANDLE *handle,
     else if ( (*handle)->param_list == NULL )
 	return( II_RF_ST_EMPTY_HANDLE );
 
-    /* packages */
-    rfrc = rfapi_writeSecHeader( handle, RFAPI_SEC_COMPONENTS, fd );
-    if ( rfrc != II_RF_ST_OK )
-	return( rfrc );
-
-    rfrc = rfapi_doWrite( handle, pkg_info, fd );
-    if ( rfrc != II_RF_ST_OK )
-	return( rfrc );
-
-    /* locations */
-    rfrc = rfapi_writeSecHeader( handle, RFAPI_SEC_LOCATIONS, fd );
-    if ( rfrc != II_RF_ST_OK )
-	return( rfrc );
-
-    rfrc = rfapi_doWrite( handle, loc_info, fd );
-    if ( rfrc != II_RF_ST_OK )
-	return( rfrc );
-
-    /* system variables */
-    rfrc = rfapi_writeSecHeader( handle, RFAPI_SEC_CONFIG, fd );
-    if ( rfrc != II_RF_ST_OK )
-	return( rfrc );
-
-    rfrc = rfapi_doWrite( handle, sys_var, fd );
-    if ( rfrc != II_RF_ST_OK )
-	return( rfrc );
-
-    /* vectorwise config */
-    rfrc = rfapi_writeSecHeader( handle, RFAPI_SEC_IVW_CONFIG, fd );
-    rfrc = rfapi_doWrite( handle, ivw_cfg_ops, fd );
-    if ( rfrc != II_RF_ST_OK )
-	return( rfrc );
-
-    /* Installation Options */
-    rfrc = rfapi_writeSecHeader( handle, RFAPI_SEC_INSTALL_OPTIONS, fd );
-    if ( rfrc != II_RF_ST_OK )
-	return( rfrc );
-
-    rfrc = rfapi_doWrite( handle, inst_ops, fd );
-    if ( rfrc != II_RF_ST_OK )
-	return( rfrc );
-
-    /* Windows Connectivity Options */
-    if ( (*handle)->output_format & II_RF_DP_WINDOWS )
+    /* Search the parameter lists and write out those set in the handle */
+    while( rfapiopsinfo[i].ops )
     {
-	rfrc = rfapi_writeSecHeader( handle, RFAPI_SEC_WIN_NET_OPTIONS, fd );
-	if ( rfrc != II_RF_ST_OK )
-	    return( rfrc );
+	foundops = FALSE;
+	for( j = 0 ; rfapiopsinfo[i].ops[j] ; j++ )
+	    if ( rfapi_findParam( handle, rfapiopsinfo[i].ops[j]->pname ) )
+	    {
+		foundops = TRUE;
+		break;
+	    }
 
-	rfrc = rfapi_doWrite( handle, wincon_ops, fd );
-	if ( rfrc != II_RF_ST_OK )
-	    return( rfrc );
+	if ( foundops || (*handle)->flags & II_RF_OP_WRITE_DEFAULTS )
+	{
+	    rfrc = rfapi_writeSecHeader( handle, rfapiopsinfo[i].ophdr, fd );
+	    if ( rfrc != II_RF_ST_OK )
+		return( rfrc );
+
+	    rfrc = rfapi_doWrite( handle, rfapiopsinfo[i].ops, fd );
+	    if ( rfrc != II_RF_ST_OK )
+		return( rfrc );
+
+	}
+	i++;
     }
-
-    /* Upgrade Options */
-    rfrc = rfapi_writeSecHeader( handle, RFAPI_SEC_UPGRADE_OPTIONS, fd );
-    if ( rfrc != II_RF_ST_OK )
-	return( rfrc );
-
-    rfrc = rfapi_doWrite( handle, upg_ops, fd );
-    if ( rfrc != II_RF_ST_OK )
-	return( rfrc );
 
     /* CA Options if requested */
     if ( (*handle)->flags & II_RF_OP_INCLUDE_MDB )

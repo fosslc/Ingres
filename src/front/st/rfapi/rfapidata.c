@@ -52,6 +52,11 @@
 **	    - IIVWCFG_COLUMNSPACE: Max size for VW database
 **	    - IIVWCFG_BLOCK_SIZE: Block size for VW data
 **	    - IIVWCFG_GROUP_SIZE: Block group size for VW data
+**	13-Jul-2010 (hanje04)
+**	    BUG 124081
+**	    Add rfapiopsinfo[] array to store "option-section header" pairs
+**	    so that whole sections can more easily be excluded when not using
+**	    II_RF_OP_WRITE_DEFAULTS.
 **
 */
 
@@ -742,6 +747,16 @@ GLOBALDEF RFAPI_VAR *camdb_ops[] = {
 		&ii_add_remove_programs,
 		NULL };
 
+GLOBALDEF RFAPI_VAR_INFO rfapiopsinfo[] = {
+		{ loc_info, RFAPI_SEC_LOCATIONS },
+		{ sys_var, RFAPI_SEC_CONFIG },
+		{ inst_ops, RFAPI_SEC_INSTALL_OPTIONS },
+		{ ivw_cfg_ops, RFAPI_SEC_IVW_CONFIG },
+		{ wincon_ops, RFAPI_SEC_WIN_NET_OPTIONS },
+		{ upg_ops, RFAPI_SEC_UPGRADE_OPTIONS },
+		{ pkg_info, RFAPI_SEC_COMPONENTS },
+		{ NULL, NULL }
+	};
 
 /* Error Code String */
 GLOBALDEF const II_RFAPI_STRING rfapierrs [] = {

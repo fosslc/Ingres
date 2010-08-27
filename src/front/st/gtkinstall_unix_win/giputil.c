@@ -216,6 +216,18 @@
 **	    BUG 124054
 **	    Fix exclusion of II_VWDATA from pre/post install summaries for
 **	    non-Vectorwise installs.
+**	12-Jul-2010 (hanje04)
+**	    BUG 124081
+**	    Add gen_rf_save_name() to generate the full path for saving the
+**	    response file after a successfull installation or finding when
+**	    performing an modify. 
+**	    For modifies, look for saved response file and append new config
+**	    to it instead of generating a new one. Also include any new packages
+**	    being installed.
+**	    Fix up code to add "misc_ops" so that only options relevent to what
+**	    is actually being installed are written to the response file.
+**	    Replace popup_error_box() with popup_message_box() and add macros
+**	    for popup_error_box() and popup_warning_box()
 **	
 */
 
@@ -906,6 +918,22 @@ gen_rf_name(void)
     DBG_PRINT("Response file name is %s\n", rfnameloc.string );
 }
 
+STATUS
+gen_rf_save_name( char *fname, char *instid )
+{
+    char	tmpbuf[MAX_LOC];
+    STATUS	status = OK;
+
+    /* Check instid is sane */
+    if ( STlen(instid) > 2 )
+	return(FAIL);
+
+    STprintf( tmpbuf, RESPONSE_FILE_SAVE_DIR, instid);
+    STprintf( fname, "%s/%s.%s", tmpbuf, RESPONSE_FILE_SAVE_NAME, instid);
+
+    return(OK);
+}
+
 static II_RFAPI_STATUS
 gen_install_response_file( II_RFAPI_STRING rflocstring )
 {
@@ -1248,12 +1276,35 @@ gen_modify_response_file( II_RFAPI_STRING rflocstring )
     II_RFAPI_STATUS	rfstat; /* response file API status info */
     char		tmpbuf[MAX_FNAME]; /* misc string buffer */
     i4			i = 0; /* misc counter */
+    char		rfsavestr[MAX_LOC];
+    LOCATION	 	rfsaveloc;
+    II_RFAPI_OPTIONS	rfops = II_RF_OP_CLEANUP_AFTER_WRITE;
+
+    /*
+    ** If we're adding packages to existing install check for existing
+    ** response file which should have been saved after initial install
+    */
+    if ( mod_pkgs_to_install )
+    {
+	rfstat = gen_rf_save_name(rfsavestr, selected_instance->instance_ID);
+	if ( rfstat == OK )
+	    LOfroms( PATH & FILENAME, rfsavestr, &rfsaveloc );
+
+	if ( rfstat == OK && LOexist( &rfsaveloc ) == OK )
+	{
+	    DBG_PRINT("Found existing response file: %s\n", rfsavestr);
+	    SIcopy( &rfsaveloc, &rfnameloc );
+	    rfops |= II_RF_OP_APPEND;
+	}
+	else
+	    DBG_PRINT("Error finding response file: %s", rfsavestr);
+    }
 
     /* initialise response file handle */
     rfstat = IIrfapi_initNew( &rfhandle,
 				dep_platform,
 				(II_RFAPI_STRING)rfnameloc.string,
-				II_RF_OP_CLEANUP_AFTER_WRITE );
+				rfops );
 
     if ( rfstat != II_RF_ST_OK )
     {
@@ -1262,6 +1313,31 @@ gen_modify_response_file( II_RFAPI_STRING rflocstring )
 	return( rfstat );
     }
 
+    /* Add any packages we're installing to response file */
+    i = 0;
+    while ( packages[i] != NULL )
+    {
+	if ( mod_pkgs_to_install & packages[i]->bit )
+	{
+	    param.name = packages[i]->rfapi_name;
+	    param.value = "YES"; 
+	    param.vlen = STlen("YES");
+	    rfstat = IIrfapi_addParam( &rfhandle, &param );
+
+	    if ( rfstat != II_RF_ST_OK )
+	    {
+		DBG_PRINT(
+		    "Failed adding %s package to response file with error:\n %s\n"
+			, packages[i]->pkg_name,
+			IIrfapi_errString( rfstat ) );
+		if ( rfhandle != NULL )
+		    IIrfapi_cleanup( &rfhandle );
+		return( rfstat );
+	    }
+	}
+	i++;
+    }
+   
     /* dbms config if the package as been added */
     if ( mod_pkgs_to_install & PKG_DBMS )
     {
@@ -1340,7 +1416,50 @@ gen_modify_response_file( II_RFAPI_STRING rflocstring )
 	    return( rfstat );
 	}
 
+	/* SQL 92 */
+	param.name = II_ENABLE_SQL92;
+	if ( misc_ops & GIP_OP_SQL92 )
+	{
+	    param.value = "YES" ;
+	    param.vlen = STlen( "YES" );
+	}
+	else
+	{
+	    param.value = "NO" ;
+	    param.vlen = STlen( "NO" );
+	}
+	rfstat = IIrfapi_addParam( &rfhandle, &param );
+
+	if ( rfstat != II_RF_ST_OK )
+	{
+	    if ( rfhandle != NULL )
+		IIrfapi_cleanup( &rfhandle );
+	    return( rfstat );
+	}
+	
+	/* Install demo */
+	param.name = II_INSTALL_DEMO;
+	if ( misc_ops & GIP_OP_INSTALL_DEMO )
+	{
+	    param.value = "YES" ;
+	    param.vlen = STlen( "YES" );
+	}
+	else
+	{
+	    param.value = "NO" ;
+	    param.vlen = STlen( "NO" );
+	}
+	rfstat = IIrfapi_addParam( &rfhandle, &param );
+
+	if ( rfstat != II_RF_ST_OK )
+	{
+	    if ( rfhandle != NULL )
+		IIrfapi_cleanup( &rfhandle );
+	    return( rfstat );
+	}
+	
     }
+
     /* only one modify param for now */
     if ( ug_mode & UM_RMV && misc_ops & GIP_OP_REMOVE_ALL_FILES )
     {
@@ -1424,6 +1543,16 @@ addMiscOps( II_RFAPI_HANDLE *Handleptr, MISCOPS miscops )
 
 		}
 		break;
+	    case GIP_OP_WIN_INSTALL_DEMO:
+		if ( ~instmode & RFGEN_WIN )
+		    break;
+	    case GIP_OP_SQL92:
+	    case GIP_OP_INSTALL_DEMO:
+		if ( ~pkgs_to_install & PKG_DBMS )
+		    break; /* skip for non DBMS installs */
+	    case GIP_OP_UPGRADE_USER_DB:
+		if ( ~ug_mode & UM_UPG )
+		    break; /* skip if not upgrade */
 	    default:
 		/* for the rest say "YES" if it's on and "NO" if it's not. */
 		if ( miscops & misc_ops_info[i]->bit )
@@ -1451,17 +1580,16 @@ addMiscOps( II_RFAPI_HANDLE *Handleptr, MISCOPS miscops )
 }
 
 void 
-popup_error_box( gchar *errmsg )
+popup_message_box( const char *title, gchar *errmsg )
 {
     GtkWidget	*prompt;
     GtkWidget	*label;
     GtkWidget	*hbox;
     GtkWidget	*image;
 	
-# define ERROR_DIALOG_TITLE "Error"
     /* create quit prompt to confirm user's decision to quit app */
     prompt = gtk_dialog_new_with_buttons(
-					ERROR_DIALOG_TITLE,
+					title,
 					GTK_WINDOW( IngresInstall ),
 					GTK_DIALOG_MODAL |
 					GTK_DIALOG_DESTROY_WITH_PARENT,

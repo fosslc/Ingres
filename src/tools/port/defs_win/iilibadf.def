@@ -128,6 +128,8 @@
 ;	    Add floating trunc, ceil, floor.
 ;	01-Jun-2010 (bonro01)
 ;	    Add adu_soundex_dm for change 504949 for bug 122320
+;        9-Jul-2010 (hanal04) Bug 124087
+;           Added adu_nvchr_embunitochar() and adu_nvchr_embchartouni()
 
 EXPORTS
 adb_breakpoint		@1				
@@ -661,3 +663,5 @@ adu_flttrunc		@539
 adu_fltceil		@540
 adu_fltfloor		@541
 adu_soundex_dm		@542
+adu_nvchr_embchartouni  @543
+adu_nvchr_embunitochar  @544
