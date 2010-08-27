@@ -417,6 +417,8 @@
 **          Added soundex_dm (Daitch-Mokotoff soundex)
 **      05-oct-2009 (joea)
 **          Add prototype for adc_bool_compare.
+**	28-Jul-2010 (kiria01) b124142
+**	    Tightened ADF_NVL_BIT handling
 **/
 
 
@@ -561,12 +563,12 @@
     ** nullable or not.
     */
 
-#define  ADF_SETNULL_MACRO(v)  (*(((u_char *)(v)->db_data) + (v)->db_length - 1) = ADF_NVL_BIT)
+#define  ADF_SETNULL_MACRO(v)  (*(((u_char *)(v)->db_data) + (v)->db_length - 1) |= ADF_NVL_BIT)
     /* This macro sets a nullable data value to the null value.  It assumes that
     ** the data value pointed to by `v' is of a legal nullable type.
     */
 
-#define  ADF_CLRNULL_MACRO(v)  (*(((u_char *)(v)->db_data) + (v)->db_length - 1) = 0)
+#define  ADF_CLRNULL_MACRO(v)  (*(((u_char *)(v)->db_data) + (v)->db_length - 1) &= ~ADF_NVL_BIT)
     /* This macro sets a nullable data value to the null value.  It assumes that
     ** the data value pointed to by `v' is of a legal nullable type.
     */

@@ -1354,6 +1354,14 @@ i4                 *ade_needed;
 **	14-Jul-2010 (kschendel) b123104
 **	    Replace settrue/false with ii_true and ii_false.  Same execution,
 **	    different FI numbers.
+**	28-Jul-2010 (kiria01) b124142
+**	    Split aggregate SINGLETON function into two deferring the error
+**	    check into SINGLECHK. This allows the aggregate to summarise the
+**	    record state whilst in derived tables and hence not cause errors
+**	    to be raised with records that will not be part of the result set.
+**	    The method of flagging the potential error is to use ADF_SING_BIT
+**	    alongside ADF_NVL_BIT to be picked up by SINGLECHK.
+**	    Tighten the access to ADF_NVL_BIT.
 */
 
 
@@ -1876,6 +1884,7 @@ if (f->ins_icode >= 0) adfi_counts[f->ins_icode]++;
 #ifdef ADE_FRONTEND
 			  if (oprP[0]->opr_dt < 0)
 #endif
+			    /* Set NULL bit & implicitly clear SING bit */
 			    *((u_char *)data[0] + oprP[0]->opr_len - 1) = ADF_NVL_BIT;
 			}
 			else /* 5CXI_CLR_SKIP */
@@ -1951,7 +1960,8 @@ if (f->ins_icode >= 0) adfi_counts[f->ins_icode]++;
 #ifdef ADE_FRONTEND
 			if (oprP[0]->opr_dt < 0)
 #endif
-		        *((u_char *)data[0] + oprP[0]->opr_len - 1) = ADF_NVL_BIT;
+			    /* Set NULL bit & implicitly clear SING bit */
+			    *((u_char *)data[0] + oprP[0]->opr_len - 1) = ADF_NVL_BIT;
 		        f = (ADE_INSTRUCTION *)((char *)cxbase
 						+ next_instr_offset);
 		        next_instr_offset =
@@ -2111,6 +2121,7 @@ if (f->ins_icode >= 0) adfi_counts[f->ins_icode]++;
 	       )
 	    {
 		if (oprP[0]->opr_dt < 0)	    /* nullable result */
+		    /* Set NULL bit & implicitly clear SING bit */
 		    *((u_char *)data[0] + oprP[0]->opr_len - 1) = ADF_NVL_BIT;
 		else
 		    return(adu_error(adf_scb, E_AD1012_NULL_TO_NONNULL, 0));
@@ -2134,6 +2145,7 @@ if (f->ins_icode >= 0) adfi_counts[f->ins_icode]++;
 			/* Some aggs return NULL this way. */
 			if (oprP[0]->opr_dt < 0)	    /* nullable result */
 			{
+			    /* Set NULL bit & implicitly clear SING bit */
 			    *((u_char *)data[0] + oprP[0]->opr_len - 1) = ADF_NVL_BIT;
 			    db_stat = E_DB_OK;
 			}
@@ -2184,8 +2196,9 @@ if (f->ins_icode >= 0) adfi_counts[f->ins_icode]++;
 		    /* Process null result. */
 		    if (oprP[0]->opr_dt < 0)
 		    {
+			/* Set NULL bit & implicitly clear SING bit */
 			*((u_char *)data[0] + oprP[0]->opr_len-1) = ADF_NVL_BIT;
-			db_stat = E_DB_OK;	/* set null and change stat */
+			db_stat = E_DB_OK;
 		    }
 		    else return(db_stat);
 
@@ -2210,8 +2223,8 @@ if (f->ins_icode >= 0) adfi_counts[f->ins_icode]++;
 		    return(adu_error(adf_scb,
 			E_AD1012_NULL_TO_NONNULL, 0));
 		}
+		/* Set NULL bit & implicitly clear SING bit */
 		*((u_char *)data[0] + oprP[0]->opr_len - 1) = ADF_NVL_BIT;
-							/* set null result */
 		break;
 	    }
 	    else if (oprP[0]->opr_dt < 0)
@@ -2309,22 +2322,27 @@ if (f->ins_icode >= 0) adfi_counts[f->ins_icode]++;
 
 	    break;
 
-	  case ADE_SINGLETON:	/* final computation for inline aggs */
-	    if (*(i4 *)data[2] == 0)
+	  case ADE_SINGLETON:	/* final computation for inline SINGLETON */
+	    /* Also see ADFI_1463_SINGLETON_ALL and ADFI_1474_SINGLECHK */
+	    if (*(i4*)data[2] == 0)
 	    {
 		/* Count is zero - result is null */
 		if (oprP[0]->opr_dt > 0)
 		{
-		    return(adu_error(adf_scb,
-			E_AD1012_NULL_TO_NONNULL, 0));
+		    /* Ouput should be nullable */
+		    return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0,
+			    "ADE_SINGLETON not nullable"));
 		}
+		/* Set NULL bit & implicitly clear SING bit */
 		*((u_char *)data[0] + oprP[0]->opr_len - 1) = ADF_NVL_BIT;
-							/* set null result */
 	    }
 	    else
 	    {
-		/* Copy input including any null bit */
+		/* Copy input including any null/flag byte */
 		MEcopy(data[1], oprP[0]->opr_len, data[0]);
+		/* If count is more than one - set SING bit */
+		if (*(i4 *)data[2] > 1)
+		    *((u_char *)data[0] + oprP[0]->opr_len - 1) |= ADF_SING_BIT;
 	    }
 	    break;
 
@@ -3037,8 +3055,7 @@ do_adccompare:
 	          {
 	              ln1 = *(u_i2*)c1;
 	              c1 += 2;
-		      if (ln1 < 0  ||  
-			  ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		      if (((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
 			    (ln1 > adf_scb->adf_maxstring/2)) ||
 			  ln1 > adf_scb->adf_maxstring)
 			  return (adu_error(adf_scb, E_AD1014_BAD_VALUE_FOR_DT, 0));
@@ -3050,8 +3067,7 @@ do_adccompare:
 	          {
 	              ln2 = *(u_i2*)c2;
 	              c2 += 2;
-		      if (ln2 < 0  ||
-			  ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		      if (((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
 			    (ln2 > adf_scb->adf_maxstring/2)) ||
 			  ln2 > adf_scb->adf_maxstring)
 			  return (adu_error(adf_scb, E_AD1014_BAD_VALUE_FOR_DT, 0));
@@ -3381,10 +3397,25 @@ utf8_compare:
 	    break;
 
 	  case ADFI_1463_SINGLETON_ALL:
-	    if ((*(i4 *)data[2]))
-		return db_stat = adu_error(adf_scb, E_AD1028_NOT_ZEROONE_ROWS, 0);
-	    MEcopy(data[1], oprP[0]->opr_len, data[0]);
-	    (*(i4 *)data[2])++;
+	    /* Also see ADFI_1474_SINGLECHK_ALL aggregate and ADE_SINGLETON */
+	    if (oprP[0]->opr_dt > 0)
+		/* Ouput should be nullable */
+		return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0,
+			"singleton not nullable"));
+	    /* Set count (=data[2]) to 1 or 2 depending on whether unique.
+	    ** We don't just increment due to overflow */
+	    if (*(i4 *)data[2] == 0)
+	    {
+		*(i4 *)data[2] = 1;
+		/* Pass through data. As lenspec ADI_O1 is uesd the
+		** lengths match unless input is not nullable in which
+		** case we need to zero the NULL & SING bits */
+		MEmove(oprP[1]->opr_len, data[1], 0,
+			oprP[0]->opr_len, data[0]);
+	    }
+	    else
+		*(i4 *)data[2] = 2;
+
 	    break;
 
 	  case ADFI_081_ANY_C_ALL:
@@ -3847,8 +3878,8 @@ utf8_compare:
 			return(adu_error(adf_scb,
 			    E_AD1012_NULL_TO_NONNULL, 0));
 		    }
+		    /* Set NULL bit & implicitly clear SING bit */
 		    *((u_char *)data[0] + oprP[0]->opr_len - 1) = ADF_NVL_BIT;
-							/* set null result */
 		    break;
 		}
 		else if (oprP[0]->opr_dt < 0)
@@ -3893,8 +3924,8 @@ utf8_compare:
 			return(adu_error(adf_scb,
 			    E_AD1012_NULL_TO_NONNULL, 0));
 		    }
+		    /* Set NULL bit & implicitly clear SING bit */
 		    *((u_char *)data[0] + oprP[0]->opr_len - 1) = ADF_NVL_BIT;
-							/* set null result */
 		    break;
 		}
 		else if (oprP[0]->opr_dt < 0)
@@ -3939,8 +3970,8 @@ utf8_compare:
 			return(adu_error(adf_scb,
 			    E_AD1012_NULL_TO_NONNULL, 0));
 		    }
+		    /* Set NULL bit & implicitly clear SING bit */
 		    *((u_char *)data[0] + oprP[0]->opr_len - 1) = ADF_NVL_BIT;
-							/* set null result */
 		    break;
 		}
 		else if (oprP[0]->opr_dt < 0)
@@ -3981,8 +4012,8 @@ utf8_compare:
 			return(adu_error(adf_scb,
 			    E_AD1012_NULL_TO_NONNULL, 0));
 		    }
+		    /* Set NULL bit & implicitly clear SING bit */
 		    *((u_char *)data[0] + oprP[0]->opr_len - 1) = ADF_NVL_BIT;
-							/* set null result */
 		    break;
 		}
 		else if (oprP[0]->opr_dt < 0)
@@ -4837,8 +4868,7 @@ strCompare:
 	    {
 	        ln1 = *(u_i2*)c1;
 	        c1 += 2;
-		if (ln1 < 0  ||
-		    ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		if (((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
 		     (ln1 > adf_scb->adf_maxstring/2)) ||
 		    ln1 > adf_scb->adf_maxstring)
 		    return (adu_error(adf_scb, E_AD1014_BAD_VALUE_FOR_DT, 0));
@@ -4851,8 +4881,7 @@ strCompare:
 	    {
 	        ln2 = *(u_i2*)c2;
 	        c2 += 2;
-		if (ln2 < 0  ||
-		    ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		if (((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
 		     (ln2 > adf_scb->adf_maxstring/2)) ||
 		    (ln2 > adf_scb->adf_maxstring))
 		    return (adu_error(adf_scb, E_AD1014_BAD_VALUE_FOR_DT, 0));
@@ -6002,6 +6031,27 @@ strCompare:
             else
                 *(f8 *)data[0] = tempf;
             break;
+
+	  case ADFI_1474_SINGLECHK_ALL:
+	    /* Also see ADFI_1463_SINGLETON_ALL aggregate and ADE_SINGLETON */
+	    if (oprP[1]->opr_dt > 0)
+		/* Input should be nullable */
+		return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0,
+			"singlechk p1 not nullable"));
+
+	    /* Raise error if SING bit set */
+	    if ((data[1])[oprP[1]->opr_len - 1] & ADF_SING_BIT)
+		return db_stat = adu_error(adf_scb, E_AD1028_NOT_ZEROONE_ROWS, 0);
+	    /* Otherwise we need to copy the input. Note that output might be non-nullable */
+	    if (oprP[0]->opr_dt > 0)
+	    {
+		if ((data[1])[oprP[1]->opr_len - 1] & ADF_NVL_BIT)
+		    return db_stat = adu_error(adf_scb, E_AD1012_NULL_TO_NONNULL, 0);
+	    }
+	    /* As lenspec ADI_O1 is used, the output length should be used
+	    ** - if not nullable, will simply drop the flags byte */
+	    MEcopy(data[1], oprP[0]->opr_len, data[0]);
+	    break;
 
 	  case ADFI_595_ROWCNT_I:        /* ii_row_count */
 	  {

@@ -798,6 +798,9 @@
 **	    Define a few FI values that have to be global, here.
 **	    The ordinary definition point in adffiids.h will be commented
 **	    out to indicate what is going on.
+**	28-Jul-2010 (kiria01) b124142
+**	    Added ADF_SING_BIT as sibling to ADF_NVL_BIT to support SINGLETON
+**	    and SINGLECHK functions.
 */
 
 #ifndef ADF_HDR_INCLUDED
@@ -829,14 +832,19 @@
 
 /* This was changed to eliminate the dependency on DB_MAXNAME */
 
-#define		ADF_NVL_BIT	((u_char) 0x01)	/* The null value bit.  If    */
-						/* this bit is set in the     */
-						/* null value byte, then the  */
-						/* value of the piece of data */
-						/* is null.  If not set, the  */
-						/* data should be interpreted */
-						/* as usual based on datatype */
-						/* and length.                */
+#define		ADF_NVL_BIT	((u_char) 0x01)	/* The null value bit.  If
+						** this bit is set in the
+						** value of the piece of data
+						** is null.  If not set, the
+						** data should be interpreted
+						** as usual based on datatype 
+						** and length. */
+#define		ADF_SING_BIT	((u_char) 0x02)	/* The singleton bit. If this
+						** bit is set in the null value
+						** byte, the cardinality of the
+						** value (which might be NULL)
+						** is greater than 1. Used by
+						** SINGLETON/CHK functions. */
 
 /* This macro tells if the data value pointed to by DB_DATA_VALUE v is NULL.
 ** If it is, the macro evaluates to TRUE, otherwise FALSE.  NULL is data

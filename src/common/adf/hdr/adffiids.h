@@ -425,6 +425,8 @@
 **	    Add ii_true and ii_false to solve outer join constant folding bug.
 **	    Comment out a couple global FI's that are defined in adf.h,
 **	    so that we don't have constants like "90" in (e.g.) OPF.
+**	28-Jul-2010 (kiria01) b124142
+**	    Added SINGLECHK
 **/
 
 
@@ -1772,3 +1774,4 @@
 #define ADFI_1471_IFNULL_LVCH_LVCH	(ADI_FI_ID)1471 /* ifnull(lvarchar, lvarchar) */
 #define ADFI_1472_IFNULL_LBYTE_LBYTE	(ADI_FI_ID)1472 /* ifnull(lbyte, lbyte) */
 #define ADFI_1473_IFNULL_LNVCH_LNVCH	(ADI_FI_ID)1473 /* ifnull(lnvarchar,long_nvarchar) */
+#define ADFI_1474_SINGLECHK_ALL		(ADI_FI_ID)1474 /* all := singlechk(all) */

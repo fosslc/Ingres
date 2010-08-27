@@ -149,6 +149,8 @@
 **	25-Mar-10 (gordy)
 **	    Replaced formatted GCA interface with byte stream.
 **	    Removed obsolete functions and updated remaining.
+**	28-Jul-10 (kiria01) b124142
+**	    Tighten the access to ADF_NVL_BIT
 */
 
 
@@ -188,10 +190,10 @@ static	II_BOOL	cnvtBLOB2DataValue( IIAPI_STMTHNDL *, IIAPI_DESCRIPTOR *,
 			? TRUE : FALSE) )
 
 #define IIAPI_SETNULL(length,data)  \
-	(*(((II_CHAR *)(data)) + (length) - 1) = (II_CHAR)ADF_NVL_BIT)
+	(*(((II_CHAR *)(data)) + (length) - 1) |= (II_CHAR)ADF_NVL_BIT)
 
 #define IIAPI_SETNOTNULL(length,data)  \
-	(*(((II_CHAR *)(data)) + (length) - 1) = 0)
+	(*(((II_CHAR *)(data)) + (length) - 1) &= (II_CHAR)~ADF_NVL_BIT)
 
 /*
 ** The following macros take the API values for type
@@ -208,10 +210,11 @@ static	II_BOOL	cnvtBLOB2DataValue( IIAPI_STMTHNDL *, IIAPI_DESCRIPTOR *,
 
 #define IIAPI_SETNULLDESC(descriptor,data)  \
 	(*((II_CHAR *)(data) + IIapi_getGCALength(descriptor) - 1)  \
-							= (II_CHAR)ADF_NVL_BIT)
+							|= (II_CHAR)ADF_NVL_BIT)
 
 #define IIAPI_SETNOTNULLDESC(descriptor,data)  \
-	(*((II_CHAR *)(data) + IIapi_getGCALength(descriptor) - 1) = 0) 
+	(*((II_CHAR *)(data) + IIapi_getGCALength(descriptor) - 1)  \
+							&= (II_CHAR)~ADF_NVL_BIT) 
 
 
 

@@ -3587,6 +3587,8 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **          Need to allow "...HAVING <constant>" expressions, as with
 **          Constant Folding the list of restrictions can be reduced
 **          to a constant.
+**	28-Jul-10 (kiria01) b124142
+**	    Access ADF_NVL_BIT via macro ADF_ISNULL_MACRO
 */
 %{
 
@@ -34974,11 +34976,8 @@ predicate:		select_expr comparison select_expr
 		valnode->pss_expr->pst_sym.pst_value.pst_s_cnst.pst_tparmtype == PST_RQPARAMNO))
 	    {
 		bool handled;
-		if (valnode->pss_expr->pst_sym.pst_dataval.db_datatype < 0 &&
-		    valnode->pss_expr->pst_sym.pst_dataval.db_data &&
-		    ((u_char*)valnode->pss_expr->pst_sym.pst_dataval
-				.db_data)[valnode->pss_expr->pst_sym.pst_dataval
-					.db_length-1] == ADF_NVL_BIT)
+		if (valnode->pss_expr->pst_sym.pst_dataval.db_data &&
+		    ADF_ISNULL_MACRO(&valnode->pss_expr->pst_sym.pst_dataval))
 		{
 		    opnode.pst_opno = ADI_IIFALSE_OP;
 		    opnode.pst_joinid = join_id;
@@ -59776,8 +59775,7 @@ psl_mk_const_similar(
 	    cdv.db_datatype = -cdv.db_datatype;
 	    cdv.db_length--;
 	    /* If this is a NULL - leave as is */
-	    if (cdv.db_data &&
-		((u_char*)cdv.db_data)[cdv.db_length] == ADF_NVL_BIT)
+	    if (cdv.db_data && ADF_ISNULL_MACRO(&cdv))
 		return status;
 	}
 	if (ndv.db_datatype == cdv.db_datatype &&

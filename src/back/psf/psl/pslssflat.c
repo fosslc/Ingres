@@ -89,6 +89,13 @@
 **	09-Apr-2010 (kiria01) b123555
 **	    Propagate the from list bitmaps from the elided subselects to
 **	    their parents.
+**	28-Jul-2010 (kiria01) b124142
+**	    Split SINGLETON operator into two halves - the Aggregate portion
+**	    to do the count and annotate the data - the normal part, raising
+**	    the flag if the annotation seen. This practically means that the
+**	    var nodes become SINGLECHK(SINGLETON(var)). The split to derived
+**	    tables then pulls these apart leaving the SINGLECHK() in the tree
+**	    referenceing the derived table to check at run time. 
 */
 
 
@@ -171,6 +178,34 @@ psl_project_corr_vars (
 **	for correllations (bool factors) and sub-queries etc and where
 **	appropriate, quietly folds them into tehe main query fixing up
 **	the tree for opa.
+**
+**	For example, given some thing like:
+**
+**	    SELECT o.reltid, (SELECT i.relid FROM iirelation AS i
+**				WHERE i.reltid=o.reltid)
+**	    FROM iirelation AS o;
+**
+**	We add functions to enforce the SSQ cardinality check as follows:
+**
+**	    SELECT o.reltid, (SELECT SINGLECHK(SINGLETON(i.relid)) AS relid
+**				FROM iirelation AS i WHERE i.reltid=o.reltid)
+**	    FROM iirelation AS o;
+**
+**	Which we then flatten by factoring out the aggregate (in this case
+**	the introduced SINGLETON agg but could be ang agg) into a derived
+**	table with appropriate grouping to support the join columns:
+**
+**	    SELECT o.reltid, SINGLECHK(dt1.relid) AS relid
+**	    FROM iirelation AS o
+**		  LEFT OUTER JOIN
+**		(SELECT i.reltid, SINGLETON(i.relid) AS relid
+**			FROM iirelation i
+**			GROUP BY i.reltid
+**		) AS dt1 ON dt.reltid=o.reltid;
+**
+**	During execution, the aggregate SINGLETON will set the ADF_SING_BIT
+**	for the reltid==1 tuple which will be seen and reported after the
+**	join selection by the SELECTCHK function.
 **
 ** Input:
 **	nodep		Address of pointer to global tree to flatten
@@ -351,7 +386,9 @@ psl_flatten1(
 		    (parent = pst_parent_node(stk, subsel)))
 		{
 		    if ((parent->pst_sym.pst_type == PST_BOP ||
-			 parent->pst_sym.pst_type == PST_UOP) &&
+			 parent->pst_sym.pst_type == PST_UOP && (
+			  parent->pst_sym.pst_value.pst_s_op.pst_opno == ADI_EXIST_OP ||
+			  parent->pst_sym.pst_value.pst_s_op.pst_opno == ADI_NXIST_OP)) &&
 			(in_agg ||
 			 (Psf_ssflatten &
 			    opmeta_unsupp[parent->pst_sym.pst_value.pst_s_op.pst_opmeta])))
@@ -686,7 +723,7 @@ psl_flatten1(
 		    ** need a restricting HAVING clause. This really needs the SINGLETON aggr
 		    ** applying but we already have an aggregate so we would need to project
 		    ** this to:
-		    **  SELECT (SELECT SINGLETON((SELECT AGG(A) FROM T GROUP BY B))) FROM ...
+		    **  SELECT (SELECT SINGLECHK(SINGLETON((SELECT AGG(A) FROM T GROUP BY B)))) FROM ...
 		    ** This will work but for the time being we leave this aspect to OPF. 
 		    */
 		    if (parent->pst_sym.pst_type == PST_BOP &&
@@ -722,7 +759,7 @@ psl_flatten1(
 				DB_DATA_VALUE tmp_dv = var_node->pst_sym.pst_dataval;
 				MEfill(sizeof(opnode), 0, &opnode);
 
-				/* SINGLETON is strictly a nullable operator but could be
+				/* SINGLETON may introduce nullability where there wasn't expected
 				** used in either a context where nullability would be handled
 				** such as comparison, where it cannot be is like in assignment.
 				** Thus if the result will be passed to a compare, we enable
@@ -747,6 +784,7 @@ psl_flatten1(
 
 				opnode.pst_retnull = TRUE;
 				opnode.pst_opmeta = PST_NOMETA;
+				opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
 				opnode.pst_joinid = correl
 					? subsel->pst_sym.pst_value.pst_s_root.pst_ss_joinid
 					: PST_NOJOIN;
@@ -780,6 +818,25 @@ psl_flatten1(
 
 				if (status = pst_node(cb, &cb->pss_ostream, aop, agqual, 
 						PST_AGHEAD, (PTR) &agnode, sizeof(agnode), 
+						aop->pst_sym.pst_dataval.db_datatype,
+						aop->pst_sym.pst_dataval.db_prec, 
+						aop->pst_sym.pst_dataval.db_length, 
+						(DB_ANYTYPE *) NULL, varp,
+						&psq_cb->psq_error, 0))
+				    return status;
+			    }
+			    {
+				PST_OP_NODE opnode;
+				MEfill(sizeof(opnode), 0, &opnode);
+				opnode.pst_opno = ADI_SINGLECHK_OP;
+				opnode.pst_retnull = TRUE;
+				opnode.pst_opmeta = PST_NOMETA;
+				opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
+				opnode.pst_joinid = correl
+					? subsel->pst_sym.pst_value.pst_s_root.pst_ss_joinid
+					: PST_NOJOIN;
+				if (status = pst_node(cb, &cb->pss_ostream, *varp, NULL, 
+						PST_UOP, (PTR) &opnode, sizeof(opnode), 
 						aop->pst_sym.pst_dataval.db_datatype,
 						aop->pst_sym.pst_dataval.db_prec, 
 						aop->pst_sym.pst_dataval.db_length, 
@@ -1127,7 +1184,7 @@ psl_flatten1(
 				    MEfill(sizeof(opnode), 0, &opnode);
 				    opnode.pst_opno = ADI_IFNUL_OP;
 				    opnode.pst_opmeta = PST_NOMETA;
-				    /*opnode.pst_escape = 0;*/
+				    opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
 				    /*opnode.pst_pat_flags = 0;*/
 				    opnode.pst_joinid = joinid;
 				    if (status = pst_node(cb, &cb->pss_ostream, *agheadp, zeronode,
@@ -1631,8 +1688,11 @@ psl_add_resdom_var(
 
 	if (status = pst_treedup(cb, &dup_rb))
 	    return (status);
-	if (rvar->pst_sym.pst_type == PST_AGHEAD &&
+	if (rvar->pst_sym.pst_type == PST_UOP &&
+	    rvar->pst_sym.pst_value.pst_s_op.pst_opno == ADI_SINGLECHK_OP &&
 	    (node = rvar->pst_left) &&
+	    node->pst_sym.pst_type == PST_AGHEAD &&
+	    (node = node->pst_left) &&
 	    node->pst_sym.pst_type == PST_AOP &&
 	    node->pst_sym.pst_value.pst_s_op.pst_opno == ADI_SINGLETON_OP &&
 	    (node = node->pst_left) &&

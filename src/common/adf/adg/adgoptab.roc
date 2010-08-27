@@ -293,6 +293,8 @@
 **	14-Jul-2010 (kschendel) b123104
 **	    Add ii_true and ii_false constant operators to solve outer join
 **	    constant folding problem.
+**	28-Jul-2010 (kiria01) b124142
+**	    Added SINGLECHK.
 **/
 
 
@@ -1068,6 +1070,10 @@ GLOBALDEF   const	ADI_OPRATION    Adi_2RO_operations[] = {
 { {"asin"},		ADI_ASIN_OP,	ADI_NORM_FUNC,	    ADI_PREFIX,
 	DB_SQL|DB_QUEL,     ADI_INGRES_6                 ,  
 		ADO_ASIN_CNT,  		    ADZ_ASIN_FIIDX},
+
+{ {"singlechk"},	ADI_SINGLECHK_OP,   ADI_NORM_FUNC,  ADI_PREFIX,
+	DB_SQL|DB_QUEL,     ADI_INGRES_6                 ,  
+		ADO_SINGLECHK_CNT,  	    ADZ_SINGLECHK_FIIDX},
 
 { {"singleton"},	ADI_SINGLETON_OP,   ADI_AGG_FUNC,  ADI_PREFIX,
 	DB_SQL|DB_QUEL,     ADI_INGRES_6                 ,  

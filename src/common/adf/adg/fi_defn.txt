@@ -488,6 +488,9 @@
 #           Increase size of DAY() result to an i4 (to handle days in an interval.
 #	14-Jul-2010 (kschendel) b123104
 #	    Add ii_true, ii_false to solve outer join constant folding bug.
+#	28-Jul-2010 (kiria01) b124142
+#	    Added SINGLECHK.
+#
 
 group ADI_COMPARISON
 
@@ -8980,6 +8983,16 @@ group ADI_NORM_FUNC
 	    result DB_VCH_TYPE
 	    operands DB_VCH_TYPE
 	    routine adu_soundex_dm
+
+    operator ADI_SINGLECHK_OP
+
+	fi ADFI_1474_SINGLECHK_ALL
+	    description all : singlechk(all)
+	    flags ADI_F512_RES1STARG
+	    lenspec ADI_O1
+	    null_preinst ADE_0CXI_IGNORE
+	    result DB_ALL_TYPE
+	    operands DB_ALL_TYPE
 
 group ADI_COPY_COERCION
 
