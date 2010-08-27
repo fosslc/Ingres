@@ -5650,7 +5650,8 @@ opa_const(
 **      30-may-01 (inkdo01)
 **          Change all "count(column)" f.i.'s to ADFI_090_COUNT_C_ALL so parse
 **          trees from earlier releases generate right code.
-[@history_template@]...
+**	14-Jul-2010 (kschendel) b123104
+**	    Use symbolic definition for count-all FI.
 */
 static VOID
 opa_generate(
@@ -5819,9 +5820,9 @@ opa_generate(
         case PST_AOP:
         {
             if ((*agg_qnode)->pst_sym.pst_value.pst_s_op.pst_opno == ADI_CNT_OP)
-                (*agg_qnode)->pst_sym.pst_value.pst_s_op.pst_opinst = 90;
+                (*agg_qnode)->pst_sym.pst_value.pst_s_op.pst_opinst = ADFI_090_COUNT_C_ALL;
                                                 /* all count(col)'s are now 
-                                                ** ADFI_090_COUNT_ALL */
+                                                ** ADFI_090_COUNT_C_ALL */
         }       /* then drop into PST_COP */
         case PST_COP:
         {

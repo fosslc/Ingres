@@ -794,6 +794,10 @@
 **          copy into).
 **      01-Jul-2010 (horda03) B123234
 **          Added new error E_AD5079_INTERVAL_IN_ABS_FUNC.
+**	14-Jul-2010 (kschendel) b123104
+**	    Define a few FI values that have to be global, here.
+**	    The ordinary definition point in adffiids.h will be commented
+**	    out to indicate what is going on.
 */
 
 #ifndef ADF_HDR_INCLUDED
@@ -841,6 +845,35 @@
 
 #define  ADF_ISNULL_MACRO(v)  ( ((v)->db_datatype < 0 && (*(((u_char *)(v)->db_data) + (v)->db_length - 1) & ADF_NVL_BIT) ? TRUE : FALSE))
 
+
+/* A small handful of function instance (FI) ID's need to be known
+** outside of ADF.  Normally, one works with operator ID's, with
+** the appropriate FI being assigned by type resolution.  However in
+** a very few special cases the FI ID needs to be known.  When a FI
+** number is defined here, the usual definition point in adffiids.h is
+** commented out.
+*/
+
+/* The count(column) operator has a special optimization in opa,
+** which checks for ADFI_090_COUNT_C_ALL.
+*/
+#define ADFI_090_COUNT_C_ALL	90	/* count(c or all) */
+
+/* The tricky numeric .eq. string FI shouldn't look like a join
+** in opf, even though it's an equals operator.  Gets too complicated
+** (restriction to merge-join, or normalization for hash join, etc.)
+*/
+#define ADFI_1347_NUMERIC_EQ	1347	/* any = any */
+
+/* Disable some sort of nullability optimization in the parser for
+** STDDEV_SAMP.
+*/
+#define ADFI_845_STDDEV_SAMP_FLT 845	/* stddev_samp(flt, flt) */
+
+/* OPF needs to be able to tag a forced set-true onto sorted aggs
+** under certain conditions.
+*/
+#define ADFI_895_II_TRUE	895	/* ii_true() */
 
 /*: ADF Error Codes
 **      These are all of the error codes that can possibly be

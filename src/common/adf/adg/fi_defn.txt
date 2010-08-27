@@ -486,6 +486,8 @@
 #           Add IFNULL FI for LONG VARCHAR and LONG BYTE.
 #       01-Jul-2010 (horda03) B123234
 #           Increase size of DAY() result to an i4 (to handle days in an interval.
+#	14-Jul-2010 (kschendel) b123104
+#	    Add ii_true, ii_false to solve outer join constant folding bug.
 
 group ADI_COMPARISON
 
@@ -2130,6 +2132,24 @@ group ADI_COMPARISON
             null_preinst ADE_0CXI_IGNORE
             result DB_BOO_TYPE
             operands DB_BOO_TYPE
+
+    operator ADI_IIFALSE_OP
+
+	fi ADFI_894_II_FALSE
+	    description boolean: ii_false()
+	    complement ADFI_895_II_TRUE
+	    lenspec ADI_FIXED DB_BOO_LEN
+	    null_preinst ADE_0CXI_IGNORE
+	    result DB_BOO_TYPE
+
+    operator ADI_IITRUE_OP
+
+	fi ADFI_895_II_TRUE
+	    description boolean: ii_true()
+	    complement ADFI_894_II_FALSE
+	    lenspec ADI_FIXED DB_BOO_LEN
+	    null_preinst ADE_0CXI_IGNORE
+	    result DB_BOO_TYPE
 
 group ADI_OPERATOR
 

@@ -1351,6 +1351,9 @@ i4                 *ade_needed;
 **      21-Jun-2010 (horda03) b123926
 **          Because adu_unorm() and adu_utf8_unorm() are also called via 
 **          adu_lo_filter() change parameter order.
+**	14-Jul-2010 (kschendel) b123104
+**	    Replace settrue/false with ii_true and ii_false.  Same execution,
+**	    different FI numbers.
 */
 
 
@@ -3346,7 +3349,7 @@ utf8_compare:
 	  }
 	  break;
 
-	  case ADE_SETTRUE:
+	  case ADFI_895_II_TRUE:
 	    /* Reset CX value to TRUE and CX compare to 1EQ2.  This is used
 	    ** by MAIN segment of aggregate computation, because the raggf
 	    ** driver uses the BYCOMPARE results to decide whether to emit
@@ -3355,13 +3358,15 @@ utf8_compare:
 	    ** the driver.  If we get as far as the aggregation code in
 	    ** the CX, we know that the driver wants to see TRUE, which is
 	    ** what this operator does.  In an ideal world, ADE_SETTRUE
-	    ** would not be generated into a CX that did not involve
+	    ** would not be generated into an agg CX that did not involve
 	    ** CASE expressions.
+	    ** ii_true and ii_false are also used to present the results
+	    ** of a constant-folded expression such as "where 1=0".
 	    */
 	    cx_value = ADE_TRUE;
 	    ade_excb->excb_cmp = ADE_1EQ2;
 	    break;
-	  case ADE_SETFALSE:
+	  case ADFI_894_II_FALSE:
 	    cx_value = ADE_NOT_TRUE;
 	    ade_excb->excb_cmp = ADE_1LT2;
 	    break;

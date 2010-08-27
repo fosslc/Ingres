@@ -92,11 +92,6 @@
 #define REMOVE_INDEX	13
 #define REMOVE_PROCEDURE	14
 
-#ifndef ADFI_845_STDDEV_SAMP_FLT
-/* Primary definition in adf/hdr/adffiids.h */
-# define ADFI_845_STDDEV_SAMP_FLT 845
-#endif
-
 /*
 ** used to distinguish AVG, MIN, MAX, SUM and SINGLETON when they are
 ** reduced to avg_min_max_sum
@@ -3572,6 +3567,14 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	    column expression with a numeric IN-list is now checked for and if
 **	    found, numericnorm functions are injected to retain the string-
 **	    numeric behavior.
+**	14-Jul-2010 (kschendel) b123104
+**	    In a boolean-primary context, convert TRUE and FALSE constants
+**	    to equivalent ii_true and ii_false operators.  The reason is
+**	    that only operators have a place to put the joinid, and the
+**	    joinid is essential.
+**	    (Consider: select * from a left join b on 1 = 0;  if the joinid
+**	    is lost, we end up doing an inner join instead of a left join.
+**	    The 1 = 0 is constant-folded to FALSE.)
 **	19-Jul-2010 (frima01) Bug 124098
 **	    Add length check for objects that don't support long identifiers.
 **	20-Jul-2010 (kschendel) SIR 124104
@@ -14091,7 +14094,8 @@ cdbp_ifstmt:	    cdbp_ifkwd boolean_expr cdbp_thenkwd
 
 	$$ = $1;
 	/* Constant fold */
-	while ($$ && pst_is_const_bool($$->pst_specific.pst_if.pst_condition, &bval))
+	while ($$ != NULL && $$->pst_type == PST_IF_TYPE
+	  && pst_is_const_bool($$->pst_specific.pst_if.pst_condition, &bval))
 	{
 	    PST_STATEMENT *next;
 	    /* The pss_link must be left pointing at the block which will precede
@@ -14118,15 +14122,14 @@ cdbp_ifstmt:	    cdbp_ifkwd boolean_expr cdbp_thenkwd
 	    }
 	    else if ($$->pst_specific.pst_if.pst_false)
 	    {
-		/* Copy the ELSE branch head block over the IF thereby leaving
-		** predecessor ptrs already correct. */
-
                 next = $Ydbpinfo->pss_head_stmt;
 
                 while (next->pst_link && next->pst_link != $$)
                     next = next->pst_link;
 
                 next->pst_link = $$->pst_specific.pst_if.pst_false;
+		if (next->pst_next == $$)
+		    next->pst_next = $$->pst_specific.pst_if.pst_false;
                 $$ = $$->pst_specific.pst_if.pst_false;
 
 		/* pss_link is already pointing to end of ELSE list :-) */
@@ -33671,57 +33674,98 @@ boolean_factor:		boolean_primary
     }
 		|	NOT boolean_primary
     {
-	bool	bval;
+	DB_STATUS	       status;
 
-	/* Constant fold? */
-	if ($2 && pst_is_const_bool($2->pss_tree, &bval))
+	/* reuse PSS_TREEINFO passed from below.
+	** Might fold away the NOT, leaving whatever is below.
+	*/
+	status = pst_node(cb, &cb->pss_ostream, $2->pss_tree,
+	    (PST_QNODE *) NULL, PST_NOT, (PTR) NULL, 0, DB_NODT, (i2) 0, (i4) 0,
+	    (DB_ANYTYPE *) NULL, &$2->pss_tree, &psq_cb->psq_error, (i4) 0);
+	if (status != E_DB_OK)
 	{
-	    *(char*)$2->pss_tree->pst_sym.pst_dataval.db_data = bval ? 0 : 1;
-	    $$ = $2;
+	    return (status);
 	}
-	else
+
+	/*
+	** if multiple correlated relation references occurred in the tree
+	** rooted in NOT EXISTS we need to indicate to OPF that no flattening is
+	** to take place
+	*/
+	if ($2->pss_mask & PSS_0MULT_CORR_ATTR_IN_EXIST)
 	{
-	    DB_STATUS	       status;
-
-	    /* reuse PSS_TREEINFO passed from below */
-	    status = pst_node(cb, &cb->pss_ostream, $2->pss_tree,
-		(PST_QNODE *) NULL, PST_NOT, (PTR) NULL, 0, DB_NODT, (i2) 0, (i4) 0,
-		(DB_ANYTYPE *) NULL, &$2->pss_tree, &psq_cb->psq_error, (i4) 0);
-	    if (status != E_DB_OK)
-	    {
-		return (status);
-	    }
-
-	    /*
-	    ** if multiple correlated relation references occurred in the tree
-	    ** rooted in NOT EXISTS we need to indicate to OPF that no flattening is
-	    ** to take place
-	    */
-	    if ($2->pss_mask & PSS_0MULT_CORR_ATTR_IN_EXIST)
-	    {
-		cb->pss_flattening_flags |= PSS_MULT_CORR_ATTRS;
-		$2->pss_mask &= ~PSS_0MULT_CORR_ATTR_IN_EXIST;
-	    }
-
-	    /*
-	    ** if we were looking for and found a correlated attribute reference in
-	    ** the tree rooted in NOT EXISTS, we set PSS_CORR_AGGR in 
-	    ** cb->pss_flattening_flags to remind us to set PST_CORR_AGGR in 
-	    ** pst_mask1 of the query tree header
-	    */
-	    if ($2->pss_mask & PSS_CORR_ATTR_IN_EXIST)
-	    {
-		cb->pss_flattening_flags |= PSS_CORR_AGGR;
-		$2->pss_mask &= ~PSS_CORR_ATTR_IN_EXIST;
-	    }
-
-	    $$ = $2;
+	    cb->pss_flattening_flags |= PSS_MULT_CORR_ATTRS;
+	    $2->pss_mask &= ~PSS_0MULT_CORR_ATTR_IN_EXIST;
 	}
+
+	/*
+	** if we were looking for and found a correlated attribute reference in
+	** the tree rooted in NOT EXISTS, we set PSS_CORR_AGGR in 
+	** cb->pss_flattening_flags to remind us to set PST_CORR_AGGR in 
+	** pst_mask1 of the query tree header
+	*/
+	if ($2->pss_mask & PSS_CORR_ATTR_IN_EXIST)
+	{
+	    cb->pss_flattening_flags |= PSS_CORR_AGGR;
+	    $2->pss_mask &= ~PSS_CORR_ATTR_IN_EXIST;
+	}
+
+	$$ = $2;
     }
 ;
 
+/* The boolean expression rules are always used in a where-clause
+** or if-test type of context, where ultimately we need a true/false
+** decision.  Traditionally the optimizer has expected an operator
+** tree (perhaps connected by and/or/not) in this sort of context.
+** With the advent of constant folding, an expression like:
+** ... where 1 = 0 ...
+** is folded to constant TRUE.  Which is no big deal, *except* for
+** the fact that constants have no place to put the joinid, which
+** exists only for operators.  Rather than adding a joinid to constants
+** and trying to teach OPF about it, what we'll do is detect a
+** constant TRUE or FALSE expression here, and replace it with
+** an ii_true or ii_false operator.  These are niladic operators
+** that act like comparisons (ie they have no materialized result).
+*/
+
 boolean_primary:	predicate
     {
+	bool result;
+
+	/* Pre-check for a real constant, not ii_true or ii_false. */
+	if ($1 && $1->pss_tree->pst_sym.pst_type == PST_CONST
+	  && $1->pss_tree->pst_left == NULL
+	  && pst_is_const_bool($1->pss_tree, &result))
+	{
+	    DB_STATUS status;
+	    PST_OP_NODE op;
+	    PST_QNODE *newnode;
+
+	    MEfill(sizeof(op), 0, &op);
+	    op.pst_opno = ADI_IIFALSE_OP;
+	    if (result)
+		op.pst_opno = ADI_IITRUE_OP;
+	    op.pst_opmeta = PST_NOMETA;
+	    op.pst_pat_flags = AD_PAT_DOESNT_APPLY;
+	    op.pst_joinid = PST_NOJOIN;
+	    if (BTtest($Yqual_depth, $Yin_join_search))
+	    {
+		op.pst_joinid =
+			$Ypss_join_info.pss_join[$Ypss_join_info.depth].join_id;
+	    }
+	    /* A shame we can't reuse the true/false node, which was probably
+	    ** created out of an operator node anyway!  but it's not worth
+	    ** putting in a constant-node flag to figure it out.
+	    */
+	    status = pst_node(cb,&cb->pss_ostream, NULL, NULL,
+			PST_COP, (char *) &op, sizeof(op),
+			DB_BOO_TYPE, 0, DB_BOO_LEN, NULL,
+			&newnode, &psq_cb->psq_error, PSS_JOINID_PRESET);
+	    if (status != E_DB_OK)
+		return (status);
+	    $1->pss_tree = newnode;
+	}
 	$$ = $1;
     }
 		|	scalar_lparen boolean_expr scalar_rparen
@@ -36631,7 +36675,7 @@ number:		 	I2CONST
 bool_const:             FALSECONST
     {
         $Ydb_pdata.db_datatype = DB_BOO_TYPE;
-        $Ydb_pdata.db_length = sizeof(i1);
+        $Ydb_pdata.db_length = DB_BOO_LEN;
         $Ydb_pdata.db_prec = 0;
         $Ydb_pdata.db_collID = DB_NOCOLLATION;
         $Ydb_pdata.db_data = (PTR)&$Ydb_vdata;
@@ -36641,7 +36685,7 @@ bool_const:             FALSECONST
                 |       TRUECONST
     {
         $Ydb_pdata.db_datatype = DB_BOO_TYPE;
-        $Ydb_pdata.db_length = sizeof(i1);
+        $Ydb_pdata.db_length = DB_BOO_LEN;
         $Ydb_pdata.db_prec = 0;
         $Ydb_pdata.db_collID = DB_NOCOLLATION;
         $Ydb_pdata.db_data = (PTR)&$Ydb_vdata;
@@ -59096,6 +59140,9 @@ psl_ansi_strtodt(
 ** History:
 **	11-Feb-2009 (kiria01) 
 **	    Created.
+**	14-Jul-2010 (kschendel) b123104
+**	    Be persnickety about type casting between bool and DB_BOOL_TYPE.
+**	    The latter is i1, the former may or may not be.
 */
 
 static DB_STATUS
@@ -59108,6 +59155,7 @@ psl_bool_const_treeinfo(
     PST_CNST_NODE	cconst;
     DB_STATUS		status;
     DB_ERROR		*err_blk = &psq_cb->psq_error;
+    DB_ANYTYPE		val;
 
     status = psf_malloc(sess_cb, &sess_cb->pss_ostream, sizeof(PSS_TREEINFO),
 	     (PTR *) treeinfo, err_blk);
@@ -59119,11 +59167,14 @@ psl_bool_const_treeinfo(
     cconst.pst_pmspec  = PST_PMNOTUSED;
     cconst.pst_cqlang = DB_SQL;
     cconst.pst_origtxt = (char *) NULL;
+    val.db_booltype = DB_FALSE;
+    if (result)
+	val.db_booltype = DB_TRUE;
 
     status = pst_node(sess_cb, &sess_cb->pss_ostream, NULL, NULL,
 	PST_CONST, (char *) &cconst, sizeof(cconst),
 	DB_BOO_TYPE, (i2) 0, (i4)DB_BOO_LEN,
-	(DB_ANYTYPE *)&result, &(*treeinfo)->pss_tree, err_blk, (i4)0);
+	&val, &(*treeinfo)->pss_tree, err_blk, (i4)0);
 
     if (DB_FAILURE_MACRO(status))
 	return status;

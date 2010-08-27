@@ -1721,6 +1721,8 @@ DB_DATA_VALUE      *db_dv)
 **	    for big IN lists.
 **	18-Mar-2010 (kiria01) b123438
 **	    Added SINGLETON aggregate for scalar sub-query support.
+**	14-Jul-2010 (kschendel) b123104
+**	    Drop settrue/setfalse.  This really should be a uld table lookup.
 */
 
 static VOID
@@ -1915,14 +1917,6 @@ ADI_FI_ID	    *instr)
 
 	 case ADE_REDEEM:
 	    adf_printf("ADE_REDEEM");
-	    break;
-
-	 case ADE_SETTRUE:
-	    adf_printf("ADE_SETTRUE");
-	    break;
-
-	 case ADE_SETFALSE:
-	    adf_printf("ADE_SETFALSE");
 	    break;
 
 	  default:

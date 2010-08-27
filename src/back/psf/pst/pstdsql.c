@@ -3154,6 +3154,10 @@ pst_execute(
 **	    IN-clause.
 **      06-jul-2010 (huazh01)
 **          Flatten recursive call on pst_prmsub(). (b124031)
+**	14-Jul-2010 (kschendel) b123104
+**	    Keep boolean constants out of the parse tree when opf expects
+**	    operators.  If a compare op folds to true or false, turn it into
+**	    operator iitrue or iifalse.
 */
 DB_STATUS
 pst_prmsub(
@@ -3182,73 +3186,73 @@ pst_prmsub(
 
     while (nodep && *nodep)
     {
-      node = *nodep; 
+	node = *nodep; 
 
-      /*
-      ** If the current node is a constant node and its param number
-      ** is non-zero,  put the corresponding value from the input
-      ** parameter list in pst_dataval and zero out the param number.
-      */
-      if (node->pst_sym.pst_type == PST_CONST &&
-        (parm_no = node->pst_sym.pst_value.pst_s_cnst.pst_parm_no) > 0)
-      {
-        --parm_no;
-        MEcopy((PTR) plist[parm_no], sizeof(DB_DATA_VALUE),
-                (PTR) &node->pst_sym.pst_dataval);
-
-        if ((status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
-                    (i4)(plist[parm_no]->db_length),
-                    &node->pst_sym.pst_dataval.db_data,
-                    &psq_cb->psq_error)) != E_DB_OK)
-            return (status);
-
-        MEcopy(plist[parm_no]->db_data, plist[parm_no]->db_length,
-                node->pst_sym.pst_dataval.db_data);
-
-        /* See if it has to be a VLUP. */
-        if (repeat_dyn &&
-                ((dtype = abs(plist[parm_no]->db_datatype)) == DB_VCH_TYPE ||
-                dtype == DB_NVCHR_TYPE || dtype == DB_VBYTE_TYPE ||
-                dtype == DB_TXT_TYPE))
-        {
-            node->pst_sym.pst_dataval.db_length = ADE_LEN_UNKNOWN;
-            node->pst_sym.pst_value.pst_s_cnst.pst_tparmtype = PST_RQPARAMNO;
-        }
-
-	/* If not repeat query, reset parm no. */
-	if (!repeat_dyn)
+	/*
+	** If the current node is a constant node and its param number
+	** is non-zero,  put the corresponding value from the input
+	** parameter list in pst_dataval and zero out the param number.
+	*/
+	if (node->pst_sym.pst_type == PST_CONST &&
+	(parm_no = node->pst_sym.pst_value.pst_s_cnst.pst_parm_no) > 0)
 	{
-	    node->pst_sym.pst_value.pst_s_cnst.pst_parm_no = 0;
-	    node->pst_sym.pst_value.pst_s_cnst.pst_tparmtype = PST_USER;
-	    /* remember that this was a user provided constant */
-	}
-      }
+	    --parm_no;
+	    MEcopy((PTR) plist[parm_no], sizeof(DB_DATA_VALUE),
+		    (PTR) &node->pst_sym.pst_dataval);
 
-      if (descend && 
-          (node->pst_left || node->pst_right))
-      {
-         pst_push_item(&stk, (PTR)nodep);
+	    if ((status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
+			(i4)(plist[parm_no]->db_length),
+			&node->pst_sym.pst_dataval.db_data,
+			&psq_cb->psq_error)) != E_DB_OK)
+		return (status);
 
-         if (node->pst_left)
-         {
-            if (node->pst_right)
+	    MEcopy(plist[parm_no]->db_data, plist[parm_no]->db_length,
+		    node->pst_sym.pst_dataval.db_data);
+
+	    /* See if it has to be a VLUP. */
+	    if (repeat_dyn &&
+		    ((dtype = abs(plist[parm_no]->db_datatype)) == DB_VCH_TYPE ||
+		    dtype == DB_NVCHR_TYPE || dtype == DB_VBYTE_TYPE ||
+		    dtype == DB_TXT_TYPE))
 	    {
-		/* Delay right sub-tree */
-		pst_push_item(&stk, (PTR)&node->pst_right);
-		if (node->pst_right->pst_right ||
-			node->pst_right->pst_left)
-		    /* Mark that node just pushed will need descending */
-		    pst_push_item(&stk, (PTR)PST_DESCEND_MARK);
+		node->pst_sym.pst_dataval.db_length = ADE_LEN_UNKNOWN;
+		node->pst_sym.pst_value.pst_s_cnst.pst_tparmtype = PST_RQPARAMNO;
 	    }
-            nodep = &node->pst_left; 
-            continue; 
-         }
-         else if (node->pst_right)
-         {
-            nodep = &node->pst_right; 
-            continue; 
-         }
-      }
+
+	    /* If not repeat query, reset parm no. */
+	    if (!repeat_dyn)
+	    {
+		node->pst_sym.pst_value.pst_s_cnst.pst_parm_no = 0;
+		node->pst_sym.pst_value.pst_s_cnst.pst_tparmtype = PST_USER;
+		/* remember that this was a user provided constant */
+	    }
+	}
+
+	if (descend && 
+	  (node->pst_left || node->pst_right))
+	{
+	    pst_push_item(&stk, (PTR)nodep);
+
+	    if (node->pst_left)
+	    {
+		if (node->pst_right)
+		{
+		    /* Delay right sub-tree */
+		    pst_push_item(&stk, (PTR)&node->pst_right);
+		    if (node->pst_right->pst_right ||
+			    node->pst_right->pst_left)
+			/* Mark that node just pushed will need descending */
+			pst_push_item(&stk, (PTR)PST_DESCEND_MARK);
+		}
+		nodep = &node->pst_left; 
+		continue; 
+	    }
+	    else if (node->pst_right)
+	    {
+		nodep = &node->pst_right; 
+		continue; 
+	    }
+	}
 
 
       /*
@@ -3266,8 +3270,8 @@ pst_prmsub(
       ** the tree to the BYHEAD's right child to get the type and length.
       */
     
-      switch (node->pst_sym.pst_type)
-      {
+	switch (node->pst_sym.pst_type)
+	{
 	case PST_AGHEAD:
 	case PST_SUBSEL:
 	{
@@ -3325,6 +3329,9 @@ pst_prmsub(
 	case PST_COP:
 	case PST_MOP:
 	{
+	    bool bval;
+	    i4 joinid = node->pst_sym.pst_value.pst_s_op.pst_joinid;
+
 	    /*
 	    ** If the current node is an operator node, resolve data type
 	    ** This also will constant fold the operator and any required
@@ -3340,9 +3347,48 @@ pst_prmsub(
 		    &psq_cb->psq_error));
 	    }
 
+	    /* If we turned the node into a boolean TRUE/FALSE, turn it
+	    ** back into a boolean operator, so that the joinid isn't lost.
+	    */
+	    if (pst_is_const_bool(node, &bval)
+	      && node->pst_sym.pst_type == PST_CONST)
+	    {
+		/* pst-resolve must have made the change from operator to
+		** constant in-place.  Simply change it back.
+		*/
+		MEfill(sizeof(PST_OP_NODE), 0, &node->pst_sym.pst_value.pst_s_op);
+		node->pst_sym.pst_value.pst_s_op.pst_opno = ADI_IIFALSE_OP;
+		if (bval)
+		    node->pst_sym.pst_value.pst_s_op.pst_opno = ADI_IITRUE_OP;
+		node->pst_sym.pst_value.pst_s_op.pst_opmeta = PST_NOMETA;
+		node->pst_sym.pst_value.pst_s_op.pst_pat_flags = AD_PAT_DOESNT_APPLY;
+		node->pst_sym.pst_value.pst_s_op.pst_joinid = joinid;
+		node->pst_sym.pst_type = PST_COP;
+		node->pst_sym.pst_dataval.db_datatype = DB_BOO_TYPE;
+		node->pst_sym.pst_dataval.db_length = DB_BOO_LEN;
+		node->pst_sym.pst_dataval.db_prec = 0;
+		node->pst_sym.pst_dataval.db_collID = 0;
+		node->pst_sym.pst_dataval.db_data = NULL;
+		node->pst_left = node->pst_right = NULL;
+		/* re-resolve to fill in operator stuff */
+		status = pst_resolve(sess_cb, (ADF_CB *) sess_cb->pss_adfcb, node,
+			sess_cb->pss_lang, &psq_cb->psq_error);
+		if (DB_FAILURE_MACRO(status))
+		{
+		    return (pst_rserror(sess_cb->pss_lineno, node,
+			&psq_cb->psq_error));
+		}
+	    }
+
 	    break;
 	}
 
+	/* Note that for OR, AND, NOT, if we discover at this late date
+	** that one side is constant true/false, we can count on it
+	** being an iitrue/iifalse that was generated during operator
+	** constant folding, just above.  Playing link games should
+	** suffice in most if not all cases of and/or/not folding.
+	*/
 	case PST_OR:
 	    if (pst_is_const_bool(node->pst_left, &bval))
 		*nodep = bval ? node->pst_left : node->pst_right;
@@ -3360,11 +3406,11 @@ pst_prmsub(
 	case PST_NOT:
 	    if (pst_is_const_bool(node->pst_left, &bval))
 	    {
-		*(bool*)node->pst_left->pst_sym.pst_dataval.db_data = bval ? 0 : 1;
-		node = node->pst_left;
+		pst_not_bool(node->pst_left);
+		*nodep = node->pst_left;
 	    }
 	    else if (node->pst_left && node->pst_left->pst_sym.pst_type == PST_NOT)
-		node = node->pst_left->pst_left;
+		*nodep = node->pst_left->pst_left;
 	    break;
 
 	case PST_WHLIST:
@@ -3379,7 +3425,7 @@ pst_prmsub(
 		    node->pst_left = NULL;
 		}
 		else
-		    node = node->pst_left;
+		    *nodep = node->pst_left;
 	    }
 	    break;
 
@@ -3390,12 +3436,11 @@ pst_prmsub(
 		    node->pst_left->pst_right->pst_sym.pst_type == PST_WHOP &&
 		    !node->pst_left->pst_right->pst_left)
 	    {
-		node = node->pst_left->pst_right->pst_right;
+		*nodep = node->pst_left->pst_right->pst_right;
 	    }
 	    break;
 
 	case PST_RESDOM:
-	{
 	    if (node->pst_right != (PST_QNODE *) NULL)
 	    {
 		/*
@@ -3465,21 +3510,18 @@ pst_prmsub(
 		}
 	    }
 	    break;
-	}
-      }
+	} /* switch */
 
-      {
-        nodep = (PST_QNODE**)pst_pop_item(&stk); 
- 
-        if (nodep == PST_DESCEND_MARK)
-        {
-            descend = TRUE; 
-            nodep = (PST_QNODE**)pst_pop_item(&stk);
-            continue; 
-        }
+	nodep = (PST_QNODE**)pst_pop_item(&stk); 
+
+	if (nodep == PST_DESCEND_MARK)
+	{
+	    descend = TRUE; 
+	    nodep = (PST_QNODE**)pst_pop_item(&stk);
+	    continue; 
+	}
 	else
 	    descend = FALSE; 
-      }
     }
 
     pst_pop_all(&stk);

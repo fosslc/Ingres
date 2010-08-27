@@ -557,6 +557,8 @@
 **	    Add extra parameter to psl0_rngent and psl_rngent for WITH
 **	    support. Corrected prototype for psl_set_jrel & dropped
 **	    pst_swelem.
+**	14-Jul-2010 (kschendel) b123104
+**	    Add pst-not-bool proto.
 **	20-Jul-2010 (kschendel) SIR 124104
 **	    Pass with-clauses to psl-ct1-create-table.
 */
@@ -7171,6 +7173,9 @@ FUNC_EXTERN bool
 pst_is_const_bool(
 	PST_QNODE	   *node,
 	bool		   *bval);
+FUNC_EXTERN void pst_not_bool(
+	PST_QNODE	   *node);
+
 FUNC_EXTERN VOID
 pst_negate(
 	register DB_DATA_VALUE *dataval);

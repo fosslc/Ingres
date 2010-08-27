@@ -380,6 +380,8 @@ pst_get_union_resdom_type(
 **          correct error handling for bad return of adi_dtfamilty_resolve,
 **          it may produce various type and operand errors that need to be 
 **          returned as user errors. (Bug 123884)
+**	14-Jul-2010 (kschendel) b123104
+**	    Don't fold true/false generating operators back to constants.
 */
 DB_STATUS
 pst_resolve(
@@ -964,6 +966,15 @@ pst_resolve(
     }
     
     if (best_fidesc->adi_fiflags & ADI_F1_VARFI)
+	const_cand = FALSE;
+
+    /* Don't constant fold constant true/false generating operators either.
+    ** We want these to stay operators (to preserve joinid).
+    ** Normally one wouldn't hit iitrue/iifalse during resolve, but it
+    ** can happen when re-processing a tree for e.g. parameter substitution.
+    */
+    if (opnode->pst_sym.pst_value.pst_s_op.pst_opno == ADI_IITRUE_OP
+      || opnode->pst_sym.pst_value.pst_s_op.pst_opno == ADI_IIFALSE_OP)
 	const_cand = FALSE;
 
     while (lqnode)

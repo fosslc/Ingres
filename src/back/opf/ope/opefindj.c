@@ -1419,7 +1419,8 @@ ope_njoins(
 **	    to be picked up later.
 **	13-Nov-2009 (kiria01) SIR 121883
 **	    Distinguish between LHS and RHS card checks for 01.
-[@history_line@]...
+**	14-Jul-2010 (kschendel) SIR 123104
+**	    Use symbolic value for 1347 FI.
 */
 VOID
 ope_findjoins(
@@ -1482,7 +1483,7 @@ ope_findjoins(
                                 ** it is a subselect which requires special
                                 ** handling
                                 */
-	    || conditional->pst_sym.pst_value.pst_s_op.pst_opinst == 1347 /*ADFI_1347_NUMERIC_EQ*/
+	    || conditional->pst_sym.pst_value.pst_s_op.pst_opinst == ADFI_1347_NUMERIC_EQ
 				/* FIXME
 				** The present support for ADFI_1347_NUMERIC_EQ
 				** is limited to that of a simple predicate

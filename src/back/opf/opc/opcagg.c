@@ -1933,7 +1933,8 @@ opc_iaggtarg_init(
 **	    OLAP aggregates were getting their first datatype mapped to the
 **	    second when DB_ALL_TYPE was in use instead of the values just
 **	    being tested for nulls.
-[@history_template@]...
+**	14-Jul-2010 (kschendel) b123104
+**	    Replace SETTRUE with FI for iitrue().
 */
 static VOID
 opc_maggtarg_main(
@@ -2344,7 +2345,7 @@ opc_maggtarg_main(
 	** Ideally we would omit this if there were no CASE exprs in the
 	** accumulator part of the CX.
 	*/
-	opc_adinstr(global, cadf, ADE_SETTRUE, ADE_SMAIN, 0, 0, 0);
+	opc_adinstr(global, cadf, ADFI_895_II_TRUE, ADE_SMAIN, 0, 0, 0);
     }
 }
 
