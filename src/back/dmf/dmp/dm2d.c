@@ -784,6 +784,8 @@ NO_OPTIM=dr6_us5 pym_us5
 **          upgrade_iirel_row() init relattnametot
 **      04-Jun-2010 (frima01) Bug 123753
 **          Correct setting of rel_v9.reldatawid and rel_v9.reltotdatawid.
+**      25-Jun-2010 (frima01) Bug 123753
+**          Change E_DM9580_CONFIG_DBSERVICE_ERROR to be a warning.
 */
 
 /*
@@ -1802,7 +1804,7 @@ dm2d_add_db(
 #endif
 		if (dbservice_warning)
 		{
-		    uleFormat(NULL, E_DM9580_CONFIG_DBSERVICE_ERROR, 
+		    uleFormat(NULL, W_DM9580_CONFIG_DBSERVICE, 
 			(CL_ERR_DESC *)NULL, ULE_LOG, (DB_SQLSTATE *)NULL,
 			(char *)NULL, (i4)0, (i4 *)NULL,
 			err_code, 2, 0, cnf->cnf_dsc->dsc_dbservice,

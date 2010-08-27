@@ -653,6 +653,8 @@
 **	    Define DM_BQCB_CB for blob query context blocks.
 **	21-apr-2010 (toumi01) SIR 122403
 **	    Add E_DM944F_DM2U_MOD_ENCRYPT.
+**	25-Jun-2010 (frima01) Bug 123753
+**	    Change E_DM9580_CONFIG_DBSERVICE_ERROR to be a warning.
 */
 
 /*
@@ -2649,7 +2651,7 @@ typedef struct
 #define		    E_DM957D_REP_NO_DISTQ		(E_DM_MASK + 0x957DL)
 #define		    E_DM957E_REP_DISTQ_UPDATE		(E_DM_MASK + 0x957EL)
 #define		    E_DM957F_REP_DISTRIB_ERROR		(E_DM_MASK + 0x957FL)
-#define		    E_DM9580_CONFIG_DBSERVICE_ERROR	(E_DM_MASK + 0x9580L)
+#define		    W_DM9580_CONFIG_DBSERVICE		(E_DM_MASK + 0x9580L)
 #define		    E_DM9582_REP_NON_JNL		(E_DM_MASK + 0x9582L)
 
 /* DMVE internal error conditions. */

@@ -537,6 +537,9 @@ SQLSTATE_MAPPING_REQUIRED
 **	    E_DM930D_DM2U_READONLY_UPD_CATS.
 **	30-Apr-2010 (kschendel)
 **	    9026 & 928E don't have parameters, fix the messages.
+**	25-Jun-2010 (frima01) BUG 123753
+**	    Change DM9580_CONFIG_DBSERVICE_ERROR to be a warning indicating
+**	    mismatch of dbservice with lp64 server setting.
 */
 
 #define _DM_CLASS  3
@@ -15587,9 +15590,13 @@ will be aborted for database %1s."
 E_DM957F_REP_DISTRIB_ERROR:SS5000B_INTERNAL_ERROR
 "An error occurred when trying to distribute a replicated transaction from
 within the user thread. The transaction will be aborted"
-E_DM9580_CONFIG_DBSERVICE_ERROR:SS5000B_INTERNAL_ERROR
-"An error was detected in the dbservice flags (%0d) for database %1c.
-You may need to run upgradedb to correct invalid iitree tuples."
+W_DM9580_CONFIG_DBSERVICE:SS5000B_INTERNAL_ERROR
+"Warning: The dbservice flags (%0d) for database %1c don't
+match the dbms server flag lp64 indicating the size of
+longs and pointers.  This will likely cause various RDF errors
+when attempting to use views or other database objects.
+Run upgradedb on this database to redo stored query trees (iitree tuples).
+This warning is normal and can be ignored when running upgradedb itself."
 E_DM9581_REP_SHADOW_DUPLICATE:SS5000B_INTERNAL_ERROR
 "A duplicate record was encountered trying to create a shadow table entry
 for table %0c."

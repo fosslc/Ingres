@@ -673,6 +673,9 @@
 ##          to prevent conflicts for LSB builds.
 ##	07-May-2010 (stial01) SIR 122205
 ##          Added offline_error_action, online_error_action
+##	23-Jun-2010 (frima01) SIR 123296
+##	    Move defining createdb to the init section so it will be present
+##	    everywhere in this script.
 ##
 ##	    
 #----------------------------------------------------------------------------
@@ -806,6 +809,8 @@ Please correct your environment before running $SELF again.
 !
     exit 1
 }
+
+createdb=$II_SYSTEM/ingres/bin/createdb
 
 check_response_file 	# Validate response file (if any)
 
@@ -3595,7 +3600,7 @@ You should contact Ingres Corporation Technical Support to resolve this problem.
 
 Creating imadb...
 !
-		if $DOIT $II_SYSTEM/ingres/bin/createdb -fnofeclients \
+		if $DOIT $createdb -fnofeclients \
 		   -u${DIX}\$ingres imadb ; then
 		    : ok
 		else
@@ -3731,7 +3736,6 @@ The Ingres server could not be started.  See the server error log ($II_LOG/errlo
 Initializing the Ingres master database, iidbdb...
 
 !
-	createdb=$II_SYSTEM/ingres/bin/createdb
 	if $DOIT $createdb -S iidbdb ; then
 	    # FIXME - sleep to stop DB lock race condition
 	    sleep 1
