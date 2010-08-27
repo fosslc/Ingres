@@ -384,6 +384,10 @@ pst_get_union_resdom_type(
 **	    Don't fold true/false generating operators back to constants.
 **	3-Aug-2010 (kschendel) b124170
 **	    Use joinid from node being resolved when inserting a coercion.
+**	12-Aug-2010 (kschendel) b124234
+**	    Don't attempt to constant-fold LONG data.  Even if it works,
+**	    the resulting value described by the coupon is unlikely to
+**	    last until execution time.
 */
 DB_STATUS
 pst_resolve(
@@ -395,6 +399,7 @@ pst_resolve(
 {
 
     i4			children;
+    i4			dtbits;
     i4			i;
     i4			npars;
     DB_STATUS		status;
@@ -999,6 +1004,14 @@ pst_resolve(
 		lqnode->pst_sym.pst_value.pst_s_cnst.pst_parm_no != 0)
 	    const_coerce = FALSE;
 
+	/* Don't run a coercion that results in a LONG type. */
+	if (const_coerce)
+	{
+	    status = adi_dtinfo(adf_scb, best_fidesc->adi_dt[npars], &dtbits);
+	    if (status == E_DB_OK && dtbits & AD_PERIPHERAL)
+		const_coerce = FALSE;
+	}
+
 	/* Get coercion id for this child, if needed */
 	if (npars < best_fidesc->adi_numargs &&
 	    best_fidesc->adi_dt[npars] != DB_ALL_TYPE &&
@@ -1255,6 +1268,16 @@ pst_resolve(
     ** routine, we know it will be an operator node and so long
     ** as sizeof(PST_CNST_NODE) <= sizeof(PST_OP_NODE) there
     ** will be space to update inplace.*/
+
+    /* Don't attempt to constant-fold a LONG datatype.  The resulting
+    ** value (a coupon) doesn't survive through to the query plan,
+    ** since it's in a temporary LONG holding tank, and execution
+    ** time blows up.
+    */
+    status = adi_dtinfo(adf_scb, best_fidesc->adi_dtresult, &dtbits);
+    if (status == E_DB_OK && dtbits & AD_PERIPHERAL)
+	const_cand = FALSE;
+
     if (Psf_fold &&
 	sess_cb &&
 	const_cand &&
