@@ -520,6 +520,12 @@
 **         Added support for TIMESTAMPDIFF(), MONTHNAME() and EXTRACT().
 **   19-Jul-2010 (Ralph Loen) Bug 124101
 **         Added support for comment for slash-asterisk comment delimiters.
+**   03-Aug-2010 (Ralph Loen) Bug 124079
+**         Revised DAYOFYEAR() to include adjustments for leap years in the
+**         Gregorian calendar.  Revised CountLiteralItems to look for
+**         the DAYOFYEAR(), DAYOFMONTH() and MONTHNAME() scalars, and
+**         calculate the buffer length depending on the scalar and the
+**         length of the referenced column name.
 */
 
 typedef enum
@@ -3414,7 +3420,7 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
     CHAR     *  p1;
     LPDBC       pdbc = pstmt->pdbcOwner;
     CHAR     *  bNull = pstmt->bNull;
-    CHAR        buf[500]; 
+    CHAR        buf[1000]; 
     i4         len;
     i4         i;
     i4         bufLen;
@@ -4149,16 +4155,27 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
                         STprintf(buf," int4(interval('days',%s-date_trunc" \
                             "('yr',%s)))+1",p1,p1);
                     else
-                        STprintf(buf," case when (mod(mod(year(%s),100),4) " \
-                           "= 0 ) then 366-integer(left(varchar(cast(varchar" \
-                           "(year(%s)) + '-12-31' as ansidate) - cast(%s as " \
-                           "ansidate)), locate(varchar(cast(varchar(year(%s))" \
-                           "+ '-12-31' as ansidate) - cast(%s as ansidate)), " \
-                           "' '))) else 365-integer(left(varchar(cast(varchar" \
-                           "(year(%s)) + '-12-31' as ansidate) - cast(%s as " \
-                           "ansidate)), locate(varchar(cast(varchar(year(%s))" \
-                           "+ '-12-31' as ansidate) - cast(%s as ansidate)), " \
-                           "' '))) end", p1,p1,p1,p1,p1,p1,p1,p1,p1);
+                        STprintf(buf, "coalesce (case when (mod(year(%s),400)" \
+                            " = 0 ) then 366-integer(left(varchar(ansidate(" \
+                            "varchar(year(%s)) + '-12-31') - ansidate(%s)), " \
+                            "locate(varchar(ansidate(varchar(year(%s)) + " \
+                            "'-12-31') -ansidate(%s)), ' '))) end, " \
+                            "case when (mod(year(%s), 100) = 0 ) then " \
+                            "365-integer(left(varchar(ansidate(varchar(" \
+                            "year(%s)) + '-12-31') - ansidate(%s)), " \
+                            "locate(varchar(ansidate(varchar(year(%s)) + " \
+                            "'-12-31') - ansidate(%s)), ' '))) end, " \
+                            "case when (mod(year(%s), 4) = 0 ) then " \
+                            "366-integer(left(varchar(ansidate(varchar(" \
+                            "year(%s)) + '-12-31') - ansidate(%s)), " \
+                            "locate(varchar(ansidate(varchar(year(%s)) + " \
+                            "'-12-31') - ansidate(%s)), ' '))) " \
+                            "else 365-integer(left(varchar(ansidate(" \
+                            "varchar(year(%s)) + '-12-31') - ansidate(%s)), " \
+                            "locate(varchar(ansidate(varchar(year(%s)) + " \
+                            "'-12-31') - ansidate(%s)), ' '))) end)",
+                            p1, p1, p1, p1, p1, p1, p1, p1, p1, p1, p1, 
+                            p1, p1, p1, p1, p1, p1, p1, p1); 
                     CMnext(p);
                     p += STlength(p);
                     /*
@@ -4222,7 +4239,7 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
  
                     CMcpychar(nt,p);
                     STprintf(buf, monthNameQuery, p1, p1, p1, p1, p1, p1,
-                        p1, p1, p1, p1, p1, p1);  
+                        p1, p1, p1, p1, p1, p1);
 		    CMnext(p);
                     p += STlength(p);
                     /*
@@ -6352,7 +6369,12 @@ CHAR     * ScanNumber(CHAR * p, II_INT2 * papiDataType)
 
 DWORD CountLiteralItems(SQLINTEGER cbSqlStr, CHAR * p, UDWORD fAPILevel)
 {
-    int count=0;
+    i2 count=0;
+    i2 columnNameLength=0;
+    i2 i;
+    i2 varLen=0;
+    i2 queryLen=0;
+
     if (!p)
          return count;
 
@@ -6363,23 +6385,79 @@ DWORD CountLiteralItems(SQLINTEGER cbSqlStr, CHAR * p, UDWORD fAPILevel)
         else if ( fAPILevel > IIAPI_LEVEL_3 && !CMcmpcase(p, "{"))
         {
             CMnext(p);
-            while (CMwhite(p)) CMnext(p);
+            cbSqlStr--;
+            while (CMwhite(p)) 
+            {
+                cbSqlStr--;
+                CMnext(p);
+            }
  
             /*
-            ** If this is a function scalar, add 550 to the length, which
-            ** is currently the length of the DAYOFWEEK date scalar, when
-            ** converted to a query.  At present, this is the largest
-            ** query resulting from conversion.
+            ** The function scalars DAYOFWEEK, DAYOFYEAR and MONTHNAME
+            ** can range in length from 500 to 750 characters, and
+            ** reiterate the column name multiple times.
+            ** Discover the column name length and add it to the
+            ** count, multiplied by the number of occurrences.
+            ** Otherwise, 550 is a safe margin for converted scalars.
             */
             if (!STbcompare (p, 2, "fn", 2, TRUE))
-                count += 550; 
+            {
+                CMnext(p);
+                CMnext(p);
+                cbSqlStr -= 2;
+
+                while(CMwhite(p)) 
+                {
+                    CMnext(p);
+                    cbSqlStr--;
+                }
+                if (!STbcompare(p,9,"DAYOFWEEK",9,TRUE))
+                {
+                    queryLen = 550;
+                    varLen = 18;
+                }
+                else if (!STbcompare( p,9,"MONTHNAME",9,TRUE))
+                {
+                    queryLen = 500;
+                    varLen = 14;
+                }
+                else if (!STbcompare(p,9,"DAYOFYEAR",9,TRUE))
+                {
+                    queryLen = 750;
+                    varLen = 20;
+                }
+                if (varLen)
+                {
+                    for (i = 0; i < 9; i++)
+                        CMnext(p);
+                    cbSqlStr -= 9;
+                    while(CMwhite(p)) 
+                    {
+                        cbSqlStr--;
+                        CMnext(p);
+                    }
+                    CMnext(p);
+                    cbSqlStr--;
+                    while (*p && CMcmpcase(p,")")) 
+                    {
+                        columnNameLength++;
+                        CMnext(p);
+                        cbSqlStr--;
+                    }
+                    count += (varLen*columnNameLength) + queryLen;
+                    varLen = 0;
+                    columnNameLength = 0;
+                    queryLen = 0;
+                }
+                else
+                    count += 550;
+            }
             else
                 count += 30;
         }
         
         CMnext(p);
     }
-
     return count;
 }
 /*
