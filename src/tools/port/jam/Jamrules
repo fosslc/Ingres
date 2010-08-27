@@ -1429,6 +1429,8 @@
 #	    Port CCLEXW action to cygwin 1.7.  Add u2d conversions
 #	    to convert all files to DOS format in the intermediate
 #	    steps to avoid syntax errors.
+#       13-Aug-2010 (horda03) b124249
+#           Rebuild version.rel when the VERS file changes.
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -8133,6 +8135,9 @@ rule IIVERSREL
 	}
 	Depends files : $($(<)) ;
 	LOCATE on $($(<)) = $(ING_BUILDROOT) ;
+
+        Depends $($(<)) : $(CONFDIR)$(DFS)VERS $(CONFDIR)$(DFS)VERS.$(VERS) ;
+        NOCARE $(CONFDIR)$(DFS)VERS VERS ;
 
 	MODE on $($(<)) = $(FILEMODE) ;
 	Chmod $($(<)) ;
