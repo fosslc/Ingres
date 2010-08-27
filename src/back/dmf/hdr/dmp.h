@@ -532,6 +532,8 @@
 **	    be suppressed. 
 **      09-Jun-2010 (stial01)
 **          Add fields to DMP_POS_INFO.
+**      12-Jul-2010 (stial01) (SIR 121619 MVCC, B124076)
+**          Added rcb_new_fullscan
 */
 
 /*
@@ -1960,7 +1962,8 @@ struct _DMP_RCB
 					    ** row hits dm1c_pput or preplace.
 					    ** Manual e-o-r is for COPY.
 					    */
-    BITFLD	    rcb_bits_free:23;	    /* reserved for future use */
+    BITFLD          rcb_new_fullscan:1;     /* isnew MUST scan rcb_new_tids */
+    BITFLD	    rcb_bits_free:22;	    /* reserved for future use */
     i4         	    rcb_iso_level;          /* Isolation level. */         
 #define                  RCB_READ_UNCOMMITTED    1L
 #define                  RCB_CURSOR_STABILITY    2L

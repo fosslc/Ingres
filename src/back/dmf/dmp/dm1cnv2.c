@@ -188,6 +188,12 @@
 **	    SIR 121619 MVCC: Changes for MVCC
 **	18-Feb-2010 (stial01)
 **          dm1cnv2_get() fix copying of i2 version to caller param (i4) 
+**      12-Jul-2010 (stial01) (SIR 121619 MVCC, B124076, B124077)
+**          dm1cnv2_allocate(), dm1cnv2_clean() if crow_locking, call
+**          row_is_consistent() else call IsTranActive()
+**          dm1cnv2_isnew() Check rcb_new_fullscan, handle the XTABLE case where
+**          new tids are added to rcb_new_tids without any update to the page,
+**          defer_add_new() Set rcb_new_fullscan if page wasn't updated.
 */
 
 /* NO_OPTIM = pym_us5 */
@@ -401,15 +407,19 @@ dm1cnv2_allocate(
 	    {
 		/* Check if deleted row is committed */
 
-		/* FIXME: This could be vastly improved if in addition
-		** 	  to storing the low_tran, we also stored the
-		**	  log_id. LG now maintains an array of active
-		**	  tranid's indexed by log_id, so 
-		**	  if ( xid_array[log_id] == row_low_tran )
-		**	  could replace chasing the active transaction
-		**	  list in LG_S_ETRANSACTION.
-		*/
-		if ( IsTranActive(row_lg_id, row_low_tran) )
+		if (crow_locking(r))
+		{
+		    /*
+		    ** Don't reclaim unless committed before consistent read
+		    ** point in time described by the transactions "crib"
+		    */
+		    if (!row_is_consistent(r, row_low_tran, row_lg_id))
+		    {
+			/* skip and don't delete */
+			continue;
+		    }
+		}
+		else if ( IsTranActive(row_lg_id, row_low_tran) )
 		    continue;
 	    }
 	}
@@ -1286,7 +1296,8 @@ dm1cnv2_isnew(
     i4		i;
     DM_TID	*tidp;
     i4		page_type = t->tcb_rel.relpgtype;
-
+    i4		isnew;
+    bool	check_newtids = FALSE;
 
     /*
     ** FIX ME can't do this optimization because it doesn't work for
@@ -1296,7 +1307,8 @@ dm1cnv2_isnew(
     ** Before this optimization can be done, we need to pass the DMR_XTABLE
     ** flag down from dmr_get to dm2r_get to dm1r/dm1b get, down to the isnew
     ** accessor (See bug scripts for b103961)
-    if (r->rcb_logging
+    ** (unless we always call defer_add_new for XTABLE case in dm2r_replace)
+    if (r->rcb_new_fullscan == FALSE && r->rcb_logging
 	&& !LSN_GTE(DMPP_VPT_ADDR_PAGE_LOG_ADDR_MACRO(
 	    t->tcb_rel.relpgtype, page), &r->rcb_oldest_lsn))
 	return (FALSE);
@@ -1310,27 +1322,14 @@ dm1cnv2_isnew(
 	MECOPY_CONST_4_MACRO(
 	    (PTR)tup_hdr + Dmpp_pgtype[page_type].dmpp_lowtran_offset,
 	    &low_tran);
-	if (low_tran == r->rcb_tran_id.db_low_tran)
-	{
-	    /* only V2 has high_tran */
-	    if (page_type == TCB_PG_V2)
-	    {
-		MECOPY_CONST_4_MACRO(
-		    (PTR)tup_hdr + Dmpp_pgtype[page_type].dmpp_hightran_offset,
-		    &high_tran);
-	    }
-	    else 
-		high_tran = r->rcb_tran_id.db_high_tran;
+	MECOPY_CONST_4_MACRO(
+	    (PTR)tup_hdr + Dmpp_pgtype[page_type].dmpp_seqnum_offset,
+	    &seq_num);
 
-
-	    MECOPY_CONST_4_MACRO(
-		(PTR)tup_hdr + Dmpp_pgtype[page_type].dmpp_seqnum_offset,
-		&seq_num);
-	    if (seq_num == r->rcb_seq_number
-		&& high_tran == r->rcb_tran_id.db_high_tran)
-		return (TRUE);
-	}
-	return (FALSE);
+	if (low_tran == r->rcb_tran_id.db_low_tran 
+		&& seq_num == r->rcb_seq_number)
+	    return (TRUE);
+	check_newtids = r->rcb_new_fullscan;
     }
     else
     {
@@ -1350,43 +1349,47 @@ dm1cnv2_isnew(
 	  (PTR)tup_hdr + Dmpp_pgtype[page_type].dmpp_lowtran_offset,
 	  &low_tran);
 
-	if (low_tran == r->rcb_tran_id.db_low_tran)
-	{
-	    /* If row tranid_low matches, check rcb deferred tid list */
-	    get_tid.tid_tid.tid_line = line_num;
-	    get_tid.tid_tid.tid_page = DMPP_V2_GET_PAGE_PAGE_MACRO(page);
-
-	    curr = r;
-	    do
-	    {
-	       /* check for matching table, sequence number */
-	       if (curr->rcb_update_mode == RCB_U_DEFERRED
-		    && curr->rcb_seq_number == r->rcb_seq_number
-		    && curr->rcb_new_cnt)
-	       {
-		    i4	left, right, middle;
-		    DM_TID  *midtidp;
-
-		    left = 0;
-		    right = curr->rcb_new_cnt - 1;
-		    
-		    while (left <= right)
-		    {
-			middle = (left + right)/2;
-
-			midtidp = curr->rcb_new_tids + middle;
-			if (get_tid.tid_i4 == midtidp->tid_i4)
-			    return (TRUE);
-			else if (get_tid.tid_i4 < midtidp->tid_i4)
-			    right = middle - 1;
-			else
-			    left = middle + 1;
-		    }
-	       }
-	    } while ((curr = curr->rcb_rl_next) != r);
-	}
-	return(FALSE);
+	if (low_tran == r->rcb_tran_id.db_low_tran || r->rcb_new_fullscan)
+	    check_newtids = TRUE;
     }
+
+    if (!check_newtids)
+	return (FALSE);
+
+    /* MUST check rcb_new_tids */
+    get_tid.tid_tid.tid_line = line_num;
+    get_tid.tid_tid.tid_page = DMPP_V2_GET_PAGE_PAGE_MACRO(page);
+
+    curr = r;
+    do
+    {
+       /* check for matching table, sequence number */
+       if (curr->rcb_update_mode == RCB_U_DEFERRED
+	    && curr->rcb_seq_number == r->rcb_seq_number
+	    && curr->rcb_new_cnt)
+       {
+	    i4	left, right, middle;
+	    DM_TID  *midtidp;
+
+	    left = 0;
+	    right = curr->rcb_new_cnt - 1;
+	    
+	    while (left <= right)
+	    {
+		middle = (left + right)/2;
+
+		midtidp = curr->rcb_new_tids + middle;
+		if (get_tid.tid_i4 == midtidp->tid_i4)
+		    return (TRUE);
+		else if (get_tid.tid_i4 < midtidp->tid_i4)
+		    right = middle - 1;
+		else
+		    left = middle + 1;
+	    }
+       }
+    } while ((curr = curr->rcb_rl_next) != r);
+
+    return (FALSE);
 }
 
 /*{
@@ -2195,7 +2198,7 @@ i4		*err_code)
 	    ** V3, V4 pages do not keep sequence number per row 
 	    ** Remember tid in rcb
 	    */
-	    status = defer_add_new(rcb, tid, err_code);
+	    status = defer_add_new(rcb, tid, TRUE, err_code);
 	}
 	else
 	{
@@ -2291,6 +2294,7 @@ DB_STATUS
 defer_add_new(
 DMP_RCB *rcb,
 DM_TID  *put_tid,
+i4	page_updated,	
 i4	*err_code)
 {
     DMP_RCB             *r = rcb;
@@ -2313,13 +2317,28 @@ i4	*err_code)
     put_tid->tid_tid.tid_page, put_tid->tid_tid.tid_line);
 #endif
 
-    /* Add to all tid list for this table, this sequence number */
+    /*
+    ** Add to all tid list for this table, this sequence number
+    ** Note this code adds the tid to rcb_new_tids for all cursors
+    ** on this table having the same sequence number.
+    ** (although most likely there is only one cursor open on this table)
+    */
     curr = r;
     do
     {
        if (curr->rcb_update_mode == RCB_U_DEFERRED
 	    && curr->rcb_seq_number == r->rcb_seq_number)
 	{
+	    /* If the page/row header tran/sequence wasnt updated,
+	    ** isnew() routines must always check for tid in rcb_new_tids
+	    ** before returning FALSE
+	    ** NOTE: rcb_new_fullscan does not mean all deferred update
+	    ** tids are in rcb_new_tids, just the ones where the page
+	    ** was not updated. (the DM2R_XTABLE case)
+	    */
+	    if (page_updated == FALSE)
+		curr->rcb_new_fullscan = TRUE;
+
 	    /* Add the tid */
 	    if (curr->rcb_new_cnt >= curr->rcb_new_max)
 	    {
@@ -2449,13 +2468,13 @@ i4	*err_code)
 */
 DB_STATUS	    
 dm1cnv2_clean(
-i4		page_type,
-i4		page_size,
+DMP_RCB		*r,
 DMPP_PAGE	*page,
-DB_TRAN_ID	*tranid,
-i4		lk_type,
 i4		*avail_space)
 {
+    i4		page_type = r->rcb_tcb_ptr->tcb_rel.relpgtype;
+    i4		page_size = r->rcb_tcb_ptr->tcb_rel.relpgsize;
+    DB_TRAN_ID  *tranid = &r->rcb_tran_id;
     i4     i;
     i4     nextlno;
     i4	space;
@@ -2504,21 +2523,21 @@ i4		*avail_space)
 	    /* do not reclaim if row deleted by same transaction */
 	    if (tranid && row_low_tran == tranid->db_low_tran)
 		continue;
-	    else
+	    else if (crow_locking(r))
 	    {
-		/* Check if deleted row is committed */
-
-		/* FIXME: This could be vastly improved if in addition
-		** 	  to storing the low_tran, we also stored the
-		**	  log_id. LG now maintains an array of active
-		**	  tranid's indexed by log_id, so 
-		**	  if ( xid_array[log_id] == row_low_tran )
-		**	  could replace chasing the active transaction
-		**	  list in LG_S_ETRANSACTION.
+		/*
+		** Don't reclaim unless committed before consistent read
+		** point in time described by the transactions "crib"
 		*/
-		if ( IsTranActive(row_lg_id, row_low_tran) )
+		if (!row_is_consistent(r, row_low_tran, row_lg_id))
+		{
+		    /* skip and don't delete */
 		    continue;
+		}
 	    }
+	    else if ( IsTranActive(row_lg_id, row_low_tran) )
+		continue;
+	    /* committed/consistent, ok to reclaim */
 	}
 
 	/* compressed or altered tables: get entry size */

@@ -990,6 +990,8 @@ NO_OPTIM=dr6_us5 i64_aix
 **          dm2r_position() use logical value locks if not releasing
 **          dm2r_put() release value lock after put (not after allocate)
 **          base_delete_put() release value lock after put (not after allocate)
+**      12-Jul-2010 (stial01) (SIR 121619 MVCC, B124076)
+**          dm2r_replace() if row/crow_locking, defer_add_new() else dmpp_dput()
 */
 
 static DB_STATUS BuildRtreeRecord(
@@ -1630,6 +1632,7 @@ DB_ERROR	    *dberr )
     r->rep_prio_rcb    = NULL;
     r->rep_cdds_rcb    = NULL;
     r->rcb_new_cnt = 0;
+    r->rcb_new_fullscan = 0;
     r->rcb_opt_extend = t->tcb_rel.relextend;
     r->rcb_bulk_cnt = 0;
     r->rcb_bulk_misc = NULL;
@@ -6508,22 +6511,34 @@ DB_ERROR	    *dberr )
 	    }
 	    else
 	    {
-		if ((flag & DM2R_XTABLE) && 
-		    (r->rcb_update_mode == RCB_U_DEFERRED || crow_locking(r)))
+		if ((flag & DM2R_XTABLE) && r->rcb_update_mode == RCB_U_DEFERRED)
 		{
 		    /*
-		    ** Do deferred put proessing if crow_locking so we can
-		    ** ignore changes by our own transaction without mvcc undo
+		    ** If row locking/crow locking add the tid to rcb_new_tids
+		    ** instead of doing unlogged updates to the row header
+		    ** which could interfere with mvcc undo processing
 		    */
-		    dm0pMutex(&t->tcb_table_io, (i4)0, r->rcb_lk_id,
+		    if (row_locking(r) || crow_locking(r))
+		    {
+			/* Don't do unlogged deferred processing on page */
+			status = defer_add_new(r, &r->rcb_currenttid, 
+				FALSE, err_code);
+		    }
+		    else
+		    {
+			/* Must first swap from CR to Root */
+			dm0pLockBufForUpd(r, &r->rcb_data);
+			dm0pMutex(&t->tcb_table_io, (i4)0, r->rcb_lk_id,
 				    &r->rcb_data);
-		    status = (*t->tcb_acc_plv->dmpp_dput)(r, 
+			status = (*t->tcb_acc_plv->dmpp_dput)(r, 
 				r->rcb_data.page, &r->rcb_currenttid,err_code);
+			dm0pUnmutex(&t->tcb_table_io, (i4)0, r->rcb_lk_id, 
+				    &r->rcb_data);
+			/* Release exclusive readlock on Root, restore CR */
+			dm0pUnlockBuf(r, &r->rcb_data);
+		    }
 		    if ( status )
 			SETDBERR(dberr, 0, *err_code);
-
-		    dm0pUnmutex(&t->tcb_table_io, (i4)0, r->rcb_lk_id, 
-				    &r->rcb_data);
 		}	
 		/* give error message to QEF */
 		if (status == E_DB_OK)

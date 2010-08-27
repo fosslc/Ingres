@@ -564,12 +564,16 @@
 **	09-Jun-2010 (stial01)
 **          TRdisplay table id when there is an error
 **          dm1r_unlock_value, init relid for error messages, not just trace
+**      12-Jul-2010 (stial01) (SIR 121619 MVCC, B124076, B124077)
+**          Created is_row_consistent() from code in dm1r_crow_lock()
+**          Changed params to dmpp_clean accessor (pass the rcb)
+**          dm1r_get() DM1C_BYTID LockBufForUpd so dmpp_isnew (rootpage)
+**          can detect ambiguous updates. 
 */
 
 /*
 **  function prototypes
 */
-
 static DB_STATUS
 dm1r_rowlk_access(
 	DMP_RCB        *rcb,
@@ -1596,6 +1600,7 @@ dm1r_get(
 	bool		skip_reading_page = FALSE;
 	DB_ERROR	local_dberr;
 	i4	        *err_code = &dberr->err_code;
+	bool		cr_page;
 
     CLRDBERR(dberr);
 
@@ -2342,8 +2347,31 @@ dm1r_get(
 	    if (rec_ptr != record)
 		MEcopy(rec_ptr, record_size, record);
 
+	    /* is row from CR page */
+	    if (r->rcb_data.page && 
+		DMPP_VPT_IS_CR_PAGE(t->tcb_rel.relpgtype, r->rcb_data.page) )
+		cr_page = TRUE;
+	    else
+		cr_page = FALSE;
+
 	    /* Unlock buffer */
 	    dm0pUnlockBuf(r, &r->rcb_data);
+
+	    if  (r->rcb_update_mode == RCB_U_DEFERRED && (opflag & DM1C_BYTID) 
+		    && cr_page)
+	    {
+		/* Returning CR row, check for ambiguous update on ROOT */
+		dm0pLockBufForUpd(r, &r->rcb_data);
+		if ((*t->tcb_acc_plv->dmpp_isnew)(r, r->rcb_data.page,
+			    (i4)localtid.tid_tid.tid_line))
+		{
+		    SETDBERR(dberr, 0, E_DM0047_CHANGED_TUPLE);
+		    /* Unlock buffer */
+		    dm0pUnlockBuf(r, &r->rcb_data);
+		    return (E_DB_ERROR);
+		}
+		dm0pUnlockBuf(r, &r->rcb_data);
+	    }
 
 	    if (row_locking(r)
 		&& (r->rcb_iso_level == RCB_CURSOR_STABILITY)
@@ -4061,87 +4089,24 @@ DB_ERROR	*dberr)
 		*/	   
 		if ( row_low_tran && row_low_tran != r->rcb_tran_id.db_low_tran )
 		{
-		    /*
-		    ** If row has been updated by a later-starting transaction,
-		    ** then it wins the race.
-		    **
-		    ** As we only cache only db_low_tran and discard db_high_tran,
-		    ** watch for db_low_tran wrap. svcb_last_tranid is the 
-		    ** last transaction id assigned by LG.
-		    **
-		    ** If READ_COMMITTED, return E_DM0029_ROW_UPDATE_CONFLICT
-		    ** to QEF. That'll induce it to retry the statement with
-		    ** a fresh CRIB and crib_bos_tranid.
-		    */
-		    VOLATILE_ASSIGN_MACRO(dmf_svcb->svcb_last_tranid, LastTranid);
-
-		    if ( row_low_tran > crib->crib_bos_tranid ||
-			 (row_low_tran < crib->crib_bos_tranid &&
-			  crib->crib_bos_tranid > LastTranid &&
-			  row_low_tran <= LastTranid) )
+		    if (!row_is_consistent(r, row_low_tran, row_lg_id))
 		    {
 			if ( r->rcb_iso_level == RCB_SERIALIZABLE ||
 			     r->rcb_state & RCB_CURSOR )
-			{
 			    SETDBERR(dberr, 0, E_DM0020_UNABLE_TO_SERIALIZE);
-			}
 			else
 			    SETDBERR(dberr, 0, E_DM0029_ROW_UPDATE_CONFLICT);
 			status = E_DB_ERROR;
 		    }
 
-		    /*
-		    ** If there were uncommitted transactions at our CR point in time
-		    ** and this update was made by one of them, then the earlier
-		    ** transaction wins.
-		    **
-		    ** If READ_COMMITTED, return E_DM0029_ROW_UPDATE_CONFLICT
-		    ** to QEF. That'll induce it to retry the statement with
-		    ** a fresh CRIB and new crib_bos_tranid.
-		    */
-		    else if ( crib->crib_lgid_low )
-		    {
-			if ( row_lg_id )
-			{
-			    if ( CRIB_XID_WAS_ACTIVE(crib, row_lg_id, row_low_tran) )
-			    {
-				if ( r->rcb_iso_level == RCB_SERIALIZABLE ||
-				     r->rcb_state & RCB_CURSOR )
-				{
-				    SETDBERR(dberr, 0, E_DM0020_UNABLE_TO_SERIALIZE);
-				}
-				else
-				    SETDBERR(dberr, 0, E_DM0029_ROW_UPDATE_CONFLICT);
-				status = E_DB_ERROR;
-			    }
-			}
-			else
-			{
-			    /*
-			    ** row_lg_id unknown (V3/V4), have to do it the slow way,
-			    ** scan the crib xid_array for matching tran_id.
-			    */
-			    for ( i = crib->crib_lgid_low;
-				  i <= crib->crib_lgid_high && status == E_DB_OK;
-				  i++ )
-			    {
-				if ( crib->crib_xid_array[i] == row_low_tran )
-				{
-				    if ( r->rcb_iso_level == RCB_SERIALIZABLE ||
-					 r->rcb_state & RCB_CURSOR )
-				    {
-					SETDBERR(dberr, 0, E_DM0020_UNABLE_TO_SERIALIZE);
-				    }
-				    else
-					SETDBERR(dberr, 0, E_DM0029_ROW_UPDATE_CONFLICT);
-				    status = E_DB_ERROR;
-				}
-			    }
-			}
-		    }
-
 		    if ( get_status && status == E_DB_OK )
 		    {
+			/*
+			** Shut off MVCC tracing if enabled, otherwise the
+			** iidbms log is so cluttered as to be unreadable.
+			*/
+			d->dcb_status &= ~DCB_S_MVCC_TRACE;
+
 			/* This is always due to wrongheaded make_consistent */
 			TRdisplay("%@ dm1r_crow_lock:%d rcb %p tran %x page %p DELETED TID: [%d,%d]"
 				  " row_lg_id %d row_low_tran %x %w\n",
@@ -4166,6 +4131,9 @@ DB_ERROR	*dberr)
 				next_rcb->rcb_tcb_ptr->tcb_rel.reltid.db_tab_base,
 				next_rcb->rcb_tcb_ptr->tcb_rel.reltid.db_tab_index);
 			}
+
+			/* Dump diagnostics to log */
+			dmd_pr_mvcc_info(r);
 
 			dmd_check(E_DM0029_ROW_UPDATE_CONFLICT);
 		    }
@@ -4523,6 +4491,110 @@ DB_ERROR	*dberr)
     }
 
     return(status);
+}
+
+/* 
+** Name: row_is_consistent    - is row is read consistent according to CRIB
+**
+** Description:
+**
+**      Given a the row_low_tran and row_lg_id, check if the row is
+**      consistent, i.e. committed before the consistent read point in time
+**      described by the transactions "crib"
+**
+** Inputs:
+**	rcb		    - The RCB control block
+**      row_low_tran
+**      row_lg_id
+**
+** Outputs:
+**      None
+**
+** Returns:
+**      TRUE/FALSE
+**
+** Side Effects:
+**      None
+**
+** History:
+**	12-Jul-2010 (stial01)
+**	    Created from code in dm1r_crow_lock(), also needed for page clean.
+*/
+bool
+row_is_consistent(
+DMP_RCB		*r,
+u_i4		row_low_tran,
+u_i2		row_lg_id)
+{
+    LG_CRIB	*crib = r->rcb_crib_ptr;
+    u_i4	LastTranid;
+    i4		i;
+
+    /*
+    ** NB: rcb_tran_id is the "real" transaction id used
+    **     to mark page/row updates.
+    **
+    **	   crib_bos_tranid is an artificial tranid acquired
+    **	   to mark the beginning of a statement when Read Committed
+    **	   and will never appear in any page or row as
+    **	   the "tranid of update".
+    **
+    **	   When Serializable, crib_bos_tranid will be the
+    **	   real rcb_tran_id.
+    */	   
+    if ( row_low_tran && row_low_tran != r->rcb_tran_id.db_low_tran )
+    {
+	/*
+	** If row has been updated by a later-starting transaction,
+	** then it wins the race.
+	**
+	** As we only cache only db_low_tran and discard db_high_tran,
+	** watch for db_low_tran wrap. svcb_last_tranid is the 
+	** last transaction id assigned by LG.
+	**
+	** If READ_COMMITTED, return E_DM0029_ROW_UPDATE_CONFLICT
+	** to QEF. That'll induce it to retry the statement with
+	** a fresh CRIB and crib_bos_tranid.
+	*/
+	VOLATILE_ASSIGN_MACRO(dmf_svcb->svcb_last_tranid, LastTranid);
+
+	if ( row_low_tran > crib->crib_bos_tranid ||
+	     (row_low_tran < crib->crib_bos_tranid &&
+	      crib->crib_bos_tranid > LastTranid &&
+	      row_low_tran <= LastTranid) )
+	    return (FALSE);
+
+	/*
+	** If there were uncommitted transactions at our CR point in time
+	** and this update was made by one of them, then the earlier
+	** transaction wins.
+	**
+	** If READ_COMMITTED, return E_DM0029_ROW_UPDATE_CONFLICT
+	** to QEF. That'll induce it to retry the statement with
+	** a fresh CRIB and new crib_bos_tranid.
+	*/
+	else if ( crib->crib_lgid_low )
+	{
+	    if ( row_lg_id )
+	    {
+		if ( CRIB_XID_WAS_ACTIVE(crib, row_lg_id, row_low_tran) )
+		    return (FALSE);
+	    }
+	    else
+	    {
+		/*
+		** row_lg_id unknown (V3/V4), have to do it the slow way,
+		** scan the crib xid_array for matching tran_id.
+		*/
+		for ( i = crib->crib_lgid_low; i <= crib->crib_lgid_high; i++ )
+		{
+		    if ( crib->crib_xid_array[i] == row_low_tran )
+			return (FALSE);
+		}
+	    }
+	}
+    }
+    return (TRUE);
 }
 
 
@@ -6611,9 +6683,7 @@ dm1r_allocate(
 	    /* if row/crow/phys locking can only clean committed deletes */
 	    page_cleaned = TRUE;
 	    dm0pMutex(tbio, (i4)0, r->rcb_lk_id, pinfo);
-	    status = (*t->tcb_acc_plv->dmpp_clean)(
-		    t->tcb_rel.relpgtype, t->tcb_rel.relpgsize, pinfo->page,
-		    &r->rcb_tran_id, 0, &clean_bytes);
+	    status = (*t->tcb_acc_plv->dmpp_clean)(r, pinfo->page,&clean_bytes);
 	    dm0pUnmutex(tbio, (i4)0, r->rcb_lk_id, pinfo);
 	    if (status != E_DB_OK)
 		break;
@@ -8315,5 +8385,6 @@ dbg_dm723(
 **   dm1r_replace -> replace segs - dm0l_row_unpack
 **   grep DB_MAXTUP,DM_MAXTUP
 */
+
 
 

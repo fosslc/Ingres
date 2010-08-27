@@ -202,6 +202,8 @@
 **	    the next_line entry to zero in dm1cn_delete. (B119823)
 **	25-Aug-2009 (kschendel) 121804
 **	    Need dmxe.h to satisfy gcc 4.3.
+**      12-Jul-2010 (stial01) (SIR 121619 MVCC, B124077)
+**          dm1cn_clean() Parameter changes.
 */
 
 /* NO_OPTIM = pym_us5 */
@@ -1963,11 +1965,8 @@ dm1cn_clear(
 
 DB_STATUS	    
 dm1cn_clean(
-i4		page_type,
-i4		page_size,
+DMP_RCB		*r,
 DMPP_PAGE	*page,
-DB_TRAN_ID	*tranid,
-i4		lk_type,
 i4		*avail_space)
 {
     return (E_DB_OK);

@@ -80,6 +80,8 @@
 **	    dm1cn_delete, dm1cn_get, dm1cn_put prototypes.
 **	9-Jul-2010 (kschendel) sir 123450
 **	    Add BYTE column compression ops.
+**      12-Jul-2010 (stial01) (SIR 121619 MVCC, B124076, B124077)
+**          Prototype changes.
 **/
 
 /* Definition of compression / decompression control array.
@@ -322,9 +324,12 @@ FUNC_EXTERN i4		dm1cn_cmpcontrol_size(
 			i4		relversion);
 
 FUNC_EXTERN DB_STATUS	dm1cn_clean(
-			    i4		page_type,
-			    i4		page_size,
+			    DMP_RCB	*r,
 			    DMPP_PAGE	*page,
-			    DB_TRAN_ID  *tranid,
-			    i4		lk_type,
 			    i4		*avail_space);
+
+FUNC_EXTERN DB_STATUS defer_add_new(
+			DMP_RCB *rcb,
+			DM_TID  *put_tid,
+			i4	page_updated,
+			i4	*err_code);
