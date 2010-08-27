@@ -488,6 +488,12 @@ NO_OPTIM = rs4_us5 su4_u42 su4_cmw i64_aix r64_us5
 **      21-Jun-2010 (horda03) b123926
 **          Because adu_unorm() and adu_utf8_unorm() are also called via 
 **          adu_lo_filter() change parameter order.
+**	04-Aug-2010 (kiria01) b124160
+**	    Raised limit handling on vlts. Now we have a ADE_MXVLTS_SOFT
+**	    upto which the stack will be used and beyond, the limit can
+**	    get to ADE_MXVLTS which is the max supported in the CXHEAD.
+**	    To handle this memory will be allocated temporarily to extend
+**	    the workspace.
 **/
 
 
@@ -508,7 +514,7 @@ static  DB_STATUS   ad0_fill_vltws(ADF_CB             *adf_scb,
 				   i4                 nbases,
 				   PTR                bases[],
 				   i4                 *nvlts,
-				   ADE_VLT_WS_STRUCT  vlt_ws[]);
+				   ADE_VLT_WS_STRUCT  **vlt_ws);
 
 #ifdef COUNTS
 static i4  adfi_counts[1027] = {0};
@@ -633,7 +639,8 @@ i4                 *ade_needed;
 # endif
 {
     ADE_CXHEAD          *cxhead = (ADE_CXHEAD *) ade_cx;
-    ADE_VLT_WS_STRUCT   vlt_ws[ADE_MXVLTS];
+    ADE_VLT_WS_STRUCT   _vlt_ws[ADE_MXVLTS_SOFT];
+    ADE_VLT_WS_STRUCT	*vlt_ws = _vlt_ws;
     i4                  nvlts;
     i4                  i;
     DB_STATUS           db_stat = E_DB_OK;
@@ -643,7 +650,7 @@ i4                 *ade_needed;
 
     if (    cxhead->cx_n_vlts
 	&&  !(db_stat = ad0_fill_vltws(adf_scb, ade_cx, ade_nbases, ade_bases,
-				       &nvlts, vlt_ws)
+				       &nvlts, &vlt_ws)
 	     )
        )
     {
@@ -652,6 +659,8 @@ i4                 *ade_needed;
 	    *ade_needed += vlt_ws[i].vlt_len;
 	    ADE_ROUNDUP_MACRO(*ade_needed, sizeof(ALIGN_RESTRICT));
 	}
+	if (vlt_ws != _vlt_ws)
+	    MEfree(vlt_ws);
     }
 
     return(db_stat);
@@ -6679,7 +6688,7 @@ ADE_OPERAND        *op)
 ** Outputs:
 **      nvlts                           Number of VLTs in the vlt work space
 **					array.
-**      vlt_ws                          VLT work space array.
+**      vlt_ws                          VLT work space array pointer address.
 **
 **	Returns:
 **	      The following DB_STATUS codes may be returned:
@@ -6742,7 +6751,7 @@ PTR                cx,
 i4                 nbases,
 PTR                bases[],
 i4                 *nvlts,
-ADE_VLT_WS_STRUCT  vlt_ws[])
+ADE_VLT_WS_STRUCT  **pvlt_ws)
 {
     ADE_CXHEAD          *cxhead = (ADE_CXHEAD *) cx;
     i4             nexti;
@@ -6762,7 +6771,8 @@ ADE_VLT_WS_STRUCT  vlt_ws[])
     DB_STATUS           db_stat;
     DB_DT_ID		bdt;
     DB_DT_ID		out_bdt;
-
+    ADE_VLT_WS_STRUCT   *vlt_ws = *pvlt_ws; /* We start with ADE_MXVLTS_SOFT */
+    bool		vlt_grown = FALSE;
 
     *nvlts = 0;
 
@@ -6782,11 +6792,21 @@ ADE_VLT_WS_STRUCT  vlt_ws[])
 	iptr = (ADE_INSTRUCTION *) ((char *) cx + nexti);
 	if (iptr->ins_icode == ADE_CALCLEN)
 	{
-#ifdef    xDEBUG
 	    if (*nvlts >= ADE_MXVLTS)
 		return(adu_error(adf_scb, E_AD550E_TOO_MANY_VLTS, 0));
-#endif /* xDEBUG */
-
+	    if (vlt_grown == FALSE &&
+		*nvlts >= ADE_MXVLTS_SOFT)
+	    {
+		/* Allocate temporary memory - caller will free */
+		PTR tmp = MEreqmem(0, ADE_MXVLTS*sizeof(ADE_VLT_WS_STRUCT), FALSE, &status);
+		if (!tmp)
+		    return(adu_error(adf_scb, E_AD550E_TOO_MANY_VLTS, 0));
+		/* Copy existing */
+		MEcopy((PTR)vlt_ws, ADE_MXVLTS_SOFT*sizeof(ADE_VLT_WS_STRUCT), tmp);
+		/* Adopt the block as current */
+		*pvlt_ws = vlt_ws = (ADE_VLT_WS_STRUCT*)tmp;
+		vlt_grown = TRUE;
+	    }
 	    /* Now let's process the VLT for this ADE_CALCLEN instruction */
 	    /* ---------------------------------------------------------- */
 
