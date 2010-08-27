@@ -1488,6 +1488,9 @@ static DB_STATUS test_redo(
 **	30-Jul-2010 (jonj)
 **	    Previous fix for B124096 failed to fill in tabid's in newly
 **	    created partitions, causing file rename errors later on.
+**	03-Aug-2010 (miket) SIR 122403
+**	    Trap attempt to change the structure of an encrypted index;
+**	    only HASH is valid. Also remove unreferenced input_is_index.
 */
 DB_STATUS
 dm2u_modify(
@@ -1580,7 +1583,6 @@ DB_ERROR        *dberr)
     DMP_RELATION	online_reltup;
     DB_TAB_ID		online_tabid;
     i4			table_lock_mode;
-    bool		input_is_index = FALSE;
     LK_LOCK_KEY		lock_key;
     RFP_OCTX		*octx = 0;
     bool		already_logged = FALSE;
@@ -1844,9 +1846,17 @@ DB_ERROR        *dberr)
 	if ((t->tcb_rel.relstat & TCB_INDEX) ||
 	    (input_rcb && (input_rcb->rcb_tcb_ptr->tcb_rel.relstat & TCB_INDEX)))
 	{
-	    input_is_index = TRUE;
 	    /* ...just to be safe... */
 	    mcb->mcb_clustered = FALSE;
+	    /* an encrypted secondary index can ONLY be structure hash */
+	    if (t->tcb_data_rac.encrypted_attrs == TRUE &&
+		mcb->mcb_structure != TCB_HASH &&
+		mcb->mcb_structure != 0)
+	    {
+		status = E_DB_ERROR;
+		SETDBERR(dberr, 0, E_DM019F_INVALID_ENCRYPT_INDEX);
+		break;
+	    }
 	}
 
         /*

@@ -474,6 +474,8 @@ SQLSTATE_MAPPING_REQUIRED
 **	    Clarify language for msg E_US24BF.
 **	30-Jul-2010 (miket) SIR 122403
 **	    Improve content/format for E_US0F0F, and add encrypt clause.
+**	03-Aug-2010 (miket) SIR 122403
+**	    Add "ENCRYPT" to US1586
 */
 
 #define _US_CLASS   0
@@ -5922,7 +5924,7 @@ E_US1586_5510:SS42000_SYN_OR_ACCESS_ERR
 "MODIFY: Invalid option '%0c'.
 \n Try one of the following:
 \n   [C]ISAM, [C]HASH, [C]HEAP, [C]HEAPSORT, [C]BTREE, CLUSTERED, MERGE,
-\n   TRUNCATED, REORGANIZE, REORGANISE, RELOCATE, [NO]PERSISTENCE"
+\n   TRUNCATED, REORGANIZE, REORGANISE, RELOCATE, [NO]PERSISTENCE, ENCRYPT"
 E_US1587_5511:SS42501_COL_NOT_FOUND
 "MODIFY %0c: bad column name '%1c'."
 E_US1588_5512:SS42000_SYN_OR_ACCESS_ERR
