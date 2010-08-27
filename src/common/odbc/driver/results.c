@@ -382,6 +382,10 @@
 **     23-Mar-2010 (Ralph Loen) SIR 123465
 **         Trace raw and converted data in GetColumn() with new odbc_hexdump() 
 **         function.
+**     24-Jun-2010 (Ralph Loen)  Bug 122174
+**         In SQLDescribeCol() return the precision instead of the
+**         column size for the precision argument if the data type is
+**         SQL_DECIMAL or SQL_NUMERIC.
 */
 
 
@@ -653,19 +657,26 @@ RETCODE SQL_API SQLDescribeCol_InternalCall(
     if ( pfNullable)
         *pfNullable = pird->Nullable;
     if ((pstmt->fOptions & OPT_CONVERTINT8TOINT4) && (pird->ConciseType == SQL_BIGINT))
-	   {
-		   *pfSqlType = SQL_INTEGER;
-		   *pfNullable = 0;
-	   }
+    {
+        *pfSqlType = SQL_INTEGER;
+        *pfNullable = 0;
+    }
+
     if ( pcbColDef)
-       {if      (pird->ConciseType == SQL_FLOAT  ||
-                 pird->ConciseType == SQL_DOUBLE)
-            *pcbColDef = 15;
-        else if (pird->ConciseType == SQL_REAL)
-            *pcbColDef = 7;
-        else
+    {
+        switch (pird->ConciseType)
+        {
+        case SQL_NUMERIC:
+        case SQL_DECIMAL:
             *pcbColDef = pird->Precision;
-       }
+            break;
+
+        default: 
+            *pcbColDef = pird->Length;
+            break;
+        }
+    }
+
     if ( pibScale)
         *pibScale = pird->Scale;
 

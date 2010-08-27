@@ -261,6 +261,9 @@
 **     05-Apr-2010 (Ralph Loen) Bug 123539
 **         Removed debug message "Len is %d, p is %s" from 
 **         SQLColumnPrivileges_InternalCall().
+**     24-Jun-2010 (Ralph Loen)  Bug 122174
+**         In CatFetchColumn() and CatScale(), treat precision as scale if
+**         the target column is a time or timestamp column.
 */
 
 /*
@@ -5485,6 +5488,9 @@ static SWORD   CatFetchColumn(
     {
         pird->OctetLength  += sizeof(II_INT2);
     }
+	if (fType == IIAPI_TS_TYPE || fType == IIAPI_TSWO_TYPE ||
+		fType == IIAPI_TSTZ_TYPE)
+		pird->Precision = *pcbScale;
     SetDescDefaultsFromType(pstmt->pdbcOwner, pird);
 
     /*
@@ -6361,7 +6367,13 @@ static void   CatScale(
     switch (pird->fIngApiType)
     {
     case IIAPI_DEC_TYPE:
-		break;
+    case IIAPI_TS_TYPE:
+    case IIAPI_TSWO_TYPE:
+    case IIAPI_TSTZ_TYPE:
+    case IIAPI_TIME_TYPE:
+    case IIAPI_TMWO_TYPE:
+    case IIAPI_TMTZ_TYPE:
+        break;
 		
     case IIAPI_MNY_TYPE:
         *pcbScale = 2;
