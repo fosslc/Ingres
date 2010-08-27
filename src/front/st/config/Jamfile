@@ -86,6 +86,8 @@
 #	Add recoffline.hlp, reconline.hlp
 #	20-Jul-2010 (kschendel) SIR 124104
 #	    Add dbmsccom.hlp.
+#	02-Aug-2010 (miket) SIR 124154
+#	    Add dbmsmxky.hlp
 
 SubDir ING_SRC front st config ;
 
@@ -215,6 +217,7 @@ File $(INGMSG)$(DFS)dbmsltsc.hlp : dbmsltsc.hlp ;
 File $(INGMSG)$(DFS)dbmsltut.hlp : dbmsltut.hlp ;
 FILE $(INGMSG)$(DFS)dbmsmdep.hlp : dbmsmdep.hlp ;
 FILE $(INGMSG)$(DFS)dbmsmlst.hlp : dbmsmlst.hlp ;
+FILE $(INGMSG)$(DFS)dbmsmxky.hlp : dbmsmxky.hlp ;
 File $(INGMSG)$(DFS)dbmsname.hlp : dbmsname.hlp ;
 File $(INGMSG)$(DFS)dbmsnrst.hlp : dbmsnrst.hlp ;
 File $(INGMSG)$(DFS)dbmsopfa.hlp : dbmsopfa.hlp ;

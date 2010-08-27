@@ -6494,6 +6494,10 @@ DB_ERROR            *dberr)
 **	    Created with some cloning from dm2u_alterstatus_upd_cats.
 **	27-Jul-2010 (toumi01) BUG 124133
 **	    Store shm encryption keys by dbid/relid, not just relid! Doh!
+**	29-Jul-2010 (miket) BUG 124154
+**	    Improve dmf_crypt_maxkeys handling.
+**	    Fix counter limit checking (was increment before test -
+**	    should be test and if okay increment else error).
 */
 DB_STATUS
 dm2u_modify_encrypt(
@@ -6858,10 +6862,9 @@ DB_ERROR	*dberr)
 		cp = cp_inactive;	/* reuse empty slot */
 	    else
 	    {
-		Dmc_crypt->seg_active++;	/* new slot */
-		if (Dmc_crypt->seg_active > Dmc_crypt->seg_size)
+		if (Dmc_crypt->seg_active+1 > Dmc_crypt->seg_size)
 		{
-		    /* > hard-coded value or ii.*.dbms.*.dmf_crypt_maxkeys */
+		    /* > config.dat ii.*.dbms.*.dmf_crypt_maxkeys */
 		    uleFormat( NULL, E_DM0179_DMC_CRYPT_SLOTS_EXHAUSTED,
 			(CL_ERR_DESC *)NULL,
 			ULE_LOG, NULL, (char *)NULL,
@@ -6871,6 +6874,8 @@ DB_ERROR	*dberr)
 		    SETDBERR(dberr, 0, E_DM9101_UPDATE_CATALOGS_ERROR);
 		    status = E_DB_ERROR;
 		}
+		else
+		    Dmc_crypt->seg_active++;	/* new slot */
 	    }
 	    if ( status == E_DB_OK )
 	    {

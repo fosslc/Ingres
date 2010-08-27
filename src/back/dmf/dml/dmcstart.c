@@ -863,6 +863,10 @@ static STATUS dmcm_lkinit(
 **	    Removed max_tuple_length.
 **	11-Jun-2010 (jonj)
 **	    svcb_xid_lg_id_max is sizeof(u_i4), not sizeof(u_i4 *)
+**	29-Jul-2010 (miket) BUG 124154
+**	    Improve dmf_crypt_maxkeys handling.
+**	    Allocate exactly as many dmf_crypt_maxkeys as asked for, with
+**	    no page padding and with default to 0.
 */
 
 DB_STATUS
@@ -1039,9 +1043,6 @@ DB_VPT_SIZEOF_TUPLE_HDR(TCB_PG_V4), DMPP_VPT_SIZEOF_TUPLE_HDR_MACRO(TCB_PG_V4));
 	/* WriteBehind defaults to ON */
 	c_writebehind[cache_ix] = 1;
     }
-
-    if ( !(dmc->dmc_flags_mask & (DMC_RECOVERY|DMC_STAR_SVR)) )
-	c_crypt_maxkeys = 1; /* by default allocate 1 page of encryption keys */
 
     for (;;)
     {
@@ -2851,19 +2852,22 @@ DB_VPT_SIZEOF_TUPLE_HDR(TCB_PG_V4), DMPP_VPT_SIZEOF_TUPLE_HDR_MACRO(TCB_PG_V4));
 	*/
 
 	Dmc_crypt = NULL;
+	TRdisplay("Encryption maximum active keys = %d\n", c_crypt_maxkeys);
 	if (c_crypt_maxkeys)
 	{
 	    SIZE_TYPE	   pages = ( (sizeof(DMC_CRYPT) +
 				c_crypt_maxkeys * sizeof(DMC_CRYPT_KEY) )
 				/ ME_MPAGESIZE) + 1;
 	    SIZE_TYPE	   pages_got;
+	    i4		   page_maxkeys;
 	    CL_ERR_DESC	   sys_err;
 	    /*
-	    ** round up to make full use of memory
+	    ** hypothetically round up to make full use of memory for message
 	    */
-	    c_crypt_maxkeys = ((pages * ME_MPAGESIZE) - sizeof(DMC_CRYPT)) /
+	    page_maxkeys = ((pages * ME_MPAGESIZE) - sizeof(DMC_CRYPT)) /
 		sizeof(DMC_CRYPT_KEY);
-	    TRdisplay("Encryption maximum active keys = %d\n", c_crypt_maxkeys);
+	    TRdisplay("Encryption %d key pages could hold %d keys\n",
+		pages, page_maxkeys);
 	    /*
 	    ** get shared memory
 	    */

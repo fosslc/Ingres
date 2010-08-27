@@ -698,6 +698,9 @@ rms.dmf_tbl_cache_size.title:		'RMS Gateway DMF Table Cache Size'
 dbms.dmf_cache_size.title:		'DBMS DMF Cache Size'
 rms.dmf_cache_size.title:               'RMS DMF Cache Size'
 
+*.dmf_crypt_maxkeys.file:		dbmsmxky.hlp
+dbms.dmf_crypt_maxkeys.title:		'DBMS DMF Max Active Encryption Keys'
+
 *.dmf_free_limit.file:			dbmsdmff.hlp	
 dbms.dmf_free_limit.title:		'DBMS DMF Free Page Limit'
 rms.dmf_free_limit.title:               'RMS DMF Free Page Limit'

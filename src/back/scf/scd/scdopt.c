@@ -368,6 +368,9 @@ NO_OPTIM=dr6_us5
 **	    Add option "!.batch_copy_optim"
 **	20-Jul-2010 (kschendel) SIR 124104
 **	    Add create-compression.
+**	29-Jul-2010 (miket) BUG 124154
+**	    Improve dmf_crypt_maxkeys handling.
+**	    Supply missing break in CRYPT_MAXKEYS.
 */
 
 /*
@@ -1217,6 +1220,7 @@ scd_options(
 		/* Set the maximum shmem active encryption keys */
 		dca->char_id = DMC_C_CRYPT_MAXKEYS;
 		dca++->char_value = scd_value;
+		break;
 
 	    case SCO_DBCNT:
 		scd_cb->max_dbcnt = scd_value;

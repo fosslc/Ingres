@@ -219,6 +219,8 @@
 **          Add offline_error_action, online_error_action help
 **	20-Jul-2010 (kschendel) SIR 124104
 **	    Add create_compression help.
+**	02-Aug-2010 (miket) SIR 124154
+**	    Add dbmsmxky.hlp.
 */
 
 PART   config
@@ -325,6 +327,7 @@ PART   config
       FILE dbmsltut.hlp
       FILE dbmsmdep.hlp
       FILE dbmsmlst.hlp
+      FILE dbmsmxky.hlp
       FILE dbmsname.hlp
       FILE dbmsnrst.hlp
       FILE dbmsopfa.hlp

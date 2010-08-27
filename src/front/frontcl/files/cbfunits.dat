@@ -144,6 +144,7 @@ ii.*.*.*.psf_vch_prec:                  boolean
 *.*.dbms.*.blob_etab_structure:        string
 *.*.dbms.*.vch_compression:		boolean
 *.*.dbms.*.dmf_build_pages:            'data pages'
+*.*.dbms.*.dmf_crypt_maxkeys:		'encryption keys'
 *.*.dbms.*.dmf_db_cache_size:		'entries'
 *.*.dbms.*.dmf_tbl_cache_size:		'entries'
 *.*.dbms.*.dmf_int_sort_size:		bytes

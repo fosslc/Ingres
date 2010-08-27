@@ -623,6 +623,10 @@
 --#
 --#	20-Jul-2010 (kschendel) SIR 124104
 --#	    Add create_compression.
+--#	02-Aug-2010 (miket) SIR 124154
+--#	    Add dmf_crypt_maxkeys with initial default value of 180, the
+--#	    max keys that fit on one memory page (at least for 64-bit
+--#	    Linux).
 
 -- location setup resources
 # ifdef UNIX 
@@ -801,6 +805,7 @@ ii.$.dbms.$.dmcm:               IF ( ii.$.config.cluster_mode == ON ||
                                 ENDIF;
 --# the MAX here is simply to keep memory requirements within reason
 ii.$.dbms.$.dmf_build_pages:   16, MIN = 1, MAX = 256;
+ii.$.dbms.$.dmf_crypt_maxkeys:	180;
 ii.$.dbms.$.dmf_db_cache_size:	40;
 ii.$.dbms.$.dmf_int_sort_size:	512K, MIN=100K;
 ii.$.dbms.$.dmf_tbl_cache_size: 40;

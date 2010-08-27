@@ -1,0 +1,10 @@
+/#-- Copyright (c) 2010 Ingres Corporation
+
+  The dmf_crypt_maxkeys is a non-negative integer representing the
+  number of encrypted tables that can be active at one time. A shared
+  memory segment to store encryption keys in active use is allocated at
+  DBMS server startup. If zero is specified then no encryption shared
+  memory segment is allocated. Encrypted tables are unlocked for active
+  encryption processing using the MODIFY statement.
+
+  The default value for dmf_crypt_maxkeys is 180.
