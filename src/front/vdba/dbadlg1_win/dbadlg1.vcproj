@@ -420,7 +420,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(ING_SRC)\front\vdba\containr_win&quot;;&quot;$(ING_SRC)\cl\hdr\hdr&quot;;&quot;$(ING_SRC)\cl\hdr\hdr_unix_win&quot;;&quot;$(ING_SRC)\cl\hdr\hdr_win&quot;;&quot;$(ING_SRC)\cl\clf\hdr_win&quot;;&quot;$(ING_SRC)\cl\clf\hdr_unix_win&quot;;&quot;$(ING_SRC)\gl\hdr\hdr&quot;;&quot;$(ING_SRC)\common\hdr\hdr&quot;;&quot;$(ING_SRC)\common\gcf\hdr&quot;;..\hdr_win;..\inc_win"
+				AdditionalIncludeDirectories="&quot;$(ING_SRC)\front\vdba\containr_win&quot;;&quot;$(ING_SRC)\cl\hdr\hdr&quot;;&quot;$(ING_SRC)\cl\hdr\hdr_unix_win&quot;;&quot;$(ING_SRC)\cl\hdr\hdr_win&quot;;&quot;$(ING_SRC)\cl\clf\hdr_win&quot;;&quot;$(ING_SRC)\cl\clf\hdr_unix_win&quot;;&quot;$(ING_SRC)\gl\hdr\hdr&quot;;&quot;$(ING_SRC)\common\hdr\hdr&quot;;&quot;$(ING_SRC)\common\gcf\hdr&quot;;..\hdr_win;..\inc_win;$(ING_SRC)\back\dmf\hdr;$(ING_SRC)\back\hdr\hdr"
 				PreprocessorDefinitions="_DEBUG;WIN32;_WINDOWS;MAINLIB;DESKTOP;NT_GENERIC;IMPORT_DLL_DATA;INGRESII;_CRT_SECURE_NO_WARNINGS"
 				RuntimeLibrary="3"
 				UsePrecompiledHeader="0"
