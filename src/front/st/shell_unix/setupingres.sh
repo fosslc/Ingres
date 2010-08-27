@@ -16,6 +16,9 @@
 ## History:
 ##	20-Jan-2010 (hanje04)
 ##	    Created.
+##	16-Jun-2010 (hanje04)
+##	    Bug 123931
+##	    Response file is passed as first argument not second
 
 self=`basename $0`
 (LSBENV)
@@ -117,7 +120,7 @@ echo $$ > ${runfile}
 [ -r $setuptodo ] || [ -s $setuptodo ] || exit 0
 
 # Check for response file
-respfile=${2:-}
+respfile=${1:-}
 if [ "$respfile" ] ; then
     if [ -r "$respfile" ] ; then
 	export II_RESPONSE_FILE="${respfile}"
