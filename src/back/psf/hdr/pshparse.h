@@ -4957,6 +4957,11 @@ typedef struct _PSS_WITH_CLAUSE
 **	    Added first_n_ok_depth
 **      02-Jun-2010 (coomi01) b123821
 **          Add save_seq_ops[] of bool to PSS_YYVARS.
+**	10-Aug-2010 (kschendel) b124222
+**	    cast_length is used as i2 when a const node is created from it;
+**	    it has to be declared i2 here (or, a real DB_ANYTYPE union used),
+**	    or we pick up the wrong half on big-endian machines.
+**	    Causes cast(thing as varchar(30)) to be wrong.
 **/
 
 /* For passing opflags to arg_stack users */
@@ -5564,9 +5569,9 @@ blow chunks now!
 					*/
     bool	    md_reconstruct;	/* TRUE if modify to reconstruct */
     i2		    save_pss_rsdmno[MAX_NESTING];	/* across derived table processing */
+    i2		    cast_length;	/* N in cast(x to varchar(N)) */
     i4		    save_psq_mode;	/* ditto */
     i4		    loc_count;		/* count of locators in psq_locator */
-    i4		    cast_length;	/* N in cast(x to varchar(N)) */
 
     PST_QNODE	    *union_head;	/* Head of UNION tree if applicable */
     PST_QNODE	    *tlist_stack[MAX_NESTING]; /* same depth as from list */
