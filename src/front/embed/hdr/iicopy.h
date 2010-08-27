@@ -96,6 +96,8 @@
 **	3-Dec-2009 (kschendel) SIR 122974
 **	    Many additions: truncation check length, direct coercion call,
 **	    more convenience bools, CSV delimiter.
+**	18-Aug-2010 (kschendel) b124272
+**	    Add a "normalize me" bool.
 */
 
 typedef struct {
@@ -172,6 +174,12 @@ typedef struct {
 					** row-types, ie varchar, utf8, and
 					** byte varying. */
     bool	cp_tuplob;		/* TRUE if tuple-value is long type */
+    bool	cp_unorm;		/* TRUE if column data needs to be
+					** normalized.  Usually set for nchar
+					** and nvarchar, but can be set for
+					** ordinary string-like columns when
+					** the character set is UTF8.
+					*/
     char	cp_name[GCA_MAXNAME+2];	/* domain name */
     char	cp_delim[CPY_MAX_DELIM+2];/* domain delimiter; the +2 is to
 					** assure multibyte delimiter compares
