@@ -745,6 +745,9 @@ i4 dm2uu_tab_id_warn_now  = DM2UU_TAB_ID_WARN_NOW;
 **	    No need to set no-coupon in RCB, access mode does it now.
 **	03-June-2010 (thaju02) Bug 122698
 **	    If thread erred, set *dberr to mx_dberr.
+**	19-Aug-2010 (miket) SIR 122403
+**	    Preserve extra stuff that might be at the end of the sort
+**	    record across encryption processing: bucket, partition, tid8.
 */
 
 DB_STATUS
@@ -1048,6 +1051,10 @@ DB_ERROR	    *dberr)
 		    {
 			local_status = dm1e_aes_encrypt(r, &t->tcb_data_rac,
 			    record, r->rcb_erecord_ptr, dberr);
+			/* (may) need to preserve bucket, partition, tid8 */
+			MEcopy(record+m->mx_width,
+			    sizeof(i4)+sizeof(u_i2)+sizeof(DM_TID8),
+			    r->rcb_erecord_ptr+m->mx_width);
 			record = r->rcb_erecord_ptr;
 		    }
 		    else
@@ -1056,6 +1063,10 @@ DB_ERROR	    *dberr)
 		    {
 			local_status = dm1e_aes_encrypt(r, &m->mx_data_rac,
 			    record, r->rcb_erecord_ptr, dberr);
+			/* (may) need to preserve bucket, partition, tid8 */
+			MEcopy(record+m->mx_width,
+			    sizeof(i4)+sizeof(u_i2)+sizeof(DM_TID8),
+			    r->rcb_erecord_ptr+m->mx_width);
 			record = r->rcb_erecord_ptr;
 		    }
 		    if (local_status != E_DB_OK)

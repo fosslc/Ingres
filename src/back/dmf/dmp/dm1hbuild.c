@@ -370,6 +370,10 @@ DB_ERROR        *dberr)
 **	    scan. However regular put operation will add the page in the
 **	    front of the bucket so that the subsequent put operations are
 **	    not penalized.
+**	04-jun-2010 (miket) SIR 122403
+**	    Function dm1hbput requires sorted input, but silently produces
+**	    invalid hash structures if input is not properly sorted. Trap this
+**	    error to make it easier to find internal errors.
 */
 DB_STATUS
 dm1hbput(
@@ -390,6 +394,14 @@ DB_ERROR         *dberr)
 
     /* If we have crossed over to a new bucket switch to new main page. */
 
+    if (bucket < mct->mct_curbucket)
+    {
+	/* internal error if input is not properly sorted */
+	TRdisplay("%@ dm1hbput: hash bucket sort error: %d follows %d\n",
+	    bucket, mct->mct_curbucket);
+	return (E_DB_ERROR);
+    }
+    else
     if (bucket != mct->mct_curbucket)
     {
 	do
