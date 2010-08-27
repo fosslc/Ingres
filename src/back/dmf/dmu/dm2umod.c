@@ -1485,7 +1485,9 @@ static DB_STATUS test_redo(
 **	    Ask for row-versioning when sizing compression control array.
 **	    We don't know if there are any versioned/altered atts, assume
 **	    the worst rather than the best.
-**	    
+**	30-Jul-2010 (jonj)
+**	    Previous fix for B124096 failed to fill in tabid's in newly
+**	    created partitions, causing file rename errors later on.
 */
 DB_STATUS
 dm2u_modify(
@@ -4223,6 +4225,17 @@ DB_ERROR        *dberr)
 					relstat,
 					m->mx_new_relstat2,
 					dberr);
+
+			/* Fill in tabid's in new targets */
+			for (tp = m->mx_tpcb_next;
+			     tp && status == E_DB_OK; 
+			     tp = tp->tpcb_next)
+			{
+			    /* repartition, possibly new targets */
+			    if (tp->tpcb_tabid.db_tab_base == 0)
+				tp->tpcb_tabid = 
+				    mcb->mcb_partitions[tp->tpcb_partno].part_tabid;
+			}
 		    }
 		}
 		else if (!((dcb->dcb_bm_served == DCB_MULTIPLE) && 
