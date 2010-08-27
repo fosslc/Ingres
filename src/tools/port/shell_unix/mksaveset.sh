@@ -215,6 +215,8 @@
 ##	    BUG 124046
 ##	    Re-add ingres-LICENSE to rpm saveset under 'bin' as it's now used
 ##	    by ingres_express_install.sh
+##	14-July-2010 (bonro01)
+##	    Add Beta LICENSE to ingbuild.
 ##                                         
 . readvers
 . (PROG1PRFX)sysdep
@@ -285,10 +287,10 @@ do
 		    gpl|\
 		    com|\
 		   eval|\
-		     emb) lictype=$2
+		     beta) lictype=$2
 			  shift
 			  ;;
-		      *) echo "$2 is not a valid license: use gpl, com, emb or  eval"
+		      *) echo "$2 is not a valid license: use gpl, com, beta or  eval"
 			 exit 1
 			 ;;
 		esac
