@@ -523,6 +523,8 @@
 **          On a Clustered Ingres installation, the restart after a crash
 **          will keep JOURNAL locks on DBs that had TXs recovered from
 **          the local TX log file.
+**      09-Aug-2010 (maspa05) b123189, b123960
+**          Added parameter to dm0l_opendb
 **/
 
 /*
@@ -964,6 +966,7 @@ DB_ERROR    *dberr)
 	status = dm0l_opendb(
 	    lctx->lctx_lgid, 
 	    DM0L_NOTDB,
+	    0,
 	    &archiver_db,
 	    (DB_OWN_NAME *)DB_INGRES_NAME,
 	    (i4)0,

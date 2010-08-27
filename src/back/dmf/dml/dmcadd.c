@@ -243,6 +243,8 @@ NO_OPTIM=dr6_us5 i64_aix
 **	    Add support for Unicode collation
 **	12-Nov-2009 (kschendel) SIR 122882
 **	    Change cmptlvl to an integer.
+**	09-aug-2010 (maspa05) b123189, b123960
+**	    Pass flag for readonlydb through to dm2d_add_db
 */
 
 static const DMM_LOC_LIST    loc_list[4] =
@@ -351,6 +353,8 @@ DMC_CB    *dmc_cb)
         if (dmc->dmc_flags_mask & DMC_DMCM)
             flags |= DM2D_DMCM;
 
+        if (dmc->dmc_flags_mask2 & DMC2_READONLYDB)
+            flags |= DM2D_READONLYDB;
 	/*
 	** It is an error to specify Fast Commit without specifying to
 	** use a single buffer manager.

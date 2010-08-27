@@ -251,6 +251,9 @@ NO_OPTIM = r64_us5
 **	    Don't put LDB on queue until it's completely initialized.
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Initialize new ldb_active_lxbq.
+**      09-aug-2010 (maspa05) b123189, b123960
+**          Pass flag to indicate a readonly database LDB_RODB, so that it
+**          gets picked up by LGshow
 */
 STATUS
 LGadd(
@@ -518,6 +521,8 @@ CL_ERR_DESC	    *sys_err)
 			    ldb->ldb_status |= LDB_PRETEND_CONSISTENT;
 	    		if (flag & LG_READONLY)
 			    ldb->ldb_status |= LDB_READONLY;
+	    		if (flag & LG_RODB)
+			    ldb->ldb_status |= LDB_RODB;
 			SignalEvent = LGD_OPENDB;
 		    }
 		}
@@ -672,6 +677,8 @@ CL_ERR_DESC	    *sys_err)
 		ldb->ldb_status |= LDB_PRETEND_CONSISTENT;
 	    if (flag & LG_READONLY)
 		ldb->ldb_status |= LDB_READONLY;
+	    if (flag & LG_RODB)
+	        ldb->ldb_status |= LDB_RODB;
 	}
 
 	if ((ldb->ldb_status & LDB_NOTDB) == 0)

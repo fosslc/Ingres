@@ -12144,6 +12144,10 @@ copy_from_master(DMP_TCB *tcb, DMP_TCB *master_tcb)
 **	    Set flag for btree-leaf-uses-overflow-for-duplicates.
 **	27-May-2010 (gupsh01) BUG 123823
 **	    Fix error handling for error E_DM0075_BAD_ATTRIBUTE_ENTRY. 
+**	09-aug-2010 (maspa05) b123189, b123960
+**	    Use dcb_status of DCB_S_RODB to check if database is readonly i.e.
+**          always only has one location. This distinguishes it from a database
+**          opened in read-only mode.
 */
 
 static DB_STATUS
@@ -12367,7 +12371,7 @@ DB_ERROR	*dberr)
 		    ** A readonly database has only one location. Do not
 		    ** compare logical names, because they will be different.
 		    */
-		    if (dcb->dcb_access_mode == DCB_A_READ)
+		    if (dcb->dcb_status & DCB_S_RODB)
 		    {
 		      STRUCT_ASSIGN_MACRO(dcb->dcb_ext->ext_entry[i].logical, 
 			t->tcb_table_io.tbio_location_array[k].loc_name); 

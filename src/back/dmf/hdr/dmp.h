@@ -534,6 +534,9 @@
 **          Add fields to DMP_POS_INFO.
 **      12-Jul-2010 (stial01) (SIR 121619 MVCC, B124076)
 **          Added rcb_new_fullscan
+**	09-aug-2010 (maspa05) b123189, b123960
+**	    Add DCB_S_RODB to indicate database is a readonly database (as
+**          opposed to a database merely opened for read-only access)
 */
 
 /*
@@ -884,11 +887,13 @@ struct _DMP_DCB
 #define			DCB_S_HAS_RAW	    0x100000L /* DB has a raw location,
 						    ** set at DB open time,
 						    ** not at ADD time. */
+#define                 DCB_S_RODB         0x200000L /* readonly database */
 /* String values of above bits */
 #define	DCB_STATUS	"\
 JOURNAL,EXCLUSIVE,ROLLFORWARD,ONLINE_RCP,RECOVER,FASTCOMMIT,INVALID,\
 BACKUP,SYNC,PRODUCTION,NOBACKUP,REPLICATE,DMCM,REPCATS,MLOCKED,\
-MVCC,MVCC_DISABLED,MVCC_TRACE,MVCC_JTRACE,MUST_LOG,HAS_RAW"
+MVCC,MVCC_DISABLED,MVCC_TRACE,MVCC_JTRACE,MUST_LOG,HAS_RAW,\
+READONLYDB"
 
     LG_LA	    dcb_backup_addr;	    /* On-line backup starting log
 					    ** address. */

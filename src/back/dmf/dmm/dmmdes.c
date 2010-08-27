@@ -290,6 +290,8 @@ static DB_STATUS destroy_loc_list(
 **          Check status of DIdirdelete(), if it is equal to DI_BADDELETE,
 **          setup error message info structure to contain the path of the 
 **          directory that failed to be deleted.
+**	09-aug-2010 (maspa05) b123189, b123960
+**	    Set dcb_status for readonly database
 */
 
 static STATUS
@@ -548,7 +550,10 @@ DMM_CB    *dmm_cb)
 
     /*	Change config access/service. */
     if (dmm->dmm_db_access & DU_RDONLY)
+    {
 	cnf_flag |= DM0C_READONLY;
+	dcb.dcb_status |= DCB_S_RODB;
+    }
     	
     open_status = dm0c_open(&dcb, cnf_flag, xcb->xcb_lk_id, &cnf, &open_dberr);
     if (open_status)

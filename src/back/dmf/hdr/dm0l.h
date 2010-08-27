@@ -343,6 +343,9 @@
 **          Changes for Long IDs
 **	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
 **          Remove table name,owner from log records.
+**      09-aug-2010 (maspa05) b123189, b123960
+**          Added parameter to dm0l_opendb (flag2)
+**          Added DM0L_RODB flag for flag2 to indicate a readonly database
 **/
 
 /*
@@ -379,6 +382,12 @@
 */
 #define			DM0L_STARTDRAIN	1
 #define			DM0L_ENDDRAIN	2
+
+/*
+**      dm0l_opendb 'flag2' flags (other flags used by dm0l_opendb are part of
+**                                 DM0L_HEADER)
+*/
+#define			DM0L_RODB		0x0001
 
 /*
 ** Defines the maximum number of individual pages that can be logged in a
@@ -3340,6 +3349,7 @@ FUNC_EXTERN DB_STATUS dm0l_fcreate(
 FUNC_EXTERN DB_STATUS dm0l_opendb(
 			i4		    lg_id,
 			i4		    flag,
+			i4		    flag2,
 			DB_DB_NAME          *name,
 			DB_OWN_NAME	    *owner,
 			i4             ext_dbid,

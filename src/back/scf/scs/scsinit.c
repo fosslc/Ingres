@@ -5841,6 +5841,10 @@ scs_icsxlate(SCD_SCB	*scb ,
 **	    dbcmptlvl is now an integer.
 **	22-Apr-2010 (kschendel) SIR 123485
 **	    Remove a couple bad deallocs of tmptupmem, found by accident.
+**      09-aug-2010 (maspa05) b123189, b123960
+**          Set DMC2_READONLYDB for true readonly database (DU_RDONLY) so
+**          we can tell the difference between a readonlydb and one opened
+**          for read-only access
 */
 DB_STATUS
 scs_dbdb_info(SCD_SCB *scb ,
@@ -6954,6 +6958,12 @@ scs_dbdb_info(SCD_SCB *scb ,
 	    }
 	    else
 	    {
+
+	if (scb->scb_sscb.sscb_ics.ics_dbstat & DU_RDONLY)
+	{
+	    scb->scb_sscb.sscb_ics.ics_db_access_mode = DMC_A_READ;
+	    scb->scb_sscb.sscb_ics.ics_dmf_flags2 |= DMC2_READONLYDB;
+	}
 		/* This isn't an open, it just looks for the target dbcb */
 
 		if ((status = scs_dbopen(&scb->scb_sscb.sscb_ics.ics_dbname,
@@ -7795,7 +7805,10 @@ scs_dbdb_info(SCD_SCB *scb ,
     {
     	scb->scb_sscb.sscb_ics.ics_loc = &location;
 	if (scb->scb_sscb.sscb_ics.ics_dbstat & DU_RDONLY)
+	{
 	    scb->scb_sscb.sscb_ics.ics_db_access_mode = DMC_A_READ;
+	    scb->scb_sscb.sscb_ics.ics_dmf_flags2 |= DMC2_READONLYDB;
+	}
 
     	status = scs_dbopen(0, 0, 0, scb, error, 0, dmc, &dbt, 0);
     	if (status)

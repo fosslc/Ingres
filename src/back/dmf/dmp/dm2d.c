@@ -1644,6 +1644,11 @@ DB_ERROR	*dberr)
 **	    a DMCM may not be needed if clustered but node affined.
 **	12-Nov-2009 (kschendel) SIR 122882
 **	    cmptvl is an integer now.
+**	09-aug-2010 (maspa05) b123189, b123960
+**          Set dcb_status to DCB_S_RODB if database is readonly
+**          This is so when we call dm0c_open it will know if this is a
+**          readonlydb (cnf in II_DATABASE) as opposed to a database being
+**          opened read-only (e.g. inconsistent or incremental rfwd)
 */
 DB_STATUS
 dm2d_add_db(
@@ -1706,6 +1711,9 @@ dm2d_add_db(
 	dcb->dcb_access_mode = DCB_A_READ;
 	if (*access_mode == DM2D_A_WRITE)
 	    dcb->dcb_access_mode = DCB_A_WRITE;
+        
+	if (flag & DM2D_READONLYDB)
+    	    dcb->dcb_status |= DCB_S_RODB;
 
 	/*
 	** Check the config file for conversion requirements.
@@ -3555,6 +3563,12 @@ dm2d_del_db(
 **	    indefinitely.
 **	20-May-2010 (thaju02) Bug 123427
 **	    Add lk_id param to dm2rep_qman().
+**      09-aug-2010 (maspa05) b123189, b123960
+**          Set dcb_status to DCB_S_RODB if database is readonly
+**          Also call dm0l_opendb with DM0L_RODB
+**          This is so when we call dm0c_open it will know if this is a
+**          readonlydb (cnf in II_DATABASE) as opposed to a database being
+**          opened read-only (e.g. inconsistent or incremental rfwd)
 */
 DB_STATUS
 dm2d_open_db(
@@ -3598,6 +3612,7 @@ dm2d_open_db(
     LK_LKID		dblkid;
     CL_ERR_DESC          sys_err;
     i4		open_flag;
+    i4		open_flag2;
     i4			write_mode;
     i4			dbcache = FALSE;
     ADULTABLE		*tbl;
@@ -4007,6 +4022,8 @@ dm2d_open_db(
           ((svcb->svcb_status & SVCB_SINGLEUSER) == 0) )
 	    cnf_flag |= DM0C_READONLY;
 
+	if (flag & DM2D_READONLYDB)
+    	    dcb->dcb_status |= DCB_S_RODB;
 
 	/*  Open the configuration file. If this is rollforward, and we can't
 	**  open the regular config file, try to open the .rfc version which
@@ -4741,6 +4758,7 @@ dm2d_open_db(
 	if (!(flag & DM2D_NLG))
 	{
 	    open_flag = 0;
+	    open_flag2 = 0;
 	    if (dcb->dcb_status & DCB_S_JOURNAL)
 		open_flag |= DM0L_JOURNAL;
             if ((dcb->dcb_status & DCB_S_FASTCOMMIT) ||
@@ -4752,10 +4770,13 @@ dm2d_open_db(
 		open_flag |= DM0L_NOLOGGING;
 	    if (dcb->dcb_access_mode == DCB_A_READ)
 	    	open_flag |= (DM0L_READONLY_DB | DM0L_NOLOGGING);
+    	    if (dcb->dcb_status & DCB_S_RODB)
+		open_flag2 |= DM0L_RODB;
 	    if ( dcb->dcb_status & DCB_S_MVCC )
 	        open_flag |= DM0L_MVCC;
 	    status = dm0l_opendb(svcb->svcb_lctx_ptr->lctx_lgid,
 		open_flag,
+		open_flag2,
                 &dcb->dcb_name, 
 		&dcb->dcb_db_owner, 
 		dcb->dcb_id, 
@@ -6180,7 +6201,7 @@ dm2d_extend_db(
 	    if (dmxe_flag & DMXE_JOURNAL)
 	        open_flag |= DM0L_JOURNAL;
 	    status = dm0l_opendb(svcb->svcb_lctx_ptr->lctx_lgid,
-		    open_flag, &dcb->dcb_name, &dcb->dcb_db_owner, 
+		    open_flag,0, &dcb->dcb_name, &dcb->dcb_db_owner, 
 		    dcb->dcb_id, &dcb->dcb_location.physical,
 		    dcb->dcb_location.phys_length, &dcb->dcb_log_id,
 		    (LG_LSN *)NULL,
@@ -6708,7 +6729,7 @@ dm2d_unextend_db(
 	}
 
 	status = dm0l_opendb(svcb->svcb_lctx_ptr->lctx_lgid,
-		(dmxe_flag & DMXE_JOURNAL) ? DM0L_JOURNAL : 0,
+		(dmxe_flag & DMXE_JOURNAL) ? DM0L_JOURNAL : 0,0,
 		&dcb->dcb_name, &dcb->dcb_db_owner, 
 		dcb->dcb_id, &dcb->dcb_location.physical,
 		dcb->dcb_location.phys_length, &dcb->dcb_log_id,
@@ -7016,6 +7037,12 @@ dm2d_unextend_db(
 **	    is used for data and work/aux work, and we have found the data
 **	    usage config file entry for the location. This change fixes bug
 **	    102500, problem INGSRV 1263.
+**      09-aug-2010 (maspa05) b123189, b123960
+**          Set dcb_status to DCB_S_RODB if database is readonly and call
+**          dm0l_opendb with DM0L_RODB
+**          This is so when we call dm0c_open it will know if this is a
+**          readonlydb (cnf in II_DATABASE) as opposed to a database being
+**          opened read-only (e.g. inconsistent or incremental rfwd)
 */
 DB_STATUS
 dm2d_alter_db(
@@ -7132,7 +7159,10 @@ dm2d_alter_db(
 	/*  Open the configuration file. */
 	
 	if (dm2d->alter_info.tas_info.db_access & DU_RDONLY)
+	{
 	    cnf_flag |= DM0C_READONLY;
+    	    dcb->dcb_status |= DCB_S_RODB;
+	}
 
 	status = dm0c_open(dcb, cnf_flag, lock_list, &cnf, dberr);
 	if (status != E_DB_OK)
@@ -7179,11 +7209,14 @@ dm2d_alter_db(
 	if (logging)
 	{
 	    i4	open_flag = 0;
+	    i4	open_flag2 = 0;
 
 	    if (dmxe_flag & DMXE_JOURNAL)
 	        open_flag |= DM0L_JOURNAL;
+	    if (dcb->dcb_status & DCB_S_RODB)
+		open_flag2 |= DM0L_RODB;
 	    status = dm0l_opendb(svcb->svcb_lctx_ptr->lctx_lgid,
-		    open_flag, &dcb->dcb_name, &dcb->dcb_db_owner, 
+		    open_flag, open_flag2, &dcb->dcb_name, &dcb->dcb_db_owner, 
 		    dcb->dcb_id, &dcb->dcb_location.physical,
 		    dcb->dcb_location.phys_length, &dcb->dcb_log_id,
 		    (LG_LSN *)NULL,

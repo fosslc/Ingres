@@ -280,6 +280,9 @@
 **	    Pass (aligned) buffer to LG_write_log_headers.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      09-aug-2010 (maspa05) b123189, b123960
+**          Added LDB_RODB to indicate a readonly database used by LGadd and
+**          LGshow
 **/
 
 #undef LG_DUAL_LOGGING_TESTBED 
@@ -1083,6 +1086,7 @@ struct _LDB
 #define			LDB_CKPLK_STALL	    0x00100000
 #define			LDB_CLOSE_WAIT	    0x00200000
 #define			LDB_MVCC	    0x00400000
+#define			LDB_RODB	    0x00800000
     i4              ldb_lxbo_count;     /* Number of ongoing xact for ckpdb */
     i4		    ldb_lxb_count;	/* Number of transactions. */
     SIZE_TYPE	    ldb_lfb_offset;	/* logfile for this database */

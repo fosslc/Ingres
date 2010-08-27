@@ -810,6 +810,8 @@ NO_OPTIM = dr6_us5
 **          Changes for Long IDs
 **	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
 **          Remove table name,owner from log records.
+**      09-aug-2010 (maspa05) b123189, b123960
+**          Added parameter to dm0l_opendb
 */
 
 /*
@@ -7664,7 +7666,7 @@ DMP_DCB		*dcb)
 	** log record a failure would lose the database context and the archiver
 	** would not process the journaled undo records.)
 	*/
-	status = dm0l_opendb(dmf_svcb->svcb_lctx_ptr->lctx_lgid, DM0L_JOURNAL,
+	status = dm0l_opendb(dmf_svcb->svcb_lctx_ptr->lctx_lgid, DM0L_JOURNAL,0,
 	    &dcb->dcb_name, &dcb->dcb_db_owner, dcb->dcb_id,
 	    &dcb->dcb_location.physical, dcb->dcb_location.phys_length,
 	    &dcb->dcb_log_id, (LG_LSN *)0, &jsx->jsx_dberr);
@@ -17190,7 +17192,7 @@ DMP_DCB		    *dcb)
     for (  ; ; )
     {
 	status = dm0l_opendb(dmf_svcb->svcb_lctx_ptr->lctx_lgid,
-	    DM0L_JOURNAL, &dcb->dcb_name, &dcb->dcb_db_owner, dcb->dcb_id,
+	    DM0L_JOURNAL, 0, &dcb->dcb_name, &dcb->dcb_db_owner, dcb->dcb_id,
 	    &dcb->dcb_location.physical, dcb->dcb_location.phys_length,
 	    &dcb->dcb_log_id, (LG_LSN *)0, &jsx->jsx_dberr);
 	if (status)
@@ -17454,7 +17456,7 @@ DMP_DCB		    *dcb)
     }
 
     status = dm0l_opendb(dmf_svcb->svcb_lctx_ptr->lctx_lgid,
-	DM0L_JOURNAL | DM0L_SPECIAL, &dcb->dcb_name, &dcb->dcb_db_owner, dcb->dcb_id,
+	DM0L_JOURNAL | DM0L_SPECIAL, 0, &dcb->dcb_name, &dcb->dcb_db_owner, dcb->dcb_id,
 	&dcb->dcb_location.physical, dcb->dcb_location.phys_length,
 	&dcb->dcb_log_id, &incr_lsn, &jsx->jsx_dberr);
 

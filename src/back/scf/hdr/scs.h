@@ -495,6 +495,9 @@ struct _SCS_DBPRIV
 **	    Move ics_date_type_alias to SC_MAIN_CB.
 **	03-Aug-2007 (gupsh01)
 **	    Reinstate ics_date_alias for session level setting.
+**      09-aug-2010 (maspa05) b123189, b123960
+**          Added ics_dmf_flags2 to mirror dmc_flags_mask2 in DMC_CB
+**          This is so we can pass DMC2_READONLYDB
 */
 typedef struct _SCS_ICS
 {
@@ -542,6 +545,7 @@ typedef struct _SCS_ICS
     DB_OWN_NAME	    ics_dbowner;	/* who owns it */
     DB_OWN_NAME	    ics_cat_owner;	/* catalog owner */
     i4	    ics_dmf_flags;	/* flags db is opened with */
+    i4	    ics_dmf_flags2;	/* flags db is opened with */
     i4	    ics_db_access_mode;	/* read or write */
     i4	    ics_lock_mode;
     i4		    ics_udbid;

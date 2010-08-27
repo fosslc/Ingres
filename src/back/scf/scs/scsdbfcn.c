@@ -433,6 +433,8 @@ GLOBALREF SCS_DBLIST MustLog_DB_Lst;   /* database list etc.    */
 **	13-May-2008 (kibro01) b120369
 **	    Add flag to state this is a verifydb-style command which shouldn't
 **	    check replication during the open-db.
+**      09-aug-2010 (maspa05) b123189, b123960
+**          Add DMC2_READONLYDB to indicate readonly database 
 **
 [@history_template@]...
 */
@@ -761,6 +763,10 @@ scs_dbopen(DB_DB_NAME *db_name,
 	    dmc->dmc_db_id = dbcb->db_addid;
 	    dmc->dmc_lock_mode = scb->scb_sscb.sscb_ics.ics_lock_mode;
 	    dmc->dmc_op_type = DMC_DATABASE_OP;
+
+            if (scb->scb_sscb.sscb_ics.ics_dmf_flags2 & DMC2_READONLYDB)
+                    dmc->dmc_flags_mask2 |= DMC2_READONLYDB;
+
 	    dbop_status = dmf_call(DMC_OPEN_DB, dmc);
 
 	    if (scf_status = CSp_semaphore(1, &Sc_main_cb->sc_kdbl.kdb_semaphore))

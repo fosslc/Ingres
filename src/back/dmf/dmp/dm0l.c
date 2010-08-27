@@ -2665,11 +2665,16 @@ dm0l_fcreate(
 ** 	    Added DM0L_READONLY_DB for readonly databases.
 **	11-Nov-1997 (jenjo02)
 **	    Reserve log space and write log record with one call.
+**	09-aug-2010 (maspa05) b123189, b123960
+**	    Added paramter, flag2, to dm0l_opendb in order to add a new flag
+**          DM0L_RODB to indicate a readonly database, as opposed to one 
+**          merely opened read-only.
 */
 DB_STATUS
 dm0l_opendb(
     i4		    lg_id,
     i4		    flag,
+    i4              flag2,
     DB_DB_NAME		    *name,
     DB_OWN_NAME		    *owner,
     i4		    ext_dbid,
@@ -2729,6 +2734,8 @@ dm0l_opendb(
 	add_flag |= LG_FCT;
     if (flag & DM0L_PRETEND_CONSISTENT)
 	add_flag |= LG_PRETEND_CONSISTENT;
+    if (flag2 & DM0L_RODB)
+	add_flag |= LG_RODB;
     if ( flag & DM0L_MVCC )
         add_flag |= LG_MVCC;
 

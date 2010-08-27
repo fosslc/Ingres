@@ -492,6 +492,8 @@
 **          Itanium VMS port
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs, db_buffer holds (dbname, owner.. )
+**      09-Aug-2010 (maspa05) b123189, b123960
+**          Added param to dm0l_opendb call.
 */
 
 
@@ -5964,6 +5966,7 @@ i4			*log_id)
     CSP			*csp = &csp_global;
     i4			err_code;
     i4			open_flag;
+    i4			open_flag2;
     LK_LOCK_KEY		lockckey;
     LK_LKID		lockid;
     DB_STATUS		status = E_DB_OK;
@@ -5974,6 +5977,7 @@ i4			*log_id)
     DB_ERROR		local_dberr;
 
     open_flag = 0;
+    open_flag2 = 0;
     *log_id = 0;
 
     if (dcb_status & DCB_S_JOURNAL)
@@ -5981,9 +5985,14 @@ i4			*log_id)
     if ((dcb_status & DCB_S_FASTCOMMIT) ||
 	(dcb_status & DCB_S_DMCM))
 	open_flag |= DM0L_FASTCOMMIT;
+    /* set the flag for a readonly database
+     * not sure if this could ever happen but since we have the DCB status
+     * may as well set the flag properly */
+    if (dcb_status & DCB_S_RODB)
+	open_flag2 |= DM0L_RODB;
 
     status = dm0l_opendb(dmf_svcb->svcb_lctx_ptr->lctx_lgid,
-	open_flag, dbname, dbowner, ckp_msg->ckp.dbid,
+	open_flag, open_flag2, dbname, dbowner, ckp_msg->ckp.dbid,
 	&dblocation->physical, dblocation->phys_length, log_id, 
 	(LG_LSN *)0, &local_dberr); 
 
