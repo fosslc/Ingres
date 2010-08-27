@@ -7953,6 +7953,10 @@ DMP_DCB		*dcb)
 **	14-May-2010 (thaju02) Bug 123748
 **	    Perform undo processing for record in which record's lsn 
 **	    is equal to xaction's clr lsn.
+**	01-Jul-2010 (thaju02) Bug 123982
+**	    Back out prior change to address bug 123748; readdress.
+**	    Add specific case for EMINI CLR; process log rec if LTE
+**	    EMINI CLR lsn. 
 */
 static DB_STATUS
 undo_journal_records(
@@ -8052,14 +8056,25 @@ DMVE_CB		*dmve)
 	else if (tx->tx_status & RFP_TX_CLR_JUMP)
 	{
 	    /*
-	    ** If we have found the clr lsn, then turn off the
-	    ** CLR_JUMP flag so that record for this transaction
+	    ** If we have found the compensated record, then turn off the
+	    ** CLR_JUMP flag so that the next record for this transaction
 	    ** will be processed.
 	    */
-	    if (LSN_LTE(&record->lsn, &tx->tx_clr_lsn))
+	    if (LSN_LT(&record->lsn, &tx->tx_clr_lsn))
 		tx->tx_status &= ~RFP_TX_CLR_JUMP;
 	    else
+	    {
+		if (LSN_EQ(&record->lsn, &tx->tx_clr_lsn))
+		    tx->tx_status &= ~RFP_TX_CLR_JUMP;
 		continue;
+	    }
+	}
+	else if (tx->tx_status & RFP_TX_EMINI_JUMP)
+	{
+            if (LSN_LTE(&record->lsn, &tx->tx_clr_lsn))
+                tx->tx_status &= ~RFP_TX_EMINI_JUMP;
+            else
+                continue;
 	}
 
 	if (jsx->jsx_status & JSX_TRACE)
@@ -8077,6 +8092,8 @@ DMVE_CB		*dmve)
 
 	    if (record->type == DM0LABORTSAVE)
 		tx->tx_status |= RFP_TX_ABS_JUMP;
+	    else if (record->type == DM0LEMINI)
+		tx->tx_status |= RFP_TX_EMINI_JUMP;
 	    else
 		tx->tx_status |= RFP_TX_CLR_JUMP;
 
