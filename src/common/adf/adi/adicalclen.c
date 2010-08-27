@@ -2662,6 +2662,10 @@ DB_DATA_VALUE      *adi_dvr;
 **      24-Jun-2010 (horda03) B123987
 **          For DATE->STRING if ADF_LONG_DATE_STRINGS specified, then return
 **          the longer length.
+**	10-Aug-2010 (kschendel) b124223
+**	    Add boolean entries to switch statements.
+**	    Notice that most of the to-NVARCHAR entries with fixed lengths
+**	    were not adding the count size, fix.
 */
 static DB_STATUS
 adi_1len_indirect( 
@@ -2678,6 +2682,10 @@ ADI_LENSPEC        *out_lenspec)
       case ADI_VBYTE_OP:
 	switch(abs(dv1->db_datatype))
 	{
+	  case DB_BOO_TYPE:
+	    out_lenspec->adi_lncompute = ADI_FIXED;
+	    out_lenspec->adi_fixedsize = 5 + DB_CNTSIZE;
+	    break;
 	  case DB_CHR_TYPE:
 	  case DB_CHA_TYPE:
 	  case DB_BYTE_TYPE:
@@ -2777,6 +2785,10 @@ ADI_LENSPEC        *out_lenspec)
       case ADI_BYTE_OP:
 	switch(abs(dv1->db_datatype))
 	{
+	  case DB_BOO_TYPE:
+	    out_lenspec->adi_lncompute = ADI_FIXED;
+	    out_lenspec->adi_fixedsize = 5;	/* "FALSE" */
+	    break;
 	  case DB_CHR_TYPE:
 	  case DB_CHA_TYPE:
           case DB_BYTE_TYPE:
@@ -2874,6 +2886,10 @@ ADI_LENSPEC        *out_lenspec)
       case ADI_NCHAR_OP:
 	switch(abs(dv1->db_datatype))
 	{
+	  case DB_BOO_TYPE:
+	    out_lenspec->adi_lncompute = ADI_FIXED;
+	    out_lenspec->adi_fixedsize = 5 * sizeof(UCS2);
+	    break;
 	  case DB_CHR_TYPE:
           case DB_CHA_TYPE:
           case DB_BYTE_TYPE:
@@ -2965,6 +2981,10 @@ ADI_LENSPEC        *out_lenspec)
       case ADI_NVCHAR_OP:
 	switch(abs(dv1->db_datatype))
 	{
+	  case DB_BOO_TYPE:
+	    out_lenspec->adi_lncompute = ADI_FIXED;
+	    out_lenspec->adi_fixedsize = 5 * sizeof(UCS2) + DB_CNTSIZE;
+	    break;
 	  case DB_CHR_TYPE:
           case DB_CHA_TYPE:
           case DB_BYTE_TYPE:
@@ -2985,46 +3005,46 @@ ADI_LENSPEC        *out_lenspec)
             out_lenspec->adi_lncompute = ADI_FIXED;
             if (flag & ADF_LONG_DATE_STRINGS)
             {
-               out_lenspec->adi_fixedsize = AD_11DTE_INTRV_OUTLENGTH * sizeof(UCS2);
+               out_lenspec->adi_fixedsize = AD_11DTE_INTRV_OUTLENGTH * sizeof(UCS2) + DB_CNTSIZE;
             }
             else
-               out_lenspec->adi_fixedsize = AD_1DTE_OUTLENGTH * sizeof(UCS2);
+               out_lenspec->adi_fixedsize = AD_1DTE_OUTLENGTH * sizeof(UCS2) + DB_CNTSIZE;
             break;
           case DB_ADTE_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = AD_2ADTE_OUTLENGTH * sizeof(UCS2);
+            out_lenspec->adi_fixedsize = AD_2ADTE_OUTLENGTH * sizeof(UCS2) + DB_CNTSIZE;
             break;
           case DB_TMWO_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = AD_3TMWO_OUTLENGTH * sizeof(UCS2);
+            out_lenspec->adi_fixedsize = AD_3TMWO_OUTLENGTH * sizeof(UCS2) + DB_CNTSIZE;
             break;
           case DB_TMW_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = AD_4TMW_OUTLENGTH * sizeof(UCS2);
+            out_lenspec->adi_fixedsize = AD_4TMW_OUTLENGTH * sizeof(UCS2) + DB_CNTSIZE;
             break;
           case DB_TME_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = AD_5TME_OUTLENGTH * sizeof(UCS2);
+            out_lenspec->adi_fixedsize = AD_5TME_OUTLENGTH * sizeof(UCS2) + DB_CNTSIZE;
             break;
           case DB_TSWO_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = AD_6TSWO_OUTLENGTH * sizeof(UCS2);
+            out_lenspec->adi_fixedsize = AD_6TSWO_OUTLENGTH * sizeof(UCS2) + DB_CNTSIZE;
             break;
           case DB_TSW_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = AD_7TSW_OUTLENGTH * sizeof(UCS2);
+            out_lenspec->adi_fixedsize = AD_7TSW_OUTLENGTH * sizeof(UCS2) + DB_CNTSIZE;
             break;
           case DB_TSTMP_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = AD_8TSTMP_OUTLENGTH * sizeof(UCS2);
+            out_lenspec->adi_fixedsize = AD_8TSTMP_OUTLENGTH * sizeof(UCS2) + DB_CNTSIZE;
             break;
           case DB_INYM_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = AD_9INYM_OUTLENGTH * sizeof(UCS2);
+            out_lenspec->adi_fixedsize = AD_9INYM_OUTLENGTH * sizeof(UCS2) + DB_CNTSIZE;
             break;
           case DB_INDS_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = AD_10INDS_OUTLENGTH * sizeof(UCS2);
+            out_lenspec->adi_fixedsize = AD_10INDS_OUTLENGTH * sizeof(UCS2) + DB_CNTSIZE;
             break;
           case DB_FLT_TYPE:
           case DB_DEC_TYPE:
@@ -3033,15 +3053,15 @@ ADI_LENSPEC        *out_lenspec)
             break;
           case DB_MNY_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = 20 * sizeof(UCS2);
+            out_lenspec->adi_fixedsize = 20 * sizeof(UCS2) + DB_CNTSIZE;
             break;
           case DB_LOGKEY_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = DB_LEN_OBJ_LOGKEY * sizeof(UCS2);
+            out_lenspec->adi_fixedsize = DB_LEN_OBJ_LOGKEY * sizeof(UCS2) + DB_CNTSIZE;
             break;
           case DB_TABKEY_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = DB_LEN_TAB_LOGKEY * sizeof(UCS2);
+            out_lenspec->adi_fixedsize = DB_LEN_TAB_LOGKEY * sizeof(UCS2) + DB_CNTSIZE;
             break;
 	  /* Fix me: add support for BIT TYPE */
 	  case DB_NCHR_TYPE:
