@@ -52905,6 +52905,9 @@ psl_ifstmt(
 **	    psq_cb->psq_error gives us the error block
 **	10-sep-99 (inkdo01)
 **	    Added target list check to pst_node_flags set, for case functions.
+**	28-Jun-2010 (kiria01) b121860
+**	    Allow bias to unicode to be overridden when direct compare is made
+**	    between a column and a constant or constant expression.
 */
 static DB_STATUS
 psl_simple_compare(
@@ -52951,6 +52954,42 @@ psl_simple_compare(
 	     ( psq_cb->psq_mode == PSQ_ATBL_ADD_COLUMN) ) ) )
     {
 	pst_node_flags = PSS_NORES;
+    }
+    /* See if the comparison is between a column and a constant
+    ** and try to ensure that the column datatype is chosen so
+    ** that indexes are not disabled by the comparison rules.
+    ** The main comparisons that bias away from ideal are those
+    ** involving unicode and these checks are presently limited
+    ** to just these types. Incidentally, we don't change the pattern
+    ** operators as psl_patcomp will have done so already. */
+    if (operand2 &&
+	operator != ADI_LIKE_OP &&
+	operator != ADI_NLIKE_OP)
+    {
+	PST_QNODE *var = operand1;  /* Assume col op const */
+	PST_QNODE *cnst = operand2;
+	if (var->pst_sym.pst_type != PST_VAR)
+	{
+	    var = operand2;  /* Might be const op col */
+	    cnst = operand1;
+	}
+    	if (var->pst_sym.pst_type == PST_VAR &&
+		cnst->pst_sym.pst_type == PST_CONST &&
+		(cnst->pst_sym.pst_value.pst_s_cnst.pst_tparmtype == PST_USER ||
+		 cnst->pst_sym.pst_value.pst_s_cnst.pst_tparmtype == PST_RQPARAMNO) &&
+		(cnst->pst_sym.pst_dataval.db_datatype == DB_NODT ||
+		 abs(cnst->pst_sym.pst_dataval.db_datatype) == DB_NVCHR_TYPE ||
+		 abs(cnst->pst_sym.pst_dataval.db_datatype) == DB_NCHR_TYPE))
+	{
+            /* Try to cast constant to type of column */
+	    if (status = psl_mk_const_similar(sess_cb, &sess_cb->pss_ostream,
+				&var->pst_sym.pst_dataval,
+				(var == operand1)
+					? &operand2
+					: &operand1,
+				&psq_cb->psq_error, NULL))
+		return(status);
+	}
     }
 
     if (in_join_search)
@@ -59342,7 +59381,7 @@ psl_patcomp(
 **		to match the structure of something else. Intended for use with IN
 **		processing where the scan really ought to have similar datatypes
 **		to the key operand. This routine will attempt to make ints and floats
-**		match in size and decimals to math scale and precision too to that
+**		match in size and decimals to match scale and precision too so that
 **		efficent runtime compares can be done.
 **
 ** Input:
