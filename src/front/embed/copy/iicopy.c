@@ -594,6 +594,11 @@ loc_alloc(i4 n1,i4 n2,PTR *p)
 **	10-Mar-2010 (kschendel) SIR 122974
 **	    Squeeze out a bit more performance by eliminating rowleft in favor
 **	    of a guard pointer.
+**      01-Jul-2010 (horda03) B124010
+**          If the file for a COPY FROM cannot be opened, then terminate the
+**          command but don't ABORT it. If the COPY was to a Global Temporary
+**          Table, aborting the COPY in this instance will drop the table,
+**          but no data has been transferred, so the GTT has not been modified.
 */ 
 
 /* Not sure why these aren't declared elsewhere, but whatever... */
@@ -6703,6 +6708,10 @@ IIcpdbwrite( II_LBQ_CB *IIlbqcb, II_CP_STRUCT *copy_blk, II_CP_GROUP *cgroup)
 **	    domain list with xx=d1 instead of nl=d1, but then of course
 **	    the \r\n's come back, putting all your counted-length domains
 **	    at risk of failure.)
+**      01-Jul-2010 (horda03) B124010
+**          If SIfopen fails for a COPY FROM, then don't abort the
+**          query, just end. Thus preserving a Global Temp. Table
+**          (if it was the target of the copy).
 */
 static i4
 IIcpfopen(II_CP_STRUCT *copy_blk)
@@ -6739,8 +6748,18 @@ IIcpfopen(II_CP_STRUCT *copy_blk)
         status = SIfopen(&loc, "r", copy_blk->cp_filetype,
             rec_len, &copy_blk->cp_file_ptr);
 	if (status)
+        {
+            /* As the COPY failed to open the file for reading, no
+            ** data has been copied to the table, so no need to
+            ** Abort. We don't want to abort the COPY in this circumstance
+            ** as if the table is a Global Temporary Table it would
+            ** be dropped.
+            */
+            copy_blk->cp_status |= CPY_NOABORT;
+
 	    IIlocerr(GE_HOST_ERROR, E_CO0005_FILE_OPEN_ERR, II_ERR,
 		     1, copy_blk->cp_filename);
+        }
 	copy_blk->cp_at_eof = FALSE;
     }
  
