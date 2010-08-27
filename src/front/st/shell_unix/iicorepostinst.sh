@@ -35,6 +35,9 @@
 ##	02-Jun-2010 (hanje04)
 ##	    BUG 123856
 ##	    Use su if we can't find runuser
+##	16-Jun-2010 (hanje04)
+##	    BUG 123929
+##	    Run iisetres as $II_USERID not $II_GROUPID
 
 ## Need II_SYSTEM to be set
 [ -z "$II_SYSTEM" ] &&
@@ -173,7 +176,7 @@ II_INSTALLATION configured as $II_INSTALLATION.
 
         CONFIG_HOST=`iipmhost`
 	$runuser -m -c "$II_SYSTEM/ingres/utility/iisetres \"ii.${CONFIG_HOST}.setup.owner.user\" $II_USERID" $II_USERID
-	$runuser -m -c "$II_SYSTEM/ingres/utility/iisetres \"ii.${CONFIG_HOST}.setup.owner.group\" $II_GROUPID" $II_GROUPID
+	$runuser -m -c "$II_SYSTEM/ingres/utility/iisetres \"ii.${CONFIG_HOST}.setup.owner.group\" $II_GROUPID" $II_USERID
     fi
 
 }
