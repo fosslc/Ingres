@@ -414,6 +414,8 @@ static DB_STATUS copy_into_child(SCF_FTX *ftx);
 **	    this flag is only set for the insert to copy optimization
 **	04-aug-2010 (miket) 122403
 **	    Trap attempt to copy a locked encrypted table.
+**	05-aug-2010 (miket) SIR 122403
+**	    Fix rookie error: dmt_enc_locked undefined unless E_DB_OK.
 */
 
 DB_STATUS
@@ -601,7 +603,7 @@ QEF_RCB       *qef_rcb)
 
 	status = dmf_call(DMT_OPEN, &copy_ctl->dmtcb);
 	/* bail out if this is a locked encrypted table */
-	if (copy_ctl->dmtcb.dmt_enc_locked)
+	if (status == E_DB_OK && copy_ctl->dmtcb.dmt_enc_locked)
 	{
 	    status = E_DB_ERROR;
 	    copy_ctl->dmtcb.error.err_code = E_QE0190_ENCRYPT_LOCKED;
