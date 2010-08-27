@@ -67,6 +67,8 @@ GLOBALREF	DMC_CRYPT	*Dmc_crypt;
 ** History:
 **      14-feb-2010 (toumi01) SIR 122403
 **	    Created.
+**	27-Jul-2010 (toumi01) BUG 124133
+**	    Store shm encryption keys by dbid/relid, not just relid! Doh!
 [@history_template@]...
 */
 DB_STATUS
@@ -108,6 +110,7 @@ dm1e_aes_decrypt(DMP_RCB *r, DMP_ROWACCESS *rac, char *erec, char *prec,
     cp += r->rcb_enckey_slot;
     MEcopy((PTR)cp->key,sizeof(key),key);	/* cache it locally */
     if ( cp->status == DMC_CRYPT_ACTIVE &&
+	 cp->db_id == t->tcb_dcb_ptr->dcb_id &&
 	 cp->db_tab_base == t->tcb_rel.reltid.db_tab_base)
 	; /* it is the best of all possible worlds */
     else
@@ -235,6 +238,8 @@ dm1e_aes_decrypt(DMP_RCB *r, DMP_ROWACCESS *rac, char *erec, char *prec,
 ** History:
 **      14-feb-2010 (toumi01) SIR 122403
 **	    Created.
+**	27-Jul-2010 (toumi01) BUG 124133
+**	    Store shm encryption keys by dbid/relid, not just relid! Doh!
 [@history_template@]...
 */
 DB_STATUS
@@ -278,6 +283,7 @@ dm1e_aes_encrypt(DMP_RCB *r, DMP_ROWACCESS *rac, char *prec, char *erec,
     cp += r->rcb_enckey_slot;
     MEcopy((PTR)cp->key,sizeof(key),key);	/* cache it locally */
     if ( cp->status == DMC_CRYPT_ACTIVE &&
+	 cp->db_id == t->tcb_dcb_ptr->dcb_id &&
 	 cp->db_tab_base == t->tcb_rel.reltid.db_tab_base)
 	; /* it is the best of all possible worlds */
     else

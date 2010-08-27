@@ -41,12 +41,15 @@ typedef struct _DMC_CRYPT
 ** History:
 **	13-apr-2010 (toumi01) SIR 122403
 **	    Created.
+**	27-jul-2010 (toumi01)
+**	    Need to qualify key by database id!
 */
 typedef struct _DMC_CRYPT_KEY
 {
     i4		status;
 #define		DMC_CRYPT_INACTIVE	0L
 #define		DMC_CRYPT_ACTIVE	1L
+    i4		db_id;			/* id of the database */
     i4		db_tab_base;		/* encryption is on base tables */
     u_char	key[AES_256_BYTES];
 } DMC_CRYPT_KEY;

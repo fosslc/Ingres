@@ -1611,6 +1611,8 @@ static READONLY struct
 **	13-Apr-2010 (kschendel) SIR 123485
 **	    Accept "no coupon" access modes;  for ordinary read/write with
 **	    LOB's in the table, find or create BQCB, save in RCB.
+**	27-Jul-2010 (toumi01) BUG 124133
+**	    Store shm encryption keys by dbid/relid, not just relid! Doh!
 */
 DB_STATUS
 dm2t_open(
@@ -2805,7 +2807,8 @@ DB_ERROR            *dberr)
 	    for ( cp = (DMC_CRYPT_KEY *)((PTR)Dmc_crypt + sizeof(DMC_CRYPT)),
 			i = 0 ; i < Dmc_crypt->seg_active ; cp++, i++ )
 	    {
-		if ( cp->db_tab_base == tcb->tcb_rel.reltid.db_tab_base )
+		if ( cp->db_id == dcb->dcb_id &&
+		     cp->db_tab_base == tcb->tcb_rel.reltid.db_tab_base )
 		{
 		    r->rcb_enckey_slot = i;
 		    break;

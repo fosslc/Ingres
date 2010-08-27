@@ -6492,6 +6492,8 @@ DB_ERROR            *dberr)
 ** History:
 **	16-apr-2010 (toumi01) SIR 122403
 **	    Created with some cloning from dm2u_alterstatus_upd_cats.
+**	27-Jul-2010 (toumi01) BUG 124133
+**	    Store shm encryption keys by dbid/relid, not just relid! Doh!
 */
 DB_STATUS
 dm2u_modify_encrypt(
@@ -6818,7 +6820,8 @@ DB_ERROR	*dberr)
 		i < Dmc_crypt->seg_active ; cp++, i++ )
 	{
 	    /* found the entry for this record ... done */
-	    if ( cp->db_tab_base == rel.reltid.db_tab_base )
+	    if ( cp->db_id == t->tcb_dcb_ptr->dcb_id &&
+		 cp->db_tab_base == rel.reltid.db_tab_base )
 		break;
 	    /* found first inactive slot ... remember */
 	    if ( cp->status == DMC_CRYPT_INACTIVE &&
@@ -6832,7 +6835,8 @@ DB_ERROR	*dberr)
 	*/
 	if (dmu->dmu_enc_flags2 & DMU_NULLPASS)
 	{
-	    if ( cp->db_tab_base == rel.reltid.db_tab_base )
+	    if ( cp->db_id == t->tcb_dcb_ptr->dcb_id &&
+		 cp->db_tab_base == rel.reltid.db_tab_base )
 	    {
 		MEfill(sizeof(DMC_CRYPT_KEY), 0, (PTR)cp);
 		cp->status = DMC_CRYPT_INACTIVE;
@@ -6846,7 +6850,8 @@ DB_ERROR	*dberr)
 	** 3. a new slot at the end
 	*/
 	{
-	    if ( cp->db_tab_base == rel.reltid.db_tab_base )
+	    if ( cp->db_id == t->tcb_dcb_ptr->dcb_id &&
+		 cp->db_tab_base == rel.reltid.db_tab_base )
 	    	;			/* reuse our slot */
 	    else
 	    if ( cp_inactive != NULL)
@@ -6871,6 +6876,7 @@ DB_ERROR	*dberr)
 	    {
 		MEfill(sizeof(DMC_CRYPT_KEY), 0, (PTR)cp);
 		MEcopy((PTR)decrypted_key, keybytes, (PTR)cp->key);
+		cp->db_id = t->tcb_dcb_ptr->dcb_id;
 		cp->db_tab_base = rel.reltid.db_tab_base;
 		cp->status = DMC_CRYPT_ACTIVE;
 	    }
