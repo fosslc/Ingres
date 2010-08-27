@@ -120,6 +120,9 @@ $!!             terminates with errors.
 $!!	30-apr-2009 (joea)
 $!!	    Remove undocumented and incompletely implemented options.
 $!!	    Clean up commented out code.
+$!!     24-Jun-2010 (horda03) Bug 122555
+$!!             Add check_lglk_mem to ensure Ingres will connect to a
+$!!             new LG/LK shared memory section.
 $!!
 $!----------------------------------------------------------------------------
 $_START_IISUNODE:
@@ -185,7 +188,6 @@ $ ENDIF
 $!
 $!
 $ ii_installation_must_exist = "TRUE"
-$ ii_installation = ""
 $ IF f$trnlnm("II_SYSTEM","LNM$GROUP") .eqs. ""
 $ THEN
 $    IF f$trnlnm("II_SYSTEM","LNM$SYSTEM") .eqs. ""
@@ -194,7 +196,11 @@ $       error_box "II_SYSTEM is not defined.  The II_SYSTEM logical must be defi
 $       goto _EXIT_FAIL
 $    ELSE
 $       ii_installation_must_exist = "FALSE"
+$
+$       ii_installation = F$TRNLNM( "II_INSTALLATION", "LNM$SYSTEM" )
 $    ENDIF
+$ ELSE
+$    ii_installation = F$TRNLNM( "II_INSTALLATION", "LNM$GROUP" )
 $ ENDIF
 $!
 $!
@@ -1378,6 +1384,10 @@ $         message_box "Please restart this node and then stop it cleanly so thes
 $!
 $        goto _REMNODE_EXIT_FAIL
 $     endif
+$
+$     ! Make certain there isn't an IPM session using the Logging/Locking shared memory.
+$
+$     check_lglk_mem "''ii_installation'"
 $!
 $     getressym 'self' "''CONFIG_HOST'" config.cluster.id
 $     II_CLUSTER_ID = iishlib_rv1

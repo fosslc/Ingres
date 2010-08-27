@@ -253,6 +253,9 @@ $!!         Correct the grammar of the ingresdate/ansidate date alias
 $!!         setup.
 $!!     14-Jan-2010 (horda03) Bug 123153
 $!!         Upgrade all nodes in a clustered environment.
+$!!     24-Jun-2010 (horda03) Bug 122555
+$!!             Add check_lglk_mem to ensure Ingres will connect to a
+$!!             new LG/LK shared memory section.
 $!!    
 $!------------------------------------------------------------------------	
 $!
@@ -2227,6 +2230,10 @@ $ pan_cluster_cmd "''nodes'" iisetres "ii." ".ingstart.*.begin ""@ii_system:[ing
 $!
 $! Create or erase the primary transaction log.
 $!
+$! First verify that there isn't an IPM process still using
+$! the Locking/Logging shared memory.
+$!
+$ check_lglk_mem "''ii_installation'"
 $ entry = 0
 $
 $Primary_TX_log:
