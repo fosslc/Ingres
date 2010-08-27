@@ -401,6 +401,10 @@ ule_initiate( char *node_name, i4  l_node_name, char *server_name,
 **	    be useful to see the message in time-ordered context wrt
 **	    other things in the trace log. Echo using TRwrite rather
 **	    than TRdisplay as there's no formatting to be done.
+**      11-Aug-2010 (maspa05) b124225
+**          Remove artificial limit of 16384 characters when writing query
+**          text to the errlog.log. We already write this in ER_MAX_LEN
+**          chunks so there's no need to truncate it.
 **	    
 */
 /* VARARGS31 */
@@ -857,8 +861,7 @@ i4	    num_parms,
 	    hdr_size = STlength(MessageArea);
 	    for (prbuf = psqbuf, prlen = psqlen; prlen > 0; ) 
 	    {
-		if (prlen > 16384)
-		    prlen = 16384;
+		    
 		if (prlen > ER_MAX_LEN - hdr_size)
 		    i = ER_MAX_LEN - hdr_size;
 		else
@@ -879,8 +882,6 @@ i4	    num_parms,
 	    hdr_size = STlength(MessageArea);
 	    for (prbuf = qbuf, prlen = qlen; prlen > 0; ) 
 	    {
-		if (prlen > 16384)
-		    prlen = 16384;
 		if (prlen > ER_MAX_LEN - hdr_size)
 		    i = ER_MAX_LEN - hdr_size;
 		else
@@ -900,8 +901,6 @@ i4	    num_parms,
 	    hdr_size = STlength(MessageArea);
 	    for (prbuf = prev_qbuf, prlen = prev_qlen; prlen > 0; ) 
 	    {
-		if (prlen > 16384)
-		    prlen = 16384;
 		if (prlen > ER_MAX_LEN - hdr_size)
 		    i = ER_MAX_LEN - hdr_size;
 		else
