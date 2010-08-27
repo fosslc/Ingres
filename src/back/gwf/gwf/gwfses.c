@@ -37,6 +37,7 @@
 **      gws_interrupt_handler()
 **      gws_register_intr_handler()
 **	gws_gt_gw_sess() - locate my GW_SESSION
+**	gws_gt_parent_gw_sess() - locate my parent's GW_SESSION
 **
 ** History:
 **	04-apr-90 (linda)
@@ -98,6 +99,10 @@
 **          Changes for Long IDs
 **	11-Jun-2010 (kiria01) b123908
 **	    Init ulm_streamid_p for ulm_openstream to fix potential segvs.
+**      12-Aug-2010 (horda03) b124109
+**          Added gws_gt_parent_gw_sess to obtain the GW_SESSION for
+**          a factotum thread parent. If not a factotum threadm, then
+**          NULL is returned.
 */
 
 /*
@@ -882,6 +887,59 @@ gws_gt_gw_sess(void)
     {
 	gwf_error(scf_cb.scf_error.err_code, GWF_INTERR, 0);
 	gw_sess = NULL;
+    }
+
+    return( gw_sess );
+}
+
+/*{
+** Name:        gws_gt_parent_gw_sess  - locate my parent GW_SESSION
+**
+** Description:
+**      Gets the GW_SESSION from SCF for the parent session. This
+**      identifies the parent session of a factotum thread.
+**
+** Re-entrancy:
+**      yes.
+**
+** Inputs:
+**      none.
+**
+** Outputs:
+**      None.
+**
+** Returns:
+**      The GW_SESSION,  or NULL if no parent (i.e, not a factotum thread).
+**
+** History:
+**      12-Aug-2010 (horda03)
+**          created.
+*/
+GW_SESSION *
+gws_gt_parent_gw_sess(void)
+{
+    GW_SESSION  *gw_sess = (GW_SESSION *) NULL;
+    SCF_CB      scf_cb;
+    SCF_SCI     scf_sci;
+    DB_STATUS   db_stat;
+
+    scf_sci.sci_code = SCI_PARENT_SCB;
+    scf_sci.sci_length = sizeof( *gw_sess );
+    scf_sci.sci_aresult = (PTR)&gw_sess;
+    scf_sci.sci_rlength = 0;
+
+    scf_cb.scf_type = SCF_CB_TYPE;
+    scf_cb.scf_length = sizeof( scf_cb );
+    scf_cb.scf_session = DB_NOSESSION;
+    scf_cb.scf_facility = DB_GWF_ID;
+    scf_cb.scf_len_union.scf_ilength = 1;
+    scf_cb.scf_ptr_union.scf_sci = (SCI_LIST *)&scf_sci;
+
+    db_stat = scf_call( SCU_INFORMATION, &scf_cb );
+    if( db_stat != E_DB_OK )
+    {
+        gwf_error(scf_cb.scf_error.err_code, GWF_INTERR, 0);
+        gw_sess = NULL;
     }
 
     return( gw_sess );

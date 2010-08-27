@@ -70,6 +70,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**      12-Aug-2010 (horda03) b124109
+**          Add support for op218 (force use of EXCHANGE nodes)
 **/
 
 /*{
@@ -389,6 +391,7 @@ opt_call(
 	case OPT_F086_DUMP_QTREE2:
 	case OPT_F087_ALLFRAGS:
 	case OPT_F088_BESTPLANS:
+	case OPT_F090_FORCE_EXCHANGE:
             if (debug_cb->db_value_count > 0)
 		return( E_DB_ERROR );	    /* these flags have no values */
 	    break;			    /* Flag is defined */

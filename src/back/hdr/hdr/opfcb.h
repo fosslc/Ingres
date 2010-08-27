@@ -168,6 +168,9 @@
 **          Changes for Long IDs
 **	04-Aug-2010 (wanfr01) b124188
 **	    Removed  OPF_ONE_REL_OPT - crossed in accidentally
+**     12-Aug-2010 (horda03) b124109
+**          Added trace point OP218 which forces optimiser to insert EXCHANGE
+**          nodes (when Parallel queries enabled).
 **/
 
 /*}
@@ -2454,6 +2457,10 @@ typedef i4 OPX_ERROR;
 #define			OPT_F088_BESTPLANS	88
 /* SET TRACE POINT OP216
 ** - print just the best query plans in the order they are found.
+*/
+#define			OPT_F090_FORCE_EXCHANGE 90
+/* SET TRACE POINT OP218
+** Force the optimiser to insert EXCH nodes.
 */
 
 

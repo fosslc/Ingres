@@ -204,7 +204,11 @@ static void qen_exch_pqual_init(
 **	11-May-2010 (kschendel) b123565
 **	    Snapshot the parent DSH, not the root DSH.  If we're a 1:1
 **	    exch under a 1:N parallel union, parent and root are different
-*	    (and parent is the correct one).
+**          (and parent is the correct one).
+**      12-Aug-2010 (horda03) b124109
+**          Exception occurs if the cut_read_buf returns a WARNING and
+**          there are no (<0) cells to process. In this circumstance, 
+**          terminate the child.
 */
 
 DB_STATUS
@@ -837,7 +841,9 @@ i4		    function )
     /* Check for cancel, context switch if not MT */
     CScancelCheck(dsh->dsh_sid);
     if (QEF_CHECK_FOR_INTERRUPT(qef_cb, dsh) == E_DB_ERROR)
+    {
 	return (E_DB_ERROR);
+    }
 
     /* If the trace point qe90 is turned on then gather cpu and dio stats */
     if (dsh->dsh_qp_stats)
@@ -951,9 +957,9 @@ i4		    function )
 	    ** Bad status could be because of a CUT failure (bad)
 	    ** or the receipt of a async status from one of the
 	    ** kids because it encountered some unexpected problem.
-	    ** In either case, this query is toast.
+	    ** In either case or if there are <0 cells, this query is toast.
 	    */
-	    if (DB_FAILURE_MACRO(status))
+	    if (DB_FAILURE_MACRO(status) || ( status && CurChild->cells_remaining < 0) )
 	    {
 		if ( exch_cb->trace )
 		    TRdisplay("%@ %p %2d %s %s cut_read_buf status %d %x\n",
@@ -1475,9 +1481,13 @@ qen_exchange_child(SCF_FTX *ftxcb)
 			*MatRow = (char*)BuffHdr + sizeof(BUFF_HDR);
 
 			if ( status = ade_execute_cx(dsh->dsh_adf_cb, ade_excb) )
+                        {
 			    error.err_code = dsh->dsh_adf_cb->adf_errcb.ad_errcode;
+                        }
 			else if ( status = CommRcb->cut_async_status )
+                        {
 			    error.err_code = E_CU0204_ASYNC_STATUS;
+                        }
 			else
 			{
 			    MatRows++;

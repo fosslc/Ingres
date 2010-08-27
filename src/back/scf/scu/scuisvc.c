@@ -272,6 +272,9 @@
 **	    Re-type some ptr's as the proper struct pointer.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      12-Aug-2010 (horda03) b124109
+**          Added SCI_PARENT_SCB, obtain SCI_SCB info for a factotum thread's
+**          parent.
 */
 
 /*
@@ -378,6 +381,8 @@ GLOBALREF SC_MAIN_CB	*Sc_main_cb;        /* central scf cb */
 **	  Replace the non-portable strlen("multinational4")
 **	26-Oct-2009 (kiria01) SIR 121883
 **	    Scalar sub-query support: Added CARDINALITY_CHECK
+**      12-Aug-2010 (horda03) b124109
+**          Added SCI_PARENT_SCB.
 */
 typedef struct _SCI_INFO_TABLE
 {
@@ -534,6 +539,9 @@ static  const SCI_INFO_TABLE Sci_info_table[] = {
     { SCI_DECIMAL_FORMAT, 2 },
     { SCI_PAGETYPE_V5, 1},
     { SCI_FLATCHKCARD, 1 },
+    { SCI_IGNORE, 0 },  /* SCI_PAGETYPE_V6 */
+    { SCI_IGNORE, 0 },  /* SCI_PAGETYPE_V7 */
+    { SCI_PARENT_SCB, sizeof(PTR) },
     {0}
 };
 
@@ -750,6 +758,9 @@ static  const SCI_INFO_TABLE Sci_info_table[] = {
 **        This fixes b119231. 
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Add SCI_PAGETYPE_V6, SCI_PAGETYPE_V7
+**      12-Aug-2010 (horda03) b124109
+**          Added SCI_PARENT_SCB, for a factotum thread find the
+**          (ultimate) parent's scb to obtain the SCI_SCB details.
 */
 DB_STATUS
 scu_information(SCF_CB	*cb, SCD_SCB *scb )
@@ -937,6 +948,29 @@ scu_information(SCF_CB	*cb, SCD_SCB *scb )
 	    where = (PTR) &lcount;
 	    lcount = TMsecs();
 	    break;
+
+        case SCI_PARENT_SCB:
+
+            if (scb->scb_sscb.sscb_stype != SCS_SFACTOTUM)
+            {
+               where = (PTR) NULL;
+               break;
+            }
+
+            /* Factotum thread, so get the ultimate parent. */
+            while (scb && (scb->scb_sscb.sscb_stype == SCS_SFACTOTUM) )
+            {
+               scb = (SCD_SCB *) CSfind_scb( scb->scb_sscb.sscb_factotum_parms.ftc_thread_id );
+            }
+
+            if (!scb)
+            {
+               SETDBERR(&cb->scf_error, index, E_SC0007_INFORMATION);
+	       status = E_DB_ERROR;
+	       break;
+            }
+
+            /* Drop through to retrieve the facility's CB */
 
 	case SCI_SCB:
 	    switch (cb->scf_facility)

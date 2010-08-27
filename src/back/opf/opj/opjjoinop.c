@@ -126,6 +126,8 @@
 **	    as of this writing, the other RCB's are updated without
 **	    proper concurrency controls.  It's best to just avoid the
 **	    situation.
+**      12-Aug-2010 (horda03) b124109
+**          Enable trace point OP218 to force use of EXCH nodes.
 **/
 
 /*}
@@ -248,7 +250,8 @@ opj_excheval(
 	OPO_CO		**pcopp,
 	EXCHDESC	*exchp,
 	i4		*exchpixp,
-	i4		level);
+	i4		level,
+        bool            force_exch);
 
 static VOID
 opj_exchunion(
@@ -258,7 +261,8 @@ opj_exchunion(
 	i4		*exchpixp,
 	i4		level,
 	i4		*ucount,
-	OPO_COST	*ureduction);
+	OPO_COST	*ureduction,
+        bool            force_exch);
 
 static VOID
 opj_exchadd(
@@ -5840,6 +5844,9 @@ opj_partagg(OPS_SUBQUERY *sq, OPV_PCJDESC *pcjdp, i4 gcount)
 **	    Make sure that a subquery is only processed once, lest
 **	    duplicate exch requests be registered.  This can lead to
 **	    a bad query plan that falls over at runtime.
+**      12-Aug-2010 (horda03) b124109
+**          Check if trace point OP218 has been set, and if so and
+**          parallel processing enabled, then use EXCH nodes.
 */
 static VOID
 opj_exchange(
@@ -5854,6 +5861,8 @@ opj_exchange(
     f4			thres = global->ops_cb->ops_alter.ops_pq_threshold;
 					/* CBF threshold cost of || plan */
     i4			exchpix = 0;
+    bool                force_exch = opt_strace(global->ops_cb, 
+                                                OPT_F090_FORCE_EXCHANGE);
 
 
     /* Loop over plan fragments looking for one expensive enough to be
@@ -5877,9 +5886,11 @@ opj_exchange(
 	    continue;			/* empty or partition agg sq */
 	sq->ops_sunion.opu_mask |= OPU_EXCH_PROCESSED;
 	bestco = sq->ops_bestco;
-	if (bestco == NULL || (plancost = opn_cost(sq, 
-		bestco->opo_cost.opo_dio, 
-		bestco->opo_cost.opo_cpu)) < thres)
+	if (bestco == NULL || 
+            ( !force_exch &&
+               (plancost = opn_cost(sq, 
+		                    bestco->opo_cost.opo_dio, 
+		                    bestco->opo_cost.opo_cpu)) < thres) )
 	    continue;			/* estimate must be > threshold */
 
 	/* We have a fragment worth checking. If exchange structure array
@@ -5887,7 +5898,7 @@ opj_exchange(
 	if (exchp == NULL)
 	    exchp = (EXCHDESC *)opu_memory(global, 2*dop*sizeof(EXCHDESC));
 
-	opj_excheval(sq, bestco, &sq->ops_bestco, exchp, &exchpix, 0);
+	opj_excheval(sq, bestco, &sq->ops_bestco, exchp, &exchpix, 0, force_exch);
     }
 
     /* If there are entries in the exchange descriptor array, add them
@@ -6094,6 +6105,7 @@ opj_exchupd_anal(OPS_STATE *global)
 **	exchpixp			ptr to index of current entry
 **					exchange descriptor array
 **	level				Depth in the CO tree (top = 0)
+**      force_exch                      Has use of EXCH nodes been forced
 **
 ** Outputs:
 **      exchp				exchange descriptor array with 
@@ -6139,6 +6151,9 @@ opj_exchupd_anal(OPS_STATE *global)
 **	    pre-sorted K/T join (the sort wastes most of the exch effort),
 **	    nor on the inner of a PSM join (inner reset would throw away
 **	    what the exch has prefetched).
+**      12-Aug-2010 (horda03) b124109
+**          Added force_exch parameter. If set then force parallelisation of
+**          query.
 */
 
 #define MINEXCH 50.0		/* Minimum reduction for any exch */
@@ -6150,7 +6165,8 @@ opj_excheval(
 	OPO_CO		**pcopp,
 	EXCHDESC	*exchp,
 	i4		*exchpixp,
-	i4		level)
+	i4		level,
+        bool            force_exch)
 
 {
     OPV_VARS	*varp;
@@ -6193,13 +6209,13 @@ opj_excheval(
 		cop->opo_variant.opo_local->opo_pgcount == 0))
     {
 	pro = opj_excheval(sq, outer, &cop->opo_outer, 
-						exchp, exchpixp, level+1);
+						exchp, exchpixp, level+1, force_exch);
 
 	if (inner != NULL && inner->opo_sjpr != DB_ORIG &&
 	    cop->opo_variant.opo_local->opo_jtype != OPO_SJKEY &&
 	    cop->opo_variant.opo_local->opo_jtype != OPO_SJTID)
 	    pri = opj_excheval(sq, inner, &cop->opo_inner, 
-						exchp, exchpixp, level+1);
+						exchp, exchpixp, level+1, force_exch);
     }
     else if (cop->opo_sjpr == DB_PR && outer && outer->opo_sjpr == DB_ORIG)
 	pr = TRUE;
@@ -6310,7 +6326,7 @@ opj_excheval(
 	if (varp->opv_subselect)
 	{
 	    opj_exchunion(sq->ops_global, exchp, varp, exchpixp, level+1,
-						&ucount, &ureduction);
+						&ucount, &ureduction, force_exch);
 	    if (ucount == 0 || outer_noexch)
 		return(pr);
 	    tro = ureduction;
@@ -6331,7 +6347,7 @@ opj_excheval(
 	    threads = pthreads;
 	else
 	    threads = nparts;
-	if (threads <= 1)
+	if ( !force_exch && (threads <= 1))
 	    return(pr);
 
 	tro = (((float)threads - 1) / (float)threads) * costr * 0.8;
@@ -6350,14 +6366,14 @@ opj_excheval(
     }	/* end of opo_sjpr switch */
 
     /* Add entries to exchange descriptor array (where appropriate). */
-    if (tri <= MINEXCH && tro <= MINEXCH)
+    if ( !force_exch && tri <= MINEXCH && tro <= MINEXCH)
 	return(pr);
 
     tr = tro;
     for (pass = 1;  pass >= 0;  tr = tri, --pass)
     {
 	/* Loop once for outer, then once for inner. */
-	if (tr <= MINEXCH)
+	if (!force_exch && (tr <= MINEXCH) )
 	    continue;			/* Loop if no reduction this side */
 
 	/* If there's room in the array, add another entry. Otherwise,
@@ -6377,7 +6393,7 @@ opj_excheval(
 		    i = j;		/* Replace this one, so far */
 		}
 	}
-	if (tr <= smallest)
+	if (!force_exch && (tr <= smallest) )
 	    continue;			/* tr smaller than smallest, loop */
 
 	/* "i" now indexes the entry we're inserting to. */
@@ -6413,6 +6429,7 @@ opj_excheval(
 **	ucount				ptr to count of union'ed selects
 **	ureduction			ptr to estimated cost reduction 
 **					from exchange palced above union
+**      force_exch                      Has use of EXCH nodes been forced
 **
 ** Outputs:
 **      global->ops_subquery		subquery structures addressing QEPs
@@ -6438,6 +6455,9 @@ opj_excheval(
 **	    No exch's in partition compatible agg subquery.
 **	8-Jan-2010 (kschendel) b123122
 **	    Don't reprocess an already processed subquery.
+**      12-Aug-2010 (horda03) b124109
+**          Added force_exch parameter. If set then force parallelisation of
+**          query.
 */
 static VOID
 opj_exchunion(
@@ -6447,7 +6467,8 @@ opj_exchunion(
 	i4		*exchpixp,
 	i4		level,
 	i4		*ucount,
-	OPO_COST	*ureduction)
+	OPO_COST	*ureduction,
+        bool            force_exch)
 
 {
     OPS_SUBQUERY	*sq;
@@ -6489,7 +6510,7 @@ opj_exchunion(
 	/* We have a fragment worth checking. If exchange structure array
 	** not yet allocated, do that first. */
 
-	opj_excheval(sq, bestco, &sq->ops_bestco, exchp, exchpixp, level);
+	opj_excheval(sq, bestco, &sq->ops_bestco, exchp, exchpixp, level, force_exch);
     }
 
     /* max2cost is the 2nd most expensive of the union'ed selects. It

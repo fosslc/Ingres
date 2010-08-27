@@ -304,6 +304,9 @@
 **	    dbmsinfo('pagetype_v7')
 **	28-may-2010 (stephenb)
 **	    Add message E_SC02A1_INCORRECT_QUERY_PARMS
+**      12-Aug-2010 (horda03) b124109
+**          Added SCI_PARENT_SCB to obtain a factotum thread's (ultimate) parent
+**          SCI_SCB information.
 */
 
 /*
@@ -1373,6 +1376,9 @@ typedef struct _SCF_SCI
 						*/
 #define			SCI_PAGETYPE_V6	    136 /* Y if V6 pgtype available */
 #define			SCI_PAGETYPE_V7	    137 /* Y if V7 pgtype available */
+#define			SCI_PARENT_SCB      138 /* returns ptr to parent scb by fac
+                                                ** for factotum threads. Null otherwise
+                                                */
 
 
     char	    *sci_aresult;
