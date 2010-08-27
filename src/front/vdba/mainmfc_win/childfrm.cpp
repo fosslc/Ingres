@@ -66,6 +66,10 @@
 **    to account for delimeted ids such as username.table_name.
 **  02-Jun-2010 (drivi01)
 **    Remove hard coded buffer sizes.
+**  29-Jun-2010 (drivi01)
+**    Disable space calculation for Ingres VectorWise tables.
+**    This is b/c the calculations can not be accurate due
+**    to compression of the pages on disk.
 **/
 
 #include "stdafx.h"
@@ -1593,9 +1597,17 @@ void CChildFrame::OnUpdateButtonSpacecalc(CCmdUI* pCmdUI)
   BOOL bEnable = TRUE;
 
   LPDOMDATA lpDomData = GetLPDomData(this);
-
+  
   if (lpDomData->ingresVer==OIVERS_NOTOI)
     bEnable = FALSE;
+
+  DWORD dwCurSel = GetCurSel(lpDomData);
+  LPTREERECORD lpRecord = (LPTREERECORD) :: SendMessage(lpDomData->hwndTreeLb,
+				LM_GETITEMDATA, 0, (LPARAM) dwCurSel);
+  int CurItemObjType = lpRecord->recType;
+  if ((IsVW() && getint(lpRecord->szComplim + STEPSMALLOBJ + STEPSMALLOBJ) > 0)
+	|| CurItemObjType == OT_STATIC_TABLE)
+	bEnable = FALSE;
 
   pCmdUI->Enable(bEnable);
 }
@@ -3094,7 +3106,7 @@ void CChildFrame::OnUpdateButtonFastload(CCmdUI* pCmdUI)
         if (lpRecord->parentDbType == DBTYPE_REGULAR)
           if (!IsNoItem(lpRecord->recType, (char*)lpRecord->objName))
             if (!IsSystemObject(lpRecord->recType, lpRecord->objName, lpRecord->ownerName) && 
-				(!IsVW() || (IsVW && getint(lpRecord->szComplim + STEPSMALLOBJ + STEPSMALLOBJ) == 0)))
+				(!IsVW() || (IsVW() && getint(lpRecord->szComplim + STEPSMALLOBJ + STEPSMALLOBJ) == 0)))
 	              bEnable = TRUE;
     }
   }
