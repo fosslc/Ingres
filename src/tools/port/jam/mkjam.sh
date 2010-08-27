@@ -128,6 +128,11 @@
 ##	    null device, not c:/nul.  (Commands issued directly into the
 ##	    dos command interpreter need nul or nul:, of course, but mkjam
 ##	    is run via a unix-like shell.)
+##	12-Aug-2010 (drivi01)
+##	    Make sure that Jamfiles produced by cygwin 1.7 shell are
+##	    readable my FTJam which means they need to be in the DOS
+##	    format.  
+##	    Add u2d commands to force Jamfiles to be in DOS format.
 ##
 
 CMD=`basename $0`
@@ -1763,5 +1768,13 @@ export GROUP FACILITY SUBSYS COMPONENT
 
  )                  # end of for-loop subshell
 }                   # end of for-d-in loop
+
+if [ "$platform" = "win" ] && [ -n "$USE_CYGWIN" ] ; then
+     if [ ! -z $jamdflt ] ; then	
+	u2d $jamdflt
+     else
+	u2d $jamfile
+     fi
+fi
 
 exit 0

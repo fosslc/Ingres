@@ -1431,6 +1431,11 @@
 #	    steps to avoid syntax errors.
 #       13-Aug-2010 (horda03) b124249
 #           Rebuild version.rel when the VERS file changes.
+#	13-Aug-2010 (drivi01)
+#	    Cygwin 1.7 expects shell files on Windows to be
+#	    binary and prefers POSIX paths.
+#	    Update ShellNt rule to convert shell files to
+#	    binary format at build time.
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -10434,6 +10439,7 @@ actions piecemeal quietly ShellNT
     echo { print } >> awk.input
 
     $(AWK) -f awk.input < $(>) > $(<)
+    if not "$(USE_CYGWIN)"=="" d2u $(<)
     $(RM) awk.input
 }
 

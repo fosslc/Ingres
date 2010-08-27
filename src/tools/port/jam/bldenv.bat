@@ -106,6 +106,18 @@ REM	     In cygwin 1.7 diff.exe version 2.9 returns every line as
 REM	     the diff.  To avoid this, set DIFF environment variable
 REM	     for piccolo to "diff --strip-trailing-cr" to avoid
 REM	     the whole file being returned as diff.
+REM	12-Aug-2010 (drivi01)
+REM	     Set CYGWIN to nodosfilewarning to prevent cygwin 1.7 
+REM	     from throwing errors about DOS paths instead of POSIX.
+REM	     Fix compiler setup on x86 by fixing %CPU% variable.
+REM	     Fix the logic around Unix tools setup.
+REM	     Verify that PATH is setup correctly for cygwin and
+REM	     MKS, so that link.exe, rebase.exe and find.exe are
+REM	     picked up from correct places, this is done by
+REM	     putting compiler at the head of the PATH, then
+REM	     unix tools and then C:\windows\system32.
+REM	     Move DIFF_SET after AWK_SET to ensure AWK_CMD is set.
+REM	     
 REM
 
 :TRUNK_LOOP
@@ -148,6 +160,7 @@ if "%CPU%"=="AMD64" if not exist "%MSVCLoc%\VC\vcvarsall.bat" echo Invalid compi
 if "%CPU%"=="AMD64" if "%MSVCDir%"=="" call "%MSVCLoc%\VC\vcvarsall.bat" amd64 & set MSVCLoc=
 if "%CPU%"=="x86" if not exist "%MSVCLoc%\Common7\Tools\vsvars32.bat" echo Invalid compiler path specified. & goto MSVC_LOOP
 if "%CPU%"=="x86" if "%MSVCDir%"=="" call "%MSVCLoc%\Common7\Tools\vsvars32.bat"& set MSVCLoc=
+if "%CPU%"=="i386" if "%MSVCDir%"=="" call "%MSVCLoc%\Common7\Tools\vsvars32.bat"& set MSVCLoc=
 if NOT "%WindowsSdkDir%"=="" if x%MT%==x SET MT="%WindowsSdkDir%\bin\mt.exe" & set PATH=%WindowsSdkDir%\bin;%PATH%
 goto OTHERS
 
@@ -176,11 +189,17 @@ if "%KRB5HDR%"=="" SET KRB5HDR=%ING_ROOT%\Kerberos5
 if not exist "%KRB5HDR%" echo %KRB5HDR% does not exist& SET KRB5HDR=& goto KERBEROS_LOOP
 
 REM Check if Cygwin is installed
-if "%USE_CYGWIN%"=="TRUE" goto FLEX_SET
-SET USE_CYGWIN=
+:CYGWIN_CHK
+if "%USE_CYGWIN%"=="TRUE" goto CHK_UNXLOC
+if "%USE_CGYWIN%"=="" (
 which cygpath.exe > nul: 2>&1
 if errorlevel 1 goto CHK_UNXLOC
 SET USE_CYGWIN=TRUE
+if "%CYGWIN%"=="" SET CYGWIN=nodosfilewarning 
+goto FLEX_SET 
+) else (
+goto GET_UNXLOC
+)
 
 :CHK_UNXLOC
 which ls.exe > nul: 2>&1
@@ -195,10 +214,11 @@ rm settmp.bat
 goto FLEX_SET
 
 :GET_UNXLOC
-SET /P MKSLOC=Root location of the UNIX tools: 
+SET /P MKSLOC=Bin location of the UNIX tools: 
 if not exist "%MKSLOC%\ls.exe" echo This location does not contain the appropriate set of UNIX tools.& goto GET_UNXLOC
-SET PATH=%WindowsSdkDir%\bin;%MKSLOC%;%PATH%
+SET PATH=%WindowsSdkDir%\bin;%MKSLOC%;%PATH% & goto CYGWIN_CHK
 :FLEX_SET
+if "%USE_CYGWIN%"=="" goto SHELL_SET
 REM if FLEX_FLAG is not set then set according to version of flex 
 if NOT "%FLEX_FLAG%"=="" goto SHELL_SET
 SET FLEX_FLAG=--nounistd
@@ -210,27 +230,33 @@ REM note the following line end in FLEX_FLAG={space} - this is important as it
 REM sets an empty string rather than unset the variable
 if %FLEXVER% LSS 31 SET FLEX_FLAG= 
 SET FLEXVER=
-if "%USE_CYGWIN%"=="" goto SHELL_SET
-:DIFF_SET
-REM if this is cygwin and diff version is 2.9, then we need to strip the trailing CR
-REM to avoid diffs in the whole file.
-printf "SET DIFFVER=" > settmp.bat
-diff --version |awk 'NR==1 {print $4$5$6$7}'|cut -d. -f1,2,3 --output-delimiter=|cut -b1,3,5 >> settmp.bat
-call settmp.bat
-rm settmp.bat
-if %DIFFVER% GEQ 29 SET DIFF="diff --strip-trailing-cr"
+
 :SHELL_SET
 if "%CPU%"=="AMD64" if NOT "%USE_CYGWIN%"=="" SET /P SHELL=Full path to the cygwin shell (default C:\cygwin\bin\sh.exe):
 if "%CPU%"=="AMD64" if NOT "%USE_CYGWIN%"=="" if "%SHELL%"=="" set SHELL=c:\cygwin\bin\sh.exe & goto AWK_SET
 if "%CPU%"=="AMD64" if NOT "%USE_CYGWIN%"=="" if NOT "%SHELL%"=="" goto AWK_SET
-if exist "%MKSLOC%\sh.exe" SET SHELL=%MKSLOC%\sh.exe& goto AWK_SET
-if exist "%MKSLOC%\zsh.exe" SET SHELL=%MKSLOC%\zsh.exe
+if not "%MKSLOC%"=="" if exist "%MKSLOC%\sh.exe" SET SHELL=%MKSLOC%\sh.exe& goto AWK_SET
+if not "%MKSLOC%"=="" if exist "%MKSLOC%\zsh.exe" SET SHELL=%MKSLOC%\zsh.exe& goto AWK_SET
+if "%MKSLOC%"=="" if not "%USE_CYGWIN%"=="" set SHELL=zsh& goto AWK_SET
+set SHELL=sh 
+
 
 :AWK_SET
-@echo off
 REM prefer gawk, as awk.exe on Cygwin is a symlink and cmd doesn't like it.
-if exist "%MKSLOC%\gawk.exe" SET AWK_CMD=gawk& goto MISC
-if exist "%MKSLOC%\awk.exe" SET AWK_CMD=awk
+if not "%MKSLOC%"=="" if exist "%MKSLOC%\gawk.exe" SET AWK_CMD=gawk& goto DIFF_SET
+if not "%MKSLOC%"=="" if exist "%MKSLOC%\awk.exe" SET AWK_CMD=awk& goto DIFF_SET
+if "%MKSLOC%"=="" if not "%USE_CYGWIN%"=="" set AWK_CMD=gawk&goto DIFF_SET
+set AWK_CMD=awk
+
+:DIFF_SET
+if "%USE_CYGWIN%"=="" goto MISC
+REM if this is cygwin and diff version is 2.9, then we need to strip the trailing CR
+REM to avoid diffs in the whole file.
+printf "SET DIFFVER=" > settmp.bat
+diff --version |%AWK_CMD% 'NR==1 {print $4$5$6$7}'|cut -d. -f1,2,3 --output-delimiter=|cut -b1,3,5 >> settmp.bat
+call settmp.bat
+rm settmp.bat
+if %DIFFVER% GEQ 29 SET DIFF="diff --strip-trailing-cr" & goto MISC
 
 :MISC
 SET DD_RSERVERS=%II_SYSTEM%\ingres\rep

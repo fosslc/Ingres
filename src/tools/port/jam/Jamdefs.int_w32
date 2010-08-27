@@ -155,6 +155,11 @@
 #          then by default the shell commands are not echoed. The
 #          command "jam -dx" when JAMSHELL_ECHO == "OFF" will display
 #          then shell commands.
+#	12-Aug-2010 (drivi01)
+#	   Force the use of gawk with cygwin 1.7 to produce correct
+#	   output files and avoid missing carriage returns which 
+#	   forces the whole file to be on 1 line.  
+#	   gawk ensures that the file is produced in the readable format.
 #
 #VARS
 #
@@ -208,9 +213,12 @@ CD		= "cd /d" ;
 CP		= "cp -f" ;
 RM		= "rm -f" ;
 CHMOD		= chmod ;
+FLEX		= flex ;
+AWK_CMD        ?= awk ; 
 if $(USE_CYGWIN)
 {
    FLEX_FLAG       ?=  --nounistd ;
+   AWK_CMD         = gawk ;
 }
 FLEX		= flex $(FLEX_FLAG) ;
 LEX 		= flex ;
