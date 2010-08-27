@@ -1167,6 +1167,7 @@ qee_destroy(
 		sptr->sp_current = 0;
 		sptr->sp_curpage = -1;
 		sptr->sp_flags = SP_BEGIN;
+		/* sp_posnbuff comes from the DSH stream, so leave it alone. */
 	    }
 
 	    /* Mark that no tables are open */
@@ -1256,7 +1257,9 @@ qee_destroy(
 **	    .qef_qso_handle	query plan handle if not zero.
 **	page_count		number of pages in set input table parameter.
 **				-1 if this is not for a set input procedure.
-**      isTproc                 TRUE if TPROC node, FALSE otherwise
+**	qsf_rcb
+**	    qsf_obj_id.qso_handle  QSF object handle to QP
+**	is_tproc		TRUE if DSH is to be used for a table procedure
 **
 ** Outputs:
 **      dsh                             data segment header
@@ -1418,6 +1421,8 @@ qee_destroy(
 **	11-May-2010 (kschendel) b123565
 **	    Rename dsh_root to dsh_parent.
 **	    Init the "stats are inited" flag.
+**	18-Jun-2010 (kschendel) b123775
+**	    Put tproc DSH's on the odsh list for cleanup purposes.
 */
 DB_STATUS
 qee_fetch(
@@ -1426,7 +1431,7 @@ qee_fetch(
 	QEE_DSH		**dsh,
 	i4		page_count,
 	QSF_RCB		*qsf_rcb,
-        bool            isTproc
+	bool		is_tproc
         )
 {
     QEE_DSH	    *ndsh   = (QEE_DSH *)NULL;
@@ -1581,7 +1586,7 @@ qee_fetch(
 	
 	/* Allocate QEF_RCB savearea if necessary */
 	ndsh->dsh_saved_rcb = ndsh->dsh_exeimm_rcb = (QEF_RCB *) NULL;
-	if (qp->qp_status & (QEQP_CALLPR_RCB | QEQP_EXEIMM_RCB | QEQP_TPROC_RCB))
+	if (qp->qp_status & (QEQP_CALLPR_RCB | QEQP_EXEIMM_RCB | QEQP_CALLS_TPROC))
 	{
 	    ulm.ulm_psize = sizeof(QEF_RCB);
 	    status = qec_malloc(&ulm);
@@ -1590,7 +1595,7 @@ qee_fetch(
 		qef_rcb->error.err_code = ulm.ulm_error.err_code;
 		goto err_exit;
 	    }
-	    if (qp->qp_status & (QEQP_CALLPR_RCB | QEQP_TPROC_RCB))
+	    if (qp->qp_status & (QEQP_CALLPR_RCB | QEQP_CALLS_TPROC))
 		ndsh->dsh_saved_rcb = (QEF_RCB *) ulm.ulm_pptr;
 	    else ndsh->dsh_exeimm_rcb = (QEF_RCB *) ulm.ulm_pptr;
 				/* save RCB addr in right spot */
@@ -1741,6 +1746,10 @@ qee_fetch(
     ndsh->dsh_stack = NULL;
     ndsh->dsh_exeimm = NULL;
     ndsh->dsh_depth_act = 0;
+
+    /* Flag dsh if we're using it for a table procedure. */
+    if (is_tproc)
+	ndsh->dsh_qp_status |= DSH_TPROC_DSH;
 
     /* ADF CB is the session's.
     ** FIXME this is probably wrong in a parallel query environment,
@@ -2017,18 +2026,17 @@ qee_fetch(
     /* give to caller */
 
     *dsh = ndsh;
-    if (!isTproc)
+    next = (QEE_DSH *)qefcb->qef_odsh;
+    ndsh->dsh_next = next;
+    if (next)
     {
-        next = (QEE_DSH *)qefcb->qef_odsh;
-        ndsh->dsh_next = next;
-        if (next)
-        {
-	    next->dsh_prev = ndsh;
-        }
-
-          qefcb->qef_dsh = (PTR)ndsh;
-          qefcb->qef_odsh = (PTR)ndsh;
+	next->dsh_prev = ndsh;
     }
+    qefcb->qef_odsh = (PTR)ndsh;
+
+    /* Don't set top-level DSH if this is a tproc QP */
+    if (! is_tproc)
+	qefcb->qef_dsh = (PTR)ndsh;
 
 #ifdef xDEBUG
     (VOID) qe2_chk_qp(ndsh);
@@ -2155,6 +2163,8 @@ err_exit:
 **	25-Jan-2008 (kibro01) b116600
 **	    Because hash joins and parallel queries can amend the dsh_row
 **	    value, store the original and reuse that when giving back a qep.
+**	18-Jun-2010 (kschendel) b123775
+**	    DSH resource list simplified, reflect here.
 */
 
 static DB_STATUS
@@ -2444,28 +2454,21 @@ qee_create(
 	    dsh->dsh_resources = (QEE_RESOURCE *)Mem;
 	    Mem += DB_ALIGN_MACRO(qp->qp_cnt_resources * sizeof(QEE_RESOURCE));
 
-	    /* Also, fill in the qee resource descriptions */
+	    /* Also, fill in the qee resource descriptions.
+	    ** The area is zeroed, ie NULL / FALSE, but we need to
+	    ** set up memory constant table stuff if used.
+	    */
 	    for (qp_resource = qp->qp_resources;
 		    qp_resource != NULL;
 		    qp_resource = qp_resource->qr_next
 		)
 	    {
-		QEE_TBL_RESOURCE *qee_tbl_res;
-
 		i = qp_resource->qr_id_resource;
-
-		dsh->dsh_resources[i].qer_qefresource = (PTR) qp_resource;
 
 		if (qp_resource->qr_type == QEQR_TABLE)
 		{
-		    qee_tbl_res = 
-		     &dsh->dsh_resources[i].qer_resource.qer_tbl;
-		    qee_tbl_res->qer_inuse_vl = NULL;
-		    qee_tbl_res->qer_free_vl = NULL;
-		    qee_tbl_res->qer_empty_vl = NULL;
-		    if (qp_resource->qr_resource.qr_tbl.qr_tbl_type !=
-			    QEQR_MCNSTTBL) qee_tbl_res->qer_cnsttab_p = NULL;
-		    else
+		    if (qp_resource->qr_resource.qr_tbl.qr_tbl_type ==
+			    QEQR_MCNSTTBL)
 		    {
 			ulm->ulm_psize = sizeof(QEE_MEM_CONSTTAB);
 			if (ulm_status = qec_malloc(ulm))
@@ -2473,7 +2476,7 @@ qee_create(
 			    qef_rcb->error.err_code = ulm->ulm_error.err_code;
 			    break;
 			}
-			qee_tbl_res->qer_cnsttab_p = 
+			dsh->dsh_resources[i].qer_resource.qer_tbl.qer_cnsttab_p =
 				    (QEE_MEM_CONSTTAB *) ulm->ulm_pptr;
 		    }
 		}
@@ -3655,6 +3658,7 @@ qee_cract(
 		    Mem += DB_ALIGN_MACRO(sizeof(DMT_CB));
 
 		    /* Init QEE_RSET_SPOOL. */
+		    sptr->sp_posnbuff = NULL;
 		    sptr->sp_rowcount = 0;
 		    sptr->sp_current = 0;
 		    sptr->sp_curpage = -1;

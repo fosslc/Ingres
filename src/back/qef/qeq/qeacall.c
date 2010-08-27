@@ -291,6 +291,9 @@ static DB_STATUS openTempTable(
 **      22-Apr-2009 (hanal04) Bug 121970
 **          In printrule tracing print the ahd_pcount not qef_pcount
 **          which is set to zero if we are in a sub-procedure.
+**	21-Jun-2010 (kschendel) b123775
+**	    Combine is-tproc and in-progress args to qeq-dsh.
+**	    Make dbp alias a real QSO_NAME.
 */
 DB_STATUS
 qea_callproc(
@@ -332,6 +335,10 @@ i4		    state )		/* Unused */
 	** CALLPROC fails. In this case we just continue with error processing.
 	** No need for another error as CLEAN_RSRC is only set if a client on
 	** the outside issued an error knowing we have a stacked environment.
+	** (Note: as of the 123775 fixes, we shouldn't ever get here with
+	** CLEAN_RSRC set, since qeq-query no longer attempts to execute
+	** the action from the sequencer callback.  I'm leaving the code
+	** here for now, though.)
 	*/
 	if ((qef_rcb->qef_intstate & QEF_CLEAN_RSRC) != 0)
 	{
@@ -443,7 +450,7 @@ i4		    state )		/* Unused */
 		char	*rn, *pn;	/* Rule/procedure names */
 
 		rn = act->qhd_obj.qhd_callproc.ahd_rulename.db_name;
-		pn = act->qhd_obj.qhd_callproc.ahd_dbpalias.als_crsr_id.db_cur_name;
+		pn = act->qhd_obj.qhd_callproc.ahd_dbpalias.qso_n_id.db_cur_name;
 		/* Tailor trace for rules vs nested procedures */
 		STprintf(cbuf, *rn == EOS ?
 		     "PRINTRULES 1: Executing procedure '%.*s'\n" :
@@ -517,13 +524,11 @@ i4		    state )		/* Unused */
                            qef_rcb->qef_dbpId);
 
 	/* Get the id of the procedure to call */
-	STRUCT_ASSIGN_MACRO(act->qhd_obj.qhd_callproc.ahd_dbpalias.als_crsr_id, qef_rcb->qef_qp);
-	qef_rcb->qef_qso_handle = 0;
+	STRUCT_ASSIGN_MACRO(act->qhd_obj.qhd_callproc.ahd_dbpalias.qso_n_id, qef_rcb->qef_qp);
+	qef_rcb->qef_qso_handle = NULL;
 	/* Set the full name of the procedure into the RCB in case  */
 	/* we have to call PSF to define the procedure. */
-	MEcopy((PTR)&act->qhd_obj.qhd_callproc.ahd_dbpalias,
-	       sizeof(act->qhd_obj.qhd_callproc.ahd_dbpalias),
-	       (PTR)&qef_rcb->qef_dbpname);
+	qef_rcb->qef_dbpname = act->qhd_obj.qhd_callproc.ahd_dbpalias;
 
 	/* Lookup this procedure name as a QSF alias. At this time  */
 	/* we do not have a valid DB_CURSOR_ID because we do not    */
@@ -571,8 +576,7 @@ i4		    state )		/* Unused */
 	/* to allow normal QEF processing to continue.		    */
 	MEcopy((PTR)qsf_rcb.qsf_obj_id.qso_name, sizeof(DB_CURSOR_ID),
 	       (PTR)&qef_rcb->qef_qp);
-	status = qeq_dsh(qef_rcb, 0 , &proc_dsh, TRUE, page_count,
-                         (bool)FALSE);
+	status = qeq_dsh(qef_rcb, 0 , &proc_dsh, QEQDSH_IN_PROGRESS, page_count);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    char	*rn, *pn;	/* Rule/procedure names */
@@ -602,7 +606,7 @@ i4		    state )		/* Unused */
 		|| call_dsh->dsh_error.err_code == E_QE030B_RULE_PROC_MISMATCH)
 	    {
 		pn =
-		 act->qhd_obj.qhd_callproc.ahd_dbpalias.als_crsr_id.db_cur_name;
+		 act->qhd_obj.qhd_callproc.ahd_dbpalias.qso_n_id.db_cur_name;
 		rn = act->qhd_obj.qhd_callproc.ahd_rulename.db_name;
 		if (*rn == EOS)
 		    rn = "NULL                                   ";
@@ -636,7 +640,7 @@ i4		    state )		/* Unused */
 	    char	*pn;
 	    /* Row producing procs cannot be invoked by QEA_CALLPROC (which
 	    ** implies either nested proc call or dynamic SQL proc call). */
-	    pn = act->qhd_obj.qhd_callproc.ahd_dbpalias.als_crsr_id.db_cur_name;
+	    pn = act->qhd_obj.qhd_callproc.ahd_dbpalias.qso_n_id.db_cur_name;
 	    qef_error(E_QE030D_NESTED_ROWPROCS, 0L, E_DB_ERROR, &err,
 		&call_dsh->dsh_error, 1,
 		qec_trimwhite(DB_DBP_MAXNAME, pn), pn);

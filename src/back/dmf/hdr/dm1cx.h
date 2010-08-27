@@ -82,6 +82,8 @@
 **	    dm1cxget prototypes.
 **	23-Feb-2010 (stial01)
 **          Added rcb to dm1cxclean prototype
+**	09-Jun-2010 (stial01)
+**          Added prototype for dm1cx_txn_get
 */
 
 /*
@@ -219,3 +221,5 @@ FUNC_EXTERN DB_STATUS dm1cx_dput(DMP_RCB *r,
 			    i4	pos,
 			    DM_TID *tid,
 			    i4 *err_code);
+FUNC_EXTERN DB_STATUS dm1cx_txn_get(i4 pgtype,DMPP_PAGE *b, i4 child, 
+				i4 *row_low_tran, u_i2 *row_lg_id);

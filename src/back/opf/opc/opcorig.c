@@ -293,8 +293,8 @@ typedef struct _OPC_MDIM
 /*
 **  Forward and/or External function references.
 */
-static QEF_VALID *
-opc_procvalid(OPS_STATE	*global,
+static QEF_RESOURCE *
+opc_procresource(OPS_STATE	*global,
 	OPV_GRV		*gvarp);
 
 static bool 
@@ -876,6 +876,8 @@ opc_orig_build(
 ** History:
 **      6-may-2008 (dougi)
 **	    Written for table procedure implementation.
+**	17-Jun-2010 (kschendel) b123775
+**	    Don't build a valid list entry for tprocs, just a resource.
 */
 VOID opc_tproc_build(OPS_STATE	*global,
 		OPC_NODE	*cnode)
@@ -889,7 +891,7 @@ VOID opc_tproc_build(OPS_STATE	*global,
     QEN_NODE	*tprocp = cnode->opc_qennode;
     PST_QNODE   *tproc_qual, *resdomp;
     OPE_BMEQCLS tproc_eqcmp;
-    QEF_VALID	*valid;
+    QEF_RESOURCE *resource;
     i4		i;
 
     /* Lets figure out where the real TPROC node is and point opc_cco at
@@ -1001,11 +1003,10 @@ VOID opc_tproc_build(OPS_STATE	*global,
 
     cnode->opc_cco = tco;                       /* restore PR addr */
 
-    valid = opc_procvalid(global, varp->opv_grv); /* make QEF_VALID */
+    resource = opc_procresource(global, varp->opv_grv); /* make resource entry */
 
-    tprocp->node_qen.qen_tproc.tproc_qpidptr = (PTR) &valid->vl_resource->
-				qr_resource.qr_proc.qr_dbpalias;
-    global->ops_cstate.opc_qp->qp_status |= QEQP_TPROC_RCB;
+    tprocp->node_qen.qen_tproc.tproc_resix = resource->qr_id_resource;
+    global->ops_cstate.opc_qp->qp_status |= QEQP_CALLS_TPROC;
 }
 
 /*{
@@ -2735,8 +2736,9 @@ opc_qerangeand(
 **	list of tables (and other objects) that are used by the query plan.
 **	The differences between the resource and valid lists are:
 **	    - There is only one resource list per qp, where as there is
-**	      one valid list per qp.
-**	    - A table is listed only once on the resource list, where as
+**	      one valid list per top-level action header.
+**	      (top-level meaning not under a QP-node, see above)
+**	    - A table is listed only once on the resource list, whereas
 **	      a table can be listed many times on a valid list (depending
 **	      on the number of correlation variables that refer to that table).
 **	The resource list is used by QEF to verify that the query plan is
@@ -2744,7 +2746,8 @@ opc_qerangeand(
 **	needed open tables are available for an action. Given this, valid
 **	lists are no longer the best name for their function. The name
 **	hasn't been changed due to the lateness of the cycle and the number of
-**	files changed.
+**	files changed.  (And, 15 years later, we still haven't changed the
+**	name, mostly due to inertia!)
 **
 **	In the past, the valid list served both functions (query plan
 **	correctness, and opening tables). In this scheme, which action header 
@@ -2838,6 +2841,11 @@ opc_qerangeand(
 **	    entry will always go on the "top" action.  We might check
 **	    some stuff on the "first" action, but the valid entry won't
 **	    be attached there.
+**	17-Jun-2010 (kschendel) b123775
+**	    Changes to simplify the validation step (mostly for tprocs).
+**	    Kill unused vl-stmt, move timestamp to resource entry.
+**	29-Jun-2010 (kschendel)
+**	    Comment fix, no code change.
 */
 QEF_VALID *
 opc_valid(
@@ -2998,10 +3006,11 @@ opc_valid(
     ret_vl->vl_total_pages = rel->rdr_rel->tbl_page_count;
     ret_vl->vl_alt = NULL;
     ret_vl->vl_size_sensitive = size_sensitive;
-    ret_vl->vl_stmt = global->ops_cstate.opc_stmtno;
     ret_vl->vl_debug = (PTR) rel;
-    ret_vl->vl_resource = resource;
     ret_vl->vl_mustlock = mustlock;
+    ret_vl->vl_flags = 0;
+    if (qr_tbl->qr_tbl_type == QEQR_REGTBL)
+	ret_vl->vl_flags |= QEF_REG_TBL;
     if (rel->rdr_parts != NULL)
     {
 	ret_vl->vl_flags |= QEF_PART_TABLE;
@@ -3033,14 +3042,17 @@ opc_valid(
 	    global->ops_cstate.opc_qp->qp_setInput->vl_size_sensitive |=
 		size_sensitive;
 	}
-	ret_vl->vl_flags = QEF_SET_INPUT;
+	ret_vl->vl_flags |= QEF_SET_INPUT;
     }
     else
     {
 	STRUCT_ASSIGN_MACRO(rel->rdr_rel->tbl_id,
 			    ret_vl->vl_tab_id);
+	/* Only need to do this for new resource entry, but repeated
+	** assignment doesn't hurt.
+	*/
 	STRUCT_ASSIGN_MACRO(rel->rdr_rel->tbl_date_modified,
-			    ret_vl->vl_timestamp);
+			    qr_tbl->qr_timestamp);
     }
 
     /*
@@ -3108,11 +3120,16 @@ opc_valid(
 }
 
 /*{
-** Name: OPC_PROCVALID	- Allocate and format QEF_VALID for table procedure
+** Name: OPC_PROCRESOURCE - Allocate and format QEF_RESOURCE for table proc
 **
 ** Description:
-**      This Rfunction allocates and formats a QEF_VALID for a table
-**	procedure. There's much less to do than for tables.
+**	This function allocates a resource list entry for a table procedure.
+**	If none already exists, we'll create one.  Tprocs don't need valid
+**	list entries, since there's no need to distinguish one tproc
+**	reference from another (in the sense that they are always readonly,
+**	no locking specials, etc).  The qp-node is good enough to keep
+**	things straight, we only need the resource list entry for
+**	plan validation purposes.
 **
 ** Inputs:
 **  global -
@@ -3121,10 +3138,9 @@ opc_valid(
 **	The global range variable of the table procedure to find
 **
 ** Outputs:
-**	None
 **
 **	Returns:
-**	    none
+**	    A resource list entry for the tproc
 **	Exceptions:
 **	    none
 **
@@ -3134,19 +3150,18 @@ opc_valid(
 ** History:
 **      5-june-2008 (dougi)
 **	    Written for table procedures.
+**	17-Jun-2010 (kschendel) b123775
+**	    Don't need a valid list entry, just a resource list entry.
 */
-static QEF_VALID *
-opc_procvalid(
+static QEF_RESOURCE *
+opc_procresource(
 	OPS_STATE   *global, 
 	OPV_GRV	    *grv)
 
 {
     QEF_QP_CB		*qp = global->ops_cstate.opc_qp;
-    QEF_VALID		*top_vl;
-    QEF_VALID		*ret_vl;
     QEF_RESOURCE	*resource;
     QEF_PROC_RESOURCE	*qr_proc;
-    QEF_AHD             *ahd;
     i4			dummyi4;
     PTR			dummyptr;
 
@@ -3169,50 +3184,24 @@ opc_procvalid(
 			pst_rangetab[grv->opv_qrt]->pst_rngvar.db_tab_base;
 	qr_proc->qr_procedure_id2 = global->ops_qheader->
 			pst_rangetab[grv->opv_qrt]->pst_rngvar.db_tab_index;
-	qr_proc->qr_dbpalias.qr_crsr_id.db_cursor_id[0] = 0;
-	qr_proc->qr_dbpalias.qr_crsr_id.db_cursor_id[1] = 0;
+	qr_proc->qr_dbpalias.qso_n_id.db_cursor_id[0] = 0;
+	qr_proc->qr_dbpalias.qso_n_id.db_cursor_id[1] = 0;
 
 	/*
 	** The following MEcopy works because
 	** DB_TAB_MAXNAME=DB_CURSOR_MAXNAME
 	*/
 	MEcopy((char *)&grv->opv_relation->rdr_rel->tbl_name, DB_CURSOR_MAXNAME,
-			(char *)&qr_proc->qr_dbpalias.qr_crsr_id.db_cur_name);
+			(char *)&qr_proc->qr_dbpalias.qso_n_id.db_cur_name);
 	MEcopy((char *)&grv->opv_relation->rdr_rel->tbl_owner, sizeof(DB_OWN_NAME),
-			(char *)&qr_proc->qr_dbpalias.qr_user);
-	qr_proc->qr_dbpalias.qr_dbid = global->ops_cb->ops_udbid;
+			(char *)&qr_proc->qr_dbpalias.qso_n_own);
+	qr_proc->qr_dbpalias.qso_n_dbid = global->ops_cb->ops_udbid;
 
 	qp->qp_resources = resource;
 	qp->qp_cnt_resources++;
     }
 
-    /* Allocate and fill in the valid list entry. */
-    ret_vl = (QEF_VALID *) opu_qsfmem(global, sizeof (QEF_VALID));
-
-    ret_vl->vl_next = global->ops_cstate.opc_topahd->ahd_valid;
-    ret_vl->vl_rw = 0;
-    ret_vl->vl_est_pages = 0;
-    ret_vl->vl_total_pages = 0;
-    ret_vl->vl_alt = NULL;
-    ret_vl->vl_size_sensitive = 0;
-    ret_vl->vl_stmt = global->ops_cstate.opc_stmtno;
-    ret_vl->vl_debug = (PTR) NULL;
-    ret_vl->vl_resource = resource;
-    ret_vl->vl_mustlock = 0;
-    ret_vl->vl_partition_cnt = 0;
-    ret_vl->vl_part_tab_id = (DB_TAB_ID *) NULL;
-    ret_vl->vl_tab_id.db_tab_base = qr_proc->qr_procedure_id1;
-    ret_vl->vl_tab_id.db_tab_index = qr_proc->qr_procedure_id2;
-    ret_vl->vl_dmf_cb = -1;
-    ret_vl->vl_dmr_cb = -1;
-    ret_vl->vl_flags = QEF_TPROC;
-
-    /* Put the valid list entry on the action header list. */
-    global->ops_cstate.opc_topahd->ahd_valid = ret_vl;
-
-    /* All's well, lets give it to the caller. */
-    return(ret_vl);
-
+    return(resource);
 }
 
 /*{

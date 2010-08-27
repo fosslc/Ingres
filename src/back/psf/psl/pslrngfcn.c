@@ -7,6 +7,7 @@
 #include    <cs.h>
 #include    <qu.h>
 #include    <me.h>
+#include    <bt.h>
 #include    <st.h>
 #include    <sl.h>
 #include    <iicommon.h>
@@ -43,6 +44,7 @@
 **			  specified user.
 **
 **	    psl0_orngent - like above but doesn't report table not found errors.
+**	    psl_swelem - locate table amongst with list elements in range table
 **
 **  	Static functions:
 **	    psl_syn_id	- determine id of a synonym, given its name and owner
@@ -103,6 +105,11 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	19-Jun-2010 (kiria01) b123951
+**	    Add extra parameter to psl0_rngent and psl_rngent to support WITH
+**	    list elements for T121. pst_swelem have been moved into gere as a
+**	    static function along with pst_swelem_clone that will handle the
+**	    expansions required.
 **/
 
 /* static function declarations */
@@ -113,6 +120,31 @@ psl_syn_id(
 	DB_TAB_NAME	*syn_name,
 	DB_TAB_ID	*syn_id,
 	DB_ERROR	*err_blk);
+
+static DB_STATUS psl_swelem(
+	PSS_SESBLK	*sess_cb,
+	PSS_USRRANGE	*rngtable,
+	PSQ_MODE	query_mode,
+	i4		scope,
+	char		*varname,
+	DB_TAB_NAME	*tabname,
+	PSS_RNGTAB	**rngvar,
+	PST_J_ID	*pjoin_id,
+	DB_ERROR	*err_blk);
+typedef struct _PST_SWELEM_CLONE_CTX {
+	PSS_SESBLK	*cb;
+	PSS_USRRANGE	*rngtable;
+	PSQ_MODE	qry_mode;
+	PSS_RNGTAB	**rngvar;
+	DB_ERROR	*err_blk;
+	PST_J_ID	*pjoin_id;
+	PSS_RNGTAB	*rng_vars[PST_NUMVARS];
+	i4		vno_map[PST_NUMVARS];
+	PST_J_ID	jid_map[PST_NUMVARS];
+} PST_SWELEM_CLONE_CTX;
+static DB_STATUS psl_swelem_clone(
+	PST_SWELEM_CLONE_CTX *ctx,
+	PSS_RNGTAB	*orig);
 
 /*{
 ** Name: psl_rngent	- Enter a range variable
@@ -212,7 +244,8 @@ psl_rngent(
 	PSS_RNGTAB	   **rngvar,
 	i4		   query_mode,
 	DB_ERROR	   *err_blk,
-	i4                *caller_info)
+	i4                *caller_info,
+	PST_J_ID	   *pjoin_id)
 {
     DB_STATUS           status;
     i4		err_code;
@@ -230,7 +263,7 @@ psl_rngent(
 
     status = psl0_rngent(rngtable, scope, varname, tabname, cb, tabonly, rngvar,
 	query_mode, err_blk, tbls_to_lookup,
-	caller_info, 0);
+	caller_info, 0, pjoin_id);
 
     /*
     ** If table wasn't found, report it to user here.  Couldn't
@@ -294,6 +327,10 @@ psl_rngent(
 **					synonym owned by the DBA
 **	    PSS_SYS_OBJ			info was retrieved on an object or
 **					synonym owned by system ($INGRES)
+**	pjoin_id			Pointer to variable holding current highest
+**					assigned join id. Only needed if in WITH
+**					element expansion contexts. (Where join id
+**					is available). Pass NULL if not needed.
 **		
 **	Returns:
 **	    E_DB_OK			Success
@@ -379,7 +416,7 @@ psl_rngent(
 **	26-sep-06 (toumi01)
 **	    For GTT lookup changes fix init of err_code for USRTBL search.
 **	29-dec-2006 (dougi)
-**	    Call to new function pst_swelem() to potentially resolve table 
+**	    Call to new function psl_swelem() to potentially resolve table 
 **	    references against with list elements.
 */
 DB_STATUS
@@ -395,7 +432,8 @@ psl0_rngent(
 	DB_ERROR	*err_blk,
 	i4		tbls_to_lookup,
 	i4		*caller_info,
-	i4		lookup_mask)
+	i4		lookup_mask,
+	PST_J_ID	*pjoin_id)
 {
     DB_STATUS           status = E_DB_ERROR;
     i4		err_code;
@@ -421,9 +459,14 @@ psl0_rngent(
     if (cb->pss_ses_flag & PSS_WITHELEM_INQ)
     {
 	/* There is a with clause in this query. First try to find table 
-	** amongst with list elements. */
+	** amongst with list elements.
+	** If a with element is found, it will be used essentially as a
+	** template to create a new derived table cloned from it so this
+	** 'lookup' will instanciate a template. See psl_swelem for fuller
+	** details. */
 	*caller_info = PSS_WITH_ELEM;
-	status = pst_swelem(cb, scope, rngtable, tabname, rngvar, err_blk);
+	status = psl_swelem(cb, rngtable, query_mode, scope, varname,
+					tabname, rngvar, pjoin_id, err_blk);
 
 	if (status != E_DB_OK)
 	{
@@ -1264,3 +1307,504 @@ psl_syn_id(
     
     return(status);
 }
+
+
+/*{
+** Name: psl_swelem	- search range table for with list element of
+**	supplied name and handle expansion
+**
+** Description:
+**      This function searches the range table WITH list elements for an
+**	entry with the supplied name. If it finds one it returns it after
+**	having expanded the relevant ranges.
+**
+** Inputs:
+**	sess_cb				Pointer to session control block
+**      rngtable                        Pointer to the user range table
+**	query_mode			The mode of the query.
+**	scope				scope that range variable belongs in
+**					-1 means don't care.
+**	varname				Correlation name to assign to range
+**					if 'created'. The first expansion of
+**					a PST_WETREE merely takes ownership of
+**					the template range.
+**	tabname				Table name of desired entry
+**	rngvar				Place to put pointer to new range
+**					variable
+**	pjoin_id			Pointer to max current join id variable
+**					in case we cause more to be assigned.
+**	err_blk				Place to put error information
+**
+** Outputs:
+**	rngtable			May be re-shuffled or augmented.
+**      rngvar                          Set to point to the range variable
+**	pjoin_id			May be updated
+**	err_blk				Filled in if an error happens
+**	Returns:
+**	    E_DB_OK			Success
+**	    E_DB_ERROR			Non-catastrophic failure
+**	    E_DB_FATAL			Catastrophic failure
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	None
+**
+** History:
+**	29-dec-2006 (dougi)
+**	    Written for support of with list elements.
+*/
+static DB_STATUS
+psl_swelem(
+	PSS_SESBLK	*sess_cb,
+	PSS_USRRANGE	*rngtable,
+	PSQ_MODE	query_mode,
+	i4		scope,
+	char		*varname,
+	DB_TAB_NAME	*tabname,
+	PSS_RNGTAB	**rngvar,
+	PST_J_ID	*pjoin_id,
+	DB_ERROR	*err_blk)
+{
+    PSS_RNGTAB	*rptr;
+    DB_STATUS	status;
+    i4		i;
+    bool	found = FALSE;
+
+    if (!pjoin_id)
+    {
+	/* Not called from a WITH element expansion context */
+	err_blk->err_code = E_PS0903_TAB_NOTFOUND;
+	return(E_DB_ERROR);
+    }
+
+    /* Search range table for WITH elements whose name matches
+    ** the supplied table name. */
+    for (i = 0, rptr = (PSS_RNGTAB *)rngtable->pss_qhead.q_next;
+	i < PST_NUMVARS && rptr && rptr->pss_used && rptr->pss_rgno > 0;
+	i++, rptr = (PSS_RNGTAB *)rptr->pss_rngque.q_next)
+    {
+	if (rptr->pss_rgtype == PST_WETREE &&
+		MEcmp(tabname, &rptr->pss_tabname, DB_TAB_MAXNAME) == 0)
+	{
+	    found = TRUE;
+	    *rngvar = rptr;
+	    if (scope != -1)
+		rptr->pss_rgparent = scope;
+	    break;
+	}
+    }
+
+    if (!found || !pjoin_id)
+    {
+	/* Simple case - not a WITH element! (probably just a base table or view) */
+	err_blk->err_code = E_PS0903_TAB_NOTFOUND;
+	return(E_DB_ERROR);
+    }
+    else
+    {
+	/* We have a WITH element (& its ancestors) that need to be cloned */
+	PST_SWELEM_CLONE_CTX ctx;
+
+	ctx.cb = sess_cb;
+	ctx.rngtable = rngtable;
+	ctx.qry_mode = query_mode;
+	ctx.rngvar = rngvar;
+	ctx.err_blk = err_blk;
+	ctx.pjoin_id = pjoin_id;
+	MEfill(sizeof(ctx.rng_vars), 0, ctx.rng_vars);
+	MEfill(sizeof(ctx.vno_map), -1, ctx.vno_map);
+	MEfill(sizeof(ctx.jid_map), -1, ctx.jid_map);
+	for (i = 0, rptr = (PSS_RNGTAB *)rngtable->pss_qhead.q_next;
+	    i < PST_NUMVARS && rptr;
+	    i++, rptr = (PSS_RNGTAB *)rptr->pss_rngque.q_next)
+	{
+	    if (rptr->pss_used &&
+		    rptr->pss_rgno >= 0 &&
+		    rptr->pss_rgno < PST_NUMVARS)
+		ctx.rng_vars[rptr->pss_rgno] = rptr;
+	}
+	if (!(status = psl_swelem_clone(&ctx, *rngvar)))
+	{
+	    PST_J_ID jid;
+	    /* The one remaining thing to do now is the update of the
+	    ** inner and outer joinid masks in the range table */
+	    for (i = 0; i < PST_NUMVARS; i++)
+	    {
+		PST_J_MASK mask;
+		if (ctx.vno_map[i] < 0)
+		    continue;
+		/* We have a new range table as the vno_map is > 0 */
+		jid = -1;
+		rptr = ctx.rng_vars[ctx.vno_map[i]];
+		mask = rptr->pss_outer_rel;
+		while((jid = BTnext(jid, (PTR)&mask, PST_NUMVARS)) != -1)
+		{
+		    if (ctx.jid_map[jid] >= 0)
+		    {
+			BTclear(jid, (PTR)&rptr->pss_outer_rel);
+			BTset(ctx.jid_map[jid], (PTR)&rptr->pss_outer_rel);
+		    }
+		}
+		mask = rptr->pss_inner_rel;
+		while((jid = BTnext(jid, (PTR)&mask, PST_NUMVARS)) != -1)
+		{
+		    if (ctx.jid_map[jid] >= 0)
+		    {
+			BTclear(jid, (PTR)&rptr->pss_inner_rel);
+			BTset(ctx.jid_map[jid], (PTR)&rptr->pss_inner_rel);
+		    }
+		}
+	    }
+
+	    /* We must also store away the range variable name that
+	    ** instanciated this element. Any later copies will
+	    ** overwrite with distinct value. */
+	    STmove(varname, ' ', sizeof((*rngvar)->pss_rgname),
+				(char*)(*rngvar)->pss_rgname);
+	}
+	return status;
+    }
+}
+
+
+/*{
+** Name: psl_swelem_clone - clone tree of range tables for with list element
+**
+** Description:
+**      This function clones a WITH element and any elements it needs for a
+**	full, distinct clone. This was once a part of psl_swelem but is now
+**	pulled out to handle the recursive nature of expansion.
+**
+**	The context block passed in will be global to the recursion and
+**	contains the working areas to track the cloning. It is expected that
+**	the caller initialize these and will have to perform a final fixup
+**	based on that returned context.
+**
+**	When the WITH list is parsed it is done left to right and any 'table'
+**	references can also 'seen' those that have been parsed to the left.
+**	The complexities occur mainly with one or more levels of WITH element
+**	refering to another. Such happening requires that a new range variable
+**	copy be made for every variable refered to, recursivly, so that the new
+**	reference may be instantiated. This might seem to suggest that several
+**	levels of reference could require a deep bushy expansion but it doesn't
+**	as each separate level of WITH element will already have had its own
+**	nested references expanded thus each new reference replicates a flat
+**	tree. This is important as it simplifies the tracking of the vno refs
+**	and also the join ids.
+**
+**	Initially, given a query tree bearing range varaiable, we scan it for
+**	its root nodes to determine the ranges we need to clone - which we do.
+**	We also note the join ids in the tree and assign new values for the
+**	post call fixup.
+**	We then create the new entry and add this to the user range list.
+**	Having created the range entry and knowing that all pre-requisite range
+**	variables have been cloned, we can duplicate any tree fixing up refs as
+**	calculated in the initial pass.
+**	Then it just remains for the caller to do a single pass on the range
+**	table to apply the inner and outer map fixups.
+**
+** Inputs:
+**	orig			Range table entry to clone.
+**	ctx			Pointer to control block shared by this and all
+**				recursive calls. (PST_SWELEM_CLONE_CTX)
+**	  .cb			Pointer to session control block
+**	  .rngtable		Pointer to user range table.
+**	  .qry_mode		Mode of query
+**	  .pjoin_id		Pointer to the current max_join_id for
+**			        assigning new join ids without clashing.
+**	  .rng_vars		This is the address of a vector of pointers
+**				to the entries in the user range table but
+**				setup for ordinal access. Must be initialised
+**				to index .rngtable on entry & this routine will
+**				keep up to date with additions.
+**	  .vno_map		Pending update map for cloning vno entries.
+**				On external call, this must be set to -1s
+**	  .jid_map		Pending update map for cloning joinids.
+**				On external call, this must be set to -1s
+**
+** Outputs:
+**	ctx			Pointer to control block shared by this and all
+**				recursive calls. (PST_SWELEM_CLONE_CTX)
+**	  .cb			Pointer to session control block. Memory stream
+**				data will be updated
+**	  .rngtable		Pointer to user range table will be updated
+**				if clone occurs.
+**	  .rngvar		Place to put pointer to new range
+**	  .err_blk		DB_ERROR block for propagation	
+**	  .pjoin_id		Pointer to the current max_join_id for
+**			        assigning new join ids without clashing.
+**	  .rng_vars		This is the address of a vector of pointers
+**				to the entries in the user range table but
+**				setup for ordinal access.
+**	  .vno_map		Pending update map for cloning vno entries.
+**				This map will be supplemented as additions are
+**				made. On exit, this will reflect all the cloned
+**				entries and what they became.
+**	  .jid_map		Pending update map for cloning joinids.
+**				This map will be supplemented as additions are
+**				made. On exit, this will reflect all the join id
+**				changes *in progress*. Note that the inner and
+**				outer range table maps need updating by caller
+**				after full return.
+**
+**	Returns:
+**	    E_DB_OK			Success
+**	    E_DB_ERROR			Non-catastrophic failure
+**	    E_DB_FATAL			Catastrophic failure
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	None
+**
+** History:
+**	19-Jun-2010 (kiria01) b123951
+**	    Written for expansion of WITH list elements.
+*/
+static DB_STATUS
+psl_swelem_clone(
+    struct _PST_SWELEM_CLONE_CTX *ctx,
+    PSS_RNGTAB *orig)
+{
+    DB_STATUS status = E_DB_OK;
+    PSS_RNGTAB *rptr;
+    PST_STK stk;
+    PST_QNODE **nodep, *node;
+
+    if (ctx->vno_map[orig->pss_rgno] >= 0)
+	/* Already done :-) */
+	return status;
+
+    PST_STK_INIT(stk, ctx->cb);
+
+    if (orig->pss_rgtype == PST_RTREE ||
+	orig->pss_rgtype == PST_DRTREE ||
+	orig->pss_rgtype == PST_WETREE)
+    {
+	/* If we have a WITH element and this is the first reference
+	** then it is sufficient to return this as the first copy. */
+	if (orig->pss_rgtype == PST_WETREE &&
+	    (~orig->pss_var_mask & PSS_WE_REFED))
+	{
+	    /* First reference - no need to make a copy yet but mark its as taken. */
+	    orig->pss_var_mask |= PSS_WE_REFED;
+	    *ctx->rngvar = orig;
+	    return E_DB_OK ;
+	}
+
+	/* First clone the ancestors. These will correspond to
+	** the source ranges as represented in the root node .pst_tvrm
+	** sets. These will each need cloning but might already have
+	** been cloned for this expansion at a different point as a
+	** correlated variable. */
+	nodep = &orig->pss_qtree;
+	while (nodep && (node = *nodep))
+	{
+	    switch (node->pst_sym.pst_type)
+	    {
+	    case PST_ROOT:
+	    case PST_SUBSEL:
+	    case PST_AGHEAD:
+		{
+		    i4 rgno = -1;
+		    if (node->pst_sym.pst_value.pst_s_root.pst_union.pst_next)
+			pst_push_item(&stk,
+				(PTR)&node->pst_sym.pst_value.pst_s_root.pst_union.pst_next);
+		    while((rgno = BTnext(rgno,
+			    (PTR)&node->pst_sym.pst_value.pst_s_root.pst_tvrm, PST_NUMVARS)) != -1)
+		    {
+			/* If not yet cloned - do so. */
+			if (ctx->vno_map[rgno] < 0 &&
+				(status = psl_swelem_clone(ctx, ctx->rng_vars[rgno])))
+			    return status;
+		    }
+		}
+		break;
+	    case PST_UOP:
+	    case PST_BOP:
+	    case PST_MOP:
+	    case PST_AOP:
+	    case PST_COP:
+	    case PST_AND:
+	    case PST_OR:
+		{
+		    PST_J_ID jid = node->pst_sym.pst_value.pst_s_op.pst_joinid;
+		    if (jid > 0 && ctx->jid_map[jid] < 0)
+		    {
+			ctx->jid_map[jid] = ++*ctx->pjoin_id;
+		    }
+		}
+		break;
+	    case PST_CONST:
+	    case PST_BYHEAD:
+		/* Don't descent these */
+		nodep = (PST_QNODE**)pst_pop_item(&stk);
+		continue;
+	    }
+	    if (node->pst_left)
+	    {
+		if (node->pst_right)
+		    /* Descent right later */
+		    pst_push_item(&stk, (PTR)&node->pst_right);
+		nodep = &node->pst_left;
+	    }
+	    else if (node->pst_right)
+		nodep = &node->pst_right;
+	    else
+		nodep = (PST_QNODE**)pst_pop_item(&stk);
+	}
+    }
+
+    /* Get entry to copy element into. */
+    rptr = (PSS_RNGTAB *) QUremove(ctx->rngtable->pss_qhead.q_prev);
+
+    /* Free up table description if it exists */
+    status = pst_rng_unfix(ctx->cb, rptr, ctx->err_blk);
+    if (status != E_DB_OK)
+    {
+	/* Put the range variable at the head of the queue */
+	if (rptr != &ctx->rngtable->pss_rsrng)
+	    QUinsert((QUEUE *) rptr, ctx->rngtable->pss_qhead.q_prev);
+
+	*ctx->rngvar = (PSS_RNGTAB *) NULL;
+	return status;
+    }
+
+    /* Duplicate the range entry from the template and setup to return
+    ** address of new block to caller. */
+    ctx->rngtable->pss_maxrng++;
+    if (ctx->rngtable->pss_maxrng > PST_NUMVARS - 1)
+    {
+	i4 err_code;
+	(VOID) psf_error(3100L, 0L, PSF_USERERR, &err_code, ctx->err_blk, 0);
+	*ctx->rngvar = (PSS_RNGTAB *) NULL;
+	return E_DB_ERROR;
+    }
+    /* Register this fix up AND mark as seen */
+    ctx->vno_map[orig->pss_rgno] = ctx->rngtable->pss_maxrng;
+    if (orig->pss_rgtype != PST_TABLE)
+	/* Copy all the field */
+	*rptr = *orig;
+    else /* PST_TABLE */
+    {
+	rptr->pss_rgtype = PST_TABLE;
+	rptr->pss_rgparent = orig->pss_rgparent;
+	rptr->pss_qtree = 0;
+	/* Do the lookup as would normally be done to keep RDF happy */
+	if (status = pst_showtab(ctx->cb, PST_SHWID,
+		    NULL, NULL, &orig->pss_tabid, FALSE, 
+		    rptr, ctx->qry_mode, ctx->err_blk))
+	{
+	    /* Put the range variable at the head of the queue */
+	    if (ctx->rngtable != NULL && rptr != &ctx->rngtable->pss_rsrng)
+		QUinsert((QUEUE *) rptr, ctx->rngtable->pss_qhead.q_prev);
+
+	    *ctx->rngvar = (PSS_RNGTAB *) NULL;
+	    return (status);
+	}
+	/* Mark the range variable as used & set name */
+	rptr->pss_used = TRUE;
+	MEcopy(orig->pss_rgname, sizeof(rptr->pss_rgname), rptr->pss_rgname);
+	rptr->pss_inner_rel = orig->pss_inner_rel;
+	rptr->pss_outer_rel = orig->pss_outer_rel;
+    }
+
+    *ctx->rngvar = rptr;
+
+    /* Put the range variable at the head of the queue */
+    QUinsert((QUEUE *) rptr, (QUEUE *) &ctx->rngtable->pss_qhead.q_next);
+    /* Set its updated number in place & add to rng_vars[]. */
+    rptr->pss_rgno = ctx->rngtable->pss_maxrng;
+    ctx->rng_vars[rptr->pss_rgno] = rptr;
+
+    if (orig->pss_rgtype == PST_RTREE ||
+	orig->pss_rgtype == PST_DRTREE ||
+	orig->pss_rgtype == PST_WETREE)
+    {
+	i4 jid, vno;
+	/* Replicate the element's parse tree.
+	** Essentially a simple tree copy except that we will update:
+	** a) Float VAR vno references
+	** b) Float join ids 
+	** c) Update vno maps in root nodes
+	** d) Update Join ID maps
+	*/
+	nodep = &rptr->pss_qtree;
+
+	while (nodep)
+	{
+	    PST_QNODE *onode = *nodep;
+	    i4 nsize, datasize;
+	    if (status = pst_node_size(&onode->pst_sym, &nsize, &datasize,
+			   ctx->err_blk))
+		return status;
+	    /* Allocate enough space */
+	    nsize += sizeof(PST_QNODE) - sizeof(PST_SYMVALUE);
+	    if (status = psf_malloc(ctx->cb, &ctx->cb->pss_ostream,
+			    nsize + datasize, nodep, ctx->err_blk))
+		return status;
+	    node = *nodep;
+	    /* Copy the old node to the new node */
+	    MEcopy((PTR)onode, nsize, (PTR)node);
+	    if (datasize)
+	    {
+		/* NOTE:
+		** Of the allocated memory, the initial part was for the node itself
+		** and the remaining datasize bytes will be used for the datavalue */
+		node->pst_sym.pst_dataval.db_data = (char*)node + nsize;
+    		MEcopy((PTR)onode->pst_sym.pst_dataval.db_data,
+			datasize, (PTR) node->pst_sym.pst_dataval.db_data);
+	    }
+
+	    switch (node->pst_sym.pst_type)
+	    {
+	    case PST_ROOT:
+	    case PST_AGHEAD:
+	    case PST_SUBSEL:
+		/* duplicate a union */
+		if (node->pst_sym.pst_value.pst_s_root.pst_union.pst_next)
+		    pst_push_item(&stk,
+			(PTR)&node->pst_sym.pst_value.pst_s_root.pst_union.pst_next);
+		vno = -1;
+		while((vno = BTnext(vno,
+			(PTR)&onode->pst_sym.pst_value.pst_s_root.pst_tvrm, PST_NUMVARS)) != -1)
+		{
+		    if (ctx->vno_map[vno] >= 0)
+		    {
+			BTclear(vno, (PTR)&node->pst_sym.pst_value.pst_s_root.pst_tvrm);
+			BTset(ctx->vno_map[vno], 
+				(PTR)&node->pst_sym.pst_value.pst_s_root.pst_tvrm);
+		    }
+		}
+		break;
+	    case PST_VAR:
+		if ((vno = ctx->vno_map[node->pst_sym.pst_value.pst_s_var.pst_vno]) >= 0)
+		    node->pst_sym.pst_value.pst_s_var.pst_vno = vno;
+		break;
+	    case PST_UOP:
+	    case PST_BOP:
+	    case PST_MOP:
+	    case PST_AOP:
+	    case PST_COP:
+	    case PST_AND:
+	    case PST_OR:
+		if ((jid = node->pst_sym.pst_value.pst_s_op.pst_joinid) > 0)
+		    node->pst_sym.pst_value.pst_s_op.pst_joinid = ctx->jid_map[jid];
+		break;
+	    }
+	    if ((*nodep)->pst_left)
+	    {
+		if ((*nodep)->pst_right)
+		    pst_push_item(&stk, (PTR)&(*nodep)->pst_right);
+		nodep = &(*nodep)->pst_left;
+	    }
+	    else if ((*nodep)->pst_right)
+		nodep = &(*nodep)->pst_right;
+	    else
+		nodep = (PST_QNODE**)pst_pop_item(&stk);
+	}
+    }
+    return(E_DB_OK);
+}
+

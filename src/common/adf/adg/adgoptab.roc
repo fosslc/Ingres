@@ -290,6 +290,11 @@
 **      19-apr-2010 (huazh01) 
 **          change the definition of SINGLETON aggregate from 
 **          ADI_NORM_FUNC to ADI_AGG_FUNC. (b123597)
+**	14-Jul-2010 (kschendel) b123104
+**	    Add ii_true and ii_false constant operators to solve outer join
+**	    constant folding problem.
+**	28-Jul-2010 (kiria01) b124142
+**	    Added SINGLECHK.
 **/
 
 
@@ -725,6 +730,14 @@ GLOBALDEF   const	ADI_OPRATION    Adi_2RO_operations[] = {
 	DB_SQL|DB_QUEL,     ADI_INGRES_6                 ,  
 		ADO_TB2DI_CNT,		    ADZ_TB2DI_FIIDX},
 
+{ {"ii_false"},	ADI_IIFALSE_OP,   ADI_COMPARISON,	    ADI_PREFIX,
+	DB_SQL|DB_QUEL,     ADI_INGRES_6                 ,  
+		ADO_IIFALSE_CNT,	    ADZ_IIFALSE_FIIDX},
+
+{ {"ii_true"},	ADI_IITRUE_OP,   ADI_COMPARISON,	    ADI_PREFIX,
+	DB_SQL|DB_QUEL,     ADI_INGRES_6                 ,  
+		ADO_IITRUE_CNT,		    ADZ_IITRUE_FIIDX},
+
 { {"iichar12"},		ADI_CHA12_OP,   ADI_NORM_FUNC,	    ADI_PREFIX,
 	DB_SQL|DB_QUEL,     ADI_INGRES_6                 ,  
 		ADO_CHA12_CNT,		    ADZ_CHA12_FIIDX},
@@ -1057,6 +1070,10 @@ GLOBALDEF   const	ADI_OPRATION    Adi_2RO_operations[] = {
 { {"asin"},		ADI_ASIN_OP,	ADI_NORM_FUNC,	    ADI_PREFIX,
 	DB_SQL|DB_QUEL,     ADI_INGRES_6                 ,  
 		ADO_ASIN_CNT,  		    ADZ_ASIN_FIIDX},
+
+{ {"singlechk"},	ADI_SINGLECHK_OP,   ADI_NORM_FUNC,  ADI_PREFIX,
+	DB_SQL|DB_QUEL,     ADI_INGRES_6                 ,  
+		ADO_SINGLECHK_CNT,  	    ADZ_SINGLECHK_FIIDX},
 
 { {"singleton"},	ADI_SINGLETON_OP,   ADI_AGG_FUNC,  ADI_PREFIX,
 	DB_SQL|DB_QUEL,     ADI_INGRES_6                 ,  

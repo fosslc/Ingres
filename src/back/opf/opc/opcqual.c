@@ -1111,6 +1111,12 @@ opc_cqual(
 **	    for big IN lists.
 **	03-Nov-2009 (kiria01) b122822
 **	    Support both sorted and traditional INLIST form for generality
+**	11-Jun-2010 (kiria01) b123908
+**	    Don't access non-existant fields from PST_OPERAND nodes.
+**	14-Jul-2010 (kschendel) b123104
+**	    Don't need boolean constant specials any more, all boolean
+**	    constants in a where clause context should have been translated
+**	    to ii_true() or ii_false().
 */
 #define	    OPC_CNSTEXPR    1
 #define	    OPC_NOTCONST    2
@@ -1654,7 +1660,11 @@ opc_cqual1(
         	if (!resqnode)
                     break;
                 lqnode = resqnode->pst_right;   /* point to the operand */
-		cnvrtid = resqnode->pst_sym.pst_value.pst_s_op.pst_oprcnvrtid;
+		/* We should set cnvrtid from resqnode->pst_sym.pst_value
+		** .pst_s_op.pst_oprcnvrtid except this is a PST_OPERAND
+		** node that doesn't have pst_oprcnvrtid! For now it is
+		** sufficient that the value is not ADI_NILCOERCE */
+		cnvrtid = 0;
             }
 	    else
 	    {
@@ -2023,33 +2033,15 @@ opc_cqual1(
 	 case PST_USER:
 	    /* This is a constant expression, so do any compiling into the
 	    ** virgin segment. See the comment in the operator case above.
-	    ** One special case however, TRUE or FALSE should be instanciated
-	    ** as instructions ADE_SETTRUE or ADE_SETFALSE instead of going
-	    ** into VIRGIN segment.
 	    */
-	    if (root->pst_sym.pst_dataval.db_datatype == DB_BOO_TYPE)
-	    {
-		opc_adinstr(global, cadf, !*(char*)root->pst_sym.pst_dataval.db_data
-				? ADE_SETFALSE
-				: ADE_SETTRUE, ADE_SMAIN, 0, 0, 0);
-	    }
-	    else if (root->pst_sym.pst_dataval.db_datatype == -DB_BOO_TYPE)
-	    {
-		opc_adinstr(global, cadf,
-			(((char*)root->pst_sym.pst_dataval.db_data)[1] & ADF_NVL_BIT) ||
-					!*(char*)root->pst_sym.pst_dataval.db_data
-				? ADE_SETFALSE
-				: ADE_SETTRUE, ADE_SMAIN, 0, 0, 0);
-	    }
-		ret = OPC_CNSTEXPR;
-		segment = ADE_SVIRGIN;
+	    ret = OPC_CNSTEXPR;
+	    segment = ADE_SVIRGIN;
 
-		/* This is a constant that appears directly in the const
-		** node, so compile it into the CX and fill in ops[0]/
-		*/
-		opc_adconst(global, cadf, &root->pst_sym.pst_dataval, &ops[0],
-			    root->pst_sym.pst_value.pst_s_cnst.pst_cqlang,
-								    segment);
+	    /* This is a constant that appears directly in the const
+	    ** node, so compile it into the CX and fill in ops[0]/
+	    */
+	    opc_adconst(global, cadf, &root->pst_sym.pst_dataval, &ops[0],
+			root->pst_sym.pst_value.pst_s_cnst.pst_cqlang, segment);
 
 	    break;
 
@@ -4870,6 +4862,10 @@ opc_crupcurs(
 **	    for big IN lists.
 **	03-Nov-2009 (kiria01) b122822
 **	    Support both sorted and traditional INLIST form for generality
+**	14-Jul-2010 (kschendel) b123104
+**	    Don't need boolean constant specials any more, all boolean
+**	    constants in a where clause context should have been translated
+**	    to ii_true() or ii_false().
 */
 static VOID
 opc_crupcurs1(
@@ -5482,27 +5478,7 @@ opc_crupcurs1(
 	    break;
 
 	 case PST_USER:
-	    /* This is a constant expression, so do any compiling into the
-	    ** virgin segment. See the comment in the operator case above.
-	    ** One special case however, TRUE or FALSE should be instanciated
-	    ** as instructions ADE_SETTRUE or ADE_SETFALSE instead of going
-	    ** into VIRGIN segment.
-	    */
-	    if (root->pst_sym.pst_dataval.db_datatype == DB_BOO_TYPE)
-	    {
-		opc_adinstr(global, cadf, !*(char*)root->pst_sym.pst_dataval.db_data
-				? ADE_SETFALSE
-				: ADE_SETTRUE, ADE_SMAIN, 0, 0, 0);
-	    }
-	    else if (root->pst_sym.pst_dataval.db_datatype == -DB_BOO_TYPE)
-	    {
-		opc_adinstr(global, cadf,
-			(((char*)root->pst_sym.pst_dataval.db_data)[1] & ADF_NVL_BIT) ||
-					!*(char*)root->pst_sym.pst_dataval.db_data
-				? ADE_SETFALSE
-				: ADE_SETTRUE, ADE_SMAIN, 0, 0, 0);
-	    }
-
+	    /* This is a constant expression */
             opc_adconst(global, cadf, &root->pst_sym.pst_dataval, &ops[0],
 			root->pst_sym.pst_value.pst_s_cnst.pst_cqlang, ADE_SMAIN);
 	    break;

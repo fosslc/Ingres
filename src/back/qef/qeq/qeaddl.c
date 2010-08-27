@@ -6382,6 +6382,10 @@ dumpTextToScreen(
 **		( listOfReferringColumns )
 **		WITH PERSISTENCE, STRUCTURE=BTREE;
 **
+**	If TABLE-STRUCT is requested, we instead generate a modify:
+**		MODIFY tableName TO BTREE ON
+**		( listOfUniqueColumns )
+**		WITH [ COMPRESSION = ([HI]DATA) ] | [ FILLFACTOR = 100 ]
 **
 **
 ** Inputs:
@@ -6403,6 +6407,11 @@ dumpTextToScreen(
 **	3-may-2007 (dougi)
 **	    Add support for optional modify of base table to btree on
 **	    constrained columns (in lieu of secondary index).
+**	28-Jul-2010 (kschendel) SIR 124104
+**	    Add code to autostruct to preserve compression in case the table
+**	    was created with compression.  Also, tweak autostruct so that
+**	    it asks for 100% fillfactor ... lower fillfactors are pointless
+**	    for uncompressed btrees (due to the associated data page business).
 */
 
 static	char	createIndex[ ] = "CREATE INDEX ";
@@ -6414,6 +6423,10 @@ static	char	withBTREE[ ] = " ) WITH PERSISTENCE, STRUCTURE=";
 static	char	modifyTable1[ ] = "MODIFY ";
 
 static	char	toBTREE[ ] = " TO BTREE ON ";
+
+static	char	withFF100[ ] = " WITH FILLFACTOR=100 ";
+static	char	withDataComp[ ] = " WITH COMPRESSION=(DATA) ";
+static	char	withHidataComp[ ] = " WITH COMPRESSION=(HIDATA) ";
 
 static DB_STATUS
 textOfIndexOnRefingTable(
@@ -6512,6 +6525,19 @@ textOfIndexOnRefingTable(
 		    NO_POSTFIX, DB_MAX_COLS , ( char * ) NULL, ( char * ) NULL,
 		    LEAD_COMMA );
 	    if ( status != E_DB_OK )	break;
+
+	    /* WITH COMPRESSION = (data) (optional).  If no compression,
+	    ** add WITH FILLFACTOR = 100 which is best for uncompressed btree.
+	    */
+	    if (details->qci_compress & PST_DATA_COMP)
+		addString(&evolvingString, withDataComp, STlength(withDataComp),
+			NO_PUNCTUATION, NO_QUOTES);
+	    else if (details->qci_compress & PST_HI_DATA_COMP)
+		addString(&evolvingString, withHidataComp, STlength(withHidataComp),
+			NO_PUNCTUATION, NO_QUOTES);
+	    else
+		addString(&evolvingString, withFF100, STlength(withFF100),
+			NO_PUNCTUATION, NO_QUOTES);
 
 	    /* now concatenate all the string fragments */
 
@@ -9315,6 +9341,11 @@ textOfUpdateRefedRule(
 **		WITH PERSISTENCE, UNIQUE_SCOPE = STATEMENT,
 **		STRUCTURE = BTREE
 **
+**	If TABLE-STRUCT is requested, we instead generate a modify:
+**		MODIFY tableName TO BTREE UNIQUE
+**		UNIQUE_SCOPE = STATEMENT
+**		( listOfUniqueColumns )
+**		WITH [ COMPRESSION = ([HI]DATA) ] | [ FILLFACTOR = 100 ]
 **
 **
 ** Inputs:
@@ -9335,6 +9366,11 @@ textOfUpdateRefedRule(
 **	3-may-2007 (dougi)
 **	    Add support for optional modify of base table to btree on
 **	    constrained columns (in lieu of secondary index).
+**	28-Jul-2010 (kschendel) SIR 124104
+**	    Add code to autostruct to preserve compression in case the table
+**	    was created with compression.  Also, tweak autostruct so that
+**	    it asks for 100% fillfactor ... lower fillfactors are pointless
+**	    for uncompressed btrees (due to the associated data page business).
 */
 
 static char	createUniqueIndex[ ] = "CREATE UNIQUE INDEX ";
@@ -9439,6 +9475,19 @@ textOfUniqueIndex(
 		    NO_POSTFIX, DB_MAX_COLS , ( char * ) NULL, ( char * ) NULL,
 		    LEAD_COMMA );
 	    if ( status != E_DB_OK )	break;
+
+	    /* WITH COMPRESSION = (data) (optional).  If no compression,
+	    ** add WITH FILLFACTOR = 100 which is best for uncompressed btree.
+	    */
+	    if (details->qci_compress & PST_DATA_COMP)
+		addString(&evolvingString, withDataComp, STlength(withDataComp),
+			NO_PUNCTUATION, NO_QUOTES);
+	    else if (details->qci_compress & PST_HI_DATA_COMP)
+		addString(&evolvingString, withHidataComp, STlength(withHidataComp),
+			NO_PUNCTUATION, NO_QUOTES);
+	    else
+		addString(&evolvingString, withFF100, STlength(withFF100),
+			NO_PUNCTUATION, NO_QUOTES);
 
 	    /* now concatenate all the string fragments */
 

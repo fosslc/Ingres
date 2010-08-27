@@ -8,6 +8,13 @@
 //
 //    Dialog box for table (or view) grant.            
 //
+//    History:
+//	20-Aug-2010 (drivi01)
+//	 Updated a call to CAListBoxFillTables function which
+//	 was updated to include the 3rd parameter.
+//	 The 3rd parameter is set to FALSE here to specify that
+//	 only Ingres tables should be displayed.
+//
 ********************************************************************/
 
 #include <ctype.h>
@@ -136,7 +143,7 @@ static BOOL OnInitDialog (HWND hwnd, HWND hwndFocus, LPARAM lParam)
 
    if (lpgrant->ObjectType == OT_TABLE)
    {
-       if (!CAListBoxFillTables (hwndTables, lpgrant->DBName))
+       if (!CAListBoxFillTables (hwndTables, lpgrant->DBName, FALSE))
            CAListBoxDestroyItemData (hwndTables);
        if (x_strlen (lpgrant->PreselectObject) > 0)
        {

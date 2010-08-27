@@ -101,6 +101,9 @@
 **	26-May-2010 (hanje04)
 **	    SIR 123791
 **	    Define TYPICAL_VECTORWISE set of packages to be installed.
+**	14-Jul-2010 (hanje04)
+**	    BUG 124081
+**	    Added defns. for location to save the response file
 ** 
 */
 
@@ -110,6 +113,8 @@
 /* Default Install Information */
 #define DEFAULT_CHAR_SET 17 /* iso88591 */
 #define RESPONSE_FILE_NAME "iirfinstall"
+#define RESPONSE_FILE_SAVE_NAME "install.rsp"
+#define RESPONSE_FILE_SAVE_DIR "/var/lib/ingres/%s"
 #define STDOUT_LOGFILE_NAME "/tmp/iiinstall_stdout"
 #define STDERR_LOGFILE_NAME "/tmp/iiinstall_stderr"
 #define MAX_FNAME 256

@@ -916,7 +916,18 @@
 **      and stopped working due to long ids change.
 **      This change replaces the obsolete API call with a range of
 **      supported open API calls.
-**      
+**  24-Jun-2010 (frima01) Bug 123753
+**      Move LoadDemodb after and StarPostInstallation before UpgradeDatabases.
+**  30-Jun-2010 (drivi01) Bug 123753
+**      Add function StartOneServer to avoid having to recycle
+**      the whole installation and save time during post installation.
+**      Remove Sleep from LoadDemodb, don't think it's needed.
+**      Start Star server after installation only in case of upgrade
+**      to ensure the star databases are upgraded, otherwise it isn't
+**      needed, save time and don't start.
+**  20-Jul-2010 (drivi01)
+**	    Add newly exposed configuration parameters to the post installation.
+**	    Handle upgrade cases.
 **	    
 */
 /* Turn off POSIX warning for this file until Microsoft fixes this bug */
@@ -1533,6 +1544,8 @@ CInstallation::SetDate()
 **	    Advantage Ingres SDK.
 **	21-jan-2004 (penga03)
 **	    Remove inguninst.exe only if upgrade.
+**	24-May-2010 (drivi01)
+**	    Remove Ice.  Leave the code.
 */
 void
 CInstallation::Init()
@@ -1547,7 +1560,9 @@ CInstallation::Init()
     AddComponent(IDS_LABELTOOLS, SIZE_TOOLS, TRUE, TRUE);
     AddComponent(IDS_LABELVISION, SIZE_VISION, TRUE, TRUE);
     AddComponent(IDS_LABELREPLICATOR,SIZE_REPLICAT, TRUE, TRUE);
+#ifdef BUILD_ICE    
     AddComponent(IDS_LABELICE, SIZE_ICE, TRUE, TRUE);
+#endif
     AddComponent(IDS_LABELOPENROADDEV, SIZE_OPENROAD_DEV, TRUE, TRUE);
     AddComponent(IDS_LABELDOC, SIZE_DOC, TRUE, TRUE);
     AddComponent(IDS_LABELOPENROADRUN, SIZE_OPENROAD_RUN, FALSE, TRUE);
@@ -1572,7 +1587,9 @@ CInstallation::Init()
     CComponent	*tools = GetTools();
     CComponent	*vision = GetVision();
     CComponent	*replicat = GetReplicat();
+#ifdef BUILD_ICE    
     CComponent	*ice = GetICE();
+#endif
     CComponent	*openroaddev = GetOpenROADDev();
     CComponent	*openroadrun = GetOpenROADRun();
     CComponent	*onlinedoc = GetOnLineDoc();
@@ -1765,11 +1782,13 @@ CInstallation::Init()
 	replicat->m_selected = GetRegValueBOOL(
 			strValue.LoadString(IDS_LABELREPLICATOR) ? strValue : "", FALSE);
     }
+#ifdef BUILD_ICE    
     if (ice)
     {
 	ice->m_selected = GetRegValueBOOL(
 			strValue.LoadString(IDS_LABELICE) ? strValue : "", FALSE);
     }
+#endif
     if (openroaddev)
     {
 	openroaddev->m_selected = GetRegValueBOOL(
@@ -1930,6 +1949,8 @@ CInstallation::Execute(LPCSTR lpCmdLine, BOOL bWait/*=TRUE*/, BOOL bWindow/*=FAL
 **	06-oct-2001 (penga03)
 **	    Set the defalut value of m_HTTP_ServerPath to be the install path of 
 **	    the HTTP server installed locally.
+**	24-May-2010 (drivi01)
+**	    Remove Ice, leave the code.
 */
 BOOL
 CInstallation::SetSymbolTbl()
@@ -2016,7 +2037,7 @@ CInstallation::SetSymbolTbl()
 	if (Exec("ingsetenv.exe", s))
 	    error = TRUE;
     }
-
+#ifdef BUILD_ICE    
     CComponent *ice = theInstall.GetICE();
     if ((ice) && (ice->m_selected))
     { 	
@@ -2040,6 +2061,7 @@ CInstallation::SetSymbolTbl()
 		}
 	    }
 	}
+	
 		
 	if(!Local_NMgtIngAt("II_ICE_COLDFUSION", m_ColdFusionPath))
 	    m_ColdFusionPath = GetRegValue("iicoldfusiondir");
@@ -2056,6 +2078,7 @@ CInstallation::SetSymbolTbl()
 	if (Exec("ingsetenv.exe", s)) 
 	    error = TRUE;
     }
+#endif
 
     AppendComment(error ? IDS_FAILED : IDS_DONE);
     return (!error);
@@ -2159,12 +2182,16 @@ CInstallation::CheckpointOneDatabase(LPCSTR lpName)
 **	    Removed upgrade of imadb, icedb, icetutor, and icesvr, as they
 **	    are now treated as system databases and will get upgraded
 **	    automatically by an upgradedb on iidbdb.
+**  24-May-2010 (drivi01)
+**      Remove Ice, leave the code.
 */
 BOOL
 CInstallation::CreateDatabases()
 {
     CComponent	*dbms = theInstall.GetDBMS();
+#ifdef BUILD_ICE    
     CComponent	*ice = theInstall.GetICE();
+#endif
     BOOL	bret = TRUE;
 
     if (dbms && dbms->m_selected)
@@ -2231,6 +2258,7 @@ CInstallation::CreateDatabases()
 	AppendComment(bret ? IDS_DONE : IDS_FAILED);
 	}
 
+#ifdef BUILD_ICE    
     if (ice && ice->m_selected)
     {
 	BOOL bCreateICEDB=0;
@@ -2251,7 +2279,7 @@ CInstallation::CreateDatabases()
 	    if(bret)
 	    {
 		CString t(m_installPath); t.Replace("\\", "/");
-
+		
 		/*
 		** modify [II_SYSTEM] in
 		** %II_SYSTEM%\ingres\temp\icesdk.sql
@@ -2293,7 +2321,7 @@ CInstallation::CreateDatabases()
 	if (bCreateICEDB)
 	    AppendComment(bret ? IDS_DONE : IDS_FAILED);
     }
-
+#endif
 #ifdef EVALUATION_RELEASE
 
     if (!Create_OtherDBUsers())
@@ -2416,10 +2444,6 @@ CInstallation::CreateDatabases()
     {
 	if (!CreateOneDatabase("timeregs -utimregs"))
 	    bret = FALSE;
-    }
-
-    if (bret)
-    {
     }
 
     /* create and populate infocadb */
@@ -3050,6 +3074,11 @@ CInstallation::CleanSharedMemory()
 **	12-May-2010 (drivi01)
 **          Add two new parameters on the upgrade offline_error_action
 **          and online_error_action.
+**  24-May-2010 (drivi01)
+**		Remove Ice, leave the code.
+**	13-Aug-2010 (drivi01)
+** 	    For upgrade scenarios, added a big list of parameters
+**	    that should be added to config.dat on upgrade.
 */
 BOOL
 CInstallation::SetConfigDat()
@@ -3061,7 +3090,7 @@ CInstallation::SetConfigDat()
     DWORD	dw = 0;
     HANDLE	File;
     CComponent	*dbms = theInstall.GetDBMS();
-    CString	temp, BakCrsFile, SetupString;
+    CString	temp, value, BakCrsFile, SetupString;
 
     Host = m_computerName;
     Host.MakeLower();
@@ -3105,15 +3134,109 @@ CInstallation::SetConfigDat()
 
 
 	/* 
-	** New parameters for release 10.0
+	** Newly exposed parameters in release 10.0, may have existing values
+	** especially in future releases. (Upgrade Scenario only)
 	*/
-	cmd.Format("offline_error_action \"%s\\ingres\\files\\dbms.rfm",
+	cmd.Format("-keep offline_error_action \"%s\\ingres\\files\\dbms.rfm",
 		   (LPCSTR)m_installPath);
 	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
-	cmd.Format("online_error_action \"%s\\ingres\\files\\dbms.rfm",
+	cmd.Format("-keep online_error_action \"%s\\ingres\\files\\dbms.rfm",
 		   (LPCSTR)m_installPath);
 	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
-
+	cmd.Format("-keep system_lock_level \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep dmf_build_pages \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep opf_new_enum \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep opf_greedy_factor \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep qef_hash_rbsize \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep qef_hash_wbsize \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep qef_hash_cmp_threshold \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep qef_hashjoin_min \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep qef_hashjoin_max \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep cache_dynamic \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep table_auto_structure \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep batch_copy_optim \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep cardinality_check \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep degree_of_parallelism \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep fallocate \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep opf_inlist_thresh \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep opf_pq_partthreads \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep psf_vch_prec \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep qef_max_mem_sleep \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep qef_no_dependency_chk \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep result_structure \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep rule_del_prefetch \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep qef_memory \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep sole_cache \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep optimize_writes \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep readbackward_blocks \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep readforward_blocks \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep dmf_crypt_maxkeys \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep create_compression \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep default_journaling \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	cmd.Format("-keep sole_server \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	
 	/*
 	** Brand new parameters for this release.
 	*/
@@ -3253,6 +3376,7 @@ CInstallation::SetConfigDat()
 	** Compute dmf_tcb_limit from old dmf_hash_size.
 	** The temporary rules have to live in II_CONFIG.
 	*/
+	BOOL bset_direct_io = FALSE;
 	temp.Format("%s\\ingres\\files\\postdbms.crs", (LPCSTR)m_installPath);
 	RemoveFile(temp);
 	AppendToFile(temp, "ii.$.dbms.$.dmf_tcb_limit:\t8 * ii.$.dbms.$.dmf_hash_size, MIN = 2048;\n");
@@ -3262,11 +3386,51 @@ CInstallation::SetConfigDat()
 	AppendToFile(temp, "ii.$.dbms.$.rdf_tbl_cols:	50;\n");
 	AppendToFile(temp, "ii.$.rcp.log.cp_interval_mb:	(ii.$.rcp.file.kbytes * (ii.$.rcp.log.cp_interval / 100) + 512) / 1024, MIN = 1;\n");
 	AppendToFile(temp, "ii.$.rcp.log.cp_interval:	5;\n");
+	ConfigKey.Format("ii.%s.dbms.*.direct_io", Host);
+	if (Local_PMget(ConfigKey, value) && !value.IsEmpty())
+	{
+		CString value2;
+		value2.Format("ii.$.config.direct_io:\t%s;\n", value.GetBuffer());
+		AppendToFile(temp, value2.GetBuffer());
+		bset_direct_io = TRUE;
+	}
+	ConfigKey.Format("ii.%s.dbms.*.direct_io_log", Host);
+	if (Local_PMget(ConfigKey, value) && !value.IsEmpty())
+	{
+		CString value2;
+		value2.Format("ii.$.config.direct_io_log:\t%s;\n", value.GetBuffer());
+		AppendToFile(temp, value2.GetBuffer());
+	}
+	ConfigKey.Format("ii.%s.dbms.*.direct_io_load", Host);
+	if (Local_PMget(ConfigKey, value) && !value.IsEmpty())
+	{
+		CString value2;
+		value2.Format("ii.$.config_direct_load:\t%s;\n", value.GetBuffer());
+		AppendToFile(temp, value2.GetBuffer());
+	}
 
 	temp2.Format("%s\\ingres\\files\\dbms.rfm", (LPCSTR)m_installPath);
 	temp3.Format("%s\\ingres\\temp\\rfmtemp", (LPCSTR)m_installPath);
 	CopyFile(temp2, temp3, FALSE);
 	AppendToFile(temp3, "rulefile.99: postdbms.crs\n");
+
+	/* Special case: Figure out if dmf_tcb_limit was set to 5000, reset to 10000 if it was
+	** otherwise just keep the old value. If it was not previously set, then just
+	** expose the default value.
+	*/
+	ConfigKey.Format("ii.%s.dbms.*.dmf_tcb_limit", Host);
+	if (Local_PMget(ConfigKey, value) && !value.IsEmpty() && atoi(value) != 5000)
+	{
+		cmd.Format("-keep dmf_tcb_limit \"%s\\ingres\\temp\\rfmtemp",
+ 		   (LPCSTR)m_installPath);
+ 		Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	}
+	else
+	{
+		cmd.Format("dmf_tcb_limit \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+		Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	}
 
 	cmd.Format("-keep qef_dsh_memory \"%s\\ingres\\temp\\rfmtemp",
 		   (LPCSTR)m_installPath);
@@ -3277,9 +3441,36 @@ CInstallation::SetConfigDat()
 	cmd.Format("-keep cp_interval_mb \"%s\\ingres\\temp\\rfmtemp",
 		   (LPCSTR)m_installPath);
 	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
-	cmd.Format("-keep dmf_tcb_limit \"%s\\ingres\\temp\\rfmtemp",
+	
+	/* Special case: Assign the old value of ii.$.dbms.*.direct_io to the new parameter
+	** of ii.$.config.direct_io if it was previously set, if not
+	** just set it to the new value, if exists keep the existing value
+	*/
+	if (bset_direct_io)
+	{
+		cmd.Format("-keep direct_io \"%s\\ingres\\temp\\rfmtemp",
+			   (LPCSTR)m_installPath);
+		Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+		cmd.Format("-keep direct_io_log \"%s\\ingres\\temp\\rfmtemp",
+			   (LPCSTR)m_installPath);
+		Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+		cmd.Format("-keep direct_io_load \"%s\\ingres\\temp\\rfmtemp",
+			   (LPCSTR)m_installPath);
+		Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	}
+	else
+	{
+		cmd.Format("-keep direct_io \"%s\\ingres\\files\\dbms.rfm",
 		   (LPCSTR)m_installPath);
-	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+		Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+		cmd.Format("-keep direct_io_log \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+		Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+		cmd.Format("-keep direct_io_load \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+		Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
+	}
+
 
 	RemoveFile(temp3);
 	RemoveFile(temp);
@@ -3510,6 +3701,7 @@ CInstallation::SetConfigDat()
 	cmd.Format("ii.%s.ingstart.*.rmcmd 0", (LPCSTR)m_computerName);
 	Exec(m_installPath + "\\ingres\\utility\\iisetres.exe", cmd, FALSE);
 
+#ifdef BUILD_ICE    
 	/*
 	** Set ICE Server startup count to 0 since setup is not yet complete
 	** Also, enable 4K pages, as ICE uses row level locking.
@@ -3523,6 +3715,7 @@ CInstallation::SetConfigDat()
 	    cmd.Format("ii.%s.ingstart.*.icesvr 0", (LPCSTR)m_computerName);
 	    Exec(m_installPath + "\\ingres\\utility\\iisetres.exe", cmd, FALSE);
 	}
+#endif
 
 	CComponent *star = theInstall.GetStar();
 	if ((star) && (star->m_selected))
@@ -3926,6 +4119,32 @@ CInstallation::StartServer(BOOL Comment/*=TRUE*/)
 }
 
 BOOL
+CInstallation::StartOneServer(char *server_name)
+{
+     BOOL error = FALSE;
+	
+     if (m_bClusterInstall)
+     {
+	/* In case of cluster, we have to bring the whole cluster down and then up
+        ** assuming Star or server was setup properly and will come up.
+	** The counter of the server at this point has to be set to 1, ensure that
+	** it is the case.
+	*/
+	if (!OfflineResource())
+	    error = TRUE;
+	if (!OnlineResource())
+	    error = TRUE;
+     }
+     else
+     {
+	if (Exec(m_installPath + "\\ingres\\utility\\ingstart.exe", server_name))
+	    error = TRUE;
+     }
+
+return (!error);
+}
+
+BOOL
 CInstallation::StopServer(BOOL echo)
 {
     BOOL error = FALSE;
@@ -4143,6 +4362,8 @@ CInstallation::UpdateLogFile()
 **	    Restore the Net server startup count correctly after an 
 **	    installation is modified. This corrects the bug introduced in
 **	    change 494289 for b121120.
+**  24-May-2010 (drivi01)
+**	    Remove ice, leave the code.
 **	    
 */
 DWORD
@@ -4158,7 +4379,9 @@ CInstallation::ThreadPostInstallation()
     CComponent	*tools = GetTools();
     CComponent	*vision = GetVision();
     CComponent	*replicat = GetReplicat();
+#ifdef BUILD_ICE    
     CComponent	*ice = GetICE();
+#endif
     CComponent	*openroaddev = GetOpenROADDev();
     CComponent	*openroadrun = GetOpenROADRun();
     CComponent	*jdbc = GetJDBC();
@@ -4287,12 +4510,9 @@ CInstallation::ThreadPostInstallation()
     if (bret && dbms->m_selected)	
 	bret = ServerPostInstallation();
 
-    if (bret && star->m_selected)	
-	bret = StarPostInstallation();
-
     if (bret && replicat->m_selected)	
 	bret = ReplicatPostInstallation();
-
+#ifdef BUILD_ICE    
     if (bret && ice->m_selected)	
 	{
 	if (!dbms->m_selected)
@@ -4312,10 +4532,11 @@ CInstallation::ThreadPostInstallation()
 
 	if (bret)
 	    bret = IcePostInstallation();
-
+    
 	if (!dbms->m_selected)
 	    StopServer(TRUE);
-    }
+	}
+#endif
 
 #ifdef EVALUATION_RELEASE
     if(bret)
@@ -4714,6 +4935,8 @@ RemoveObsoleteRegEntries()
 **	    Remove prompt to upgrade user databases.  User is asked this 
 **	    question in pre-installer now and doesn't need to be asked 
 **	    the same question twice.
+**  24-May-2010 (drivi01)
+**      Remove Ice, leave the code.
 */
 BOOL
 CInstallation::ServerPostInstallation()
@@ -4721,6 +4944,7 @@ CInstallation::ServerPostInstallation()
     BOOL	bret = TRUE;
     CString	strBuffer;
     CComponent	*dbms = GetDBMS();
+    CComponent	*star = GetStar();
     CString cmd;
     BOOL silent;
 
@@ -4806,13 +5030,21 @@ CInstallation::ServerPostInstallation()
     if (bret && !LoadIMA())
 	bret = FALSE;
 
-	if (bret && DatabaseExists("demodb") && !LoadDemodb())
-	bret = FALSE;
-
+#ifdef BUILD_ICE    
     CComponent *ice = theInstall.GetICE();
     if ((ice) && (ice->m_selected))
     {
 	if (bret && !LoadICE())
+	    bret = FALSE;
+    }
+#endif
+    
+    /* Finish star server configuration and start it for the upgrade */
+    if (bret && star->m_selected)	
+    {
+	bret = StarPostInstallation();
+	/* drivi01: Start only star server here not to waste time recycling the whole installation */
+	if (bret && m_DBMSupgrade && !StartOneServer("-iistar"))
 	    bret = FALSE;
     }
 
@@ -4830,7 +5062,10 @@ CInstallation::ServerPostInstallation()
 	m_attemptedUDBupgrade = TRUE;
     }
 
-	StopServer(TRUE);
+    if (bret && DatabaseExists("demodb") && !LoadDemodb())
+    bret = FALSE;
+
+    StopServer(TRUE);
 
     if (bret)
     {
@@ -5419,7 +5654,6 @@ CInstallation::LoadDemodb()
 
     SetStdHandle(STD_INPUT_HANDLE, SaveStdin);
     CloseHandle(newstdin);
-    Sleep (1500);
 
 	if (i == 0)
 		if(!CheckpointOneDatabase("-j demodb"))

@@ -24,6 +24,9 @@
 ** 09-Mar-2009 (smeke01) b121764
 **    Pass parameters to CreateSQLWizard as UCHAR so that we don't 
 **    need to use the T2A macro.
+** 30-Jun-2010 (drivi01)
+**    Bug #124006
+**    Add new BOOLEAN datatype.
 */
 
 #include <ctype.h>
@@ -497,6 +500,48 @@ static CTLDATA typeTypesAnsiDate[] =
    -1    // terminator
 };
 
+static CTLDATA typeTypesBoolean[] =
+{
+   INGTYPE_C,              IDS_INGTYPE_C,
+   INGTYPE_CHAR,           IDS_INGTYPE_CHAR,
+   INGTYPE_TEXT,           IDS_INGTYPE_TEXT,
+   INGTYPE_VARCHAR,        IDS_INGTYPE_VARCHAR,
+   INGTYPE_LONGVARCHAR,    IDS_INGTYPE_LONGVARCHAR,
+   INGTYPE_BIGINT,         IDS_INGTYPE_BIGINT,
+   INGTYPE_BOOLEAN,	   IDS_INGTYPE_BOOL,
+   INGTYPE_INT8,           IDS_INGTYPE_INT8,
+   INGTYPE_INT4,           IDS_INGTYPE_INT4,
+   INGTYPE_INT2,           IDS_INGTYPE_INT2,
+   INGTYPE_INT1,           IDS_INGTYPE_INT1,
+   INGTYPE_DECIMAL,        IDS_INGTYPE_DECIMAL,
+   INGTYPE_FLOAT,          IDS_INGTYPE_FLOAT,
+   INGTYPE_FLOAT8,         IDS_INGTYPE_FLOAT8,
+   INGTYPE_FLOAT4,         IDS_INGTYPE_FLOAT4,
+   INGTYPE_DATE,           IDS_INGTYPE_DATE,
+   INGTYPE_ADTE,           IDS_INGTYPE_ADTE,             // ansidate
+   INGTYPE_TMWO,           IDS_INGTYPE_TMWO,             // time without time zone
+   INGTYPE_TMW,            IDS_INGTYPE_TMW,              // time with time zone
+   INGTYPE_TME,            IDS_INGTYPE_TME,              // time with local time zone
+   INGTYPE_TSWO,           IDS_INGTYPE_TSWO,             // timestamp without time zone
+   INGTYPE_TSW,            IDS_INGTYPE_TSW,              // timestamp with time zone
+   INGTYPE_TSTMP,          IDS_INGTYPE_TSTMP,            // timestamp with local time zone
+   INGTYPE_INYM,           IDS_INGTYPE_INYM,             // interval year to month
+   INGTYPE_INDS,           IDS_INGTYPE_INDS,             // interval day to second
+   INGTYPE_IDTE,           IDS_INGTYPE_IDTE,             // ingresdate
+   INGTYPE_MONEY,          IDS_INGTYPE_MONEY,
+   INGTYPE_BYTE,           IDS_INGTYPE_BYTE,
+   INGTYPE_BYTEVAR,        IDS_INGTYPE_BYTEVAR,
+   INGTYPE_LONGBYTE,       IDS_INGTYPE_LONGBYTE,
+   INGTYPE_INTEGER,        IDS_INGTYPE_INTEGER,          // equivalent to INT4
+   INGTYPE_OBJKEY,         IDS_INGTYPE_OBJECTKEY,
+   INGTYPE_TABLEKEY,       IDS_INGTYPE_TABLEKEY,
+   INGTYPE_UNICODE_NCHR,   IDS_INGTYPE_UNICODE_NCHR,     // unicode nchar
+   INGTYPE_UNICODE_NVCHR,  IDS_INGTYPE_UNICODE_NVCHR,    // unicode nvarchar
+   INGTYPE_UNICODE_LNVCHR, IDS_INGTYPE_UNICODE_LNVCHR,   // unicode long nvarchar
+   -1    // terminator
+};
+
+
 typedef struct tagPROCADD {
   LPSTR lpStatement;        // returned statement
   BOOL  bParameter;         // TRUE for parameter, FALSE for declare section
@@ -761,7 +806,9 @@ static BOOL OnSubAddInitDialog (HWND hwnd, HWND hwndFocus, LPARAM lParam)
    SetWindowText  (hwnd, szTitle);
 
    // Initialize controls
-   if (GetOIVers() >= OIVERS_91)
+   if (GetOIVers() >= OIVERS_100)
+      OccupyComboBoxControl(GetDlgItem(hwnd, IDC_PROC_SUBADD_TYPE), typeTypesBoolean);
+   else if (GetOIVers() >= OIVERS_91)
       OccupyComboBoxControl(GetDlgItem(hwnd, IDC_PROC_SUBADD_TYPE), typeTypesAnsiDate);
    else if (GetOIVers() >= OIVERS_30)
       OccupyComboBoxControl(GetDlgItem(hwnd, IDC_PROC_SUBADD_TYPE), typeTypesBigInt);
@@ -955,6 +1002,7 @@ struct coltype {
       {INGTYPE_TEXT        ," text("         },
       {INGTYPE_VARCHAR     ," varchar("      },
       {INGTYPE_LONGVARCHAR ," long varchar " },
+      {INGTYPE_BOOLEAN     ," boolean "      },
       {INGTYPE_BIGINT      ," bigint "       },
       {INGTYPE_INT8        ," int8 "         },
       {INGTYPE_INT4        ," int "          },

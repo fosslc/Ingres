@@ -34,6 +34,7 @@ NO_OPTIM=dr6_us5
 #include    <dmf.h>
 #include    <dmccb.h>
 #include    <dmtcb.h>
+#include    <dmucb.h>
 #include    <qsf.h>
 #include    <ddb.h>
 #include    <opfcb.h>
@@ -365,6 +366,11 @@ NO_OPTIM=dr6_us5
 **	    Remove max_tuple_length.
 **	29-apr-2010 (stephenb)
 **	    Add option "!.batch_copy_optim"
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Add create-compression.
+**	29-Jul-2010 (miket) BUG 124154
+**	    Improve dmf_crypt_maxkeys handling.
+**	    Supply missing break in CRYPT_MAXKEYS.
 */
 
 /*
@@ -501,6 +507,7 @@ struct _SCD_OPT {
 # define	SCO_SORT_IOFACTOR	 96
 # define	SCO_AUTOSTRUCT		 97
 # define	SCO_CACHE_DYNAMIC	 98
+# define	SCO_CREATE_COMPRESSION	 99	/* create-table compression */
 
 # define	SCO_SESSION_CHK_INTERVAL 100	/* Session check interval */
 # define	SCO_SECURE_LEVEL	 101
@@ -732,6 +739,7 @@ static SCD_OPT scd_opttab[] =
     SCO_CHECK_DEAD,		'o',	'3',	"!.check_dead",
     SCO_CORE_ENABLED,		't',	' ',	"!.core_enabled",
     SCO_CP_TIMER,		'o',	'3',	"!.cp_timer",
+    SCO_CREATE_COMPRESSION,	'g',	'3',	"!.create_compression",
     SCO_CURS_LIMIT,		'o',	' ',	"!.cursor_limit",
     SCO_DBCNT,			'o',	' ',	"!.database_limit",
     SCO_DBLIST,			'g',	' ',	"!.database_list",
@@ -1212,6 +1220,7 @@ scd_options(
 		/* Set the maximum shmem active encryption keys */
 		dca->char_id = DMC_C_CRYPT_MAXKEYS;
 		dca++->char_value = scd_value;
+		break;
 
 	    case SCO_DBCNT:
 		scd_cb->max_dbcnt = scd_value;
@@ -1752,6 +1761,20 @@ scd_options(
 	    case SCO_CP_TIMER:
 		scd_cb->cp_timeout = scd_value;
 		break;
+
+	    case SCO_CREATE_COMPRESSION:
+		/* Values should be validated by cbf */
+		if (STcasecmp(scd_svalue, "none") == 0)
+		    psq_cb->psq_create_compression = DMU_C_OFF;
+		else if (STcasecmp(scd_svalue, "data") == 0)
+		    psq_cb->psq_create_compression = DMU_C_ON;
+		else if (STcasecmp(scd_svalue, "hidata") == 0)
+		    psq_cb->psq_create_compression = DMU_C_HIGH;
+		else
+		    TRdisplay("%@ Invalid create_compression value %s ignored\n",
+			scd_svalue);
+		break;
+
 
 	    case SCO_CSRUPDATE:
 		if (STcasecmp(scd_svalue, ERx("deferred") ) == 0)

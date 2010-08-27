@@ -958,6 +958,9 @@ GLOBALREF HANDLE    GCshutdownEvent;
 **	    can get a trace WARNING in listen complete when pipe owner
 **	    doesn't match the user sent by the client when Ingres run
 **	    as a service (SYSTEM vs system).
+**	16-Aug-2010 (Bruce Lunsford) Bug 124263
+**	    Ingstart.exe may crash or take (up to 30 seconds) longer than it
+**	    should to start Ingres if II_GC_PROT=tcp_ip (from sir 122679).
 */
 
 /******************************************************************************
@@ -1932,6 +1935,13 @@ GCregister(SVC_PARMS *svc_parms)
 **	    to _beginthreadex() which is recommended when using C runtime.
 **      13-Apr-2010 (Bruce Lunsford) Sir 122679
 **          If net protocol driver selected, call it with GCC_CONNECT.
+**	16-Aug-2010 (Bruce Lunsford) Bug 124263
+**	    Save the (connect_)iocb address in the asipc for driver
+**	    connections (eg, tcp_ip) so that it can be freed later in
+**	    GCrelease().  Previously, this "save" was only done if
+**	    connect processing reached the end of GCDriverRequest_exit()
+**	    with intermediate MEfree()s if an error occurred, which
+**	    complicated the code and could cause a crash in ingstart.
 **
 ******************************************************************************/
 VOID
@@ -1986,6 +1996,10 @@ GCrequest(SVC_PARMS *svc_parms)
 		GCTRACE(1)("GCrequest: Failed to allocate ASYNC IOCB block for GCC driver call.\n");
 		GCerror(GC_RQ_RESOURCE, ER_alloc);
 	    }
+	    /*
+	    ** Save pointer to iocb so that it can be freed in GCrelease().
+	    */
+	    asipc->connect_iocb = iocb;
 	    iocb->svc_parms = svc_parms;
 	    GCDriverRequest (svc_parms, iocb);
 	    return;
@@ -2388,6 +2402,10 @@ GCrequest2_end:
 **	    2-byte length prefix.
 **	    Add optional input parm iocb_in which will be used if not NULL;
 **	    needed for driver logic which already has an ASYNC_IOCB.
+**	16-Aug-2010 (Bruce Lunsford) Bug 124263
+**	    Return OK rather than svc_parms->status after call to
+**	    GCDriverSendPeer() since lower layers will handle errors and
+**	    call the completion routine appropriately themselves.
 **
 ******************************************************************************/
 STATUS
@@ -2524,11 +2542,19 @@ GCrequestSendPeer(SVC_PARMS *svc_parms, ASYNC_IOCB *iocb_in)
 
     /*
     **  If network protocol driver selected, call it with GCDriverSendPeer.
+    **  - Return OK here, rather than svc_parms->status, since lower
+    **    layers will call the completion routine appropriately
+    **    themselves, thus handling errors if they should occur.
+    **    In fact, the driver code will likely call GCA back directly
+    **    several times before returning (if I/O completes immediately).
+    **    Also, if bedchecking the name server, the svc_parms->status
+    **    will generally be E_GC0032_NO_PEER and appear to be an error
+    **    when it is not.
     */
     if (GCdriver_pce)
     {
 	GCDriverSendPeer (svc_parms, connect_block);
-	return(svc_parms->status);
+	return(OK);
     }
 
     /*
@@ -7418,6 +7444,12 @@ GCDriverRequest(SVC_PARMS *svc_parms, ASYNC_IOCB *iocb)
 ** History:
 **	13-Apr-2010 (Bruce Lunsford) Sir 122679
 **	    Created.
+**	16-Aug-2010 (Bruce Lunsford) Bug 124263
+**	    Move saving of the iocb address in the asipc to earlier, when
+**	    the iocb is first allocated.  Also remove all MEfree(iocb)'s
+**	    since it will be freed later in GCrelease(). This eliminates
+**	    the chance of freeing the memory twice and fixes an occasional
+**	    crash in ingstart.
 **
 ******************************************************************************/
 VOID
@@ -7445,7 +7477,6 @@ GCDriverRequest_exit( PTR ptr )
 		    gcccl_parmlist->function_parms.connect.port_id,
 		    gcccl_parmlist->generic_status,
 		    gcccl_parmlist->system_status.callid);
-	MEfree( iocb );
 	/*
 	** Map GCC CL errors to GCA CL errors
 	*/
@@ -7509,24 +7540,18 @@ GCDriverRequest_exit( PTR ptr )
     status = GCrequestSendPeer(svc_parms, iocb);
     if (status != OK)
     {
+	GCTRACE(1)("GCDriverRequest_exit: GCrequestSendPeer() failed (%x) for protocol '%s' to node %s port '%s' with status=%x system_status=%d\n",
+		    status,
+		    GCdriver_pce->pce_pid,
+		    gcccl_parmlist->function_parms.connect.node_id,
+		    gcccl_parmlist->function_parms.connect.port_id,
+		    gcccl_parmlist->generic_status,
+		    gcccl_parmlist->system_status.callid);
 	svc_parms->status = NP_IO_FAIL;
-	MEfree(iocb);
 	svc_parms->sys_err->errnum = status;
 	(*svc_parms->gca_cl_completion) (svc_parms->closure);
     }
 
-    /*
-    ** Save pointer to iocb so that it can be freed in GCrelease.
-    ** Since the gca_cl_completion() will be invoked directly from
-    ** the GCDriverSend() state machine at lower layers when the send
-    ** IO completes (successfully or not), we don't get control back
-    ** when that happens, so don't have a good way to free the iocb.
-    ** The GCDriverSend layer doesn't know about the iocb, so it can't
-    ** really free it either.  It also can't be freed until the send is
-    ** fully completed because the send buffer is the connect block,
-    ** which is concatenated to the iocb.
-    */
-    asipc->connect_iocb = iocb;
     return;
 }
 

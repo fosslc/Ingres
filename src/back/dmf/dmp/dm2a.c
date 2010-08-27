@@ -772,6 +772,13 @@ DB_ERROR     	*dberr )
 **	    Ensure the misc_data pointer in a MISC_CB is set correctly and
 **	    that we correctly allocate sizeof(DMP_MISC), not sizeof(DM_OBJECT)
 **	    since that's what we're actually using (the type is MISC_CB)
+**	22-Jul-2010 (kschendel) b124116
+**	    Fix problems if we allocate more RCB's here and the table
+**	    contains LOB's.  If we're not qualifying rows, tag the RCB
+**	    with "no coupon" since we can't possibly care about any
+**	    LOB columns.  If we're qualifying, there is some remote chance
+**	    that the where-clause will involve LOBs, so copy the BQCB
+**	    pointer from the calling RCB into our temporary ones.
 */
 static DB_STATUS
 build_sagg_actions(
@@ -872,15 +879,19 @@ DB_ERROR     	*dberr )
 	    if (agglims != DM2A_AGLIM_COUNT)
 	    {
 		status = dm2r_rcb_allocate(t, rcb, &rcb->rcb_tran_id,
-		    rcb->rcb_lk_id, rcb->rcb_log_id, &act[na].rcb, dberr);
-		
+		    rcb->rcb_lk_id, rcb->rcb_log_id, &arcb, dberr);
+
 		if ( status != E_DB_OK )
 		    break;
-                /* b84245 - simple aggregates do not require WRITE mode */
-                act[na].rcb->rcb_lk_mode = RCB_K_IS;
-                act[na].rcb->rcb_k_mode = RCB_K_IS;
-                act[na].rcb->rcb_access_mode = RCB_A_READ;
-                act[na].rcb->rcb_uiptr = rcb->rcb_uiptr;
+		act[na].rcb = arcb;
+		/* b84245 - simple aggregates do not require WRITE mode */
+		arcb->rcb_lk_mode = RCB_K_IS;
+		arcb->rcb_k_mode = RCB_K_IS;
+		arcb->rcb_access_mode = RCB_A_READ;
+		arcb->rcb_uiptr = rcb->rcb_uiptr;
+		/* won't need any lobs in the row */
+		arcb->rcb_state |= RCB_NO_CPN;
+
 		/* passed-in RCB should point to a valid message area if
 		** it was opened in the normal way by a user (dmtopen).
 		*/
@@ -897,18 +908,17 @@ DB_ERROR     	*dberr )
 			rnl_bufs = 2;
 		    status = dm0m_allocate(
 				sizeof(DMP_MISC) + t->tcb_rel.relpgsize * rnl_bufs,
-		    		(i4)0, (i4)MISC_CB, 
+				(i4)0, (i4)MISC_CB,
 				(i4)MISC_ASCII_ID, (char *)&act[na].rcb,
-				(DM_OBJECT **)&act[na].rcb->rcb_rnl_cb, 
+				(DM_OBJECT **)&arcb->rcb_rnl_cb,
 				dberr);
 		    if (status != E_DB_OK)
 			break;
-		    act[na].rcb->rcb_rnl_cb->misc_data =
-			(char*)act[na].rcb->rcb_rnl_cb + sizeof(DMP_MISC);
+		    arcb->rcb_rnl_cb->misc_data =
+			(char*)arcb->rcb_rnl_cb + sizeof(DMP_MISC);
 		}
-		status = dm2r_position(act[na].rcb, DM2R_ALL, NULL, 0,
+		status = dm2r_position(arcb, DM2R_ALL, NULL, 0,
 				(DM_TID *)NULL, dberr);
-		
 		if ( status != E_DB_OK )
 		    break;
 	    }
@@ -1016,10 +1026,16 @@ DB_ERROR     	*dberr )
 	    arcb->rcb_ll_given = rcb->rcb_ll_given;
 	    MEcopy(rcb->rcb_hl_ptr, t->tcb_klen, arcb->rcb_hl_ptr);
 	    MEcopy(rcb->rcb_ll_ptr, t->tcb_klen, arcb->rcb_ll_ptr);
+	    /* Copy over LOB access stuff, but if we aren't qualifying,
+	    ** we don't need to process LOB coupons at all.
+	    */
+	    arcb->rcb_bqcb_ptr = rcb->rcb_bqcb_ptr;
+	    if (arcb->rcb_f_qual == NULL)
+		arcb->rcb_state |= RCB_NO_CPN;
 	    act[na].rcb = arcb;
 
 	    if (! rcb->rcb_hl_given)
-	    {	
+	    {
 		/* No hi range given, position to end of table */
 		status = dm2r_position(act[na].rcb, DM2R_LAST, NULL, 0,
 				(DM_TID *)NULL, dberr);
@@ -1029,7 +1045,7 @@ DB_ERROR     	*dberr )
 	    }
 	    if (t->tcb_table_type == TCB_BTREE)
 	    {
-		/* 
+		/*
 		** Indicate that btree will be read backwards, starting
 		** from the end of the table OR the end of the pages
 		** that satisfy the hi key qualification, if any. Once
@@ -1103,7 +1119,7 @@ DB_ERROR     	*dberr )
 	{
 	    int i;
 
-	    TRdisplay("\nDMF_AGG_PROC: rcb: %x  struct: %w \n",
+	    TRdisplay("%@\nDMF_AGG_PROC: rcb: %p  struct: %w \n",
 		rcb, "0,1,2,HEAP,4,ISAM,6,HASH,8,9,10,BTREE,12,GATEWAY",
 		t->tcb_table_type);
 
@@ -1118,7 +1134,7 @@ DB_ERROR     	*dberr )
 			act[i].direction == DM2R_GETPREV ? "PREV" : "NONE",
 		    "?,NONEXT,FIRST,NEWMAINPG", act[i].break_on,
 		    "NO,YES", act[i].call_ade);
-		TRdisplay("   scanfunc: %s  origmainpg: %d  thisrcb: %x\n\n",
+		TRdisplay("   scanfunc: %s  origmainpg: %u  thisrcb: %p\n\n",
 		    act[i].scanner == dm2r_get ? "r_get" :
 			act[i].scanner == dm1b_count ? "b_count" :
 			  act[i].scanner == dm1m_count ? "m_count" :

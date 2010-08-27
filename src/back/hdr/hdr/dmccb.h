@@ -206,6 +206,8 @@
 **          Added DMC2_MUST_LOG.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      09-aug-2010 (maspa05) b123189, b123960
+**          Added DMC2_READONLYDB to indicate a readonly database
 **/
 
 
@@ -486,6 +488,8 @@ typedef struct _DMC_CB
 			*/
 #define                 DMC2_MUST_LOG       0x00000002L
                         /* Database must be logged when access from this DBMS */
+#define                 DMC2_READONLYDB     0x00000004L
+                        /* readonlydb */
 
     DM_DATA         dmc_char_array;	/* Pointer to an array of 
 					** configuration variables. */

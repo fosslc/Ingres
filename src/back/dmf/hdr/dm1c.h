@@ -156,6 +156,8 @@
 **          Added DM1C_SPLIT_DUPS
 **	14-Apr-2010 (kschendel) SIR 123485
 **	    dm1c LOB related routines changed prototypes, fix here.
+**      12-Jul-2010 (stial01) (SIR 121619 MVCC, B124076, B124077)
+**          Prototype changes.
 **/
 
 /*
@@ -526,11 +528,8 @@ struct _DMPP_ACC_PLV {
 			DM_TID          *tid,
 			i4		*err_code);
 	DB_STATUS (*dmpp_clean)(
-			i4		page_type,
-			i4		page_size,
-			DMPP_PAGE	*page,
-			DB_TRAN_ID	*tranid,
-			i4		lk_type,
+			DMP_RCB		*rcb,
+			DMPP_PAGE       *page,
 			i4		*avail_space);
 };
 

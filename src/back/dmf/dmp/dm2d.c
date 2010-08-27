@@ -784,6 +784,8 @@ NO_OPTIM=dr6_us5 pym_us5
 **          upgrade_iirel_row() init relattnametot
 **      04-Jun-2010 (frima01) Bug 123753
 **          Correct setting of rel_v9.reldatawid and rel_v9.reltotdatawid.
+**      25-Jun-2010 (frima01) Bug 123753
+**          Change E_DM9580_CONFIG_DBSERVICE_ERROR to be a warning.
 */
 
 /*
@@ -1642,6 +1644,11 @@ DB_ERROR	*dberr)
 **	    a DMCM may not be needed if clustered but node affined.
 **	12-Nov-2009 (kschendel) SIR 122882
 **	    cmptvl is an integer now.
+**	09-aug-2010 (maspa05) b123189, b123960
+**          Set dcb_status to DCB_S_RODB if database is readonly
+**          This is so when we call dm0c_open it will know if this is a
+**          readonlydb (cnf in II_DATABASE) as opposed to a database being
+**          opened read-only (e.g. inconsistent or incremental rfwd)
 */
 DB_STATUS
 dm2d_add_db(
@@ -1704,6 +1711,9 @@ dm2d_add_db(
 	dcb->dcb_access_mode = DCB_A_READ;
 	if (*access_mode == DM2D_A_WRITE)
 	    dcb->dcb_access_mode = DCB_A_WRITE;
+        
+	if (flag & DM2D_READONLYDB)
+    	    dcb->dcb_status |= DCB_S_RODB;
 
 	/*
 	** Check the config file for conversion requirements.
@@ -1802,7 +1812,7 @@ dm2d_add_db(
 #endif
 		if (dbservice_warning)
 		{
-		    uleFormat(NULL, E_DM9580_CONFIG_DBSERVICE_ERROR, 
+		    uleFormat(NULL, W_DM9580_CONFIG_DBSERVICE, 
 			(CL_ERR_DESC *)NULL, ULE_LOG, (DB_SQLSTATE *)NULL,
 			(char *)NULL, (i4)0, (i4 *)NULL,
 			err_code, 2, 0, cnf->cnf_dsc->dsc_dbservice,
@@ -3553,6 +3563,12 @@ dm2d_del_db(
 **	    indefinitely.
 **	20-May-2010 (thaju02) Bug 123427
 **	    Add lk_id param to dm2rep_qman().
+**      09-aug-2010 (maspa05) b123189, b123960
+**          Set dcb_status to DCB_S_RODB if database is readonly
+**          Also call dm0l_opendb with DM0L_RODB
+**          This is so when we call dm0c_open it will know if this is a
+**          readonlydb (cnf in II_DATABASE) as opposed to a database being
+**          opened read-only (e.g. inconsistent or incremental rfwd)
 */
 DB_STATUS
 dm2d_open_db(
@@ -3596,6 +3612,7 @@ dm2d_open_db(
     LK_LKID		dblkid;
     CL_ERR_DESC          sys_err;
     i4		open_flag;
+    i4		open_flag2;
     i4			write_mode;
     i4			dbcache = FALSE;
     ADULTABLE		*tbl;
@@ -4005,6 +4022,8 @@ dm2d_open_db(
           ((svcb->svcb_status & SVCB_SINGLEUSER) == 0) )
 	    cnf_flag |= DM0C_READONLY;
 
+	if (flag & DM2D_READONLYDB)
+    	    dcb->dcb_status |= DCB_S_RODB;
 
 	/*  Open the configuration file. If this is rollforward, and we can't
 	**  open the regular config file, try to open the .rfc version which
@@ -4739,6 +4758,7 @@ dm2d_open_db(
 	if (!(flag & DM2D_NLG))
 	{
 	    open_flag = 0;
+	    open_flag2 = 0;
 	    if (dcb->dcb_status & DCB_S_JOURNAL)
 		open_flag |= DM0L_JOURNAL;
             if ((dcb->dcb_status & DCB_S_FASTCOMMIT) ||
@@ -4750,10 +4770,13 @@ dm2d_open_db(
 		open_flag |= DM0L_NOLOGGING;
 	    if (dcb->dcb_access_mode == DCB_A_READ)
 	    	open_flag |= (DM0L_READONLY_DB | DM0L_NOLOGGING);
+    	    if (dcb->dcb_status & DCB_S_RODB)
+		open_flag2 |= DM0L_RODB;
 	    if ( dcb->dcb_status & DCB_S_MVCC )
 	        open_flag |= DM0L_MVCC;
 	    status = dm0l_opendb(svcb->svcb_lctx_ptr->lctx_lgid,
 		open_flag,
+		open_flag2,
                 &dcb->dcb_name, 
 		&dcb->dcb_db_owner, 
 		dcb->dcb_id, 
@@ -6178,7 +6201,7 @@ dm2d_extend_db(
 	    if (dmxe_flag & DMXE_JOURNAL)
 	        open_flag |= DM0L_JOURNAL;
 	    status = dm0l_opendb(svcb->svcb_lctx_ptr->lctx_lgid,
-		    open_flag, &dcb->dcb_name, &dcb->dcb_db_owner, 
+		    open_flag,0, &dcb->dcb_name, &dcb->dcb_db_owner, 
 		    dcb->dcb_id, &dcb->dcb_location.physical,
 		    dcb->dcb_location.phys_length, &dcb->dcb_log_id,
 		    (LG_LSN *)NULL,
@@ -6706,7 +6729,7 @@ dm2d_unextend_db(
 	}
 
 	status = dm0l_opendb(svcb->svcb_lctx_ptr->lctx_lgid,
-		(dmxe_flag & DMXE_JOURNAL) ? DM0L_JOURNAL : 0,
+		(dmxe_flag & DMXE_JOURNAL) ? DM0L_JOURNAL : 0,0,
 		&dcb->dcb_name, &dcb->dcb_db_owner, 
 		dcb->dcb_id, &dcb->dcb_location.physical,
 		dcb->dcb_location.phys_length, &dcb->dcb_log_id,
@@ -7014,6 +7037,12 @@ dm2d_unextend_db(
 **	    is used for data and work/aux work, and we have found the data
 **	    usage config file entry for the location. This change fixes bug
 **	    102500, problem INGSRV 1263.
+**      09-aug-2010 (maspa05) b123189, b123960
+**          Set dcb_status to DCB_S_RODB if database is readonly and call
+**          dm0l_opendb with DM0L_RODB
+**          This is so when we call dm0c_open it will know if this is a
+**          readonlydb (cnf in II_DATABASE) as opposed to a database being
+**          opened read-only (e.g. inconsistent or incremental rfwd)
 */
 DB_STATUS
 dm2d_alter_db(
@@ -7130,7 +7159,10 @@ dm2d_alter_db(
 	/*  Open the configuration file. */
 	
 	if (dm2d->alter_info.tas_info.db_access & DU_RDONLY)
+	{
 	    cnf_flag |= DM0C_READONLY;
+    	    dcb->dcb_status |= DCB_S_RODB;
+	}
 
 	status = dm0c_open(dcb, cnf_flag, lock_list, &cnf, dberr);
 	if (status != E_DB_OK)
@@ -7177,11 +7209,14 @@ dm2d_alter_db(
 	if (logging)
 	{
 	    i4	open_flag = 0;
+	    i4	open_flag2 = 0;
 
 	    if (dmxe_flag & DMXE_JOURNAL)
 	        open_flag |= DM0L_JOURNAL;
+	    if (dcb->dcb_status & DCB_S_RODB)
+		open_flag2 |= DM0L_RODB;
 	    status = dm0l_opendb(svcb->svcb_lctx_ptr->lctx_lgid,
-		    open_flag, &dcb->dcb_name, &dcb->dcb_db_owner, 
+		    open_flag, open_flag2, &dcb->dcb_name, &dcb->dcb_db_owner, 
 		    dcb->dcb_id, &dcb->dcb_location.physical,
 		    dcb->dcb_location.phys_length, &dcb->dcb_log_id,
 		    (LG_LSN *)NULL,
@@ -11988,6 +12023,9 @@ dm2d_upgrade_rewrite_iirel (
 **	    union-ize the old-relation input.
 **	    Include mandatory-flag setting of PHYSLOCK-CONCUR, easier to do
 **	    here than in upgradedb.
+**	5-Jun-2010 (kschendel)
+**	    Enforce no extra bits turned on in relstat, relstat2; makes it
+**	    easier to add flags in the future.
 */
 static VOID
 upgrade_iirel_row(
@@ -12068,7 +12106,7 @@ DM0C_CNF	*cnf)
 	    rel_v8.relpgtype = TCB_PG_V1;
 
 	    if ( rel_v8.relstat & TCB_COMPRESSED )
-		rel_v8.relcomptype = TCB_C_STANDARD;
+		rel_v8.relcomptype = TCB_C_STD_OLD;
 	    else
 		rel_v8.relcomptype = TCB_C_NONE;
 
@@ -12334,12 +12372,19 @@ DM0C_CNF	*cnf)
 	    {
 		rel_v9.relstat2 |= TCB2_PHYSLOCK_CONCUR;
 	    }
+
+	    /* Make sure relstat2 doesn't contain any extra bits! */
+	    rel_v9.relstat2 &= ~TCB2_RELSTAT2_ALL;
+
 	    /* Allow duplicates in iiextended_relation, easier to do here
 	    ** than in upgradedb!
 	    */
 	    if (rel_v9.reltid.db_tab_base == DM_B_ETAB_TAB_ID
 	      && rel_v9.reltid.db_tab_index == DM_I_ETAB_TAB_ID)
 		rel_v9.relstat |= TCB_DUPLICATES;
+
+	    /* Make sure relstat doesn't contain any extra bits! */
+	    rel_v9.relstat &= ~TCB_RELSTAT_ALL;
 
 	    /* To prepare for the possible reclamation of TCB_GATEWAY, make
 	    ** sure that the two gateway-ID columns are zero if TCB_GATEWAY
@@ -12575,6 +12620,8 @@ DM0C_CNF *cnf)
 **	3-May-2010 (kschendel) SIR 123639
 **	    Compression in the core catalogs means we have to compress
 **	    converted iiattribute / iirelation.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    It's always OLD standard compression, not the new one.
 */
 
 static DB_STATUS
@@ -12621,7 +12668,7 @@ build_core_rac(DB_TAB_ID *table_id, DMP_ATTRIBUTE *core_atts,
     ** different type, pass in the reference DMP_RELATION as well so
     ** relcomptype can be examined.)
     */
-    cmpcontrol_size = dm1c_cmpcontrol_size(TCB_C_STANDARD, att_count, 0);
+    cmpcontrol_size = dm1c_cmpcontrol_size(TCB_C_STD_OLD, att_count, 0);
     size = sizeof(DMP_MISC) + DB_ALIGN_MACRO(sizeof(DMP_ROWACCESS))
 		+ att_count * sizeof(DB_ATTS *)
 		+ att_count * sizeof(DB_ATTS)
@@ -12642,7 +12689,7 @@ build_core_rac(DB_TAB_ID *table_id, DMP_ATTRIBUTE *core_atts,
     p = p + att_count * sizeof(DB_ATTS);
     rac->cmp_control = p;
     rac->control_count = cmpcontrol_size;
-    rac->compression_type = TCB_C_STANDARD;
+    rac->compression_type = TCB_C_STD_OLD;
 
     attp = first_att;
     while (--att_count >= 0)

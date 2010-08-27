@@ -9,6 +9,7 @@
 #include    <di.h>
 #include    <me.h>
 #include    <pc.h>
+#include    <st.h>
 #include    <tr.h>
 #include    <iicommon.h>
 #include    <dbdbms.h>
@@ -47,7 +48,6 @@
 **
 **          dmve_fix_tabio - Get Table Io Control Block for recovery operation.
 **	    dmve_location_check - Check if specified location needs recovery.
-**	    dmve_name_unpack - Extract table name/owner from variable fields.
 **	    dmve_partial_recov_check - Check if partial recovery performed.
 **          dmve_get_iirel_row - Get a row from iirelation for a given table.
 **          dmve_cachefix_page - Wrapper for dm0p_cachefix_page()
@@ -168,6 +168,10 @@
 **          Added new routines for iirelation/iisequence recovery        
 **	25-May-2010 (kschendel)
 **	    Add missing CM inclusion, required for bool declarations.
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          dmve_get_tabinfo() copy table name only if tabname not null
 **/
 
 /*
@@ -196,11 +200,13 @@ static DB_STATUS	build_recovery_info(
 				DMVE_CB		*dmve,
 				DMVE_LOC_ENTRY	*info_array,
 				i4		*num_entries,
-				DB_TAB_NAME	*table_name,
-				DB_OWN_NAME	*table_owner,
 				i4		*page_type,
 				i4		*page_size,
 				i4		*location_count);
+
+static VOID dmve_init_tabinfo(
+				DMVE_CB		*dmve,
+				DMP_TABLE_IO	*tbio);
 
 
 /*{
@@ -290,8 +296,11 @@ DMP_TABLE_IO	**table_io)
     DMVE_LOC_ENTRY		*loc_entry;
     i4			*err_code = &dmve->dmve_error.err_code;
     DB_ERROR		local_dberr;
+    DMP_RELATION	reltup;
+    DMP_TCB		*t = NULL;
 
     CLRDBERR(&dmve->dmve_error);
+    DMVE_CLEAR_TABINFO_MACRO(dmve);
 
     /*
     ** If MVCC, make_consistent has provided dmve_tbio, dmve_plv
@@ -301,6 +310,7 @@ DMP_TABLE_IO	**table_io)
     {
 	*table_io = dmve->dmve_tbio;
 	MEfill(sizeof(dmve->dmve_pages), '\0', &dmve->dmve_pages);
+	/* currently dont need to call dmve_init_tabinfo for MVCC */
         return(E_DB_OK);
     }
 
@@ -316,8 +326,7 @@ DMP_TABLE_IO	**table_io)
 	** operations.
 	*/
 	status = build_recovery_info(dmve, loc_info_array, &num_entries,
-		&table_name, &table_owner, &page_type, &page_size,
-		&location_count);
+		&page_type, &page_size, &location_count);
 	if (DB_FAILURE_MACRO(status))
 	    break;
 	if (status == E_DB_WARN)
@@ -420,6 +429,7 @@ DMP_TABLE_IO	**table_io)
 	{
 	    *table_io = tbio;
 	    dmve->dmve_tbio = tbio;
+	    dmve_init_tabinfo(dmve, tbio);
 	    return (E_DB_OK);
 	}
 	status = E_DB_OK;                                               
@@ -436,6 +446,18 @@ DMP_TABLE_IO	**table_io)
 	*/
 	if (tbio == NULL)
 	{
+	    if (!build_retries)
+	    {
+		/* Get the iirelation tuple, we need the table name, owner */
+		status = dmve_get_iirel_row(dmve, table_id, &reltup);
+		if (status)
+		{
+		    SETDBERR(&dmve->dmve_error, 0, E_DM9661_DMVE_FIX_TABIO_RETRY);
+		    status = E_DB_ERROR;
+		    break;
+		}
+	    }
+
 	    /*
 	    ** Make sure we're not looping in here forever.
 	    ** (Note that it is possible for somebody to toss out our
@@ -543,6 +565,8 @@ DMP_TABLE_IO	**table_io)
 
 	*table_io = tbio;
 	dmve->dmve_tbio = tbio;
+	dmve_init_tabinfo(dmve, tbio);
+
 	return (E_DB_OK);
     }
 
@@ -725,50 +749,6 @@ DMVE_CB		*dmve)
 }
 
 /*
-** Name: dmve_name_unpack - Extract name, owner from variable length log rec.
-**
-** Description:
-**
-** Inputs:
-**	tab_name_ptr		- pointer to compressed table name
-**	tab_name_size		- size of compressed name
-**	own_name_ptr		- pointer to compressed owner name
-**	own_name_size		- size of compressed name
-**
-** Outputs:
-**	tab_name_buf		- buffer filled in with expanded table name
-**	own_name_buf		- buffer filled in with expanded owner name
-**	Returns:
-**	    none
-**	Exceptions:
-**	    none
-**
-** Side Effects:
-**	    none
-**
-** History:
-**	26-oct-1992 (rogerk)
-**	    Reduced Logging Project: Written.
-*/
-VOID
-dmve_name_unpack(
-char		*tab_name_ptr, 
-i4		tab_name_size,
-DB_TAB_NAME	*tab_name_buf,
-char		*own_name_ptr, 
-i4		own_name_size,
-DB_OWN_NAME	*own_name_buf)
-{
-    /*
-    ** Make a blank padded version of the table and owner names
-    */
-    MEmove(tab_name_size, (PTR)tab_name_ptr, ' ',
-		    sizeof(DB_TAB_NAME), (PTR)tab_name_buf);
-    MEmove(own_name_size, (PTR)own_name_ptr, ' ',
-		    sizeof(DB_OWN_NAME), (PTR)own_name_buf);
-}
-
-/*
 ** Name: build_recover_info - Build array of DMVE_LOC_INFO for checking
 **                            access to all required locations.
 **
@@ -790,7 +770,8 @@ DB_OWN_NAME	*own_name_buf)
 **				    DM2T_X or DM2T_S.
 **
 ** Outputs:
-**	page_size		    What page size is this table?
+**	page_size		    table page size 
+**	page_type		    table page type
 **
 **	Returns:
 **	    E_DB_OK
@@ -836,16 +817,15 @@ build_recovery_info(
 DMVE_CB		*dmve,
 DMVE_LOC_ENTRY	*info_array,
 i4		*num_entries,
-DB_TAB_NAME	*table_name,
-DB_OWN_NAME	*table_owner,
 i4		*page_type,
 i4		*page_size,
 i4		*location_count)
 {
     DB_STATUS		status = E_DB_OK;
-    char		*tab_name_ptr;
-    char		*own_name_ptr;
     i4		i = 0;
+
+    *location_count = 0;
+    *num_entries = 0;
 
     switch (((DM0L_HEADER *)dmve->dmve_log_rec)->type)
     {
@@ -854,16 +834,11 @@ i4		*location_count)
 	    DM0L_PUT	*put_rec = (DM0L_PUT *)dmve->dmve_log_rec;
 
 	    if (put_rec->put_header.length != 
-		    (sizeof(DM0L_PUT) + put_rec->put_rec_size -
-			    (DB_TAB_MAXNAME - put_rec->put_tab_size) -
-			    (DB_OWN_MAXNAME - put_rec->put_own_size)))
+		    (sizeof(DM0L_PUT) + put_rec->put_rec_size))
 	    {
 		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
 		break;
 	    }
-
-	    tab_name_ptr = &put_rec->put_vbuf[0];
-	    own_name_ptr = &put_rec->put_vbuf[put_rec->put_tab_size];
 
 	    if (dmve_location_check(dmve, (i4)put_rec->put_cnf_loc_id))
 	    {
@@ -874,8 +849,6 @@ i4		*location_count)
 		i++;
 	    }
 
-	    dmve_name_unpack(tab_name_ptr, put_rec->put_tab_size, table_name,
-			     own_name_ptr, put_rec->put_own_size, table_owner);
 	    *location_count = put_rec->put_loc_cnt;
 	    *page_type =  put_rec->put_pg_type;
 	    *page_size = put_rec->put_page_size;
@@ -888,15 +861,11 @@ i4		*location_count)
 	    DM0L_DEL	*del_rec = (DM0L_DEL *)dmve->dmve_log_rec;
 
 	    if (del_rec->del_header.length != 
-		(sizeof(DM0L_DEL) + del_rec->del_rec_size -
-			(DB_TAB_MAXNAME - del_rec->del_tab_size) -
-			(DB_OWN_MAXNAME - del_rec->del_own_size)))
+		(sizeof(DM0L_DEL) + del_rec->del_rec_size))
 	    {
 		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
 		break;
 	    }
-	    tab_name_ptr = &del_rec->del_vbuf[0];
-	    own_name_ptr = &del_rec->del_vbuf[del_rec->del_tab_size];
 
 	    if (dmve_location_check(dmve, (i4)del_rec->del_cnf_loc_id))
 	    {
@@ -907,8 +876,6 @@ i4		*location_count)
 		i++;
 	    }
 
-	    dmve_name_unpack(tab_name_ptr, del_rec->del_tab_size, table_name,
-			     own_name_ptr, del_rec->del_own_size, table_owner);
 	    *location_count = del_rec->del_loc_cnt;
 	    *page_type = del_rec->del_pg_type;
 	    *page_size = del_rec->del_page_size;
@@ -923,16 +890,11 @@ i4		*location_count)
 	    if (rep_rec->rep_header.length != 
 		(sizeof(DM0L_REP) + 
 			rep_rec->rep_odata_len +
-			rep_rec->rep_ndata_len -
-			(DB_TAB_MAXNAME - rep_rec->rep_tab_size) -
-			(DB_OWN_MAXNAME - rep_rec->rep_own_size)))
+			rep_rec->rep_ndata_len))
 	    {
 		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
 		break;
 	    }
-
-	    tab_name_ptr = &rep_rec->rep_vbuf[0];
-	    own_name_ptr = &rep_rec->rep_vbuf[rep_rec->rep_tab_size];
 
 	    if (dmve_location_check(dmve, (i4)rep_rec->rep_ocnf_loc_id))
 	    {
@@ -952,9 +914,6 @@ i4		*location_count)
 		i++;
 	    }
 
-
-	    dmve_name_unpack(tab_name_ptr, rep_rec->rep_tab_size, table_name,
-			     own_name_ptr, rep_rec->rep_own_size, table_owner);
 	    *location_count = rep_rec->rep_loc_cnt;
 	    *page_type = rep_rec->rep_pg_type;
 	    *page_size = rep_rec->rep_page_size;
@@ -965,9 +924,6 @@ i4		*location_count)
 	case DM0LBI:
 	{
 	    DM0L_BI	*bi_rec = (DM0L_BI *)dmve->dmve_log_rec;
-
-	    *table_name = bi_rec->bi_tblname;
-	    *table_owner = bi_rec->bi_tblowner;
 
 	    if (dmve_location_check(dmve, (i4)bi_rec->bi_loc_id))
 	    {
@@ -989,9 +945,6 @@ i4		*location_count)
 	{
 	    DM0L_AI	*ai_rec = (DM0L_AI *)dmve->dmve_log_rec;
 
-	    *table_name = ai_rec->ai_tblname;
-	    *table_owner = ai_rec->ai_tblowner;
-
 	    if (dmve_location_check(dmve, (i4)ai_rec->ai_loc_id))
 	    {
 		info_array[i].loc_pg_num = ai_rec->ai_pageno;
@@ -1012,17 +965,12 @@ i4		*location_count)
 	{
 	    DM0L_ASSOC	*assoc_rec = (DM0L_ASSOC *)dmve->dmve_log_rec;
 
-	    if (assoc_rec->ass_header.length != (sizeof(DM0L_ASSOC) -
-		(DB_TAB_MAXNAME - assoc_rec->ass_tab_size) -
-		(DB_OWN_MAXNAME - assoc_rec->ass_own_size)))
+	    if (assoc_rec->ass_header.length != sizeof(DM0L_ASSOC))
 	    {
 		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
 		status = E_DB_ERROR;
 		break;
 	    }
-
-	    tab_name_ptr = &assoc_rec->ass_vbuf[0];
-	    own_name_ptr = &assoc_rec->ass_vbuf[assoc_rec->ass_tab_size];
 
 	    if (dmve_location_check(dmve, (i4)assoc_rec->ass_lcnf_loc_id))
 	    {
@@ -1054,9 +1002,6 @@ i4		*location_count)
 		i++;
 	    }
 
-	    dmve_name_unpack(tab_name_ptr, assoc_rec->ass_tab_size, 
-			     table_name, own_name_ptr, 
-			     assoc_rec->ass_own_size, table_owner);
 	    *location_count = assoc_rec->ass_loc_cnt;
 	    *page_type = assoc_rec->ass_pg_type;
 	    *page_size = assoc_rec->ass_page_size;
@@ -1068,15 +1013,11 @@ i4		*location_count)
 	{
 	    DM0L_ALLOC	*all_rec = (DM0L_ALLOC *)dmve->dmve_log_rec;
 
-	    if (all_rec->all_header.length != (sizeof(DM0L_ALLOC) -
-		    (DB_TAB_MAXNAME - all_rec->all_tab_size) -
-		    (DB_OWN_MAXNAME - all_rec->all_own_size)))
+	    if (all_rec->all_header.length != sizeof(DM0L_ALLOC))
 	    {
 		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
 		break;
-	}
-	    tab_name_ptr = &all_rec->all_vbuf[0];
-	    own_name_ptr = &all_rec->all_vbuf[all_rec->all_tab_size];
+	    }
 
 	    if (dmve_location_check(dmve, (i4)all_rec->all_fhdr_cnf_loc_id))
 	    {
@@ -1105,8 +1046,6 @@ i4		*location_count)
 		i++;
 	    }
 
-	    dmve_name_unpack(tab_name_ptr, all_rec->all_tab_size, table_name,
-			     own_name_ptr, all_rec->all_own_size, table_owner);
 	    *location_count = all_rec->all_loc_cnt;
 	    *page_type = all_rec->all_pg_type;
 	    *page_size = all_rec->all_page_size;
@@ -1118,16 +1057,11 @@ i4		*location_count)
 	{
 	    DM0L_DEALLOC    *dall_rec = (DM0L_DEALLOC *)dmve->dmve_log_rec;
 
-	    if (dall_rec->dall_header.length != (sizeof(DM0L_DEALLOC) -
-		    (DB_TAB_MAXNAME - dall_rec->dall_tab_size) -
-		    (DB_OWN_MAXNAME - dall_rec->dall_own_size)))
+	    if (dall_rec->dall_header.length != sizeof(DM0L_DEALLOC))
 	    {
 		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
 		break;
 	    }
-
-	    tab_name_ptr = &dall_rec->dall_vbuf[0];
-	    own_name_ptr = &dall_rec->dall_vbuf[dall_rec->dall_tab_size];
 
 	    if (dmve_location_check(dmve, (i4)dall_rec->dall_fhdr_cnf_loc_id))
 	    {
@@ -1156,8 +1090,6 @@ i4		*location_count)
 		i++;
 	    }
 
-	    dmve_name_unpack(tab_name_ptr, dall_rec->dall_tab_size, table_name,
-			    own_name_ptr, dall_rec->dall_own_size, table_owner);
 	    *location_count = dall_rec->dall_loc_cnt;
 	    *page_type = dall_rec->dall_pg_type;
 	    *page_size = dall_rec->dall_page_size;
@@ -1168,9 +1100,6 @@ i4		*location_count)
 	case DM0LEXTEND:
 	{
 	    DM0L_EXTEND	*ext_rec = (DM0L_EXTEND *)dmve->dmve_log_rec;
-
-	    *table_name = ext_rec->ext_tblname;
-	    *table_owner = ext_rec->ext_tblowner;
 
 	    if (dmve_location_check(dmve, (i4)ext_rec->ext_fhdr_cnf_loc_id))
 	    {
@@ -1257,16 +1186,11 @@ i4		*location_count)
 	{
 	    DM0L_OVFL	*ovf_rec = (DM0L_OVFL *)dmve->dmve_log_rec;
 
-	    if (ovf_rec->ovf_header.length != (sizeof(DM0L_OVFL) - 
-		(DB_TAB_MAXNAME - ovf_rec->ovf_tab_size) -
-		(DB_OWN_MAXNAME - ovf_rec->ovf_own_size)))
+	    if (ovf_rec->ovf_header.length != sizeof(DM0L_OVFL))
 	    {
 		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
 		break;
 	    }
-
-	    tab_name_ptr = &ovf_rec->ovf_vbuf[0];
-	    own_name_ptr = &ovf_rec->ovf_vbuf[ovf_rec->ovf_tab_size];
 
 	    if (dmve_location_check(dmve, (i4)ovf_rec->ovf_cnf_loc_id))
 	    {
@@ -1286,9 +1210,6 @@ i4		*location_count)
 		i++;
 	    }
 
-
-	    dmve_name_unpack(tab_name_ptr, ovf_rec->ovf_tab_size, table_name,
-			     own_name_ptr, ovf_rec->ovf_own_size, table_owner);
 	    *location_count = ovf_rec->ovf_loc_cnt;
 	    *page_type = ovf_rec->ovf_pg_type;
 	    *page_size = ovf_rec->ovf_page_size;
@@ -1300,16 +1221,11 @@ i4		*location_count)
 	{
 	    DM0L_NOFULL	*nofull_rec = (DM0L_NOFULL *)dmve->dmve_log_rec;
 
-	    if (nofull_rec->nofull_header.length != (sizeof(DM0L_NOFULL) - 
-		(DB_TAB_MAXNAME - nofull_rec->nofull_tab_size) -
-		(DB_OWN_MAXNAME - nofull_rec->nofull_own_size)))
+	    if (nofull_rec->nofull_header.length != sizeof(DM0L_NOFULL))
 	    {
 		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
 		break;
 	    }
-	    tab_name_ptr = &nofull_rec->nofull_vbuf[0];
-	    own_name_ptr = 
-		&nofull_rec->nofull_vbuf[nofull_rec->nofull_tab_size];
 
 	    if (dmve_location_check(dmve, (i4)nofull_rec->nofull_cnf_loc_id))
 	    {
@@ -1321,9 +1237,6 @@ i4		*location_count)
 		i++;
 	    }
 
-	    dmve_name_unpack(tab_name_ptr, nofull_rec->nofull_tab_size, 
-			     table_name, own_name_ptr, 
-			     nofull_rec->nofull_own_size, table_owner);
 	    *location_count = nofull_rec->nofull_loc_cnt;
 	    *page_type = nofull_rec->nofull_pg_type;
 	    *page_size = nofull_rec->nofull_page_size;
@@ -1334,9 +1247,6 @@ i4		*location_count)
 	case DM0LFMAP:
 	{
 	    DM0L_FMAP	*fmap_rec = (DM0L_FMAP *)dmve->dmve_log_rec;
-
-	    *table_name = fmap_rec->fmap_tblname;
-	    *table_owner = fmap_rec->fmap_tblowner;
 
 	    if (dmve_location_check(dmve, (i4)fmap_rec->fmap_fhdr_cnf_loc_id))
 	    {
@@ -1366,9 +1276,6 @@ i4		*location_count)
 	case DM0LUFMAP:
 	{
 	    DM0L_UFMAP	*fmap_rec = (DM0L_UFMAP *)dmve->dmve_log_rec;
-
-	    *table_name = fmap_rec->fmap_tblname;
-	    *table_owner = fmap_rec->fmap_tblowner;
 
 	    if (dmve_location_check(dmve, (i4)fmap_rec->fmap_fhdr_cnf_loc_id))
 	    {
@@ -1402,16 +1309,11 @@ i4		*location_count)
 	    i4	put_loc_id = -1;
 
 	    if (put_rec->btp_header.length != (sizeof(DM0L_BTPUT) - 
-		(DM1B_MAXLEAFLEN - put_rec->btp_key_size) -
-		(DB_TAB_MAXNAME - put_rec->btp_tab_size) -
-		(DB_OWN_MAXNAME - put_rec->btp_own_size)))
+		(DM1B_MAXLEAFLEN - put_rec->btp_key_size)))
 	    {
 		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
 		break;
 	    }
-
-	    tab_name_ptr = &put_rec->btp_vbuf[0];
-	    own_name_ptr = &put_rec->btp_vbuf[put_rec->btp_tab_size];
 
 	    if (dmve_location_check(dmve, (i4)put_rec->btp_cnf_loc_id))
 	    {
@@ -1444,8 +1346,6 @@ i4		*location_count)
 	    	}
 	    }
 
-	    dmve_name_unpack(tab_name_ptr, put_rec->btp_tab_size, table_name,
-			     own_name_ptr, put_rec->btp_own_size, table_owner);
 	    *location_count = put_rec->btp_loc_cnt;
 	    *page_type = put_rec->btp_pg_type;
 	    *page_size = put_rec->btp_page_size;
@@ -1460,16 +1360,11 @@ i4		*location_count)
 	    i4	del_loc_id = -1;
 
 	    if (del_rec->btd_header.length != (sizeof(DM0L_BTDEL) - 
-		(DM1B_MAXLEAFLEN - del_rec->btd_key_size) -
-		(DB_TAB_MAXNAME - del_rec->btd_tab_size) -
-		(DB_OWN_MAXNAME - del_rec->btd_own_size)))
+		(DM1B_MAXLEAFLEN - del_rec->btd_key_size)))
 	    {
 		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
 		break;
 	    }
-
-	    tab_name_ptr = &del_rec->btd_vbuf[0];
-	    own_name_ptr = &del_rec->btd_vbuf[del_rec->btd_tab_size];
 
 	    if (dmve_location_check(dmve, (i4)del_rec->btd_cnf_loc_id))
 	    {
@@ -1502,8 +1397,6 @@ i4		*location_count)
 	    	}
 	    }
 
-	    dmve_name_unpack(tab_name_ptr, del_rec->btd_tab_size, table_name,
-			     own_name_ptr, del_rec->btd_own_size, table_owner);
 	    *location_count = del_rec->btd_loc_cnt;
 	    *page_type = del_rec->btd_pg_type;
 	    *page_size = del_rec->btd_page_size;
@@ -1514,9 +1407,6 @@ i4		*location_count)
 	case DM0LBTSPLIT:
 	{
 	    DM0L_BTSPLIT  *spl_rec = (DM0L_BTSPLIT *)dmve->dmve_log_rec;
-
-	    *table_name = spl_rec->spl_tblname;
-	    *table_owner = spl_rec->spl_tblowner;
 
 	    if (dmve_location_check(dmve, (i4)spl_rec->spl_cur_loc_id))
 	    {
@@ -1557,9 +1447,6 @@ i4		*location_count)
 	    i4	l_id; 
 	    i4	leaf_loc_id = -1;
 	    i4	ovfl_loc_id = -1;
-
-	    *table_name = bto_rec->bto_tblname;
-	    *table_owner = bto_rec->bto_tblowner;
 
 	    if (dmve_location_check(dmve, (i4)bto_rec->bto_leaf_loc_id))
 	    {
@@ -1614,9 +1501,6 @@ i4		*location_count)
 	    i4	l_id; 
 	    i4	prev_loc_id = -1;
 	    i4	ovfl_loc_id = -1;
-
-	    *table_name = btf_rec->btf_tblname;
-	    *table_owner = btf_rec->btf_tblowner;
 
 	    if (dmve_location_check(dmve, (i4)btf_rec->btf_prev_loc_id))
 	    {
@@ -1674,16 +1558,11 @@ i4		*location_count)
 	    if (put_rec->rtp_header.length !=  (i4)(sizeof(DM0L_RTPUT) - 
 		(DB_MAXRTREE_KEY - put_rec->rtp_key_size) -
 		(RCB_MAX_RTREE_LEVEL * sizeof(DM_TID) - 
-		put_rec->rtp_stack_size) -
-		(DB_TAB_MAXNAME - put_rec->rtp_tab_size) -
-		(DB_OWN_MAXNAME - put_rec->rtp_own_size)))
+		put_rec->rtp_stack_size)))
 	    {
 		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
 		break;
 	    }
-
-	    tab_name_ptr = &put_rec->rtp_vbuf[0];
-	    own_name_ptr = &put_rec->rtp_vbuf[put_rec->rtp_tab_size];
 
 	    if (dmve_location_check(dmve, (i4)put_rec->rtp_cnf_loc_id))
 	    {
@@ -1716,8 +1595,6 @@ i4		*location_count)
 	    	}
 	    }
 
-	    dmve_name_unpack(tab_name_ptr, put_rec->rtp_tab_size, table_name,
-			     own_name_ptr, put_rec->rtp_own_size, table_owner);
 	    *location_count = put_rec->rtp_loc_cnt;
 	    *page_type = put_rec->rtp_pg_type;
 	    *page_size = put_rec->rtp_page_size;
@@ -1734,16 +1611,11 @@ i4		*location_count)
 	    if (del_rec->rtd_header.length != (sizeof(DM0L_RTDEL) - 
 		(RCB_MAX_RTREE_LEVEL * sizeof(DM_TID) -
 		del_rec->rtd_stack_size) -
-		(DB_MAXRTREE_KEY - del_rec->rtd_key_size) -
-		(DB_TAB_MAXNAME - del_rec->rtd_tab_size) -
-		(DB_OWN_MAXNAME - del_rec->rtd_own_size)))
+		(DB_MAXRTREE_KEY - del_rec->rtd_key_size)))
 	    {
 		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
 		break;
 	    }
-
-	    tab_name_ptr = &del_rec->rtd_vbuf[0];
-	    own_name_ptr = &del_rec->rtd_vbuf[del_rec->rtd_tab_size];
 
 	    if (dmve_location_check(dmve, (i4)del_rec->rtd_cnf_loc_id))
 	    {
@@ -1776,8 +1648,6 @@ i4		*location_count)
 	    	}
 	    }
 
-	    dmve_name_unpack(tab_name_ptr, del_rec->rtd_tab_size, table_name,
-			     own_name_ptr, del_rec->rtd_own_size, table_owner);
 	    *location_count = del_rec->rtd_loc_cnt;
 	    *page_type = del_rec->rtd_pg_type;
 	    *page_size = del_rec->rtd_page_size;
@@ -1794,16 +1664,11 @@ i4		*location_count)
 	    if (rep_rec->rtr_header.length != (i4) (sizeof(DM0L_RTREP) - 
 		(DB_MAXRTREE_KEY - rep_rec->rtr_okey_size) -
 		(DB_MAXRTREE_KEY - rep_rec->rtr_nkey_size) -
-		(RCB_MAX_RTREE_LEVEL * sizeof(DM_TID) - rep_rec->rtr_stack_size) -
-		(DB_TAB_MAXNAME - rep_rec->rtr_tab_size) -
-		(DB_OWN_MAXNAME - rep_rec->rtr_own_size)))
+		(RCB_MAX_RTREE_LEVEL * sizeof(DM_TID) - rep_rec->rtr_stack_size)))
 	    {
 		SETDBERR(&dmve->dmve_error, 0, E_DM9601_DMVE_BAD_PARAMETER);
 		break;
 	    }
-
-	    tab_name_ptr = &rep_rec->rtr_vbuf[0];
-	    own_name_ptr = &rep_rec->rtr_vbuf[rep_rec->rtr_tab_size];
 
 	    if (dmve_location_check(dmve, (i4)rep_rec->rtr_cnf_loc_id))
 	    {
@@ -1836,8 +1701,6 @@ i4		*location_count)
 	    	}
 	    }
 
-	    dmve_name_unpack(tab_name_ptr, rep_rec->rtr_tab_size, table_name,
-			     own_name_ptr, rep_rec->rtr_own_size, table_owner);
 	    *location_count = rep_rec->rtr_loc_cnt;
 	    *page_type = rep_rec->rtr_pg_type;
 	    *page_size = rep_rec->rtr_page_size;
@@ -1848,9 +1711,6 @@ i4		*location_count)
 	case DM0LBTUPDOVFL:
 	{
 	    DM0L_BTUPDOVFL  *btu_rec = (DM0L_BTUPDOVFL *)dmve->dmve_log_rec;
-
-	    *table_name = btu_rec->btu_tblname;
-	    *table_owner = btu_rec->btu_tblowner;
 
 	    if (dmve_location_check(dmve, (i4)btu_rec->btu_cnf_loc_id))
 	    {
@@ -1871,9 +1731,6 @@ i4		*location_count)
 	case DM0LDISASSOC:
 	{
 	    DM0L_DISASSOC  *dis_rec = (DM0L_DISASSOC *)dmve->dmve_log_rec;
-
-	    *table_name = dis_rec->dis_tblname;
-	    *table_owner = dis_rec->dis_tblowner;
 
 	    if (dmve_location_check(dmve, (i4)dis_rec->dis_cnf_loc_id))
 	    {
@@ -2610,15 +2467,23 @@ DMP_RELATION    *rel_row)
 }
 
 /*
-** Name: dmve_get_tab - Extrace table id, name and owner from a log record
-**
+** Name: dmve_get_tabinfo - Get table id,name,owner from DMVE_CB
+**                          Called from rollforwarddb and rcp offline recovery
+**                          ... after a dmve error.
+** 
 ** Description:
+**      This routine is called after a dmve error to get the 
+**      table id, name and owner associated with the last dmve call.
+**      It gets the table id from the log record. (dmve->dmve_log_rec)
+**      The table name,owner are present in some log records, 
+**      or can be found in the DMVE_CB ...
+**      ... if the dmve error happened after dmve_fix_tbio was called.
 **
-**      This routine is called to extract the table id, name and owner
-**      from a log record.
+**      Note tablename, owner is not strictly required for dmve error handling.
+**      (error handling mostly works off of tabid which is always in the logrec)
 **
 ** Inputs:
-**      record		- log record
+**      dmve		- the dmve cb
 **
 ** Outputs:
 **      None
@@ -2637,155 +2502,96 @@ DMP_RELATION    *rel_row)
 **          FMAP or new FMAP itself.
 */
 VOID
-dmve_get_tab(
-char                *record,
+dmve_get_tabinfo(
+DMVE_CB		    *dmve,
 DB_TAB_ID	    *tabid,
 DB_TAB_NAME	    *tabname,
 DB_OWN_NAME	    *ownname)
 {
-    DM0L_HEADER     *h = (DM0L_HEADER *)record;
+    DMP_DCB	    *dcb = dmve->dmve_dcb_ptr;
+    DM0L_HEADER     *h = (DM0L_HEADER *)dmve->dmve_log_rec;
+    DB_TAB_ID	    *log_tabid;
+    DB_TAB_NAME     *log_tabname;
+    DB_OWN_NAME     *log_ownname;
+    char	    tnamebuf[DB_TAB_MAXNAME + 1];
+    DB_ERROR	    local_dberr;
+    DB_TAB_NAME     relid;
+    DB_OWN_NAME     relowner;
 
     if (tabid)
     {
 	tabid->db_tab_base = 0;
 	tabid->db_tab_index = 0;
     }
-
     if (tabname)
-	MEfill(sizeof(*tabname), ' ', tabname);
-
+	MEfill(sizeof(DB_TAB_NAME), ' ', tabname->db_tab_name);
     if (ownname)
-	MEfill(sizeof(*ownname), ' ', ownname);
+	MEfill(sizeof(DB_OWN_NAME), ' ', ownname->db_own_name);
+
+    if (!tabid)
+	return;
+
+    log_tabid = NULL;
+    log_tabname = NULL;
+    log_ownname = NULL;
 
     switch (h->type)
     {
-    case DM0LBI:
-	{
-	    DM0L_BI	    *r = (DM0L_BI*)h;
+	case DM0LBI:
+	    log_tabid = &((DM0L_BI *)h)->bi_tbl_id;
+	    break;
 
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->bi_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->bi_tblname, sizeof(r->bi_tblname), tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->bi_tblowner, sizeof(r->bi_tblowner), ownname->db_own_name);
+	case DM0LAI:
+	    log_tabid = &((DM0L_AI *)h)->ai_tbl_id;
+	    break;
 
-	}
-	break;
+	case DM0LPUT:
+	    log_tabid = &((DM0L_PUT *)h)->put_tbl_id;
+	    break;
 
-    case DM0LAI:
-	{
-	    DM0L_AI	    *r = (DM0L_AI*)h;
+	case DM0LDEL:
+	    log_tabid = &((DM0L_DEL *)h)->del_tbl_id;
+	    break;
 
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->ai_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->ai_tblname, sizeof(r->ai_tblname), tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->ai_tblowner, sizeof(r->ai_tblowner), ownname->db_own_name);
+	case DM0LREP:
+	    log_tabid = &((DM0L_REP *)h)->rep_tbl_id;
+	    break;
 
-	}
-	break;
+	case DM0LFRENAME:
+	    log_tabid = &((DM0L_FRENAME *)h)->fr_tbl_id;
+	    break;
 
-    case DM0LPUT:
-	{
-	    DM0L_PUT	    *r = (DM0L_PUT*)h;
+	case DM0LFCREATE:
+	    log_tabid = &((DM0L_FCREATE *)h)->fc_tbl_id;
+	    break;
 
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->put_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->put_vbuf[0], r->put_tab_size, tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->put_vbuf[r->put_tab_size], r->put_own_size, ownname->db_own_name);
-
-	}
-	break;
-
-    case DM0LDEL:
-	{
-	    DM0L_DEL	    *r = (DM0L_DEL*)h;
-
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->del_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->del_vbuf[0], r->del_tab_size, tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->del_vbuf[r->del_tab_size], r->del_own_size, ownname->db_own_name);
-
-	}
-	break;
-
-    case DM0LREP:
-	{
-	    DM0L_REP	    *r = (DM0L_REP*)h;
-
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->rep_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->rep_vbuf[0], r->rep_tab_size, tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->rep_vbuf[r->rep_tab_size], r->rep_own_size, ownname->db_own_name);
-
-	}
-	break;
-
-    case DM0LFRENAME:
-	{
-	    DM0L_FRENAME    *r = (DM0L_FRENAME*)h;
-
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->fr_tbl_id, *tabid);
-
-	}
-	break;
-
-    case DM0LFCREATE:
-	{
-	    DM0L_FCREATE    *r = (DM0L_FCREATE*)h;
-
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->fc_tbl_id, *tabid);
-
-	}
-	break;
-
-    case DM0LCREATE:
+	case DM0LCREATE:
 	{
 	    DM0L_CREATE	    *r = (DM0L_CREATE*)h;
 
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->duc_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->duc_name, sizeof(r->duc_name), tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->duc_owner, sizeof(r->duc_owner), ownname->db_own_name);
+	    log_tabid = &r->duc_tbl_id;
+	    log_tabname = &r->duc_name;
+	    log_ownname = &r->duc_owner;
 	}
 	break;
 
-    case DM0LCRVERIFY:
+	case DM0LCRVERIFY:
 	{
 	    DM0L_CRVERIFY    *r = (DM0L_CRVERIFY*)h;
 
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->ducv_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->ducv_name, sizeof(r->ducv_name), tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->ducv_owner, sizeof(r->ducv_owner), ownname->db_own_name);
-
+	    log_tabid = &r->ducv_tbl_id;
+	    log_tabname = &r->ducv_name;
+	    log_ownname = &r->ducv_owner;
 	}
 	break;
 
-    case DM0LDESTROY:
+	case DM0LDESTROY:
 	{
 	    DM0L_DESTROY    *r = (DM0L_DESTROY*)h;
 
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->dud_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->dud_name, sizeof(r->dud_name), tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->dud_owner, sizeof(r->dud_owner), ownname->db_own_name);
+	    log_tabid = &r->dud_tbl_id;
+	    log_tabname = &r->dud_name;
+	    log_ownname = &r->dud_owner;
 	}
 	break;
 
@@ -2793,12 +2599,9 @@ DB_OWN_NAME	    *ownname)
 	{
 	    DM0L_RELOCATE   *r = (DM0L_RELOCATE*)h;
 
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->dur_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->dur_name, sizeof(r->dur_name), tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->dur_owner, sizeof(r->dur_owner), ownname->db_own_name);
+	    log_tabid = &r->dur_tbl_id;
+	    log_tabname = &r->dur_name;
+	    log_ownname = &r->dur_owner;
 	}
 	break;
 
@@ -2806,12 +2609,9 @@ DB_OWN_NAME	    *ownname)
 	{
 	    DM0L_MODIFY	    *r = (DM0L_MODIFY*)h;
 
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->dum_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->dum_name, sizeof(r->dum_name), tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->dum_owner, sizeof(r->dum_owner), ownname->db_own_name);
+	    log_tabid = &r->dum_tbl_id;
+	    log_tabname = &r->dum_name;
+	    log_ownname = &r->dum_owner;
 	}
 	break;
 
@@ -2819,12 +2619,9 @@ DB_OWN_NAME	    *ownname)
 	{
 	    DM0L_LOAD	    *r = (DM0L_LOAD*)h;
 
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->dul_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->dul_name, sizeof(r->dul_name), tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->dul_owner, sizeof(r->dul_owner), ownname->db_own_name);
+	    log_tabid = &r->dul_tbl_id;
+	    log_tabname = &r->dul_name;
+	    log_ownname = &r->dul_owner;
 	}
 	break;
 
@@ -2832,356 +2629,143 @@ DB_OWN_NAME	    *ownname)
 	{
 	    DM0L_INDEX	    *r = (DM0L_INDEX*)h;
 
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->dui_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->dui_name, sizeof(r->dui_name), tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->dui_owner, sizeof(r->dui_owner), ownname->db_own_name);
+	    log_tabid = &r->dui_tbl_id;
+	    log_tabname = &r->dui_name;
+	    log_ownname = &r->dui_owner;
 	}
 	break;
 
-    case DM0LSM1RENAME:
-	{
-	    DM0L_SM1_RENAME	*r = (DM0L_SM1_RENAME*)h;
+	case DM0LSM1RENAME:
+	    log_tabid = &((DM0L_SM1_RENAME *)h)->sm1_tbl_id;
+	    break;
 
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->sm1_tbl_id, *tabid);
-	}
-	break;
+	case DM0LSM2CONFIG:
+	    log_tabid = &((DM0L_SM2_CONFIG *)h)->sm2_tbl_id;
+	    break;
 
-    case DM0LSM2CONFIG:
-	{
-	    DM0L_SM2_CONFIG	*r = (DM0L_SM2_CONFIG*)h;
+	case DM0LSM0CLOSEPURGE:
+	    log_tabid = &((DM0L_SM0_CLOSEPURGE *)h)->sm0_tbl_id; 
+	    break;
 
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->sm2_tbl_id, *tabid);
-	}
-
-	break;
-
-    case DM0LSM0CLOSEPURGE:
-	{
-	    DM0L_SM0_CLOSEPURGE	*r = (DM0L_SM0_CLOSEPURGE*)h;
-
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->sm0_tbl_id, *tabid);
-	}
-	break;
-
-    case DM0LALTER:
+	case DM0LALTER:
 	{
 	    DM0L_ALTER	    *r = (DM0L_ALTER*)h;
 
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->dua_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->dua_name, sizeof(r->dua_name), tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->dua_owner, sizeof(r->dua_owner), ownname->db_own_name);
+	    log_tabid = &r->dua_tbl_id;
+	    log_tabname = &r->dua_name;
+	    log_ownname = &r->dua_owner;
 	}
 	break;
 
-    case DM0LDMU:
+	case DM0LDMU:
 	{
 	    DM0L_DMU	    *r = (DM0L_DMU*)h;
 
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->dmu_tabid, *tabid);
-	    if (tabname)
-		MEcopy(&r->dmu_tblname, sizeof(r->dmu_tblname), tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->dmu_tblowner, sizeof(r->dmu_tblowner), ownname->db_own_name);
+	    log_tabid = &r->dmu_tabid;
+	    log_tabname = &r->dmu_tblname;
+	    log_ownname = &r->dmu_tblowner;
 	}
 	break;
 
-    case DM0LASSOC:
-        {
-            DM0L_ASSOC      *r = (DM0L_ASSOC*)h;
+	case DM0LASSOC:
+	    log_tabid = &((DM0L_ASSOC *)h)->ass_tbl_id;
+	    break;
 
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->ass_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->ass_vbuf[0], r->ass_tab_size, tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->ass_vbuf[r->ass_tab_size], r->ass_own_size, ownname->db_own_name);
-        }
-        break;
+	case DM0LALLOC:
+	    log_tabid = &((DM0L_ALLOC *)h)->all_tblid;
+	    break;
 
-    case DM0LALLOC:
-        {
-            DM0L_ALLOC      *r = (DM0L_ALLOC*)h;
+	case DM0LDEALLOC:
+	    log_tabid = &((DM0L_DEALLOC *)h)->dall_tblid;
+	    break;
 
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->all_tblid, *tabid);
-	    if (tabname)
-		MEcopy(&r->all_vbuf[0], r->all_tab_size, tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->all_vbuf[r->all_tab_size], r->all_own_size, ownname->db_own_name);
-        }
-        break;
+	case DM0LEXTEND:
+	    log_tabid = &((DM0L_EXTEND *)h)->ext_tblid;
+	    break;
 
-    case DM0LDEALLOC:
-        {
-            DM0L_DEALLOC    *r = (DM0L_DEALLOC*)h;
+	case DM0LOVFL:
+	    log_tabid = &((DM0L_OVFL *)h)->ovf_tbl_id;
+	    break;
 
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->dall_tblid, *tabid);
-	    if (tabname)
-		MEcopy(&r->dall_vbuf[0], r->dall_tab_size, tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->dall_vbuf[r->dall_tab_size], r->dall_own_size, ownname->db_own_name);
-        }
-        break;
+	case DM0LNOFULL:
+	    log_tabid = &((DM0L_NOFULL *)h)->nofull_tbl_id;
+	    break;
 
-    case DM0LEXTEND:
-        {
-            DM0L_EXTEND     *r = (DM0L_EXTEND *)h;
+	case DM0LFMAP:
+	    log_tabid = &((DM0L_FMAP *)h)->fmap_tblid;
+	    break;
 
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->ext_tblid, *tabid);
-	    if (tabname)
-		MEcopy(&r->ext_tblname, sizeof(r->ext_tblname), tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->ext_tblowner, sizeof(r->ext_tblowner), ownname->db_own_name);
+	case DM0LUFMAP:
+	    log_tabid = &((DM0L_UFMAP *)h)->fmap_tblid;
+	    break;
 
-        }
-        break;
+	case DM0LBTPUT:
+	    log_tabid = &((DM0L_BTPUT *)h)->btp_tbl_id;
+	    break;
 
-    case DM0LOVFL:
-        {
-            DM0L_OVFL      *r = (DM0L_OVFL*)h;
+	case DM0LBTDEL:
+	    log_tabid = &((DM0L_BTDEL *)h)->btd_tbl_id;
+	    break;
 
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->ovf_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->ovf_vbuf[0], r->ovf_tab_size, tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->ovf_vbuf[r->ovf_tab_size], r->ovf_own_size, ownname->db_own_name);
+	case DM0LBTSPLIT:
+	    log_tabid = &((DM0L_BTSPLIT *)h)->spl_tbl_id;
+	    break;
 
-	}
-        break;
+	case DM0LBTOVFL:
+	    log_tabid = &((DM0L_BTOVFL *)h)->bto_tbl_id;
+	    break;
 
-    case DM0LNOFULL:
-        {
-            DM0L_NOFULL      *r = (DM0L_NOFULL*)h;
+	case DM0LBTFREE:
+	    log_tabid = &((DM0L_BTFREE *)h)->btf_tbl_id;
+	    break;
 
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->nofull_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->nofull_vbuf[0], r->nofull_tab_size, tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->nofull_vbuf[r->nofull_tab_size], r->nofull_own_size, ownname->db_own_name);
+	case DM0LBTUPDOVFL:
+	    log_tabid = &((DM0L_BTUPDOVFL *)h)->btu_tbl_id;
+	    break;
 
-	}
-        break;
+	case DM0LDISASSOC:
+	    log_tabid = &((DM0L_DISASSOC *)h)->dis_tbl_id;
+	    break;
 
-    case DM0LFMAP:
-        {
-            DM0L_FMAP      *r = (DM0L_FMAP*)h;
+	case DM0LRTDEL:
+	    log_tabid = &((DM0L_RTDEL *)h)->rtd_tbl_id;
+	    break;
 
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->fmap_tblid, *tabid);
-	    if (tabname)
-		MEcopy(&r->fmap_tblname, sizeof(r->fmap_tblname), tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->fmap_tblowner, sizeof(r->fmap_tblowner), ownname->db_own_name);
+	case DM0LRTPUT:
+	    log_tabid = &((DM0L_RTPUT *)h)->rtp_tbl_id;
+	    break;
 
-	}
-        break;
+	case DM0LRTREP:
+	    log_tabid = &((DM0L_RTREP *)h)->rtr_tbl_id;
+	    break;
 
-    case DM0LUFMAP:
-        {
-            DM0L_UFMAP      *r = (DM0L_UFMAP*)h;
-
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->fmap_tblid, *tabid);
-	    if (tabname)
-		MEcopy(&r->fmap_tblname, sizeof(r->fmap_tblname), tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->fmap_tblowner, sizeof(r->fmap_tblowner), ownname->db_own_name);
-
-	}
-        break;
-
-    case DM0LBTPUT:
-        {
-            DM0L_BTPUT	    *r = (DM0L_BTPUT*)h;
-
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->btp_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->btp_vbuf[0], r->btp_tab_size, tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->btp_vbuf[r->btp_tab_size], r->btp_own_size, ownname->db_own_name);
-
-	}
-        break;
-
-    case DM0LBTDEL:
-        {
-            DM0L_BTDEL	    *r = (DM0L_BTDEL*)h;
-
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->btd_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->btd_vbuf[0], r->btd_tab_size, tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->btd_vbuf[r->btd_tab_size], r->btd_own_size, ownname->db_own_name);
-
-	}
-        break;
-
-    case DM0LBTSPLIT:
-        {
-            DM0L_BTSPLIT    *r = (DM0L_BTSPLIT*)h;
-    	    char	    *desc_key;
-	    
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->spl_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->spl_tblname, sizeof(r->spl_tblname), tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->spl_tblowner, sizeof(r->spl_tblowner), ownname->db_own_name);
-
-	    desc_key = (char *)&r->spl_vbuf + r->spl_page_size;
-
-	}
-        break;
-
-    case DM0LBTOVFL:
-        {
-            DM0L_BTOVFL    *r = (DM0L_BTOVFL*)h;
-	
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->bto_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->bto_tblname, sizeof(r->bto_tblname), tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->bto_tblowner, sizeof(r->bto_tblowner), ownname->db_own_name);
-	}
-        break;
-
-    case DM0LBTFREE:
-        {
-            DM0L_BTFREE    *r = (DM0L_BTFREE*)h;
-
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->btf_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->btf_tblname, sizeof(r->btf_tblname), tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->btf_tblowner, sizeof(r->btf_tblowner), ownname->db_own_name);
-
-	}
-        break;
-
-    case DM0LBTUPDOVFL:
-        {
-            DM0L_BTUPDOVFL	*r = (DM0L_BTUPDOVFL*)h;
-
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->btu_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->btu_tblname, sizeof(r->btu_tblname), tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->btu_tblowner, sizeof(r->btu_tblowner), ownname->db_own_name);
-
-	}
-        break;
-
-    case DM0LDISASSOC:
-        {
-            DM0L_DISASSOC	*r = (DM0L_DISASSOC*)h;
-
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->dis_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->dis_tblname, sizeof(r->dis_tblname), tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->dis_tblowner, sizeof(r->dis_tblowner), ownname->db_own_name);
-
-	}
-        break;
-
-    case DM0LRTDEL:
-        {
-            DM0L_RTDEL	    *r = (DM0L_RTDEL*)h;
-
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->rtd_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->rtd_vbuf[0], r->rtd_tab_size, tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->rtd_vbuf[r->rtd_tab_size], r->rtd_own_size, ownname->db_own_name);
-
-	}
-        break;
-
-    case DM0LRTPUT:
-        {
-            DM0L_RTPUT	    *r = (DM0L_RTPUT*)h;
-
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->rtp_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->rtp_vbuf[0], r->rtp_tab_size, tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->rtp_vbuf[r->rtp_tab_size], r->rtp_own_size, ownname->db_own_name);
-
-	}
-        break;
-
-    case DM0LRTREP:
-        {
-            DM0L_RTREP	    *r = (DM0L_RTREP*)h;
-
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->rtr_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->rtr_vbuf[0], r->rtr_tab_size, tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->rtr_vbuf[r->rtr_tab_size], r->rtr_own_size, ownname->db_own_name);
-
-	}
-        break;
-
-    case DM0LBSF:
+	case DM0LBSF:
 	{
 	    DM0L_BSF    *r = (DM0L_BSF *)h;
 
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->bsf_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->bsf_name, sizeof(r->bsf_name), tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->bsf_owner, sizeof(r->bsf_owner), ownname->db_own_name);
+	    log_tabid = &r->bsf_tbl_id;
+	    log_tabname = &r->bsf_name;
+	    log_ownname = &r->bsf_owner;
 	}
 	break;
 
-    case DM0LESF:
+	case DM0LESF:
 	{
 	    DM0L_ESF    *r = (DM0L_ESF *)h;
 
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->esf_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->esf_name, sizeof(r->esf_name), tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->esf_owner, sizeof(r->esf_owner), ownname->db_own_name);
+	    log_tabid = &r->esf_tbl_id;
+	    log_tabname = &r->esf_name;
+	    log_ownname = &r->esf_owner;
 	}
 	break;
 
-    case DM0LRNLLSN:
+	case DM0LRNLLSN:
         {
             DM0L_RNL_LSN    *r = (DM0L_RNL_LSN *)h;
 
-	    if (tabid)
-		STRUCT_ASSIGN_MACRO(r->rl_tbl_id, *tabid);
-	    if (tabname)
-		MEcopy(&r->rl_name, sizeof(r->rl_name), tabname->db_tab_name);
-	    if (ownname)
-		MEcopy(&r->rl_owner, sizeof(r->rl_owner), ownname->db_own_name);
+	    log_tabid = &r->rl_tbl_id;
+	    log_tabname = &r->rl_name;
+	    log_ownname = &r->rl_owner;
 
         }
         break;
@@ -3190,8 +2774,85 @@ DB_OWN_NAME	    *ownname)
 	break;
     }	
 
+    if (log_tabid)
+	STRUCT_ASSIGN_MACRO(*log_tabid, *tabid);
+    if (log_tabname && log_ownname)
+    {
+	if (tabname)
+	    STRUCT_ASSIGN_MACRO(*log_tabname, *tabname);
+	if (ownname)
+	    STRUCT_ASSIGN_MACRO(*log_ownname, *ownname);
+	return;
+    }
+
+    if (tabname && ownname)
+    {
+	/*
+	** Lookup table name/owner
+	** Should find tcb if dmve_fix_tbio was successful
+	*/
+	if (dmve->dmve_tabinfo.tabid.db_tab_base == tabid->db_tab_base &&
+	    dmve->dmve_tabinfo.tabid.db_tab_index == tabid->db_tab_index)
+	{
+	    STmove(dmve->dmve_tabinfo.tabstr, ' ',
+		sizeof(DB_TAB_NAME), tabname->db_tab_name);
+	    STmove(dmve->dmve_tabinfo.ownstr, ' ',
+		sizeof(DB_OWN_NAME), ownname->db_own_name);
+	}
+	else if (dm2t_lookup_tabname(dcb, tabid,
+		    &relid, &relowner, &local_dberr) == E_DB_OK)
+	{
+	    STRUCT_ASSIGN_MACRO(relid, *tabname);
+	    STRUCT_ASSIGN_MACRO(relowner, *ownname);
+	}
+	else
+	{
+	    /* alternative error handling would be to reset tabid to 0,0 */
+	    STprintf(tnamebuf, "reltid%d_reltidx%d", 
+		tabid->db_tab_base, tabid->db_tab_index);
+	    STmove(tnamebuf, ' ', sizeof(DB_TAB_NAME), tabname->db_tab_name);
+	}
+    }
+
     return;
 }
+
+/*
+** Name: dmve_get_tabid - Extract table id from a log record
+**
+** Description:
+**
+**      This routine is called to extract the table id from a log record.
+**
+** Inputs:
+**      record		- log record
+**
+** Outputs:
+**      None
+**
+** Returns:
+**      tabid
+**
+** History:
+**	21-jul-2010 (stial01)
+**	    Created.
+*/
+VOID
+dmve_get_tabid(
+PTR                 record,
+DB_TAB_ID	    *tabid)
+{
+    DMVE_CB	dmve_cb;
+    DMVE_CB	*dmve = &dmve_cb;
+
+    /* init DMVE_CB for dmve_get_tabinfo */
+    DMVE_CLEAR_TABINFO_MACRO(dmve);
+    dmve->dmve_log_rec = record;
+
+    dmve_get_tabinfo(dmve, tabid, (DB_TAB_NAME *)NULL, (DB_OWN_NAME *)NULL);
+    return;
+}
+
 
 /*
 ** Name: dmve_cachefix_page - Wrapper for dm0p_cachefix_page() to accomodate
@@ -3920,4 +3581,59 @@ i4		size2)
     else
 	return (FALSE);
 
+}
+
+/*
+** Name: dmve_init_tabinfo - Init table info inside DMVE_CB
+**
+** Description:
+**
+**      This routine is called to init table information inside DMVE_CB
+**      It should be called after successful dmve_fix_tbio
+**      Table information is then available in the dmve cb for error handling
+**
+** Inputs:
+**      record		- log record
+**
+** Outputs:
+**      None
+**
+** Returns:
+**      tabid
+**
+** History:
+**	21-jul-2010 (stial01)
+**	    Created.
+*/
+static VOID
+dmve_init_tabinfo(
+DMVE_CB		*dmve,
+DMP_TABLE_IO	*tbio)
+{
+    DMP_TCB *t;
+
+    if (!tbio)
+    {
+	dmve->dmve_tabinfo.ownlen = 0;
+	dmve->dmve_tabinfo.tablen = 0;
+	dmve->dmve_tabinfo.tabid.db_tab_base = 0;
+	dmve->dmve_tabinfo.tabid.db_tab_index = 0;
+    }
+    else
+    {
+	/* This might be partial tcb, but it will always have basic info */
+	t = (DMP_TCB *)((char *)tbio - CL_OFFSETOF(DMP_TCB, tcb_table_io));
+
+	MEcopy(t->tcb_rel.relid.db_tab_name, t->tcb_relid_len, 
+		dmve->dmve_tabinfo.tabstr);
+	dmve->dmve_tabinfo.tabstr[t->tcb_relid_len] = '\0';
+
+	MEcopy(t->tcb_rel.relowner.db_own_name, t->tcb_relowner_len, 
+		dmve->dmve_tabinfo.ownstr);
+	dmve->dmve_tabinfo.ownstr[t->tcb_relowner_len] = '\0';
+
+	dmve->dmve_tabinfo.ownlen = t->tcb_relowner_len;
+	dmve->dmve_tabinfo.tablen = t->tcb_relid_len;
+	dmve->dmve_tabinfo.tabid = t->tcb_rel.reltid;
+    }
 }

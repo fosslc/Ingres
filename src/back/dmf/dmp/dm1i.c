@@ -1516,6 +1516,13 @@ DB_ERROR        *dberr)
 **	22-Apr-2010 (kschendel) SIR 123485
 **	    Process coupons if doing full row duplicate checking and there
 **	    are blobs, otherwise dmpe now complains about lack of context.
+**	26-Jul-2010 (kschendel) b124127
+**	    Make sure that the extra tuple buffer is allocated for all
+**	    cases that we use it.  It was only being allocated for
+**	    compressed rows.
+**	16-Aug-2010 (jonj) SD 146221
+**	    dm1r_crow_lock(flags) now DM1R_LK_? instead of LK_? to avoid
+**	    collisions with lk.h defines.
 */
 static DB_STATUS
 ipage_dupcheck(
@@ -1554,7 +1561,11 @@ DB_ERROR    *dberr)
 
     CLRDBERR(dberr);
  
-    if (t->tcb_data_rac.compression_type != TCB_C_NONE && r->rcb_tupbuf == NULL)
+    if (r->rcb_tupbuf == NULL
+      && (t->tcb_data_rac.compression_type != TCB_C_NONE
+	 || t->tcb_rel.relstat2 & TCB2_HAS_EXTENSIONS
+	 || t->tcb_rel.relversion != 0
+	 || t->tcb_seg_rows) )
     {
 	r->rcb_tupbuf = dm0m_tballoc((t->tcb_rel.relwid +
 					t->tcb_data_rac.worstcase_expansion));
@@ -1580,7 +1591,7 @@ DB_ERROR    *dberr)
 
 	    if ( crow_locking(r) )
 	    {
-	        s = dm1r_crow_lock(r, LK_PHYSICAL, &tid_to_lock, NULL, dberr);
+	        s = dm1r_crow_lock(r, DM1R_LK_PHYSICAL, &tid_to_lock, NULL, dberr);
 	    }
 	    else
 	    {

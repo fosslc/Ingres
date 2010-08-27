@@ -35,6 +35,9 @@
 **    is set to True and Ingres tables if parameter is FALSE.
 ** 02-Jun-2010 (drivi01)
 **    Remove hard coded buffer sizes.
+** 30-Jun-2010 (drivi01)
+**    Bug #124006
+**    Add new BOOLEAN datatype.
 **/
 
 #include "dll.h"
@@ -1263,6 +1266,9 @@ static void FormatColumn (LPSTRINGLIST lpCol, LPTSTR lpszBufferCol)
     case INGTYPE_UNICODE_LNVCHR:
         lstrcpy (lpszBufferCol, "long nvarchar");
         break;
+    case INGTYPE_BOOLEAN:
+	lstrcpy (lpszBufferCol, "boolean");
+	break;
 
     }
 }

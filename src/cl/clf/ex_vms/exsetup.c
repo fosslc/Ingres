@@ -3,6 +3,7 @@
 */
 # include	<compat.h>
 # include	<excl.h>
+#include <ints.h>
 #include "exi.h"
 
 /*
@@ -26,6 +27,10 @@
 **	29-jun-2009 (joea)
 **	    The first argument should be a pointer to a function returning
 **	    STATUS not to a function returning a pointer to i4.
+**      16-jun-2010 (joea)
+**          On Itanium, align the beginning of jmp_buf block if not octaword
+**          aligned and save the address in iijmpbuf.  Call
+**          lib$i64_init_invo_context to initialize it.
 */
 
 STATUS 
@@ -37,6 +42,21 @@ EXsetup(STATUS (*handler)(EX_ARGS *args), EX_CONTEXT *context)
 	context->address_check = (PTR)context;
 
 	i_EXpush(context);
+
+#if defined(i64_vms)
+    context->iijmpbuf = (INVO_CONTEXT_BLK *)context->jmpbuf_blk;
+    if (((int)context->iijmpbuf & 0xFFFFFFF0) != (int)context->iijmpbuf)
+    {
+        int64 *aligned_icb = (int64 *)((char *)context->iijmpbuf
+                                       + sizeof(int64));
+        context->iijmpbuf = (INVO_CONTEXT_BLK *)
+            ((int64)((char *)aligned_icb + 15) & ~15);
+    }
+
+    if (lib$i64_init_invo_context(context->iijmpbuf,
+                                  LIBICB$K_INVO_CONTEXT_VERSION, 0) == 0)
+        return FAIL;
+#endif
 
 	return OK;
 }

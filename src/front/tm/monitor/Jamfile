@@ -3,11 +3,14 @@
 #
 # 13-aug-2009 (horda03)
 #   tm built with static libraries on VMS
+#       06-jul-2010 (joea)
+#           Compile tmmain with NOOPTIM on IA64 VMS.
 
 SubDir ING_SRC front tm monitor ;
 
 IISUBSYS front tm monitor ;
 
+IINOOPTIM tmmain.c : i64_vms ;
 
 IIBINEXE tm : tmmain.qsc ;
 if $(VMS)

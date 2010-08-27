@@ -140,6 +140,8 @@ typedef ULT_VECTOR_MACRO(OPT_BMGLOBAL, OPT_GVALUES) OPT_GLOBAL;
 **	    Pass on cardinality_check setting in ops_nocardchk.
 **	03-Dec-2009 (kiria01) b122952
 **	    Add .opf_inlist_thresh for control of eq keys on large inlists.
+**      17-Aug-2010 (horda03) b124274
+**          Add .ops_qep_flag for displaying QEPs in segments.
 [@history_line@]...
 */
 typedef struct _OPS_ALTER
@@ -212,6 +214,8 @@ typedef struct _OPS_ALTER
                                         ** structure is required */
     bool            ops_qep;            /* TRUE - if QEP should be printed
                                         ** i.e. if SET QEP command executed */
+    i4              ops_qep_flag;       /* ULD_FLAG_SEGMENTS - if Segmented QEP should be printed
+                                        ** i.e. if SET QEP SEGMENTED command executed */
     i2		    ops_cnffact;	/* Factor applied to estimated #fax
 					** after CNF transform to determine if
 					** where is too complex */

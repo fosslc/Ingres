@@ -24,6 +24,8 @@
 **	    options. These are passed around in a DMR_CB.
 **	4-Dec-2009 (kschendel) SIR 122974
 **	    Add special CSV delimiter.
+**	24-jun-2010 (stephenb)
+**	    Add CPY_INS_OPTIM and CPY_SMALL
 **/
 
 /*
@@ -76,3 +78,7 @@
 #define			CPY_CONTINUE		0x00000800
 /*	notused, was empty			0x00001000 */
 #define			CPY_DMR_CB		0x00002000
+/* copy was called from insert optimization (back-end only) */
+#define			CPY_INS_OPTIM		0x00004000
+/* copy is very small (back-end only) */
+#define			CPY_SMALL		0x00008000

@@ -3,6 +3,9 @@
 **
 */
 
+/* Make sure we have QSO_NAME defined */
+#include <qsf.h>
+
 /**
 ** Name: QEFRCB.H - data structures for requesting QEF operations.
 **
@@ -149,11 +152,16 @@
 **          Replace i4 with SIZE_TYPE for memory pool > 2Gig.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      23-jun-2010 (stephenb)
+**          Add QEF_COL_DATA and QEF_INS_DATA structures to support
+**          buffering of insert rows for batch copy optimization
 {@history_template@}
 **/
 
 typedef struct _QEF_ALT QEF_ALT;
 typedef struct _QEF_DATA QEF_DATA;
+typedef struct _QEF_COL_DATA QEF_COL_DATA;
+typedef struct _QEF_INS_DATA QEF_INS_DATA;
 typedef struct _QEF_PARAM QEF_PARAM;
 typedef struct _QEF_RCB QEF_RCB;
 typedef struct _QEF_CB	QEF_CB;
@@ -223,6 +231,10 @@ struct _QEF_ALT
 **      Data blocks can be linked to gether to provide room for
 **	an arbitrary amount of input and output. Each data block
 **	holds one tuple.
+**	** WARNING WARNING WARNING WARNING ****
+**	This control block is cast to DM_MDATA in qeu_r_copy, at least
+**	the first 3 fields must mirror that control block. If you
+**	make any changes to this structure, please check DM_MDATA first.
 **
 ** History:
 **     23-may-86 (daved)
@@ -235,6 +247,55 @@ struct _QEF_DATA
     PTR         dt_data;        /* pointer to the beginning of
                                 ** the data area.
                                 */
+};
+
+/*}
+** Name: QEF_INS_DATA - QEF Insert data
+** 
+** Description:
+** 	When converting single row inserts into blocks of rows
+** 	to leverage on a set based interface (such as COPY), each
+** 	row may have a different format (type, size, and precision).
+** 	This structure supplies the extra information, allowing each row in
+** 	a data block to be different.
+** 	The structure is currently used to convert insert statements
+** 	for use with "copy" protocols. This is possible when running
+** 	several concurrent inserts in batch mode. 
+**
+**	this structure will be kept in lock-step with the QEF_DATA
+**	structure it contains. each "ins_next" insert data will contain
+**	the "ins_data" pointed to by "ins_data->dt_next". QEF_DATA also
+**	has a next pointer because it can live independently of this
+**	structure when all rows a data block have identical input format
+**	
+** History:
+** 	23-jun-2010 (stephenb)
+** 	    Created.
+*/
+struct _QEF_INS_DATA
+{
+    QEF_INS_DATA *ins_next;	/* next value */
+    QEF_DATA	ins_data;	/* internal data */
+    i4		ins_ext_size;	/* external size of this row */
+    QEF_COL_DATA *ins_col;	/* array of column data */
+};
+/*}
+** Name: QEF_COL_DATA - QEF column data (for use in above)
+** 
+** Description:
+** 	Describes each column in a data block. Currently this
+** 	is only used for the inert to copy optimization, where each
+** 	row in a copy buffer may have a different format (requiring
+** 	a column description for each one)
+** 
+** History:
+**	23-jun-2010 (stephenb)
+**	    Created
+*/
+struct _QEF_COL_DATA
+{
+    DB_DATA_VALUE	dtcol_value;	/* type, precision and length */
+    i4			dtcol_offset;	/* offset in above dt_data */
 };
 
 /*}
@@ -717,6 +778,11 @@ typedef struct _QEF_DDB_REQ
 **	    QEF_CB.
 **	24-apr-2007 (dougi)
 **	    Remove scrollable cursor #define's - they're already in gca.h.
+**	22-Jun-2010 (kschendel) b123775
+**	    Make DBP name a real QSO_NAME.
+**	    Delete the open-count, not used for anything and at least one
+**	    place in qeq.c was zeroing the open count here, thinking that
+**	    it was zeroing the qef-cb open count (!).
 */
 struct _QEF_RCB
 {
@@ -736,7 +802,6 @@ struct _QEF_RCB
     i4		qef_stat;	/* This field is used during a QEF_INFO call */
 				/* to return the current transaction status. */
     i4		qef_stm_error;	/* Used to return statement error mode. */
-    i4		qef_open_count;	/* number of open cursors */
     DB_SP_NAME *qef_spoint;     /* name of a savepoint */
     DB_TAB_TIMESTAMP qef_comstamp;/* date of last commit transaction stmt */
     i4          qef_pcount;     /* how many sets of input parameters */
@@ -787,12 +852,7 @@ struct _QEF_RCB
     u_i4	qef_fetch_anchor; /* reference point for scrollable cursor
 				** offset (uses GCA_ANCHOR_xxx values) */
     i4          qef_version;    /* version number */
-    struct
-    {
-	DB_CURSOR_ID	qef_p_crsr_id;
-	char		qef_p_user[DB_OWN_MAXNAME];
-	i4		qef_p_dbid;
-    } qef_dbpname;		/* An alias for a procedure (QP) that QEF    */
+    QSO_NAME	qef_dbpname;	/* An alias for a procedure (QP) that QEF    */
 				/* needs compiled for execution. This value */
 				/* is filled in when QEF returns with the   */
 				/* error code E_QE0119_LOAD_QP. An alias is */

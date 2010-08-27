@@ -59,6 +59,8 @@
 **	    Add support for the Ada ' tick operator.
 **	15-aug-2007 (dougi)
 **	    Added tDTCONST for date/time literals.
+**      23-aug-2010 (stial01) (SIR 121123)
+**          Changes for Long IDs
 */
 
 /* 
@@ -171,9 +173,9 @@ GLOBALREF i4		tok_special[];
 /* Maximum sizes of data scanned off */
 
 # define	SC_NUMMAX	100
-# define	SC_WORDMAX	64
-# define	SC_STRMAX	255
-# define	SC_LINEMAX	255
+# define	SC_WORDMAX	256
+# define	SC_STRMAX	512
+# define	SC_LINEMAX	512
 
 /* 
 ** Tags to allow additions into a union of token types - yylval.

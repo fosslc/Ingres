@@ -1150,6 +1150,8 @@ exit2:
 **	    Reuse psq_als_owner to handle owner.procedure if PSQ_OWNER_SET is set.
 **	03-mar-2008 (toumi01) BUG 120040
 **	    Initialize pst_flags lest we make decisions based on random memory.
+**	19-Jun-2010 (kiria01) b123951
+**	    Add extra parameter to psl0_rngent for WITH support.
 */
 psq_dbpreg(
 	PSQ_CB		*psq_cb,
@@ -1204,7 +1206,7 @@ psq_dbpreg(
 			(DB_TAB_NAME *)&psq_cb->psq_cursid.db_cur_name, 
 			sess_cb, TRUE, &resrange, psq_cb->psq_mode, 
 			&psq_cb->psq_error, tbls_to_lookup, &rngvar_info, 
-			lookup_mask);
+			lookup_mask, NULL);
     }
 
     if (DB_FAILURE_MACRO(status))

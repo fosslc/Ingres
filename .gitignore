@@ -2,8 +2,9 @@
 *.efr
 *.sc
 *.roc
-*.patch
-*.message
+*.import_txt
+*.import_tmp
+*.import_msg
 Jamdbg
 Jamfile
 VERS

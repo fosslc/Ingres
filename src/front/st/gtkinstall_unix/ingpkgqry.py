@@ -52,6 +52,18 @@
 ##	25-May-2010 (hanje04)
 ##	    SIR 123791
 ##	    Make sure we get ALL the locations in dblocdict
+##	25-Jun-2010 (hanje04)
+##	    BUG 123984
+##	    Make sure core package is added to ssinfo once we've verified it's
+##	    there
+##	10-Aug-2010 (hanje04)
+##	    BUG 124253
+##	    For non-renamed installs, get installation ID from symbol.tbl as
+##	    it may not be II
+##	19-Aug-2010 (hanje04)
+##	    BUG 124284
+##	    Only close() cfgfile if we've opened it in findInstID(). Improve
+##	    error meessage too.
 
 
 # load external modules
@@ -120,6 +132,7 @@ The 'python-xml' package must be installed to run this installer"
 FAIL_OPEN_FILE = "ERROR: Failed to open file: %s"
 FAIL_GET_DBLOCS = "ERROR: Failed to determine DB locations"
 FAIL_GET_LOGLOCS = "ERROR: Failed to determine log locations"
+FAIL_GET_IIINST = "ERROR: Failed to determine value for II_INSTALLATION"
 FAIL_WRITE_XML="ERROR: Failed to write XML to: %s\n%s\n"
 FAIL_SSET_QRY="ERROR: Failed to query %s saveset"
 INVALID_PKG_NAME = "ERROR: %(name)s-%(version)s-%(release)s-%(arch)s.rpm is not a valid package.\nAborting"
@@ -212,6 +225,32 @@ def isRenamed( pkgname ):
 	renamed = False
 
     return renamed
+def findInstID( instloc ):
+    """Read II_INSTALLATION from symbol table of target instance
+	and return it"""
+    symtblpath = "%s/%s/%s" % ( instloc, filesloc, symtbl )
+    instid = "undefined"
+
+    try:
+	cfgfile = file( symtblpath, 'r' )
+    except:
+	print FAIL_OPEN_FILE % symtblpath
+	print FAIL_GET_IIINST
+    else:
+	# start reading the file
+	ent = cfgfile.readline()
+	while ent != '':
+	    # match each line against II_INSTALLATION
+	    if re.match( "II_INSTALLATION", ent ) != None:
+		    # extract the value from the RHS of the =
+		    tmplst = re.split( '\t', ent, maxsplit = 1 )
+		    instid = tmplst[1].strip()
+		    break
+	
+	    # and move on
+	    ent = cfgfile.readline()
+	    cfgfile.close()
+    return instid
 
 def findAuxLoc( instloc ):
     """Get database and log locations for an Ingres instance at
@@ -295,6 +334,9 @@ def getRPMSaveSetInfo( location ):
     if re.match( pkg_basename, hdr[ 'name' ] ) == None:
 	print INVALID_PKG_NAME % hdr
 	return None
+    else:
+        # Add core package to ssinfo
+        ssinfo[ 'package' ].append('core')
 
     ssinfo[ 'version' ] = [ "%(version)s-%(release)s" % hdr  ]
     ssinfo[ 'arch' ] = [ "%(arch)s" % hdr ]
@@ -346,7 +388,8 @@ def searchRPMDB( sshdr ):
 		debugPrint( "%s is renamed, ID is %s" % ( inst['name'], instid[0] ) )
 		renamed = True
 	    else:
-		instid[0]= "II"
+		# Non-renamed can have non-default instid but we need 
+		# more info before we can find it
 		renamed = False
 
 	    # What's version is the instance and what can we do to it
@@ -380,6 +423,16 @@ def searchRPMDB( sshdr ):
 		    if re.search( instpat, string, 0 ) != None:
 			debugPrint( "\tFound %(name)s-%(version)s-%(release)s" % p )
 			instpkgs.append( ingpkg )
+
+	    # find instID for non-renamed installs
+	    if not renamed:
+		instid[0] = findInstID(instloc[0])
+
+	    # sanity check what we got back
+	    if len(instid[0]) != 2:
+		print "Invalid installation ID: '%s', found for %s-%s, using II" % \
+					(instid[0], basename[0], version[0])
+		instid[0] = "II"
 
 	    # create dictionary to store info
 	    instinfo = { 'ID' : instid,

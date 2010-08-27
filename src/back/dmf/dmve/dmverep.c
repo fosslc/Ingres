@@ -273,6 +273,8 @@
 **          Changes for Long IDs, move consistency check to dmveutil
 **      29-Apr-2010 (stial01)
 **          Use new routintes to compare rows in iirelation, iisequence
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 */
 
 static DB_STATUS	dmv_rerep(
@@ -422,6 +424,7 @@ DMVE_CB		*dmve_cb)
     DMP_PINFO		*new_pinfo = NULL;
 
     CLRDBERR(&dmve->dmve_error);
+    DMVE_CLEAR_TABINFO_MACRO(dmve);
 
     for (;;)
     {
@@ -544,8 +547,8 @@ DMVE_CB		*dmve_cb)
 		    uleFormat(NULL, E_DM9665_PAGE_OUT_OF_DATE, (CL_ERR_DESC *)NULL,
 			ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
 			&loc_error, 8,
-			sizeof(*tbio->tbio_relid), tbio->tbio_relid,
-			sizeof(*tbio->tbio_relowner), tbio->tbio_relowner,
+			sizeof(DB_TAB_NAME), tbio->tbio_relid->db_tab_name,
+			sizeof(DB_OWN_NAME), tbio->tbio_relowner->db_own_name,
 			0, DMPP_VPT_GET_PAGE_PAGE_MACRO(page_type, old_page),
 			0, DMPP_VPT_GET_PAGE_STAT_MACRO(page_type, old_page),
 			0, DMPP_VPT_GET_LOG_ADDR_HIGH_MACRO(page_type, old_page),
@@ -564,8 +567,8 @@ DMVE_CB		*dmve_cb)
 		    uleFormat(NULL, E_DM9665_PAGE_OUT_OF_DATE, (CL_ERR_DESC *)NULL,
 			ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
 			&loc_error, 8,
-			sizeof(*tbio->tbio_relid), tbio->tbio_relid,
-			sizeof(*tbio->tbio_relowner), tbio->tbio_relowner,
+			sizeof(DB_TAB_NAME), tbio->tbio_relid->db_tab_name,
+			sizeof(DB_OWN_NAME), tbio->tbio_relowner->db_own_name,
 			0, DMPP_VPT_GET_PAGE_PAGE_MACRO(page_type, new_page),
 			0, DMPP_VPT_GET_PAGE_STAT_MACRO(page_type, new_page),
 			0, DMPP_VPT_GET_LOG_ADDR_HIGH_MACRO(page_type, new_page),
@@ -587,8 +590,8 @@ DMVE_CB		*dmve_cb)
 		   uleFormat(NULL, E_DM9665_PAGE_OUT_OF_DATE, (CL_ERR_DESC *)NULL,
 		    ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
 		    &loc_error, 8,
-		    sizeof(*tbio->tbio_relid), tbio->tbio_relid,
-		    sizeof(*tbio->tbio_relowner), tbio->tbio_relowner,
+		    sizeof(DB_TAB_NAME), tbio->tbio_relid->db_tab_name,
+		    sizeof(DB_OWN_NAME), tbio->tbio_relowner->db_own_name,
 		    0, DMPP_VPT_GET_PAGE_PAGE_MACRO(page_type, old_page),
 		    0, DMPP_VPT_GET_PAGE_STAT_MACRO(page_type, old_page),
 		    0, DMPP_VPT_GET_LOG_ADDR_HIGH_MACRO(page_type, old_page),
@@ -609,8 +612,8 @@ DMVE_CB		*dmve_cb)
 		   uleFormat(NULL, E_DM9665_PAGE_OUT_OF_DATE, (CL_ERR_DESC *)NULL,
 		    ULE_LOG, NULL, (char *)NULL, 0, NULL,
 		    &loc_error, 8,
-		    sizeof(*tbio->tbio_relid), tbio->tbio_relid,
-		    sizeof(*tbio->tbio_relowner), tbio->tbio_relowner,
+		    sizeof(DB_TAB_NAME), tbio->tbio_relid->db_tab_name,
+		    sizeof(DB_OWN_NAME), tbio->tbio_relowner->db_own_name,
 		    0, DMPP_VPT_GET_PAGE_PAGE_MACRO(page_type, new_page),
 		    0, DMPP_VPT_GET_PAGE_STAT_MACRO(page_type, new_page),
 		    0, DMPP_VPT_GET_LOG_ADDR_HIGH_MACRO(page_type, new_page),
@@ -900,10 +903,8 @@ char	    	    *new_row_buf)
     /*
     ** Get pointers to new and old log record data segments.
     */
-    old_row_log_info = &log_rec->rep_vbuf[log_rec->rep_tab_size + 
-			    log_rec->rep_own_size];
-    new_row_log_info = &log_rec->rep_vbuf[log_rec->rep_tab_size + 
-			    log_rec->rep_own_size + log_rec->rep_odata_len];
+    old_row_log_info = ((char *)log_rec) + sizeof(*log_rec);
+    new_row_log_info = old_row_log_info + log_rec->rep_odata_len;
 
     /*
     ** Consistency Check:
@@ -930,8 +931,8 @@ char	    	    *new_row_buf)
 	    uleFormat(NULL, E_DM966D_DMVE_ROW_MISSING, (CL_ERR_DESC *)NULL, ULE_LOG,
 		NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 6, 
 		sizeof(DB_DB_NAME), tabio->tbio_dbname->db_db_name,
-		log_rec->rep_tab_size, &log_rec->rep_vbuf[0],
-		log_rec->rep_own_size, &log_rec->rep_vbuf[log_rec->rep_tab_size],
+		sizeof(DB_TAB_NAME), tabio->tbio_relid->db_tab_name,
+		sizeof(DB_OWN_NAME), tabio->tbio_relowner->db_own_name,
 		0, log_rec->rep_otid.tid_tid.tid_page,
 		0, log_rec->rep_otid.tid_tid.tid_line,
 		0, status);
@@ -1017,8 +1018,8 @@ char	    	    *new_row_buf)
 	    uleFormat(NULL, E_DM966C_DMVE_TUPLE_MISMATCH, (CL_ERR_DESC *)NULL, ULE_LOG,
 		NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 8, 
 		sizeof(DB_DB_NAME), tabio->tbio_dbname->db_db_name,
-		log_rec->rep_tab_size, &log_rec->rep_vbuf[0],
-		log_rec->rep_own_size, &log_rec->rep_vbuf[log_rec->rep_tab_size],
+		sizeof(DB_TAB_NAME), tabio->tbio_relid->db_tab_name,
+		sizeof(DB_OWN_NAME), tabio->tbio_relowner->db_own_name,
 		0, log_rec->rep_otid.tid_tid.tid_page,
 		0, log_rec->rep_otid.tid_tid.tid_line,
 		0, record_size, 0, log_rec->rep_orec_size,
@@ -1054,8 +1055,8 @@ char	    	    *new_row_buf)
 	    uleFormat(NULL, E_DM9674_DMVE_PAGE_NOROOM, (CL_ERR_DESC *)NULL, ULE_LOG,
 		NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 6, 
 		sizeof(DB_DB_NAME), tabio->tbio_dbname->db_db_name,
-		log_rec->rep_tab_size, &log_rec->rep_vbuf[0],
-		log_rec->rep_own_size, &log_rec->rep_vbuf[log_rec->rep_tab_size],
+		sizeof(DB_TAB_NAME), tabio->tbio_relid->db_tab_name,
+		sizeof(DB_OWN_NAME), tabio->tbio_relowner->db_own_name,
 		0, log_rec->rep_ntid.tid_tid.tid_page,
 		0, log_rec->rep_ntid.tid_tid.tid_line, 
 		0, log_rec->rep_nrec_size);
@@ -1565,10 +1566,8 @@ char	    	    *new_row_buf)
     /*
     ** Calculate pointers to log record row recovery information.
     */
-    old_row_log_info = &log_rec->rep_vbuf[log_rec->rep_tab_size + 
-			    log_rec->rep_own_size];
-    new_row_log_info = &log_rec->rep_vbuf[log_rec->rep_tab_size + 
-			    log_rec->rep_own_size + log_rec->rep_odata_len];
+    old_row_log_info = ((char *)log_rec) + sizeof(*log_rec);
+    new_row_log_info = old_row_log_info + log_rec->rep_odata_len;
 
     /*
     ** Get pointer to correct page for the new tuple (the one which must be
@@ -1608,8 +1607,8 @@ char	    	    *new_row_buf)
 	    uleFormat(NULL, E_DM966D_DMVE_ROW_MISSING, (CL_ERR_DESC *)NULL, ULE_LOG,
 		NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 6, 
 		sizeof(DB_DB_NAME), tabio->tbio_dbname->db_db_name,
-		log_rec->rep_tab_size, &log_rec->rep_vbuf[0],
-		log_rec->rep_own_size, &log_rec->rep_vbuf[log_rec->rep_tab_size],
+		sizeof(DB_TAB_NAME), tabio->tbio_relid->db_tab_name,
+		sizeof(DB_OWN_NAME), tabio->tbio_relowner->db_own_name,
 		0, log_rec->rep_ntid.tid_tid.tid_page,
 		0, log_rec->rep_ntid.tid_tid.tid_line,
 		0, status);
@@ -1693,8 +1692,8 @@ char	    	    *new_row_buf)
 		ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL, 
 		err_code, 8, 
 		sizeof(DB_DB_NAME), tabio->tbio_dbname->db_db_name,
-		log_rec->rep_tab_size, &log_rec->rep_vbuf[0],
-		log_rec->rep_own_size, &log_rec->rep_vbuf[log_rec->rep_tab_size],
+		sizeof(DB_TAB_NAME), tabio->tbio_relid->db_tab_name,
+		sizeof(DB_OWN_NAME), tabio->tbio_relowner->db_own_name,
 		0, log_rec->rep_ntid.tid_tid.tid_page,
 		0, log_rec->rep_ntid.tid_tid.tid_line,
 		0, record_size, 0, log_rec->rep_nrec_size,
@@ -1706,6 +1705,8 @@ char	    	    *new_row_buf)
 			log_rec->rep_page_size, newrow_page, "DATA");
 	    uleFormat(NULL, E_DM9636_UNDO_REP, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
 		(char *)NULL, (i4)0, (i4 *)NULL, err_code, 0); 
+	    if (dmve->dmve_flags & DMVE_MVCC)
+		dmd_pr_mvcc_info(dmve->dmve_rcb);
 	}
     }
 
@@ -1734,8 +1735,8 @@ char	    	    *new_row_buf)
 	    uleFormat(NULL, E_DM9674_DMVE_PAGE_NOROOM, (CL_ERR_DESC *)NULL, ULE_LOG,
 		NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 6, 
 		sizeof(DB_DB_NAME), tabio->tbio_dbname->db_db_name,
-		log_rec->rep_tab_size, &log_rec->rep_vbuf[0],
-		log_rec->rep_own_size, &log_rec->rep_vbuf[log_rec->rep_tab_size],
+		sizeof(DB_TAB_NAME), tabio->tbio_relid->db_tab_name,
+		sizeof(DB_OWN_NAME), tabio->tbio_relowner->db_own_name,
 		0, log_rec->rep_otid.tid_tid.tid_page,
 		0, log_rec->rep_otid.tid_tid.tid_line, 
 		0, log_rec->rep_orec_size);
@@ -1745,6 +1746,8 @@ char	    	    *new_row_buf)
 	    dmve_trace_page_contents(log_rec->rep_pg_type, 
 			log_rec->rep_page_size, old_page, "DATA");
 	    SETDBERR(&dmve->dmve_error, 0, E_DM9636_UNDO_REP);
+	    if (dmve->dmve_flags & DMVE_MVCC)
+		dmd_pr_mvcc_info(dmve->dmve_rcb);
 	    return(E_DB_ERROR);
 	}
     }
@@ -1874,8 +1877,8 @@ char	    	    *new_row_buf)
                 &comp_ndata, &comp_ndata_len, &diff_offset, &comp_orow);
 
 	    status = dm0l_rep(dmve->dmve_log_id, flags, &log_rec->rep_tbl_id, 
-		(DB_TAB_NAME*)&log_rec->rep_vbuf[0], log_rec->rep_tab_size, 
-		(DB_OWN_NAME*)&log_rec->rep_vbuf[log_rec->rep_tab_size], log_rec->rep_own_size, 
+		tabio->tbio_relid, 0,
+		tabio->tbio_relowner, 0,
 		&log_rec->rep_otid, 
 		&log_rec->rep_ntid,
 		log_rec->rep_pg_type, log_rec->rep_page_size,

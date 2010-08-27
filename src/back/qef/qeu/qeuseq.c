@@ -326,6 +326,12 @@ QEUQ_CB	    *qeuq_cb)
 **	    Don't increment the db_tab_index to mark cache to be
 **	    refreshed as will be noted in the dms_end_seq() call and
 **	    cache subsequently flushed.
+**	11-Jul-2010 (jonj) Bug 123896
+**	    Acquire sequence id before opening newly created
+**	    sequence, rather than after.
+**	    dms_open() now forms LK_SEQUENCE locks using this unique
+**	    id instead of sequence owner and name, which cannot
+**	    be made into a unique lock key.
 */
 static DB_STATUS
 qeu_seq(
@@ -392,36 +398,6 @@ QEUQ_CB	        *qeuq_cb)
 	    qef_cb->qef_stat = QEF_MSTRAN;
 
 	stuple = (DB_IISEQUENCE *)qeuq_cb->qeuq_uld_tup->dt_data;
-
-	/*
-	** Open the Sequence. For DDL, this involves
-	** placing an exclusive lock on the 
-	** database id, sequence name and owner.
-	** 
-	** DML Queries which have opened the Sequence hold
-	** at least an IX lock on the sequence, so we'll be
-	** blocked until they commit.
-	*/
-	dms_cb.type = DMS_SEQ_CB;
-	dms_cb.length = sizeof(DMS_CB);
-	dms_cb.dms_flags_mask = (action == QEU_CSEQ) ? DMS_CREATE 
-			       :(action == QEU_ASEQ) ? DMS_ALTER
-			       : DMS_DROP;
-	dms_cb.dms_tran_id = qef_cb->qef_dmt_id;
-	dms_cb.dms_db_id = qeuq_cb->qeuq_db_id;
-	dms_cb.dms_seq_array.data_address = (PTR)&dms_seq;
-	dms_cb.dms_seq_array.data_in_size = sizeof(DMS_SEQ_ENTRY);
-	STRUCT_ASSIGN_MACRO(stuple->dbs_name, dms_seq.seq_name);
-	STRUCT_ASSIGN_MACRO(stuple->dbs_owner, dms_seq.seq_owner);
-	STRUCT_ASSIGN_MACRO(stuple->dbs_uniqueid, dms_seq.seq_id);
-
-	status = dmf_call(DMS_OPEN_SEQ, &dms_cb);
-	if ( status )
-	{
-	    error = dms_cb.error.err_code;
-	    break;
-	}
-	seq_opened = TRUE;
 
     
 	/* Open iisequences catalog */
@@ -496,7 +472,8 @@ QEUQ_CB	        *qeuq_cb)
 		/*
 		** CREATE:
 		** Get unique sequence id (a table id) from DMF
-		** to be used as an internal identifer.
+		** to be used as an internal identifer
+		** and lock key element.
 		*/
 		dmu_cb.type = DMU_UTILITY_CB;
 		dmu_cb.length = sizeof(DMU_CB);
@@ -509,6 +486,37 @@ QEUQ_CB	        *qeuq_cb)
 		else
 		    qeu.error.err_code = dmu_cb.error.err_code;
 	    }
+	}
+
+	if ( status == E_DB_OK )
+	{
+	    /*
+	    ** Open the Sequence. For DDL, this involves
+	    ** placing an exclusive lock on the 
+	    ** database id and sequence id.
+	    ** 
+	    ** DML Queries which have opened the Sequence hold
+	    ** at least an IX lock on the sequence, so we'll be
+	    ** blocked until they commit.
+	    */
+	    dms_cb.type = DMS_SEQ_CB;
+	    dms_cb.length = sizeof(DMS_CB);
+	    dms_cb.dms_flags_mask = (action == QEU_CSEQ) ? DMS_CREATE 
+				   :(action == QEU_ASEQ) ? DMS_ALTER
+				   : DMS_DROP;
+	    dms_cb.dms_tran_id = qef_cb->qef_dmt_id;
+	    dms_cb.dms_db_id = qeuq_cb->qeuq_db_id;
+	    dms_cb.dms_seq_array.data_address = (PTR)&dms_seq;
+	    dms_cb.dms_seq_array.data_in_size = sizeof(DMS_SEQ_ENTRY);
+	    STRUCT_ASSIGN_MACRO(stuple->dbs_name, dms_seq.seq_name);
+	    STRUCT_ASSIGN_MACRO(stuple->dbs_owner, dms_seq.seq_owner);
+	    STRUCT_ASSIGN_MACRO(stuple->dbs_uniqueid, dms_seq.seq_id);
+
+	    status = dmf_call(DMS_OPEN_SEQ, &dms_cb);
+	    if ( status )
+		qeu.error.err_code = dms_cb.error.err_code;
+	    else
+		seq_opened = TRUE;
 	}
 
 	if ( status == E_DB_OK && action == QEU_ASEQ )

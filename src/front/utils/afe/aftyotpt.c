@@ -77,6 +77,9 @@ DB_STATUS	adc_lenchk();
 **          Time types may have a precision. If specified use the db_prec
 **          value and reformat the type name that iicolumns supplied that did
 **          not include the precision.
+**      20-Aug-2010 (hanal04) Bug 124285
+**          DB_INDS_TYPE should show the precision at the end of the type
+**          so that the precision follws the word seconds.
 */
 DB_STATUS
 afe_tyoutput ( cb, dbv, user_type )
@@ -121,11 +124,24 @@ register DB_USER_TYPE	*user_type;
                 */
                 switch ( AFE_DATATYPE(dbv) )
                 {
+                  case DB_INDS_TYPE:
+                        if(dblength.db_prec != 0)
+                        {
+			    char *fmt = "%s(%d)";
+                            /* Need to add precision to INTERVAL DAY TO SEC */
+                            _VOID_ STprintf( user_type->dbut_name, fmt,
+                                             name.adi_dtname,
+                                             dblength.db_prec);
+
+                        }
+                        else
+		            STcopy(name.adi_dtname, user_type->dbut_name);
+                        break;
+
                   case DB_TMWO_TYPE:
                   case DB_TMW_TYPE:
                   case DB_TSWO_TYPE:
                   case DB_TSW_TYPE:
-                  case DB_INDS_TYPE:
                   case DB_TME_TYPE:
                   case DB_TSTMP_TYPE:
                         if(dblength.db_prec != 0)

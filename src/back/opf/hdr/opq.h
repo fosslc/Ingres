@@ -99,6 +99,8 @@
 **	    Add missing prototypes.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**  12-jul-2010 (coomi01) b124051 
+**      Create Hex value strings for stats
 */
 
 # define	NAMELEN		DB_GW1_MAXNAME
@@ -174,6 +176,12 @@
 # define TEXT7I "\ncell:%d    count:%f    value:"
 # define TEXT7O1 "\ncell:%%5d    count:%%-%d.%df    repf:%%-%d.%df    value:"
 # define TEXT7I1 "\ncell:%d    count:%f    repf:%f    value:"
+
+# define TEXT7O_hex  "\ncell:%%5d    count:%%-%d.%df    value HEX:"
+# define TEXT7I_hex  "\ncell:%d    count:%f    value HEX:"
+# define TEXT7O1_hex "\ncell:%%5d    count:%%-%d.%df    repf:%%-%d.%df    value HEX:"
+# define TEXT7I1_hex "\ncell:%d    count:%f    repf:%f    value HEX:"
+
 # define TEXT8 	"%s"
 # define TEXT9O	"\nunique chars: "
 # define TEXT9I	"\nunique chars: %d"
@@ -565,6 +573,9 @@ typedef struct _OPQ_DBCAPS
 **	26-oct-05 (inkdo01)
 **	    Add opq_sample flag to distinguish real samples from 
 **	    uses of -zfq option that generate temp tables.
+**	26-jul-10 (toumi01)
+**	    Add opq_encstats flag to request histograms for encrypted
+**	    columns. The default behavior is to skip them.
 */
 typedef struct _OPQ_GLOBAL
 {
@@ -605,6 +616,9 @@ typedef struct _OPQ_GLOBAL
     bool	opq_sample;	/* Flag indicating whether "-zs" parm 
 				** was specified */
     bool	opq_hexout;	/* Flag indicating whether "-zhex" pam
+				** was specified */
+    bool	opq_encstats;	/* Flag indicating whether "-ze" parm asking
+				** for statistics for encrypted columns
 				** was specified */
 } OPQ_GLOBAL;
 

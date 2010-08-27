@@ -301,6 +301,8 @@ typedef struct _DMPE_LLOC_CXT
 ** Edit History:
 **	12-Apr-2010 (kschendel) SIR 123485
 **	    Invented.
+**	13-Jul-2010 (jonj)
+**	    Add bqcb_seq_number for MVCC-opened etabs.
 */
 
 /* First, the BQCB per-attribute entry. */
@@ -339,6 +341,7 @@ struct _DMPE_BQCB
 				** use page locking on the etabs.
 				*/
     i4		bqcb_base_id;	/* Base table db_tab_base */
+    i4		bqcb_seq_number;/* rcb_seq_number from base DMP_RCB */
     i2		bqcb_natts;	/* Number of LOB attributes in the table */
     enum {
 	BQCB_LOAD_UNKNOWN,	/* don't know yet */

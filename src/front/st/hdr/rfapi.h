@@ -68,6 +68,10 @@
 **	    - IIVWCFG_COLUMNSPACE: Max size for VW database
 **	    - IIVWCFG_BLOCK_SIZE: Block size for VW data
 **	    - IIVWCFG_GROUP_SIZE: Block group size for VW data
+**	14-Jul-2010 (hanje04)
+**	    BUG 123081
+**	    Add II_RF_OP_APPEND for appending to existing response file rather
+**	    than creating a new one.
 ** 
 */
 
@@ -268,6 +272,7 @@ struct _RFAPI_LIST {
 # define II_RF_OP_ADD_ON_UPDATE 0x00000004
 # define II_RF_OP_WRITE_DEFAULTS 0x00000008
 # define II_RF_OP_INCLUDE_MDB 0x00000010
+# define II_RF_OP_APPEND 0x00000020
     u_i2 memtag;	/* ME tag used for memory allocation */
 };
 

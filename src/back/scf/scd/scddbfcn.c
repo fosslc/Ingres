@@ -186,6 +186,8 @@ GLOBALREF SC_MAIN_CB	    *Sc_main_cb;    /* core struct of SCF */
 **      27-May-1999 (hanal04)
 **          Remove and reworked the above change for bug 55788. If
 **          DMC_CNF_LOCKED is set pass this information to DMF. b97083.
+**      09-aug-2010 (maspa05) b123189, b123960
+**          Set DMC2_READONLYDB in dmc_flags_mask2 if database is readonly db
 **          
 [@history_template@]...
 */
@@ -213,6 +215,10 @@ scd_dbadd(SCV_DBCB *dbcb,
 	(dbcb->db_flags_mask & ~(DMC_MAKE_CONSISTENT | DMC_PRETEND | DMC_NLK_SESS));
 
 	dmc->dmc_db_access_mode = dbcb->db_access_mode;
+
+	if (dbcb->db_dbtuple.du_access & DU_RDONLY)
+	    dmc->dmc_flags_mask2 |= DMC2_READONLYDB;
+
 	if (dmc->dmc_db_access_mode == DMC_A_WRITE
 	    && dbcb->db_dbtuple.du_access & DU_RDONLY)
 	    dmc->dmc_db_access_mode = DMC_A_READ;

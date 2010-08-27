@@ -374,6 +374,10 @@
 **	    that will be invoked by the "Monitor Ingres Cache Statistics" menu item
 **	    that sets up the environment, loads the perf DLL and the counters
 **	    before invoking "perfmon" with the given parameter.
+**	02-Aug-2010 (drivi01)
+**	    HKEY_CLASSES_ROOT\\Ingres_Database_XX where XX is an instance id
+**          is not being removed on uninstall.
+**          Fix the installer to remove this key.
 */
 
 #include <stdio.h>
@@ -2407,7 +2411,7 @@ ingres_delete_file_associations(MSIHANDLE hInstall)
 
 
         dwSize = sizeof(temp);
-        if (MsiGetProperty( hInstall, "DBATools", temp, &dwSize)==ERROR_SUCCESS)
+        if (MsiGetProperty( hInstall, "DBATools", temp, &dwSize)==ERROR_SUCCESS && temp[0])
 	    isDBATools=TRUE;
 
 	/* Delete VDBA and IIA file associations set in registry*/
@@ -3942,7 +3946,7 @@ ingres_create_vista_shortcut(MSIHANDLE hInstall)
     if (!IsVista()) return ERROR_SUCCESS;
 
     dwSize = sizeof(szBuf);
-    if (MsiGetProperty(hInstall, "DBATools", szBuf, &dwSize ) != ERROR_SUCCESS)
+    if (MsiGetProperty(hInstall, "DBATools", szBuf, &dwSize ) != ERROR_SUCCESS && szBuf[0])
     {
 	return (ERROR_INSTALL_FAILURE);
     }
@@ -5123,7 +5127,7 @@ ingres_installfinalize(MSIHANDLE hInstall)
     int isDBATools = TRUE;
 
     dwSize = sizeof(szBuf);
-    if (MsiGetProperty( hInstall, "DBATools", szBuf, &dwSize)==ERROR_SUCCESS)
+    if (MsiGetProperty( hInstall, "DBATools", szBuf, &dwSize)==ERROR_SUCCESS && szBuf[0])
 	isDBATools=TRUE;
 
     dwSize=sizeof(szII_SYSTEM);

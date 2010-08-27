@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1999, 2009 Ingres Corporation. All Rights Reserved.
+** Copyright (c) 1999, 2010 Ingres Corporation. All Rights Reserved.
 */
 
 using System;
@@ -92,6 +92,10 @@ namespace Ingres.ProviderInternals
 	**	    Added Target structure and TargetList class.
 	**	 4-Aug-09 (thoda04) Bug 122412 fix
 	**	    Added getTargetListString() to support "(local)" again.
+	**	13-Aug-10 (thoda04) Bug 124123
+	**	    Allow one thread to unlock a connection that was locked 
+	**	    by another thread.  E.g. a DataReader created by one thread
+	**	    and processed/closed by another thread.
 	*/
 
 
@@ -225,7 +229,7 @@ namespace Ingres.ProviderInternals
 		** a boolean defines the state of the lock.
 		*/
 		private bool                    lock_active = false;
-		private int                     lock_thread_hashcode = 0;
+		private int                     lock_thread_id = 0;
 		private System.Object           lock_obj = new System.Object();
 		private int                     lock_nest_count;
 		private bool                    lock_nesting_allowed;
@@ -519,13 +523,16 @@ namespace Ingres.ProviderInternals
 		{
 			lock(lock_obj)
 			{
+				System.Threading.Thread currentThread =
+				    System.Threading.Thread.CurrentThread;
+
 				while (lock_active)  // if already locked by someone
 				{
 					// if recursively locked by the same thread,
 					// make sure it was intentional as in the case
 					// of the DTCEnlistment's TxResourceAsyncThread.
-					if (lock_thread_hashcode ==
-						System.Threading.Thread.CurrentThread.GetHashCode())
+					if (lock_thread_id ==
+						currentThread.ManagedThreadId)
 					{
 						if (lock_nesting_allowed)
 						{
@@ -534,8 +541,8 @@ namespace Ingres.ProviderInternals
 						}
 
 						if (trace.enabled(1))  // unintentional nested locking!
-							trace.write(title + ".lock(): locked, current " +
-								lock_thread_hashcode.ToString());
+							trace.write(title + ".lock(): nested locking!!, current " +
+								lock_thread_id.ToString());
 						throw SqlEx.get( ERR_GC4005_SEQUENCING );
 					}
 					
@@ -551,21 +558,21 @@ namespace Ingres.ProviderInternals
 				}
 				
 				// we have the lock!
-				lock_thread_hashcode =
-					System.Threading.Thread.CurrentThread.GetHashCode();
+				lock_thread_id =
+					currentThread.ManagedThreadId;
 				lock_active = true;
 				lock_nesting_allowed = nesting_allowed;
 				lock_nest_count = 1;
 
 				if (trace.enabled(5))
 					trace.write(title + ".lock(): locked by " +
-						lock_thread_hashcode.ToString());
+						lock_thread_id.ToString());
 			}  // end lock(lock_obj)
 			
 			return ;
 		}
-		
-		
+
+
 		/*
 		** Name: UnlockConnection
 		**
@@ -585,48 +592,55 @@ namespace Ingres.ProviderInternals
 		**	29-Sep-99 (gordy)
 		**	    Created.
 		**	19-May-00 (gordy)
-		**	    Check for additional invalid unlock conditions.*/
-		
+		**	    Check for additional invalid unlock conditions.
+		**	13-Aug-10 (thoda04) Bug 124123
+		**	    Allow a non-owner thread to unlock a connection 
+		**	    that was locked by an owner thread.
+		**/
+
 		public virtual void  UnlockConnection()
 		{
 			lock(lock_obj)
 			{
-				if (lock_thread_hashcode == 0 || !lock_active)
+				System.Threading.Thread currentThread =
+					System.Threading.Thread.CurrentThread;
+
+				if (lock_thread_id == 0 || !lock_active)
 				{
 					if (trace.enabled(1))
 						trace.write(title + ".unlock(): not locked!, current " +
-							System.Threading.Thread.CurrentThread.ToString());
-					lock_thread_hashcode = 0;
+							currentThread.ManagedThreadId.ToString());
+					lock_thread_id = 0;
 					lock_active = false;
 				}
-				else if (lock_thread_hashcode !=
-					System.Threading.Thread.CurrentThread.GetHashCode())
+				else if (lock_thread_id !=
+					currentThread.ManagedThreadId)
 				{
 					if (trace.enabled(1))
 						trace.write(title + ".unlock(): not owner, current " +
-							System.Threading.Thread.CurrentThread.ToString() +
-							", owner " + lock_thread_hashcode.ToString());
+							currentThread.ManagedThreadId.ToString() +
+							", owner " + lock_thread_id.ToString());
 				}
 				else
 				{
 					if (trace.enabled(5))
 						trace.write(title + ".unlock(): owner " +
-							lock_thread_hashcode.ToString());
-
-					// if we had nested LockConnection calls then just return;
-					if (--lock_nest_count > 0)
-						return;
-
-					// get ready to release the next in the waiting queue
-					lock_active = false;
-					lock_thread_hashcode = 0;
-					lock_nest_count = 0;
-					lock_nesting_allowed = false;
-
-					// move the next in the waiting queue to ready queue
-					// to get it to ready to come out of its wait
-					System.Threading.Monitor.Pulse(lock_obj);
+							lock_thread_id.ToString());
 				}
+
+				// if we had nested LockConnection calls then just return;
+				if (--lock_nest_count > 0)
+					return;
+
+				// get ready to release the next in the waiting queue
+				lock_active = false;
+				lock_thread_id = 0;
+				lock_nest_count = 0;
+				lock_nesting_allowed = false;
+
+				// move the next in the waiting queue to ready queue
+				// to get it to ready to come out of its wait
+				System.Threading.Monitor.Pulse(lock_obj);
 			}  // end lock(lock_obj)
 			
 			return ;

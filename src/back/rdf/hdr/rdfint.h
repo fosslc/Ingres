@@ -250,6 +250,8 @@
 **	    pointer in rdu_ferror() prototype.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      20-aug-2010 (stial01)
+**          rdu_mrecover() Added ULM_RCB param.
 */
 
 /* Macro to return pointer to session's RDF_SESS_CB directly from SCF's SCB */
@@ -2024,6 +2026,7 @@ FUNC_EXTERN DB_STATUS rdu_malloc(   RDF_GLOBAL	*global,
 
 /* rdu_mrecover - garbage-collect RDF memory */
 FUNC_EXTERN DB_STATUS rdu_mrecover(RDF_GLOBAL *global,
+				   ULM_RCB   *ulm_rcb,
 				   DB_STATUS orig_status,
 				   RDF_ERROR errcode);
 

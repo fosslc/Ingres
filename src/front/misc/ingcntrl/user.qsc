@@ -147,7 +147,15 @@ fool ming:
 **	    'ingres' is no longer a special userid and may be deleted.
 **	16-Nov-2004 (bonro01)
 **	    Prevent install userid from being deleted.
+**	25-Jun-2010 (gupsh01)
+**	    Turn optimization off on windows so that input parameters to 
+**	    user_write does not get corrupted.
 **/
+
+#ifdef WIN32
+#pragma optimize ("", off)
+#pragma warning (disable : 4748)
+#endif
 
      EXEC SQL INCLUDE SQLCA ;
      EXEC SQL WHENEVER SQLERROR CALL SQLPRINT ;

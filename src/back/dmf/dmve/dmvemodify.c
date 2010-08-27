@@ -214,6 +214,8 @@
 **          Changes for Long IDs
 **	13-Apr-2010 (kschendel) SIR 123485
 **	    Open no-coupon to avoid unnecessary LOB overhead.
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 **/
 
 static DB_STATUS dmv_remodify(
@@ -351,6 +353,7 @@ DMVE_CB		*dmve_cb)
     i4		actual_size;
 
     CLRDBERR(&dmve->dmve_error);
+    DMVE_CLEAR_TABINFO_MACRO(dmve);
 	
     for (;;)
     {
@@ -574,6 +577,8 @@ DMVE_CB		*dmve_cb)
 **	    since that's what we're actually using (the type is MISC_CB)
 **	23-Oct-2009 (kschendel) SIR 122739
 **	    Do hidata compression modifies properly.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Ditto for new-standard compression.
 */
 static DB_STATUS
 dmv_remodify(
@@ -908,6 +913,8 @@ DM0L_MODIFY 	*log_rec)
 	mcb->mcb_d_fill = log_rec->dum_dfill;
 	mcb->mcb_compressed = TCB_C_NONE;
 	if (log_rec->dum_status & TCB_COMPRESSED)
+	    mcb->mcb_compressed = TCB_C_STD_OLD;
+	if (log_rec->dum_flag & DM0L_MODIFY_NEWCOMPRESS)
 	    mcb->mcb_compressed = TCB_C_STANDARD;
 	if (log_rec->dum_flag & DM0L_MODIFY_HICOMPRESS)
 	    mcb->mcb_compressed = TCB_C_HICOMPRESS;

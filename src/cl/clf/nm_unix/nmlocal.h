@@ -51,6 +51,9 @@
 **	22-Mar-2010 (hanje04)
 **	    SIR 123296
 **	    Add buffer for /usr/bin (UBIN)
+**	14-Jun-2010 (whiro01)
+**	    Take out "NMstIngAt" which conflicts (in C++) with the def in
+**	    nmcl.h
 */
  
 # include	<tm.h>
@@ -118,7 +121,6 @@ GLOBALREF SYSTIME NMtime;
 FUNC_EXTERN FILE	*NMopensyms();
 FUNC_EXTERN STATUS	NMaddsym();
 FUNC_EXTERN STATUS	NMreadsyms();
-FUNC_EXTERN STATUS	NMstIngAt();
 FUNC_EXTERN STATUS	NMwritesyms();
 FUNC_EXTERN STATUS	NMflushIng();
 FUNC_EXTERN STATUS	NM_initsyms();

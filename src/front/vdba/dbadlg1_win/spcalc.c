@@ -49,6 +49,13 @@
 **    to 9.0 level versioning. Make sure that 9.0 version string is
 **    correctly interpreted by visual tools and VDBA internal version
 **    is set properly upon that interpretation. 
+**  June-16-2010 (drivi01) 
+**    BUG 123930
+**    The page types used in VDBA are out of date and missing the new
+**    types DMPP_TUPLE_HDR_V6 and DMPP_TUPLE_HDR_V7
+**    This change updates the code with the new page types and
+**    also uses the structures for the header types to calculate
+**    the space.
 **    
 ********************************************************************/
 
@@ -64,6 +71,16 @@
 #include "dgerrh.h"
 #include "msghandl.h"
 #include "dbaginfo.h"
+#include <pc.h>
+#include <dbdbms.h>
+#include <cs.h>
+#include <adf.h>
+#include <lk.h>
+#include <lg.h>
+#include <dmf.h>
+#include <dm.h>
+#include <dmp.h>
+#include <dmpp.h>
 
 extern BOOL MSGContinueBox (LPCTSTR lpszMessage);
 
@@ -84,6 +101,8 @@ typedef struct tagFILLFACTORS
 #define PAGE_TYPE_V2 2    /* V2 MUST be 2 because it is the value gotten from the dm34 tracepoint */
 #define PAGE_TYPE_V3 3    /* V3 MUST be 3 because it is the value gotten from the dm34 tracepoint */
 #define PAGE_TYPE_V4 4    /* V4 MUST be 4 because it is the value gotten from the dm34 tracepoint */
+#define PAGE_TYPE_V6 6    /* V4 MUST be 6 because it is the value gotten from the dm34 tracepoint */
+#define PAGE_TYPE_V7 7    /* V4 MUST be 7 because it is the value gotten from the dm34 tracepoint */
 
 static int pagetypespertabletypes[12];
 static int iTabRowsSpanPages[]={ 2008, 3998, 8084, 16276, 32660, 65428 };
@@ -211,6 +230,8 @@ static int GetPageOverHead(int iPageType)
 		case PAGE_TYPE_V2:
 		case PAGE_TYPE_V3:
 		case PAGE_TYPE_V4:
+		case PAGE_TYPE_V6:
+		case PAGE_TYPE_V7:
 			return 80;
 		default:
 			myerror(ERR_INGRESPAGES);
@@ -222,13 +243,17 @@ static int GetRowOverHead(int iPageType)
 {
 	switch (iPageType) {
 		case PAGE_TYPE_V1:
-			return 2;
+			return sizeof(DMPP_TUPLE_HDR_V1);
 		case PAGE_TYPE_V2:
-			return 28;
+			return sizeof(DMPP_TUPLE_HDR_V2);
 		case PAGE_TYPE_V3:
-			return 10;
+			return sizeof(DMPP_TUPLE_HDR_V3);
 		case PAGE_TYPE_V4:
-			return 8;
+			return sizeof(DMPP_TUPLE_HDR_V4);
+		case PAGE_TYPE_V6:
+			return sizeof(DMPP_TUPLE_HDR_V6);
+		case PAGE_TYPE_V7:
+			return sizeof(DMPP_TUPLE_HDR_V7);
 		default:
 			myerror(ERR_INGRESPAGES);
 			return 0;
@@ -400,7 +425,7 @@ static BOOL OnInitDialog(HWND hwnd, HWND hwndFocus, LPARAM lParam)
 				EndDialog(hwnd, -1);
 				return TRUE;
 			}
-			if (PAGE_TYPE_V1 != 1 || PAGE_TYPE_V2 != 2 || PAGE_TYPE_V3 != 3 || PAGE_TYPE_V4 !=4) {
+			if (PAGE_TYPE_V1 != 1 || PAGE_TYPE_V2 != 2 || PAGE_TYPE_V3 != 3 || PAGE_TYPE_V4 !=4 || PAGE_TYPE_V6 != 6 || PAGE_TYPE_V7 != 7) {
 				myerror(ERR_INGRESPAGES); /* the parsing of dm34 trace output (in parse.cpp) assumes V1 == 1 V2 == 2 etc... */
 				EndDialog(hwnd, -1);
 				return TRUE;
@@ -1293,7 +1318,8 @@ static DWORD CalculateIsam(HWND hwnd, LPSTRUCTINFO lpinfo)
 	}
 
 	//dwKeysPerPage = (DWORD)((float)dwPageFreeSpace / ((float)lpinfo->nKeyWidth + (float)dwTupleOverhead));
-	dwKeysPerPage = dwPageFreeSpace / (lpinfo->nKeyWidth + dwTupleOverhead);
+	if (lpinfo->nKeyWidth != 0 || dwTupleOverhead != 0) //avoid division by 0
+		dwKeysPerPage = dwPageFreeSpace / (lpinfo->nKeyWidth + dwTupleOverhead);
 
 	// Calculate the number of index pages needed and round up to the
 	// nearest integer

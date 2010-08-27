@@ -73,7 +73,11 @@
 ** 27-May-2010 (drivi01)
 **    Add iicommon.h to the headers to include GL_MAXNAME constant definition
 **    in constdef.h.
-
+** 23-Jun-2010 (drivi01) 
+**    Fix some hardcoded buffer length for long id change.
+** 30-Jun-2010 (drivi01)
+**    Bug #124006
+**    Add new BOOLEAN datatype.
 **/
 
 #include "stdafx.h"
@@ -2092,8 +2096,8 @@ static BOOL QueryTVIGrantee (CaLLQueryInfo* pQueryInfo, CTypedPtrList< CObList, 
 	POSITION pos = NULL;
 
 	EXEC SQL BEGIN DECLARE SECTION;
-		char  szPermitUser[48];
-		char  szPermitType[128];
+		char  szPermitUser[MAXOBJECTNAME+48];
+		char  szPermitType[MAXOBJECTNAME*2];
 		char  chType[2];
 		char* lpObject = T2A((LPTSTR)(LPCTSTR)strObject);
 		char* lpObjectOwner = T2A((LPTSTR)(LPCTSTR)strObjectOwner);
@@ -2858,6 +2862,8 @@ int INGRESII_llIngresColumnType2i(LPCTSTR lpszColType, int nLen)
 		return IISQ_TSWO_TYPE;
 	if (strName.CompareNoCase(_T("timestamp with time zone")) == 0)
 		return IISQ_TSW_TYPE;
+	if (strName.CompareNoCase(_T("boolean")) == 0)
+		return IISQ_BOO_TYPE;
 	return -1;
 }
 
@@ -2936,6 +2942,8 @@ CString INGRESII_llIngresColumnType2Str(int iColType, int nLen)
 		return _T("timestamp");
 	case IISQ_TSW_TYPE:
 		return _T("timestamp with time zone");
+	case IISQ_BOO_TYPE:
+		return _T("boolean");
 
 	default:
 		// TODO if such a need:
@@ -3013,7 +3021,8 @@ int INGRESII_llIngresColumnType2AppType(CaColumn* pCol)
 		return INGTYPE_INYM;
 	case IISQ_INDS_TYPE:
 		return INGTYPE_INDS;
-
+	case IISQ_BOO_TYPE :
+		return INGTYPE_BOOLEAN;
 	default:
 		// TODO if such a need:
 		ASSERT(FALSE);

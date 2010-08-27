@@ -2,6 +2,9 @@
 **Copyright (c) 2004 Ingres Corporation
 */
 
+/* Make sure we have QSO_NAME */
+#include <qsf.h>
+
 /**
 ** Name: QEFACT.H - This file describes the action control block
 **
@@ -147,9 +150,17 @@ typedef struct _QEF_SCROLL	QEF_SCROLL;
 ** Name: QEF_PROC_RESOURCE - DBP specific info for resources
 **
 ** Description:
-**      This holds the id for procedure(s) used by this query plan and
-**      will be used for validating the currency of dbps.
-[@comment_line@]...
+**
+**	This variant of a resource list entry is for table procedures
+**	used by the query plan.  There is one entry per distinct
+**	table proc.
+**
+**	DB procedures aren't "validated" as such, so we don't make
+**	resource list entries for other DB procedure usages (explicit
+**	callproc or rule-fired dbproc).  Table procs are more deeply
+**	entwined into a particular action's qep, though, and the
+**	tproc is opened and its tables validated at the start of the
+**	QP just like we do for tables.
 **
 ** History:
 **      99-foo-93 (jhahn)
@@ -160,26 +171,28 @@ typedef struct _QEF_SCROLL	QEF_SCROLL;
 **	    Added qr_procedure_qpix, name, owner for table procedures.
 **	8-dec-2008 (dougi)
 **	    Drop qr_procedure_qpix - it's no longer needed.
+**	17-Jun-2010 (kschendel) b123775
+**	    Get rid of valid list for table procs.  Make dbpalias a
+**	    real QSO_NAME.
 */
 typedef struct _QEF_PROC_RESOURCE
 {
+    /* The procedure ID is available to QEF, but at the moment it's
+    ** only used by OPF to aid in generating the resource list.
+    */
     i4 qr_procedure_id1; /* high order of procedure id */
     i4 qr_procedure_id2; /* low order of procedure id */
-    /* The following structure matches ahd_dbpalias in the QEA_CALLPROC 
-    ** structure. They should be kept in sync. And, in fact, this is
-    ** actually a QSO_NAME. */
-    struct
-    {
-	DB_CURSOR_ID	qr_crsr_id;	/* cursor ID/proc name */
-	char		qr_user[DB_OWN_MAXNAME]; /* proc owner */
-	i4		qr_dbid;
-    } qr_dbpalias;
-	/* Qr_valid is a listed list of valid structs that
-	** use the table proc for this resource. They are linked by the vl_alt
-	** field. Qr_lastvalid is a pointer to the last one on the list.
-	*/
-    QEF_VALID	*qr_valid;
-    QEF_VALID	*qr_lastvalid;
+
+    /* Front-end / alias / "real" name of the table procedure.
+    ** The db_cursor_id part of the DB_CURSOR_ID here is zero.  It will
+    ** get filled in by QSF when the alias is translated.  The translated
+    ** DB_CURSOR_ID is stored in the runtime resource list.
+    */
+    QSO_NAME	qr_dbpalias;	/* Alias name of table procedure */
+
+    /* If anything other than tprocs ever generate PROC resources,
+    ** we'll probably need a is-tproc boolean here.
+    */
 } QEF_PROC_RESOURCE;
 
 /*}
@@ -223,7 +236,9 @@ typedef struct _QEF_MEM_CONSTTAB
 **	11-feb-97 (inkdo01)
 **	    Added flag and pointer for MS Access OR transformation (in memory
 **	    constant table)
-[@history_template@]...
+**	17-Jun-2010 (kschendel) b123775
+**	    Take timestamp out of valid list, put here, since this is what
+**	    does the actual validating.
 */
 typedef struct _QEF_TBL_RESOURCE
 {
@@ -249,6 +264,12 @@ typedef struct _QEF_TBL_RESOURCE
 	** qr_cnsttab_p is the address of its defining structure.
 	*/
     QEF_MEM_CONSTTAB	*qr_cnsttab_p;
+
+	/* The timestamp used for the actual validation of the table */
+    DB_TAB_TIMESTAMP
+                qr_timestamp;	/* timestamp to validate with. 0 indicates
+				** validation not required.
+				*/
 } QEF_TBL_RESOURCE;
 
 /*}
@@ -288,7 +309,11 @@ typedef struct _QEF_RESOURCE
 #define QEQR_TABLE     2	/* table resource */
 
 	/* Qr_id_resource is a monotonically increasing number (starting
-	** with 0) for each table in the resource list
+	** with 0) for each table in the resource list.  It's used to
+	** index into the dsh_resources array, addressing the mutable
+	** part of the resource list.  (The QEF_RESOURCE itself is of
+	** course read-only during execution, as multiple sessions might
+	** be sharing the query plan.)
 	*/
     i4		qr_id_resource;
 
@@ -300,15 +325,27 @@ typedef struct _QEF_RESOURCE
 } QEF_RESOURCE;
 
 /*}
-** Name: QEF_VALID - List of files to open and timestamps to compare with
+** Name: QEF_VALID - List of tables to open
 **
 ** Description:
-**      For a relation to be valid, its timestamp must match the 
-**	timestamp the query was optimized with. The vl_dmf_cb control 
-**	blocks are read-only because this is a shared object. 
+**	The valid list is an obsolete name for the list of tables to
+**	open.  Each action that needs tables opened has a list of
+**	QEF_VALID entries indicating which tables and what mode to use.
+**	A table might be listed multiple times if there are multiple
+**	references (correlation names / cursors) to that table.
+**	The action list is linked by the vl_next field.
 **
-**	By convention, the last element in the list is the result 
-**	relation (if there is any). 
+**	Each valid list entry is also accessible from a resource list
+**	entry, which is the actual validator entry.  vl_alt links
+**	all valid entries for the same table (ie resource).
+**
+**	By convention, the last element in the list is the result
+**	relation (if there is any).   (is this still true??)
+**
+**	Valid-list entries are part of the query plan, and as such are
+**	read-only.  Limited exceptions are made for situations where the
+**	query plan can't reasonably be shared, such as a CTAS, where we
+**	need to fill in the actual table ID created.
 **
 **	Note: with the creation of the resource list, QEF_VALID no longer
 **	represents the list of tables to validate. Instead, the QEF_VALID
@@ -348,7 +385,10 @@ typedef struct _QEF_RESOURCE
 **	    Added QEF_TPROC flag for table procedures.
 **	20-Nov-2009 (kschendel) SIR 122890
 **	    Add needs-Xlock flag.
-**	    
+**	17-Jun-2010 (kschendel) b123775
+**	    Move timestamp to resource list;  delete unused members;
+**	    drop tproc flag, we don't make valid list entries for tprocs
+**	    any more.
 */
 struct _QEF_VALID
 {
@@ -357,6 +397,11 @@ struct _QEF_VALID
 				    ** case of partitioning */
     i4	vl_rw;		    /* read or write access to table */
 				    /* use DMF constants */
+
+/* FIXME:  this estimated / total / size-sensitive stuff could be moved
+** to the resource list entry.  Need to make sure that qp->qp_setInput
+** is tied in properly before doing that.
+*/
     i4	vl_est_pages;	    /* # of page that OPF estimates will be
 				    ** touched by this query. */
     i4	vl_total_pages;	    /* total # of pages in the relation at
@@ -364,30 +409,26 @@ struct _QEF_VALID
     bool	vl_size_sensitive;  /* TRUE if the QP sensitive to # of pages
 				    ** in the relation */
     i4	        vl_dmf_cb;          /* index into DSH->DSH_CBS 
-				    ** containing the DSH_QUEUE containing
-				    ** the DMT_CB to open file.
+				    ** containing the DMT_CB to open file.
 				    ** For partitioned tables, this is index
 				    ** to start of block of DMT_CBs, one per
-				    ** partition.
+				    ** partition, with an additional [-1]
+				    ** entry for the master.
 				    */
     i4		vl_dmr_cb;	    /* index into the DSH->DSH_CBS containing
-				    ** the DMR_CB.
+				    ** the DMR_CB.  Partitions handled same
+				    ** as DMT_CB's.
 				    */
-    DB_TAB_TIMESTAMP
-                vl_timestamp;       /* timestamp to validate with. 0 indicates
-                                    ** validation not required.
-                                    */
     PTR		vl_debug;
     QEF_VALID	*vl_alt;	    /* next valid entry for current range var */
-    i4		vl_stmt;	    /* relative statement number referencing
-				    ** the current table */
     i4		vl_flags;
-#define QEF_SET_INPUT	0x01
-#define QEF_SET_TIDJOIN	0x02	    /* tell dmf its a tidjoin - for prefetch */
+#define QEF_SET_INPUT	0x01	    /* A set-input temporary table, see
+				    ** vl-tab-id-index below */
+#define QEF_REG_TBL	0x02	    /* Resource is a REGTBL resource */
 #define QEF_MCNSTTBL	0x04	    /* MS Access OR in-memory constant table */
 #define QEF_SESS_TEMP	0x08	    /* a Global Session Temporary Table */
 #define	QEF_PART_TABLE	0x10	    /* a partitioned table */
-#define	QEF_TPROC	0x20	    /* a table procedure */
+/*	notused		0x20	*/
 #define QEF_NEED_XLOCK	0x40	    /* If IX lock requested, use X instead.
 				    ** This is needed if the table is going
 				    ** to be LOADed.
@@ -403,10 +444,6 @@ struct _QEF_VALID
 				    ** invocation.  "crude, but effective."
 				    */
 
-	/* Vl_resource is the QEF_RESOURCE struct for the table that this
-	** valid struct refers to
-	*/
-    QEF_RESOURCE    *vl_resource;
     i4		vl_partition_cnt;   /* count of partitions in partitioned 
 				    ** table. */
     DB_TAB_ID	*vl_part_tab_id;    /* ptr to array of tab_id's for 
@@ -630,6 +667,8 @@ struct _QEF_SCROLL
 **	    better structure packing.
 **	17-Nov-2009 (kschendel) SIR 122890
 **	    Add load-CTAS flag.
+**	2-Jul-2010 (kschendel) b124004
+**	    AHD_PART_TAB not used by anyone, delete it.
 */
 typedef struct _QEF_QEP
 {
@@ -676,8 +715,6 @@ typedef struct _QEF_QEP
 					** row in the associated query. This
 					** value is an index into dsh->dsh_cbs
 					** where the DMR_CB can be found.
-					** Previously ahd_cb in the QEF_RUP
-					** structure.
 					*/
     i4		    ahd_tidrow;		/* Index into DSH->DSH_ROW
 					** containing row with the
@@ -727,16 +764,21 @@ typedef struct _QEF_QEP
 					** perform the qeq_validate init
 					** logic.
 					*/
-#define	AHD_PART_TAB	    0x10	/* TRUE if inserting/updating
-					** a partitioned table (DB_PART_DEF
-					** stuff has been copied)
-					*/
+/*	notused		    0x10	*/
 #define AHD_PCOLS_UPDATE    0x20	/* TRUE if update set clauses 
 					** reference at least one partitioning
 					** column (row may change p's)
 					*/
 #define AHD_4BYTE_TIDP	    0x40	/* TRUE if ahd_tidoffset addrs
-					** a 4-byte tidp */
+					** a 4-byte tidp.  NOTE: for KEYSET
+					** scrollable cursors, this flag refers
+					** to the tidp returned by the QEP,
+					** ie the ahd_scroll ahd_tidoffset,
+					** *not* the action header tidoffset.
+					** For keyset cursors the header
+					** tidoffset is always an 8-byte
+					** formatted copy of the tid.
+					*/
 #define	AHD_SCROLL	    0x80	/* TRUE if this is the GET on top
 					** of a scrollable cursor */
 #define	AHD_KEYSET	    0x100	/* TRUE if this is a KEYSET scrollable
@@ -1116,6 +1158,9 @@ typedef	struct	_QEF_RENAME_STATEMENT
 **	3-may-2007 (dougi)
 **	    Added flag to force table to btree on constrained columns (instead
 **	    of building secondary index).
+**	28-Jul-2010 (kschendel) SIR 124104
+**	    Add compression flags (same as PST_RESTAB pst_compress flags)
+**	    so that autostruct can keep compression.
 */
 typedef	struct	_QEF_CREATE_INTEGRITY_STATEMENT
 {
@@ -1284,6 +1329,7 @@ typedef	struct	_QEF_CREATE_INTEGRITY_STATEMENT
     i4		qci_idx_alloc;    /* alloc (from with) */
     i4		qci_idx_extend;   /* extend (from with) */
     i4		qci_idx_struct;   /* ix structure (from with) */
+    i2		qci_compress;	/* pst_compress style compression flags */
 
     /*
     ** The following fields are the DSH row numbers of data that is filled
@@ -1576,44 +1622,6 @@ typedef struct QEF_DROP_INTEGRITY_
 } QEF_DROP_INTEGRITY;
 
 /*}
-** Name: QEF_RUP - 
-**
-** Description:
-[@comment_line@]...
-**
-** History:
-[@history_template@]...
-*/
-typedef struct _QEF_RUP
-{
-    PTR		    ahd_qhandle;	/* handle to associated query */
-    i4              ahd_cb;             /* DMF control block containing
-					** the update row in the
-					** associated query.
-					** This value is an index into
-					** DSH->DSH_CBS where a DMR_CB
-					** will be referenced.
-					*/
-    QEN_ADF	    *ahd_current;	/* update tuple 
-					** replace operation.
-					** This struct contains info
-					** so that the new tuple can
-					** be created.
-					** The output tuple here is
-					** the tuple in the update 
-					** DMR_CB specified as the
-					** update control block.
-					*/
-    i4		    ahd_duphandle;      /* what to do on 
-					** replace/append if duplicate
-					** key encountered;   
-					** see QEF_QEP.ahd_duphandle for defines
-					*/
-} QEF_RUP;
-
-
-
-/*}
 ** Name: QEF_IF - If statement specific info for actions.
 **
 ** Description:
@@ -1760,6 +1768,8 @@ typedef struct _QEF_CP_PARAM
 **	    Add QEF_CP_CONSTRAINT to identify a constraint so
 **	    procedures without parameters are properly identified.
 **	    This replaces QEN_CONSTRAINT.
+**	22-Jun-2010 (kschendel) b123775
+**	    Make dbp alias a real QSO_NAME.
 */
 typedef struct _QEF_CALLPROC
 {
@@ -1774,12 +1784,7 @@ typedef struct _QEF_CALLPROC
     /* Alias structure for naming the DB procedure to call. Note that the    */
     /* timestamp component of the DB_CURSOR_ID will must be zero to look    */
     /* this procedure name up as an alias. */
-    struct
-    {
-	DB_CURSOR_ID	als_crsr_id;
-	char		als_user[DB_OWN_MAXNAME];
-	i4		als_dbid;
-    } ahd_dbpalias;
+    QSO_NAME		ahd_dbpalias;
     DB_TAB_ID		ahd_procedureID; /* ID of above procedure or 0 */
 
     QEN_TEMP_TABLE	*ahd_proc_temptable; /* NULL if not set input proc */
@@ -2283,8 +2288,10 @@ struct _QEF_RELATED_OBJECT
 **	    diagnostics.
 **	19-Apr-2007 (kschendel) b122118
 **	    Remove ahd-keys, nothing used it.
-8*	18-Mar-2010 (gupsh01) SIR 123444 
+**	18-Mar-2010 (gupsh01) SIR 123444 
 **	    Added support for Alter table rename table/column. 
+**	2-Jul-2010 (kschendel) b124004
+**	    Drop qhd_rup, not used.
 */
 struct _QEF_AHD
 {
@@ -2442,7 +2449,6 @@ struct _QEF_AHD
     {
 	QEF_QEP	    qhd_qep;		/* action with QEP */
         QEF_DMU	    qhd_dmu;		/* DMF action */
-        QEF_RUP	    qhd_rup;		/* update cursor action */ /* used ? */
 	QEF_IF	    qhd_if;		/* If statement */
 	QEF_RETURN  qhd_return;		/* Return statment */
 	QEF_MESSAGE qhd_message;	/* Message statment */

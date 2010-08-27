@@ -112,6 +112,15 @@
 **	21-May-2010 (kschendel) b123775
 **	    Make a couple local routines static.
 **	    Ensure that qep-less fetch only happens once, even if not cursor.
+**	1-Jul-2010 (kschendel) b124004
+**	    Some fixes to ensure that RUP/RDEL (current of cursor) operations
+**	    work properly with partitioned tables:  delete the qp-upd-cb
+**	    thing.  Ensure that the row TID is copied to the scroll result
+**	    (keyset) row, even when retrieving for the first time from the QP.
+**	    Also: fix memory leak when multiple scroll positioning is done
+**	    (no output rows requested), save the "toss me" row area in the
+**	    scroll data structure.
+**	    Drop function arg from fetchers, wasn't used.
 **/
 
 
@@ -123,7 +132,6 @@ QEF_AHD		*action,
 QEF_RCB		*qef_rcb,
 QEE_DSH		*dsh,
 QEF_DATA	*output,
-i4		function,
 i4		*open_flag,
 i4		position,
 bool		fetchlast,
@@ -134,7 +142,6 @@ QEF_AHD		*action,
 QEF_RCB		*qef_rcb,
 QEE_DSH		*dsh,
 QEF_DATA	*output,
-i4		function,
 i4		*open_flag,
 bool		doing_offset,
 bool		*gotarow );
@@ -337,6 +344,9 @@ QEE_DSH		*dsh);
 **	16-Nov-2009 (thaju02) B122848
 **	    If rowoffset, qea_fetch_readqep() should not write these 
 **	    tuples to result set spool file. 
+**	1-Jul-2010 (kschendel) b124004
+**	    Remember fake row-buffer used for positioning, so that we
+**	    don't allocate memory over and over.
 */
 DB_STATUS
 qea_fetch(
@@ -410,6 +420,9 @@ i4		function )
     if (!scroll && buf_count <= 0 && output && output->dt_data)
 	buf_count = 1;
 
+    if (scroll)
+	sptr = (QEE_RSET_SPOOL *)dsh->dsh_cbs[qp->qp_rssplix];
+
     if (buf_count <= 0 && !scroll)
     {
 	qef_error(E_QE00A6_NO_DATA, 0L, E_DB_ERROR,
@@ -418,26 +431,31 @@ i4		function )
     }
     else if (buf_count == 0)
     {
-	/* 0 rows are requested for a scrollable cursor. This means 
-	** we have only to position the cursor, but we still need a
-	** buffer for qea_fetch to materialize the result row. */
-	ULM_RCB		ulm;
-	i4		rtupsize = ((GCA_TD_DATA *)dsh->dsh_qp_ptr->
-				qp_sqlda)->gca_tsize;
-
-	STRUCT_ASSIGN_MACRO(Qef_s_cb->qef_d_ulmcb, ulm);
-	ulm.ulm_streamid_p = &dsh->dsh_streamid;
-	ulm.ulm_psize = rtupsize + sizeof(QEF_DATA);
-	status = qec_malloc(&ulm);
-	
-	if (status != E_DB_OK)
+	output = sptr->sp_posnbuff;
+	if (output == NULL)
 	{
-	    dsh->dsh_error.err_code = ulm.ulm_error.err_code;
-	    return (status);
+	    /* 0 rows are requested for a scrollable cursor. This means 
+	    ** we have only to position the cursor, but we still need a
+	    ** buffer for qea_fetch to materialize the result row. */
+	    ULM_RCB		ulm;
+	    i4		rtupsize = ((GCA_TD_DATA *)dsh->dsh_qp_ptr->
+				    qp_sqlda)->gca_tsize;
+
+	    STRUCT_ASSIGN_MACRO(Qef_s_cb->qef_d_ulmcb, ulm);
+	    ulm.ulm_streamid_p = &dsh->dsh_streamid;
+	    ulm.ulm_psize = rtupsize + sizeof(QEF_DATA);
+	    status = qec_malloc(&ulm);
+	    
+	    if (status != E_DB_OK)
+	    {
+		dsh->dsh_error.err_code = ulm.ulm_error.err_code;
+		return (status);
+	    }
+	    output = (QEF_DATA *)ulm.ulm_pptr;
+	    sptr->sp_posnbuff = output;
 	}
-	output = (QEF_DATA *)ulm.ulm_pptr;
 	output->dt_next = NULL;
-	output->dt_data = ulm.ulm_pptr + sizeof(QEF_DATA);
+	output->dt_data = (char *) output + sizeof(QEF_DATA);
     }
 
     dsh->dsh_qef_rowcount = 0;
@@ -469,7 +487,7 @@ i4		function )
 	    for ( ; rowoffset-- && status == E_DB_OK; )
 	    {
 		status = qea_fetch_readqep(action, qef_rcb, dsh, output, 
-					function, &open_flag, TRUE, &gotarow);
+					&open_flag, TRUE, &gotarow);
 		if (status != E_DB_OK &&
 		    dsh->dsh_error.err_code == E_QE0015_NO_MORE_ROWS)
 		    goto err_exit;
@@ -481,7 +499,6 @@ i4		function )
     if (scroll)
     {
 	fetchlast = rowinspool = skipread = FALSE;
-	sptr = (QEE_RSET_SPOOL *)dsh->dsh_cbs[qp->qp_rssplix];
 	/* Determine target row. */
 	switch(qef_rcb->qef_fetch_anchor){
 	  case GCA_ANCHOR_BEGIN:
@@ -554,7 +571,7 @@ i4		function )
 	    {
 		/* If fetch orientation isn't NEXT, we must position first. */
 		status = qea_fetch_position(action, qef_rcb, dsh, output,
-			function, &open_flag, rowno, fetchlast, &pre_read);
+			&open_flag, rowno, fetchlast, &pre_read);
 		if (status != E_DB_OK)
 		{
 		    if (dsh->dsh_error.err_code != E_QE0015_NO_MORE_ROWS)
@@ -597,7 +614,7 @@ i4		function )
 	{
 	    /* Read row from query plan, then check scrollable stuff. */
 	    status = qea_fetch_readqep(action, qef_rcb, dsh, output, 
-					function, &open_flag, FALSE, &gotarow);
+					&open_flag, FALSE, &gotarow);
 	    if (scroll && status != E_DB_OK &&
 		dsh->dsh_error.err_code == E_QE0015_NO_MORE_ROWS)
 	    {
@@ -805,7 +822,6 @@ QEF_AHD		*action,
 QEF_RCB		*qef_rcb,
 QEE_DSH		*dsh,
 QEF_DATA	*output,
-i4		function,
 i4		*open_flag,
 i4		position,
 bool		fetchlast,
@@ -833,7 +849,7 @@ bool		*pre_read)
 	readcount = (fetchlast) ? MAXI4 : position - sptr->sp_rowcount;
 	do {
 	    status = qea_fetch_readqep(action, qef_rcb, dsh, output, 
-					function, open_flag, FALSE, &gotarow);
+					open_flag, FALSE, &gotarow);
 	    if (status != E_DB_OK && 
 		dsh->dsh_error.err_code != E_QE0015_NO_MORE_ROWS)
 		return(status);
@@ -978,6 +994,8 @@ bool		*pre_read)
 **	    Move ahd_rssplix to qp_rssplix.
 **	2-oct-2008 (dougi)
 **	    Return TIDs from updateable KEYSET cursors.
+**	30-Jun-2010 (kschendel) b124004
+**	    Fill in "code needed here" for partitioned table updates.
 */
 
 static DB_STATUS
@@ -1016,35 +1034,50 @@ i4		*rowstat)
 	return;
 
     /* Check for KEYSET cursor and perform 2nd step of reading base table
-    ** by TID, verifying it to be same row and projecting result row. */
+    ** by TID, verifying it to be same row and projecting result row.
+    ** The temp table row is preceded by a TID8 and a checksum.
+    */
     if (action->qhd_obj.qhd_qep.ahd_qepflag & AHD_KEYSET)
     {
 	DB_TID8	bigtid;
+	i8	*intid, *to;
+	i4	*incsum;
 	DMR_CB	*tiddmr, *origdmr;
-	char	*intid, *outtid, *to;
 	QEF_SCROLL *scrollp = action->qhd_obj.qhd_qep.ahd_scroll;
 	char	*btrowp = dsh->dsh_row[scrollp->ahd_rsbtrow];
 	QEN_ADF	*baseproj = scrollp->ahd_rskcurr;
 	ADF_CB	*adf_cb = dsh->dsh_adf_cb;
 	ADE_EXCB *baseexcb = (ADE_EXCB *)dsh->dsh_cbs[baseproj->qen_pos];
 	i4	result, oldcsum, checksum;
+	i4	dmrix;
 	DB_DATA_VALUE	rowdv, checkdv;
 	bool	nomatch = FALSE;
 
 	/* Extract TID from keyset row just read. */
-	outtid = (PTR)&bigtid;
-	intid = output->dt_data;
+	intid = (i8 *) output->dt_data;
 	I8ASSIGN_MACRO(*intid, bigtid);
-	I8ASSIGN_MACRO(*intid, *(sptr->sp_rowbuff)); /* save for posn'd ops */
-	intid += DB_TID8_LENGTH;		/* skip to checksum */
-	I4ASSIGN_MACRO(*intid, oldcsum);
+	I8ASSIGN_MACRO(*intid, *(i8 *)(sptr->sp_rowbuff)); /* save for posn'd ops */
+	incsum = (i4 *) ((char *)intid + DB_TID8_LENGTH); /* skip to checksum */
+	I4ASSIGN_MACRO(*incsum, oldcsum);
 	
-	/* If this is a partitioned table, extra logic goes here to 
-	** locate the correct DMR_CB to clone. */
+	/* Locate the DMR_CB, opening the partition if necessary (should
+	** already be open, but qeq-part-open returns quickly in that case)
+	*/
+	dmrix = action->qhd_obj.qhd_qep.ahd_odmr_cb;
+	if (action->qhd_obj.qhd_qep.ahd_part_def)
+	{
+	    status = qeq_part_open(qef_rcb, dsh, NULL, 0,
+			dmrix, action->qhd_obj.qhd_qep.ahd_dmtix,
+			bigtid.tid.tid_partno);
+	    if (status != E_DB_OK)
+		return (status);
+	    origdmr = (DMR_CB *)dsh->dsh_cbs[dmrix + bigtid.tid.tid_partno + 1];
+	}
+	else
+	{
+	    origdmr = (DMR_CB *)dsh->dsh_cbs[dmrix];
+	}
 
-	/* Non-partitioned table. */
-	origdmr = (DMR_CB *)dsh->dsh_cbs[action->qhd_obj.qhd_qep.ahd_odmr_cb];
-					/* get base table DMR_CB to clone */
 	tiddmr = (DMR_CB *)dsh->dsh_cbs[action->qhd_obj.qhd_qep.ahd_scroll->
 							ahd_rsbtdmrix];
 					/* target DMR ptr */
@@ -1052,8 +1085,6 @@ i4		*rowstat)
 	tiddmr->dmr_flags_mask = DMR_BY_TID;
 	tiddmr->dmr_tid = bigtid.tid_i4.tid;
 	tiddmr->dmr_data.data_address = btrowp;
-	dsh->dsh_cbs[dsh->dsh_qp_ptr->qp_upd_cb] = (PTR)tiddmr;
-					/* save addr for pos'd upd/del */
 
 	status = dmf_call(DMR_GET, tiddmr);
 	if (status != E_DB_OK)
@@ -1063,8 +1094,6 @@ i4		*rowstat)
 	    if (tiddmr->error.err_code == E_DM003C_BAD_TID ||
 		tiddmr->error.err_code == E_DM0044_DELETED_TID)
 	    {
-		/* qef_error(E_QE00A7_ROW_DELETED, 0L, E_DB_WARN,
-		    &error, &dsh->dsh_error, 0); */
 		*rowstat = GCA_ROW_DELETED;
 		sptr->sp_current++;
 		return(E_DB_OK);
@@ -1086,8 +1115,6 @@ i4		*rowstat)
 	{
 	    /* Row has been changed and is no longer considered part
 	    ** of the result set. Return appropriate conditions. */
-	    /* qef_error(E_QE00A7_ROW_DELETED, 0L, E_DB_WARN,
-		    &error, &dsh->dsh_error, 0): */
 	    tiddmr->dmr_tid = -1;		/* prevent pos'd upd/del */
 	    *rowstat = GCA_ROW_DELETED;
 	    sptr->sp_current++;
@@ -1111,7 +1138,7 @@ i4		*rowstat)
 	/* Stick TID where positioned update/delete expect to see it. */
 	if (scrollp->ahd_tidrow > 0)
 	{
-	    to = (PTR)(dsh->dsh_row[action->qhd_obj.qhd_qep.ahd_tidrow]
+	    to = (i8 *)(dsh->dsh_row[action->qhd_obj.qhd_qep.ahd_tidrow]
 				+ action->qhd_obj.qhd_qep.ahd_tidoffset);
 	    I8ASSIGN_MACRO(bigtid, *to);
 	}
@@ -1247,11 +1274,23 @@ i4		*result)
 **	    .dsh_cbs			array of (among other things) DMS_CB
 **					control blocks used for sequence
 **					operators.
+**	output				QEF_DATA Where to materialize the row
+**	open_flag			Address of node function (eg open or
+**					reset), updated to turn off open/reset
+**					after node called for the first time.
+**	doing_offset			TRUE if just skipping through rows to
+**					be tossed due to an OFFSET clause;
+**					skipped rows are not written to temp.
+**	gotarow				An output
+**
 ** Outputs:
 **      dsh
 **	    .dsh_error.err_code		one of the following
 **				E_QE0000_OK
 **				E_QE0017_BAD_CB
+**	gotarow				Returned TRUE if complete row was
+**					fetched (not partial row)
+**
 **	Returns:
 **	    E_DB_{OK, WARN, ERROR, FATAL}
 **	Exceptions:
@@ -1278,6 +1317,11 @@ i4		*result)
 **	    from the first fetch.  (QP-less fetch can be from e.g. a SAGG,
 **	    and it's inconvenient to remember the pending-EOF status from
 **	    multiple nested for-GET's in tprocs or rowprocs.)
+**	17-Jun-2010 (kschendel) b123775
+**	    Drop a line of dead code left by above edit.
+**	1-Jul-2010 (kschendel) b124004
+**	    Make sure we set up all the tid stuff needed by RUP/RDEL.
+**	    Drop function param, not used and was confusing.
 */
 
 static DB_STATUS
@@ -1286,7 +1330,6 @@ QEF_AHD		*action,
 QEF_RCB		*qef_rcb,
 QEE_DSH		*dsh,
 QEF_DATA	*output,
-i4		function,
 i4		*open_flag,
 bool		doing_offset,
 bool		*gotarow)
@@ -1356,8 +1399,10 @@ bool		*gotarow)
 		status = E_DB_WARN;
 		dsh->dsh_error.err_code = E_QE0015_NO_MORE_ROWS;
 	    }
-	     else status = (*node->qen_func)(node, qef_rcb, dsh, *open_flag);
-	    *open_flag = function &= ~(TOP_OPEN | FUNC_RESET);
+	    else
+		status = (*node->qen_func)(node, qef_rcb, dsh, *open_flag);
+
+	    *open_flag &= ~(TOP_OPEN | FUNC_RESET);
 
 	    /*
 	    ** If the qen_node returned no rows and we are supposed to
@@ -1381,10 +1426,6 @@ bool		*gotarow)
 		    status = E_DB_WARN;
 		}
 	    }
-
-	    if (keyset && action->qhd_obj.qhd_qep.ahd_odmr_cb >= 0)
-		dsh->dsh_cbs[dsh->dsh_qp_ptr->qp_upd_cb] =
-		    dsh->dsh_cbs[action->qhd_obj.qhd_qep.ahd_odmr_cb];
 
 	    if (status != E_DB_OK)
 	    {
@@ -1475,6 +1516,52 @@ bool		*gotarow)
 	    status = qea_fetch_writetemp(action, qef_rcb, dsh, output);
 	    if (status == E_DB_OK)
 		rsptr->sp_current = rsptr->sp_rowcount;
+
+	    /* Check for KEYSET cursor and copy TID to keyset temp row.
+	    ** RUP/RDEL cursor operations use ahd_tidrow/tidoffset and
+	    ** those point to the keyset temp, not the QEP row.
+	    */
+	    if (action->qhd_obj.qhd_qep.ahd_qepflag & AHD_KEYSET
+	      && action->qhd_obj.qhd_qep.ahd_tidoffset >= 0)
+	    {
+		QEF_SCROLL *scrollp = action->qhd_obj.qhd_qep.ahd_scroll;
+		DB_TID8	bigtid;
+		PTR	from, to;
+
+		to = (PTR)(dsh->dsh_row[action->qhd_obj.qhd_qep.ahd_tidrow]
+				+ action->qhd_obj.qhd_qep.ahd_tidoffset);
+		/* TID is either in a DSH row or in the orig's DMR_CB */
+		bigtid.tid_i4.tpf = 0;		/* clear partition stuff */
+		if (scrollp->ahd_tidrow > 0)
+		{
+		    from = (PTR)(dsh->dsh_row[scrollp->ahd_tidrow]
+						+ scrollp->ahd_tidoffset);
+		    if (action->qhd_obj.qhd_qep.ahd_qepflag & AHD_4BYTE_TIDP)
+		    {
+			I4ASSIGN_MACRO(*from, bigtid.tid_i4.tid);
+		    }
+		    else
+		    {
+			/* 8-byte tid includes partition stuff */
+			I8ASSIGN_MACRO(*from, bigtid);
+		    }
+		}
+		else 
+		{
+		    DMR_CB	*origdmr;
+		    u_i2	partno;
+
+		    origdmr = (DMR_CB *)dsh->dsh_cbs[action->qhd_obj.qhd_qep.
+									ahd_odmr_cb];
+		    bigtid.tid_i4.tid = origdmr->dmr_tid;
+		    partno = dsh->dsh_xaddrs[action->qhd_obj.qhd_qep.ahd_ruporig]->
+					qex_status->node_ppart_num;
+		    bigtid.tid.tid_partno = partno;
+		}
+
+		/* Set 8-byte tid where action header says it is */
+		I8ASSIGN_MACRO(bigtid, *to);
+	    }
 	}
     }	/* end of "if (node)" */
     else
@@ -1559,7 +1646,6 @@ bool		*gotarow)
 	    {
 		/* eof will be returned with rowcount = 1 */
 		dsh->dsh_error.err_code = E_QE0015_NO_MORE_ROWS;
-		ade_excb->excb_seg = ADE_SMAIN;
 		status = E_DB_WARN;
 	    }
 	    /* Jigger the CX segment to indicate EOF if caller doesn't
@@ -1635,6 +1721,9 @@ bool		*gotarow)
 **	8-Jun-2009 (kibro01) b122171
 **	    Use multiple columns in temp table if result size is greater than
 **	    adu_maxstring.
+**	30-Jun-2010 (kschendel) b124004
+**	    Check 4byte-tid flag just in case, when saving tids for keyset
+**	    (updateable) cursors.
 */
 
 static DB_STATUS
@@ -1804,8 +1893,16 @@ QEF_DATA	*output)
 					+ scrollp->ahd_tidoffset);
 	    to = (PTR)(dsh->dsh_row[action->qhd_obj.qhd_qep.ahd_tidrow]
 				+ action->qhd_obj.qhd_qep.ahd_tidoffset);
-	    I8ASSIGN_MACRO(*from, bigtid);
-	    I8ASSIGN_MACRO(*from, *to);		/* where posnd ops expect it */
+	    if (action->qhd_obj.qhd_qep.ahd_qepflag & AHD_4BYTE_TIDP)
+	    {
+		I4ASSIGN_MACRO(*from, bigtid.tid_i4.tid);
+	    }
+	    else
+	    {
+		/* 8-byte tid includes partition stuff */
+		I8ASSIGN_MACRO(*from, bigtid);
+	    }
+	    I8ASSIGN_MACRO(bigtid, *to);	/* where posnd ops expect it */
 	}
 	else 
 	{

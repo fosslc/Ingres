@@ -40,6 +40,9 @@
 **     (bug 99866) updated the "action" input string passed to the ICE API 
 **     for add and drop ICE servier variable, according to change 446504 for
 **     bug  102229
+**    27-Jul-2010 (drivi01)
+**     Add #ifndef NOUSEICEAPI to remove ice code that can be enabled
+**     at any time by enable NOUSEICEAPI from a solution.
 ********************************************************************/
 
 #include "dba.h" 
@@ -3129,6 +3132,7 @@ int ICE_FillTempFileFromDoc(LPUCHAR lpVirtNode,ICEBUSUNITDOCDATA * lpdocdata,LPU
 BOOL IsIceLoginPasswordValid(TCHAR *lpVirtNode, TCHAR *lpUserName,
 							 TCHAR *lpPasswd, TCHAR *tcErrBuf, UINT iBufLen)
 {
+#ifndef NOUSEICEAPI
 	ICE_STATUS   status = 0;
 	ICE_C_CLIENT ICEclient = NULL;
 	
@@ -3164,4 +3168,7 @@ BOOL IsIceLoginPasswordValid(TCHAR *lpVirtNode, TCHAR *lpUserName,
 		ManageIceError(&ICEclient, &status);
 
 	return TRUE;
+#else
+	return FALSE;
+#endif
 }

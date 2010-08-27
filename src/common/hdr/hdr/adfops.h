@@ -147,6 +147,10 @@
 **	    Added SINGLETON aggregate for scalar sub-query support.
 **	25-Mar-2010 (toumi01) SIR 122403
 **	    Add AES_DECRYPT and AES_ENCRYPT.
+**	14-Jul-2010 (kschendel) b123104
+**	    Add ii_true and ii_false to solve outer join constant folding bug.
+**	28-Jul-2010 (kiria01) b124142
+**	    Added SINGLECHK
 **/
 
 /*
@@ -420,6 +424,9 @@ _DEFINE(SINGLETON,     238  /* singleton               */)\
 _DEFINE(AES_DECRYPT,   239  /* aes_decrypt             */)\
 _DEFINE(AES_ENCRYPT,   240  /* aes_encrypt             */)\
 _DEFINE(SOUNDEX_DM,    241  /* soundex_dm              */)\
+_DEFINE(IIFALSE,       242  /* ii_false                */)\
+_DEFINE(IITRUE,        243  /* ii_true                 */)\
+_DEFINE(SINGLECHK,     244  /* singlechk               */)\
 _DEFINEEND
 
 

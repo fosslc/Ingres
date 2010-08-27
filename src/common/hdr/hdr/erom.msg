@@ -69,6 +69,11 @@
 **	01-may-2008 (zhayu01) SIR 120626
 **	    Added E_OM00E2_SOBADFILE_INVALIDUTF8.
 **	    Added E_OM00E3_OPENERR_UTF8.
+**      11-jun-2010 (berbo01) SIR 44794
+**	    Added E_OM00E2_KEY_NOT_FOUND, E_OM00E3_DUPLICATE_KEY,
+**	    E_OM00E4_INVALID_PARAM_VALUE, E_OM00E5_PRECOND_VIOLATION, E_OM00E6_INTERNAL_ERROR
+**	12-jul-2010 (zhayu01) SIR 44794
+**		Resolve message ID conflict between previous two changes.
 **/
 
 # define	_OM_CLASS	189
@@ -2770,3 +2775,64 @@ The database '%0c' could not be opened because it is not UTF8 enabled."
 ** User Action:
 **	Specify a UTF8 database or make the databse UTF8 enabled.
 */
+
+/*
+** The messages E_OM00E4_KEY_NOT_FOUND and E_OM00E5_DUPLICATE_KEY are status codes.
+** used to return from W4GL system class methods.
+** The messages are "dummy" messages: they will never actually be printed.
+*/
+E_OM00E4_KEY_NOT_FOUND	"The key was not found."
+E_OM00E5_DUPLICATE_KEY	"The key already exists."
+
+E_OM00E6_INVALID_PARAM_VALUE	"Invalid parameter value: %0c"
+
+/*%
+**
+** Arguments:
+**	0	The detail description about the invalid parameter.
+**
+** Explanation:
+**	A parameter was passed an invalid value.
+**
+** System Status:
+**	An error status indicating failure will be returned.
+**
+** User Action:
+**	Pass a correct value to this parameter.
+*/
+
+E_OM00E7_PRECOND_VIOLATION	"Precondition violation: %0c"
+
+/*%
+**
+** Arguments:
+**	0	The detail description of the violated precondition.
+**
+** Explanation:
+**	A precondition required to run the method was not fulfilled.
+**
+** System Status:
+**	An error status indicating failure will be returned.
+**
+** User Action:
+**	Make sure all preconditions are fulfilled before invoking the method.
+*/
+
+E_OM00E8_INTERNAL_ERROR	"Internal error: %0c"
+
+/*%
+**
+** Arguments:
+**	0	The detail description of the internal error.
+**
+** Explanation:
+**	An internal error occured during execution of the method.
+**
+** System Status:
+**	An error status indicating failure will be returned,
+**	or a "default" action will be performed.
+**
+** User Action:
+**	If possible, prevent conditions that can cause the error.
+*/
+

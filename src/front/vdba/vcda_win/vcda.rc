@@ -44,7 +44,7 @@ BEGIN
 END
 
 IDD_MAIN DIALOGEX 0, 0, 380, 228
-STYLE DS_SETFONT | WS_CHILD | WS_CLIPCHILDREN
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_CLIPCHILDREN
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | 
@@ -54,8 +54,8 @@ BEGIN
     PUSHBUTTON      "Hostnames-mapping...",IDC_BUTTON1,298,1,81,14,NOT 
                     WS_VISIBLE
     CONTROL         "Main Parameters:",IDC_STATIC_MAINPARAM,"Static",
-                    SS_LEFTNOWORDWRAP | SS_CENTERIMAGE | WS_GROUP,15,1,60,14
-    ICON            "",IDC_STATIC_MAINICON,0,0,20,16,SS_CENTERIMAGE | 
+                    SS_LEFTNOWORDWRAP | SS_CENTERIMAGE | WS_GROUP,20,1,60,14
+    ICON            "",IDC_STATIC_MAINICON,0,0,20,20,SS_CENTERIMAGE | 
                     SS_REALSIZEIMAGE,WS_EX_TRANSPARENT
 END
 
@@ -113,7 +113,7 @@ FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
     LTEXT           "Static",IDC_STATIC_IMAGE,7,1,110,191
     GROUPBOX        "Non Editable Variables",IDC_STATIC,121,6,252,65
-    LTEXT           "The following, read only, variables are different in the snapshot file and will not be restored because this would corrupt the behaviour ot the Installation.",
+    LTEXT           "The following, read only, variables are different in the snapshot file and will not be restored because this would corrupt the behaviour of the Installation.",
                     IDC_STATIC1,149,21,116,42
     ICON            "",IDC_STATIC_IDI_WARNING,127,27,21,20
     GROUPBOX        "Restore",IDC_STATIC,121,76,252,45

@@ -88,6 +88,8 @@ LIBRARY = IMPDMFLIBDATA
 **	    too primitive.
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Changes for MVCC
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Add new-standard compression, same dispatches as old.
 */
 
 
@@ -95,8 +97,10 @@ LIBRARY = IMPDMFLIBDATA
 GLOBALDEF DMP_RACFUN_CMP dm1c_compress_v[] =
 {
 	NULL,			/* None */
-	dm1cn_compress,		/* Standard */
-	NULL, NULL, NULL, NULL, NULL,
+	dm1cn_compress,		/* Old Standard */
+	NULL,			/* Old / notused */
+	dm1cn_compress,		/* New Standard */
+	NULL, NULL, NULL,
 	dm1ch_compress		/* hidata */
 };
 
@@ -104,8 +108,10 @@ GLOBALDEF DMP_RACFUN_CMP dm1c_compress_v[] =
 GLOBALDEF DMP_RACFUN_UNCMP dm1c_uncompress_v[] =
 {
 	NULL,			/* None */
-	dm1cn_uncompress,	/* Standard */
-	NULL, NULL, NULL, NULL, NULL,
+	dm1cn_uncompress,	/* Old Standard */
+	NULL,			/* Old / notused */
+	dm1cn_uncompress,	/* New Standard */
+	NULL, NULL, NULL,
 	dm1ch_uncompress	/* hidata */
 };
 
@@ -113,8 +119,10 @@ GLOBALDEF DMP_RACFUN_UNCMP dm1c_uncompress_v[] =
 GLOBALDEF DMP_RACFUN_XPN dm1c_compexpand_v[] =
 {
 	NULL,			/* None */
-	dm1cn_compexpand,	/* Standard */
-	NULL, NULL, NULL, NULL, NULL,
+	dm1cn_compexpand,	/* Old Standard */
+	NULL,			/* Old / notused */
+	dm1cn_compexpand,	/* New Standard */
+	NULL, NULL, NULL,
 	dm1ch_compexpand	/* hidata */
 };
 
@@ -122,8 +130,10 @@ GLOBALDEF DMP_RACFUN_XPN dm1c_compexpand_v[] =
 GLOBALDEF DMP_RACFUN_CSETUP dm1c_cmpcontrol_setup_v[] =
 {
 	NULL,			/* None */
-	dm1cn_cmpcontrol_setup,	/* Standard */
-	NULL, NULL, NULL, NULL, NULL,
+	dm1cn_cmpcontrol_setup,	/* Old Standard */
+	NULL,			/* Old / notused */
+	dm1cn_cmpcontrol_setup,	/* New Standard */
+	NULL, NULL, NULL,
 	NULL			/* hidata */
 };
 
@@ -131,8 +141,10 @@ GLOBALDEF DMP_RACFUN_CSETUP dm1c_cmpcontrol_setup_v[] =
 GLOBALDEF DMP_RACFUN_CSIZE dm1c_cmpcontrol_size_v[] =
 {
 	NULL,			/* None */
-	dm1cn_cmpcontrol_size,	/* Standard */
-	NULL, NULL, NULL, NULL, NULL,
+	dm1cn_cmpcontrol_size,	/* Old Standard */
+	NULL,			/* Old / notused */
+	dm1cn_cmpcontrol_size,	/* New Standard */
+	NULL, NULL, NULL,
 	NULL			/* hidata */
 };
 

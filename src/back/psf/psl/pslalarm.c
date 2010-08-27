@@ -566,6 +566,8 @@ psl_al1_create_alarm(
 ** History:
 **	6-dec-93 (robf)
 **          Created
+**	19-Jun-2010 (kiria01) b123951
+**	    Add extra parameter to psl0_rngent for WITH support.
 */
 DB_STATUS
 psl_al2_tbl_obj_spec(
@@ -598,7 +600,7 @@ psl_al2_tbl_obj_spec(
 		obj_spec->pss_orig_obj_name,
 		&obj_spec->pss_obj_name, cb, TRUE, &resrange,
 		psq_cb->psq_mode, &psq_cb->psq_error,
-		PSS_USRTBL | PSS_DBATBL | PSS_INGTBL, &rngvar_info, 0);
+		PSS_USRTBL | PSS_DBATBL | PSS_INGTBL, &rngvar_info, 0, NULL);
 	}
 
 	if (status != E_DB_OK)

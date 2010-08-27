@@ -22,9 +22,13 @@
 **
 ** History:
 **
-**    05-Sep-2006 (hanje04)
-**	SIR 116907
-**	Created.
+**	05-Sep-2006 (hanje04)
+**	    SIR 116907
+**	    Created.
+**	13-Jul-2010 (hanje04)
+**	    BUG 124081
+**	    Add option II_RF_OP_APPEND to allow appending to existing response
+**	    file rather than generating a new one
 ** 
 */
 
@@ -60,9 +64,9 @@ GLOBALREF const II_RFAPI_STRING rfapierrs[];
 **	    II_RF_ST_NULL_ARG
 **	    II_RF_ST_FILE_EXISTS
 **	    II_RF_ST_INVALID_FORMAT
-**	    II_RF_ST_FILE_EXISTS
 **	    II_RF_ST_MEM_ERROR
 **	    II_RF_ST_CREATE_FAIL
+**	    II_RF_ST_FILE_NOT_FOUND
 **	...
 **	    II_RF_ST_FAIL
 */
@@ -95,9 +99,18 @@ IIrfapi_initNew		( II_RFAPI_HANDLE *handle,
     /* convert string to LO LOCATION */
     LOfroms( PATH & FILENAME, response_file, &rfloc );
 
-    /* check the file doesn't already exist */
-    if ( LOexist( &rfloc ) == OK )
-	return( II_RF_ST_FILE_EXISTS );
+    /*
+    ** check file doesn't already exist if we don't want it but 
+    ** is there if we do
+    */
+    if ( flags & II_RF_OP_APPEND )
+    {
+        if ( LOexist( &rfloc ) != OK )
+	    return( II_RF_ST_FILE_NOT_FOUND );
+    }
+    else
+        if ( LOexist( &rfloc ) == OK )
+	    return( II_RF_ST_FILE_EXISTS );
 
     /* 
     ** create tag and allocate memory. Store the tag as we'll 
@@ -131,7 +144,7 @@ IIrfapi_initNew		( II_RFAPI_HANDLE *handle,
     (*handle)->output_format = format;
 
     /* create empty response file */
-    if ( LOcreate( &rfloc ) != OK )
+    if ( ~flags&II_RF_OP_APPEND && LOcreate( &rfloc ) != OK )
     {
 	/* free up memory before returning */
 	MEtfree( memtag );
@@ -170,6 +183,7 @@ IIrfapi_initNew		( II_RFAPI_HANDLE *handle,
 **	    II_RF_ST_NULL_ARG
 **	    II_RF_ST_FILE_EXISTS
 **	    II_RF_ST_CREATE_FAIL
+**	    II_RF_ST_FILE_NOT_FOUND
 **	...
 **	    II_RF_ST_FAIL
 */
@@ -193,13 +207,16 @@ IIrfapi_setOutFileLoc( II_RFAPI_HANDLE	*handle,
     /* convert string to LO LOCATION */
     LOfroms( PATH & FILENAME, newfileloc, &rfloc );
 
-    /* check the file doesn't already exist */
-    if ( LOexist( &rfloc ) == OK )
-	return( II_RF_ST_FILE_EXISTS );
-
-    /* create new response file */
-    if ( LOcreate( &rfloc ) != OK )
-	return( II_RF_ST_CREATE_FAIL );
+    /* check the output file */
+    if ( (*handle)->flags & II_RF_OP_APPEND )
+    {
+	if ( LOexist( &rfloc ) != OK )
+	    return( II_RF_ST_FILE_NOT_FOUND );
+    }
+    else
+	/* create new response file */
+	if ( LOcreate( &rfloc ) != OK )
+	    return( II_RF_ST_CREATE_FAIL );
 
     /* remove previous file name from handle */
     MEfree( (*handle)->locbuf );
@@ -573,6 +590,7 @@ IIrfapi_writeRespFile( II_RFAPI_HANDLE *handle )
 {
     FILE	*resp_fd; /* file descriptor for response file */
     II_RFAPI_STATUS rfrc;
+    char	*mode;
 
     /* check handle is valid */
     if ( (*handle) == NULL  )
@@ -587,7 +605,8 @@ IIrfapi_writeRespFile( II_RFAPI_HANDLE *handle )
 	return( II_RF_ST_FILE_NOT_FOUND );
 
     /* open file for writing */
-    SIopen( &(*handle)->response_file_loc, "w", &resp_fd );
+    mode = ( (*handle)->flags & II_RF_OP_APPEND ) ? "a" : "w" ;
+    SIopen( &(*handle)->response_file_loc, mode, &resp_fd );
 
     /* write header */
     if ( rfrc = rfapi_writeRFHeader( handle, resp_fd ) != II_RF_ST_OK )

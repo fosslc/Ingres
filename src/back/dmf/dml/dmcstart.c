@@ -861,6 +861,14 @@ static STATUS dmcm_lkinit(
 **	    Add page types V6, V7
 **	08-Mar-2010 (thaju02)
 **	    Removed max_tuple_length.
+**	11-Jun-2010 (jonj)
+**	    svcb_xid_lg_id_max is sizeof(u_i4), not sizeof(u_i4 *)
+**	29-Jul-2010 (miket) BUG 124154
+**	    Improve dmf_crypt_maxkeys handling.
+**	    Allocate exactly as many dmf_crypt_maxkeys as asked for, with
+**	    no page padding and with default to 0.
+**	3-Aug-2010 (kschendel) SIR 122757
+**	    Add trdisplay of direct IO settings.
 */
 
 DB_STATUS
@@ -1037,9 +1045,6 @@ DB_VPT_SIZEOF_TUPLE_HDR(TCB_PG_V4), DMPP_VPT_SIZEOF_TUPLE_HDR_MACRO(TCB_PG_V4));
 	/* WriteBehind defaults to ON */
 	c_writebehind[cache_ix] = 1;
     }
-
-    if ( !(dmc->dmc_flags_mask & (DMC_RECOVERY|DMC_STAR_SVR)) )
-	c_crypt_maxkeys = 1; /* by default allocate 1 page of encryption keys */
 
     for (;;)
     {
@@ -2023,7 +2028,7 @@ DB_VPT_SIZEOF_TUPLE_HDR(TCB_PG_V4), DMPP_VPT_SIZEOF_TUPLE_HDR_MACRO(TCB_PG_V4));
 		break;
 	    }
 	    /* Compute the highest lg_id bound of the array */
-	    svcb->svcb_xid_lg_id_max = svcb->svcb_xid_array_size / sizeof(u_i4 *);
+	    svcb->svcb_xid_lg_id_max = svcb->svcb_xid_array_size / sizeof(u_i4);
 
 	    TRdisplay("%@ dmc_start_server:%d svcb xid_array %p, size %d, lg_id_max %x\n",
 	    		__LINE__,
@@ -2356,6 +2361,9 @@ DB_VPT_SIZEOF_TUPLE_HDR(TCB_PG_V4), DMPP_VPT_SIZEOF_TUPLE_HDR_MACRO(TCB_PG_V4));
 	    SETDBERR(&dmc->error, 0, E_DM007F_ERROR_STARTING_SERVER);
 	    break;
 	}
+	TRdisplay("%@ Direct IO hint is %s, direct IO load hint is %s\n",
+		svcb->svcb_directio_tables ? "ON" : "OFF",
+		svcb->svcb_directio_load ? "ON" : "OFF");
 
 	/*
 	** Allocate and initialize the Logging Context Block.
@@ -2849,19 +2857,22 @@ DB_VPT_SIZEOF_TUPLE_HDR(TCB_PG_V4), DMPP_VPT_SIZEOF_TUPLE_HDR_MACRO(TCB_PG_V4));
 	*/
 
 	Dmc_crypt = NULL;
+	TRdisplay("Encryption maximum active keys = %d\n", c_crypt_maxkeys);
 	if (c_crypt_maxkeys)
 	{
 	    SIZE_TYPE	   pages = ( (sizeof(DMC_CRYPT) +
 				c_crypt_maxkeys * sizeof(DMC_CRYPT_KEY) )
 				/ ME_MPAGESIZE) + 1;
 	    SIZE_TYPE	   pages_got;
+	    i4		   page_maxkeys;
 	    CL_ERR_DESC	   sys_err;
 	    /*
-	    ** round up to make full use of memory
+	    ** hypothetically round up to make full use of memory for message
 	    */
-	    c_crypt_maxkeys = ((pages * ME_MPAGESIZE) - sizeof(DMC_CRYPT)) /
+	    page_maxkeys = ((pages * ME_MPAGESIZE) - sizeof(DMC_CRYPT)) /
 		sizeof(DMC_CRYPT_KEY);
-	    TRdisplay("Encryption maximum active keys = %d\n", c_crypt_maxkeys);
+	    TRdisplay("Encryption %d key pages could hold %d keys\n",
+		pages, page_maxkeys);
 	    /*
 	    ** get shared memory
 	    */

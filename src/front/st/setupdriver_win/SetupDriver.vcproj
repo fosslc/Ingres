@@ -67,6 +67,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="msi.lib"
 				OutputFile="$(OutDir)/SetupDriver.exe"
 				LinkIncremental="2"
 				UACExecutionLevel="2"
@@ -229,6 +230,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="msi.lib"
 				OutputFile="$(OutDir)/SetupDriver.exe"
 				LinkIncremental="1"
 				UACExecutionLevel="2"
@@ -393,6 +395,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="msi.lib"
 				OutputFile="$(OutDir)/SetupDriver.exe"
 				LinkIncremental="2"
 				UACExecutionLevel="2"
@@ -476,6 +479,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="msi.lib"
 				OutputFile="$(OutDir)/SetupDriver.exe"
 				LinkIncremental="2"
 				UACExecutionLevel="2"
@@ -555,6 +559,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="msi.lib"
 				OutputFile="$(OutDir)/SetupDriver.exe"
 				LinkIncremental="1"
 				UACExecutionLevel="2"
@@ -636,6 +641,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="msi.lib"
 				OutputFile="$(OutDir)/SetupDriver.exe"
 				LinkIncremental="1"
 				UACExecutionLevel="2"

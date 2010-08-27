@@ -49,6 +49,8 @@
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Add lg_id parameter to
 **	    dm1cnv2_delete, dm1cnv2_get, dm1cnv2_put prototypes.
+**      12-Jul-2010 (stial01) (SIR 121619 MVCC, B124076, B124077)
+**          Prototype changes.
 **/
 
 FUNC_EXTERN DB_STATUS   dm1cnv2_allocate(
@@ -169,9 +171,6 @@ FUNC_EXTERN i4	         dm1cnv2_dput(
 			    i4		*err_code);
 
 FUNC_EXTERN DB_STATUS	dm1cnv2_clean(
-			    i4		page_type,
-			    i4		page_size,
+			    DMP_RCB	*rcb,
 			    DMPP_PAGE	*page,
-			    DB_TRAN_ID  *tranid,
-			    i4		lk_type,
 			    i4		*avail_space);

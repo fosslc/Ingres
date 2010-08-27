@@ -100,6 +100,8 @@
 **	13-Nov-2009 (kiria01) SIR 121883
 **	    To distinguish between LHS and RHS card checks for 01 we have
 **	    opo_card_* that need initialising.
+**	10-Aug-2010 (kschendel) b124218
+**	    Another flag to initialize.
 */
 VOID
 opo_initco(subquery, cop)
@@ -141,6 +143,7 @@ OPO_CO             *cop;
     cop->opo_card_outer = 0;
     cop->opo_card_inner = 0;
     cop->opo_is_swapped = 0;
+    cop->opo_no_exch = 0;
     if (subquery->ops_global->ops_cb->ops_smask & OPS_MDISTRIBUTED)
     {
 	OPD_SCOST	*basep;	    /* ptr to array of costs be be initialized */

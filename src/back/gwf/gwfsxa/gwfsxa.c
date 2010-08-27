@@ -111,6 +111,8 @@
 **          Changes for Long IDs
 **     22-apr-2010 (stial01)
 **          Use DB_EXTFMT_SIZE for register table newcolname IS 'ext_format'
+**	11-Jun-2010 (kiria01) b123908
+**	    Init ulm_streamid_p for ulm_openstream to fix potential segvs.
 */
 
 GLOBALREF	GW_FACILITY	*Gwf_facility;
@@ -2065,6 +2067,7 @@ gwsxa_init( GWX_RCB *gwx_rcb )
 	    }
 	    sxa_ulm_memleft=gwsxa_ulm.ulm_sizepool;
 	    gwsxa_ulm.ulm_memleft= &sxa_ulm_memleft;
+	    gwsxa_ulm.ulm_streamid_p = NULL;
 	    /*
 	    **	Initialize semaphores
 	    */

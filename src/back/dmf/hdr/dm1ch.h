@@ -33,6 +33,8 @@
 **	    Pass adf-cb to uncompress, not ptr.
 **	23-Oct-2009 (kschendel) SIR 122739
 **	    Integrate call sequence changes for new rowaccessor scheme.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Compression type now part of compexpand call.
 **/
 
 FUNC_EXTERN DB_STATUS  dm1ch_compress(
@@ -53,5 +55,6 @@ FUNC_EXTERN DB_STATUS  dm1ch_uncompress(
 			ADF_CB		*rcb_adf_cb);
 
 FUNC_EXTERN i4       dm1ch_compexpand(
+			i4		compression_type,
 			DB_ATTS		**atts,
 			i4		att_cnt);

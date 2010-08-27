@@ -75,6 +75,13 @@
 **   message is displayed instead of "System Error 34".
 **  02-Jun-2010 (drivi01)
 **   Remove hard coded buffer sizes.
+**  23-Jun-2010 (drivi01)
+**   Fix hardcoded buffer sizes for long ids change.
+**   Replace GlobalMemoryStatus with GlobalMemoryStatusEx which is 
+**   recommended for acurate information.  
+**   In mycallbackpages function, deal with broken buffers which
+**   may not contain expected data in 1 buffer, but the data
+**   could be broken up between multiple buffers.
 */
 
 #include "stdafx.h"
@@ -233,6 +240,7 @@ static char *szDummy4      = "e - Empty overflow pages.";
 static  long lpages0 ,lpages,lused,lfreed,lunused,loverflow,lgroupfactor;
 static  long lposinblock,lusedinblock,loverflowinblock,lnbblocks, lunrecognisedpagetype;
 static  BOOL bResult;
+static  BOOL bBrokenLine;
 static  int mycallbackstate;
 static  CByteArray *pBA;
 static  BOOL bcallbackregistered = FALSE;
@@ -248,11 +256,11 @@ extern "C"
 {
 void mycallbackpages(void * p1, char * outbuf,int i)
 {
-   MEMORYSTATUS memstatus;
+   MEMORYSTATUSEX memstatus;
    int iret;
    char Line[1000];
    char buf[200];
-   long  l1;
+   DWORDLONG  l1;
    mystring +=outbuf;
    char * CurLine  = mystring.GetBuffer(0);
    char * pc       = x_strchr(CurLine,TRACELINESEP);
@@ -287,24 +295,28 @@ void mycallbackpages(void * p1, char * outbuf,int i)
 
    switch (mycallbackstate) {
       case 0 :
-         if (x_strncmp(CurLine,szPage,x_strlen(szPage))) 
+         if (x_strncmp(CurLine,szPage,x_strlen(szPage)) && !bBrokenLine) 
+         {
+            bBrokenLine = FALSE;
             return;
+         }
 
          pc=x_strstr(CurLine,szTotPages);
          if (!pc) {
-            bResult=FALSE;
+            bBrokenLine=TRUE; //Could be a broken line
             break;
          }
+         bBrokenLine=FALSE;
          lpages0=atol(pc+x_strlen(szTotPages));
          if (lpages0<0L) {     /* header not found */
             myerror(ERR_INGRESPAGES);
             bResult=FALSE;
             return;
          }
-         memstatus.dwLength = sizeof(MEMORYSTATUS);
+         memstatus.dwLength = sizeof(MEMORYSTATUSEX);
 #ifndef MAINWIN
-         GlobalMemoryStatus( &memstatus);
-         l1= min( (memstatus.dwTotalPhys/5) , (memstatus.dwAvailPhys/3) );
+         GlobalMemoryStatusEx( &memstatus);
+         l1= min( (memstatus.ullTotalPhys/5) , (memstatus.ullAvailPhys/3) );
          while (l1<lpages0) {
            l1*=10L;
            lgroupfactor*=10L;
@@ -677,7 +689,7 @@ BOOL SQLGetPageTypesPerTableTypes(LPUCHAR pNodeName,int * p12ints)
 BOOL GetIngresPageInfo(int nNodeHandle, LPUCHAR dbName, LPUCHAR tableName, LPUCHAR tableOwner, LPINGRESPAGEINFO lpPageInfo)
 {
 	int iret,ilocsession;
-	char buf[400];
+	char buf[MAXOBJECTNAME*4+400];
 	UCHAR NodeName[MAXOBJECTNAME];
 	UCHAR UserName[MAXOBJECTNAME], UserName1[MAXOBJECTNAME];
 	UCHAR FullTableName[MAXOBJECTNAME*2];

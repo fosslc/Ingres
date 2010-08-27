@@ -140,6 +140,9 @@ psl_st0_settransaction(
 **  History:
 **	23-aug-1993 (bryanp)
 **	    created.
+**	11-Jun-2010 (kiria01) b123908
+**	    Initialise pointers after psf_mopen would have invalidated any
+**	    prior content.
 */
 DB_STATUS
 psl_st1_settranstmnt(
@@ -156,6 +159,7 @@ psl_st1_settranstmnt(
     status = psf_mopen(sess_cb, QSO_QP_OBJ, &sess_cb->pss_ostream, &psq_cb->psq_error);
     if (status != E_DB_OK)
 	return (status);
+    sess_cb->pss_stk_freelist = NULL;
 
     if (sess_cb->pss_distrib & DB_3_DDB_SESS)
     {

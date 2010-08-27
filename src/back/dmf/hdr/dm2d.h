@@ -105,6 +105,8 @@
 **          activity. SET NOLOGGING is blocked.
 **	25-Aug-2009 (kschendel) 121804
 **	    Define dm2d-row-lock for gcc 4.3.
+**      09-aug-2010 (maspa05) b123189, b123960
+**          Added DM2D_READONLYDB as flag for a readonly database
 **/
 
 /*
@@ -171,6 +173,7 @@
 #define         DM2D_MUST_LOG       0x01000000L /* Must log all activity
                                                 ** for this DB in this DBMS
                                                 */
+#define         DM2D_READONLYDB     0x02000000L /* readonly database */
 
 /*
 **  The following constants depend on values in the logical interface and

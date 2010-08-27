@@ -21,13 +21,15 @@
 #	13-Mar-2010 (kiria01)
 #	    Created after conflict found between collate and comment
 #	    when adding singleton.
+#       23-Aug-2010 (horda03)
+#           Initialise curlen.
 #
 BEGIN{
 	if (OUT==""){
 		print "OUT variable is not defined"
 		exit -1
 	}
-	curlen
+	curlen=0
 	idx=0
 	last=""
 }

@@ -62,14 +62,16 @@
 **
 **  As a byproduct, the relations are opened and keys are produced. 
 **
-**          qeq_validate - validate relations: open as necessary
-**			 - check for proper use of pattern matching
-**			 - in keys
+**	    qeq_topact_validate - Open a "top" action (one NOT under a QP
+**			   node), validate the entire QP if necessary.
+**	    qeq_subplan_init - (Re-)Initialize the subplan under an action,
+**			   (or rarely, under a specific node).  Re-runs
+**			   virgin CX segments, resets keying, etc.
 **	    qeq_ksort	 - key sorting and placement
 **	    qeq_ade	 - initialize ADE_EXCBs.
 **	    qeq_ade_base - initialize ADE_EXCB pointer array.
 **          qeq_audit     - Audit access to table and views, also alarms
-**	    qeq_vopen	 - Open a valid struct.
+**	    qeq_vopen	 - Open a table instance (a valid struct)
 **
 **
 **  History:
@@ -365,6 +367,13 @@
 **	    does initialization (VIRGIN segments and such).  The sub-plan
 **	    initialization has to run in the proper child thread context
 **	    when parallel query is in use, so it needs to be a separate piece.
+**	17-Jun-2010 (kschendel) b123775
+**	    More work on validation:  locate and validate tprocs during
+**	    resource validation, not action open.  To decide if a table
+**	    valid-list entry is open, look at the DMT_CB instead of
+**	    recording the valid entry on (yet another) list.
+**	29-Jun-2010 (kschendel)
+**	    Comment updates only, no code change.
 **/
 
 
@@ -387,10 +396,10 @@ QEE_DSH	     *dsh,
 QEF_AUD      *aud,
 DB_STATUS   *status );
 
-static DB_STATUS qeq_vld_first_act(
+static DB_STATUS qeq_validate_qp(
 	QEF_RCB		*qef_rcb,
 	QEE_DSH		*dsh,
-	bool		init_action);
+	bool		size_check);
 
 static DB_STATUS
 qeq_vopen(
@@ -398,50 +407,28 @@ qeq_vopen(
 	  QEE_DSH     *dsh,
           QEF_VALID   *vl);
 
-static DB_STATUS
-qeq_load_tproc_qp(
-	QEF_RCB        *qef_rcb,
-        QEE_DSH        *dsh,
-        QSF_RCB        *qsf_rcb,
-        QEF_RESOURCE   *qefresource);
-
-static DB_STATUS
-qeq_get_tproc_tab(
-        QEF_RCB     *qef_rcb,
-     	QSF_RCB     *qsf_rcb,
-        QEE_DSH     *dsh,
-        ULM_RCB     *ulm,
-        QEF_VALID   *vl,
-        DMT_CB      *dmt_cb_tproc);
-
-static DB_STATUS
-qeq_validate_tproc(
-     	QEF_RCB     *qef_rcb,
-     	QSF_RCB     *qsf_rcb,
-        QEE_DSH     *dsh,
-        ULM_RCB     *ulm,
-        bool        *tm_match);
-
-static DB_STATUS
-qeq_destroy_tproc_qp(
-	QEF_RCB     *qef_rcb,
-        QEE_DSH     *dsh,
-        QSF_RCB     *qsf_rcb,
-        QEF_RESOURCE  *qefresource);
+static DB_STATUS qeq_load_tproc_dsh(
+	QEF_RCB		*qef_rcb,
+        QEF_RESOURCE	*qpresource,
+        QEE_DSH		*dsh,
+	QEE_DSH		**tproc_dsh);
 
 GLOBALREF QEF_S_CB		*Qef_s_cb;
 
 /*{
-** Name: qeq_topact_validate - Validate a "top" action
+** Name: qeq_topact_validate - Open/Validate a "top" action
 **
 ** Description:
-**	This routine is called to validate a "top" action.  Top actions
-**	are always run in the main session thread and are never actions
+**	This routine is called to prepare a "top" action.  Top actions
+**	are always run in the main session thread (*) and are never actions
 **	found in a QP tree under a QP node.
 **
 **	If it's the first action of the query, the resource list is
-**	used to open and validate tables.  If some table (or DBproc) is
-**	newer than the QP timestamp, the entire query plan is invalid.
+**	used to validate the query plan as a whole.  If some table
+**	(or DBproc) is newer than the QP timestamp, the entire query
+**	plan is invalid, and a warning plus specific error status is
+**	returned.  The caller might attempt a recompile / retry of
+**	the entire query.
 **
 **	Each top action (first or not) of a query has a "valid" list,
 **	which is a list of tables that need to be opened for that action.
@@ -451,12 +438,18 @@ GLOBALREF QEF_S_CB		*Qef_s_cb;
 **	opens to the specific threads, but that's not how it works at
 **	the moment.
 **
+**	(*) A top action may be opened and executed in a child thread of a
+**	parallel plan, if and only if it's an action inside a table procedure.
+**	In that situation, all we're doing is opening tables;  QP validation
+**	never takes place in a child thread.
+**
 ** Inputs:
 **      qef_rcb			QEF query request control block
 **	dsh			DSH for the (main session) thread.
 **	action			A "top" action, possibly with a resource or
 **				valid list.
-**	init_action		TRUE if we're going to execute actions,
+**	size_check		TRUE to do table size check if we're
+**				validating the QP (first action)
 **				FALSE if just reopening tables (e.g. for
 **				DBproc continuation after commit/rollback)
 **
@@ -867,6 +860,12 @@ GLOBALREF QEF_S_CB		*Qef_s_cb;
 **	    Restore the setting of dsh-act-ptr for tprocs, that's the
 **	    query resume point if the tproc needs loaded.  My bad for
 **	    taking it out.
+**	18-Jun-2010 (kschendel) b123775
+**	    Instead of using yet another list to see if a valid entry was
+**	    processed, just check the DMT_CB.  Take tproc handling out of
+**	    here, do in the QP validation routine which is where it
+**	    really belongs anyway.  (plus doing it here causes confusion
+**	    as to which resource list is being used.)
 */
 
 DB_STATUS
@@ -874,7 +873,7 @@ qeq_topact_validate(
 QEF_RCB		*qef_rcb,
 QEE_DSH		*dsh,
 QEF_AHD		*action,
-bool		init_action)
+bool		size_check)
 {
     QEF_VALID	    *vl;
     DB_STATUS	    status = E_DB_OK;
@@ -882,17 +881,13 @@ bool		init_action)
     PTR		    *cbs = dsh->dsh_cbs;		/* control blocks for
 							** DMU, ADF
 							*/
-    QEE_VALID	*qevl;
     DMR_CB	    *dmr_cb;
     DMT_CB	    *dmt_cb;
     QEF_QP_CB       *qp = dsh->dsh_qp_ptr;
     i4		    i;
     QEE_RESOURCE    *resource;
     QEF_RESOURCE    *qefresource;
-    ULM_RCB	    ulm;
     DMR_CHAR_ENTRY  dmr_char_entry;
-    QSF_RCB         qsf_rcb;
-    bool            tproc_tm_match = TRUE;
 
     /* This call will prevent a server which implements CSswitch from
        getting into a loop if a user has a looping stored procedure. */
@@ -901,10 +896,6 @@ bool		init_action)
 
     if (QEF_CHECK_FOR_INTERRUPT(qef_cb, dsh) == E_DB_ERROR)
 	return (E_DB_ERROR); /* so user can abort a looping procedure */
-
-    /* set up to allocate memory out of the dsh's stream */
-    STRUCT_ASSIGN_MACRO(Qef_s_cb->qef_d_ulmcb, ulm);
-    ulm.ulm_streamid_p = &dsh->dsh_streamid;
 
     /* clean up action pointer, it will be set if qeq_validate completed */
 
@@ -918,14 +909,19 @@ bool		init_action)
     if (qp->qp_status & QEQP_DEFERRED)
 	dsh->dsh_stmt_no = qef_cb->qef_stmt++;
 
-    if (action == qp->qp_ahd)
+    if (action == qp->qp_ahd && (dsh->dsh_qp_status & DSH_TPROC_DSH) == 0)
     {
-	/* If the first action of a query, process the resource list,
-	** which specifies the tables needed.  This will check timestamps
-	** too, and will return a not-OK status if the QP is out of date
-	** with respect to the resources needed.
+	/* If the first action of a query, validate the query plan against
+	** the resource list of tables and tprocs needed.  This will
+	** check timestamps and sizes, and will return a not-OK status if
+	** the QP is out of date with respect to the resources needed.
+	**
+	** This is NOT done for table procedures;  tprocs are validated
+	** from the parent query plan.  By the time we actually get into
+	** the tproc it should be known valid.
 	*/
-	status = qeq_vld_first_act(qef_rcb, dsh, init_action);
+	status = qeq_validate_qp(qef_rcb, dsh, size_check);
+	/* if status != E_DB_OK we drop thru, below */
     }
 
     /* Open tables for this action */
@@ -934,178 +930,25 @@ bool		init_action)
 	    vl = vl->vl_next
 	)
     {
-	bool vl_found = FALSE;
-
 	if (vl->vl_flags & QEF_MCNSTTBL) continue;
 
-	if (vl->vl_flags & QEF_TPROC)
-	{
-
-	    if ((qef_rcb->qef_intstate & QEF_CLEAN_RSRC) != 0)
-	    {
-		dsh->dsh_error.err_code = E_QE0025_USER_ERROR;
-		qef_rcb->qef_intstate &= ~QEF_CLEAN_RSRC;
-		status = E_DB_ERROR;
-		return status;
-	    }
-
-	    /* recompile and reload the tproc */
-	    STRUCT_ASSIGN_MACRO(*qef_rcb, *dsh->dsh_saved_rcb);
-
-	    /* reset qefresource */
-	    qefresource = vl->vl_resource;
-
-	    status = qeq_load_tproc_qp(qef_rcb, dsh, &qsf_rcb, qefresource);
-
-	    /* If we have to reload the tproc, set the dsh current
-	    ** action now, so that when the sequencer resumes the
-	    ** query, QEF knows which action caused the reload.
-	    ** If the tproc is there, we'll clear dsh-act-ptr and
-	    ** let things get thru the subplan init as usual.
-	    */
-	    dsh->dsh_act_ptr = action;
-	    if (status == E_DB_OK &&                     /* tproc QP cached */
-		!(qp->qp_status & QEQP_ISDBP) &&               /* top query */
-		!(qef_rcb->qef_intstate & QEF_DBPROC_QP)/* not QEF callback */
-	       )
-	    {
-		/* Validate timestamp mismatch */
-		status = qeq_validate_tproc(qef_rcb, &qsf_rcb, dsh,
-					&ulm, &tproc_tm_match);
-		if (status!= E_DB_OK)
-		    return status;
-
-		if (!tproc_tm_match)
-		{
-		    /* If there is any timestamp mismatch, destroy
-		     * all ttproc QP from QSF, so when the control
-		     * is back to SCF, the query is treated is being
-		     * executed the first time and all the nested
-		     * tprocs will be recompiled.
-		     */
-		    QEF_RESOURCE  *qp_resource
-			= ((QEF_QP_CB *)qsf_rcb.qsf_root)->qp_resources;
-
-		    status = qeq_destroy_tproc_qp(qef_rcb, dsh, &qsf_rcb,
-					      qp_resource);
-		    if (status != E_DB_OK)
-			return status;
-
-		    /* Error out to force the tproc recompilation. */
-		    status = E_DB_ERROR;
-		}
-	    }
-
-
-	    if (DB_FAILURE_MACRO(status))
-	    {
-		/* No such procedure in QSF, ask SCF to recompile. */
-		qef_rcb->qef_intstate |= QEF_DBPROC_QP;
-
-		dsh->dsh_error.err_code = E_QE030F_LOAD_TPROC_QP;
-
-		break;
-	    }
-	    else
-	    {
-		/* The procedure was found. Turn off the saved bit. */
-		qef_rcb->qef_intstate &= ~QEF_DBPROC_QP;
-
-		/* save the cursor ID to locate the tproc qp from QSF */
-		MEcopy((PTR)qsf_rcb.qsf_obj_id.qso_name,
-		       sizeof(DB_CURSOR_ID),
-		       (PTR)&qefresource->qr_resource.qr_proc.qr_dbpalias);
-		/* Don't need action saved, null it out, will be set
-		** again if subplan-init is happy with things.
-		*/
-		dsh->dsh_act_ptr = NULL;
-	    }
-
-	    continue;
-	}
-			    /* skip all this stuff for in-memory tabs */
-	resource = &dsh->dsh_resources[vl->vl_resource->qr_id_resource];
-
-	/* if there's an unused open valid struct then use that */
-	if (resource->qer_resource.qer_tbl.qer_free_vl != NULL &&
-	     resource->qer_resource.qer_tbl.qer_free_vl->qevl_qefvl ==
-								(PTR) vl
-	    )
-	{
-	    resource->qer_resource.qer_tbl.qer_free_vl->qevl_next =
-		    resource->qer_resource.qer_tbl.qer_inuse_vl;
-	    resource->qer_resource.qer_tbl.qer_inuse_vl =
-		    resource->qer_resource.qer_tbl.qer_free_vl;
-	    resource->qer_resource.qer_tbl.qer_free_vl = NULL;
-	    vl_found = TRUE;
-	}
-	else
-	{
-	    /* See if we've already opened the table */
-	    for (qevl = resource->qer_resource.qer_tbl.qer_inuse_vl;
-		    qevl != NULL;
-		    qevl = qevl->qevl_next
-		)
-	    {
-		if (qevl->qevl_qefvl == (PTR) vl)
-		{
-		    vl_found = TRUE;
-		    break;
-		}
-	    }
-	}
-
-	if (!vl_found)
+	/* Must be a table, and not an in-memory table either.
+	** Open the table unless we opened it for validation purposes.
+	*/
+	dmt_cb = (DMT_CB *) cbs[vl->vl_dmf_cb];
+	if (dmt_cb->dmt_record_access_id == NULL)
 	{
 	    /*
-	    ** Open the table and add it to the inuse list
+	    ** Open (another) DMF reference to the table
 	    */
-	    if (resource->qer_resource.qer_tbl.qer_empty_vl == NULL)
-	    {
-		ulm.ulm_psize = sizeof (QEE_VALID);
-		status = qec_malloc(&ulm);
-		if (status != E_DB_OK)
-		{
-		    dsh->dsh_error.err_code = ulm.ulm_error.err_code;
-		    return (status);
-		}
-		/* quiesce the compiler warning */
-		qevl = (QEE_VALID *)ulm.ulm_pptr;
-	    }
-	    else
-	    {
-		qevl = resource->qer_resource.qer_tbl.qer_empty_vl;
-		resource->qer_resource.qer_tbl.qer_empty_vl =
-			qevl->qevl_next;
-		if (qevl->qevl_next != NULL)
-		    qevl->qevl_next->qevl_prev = NULL;
-		qevl->qevl_next = qevl->qevl_prev = NULL;
-	    }
-
-	    qevl->qevl_qefvl = (PTR) vl;
-	    if (resource->qer_resource.qer_tbl.qer_inuse_vl == NULL)
-	    {
-		qevl->qevl_next = qevl->qevl_prev = NULL;
-		resource->qer_resource.qer_tbl.qer_inuse_vl = qevl;
-	    }
-	    else
-	    {
-		qevl->qevl_next =
-		    resource->qer_resource.qer_tbl.qer_inuse_vl;
-		qevl->qevl_prev = NULL;
-		qevl->qevl_next->qevl_prev = qevl;
-		resource->qer_resource.qer_tbl.qer_inuse_vl = qevl;
-	    }
-
 	    status = qeq_vopen(qef_rcb, dsh, vl);
 	    if (status != E_DB_OK)
 		break;
 	}
-	    /*
-	    ** If we've opened the table already, then DMR_ALTER the
-	    ** statement number
-	    */
-	dmt_cb = (DMT_CB *) cbs[vl->vl_dmf_cb];
+	/* If the statement number isn't right (e.g. the table was
+	** opened for validation at a prior step and the qp uses
+	** deferred semantics), tell DMF the right stmt no.
+	*/
 	if (dmt_cb->dmt_sequence != dsh->dsh_stmt_no)
 	{
 	    /* set up to pass it to DMF */
@@ -1130,7 +973,7 @@ bool		init_action)
 	/*
 	** Make sure the table was locked with the correct lock mode
 	**
-	** If the table open open failed with lock timeout while
+	** If the table open failed with lock timeout while
 	** validating ALL query plan table resources, we performed the
 	** table validation with readlock=nolock which requests a table
 	** control lock.
@@ -2205,20 +2048,44 @@ qeq_subplan_init(QEF_RCB *qef_rcb, QEE_DSH *dsh,
 }
 
 /*
-** Name: qeq_vld_first_act -- Validation for first query action
+** Name: qeq_validate_qp -- Validate a query plan
 **
 ** Description:
-**	Do validation / table open actions for the first query action.
-**	This is only done once on the first action of a QP.
-**	We run through the resource list and validate / open the
-**	listed tables.
+**
+**	This routine is called for the first action of a query plan.
+**	It goes through the plan resource list and validates items
+**	(tables and DB procedures) used by the plan, to ensure that
+**	the plan is valid and no tables have changed definition
+**	since the QP was compiled.
+**
+**	The table validation step picks up the first valid list
+**	entry, opens it, and checks the timestamp on the table vs
+**	the query plan (ie resource list entry).  The table is
+**	left open to hold a control lock during execution.  If a
+**	table validation fails, the QP is marked obsolete, and the
+**	table definition is turfed out of RDF since RDF probably
+**	has an obsolete version of the definition.
+**
+**	The DB procedure validation step applies strictly to table
+**	procedures;  other uses of DB procs are handled separately.
+**	Procedure validation involves finding the tproc QP, finding
+**	or creating a DSH for it, and recursively validating the
+**	tproc QP's resource list.  The QP is left locked and the
+**	DSH left around;  the first tproc usage will grab the DSH
+**	and use it.
+**
+**	In addition to validating, if the QP uses any sequences,
+**	they are all opened here.
 **
 ** Inputs:
 **	qef_rcb			QEF request control block
 **	dsh			(main) thread's data segment header
-**	init_action		TRUE if we're going to execute actions,
-**				FALSE if just reopening tables (e.g. for
-**				DBproc continuation after commit/rollback)
+**	size_check		TRUE to run a table size check in addition
+**				to the timestamp validation.
+**				FALSE if no size check wanted (for situations
+**				like DBproc continuation after commit or
+**				rollback, when a validate error is a hard
+**				error with no retry available).
 **
 ** Outputs:
 **	Returns E_DB_OK or error status; error info will be in dsh_error.
@@ -2227,10 +2094,23 @@ qeq_subplan_init(QEF_RCB *qef_rcb, QEE_DSH *dsh,
 **	13-May-2010 (kschendel) b123565
 **	    Split from qeq-validate whilst trying to figure out the
 **	    parallel query validation fiasco.
+**	18-Jun-2010 (kschendel) b123755
+**	    More work on validation:  simplify table validation tracking,
+**	    do tproc validation here instead of at action table-open time
+**	    (so that the resource lists don't get mixed up).
+**	    Rename to better reflect what the routine does.
+**	21-jul-2010 (stephenb) b124107
+**	    We need to verify that the iisequnece record with the correct
+**	    sequence ID according to the DSH exists since this may not
+**	    be checked in the parser if the query gets at the sequence through
+**	    devious means. It is possible that the sequence has been dropped,
+**	    and another one with the same name created, and we can get to here
+**	    without noticing. We need to reject the plan if that happens.
+**	    Re-created sequences with have a new sequence ID.
 */
 
 static DB_STATUS
-qeq_vld_first_act(QEF_RCB *qef_rcb, QEE_DSH *dsh, bool init_action)
+qeq_validate_qp(QEF_RCB *qef_rcb, QEE_DSH *dsh, bool size_check)
 {
     DB_STATUS	status, status1;
     DMT_CB	*dmt_cb;
@@ -2238,8 +2118,7 @@ qeq_vld_first_act(QEF_RCB *qef_rcb, QEE_DSH *dsh, bool init_action)
     PTR		*cbs = dsh->dsh_cbs;
     RDF_CB	rdf_cb;
     QEE_RESOURCE  *resource;
-    QEE_VALID	*qevl;
-    QEF_RESOURCE  *qefresource;
+    QEF_RESOURCE  *qpresource;
     QEF_CB	*qef_cb = dsh->dsh_qefcb;
     QEF_QP_CB	*qp = dsh->dsh_qp_ptr;
     QEF_VALID	*vl;
@@ -2251,23 +2130,25 @@ qeq_vld_first_act(QEF_RCB *qef_rcb, QEE_DSH *dsh, bool init_action)
 
     /* for each resource */
     status = E_DB_OK;
-    for (i = 0; i < qp->qp_cnt_resources; i += 1)
+    for (qpresource = qp->qp_resources;
+	 qpresource != NULL;
+	 qpresource = qpresource->qr_next
+	)
     {
-	resource = &dsh->dsh_resources[i];
-	qefresource = (QEF_RESOURCE *) resource->qer_qefresource;
+	resource = &dsh->dsh_resources[qpresource->qr_id_resource];
 
 	/* if this is a resource that needs validating */
 
 	/* First check for in-memory table (MS Access OR transform) */
-	if (qefresource->qr_type == QEQR_TABLE &&
-	    qefresource->qr_resource.qr_tbl.qr_tbl_type == QEQR_MCNSTTBL)
+	if (qpresource->qr_type == QEQR_TABLE &&
+	    qpresource->qr_resource.qr_tbl.qr_tbl_type == QEQR_MCNSTTBL)
 	{
 	    i4	tab_index;
 	    QEF_MEM_CONSTTAB	*qef_con_p;
 	    QEE_MEM_CONSTTAB	*qee_con_p;
 
-	    tab_index = qefresource->qr_resource.qr_tbl.qr_lastvalid->vl_dmr_cb;
-	    qef_con_p = qefresource->qr_resource.qr_tbl.qr_cnsttab_p;
+	    tab_index = qpresource->qr_resource.qr_tbl.qr_lastvalid->vl_dmr_cb;
+	    qef_con_p = qpresource->qr_resource.qr_tbl.qr_cnsttab_p;
 	    qee_con_p = resource->qer_resource.qer_tbl.qer_cnsttab_p;
 	    /* Init. MEM_CONSTTAB and stick addr in dsh_cbs */
 	    qee_con_p->qer_tab_p = qef_con_p->qr_tab_p;
@@ -2277,16 +2158,18 @@ qeq_vld_first_act(QEF_RCB *qef_rcb, QEE_DSH *dsh, bool init_action)
 	    cbs[tab_index] = (PTR)qee_con_p;
 			/* VERY IMPORTANT - stick QEE_MEM_CONSTTAB
 			** ptr here for qen_orig to find later */
-	    continue;	/* skip rest of the loop */
+	    continue;	/* done, skip to next resource */
 	}
 
-	if (qefresource->qr_type == QEQR_TABLE &&
-	     qefresource->qr_resource.qr_tbl.qr_tbl_type == QEQR_REGTBL &&
-	     resource->qer_resource.qer_tbl.qer_free_vl == NULL &&
-	     resource->qer_resource.qer_tbl.qer_inuse_vl == NULL
+	if (qpresource->qr_type == QEQR_TABLE &&
+	     qpresource->qr_resource.qr_tbl.qr_tbl_type == QEQR_REGTBL &&
+	     ! resource->qer_resource.qer_tbl.qer_validated
 	    )
 	{
-	    vl = qefresource->qr_resource.qr_tbl.qr_valid;
+	    /* Ordinary table, snag a valid list entry and use it to
+	    ** open the table so that we can check its timestamp.
+	    */
+	    vl = qpresource->qr_resource.qr_tbl.qr_valid;
 
 	    status = qeq_vopen(qef_rcb, dsh, vl);
 	    dmt_cb = (DMT_CB *) cbs[vl->vl_dmf_cb];
@@ -2294,42 +2177,10 @@ qeq_vld_first_act(QEF_RCB *qef_rcb, QEE_DSH *dsh, bool init_action)
 	    if (status != E_DB_OK)
 		break;
 
-	    /*
-	    ** if there aren't empty resource structs then
-	    ** allocate them, otherwise take one off the list.
-	    */
-	    if (resource->qer_resource.qer_tbl.qer_empty_vl == NULL)
-	    {
-		ulm.ulm_psize = sizeof (QEE_VALID);
-		status = qec_malloc(&ulm);
-		if (status != E_DB_OK)
-		{
-		    dsh->dsh_error.err_code = ulm.ulm_error.err_code;
-		    return (status);
-		}
-		/* cast to quiesce the compiler warning */
-		qevl = (QEE_VALID *)ulm.ulm_pptr;
-	    }
-	    else
-	    {
-		qevl = resource->qer_resource.qer_tbl.qer_empty_vl;
-		resource->qer_resource.qer_tbl.qer_empty_vl = qevl->qevl_next;
-		if (qevl->qevl_next != NULL)
-		    qevl->qevl_next->qevl_prev = NULL;
-		qevl->qevl_next = qevl->qevl_prev = NULL;
-	    }
-
-	    qevl->qevl_qefvl = (PTR) vl;
-	    if (resource->qer_resource.qer_tbl.qer_free_vl == NULL)
-	    {
-		qevl->qevl_next = qevl->qevl_prev = NULL;
-		resource->qer_resource.qer_tbl.qer_free_vl = qevl;
-	    }
-
 	    /* this is the real validation step for tables */
-	    if (vl->vl_timestamp.db_tab_high_time !=
+	    if (qpresource->qr_resource.qr_tbl.qr_timestamp.db_tab_high_time !=
 			dmt_cb->dmt_timestamp.db_tab_high_time ||
-		vl->vl_timestamp.db_tab_low_time !=
+		qpresource->qr_resource.qr_tbl.qr_timestamp.db_tab_low_time !=
 			dmt_cb->dmt_timestamp.db_tab_low_time)
 	    {
 		/* relation out of date */
@@ -2376,7 +2227,7 @@ qeq_vld_first_act(QEF_RCB *qef_rcb, QEE_DSH *dsh, bool init_action)
 	    */
 
 	    /* Skip all this if the number of pages hasn't changed */
-	    if (vl->vl_size_sensitive && init_action &&
+	    if (vl->vl_size_sensitive && size_check &&
 		vl->vl_total_pages != dmt_cb->dmt_page_count)
 	    {
 		i4	adj_affected_pages, adj_est_pages;
@@ -2391,7 +2242,6 @@ qeq_vld_first_act(QEF_RCB *qef_rcb, QEE_DSH *dsh, bool init_action)
 				 / vl->vl_total_pages;
 
 		/* Account for growth or shrinkage */
-		growth_factor = +growth_factor;
 
 		adj_affected_pages = vl->vl_est_pages +
 			((vl->vl_est_pages * growth_factor) / 100);
@@ -2429,6 +2279,70 @@ qeq_vld_first_act(QEF_RCB *qef_rcb, QEE_DSH *dsh, bool init_action)
 		    break;
 		}
 	    }   /* end if size_sensitive */
+	} /* if regular table */
+	else if (qpresource->qr_type == QEQR_PROCEDURE
+	  && ! resource->qer_resource.qer_proc.qer_procdsh_valid)
+	{
+	    QEE_DSH *tproc_dsh;
+
+	    /* Validate a table procedure.
+	    ** Load the QP and create a DSH for that QP.  Then, validate
+	    ** the tproc's QP in the usual manner.  If something goes wrong,
+	    ** drop the DSH, unlock the QP if it was there, and return
+	    ** so that the caller can recreate the tproc's QP.
+	    */
+	    qef_rcb->qef_intstate &= ~QEF_DBPROC_QP;
+	    tproc_dsh = resource->qer_resource.qer_proc.qer_proc_dsh;
+	    *(dsh->dsh_saved_rcb) = *qef_rcb;
+	    if (tproc_dsh == NULL)
+	    {
+		status = qeq_load_tproc_dsh(qef_rcb, qpresource, dsh, &tproc_dsh);
+	    }
+	    else
+	    {
+		/* Switch a few rcb things to the tproc context */
+		qef_rcb->qef_dbpname = qpresource->qr_resource.qr_proc.qr_dbpalias;
+		qef_rcb->qef_qp = resource->qer_resource.qer_proc.qer_proc_cursid;
+		qef_rcb->qef_qso_handle = tproc_dsh->dsh_qp_handle;
+	    }
+	    if (status == E_DB_OK)
+	    {
+		/* Set the proper statement number, then validate */
+		tproc_dsh->dsh_stmt_no = dsh->dsh_stmt_no;
+		status = qeq_validate_qp(qef_rcb, tproc_dsh, size_check);
+		if (status != E_DB_OK)
+		{
+		    /* Drop the unusable tproc DSH and its QP */
+		    tproc_dsh->dsh_qp_status |= DSH_QP_OBSOLETE;
+		    (void) qee_destroy(qef_cb, qef_rcb, &tproc_dsh);
+		    resource->qer_resource.qer_proc.qer_proc_dsh = NULL;
+		}
+	    }
+	    if (status != E_DB_OK)
+	    {
+		/* Not there, or was invalid, ask SCF to recompile.
+		** qef_qp in the qef_rcb has the tproc QSF ID and qef_dbpname
+		** in the qsf_rcb has the full alias for recompiling.
+		** These are set by load-tproc-dsh;  in the case of
+		** nested tprocs, the most deeply nested tproc's ID is
+		** the one left in the qef RCB (which is the one that failed).
+		**
+		** Sequencer expects null qso-handle for DBproc recreate,
+		** else it doesn't do all the right things.
+		*/
+		qef_rcb->qef_intstate |= QEF_DBPROC_QP;
+		qef_rcb->qef_qso_handle = NULL;
+		dsh->dsh_error.err_code = E_QE030F_LOAD_TPROC_QP;
+		break;
+	    }
+	    /* The tproc looks OK, hang on to the DSH, someone can use it */
+	    resource->qer_resource.qer_proc.qer_proc_dsh = tproc_dsh;
+	    resource->qer_resource.qer_proc.qer_procdsh_used = FALSE;
+	    resource->qer_resource.qer_proc.qer_procdsh_valid = TRUE;
+	    /* Restore qef-rcb to what it looked like before switching to the
+	    ** tproc dsh for validating.
+	    */
+	    *qef_rcb = *(dsh->dsh_saved_rcb);
 	}
     }
     /* For each sequence (if any) - open with DMF call. */
@@ -2436,9 +2350,53 @@ qeq_vld_first_act(QEF_RCB *qef_rcb, QEE_DSH *dsh, bool init_action)
     {
 	DMS_CB		*dms_cb;
 	QEF_SEQUENCE	*qseqp;
+	DB_IISEQUENCE	seqtuple;
 
 	for (qseqp = qp->qp_sequences; qseqp; qseqp = qseqp->qs_qpnext)
 	{
+	    /*
+	    ** make sure iisequence record exists for DSH sequence ID. We need
+	    ** to do this here because it may not have been checked already, and
+	    ** it is possible to drop and re-create a sequence with the same name
+	    ** which invalidates the sequence ID in the DSH.
+	    */
+	    qeu_rdfcb_init((PTR) &rdf_cb, qef_cb);
+	    rdf_cb.rdf_rb.rdr_types_mask = RDR_BY_NAME;
+	    rdf_cb.rdf_rb.rdr_2types_mask = RDR2_SEQUENCE;
+	    MEmove(sizeof(DB_NAME), (PTR) &qseqp->qs_seqname, ' ',
+		sizeof(DB_NAME), (PTR) &rdf_cb.rdf_rb.rdr_name.rdr_seqname);
+	    STRUCT_ASSIGN_MACRO(qseqp->qs_owner, rdf_cb.rdf_rb.rdr_owner);
+	    rdf_cb.rdf_rb.rdr_update_op = RDR_OPEN;
+	    rdf_cb.rdf_rb.rdr_qtuple_count = 1;
+	    rdf_cb.rdf_rb.rdr_qrytuple = (PTR)&seqtuple;
+	    status = rdf_call(RDF_GETINFO, (PTR) &rdf_cb);
+	    if (status != E_DB_OK)
+	    {
+		if (rdf_cb.rdf_error.err_code == E_RD0013_NO_TUPLE_FOUND)
+		{
+		    /* no iisequence record, must have been dropped */
+		    dsh->dsh_qp_status |= DSH_QP_OBSOLETE;
+		    dsh->dsh_error.err_code = E_QE0023_INVALID_QUERY;
+		    return(E_DB_WARN);
+		}
+		else
+		{
+		    dsh->dsh_error.err_code = rdf_cb.rdf_error.err_code;
+		    return(status);
+		}
+	    }
+	    else if (seqtuple.dbs_uniqueid.db_tab_base != qseqp->qs_id.db_tab_base ||
+		    seqtuple.dbs_uniqueid.db_tab_index != qseqp->qs_id.db_tab_index)
+	    {
+		/*
+		** found record but it has the wrong sequence ID,
+		** must have been re-created
+		*/
+		dsh->dsh_qp_status |= DSH_QP_OBSOLETE;
+		dsh->dsh_error.err_code = E_QE0023_INVALID_QUERY;
+		return(E_DB_WARN);
+	    }
+
 	    dms_cb = (DMS_CB *)dsh->dsh_cbs[qseqp->qs_cbnum];
 	    dms_cb->dms_tran_id = dsh->dsh_dmt_id;
 	    dms_cb->dms_db_id = qef_rcb->qef_db_id;
@@ -2452,7 +2410,7 @@ qeq_vld_first_act(QEF_RCB *qef_rcb, QEE_DSH *dsh, bool init_action)
     }
 
     return (status);
-} /* qeq_vld_first_act */
+} /* qeq_validate_qp */
 
 /*{
 ** Name: QEQ_VOPEN	- Open a valid list entry.
@@ -2534,6 +2492,9 @@ qeq_vld_first_act(QEF_RCB *qef_rcb, QEE_DSH *dsh, bool init_action)
 **	    Use DSH pointer as cursorid to dmt_open.
 **	13-May-2010 (kschendel) b123565
 **	    Delete "action" parameter, not real meaningful.
+**	15-Jul-2010 (jonj)
+**	    Reset DMT_FORCE_NOLOCK now that dmt_open no
+**	    longer hoses dmt_flags_mask bits.
 */
 static DB_STATUS
 qeq_vopen(
@@ -2698,6 +2659,8 @@ qeq_vopen(
 	    dmt_cb->dmt_flags_mask |= DMT_FORCE_NOLOCK;
 	    dmt_cb->dmt_lock_mode = DMT_N;
 	    status = qen_openAndLink(dmt_cb, dsh);
+	    /* Reset DMT_FORCE_NOLOCK for future calls. */
+	    dmt_cb->dmt_flags_mask &= ~DMT_FORCE_NOLOCK;
 	}
 
 	/* Reset dmt_char_array for future calls */
@@ -3792,373 +3755,107 @@ DB_STATUS   *status )
 
 
 /*{
-** Name: qeq_load_tproc_qp	- Load table procedure QP
+** Name: qeq_load_tproc_dsh	- Load table procedure QP and DSH
 **
 ** Description:
-**     This routine loads a table procedure QP from
-**     QSF cache.
+**	This routine is part of table procedure validation.  The
+**	tproc named by the given (calling-)QP resource is located
+**	in QSF, and a DSH is created or located for that query plan.
+**
+**	Either way, the QEF RCB is updated with the QSF name and
+**	alias of the table proc.  This way, if the QP isn't there,
+**	or if something goes wrong with validation later on, the
+**	sequencer will know what table proc needs to be recompiled.
 **
 ** Inputs:
-**     qef_rcb     - Pointer to qef control block
-**     dsh	   - Top query data segment header
-**     qsf_rcb     - Pointer to the request control block
-**     qefresource - Pointer to query plan object
+**	qef_rcb		- Pointer to qef request block
+**	qpresource	- (Calling-)QP resource for table procedure
+**	dsh		- DSH for (calling-)QP
+**	tproc_dsh	- an output
 **
 ** Outputs:
-**     qsf_rcb     - Pointer to the request control block
+**	tproc_dsh	- Filled in with DSH for tproc QP if found
+**	The DB cursor ID of the DSH side of the QP resource is filled in
+**	with the QSF tproc object name, if it's found.
 **
 ** Returns:
-**     E_DB_{OK, WARN, ERROR, FATAL}
+**	E_DB_OK, or E_DB_ERROR if QP not there or can't make a DSH.
+**
+**	Note that if error, there's no need to worry about the specific
+**	error code in dsh_error, caller will change it anyway to "load
+**	tproc" for the sequencer return-back.
 **
 ** Exceptions:
-**     None.
+**	None.
 **
 ** History
-**     12-May-2009 (gefei01)
-**         Creation.
+**	12-May-2009 (gefei01)
+**	    Creation.
+**	18-Jun-2010 (kschendel) b123775
+**	    Rework so that the DSH is created as well as the QP located.
 */
-static DB_STATUS
-qeq_load_tproc_qp(
-	QEF_RCB        *qef_rcb,
-        QEE_DSH        *dsh,
-        QSF_RCB        *qsf_rcb,
-        QEF_RESOURCE   *qefresource)
-{
-    DB_STATUS        status = E_DB_OK;
 
-    /* next 2 lines are temporary*/
-    qef_rcb->qef_dbpId.db_tab_base = 0;
+static DB_STATUS
+qeq_load_tproc_dsh(
+	QEF_RCB		*qef_rcb,
+        QEF_RESOURCE	*qpresource,
+        QEE_DSH		*dsh,
+	QEE_DSH		**tproc_dsh)
+{
+    DB_STATUS	status = E_DB_OK;
+    QEE_RESOURCE *res;		/* DSH resource for table proc */
+    QSF_RCB	qsf;		/* QSF request block */
+    QSO_NAME	dbpalias;	/* Alias name of the table proc */
+
+    /* Look for the table procedure QP object in QSF */
+    qsf.qsf_type = QSFRB_CB;
+    qsf.qsf_ascii_id = QSFRB_ASCII_ID;
+    qsf.qsf_length = sizeof(QSF_RCB);
+    qsf.qsf_owner = (PTR)DB_QEF_ID;
+    qsf.qsf_sid = qef_rcb->qef_cb->qef_ses_id;
+    qsf.qsf_feobj_id.qso_type = QSO_ALIAS_OBJ;
+    qsf.qsf_feobj_id.qso_lname = sizeof(qsf.qsf_feobj_id.qso_name);
+    dbpalias = qpresource->qr_resource.qr_proc.qr_dbpalias;
+    /* Clean out the cursor-ID bits that we don't know and are zero */
+    dbpalias.qso_n_id.db_cursor_id[0] = 0;
+    dbpalias.qso_n_id.db_cursor_id[1] = 0;
+    MEcopy((PTR) &dbpalias, sizeof(QSO_NAME), (PTR)qsf.qsf_feobj_id.qso_name);
+    qsf.qsf_lk_state = QSO_SHLOCK;	/* Ask for shared lock on QP */
+
+    /* Before making the QSF call, fill in the tproc name info into the
+    ** QEF RCB as well ... just in case things don't work out, here or
+    ** during validation.
+    */
+    qef_rcb->qef_dbpId.db_tab_base = 0;	/* not to confuse with set-input */
     qef_rcb->qef_dbpId.db_tab_index = 0;
-    qefresource->qr_resource.qr_proc.
-                 qr_dbpalias.qr_crsr_id.db_cursor_id[0]=0;
-    qefresource->qr_resource.qr_proc.
-                 qr_dbpalias.qr_crsr_id.db_cursor_id[1]=0;
-    STRUCT_ASSIGN_MACRO(qefresource->qr_resource.qr_proc.qr_dbpalias.qr_crsr_id,
-                        qef_rcb->qef_qp);
-    qef_rcb->qef_qso_handle = 0;
-    /* Set the full name of the procedure into the rcb.
-     * in case we have to call PSF to define the procedure.
-     */
-    MEcopy((PTR)&qefresource->qr_resource.qr_proc.qr_dbpalias,
-           sizeof(qefresource->qr_resource.qr_proc.qr_dbpalias),
-           (PTR)&qef_rcb->qef_dbpname);
+    qef_rcb->qef_qp = dbpalias.qso_n_id;
+    qef_rcb->qef_qso_handle = NULL;	/* See below */
+    qef_rcb->qef_dbpname = qpresource->qr_resource.qr_proc.qr_dbpalias;
 
-    /* Look up the procedure name as a QSF */
-    qsf_rcb->qsf_type = QSFRB_CB;
-    qsf_rcb->qsf_ascii_id = QSFRB_ASCII_ID;
-    qsf_rcb->qsf_length = sizeof(QSF_RCB);
-    qsf_rcb->qsf_owner = (PTR)DB_QEF_ID;
-    qsf_rcb->qsf_sid = qef_rcb->qef_cb->qef_ses_id;
+    /* Now try for the QP in QSF */
+    status = qsf_call(QSO_JUST_TRANS, &qsf);
+    if (status != E_DB_OK || qsf.qsf_t_or_d != QSO_WASTRANSLATED)
+	return (E_DB_ERROR);
 
-    qsf_rcb->qsf_feobj_id.qso_type = QSO_ALIAS_OBJ;
-    qsf_rcb->qsf_feobj_id.qso_lname =
-    sizeof(qsf_rcb->qsf_feobj_id.qso_name);
+    /* OK so far, remember the translated name in the DSH resource */
+    res = &dsh->dsh_resources[qpresource->qr_id_resource];
+    MEcopy((PTR) qsf.qsf_obj_id.qso_name, sizeof(DB_CURSOR_ID),
+	(PTR) &res->qer_resource.qer_proc.qer_proc_cursid);
+    qef_rcb->qef_qso_handle = qsf.qsf_obj_id.qso_handle;
 
-    MEcopy((PTR)&qefresource->qr_resource.qr_proc.qr_dbpalias,
-           sizeof(qsf_rcb->qsf_feobj_id.qso_name),
-           (PTR)qsf_rcb->qsf_feobj_id.qso_name);
+    /* Get a DSH for this table proc QP.  Specifying a tproc in the call
+    ** tells qeq-dsh to not look for an existing DSH active for the query,
+    ** but instead got a new one.  This call basically can't fail unless
+    ** there's no memory for a DSH.
+    */
+    qef_rcb->qef_qp = res->qer_resource.qer_proc.qer_proc_cursid;
+    status = qeq_dsh(qef_rcb, 0, tproc_dsh, QEQDSH_TPROC, -1);
+    /* qeq-dsh shlocks the QP just like we did above, release one of
+    ** the locks so we don't over-count.  Wait till now to do it so
+    ** that the QP is pinned between the trans and the DSH creation.
+    */
+    (void) qsf_call(QSO_UNLOCK, &qsf);
 
-    qsf_rcb->qsf_lk_state = QSO_FREE;
-
-    /* Load tproc QP from QSF */
-    status = qsf_call(QSO_JUST_TRANS, qsf_rcb);
-
-    return status;
-}
-
+    return (status);
+} /* qeq_load_tproc_dsh */
 
-/*{
-** Name: qeq_get_tproc_tab	- Get table procedure table
-**
-** Description:
-**     This routine sets up a table referenced by a table procedure.
-**
-** Inputs:
-**     qef_rcb      - Pointer to qef control block
-**     qsf_rcb      - Pointer to the request control block
-**     dsh	    - Top query data segment header
-**     ulm          - Pointer to memory management control block.
-**     vl           - Pointer to the open file
-**     dmt_cb_tproc - Pointer to table access control block
-**
-** Outputs:
-**     dmt_cb_tproc - Pointer to table access control block
-**
-** Returns:
-**     E_DB_{OK, WARN, ERROR, FATAL}
-**
-** Exceptions:
-**     None.
-**
-** History
-**     12-May-2009 (gefei01)
-**         Creation.
-*/
-static DB_STATUS
-qeq_get_tproc_tab(
-     	QEF_RCB     *qef_rcb,
-     	QSF_RCB     *qsf_rcb,
-        QEE_DSH     *dsh,
-        ULM_RCB     *ulm,
-        QEF_VALID   *vl,
-        DMT_CB      *dmt_cb_tproc)
-{
-    DMT_CHAR_ENTRY  dmt_char_entry[2];
-    DB_STATUS   status = E_DB_OK;
-
-
-    /* Set up dmt_cb for timestamp check */
-    MEfill(sizeof(DMT_CB), (u_char)0, (PTR)dmt_cb_tproc);
-    dmt_cb_tproc->type = DMT_TABLE_CB;
-    dmt_cb_tproc->length = sizeof(DMT_CB);
-    dmt_cb_tproc->owner = (PTR)DB_QEF_ID;
-    dmt_cb_tproc->ascii_id = DMT_ASCII_ID;
-    dmt_cb_tproc->dmt_db_id = qef_rcb->qef_db_id;
-    STRUCT_ASSIGN_MACRO(vl->vl_tab_id, dmt_cb_tproc->dmt_id);
-    MEfill(sizeof(DB_OWN_NAME), (u_char)' ',
-          (PTR)&dmt_cb_tproc->dmt_owner);
-    dmt_cb_tproc->dmt_char_array.data_address = 0;
-    dmt_cb_tproc->dmt_char_array.data_in_size = 0;
-    dmt_cb_tproc->dmt_mustlock = vl->vl_mustlock;
-
-    ulm->ulm_psize = sizeof(DB_LOC_NAME);
-    status = qec_malloc(ulm);
-    if (status != E_DB_OK)
-    {
-        dsh->dsh_error.err_code = ulm->ulm_error.err_code;
-        return (status);
-    }
-
-    dmt_cb_tproc->dmt_location.data_address = ulm->ulm_pptr;
-
-    dmt_cb_tproc->dmt_tran_id = dsh->dsh_dmt_id;
-    dmt_cb_tproc->dmt_sequence = 0;
-    dmt_cb_tproc->dmt_mustlock = vl->vl_mustlock;
-    if (qef_rcb->qef_qacc == QEF_READONLY)
-        dmt_cb_tproc->dmt_access_mode = DMT_A_READ;
-    else
-        dmt_cb_tproc->dmt_access_mode = vl->vl_rw;
-    dmt_cb_tproc->dmt_update_mode = DMT_U_DIRECT;
-                
-    switch (dmt_cb_tproc->dmt_access_mode)
-    {
-        case DMT_A_READ:
-        case DMT_A_RONLY:
-            dmt_cb_tproc->dmt_lock_mode = DMT_IS;
-            break;
-
-        case DMT_A_WRITE:
-            dmt_cb_tproc->dmt_lock_mode = DMT_IX;
-            break;
-    }
-
-    dmt_char_entry[0].char_id = DMT_C_EST_PAGES;
-    dmt_char_entry[0].char_value = vl->vl_est_pages;
-    dmt_char_entry[1].char_id = DMT_C_TOTAL_PAGES;
-    dmt_char_entry[1].char_value = vl->vl_total_pages;
-    dmt_cb_tproc->dmt_char_array.data_in_size = 2 * sizeof(DMR_CHAR_ENTRY);
-    dmt_cb_tproc->dmt_char_array.data_address = (PTR)dmt_char_entry;
-
-    return status;
-}
-
-
-/*{
-** Name: qeq_validate_tproc - Validate table procedure
-**
-** Description:
-**     This routine recursively validates the timestamp of
-**     each referenced table in the given table procedure
-**     and nested table procedures.
-**
-** Inputs:
-**     qef_rcb      - Pointer to qef control block
-**     qsf_rcb      - Pointer to the request control block
-**     dsh	    - Top query data segment header
-**     ulm          - Pointer to memory management control block.
-**     tm_match     - TRUE (timestamp match) or FALSE (timestamp mismatch) 
-**
-** Outputs:
-**     tm_match     - TRUE (timestamp match) or FALSE (timestamp mismatch)
-**
-** Returns:
-**     E_DB_{OK, WARN, ERROR, FATAL}
-**
-** Exceptions:
-**     None.
-**
-** History
-**     12-May-2009 (gefei01)
-**         Creation.
-*/
-static DB_STATUS
-qeq_validate_tproc(
-     	QEF_RCB     *qef_rcb,
-     	QSF_RCB     *qsf_rcb,
-        QEE_DSH     *dsh,
-        ULM_RCB     *ulm,
-        bool        *tm_match)
-{
-    QEF_QP_CB    *tproc_qp;
-    QEF_RESOURCE *qp_resource;
-    QSF_RCB       nested_qsf;
-    QEF_VALID    *vl;
-    DMT_CB        dmt_cb;
-    DB_STATUS     status = E_DB_OK;
-
-    /* Lock tproc QP for further access */
-    qsf_rcb->qsf_lk_state = QSO_SHLOCK;
-    status = qsf_call(QSO_LOCK, qsf_rcb);
-    if (status != E_DB_OK)
-    {
-        qef_rcb->error.err_code = qsf_rcb->qsf_error.err_code;
-        return status;
-    }
-
-    tproc_qp = (QEF_QP_CB *)qsf_rcb->qsf_root;
-
-    /* Traverse tproc QP tree recursively to find any referenced 
-     * table that has a mismatched timestamp. The search stops
-     * when a mismatch has been found, or when no more resource,
-     * or an error has occurred.
-     */
-    for (qp_resource = tproc_qp->qp_resources;
-         qp_resource != NULL;
-         qp_resource = qp_resource->qr_next)
-    {
-        if (qp_resource->qr_type == QEQR_TABLE)
-        {
-            /* A referenced table has been found.
-             * Check its timestamp.
-             */
-	    for (vl = qp_resource->qr_resource.qr_tbl.qr_valid;
-                 vl != NULL;
-                 vl = vl->vl_next)
-            {
-	        status = qeq_get_tproc_tab(qef_rcb, qsf_rcb, dsh, ulm,
-                                           vl, &dmt_cb);
-
-                if (status != E_DB_OK)
-                    goto exit;
-
-                status = dmf_call(DMT_OPEN, &dmt_cb);
-                if (DB_FAILURE_MACRO(status))
-                {
-                   dsh->dsh_error.err_code = dmt_cb.error.err_code;
-                   goto exit;
-                }
-
-                if (vl->vl_timestamp.db_tab_high_time !=
-                    dmt_cb.dmt_timestamp.db_tab_high_time ||
-                    vl->vl_timestamp.db_tab_low_time !=
-                    dmt_cb.dmt_timestamp.db_tab_low_time)
-                {
-                    *tm_match = FALSE;
-                }
-
-                status = dmf_call(DMT_CLOSE, &dmt_cb);
-                if (DB_FAILURE_MACRO(status))
-                {
-                   dsh->dsh_error.err_code = dmt_cb.error.err_code;
-                   goto exit;
-                }
-
-                /* Found a timestamp mismatch. Ready to exit. */ 
-                if (!*tm_match)
-                    break;
-            }
-        }
-        else if (qp_resource->qr_type == QEQR_PROCEDURE)
-        {
-            /* A nested table procedure has been found.
-             * Load the tproc and traverse it recursively.
-             */
-            status = qeq_load_tproc_qp(qef_rcb, dsh, &nested_qsf, qp_resource);
-            if (status != E_DB_OK)
-                break;
-
-            status = qeq_validate_tproc(qef_rcb, &nested_qsf, dsh, ulm, tm_match);
-            if (status != E_DB_OK)
-                break;
-        }
-
-        if (!*tm_match)
-            break;
-    }
-
-exit:
-
-    status = qsf_call(QSO_UNLOCK, qsf_rcb);
-
-    if (status != E_DB_OK)
-        qef_rcb->error.err_code = qsf_rcb->qsf_error.err_code;
-
-    return status;
-}
-
-
-/*{
-** Name: qeq_destroy_tproc_qp - Destroy table procedure QP
-**
-** Description:
-**     This routine recursively destroys a given table procedure QP
-**     and the nested table procedure QPs from QSF cache.
-**
-** Inputs:
-**     qef_rcb      - Pointer to qef control block
-**     dsh	    - Top query data segment header
-**     qsf_rcb      - Pointer to the request control block
-**     qefresource  - Pointer to query plan object
-**
-** Outputs:
-**     None.
-**
-** Returns:
-**     E_DB_{OK, WARN, ERROR, FATAL}
-**
-** Exceptions:
-**     None.
-**
-** History
-**     12-May-2009 (gefei01)
-**         Creation.
-*/
-static DB_STATUS
-qeq_destroy_tproc_qp(
-	QEF_RCB     *qef_rcb,
-        QEE_DSH     *dsh,
-        QSF_RCB     *qsf_rcb,
-        QEF_RESOURCE  *qefresource)
-{
-    QEF_RESOURCE   *qp_resource;
-    QSF_RCB         nested_qsf;
-    QEF_VALID      *vl;
-    DB_STATUS       status = E_DB_OK;
-
-    /*Destroy the already loaded tproc QP */
-    status = qsf_call(QSO_DESTROY, qsf_rcb);
-    if (status != E_DB_OK)
-    {
-        qef_rcb->error.err_code = qsf_rcb->qsf_error.err_code;
-        return status;
-    }
-
-    /* Loacate next tporc QP */
-    for (qp_resource = qefresource->qr_next;
-         qp_resource != NULL;
-         qp_resource = qp_resource->qr_next)
-    {
-      if (qp_resource->qr_type == QEQR_PROCEDURE)
-      {
-        /* Found a nested tproc, laod it and destroy it from QSF cache. */
-	status = qeq_load_tproc_qp(qef_rcb, dsh, &nested_qsf, qp_resource);
-        if (status != E_DB_OK)
-            return status;
-
-        status = qeq_destroy_tproc_qp(qef_rcb, dsh, &nested_qsf, qp_resource);
-        if (status != E_DB_OK)
-            return status;
-      }
-    }
-    return status;    
-}

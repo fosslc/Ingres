@@ -280,6 +280,9 @@
 **	    Pass (aligned) buffer to LG_write_log_headers.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      09-aug-2010 (maspa05) b123189, b123960
+**          Added LDB_RODB to indicate a readonly database used by LGadd and
+**          LGshow
 **/
 
 #undef LG_DUAL_LOGGING_TESTBED 
@@ -703,18 +706,10 @@ struct _LFB
 **	    the log file. The checksum includes the log page header and chunks
 **	    of data from various sections of the log page. The contents of the
 **	    whole log page are not included because of the cost in CPU.
-**	    Set by chk_sum() call from write_block().
+**	    Set by LGchk_sum() call from LG_queue_write().
 **	lbh_used:
-**	    The number of bytes used on this log page, <= lgh_size. Set by
-**	    queue_write().
-**	lgh_extra:
-**	    An extra field that is initialized to zero by queue_write().
-**	lbh_hlps:
-**	    High word of log page stamp, for cluster support. Set by
-**	    get_pagestamp() call from write_block().
-**	lbh_llps:
-**	    Low word of log page stamp, for cluster support. Set by
-**	    get_pagestamp() call from write_block().
+**	    The number of bytes used on this log page, <= lgh_size-LG_BKEND_SIZE
+**	    Set by LG_queue_write().
 **
 ** History:
 **	Summer, 1992 (bryanp)
@@ -724,17 +719,27 @@ struct _LFB
 **	    Also, lbh_hlps and lbh_llps are no longer used, but I have not
 **		removed them from the LBH because that affects more code than
 **		I want to touch at this late date.
+**	06-Jul-2010 (jonj) SIR 122696
+**	    Expanded lbh_used from u_i2 to i4, deleted unused lbh_extra,
+**	    lbh_hlps, lbh_llps.
 */
 struct _LBH
 {
     LG_LA	    lbh_address;	/* Log buffer address. */
     i4	    	    lbh_checksum;	/* Checksum of buffer. */
-    u_i2	    lbh_used;		/* Number of used bytes on page. */
-    i2		    lbh_extra;		/* Extra: must be 0 */
-
-    i4         	    lbh_hlps;           /* log page stamp high value. */
-    i4         	    lbh_llps;           /* log page stamp low value. */
+    i4		    lbh_used;		/* Number of used bytes on page. */
 };
+/*
+** The la_sequence is stored in the last four bytes of each non-header page.
+** This, paired with lbh_address.la_sequence, provides a set of
+** bookends to read-verify the page.
+**
+** The space reserved for this is not included in lbh_used, thus
+** a "completely full" page is represented by 
+** lbh_used == page_size - LG_BKEND_SIZE.
+*/
+#define		LG_BKEND_SIZE	sizeof(u_i4)
+
 
 /*}
 ** Name: LGC - Log context
@@ -1081,6 +1086,7 @@ struct _LDB
 #define			LDB_CKPLK_STALL	    0x00100000
 #define			LDB_CLOSE_WAIT	    0x00200000
 #define			LDB_MVCC	    0x00400000
+#define			LDB_RODB	    0x00800000
     i4              ldb_lxbo_count;     /* Number of ongoing xact for ckpdb */
     i4		    ldb_lxb_count;	/* Number of transactions. */
     SIZE_TYPE	    ldb_lfb_offset;	/* logfile for this database */

@@ -32,6 +32,8 @@
 **          Added DB_VBYTE_TYPE to the list of VLUP's
 **	25-aug-93 (ed)
 **	    remove dbdbms.h
+**      12-Jul-2010 (hanal04) Bug 123912
+**          Added DB_NVCHR_TYPE to the list of VLUP's
 */
 VOID
 adg_vlup_setnull(  
@@ -54,6 +56,18 @@ DB_DATA_VALUE *dv)
 		tdata[tcount] = tdata[dv->db_length - DB_CNTSIZE - 1];
 	    }
 	 }
+         else if( dv->db_datatype == -DB_NVCHR_TYPE)
+         {
+            I2ASSIGN_MACRO(((DB_NVCHR_STRING *)dv->db_data)->count,
+                           tcount);
+            tcount *= sizeof(UCS2);
+            if( tcount < dv->db_length)
+            {
+                /* Move null byte */
+                u_char  *tdata=(u_char *)((DB_NVCHR_STRING *)dv->db_data)->element_array;
+                tdata[tcount] = tdata[dv->db_length - DB_CNTSIZE - 1];
+            }
+         } 
 }
 
 

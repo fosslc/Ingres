@@ -322,6 +322,8 @@ opc_deferred_cpahd_build(
 **	10-march-2009 (dougi) bug 121773
 **	    Changes to identify query plans for cached dynamic queries with 
 **	    LOB locators enabled.
+**	1-Jul-2010 (kschendel) b124004
+**	    Kill qp_upd_cb, add qp-fetch-ahd.
 */
 VOID
 opc_iqp_init(
@@ -632,7 +634,6 @@ opc_iqp_init(
     ** headers are built, these fields will be filled in or increased to thier
     ** correct values.
     */
-    qp->qp_upd_cb = -1;
     qp->qp_key_row = -1;
     qp->qp_key_sz = max( sizeof (i4), sizeof (ALIGN_RESTRICT) );
     qp->qp_row_cnt = 0;
@@ -647,6 +648,7 @@ opc_iqp_init(
     qp->qp_sort_cnt = 0;
     qp->qp_ahd_cnt = 0;
     qp->qp_ahd = NULL;
+    qp->qp_fetch_ahd = NULL;
     qp->qp_ndbp_params = 0;
     qp->qp_dbp_params = NULL;
     qp->qp_pcx_cnt = 0;
@@ -690,7 +692,6 @@ opc_iqp_init(
     global->ops_cstate.opc_rparms = NULL;
     global->ops_cstate.opc_cparms = NULL;
     global->ops_cstate.opc_pvrow_dbp = -1;
-    global->ops_cstate.opc_stmtno = 0;
     global->ops_cstate.opc_flags = 0;
     global->ops_cstate.opc_topdecvar = NULL;
     global->ops_cstate.opc_curnode = NULL;
@@ -819,6 +820,8 @@ opc_iqp_init(
 **	    Support offset/first "n" parameters.
 **	18-mar-2010 (gupsh01) SIR 123444
 **	    Added support for alter table ...rename table/column.
+**	21-Jun-2010 (kschendel) b123775
+**	    Delete unused statement no.
 */
 VOID
 opc_cqp_continue(
@@ -1161,11 +1164,6 @@ opc_cqp_continue(
 	new_ahd->ahd_stmtno = global->ops_statement->pst_lineno;
     else if (new_ahd)
 	new_ahd->ahd_stmtno = -1;
-
-    /* Now that we're finish with this statement, let's increment the statement
-    ** number to get ready for the next one.
-    */
-    global->ops_cstate.opc_stmtno ++;
 
     /* Handle the audit information for each statement. */
     statementp = global->ops_statement;

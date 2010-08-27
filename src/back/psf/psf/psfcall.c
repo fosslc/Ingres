@@ -324,6 +324,9 @@ psf_svr_handle(
 **	    Batch flags are now on psq_flag2.
 **	04-may-2010 (miket) SIR 122403
 **	    Init new sess_cb->pss_stmt_flags2.
+**	18-jun-2010 (stephenb)
+**	    clear pss_last_sname on commit in case we are in cleanup mode
+**	    after terminating a copy optimization (Bug 123939)
 */
 DB_STATUS
 psq_call(
@@ -435,6 +438,8 @@ psq_call(
 	break;
 
     case PSQ_COMMIT:
+	/* cleanup last_sname in case we are terminating a copy optimization */
+	sess_cb->pss_last_sname[0] = EOS;
 	ret_val = pst_commit_dsql(psq_cb, sess_cb);
 	break;
 

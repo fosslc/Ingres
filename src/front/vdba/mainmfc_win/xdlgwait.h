@@ -16,6 +16,8 @@
 **  20-Mar-2001 (noifr01)
 **    (bug 104246) disabled constructor of  CxDlgWait that was resulting in
 **    launching the old-style animation
+**  15-Jun-2010 (drivi01)
+**    DoModal should return INT_PTR.
 *******************************************************************************/
 #if !defined(AFX_XDLGWAIT_H__56937720_287A_11D2_A295_00609725DDAF__INCLUDED_)
 #define AFX_XDLGWAIT_H__56937720_287A_11D2_A295_00609725DDAF__INCLUDED_
@@ -34,7 +36,7 @@ public:
 #if 0
 	CxDlgWait(CWnd* pParent = NULL);
 #endif
-	virtual int DoModal();
+	virtual INT_PTR DoModal();
 	//
 	// The second constructor must be called with lpszCaption not null.
 	// NOTE: IDD_XTASK_WAIT_WITH_TITLE is a duplicated DLG ID from IDD_XTASK_WAIT.

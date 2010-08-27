@@ -119,6 +119,8 @@
 **	    Replace DMPP_PAGE* with DMP_PINFO* as needed.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs, move consistency check to dmveutil
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 **/
 
 /*
@@ -224,6 +226,7 @@ DMVE_CB		*dmve)
     DMP_PINFO		*pinfo = NULL;
 
     CLRDBERR(&dmve->dmve_error);
+    DMVE_CLEAR_TABINFO_MACRO(dmve);
 
     MEfill(sizeof(LK_LKID), 0, &lockid);
     MEfill(sizeof(LK_LKID), 0, &page_lockid);
@@ -395,8 +398,8 @@ DMVE_CB		*dmve)
 		    uleFormat(NULL, E_DM9665_PAGE_OUT_OF_DATE, (CL_ERR_DESC *)NULL,
 			ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
 			&loc_error, 8,
-			sizeof(*tbio->tbio_relid), tbio->tbio_relid,
-			sizeof(*tbio->tbio_relowner), tbio->tbio_relowner,
+			sizeof(DB_TAB_NAME), tbio->tbio_relid->db_tab_name,
+			sizeof(DB_OWN_NAME), tbio->tbio_relowner->db_own_name,
 			0, DM1B_VPT_GET_PAGE_PAGE_MACRO(page_type, page),
 			0, DM1B_VPT_GET_PAGE_STAT_MACRO(page_type, page),
 			0, DM1B_VPT_GET_LOG_ADDR_HIGH_MACRO(page_type, page),
@@ -415,8 +418,8 @@ DMVE_CB		*dmve)
 		uleFormat(NULL, E_DM9665_PAGE_OUT_OF_DATE, (CL_ERR_DESC *)NULL,
 		    ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
 		    &loc_error, 8,
-		    sizeof(*tbio->tbio_relid), tbio->tbio_relid,
-		    sizeof(*tbio->tbio_relowner), tbio->tbio_relowner,
+		    sizeof(DB_TAB_NAME), tbio->tbio_relid->db_tab_name,
+		    sizeof(DB_OWN_NAME), tbio->tbio_relowner->db_own_name,
 		    0, DM1B_VPT_GET_PAGE_PAGE_MACRO(page_type, page),
 		    0, DM1B_VPT_GET_PAGE_STAT_MACRO(page_type, page),
 		    0, DM1B_VPT_GET_LOG_ADDR_HIGH_MACRO(page_type, page),
@@ -453,8 +456,7 @@ DMVE_CB		*dmve)
 	** the tree until you reach the root.  Beware that a root split may
 	** have occured.
 	*/
-	    stack = (DM_TID*)&log_rec->rtr_vbuf[log_rec->rtr_tab_size +
-					    log_rec->rtr_own_size];
+	    stack = (DM_TID*) (((char *)log_rec) + sizeof(*log_rec));
 	    stack_level = log_rec->rtr_stack_size / sizeof(DM_TID);
 	    status = dmve_rtadjust_mbrs(dmve, &adf_scb, tbio,
 			log_rec->rtr_tbl_id,
@@ -595,10 +597,8 @@ i4		    recovery_action)
     if (page == NULL)
 	  return (E_DB_OK);
 
-    old_key = &log_rec->rtr_vbuf[log_rec->rtr_tab_size + log_rec->rtr_own_size +
-    				 log_rec->rtr_stack_size];
-    new_key = &log_rec->rtr_vbuf[log_rec->rtr_tab_size + log_rec->rtr_own_size +
-				 log_rec->rtr_stack_size + log_rec->rtr_okey_size];
+    old_key = &log_rec->rtr_vbuf[log_rec->rtr_stack_size];
+    new_key = old_key + log_rec->rtr_stack_size + log_rec->rtr_okey_size;
 
     ix_compressed = DM1CX_UNCOMPRESSED;
     if (log_rec->rtr_cmp_type != TCB_C_NONE)

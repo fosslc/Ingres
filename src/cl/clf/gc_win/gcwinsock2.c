@@ -292,6 +292,26 @@
 **	    GCwinsock2_restore() to support GCsave() and GCrestore()
 **	    (and are called by those routines).  These functions are
 **	    only used when running under GCA CL (ie, as local IPC).
+**	14-Jun-2010 (Bruce Lunsford) Bug 123954
+**	    Trace showed bogus value (often very large) for # of bytes
+**	    gotten after reissuing WSARecv() following receipt of a
+**	    partial message.  Fixed by initializing dwBytes to zero.
+**	    Also add explanatory traces when required to reissue recv.
+**	23-Jun-2010 (Bruce Lunsford) Sir 123953
+**	    Change default for TCP_NODELAY socket option from OFF to ON
+**	    since it improves response time in some cases, but never
+**	    seems to hurt response time.  Also add new Ingres config
+**	    names to enable or disable it, which are more "intuitive"
+**	    than the old names, while keeping the old (for now) for
+**	    backward compatibility (even though never documented).
+**	    New names: II_TCPIP_NODELAY    and !.tcp_ip.nodelay.
+**	    Old names: II_WINSOCK2_NODELAY and !.winsock2_nodelay.
+**	16-Aug-2010 (Bruce Lunsford) Bug 124263
+**	    Ingstart.exe may crash or take (up to 30 seconds) longer than it
+**	    should to start Ingres if II_GC_PROT=tcp_ip (from sir 122679).
+**	    (Re)set GCwinsock2_shutting_down to FALSE in GCwinsock2_init()
+**	    to handle applications that may call "init" and "term" multiple
+**	    times, such as ingstart with II_GC_PROT=tcp_ip.
 */
 
 /* FD_SETSIZE is the maximum number of sockets that can be
@@ -466,7 +486,7 @@ static i4				GCwinsock2_use_count = 0;
 static bool				GCwinsock2_shutting_down = FALSE;
 static bool				is_win9x = FALSE;
 static i4				GCWINSOCK2_timeout;
-static bool				GCWINSOCK2_nodelay = FALSE;
+static bool				GCWINSOCK2_nodelay = TRUE;
 static bool				GCWINSOCK2_event_q = FALSE;
 static HANDLE				GCwinsock2CompletionPort = NULL;
 static HANDLE				hGCwinsock2Process       = NULL;
@@ -630,6 +650,21 @@ VOID		gc_tdump( char *buf, i4 len );
 **	    option for tcp_ip as a local (GCA CL) protocol (instead of
 **	    pipes.  IO Completion Port logic can be enabled by setting
 **	    II_WINSOCK2_CONCURRENT_THREADS to a non-zero numeric value.
+**	23-Jun-2010 (Bruce Lunsford) Sir 123953
+**	    Change default for TCP_NODELAY socket option from OFF to ON
+**	    since it improves response time in some cases, but never
+**	    seems to hurt response time.  Also add new Ingres config
+**	    names to enable or disable it, which are more "intuitive"
+**	    than the old names, while keeping the old (for now) for
+**	    backward compatibility (even though never documented).
+**	    New names: II_TCPIP_NODELAY    and !.tcp_ip.nodelay.
+**	    Old names: II_WINSOCK2_NODELAY and !.winsock2_nodelay.
+**	16-Aug-2010 (Bruce Lunsford) Bug 124263
+**	    (Re)set GCwinsock2_shutting_down to FALSE to handle
+**	    applications that may call "init" and "term" multiple
+**	    times, such as ingstart with II_GC_PROT=tcp_ip.
+**	    Otherwise, after 2nd or subsequent "init", code still
+**	    thinks the driver is shutting down.
 */
 
 STATUS
@@ -660,6 +695,7 @@ GCwinsock2_init(GCC_PCE * pptr)
 		proto, GCwinsock2_use_count, WSAStartup_called);
 
     GCwinsock2_use_count++;	/* Increment # times init called */
+    GCwinsock2_shutting_down = FALSE;
 
     if (GCwinsock2_startup_WSA() == FAIL)
 	    return FAIL;
@@ -711,17 +747,22 @@ GCwinsock2_init(GCC_PCE * pptr)
 	GCWINSOCK2_timeout = atoi(ptr);
 
     /*
-    ** Should TCP_NODELAY be set on sockets?
+    ** Should TCP_NODELAY be set on sockets?  (default is ON)
     */
-    NMgtAt("II_WINSOCK2_NODELAY", &ptr);
-    if ( ((ptr && *ptr) || (PMget("!.winsock2_nodelay", &ptr) == OK)) &&
-	 (STcasecmp( ptr, "ON" ) == 0) )
+    NMgtAt("II_TCPIP_NODELAY", &ptr);
+    if ( !(ptr && *ptr) )
+	NMgtAt("II_WINSOCK2_NODELAY", &ptr);  /* for backward compat */
+    if ( ((ptr && *ptr) ||
+	  (PMget("!.tcp_ip.nodelay", &ptr) == OK) ||
+	  (PMget("!.winsock2_nodelay", &ptr) == OK)) &&  /*for backward compat*/
+	 (STcasecmp( ptr, "OFF" ) == 0) )
     {
-	GCWINSOCK2_nodelay = TRUE;
-	GCTRACE(1)("GCwinsock2_init %s: TCP_NODELAY option is ON\n", proto);
+	GCWINSOCK2_nodelay = FALSE;
     }
     else
-	GCWINSOCK2_nodelay = FALSE;
+	GCWINSOCK2_nodelay = TRUE;
+    GCTRACE(1)("GCwinsock2_init %s: TCP_NODELAY option is %s\n", proto,
+		GCWINSOCK2_nodelay ? "ON" : "OFF" );
 
     /*
     ** Get pointer to WinSock 2.2 protocol's control entry in table.
@@ -5361,6 +5402,11 @@ GCwinsock2_async_completion( GCC_P_PLIST *parm_list )
 **	    connection having been closed (BytesTransferred == 0);
 **	    can be used by caller to detect closed socket.  Also
 **	    clear pcb->tot_rcv if error occurs, as done elsewhere.
+**	14-Jun-2010 (Bruce Lunsford) Bug 123954
+**	    Trace showed bogus value (often very large) for # of bytes
+**	    gotten after reissuing WSARecv() following receipt of a
+**	    partial message.  Fixed by initializing dwBytes to zero.
+**	    Also add explanatory traces when required to reissue recv.
 */
 bool 
 GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS *lpstatus, DWORD BytesTransferred_in, PER_IO_DATA *lpPerIoData)
@@ -5371,7 +5417,7 @@ GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS *lpstatus, DWORD BytesTransfer
     char		*proto;
     PCB2		*pcb;
     int			i;
-    DWORD		dwBytes;
+    DWORD		dwBytes = 0;
     DWORD		dwBytes_wanted;
     i4			len;
     i4			len_prefix = lpPerIoData->block_mode ? 0 : 2;
@@ -5486,10 +5532,15 @@ GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS *lpstatus, DWORD BytesTransfer
     if (pcb->rcv_bptr < parm_list->buffer_ptr)
     {
 	/*
-	** Haven't received the all of the 2-byte length header yet.
+	** Haven't received all of the 2-byte length header yet.
 	** We need to issue another recv to get the rest of the
 	** message (or at least the header).
 	*/
+	GCTRACE(2)( "GCwinsock2_OP_RECV_complete %s %d: %p Partial length hdr recvd(need minimum %d bytes more)...reissue WSARecv() for %d bytes into 0x%p\n",
+		proto, pcb->id, parm_list,
+		parm_list->buffer_ptr - pcb->rcv_bptr,
+		pcb->tot_rcv,
+		pcb->rcv_bptr );
 
 	ZeroMemory(&lpPerIoData->Overlapped, sizeof(OVERLAPPED));
 	lpPerIoData->wbuf.buf = pcb->rcv_bptr;
@@ -5512,8 +5563,8 @@ GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS *lpstatus, DWORD BytesTransfer
 		return TRUE; /* GCC_RECEIVE is done */
 	    }
 	}
-	GCTRACE(4)( "GCwinsock2_OP_RECV_complete %s %d: %p want %d bytes got %d bytes\n",
-		    proto, pcb->id, parm_list, dwBytes_wanted, dwBytes );
+	GCTRACE(2)( "GCwinsock2_OP_RECV_complete %s %d: %p reissued WSARecv() for hdr+msg: Want %d bytes got %d\n",
+		proto, pcb->id, parm_list, dwBytes_wanted, dwBytes );
 
 	return FALSE;  /* GCC_RECEIVE is not yet done...need more data. */
     }  /* End if still need rest of 2-byte length header */
@@ -5555,6 +5606,13 @@ GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS *lpstatus, DWORD BytesTransfer
     if( len < 0 )
     {
 	pcb->tot_rcv = -len;
+	GCTRACE(2)( "GCwinsock2_OP_RECV_complete %s %d: %p Partial message recvd(%d of %d)...reissue WSARecv() for remaining %d bytes into 0x%p\n",
+		proto, pcb->id, parm_list,
+		pcb->rcv_bptr - parm_list->buffer_ptr,
+		parm_list->buffer_lng,
+		pcb->tot_rcv,
+		pcb->rcv_bptr );
+
 	ZeroMemory(&lpPerIoData->Overlapped, sizeof(OVERLAPPED));
 	lpPerIoData->wbuf.buf = pcb->rcv_bptr;
 	lpPerIoData->wbuf.len = dwBytes_wanted = pcb->tot_rcv;
@@ -5575,9 +5633,8 @@ GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS *lpstatus, DWORD BytesTransfer
 		return TRUE; /* GCC_RECEIVE is done */
 	    }
 	}
-	GCTRACE(4)( "GCwinsock2_OP_RECV_complete %s %d: %p Want %d bytes got %d, msg len %d remaining %d\n",
-		proto, pcb->id, parm_list, dwBytes_wanted, dwBytes,
-		parm_list->buffer_lng, -len );
+	GCTRACE(2)( "GCwinsock2_OP_RECV_complete %s %d: %p reissued WSARecv() for msg: Want %d bytes got %d\n",
+		proto, pcb->id, parm_list, dwBytes_wanted, dwBytes );
 	return FALSE;  /* GCC_RECEIVE is not yet done...need more data. */
     }  /* End if len < 0 */
 

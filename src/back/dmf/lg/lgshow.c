@@ -3034,6 +3034,8 @@ CL_ERR_DESC	    *sys_err)
 **	    Removed LDB_STALL_RW status bit.
 **	26-Apr-2000 (thaju02)
 **	    Added LDB_CKPLK_STALL. (B101303)
+**	09-aug-2010 (maspa05) b123189, b123960
+**	    Added LDB_RODB for readonly database
 */
 static VOID
 map_dbstatus_to_world(
@@ -3085,6 +3087,8 @@ i4            *external_status)
 	*external_status |= DB_CKPLK_STALL;
     if (internal_status & LDB_MVCC)
 	*external_status |= DB_MVCC;
+    if (internal_status & LDB_RODB)
+	*external_status |= DB_RODB;
 
     return;
 }

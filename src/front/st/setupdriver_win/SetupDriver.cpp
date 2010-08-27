@@ -1,5 +1,5 @@
 /*
-**  Copyright (c) 2006 Ingres Corporation
+**  Copyright (c) 2010 Ingres Corporation
 */
 
 /*
@@ -23,6 +23,9 @@
 **			.NET Data Provider 2.0 replaced with version 2.1.
 **		01-Aug-2008 (drivi01)
 **			Clean up warnings.
+**		09-Jul-2010 (drivi01)
+**			Add routines to automatically update license text
+**			in the installers launched by this driver.
 **
 */
 
@@ -32,6 +35,8 @@
 # include <stdio.h>
 #include <clusapi.h>
 #include <resapi.h>
+#include <msiquery.h>
+#include "SetupDriver.h"
 
 HWND		hDlgGlobal;	/* Handle to Main Dialog */
 
@@ -41,6 +46,7 @@ HWND		hDlgGlobal;	/* Handle to Main Dialog */
 int _access(char *,int);
 VOID BoxErr4 (CHAR *, CHAR *);
 int count_tokens(char *);
+BOOL setupii_license(char *, char *);
 
 /*
 **  Name: WinMain()
@@ -77,7 +83,7 @@ PROCESS_INFORMATION pi;
 STARTUPINFO si;
 DWORD	dwError;
 int bSilent=0;
-char cmd[MAX_PATH+1], pathBuf[MAX_PATH+1], token[MAX_PATH+1], rspFile[MAX_PATH+1], buf[MAX_PATH+1];
+char cmd[MAX_PATH+1], pathBuf[MAX_PATH+1], token[MAX_PATH+1], rspFile[MAX_PATH+1], buf[MAX_PATH+1], lic_path[MAX_PATH+1];
 size_t pathLen;
 char *ptoken = (char *)&token;
 char location[MAX_PATH+1];
@@ -258,7 +264,10 @@ HKEY hkSubKey, hkSubKey2;
 			return 1;
 		}
 	}
-		
+
+	//Load the license
+	sprintf(lic_path, "%s\\LICENSE.rtf", pathBuf);
+	setupii_license(lic_path, msiFile);
 
 	memset(&si, 0, sizeof(si));
 	memset(&pi, 0, sizeof(pi));
@@ -275,6 +284,152 @@ HKEY hkSubKey, hkSubKey2;
     return 0;
 }
 
+/*
+** Loads the license text into installer file.
+** History:
+**	09-Jul-2010 (drivi01)
+**     Copy license update code from preinstaller.
+*/
+
+BOOL
+setupii_license(char *licensePath, char *path)
+{
+	char *txt_buf = NULL;
+	char cmd[255];
+	MSIHANDLE msih, hView, hRec;
+	FILE *stream;
+	fpos_t pos;
+	BOOL	alloc = FALSE;
+	int	read_count = 0;
+	int final_read_count = 0;
+	int ret_val=1;
+
+	/* load license into a buffer */
+	if ((stream = fopen(licensePath, "r")) != NULL)
+	{
+		/* count length of file to determine size of the buffer */
+		if (!fseek(stream, 0, SEEK_END))
+		{
+			fgetpos(stream, &pos);
+			if (pos > 0)
+			{
+				txt_buf = (char *)malloc((int)pos + 1);
+			}
+			else
+			{
+				fclose(stream);
+				ret_val=0;
+				goto CLEANUP;
+			}
+		}
+		fseek(stream, 0, SEEK_SET);
+		/* read license file into a buffer */
+		while (!feof(stream))
+		{
+			read_count = fread(txt_buf+final_read_count, sizeof(char), (int)pos, stream);
+			final_read_count = final_read_count + read_count;
+		}
+		if (!txt_buf && !final_read_count)
+		{
+			fclose(stream);
+			ret_val=0;
+			goto CLEANUP;
+		}
+		else
+			txt_buf[final_read_count] = '\0';
+
+		fclose(stream);
+	}
+	else
+	{
+		CString str;
+		CString licPath(licensePath);
+		licPath.Replace("\\", "\\\\");
+		licPath.Replace(".rtf", ".pdf");
+		str.Format(IDS_ACCEPT_TERMS, licPath.GetBuffer());
+		txt_buf = (char *)malloc(MAX_PATH*2);
+		memcpy(txt_buf, str.GetBuffer(), str.GetLength());
+	}
+
+	/* Update a License Record with license retrieved from the image */
+	if (!(MsiOpenDatabase(path, MSIDBOPEN_DIRECT, &msih)==ERROR_SUCCESS))
+	{
+	    ret_val=0;
+		goto CLEANUP;
+	}
+
+	sprintf(cmd, "SELECT * FROM Control WHERE Dialog_ = 'LicenseAgreement' AND Control = 'Memo'");
+	if (!(MsiDatabaseOpenView(msih, cmd, &hView) == ERROR_SUCCESS))
+	{
+		ret_val=0;
+		goto CLEANUP;
+	}
+
+	if (!(MsiViewExecute(hView, 0) == ERROR_SUCCESS))
+	{
+		ret_val=0;
+		goto CLEANUP;
+	}
+
+	if (!(MsiViewFetch(hView, &hRec) == ERROR_SUCCESS))
+	{
+		ret_val=0;
+		goto CLEANUP;
+	}
+
+	if (!(MsiRecordSetString(hRec, 10, txt_buf) == ERROR_SUCCESS))
+	{
+		ret_val=0;
+		goto CLEANUP;
+	}
+
+	if (!(MsiViewModify(hView, MSIMODIFY_UPDATE,hRec) == ERROR_SUCCESS))
+	{
+		ret_val=0;
+		goto CLEANUP;
+	}
+
+	if (!(MsiCloseHandle(hRec) == ERROR_SUCCESS))
+	{
+		ret_val=0;
+		goto CLEANUP;
+	}
+
+	if (!(MsiViewClose( hView ) == ERROR_SUCCESS))
+	{
+		ret_val=0;
+		goto CLEANUP;
+	}
+
+	if (!(MsiCloseHandle(hView) == ERROR_SUCCESS))
+	{
+		ret_val=0;
+		goto CLEANUP;
+	}
+
+	/* Commit changes to the MSI database */
+	if (!(MsiDatabaseCommit(msih)==ERROR_SUCCESS))
+	{
+	    ret_val=0;
+		goto CLEANUP;
+	}
+	
+	if (!(MsiCloseHandle(msih)==ERROR_SUCCESS))
+	{
+		ret_val=0;
+		goto CLEANUP;
+	}
+
+
+CLEANUP:
+	if (txt_buf)
+	{
+		free(txt_buf);
+		txt_buf = NULL;
+	}
+
+	return ret_val;
+}
 
 /*
 **  Name: count_tokens

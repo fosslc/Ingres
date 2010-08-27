@@ -404,6 +404,8 @@
 **	    Add support for column encryption.
 **	10-may-2010 (stephenb)
 **	    Cast new i8 reltups to i4
+**      29-Jul-2009 (stial01) (b124163)
+**          If building mxcb sem name, don't assume CS_SEM_NAME_LEN>=DB_MAXNAME
 **/
 
 GLOBALREF	DMC_CRYPT	*Dmc_crypt;
@@ -743,6 +745,9 @@ i4 dm2uu_tab_id_warn_now  = DM2UU_TAB_ID_WARN_NOW;
 **	    No need to set no-coupon in RCB, access mode does it now.
 **	03-June-2010 (thaju02) Bug 122698
 **	    If thread erred, set *dberr to mx_dberr.
+**	19-Aug-2010 (miket) SIR 122403
+**	    Preserve extra stuff that might be at the end of the sort
+**	    record across encryption processing: bucket, partition, tid8.
 */
 
 DB_STATUS
@@ -1046,6 +1051,10 @@ DB_ERROR	    *dberr)
 		    {
 			local_status = dm1e_aes_encrypt(r, &t->tcb_data_rac,
 			    record, r->rcb_erecord_ptr, dberr);
+			/* (may) need to preserve bucket, partition, tid8 */
+			MEcopy(record+m->mx_width,
+			    sizeof(i4)+sizeof(u_i2)+sizeof(DM_TID8),
+			    r->rcb_erecord_ptr+m->mx_width);
 			record = r->rcb_erecord_ptr;
 		    }
 		    else
@@ -1054,6 +1063,10 @@ DB_ERROR	    *dberr)
 		    {
 			local_status = dm1e_aes_encrypt(r, &m->mx_data_rac,
 			    record, r->rcb_erecord_ptr, dberr);
+			/* (may) need to preserve bucket, partition, tid8 */
+			MEcopy(record+m->mx_width,
+			    sizeof(i4)+sizeof(u_i2)+sizeof(DM_TID8),
+			    r->rcb_erecord_ptr+m->mx_width);
 			record = r->rcb_erecord_ptr;
 		    }
 		    if (local_status != E_DB_OK)
@@ -2725,7 +2738,7 @@ i4		thread_type)
     SCF_FTC	ftc;
     STATUS	scf_status = OK;
     i4		new_threads;
-    char	sem_name[CS_SEM_NAME_LEN+16];
+    char	sem_name[CS_SEM_NAME_LEN + DB_TAB_MAXNAME + 16];
     char	thread_name[60];
     i4		avail_threads;
     i4		threads, remainder;
@@ -2756,11 +2769,19 @@ i4		thread_type)
 	{
 	    /* Init the MXCB stuff we'll need to sync the threads */
 	    CScnd_init(&m->mx_cond);
+
+	    /*
+	    ** Initialize the MXCB mutexes
+	    ** CS will truncate the name to CS_SEM_NAME_LEN
+	    ** Since table name may be > CS_SEM_NAME_LEN, 
+	    ** use reltid,reltidx to make the semaphore name unique,
+	    ** plus as much of the table name as we can fit
+	    */
 	    CSw_semaphore(&m->mx_cond_sem, CS_SEM_SINGLE,
-			    STprintf(sem_name,
-				    "MXCB %*s",
-				    t->tcb_relid_len,
-				    t->tcb_rel.relid.db_tab_name));
+		      STprintf(sem_name, "MXCB %x %x %*s", 
+			t->tcb_rel.reltid.db_tab_base, 
+			t->tcb_rel.reltid.db_tab_index,
+			t->tcb_relid_len, t->tcb_rel.relid.db_tab_name));
 	    CSget_sid(&m->mx_sid);
 	    m->mx_state |= MX_THREADED;
 
@@ -6447,11 +6468,11 @@ DB_ERROR            *dberr)
 }
 
 /*{
-** Name: dm2u_modify_encrypt -  Enable encryption and perhaps modify
+** Name: dm2u_modify_encrypt -  Unlock encryption and perhaps modify
 **				the encryption passphrase.
 **
 ** Description:
-**	Most commonly we will be here to enable encryption for a table.
+**	Most commonly we will be here to unlock encryption for a table.
 **	In that case we just ensure that the table exists, the user has
 **	access to it, and the user knows the encryption passphrase. An
 **	encryption key to process user data will be posted to shared memory
@@ -6487,11 +6508,27 @@ DB_ERROR            *dberr)
 **	    none
 **
 ** Side Effects:
-**	    enables/disable table's encryption key in shared memory
+**	    unlocks/locks table's encryption key in shared memory
 **
 ** History:
 **	16-apr-2010 (toumi01) SIR 122403
 **	    Created with some cloning from dm2u_alterstatus_upd_cats.
+**	27-Jul-2010 (toumi01) BUG 124133
+**	    Store shm encryption keys by dbid/relid, not just relid! Doh!
+**	29-Jul-2010 (miket) BUG 124154
+**	    Improve dmf_crypt_maxkeys handling.
+**	    Fix counter limit checking (was increment before test -
+**	    should be test and if okay increment else error).
+**	04-Aug-2010 (miket) SIR 122403
+**	    Change encryption activation terminology from
+**	    enabled/disabled to unlock/locked.
+**	06-Aug-2010 (miket) SIR 122403
+**	    Modify of catalog-stored AES keys is encrypting for
+**	    128/192/256 bits 3/3/4 blocks, but it should be 2/2/3
+**	    (see dm2u_create code and lengthy comment).
+**	21-Aug-2010 (miket) SIR 122403 SD 146013
+**	    Correct key cache lookup to use the db_tab_base of the record we
+**	    are modifying, not the last one on which we did a get!
 */
 DB_STATUS
 dm2u_modify_encrypt(
@@ -6643,7 +6680,7 @@ DB_ERROR	*dberr)
 	    {
 		keybits = AES_128_BITS;
 		keybytes = AES_128_BYTES;
-		blocks = 3;
+		blocks = 2;
 		oldkey = dmu->dmu_enc_old128pass;
 		newkey = dmu->dmu_enc_new128pass;
 	    }
@@ -6652,7 +6689,7 @@ DB_ERROR	*dberr)
 	    {
 		keybits = AES_192_BITS;
 		keybytes = AES_192_BYTES;
-		blocks = 3;
+		blocks = 2;
 		oldkey = dmu->dmu_enc_old192pass;
 		newkey = dmu->dmu_enc_new192pass;
 	    }
@@ -6661,7 +6698,7 @@ DB_ERROR	*dberr)
 	    {
 		keybits = AES_256_BITS;
 		keybytes = AES_256_BYTES;
-		blocks = 4;
+		blocks = 3;
 		oldkey = dmu->dmu_enc_old256pass;
 		newkey = dmu->dmu_enc_new256pass;
 	    }
@@ -6811,14 +6848,15 @@ DB_ERROR	*dberr)
 	/*
 	** A linear search. Not elegant, but we only have to look through
 	** memory at active slots, one per table with encryption that has
-	** been enabled, matching on base reltid. Should be fast.
+	** been unlocked, matching on base reltid. Should be fast.
 	*/
 	for ( cp = (DMC_CRYPT_KEY *)((PTR)Dmc_crypt + sizeof(DMC_CRYPT)),
 		i = 0 ;
 		i < Dmc_crypt->seg_active ; cp++, i++ )
 	{
 	    /* found the entry for this record ... done */
-	    if ( cp->db_tab_base == rel.reltid.db_tab_base )
+	    if ( cp->db_id == t->tcb_dcb_ptr->dcb_id &&
+		 cp->db_tab_base == m->mx_table_id.db_tab_base )
 		break;
 	    /* found first inactive slot ... remember */
 	    if ( cp->status == DMC_CRYPT_INACTIVE &&
@@ -6826,13 +6864,14 @@ DB_ERROR	*dberr)
 		cp_inactive = cp;
 	}
 	/*
-	** Are we here just to disable encryption because PASSPHRASE=''
+	** Are we here just to relock encryption because PASSPHRASE=''
 	** was specified? If so and we found our man, clear him out!
 	** Otherwise, encryption was already off for the table.
 	*/
 	if (dmu->dmu_enc_flags2 & DMU_NULLPASS)
 	{
-	    if ( cp->db_tab_base == rel.reltid.db_tab_base )
+	    if ( cp->db_id == t->tcb_dcb_ptr->dcb_id &&
+		 cp->db_tab_base == m->mx_table_id.db_tab_base )
 	    {
 		MEfill(sizeof(DMC_CRYPT_KEY), 0, (PTR)cp);
 		cp->status = DMC_CRYPT_INACTIVE;
@@ -6846,17 +6885,17 @@ DB_ERROR	*dberr)
 	** 3. a new slot at the end
 	*/
 	{
-	    if ( cp->db_tab_base == rel.reltid.db_tab_base )
+	    if ( cp->db_id == t->tcb_dcb_ptr->dcb_id &&
+		 cp->db_tab_base == m->mx_table_id.db_tab_base )
 	    	;			/* reuse our slot */
 	    else
 	    if ( cp_inactive != NULL)
 		cp = cp_inactive;	/* reuse empty slot */
 	    else
 	    {
-		Dmc_crypt->seg_active++;	/* new slot */
-		if (Dmc_crypt->seg_active > Dmc_crypt->seg_size)
+		if (Dmc_crypt->seg_active+1 > Dmc_crypt->seg_size)
 		{
-		    /* > hard-coded value or ii.*.dbms.*.dmf_crypt_maxkeys */
+		    /* > config.dat ii.*.dbms.*.dmf_crypt_maxkeys */
 		    uleFormat( NULL, E_DM0179_DMC_CRYPT_SLOTS_EXHAUSTED,
 			(CL_ERR_DESC *)NULL,
 			ULE_LOG, NULL, (char *)NULL,
@@ -6866,12 +6905,15 @@ DB_ERROR	*dberr)
 		    SETDBERR(dberr, 0, E_DM9101_UPDATE_CATALOGS_ERROR);
 		    status = E_DB_ERROR;
 		}
+		else
+		    Dmc_crypt->seg_active++;	/* new slot */
 	    }
 	    if ( status == E_DB_OK )
 	    {
 		MEfill(sizeof(DMC_CRYPT_KEY), 0, (PTR)cp);
 		MEcopy((PTR)decrypted_key, keybytes, (PTR)cp->key);
-		cp->db_tab_base = rel.reltid.db_tab_base;
+		cp->db_id = t->tcb_dcb_ptr->dcb_id;
+		cp->db_tab_base = m->mx_table_id.db_tab_base;
 		cp->status = DMC_CRYPT_ACTIVE;
 	    }
 	}

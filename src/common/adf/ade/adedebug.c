@@ -133,10 +133,15 @@
 **	    Added DB_PAT_TYPE types to display
 **      04-dec-2009 (joea)
 **          Change location of DB_BOO_TYPE in type_name array.
+**       7-Jul-2010 (hanal04) Bug 124048
+**          Correct op150 output for ADE_CALCLEN.
 **/
 
 #define		ADE_PDTSMALL	0   /* Minimum datatype in this table */
 #define		ADE_PDTBIG     99   /* Maximum datatype in this table */
+
+#define		ADE_LNCSMALL    1   /* Minimum adi_lncompute in this table */
+#define         ADE_LNCBIG     99   /* Maximum adi_lncompute in this table */
 
 #define		DATA_DISP_LEN  50   /* Limit to data display width */
 
@@ -174,6 +179,8 @@ static VOID	   ade_prtype(DB_DATA_VALUE  *db_dv);
 
 static VOID	   ade_prdv(DB_DATA_VALUE  *db_dv);
 
+static VOID	   ade_prlenspec(DB_DATA_VALUE  *db_dv);
+
 
 static char	*type_name[] = {
 /* 0 - 19 */
@@ -208,6 +215,42 @@ static char	*type_name[] = {
     NULL,	    NULL,	    NULL,	    NULL
 };
 
+static char	*lnc_name[] = {
+/* 0 - 19 */
+    NULL,	     "ADI_O1",         "ADI_O2",      "ADI_LONGER",
+    "ADI_SHORTER",   "ADI_DIFFERENCE", "ADI_CSUM",    "ADI_FIXED",
+    "ADI_PRINT",     "ADI_O1CT",       "ADI_O1TC",    NULL,
+    "ADI_TSUM",      "ADI_ADD1",       "ADI_SUB1",    "ADI_TPRINT",
+    "ADI_4ORLONGER", NULL,	       "ADI_RESLEN",  "ADI_SUMT",
+/* 20 - 39 */
+    "ADI_P2D2",      "ADI_2XP2",      "ADI_2XM2",     "ADI_CTSUM", 
+    "ADI_SUMV",      "ADI_RSLNO1CT",  "ADI_DECADD",   "ADI_DECMUL", 
+    "ADI_DECIMUL",   "ADI_IDECMUL",   "ADI_DECDIV",   "ADI_DECIDIV",  
+    "ADI_IDECDIV",   "ADI_DECAVG",    "ADI_DECSUM",   "ADI_DECINT", 
+    "ADI_DECFUNC",   "ADI_DECBLEND",  "ADI_BIT2CHAR", "ADI_CHAR2BIT",
+/* 40 - 59 */
+    "ADI_COUPON",    "ADI_X2P2",      "ADI_CTOU",     "ADI_UTOC",
+    "ADI_CTOVARU",   "ADI_VARCTOU",   "ADI_UTOVARC",  "ADI_VARUTOC",
+    "ADI_NPRINT",    "ADI_NTPRINT",   "ADI_CWTOVB",   "ADI_DATE2DATE",
+    "ADI_DECROUND",  "ADI_DECCEILFL", "ADI_O1UNIDBL", "ADI_IMULI",
+    "ADI_IADDI",     "ADI_ISUBI",     "ADI_IDIVI",    "ADI_MINADD1",
+/* 60 - 79 */
+    "ADI_O1UNORM",   "ADI_PATCOMP",   "ADI_PATCOMPU", "ADI_O1AES",
+    NULL,	     NULL,	      NULL,	      NULL,
+    NULL,	     NULL,	      NULL,   	      NULL,
+    NULL,	     NULL,	      NULL,  	      NULL,
+    NULL,	     NULL,	      NULL,	      NULL,
+/* WARNING WE ARE SKIPPING 910 NULLs here */
+#define LNC_LOW_TAB     79
+#define LNC_HIGH_TAB   990
+#define LNC_HIGH_SKIP  (LNC_HIGH_TAB - (LNC_LOW_TAB + 1))
+/* 80 - 99 lenspec values 990 - 1009 */
+    NULL,	        NULL,	          NULL,	                     NULL,
+    NULL,	        NULL,	          NULL,	                     NULL,
+    "ADI_LEN_INDIRECT",	"ADI_LEN_EXTERN", "ADI_LEN_EXTERN_COUNTVEC", NULL,
+    NULL,	        NULL,	          NULL,	                     NULL,
+    NULL,	        NULL,	          NULL,	                     NULL
+};
 
 
 /*
@@ -822,6 +865,9 @@ i4            koff)
 **	    ADE_OPERAND rather than copying it to the stack.
 **	25-Mar-2005 (schka24)
 **	    Suppress data type for mecopy's, not useful information.
+**       7-Jul-2010 (hanal04) Bug 124048
+**          The first operand of an ADE_CALCLEN instruction is as
+**          ADI_LENSPEC.
 */
 
 static VOID
@@ -873,7 +919,14 @@ i4            loff)
 		dv.db_collID = opP->opr_collID;
 
 		adf_printf("%d[%d]{", opP->opr_base, (i4)opP->opr_offset);
-		ade_prtype(&dv);
+                if (instr->ins_icode == ADE_CALCLEN && onum == 0)
+                {
+                    ade_prlenspec(&dv); 
+                }
+                else
+                {
+		    ade_prtype(&dv);
+                }
 	    }
 
 	    if (onum < (instr->ins_nops - 1))
@@ -1190,6 +1243,66 @@ DB_DATA_VALUE      *db_dv)
 	    adf_printf("%s(%d)} ", 
 		       type_name[bdt],
 		       db_dv->db_length);
+    }
+    return;
+}
+
+/*
+** Name: ade_prlenspec() - Print a lenspec from a DB_DATA_VALUE for debugging.
+**
+** Description:
+**        This routine formats and prints lenspec values that have been 
+**        stored in a DB_DATA_VALUE for debugging.
+**
+** Inputs:
+**      db_dv                           pointer to the DB_DATA_VALUE to be
+**					formated and printed.
+**
+** Outputs:
+**	none
+**
+**	Returns:
+**	    none
+**
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	    none
+**
+** History:
+**       7-Jul-2010 (hanal04) Bug 124048
+**          created from ade_prtype.
+*/
+
+static VOID
+ade_prlenspec(
+DB_DATA_VALUE      *db_dv)
+{
+    i2		adi_lncompute = db_dv->db_datatype;
+    i2		idx = db_dv->db_datatype;
+
+    if (adi_lncompute > LNC_LOW_TAB)
+        idx -= LNC_HIGH_SKIP;
+ 
+    if (idx < ADE_LNCSMALL || idx > ADE_LNCBIG ||
+        (adi_lncompute > LNC_LOW_TAB && adi_lncompute < LNC_HIGH_TAB) ||
+        lnc_name[idx] == NULL) 
+    {
+	adf_printf("< lenspec %d, %d, %d >} ", (i4) adi_lncompute, 
+                   (i4)db_dv->db_length, db_dv->db_prec);
+    }
+    else if (adi_lncompute == ADI_FIXED)
+    {
+	adf_printf("%s(%d,%d)} ", 
+		       lnc_name[idx],
+		       db_dv->db_length,
+		       db_dv->db_prec);
+    }
+    else
+    {
+	adf_printf("%s} ", lnc_name[idx]);
+
     }
     return;
 }
@@ -1608,6 +1721,8 @@ DB_DATA_VALUE      *db_dv)
 **	    for big IN lists.
 **	18-Mar-2010 (kiria01) b123438
 **	    Added SINGLETON aggregate for scalar sub-query support.
+**	14-Jul-2010 (kschendel) b123104
+**	    Drop settrue/setfalse.  This really should be a uld table lookup.
 */
 
 static VOID
@@ -1802,14 +1917,6 @@ ADI_FI_ID	    *instr)
 
 	 case ADE_REDEEM:
 	    adf_printf("ADE_REDEEM");
-	    break;
-
-	 case ADE_SETTRUE:
-	    adf_printf("ADE_SETTRUE");
-	    break;
-
-	 case ADE_SETFALSE:
-	    adf_printf("ADE_SETFALSE");
 	    break;
 
 	  default:

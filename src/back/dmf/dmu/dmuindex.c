@@ -1001,7 +1001,7 @@ PTR		ix_cb)
 		** types, pass the type here.
 		*/
 		if (chr[i].char_value != DMU_C_OFF)
-		    indx_cb->indxcb_compressed = TCB_C_DEFAULT;
+		    indx_cb->indxcb_compressed = TCB_C_STANDARD;
 		break;
 
 	    case DMU_UNIQUE:

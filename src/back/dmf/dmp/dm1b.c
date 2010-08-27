@@ -786,6 +786,14 @@
 **          reposition for RCB_P_FETCH, should not reposition to deleted entry
 **	10-May-2010 (stial01)
 **          Init DMP_PINFO with DMP_PINIT, minor changes to TRdisplays
+**	09-Jun-2010 (stial01)
+**          TRdisplay more info when there is an error
+**	13-Aug-2010 (kschendel) b124255
+**	    Add a wee bit to some of the trace output, e.g. RCB address,
+**	    makes it easier to watch things during stress tests.
+**	16-Aug-2010 (jonj) SD 146221
+**	    dm1r_crow_lock(flags) now DM1R_LK_? instead of LK_? to avoid
+**	    collisions with lk.h defines.
 */
 
 
@@ -2498,7 +2506,7 @@ dm1b_dupcheck(
 		    dm0pUnlockBuf(r, leafPinfo);
 
 		    if ( crow_locking(r) )
-			s = dm1r_crow_lock(r, LK_PHYSICAL, &localtid, NULL, dberr);
+			s = dm1r_crow_lock(r, DM1R_LK_PHYSICAL, &localtid, NULL, dberr);
 		    else
 		    {
 			/* Don't clear lock coupling in rcb */
@@ -3243,6 +3251,7 @@ retry:
 **	13-Apr-2006 (jenjo02)
 **	    Clustered primary has no data pages.
 */
+
 DB_STATUS
 dm1b_delete(
     DMP_RCB	*rcb,
@@ -3859,7 +3868,8 @@ dm1b_get(
     LK_LOCK_KEY     save_lock_key;
     i4         	    new_lock = FALSE;
     i4         	    lock_flag = 0;
-    bool            reposition = TRUE; 
+    bool            reposition = TRUE;
+    bool	    dm601;
     DM_TID          unlock_tid;
     DB_ERROR	    local_dberr;
     i4		    *err_code = &dberr->err_code;
@@ -3878,9 +3888,10 @@ dm1b_get(
     if (row_locking(r))
 	MEfill(sizeof(save_lock_key), 0, &save_lock_key);
 
-    if (DMZ_AM_MACRO(1))
+    dm601 = (DMZ_AM_MACRO(1) != 0);
+    if (dm601)
     {
-	s = TRdisplay("dm1b_get: Starting tid = %d,%d,flag = %x\n", 
+	s = TRdisplay("dm1b_get:  %p Starting tid = %d,%d,flag = %x\n", r,
                 r->rcb_lowtid.tid_tid.tid_page, 
                 r->rcb_lowtid.tid_tid.tid_line, 
                 opflag); 
@@ -3985,6 +3996,11 @@ dm1b_get(
 	** to the TID's partition number, needed for
 	** row locking.
 	*/
+	if (dm601)
+	{
+	    TRdisplay("dm1b_get %p about to next/prev bid (lowtid) %d,%d\n",
+		r,r->rcb_lowtid.tid_tid.tid_page,r->rcb_lowtid.tid_tid.tid_line);
+	}
 	if (opflag & DM1C_GETNEXT) 
 	    s = next(r, &row_low_tran, &row_lg_id, opflag, dberr);
 	else
@@ -3999,13 +4015,15 @@ dm1b_get(
 
 	if (s != E_DB_OK)
 	    break;
-	
+
 	/*
 	** row locking only saves new position after locking record
 	** likewise for crow locking constraint/update cursor processing 
 	*/
 	if (!row_locking(r) && !NeedCrowLock(r))
+	{
 	    DM1B_POSITION_SAVE_MACRO(r, r->rcb_other.page, &r->rcb_lowtid, RCB_P_GET);
+	}
 
 	/*
 	** Now that we are here, whether it is a secondary
@@ -4402,10 +4420,10 @@ dm1b_get(
 	    /* Else row qualifies */
 	}
 
-	if (DMZ_AM_MACRO(1))
+	if (dm601)
 	{
-	    TRdisplay("dm1b_get: Ending bid = %d,%d,currenttid = %d,%d\n", 
-                r->rcb_lowtid.tid_tid.tid_page, 
+	    TRdisplay("dm1b_get: %p Ending bid = %d,%d,currenttid = %d,%d\n",
+                r, r->rcb_lowtid.tid_tid.tid_page, 
                 r->rcb_lowtid.tid_tid.tid_line, 
                 localtid.tid_tid.tid_page, 
                 localtid.tid_tid.tid_line); 
@@ -4502,7 +4520,7 @@ dm1b_get(
 	if (r->rcb_pos_info[RCB_P_GET].bid.tid_i4 != r->rcb_lowtid.tid_i4)
 	{
 	    TRdisplay("DM1B_POSITION_CHECK %~t (%d,%d) (%d,%d)\n",
-		32, r->rcb_tcb_ptr->tcb_rel.relid.db_tab_name,
+		t->tcb_relid_len, r->rcb_tcb_ptr->tcb_rel.relid.db_tab_name,
 		r->rcb_pos_info[RCB_P_GET].bid.tid_tid.tid_page,
 		r->rcb_pos_info[RCB_P_GET].bid.tid_tid.tid_line,
 		r->rcb_lowtid.tid_tid.tid_page,
@@ -8353,7 +8371,7 @@ dm1badupcheck(
 		dm0pUnlockBuf(r, leafPinfo);
 
 		if ( crow_locking(r) )
-		    s = dm1r_crow_lock(r, LK_PHYSICAL, &localtid, NULL, dberr);
+		    s = dm1r_crow_lock(r, DM1R_LK_PHYSICAL, &localtid, NULL, dberr);
 		else
 		{
 		    /* Don't clear lock coupling in rcb */
@@ -11386,6 +11404,8 @@ dm1b_count(
 **          btree_reposition() Set error status where compare != DM1B_SAME
 **	26-Feb-2010 (jonj)
 **	    CRIB now anchored in RCB.
+**	29-Jun-2010 (jonj)
+**	    Add more debug stuff to reposition error reporting.
 */
 static DB_STATUS
 btree_reposition(
@@ -11411,6 +11431,7 @@ btree_reposition(
     bool		split_done = FALSE;
     i4			tidpartno;
     i4		    *err_code = &dberr->err_code;
+    i4			local_error;
     DMP_POS_INFO   *savepos;
     DMP_POS_INFO   origpos;
     DMPP_PAGE		**leaf;
@@ -11760,16 +11781,33 @@ btree_reposition(
 
     if (s != E_DB_OK || !key_found) 
     {
-	TRdisplay("DM1B-REPOS pop %d tran %x Bid:(%d,%d) status %d \n"
-	    "\t    POS Bid:(%d,%d) Tid:(%d,%d) LSN=(%x,%x)\n"
-	    "\t    POS cc %d nextleaf %d page_stat %x %v\n",
-	    pop, r->rcb_tran_id.db_low_tran,
+	/* Shut off MVCC tracing to make all of this stuff readable */
+	t->tcb_dcb_ptr->dcb_status &= ~DCB_S_MVCC_TRACE;
+
+	/* Show how we got here */
+	if ( s )
+	    uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
+		       (char *)NULL, (i4)0, (i4 *)NULL, err_code,
+		       0);
+
+	TRdisplay("DM1B-REPOS Session ID 0x%p op %d page 0x%p (%d,%d) %~t\n"
+	    "    pop %d tran %x lgid %d Bid:(%d,%d) status %d \n"
+	    "    POS Bid:(%d,%d) Tid:(%d,%d) LSN=(%x,%x) Line %d\n"
+	    "    POS cc %d nextleaf %d page_stat %x %v\n"
+	    "    POS page 0x%p page tran %x\n"
+	    "    POS row tran %x row lgid %d\n",
+	    r->rcb_sid, r->rcb_dmr_opcode, leafPinfo->page,
+	    t->tcb_rel.reltid.db_tab_base, t->tcb_rel.reltid.db_tab_index,
+	    t->tcb_relid_len, t->tcb_rel.relid.db_tab_name,
+	    pop, r->rcb_tran_id.db_low_tran, (i4)r->rcb_slog_id_id,
 	    bid->tid_tid.tid_page, bid->tid_tid.tid_line, s,
 	    savepos->bid.tid_tid.tid_page, savepos->bid.tid_tid.tid_line,
 	    savepos->tidp.tid_tid.tid_page, savepos->tidp.tid_tid.tid_line,
-	    savepos->lsn.lsn_low, savepos->lsn.lsn_high,
+	    savepos->lsn.lsn_high, savepos->lsn.lsn_low, savepos->line,
 	    savepos->clean_count, savepos->nextleaf,
-	    savepos->page_stat, PAGE_STAT, savepos->page_stat);
+	    savepos->page_stat, PAGE_STAT, savepos->page_stat,
+	    savepos->page, savepos->tran.db_low_tran,
+	    savepos->row_low_tran, (i4)(savepos->row_lg_id));
 
 	TRdisplay("DM1B-REPOS ");
         dmd_prkey(r, key_ptr, DM1B_PLEAF, (DB_ATTS**)NULL, (i4)0, (i4)0);
@@ -11778,6 +11816,9 @@ btree_reposition(
 	{
 	    /* dmd_prindex prints page header, range entries, kids */
 	    dmd_prindex(r, *leaf, (i4)0);
+	    /* If CR leaf, do likewise */
+	    if ( leafPinfo->CRpage )
+		dmd_prindex(r, leafPinfo->CRpage, (i4)0);
 	    dm0pUnlockBuf(r, leafPinfo);
 	    dm0p_unfix_page(r, DM0P_UNFIX, leafPinfo, dberr);
 	}
@@ -11795,7 +11836,13 @@ btree_reposition(
 		crib->crib_bos_lsn.lsn_low,
 		crib->crib_sequence,
 		crib->crib_lgid_low, crib->crib_lgid_high);
+
+		dmd_pr_mvcc_info(r);
 	}
+
+	/* query will always be printed for E_UL0017 */
+	uleFormat(NULL, E_UL0017_DIAGNOSTIC, (CL_ERR_DESC *)NULL, ULE_LOG, NULL, 
+	    (char *)NULL, (i4)0, (i4 *)NULL, &local_error, 1, 10, "DM1B_REPOS");
 
 	SETDBERR(dberr, 0, E_DM93F6_BAD_REPOSITION);
 	return (E_DB_ERROR);
@@ -11883,6 +11930,7 @@ btree_reposition(
 **	    reset the flag here, the overriding noread-ahead decision will
 **	    be lost.
 */          
+
 DB_STATUS
 dm1b_position(
 DMP_RCB        *rcb,
@@ -12511,6 +12559,8 @@ DB_ERROR    *dberr)
 ** Inputs:
 **      rcb             
 **      get_status         return code from get
+**			   Will be either OK or WARN, errors are pruned out
+**			   by the caller
 **      access             Type of row access
 **      low_tran
 **      tid_to_lock
@@ -12519,6 +12569,7 @@ DB_ERROR    *dberr)
 **
 ** Outputs:
 **	E_DB_OK if row locked.
+**	E_DB_WARN if need to cycle around for another next
 **	E_DB_ERROR if row not locked.
 **
 **
@@ -12545,6 +12596,14 @@ DB_ERROR    *dberr)
 **	17-Feb-2005 (schka24)
 **	    Fix typo in above, used wrong ptr to get to global index
 **	    base table.  Somehow nobody tripped over it until now!
+**	13-Aug-2010 (kschendel) b124255
+**	    "Get" position was being saved prematurely after coming out
+**	    of a lock-wait, before we've checked the data page stuff.
+**	    If the data page turned out to not be valid, we need to
+**	    reposition to the saved "get" position, which because of the
+**	    premature save was the current position and not the last-locked
+**	    position, ie it's the wrong place.  When we return back to
+**	    the get main loop we'd miss records.
 */
 static DB_STATUS
 dm1b_rowlk_access(
@@ -12631,10 +12690,12 @@ dm1b_rowlk_access(
 	need_reposition = TRUE;
 
 	if (DMZ_AM_MACRO(5))
-	TRdisplay("ROW_ACC_NEWDATA LKWAIT %d, xid %x table %d bid %d,%d tid %d,%d acc %d\n",
-	lkwait, r->rcb_tran_id.db_low_tran, t->tcb_rel.reltid.db_tab_base, 
-	save_bid.tid_tid.tid_page, save_bid.tid_tid.tid_line,
-	tid_to_lock->tid_tid.tid_page, tid_to_lock->tid_tid.tid_line, access);
+	{
+	    TRdisplay("ROW_ACC_NEWDATA %p LKWAIT %d, xid %x table %d bid %d,%d tid %d,%d acc %d\n",
+		r, lkwait, r->rcb_tran_id.db_low_tran, t->tcb_rel.reltid.db_tab_base, 
+		save_bid.tid_tid.tid_page, save_bid.tid_tid.tid_line,
+		tid_to_lock->tid_tid.tid_page, tid_to_lock->tid_tid.tid_line, access);
+	}
     }
     else
     {
@@ -12644,12 +12705,11 @@ dm1b_rowlk_access(
 	    *low_tran_ptr = 0;
 	    *lg_id_ptr = 0;
 
-	    /* If committed delete... skip it */
-	    if (get_status == E_DB_WARN)
-		return (E_DB_WARN);
-
-	    /* Data is committed... We don't need to lock yet */
-	    return (E_DB_OK);
+	    /* Return original get status so called can skip if it's a
+	    ** committed delete, or use the row if it's ok.
+	    ** Data is committed... We don't need to lock yet.
+	    */
+	    return (get_status);
 	}
 	else
 	{
@@ -12775,10 +12835,7 @@ dm1b_rowlk_access(
 	    */
 	    DM1B_POSITION_SAVE_MACRO(r, r->rcb_other.page, &r->rcb_lowtid, RCB_P_GET);
 
-	    if (get_status == E_DB_WARN)
-		return (E_DB_WARN);
-	    else
-		return (E_DB_OK);
+	    return (get_status);
 	}
 
 	/*
@@ -12843,11 +12900,7 @@ dm1b_rowlk_access(
     if (DM1B_POSITION_PAGE_COMPARE_MACRO(t->tcb_rel.relpgtype, 
 		r->rcb_other.page, &orig_posinfo) == DM1B_SAME)
     {
-	/*
-	** Save position info 
-	** for reposition to start of this leaf, or the last LOCKED record. 
-	*/
-	DM1B_POSITION_SAVE_MACRO(r, r->rcb_other.page, &r->rcb_lowtid, RCB_P_GET);
+	bool data_valid = TRUE;
 
 	/*
 	** Leaf page hasn't changed... check if data page has
@@ -12866,30 +12919,43 @@ dm1b_rowlk_access(
 
 	    DMPP_VPT_GET_PAGE_LOG_ADDR_MACRO(t->tcb_rel.relpgtype, 
 			r->rcb_data.page, page_lsn);
-	    if (LSN_EQ(&data_lsn, &page_lsn))
+	    if (! LSN_EQ(&data_lsn, &page_lsn))
 	    {
-		if (get_status == E_DB_WARN)
-		    return (E_DB_WARN);
-		else
-		    return (E_DB_OK);
-	    }
-	    else
 		dm0pUnlockBuf(r, &r->rcb_data);
+		data_valid = FALSE;
+	    }
 	}
-	else
+	if (data_valid)
 	{
-	    if (get_status == E_DB_WARN)
-		return (E_DB_WARN);
-	    else
-		return (E_DB_OK);
+	    /*
+	    ** Save position info 
+	    ** for reposition to start of this leaf, or the last LOCKED record. 
+	    */
+	    DM1B_POSITION_SAVE_MACRO(r, r->rcb_other.page, &r->rcb_lowtid, RCB_P_GET);
+	    return (get_status);
 	}
     }
 
     if (DMZ_AM_MACRO(5))
-    TRdisplay("REPOSITION after LKWAIT, xid %x table %d bid %x,%x tid %d,%d acc %d\n",
-	r->rcb_tran_id.db_low_tran, t->tcb_rel.reltid.db_tab_base,
-	save_bid.tid_tid.tid_page, save_bid.tid_tid.tid_line,
-	tid_to_lock->tid_tid.tid_page, tid_to_lock->tid_tid.tid_line, access);
+    {
+	if (DM1B_POSITION_VALID_MACRO(r, RCB_P_GET))
+	{
+	    TRdisplay("REPOSITION after LKWAIT, %p, xid %x table %d\n  get saved-bid %d,%d tid %d,%d acc %d\n",
+		r, r->rcb_tran_id.db_low_tran, t->tcb_rel.reltid.db_tab_base,
+		r->rcb_pos_info[RCB_P_GET].bid.tid_tid.tid_page,
+		r->rcb_pos_info[RCB_P_GET].bid.tid_tid.tid_line,
+		tid_to_lock->tid_tid.tid_page, tid_to_lock->tid_tid.tid_line, access);
+	}
+	else
+	{
+	    TRdisplay("REPOSITION after LKWAIT, %p, xid %x table %d\n  %s start saved-bid %d,%d tid %d,%d acc %d\n",
+		r, r->rcb_tran_id.db_low_tran, t->tcb_rel.reltid.db_tab_base,
+		(DM1B_POSITION_VALID_MACRO(r, RCB_P_START)) ? "valid" : "invalid",
+		r->rcb_pos_info[RCB_P_START].bid.tid_tid.tid_page,
+		r->rcb_pos_info[RCB_P_START].bid.tid_tid.tid_line,
+		tid_to_lock->tid_tid.tid_page, tid_to_lock->tid_tid.tid_line, access);
+	}
+    }
 
     /*
     ** Try to reposition to last row locked.
@@ -12938,7 +13004,8 @@ dm1b_rowlk_access(
 #ifdef xDEBUG
 	TRdisplay("Reposition last row locked op %d key %d tid %d,%d\n",
 	    access, *((int *)r->rcb_repos_key_ptr), 
-	    r->rcb_repos_tid.tid_tid.tid_page, r->rcb_repos_tid.tid_tid.tid_line);
+	    r->rcb_pos_info[RCB_P_GET].bid.tid_tid.tid_page,
+	    r->rcb_pos_info[RCB_P_GET].bid.tid_tid.tid_line);
 #endif
 
 	/* Reset lowtid back to last good position */
@@ -14597,23 +14664,31 @@ i4		pop,
 i4		line)
 {									
     DMP_TCB	*t = r->rcb_tcb_ptr;
+    DMP_POS_INFO *pos = &r->rcb_pos_info[pop];
+    char	*tup_hdr;
 
-    r->rcb_pos_info[pop].bid.tid_i4 = (bidp)->tid_i4;			
-    DM1B_VPT_GET_PAGE_LOG_ADDR_MACRO(t->tcb_rel.relpgtype, 
-    b, r->rcb_pos_info[pop].lsn);					
-    r->rcb_pos_info[pop].clean_count = 					
-	DM1B_VPT_GET_BT_CLEAN_COUNT_MACRO(t->tcb_rel.relpgtype,b);
-    r->rcb_pos_info[pop].nextleaf =					
-	DM1B_VPT_GET_BT_NEXTPAGE_MACRO(t->tcb_rel.relpgtype, b);
-    r->rcb_pos_info[pop].page_stat =					
-	DM1B_VPT_GET_PAGE_STAT_MACRO(t->tcb_rel.relpgtype, b);
-    r->rcb_pos_info[pop].valid = TRUE;					
-    r->rcb_pos_info[pop].line = __LINE__;				
+    pos->bid.tid_i4 = (bidp)->tid_i4;			
+    DM1B_VPT_GET_PAGE_LOG_ADDR_MACRO(t->tcb_rel.relpgtype, b, pos->lsn);					
+    pos->clean_count =DM1B_VPT_GET_BT_CLEAN_COUNT_MACRO(t->tcb_rel.relpgtype,b);
+    pos->nextleaf = DM1B_VPT_GET_BT_NEXTPAGE_MACRO(t->tcb_rel.relpgtype, b);
+    pos->page_stat = DM1B_VPT_GET_PAGE_STAT_MACRO(t->tcb_rel.relpgtype, b);
+    pos->valid = TRUE;					
+    pos->line = line;				
+    pos->page = b;				
+    pos->tran = DM1B_VPT_GET_PAGE_TRAN_ID_MACRO(t->tcb_rel.relpgtype, b);
+    pos->row_low_tran = 0;
+    pos->row_lg_id = 0;
     if ((bidp)->tid_tid.tid_line != DM_TIDEOF)			
     {									
+	DB_STATUS	entry_status;
+
 	dm1cxtget(t->tcb_rel.relpgtype,			
 	    t->tcb_rel.relpgsize, b, (bidp)->tid_tid.tid_line, 
-	    &r->rcb_pos_info[pop].tidp, (i4*)NULL);				
+	    &pos->tidp, (i4*)NULL);				
+
+	/* save the transaction information for the entry */
+	entry_status = dm1cx_txn_get(t->tcb_rel.relpgtype, b, 
+		(i4)bidp->tid_tid.tid_line, &pos->row_low_tran, &pos->row_lg_id);
 
 	/*
 	** Save key if RCB_P_GET
@@ -14687,8 +14762,8 @@ i4		line)
 		    lock_key.lk_key1 = t->tcb_dcb_ptr->dcb_id;
 		    lock_key.lk_key2 = t->tcb_rel.reltid.db_tab_base;
 		    lock_key.lk_key3 = reltidx;
-		    lock_key.lk_key4 = r->rcb_pos_info[pop].tidp.tid_tid.tid_page;
-		    lock_key.lk_key5 = r->rcb_pos_info[pop].tidp.tid_tid.tid_line;
+		    lock_key.lk_key4 = pos->tidp.tid_tid.tid_page;
+		    lock_key.lk_key5 = pos->tidp.tid_tid.tid_line;
 		    lock_key.lk_key6 = 0;
 		    /* Length of zero returned if no matching key */
 		    s = LKshow(flag, r->rcb_lk_id, (LK_LKID *)NULL, &lock_key, 
@@ -14707,11 +14782,20 @@ i4		line)
     /* For now use dm618 */
     if (DMZ_AM_MACRO(18))
     {
-	TRdisplay("Line %d %~t pop %d position bid %d %d tid %d %d\n",
-	    line, 32, t->tcb_rel.relid.db_tab_name, pop,
-	    r->rcb_pos_info[pop].bid.tid_tid.tid_page,
-	    r->rcb_pos_info[pop].bid.tid_tid.tid_line,
-	    r->rcb_pos_info[pop].tidp.tid_tid.tid_page,
-	    r->rcb_pos_info[pop].tidp.tid_tid.tid_line);
+	TRdisplay("DM1B-SAVEPOS (%d,%d) %~t %p source-line %d\n"
+	    "    pop %w (%d) tran %x \n"
+	    "    POS Bid:(%d,%d) Tid:(%d,%d) LSN=(%x,%x)\n"
+	    "    POS cc %d nextleaf %d page_stat %x %v\n"
+	    "    POS page 0x%p tran %x\n",
+	    t->tcb_rel.reltid.db_tab_base, t->tcb_rel.reltid.db_tab_index,
+	    t->tcb_relid_len, t->tcb_rel.relid.db_tab_name, r, line,
+	    "START,GET,FETCH,ALLOC,TEMP",pop,
+	    pop, r->rcb_tran_id.db_low_tran,
+	    pos->bid.tid_tid.tid_page, pos->bid.tid_tid.tid_line,
+	    pos->tidp.tid_tid.tid_page, pos->tidp.tid_tid.tid_line,
+	    pos->lsn.lsn_low, pos->lsn.lsn_high,
+	    pos->clean_count, pos->nextleaf,
+	    pos->page_stat, PAGE_STAT, pos->page_stat,
+	    pos->page, pos->tran.db_low_tran);
     }
 }

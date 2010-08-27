@@ -706,6 +706,10 @@ NO_OPTIM=dr6_us5 i64_aix
 **          Cast new i8 reltups to i4.
 **      27-May-2010 (stial01)
 **          Set DM1C_CORE_CATALOG for iidevices,iisequence which use phys locks
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    dm2u-create wants compression now.
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 **/
 
 /*
@@ -841,7 +845,7 @@ static DB_STATUS position_to_row(
 			DM_TID              *tid,
 			DB_ERROR            *dberr);
 
-DB_STATUS create_new_parts(
+static DB_STATUS create_new_parts(
 			DM2U_MXCB           *m,
 			DB_TAB_NAME         *tabname,
 			DB_OWN_NAME         *owner,
@@ -853,7 +857,7 @@ DB_STATUS create_new_parts(
 			i4                  relstat2,
 			DB_ERROR            *dberr);
 
-DB_STATUS get_online_rel(
+static DB_STATUS get_online_rel(
                         DM2U_MXCB           *m,
                         DB_TAB_ID           *modtemp_tabid,
                         DMU_CB              *index_cbs,
@@ -868,6 +872,19 @@ static DB_STATUS check_archiver(
 				LG_LSN		    *lsn,
 				DB_ERROR	    *dberr);
 
+static DB_STATUS init_readnolock(
+			DM2U_MXCB	*mxcb,
+			DM2U_OSRC_CB	*osrc,
+			DB_ERROR	*dberr);
+
+static DB_STATUS test_redo(
+			DM2U_OMCB	*omcb,
+			DM0L_HEADER	*record,
+			DB_TAB_ID	*log_tabid,
+			DM_PAGENO	log_page,
+			LG_LSN		*log_lsn,
+			bool		*redo,
+			DB_ERROR	*dberr);
 
 /*{
 ** Name: dm2u_modify - Modify a table's structure.
@@ -1454,6 +1471,32 @@ static DB_STATUS check_archiver(
 **	    SIR 121619 MVCC: Temp tables are not DM_SCONCUR_MAX.
 **	13-may-2010 (miket) SIR 122403
 **	    Fix net-change logic for width for ALTER TABLE.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Index (btree) key compression is hardwired to old-standard for now.
+**	    So are catalogs (if compressed).
+**	16-Jul-2010 (jonj) BUG 124096
+**	    When modify DMU_ONLINE_START and adding partitions, qeu_modify_prep
+**	    does not create the new partitions. If the subject table is
+**	    already exclusively locked, we skip do_online_modify(), but
+**	    still need to create the partitions that QEU did not.
+**	    Made some static functions static, added function prototypes
+**	    for some that were missing.
+**	27-Jul-2010 (kschendel) b124135
+**	    Ask for row-versioning when sizing compression control array.
+**	    We don't know if there are any versioned/altered atts, assume
+**	    the worst rather than the best.
+**	30-Jul-2010 (jonj)
+**	    Previous fix for B124096 failed to fill in tabid's in newly
+**	    created partitions, causing file rename errors later on.
+**	03-Aug-2010 (miket) SIR 122403
+**	    Trap attempt to change the structure of an encrypted index;
+**	    only HASH is valid. Also remove unreferenced input_is_index.
+**	09-Aug-2010 (miket) SIR 122403
+**	    Fix check for attempt to make an encrypted column a primary
+**	    key by moving the code to the correct loop location.
+**	25-Aug-2010 (miket) SIR 122403 SD 145902 CRYPT_FIXME
+**	    For now disable modify encrypted index from HASH to HASH
+**	    because it is broken.
 */
 DB_STATUS
 dm2u_modify(
@@ -1546,7 +1589,6 @@ DB_ERROR        *dberr)
     DMP_RELATION	online_reltup;
     DB_TAB_ID		online_tabid;
     i4			table_lock_mode;
-    bool		input_is_index = FALSE;
     LK_LOCK_KEY		lock_key;
     RFP_OCTX		*octx = 0;
     bool		already_logged = FALSE;
@@ -1557,6 +1599,7 @@ DB_ERROR        *dberr)
     i4			attnmsz;
     char		*nextattname;
     DB_ATTS		*curatt;
+    CL_ERR_DESC		sys_err;
 
     CLRDBERR(dberr);
 		
@@ -1651,34 +1694,95 @@ DB_ERROR        *dberr)
 
 	if (!mcb->mcb_temporary)
 	{
-	    i4		control_lock_mode = (mcb->mcb_flagsmask & DMU_ONLINE_START ? 
-								LK_S : lk_mode);
-	    CL_ERR_DESC	sys_err;
+	    i4		length;
+	    LK_LKB_INFO	lock_info;
+	    i4		control_lock_mode;
+
+	    control_lock_mode = lk_mode;
 
 	    if (mcb->mcb_flagsmask & DMU_ONLINE_START)
 	    {
-		lock_key.lk_type = LK_ONLN_MDFY;
+
+		/*
+		** Check the subject table's lock mode, if any,
+		** save it in table_lock_mode.
+		**
+		** If exclusively locked, we won't need an online
+		** modify lock or a control lock, and we won't
+		** need to call do_online_modify(), but because
+		** qeu_modify_prep() didn't create new partitions,
+		** we'll have to do that instead, later.
+		*/
+
+		lock_key.lk_type = LK_TABLE;
 		lock_key.lk_key1 = (i4)dcb->dcb_id;
 		lock_key.lk_key2 = mcb->mcb_tbl_id->db_tab_base;
-		lock_key.lk_key3 = mcb->mcb_tbl_id->db_tab_index;
+		lock_key.lk_key3 = 0;
 		lock_key.lk_key4 = 0;
 		lock_key.lk_key5 = 0;
 		lock_key.lk_key6 = 0;
-		status = LKrequest(dcb->dcb_bm_served == DCB_SINGLE ?
-                                   LK_LOCAL | LK_PHYSICAL : LK_PHYSICAL,
-                                   lk_id, &lock_key, LK_X, (LK_VALUE *)0,
-                                   (LK_LKID *)0, timeout, &sys_err);
-		if (status != OK)
+
+		/* length == 0 if no matching key */
+		status = LKshow(LK_S_OWNER_GRANT, TableLockList,
+				(LK_LKID*)NULL, &lock_key,
+				sizeof(lock_info), (PTR)&lock_info,
+				&length, NULL, &sys_err);
+
+		
+		/* Remember subject table's lock mode, if any */
+		if ( status == OK && length )
+		    table_lock_mode = lock_info.lkb_grant_mode;
+		else
+		    table_lock_mode = LK_N;
+
+		if ( table_lock_mode == LK_X )
+		    control_lock_mode = LK_N;
+		else
 		{
-		    /* FIX ME */
-		    return(status);
+		    lock_key.lk_type = LK_ONLN_MDFY;
+		    lock_key.lk_key1 = (i4)dcb->dcb_id;
+		    lock_key.lk_key2 = mcb->mcb_tbl_id->db_tab_base;
+		    lock_key.lk_key3 = mcb->mcb_tbl_id->db_tab_index;
+		    lock_key.lk_key4 = 0;
+		    lock_key.lk_key5 = 0;
+		    lock_key.lk_key6 = 0;
+		    status = LKrequest(dcb->dcb_bm_served == DCB_SINGLE ?
+				       LK_LOCAL | LK_PHYSICAL : LK_PHYSICAL,
+				       TableLockList, &lock_key, LK_X, 
+				       (LK_VALUE *)NULL, (LK_LKID*)NULL, 
+				       timeout, &sys_err);
+		    if (status != OK)
+		    {
+			uleFormat(NULL, status, &sys_err, ULE_LOG, NULL, NULL, 
+				    0, NULL, &local_error, 0);
+			if ( status == LK_TIMEOUT ) 
+			    SETDBERR(dberr, 0, E_DM004D_LOCK_TIMER_EXPIRED);
+			else if ( status == LK_DEADLOCK )
+			    SETDBERR(dberr, 0, E_DM0042_DEADLOCK);
+			else if ( status == LK_NOLOCKS )
+			    SETDBERR(dberr, 0, E_DM004B_LOCK_QUOTA_EXCEEDED);
+			else if ( status == LK_INTR_FA )
+			    SETDBERR(dberr, 0, E_DM016B_LOCK_INTR_FA);
+			else
+			{
+			    uleFormat(NULL, E_DM901C_BAD_LOCK_REQUEST, &sys_err,
+				      ULE_LOG, NULL, NULL, 0, NULL, &local_error, 
+				      2, 0, LK_X, 0, TableLockList);
+			    SETDBERR(dberr, 0, E_DM926D_TBL_LOCK);
+			}
+			return(E_DB_ERROR);
+		    }
+		    control_lock_mode = LK_S;
 		}
 	    }
 
-	    status = dm2t_control(dcb, mcb->mcb_tbl_id->db_tab_base, TableLockList, 
+	    if ( control_lock_mode != LK_N )
+	    {
+		status = dm2t_control(dcb, mcb->mcb_tbl_id->db_tab_base, TableLockList, 
 			    control_lock_mode, (i4)0, timeout, dberr);
-	    if (status != E_DB_OK)
-		return(E_DB_ERROR);
+		if (status != E_DB_OK)
+		    return(E_DB_ERROR);
+	    }
 	}
     }
 
@@ -1731,9 +1835,13 @@ DB_ERROR        *dberr)
 	if (scb && (scb->scb_s_type & SCB_S_FACTOTUM) == 0)
 	    r->rcb_sid = scb->scb_sid;
 
-	/* Silently avoid hidata compression on catalogs. */
+	/* Silently avoid hidata compression on catalogs.  Also ensure that
+	** we use OLD-standard.  Work in dm2d.c would be needed to allow
+	** NEW-standard compression on core catalogs, best to just
+	** avoid the issue.
+	*/
 	if (t->tcb_rel.relstat & TCB_CATALOG && mcb->mcb_compressed != TCB_C_NONE)
-	    mcb->mcb_compressed = TCB_C_STANDARD;
+	    mcb->mcb_compressed = TCB_C_STD_OLD;
 
 	/*
 	** If input is index, this is online modify of secondary index 
@@ -1744,9 +1852,21 @@ DB_ERROR        *dberr)
 	if ((t->tcb_rel.relstat & TCB_INDEX) ||
 	    (input_rcb && (input_rcb->rcb_tcb_ptr->tcb_rel.relstat & TCB_INDEX)))
 	{
-	    input_is_index = TRUE;
 	    /* ...just to be safe... */
 	    mcb->mcb_clustered = FALSE;
+	    /* an encrypted secondary index can ONLY be structure hash */
+	    if (t->tcb_data_rac.encrypted_attrs == TRUE &&
+#if 0
+CRYPT_FIXME This should be allowed, in theory, but creates encryption
+CRC errors right now, so comment out and revisit when time allows.
+		mcb->mcb_structure != TCB_HASH &&
+#endif
+		mcb->mcb_structure != 0)
+	    {
+		status = E_DB_ERROR;
+		SETDBERR(dberr, 0, E_DM019F_INVALID_ENCRYPT_INDEX);
+		break;
+	    }
 	}
 
         /*
@@ -2302,6 +2422,9 @@ DB_ERROR        *dberr)
 	    break;
 	}
 
+	/* Don't ever change core-catalog compression from what it was
+	** originally.  (Fixing this would need work in dm2d, DB open time.)
+	*/
 	if (t->tcb_rel.relstat & TCB_CONCUR)
 	{
 	    mcb->mcb_compressed = t->tcb_rel.relcomptype;
@@ -2859,18 +2982,16 @@ DB_ERROR        *dberr)
 	    /* ...and source TID */
 	    cmplist_count++;
 
-	    /* Guess at (upper limit for) NEW compression control sizes.
-	    ** There will be no row versioning in the new stuff.
-	    */
+	    /* Guess at (upper limit for) NEW compression control sizes. */
 	    data_cmpcontrol_size = dm1c_cmpcontrol_size(
-			mcb->mcb_compressed, t->tcb_data_rac.att_count, 0);
+			mcb->mcb_compressed, t->tcb_data_rac.att_count, t->tcb_rel.relversion);
 	    if (mcb->mcb_index_compressed)
 	    {
 		if (mcb->mcb_structure == TCB_RTREE)
 		{
 		    /* Toss in one more for hilbert */
 		    index_cmpcontrol_size = dm1c_cmpcontrol_size(
-			TCB_C_STANDARD, bkey_count+1, 0);
+			TCB_C_STD_OLD, bkey_count+1, t->tcb_rel.relversion);
 		}
 		else if (mcb->mcb_structure == TCB_BTREE)
 		{
@@ -2879,9 +3000,9 @@ DB_ERROR        *dberr)
 		    ** keys if not.  ***NEEDS FIXED FOR CLUSTERED).
 		    */
 		    index_cmpcontrol_size = dm1c_cmpcontrol_size(
-			TCB_C_STANDARD, mcb->mcb_kcount+1, 0);
+			TCB_C_STD_OLD, mcb->mcb_kcount+1, t->tcb_rel.relversion);
 		    leaf_cmpcontrol_size = dm1c_cmpcontrol_size(
-			TCB_C_STANDARD, bkey_count, 0);
+			TCB_C_STD_OLD, bkey_count, t->tcb_rel.relversion);
 		}
 	    }
 	    data_cmpcontrol_size = DB_ALIGN_MACRO(data_cmpcontrol_size);
@@ -3034,9 +3155,9 @@ DB_ERROR        *dberr)
 	m->mx_index_comp = mcb->mcb_index_compressed;
 	if (m->mx_index_comp)
 	{
-	    /* No syntax for key compression type yet, always use STANDARD */
-	    m->mx_leaf_rac.compression_type = TCB_C_STANDARD;
-	    m->mx_index_rac.compression_type = TCB_C_STANDARD;
+	    /* No syntax for key compression type yet, always use OLD STANDARD */
+	    m->mx_leaf_rac.compression_type = TCB_C_STD_OLD;
+	    m->mx_index_rac.compression_type = TCB_C_STD_OLD;
 	}
 	m->mx_unique = mcb->mcb_unique;
 	m->mx_dmveredo = FALSE;
@@ -3582,7 +3703,7 @@ DB_ERROR        *dberr)
 
 	    key_expansion = 0;
 	    if ( mcb->mcb_index_compressed )
-		key_expansion = dm1c_compexpand(TCB_C_STANDARD,
+		key_expansion = dm1c_compexpand(TCB_C_STD_OLD,
 			t->tcb_data_rac.att_ptrs, t->tcb_data_rac.att_count); 
 
 	    for (i = 0; i < t->tcb_rel.relatts - 1; i++)
@@ -3768,14 +3889,6 @@ DB_ERROR        *dberr)
 			t->tcb_atts_ptr[j].attnmstr, ' ',
 			DB_ATT_MAXNAME, tmpattnm.db_att_name);
 
-		    /* Only encrypted hash secondary indices are allowed
-		    ** for encrypted columns.
-		    */
-		    if (t->tcb_atts_ptr[j].encflags & ATT_ENCRYPT)
-		    {
-			SETDBERR(dberr, 0, E_DM0066_BAD_KEY_TYPE);
-			break;
-		    }
 		    if ((MEcmp(tmpattnm.db_att_name, 
 			 (char *)&mcb->mcb_key[i]->key_attr_name,
 			 sizeof(mcb->mcb_key[i]->key_attr_name)) == 0) && 
@@ -3790,6 +3903,15 @@ DB_ERROR        *dberr)
 			if ((key_map[j >> 5] & (1 << (j & 0x1f))))
 			{
 			    SETDBERR(dberr, 0, E_DM001C_BAD_KEY_SEQUENCE);
+			    break;
+			}
+
+			/* Only encrypted hash secondary indices are allowed
+			** for encrypted columns.
+			*/
+			if (t->tcb_atts_ptr[j].encflags & ATT_ENCRYPT)
+			{
+			    SETDBERR(dberr, 0, E_DM0066_BAD_KEY_TYPE);
 			    break;
 			}
 
@@ -3898,7 +4020,7 @@ DB_ERROR        *dberr)
 	    key_expansion = 0;
 	    if ( mcb->mcb_index_compressed )
 	    {
-		key_expansion = dm1c_compexpand(TCB_C_STANDARD,
+		key_expansion = dm1c_compexpand(TCB_C_STD_OLD,
 			m->mx_leaf_rac.att_ptrs, m->mx_leaf_rac.att_count);
 	    }
 
@@ -4095,27 +4217,49 @@ DB_ERROR        *dberr)
 	*/
 	if (! gateway)
 	{
-	    /*
-	    ** Unless overridden by system configuration option, 
-	    ** temporary files created here employ DI_USER_SYNC_MASK
-	    ** and are sync'd at end via dm2f_force_file().
-	    */
-	    if (dcb->dcb_sync_flag & DCB_NOSYNC_MASK)
-		db_sync_flag = 0;
-	    else
-		db_sync_flag = DI_USER_SYNC_MASK;
-	    if (dmf_svcb->svcb_directio_load)
-		db_sync_flag |= DI_DIRECTIO_MASK;
-	    if (!online_modify)
-		db_sync_flag |= DI_PRIVATE_MASK;
-
-	    table_lock_mode = get_table_lockmode(dcb, m, mcb->mcb_tbl_id);
-
-	    if (!(DMZ_SRT_MACRO(12)) &&
-		(mcb->mcb_flagsmask & DMU_ONLINE_START) &&
-		(table_lock_mode != LK_X))
+	    if ( mcb->mcb_flagsmask & DMU_ONLINE_START )
 	    {
-		if (!((dcb->dcb_bm_served == DCB_MULTIPLE) && 
+		/*
+		** If modify table is exclusively locked or
+		** online modify is prohibited by trace point,
+		** don't do_online_modify(), but we still have to
+		** create any new partitions because qeu_modify_prep()
+		** didn't.
+		*/
+		if ( table_lock_mode == LK_X || DMZ_SRT_MACRO(12) )
+		{
+		    status = dm0p_close_page(t, lk_id, log_id, 
+					DM0P_CLCACHE, dberr);
+		    if (status != E_DB_OK)
+			break;
+
+		    /* If there are new partitions to be created, create them */
+		    if ( m->mx_spcb_count < m->mx_tpcb_count )
+		    {
+			status = create_new_parts(m,
+					&t->tcb_rel.relid,
+					&t->tcb_rel.relowner,
+					mcb->mcb_new_part_def,
+					mcb->mcb_partitions,
+					&m->mx_table_id,
+					mcb->mcb_db_lockmode,
+					relstat,
+					m->mx_new_relstat2,
+					dberr);
+
+			/* Fill in tabid's in new targets */
+			for (tp = m->mx_tpcb_next;
+			     tp && status == E_DB_OK; 
+			     tp = tp->tpcb_next)
+			{
+			    /* repartition, possibly new targets */
+			    if (tp->tpcb_tabid.db_tab_base == 0)
+				tp->tpcb_tabid = 
+				    mcb->mcb_partitions[tp->tpcb_partno].part_tabid;
+			}
+		    }
+		}
+		else if (!((dcb->dcb_bm_served == DCB_MULTIPLE) && 
 				((dcb->dcb_status & DCB_S_FASTCOMMIT) == 0)) &&
 		    ((dcb->dcb_status & DCB_S_ROLLFORWARD) == 0) &&
 		    ((t->tcb_rel.relstat & TCB_CONCUR) == 0) &&
@@ -4130,30 +4274,32 @@ DB_ERROR        *dberr)
 		    t->tcb_rel.reltid.db_tab_index == 0)
 		{
 		    status = do_online_modify(&m, timeout, mcb->mcb_dmu,
-				    mcb->mcb_modoptions, mcb->mcb_mod_options2,
-				    mcb->mcb_kcount, mcb->mcb_key, mcb->mcb_db_lockmode,
-				    &online_tabid, 
-				    mcb->mcb_tup_info, mcb->mcb_has_extensions, mcb->mcb_relstat2, 
-				    (mcb->mcb_flagsmask & ~DMU_ONLINE_START), 
-				    mcb->mcb_rfp_entry, &online_reltup, 
-				    mcb->mcb_new_part_def, mcb->mcb_new_partdef_size,
-				    mcb->mcb_partitions, mcb->mcb_nparts, mcb->mcb_verify,
-				    dberr);
-		    if (status != E_DB_OK)
-			break;
+			    mcb->mcb_modoptions, mcb->mcb_mod_options2,
+			    mcb->mcb_kcount, mcb->mcb_key, mcb->mcb_db_lockmode,
+			    &online_tabid, 
+			    mcb->mcb_tup_info, mcb->mcb_has_extensions, 
+			    mcb->mcb_relstat2, 
+			    (mcb->mcb_flagsmask & ~DMU_ONLINE_START), 
+			    mcb->mcb_rfp_entry, &online_reltup, 
+			    mcb->mcb_new_part_def, mcb->mcb_new_partdef_size,
+			    mcb->mcb_partitions, mcb->mcb_nparts, mcb->mcb_verify,
+			    dberr);
 
-		    online_modify = TRUE;
-		    r = rcb;
-		    m->mx_rcb = r;
-		    m->mx_newtup_cnt = *mcb->mcb_tup_info;
+		    if ( status == E_DB_OK )
+		    {
+			/* From here on, don't rely on DMU_ONLINE_START */
+			online_modify = TRUE;
 
-		    STRUCT_ASSIGN_MACRO(m->mx_bsf_lsn, bsf_lsn);
+			r = rcb;
+			m->mx_rcb = r;
+			m->mx_newtup_cnt = *mcb->mcb_tup_info;
 
-		    /* flush pages */
-		    status = dm0p_close_page(t, lk_id, log_id,
-                                DM0P_CLCACHE, dberr);
-		    if (status != E_DB_OK)
-			break;
+			STRUCT_ASSIGN_MACRO(m->mx_bsf_lsn, bsf_lsn);
+
+			/* flush pages */
+			status = dm0p_close_page(t, lk_id, log_id,
+				    DM0P_CLCACHE, dberr);
+		    }
 		}
 		else
 		{
@@ -4181,12 +4327,26 @@ DB_ERROR        *dberr)
 					t->tcb_rel.relstat,
 					t->tcb_rel.reltid.db_tab_base,
 					t->tcb_rel.reltid.db_tab_index);
-			if (table_lock_mode == LK_X)
-			    TRdisplay("    - table lock mode is X\n");
 		    }
-		    break;
 		}
+
+		if ( status )
+		    break;
 	    }
+
+	    /*
+	    ** Unless overridden by system configuration option, 
+	    ** temporary files created here employ DI_USER_SYNC_MASK
+	    ** and are sync'd at end via dm2f_force_file().
+	    */
+	    if (dcb->dcb_sync_flag & DCB_NOSYNC_MASK)
+		db_sync_flag = 0;
+	    else
+		db_sync_flag = DI_USER_SYNC_MASK;
+	    if (dmf_svcb->svcb_directio_load)
+		db_sync_flag |= DI_DIRECTIO_MASK;
+	    if (!online_modify)
+		db_sync_flag |= DI_PRIVATE_MASK;
 
             for ( tp = m->mx_tpcb_next;
                   tp && status == E_DB_OK;
@@ -4324,6 +4484,8 @@ DB_ERROR        *dberr)
 
 		if (mcb->mcb_compressed == TCB_C_HICOMPRESS)
 		    dum_flag |= DM0L_MODIFY_HICOMPRESS;
+		if (mcb->mcb_compressed == TCB_C_STANDARD)
+		    dum_flag |= DM0L_MODIFY_NEWCOMPRESS;
 		/* Other stuff can go here (page compression, etc) */
 		status = logModifyData(log_id, dm0l_jnlflag,
 			mcb->mcb_new_part_def, mcb->mcb_new_partdef_size,
@@ -4552,6 +4714,8 @@ DB_ERROR        *dberr)
 		dum_flag |= DM0L_ONLINE;
 	    if (mcb->mcb_compressed == TCB_C_HICOMPRESS)
 		dum_flag |= DM0L_MODIFY_HICOMPRESS;
+	    if (mcb->mcb_compressed == TCB_C_STANDARD)
+		dum_flag |= DM0L_MODIFY_NEWCOMPRESS;
 
 	    /*
 	    ** Note that when partitioning, the partition location information
@@ -5323,7 +5487,7 @@ DB_ERROR	*dberr)
 	    dm2u_create(dcb, xcb, &newtab_name, &owner, &location, (i4)1,
 		    &ntbl_id, &nidx_id, index, view,
 		    setrelstat, relstat2,
-		    structure, ntab_width, ntab_width,
+		    structure, TCB_C_NONE, ntab_width, ntab_width,
 		    NumAtts, AttList, db_lockmode,
 		    allocation, extend, newpgtype, newpgsize,
 		    (DB_QRY_ID *)0, (DM_PTR *)NULL,
@@ -8820,7 +8984,8 @@ DB_ERROR	    *dberr)
 		    tp->tpcb_loc_list, tp->tpcb_loc_count, 
 		    &new_tabid, &new_ixid, 0, view,
 		    (setrelstat), base_relstat2,
-		    DB_HEAP_STORE, t->tcb_rel.relwid, t->tcb_rel.reldatawid,
+		    DB_HEAP_STORE, TCB_C_NONE,
+		    t->tcb_rel.relwid, t->tcb_rel.reldatawid,
 		    attr_count, attr_ptrs, db_lockmode,
 		    allocation, extend, 
 		    m->mx_page_type, m->mx_page_size,
@@ -8961,7 +9126,8 @@ DB_ERROR	    *dberr)
                     locnArray, sp->spcb_loc_count,
                     &newpart_tabid, &newpart_ixid, 0, view,
                     setrelstat, base_relstat2,
-                    DB_HEAP_STORE, t->tcb_rel.relwid, t->tcb_rel.reldatawid,
+                    DB_HEAP_STORE, TCB_C_NONE,
+		    t->tcb_rel.relwid, t->tcb_rel.reldatawid,
                     0, 0, db_lockmode,
                     allocation, extend,
                     m->mx_page_type, m->mx_page_size,
@@ -10334,7 +10500,7 @@ DB_ERROR	    *dberr)
 		STRUCT_ASSIGN_MACRO(put->put_tbl_id, log_tabid);
 		log_page = put->put_tid.tid_tid.tid_page;
 		log_lsn = &put->put_header.lsn;
-		log_row = &put->put_vbuf[put->put_tab_size + put->put_own_size];
+		log_row = ((char *)put) + sizeof(DM0L_PUT);
 		row_version = put->put_row_version;
 		otid = ntid = &put->put_tid;
 	    }
@@ -10344,7 +10510,7 @@ DB_ERROR	    *dberr)
 		STRUCT_ASSIGN_MACRO(del->del_tbl_id, log_tabid);
 		log_page = del->del_tid.tid_tid.tid_page;
 		log_lsn = &del->del_header.lsn;
-		log_row = &del->del_vbuf[del->del_tab_size + del->del_own_size];
+		log_row = ((char *)del) + sizeof(DM0L_DEL);
 		row_version = del->del_row_version;
 		otid = ntid = &del->del_tid;
 	    }
@@ -10355,7 +10521,7 @@ DB_ERROR	    *dberr)
 		log_page = rep->rep_otid.tid_tid.tid_page;
 		log_page2 = rep->rep_ntid.tid_tid.tid_page;
 		log_lsn = &rep->rep_header.lsn;
-		log_row = &rep->rep_vbuf[rep->rep_tab_size + rep->rep_own_size];
+		log_row = ((char *)rep) + sizeof(DM0L_REP);
 		log_new_row = log_row + rep->rep_odata_len;
 		otid = &rep->rep_otid;
 		ntid = &rep->rep_ntid;
@@ -11006,44 +11172,7 @@ DB_ERROR	*dberr)
 }
 
 
-i4
-get_table_lockmode(
-DMP_DCB		    *dcb,
-DM2U_MXCB	    *mxcb,
-DB_TAB_ID	    *table_id)
-{
-    LK_LOCK_KEY		lock_key;
-    LK_LKB_INFO		info_buf;
-    CL_ERR_DESC		sys_err;
-    u_i4		info_result;
-    STATUS		s;
-    i4			flag;
-
-    /*
-    ** Format the lock key using the Database Id and the Base TableId.
-    ** Note that base table and secondary index locks collide!!!
-    */
-    lock_key.lk_type = LK_TABLE;
-    lock_key.lk_key1 = dcb->dcb_id;
-    lock_key.lk_key2 = table_id->db_tab_base;
-    lock_key.lk_key3 = 0;
-    lock_key.lk_key4 = 0;
-    lock_key.lk_key5 = 0;
-    lock_key.lk_key6 = 0;
-
-    /* Length of zero returned if no matching key */
-    flag = LK_S_OWNER_GRANT;
-    s = LKshow(flag, mxcb->mx_lk_id, (LK_LKID *)0, &lock_key, 
-		sizeof(info_buf), (PTR)&info_buf, &info_result, 
-		(u_i4 *)0, &sys_err);
-
-    if (s == OK && (info_result != 0))
-	return ((i4)info_buf.lkb_grant_mode);
-    else
-	return ((i4)LK_N);
-}
-
-DB_STATUS
+static DB_STATUS
 init_readnolock(
 DM2U_MXCB	*mxcb,
 DM2U_OSRC_CB	*osrc,
@@ -11134,7 +11263,7 @@ DB_ERROR	*dberr)
     return (status);
 }
 
-
+static DB_STATUS
 test_redo(
 DM2U_OMCB	*omcb,
 DM0L_HEADER	*record,
@@ -11572,15 +11701,14 @@ DB_ERROR	*dberr)
 		{
 		    DM0L_PUT	*put = (DM0L_PUT *)record;
 
-		    log_row = &put->put_vbuf[put->put_tab_size + put->put_own_size];
+		    log_row = ((char *)put) + sizeof(DM0L_PUT);
 		    MEcopy(log_row, put->put_rec_size, row_image);
 		}
 		else if (record->type == DM0LREP)
 		{
 		    DM0L_REP	*rep = (DM0L_REP *)record;
 
-		    log_row = &rep->rep_vbuf[rep->rep_tab_size + rep->rep_own_size] +
-				rep->rep_odata_len;
+		    log_row = ((char *)rep) + sizeof(DM0L_REP) + rep->rep_odata_len;
 		    MEcopy(log_row, rep->rep_ndata_len, row_image);
 		    *ndata_len = rep->rep_ndata_len;
 		    *nrec_size = rep->rep_nrec_size;
@@ -11704,7 +11832,7 @@ DB_ERROR	*dberr)
     return(status);
 }
 
-DB_STATUS
+static DB_STATUS
 create_new_parts(
 DM2U_MXCB		*m,
 DB_TAB_NAME		*tabname,
@@ -11757,7 +11885,7 @@ DB_ERROR		*dberr)
 		part->loc_array.data_in_size/sizeof(DB_LOC_NAME),
 		&newpart_tabid, &newpart_ixid, 0, 0,
 		relstat, relstat2,
-		DB_HEAP_STORE, t->tcb_rel.relwid, t->tcb_rel.reldatawid,
+		DB_HEAP_STORE, TCB_C_NONE, t->tcb_rel.relwid, t->tcb_rel.reldatawid,
 		0, 0, db_lockmode, 0, 0,
 		m->mx_page_type, m->mx_page_size,
 		(DB_QRY_ID *)0, (DM_PTR *)NULL,
@@ -11780,7 +11908,7 @@ DB_ERROR		*dberr)
     return(status);
 }
 
-DB_STATUS
+static DB_STATUS
 get_online_rel(
 DM2U_MXCB               *m,
 DB_TAB_ID               *modtemp_tabid,

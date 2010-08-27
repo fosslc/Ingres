@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2003, 2009 Ingres Corporation. All Rights Reserved.
+** Copyright (c) 2003, 2010 Ingres Corporation. All Rights Reserved.
 */
 
 using System;
@@ -31,6 +31,8 @@ namespace Ingres.ProviderInternals
 	**	12-oct-09 (thoda04)
 	**	    GetSchemaTable() does not return BaseTableName
 	**	    if table name reference is in the JOIN clause.  Bug 122652.
+	**	19-Jan-10 (thoda04)  B124115
+	**	    Added slash-star comment support to ScanSqlStatement().
 	*/
 
 	/*
@@ -1333,6 +1335,8 @@ namespace Ingres.ProviderInternals
 		** History:
 		**	28-Jan-03 (thoda04)
 		**	    Created.
+		**	19-Jan-10 (thoda04) B124115
+		**	    Added slash-star comment support.
 		*/
 
 		/// <summary>
@@ -1346,6 +1350,8 @@ namespace Ingres.ProviderInternals
 			bool insideIdentifier  = false;
 			bool insideNumeric     = false;
 			bool insideNumericExponent= false;
+			bool insideSlashStarComment= false;
+			bool isPrevCharSlash= false;
 			StringBuilder sbToken = new System.Text.StringBuilder(100);
 			char priorChar = Char.MinValue;
 			char quoteChar = Char.MinValue;
@@ -1437,6 +1443,30 @@ namespace Ingres.ProviderInternals
 						insideNumericExponent  = false;
 				}
 
+				if (isPrevCharSlash)   // was prev char a "/" as part of "/*"?
+				{
+					isPrevCharSlash = false;
+					if (c == '*')      // is char sequence "/*"
+					{
+						insideSlashStarComment = true;  // /* comment */
+						sbToken.Length = 0;             // discard '/' token
+						priorChar = Char.MinValue;      // clear any context
+						continue;
+					}
+				}
+
+				if (insideSlashStarComment)
+				{
+					if (priorChar == '*' && c == '/')  // end of */ comment?
+					{
+						insideSlashStarComment = false;
+						c = Char.MinValue;             // clear context
+					}
+					priorChar = c;
+					continue;
+				}
+
+
 				if (sbToken.Length != 0)   // flush token to token list
 				{
 					list.Add(sbToken.ToString());
@@ -1469,6 +1499,13 @@ namespace Ingres.ProviderInternals
 					quoteChar = c;             // remember starting quote
 					priorChar = Char.MinValue; // clear any doubled quote context
 					continue;                  // build up the string
+				}
+
+				if (c == '/')                  // start of /* comment?
+				{
+					isPrevCharSlash = true;
+					priorChar = Char.MinValue; // clear any context
+					continue;                  // go check for '/*'
 				}
 
 			}  // end foreach

@@ -3,6 +3,7 @@
 */
 #ifndef    COMMON_INCLUDE
 #define                 COMMON_INCLUDE  0
+#include <wchar.h>
 #include <gl.h>
 /**
 ** Name: IICOMMON.H - Types and names used by ingres both DBMS and FEs
@@ -161,6 +162,11 @@
 **          Use DB_EXTFMT_SIZE for register table newcolname IS 'ext_format'
 **	27-Apr-2010 (kschendel) SIR 123639
 **	    Take max # of columns from build config if available.
+**	26-jun-2010 (stephenb)
+**	    Add define for DB_MAXROWSIZE to avoid hard-coded values which
+**	    might vary and cause problems.
+**     13-Aug-2010 (hanal04) Bug 124250
+**        Moved AFE_NTEXT_STRING from afe.h to iicommon.h
 **/
 
 #define                  P2K		 2048
@@ -479,6 +485,7 @@ typedef struct _DB_ERROR
 		    */
 #define                 DB_AREA_MAX     128     /* Max # bytes in AREA */
 #define                 DB_FILE_MAX     12      /* Max # bytes in a filename */
+#define			DB_MAXROWSIZE	256*1024 /* maximum size of a row in the DBMS */
 
 
 /*}
@@ -1319,6 +1326,20 @@ typedef struct _DB_TEXT_STRING
     u_i2            db_t_count;         /* The number of chars in the string */
     u_char          db_t_text[1];       /* The actual string */
 }   DB_TEXT_STRING;
+
+/*
+** Name: AFE_NTEXT_STRING - NVARCHAR datatype
+**
+** Description:
+**      This structure is comparable to DB_TEXT_STRING but is designed for
+**      NVARCHAR datatypes. Its main purpose is to deal with alignment of the
+**      wchar_t member. Moved from afe.h.
+*/
+typedef struct
+{
+    u_i2        afe_t_count;
+    wchar_t     afe_t_text[1];
+} AFE_NTEXT_STRING;
 
 /*
 ** Name: DEFINE_DB_TEXT_STRING - for defining local VARCHAR data.

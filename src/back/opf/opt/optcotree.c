@@ -347,6 +347,8 @@
 **	    Add pst_opno translation to trace point op170.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      17-Aug-2010 (horda03) b124274
+**          Enable segmented QEPs.
 **/
 struct	tab
 {
@@ -6938,6 +6940,8 @@ opt_fjprint(
 ** History:
 **      3-aug-86 (seputis)
 **          initial creation
+**      17-Aug-2010 (horda03) b124274
+**          Pass Segmented QEP flag to tree output routine
 [@history_template@]...
 */
 static VOID
@@ -6952,7 +6956,8 @@ opt_fjtree()
     /* whitesmith C CMS won't accept ptr to function casts  (cfr)
     ** Neither does UNIX (ejl)
     */
-    uld_prtree_x((PTR)global->ops_estate.opn_sroot,/* root of Join tree to print */
+    uld_prtree_x(global->ops_cb->ops_alter.ops_qep_flag,
+                 (PTR)global->ops_estate.opn_sroot,/* root of Join tree to print */
 	opt_fjprint,                            /* routine to print a node */
         opt_jleft,                              /* get left child */
 	opt_jright,                             /* get right child */
@@ -7360,7 +7365,8 @@ opt_printPlanType(
 **	    op188 to call opt_cotree() just as trace point op145 (set qep) 
 **	    does, so that we get similar output from both. Added in display 
 **	    of current and best fragment numbers and 'Best QUERY PLAN so far'. 
-**	    
+**      17-Aug-2010 (horda03) b124274
+**          Pass Segmented QEP flag to tree output routine
 */
 VOID
 opt_printCostTree(
@@ -7693,7 +7699,8 @@ opt_printCostTree(
     /* whitesmith C CMS won't accept ptr to function casts  (cfr)
     ** Neither does UNIX (ejl)
     */
-    uld_prtree_x((PTR)cop,			/* root of CO tree to print */
+    uld_prtree_x(global->ops_cb->ops_alter.ops_qep_flag,
+        (PTR)cop,				/* root of CO tree to print */
 	printNode,                              /* routine to print a node */
         opt_coleft,                             /* get left child */
 	opt_coright,                            /* get right child */

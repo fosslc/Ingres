@@ -135,6 +135,10 @@
 **          Added DSH_TPROC_DSH to dsh_qp_status.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	18-Jun-2010 (kschendel) b123775
+**	    Rework DSH-side resource list structures to help tprocs and for
+**	    general sanity, eliminate waste and confusion.  Drop QEE_VALID
+**	    entirely, keep validated tproc DSH and cursor-ID in proc entry.
 **/
 
 /* The defines for ADE_1x2 are used by many join routines when the result of
@@ -1395,29 +1399,45 @@ typedef struct _QEE_TEMP_TABLE
 #define	TT_TUPLE_COUNT_GUESS	0x0000001L
 }	QEE_TEMP_TABLE;
 
-/*}
-** Name: QEE_VALID - Linked list of QEQ_VALID structs
+/*
+** Name: QEE_PROC_RESOURCE - DSH extension of procedure resource entry
 **
 ** Description:
-**      This struct forms a linked list of QEQ_VALID structs that is used
-**	in the QEE_TBL_RESOURCE struct.
+**
+**	This structure holds session specific runtime state that
+**	corresponds to a (table) procedure resource entry (QEF_PROC_RESOURCE).
+**	The resource list itself is part of the QP and is therefore
+**	readonly, so any writable data has to be in a separate
+**	struct allocated as part of the DSH.
+**
+**	Table procs are validated by finding the tproc QP in QSF,
+**	creating a DSH for the QP, and recursively validating that
+**	QP's resource list.  In order to prevent any tables/tprocs
+**	from changing after validation, the tproc DSH is kept open
+**	after validation, and the (first if many) tproc node gets
+**	to use that DSH.  So, we need to record:
+**	- the DSH opened for validation;
+**	- the cursor ID returned by QSF for the tproc;
+**	- an indication of whether some tproc node is using the validation
+**	  DSH (so that multiple tproc nodes all using the same tproc
+**	  can know whether to get their own DSH or not).
+**	- an indication as to whether the DSH is actually valid (a commit
+**	  or rollback in a DBproc that calls the tproc will require that
+**	  the tproc be re-validated).
 **
 ** History:
-**      5-oct-93 (eric)
-**          created
-**	13-jan-94 (rickh)
-**	    Reduced _QEE_VALID to a struct.  As a typedef it generated
-**	    acc compiler warnings.
-[@history_template@]...
+**	18-Jun-2010 (kschendel) b123775
+**	    Define runtime resource data for table procedures so that
+**	    they can be validated properly.
 */
-typedef struct _QEE_VALID QEE_VALID;
-struct _QEE_VALID
-{
-    QEE_VALID	*qevl_next;
-    QEE_VALID	*qevl_prev;
 
-    PTR		qevl_qefvl; /* pointer to QEF_VALID */
-}   ;
+typedef struct _QEE_PROC_RESOURCE
+{
+    struct _QEE_DSH	*qer_proc_dsh;	/* DSH proc was validated against */
+    DB_CURSOR_ID	qer_proc_cursid; /* Translated QSF name for tproc */
+    bool		qer_procdsh_used; /* TRUE if DSH used by tproc node */
+    bool		qer_procdsh_valid; /* TRUE if DSH has been validated */
+} QEE_PROC_RESOURCE;
 
 /*}
 ** Name: QEE_MEM_CONSTTAB - defines MS Access OR transformed in-memory 
@@ -1446,85 +1466,65 @@ typedef struct _QEE_MEM_CONSTTAB
 } QEE_MEM_CONSTTAB;
 
 /*}
-** Name: QEE_TBL_RESOURCE - Description of open instances of a table
+** Name: QEE_TBL_RESOURCE - DSH extension of table resource entry
 **
 ** Description:
-**      This struct describes the state of open instances of a table.
-**	An open instance can be in one of three states:
-**	    - Open and being used by an action
-**	    - Open and not being used by an action
-**	    - Closed (ie. an empty struct to be used).
-**	These states are useful because tables can be opened many times
-**	during the processing of a query. This allows us to reuse
-**	open instances of a table, reducing the number of times that
-**	we open a table, reducing our cpu cost.
-**	This is also a part of the resource list processing. When a resource
-**	list is validated, we open the tables as we can table ids. The
-**	tables are put on the open/not used list, and are used by the
-**	next action that uses the table.
 **
-**	Currently, we keep track of open instances of valid structs. As
-**	soon as we get some DMF support we will move to keeping track of
-**	dmr_cb/dmt_cb's. This change will allow us to make the maximum
-**	reduction in cpu cost
+**	This structure records any session specific runtime state that
+**	corresponds to a table validation (resource) entry (QEF_TBL_RESOURCE).
+**	The resource list is part of the query plan and hence is
+**	read-only, so any session specific writable parts have to be
+**	separated out.
+**
+**	For tables, we don't really need much state, other than for
+**	in-memory constant tables.  Their state really ought to be
+**	kept somewhere else, as there's only one resource entry per
+**	table instance;  but since in-memory constant tables are never
+**	opened multiple times in a QP, we get away with this.
 **
 ** History:
 **      5-oct-93 (eric)
 **          created.
 **	13-feb-97 (inkdo01)
 **	    Added pointer to MS Access OR transformed constant table.
-[@history_template@]...
+**	18-Jun-2010 (kschendel) b123775
+**	    Reduce to stub for memory constant tables.
 */
 typedef struct _QEE_TBL_RESOURCE
 {
-	/* Qer_inuse_vl is a linked list of valid structs that have been
-	** opened and are currently in use.
-	*/
-    QEE_VALID	*qer_inuse_vl;
-
-	/* Qer_free_vl is a linked list of valid structs that have been
-	** opened and are available for use.
-	*/
-    QEE_VALID	*qer_free_vl;
-
-    /* Qer_empty_valid is a list of empty qee valid structs that are available
-    ** for use in the free or inuse list.
-    */
-    QEE_VALID	*qer_empty_vl;
     /* If TBL_RESOURCE defines a MS Access OR transformed in-memory constant
     ** table, qer_cnsttab_p is the address of its defining structure (used 
     ** by qen_orig to "read" the "rows"). 
     */
     QEE_MEM_CONSTTAB	*qer_cnsttab_p;
+
+    bool		qer_validated;	/* TRUE if table has been validated */
 }   QEE_TBL_RESOURCE;
 
 /*}
-** Name:  QEE_RESOURCE - Struct to describe the state of an active resource.
+** Name:  QEE_RESOURCE - DSH extension of QEF_RESOURCE entry
 **
 ** Description:
 **      This struct lives in the DSH, and holds information about the 
 **      the state of the QEF_RESOURCE that it's associated with.
-**      The information currently consists of a pointer to the 
-**      associated QEF_RESOURCE, and info specific to the resource type
-**      (see above for more info)
-[@comment_line@]...
+**	Resource list entries are part of the QP and hence readonly,
+**	so we need a corresponding DSH structure to hold any session
+**	specific runtime state.  The QEF_RESOURCE entry contains
+**	an index (qr_id_resource) into dsh_resources, which is an
+**	array of these QEE_RESOURCE things.
 **
 ** History:
 **      5-oct-93 (eric)
 **          created
-[@history_line@]...
-[@history_template@]...
+**	18-Jun-2010 (kschendel) b123775
+**	    Add proc resource state.
 */
 typedef struct _QEE_RESOURCE
 {
-	/* Qer_qefresource points to the QEF_RESOURCE in the query plan that
-	** this struct is paired with
-	*/
-    PTR	    qer_qefresource; /* pointer to QEF_RESOURCE */
-
     union
     {
         QEE_TBL_RESOURCE  qer_tbl;
+	QEE_PROC_RESOURCE qer_proc;
     } qer_resource;      /* union of possible resources */
 }   QEE_RESOURCE;
 
@@ -1539,6 +1539,9 @@ typedef struct _QEE_RESOURCE
 **	    Written.
 **	17-may-2007 (dougi)
 **	    Added sp_fmapcount for TID computation.
+**	1-Jul-2010 (kschendel) b124004
+**	    Added sp_posnbuff for scrolls for positioning;  these need a
+**	    dummy row buffer, and we don't want to leak memory.
 */
 
 typedef struct _QEE_RSET_SPOOL {
@@ -1546,6 +1549,10 @@ typedef struct _QEE_RSET_SPOOL {
     DMR_CB	*sp_rdmrcb;		/* ptr to read DMR_CB of spool temp */
     DMT_CB	*sp_dmtcb;		/* ptr to DMT_CB of spool temp */
     PTR		sp_rowbuff;		/* row buffer addr. */
+    QEF_DATA	*sp_posnbuff;		/* Fake/toss buffer for a row for
+					** a scrolling fetch with no rows
+					** (ie positioning only)
+					*/
     i4		sp_rowcount;		/* no. of rows in result set (so far) */
     i4		sp_current;		/* current row in result set */
     i4		sp_pagecount;		/* no. of pgs in result set (so far) */
@@ -1986,7 +1993,11 @@ struct	_QEE_DSH
     /* Cursor has executed fetch for 1st time (used to guide reset flag
     ** in cursor'd queries). */
 #define DSH_TPROC_DSH       0x800
-    /* This query contains a table procedure. Set only to the top DSH */
+    /* Set if this DSH is for a table procedure.  Contrast with the
+    ** qp_status flag QEQP_CALLS_TPROC, which says that the qp *calls*
+    ** a table procedure!  The QP for the tproc itself looks like any
+    ** other row-returning DBproc, the only indicator is in the DSH.
+    */
     QEF_CB	   *dsh_qefcb;	    /* PTR to qef_cb */
     QEE_DSH	   *dsh_parent;	    /* PTR to parent DSH for || query */
 				    /* By the way, this can be confusing,

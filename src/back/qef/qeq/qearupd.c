@@ -238,6 +238,9 @@
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: If E_DM0029_ROW_UPDATE_CONFLICT returned,
 **	    invalidate the QP and retry.
+**	1-Jul-2010 (kschendel) b124004
+**	    Minor changes for RUP from scrollable keyset cursors;  the
+**	    fetched row is always in dsh-qef-output.
 */
 DB_STATUS
 qea_rupdate(
@@ -256,12 +259,12 @@ i4		    state )
     QEN_ADF		*qen_adf;
     ADE_EXCB		*ade_excb;
     PTR			*assoc_cbs = assoc_dsh->dsh_cbs;
-    PTR			output;
+    PTR			output, save_addr;
     char		*tidinput;  /* location of tid */
     DB_TID8		oldbigtid, newbigtid;
     u_i2		oldpartno = 0;
     u_i2		newpartno = 0;
-    i4			odmr_cb;	/* CB number of DMR_CB */
+    i4			odmr_cb_ix;	/* CB number of DMR_CB */
     i4			orig_node;
     
     status = E_DB_OK;
@@ -273,9 +276,12 @@ i4		    state )
 	if (state == DSH_CT_CONTINUE)
 	    break;
 
-	/* Address DMR_CB before the BEFORE logic. */
-	odmr_cb = act->qhd_obj.qhd_qep.ahd_odmr_cb;
-	dmr_cb = (DMR_CB*) assoc_cbs[odmr_cb];
+	/* Address the DMR_CB used to access the row.  The odmr_cb_ix is in
+	** the associated (cursor) QP context.  We'll adjust for partitioning
+	** a bit later.
+	*/
+	odmr_cb_ix = act->qhd_obj.qhd_qep.ahd_odmr_cb;
+	dmr_cb = (DMR_CB*) assoc_cbs[odmr_cb_ix];
 	if (status == DSH_CT_CONTINUE3)
 	{
 	    /* Resuming from a BEFORE trigger, reset variables */
@@ -287,14 +293,17 @@ i4		    state )
 	    newpartno = newbigtid.tid.tid_partno;
 	    output = dsh->dsh_row[act->qhd_obj.qhd_qep.u1.s1.ahd_a_row];
 	    if (act->qhd_obj.qhd_qep.ahd_part_def != NULL)
-		dmr_cb = (DMR_CB *) assoc_cbs[odmr_cb + oldpartno + 1];
+		dmr_cb = (DMR_CB *) assoc_cbs[odmr_cb_ix + oldpartno + 1];
 	}
 	else
 	{
 	    /* Normal path */
 	    dsh->dsh_qef_remnull = 0;
 	    dsh->dsh_qef_rowcount = 0;
-    
+
+	    /* Use fetch row for holding update row if need be */
+	    output = assoc_dsh->dsh_row[assoc_dsh->dsh_qp_ptr->qp_fetch_ahd->qhd_obj.qhd_qep.ahd_ruprow];
+
 	    /* make sure we have a positioned record */
 	    if (assoc_dsh->dsh_positioned == FALSE)
 	    {
@@ -306,7 +315,7 @@ i4		    state )
 		status = E_DB_ERROR;
 		break;
 	    }
-	        
+
 	    /* check that this query plan has update privilege */
 	    if ((assoc_dsh->dsh_qp_ptr->qp_status & QEQP_UPDATE) == 0)
 	    {
@@ -327,17 +336,14 @@ i4		    state )
 		    dsh->dsh_qef_rowcount = 0;
 		return(status);
 	    }
-    
-	    /* LDB processing */
 
-	    /* create the new tuple */
-	    output = dmr_cb->dmr_data.data_address;
+	    /* LDB processing */
 
 	    /* process the qualification expression */
 	    qen_adf     = act->qhd_obj.qhd_qep.ahd_constant;
 	    if (qen_adf != NULL)
 	    {
-		ade_excb = (ADE_EXCB*) dsh->dsh_cbs[qen_adf->qen_pos];	
+		ade_excb = (ADE_EXCB*) dsh->dsh_cbs[qen_adf->qen_pos];
 		if (dsh->dsh_qp_ptr->qp_status & QEQP_GLOBAL_BASEARRAY)
 		    dsh->dsh_row[qen_adf->qen_uoutput] = output;
 		else ade_excb->excb_bases[ADE_ZBASE + qen_adf->qen_uoutput] = output;
@@ -355,14 +361,15 @@ i4		    state )
 	    }
 
 	    /* REPLACE THE TUPLE
-	    ** if the cursor is positioned on the base table (ahd_tidoffset is -1),
-	    ** replace the tuple at the current position.  Otherwise the cursor
-	    ** must have been positioned via a secondary index.  Get the tid and
-	    ** replace the base table tuple by the tid. */
+	    ** if the cursor is positioned on the base table (ahd_tidoffset is
+	    ** -1), replace the tuple at the current position.  Otherwise the
+	    ** cursor must have been positioned via a secondary index.  Get
+	    ** the tid, re-fetch the original row by tid, and replace the
+	    ** base table tuple by the tid.
+	    */
 
 	    if (act->qhd_obj.qhd_qep.ahd_tidoffset == -1)
 	    {
-		dmr_cb->dmr_flags_mask = DMR_CURRENT_POS;
 		/* If partitioned, dig the current partition number out of
 		** the node status for the orig (or kjoin/tjoin) node that
 		** fetched the row in the first place.  OPC has kindly put
@@ -380,7 +387,9 @@ i4		    state )
 		    }
 		    oldpartno = assoc_dsh->dsh_xaddrs[orig_node]->
 						qex_status->node_ppart_num;
+		    dmr_cb = (DMR_CB *) assoc_cbs[odmr_cb_ix + oldpartno + 1];
 		}
+		dmr_cb->dmr_flags_mask = DMR_CURRENT_POS;
 	    }
 	    else
 	    {
@@ -388,7 +397,7 @@ i4		    state )
 		tidinput  = 
 		    (char *) assoc_dsh->dsh_row[act->qhd_obj.qhd_qep.ahd_tidrow]
 				 + act->qhd_obj.qhd_qep.ahd_tidoffset;
-            
+
 		if (act->qhd_obj.qhd_qep.ahd_qepflag & AHD_4BYTE_TIDP)
 		{
 		    I4ASSIGN_MACRO(*tidinput, oldbigtid.tid_i4.tid );
@@ -400,7 +409,6 @@ i4		    state )
 		}
 		oldpartno = oldbigtid.tid.tid_partno;
 		newpartno = oldpartno;
-		dmr_cb->dmr_tid = oldbigtid.tid_i4.tid;
 	
 		/* Check for partitioning and set up DMR_CB. */
 		if (act->qhd_obj.qhd_qep.ahd_part_def)
@@ -409,7 +417,7 @@ i4		    state )
 		    ** flags are the same as the cursor's, thanks to OPC.
 		    */
 		    status = qeq_part_open(qef_rcb, assoc_dsh, NULL, 0, 
-			odmr_cb,
+			odmr_cb_ix,
 			act->qhd_obj.qhd_qep.ahd_dmtix, oldpartno);
 			
 		    if (status != E_DB_OK)
@@ -417,17 +425,19 @@ i4		    state )
 			dsh->dsh_error.err_code = assoc_dsh->dsh_error.err_code;
 			return(status);
 		    }
-		    pdmr_cb = (DMR_CB *)assoc_cbs[odmr_cb + oldpartno+1];
+		    pdmr_cb = (DMR_CB *)assoc_cbs[odmr_cb_ix + oldpartno+1];
 
-		    MEcopy((PTR)&dmr_cb->dmr_tid, sizeof(DB_TID),
-				(PTR)&pdmr_cb->dmr_tid);
 		    STRUCT_ASSIGN_MACRO(dmr_cb->dmr_data, pdmr_cb->dmr_data);
 		    dmr_cb = pdmr_cb;
 		}
+		dmr_cb->dmr_tid = oldbigtid.tid_i4.tid;
 		dmr_cb->dmr_flags_mask = DMR_BY_TID;
 	
 		/* get the tuple to be updated. */
+		save_addr = dmr_cb->dmr_data.data_address;
+		dmr_cb->dmr_data.data_address = output;
 		status = dmf_call(DMR_GET, dmr_cb);
+		dmr_cb->dmr_data.data_address = save_addr;
 		if (status != E_DB_OK)
 		{
 		    dsh->dsh_error.err_code = dmr_cb->error.err_code;
@@ -519,9 +529,8 @@ i4		    state )
 	    ** Don't change the fetching DSH's current dmr-cb in case
 	    ** we're running a true in-place cursor.
 	    */
-	    pdmr_cb = dmr_cb;
 	    status = qeq_part_open(qef_rcb, assoc_dsh, NULL, 0, 
-		odmr_cb,
+		odmr_cb_ix,
 		act->qhd_obj.qhd_qep.ahd_dmtix, newpartno);
 			
 	    if (status != E_DB_OK)
@@ -529,8 +538,7 @@ i4		    state )
 		dsh->dsh_error.err_code = assoc_dsh->dsh_error.err_code;
 		return(status);
 	    }
-	    assoc_cbs[odmr_cb] = (PTR) dmr_cb;
-	    dmr_cb = (DMR_CB *)assoc_cbs[odmr_cb + newpartno+1];
+	    dmr_cb = (DMR_CB *)assoc_cbs[odmr_cb_ix + newpartno+1];
 
 	    dsh->dsh_qef_targcount = 1;
 	    /* Final preparation of new partition DMR_CB. */

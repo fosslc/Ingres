@@ -208,6 +208,8 @@ gcd_get_env( u_i2 api_vers, PTR *hndl )
 ** History:
 **	 20-Nov-07 (rajus01) Bug 119505, SD Issue: 122906
 **	    Created.
+**	24-Aug-10 (gordy)
+**	    Add API version 7.
 */
 void 
 gcd_rel_env( u_i2 api_vers )
@@ -220,6 +222,7 @@ gcd_rel_env( u_i2 api_vers )
 	case IIAPI_VERSION_4:
 	case IIAPI_VERSION_5:
 	case IIAPI_VERSION_6:
+	case IIAPI_VERSION_7:
 	{
 	    u_i2 version = api_vers - 1;
 	    if(  api_env[version].api_envhndl )
@@ -232,7 +235,7 @@ gcd_rel_env( u_i2 api_vers )
 	default:
         {
 	    int i;
-	    for ( i=0; i < IIAPI_VERSION_6; i++ )
+	    for ( i=0; i < IIAPI_VERSION_7; i++ )
 		if( api_env[i].api_envhndl )
 		{
 		    gcd_api_term( api_env[i].api_envhndl );

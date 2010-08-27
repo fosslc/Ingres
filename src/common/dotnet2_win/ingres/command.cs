@@ -46,6 +46,8 @@
 	**	    If CommandText==String.Empty, don't sever connection to server.
 	**	12-apr-10 (thoda04) SIR 123585
 	**	    Add named parameter marker support.
+	**	 1-jul-10 (thoda04) SIR 123585
+	**	    Allow match on named parameter without leading marker character.
 	*/
 
 using System;
@@ -765,18 +767,30 @@ public sealed class IngresCommand :
 				parameterMarkers[0].Length > 1)     // but not if "?"
 			{
 				parameters = new IngresParameterCollection();
+
+				//  Try to match "?myparm" or "myparm" against the
+				//  IngresCommand.Parameters collection and 
+				//  re-order it into a new parameter collection.
 				foreach (String parameterMarker in parameterMarkers)
 				{
-					if (Parameters.Contains(parameterMarker) == false)
-						throw new SqlEx(
-							"Named parameter marker \"" +
-							parameterMarker + "\" " +
-							"was not found in the IngresCommand.Parameters " +
-							"collection.");
-					IngresParameter parm = Parameters[parameterMarker];
+					string marker = parameterMarker;  // look for "?myparm"
+
+					if (Parameters.Contains(marker) == false)
+					{
+						if (marker.Length > 1)     // instead of "?myparm"
+							marker = marker.Substring(1);  // try "myparm"
+
+						if (Parameters.Contains(marker) == false)
+							throw new SqlEx(
+								"Named parameter marker \"" +
+								parameterMarker + "\" " +
+								"was not found in the IngresCommand.Parameters " +
+								"collection.");
+					}
+					IngresParameter parm = Parameters[marker];
 					parameters.Add(parm.Clone());
-				}
-			}
+				}  // end foreach (String parameterMarker in Markers)
+			}  // endif Markers.Count > 0 && Markers[0].Length > 1
 
 
 			int paramIndex = -1;

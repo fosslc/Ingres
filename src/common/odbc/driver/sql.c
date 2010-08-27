@@ -675,7 +675,12 @@
 **          GetProcParamNames() contingent on IIAPI_LEVEL_6, since
 **          databases at this level don't require the parameters to be
 **          named.
-**          
+**    14-Jul-1010 (Ralph Loen)  Bug 124079
+**          In ScanProcParamNamesAndBuildDescriptor(), don't skip
+**          GetProcParamNames() if the target db is Vectorwise.  In
+**          GetServerInfo(), set the release version to the same as Ingres 
+**          10.0 for Vectorwise servers, and disable OPT_INGRESDATE and
+**          OPT_BLANKDATEisNULL for Vectorwise servers.`
 **     
 */
 
@@ -1562,9 +1567,10 @@ BOOL ScanProcParmsAndBuildDescriptor(
 
     /*
     ** Ingres 10 and later supports positional DB procedure parameters,
-    ** so there is no need to get the names of the parameters.
+    ** so there is no need to get the names of the parameters.  Vectorwise
+    ** currently does not support positional parameters.
     */
-    if (pdbc->fAPILevel < IIAPI_LEVEL_6)
+    if (pdbc->fAPILevel < IIAPI_LEVEL_6 || isServerClassVECTORWISE(pdbc) )
     {
         rc = GetProcParamNames(pSession, pstmt, pProcIPD, szProcName, szSchema);
                  /* Search and read the catalog for the procedure column names,
@@ -5731,6 +5737,7 @@ BOOL GetServerInfo(SESS * pSession, LPSQLCA psqlca, LPDBC pdbc)
     char        part3[5] = "0";  /* part after slash */
     char      * part     = &part1[0];
     BOOL        notrelease6x = TRUE;
+    BOOL        isVectorwise = FALSE;
     SIZE_TYPE   digitlimit=2;
 
     char szRelease[100];
@@ -5772,6 +5779,9 @@ BOOL GetServerInfo(SESS * pSession, LPSQLCA psqlca, LPDBC pdbc)
                                  "6.2/01 (mvs.mxa/09)"
                                  "II 2.5/0006 (su4.us5/39)"
                                  "EC DB2 2.2/9904"  */
+	if (*p == 'V')
+            isVectorwise = TRUE;
+
     if (*p=='6')
        {
 			/*	Since Ingres 6.x does not allow 3 level qualifier
@@ -5843,6 +5853,18 @@ BOOL GetServerInfo(SESS * pSession, LPSQLCA psqlca, LPDBC pdbc)
 	p = &szUnicode[2];   /* p points past 2-byte length field to unicode level */
 	if (*p == '1')
 	    pdbc->fOptions |= OPT_UNICODE;  /* server supports NCHAR */
+
+        /*
+        ** If Vectorwise, make the release level the same as Ingres 10.0.
+        ** Ignore "Send Date/Time as Ingres Date" and "Return empty string 
+        ** DATE values as NULL configuration settings.
+        */
+        if (isVectorwise)
+        {
+            pdbc->fRelease = 10000000;
+            pdbc->fOptions &= ~OPT_INGRESDATE;
+            pdbc->fOptions &= ~OPT_BLANKDATEisNULL;
+        }
 
 	return(TRUE);
 }

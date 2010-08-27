@@ -1966,6 +1966,13 @@ RemoveOneDir(char *DirName)
 **  History:
 **      21-aug-2003 (penga03)
 **          Created.
+**	13-Aug-2010 (drivi01)
+**          NetApiBufferFree(pGroups) call is causing a
+**          SEGV on x64 while running install as ingres.
+**          Added a pointer to store pGroups before 
+**          enumerating so that the original pGroups is
+**          freed instead of some address at the end of the
+**          enumeration.
 */
 BOOL 
 CheckUserRights(char *UserName)
@@ -2058,6 +2065,7 @@ CheckUserRights(char *UserName)
 		(LPBYTE *)&pGroups, -1, &EntriesRead, &TotalEntries);
     if (nets == NERR_Success)
     {
+	BYTE *hdpGroups = pGroups;
 	for (i = 0; i < EntriesRead; i++)
 	{
 	    n = wcstombs(p, pGroups->lgrui0_name, 512);
@@ -2088,7 +2096,8 @@ CheckUserRights(char *UserName)
 
 	    pGroups++;
 	} /* end of for loop */
-    }
+	pGroups = hdpGroups;
+	}
     if (pGroups) NetApiBufferFree(pGroups);
 
     /* Close the policy handle. */

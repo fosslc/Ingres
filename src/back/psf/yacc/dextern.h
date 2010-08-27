@@ -52,6 +52,8 @@
 **	    Remove i4 to long macro as in front dextern.h
 **	18-Mar-2010 (kiria01) b123438
 **	    Upped the ACTSIZE to 16000
+**	2-Aug-2010 (kschendel) b124170
+**	    byacc has to generate "reentrant" and "functions", remove flags.
 */
 
 /**
@@ -349,12 +351,8 @@ GLOBALREF i4  zzsrconf ;
 
 /* code production information */
 
-/* tells whether to put productions into separate functions */
-GLOBALREF i4   functions;
 /* maximum number of cases per switch, to be used if above is TRUE */
 GLOBALREF i4   switchsize;
-/* tells whether to produce a re-entrant parser */
-GLOBALREF i4   reentrant;
 /* type of the control block passed to the re-entrant parser */
 GLOBALREF char argtype[];
 /* prefix for table names */

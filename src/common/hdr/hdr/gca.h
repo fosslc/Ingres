@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004, 2009 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 /*
@@ -556,6 +556,8 @@
 **	15-Apr-10 (gordy)
 **	    Note that batch processing and positional database procedure
 **	    parameters are supported at GCA_PROTOCOL_LEVEL_68.
+**	24-Aug-10 (gordy)
+**	    Added registration bit for DAS MIB.
 */
 
 #ifndef GCA_INCLUDED
@@ -1216,6 +1218,7 @@ struct _GCA_RG_PARMS
 # define	GCA_RG_IIACP		0x04000000	/* ACP MIB */
 # define	GCA_RG_INSTALL		0x02000000	/* Install-Wide MIB */
 # define	GCA_RG_TRAP		0x01000000	/* Traps Supported */
+# define	GCA_RG_DASVR		0x00400000	/* DA Server  MIB */
 # define	GCA_RG_BRIDGESVR	0x00200000	/* Bridge Server MIB */
 # define	GCA_RG_NMSVR		0x00100000      /* Additional NS MIB */
 

@@ -147,11 +147,19 @@ NO_OPTIM = rs4_us5
 **	    (and in the mainline, before my qef-hash-dup additions.)
 **	    Fix things so that byvals start at the proper hash-keys offset
 **	    for hash agg, and at zero for sorted aggs.
+**	30-Jul-2010 (kschendel)
+**	    Replace 8 slightly-different alignment tests with a common routine.
 **/
 
 /*
 **  Forward and/or External function references.
 */
+
+static void opc_agg_align(
+	DB_DT_ID	datatype,
+	i4		length,
+	i4		*what_to_align);
+
 static VOID
 opc_bycompare(
 	OPS_STATE	*global,
@@ -635,62 +643,8 @@ opc_baggtarg_begin(
 						bynode = bynode->pst_left)
 	{
 	    /* Compute alignment factor for bylist entry. */
-	    worklen = 1;
-	    switch (bynode->pst_sym.pst_dataval.db_datatype) {
-	      case DB_INT_TYPE:
-	      case DB_FLT_TYPE:
-	      case DB_MNY_TYPE:
-              case DB_TABKEY_TYPE:
-              case DB_LOGKEY_TYPE:
-		worklen = bynode->pst_sym.pst_dataval.db_length;
-		break;
-
-	      case DB_NCHR_TYPE:
-	      case DB_NVCHR_TYPE:
-	      case -DB_NCHR_TYPE:
-	      case -DB_NVCHR_TYPE:
-		worklen = sizeof(UCS2);
-		break;
-
-	      case -DB_INT_TYPE:
-	      case -DB_FLT_TYPE:
-	      case -DB_MNY_TYPE:
-              case -DB_TABKEY_TYPE:
-              case -DB_LOGKEY_TYPE:
-		worklen = bynode->pst_sym.pst_dataval.db_length-1;
-		break;
-
-
-	      case DB_DTE_TYPE:
-	      case DB_ADTE_TYPE:
-	      case DB_TMWO_TYPE:
-	      case DB_TMW_TYPE:
-	      case DB_TME_TYPE:
-	      case DB_TSWO_TYPE:
-	      case DB_TSW_TYPE:
-	      case DB_TSTMP_TYPE:
-	      case DB_INYM_TYPE:
-	      case DB_INDS_TYPE:
-	      case -DB_DTE_TYPE:
-	      case -DB_ADTE_TYPE:
-	      case -DB_TMWO_TYPE:
-	      case -DB_TMW_TYPE:
-	      case -DB_TME_TYPE:
-	      case -DB_TSWO_TYPE:
-	      case -DB_TSW_TYPE:
-	      case -DB_TSTMP_TYPE:
-	      case -DB_INYM_TYPE:
-	      case -DB_INDS_TYPE:
-		worklen = sizeof(i4);
-		break;
-
-	      case DB_PAT_TYPE:
-	      case -DB_PAT_TYPE:
-		worklen = sizeof(i2);
-		break;
-	    }
-	    align = aggbufsz % worklen;
-	    if (align != 0) aggbufsz += (worklen - align);
+	    opc_agg_align(bynode->pst_sym.pst_dataval.db_datatype,
+			bynode->pst_sym.pst_dataval.db_length, &aggbufsz);
 	    aggbufsz += bynode->pst_sym.pst_dataval.db_length;
 	    (*bycount)++;
 	}
@@ -724,219 +678,59 @@ opc_baggtarg_begin(
 	** a counter (i4) and an extra float (f8) work field. 
 	**
 	** Start by allocating result (from resdom description) - aligned. */
-	worklen = 1;
-	switch (aop_resdom->pst_sym.pst_dataval.db_datatype) {
-	  case DB_INT_TYPE:
-	  case DB_FLT_TYPE:
-	  case DB_MNY_TYPE:
-	    worklen = aop_resdom->pst_sym.pst_dataval.db_length;
-	    break;
 
-	  case DB_VCH_TYPE:
-	  case -DB_VCH_TYPE:
-	  case DB_TXT_TYPE:
-	  case -DB_TXT_TYPE:
-	    worklen = DB_CNTSIZE;
-	    break;
-
-	  case DB_NCHR_TYPE:
-	  case DB_NVCHR_TYPE:
-	  case -DB_NCHR_TYPE:
-	  case -DB_NVCHR_TYPE:
-	    worklen = sizeof(UCS2);
-	    break;
-
-	  case -DB_INT_TYPE:
-	  case -DB_FLT_TYPE:
-	  case -DB_MNY_TYPE:
-	    worklen = aop_resdom->pst_sym.pst_dataval.db_length-1;
-	    break;
-
-	  case DB_DTE_TYPE:
-	  case DB_ADTE_TYPE:
-	  case DB_TMWO_TYPE:
-	  case DB_TMW_TYPE:
-	  case DB_TME_TYPE:
-	  case DB_TSWO_TYPE:
-	  case DB_TSW_TYPE:
-	  case DB_TSTMP_TYPE:
-	  case DB_INYM_TYPE:
-	  case DB_INDS_TYPE:
-	  case -DB_DTE_TYPE:
-	  case -DB_ADTE_TYPE:
-	  case -DB_TMWO_TYPE:
-	  case -DB_TMW_TYPE:
-	  case -DB_TME_TYPE:
-	  case -DB_TSWO_TYPE:
-	  case -DB_TSW_TYPE:
-	  case -DB_TSTMP_TYPE:
-	  case -DB_INYM_TYPE:
-	  case -DB_INDS_TYPE:
-	    worklen = sizeof(i4);
-	    break;
-
-	  case DB_PAT_TYPE:
-	  case -DB_PAT_TYPE:
-	    worklen = sizeof(i2);
-	    break;
-	}
+	opc_agg_align(aop_resdom->pst_sym.pst_dataval.db_datatype,
+		aop_resdom->pst_sym.pst_dataval.db_length, &aggbufsz);
 
 	/* Some aggregates (e.g. avg(date), some OLAP statistical aggs) require
 	** workspace structure distinct from result type. They're always f8
 	** aligned. This is also true for sum(float) aggs, even if the source
 	** value is f4. */
 	sumf4 = FALSE;				/* init flag */
-	if ((agwslen = aop->pst_sym.pst_value.pst_s_op.pst_fdesc->adi_agwsdv_len)
-		!= 0 && 
-	    aop->pst_sym.pst_value.pst_s_op.pst_fdesc->adi_fiflags & ADI_F4_WORKSPACE)
-	    worklen = sizeof(f8);
-	else if (aop->pst_sym.pst_value.pst_s_op.pst_opno == ADI_SUM_OP 
-		&& abs(aop->pst_sym.pst_dataval.db_datatype) == DB_FLT_TYPE) 
+	agwslen = 0;
+	if (aop->pst_sym.pst_value.pst_s_op.pst_fdesc->adi_fiflags & ADI_F4_WORKSPACE
+	  && aop->pst_sym.pst_value.pst_s_op.pst_fdesc->adi_agwsdv_len != 0)
 	{
-	    worklen = sizeof(f8);
+	    agwslen = aop->pst_sym.pst_value.pst_s_op.pst_fdesc->adi_agwsdv_len;
+	    aggbufsz = DB_ALIGNTO_MACRO(aggbufsz, sizeof(f8));
+	}
+	else if (aop->pst_sym.pst_value.pst_s_op.pst_opno == ADI_SUM_OP 
+		&& abs(aop->pst_sym.pst_dataval.db_datatype) == DB_FLT_TYPE
+		&& aop->pst_sym.pst_dataval.db_length < sizeof(f8))
+	{
+	    aggbufsz = DB_ALIGNTO_MACRO(aggbufsz, sizeof(f8));
 	    sumf4 = TRUE;
 	}
-	else agwslen = 0;
-	align = aggbufsz % worklen;
-	if (align != 0) 
-	    aggbufsz += (worklen - align);
 	tginfo->opc_tsoffsets[rsno].opc_aggwoffset = aggbufsz;
 
 	/* Compute overflow buffer aggregate input offset - aligned. */
 	if (aopparm)	/* e.g. count(*) has no parm */
 	{
-	    worklen = 1;
-	    switch (aopparm->pst_sym.pst_dataval.db_datatype) {
-	      case DB_INT_TYPE:
-	      case DB_FLT_TYPE:
-	      case DB_MNY_TYPE:
-		worklen = aopparm->pst_sym.pst_dataval.db_length;
-		break;
-
-	      case DB_VCH_TYPE:
-	      case -DB_VCH_TYPE:
-	      case DB_TXT_TYPE:
-	      case -DB_TXT_TYPE:
-		worklen = DB_CNTSIZE;
-		break;
-
-	      case DB_NCHR_TYPE:
-	      case DB_NVCHR_TYPE:
-	      case -DB_NCHR_TYPE:
-	      case -DB_NVCHR_TYPE:
-		worklen = sizeof(UCS2);
-		break;
-
-	      case -DB_INT_TYPE:
-	      case -DB_FLT_TYPE:
-	      case -DB_MNY_TYPE:
-		worklen = aopparm->pst_sym.pst_dataval.db_length-1;
-		break;
-
-
-	      case DB_DTE_TYPE:
-	      case DB_ADTE_TYPE:
-	      case DB_TMWO_TYPE:
-	      case DB_TMW_TYPE:
-	      case DB_TME_TYPE:
-	      case DB_TSWO_TYPE:
-	      case DB_TSW_TYPE:
-	      case DB_TSTMP_TYPE:
-	      case DB_INYM_TYPE:
-	      case DB_INDS_TYPE:
-	      case -DB_DTE_TYPE:
-	      case -DB_ADTE_TYPE:
-	      case -DB_TMWO_TYPE:
-	      case -DB_TMW_TYPE:
-	      case -DB_TME_TYPE:
-	      case -DB_TSWO_TYPE:
-	      case -DB_TSW_TYPE:
-	      case -DB_TSTMP_TYPE:
-	      case -DB_INYM_TYPE:
-	      case -DB_INDS_TYPE:
-		worklen = sizeof(i4);
-		break;
-
-	      case DB_PAT_TYPE:
-	      case -DB_PAT_TYPE:
-		worklen = sizeof(i2);
-		break;
-	    }
-
-	    align = oflwsize % worklen;
-	    if (align != 0)
-		oflwsize += (worklen - align);
+	    opc_agg_align(aopparm->pst_sym.pst_dataval.db_datatype,
+			aopparm->pst_sym.pst_dataval.db_length, &oflwsize);
 	    tginfo->opc_tsoffsets[rsno].opc_aggooffset = oflwsize;
 	    oflwsize += aopparm->pst_sym.pst_dataval.db_length;
 	}
-	else tginfo->opc_tsoffsets[rsno].opc_aggooffset = -1;
+	else
+	    tginfo->opc_tsoffsets[rsno].opc_aggooffset = -1;
 
 	/* Now do the same for the 2nd parm (if OLAP binary aggregate). */
 	if (binagg)
 	{
 	    PST_QNODE	*aopparm2 = aop->pst_right;
 
-	    worklen = 1;
-	    switch (aopparm2->pst_sym.pst_dataval.db_datatype) {
-	      case DB_INT_TYPE:
-	      case DB_FLT_TYPE:
-	      case DB_MNY_TYPE:
-		worklen = aopparm2->pst_sym.pst_dataval.db_length;
-		break;
-
-	      case DB_NCHR_TYPE:
-	      case DB_NVCHR_TYPE:
-	      case -DB_NCHR_TYPE:
-	      case -DB_NVCHR_TYPE:
-		worklen = sizeof(UCS2);
-		break;
-
-	      case -DB_INT_TYPE:
-	      case -DB_FLT_TYPE:
-	      case -DB_MNY_TYPE:
-		worklen = aopparm2->pst_sym.pst_dataval.db_length-1;
-		break;
-
-	      case DB_DTE_TYPE:
-	      case DB_ADTE_TYPE:
-	      case DB_TMWO_TYPE:
-	      case DB_TMW_TYPE:
-	      case DB_TME_TYPE:
-	      case DB_TSWO_TYPE:
-	      case DB_TSW_TYPE:
-	      case DB_TSTMP_TYPE:
-	      case DB_INYM_TYPE:
-	      case DB_INDS_TYPE:
-	      case -DB_DTE_TYPE:
-	      case -DB_ADTE_TYPE:
-	      case -DB_TMWO_TYPE:
-	      case -DB_TMW_TYPE:
-	      case -DB_TME_TYPE:
-	      case -DB_TSWO_TYPE:
-	      case -DB_TSW_TYPE:
-	      case -DB_TSTMP_TYPE:
-	      case -DB_INYM_TYPE:
-	      case -DB_INDS_TYPE:
-		worklen = sizeof(i4);
-		break;
-
-	      case DB_PAT_TYPE:
-	      case -DB_PAT_TYPE:
-		worklen = sizeof(i2);
-		break;
-	    }
-
-	    align = oflwsize % worklen;
-	    if (align != 0)
-		oflwsize += (worklen - align);
+	    opc_agg_align(aopparm2->pst_sym.pst_dataval.db_datatype,
+			aopparm2->pst_sym.pst_dataval.db_length, &oflwsize);
 	    tginfo->opc_tsoffsets[rsno].opc_aggooffset2 = oflwsize;
 	    oflwsize += aopparm2->pst_sym.pst_dataval.db_length;
 	}
-	else tginfo->opc_tsoffsets[rsno].opc_aggooffset2 = -1;
+	else
+	    tginfo->opc_tsoffsets[rsno].opc_aggooffset2 = -1;
 
 	if (agwslen != 0) 
 	    aggbufsz += agwslen;
-	else aggbufsz += aop_resdom->pst_sym.pst_dataval.db_length;
+	else
+	    aggbufsz += aop_resdom->pst_sym.pst_dataval.db_length;
 	if (quelsagg && aop_resdom->pst_sym.pst_dataval.db_datatype > 0)
 	    aggbufsz++;		/* incr for nullind in Quel work field */
 	if (sumf4)
@@ -1665,60 +1459,7 @@ opc_iaggtarg_init(
 	    if (subqry->ops_sqtype != OPS_HFAGG)
 	    {
 		/* For non-hash agg., align the BY cols. */
-		switch (bydt) {
-		  case DB_INT_TYPE:
-		  case DB_FLT_TYPE:
-		  case DB_MNY_TYPE:
-		    worklen = ops[0].opr_len;
-		    break;
-
-		  case -DB_INT_TYPE:
-		  case -DB_FLT_TYPE:
-		  case -DB_MNY_TYPE:
-		    worklen = ops[0].opr_len - 1;
-		    break;
-
-		  case DB_NCHR_TYPE:
-	  	  case DB_NVCHR_TYPE:
-	    	  case -DB_NCHR_TYPE:
-		  case -DB_NVCHR_TYPE:
-		    worklen = sizeof(UCS2);
-		    break;
-
-		  case DB_DTE_TYPE:
-		  case DB_ADTE_TYPE:
-		  case DB_TMWO_TYPE:
-		  case DB_TMW_TYPE:
-		  case DB_TME_TYPE:
-		  case DB_TSWO_TYPE:
-		  case DB_TSW_TYPE:
-		  case DB_TSTMP_TYPE:
-		  case DB_INYM_TYPE:
-		  case DB_INDS_TYPE:
-		  case -DB_DTE_TYPE:
-		  case -DB_ADTE_TYPE:
-		  case -DB_TMWO_TYPE:
-		  case -DB_TMW_TYPE:
-		  case -DB_TME_TYPE:
-		  case -DB_TSWO_TYPE:
-		  case -DB_TSW_TYPE:
-		  case -DB_TSTMP_TYPE:
-		  case -DB_INYM_TYPE:
-		  case -DB_INDS_TYPE:
-		    worklen = sizeof(i4);
-		    break;
-
-		  case DB_PAT_TYPE:
-		  case -DB_PAT_TYPE:
-		    worklen = sizeof(i2);
-		    break;
-		  default:
-		    worklen = 1;
-		    break;
-		}
-
-		align = offset % worklen;
-		if (align != 0) offset += (worklen - align);
+		opc_agg_align(bydt, ops[0].opr_len, &offset);
 	    }
 
 	    ops[0].opr_offset = offset;
@@ -1933,7 +1674,8 @@ opc_iaggtarg_init(
 **	    OLAP aggregates were getting their first datatype mapped to the
 **	    second when DB_ALL_TYPE was in use instead of the values just
 **	    being tested for nulls.
-[@history_template@]...
+**	14-Jul-2010 (kschendel) b123104
+**	    Replace SETTRUE with FI for iitrue().
 */
 static VOID
 opc_maggtarg_main(
@@ -2042,61 +1784,7 @@ opc_maggtarg_main(
 	    ops[0].opr_collID = tginfo->opc_tsoffsets[byvalno].opc_tcollID;
 
 	    /* Align the BY column. */
-	    switch (bydt) {
-	      case DB_INT_TYPE:
-	      case DB_FLT_TYPE:
-	      case DB_MNY_TYPE:
-		worklen = ops[0].opr_len;
-		break;
-
-	      case DB_NCHR_TYPE:
-	      case DB_NVCHR_TYPE:
-	      case -DB_NCHR_TYPE:
-	      case -DB_NVCHR_TYPE:
-		worklen = sizeof(UCS2);
-		break;
-
-	      case -DB_INT_TYPE:
-	      case -DB_FLT_TYPE:
-	      case -DB_MNY_TYPE:
-		worklen = ops[0].opr_len - 1;
-		break;
-
-	      case DB_DTE_TYPE:
-	      case DB_ADTE_TYPE:
-	      case DB_TMWO_TYPE:
-	      case DB_TMW_TYPE:
-	      case DB_TME_TYPE:
-	      case DB_TSWO_TYPE:
-	      case DB_TSW_TYPE:
-	      case DB_TSTMP_TYPE:
-	      case DB_INYM_TYPE:
-	      case DB_INDS_TYPE:
-	      case -DB_DTE_TYPE:
-	      case -DB_ADTE_TYPE:
-	      case -DB_TMWO_TYPE:
-	      case -DB_TMW_TYPE:
-	      case -DB_TME_TYPE:
-	      case -DB_TSWO_TYPE:
-	      case -DB_TSW_TYPE:
-	      case -DB_TSTMP_TYPE:
-	      case -DB_INYM_TYPE:
-	      case -DB_INDS_TYPE:
-		worklen = sizeof(i4);
-		break;
-
-	      case DB_PAT_TYPE:
-	      case -DB_PAT_TYPE:
-		worklen = sizeof(i2);
-		break;
-
-	      default:
-		worklen = 1;
-		break;
-	    }
-
-	    align = offset % worklen;
-	    if (align != 0) offset += (worklen - align);
+	    opc_agg_align(bydt, ops[0].opr_len, &offset);
 	    ops[0].opr_offset = offset;
 	    offset += ops[0].opr_len;
 
@@ -2164,7 +1852,7 @@ opc_maggtarg_main(
 		{
 		    /* Binary OLAP aggregate - prepare 2nd operand, too. */
 		    ops[2].opr_dt = aop_resdom->pst_right->
-				pst_sym.pst_value.pst_s_op.pst_fdesc->adi_dt[0];
+				pst_sym.pst_value.pst_s_op.pst_fdesc->adi_dt[1];
 
 		    if (ops[2].opr_dt == DB_ALL_TYPE)
 		    {
@@ -2344,7 +2032,7 @@ opc_maggtarg_main(
 	** Ideally we would omit this if there were no CASE exprs in the
 	** accumulator part of the CX.
 	*/
-	opc_adinstr(global, cadf, ADE_SETTRUE, ADE_SMAIN, 0, 0, 0);
+	opc_adinstr(global, cadf, ADFI_895_II_TRUE, ADE_SMAIN, 0, 0, 0);
     }
 }
 
@@ -2495,61 +2183,7 @@ opc_faggtarg_finit(
 	    if (subqry->ops_sqtype != OPS_HFAGG)
 	    {
 		/* For non hash aggs., align the BY column. */
-		switch (bydt) {
-		  case DB_INT_TYPE:
-		  case DB_FLT_TYPE:
-		  case DB_MNY_TYPE:
-		    worklen = ops[1].opr_len;
-		    break;
-
-		  case -DB_INT_TYPE:
-		  case -DB_FLT_TYPE:
-		  case -DB_MNY_TYPE:
-		    worklen = ops[1].opr_len - 1;
-		    break;
-
-                  case DB_NCHR_TYPE:
-                  case DB_NVCHR_TYPE:
-                  case -DB_NCHR_TYPE:
-                  case -DB_NVCHR_TYPE:
-                    worklen = sizeof(UCS2);
-                    break;
-
-		  case DB_DTE_TYPE:
-		  case DB_ADTE_TYPE:
-		  case DB_TMWO_TYPE:
-		  case DB_TMW_TYPE:
-		  case DB_TME_TYPE:
-		  case DB_TSWO_TYPE:
-		  case DB_TSW_TYPE:
-		  case DB_TSTMP_TYPE:
-		  case DB_INYM_TYPE:
-		  case DB_INDS_TYPE:
-		  case -DB_DTE_TYPE:
-		  case -DB_ADTE_TYPE:
-		  case -DB_TMWO_TYPE:
-		  case -DB_TMW_TYPE:
-		  case -DB_TME_TYPE:
-		  case -DB_TSWO_TYPE:
-		  case -DB_TSW_TYPE:
-		  case -DB_TSTMP_TYPE:
-		  case -DB_INYM_TYPE:
-		  case -DB_INDS_TYPE:
-		    worklen = sizeof(i4);
-		    break;
-
-		  case DB_PAT_TYPE:
-		  case -DB_PAT_TYPE:
-		    worklen = sizeof(i2);
-		    break;
-
-		  default:
-		    worklen = 1;
-		    break;
-		}
-
-		align = offset % worklen;
-		if (align != 0) offset += (worklen - align);
+		opc_agg_align(bydt, ops[1].opr_len, &offset);
 	    }
 
 	    ops[1].opr_offset = offset;
@@ -3052,3 +2686,121 @@ opc_bycompare(
     ops[1].opr_base = proj_src_base;
     opc_adinstr(global, cadf, ADE_MECOPY, ADE_SMAIN, 2, ops, 0);
 }
+
+/*
+** Name: opc_agg_align - Align aggregate work offset properly
+**
+** Description:
+**
+**	This routine applies a type-specific alignment to a row buffer
+**	offset, supplied by the caller.  We make a tacit assumption
+**	here, that a data item of size N is best addressed on a N-aligned
+**	address boundary.  This is in contrast to the rest of OPC,
+**	which assumes ALIGN_RESTRICT.
+**
+**	I'm not 100% sure that opcagg should be aligning this way at
+**	all;  but given that it does, we might as well do it the
+**	same in every instance, instead of having 8 switch statements
+**	which are all almost the same but not quite.
+**
+** Inputs:
+**	datatype			The type of the item to be aligned
+**	length				Length of the item to be aligned,
+**					including null-indicator if any
+**	offset				i4 * output
+**
+** Outputs:
+**	offset				Aligned to a suitable address boundary
+**
+** Returns nothing.
+**
+** History:
+**	29-Jul-2010 (kschendel) b124149
+**	    Combine 8 different switches which are almost but not quite the
+**	    same, into a common routine.
+*/
+
+static void
+opc_agg_align(DB_DT_ID datatype, i4 length, i4 *offp)
+{
+    i4 align, rem;
+
+    switch (datatype)
+    {
+	case DB_INT_TYPE:
+	case DB_FLT_TYPE:
+	case DB_MNY_TYPE:
+	    align = length;
+	    break;
+
+	case -DB_INT_TYPE:
+	case -DB_FLT_TYPE:
+	case -DB_MNY_TYPE:
+	    align = length-1;
+	    break;
+
+	case DB_TABKEY_TYPE:
+	case DB_LOGKEY_TYPE:
+	case -DB_TABKEY_TYPE:
+	case -DB_LOGKEY_TYPE:
+	    /* Not sure these are even relevant, but go for i8 alignment.
+	    ** ADF isn't going to attempt to address more than that.
+	    */
+	    align = sizeof(i8);
+	    break;
+
+	case DB_VCH_TYPE:
+	case -DB_VCH_TYPE:
+	case DB_VBYTE_TYPE:
+	case -DB_VBYTE_TYPE:
+	case DB_NVCHR_TYPE:
+	case -DB_NVCHR_TYPE:
+	case DB_TXT_TYPE:
+	case -DB_TXT_TYPE:
+	case DB_LTXT_TYPE:
+	case -DB_LTXT_TYPE:
+	    align = DB_CNTSIZE;
+	    break;
+
+	case DB_NCHR_TYPE:
+	case -DB_NCHR_TYPE:
+	    align = sizeof(UCS2);
+	    break;
+
+	case DB_DTE_TYPE:
+	case DB_ADTE_TYPE:
+	case DB_TMWO_TYPE:
+	case DB_TMW_TYPE:
+	case DB_TME_TYPE:
+	case DB_TSWO_TYPE:
+	case DB_TSW_TYPE:
+	case DB_TSTMP_TYPE:
+	case DB_INYM_TYPE:
+	case DB_INDS_TYPE:
+	case -DB_DTE_TYPE:
+	case -DB_ADTE_TYPE:
+	case -DB_TMWO_TYPE:
+	case -DB_TMW_TYPE:
+	case -DB_TME_TYPE:
+	case -DB_TSWO_TYPE:
+	case -DB_TSW_TYPE:
+	case -DB_TSTMP_TYPE:
+	case -DB_INYM_TYPE:
+	case -DB_INDS_TYPE:
+	    /* Largest thing in a date struct is i4 */
+	    align = sizeof(i4);
+	    break;
+
+	case DB_PAT_TYPE:
+	case -DB_PAT_TYPE:
+	    align = sizeof(i2);
+	    break;
+
+	default:
+	    return;		/* No added alignment */
+    }
+    rem = (*offp) % align;
+    if (rem != 0)
+	*offp += (align - rem);
+
+} /* opc_agg_align */

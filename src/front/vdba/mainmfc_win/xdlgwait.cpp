@@ -37,6 +37,19 @@
 **    The loop introduced by change 478230 and the subsequent change 478810
 **    prevented the initialization of the dialog on an event timeout.
 **    Allow the animation dialog to display on event timeout.
+**  11-Jun-2010 (drivi01)
+**    Fix the hang in threading.  The hang was happenning for 3 different reasons:
+**       1. PostMessage was hanging
+**       2. dwWaitResult in DoModal had garbage value b/c it wasn't reset
+**          and was sending the wait dialog into infinite loop.
+**       3. WaitForSingleObject was hanging in OnExecuteTask when thread was 
+**          already dead.
+**       Each of the above situation was rectified with the following:
+**       1. Post Message was replaced with SendNotifyMessage
+**       2. dwWaitResult is initialized to 0 after the main thread returns
+**          from CDialog::DoModal so that while loop doesn't become infinite.
+**       3. Check that the thread is still alive when calling 
+**          WaitForSingleObject in OnExecuteTask.
 **/
 
 #include "stdafx.h"
@@ -87,6 +100,7 @@ UINT CxDlgWait::ThreadProcControlS1 (LPVOID pParam)
 	int nResult = 0;
 	TCHAR tchszRetern [] = {0x0D, 0x0A, 0x0};
 	DWORD dwWaitResult;
+
 	dwWaitResult = WaitForSingleObject (m_hMutexV1, 100L);
 	switch (dwWaitResult)
 	{
@@ -124,9 +138,9 @@ UINT CxDlgWait::ThreadProcControlS1 (LPVOID pParam)
 	}
 
 	if (bCanExit)
-		::PostMessage (m_hWnd, WM_EXECUTE_TASK, (WPARAM)0, (LPARAM)IDOK);
+		::SendNotifyMessage(m_hWnd, WM_EXECUTE_TASK, (WPARAM)0, (LPARAM)IDOK);
 	else
-		::PostMessage (m_hWnd, WM_EXECUTE_TASK, (WPARAM)0, (LPARAM)IDCANCEL);
+		::SendNotifyMessage(m_hWnd, WM_EXECUTE_TASK, (WPARAM)0, (LPARAM)IDCANCEL);
 
 	return nResult;
 }
@@ -280,15 +294,15 @@ CxDlgWait::CxDlgWait(LPCTSTR lpszCaption, CWnd* pParent)
 	Init();
 }
 
-int CxDlgWait::DoModal()
+INT_PTR CxDlgWait::DoModal()
 {
-    int nAnswer = IDCANCEL;
+    INT_PTR nAnswer = IDCANCEL;
     BOOL bCallBase = FALSE;
     BOOL waitretry = FALSE;
     BOOL callModal = TRUE;
     DWORD dwWaitResult;
-    
-    theApp.SetInterruptType (INTERRUPT_NOT_ALLOWED);
+
+	theApp.SetInterruptType (INTERRUPT_NOT_ALLOWED);
     if (m_pExecParam && m_pExecParam->IsExecuteImmediately())
     {
         bCallBase = TRUE;
@@ -302,7 +316,7 @@ int CxDlgWait::DoModal()
         // Execute the Thread:
         m_pThread1 = AfxBeginThread((AFX_THREADPROC)IFThreadControlS1, this, THREAD_PRIORITY_BELOW_NORMAL);
         do
-        {
+        {	
             dwWaitResult = WaitForSingleObject (m_pThread1->m_hThread,
                 theApp.DlgWaitGetDelayExecution());
             switch (dwWaitResult)
@@ -335,7 +349,7 @@ int CxDlgWait::DoModal()
                 ** Either the query is taking a long time or is blocked.
                 ** Wait for the thread to complete.  There is nothing else for
                 ** it at this point, except maybe prevent a forever loop.
-                */
+                */						
             default:
                 /*
                 ** An unexpected return code.
@@ -349,6 +363,8 @@ int CxDlgWait::DoModal()
                     */
                     nAnswer = CDialog::DoModal();
                     callModal = FALSE;
+                    waitretry = FALSE;
+                    dwWaitResult = 0;
                 }
                 /*
                 ** waitretry value should be FALSE, ensure that it is 
@@ -584,12 +600,15 @@ void CxDlgWait::OnDestroy()
 LONG CxDlgWait::OnExecuteTask (WPARAM wParam, LPARAM lParam)
 {
 	LPCTSTR lpszText = NULL;
+	DWORD ret;
+
 	switch ((int)wParam)
 	{
 	case 0:
 		//
 		// Wait for the termination of the thread T1:
-		WaitForSingleObject (m_pThread1->m_hThread, INFINITE);
+		if (GetExitCodeThread(m_pThread1->m_hThread, &ret) && ret == STILL_ACTIVE)
+			WaitForSingleObject (m_pThread1->m_hThread, INFINITE);
 		EndDialog ((int)lParam);
 		break;
 	case 1:

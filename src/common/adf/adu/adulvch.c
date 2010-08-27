@@ -122,6 +122,9 @@ adu_getseg(ADF_CB        *scb,
 **	    but now just calls the extended form adu_lo_setup_workspace.
 **      27-Mar-2009 (hanal04) Bug 121857
 **          Correct xDEBUG code to use dv_pos. rdv is undeclared.
+**	04-Jun-2010 (kiria01) b123879 i144946
+**	    Don't return unnecessary errors for i8 values that are outside of
+**	    i4 range when later logic would have adjusted the parameter anyway.
 **/
 
 /*{
@@ -1063,7 +1066,6 @@ adu_7lvch_left(ADF_CB        *scb,
     ADP_PERIPHERAL         *out_cpn = (ADP_PERIPHERAL *) dv_out->db_data;
     ADP_LO_WKSP            *work = (ADP_LO_WKSP *) dv_work->db_data;
     ADP_POP_CB             pop_cb;
-    i8			   i8temp;
 
 
     for (;;)
@@ -1097,18 +1099,19 @@ adu_7lvch_left(ADF_CB        *scb,
 			work->adw_adc.adc_longs[ADW_L_LRCOUNT] = 0;
 		    break;
 		case 8:
-		    i8temp  = *(i8 *)dv_count->db_data;
+		{
+		    i8 i8temp  = *(i8 *)dv_count->db_data;
 
 		    /* adc_longs[] is an array of i4s so limit to i4 values as before */
-		    if ( i8temp > MAXI4 || i8temp < MINI4LL )
-			return (adu_error(scb, E_AD9998_INTERNAL_ERROR, 2, 0, "lvch_left count overflow"));
-
-		    if ( i8temp < 0 )
+		    if ( i8temp > MAXI4 )
+			work->adw_adc.adc_longs[ADW_L_LRCOUNT] = MAXI4;
+		    else if ( i8temp < 0 )
 			work->adw_adc.adc_longs[ADW_L_LRCOUNT] = 0;
 		    else
 			work->adw_adc.adc_longs[ADW_L_LRCOUNT] = (i4) i8temp;
 
 		    break;
+		}
 		default:
 		    return (adu_error(scb, E_AD9998_INTERNAL_ERROR, 2, 0, "lvch_left count length"));
 	    }
@@ -1379,7 +1382,6 @@ adu_9lvch_right(ADF_CB        *scb,
     ADP_LO_WKSP            *work = (ADP_LO_WKSP *) dv_work->db_data;
     ADP_POP_CB		   *inpop;
     i4                count;
-    i8                i8temp;
 
     for (;;)
     {
@@ -1403,14 +1405,18 @@ adu_9lvch_right(ADF_CB        *scb,
 		    count =  *(i4 *) dv_count->db_data;
 		    break;
 		case 8:
-		    i8temp  = *(i8 *)dv_count->db_data;
+		{
+		    i8 i8temp  = *(i8 *)dv_count->db_data;
 
 		    /* per_length1 field is u_i4 so limit to i4 values as before */
-		    if ( i8temp > MAXI4 || i8temp < MINI4LL )
-			return (adu_error(scb, E_AD9998_INTERNAL_ERROR, 2, 0, "lvch_right count overflow"));
-
-		    count = (i4) i8temp;
+		    if (i8temp > MAXI4)
+			count = MAXI4;
+		    else if (i8temp < MINI4LL)
+			count =  MINI4;
+		    else
+			count = (i4) i8temp;
 		    break;
+		}
 		default:
 		    return (adu_error(scb, E_AD9998_INTERNAL_ERROR, 2, 0, "lvch_right count length"));
 	    }
@@ -1967,7 +1973,6 @@ adu_14lvch_substrlen(ADF_CB        *scb,
     i4			per_length1;
     i4			count;
     ADP_POP_CB		*inpop;
-    i8			i8temp;
 
     for (;;)
     {
@@ -1984,13 +1989,18 @@ adu_14lvch_substrlen(ADF_CB        *scb,
 		start_pos =  *(i4 *) dv_pos->db_data;
 		break;
 	    case 8:
-		i8temp  = *(i8 *)dv_pos->db_data;
+	    {
+		i8 i8temp  = *(i8 *)dv_pos->db_data;
 
 		/* limit to i4 values */
-		if ( i8temp > MAXI4 || i8temp < MINI4LL )
-		    return (adu_error(scb, E_AD9998_INTERNAL_ERROR, 2, 0, "lvch_substr start overflow"));
-		start_pos = (i4) i8temp;
+		if (i8temp > MAXI4)
+		    start_pos = MAXI4;
+		else if (i8temp < MINI4LL )
+		    start_pos = MINI4LL;
+		else
+		    start_pos = (i4)i8temp;
 		break;
+	    }
 	    default:
 		return (adu_error(scb, 
 			E_AD9998_INTERNAL_ERROR, 2, 0, "lvch_substr start length"));
@@ -2017,13 +2027,18 @@ adu_14lvch_substrlen(ADF_CB        *scb,
 		count = *(i4 *) dv_count->db_data;
 		break;
 	    case 8:
-		i8temp  = *(i8 *)dv_count->db_data;
+	    {
+		i8 i8temp  = *(i8 *)dv_count->db_data;
 
 		/* limit to i4 values */
-		if ( i8temp > MAXI4 || i8temp < MINI4LL )
-		    return (adu_error(scb, E_AD9998_INTERNAL_ERROR, 2, 0, "lvch_substr for overflow"));
-		count = (i4) i8temp;
+		if (i8temp > MAXI4)
+		    count = MAXI4;
+		else if (i8temp < MINI4LL)
+		    count = MINI4;
+		else
+		    count = (i4) i8temp;
 		break;
+	    }
 	    default:
 		return (adu_error(scb, 
 			E_AD9998_INTERNAL_ERROR, 2, 0, "lvch_substr for length"));
@@ -3118,7 +3133,7 @@ adu_getseg(ADF_CB        *scb,
 
     if (segno && pop_cb->pop_segno1 != segno)
     {
-	pop_cb->pop_error.err_code == E_AD7001_ADP_NONEXT;
+	pop_cb->pop_error.err_code = E_AD7001_ADP_NONEXT;
 	status = E_DB_ERROR;
     }
 
@@ -3342,6 +3357,9 @@ DB_DATA_VALUE	   *locator_dv)
 ** History:
 **	19-May-2009 (kiria01) SIR121788
 **         Created.
+**      18-Aug-2010 (hanal04) Bug 124271
+**         Correct setting of shd_l1_check. UTF-8 NVCH to VCH shows
+**         the old code was wrong.
 */
 
 /*
@@ -3394,16 +3412,7 @@ adu_long_coerce_slave(ADF_CB	    *scb,
     {
 	/* Size ok */
 	if (dv_out->db_datatype == DB_VCH_TYPE)
-	{
-	    register char *e = p + size;
-	    register i4 l;
-	    do
-	    {
-		l = CMbytecnt(p);
-		p += l;
-		work->adw_shared.shd_l1_check++;
-	    } while (p < e);
-	}
+            work->adw_shared.shd_l1_check += size;
 	else
 	    work->adw_shared.shd_l1_check += size / ctx->multiplier;
 	work->adw_shared.shd_exp_action = ADW_CONTINUE;

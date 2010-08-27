@@ -73,6 +73,8 @@
 **	    must be exported as REFERENCE_IN_DLL.
 **	12-Oct-2008 (kiria01) SIR121012
 **	    Added MO hooks for PSF.
+**	11-Jun-2010 (kiria01) b123908
+**	    Init ulm_streamid_p for ulm_openstream to fix potential segvs.
 [@history_template@]...
 **/
 
@@ -191,6 +193,8 @@ GLOBALREF	PSF_SERVBLK	*Psf_srvblk;
 **          Added server_class so SC930 can output it
 **	19-May-2010 (kiria01) b123766
 **	    Set cardinality check flag into server block
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Pass create-compression to server block
 */
 DB_STATUS
 psq_startup(
@@ -201,7 +205,6 @@ psq_startup(
     RDF_CCB		rdf_cb;
     DB_STATUS		status;
     SIZE_TYPE		memleft;
-
 
     /* Start out with no error */
     psq_cb->psq_error.err_code = E_PS0000_OK;
@@ -259,6 +262,8 @@ psq_startup(
 	    &psq_cb->psq_error, 0);
 	return (status);
     }
+    ulm_rcb.ulm_streamid_p = NULL;
+    ulm_rcb.ulm_flags = ULM_SHARED_STREAM;
     if ((status = ulm_openstream(&ulm_rcb)) != E_DB_OK)
     {
 	if (ulm_rcb.ulm_error.err_code == E_UL0005_NOMEM)
@@ -348,6 +353,7 @@ psq_startup(
 				    : 0;
 
     Psf_srvblk->psf_vch_prec = psq_cb->psq_vch_prec;
+    Psf_srvblk->psf_create_compression = psq_cb->psq_create_compression;
     /*
     ** Return the size needed for the session control block.
     */

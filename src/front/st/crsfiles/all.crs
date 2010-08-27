@@ -277,6 +277,8 @@
 --#	    SIR 123622
 --#	    Add default value for history_recall for non-unix platforms
 --#	    and correct valid values for UNIX
+--#	25-Jun-2010 (frima01) BUG 123622
+--#	    Replace wrong comment symbol from last change.
 --#
 --#
 -- configuration system preferences
@@ -761,7 +763,7 @@
 (PROG4PRFX).*.config.svr_slots:         32, MIN = 32, MAX = 128;
 #endif /* UNIX */
 
-# Terminal monitor config
+-- Terminal monitor config
 # ifdef UNIX
 (PROG4PRFX).*.tm.history_recall:	"true", VALID = { "true", "false" } ;
 # else

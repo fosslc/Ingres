@@ -1059,6 +1059,9 @@ NO_OPTIM=dr6_us5
 **          as all TCB_CONCUR now have TCB2_PHYSLOCK_CONCUR as well
 **      14-May-2010 (stial01)
 **          Alloc/maintain exact size of column names (iirelation.relattnametot)
+**      09-Jun-2010 (stial01) (B123906)
+**          init_bt_si_tcb() currently, range entries same as leaf entries
+**          even if the index has non-key columns
 */
 
 GLOBALREF	DMC_CRYPT	*Dmc_crypt;
@@ -1608,6 +1611,12 @@ static READONLY struct
 **	13-Apr-2010 (kschendel) SIR 123485
 **	    Accept "no coupon" access modes;  for ordinary read/write with
 **	    LOB's in the table, find or create BQCB, save in RCB.
+**	27-Jul-2010 (toumi01) BUG 124133
+**	    Store shm encryption keys by dbid/relid, not just relid! Doh!
+**	04-Aug-2010 (miket) SIR 122403
+**	    Change encryption activation terminology from
+**	    enabled/disabled to unlock/locked.
+**	    Change rcb_enckey_slot base from 0 to 1 for sanity checking.
 */
 DB_STATUS
 dm2t_open(
@@ -2788,7 +2797,7 @@ DB_ERROR            *dberr)
 
 	/* If this is an encrypted table, locate its key in Dmc_crypt and
 	** save the slot number in the RCB. Will not find it if encryption
-	** is not enabled yet. Indices inherit the encryption of the parent.
+	** is not unlocked yet. Indices inherit the encryption of the parent.
 	*/
 	r->rcb_enckey_slot = 0;
 	if ( (Dmc_crypt != NULL) &&
@@ -2802,9 +2811,10 @@ DB_ERROR            *dberr)
 	    for ( cp = (DMC_CRYPT_KEY *)((PTR)Dmc_crypt + sizeof(DMC_CRYPT)),
 			i = 0 ; i < Dmc_crypt->seg_active ; cp++, i++ )
 	    {
-		if ( cp->db_tab_base == tcb->tcb_rel.reltid.db_tab_base )
+		if ( cp->db_id == dcb->dcb_id &&
+		     cp->db_tab_base == tcb->tcb_rel.reltid.db_tab_base )
 		{
-		    r->rcb_enckey_slot = i;
+		    r->rcb_enckey_slot = i+1;	/* slot is 1-based */
 		    break;
 		}
 	    }
@@ -12134,6 +12144,10 @@ copy_from_master(DMP_TCB *tcb, DMP_TCB *master_tcb)
 **	    Set flag for btree-leaf-uses-overflow-for-duplicates.
 **	27-May-2010 (gupsh01) BUG 123823
 **	    Fix error handling for error E_DM0075_BAD_ATTRIBUTE_ENTRY. 
+**	09-aug-2010 (maspa05) b123189, b123960
+**	    Use dcb_status of DCB_S_RODB to check if database is readonly i.e.
+**          always only has one location. This distinguishes it from a database
+**          opened in read-only mode.
 */
 
 static DB_STATUS
@@ -12357,7 +12371,7 @@ DB_ERROR	*dberr)
 		    ** A readonly database has only one location. Do not
 		    ** compare logical names, because they will be different.
 		    */
-		    if (dcb->dcb_access_mode == DCB_A_READ)
+		    if (dcb->dcb_status & DCB_S_RODB)
 		    {
 		      STRUCT_ASSIGN_MACRO(dcb->dcb_ext->ext_entry[i].logical, 
 			t->tcb_table_io.tbio_location_array[k].loc_name); 
@@ -15634,6 +15648,8 @@ rep_catalog(
 **          bug 117355. 
 **	11-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Index key compression is always pinned to OLD STANDARD.
 */
 
 DB_STATUS
@@ -15737,7 +15753,7 @@ DB_ERROR	*dberr)
 			  rel->relcmptlvl == DMF_T4_VERSION) )
 			keys = rel->relatts;
 		    key_cmpcontrol_size = dm1c_cmpcontrol_size(
-				TCB_C_STANDARD, keys,
+				TCB_C_STD_OLD, keys,
 				rel->relversion);
 		    key_cmpcontrol_size = DB_ALIGN_MACRO(key_cmpcontrol_size);
 		}
@@ -15784,7 +15800,7 @@ DB_ERROR	*dberr)
 		    {
 			/* Key compression hardwired to "standard" for now */
 			leaf_cmpcontrol_size = dm1c_cmpcontrol_size(
-				TCB_C_STANDARD, rel->relatts,
+				TCB_C_STD_OLD, rel->relatts,
 				rel->relversion);
 			leaf_cmpcontrol_size = DB_ALIGN_MACRO(leaf_cmpcontrol_size);
 		    }
@@ -16107,8 +16123,8 @@ DB_ERROR	*dberr)
 	t->tcb_data_rac.compression_type = rel->relcomptype;
 	if (rel->relstat & TCB_INDEX_COMP)
 	{
-	    t->tcb_index_rac.compression_type = TCB_C_STANDARD;
-	    t->tcb_leaf_rac.compression_type = TCB_C_STANDARD;
+	    t->tcb_index_rac.compression_type = TCB_C_STD_OLD;
+	    t->tcb_leaf_rac.compression_type = TCB_C_STD_OLD;
 	}
 
 	/*
@@ -16531,6 +16547,7 @@ bool	*leaf_setup)
     i4			 i,j, tidp_i;
     i4			 LeafTidSize;
     DB_ATTS              **ixkeys;
+    bool		bld_rng_with_keys_only = FALSE;
 
     LeafTidSize = (t->tcb_rel.relstat2 & TCB2_GLOBAL_INDEX)
 			? sizeof(DM_TID8) : sizeof(DM_TID);
@@ -16679,10 +16696,16 @@ bool	*leaf_setup)
 	}
     }
 
-    /* cmptlvl < old-version means T10 and newer. */
-    if (t->tcb_rel.relcmptlvl == DMF_T8_VERSION
-      || t->tcb_rel.relcmptlvl == DMF_T9_VERSION
-      || t->tcb_rel.relcmptlvl < DMF_T_OLD_VERSION)
+    /*
+    ** cmptlvl < old-version means T10 and newer. 
+    **
+    ** Currently dm1bbuild never builds range entries with keys only
+    ** ... even if the index has non-key columns
+    ** (code for this was submitted and backed out of dm1bbuild.c)
+    */
+    bld_rng_with_keys_only = FALSE;
+    if (bld_rng_with_keys_only && 
+		(t->tcb_rel.relcmptlvl < DMF_T_OLD_VERSION))
     {
 	/* New style (>= v8) secondary LEAF range entries just have keys */
 	t->tcb_rngkeys = t->tcb_ixkeys;

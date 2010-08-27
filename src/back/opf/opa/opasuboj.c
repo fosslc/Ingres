@@ -65,6 +65,8 @@
 **	27-Oct-2009 (kiria01) SIR 121883
 **	    Scalar Subselects - extend scope of opa_subsel_to_oj
 **	    to trawl other parts of the query tree.
+**	21-may-10 (smeke01) b123752
+**	    Change parameter bool newoj to PST_J_ID *pjoinid.
 **/
 
 /* Static variables and other such stuff. */
@@ -88,7 +90,7 @@ opa_notex_transform(
 	PST_QNODE	   *root,
 	PST_QNODE	   *inner_root,
 	bool		   *gotone,
-	bool		   newoj);
+	PST_J_ID	   *pjoinid);
 
 static bool
 opa_notex_analyze(
@@ -109,7 +111,7 @@ opa_notin_transform(
 	PST_QNODE	   *root,
 	PST_QNODE	   *bopp,
 	bool		   *gotone,
-	bool		   newoj);
+	PST_J_ID	   *pjoinid);
 
 static bool
 opa_notin_analyze(
@@ -125,7 +127,7 @@ opa_subsel_search(
 	PST_QNODE	   *outer_root,
 	PST_QNODE	   *root,
 	bool		   *gotone,
-	bool		   newoj);
+	PST_J_ID	   *pjoinid);
 
 static VOID
 opa_process_one_qnode(
@@ -341,8 +343,10 @@ opa_subsel_byheadchk(
 **	root		ptr to root of fragment to transform (either PST_ROOT
 **			or PST_AGHEAD)
 **	inner_root	ptr to root node of subselect 
-**	newoj		flag indicating whether the WHERE clause in this 
-**			subtree is fresh or a repeat because of agg handling
+**	pjoinid		ptr to a PST_J_ID variable that contains the joinid value
+**			to be incremented and used for each new join created. Callers
+**			can reset this to a base value deliberately so that repeated
+**			sections of the tree get the same sequence of join ids.
 **
 ** Outputs:
 **      header		ptr to possibly modifed parse tree
@@ -354,7 +358,8 @@ opa_subsel_byheadchk(
 **	    none
 **
 ** Side Effects:
-**	    none
+**	header->pst_numjoins may be incremented.
+**	    
 **
 ** History:
 **      10-aug-99 (inkdo01)
@@ -372,6 +377,17 @@ opa_subsel_byheadchk(
 **	    up placement of new predicates in parse tree).
 **	16-mar-06 (dougi)
 **	    New parm to accomodate multiple aggs in same containing query.
+**	21-may-10 (smeke01) b123752
+**	    Use new parameter pjoinid passed in by caller as basis for joinids
+**	    for new joins. This enables the caller to make sure that the same
+**	    joinid(s) is/are used for any repeat copies of the AGHEAD WHERE clause.
+**	    Ensure that global header->pst_numjoins is incremented only for the
+**	    first copy.
+**	07-jun-10 (smeke01) b123874
+**	    Ensure that certain global maps are updated only for the first copy of
+**	    the AGHEAD. 'global maps' in this context means the global rangetable
+**	    pst_outer_rel and pst_inner_rel maps, and the table map for the root
+**	    of the query (pointed to by outer_root).
 [@history_template@]...
 */
 static void
@@ -383,7 +399,7 @@ opa_notex_transform(
 	PST_QNODE	   *root,
 	PST_QNODE	   *inner_root,
 	bool		   *gotone,
-	bool		   newoj)
+	PST_J_ID	   *pjoinid)
 
 {
     PST_QNODE	*andp, *varp, *opp;
@@ -456,49 +472,64 @@ opa_notex_transform(
 	    opx_verror(status, E_OP0685_RESOLVE, error.err_data);
     }
 
-    /* Join ID of "on" clause is 1 bigger than parse tree's pst_numjoins.
-    ** Assign it to all connectives and relops in subsel where clause. */
+    /*
+    ** The following 'global maps' are updated the first time through
+    ** for one complete aghead:
+    ** 1. The global rangetable pst_outer_rel and pst_inner_rel maps
+    ** 2. The table map for the root of the query ('outer_root')
+    ** We must make sure that it isn't done again if there are subsequent
+    ** copies of the aghead, as there are when we have more than one
+    ** aggregate operator. We can detect that this is the first time
+    ** through if the joinid passed in to opa_notex_transform(), when
+    ** incremented, is greater than the global joinid variable
+    ** header->pst_numjoins. header->pst_numjoins in this context acts as
+    ** a high water mark for the joinid numbering.
+    */
+    joinid = ++*pjoinid;
 
-    if (newoj)
-	header->pst_numjoins++;
-    joinid = header->pst_numjoins;
+    /* Assign joinid to all connectives and relops in subsel where clause. */
     opa_subsel_joinid(global, inner_root->pst_right, joinid);
     global->ops_goj.opl_mask = OPL_OJFOUND;
     global->ops_goj.opl_glv = joinid;	/* set some global OJ stuff */
 
-    /* Loop over outer_root pst_tvrm, ORing joinid into their range table 
-    ** pst_outer_rel's. Then loop over inner_root pst_tvrm, ORing joinid
-    ** into their range table pst_inner_rel's. */
+    if (joinid > header->pst_numjoins)
+    {
+	header->pst_numjoins = joinid;
 
-    for (varno = -1; (varno = BTnext((i4)varno,
+	/* Loop over outer_root pst_tvrm, ORing joinid into their range table 
+	** pst_outer_rel's. Then loop over inner_root pst_tvrm, ORing joinid
+	** into their range table pst_inner_rel's. */
+
+	for (varno = -1; (varno = BTnext((i4)varno,
 	    (PTR)&outer_root->pst_sym.pst_value.pst_s_root.pst_tvrm, 
 	    BITS_IN(outer_root->pst_sym.pst_value.pst_s_root.pst_tvrm))) 
 	    != -1; )
-    {
-	PST_RNGENTRY	*rngp = header->pst_rangetab[varno];
+	{
+	    PST_RNGENTRY	*rngp = header->pst_rangetab[varno];
 
-	BTset((i4)joinid, (PTR)&rngp->pst_outer_rel.pst_j_mask);
-    }
+	    BTset((i4)joinid, (PTR)&rngp->pst_outer_rel.pst_j_mask);
+	}
 
-    for (varno = -1; (varno = BTnext((i4)varno,
+	for (varno = -1; (varno = BTnext((i4)varno,
 	    (PTR)&inner_root->pst_sym.pst_value.pst_s_root.pst_tvrm, 
 	    BITS_IN(inner_root->pst_sym.pst_value.pst_s_root.pst_tvrm))) 
 	    != -1; )
-    {
-	PST_RNGENTRY	*rngp = header->pst_rangetab[varno];
+	{
+	    PST_RNGENTRY	*rngp = header->pst_rangetab[varno];
 
-	BTset((i4)joinid, (PTR)&rngp->pst_inner_rel.pst_j_mask);
-    }
+	    BTset((i4)joinid, (PTR)&rngp->pst_inner_rel.pst_j_mask);
+	}
 
-    /* Finally, OR the inner_root pst_tvrm into the outer_root pst_tvrm. */
+	/* Finally, OR the inner_root pst_tvrm into the outer_root pst_tvrm. */
 
-    BTor((i4)BITS_IN(outer_root->pst_sym.pst_value.pst_s_root.pst_tvrm),
-	(PTR)&inner_root->pst_sym.pst_value.pst_s_root.pst_tvrm,
-	(PTR)&outer_root->pst_sym.pst_value.pst_s_root.pst_tvrm);
-    outer_root->pst_sym.pst_value.pst_s_root.pst_tvrc = 
-	BTcount((PTR)&outer_root->pst_sym.pst_value.pst_s_root.pst_tvrm,
-	    BITS_IN(outer_root->pst_sym.pst_value.pst_s_root.pst_tvrm));
+	BTor((i4)BITS_IN(outer_root->pst_sym.pst_value.pst_s_root.pst_tvrm),
+	    (PTR)&inner_root->pst_sym.pst_value.pst_s_root.pst_tvrm,
+	    (PTR)&outer_root->pst_sym.pst_value.pst_s_root.pst_tvrm);
+	outer_root->pst_sym.pst_value.pst_s_root.pst_tvrc = 
+	    BTcount((PTR)&outer_root->pst_sym.pst_value.pst_s_root.pst_tvrm,
+		BITS_IN(outer_root->pst_sym.pst_value.pst_s_root.pst_tvrm));
 					/* update from clause cardinality */
+    }
 
     /* And really finally, if we're under an AGHEAD, OR the inner_root 
     ** pst_tvrm into the AGHEAD (root) pst_tvrm. */
@@ -664,8 +695,10 @@ opa_notex_analyze(
 **	root		ptr to root of fragment to transform (either PST_ROOT
 **			or PST_AGHEAD)
 **	bopp		ptr to "=" or "<>" node of subsel compare
-**	newoj		flag indicating whether the WHERE clause in this 
-**			subtree is fresh or a repeat because of agg handling
+**	pjoinid		ptr to a PST_J_ID variable that contains the joinid value
+**			to be incremented and used for each new join created. Callers
+**			can reset this to a base value deliberately so that repeated
+**			sections of the tree get the same sequence of join ids.
 **
 ** Outputs:
 **      header		ptr to possibly modifed parse tree
@@ -677,7 +710,8 @@ opa_notex_analyze(
 **	    none
 **
 ** Side Effects:
-**	    none
+**	header->pst_numjoins may be incremented.
+**	    
 **
 ** History:
 **      12-aug-99 (inkdo01)
@@ -706,6 +740,17 @@ opa_notex_analyze(
 **	    up placement of new predicates in parse tree).
 **	16-mar-06 (dougi)
 **	    New parm to accomodate multiple aggs in same containing query.
+**	21-may-10 (smeke01) b123752
+**	    Use new parameter pjoinid passed in by caller as basis for joinids
+**	    for new joins. This enables the caller to make sure that the same
+**	    joinid(s) is/are used for any repeat copies of the AGHEAD WHERE clause.
+**	    Ensure that global header->pst_numjoins is incremented only for the
+**	    first copy.
+**	01-jul-10 (smeke01) b124009
+**	    Ensure that certain global maps are updated only for the first copy of
+**	    the AGHEAD. 'global maps' in this context means the global rangetable
+**	    pst_outer_rel and pst_inner_rel maps, and the table map for the root
+**	    of the query (pointed to by outer_root).
 [@history_template@]...
 */
 static void
@@ -717,7 +762,7 @@ opa_notin_transform(
 	PST_QNODE	   *root,
 	PST_QNODE	   *bopp,
 	bool		   *gotone,
-	bool		   newoj)
+	PST_J_ID	   *pjoinid)
 
 {
     PST_QNODE	*andp, *varp, *opp;
@@ -813,49 +858,64 @@ opa_notin_transform(
     andp->pst_right->pst_right = inner_root->pst_right;
 					/* subselect where clause */
 
-    /* Join ID of "on" clause is 1 bigger than parse tree's pst_numjoins.
-    ** Assign it to all connectives and relops in subsel where clause. */
+    /*
+    ** The following 'global maps' are updated the first time through
+    ** for one complete aghead:
+    ** 1. The global rangetable pst_outer_rel and pst_inner_rel maps
+    ** 2. The table map for the root of the query ('outer_root')
+    ** We must make sure that it isn't done again if there are subsequent
+    ** copies of the aghead, as there are when we have more than one
+    ** aggregate operator. We can detect that this is the first time
+    ** through if the joinid passed in to opa_notex_transform(), when
+    ** incremented, is greater than the global joinid variable
+    ** header->pst_numjoins. header->pst_numjoins in this context acts as
+    ** a high water mark for the joinid numbering.
+    */
+    joinid = ++*pjoinid;
 
-    if (newoj)
-	header->pst_numjoins++;
-    joinid = header->pst_numjoins;
+    /* Assign it to all connectives and relops in subsel where clause. */
     opa_subsel_joinid(global, andp->pst_right, joinid);
     global->ops_goj.opl_mask = OPL_OJFOUND;
     global->ops_goj.opl_glv = joinid;	/* set some global OJ stuff */
 
-    /* Loop over outer_root pst_tvrm, ORing joinid into their range table 
-    ** pst_outer_rel's. Then loop over inner_root pst_tvrm, ORing joinid
-    ** into their range table pst_inner_rel's. */
+    if (joinid > header->pst_numjoins)
+    {
+	header->pst_numjoins = joinid;
 
-    for (varno = -1; (varno = BTnext((i4)varno,
+	/* Loop over outer_root pst_tvrm, ORing joinid into their range table 
+	** pst_outer_rel's. Then loop over inner_root pst_tvrm, ORing joinid
+	** into their range table pst_inner_rel's. */
+
+	for (varno = -1; (varno = BTnext((i4)varno,
 	    (PTR)&outer_root->pst_sym.pst_value.pst_s_root.pst_tvrm, 
 	    BITS_IN(outer_root->pst_sym.pst_value.pst_s_root.pst_tvrm))) 
 	    != -1; )
-    {
-	PST_RNGENTRY	*rngp = header->pst_rangetab[varno];
+	{
+	    PST_RNGENTRY	*rngp = header->pst_rangetab[varno];
 
-	BTset((i4)joinid, (PTR)&rngp->pst_outer_rel.pst_j_mask);
-    }
+	    BTset((i4)joinid, (PTR)&rngp->pst_outer_rel.pst_j_mask);
+	}
 
-    for (varno = -1; (varno = BTnext((i4)varno,
+	for (varno = -1; (varno = BTnext((i4)varno,
 	    (PTR)&inner_root->pst_sym.pst_value.pst_s_root.pst_tvrm, 
 	    BITS_IN(inner_root->pst_sym.pst_value.pst_s_root.pst_tvrm))) 
 	    != -1; )
-    {
-	PST_RNGENTRY	*rngp = header->pst_rangetab[varno];
+	{
+	    PST_RNGENTRY	*rngp = header->pst_rangetab[varno];
 
-	BTset((i4)joinid, (PTR)&rngp->pst_inner_rel.pst_j_mask);
-    }
+	    BTset((i4)joinid, (PTR)&rngp->pst_inner_rel.pst_j_mask);
+	}
 
-    /* Finally, OR the inner_root pst_tvrm into the outer_root pst_tvrm. */
+	/* Finally, OR the inner_root pst_tvrm into the outer_root pst_tvrm. */
 
-    BTor((i4)BITS_IN(outer_root->pst_sym.pst_value.pst_s_root.pst_tvrm),
-	(PTR)&inner_root->pst_sym.pst_value.pst_s_root.pst_tvrm,
-	(PTR)&outer_root->pst_sym.pst_value.pst_s_root.pst_tvrm);
-    outer_root->pst_sym.pst_value.pst_s_root.pst_tvrc = 
-	BTcount((PTR)&outer_root->pst_sym.pst_value.pst_s_root.pst_tvrm,
+	BTor((i4)BITS_IN(outer_root->pst_sym.pst_value.pst_s_root.pst_tvrm),
+	    (PTR)&inner_root->pst_sym.pst_value.pst_s_root.pst_tvrm,
+	    (PTR)&outer_root->pst_sym.pst_value.pst_s_root.pst_tvrm);
+	outer_root->pst_sym.pst_value.pst_s_root.pst_tvrc = 
+	    BTcount((PTR)&outer_root->pst_sym.pst_value.pst_s_root.pst_tvrm,
 	    BITS_IN(outer_root->pst_sym.pst_value.pst_s_root.pst_tvrm));
 					/* update from clause cardinality */
+    }
 
     /* And really finally, if we're under an AGHEAD, OR the inner_root 
     ** pst_tvrm into the AGHEAD (root) pst_tvrm. */
@@ -978,8 +1038,10 @@ opa_notin_analyze(
 **	outer_root	ptr to root node of outer select 
 **	root		ptr to root of fragment to transform (either PST_ROOT
 **			or PST_AGHEAD)
-**	newoj		flag indicating whether the WHERE clause in this 
-**			subtree is fresh or a repeat because of agg handling
+**	pjoinid		ptr to a PST_J_ID variable that contains the joinid value
+**			to be incremented and used for each new join created. Callers
+**			can reset this to a base value deliberately so that repeated
+**			sections of the tree get the same sequence of join ids.
 **
 ** Outputs:
 **      header		ptr to possibly modifed parse tree
@@ -1014,6 +1076,10 @@ opa_notin_analyze(
 **	    Extend the 18-jan-05 (inkdo01) fix for bug 113772 to the other
 **	    (left) side of the "not in"/"<> ALL" subselect. This change
 **	    fixes bug 120034.
+**	21-may-10 (smeke01) b123752
+**	    Use new parameter joinid passed in by caller as basis for joinids
+**	    for new joins. This enables the caller to make sure that the same
+**	    joinid(s) is/are used for any repeat copies of the AGHEAD WHERE clause.
 [@history_template@]...
 */
 static VOID
@@ -1024,7 +1090,7 @@ opa_subsel_search(
 	PST_QNODE	   *outer_root,
 	PST_QNODE	   *root,
 	bool		   *gotone,
-	bool		   newoj)
+	PST_J_ID	   *pjoinid)
 
 {
     PST_QNODE	*nodep1;
@@ -1059,7 +1125,7 @@ opa_subsel_search(
 		/* Ta, da! Now call analyzer to determine if this one can
 		** be transformed, and do it. */
 		opa_notex_transform(global, nodep, header, outer_root, 
-			root, nodep1, gotone, newoj);
+			root, nodep1, gotone, pjoinid);
 	    }
 	    else if ((nodep1 = (*nodep)->pst_left)->pst_sym.pst_type == PST_BOP
 		&&
@@ -1083,7 +1149,7 @@ opa_subsel_search(
 		** as "... c1 <> all (select ..." which is the same as
 		** "... c1 not in (select ...". */
 		opa_notin_transform(global, nodep, header, outer_root, 
-			root, nodep1, gotone, newoj);
+			root, nodep1, gotone, pjoinid);
 	    }
 	    return;
 
@@ -1107,13 +1173,13 @@ opa_subsel_search(
 		/* This one is "... c1 NOT IN (select ..." which is the same as
 		** "... c1 <> ALL (select ...". */
 		opa_notin_transform(global, nodep, header, outer_root, 
-			root, (*nodep), gotone, newoj);
+			root, (*nodep), gotone, pjoinid);
 	    }
 	    return;
 
 	  case PST_AND:
 	    opa_subsel_search(global, &(*nodep)->pst_left, header, 
-			outer_root, root, &local_gotone, newoj);
+			outer_root, root, &local_gotone, pjoinid);
                                         /* recurse down left */
 
             /* b117988: 
@@ -1128,7 +1194,7 @@ opa_subsel_search(
                {
                   local_gotone = FALSE; 
                   opa_subsel_search(global, &(*nodep)->pst_left, header, 
-                                    outer_root, root, &local_gotone, newoj);
+                                    outer_root, root, &local_gotone, pjoinid);
                }
                while (local_gotone);
             }
@@ -1177,6 +1243,9 @@ opa_subsel_search(
 **	    transform. Only increment the OJ joinid once.
 **	8-Jan-2010 (kschendel) b123126
 **	    121883 change broke stack-empty check, fix.
+**	21-may-10 (smeke01) b123752
+**	    Make sure that the same joinid(s) is/are used for any 
+**	    repeat copies of the AGHEAD WHERE clause.
 */
 VOID
 opa_subsel_to_oj1(
@@ -1186,13 +1255,12 @@ opa_subsel_to_oj1(
 
 {
     PST_QTREE	*header = global->ops_qheader;
-    bool	firstag;
+    PST_J_ID	joinid, save_joinid;
 
-
+    joinid = header->pst_numjoins;
     opa_subsel_search(global, &outer_root->pst_right, header, outer_root, 
-				outer_root, gotone, TRUE);
+				outer_root, gotone, &joinid);
 					/* check where clause for subsels */
-    firstag = TRUE;
 
     /* Aggregate queries hide the where clause under the AGHEAD node
     ** under the RESDOM. This loop checks the RESDOMs for simple
@@ -1202,11 +1270,14 @@ opa_subsel_to_oj1(
     ** subtree (defining the GROUP BY cols) and the same rhs (its
     ** WHERE clause). opa later consolidates these into a single
     ** subquery, but here it causes problems for the OJ transform.
-    ** The solution is to pass a flag indicating whether this is the
-    ** 1st of potentially a series of AGHEAD WHERE clauses, all the
-    ** same. The flag prevents it from generating multiple OJs
-    ** (joinids) when only one is required. */
+    ** We need to make sure that the same joinid(s) is/are used for
+    ** the repeat copies of the AGHEAD WHERE clause. We do this by
+    ** saving the starting value of header->pst_numjoins, and passing
+    ** the value in a write parameter so that it can be incremented
+    ** as required by later functions. These functions also handle
+    ** incrementing header->pst_numjoins. */
 
+    save_joinid = joinid = header->pst_numjoins;
     if (outer_root->pst_sym.pst_value.pst_s_root.pst_qlang == DB_SQL)
     {
 	OPV_STKDECL
@@ -1260,8 +1331,9 @@ opa_subsel_to_oj1(
 		{
 		case PST_AGHEAD:
 		    opa_subsel_search(global, &node->pst_right, 
-				header, outer_root, node, gotone, firstag);
-		    firstag = FALSE;
+				header, outer_root, node, gotone, &joinid);
+		    /* make sure that subsequent copies of the aggregate start at the same join id */
+		    joinid = save_joinid; 
 		    break;
 		case PST_SUBSEL:
 		    opa_subsel_to_oj1(global, node, gotone);

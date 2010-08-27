@@ -1507,6 +1507,10 @@ opc_bsmap(
 **      07-Jun-2010 (horda03) b123878
 **          For nullable decimal transforms, add 1 to the length (for the null
 **          byte).
+**	09-Aug-2010 (gupsh01)
+**	    For VLUP input, if a coercion of a non-unicode type to a unicode
+**	    type, triggers a unorm operation, ensure that we carry out the
+**	    result length calculation for the unorm field. 
 */
 VOID
 opc_adtransform(
@@ -1532,6 +1536,7 @@ opc_adtransform(
     bool	    srcuni = FALSE;
     i4		    orig_dt = 0;
     bool	    resutf8 = FALSE, srcutf8 = FALSE;
+    bool	    unorm_init = FALSE;
 
     /* Get basic data types without nullability, used a lot here */
     abs_srctype = abs(srcop->opr_dt);
@@ -1545,7 +1550,6 @@ opc_adtransform(
 	 abs_srctype == DB_CHR_TYPE ||
 	 abs_srctype == DB_LVCH_TYPE ||
          abs_srctype == DB_LCLOC_TYPE ||
-         abs_srctype == DB_LBLOC_TYPE ||
 	 abs_srctype == DB_LTXT_TYPE))
 	srcutf8 = TRUE;
 
@@ -1556,7 +1560,6 @@ opc_adtransform(
 	 abs_restype == DB_CHR_TYPE ||
 	 abs_restype == DB_LVCH_TYPE ||
          abs_restype == DB_LCLOC_TYPE ||
-         abs_restype == DB_LBLOC_TYPE ||
 	 abs_restype == DB_LTXT_TYPE))
 	resutf8 = TRUE;
 
@@ -1712,11 +1715,42 @@ opc_adtransform(
                    resop->opr_len++;
                 }
 	  }
-       }	
 
-	/* get the temp space to hold the data; */
-	if (resop->opr_len > 0)
+	  /* get the temp space to hold the data; */
+	  if (resop->opr_len > 0)
+	  {
+	    align = resop->opr_len % sizeof (ALIGN_RESTRICT);
+	    if (align != 0)
+		align = sizeof (ALIGN_RESTRICT) - align;
+	    global->ops_cstate.opc_temprow->opc_olen += resop->opr_len + align;
+	  }
+
+	  /* For VLUP parameters, if coercing into unicode types, 
+	  ** Make sure that calclen sets the length for the unorm
+	  ** operand as well.
+	  */
+	  if (unorm)
+	  {
+		STRUCT_ASSIGN_MACRO(*resop, uniop); /* init Unicode operand */
+		uniop.opr_base = cadf->opc_row_base[OPC_CTEMP];
+						/* temp result buffer */
+		uniop.opr_offset = global->ops_cstate.opc_temprow->opc_olen;
+
+		/* Update temp buffer offset past Unicode operand. */
+		align = uniop.opr_len % sizeof (ALIGN_RESTRICT);
+		if (align != 0)
+		  align = sizeof (ALIGN_RESTRICT) - align;
+		global->ops_cstate.opc_temprow->opc_olen += uniop.opr_len + align;
+
+        	opc_adcalclen(global, cadf, &fdesc->adi_lenspec, 1, opptrs, 
+			  &uniop, &dataptr );
+
+		unorm_init = TRUE;
+          }
+       }	
+       else if (resop->opr_len > 0)
 	{
+	/* get the temp space to hold the data; */
 	    align = resop->opr_len % sizeof (ALIGN_RESTRICT);
 	    if (align != 0)
 		align = sizeof (ALIGN_RESTRICT) - align;
@@ -1726,7 +1760,7 @@ opc_adtransform(
 
     /* If Unicode result, allocate intermediate result for coercion so that
     ** normalization is done into resop. */
-    if (unorm)
+    if (unorm && !(unorm_init))
     {
 	STRUCT_ASSIGN_MACRO(*resop, uniop);	/* init Unicode operand */
 	uniop.opr_base = cadf->opc_row_base[OPC_CTEMP];
@@ -1742,8 +1776,12 @@ opc_adtransform(
 
     /* compile the code the convert the data; */
     if (unorm)
+    {
+	/* Make sure that uniop is set */
 	STRUCT_ASSIGN_MACRO(uniop, ops[0]);
-    else STRUCT_ASSIGN_MACRO(*resop, ops[0]);
+    }
+    else 
+	STRUCT_ASSIGN_MACRO(*resop, ops[0]);
     STRUCT_ASSIGN_MACRO(*srcop, ops[1]);
 
     /* Check special cases for ints and floats.  (Maybe could add decimal

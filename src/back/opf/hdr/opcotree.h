@@ -554,6 +554,8 @@ typedef struct _OPO_STSTATE
 **	    Add unrestricted join ordering for use by hash join.
 **	30-may-2008 (dougi)
 **	    Added opo_tprocjoin flag for table procedures.
+**	10-Aug-2010 (kschendel) b124218
+**	    Added no-exchange flag to prevent DMF problems with updating.
 */
 typedef struct _OPO_CO
 {
@@ -773,6 +775,10 @@ typedef struct _OPO_CO
     BITFLD	    opo_card_outer:2;	/* Card assrtion for outer */
     BITFLD	    opo_card_inner:2;	/* Card assrtion for inner */
     BITFLD	    opo_is_swapped:1;	/* Flag to track if inner&outer swapped */
+    BITFLD	    opo_no_exch:1;	/* Set if exch is not allowed over this
+					** particular plan fragment (see
+					** opj_exchupd_anal for why)
+					*/
     union 
     {
 	OPD_SCOST       *opo_scost;	/* site cost information 

@@ -1491,6 +1491,8 @@ ade_verlabs(PTR	cxptr,
 **	    for big IN lists.
 **	18-Mar-2010 (kiria01) b123438
 **	    Added SINGLETON aggregate for scalar sub-query support.
+**	14-Jul-2010 (kschendel) b123104
+**	    Settrue/false no longer special cases.
 */
 
 DB_STATUS
@@ -1572,8 +1574,6 @@ i4                 *ade_unaligned)
 	case ADE_PMQUEL:
 	case ADE_NO_PMQUEL:
 	case ADE_PMFLIPFLOP:
-	case ADE_SETTRUE:
-	case ADE_SETFALSE:
 	    if (ade_nops != 0)
 		status = E_AD5502_WRONG_NUM_OPRS;
 	    break;

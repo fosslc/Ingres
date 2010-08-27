@@ -1,5 +1,5 @@
 /*
-**  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+**  Copyright (C) 2005-2010 Ingres Corporation. All Rights Reserved.
 */
 
 /*
@@ -132,6 +132,17 @@
 **    and determine if it's a DBA Tools installation.
 ** 07-May-2008 (drivi01)
 **    Remove Message boxes used for debugging purposes from the code.
+** 18-Aug-2010 (lunbr01)  bug 124216
+**    Remove code that depended on the local server listen addresses
+**    being in the format used for named pipes, and instead use the
+**    code for Unix that doesn't depend on the format of the listen
+**    addresses. This is needed on Windows to support using protocol
+**    "tcp_ip" as the local IPC rather than the default named pipes.
+**    IVM code should not depend on the format of the listen addresses.
+**    "#ifdef MAINWIN" had been used to generate the Unix version of
+**    the code.  Hence, the fix is to keep the MAINWIN code and strip
+**    out the non-MAINWIN code that was used to detect and parse pipe
+**    names.
 */
 
 #include "stdafx.h"
@@ -516,14 +527,12 @@ static void AddEventToList (char * lpstring, CTypedPtrList<CObList, CaLoggedEven
 			// (all others seem to be real instances)
 		}
 		if (bufInstance[0]) {
-#ifdef MAINWIN
-			// under UNIX, remove trailing string such as IIGCC, IIGCB, ... that come after
+			// Remove trailing string such as IIGCC, IIGCB, ... that come after
 			// spaces, and don't belong to the instance name. The server type will be identified
 			// through the preceeding 0x9051D or == 0xC2A10 message information
 			char * pcloc = _tcschr(bufInstance,' ');
 			if (pcloc)
 				*pcloc='\0';
-#endif
 			strcpy(bufText, pc2+1);
 		}
 		else
@@ -590,9 +599,6 @@ static void AddEventToList (char * lpstring, CTypedPtrList<CObList, CaLoggedEven
 	// manage "Finished loading configuration parameters for configuration 'xyz' of server type 'xyz2'.
 	while (!bExtraLineofPrevMessage && (msgclassAndId.lMsgFullID == 0x9051D || msgclassAndId.lMsgFullID == 0xC2A10 
 															|| msgclassAndId.lMsgFullID == 0xC4802)) {
-#ifndef MAINWIN
-		char ClassName[100];
-#endif
 		char ConfigName[100];
 		char CompType[100];
 		char * pc11 = _tcschr(bufText,'\'');
@@ -614,16 +620,6 @@ static void AddEventToList (char * lpstring, CTypedPtrList<CObList, CaLoggedEven
 		if (!pc12)
 			break;
 		fstrncpy(CompType, pc11+1,pc12-pc11);
-#ifndef MAINWIN
-		pc11 = _tcschr(bufInstance,'\\');
-		if (!pc11) 
-			break;
-		strcpy(ClassName,pc11+1);
-		pc11=_tcschr(ClassName,'\\');
-		if (!pc11)
-			break;
-		*pc11='\0';
-#endif
 
 		// if the instance has non standard characteristics, add it to the 
 		// "special instances" list
@@ -647,31 +643,10 @@ static void AddEventToList (char * lpstring, CTypedPtrList<CObList, CaLoggedEven
 		else 
 			break;
 
-#ifdef MAINWIN
-		// under UNIX, put all such servers in the "special list", because there is
+		// Put all such servers in the "special list", because there is
 		// no way otherwise to figure out their server type, the server class not 
-		// being part of the instance name in the general case under UNIX 
+		// being part of the instance name in the general case.
 		BOOL bSpecialInstance = TRUE;
-#else
-		BOOL bSpecialInstance = FALSE;
-		// DBMS, STAR, NET and BRIDGE, JDBC, DASVR can have alternate config names
-		if ( _tcsicmp(ConfigName,GetLocDefConfName()) && // alternate config name
-			 (isvrtype == COMP_TYPE_DBMS || isvrtype == COMP_TYPE_STAR  ||
-			  isvrtype == COMP_TYPE_NET  || isvrtype == COMP_TYPE_BRIDGE ||
-			  isvrtype == COMP_TYPE_JDBC || isvrtype == COMP_TYPE_DASVR
-			 )
-		   )
-		   bSpecialInstance = TRUE;
-		
-		// test non-standard server classes
-		if ( (isvrtype == COMP_TYPE_DBMS         && stricmp(ClassName,"INGRES")) ||// DBMS with serverclass not INGRES
-			 (isvrtype == COMP_TYPE_STAR         && stricmp(ClassName,"STAR"  )) ||// STAR with serverclass not STAR
-			 (isvrtype == COMP_TYPE_JDBC         && stricmp(ClassName,"JDBC"  )) ||// JDBC with serverclass not JDBC
-			 (isvrtype == COMP_TYPE_DASVR        && stricmp(ClassName,"DASVR" )) ||// DASVR with serverclass not DASVR
-			 (isvrtype == COMP_TYPE_INTERNET_COM && stricmp(ClassName,"ICESVR"))   // ICE  with serverclass not ICESVR
-           )
-		   bSpecialInstance = TRUE;
-#endif
 		if (bSpecialInstance) {
 			if ( !_tcsicmp(ConfigName,GetLocDefConfName()))
 			   strcpy(ConfigName,GetLocDefConfName()); // to be consistent with what is seen in the IVM/VCBF branches
@@ -692,13 +667,11 @@ static void AddEventToList (char * lpstring, CTypedPtrList<CObList, CaLoggedEven
 		// after a crash.... if even significant
 			theApp.GetSpecialInstanceInfo().CleanUp();
 			_tcscpy(bufLastClass,_T(""));
-#ifdef MAINWIN
-			// under UNIX, store the name server instance in the "special list", since the server
+			// Store the name server instance in the "special list", since the server
 			// type otherwise cannot be deducted from the instance name in the general case (it is
-			// not part of the instance name under UNIX)
+			// not part of the instance name under anything other than named pipes on Windows)
 			CaParseInstanceInfo *pInstance = new CaParseInstanceInfo(bufInstance,"","",COMP_TYPE_NAME);
 			theApp.GetSpecialInstanceInfo().GetSpecialInstancesList().AddTail(pInstance);
-#endif
 		// TO BE DONE: special management for the "since last name server startup" message filter setting
 	}
 

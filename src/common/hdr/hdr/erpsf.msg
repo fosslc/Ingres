@@ -145,6 +145,8 @@ SQLSTATE_MAPPING_REQUIRED
 **	    Add messages for encryption syntax errors:
 **	    E_PS0C86_ENCRYPT_NOTABLVL, E_PS0C87_ENCRYPT_NOCOLS,
 **	    E_PS0C88_ENCRYPT_NOPASS
+**	1-jul-2010 (stephenb)
+**	    Add E_PS03B4_NO_COPY_CACHE
 */
 
 
@@ -946,6 +948,10 @@ processing an insert-to-copy optimization."
 E_PS03B3_NULL_QUERY_TREE:SS5000B_INTERNAL_ERROR
 "A NULL query tree was passed to the function pst_cpdata.
 Query processing cannot continue."
+E_PS03B4_NO_COPY_CACHE:SS5000B_INTERNAL_ERROR
+"The batched insert to copy optimization has exhausted the
+cache for insert records. Please report this problem to
+your technical support representative."
 E_PS0401_CUR_NOT_FOUND:SS42504_UNKNOWN_CURSOR
 "no such cursor in the parser facility"
 E_PS0402_NONUPDATABLE_COLUMN:SS42000_SYN_OR_ACCESS_ERR

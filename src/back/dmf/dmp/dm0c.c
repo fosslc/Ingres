@@ -973,6 +973,10 @@ DB_ERROR	    *dberr)
 **	7-Mar-2006 (kschendel)
 **	    Above change broke readonly databases, which is a case
 **	    in which the db names do NOT necessarily match.  Fix.
+**	09-aug-2010 (maspa05) b123189, b123960
+**	    Need to distinguish between a database being opened for read-only
+**          access (flags & DM0C_READONLY) and a readonly database where the
+**          cnf file is always in II_DATABASE
 */
 DB_STATUS
 dm0c_open(
@@ -1096,9 +1100,10 @@ DB_ERROR	    *dberr)
 	    }
 	}
 
+
 	for (;;)
 	{
-	    if (flags & DM0C_READONLY)
+	    if (dcb->dcb_status & DCB_S_RODB) 
 	    {
 	    	/* 
 	    	** A readonly database's .cnf file is in the II_DATABASE area.
@@ -1454,13 +1459,23 @@ DB_ERROR	    *dberr)
 	** If this is the first time a readonly database is opened,
 	**   copy certain information from the original .cnf file. 
 	*/
-	if (flags & DM0C_READONLY && desc->dsc_access_mode == DSC_READ
+
+	if (dcb->dcb_status & DCB_S_RODB 
+			&& desc->dsc_access_mode == DSC_READ
 	    && ! desc->dsc_status & DSC_VALID)
 	{
     	    DM0C_CNF		*rdcnf = 0;
 
+	    /* need to do a partial open not as readonlydb so as to get
+	     * the original cnf file info */
+
+	    dcb->dcb_status &= ~DCB_S_RODB ;
+
 	    status = dm0c_open(dcb, DM0C_PARTIAL | DM0C_NOLOCK | DM0C_IO_READ, 
 	    		       lock_list, &rdcnf, dberr);
+
+	    dcb->dcb_status |= DCB_S_RODB ;
+
 	    if (status)
 		break;
 

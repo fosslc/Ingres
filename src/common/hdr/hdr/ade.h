@@ -168,6 +168,9 @@
 **	18-Mar-2010 (kiria01) b123438
 **	    Added ADE_SINGLETON as FINIT support for inline SINGLETON
 **	    aggregate for scalar sub-query support.
+**	14-Jul-2010 (kschendel) b123104
+**	    Delete settrue, setfalse;  will use ii_true and ii_false FI's
+**	    instead.
 **/
 
 /*
@@ -298,8 +301,8 @@
 #define			ADE_NOOP	(-1035) /* NOOP to replace collapsed
 						** MECOPY's (or for whatever
 						** other purpose they suit) */
-#define			ADE_SETTRUE	(-1036)	/* Reset CX result to TRUE */
-#define			ADE_SETFALSE	(-1037)	/* Reset CX result to FALSE */
+/*		notused, was settrue	-1036 */
+/*		notused, was setfalse	-1037 */
 #define			ADE_MECOPY_MANY (-1038)	/* MECOPY, but not the last */
 #define			ADE_COMPAREN	(-1039)	/* Bulk compare operator - true vararg */
 #define			ADE_NCOMPAREN	(-1040)	/* Bulk not compare operator - true vararg */

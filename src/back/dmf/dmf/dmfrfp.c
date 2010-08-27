@@ -808,6 +808,10 @@ NO_OPTIM = dr6_us5
 **          rfp_check_lsn_waiter() Fixed DB_ERROR param to dm2u_load_table
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
+**      09-aug-2010 (maspa05) b123189, b123960
+**          Added parameter to dm0l_opendb
 */
 
 /*
@@ -1659,6 +1663,7 @@ DMP_DCB		    *dcb)
 	rfp.test_dump_err = 0;
 	rfp.test_excp_err = 0;
 	rfp.test_indx_err = 0;
+#ifdef xDEBUG
 	if (MEcmp(dcb->dcb_name.db_db_name, "test_rfp_dmve_error ", 20) == 0)
 	{
 	    char	*env;
@@ -1678,6 +1683,7 @@ DMP_DCB		    *dcb)
 		    rfp.test_indx_err = 1;
 	    }
 	}
+#endif
 
 	/*
 	** Apply dumps if restoring an online backup.
@@ -7660,7 +7666,7 @@ DMP_DCB		*dcb)
 	** log record a failure would lose the database context and the archiver
 	** would not process the journaled undo records.)
 	*/
-	status = dm0l_opendb(dmf_svcb->svcb_lctx_ptr->lctx_lgid, DM0L_JOURNAL,
+	status = dm0l_opendb(dmf_svcb->svcb_lctx_ptr->lctx_lgid, DM0L_JOURNAL,0,
 	    &dcb->dcb_name, &dcb->dcb_db_owner, dcb->dcb_id,
 	    &dcb->dcb_location.physical, dcb->dcb_location.phys_length,
 	    &dcb->dcb_log_id, (LG_LSN *)0, &jsx->jsx_dberr);
@@ -7953,6 +7959,12 @@ DMP_DCB		*dcb)
 **	14-May-2010 (thaju02) Bug 123748
 **	    Perform undo processing for record in which record's lsn 
 **	    is equal to xaction's clr lsn.
+**	01-Jul-2010 (thaju02) Bug 123982
+**	    Back out prior change to address bug 123748; readdress.
+**	    Add specific case for EMINI CLR; process log rec if LTE
+**	    EMINI CLR lsn. 
+**	01-Jul-2010 (thaju02) Bug 123981
+**	    For RFP_TX_ABS_JUMP, change LSN_LT to LSN_LTE.
 */
 static DB_STATUS
 undo_journal_records(
@@ -8044,7 +8056,7 @@ DMVE_CB		*dmve)
 	*/
 	if (tx->tx_status & RFP_TX_ABS_JUMP)
 	{
-	    if (LSN_LT(&record->lsn, &tx->tx_clr_lsn))
+	    if (LSN_LTE(&record->lsn, &tx->tx_clr_lsn))
 		tx->tx_status &= ~RFP_TX_ABS_JUMP;
 	    else
 		continue;
@@ -8052,14 +8064,25 @@ DMVE_CB		*dmve)
 	else if (tx->tx_status & RFP_TX_CLR_JUMP)
 	{
 	    /*
-	    ** If we have found the clr lsn, then turn off the
-	    ** CLR_JUMP flag so that record for this transaction
+	    ** If we have found the compensated record, then turn off the
+	    ** CLR_JUMP flag so that the next record for this transaction
 	    ** will be processed.
 	    */
-	    if (LSN_LTE(&record->lsn, &tx->tx_clr_lsn))
+	    if (LSN_LT(&record->lsn, &tx->tx_clr_lsn))
 		tx->tx_status &= ~RFP_TX_CLR_JUMP;
 	    else
+	    {
+		if (LSN_EQ(&record->lsn, &tx->tx_clr_lsn))
+		    tx->tx_status &= ~RFP_TX_CLR_JUMP;
 		continue;
+	    }
+	}
+	else if (tx->tx_status & RFP_TX_EMINI_JUMP)
+	{
+            if (LSN_LTE(&record->lsn, &tx->tx_clr_lsn))
+                tx->tx_status &= ~RFP_TX_EMINI_JUMP;
+            else
+                continue;
 	}
 
 	if (jsx->jsx_status & JSX_TRACE)
@@ -8077,6 +8100,8 @@ DMVE_CB		*dmve)
 
 	    if (record->type == DM0LABORTSAVE)
 		tx->tx_status |= RFP_TX_ABS_JUMP;
+	    else if (record->type == DM0LEMINI)
+		tx->tx_status |= RFP_TX_EMINI_JUMP;
 	    else
 		tx->tx_status |= RFP_TX_CLR_JUMP;
 
@@ -10837,8 +10862,8 @@ DB_STATUS	    err_status)
     else if (!tblcb && dmve && dmve->dmve_log_rec)
     {
 	/* this must be database recovery - or we would already have tblcb */
-	/* Call dmve_get_tab to extract table information from log record */
-	dmve_get_tab((char *)dmve->dmve_log_rec, &tabid, &tabname, &ownname);
+	/* Call dmve_get_tabinfo to get table information */
+	dmve_get_tabinfo(dmve, &tabid, &tabname, &ownname);
     }
     else
     {
@@ -11014,8 +11039,9 @@ DB_STATUS	    err_status)
     i4		    loc_err;
     char	    line_buffer[132];
     DB_TAB_ID	    tabid, sconcur_id;
-    DB_TAB_NAME	    tabname, sconcur_name;
-    DB_OWN_NAME	    ownname, sconcur_own;
+    char	    *sconcur_name;
+    DB_TAB_NAME	    tabname;
+    DB_OWN_NAME	    ownname;
     i4		    table_error = jsx->jsx_dberr.err_code;
     i4		    local_error;
     bool	    apply, found;
@@ -11049,14 +11075,12 @@ DB_STATUS	    err_status)
     if (tblcb)
     {
 	STRUCT_ASSIGN_MACRO(tblcb->tblcb_table_id, sconcur_id);
-	STRUCT_ASSIGN_MACRO(tblcb->tblcb_table_name, sconcur_name);
-	STRUCT_ASSIGN_MACRO(tblcb->tblcb_table_owner, sconcur_own);
     }
     else if (!tblcb && rec)
     {
 	/* this must be database recovery - or we would already have tblcb */
-	/* Call dmve_get_tab to extract table information from log record */
-	dmve_get_tab((char *)rec, &sconcur_id, &sconcur_name, &sconcur_own);
+	/* Call dmve_get_tabid to extract table information from log record */
+	dmve_get_tabid((PTR)rec, &sconcur_id);
     }
     else
     {
@@ -11066,14 +11090,13 @@ DB_STATUS	    err_status)
     if (rec->type == DM0LREP)
     {
 	rep = (DM0L_REP *)rec;
-	old = &rep->rep_vbuf[rep->rep_tab_size + rep->rep_own_size];
-	new_row_log_info = &rep->rep_vbuf[rep->rep_tab_size +
-		    rep->rep_own_size + rep->rep_odata_len];
+	old = (((char *)rep) + sizeof(DM0L_REP));
+	new_row_log_info = old + rep->rep_odata_len;
     }
     else if (rec->type == DM0LDEL)
     {
 	del = (DM0L_DEL *)rec;
-	old = &del->del_vbuf[del->del_tab_size + del->del_own_size];
+	old = (((char *)del) + sizeof(DM0L_DEL));
     }
     else
     {
@@ -11089,6 +11112,7 @@ DB_STATUS	    err_status)
     if (sconcur_id.db_tab_base == DM_B_RELATION_TAB_ID &&
 			sconcur_id.db_tab_index == 0)
     {
+	sconcur_name = "iirelation";
 	MEcopy(old, sizeof(DMP_RELATION), (PTR)&oldrel);
 	STRUCT_ASSIGN_MACRO(oldrel.reltid, tabid);
 	STRUCT_ASSIGN_MACRO(oldrel.relid, tabname);
@@ -11178,6 +11202,7 @@ DB_STATUS	    err_status)
     else if (sconcur_id.db_tab_base == DM_B_RELATION_TAB_ID && 
 			sconcur_id.db_tab_index == DM_I_RIDX_TAB_ID)
     {
+	sconcur_name = "iirel_idx";
 	MEcopy(old, sizeof(DMP_RINDEX), (PTR)&oldrindx);
 	STRUCT_ASSIGN_MACRO(oldrindx.relname, tabname);
 	STRUCT_ASSIGN_MACRO(oldrindx.relowner, ownname);
@@ -11185,12 +11210,14 @@ DB_STATUS	    err_status)
     else if (sconcur_id.db_tab_base == DM_B_ATTRIBUTE_TAB_ID && 
 			sconcur_id.db_tab_index == 0)
     {
+	sconcur_name = "iiattribute";
 	MEcopy(old, sizeof(DMP_ATTRIBUTE), (PTR)&oldatt);
 	STRUCT_ASSIGN_MACRO(oldatt.attrelid, tabid);
     }
     else if (sconcur_id.db_tab_base == DM_B_INDEX_TAB_ID && 
 			sconcur_id.db_tab_index == 0)
     {
+	sconcur_name = "iiindex";
 	MEcopy(old, sizeof(DMP_INDEX), (PTR)&oldind);	
 	tabid.db_tab_base = oldind.baseid;
 	tabid.db_tab_base = 0; /* associate with base table */
@@ -11198,6 +11225,7 @@ DB_STATUS	    err_status)
     else if (sconcur_id.db_tab_base == DM_B_DEVICE_TAB_ID && 
 			sconcur_id.db_tab_index == 0)
     {
+	sconcur_name = "iidevices";
 	MEcopy(old, sizeof(DMP_DEVICE), (PTR)&olddev);
 	STRUCT_ASSIGN_MACRO(olddev.devreltid, tabid);
     }
@@ -11222,8 +11250,8 @@ DB_STATUS	    err_status)
     }
 
     TRformat(dmf_diag_put_line, 0, line_buffer, sizeof(line_buffer),
-	    "Error during recovery of table %~t for (%~t, %~t)\n",
-	    sizeof(DB_TAB_NAME), sconcur_name.db_tab_name,
+	    "Error during recovery of catalog %s for (%~t, %~t)\n",
+	    sconcur_name,
 	    sizeof(DB_TAB_NAME), tabname.db_tab_name,
 	    sizeof(DB_OWN_NAME), ownname.db_own_name);
 
@@ -11840,8 +11868,7 @@ u_i4	    phase)
 		    TRformat(dmf_diag_put_line, 0, 
 		    line_buffer, sizeof(line_buffer),
 		    "WARNING: Marking %~t inconsistent\n",
-			sizeof(tblcb->tblcb_table_name),
-			tblcb->tblcb_table_name.db_tab_name);
+			sizeof(DB_TAB_NAME), rel_record.relid.db_tab_name);
 		}
 
 
@@ -17165,7 +17192,7 @@ DMP_DCB		    *dcb)
     for (  ; ; )
     {
 	status = dm0l_opendb(dmf_svcb->svcb_lctx_ptr->lctx_lgid,
-	    DM0L_JOURNAL, &dcb->dcb_name, &dcb->dcb_db_owner, dcb->dcb_id,
+	    DM0L_JOURNAL, 0, &dcb->dcb_name, &dcb->dcb_db_owner, dcb->dcb_id,
 	    &dcb->dcb_location.physical, dcb->dcb_location.phys_length,
 	    &dcb->dcb_log_id, (LG_LSN *)0, &jsx->jsx_dberr);
 	if (status)
@@ -17429,7 +17456,7 @@ DMP_DCB		    *dcb)
     }
 
     status = dm0l_opendb(dmf_svcb->svcb_lctx_ptr->lctx_lgid,
-	DM0L_JOURNAL | DM0L_SPECIAL, &dcb->dcb_name, &dcb->dcb_db_owner, dcb->dcb_id,
+	DM0L_JOURNAL | DM0L_SPECIAL, 0, &dcb->dcb_name, &dcb->dcb_db_owner, dcb->dcb_id,
 	&dcb->dcb_location.physical, dcb->dcb_location.phys_length,
 	&dcb->dcb_log_id, &incr_lsn, &jsx->jsx_dberr);
 

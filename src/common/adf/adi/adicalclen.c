@@ -167,6 +167,9 @@
 **	    Need me.h to satisfy gcc 4.3.
 **	12-Mar-2010 (toumi01) SIR 122403
 **	    Added ADI_O1AES for encryption.
+**      24-Jun-2010 (horda03) B123987
+**          For DATE->STRING if ADF_LONG_DATE_STRINGS specified, then return
+**          the longer length.
 **/
 
 /*
@@ -182,6 +185,7 @@
 
 /* Create LENSPEC based on input datatypes */
 static DB_STATUS adi_1len_indirect(ADI_OP_ID          fiopid,
+                                   u_i4               flag,
 				   DB_DATA_VALUE      *dv1,
 				   DB_DATA_VALUE      *dv2,
 				   ADI_LENSPEC        *out_lenspec);
@@ -1097,6 +1101,12 @@ i4                 *adi_rlen;
 **	13-May-2010 (gupsh01) 
 **	    Fixed the minimum length for an nchar/nvarchar data type. This length
 **	    should not be at least sizeof(UCS2) not 1.
+**	4-jun-2010 (stephenb)
+**	    Add new case ADI_LONGER23RES to support nvl2, which uniquely
+**	    examines operands 2 and 3 to decide the return type. (Bug 123880)
+**	9-aug-2010 (stephenb)
+**	    ANSI time/timestamp types also have a precision that needs to be upheld.
+**	    (Bug 124210)
 */
 
 # ifdef ADF_BUILD_WITH_PROTOS
@@ -1214,6 +1224,7 @@ DB_DATA_VALUE      *adi_dvr;
 		break;
 	    case ADI_LEN_INDIRECT:
 		status = adi_1len_indirect( fi_desc->adi_fiopid, 
+                                           adf_scb->adf_misc_flags,
 					   adi_dv[0], adi_dv[1], 
 					   &local_lenspec);
 	    }
@@ -1328,6 +1339,149 @@ DB_DATA_VALUE      *adi_dvr;
 	    rlen = len[1];
 	    break;
 
+	case ADI_LONGER23RES:
+	{
+	    DB_DT_ID	res=abs(adi_dvr->db_datatype);
+	    /* 
+	    ** length is longer of args 2 and 3 taking the 
+	    ** result into account. If any input is date/time and result is not,
+	    ** we may need expansion. This only
+	    ** occurs when two non-intrinsic types do not
+	    ** compare (such as byte and date). See rules
+	    ** in adi_resolve.
+	    */
+	    if (adi_numops < 3 ||
+		    len[1] == ADE_LEN_UNKNOWN || len[2] == ADE_LEN_UNKNOWN)
+	    {
+		rprec = 0;
+		rlen = ADE_LEN_UNKNOWN;
+	    }
+	    else if (res != DB_DTE_TYPE && res != DB_TSWO_TYPE && res != DB_TSTMP_TYPE &&
+		    res != DB_TSW_TYPE && res != DB_ADTE_TYPE && res != DB_TMWO_TYPE &&
+		    res != DB_TMW_TYPE && res != DB_TME_TYPE && res != DB_INYM_TYPE &&
+		    res != DB_INDS_TYPE)
+	    {
+		/* 
+		** result is not a date/time type, if any input is, the result will
+		** be a string which may need expansion according to the input type
+		*/
+		rprec = 0; /* we'll re-set it if necessary */
+		if (abs(adi_dv[1]->db_datatype) == DB_DTE_TYPE || 
+			    abs(adi_dv[2]->db_datatype) == DB_DTE_TYPE)
+		    /* Ingres date */
+		    rlen = ADU_BIGGEST_MACRO(len[1], len[2], AD_1DTE_OUTLENGTH);
+		else if (abs(adi_dv[1]->db_datatype) == DB_TSWO_TYPE ||
+			    abs(adi_dv[2]->db_datatype) == DB_TSWO_TYPE)
+		    /* Timestamp */
+		    rlen = ADU_BIGGEST_MACRO(len[1], len[2], AD_6TSWO_OUTLENGTH);
+		else if (abs(adi_dv[1]->db_datatype) == DB_TSTMP_TYPE ||
+			    abs(adi_dv[2]->db_datatype) == DB_TSTMP_TYPE)
+		    /* Timestamp */
+		    rlen = ADU_BIGGEST_MACRO(len[1], len[2], AD_8TSTMP_OUTLENGTH);
+		else if (abs(adi_dv[1]->db_datatype) == DB_TSW_TYPE ||
+			    abs(adi_dv[2]->db_datatype) == DB_TSW_TYPE)
+		    /* Timestamp */
+		    rlen = ADU_BIGGEST_MACRO(len[1], len[2], AD_7TSW_OUTLENGTH);
+		else if (abs(adi_dv[1]->db_datatype) == DB_ADTE_TYPE ||
+			    abs(adi_dv[2]->db_datatype) == DB_ADTE_TYPE)
+		    /* ANSI Date */
+		    rlen = ADU_BIGGEST_MACRO(len[1], len[2], AD_2ADTE_OUTLENGTH);
+		else if (abs(adi_dv[1]->db_datatype) == DB_TMWO_TYPE ||
+			    abs(adi_dv[2]->db_datatype) == DB_TMWO_TYPE)
+		    /* Time */
+		    rlen = ADU_BIGGEST_MACRO(len[1], len[2], AD_3TMWO_OUTLENGTH);
+		else if (abs(adi_dv[1]->db_datatype) == DB_TME_TYPE ||
+			    abs(adi_dv[2]->db_datatype) == DB_TME_TYPE)
+		    /* Time */
+		    rlen = ADU_BIGGEST_MACRO(len[1], len[2], AD_5TME_OUTLENGTH);
+		else if (abs(adi_dv[1]->db_datatype) == DB_TMW_TYPE ||
+			    abs(adi_dv[2]->db_datatype) == DB_TMW_TYPE)
+		    /* Time */
+		    rlen = ADU_BIGGEST_MACRO(len[1], len[2], AD_4TMW_OUTLENGTH);
+		else if (abs(adi_dv[1]->db_datatype) == DB_INYM_TYPE ||
+			    abs(adi_dv[2]->db_datatype) == DB_INYM_TYPE)
+		    /* Interval Year/Month */
+		    rlen = ADU_BIGGEST_MACRO(len[1], len[2], AD_9INYM_OUTLENGTH);
+		else if (abs(adi_dv[1]->db_datatype) == DB_INDS_TYPE ||
+			    abs(adi_dv[2]->db_datatype) == DB_INDS_TYPE)
+		    /* Interval Day/Sec */
+		    rlen = ADU_BIGGEST_MACRO(len[1], len[2], AD_10INDS_OUTLENGTH);
+		/*
+		** from here down, none of the inputs can be date/time types
+		** and neither is the result
+		*/
+		else if (res == DB_DEC_TYPE)
+		{
+		    /*
+		    ** result is decimal.
+		    ** For blending values involving decimals, Simply
+		    ** maxing the length is not enough. Incompatible
+		    ** decimal types will be taken care of in adi_resolve
+		    ** so we just need to set the length and precision
+		    */
+		    p1 = DB_P_DECODE_MACRO(prec[1]);
+		    s1 = DB_S_DECODE_MACRO(prec[1]);
+		    p2 = DB_P_DECODE_MACRO(prec[2]);
+		    s2 = DB_S_DECODE_MACRO(prec[2]);
+		    rp = min(DB_MAX_DECPREC, max(p1-s1, p2-s2) + max(s1, s2));
+		    rs = max(s1, s2);
+		    rprec = DB_PS_ENCODE_MACRO(rp, rs);
+		    rlen = DB_PREC_TO_LEN_MACRO(rp);
+		}
+		else
+		    /* no dates or decimals involved  just user the longer */
+		    rlen = len[1] > len[2] ? len[1] : len[2];
+	    }
+	    else
+	    {
+		/*
+		** result is a date/time type, set fixed length.
+		*/
+		switch (res)
+		{
+		    case DB_DEC_TYPE:
+		    case DB_DTE_TYPE:
+			/* Ingres date, fixed length */
+			rlen = ADF_DTE_LEN;
+			rprec = 0;
+			break;
+		    case DB_TSWO_TYPE:
+		    case DB_TSTMP_TYPE:
+		    case DB_TSW_TYPE:
+			/* Timestamp, fixed length */
+			rlen = ADF_TSTMP_LEN;
+			rprec = prec[1] > prec[2] ? prec[1] : prec[2];
+			break;
+		    case DB_ADTE_TYPE:
+			/* ANSI date, fixed length */
+			rlen = ADF_ADATE_LEN;
+			rprec = 0;
+			break;
+		    case DB_TMWO_TYPE:
+		    case DB_TME_TYPE:
+		    case DB_TMW_TYPE:
+			/* Time, fixed length */
+			rlen = ADF_TIME_LEN;
+			rprec = prec[1] > prec[2] ? prec[1] : prec[2];
+			break;
+		    case DB_INYM_TYPE:
+			/* Interval Year/Month, fixed length */
+			rlen = ADF_INTYM_LEN;
+			rprec = 0;
+			break;
+		    case DB_INDS_TYPE:
+			/* Interval day/sec, fixed length */
+			rlen = ADF_INTDS_LEN;
+			rprec = prec[1] > prec[2] ? prec[1] : prec[2];
+			break;
+		    default:
+			/* shouldn't get here */
+			return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 
+					2, 0, "bad input type"));
+		}
+	    }
+	    break;
+	}   
 	case ADI_LONGER:
 	    /* Length is longer of the args */
 	    if (len[0] == ADE_LEN_UNKNOWN || len[1] == ADE_LEN_UNKNOWN)
@@ -2444,6 +2598,7 @@ DB_DATA_VALUE      *adi_dvr;
 ** Inputs:
 **      fiopid                          Operator ID for this function 
 **                                      instance.
+**      flag                            adf_cb's adf_misc_flags.
 **      dv1                             Ptr to DB_DATA_VALUE for first input
 **                                      operand.  (Only used as a convenient
 **                                      mechanism for supplying a datatype and
@@ -2507,10 +2662,18 @@ DB_DATA_VALUE      *adi_dvr;
 **	    Correct the NCHAR(NVARCHAR) and NVARCHAR(NCHAR) codes - the
 **	    TC & CT were the wrong way round!
 **	    Also made NVARCHAR(NVARCHAR) use ADI_O1 as it should.
+**      24-Jun-2010 (horda03) B123987
+**          For DATE->STRING if ADF_LONG_DATE_STRINGS specified, then return
+**          the longer length.
+**	10-Aug-2010 (kschendel) b124223
+**	    Add boolean entries to switch statements.
+**	    Notice that most of the to-NVARCHAR entries with fixed lengths
+**	    were not adding the count size, fix.
 */
 static DB_STATUS
 adi_1len_indirect( 
 ADI_OP_ID          fiopid,
+u_i4               flag,
 DB_DATA_VALUE      *dv1,
 DB_DATA_VALUE      *dv2,
 ADI_LENSPEC        *out_lenspec) 
@@ -2522,6 +2685,10 @@ ADI_LENSPEC        *out_lenspec)
       case ADI_VBYTE_OP:
 	switch(abs(dv1->db_datatype))
 	{
+	  case DB_BOO_TYPE:
+	    out_lenspec->adi_lncompute = ADI_FIXED;
+	    out_lenspec->adi_fixedsize = 5 + DB_CNTSIZE;
+	    break;
 	  case DB_CHR_TYPE:
 	  case DB_CHA_TYPE:
 	  case DB_BYTE_TYPE:
@@ -2540,7 +2707,12 @@ ADI_LENSPEC        *out_lenspec)
 	    break;
 	  case DB_DTE_TYPE:
 	    out_lenspec->adi_lncompute = ADI_FIXED;
-	    out_lenspec->adi_fixedsize = AD_1DTE_OUTLENGTH + DB_CNTSIZE;
+            if (flag & ADF_LONG_DATE_STRINGS)
+            {
+	       out_lenspec->adi_fixedsize = AD_11DTE_INTRV_OUTLENGTH + DB_CNTSIZE;
+            }
+            else
+	       out_lenspec->adi_fixedsize = AD_1DTE_OUTLENGTH + DB_CNTSIZE;
 	    break;
           case DB_ADTE_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
@@ -2616,6 +2788,10 @@ ADI_LENSPEC        *out_lenspec)
       case ADI_BYTE_OP:
 	switch(abs(dv1->db_datatype))
 	{
+	  case DB_BOO_TYPE:
+	    out_lenspec->adi_lncompute = ADI_FIXED;
+	    out_lenspec->adi_fixedsize = 5;	/* "FALSE" */
+	    break;
 	  case DB_CHR_TYPE:
 	  case DB_CHA_TYPE:
           case DB_BYTE_TYPE:
@@ -2634,7 +2810,12 @@ ADI_LENSPEC        *out_lenspec)
 	    break;
 	  case DB_DTE_TYPE:
 	    out_lenspec->adi_lncompute = ADI_FIXED;
-	    out_lenspec->adi_fixedsize = AD_1DTE_OUTLENGTH;
+            if (flag & ADF_LONG_DATE_STRINGS)
+            {
+               out_lenspec->adi_fixedsize = AD_11DTE_INTRV_OUTLENGTH;
+            }
+            else
+	       out_lenspec->adi_fixedsize = AD_1DTE_OUTLENGTH;
 	    break;
           case DB_ADTE_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
@@ -2708,6 +2889,10 @@ ADI_LENSPEC        *out_lenspec)
       case ADI_NCHAR_OP:
 	switch(abs(dv1->db_datatype))
 	{
+	  case DB_BOO_TYPE:
+	    out_lenspec->adi_lncompute = ADI_FIXED;
+	    out_lenspec->adi_fixedsize = 5 * sizeof(UCS2);
+	    break;
 	  case DB_CHR_TYPE:
           case DB_CHA_TYPE:
           case DB_BYTE_TYPE:
@@ -2726,7 +2911,12 @@ ADI_LENSPEC        *out_lenspec)
             break;
           case DB_DTE_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = AD_1DTE_OUTLENGTH * sizeof(UCS2);
+            if (flag & ADF_LONG_DATE_STRINGS)
+            {
+               out_lenspec->adi_fixedsize = AD_11DTE_INTRV_OUTLENGTH * sizeof(UCS2);
+            }
+            else
+               out_lenspec->adi_fixedsize = AD_1DTE_OUTLENGTH * sizeof(UCS2);
             break;
           case DB_ADTE_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
@@ -2794,6 +2984,10 @@ ADI_LENSPEC        *out_lenspec)
       case ADI_NVCHAR_OP:
 	switch(abs(dv1->db_datatype))
 	{
+	  case DB_BOO_TYPE:
+	    out_lenspec->adi_lncompute = ADI_FIXED;
+	    out_lenspec->adi_fixedsize = 5 * sizeof(UCS2) + DB_CNTSIZE;
+	    break;
 	  case DB_CHR_TYPE:
           case DB_CHA_TYPE:
           case DB_BYTE_TYPE:
@@ -2812,43 +3006,48 @@ ADI_LENSPEC        *out_lenspec)
             break;
           case DB_DTE_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = AD_1DTE_OUTLENGTH * sizeof(UCS2);
+            if (flag & ADF_LONG_DATE_STRINGS)
+            {
+               out_lenspec->adi_fixedsize = AD_11DTE_INTRV_OUTLENGTH * sizeof(UCS2) + DB_CNTSIZE;
+            }
+            else
+               out_lenspec->adi_fixedsize = AD_1DTE_OUTLENGTH * sizeof(UCS2) + DB_CNTSIZE;
             break;
           case DB_ADTE_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = AD_2ADTE_OUTLENGTH * sizeof(UCS2);
+            out_lenspec->adi_fixedsize = AD_2ADTE_OUTLENGTH * sizeof(UCS2) + DB_CNTSIZE;
             break;
           case DB_TMWO_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = AD_3TMWO_OUTLENGTH * sizeof(UCS2);
+            out_lenspec->adi_fixedsize = AD_3TMWO_OUTLENGTH * sizeof(UCS2) + DB_CNTSIZE;
             break;
           case DB_TMW_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = AD_4TMW_OUTLENGTH * sizeof(UCS2);
+            out_lenspec->adi_fixedsize = AD_4TMW_OUTLENGTH * sizeof(UCS2) + DB_CNTSIZE;
             break;
           case DB_TME_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = AD_5TME_OUTLENGTH * sizeof(UCS2);
+            out_lenspec->adi_fixedsize = AD_5TME_OUTLENGTH * sizeof(UCS2) + DB_CNTSIZE;
             break;
           case DB_TSWO_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = AD_6TSWO_OUTLENGTH * sizeof(UCS2);
+            out_lenspec->adi_fixedsize = AD_6TSWO_OUTLENGTH * sizeof(UCS2) + DB_CNTSIZE;
             break;
           case DB_TSW_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = AD_7TSW_OUTLENGTH * sizeof(UCS2);
+            out_lenspec->adi_fixedsize = AD_7TSW_OUTLENGTH * sizeof(UCS2) + DB_CNTSIZE;
             break;
           case DB_TSTMP_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = AD_8TSTMP_OUTLENGTH * sizeof(UCS2);
+            out_lenspec->adi_fixedsize = AD_8TSTMP_OUTLENGTH * sizeof(UCS2) + DB_CNTSIZE;
             break;
           case DB_INYM_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = AD_9INYM_OUTLENGTH * sizeof(UCS2);
+            out_lenspec->adi_fixedsize = AD_9INYM_OUTLENGTH * sizeof(UCS2) + DB_CNTSIZE;
             break;
           case DB_INDS_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = AD_10INDS_OUTLENGTH * sizeof(UCS2);
+            out_lenspec->adi_fixedsize = AD_10INDS_OUTLENGTH * sizeof(UCS2) + DB_CNTSIZE;
             break;
           case DB_FLT_TYPE:
           case DB_DEC_TYPE:
@@ -2857,15 +3056,15 @@ ADI_LENSPEC        *out_lenspec)
             break;
           case DB_MNY_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = 20 * sizeof(UCS2);
+            out_lenspec->adi_fixedsize = 20 * sizeof(UCS2) + DB_CNTSIZE;
             break;
           case DB_LOGKEY_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = DB_LEN_OBJ_LOGKEY * sizeof(UCS2);
+            out_lenspec->adi_fixedsize = DB_LEN_OBJ_LOGKEY * sizeof(UCS2) + DB_CNTSIZE;
             break;
           case DB_TABKEY_TYPE:
             out_lenspec->adi_lncompute = ADI_FIXED;
-            out_lenspec->adi_fixedsize = DB_LEN_TAB_LOGKEY * sizeof(UCS2);
+            out_lenspec->adi_fixedsize = DB_LEN_TAB_LOGKEY * sizeof(UCS2) + DB_CNTSIZE;
             break;
 	  /* Fix me: add support for BIT TYPE */
 	  case DB_NCHR_TYPE:

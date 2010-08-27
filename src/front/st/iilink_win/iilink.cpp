@@ -47,6 +47,10 @@
 **		- Add additional command to build manifest into iilibudt.dll
 **		  produced by iilink.
 **		- Block this utility if compiler is older or newer than 8.0 or 9.0.
+**  29-Jul-2010 (drivi01)
+**		Visual Studio 2008 remains the default compiler version.
+**		Update the supported compiler version filter to accept
+**      any compiler above version 8.0.
 **		
 **	    
 */
@@ -499,9 +503,10 @@ CompareVersion(char *FileName)
     sscanf((char *)lpValue, "%d.%d.%d", &majver, &minver, &relno);
     free(lpvData);
 
-    /* Check Major & Minor Version Number, should be 8.0 or 9.0 */
-    if (((majver == 8) && (minver == 0)) ||
-	((majver == 9) && (minver == 0))) 
+    /* Check Major Version Number, anything above 8.0 is
+    ** acceptable.
+    */
+    if ((majver >= 8) )
 	return 1;
     else
     {

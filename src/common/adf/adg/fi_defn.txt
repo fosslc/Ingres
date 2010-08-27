@@ -479,6 +479,25 @@
 #           is a string, so these FI have either ADI_F65536_PAR1MATCH or
 #           ADI_F131072_PAR2MATCH flag set, meaning that they will only be
 #           considered if the appropriate parameter is MONEY.
+#	3-jun-2010 (stephenb)
+#		Fix ADFI_1457_NVL2_ANY with correct return type and new
+#		lenspec. (Bug 123880)
+#       15-Jun-2010 (horda03) B123926
+#           Add IFNULL FI for LONG VARCHAR and LONG BYTE.
+#       01-Jul-2010 (horda03) B123234
+#           Increase size of DAY() result to an i4 (to handle days in an interval.
+#	14-Jul-2010 (kschendel) b123104
+#	    Add ii_true, ii_false to solve outer join constant folding bug.
+#	28-Jul-2010 (kiria01) b124142
+#	    Added SINGLECHK.
+#	12-Aug-2010 (kschendel) b124234
+#	    All operators with a LONG result have to be flagged NOTVIRGIN.
+#	    Otherwise in a multi-row situation, DMF (dmpe_move) might release
+#	    the value temp and the next trip thru the CX errors out.
+#	    Asking for NOTVIRGIN is hardly an optimal solution but it will
+#	    have to do, until opc / qef / dmf is taught to do a better job
+#	    of either LOB temps or temp lifetimes or both.
+#
 
 group ADI_COMPARISON
 
@@ -2124,6 +2143,24 @@ group ADI_COMPARISON
             result DB_BOO_TYPE
             operands DB_BOO_TYPE
 
+    operator ADI_IIFALSE_OP
+
+	fi ADFI_894_II_FALSE
+	    description boolean: ii_false()
+	    complement ADFI_895_II_TRUE
+	    lenspec ADI_FIXED DB_BOO_LEN
+	    null_preinst ADE_0CXI_IGNORE
+	    result DB_BOO_TYPE
+
+    operator ADI_IITRUE_OP
+
+	fi ADFI_895_II_TRUE
+	    description boolean: ii_true()
+	    complement ADFI_894_II_FALSE
+	    lenspec ADI_FIXED DB_BOO_LEN
+	    null_preinst ADE_0CXI_IGNORE
+	    result DB_BOO_TYPE
+
 group ADI_OPERATOR
 
     operator ADI_MUL_OP
@@ -2499,7 +2536,7 @@ group ADI_OPERATOR
 
 	fi ADFI_714_LVCH_ADD_LVCH
 	    description lvch  :  lvch + lvch
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (2*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -2525,7 +2562,7 @@ group ADI_OPERATOR
 
 	fi ADFI_729_LBYTE_ADD_LBYTE
 	    description lbyte  :  lbyte + lbyte
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (2*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -4040,7 +4077,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_713_CONCAT_LVCH_LVCH
 	    description lvch  :  concat(lvch,lvch)
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (2*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -4066,7 +4103,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_732_CONCAT_LBYTE_LBYTE
 	    description lbyte  :  concat(lbyte,lbyte)
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (2*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -4774,7 +4811,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_709_LEFT_LVCH_INT
 	    description lvch  :  left(lvch,int)
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (2*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -4800,7 +4837,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_735_LEFT_LBYTE_I
 	    description lbyte  :  left(lbyte,i)
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (2*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -4995,7 +5032,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_712_LOWERCASE_LVCH
 	    description lvch  :  lowercase(lvch)
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (2*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -5021,7 +5058,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1281_LOWERCASE_LNVCHR
 	    description lvch  :  lowercase(long nvarchar)
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (2*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -5214,7 +5251,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_710_RIGHT_LVCH_INT
 	    description lvch  :  right(lvch,int)
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (2*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -5240,7 +5277,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_741_RIGHT_LBYTE_I
 	    description lbyte  :  right(lbyte,i)
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (2*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -5316,7 +5353,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_744_SHIFT_LBYTE_I
 	    description lbyte  :  shift(lbyte,i)
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (2*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -5651,7 +5688,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_711_UPPERCASE_LVCH
 	    description lvch  :  uppercase(lvch)
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (2*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -5677,7 +5714,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1282_UPPERCASE_LNVCHR 
 	    description lvch  :  uppercase(long nvarchar)
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (2*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -5898,6 +5935,34 @@ group ADI_NORM_FUNC
 	    result DB_VCH_TYPE
 	    operands DB_VCH_TYPE DB_VCH_TYPE
 	    routine adu_ifnull
+
+        fi ADFI_1473_IFNULL_LNVCH_LNVCH
+            description lnvchr : ifnull(lnvchr,lnvchr)
+	    flags ADI_F32768_IFNULL|ADI_F32_NOTVIRGIN
+            lenspec ADI_LONGER
+            null_preinst ADE_0CXI_IGNORE
+            result DB_LNVCHR_TYPE
+            operands DB_LNVCHR_TYPE DB_LNVCHR_TYPE
+            routine adu_ifnull
+
+        fi ADFI_1471_IFNULL_LVCH_LVCH
+            description all : ifnull(lvch,lvch)
+	    flags ADI_F32768_IFNULL|ADI_F32_NOTVIRGIN
+            lenspec ADI_LONGER
+            null_preinst ADE_0CXI_IGNORE
+            result DB_LVCH_TYPE
+            operands DB_LVCH_TYPE DB_LVCH_TYPE
+            routine adu_ifnull
+
+        fi ADFI_1472_IFNULL_LBYTE_LBYTE
+            description all : ifnull(lbyte,lbyte)
+	    flags ADI_F32768_IFNULL|ADI_F32_NOTVIRGIN
+            lenspec ADI_LONGER
+            null_preinst ADE_0CXI_IGNORE
+            result DB_LBYTE_TYPE
+            operands DB_LBYTE_TYPE DB_LBYTE_TYPE
+            routine adu_ifnull
+
 
     operator ADI_STRUC_OP
 
@@ -6785,6 +6850,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1088_LVCH_CHAR
 	    description long_varchar  :  long_varchar(char)
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LVCH_TYPE
@@ -6793,6 +6859,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1089_LVCH_C
 	    description long_varchar  :  long_varchar(c)
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LVCH_TYPE
@@ -6801,6 +6868,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1090_LVCH_TEXT
 	    description long_varchar  :  long_varchar(text)
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LVCH_TYPE
@@ -6809,6 +6877,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1091_LVCH_VARCHAR
 	    description long_varchar  :  long_varchar(varchar)
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LVCH_TYPE
@@ -6817,6 +6886,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1092_LVCH_LVCH
 	    description long_varchar  :  long_varchar(long_varchar)
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LVCH_TYPE
@@ -6825,7 +6895,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1399_LVCH_LNVCHR
 	    description long_varchar  :  long_varchar(long_nvarchar)
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (3*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -6835,6 +6905,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1093_LVCH_LTXT
 	    description long_varchar  :  long_varchar(longtext)
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LVCH_TYPE
@@ -6843,6 +6914,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1094_LVCH_LBYTE
 	    description long_varchar  :  long_varchar(lbyte)
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LVCH_TYPE
@@ -6853,6 +6925,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1095_LBYTE_C
 	    description lbyte  : lbyte(c)
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBYTE_TYPE
@@ -6861,6 +6934,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1096_LBYTE_CHAR
 	    description lbyte  :  lbyte(char)
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBYTE_TYPE
@@ -6869,6 +6943,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1097_LBYTE_VARCHAR
 	    description lbyte  :  lbyte(varchar)
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBYTE_TYPE
@@ -6877,6 +6952,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1098_LBYTE_TEXT
 	    description lbyte  :  lbyte(text)
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBYTE_TYPE
@@ -6885,6 +6961,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1099_LBYTE_LONGTEXT
 	    description lbyte  :  lbyte(longtext)
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBYTE_TYPE
@@ -6893,6 +6970,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1100_LBYTE_BYTE
 	    description lbyte  :  lbyte(byte)
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBYTE_TYPE
@@ -6901,6 +6979,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1101_LBYTE_VARBYTE
 	    description lbyte  :  lbyte(varbyte)
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBYTE_TYPE
@@ -6909,6 +6988,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1102_LBYTE_LBYTE
 	    description lbyte  :  lbyte(lbyte)
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBYTE_TYPE
@@ -6917,6 +6997,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1103_LBYTE_LVCH
 	    description lbyte  :  lbyte(lvch)
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBYTE_TYPE
@@ -6925,6 +7006,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1104_LBYTE_NCHAR
 	    description lbyte  :  lbyte(nchar)
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBYTE_TYPE
@@ -6933,6 +7015,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1105_LBYTE_NVCHAR
 	    description lbyte  :  lbyte(nvarchar)
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBYTE_TYPE
@@ -6941,7 +7024,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1416_LBYTE_LNVCHR
 	    description long_varchar  :  lbyte(long_nvarchar)
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (3*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -7290,7 +7373,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1219_SUBSTRING_LVCH_I
 	    description lvch  :  substring(lvch,int)
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (2*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -7300,7 +7383,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1220_SUBSTRING_LBYTE_I
 	    description lbyte  :  substring(lbyte,int)
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (2*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -7310,7 +7393,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1221_SUBSTRING_LNVCHR_I
 	    description lvch  :  substring(lnvchr,int)
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (2*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -7320,7 +7403,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1222_SUBSTRING_LVCH_I_I
 	    description lvch  :  substring(lvch,int,int)
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (2*DB_MAXTUP)+2*sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -7330,7 +7413,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1223_SUBSTRING_LBYTE_I_I
 	    description lbyte  :  substring(lbyte,int,int)
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (2*DB_MAXTUP)+2*sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -7340,7 +7423,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1224_SUBSTRING_LNVCHR_I_I
 	    description lvch  :  substring(lnvchr,int,int)
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (2*DB_MAXTUP)+2*sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -8240,7 +8323,7 @@ group ADI_NORM_FUNC
 	fi ADFI_1252_DAYPART
 	    description i  :  day(date/time)
 	    flags ADI_F16384_CHKVARFI
-	    lenspec ADI_FIXED 2
+	    lenspec ADI_FIXED 4
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_INT_TYPE
 	    operands DB_DTE_TYPE
@@ -8681,7 +8764,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1400_LNVCHR_LVCH
 	    description long_nvarchar  :  long_nvarchar(long_varchar)
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (3*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -8691,7 +8774,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1401_LNVCHR_LBYTE
 	    description long_nvarchar  :  long_nvarchar(long_byte)
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (3*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -8701,6 +8784,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1402_LNVCHR_LNVCHR
 	    description long_nvarchar  :  long_nvarchar(long_nvarchar)
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LNVCHR_TYPE
@@ -8709,6 +8793,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1403_LNVCHR_CHAR
 	    description long_nvarchar  :  long_nvarchar(char)
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LNVCHR_TYPE
@@ -8717,6 +8802,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1404_LNVCHR_C
 	    description long_nvarchar  :  long_nvarchar(c)
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LNVCHR_TYPE
@@ -8725,6 +8811,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1405_LNVCHR_TEXT
 	    description long_nvarchar  :  long_nvarchar(text)
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LNVCHR_TYPE
@@ -8733,6 +8820,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1406_LNVCHR_VARCHAR
 	    description long_nvarchar  :  long_nvarchar(varchar)
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LNVCHR_TYPE
@@ -8741,6 +8829,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_1407_LNVCHR_LTXT
 	    description long_nvarchar  :  long_nvarchar(longtext)
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LNVCHR_TYPE
@@ -8870,9 +8959,9 @@ group ADI_NORM_FUNC
 	fi ADFI_1457_NVL2_ANY
 	    description all  :  nvl2(all,all,all)
 	    flags ADI_F32768_IFNULL
-	    lenspec ADI_LONGER
+	    lenspec ADI_LONGER23RES
 	    null_preinst ADE_0CXI_IGNORE
-	    result DB_CHR_TYPE
+	    result DB_ALL_TYPE
 	    operands DB_ALL_TYPE DB_ALL_TYPE DB_ALL_TYPE
 	    routine adu_nvl2
 	    
@@ -8925,6 +9014,16 @@ group ADI_NORM_FUNC
 	    result DB_VCH_TYPE
 	    operands DB_VCH_TYPE
 	    routine adu_soundex_dm
+
+    operator ADI_SINGLECHK_OP
+
+	fi ADFI_1474_SINGLECHK_ALL
+	    description all : singlechk(all)
+	    flags ADI_F512_RES1STARG
+	    lenspec ADI_O1
+	    null_preinst ADE_0CXI_IGNORE
+	    result DB_ALL_TYPE
+	    operands DB_ALL_TYPE
 
 group ADI_COPY_COERCION
 
@@ -10200,6 +10299,7 @@ group ADI_COERCION
 
 	fi ADFI_620_CHAR_TO_LVCH
 	    description long_varchar  :  char -> long_varchar
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LVCH_TYPE
@@ -10208,6 +10308,7 @@ group ADI_COERCION
 
 	fi ADFI_621_C_TO_LVCH
 	    description long_varchar  :  c -> long_varchar
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LVCH_TYPE
@@ -10216,6 +10317,7 @@ group ADI_COERCION
 
 	fi ADFI_622_TEXT_TO_LVCH
 	    description long_varchar  :  text -> long_varchar
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LVCH_TYPE
@@ -10224,6 +10326,7 @@ group ADI_COERCION
 
 	fi ADFI_623_VARCHAR_TO_LVCH
 	    description long_varchar  :  varchar -> long_varchar
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LVCH_TYPE
@@ -10232,6 +10335,7 @@ group ADI_COERCION
 
 	fi ADFI_624_LVCH_TO_LVCH
 	    description long_varchar  :  long_varchar -> long_varchar
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LVCH_TYPE
@@ -10240,7 +10344,7 @@ group ADI_COERCION
 
 	fi ADFI_1397_LNVCHR_TO_LVCH
 	    description long_varchar  :  long_nvarchar -> long_varchar
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (3*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -10250,6 +10354,7 @@ group ADI_COERCION
 
 	fi ADFI_625_LTXT_TO_LVCH
 	    description long_varchar  :  longtext -> long_varchar
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LVCH_TYPE
@@ -10506,6 +10611,7 @@ group ADI_COERCION
 
 	fi ADFI_672_CHAR_TO_LBYTE
 	    description lbyte  :  char -> lbyte
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBYTE_TYPE
@@ -10514,6 +10620,7 @@ group ADI_COERCION
 
 	fi ADFI_671_VARCHAR_TO_LBYTE
 	    description lbyte  :  varchar -> lbyte
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBYTE_TYPE
@@ -10522,6 +10629,7 @@ group ADI_COERCION
 
 	fi ADFI_670_C_TO_LBYTE
 	    description lbyte  :  c -> lbyte
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBYTE_TYPE
@@ -10530,6 +10638,7 @@ group ADI_COERCION
 
 	fi ADFI_669_TEXT_TO_LBYTE
 	    description lbyte  :  text -> lbyte
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBYTE_TYPE
@@ -10538,6 +10647,7 @@ group ADI_COERCION
 
 	fi ADFI_667_LONGTEXT_TO_LBYTE
 	    description lbyte  :  longtext -> lbyte
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBYTE_TYPE
@@ -10546,6 +10656,7 @@ group ADI_COERCION
 
 	fi ADFI_666_BYTE_TO_LBYTE
 	    description lbyte  :  byte -> lbyte
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBYTE_TYPE
@@ -10554,6 +10665,7 @@ group ADI_COERCION
 
 	fi ADFI_664_VARBYTE_TO_LBYTE
 	    description lbyte  :  varbyte -> lbyte
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBYTE_TYPE
@@ -10562,6 +10674,7 @@ group ADI_COERCION
 
 	fi ADFI_663_LBYTE_TO_LBYTE
 	    description lbyte  :  lbyte -> lbyte
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBYTE_TYPE
@@ -10570,6 +10683,7 @@ group ADI_COERCION
 
 	fi ADFI_782_LBYTE_TO_LVCH
 	    description lvch  :  lbyte -> lvch
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LVCH_TYPE
@@ -10578,6 +10692,7 @@ group ADI_COERCION
 
 	fi ADFI_783_LVCH_TO_LBYTE
 	    description lbyte  :  lvch -> lbyte
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBYTE_TYPE
@@ -10990,6 +11105,7 @@ group ADI_COERCION
 
 	fi ADFI_1064_NCHAR_TO_LBYTE
 	    description lbyte  :  nchar -> lbyte
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBYTE_TYPE
@@ -10998,6 +11114,7 @@ group ADI_COERCION
 
 	fi ADFI_1065_NVCHAR_TO_LBYTE
 	    description lbyte  :  nvarchar -> lbyte
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBYTE_TYPE
@@ -11038,6 +11155,7 @@ group ADI_COERCION
 
 	fi ADFI_1070_LONGTEXT_TO_LONGNVCHAR
 	    description long_nvarchar  :  longtext -> long_nvarchar
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LNVCHR_TYPE
@@ -11054,6 +11172,7 @@ group ADI_COERCION
 
 	fi ADFI_1072_NCHAR_TO_LONGNVCHAR
 	    description long_nvarchar  :  nchar -> long_nvarchar
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LNVCHR_TYPE
@@ -11062,6 +11181,7 @@ group ADI_COERCION
 
 	fi ADFI_1073_NVCHAR_TO_LONGNVCHAR
 	    description long_nvarchar  :  nvarchar -> long_nvarchar
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LNVCHR_TYPE
@@ -11070,6 +11190,7 @@ group ADI_COERCION
 
 	fi ADFI_1075_LNVARCHAR_TO_LNVARCHAR
 	    description long_nvarchar  :  long_nvarchar -> long_nvarchar
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LNVCHR_TYPE
@@ -11078,7 +11199,7 @@ group ADI_COERCION
 
 	fi ADFI_1398_LVCH_TO_LNVCHR
 	    description long_nvarchar  :  long_varchar -> long_nvarchar
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (3*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -11322,6 +11443,7 @@ group ADI_COERCION
 
 	fi ADFI_1198_CHAR_TO_LONGNVCHAR
 	    description long_nvarchar  :  char -> long_nvarchar
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LNVCHR_TYPE
@@ -11330,6 +11452,7 @@ group ADI_COERCION
 
 	fi ADFI_1199_VCHAR_TO_LONGNVCHAR
 	    description long_nvarchar  :  varchar -> long_nvarchar
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LNVCHR_TYPE
@@ -11338,6 +11461,7 @@ group ADI_COERCION
 
 	fi ADFI_1258_LNLOC_TO_LNVCHR
 	    description long nvarchar : lnloc -> lnvchr
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LNVCHR_TYPE
@@ -11346,6 +11470,7 @@ group ADI_COERCION
 
 	fi ADFI_1259_LBLOC_TO_LBYTE
 	    description long byte : lbloc -> lbyte
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBYTE_TYPE
@@ -11354,6 +11479,7 @@ group ADI_COERCION
 
 	fi ADFI_1260_LCLOC_TO_LVCH
 	    description long varchar : lcloc -> lvch
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LVCH_TYPE
@@ -11362,6 +11488,7 @@ group ADI_COERCION
 
 	fi ADFI_1261_LNVCHR_TO_LNLOC
 	    description long nvarchar locator : lnvchr -> lnloc
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED ADP_LOC_PERIPH_SIZE
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LNLOC_TYPE
@@ -11370,6 +11497,7 @@ group ADI_COERCION
 
 	fi ADFI_1262_LBYTE_TO_LBLOC
 	    description long byte locator : lbyte -> lbloc
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED ADP_LOC_PERIPH_SIZE
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBLOC_TYPE
@@ -11378,6 +11506,7 @@ group ADI_COERCION
 
 	fi ADFI_1263_LVCH_TO_LCLOC
 	    description long varchar locator : lvch-> lcloc
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED ADP_LOC_PERIPH_SIZE
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LCLOC_TYPE
@@ -11394,6 +11523,7 @@ group ADI_COERCION
 
 	fi ADFI_1278_NVCHAR_TO_LONGVCHAR 
 	    description long_nvarchar  :  nvarchar -> long_varchar
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LVCH_TYPE
@@ -11402,6 +11532,7 @@ group ADI_COERCION
 
 	fi ADFI_1279_VCHAR_TO_LONGNVCHAR
 	    description long_nvarchar  :  varchar -> long_nvarchar
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LNVCHR_TYPE
@@ -11442,6 +11573,7 @@ group ADI_COERCION
 
 	fi ADFI_1374_VARBYTE_TO_LVCH
 	    description long_varchar  :  varbyte -> long_varchar
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LVCH_TYPE
@@ -11466,6 +11598,7 @@ group ADI_COERCION
 
 	fi ADFI_1408_LCLOC_TO_LBYTE
 	    description long_byte :  long_varchar locator -> lbyte
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LBYTE_TYPE
@@ -11474,7 +11607,7 @@ group ADI_COERCION
 
 	fi ADFI_1409_LCLOC_TO_LNVCHR
 	    description long_nvarchar  :  long_varchar locator -> long_nvarchar
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (3*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -11484,6 +11617,7 @@ group ADI_COERCION
 
 	fi ADFI_1410_LBLOC_TO_LVCH
 	    description long_varchar  :  lbyte locator -> long_varchar
+	    flags ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_LVCH_TYPE
@@ -11492,7 +11626,7 @@ group ADI_COERCION
 
 	fi ADFI_1411_LBLOC_TO_LNVCHR	
 	    description long_nvarchar  :  lbyte locator -> long_nvarchar
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (3*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -11502,7 +11636,7 @@ group ADI_COERCION
 
 	fi ADFI_1412_LNLOC_TO_LBYTE
 	    description lbyte  :  long_nvarchar locator -> lbyte
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (3*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -11512,7 +11646,7 @@ group ADI_COERCION
 
 	fi ADFI_1413_LNLOC_TO_LVCH
 	    description long_varchar  :  long_nvarchar locator -> long_varchar
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (3*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -11522,7 +11656,7 @@ group ADI_COERCION
 
 	fi ADFI_1414_LNVCHR_TO_LBYTE
 	    description lbyte  :  long_nvarchar -> lbyte
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (3*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP
@@ -11532,7 +11666,7 @@ group ADI_COERCION
 
 	fi ADFI_1415_LBYTE_TO_LNVCHR	
 	    description long_nvarchar  :  lbyte -> long_nvarchar
-	    flags ADI_F4_WORKSPACE
+	    flags ADI_F4_WORKSPACE|ADI_F32_NOTVIRGIN
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    workspace (3*DB_MAXTUP)+sizeof(ADP_LO_WKSP)
 	    null_preinst ADE_1CXI_SET_SKIP

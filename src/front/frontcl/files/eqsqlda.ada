@@ -19,8 +19,11 @@
 --              22-apr-1994     - Added datatype code for W4GL objects. (timt)
 --              20-Mar-2002	- Updated IISQ_MAX_COLS to 1024. (toumi01)
 --              18-nov-2009     - Add IISQ_BOO_TYPE. (joea)
+--              29-Jul-2010     - Increase the size of sqlnamec from 34 to 
+--				  258, to match with the IISQD_NAMELEN in  
+--				  IISQLDA. (hweho01) S121123
 --
--- Copyright (c) 2004 Ingres Corporation
+-- Copyright (c) 2004, 2010 Ingres Corporation
 --
 
 with SYSTEM;
@@ -68,7 +71,7 @@ package	ESQLDA is
     type IISQL_NAME is
 	record
 	    sqlnamel: Short_Integer;
-	    sqlnamec: String(1..34);
+	    sqlnamec: String(1..258);
 	end record;
 
     --

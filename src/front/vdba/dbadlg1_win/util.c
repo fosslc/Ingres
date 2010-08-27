@@ -50,6 +50,16 @@
 **     on which are requested.
 **    02-Jun-2010 (drivi01)
 **     Remove hard coded buffer sizes.
+**    20-Aug-2010 (drivi01)
+**     Update function CAListBoxFillTables to take a 3rd parameter.
+**     This parameter will indicate whether the function should
+**     display all tables or just Ingres specific tables.
+**     This function is being used to display tables for many dialogs
+**     such as optimizedb/tables, usermod/tables, create alarms,
+**     auditdb.  In the instances where the operation is not supported
+**     on Ingres VectorWise tables, we want to display only Ingres tables.
+**     However, for commands such as optimizedb, we want to display all
+**     tables.
 ********************************************************************/
 
 #include "dll.h"
@@ -1977,7 +1987,11 @@ BOOL ComboBoxFillTablesFiltered (HWND hwndCtl, LPUCHAR DatabaseName, BOOL bVW)
 	return TRUE;
 }
 
-BOOL CAListBoxFillTables (HWND hwndCtl, LPUCHAR DatabaseName)
+//
+// Last parameter specifies whether to display only Ingres tables
+// or Ingres and Ingres VectorWise tables.
+//
+BOOL CAListBoxFillTables (HWND hwndCtl, LPUCHAR DatabaseName, BOOL bVW)
 {
 	int		hdl, ires, idx;
 	BOOL		bwsystem;
@@ -2013,9 +2027,15 @@ BOOL CAListBoxFillTables (HWND hwndCtl, LPUCHAR DatabaseName)
 	idx = CB_ERR;
 	while (ires == RES_SUCCESS)
 	{
-		// Do not display VectorWise tables b/c this table type
-		// doesn't support this command.
-		if (getint(szExtra+STEPSMALLOBJ+STEPSMALLOBJ) == 0)
+		//If bVW is TRUE then display all tables Ingres and VectorWise
+		// if bVW is FALSE then only Ingres.
+		// Some commands aren't supported for VectorWise tables,
+		// this code path is taken by a lot of dialogs such as
+		// auditDB, usermod which aren't supported for VW tables
+		// for those commands we only need to display Ingres tables.
+		// However, optimizedb dialog needs all tables to be displayed.
+		if ((!bVW && getint(szExtra+STEPSMALLOBJ+STEPSMALLOBJ) == 0)
+			|| bVW)
 			idx = CAListBox_AddString	 (hwndCtl, buf);
 		buffowner = ESL_AllocMem (x_strlen (szOwner) +1);
 		if (!buffowner)
@@ -2031,7 +2051,6 @@ BOOL CAListBoxFillTables (HWND hwndCtl, LPUCHAR DatabaseName)
 	}
 	return TRUE;
 }
-
 
 
 BOOL ComboBoxFillViews (HWND hwndCtl, LPUCHAR DatabaseName)

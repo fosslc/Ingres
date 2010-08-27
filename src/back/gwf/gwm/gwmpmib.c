@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 
@@ -63,6 +63,8 @@
 **	    replace nat and longnat with i4
 **      24-Feb-2004 (kodse01)
 **          Removed gwxit.h inclusion which is not required.
+**	24-Aug-10 (gordy)
+**	    Fixed display of MIB registration bits.
 **/
 
 /* forwards */
@@ -806,6 +808,12 @@ GM_srv_get( i4  offset, i4  size, PTR object, i4  lsbuf, char *sbuf )
 **          created.
 **      23-Apr-1996 (rajus01)
 **          Added GCB (Protocol Bridge) to TRformat.
+**	24-Aug-10 (gordy)
+**	    GCB bit was added in wrong position.  It is defined in a
+**	    part of the MIB mask which was being discarded.  Fixed the
+**	    mask/shift to access all current bits, moved GCB to the
+**	    correct location and added NMSVR (Name Server Registry)
+**	    and GCD bits.
 */
 
 STATUS 
@@ -818,7 +826,7 @@ GM_sflags_get( i4  offset, i4  size, PTR object, i4  lsbuf, char *sbuf )
 
     MEfill( sizeof(buf), 0, buf );
     TRformat(NULL, 0, buf, sizeof(buf), "%v",
-	    "TRAP,INSTALL,ACP,RCP,INGRES,GCC,GCB,GCN", (flags & GCA_RG_MIB_MASK) >> 24 );
+	    "NMSVR,GCB,GCD,UNUSED,TRAP,INSTALL,ACP,RCP,INGRES,GCC,GCN", (flags & GCA_RG_MIB_MASK) >> 20 );
 
     return (MOstrout( MO_VALUE_TRUNCATED, buf, lsbuf, sbuf ));
 }

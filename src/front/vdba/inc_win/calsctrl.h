@@ -17,10 +17,19 @@
 **    Create library ctrltool.lib for more resuable of this control
 ** 19-Dec-2001 (uk$so01)
 **    SIR #106648, Split vdba into the small component ActiveX/COM
+** 24-Jun-2010 (drivi01)
+**    Remove hardcoded column length, use DBOBJECTLEN defined 
+**    in constdef.h which uses DB_MAXNAME from dbms headers.
 **/
 
 #ifndef CALSCTRL_HEADER
 #define CALSCTRL_HEADER
+extern "C"
+{
+#include "constdef.h"
+#include <compat.h>
+#include <iicommon.h>
+}
 
 #define XBITMAP_FOCUS           0
 #define XBITMAP_BITMAP          1
@@ -37,10 +46,10 @@ typedef struct tagSORTPARAMS
 	                   // which member in the ListCtrl's item data to be compared.
 } SORTPARAMS;
 
-#define MAXLSCTRL_HEADERLENGTH 128
+#define MAXLSCTRL_HEADERLENGTH DBOBJECTLEN
 typedef struct tagLSCTRLHEADERPARAMS
 {
-	TCHAR m_tchszHeader [MAXLSCTRL_HEADERLENGTH+1]; // Column's Title
+	TCHAR m_tchszHeader [MAXLSCTRL_HEADERLENGTH]; // Column's Title
 	int   m_cxWidth;                                // Column's width
 	int   m_fmt;                                    // Column's allignment
 	BOOL  m_bUseCheckMark;                          // Column can have a check box.

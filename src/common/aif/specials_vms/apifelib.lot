@@ -40,6 +40,10 @@
 !       21-Aug-2008 (Ralph Loen) Bug 120761
 !           Moved IIapi_getColumnInfo to the bottom of the PROCEDURE
 !           declaration.
+!       21-apr-2010 (joea)
+!           Change various entry points that should not have been present in
+!           the first place to SPAREs, since they have been removed from the
+!           library.
 !
 IDENT=aiflib
 GSMATCH=LEQUAL,126,0
@@ -54,15 +58,15 @@ SYMBOL_VECTOR=(	IIapi_initADF=PROCEDURE,-
 		IIapi_getConnIdHndl=PROCEDURE,-
 		IIapi_getAPILength=PROCEDURE,-
 		IIapi_getGCALength=PROCEDURE,-
-		IIapi_getBLOBLength=PROCEDURE,-
+		SPARE, -	! IIapi_getBLOBLength
 		IIapi_cnvtDescr2GDV=PROCEDURE,-
 		IIapi_cnvtDataValue2GDV=PROCEDURE,-
-		IIapi_cnvtDataValue2GCATuple=PROCEDURE,-
-		IIapi_cnvtBLOB2GCATuple=PROCEDURE,-
+		SPARE, -	! IIapi_cnvtDataValue2GCATuple
+		SPARE, -	! IIapi_cnvtBLOB2GCATuple
 		IIapi_cnvtGDV2Descr=PROCEDURE,-
 		IIapi_cnvtGDV2DataValue=PROCEDURE,-
 		IIapi_loadColumns=PROCEDURE,-
-		IIapi_checkBLOBSegment=PROCEDURE,-
+		SPARE, -	! IIapi_checkBLOBSegment
 		IIapi_setDispatchFlag=PROCEDURE,-
 		IIapi_clearDispatchFlag=PROCEDURE,-
 		IIapi_createErrorHndl=PROCEDURE,-
@@ -72,17 +76,17 @@ SYMBOL_VECTOR=(	IIapi_initADF=PROCEDURE,-
 		IIapi_cleanErrorHndl=PROCEDURE,-
 		IIapi_clearAllErrors=PROCEDURE,-
 		IIapi_errorStatus=PROCEDURE,-
-		IIapi_createGCAError=PROCEDURE,-
-		IIapi_createGCAAttention=PROCEDURE,-
-		IIapi_createGCAClose=PROCEDURE,-
-		IIapi_createGCAFetch=PROCEDURE,-
-		IIapi_createGCAParm=PROCEDURE,-
-		IIapi_createGCAMdassoc=PROCEDURE,-
-		IIapi_createGCAResponse=PROCEDURE,-
-		IIapi_createGCAAck=PROCEDURE,-
-		IIapi_createGCAQuery=PROCEDURE,-
-		IIapi_createGCASecure=PROCEDURE,-
-		IIapi_createGCATuple=PROCEDURE,-
+		SPARE, -	! IIapi_createGCAError
+		SPARE, -	! IIapi_createGCAAttention
+		SPARE, -	! IIapi_createGCAClose
+		SPARE, -	! IIapi_createGCAFetch
+		SPARE, -	! IIapi_createGCAParm
+		SPARE, -	! IIapi_createGCAMdassoc
+		SPARE, -	! IIapi_createGCAResponse
+		SPARE, -	! IIapi_createGCAAck
+		SPARE, -	! IIapi_createGCAQuery
+		SPARE, -	! IIapi_createGCASecure
+		SPARE, -	! IIapi_createGCATuple
 		IIapi_gen2IntSQLState=PROCEDURE,-
 		IIapi_createIdHndl=PROCEDURE,-
 		IIapi_deleteIdHndl=PROCEDURE,-
@@ -95,8 +99,8 @@ SYMBOL_VECTOR=(	IIapi_initADF=PROCEDURE,-
 		IIapi_sndGCA=PROCEDURE,-
 		IIapi_rcvNormalGCA=PROCEDURE,-
 		IIapi_rcvExpediteGCA=PROCEDURE,-
-		IIapi_reserveGCABuffer=PROCEDURE,-
-		IIapi_releaseGCABuffer=PROCEDURE,-
+		SPARE, -	! IIapi_reserveGCABuffer
+		SPARE, -	! IIapi_releaseGCABuffer
 		IIapi_isBLOB=PROCEDURE,-
 		IIapi_initAPI=PROCEDURE,-
 		IIapi_termAPI=PROCEDURE,-

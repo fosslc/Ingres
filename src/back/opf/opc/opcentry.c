@@ -515,6 +515,9 @@ opc_querycomp(
 **
 **	5-may-2007 (dougi)
 **	    Written.
+**	28-Jul-2010 (kschendel) SIR 124104
+**	    Continue the hand-off of compression, so that eventually it can
+**	    end up in the create integrity action header for QEF.
 */
 
 static VOID
@@ -557,6 +560,13 @@ PST_STATEMENT	*stmtp)
      }
 
     if (gotone)
+    {
 	wptr->pst_specific.pst_createIntegrity.pst_createIntegrityFlags
 			|= PST_CONS_TABLE_STRUCT;
+	/* Hand off table compression setting too, which is in turn passed
+	** to QEF via the create integrity action.
+	*/
+	wptr->pst_specific.pst_createIntegrity.pst_compress =
+		stmtp->pst_specific.pst_createTable.pst_compress;
+    }
 }

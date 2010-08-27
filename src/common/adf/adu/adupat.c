@@ -45,6 +45,9 @@
 **          A standard interface is expected by fcn lookup / execute
 **          operations. Force NFC normalization is now achieved by temporarily
 **          updating the adf_uninorm_flag in the ADF_CB.
+**      21-Jun-2010 (horda03) b123926
+**          Because adu_unorm() and adu_utf8_unorm() are also called via 
+**          adu_lo_filter() change parameter order.
 **/
 
 #include <compat.h>
@@ -417,7 +420,7 @@ adu_like_all(
 	    }
 
             adf_scb->adf_uninorm_flag = AD_UNINORM_NFC;
-	    db_stat = adu_unorm(adf_scb, &dv_tmp1, &dv_tmp3);
+	    db_stat = adu_unorm(adf_scb, &dv_tmp3, &dv_tmp1);
             adf_scb->adf_uninorm_flag = saved_uninorm_flag;
 	    MEfree((char *)dv_tmp3.db_data);
 	    if (db_stat)
@@ -479,7 +482,7 @@ adu_like_all(
 		    return db_stat;
 		}
                 adf_scb->adf_uninorm_flag = AD_UNINORM_NFC;
-		db_stat = adu_unorm(adf_scb, &dv_tmp2, &dv_tmp3, 1);
+		db_stat = adu_unorm(adf_scb, &dv_tmp3, &dv_tmp2);
                 adf_scb->adf_uninorm_flag = saved_uninorm_flag;
 		MEfree((char *)dv_tmp3.db_data);
 		if (db_stat)

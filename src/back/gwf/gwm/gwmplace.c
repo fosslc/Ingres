@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 # include <compat.h>
@@ -128,6 +128,8 @@
 **	    Compiler warning fixes.
 **	30-May-2009 (kiria01) SIR 121665
 **	    Update GCA API to LEVEL 5
+**	24-Aug-10 (gordy)
+**	    Skip servers registered with NMSVR mib.
 **/
 
 /* forwards */
@@ -1326,6 +1328,13 @@ GM_zp_connections( GM_PLACE_BLK *place_blk )
 **	    created.
 **	18-Nov-1992 (daveb)
 **	    fix debugging TRdisplay segv.
+**	24-Aug-10 (gordy)
+**	    Skip servers registered with NMSVR mib.  These are 
+**	    Name Servers from other installations registered with 
+**	    the master Name Server and are not a part of the target
+**	    vnode domain.  Also, the local Name Server registers
+**	    with both NMSVR and IINMSVR mib and the NMSVR entry
+**	    can be ignored.
 */
 static STATUS
 GM_query_vnode( GM_PLACE_BLK *vnode_place )
@@ -1365,6 +1374,19 @@ GM_query_vnode( GM_PLACE_BLK *vnode_place )
 
 	while( (reg = (GM_REGISTER_BLK *)SPdeq( &node_tree.root )) != NULL )
 	{
+	    /*
+	    ** Name Servers register in their own domains with the
+	    ** IINMSVR MIB.  They also register with the registry
+	    ** master Name Server using the NMSVR MIB.  A Name Server
+	    ** registered with NMSVR MIB is not a part of the target
+	    ** domain, so skip it.
+	    */ 
+	    if ( reg->reg_flags & GCA_RG_NMSVR )
+	    {
+		GM_free( (PTR)reg );
+	    	continue;
+	    }
+
 	    STprintf( pbuf, "%s::/@%s",
 		     vnode_place->place_blk.key, reg->reg_addr );
 

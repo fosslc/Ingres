@@ -1893,6 +1893,9 @@ OPS_DTLENGTH	bound_length)
 **	    Add nosetstatistics boolean for new "-zy" optimizedb flag which
 **	    switches off 'set statistics' if it has already been run. This
 **	    change implements SIR 117405.
+**	26-jul-10 (toumi01) BUG 124136
+**	    Add opq_encstats flag to request statistics for encrypted
+**	    columns. The default behavior is to skip them.
 */
 bool
 badarglist(
@@ -1947,6 +1950,7 @@ bool		*nosample)
     g->opq_prec = OPQ_INIPREC;
     g->opq_lvrepf = FALSE;
     g->opq_newrepfest = FALSE;
+    g->opq_encstats = FALSE;
     g->opq_newquery = FALSE;
     g->opq_comppkey = FALSE;
     g->opq_nott = FALSE;
@@ -1988,6 +1992,10 @@ bool		*nosample)
 	else if (optimizedb && !STcompare(temp, "-zdn"))
 	{
 	    g->opq_newrepfest = TRUE;
+	}
+	else if (optimizedb && !STcompare(temp, "-ze"))
+	{
+	    g->opq_encstats = TRUE;
 	}
 	else if (optimizedb && !STcompare(temp, "-zfq"))
 	{
@@ -2401,6 +2409,8 @@ bool		*nosample)
 **	9-nov-05 (inkdo01)
 **	    Optionally support hex output as directed by "-zhex" option.
 **	    Note, this can't be reloaded with optimizedb -i <filename>.
+**      09-Jul-2010 (coomi01) b124051
+**          Additionally use hex strings for byte data types.
 */
 VOID
 prelem(
@@ -2412,7 +2422,10 @@ FILE		   *outf)
     i4	default_width;
     i4  worst_width;
 
-    if (g->opq_hexout)
+    /*
+    ** Swtch on hex output if data type is byte, or the user has requested it.
+    */
+    if ((DB_BYTE_TYPE == datatype->db_datatype) || g->opq_hexout)
     {
 	/* Call adu_hex() to generate the hex string, then printf it. */
 	DB_STATUS	status;
@@ -2709,6 +2722,11 @@ char		*out)
 **      20-Feb-2009 (huazh01)
 **          Adjust the display precision if the null_count is over 10 
 **          million. (b121643)
+**      08-July-2010 (coomi01) b124029
+**          When looking for monotone problems, compare histogram keys
+**          directly.
+**      09-Jul-2010 (coomi01) b124051
+**          Detect byte datatypes, and then use hex strings to export values.
 */
 VOID
 opq_print_stats(
@@ -2734,6 +2752,10 @@ FILE		*outf,
 bool		verbose,
 bool		quiet)
 {
+    /*
+    ** Flag hex production by either command line, or use of a Byte data type
+    */
+    bool hexOut = g->opq_hexout || (DB_BYTE_TYPE == attrp->hist_dt.db_datatype);
     char histval_copy[DB_MAXSTRING+1]={0};
 
     /* Print information from iistatistics */
@@ -2905,7 +2927,10 @@ bool		quiet)
 
 	if (sizeof(OPN_PERCENT) == sizeof(f8))
 	{
-	    STprintf(text7o_fmt, TEXT7O1,
+	    /*
+	    ** Create a output formatter incorporating hex values if required.
+	    */
+	    STprintf(text7o_fmt, hexOut ? TEXT7O1_hex : TEXT7O1 ,
 		     g->opq_adfcb->adf_outarg.ad_f8width,
 		     g->opq_adfcb->adf_outarg.ad_f8prec, 
 		     g->opq_adfcb->adf_outarg.ad_f8width,
@@ -2913,7 +2938,7 @@ bool		quiet)
 	}
 	else
 	{
-	    STprintf(text7o_fmt, TEXT7O1,
+	    STprintf(text7o_fmt, hexOut ? TEXT7O1_hex : TEXT7O1,
 		     g->opq_adfcb->adf_outarg.ad_f4width,
 		     g->opq_adfcb->adf_outarg.ad_f4prec, 
 		     g->opq_adfcb->adf_outarg.ad_f4width,
@@ -2933,7 +2958,7 @@ bool		quiet)
 	    {
 		extra_len = ( (i4)MHlog10( (f8)cell_repf[cell] ) ) - 6;
 
-		STprintf(text7o_fmt, TEXT7O1,
+		STprintf(text7o_fmt, hexOut ? TEXT7O1_hex : TEXT7O1,
 			 g->opq_adfcb->adf_outarg.ad_f4width,
 			 g->opq_adfcb->adf_outarg.ad_f4prec,
 			 g->opq_adfcb->adf_outarg.ad_f4width ,
@@ -2955,8 +2980,12 @@ bool		quiet)
 			cell_repf[cell], g->opq_adfcb->adf_decimal.db_decimal);
 	    }
 	    prelem(g, (PTR)curr_value, &attrp->hist_dt, outf);
+
+	    /*
+	    ** Compare the histogram value with its' predecessor
+	    */
 	    if (!g->opq_hexout &&
-	        STcompare(opq_convbuf.buf.value, histval_copy) == 0)
+	        MEcmp(curr_value, curr_value+value_length, value_length) == 0)
 	    {
 	        opq_error((DB_STATUS)E_DB_WARN,
 		    (i4)W_OP0976_PREC_WARNING, (i4)6,
@@ -2964,7 +2993,12 @@ bool		quiet)
 			0, cell,
 			STlen(histval_copy), histval_copy);
 	    }
-	    STcopy(opq_convbuf.buf.value, histval_copy);
+
+	    /*
+	    ** Copy entire key to histval_copy
+	    */
+	    MEcopy(opq_convbuf.buf.value, value_length, histval_copy);
+
 
 	    curr_value += value_length;	/* Point to next boundary value */
 	}		
@@ -3445,6 +3479,9 @@ char		*dst)
 **        Disallow multiple -r flags with the same table name
 **      11-Feb-2010 (maspa05) b123140
 **        Missing parameter in STxcompare in above change
+**      20-Jul-2010 (hanal04) Bug 124100
+**        Do not try to select from iisynonym when we are connected to a
+**        STAR DB. It does not exist.
 */
 bool
 i_rel_list_from_input(
@@ -3544,47 +3581,91 @@ bool		statdump)
 	for (cnt = 0, first = TRUE, es_owner = (char *)&g->opq_owner;;
 	     first = FALSE, es_owner = (char *)&g->opq_dba)
 	{
-            exec sql repeated select t.table_owner, t.num_rows, t.table_type,
-		     t.table_reltid, t.table_reltidx, t.number_pages,
-		     t.table_stats, t.overflow_pages, t.row_width
-                into :es_ownname, :es_nrows, :es_type,
-		     :es_reltid, :es_xreltid, :es_pages,
-		     :es_tstat, :es_ovflow, :es_relwid
-		from  (iitables t left join iisynonyms s on t.table_name = s.table_name)
-		where (t.table_owner = :es_owner) 
-		and   ((t.table_name = :es_relname) or (s.synonym_name = :es_relname));
+            if(g->opq_dbms.dbms_type == OPQ_STAR)
+            {   
+                exec sql repeated select t.table_owner, t.num_rows, t.table_type,
+		         t.table_reltid, t.table_reltidx, t.number_pages,
+		         t.table_stats, t.overflow_pages, t.row_width
+                    into :es_ownname, :es_nrows, :es_type,
+		         :es_reltid, :es_xreltid, :es_pages,
+		         :es_tstat, :es_ovflow, :es_relwid
+		    from  iitables t;
+    
+	        exec sql begin;
+		    /* Trim trailing white space and save table info */
+		    (VOID) STtrmwhite((char *)&rp->relname);
+		    rp->samplename[0] = EOS;
+		    (VOID) STtrmwhite((char *)&rp->ownname);
+		    if (!exrel)
+		    {	/* No need for this if we're excluding the table. */
+		        rp->nsample = (i4)0;
+		        rp->reltid  = es_reltid;
+		        rp->reltidx = es_xreltid;
+		        rp->pages   = es_pages;
+		        rp->overflow= es_ovflow;
+		        rp->ntups = es_nrows;
+                        rp->relwid = es_relwid;
+		        rp->attcount = 0;	    /* count of interesting attributes*/
+                        rp->statset = (bool)FALSE;
+		        if ((es_tstat[0] == 'Y')	/* need to "set statistics" */
+			    &&
+			    (nosetstats))
+			       rp->statset = (bool)TRUE;
+		        rp->sampleok = (bool)TRUE;  /* assume sampling ok */
+		        rp->physinfo = (bool)TRUE;  /* assume phys info retrieved */
+		        rp->withstats = (bool)FALSE;/* assume no stats present */
+		        rp->samplecrtd = (bool)FALSE;/* assume sample tbl not created */
+		        rp->comphist = (bool)FALSE; /* assume no composite histogram */
+		        rp->index = FALSE;	    /* assume base table - not ix */
+		    }
 
-	    exec sql begin;
-		/* Trim trailing white space and save table info */
-		(VOID) STtrmwhite((char *)&rp->relname);
-		rp->samplename[0] = EOS;
-		(VOID) STtrmwhite((char *)&rp->ownname);
-		if (!exrel)
-		{	/* No need for this if we're excluding the table. */
-		    rp->nsample = (i4)0;
-		    rp->reltid  = es_reltid;
-		    rp->reltidx = es_xreltid;
-		    rp->pages   = es_pages;
-		    rp->overflow= es_ovflow;
-		    rp->ntups = es_nrows;
-                    rp->relwid = es_relwid;
-		    rp->attcount = 0;	    /* count of interesting attributes*/
-                    rp->statset = (bool)FALSE;
-		    if ((es_tstat[0] == 'Y')	/* need to "set statistics" */
-			&&
-			(nosetstats))
-			   rp->statset = (bool)TRUE;
-		    rp->sampleok = (bool)TRUE;  /* assume sampling ok */
-		    rp->physinfo = (bool)TRUE;  /* assume phys info retrieved */
-		    rp->withstats = (bool)FALSE;/* assume no stats present */
-		    rp->samplecrtd = (bool)FALSE;/* assume sample tbl not created */
-		    rp->comphist = (bool)FALSE; /* assume no composite histogram */
-		    rp->index = FALSE;	    /* assume base table - not ix */
-		}
+		    cnt++;
+	            exec sql end;
 
-		cnt++;
+            }
+            else
+            {
+                exec sql repeated select t.table_owner, t.num_rows, t.table_type,
+		         t.table_reltid, t.table_reltidx, t.number_pages,
+		         t.table_stats, t.overflow_pages, t.row_width
+                    into :es_ownname, :es_nrows, :es_type,
+		         :es_reltid, :es_xreltid, :es_pages,
+		         :es_tstat, :es_ovflow, :es_relwid
+		    from  (iitables t left join iisynonyms s on t.table_name = s.table_name)
+		    where (t.table_owner = :es_owner) 
+		    and   ((t.table_name = :es_relname) or (s.synonym_name = :es_relname));
+    
+	        exec sql begin;
+		    /* Trim trailing white space and save table info */
+		    (VOID) STtrmwhite((char *)&rp->relname);
+		    rp->samplename[0] = EOS;
+		    (VOID) STtrmwhite((char *)&rp->ownname);
+		    if (!exrel)
+		    {	/* No need for this if we're excluding the table. */
+		        rp->nsample = (i4)0;
+		        rp->reltid  = es_reltid;
+		        rp->reltidx = es_xreltid;
+		        rp->pages   = es_pages;
+		        rp->overflow= es_ovflow;
+		        rp->ntups = es_nrows;
+                        rp->relwid = es_relwid;
+		        rp->attcount = 0;	    /* count of interesting attributes*/
+                        rp->statset = (bool)FALSE;
+		        if ((es_tstat[0] == 'Y')	/* need to "set statistics" */
+			    &&
+			    (nosetstats))
+			       rp->statset = (bool)TRUE;
+		        rp->sampleok = (bool)TRUE;  /* assume sampling ok */
+		        rp->physinfo = (bool)TRUE;  /* assume phys info retrieved */
+		        rp->withstats = (bool)FALSE;/* assume no stats present */
+		        rp->samplecrtd = (bool)FALSE;/* assume sample tbl not created */
+		        rp->comphist = (bool)FALSE; /* assume no composite histogram */
+		        rp->index = FALSE;	    /* assume base table - not ix */
+		    }
 
-	    exec sql end;
+		    cnt++;
+	            exec sql end;
+            }
 
 
 	    if (cnt > 0 || first == FALSE)
@@ -4663,6 +4744,14 @@ OPQ_ALIST 	*attrp)
 **    02-sep-08 (hayke02)
 **        Repair change for SIR 117405 so that we init and set statset
 **        correctly.
+**      10-Jun-2010 (hanal04) Bug 123898
+**          Do not try to access iirelation. It does not exist in a Star
+**          database. Use iitables.table_subtype <> 'I' to eliminate
+**          gateway tables from the table list.
+**      19-Aug-2010 (hanal04) Bug 124276
+**          Fix for Bug 123898 excluded all Gateway tables. Rework fix
+**          for Bug 123898 and 117368 to use different query text
+**          if we are a STAR DB and use a cursor instead of a SELECT loop.
 */
 bool
 r_rel_list_from_rel_rel(
@@ -4685,7 +4774,8 @@ bool		statdump)
 	char	es_pattern[4];
 	char	es_tabtype[9];
 	char	es_tstat[8 + 1];
-	i4	es_gwid = GW_IMA;
+        char    stmtbuf[2048];
+        char    gwid[5];
     exec sql end declare section;
 
     i4		ri = 0;
@@ -4732,27 +4822,62 @@ bool		statdump)
     ** cannot produce spurious extra rows, leading to reoccurrence of a bug
     ** with the same symptoms as b107881.
     */
-    exec sql select t.table_name, t.table_owner, t.num_rows,
-	     t.table_reltid, t.table_reltidx, t.number_pages,
-	     t.overflow_pages, t.row_width, t.table_type,
-	     t.table_stats
-	into :es_relname, :es_ownname, :es_nrows,
-	     :es_reltid, :es_xreltid, :es_pages,
-	     :es_ovflow, :es_relwid, :es_tabtype,
-	     :es_tstat
-	from iitables t, iirelation i
-	where   t.table_owner in (:es_ownr, :es_dba) and
-		t.table_name  not like :es_pattern and
-		t.table_type  in ('T', 'I') and
-		t.table_reltid = i.reltid and
-		t.table_name = i.relid and
-		t.table_reltidx = i.reltidx and
-		i.relgwid <> :es_gwid and
-		(t.table_name <> 'remotecmdlock' or 
-		 t.table_owner <> '$ingres')
-	order by t.table_name;
+    if(g->opq_dbms.dbms_type == OPQ_STAR)
+    {
+        /* ESQL precompiler does not like lines beyond a certain length   */
+        /* Parameters in this query must match those in the non-star case */
+        STprintf(stmtbuf, "select t.table_name, t.table_owner, t.num_rows, ");
+        STpolycat(4, stmtbuf, "t.table_reltid, t.table_reltidx, ",
+                              "t.number_pages, t.overflow_pages, ",
+                              "t.row_width, t.table_type, t.table_stats ",
+                              stmtbuf);
+        STpolycat(4, stmtbuf, "from iitables t where t.table_owner in (?, ?) ",
+                              "and t.table_name  not like ? and t.table_type ",
+                              "in ('T', 'I') and t.table_subtype <> 'I' and ",
+                              stmtbuf);
+        STpolycat(4, stmtbuf, "(t.table_name <> 'remotecmdlock' or ",
+                              "t.table_owner <> '$ingres') order by ",
+                              "t.table_name",
+                              stmtbuf);
+    }
+    else
+    {
+        /* ESQL precompiler does not like lines beyond a certain length   */
+        /* Parameters in this query must match those in the star case     */
+        STprintf(gwid, "%d ", GW_IMA);
+        STprintf(stmtbuf, "select t.table_name, t.table_owner, t.num_rows, ");
+        STpolycat(4, stmtbuf, "t.table_reltid, t.table_reltidx, ",
+                              "t.number_pages, t.overflow_pages, ",
+                              "t.row_width, t.table_type, t.table_stats ",
+                              stmtbuf);
+        STpolycat(4, stmtbuf, "from iitables t, iirelation i where ",
+                              "t.table_owner in (?, ?) and t.table_name ",
+                              "not like ? and t.table_type  in ('T', 'I') ",
+                              stmtbuf);
+        STpolycat(4, stmtbuf, "and t.table_reltid = i.reltid and ",
+                              "t.table_name = i.relid and i.relgwid <> ",
+                              gwid,
+                              stmtbuf);
+        STpolycat(4, stmtbuf, "and (t.table_name <> 'remotecmdlock' or ",
+                              "t.table_owner <> '$ingres') order by ",
+                              "t.table_name",
+                              stmtbuf);
 
-    exec sql begin;
+    }
+
+    EXEC SQL prepare stmt from :stmtbuf;
+    EXEC SQL declare cs cursor for stmt;
+    EXEC SQL open cs for readonly using :es_ownr, :es_dba, :es_pattern;
+
+    while(1)
+    {
+        EXEC SQL fetch cs into :es_relname, :es_ownname, :es_nrows,
+             :es_reltid, :es_xreltid, :es_pages,
+             :es_ovflow, :es_relwid, :es_tabtype,
+             :es_tstat;
+        if(sqlca.sqlcode)
+            break; 
+
 	/* First check for "-xr" list and skip the OPQ_RLIST build
 	** if current table is in exclusion list. */
 	if (ex_rellst != NULL)
@@ -4792,7 +4917,7 @@ bool		statdump)
 		/* %s: more than %d tables for database  '%s'
 		*/
 		overrun = TRUE;
-		exec sql endselect;
+		break;
 	    }
 	    else
 	    {
@@ -4835,7 +4960,9 @@ bool		statdump)
 # endif /* xDEBUG */
 	    }
 	}
-    exec sql end;
+    }
+
+    EXEC SQL close cs;
 
     /* Indicate the end of list */
     if (!overrun)
@@ -4934,6 +5061,8 @@ bool		statdump)
 **	    Add more new options - -zcpk, -zdn, -zfq, -znt.
 **	17-july-01 (inkdo01)
 **	    Add "-xr"
+**	26-july-10 (toumi01) BUG 124136
+**	    Add "-ze"
 */
 VOID
 opt_usage(VOID)
@@ -4956,7 +5085,7 @@ opt_usage(VOID)
         SIprintf("           optimizedb [-i filename] [-o filename]\n");
         SIprintf("           [-zv] [-zfq] [-zh] [-zk] [-zlr] [-zx]\n");
         SIprintf("           [-zdn] [-zcpk] [-zu#] [-zr#] [-zn#] [-zs#]\n");
-        SIprintf("           [-znt] [-zc] [-zp] [-zw]\n");
+        SIprintf("           [-znt] [-zc] [-zp] [-zw] [-ze]\n");
         SIprintf("           [ingres flags] dbname\n");
         SIprintf("	         {-rtablename {-acolumnname}} |\n");
         SIprintf("	         {-xrtablename}\n");

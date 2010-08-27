@@ -97,6 +97,10 @@
 **	12-july-06 (dougi)
 **	    Detect "sum" that's really a transformed "avg" and fix text to
 **	    avoid confusion.
+**	8-jun-2010 (stephenb)
+**	    Fix error messages for "ifnull" to include the alias "nvl".
+**	    Fix error messages for "nvl2" to report types for operands 
+**	    2 and 3 for incompatible operand type error. (Bug 123884)
 */
 DB_STATUS
 pst_rserror(
@@ -151,6 +155,9 @@ pst_rserror(
     if (STcompare(opname.adi_opname, "sum") == 0 &&
 	opnode->pst_sym.pst_value.pst_s_op.pst_flags & PST_AVG_AOP)
 	STcopy("avg", opname.adi_opname);	/* it's really "avg" */
+    
+    if (STcompare(opname.adi_opname, "ifnull") == 0)
+    	STcopy("ifnull/nvl", opname.adi_opname); /* could be ifnull or nvl */
 
     if (DB_FAILURE_MACRO(status))
     {
@@ -187,6 +194,13 @@ pst_rserror(
 	    lefttype = opnode->pst_left->pst_sym.pst_dataval.db_datatype;
 	    if (children >= 2)
 		righttype = opnode->pst_right->pst_sym.pst_dataval.db_datatype;
+	}
+	else if (STcompare(opname.adi_opname, "nvl2") == 0)
+	{
+	    /* NVL2 compares op2 and op3, report those as the types */
+	    lefttype = opnode->pst_left->pst_right->pst_sym.pst_dataval.db_datatype;
+	    righttype = 
+	        opnode->pst_left->pst_left->pst_right->pst_sym.pst_dataval.db_datatype;
 	}
 	else
 	{

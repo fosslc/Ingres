@@ -127,6 +127,8 @@
 **	    Add CX_LOCK_INFO and CX_LOCK_LIST.
 **	23-Aug-2009 (kschendel) 121804
 **	    Need pc.h too.
+**      26-jul-2010 (joea)
+**          Change SIZE_TYPE cast in CX_RELOFF2PTR to an int cast.
 **/
 
 #ifndef CX_H_INCLUDED
@@ -611,7 +613,7 @@ struct _CX_REQ_CB
  }
 
 #define CX_PTR2RELOFF(b,p)	(((char *)(p)) - ((char *)(b)))
-#define CX_RELOFF2PTR(b,ro)	(((char *)(b)) + ((SIZE_TYPE)(ro)))
+#define CX_RELOFF2PTR(b,ro)	(((char *)(b)) + ((int)(ro)))
 
 /*
 ** CX_BLKI

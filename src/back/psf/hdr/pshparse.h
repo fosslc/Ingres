@@ -553,6 +553,14 @@
 **          Changes for Long IDs
 **	06-Apr-2010 (gupsh01) SIR 123444
 **	    Added support for ALTER TABLE ..RENAME TABLE/COLUMN.
+**	19-Jun-2010 (kiria01) b123951
+**	    Add extra parameter to psl0_rngent and psl_rngent for WITH
+**	    support. Corrected prototype for psl_set_jrel & dropped
+**	    pst_swelem.
+**	14-Jul-2010 (kschendel) b123104
+**	    Add pst-not-bool proto.
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Pass with-clauses to psl-ct1-create-table.
 */
 
 /*
@@ -1450,13 +1458,6 @@ typedef struct _PSS_DECVAR PSS_DECVAR;  /* forward declaration */
 **	structure to allow this to happen without interfering with the go block
 **	in progress.
 **
-**	Note that the pss_yacc member is a pointer to a i4  instead of a
-**	YACC_CB.  The reason is that the YACC_CB contains references to YYSTYPE,
-**	which is only defined by yacc (in ytab.h).  Outside of a yacc directory,
-**	YYSTYPE is undefined.  Therefore, we must allocate a YACC_CB in one of
-**	the language directories.  For example, a YACC_CB for QUEL would be
-**	allocated in the PSL directory.
-**
 ** History:
 **     09-oct-85 (jeff)
 **          written
@@ -1801,6 +1802,19 @@ typedef struct _PSS_DECVAR PSS_DECVAR;  /* forward declaration */
 **	    Add flags PSS_2_ENCRYPTION and PSS_2_PASSPHRASE.
 **	29-apr-2010 (stephenb)
 **	    Add batch_copy_optim and associated defines.
+**	21-Jul-2010 (kschendel) SIR 124104
+**	    Add default compression.
+**	30-Jul-2010 (kschendel) b124164
+**	    Drop unused pss-yastr found while checking for uninited stuff.
+**	2-Aug-2010 (kschendel) b124170
+**	    Add a pointer to the parser state (PSS_YYVARS) to the session
+**	    block.  This is long overdue;  we've passed around the yyvars
+**	    pointer all this time, at least partly because yacc always
+**	    generated the yyvars as a local and never hooked things up.
+**	    The parser has been using its own yacc for decades now, and
+**	    that yacc can bloody well do what it's told.
+**	    Access to the parser state is necessary in some low level
+**	    contexts, such as "make constant similar".
 */
 typedef struct _PSS_SESBLK
 {
@@ -1818,7 +1832,6 @@ typedef struct _PSS_SESBLK
     i4	    pss_psessid;	/* parser session id. used for cursor
 					** ids.
 					*/
-    PTR		    pss_yastr;		/* Mem. stream used for yacc CB */
     PSC_CURBLK      pss_firstcursor;    /* Avoid alloc. for 1st cursor/sess. */
     i4		    pss_numcursors;	/* Number of allocated cursors */
     DB_LANG         pss_lang;           /* Query language id */
@@ -1851,6 +1864,7 @@ typedef struct _PSS_SESBLK
     PST_RESTAB	    pss_restab;		/* structure holding result tab info */
     PSS_CURSTAB     pss_curstab;        /* Hash table of cursor ctrl blocks */
     struct _YACC_CB *pss_yacc;		/* Ptr to ctl blk for re-entrant yacc */
+    struct PSS_YYVARS_ *pss_yyvars;	/* Ptr to current parser state */
     i4		    (*pss_parser)();	/* ptr to yacc finite state machine */
 
 /* Trace vector for parser sessions 
@@ -1868,6 +1882,7 @@ ULT_VECTOR_MACRO(PSS_TBITS, PSS_TVAO) pss_trace;
 					** PSQ_50DEFQRY	    - 5.0 repeat query
 					*/
     i2		    pss_rsdmno;		/* result domain number */
+    i2		    pss_create_compression;  /* Default table compression */
     PSF_MSTREAM	    pss_ostream;	/* Mem. stream to alloc output object */
     PST_QNODE	    *pss_tlist;		/* Pointer to current target list */
     PTR		    pss_dbid;		/* Database id for this session */
@@ -2766,6 +2781,8 @@ i4		    pss_flattening_flags;
 **	    Add PSF_CACHEDYN server wide flag.
 **      15-Feb-2010 (maspa05) SIR 123293
 **          Add psf_server_class so SC930 can output server_class
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Add default create-table compression.
 */
 typedef struct _PSF_SERVBLK
 {
@@ -2854,6 +2871,9 @@ typedef struct _PSF_SERVBLK
 					*/
 #define     PSF_NOCHK_SINGLETON_CARD	   0x0080L
 
+    i2		    psf_create_compression;  /* DMU_C_xxx default create table
+					** compression from config.
+					*/
     bool	    psf_vch_prec;	/* varchar precedence */
     char           *psf_server_class;   /* server_class of server */
 } PSF_SERVBLK;
@@ -3842,6 +3862,10 @@ typedef struct _PSS_J_QUAL
 **		Added PSS_JOINID_PRESET to allow presetting of pst_join_id.
 **	    05-Dec-2008 (kiria01) b121333
 **		Added PSS_JOINID_PRESET  to allow presetting of pst_
+**	3-Aug-2010 (kschendel) b124170
+**	    Add PSS_JOINID_STD telling pst-node to set the joinid in the
+**	    "standard" manner, using the parser state.  See pst-node for
+**	    the exact definition of "standard manner".
 */
 typedef struct _PSS_DUPRB
 {
@@ -3929,6 +3953,14 @@ typedef struct _PSS_DUPRB
 				    ** set. Don't override.
 				    */
 #define		PSS_FLAGS_PRESET    0x80
+
+				    /* Set this to tell pst_node that it is to
+				    ** set the joinid (for an operator node)
+				    ** in the "standard" manner using parser
+				    ** state.  See pst-node for the exact
+				    ** definition of "standard manner".
+				    */
+#define		PSS_JOINID_STD	    0x100
 
 /*
 ** PSS_DBPALIAS	   a typedef for dbproc id to be used throughout PSF
@@ -4925,6 +4957,11 @@ typedef struct _PSS_WITH_CLAUSE
 **	    Added first_n_ok_depth
 **      02-Jun-2010 (coomi01) b123821
 **          Add save_seq_ops[] of bool to PSS_YYVARS.
+**	10-Aug-2010 (kschendel) b124222
+**	    cast_length is used as i2 when a const node is created from it;
+**	    it has to be declared i2 here (or, a real DB_ANYTYPE union used),
+**	    or we pick up the wrong half on big-endian machines.
+**	    Causes cast(thing as varchar(30)) to be wrong.
 **/
 
 /* For passing opflags to arg_stack users */
@@ -5532,9 +5569,9 @@ blow chunks now!
 					*/
     bool	    md_reconstruct;	/* TRUE if modify to reconstruct */
     i2		    save_pss_rsdmno[MAX_NESTING];	/* across derived table processing */
+    i2		    cast_length;	/* N in cast(x to varchar(N)) */
     i4		    save_psq_mode;	/* ditto */
     i4		    loc_count;		/* count of locators in psq_locator */
-    i4		    cast_length;	/* N in cast(x to varchar(N)) */
 
     PST_QNODE	    *union_head;	/* Head of UNION tree if applicable */
     PST_QNODE	    *tlist_stack[MAX_NESTING]; /* same depth as from list */
@@ -5767,6 +5804,7 @@ FUNC_EXTERN DB_STATUS
 psl_ct1_create_table(
 	PSS_SESBLK	*sess_cb,
 	PSQ_CB		*psq_cb,
+	PSS_WITH_CLAUSE *with_clauses,
 	PSS_CONS	*cons_list);
 
 FUNC_EXTERN DB_STATUS
@@ -6285,7 +6323,8 @@ psl_rngent(
 	PSS_RNGTAB	   **rngvar,
 	i4		   query_mode,
 	DB_ERROR	   *err_blk,
-	i4                *caller_info);
+	i4                *caller_info,
+	PST_J_ID	   *pjoin_id);
 FUNC_EXTERN DB_STATUS
 psl_drngent(
 	PSS_USRRANGE       *rngtable,
@@ -6319,7 +6358,8 @@ psl0_rngent(
 	DB_ERROR	*err_blk,
 	i4		tbls_to_lookup,
 	i4		*caller_info,
-	i4		lookup_mask);
+	i4		lookup_mask,
+	PST_J_ID	*pjoin_id);
 FUNC_EXTERN DB_STATUS
 psl_orngent(
 	PSS_USRRANGE    *rngtable,
@@ -6483,7 +6523,7 @@ FUNC_EXTERN VOID
 psl_set_jrel(
 	PST_J_MASK		*inner_rels,
 	PST_J_MASK		*outer_rels,
-	i4			join_id,
+	PST_J_ID		join_id,
 	register PSS_RNGTAB	**rng_vars,
         DB_JNTYPE               join_type);
 FUNC_EXTERN DB_STATUS
@@ -7154,6 +7194,9 @@ FUNC_EXTERN bool
 pst_is_const_bool(
 	PST_QNODE	   *node,
 	bool		   *bval);
+FUNC_EXTERN void pst_not_bool(
+	PST_QNODE	   *node);
+
 FUNC_EXTERN VOID
 pst_negate(
 	register DB_DATA_VALUE *dataval);
@@ -7290,14 +7333,6 @@ pst_slook(
 	PSS_RNGTAB	   **result,
 	DB_ERROR	   *err_blk,
 	bool		   scope_flag);
-FUNC_EXTERN DB_STATUS
-pst_swelem(
-	PSS_SESBLK	   *cb,
-	i4		    scope,
-	PSS_USRRANGE       *rngtable,
-	DB_TAB_NAME	   *tabname,
-	PSS_RNGTAB	   **rngvar,
-	DB_ERROR	   *err_blk);
 FUNC_EXTERN DB_STATUS
 pst_stproc(
 	PSS_USRRANGE       *rngtable,

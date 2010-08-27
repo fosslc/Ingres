@@ -45,12 +45,16 @@
 **	In function ExcuteSelectStatement, added code to manage releasing
 **	session on closing cursor. If sqlquery.ocx is invoked from the vdba dom
 **	right panel then set to release the session on close.
+** 23-Jun-2010 (drivi01) 
+**    Fix some hardcoded buffer length for long id change.
 */
 
 #include "stdafx.h"
 #include "rcdepend.h"
 #include "qframe.h"
 #include "qpageres.h"
+#include <compat.h>
+#include <iicommon.h>
 
 //
 // The define below shows the number of fetched rows below the list control:
@@ -282,7 +286,7 @@ void CuDlgSqlQueryPageResult::BrokenCursor()
 LONG CuDlgSqlQueryPageResult::OnGetData (WPARAM wParam, LPARAM lParam)
 {
 	LVCOLUMN lvcolumn;
-	TCHAR    tchszHeader [64];
+	TCHAR    tchszHeader [DBOBJECTLEN];
 	int i, nCount = m_ListCtrl.GetItemCount();
 	int j, nColumn = 0;
 	CaQuerySelectPageData* pData    = NULL;

@@ -22,6 +22,7 @@
 #include    <qefnode.h>
 #include    <qefact.h>
 #include    <qefqp.h>
+#include    <uld.h>
 /* beginning of optimizer header files */
 #include    <opglobal.h>
 #include    <opdstrib.h>
@@ -70,6 +71,9 @@
 **	    Pass on cardinality_check setting.
 **	03-Dec-2009 (kiria01) b122952
 **	    Add .opf_inlist_thresh for control of eq keys on large inlists.
+**      17-Aug-2010 (horda03) b124274
+**          For SET [NO]QEP [SEGMENTED] ops_qep_flag. Needed uld.h for flag
+**          values.
 [@history_line@]...
 **/
 
@@ -108,6 +112,9 @@
 **	    Added support for "set joinop [no]newenum", "set [no]hash".
 **	4-mar-04 (inkdo01)
 **	    Added support for "set [no]parallel [n]".
+**      17-Aug-2010 (horda03) b124274
+**          IF SET QEP and opf_value set then enable Segmented QEP
+**          displays. disable otherwise.
 [@history_line@]...
 */
 static DB_STATUS
@@ -158,11 +165,13 @@ ops_change(
 	case OPF_QEP:
 	{
 	    altercb->ops_qep = TRUE;	        /* print QEP */
+            altercb->ops_qep_flag = opf_cb->opf_value ? ULD_FLAG_SEGMENTS : ULD_FLAG_NONE;
 	    break;
 	}
 	case OPF_NOQEP:
 	{
 	    altercb->ops_qep = FALSE;	        /* print qep */
+            altercb->ops_qep_flag = ULD_FLAG_NONE;
 	    break;
 	}
 	case OPF_RET_INTO:

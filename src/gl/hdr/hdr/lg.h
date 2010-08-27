@@ -763,6 +763,10 @@
 **	    LG_S_RFBLOCKS for buffered log reads.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      09-aug-2010 (maspa05) b123189, b123960
+**          Added LG_RODB and DB_RODB to indicate readonly database.
+**          Logging system needs to know if a database is readonly so that it
+**          can indicate (via LGshow) to RCP. 
 **/
 
 /*
@@ -1149,6 +1153,7 @@ LOGFULL,FREEBUF,LASTBUF,FORCED_IO,EVENT,WRITEIO,MINI,COMMIT"
 #define		    LG_CSP_RECOVER	    0x1000L
 #define		    LG_XA_START_XA	    0x2000L
 #define		    LG_XA_START_JOIN	    0x4000L
+#define		    LG_RODB		    0x8000L
 
 /*
 **	Flag values for LGend.
@@ -1918,12 +1923,15 @@ struct _LG_DATABASE
 #define		    DB_OPN_WAIT			0x00080000L
 #define		    DB_CKPLK_STALL		0x00100000
 #define		    DB_MVCC			0x00200000
+#define		    DB_RODB      		0x00400000 
+    /* not the same as DB_READONLY which means database is in read-only mode
+     * DB_RODB means a readonly database */
 
 #define DB_STATUS_MEANING "\
 INVALID,JOURNAL,NOTDB,PURGE,OPENDB_PEND,CLOSEDB_PEND,\
 RECOVER,FAST_COMMIT,PRETEND_CONSISTENT,CLOSEDB_DONE,BACKUP,\
 STALL,READONLY,FBACKUP,CKPDB_PEND,JSWITCH,0x00010000,\
-CKPDB_ERROR,ACTIVE,OPN_WAIT,CKPLK_STALL,MVCC"
+CKPDB_ERROR,ACTIVE,OPN_WAIT,CKPLK_STALL,MVCC,READONLYDB"
 
     i4	    db_database_id;	/* External Database Id */
     LG_LA           db_sbackup;         /* Start backup lga     */

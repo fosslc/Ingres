@@ -360,6 +360,13 @@ GLOBALREF i4 Di_backend;	/* TRUE if running a back-end server.
 **	    the Datallegro XFS-reservations code, but uses fallocate()
 **	    instead of (deprecated) XFS specific ioctls.
 **	    Remove alignment realloc for linux, callers will do it now.
+**	10-Jul-2010 (kschendel) b124063
+**	    Because of the above auto-alignment removal, "mandatory" direct-IO
+**	    no longer works.  It's a bad idea anyway, callers should decide,
+**	    not this low level.  (I assume the mandatory setting was for
+**	    performance, not correctness;  any fstype that operates incorrectly
+**	    when direct-IO is OFF should be banned outright!)  Remove the
+**	    notion of forced direct-IO.
 **/
 
 /* defines */
@@ -516,6 +523,13 @@ static int IIdio_file_fd( int fd );
 **	    partitioned / parallelized data warehouse environments.
 **	    (The fallocate strategy slows down loads but gives better
 **	    disk layouts for later reads.)
+**	10-Jul-2010 (kschendel) b124063
+**	    Because of the auto-alignment removal, "mandatory" direct-IO
+**	    no longer works.  It's a bad idea anyway, callers should decide,
+**	    not this low level.  (I assume the mandatory setting was for
+**	    performance, not correctness;  any fstype that operates incorrectly
+**	    when direct-IO is OFF should be banned outright!)  Remove the
+**	    notion of forced direct-IO.
 */
 
 int
@@ -684,24 +698,24 @@ IIdio_open(
 		else
 		{
 		    /* check filesystem type and known requirements for support */
-		    i4 enable_odirect = FALSE;
-		    i4 odirect_mandatory = FALSE;
+		    i4 enable_odirect;
 
+		    /* Assume FS allows direct IO unless otherwise listed */
+		    enable_odirect = TRUE;
 		    switch (fs.f_type)
 		    {
 			case GFS_SUPER_MAGIC:
-			    odirect_mandatory = TRUE;
 			    FPROP_ALLOCSTRATEGY_SET(*fprop, FPROP_ALLOCSTRATEGY_TRNC);
 			    break;
 			case OCFS_SUPER_MAGIC:
-			    odirect_mandatory = TRUE;
 			    FPROP_ALLOCSTRATEGY_SET(*fprop, FPROP_ALLOCSTRATEGY_TRNC);
 			    break;
 			case LUSTRE_SUPER_MAGIC:
-			    odirect_mandatory = TRUE;
 			    FPROP_ALLOCSTRATEGY_SET(*fprop, FPROP_ALLOCSTRATEGY_VIRT);
 			    break;
 			case NFS_SUPER_MAGIC:
+			    enable_odirect = FALSE;
+			    /* Fall thru to set strategy */
 			case EXT3_SUPER_MAGIC:
 			    /* FIXME FIXME how do we tell ext4 from ext3?
 			    ** Ideally want special case for ext4 with
@@ -710,20 +724,12 @@ IIdio_open(
 			    ** strategy, but trnc doesn't preallocate space.
 			    ** Stick with virt strategy for ext3.
 			    */
-			    /* Enable only if wanted and configured */
-			    if ( *fprop & FPROP_DIRECT_REQ )
-				enable_odirect = TRUE;
 			    FPROP_ALLOCSTRATEGY_SET(*fprop, FPROP_ALLOCSTRATEGY_VIRT);
 			    break;
 			case JFS_SUPER_MAGIC:
-			    if ( *fprop & FPROP_DIRECT_REQ )
-				enable_odirect = TRUE;
 			    FPROP_ALLOCSTRATEGY_SET(*fprop, FPROP_ALLOCSTRATEGY_VIRT);
 			    break;
 			case XFS_SUPER_MAGIC:
-			    /* Enable only if wanted and configured */
-			    if ( *fprop & FPROP_DIRECT_REQ )
-				enable_odirect = TRUE;
 			    /* Try "reservations" strategy for XFS. */
 			    FPROP_ALLOCSTRATEGY_SET(*fprop,
 				fallocate_allowed ? FPROP_ALLOCSTRATEGY_RESV
@@ -731,25 +737,19 @@ IIdio_open(
 			    break;
 			/* FIXME:  add btrfs when the steam stops rising */
 			default:
-			    enable_odirect = FALSE;
+			    /* For J Random Filesystem, hope that vfs layer
+			    ** deals with direct-IO, use virtual alloc
+			    */
+			    FPROP_ALLOCSTRATEGY_SET(*fprop, FPROP_ALLOCSTRATEGY_VIRT);
 			    break;
 		    }
-		    if ( enable_odirect || odirect_mandatory )
+		    if (*fprop & FPROP_DIRECT_REQ && enable_odirect)
 		    {
-			/* We'll turn on direct IO */
-			if (fcntl(fd, F_SETFL, mode | O_DIRECT) == -1)
-			{
-			    /* was O_DIRECT mandatory? */
-			    if ( odirect_mandatory )
-			    {
-				SETCLERR(err, 0, ER_open);
-				close(fd);
-				TRdisplay("%@ IIdio_open: failed to enable mandatory O_DIRECT for filesystem, f_type %x, fd %d, mode %x\n",
-						  (i4) fs.f_type, fd, mode);
-				return(-1);
-			    }
-			}
-			else
+			/* We'll turn on direct IO.  Do nothing special if
+			** this fails, just leave the "using direct IO" flag
+			** turned off.  If it works indicate same.
+			*/
+			if (fcntl(fd, F_SETFL, mode | O_DIRECT) == 0)
 			{
 			    *fprop |= FPROP_DIRECT;
 			    mode |= O_DIRECT;	/* for log display */

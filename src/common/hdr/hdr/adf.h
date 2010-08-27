@@ -788,6 +788,19 @@
 **      08-Jun-2010 (horda03)
 **          When xDEBUG defined build fails due to : at end of prototype
 **          definition. And adu_unorm interface wrong.
+**      24-Jun-2010 (horda03) B123987
+**          Add adf_misc_flags to so that DATE->STRING conversion of
+**          greater than 25 chars can be signalled (used for Ascii
+**          copy into).
+**      01-Jul-2010 (horda03) B123234
+**          Added new error E_AD5079_INTERVAL_IN_ABS_FUNC.
+**	14-Jul-2010 (kschendel) b123104
+**	    Define a few FI values that have to be global, here.
+**	    The ordinary definition point in adffiids.h will be commented
+**	    out to indicate what is going on.
+**	28-Jul-2010 (kiria01) b124142
+**	    Added ADF_SING_BIT as sibling to ADF_NVL_BIT to support SINGLETON
+**	    and SINGLECHK functions.
 */
 
 #ifndef ADF_HDR_INCLUDED
@@ -819,14 +832,19 @@
 
 /* This was changed to eliminate the dependency on DB_MAXNAME */
 
-#define		ADF_NVL_BIT	((u_char) 0x01)	/* The null value bit.  If    */
-						/* this bit is set in the     */
-						/* null value byte, then the  */
-						/* value of the piece of data */
-						/* is null.  If not set, the  */
-						/* data should be interpreted */
-						/* as usual based on datatype */
-						/* and length.                */
+#define		ADF_NVL_BIT	((u_char) 0x01)	/* The null value bit.  If
+						** this bit is set in the
+						** value of the piece of data
+						** is null.  If not set, the
+						** data should be interpreted
+						** as usual based on datatype 
+						** and length. */
+#define		ADF_SING_BIT	((u_char) 0x02)	/* The singleton bit. If this
+						** bit is set in the null value
+						** byte, the cardinality of the
+						** value (which might be NULL)
+						** is greater than 1. Used by
+						** SINGLETON/CHK functions. */
 
 /* This macro tells if the data value pointed to by DB_DATA_VALUE v is NULL.
 ** If it is, the macro evaluates to TRUE, otherwise FALSE.  NULL is data
@@ -835,6 +853,35 @@
 
 #define  ADF_ISNULL_MACRO(v)  ( ((v)->db_datatype < 0 && (*(((u_char *)(v)->db_data) + (v)->db_length - 1) & ADF_NVL_BIT) ? TRUE : FALSE))
 
+
+/* A small handful of function instance (FI) ID's need to be known
+** outside of ADF.  Normally, one works with operator ID's, with
+** the appropriate FI being assigned by type resolution.  However in
+** a very few special cases the FI ID needs to be known.  When a FI
+** number is defined here, the usual definition point in adffiids.h is
+** commented out.
+*/
+
+/* The count(column) operator has a special optimization in opa,
+** which checks for ADFI_090_COUNT_C_ALL.
+*/
+#define ADFI_090_COUNT_C_ALL	90	/* count(c or all) */
+
+/* The tricky numeric .eq. string FI shouldn't look like a join
+** in opf, even though it's an equals operator.  Gets too complicated
+** (restriction to merge-join, or normalization for hash join, etc.)
+*/
+#define ADFI_1347_NUMERIC_EQ	1347	/* any = any */
+
+/* Disable some sort of nullability optimization in the parser for
+** STDDEV_SAMP.
+*/
+#define ADFI_845_STDDEV_SAMP_FLT 845	/* stddev_samp(flt, flt) */
+
+/* OPF needs to be able to tag a forced set-true onto sorted aggs
+** under certain conditions.
+*/
+#define ADFI_895_II_TRUE	895	/* ii_true() */
 
 /*: ADF Error Codes
 **      These are all of the error codes that can possibly be
@@ -1094,6 +1141,7 @@
 #define			E_AD5076_ANSIINDS_BADFMT	(E_AD_MASK + 0x5076L)
 #define			E_AD5077_ANSITMZONE_BADFMT	(E_AD_MASK + 0x5077L)
 #define			E_AD5078_ANSITIME_INTVLADD	(E_AD_MASK + 0x5078L)
+#define			E_AD5079_INTERVAL_IN_ABS_FUNC   (E_AD_MASK + 0x5079L)
     /* Numbers 5080 thru 508F are associated with log key function instances */
 #define			E_AD5080_LOGKEY_BAD_CVT_LEN	(E_AD_MASK + 0x5080L)
 #define			E_AD5081_UNICODE_FUNC_PARM 	(E_AD_MASK + 0x5081L)
@@ -2014,6 +2062,10 @@ typedef struct _ADK_CONST_BLK
 **      26-Nov-2009 (hanal04) Bug 122938
 **          Added adf_max_decprec to hold the maximum decimal precision
 **          supported by the client.
+**      24-Jun-2010 (horda03) B123987
+**          Add adf_misc_flags, and ADF_LONG_DATE_STRINGS to signal a
+**          String of AD_11_MAX_STRING_LEN length should be returned
+**          for a DATE->CHAR conversion.
 */
 
 typedef struct _ADF_CB
@@ -2118,6 +2170,8 @@ typedef struct _ADF_CB
 						** into atring needing a substitution
 						** char supplemented -> not constant.
 						** See ADI_F16384_CHKVARFI */
+   u_i4             adf_misc_flags;
+#define ADF_LONG_DATE_STRINGS 0x00000001    /* Date strings of AD_11_MAX_STRING_LEN required */
 }   ADF_CB;
 
 
@@ -2139,6 +2193,8 @@ typedef struct _ADF_CB
 **	30-may-89 (jrb)
 **	    Added ADI_FIND_COMMON to support the relocation of datatype
 **	    resolution into ADF.
+**	11-aug-2010 (stephenb)
+**	    Add ADI_NVL2_FIND_COMMON
 */
 
 typedef	    i2	    ADI_OP_ID;
@@ -2147,6 +2203,13 @@ typedef	    i2	    ADI_OP_ID;
 #define		ADI_FIND_COMMON	    (ADI_OP_ID) -2  /* Tells adi_resolve to */
 						    /* find a common data-  */
 						    /* type.		    */
+#define		ADI_NVL2_FIND_COMMON (ADI_OP_ID) -3 /* same as above for NVL2
+						    ** this tells us we are
+						    ** dealing with an NVL2 OP
+						    ** which needs exceptions
+						    ** in resolving because of
+						    ** it's "ALL" parameters
+						    ** and "ALL" return */
 #define		ADI_DISABLED	    (ADI_OP_ID) -4  /* Flags undefined ope- */
 						    /* rator of a function. */
 
@@ -2388,6 +2451,8 @@ typedef struct
 **	    Added ADI_MINADD1 (At least 'fixed bytes' and then add 1 extra.
 **	27-Oct-2008 (kiria01) SIR120473
 **	    Added ADI_PATCOMP & ADI_PATCOMPU for pattern compiler.
+**	4-jun-2008 (stephenb)
+**	    Add ADI_LONGER23RES for nvl2 support. (Bug 123880)
 [@history_template@]...
 */
 
@@ -2667,6 +2732,15 @@ typedef struct _ADI_LENSPEC
 #define			ADI_PATCOMP	61	/* Est pat len */
 #define			ADI_PATCOMPU	62	/* Est unicode pat len */
 #define			ADI_O1AES	63	/* padded for block crypto */
+
+/*
+** Special for 3 operand functions where we need the length
+** of the longest of parameters 2 and 3
+*/
+#define			ADI_LONGER23RES	64	/* longer of parms 2 and 3
+						** taking the result into 
+						** account. 
+						*/
 
 /*
 ** ADI_LEN_INDIRECT is introduced to support the DB_ALL_TYPE and
@@ -3357,6 +3431,8 @@ enum AD_PAT_FORMS_enum {AD_PAT_FORMS AD_PAT_FORM_MAX,AD_PAT_FORM_MAXNEG=AD_PAT_F
 **	    modified fi_desc as from dtfamily processing. Added adf_dv_n
 **	    so that arg count can be stated and not just inferred.
 **	    Moved the block to the end to allow for varargs more easily
+**	19-Aug-2010 (kschendel) b124282
+**	    Delete compatibility adf_isescape definition.
 */
 
 typedef struct _ADF_FN_BLK
@@ -3400,7 +3476,6 @@ typedef struct _ADF_FN_BLK
 #define adf_2_dv adf_dv[2]		/* Legacy support - 2nd param */
 #define adf_3_dv adf_dv[3]		/* Legacy support - 3rd param */
 #define adf_4_dv adf_dv[4]		/* Legacy support - 4th param */
-#define adf_isescape adf_pat_flags	/* Legacy support - previously boolean i1 */
 
 
 }   ADF_FN_BLK;

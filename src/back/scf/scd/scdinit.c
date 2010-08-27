@@ -36,6 +36,7 @@ NO_OPTIM=dr6_us5
 #include    <dmf.h>
 #include    <dmccb.h>
 #include    <dmtcb.h>
+#include    <dmucb.h>
 #include    <qsf.h>
 #include    <ddb.h>
 #include    <opfcb.h>
@@ -1699,6 +1700,11 @@ GLOBALREF const char	Version[];
 **          Pass server_class to PSF so we can output it in SC930 trace
 **      29-apr-2010 (Stephenb)
 **          Init sc_batch_copy_optim.
+**      21-jun-2010 (stephenb)
+**          Replace hard-coded values for opf_maxtup and qef_maxtup with
+**          DB_MAXROWSIZE
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Initialize create-compression to NONE.
 */
 DB_STATUS
 scd_initiate( CS_INFO_CB  *csib )
@@ -2056,6 +2062,7 @@ scd_initiate( CS_INFO_CB  *csib )
 	psq_cb.psq_flag2 = 0L;
     psq_cb.psq_maxmemf = 0.5;	/* default memory proportion */
     psq_cb.psq_cp_qefrcb = NULL;
+    psq_cb.psq_create_compression = DMU_C_OFF;
 
     /* server_class gets passed to PSF so it can output it in SC930 trace */
     psq_cb.psq_server_class = Sc_main_cb->sc_server_class;
@@ -3277,7 +3284,7 @@ scd_initiate( CS_INFO_CB  *csib )
 		qef_cb.qef_sorthash_memory = MAX_SIZE_TYPE;
 	}
 	qef_cb.qef_sess_max = num_qef_sessions;
-	qef_cb.qef_maxtup = 256*1024;
+	qef_cb.qef_maxtup = DB_MAXROWSIZE;
 
 	if (Sc_main_cb->sc_capabilities & SC_STAR_SERVER)
 	    qef_cb.qef_s1_distrib = DB_2_DISTRIB_SVR;
@@ -3332,7 +3339,7 @@ scd_initiate( CS_INFO_CB  *csib )
 
 	opf_cb.opf_actsess = num_opf_sessions;
 	opf_cb.opf_maxpage = Sc_main_cb->sc_maxpage;
-	opf_cb.opf_maxtup = 256*1024;
+	opf_cb.opf_maxtup = DB_MAXROWSIZE;
 	for (i = 0; i < DB_MAX_CACHE; i++)
 	{
 	  opf_cb.opf_pagesize[i] = Sc_main_cb->sc_pagesize[i];

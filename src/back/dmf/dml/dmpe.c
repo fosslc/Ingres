@@ -1048,6 +1048,8 @@ dmpe_call(i4        op_code ,
 **	    realize when too much data is being bulk-loaded into an etab.
 **	    Keep track by hand and start loading a new etab when nearing
 **	    the danger point.
+**	19-Aug-2010 (kschendel) b124282
+**	    Make sure we initialize adf pat-flags too.
 */
 static DB_STATUS
 dmpe_put(ADP_POP_CB	*pop_cb)
@@ -1122,6 +1124,7 @@ dmpe_put(ADP_POP_CB	*pop_cb)
 
 	    pcb->pcb_fblk.adf_fi_desc = NULL;
 	    pcb->pcb_fblk.adf_dv_n = 1;
+	    pcb->pcb_fblk.adf_pat_flags = AD_PAT_DOESNT_APPLY;
 	    STRUCT_ASSIGN_MACRO(*input, pcb->pcb_fblk.adf_1_dv);
 	    pcb->pcb_fblk.adf_r_dv.db_length = input->db_length;
 	    status = adf_func(adfcb, &pcb->pcb_fblk);
@@ -3190,6 +3193,9 @@ dmpe_relocate(DMU_CB	  *base_dmu ,
 ** History:
 **	15-Apr-2010 (kschendel) SIR 123485
 **	    Created.
+**	13-Jul-2010 (jonj)
+**	    Save rcb_seq_number in bqcb_seq_number for etab
+**	    table open.
 */
 
 /* First, a helper routine to extract common code.  This routine
@@ -3201,6 +3207,10 @@ static void
 dmpe_update_bqcb(DMPE_BQCB *bqcb, DMP_RCB *r)
 {
     r->rcb_bqcb_ptr = bqcb;
+
+    /* Stash rcb_seq_number for use by etab dmt_open */
+    bqcb->bqcb_seq_number = r->rcb_seq_number;
+
     if (r->rcb_lk_type == RCB_K_CROW)
     {
 	bqcb->bqcb_table_lock = FALSE;
@@ -4673,6 +4683,7 @@ dmpe_query_end(bool was_error, bool delete_temps, DB_ERROR *dberr)
 	bqcb->bqcb_table_lock = FALSE;
 	bqcb->bqcb_x_lock = FALSE;
 	bqcb->bqcb_crib = NULL;
+	bqcb->bqcb_seq_number = 0;
     }
 
     /* Now, delete BQCB's if allowable.  We'll double check the XCB / RCB
@@ -7498,6 +7509,8 @@ DB_ERROR	*dberr)
 **	16-Apr-2010 (kschendel) SIR 123485
 **	    Figure out the lock level and mvcc-ness from the query context
 **	    (BQCB), which the caller will provide.
+**	13-Jul-2010 (jonj)
+**	    Set dmt_sequence to the current statement sequence.
 */
 
 static DB_STATUS
@@ -7512,12 +7525,14 @@ etab_open(DMT_CB *dmtcb, ADP_POP_CB *pop_cb)
     DMP_TCB *t;
     LG_CRIB *crib;
     i4 lockmode;
+    i4	seq_number;
 
     pcb = (DMPE_PCB *) pop_cb->pop_user_arg;
     bqcb = pcb->pcb_bqcb;
     r = NULL;
     crib = NULL;
     table_lock = FALSE;
+    seq_number = 0;
     wksp = (DB_BLOB_WKSP *) pop_cb->pop_info;
     if (wksp != NULL && wksp->flags & BLOBWKSP_ACCESSID)
     {
@@ -7527,6 +7542,8 @@ etab_open(DMT_CB *dmtcb, ADP_POP_CB *pop_cb)
 	    crib = r->rcb_crib_ptr;
 	else if (r->rcb_lk_type == RCB_K_TABLE)
 	    table_lock = TRUE;
+
+	seq_number = r->rcb_seq_number;
     }
     else if (bqcb != NULL)
     {
@@ -7535,6 +7552,7 @@ etab_open(DMT_CB *dmtcb, ADP_POP_CB *pop_cb)
 	*/
 	table_lock = bqcb->bqcb_table_lock;
 	crib = bqcb->bqcb_crib;
+	seq_number = bqcb->bqcb_seq_number;
     }
 
     dmtcb->dmt_crib_ptr = NULL;
@@ -7581,6 +7599,9 @@ etab_open(DMT_CB *dmtcb, ADP_POP_CB *pop_cb)
 	}
     }
     dmtcb->dmt_lock_mode = lockmode;
+
+    /* Set the statement sequence number */
+    dmtcb->dmt_sequence = seq_number;
 
     status = dmt_open(dmtcb);		/* First do the open */
     if (status != E_DB_OK)

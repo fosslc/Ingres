@@ -418,6 +418,15 @@
 **          'string' / 'string' (char and c) add
 **       13-May-2010 (horda03) B123704
 **          Removed ADFI_1470_VARCHAR_DIV_VARCHAR and ADFI_1471_VARCHAR_MUL_VARCHAR
+**      15-Jun-2010 (horda030 B123926
+**          Add ADFI_1471_IFNULL_LVCH_LVCH, ADFI_1472_IFNULL_LBYTE_LBYTE and
+**          ADFI_1473_IFNULL_LNVCH_LNVCH
+**	14-Jul-2010 (kschendel) b123104
+**	    Add ii_true and ii_false to solve outer join constant folding bug.
+**	    Comment out a couple global FI's that are defined in adf.h,
+**	    so that we don't have constants like "90" in (e.g.) OPF.
+**	28-Jul-2010 (kiria01) b124142
+**	    Added SINGLECHK
 **/
 
 
@@ -516,7 +525,7 @@
 #define ADFI_087_AVG_F                (ADI_FI_ID) 87 /* avg(f) */
 #define ADFI_088_AVG_I                (ADI_FI_ID) 88 /* avg(i) */
 #define ADFI_089_AVG_MONEY            (ADI_FI_ID) 89 /* avg(money) */
-#define ADFI_090_COUNT_C_ALL          (ADI_FI_ID) 90 /* count(c & all) */
+/*      ADFI_090_COUNT_C_ALL   defined in adf.h         count(c & all) */
 #define ADFI_091_COUNT_DATE           (ADI_FI_ID) 91 /* count(date) */
 #define ADFI_092_COUNT_F              (ADI_FI_ID) 92 /* count(f) */
 #define ADFI_093_COUNT_I              (ADI_FI_ID) 93 /* count(i) */
@@ -1218,7 +1227,7 @@
 #define ADFI_842_REGR_SXY_FLT         (ADI_FI_ID)842 /* regr_sxy(flt, flt) */
 #define ADFI_843_REGR_SYY_FLT         (ADI_FI_ID)843 /* regr_syy(flt, flt) */
 #define ADFI_844_STDDEV_POP_FLT       (ADI_FI_ID)844 /* stddev_pop(flt, flt) */
-#define ADFI_845_STDDEV_SAMP_FLT      (ADI_FI_ID)845 /* stddev_samp(flt, flt) ** See pslsgram.yi for secondary defn */
+/*	ADFI_845_STDDEV_SAMP_FLT      defined in adf.h  stddev_samp(flt, flt) */
 #define ADFI_846_VAR_POP_FLT          (ADI_FI_ID)846 /* var_pop(flt, flt) */
 #define ADFI_847_VAR_SAMP_FLT         (ADI_FI_ID)847 /* var_samp(flt, flt) */
 
@@ -1268,8 +1277,8 @@
 #define ADFI_891_CHAREXTRACT_TEXT_I   (ADI_FI_ID)891 /* charextract(text,i) */
 #define ADFI_892_CHAREXTRACT_CHAR_I   (ADI_FI_ID)892 /* charextract(char,i) */
 #define ADFI_893_CHAREXTRACT_VARCHAR_I (ADI_FI_ID)893 /* charextract(varchar,i) */
-					/* 894 notused */
-					/* 895 notused */
+#define ADFI_894_II_FALSE	(ADI_FI_ID) 894 /* ii_false */
+/*	ADFI_895_II_TRUE	defined in adf.h  895  ii_true */
 					/* 896 notused */
 					/* 897 notused */
 					/* 898 notused */
@@ -1635,7 +1644,7 @@
 #define ADFI_1344_DEC_TO_NVCHAR		(ADI_FI_ID)1344 /* decimal -> nvarchar -> */
 #define ADFI_1345_I_TO_NVCHAR		(ADI_FI_ID)1345 /* i -> nvarchar */
 #define ADFI_1346_F_TO_NVCHAR		(ADI_FI_ID)1346 /* f -> nvarchar */
-#define ADFI_1347_NUMERIC_EQ		(ADI_FI_ID)1347 /* all = all */
+/*      ADFI_1347_NUMERIC_EQ		defined in adf.h   all = all */
 #define ADFI_1348_NUMERIC_NE		(ADI_FI_ID)1348 /* all <> all */
 #define ADFI_1349_NUMERIC_LT		(ADI_FI_ID)1349 /* all < all */
 #define ADFI_1350_NUMERIC_GE		(ADI_FI_ID)1350 /* all >= all */
@@ -1762,3 +1771,7 @@
 #define ADFI_1468_MONEY_MUL_VARCHAR	(ADI_FI_ID)1468 /* money * varchar */
 #define ADFI_1469_VARCHAR_MUL_MONEY	(ADI_FI_ID)1469 /* varchar * money */
 #define ADFI_1470_SOUNDEX_DM	        (ADI_FI_ID)1470 /* soundex_dm() */
+#define ADFI_1471_IFNULL_LVCH_LVCH	(ADI_FI_ID)1471 /* ifnull(lvarchar, lvarchar) */
+#define ADFI_1472_IFNULL_LBYTE_LBYTE	(ADI_FI_ID)1472 /* ifnull(lbyte, lbyte) */
+#define ADFI_1473_IFNULL_LNVCH_LNVCH	(ADI_FI_ID)1473 /* ifnull(lnvarchar,long_nvarchar) */
+#define ADFI_1474_SINGLECHK_ALL		(ADI_FI_ID)1474 /* all := singlechk(all) */

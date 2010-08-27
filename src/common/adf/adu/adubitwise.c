@@ -883,6 +883,9 @@ DB_DATA_VALUE	*rdv)
 **	    Created.
 **      23-may-2007 (smeke01) b118342/b118344
 **	    Work with i8.
+**	04-Jun-2010 (kiria01) b123879 i144946
+**	    Don't return unnecessary errors for i8 values that are outside of
+**	    i4 range when later logic would have adjusted the parameter anyway.
 */
 DB_STATUS
 adu_intextract(
@@ -894,7 +897,6 @@ DB_DATA_VALUE	*rdv)
     DB_STATUS           db_stat;
     unsigned char	*s;
     i4		    	slen, n, r;
-    i8			i8n;
     	
     if ((db_stat = adu_3straddr(adf_scb, dvbyte, (char**)&s)) != E_DB_OK)
 	return (db_stat);
@@ -913,14 +915,18 @@ DB_DATA_VALUE	*rdv)
     	  n = *(i4*)dvint->db_data;
 	  break;
     	case 8:
-	  i8n = *(i8 *)dvint->db_data;
+	{
+	  i8 i8n = *(i8 *)dvint->db_data;
 
-	  /* limit to i4 values */
-	  if ( i8n > MAXI4 || i8n < MINI4LL )
-		return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "intextract count overflow"));
-
+	  /* limit to i4 values - don't return error though as outrange should return
+	  ** 0 anyway regardless. */
+	  if (i8n > MAXI4)
+		i8n = MAXI4;
+	  else if (i8n < MINI4LL)
+		i8n = MINI4LL;	
 	  n = (i4) i8n;
 	  break;
+	}
 	default:
 	  return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0, "intextract count length"));
     }

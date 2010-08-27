@@ -164,6 +164,8 @@
 **	    to update the iirelation row for any dependent indexes, hence break 
 **	    out handling of rename columns for dependent indexes into new 
 **	    routine si_rencol_adjust().
+**      23-Jun-2010 (stial01) (b123972)
+**          Fixed test for page type(s) that allow rows spanning pages
 **/
 
 /*
@@ -366,6 +368,15 @@ static DB_STATUS   si_rencol_adjust(
 **	    Update relattnametot in iirelation in case of the rename column.
 **	    Call si_rencol_adjust() to update the iirelation row for any 
 **	    dependent indexes.
+**	6-Jun-2010 (kschendel) b123923
+**	    Parser now prohibits all alter table alter column with LOB types,
+**	    except when new and old types are essentially equivalent.  In
+**	    that case, just update the existing iiattribute, don't make it
+**	    look like a normal alter column.
+**	    Remove an extra break-out-of for(;;), fix a lot of broken
+**	    indentation.
+**	25-Aug-2010 (miket) SIR 122403 SD 145781
+**	    Better msg for alter table not valid for encrypted tables.
 */
 
 DB_STATUS
@@ -393,58 +404,57 @@ DB_ERROR	*dberr)
     DMP_ATTRIBUTE	att_rec_tmp;
     i4             i;
     DB_TAB_TIMESTAMP    timestamp;
-    i4             error;
-    i4             local_error;
-    DB_ERROR            log_err;
-    DB_STATUS           status;
-    DB_STATUS           local_status;
-    DB_TAB_ID           table_id;
+    i4		error;
+    i4		local_error;
+    DB_ERROR	log_err;
+    DB_STATUS	status;
+    DB_STATUS	local_status;
+    DB_TAB_ID	table_id;
     DM2R_KEY_DESC       rel_key_desc[2];
     DM2R_KEY_DESC       att_key_desc[2];
     DM2R_KEY_DESC       idx_key_desc[2];
-    DM_TID              reltid;
-    DM_TID              attrtid;
-    DML_SCB             *scb;
-    bool                syscat;
-    i4             lk_mode;
+    DM_TID	reltid;
+    DM_TID	attrtid;
+    DML_SCB	*scb;
+    bool	syscat;
+    i4		lk_mode;
     i4		purge_mode = DM2T_NOPURGE;
-    i4             journal;
-    i4                  gateway = 0;
-    i4                  view    = 0;
-    i4             has_extensions = 0;
-    i4                  logging;
-    LG_LSN              lsn;
-    i4             table_access_mode;
-    i4             timeout = 0;
-    i4             journal_flag;
+    i4		journal;
+    i4		gateway = 0;
+    i4		view    = 0;
+    i4		has_extensions = 0;
+    i4		logging;
+    LG_LSN	lsn;
+    i4		table_access_mode;
+    i4		timeout = 0;
+    i4		journal_flag;
     i4		deleted_index = 0;
-    u_i2		hold_attid = 0;
-    u_i2		hold_attintl_id = 0;
-    u_i2		dropped_col_intlid;
-    u_i2		dropped_col_size;
+    u_i2	hold_attid = 0;
+    u_i2	hold_attintl_id = 0;
+    u_i2	dropped_col_intlid;
+    u_i2	dropped_col_size;
     i2		dropped_col_attid = -1;
-    bool		has_vers;
-    bool		parttab;
-    ADF_CB              adf_scb;
-    i4                  dt_bits;
+    bool	has_vers;
+    bool	parttab;
+    ADF_CB	*adf_scb;
+    i4		dt_bits;
     DMP_ETAB_CATALOG    etab_record;
-    u_i2		altcol_col_intlid;
-    u_i2		altcol_col_size;
-    i2			sizediff;
-    bool		column_altered = FALSE;
-    DMP_RCB		*idx_rcb = (DMP_RCB *) 0;
-    DMP_INDEX		idxrec;
-    DM_TID		idxtid;
-    DB_TAB_ID		idx_tabid;
-    i4			max;
-    i4			nsz;
-    DB_ERROR		local_dberr;
-    DB_ATT_NAME		tmpattnm;
+    u_i2	altcol_col_intlid;
+    u_i2	altcol_col_size;
+    i2		sizediff;
+    bool	column_altered = FALSE;
+    bool	incr_relversion = FALSE;
+    DMP_RCB	*idx_rcb = (DMP_RCB *) 0;
+    DMP_INDEX	idxrec;
+    DM_TID	idxtid;
+    DB_TAB_ID	idx_tabid;
+    i4		max;
+    i4		nsz;
+    DB_ERROR	local_dberr;
+    DB_ATT_NAME	tmpattnm;
 
     CLRDBERR(dberr);
     CLRDBERR(&log_err);
-
-    MEfill(sizeof(ADF_CB),0,(PTR)&adf_scb);
 
     status = dm2u_ckp_lock(dcb, (DB_TAB_NAME *)NULL, (DB_OWN_NAME *)NULL, 
 			   xcb, dberr);
@@ -463,6 +473,7 @@ DB_ERROR	*dberr)
 
     lk_mode = DM2T_X;
     scb = xcb->xcb_scb_ptr;
+    adf_scb = scb->scb_adf_cb;
 
     timeout = dm2t_get_timeout(scb, tbl_id); /* from set lockmode */
 
@@ -493,10 +504,10 @@ DB_ERROR	*dberr)
         t = r->rcb_tcb_ptr;
         r->rcb_xcb_ptr = xcb;
 
-	/* Can't alter an encrypted table (yet) CRYPT_FIXME */
+	/* Can't alter an encrypted table (yet) */
 	if ( t->tcb_rel.relencflags & TCB_ENCRYPTED )
         {
-	   SETDBERR(dberr, 0, E_DM010A_ERROR_ALTERING_TABLE);
+	   SETDBERR(dberr, 0, E_DM00AD_ENCRYPT_NO_ALTER_TABLE);
 	   status = E_DB_ERROR;
            break;
         }
@@ -569,7 +580,7 @@ DB_ERROR	*dberr)
 	}
 	
 	/* Calculate max row size for this page size, page type */
-	if (t->tcb_rel.relpgtype == DM_PG_V5)
+	if (DMPP_VPT_PAGE_HAS_SEGMENTS(t->tcb_rel.relpgtype))
 	   max = DM_TUPLEN_MAX_V5;
 	else
 	   max = dm2u_maxreclen(t->tcb_rel.relpgtype, t->tcb_rel.relpgsize);
@@ -648,390 +659,386 @@ DB_ERROR	*dberr)
         attr_rcb->rcb_xcb_ptr = xcb;
 
 
-        for (;;)
-        {
+	/* position iirelation on page for table being altered */
 
-            /* position iirelation on page for table being altered */
+	table_id.db_tab_base = tbl_id->db_tab_base;
+	table_id.db_tab_index = tbl_id->db_tab_index;
+	rel_key_desc[0].attr_operator = DM2R_EQ;
+	rel_key_desc[0].attr_number = DM_1_RELATION_KEY;
+	rel_key_desc[0].attr_value = (char *) &table_id.db_tab_base;
 
-            table_id.db_tab_base = tbl_id->db_tab_base;
-            table_id.db_tab_index = tbl_id->db_tab_index;
-            rel_key_desc[0].attr_operator = DM2R_EQ;
-            rel_key_desc[0].attr_number = DM_1_RELATION_KEY;
-            rel_key_desc[0].attr_value = (char *) &table_id.db_tab_base;
+	att_key_desc[0].attr_operator = DM2R_EQ;
+	att_key_desc[0].attr_number = DM_1_ATTRIBUTE_KEY;
+	att_key_desc[0].attr_value = (char *) &table_id.db_tab_base;
+	att_key_desc[1].attr_operator = DM2R_EQ;
+	att_key_desc[1].attr_number = DM_2_ATTRIBUTE_KEY;
+	att_key_desc[1].attr_value = (char *) &table_id.db_tab_index;
 
-            att_key_desc[0].attr_operator = DM2R_EQ;
-            att_key_desc[0].attr_number = DM_1_ATTRIBUTE_KEY;
-            att_key_desc[0].attr_value = (char *) &table_id.db_tab_base;
-            att_key_desc[1].attr_operator = DM2R_EQ;
-            att_key_desc[1].attr_number = DM_2_ATTRIBUTE_KEY;
-            att_key_desc[1].attr_value = (char *) &table_id.db_tab_index;
+	idx_key_desc[0].attr_operator = DM2R_EQ;
+	idx_key_desc[0].attr_number = DM_1_INDEX_KEY;
+	idx_key_desc[0].attr_value = (char *) &table_id.db_tab_base;
+	idx_key_desc[1].attr_operator = DM2R_EQ;
+	idx_key_desc[1].attr_number = DM_2_INDEX_KEY;
+	idx_key_desc[1].attr_value = (char *) &table_id.db_tab_index;
 
-            idx_key_desc[0].attr_operator = DM2R_EQ;
-            idx_key_desc[0].attr_number = DM_1_INDEX_KEY;
-            idx_key_desc[0].attr_value = (char *) &table_id.db_tab_base;
-            idx_key_desc[1].attr_operator = DM2R_EQ;
-            idx_key_desc[1].attr_number = DM_2_INDEX_KEY;
-            idx_key_desc[1].attr_value = (char *) &table_id.db_tab_index;
+	status = dm2r_position(rel_rcb, DM2R_QUAL, rel_key_desc, (i4)1,
+			       (DM_TID *)0, dberr);
+	if (status != E_DB_OK)
+	    break;
 
-            status = dm2r_position(rel_rcb, DM2R_QUAL, rel_key_desc, (i4)1,
-                                   (DM_TID *)0, dberr);
-            if (status != E_DB_OK)
-                break;
+	for (;;)
+	{
+	    status = dm2r_get(rel_rcb, &reltid, DM2R_GETNEXT,
+			      (char *)&relrecord, dberr);
 
-            for (;;)
-            {
-                status = dm2r_get(rel_rcb, &reltid, DM2R_GETNEXT,
-                                  (char *)&relrecord, dberr);
+	    if (status != E_DB_OK)
+		break;
 
-                if (status != E_DB_OK)
-		    break;
+	    if ((relrecord.reltid.db_tab_base == table_id.db_tab_base) &&
+		(relrecord.reltid.db_tab_index == table_id.db_tab_index))
 
-                if ((relrecord.reltid.db_tab_base == table_id.db_tab_base) &&
-                    (relrecord.reltid.db_tab_index == table_id.db_tab_index))
+		break;
 
-                    break;
+	}
 
-            }
+	if (status != E_DB_OK)
+	   break;
 
-            if (status != E_DB_OK)
-               break;
+	if (t->tcb_rel.relcmptlvl == DMF_T0_VERSION ||
+	    t->tcb_rel.relcmptlvl == DMF_T1_VERSION ||
+	    t->tcb_rel.relcmptlvl == DMF_T2_VERSION)
+	{
+	    SETDBERR(dberr, 0, E_DM00A5_ATBL_UNSUPPORTED);
+	    status = E_DB_ERROR;
+	    break;
+	}
 
-	    if (t->tcb_rel.relcmptlvl == DMF_T0_VERSION ||
-		t->tcb_rel.relcmptlvl == DMF_T1_VERSION ||
-		t->tcb_rel.relcmptlvl == DMF_T2_VERSION)
-            {
-		SETDBERR(dberr, 0, E_DM00A5_ATBL_UNSUPPORTED);
-		status = E_DB_ERROR;
-	        break;
-            }
+	if (operation == DMU_C_ADD_ALTER)
+	{
+	   status = dm2r_position(attr_rcb, DM2R_QUAL, att_key_desc, (i4)2,
+				  (DM_TID *)0,
+				   dberr);
 
-            if (operation == DMU_C_ADD_ALTER)
-            {
-               status = dm2r_position(attr_rcb, DM2R_QUAL, att_key_desc, (i4)2,
-                                      (DM_TID *)0,
-				       dberr);
+	   if (status != E_DB_OK)
+	      break;
 
-               if (status != E_DB_OK)
-                  break;
+	   for (;;)
+	   {
+	       status = dm2r_get(attr_rcb, &attrtid, DM2R_GETNEXT,
+				 (char *)&att_rec, dberr);
 
-               for (;;)
-               {
-                   status = dm2r_get(attr_rcb, &attrtid, DM2R_GETNEXT,
-                                     (char *)&att_rec, dberr);
-
-                   if (status == E_DB_OK)
-                   {
-
-                      if ((att_rec.attrelid.db_tab_base ==
-		     				 table_id.db_tab_base) &&
-                    	  (att_rec.attrelid.db_tab_index ==
-			 			 table_id.db_tab_index))
-		      {
-
-		          if (att_rec.attintl_id > hold_attintl_id)
-			     hold_attintl_id = att_rec.attintl_id;
-
-		          if ((att_rec.attid > hold_attid) &&
-                              (!att_rec.attver_dropped))
-                             hold_attid = att_rec.attid;
-		      }
-                      continue;
-                   }
-
-		   /*
-		   ** Init ALL fields of new att record
-		   ** Do NOT assume that at the end of dm2r_get calls
-		   ** that it contains an attribute for this table
-		   ** (att_rec buf was used by dm2r_get to uncompress
-		   ** rows before comparing the key we gave
-		   */
-		   MEfill(sizeof(att_rec), 0, (char *)&att_rec); 
-                   if (status == E_DB_ERROR && dberr->err_code == E_DM0055_NONEXT)
-                   {
-                      att_rec.attrelid = table_id;
-                      att_rec.attid = ++hold_attid;
-                      att_rec.attxtra = 0;
-                      att_rec.attoff = relrecord.relwid;
-                      att_rec.attfmt = attr_entry[0]->attr_type;
-                      att_rec.attfml = attr_entry[0]->attr_size;
-                      att_rec.attfmp = attr_entry[0]->attr_precision;
-                      att_rec.attkey = 0;
-                      att_rec.attflag = attr_entry[0]->attr_flags_mask;
-                      COPY_DEFAULT_ID( attr_entry[0]->attr_defaultID,
-                                      att_rec.attDefaultID );
-                      STRUCT_ASSIGN_MACRO(attr_entry[0]->attr_name,
-                                             att_rec.attname);
-                      att_rec.attintl_id = ++hold_attintl_id;
-                      att_rec.attver_added = (relrecord.relversion + 1);
-                      att_rec.attver_dropped = 0;
-                      att_rec.attver_altcol = 0;
-                      att_rec.attval_from = 0;
-                      att_rec.attcollID = attr_entry[0]->attr_collID;
-                      att_rec.attgeomtype = attr_entry[0]->attr_geomtype;
-                      att_rec.attsrid = attr_entry[0]->attr_srid;
-                      att_rec.attencflags = attr_entry[0]->attr_encflags;
-                      att_rec.attencwid = attr_entry[0]->attr_encwid;
-                      MEfill(sizeof(att_rec.attfree), 0,
-                             (PTR)&att_rec.attfree);
-
-                      status = dm2r_put(attr_rcb, DM2R_DUPLICATES,
-                                        (char *)&att_rec, dberr);
-
-                      if (status != E_DB_OK)
-                      {
-                            uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
-                                       (char *)NULL, (i4)0, (i4 *)NULL,
-                                       &local_error, 0);
-			    SETDBERR(&log_err, 0, E_DM9028_ATTR_UPDATE_ERR);
-                            break;
-                      }
-
-                      break;
-                   }
-
-                   else
-
-                   {
-		      SETDBERR(dberr, 0, E_DM008A_ERROR_GETTING_RECORD);
-                      break;
-                   }
-
-                }   /* end of for (;;) */
-
-		for (nsz = DB_ATT_MAXNAME;  
-		    att_rec_tmp.attname.db_att_name[nsz-1] == ' '
-			    && nsz >= 1; nsz--);
-
-                relrecord.relatts++;
-                relrecord.relwid += att_rec.attfml;
-		relrecord.reltotwid += att_rec.attfml;
-		relrecord.reldatawid += att_rec.attfml;
-		relrecord.reltotdatawid += att_rec.attfml;
-                relrecord.relattnametot += nsz;
-
-		/* If we added a peripheral column, create the etab */
-		status = adi_dtinfo(&adf_scb, attr_entry[0]->attr_type, 
-			&dt_bits);
-		if (status != E_DB_OK)
-		    break;
-
-		if (dt_bits & AD_PERIPHERAL)
-		{
-		    /*
-		    ** VPS extension tables
-		    ** Page size will be determined in dmpe
-		    */
-		    status = dmpe_create_extension(xcb, &relrecord, 
-			    0, /* page_size determined in dmpe */
-			    t->tcb_table_io.tbio_location_array,
-			    t->tcb_table_io.tbio_loc_count,
-			    att_rec.attid, att_rec.attfmt, 
-			    &etab_record, dberr);
-		    
-		    if (status != E_DB_OK)
-			break;
-		}
-            }
-            else if (operation == DMU_C_DROP_ALTER)   /* process DROP COLUMN */
-            {
-	       for (i = 1; i <= t->tcb_rel.relatts; i++)
+	       if (status == E_DB_OK)
 	       {
-		   MEmove(t->tcb_atts_ptr[i].attnmlen,
-		       t->tcb_atts_ptr[i].attnmstr,
-		       ' ', DB_ATT_MAXNAME, tmpattnm.db_att_name);
-		   if (t->tcb_atts_ptr[i].ver_dropped == 0 &&
-		       MEcmp(tmpattnm.db_att_name,
-				(PTR)&attr_entry[0]->attr_name,
-				sizeof(DB_ATT_NAME) ) == 0)
-		   {
-		      dropped_col_intlid = t->tcb_atts_ptr[i].intl_id;
-		      dropped_col_size = t->tcb_atts_ptr[i].length;
-		      break;
-		   }
+
+		  if ((att_rec.attrelid.db_tab_base ==
+					     table_id.db_tab_base) &&
+		      (att_rec.attrelid.db_tab_index ==
+					     table_id.db_tab_index))
+		  {
+
+		      if (att_rec.attintl_id > hold_attintl_id)
+			 hold_attintl_id = att_rec.attintl_id;
+
+		      if ((att_rec.attid > hold_attid) &&
+			  (!att_rec.attver_dropped))
+			 hold_attid = att_rec.attid;
+		  }
+		  continue;
 	       }
 
-	       if (i > t->tcb_rel.relatts)
+	       /*
+	       ** Init ALL fields of new att record
+	       ** Do NOT assume that at the end of dm2r_get calls
+	       ** that it contains an attribute for this table
+	       ** (att_rec buf was used by dm2r_get to uncompress
+	       ** rows before comparing the key we gave
+	       */
+	       MEfill(sizeof(att_rec), 0, (char *)&att_rec); 
+	       if (status == E_DB_ERROR && dberr->err_code == E_DM0055_NONEXT)
 	       {
-		  SETDBERR(dberr, 0, E_DM002A_BAD_PARAMETER);
-		  status = E_DB_ERROR;
+		  att_rec.attrelid = table_id;
+		  att_rec.attid = ++hold_attid;
+		  att_rec.attxtra = 0;
+		  att_rec.attoff = relrecord.relwid;
+		  att_rec.attfmt = attr_entry[0]->attr_type;
+		  att_rec.attfml = attr_entry[0]->attr_size;
+		  att_rec.attfmp = attr_entry[0]->attr_precision;
+		  att_rec.attkey = 0;
+		  att_rec.attflag = attr_entry[0]->attr_flags_mask;
+		  COPY_DEFAULT_ID( attr_entry[0]->attr_defaultID,
+				  att_rec.attDefaultID );
+		  STRUCT_ASSIGN_MACRO(attr_entry[0]->attr_name,
+					 att_rec.attname);
+		  att_rec.attintl_id = ++hold_attintl_id;
+		  att_rec.attver_added = (relrecord.relversion + 1);
+		  att_rec.attver_dropped = 0;
+		  att_rec.attver_altcol = 0;
+		  att_rec.attval_from = 0;
+		  att_rec.attcollID = attr_entry[0]->attr_collID;
+		  att_rec.attgeomtype = attr_entry[0]->attr_geomtype;
+		  att_rec.attsrid = attr_entry[0]->attr_srid;
+		  att_rec.attencflags = attr_entry[0]->attr_encflags;
+		  att_rec.attencwid = attr_entry[0]->attr_encwid;
+		  MEfill(sizeof(att_rec.attfree), 0,
+			 (PTR)&att_rec.attfree);
+
+		  status = dm2r_put(attr_rcb, DM2R_DUPLICATES,
+				    (char *)&att_rec, dberr);
+
+		  if (status != E_DB_OK)
+		  {
+			uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
+				   (char *)NULL, (i4)0, (i4 *)NULL,
+				   &local_error, 0);
+			SETDBERR(&log_err, 0, E_DM9028_ATTR_UPDATE_ERR);
+			break;
+		  }
+
 		  break;
 	       }
 
-	       if (cascade)
+	       else
+
 	       {
-		  status = si_cascade(xcb, &r, t, attr_entry, &relrecord,
-				      db_lockmode, journal_flag,
-				      &deleted_index, dberr);
-
-		  if (status != E_DB_OK)
-		     break;
+		  SETDBERR(dberr, 0, E_DM008A_ERROR_GETTING_RECORD);
+		  break;
 	       }
 
-               status = dm2r_position(attr_rcb, DM2R_QUAL, att_key_desc, (i4)2,
-                                      (DM_TID *)0,
-				       dberr);
+	    }   /* end of for (;;) */
 
-               if (status != E_DB_OK)
-                  break;
+	    for (nsz = DB_ATT_MAXNAME;  
+		att_rec_tmp.attname.db_att_name[nsz-1] == ' '
+			&& nsz >= 1; nsz--);
 
-               for (;;)
-               {
-                   status = dm2r_get(attr_rcb, &attrtid, DM2R_GETNEXT,
-                                     (char *)&att_rec, dberr);
+	    relrecord.relatts++;
+	    relrecord.relwid += att_rec.attfml;
+	    relrecord.reltotwid += att_rec.attfml;
+	    relrecord.reldatawid += att_rec.attfml;
+	    relrecord.reltotdatawid += att_rec.attfml;
+	    relrecord.relattnametot += nsz;
 
-		   if (status == E_DB_OK) 
-		   {
-                      if (att_rec.attrelid.db_tab_base ==
-		     				 table_id.db_tab_base &&
-                          att_rec.attrelid.db_tab_index ==
-			 			 table_id.db_tab_index &&  
-			  att_rec.attver_dropped == 0)
-		      {
-			  if (att_rec.attintl_id == dropped_col_intlid)
-			  {
-		             att_rec.attver_dropped =
-			    			 (relrecord.relversion + 1);
-		      	     relrecord.relwid -= att_rec.attfml;
-		      	     relrecord.reldatawid -= att_rec.attfml;
+	    /* If we added a peripheral column, create the etab */
+	    status = adi_dtinfo(adf_scb, attr_entry[0]->attr_type, 
+		    &dt_bits);
+	    if (status != E_DB_OK)
+		break;
 
-            	      	     status = dm2r_replace(attr_rcb, &attrtid,
-			    		  DM2R_BYPOSITION, (char *)&att_rec,
-					  (char *)0, dberr);
+	    if (dt_bits & AD_PERIPHERAL)
+	    {
+		/*
+		** VPS extension tables
+		** Page size will be determined in dmpe
+		*/
+		status = dmpe_create_extension(xcb, &relrecord, 
+			0, /* page_size determined in dmpe */
+			t->tcb_table_io.tbio_location_array,
+			t->tcb_table_io.tbio_loc_count,
+			att_rec.attid, att_rec.attfmt, 
+			&etab_record, dberr);
+		
+		if (status != E_DB_OK)
+		    break;
+	    }
+	    incr_relversion = TRUE;
+	}
+	else if (operation == DMU_C_DROP_ALTER)   /* process DROP COLUMN */
+	{
+	    for (i = 1; i <= t->tcb_rel.relatts; i++)
+	    {
+		MEmove(t->tcb_atts_ptr[i].attnmlen,
+			t->tcb_atts_ptr[i].attnmstr,
+			' ', DB_ATT_MAXNAME, tmpattnm.db_att_name);
+		if (t->tcb_atts_ptr[i].ver_dropped == 0 &&
+		  MEcmp(tmpattnm.db_att_name,
+			    (PTR)&attr_entry[0]->attr_name,
+			    sizeof(DB_ATT_NAME) ) == 0)
+		{
+		    dropped_col_intlid = t->tcb_atts_ptr[i].intl_id;
+		    dropped_col_size = t->tcb_atts_ptr[i].length;
+		    break;
+		}
+	    }
 
-            	      	     if (status != E_DB_OK)
-            	      	     {
-                	 	uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, 
-                    		    	   NULL, (char *)NULL, (i4)0, 
-				     	   (i4 *)NULL, &local_error, 0);
+	    if (i > t->tcb_rel.relatts)
+	    {
+		SETDBERR(dberr, 0, E_DM002A_BAD_PARAMETER);
+		status = E_DB_ERROR;
+		break;
+	    }
+
+	    if (cascade)
+	    {
+		status = si_cascade(xcb, &r, t, attr_entry, &relrecord,
+				  db_lockmode, journal_flag,
+				  &deleted_index, dberr);
+
+		if (status != E_DB_OK)
+		    break;
+	    }
+
+	    status = dm2r_position(attr_rcb, DM2R_QUAL, att_key_desc, (i4)2,
+				  (DM_TID *)0,
+				   dberr);
+
+	    if (status != E_DB_OK)
+		break;
+
+	    for (;;)
+	    {
+		status = dm2r_get(attr_rcb, &attrtid, DM2R_GETNEXT,
+				 (char *)&att_rec, dberr);
+
+		if (status == E_DB_OK) 
+		{
+		    if (att_rec.attrelid.db_tab_base == table_id.db_tab_base &&
+		      att_rec.attrelid.db_tab_index == table_id.db_tab_index &&
+		      att_rec.attver_dropped == 0)
+		    {
+			if (att_rec.attintl_id == dropped_col_intlid)
+			{
+			    att_rec.attver_dropped = (relrecord.relversion + 1);
+			    relrecord.relwid -= att_rec.attfml;
+			    relrecord.reldatawid -= att_rec.attfml;
+
+			    status = dm2r_replace(attr_rcb, &attrtid,
+				      DM2R_BYPOSITION, (char *)&att_rec,
+				      (char *)0, dberr);
+
+			    if (status != E_DB_OK)
+			    {
+				uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, 
+				       NULL, (char *)NULL, (i4)0, 
+				       (i4 *)NULL, &local_error, 0);
 				SETDBERR(&log_err, 0, E_DM9026_REL_UPDATE_ERR);
-                	        break;
-            	      	     }
-			     dropped_col_attid = att_rec.attid;
-			  }
-			  else if (att_rec.attintl_id > dropped_col_intlid)
-			  {
-		      	     att_rec.attoff -= dropped_col_size;
-			     att_rec.attid--;
-            	             status = dm2r_replace(attr_rcb, &attrtid,
-				          DM2R_BYPOSITION, (char *)&att_rec,
-					  (char *)0, dberr);
+				break;
+			    }
+			    dropped_col_attid = att_rec.attid;
+			}
+			else if (att_rec.attintl_id > dropped_col_intlid)
+			{
+			    att_rec.attoff -= dropped_col_size;
+			    att_rec.attid--;
+			    status = dm2r_replace(attr_rcb, &attrtid,
+				      DM2R_BYPOSITION, (char *)&att_rec,
+				      (char *)0, dberr);
 
-            	             if (status != E_DB_OK)
-            	             {
-                	 	uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, 
-                    		    	   NULL, (char *)NULL, (i4)0, 
-				     	   (i4 *)NULL, &local_error, 0);
+			    if (status != E_DB_OK)
+			    {
+				uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, 
+				       NULL, (char *)NULL, (i4)0, 
+				       (i4 *)NULL, &local_error, 0);
 				SETDBERR(&log_err, 0, E_DM9026_REL_UPDATE_ERR);
-                	        break;
-            	             }
-			  }
-		      }
-		  }
-		  else
-                  {
-		      if (dberr->err_code == E_DM0055_NONEXT)
-		      {
-			 status = si_adjust_colmaps(dcb, xcb, &relrecord,
-						    &table_id,
-						    dropped_col_attid,
-						    db_lockmode, journal_flag,
-						    dberr);
+				break;
+			    }
+			}
+		    }
+		}
+		else
+		{
+		    if (dberr->err_code == E_DM0055_NONEXT)
+		    {
+			status = si_adjust_colmaps(dcb, xcb, &relrecord,
+						&table_id,
+						dropped_col_attid,
+						db_lockmode, journal_flag,
+						dberr);
 
-			 if (status != E_DB_OK)
+			if (status != E_DB_OK)
 			    break;
-		      }
-                      break;
-		  }
-	       }
-            }
-	    else if (operation == DMU_C_ALTCOL_ALTER)   /* ALTER TAB ALT COLUMN */
-            {
-	      /* search the attribute to alter */
-              for (i = 1; i <= t->tcb_rel.relatts; i++)
-              {
+		    }
+		    break;
+		}
+	    } /* for */
+	    incr_relversion = TRUE;
+	}
+	else if (operation == DMU_C_ALTCOL_ALTER)   /* ALTER TAB ALT COLUMN */
+	{
+	    /* search the attribute to alter */
+	    for (i = 1; i <= t->tcb_rel.relatts; i++)
+	    {
 		MEmove(t->tcb_atts_ptr[i].attnmlen,
 		    t->tcb_atts_ptr[i].attnmstr,
 		    ' ', DB_ATT_MAXNAME, tmpattnm.db_att_name);
 
-                  if (t->tcb_atts_ptr[i].ver_altcol == 0 &&
-                      t->tcb_atts_ptr[i].ver_dropped == 0 &&
-                       MEcmp(tmpattnm.db_att_name,
-                                (PTR)&attr_entry[0]->attr_name,
-                                sizeof(DB_ATT_NAME) ) == 0)
-                  {
+		if (t->tcb_atts_ptr[i].ver_altcol == 0 &&
+		  t->tcb_atts_ptr[i].ver_dropped == 0 &&
+		  MEcmp(tmpattnm.db_att_name,
+			    (PTR)&attr_entry[0]->attr_name,
+			    sizeof(DB_ATT_NAME) ) == 0)
+		{
 		    DB_DT_ID	    coltype = 0;
-            	    DB_DT_ID	    restype = 0;
-                    ADI_DT_NAME     coltype_name;
-                    ADI_DT_NAME     restype_name;
+		    DB_DT_ID	    restype = 0;
+		    ADI_DT_NAME     coltype_name;
+		    ADI_DT_NAME     restype_name;
 		    ADI_DT_BITMASK  typeset;
 
 		    /* Check if the column is a key in the table */
-                    if (t->tcb_atts_ptr[i].key)
-                    {
-                        uleFormat(dberr, E_DM019C_ACOL_KEY_NOT_ALLOWED, 
-					(CL_ERR_DESC *)NULL, ULE_LOG,
-                                           NULL, (char *)NULL, (i4)0,
-                                           (i4 *)NULL, &local_error, 4,
-                          sizeof(DB_OWN_NAME), t->tcb_rel.relowner.db_own_name,
-                          sizeof(DB_TAB_NAME), t->tcb_rel.relid.db_tab_name,
-                          sizeof(DB_DB_NAME), t->tcb_dcb_ptr->dcb_name.db_db_name,
-			  t->tcb_atts_ptr[i].attnmlen,
-			  t->tcb_atts_ptr[i].attnmstr);
+		    if (t->tcb_atts_ptr[i].key)
+		    {
+			uleFormat(dberr, E_DM019C_ACOL_KEY_NOT_ALLOWED, 
+				    (CL_ERR_DESC *)NULL, ULE_LOG,
+				       NULL, (char *)NULL, (i4)0,
+				       (i4 *)NULL, &local_error, 4,
+				sizeof(DB_OWN_NAME), t->tcb_rel.relowner.db_own_name,
+				sizeof(DB_TAB_NAME), t->tcb_rel.relid.db_tab_name,
+				sizeof(DB_DB_NAME), t->tcb_dcb_ptr->dcb_name.db_db_name,
+				t->tcb_atts_ptr[i].attnmlen,
+				t->tcb_atts_ptr[i].attnmstr);
 			SETDBERR(&log_err, 0, E_DM9028_ATTR_UPDATE_ERR);
-                        status = E_DB_ERROR;
-                        break;
-                    }
+			status = E_DB_ERROR;
+			break;
+		    }
 
-                    /* Check for incompatible type coercion */
+		    /* Check for incompatible type coercion */
 		    coltype = abs(t->tcb_atts_ptr[i].type);
-            	    restype = abs(attr_entry[0]->attr_type);
-            	    if (coltype != restype)
-            	    {
-                      if ((status = adi_tycoerce(&adf_scb, coltype, &typeset))
-                   		|| !BTtest((i4) ADI_DT_MAP_MACRO(restype), 
-				(char*) &typeset))
-                      {
+		    restype = abs(attr_entry[0]->attr_type);
+		    if (coltype != restype)
+		    {
+			if ((status = adi_tycoerce(adf_scb, coltype, &typeset))
+			    || !BTtest((i4) ADI_DT_MAP_MACRO(restype), 
+			    (char*) &typeset))
+			{
 
-                        STmove("<none>", ' ', 
-			  sizeof (ADI_DT_NAME), (char *) &coltype_name);
-                        STmove("<none>", ' ', 
-		 	  sizeof (ADI_DT_NAME), (char *) &restype_name);
+			    STmove("<none>", ' ', 
+			      sizeof (ADI_DT_NAME), (char *) &coltype_name);
+			    STmove("<none>", ' ', 
+			      sizeof (ADI_DT_NAME), (char *) &restype_name);
 
-                        status = adi_tyname(&adf_scb, coltype, &coltype_name);
-                        status = adi_tyname(&adf_scb, restype, &restype_name);
+			    status = adi_tyname(adf_scb, coltype, &coltype_name);
+			    status = adi_tyname(adf_scb, restype, &restype_name);
 
-                        uleFormat(dberr, E_DM019B_INVALID_ALTCOL_PARAM, 
-					(CL_ERR_DESC *)NULL, ULE_LOG,
-                                           NULL, (char *)NULL, (i4)0,
-                                           (i4 *)NULL, &local_error, 3,
-					   STtrmwhite((char *)&coltype_name),
-					   &coltype_name, 
-					   STtrmwhite((char *)&restype_name), 
-					   &restype_name,
-					   t->tcb_atts_ptr[i].attnmlen,
-					   t->tcb_atts_ptr[i].attnmstr);
-			SETDBERR(&log_err, 0, E_DM9028_ATTR_UPDATE_ERR);
-                        status = E_DB_ERROR;
-                        break;
-                      }
-            	    }
+			    uleFormat(dberr, E_DM019B_INVALID_ALTCOL_PARAM, 
+				    (CL_ERR_DESC *)NULL, ULE_LOG,
+				       NULL, (char *)NULL, (i4)0,
+				       (i4 *)NULL, &local_error, 3,
+				       STtrmwhite((char *)&coltype_name),
+				       &coltype_name, 
+				       STtrmwhite((char *)&restype_name), 
+				       &restype_name,
+				       t->tcb_atts_ptr[i].attnmlen,
+				       t->tcb_atts_ptr[i].attnmstr);
+			    SETDBERR(&log_err, 0, E_DM9028_ATTR_UPDATE_ERR);
+			    status = E_DB_ERROR;
+			    break;
+			}
+		    }
 		    else if ( (t->tcb_atts_ptr[i].type < 0) &&
-			      (attr_entry[0]->attr_type > 0) )
+			  (attr_entry[0]->attr_type > 0) )
 		    {
 			/* nullable to non-nullable */
-                        uleFormat(dberr, E_DM019B_INVALID_ALTCOL_PARAM, 
-					(CL_ERR_DESC *)NULL, ULE_LOG,
-                                           NULL, (char *)NULL, (i4)0,
-                                           (i4 *)NULL, &local_error, 3,
-                                           sizeof("nullable"),
-                                           "nullable",
-                                           sizeof("non-nullable"),
-                                           "non-nullable",
-					   t->tcb_atts_ptr[i].attnmlen,
-					   t->tcb_atts_ptr[i].attnmstr);
+			uleFormat(dberr, E_DM019B_INVALID_ALTCOL_PARAM, 
+				    (CL_ERR_DESC *)NULL, ULE_LOG,
+				       NULL, (char *)NULL, (i4)0,
+				       (i4 *)NULL, &local_error, 3,
+				       sizeof("nullable"),
+				       "nullable",
+				       sizeof("non-nullable"),
+				       "non-nullable",
+				       t->tcb_atts_ptr[i].attnmlen,
+				       t->tcb_atts_ptr[i].attnmstr);
 			SETDBERR(&log_err, 0, E_DM9028_ATTR_UPDATE_ERR);
-                        status = E_DB_ERROR;
-                        break;
+			status = E_DB_ERROR;
+			break;
 		    }
 		    /* If this is not the base version of a table (also
 		    ** reset if the table has usermod run against it)
@@ -1044,379 +1051,406 @@ DB_ERROR	*dberr)
 			new = &attr_entry[0]->attr_defaultID;
 			if (MEcmp(old,new,sizeof(DB_TAB_ID))!=0)
 			{
-                            uleFormat(dberr, E_DM01A0_INVALID_ALTCOL_DEFAULT, 
-					(CL_ERR_DESC *)NULL, ULE_LOG,
-                                           NULL, (char *)NULL, (i4)0,
-                                           (i4 *)NULL, &local_error, 0);
-                            log_err = *dberr;
-                            status = E_DB_ERROR;
-                            break;
+			    uleFormat(dberr, E_DM01A0_INVALID_ALTCOL_DEFAULT, 
+				    (CL_ERR_DESC *)NULL, ULE_LOG,
+				       NULL, (char *)NULL, (i4)0,
+				       (i4 *)NULL, &local_error, 0);
+			    log_err = *dberr;
+			    status = E_DB_ERROR;
+			    break;
 			}
 		    }
-		     
-                    att_rec.attver_added = (relrecord.relversion + 1);
-                    altcol_col_intlid = t->tcb_atts_ptr[i].intl_id;
-                    altcol_col_size = t->tcb_atts_ptr[i].length;
-                    break;
-                  }
-              }
-	      if (status != E_DB_OK)
-	        break;
-
-              if (i > t->tcb_rel.relatts)
-              {
-	          /* Requesting alter of a non existing column */
-		  SETDBERR(dberr, 0, E_DM002A_BAD_PARAMETER);
-                  status = E_DB_ERROR;
-                  break;
-              }
-
-		/*
-		** If this is ALTER COLUMN, will the tuple now be too long?
-		*/
-		if (((t->tcb_rel.reltotwid - altcol_col_size) +
-			attr_entry[0]->attr_size) > max)
-		{
-		    SETDBERR(dberr, 0, E_DM0186_MAX_TUPLEN_EXCEEDED);
-		    status = E_DB_ERROR;
+		    altcol_col_intlid = t->tcb_atts_ptr[i].intl_id;
+		    altcol_col_size = t->tcb_atts_ptr[i].length;
 		    break;
 		}
-	       
+	    } /* att search for */
+	    if (status != E_DB_OK)
+		break;
 
-	      /* Get the iiattribute record */
-	      status = dm2r_position(attr_rcb, DM2R_QUAL, att_key_desc, (i4)2,
-                                      (DM_TID *)0,
-                                       dberr);
-              if (status != E_DB_OK)
-                  break;
+	    if (i > t->tcb_rel.relatts)
+	    {
+		/* Requesting alter of a non existing column */
+		SETDBERR(dberr, 0, E_DM002A_BAD_PARAMETER);
+		status = E_DB_ERROR;
+		break;
+	    }
 
-	      /*
-	      ** Must calculate sizediff before processing atts
-	      ** We won't necessarily see altered att before the others
-	      ** we need to update
-	      */
-	      sizediff = attr_entry[0]->attr_size - altcol_col_size;
+	    /*
+	    ** If this is ALTER COLUMN, will the tuple now be too long?
+	    */
+	    if (((t->tcb_rel.reltotwid - altcol_col_size) +
+		    attr_entry[0]->attr_size) > max)
+	    {
+		SETDBERR(dberr, 0, E_DM0186_MAX_TUPLEN_EXCEEDED);
+		status = E_DB_ERROR;
+		break;
+	    }
 
-	      for (;;)
-              {
-	          /* Get the iiattribute record */
-                  status = dm2r_get(attr_rcb, &attrtid, DM2R_GETNEXT,
-                                     (char *)&att_rec, dberr);
+	    /* See if (new) column is a LOB.  The parser has checked that if
+	    ** either is a LOB, both are, and there is no change needed
+	    ** other than updating the metadata in iiattribute.  (most
+	    ** notably, the SRID.)
+	    */
+	    status = adi_dtinfo(adf_scb, attr_entry[0]->attr_type, &dt_bits);
+	    if (status != E_DB_OK)
+		break;
+	    /* dt_bits & AD_PERIPHERAL means LOB style alter */
 
-                  if (status == E_DB_OK)
-                  {
-                    if ((att_rec.attrelid.db_tab_base == table_id.db_tab_base) &&
-                        (att_rec.attrelid.db_tab_index == table_id.db_tab_index))
-		    { 
-                        if (att_rec.attintl_id == altcol_col_intlid)
-                        {
-                            att_rec.attver_dropped = relrecord.relversion + 1;
-                            att_rec.attver_altcol = relrecord.relversion + 1;
+	    /* Get the iiattribute record */
+	    status = dm2r_position(attr_rcb, DM2R_QUAL, att_key_desc, (i4)2,
+				  (DM_TID *)0,
+				   dberr);
+	    if (status != E_DB_OK)
+		break;
 
+	    /*
+	    ** Must calculate sizediff before processing atts
+	    ** We won't necessarily see altered att before the others
+	    ** we need to update
+	    */
+	    sizediff = attr_entry[0]->attr_size - altcol_col_size;
 
-                            status = dm2r_replace(attr_rcb, &attrtid,
-                                          DM2R_BYPOSITION, (char *)&att_rec,
-                                          (char *)0, dberr);
-                            if (status != E_DB_OK)
-                            {
-                                uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG,
-                                           NULL, (char *)NULL, (i4)0,
-                                           (i4 *)NULL, &local_error, 0);
-				SETDBERR(&log_err, 0, E_DM9026_REL_UPDATE_ERR);
-                                break;
-                            }
+	    for (;;)
+	    {
+		/* Get the iiattribute record */
+		status = dm2r_get(attr_rcb, &attrtid, DM2R_GETNEXT,
+				 (char *)&att_rec, dberr);
 
-                            /* here we will append the record */
-			    STRUCT_ASSIGN_MACRO(att_rec.attrelid, 
-						att_rec_tmp.attrelid);
-                            att_rec_tmp.attid = att_rec.attid;
-                            att_rec_tmp.attxtra = att_rec.attxtra;
-			    STRUCT_ASSIGN_MACRO(attr_entry[0]->attr_name,
-                                        att_rec_tmp.attname);
-                            att_rec_tmp.attoff = att_rec.attoff;
-                            att_rec_tmp.attfmt = attr_entry[0]->attr_type;
-                            att_rec_tmp.attfml = attr_entry[0]->attr_size;
-                            att_rec_tmp.attfmp = attr_entry[0]->attr_precision;
-                            att_rec_tmp.attkey = att_rec.attkey; 
-                            att_rec_tmp.attflag = attr_entry[0]->attr_flags_mask;
-                            COPY_DEFAULT_ID( attr_entry[0]->attr_defaultID,
-                                        att_rec_tmp.attDefaultID );
-                            att_rec_tmp.attintl_id = att_rec.attintl_id + 1;
-                            att_rec_tmp.attver_added = relrecord.relversion + 1;
-				/* att_rec.attver_added; */
-                            att_rec_tmp.attver_dropped = 0; 
-                            att_rec_tmp.attval_from = att_rec.attval_from; 
-                            att_rec_tmp.attver_altcol = 0;
-                            att_rec_tmp.attcollID = 
-					attr_entry[0]->attr_collID;
-                            att_rec_tmp.attgeomtype = attr_entry[0]->attr_geomtype;
-                            att_rec_tmp.attsrid = attr_entry[0]->attr_srid;
-                            att_rec_tmp.attencflags = attr_entry[0]->attr_encflags;
-                            att_rec_tmp.attencwid = attr_entry[0]->attr_encwid;
+		if (status == E_DB_OK)
+		{
+		    if (att_rec.attrelid.db_tab_base != table_id.db_tab_base ||
+			att_rec.attrelid.db_tab_index != table_id.db_tab_index)
+			continue;	/* Not an interesting att */
+		    if (att_rec.attintl_id == altcol_col_intlid)
+		    {
+			if ((dt_bits & AD_PERIPHERAL) == 0)
+			{
+			    /* Normal alter column */
+			    att_rec.attver_dropped = relrecord.relversion + 1;
+			    att_rec.attver_altcol = relrecord.relversion + 1;
+			}
+			else
+			{
+			    /* LOB alter column, stuff (new?) type info */
+			    att_rec.attfmt = attr_entry[0]->attr_type;
+			    att_rec.attgeomtype = attr_entry[0]->attr_geomtype;
+			    att_rec.attsrid = attr_entry[0]->attr_srid;
+			}
 
-                            MEfill(sizeof(att_rec_tmp.attfree), 0, 
-					(PTR)&att_rec_tmp.attfree);
+			status = dm2r_replace(attr_rcb, &attrtid,
+				  DM2R_BYPOSITION, (char *)&att_rec,
+				  (char *)0, dberr);
+			if (status != E_DB_OK)
+			{
+			    uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG,
+				   NULL, (char *)NULL, (i4)0,
+				   (i4 *)NULL, &local_error, 0);
+			    SETDBERR(&log_err, 0, E_DM9026_REL_UPDATE_ERR);
+			    break;
+			}
+			/* If LOB alter, don't need to keep looking.
+			** Note that column_altered will be false.
+			*/
+			if (dt_bits & AD_PERIPHERAL)
+			    break;
+			incr_relversion = TRUE;
 
-                            status = dm2r_put(attr_rcb, DM2R_DUPLICATES,
-                                          (char *)&att_rec_tmp, dberr);
-                            if (status != E_DB_OK)
-                            {
-                               uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG,
-                                           NULL, (char *)NULL, (i4)0,
-                                           (i4 *)NULL, &local_error, 0);
-			       SETDBERR(&log_err, 0, E_DM9028_ATTR_UPDATE_ERR);
-                               break;
-                            }
+			/* here we will append the record */
+			STRUCT_ASSIGN_MACRO(att_rec.attrelid, 
+					att_rec_tmp.attrelid);
+			att_rec_tmp.attid = att_rec.attid;
+			att_rec_tmp.attxtra = att_rec.attxtra;
+			STRUCT_ASSIGN_MACRO(attr_entry[0]->attr_name,
+				att_rec_tmp.attname);
+			att_rec_tmp.attoff = att_rec.attoff;
+			att_rec_tmp.attfmt = attr_entry[0]->attr_type;
+			att_rec_tmp.attfml = attr_entry[0]->attr_size;
+			att_rec_tmp.attfmp = attr_entry[0]->attr_precision;
+			att_rec_tmp.attkey = att_rec.attkey; 
+			att_rec_tmp.attflag = attr_entry[0]->attr_flags_mask;
+			COPY_DEFAULT_ID( attr_entry[0]->attr_defaultID,
+				att_rec_tmp.attDefaultID );
+			att_rec_tmp.attintl_id = att_rec.attintl_id + 1;
+			att_rec_tmp.attver_added = relrecord.relversion + 1;
+			att_rec_tmp.attver_dropped = 0; 
+			att_rec_tmp.attval_from = att_rec.attval_from; 
+			att_rec_tmp.attver_altcol = 0;
+			att_rec_tmp.attcollID = attr_entry[0]->attr_collID;
+			att_rec_tmp.attgeomtype = attr_entry[0]->attr_geomtype;
+			att_rec_tmp.attsrid = attr_entry[0]->attr_srid;
+			att_rec_tmp.attencflags = attr_entry[0]->attr_encflags;
+			att_rec_tmp.attencwid = attr_entry[0]->attr_encwid;
 
-			    for (nsz = DB_ATT_MAXNAME;  
-				att_rec_tmp.attname.db_att_name[nsz-1] == ' '
-					&& nsz >= 1; nsz--);
+			MEfill(sizeof(att_rec_tmp.attfree), 0, 
+				(PTR)&att_rec_tmp.attfree);
 
-                            relrecord.relwid += sizediff;
-                	    relrecord.relatts++;
-                            relrecord.reltotwid += sizediff;
-                            relrecord.reldatawid += sizediff;
-                            relrecord.reltotdatawid += sizediff;
-			    relrecord.relattnametot += nsz;
-			    column_altered = TRUE;
-		        }
-		        else if (att_rec.attintl_id > altcol_col_intlid)
-                        {
-			  if ((column_altered == TRUE ) && 
-			      (att_rec.attintl_id == altcol_col_intlid + 1) &&
-                              (MEcmp((PTR)&att_rec.attname,
-                                (PTR)&attr_entry[0]->attr_name,
-                                sizeof(DB_ATT_NAME) ) == 0))
-			    continue;
-			    
-                          att_rec.attoff += sizediff;
-                          att_rec.attintl_id++;
-                          status = dm2r_replace(attr_rcb, &attrtid,
-                                          DM2R_BYPOSITION, (char *)&att_rec,
-                                          (char *)0, dberr);
+			status = dm2r_put(attr_rcb, DM2R_DUPLICATES,
+				  (char *)&att_rec_tmp, dberr);
+			if (status != E_DB_OK)
+			{
+			    uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG,
+				   NULL, (char *)NULL, (i4)0,
+				   (i4 *)NULL, &local_error, 0);
+			    SETDBERR(&log_err, 0, E_DM9028_ATTR_UPDATE_ERR);
+			    break;
+			}
 
-                           if (status != E_DB_OK)
-                           {
-                                uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG,
-                                           NULL, (char *)NULL, (i4)0,
-                                           (i4 *)NULL, &local_error, 0);
-				SETDBERR(&log_err, 0, E_DM9026_REL_UPDATE_ERR);
-                                break;
-                           }
-                       }
+			for (nsz = DB_ATT_MAXNAME;  
+			     att_rec_tmp.attname.db_att_name[nsz-1] == ' '
+				&& nsz >= 1; nsz--)
+			    ;
+
+			relrecord.relwid += sizediff;
+			relrecord.relatts++;
+			relrecord.reltotwid += sizediff;
+			relrecord.reldatawid += sizediff;
+			relrecord.reltotdatawid += sizediff;
+			relrecord.relattnametot += nsz;
+			column_altered = TRUE;
 		    }
-		  }
-		  else
-                  {
-                      if (dberr->err_code == E_DM0055_NONEXT)
-                      {
+		    else if (att_rec.attintl_id > altcol_col_intlid)
+		    {
+			if ((column_altered == TRUE ) && 
+			  (att_rec.attintl_id == altcol_col_intlid + 1) &&
+			  (MEcmp((PTR)&att_rec.attname,
+				(PTR)&attr_entry[0]->attr_name,
+				sizeof(DB_ATT_NAME) ) == 0))
+			    continue;
+
+			att_rec.attoff += sizediff;
+			att_rec.attintl_id++;
+			status = dm2r_replace(attr_rcb, &attrtid,
+				  DM2R_BYPOSITION, (char *)&att_rec,
+				  (char *)0, dberr);
+
+			if (status != E_DB_OK)
+			{
+			    uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG,
+				   NULL, (char *)NULL, (i4)0,
+				   (i4 *)NULL, &local_error, 0);
+			    SETDBERR(&log_err, 0, E_DM9026_REL_UPDATE_ERR);
+			    break;
+			}
+		    }
+		}
+		else
+		{
+		    if (dberr->err_code == E_DM0055_NONEXT)
+		    {
 			status = E_DB_OK;
 			CLRDBERR(dberr);
-                      }
-                      break;
-                  }
-	      } /* end for ;; */
+		    }
+		    break;
+		}
+	    } /* end for ;; */
 
-	      if (column_altered && t->tcb_index_count)
-	      {
-	          /* open iiindex */
-		  idx_tabid.db_tab_base = DM_B_INDEX_TAB_ID;
-		  idx_tabid.db_tab_index = DM_I_INDEX_TAB_ID;
-		  status = dm2t_open(dcb, &idx_tabid, DM2T_IX,
-			DM2T_UDIRECT, DM2T_A_WRITE, (i4)0, (i4)20,
-			xcb->xcb_sp_id, xcb->xcb_log_id, xcb->xcb_lk_id, 
-			(i4)0, (i4) 0, db_lockmode,
-			&xcb->xcb_tran_id, &timestamp,
-			&idx_rcb, (DML_SCB *)0, dberr);
-
-		  if (status != E_DB_OK)
-		      break;
-
-		  status = dm2r_position(idx_rcb, DM2R_QUAL, idx_key_desc, (i4)1, 
-			      (DM_TID *)0, dberr);
-
-		  if (status != E_DB_OK)
-		      break;
-
-		  for (;;)
-		  {
-		      bool	index_update = FALSE;
-
-		      status = dm2r_get(idx_rcb, &idxtid, DM2R_GETNEXT,
-                                 (char *)&idxrec, dberr);
-
-		      if (status == E_DB_OK)
-		      {
-			  if (idxrec.baseid == table_id.db_tab_base)
-			  {
-			      for (i = 0; i < DB_MAXIXATTS; i++)
-			      {
-			          if (idxrec.idom[i] > altcol_col_intlid)
-			          {
-				      idxrec.idom[i]++;
-				      index_update = TRUE;
-			          }
-			      }
-	
-		   	      if (index_update)
-			      {
-				  status = dm2r_replace(idx_rcb, &idxtid,
-                                          DM2R_BYPOSITION, (char *)&idxrec,
-                                          (char *)0, dberr);
-			          if (status != E_DB_OK)
-				  {
-                                      uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, 
-				      	   ULE_LOG, NULL, (char *)NULL, (i4)0,
-                                           (i4 *)NULL, &local_error, 0);
-				      SETDBERR(&log_err, 0, E_DM9027_INDEX_UPDATE_ERR);
-                                      break;
-				  }
-			      }
-		  	  }
-		      }
-		      else 
-		      {
-			  if (dberr->err_code == E_DM0055_NONEXT)
-			  {
-			      status = E_DB_OK;
-			      CLRDBERR(dberr);
-			  }
-			  break;
-		      }
-		  }
-	      }
-	    }
-	    else if ( operation == DMU_C_ALTCOL_RENAME ) /* ALTER TABLE RENAME COLUMN */
+	    if (column_altered && t->tcb_index_count)
 	    {
-	      DMP_TCB *it;
+		/* open iiindex */
+		idx_tabid.db_tab_base = DM_B_INDEX_TAB_ID;
+		idx_tabid.db_tab_index = DM_I_INDEX_TAB_ID;
+		status = dm2t_open(dcb, &idx_tabid, DM2T_IX,
+		    DM2T_UDIRECT, DM2T_A_WRITE, (i4)0, (i4)20,
+		    xcb->xcb_sp_id, xcb->xcb_log_id, xcb->xcb_lk_id, 
+		    (i4)0, (i4) 0, db_lockmode,
+		    &xcb->xcb_tran_id, &timestamp,
+		    &idx_rcb, (DML_SCB *)0, dberr);
 
-	      for (i = 1; i <= t->tcb_rel.relatts; i++)
-              {
-		  MEmove(t->tcb_atts_ptr[i].attnmlen,
-                    t->tcb_atts_ptr[i].attnmstr,
-                    ' ', DB_ATT_MAXNAME, tmpattnm.db_att_name);
+		if (status != E_DB_OK)
+		    break;
 
-                  if (t->tcb_atts_ptr[i].ver_altcol == 0 &&
-                      t->tcb_atts_ptr[i].ver_dropped == 0 &&
-                       MEcmp(tmpattnm.db_att_name,
-                                (PTR)&attr_entry[0]->attr_name,
-                                sizeof(DB_ATT_NAME) ) == 0)
-                  {
-                    break;
-                  }
-              }
+		status = dm2r_position(idx_rcb, DM2R_QUAL, idx_key_desc, (i4)1, 
+			  (DM_TID *)0, dberr);
 
-              if (i > t->tcb_rel.relatts)
-              {
-	          /* Requesting alter of a non existing column */
-		  SETDBERR(&log_err, 0, E_DM002A_BAD_PARAMETER);
-                  status = E_DB_ERROR;
-                  break;
-              }
+		if (status != E_DB_OK)
+		    break;
 
-	      /* Get the iiattribute record */
-	      status = dm2r_position(attr_rcb, DM2R_QUAL, att_key_desc, (i4)2,
-                                      (DM_TID *)0, dberr);
-              if (status != E_DB_OK)
-                  break;
+		for (;;)
+		{
+		    bool	index_update = FALSE;
 
-	      for (;;)
-              {
-	          /* Get the iiattribute record */
-                  status = dm2r_get(attr_rcb, &attrtid, DM2R_GETNEXT,
-                                     (char *)&att_rec, dberr);
+		    status = dm2r_get(idx_rcb, &idxtid, DM2R_GETNEXT,
+			     (char *)&idxrec, dberr);
 
-                  if (status == E_DB_OK)
-                  {
-                    if ((att_rec.attrelid.db_tab_base == table_id.db_tab_base) &&
-                        (att_rec.attrelid.db_tab_index == table_id.db_tab_index) 
+		    if (status == E_DB_OK)
+		    {
+			if (idxrec.baseid == table_id.db_tab_base)
+			{
+			    for (i = 0; i < DB_MAXIXATTS; i++)
+			    {
+				if (idxrec.idom[i] > altcol_col_intlid)
+				{
+				    idxrec.idom[i]++;
+				    index_update = TRUE;
+				}
+			    }
+    
+			    if (index_update)
+			    {
+				status = dm2r_replace(idx_rcb, &idxtid,
+				      DM2R_BYPOSITION, (char *)&idxrec,
+				      (char *)0, dberr);
+				if (status != E_DB_OK)
+				{
+				    uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, 
+				       ULE_LOG, NULL, (char *)NULL, (i4)0,
+				       (i4 *)NULL, &local_error, 0);
+				    SETDBERR(&log_err, 0, E_DM9027_INDEX_UPDATE_ERR);
+				    break;
+				}
+			    }
+			}
+		    }
+		    else 
+		    {
+			if (dberr->err_code == E_DM0055_NONEXT)
+			{
+			    status = E_DB_OK;
+			    CLRDBERR(dberr);
+			}
+			break;
+		    }
+		} /* for (;;) */
+	    } /* if altered & indexed */
+	}
+	else if ( operation == DMU_C_ALTCOL_RENAME ) /* ALTER TABLE RENAME COLUMN */
+	{
+	    DMP_TCB *it;
+
+	    for (i = 1; i <= t->tcb_rel.relatts; i++)
+	    {
+		MEmove(t->tcb_atts_ptr[i].attnmlen,
+			t->tcb_atts_ptr[i].attnmstr,
+			' ', DB_ATT_MAXNAME, tmpattnm.db_att_name);
+
+		if (t->tcb_atts_ptr[i].ver_altcol == 0 &&
+		  t->tcb_atts_ptr[i].ver_dropped == 0 &&
+		  MEcmp(tmpattnm.db_att_name,
+			    (PTR)&attr_entry[0]->attr_name,
+			    sizeof(DB_ATT_NAME) ) == 0)
+		{
+		    break;
+		}
+	    }
+
+	    if (i > t->tcb_rel.relatts)
+	    {
+		/* Requesting alter of a non existing column */
+		SETDBERR(&log_err, 0, E_DM002A_BAD_PARAMETER);
+		status = E_DB_ERROR;
+		break;
+	    }
+
+	    /* Get the iiattribute record */
+	    status = dm2r_position(attr_rcb, DM2R_QUAL, att_key_desc, (i4)2,
+				  (DM_TID *)0, dberr);
+	    if (status != E_DB_OK)
+		break;
+
+	    for (;;)
+	    {
+		/* Get the iiattribute record */
+		status = dm2r_get(attr_rcb, &attrtid, DM2R_GETNEXT,
+				 (char *)&att_rec, dberr);
+
+		if (status == E_DB_OK)
+		{
+		    if ((att_rec.attrelid.db_tab_base == table_id.db_tab_base) &&
+			(att_rec.attrelid.db_tab_index == table_id.db_tab_index) 
 			)
 		    { 
 			if (MEcmp((PTR) &(attr_entry[0]->attr_name.db_att_name), 
-					(PTR) &(att_rec.attname), 
-					sizeof(DB_ATT_NAME)) == 0 )
+				    (PTR) &(att_rec.attname), 
+				    sizeof(DB_ATT_NAME)) == 0 )
 			{
 			    /* Copy everything from old record to new record, 
 			    ** except substitue the name to new column name. 
 			    */
-			    int nsz_p;
+			    i4 nsz_p;
 
-                            MEcopy((PTR)&att_rec, sizeof(DMP_ATTRIBUTE), (PTR)&att_rec_tmp);
+			    MEcopy((PTR)&att_rec, sizeof(DMP_ATTRIBUTE), (PTR)&att_rec_tmp);
 
-			    /* Maintain the relattnametot for iirelation tuple */
+			    /* Maintain the relattnametot for iirelation row */
 			    for (nsz_p = DB_ATT_MAXNAME; 
-				att_rec_tmp.attname.db_att_name[nsz_p-1] == ' '
-                            	&& nsz_p >= 1; nsz_p--);
-                	    relrecord.relattnametot -= nsz_p;
+				 att_rec_tmp.attname.db_att_name[nsz_p-1] == ' '
+				 && nsz_p >= 1; nsz_p--)
+				;
+			    relrecord.relattnametot -= nsz_p;
 
-                            STRUCT_ASSIGN_MACRO(attr_entry[1]->attr_name,
-                                        att_rec_tmp.attname);
+			    STRUCT_ASSIGN_MACRO(attr_entry[1]->attr_name,
+				    att_rec_tmp.attname);
 
 			    for (nsz = DB_ATT_MAXNAME; 
-				att_rec_tmp.attname.db_att_name[nsz-1] == ' '
-                            	&& nsz >= 1; nsz--);
-                	    relrecord.relattnametot += nsz;
+				 att_rec_tmp.attname.db_att_name[nsz-1] == ' '
+				 && nsz >= 1; nsz--)
+				;
+			    relrecord.relattnametot += nsz;
 
-                            status = dm2r_replace(attr_rcb, &attrtid,
-                                          DM2R_BYPOSITION, (char *)&att_rec_tmp,
-                                          (char *)0, dberr);
-                            if (status != E_DB_OK)
-                            {
-                               uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG,
-                                           NULL, (char *)NULL, (i4)0,
-                                           (i4 *)NULL, &local_error, 0);
-			       SETDBERR(&log_err, 0, E_DM9028_ATTR_UPDATE_ERR);
-                               break;
-                            }
-		            error = 0;
+			    status = dm2r_replace(attr_rcb, &attrtid,
+				      DM2R_BYPOSITION, (char *)&att_rec_tmp,
+				      (char *)0, dberr);
+			    if (status != E_DB_OK)
+			    {
+				uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG,
+				       NULL, (char *)NULL, (i4)0,
+				       (i4 *)NULL, &local_error, 0);
+				SETDBERR(&log_err, 0, E_DM9028_ATTR_UPDATE_ERR);
+				break;
+			    }
+			    error = 0;
 			    status = E_DB_OK;
 			} /* Attribute found */
 		    } 
-		  }
-		  else
-                  {
-		      if (dberr->err_code == E_DM0055_NONEXT)
-                      {
-                          status = E_DB_OK;
-                          CLRDBERR(dberr);
-                      }
-                      break;
-                  }
-	      } /* end for ;; */
-
-	    }
-	    else if ( operation == DMU_C_ALTTBL_RENAME ) /* ALTER TABLE RENAME TO ... */
-	    {
-		/* Table rename operation, replace the table name with tnew table name */
-	        if (newtab_name)
-		{
-		  STmove((char *)&newtab_name->db_tab_name[0], ' ',
-                        sizeof (newtab_name->db_tab_name), (char *)(&((relrecord.relid).db_tab_name[0])));
+	        }
+	        else
+	        {
+		    if (dberr->err_code == E_DM0055_NONEXT)
+		    {
+			status = E_DB_OK;
+			CLRDBERR(dberr);
+		    }
+		    break;
 		}
-		else 
-		{
-			SETDBERR(dberr, 0, E_DM002A_BAD_PARAMETER);
-	       		status = E_DB_ERROR;
-		}
-	    }
-	    else
+	    } /* end for ;; */
+
+	}
+	else if ( operation == DMU_C_ALTTBL_RENAME ) /* ALTER TABLE RENAME TO ... */
+	{
+	    /* Table rename operation, replace the table name with tnew table name */
+	    if (newtab_name)
 	    {
-	       SETDBERR(dberr, 0, E_DM002A_BAD_PARAMETER);
-	       status = E_DB_ERROR;
+	      STmove((char *)&newtab_name->db_tab_name[0], ' ',
+		    sizeof (newtab_name->db_tab_name), (char *)(&((relrecord.relid).db_tab_name[0])));
 	    }
+	    else 
+	    {
+		    SETDBERR(dberr, 0, E_DM002A_BAD_PARAMETER);
+		    status = E_DB_ERROR;
+	    }
+	}
+	else
+	{
+	    SETDBERR(dberr, 0, E_DM002A_BAD_PARAMETER);
+	    status = E_DB_ERROR;
+	}
 
-	    if (status != E_DB_OK)
-	       break;
+	if (status != E_DB_OK)
+	   break;
 
-            TMget_stamp((TM_STAMP *)&relrecord.relstamp12);
-	    relrecord.relmoddate = TMsecs();
+	TMget_stamp((TM_STAMP *)&relrecord.relstamp12);
+	relrecord.relmoddate = TMsecs();
 
-	    if ((operation != DMU_C_ALTTBL_RENAME) &&
-		(operation != DMU_C_ALTCOL_RENAME))
-                relrecord.relversion++;
-
-	    relrecord.relstat2  |= (TCB2_ALTERED |TCB2_TBL_RECOVERY_DISALLOWED);
-            if (has_extensions)
+	relrecord.relstat2 |= TCB2_TBL_RECOVERY_DISALLOWED;
+	/* Bump the relversion for add/drop/alter column,
+	** and mark table "altered".  Not needed for rename or degenerate
+	** blob alter-column.
+	*/
+	if (incr_relversion)
+	{
+	    relrecord.relversion++;
+	    relrecord.relstat2 |= TCB2_ALTERED;
+	    if (has_extensions)
 	    {
 		/*
 		** If alter add peripheral, it is safe to specify
@@ -1426,7 +1460,7 @@ DB_ERROR	*dberr)
 		*/
 		if ((relrecord.relstat2 & TCB2_HAS_EXTENSIONS) == 0)
 		    relrecord.relstat2 |= TCB2_BSWAP;
-                relrecord.relstat2 |= TCB2_HAS_EXTENSIONS;
+		relrecord.relstat2 |= TCB2_HAS_EXTENSIONS;
 	    }
 	    if (deleted_index)
 	    {
@@ -1434,97 +1468,95 @@ DB_ERROR	*dberr)
 		if (relrecord.relidxcount == 0)
 		    relrecord.relstat &= ~(TCB_IDXD);
 	    }
+	}
 
 
-            /*
-            ** Replace altered relation record in iirelation table.
-            */
-            status = dm2r_replace(rel_rcb, &reltid, DM2R_BYPOSITION,
-                                  (char *)&relrecord, (char *)0, dberr);
+	/*
+	** Replace altered relation record in iirelation table.
+	*/
+	status = dm2r_replace(rel_rcb, &reltid, DM2R_BYPOSITION,
+			      (char *)&relrecord, (char *)0, dberr);
 
-            if (status != E_DB_OK)
-            {
-                uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
-                    (char *)NULL, (i4)0, (i4 *)NULL, &local_error, 0);
-		SETDBERR(&log_err, 0, E_DM9026_REL_UPDATE_ERR);
-                break;
-            }
+	if (status != E_DB_OK)
+	{
+	    uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
+		(char *)NULL, (i4)0, (i4 *)NULL, &local_error, 0);
+	    SETDBERR(&log_err, 0, E_DM9026_REL_UPDATE_ERR);
+	    break;
+	}
 
-            /* Check for errors inserting records. */
+	/* Check for errors inserting records. */
 
-            if (status != E_DB_OK)
-                break;
+	if (status != E_DB_OK)
+	    break;
 
-            /*
-            ** Unfix any fixed pages from iiattribute.
-            */
+	/*
+	** Unfix any fixed pages from iiattribute.
+	*/
 
-            status = dm2r_unfix_pages(attr_rcb, dberr);
-            if (status != E_DB_OK)
-            {
-                uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
-                    (char *)NULL, (i4)0, (i4 *)NULL, &local_error, 0);
-		SETDBERR(&log_err, 0, E_DM9028_ATTR_UPDATE_ERR);
-                break;
-            }
+	status = dm2r_unfix_pages(attr_rcb, dberr);
+	if (status != E_DB_OK)
+	{
+	    uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
+		(char *)NULL, (i4)0, (i4 *)NULL, &local_error, 0);
+	    SETDBERR(&log_err, 0, E_DM9028_ATTR_UPDATE_ERR);
+	    break;
+	}
 
-	    /* If table is partitioned and operation is ADD or DROP,
-	    ** update partition iirelation rows and (for DROP) fix
-	    ** iidistcol att_number values. */
-	    if (parttab && operation != DMU_C_ALTCOL_ALTER)
-	    {
-		status = pt_adddrop_adjust(xcb, dcb, rel_rcb, &rel_key_desc[0], 
-			&relrecord, db_lockmode, dropped_col_attid, dberr);
-		if (status != E_DB_OK)
-		    break;
-	    }
+	/* If table is partitioned and operation is ADD or DROP,
+	** update partition iirelation rows and (for DROP) fix
+	** iidistcol att_number values. */
+	if (parttab && operation != DMU_C_ALTCOL_ALTER)
+	{
+	    status = pt_adddrop_adjust(xcb, dcb, rel_rcb, &rel_key_desc[0], 
+		    &relrecord, db_lockmode, dropped_col_attid, dberr);
+	    if (status != E_DB_OK)
+		break;
+	}
 
-	    /* If doing a column rename and the table has secondry indexes, 
-	    ** Fix the index entries in iirelation and iiattributes catalogs */
-	    if (( operation == DMU_C_ALTCOL_RENAME ) && 
-		(t->tcb_iq_next != (DMP_TCB*) &t->tcb_iq_next))
-	    {
- 	        status = si_rencol_adjust( t, attr_entry, rel_rcb, 
-					attr_rcb, dberr, &log_err);
-		if (status != E_DB_OK)
-		    break;
-  	    }
+	/* If doing a column rename and the table has secondry indexes, 
+	** Fix the index entries in iirelation and iiattributes catalogs */
+	if (( operation == DMU_C_ALTCOL_RENAME ) && 
+	    (t->tcb_iq_next != (DMP_TCB*) &t->tcb_iq_next))
+	{
+	    status = si_rencol_adjust( t, attr_entry, rel_rcb, 
+				    attr_rcb, dberr, &log_err);
+	    if (status != E_DB_OK)
+		break;
+	}
 
-            /*
-            ** Log the alter operation - unless logging is disabled.
-            */
-            if ((xcb->xcb_flags & XCB_NOLOGGING) == 0)
-            {
-                /*
-                ** Note assumptions made here about the location of pages
-                ** created during dm1s_empty_table.
-                */
-                status = dm0l_alter(xcb->xcb_log_id, journal_flag,
-                    tbl_id, tab_name, tab_owner, cascade,
-                    operation, (LG_LSN *)0, &lsn, dberr);
+	/*
+	** Log the alter operation - unless logging is disabled.
+	*/
+	if ((xcb->xcb_flags & XCB_NOLOGGING) == 0)
+	{
+	    /*
+	    ** Note assumptions made here about the location of pages
+	    ** created during dm1s_empty_table.
+	    */
+	    status = dm0l_alter(xcb->xcb_log_id, journal_flag,
+		tbl_id, tab_name, tab_owner, cascade,
+		operation, (LG_LSN *)0, &lsn, dberr);
 
-                if (status != E_DB_OK)
-                    break;
-            }
+	    if (status != E_DB_OK)
+		break;
+	}
 
-            /*
-            ** Log the DMU operation.  This marks a spot in the log file to
-            ** which we can only execute rollback recovery once.  If we now
-            ** issue update statements against the newly-created table, we
-            ** cannot do abort processing for those statements once we have
-            ** begun backing out the create.
-            */
-            if ((xcb->xcb_flags & XCB_NOLOGGING) == 0)
-            {
-                status = dm0l_dmu(xcb->xcb_log_id, journal_flag, tbl_id,
-                    		  tab_name, tab_owner, (i4)DM0LALTER,
-				  (LG_LSN *)0, dberr);
-                if (status != E_DB_OK)
-                    break;
-            }
-
-            break;
-        } /* end for */
+	/*
+	** Log the DMU operation.  This marks a spot in the log file to
+	** which we can only execute rollback recovery once.  If we now
+	** issue update statements against the newly-created table, we
+	** cannot do abort processing for those statements once we have
+	** begun backing out the create.
+	*/
+	if ((xcb->xcb_flags & XCB_NOLOGGING) == 0)
+	{
+	    status = dm0l_dmu(xcb->xcb_log_id, journal_flag, tbl_id,
+			      tab_name, tab_owner, (i4)DM0LALTER,
+			      (LG_LSN *)0, dberr);
+	    if (status != E_DB_OK)
+		break;
+	}
 
 	break;
 

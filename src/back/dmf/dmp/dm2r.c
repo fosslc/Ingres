@@ -986,6 +986,15 @@ NO_OPTIM=dr6_us5 i64_aix
 **          More changes for Long IDs
 **	25-May-2010 (kschendel)
 **	    Add missing mh include.
+**      09-Jun-2010 (stial01) (B123905)
+**          dm2r_position() use logical value locks if not releasing
+**          dm2r_put() release value lock after put (not after allocate)
+**          base_delete_put() release value lock after put (not after allocate)
+**      12-Jul-2010 (stial01) (SIR 121619 MVCC, B124076)
+**          dm2r_replace() if row/crow_locking, defer_add_new() else dmpp_dput()
+**	20-Aug-2010 (miket) SIR 122403 SD 145904
+**	    Encrypted indexes get the encryption shm slot number from the base
+**	    table parent.
 */
 
 static DB_STATUS BuildRtreeRecord(
@@ -1289,6 +1298,10 @@ static DB_STATUS SIcomplete(
 **	    the tcb_mutex.
 **	13-Apr-2010 (kschendel) SIR 123485
 **	    Init bqcb ptr and manual EOR flag.  Drop row version.
+**	4-jun-2010 (toumi01) SIR 122403
+**	    Instead of TMget_stamp use TMhrnow, because the result of the
+**	    former is supposed to be opaque (we should not reference
+**	    tm_stamp.tms_usec). This fixes portability to VMS.
 */
 DB_STATUS
 dm2r_rcb_allocate(
@@ -1310,7 +1323,7 @@ DB_ERROR	    *dberr )
     i4			rec_buffers;
     i4                  klen;
     i4			seglen = 0;
-    TM_STAMP		tm_stamp;
+    HRSYSTIME		hrtime;
     DB_ERROR		local_dberr;
     i4		    *err_code = &dberr->err_code;
 
@@ -1331,11 +1344,11 @@ DB_ERROR	    *dberr )
     {
 	i4 tempi = MHrand2();
 	rec_buffers++;			/* erecord */
-	TMget_stamp(&tm_stamp);
+	TMhrnow(&hrtime);
 	/* seed the random generator: kick the can an arbitrary distance
-	** (tms_usc) down the road from an arbitrary starting point (tempi)
+	** (tv_nsec) down the road from an arbitrary starting point (tempi)
 	*/
-	MHsrand2(tm_stamp.tms_usec * tempi);
+	MHsrand2(hrtime.tv_nsec * tempi);
     }
 
     if (t->tcb_table_type == TCB_BTREE)
@@ -1622,6 +1635,7 @@ DB_ERROR	    *dberr )
     r->rep_prio_rcb    = NULL;
     r->rep_cdds_rcb    = NULL;
     r->rcb_new_cnt = 0;
+    r->rcb_new_fullscan = 0;
     r->rcb_opt_extend = t->tcb_rel.relextend;
     r->rcb_bulk_cnt = 0;
     r->rcb_bulk_misc = NULL;
@@ -3592,6 +3606,8 @@ dm2r_get(
 **          rcb_ll_op_type and rcb_ll_given so that the respective dm1X_get()
 **          calls can correctly set DMA_ACC_BYKEY, thereby flagging
 **          dma_row_access() to write an audit record for the keyed SELECT.
+**	25-Aug-2010 (miket) SIR 122403
+**	    Remove encryption debugging code and dev-only trace point.
 */
 DB_STATUS
 dm2r_position(
@@ -3814,14 +3830,6 @@ dm2r_position(
         return (status);
     }
 
-/* CRYPT_FIXME hack to (partially) work around bad hash encrypted SI lookup.
-** For some reason (length of plain text vs. encrypted text difference?)
-** we are not hashing to the right page for the lookup, or are building
-** the encrypted SI incorrectly. This change forces us to read the entire
-** index where we do indeed find our match and achieve our TJOIN select.
-*/
-if (t->tcb_parent_tcb_ptr->tcb_rel.relencflags & TCB_ENCRYPTED)
-flag |= DM2R_ALL;
     /*	Handle the position for full scan case. */
     if (flag & DM2R_ALL)
     {
@@ -4085,11 +4093,11 @@ flag |= DM2R_ALL;
 
         /*
         ** If row locking get value locks if when we position .
+	** Request LOGICAL value lock, it's not going to get released
         */
         if ((row_locking(r)) && (r->rcb_iso_level == RCB_SERIALIZABLE))
         {
-	    status = dm1r_lock_value(rcb, 
-			(i4)(DM1R_LK_PHYSICAL | DM1R_PHANPRO_VALUE), 
+	    status = dm1r_lock_value(rcb, (i4)(DM1R_PHANPRO_VALUE), 
 			r->rcb_record_ptr, dberr);
 	    if (status != E_DB_OK)
 	        return (status);
@@ -4768,8 +4776,10 @@ dm2r_put(
     i4			loc_err;
     DB_TAB_TIMESTAMP	local_timestamp;
     i4			rcb_si_flags;
+    DB_STATUS		local_status;
     DB_ERROR		local_dberr;
     i4		    *err_code = &dberr->err_code;
+    bool		value_lock = FALSE;
 
     CLRDBERR(dberr);
 
@@ -5013,6 +5023,8 @@ dm2r_put(
 	    && (row_locking(r) || crow_locking(r)) )
     {
 	status = dm1r_lock_value(r, (i4)DM1R_LK_PHYSICAL, record, dberr);
+	if (status == E_DB_OK)
+	    value_lock = TRUE;
     }
 
     /*	Allocate space for the new record. */
@@ -5050,13 +5062,6 @@ dm2r_put(
     default:;
     }
  
-    /* Once the record is on the page we can release the value lock */
-    if ( status == E_DB_OK && (row_locking(r) || crow_locking(r)) 
-    		&& t->tcb_rel.relkeys )
-    {
-	status = dm1r_unlock_value(r, record, dberr);
-    }
-
     if (status == E_DB_OK && (t->tcb_rel.relstat2 & TCB2_HAS_EXTENSIONS)
 			&& (flag & DM2R_REDO_SF) == 0)
     {
@@ -5238,6 +5243,23 @@ dm2r_put(
 	 t->tcb_update_idx )
     {
 	status = dm2r_unfix_pages(r, dberr);
+    }
+
+    /*
+    ** Release the value lock (after the put)
+    ** Previously we were releasing after the allocate, before the put
+    ** causing btree errors because dm1b_dupcheck DM1B_SKIP_DELETED_KEY_MACRO
+    ** was true for another transaction trying to insert the same key
+    ** (t1-alloc, t2-alloc-uses-t1-reserved-leaf-entry, t2-put, t1-put-error)
+    ** Since the btree reserved key entry doesn't have a valid tid to 
+    ** waitlock on, hold the value lock until after the put.
+    */
+    if ( value_lock ) 
+    {
+	local_status = dm1r_unlock_value(r, record, &local_dberr);
+	if (local_status)
+	    uleFormat(&local_dberr, 0, NULL, ULE_LOG, NULL, 
+			    NULL, 0, NULL, &loc_err, 0);
     }
 
     if (status != E_DB_OK)
@@ -5994,6 +6016,12 @@ BuildRtreeRecord(
 **	28-Apr-2010 (jonj) SD 144272
 **	    Use DMP_PINIT to fully initialize local pinfos, use
 **	    direct references to pinfo.page.
+**	11-Aug-2010 (miket) SIR 122403 SD 146244
+**	    For encryption the difference in the encrypted and unencrypted
+**	    buffer layouts and the fact that the external value can remain
+**	    the same while the internal value changes can confuse the
+**	    tuple change routine adt_compute_part_change, so use
+**	    adt_compute_change instead.
 */
 DB_STATUS
 dm2r_replace(
@@ -6422,7 +6450,8 @@ DB_ERROR	    *dberr )
 	delta_end = 0;
 	adf_cb = r->rcb_adf_cb;
 
-	if ( attset && (t->tcb_rel.relstat2 & TCB2_ALTERED) == 0 )
+	if ( attset && (t->tcb_rel.relstat2 & TCB2_ALTERED) == 0 &&
+		!(t->tcb_rel.relencflags & TCB_ENCRYPTED) )
 	{
 	    status = adt_compute_part_change(adf_cb,r->rcb_tcb_ptr->tcb_rel.relatts,
 		t->tcb_atts_ptr,record, r->rcb_record_ptr,
@@ -6486,22 +6515,34 @@ DB_ERROR	    *dberr )
 	    }
 	    else
 	    {
-		if ((flag & DM2R_XTABLE) && 
-		    (r->rcb_update_mode == RCB_U_DEFERRED || crow_locking(r)))
+		if ((flag & DM2R_XTABLE) && r->rcb_update_mode == RCB_U_DEFERRED)
 		{
 		    /*
-		    ** Do deferred put proessing if crow_locking so we can
-		    ** ignore changes by our own transaction without mvcc undo
+		    ** If row locking/crow locking add the tid to rcb_new_tids
+		    ** instead of doing unlogged updates to the row header
+		    ** which could interfere with mvcc undo processing
 		    */
-		    dm0pMutex(&t->tcb_table_io, (i4)0, r->rcb_lk_id,
+		    if (row_locking(r) || crow_locking(r))
+		    {
+			/* Don't do unlogged deferred processing on page */
+			status = defer_add_new(r, &r->rcb_currenttid, 
+				FALSE, err_code);
+		    }
+		    else
+		    {
+			/* Must first swap from CR to Root */
+			dm0pLockBufForUpd(r, &r->rcb_data);
+			dm0pMutex(&t->tcb_table_io, (i4)0, r->rcb_lk_id,
 				    &r->rcb_data);
-		    status = (*t->tcb_acc_plv->dmpp_dput)(r, 
+			status = (*t->tcb_acc_plv->dmpp_dput)(r, 
 				r->rcb_data.page, &r->rcb_currenttid,err_code);
+			dm0pUnmutex(&t->tcb_table_io, (i4)0, r->rcb_lk_id, 
+				    &r->rcb_data);
+			/* Release exclusive readlock on Root, restore CR */
+			dm0pUnlockBuf(r, &r->rcb_data);
+		    }
 		    if ( status )
 			SETDBERR(dberr, 0, *err_code);
-
-		    dm0pUnmutex(&t->tcb_table_io, (i4)0, r->rcb_lk_id, 
-				    &r->rcb_data);
 		}	
 		/* give error message to QEF */
 		if (status == E_DB_OK)
@@ -10316,6 +10357,8 @@ si_put(
 	    switch (it->tcb_rel.relspec)
 	    {
 	    case TCB_HASH:
+		/* indexes use the base record encryption slot */
+		ir->rcb_enckey_slot = r->rcb_enckey_slot;
 		status = dm1h_allocate(ir, &ir->rcb_data,
 				&ir->rcb_si_newtid, ir->rcb_record_ptr, crec,
 		    		rec_len, alloc_flag, dberr);
@@ -10708,6 +10751,8 @@ si_delete(
 	switch (it->tcb_rel.relspec)
 	{
 	    case TCB_HASH:
+		/* indexes use the base record encryption slot */
+		ir->rcb_enckey_slot = r->rcb_enckey_slot;
 		status = dm1h_search(ir, &ir->rcb_data,
 		    ir->rcb_s_key_ptr, DM1C_FIND_SI_UPD, DM1C_EXACT,
 		    &ir->rcb_lowtid, dberr);
@@ -10774,6 +10819,8 @@ si_delete(
 	    */
 	    tid.tid_i4 = r->rcb_si_oldtid.tid_i4;
 
+	    /* indexes use the base record encryption slot */
+	    ir->rcb_enckey_slot = r->rcb_enckey_slot;
 	    status = dm1r_get(ir, &tid, ir->rcb_record_ptr,
 		DM1C_GETNEXT | DM1C_GET_SI_UPD, dberr);
 	}
@@ -10964,6 +11011,9 @@ si_delete(
 **	28-Apr-2010 (jonj) SD 144272
 **	    Remove indirect references to pinfo.page, use DMP_PINIT to
 **	    fully init pinfos.
+**	24-Aug-2010 (miket) SIR 122403 SD 145904
+**	    Encrypted indexes get the encryption shm slot number from the base
+**	    table parent. Encrypt SIs on replace.
 */
 static DB_STATUS
 si_replace(
@@ -11303,6 +11353,8 @@ si_replace(
 	    switch (it->tcb_rel.relspec)
 	    {
 	    case TCB_HASH:
+		/* indexes use the base record encryption slot */
+		ir->rcb_enckey_slot = r->rcb_enckey_slot;
 		status = dm1h_search(ir, &ir->rcb_data,
 		    ir->rcb_s_key_ptr,
 		    DM1C_FIND_SI_UPD, DM1C_EXACT, &ir->rcb_lowtid, dberr);
@@ -11377,6 +11429,8 @@ si_replace(
 		*/
 		oldtid.tid_i4 = r->rcb_si_oldtid.tid_i4;
 
+		/* indexes use the base record encryption slot */
+		ir->rcb_enckey_slot = r->rcb_enckey_slot;
 		status = dm1r_get(ir, &oldtid, ir->rcb_record_ptr,
 			DM1C_GETNEXT | DM1C_GET_SI_UPD, dberr);
 
@@ -11389,6 +11443,15 @@ si_replace(
 
 	    newrecord = ir->rcb_srecord_ptr;
 	    oldrecord = ir->rcb_record_ptr;
+
+	    /* Encrypt the index if needed. */
+	    if (t->tcb_data_rac.encrypted_attrs)
+	    {
+		status = dm1e_aes_encrypt(r, &it->tcb_data_rac, newrecord,
+			ir->rcb_erecord_ptr, dberr);
+		if (status != E_DB_OK)
+		    return(status);
+	    }
 
 	    /*  Compute the sizes of the old and new records. */
 
@@ -11435,6 +11498,8 @@ si_replace(
 		switch (it->tcb_rel.relspec)
 		{
 		case TCB_HASH:
+		    /* indexes use the base record encryption slot */
+		    ir->rcb_enckey_slot = r->rcb_enckey_slot;
 		    status = dm1h_allocate(ir, &newdataPinfo, &newtid,
 				newrecord, crec, newlength, alloc_flag, dberr);
 		    break;
@@ -11553,6 +11618,10 @@ si_replace(
 	    */
 	    if (it->tcb_rel.relcomptype != TCB_C_NONE)
 		newrecord = crec;
+
+	    /* if encrypted, pass the encrypted record to replace */
+	    if (t->tcb_data_rac.encrypted_attrs)
+		newrecord = ir->rcb_erecord_ptr;
 
 	    /* This is constant */
 	    delta_end = it->tcb_rel.relwid;
@@ -11750,6 +11819,10 @@ base_delete_put(
     LK_LKID             newval_lkid;
     char		*crec = (PTR)0;
     i4		    *err_code = &dberr->err_code;
+    i4			loc_err;
+    DB_STATUS		local_status;
+    DB_ERROR		local_dberr;
+    bool		new_value_lock = FALSE;
 
     CLRDBERR(dberr);
 
@@ -11778,6 +11851,7 @@ base_delete_put(
 	
 	/* Save the lkid so we don't have to rehash to unlock */
 	STRUCT_ASSIGN_MACRO(r->rcb_val_lkid, newval_lkid);
+	new_value_lock = TRUE;
     }
 
     /*
@@ -11911,17 +11985,6 @@ base_delete_put(
 	    break;
     }
 
-    /* 
-    ** Once the record is on the page we can release the value lock.
-    ** We may be holding value locks during dup checking which can be 
-    ** released too.
-    */
-    if (status == E_DB_OK && (t->tcb_rel.relkeys))
-    {
-	STRUCT_ASSIGN_MACRO(newval_lkid, r->rcb_val_lkid);
-        status = dm1r_unlock_value(r, newrecord, dberr);
-    }
-
     if (status != E_DB_OK)
     {
 	if (dberr->err_code == E_DM0045_DUPLICATE_KEY &&
@@ -11950,6 +12013,24 @@ base_delete_put(
 			newrecord, r->rcb_s_key_ptr, newlength,
 			(i4)DM1C_MREPLACE, dberr);
 	    break;
+    }
+
+    /* 
+    ** Release the value lock (after the put)
+    ** Previously we were releasing after the allocate, before the put
+    ** causing btree errors because dm1b_dupcheck DM1B_SKIP_DELETED_KEY_MACRO
+    ** was true for another transaction trying to insert the same key
+    ** (t1-alloc, t2-alloc-uses-t1-reserved-leaf-entry, t2-put, t1-put-error)
+    ** Since the btree reserved key entry doesn't have a valid tid to 
+    ** waitlock on, hold the value lock until after the put.
+    */
+    if ( new_value_lock )
+    {
+	STRUCT_ASSIGN_MACRO(newval_lkid, r->rcb_val_lkid);
+        local_status = dm1r_unlock_value(r, newrecord, &local_dberr);
+	if (local_status)
+	    uleFormat(&local_dberr, 0, NULL, ULE_LOG, NULL, 
+			    NULL, 0, NULL, &loc_err, 0);
     }
 
     /* rcb update */

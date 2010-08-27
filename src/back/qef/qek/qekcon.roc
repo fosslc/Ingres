@@ -1294,9 +1294,11 @@ GLOBALDEF const char	    IIQE_41_qet_t9_ok_w_ldbs[] = "QET_T9_OK_W_LDBS";
 **	    Change "II9.1" to "II9.2"
 **	14-Jun-2007 (bonro01)
 **	    Change "II9.2" to "II9.3"
+**	12-Jul-2010 (bonro01)
+**	    Change "II10.0" to "II10.1"
 */
 
-GLOBALDEF const char	    IIQE_42_ing_60[] = "II10.0";
+GLOBALDEF const char	    IIQE_42_ing_60[] = "II10.1";
 
 
 /*}

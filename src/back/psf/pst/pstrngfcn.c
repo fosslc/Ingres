@@ -46,7 +46,6 @@
 **	    pst_rgfind - Find a range variable for a given var. no.
 **	    pst_sdent  - create range table entry for derived table or 
 **			with list element
-**	    pst_swelem - locate table amongst with list elements in range table
 **
 **
 **  History:    $Log-for RCS$
@@ -87,6 +86,9 @@
 **          Disallow DML operation in table procedure.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	19-Jun-2010 (kiria01) b123951
+**	    Moved pst_swelem to psl_swelem for WITH support as it is more
+**	    than just a name lookup.
 [@history_template@]...
 **/
 
@@ -1702,140 +1704,6 @@ pst_sdent(
     *rngvar = rptr;
 
     return (E_DB_OK);
-}
-
-/*{
-** Name: pst_swelem	- search range table for with list element of
-**	supplied name
-**
-** Description:
-**      This function searches the range table with list elements for an
-**	entry with the supplied name. This function is called first to
-**	resolve from list items, then it successively calls pst_sent to
-**	locate table amongst temp tables, then finally persistent tables
-**	and views.
-**
-** Inputs:
-**	sess_cb				Pointer to session control block
-**	scope				scope that range variable belongs in
-**					-1 means don't care.
-**      rngtable                        Pointer to the user range table
-**	tabname				Table name of desired entry
-**	rngvar				Place to put pointer to new range
-**					variable
-**	err_blk				Place to put error information
-**
-** Outputs:
-**      rngvar                          Set to point to the range variable
-**	err_blk				Filled in if an error happens
-**	Returns:
-**	    E_DB_OK			Success
-**	    E_DB_ERROR			Non-catastrophic failure
-**	    E_DB_FATAL			Catastrophic failure
-**	Exceptions:
-**	    none
-**
-** Side Effects:
-**	None
-**
-** History:
-**	29-dec-2006 (dougi)
-**	    Written for support of with list elements.
-*/
-DB_STATUS
-pst_swelem(
-	PSS_SESBLK	   *sess_cb,
-	i4		    scope,
-	PSS_USRRANGE	   *rngtable,
-	DB_TAB_NAME	   *tabname,
-	PSS_RNGTAB	   **rngvar,
-	DB_ERROR	   *err_blk)
-
-{
-    PSS_RNGTAB	*rptr;
-    PST_QNODE	*duptree;
-    PSS_DUPRB	dup_rb;
-    DB_STATUS	status;
-    i4		i, err_code;
-    bool	found;
-
-
-    /* Search range table for with list elements whose name matches
-    ** the supplied table name. */
-    for (i = 0, found = FALSE, rptr = (PSS_RNGTAB *)rngtable->pss_qhead.q_next;
-	!found && i < PST_NUMVARS && rptr && 
-				rptr->pss_used && rptr->pss_rgno > 0;
-	i++, rptr = (PSS_RNGTAB *)rptr->pss_rngque.q_next)
-    {
-	if (rptr->pss_rgtype == PST_WETREE &&
-		MEcmp(tabname, &rptr->pss_tabname, DB_TAB_MAXNAME) == 0)
-	{
-	    found = TRUE;
-	    *rngvar = rptr;
-	    if (scope != -1)
-		rptr->pss_rgparent = scope;
-	}
-    }
-
-    if (!found)
-    {
-	err_blk->err_code = E_PS0903_TAB_NOTFOUND;
-	return(E_DB_ERROR);
-    }
-
-    if ((rptr->pss_var_mask & PSS_WE_REFED) == 0)
-    {
-	/* First reference - no need to make a copy yet. */
-	rptr->pss_var_mask |= PSS_WE_REFED;
-	return(E_DB_OK);
-    }
-
-    /* Get entry to copy element into. */
-    rptr = (PSS_RNGTAB *) QUremove(rngtable->pss_qhead.q_prev);
-
-    /* Free up table description if it exists */
-    status = pst_rng_unfix(sess_cb, rptr, err_blk);
-    if (status != E_DB_OK)
-    {
-	/* Put the range variable at the head of the queue */
-	if (rptr != &rngtable->pss_rsrng)
-	    QUinsert((QUEUE *) rptr, rngtable->pss_qhead.q_prev);
-
-	*rngvar = (PSS_RNGTAB *) NULL;
-	return (status);
-    }
-
-    STRUCT_ASSIGN_MACRO(*(*rngvar), *rptr);
-    *rngvar = rptr;
-
-    /* Put the range variable at the head of the queue */
-    QUinsert((QUEUE *) rptr, (QUEUE *) &rngtable->pss_qhead.q_next);
-
-    rptr->pss_rgno = ++rngtable->pss_maxrng;
-    if (rptr->pss_rgno > PST_NUMVARS - 1)
-    {
-	(VOID) psf_error(3100L, 0L, PSF_USERERR, &err_code, err_blk, 0);
-	*rngvar = (PSS_RNGTAB *) NULL;
-	return (E_DB_ERROR);
-    }
-
-    /* Replicate the element's parse tree. */
-    dup_rb.pss_op_mask = 0;
-    dup_rb.pss_tree_info = NULL;
-    dup_rb.pss_mstream = &sess_cb->pss_ostream;
-    dup_rb.pss_err_blk = err_blk;
-    dup_rb.pss_1ptr = NULL;
-    dup_rb.pss_num_joins = 0;
-    dup_rb.pss_tree = rptr->pss_qtree;
-    dup_rb.pss_dup = &duptree;
-    status = pst_treedup(sess_cb, &dup_rb);
-    if (DB_FAILURE_MACRO(status))
-	return(status);
-
-    rptr->pss_qtree = duptree;
-
-    /* Found a matching with element - return success. */
-    return(E_DB_OK);
 }
 
 /*{

@@ -537,6 +537,14 @@ SQLSTATE_MAPPING_REQUIRED
 **	    E_DM930D_DM2U_READONLY_UPD_CATS.
 **	30-Apr-2010 (kschendel)
 **	    9026 & 928E don't have parameters, fix the messages.
+**	25-Jun-2010 (frima01) BUG 123753
+**	    Change DM9580_CONFIG_DBSERVICE_ERROR to be a warning indicating
+**	    mismatch of dbservice with lp64 server setting.
+**	04-aug-2010 (miket) SIR 122403
+**	    Change encryption activation terminology from
+**	    enabled/disabled to unlock/locked.
+**	25-aug-2010 (miket) SIR 122403 SD 145781
+**	    Better msg for alter table not valid for encrypted tables.
 */
 
 #define _DM_CLASS  3
@@ -1201,6 +1209,8 @@ E_DM00AB_CANT_MAP_SHARED_MEM:SS5000B_INTERNAL_ERROR
 E_DM00AC_LOGFULL_COMMIT:SS01000_WARNING
 "Transaction %0x%1x in database %2c has been committed through
 log address <%3d,%4d,%5d> to free up log space."
+E_DM00AD_ENCRYPT_NO_ALTER_TABLE:SS50000_MISC_ERRORS
+"The ALTER TABLE statement is not supported for encrypted tables."
 E_DM00D0_LOCK_MANAGER_ERROR:SS5000B_INTERNAL_ERROR
 "Error creating a server lock list."
 E_DM00D1_BAD_SYSCAT_MOD:SS5000B_INTERNAL_ERROR
@@ -2243,23 +2253,23 @@ E_DM0171_BAD_CACHE_PROTOCOL:SS5000B_INTERNAL_ERROR
  the DMCM protocol."
 E_DM0172_DMCM_LOCK_FAIL:SS5000B_INTERNAL_ERROR
 "An attempt to request or convert the DMCM control lock failed."
-E_DM0174_ENCRYPT_NOT_ENABLED:SS50000_MISC_ERRORS
-"Encryption is not enabled for the table."
+E_DM0174_ENCRYPT_LOCKED:SS50000_MISC_ERRORS
+"Encryption is locked for the table."
 E_DM0175_ENCRYPT_FLAG_ERROR:SS5000B_INTERNAL_ERROR
 "Internal encryption error: invalid encrytion options flags."
 E_DM0176_ENCRYPT_CRC_ERROR:SS5000B_INTERNAL_ERROR
 "Internal encryption error: CRC mismatch decrypting data."
 E_DM0177_RECORD_NOT_ENCRYPTED:SS50000_MISC_ERRORS
-"A command has been issue to enable encryption for non-encrypted table."
+"A command has been issue to unlock encryption for non-encrypted table."
 E_DM0178_PASSPHRASE_FAILED_CRC:SS50000_MISC_ERRORS
 "The user-specified passphrase was used to decrypt a stored AES key and
 failed the CRC check. This usually indicates a user error."
 E_DM0179_DMC_CRYPT_SLOTS_EXHAUSTED:SS50002_LIMIT_EXCEEDED
 "The %0d encryption key slots in shared memory segment Dmc_crypt are
 exhausted. One slot is needed for each base table for which encryption
-is enabled. The value can be configured (ii.*.dbms.*.dmf_crypt_maxkeys)
+is unlocked. The value can be configured (ii.*.dbms.*.dmf_crypt_maxkeys)
 to increase the limit. Either increase the limit and restart the server,
-or use the MODIFY command to disable encryption for tables that are not
+or use the MODIFY command to relock encryption for tables that are not
 actively being used."
 /*%
 ** Parameters:
@@ -15587,9 +15597,13 @@ will be aborted for database %1s."
 E_DM957F_REP_DISTRIB_ERROR:SS5000B_INTERNAL_ERROR
 "An error occurred when trying to distribute a replicated transaction from
 within the user thread. The transaction will be aborted"
-E_DM9580_CONFIG_DBSERVICE_ERROR:SS5000B_INTERNAL_ERROR
-"An error was detected in the dbservice flags (%0d) for database %1c.
-You may need to run upgradedb to correct invalid iitree tuples."
+W_DM9580_CONFIG_DBSERVICE:SS5000B_INTERNAL_ERROR
+"Warning: The dbservice flags (%0d) for database %1c don't
+match the dbms server flag lp64 indicating the size of
+longs and pointers.  This will likely cause various RDF errors
+when attempting to use views or other database objects.
+Run upgradedb on this database to redo stored query trees (iitree tuples).
+This warning is normal and can be ignored when running upgradedb itself."
 E_DM9581_REP_SHADOW_DUPLICATE:SS5000B_INTERNAL_ERROR
 "A duplicate record was encountered trying to create a shadow table entry
 for table %0c."

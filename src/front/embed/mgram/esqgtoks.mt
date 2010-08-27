@@ -227,6 +227,8 @@
 **          Add tokens for FALSE, TRUE and UNKNOWN.
 **	12-Apr-2010 (gupsh01)
 **	    Add tokens for RENAME to support RENAME table/column syntax.
+**	26-Aug-2010 (miket) SIR 122403 SD 146503
+**	    Add tENCRYPT.
 */
 /* %T header end */
 
@@ -300,6 +302,7 @@ GLOBALDEF KEY_ELM	 tok_keytab[] =
 	"down",			tDOWN,
 	"drop",			tDROP,
 	"else",			tELSE,
+	"encrypt",		tENCRYPT,
 	"end",			tEND,
 	"end-exec",		tEND_EXEC,
 	"enddata",		tENDDATA,

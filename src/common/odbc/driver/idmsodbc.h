@@ -352,6 +352,12 @@
 **     23-Apr-2010 (Ralph Loen) Bug 123629
 **         Added tDBC attributes browseConnectCalled and bcOutStr.  Added
 **         SQLSTATE SQL_01S00.
+**     14-Jul-2010 (Ralph Loen) Bug 124079 
+**         Add fServerClassVECTORWISE server class.  Note that a
+**         Vectorwise server is assumed to have the capabilities of an 
+**         Ingres server by default.
+**    13-Aug-2010 (Ralph Loen) Bug 124235
+**         Added ErrGetSqlcaMessageLen().
 */
 #ifndef _INC_IDMSODBC
 #define _INC_IDMSODBC
@@ -1104,6 +1110,7 @@ typedef struct tDBC
     UDWORD      max_decprec;            /* Max decimal precision */
 
     BOOL        is_unicode_enabled;     /* If target is unicode_enabled */      
+
     UWORD       fServerClass;           /* ServerClass bits */
 #define         fServerClassINGRES      0x0001
 #define         fServerClassOPINGDT     0x0002
@@ -1120,9 +1127,12 @@ typedef struct tDBC
 #define         fServerClassALLBASE     0x1000
 #define         fServerClassRMS         0x2000
 #define         fServerClassDB2UDB      0x4000
+#define         fServerClassVECTORWISE  0x8000
 
 
-#define         isServerClassINGRES(dbc)   ((dbc)->fServerClass & fServerClassINGRES) 
+#define         isServerClassINGRES(dbc)   ((dbc)->fServerClass \
+                                           & (fServerClassINGRES+ \
+	                                      fServerClassVECTORWISE))
 #define         isServerClassOPINGDT(dbc)  ((dbc)->fServerClass & fServerClassOPINGDT) 
 #define         isServerClassDCOM(dbc)     ((dbc)->fServerClass & fServerClassDCOM) 
 #define         isServerClassIDMS(dbc)     ((dbc)->fServerClass & fServerClassIDMS) 
@@ -1137,17 +1147,19 @@ typedef struct tDBC
 #define         isServerClassALLBASE(dbc)  ((dbc)->fServerClass & fServerClassALLBASE) 
 #define         isServerClassRMS(dbc)      ((dbc)->fServerClass & fServerClassRMS)
 #define         isServerClassDB2UDB(dbc)   ((dbc)->fServerClass & fServerClassDB2UDB)
+#define         isServerClassVECTORWISE(dbc)   ((dbc)->fServerClass & fServerClassVECTORWISE)
 #define         isServerClassAnIngresEngine(dbc) ((dbc)->fServerClass \
                                                       & (fServerClassINGRES+ \
                                                          fServerClassIMS+ \
                                                          fServerClassVSAM+ \
-                                                         fServerClassRMS)) 
+                                                         fServerClassVECTORWISE+ \
+	                                                 fServerClassRMS))
 #define         isServerClassEA(dbc)       ((dbc)->fServerClass \
                                                       & (fServerClassORACLE+ \
                                                          fServerClassINFORMIX+ \
                                                          fServerClassSYBASE+ \
                                                          fServerClassRMS+ \
-														 fServerClassDB2UDB))
+                                                         fServerClassDB2UDB))
 
     DWORD       dwDTCRMCookie;          /* MTS/DTC resource mgr cookie */
     CHAR        szDecimal[2];
@@ -1871,6 +1883,7 @@ void    FASTCALL UnlockDbc (LPDBC);
 RETCODE FASTCALL ErrUnlockDbc (UINT, LPDBC);
 RETCODE FASTCALL ErrUnlockDesc (UINT err, LPDESC pdesc);
 RETCODE FASTCALL ErrUnlockStmt (UINT, LPSTMT);
+WORD ErrGetSqlcaMessageLen( SQLSMALLINT, LPSQLCA);
 #define UnlockDesc(p) UnlockDbc ((p)->pdbc)
 #define UnlockStmt(p) UnlockDbc ((p)->pdbcOwner)
 

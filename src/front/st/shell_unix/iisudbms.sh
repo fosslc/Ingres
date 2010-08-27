@@ -673,7 +673,22 @@
 ##          to prevent conflicts for LSB builds.
 ##	07-May-2010 (stial01) SIR 122205
 ##          Added offline_error_action, online_error_action
-##
+##	23-Jun-2010 (frima01) SIR 123296
+##	    Move defining createdb to the init section so it will be present
+##	    everywhere in this script.
+##	08-Jul-2010 (hanje04)
+##	    SD 144213
+##	    BUG 124055
+##	    Make II_CONFIG_TYPE=TRAD a no-op as it just refers to the default
+##	    Ingres configuration and causes an error in install.log
+##	20-Jul-2010 (kschendel) SIR 124104
+##	    Add create_compression to the upgrade list.
+##	3-Aug-2010 (kschendel) SIR 122757
+##	    Change that added config.direct_io should include direct_io_log.
+##	03-Aug-2010 (miket) SIR 124154
+##	    Add dmf_crypt_maxkeys to the upgrade list.
+##	25-Aug-2010 (bonro01) BUG 124305
+##	    Remove confusing Independent Storage device prompt.
 ##	    
 #----------------------------------------------------------------------------
 . iisysdep
@@ -806,6 +821,8 @@ Please correct your environment before running $SELF again.
 !
     exit 1
 }
+
+createdb=$II_SYSTEM/ingres/bin/createdb
 
 check_response_file 	# Validate response file (if any)
 
@@ -1426,7 +1443,8 @@ update_parameters()
     for param in system_lock_level di_zero_bufsize fd_affinity dmf_build_pages \
 		fallocate opf_new_enum opf_greedy_factor \
 		qef_hash_rbsize qef_hash_wbsize qef_hash_cmp_threshold \
-		qef_hashjoin_min qef_hashjoin_max
+		qef_hashjoin_min qef_hashjoin_max create_compression \
+		dmf_crypt_maxkeys
     do
 	x=`iigetres "ii.$CONFIG_HOST.dbms.*.$param"`
 	if [ -z "$x" ] ; then
@@ -1454,12 +1472,20 @@ update_parameters()
 
     ## was dbms.*.direct_io, now is config.direct_io.  If not there at
     ## all, add the new one;  else translate old to new.
+    ## Note: due to unfortunate peculiarities of iiinitres, we'll
+    ## probably end up with both ii.*.config.direct_io AND
+    ## ii.hostname.config.direct_io.  The second is the one the
+    ## server uses.  No good way to get rid of the * versions.
     x=`iigetres "ii.$CONFIG_HOST.config.direct_io"`
     if [ -z "$x" ] ; then
 	x=`iigetres "ii.$CONFIG_HOST.dbms.*.direct_io"`
 	$DOIT iiinitres direct_io $II_CONFIG/dbms.rfm
+	$DOIT iiinitres direct_io_log $II_CONFIG/dbms.rfm
+	$DOIT iiinitres direct_io_load $II_CONFIG/dbms.rfm
 	if [ -n "$x" ] ; then
 	    $DOIT iisetres -v "ii.$CONFIG_HOST.config.direct_io" "$x"
+	    $DOIT iisetres -v "ii.$CONFIG_HOST.config.direct_io_log" "$x"
+	    ## Leave direct_io_load OFF, has to be set explicitly.
 	fi
     fi
 
@@ -2364,27 +2390,9 @@ fi #end of WRITE_RESPONSE mode ****
       if [ -z "$DATA" ] ; then
          echo ""
          prompt "Do you want to continue this setup procedure?" y || exit 1
-         cat << !
-
-Ingres has the capability to guarantee integrity of all committed
-database transactions in the event of a system software failure or
-single storage device failure.  IMPORTANT NOTE: if a second storage
-device fails before recovery from an initial failure has taken place,
-committed transactions may be lost. 
-
-If you intend to take advantage of this capability, you need to
-have at least two independent storage devices available (one in
-addition to the one Ingres is being installed on).  If you do not
-have two independent storage devices available, but would like to take
-advantage of this capability, you should not complete this setup
-procedure at this time.
-
-!
       else
          echo ""
       fi
-
-      prompt "Do you want to continue this setup procedure?" y || exit 1
    }
 }
 
@@ -3595,7 +3603,7 @@ You should contact Ingres Corporation Technical Support to resolve this problem.
 
 Creating imadb...
 !
-		if $DOIT $II_SYSTEM/ingres/bin/createdb -fnofeclients \
+		if $DOIT $createdb -fnofeclients \
 		   -u${DIX}\$ingres imadb ; then
 		    : ok
 		else
@@ -3731,7 +3739,6 @@ The Ingres server could not be started.  See the server error log ($II_LOG/errlo
 Initializing the Ingres master database, iidbdb...
 
 !
-	createdb=$II_SYSTEM/ingres/bin/createdb
 	if $DOIT $createdb -S iidbdb ; then
 	    # FIXME - sleep to stop DB lock race condition
 	    sleep 1
@@ -3945,7 +3952,7 @@ Shutting down the Ingres server...
     CONFIG_TYPE=''
     $READ_RESPONSE && \
 	CONFIG_TYPE=`iiread_response II_CONFIG_TYPE $RESINFILE`
-    if [ "$CONFIG_TYPE" ] ; then
+    if [ "$CONFIG_TYPE" -a "$CONFIG_TYPE" != "TRAD" ] ; then
 	$DOIT iiapplcfg -t $CONFIG_TYPE ||
 	{
 	    NONFATAL_ERROR=Y

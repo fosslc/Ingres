@@ -350,6 +350,10 @@ static VOID scc_end_message( SCD_SCB *scb ); /* Complete incomplete message */
 **          messages) immediately.
 **      jan 2010 (stephenb)
 **          Batch processing changes.
+**      8-jul-2010 (stephenb)
+**          Update error processing for batches. We now hold on to
+**          messages for all batch processing, so empty the queue
+**          appropriately when we get an error.
 */
 DB_STATUS
 scc_error( i4  operation, SCF_CB * scf_cb, SCD_SCB *scb )
@@ -363,6 +367,7 @@ scc_error( i4  operation, SCF_CB * scf_cb, SCD_SCB *scb )
     i4			error;
     i4			gca_indicator = 0;
     STATUS		rv;
+    SCC_CSCB		*cscb = &scb->scb_cscb;
 
 #ifdef VMS
     int ast_enabled;
@@ -574,23 +579,27 @@ scc_error( i4  operation, SCF_CB * scf_cb, SCD_SCB *scb )
 		}
 		else
 		{
-		    if(scb->scb_sscb.sscb_flags & SCS_INSERT_OPTIM &&
+		    if(((scb->scb_sscb.sscb_flags & SCS_INSERT_OPTIM) ||
+			    (cscb->cscb_in_group && cscb->cscb_eog_error)) &&
 			    operation == SCC_ERROR)
 		    {
 			SCC_GCMSG	*message;
 			SCC_GCMSG	*next_message;
 			/* 
-			** we got an error while running an insert to copy optimization.
+			** either we got an error while running an insert to copy 
+			** optimization or we got a group terminating error in a batch.
 			** The assumption is that an error in a copy that causes a user
 			** error to be sent to the front-end will also terminate the copy
-			** (thus making all previous rows evaporate). What we will do
+			** (thus making all previous rows evaporate). If a batch terminate
+			** error occurs the work we did up to now will also evaporate 
+			** (due to rollback). What we will do
 			** in this case is remove all previous responses from the message
 			** queue and insert the error. When the code drops back in to
 			** the sequencer this error will be flagged as batch terminating
 			** which will cause us to eat the rest of the input for the current
 			** batch. The user will ultimately be sent one error message for
-			** the current copy optimization and must assume that the rest of
-			** the batch (i.e. the entire copy) failed.
+			** the current batch and must assume that the rest of
+			** the batch failed.
 			*/
 			message=scb->scb_cscb.cscb_mnext.scg_next;
 			while (message != (SCC_GCMSG *) &scb->scb_cscb.cscb_mnext)

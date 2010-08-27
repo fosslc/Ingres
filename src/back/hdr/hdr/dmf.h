@@ -679,6 +679,11 @@ struct _DM_MDATA
 **	    E_DM0029_ROW_UPDATE_CONFLICT,
 **	    E_DM0012_MVCC_INCOMPATIBLE,
 **	    E_DM0013_MVCC_DISABLED
+**	04-Aug-2010 (miket) SIR 122403
+**	    Change encryption activation terminology from
+**	    enabled/disabled to unlock/locked.
+**	25-aug-2010 (miket) SIR 122403 SD 145781
+**	    Better msg for alter table not valid for encrypted tables.
 */
 typedef struct _DM_ERR
 {
@@ -833,6 +838,7 @@ typedef struct _DM_ERR
 #define		    E_DM00AA_BAD_ATT_KEY_COUNT		(E_DM_MASK + 0x00AAL)
 #define		    E_DM00AB_CANT_MAP_SHARED_MEM	(E_DM_MASK + 0x00ABL)
 #define		    E_DM00AC_LOGFULL_COMMIT		(E_DM_MASK + 0x00ACL)
+#define		    E_DM00AD_ENCRYPT_NO_ALTER_TABLE	(E_DM_MASK + 0x00ADL)
 #define		    E_DM00D0_LOCK_MANAGER_ERROR		(E_DM_MASK + 0x00D0L)
 #define		    E_DM00D1_BAD_SYSCAT_MOD		(E_DM_MASK + 0x00D1L)
 #define		    E_DM00E0_BAD_CB_PTR			(E_DM_MASK + 0x00E0L)
@@ -942,7 +948,7 @@ typedef struct _DM_ERR
 #define             E_DM0171_BAD_CACHE_PROTOCOL         (E_DM_MASK + 0x0171L)
 #define             E_DM0172_DMCM_LOCK_FAIL             (E_DM_MASK + 0x0172L)
 #define             E_DM0173_RAAT_SI_TIMER              (E_DM_MASK + 0x0173L)
-#define		    E_DM0174_ENCRYPT_NOT_ENABLED	(E_DM_MASK + 0x0174L)
+#define		    E_DM0174_ENCRYPT_LOCKED		(E_DM_MASK + 0x0174L)
 #define		    E_DM0175_ENCRYPT_FLAG_ERROR		(E_DM_MASK + 0x0175L)
 #define		    E_DM0176_ENCRYPT_CRC_ERROR		(E_DM_MASK + 0x0176L)
 #define		    E_DM0177_RECORD_NOT_ENCRYPTED	(E_DM_MASK + 0x0177L)

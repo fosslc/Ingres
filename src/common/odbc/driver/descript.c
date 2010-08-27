@@ -121,13 +121,25 @@
 **     29-Mar-2010 (drivi01)
 **	    Update lenValuePtr to point to pxxd->OctetLength to avoid
 **          SEGVs as the current pointer causes SEGVs on x64.
+**     24-Jun-2010 (Ralph Loen)  Bug 122174
+**          Expand 01-Jul-2009 fix to include SQLDescribeCol_InternalCall(),
+**          and SQLGetDescField_internalCall(), and SQLColAttributes().  
+**          Include date/time data types.
+**     25-Jun-2010 (Ralph Loen)  Bug 122174
+**          Correct SQL_DESC_OCTET_LENGTH, SQL_DESC_LENGTH, and
+**          SQL_DESC_PRECISION for interval types.
+**     10-Aug-2010 (drivi01)
+**	    Fix pird->OctetLength for 64-bit Windows platform
+**	    because pird isn't defined.  Use pxxd instead.
+**     24-Aug-2010 (Ralph Loen) Bug 124300
+**          In SQLGetDescRec_InternalCall(), don't fill an unreferenced
+**          SubTypePtr.
 */
 
 /*
 **  Internal functions:
 */
 RETCODE CheckDescField(LPDESC pdesc, LPDESCFLD  papd);
-i4 GetLengthFromType( LPDESC pdesc, LPDESCFLD pird, i4 attr );
 
 /*
 **  Static Constants:
@@ -367,8 +379,8 @@ SQLRETURN  SQL_API SQLColAttribute_InternalCall (
 
         if (i4ValuePtr)
             *i4ValuePtr = pird->ConciseType;
-		if (option_bigint && *i4ValuePtr == SQL_BIGINT)
-			*i4ValuePtr = SQL_INTEGER;
+        if (option_bigint && *i4ValuePtr == SQL_BIGINT)
+            *i4ValuePtr = SQL_INTEGER;
         if (StringLengthPtr)
            *StringLengthPtr = sizeof(SQLINTEGER);
         break;
@@ -402,7 +414,7 @@ SQLRETURN  SQL_API SQLColAttribute_InternalCall (
     case SQL_DESC_LENGTH:
 
         if (ulenValuePtr)
-            *ulenValuePtr = GetLengthFromType( pIRD, pird, SQL_DESC_LENGTH);
+            *ulenValuePtr = pird->Length;
 
         if (StringLengthPtr)
            *StringLengthPtr = sizeof(SQLUINTEGER);
@@ -439,8 +451,8 @@ SQLRETURN  SQL_API SQLColAttribute_InternalCall (
 
         if (i4ValuePtr)
             *i4ValuePtr  = isaIPD(pIRD)?TRUE:pird->Nullable;
-		if ( option_bigint && pird->ConciseType == SQL_BIGINT)
-			*i4ValuePtr  = 0;
+            if ( option_bigint && pird->ConciseType == SQL_BIGINT)
+                    *i4ValuePtr  = 0;
         if (StringLengthPtr)
            *StringLengthPtr = sizeof(SQLINTEGER);
         break;
@@ -459,28 +471,45 @@ SQLRETURN  SQL_API SQLColAttribute_InternalCall (
         {
             switch (pird->ConciseType)
             {
-                 case SQL_LONGVARCHAR:
-                 case SQL_WLONGVARCHAR:
-                 case SQL_LONGVARBINARY:
+            case SQL_TYPE_DATE:
+            case SQL_TYPE_TIME:
+                *lenValuePtr = sizeof(SQL_DATE_STRUCT);
+                break;
 
-                     *lenValuePtr  = FETMAX;
-                     break;
+            case SQL_TYPE_TIMESTAMP:
+                *lenValuePtr = sizeof(SQL_TIMESTAMP_STRUCT);
+                break;
 
-                 case SQL_VARCHAR:
-                 case SQL_WVARCHAR:
-                 case SQL_VARBINARY:
+            case SQL_LONGVARCHAR:
+            case SQL_WLONGVARCHAR:
+            case SQL_LONGVARBINARY:
+                *lenValuePtr  = FETMAX;
+                break;
+            
+            case SQL_VARCHAR:
+            case SQL_WVARCHAR:
+            case SQL_VARBINARY:
+                *lenValuePtr = pird->OctetLength - sizeof(i2);
+                break;
+            
+            case SQL_BIGINT:
+                if (option_bigint)
+                {
+                    *lenValuePtr = sizeof(SQL_INTEGER); 
+                    break;
+                }/*if not, fall through*/
 
-                     *lenValuePtr = pird->OctetLength - sizeof(i2);
-                     break;
-				 case SQL_BIGINT:
-					 if (option_bigint)
-					 {
-						*lenValuePtr = sizeof(SQL_INTEGER); 
-					    break;
-					 }/*if not, fall through*/
-                 default:
-                     *lenValuePtr  = pird->OctetLength;
-                     break;
+            case SQL_DECIMAL:
+            case SQL_NUMERIC:
+                *lenValuePtr = pird->Precision + 2;
+                break;
+
+            default:
+                if (pird->VerboseType == SQL_INTERVAL)
+                    *lenValuePtr = sizeof(SQL_INTERVAL_STRUCT);
+                else
+                    *lenValuePtr  = pird->OctetLength;
+                break;
             }
         }
         if (StringLengthPtr)
@@ -490,7 +519,28 @@ SQLRETURN  SQL_API SQLColAttribute_InternalCall (
     case SQL_DESC_PRECISION:
 
         if (i4ValuePtr)
-            *i4ValuePtr  = (SQLINTEGER)pird->Precision;
+        {
+            switch (pird->fIngApiType)
+            {
+            case IIAPI_TS_TYPE:
+            case IIAPI_TSTZ_TYPE:
+            case IIAPI_TSWO_TYPE:
+            case IIAPI_TIME_TYPE:
+            case IIAPI_TMTZ_TYPE:
+            case IIAPI_TMWO_TYPE:
+            case IIAPI_INTDS_TYPE:
+                *i4ValuePtr  = (SQLINTEGER)pird->IsoTimePrecision;
+                break;
+
+            case IIAPI_DEC_TYPE:
+                *i4ValuePtr = pird->Precision;
+                break;
+
+            default:
+                *i4ValuePtr  = (SQLINTEGER)pird->Precision;
+                break;
+            }
+        }
         if (StringLengthPtr)
            *StringLengthPtr = sizeof(SQLINTEGER);
         break;
@@ -533,12 +583,12 @@ SQLRETURN  SQL_API SQLColAttribute_InternalCall (
 
     case SQL_DESC_TYPE:
 
-		if (i4ValuePtr)
-		{
+        if (i4ValuePtr)
+        {
             *i4ValuePtr  = pird->VerboseType;
-			if((option_bigint) && (pird->VerboseType == SQL_BIGINT))
-				*i4ValuePtr = SQL_INTEGER;
-		}
+            if((option_bigint) && (pird->VerboseType == SQL_BIGINT))
+                *i4ValuePtr = SQL_INTEGER;
+        }
         if (StringLengthPtr)
            *StringLengthPtr = sizeof(SQLINTEGER);
         break;
@@ -576,14 +626,20 @@ SQLRETURN  SQL_API SQLColAttribute_InternalCall (
     case SQL_COLUMN_LENGTH:      /* 2.x LENGTH definition differs from 3.x */
 
         if (lenValuePtr)
-           *lenValuePtr = pird->Length;       /* ???? different for 2.x ????*/
+        {
+           if (pird->fIngApiType == IIAPI_DEC_TYPE)
+               *lenValuePtr = pird->Precision + 2;
+           else
+               *lenValuePtr = pird->OctetLength;     
+        }
         if (StringLengthPtr)
            *StringLengthPtr = sizeof(SQLINTEGER);
         break;
 
     case SQL_COLUMN_PRECISION:   /* 2.x PRECISION definition differs from 3.x */
+
         if (i4ValuePtr)
-            *i4ValuePtr  = (SQLINTEGER)pird->Precision;   /* ???? different for 2.x ????*/
+            *i4ValuePtr  = (SQLINTEGER)pird->Length;   /* ???? different for 2.x ????*/
         if (StringLengthPtr)
            *StringLengthPtr = sizeof(SQLINTEGER);
         break;
@@ -826,18 +882,6 @@ SQLRETURN  SQL_API SQLGetDescField_InternalCall (
     if (!(PermissionNeeded & DescPermissionTable[i].Permission))
         return(ErrUnlockDesc(SQL_HY091,pdesc)); /* invalid field id */
 
-/*
-    if (isaIRD(pdesc))    ??? implement later  ????
-       {
-       if stmt had been not prepared nor executed
-          return error HY007;
-       else 
-          if there is no open ODBC cursor associated with it
-             return SQL_NO_DATA;
-       }
-*/
-
-
     foundit = TRUE;                 /* assume we find a DESC header field */
     switch(FieldIdentifier)         /* looking for DESC header fields */
     {
@@ -1050,10 +1094,9 @@ SQLRETURN  SQL_API SQLGetDescField_InternalCall (
         if (ValuePtr)
         {
 #ifdef _WIN64
-            *ulenValuePtr = (u_i4)GetLengthFromType( pdesc, pxxd,
-                SQL_DESC_LENGTH );
+            *ulenValuePtr = (u_i4)pxxd->Length;
 #else
-            i4temp = GetLengthFromType ( pdesc, pxxd, SQL_DESC_LENGTH);
+            i4temp = pxxd->Length;
             I4ASSIGN_MACRO(i4temp, *u4ValuePtr);
 #endif
         }
@@ -1158,9 +1201,23 @@ SQLRETURN  SQL_API SQLGetDescField_InternalCall (
     case SQL_DESC_PRECISION:
 
         if (ValuePtr)
-           {i2temp = (i2) pxxd->Precision;
+        { 
+            i2temp = (i2) pxxd->Precision;
+
+            switch (pxxd->fIngApiType)
+            {
+                case IIAPI_TS_TYPE:
+                case IIAPI_TSTZ_TYPE:
+                case IIAPI_TSWO_TYPE:
+                case IIAPI_TIME_TYPE:
+                case IIAPI_TMTZ_TYPE:
+                case IIAPI_TMWO_TYPE:
+                case IIAPI_INTDS_TYPE:
+                    i2temp = (i2) pxxd->IsoTimePrecision;
+                    break;
+            }
             I2ASSIGN_MACRO(i2temp, *i2ValuePtr);
-           }
+        }
         if (StringLengthPtr)
            *StringLengthPtr = sizeof(SQLSMALLINT);
         break;
@@ -1307,7 +1364,7 @@ SQLRETURN  SQL_API SQLGetDescRec (
     SQLHDESC     DescriptorHandle,
     SQLSMALLINT  RecNumber,
     SQLCHAR     *Name,
-    SQLSMALLINT  BufferLength,
+   SQLSMALLINT  BufferLength,
     SQLSMALLINT *StringLengthPtr,
     SQLSMALLINT *TypePtr,
     SQLSMALLINT *SubTypePtr,
@@ -1364,17 +1421,6 @@ SQLRETURN  SQL_API SQLGetDescRec_InternalCall (
         (RecNumber == 0  &&  isaIPD(pdesc)))
             return ErrUnlockDesc(SQL_07009, pdesc); /* Invalid descriptor index */
 
-/*
-    if DescriptorHandle is associated with a pstmt as an IRD
-       {
-       if stmt had been not prepared nor executed
-          return error HY007;    ????
-       else 
-          if there is no open ODBC cursor associated with it
-             return SQL_NO_DATA;
-       }
-
-*/
     pxxd = pdesc->pcol + RecNumber;
 
     /* SQL_DESC_NAME */
@@ -1388,17 +1434,52 @@ SQLRETURN  SQL_API SQLGetDescRec_InternalCall (
         *TypePtr  = pxxd->VerboseType;
 
     /* SQL_DESC_DATETIME_INTERVAL_CODE */
-    if ( SubTypePtr && (pxxd->VerboseType==SQL_DATETIME  ||
-                        pxxd->VerboseType==SQL_INTERVAL))
+    if (SubTypePtr)
         *SubTypePtr = pxxd->DatetimeIntervalCode;
 
     /* SQL_DESC_OCTET_LENGTH */
     if ( LengthPtr)
-        *LengthPtr  = pxxd->OctetLength;
+    { 
+        switch (pxxd->ConciseType)
+        {
+        case SQL_TYPE_DATE:
+        case SQL_TYPE_TIME:
+            *LengthPtr = sizeof(SQL_DATE_STRUCT);
+            break;
+
+        case SQL_TYPE_TIMESTAMP:
+            *LengthPtr = sizeof(SQL_TIMESTAMP_STRUCT);
+            break;
+
+        default:
+            if (pxxd->VerboseType == SQL_INTERVAL)
+                *LengthPtr = sizeof(SQL_INTERVAL_STRUCT);
+            else
+                *LengthPtr  = pxxd->OctetLength;
+            break;
+        }
+    }
 
     /* SQL_DESC_PRECISION */
-    if ( PrecisionPtr)
-        *PrecisionPtr  = (SQLSMALLINT) pxxd->Precision;
+    if ( PrecisionPtr )
+    {
+        switch (pxxd->fIngApiType)
+        {
+        case IIAPI_TS_TYPE:
+        case IIAPI_TSTZ_TYPE:
+        case IIAPI_TSWO_TYPE:
+        case IIAPI_TIME_TYPE:
+        case IIAPI_TMTZ_TYPE:
+        case IIAPI_TMWO_TYPE:
+        case IIAPI_INTDS_TYPE:
+            *PrecisionPtr  = (SQLSMALLINT)pxxd->IsoTimePrecision;
+            break;
+        
+        default:
+            *PrecisionPtr  = (SQLSMALLINT) pxxd->Precision;
+            break;
+        }
+    }
 
     /* SQL_DESC_SCALE */
     if ( ScalePtr)
@@ -2874,16 +2955,20 @@ void ResetDescriptorFields(LPDESC pdesc, i4 startindex, i4 endindex)
 
 void SetDescDefaultsFromType(LPDBC pdbc, LPDESCFLD pird)
 {
+    pird->DatetimeIntervalCode = 0;
+
     if (pird->fIngApiType != IIAPI_DEC_TYPE  &&
         pird->fIngApiType != IIAPI_MNY_TYPE)
         pird->Scale       = 0;
 
+    pird->IsoTimePrecision = 0;
+    
     switch(pird->fIngApiType)
     {
     case IIAPI_CHA_TYPE:
     case IIAPI_CHR_TYPE:
         pird->ConciseType = SQL_CHAR;
-        pird->Precision   = pird->OctetLength;
+        pird->Precision = pird->Length = pird->OctetLength;
         pird->VerboseType = pird->ConciseType;    
         break;
 
@@ -2891,7 +2976,7 @@ void SetDescDefaultsFromType(LPDBC pdbc, LPDESCFLD pird)
     case IIAPI_TXT_TYPE:
     case IIAPI_LTXT_TYPE:
         pird->ConciseType = SQL_VARCHAR;
-        pird->Precision   = pird->OctetLength - 2;
+        pird->Precision   = pird->Length = pird->OctetLength - 2;
         pird->VerboseType = pird->ConciseType;    
 
         break;
@@ -2901,27 +2986,27 @@ void SetDescDefaultsFromType(LPDBC pdbc, LPDESCFLD pird)
         if (pird->OctetLength==4)
         { 
             pird->ConciseType      = SQL_INTEGER;
-            pird->Precision = 10;
+            pird->Length = pird->Precision = 10;
         }
         else if (pird->OctetLength==2)
         { 
             pird->ConciseType      = SQL_SMALLINT;
-            pird->Precision = 5;
+            pird->Length = pird->Precision = 5;
         }
         else if (pird->OctetLength==1)
         { 
             pird->ConciseType      = SQL_TINYINT;
-            pird->Precision = 3;
+            pird->Length = pird->Precision = 3;
         }
         else if (pird->OctetLength==8)
         { 
             pird->ConciseType      = SQL_BIGINT;
-            pird->Precision = 19;
+            pird->Length = pird->Precision = 19;
         }
         else /* should never happen */
         { 
             pird->ConciseType      = SQL_INTEGER;
-            pird->Precision = 10;
+            pird->Length = pird->Precision = 10;
         }
         pird->VerboseType = pird->ConciseType;    
 
@@ -2930,12 +3015,13 @@ void SetDescDefaultsFromType(LPDBC pdbc, LPDESCFLD pird)
     case IIAPI_DEC_TYPE:
         pird->ConciseType = SQL_DECIMAL;
         pird->VerboseType = pird->ConciseType;    
-
+        pird->Length = pird->Precision;
+    
         break;
 
     case IIAPI_MNY_TYPE:
         pird->ConciseType = SQL_DECIMAL; 
-        pird->Precision   = 14;  /* +-999,999,999,999.99 */
+        pird->Precision = pird->Length  = 14;  /* +-999,999,999,999.99 */
         pird->Scale       = 2;
         pird->VerboseType = pird->ConciseType;    
 
@@ -2945,18 +3031,12 @@ void SetDescDefaultsFromType(LPDBC pdbc, LPDESCFLD pird)
         if (pird->OctetLength <= 4)
         {
             pird->ConciseType      = SQL_REAL;
-            if (pdbc->penvOwner->ODBCVersion <= SQL_OV_ODBC2)
-                pird->Precision =  7;
-            else 
-                pird->Precision = 24;
+            pird->Length = pird->Precision =  7;
         }
         else 
         {
-            pird->ConciseType      = SQL_FLOAT;
-            if (pdbc->penvOwner->ODBCVersion <= SQL_OV_ODBC2)
-                pird->Precision = 15;
-            else 
-                pird->Precision = 53;
+            pird->ConciseType = SQL_FLOAT;
+            pird->Length = pird->Precision = 15;
         }
         pird->VerboseType = pird->ConciseType;    
         
@@ -2970,68 +3050,66 @@ void SetDescDefaultsFromType(LPDBC pdbc, LPDESCFLD pird)
 
     case IIAPI_BYTE_TYPE:
         pird->ConciseType = SQL_BINARY; 
-        pird->Precision   = pird->OctetLength;
+        pird->Precision = pird->Length = pird->OctetLength;
         pird->VerboseType = pird->ConciseType;    
 
         break;
 
     case IIAPI_VBYTE_TYPE:
         pird->ConciseType = SQL_VARBINARY;
-        pird->Precision   = pird->OctetLength - 2;
+        pird->Precision = pird->Length = pird->OctetLength - 2;
         pird->VerboseType = pird->ConciseType;    
 
         break;
 
     case IIAPI_LVCH_TYPE:
         pird->ConciseType = SQL_LONGVARCHAR;
-        pird->Precision   = MAXI4;
+        pird->Precision  = pird->Length = MAXI4;
         pird->VerboseType = pird->ConciseType;    
 
         break;
 
     case IIAPI_LBYTE_TYPE:
         pird->ConciseType = SQL_LONGVARBINARY; 
-        pird->Precision   = MAXI4;
+        pird->Precision   = pird->Length = MAXI4;
         pird->VerboseType = pird->ConciseType;    
 
         break;
 
-# ifdef IIAPI_NCHA_TYPE
-
     case IIAPI_NCHA_TYPE:
         pird->ConciseType = SQL_WCHAR;
-        pird->Precision   = pird->OctetLength / sizeof(SQLWCHAR);
+        pird->Precision   = pird->Length = 
+            pird->OctetLength / sizeof(SQLWCHAR);
         pird->VerboseType = pird->ConciseType;    
 
         break;
 
     case IIAPI_NVCH_TYPE:
         pird->ConciseType = SQL_WVARCHAR;
-        pird->Precision   = (pird->OctetLength-2) / sizeof(SQLWCHAR);
+        pird->Precision   = pird->Length = (pird->OctetLength 
+            / sizeof(SQLWCHAR)) - sizeof(i2);
         pird->VerboseType = pird->ConciseType;    
 
         break;
 
     case IIAPI_LNVCH_TYPE:
         pird->ConciseType = SQL_WLONGVARCHAR;
-        pird->Precision   = MAXI4/2;
+        pird->Precision   = pird->Length = MAXI4/2;
         pird->VerboseType = pird->ConciseType;    
 
         break;
 
-# endif
-
     case IIAPI_LOGKEY_TYPE:
     case IIAPI_TABKEY_TYPE:
         pird->ConciseType = SQL_BINARY;
-        pird->Precision   = pird->OctetLength;
+        pird->Precision = pird->Length = pird->OctetLength;
         pird->VerboseType = pird->ConciseType;    
 
         break;
 
     case IIAPI_HNDL_TYPE:
         pird->ConciseType = SQL_INTEGER;
-        pird->Precision   = 10;
+        pird->Precision = pird->Length = 10;
         pird->VerboseType = pird->ConciseType;  
     
         break;
@@ -3040,9 +3118,8 @@ void SetDescDefaultsFromType(LPDBC pdbc, LPDESCFLD pird)
         pird->ConciseType = SQL_TYPE_DATE;
         pird->VerboseType = SQL_DATETIME;
         pird->DatetimeIntervalCode = SQL_CODE_DATE;
-        pird->Precision   = 
-        pird->OctetLength =
-        pird->Length      = 11;
+        pird->Precision = pird->OctetLength =
+             pird->Length = ODBC_DATE_OUTLENGTH;
 
         if (pdbc == NULL)
             break;
@@ -3054,25 +3131,41 @@ void SetDescDefaultsFromType(LPDBC pdbc, LPDESCFLD pird)
         break;
 
     case IIAPI_DTE_TYPE:
-    case IIAPI_TS_TYPE:
-    case IIAPI_TSWO_TYPE:
-    case IIAPI_TSTZ_TYPE:
         pird->ConciseType = SQL_TYPE_TIMESTAMP;
         pird->VerboseType = SQL_DATETIME;
         pird->DatetimeIntervalCode = SQL_CODE_TIMESTAMP;
-        if (pird->fIngApiType != IIAPI_DTE_TYPE)
-            pird->IsoTimePrecision = (II_UINT2) pird->Precision;
-        else
-            pird->IsoTimePrecision = 0;
+        pird->IsoTimePrecision = 0;
         pird->Precision   = 19;
-        if (pird->fIngApiType == IIAPI_TSTZ_TYPE || pird->fIngApiType ==
-            IIAPI_TS_TYPE)
-            pird->OctetLength = pird->Length = ODBC_TSTZ_OUTLENGTH+1;
-        else if (pird->fIngApiType == IIAPI_TSWO_TYPE)
-            pird->OctetLength = pird->Length = ODBC_TSWO_OUTLENGTH+1;
-        else
-            pird->OctetLength =
-                pird->Length      = ODBC_DTE_OUTLENGTH+1;
+        pird->OctetLength =
+             pird->Length      = ODBC_DTE_OUTLENGTH;
+
+        if (pdbc == NULL)
+            break;
+
+        if (pdbc->fOptions & OPT_BLANKDATEisNULL ||  /* if return blank date */
+            pdbc->fOptions & OPT_DATE1582isNULL)     /* or return 1582 */
+           pird->Nullable = SQL_NULLABLE;    /* as NULL, then set descriptor */
+
+        break;
+
+    case IIAPI_TS_TYPE:
+    case IIAPI_TSWO_TYPE:
+    case IIAPI_TSTZ_TYPE:
+        /*
+        ** Note that the fetched precision is the number of digits to
+        ** right of the decimal point.  This is the ISO standard definition
+        ** for ISO date/time types.  For decimal types, precision is
+        ** the number of significant digits.  
+        ** The precision for ODBC gets overridden after IsoTimePrecision is
+        ** filled, since precision takes on a different meaning in ODBC
+        ** 2.0.  In ODBC 2.0, precision for date/time is the number of
+        ** significant digits.       
+        */
+        pird->IsoTimePrecision = pird->Scale = (i2) pird->Precision;
+        pird->Precision = pird->Length = 20 + pird->IsoTimePrecision;
+        pird->ConciseType = SQL_TYPE_TIMESTAMP;
+        pird->VerboseType = SQL_DATETIME;
+        pird->DatetimeIntervalCode = SQL_CODE_TIMESTAMP;
 
         if (pdbc == NULL)
             break;
@@ -3086,23 +3179,19 @@ void SetDescDefaultsFromType(LPDBC pdbc, LPDESCFLD pird)
     case IIAPI_TMWO_TYPE:
     case IIAPI_TIME_TYPE:
     case IIAPI_TMTZ_TYPE:
+        pird->IsoTimePrecision = pird->Scale = (i2) pird->Precision;
+        pird->Precision = pird->Length = 9 + pird->IsoTimePrecision;
         pird->ConciseType = SQL_TYPE_TIME;
         pird->VerboseType = SQL_DATETIME;
         pird->DatetimeIntervalCode = SQL_CODE_TIME;
-        pird->IsoTimePrecision = (II_UINT2) pird->Precision;
-        if (pird->fIngApiType == IIAPI_TMTZ_TYPE || pird->fIngApiType ==
-            IIAPI_TIME_TYPE)
-        {
-            pird->Precision   = 8; 
-            pird->OctetLength =
-            pird->Length      = ODBC_TMTZ_OUTLENGTH; 
-        }
-        else
-        {
-            pird->Precision   = 11; 
-            pird->OctetLength =
-            pird->Length      = ODBC_TMWO_OUTLENGTH; 
-        }
+
+        if (pdbc == NULL)
+            break;
+
+        if (pdbc->fOptions & OPT_BLANKDATEisNULL ||  /* if return blank date */
+            pdbc->fOptions & OPT_DATE1582isNULL)     /* or return 1582 */
+           pird->Nullable = SQL_NULLABLE;    /* as NULL, then set descriptor */
+
         break;
     
     case IIAPI_INTYM_TYPE:
@@ -3118,110 +3207,16 @@ void SetDescDefaultsFromType(LPDBC pdbc, LPDESCFLD pird)
         pird->ConciseType = SQL_INTERVAL_DAY_TO_SECOND;
         pird->VerboseType = SQL_INTERVAL;
         pird->DatetimeIntervalCode = SQL_CODE_DAY_TO_SECOND;
-        pird->IsoTimePrecision = (II_UINT2) pird->Precision;
-        pird->Precision   = 
-        pird->OctetLength =
-        pird->Length      = ODBC_INTDS_OUTLENGTH; 
+        pird->IsoTimePrecision = pird->Scale = pird->Precision;
+        pird->Precision = pird->Length = 10 + pird->IsoTimePrecision;
+        pird->OctetLength = ODBC_INTDS_OUTLENGTH; 
     
         break;
     
     default:
+        if (pird->Precision > 0)
+            pird->Length = pird->Precision;
         break;
 
     }  /* end switch(pird->fIngApiType) */
-}
-
-/*
-** Name: GetLengthFromType
-**
-** Description:
-**  Return a length field of a LPDESCFLD descriptor.
-**
-** Input:
-**  pdesc   Descriptor (IRD, ARD, APD or IPD)
-**  pxxd    A descriptor field of the pdesc structure.
-**  attr    Length attribute.  Can be:
-**          SQL_DESC_LENGTH
-**          SQL_DESC_OCTET_LENGTH
-**          SQL_COLUMN_LENGTH
-**
-** Returns:
-**  i4     Field length, possibly modified if the pdesc is an IRD. 
-**
-** History:
-**  01-Jul-2009 Bug 122174 (Ralph Loen)
-**      Created.
-*/
-i4 GetLengthFromType( LPDESC pdesc, LPDESCFLD pxxd, i4 attr )
-{
-    LPDBC pdbc = pdesc->pdbc;
-    i4 retlen;
-    BOOL option_bigint = pdbc->fOptions & OPT_CONVERTINT8TOINT4;
-
-    i4 type = pxxd->ConciseType;
-
-    if ( option_bigint && (pxxd->ConciseType == SQL_BIGINT) )
-        type = SQL_INTEGER;
-
-    switch (attr)
-    {
-    case SQL_DESC_LENGTH:
-        retlen = pxxd->Length;
-        break;
-
-    case SQL_DESC_OCTET_LENGTH:
-    case SQL_COLUMN_LENGTH:
-        retlen = pxxd->OctetLength;
-        break;
-
-    default:
-        break;
-    }
-
-    if (!isaIRD(pdesc))
-        return retlen;
-
-    switch (type)
-    {
-        case SQL_WLONGVARCHAR:
-            if (attr == SQL_DESC_LENGTH) 
-                retlen = MAXI4 / sizeof(SQLWCHAR);
-            else
-                retlen = MAXI4;
-            break;
-
-        case SQL_LONGVARCHAR:
-        case SQL_LONGVARBINARY:
-            retlen = MAXI4;
-            break;
-
-        case SQL_VARCHAR:
-        case SQL_VARBINARY:
-            retlen -= sizeof(i2);
-            break;
-
-        case SQL_WVARCHAR:
-            retlen -= sizeof(i2);
-            if (attr == SQL_DESC_LENGTH)
-                retlen /= sizeof(SQLWCHAR);
-            break;
-
-        case SQL_WCHAR:
-            if (attr == SQL_DESC_LENGTH) 
-                retlen /= sizeof(SQLWCHAR);
-            break;
-
-        case SQL_CHAR:
-            break;
-
-        default:
-            if ((attr == SQL_DESC_LENGTH) && ((type != SQL_NUMERIC) ||
-                (type != SQL_DECIMAL)))
-            {
-                retlen = pxxd->Precision;
-            }
-            break;
-    }
-
-    return retlen;
 }

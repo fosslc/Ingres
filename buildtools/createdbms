@@ -24,6 +24,9 @@
 ##	    Move set_env.sh call and use set -- to clear $1 parm before
 ##	    calling the set_env.sh script so that createdbms parms
 ##	    are not passed to sourced scripts.
+##	8-jul-2010 (stephenb)
+##	    Bump transaction log to 500 Meg to prevent tests from failing
+##	    (usually am95.sep)
 
 usage()
 {
@@ -263,7 +266,7 @@ if [ ! -f ${II_SYSTEM}/resp.txt ]
 then
    echo "Creating resp.txt file."
    cat << ! > $II_SYSTEM/resp.txt
-LOG_KBYTES=200000
+LOG_KBYTES=500000
 START_ON_BOOT=NO
 !
 fi

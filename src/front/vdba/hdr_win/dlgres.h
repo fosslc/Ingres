@@ -59,6 +59,9 @@
 **    Add IDC_MORE_OPTIONS define here if it isn't already defined.  
 **    This is b/c resource.h gets included in a few files in mainmfc
 **    causing warnings of redefine for the constant.
+** 30-Jun-2010 (drivi01)
+**    Bug #124006
+**    Add new BOOLEAN datatype.
 */
 
 #ifndef DLGRES_HEADER
@@ -1792,6 +1795,7 @@
 #define IDS_DROPAUDITKEY                       20130
 #define IDS_STRUCT_HEAPSORT                    20132
 #define IDS_WORK                               20133
+#define IDS_INGTYPE_BOOL                       20134
 
 #define IDS_COLLISION_PASSIVE                  20135   // PS 05/03/96 
 #define IDS_COLLISION_ACTIVE                   20136   // PS 05/03/96

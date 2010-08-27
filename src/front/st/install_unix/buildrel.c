@@ -347,6 +347,8 @@
 **	    ING_BUILD/files/srpmflists
 **	    Add -B flag to allow batch operation. Perm errors or missing
 **	    files result in listing and exit without further prompting.
+**	14-July-2010 (bonro01)
+**	    Add Beta LICENSE to ingbuild.
 **	    
 */
 
@@ -388,7 +390,7 @@ GLOBALDEF char *respfilename = NULL; /* user supplied response file name */
 GLOBALDEF bool privatePath = FALSE;
 GLOBALDEF char *gpl_lic = "gpl" ;
 GLOBALDEF char *com_lic = "com" ;
-GLOBALDEF char *emb_lic = "emb" ;
+GLOBALDEF char *beta_lic = "beta" ;
 GLOBALDEF char *eval_lic = "eval" ;
 GLOBALDEF char *license_type = NULL ;
 GLOBALDEF char manifestDir[ MAX_LOC + 1 ];
@@ -613,9 +615,9 @@ main(i4 argc, char *argv[])
 				    license_type=com_lic;
 				    break;
 				}
-				else if (STcompare(argv[argvx], emb_lic) == 0)
+				else if (STcompare(argv[argvx], beta_lic) == 0)
 				{
-				    license_type=emb_lic;
+				    license_type=beta_lic;
 				    break;
 				}
 				else if (STcompare(argv[argvx], eval_lic) == 0)

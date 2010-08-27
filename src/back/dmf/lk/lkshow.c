@@ -524,6 +524,15 @@ CL_ERR_DESC         *sys_err)
 **	    Removed erroneous ,0 from ule_format
 **	09-Jan-2008 (jonj)
 **	    For LK_S_MUTEX, cast LK_SEMAPHORE to CS_SEMAPHORE.
+**	29-Jun-2010 (thaju02) Bug 124007
+**	    Switch order in case LK_S_TRAN_LOCKS/LK_S_REL_TRAN_LOCKS; 
+**	    check if llb is a handle to a shared list (LLB_PARENT_SHARED) 
+**	    before check if related llb. 
+**	23-Jul-2010 (kschendel) b124007
+**	    Revert the above (my bad for suggesting it to Julie).
+**	    The real problem was in LKconnect, which shouldn't be moving
+**	    the related list to the shared LLB.  The related list is
+**	    supposed to be in the handle (parent-shared) LLB.
 */
 /* ARGSUSED */
 static STATUS
@@ -1016,7 +1025,7 @@ CL_ERR_DESC	    *sys_err)
 	    }
 
 	    /* Related LLB wanted? */
-	    if (flag == LK_S_REL_TRAN_LOCKS)
+	    if (flag == LK_S_REL_TRAN_LOCKS) 
 	    {
 		if (llb->llb_related_llb == 0)
 		{
@@ -1041,11 +1050,12 @@ CL_ERR_DESC	    *sys_err)
 		    return (LK_BADPARAM);
 		}
 	    }
+
 	    /*
 	    ** If lock list is a handle to a shared list, then use the actual shared
 	    ** list llb, as it's the one actually holding the locks.
 	    */
-	    else if (llb->llb_status & LLB_PARENT_SHARED)
+	    if (llb->llb_status & LLB_PARENT_SHARED)
 	    {
 		if (llb->llb_shared_llb == 0)
 		{
@@ -2188,6 +2198,8 @@ fill_in_stat_block( LK_STAT *stat, i4  info_size, u_i4 *info_result, LKD *lkd )
 **	    "-lk_key3" instead of a large negative number.
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Add LK_CROW, LK_TBL_MVCC lock types.
+**	11-Jun-2010 (jonj) Bug 123896
+**	    Add distinct display of LK_SEQUENCE.
 */
 char *
 LKkey_to_string( LK_LOCK_KEY *key, char *buffer )
@@ -2495,6 +2507,11 @@ LKkey_to_string( LK_LOCK_KEY *key, char *buffer )
 	STprintf(bp, "CHAN=%d,%s", key->lk_key1 >> 2,
                  ((key->lk_key1 & 3) == 0) ? "HELLO"
                  : ((key->lk_key1 & 3) == 1) ? "GOODBYE" : "SEND");
+	break;
+
+    case LK_SEQUENCE:
+	STprintf(bp,"DB=%x,SEQUENCE=%d", 
+	key->lk_key1, key->lk_key2);
 	break;
 
     default:

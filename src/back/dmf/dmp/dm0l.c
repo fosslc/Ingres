@@ -591,6 +591,8 @@
 **	    initialize new DM0L_CRHEADER in appropriate log records.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 */
 
 /*
@@ -1127,8 +1129,6 @@ DB_ERROR	*dberr)
 	log.bi_header.compensated_lsn = *prev_lsn;
 
     log.bi_tbl_id = *tbl_id;
-    log.bi_tblname = *name;
-    log.bi_tblowner = *owner;
     log.bi_pg_type = pg_type;
     log.bi_loc_cnt = loc_cnt;
     log.bi_loc_id = loc_config_id;
@@ -1226,8 +1226,6 @@ DB_ERROR	*dberr)
 	log.ai_header.compensated_lsn = *prev_lsn;
 
     log.ai_tbl_id = *tbl_id;
-    log.ai_tblname = *name;
-    log.ai_tblowner = *owner;
     log.ai_pg_type = pg_type;
     log.ai_loc_cnt = loc_cnt;
     log.ai_loc_id = loc_config_id;
@@ -1347,18 +1345,8 @@ DB_ERROR	*dberr)
 
     CLRDBERR(dberr);
 
-    /*
-    ** The table name and owner are logged with the trailing blanks
-    ** removed.  "name_len" and "owner_len" reflect these lengths.
-    */
-
-    /*
-    ** The length of the record reflects variable length record,
-    ** owner name and table name.
-    */
-    log.put_header.length = sizeof(DM0L_PUT) + size -
-				(DB_TAB_MAXNAME - name_len) -
-				(DB_OWN_MAXNAME - owner_len);
+    /* The length of the record reflects variable length record */
+    log.put_header.length = sizeof(DM0L_PUT) + size;
 
     log.put_header.type   = DM0LPUT;
     log.put_header.flags  = flag;
@@ -1374,8 +1362,6 @@ DB_ERROR	*dberr)
     log.put_cnf_loc_id	  = loc_config_id;
     log.put_loc_cnt 	  = loc_cnt;
     log.put_rec_size 	  = size;
-    log.put_tab_size	  = name_len;
-    log.put_own_size	  = owner_len;
     log.put_tid		  = *tid;
     log.put_tbl_id	  = *tbl_id;
     log.put_row_version	  = row_version;
@@ -1384,19 +1370,15 @@ DB_ERROR	*dberr)
     else
 	MEfill(sizeof(DMPP_SEG_HDR), '\0', &log.put_seg_hdr);
 
-    lg_object[0].lgo_size = ((char *)&log.put_vbuf[0]) - ((char *)&log);
+    lg_object[0].lgo_size = sizeof(log);
     lg_object[0].lgo_data = (PTR) &log;
-    lg_object[1].lgo_size = name_len;
-    lg_object[1].lgo_data = (PTR) name;
-    lg_object[2].lgo_size = owner_len;
-    lg_object[2].lgo_data = (PTR) owner;
-    lg_object[3].lgo_size = size;
-    lg_object[3].lgo_data = record;
+    lg_object[1].lgo_size = size;
+    lg_object[1].lgo_data = record;
 
     /*
     ** PUT record CLRs are recognized by a zero length row.
     */
-    num_objects = size ? 4 : 3;
+    num_objects = size ? 2 : 1;
     status = LGwrite(0, log_id, num_objects, lg_object, lri, &error);
 
     if (status == OK)
@@ -1487,16 +1469,7 @@ DB_ERROR	*dberr)
 
     CLRDBERR(dberr);
 
-    /*
-    ** The table name and owner are logged with the trailing blanks
-    ** removed.  "name_len" and "owner_len" reflect these lengths.
-    */
-
-    /*
-    ** The length of the record reflects the owner name and table name length.
-    */
-    log.nofull_header.length = sizeof(DM0L_NOFULL) - (DB_TAB_MAXNAME - name_len)
-				- (DB_OWN_MAXNAME - owner_len);
+    log.nofull_header.length = sizeof(DM0L_NOFULL);
 
     log.nofull_header.type = DM0LNOFULL;
     log.nofull_header.flags = flag;
@@ -1511,18 +1484,12 @@ DB_ERROR	*dberr)
     log.nofull_loc_cnt 	  = loc_cnt;
     log.nofull_cnf_loc_id  = loc_config_id;
     log.nofull_pageno 	  = pageno;
-    log.nofull_tab_size	  = name_len;
-    log.nofull_own_size	  = owner_len;
     log.nofull_tbl_id	  = *tbl_id;
 
-    lg_object[0].lgo_size = ((char *)&log.nofull_vbuf[0]) - ((char *)&log);
+    lg_object[0].lgo_size = sizeof(log);
     lg_object[0].lgo_data = (PTR) &log;
-    lg_object[1].lgo_size = name_len;
-    lg_object[1].lgo_data = (PTR) name;
-    lg_object[2].lgo_size = owner_len;
-    lg_object[2].lgo_data = (PTR) owner;
 
-    status = LGwrite(0, log_id, (i4)3, lg_object, lri, &error);
+    status = LGwrite(0, log_id, (i4)1, lg_object, lri, &error);
 
     if (status == OK)
     {
@@ -1630,18 +1597,8 @@ DB_ERROR	*dberr)
 
     CLRDBERR(dberr);
 
-    /*
-    ** The table name and owner are logged with the trailing blanks
-    ** removed.  "name_len" and "owner_len" reflect these lengths.
-    */
-
-    /*
-    ** The length of the record reflects variable length record,
-    ** owner name and table name.
-    */
-    log.del_header.length = sizeof(DM0L_DEL) + size -
-				(DB_TAB_MAXNAME - name_len) -
-				(DB_OWN_MAXNAME - owner_len);
+    /* The length of the record reflects variable length record */
+    log.del_header.length = sizeof(DM0L_DEL) + size;
 
     log.del_header.type   = DM0LDEL;
     log.del_header.flags  = flag;
@@ -1659,8 +1616,6 @@ DB_ERROR	*dberr)
     log.del_cnf_loc_id	  = loc_config_id;
     log.del_loc_cnt 	  = loc_cnt;
     log.del_rec_size 	  = size;
-    log.del_tab_size	  = name_len;
-    log.del_own_size	  = owner_len;
     log.del_tbl_id	  = *tbl_id;
     log.del_tid	  	  = *tid;
     log.del_row_version	  = row_version;
@@ -1669,16 +1624,12 @@ DB_ERROR	*dberr)
     else
 	MEfill(sizeof(DMPP_SEG_HDR), '\0', &log.del_seg_hdr);
 
-    lg_object[0].lgo_size = ((char *)&log.del_vbuf[0]) - ((char *)&log);
+    lg_object[0].lgo_size = sizeof(log);
     lg_object[0].lgo_data = (PTR) &log;
-    lg_object[1].lgo_size = name_len;
-    lg_object[1].lgo_data = (PTR) name;
-    lg_object[2].lgo_size = owner_len;
-    lg_object[2].lgo_data = (PTR) owner;
-    lg_object[3].lgo_size = size;
-    lg_object[3].lgo_data = record;
+    lg_object[1].lgo_size = size;
+    lg_object[1].lgo_data = record;
 
-    status = LGwrite(0, log_id, (i4)4, lg_object, lri, &error);
+    status = LGwrite(0, log_id, (i4)2, lg_object, lri, &error);
 
     if (status == OK)
     {
@@ -1841,11 +1792,6 @@ DB_ERROR	*dberr)
     CLRDBERR(dberr);
 
     /*
-    ** The table name and owner are logged with the trailing blanks
-    ** removed.  "name_len" and "owner_len" reflect these lengths.
-    */
-
-    /*
     ** Consistency check: make sure row compression produced sensible results.
     */
     if ((comp_odata_len < 0) || (comp_odata_len > l_orecord) ||
@@ -1871,12 +1817,9 @@ DB_ERROR	*dberr)
 
     /*
     ** The length of the record reflects variable length records,
-    ** owner name and table name, and compressed rows.
+    ** and compressed rows.
     */
-    log.rep_header.length = sizeof(DM0L_REP) +
-				comp_odata_len + comp_ndata_len -
-				(DB_TAB_MAXNAME - name_len) -
-				(DB_OWN_MAXNAME - owner_len);
+    log.rep_header.length = sizeof(DM0L_REP) + comp_odata_len + comp_ndata_len;
     log.rep_header.type    = DM0LREP;
     log.rep_header.flags   = flag;
     if (flag & DM0L_CLR)
@@ -1899,22 +1842,16 @@ DB_ERROR	*dberr)
     log.rep_odata_len      = comp_odata_len;
     log.rep_ndata_len      = comp_ndata_len;
     log.rep_diff_offset    = diff_offset;
-    log.rep_tab_size	   = name_len;
-    log.rep_own_size	   = owner_len;
     log.rep_tbl_id	   = *tbl_id;
     log.rep_otid	   = *otid;
     log.rep_ntid	   = *ntid;
     log.rep_orow_version   = orow_version;
     log.rep_nrow_version   = nrow_version;
 
-    lg_object[0].lgo_size = ((char *)&log.rep_vbuf[0]) - ((char *)(&log));
+    lg_object[0].lgo_size = sizeof(log);
     lg_object[0].lgo_data = (PTR) &log;
-    lg_object[1].lgo_size = name_len;
-    lg_object[1].lgo_data = (PTR) name;
-    lg_object[2].lgo_size = owner_len;
-    lg_object[2].lgo_data = (PTR) owner;
 
-    obj_num = 3;
+    obj_num = 1;
     if (comp_odata_len)
     {
 	lg_object[obj_num].lgo_size = comp_odata_len;
@@ -2728,11 +2665,16 @@ dm0l_fcreate(
 ** 	    Added DM0L_READONLY_DB for readonly databases.
 **	11-Nov-1997 (jenjo02)
 **	    Reserve log space and write log record with one call.
+**	09-aug-2010 (maspa05) b123189, b123960
+**	    Added paramter, flag2, to dm0l_opendb in order to add a new flag
+**          DM0L_RODB to indicate a readonly database, as opposed to one 
+**          merely opened read-only.
 */
 DB_STATUS
 dm0l_opendb(
     i4		    lg_id,
     i4		    flag,
+    i4              flag2,
     DB_DB_NAME		    *name,
     DB_OWN_NAME		    *owner,
     i4		    ext_dbid,
@@ -2792,6 +2734,8 @@ dm0l_opendb(
 	add_flag |= LG_FCT;
     if (flag & DM0L_PRETEND_CONSISTENT)
 	add_flag |= LG_PRETEND_CONSISTENT;
+    if (flag2 & DM0L_RODB)
+	add_flag |= LG_RODB;
     if ( flag & DM0L_MVCC )
         add_flag |= LG_MVCC;
 
@@ -3931,6 +3875,8 @@ dm0l_modify(
 **	    for support of indexes on Clustered tables.
 **	5-Nov-2009 (kschendel) SIR 122739
 **	    Fix outrageous name confusion re acount vs kcount.
+**	16-Jul-2010 (kschendel) SIR 123450
+**	    Pass data/key compression type to log record.
 */
 DB_STATUS
 dm0l_index(
@@ -3958,6 +3904,8 @@ dm0l_index(
     i4		    extend,
     i4              pg_type,
     i4		    page_size,
+    i2		    comptype,
+    i2		    ixcomptype,
     i2		    name_id,
     i4		    name_gen,
     i4			    dimension,
@@ -3999,6 +3947,8 @@ dm0l_index(
     log.dui_reltups = reltups;
     log.dui_buckets = buckets;
     log.dui_kcount = kcount;
+    log.dui_comptype = comptype;
+    log.dui_ixcomptype = ixcomptype;
     log.dui_allocation = allocation;
     log.dui_extend = extend;
     log.dui_page_size = page_size;
@@ -7790,24 +7740,10 @@ dm0l_assoc(
 
     CLRDBERR(dberr);
 
-    /*
-    ** The table name and owner are logged with the trailing blanks
-    ** removed.  "name_len" and "owner_len" reflect these lengths.
-    */
-
-    lg_object[0].lgo_size = ((char *)&log.ass_vbuf[0]) - ((char *)&log);
+    lg_object[0].lgo_size = sizeof(log);
     lg_object[0].lgo_data = (PTR) &log;
-    lg_object[1].lgo_size = name_len;
-    lg_object[1].lgo_data = (PTR) name;
-    lg_object[2].lgo_size = owner_len;
-    lg_object[2].lgo_data = (PTR) owner;
 
-    /*
-    ** The length of the record reflects the owner name and table name length.
-    */
-    log.ass_header.length = sizeof(DM0L_ASSOC) - (DB_TAB_MAXNAME - name_len) -
-				(DB_OWN_MAXNAME - owner_len);
-
+    log.ass_header.length = sizeof(DM0L_ASSOC);
     log.ass_header.type = DM0LASSOC;
     log.ass_header.flags = flag;
     if (flag & DM0L_CLR)
@@ -7827,10 +7763,8 @@ dm0l_assoc(
     log.ass_leaf_page = leafpage;
     log.ass_old_data = oldpage;
     log.ass_new_data = newpage;
-    log.ass_tab_size = name_len;
-    log.ass_own_size = owner_len;
 
-    status = LGwrite(0, lg_id, (i4)3, lg_object, lrileaf, &error);
+    status = LGwrite(0, lg_id, (i4)1, lg_object, lrileaf, &error);
 
     if (status == OK)
     {
@@ -7928,14 +7862,7 @@ DB_ERROR	*dberr)
 
     CLRDBERR(dberr);
 
-    /*
-    ** The table name and owner are logged with the trailing blanks
-    ** removed.  "name_len" and "owner_len" reflect these lengths.
-    */
-
-    log.all_header.length = sizeof(DM0L_ALLOC) -
-				(DB_TAB_MAXNAME - name_len) -
-				(DB_OWN_MAXNAME - owner_len);
+    log.all_header.length = sizeof(DM0L_ALLOC);
     log.all_header.type = DM0LALLOC;
     log.all_header.flags = flag;
     if (flag & DM0L_CLR)
@@ -7952,8 +7879,6 @@ DB_ERROR	*dberr)
     log.all_fhdr_cnf_loc_id = fhdr_config_id;
     log.all_fmap_cnf_loc_id = fmap_config_id;
     log.all_free_cnf_loc_id = free_config_id;
-    log.all_tab_size = name_len;
-    log.all_own_size = owner_len;
 
     log.all_fhdr_hwmap = FALSE;
     log.all_fhdr_hint = FALSE;
@@ -7962,14 +7887,10 @@ DB_ERROR	*dberr)
     if (freehint_update)
 	log.all_fhdr_hint = TRUE;
 
-    lg_object[0].lgo_size = ((char *)&log.all_vbuf[0]) - ((char *)&log);
+    lg_object[0].lgo_size = sizeof(log);
     lg_object[0].lgo_data = (PTR) &log;
-    lg_object[1].lgo_size = name_len;
-    lg_object[1].lgo_data = (PTR) tbl_name;
-    lg_object[2].lgo_size = owner_len;
-    lg_object[2].lgo_data = (PTR) tbl_owner;
 
-    status = LGwrite(0, lg_id, (i4)3, lg_object, &lri, &error);
+    status = LGwrite(0, lg_id, (i4)1, lg_object, &lri, &error);
     *lsn = lri.lri_lsn;
 
     if (status == OK)
@@ -8060,14 +7981,7 @@ DB_ERROR        *dberr)
 
     CLRDBERR(dberr);
 
-    /*
-    ** The table name and owner are logged with the trailing blanks
-    ** removed.  "name_len" and "owner_len" reflect these lengths.
-    */
-
-    log.dall_header.length = sizeof(DM0L_DEALLOC) -
-				(DB_TAB_MAXNAME - name_len) -
-				(DB_OWN_MAXNAME - owner_len);
+    log.dall_header.length = sizeof(DM0L_DEALLOC);
     log.dall_header.type = DM0LDEALLOC;
     log.dall_header.flags = flag;
     if (flag & DM0L_CLR)
@@ -8084,21 +7998,15 @@ DB_ERROR        *dberr)
     log.dall_fhdr_cnf_loc_id = fhdr_config_id;
     log.dall_fmap_cnf_loc_id = fmap_config_id;
     log.dall_free_cnf_loc_id = free_config_id;
-    log.dall_tab_size = name_len;
-    log.dall_own_size = owner_len;
 
     log.dall_fhdr_hint = FALSE;
     if (freehint_update)
 	log.dall_fhdr_hint = TRUE;
 
-    lg_object[0].lgo_size = ((char *)&log.dall_vbuf[0]) - ((char *)&log);
+    lg_object[0].lgo_size = sizeof(log);
     lg_object[0].lgo_data = (PTR) &log;
-    lg_object[1].lgo_size = name_len;
-    lg_object[1].lgo_data = (PTR) tbl_name;
-    lg_object[2].lgo_size = owner_len;
-    lg_object[2].lgo_data = (PTR) tbl_owner;
 
-    status = LGwrite(0, lg_id, (i4)3, lg_object, &lri, &error);
+    status = LGwrite(0, lg_id, (i4)1, lg_object, &lri, &error);
     *lsn = lri.lri_lsn;
 
     if (status == OK)
@@ -8202,8 +8110,6 @@ DB_ERROR	*dberr)
 	log.ext_header.compensated_lsn = *prev_lsn;
 
     STRUCT_ASSIGN_MACRO(*tbl_id, log.ext_tblid);
-    STRUCT_ASSIGN_MACRO(*tbl_name, log.ext_tblname);
-    STRUCT_ASSIGN_MACRO(*tbl_owner, log.ext_tblowner);
 
     log.ext_pg_type = pg_type;
     log.ext_page_size = page_size;
@@ -8342,13 +8248,7 @@ dm0l_ovfl(
 
     CLRDBERR(dberr);
 
-    /*
-    ** The table name and owner are logged with the trailing blanks
-    ** removed.  "name_len" and "owner_len" reflect these lengths.
-    */
-
-    log.ovf_header.length = sizeof(DM0L_OVFL) - (DB_TAB_MAXNAME - name_len) -
-				(DB_OWN_MAXNAME - owner_len);
+    log.ovf_header.length = sizeof(DM0L_OVFL);
     log.ovf_header.type = DM0LOVFL;
     log.ovf_header.flags = flag;
     if (flag & DM0L_CLR)
@@ -8357,12 +8257,8 @@ dm0l_ovfl(
     /* Stow LRI in CR header */
     DM0L_MAKE_CRHEADER_FROM_LRI(lri, &log.ovf_crhdr);
 
-    lg_object[0].lgo_size = ((char *)&log.ovf_vbuf[0]) - ((char *)&log);
+    lg_object[0].lgo_size = sizeof(log);
     lg_object[0].lgo_data = (PTR) &log;
-    lg_object[1].lgo_size = name_len;
-    lg_object[1].lgo_data = (PTR) name;
-    lg_object[2].lgo_size = owner_len;
-    lg_object[2].lgo_data = (PTR) owner;
 
     log.ovf_fullc = (i2)fullc;
     log.ovf_newpage = newpage;
@@ -8375,10 +8271,8 @@ dm0l_ovfl(
     log.ovf_cnf_loc_id = config_id;
     log.ovf_ovfl_cnf_loc_id = oflo_config_id;
     log.ovf_tbl_id = *tbl_id;
-    log.ovf_tab_size = name_len;
-    log.ovf_own_size = owner_len;
 
-    status = LGwrite(0, lg_id, (i4)3, lg_object, lri, &error);
+    status = LGwrite(0, lg_id, (i4)1, lg_object, lri, &error);
 
     if (status == OK)
     {
@@ -8463,8 +8357,6 @@ DB_ERROR	*dberr)
 	log.fmap_header.compensated_lsn = *prev_lsn;
 
     STRUCT_ASSIGN_MACRO(*tbl_id, log.fmap_tblid);
-    STRUCT_ASSIGN_MACRO(*tbl_name, log.fmap_tblname);
-    STRUCT_ASSIGN_MACRO(*tbl_owner, log.fmap_tblowner);
 
     log.fmap_pg_type = pg_type;
     log.fmap_page_size = page_size;
@@ -8578,8 +8470,6 @@ DB_ERROR	*dberr)
 	log.fmap_header.compensated_lsn = *prev_lsn;
 
     STRUCT_ASSIGN_MACRO(*tbl_id, log.fmap_tblid);
-    STRUCT_ASSIGN_MACRO(*tbl_name, log.fmap_tblname);
-    STRUCT_ASSIGN_MACRO(*tbl_owner, log.fmap_tblowner);
 
     log.fmap_pg_type = pg_type;
     log.fmap_page_size = page_size;
@@ -8707,19 +8597,8 @@ DB_ERROR	*dberr)
 
     CLRDBERR(dberr);
 
-    /*
-    ** The table name and owner are logged with the trailing blanks
-    ** removed.  "name_len" and "owner_len" reflect these lengths.
-    */
-
-    /*
-    ** The length of the record reflects variable length key,
-    ** owner name and table name.
-    */
-    log.btp_header.length = sizeof(DM0L_BTPUT) -
-				(DM1B_MAXLEAFLEN - key_length) -
-				(DB_TAB_MAXNAME - name_len) -
-				(DB_OWN_MAXNAME - owner_len);
+    /* The length of the record reflects variable length key */
+    log.btp_header.length = sizeof(DM0L_BTPUT) - (DM1B_MAXLEAFLEN - key_length);
 
     log.btp_header.type = DM0LBTPUT;
     log.btp_header.flags = flag;
@@ -8738,24 +8617,18 @@ DB_ERROR	*dberr)
     log.btp_bid = *bid;
     log.btp_bid_child = bid_child;
     log.btp_tid = *tid;
-    log.btp_tab_size = name_len;
-    log.btp_own_size = owner_len;
     log.btp_key_size = key_length;
     log.btp_partno = partno;
     log.btp_btflags = btflags;
 
-    num_objects = 3;
+    num_objects = 1;
     lg_object[0].lgo_size = ((char *)&log.btp_vbuf[0]) - ((char *)&log);
     lg_object[0].lgo_data = (PTR) &log;
-    lg_object[1].lgo_size = name_len;
-    lg_object[1].lgo_data = (PTR) tbl_name;
-    lg_object[2].lgo_size = owner_len;
-    lg_object[2].lgo_data = (PTR) tbl_owner;
 
     if (key_length)
     {
-	lg_object[3].lgo_size = key_length;
-	lg_object[3].lgo_data = key;
+	lg_object[1].lgo_size = key_length;
+	lg_object[1].lgo_data = key;
 	num_objects++;
     }
 
@@ -8865,20 +8738,8 @@ DB_ERROR	*dberr)
 
     CLRDBERR(dberr);
 
-    /*
-    ** The table name and owner are logged with the trailing blanks
-    ** removed.  "name_len" and "owner_len" reflect these lengths.
-    */
-
-    /*
-    ** The length of the record reflects variable length key,
-    ** owner name and table name.
-    */
-    log.btd_header.length = sizeof(DM0L_BTDEL) -
-				(DM1B_MAXLEAFLEN - key_length) -
-				(DB_TAB_MAXNAME - name_len) -
-				(DB_OWN_MAXNAME - owner_len);
-
+    /* The length of the record reflects variable length key */
+    log.btd_header.length = sizeof(DM0L_BTDEL) - (DM1B_MAXLEAFLEN - key_length);
     log.btd_header.type = DM0LBTDEL;
     log.btd_header.flags = flag;
     if (flag & DM0L_CLR)
@@ -8897,21 +8758,15 @@ DB_ERROR	*dberr)
     log.btd_bid_child = bid_child;
     log.btd_tid = *tid;
     log.btd_partno = partno;
-    log.btd_tab_size = name_len;
-    log.btd_own_size = owner_len;
     log.btd_key_size = key_length;
     log.btd_btflags = btflags;
 
     lg_object[0].lgo_size = ((char *)&log.btd_vbuf[0]) - ((char *)&log);
     lg_object[0].lgo_data = (PTR) &log;
-    lg_object[1].lgo_size = name_len;
-    lg_object[1].lgo_data = (PTR) tbl_name;
-    lg_object[2].lgo_size = owner_len;
-    lg_object[2].lgo_data = (PTR) tbl_owner;
-    lg_object[3].lgo_size = key_length;
-    lg_object[3].lgo_data = key;
+    lg_object[1].lgo_size = key_length;
+    lg_object[1].lgo_data = key;
 
-    status = LGwrite(0, lg_id, (i4)4, lg_object, lri, &error);
+    status = LGwrite(0, lg_id, (i4)2, lg_object, lri, &error);
 
     if (status == OK)
     {
@@ -9029,9 +8884,7 @@ DB_ERROR	*dberr)
 
     CLRDBERR(dberr);
 
-    /*
-    ** The length of the record reflects the variable length key.
-    */
+    /* The length of the record reflects variable length key */
     log.spl_header.length = sizeof(DM0L_BTSPLIT) - sizeof(DMPP_PAGE)
 				+ page_size + descrim_keylength; 
 
@@ -9044,8 +8897,6 @@ DB_ERROR	*dberr)
     DM0L_MAKE_CRHEADER_FROM_LRI(lri, &log.spl_crhdr);
 
     STRUCT_ASSIGN_MACRO(*tbl_id, log.spl_tbl_id);
-    STRUCT_ASSIGN_MACRO(*tbl_name, log.spl_tblname);
-    STRUCT_ASSIGN_MACRO(*tbl_owner, log.spl_tblowner);
 
     log.spl_pg_type = pg_type;
     log.spl_page_size = page_size;
@@ -9182,9 +9033,7 @@ DB_ERROR	*dberr)
 
     CLRDBERR(dberr);
 
-    /*
-    ** The length of the record reflects the variable length range keys.
-    */
+    /* The length of the record reflects variable length range keys */
     log.bto_header.length = sizeof(DM0L_BTOVFL) -
 				(DM1B_KEYLENGTH - lrange_len) -
 				(DM1B_KEYLENGTH - rrange_len);
@@ -9198,8 +9047,6 @@ DB_ERROR	*dberr)
     DM0L_MAKE_CRHEADER_FROM_LRI(lri, &log.bto_crhdr);
 
     STRUCT_ASSIGN_MACRO(*tbl_id, log.bto_tbl_id);
-    STRUCT_ASSIGN_MACRO(*tbl_name, log.bto_tblname);
-    STRUCT_ASSIGN_MACRO(*tbl_owner, log.bto_tblowner);
 
     log.bto_pg_type = pg_type;
     log.bto_page_size = page_size;
@@ -9360,9 +9207,7 @@ DB_ERROR	*dberr)
 
     CLRDBERR(dberr);
 
-    /*
-    ** The length of the record reflects the variable length range keys.
-    */
+    /* The length of the record reflects variable length range keys */
     log.btf_header.length = sizeof(DM0L_BTFREE) -
 				(DM1B_KEYLENGTH - lrange_len) -
 				(DM1B_KEYLENGTH - rrange_len) -
@@ -9374,8 +9219,6 @@ DB_ERROR	*dberr)
 	log.btf_header.compensated_lsn = *prev_lsn;
 
     STRUCT_ASSIGN_MACRO(*tbl_id, log.btf_tbl_id);
-    STRUCT_ASSIGN_MACRO(*tbl_name, log.btf_tblname);
-    STRUCT_ASSIGN_MACRO(*tbl_owner, log.btf_tblowner);
 
     log.btf_pg_type = pg_type;
     log.btf_page_size = page_size;
@@ -9543,9 +9386,7 @@ DB_ERROR	*dberr)
 
     CLRDBERR(dberr);
 
-    /*
-    ** The length of the record reflects the variable length range keys.
-    */
+    /* The length of the record reflects variable length range keys */
     log.btu_header.length = sizeof(DM0L_BTUPDOVFL) -
 				(DM1B_KEYLENGTH - lrange_len) -
 				(DM1B_KEYLENGTH - rrange_len) -
@@ -9558,8 +9399,6 @@ DB_ERROR	*dberr)
 	log.btu_header.compensated_lsn = *prev_lsn;
 
     STRUCT_ASSIGN_MACRO(*tbl_id, log.btu_tbl_id);
-    STRUCT_ASSIGN_MACRO(*tbl_name, log.btu_tblname);
-    STRUCT_ASSIGN_MACRO(*tbl_owner, log.btu_tblowner);
 
     log.btu_pg_type = pg_type;
     log.btu_page_size = page_size;
@@ -9712,21 +9551,11 @@ DB_ERROR	*dberr)
 
     CLRDBERR(dberr);
 
-    /*
-    ** The table name and owner are logged with the trailing blanks
-    ** removed.  "name_len" and "owner_len" reflect these lengths.
-    */
-
-    /*
-    ** The length of the record reflects variable length key, ancestor stack,
-    ** owner name and table name.
-    */
+    /* The length of the record reflects variable length key, ancestor stack */
     log.rtd_header.length = sizeof(DM0L_RTDEL) -
 				(RCB_MAX_RTREE_LEVEL * sizeof(DM_TID) -
 				 stack_length) -
-				(DB_MAXRTREE_KEY - key_length) -
-				(DB_TAB_MAXNAME - name_len) -
-				(DB_OWN_MAXNAME - owner_len);
+				(DB_MAXRTREE_KEY - key_length);
 
     log.rtd_header.type = DM0LRTDEL;
     log.rtd_header.flags = flag;
@@ -9743,23 +9572,17 @@ DB_ERROR	*dberr)
     log.rtd_obj_dt_id = obj_dt_id;
     log.rtd_bid = *bid;
     log.rtd_tid = *tid;
-    log.rtd_tab_size = name_len;
-    log.rtd_own_size = owner_len;
     log.rtd_stack_size = stack_length;
     log.rtd_key_size = key_length;
 
     lg_object[0].lgo_size = ((char *)&log.rtd_vbuf[0]) - ((char *)&log);
     lg_object[0].lgo_data = (PTR) &log;
-    lg_object[1].lgo_size = name_len;
-    lg_object[1].lgo_data = (PTR) tbl_name;
-    lg_object[2].lgo_size = owner_len;
-    lg_object[2].lgo_data = (PTR) tbl_owner;
-    lg_object[3].lgo_size = stack_length;
-    lg_object[3].lgo_data = (PTR) stack;
-    lg_object[4].lgo_size = key_length;
-    lg_object[4].lgo_data = key;
+    lg_object[1].lgo_size = stack_length;
+    lg_object[1].lgo_data = (PTR) stack;
+    lg_object[2].lgo_size = key_length;
+    lg_object[2].lgo_data = key;
 
-    status = LGwrite(0, lg_id, (i4)5, lg_object, &lri, &error);
+    status = LGwrite(0, lg_id, (i4)3, lg_object, &lri, &error);
     *lsn = lri.lri_lsn;
 
     if (status == OK)
@@ -9858,21 +9681,11 @@ DB_ERROR	*dberr)
 
     CLRDBERR(dberr);
 
-    /*
-    ** The table name and owner are logged with the trailing blanks
-    ** removed.  "name_len" and "owner_len" reflect these lengths.
-    */
-
-    /*
-    ** The length of the record reflects variable length key, ancestor stack,
-    ** owner name and table name.
-    */
+    /* The length of the record reflects variable length key, ancestor stack */
     log.rtp_header.length = sizeof(DM0L_RTPUT) -
 				(RCB_MAX_RTREE_LEVEL * sizeof(DM_TID) -
 				 stack_length) -
-				(DB_MAXRTREE_KEY - key_length) -
-				(DB_TAB_MAXNAME - name_len) -
-				(DB_OWN_MAXNAME - owner_len);
+				(DB_MAXRTREE_KEY - key_length);
 
     log.rtp_header.type = DM0LRTPUT;
     log.rtp_header.flags = flag;
@@ -9889,20 +9702,14 @@ DB_ERROR	*dberr)
     log.rtp_obj_dt_id = obj_dt_id;
     log.rtp_bid = *bid;
     log.rtp_tid = *tid;
-    log.rtp_tab_size = name_len;
-    log.rtp_own_size = owner_len;
     log.rtp_stack_size = stack_length;
     log.rtp_key_size = key_length;
 
     lg_object[0].lgo_size = ((char *)&log.rtp_vbuf[0]) - ((char *)&log);
     lg_object[0].lgo_data = (PTR) &log;
-    lg_object[1].lgo_size = name_len;
-    lg_object[1].lgo_data = (PTR) tbl_name;
-    lg_object[2].lgo_size = owner_len;
-    lg_object[2].lgo_data = (PTR) tbl_owner;
-    lg_object[3].lgo_size = stack_length;
-    lg_object[3].lgo_data = (PTR) stack;
-    num_objects = 4;
+    lg_object[1].lgo_size = stack_length;
+    lg_object[1].lgo_data = (PTR) stack;
+    num_objects = 2;
 
     if (key_length)
     {
@@ -10010,20 +9817,13 @@ DB_ERROR	*dberr)
     CLRDBERR(dberr);
 
     /*
-    ** The table name and owner are logged with the trailing blanks
-    ** removed.  "name_len" and "owner_len" reflect these lengths.
-    */
-
-    /*
     ** The length of the record reflects the ancestor stack, two variable length
-    ** keys, owner name and table name.
+    ** keys.
     */
     log.rtr_header.length = sizeof(DM0L_RTREP) -
 				(RCB_MAX_RTREE_LEVEL * sizeof(DM_TID) -
 				 stack_length) -
-				((DB_MAXRTREE_KEY - key_length) * 2)-
-				(DB_TAB_MAXNAME - name_len) -
-				(DB_OWN_MAXNAME - owner_len);
+				((DB_MAXRTREE_KEY - key_length) * 2);
 
     log.rtr_header.type = DM0LRTREP;
     log.rtr_header.flags = flag;
@@ -10040,20 +9840,14 @@ DB_ERROR	*dberr)
     log.rtr_obj_dt_id = obj_dt_id;
     log.rtr_bid = *bid;
     log.rtr_tid = *tid;
-    log.rtr_tab_size = name_len;
-    log.rtr_own_size = owner_len;
     log.rtr_stack_size = stack_length;
     log.rtr_okey_size = log.rtr_nkey_size = key_length;
 
     lg_object[0].lgo_size = ((char *)&log.rtr_vbuf[0]) - ((char *)&log);
     lg_object[0].lgo_data = (PTR) &log;
-    lg_object[1].lgo_size = name_len;
-    lg_object[1].lgo_data = (PTR) tbl_name;
-    lg_object[2].lgo_size = owner_len;
-    lg_object[2].lgo_data = (PTR) tbl_owner;
-    lg_object[3].lgo_size = stack_length;
-    lg_object[3].lgo_data = (PTR) stack;
-    num_objects = 4;
+    lg_object[1].lgo_size = stack_length;
+    lg_object[1].lgo_data = (PTR) stack;
+    num_objects = 2;
 
     if (key_length)
     {
@@ -10149,8 +9943,6 @@ dm0l_disassoc(
 	log.dis_header.compensated_lsn = *prev_lsn;
 
     log.dis_tbl_id = *tbl_id;
-    STRUCT_ASSIGN_MACRO(*name, log.dis_tblname);
-    STRUCT_ASSIGN_MACRO(*owner, log.dis_tblowner);
 
     log.dis_pg_type  = pg_type;
     log.dis_page_size = page_size;

@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1999, 2009 Ingres Corporation All Rights Reserved.
+** Copyright (c) 1999, 2010 Ingres Corporation All Rights Reserved.
 */
 
 package com.ingres.gcf.jdbc;
@@ -59,6 +59,9 @@ package com.ingres.gcf.jdbc;
 **          Added connection property 'send_ingres_dates' to allow the
 **          driver to send the date/time/timestamp values as INGRESDATE
 **          datatype instead of TS_W_TZ (ANSI TIMESTAMP WITH TIMEZONE).
+**	30-Jul-10 (gordy)
+**	    Added connection property 'send_integer_booleans' to allow
+**	    driver to send boolean values as tinyint.
 */
 
 import	java.util.ResourceBundle;
@@ -96,6 +99,7 @@ import	java.util.ListResourceBundle;
 **	RSRC_CP_MNY_PRC		Money precision
 **	RSRC_CP_DTE_TYP		Date alias
 **	RSRC_CP_SND_ING_DTE	Send Ingres Dates
+**	RSRC_CP_SND_INT_BOOL	Send integer booleans.
 **
 **  Public methods:
 **
@@ -145,6 +149,8 @@ import	java.util.ListResourceBundle;
 **	    Added RSRC_CP_DTE_TYPE.
 **      11-Feb-10 (rajus01) Bug 123277
 **	    Added RSRC_CP_SND_ING_DTE.
+**	30-Jul-10 (gordy)
+**	    Added RSRC_CP_SND_INT_BOOL.
 */
 
 public class
@@ -174,7 +180,8 @@ DrvRsrc
     public static final String	RSRC_CP_MNY_FMT = "RSRC_CP_MNY_FMT";
     public static final String	RSRC_CP_MNY_PRC = "RSRC_CP_MNY_PRC";
     public static final String	RSRC_CP_DTE_TYP = "RSRC_CP_DTE_TYP";
-    public static final String  RSRC_CP_SND_ING_DTE = "RSRC_CP_SND_ING_DTE";
+    public static final String  RSRC_CP_SND_ING_DTE  = "RSRC_CP_SND_ING_DTE";
+    public static final String  RSRC_CP_SND_INT_BOOL = "RSRC_CP_SND_INT_BOOL";
 
     /*
     ** Key/value resource list.
@@ -204,6 +211,7 @@ DrvRsrc
 	{ RSRC_CP_MNY_PRC,	"Money Precision" },
 	{ RSRC_CP_DTE_TYP,	"Date Alias" },
 	{ RSRC_CP_SND_ING_DTE,	"Send Ingres Dates" },
+	{ RSRC_CP_SND_INT_BOOL,	"Send Integer Booleans" },
     };
 
 

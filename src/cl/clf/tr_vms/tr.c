@@ -11,6 +11,7 @@
 #include    <lo.h>
 #include    <si.h>
 #include    <st.h>
+#include    <pc.h>
 #include    <tm.h>
 #include    <me.h>
 #include    <clconfig.h>
@@ -180,6 +181,8 @@
 **	16-Jun-2008 (kiria01) b120533
 **	    Fixup %w & %v so that range errors don't just end in an empty
 **	    string.
+**       9-Jun-2010 (hanal04) Bug 123886
+**          Add %^ format specifier to include pid, tid information.
 **/
 
 /*}
@@ -387,6 +390,9 @@ STATUS tr_handler(EX_ARGS *exargs);
 **          ?   Format the argument from a TM_STAMP structure.  
 **
 **	    %	Print a '%'.
+**
+**          ^  Print the Pid/Tid.
+**
 **
 **	    [	Start array of pointers.  Width is used to tell how many pointers to
 **		follow.  The first parameter is the address of the array of pointers.
@@ -1049,6 +1055,17 @@ struct argmng	    *marg;
 		format_buffer = format_item;
 	    }
 	    break;
+
+        case '^':
+            {
+                PID     pid;
+
+                PCpid(&pid);
+                STprintf(format_item, "[%x,%d]", pid, TRcontext_tid);
+                format_length = STlength(format_item);
+                format_buffer = format_item;
+            }
+            break;
 
 	case 'c':
 	    format_length = 1;

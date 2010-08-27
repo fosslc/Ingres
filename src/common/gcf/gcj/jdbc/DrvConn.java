@@ -123,6 +123,8 @@ package	com.ingres.gcf.jdbc;
 **	    Add config setting to enable/disable scrollable cursors.
 **	25-Mar-10 (gordy)
 **	    Add config setting to enable/disable batch processing.
+**	30-Jul-10 (gordy)
+**	    Add config setting to force booleans parameters to integer.
 */
 
 import	java.util.Hashtable;
@@ -201,7 +203,6 @@ import	com.ingres.gcf.dam.MsgConst;
 **	dt_lit			Literal date/time format.
 **	trace			Tracing output.
 **	dbms_log		DBMS trace log.
-**	snd_ing_dte		Send ingres date/time or ansi date/time?
 **
 **  Public Methods:
 **
@@ -318,6 +319,9 @@ import	com.ingres.gcf.dam.MsgConst;
 **	    Added snd_ing_dte.
 **	25-Mar-10 (gordy)
 **	    Added config flag to enable/disable batch processing.
+**	30-Jul-10 (gordy)
+**	    Added config flag to force booleans to be sent as integers.
+**	    Converted similar snd_ing_dte config item to config flag.
 */
 
 class
@@ -351,6 +355,8 @@ DrvConn
     public static final int	CNF_LOB_CACHE	= 0x0008;
     public static final int	CNF_CURS_SCROLL	= 0x0010;
     public static final int	CNF_BATCH	= 0x0020;
+    public static final int	CNF_INGDATE	= 0x0040;
+    public static final int	CNF_INTBOOL	= 0x0080;
 
     public int		cnf_flags		= CNF_LOCATORS |
 						  CNF_CURS_SCROLL | CNF_BATCH;
@@ -373,7 +379,6 @@ DrvConn
     public  boolean	ucs2_supported		= false;
     public  boolean	select_loops		= false;
     public  int		cursor_mode		= DRV_CRSR_READONLY;
-    public  boolean	snd_ing_dte		= false;
     public  boolean	autoCommit		= true;
     public  boolean	readOnly		= false;
     public  int		max_char_len		= DBMS_COL_MAX;

@@ -36,6 +36,9 @@
 ##	    Removed function keyword - not supported on all systems.
 ##  08-Jun-2010 (thich01)
 ##     Added set -- to clear passed in arguments
+##	22-jun-2010 (stephenb)
+##	    Add -hoqa option to run handoffqa version of list files (valid
+##	    only for Ingres internal testing)
 
 # we should set BUILDTOOLS so we know where the other tools are
 PWD=`pwd`
@@ -60,7 +63,10 @@ export BUILDTOOLS
 
 usage()
 {
-	echo "Usage: test_env.sh installation_code"
+	echo "Usage: test_env.sh [-noclear] [-hoqa] installation_code"
+	echo ""
+	echo "-hoqa implies -noclear and will set both"
+	echo "-noclear requires that the environment variable ING_TST is set"
 }
 
 set_testenv()
@@ -82,8 +88,14 @@ set_testenv()
 	export TST_OUTPUT=$II_SYSTEM/output
 	export TST_ROOT_OUTPUT=$TST_OUTPUT
 	export TST_SHELL=$ING_TST/suites/shell
-	export TST_CFG=$ING_TST/suites/acceptst
-	export TST_LISTEXEC=$ING_TST/suites/acceptst
+	if [ "$hoqa" ]
+	then
+	    export TST_CFG=$ING_TST/suites/handoffqa
+	    export TST_LISTEXEC=$ING_TST/suites/handoffqa
+	else
+	    export TST_CFG=$ING_TST/suites/acceptst
+	    export TST_LISTEXEC=$ING_TST/suites/acceptst
+	fi
 	export TST_TOOLS=$ING_TOOLS/bin
 	export TOOLS_DIR=$ING_TOOLS
 
@@ -119,6 +131,11 @@ do
             export II_INSTALLATION
 	    shift
 	    ;; 
+	-hoqa)
+	    noclear=true
+	    hoqa=true
+	    shift
+	    ;;
 	*)
 	    usage
 	    return 1

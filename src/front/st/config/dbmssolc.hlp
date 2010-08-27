@@ -1,0 +1,22 @@
+/#-- Copyright (c) 2010 Ingres Corporation
+
+  The sole_cache resource determines whether databases can be opened
+  by DBMS servers using other, private DMF caches.  It is analogous to
+  the sole_server resource, but is less restrictive:  sole_server says
+  that a database may only be opened by one DBMS server at a time,
+  while sole_cache says that a database may be opened by any of the
+  DBMS servers as long as they share a DMF cache.
+
+  One example where sole_cache might be preferable to sole_server is
+  to allow the use of fast commit together with use of the fastload
+  utility.  In this example, fastload would be run with its -cache_sharing
+  option, specifying the same DMF cache name as the DBMS server(s) use.
+  Sole_server would not be appropriate, as it would not allow fastload
+  to access a database already open by some DBMS server.  Sole_cache
+  would allow both fastload and a DBMS server to access the same database,
+  while still permitting fast commit operation.
+
+  If the DBMS servers in an installation do not share DMF cache,
+  sole_cache is equivalent to sole_server.
+
+  The default for sole_cache is ON, unless cluster or DMCM mode is also ON.

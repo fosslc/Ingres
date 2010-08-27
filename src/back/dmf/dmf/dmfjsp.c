@@ -3806,6 +3806,10 @@ DMP_DCB		    **dcb)
 **	        Added *name parm to dm0s_minit() calls.
 **	9-Jan-2005 (kschendel)
 **	    Record server-control priv for others to see.
+**	11-Jun-2006 (jonj)
+**	    SIR 120874 error source identification boo-boo:
+**	    If dbname not found, return E_DM1011_JSP_DB_NOTFOUND
+**	    rather than E_DM0055_NONEXT.
 [@history_template@]...
 */
 static DB_STATUS
@@ -4474,7 +4478,6 @@ DMF_JSX             *journal_context)
 	    {
 		/*  Probe for each listed database. */
 
-		SETDBERR(&jsx->jsx_dberr, 0, E_DM1011_JSP_DB_NOTFOUND);
 		key_list[0].attr_value = (char *)&ndcb->dcb_name;
 		key_list[0].attr_operator = DM2R_EQ;
 		key_list[0].attr_number = DM_1_DATABASE_KEY;
@@ -4484,6 +4487,8 @@ DMF_JSX             *journal_context)
 		{
 		    status = dm2r_get(rcb, &tid, DM2R_GETNEXT,
 					(char *)&database, &jsx->jsx_dberr);
+		    if ( status && jsx->jsx_dberr.err_code == E_DM0055_NONEXT )
+			SETDBERR(&jsx->jsx_dberr, 0, E_DM1011_JSP_DB_NOTFOUND);
 		}
 		if (status == E_DB_OK)
 		{

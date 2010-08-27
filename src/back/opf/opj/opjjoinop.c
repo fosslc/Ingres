@@ -115,6 +115,19 @@
 **	    Minor code and comment cleanup.
 **     28-Oct-2009 (maspa05) b122725
 **          Moved declaration of ult_open_tracefile to ulf.h
+**	10-Aug-2010 (kschendel) b124218
+**	    Don't parallelize a fetch from the table being updated by
+**	    an update-type query, or from any of its secondary indexes.
+**	    DMF's btree code (dm1b_rcb_update and friends) assumes that
+**	    concurrency issues are handled by locking, which doesn't
+**	    apply within a session.  dm1b_rcb_update doesn't see the
+**	    child thread RCB and doesn't do necessary position updates.
+**	    Allowing it to see the child RCB isn't the answer, because
+**	    as of this writing, the other RCB's are updated without
+**	    proper concurrency controls.  It's best to just avoid the
+**	    situation.
+**      12-Aug-2010 (horda03) b124109
+**          Enable trace point OP218 to force use of EXCH nodes.
 **/
 
 /*}
@@ -227,6 +240,9 @@ static VOID
 opj_exchange(
 	OPS_STATE	*global);
 
+static void opj_exchupd_anal(
+	OPS_STATE	*global);
+
 static bool
 opj_excheval(
 	OPS_SUBQUERY	*sq,
@@ -234,7 +250,8 @@ opj_excheval(
 	OPO_CO		**pcopp,
 	EXCHDESC	*exchp,
 	i4		*exchpixp,
-	i4		level);
+	i4		level,
+        bool            force_exch);
 
 static VOID
 opj_exchunion(
@@ -244,7 +261,8 @@ opj_exchunion(
 	i4		*exchpixp,
 	i4		level,
 	i4		*ucount,
-	OPO_COST	*ureduction);
+	OPO_COST	*ureduction,
+        bool            force_exch);
 
 static VOID
 opj_exchadd(
@@ -5826,6 +5844,9 @@ opj_partagg(OPS_SUBQUERY *sq, OPV_PCJDESC *pcjdp, i4 gcount)
 **	    Make sure that a subquery is only processed once, lest
 **	    duplicate exch requests be registered.  This can lead to
 **	    a bad query plan that falls over at runtime.
+**      12-Aug-2010 (horda03) b124109
+**          Check if trace point OP218 has been set, and if so and
+**          parallel processing enabled, then use EXCH nodes.
 */
 static VOID
 opj_exchange(
@@ -5840,12 +5861,20 @@ opj_exchange(
     f4			thres = global->ops_cb->ops_alter.ops_pq_threshold;
 					/* CBF threshold cost of || plan */
     i4			exchpix = 0;
+    bool                force_exch = opt_strace(global->ops_cb, 
+                                                OPT_F090_FORCE_EXCHANGE);
 
 
     /* Loop over plan fragments looking for one expensive enough to be
     ** eligible for parallelization. */
     if (dop <= 1)
 	return;				/* but first see if || is enabled */
+
+    /* Before analyzing for cost reductions, mark nodes that are not
+    ** permitted to be parallelized because of DMF restrictions on
+    ** update-type queries.
+    */
+    opj_exchupd_anal(global);
 
     /* This set of subqueries may not be right - further checking is
     ** required to make sure. For example, by this time in the process, 
@@ -5857,9 +5886,11 @@ opj_exchange(
 	    continue;			/* empty or partition agg sq */
 	sq->ops_sunion.opu_mask |= OPU_EXCH_PROCESSED;
 	bestco = sq->ops_bestco;
-	if (bestco == NULL || (plancost = opn_cost(sq, 
-		bestco->opo_cost.opo_dio, 
-		bestco->opo_cost.opo_cpu)) < thres)
+	if (bestco == NULL || 
+            ( !force_exch &&
+               (plancost = opn_cost(sq, 
+		                    bestco->opo_cost.opo_dio, 
+		                    bestco->opo_cost.opo_cpu)) < thres) )
 	    continue;			/* estimate must be > threshold */
 
 	/* We have a fragment worth checking. If exchange structure array
@@ -5867,7 +5898,7 @@ opj_exchange(
 	if (exchp == NULL)
 	    exchp = (EXCHDESC *)opu_memory(global, 2*dop*sizeof(EXCHDESC));
 
-	opj_excheval(sq, bestco, &sq->ops_bestco, exchp, &exchpix, 0);
+	opj_excheval(sq, bestco, &sq->ops_bestco, exchp, &exchpix, 0, force_exch);
     }
 
     /* If there are entries in the exchange descriptor array, add them
@@ -5877,6 +5908,182 @@ opj_exchange(
 
 }
 
+
+/*
+** Name: opj_exchupd_anal - mark plan nodes that mustn't be parallelized
+**
+** Description:
+**	DMF was designed before parallel query, and some key parts of
+**	DMF expect to do concurrency control based on locking.  For
+**	instance, as of this writing (summer 2010), the btree code
+**	expects at most one cursor (RCB) from a session will be in DMF at a
+**	time;  so it does things like update all the other session RCB's
+**	with position-is-valid information, and it does it without
+**	any mutexing or concurrency control.  This fails when the
+**	query is run as a parallel plan, with the being-updated
+**	table (or one of its indexes) being fetched in a child thread
+**	under an EXCH.
+**
+**	The cure (for now) is to analyze the proposed plan before we
+**	compute parallel-query reductions, and mark those nodes which
+**	must not be placed under an exch.  Any plan subtree which contains
+**	an ORIG reading from the result table, or any of its indexes,
+**	is marked do-not-parallelize.
+**
+**	An exception can be made for fragments which are run to completion
+**	before any rows hit the top of the plan (the updating action header).
+**	For example, given the simple plan:
+**
+**	      HJOIN
+**             / \
+**	    ORIG  ORIG
+**
+**	the left (build) orig could be parallelized, because it's run to
+**	completion before any rows are emitted from the hash join and
+**	thence to DMF.  (Of course, this same property makes that orig
+**	very very undesirable for parallelizing, but there might be some
+**	benefit if the ORIG were instead some more complex plan fragment.)
+**	No great amount of effort is expended to find this sort of thing.
+**
+**	The analysis is run "in the usual manner", with a stub driver to
+**	loop through the subquery and union lists, and a recursive
+**	analyzer to examine nodes and deal with orig's which are in fact
+**	subqueries themselves.
+**
+**	Eventually, one can hope that DMF is fixed up to be more aware of
+**	parallel query possibilities, and when that happens, this code
+**	can be dropped.
+**
+** Inputs:
+**	global			Optimizer global state
+**
+** Outputs:
+**	returns nothing
+**
+**	Non-parallelizable nodes are marked with opo_no_exch set.
+**
+** History:
+**	10-Aug-2010 (kschendel) b124218
+**	    Written.
+*/
+
+/* This is the worker routine that does the analysis and any subquery
+** diving needed.
+*/
+static void
+opj_exchupd_worker(OPS_SUBQUERY *sq, OPO_CO *cop, i4 result_baseid)
+{
+
+    OPO_CO *inner = cop->opo_inner;
+    OPO_CO *outer = cop->opo_outer;
+
+    switch (cop->opo_sjpr)
+    {
+    case DB_ORIG:
+	{
+	    OPV_VARS	*varp;
+	    OPV_IVARS	varno;
+
+	    varno = cop->opo_union.opo_orig;
+	    varp = sq->ops_vars.opv_base->opv_rt[varno];
+	    /* Recursively process var's subquery if var is a subselect */
+	    if (varp->opv_subselect)
+	    {
+		OPS_SUBQUERY *ssq;
+
+		ssq = sq->ops_global->ops_rangetab.opv_base->opv_grv[
+				varp->opv_subselect->opv_sgvar]->
+			opv_gsubselect->opv_subquery;
+		if (ssq->ops_bestco != NULL)
+		    opj_exchupd_worker(ssq, ssq->ops_bestco, result_baseid);
+		return;
+	    }
+	    /* If this orig is the table being updated, or one of its
+	    ** secondary indexes, it mustn't be parallelized.
+	    */
+	    if (varp->opv_grv->opv_relation
+	      && varp->opv_grv->opv_relation->rdr_rel->tbl_id.db_tab_base == result_baseid)
+		cop->opo_no_exch = 1;
+	    return;		/* Nothing underneath */
+	}
+
+    case DB_RSORT:
+	/* Top sort consumes its input before emitting output */
+	outer = NULL;
+	break;
+
+    case DB_SJ:
+	/* Various joins.  Don't bother analyzing the left (build) side
+	** of a hash join, it's run to completion before any rows are
+	** emitted.  (unless it's a partition compatible join.)
+	** A similar test could be done for merge joins with actually-
+	** sorted inputs (not implicitly sorted), but I can't be bothered
+	** at the moment (kschendel).
+	** It goes without saying that this analysis is being run after
+	** the opj pass that assigns real join types...
+	*/
+	if (cop->opo_variant.opo_local->opo_jtype == OPO_SJHASH
+	  && cop->opo_variant.opo_local->opo_pgcount == 0)
+	    outer = NULL;	/* Don't analyze build input */
+	break;
+
+    default:
+	break;
+
+    } /* switch */
+
+    /* Recurse to analyze left and right inputs.  (Above code may have
+    ** decided that one or the other is a don't-care.)
+    ** If either subtree comes back "no exch", this node must also be "no exch".
+    */
+    if (outer != NULL)
+    {
+	opj_exchupd_worker(sq, outer, result_baseid);
+	if (outer->opo_no_exch)
+	{
+	    cop->opo_no_exch = 1;
+	}
+    }
+    if (inner != NULL)
+    {
+	opj_exchupd_worker(sq, inner, result_baseid);
+	if (inner->opo_no_exch)
+	    cop->opo_no_exch = 1;
+    }
+} /* opj_exchupd_worker */
+
+
+
+/* And here is the actual analysis driver */
+static void
+opj_exchupd_anal(OPS_STATE *global)
+{
+    i4 result_baseid;
+    i4 mode;
+    OPS_SUBQUERY *outer_sq;
+    OPS_SUBQUERY *sq;
+
+    /* Before doing any of this, see if we need to analyze.  Only
+    ** worry about delete, insert, update queries.  Retrieve and retinto
+    ** are fine.
+    */
+    mode = global->ops_qheader->pst_mode;
+    if (mode != PSQ_DELETE && mode != PSQ_REPLACE && mode != PSQ_APPEND)
+	return;
+    result_baseid = global->ops_qheader->pst_restab.pst_restabid.db_tab_base;
+    for (outer_sq = global->ops_subquery;
+	 outer_sq != NULL;
+	 outer_sq = outer_sq->ops_next)
+    {
+	sq = outer_sq;
+	do
+	{
+	    if (sq->ops_bestco != NULL)
+		opj_exchupd_worker(sq, sq->ops_bestco, result_baseid);
+	    sq = sq->ops_union;
+	} while (sq != NULL);
+    }
+} /* opj_exchupd_anal */
 
 /*{
 ** Name: opj_excheval	- analyze nodes of a plan fragment for parallel
@@ -5898,13 +6105,14 @@ opj_exchange(
 **	exchpixp			ptr to index of current entry
 **					exchange descriptor array
 **	level				Depth in the CO tree (top = 0)
+**      force_exch                      Has use of EXCH nodes been forced
 **
 ** Outputs:
 **      exchp				exchange descriptor array with 
 **					information about various 
 **					prospective exchange nodes
 **	Returns:
-**	    VOID
+**	    TRUE if cop is a proj-rest node, else FALSE
 **	Exceptions:
 **
 **
@@ -5937,9 +6145,18 @@ opj_exchange(
 **	    Use pqbf estimate for number of partitions selected.
 **	    Fool with cost reductions a little, e.g. discourage exch
 **	    on hash join build side since it's a collection point.
+**	10-Aug-2010 (kschendel) b124216
+**	    Obey no-exchange flags set by prior analysis pass.
+**	    Fine-tune calculations so that we don't put exch under
+**	    pre-sorted K/T join (the sort wastes most of the exch effort),
+**	    nor on the inner of a PSM join (inner reset would throw away
+**	    what the exch has prefetched).
+**      12-Aug-2010 (horda03) b124109
+**          Added force_exch parameter. If set then force parallelisation of
+**          query.
 */
 
-#define MINEXCH 10.0		/* Minimum reduction for any exch */
+#define MINEXCH 50.0		/* Minimum reduction for any exch */
 
 static bool
 opj_excheval(
@@ -5948,11 +6165,13 @@ opj_excheval(
 	OPO_CO		**pcopp,
 	EXCHDESC	*exchp,
 	i4		*exchpixp,
-	i4		level)
+	i4		level,
+        bool            force_exch)
 
 {
     OPV_VARS	*varp;
     OPB_PQBF	*pqbfp;
+    OPO_CO	*inner, *outer;
     OPO_COST	costr, costo, costi;	/* cost estimates for node result,
 					** outer and inner subplans */
     OPO_COST	tro = 0.0, tri = 0.0;	/* time reduction estimates for
@@ -5963,11 +6182,15 @@ opj_excheval(
     i4		pthreads = sq->ops_global->ops_cb->ops_alter.ops_pq_partthreads;
     i4		i, j, ucount;
     i4		nparts, threads;
-    i4		outer;
+    i4		pass;
     bool	pr = FALSE;
     bool	pro, pri;
     bool	punion = FALSE;
+    bool	outer_noexch = FALSE, inner_noexch = FALSE;
 
+
+    inner = cop->opo_inner;
+    outer = cop->opo_outer;
 
     /* Time reduction estimates from the introduction of exchange nodes
     ** are made from bottom (leaf nodes) to top of the query tree. Start
@@ -5981,21 +6204,20 @@ opj_excheval(
     ** descend through partition compatible joins - exchange nodes are
     ** placed above them, not below. */
 
-    if (cop->opo_outer && cop->opo_outer->opo_sjpr != DB_ORIG &&
+    if (outer != NULL && outer->opo_sjpr != DB_ORIG &&
 	(cop->opo_sjpr != DB_SJ || 
 		cop->opo_variant.opo_local->opo_pgcount == 0))
     {
-	pro = opj_excheval(sq, cop->opo_outer, &cop->opo_outer, 
-						exchp, exchpixp, level+1);
+	pro = opj_excheval(sq, outer, &cop->opo_outer, 
+						exchp, exchpixp, level+1, force_exch);
 
-	if (cop->opo_inner && cop->opo_inner->opo_sjpr != DB_ORIG &&
+	if (inner != NULL && inner->opo_sjpr != DB_ORIG &&
 	    cop->opo_variant.opo_local->opo_jtype != OPO_SJKEY &&
 	    cop->opo_variant.opo_local->opo_jtype != OPO_SJTID)
-	    pri = opj_excheval(sq, cop->opo_inner, &cop->opo_inner, 
-						exchp, exchpixp, level+1);
+	    pri = opj_excheval(sq, inner, &cop->opo_inner, 
+						exchp, exchpixp, level+1, force_exch);
     }
-    else if (cop->opo_sjpr == DB_PR && cop->opo_outer &&
-	cop->opo_outer->opo_sjpr == DB_ORIG)
+    else if (cop->opo_sjpr == DB_PR && outer && outer->opo_sjpr == DB_ORIG)
 	pr = TRUE;
     else if (cop->opo_sjpr == DB_SJ)
 	pr = FALSE;
@@ -6005,14 +6227,18 @@ opj_excheval(
     ** with subtrees. Then the impact of an exchange node between them
     ** can be assessed. */
 
-    if (cop->opo_outer && !pr)
-	costo = opn_cost(sq, cop->opo_outer->opo_cost.opo_dio,
-			cop->opo_outer->opo_cost.opo_cpu);
-    else costo = 0.0;
-    if (cop->opo_inner)
-	costi = opn_cost(sq, cop->opo_inner->opo_cost.opo_dio,
-			cop->opo_inner->opo_cost.opo_cpu);
-    else costi = 0.0;
+    costi = costo = 0.0;
+    if (outer != NULL)
+    {
+	if (!pr)
+	    costo = opn_cost(sq, outer->opo_cost.opo_dio, outer->opo_cost.opo_cpu);
+	outer_noexch = (outer->opo_no_exch != 0);
+    }
+    if (inner != NULL)
+    {
+	costi = opn_cost(sq, inner->opo_cost.opo_dio, inner->opo_cost.opo_cpu);
+	inner_noexch = (inner->opo_no_exch != 0);
+    }
     costr = opn_cost(sq, cop->opo_cost.opo_dio, cop->opo_cost.opo_cpu);
     costr = costr - costo - costi;	/* cost of executing this node */
     threads = 1;
@@ -6020,25 +6246,19 @@ opj_excheval(
     /* Estimate the minimum cost reduction of adding an exchange node
     ** below the current node. */
     switch (cop->opo_sjpr) {
-	/* Removed this code - it may only appear at the top of a plan.
-	** In any event, it confuses other points of exchange insertion.
-      case DB_RSORT:	** I think this is a top sort **
-	tro = (costr > costo) ? costo : costr;
-	tro *= 0.3;		** estimated reduction is 30% of lesser
-				** of input time & sort time **
-	if (pro)
-	    tro = 0.0;		** to prevent exch on top of exch **
-	break;		end of removed code */
-
       case DB_SJ:
 	if (cop->opo_variant.opo_local->opo_pgcount > 0)
 	{
-	    /* Partition compatible join - no need to recurse
-	    ** further. Propose 1:n exchange node here. */
-	    threads = (cop->opo_variant.opo_local->opo_pgcount >
-		pthreads) ? pthreads : cop->opo_variant.opo_local->opo_pgcount;
-	    tro = (((float)threads - 1) / (float)threads) * costr * 0.7;
+	    if (! cop->opo_no_exch)
+	    {
+		/* Partition compatible join - no need to recurse
+		** further. Propose 1:n exchange node here. */
+		threads = pthreads;
+		if (cop->opo_variant.opo_local->opo_pgcount < pthreads)
+		    threads = cop->opo_variant.opo_local->opo_pgcount;
+		tro = (((float)threads - 1.0) / (float)threads) * costr * 0.7;
 				/* these should save lots! */
+	    }
 	    break;
 	}
 
@@ -6048,10 +6268,17 @@ opj_excheval(
 	  case OPO_SJTID:
 	    /* Key and TID joins effectively only have one input -
 	    ** the outer source. So compute the reduction from placing
-	    ** exchange between the join and the outer source nodes. */
-	    tro = (costr > costo) ? costo : costr;
-	    tro *= 0.3;		/* estimated reduction is 30% of lesser
+	    ** exchange between the join and the outer source nodes.
+	    ** Don't put an exchange below this join if there's a pre-sort,
+	    ** though;  the sort is a collection point and you can't flow
+	    ** rows through it effectively.
+	    */
+	    if (! outer_noexch && ! cop->opo_osort)
+	    {
+		tro = (costr > costo) ? costo : costr;
+		tro *= 0.3;	/* estimated reduction is 30% of lesser
 				** of input time and join time */
+	    }
 	    if (pro)
 		return(FALSE);	/* No reduction from K/T-join over orig */
 	    break;
@@ -6062,41 +6289,57 @@ opj_excheval(
 	  case OPO_SJHASH:
 	    tro = (costr > costo) ? costo : costr;
 	    tri = (costr > costi) ? costi : costr;
-	    if (cop->opo_variant.opo_local->opo_jtype == OPO_SJHASH)
-		tro *= 0.10;	/* Minimal reduction on hash join build side */
+	    /* Minimal reduction if hash build side, or if we have to sort. */
+	    if (cop->opo_variant.opo_local->opo_jtype == OPO_SJHASH
+	      || cop->opo_osort)
+		tro *= 0.10;
+	    else if (pro)
+		tro *= 0.01;	/* Generally avoid exch over orig */
 	    else
 		tro *= 0.40;	/* else use 40% of lesser time */
-	    tri *= 0.50;	/* est inner reduction is 50% of lesser
+	    if (cop->opo_variant.opo_local->opo_jtype != OPO_SJPSM)
+	    {
+		if (cop->opo_isort)
+		    tri *= 0.10;  /* Minimal reduction if have to sort */
+		else if (pri)
+		    tri *= 0.01;  /* Avoid if feed from orig */
+		else
+		    tri *= 0.50;  /* est inner reduction is 50% of lesser
 				** of inner input time and join time */
-	    if (pri)
-		tri = 0.0;	/* No reduction if an input is an ORIG */
-	    if (pro)
+	    }
+	    else
+		tri = 0.0;	/* No reduction on inner of PSM, reset of
+				** inner will waste exch work
+				*/
+	    /* No reduction if not allowed */
+	    if (outer_noexch)
 		tro = 0.0;
+	    if (inner_noexch)
+		tri = 0.0;
 	    break;
 	}
 	break;
 
       case DB_PR:
-	varp = sq->ops_vars.opv_base->opv_rt[cop->opo_outer->
-				opo_union.opo_orig];
+	varp = sq->ops_vars.opv_base->opv_rt[outer->opo_union.opo_orig];
 				/* OPV_VARS for ORIG node table */
 	if (varp->opv_subselect)
 	{
 	    opj_exchunion(sq->ops_global, exchp, varp, exchpixp, level+1,
-						&ucount, &ureduction);
-	    if (ucount == 0)
-		return(FALSE);
+						&ucount, &ureduction, force_exch);
+	    if (ucount == 0 || outer_noexch)
+		return(pr);
 	    tro = ureduction;
 	    threads = ucount;
 	    punion = TRUE;
 	    break;
 	}
 	else if (!varp->opv_grv->opv_relation || 
-		!varp->opv_grv->opv_relation->rdr_parts)
-	    return(FALSE);	/* not partitioned - we're not interested */
+		!varp->opv_grv->opv_relation->rdr_parts || outer_noexch)
+	    return(pr);		/* not partitioned - we're not interested */
 
 	nparts = varp->opv_grv->opv_relation->rdr_parts->nphys_parts;
- 
+
 	pqbfp = varp->opv_pqbf;
 	if (pqbfp != NULL)
 	    nparts = pqbfp->opb_pqcount;
@@ -6104,23 +6347,33 @@ opj_excheval(
 	    threads = pthreads;
 	else
 	    threads = nparts;
-	if (threads <= 1)
-	    return(FALSE);
+	if ( !force_exch && (threads <= 1))
+	    return(pr);
 
 	tro = (((float)threads - 1) / (float)threads) * costr * 0.8;
 				/* reduction assumption is that threads
 				** will scale, less 20% overhead */
+	break;
+
+      default:
+	/* Probably a DB_RSORT */
+	/* Do nothing immediately below a top sort, wouldn't help
+	** anyway because the sort can't run until it has all of its
+	** input.
+	*/
+	break;
+
     }	/* end of opo_sjpr switch */
 
     /* Add entries to exchange descriptor array (where appropriate). */
-    if (tri <= MINEXCH && tro <= MINEXCH)
-	return(FALSE);
+    if ( !force_exch && tri <= MINEXCH && tro <= MINEXCH)
+	return(pr);
 
     tr = tro;
-    for (outer = 1;  outer >= 0;  tr = tri, --outer)
+    for (pass = 1;  pass >= 0;  tr = tri, --pass)
     {
 	/* Loop once for outer, then once for inner. */
-	if (tr <= MINEXCH)
+	if (!force_exch && (tr <= MINEXCH) )
 	    continue;			/* Loop if no reduction this side */
 
 	/* If there's room in the array, add another entry. Otherwise,
@@ -6140,7 +6393,7 @@ opj_excheval(
 		    i = j;		/* Replace this one, so far */
 		}
 	}
-	if (tr <= smallest)
+	if (!force_exch && (tr <= smallest) )
 	    continue;			/* tr smaller than smallest, loop */
 
 	/* "i" now indexes the entry we're inserting to. */
@@ -6149,7 +6402,7 @@ opj_excheval(
 	exchp[i].exch_reduction = tr;
 	exchp[i].exch_count = threads;
 	exchp[i].exch_level = level;
-	exchp[i].exch_outer = (outer != 0);
+	exchp[i].exch_outer = (pass != 0);
 	exchp[i].exch_pr = pr;
 	exchp[i].exch_un = punion;
     }
@@ -6176,6 +6429,7 @@ opj_excheval(
 **	ucount				ptr to count of union'ed selects
 **	ureduction			ptr to estimated cost reduction 
 **					from exchange palced above union
+**      force_exch                      Has use of EXCH nodes been forced
 **
 ** Outputs:
 **      global->ops_subquery		subquery structures addressing QEPs
@@ -6201,6 +6455,9 @@ opj_excheval(
 **	    No exch's in partition compatible agg subquery.
 **	8-Jan-2010 (kschendel) b123122
 **	    Don't reprocess an already processed subquery.
+**      12-Aug-2010 (horda03) b124109
+**          Added force_exch parameter. If set then force parallelisation of
+**          query.
 */
 static VOID
 opj_exchunion(
@@ -6210,7 +6467,8 @@ opj_exchunion(
 	i4		*exchpixp,
 	i4		level,
 	i4		*ucount,
-	OPO_COST	*ureduction)
+	OPO_COST	*ureduction,
+        bool            force_exch)
 
 {
     OPS_SUBQUERY	*sq;
@@ -6252,7 +6510,7 @@ opj_exchunion(
 	/* We have a fragment worth checking. If exchange structure array
 	** not yet allocated, do that first. */
 
-	opj_excheval(sq, bestco, &sq->ops_bestco, exchp, exchpixp, level);
+	opj_excheval(sq, bestco, &sq->ops_bestco, exchp, exchpixp, level, force_exch);
     }
 
     /* max2cost is the 2nd most expensive of the union'ed selects. It

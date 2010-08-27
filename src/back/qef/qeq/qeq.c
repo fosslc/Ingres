@@ -395,7 +395,7 @@
 **	17-mar-1994 (anitap)
 **	    Fix for bug 59929. Error during SELECT of ALTER TABLE resulted
 **	    in the whole transaction to be rolled back. This was because the
-**	    number of open cursors (qef_rcb->qef_open_count) was not being
+**	    number of open cursors (qef_cb->qef_open_count) was not being
 **	    decremented. Look at qeq_query() for more details. 
 **	21-mar-94 (rickh)
 **	    Look up DSH's by QSF object handle, not query plan name. This
@@ -574,6 +574,9 @@
 **      01-Apr-2009 (gefei01)
 **          Bug 121870: qeq_cleanup does qet_commit to abort to the last
 **          internal savepoint even when open cursor count is non zero.
+**	18-Jun-2010 (kschendel) b123775
+**	    Various changes in resource validation data structures, mostly
+**	    so that table procs get validated the right way.
 */
 
 
@@ -748,6 +751,8 @@ i4		**iierrorno);
 **          Support cursor select for table procedure.
 **	14-May-2010 (kschendel) b123565
 **	    Split validation into two parts, fix here.
+**	21-Jun-2010 (kschendel) b123775
+**	    Slight changes to table proc re-entry.
 */
 DB_STATUS
 qeq_open(
@@ -762,32 +767,30 @@ QEF_RCB		    *qef_rcb )
     qef_cb->qef_rcb = qef_rcb;
     qef_rcb->qef_remnull = 0;
 
-    /* Search for the DSH of the specified QP */
-    if ((qef_rcb->qef_intstate & QEF_DBPROC_QP) != 0)
+    /* Search for the DSH of the specified QP.  If this is a reentry
+    ** after table procedure QP recreation, the QEF RCB has the tproc
+    ** info in it instead of the cursor-open info, needs a tiny bit of
+    ** special handling.
+    */
+    if (qef_rcb->qef_intstate & QEF_DBPROC_QP)
     {
-        /* Tproc QP has been recompiled.
-         * Callback to QEF to reopen the same cursor.
-         * Retrieve the already allocated DSH.
-         */
-        dsh = (QEE_DSH *)qef_cb->qef_dsh;
-
-        if (dsh != NULL)
-        {
-            qef_rcb->qef_qso_handle = dsh->dsh_saved_rcb->qef_qso_handle;
-        }
-        else
-        {
-            i4 err;
-
-            qef_error(E_QE0002_INTERNAL_ERROR, 0L, status, &err,
-                    &qef_rcb->error, 0);
-
-            status = E_DB_ERROR;
-            return status;
-        }
+	dsh = (QEE_DSH *) qef_cb->qef_dsh;
+	if (dsh == NULL)
+	{
+	    i4 local_err;
+	    qef_error(E_QE0002_INTERNAL_ERROR, 0, status, &err,
+		&qef_rcb->error, 0);
+	    return (E_DB_ERROR);
+	}
+	*qef_rcb = *(dsh->dsh_saved_rcb);
+	qef_rcb->qef_intstate &= ~QEF_DBPROC_QP;  /* Make sure */
     }
-    else if (status = qeq_dsh(qef_rcb, -1, &dsh, (bool)FALSE, (i4)-1, (bool)FALSE))
-	return (status);
+    else
+    {
+	status = qeq_dsh(qef_rcb, -1, &dsh, QEQDSH_NORMAL, -1);
+	if (status != E_DB_OK)
+	    return (status);
+    }
 
     /* Start a single statement transaction if necessary */
 
@@ -894,8 +897,7 @@ QEF_RCB		    *qef_rcb )
     /* If tproc QP needs to be recompiled,
      * return to the sequencer to do it.
      */
-    if (DB_FAILURE_MACRO(status) &&
-        qef_rcb->error.err_code == E_QE030F_LOAD_TPROC_QP)
+    if (status != E_DB_OK && qef_rcb->error.err_code == E_QE030F_LOAD_TPROC_QP)
         return status;
 
     /* cleaning up */
@@ -1011,7 +1013,7 @@ QEF_RCB		    *qef_rcb )
     }
 
     /* Search for the DSH of the specified QP */
-    if (status = qeq_dsh(qef_rcb, 1, &dsh, (bool)FALSE, (i4) -1, (bool)FALSE))
+    if (status = qeq_dsh(qef_rcb, 1, &dsh, QEQDSH_NORMAL, -1))
 	return (status);
 
     /* This cursor is closed, update number of open query/cursors. */
@@ -1211,7 +1213,7 @@ QEF_RCB		*qef_rcb )
 
     /* Search for the DSH of the specified QP */
 
-    if (status = qeq_dsh(qef_rcb, 1, &dsh, (bool)FALSE, (i4) -1, (bool)FALSE))
+    if (status = qeq_dsh(qef_rcb, 1, &dsh, QEQDSH_NORMAL, -1))
 	return (status);
 
     /* assume that this fetch will leave us unpositioned
@@ -1842,7 +1844,7 @@ QEF_RCB		*qef_rcb )
 **	17-mar-1994 (anitap)
 **	    Fix for bug 59929. Error during SELECT of ALTER TABLE resulted
 **	    in the whole transaction to be rolled back. This was because the
-**	    number of open cursors (qef_rcb->qef_open_count) was not being
+**	    number of open cursors (qef_cb->qef_open_count) was not being
 **	    decremented. 
 **	08-apr-1994 (pearl)
 **	    Bug 56748.  Save the mode in QEF_RCB.qef_mode before 
@@ -1997,6 +1999,11 @@ QEF_RCB		*qef_rcb )
 **	    a FOR-GET, e.g. in a rowproc, make sure that the continuation is
 **	    done properly.
 **	    Fix a little bad indentation.
+**	24-Jun-2010 (kschendel) b123775
+**	    Tproc validation redone, always happens on first action just like
+**	    tables, reflect here.  Make sure that "clean-resources" callback
+**	    from sequencer is properly handled when the failure was due to a
+**	    tproc (as opposed to a explicit or rule-called dbp).
 */
 
 DB_STATUS
@@ -2034,6 +2041,7 @@ i4		mode )
     PST_INFO            *qef_info;
     DB_SCHEMA_NAME	*qea_schname;
     i4			flag = EXPLICIT_SCHEMA;
+    i4			func;
     QEUQ_CB		*qeuq_cb = (QEUQ_CB *)NULL;
     DB_ERRTYPE		err_save = -1;
     QEF_CREATE_INTEGRITY_STATEMENT	*integrityDetails;
@@ -2104,63 +2112,72 @@ i4		mode )
         ** parsed and failed. The QEA_EXEC_IMM action will check to see if
         ** parsing of the query text has failed. If so, it will generate a
         ** fatal error and continue with normal error recovery.
+	**			OR
+	** If the sequencer is unable to recreate a requested QP, it may
+	** be calling back so that QEF can clean up the in-progress query.
+	** If there is no DSH, do the cleanup by hand here.  Otherwise
+	** fall through, but with an error status so that query execution
+	** aborts and unwinds in the normal manner.
 	*/
 
 	dsh = (QEE_DSH *) qef_cb->qef_dsh;
+	if ((qef_rcb->qef_intstate & QEF_CLEAN_RSRC) != 0 || dsh == NULL)
+	{
+	    qef_rcb->error.err_code = E_QE0025_USER_ERROR;
+	    if (dsh == NULL)
+	    {
+		status = qeq_cleanup(qef_rcb, E_DB_OK, TRUE);
+		qef_rcb->qef_intstate &= ~(QEF_CLEAN_RSRC | QEF_DBPROC_QP | QEF_EXEIMM_PROC);
+		return (status);
+	    }
+	}
 
 	/* 
 	** We saved the execution state of the old QP before trying to
 	** create a new QP. At this point we restore the old QP's state.
 	*/
 
-	if (dsh != (QEE_DSH *)NULL)	/* Avoid AV is dsh null */
+	if ((qef_rcb->qef_intstate & QEF_DBPROC_QP) != 0)
 	{
-	    if ((qef_rcb->qef_intstate & QEF_DBPROC_QP) != 0)
-	    {
-		qeq_rcb = *(dsh->dsh_saved_rcb);
+	    qeq_rcb = *(dsh->dsh_saved_rcb);
 
-		/* we do not want to restore the qp handle if we are dealing
-		** with QEA_EXEC_IMM type of action.
-		*/ 
-		qef_rcb->qef_qso_handle = qeq_rcb.qef_qso_handle;
-	    }
-	    else
-		qeq_rcb = *(dsh->dsh_exeimm_rcb);
-
-            qef_rcb->qef_rowcount= qeq_rcb.qef_rowcount;
-
-	    qeq_restore(&qeq_rcb, qef_rcb, dsh, &mode, &act, &rowcount, &qp,
-			&cbs, &iirowcount);
-
-	    if (qp->qp_oerrorno_offset == -1)
-		iierrorno = (i4 *)NULL;
-	    else
-		iierrorno = (i4 *)(dsh->dsh_row[qp->qp_rerrorno_row] + 
-			       qp->qp_oerrorno_offset);
-	    /* If resume action was a FOR-GET, and we're resuming from
-	    ** a dbproc load, it pretty much has to be a tproc, and
-	    ** also has to be the first execution of that GET (else we
-	    ** wouldn't have been revalidating it.)  Turn on the prevfor
-	    ** flag to show later code that this is the first time thru
-	    ** this FOR-GET driven for loop.
-	    */
-	    if (act != NULL /* just in case! */
-	      && act->ahd_atype == QEA_GET
-	      && act->qhd_obj.qhd_qep.ahd_qepflag & AHD_FORGET
-	      && qef_rcb->qef_intstate & QEF_DBPROC_QP)
-		prevfor = TRUE;
+	    /* we do not want to restore the qp handle if we are dealing
+	    ** with QEA_EXEC_IMM type of action.
+	    */ 
+	    qef_rcb->qef_qso_handle = qeq_rcb.qef_qso_handle;
 	}
 	else
-	{
-	    /* dsh pointer is null and we are in callback to clean up */
-	    /* bug 75401 */
-	    if ((qef_rcb->qef_intstate & QEF_CLEAN_RSRC) != 0)
-	    {
-		qef_rcb->error.err_code = E_QE0025_USER_ERROR;
-	    	qef_rcb->qef_intstate &= ~QEF_CLEAN_RSRC;
-		return (qeq_cleanup(qef_rcb, status, TRUE));
-	    }
-	}
+	    qeq_rcb = *(dsh->dsh_exeimm_rcb);
+
+	qef_rcb->qef_rowcount= qeq_rcb.qef_rowcount;
+
+	qeq_restore(&qeq_rcb, qef_rcb, dsh, &mode, &act, &rowcount, &qp,
+		    &cbs, &iirowcount);
+
+	if (qp->qp_oerrorno_offset == -1)
+	    iierrorno = (i4 *)NULL;
+	else
+	    iierrorno = (i4 *)(dsh->dsh_row[qp->qp_rerrorno_row] + 
+			   qp->qp_oerrorno_offset);
+	/* If resume action is null, start at the beginning.  (This
+	** ought to be the normal case for tprocs.)
+	** If resume action was a FOR-GET, and we're resuming from
+	** a dbproc load, it pretty much has to be a tproc, and
+	** also has to be the first execution of that GET (else we
+	** wouldn't have been revalidating it.)  Turn on the prevfor
+	** flag to show later code that this is the first time thru
+	** this FOR-GET driven for loop.
+	** (As of 123775 this really shouldn't happen because tprocs
+	** are validated and recompiled at the start of the QP, which
+	** would be the FOR itself if not earlier, but leave this in case.)
+	*/
+	first_act = qp->qp_ahd;
+	if (act == NULL)
+	    act = first_act;
+	else if (qef_rcb->qef_intstate & QEF_DBPROC_QP
+	  && act->ahd_atype == QEA_GET
+	  && act->qhd_obj.qhd_qep.ahd_qepflag & AHD_FORGET)
+	    prevfor = TRUE;
     }
     else
     {
@@ -2182,8 +2199,7 @@ i4		mode )
 	else
 	{
 	    /* Search for the DSH of the specified QP */
-	    status = qeq_dsh(qef_rcb, 0, &dsh, (bool)FALSE,
-                             (i4) -1, (bool)FALSE);
+	    status = qeq_dsh(qef_rcb, 0, &dsh, QEQDSH_NORMAL, -1);
 	    if (DB_FAILURE_MACRO(status))
 	    {
 		if ((qef_rcb->error.err_code == E_QE0023_INVALID_QUERY) ||
@@ -2592,10 +2608,7 @@ i4		mode )
 	if ((qef_rcb->qef_stmt_type & QEF_GCA1_INVPROC) == 0)
 	    qef_rcb->qef_context_cnt = 0;
 	else
-	{
 	    qef_rcb->qef_context_cnt = 1;
-	    qef_rcb->qef_open_count = 1;
-	}
     }
 
     /*
@@ -2604,7 +2617,11 @@ i4		mode )
     while (act != (QEF_AHD *)NULL)
     {
 	qeq_rcbtodsh(qef_rcb, dsh);
-	if (ddb_b)
+	status = E_DB_OK;
+	if (qef_rcb->qef_intstate & QEF_CLEAN_RSRC)
+	    status = E_DB_ERROR;
+
+	if (status == E_DB_OK && ddb_b)
 	{
 	    /* Validate the action.  This checks legal action types for
 	    ** distributed.  Must modify when more action types become legal
@@ -2627,7 +2644,7 @@ i4		mode )
 	** a procedure, we only validate the select GET on entry to the
 	** loop (so as not to reposition the query for each loop iteration).
 	*/
-	else if (act_state == DSH_CT_INITIAL &&
+	else if (status == E_DB_OK && act_state == DSH_CT_INITIAL &&
 	    (prevfor || act->ahd_atype != QEA_GET || 
 		!(act->qhd_obj.qhd_qep.ahd_qepflag & AHD_FORGET)) )
 	{
@@ -2649,10 +2666,7 @@ i4		mode )
 		** qualification that yields FALSE.
 		*/
 
-		if (dsh->dsh_error.err_code == E_QE0119_LOAD_QP ||
-		    dsh->dsh_error.err_code == E_QE030F_LOAD_TPROC_QP)
-		   qeq_dshtorcb(qef_rcb, dsh);
-
+		qeq_dshtorcb(qef_rcb, dsh);
 		if (qef_rcb->error.err_code == E_QE0119_LOAD_QP ||
 		    qef_rcb->error.err_code == E_QE030F_LOAD_TPROC_QP)
 		{
@@ -2660,7 +2674,6 @@ i4		mode )
 		    return (status);
 		}
 
-		qeq_dshtorcb(qef_rcb, dsh);
 		if (qef_rcb->error.err_code == E_QE1004_TABLE_NOT_OPENED)
 		{
 		    /*
@@ -2751,11 +2764,13 @@ i4		mode )
 		act->qhd_obj.qhd_qep.ahd_qepflag & AHD_FORGET)
 	{
 	    act_reset = FALSE;
-	    status = E_DB_OK;
 	}
 	prevfor = FALSE;		/* reset the FOR flag */
+	func = NO_FUNC;
+	if (act_reset)
+	    func = FUNC_RESET;		/* Compute oft-used function */
 
-	if (!(act_state == DSH_CT_INITIAL && status))
+	if (status == E_DB_OK)
 	{
 	    /* initialization was successful */
 
@@ -2770,29 +2785,26 @@ i4		mode )
 
 	    case QEA_APP:
 	    case QEA_LOAD:
-		status = qea_append(act, qef_rcb, dsh,
-			(act_reset) ? FUNC_RESET : NO_FUNC, act_state);
+		status = qea_append(act, qef_rcb, dsh, func, act_state);
 		break;
 
 	    case QEA_SAGG:
-		status = qea_sagg(act, qef_rcb, dsh,
-			(act_reset) ? FUNC_RESET : NO_FUNC);
+		status = qea_sagg(act, qef_rcb, dsh, func);
 		break;
 
 	    case QEA_UPD:
-		status = qea_replace(act, qef_rcb, dsh,
-			(act_reset) ? FUNC_RESET : NO_FUNC, act_state);
+		status = qea_replace(act, qef_rcb, dsh, func, act_state);
 		break;
 
 	    case QEA_RUP:
 	    case QEA_D9_UPD:
 		status = qea_rupdate(act, qef_rcb, dsh, dsh->dsh_aqp_dsh,
-			(act_reset) ? FUNC_RESET : NO_FUNC, act_state);
+			func, act_state);
 		break;
 
 	    case QEA_RDEL:
 		status = qea_rdelete(act, qef_rcb, dsh, dsh->dsh_aqp_dsh,
-			(act_reset) ? FUNC_RESET : NO_FUNC, act_state);
+			func, act_state);
 		if ((status == E_DB_OK) && (ddb_b))
 		{
 		    dsh->dsh_qp_status &= ~DSH_IN_USE;
@@ -2802,7 +2814,7 @@ i4		mode )
 		
 	    case QEA_DEL:
 		status = qea_delete(act, qef_rcb, dsh,
-			(act_reset) ? FUNC_RESET : NO_FUNC, act_state);
+			func, act_state);
 		break;
 
 	    case QEA_FOR:
@@ -2811,8 +2823,7 @@ i4		mode )
 		break;
 
 	    case QEA_GET:
-		status = qea_fetch(act, qef_rcb, dsh,
-			(act_reset) ? FUNC_RESET : NO_FUNC);
+		status = qea_fetch(act, qef_rcb, dsh, func);
 		act_reset = prevreset;
 		qeq_dshtorcb(qef_rcb, dsh);
 		dshcopy = FALSE;
@@ -2851,8 +2862,7 @@ i4		mode )
 		break;
 
 	    case QEA_RETROW:
-		status = qea_retrow(act, qef_rcb, dsh,
-				(act_reset) ? FUNC_RESET : NO_FUNC);
+		status = qea_retrow(act, qef_rcb, dsh, func);
 		qeq_dshtorcb(qef_rcb, dsh);
 		dshcopy = FALSE;
 		if ((status == E_DB_INFO &&
@@ -2899,33 +2909,27 @@ i4		mode )
 		break;
 
 	    case QEA_PROJ:
-		status = qea_proj(act, qef_rcb, dsh,
-			(act_reset) ? FUNC_RESET : NO_FUNC);
+		status = qea_proj(act, qef_rcb, dsh, func);
 		break;
 
 	    case QEA_AGGF:
-		status = qea_aggf(act, qef_rcb, dsh,
-			(act_reset) ? FUNC_RESET : NO_FUNC);
+		status = qea_aggf(act, qef_rcb, dsh, func);
 		break;
 
 	    case QEA_PUPD:
-		status = qea_preplace(act, qef_rcb, dsh,
-			(act_reset) ? FUNC_RESET : NO_FUNC, act_state);
+		status = qea_preplace(act, qef_rcb, dsh, func, act_state);
 		break;
 
 	    case QEA_PDEL:
-		status = qea_pdelete(act, qef_rcb, dsh,
-			(act_reset) ? FUNC_RESET : NO_FUNC, act_state);
+		status = qea_pdelete(act, qef_rcb, dsh, func, act_state);
 		break;
 
 	    case QEA_COMMIT:
-		status = qea_commit(act, qef_rcb, dsh,
-			NO_FUNC, act_state);
+		status = qea_commit(act, qef_rcb, dsh, NO_FUNC, act_state);
 		break;
 
 	    case QEA_ROLLBACK:
-		status = qea_rollback(act, qef_rcb, dsh,
-			NO_FUNC, act_state);
+		status = qea_rollback(act, qef_rcb, dsh, NO_FUNC, act_state);
 		break;
 
 	    case QEA_IF:
@@ -4181,14 +4185,14 @@ bool		care_if_smaller)
 **	must_find		Search qualifier
 **	       -1		error if the dsh already exists.
 **		0		create one if the dsh is not found.
+**				Or, if tproc, create one without looking.
 **		1		error if the dsh is not found. 
-**	in_progress		Executing a rule action list, ok to load a new
-**				DSH even if we are in an SST if TRUE.
-**			        Do not release the DSH in the middle of rule
-**				processing.  If it is NULL then we will zap
-**				all session DSH's.
-**				Since we are not at an outer scope allow caller
-**				to handle errors.
+**	qptype			One of QEQDSH_NORMAL, QEQDSH_IN_PROGRESS, or
+**				QEQDSH_TPROC.  The in-progress call is for
+**				normal callprocs or execute immediates, and
+**				alters xaction checking slightly.  The tproc
+**				call asks to flag the DSH as being a table
+**				proc DSH, and alters the DSH search slightly.
 **	page_count		number of pages in set input table parameter.
 **				-1 if this is not for a set input procedure.
 **
@@ -4264,51 +4268,71 @@ bool		care_if_smaller)
 **      24-Feb-2009 (gefei01)
 **          Fix bug 121711:: Make table procedure dsh allocation an exception
 **          for multiple statement transaction.
-**          
-[@history_line@]...
+**	18-Jun-2010 (kschendel) b123775
+**	    Combine is-tproc and in-progress parameters.
+**	    Handle QE030B from execute procedure properly (eg embedded
+**	    execute procedure, which runs the query with the dbp QP directly
+**	    rather than executing a callproc.)
+**	    This routine is called a lot, do some minor optimizing.
 */
 DB_STATUS
 qeq_dsh(
 	QEF_RCB		*qef_rcb,
 	i4		must_find,
-	QEE_DSH		**dsh,
-	bool		in_progress,
-	i4         page_count,
-        bool            isTproc
+	QEE_DSH		**pdsh,
+	QEQ_DSH_QPTYPE	qptype,
+	i4         page_count
  	)
 {
     PTR		handle;
-    i4	error;
-    i4	err    = E_QE0000_OK;
-    DB_STATUS	stat   = E_DB_OK;
+    i4	err;
+    DB_STATUS	stat;
     DB_STATUS	status   = E_DB_OK;
     QEF_CB	*qef_cb = qef_rcb->qef_cb;
     bool        is_set_input = page_count >= 0;
     QSF_RCB	qsf_rcb;
+    QEE_DSH	*dsh;
     QEF_QP_CB	*qp;
-    
-    qsf_rcb.qsf_next = (QSF_RCB *)NULL;
-    qsf_rcb.qsf_prev = (QSF_RCB *)NULL;
-    qsf_rcb.qsf_length = sizeof(QSF_RCB);
-    qsf_rcb.qsf_type = QSFRB_CB;
-    qsf_rcb.qsf_owner = (PTR)DB_QEF_ID;
-    qsf_rcb.qsf_ascii_id = QSFRB_ASCII_ID;
-    qsf_rcb.qsf_sid = qef_rcb->qef_cb->qef_ses_id;
-    qsf_rcb.qsf_obj_id.qso_handle = qef_rcb->qef_qso_handle;
-    qsf_rcb.qsf_lk_state = QSO_SHLOCK;
 
-    if (handle = qef_rcb->qef_qso_handle)
+    *pdsh = dsh = NULL;
+    handle = qef_rcb->qef_qso_handle;
+    if (handle != NULL && qptype != QEQDSH_TPROC)
     {
-	/* search the list of active DSHs using QP handle */
-	for (*dsh = (QEE_DSH *)qef_cb->qef_odsh; *dsh; *dsh = (*dsh)->dsh_next)
+	/* Try to locate the DSH in the session open-DSH list. */
+	for (dsh = (QEE_DSH *)qef_cb->qef_odsh; dsh; dsh = dsh->dsh_next)
 	{
-	    if ((*dsh)->dsh_qp_handle == handle &&
-		((*dsh)->dsh_qp_status & DSH_IN_USE) == 0)
+	    if (dsh->dsh_qp_handle == handle &&
+		(dsh->dsh_qp_status & DSH_IN_USE) == 0)
 		break;		/* found an active DSH */
 	}
-
-	if (*dsh == NULL)
+	if (dsh != NULL && must_find >= 0 && !is_set_input)
 	{
+	    /* Fast-path return especially for cursor FETCH */
+	    dsh->dsh_adf_cb->adf_constants = dsh->dsh_qconst_cb;
+	    qef_cb->qef_dsh = (PTR) dsh;
+	    dsh->dsh_qp_status |= DSH_IN_USE;
+	    *pdsh = dsh;
+	    return (E_DB_OK);
+	}
+    }
+    if (dsh == NULL)
+    {
+	/* DSH not in the list, or caller doesn't know the handle.
+	** We'll need to lock the QP by handle, or look it up by ID.
+	*/
+
+	qsf_rcb.qsf_next = (QSF_RCB *)NULL;
+	qsf_rcb.qsf_prev = (QSF_RCB *)NULL;
+	qsf_rcb.qsf_length = sizeof(QSF_RCB);
+	qsf_rcb.qsf_type = QSFRB_CB;
+	qsf_rcb.qsf_owner = (PTR)DB_QEF_ID;
+	qsf_rcb.qsf_ascii_id = QSFRB_ASCII_ID;
+	qsf_rcb.qsf_sid = qef_rcb->qef_cb->qef_ses_id;
+	qsf_rcb.qsf_lk_state = QSO_SHLOCK;
+
+	if (handle != NULL && qptype != QEQDSH_TPROC)
+	{
+	    qsf_rcb.qsf_obj_id.qso_handle = qef_rcb->qef_qso_handle;
 	    status = qsf_call(QSO_LOCK, &qsf_rcb);
 	    if (status)
 	    {
@@ -4319,56 +4343,69 @@ qeq_dsh(
 	}
 	else
 	{
-	    qp = (*dsh)->dsh_qp_ptr;
-	}
-    }
-    else
-    {
-	/* Obtain and lock the QP from QSF */
-	qsf_rcb.qsf_obj_id.qso_type = QSO_QP_OBJ;
-	qsf_rcb.qsf_obj_id.qso_lname = sizeof (DB_CURSOR_ID);
-	MEcopy((PTR)&qef_rcb->qef_qp, sizeof (DB_CURSOR_ID), 
-	    (PTR)qsf_rcb.qsf_obj_id.qso_name);
-	do
-	{
-	    status = qsf_call(QSO_GETNEXT, &qsf_rcb);
-	    if (status)
+	    /* Obtain and lock the QP from QSF */
+	    qsf_rcb.qsf_obj_id.qso_type = QSO_QP_OBJ;
+	    qsf_rcb.qsf_obj_id.qso_lname = sizeof (DB_CURSOR_ID);
+	    MEcopy((PTR)&qef_rcb->qef_qp, sizeof (DB_CURSOR_ID), 
+		(PTR)qsf_rcb.qsf_obj_id.qso_name);
+	    qsf_rcb.qsf_obj_id.qso_handle = NULL;
+	    do
 	    {
-		if (qsf_rcb.qsf_error.err_code == E_QS0019_UNKNOWN_OBJ)
-		    qef_rcb->error.err_code = E_QE0023_INVALID_QUERY;
-		else
-		    qef_rcb->error.err_code = E_QE0014_NO_QUERY_PLAN;
-		return(status);
+		status = qsf_call(QSO_GETNEXT, &qsf_rcb);
+		if (status)
+		{
+		    if (qsf_rcb.qsf_error.err_code == E_QS0019_UNKNOWN_OBJ)
+			qef_rcb->error.err_code = E_QE0023_INVALID_QUERY;
+		    else
+			qef_rcb->error.err_code = E_QE0014_NO_QUERY_PLAN;
+		    return(status);
+		}
+		qp = (QEF_QP_CB *) qsf_rcb.qsf_root;
+		handle = qsf_rcb.qsf_obj_id.qso_handle;
+		/* For a session temporary table, 
+		** size_sensitive field is set to false */
+		if ( qp->qp_setInput != NULL &&
+		     (qp->qp_setInput->vl_flags & QEF_SESS_TEMP)
+		   )
+		     qp->qp_setInput->vl_size_sensitive = FALSE;
 	    }
-	    qp = (QEF_QP_CB *) qsf_rcb.qsf_root;
-	    handle = qsf_rcb.qsf_obj_id.qso_handle;
-            /* For a session temporary table, 
-               size_sensitive field is set to false */
-            if ( qp->qp_setInput != NULL &&
-                 (qp->qp_setInput->vl_flags & QEF_SESS_TEMP)
-               )
-                 qp->qp_setInput->vl_size_sensitive = FALSE;
-	}
-	while (is_set_input &&
-	       !qeq_qp_apropos(qp->qp_setInput, page_count, TRUE));
+	    while (is_set_input &&
+		   !qeq_qp_apropos(qp->qp_setInput, page_count, TRUE));
 
-	/* For sharable QP.  Sometimes the QP sent to QEF is destroyed by
-	** another session.  So check for a NULL root.  If so, release the
-	** lock and tell SCF that we have got an invalid QP */
-	if (qp == (QEF_QP_CB *) NULL)
-	{
-	    qsf_call(QSO_UNLOCK, &qsf_rcb);
-	    qef_rcb->error.err_code = E_QE0023_INVALID_QUERY;
-	    status = E_DB_ERROR;
-	    return(status);
-	} 
+	    /* For sharable QP.  Sometimes the QP sent to QEF is destroyed by
+	    ** another session.  So check for a NULL root.  If so, release the
+	    ** lock and tell SCF that we have got an invalid QP */
+	    if (qp == (QEF_QP_CB *) NULL)
+	    {
+		qsf_call(QSO_UNLOCK, &qsf_rcb);
+		qef_rcb->error.err_code = E_QE0023_INVALID_QUERY;
+		status = E_DB_ERROR;
+		return(status);
+	    } 
 
-	/* search the list of active DSHs using QP handle */
-	for (*dsh = (QEE_DSH *)qef_cb->qef_odsh; *dsh; *dsh = (*dsh)->dsh_next)
-	{
-	    if ((*dsh)->dsh_qp_handle == handle &&
-		((*dsh)->dsh_qp_status & DSH_IN_USE) == 0)
-		break;		/* found an active DSH */
+	    /* When the dsh is a table procedure DSH, don't bother
+	    ** looking for other session DSH's using this table proc.
+	    ** Just create a new DSH for the table proc.
+	    ** (We're being called either from validation in qeqvalid,
+	    ** or from tproc node open in qentproc.)
+	    **
+	    ** The reason is that tprocs are like tables in that one
+	    ** can have multiple independent open-references to the
+	    ** same tproc.  Each one must have its own DSH, we don't want
+	    ** to find a DSH that's for some other reference.
+	    */
+	    if (must_find != 0 || qptype != QEQDSH_TPROC)
+	    {
+		/* Not TPROC, now that we know the QP handle, look for the
+		** DSH on the session list to see if we already have it.
+		*/
+		for (dsh = (QEE_DSH *)qef_cb->qef_odsh; dsh; dsh = dsh->dsh_next)
+		{
+		    if (dsh->dsh_qp_handle == handle &&
+			(dsh->dsh_qp_status & DSH_IN_USE) == 0)
+			break;		/* found an active DSH */
+		}
+	    }
 	}
     }
 
@@ -4386,22 +4423,21 @@ qeq_dsh(
 	err = E_QE030B_RULE_PROC_MISMATCH;
 	status = E_DB_ERROR;
     }
-    /* return if we found a dsh and the search qualifier is to find one */
-    else if (*dsh && must_find >= 0)
+    /* continue if we found a dsh and the search qualifier is to find one */
+    else if (dsh != NULL && must_find >= 0)
     {
-	(*dsh)->dsh_adf_cb->adf_constants = (*dsh)->dsh_qconst_cb;
-	qef_cb->qef_dsh = (PTR) (*dsh);
+	qef_cb->qef_dsh = (PTR) dsh;
 	status = E_DB_OK;
     }
     /* error if we found one and the qualifier is not to find one */
-    else if (*dsh && must_find < 0)
+    else if (dsh != NULL && must_find < 0)
     {
 	qef_cb->qef_dsh = (PTR)NULL;
 	err = E_QE000C_CURSOR_ALREADY_OPENED;
 	status = E_DB_ERROR;
     }
     /* also error if the DSH is not found when it is expected to be found */
-    else if (!*dsh && must_find > 0)
+    else if (dsh == NULL && must_find > 0)
     {
 	qef_cb->qef_dsh = (PTR)NULL;
 	err = E_QE0008_CURSOR_NOT_OPENED;
@@ -4413,28 +4449,26 @@ qeq_dsh(
 	do
 	{
 	    /* allocate a new DSH */
-	    status = qee_fetch(qef_rcb, qp, dsh, page_count, &qsf_rcb, isTproc);
+	    status = qee_fetch(qef_rcb, qp, &dsh, page_count, &qsf_rcb,
+			(qptype == QEQDSH_TPROC) );
 	    err = qef_rcb->error.err_code;
 	    if (status != E_DB_OK)
 		break;
 	    /* replace cursor QPs are OK. Don't check for deferred or
 	    ** transactions. Also applies to delete cursor QPs.
 	    */
-	    if ((*dsh)->dsh_qp_ptr->qp_ahd->ahd_atype == QEA_RUP ||
-		(*dsh)->dsh_qp_ptr->qp_ahd->ahd_atype == QEA_RDEL)
+	    if (dsh->dsh_qp_ptr->qp_ahd->ahd_atype == QEA_RUP ||
+		dsh->dsh_qp_ptr->qp_ahd->ahd_atype == QEA_RDEL)
 		break;
 
 	    /* error if we want to create a new DSH (open another query).
 	    ** and another query plan is active and we don't have an MST.
-	    ** This will not be true if we are calling a procedure from
-	    ** within a rule action list. The in_progress flag is set to
-	    ** TRUE if this is our present condition.
+	    ** Don't check this if DSH is for a DB proc or the query is
+	    ** in progress for some reason.
 	    */
-	    if (in_progress)
-		break;
 	    if (qef_cb->qef_open_count > 0 &&
                 qef_cb->qef_stat != QEF_MSTRAN &&
-                !isTproc)
+		qptype == QEQDSH_NORMAL)
 	    {
 		err = E_QE0238_NO_MSTRAN;
 		status = E_DB_ERROR;
@@ -4448,13 +4482,13 @@ qeq_dsh(
 	    ** If in nested context make sure to clear qef_dsh, but do not call
 	    ** qee_cleanup with a NULL DSH as that will zap all session DSH's.
 	    */
-	    if (in_progress || !*dsh)
+	    if (qptype == QEQDSH_IN_PROGRESS || dsh == NULL)
 	    {
 		qef_cb->qef_dsh = (PTR)NULL;
 	    }
 	    else
 	    {
-		stat = qee_cleanup(qef_rcb, dsh);
+		stat = qee_cleanup(qef_rcb, &dsh);
 		if (stat > status)
 		{
 		    status = stat;
@@ -4462,23 +4496,39 @@ qeq_dsh(
 		}
 	    }
 	}
-	else
-	{
-	    (*dsh)->dsh_adf_cb->adf_constants = (*dsh)->dsh_qconst_cb;
-	}
     }
 
-    qef_rcb->error.err_code = err;
-    if (status)
+    if (status != E_DB_OK)
     {
-	if (!in_progress &&		    /* Handled by caller */
+	i4 local_error;
+	if (qptype != QEQDSH_IN_PROGRESS &&	/* Handled by caller */
 	    (err != E_QE0023_INVALID_QUERY) &&  
             (err != E_QE0301_TBL_SIZE_CHANGE))  /* not DBP recompile needed */
-	    qef_error(qef_rcb->error.err_code, 0L, status, &error,
+	{
+	    if (err == E_QE030B_RULE_PROC_MISMATCH)
+	    {
+		char *pn;
+		/* This message has a parameter, need to supply it. */
+		pn = qef_rcb->qef_dbpname.qso_n_id.db_cur_name;
+		qef_error(err, 0, status, &local_error, &qef_rcb->error,1,
+			qec_trimwhite(DB_DBP_MAXNAME,pn), pn);
+	    }
+	    else
+	    {
+		qef_error(err, 0L, status, &local_error,
 		      &qef_rcb->error, 0);
+	    }
+	    err = E_QE0122_ALREADY_REPORTED;
+	}
+	qef_rcb->error.err_code = err;
     }
     else
-	(*dsh)->dsh_qp_status |= DSH_IN_USE;
+    {
+	dsh->dsh_adf_cb->adf_constants = dsh->dsh_qconst_cb;
+	dsh->dsh_qp_status |= DSH_IN_USE;
+	qef_rcb->error.err_code = E_QE0000_OK;
+	*pdsh = dsh;
+    }
     return (status);
 }
 
@@ -5151,7 +5201,12 @@ QEE_DSH	    *dsh
 **  Name: QEQ_RELEASE_DSH_RESOURCES   - Release dsh resources
 **
 **  Description:
-**	Marks the dmt_cb's as closed in the dsh's list of resources.
+**	Called after all tables and table procedures for a DSH's QP are
+**	closed.  All DMT-CB's are cleaned to make sure they appear
+**	closed (probably unnecessary, but whatever).  More importantly.
+**	the DSH side of the QP resource list is cleaned up so that
+**	all the resources are marked as not-opened, not-validated.
+**
 **  Inputs:
 **	dsh	pointer to dsh for which resources are to be released.
 **  Output:
@@ -5160,6 +5215,9 @@ QEE_DSH	    *dsh
 **  History:
 **	31-jan-94 (jhahn)
 **	    Created (from qeq_validate)
+**	18-Jun-2010 (kschendel) b123775
+**	    DSH side of resource list reworked, reflect changes here.
+**	    No more qee-valid list, and tprocs have info to clean up.
 */
 VOID
 qeq_release_dsh_resources(
@@ -5169,8 +5227,7 @@ QEE_DSH	    *dsh
     QEF_QP_CB       *qp = dsh->dsh_qp_ptr;
     DMT_CB	    *dmt_cb;
     QEE_RESOURCE    *resource;
-    QEE_VALID	    **next_validp, *last_valid;
-    i4  i;
+    QEF_RESOURCE    *qpres;
 
     for(dmt_cb = dsh->dsh_open_dmtcbs;
 	dmt_cb != (DMT_CB *)NULL;
@@ -5181,36 +5238,25 @@ QEE_DSH	    *dsh
     dsh->dsh_open_dmtcbs = (DMT_CB *)NULL;
 
     /* for each resource */
-    for (i = 0; i < qp->qp_cnt_resources; i += 1)
+    for (qpres = qp->qp_resources; qpres != NULL; qpres = qpres->qr_next)
     {
-	resource = &dsh->dsh_resources[i];
+	resource = &dsh->dsh_resources[qpres->qr_id_resource];
 
-	/* Tables have been closed, so reclaim the qee_valid
-	** pointers.
-	*/
-	next_validp = &(resource->qer_resource.qer_tbl.qer_empty_vl);
-	last_valid = (QEE_VALID *)NULL;
-	if (resource->qer_resource.qer_tbl.qer_free_vl != NULL)
+	if (qpres->qr_type == QEQR_TABLE)
 	{
-	    while (*next_validp != (QEE_VALID *)NULL)
-	    {
-		last_valid = *next_validp;
-		next_validp = &(last_valid->qevl_next);
-	    }
-	    *next_validp = resource->qer_resource.qer_tbl.qer_free_vl;
-	    (*next_validp)->qevl_prev = last_valid; /*Do we need this? */
-	    resource->qer_resource.qer_tbl.qer_free_vl = NULL;
+	    resource->qer_resource.qer_tbl.qer_validated = FALSE;
 	}
-	if (resource->qer_resource.qer_tbl.qer_inuse_vl != NULL)
+	else if (qpres->qr_type == QEQR_PROCEDURE)
 	{
-	    while (*next_validp != (QEE_VALID *)NULL)
-	    {
-		last_valid = *next_validp;
-		next_validp = &(last_valid->qevl_next);
-	    }
-	    *next_validp = resource->qer_resource.qer_tbl.qer_inuse_vl;
-	    (*next_validp)->qevl_prev = last_valid; /*Do we need this? */
-	    resource->qer_resource.qer_tbl.qer_inuse_vl = NULL;
+	    if (resource->qer_resource.qer_proc.qer_proc_dsh != NULL)
+		qeq_release_dsh_resources(resource->qer_resource.qer_proc.qer_proc_dsh);
+	    /* Don't null out qer-proc-dsh, might just be a commit and
+	    ** the DSH is still there, just needs validated.
+	    ** However we can clear used, either this isn't a tproc-using
+	    ** action or the dsh has indeed been released.
+	    */
+	    resource->qer_resource.qer_proc.qer_procdsh_used = FALSE;
+	    resource->qer_resource.qer_proc.qer_procdsh_valid = FALSE;
 	}
     }
 }
@@ -5420,6 +5466,9 @@ qeq_close_dsh_nodes(QEE_DSH *dsh)
 **	    Statement abort was broken because we put the savepoint name in a
 **	    local, then promptly exited the block containing the local!
 **	    Who knows why that has ever worked.  Caused E_US087A.
+**	18-Jun-2010 (kschendel) b123775
+**	    Tproc DSH cleanup is now sent through here, so skip anything
+**	    that tproc cleanup shouldn't do:  in particular, commit/abort.
 */
 DB_STATUS
 qeq_cleanup(
@@ -5455,13 +5504,10 @@ bool	    release )
     status = E_DB_OK;
 
     if (dsh != NULL)
+    {
 	qeq_close_dsh_nodes(dsh);
 
-    if (dsh && (dsh->dsh_qp_status & DSH_TPROC_DSH))
-    {
-        isTproc = TRUE;
-        if (qef_cb->qef_open_count > 0)
-            open_count = qef_cb->qef_open_count;
+	isTproc = (dsh->dsh_qp_status & DSH_TPROC_DSH) != 0;
     }
 
     do
@@ -5582,7 +5628,7 @@ bool	    release )
 		** The only really critical thing to hang on to is in-flight
 		** LOB's in holding temps.
 		*/
-		if (qef_cb->qef_open_count == 0)
+		if (!isTproc && qef_cb->qef_open_count == 0)
 		{
 		    DMR_CB dmrcb;
 		    dmrcb.type = DMR_RECORD_CB;
@@ -5663,6 +5709,8 @@ bool	    release )
 			}
 		    }
 		}
+
+		/* Mark DSH's resource list, nothing is open */
 		qeq_release_dsh_resources(dsh);
 
 	    } /* if dsh */
@@ -5673,28 +5721,18 @@ bool	    release )
 	    /* Commit/savepoint the transaction
 	    **  -  For a SST, commit the transaction 
 	    **  -  For a MST, declare an internal savepoint if no open cursor.
+	    ** But never commit or savepoint if this is a tproc DSH.
 	    */
 	    status = E_DB_OK;
 
-	    if ((qef_cb->qef_stat == QEF_SSTRAN &&
-                 qef_cb->qef_open_count == 0) ||
-                isTproc)
+	    if (qef_cb->qef_stat == QEF_SSTRAN && qef_cb->qef_open_count == 0
+	      && ! isTproc)
 	    {
-                /* For table procedure queries, always abort to the last
-                 * internal save point. Decrementing the open count to 0
-                 * to do so, but first save it.
-                 */
-                if (isTproc && open_count > 0)
-                    qef_cb->qef_open_count = 0;
-
 		status = qet_commit(qef_cb);
-
-                /* Restore the open count for table procedure */
-                if (isTproc && open_count > 0)
-                    qef_cb->qef_open_count = open_count;
 	    }
 	    else if (qef_cb->qef_stat == QEF_MSTRAN && 
 		     qef_cb->qef_open_count == 0 && 
+		     !isTproc &&
 		     !ddb_b)			/* no distributed internal sp */
 	    {
 		qef_rcb->qef_spoint = &Qef_s_cb->qef_sp_savepoint;
@@ -5727,7 +5765,8 @@ bool	    release )
 	** entire transaction since there will always be more than one
 	** query open (the original query and the rule action).
 	*/
-	if (qef_cb->qef_stat != QEF_NOTRAN && qef_rcb->qef_rule_depth == 0)
+	if (qef_cb->qef_stat != QEF_NOTRAN && qef_rcb->qef_rule_depth == 0
+	  && !isTproc)
 	{
 	    if (ddb_b)		/* distributed? */
 	    {
@@ -5984,6 +6023,11 @@ qeq_closeTempTables(
 **	11-nov-1998 (somsa01)
 **	    We need to make sure that the continuation flag is reset.
 **	    (Bug #94114)
+**      18-Aug-2010 (maspa05) b124108
+**          If we call qeq_dsh to retrieve the same DSH that we already have
+**          in qef_dsh then we will have locked the corresponding QP twice
+**          therefore unlock it so that we don't accumulate locks and 
+**          consequently never free the QP.
 */
 DB_STATUS
 qeq_endret(
@@ -5998,8 +6042,55 @@ QEF_RCB		*qef_rcb )
 
     /* search the list of active DSHs for the specified one */
 
-    if (status = qeq_dsh(qef_rcb, 1, &dsh, (bool)FALSE, (i4) -1,(bool)FALSE))
+    if (status = qeq_dsh(qef_rcb, 1, &dsh, QEQDSH_NORMAL, -1))
 	return (status);    /* won't go very far without DSH */
+
+    /* if we just retrieved the same dsh that we already have then
+     * unlock it (we'll have locked it twice) */
+
+    if (dsh == (QEE_DSH *)qef_cb->qef_dsh)
+    {
+        QSF_RCB	qsf_rcb;
+
+        qsf_rcb.qsf_next = (QSF_RCB *)NULL;
+        qsf_rcb.qsf_prev = (QSF_RCB *)NULL;
+        qsf_rcb.qsf_length = sizeof(QSF_RCB);
+        qsf_rcb.qsf_type = QSFRB_CB;
+        qsf_rcb.qsf_lk_state = QSO_SHLOCK;
+        qsf_rcb.qsf_owner = (PTR)DB_QEF_ID;
+        qsf_rcb.qsf_ascii_id = QSFRB_ASCII_ID;
+        qsf_rcb.qsf_sid = qef_rcb->qef_cb->qef_ses_id;
+        qsf_rcb.qsf_obj_id.qso_handle = qef_rcb->qef_qso_handle;
+	qsf_rcb.qsf_obj_id.qso_type = QSO_QP_OBJ;
+	qsf_rcb.qsf_obj_id.qso_lname = sizeof (DB_CURSOR_ID);
+	MEcopy((PTR)&qef_rcb->qef_qp, sizeof (DB_CURSOR_ID), 
+	    (PTR)qsf_rcb.qsf_obj_id.qso_name);
+
+	/* can't unlock without a handle */
+	if (!qsf_rcb.qsf_obj_id.qso_handle)
+	{
+            status=qsf_call(QSO_GETHANDLE, &qsf_rcb);   
+	    if (status)
+	    {
+	       qef_rcb->error.err_code = qsf_rcb.qsf_error.err_code;
+	       return (status);
+	    }
+	    /* gethandle adds another lock! so unlock for that */
+            status=qsf_call(QSO_UNLOCK, &qsf_rcb);   
+	    if (status)
+	    {
+	       qef_rcb->error.err_code = qsf_rcb.qsf_error.err_code;
+	       return (status);
+	    }
+	}
+
+	status=qsf_call(QSO_UNLOCK, &qsf_rcb); 
+	if (status)
+	{
+	    qef_rcb->error.err_code = qsf_rcb.qsf_error.err_code;
+	    return (status);
+	}
+    }
 
     /* update count of open query/cursor */
     qef_cb->qef_open_count--;

@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2007 Ingres Corporation All Rights Reserved.
+** Copyright (c) 2010 Ingres Corporation All Rights Reserved.
 */
 
 package	com.ingres.gcf.jdbc;
@@ -24,6 +24,14 @@ package	com.ingres.gcf.jdbc;
 **          - Replaced SqlEx references with SQLException or SqlExFactory
 **            depending upon the usage of it. SqlEx becomes obsolete to
 **            support JDBC 4.0 SQLException hierarchy.
+**	 9-Aug-10 (gordy)
+**	    For an empty result-set, isBeforeFirst() is supposed to return
+**	    false.  It cannot be determined if the result-set is empty if
+**	    no rows have been fetched.  Implement isBeforeFirst() to detect
+**	    this condition and determine if the result-set is empty.  Also,
+**	    isLast() cannot always determine if the highest row fetched is
+**	    also the last.  Implement isLast() to detect this condition
+**	    and determine if there are any more rows in the result set.
 */
 
 import	java.sql.ResultSet;
@@ -53,6 +61,8 @@ import	com.ingres.gcf.util.SqlExFactory;
 **	20-Jul-07 (gordy)
 **	    Super-class now tracks number of rows in result-set
 **	    and provides most of the capabilities to do scrolling.
+**	 9-Aug-10 (gordy)
+**	    Implement isBeforeFirst() and isLast.
 */
 
 public class
@@ -154,6 +164,174 @@ load( int reference, int offset, boolean load )
 
     return;
 } // load
+
+
+/*
+** Name: isBeforeFirst
+**
+** Description:
+**	Is cursor before first row of the result-set.
+**
+**	An empty result-set cannot be detected if a fetch request has
+**	not been made.  If this is the case, prefetch the first block 
+**	of rows to determine if the result-set is empty.
+**	
+** Input:
+**	None.
+**
+** Output:
+**	None.
+**
+** Returns:
+**	boolean	    TRUE if before first, FALSE otherwise.
+**
+** History:
+**	 9-Aug-10 (gordy)
+**	    Created.
+*/
+
+public boolean
+isBeforeFirst()
+    throws SQLException
+{
+    /*
+    ** An empty result-set is indicated by a rowCount of 0.  If
+    ** a result-set size has not been determined (rowCount < 0),
+    ** the highest row fetched can be used to detect a non-empty
+    ** result-set.  The super class implementation only returns
+    ** the wrong value when the result-set is empty and no rows
+    ** have been fetched.  Check for this specific condition.
+    */
+    if ( posStatus == BEFORE  &&  rowCount < 0  &&  maxRow < 1 )
+    {
+	if ( trace.enabled() )  trace.log( title + ".isBeforeFirst()" );
+
+	flush();
+	warnings = null;
+
+	try
+	{
+	    /*
+	    ** Load the first block of rows.  If the result-set is
+	    ** empty, then the result-set size will be known.  If
+	    ** the result-set is not empty, then the first block of
+	    ** rows will be in the cache and available for subsequent
+	    ** operations.
+	    */
+	    load( ROW, 1, fetchSize() );
+
+	    /*
+	    ** Reposition the logical cursor back to before the first row.
+	    */
+	    flush();
+	    warnings = null;
+	    load( BEFORE, 0, 0 );
+	}
+	catch( SQLException ex )
+	{
+	    if ( trace.enabled() )
+		trace.log( title + ": error positioning/loading row" );
+	    if ( trace.enabled( 1 ) )  SqlExFactory.trace( ex, trace );
+	    try { shut(); }  catch( SQLException ignore ) {}
+	    throw ex;
+	}
+    }
+
+    /*
+    ** The result-set info is now sufficient for the super class
+    ** implementation to return the correct result.
+    */
+    return( super.isBeforeFirst() );
+}
+
+
+/*
+** Name: isLast
+**
+** Description:
+**	Is cursor on last row of the result-set.
+**
+**	If the physical cursor has not been moved beyond the current
+**	row, it may not be known whether it is the last row or not.
+**	A fetch is required if a row cannot positively identified as
+**	(not) last.
+**
+** Input:
+**	None.
+**
+** Output:
+**	None.
+**
+** Returns:
+**	boolean	    TRUE if known to be on last row, FALSE otherwise.
+**
+** History:
+**	 9-Aug-10 (gordy)
+**	    Created.
+*/
+
+public boolean
+isLast()
+    throws SQLException
+{
+    /*
+    ** If the current row is the highest row fetched but is not
+    ** marked as LAST, then a fetch is required to determine if
+    ** this really is the last row or if more rows follow.
+    */
+    if ( posStatus == ROW  &&  currentRow.id >= maxRow  &&
+	 (currentRow.status & Row.LAST) == 0 )
+    {
+	if ( trace.enabled() )  trace.log( title + ".isLast()" );
+
+	flush();
+	warnings = null;
+
+	try
+	{
+	    /*
+	    ** The easiest thing to do is load a block of rows starting
+	    ** with the current row.  This will determine if it is the
+	    ** last row, and if not will pre-fetch the next block of 
+	    ** rows for processing.  This will only work if the pre-
+	    ** fetch block size is more than one row.
+	    */
+	    int size = fetchSize();
+
+	    if ( size > 1 )
+		load( ROW, 0, size );
+	    else
+	    {
+		/*
+		** With fetches restricted to one row, the next row
+		** row must be fetched.  This will determine if there
+		** is another row or the end of the result-set has
+		** been reached.  In either case, the cursor must be
+		** moved back to the original row.
+		*/
+		load( ROW, 1, size );
+
+		flush();
+		warnings = null;
+		load( ROW, -1, size );
+	    }
+	}
+	catch( SQLException ex )
+	{
+	    if ( trace.enabled() )
+		trace.log( title + ": error positioning/loading row" );
+	    if ( trace.enabled( 1 ) )  SqlExFactory.trace( ex, trace );
+	    try { shut(); }  catch( SQLException ignore ) {}
+	    throw ex;
+	}
+    }
+
+    /*
+    ** The result-set info is now sufficient for the super class
+    ** implementation to return the correct result.
+    */
+    return( super.isLast() );
+} // isLast
 
 
 } // class RsltScrUpd

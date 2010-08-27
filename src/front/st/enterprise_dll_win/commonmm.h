@@ -83,6 +83,14 @@
 **	    Making a note of the product code in this file
 **	    as it wouldn't be a visible change in a binary file
 **	    IngresII_Doc.ism.
+**	20-Jul-2010 (bonro01)
+**	    Update version for Ingres 10.1
+**	    Updated the product code for IngresII_Doc.ism
+**	    from {07B11A75-FCF3-4963-8651-1619E958DED4}
+**	    to   {9C12A32D-0014-497B-8E00-3A3C51CA2469}
+**	    Making a note of the product code in this file
+**	    as it wouldn't be a visible change in a binary file
+**	    IngresII_Doc.ism.
 */
 extern int	Execute(char *lpCmdLine, BOOL bwait);
 extern int	Local_NMgtIngAt(char *strKey, char *strRetValue);
@@ -130,4 +138,4 @@ extern DWORD	GetProductCode(char *path, char *guid, DWORD size);
 extern BOOL	ExecuteShellEx(char *lpCmdLine);
 
 
-#define ING_VERS	"10.0"
+#define ING_VERS	"10.1"

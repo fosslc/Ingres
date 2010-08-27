@@ -1398,6 +1398,10 @@ ADI_FI_ID	    *instr)
 **          SIGSGEV caused by using unitialised pointer datep.
 **	30-Mar-2010 (kschendel) SIR 123485
 **	    Update call to use ADF_CB *.
+**      02-Aug-2010 (maspa05) b124161
+**          Output BYTE/VBYTE as hex digits
+**      09-Aug-2010 (maspa05) b124161
+**          change u_i1 to u_tmp_i1 - u_i1 is a #define on VMS
 */
 
 char *
@@ -1427,6 +1431,7 @@ ADF_CB *tzcb)
     i4				i4_tmp;
     i2				i2_tmp, i2_tmp2;
     i1				i1_tmp;
+    u_char 			u_tmp_i1;
     char			stbuf[2048];
     AD_DTUNION			*dp;
     i8				i8_tmp;
@@ -1474,7 +1479,6 @@ ADF_CB *tzcb)
 
 	  case DB_CHA_TYPE:
 	  case DB_CHR_TYPE:
-	  case DB_BYTE_TYPE:
 	    if (blen == 0)
 	    {
 		STprintf(str, "''");
@@ -1627,7 +1631,6 @@ ADF_CB *tzcb)
 	  case DB_VCH_TYPE:
 	  case DB_TXT_TYPE:
 	  case DB_LTXT_TYPE:
-	  case DB_VBYTE_TYPE:
 	    I2ASSIGN_MACRO(((DB_TEXT_STRING *)data)->db_t_count, i2_tmp);
 	    if (i2_tmp == 0)
 	    {
@@ -1643,6 +1646,23 @@ ADF_CB *tzcb)
 	    else
 		STcopy("FALSE",str);
 	    break;
+
+	  case DB_VBYTE_TYPE:
+            I2ASSIGN_MACRO(((DB_TEXT_STRING *)data)->db_t_count, i2_tmp);
+	    blen=i2_tmp;
+	    data = ((DB_TEXT_STRING *)data)->db_t_text;
+
+	  case DB_BYTE_TYPE:
+	    c_tmp=str;
+	    STprintf(c_tmp,"%d:",blen);
+	    c_tmp += STlength(c_tmp);
+	    for(i=0; i< blen; i++)
+	    {
+                u_tmp_i1=(u_char) data[i];
+                STprintf(c_tmp,"%02x ", u_tmp_i1);
+		c_tmp += STlength(c_tmp);
+	    }
+            break;
 
 	  case DB_NCHR_TYPE:
 	    str[0] = EOS;

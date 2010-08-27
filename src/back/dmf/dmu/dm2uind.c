@@ -381,6 +381,8 @@
 **	    Fix net-change logic for width for ALTER TABLE.
 **      14-May-2010 (stial01)
 **          Alloc/maintain exact size of column names (iirelation.relattnametot)
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    dm2u-create wants compression now.
 **/
 
 /*{
@@ -824,6 +826,8 @@
 **	    Use no-coupon access modes.
 **	10-may-2010 (stephenb)
 **	    Cast new i8 reltups back to i4
+**	16-Jul-2010 (kschendel) SIR 123450
+**	    Really pass the compression type(s) in the log record.
 */
 DB_STATUS
 dm2u_index(
@@ -1247,7 +1251,7 @@ DM2U_INDEX_CB   *index_cb)
 	      index_cb->indxcb_index_name, &owner, index_cb->indxcb_location, 
 	      loc_count, index_cb->indxcb_tbl_id, index_cb->indxcb_idx_id, 
 	      (i4)1, (i4)0, setrelstat, setrelstat2,
-	      m->mx_structure, m->mx_width, m->mx_width, NumCreAtts,
+	      m->mx_structure, TCB_C_NONE, m->mx_width, m->mx_width, NumCreAtts,
 	      att_list, index_cb->indxcb_db_lockmode,
 	      DM_TBL_DEFAULT_ALLOCATION, DM_TBL_DEFAULT_EXTEND, 
 	      m->mx_page_type, m->mx_page_size, index_cb->indxcb_qry_id, 
@@ -1668,6 +1672,8 @@ DM2U_INDEX_CB   *index_cb)
 		index_cb->indxcb_idx_key, index_cb->indxcb_kcount,
 		index_cb->indxcb_allocation, index_cb->indxcb_extend, 
 		m->mx_page_type, m->mx_page_size, 
+		index_cb->indxcb_compressed,
+		index_cb->indxcb_index_compressed ? TCB_C_STD_OLD : TCB_C_NONE,
 		name_id, name_gen,
 		m->mx_dimension, m->mx_hilbertsize,(f8 *)&m->mx_range,  
 		(LG_LSN*)0, &lsn, dberr);
@@ -1826,6 +1832,12 @@ DM2U_INDEX_CB   *index_cb)
 **	    new row-accessor stuff.
 **	14-Apr-2010 (kschendel) SIR 123485
 **	    Use no-coupon access modes.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Index btree key compression is wired to old-standard for now.
+**	27-Jul-2010 (kschendel) b124135
+**	    Ask for row-versioning when sizing compression control array.
+**	    We don't know if there are any versioned/altered atts, assume
+**	    the worst rather than the best.
 */
 
 DB_STATUS
@@ -1929,19 +1941,18 @@ dm2uMakeIndMxcb(DM2U_MXCB **mxcb,
     AllAttsCount = index_cb->indxcb_acount + ClusterKeyCount;
 
     /* Guess at (upper limit for) NEW compression control sizes.
-    ** There will be no row versioning in the new stuff.
     ** Throw in a +1 in case tidp ends up part of the key.
     ** Another +1 in case rtree and hilbert.  (It's just an upper limit.)
     */
     data_cmpcontrol_size = dm1c_cmpcontrol_size(
-		index_cb->indxcb_compressed, AllAttsCount+2, 0);
+		index_cb->indxcb_compressed, AllAttsCount+2, t->tcb_rel.relversion);
     if (index_cb->indxcb_index_compressed)
     {
-	/* Key compression is wired to "standard" at present */
+	/* Key compression is wired to "old standard" at present */
 	if (index_cb->indxcb_structure == TCB_RTREE)
 	{
 	    index_cmpcontrol_size = dm1c_cmpcontrol_size(
-		TCB_C_STANDARD, AllAttsCount+2, 0);
+		TCB_C_STD_OLD, AllAttsCount+2, t->tcb_rel.relversion);
 	}
 	else if (index_cb->indxcb_structure == TCB_BTREE)
 	{
@@ -1949,9 +1960,9 @@ dm2uMakeIndMxcb(DM2U_MXCB **mxcb,
 	    ** Leaf entry is the whole row including any non-key atts.
 	    */
 	    index_cmpcontrol_size = dm1c_cmpcontrol_size(
-		TCB_C_STANDARD, index_cb->indxcb_kcount+1, 0);
+		TCB_C_STD_OLD, index_cb->indxcb_kcount+1, t->tcb_rel.relversion);
 	    leaf_cmpcontrol_size = dm1c_cmpcontrol_size(
-		TCB_C_STANDARD, AllAttsCount+1, 0);
+		TCB_C_STD_OLD, AllAttsCount+1, t->tcb_rel.relversion);
 	}
     }
     data_cmpcontrol_size = DB_ALIGN_MACRO(data_cmpcontrol_size);
@@ -2263,8 +2274,8 @@ dm2uMakeIndMxcb(DM2U_MXCB **mxcb,
     m->mx_index_comp = index_cb->indxcb_index_compressed;
     if (index_cb->indxcb_index_compressed)
     {
-	m->mx_leaf_rac.compression_type = TCB_C_STANDARD;
-	m->mx_index_rac.compression_type = TCB_C_STANDARD;
+	m->mx_leaf_rac.compression_type = TCB_C_STD_OLD;
+	m->mx_index_rac.compression_type = TCB_C_STD_OLD;
     }
     m->mx_unique = index_cb->indxcb_unique;
     m->mx_dmveredo = index_cb->indxcb_dmveredo;
@@ -2472,6 +2483,8 @@ dm2uMakeIndMxcb(DM2U_MXCB **mxcb,
 **	    RCB's adfcb now typed as such, minor fixes here.
 **	29-Sept-2009 (troal01)
 **		Add geospatial support.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Index btree key compression is wired to old-standard for now.
 */
 DB_STATUS
 dm2uMakeIndAtts(
@@ -3134,7 +3147,7 @@ DB_ERROR	*dberr)
 
 	    adj_leaflen = m->mx_kwidth;
 	    if (index_cb->indxcb_index_compressed)
-		adj_leaflen += dm1c_compexpand(TCB_C_STANDARD,
+		adj_leaflen += dm1c_compexpand(TCB_C_STD_OLD,
 				m->mx_data_rac.att_ptrs,
 				m->mx_data_rac.att_count);
 

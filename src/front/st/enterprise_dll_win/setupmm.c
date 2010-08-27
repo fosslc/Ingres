@@ -327,6 +327,13 @@
 **          the code to make sure all the errors are brought on foreground.
 **	16-Jan-2009 (whiro01) SD Issue 132899
 **	    In conjunction with the fix for this issue, fixed a few compiler warnings.
+**      03-Aug-2010 (horda03) B124173
+**          Added ingres_check_rspfile. The function checks
+**          If the file specified INGRES_RSP_FILE exists then prompt user
+**          to confirm that they really want to overwrite the file. If the
+**          file happens to be a directory, then output a warning.
+**          The functions exits with "INGRES_CONTINUE" set to "YES" if the
+**          Response file is to be written, "NO" otherwise.
 */
 #include <windows.h>
 #include <msi.h>
@@ -1291,7 +1298,9 @@ ingres_ice_verify_paths(MSIHANDLE hInstall)
 **	    The parameter will setup configuration type for the Ingres instance.
 **	    Parameter will take 3 options: TXN, BI, CM.
 **	    II_CONFIG_TYPE=NULL or the absence of II_CONFIG_TYPE parameter
-**	    will revert back to Classic/Traditional Ingres configuration.	
+**	    will revert back to Classic/Traditional Ingres configuration.
+**	27-Jul-2010 (drivi01)
+**	    Remove ICE, but leave the code.	
 **	    
 */
 UINT __stdcall 
@@ -1721,7 +1730,7 @@ ingres_set_properties(MSIHANDLE hInstall)
 		MsiSetProperty(hInstall, "INGRES_ENABLESQL92", "");
 	
 	/* ICE */
-	GetPrivateProfileString("Ingres Configuration", "iihttpserver", "", lpReturnedString, sizeof(lpReturnedString), strRSPFile);
+	/*GetPrivateProfileString("Ingres Configuration", "iihttpserver", "", lpReturnedString, sizeof(lpReturnedString), strRSPFile);
 	if(lpReturnedString[0] && GetFileAttributes(lpReturnedString)!=-1)
 		MsiSetProperty(hInstall, "INGRES_HTTP_SERVER", lpReturnedString);
 	else
@@ -1744,7 +1753,8 @@ ingres_set_properties(MSIHANDLE hInstall)
 		MsiSetProperty(hInstall, "INGRES_COLDFUSION_PATH", lpReturnedString);
 	else
 		MsiSetProperty(hInstall, "INGRES_COLDFUSION_PATH", strInstallPath);
-	
+	*/
+
 	GetPrivateProfileString("Ingres Configuration", "serviceauto", "", lpReturnedString, sizeof(lpReturnedString), strRSPFile);
 	if(strlen(lpReturnedString)==0)
 		GetPrivateProfileString("Ingres Configuration", "II_SERVICE_START_AUTO", "", lpReturnedString, sizeof(lpReturnedString), strRSPFile);
@@ -2117,6 +2127,10 @@ ingres_set_properties(MSIHANDLE hInstall)
 **	12-Aug-2009 (drivi01)
 **	    Add Spatial Objects component to the response file.  The new 
 ** 	    component name in the response file is II_COMPONENT_SPATIAL.
+**      24-May-2010 (drivi01)
+**	    Disable ICE in the response file.  Leave the code for now in
+**          case it needs to be enabled.
+**	    Set ICE to be removed on upgrade if it's already installed.
 */
 
 UINT __stdcall 
@@ -2228,7 +2242,11 @@ ingres_base_settings(MSIHANDLE hInstall)
 
 	/* Ingres/ICE */
 	MsiGetFeatureState(hInstall, "IngresIce", &iInstalled, &iAction);
-	if(iInstalled!=INSTALLSTATE_LOCAL)
+	if (iInstalled == INSTALLSTATE_LOCAL)
+	{
+		MsiSetFeatureState(hInstall, "IngresIce", INSTALLSTATE_ABSENT);
+	}
+	/*if(iInstalled!=INSTALLSTATE_LOCAL)
 	{
 		GetPrivateProfileString("Ingres Configuration", "Ingres/ICE", "", lpReturnedString, sizeof(lpReturnedString), strRSPFile);
 		if (strlen(lpReturnedString)==0)
@@ -2246,7 +2264,7 @@ ingres_base_settings(MSIHANDLE hInstall)
 			else if (!strstr(szAddLocal, "IngresIce"))
 				strcat(szAddLocal, ",IngresIce");
 		}
-	}
+	}*/
 
 	/* Ingres/Replicator */
 	MsiGetFeatureState(hInstall, "IngresReplicator", &iInstalled, &iAction);
@@ -6228,3 +6246,53 @@ ingres_warn_remove_dbms(MSIHANDLE hInstall)
 	return ERROR_SUCCESS;
 	
 }
+
+UINT __stdcall
+ingres_check_rspfile(MSIHANDLE hInstall)
+{
+        BOOL bAnswer;
+        char buf[MAX_PATH+1], lpText[512];
+        DWORD nret, fattrib;
+
+        MsiSetProperty(hInstall, "INGRES_CONTINUE", "YES");
+
+        nret=sizeof(buf);
+        MsiGetProperty(hInstall, "INGRES_RSP_FILE", buf, &nret);
+        if(!(buf[0]))
+        {
+                MyMessageBox(hInstall, "You must enter a value for the Response File.");
+                MsiSetProperty(hInstall, "INGRES_CONTINUE", "NO");
+                return ERROR_SUCCESS;
+        }
+
+        fattrib = GetFileAttributes(buf);
+
+        if (fattrib==-1)
+        {
+                /* File doeesn't exist so continue */
+
+                return ERROR_SUCCESS;
+        }
+
+        if (fattrib & FILE_ATTRIBUTE_DIRECTORY)
+        {
+                sprintf(lpText, "\"%s\" is a directory. Please enter a valid file name.", buf);
+                MyMessageBox(hInstall, lpText);
+
+                MsiSetProperty(hInstall, "INGRES_CONTINUE", "NO");
+                return ERROR_SUCCESS;
+        }
+
+
+        sprintf(lpText, "\"%s\" exists. Do you wish to overwrite ?", buf);
+
+        bAnswer = AskUserYN(hInstall, lpText);
+
+        if (!bAnswer)
+        {
+                MsiSetProperty(hInstall, "INGRES_CONTINUE", "NO");
+        }
+
+        return ERROR_SUCCESS;
+}
+

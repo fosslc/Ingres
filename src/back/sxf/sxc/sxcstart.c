@@ -167,6 +167,8 @@
 **      30-May-2006 (hanal04) bug 116149
 **          Initialise Sxf_svcb->sxf_db_info to prevent SIGSEGV in
 **          sxc_getdb().
+**	11-Jun-2010 (kiria01) b123908
+**	    Init ulm_streamid_p for ulm_openstream to fix potential segvs.
 */
 DB_STATUS
 sxc_startup(
@@ -252,6 +254,7 @@ sxc_startup(
 	/* Open a shared stream and allocate SXF_SVCB with one call */
 	ulm_rcb.ulm_flags = ULM_SHARED_STREAM | ULM_OPEN_AND_PALLOC;
 	ulm_rcb.ulm_psize = sizeof (SXF_SVCB);
+	ulm_rcb.ulm_streamid_p = NULL;
 
 	status = ulm_openstream(&ulm_rcb);		
 	if (status != E_DB_OK)

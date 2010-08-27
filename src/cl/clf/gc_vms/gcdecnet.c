@@ -95,6 +95,9 @@
 **	    Use EFN$C_ENF and IOSB when calling a synchronous system service.
 **      22-Dec-2008 (stegr01)
 **          Itanium VMS port.
+**      13-May-2010 (Ralph Loen) Bug 120552
+**          Add output argument to GC_decnet_addr() to return the "actual"
+**          symbolic port (base port plus subport).
 */
 
 typedef long VMS_STATUS;
@@ -763,17 +766,23 @@ BS_PARMS	*bsp;
 **	    Changed STbcompare of "II_GCC" to account for all six characters
 **	    instead of the first five.  Changed iigcc from a i4 to a bool,
 **	    and made sure the resulting port was in uppercase.
+**      13-May-2010 (Ralph Loen) Bug 120552
+**          Add output argument to return the "actual"
+**          symbolic port (base port plus subport).
 */
-GC_decnet_addr( pin, subport, pout )
+GC_decnet_addr( pin, subport, pout, addrout )
 char	*pin;
 i4	subport;
 char	*pout;
+char    *addrout;
 {
 	char	*inst = 0;
 	char	*n = 0;
 	bool	iigcc = FALSE;
 	char	*p = pin; 
 	char	portbuf[ 5 ];
+
+        STcopy(pin, addrout);
 
 	/* Pull pin apart */
 

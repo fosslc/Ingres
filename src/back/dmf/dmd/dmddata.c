@@ -53,7 +53,6 @@
 **	      (EXTERNAL)
 **          dmd_prrecord    - Prints a record from a table.
 **	      (EXTERNAL)
-**          dmdprbkey       - Prints the key of BTREE index.
 **          dmdprbrange     - Prints the range for BTREE index.
 **	      (EXTERNAL)
 **          dmdprbtree      - Prints the tree part of BTREE table.
@@ -191,17 +190,15 @@
 **          wasn't passed correctly from outside this file
 **      10-May-2010 (stial01)
 **          dmd_prindex() print clean count
+**      09-Jun-2010 (stial01)
+**          Added dmd_pr_mvcc_info, deleted unused dmdprbkey
+**          Fixed dmdprentries (for compressed entries)
 */
 
 
 /*
 **  Forward function references.
 */
-
-static VOID          dmdprbkey(
-			DMP_RCB		*rcb,
-			DMPP_PAGE	*b,
-			i4		i );
 
 static VOID          dmdprbtree(
 			DMP_RCB		*rcb,
@@ -949,112 +946,6 @@ char			*record)
 }
 
 /*{
-** Name: dmdprbkey - Prints a key from an index/leaf page of a BTREE.
-**
-** Description:
-**      This routine prints a key from an index page of a BTREE.
-**
-** Inputs:
-**      rcb                             Pointer to RCB.
-**      b                               Pointer to page to print.
-**      i				Value indicating indentation level.
-**
-** Outputs:
-**      none
-**	Returns:
-**	    none
-**	Exceptions:
-**	    none
-**
-** Side Effects:
-**	    none
-**
-** History:
-**	07-nov-85 (jennifer)
-**          Created for Jupiter.
-**	10-jan-1991 (bryanp)
-**	    Use the dm1cx() routines to support Btree index compression.
-**	    Pass '0' to dmd_prkey; we want the newline printed.
-**	06-may-1996 (thaju02 & nanpr01)
-**	    New Page Format Project: Change page header references to use
-**	    macros.
-**      03-june-1996 (stial01)
-**          Added DMPP_TUPLE_INFO argument to dm1cxget() 
-**      22-nov-96 (stial01,dilma04)
-**          Row Locking Project:
-**          Remove unecessary tup_info initialization.
-**      21-apr-97 (stial01)
-**          Print deleted leaf entries
-**      12-jun-97 (stial01)
-**          dmdprbkey() Pass tlv to dm1cxget instead of tcb.
-*/
-static VOID
-dmdprbkey(
-DMP_RCB	    *rcb, 
-DMPP_PAGE   *b, 
-i4      i)
-{
-    DMP_TCB	*t = rcb->rcb_tcb_ptr;
-    DM_TID      tid; 
-    char	*AllocKbuf;
-    char	key_buf[DM1B_MAXSTACKKEY];
-    i4		key_len;
-    char        *keypos; 
-    DB_STATUS	s;
-    DMP_ROWACCESS *rac;
-    bool        is_index;
-    DB_ERROR	local_dberr;
-    u_i4	row_low_tran = 0;
-    u_i2	row_lg_id = 0;
-
-    is_index = 
-    ((DM1B_VPT_GET_PAGE_STAT_MACRO(t->tcb_rel.relpgtype, b) & DMPP_INDEX) != 0);
-    if (is_index)
-    {
-	rac = &t->tcb_index_rac;
-	key_len = t->tcb_ixklen;
-    }
-    else
-    {
-	rac = &t->tcb_leaf_rac;
-	key_len = t->tcb_klen;
-    }
-
-    if ( dm1b_AllocKeyBuf(key_len, key_buf, &keypos, &AllocKbuf, &local_dberr) )
-    {
-	TRdisplay("*** dmbprbkey: Unable to allocate %d bytes of memory for key\n",
-			key_len);
-	return;
-    }
-
-    s = dm1cxget( t->tcb_rel.relpgtype, t->tcb_rel.relpgsize, b,
-		rac, i, &keypos, &tid, (i4*)NULL, &key_len, 
-		&row_low_tran, &row_lg_id, rcb->rcb_adf_cb );
-    if (s == E_DB_OK || (s == E_DB_WARN && t->tcb_rel.relpgtype != TCB_PG_V1))
-    {
-	dmd_prkey(rcb, keypos, is_index ? DM1B_PINDEX : DM1B_PLEAF, (DB_ATTS**)NULL, (i4)1, (i4)0);
-
-	/* print tuple header also */
-	TRdisplay(" tran %x lg_id %d ", row_low_tran, (i4)row_lg_id);
-	if (s == E_DB_WARN)
-	    TRdisplay(" DELETED \n");
-	else
-	    TRdisplay("\n");
-    }
-    else
-    {
-	TRdisplay("***Unable to retrieve entry %d from page %d\n",
-		    i, DM1B_VPT_GET_PAGE_PAGE_MACRO(t->tcb_rel.relpgtype, b));
-    }
-
-    /* Discard any allocated key b */
-    if ( AllocKbuf )
-	dm1b_DeallocKeyBuf(&AllocKbuf, &keypos);
-
-    return;
-}
-
-/*{
 ** Name: dmdprbrange - Prints low and high range of BTREE leaf page.
 **
 ** Description:
@@ -1346,6 +1237,8 @@ DMPP_PAGE	*b)
     for (i = 0; i < kids; i++)
     {
 	dmdprtid(page_type, page_size, b, i); 
+	keypos = KeyBuf;
+	key_len = klen;
 	if (DM1B_VPT_GET_PAGE_STAT_MACRO(page_type, b) & DMPP_INDEX)
 	    s = dm1cxget(page_type, page_size, b, rac, i, &keypos,
 		    &tid, (i4*)NULL, &key_len, NULL, NULL, adf_cb );
@@ -1563,4 +1456,86 @@ ADF_CB		*adf_cb)
 	buffer[25] = EOS;
 
 	return;
+}
+
+
+
+/*
+** Name: dmd_pr_mvcc_info		- print mvcc diags (after failure)
+**
+** Description:
+**	This routine can be called after mvcc failure to print diagnosticts
+**
+** Inputs:
+**      rcb
+**
+** Outputs:
+**      none
+**
+** Returns:
+**	VOID
+**
+** History:
+**      09-Jun-2010 (stial01)
+**          Created from similar diags in dm1r_delete.
+**	01-Jul-2010 (jonj)
+**	    Added some more crib stuff, like the contents
+**	    of the xid_array.
+*/
+VOID
+dmd_pr_mvcc_info(
+DMP_RCB		*r)
+{
+    DMP_TCB		*t;
+    LG_CRIB		*crib = r->rcb_crib_ptr;
+    i4			i;
+
+    t = r->rcb_tcb_ptr;
+
+    if ( crib )
+    {
+	TRdisplay(
+	    " %@ tran %x MVCC: tbl(%d,%d) \n"
+	    " crib_bos_tranid %x\n"
+	    " log_id %d low_lsn %x commit %x bos %x\n",
+	    r->rcb_tran_id.db_low_tran,
+	    t->tcb_rel.reltid.db_tab_base, t->tcb_rel.reltid.db_tab_index,
+	    crib->crib_bos_tranid,
+	    r->rcb_slog_id_id,
+	    crib->crib_low_lsn.lsn_low,
+	    crib->crib_last_commit.lsn_low,
+	    crib->crib_bos_lsn.lsn_low);
+	TRdisplay("%@ tran %x active transactions: %d,%d\n",
+	    r->rcb_tran_id.db_low_tran,
+	    crib->crib_lgid_low, crib->crib_lgid_high);
+	for ( i = crib->crib_lgid_low; i <= crib->crib_lgid_high; i++ )
+	{
+	    if ( crib->crib_xid_array[i] )
+	        TRdisplay("          %4d: 0x%x\n",
+		    i, crib->crib_xid_array[i]);
+	}
+    }
+
+    /* Additional diagnostics, print page contents */
+    if ( r->rcb_other.page )
+    {
+	TRdisplay("\n%@ RCB other.page 0x%x:\n", r->rcb_other.page);
+	dmd_prindex(r, r->rcb_other.page, (i4)0);
+    }
+    if ( r->rcb_other.CRpage )
+    {
+	TRdisplay("\n%@ RCB other.CRpage 0x%x:\n", r->rcb_other.CRpage);
+	dmd_prindex(r, r->rcb_other.CRpage, (i4)0);
+    }
+
+    if ( r->rcb_data.page )
+    {
+	TRdisplay("\n%@ RCB data.page 0x%x:\n", r->rcb_data.page);
+	dmd_prdata(r, r->rcb_data.page);
+    }
+    if ( r->rcb_data.CRpage )
+    {
+	TRdisplay("\n%@ RCB data.CRpage 0x%x:\n", r->rcb_data.CRpage);
+	dmd_prdata(r, r->rcb_data.CRpage);
+    }
 }

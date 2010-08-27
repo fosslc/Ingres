@@ -193,6 +193,19 @@
 **     23-Apr-2010 (Ralph Loen) Bug 123629
 **          In SQLBrowseConnectW(), don't invoke ResetDbc() if
 **          bcConnectCalled is set in the connection handle.
+**    13-Aug-2010 (Ralph Loen) Bug 124235
+**          In SQLGetDiagRecW(), SQLGetDiagFieldW(), and SQLGetErrorW(),
+**          replaced ceiling of SQL_MAX_MESSAGE_LENGTH with
+**          the result of ErrGetSqlcaMessageLen().  Unicode conversion
+**          workspaces are not potentially dynamic.
+**     24-Aug-2010 (Ralph Loen) Bug 124300
+**          In ConvertWCharToChar(), allow for two bytes of the length 
+**          indicator for the returned varchar.
+**     25-Aug-2010 (Ralph Loen) Bug 124307
+**          In ConvertWCharToChar(), multiply the length of source
+**          Unicode string by 2 instead of sizeof(SQLWCHAR), since
+**          this equates to 4 on UCS4 systems, but the string has already
+**          been converted to UCS2.
 */
 
 /*
@@ -468,7 +481,7 @@ RETCODE ConvertWCharToChar(
         ConvertUCS4ToUCS2((u_i4*)szWideValue, (u_i2*)ucs2buf, cbWideValue);
     }
 
-    cbWideValue *= sizeof(SQLWCHAR); 
+    cbWideValue *= sizeof(i2); 
 
     szValue = MEreqmem(0, cbValueMax+2, TRUE, NULL);
 
@@ -503,13 +516,13 @@ RETCODE ConvertWCharToChar(
         cv.cv_srcValue.dv_length    = (II_UINT2) cbWideValue;
         cv.cv_dstDesc.ds_dataType   = IIAPI_VCH_TYPE;
         cv.cv_dstDesc.ds_nullable   = FALSE;
-        cv.cv_dstDesc.ds_length     = (II_UINT2)cbValueMax;
+        cv.cv_dstDesc.ds_length     = (II_UINT2)cbValueMax+2;
         cv.cv_dstDesc.ds_precision  = 0;
         cv.cv_dstDesc.ds_scale      = 0;
         cv.cv_dstDesc.ds_columnType = IIAPI_COL_TUPLE;
         cv.cv_dstDesc.ds_columnName = NULL;
         cv.cv_dstValue.dv_null      = FALSE;
-        cv.cv_dstValue.dv_length    = (II_UINT2)cbValueMax;
+        cv.cv_dstValue.dv_length    = (II_UINT2)cbValueMax+2;
         cv.cv_dstValue.dv_value     = szValue;
 
         IIapi_convertData(&cv);  
@@ -1102,49 +1115,76 @@ SQLRETURN SQL_API SQLErrorW(
     SQLRETURN    rc, rc2 = SQL_SUCCESS;
     SQLCHAR      szSqlStateWk    [SQL_SQLSTATE_SIZE+1]="";
     SQLWCHAR     szWideSqlStateWk[SQL_SQLSTATE_SIZE+1]={0};
-    SQLCHAR      szErrorMsgWk[512];
+    SQLCHAR      szErrorMsgWk[SQL_MAX_MESSAGE_LENGTH];
+    char         *szValue = (char *)&szErrorMsgWk[0];
+    WORD         len = SQL_MAX_MESSAGE_LENGTH;
+    LPDBC        pdbc = (LPDBC)hdbc;
+    LPSTMT       pstmt = (LPSTMT)hstmt;
+    SQLCA_TYPE   *psqlca = NULL;
+    BOOL         dynAlloc = FALSE;
+
+    if (!(pdbc && pstmt))
+    {
+        if (pdbc)
+            psqlca = &pdbc->sqlca;
+        else if (pstmt)
+            psqlca = &pstmt->sqlca;
+    }
+
+    if (psqlca)   
+    {
+        len = ErrGetSqlcaMessageLen(1, psqlca);
+
+        if (len > SQL_MAX_MESSAGE_LENGTH - 50)
+        {
+            len += 100;
+            szValue = MEreqmem(0, len, TRUE, NULL);
+            dynAlloc = TRUE;
+        }
+        else
+            len = SQL_MAX_MESSAGE_LENGTH;
+    }
 
     if ((henv  &&  ((LPENV )henv)                       ->isMerant311) ||
         (hdbc  &&  ((LPDBC )hdbc)            ->penvOwner->isMerant311) ||
         (hstmt &&  ((LPSTMT)hstmt)->pdbcOwner->penvOwner->isMerant311))
+    {
                               /* call ASCII entry point if Merant 3.11*/
-        return SQLError_InternalCall(henv, hdbc, hstmt,
-                  (SQLCHAR*)szSqlState, pfNativeError,
-                  (SQLCHAR*)szErrorMsg, cbErrorMsgMax, pcbErrorMsg);
-
-/*
-   {    char s[80]= "cbErrorMsgMax = ";
-        char t[80];
-        itoa((int)cbErrorMsgMax, t, (int)10);
-           strcat(s,t); 
-        MessageBox(NULL, s, "SQLErrorW", MB_ICONSTOP|MB_OK);
+        rc = SQLError_InternalCall(henv, hdbc, hstmt,
+            (SQLCHAR*)szSqlState, pfNativeError,
+            (SQLCHAR*)szErrorMsg, cbErrorMsgMax, pcbErrorMsg);
+        goto end;
     }
-*/
+
     rc = SQLError_InternalCall(henv, hdbc, hstmt,
                   szSqlStateWk, pfNativeError,
-                  szErrorMsgWk, sizeof(szErrorMsgWk), pcbErrorMsg);
+                  szValue, len, pcbErrorMsg);
     if (rc != SQL_SUCCESS  &&  rc != SQL_SUCCESS_WITH_INFO)
-        return rc;
+        goto end;
 
     if (szSqlState)          /* move SQLSTATE back */
-       {
+    {
         rc2 = ConvertCharToWChar(NULL,
-             (CHAR*)szSqlStateWk,    SQL_SQLSTATE_SIZE,     /* source */
-             szWideSqlStateWk,                       /* target */
-             sizeof(szWideSqlStateWk)/sizeof(SQLWCHAR),
-             NULL, NULL, NULL);
+            (CHAR*)szSqlStateWk,    SQL_SQLSTATE_SIZE,     /* source */
+            szWideSqlStateWk,                       /* target */
+            sizeof(szWideSqlStateWk)/sizeof(SQLWCHAR),
+            NULL, NULL, NULL);
         memcpy(szSqlState, szWideSqlStateWk, SQL_SQLSTATE_SIZE*sizeof(SQLWCHAR));
-       }
+    }
 
     if (rc2 == SQL_SUCCESS)
         rc2 = ConvertCharToWChar(NULL,   /* move Error Message Text back */
-            (CHAR*)szErrorMsgWk,    SQL_NTS     ,  /* source */
+            (CHAR*)szValue,    SQL_NTS     ,  /* source */
             szErrorMsg,      cbErrorMsgMax,        /* target */
             pcbErrorMsg, NULL, NULL);
 
     if (rc == SQL_SUCCESS)   /* upgrade the msg level */
         rc =  rc2;
 
+end:
+    if (dynAlloc)
+        MEfree((PTR)szValue);
+    
     return rc;
 }
 
@@ -1524,15 +1564,57 @@ SQLRETURN SQL_API SQLGetDiagFieldW(
     SQLPOINTER       rgbDiagInfoOrig   = rgbDiagInfo;
     SQLSMALLINT      cbDiagInfoMaxOrig = cbDiagInfoMax;
     short            bNeedConversion=FALSE;
-    char             DescWk[512];
+    char             DescWk[SQL_MAX_MESSAGE_LENGTH];
+    char         *szValue = &DescWk[0];
+    WORD         len = SQL_MAX_MESSAGE_LENGTH;
+    LPDBC        pdbc;
+    LPSTMT       pstmt;
+    LPDESC       pdesc;
+    SQLCA_TYPE *psqlca = NULL;
+    BOOL         dynAlloc = FALSE;
+
+    switch (fHandleType)
+    {
+    case SQL_HANDLE_DBC:
+        pdbc = (LPDBC)handle;
+        psqlca = &pdbc->sqlca;
+        break;
+
+    case SQL_HANDLE_STMT:
+        pstmt = (LPSTMT)handle;
+        psqlca = &pstmt->sqlca;
+        break;
+
+    case SQL_HANDLE_DESC:
+        pdesc = (LPDESC)handle;
+        psqlca = &pdesc->sqlca;
+        break;
+    }
+
+    if (psqlca)
+    {
+        len = ErrGetSqlcaMessageLen(iRecord, psqlca);
+
+        if (len > SQL_MAX_MESSAGE_LENGTH - 50)
+        {
+            len += 100;
+            szValue = MEreqmem(0, len, TRUE, NULL);
+            dynAlloc = TRUE;
+        }
+        else
+            len = SQL_MAX_MESSAGE_LENGTH;
+    }
 
     if ((fHandleType==SQL_HANDLE_ENV  &&  ((LPENV )handle)                      ->isMerant311) ||
         (fHandleType==SQL_HANDLE_DBC  &&  ((LPDBC )handle)           ->penvOwner->isMerant311) ||
         (fHandleType==SQL_HANDLE_STMT &&  ((LPSTMT)handle)->pdbcOwner->penvOwner->isMerant311) ||
         (fHandleType==SQL_HANDLE_DESC &&  ((LPDESC)handle)     ->pdbc->penvOwner->isMerant311))
-                              /* call ASCII entry point if Merant 3.11*/
-        return SQLGetDiagField_InternalCall(fHandleType, handle, iRecord, fDiagField,
-                         rgbDiagInfo, cbDiagInfoMax, pcbDiagInfo);
+    {
+        /* call ASCII entry point if Merant 3.11*/
+        rc = SQLGetDiagField_InternalCall(fHandleType, handle, iRecord, fDiagField,
+            rgbDiagInfo, cbDiagInfoMax, pcbDiagInfo);
+        goto end;
+    }
 
     if (fDiagField == SQL_DIAG_DYNAMIC_FUNCTION ||
         fDiagField == SQL_DIAG_CLASS_ORIGIN     ||
@@ -1541,20 +1623,20 @@ SQLRETURN SQL_API SQLGetDiagFieldW(
         fDiagField == SQL_DIAG_SERVER_NAME      ||
         fDiagField == SQL_DIAG_SQLSTATE         ||
         fDiagField == SQL_DIAG_SUBCLASS_ORIGIN)
-           {
+        {
             bNeedConversion=TRUE;
-            rgbDiagInfo   = DescWk;
-            cbDiagInfoMax = sizeof(DescWk);
-           }
+            rgbDiagInfo   = szValue;
+            cbDiagInfoMax = len;
+        }
 
     rc = SQLGetDiagField_InternalCall(fHandleType, handle, iRecord, fDiagField,
-                         rgbDiagInfo, cbDiagInfoMax, pcbDiagInfo);
+        rgbDiagInfo, cbDiagInfoMax, pcbDiagInfo);
 
     if (rc != SQL_SUCCESS  &&  rc != SQL_SUCCESS_WITH_INFO)
-        return rc;
+        goto end;
 
     if (bNeedConversion==FALSE)  /* if not a name, we're all done */
-        return rc;
+        goto end;
 
     rc2 = ConvertCharToWChar(NULL,    /* move name back as wide (Unicode)*/
                          rgbDiagInfo,   SQL_NTS,             /* source */
@@ -1567,7 +1649,10 @@ SQLRETURN SQL_API SQLGetDiagFieldW(
     if (pcbDiagInfo && (rc == SQL_SUCCESS  ||  rc == SQL_SUCCESS_WITH_INFO))
        *pcbDiagInfo = (SQLSMALLINT)(*pcbDiagInfo * sizeof(SQLWCHAR));
                              /* return length as byte length */
-
+end:
+    if (dynAlloc)
+        MEfree((PTR)szValue);
+    
     return rc;
 }
 
@@ -1585,46 +1670,89 @@ SQLRETURN SQL_API SQLGetDiagRecW(
     SQLRETURN    rc, rc2 = SQL_SUCCESS;
     char         szSqlStateWk    [SQL_SQLSTATE_SIZE+1]="";
     SQLWCHAR     szWideSqlStateWk[SQL_SQLSTATE_SIZE+1]={0};
-    char         szErrorMsgWk[512];
+    char         szErrorMsgWk[SQL_MAX_MESSAGE_LENGTH];
+    char         *szValue = &szErrorMsgWk[0];
+    WORD         len = SQL_MAX_MESSAGE_LENGTH;
+    LPDBC        pdbc;
+    LPSTMT       pstmt;
+    LPDESC       pdesc;
+    SQLCA_TYPE *psqlca = NULL;
+    BOOL         dynAlloc = FALSE;
 
+    switch (fHandleType)
+    {
+    case SQL_HANDLE_DBC:
+        pdbc = (LPDBC)handle;
+        psqlca = &pdbc->sqlca;
+        break;
+
+    case SQL_HANDLE_STMT:
+        pstmt = (LPSTMT)handle;
+        psqlca = &pstmt->sqlca;
+        break;
+
+    case SQL_HANDLE_DESC:
+        pdesc = (LPDESC)handle;
+        psqlca = &pdesc->sqlca;
+        break;
+    }
+
+    if (psqlca)
+    {
+        len = ErrGetSqlcaMessageLen(iRecord, psqlca);
+
+        if (len > SQL_MAX_MESSAGE_LENGTH - 50)
+        {
+            len += 100;
+            szValue = MEreqmem(0, len, TRUE, NULL);
+            dynAlloc = TRUE;
+        }
+        else
+            len = SQL_MAX_MESSAGE_LENGTH;
+    }
+    
     if ((fHandleType==SQL_HANDLE_ENV  &&  ((LPENV )handle)                      ->isMerant311) ||
         (fHandleType==SQL_HANDLE_DBC  &&  ((LPDBC )handle)           ->penvOwner->isMerant311) ||
         (fHandleType==SQL_HANDLE_STMT &&  ((LPSTMT)handle)->pdbcOwner->penvOwner->isMerant311) ||
         (fHandleType==SQL_HANDLE_DESC &&  ((LPDESC)handle)     ->pdbc->penvOwner->isMerant311))
+    {
                               /* call ASCII entry point if Merant 3.11*/
-        return SQLGetDiagRec_InternalCall(fHandleType, handle, iRecord,
+        rc = SQLGetDiagRec_InternalCall(fHandleType, handle, iRecord,
                        (SQLCHAR*)szSqlState, pfNativeError,
-                       (SQLCHAR*)szErrorMsg, cbErrorMsgMax, pcbErrorMsg);
+                       (SQLCHAR*)szValue, cbErrorMsgMax, pcbErrorMsg);
+        goto end;
+    }
 
     rc = SQLGetDiagRec_InternalCall(fHandleType, handle, iRecord,
-                       (SQLCHAR*)szSqlStateWk, pfNativeError,
-                       (SQLCHAR*)szErrorMsgWk, sizeof(szErrorMsgWk), pcbErrorMsg);
+        (SQLCHAR*)szSqlStateWk, pfNativeError,
+        (SQLCHAR*)szValue, len, pcbErrorMsg);
     if (rc != SQL_SUCCESS  &&  rc != SQL_SUCCESS_WITH_INFO)
-        return rc;
+        goto end;
 
     if (szSqlState)          /* move SQLSTATE back */
-       {
+    {
         rc2 = ConvertCharToWChar(NULL,
-             szSqlStateWk,    sizeof(szSqlStateWk),                      /* source */
-             szWideSqlStateWk,sizeof(szWideSqlStateWk)/sizeof(SQLWCHAR), /* target */
-             NULL, NULL, NULL);
+            szSqlStateWk,    sizeof(szSqlStateWk),                      /* source */
+            szWideSqlStateWk,sizeof(szWideSqlStateWk)/sizeof(SQLWCHAR), /* target */
+            NULL, NULL, NULL);
         if (SQL_SUCCEEDED(rc2))
             memcpy(szSqlState, szWideSqlStateWk, (SQL_SQLSTATE_SIZE+1)*sizeof(SQLWCHAR));
-       }
+    }
 
     if (SQL_SUCCEEDED(rc2))
         rc2 = ConvertCharToWChar(NULL,   /* move Error Message Text back */
-         szErrorMsgWk,    SQL_NTS     ,  /* source */
-         szErrorMsg,      cbErrorMsgMax, /* target */
-         pcbErrorMsg, NULL, NULL);
+            szValue,    SQL_NTS     ,  /* source */
+            szErrorMsg,      cbErrorMsgMax, /* target */
+            pcbErrorMsg, NULL, NULL);
 
     if (rc2 != SQL_SUCCESS)   /* upgrade the msg level */
         rc =  rc2;
-
+    
+end:
+    if (dynAlloc)
+        MEfree((PTR)szValue);
     return rc;
 }
-
-
 
 #endif
 

@@ -211,6 +211,12 @@ dbms.buf_caches.title:    		'DBMS Buffer Caches'
 dbms.cache_dynamic.file:		dbmscady.hlp
 dbms.cache_dynamic.title:		'DBMS Dynamic Query Cache'
 
+dbms.batch_copy_optim.file:			dbmscpop.hlp
+dbms.batch_copy_optim.title:		'DBMS Batch Copy Optimization'
+
+dbms.table_auto_structure.file:		dbmstbst.hlp
+dbms.table_auto_structure.title:	'DBMS Automatic Table Structure'
+
 *.cache_name.file:			cachname.hlp
 dbms.cache_name.title:			'DBMS Cache Name'
 rms.cache_name.title:			'RMS Cache Name'
@@ -220,6 +226,9 @@ dbms.cache_sharing.title:		'DBMS Cache Sharing'
 
 rms.cache_sharing.file:			rmscachshar.hlp
 rms.cache_sharing.title:                'RMS Cache Sharing'
+
+dbms.create_compression.file:		dbmsccom.hlp
+dbms.create_compression.title:		'DBMS Default Create-Table Compression'
 
 dbms.dmcm.file:				dmcm.hlp
 dbms.dmcm.title:			'DBMS Distributed Multi-Cache'
@@ -276,6 +285,9 @@ rms.define_address.title:		'II_DBMS_SERVER Symbol Definition'
 
 *.default_journaling.file:		dbmsjrnl.hlp	
 dbms.default_journaling.title:		'DBMS Default Journaling'
+
+dbms.degree_of_parallelism.file:	dbmsdegp.hlp
+dbms.degree_of_parallelism.title:	'DBMS Degree of DMF Parallelism'
 
 dbms.dmf_build_pages.file:              dbmsdmbp.hlp
 dbms.dmf_build_pages.title:             'DBMS DMF Build Buffer Size'
@@ -337,6 +349,7 @@ rms.log_readnolock.title:              'Log errors for readlock nolock'
 *.mechanisms.file:                      mechanisms.hlp
 *.mechanisms.title:			'Dynamically-loaded Mechanism List'
 
+*.name_service.file:			dbmsname.hlp
 dbms.name_service.title:		'DBMS Name Service'
 star.name_service.title:		'Star Name Service'
 recovery.name_service.title:		'Recovery Server Name Service'
@@ -390,6 +403,9 @@ rms.opf_old_idxorder.title:		'RMS Gateway OPF secondary index order'
 
 *.opf_pq_dop.file:			dbmspqdo.hlp
 *.opf_pq_dop.title:			'Parallel Query Thread Count'
+
+*.opf_pq_partthreads.file:		dbmspqpa.hlp
+*.opf_pq_partthreads.title:		'Parallel Query Thread Count for Partitioned Table'
 
 *.opf_pq_threshold.file:		dbmspqth.hlp
 *.opf_pq_threshold.title:		'Parallel Query Threshold'
@@ -600,9 +616,12 @@ rms.session_accounting.title:		'RMS Gateway Session Accounting'
 
 dbms.size_io_buf.file:			dbmssiob.hlp
 dbms.size_io_buf.title:			'DBMS/Slave I/O Buffer Size'
-	  
+
+dbms.sole_cache.file:			dbmssolc.hlp
+dbms.sole_cache.title:			'DBMS Database Sole-Cache Affinity'
+
 *.sole_server.file:			dbmssole.hlp	
-dbms.sole_server.title:			'DBMS Sole Server'
+dbms.sole_server.title:			'DBMS Database Sole Server Affinity'
 star.sole_server.title:			'Star Sole Server'
 rms.sole_server.title:			'RMS Gateway Sole Server'
 
@@ -691,6 +710,9 @@ rms.dmf_tbl_cache_size.title:		'RMS Gateway DMF Table Cache Size'
 *.dmf_cache_size.file:			dbmscach.hlp
 dbms.dmf_cache_size.title:		'DBMS DMF Cache Size'
 rms.dmf_cache_size.title:               'RMS DMF Cache Size'
+
+*.dmf_crypt_maxkeys.file:		dbmsmxky.hlp
+dbms.dmf_crypt_maxkeys.title:		'DBMS DMF Max Active Encryption Keys'
 
 *.dmf_free_limit.file:			dbmsdmff.hlp	
 dbms.dmf_free_limit.title:		'DBMS DMF Free Page Limit'

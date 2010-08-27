@@ -179,6 +179,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	28-Jul-2010 (kschendel) SIR 124104
+**	    Key count in statement node changed to i2, fix here.
 */
 
 /* function prototypes for static functions
@@ -195,7 +197,7 @@ static DB_STATUS    psl_ver_cons_columns(
 					 DB_COLUMN_BITMAP *col_map,
 					 DMT_ATT_ENTRY    **att_array,
 					 PST_COL_ID       **colid_listp,
-					 i4		  *numcols,
+					 i2		  *numcols,
 					 DB_ERROR  	  *err_blk);
 static DB_STATUS    psl_ver_unique_cons(
 					PSS_SESBLK    *sess_cb, 
@@ -796,7 +798,7 @@ psl_ver_cons_columns(
 /*returned*/	     DB_COLUMN_BITMAP *col_map,
 /*returned*/	     DMT_ATT_ENTRY    **att_array,
 /*returned*/	     PST_COL_ID       **colid_listp,
-/*returned*/	     i4	      *num_cols,
+/*returned*/	     i2	      *num_cols,
 /*returned*/	     DB_ERROR  	      *err_blk)
 {
     PSY_COL 	    *curcol;
@@ -2307,6 +2309,8 @@ psl_ver_unique_cons(
 **	    If psl_rngent returns E_DB_INFO it found a session temporary
 **	    table, which is invalid in this context, so ignore such tables
 **	    (pslsgram will catch this anyway, or at least should!).
+**	19-Jun-2010 (kiria01) b123951
+**	    Add extra parameter to psl_rngent for WITH support.
 */
 static DB_STATUS
 psl_ver_ref_cons(
@@ -2322,7 +2326,8 @@ psl_ver_ref_cons(
     PSS_OBJ_NAME     *ref_obj_name;
     PSS_RNGTAB	     *rngvar;
     i4		     rngvar_info;
-    i4		     num_cols, dummy;
+    i4		     num_cols;
+    i2		     dummy;
     PST_COL_ID	     *cons_collist;
     PST_COL_ID	     *ref_collist;
     PSY_COL	     *curcol;
@@ -2604,7 +2609,7 @@ psl_ver_ref_cons(
     {
 	status = psl_rngent(&sess_cb->pss_auxrng, -1, "", 
 			    &ref_obj_name->pss_obj_name, sess_cb, FALSE, 
-			    &rngvar, qmode, err_blk, &rngvar_info);
+			    &rngvar, qmode, err_blk, &rngvar_info, NULL);
 	if (status == E_DB_INFO)	/* oops, we found a session.table */
 	{
 	    rngvar = (PSS_RNGTAB *) NULL;
@@ -4286,7 +4291,7 @@ psl_ver_check_cons(
     DB_COLUMN_BITMAP known_not_nullable_map;
     i4	   err_code;
     DB_ERROR	   *err_blk = &psq_cb->psq_error;
-    i4		   dummy;
+    i2		   dummy;
 
     /* set bit flagging this as a check constraint
      */

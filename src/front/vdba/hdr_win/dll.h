@@ -33,6 +33,11 @@
 **   Keep in mind that here we're getting dangerously close
 **   to blowing a stack, so this should be the first place to look
 **   if that happens.
+**  20-Aug-2010 (drivi01)
+**   Add a 3rd parameter to the CAListBoxFillTables function.
+**   The parameter will specify whether the list of tables
+**   should include all tables (Ingres and VectorWise) or just
+**   Ingres tables.
 ********************************************************************/
 
 #ifndef _DLL_H
@@ -196,7 +201,7 @@ void CAListBoxFillTableColumns         (HWND hwndCtl, LPUCHAR DBName, LPUCHAR Ta
 BOOL CAListBoxFillTableColumns_x_Types (HWND hwndCtl, LPUCHAR DBName, LPUCHAR TableName);
 BOOL CAListBoxFillViewColumns_x_Types  (HWND hwndCtl, LPUCHAR DBName, LPUCHAR ViewName);
 
-BOOL CAListBoxFillTables    (HWND hwndCtl, LPUCHAR DatabaseName);
+BOOL CAListBoxFillTables    (HWND hwndCtl, LPUCHAR DatabaseName, BOOL bVW);
 void CAListBoxFillViewColumns  (HWND hwndCtl, LPUCHAR DBName, LPUCHAR ViewName);
 void ComboBoxFillUsers      (HWND hwndCtl);
 void CAListBoxFillUsers     (HWND hwndCtl);

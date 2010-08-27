@@ -40,6 +40,12 @@ GLOBALREF	DMC_CRYPT	*Dmc_crypt;
 **	    Created.
 **	25-May-2010 (kschendel)
 **	    Add missing MH include.
+**	20-aug-2010 (miket) SIR 122403
+**	    Trap illegal encryption slot parameter.
+**	24-Aug-2010 (miket) SIR 122403
+**	    Index operations on a locked table will inherit a 0 slot.
+**	    So tell the user that encryption is locked, but write
+**	    a diagnostic message as well to the dbms log.
 **/
 
 /*{
@@ -49,7 +55,8 @@ GLOBALREF	DMC_CRYPT	*Dmc_crypt;
 **	Implements transparent decryption for column encryption.
 **
 ** Inputs:
-**      t			Pointer to DMP_TCB
+**      r			Pointer to DMP_RCB
+**      rac			Pointer to DMP_ROWACCESS
 **      erec			Pointer to encrypted text rec buffer
 **      prec			Pointer to plain text rec buffer
 **	work			Pointer to work buffer
@@ -67,6 +74,15 @@ GLOBALREF	DMC_CRYPT	*Dmc_crypt;
 ** History:
 **      14-feb-2010 (toumi01) SIR 122403
 **	    Created.
+**	27-Jul-2010 (toumi01) BUG 124133
+**	    Store shm encryption keys by dbid/relid, not just relid! Doh!
+**	04-Aug-2010 (miket) SIR 122403
+**	    Correct function documentation.
+**	    Change encryption activation terminology from
+**	    enabled/disabled to unlock/locked.
+**	    Change rcb_enckey_slot base from 0 to 1 for sanity checking.
+**	24-Aug-2010 (miket) SIR 122403
+**	    Clarify the bad CRC msg by adding computed and stored adjectives.
 [@history_template@]...
 */
 DB_STATUS
@@ -98,22 +114,30 @@ dm1e_aes_decrypt(DMP_RCB *r, DMP_ROWACCESS *rac, char *erec, char *prec,
 	    ULE_LOG, NULL, (char *)NULL,
 	    (i4)0, (i4 *)NULL, &error, 1,
 	    sizeof(slots), &slots);
-	SETDBERR(dberr, 0, E_DM0174_ENCRYPT_NOT_ENABLED);
+	SETDBERR(dberr, 0, E_DM0174_ENCRYPT_LOCKED);
 	return (E_DB_ERROR);
     }
 
     if (!(t->tcb_rel.relencflags & TCB_ENCRYPTED))
 	t = t->tcb_parent_tcb_ptr;	/* for secondary indices */
     cp = (DMC_CRYPT_KEY *)((PTR)Dmc_crypt + sizeof(DMC_CRYPT));
-    cp += r->rcb_enckey_slot;
+    if (r->rcb_enckey_slot < 1)
+    {
+	TRdisplay("%@ Illegal parameter in dm1e_aes_decrypt: r->rcb_enckey_slot = %d\n",
+	    r->rcb_enckey_slot);
+	SETDBERR(dberr, 0, E_DM0174_ENCRYPT_LOCKED);
+	return (E_DB_ERROR);
+    }
+    cp += r->rcb_enckey_slot-1;		/* slot is 1-based */
     MEcopy((PTR)cp->key,sizeof(key),key);	/* cache it locally */
     if ( cp->status == DMC_CRYPT_ACTIVE &&
+	 cp->db_id == t->tcb_dcb_ptr->dcb_id &&
 	 cp->db_tab_base == t->tcb_rel.reltid.db_tab_base)
 	; /* it is the best of all possible worlds */
     else
     {
-	/* encryption not enabled using MODIFY tbl ENCRYPT WITH PASSPHRASE= */
-	SETDBERR(dberr, 0, E_DM0174_ENCRYPT_NOT_ENABLED);
+	/* encryption not unlocked using MODIFY tbl ENCRYPT WITH PASSPHRASE= */
+	SETDBERR(dberr, 0, E_DM0174_ENCRYPT_LOCKED);
 	return (E_DB_ERROR);
     }
 
@@ -179,7 +203,7 @@ dm1e_aes_decrypt(DMP_RCB *r, DMP_ROWACCESS *rac, char *erec, char *prec,
 		{
 		    /* internal error */
 		    SETDBERR(dberr, 0, E_DM0176_ENCRYPT_CRC_ERROR);
-		    TRdisplay("\tDecryption bad CRC: %x does not match ",crc);
+		    TRdisplay("\tDecryption bad CRC: computed %x does not match stored ",crc);
 		    MEcopy((PTR)work + crclen, sizeof(crc), (PTR)&crc);
 		    TRdisplay("%x:\n",crc);
 		    p = work;
@@ -218,7 +242,8 @@ dm1e_aes_decrypt(DMP_RCB *r, DMP_ROWACCESS *rac, char *erec, char *prec,
 **	Implements transparent encryption for column encryption.
 **
 ** Inputs:
-**      t			Pointer to DMP_TCB
+**      r			Pointer to DMP_RCB
+**      rac			Pointer to DMP_ROWACCESS
 **      prec			Pointer to plain text rec buffer
 **      erec			Pointer to encrypted text rec buffer
 **	DB_ERROR		*dberr
@@ -235,6 +260,13 @@ dm1e_aes_decrypt(DMP_RCB *r, DMP_ROWACCESS *rac, char *erec, char *prec,
 ** History:
 **      14-feb-2010 (toumi01) SIR 122403
 **	    Created.
+**	27-Jul-2010 (toumi01) BUG 124133
+**	    Store shm encryption keys by dbid/relid, not just relid! Doh!
+**	04-Aug-2010 (miket) SIR 122403
+**	    Correct function documentation.
+**	    Change encryption activation terminology from
+**	    enabled/disabled to unlock/locked.
+**	    Change rcb_enckey_slot base from 0 to 1 for sanity checking.
 [@history_template@]...
 */
 DB_STATUS
@@ -268,22 +300,30 @@ dm1e_aes_encrypt(DMP_RCB *r, DMP_ROWACCESS *rac, char *prec, char *erec,
 	    ULE_LOG, NULL, (char *)NULL,
 	    (i4)0, (i4 *)NULL, &error, 1,
 	    sizeof(slots), &slots);
-	SETDBERR(dberr, 0, E_DM0174_ENCRYPT_NOT_ENABLED);
+	SETDBERR(dberr, 0, E_DM0174_ENCRYPT_LOCKED);
 	return (E_DB_ERROR);
     }
 
     if (!(t->tcb_rel.relencflags & TCB_ENCRYPTED))
 	t = t->tcb_parent_tcb_ptr;	/* for secondary indices */
     cp = (DMC_CRYPT_KEY *)((PTR)Dmc_crypt + sizeof(DMC_CRYPT));
-    cp += r->rcb_enckey_slot;
+    if (r->rcb_enckey_slot < 1)
+    {
+	TRdisplay("%@ Illegal parameter in dm1e_aes_encrypt: r->rcb_enckey_slot = %d\n",
+	    r->rcb_enckey_slot);
+	SETDBERR(dberr, 0, E_DM0174_ENCRYPT_LOCKED);
+	return (E_DB_ERROR);
+    }
+    cp += r->rcb_enckey_slot-1;		/* slot is 1-based */
     MEcopy((PTR)cp->key,sizeof(key),key);	/* cache it locally */
     if ( cp->status == DMC_CRYPT_ACTIVE &&
+	 cp->db_id == t->tcb_dcb_ptr->dcb_id &&
 	 cp->db_tab_base == t->tcb_rel.reltid.db_tab_base)
 	; /* it is the best of all possible worlds */
     else
     {
-	/* encryption not enabled using MODIFY tbl ENCRYPT WITH PASSPHRASE= */
-	SETDBERR(dberr, 0, E_DM0174_ENCRYPT_NOT_ENABLED);
+	/* encryption not unlocked using MODIFY tbl ENCRYPT WITH PASSPHRASE= */
+	SETDBERR(dberr, 0, E_DM0174_ENCRYPT_LOCKED);
 	return (E_DB_ERROR);
     }
 

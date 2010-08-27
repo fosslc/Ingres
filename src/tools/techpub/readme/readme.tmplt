@@ -1,7 +1,7 @@
 <HTML>
 <HEAD>
 <!-- Created with DOC2HTML, v610 (12/21/2006) -->
-<title>Ingres® 10.0 </title>
+<title>Ingres® 10.0 Beta </title>
 <META HTTP-EQUIV="Content-Type" Content="text-html; charset=utf-8">
 <style>
 <!--
@@ -39,7 +39,7 @@ hr                           { color: #CCCCCC; height:1px; }
 </HEAD>
 <BODY>
 <table width="100%"  border="0" cellspacing="0" cellpadding="0"><tr><td class="computerassoc">Ingres Corporation</td></tr></table>
-<h1><a name="ingres_10_0">Ingres<sup>®</sup> 10.0</a></h1>
+<h1><a name="ingres_10_0_beta">Ingres<sup>®</sup> 10.0 Beta</a></h1>
 <p>
 <hr>
 <nobr>
@@ -56,19 +56,17 @@ hr                           { color: #CCCCCC; height:1px; }
 <br><a href="#enterprise_access_support">4.6  Enterprise Access Support</a>
 <br><a href="#odbc_support">4.7  ODBC Support</a>
 <br><a href="#jdbc_driver">4.8  JDBC Driver</a>
-<br><a href="#unicode_support_in_terminal_monitor">4.9  Unicode Support in Terminal Monitor</a>
-<br><a href="#selecting_or_updating_new_data_types_from_an_older_client">4.10  Selecting or Updating New Data Types from an Older Client</a>
-<br><a href="#embedded_sql_c_and_abf_programs">4.11  Embedded SQL/C and ABF Programs</a>
-<br><a href="#change_to_default_column_names_for_row_producing_procedures">4.12  Change to Default Column Names for Row-producing Procedures</a>
-<br><a href="#tables_with_identity_columns">4.13  Tables with Identity Columns</a>
-<br><a href="#web_deployment_option">4.14  Web Deployment Option</a>
+<br><a href="#ingres_jdbc_driver_package">4.9  Ingres JDBC Driver Package</a>
+<br><a href="#unicode_support_in_terminal_monitor">4.10  Unicode Support in Terminal Monitor</a>
+<br><a href="#selecting_or_updating_new_data_types_from_an_older_client">4.11  Selecting or Updating New Data Types from an Older Client</a>
+<br><a href="#embedded_sql_c_and_abf_programs">4.12  Embedded SQL/C and ABF Programs</a>
+<br><a href="#change_to_default_column_names_for_row_producing_procedures">4.13  Change to Default Column Names for Row-producing Procedures</a>
+<br><a href="#tables_with_identity_columns">4.14  Tables with Identity Columns</a>
+<br><a href="#removed_features">4.15  Removed Features</a>
+<br><a href="#subquery_behavior_change_due_to_scalar_subquery_feature">4.16  Subquery Behavior Change due to Scalar Subquery Feature</a>
 <p><b><a href="#fixed_issues">5.0  Fixed Issues</a></b>
-<p><b><a href="#known_issues">6.0  Known Issues</a></b>
-<br><a href="#dbms_server_and_dba_tools_issues">6.1  DBMS Server and DBA Tools Issues</a>
-<br><a href="#windows_installation_issues">6.2  Windows Installation Issues</a>
-<br><a href="#linux_installation_issues">6.3  Linux Installation Issues</a>
-<p><b><a href="#documentation">7.0  Documentation</a></b>
-<p><b><a href="#your_support_options">8.0  Your Support Options</a></b>
+<p><b><a href="#documentation">6.0  Documentation</a></b>
+<p><b><a href="#your_support_options">7.0  Your Support Options</a></b>
 </nobr>
 <p>
 <hr>
@@ -91,8 +89,8 @@ users.
 <p>
 <hr>
 <h3><a name="new_in_this_release">1.1  New in this Release</a></h3>
-<p>New features for Ingres 10.0 are described in the
-<a href="http://docs.ingres.com/Ingres/9.3/Ingres%209.3%20Release%20Summary/docindex.htm" target="_blank">Ingres 10.0 Release Summary</a>.
+<p>New features for Ingres 10.0 are described in the Ingres
+10.0 Release Summary.
 <p>
 <hr>
 <h2><a name="operating_system_support">2.0  Operating System Support</a></h2>
@@ -183,18 +181,6 @@ behavior can be selected using the URL attribute
 CURSOR=DBMS or setting the property
 ingres.jdbc.property.cursor_mode=dbms in the driver
 property file. 
-<p><b>Ingres JDBC Driver Package</b>
-<p>The original Ingres JDBC Driver and DataSources classes
-contained in the Java archive iijdbc.jar under the Java
-package path of "ca.ingres.jdbc" are moved to the package
-path of "com.ingres.jdbc". The iijdbc.jar archive included
-with Ingres 10.0 also contains the original classes for
-backward compatibility. The original "ca.ingres.jdbc"
-package path and classes will be removed from iijdbc.jar in
-the next major release. Existing references to
-"ca.ingres.jdbc" classes will continue to work, but should
-be changed when convenient. New references should use the
-package path of "com.ingres.jdbc". 
 <p><b>Sequence Expressions</b>
 <p>If a sequence expression is used in a WHERE, ON, GROUP BY,
 HAVING, ORDER BY, or UNION clause, in a subquery, or with
@@ -211,7 +197,7 @@ set can be selected during installation.  If you are
 converting an existing database to a Unicode database, we
 recommend the database be reviewed to ensure that any
 existing 8-bit data convert to the correct encoding. 
-<a href="http://www.ingres.com/services/premium-services.php" target="_blank">Ingres Premium Services</a>  can assist you in a successful
+<a href="http://www.ingres.com/services/operational-services.php" target="_blank">Ingres Operational Services</a>  can assist you in a successful
 Unicode implementation.
 <p><b>Note:</b> An upgrade of a pre-Ingres 9.2 database with the
 character set to UTF8 is unable to be upgraded to Ingres
@@ -240,8 +226,7 @@ running in the local instance. We recommend that OpenROAD
 <p>
 <hr>
 <h3><a name="enterprise_access_support">4.6  Enterprise Access Support</a></h3>
-<p>This version of Ingres does not support Enterprise Access
-2.1 or 2.6 running in the local instance.  
+<p>This version of Ingres does not support Enterprise Access.
 <p>
 <hr>
 <h3><a name="odbc_support">4.7  ODBC Support</a></h3>
@@ -252,24 +237,51 @@ ODBC driver manager. For more information, see the
 <p>
 <hr>
 <h3><a name="jdbc_driver">4.8  JDBC Driver</a></h3>
-<p>The Ingres JDBC Driver supports Java 5 and above.  
+<p>The Ingres JDBC 4.0 Driver supports Java 6 and above.  
 <p>
 <hr>
-<h3><a name="unicode_support_in_terminal_monitor">4.9  Unicode Support in Terminal Monitor</a></h3>
+<h3><a name="ingres_jdbc_driver_package">4.9  Ingres JDBC Driver Package</a></h3>
+<p>Beginning with Ingres 2006, the Ingres JDBC Driver and
+DataSources classes contained in the Java archive
+iijdbc.jar under the Java package path of "ca.ingres.jdbc"
+were moved to the package path of "com.ingres.jdbc". The
+iijdbc.jar archive included with all Ingres 9.x releases
+also contains the original classes for backward
+compatibility with the note that the classes would be
+removed in the next major Ingres release.  
+<p>The original "ca.ingres.jdbc" package path and classes will
+be removed from iijdbc.jar beginning with Ingres 10.
+Existing references to "ca.ingres.jdbc" will need to
+be&nbsp;changed.&nbsp; JDBC 4.0, which is supported by the Ingres 10
+JDBC driver, provides a new mechanism for loading JDBC
+drivers which does not require Java applications to
+instantiate or reference the driver class.&nbsp; Existing
+references such as
+Class.forName("ca.ingres.jdbc.IngresDriver") may be removed
+completely and the JDBC DriverManager will load the Ingres
+JDBC driver automatically when iijdbc.jar is included in
+CLASSPATH.&nbsp; If instantiation of the driver class is still
+desired, then "ca.ingres.jdbc.IngresDriver" will need to be
+changed to "com.ingres.jdbc.IngresDriver".&nbsp; Any references
+to DataSources which use the "ca.ingres.jdbc" package path
+will need to be changed to "com.ingres.jdbc".
+<p>
+<hr>
+<h3><a name="unicode_support_in_terminal_monitor">4.10  Unicode Support in Terminal Monitor</a></h3>
 <p>The terminal monitor now supports displaying query results
 from Unicode columns by coercing them to local character
 set. It will return an error if the Unicode character
 cannot be coerced to the local character set.
 <p>
 <hr>
-<h3><a name="selecting_or_updating_new_data_types_from_an_older_client">4.10  Selecting or Updating New Data Types from an Older Client</a></h3>
+<h3><a name="selecting_or_updating_new_data_types_from_an_older_client">4.11  Selecting or Updating New Data Types from an Older Client</a></h3>
 <p>When connecting from an older version of the client to
 Ingres 10.0, if a query attempts to select or update a new
 data type not supported by the client (for example, ANSI
 date/time types), you will receive error E_US10F0.
 <p>
 <hr>
-<h3><a name="embedded_sql_c_and_abf_programs">4.11  Embedded SQL/C and ABF Programs</a></h3>
+<h3><a name="embedded_sql_c_and_abf_programs">4.12  Embedded SQL/C and ABF Programs</a></h3>
 <p>Embedded SQL/C and Applications-By-Forms programs that have
 silently ignored overflow in the past may issue the
 message: "Overflow of numeric data from column n into
@@ -279,7 +291,7 @@ to i8), or change the query so that it no longer returns
 overflowing results.
 <p>
 <hr>
-<h3><a name="change_to_default_column_names_for_row_producing_procedures">4.12  Change to Default Column Names for Row-producing Procedures</a></h3>
+<h3><a name="change_to_default_column_names_for_row_producing_procedures">4.13  Change to Default Column Names for Row-producing Procedures</a></h3>
 <p>The default names of columns of row-producing procedures
 have changed from "result elementx" to "result_columnx"
 (for example: result_column0, result_column1,
@@ -288,28 +300,55 @@ result_column2).
 reflect the new names.
 <p>
 <hr>
-<h3><a name="tables_with_identity_columns">4.13  Tables with Identity Columns</a></h3>
+<h3><a name="tables_with_identity_columns">4.14  Tables with Identity Columns</a></h3>
 <p>Tables with an identity column as the replication key
 cannot be replicated between full peer databases.
 <p>
 <hr>
-<h3><a name="web_deployment_option">4.14  Web Deployment Option</a></h3>
-<p>The Web Deployment Option is a deprecated feature and will
-be removed in the next release. Currently, the Apache 1.3.x
-servers with EAPI (Extended Application Programming
-Interface) are not supported. &nbsp;
-<p>On UNIX and Linux, the Web Deployment Option is not
-included by default for the installation programs such as
-ingbuild or ingres_express_install.sh. The option can only
-be selected in two situations: 
-<ul>
-<p><li>In an upgrade process (it exists from a previous release)
-<p><li>It is specified in the command line for a new installation,
-such as:
+<h3><a name="removed_features">4.15  Removed Features</a></h3>
+<p>The Web Deployment option has been removed.
+<p>
+<hr>
+<h3><a name="subquery_behavior_change_due_to_scalar_subquery_feature">4.16  Subquery Behavior Change due to Scalar Subquery Feature</a></h3>
+<p>The scalar subquery feature introduced in Ingres 10 can
+cause certain existing subqueries to return an error.
+<p>In previous releases, the following two forms of syntax
+were equivalent:
 <pre>
-ingbuild -install=ice64 $II_DISTRIBUTION
+SELECT col1_int, col2_float FROM session.vps18_gtt2
+
+   WHERE col1_int = (SELECT col1_int FROM session.vps18_gtt1
+
+   WHERE (col1_int&gt;=11100 AND col1_int&lt;=11115)) ORDER BY col1_int;
 </pre>
-</ul>
+<pre>
+SELECT col1_int, col2_float FROM session.vps18_gtt2
+
+   WHERE col1_int in (SELECT col1_int FROM session.vps18_gtt1
+
+   WHERE (col1_int&gt;=11100 AND col1_int&lt;=11115)) ORDER BY col1_int;
+</pre>
+<p>With the introduction of scalar subqueries, the first form
+will fail with E_US1196 (cardinality error) if the subquery
+returns more than one row.
+<p>In previous releases, the ANY operator was implied in such
+scalar subqueries and the cardinality violation was not
+raised; in Ingres 10, the cardinality violation is flagged
+by default.
+<p>When migrating to Ingres 10, you can use the parameter
+cardinality_check under the DBMS Server component in CBF to
+revert to the legacy behavior if your data or applications
+exhibit this new behavior. You can also control the
+behavior at the session level with SET
+[NO]CARDINALITY_CHECK, or change your SQL to use the
+explicit ANY operator, if appropriate:
+<pre>
+SELECT col1_int, col2_float FROM session.vps18_gtt2
+
+   WHERE col1_int = ANY(SELECT col1_int FROM session.vps18_gtt1
+
+   WHERE (col1_int&gt;=11100 AND col1_int&lt;=11115)) ORDER BY col1_int;
+</pre>
 <p>
 <hr>
 <h2><a name="fixed_issues">5.0  Fixed Issues</a></h2>
@@ -321,283 +360,14 @@ notice; it is required to access the document.
 </dl>
 <p>
 <hr>
-<h2><a name="known_issues">6.0  Known Issues</a></h2>
-<p>For an informational solution or to see if a patch is
-available for the following known issues, visit
-<a href="http://ingres.com/support" target="_blank">http://ingres.com/support</a>  or contact Support Services.
-<p>
-<hr>
-<h3><a name="dbms_server_and_dba_tools_issues">6.1  DBMS Server and DBA Tools Issues</a></h3>
-<p><table border>
-<tr>
-<th align=left valign=top>
-Reference
-</th>
-<th align=left valign=top>
-Description
-</th>
-</tr>
-<tr>
-<td>086877
-</td>
-<td>Ingres Replicator does not work with partitioned tables.
-</td>
-</tr>
-<tr class="alt">
-<td>110051<br>
-(Linux only)
-</td>
-<td>Database events may be lost if sent in quick succession between two sessions both connecting from the same ESQL program.
-</td>
-</tr>
-<tr>
-<td>115716
-</td>
-<td>SET IO_TRACE does not work when used along with SET PARALLEL.
-</td>
-</tr>
-<tr class="alt">
-<td>115717
-</td>
-<td>Command SQL &lt;database&gt; -R&lt;role&gt; prompts for a password even if the role is not assigned a password.
-</td>
-</tr>
-<tr>
-<td>115718
-</td>
-<td>MODIFY TABLE returns error E_QE0083 when modifying a table in a raw database location.
-</td>
-</tr>
-<tr class="alt">
-<td>115721
-</td>
-<td>XMLIMPORT utility failed to import UUID data that was generated with the GENXML utility. The error message generated during the XMLIMPORT phase reads: [Fatal Error at file xmlout.xml, Message: Invalid character (Unicode: 0x19)].
-</td>
-</tr>
-<tr>
-<td>115722
-</td>
-<td>The XMLIMPORT utility fails to apply table or row level constraints to database objects generated with the GENXML utility.
-</td>
-</tr>
-<tr class="alt">
-<td>117479<br>
-(Windows only)
-</td>
-<td>Ingres Export Assistant will not export data with Unicode data types.
-</td>
-</tr>
-<tr>
-<td>117866
-</td>
-<td>The fraction portion of INTERVAL day to second literals is truncated to 6 places. Maximum allowable is 9.
-</td>
-</tr>
-<tr class="alt">
-<td>117872<br>
-(Windows only)
-</td>
-<td>Error E_OP0791_ADE_INSTRGEN consistency check is returned from the following syntax:<br>
-update junk set a1=a1-date('1 months') where a1='1-10'
-</td>
-</tr>
-<tr>
-<td>117873
-</td>
-<td>The maximum size of a sequence is 2147483647, even though it is possible to specify BigInt.
-</td>
-</tr>
-<tr class="alt">
-<td>117874
-</td>
-<td>Shutting down Ingres using a user ID other than the Ingres Administrator displays a FATAL ERROR message, where a permission denied warning would be more appropriate.
-</td>
-</tr>
-<tr>
-<td>117875
-</td>
-<td>Configuration Manager fails to restore the original DATE_TYPE_ALIAS value when the RESTORE button is used.
-</td>
-</tr>
-<tr class="alt">
-<td>118493
-</td>
-<td>In a concurrent processing environment, error "E_DMA42F_LG_UNMUTEX An error was encountered releasing mutually exclusive access to a logging system data structure" may occur. The configuration settings in CBF are: 100 MB dual log, 2 DBMS servers, 2k page size and per_tx_limit=1000 for locking. The error was seen in Tru64 and HP-Itanium platforms. To avoid the error, increase the number for locking.
-</td>
-</tr>
-<tr>
-<td>119477
-</td>
-<td>On UTF8 installations on Windows, setting up replication fails while creating a shadow table with E_RM0103 error.
-</td>
-</tr>
-<tr class="alt">
-<td>119643
-</td>
-<td>On Windows, some DTP ESQLC programs may produce errors that cause the DBMS and recovery servers to terminate unexpectedly.
-</td>
-</tr>
-<tr>
-<td>120203
-</td>
-<td>Upgrade Ingres 2.0 to Ingres 9.2 does not work.
-</td>
-</tr>
-<tr class="alt">
-<td>120207
-</td>
-<td>If Sun C 5.9 or newer compiler is used, running iilink in 64-bit mode produces warning message "-xarch=v9 is deprecated, use –m64 to create 64-bit programs-".
-</td>
-</tr>
-<tr>
-<td>120213
-</td>
-<td>Get unexpected sqlca.sqlcode from a dbevent, zero is expected, but 710 is received.
-</td>
-</tr>
-<tr class="alt">
-<td>120992
-</td>
-<td>Server encounters a SEGV with an instruction address not in executable code, for example PC 0x0000000b
-</td>
-</tr>
-<tr>
-<td>121200
-</td>
-<td>Local_timestamp is not refreshed when used in a DBP.
-</td>
-</tr>
-<tr class="alt">
-<td>121202
-</td>
-<td>In a UTF8 installation, optimizedb fails with error “E_AD5010_SOURCE_STRING_TRUNC UTF8 string supplied is of incorrect format”. The process involves loading a table from an external ASCII file, creating some secondary indexes, and the running optimizedb. The data file is significant for containing extended ( that is, &gt; 7FH ) ASCII characters.
-</td>
-</tr>
-<tr>
-<td>121340<br>
-(Windows only)
-</td>
-<td>CKPDB on Windows truncates one of the file names in the output if the database is spread across multiple locations.
-</td>
-</tr>
-<tr class="alt">
-<td>121409
-</td>
-<td>The presence of NULL data in the column queried in a NOT IN (subselect) will cause the NOT IN to return FALSE.
-</td>
-</tr>
-<tr>
-<td>121554
-</td>
-<td>On UTF-8 installations, peer to peer replication fails with error E_PS037B_UNORM error normalizing data value.
-</td>
-</tr>
-<tr class="alt">
-<td>122661<br>
-(Windows only)
-</td>
-<td>.NET Data Provider does not support distributed transactions on Windows 2008 64-bit at this time.  Neither 32-bit nor 64-bit applications are supported on Win2K8 64-bit in the use of distributed transactions.  .NET System.Transactions.TransactionScope class, IngresConnection's methods of EnlistTransaction and EnlistDistributedTransaction are not supported at this time.
-</td>
-</tr>
-<tr>
-<td>122662
-</td>
-<td>Full outer join and right outer join do not work with table procedures. The following error is returned: "E_SC0206_CANNOT_PROCESS An internal error prevents further processing of this query."
-</td>
-</tr>
-<tr class="alt">
-<td>122670<br>
-(Windows only)
-</td>
-<td>iilink on Windows doesn't work well with 2005 compiler due to lack of manifesting. The utility needs to be fixed to work with only supported compilers as well as update the compiler/linker flags.
-</td>
-</tr>
-</table>
-<p>
-<hr>
-<h3><a name="windows_installation_issues">6.2  Windows Installation Issues</a></h3>
-<p><table border>
-<tr>
-<th align=left valign=top>
-Reference  
-</th>
-<th align=left valign=top>
-Description  
-</th>
-</tr>
-<tr>
-<td>117476
-</td>
-<td>A dual transaction log fails to be created when a customized install requests one.
-</td>
-</tr>
-<tr class="alt">
-<td>117478
-</td>
-<td>Help missing from the install "Installation type" dialog.
-</td>
-</tr>
-<tr>
-<td>117933
-</td>
-<td>Setting DMF cache parameter to exceed 2 GB on Windows results in a SEGV, and after that Ingres Service Manager hangs and it must be restarted and Ingres has to be stopped.
-</td>
-</tr>
-</table>
-<p>
-<hr>
-<h3><a name="linux_installation_issues">6.3  Linux Installation Issues</a></h3>
-<p><table border>
-<tr>
-<th align=left valign=top>
-Reference  
-</th>
-<th align=left valign=top>
-Description  
-</th>
-</tr>
-<tr>
-<td>115724
-</td>
-<td>As of the time this readme was published, the installation of Ingres requires RPM with a version in the range 3.0.6 through 4.4.2, except for RPM version 4.1. If RPM 4.1 is installed, it must be upgraded to version 4.1.1 or higher before you can install Ingres.
-<p>RPM 4.1 fails to set environment variable RPM_INSTALL_PREFIX.&nbsp;Attempting to install Ingres with RPM 4.1 will lead to numerous "cannot find file" errors, and a failed install.&nbsp;For further details on this RPM bug, see <a href="http://bugzilla.redhat.com/bugzilla/show_bug.cgi?id=75057" target="_blank">http://bugzilla.redhat.com/bugzilla/show_bug.cgi?id=75057</a>.&nbsp;
-</td>
-</tr>
-<tr class="alt">
-<td>117861
-</td>
-<td>The GUI installer allows II_SYSTEM to be left blank and does not validate its value.
-</td>
-</tr>
-<tr>
-<td>117871
-</td>
-<td>The GUI installer for Linux does not install on x86 64-bit Linux systems.
-</td>
-</tr>
-<tr class="alt">
-<td>117876
-</td>
-<td>The Linux GUI installer incorrectly allows an install with only the "core" package selected, which results in an unusable installation.
-</td>
-</tr>
-<tr>
-<td>121555
-</td>
-<td>Ingres GUI installer on Linux fails to start on Fedora Core 10 with following error: "ERROR: Cannot locate RPM runtime libraries. Aborting"
-</td>
-</tr>
-</table>
-<p>
-<hr>
-<h2><a name="documentation">7.0  Documentation</a></h2>
+<h2><a name="documentation">6.0  Documentation</a></h2>
 <p>The Ingres documentation is available for download in PDF
 from <a href="http://esd.ingres.com/product/docs" target="_blank">http://esd.ingres.com/product/docs</a>.
 <p>Searchable online documentation is available at
 <a href="http://docs.ingres.com/" target="_blank">docs.ingres.com</a>.
 <p>
 <hr>
-<h2><a name="your_support_options">8.0  Your Support Options</a></h2>
+<h2><a name="your_support_options">7.0  Your Support Options</a></h2>
 <p>Enterprise customers with active maintenance and support
 contracts have full access to Ingres Support, including
 telephone support and online use of our call tracking

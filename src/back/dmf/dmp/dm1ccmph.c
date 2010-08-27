@@ -673,6 +673,7 @@ dm1ch_uncompress(
 **	they are not used.
 **
 ** Inputs:
+**	compression_type		The compression type code
 **      atts_array                      Pointer to an array of attribute
 **                                      descriptors.
 **      atts_count                      Number of entries in atts_array.
@@ -692,10 +693,12 @@ dm1ch_uncompress(
 ** History:
 **	27_oct_94 (shero03)
 **	Created
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Compression type is now passed too.
 */
 
 i4
-dm1ch_compexpand(
+dm1ch_compexpand(	i4		compression_type,
 			DB_ATTS		**atts,
 			i4		att_cnt)
 {

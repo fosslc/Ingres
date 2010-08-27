@@ -87,6 +87,8 @@
 **	    in rdu_ferror(). Use new form of uleFormat().
 **      17-dec-2008 (joea)
 **          Replace READONLY/WSCREADONLY by const.
+**      20-aug-2010 (stial01)
+**          rdp_build_partdef() Fixed E_UL0005_NOMEM/rdu_mrecover err handling.
 */
 
 
@@ -294,6 +296,7 @@ rdp_build_partdef(RDF_GLOBAL *global)
 					** as master, or might be private
 					*/
     ULM_RCB temp_ulm_rcb;		/* Request block for temporary stream */
+    i4					mrecover_cnt = 0;
 
     user_info = global->rdfcb->rdf_info_blk;
     master_dmt_tbl = user_info->rdr_rel;
@@ -339,41 +342,50 @@ rdp_build_partdef(RDF_GLOBAL *global)
     /* We'll need to sling some temporary memory around, create a temp
     ** RDF stream for it.  (Who knows where rdu_malloc is pointing to...)
     */
+    do
+    {
+	temp_ulm_rcb.ulm_poolid = Rdi_svcb->rdv_poolid;
+	temp_ulm_rcb.ulm_memleft = &Rdi_svcb->rdv_memleft;
+	temp_ulm_rcb.ulm_facility = DB_RDF_ID;
+	temp_ulm_rcb.ulm_blocksize = 0;	/* No preferred block size */
+	temp_ulm_rcb.ulm_streamid_p = &temp_ulm_rcb.ulm_streamid;
+	/* No other thread will see this stream, can be private */
+	temp_ulm_rcb.ulm_flags = ULM_PRIVATE_STREAM | ULM_OPEN_AND_PALLOC;
 
-    temp_ulm_rcb.ulm_poolid = Rdi_svcb->rdv_poolid;
-    temp_ulm_rcb.ulm_memleft = &Rdi_svcb->rdv_memleft;
-    temp_ulm_rcb.ulm_facility = DB_RDF_ID;
-    temp_ulm_rcb.ulm_blocksize = 0;	/* No preferred block size */
-    temp_ulm_rcb.ulm_streamid_p = &temp_ulm_rcb.ulm_streamid;
-    /* No other thread will see this stream, can be private */
-    temp_ulm_rcb.ulm_flags = ULM_PRIVATE_STREAM | ULM_OPEN_AND_PALLOC;
+	/* The iidistval catalog has pretty big rows, so don't allocate a
+	** buffer on the stack -- use the temporary stream.
+	** iidistval is the biggest, for the others it will simply allow
+	** reading more rows at once.
+	** 10 rows at a time is plenty.  Add a little extra to allow for alignment.
+	*/
+	qef_size = 10 * (sizeof(QEF_DATA) + sizeof(DB_IIDISTVAL)) + sizeof(PTR);
+	temp_ulm_rcb.ulm_psize = qef_size;
 
-    /* The iidistval catalog has pretty big rows, so don't allocate a
-    ** buffer on the stack -- use the temporary stream.
-    ** iidistval is the biggest, for the others it will simply allow
-    ** reading more rows at once.
-    ** 10 rows at a time is plenty.  Add a little extra to allow for alignment.
-    */
-    qef_size = 10 * (sizeof(QEF_DATA) + sizeof(DB_IIDISTVAL)) + sizeof(PTR);
-    temp_ulm_rcb.ulm_psize = qef_size;
-    status = ulm_openstream(&temp_ulm_rcb);
+	status = ulm_openstream(&temp_ulm_rcb);
+	if (DB_SUCCESS_MACRO(status))
+	    break;
+
+	mrecover_cnt++;
+	/* Garbage-collect and try again */
+	TRdisplay("%@ [%x] Garbage-collecting RDF: part openstream err %d %d psize %d (poolid %x, memleft %d try %d)\n",
+	    global->rdf_sess_id, temp_ulm_rcb.ulm_error.err_code,
+	    global->rdf_ulmcb.ulm_error.err_code,
+	    temp_ulm_rcb.ulm_psize, temp_ulm_rcb.ulm_poolid, 
+	    Rdi_svcb->rdv_memleft, mrecover_cnt);
+
+	/* Pass rdu_mrecover the ULM_RCB we used for ulm_openstream */
+	status = rdu_mrecover(global, &temp_ulm_rcb, status, E_RD0118_ULMOPEN);
+
+    } while (DB_SUCCESS_MACRO(status));
+
     if (DB_FAILURE_MACRO(status))
     {
-	/* Garbage-collect and try once more */
-	TRdisplay("%@ [%x] Garbage-collecting RDF: part openstream err %d psize %d (poolid %x, memleft %d)\n",
-		global->rdf_sess_id, temp_ulm_rcb.ulm_error.err_code,
-		temp_ulm_rcb.ulm_psize, temp_ulm_rcb.ulm_poolid, Rdi_svcb->rdv_memleft);
-	status = rdu_mrecover(global, status, E_RD0118_ULMOPEN);
-	if (DB_FAILURE_MACRO(status)) return(status);
-	status = ulm_openstream(&temp_ulm_rcb);
-	if (DB_FAILURE_MACRO(status))
-	{
-	    /* Report error, return */
-	    rdu_ferror(global,status, &temp_ulm_rcb.ulm_error,
-			E_RD0001_NO_MORE_MEM, 0);
-	    return (status);
-	}
+	/* Report error, return */
+	rdu_ferror(global,status, &temp_ulm_rcb.ulm_error,
+		    E_RD0001_NO_MORE_MEM, 0);
+	return (status);
     }
+
     qef_area = temp_ulm_rcb.ulm_pptr;
 
     /* Errors from this point on should goto cleanup to release the

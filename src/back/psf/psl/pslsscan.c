@@ -509,6 +509,13 @@
 **	    Added support for RENAME table.
 **	29-apr-2010 (stephenb)
 **	    Add support for "set [no]batch_copy_optim"
+**      21-Jun-2010 (horda03) b123926
+**          Because adu_unorm() and adu_utf8_unorm() are also called via 
+**          adu_lo_filter() change parameter order.
+**	21-Jul-2010 (kschendel) SIR 124104
+**	    Add set [no]create_compression.
+**      17-Aug-2010 (horda03) b124274
+**          Add SEGMENTED as a keyword for SET QEP SEGMENTED.
 **/
 
 /*
@@ -842,6 +849,7 @@ static const SECONDARY      Setwords[] = {
 			{ "cache_dynamic",SETCACHEDYN, PSL_ONSET  },
 			{ "cardinality_check",SETCARDCHK, PSL_ONSET},
 		        { "cpufactor",    SETCPUFACT,  PSL_GOVAL  },
+			{ "create_compression", SETCREATECOMPRESSION, PSL_ONSET},
 			{ "date_format",  SETDATEFMT,  PSL_GOVAL  },
 			{ "ddl_concurrency",SETDDLCONCUR,PSL_GOVAL},
 			{ "decimal",      SETDECIMAL,  PSL_GOVAL  },
@@ -868,6 +876,7 @@ static const SECONDARY      Setwords[] = {
 			{ "nobatch_copy_optim", SETBATCHCOPYOPTIM, PSL_OFFSET},
 			{ "nocache_dynamic",SETCACHEDYN, PSL_OFFSET},
 			{ "nocardinality_check",SETCARDCHK, PSL_OFFSET},
+			{ "nocreate_compression", SETCREATECOMPRESSION, PSL_OFFSET},
 			{ "noflatten",    SETFLATTEN,  PSL_OFFSET },
 			{ "nohash",       SETHASH,     PSL_OFFSET },
 			{ "noio_trace",   SETIOTRACE,  PSL_OFFSET },
@@ -1370,7 +1379,8 @@ static const KEYINFO                Key_info[] = {
 /* 214 */              { UNKNCONST,         0,  0,      (SECONDARY *)NULL },
 /* 215 */	       { SINGLETON,	    0,	0,	(SECONDARY *)NULL },
 /* 216 */	       { RENAME,    PSL_GOVAL,	0,	(SECONDARY *)NULL },
-/* 217 */	       { ENCRYPT,	    0,  0,	(SECONDARY *)NULL }
+/* 217 */	       { ENCRYPT,	    0,  0,	(SECONDARY *)NULL },
+/* 218 */              { SEGMENTED,         0,  0,      (SECONDARY *) NULL   }
 };
 
 /* Alternate keyword lists for inside WITH parsing (specifically, when
@@ -4340,6 +4350,16 @@ multi_word_keyword(PSS_SESBLK *pss_cb, PSQ_CB *psq_cb,
 **          Avoid ULM corruption by actually using the calculated amount
 **          of memory (the 'reserve' variable) instead of using a hard coded
 **          constant.
+**	28-May-2010 (gupsh01)
+**	    For extra long strings, truncate to the maximum length
+**	    length allowed.
+**	03-Aug-2010 (kiria01) b124158
+**	    Found the ULM corruption and fixed the bug in the 'don't need to normalise'
+**	    optimisation. The ULM bug happens when this routine checks for allocated
+**	    block size of PSS_SBSIZE but the allocation routine only allocates the
+**	    request size (was reserve). The optimisation of returning the raw data
+**	    when no net normalisation happened broke when the save_symnext became
+**	    stale when a new block was allocated.
 */
 static i4
 psl_unorm(
@@ -4374,6 +4394,8 @@ i4	    token)
     i4			size = 0;
     i4			val1, val2;
     i4			error;
+    i2			maxlen;
+    i4			utf8;
 
     save_symnext = pss_cb->pss_symnext;
     adf_cb = (ADF_CB*) pss_cb->pss_adfcb;
@@ -4397,12 +4419,35 @@ i4	    token)
 	dv1.db_length = text->db_t_count + DB_CNTSIZE;
 	dv1.db_data = (PTR)text;
 	rdv.db_datatype = DB_VCH_TYPE;
+
+	utf8 = (adf_cb->adf_utf8_flag & AD_UTF8_ENABLED);	
+	if (utf8)
+	   maxlen =  DB_UTF8_MAXSTRING; 
+        else 
+	   maxlen =  DB_MAXSTRING;
+
+	if (dv1.db_length > (maxlen + DB_CNTSIZE))
+	{
+	    if (adf_cb->adf_strtrunc_opt != ADF_IGN_STRTRUNC)
+            {
+		int lineno = pss_cb->pss_lineno;
+		_VOID_ psf_error(9412L, 0L, PSF_USERERR, &error,
+				&psq_cb->psq_error, 2, (i4) sizeof(lineno), &lineno, 
+				(i4) sizeof(maxlen),  &maxlen);
+
+	        if (adf_cb->adf_strtrunc_opt == ADF_ERR_STRTRUNC)
+		    return (-1);
+            }
+  	    /* truncate the length to max allowed length */
+	    dv1.db_length = maxlen + DB_CNTSIZE;
+	    ((DB_TEXT_STRING *)dv1.db_data)->db_t_count = maxlen;
+	}
     }
     else if (token == QDATA)
     {
 	/* check if we need to unorm QDATA */
 	qdv = yacc_cb->yylval.psl_dbval;
-	STRUCT_ASSIGN_MACRO(*qdv, dv1);
+	dv1 = *qdv;
 
 	if (!psl_dtunorm(adf_cb, qdv->db_datatype))
 	    return (token);
@@ -4484,11 +4529,13 @@ dv1.db_length, rdv.db_length);
     if (pss_cb->pss_symnext + reserve >=
 	&pss_cb->pss_symblk->pss_symdata[PSS_SBSIZE - 1])
     {
-	status = psf_symall(pss_cb, psq_cb, reserve);
+	status = psf_symall(pss_cb, psq_cb, PSS_SBSIZE);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return(-1);	/* error */
 	}
+	/* New block means need to clear stale pointer */
+	save_symnext = NULL;
     }
 
     /* ALWAYS align data value */
@@ -4498,7 +4545,7 @@ dv1.db_length, rdv.db_length);
     if (token == QDATA)
     {
 	n_qdv = (DB_DATA_VALUE *)tmp_symnext;
-	STRUCT_ASSIGN_MACRO(*qdv, *n_qdv);
+	*n_qdv = *qdv;
 	tmp_symnext += sizeof(DB_DATA_VALUE);
     }
 
@@ -4506,9 +4553,9 @@ dv1.db_length, rdv.db_length);
 
     /* Do the unorm */
     if (rdv.db_datatype == DB_NVCHR_TYPE)
-	status = adu_unorm(adf_cb, &rdv, &dv1, 0);
+	status = adu_unorm(adf_cb, &dv1, &rdv);
     else
-	status = adu_utf8_unorm(adf_cb, &rdv, &dv1);
+	status = adu_utf8_unorm(adf_cb, &dv1, &rdv);
     if (status)
     {
 	status = psl_unorm_error(pss_cb, psq_cb, &rdv, &dv1, status);
@@ -4543,13 +4590,12 @@ dv1.db_length, rdv.db_length);
     ** pss_symnext or reset yylval,len
     */
     if (norm_str_len == input_str_len &&
-	!MEcmp(input_str, (char *)rdv.db_data + DB_CNTSIZE, norm_str_len))
+	!MEcmp(input_str, (char *)rdv.db_data + DB_CNTSIZE, norm_str_len) &&
+	save_symnext)
     {
 	/* Move back to input token, caller will move the pss_symnext */
-	/* for now always advance so we can test this code
 	pss_cb->pss_symnext = save_symnext;
 	return (token);
-	*/
     }
     else if (ult_check_macro(&pss_cb->pss_trace, 19, &val1, &val2))
     {
@@ -4736,9 +4782,9 @@ DB_STATUS err_status)
 
     /* Try the unorm again */
     if (rdv->db_datatype == DB_NVCHR_TYPE)
-	status = adu_unorm(adf_cb, rdv, dv1, 0);
+	status = adu_unorm(adf_cb, dv1, rdv);
     else
-	status = adu_utf8_unorm(adf_cb, rdv, dv1);
+	status = adu_utf8_unorm(adf_cb, dv1, rdv);
 
     if (status)
     {

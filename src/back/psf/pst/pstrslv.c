@@ -376,6 +376,22 @@ pst_get_union_resdom_type(
 **          and earlier failure in adi_resolve(). This lead to a SIGSEGV
 **          instead of the expected error report. Move the IFNULL aggregate
 **          down below the error check.
+**      7-jun-2010 (stephenb)
+**          correct error handling for bad return of adi_dtfamilty_resolve,
+**          it may produce various type and operand errors that need to be 
+**          returned as user errors. (Bug 123884)
+**	14-Jul-2010 (kschendel) b123104
+**	    Don't fold true/false generating operators back to constants.
+**	3-Aug-2010 (kschendel) b124170
+**	    Use joinid from node being resolved when inserting a coercion.
+**	4-aug-2010 (stephenb)
+**	    ADF calls may also return E_AD2009_NOCOERCION when no coercion
+**	    is available, treat as user error. Also fix error handling
+**	    for other ADF calls. (Bug 124209)
+**	12-Aug-2010 (kschendel) b124234
+**	    Don't attempt to constant-fold LONG data.  Even if it works,
+**	    the resulting value described by the coupon is unlikely to
+**	    last until execution time.
 */
 DB_STATUS
 pst_resolve(
@@ -387,6 +403,7 @@ pst_resolve(
 {
 
     i4			children;
+    i4			dtbits;
     i4			i;
     i4			npars;
     DB_STATUS		status;
@@ -541,7 +558,8 @@ pst_resolve(
     if (status != E_DB_OK)
     {
 	/* Complain if no applicable function found */
-	if (	adf_scb->adf_errcb.ad_errcode == E_AD2062_NO_FUNC_FOUND)
+	if (	adf_scb->adf_errcb.ad_errcode == E_AD2062_NO_FUNC_FOUND ||
+		adf_scb->adf_errcb.ad_errcode == E_AD2009_NOCOERCION)
 	{
 	    if (children == 1)
 		error->err_code = 2907L;
@@ -636,7 +654,36 @@ pst_resolve(
 					  best_fidesc, &adi_rslv_blk);
 	    if (status != E_DB_OK)
 	    {
-		return (status);
+		/* Complain if no applicable function found */
+		if (	adf_scb->adf_errcb.ad_errcode == E_AD2062_NO_FUNC_FOUND
+			|| adf_scb->adf_errcb.ad_errcode == E_AD2009_NOCOERCION)
+		{
+		    if (children == 1)
+			error->err_code = 2907L;
+		    else
+			error->err_code = 2908L;
+		    return (E_DB_ERROR);
+		}
+
+		/* Complain if parameter count is wrong. */
+		if (  	adf_scb->adf_errcb.ad_errcode == E_AD2061_BAD_OP_COUNT)
+		{
+		    error->err_code = 2903L;
+		    return(E_DB_ERROR);
+		}
+
+		/* Complain if ambiguous function found */
+		if (adf_scb->adf_errcb.ad_errcode == E_AD2063_FUNC_AMBIGUOUS)
+		{
+		    if (children == 1)
+			error->err_code = 2909L;
+		    else
+			error->err_code = 2910L;
+		    return (E_DB_ERROR);
+		}
+
+		error->err_code = E_PS0C05_BAD_ADF_STATUS;
+		return (E_DB_ERROR);
 	    }
 	}
     }
@@ -709,6 +756,7 @@ pst_resolve(
 		    ** of the other side */
 		    op.pst_opmeta = PST_NOMETA;
 		    op.pst_pat_flags = AD_PAT_DOESNT_APPLY;
+		    op.pst_joinid = opnode->pst_sym.pst_value.pst_s_op.pst_joinid;
 		    /* The darn i4 casts are because sizeof is technically
 		    ** a size_t, which is 64-bit on LP64, and gcc complains. */
 		    switch (abs(n_dt))
@@ -782,7 +830,7 @@ pst_resolve(
 			!pst_node(sess_cb, &sess_cb->pss_ostream,
 			*s, res_node, res_node ? PST_BOP : PST_UOP,
 			    (char *)&op, sizeof(op), n_dt, ps, len,
-			    (DB_ANYTYPE *)NULL, &res_node, error, 0) &&
+			    (DB_ANYTYPE *)NULL, &res_node, error, PSS_JOINID_PRESET) &&
 			res_node &&
 			res_node->pst_sym.pst_type == PST_CONST)
 		    {
@@ -819,7 +867,6 @@ pst_resolve(
 	if (!handled && !adi_resolve(adf_scb, &tmp_adi_rslv_blk, FALSE))
 	{
 	    PST_OP_NODE op;
-	    i4 flags = PSS_JOINID_PRESET;
 	    PST_QNODE **p;
 	    PST_QNODE *t;
 	    i = 0;
@@ -864,7 +911,7 @@ pst_resolve(
 		if (status = pst_node(sess_cb, &sess_cb->pss_ostream,
 			t, (PST_QNODE *)NULL, PST_UOP,
 			(char *)&op, sizeof(op), DB_NODT, (i2)0, (i4)0,
-			(DB_ANYTYPE *)NULL, p, error, flags))
+			(DB_ANYTYPE *)NULL, p, error, PSS_JOINID_PRESET))
 		    return (status);
 		/* Having injected the node we need to propagete
 		** the full resolved datatype to any intermediate
@@ -934,6 +981,15 @@ pst_resolve(
     if (best_fidesc->adi_fiflags & ADI_F1_VARFI)
 	const_cand = FALSE;
 
+    /* Don't constant fold constant true/false generating operators either.
+    ** We want these to stay operators (to preserve joinid).
+    ** Normally one wouldn't hit iitrue/iifalse during resolve, but it
+    ** can happen when re-processing a tree for e.g. parameter substitution.
+    */
+    if (opnode->pst_sym.pst_value.pst_s_op.pst_opno == ADI_IITRUE_OP
+      || opnode->pst_sym.pst_value.pst_s_op.pst_opno == ADI_IIFALSE_OP)
+	const_cand = FALSE;
+
     while (lqnode)
     {
 	DB_DATA_VALUE tempop;
@@ -953,6 +1009,14 @@ pst_resolve(
 		lqnode->pst_sym.pst_value.pst_s_cnst.pst_tparmtype != PST_USER ||
 		lqnode->pst_sym.pst_value.pst_s_cnst.pst_parm_no != 0)
 	    const_coerce = FALSE;
+
+	/* Don't run a coercion that results in a LONG type. */
+	if (const_coerce)
+	{
+	    status = adi_dtinfo(adf_scb, best_fidesc->adi_dt[npars], &dtbits);
+	    if (status == E_DB_OK && dtbits & AD_PERIPHERAL)
+		const_coerce = FALSE;
+	}
 
 	/* Get coercion id for this child, if needed */
 	if (npars < best_fidesc->adi_numargs &&
@@ -976,6 +1040,34 @@ pst_resolve(
 		if (!const_coerce ||
 		    best_fidesc->adi_dt[npars] != base_fidesc->adi_dt[npars])
 		{
+		    /* should return user error for no coercion */
+		    if (	adf_scb->adf_errcb.ad_errcode == E_AD2062_NO_FUNC_FOUND
+			    || adf_scb->adf_errcb.ad_errcode == E_AD2009_NOCOERCION)
+		    {
+			if (children == 1)
+			    error->err_code = 2907L;
+			else
+			    error->err_code = 2908L;
+			return (E_DB_ERROR);
+		    }
+
+		    /* Complain if parameter count is wrong. */
+		    if (  	adf_scb->adf_errcb.ad_errcode == E_AD2061_BAD_OP_COUNT)
+		    {
+			error->err_code = 2903L;
+			return(E_DB_ERROR);
+		    }
+
+		    /* Complain if ambiguous function found */
+		    if (adf_scb->adf_errcb.ad_errcode == E_AD2063_FUNC_AMBIGUOUS)
+		    {
+			if (children == 1)
+			    error->err_code = 2909L;
+			else
+			    error->err_code = 2910L;
+			return (E_DB_ERROR);
+		    }
+		    
 		    error->err_code = E_PS0C05_BAD_ADF_STATUS;
 		    return (E_DB_SEVERE);
 		}
@@ -1210,6 +1302,16 @@ pst_resolve(
     ** routine, we know it will be an operator node and so long
     ** as sizeof(PST_CNST_NODE) <= sizeof(PST_OP_NODE) there
     ** will be space to update inplace.*/
+
+    /* Don't attempt to constant-fold a LONG datatype.  The resulting
+    ** value (a coupon) doesn't survive through to the query plan,
+    ** since it's in a temporary LONG holding tank, and execution
+    ** time blows up.
+    */
+    status = adi_dtinfo(adf_scb, best_fidesc->adi_dtresult, &dtbits);
+    if (status == E_DB_OK && dtbits & AD_PERIPHERAL)
+	const_cand = FALSE;
+
     if (Psf_fold &&
 	sess_cb &&
 	const_cand &&

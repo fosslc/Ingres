@@ -215,6 +215,10 @@ struct _QEU_MISSING_COL
 **	    For encryption add qeu_tup_physical.
 **	12-Apr-2010 (kschendel) SIR 123485
 **	    Add base table access ID for COPY FROM, for use with blobs.
+**	26-jun-2010 (stephenb)
+**	    Add qeu_cbuf, qeu_cptr, qeu_csize, qeu_cleft, qeu_load_buf,
+**	    and qeu_insert_data to support buffering of batch insert 
+**	    rows for copy
 */
 struct _QEU_COPY
 {
@@ -272,6 +276,26 @@ struct _QEU_COPY
     i4			qeu_ssize;	    /* size of storage */
     i4			qeu_sused;	    /* amount of storage used */
     char		*qeu_sptr;	    /* pointer into storage */
+    
+    /*
+    ** similar to qeu_sbuf above. qeu_cbuf is allocated by
+    ** PSF from the proto stream (which is destroyed by PSF on
+    ** commit). It is used to store the input records as they come
+    ** in from prepared "insert" statements when running the insert to
+    ** copy optimization. When the buffer fills up, qeu_r_copy will
+    ** be called to load the tuples, and the buffer is re-used. This
+    ** allows us to use the copy code as it was intended (for several
+    ** records at once), and gives us at least some insight into
+    ** how many records we might have in a batch, allowing us to
+    ** optimize the copy code for very small batches. We could over-load
+    ** the above "sbuf" variables to have yet another meaning, but
+    ** the storage is cheap enough (only one of these per copy session).
+    */
+    PTR			qeu_cbuf;	    /* record storage */
+    i4			qeu_csize;	    /* size of the buffer */
+    i4			qeu_cleft;	    /* amount left */
+    char		*qeu_cptr;	    /* current location */
+    bool		qeu_load_buf;	    /* QEF should load the buffer */
 
     /* The following set of variables is used for the sequencer when
     ** there are large objects involved.  The sequencer will be called
@@ -301,6 +325,17 @@ struct _QEU_COPY
 					    ** elements of this array in order of
 					    ** table attributes
 					    */
+    QEF_INS_DATA	*qeu_insert_data;   /* insert data array for insert to copy
+					    ** optimization. In this case each row
+					    ** may have a different format, so we need
+					    ** some way to keep the format for every row
+					    ** in a copy block. The row will be converted
+					    ** to the fixed internal tuple format in
+					    ** qeu_r_copy
+					    */
+    QEF_INS_DATA	*qeu_ins_last;	    /* last element in above array
+					    ** (saves scanning the linked lis
+					    ** to find it ) */
     QEU_MISSING_COL     *qeu_missing;       /* pointer to missing column defaults */
     struct _DMR_CB	*qeu_dmrcb;	    /* Pointer to parser created DMR
 					    ** CB to point to optional DMU-

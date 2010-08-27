@@ -77,6 +77,8 @@
 **	    Update above for new rowaccessor scheme.
 **      15-Apr-2010 (stial01)
 **          Prototypes: added dmdprentries(), changed dmd_print_entry()
+**	09-Jun-2010 (stial01)
+**          Added prototype for dmd_pr_mvcc_info()
 */
 
 /*
@@ -341,3 +343,5 @@ FUNC_EXTERN bool dmd_reptrace(VOID);
 FUNC_EXTERN VOID dmd_page_types(VOID);
 
 FUNC_EXTERN VOID dmd_log_info(i4 options);
+
+FUNC_EXTERN VOID dmd_pr_mvcc_info(DMP_RCB *r);

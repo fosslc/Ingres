@@ -111,6 +111,9 @@
 **    Disable column selection for Ingres VectorWise tables.
 ** 02-Jun-2010 (drivi01)
 **    Remove hard coded buffer sizes.
+** 30-Jun-2010 (drivi01)
+**    Bug #124006
+**    Add new BOOLEAN datatype.
 *******************************************************************************/
 
 // NOTE:
@@ -229,6 +232,47 @@ static CTLDATA typeTypesAnsiDate[] =
    INGTYPE_VARCHAR,        IDS_INGTYPE_VARCHAR,
    INGTYPE_LONGVARCHAR,    IDS_INGTYPE_LONGVARCHAR,
    INGTYPE_BIGINT,         IDS_INGTYPE_BIGINT,
+   INGTYPE_INT8,           IDS_INGTYPE_INT8,
+   INGTYPE_INT4,           IDS_INGTYPE_INT4,
+   INGTYPE_INT2,           IDS_INGTYPE_INT2,
+   INGTYPE_INT1,           IDS_INGTYPE_INT1,
+   INGTYPE_DECIMAL,        IDS_INGTYPE_DECIMAL,
+   INGTYPE_FLOAT,          IDS_INGTYPE_FLOAT,
+   INGTYPE_FLOAT8,         IDS_INGTYPE_FLOAT8,
+   INGTYPE_FLOAT4,         IDS_INGTYPE_FLOAT4,
+   INGTYPE_DATE,           IDS_INGTYPE_DATE,
+   INGTYPE_ADTE,           IDS_INGTYPE_ADTE,             // ansidate
+   INGTYPE_TMWO,           IDS_INGTYPE_TMWO,             // time without time zone
+   INGTYPE_TMW,            IDS_INGTYPE_TMW,              // time with time zone
+   INGTYPE_TME,            IDS_INGTYPE_TME,              // time with local time zone
+   INGTYPE_TSWO,           IDS_INGTYPE_TSWO,             // timestamp without time zone
+   INGTYPE_TSW,            IDS_INGTYPE_TSW,              // timestamp with time zone
+   INGTYPE_TSTMP,          IDS_INGTYPE_TSTMP,            // timestamp with local time zone
+   INGTYPE_INYM,           IDS_INGTYPE_INYM,             // interval year to month
+   INGTYPE_INDS,           IDS_INGTYPE_INDS,             // interval day to second
+   INGTYPE_IDTE,           IDS_INGTYPE_IDTE,             // ingresdate
+   INGTYPE_MONEY,          IDS_INGTYPE_MONEY,
+   INGTYPE_BYTE,           IDS_INGTYPE_BYTE,
+   INGTYPE_BYTEVAR,        IDS_INGTYPE_BYTEVAR,
+   INGTYPE_LONGBYTE,       IDS_INGTYPE_LONGBYTE,
+   INGTYPE_INTEGER,        IDS_INGTYPE_INTEGER,          // equivalent to INT4
+   INGTYPE_OBJKEY,         IDS_INGTYPE_OBJECTKEY,
+   INGTYPE_TABLEKEY,       IDS_INGTYPE_TABLEKEY,
+   INGTYPE_UNICODE_NCHR,   IDS_INGTYPE_UNICODE_NCHR,     // unicode nchar
+   INGTYPE_UNICODE_NVCHR,  IDS_INGTYPE_UNICODE_NVCHR,    // unicode nvarchar
+   INGTYPE_UNICODE_LNVCHR, IDS_INGTYPE_UNICODE_LNVCHR,   // unicode long nvarchar
+   -1    // terminator
+};
+
+static CTLDATA typeTypesBoolean[] =
+{
+   INGTYPE_C,              IDS_INGTYPE_C,
+   INGTYPE_CHAR,           IDS_INGTYPE_CHAR,
+   INGTYPE_TEXT,           IDS_INGTYPE_TEXT,
+   INGTYPE_VARCHAR,        IDS_INGTYPE_VARCHAR,
+   INGTYPE_LONGVARCHAR,    IDS_INGTYPE_LONGVARCHAR,
+   INGTYPE_BIGINT,         IDS_INGTYPE_BIGINT,
+   INGTYPE_BOOLEAN,        IDS_INGTYPE_BOOL,
    INGTYPE_INT8,           IDS_INGTYPE_INT8,
    INGTYPE_INT4,           IDS_INGTYPE_INT4,
    INGTYPE_INT2,           IDS_INGTYPE_INT2,
@@ -1827,7 +1871,9 @@ static BOOL CntFindField(HWND hwnd, LPSTR lpszTitle)
 
 static void ComboBoxFillVDBA2xDataType (HWND hwndCtrl)
 {
-   if (GetOIVers() >= OIVERS_91)
+   if (GetOIVers() >= OIVERS_100)
+      OccupyComboBoxControl(hwndCtrl, typeTypesBoolean);
+   else if (GetOIVers() >= OIVERS_91)
       OccupyComboBoxControl(hwndCtrl, typeTypesAnsiDate);
    else if (GetOIVers() >= OIVERS_30)
       OccupyComboBoxControl(hwndCtrl, typeTypesBigInt);
@@ -3988,7 +4034,9 @@ static int GetDataTypeStringId(int nId)
 {
    int nOffset = 0;
    CTLDATA *lpDataType;
-   if (GetOIVers() >= OIVERS_91)
+   if (GetOIVers() >= OIVERS_100)
+	   lpDataType = typeTypesBoolean;
+   else if (GetOIVers() >= OIVERS_91)
       lpDataType = typeTypesAnsiDate;
    else if (GetOIVers() >= OIVERS_30)
       lpDataType = typeTypesBigInt;

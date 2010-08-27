@@ -99,6 +99,8 @@ FUNC_EXTERN PTR		opu_memory();
 **	    Added OPC_EXCH_N flag for parallel queries.
 **	7-may-2008 (dougi)
 **	    Added opc_curnode to help with table procedures.
+**	21-Jun-2010 (kschendel) b123775
+**	    Delete unused stmtno.
 */
 struct _OPC_STATE
 {
@@ -145,13 +147,6 @@ struct _OPC_STATE
 
 	/* Opc_pvrow_dbp is the first of N rows for DB proc parameter values */
     i4		    opc_pvrow_dbp;
-
-	/* Opc_stmtno gives the statement number that we are currently 
-	** compiling. For non-DB procedures, this will always be zero. For
-	** DB procedures, this will start with zero and will be incremented
-	** for each statement in the dbproc.
-	*/
-    i4		    opc_stmtno;
 
     i4		    opc_flags;	/* Flags for the state of compilation */
 #define	    OPC_LVARS_FILLED	0x01    /* Local dbp vars have default values */
