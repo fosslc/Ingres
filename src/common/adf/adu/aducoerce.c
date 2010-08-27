@@ -121,6 +121,9 @@ NO_OPTIM = sgi_us5
 **	    Use MINI4LL in i8 contexts to avoid C typing trap.
 **	12-Dec-2008 (kiria01) b121366
 **	    Alignment access to db_data protected.
+**	05-aug-2010 (zhayu01) Bug 124183 / SD 146120
+**	    Changed utemp declaration from char[64] to char [DB_MAXTUP+1] in
+**	    adu_1flt_coerce() and adu_1dec_coerce().
 **/
 
 
@@ -228,6 +231,8 @@ e.
 **	    Added support for nchar and nvarchar datatypes.
 **	18-may-2004 (gupsh01)
 **	    Fixed length calculations.
+**	04-aug-2010 (zhayu01) Bug 124183 / SD 146120
+**	    Changed utemp declaration from char [64] to char [DB_MAXTUP + 1].
 */
 DB_STATUS
 adu_1flt_coerce(
@@ -240,7 +245,7 @@ DB_DATA_VALUE	    *rdv)
     u_i2		count;
     char                temp[DB_MAXTUP + 1];
     DB_DATA_VALUE	cdata;
-    char		utemp[64] = {'0'};
+    char		utemp[DB_MAXTUP + 1] = {'0'};
     DB_STATUS		db_stat = E_DB_OK;
     char		decimal = (adf_scb->adf_decimal.db_decspec ?
 				(char) adf_scb->adf_decimal.db_decimal : '.');
@@ -461,6 +466,8 @@ DB_DATA_VALUE	    *rdv)
 **	    Remove the previous change as decimal digit are single byte.
 **      28-Aug-2007 (kiria01) b121252
 **          Allow string data floats to be represented in scientific notation.
+**	05-aug-2010 (zhayu01) Bug 124183 / SD 146120
+**	    Changed utemp declaration from char [64] to char [DB_MAXTUP + 1].
 **	
 */
 
@@ -481,7 +488,7 @@ DB_DATA_VALUE	    *rdv)
 				(char) adf_scb->adf_decimal.db_decimal : '.');
     bool	    v8;
     DB_DATA_VALUE   cdata;
-    char            utemp[64] = {'0'};
+    char            utemp[DB_MAXTUP + 1] = {'0'};
     DB_STATUS       db_stat = E_DB_OK;
 
     switch (dv->db_datatype)
