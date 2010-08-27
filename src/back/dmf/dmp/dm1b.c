@@ -791,6 +791,9 @@
 **	13-Aug-2010 (kschendel) b124255
 **	    Add a wee bit to some of the trace output, e.g. RCB address,
 **	    makes it easier to watch things during stress tests.
+**	16-Aug-2010 (jonj) SD 146221
+**	    dm1r_crow_lock(flags) now DM1R_LK_? instead of LK_? to avoid
+**	    collisions with lk.h defines.
 */
 
 
@@ -2503,7 +2506,7 @@ dm1b_dupcheck(
 		    dm0pUnlockBuf(r, leafPinfo);
 
 		    if ( crow_locking(r) )
-			s = dm1r_crow_lock(r, LK_PHYSICAL, &localtid, NULL, dberr);
+			s = dm1r_crow_lock(r, DM1R_LK_PHYSICAL, &localtid, NULL, dberr);
 		    else
 		    {
 			/* Don't clear lock coupling in rcb */
@@ -8368,7 +8371,7 @@ dm1badupcheck(
 		dm0pUnlockBuf(r, leafPinfo);
 
 		if ( crow_locking(r) )
-		    s = dm1r_crow_lock(r, LK_PHYSICAL, &localtid, NULL, dberr);
+		    s = dm1r_crow_lock(r, DM1R_LK_PHYSICAL, &localtid, NULL, dberr);
 		else
 		{
 		    /* Don't clear lock coupling in rcb */

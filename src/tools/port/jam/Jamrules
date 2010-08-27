@@ -1436,6 +1436,9 @@
 #	    binary and prefers POSIX paths.
 #	    Update ShellNt rule to convert shell files to
 #	    binary format at build time.
+#	16-Aug-2010 (drivi01)
+#	    Fix $(USE_CYGWIN) in ShellNT action to 
+#	    environment variable %USE_CYGWIN% check.
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -10439,7 +10442,7 @@ actions piecemeal quietly ShellNT
     echo { print } >> awk.input
 
     $(AWK) -f awk.input < $(>) > $(<)
-    if not "$(USE_CYGWIN)"=="" d2u $(<)
+    if not "%USE_CYGWIN%"=="" d2u $(<)
     $(RM) awk.input
 }
 

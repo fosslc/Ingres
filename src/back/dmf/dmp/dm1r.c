@@ -3871,13 +3871,13 @@ dm1r_rcb_update(
 ** Inputs:
 **	rcb		    - The RCB control block
 **	tid		    - the row we're locking.
-**	flags		    - LK_NOWAIT, LK_PHYSICAL or zero.
-**			      LK_NOWAIT is used whenever the buffer
+**	flags		    - DM1R_LK_NOWAIT, DM1R_LK_PHYSICAL or zero.
+**			      DM1R_LK_NOWAIT is used whenever the buffer
 **			      is locked, to avoid deadlock.
-**			      LK_PHYSICAL is used when duplicate
+**			      DM1R_LK_PHYSICAL is used when duplicate
 **			      checking.
 **	page		    - pointer to pointer to page where TID lives,
-**			      NULL when LK_PHYSICAL duplicate checking.
+**			      NULL when DM1R_LK_PHYSICAL duplicate checking.
 **
 ** Outputs:
 **	dberr		    - reason for error return
@@ -3904,6 +3904,9 @@ dm1r_rcb_update(
 **	    SIR 121619 MVCC: Blob support: simply return if tcb_extended;
 **	    the row containing the blob column has already been locked
 **	    and checked for update conflicts.
+**	16-Aug-2010 (jonj) SD 146221
+**	    Input "flags" now DM1R_LK_? defines to avoid collisions with
+**	    lk.h LK_? flags.
 */
 DB_STATUS
 dm1r_crow_lock(
@@ -3938,6 +3941,7 @@ DB_ERROR	*dberr)
     DMP_PINFO	*PinfoPtr;
     DML_XCB	    *next_r_queue;
     DMP_RCB	    *next_rcb;
+    i4		lk_flags;
 
     CLRDBERR(dberr);
 
@@ -4002,14 +4006,21 @@ DB_ERROR	*dberr)
     lock_key.lk_key5 = tid->tid_tid.tid_line;
     lock_key.lk_key6 = 0;
 
+    /* Transform DM1R_LK_? flags to those known by LK */
+    lk_flags = LK_STATUS;
+    if ( flags & DM1R_LK_PHYSICAL )
+        lk_flags |= LK_PHYSICAL;
+    if ( flags & DM1R_LK_NOWAIT )
+        lk_flags |= LK_NOWAIT;
+
     /* Output a lock trace message if tracing is enabled. */
     if (DMZ_SES_MACRO(1))
-	dmd_lock(&lock_key, r->rcb_lk_id, LK_REQUEST, flags, LK_X,
+	dmd_lock(&lock_key, r->rcb_lk_id, LK_REQUEST, lk_flags, LK_X,
 	    r->rcb_timeout, &r->rcb_tran_id, relid, &d->dcb_name);
 
     /* Request a logical/physical lock on the row. */
 
-    cl_status = LKrequest(flags | LK_STATUS, r->rcb_lk_id, &lock_key, LK_X,
+    cl_status = LKrequest(lk_flags, r->rcb_lk_id, &lock_key, LK_X,
 	    (LK_VALUE *)NULL, &lock_id, r->rcb_timeout, &sys_err);
 
     for (;;)
@@ -4030,7 +4041,7 @@ DB_ERROR	*dberr)
 
 	    if ( pinfo &&
 	         crow_locking(r) &&
-		 !(flags & LK_PHYSICAL) &&
+		 !(lk_flags & LK_PHYSICAL) &&
 		 lock_id.lk_unique &&
 		 r->rcb_crow_tid.tid_i4 != tid->tid_i4 )
 	    {
@@ -4271,7 +4282,7 @@ DB_ERROR	*dberr)
 	    ** LK_RELLOG let's LKrelease know it's ok to release this single logical
 	    ** lock rather than just ignoring the release.
 	    */
-	    if ( flags & LK_PHYSICAL || 
+	    if ( lk_flags & LK_PHYSICAL || 
 		    (dberr->err_code == E_DM0029_ROW_UPDATE_CONFLICT &&
 		     cl_status == LK_NEW_LOCK && lock_id.lk_unique) )
 	    {
@@ -4316,7 +4327,7 @@ DB_ERROR	*dberr)
 		    (d->dcb_status & DCB_S_RECOVER))
 	    {
 		dmd_lkrqst_trace(dmd_put_line, &lock_key, r->rcb_lk_id, 
-		    LK_REQUEST, flags, LK_X, 
+		    LK_REQUEST, lk_flags, LK_X, 
 		    r->rcb_timeout, &r->rcb_tran_id,
 		    relid, &d->dcb_name);
 		dmd_lock_info(DMTR_LOCK_LISTS | DMTR_LOCK_USER_LISTS |
@@ -4393,7 +4404,7 @@ DB_ERROR	*dberr)
 	** return and let caller unlock the buffers and do the escalate
 	*/
 	if ( dberr->err_code == E_DM004B_LOCK_QUOTA_EXCEEDED &&
-	     !(flags & LK_NOWAIT) )
+	     !(lk_flags & LK_NOWAIT) )
 	{
 	    /*
 	    ** Escalate to table level locking because 
@@ -4708,7 +4719,7 @@ DB_ERROR       *dberr)
     ** too many logical locks.
     */
     status = dm1r_crow_lock(r, 
-			    (dm0pBufIsLocked(&r->rcb_data)) ? LK_NOWAIT : 0,
+			    (dm0pBufIsLocked(&r->rcb_data)) ? DM1R_LK_NOWAIT : 0,
 			    tid_to_lock,
 			    (DMP_PINFO*)NULL,
 			    dberr);
@@ -6699,7 +6710,7 @@ dm1r_allocate(
 	{
 	    /* Can't wait if buffer is locked */
 	    status = dm1r_crow_lock(r, 
-	    		(dm0pBufIsLocked(pinfo)) ? LK_NOWAIT : 0, 
+	    		(dm0pBufIsLocked(pinfo)) ? DM1R_LK_NOWAIT : 0, 
 			tid, NULL, dberr);
 	}
 	else if ((t->tcb_rel.relstat & TCB_INDEX) == 0)

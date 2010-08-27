@@ -601,6 +601,9 @@
 **	22-Apr-2010 (kschendel) SIR 123485
 **	    Process coupons if doing full row duplicate checking and there
 **	    are blobs, otherwise dmpe now complains about lack of context.
+**	16-Aug-2010 (jonj) SD 146221
+**	    dm1r_crow_lock(flags) now DM1R_LK_? instead of LK_? to avoid
+**	    collisions with lk.h defines.
 */
 DB_STATUS
 dm1h_allocate(
@@ -803,7 +806,7 @@ DB_ERROR       *dberr)
 		    dm0pUnlockBuf(r, pinfo);
 
 		    if ( crow_locking(r) )
-		        s = dm1r_crow_lock(r, LK_PHYSICAL, &tid_to_lock, NULL, dberr);
+		        s = dm1r_crow_lock(r, DM1R_LK_PHYSICAL, &tid_to_lock, NULL, dberr);
 		    else
 		    {
 			/* don't clear lock coupling in rcb */
