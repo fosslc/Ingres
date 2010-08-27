@@ -71,6 +71,9 @@
 **  12-May-2010 (drivi01)
 **     For newly added "Create Index" menu item, added
 **     case statement to handle the selection.
+**  30-Jun-2010 (drivi01)
+**     ICE is being removed from release 10.0.
+**     Remove ICE from the DOM tree.
 *****************************************************************************/
 
 // ---   IMPORTANT NOTES !!!    ---
@@ -2122,10 +2125,11 @@ static BOOL NEAR DomFillTree(LPDOMDATA lpDomData, int domCreateMode, HWND hwndMd
             return FALSE;
 
           // ICE
-          LoadString(hResource, IDS_TREE_ICE_STATIC, buf, sizeof(buf));
+          /*LoadString(hResource, IDS_TREE_ICE_STATIC, buf, sizeof(buf));
           lpRecord = AllocAndFillRecord(OT_STATIC_ICE, FALSE,
                                         NULL, NULL, NULL, 0,
                                         buf, NULL, NULL, NULL);
+	  */
           if (!lpRecord)
             return FALSE;
           recIdSt = TreeAddRecord(lpDomData, buf, 0, recIdSt, 0, lpRecord);

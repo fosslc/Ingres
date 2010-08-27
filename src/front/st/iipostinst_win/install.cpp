@@ -1544,6 +1544,8 @@ CInstallation::SetDate()
 **	    Advantage Ingres SDK.
 **	21-jan-2004 (penga03)
 **	    Remove inguninst.exe only if upgrade.
+**	24-May-2010 (drivi01)
+**	    Remove Ice.  Leave the code.
 */
 void
 CInstallation::Init()
@@ -1558,7 +1560,9 @@ CInstallation::Init()
     AddComponent(IDS_LABELTOOLS, SIZE_TOOLS, TRUE, TRUE);
     AddComponent(IDS_LABELVISION, SIZE_VISION, TRUE, TRUE);
     AddComponent(IDS_LABELREPLICATOR,SIZE_REPLICAT, TRUE, TRUE);
+#ifdef BUILD_ICE    
     AddComponent(IDS_LABELICE, SIZE_ICE, TRUE, TRUE);
+#endif
     AddComponent(IDS_LABELOPENROADDEV, SIZE_OPENROAD_DEV, TRUE, TRUE);
     AddComponent(IDS_LABELDOC, SIZE_DOC, TRUE, TRUE);
     AddComponent(IDS_LABELOPENROADRUN, SIZE_OPENROAD_RUN, FALSE, TRUE);
@@ -1583,7 +1587,9 @@ CInstallation::Init()
     CComponent	*tools = GetTools();
     CComponent	*vision = GetVision();
     CComponent	*replicat = GetReplicat();
+#ifdef BUILD_ICE    
     CComponent	*ice = GetICE();
+#endif
     CComponent	*openroaddev = GetOpenROADDev();
     CComponent	*openroadrun = GetOpenROADRun();
     CComponent	*onlinedoc = GetOnLineDoc();
@@ -1776,11 +1782,13 @@ CInstallation::Init()
 	replicat->m_selected = GetRegValueBOOL(
 			strValue.LoadString(IDS_LABELREPLICATOR) ? strValue : "", FALSE);
     }
+#ifdef BUILD_ICE    
     if (ice)
     {
 	ice->m_selected = GetRegValueBOOL(
 			strValue.LoadString(IDS_LABELICE) ? strValue : "", FALSE);
     }
+#endif
     if (openroaddev)
     {
 	openroaddev->m_selected = GetRegValueBOOL(
@@ -1941,6 +1949,8 @@ CInstallation::Execute(LPCSTR lpCmdLine, BOOL bWait/*=TRUE*/, BOOL bWindow/*=FAL
 **	06-oct-2001 (penga03)
 **	    Set the defalut value of m_HTTP_ServerPath to be the install path of 
 **	    the HTTP server installed locally.
+**	24-May-2010 (drivi01)
+**	    Remove Ice, leave the code.
 */
 BOOL
 CInstallation::SetSymbolTbl()
@@ -2027,7 +2037,7 @@ CInstallation::SetSymbolTbl()
 	if (Exec("ingsetenv.exe", s))
 	    error = TRUE;
     }
-
+#ifdef BUILD_ICE    
     CComponent *ice = theInstall.GetICE();
     if ((ice) && (ice->m_selected))
     { 	
@@ -2051,6 +2061,7 @@ CInstallation::SetSymbolTbl()
 		}
 	    }
 	}
+	
 		
 	if(!Local_NMgtIngAt("II_ICE_COLDFUSION", m_ColdFusionPath))
 	    m_ColdFusionPath = GetRegValue("iicoldfusiondir");
@@ -2067,6 +2078,7 @@ CInstallation::SetSymbolTbl()
 	if (Exec("ingsetenv.exe", s)) 
 	    error = TRUE;
     }
+#endif
 
     AppendComment(error ? IDS_FAILED : IDS_DONE);
     return (!error);
@@ -2170,12 +2182,16 @@ CInstallation::CheckpointOneDatabase(LPCSTR lpName)
 **	    Removed upgrade of imadb, icedb, icetutor, and icesvr, as they
 **	    are now treated as system databases and will get upgraded
 **	    automatically by an upgradedb on iidbdb.
+**  24-May-2010 (drivi01)
+**      Remove Ice, leave the code.
 */
 BOOL
 CInstallation::CreateDatabases()
 {
     CComponent	*dbms = theInstall.GetDBMS();
+#ifdef BUILD_ICE    
     CComponent	*ice = theInstall.GetICE();
+#endif
     BOOL	bret = TRUE;
 
     if (dbms && dbms->m_selected)
@@ -2242,6 +2258,7 @@ CInstallation::CreateDatabases()
 	AppendComment(bret ? IDS_DONE : IDS_FAILED);
 	}
 
+#ifdef BUILD_ICE    
     if (ice && ice->m_selected)
     {
 	BOOL bCreateICEDB=0;
@@ -2262,7 +2279,7 @@ CInstallation::CreateDatabases()
 	    if(bret)
 	    {
 		CString t(m_installPath); t.Replace("\\", "/");
-
+		
 		/*
 		** modify [II_SYSTEM] in
 		** %II_SYSTEM%\ingres\temp\icesdk.sql
@@ -2304,7 +2321,7 @@ CInstallation::CreateDatabases()
 	if (bCreateICEDB)
 	    AppendComment(bret ? IDS_DONE : IDS_FAILED);
     }
-
+#endif
 #ifdef EVALUATION_RELEASE
 
     if (!Create_OtherDBUsers())
@@ -2427,10 +2444,6 @@ CInstallation::CreateDatabases()
     {
 	if (!CreateOneDatabase("timeregs -utimregs"))
 	    bret = FALSE;
-    }
-
-    if (bret)
-    {
     }
 
     /* create and populate infocadb */
@@ -3061,6 +3074,8 @@ CInstallation::CleanSharedMemory()
 **	12-May-2010 (drivi01)
 **          Add two new parameters on the upgrade offline_error_action
 **          and online_error_action.
+**  24-May-2010 (drivi01)
+**		Remove Ice, leave the code.
 */
 BOOL
 CInstallation::SetConfigDat()
@@ -3597,6 +3612,7 @@ CInstallation::SetConfigDat()
 	cmd.Format("ii.%s.ingstart.*.rmcmd 0", (LPCSTR)m_computerName);
 	Exec(m_installPath + "\\ingres\\utility\\iisetres.exe", cmd, FALSE);
 
+#ifdef BUILD_ICE    
 	/*
 	** Set ICE Server startup count to 0 since setup is not yet complete
 	** Also, enable 4K pages, as ICE uses row level locking.
@@ -3610,6 +3626,7 @@ CInstallation::SetConfigDat()
 	    cmd.Format("ii.%s.ingstart.*.icesvr 0", (LPCSTR)m_computerName);
 	    Exec(m_installPath + "\\ingres\\utility\\iisetres.exe", cmd, FALSE);
 	}
+#endif
 
 	CComponent *star = theInstall.GetStar();
 	if ((star) && (star->m_selected))
@@ -4256,6 +4273,8 @@ CInstallation::UpdateLogFile()
 **	    Restore the Net server startup count correctly after an 
 **	    installation is modified. This corrects the bug introduced in
 **	    change 494289 for b121120.
+**  24-May-2010 (drivi01)
+**	    Remove ice, leave the code.
 **	    
 */
 DWORD
@@ -4271,7 +4290,9 @@ CInstallation::ThreadPostInstallation()
     CComponent	*tools = GetTools();
     CComponent	*vision = GetVision();
     CComponent	*replicat = GetReplicat();
+#ifdef BUILD_ICE    
     CComponent	*ice = GetICE();
+#endif
     CComponent	*openroaddev = GetOpenROADDev();
     CComponent	*openroadrun = GetOpenROADRun();
     CComponent	*jdbc = GetJDBC();
@@ -4402,7 +4423,7 @@ CInstallation::ThreadPostInstallation()
 
     if (bret && replicat->m_selected)	
 	bret = ReplicatPostInstallation();
-
+#ifdef BUILD_ICE    
     if (bret && ice->m_selected)	
 	{
 	if (!dbms->m_selected)
@@ -4422,10 +4443,11 @@ CInstallation::ThreadPostInstallation()
 
 	if (bret)
 	    bret = IcePostInstallation();
-
+    
 	if (!dbms->m_selected)
 	    StopServer(TRUE);
-    }
+	}
+#endif
 
 #ifdef EVALUATION_RELEASE
     if(bret)
@@ -4824,6 +4846,8 @@ RemoveObsoleteRegEntries()
 **	    Remove prompt to upgrade user databases.  User is asked this 
 **	    question in pre-installer now and doesn't need to be asked 
 **	    the same question twice.
+**  24-May-2010 (drivi01)
+**      Remove Ice, leave the code.
 */
 BOOL
 CInstallation::ServerPostInstallation()
@@ -4917,12 +4941,14 @@ CInstallation::ServerPostInstallation()
     if (bret && !LoadIMA())
 	bret = FALSE;
 
+#ifdef BUILD_ICE    
     CComponent *ice = theInstall.GetICE();
     if ((ice) && (ice->m_selected))
     {
 	if (bret && !LoadICE())
 	    bret = FALSE;
     }
+#endif
     
     /* Finish star server configuration and start it for the upgrade */
     if (bret && star->m_selected)	

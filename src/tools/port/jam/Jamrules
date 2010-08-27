@@ -1416,6 +1416,8 @@
 #           utility because it is unable to find the iilibadf shared library.
 #           The IINEEDLIBSW rule is missing the search directories for shared
 #           libraries
+#	24-Jul-2010 (drivi01)
+#	    Remove ICE from build process.
 #
 #
 #####
@@ -2040,7 +2042,8 @@ rule IIEsqlHdr
     LOCATE on $(_t) = $(INGFILES) ;
 
 }
-
+if $(BUILD_ICE)
+{
 rule IIICECAZIP
 {
   if $(NT)
@@ -2065,6 +2068,7 @@ rule IIICECAZIP
 	#_USETOOL $(<) : cazipxp.exe ;
 	Clean clean : $(INGICE)/$(<) ;	
   }
+}
 }
 
 rule IICF
@@ -9033,13 +9037,14 @@ actions _PBCopyFile
 	if not exist $(<:D) mkdir $(<:D)
 	$(CP) $(>) $(<) 
 }
-
+if $(BUILD_ICE)
+{
 actions _CAZIP
 {
 	$(CD) $(>)
 	cazipxp -r -w *.* $(<) 
 }
-
+}
 actions _INSTALLICE
 {
 	if not exist $(<) mkdir $(<)

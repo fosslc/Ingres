@@ -1291,7 +1291,9 @@ ingres_ice_verify_paths(MSIHANDLE hInstall)
 **	    The parameter will setup configuration type for the Ingres instance.
 **	    Parameter will take 3 options: TXN, BI, CM.
 **	    II_CONFIG_TYPE=NULL or the absence of II_CONFIG_TYPE parameter
-**	    will revert back to Classic/Traditional Ingres configuration.	
+**	    will revert back to Classic/Traditional Ingres configuration.
+**	27-Jul-2010 (drivi01)
+**	    Remove ICE, but leave the code.	
 **	    
 */
 UINT __stdcall 
@@ -1721,7 +1723,7 @@ ingres_set_properties(MSIHANDLE hInstall)
 		MsiSetProperty(hInstall, "INGRES_ENABLESQL92", "");
 	
 	/* ICE */
-	GetPrivateProfileString("Ingres Configuration", "iihttpserver", "", lpReturnedString, sizeof(lpReturnedString), strRSPFile);
+	/*GetPrivateProfileString("Ingres Configuration", "iihttpserver", "", lpReturnedString, sizeof(lpReturnedString), strRSPFile);
 	if(lpReturnedString[0] && GetFileAttributes(lpReturnedString)!=-1)
 		MsiSetProperty(hInstall, "INGRES_HTTP_SERVER", lpReturnedString);
 	else
@@ -1744,7 +1746,8 @@ ingres_set_properties(MSIHANDLE hInstall)
 		MsiSetProperty(hInstall, "INGRES_COLDFUSION_PATH", lpReturnedString);
 	else
 		MsiSetProperty(hInstall, "INGRES_COLDFUSION_PATH", strInstallPath);
-	
+	*/
+
 	GetPrivateProfileString("Ingres Configuration", "serviceauto", "", lpReturnedString, sizeof(lpReturnedString), strRSPFile);
 	if(strlen(lpReturnedString)==0)
 		GetPrivateProfileString("Ingres Configuration", "II_SERVICE_START_AUTO", "", lpReturnedString, sizeof(lpReturnedString), strRSPFile);
@@ -2117,6 +2120,10 @@ ingres_set_properties(MSIHANDLE hInstall)
 **	12-Aug-2009 (drivi01)
 **	    Add Spatial Objects component to the response file.  The new 
 ** 	    component name in the response file is II_COMPONENT_SPATIAL.
+**      24-May-2010 (drivi01)
+**	    Disable ICE in the response file.  Leave the code for now in
+**          case it needs to be enabled.
+**	    Set ICE to be removed on upgrade if it's already installed.
 */
 
 UINT __stdcall 
@@ -2228,7 +2235,11 @@ ingres_base_settings(MSIHANDLE hInstall)
 
 	/* Ingres/ICE */
 	MsiGetFeatureState(hInstall, "IngresIce", &iInstalled, &iAction);
-	if(iInstalled!=INSTALLSTATE_LOCAL)
+	if (iInstalled == INSTALLSTATE_LOCAL)
+	{
+		MsiSetFeatureState(hInstall, "IngresIce", INSTALLSTATE_ABSENT);
+	}
+	/*if(iInstalled!=INSTALLSTATE_LOCAL)
 	{
 		GetPrivateProfileString("Ingres Configuration", "Ingres/ICE", "", lpReturnedString, sizeof(lpReturnedString), strRSPFile);
 		if (strlen(lpReturnedString)==0)
@@ -2246,7 +2257,7 @@ ingres_base_settings(MSIHANDLE hInstall)
 			else if (!strstr(szAddLocal, "IngresIce"))
 				strcat(szAddLocal, ",IngresIce");
 		}
-	}
+	}*/
 
 	/* Ingres/Replicator */
 	MsiGetFeatureState(hInstall, "IngresReplicator", &iInstalled, &iAction);
