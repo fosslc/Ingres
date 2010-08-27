@@ -1943,8 +1943,6 @@ hold file calculation is added at end of routine
 						** makes estimate lower */
                     if ((!sjp->existence_only || sjp->kjeqcls_subset)
                         &&
-			(icop->opo_storage == DB_BTRE_STORE)
-			&&
                         (sjp->key_reptf > icop->opo_cost.opo_tpb))
 			/* adjust estimates due to high duplication factor */
 			opn_highdups(sjp, ocop, icop, probes,
@@ -3364,6 +3362,15 @@ opn_tproc_cptest(
 **	of the same type of ordering and it was more costly then
 **	delete it.
 **
+** Note on trace points op188/op215/op216.
+**	Trace points op188/op215/op216 and op145 (set qep) both use opt_cotree().
+**	op188/op215/op216 expect opt_conode to point to the fragment being
+**	traced, and op145 expects it to be NULL (so that ops_bestco is used).
+**	The NULL/non-NULL value of opt_conode also results in different
+**	display behaviour. For these reasons opt_conode is also NULLed
+**	after the call to opt_cotree().
+**
+**
 ** Inputs:
 **      subquery                        ptr to subquery being analyzed
 **      jsubtp                          cost ordering set to which new ordering
@@ -3504,6 +3511,11 @@ opn_tproc_cptest(
 **	    the best fragment number so far for use in opt_cotree(). Also
 **	    set ops_trace.opt_subquery to make sure we are tracing the current
 **	    subquery.
+**	13-may-10 (smeke01) b123727
+**	    Add new trace point op216 to output trace for all query plan
+**	    fragments and best plans considered by the optimizer. Add a new
+**	    trace point op216 that prints out only the best plans as they are
+**	    encountered.
 */
 static OPN_STATUS
 opn_corput(
@@ -3527,9 +3539,23 @@ opn_corput(
     bool		tproc_cartprod;
     OPE_IEQCLS		maxeqcls;
     f4			greedy_factor = 1.0;
+    bool 		op188 = FALSE;
+    bool 		op215 = FALSE;
+    bool 		op216 = FALSE;
 
     subquery = sjp->subquery;
     global = subquery->ops_global;
+
+    if (global->ops_cb->ops_check)
+    {
+	if (opt_strace( global->ops_cb, OPT_F060_QEP))
+	    op188 = TRUE;
+	if (opt_strace( global->ops_cb, OPT_F087_ALLFRAGS))
+	    op215 = TRUE;
+	if (opt_strace( global->ops_cb, OPT_F088_BESTPLANS))
+	    op216 = TRUE;
+    }
+
     maxeqcls = subquery->ops_eclass.ope_ev;
     tproc_cartprod = FALSE;
     cartprod = (sjp->new_jordering == OPE_NOEQCLS)
@@ -3706,7 +3732,7 @@ opn_corput(
     newcop->opo_osort = sjp->outer.sort;    /* does the outer have a sort node*/
     newcop->opo_idups = sjp->inner.duplicates != 0;
     newcop->opo_odups = sjp->outer.duplicates != 0;
-    /* count another fragment for trace point op188 */
+    /* count another fragment for trace points op188/op215/op216 */
     subquery->ops_currfragment++;
     if (global->ops_estate.opn_rootflg)	    /* if we are at the root
                                             ** then save this new co since it 
@@ -3754,6 +3780,13 @@ opn_corput(
 		    sort_dio)
 		)
 	    {
+		if (op215)
+		{
+		    global->ops_trace.opt_subquery = subquery;
+		    global->ops_trace.opt_conode = newcop;
+		    opt_cotree(newcop);
+		    global->ops_trace.opt_conode = NULL; 
+    		}
 		opn_dcmemory(subquery, newcop);
 		return(OPN_SIGOK);	    /* return if no site exists
 					    ** for which this CO would be
@@ -3785,8 +3818,17 @@ opn_corput(
 		if ( opn_deferred (subquery, &jcost, ocop, icop, 
 			sjp->blocks, sjp->join.tuples, 
 			sjp->join.eqsp->opn_relwid, &deferredsort) )
+		{
+		    if (op215)
+		    {
+			global->ops_trace.opt_subquery = subquery;
+			global->ops_trace.opt_conode = newcop;
+			opt_cotree(newcop);
+			global->ops_trace.opt_conode = NULL; 
+		    }
 		    return(OPN_SIGOK);		/* return if cost of creating
 						** temporary is too much */
+	    }
 	    }
 	    else
 		deferredsort = FALSE;
@@ -3801,6 +3843,13 @@ opn_corput(
             {   if (subquery->ops_bestco && !(subquery->ops_mask & OPS_CPFOUND)
 			&& jcost*10 > subquery->ops_cost)
                 {  /* avoid using a cart prod on the top node if possible */
+		    if (op215)
+		    {
+			global->ops_trace.opt_subquery = subquery;
+			global->ops_trace.opt_conode = newcop;
+			opt_cotree(newcop);
+			global->ops_trace.opt_conode = NULL; 
+		    }
                     return(OPN_SIGOK);  /* current best plan is not a cart prod */
                 }
             }
@@ -3834,8 +3883,17 @@ opn_corput(
 			sjp->dio, sjp->cpu, sjp->join.eqsp, &jcost, 
 			sordering, &sortrequired, newcop)
 		    )
+		{
+		    if (op215)
+		    {
+			global->ops_trace.opt_subquery = subquery;
+			global->ops_trace.opt_conode = newcop;
+			opt_cotree(newcop);
+			global->ops_trace.opt_conode = NULL; 
+		    }
 		    return(OPN_SIGOK);	/* return if added cost of sort node, or creating
 					** relation is too expensive */
+		}
 		if (sortrequired)
 		{
 		    OPO_COMAPS	*oldmaps;
@@ -3878,7 +3936,7 @@ opn_corput(
             subquery->ops_tcurrent++;       /* increment plan number */
 	    subquery->ops_tplan = subquery->ops_tcurrent; /* save the plan ID
 					    ** for the current best plan */
-	    /* save the best fragment so far for trace point op188 */
+	    /* save the best fragment so far for trace point op188/op215/op216 */
 	    subquery->ops_bestfragment = subquery->ops_currfragment;  
 	    if (global->ops_gmask & OPS_FPEXCEPTION)
 		global->ops_gmask |= OPS_BFPEXCEPTION; /* a plan was found which
@@ -3903,6 +3961,9 @@ opn_corput(
 	*/
         newcop->opo_maps = &sjp->join.eqsp->opn_maps;   /* ptr to equivalence class map
                                             ** of attributes in new relation*/
+
+	op216 = FALSE; /* op216 traces only the best plans */
+
 	if (global->ops_cb->ops_smask & OPS_MDISTRIBUTED)
 	{   
 	    if (!opd_jcost(subquery, 
@@ -3912,6 +3973,13 @@ opn_corput(
 		sjp->join.eqsp->opn_relwid, 
 		(OPO_CPU)0.0, (OPO_BLOCKS)0.0))
 	    {
+		if (op215)
+		{
+		    global->ops_trace.opt_subquery = subquery;
+		    global->ops_trace.opt_conode = newcop;
+		    opt_cotree(newcop);
+		    global->ops_trace.opt_conode = NULL; 
+    		}
 		opn_dcmemory(subquery, newcop);
 		return(OPN_SIGOK);	    /* return if no site exists
 					    ** for which this CO would be
@@ -3939,6 +4007,13 @@ opn_corput(
 			{
 			    if(cop->opo_sjeqc != OPE_NOEQCLS)
 			    {
+				if (op215)
+				{
+				    global->ops_trace.opt_subquery = subquery;
+				    global->ops_trace.opt_conode = newcop;
+				    opt_cotree(newcop);
+				    global->ops_trace.opt_conode = NULL; 
+				}
 				opn_dcmemory(subquery, newcop);
 				return(OPN_SIGOK);	/* prefer joins over cart prods */
 			    }
@@ -3963,6 +4038,13 @@ opn_corput(
 						  cop->opo_cost.opo_cpu)
 			       )
 			    {
+				if (op215)
+				{
+				    global->ops_trace.opt_subquery = subquery;
+				    global->ops_trace.opt_conode = newcop;
+				    opt_cotree(newcop);
+				    global->ops_trace.opt_conode = NULL; 
+				}
                                 opn_dcmemory(subquery, newcop);
 				return(OPN_SIGOK);    /*existing cost ordering is better*/
 			    }
@@ -3995,26 +4077,26 @@ opn_corput(
 	    pcotree (Jne.Gminco);
 #   endif
 
+    if (op188 || op215 || op216)
+    {
+	global->ops_trace.opt_subquery = subquery;
+	if (sortcop)
+	{
+	    global->ops_trace.opt_conode = sortcop;
+	    opt_cotree(sortcop);
+	}
+	else
+	{
+	    global->ops_trace.opt_conode = newcop;
+	    opt_cotree(newcop);
+	}
+	global->ops_trace.opt_conode = NULL; 
+    }
+
     if (global->ops_cb->ops_check)
     {
 	i4	    first;
 	i4	    second;
-
-	/* Check for trace point op188 to see if we are to print this CO tree */
-	/* 
-	** Trace points op188 and op145 (set qep) both use opt_cotree().
-	** op188 expects opt_conode to point to the fragment being traced, and op145
-	** expects it to be NULL (so that ops_bestco is used). The NULL/non-NULL
-	** value of opt_conode also results in different display behaviour. For these
-	** reasons opt_conode is also NULLed here after the call to opt_cotree().
-	*/
-	if (opt_strace( global->ops_cb, OPT_F060_QEP))
-	{
-	    global->ops_trace.opt_subquery = subquery;
-	    global->ops_trace.opt_conode = newcop;
-	    opt_cotree(newcop);
-	    global->ops_trace.opt_conode = NULL; 
-	}
 
 	/* If we have a usable plan, check for trace point op255 timeout setting */
 	if( subquery->ops_bestco &&

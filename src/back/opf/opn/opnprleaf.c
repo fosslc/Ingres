@@ -275,6 +275,14 @@ opn_adfsf(
 **       first tuple (this could also be useful for QBF) but this is not done
 **       now.
 **
+** Note on trace points op188/op215/op216.
+**	Trace points op188/op215/op216 and op145 (set qep) both use opt_cotree().
+**	op188/op215/op216 expect opt_conode to point to the fragment being
+**	traced, and op145 expects it to be NULL (so that ops_bestco is used).
+**	The NULL/non-NULL value of opt_conode also results in different
+**	display behaviour. For these reasons opt_conode is also NULLed
+**	after the call to opt_cotree().
+**
 ** Inputs:
 **      subquery                        ptr to subquery being analyzed
 **      jsbtp                           set of cost orderings already calculated
@@ -391,6 +399,13 @@ opn_adfsf(
 **	    the best fragment number so far for use in opt_cotree(). Also
 **	    set ops_trace.opt_subquery to make sure we are tracing the current
 **	    subquery.
+**	13-may-10 (smeke01) b123727
+**	    Add new trace point op215 to output trace for all query plan
+**	    fragments and best plans considered by the optimizer. Add a new
+**	    trace point op216 that prints out only the best plans as they are
+**	    Also cleaned up some confused variable usage: replaced dsortcop
+**	    with sortcop; and removed usage of ncop after it has been assigned
+**	    to cop, replacing it with cop.
 */
 OPN_STATUS
 opn_prleaf(
@@ -431,8 +446,23 @@ opn_prleaf(
 				    ** thread */
     OPO_COST		prcost;	    /* project restrict cost of node */
     i4 		pagesize;   /* estimate the page size     */ 
+    OPO_CO		*sortcop = NULL;	/* set to not NULL if a sort node is required */
+    bool 		op188 = FALSE;
+    bool 		op215 = FALSE;
+    bool 		op216 = FALSE;
 
     global = subquery->ops_global;
+
+    if (global->ops_cb->ops_check)
+    {
+	if (opt_strace( global->ops_cb, OPT_F060_QEP))
+	    op188 = TRUE;
+	if (opt_strace( global->ops_cb, OPT_F087_ALLFRAGS))
+	    op215 = TRUE;
+	if (opt_strace( global->ops_cb, OPT_F088_BESTPLANS))
+	    op216 = TRUE;
+    }
+
     distributed = global->ops_cb->ops_smask & OPS_MDISTRIBUTED;
     cop = jsbtp->opn_coback = jsbtp->opn_coforw = opn_cmemory( subquery ); /* 
 				    ** get a new CO node */
@@ -632,7 +662,7 @@ opn_prleaf(
 
     prcost = opn_cost(subquery, dio, cpu);
 
-    /* count another fragment for trace point op188 */
+    /* count another fragment for trace point op188/op215/op216 */
     subquery->ops_currfragment++;
 
     /* With traditional enum, the only way to have an ops_cost is to have
@@ -661,9 +691,18 @@ opn_prleaf(
 	(subquery->ops_mask & OPS_LAENUM) == 0)
 	&&
 	prcost >= subquery->ops_cost)
+    {
+	if (op215)
+	{
+	    global->ops_trace.opt_subquery = subquery;
+	    global->ops_trace.opt_conode = cop;
+	    opt_cotree(cop);
+	    global->ops_trace.opt_conode = NULL; 
+	}
 	return(OPN_SIGOK);	    /* do not do anything if the cost is larger
                                     ** than the current best plan
                                     */
+    }
     ncop = opn_cmemory(subquery);   /* get space for a project-restrict CO node 
                                     */
     ncop->opo_storage = DB_HEAP_STORE; /* no reformat for this CO node */
@@ -826,7 +865,7 @@ opn_prleaf(
 		histp->oph_origtuples = rlsp->opn_reltups;
 		histp->oph_odefined = TRUE;
 	    }
-	    
+  
     }
     cop		= ncop;			    /* all reformats go from cop
 					    ** (we must make a copy of the
@@ -846,7 +885,6 @@ opn_prleaf(
 					    ** is useful for at least one site */
 	    if (root_flag)
 	    {
-		OPO_CO		*dsortcop;  /* sort node if necessary */
 		OPO_COST	cpu_sortcost;   /* total cpu cost for sort node */
 		OPO_COST	dio_sortcost;   /* total dio cost for sort node */
 		if (subquery->ops_msort.opo_mask & OPO_MTOPSORT)
@@ -859,25 +897,34 @@ opn_prleaf(
 		    cpu_sortcost = 0.0;
 		    dio_sortcost = 0.0;
 		}
-		dsortcop = NULL;
-		useful = opd_prleaf(subquery, rlsp, ncop, eqsp->opn_relwid, 
+		useful = opd_prleaf(subquery, rlsp, cop, eqsp->opn_relwid, 
 			cpu_sortcost, dio_sortcost); /* add 
 					    ** distributed costs for this node*/
 		if (!useful 
 		    ||
 		    opd_bestplan(subquery, cop,
 			((subquery->ops_msort.opo_mask & OPO_MTOPSORT) != 0),
-			cpu_sortcost, dio_sortcost, &dsortcop))
+			cpu_sortcost, dio_sortcost, &sortcop))
+		{
+		    if (op215)
+		    {
+			global->ops_trace.opt_subquery = subquery;
+			global->ops_trace.opt_conode = cop;
+			opt_cotree(cop);
+			global->ops_trace.opt_conode = NULL; 
+		    }
 		    return(OPN_SIGOK);
+		}
 		if (subquery->ops_msort.opo_mask & OPO_MTOPSORT)
-		    opn_createsort(subquery, dsortcop, cop, eqsp); /* initialize the fields of
+		    opn_createsort(subquery, sortcop, cop, eqsp); /* initialize the fields of
 					    ** the top sort node, opd_bestplan has already
 					    ** placed the top sort node in the appropriate
 					    ** CO plan locations */
 	    }
 	    else
 	    {
-		useful = opd_prleaf(subquery, rlsp, ncop, eqsp->opn_relwid, 
+		op216 = FALSE; /* op216 traces only the best plans */
+		useful = opd_prleaf(subquery, rlsp, cop, eqsp->opn_relwid, 
 		    (OPO_CPU)0.0, (OPO_BLOCKS)0.0); /* add 
 					    ** distributed costs for this node*/
 	    }
@@ -885,9 +932,6 @@ opn_prleaf(
 	else if (root_flag)
 	{
 	    OPO_COST		prcost1;
-	    OPO_CO		*sortcop;/* set to not NULL if a sort node is
-					** required */
-	    sortcop = NULL;
 
 	    prcost1 = opn_cost(subquery, dio, cpu);
 	    if (subquery->ops_msort.opo_mask & OPO_MTOPSORT)
@@ -923,8 +967,17 @@ opn_prleaf(
 		if (opn_checksort(subquery, &subquery->ops_bestco, subquery->ops_cost,
 			    dio, cpu, eqsp, &prcost1, sordering, &sortrequired, 
 			    cop) )
+		{
+		    if (op215)
+		    {
+			global->ops_trace.opt_subquery = subquery;
+			global->ops_trace.opt_conode = cop;
+			opt_cotree(cop);
+			global->ops_trace.opt_conode = NULL; 
+		    }
 		    return(OPN_SIGOK);	/* return if added cost of sort node, or creating
 					** relation is too expensive */
+		}
 		if (sortrequired)
 		    sortcop = opn_cmemory(subquery); /* allocate memory here so that
 					** we do  not run out of memory prior to
@@ -954,7 +1007,7 @@ opn_prleaf(
 	    subquery->ops_tplan = subquery->ops_tcurrent; /* since this is
 					**a single leaf tree, opn_ceval
 					** will detect a timeout */
-	    /* save the best fragment so far for trace point op188 */
+	    /* save the best fragment so far for trace point op188/op215/op216 */
 	    subquery->ops_bestfragment = subquery->ops_currfragment;
 	    subquery->ops_cost	= prcost1;
 	    global->ops_estate.opn_search = FALSE; /* new best CO
@@ -964,34 +1017,37 @@ opn_prleaf(
 	}
 
 	if (!root_flag)
+	{
+	    op216 = FALSE; /* op216 traces only the best plans */
 	    opn_coinsert (jsbtp, cop);	/* put in co list, do not place into CO
 					** if at the root since it may be deallocated
 					** when a new best plan is found, and the PR
 					** is worthless if it was once the best plan
 					** so it does not need to be in the linked list
 					** of CO nodes */
+	}
+    }
+
+    if (op188 || op215 || op216)
+    {
+	global->ops_trace.opt_subquery = subquery;
+	if (!sortcop)
+	{
+	    global->ops_trace.opt_conode = cop;
+	    opt_cotree(cop);
+	}
+	else
+	{
+	    global->ops_trace.opt_conode = sortcop;
+	    opt_cotree(sortcop);
+	}
+	global->ops_trace.opt_conode = NULL; 
     }
 
     if (global->ops_cb->ops_check)
     {
 	i4	    first;
 	i4	    second;
-
-	/* Check for trace point op188 to see if we are to print this CO tree */
-	/* 
-	** Trace points op188 and op145 (set qep) both use opt_cotree().
-	** op188 expects opt_conode to point to the fragment being traced, and op145
-	** expects it to be NULL (so that ops_bestco is used). The NULL/non-NULL
-	** value of opt_conode also results in different display behaviour. For these
-	** reasons opt_conode is also NULLed here after the call to opt_cotree().
-	*/
-	if (opt_strace( global->ops_cb, OPT_F060_QEP))
-	{
-	    global->ops_trace.opt_subquery = subquery;
-	    global->ops_trace.opt_conode = cop;
-	    opt_cotree(cop);
-	    global->ops_trace.opt_conode = NULL;
-	}
 
 	/* If we have a usable plan, check for trace point op255 timeout setting */
 	if( subquery->ops_bestco &&

@@ -2420,6 +2420,9 @@ opd_addsite(
 **	    because the initialization value for timeout was not updated.
 **	31-Aug-2006 (kschendel)
 **	    Watch for HFAGG as well as RFAGG.
+**	13-may-10 (smeke01) b123727
+**	    Increment best plan fragment for distributed query plans. Trace 
+**	    discarded plan fragment for op215.
 */
 bool
 opd_bestplan(
@@ -2439,7 +2442,15 @@ opd_bestplan(
 				    ** in case of copying CO nodes out of
 				    ** enumeration memory */
     OPO_COST	    sort_cost;	    /* cost of adding a generic sort node */
+    bool	    op215 = FALSE;
+
     global = subquery->ops_global;
+    if (global->ops_cb->ops_check)
+    {
+	if (opt_strace( global->ops_cb, OPT_F087_ALLFRAGS))
+	    op215 = TRUE;
+    }
+
     sitepp = global->ops_gdist.opd_base;
     costp = newcop->opo_variant.opo_scost;
     addnodes = FALSE;
@@ -2464,6 +2475,13 @@ opd_bestplan(
 	}
 	if (subquery->ops_cost <= mcost)
 	{
+	    if (op215)
+	    {
+		global->ops_trace.opt_subquery = subquery;
+		global->ops_trace.opt_conode = newcop;
+		opt_cotree(newcop);
+		global->ops_trace.opt_conode = NULL; 
+	    }
 	    opn_dcmemory(subquery, newcop); /* recover the memory for the newcop */
 	    return(TRUE);	    /* this may occur if a join can occur on another
 				    ** site more cheaply than the target site, FIXME
@@ -2708,6 +2726,8 @@ opd_bestplan(
 	}
     }
     subquery->ops_tplan = subquery->ops_tcurrent;
+    /* save the best fragment so far for trace point op188/op215/op216 */
+    subquery->ops_bestfragment = subquery->ops_currfragment;  
     if (addnodes)
     while (global->ops_estate.opn_cocount < global->ops_estate.opn_corequired)
     {

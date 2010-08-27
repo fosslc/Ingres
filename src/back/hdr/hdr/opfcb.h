@@ -273,6 +273,14 @@ typedef i4  OPF_QEFTYPE;
 **	22-mar-10 (smeke01) b123457
 **	    Add trace point op214 to display query tree in op146 style, at the
 **	    same points in the code as trace point op170. 
+**	13-may-10 (smeke01) b123727
+**	    Add trace points op215 (OPT_F087_ALLFRAGS) and
+**	    op216 (OPT_F088_BESTPLANS).
+**	    Trace point op215 prints all query fragments (strictly 'all query
+**	    fragments that have made it into an OPO_CO structure'), even if
+**	    they are to be discarded, together with all best plans.  
+**	    Trace point op216 prints out only the best plans, as they are
+**	    encountered.
 [@history_line@]...
 [@history_template@]...
 */
@@ -2435,6 +2443,16 @@ typedef i4 OPX_ERROR;
 #define			OPT_F086_DUMP_QTREE2	86
 /* SET TRACE POINT OP214
 ** Display query tree in op146 style, at op170 points in the code
+*/
+#define			OPT_F087_ALLFRAGS	87
+/* SET TRACE POINT OP215
+** - print all query fragments (strictly 'all query fragments that have
+** made it into an OPO_CO structure), even if they are to be discarded,
+** together with all best plans.  
+*/
+#define			OPT_F088_BESTPLANS	88
+/* SET TRACE POINT OP216
+** - print just the best query plans in the order they are found.
 */
 
 

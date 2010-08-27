@@ -200,6 +200,14 @@
 **	    Rename OP129.
 **	22-mar-10 (smeke01) b123457
 **	    Add op214 (OPT_F086_DUMP_QTREE2).
+**	13-may-10 (smeke01) b123727
+**	    Add trace points op215 (OPT_F087_ALLFRAGS) and
+**	    op216 (OPT_F088_BESTPLANS).
+**	    Trace point op215 prints all query fragments (strictly 'all query
+**	    fragments that have made it into an OPO_CO structure'), even if
+**	    they are to be discarded, together with all best plans.  
+**	    Trace point op216 prints out only the best plans, as they are
+**	    encountered.
 */
 
 DB_STATUS
@@ -379,6 +387,8 @@ opt_call(
 	case OPT_F084_TBLAUTOSTRUCT:
 	case OPT_F085_MISSINGSTATS:
 	case OPT_F086_DUMP_QTREE2:
+	case OPT_F087_ALLFRAGS:
+	case OPT_F088_BESTPLANS:
             if (debug_cb->db_value_count > 0)
 		return( E_DB_ERROR );	    /* these flags have no values */
 	    break;			    /* Flag is defined */
