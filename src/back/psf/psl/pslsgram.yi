@@ -3605,6 +3605,9 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **      11-Aug-2010 (coomi01) b123933
 **          On insert with sort list, when reassigning resdom idents
 **          ensure the sortlist resdom refs are also updated.
+**      16-Aug-2010 (coomi01) b123934
+**          Delay push of scope from insertkwd: to valueskwd:
+**          This distinguishes INSERT ... SELECT from INSERT ... VALUES.
 */
 %{
 
@@ -26768,10 +26771,6 @@ insertkwd:         INSERT INTO
 	    $Ydbpinfo->pss_flags |= PSS_1SUB_SEEN;
 	}
 
-	MEfill(sizeof(PST_J_MASK), 0, (char *)&$Yflists[++cb->pss_qualdepth]);
-	
-	/* Adjust first_n depth in line with cb->pss_qualdepth */
-	$Yfirst_n_ok_depth++;
 
 	$Yident_always = $Yident_bydef = FALSE;
 	$Yident_attno = -1;
@@ -27069,6 +27068,11 @@ valueskwd:	    VALUES
 	$Yaggr_allowed &= ~(PSS_AGG_ALLOWED | PSS_STMT_AGG_ALLOWED);
 	$Yaggr_allowed |= PSS_AGG_SS_GT_1;
 	$Ycheck_for_vlups = FALSE;
+
+	MEfill(sizeof(PST_J_MASK), 0, (char *)&$Yflists[++cb->pss_qualdepth]);
+	
+	/* Adjust first_n depth in line with cb->pss_qualdepth */
+	$Yfirst_n_ok_depth++;
     }
 ;
 
