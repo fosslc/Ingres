@@ -190,6 +190,12 @@
 **	    BUG 124020
 **	    Use instance ID of the install we're modifying when generating
 **	    stop/star/config command line, not the default instID.
+**	24-Jun-2010 (hanje04)
+**	    BUG 124019
+**	    Need to add INGCONFIG_CMD to command line length to stop buffer
+**	    overrun when generating command line.
+**	    Also add gipAppendCmdLine() to manage allocated buffer space and
+**	    use it in place of STcat().
 */
 
 # define RF_VARIABLE "export II_RESPONSE_FILE"
@@ -200,6 +206,7 @@ static STATUS remove_temp_files( void );
 static void inst_proc_exit_handler( int sig );
 static void init_ug_train_icons( UGMODE state );
 static STATUS do_install( char *inst_cmdline );
+static STATUS gipAppendCmdLine( char *cmdbuff, char *cmd );
 size_t get_rename_cmd_len( PKGLST pkglst );
 
 void add_pkglst_to_rmv_command_line( char **cmd_line, PKGLST pkglist );
@@ -209,6 +216,10 @@ int generate_command_line( char **cmd_line );
 void add_pkglst_to_inst_command_line( char **cmd_line,
 						PKGLST pkglist,
 						bool renamed );
+
+/* static variables */
+static size_t	cmdlen = 0;
+
 /* entry point to gipxml.c */
 STATUS
 gipImportPkgInfo( LOCATION *xmlfileloc, UGMODE *state, i4 *count );
@@ -1056,7 +1067,6 @@ do_install( char *inst_cmdline )
 int
 generate_command_line( char **cmd_line )
 {
-    size_t	cmdlen = 0;
     char	tmpbuf[MAX_LOC];
     GtkWidget   *checkButton;
 
@@ -1064,18 +1074,21 @@ generate_command_line( char **cmd_line )
     if ( calc_cmd_len(&cmdlen) || cmdlen == 0 )
 	return( FAIL );
 
+    DBG_PRINT("Allocating %d bytes for command line", cmdlen);
     /* allocate memory for the command line */
     *cmd_line = malloc( cmdlen );
 
     if ( *cmd_line == NULL )
 	return( FAIL );
 
+    **cmd_line = '\0';
     /* whole command wrapped in '( )' so all output can be re-directed */
     /* Add opening '(' and set umask and response file */
-    STprintf( *cmd_line, "( %s ; %s=%s; ",
+    STprintf( tmpbuf, "( %s ; %s=%s; ",
 		UMASK_CMD,
 		RF_VARIABLE,
 		rfnameloc.string );
+    gipAppendCmdLine(*cmd_line, tmpbuf);
 
     /* write to buffer */
     if ( ug_mode & UM_INST ) /* new installation */
@@ -1095,14 +1108,14 @@ generate_command_line( char **cmd_line )
 			rndirstr,
 			new_pkgs_info.file_loc,
 			RPM_RENAME_CMD );
- 	    STcat( *cmd_line, tmpbuf );
+ 	    gipAppendCmdLine( *cmd_line, tmpbuf );
 
 	    /* add package list */
 	    add_pkglst_to_inst_command_line( cmd_line, pkgs_to_install, FALSE );
 
 	    /* add installation id and command suffix */
 	    STprintf( tmpbuf, " %s && ", instID );
- 	    STcat( *cmd_line, tmpbuf );
+ 	    gipAppendCmdLine( *cmd_line, tmpbuf );
 
 	    /*
 	    ** Finally, update the saveset info to reflect the new
@@ -1117,7 +1130,7 @@ generate_command_line( char **cmd_line )
 		RPM_INSTALL_CMD,
 		RPM_PREFIX,
 		iisystem.path );
- 	STcat( *cmd_line, tmpbuf );
+ 	gipAppendCmdLine( *cmd_line, tmpbuf );
 
 	add_pkglst_to_inst_command_line( cmd_line, pkgs_to_install,
 					(bool)( inst_state & UM_RENAME ) );
@@ -1128,16 +1141,16 @@ generate_command_line( char **cmd_line )
 	** If everything went OK start the instance, if it fails,
 	** make sure it's shut down properly
 	*/
-	STcat( *cmd_line, " && ( " );
+	gipAppendCmdLine( *cmd_line, " && ( " );
 	STprintf( tmpbuf, INGCONFIG_CMD, instID, rfnameloc.string );
- 	STcat( *cmd_line, tmpbuf );
-	STcat( *cmd_line, " && " );
+ 	gipAppendCmdLine( *cmd_line, tmpbuf );
+	gipAppendCmdLine( *cmd_line, " && " );
 	STprintf( tmpbuf, INGSTART_CMD, instID );
- 	STcat( *cmd_line, tmpbuf );
-	STcat( *cmd_line, " || ( " );
+ 	gipAppendCmdLine( *cmd_line, tmpbuf );
+	gipAppendCmdLine( *cmd_line, " || ( " );
 	STprintf( tmpbuf, INGSTOP_CMD, instID );
- 	STcat( *cmd_line, tmpbuf );
-	STcat( *cmd_line, " ; exit 1 ) ) " );
+ 	gipAppendCmdLine( *cmd_line, tmpbuf );
+	gipAppendCmdLine( *cmd_line, " ; exit 1 ) ) " );
 
         checkButton = lookup_widget(IngresInstall, "checkdocpkg");
 
@@ -1154,7 +1167,7 @@ generate_command_line( char **cmd_line )
            ) 
 	{
 	    STprintf( tmpbuf, " && %s ", RPM_INSTALL_CMD );
-	    STcat( *cmd_line, tmpbuf );
+	    gipAppendCmdLine( *cmd_line, tmpbuf );
 	    STprintf( tmpbuf, "%s/%s/%s-documentation-%s.%s.%s ",
 		new_pkgs_info.file_loc,
 		new_pkgs_info.format,
@@ -1162,7 +1175,7 @@ generate_command_line( char **cmd_line )
 		new_pkgs_info.version,
 		new_pkgs_info.arch,
 		new_pkgs_info.format);
-	    STcat( *cmd_line, tmpbuf );
+	    gipAppendCmdLine( *cmd_line, tmpbuf );
 	}
     }
     else if ( ug_mode & UM_UPG ) /* upgrade existing */
@@ -1200,14 +1213,14 @@ generate_command_line( char **cmd_line )
 			rndirstr,
 			new_pkgs_info.file_loc,
 			RPM_RENAME_CMD );
- 	    STcat( *cmd_line, tmpbuf );
+ 	    gipAppendCmdLine( *cmd_line, tmpbuf );
 
 	    /* add package list */
 	    add_pkglst_to_inst_command_line( cmd_line, upg_list, FALSE );
 
 	    /* add installation id and command suffix */
 	    STprintf( tmpbuf, " %s && ", selected_instance->instance_ID );
- 	    STcat( *cmd_line, tmpbuf );
+ 	    gipAppendCmdLine( *cmd_line, tmpbuf );
 
 	    /*
 	    ** Finally, update the saveset info to reflect the new
@@ -1222,7 +1235,7 @@ generate_command_line( char **cmd_line )
 		RPM_FORCE_INSTALL,
 		RPM_PREFIX,
 		selected_instance->inst_loc );
- 	STcat( *cmd_line, tmpbuf );
+ 	gipAppendCmdLine( *cmd_line, tmpbuf );
 
 	add_pkglst_to_inst_command_line( cmd_line, upg_list,
 					(bool)( selected_instance->action
@@ -1232,13 +1245,13 @@ generate_command_line( char **cmd_line )
 	** Add command separator, use && so that if the first part
 	** fails we don't continue and trash the system
 	*/
-	STcat( *cmd_line, "&& " );
+	gipAppendCmdLine( *cmd_line, "&& " );
 
 	/*
 	** The old package info is then removed from the RPM
 	** database.
 	*/
- 	STcat( *cmd_line, RPM_UPGRMV_CMD );
+ 	gipAppendCmdLine( *cmd_line, RPM_UPGRMV_CMD );
 	add_pkglst_to_rmv_command_line( cmd_line,
 					    selected_instance->installed_pkgs );
 
@@ -1247,23 +1260,23 @@ generate_command_line( char **cmd_line )
 	** If everything went OK start the instance, if it fails,
 	** make sure it's shut down properly
 	*/
-	STcat( *cmd_line, " && ( " );
+	gipAppendCmdLine( *cmd_line, " && ( " );
 	STprintf( tmpbuf, INGCONFIG_CMD, selected_instance->instance_ID,
 			 rfnameloc.string );
- 	STcat( *cmd_line, tmpbuf );
-	STcat( *cmd_line, " && " );
+ 	gipAppendCmdLine( *cmd_line, tmpbuf );
+	gipAppendCmdLine( *cmd_line, " && " );
 	STprintf( tmpbuf, INGSTART_CMD, selected_instance->instance_ID );
- 	STcat( *cmd_line, tmpbuf );
-	STcat( *cmd_line, " || ( " );
+ 	gipAppendCmdLine( *cmd_line, tmpbuf );
+	gipAppendCmdLine( *cmd_line, " || ( " );
 	STprintf( tmpbuf, INGSTOP_CMD, selected_instance->instance_ID );
- 	STcat( *cmd_line, tmpbuf );
-	STcat( *cmd_line, " ; exit 1 ) ) " );
+ 	gipAppendCmdLine( *cmd_line, tmpbuf );
+	gipAppendCmdLine( *cmd_line, " ; exit 1 ) ) " );
 
 	/* add doc last if it's needed */
 	if ( upg_list & new_pkgs_info.pkgs & PKG_DOC )
 	{
 	    STprintf( tmpbuf, " && %s ", RPM_INSTALL_CMD );
-	    STcat( *cmd_line, tmpbuf );
+	    gipAppendCmdLine( *cmd_line, tmpbuf );
 	    STprintf( tmpbuf, "%s/%s/%s-documentation-%s.%s.%s ",
 		new_pkgs_info.file_loc,
 		new_pkgs_info.format,
@@ -1271,7 +1284,7 @@ generate_command_line( char **cmd_line )
 		new_pkgs_info.version,
 		new_pkgs_info.arch,
 		new_pkgs_info.format);
-	    STcat( *cmd_line, tmpbuf );
+	    gipAppendCmdLine( *cmd_line, tmpbuf );
 	}
     }
     else if ( ug_mode & UM_MOD ) /* modify existing */
@@ -1289,7 +1302,7 @@ generate_command_line( char **cmd_line )
 	    if ( mod_pkgs_to_remove != PKG_DOC )
 	    {
 		/* rpm command */
-		STcat( *cmd_line, RPM_REMOVE_CMD );
+		gipAppendCmdLine( *cmd_line, RPM_REMOVE_CMD );
 		add_pkglst_to_rmv_command_line( cmd_line, mod_pkgs_to_remove );
 	    }
 	   
@@ -1300,12 +1313,12 @@ generate_command_line( char **cmd_line )
 		    RPM_REMOVE_CMD,
 		    selected_instance->pkg_basename,
 		    selected_instance->version );
-		STcat( *cmd_line, tmpbuf );
+		gipAppendCmdLine( *cmd_line, tmpbuf );
 	    }
 
 	    /* add command separator if there's more to follow */
 	    if ( mod_pkgs_to_install != PKG_NONE )
-	        STcat( *cmd_line, "&& " );
+	        gipAppendCmdLine( *cmd_line, "&& " );
 	    /* remove $II_SYSTEM/ingres/. if we've been asked to */
 	    else if ( misc_ops & GIP_OP_REMOVE_ALL_FILES )
 	    {
@@ -1313,7 +1326,7 @@ generate_command_line( char **cmd_line )
 
 		/* remove database locations first... */
 		STprintf( tmpbuf, " && %s ", RM_CMD );
-		STcat( *cmd_line, tmpbuf );
+		gipAppendCmdLine( *cmd_line, tmpbuf );
 
 		locptr = selected_instance->datalocs;
 		if ( locptr == NULL )
@@ -1324,13 +1337,13 @@ generate_command_line( char **cmd_line )
 		    STprintf( tmpbuf, "%s/ingres/%s/ ",
 				locptr->loc,
 				dblocations[locptr->idx]->dirname );
-		    STcat( *cmd_line, tmpbuf );
+		    gipAppendCmdLine( *cmd_line, tmpbuf );
 		    locptr = locptr->next_loc ;
 		}
 		    
 		/* ...then log file locations... */
 		STprintf( tmpbuf, " && %s ", RM_CMD );
-		STcat( *cmd_line, tmpbuf );
+		gipAppendCmdLine( *cmd_line, tmpbuf );
 
 		locptr = selected_instance->loglocs;
 		if ( locptr == NULL )
@@ -1340,13 +1353,13 @@ generate_command_line( char **cmd_line )
 		{
 		    STprintf( tmpbuf, "%s/ingres/log/ ",
 				locptr->loc );
-		    STcat( *cmd_line, tmpbuf );
+		    gipAppendCmdLine( *cmd_line, tmpbuf );
 		    locptr = locptr->next_loc ;
 		}
 		    
 		/* ...then II_SYSTEM */
 		STprintf( tmpbuf, "%s/ingres/", selected_instance->inst_loc );
-		STcat( *cmd_line, tmpbuf );
+		gipAppendCmdLine( *cmd_line, tmpbuf );
 	    }
 
 	}
@@ -1375,7 +1388,7 @@ generate_command_line( char **cmd_line )
 				rndirstr,
 				new_pkgs_info.file_loc,
 				RPM_RENAME_CMD );
-		    STcat( *cmd_line, tmpbuf );
+		    gipAppendCmdLine( *cmd_line, tmpbuf );
 
 		    /* add package list */
 		    add_pkglst_to_inst_command_line( cmd_line,
@@ -1385,7 +1398,7 @@ generate_command_line( char **cmd_line )
 		    /* pass it as ID to renamd command */
 		    STprintf( tmpbuf, " %s && ",
 				selected_instance->instance_ID );
-		    STcat( *cmd_line, tmpbuf );
+		    gipAppendCmdLine( *cmd_line, tmpbuf );
 
 		    /*
 		    ** Finally, update the saveset info to reflect the new
@@ -1399,7 +1412,7 @@ generate_command_line( char **cmd_line )
 		    RPM_INSTALL_CMD,
 		    RPM_PREFIX,
 		    selected_instance->inst_loc );
-		STcat( *cmd_line, tmpbuf );
+		gipAppendCmdLine( *cmd_line, tmpbuf );
 
 		/* add packages */
 		add_pkglst_to_inst_command_line( cmd_line, mod_pkgs_to_install,
@@ -1416,7 +1429,7 @@ generate_command_line( char **cmd_line )
 		else
 		    STprintf( tmpbuf, " %s ", RPM_INSTALL_CMD );
 
-		STcat( *cmd_line, tmpbuf );
+		gipAppendCmdLine( *cmd_line, tmpbuf );
 		STprintf( tmpbuf, "%s/%s/%s-documentation-%s.%s.%s ",
 		    new_pkgs_info.file_loc,
 		    new_pkgs_info.format,
@@ -1424,7 +1437,7 @@ generate_command_line( char **cmd_line )
 		    new_pkgs_info.version,
 		    new_pkgs_info.arch,
 		    new_pkgs_info.format);
-		STcat( *cmd_line, tmpbuf );
+		gipAppendCmdLine( *cmd_line, tmpbuf );
 	    }
 	}
 
@@ -1437,30 +1450,30 @@ generate_command_line( char **cmd_line )
 		( mod_pkgs_to_install != PKG_NONE || 
 		 mod_pkgs_to_remove != PKG_NONE ) )
 	{
-	    STcat( *cmd_line, " && ( " );
+	    gipAppendCmdLine( *cmd_line, " && ( " );
 	    STprintf( tmpbuf, INGCONFIG_CMD, selected_instance->instance_ID,
 			rfnameloc.string );
- 	    STcat( *cmd_line, tmpbuf );
-	    STcat( *cmd_line, " && " );
+ 	    gipAppendCmdLine( *cmd_line, tmpbuf );
+	    gipAppendCmdLine( *cmd_line, " && " );
 	    STprintf( tmpbuf, INGSTART_CMD, selected_instance->instance_ID );
- 	    STcat( *cmd_line, tmpbuf );
-	    STcat( *cmd_line, " || ( " );
+ 	    gipAppendCmdLine( *cmd_line, tmpbuf );
+	    gipAppendCmdLine( *cmd_line, " || ( " );
 	    STprintf( tmpbuf, INGSTOP_CMD, selected_instance->instance_ID );
- 	    STcat( *cmd_line, tmpbuf );
-	    STcat( *cmd_line, " ; exit 1 ) ) " );
+ 	    gipAppendCmdLine( *cmd_line, tmpbuf );
+	    gipAppendCmdLine( *cmd_line, " ; exit 1 ) ) " );
 	}
     }
     else /* unknown or NULL state */
 	return( FAIL );
 
     /* add closing ')' */
-    STcat( *cmd_line, " ) " );
+    gipAppendCmdLine( *cmd_line, " ) " );
 
     /* finally add log files */
     STprintf( tmpbuf, " 1> %s", inst_stdout );
-    STcat( *cmd_line, tmpbuf );
+    gipAppendCmdLine( *cmd_line, tmpbuf );
     STprintf( tmpbuf, " 2> %s", inst_stderr );
-    STcat( *cmd_line, tmpbuf );
+    gipAppendCmdLine( *cmd_line, tmpbuf );
 
     return( OK );
     
@@ -1613,13 +1626,16 @@ calc_cmd_len(size_t *cmdlen)
     ** On success, start the installation, if that fails then make sure it's
     ** shut down.
     **
-    ** startup commands:
-    ** && ( /etc/init.d/ingresXX start || \
-    **		( /etc/init.d/ingresXX stop ; exit 1 ) )
+    ** configuration and startup commands:
+    ** && ( /etc/init.d/ingresXX configure /tmp/iirfinstall.6854 &&
+    **		 /etc/init.d/ingresII start || 
+    **	( /etc/init.d/ingresII stop > /dev/null 2>&1 ; exit 1 ) ) 
     */
-    *cmdlen += STlen( INGSTART_CMD )
+    *cmdlen += STlen( INGCONFIG_CMD )
+		+ STlen( rfnameloc.string )
+		+ STlen( INGSTART_CMD )
 		+ STlen( INGSTOP_CMD )
-		+ 30 ; /* misc characters etc. */
+		+ 40 ; /* misc characters etc. */
 
     /* log files */
     *cmdlen += STlen( inst_stdout ) + STlen( inst_stderr ) + 5 ;
@@ -1680,7 +1696,7 @@ add_pkglst_to_inst_command_line( char **cmd_line, PKGLST pkglist, bool renamed )
     /* add core package first (if we want it) as it's a bit different */
     if ( pkglist & PKG_CORE )
     {
-	STcat( *cmd_line, new_pkgs_info.file_loc );
+	gipAppendCmdLine( *cmd_line, new_pkgs_info.file_loc );
 
 	/* and file name of package */
 	if ( renamed )
@@ -1702,7 +1718,7 @@ add_pkglst_to_inst_command_line( char **cmd_line, PKGLST pkglist, bool renamed )
 		new_pkgs_info.arch,
 		new_pkgs_info.format);
 	}
-	STcat( *cmd_line, tmpbuf );
+	gipAppendCmdLine( *cmd_line, tmpbuf );
     }
 
     /* now do the rest, skipping core, and documentation */
@@ -1719,7 +1735,7 @@ add_pkglst_to_inst_command_line( char **cmd_line, PKGLST pkglist, bool renamed )
 	if( pkglist & packages[i]->bit )
 	{
 	    /* add package location */
-	    STcat( *cmd_line, new_pkgs_info.file_loc );
+	    gipAppendCmdLine( *cmd_line, new_pkgs_info.file_loc );
 
 	    if ( renamed )
 	    {
@@ -1745,7 +1761,7 @@ add_pkglst_to_inst_command_line( char **cmd_line, PKGLST pkglist, bool renamed )
 			new_pkgs_info.arch,
 			new_pkgs_info.format);
 	    }
-	    STcat( *cmd_line, tmpbuf );
+	    gipAppendCmdLine( *cmd_line, tmpbuf );
 	}
 	i++;
     }
@@ -1767,7 +1783,7 @@ add_pkglst_to_rmv_command_line( char **cmd_line, PKGLST pkglist )
 	STprintf( tmpbuf, "%s-%s ",
 			selected_instance->pkg_basename,
 			selected_instance->version );
-        STcat( *cmd_line, tmpbuf );
+        gipAppendCmdLine( *cmd_line, tmpbuf );
     }
 
     /*
@@ -1816,7 +1832,7 @@ add_pkglst_to_rmv_command_line( char **cmd_line, PKGLST pkglist )
 			selected_instance->version );
 
 	    DBG_PRINT("Adding %s to removal command line\n", tmpbuf);
-	    STcat( *cmd_line, tmpbuf );
+	    gipAppendCmdLine( *cmd_line, tmpbuf );
 	}
 	i++;
     }
@@ -1949,6 +1965,29 @@ init_ivw_cfg()
 	}
 	i++;
     }
+}
+
+static STATUS
+gipAppendCmdLine( char *cmdbuff, char *newcmd )
+{
+    STATUS status = OK;
+
+    if ( STlen(newcmd) + STlen(cmdbuff) + 1 > cmdlen )
+    {
+	/*
+	** we're going to blow the command line buffer so error
+	** and exit cleanly
+	*/
+# define ERROR_CMDLINE_BUFF_OVERRUN "FATAL ERROR: Command line exceeds allocated space. Aborting"
+	gdk_threads_enter();
+	popup_error_box( ERROR_CMDLINE_BUFF_OVERRUN );
+	gdk_threads_leave();
+	gtk_main_quit();
+    }
+    else
+        STcat(cmdbuff, newcmd);
+
+    return(status);
 }
 # else /* xCL_GTK_EXISTS & xCL_RPM_EXISTS */
 
