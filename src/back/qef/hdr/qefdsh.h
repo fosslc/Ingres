@@ -1539,6 +1539,9 @@ typedef struct _QEE_RESOURCE
 **	    Written.
 **	17-may-2007 (dougi)
 **	    Added sp_fmapcount for TID computation.
+**	1-Jul-2010 (kschendel) b124004
+**	    Added sp_posnbuff for scrolls for positioning;  these need a
+**	    dummy row buffer, and we don't want to leak memory.
 */
 
 typedef struct _QEE_RSET_SPOOL {
@@ -1546,6 +1549,10 @@ typedef struct _QEE_RSET_SPOOL {
     DMR_CB	*sp_rdmrcb;		/* ptr to read DMR_CB of spool temp */
     DMT_CB	*sp_dmtcb;		/* ptr to DMT_CB of spool temp */
     PTR		sp_rowbuff;		/* row buffer addr. */
+    QEF_DATA	*sp_posnbuff;		/* Fake/toss buffer for a row for
+					** a scrolling fetch with no rows
+					** (ie positioning only)
+					*/
     i4		sp_rowcount;		/* no. of rows in result set (so far) */
     i4		sp_current;		/* current row in result set */
     i4		sp_pagecount;		/* no. of pgs in result set (so far) */

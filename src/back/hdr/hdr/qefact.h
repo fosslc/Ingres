@@ -667,6 +667,8 @@ struct _QEF_SCROLL
 **	    better structure packing.
 **	17-Nov-2009 (kschendel) SIR 122890
 **	    Add load-CTAS flag.
+**	2-Jul-2010 (kschendel) b124004
+**	    AHD_PART_TAB not used by anyone, delete it.
 */
 typedef struct _QEF_QEP
 {
@@ -713,8 +715,6 @@ typedef struct _QEF_QEP
 					** row in the associated query. This
 					** value is an index into dsh->dsh_cbs
 					** where the DMR_CB can be found.
-					** Previously ahd_cb in the QEF_RUP
-					** structure.
 					*/
     i4		    ahd_tidrow;		/* Index into DSH->DSH_ROW
 					** containing row with the
@@ -764,16 +764,21 @@ typedef struct _QEF_QEP
 					** perform the qeq_validate init
 					** logic.
 					*/
-#define	AHD_PART_TAB	    0x10	/* TRUE if inserting/updating
-					** a partitioned table (DB_PART_DEF
-					** stuff has been copied)
-					*/
+/*	notused		    0x10	*/
 #define AHD_PCOLS_UPDATE    0x20	/* TRUE if update set clauses 
 					** reference at least one partitioning
 					** column (row may change p's)
 					*/
 #define AHD_4BYTE_TIDP	    0x40	/* TRUE if ahd_tidoffset addrs
-					** a 4-byte tidp */
+					** a 4-byte tidp.  NOTE: for KEYSET
+					** scrollable cursors, this flag refers
+					** to the tidp returned by the QEP,
+					** ie the ahd_scroll ahd_tidoffset,
+					** *not* the action header tidoffset.
+					** For keyset cursors the header
+					** tidoffset is always an 8-byte
+					** formatted copy of the tid.
+					*/
 #define	AHD_SCROLL	    0x80	/* TRUE if this is the GET on top
 					** of a scrollable cursor */
 #define	AHD_KEYSET	    0x100	/* TRUE if this is a KEYSET scrollable
@@ -1613,44 +1618,6 @@ typedef struct QEF_DROP_INTEGRITY_
 } QEF_DROP_INTEGRITY;
 
 /*}
-** Name: QEF_RUP - 
-**
-** Description:
-[@comment_line@]...
-**
-** History:
-[@history_template@]...
-*/
-typedef struct _QEF_RUP
-{
-    PTR		    ahd_qhandle;	/* handle to associated query */
-    i4              ahd_cb;             /* DMF control block containing
-					** the update row in the
-					** associated query.
-					** This value is an index into
-					** DSH->DSH_CBS where a DMR_CB
-					** will be referenced.
-					*/
-    QEN_ADF	    *ahd_current;	/* update tuple 
-					** replace operation.
-					** This struct contains info
-					** so that the new tuple can
-					** be created.
-					** The output tuple here is
-					** the tuple in the update 
-					** DMR_CB specified as the
-					** update control block.
-					*/
-    i4		    ahd_duphandle;      /* what to do on 
-					** replace/append if duplicate
-					** key encountered;   
-					** see QEF_QEP.ahd_duphandle for defines
-					*/
-} QEF_RUP;
-
-
-
-/*}
 ** Name: QEF_IF - If statement specific info for actions.
 **
 ** Description:
@@ -2317,8 +2284,10 @@ struct _QEF_RELATED_OBJECT
 **	    diagnostics.
 **	19-Apr-2007 (kschendel) b122118
 **	    Remove ahd-keys, nothing used it.
-8*	18-Mar-2010 (gupsh01) SIR 123444 
+**	18-Mar-2010 (gupsh01) SIR 123444 
 **	    Added support for Alter table rename table/column. 
+**	2-Jul-2010 (kschendel) b124004
+**	    Drop qhd_rup, not used.
 */
 struct _QEF_AHD
 {
@@ -2476,7 +2445,6 @@ struct _QEF_AHD
     {
 	QEF_QEP	    qhd_qep;		/* action with QEP */
         QEF_DMU	    qhd_dmu;		/* DMF action */
-        QEF_RUP	    qhd_rup;		/* update cursor action */ /* used ? */
 	QEF_IF	    qhd_if;		/* If statement */
 	QEF_RETURN  qhd_return;		/* Return statment */
 	QEF_MESSAGE qhd_message;	/* Message statment */

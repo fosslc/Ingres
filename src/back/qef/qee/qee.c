@@ -1167,6 +1167,7 @@ qee_destroy(
 		sptr->sp_current = 0;
 		sptr->sp_curpage = -1;
 		sptr->sp_flags = SP_BEGIN;
+		/* sp_posnbuff comes from the DSH stream, so leave it alone. */
 	    }
 
 	    /* Mark that no tables are open */
@@ -3657,6 +3658,7 @@ qee_cract(
 		    Mem += DB_ALIGN_MACRO(sizeof(DMT_CB));
 
 		    /* Init QEE_RSET_SPOOL. */
+		    sptr->sp_posnbuff = NULL;
 		    sptr->sp_rowcount = 0;
 		    sptr->sp_current = 0;
 		    sptr->sp_curpage = -1;

@@ -371,6 +371,8 @@ opt_rdrdesc(
 **	    Print the FOR-loop nesting depth.
 **	05-Nov-2009 (kiria01) b122822
 **	    Fix op150 segv in Star
+**	1-Jul-2010 (kschendel) b124004
+**	    Delete qp_upd_cb, fix here.
 */
 VOID
 opt_qp(
@@ -392,8 +394,14 @@ opt_qp(
     TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf, OPT_PBLEN,
 	"QEF_QP_CB:\n\n");
     TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf, OPT_PBLEN,
-	"qp_status: %x \tqp_id.db_cur_name: %s \tqp_upd_cb: %5d\n\n", 
-	qp->qp_status, qp->qp_id.db_cur_name, qp->qp_upd_cb);
+	"qp_status: %x %v\n\n", 
+	qp->qp_status,
+	"UPD,RPT,DEL,SQL,SHAREABLE,SINGLETON,LOB,DEFERRED,DBP_COMBRK,ROWPROC,\
+NEED_TX,EXEIMM,CALLPR,PARALLEL,GLOBALBASE,NEED_QCONST,ISDBP,SCROLL,REPDYN,\
+CALLS_TPROC,LOCATORS", qp->qp_status);
+    TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf, OPT_PBLEN,
+	"qp_fetch_ahd: %p \tqp_id.db_cur_name: %s\n\n", 
+	qp->qp_fetch_ahd, qp->qp_id.db_cur_name);
     TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf, OPT_PBLEN,
 	"qp_stat_cnt: %5d \tqp_cb_cnt: %5d \tqp_pcx_cnt: %5d\n\n",
 	qp->qp_stat_cnt, qp->qp_cb_cnt, qp->qp_pcx_cnt);
@@ -1575,7 +1583,7 @@ opt_ahd(
 	TRformat(opt_scc, (i4 *)NULL, global->ops_cstate.opc_prbuf,
 	    OPT_PBLEN, "ahd_qepflag: 0x%x: %v\n\n",
 	    ahd->qhd_obj.qhd_qep.ahd_qepflag,
-	    "ANY,CSTAROPT,NOROWS,FOR-GET,PART_TAB,PCOLS_UPDATE,4BYTE_TIDP,\
+	    "ANY,CSTAROPT,NOROWS,FOR-GET,0x10,PCOLS_UPDATE,4BYTE_TIDP,\
 SCROLL,KEYSET,PARM_FIRSTN,PARM_OFFSETN,LOAD_CTAS,PART_SEPARATE,HAS-HASHOP,MAIN",
 	    ahd->qhd_obj.qhd_qep.ahd_qepflag);
 

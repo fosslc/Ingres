@@ -235,13 +235,7 @@ typedef struct _QEQ_DDQ_CB
 **	    for cursor statements), can have deletes performed on it, uses
 **	    deferred or direct update semantics.
 **
-**	11) qp_upd_cb gets the control block number of the DMR_CB that will
-**	    have the update tuple. If another QP wanted to update the current
-**	    row in this QP, the DMR_CB specified here would contain the
-**	    desired row. Remember that the CBs are numbered from 0. A DMR_CB
-**	    number of 5 doesn't mean that this is the fifth DMR_CB; it means
-**	    that the desired DMR_CB can be found in the fifth slot in the
-**	    DSH's dsh_cbs array (which is an array of pointers).
+**	11) There is no 11.
 **
 **	12) qp_key_sz contains the number of bytes required to hold all the
 **	    keys in this query. Keys are used to provide efficient access to
@@ -363,6 +357,11 @@ typedef struct _QEQ_DDQ_CB
 **	    Add QEQP_LOCATORS flag for LOB locators & cached dynamic.
 **	22-Jun-2010 (kschendel) b123775
 **	    Rename QP tproc flag for clarity.
+**	1-Jul-2010 (kschendel) b124004
+**	    Eliminate the assumption that the GET for an updateable cursor
+**	    QP is always the first action, by adding a pointer to the fetch
+**	    action -- allows deletion of qp_upd_cb as no longer needed.
+**	    Do a little minor rearranging to reduce LP64 space wastage.
 */
 
 struct _QEF_QP_CB
@@ -428,15 +427,6 @@ struct _QEF_QP_CB
     i4		    qp_res_row_sz;	/* space required for result tuple 
 					** in bytes.
 					*/
-    i4		    qp_upd_cb;		/* control block number in DSH 
-					** containing the row
-					** that can be updated if an update
-					** command should require it.
-					** This value is an index into the
-					** dsh_cbs array in the DSH. The value
-					** in the array is a pointer to a
-					** DMR_CB.
-					*/
     i4		    qp_key_row;		/* dsh_row index for key buffer */
     i4              qp_key_sz;          /* space required for constant keys 
 					** in bytes. This array is allocated
@@ -464,6 +454,11 @@ struct _QEF_QP_CB
     QEF_AHD        *qp_ahd;             /* list of actions required 
                                         ** for query 
                                         */
+    QEF_AHD	    *qp_fetch_ahd;	/* The GET action for an updateable
+					** cursor QP;  this is the action with
+					** tidoffset, tidrow, etc for RUP or
+					** RDEL current-of-cursor statements.
+					*/
     PTR		    qp_sqlda;		/* description of rows returned by
 					** this query plan.
 					** This structure is a ULC_SQLDA.
@@ -472,8 +467,8 @@ struct _QEF_QP_CB
     ** definitions. Qp_ndbp_params gives the number of of elements in
     ** the array.
     */
-    i4		    qp_ndbp_params;
     QEF_DBP_PARAM   *qp_dbp_params;
+    i4		    qp_ndbp_params;
 
     /* Repeat query plans have an array of DB_DATA_VALUEs to show the
     ** compiled data types of any parameters used to coerce parm sets 
@@ -536,8 +531,8 @@ struct _QEF_QP_CB
 	/* Qp_resources is a list of resources (tables, db procs) to verify
 	** Qp_cnt_resources holds the number of elements on the list.
 	*/
-    QEF_RESOURCE    *qp_resources;  	/* list of resources to verify */
     i4		    qp_cnt_resources;
+    QEF_RESOURCE    *qp_resources;  	/* list of resources to verify */
     QEF_SEQUENCE    *qp_sequences;	/* list of sequences to open/close */
     i4		    qp_rssplix;		/* dsh_cbs index os spooled result
 					** set control block */

@@ -322,6 +322,8 @@ opc_deferred_cpahd_build(
 **	10-march-2009 (dougi) bug 121773
 **	    Changes to identify query plans for cached dynamic queries with 
 **	    LOB locators enabled.
+**	1-Jul-2010 (kschendel) b124004
+**	    Kill qp_upd_cb, add qp-fetch-ahd.
 */
 VOID
 opc_iqp_init(
@@ -632,7 +634,6 @@ opc_iqp_init(
     ** headers are built, these fields will be filled in or increased to thier
     ** correct values.
     */
-    qp->qp_upd_cb = -1;
     qp->qp_key_row = -1;
     qp->qp_key_sz = max( sizeof (i4), sizeof (ALIGN_RESTRICT) );
     qp->qp_row_cnt = 0;
@@ -647,6 +648,7 @@ opc_iqp_init(
     qp->qp_sort_cnt = 0;
     qp->qp_ahd_cnt = 0;
     qp->qp_ahd = NULL;
+    qp->qp_fetch_ahd = NULL;
     qp->qp_ndbp_params = 0;
     qp->qp_dbp_params = NULL;
     qp->qp_pcx_cnt = 0;

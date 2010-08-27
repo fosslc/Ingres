@@ -999,6 +999,9 @@ opc_ahd_build(
 **	    Don't set NODEACT flag unless there's really a QP underneath.
 **	    The flag is meant as a shortcut for "this action has a sub-plan";
 **	    it defeats the purpose if one has to test ahd_qep for NULL too.
+**	1-Jul-2010 (kschendel) b124004
+**	    Set fetch-action in QP header for TID-returning actions, might be
+**	    a cursor fetch and RUP/RDEL compiling will need that action.
 */
 static QEF_AHD *
 opc_qepahd(
@@ -1052,11 +1055,6 @@ opc_qepahd(
     ahd->ahd_ascii_id = QEAHD_ASCII_ID;
     ahd->ahd_valid = NULL;
 
-    /* Set the status flag info in the QP node that is dependant on this
-    ** action. 
-    ** EJLFIX: This info should be set in a status field in the action header
-    **		not in the QP node. Fix this when QEF is ready.
-    */
     ahd->ahd_flags = 0;
     if (global->ops_qheader->pst_updtmode == PST_DIRECT ||
 	    global->ops_qheader->pst_updtmode == PST_UNSPECIFIED
@@ -1422,6 +1420,10 @@ opc_qepahd(
 		    )
 		)
 	{
+	    /* This is the main GET action, remember it for compiling
+	    ** current-of-cursor ops (RUP/RDEL).
+	    */
+	    qp->qp_fetch_ahd = ahd;
 	    for (resdom = sq->ops_root->pst_left;
 		    resdom->pst_sym.pst_type == PST_RESDOM;
 		    resdom = resdom->pst_left
@@ -1655,7 +1657,6 @@ opc_qepahd(
     else
     {
 	ahd->qhd_obj.qhd_qep.ahd_odmr_cb = valid->vl_dmr_cb;
-	global->ops_cstate.opc_qp->qp_upd_cb = valid->vl_dmr_cb;
 	ahd->qhd_obj.qhd_qep.ahd_dmtix = valid->vl_dmf_cb;
     }
 
@@ -1716,8 +1717,7 @@ opc_qepahd(
 				/* check for simple agg optimization */
 	    if (sq->ops_sqtype == OPS_HFAGG)
 	    {
-		ahd->qhd_obj.qhd_qep.u1.s2.ahd_agcbix =
-			global->ops_cstate.opc_qp->qp_hashagg_cnt++;
+		ahd->qhd_obj.qhd_qep.u1.s2.ahd_agcbix = qp->qp_hashagg_cnt++;
 				/* hash aggregate control block index */
 		ahd->qhd_obj.qhd_qep.u1.s2.ahd_aggest = MAXI4/2;
 		if (grv != NULL && grv->opv_gcost.opo_tups < MAXI4/2)
@@ -1750,10 +1750,8 @@ opc_qepahd(
 	    if (ahd->ahd_atype == QEA_UPD || ahd->ahd_atype == QEA_PUPD)
 		opc_updcolmap(global, &ahd->qhd_obj.qhd_qep,
 			sq->ops_root->pst_left, grv->opv_relation->rdr_parts);
-	    if (ahd->ahd_atype == QEA_RETROW &&
-		global->ops_cstate.opc_qp->qp_res_row_sz == 0)
-	     global->ops_cstate.opc_qp->qp_res_row_sz = 
-		global->ops_cstate.opc_retrowoff;
+	    if (ahd->ahd_atype == QEA_RETROW && qp->qp_res_row_sz == 0)
+		qp->qp_res_row_sz = global->ops_cstate.opc_retrowoff;
 	    break;
 	}
     }
@@ -1772,7 +1770,6 @@ opc_qepahd(
 	/* Insert/update/delete on partitioned table - copy DB_PART_DEF */
 	opc_partdef_copy(global, grv->opv_relation->rdr_parts, opu_qsfmem,
 	    &ahd->qhd_obj.qhd_qep.ahd_part_def);
-	ahd->qhd_obj.qhd_qep.ahd_qepflag |= AHD_PART_TAB;
     }
 
     /* Check for scrollable cursor GET action. */
@@ -1790,7 +1787,7 @@ opc_qepahd(
 	opc_ptcb(global, &ahd->qhd_obj.qhd_qep.ahd_scroll->ahd_rsdmtix, 0);
 	opc_ptcb(global, &ahd->qhd_obj.qhd_qep.ahd_scroll->ahd_rswdmrix, 0);
 	opc_ptcb(global, &ahd->qhd_obj.qhd_qep.ahd_scroll->ahd_rsrdmrix, 0);
-	opc_ptcb(global, &global->ops_cstate.opc_qp->qp_rssplix, 0);
+	opc_ptcb(global, &qp->qp_rssplix, 0);
 	ahd->qhd_obj.qhd_qep.ahd_scroll->ahd_rsrsize = qp->qp_res_row_sz;
 
 	/* Init KEYSET cursor fields */
@@ -1799,6 +1796,8 @@ opc_qepahd(
 	ahd->qhd_obj.qhd_qep.ahd_scroll->ahd_rskoff1 = (i4 *) NULL;
 	ahd->qhd_obj.qhd_qep.ahd_scroll->ahd_rskoff2 = (i4 *) NULL;
 	ahd->qhd_obj.qhd_qep.ahd_scroll->ahd_rskcurr = (QEN_ADF *) NULL;
+	ahd->qhd_obj.qhd_qep.ahd_scroll->ahd_tidrow = -1;
+	ahd->qhd_obj.qhd_qep.ahd_scroll->ahd_tidoffset = -1;
 
 	/*
 	** Do extra stuff for KEYSET processing.  
@@ -1980,8 +1979,6 @@ opc_keyset_build(
     opc_ptrow(global, &rowno, rowsz);
     ahd->qhd_obj.qhd_qep.ahd_scroll->ahd_rsbtrow = rowno;
     opc_ptcb(global, &ahd->qhd_obj.qhd_qep.ahd_scroll->ahd_rsbtdmrix, 0);
-    opc_ptcb(global, &global->ops_cstate.opc_qp->qp_upd_cb, 0);
-					/* pos'd upd/del DMR_CB ptr */
     opc_ratt(global, ceq, cop, rowno, rowsz);
 
     rrowsz = DB_TID8_LENGTH + sizeof(i4); /* leave space for TID & checksum */
@@ -3831,7 +3828,12 @@ opc_dmtahd(
 ** Name: OPC_RUPAHD	- Build a single RUP action header.
 **
 ** Description:
-{@comment_line@}...
+**	Compile a QEA_RUP action header.  This action is for an
+**	"update where current of cursor" statement.  Unlike most
+**	QPs/actions, which are more or less self-contained, the RUP
+**	action depends heavily on the cursor QP.  A bunch of info is
+**	copied from the cursor fetch action related to the fetch
+**	DMR-CB and/or the fetch TID.
 **
 ** Inputs:
 [@PARAM_DESCR@]...
@@ -3882,7 +3884,11 @@ opc_dmtahd(
 **	26-Oct-2008 (kiria01) SIR121012
 **	    Removed uninitialised passing of opdummy as no result expected
 **	    in this context.
-[@history_template@]...
+**	1-Jul-2010 (kschendel) b124004
+**	    Use "fetch action" from cursor QP rather than assuming it's the
+**	    first.  Turn off 4byte-tid in the RUP if the fetch is a keyset
+**	    scrollable cursor.  (In the latter case, the fetch 4-byte flag
+**	    is essentially an internal flag, the result TID is always 8-byte.)
 */
 static QEF_AHD *
 opc_rupahd(
@@ -3890,6 +3896,7 @@ opc_rupahd(
 {
     OPS_SUBQUERY	*sq = global->ops_cstate.opc_subqry;
     QEF_AHD		*ahd;
+    QEF_AHD		*parent_ahd;
     QSF_RCB		qsfcb;
     DB_STATUS		ret;
     QEF_QP_CB		*parent_qep;
@@ -3957,11 +3964,12 @@ opc_rupahd(
 	    global->ops_qsfcb.qsf_error.err_code);
     }
     parent_qep = (QEF_QP_CB*)qsfcb.qsf_root;
+    parent_ahd = parent_qep->qp_fetch_ahd;
 
     ahd->qhd_obj.qhd_qep.ahd_qhandle = 
 			    global->ops_caller_cb->opf_parent_qep.qso_handle;
 
-    for (vl = parent_qep->qp_ahd->ahd_valid;
+    for (vl = parent_ahd->ahd_valid;
 	    vl != NULL;
 	    vl = vl->vl_next
 	)
@@ -3971,26 +3979,25 @@ opc_rupahd(
 	    break;
 	}
     }
-    /*if (vl == NULL)
-    **{
-    **	error;	EJLFIX: add an error here;
-    **}
-    */
     /* Duplicate some stuff that QEF will need from the cursor query:
     ** tid row and offset, 4-byte tidp flag, originating node number.
     ** If it's partitioned, QEF will need the DMTCB index and direct vs
     ** deferred flag.
     */
-    ahd->qhd_obj.qhd_qep.ahd_tidrow = 
-			    parent_qep->qp_ahd->qhd_obj.qhd_qep.ahd_tidrow;
-    ahd->qhd_obj.qhd_qep.ahd_tidoffset = 
-			    parent_qep->qp_ahd->qhd_obj.qhd_qep.ahd_tidoffset;
+    ahd->qhd_obj.qhd_qep.ahd_tidrow = parent_ahd->qhd_obj.qhd_qep.ahd_tidrow;
+    ahd->qhd_obj.qhd_qep.ahd_tidoffset = parent_ahd->qhd_obj.qhd_qep.ahd_tidoffset;
     ahd->qhd_obj.qhd_qep.ahd_qepflag |=
-	    (parent_qep->qp_ahd->qhd_obj.qhd_qep.ahd_qepflag & AHD_4BYTE_TIDP);
-    ahd->qhd_obj.qhd_qep.ahd_ruporig = 
-			    parent_qep->qp_ahd->qhd_obj.qhd_qep.ahd_ruporig;
-    ahd->ahd_flags |= (parent_qep->qp_ahd->ahd_flags & QEA_DIR);
-    ahd->qhd_obj.qhd_qep.ahd_odmr_cb = parent_qep->qp_upd_cb;
+		(parent_ahd->qhd_obj.qhd_qep.ahd_qepflag & AHD_4BYTE_TIDP);
+    /* If cursor query is keyset scrollable, the action tidrow/offset will
+    ** always be an 8-byte tid.  (Because it points to a copy of the tid
+    ** returned by the underlying fetch QP, and that copy is always formatted
+    ** to be the full 8-byte form.)
+    */
+    if (parent_ahd->qhd_obj.qhd_qep.ahd_qepflag & AHD_KEYSET)
+	ahd->qhd_obj.qhd_qep.ahd_qepflag &= ~AHD_4BYTE_TIDP;
+    ahd->qhd_obj.qhd_qep.ahd_ruporig = parent_ahd->qhd_obj.qhd_qep.ahd_ruporig;
+    ahd->ahd_flags |= (parent_ahd->ahd_flags & QEA_DIR);
+    ahd->qhd_obj.qhd_qep.ahd_odmr_cb = vl->vl_dmr_cb;
     ahd->qhd_obj.qhd_qep.ahd_dmtix = vl->vl_dmf_cb;
     STRUCT_ASSIGN_MACRO(vl->vl_tab_id, 
 	global->ops_rangetab.opv_rdfcb.rdf_rb.rdr_tabid);
@@ -4004,6 +4011,8 @@ opc_rupahd(
     }
     rel = global->ops_cstate.opc_relation = 
 				global->ops_rangetab.opv_rdfcb.rdf_info_blk;
+    /* Rules or partition-changing might need this, just set it */
+    ahd->qhd_obj.qhd_qep.ahd_repsize = rel->rdr_rel->tbl_width;
 
     /* initialize the ahd_current QEN_ADF struct; */
     ninstr = 0;
@@ -4063,9 +4072,6 @@ opc_rupahd(
 	/* Update on partitioned table - copy DB_PART_DEF. */
 	opc_partdef_copy(global, rel->rdr_parts, opu_qsfmem,
 	    &ahd->qhd_obj.qhd_qep.ahd_part_def);
-	ahd->qhd_obj.qhd_qep.ahd_qepflag |= AHD_PART_TAB;
-	/* Partition-changing update might need this: */
-	ahd->qhd_obj.qhd_qep.ahd_repsize = rel->rdr_rel->tbl_width;
     }
 
     /* Add any rules information required */
@@ -4081,7 +4087,12 @@ opc_rupahd(
 ** Name: OPC_RDELAHD	- Build a single RDEL action header for delete cursor.
 **
 ** Description:
-{@comment_line@}...
+**	Compile a QEA_RDEL action header.  This action is for a
+**	"delete where current of cursor" statement.  Unlike most
+**	QPs/actions, which are more or less self-contained, the RDEL
+**	action depends heavily on the cursor QP.  A bunch of info is
+**	copied from the cursor fetch action related to the fetch
+**	DMR-CB and/or the fetch TID.
 **
 ** Inputs:
 [@PARAM_DESCR@]...
@@ -4116,7 +4127,11 @@ opc_rupahd(
 **	    Make sure we get partdef stuff from RDF.
 **	28-Feb-2005 (schka24)
 **	    Duplicate 4byte-tidp flag from cursor qp.
-[@history_template@]...
+**	1-Jul-2010 (kschendel) b124004
+**	    Use "fetch action" from cursor QP rather than assuming it's the
+**	    first.  Turn off 4byte-tid in the RUP if the fetch is a keyset
+**	    scrollable cursor.  (In the latter case, the fetch 4-byte flag
+**	    is essentially an internal flag, the result TID is always 8-byte.)
 */
 static QEF_AHD *
 opc_rdelahd(
@@ -4124,6 +4139,7 @@ opc_rdelahd(
 {
     OPS_SUBQUERY	*sq = global->ops_cstate.opc_subqry;
     QEF_AHD		*ahd;
+    QEF_AHD		*parent_ahd;
     QSF_RCB		qsfcb;
     DB_STATUS		ret;
     QEF_QP_CB		*parent_qep;
@@ -4186,6 +4202,7 @@ opc_rdelahd(
 	    global->ops_qsfcb.qsf_error.err_code);
     }
     parent_qep = (QEF_QP_CB*)qsfcb.qsf_root;
+    parent_ahd = parent_qep->qp_fetch_ahd;
 
     ahd->qhd_obj.qhd_qep.ahd_qhandle = 
 			    global->ops_caller_cb->opf_parent_qep.qso_handle;
@@ -4193,7 +4210,7 @@ opc_rdelahd(
     /* EJLFIX: check that the parent has a single base relation on it's
     ** valid list.
     */
-    for (vl = parent_qep->qp_ahd->ahd_valid;
+    for (vl = parent_ahd->ahd_valid;
 	    vl != NULL;
 	    vl = vl->vl_next
 	)
@@ -4203,24 +4220,24 @@ opc_rdelahd(
 	    break;
 	}
     }
-    /*if (vl == NULL)
-    **{
-    **	error;	EJLFIX: add an error here;
-    **}
-    */
     /* Duplicate some stuff that QEF will need from the cursor query:
     ** tid row and offset, 4-byte tidp flag.
     ** If it's partitioned, QEF will need the DMTCB index and direct vs
     ** deferred flag.
     */
-    ahd->qhd_obj.qhd_qep.ahd_tidrow = 
-			    parent_qep->qp_ahd->qhd_obj.qhd_qep.ahd_tidrow;
-    ahd->qhd_obj.qhd_qep.ahd_tidoffset = 
-			    parent_qep->qp_ahd->qhd_obj.qhd_qep.ahd_tidoffset;
+    ahd->qhd_obj.qhd_qep.ahd_tidrow = parent_ahd->qhd_obj.qhd_qep.ahd_tidrow;
+    ahd->qhd_obj.qhd_qep.ahd_tidoffset = parent_ahd->qhd_obj.qhd_qep.ahd_tidoffset;
     ahd->qhd_obj.qhd_qep.ahd_qepflag |=
-	    (parent_qep->qp_ahd->qhd_obj.qhd_qep.ahd_qepflag & AHD_4BYTE_TIDP);
-    ahd->ahd_flags |= (parent_qep->qp_ahd->ahd_flags & QEA_DIR);
-    ahd->qhd_obj.qhd_qep.ahd_odmr_cb = parent_qep->qp_upd_cb;
+		(parent_ahd->qhd_obj.qhd_qep.ahd_qepflag & AHD_4BYTE_TIDP);
+    /* If cursor query is keyset scrollable, the action tidrow/offset will
+    ** always be an 8-byte tid.  (Because it points to a copy of the tid
+    ** returned by the underlying fetch QP, and that copy is always formatted
+    ** to be the full 8-byte form.)
+    */
+    if (parent_ahd->qhd_obj.qhd_qep.ahd_qepflag & AHD_KEYSET)
+	ahd->qhd_obj.qhd_qep.ahd_qepflag &= ~AHD_4BYTE_TIDP;
+    ahd->ahd_flags |= (parent_ahd->ahd_flags & QEA_DIR);
+    ahd->qhd_obj.qhd_qep.ahd_odmr_cb = vl->vl_dmr_cb;
     ahd->qhd_obj.qhd_qep.ahd_dmtix = vl->vl_dmf_cb;
     STRUCT_ASSIGN_MACRO(vl->vl_tab_id, 
 	global->ops_rangetab.opv_rdfcb.rdf_rb.rdr_tabid);
@@ -4235,13 +4252,14 @@ opc_rdelahd(
     }
     rel = global->ops_cstate.opc_relation = 
 				global->ops_rangetab.opv_rdfcb.rdf_info_blk;
+    /* Rules might need this, just set it */
+    ahd->qhd_obj.qhd_qep.ahd_repsize = rel->rdr_rel->tbl_width;
 
     if (rel->rdr_parts != (DB_PART_DEF *) NULL)
     {
 	/* Delete on partitioned table - copy DB_PART_DEF. */
 	opc_partdef_copy(global, rel->rdr_parts, opu_qsfmem,
 	    &ahd->qhd_obj.qhd_qep.ahd_part_def);
-	ahd->qhd_obj.qhd_qep.ahd_qepflag |= AHD_PART_TAB;
     }
 
 
