@@ -2521,6 +2521,8 @@ typedef struct _PST_OBJDEP
 **	29-apr-2010 (stephenb)
 **	    Move batch flags from psq_flags to psq_flags2 to to avoid
 **	    conflicts. Add PSQ_SETBATCHCOPYOPTIM.
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Add a place to pass in create-compression.
 */
 typedef enum psq_mode_enum {
 #define PSQ_MODES_MACRO \
@@ -2716,6 +2718,7 @@ _DEFINE(PSQ_FREELOCATOR,       189,"FREE LOCATOR")\
 _DEFINE(PSQ_ATBL_RENAME_COLUMN,190,"PSQ_ATBL_RENAME_COLUMN")\
 _DEFINE(PSQ_ATBL_RENAME_TABLE, 191,"PSQ_ATBL_RENAME_TABLE")\
 _DEFINE(PSQ_SETBATCHCOPYOPTIM, 192, "SET BATCH_COPY_OPTIM")\
+_DEFINE(PSQ_CREATECOMP,        193,"SET CREATE_COMPRESSION")\
 _ENDDEFINE
 #define _DEFINE(n,v,x) n=v,
 #define _ENDDEFINE PSQ_MODE_MAX
@@ -2798,7 +2801,7 @@ typedef struct _PSQ_CB
     PTR		    psq_cp_qefrcb;	/* stashed QEF_RCB for insert to copy 
 					** optimization, see comment in scs.h */
     i4		    psq_qso_lkid;	/* lock ID for QSF */
-    i4		    psq_parser_compat;	/* Parser compatability flags.
+    i2		    psq_parser_compat;	/* Parser compatability flags.
 					** General flags to make the parser
 					** do "stuff" to be compatible with
 					** older clients, unusual situations,
@@ -2818,6 +2821,10 @@ typedef struct _PSQ_CB
 #define	    PSQ_I4_TIDS		0x0002
 
 
+    i2		    psq_create_compression; /* Place to pass create-compression
+					** startup config option: passed
+					** to parser facility CB.
+					*/
     u_i4	    psq_flag;		/*
 					** holds assorted bitflag instructions,
 					** defined below:

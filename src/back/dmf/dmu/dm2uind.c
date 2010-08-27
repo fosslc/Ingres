@@ -381,6 +381,8 @@
 **	    Fix net-change logic for width for ALTER TABLE.
 **      14-May-2010 (stial01)
 **          Alloc/maintain exact size of column names (iirelation.relattnametot)
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    dm2u-create wants compression now.
 **/
 
 /*{
@@ -1249,7 +1251,7 @@ DM2U_INDEX_CB   *index_cb)
 	      index_cb->indxcb_index_name, &owner, index_cb->indxcb_location, 
 	      loc_count, index_cb->indxcb_tbl_id, index_cb->indxcb_idx_id, 
 	      (i4)1, (i4)0, setrelstat, setrelstat2,
-	      m->mx_structure, m->mx_width, m->mx_width, NumCreAtts,
+	      m->mx_structure, TCB_C_NONE, m->mx_width, m->mx_width, NumCreAtts,
 	      att_list, index_cb->indxcb_db_lockmode,
 	      DM_TBL_DEFAULT_ALLOCATION, DM_TBL_DEFAULT_EXTEND, 
 	      m->mx_page_type, m->mx_page_size, index_cb->indxcb_qry_id, 

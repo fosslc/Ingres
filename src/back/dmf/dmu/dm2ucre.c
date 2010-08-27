@@ -962,6 +962,8 @@ NO_OPTIM=su4_cmw i64_aix
 **	    Fix net-change logic for width for ALTER TABLE.
 **	09-Jun-2010 (jonj) SIR 121123
 **	    Adapt hash of owner, table_name to long names.
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Add compression to the ridiculously long parameter list.
 */
 
 /* ****FIXME THIS parameter list is simply ridiculous.  Just pass
@@ -986,6 +988,7 @@ i4		    view,
 i4		    relstat,
 u_i4		    relstat2,
 i4		    structure,
+i4		    compression,
 i4		    ntab_width,
 i4		    ntab_data_width,
 i4		    attr_count,
@@ -1309,6 +1312,8 @@ DB_ERROR	    *errcb)
 	has_extensions = 1;
 	relstat2 |= TCB2_BSWAP;		/* Always set on new tables */
     }
+    if (compression != TCB_C_NONE)
+	relstat |= TCB_COMPRESSED;
 
     if (((dcb->dcb_status & DCB_S_JOURNAL) != DCB_S_JOURNAL) && (journal))
     {
@@ -2257,7 +2262,7 @@ DB_ERROR	    *errcb)
 	/* Set Table's Page Type */
 	relrecord.relpgtype = page_type;
 
-        relrecord.relcomptype = TCB_C_NONE;
+        relrecord.relcomptype = compression;
 
 	if (relstat & TCB_IS_PARTITIONED)
 	{

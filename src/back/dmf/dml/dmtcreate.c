@@ -596,6 +596,8 @@
 **	    it in an alternate location
 **	23-Mar-2010 (kschendel) SIR 123448
 **	    XCB's XCCB list now has to be mutex protected.
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Pass in compression too.
 */
 DB_STATUS
 dmt_create_temp(
@@ -626,6 +628,7 @@ DMT_CB  *dmt_cb)
     i4         	    structure;    
     i4	    	    allocation = DM_TTBL_DEFAULT_ALLOCATION;
     i4	    	    extend = DM_TTBL_DEFAULT_EXTEND;
+    i4		    compression = TCB_C_NONE;
     i4	    	    page_type = TCB_PG_INVALID;
     i4	    	    page_size = svcb->svcb_page_size;
     DMP_RELATION    relrecord;
@@ -873,6 +876,10 @@ DMT_CB  *dmt_cb)
                     sys_maintained = char_entry[i].char_value == DMT_C_ON;
                     break;
 
+		case DMT_C_COMPRESSED:
+		    compression = char_entry[i].char_value;
+		    break;
+
 		default:
 		    SETDBERR(&dmt->error, i, E_DM000D_BAD_CHAR_ID);
 		    return (E_DB_ERROR);
@@ -1100,6 +1107,8 @@ DMT_CB  *dmt_cb)
 		relrecord.relstat |= TCB_DUPLICATES;	    
             if (sys_maintained)
                 relrecord.relstat |= TCB_SYS_MAINTAINED;
+	    if (compression != TCB_C_NONE)
+		relrecord.relstat |= TCB_COMPRESSED;
 	    if ((dmt->dmt_flags_mask != 0) &&
 		(dmt->dmt_flags_mask & DMT_SESSION_TEMP))
 		relrecord.relstat2 |= TCB_SESSION_TEMP;
@@ -1111,7 +1120,7 @@ DMT_CB  *dmt_cb)
 	    relrecord.relallocation = allocation;
 	    relrecord.relextend = extend;
 	    relrecord.relpgtype = page_type;
-	    relrecord.relcomptype = TCB_C_NONE; /* compression*/
+	    relrecord.relcomptype = compression;
 	    relrecord.relpgsize = page_size;
 	    relrecord.reltcpri  = tbl_pri;
 

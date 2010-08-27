@@ -284,6 +284,7 @@ static	DB_STATUS   create_temporary_table(
 			i4		    relstat,
 			i4		    relstat2,
 			i4		    structure,
+			i4		    compression,
 			i4		    ntab_width,
 			i4		    attr_count,
 			DMF_ATTR_ENTRY	    **attr_entry,
@@ -670,6 +671,8 @@ static	DB_STATUS   create_temporary_table(
 **	    wants to know when the table is registered, not when it is used
 **	17-Apr-2008 (kibro01) b120276
 **	    Initialise ADF_CB structure
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Allow compression to be passed in.
 */
 DB_STATUS
 dmu_create(DMU_CB        *dmu_cb)
@@ -713,6 +716,7 @@ dmu_create(DMU_CB        *dmu_cb)
     i4	    	    extend = 0;
     i4	    	    unique = 0;
     i4	    	    modoptions = 0;
+    i4		    compression = TCB_C_NONE;
     i4	    	    tup_info;
     i4		    bits;
     SXF_ACCESS	    access;
@@ -847,6 +851,18 @@ dmu_create(DMU_CB        *dmu_cb)
 
 		case DMU_EXTEND:
 		    extend = char_entry[i].char_value;
+		    break;
+
+		case DMU_COMPRESSED:
+		    if (char_entry[i].char_value == DMU_C_ON)
+		    {
+			compression = TCB_C_STANDARD;
+			/* Note for 9.x cross: check byte_compression option,
+			** use std-old if not set.
+			*/
+		    }
+		    else if (char_entry[i].char_value == DMU_C_HIGH)
+			compression = TCB_C_HICOMPRESS;
 		    break;
 
 		case DMU_DATAFILL:
@@ -1367,8 +1383,8 @@ dmu_create(DMU_CB        *dmu_cb)
 			&dmu->dmu_table_name, 
 			&dmu->dmu_owner, location, loc_count, 
 			&dmu->dmu_tbl_id,
-			relstat, relstat2, structure, ntab_width, attr_count, 
-			attr_entry,
+			relstat, relstat2, structure, compression,
+			ntab_width, attr_count, attr_entry,
 			allocation, extend, page_size, recovery,
 			tbl_pri,
 			&dmu->error);
@@ -1378,7 +1394,7 @@ dmu_create(DMU_CB        *dmu_cb)
 	status = dm2u_create(odcb->odcb_dcb_ptr, xcb, &dmu->dmu_table_name, 
 			&dmu->dmu_owner, location, loc_count, 
 			&dmu->dmu_tbl_id, &dmu->dmu_idx_id, index, view, 
-			relstat, relstat2, structure, ntab_width,
+			relstat, relstat2, structure, compression, ntab_width,
 			ntab_data_width, attr_count, 
 			attr_entry, db_lockmode,
 			allocation, extend, page_type, page_size,
@@ -1710,9 +1726,11 @@ dmu_create(DMU_CB        *dmu_cb)
 **          X-integrate change 432896(sarjo01)
 **          Bug 67867: Added characteristic DMT_C_SYS_MAINTAINED to propagate
 **          flag DM2U_SYS_MAINTAINED for temp tables.
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Pass optional compression.
 */
 
-#define NUM_TEMP_CHARACTERISTICS 7
+#define NUM_TEMP_CHARACTERISTICS 8
 
 static DB_STATUS
 create_temporary_table(
@@ -1726,6 +1744,7 @@ DB_TAB_ID	    *tbl_id,
 i4		    relstat,
 i4		    relstat2,
 i4		    structure,
+i4		    compression,
 i4		    ntab_width,
 i4		    attr_count,
 DMF_ATTR_ENTRY	    **attr_entry,
@@ -1772,6 +1791,8 @@ DB_ERROR	    *errcb)
     characteristics[6].char_id = DMT_C_SYS_MAINTAINED;
     characteristics[6].char_value =
                   (relstat & TCB_SYS_MAINTAINED) ? DMT_C_ON : DMT_C_OFF;
+    characteristics[7].char_id = DMT_C_COMPRESSED;
+    characteristics[7].char_value = compression; /* TCB_C_xxx */
     dmt_cb.dmt_char_array.data_address = (PTR)characteristics;
     dmt_cb.dmt_char_array.data_in_size = NUM_TEMP_CHARACTERISTICS *
                               sizeof(DMT_CHAR_ENTRY);

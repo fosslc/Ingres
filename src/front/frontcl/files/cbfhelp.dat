@@ -221,6 +221,9 @@ dbms.cache_sharing.title:		'DBMS Cache Sharing'
 rms.cache_sharing.file:			rmscachshar.hlp
 rms.cache_sharing.title:                'RMS Cache Sharing'
 
+dbms.create_compression.file:		dbmsccom.hlp
+dbms.create_compression.title:		'DBMS Default Create-Table Compression'
+
 dbms.dmcm.file:				dmcm.hlp
 dbms.dmcm.title:			'DBMS Distributed Multi-Cache'
 

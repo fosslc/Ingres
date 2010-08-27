@@ -706,6 +706,8 @@ NO_OPTIM=dr6_us5 i64_aix
 **          Cast new i8 reltups to i4.
 **      27-May-2010 (stial01)
 **          Set DM1C_CORE_CATALOG for iidevices,iisequence which use phys locks
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    dm2u-create wants compression now.
 **/
 
 /*
@@ -5447,7 +5449,7 @@ DB_ERROR	*dberr)
 	    dm2u_create(dcb, xcb, &newtab_name, &owner, &location, (i4)1,
 		    &ntbl_id, &nidx_id, index, view,
 		    setrelstat, relstat2,
-		    structure, ntab_width, ntab_width,
+		    structure, TCB_C_NONE, ntab_width, ntab_width,
 		    NumAtts, AttList, db_lockmode,
 		    allocation, extend, newpgtype, newpgsize,
 		    (DB_QRY_ID *)0, (DM_PTR *)NULL,
@@ -8944,7 +8946,8 @@ DB_ERROR	    *dberr)
 		    tp->tpcb_loc_list, tp->tpcb_loc_count, 
 		    &new_tabid, &new_ixid, 0, view,
 		    (setrelstat), base_relstat2,
-		    DB_HEAP_STORE, t->tcb_rel.relwid, t->tcb_rel.reldatawid,
+		    DB_HEAP_STORE, TCB_C_NONE,
+		    t->tcb_rel.relwid, t->tcb_rel.reldatawid,
 		    attr_count, attr_ptrs, db_lockmode,
 		    allocation, extend, 
 		    m->mx_page_type, m->mx_page_size,
@@ -9085,7 +9088,8 @@ DB_ERROR	    *dberr)
                     locnArray, sp->spcb_loc_count,
                     &newpart_tabid, &newpart_ixid, 0, view,
                     setrelstat, base_relstat2,
-                    DB_HEAP_STORE, t->tcb_rel.relwid, t->tcb_rel.reldatawid,
+                    DB_HEAP_STORE, TCB_C_NONE,
+		    t->tcb_rel.relwid, t->tcb_rel.reldatawid,
                     0, 0, db_lockmode,
                     allocation, extend,
                     m->mx_page_type, m->mx_page_size,
@@ -11844,7 +11848,7 @@ DB_ERROR		*dberr)
 		part->loc_array.data_in_size/sizeof(DB_LOC_NAME),
 		&newpart_tabid, &newpart_ixid, 0, 0,
 		relstat, relstat2,
-		DB_HEAP_STORE, t->tcb_rel.relwid, t->tcb_rel.reldatawid,
+		DB_HEAP_STORE, TCB_C_NONE, t->tcb_rel.relwid, t->tcb_rel.reldatawid,
 		0, 0, db_lockmode, 0, 0,
 		m->mx_page_type, m->mx_page_size,
 		(DB_QRY_ID *)0, (DM_PTR *)NULL,

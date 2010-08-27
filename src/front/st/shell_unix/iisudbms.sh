@@ -681,6 +681,8 @@
 ##	    BUG 124055
 ##	    Make II_CONFIG_TYPE=TRAD a no-op as it just refers to the default
 ##	    Ingres configuration and causes an error in install.log
+##	20-Jul-2010 (kschendel) SIR 124104
+##	    Add create_compression to the upgrade list.
 ##	    
 #----------------------------------------------------------------------------
 . iisysdep
@@ -1435,7 +1437,7 @@ update_parameters()
     for param in system_lock_level di_zero_bufsize fd_affinity dmf_build_pages \
 		fallocate opf_new_enum opf_greedy_factor \
 		qef_hash_rbsize qef_hash_wbsize qef_hash_cmp_threshold \
-		qef_hashjoin_min qef_hashjoin_max
+		qef_hashjoin_min qef_hashjoin_max create_compression
     do
 	x=`iigetres "ii.$CONFIG_HOST.dbms.*.$param"`
 	if [ -z "$x" ] ; then

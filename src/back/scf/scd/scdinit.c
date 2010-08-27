@@ -36,6 +36,7 @@ NO_OPTIM=dr6_us5
 #include    <dmf.h>
 #include    <dmccb.h>
 #include    <dmtcb.h>
+#include    <dmucb.h>
 #include    <qsf.h>
 #include    <ddb.h>
 #include    <opfcb.h>
@@ -1702,6 +1703,8 @@ GLOBALREF const char	Version[];
 **      21-jun-2010 (stephenb)
 **          Replace hard-coded values for opf_maxtup and qef_maxtup with
 **          DB_MAXROWSIZE
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Initialize create-compression to NONE.
 */
 DB_STATUS
 scd_initiate( CS_INFO_CB  *csib )
@@ -2059,6 +2062,7 @@ scd_initiate( CS_INFO_CB  *csib )
 	psq_cb.psq_flag2 = 0L;
     psq_cb.psq_maxmemf = 0.5;	/* default memory proportion */
     psq_cb.psq_cp_qefrcb = NULL;
+    psq_cb.psq_create_compression = DMU_C_OFF;
 
     /* server_class gets passed to PSF so it can output it in SC930 trace */
     psq_cb.psq_server_class = Sc_main_cb->sc_server_class;

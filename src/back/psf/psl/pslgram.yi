@@ -761,6 +761,11 @@
 **	    Add extra parameter to psl0_rngent & psl_rngent for WITH
 **	    support to pass active join_id in case a WITH list element
 **	    needs expanding and joinids need duplicating. 
+**	16-Jul-2010 (kschendel) B123104
+**	    Convert constant-folded bools in a "qual" back to operators,
+**	    so that opf can deal with them in a consistent manner.
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Pass with-clauses to create table.
 */
 
 %{
@@ -1113,6 +1118,11 @@
 %token		    SETCPUFACT
 
 /*
+** "set create_compression" taken as a single token.
+*/
+%token		    SETCREATECOMPRESSION
+
+/*
 ** "set date_format" taken as a single token.
 */
 %token		    SETDATEFMT
@@ -1322,7 +1332,7 @@
 %type	<psl_tytype>  LBOP NOT
 %type	<psl_strtype> NAME DELIM_IDENT
 %type	<psl_textype> SCONST HEXCONST
-%type	<psl_tytype>  SETJOINOP SETJOURNAL SETSQL SETTRACE 
+%type	<psl_tytype>  SETCREATECOMPRESSION SETJOINOP SETJOURNAL SETSQL SETTRACE 
 %type   <psl_tytype>  SETQEP SETSTATS SETPRINTQRY SETRSTRUCT
 %type   <psl_tytype>  SETLTRACE SETIOTRACE SETOPTIMIZEONLY SETOJFLATTEN
 %type	<psl_tytype>  SETLOGGING SETLOGTRACE SETFLATTEN SETHASH SETPARALLEL
@@ -1407,6 +1417,7 @@ stmnt:              abort
           |	    setautocommit
 	  |	    setaggr
 	  |	    setcpufact
+	  |	    setcrecomp
           |	    setdatefmt
 	  |	    setdecimal
 	  |	    setflatten
@@ -2361,7 +2372,7 @@ create:      crestmnt crlocationname LPAREN specs RPAREN crwith
     {
 	DB_STATUS		    status;
 
-	status = psl_ct1_create_table(cb, psq_cb, (PSS_CONS *) NULL);
+	status = psl_ct1_create_table(cb, psq_cb, &$Ywith_clauses, (PSS_CONS *) NULL);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -7495,6 +7506,23 @@ setcpufact:	    SETCPUFACT intsetparam
     }
 ;
 
+/* SET NOCREATE_COMPRESSION is the important one here, it allows
+** copydb / unloaddb to operate in the traditional mode where the
+** session default is not to compress.  SET CREATE_COMPRESSION is
+** somewhat bogus, but does allow the session to operate with
+** the create table default -> data compression.  (not hidata.)
+*/
+setcrecomp:	    SETCREATECOMPRESSION
+    {
+	psq_cb->psq_mode = PSQ_CREATECOMP;
+
+	if ($1 == PSL_ONSET)
+	    cb->pss_create_compression = DMU_C_ON;	/* compression = DATA */
+	else
+	    cb->pss_create_compression = DMU_C_OFF;	/* compression NONE */
+    }
+;
+
 setdatefmt:	    SETDATEFMT strconst
     {
 	i4                err_code;
@@ -9729,6 +9757,42 @@ qual:		    LPAREN qual RPAREN
 	$$ = newnode;
     }
           |	    clause
+    {
+	bool result;
+
+	/* Convert a constant-folded clause back into an operator */
+
+	/* Pre-check for a real constant, not ii_true or ii_false. */
+	if ($1 && $1->pst_sym.pst_type == PST_CONST
+	  && $1->pst_left == NULL
+	  && pst_is_const_bool($1, &result))
+	{
+	    DB_STATUS status;
+	    PST_OP_NODE op;
+	    PST_QNODE *newnode;
+
+	    MEfill(sizeof(op), 0, &op);
+	    op.pst_opno = ADI_IIFALSE_OP;
+	    if (result)
+		op.pst_opno = ADI_IITRUE_OP;
+	    op.pst_opmeta = PST_NOMETA;
+	    op.pst_pat_flags = AD_PAT_DOESNT_APPLY;
+	    op.pst_joinid = PST_NOJOIN;
+	    /* No OJ's in quel */
+	    /* A shame we can't reuse the true/false node, which was probably
+	    ** created out of an operator node anyway!  but it's not worth
+	    ** putting in a constant-node flag to figure it out.
+	    */
+	    status = pst_node(cb,&cb->pss_ostream, NULL, NULL,
+			PST_COP, (char *) &op, sizeof(op),
+			DB_BOO_TYPE, 0, DB_BOO_LEN, NULL,
+			&newnode, &psq_cb->psq_error, PSS_JOINID_PRESET);
+	    if (status != E_DB_OK)
+		return (status);
+	    $1 = newnode;
+	}
+	$$ = $1;
+    }
 ;
 
 clause:            afcn relop afcn

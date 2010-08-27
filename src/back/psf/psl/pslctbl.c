@@ -543,11 +543,14 @@ static char * psl_seckey_attr_name(
 **	    Add support for autostruct with options.
 **	04-may-2010 (miket) SIR 122403
 **	    Check for anatomically incorrect encryption specifications.
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Pass in with-clauses, check for compression, use default.
 */
 DB_STATUS
 psl_ct1_create_table(
 	PSS_SESBLK	*sess_cb,
 	PSQ_CB		*psq_cb,
+	PSS_WITH_CLAUSE	*with_clauses,
 	PSS_CONS	*cons_list)
 {
     DB_ERROR			*err_blk= &psq_cb->psq_error;
@@ -737,6 +740,20 @@ psl_ct1_create_table(
     }
     /* PASSPHRASE= specified but no ENCRYPTION= is checked in psl_nm_eq_nm */
 
+    /* Default the COMPRESSION if not specified and not $ingres (don't
+    ** want to change how catalogs are compressed!).
+    */
+    if (MEcmp((PTR) &dmu_cb->dmu_owner, (PTR) sess_cb->pss_cat_owner, sizeof(DB_OWN_NAME)) != 0
+      && ! PSS_WC_TST_MACRO(PSS_WC_COMPRESSION, with_clauses))
+    {
+	chr = (DMU_CHAR_ENTRY *)
+		(((char *) dmu_cb->dmu_char_array.data_address)
+		+ dmu_cb->dmu_char_array.data_in_size);
+	chr->char_id = DMU_COMPRESSED;
+	chr->char_value = sess_cb->pss_create_compression;
+	dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
+    }
+	
 #ifdef	xDEBUG
     {
 	i4		val1;

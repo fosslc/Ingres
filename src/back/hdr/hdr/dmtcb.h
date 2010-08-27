@@ -744,6 +744,8 @@ typedef struct _DMT_CB
 **	    Added DMT_C_TABLE_PRIORITY
 **	23-nov-2006 (dougi)
 **	    Add DMT_C_VIEWS back into the fold.
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Invent compression characteristic.
 */
 typedef struct _DMT_CHAR_ENTRY
 {
@@ -875,6 +877,13 @@ typedef struct _DMT_CHAR_ENTRY
 						/* Specifies requested page
 						** type for a temporary table.
 						*/
+#define			DMT_C_COMPRESSED    34L
+						/* Compression type if any.
+						** *NOTE* Passes TCB_C_xxx as
+						** value, for use within DMF.
+						** Not for external use.
+						*/
+
     i4         char_value;             /* Value of characteristic. */
 #define                 DMT_C_ON            1L
 #define                 DMT_C_OFF           0L

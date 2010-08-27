@@ -338,6 +338,10 @@ FUNC_EXTERN char	*IIUGdmlStr();
 **          XF_NO_SEQUENCES is set. When -add_drop was used for tables
 **          that use sequences we were failing to add a DROP befor the
 **          generated CREATE SEQUENCE.
+**	21-jul-2010 (kschendel) SIR 124104
+**	    Output a "set nocreate_compression" statement to disable any
+**	    default compression, since the rest of xferdb assumes that
+**	    nocompression is the default.
 */
 void
 xfcrscript(char *owner, char *progname, char *dbaname, bool portable, 
@@ -510,6 +514,12 @@ xfcrscript(char *owner, char *progname, char *dbaname, bool portable,
 
 	/* Fix bug 56902, 54327: scripts leave tm in QUEL */
 	xfwrite(Xf_in, ERx("\\sql\n"));
+    }
+
+    /* Emit set nocreate_compression */
+    if (!With_distrib)
+    {
+	xfwrite(Xf_in, "set nocreate_compression\n\\p\\g\n");
     }
 
     /*

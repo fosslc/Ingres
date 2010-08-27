@@ -512,6 +512,8 @@
 **      21-Jun-2010 (horda03) b123926
 **          Because adu_unorm() and adu_utf8_unorm() are also called via 
 **          adu_lo_filter() change parameter order.
+**	21-Jul-2010 (kschendel) SIR 124104
+**	    Add set [no]create_compression.
 **/
 
 /*
@@ -845,6 +847,7 @@ static const SECONDARY      Setwords[] = {
 			{ "cache_dynamic",SETCACHEDYN, PSL_ONSET  },
 			{ "cardinality_check",SETCARDCHK, PSL_ONSET},
 		        { "cpufactor",    SETCPUFACT,  PSL_GOVAL  },
+			{ "create_compression", SETCREATECOMPRESSION, PSL_ONSET},
 			{ "date_format",  SETDATEFMT,  PSL_GOVAL  },
 			{ "ddl_concurrency",SETDDLCONCUR,PSL_GOVAL},
 			{ "decimal",      SETDECIMAL,  PSL_GOVAL  },
@@ -871,6 +874,7 @@ static const SECONDARY      Setwords[] = {
 			{ "nobatch_copy_optim", SETBATCHCOPYOPTIM, PSL_OFFSET},
 			{ "nocache_dynamic",SETCACHEDYN, PSL_OFFSET},
 			{ "nocardinality_check",SETCARDCHK, PSL_OFFSET},
+			{ "nocreate_compression", SETCREATECOMPRESSION, PSL_OFFSET},
 			{ "noflatten",    SETFLATTEN,  PSL_OFFSET },
 			{ "nohash",       SETHASH,     PSL_OFFSET },
 			{ "noio_trace",   SETIOTRACE,  PSL_OFFSET },

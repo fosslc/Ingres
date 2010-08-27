@@ -1512,6 +1512,8 @@ GLOBALREF SC_MAIN_CB *Sc_main_cb; /* server control block */
 **	    Add "psitional parm" flag to QEF structures for nameless proc parms.
 **	19-Apr-2009 (gupsh01) SIR 123444
 **	    Added support for rename table/column.
+**	21-Jul-2010 (kschendel) SIR 124104
+**	    Add (stub) set create_compression.
 */
 typedef struct _SQNCR_TBL
 {
@@ -1723,6 +1725,7 @@ static  const SQNCR_TBL   sqncr_tbl[] = {
 /* PSQ_FREELOCATOR */		{SQ_PSF_MASK, 0},
 /* PSQ_ATBL_RENAME_COLUMN */	{SQ_PSF_MASK | SQ_OPF_MASK, 0},
 /* PSQ_ATBL_RENAME_TABLE */	{SQ_PSF_MASK | SQ_OPF_MASK, 0},
+/* PSQ_CREATECOMP */		{SQ_PSF_MASK, 0},
 	{0,0}
 };
 static char execproc_syntax[] = "execute procedure ";
@@ -8837,6 +8840,7 @@ scs_sequencer(i4 op_code,
 	    case PSQ_ALLJOURNAL:
 	    case PSQ_SCARDCHK:
 	    case PSQ_SNOCARDCHK:
+	    case PSQ_CREATECOMP:
 
 	    /* the following qmodes are obsolete */
 	    case PSQ_OBSOLETE:

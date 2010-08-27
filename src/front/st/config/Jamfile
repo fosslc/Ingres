@@ -84,6 +84,8 @@
 #	    Add dbmscpop.hlp
 #    07-May-2010 (stial01) SIR 122205
 #	Add recoffline.hlp, reconline.hlp
+#	20-Jul-2010 (kschendel) SIR 124104
+#	    Add dbmsccom.hlp.
 
 SubDir ING_SRC front st config ;
 
@@ -167,6 +169,7 @@ File $(INGMSG)$(DFS)dbmsbufc.hlp : dbmsbufc.hlp ;
 File $(INGMSG)$(DFS)dbmscach.hlp : dbmscach.hlp ;
 File $(INGMSG)$(DFS)dbmscady.hlp : dbmscady.hlp ;
 File $(INGMSG)$(DFS)dbmscard.hlp : dbmscard.hlp ;
+File $(INGMSG)$(DFS)dbmsccom.hlp : dbmsccom.hlp ;
 File $(INGMSG)$(DFS)dbmsclim.hlp : dbmsclim.hlp ;
 File $(INGMSG)$(DFS)dbmscore.hlp : dbmscore.hlp ;
 File $(INGMSG)$(DFS)dbmscpus.hlp : dbmscpus.hlp ;

@@ -20,6 +20,7 @@
 *.*.*.*.connect_limit:			connections
 *.*.*.*.core_enabled:			boolean
 *.*.*.*.cpu_statistics:		boolean
+*.*.*.*.create_compression:		string
 *.*.*.*.cursor_limit:			cursors
 *.*.*.*.cursor_update_mode:		string
 *.*.*.*.cursor_default_open:		string

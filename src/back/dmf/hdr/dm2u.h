@@ -216,6 +216,8 @@
 **	    Changes for encryption project: DM2U_2_ENCRYPT,
 **	    dm2u_create parameters ntab_data_width and dmu, function
 **	    prototype for dm2u_modify_encrypt.
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Pass in compression to create.
 */
 
 /*
@@ -553,6 +555,7 @@ FUNC_EXTERN DB_STATUS	dm2u_create(
 		i4		    table_flags,
 		u_i4		    relstat2,
 		i4		    structure,
+		i4		    compression,
 		i4		    ntab_width,
 		i4		    ntab_data_width,
 		i4		    attr_count,

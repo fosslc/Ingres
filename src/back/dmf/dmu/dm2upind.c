@@ -345,6 +345,8 @@
 **	    Open sources no-coupon to avoid unnecessary LOB handling.
 **	16-Jul-2010 (kschendel) SIR 123450
 **	    Log the actual compression types.
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Pass no-compression to create table, will fix when index loaded.
 */
 STATUS
 dm2u_pindex(
@@ -715,7 +717,7 @@ DM2U_INDEX_CB   *index_cbs)
 	  index_cb->indxcb_l_count,
           index_cb->indxcb_tbl_id, index_cb->indxcb_idx_id, 
 	  (i4)1, (i4)0, setrelstat, m->mx_new_relstat2,
-          index_cb->indxcb_structure, m->mx_width, m->mx_width, NumCreAtts,
+          index_cb->indxcb_structure, TCB_C_NONE, m->mx_width, m->mx_width, NumCreAtts,
           att_list, index_cb->indxcb_db_lockmode,
           DM_TBL_DEFAULT_ALLOCATION, DM_TBL_DEFAULT_EXTEND, 
 	  m->mx_page_type, m->mx_page_size, index_cb->indxcb_qry_id, 

@@ -3574,6 +3574,8 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	    numeric behavior.
 **	19-Jul-2010 (frima01) Bug 124098
 **	    Add length check for objects that don't support long identifiers.
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Pass with-clauses to create table postprocessing.
 */
 %{
 
@@ -4347,6 +4349,11 @@ psl_checklen(
 %token		    SETCARDCHK
 
 /*
+** "set create_compression/nocreate_compression" taken as a single token.
+*/
+%token		    SETCREATECOMPRESSION
+
+/*
 ** "set [no]hash" taken as a single token.
 */
 %token		    SETHASH
@@ -4591,7 +4598,7 @@ psl_checklen(
 %type	<psl_textype> TSCONST TSTMPCONST
 %type	<psl_utextype> UCONST
 %type	<psl_tytype>  SETHASH SETJOINOP SETJOURNAL SETTRACE SETIOTRACE
-%type   <psl_tytype>  SETLOGTRACE SETLOGGING SETFLATTEN SETCARDCHK SETOJFLATTEN
+%type   <psl_tytype>  SETLOGTRACE SETLOGGING SETFLATTEN SETCARDCHK SETCREATECOMPRESSION SETOJFLATTEN
 %type   <psl_tytype>  SETPARALLEL SETCACHEDYN SETBATCHCOPYOPTIM
 %type   <psl_tytype>  SETQEP SETSTATS SETPRINTQRY SETLOCKTRACE SETPRTRULES
 %type	<psl_tytype>  SETMXIO SETMXROW SETMXCPU SETMXPAGE SETMXCOST
@@ -4834,6 +4841,7 @@ stmt:		    abort
 	  |	    set_sess_auth_id
 	  |	    setflatten
 	  |	    setchkcard
+	  |	    setcrecomp
 	  |	    sethash
 	  |	    setiotrace
 	  |	    setjoinop
@@ -8550,7 +8558,7 @@ dgtt_stmt:	dgtt_kwd new_loc_name LPAREN tbl_elem_list RPAREN dgtton tbl_with_cla
     {
 	DB_STATUS		    status;
 
-	status = psl_ct1_create_table(cb, psq_cb, (PSS_CONS *) NULL);
+	status = psl_ct1_create_table(cb, psq_cb, &$Ywith_clauses, (PSS_CONS *) NULL);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -8624,7 +8632,7 @@ create_table:	    crt_tbl_kwd new_loc_name LPAREN tbl_elem_list RPAREN tbl_with_
 	    return(E_DB_OK);
 	}
 
-	status = psl_ct1_create_table(cb, psq_cb, $Ycons_list);
+	status = psl_ct1_create_table(cb, psq_cb, &$Ywith_clauses, $Ycons_list);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
 
@@ -19914,6 +19922,7 @@ ex_imdte_stmts:	    abort
 	  |	    setdecimal
 	  |	    setflatten
 	  |	    setchkcard
+	  |	    setcrecomp
 	  |	    sethash
 	  |	    setiotrace
 	  |	    setjoinop
@@ -40102,6 +40111,34 @@ setchkcard:	    SETCARDCHK
 	    cb->pss_ses_flag |= PSS_NOCHK_SINGLETON_CARD;
 	    opf_cb->opf_alter = OPF_NOCARDCHK;
 	}
+    }
+;
+
+/* SET NOCREATE_COMPRESSION is the important one here, it allows
+** copydb / unloaddb to operate in the traditional mode where the
+** session default is not to compress.  SET CREATE_COMPRESSION is
+** somewhat bogus, but does allow the session to operate with
+** the create table default -> data compression.  (not hidata.)
+*/
+setcrecomp:	    SETCREATECOMPRESSION
+    {
+	i4                err_code;
+
+	psq_cb->psq_mode = PSQ_CREATECOMP;
+
+	/* "set create_compression" is not allowed in distributed yet */
+	if (cb->pss_distrib & DB_3_DDB_SESS)
+	{
+	    /* *** FIXME WRONG MESSAGE need to parameterize this! */
+	    (VOID) psf_error(5951L, 0L, PSF_USERERR,
+		&err_code, &psq_cb->psq_error, 0);
+	    return (E_DB_ERROR);    /* non-zero return means error */
+	}
+
+	if ($1 == PSL_ONSET)
+	    cb->pss_create_compression = DMU_C_ON;	/* compression = DATA */
+	else
+	    cb->pss_create_compression = DMU_C_OFF;	/* compression NONE */
     }
 ;
 

@@ -217,6 +217,8 @@
 **		Add dbmscpop.hlp
 **      07-May-2010 (stial01) (SIR 122205)
 **          Add offline_error_action, online_error_action help
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Add create_compression help.
 */
 
 PART   config
@@ -272,6 +274,7 @@ PART   config
       FILE dbmsbufc.hlp
       FILE dbmscach.hlp
       FILE dbmscady.hlp
+      FILE dbmsccom.hlp
       FILE dbmsclim.hlp
       FILE dbmscore.hlp
       FILE dbmscpop.hlp

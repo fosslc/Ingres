@@ -557,6 +557,8 @@
 **	    Add extra parameter to psl0_rngent and psl_rngent for WITH
 **	    support. Corrected prototype for psl_set_jrel & dropped
 **	    pst_swelem.
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Pass with-clauses to psl-ct1-create-table.
 */
 
 /*
@@ -1805,6 +1807,8 @@ typedef struct _PSS_DECVAR PSS_DECVAR;  /* forward declaration */
 **	    Add flags PSS_2_ENCRYPTION and PSS_2_PASSPHRASE.
 **	29-apr-2010 (stephenb)
 **	    Add batch_copy_optim and associated defines.
+**	21-Jul-2010 (kschendel) SIR 124104
+**	    Add default compression.
 */
 typedef struct _PSS_SESBLK
 {
@@ -1872,6 +1876,7 @@ ULT_VECTOR_MACRO(PSS_TBITS, PSS_TVAO) pss_trace;
 					** PSQ_50DEFQRY	    - 5.0 repeat query
 					*/
     i2		    pss_rsdmno;		/* result domain number */
+    i2		    pss_create_compression;  /* Default table compression */
     PSF_MSTREAM	    pss_ostream;	/* Mem. stream to alloc output object */
     PST_QNODE	    *pss_tlist;		/* Pointer to current target list */
     PTR		    pss_dbid;		/* Database id for this session */
@@ -2770,6 +2775,8 @@ i4		    pss_flattening_flags;
 **	    Add PSF_CACHEDYN server wide flag.
 **      15-Feb-2010 (maspa05) SIR 123293
 **          Add psf_server_class so SC930 can output server_class
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Add default create-table compression.
 */
 typedef struct _PSF_SERVBLK
 {
@@ -2858,6 +2865,9 @@ typedef struct _PSF_SERVBLK
 					*/
 #define     PSF_NOCHK_SINGLETON_CARD	   0x0080L
 
+    i2		    psf_create_compression;  /* DMU_C_xxx default create table
+					** compression from config.
+					*/
     bool	    psf_vch_prec;	/* varchar precedence */
     char           *psf_server_class;   /* server_class of server */
 } PSF_SERVBLK;
@@ -5771,6 +5781,7 @@ FUNC_EXTERN DB_STATUS
 psl_ct1_create_table(
 	PSS_SESBLK	*sess_cb,
 	PSQ_CB		*psq_cb,
+	PSS_WITH_CLAUSE *with_clauses,
 	PSS_CONS	*cons_list);
 
 FUNC_EXTERN DB_STATUS

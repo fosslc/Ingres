@@ -193,6 +193,8 @@ GLOBALREF	PSF_SERVBLK	*Psf_srvblk;
 **          Added server_class so SC930 can output it
 **	19-May-2010 (kiria01) b123766
 **	    Set cardinality check flag into server block
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Pass create-compression to server block
 */
 DB_STATUS
 psq_startup(
@@ -351,6 +353,7 @@ psq_startup(
 				    : 0;
 
     Psf_srvblk->psf_vch_prec = psq_cb->psq_vch_prec;
+    Psf_srvblk->psf_create_compression = psq_cb->psq_create_compression;
     /*
     ** Return the size needed for the session control block.
     */

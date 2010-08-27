@@ -620,6 +620,9 @@
 --#	    later date. Locations created by RPM.
 --# 29-apr-2010 (stephenb)
 --#		Add rule for batch_copy_optim
+--#
+--#	20-Jul-2010 (kschendel) SIR 124104
+--#	    Add create_compression.
 
 -- location setup resources
 # ifdef UNIX 
@@ -771,6 +774,7 @@ ii.$.dbms.$.cpu_statistics: 	IF ( ii.$.dbms.$.session_accounting == ON )
 				ELSE
 					OFF
 				ENDIF;
+ii.$.dbms.$.create_compression: "NONE", VALID = { "NONE", "DATA", "HIDATA" };
 ii.$.dbms.$.cursor_default_open:    "UPDATE" , VALID = { "UPDATE", "READONLY" };
 ii.$.dbms.$.cursor_limit: 	16;
 ii.$.dbms.$.cursor_update_mode:	IF ( ii.$.fixed_prefs.iso_entry_sql-92 == ON )
