@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 1987, 2004 Ingres Corporation
+**Copyright (c) 1987, 2004, 2010 Ingres Corporation
 ** All rights reserved.
 */
 
@@ -9,6 +9,10 @@
 ** Description
 **	SPACE structure which gives pertinent details concerning a
 **	numbered name space.
+**
+** History
+**	19-Jul-2010 (frima01) Bug 124097
+**	    Increase NAMEBUFFER to 267 for long identifier plus prefix.
 */
 
 typedef struct _n_sp
@@ -27,7 +31,7 @@ typedef struct _n_sp
 } SPACE;
 
 #define TABSIZE 600	/* hash table size */
-#define NAMEBUFFER 121
+#define NAMEBUFFER 267
 #define SHIFTLEN 3
 
 /*

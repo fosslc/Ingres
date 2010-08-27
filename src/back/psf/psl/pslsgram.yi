@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1986, 2005, 2009 Ingres Corporation
+** Copyright (c) 1986, 2005, 2010 Ingres Corporation
 */
 
 %{
@@ -3572,6 +3572,8 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	    column expression with a numeric IN-list is now checked for and if
 **	    found, numericnorm functions are injected to retain the string-
 **	    numeric behavior.
+**	19-Jul-2010 (frima01) Bug 124098
+**	    Add length check for objects that don't support long identifiers.
 */
 %{
 
@@ -3883,6 +3885,13 @@ psl_mk_const_similar(
 	PST_QNODE	**cst,
 	DB_ERROR	*err_blk,
 	bool		*handled);
+
+static i4
+psl_checklen( 
+	char		*ident,
+	i4		max,
+	char		*objstr,
+	DB_ERROR	*psq_error);
 
 /*[@function_reference@]...*/
 
@@ -4607,6 +4616,7 @@ psl_mk_const_similar(
 %type	<psl_strtype> corr_name1 dt_wquals prep_from
 %type   <psl_strtype> generic_ident internal_ident nonkeyword nonkey_or_sconst
 %type   <psl_strtype> auth_ident user_ident tbl_spec col_spec schema_spec
+%type   <psl_strtype> auth_obj
 %type   <psl_strtype> cdbp_while_label cdbp_forlabel cdbp_replabel
 %type	<psl_strtype> cp_delim entname owner_name
 %type   <psl_strtype> create_schema_auth newcolname sconst_ident cdbp_into_var
@@ -6974,9 +6984,10 @@ create_event:	crev_kwd obj_spec
             return (E_DB_ERROR);    /* non-zero return means error */
         }
 
-	/* test event name for reserved name
+	/* test event name for reserved name or identifier longer than 32
 	 */
-	if (PSL_IS_RESERVED_IDENT($2->pss_orig_obj_name, cb, psq_cb, TRUE))
+	if (PSL_IS_RESERVED_IDENT($2->pss_orig_obj_name, cb, psq_cb, TRUE) ||
+	  psl_checklen($2->pss_orig_obj_name,DB_EVENT_MAXNAME,"Event",&psq_cb->psq_error))
 	    return(E_DB_ERROR);
 
 	/* If name was qualified, it'd better be the same as the user */
@@ -21455,7 +21466,7 @@ db_loc_obj:		    generic_ident
 	    i4 err_code;
 
 	    (VOID) psf_error(2733, 0L, PSF_USERERR, &err_code,
-		&psq_cb->psq_error, 3, 8, "LOCATION", 0, $1, sizeof(max), &max);
+		&psq_cb->psq_error, 3, 8, "Location", 0, $1, sizeof(max), &max);
 	    return E_DB_ERROR;
 	}
 
@@ -23385,9 +23396,10 @@ crt_alm_name:		generic_ident
     {
 	i4		err_code;
 
-	/* test alarm name for reserved name
+	/* test alarm name for reserved or too long name
 	 */
-	if (PSL_IS_RESERVED_IDENT($1, cb, psq_cb, TRUE))
+	if (PSL_IS_RESERVED_IDENT($1, cb, psq_cb, TRUE) ||
+	  psl_checklen($1,DB_ALARM_MAXNAME,"Alarm",&psq_cb->psq_error))
 	    return(E_DB_ERROR);
 
 	STmove($1, ' ', DB_ALARM_MAXNAME,
@@ -25044,7 +25056,19 @@ drp_loc_kwd:	    DROPLOC
     }
 ;
 
-create_group:	    crt_grp_kwd auth_obj_list crt_grp_spec
+create_group:	    crt_grp_kwd grp_obj_list crt_grp_spec
+;
+
+grp_obj_list:    grp_obj
+		|   grp_obj_list COMMA grp_obj
+;
+
+grp_obj:    auth_obj
+    {
+	/* ensure identifier length of 32 */
+	if (psl_checklen($1,DB_OWN_MAXNAME,"Group",&psq_cb->psq_error))
+	    return E_DB_ERROR;
+    }
 ;
 
 crt_grp_kwd:	    CRTGROUP
@@ -25207,8 +25231,21 @@ drp_grp_kwd:	    DROPGROUP
     }
 ;
 
-create_role:	    crt_role_kwd auth_obj_list usr_with_spec
+create_role:	    crt_role_kwd role_obj_list usr_with_spec
 ;
+
+role_obj_list:    role_obj
+		|   role_obj_list COMMA role_obj
+;
+
+role_obj:    auth_obj
+    {
+	/* ensure identifier length of 32 */
+	if (psl_checklen($1,DB_OWN_MAXNAME,"Role",&psq_cb->psq_error))
+	    return E_DB_ERROR;
+    }
+;
+
 
 crt_role_kwd:	    CRTROLE
     {
@@ -25323,15 +25360,8 @@ auth_user:	    user_ident
 	DB_STATUS   status;
 	DB_OWN_NAME username;
 
-	if (STlength($1) > DB_OWN_MAXNAME)
-	{
-	    i4 max = DB_OWN_MAXNAME;
-	    i4 err_code;
-
-	    (VOID) psf_error(2733, 0L, PSF_USERERR, &err_code,
-		&psq_cb->psq_error, 3, 4, "USER", 0, $1, sizeof(max), &max);
+	if (psl_checklen($1,DB_OWN_MAXNAME,"User",&psq_cb->psq_error))
 	    return E_DB_ERROR;
-	}
 
 	psy_cb = (PSY_CB *) cb->pss_object;
 
@@ -46733,6 +46763,7 @@ user_ident:	auth_ident
 */
 user_ident:	internal_ident
     {
+
 	DB_STATUS	status;
 	i4	        val1,val2;
 
@@ -59741,3 +59772,36 @@ psl_mk_const_similar(
     return status;
 }
 
+/*
+** Name:	psl_checklen
+**
+** Description:	This function checks if a name exceeds a given length and
+**		generates an appropriate error stating the maximum allowed
+**		length.
+**
+** Input:
+**	ident			identifier / name to check
+**	max			maximum length
+**	objstr			type of object, e.g. group
+**	psq_error		error structure
+**
+** Output:
+**	psq_cb->psq_error	may be filled in if an error occurs
+** Returns:
+**	E_DB_OK / E_DB_ERROR
+**
+** History:
+**	19-Jul-2010 (frima01) Bug 124098
+**	    Added to check max length of non-long identifiers.
+*/
+i4 psl_checklen( char *ident , i4 max , char *objstr, DB_ERROR *psq_error)
+{
+        if (STlength(ident) > max)
+        {
+            i4 err_code;
+            (VOID) psf_error(2733, 0L, PSF_USERERR, &err_code,
+                psq_error, 3, sizeof(objstr), objstr, 0, ident, sizeof(max), &max);
+            return E_DB_ERROR;
+	}
+	return E_DB_OK;
+}
