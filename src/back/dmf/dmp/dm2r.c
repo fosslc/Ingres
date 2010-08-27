@@ -1293,6 +1293,10 @@ static DB_STATUS SIcomplete(
 **	    the tcb_mutex.
 **	13-Apr-2010 (kschendel) SIR 123485
 **	    Init bqcb ptr and manual EOR flag.  Drop row version.
+**	4-jun-2010 (toumi01) SIR 122403
+**	    Instead of TMget_stamp use TMhrnow, because the result of the
+**	    former is supposed to be opaque (we should not reference
+**	    tm_stamp.tms_usec). This fixes portability to VMS.
 */
 DB_STATUS
 dm2r_rcb_allocate(
@@ -1314,7 +1318,7 @@ DB_ERROR	    *dberr )
     i4			rec_buffers;
     i4                  klen;
     i4			seglen = 0;
-    TM_STAMP		tm_stamp;
+    HRSYSTIME		hrtime;
     DB_ERROR		local_dberr;
     i4		    *err_code = &dberr->err_code;
 
@@ -1335,11 +1339,11 @@ DB_ERROR	    *dberr )
     {
 	i4 tempi = MHrand2();
 	rec_buffers++;			/* erecord */
-	TMget_stamp(&tm_stamp);
+	TMhrnow(&hrtime);
 	/* seed the random generator: kick the can an arbitrary distance
-	** (tms_usc) down the road from an arbitrary starting point (tempi)
+	** (tv_nsec) down the road from an arbitrary starting point (tempi)
 	*/
-	MHsrand2(tm_stamp.tms_usec * tempi);
+	MHsrand2(hrtime.tv_nsec * tempi);
     }
 
     if (t->tcb_table_type == TCB_BTREE)
