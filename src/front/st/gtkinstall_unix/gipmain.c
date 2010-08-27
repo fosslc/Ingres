@@ -182,6 +182,10 @@
 **	    SIR 123791
 **	    Set pkgs_to_install=TYPICAL_VECTORWISE when initializing for
 **	    IVW_INSTALL
+**	17-Jun-2010 (hanje04)
+**	    BUG 123942
+**	    Ensure temporary rename dir is always created when rename is
+**	    triggered. Was previously only being created for upgrade mode.
 */
 
 # define RF_VARIABLE "export II_RESPONSE_FILE"
@@ -372,12 +376,10 @@ main (int argc, char *argv[])
 # define ERROR_LICENSE_NOT_FOUND "Error: %s does not exist\n"
 	SIprintf(ERROR_LICENSE_NOT_FOUND, licfile);
 
-    
-    /* If we found other installations then we're in upgrade mode */
-    if ( inst_state & UM_TRUE )
+    if ( inst_state & UM_RENAME )
     {
 	/* 
-	** As there's other instances, we'll probably need to 
+	** We have a non-renamed instance so we'll need to
 	** rename the RPMs. Create a temporary location for
 	** doing this
 	*/
@@ -387,6 +389,11 @@ main (int argc, char *argv[])
 	    printf( ERROR_CREATE_TEMP_LOC );
 	    return( FAIL );
 	}
+    }
+    
+    /* If we found other installations then we're in upgrade mode */
+    if ( inst_state & UM_TRUE )
+    {
   	if ( init_upgrade_modify_mode() != OK )
  	{
 # define ERROR_UPGRADE_INIT_FAIL "Failed to initialize upgrade mode\n"
