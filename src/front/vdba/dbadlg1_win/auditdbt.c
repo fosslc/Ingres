@@ -14,6 +14,12 @@
 **          Add function IsTableNameUnique()
 **          updated the new bRefuseTblWithDupName variable in the structure
 **          for the new sub-dialog for selecting a table
+**    20-Aug-2010 (drivi01)
+**	    Given that this class is used to load table lists for
+**	    many commands within Visual DBA, duplicate the functions
+**          to be able to make two separate calls to CAListBoxFillTables. 
+**	    One will display all tables and one will display Ingres
+**          only tables.
 ********************************************************************/
 
 
@@ -33,6 +39,7 @@
 static void OnDestroy                  (HWND hwnd);
 static void OnCommand                  (HWND hwnd, int id, HWND hwndCtl, UINT codeNotify);
 static BOOL OnInitDialog               (HWND hwnd, HWND hwndFocus, LPARAM lParam);
+static BOOL OnInitDialogAll               (HWND hwnd, HWND hwndFocus, LPARAM lParam);
 static void OnSysColorChange           (HWND hwnd);
 static void EnableDisableOKButton      (HWND hwnd);
 static BOOL FillStructureFromControls  (HWND hwnd);
@@ -41,6 +48,11 @@ static void CheckTables (HWND hwnd);
 
 BOOL CALLBACK __export DlgAuditDBTableDlgProc
                        (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+BOOL CALLBACK __export DlgAllDBTableDlgProc
+                       (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+
+int WINAPI __export DlgAuditDBTable (HWND hwndOwner, LPAUDITDBTPARAMS lpauditdbtparams);
+int WINAPI __export DlgAllDBTable (HWND hwndOwner, LPAUDITDBTPARAMS lpauditdbtparams);
 
 int WINAPI __export DlgAuditDBTable (HWND hwndOwner, LPAUDITDBTPARAMS lpauditdbtparams)
 
@@ -81,6 +93,51 @@ int WINAPI __export DlgAuditDBTable (HWND hwndOwner, LPAUDITDBTPARAMS lpauditdbt
    return (retVal);
 }
 
+int WINAPI __export DlgAllDBTable (HWND hwndOwner, LPAUDITDBTPARAMS lpauditdbtparams)
+
+/*
+// Function:
+// Shows the Specify table dialog for optimizedb.
+// The functions in this class are used in other dialogs
+// to load list of tables.
+// AuditDB is not supported by IVW and is designed
+// to dipslay only Ingres tables, this function
+// will load all the tables Ingres and IVW into the
+// list for dialogs such as optimizedb.
+// 
+//
+// Paramters:
+//     1) hwndOwner:    Handle of the parent window for the dialog.
+//     2) lpauditdbparams: 
+//                      Points to structure containing information used to 
+//                      initialise the dialog. The dialog uses the same
+//                      structure to return the result of the dialog.
+//
+// Returns: TRUE if Successful.
+//
+*/
+{
+   FARPROC lpProc;
+   int     retVal;
+   
+   if (!IsWindow(hwndOwner) || !lpauditdbtparams)
+   {
+       ASSERT(NULL);
+       return FALSE;
+   }
+
+   lpProc = MakeProcInstance ((FARPROC) DlgAllDBTableDlgProc, hInst);
+   retVal = VdbaDialogBoxParam
+       (hResource,
+        MAKEINTRESOURCE (IDD_AUDITDBT),
+        hwndOwner,
+        (DLGPROC) lpProc,
+        (LPARAM)  lpauditdbtparams
+       );
+
+   FreeProcInstance (lpProc);
+   return (retVal);
+}
 
 BOOL CALLBACK __export DlgAuditDBTableDlgProc
                        (HWND hwnd, UINT message, WPARAM wParam, LPARAM  lParam)
@@ -100,7 +157,35 @@ BOOL CALLBACK __export DlgAuditDBTableDlgProc
    return TRUE;
 }
 
+BOOL CALLBACK __export DlgAllDBTableDlgProc
+                       (HWND hwnd, UINT message, WPARAM wParam, LPARAM  lParam)
+{
+   switch (message)
+   {
+       HANDLE_MSG (hwnd, WM_COMMAND, OnCommand);
+       HANDLE_MSG (hwnd, WM_DESTROY, OnDestroy);
+       
+       case WM_INITDIALOG:
+           return HANDLE_WM_INITDIALOG (hwnd, wParam, lParam, OnInitDialogAll);
+               
+       default:
+           return FALSE;
 
+   }
+   return TRUE;
+}
+
+
+/*
+// Function:
+// This function is similar to the one below OnInitialDialogAll
+// in all ways except it calls CAListBoxFillTables with 3rd
+// parameter being FALSE which for VectorWise installations
+// loads only Ingres tables and does not load Ingres
+// VectorWise to the list of tables.  
+//
+//
+*/
 static BOOL OnInitDialog (HWND hwnd, HWND hwndFocus, LPARAM lParam)
 {
    LPAUDITDBTPARAMS lpauditdbt = (LPAUDITDBTPARAMS)lParam;
@@ -114,7 +199,38 @@ static BOOL OnInitDialog (HWND hwnd, HWND hwndFocus, LPARAM lParam)
    // force catolist.dll to load
    //
    CATOListDummy();
-   CAListBoxFillTables (hwndTables, lpauditdbt->DBName);
+   CAListBoxFillTables (hwndTables, lpauditdbt->DBName, FALSE);
+   CheckTables (hwnd);
+
+   EnableDisableOKButton (hwnd);
+   richCenterDialog (hwnd);
+
+   return TRUE;
+}
+
+/*
+// Function:
+// This function is similar to the one above OnInitialDialog
+// in all ways except it calls CAListBoxFillTables with 3rd
+// parameter being TRUE which for VectorWise installations
+// loads both types of tables Ingres and Ingres VectorWise.  
+//
+//
+*/
+static BOOL OnInitDialogAll (HWND hwnd, HWND hwndFocus, LPARAM lParam)
+{
+   LPAUDITDBTPARAMS lpauditdbt = (LPAUDITDBTPARAMS)lParam;
+   HWND hwndTables  = GetDlgItem (hwnd, IDC_AUDITDBT_TABLES);
+
+   if (!AllocDlgProp (hwnd, lpauditdbt))
+       return FALSE;
+   lpHelpStack = StackObject_PUSH (lpHelpStack, StackObject_INIT ((UINT)IDD_AUDITDBT));
+
+   //
+   // force catolist.dll to load
+   //
+   CATOListDummy();
+   CAListBoxFillTables (hwndTables, lpauditdbt->DBName, TRUE); //Display all tables 
    CheckTables (hwnd);
 
    EnableDisableOKButton (hwnd);

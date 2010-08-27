@@ -10,6 +10,11 @@
 // History:
 // uk$so01 (20-Jan-2000, Bug #100063)
 //         Eliminate the undesired compiler's warning
+//	20-Aug-2010 (drivi01)
+//	 Updated a call to CAListBoxFillTables function which
+//	 was updated to include the 3rd parameter.
+//	 The 3rd parameter is set to FALSE here to specify that
+//	 only Ingres tables should be displayed.
 ********************************************************************/
 
 #include "dll.h"
@@ -135,7 +140,7 @@ static BOOL OnInitDialog (HWND hwnd, HWND hwndFocus, LPARAM lParam)
    //
    if (x_strlen (lpsecurity->DBName) > 0)
    {
-       if (!CAListBoxFillTables (hwndTables, lpsecurity->DBName))
+       if (!CAListBoxFillTables (hwndTables, lpsecurity->DBName, FALSE))
        {
            CAListBoxDestroyItemData (hwndTables);
            return FALSE;
@@ -215,7 +220,7 @@ static void OnCommand (HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
                        x_strcpy (lpsecurity->DBName, szDatabaseName);
                        CAListBoxDestroyItemData (hwndTables);
                        CAListBox_ResetContent   (hwndTables);
-                       if (!CAListBoxFillTables (hwndTables, lpsecurity->DBName))
+                       if (!CAListBoxFillTables (hwndTables, lpsecurity->DBName, FALSE))
                            CAListBoxDestroyItemData (hwndTables);
                    }
                    break;

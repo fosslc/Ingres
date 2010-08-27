@@ -7,6 +7,13 @@
 //    Source   : gnreftab.c
 //
 //    Dialog box for Table grant (or View grant). (reference) 
+//    
+//    History:
+//	20-Aug-2010 (drivi01)
+//	 Updated a call to CAListBoxFillTables function which
+//	 was updated to include the 3rd parameter.
+//	 The 3rd parameter is set to FALSE here to specify that
+//	 only Ingres tables should be displayed.
 //
 ********************************************************************/
 
@@ -157,7 +164,7 @@ static BOOL OnInitDialog (HWND hwnd, HWND hwndFocus, LPARAM lParam)
 
    if (lpgrant->ObjectType == OT_TABLE)
    {
-       if (!CAListBoxFillTables (hwndTables, lpgrant->DBName))
+       if (!CAListBoxFillTables (hwndTables, lpgrant->DBName, TRUE))
            CAListBoxDestroyItemData (hwndTables);
        if (x_strlen (lpgrant->PreselectObject) > 1)
        {
@@ -316,7 +323,7 @@ static void OnCommand (HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
                CAListBoxDestroyItemData (hwndTables);
                CAListBox_ResetContent  (hwndTables);
                if (lpgrant->ObjectType == OT_TABLE)
-                   CAListBoxFillTables (hwndTables, lpgrant->DBName);
+                   CAListBoxFillTables (hwndTables, lpgrant->DBName, FALSE);
                else
                    CAListBoxFillViews (hwndTables, lpgrant->DBName);
                CAListBox_ResetContent (hwndExcludings);
