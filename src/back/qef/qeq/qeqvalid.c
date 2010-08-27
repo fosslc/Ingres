@@ -62,14 +62,16 @@
 **
 **  As a byproduct, the relations are opened and keys are produced. 
 **
-**          qeq_validate - validate relations: open as necessary
-**			 - check for proper use of pattern matching
-**			 - in keys
+**	    qeq_topact_validate - Open a "top" action (one NOT under a QP
+**			   node), validate the entire QP if necessary.
+**	    qeq_subplan_init - (Re-)Initialize the subplan under an action,
+**			   (or rarely, under a specific node).  Re-runs
+**			   virgin CX segments, resets keying, etc.
 **	    qeq_ksort	 - key sorting and placement
 **	    qeq_ade	 - initialize ADE_EXCBs.
 **	    qeq_ade_base - initialize ADE_EXCB pointer array.
 **          qeq_audit     - Audit access to table and views, also alarms
-**	    qeq_vopen	 - Open a valid struct.
+**	    qeq_vopen	 - Open a table instance (a valid struct)
 **
 **
 **  History:
@@ -370,6 +372,8 @@
 **	    resource validation, not action open.  To decide if a table
 **	    valid-list entry is open, look at the DMT_CB instead of
 **	    recording the valid entry on (yet another) list.
+**	29-Jun-2010 (kschendel)
+**	    Comment updates only, no code change.
 **/
 
 
@@ -416,7 +420,7 @@ GLOBALREF QEF_S_CB		*Qef_s_cb;
 **
 ** Description:
 **	This routine is called to prepare a "top" action.  Top actions
-**	are always run in the main session thread and are never actions
+**	are always run in the main session thread (*) and are never actions
 **	found in a QP tree under a QP node.
 **
 **	If it's the first action of the query, the resource list is
@@ -433,6 +437,11 @@ GLOBALREF QEF_S_CB		*Qef_s_cb;
 **	again in the child context;  it would be slicker to tie table-
 **	opens to the specific threads, but that's not how it works at
 **	the moment.
+**
+**	(*) A top action may be opened and executed in a child thread of a
+**	parallel plan, if and only if it's an action inside a table procedure.
+**	In that situation, all we're doing is opening tables;  QP validation
+**	never takes place in a child thread.
 **
 ** Inputs:
 **      qef_rcb			QEF query request control block

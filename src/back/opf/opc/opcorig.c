@@ -2736,8 +2736,9 @@ opc_qerangeand(
 **	list of tables (and other objects) that are used by the query plan.
 **	The differences between the resource and valid lists are:
 **	    - There is only one resource list per qp, where as there is
-**	      one valid list per qp.
-**	    - A table is listed only once on the resource list, where as
+**	      one valid list per top-level action header.
+**	      (top-level meaning not under a QP-node, see above)
+**	    - A table is listed only once on the resource list, whereas
 **	      a table can be listed many times on a valid list (depending
 **	      on the number of correlation variables that refer to that table).
 **	The resource list is used by QEF to verify that the query plan is
@@ -2745,7 +2746,8 @@ opc_qerangeand(
 **	needed open tables are available for an action. Given this, valid
 **	lists are no longer the best name for their function. The name
 **	hasn't been changed due to the lateness of the cycle and the number of
-**	files changed.
+**	files changed.  (And, 15 years later, we still haven't changed the
+**	name, mostly due to inertia!)
 **
 **	In the past, the valid list served both functions (query plan
 **	correctness, and opening tables). In this scheme, which action header 
@@ -2842,6 +2844,8 @@ opc_qerangeand(
 **	17-Jun-2010 (kschendel) b123775
 **	    Changes to simplify the validation step (mostly for tprocs).
 **	    Kill unused vl-stmt, move timestamp to resource entry.
+**	29-Jun-2010 (kschendel)
+**	    Comment fix, no code change.
 */
 QEF_VALID *
 opc_valid(

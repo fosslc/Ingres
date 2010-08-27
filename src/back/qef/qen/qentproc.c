@@ -159,6 +159,10 @@ QEE_DSH  *caller_dsh);
 **	    Use calling DSH's statement number since in effect we're all
 **	    the same statement.  QP validation will open one tproc DSH,
 **	    use it if it's unused, else create another DSH.
+**	29-Jun-2010 (kschendel) b123775
+**	    One fix to the above: if caller DSH shows a nonzero thread number,
+**	    we're running under an EXCH (parallel query) and must not use
+**	    the DSH used for query validation even if it's available.
 **/
 
 DB_STATUS
@@ -184,9 +188,15 @@ i4		function)
 	{
 	    QEE_PROC_RESOURCE *res;
 
-	    /* See if validation DSH is available */
+	    /* See if validation DSH is available.
+	    ** If we're under an EXCH (parallel query), we mustn't use the
+	    ** validation DSH, as it was created (and tables opened, etc)
+	    ** in the main thread, not this child thread.  Under a 1:1 EXCH
+	    ** we might get away with it, but not under a 1:N, and there's
+	    ** no simple way to tell for sure.
+	    */
 	    res = &dsh->dsh_resources[tproc_node->tproc_resix].qer_resource.qer_proc;
-	    if (! res->qer_procdsh_used)
+	    if (! res->qer_procdsh_used && dsh->dsh_threadno == 0)
 	    {
 		tproc_dsh = res->qer_proc_dsh;
 		res->qer_procdsh_used = TRUE;
@@ -215,6 +225,10 @@ i4		function)
 		status = qeq_dsh(&tproc_rcb, 0, &tproc_dsh, QEQDSH_TPROC, -1);
 		if (status != E_DB_OK)
 		    return status;
+		/* Propagate "thread #" just to show we're under an exch,
+		** if indeed we are.
+		*/
+		tproc_dsh->dsh_threadno = dsh->dsh_threadno;
 	    }
 
 	    tproc_dsh->dsh_stmt_no = dsh->dsh_stmt_no;
@@ -339,12 +353,12 @@ i4		function)
 ** when the row buffer is filled with a qualified row, or no more row, or
 ** exception occurs.
 **
-**	The most recently executed action is in node_ahd_ptr in the
-**	QEN_STATUS.  Presumably, it's either the start of the tproc,
-**	or whatever followed a RETURN ROW action.  Pick up starting
-**	at the specified action, and keep going for more.  (By the way,
-**	the relevant QEN_STATUS is the one for the tproc node, which is
-**	accessed in the *caller* context, not the tproc context.)
+**	The next action to execute is in node_ahd_ptr in the QEN_STATUS.
+**	Presumably, it's either the start of the tproc, or whatever
+**	followed a RETURN ROW action.  Pick up starting at the specified
+**	action, and keep going for more.  (By the way, the relevant
+**	QEN_STATUS is the one for the tproc node, which is accessed
+**	in the *caller* context, not the tproc context.)
 **
 **	The tproc actions are in effect top level actions, and as such
 **	they are reset on every trip through the tproc.  A key exception
