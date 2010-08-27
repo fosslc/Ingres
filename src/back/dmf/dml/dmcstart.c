@@ -867,6 +867,8 @@ static STATUS dmcm_lkinit(
 **	    Improve dmf_crypt_maxkeys handling.
 **	    Allocate exactly as many dmf_crypt_maxkeys as asked for, with
 **	    no page padding and with default to 0.
+**	3-Aug-2010 (kschendel) SIR 122757
+**	    Add trdisplay of direct IO settings.
 */
 
 DB_STATUS
@@ -2359,6 +2361,9 @@ DB_VPT_SIZEOF_TUPLE_HDR(TCB_PG_V4), DMPP_VPT_SIZEOF_TUPLE_HDR_MACRO(TCB_PG_V4));
 	    SETDBERR(&dmc->error, 0, E_DM007F_ERROR_STARTING_SERVER);
 	    break;
 	}
+	TRdisplay("%@ Direct IO hint is %s, direct IO load hint is %s\n",
+		svcb->svcb_directio_tables ? "ON" : "OFF",
+		svcb->svcb_directio_load ? "ON" : "OFF");
 
 	/*
 	** Allocate and initialize the Logging Context Block.

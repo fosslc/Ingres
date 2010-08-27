@@ -683,6 +683,8 @@
 ##	    Ingres configuration and causes an error in install.log
 ##	20-Jul-2010 (kschendel) SIR 124104
 ##	    Add create_compression to the upgrade list.
+##	3-Aug-2010 (kschendel) SIR 122757
+##	    Change that added config.direct_io should include direct_io_log.
 ##	    
 #----------------------------------------------------------------------------
 . iisysdep
@@ -1465,12 +1467,20 @@ update_parameters()
 
     ## was dbms.*.direct_io, now is config.direct_io.  If not there at
     ## all, add the new one;  else translate old to new.
+    ## Note: due to unfortunate peculiarities of iiinitres, we'll
+    ## probably end up with both ii.*.config.direct_io AND
+    ## ii.hostname.config.direct_io.  The second is the one the
+    ## server uses.  No good way to get rid of the * versions.
     x=`iigetres "ii.$CONFIG_HOST.config.direct_io"`
     if [ -z "$x" ] ; then
 	x=`iigetres "ii.$CONFIG_HOST.dbms.*.direct_io"`
 	$DOIT iiinitres direct_io $II_CONFIG/dbms.rfm
+	$DOIT iiinitres direct_io_log $II_CONFIG/dbms.rfm
+	$DOIT iiinitres direct_io_load $II_CONFIG/dbms.rfm
 	if [ -n "$x" ] ; then
 	    $DOIT iisetres -v "ii.$CONFIG_HOST.config.direct_io" "$x"
+	    $DOIT iisetres -v "ii.$CONFIG_HOST.config.direct_io_log" "$x"
+	    ## Leave direct_io_load OFF, has to be set explicitly.
 	fi
     fi
 
