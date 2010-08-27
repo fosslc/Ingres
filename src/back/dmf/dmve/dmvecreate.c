@@ -131,6 +131,8 @@
 **	    SIR 120874: dm2f_?, dm2t_? functions converted to DB_ERROR *
 **	03-Dec-2008 (jonj)
 **	    SIR 120874: dm1s_? functions converted to DB_ERROR *
+**      23-Jun-2010 (stial01) (b123948)
+**          Don't rdf_invalidate if rollforwarddb
 **/
 
 static DB_STATUS build_location_info(
@@ -564,6 +566,8 @@ DM0L_CREATE 	*log_rec)
 **          a create.
 **	26-May-2010 (kschendel)
 **	    ... but not if we're the RCP.
+**      23-Jun-2010 (stial01) (b123948)
+**	    ... and not if rollforwarddb.
 */
 static DB_STATUS
 dmv_uncreate(
@@ -605,7 +609,8 @@ DM0L_CREATE 	*log_rec)
         ** on this RDF invalidate, not much can be done.
         */
 
-	if ((dmf_svcb->svcb_status & SVCB_RCP) == 0)
+	if ((dmf_svcb->svcb_status & SVCB_RCP) == 0 &&
+	    (dmve->dmve_dcb_ptr->dcb_status & DCB_S_ROLLFORWARD) == 0)
 	{
 	    MEfill(sizeof(RDF_CB), 0, &rdfcb);
 	    STRUCT_ASSIGN_MACRO(log_rec->duc_tbl_id, rdfcb.rdf_rb.rdr_tabid);
