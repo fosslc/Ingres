@@ -2709,6 +2709,9 @@ char		*out)
 **      20-Feb-2009 (huazh01)
 **          Adjust the display precision if the null_count is over 10 
 **          million. (b121643)
+**      08-July-2010 (coomi01) b124029
+**          When looking for monotone problems, compare histogram keys
+**          directly.
 */
 VOID
 opq_print_stats(
@@ -2955,8 +2958,12 @@ bool		quiet)
 			cell_repf[cell], g->opq_adfcb->adf_decimal.db_decimal);
 	    }
 	    prelem(g, (PTR)curr_value, &attrp->hist_dt, outf);
+
+	    /*
+	    ** Compare the histogram value with its' predecessor
+	    */
 	    if (!g->opq_hexout &&
-	        STcompare(opq_convbuf.buf.value, histval_copy) == 0)
+	        MEcmp(curr_value, curr_value+value_length, value_length) == 0)
 	    {
 	        opq_error((DB_STATUS)E_DB_WARN,
 		    (i4)W_OP0976_PREC_WARNING, (i4)6,
@@ -2964,7 +2971,10 @@ bool		quiet)
 			0, cell,
 			STlen(histval_copy), histval_copy);
 	    }
-	    STcopy(opq_convbuf.buf.value, histval_copy);
+	    /*
+	    ** Copy entire key to histval_copy
+	    */
+	    MEcopy(opq_convbuf.buf.value, value_length, histval_copy);
 
 	    curr_value += value_length;	/* Point to next boundary value */
 	}		
