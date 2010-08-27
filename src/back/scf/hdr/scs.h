@@ -1350,6 +1350,8 @@ struct _SCS_MCB
 **	    Delete unused xxarea pointers, nonexistent ULF cb pointers.
 **	21-Apr-2010 (kschendel) SIR 123485
 **	    Delete blobwork, always included in lowksp now.
+**	26-jun-2010 (stephenb)
+**	    Add SCS_COPY_STARTED.
 */
 typedef struct _SCS_SSCB
 {
@@ -1383,6 +1385,8 @@ typedef struct _SCS_SSCB
 						       transaction semantics */
 #define			SCS_INSERT_OPTIM    0x200   /* session is using insert 
 						       optimization */
+#define			SCS_COPY_STARTED    0x400   /* session has started the copy
+						       for the above optimization */
     i4		    sscb_need_facilities; /* which fac's are needed */
     i4              sscb_facility;	  /* which fac's have started */
     i4		    sscb_cfac;

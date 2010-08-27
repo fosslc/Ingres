@@ -237,6 +237,20 @@ GLOBALREF PSF_SERVBLK     *Psf_srvblk;  /* PSF server control block ptr */
 #define	GCA_COL_ATT_SIZE \
     (((((GCA_COL_ATT*)0)->gca_attname - (char*)0) + DB_ATT_MAXNAME + \
       sizeof(ALIGN_RESTRICT) - 1) & ~(sizeof(ALIGN_RESTRICT) - 1))
+/*
+** defines for batched insert to copy optimization.
+**  - BEST_COPYBUF_SIZE is the optimum buffer size for determining whether
+**    to use the DMF bulk loader. If the batch contains less data than this
+**    we will not use the DMF bulk loader. This is a 
+**    fixed buffer size as opposed to a fixed number of rows. The buffer
+**    must be at least this size so that we can tell that we have at least
+**    enough rows in the batch to merit using the DMF bulk loader.
+**  - MIN_COPYBUF_ROWS is the minimum number of rows in the buffer (since that
+**    might be larger than the above based on a max row size of 256k). We need
+**    at least this number of rows to make the bulk loader worthwhile
+*/
+#define BEST_COPYBUF_SIZE	450*1024
+#define MIN_COPYBUF_ROWS	5
 
 
 static GCA_COL_ATT *
@@ -1152,6 +1166,10 @@ pst_prepare(
 **          Batch flags are now on psq_flag2. Add support for user
 **          over-ride of batch optimization through config and 
 **          session "set" statement.
+**      24-jun-2010 (stephenb)
+**          Update batch copy optimization to allocate memory for
+**          a set of rows so that we can be smart about how to run the 
+**          copy statement.
 */
 #define	RT_NODE_SIZE \
 	    sizeof(PST_QNODE) - sizeof(PST_SYMVALUE) + sizeof(PST_RT_NODE)
@@ -1505,17 +1523,40 @@ pst_execute(
 		** may run several batches of executes against the same proto. So 
 		** we will use the proto stream. The memory
 		** for the stream will be eventually freed when we commit.
+		** Memory for the copy input row buffer is allocated here;
+		** ultimately we fill it out in pst_cpdata when we get the input
+		** from each query.
 		*/
 		if (psq_cb->psq_cp_qefrcb == NULL)
 		{
 		    /* first batched execution of this query */
-			    
+		    /*
+		    ** Define size of row buffer; a buffer around 450k determines
+		    ** the break point for 
+		    ** the DMF bulk loader (no matter how many rows that fits), but
+		    ** we want room for at least MIN_COPYBUF_ROWS to allow the loader
+		    ** to do something useful.
+		    */
+		    i4		rowbuf_size = BEST_COPYBUF_SIZE;
+		    if (MIN_COPYBUF_ROWS*rngvar.pss_tabdesc->tbl_width > 
+			BEST_COPYBUF_SIZE)
+			rowbuf_size = 
+				MIN_COPYBUF_ROWS*rngvar.pss_tabdesc->tbl_width;
+		    /*
+		    ** allocate memory from proto stream for:
+		    **  - The QEF_RCB
+		    **  - The QEU_COPY struct
+		    **  - The DMR_CB struct
+		    **  - rowbuf_size to store input rows 
+		    **    and associated structures
+		    */
 		    if ((status = psf_malloc(sess_cb, &proto->pst_ostream,
-			    sizeof(QEF_RCB) + sizeof(QEU_COPY) + sizeof(DMR_CB),
+			    sizeof(QEF_RCB) + sizeof(QEU_COPY) + sizeof(DMR_CB) +
+			    rowbuf_size,
 			    &qef_rcb,
 			    &psq_cb->psq_error)) != E_DB_OK)
 			return (status);
-		    		    
+		    		   
 		    psq_cb->psq_cp_qefrcb = (PTR)qef_rcb;
 		    qef_rcb->qeu_copy = (QEU_COPY *) (psq_cb->psq_cp_qefrcb + 
 			    sizeof(QEF_RCB));
@@ -1525,6 +1566,20 @@ pst_execute(
 				    sizeof(QEU_COPY));
 		    dmr_cb   = qe_copy->qeu_dmrcb;
 		    dmr_cb->dmr_char_array.data_in_size = 0;
+		    		    		    
+		    qe_copy->qeu_cbuf = qe_copy->qeu_cptr =
+			    psq_cb->psq_cp_qefrcb + 
+			    sizeof(QEF_RCB) + sizeof(QEU_COPY) +
+			    sizeof(DMR_CB);
+		    
+		    qe_copy->qeu_input = NULL;
+		    qe_copy->qeu_insert_data = NULL;
+		    qe_copy->qeu_ext_length = 0;
+		   
+		    qe_copy->qeu_cleft = qe_copy->qeu_csize = rowbuf_size;
+		    
+		    qe_copy->qeu_stat = CPY_INS_OPTIM;
+		    qe_copy->qeu_load_buf = FALSE;
 		    
 		    /* get query tree */
 		    prt_pnode = (PST_PROCEDURE *) qsf_rb.qsf_root;
@@ -4417,7 +4472,7 @@ pst_descinput_walk(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
 ** 	None.
 ** 
 ** Side Effects:
-** 	fills out sqlda of qeu_copy
+** 	fills out copy buffer and decides whether to ask copy to load data
 ** 
 ** Returns:
 ** 	DB_STATUS
@@ -4432,6 +4487,10 @@ pst_descinput_walk(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
 **	30-mar-2010 (stephenb)
 **	    Correct error introduced in last change. We need to work
 **	    out the biggest row size *before* allocating the memory
+**	25-jun-2010 (stephenb)
+**	    Code inteligence to use new row buffer. We now collect the
+**	    input rows in the buffer until we fill it up, and then set the
+**	    flag to ask QEF to load the data in one pass
 */
 
 DB_STATUS
@@ -4445,14 +4504,17 @@ pst_cpdata(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PST_QNODE *tree, bool use_qsf)
     i4			rowsize = 0;
     DB_STATUS		status;
     i4			attno;
+    QEF_INS_DATA	*qef_ins_data;
     QEF_DATA		*data;
     QEU_CPATTINFO	*cpatt;
     QSF_RCB		qsf_rb;
     PSQ_QDESC		*qdesc;
     QEU_CPATTINFO	*att_array;
+    QEF_COL_DATA	*col_val;
     i4			err_code = 0;
     i4			i;
     i4			bytecount = 0;
+    i4			block_size;
 
 
     
@@ -4466,6 +4528,24 @@ pst_cpdata(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PST_QNODE *tree, bool use_qsf)
     qef_rcb  = (QEF_RCB *) psq_cb->psq_cp_qefrcb;
     qe_copy  = qef_rcb->qeu_copy;
     sqlda = (GCA_TD_DATA *) qe_copy->qeu_tdesc;
+    
+    /* get memory from the buffer for the attribute data values */
+    block_size = (sqlda->gca_l_col_desc+1) * sizeof(QEF_COL_DATA);
+    if (qe_copy->qeu_cleft < block_size)
+    {
+	/* 
+	** not enough cache for this block; this should never happen
+	** since we check that we have at least enough after each row,
+	** otherwise we ask copy to load the buffer and empty it.
+	*/
+	(VOID) psf_error(E_PS03B4_NO_COPY_CACHE, 0,
+		PSF_CALLERR, &err_code, &psq_cb->psq_error, 0);
+	return (E_DB_ERROR);
+    }    
+   
+    col_val = (QEF_COL_DATA *)qe_copy->qeu_cptr;
+    qe_copy->qeu_cptr += block_size;
+    qe_copy->qeu_cleft -= block_size;
     
     if (use_qsf)
     {
@@ -4489,7 +4569,18 @@ pst_cpdata(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PST_QNODE *tree, bool use_qsf)
 	    return (E_DB_ERROR);
 	}
 	qdesc = (PSQ_QDESC *)qsf_rb.qsf_root;
-	
+	/* 
+	** When we use QSF for the input data we are being called directly by 
+	** the sequencer (no parsing has been done) and we have not yet opened
+	** the session's output stream. If we came via the usual route the output
+	** stream would be opened in pst_execute when we copy the query
+	** tree from the proto. The output stream represents the result of
+	** PSF processing, so we'll open it here.
+	*/
+	if ((status = psf_mopen(sess_cb, QSO_QP_OBJ, &sess_cb->pss_ostream,
+		    &psq_cb->psq_error)) != E_DB_OK)
+	    return (status);
+	    
 	/* NOTE: we are depending here on the fact that the att array
 	** is constructed in the order of the query parameters, which will
 	** also be the order of the data values in the query block. This
@@ -4513,12 +4604,9 @@ pst_cpdata(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PST_QNODE *tree, bool use_qsf)
 		return (E_DB_ERROR);
 	    }
 	    attno = att_array[i].cp_attseq;
-	    sqlda->gca_col_desc[attno].gca_attdbv.db_datatype = 
-		    qdesc->psq_qrydata[i]->db_datatype;
-	    sqlda->gca_col_desc[attno].gca_attdbv.db_length = 
-		    qdesc->psq_qrydata[i]->db_length;
-	    sqlda->gca_col_desc[attno].gca_attdbv.db_prec = 
-		    qdesc->psq_qrydata[i]->db_prec;
+	    col_val[attno].dtcol_value.db_datatype = qdesc->psq_qrydata[i]->db_datatype;
+	    col_val[attno].dtcol_value.db_length = qdesc->psq_qrydata[i]->db_length;
+	    col_val[attno].dtcol_value.db_prec = qdesc->psq_qrydata[i]->db_prec;
 	    rowsize += qdesc->psq_qrydata[i]->db_length;
 	}
     }
@@ -4540,58 +4628,90 @@ pst_cpdata(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PST_QNODE *tree, bool use_qsf)
 		const_node = node->pst_right;
 		/* user provided constants only */
 		attno = node->pst_sym.pst_value.pst_s_rsdm.pst_ntargno;
-		sqlda->gca_col_desc[attno].gca_attdbv.db_datatype = 
+		col_val[attno].dtcol_value.db_datatype = 
 			const_node->pst_sym.pst_dataval.db_datatype;
-		sqlda->gca_col_desc[attno].gca_attdbv.db_length = 
+		col_val[attno].dtcol_value.db_length = 
 			const_node->pst_sym.pst_dataval.db_length;
-		sqlda->gca_col_desc[attno].gca_attdbv.db_prec = 
+		col_val[attno].dtcol_value.db_prec = 
 			const_node->pst_sym.pst_dataval.db_prec;
 		rowsize += const_node->pst_sym.pst_dataval.db_length;
 	    }
 	}
     }
-    /* now we know the external row size */
-    qe_copy->qeu_ext_length = rowsize; 	    
-   
-    /* allocate memory for the input record */
-    if (use_qsf)
-    {
-	/* 
-	 * WARNING: we assume that we have not yet opened the output stream if
-	** use_qsf is set, on the basis that we didn't yet build the query
-	** tree (otherwise we would be using it). Specifically, the output
-	** stream is usually opened in pst_execute when we copy the query
-	** tree from the proto.
-	*/
-	if ((status = psf_mopen(sess_cb, QSO_QP_OBJ, &sess_cb->pss_ostream,
-		    &psq_cb->psq_error)) != E_DB_OK)
-	    return (status);
-    }
-
-    if ((status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
-	    sizeof(QEF_DATA),  
-	    &data,
-	    &psq_cb->psq_error)) != E_DB_OK)
-    return (status);
-    qe_copy->qeu_input = data;
-    data->dt_next = NULL;
-
-    /*
-    ** Now adjust rowsize to longer of extern and real length
-    */
-    if (qe_copy->qeu_ext_length < qe_copy->qeu_tup_length)
-	rowsize = qe_copy->qeu_tup_length;
-
-    if ((status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
-	    rowsize ,  
-	    &data->dt_data,
-	    &psq_cb->psq_error)) != E_DB_OK)
-    return (status);
-
-    qe_copy->qeu_input->dt_size = rowsize;
+    /* now we know the external row size, is it longer than current max? */
+    if (rowsize > qe_copy->qeu_ext_length)
+	qe_copy->qeu_ext_length = rowsize;
 
     
-    /* and copy the data in */
+    /*
+    ** get memory from the buffer for the row
+    */
+    if (rowsize < qe_copy->qeu_tup_length)
+	block_size = qe_copy->qeu_tup_length + sizeof(QEF_INS_DATA);
+    else
+	block_size = rowsize + sizeof(QEF_INS_DATA);
+    if (qe_copy->qeu_cleft < block_size)
+    {
+	/* 
+	** not enough cache for this row; this is an outside exception
+	** case which we try to avoid by checking if we have enough left
+	** after processing each row. But since the user can pass any amount
+	** of data up to DB_MAXROWSIZE (currently 256k), we might end up here.
+	** we will always load the data and empty the buffer if we get here
+	** so we'll just use some cache from the query output stream to cover 
+	** this row.
+	*/
+	if ((status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
+		block_size,  
+		&qef_ins_data,
+		&psq_cb->psq_error)) != E_DB_OK)
+	return (status);
+	qe_copy->qeu_load_buf = TRUE;
+    }
+    else
+    {
+	qef_ins_data = (QEF_INS_DATA *)qe_copy->qeu_cptr;
+	qe_copy->qeu_cptr += block_size;
+	qe_copy->qeu_cleft -= block_size;
+    }
+    qef_ins_data->ins_next = NULL;
+    data = &qef_ins_data->ins_data;
+    data->dt_data = (PTR)qef_ins_data + sizeof(QEF_INS_DATA);
+    data->dt_next = NULL;
+
+    qef_ins_data->ins_col = col_val;
+    qef_ins_data->ins_ext_size = rowsize;
+    /* 
+    ** adjust rowsize to longer of extern and internal length,
+    ** this is how much of the buffer we will use
+    */
+    if (rowsize < qe_copy->qeu_tup_length)
+	rowsize = qe_copy->qeu_tup_length;
+    data->dt_size = rowsize;
+    /* 
+    ** and add the data block to the end of the linked list 
+    */
+    if (qe_copy->qeu_insert_data == NULL)
+    {
+	/* first row */
+	qe_copy->qeu_ins_last = qef_ins_data;
+	qe_copy->qeu_insert_data = qef_ins_data;
+	qe_copy->qeu_input = data;
+	qe_copy->qeu_cur_tups = 1;
+    }
+    else
+    {
+	/*
+	** add current to end of list (QEF_DATA and
+	** QEF_INS_DATA linked lists are kept in lock-step)
+	*/
+	qe_copy->qeu_ins_last->ins_next = qef_ins_data;
+	qe_copy->qeu_ins_last->ins_data.dt_next = data;
+	qe_copy->qeu_ins_last = qef_ins_data;
+	qe_copy->qeu_cur_tups++;
+    }
+   
+    /* then copy the data in */
     if (use_qsf)
     {
 	/* copy directly from query parms */
@@ -4605,11 +4725,11 @@ pst_cpdata(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PST_QNODE *tree, bool use_qsf)
 		if (cpatt->cp_attseq == attno)
 		    break;
 	    }
-	    cpatt->cp_ext_offset = bytecount;
+	    cpatt->cp_ext_offset = col_val[attno].dtcol_offset = bytecount;
 
 	    MEcopy(qdesc->psq_qrydata[i]->db_data, 
 		    qdesc->psq_qrydata[i]->db_length,
-		    qe_copy->qeu_input->dt_data + cpatt->cp_ext_offset);
+		    data->dt_data + cpatt->cp_ext_offset);
 	    bytecount += qdesc->psq_qrydata[i]->db_length;
 	}
     }
@@ -4631,14 +4751,30 @@ pst_cpdata(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PST_QNODE *tree, bool use_qsf)
 		    if (cpatt->cp_attseq == attno)
 			break;
 		}
-		cpatt->cp_ext_offset = bytecount;
+		cpatt->cp_ext_offset = col_val[attno].dtcol_offset = bytecount;
 		MEcopy(const_node->pst_sym.pst_dataval.db_data, 
 			const_node->pst_sym.pst_dataval.db_length,
-			qe_copy->qeu_input->dt_data + cpatt->cp_ext_offset);
+			data->dt_data + cpatt->cp_ext_offset);
 		bytecount += const_node->pst_sym.pst_dataval.db_length;
 	    }
 	}
     }
+    /*
+    ** check if we need to load the current buffer and empty it.
+    ** This is determined by trying to predict the size of the next row
+    ** (including column data), we do this by using the biggest of
+    ** the biggest external row size and the internal row size. If we don't
+    ** have enough buffer space for it we'll ask QEF to load the current buffer.
+    ** This should be ample for almost all cases; if we drop in here again and
+    ** we really don't have enough space we'll just use the query stream for the
+    ** row (see above).
+    */
+    block_size = (qe_copy->qeu_ext_length > qe_copy->qeu_tup_length ? 
+	    qe_copy->qeu_ext_length : qe_copy->qeu_tup_length) + 
+	    sizeof(QEF_INS_DATA) +
+	    + ((sqlda->gca_l_col_desc+1) * sizeof(QEF_COL_DATA));
+    if (!qe_copy->qeu_load_buf && qe_copy->qeu_cleft < block_size)
+	qe_copy->qeu_load_buf = TRUE;
     
     STRUCT_ASSIGN_MACRO(sess_cb->pss_ostream.psf_mstream, psq_cb->psq_result);
     psq_cb->psq_qso_lkid = sess_cb->pss_ostream.psf_mlock;

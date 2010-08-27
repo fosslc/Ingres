@@ -90,6 +90,13 @@
 */
 
 #define	IIXA_XID_STRING_LENGTH		351
+/* 
+** Optimum number of tuples for DMF load for copy
+** NOTE: Testing shows this to be less than 100 regardless of row size; 
+** large chains in the linked list of rows appear to affect performance
+** this is something we should look at in DMF at some point
+*/
+#define BEST_LOAD_TUPS			100
 
 
 #define XA_XID_EQL_MACRO(a,b)  \
@@ -2632,6 +2639,11 @@ static char execproc_syntax2[] = " = session.";
 **	    asking for a tproc recreate, by ensuring that we go through the
 **	    ERROR path and not the WARNING path.  Restore qmode once the
 **	    tproc QP is loaded and before we attempt to re-enter QEF.
+**	24-jun-2010 (stephenb)
+**	    Add inteligence for loading groups of rows in batched insert to copy
+**	    optimization. We will delay the start of the copy, and only
+**	    call QEF to load the data when PSF tells us it has filled the
+**	    buffer.
 */
 DB_STATUS
 scs_sequencer(i4 op_code,
@@ -4213,56 +4225,11 @@ scs_sequencer(i4 op_code,
 
 	    if (ps_ccb->psq_ret_flag & PSQ_INSERT_TO_COPY)
 	    {
-		/*
-		** Initialize the QEF control block.
-		** Set QEF error flag to INTERNAL so user messages won't
-		** be sent directly to the Front End.
+		/* 
+		** nothing to do here, we have delayed copy
+		** start until we have a buffer full of rows
+		** to load
 		*/
-
-		qe_ccb = (QEF_RCB *) sscb->sscb_cpy_qeccb;
-		qe_copy = qe_ccb->qeu_copy;
-		qe_ccb->qef_cb = sscb->sscb_qescb;
-		qe_ccb->qef_sess_id = scb->cs_scb.cs_self;
-		qe_ccb->qef_db_id = sscb->sscb_ics.ics_opendb_id;
-		qe_ccb->qef_eflag = QEF_INTERNAL;
-
-		/*
-		** Initialize some of the copy control block fields.
-		*/
-		qe_copy->qeu_sbuf = NULL;
-		qe_copy->qeu_sptr = NULL;
-		qe_copy->qeu_ssize = 0;
-		qe_copy->qeu_sused = 0;
-		qe_copy->qeu_partial_tup = FALSE;
-		qe_copy->qeu_error = FALSE;
-
-		qe_copy->qeu_uputerr[0] = 0;
-		qe_copy->qeu_uputerr[1] = 0;
-		qe_copy->qeu_uputerr[2] = 0;
-		qe_copy->qeu_uputerr[3] = 0;
-		qe_copy->qeu_uputerr[4] = 0;
-		qe_copy->qeu_stat = CPY_OK;
-		/*
-		** Call QEF to initialize COPY processing.  This will begin
-		** a single statement transaction and prepare for reading
-		** or writing of tuples.
-		*/
-		status = qef_call(QEU_B_COPY, qe_ccb);
-		if (DB_FAILURE_MACRO(status))
-		{
-		    scs_qef_error(status, qe_ccb->error.err_code,
-					E_SC0210_SCS_SQNCR_ERROR, scb);
-
-		    qry_status = GCA_FAIL_MASK;
-		    sscb->sscb_state = SCS_INPUT;
-		    *next_op = CS_EXCHANGE;
-		    /* this is a terminate batch error */
-		    sscb->sscb_flags &= ~SCS_INSERT_OPTIM;
-		    cscb->cscb_eog_error = TRUE;
-		    break;
-		}
-		/* store QEF_RCB for next time */
-		sscb->sscb_cpy_qeccb = (PTR) qe_ccb;
 		/* we already have a row, process it */
 		ps_ccb->psq_ret_flag |= PSQ_CONTINUE_COPY;
 	    }
@@ -4271,23 +4238,104 @@ scs_sequencer(i4 op_code,
 	    {
 		qe_ccb = (QEF_RCB *)sscb->sscb_cpy_qeccb;
 		qe_copy = qe_ccb->qeu_copy;
-		qe_copy->qeu_stat = CPY_OK;
-		status = qef_call(QEU_R_COPY, qe_ccb);
-		if (DB_FAILURE_MACRO(status))
+		/*
+		** check if we need to load the data. This can be:
+		** 1) we are finished with the batch, or:
+		** 2) PSF asked us to load because there may not be enough
+		**    space left in the buffer for the next row, or:
+		** 3) This is not a small batch and we already reached the
+		**    optimum number of buffered rows for DMF
+		*/
+		if (ps_ccb->psq_ret_flag & PSQ_FINISH_COPY ||
+			qe_copy->qeu_load_buf ||
+			((sscb->sscb_flags & SCS_COPY_STARTED) &&
+				(qe_copy->qeu_stat & CPY_SMALL) == 0 && 
+				qe_copy->qeu_cur_tups >= BEST_LOAD_TUPS ))
 		{
-		    qe_copy->qeu_stat |= CPY_FAIL;
-		    /* close copy and rollback rows */
-		    scs_copy_error(scb, qe_ccb, 0);
-		    sscb->sscb_state = SCS_CP_ERROR;
-		    /* block sent via NO_ASYNC_EXIT */
-		    sscb->sscb_cfac = DB_CLF_ID;
-		    qry_status = GCA_FAIL_MASK;
-		    sscb->sscb_state = SCS_INPUT;
-		    *next_op = CS_EXCHANGE;
-		    /* this is a terminate batch error */
-		    sscb->sscb_flags &= ~SCS_INSERT_OPTIM;
-		    cscb->cscb_eog_error = TRUE;
-		    break;
+		    if ((sscb->sscb_flags & SCS_COPY_STARTED) == 0)
+		    {
+			/* start copy */
+			qe_ccb->qef_cb = sscb->sscb_qescb;
+			qe_ccb->qef_sess_id = scb->cs_scb.cs_self;
+			qe_ccb->qef_db_id = sscb->sscb_ics.ics_opendb_id;
+			qe_ccb->qef_eflag = QEF_INTERNAL;
+    
+			/*
+			** Initialize some of the copy control block fields.
+			*/
+			qe_copy->qeu_sbuf = NULL;
+			qe_copy->qeu_sptr = NULL;
+			qe_copy->qeu_ssize = 0;
+			qe_copy->qeu_sused = 0;
+			qe_copy->qeu_partial_tup = FALSE;
+			qe_copy->qeu_error = FALSE;
+    
+			qe_copy->qeu_uputerr[0] = 0;
+			qe_copy->qeu_uputerr[1] = 0;
+			qe_copy->qeu_uputerr[2] = 0;
+			qe_copy->qeu_uputerr[3] = 0;
+			qe_copy->qeu_uputerr[4] = 0;
+			qe_copy->qeu_stat = CPY_INS_OPTIM;
+			/*
+			** Call QEF to initialize COPY processing.  This will begin
+			** a single statement transaction and prepare for reading
+			** or writing of tuples.
+			*/
+			if (ps_ccb->psq_ret_flag & PSQ_FINISH_COPY)
+			{
+			    /*
+			    ** we want to finish the copy, but we are only just
+			    ** about to start it, which means there is less than
+			    ** one buffer full of rows. these very small numbers
+			    ** of rows require special consideration in the copy
+			    ** code, so we will set a flag to allow copy to
+			    ** make smarter decisions based on the fact that
+			    ** the copy size is very small
+			    */
+			    qe_copy->qeu_stat |= CPY_SMALL;
+			}
+			status = qef_call(QEU_B_COPY, qe_ccb);
+			if (DB_FAILURE_MACRO(status))
+			{
+			    scs_qef_error(status, qe_ccb->error.err_code,
+						E_SC0210_SCS_SQNCR_ERROR, scb);
+    
+			    qry_status = GCA_FAIL_MASK;
+			    sscb->sscb_state = SCS_INPUT;
+			    *next_op = CS_EXCHANGE;
+			    /* this is a terminate batch error */
+			    sscb->sscb_flags &= ~SCS_INSERT_OPTIM;
+			    cscb->cscb_eog_error = TRUE;
+			    break;
+			}
+			sscb->sscb_flags |= SCS_COPY_STARTED;
+		    }
+		    /* load the data */
+		    qe_copy->qeu_stat |= CPY_INS_OPTIM;
+		    status = qef_call(QEU_R_COPY, qe_ccb);
+		    if (DB_FAILURE_MACRO(status))
+		    {
+			qe_copy->qeu_stat |= CPY_FAIL;
+			/* close copy and rollback rows */
+			scs_copy_error(scb, qe_ccb, 0);
+			sscb->sscb_state = SCS_CP_ERROR;
+			/* block sent via NO_ASYNC_EXIT */
+			sscb->sscb_cfac = DB_CLF_ID;
+			qry_status = GCA_FAIL_MASK;
+			sscb->sscb_state = SCS_INPUT;
+			*next_op = CS_EXCHANGE;
+			/* this is a terminate batch error */
+			cscb->cscb_eog_error = TRUE;
+			sscb->sscb_flags &= ~SCS_COPY_STARTED;
+			break;
+		    }
+		    /* and re-set the buffer */
+		    qe_copy->qeu_cleft = qe_copy->qeu_csize;
+		    qe_copy->qeu_cptr = qe_copy->qeu_cbuf;
+		    qe_copy->qeu_cur_tups = 0;
+		    qe_copy->qeu_input = NULL;
+		    qe_copy->qeu_insert_data = NULL;
+		    qe_copy->qeu_load_buf = FALSE;
 		}
 		cquery->cur_row_count = 1;
 		if ((ps_ccb->psq_ret_flag & PSQ_FINISH_COPY) == 0)
@@ -4315,6 +4363,35 @@ scs_sequencer(i4 op_code,
 		qe_ccb = (QEF_RCB *)sscb->sscb_cpy_qeccb;
 		qe_copy = qe_ccb->qeu_copy;
 		qe_copy->qeu_stat = CPY_OK;
+		/*
+		** check if we have any leftover rows to load
+		*/
+		if (qe_copy->qeu_cur_tups > 0)
+		{
+		    /* load rows in the current buffer */
+		    status = qef_call(QEU_R_COPY, qe_ccb);
+		    if (DB_FAILURE_MACRO(status))
+		    {
+			qe_copy->qeu_stat |= CPY_FAIL;
+			/* close copy and rollback rows */
+			(void)qef_call(QEU_E_COPY, qe_ccb);
+			scs_copy_error(scb, qe_ccb, 0);
+			sscb->sscb_state = SCS_CP_ERROR;
+			/* block sent via NO_ASYNC_EXIT */
+			sscb->sscb_cfac = DB_CLF_ID;
+			qry_status = GCA_FAIL_MASK;
+			sscb->sscb_state = SCS_INPUT;
+			*next_op = CS_EXCHANGE;
+			/* this is a terminate batch error */
+			cscb->cscb_eog_error = TRUE;
+			break;
+		    }
+		    /* and re-set the buffer */
+		    qe_copy->qeu_cleft = qe_copy->qeu_csize;
+		    qe_copy->qeu_cptr = qe_copy->qeu_cbuf;
+		    qe_copy->qeu_cur_tups = 0;
+		    qe_copy->qeu_input = NULL;		    
+		}
 		status = qef_call(QEU_E_COPY, qe_ccb);
 		if (DB_FAILURE_MACRO(status))
 		{
@@ -4330,8 +4407,10 @@ scs_sequencer(i4 op_code,
 		    /* this is a terminate batch error */
 		    sscb->sscb_flags &= ~SCS_INSERT_OPTIM;
 		    cscb->cscb_eog_error = TRUE;
+		    sscb->sscb_flags &= ~SCS_COPY_STARTED;
 		    break;
 		}
+		sscb->sscb_flags &= ~SCS_COPY_STARTED;
 
 		if (ps_ccb->psq_ret_flag & PSQ_CONTINUE_COPY)
 		{

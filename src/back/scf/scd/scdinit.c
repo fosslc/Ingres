@@ -1699,6 +1699,9 @@ GLOBALREF const char	Version[];
 **          Pass server_class to PSF so we can output it in SC930 trace
 **      29-apr-2010 (Stephenb)
 **          Init sc_batch_copy_optim.
+**      21-jun-2010 (stephenb)
+**          Replace hard-coded values for opf_maxtup and qef_maxtup with
+**          DB_MAXROWSIZE
 */
 DB_STATUS
 scd_initiate( CS_INFO_CB  *csib )
@@ -3277,7 +3280,7 @@ scd_initiate( CS_INFO_CB  *csib )
 		qef_cb.qef_sorthash_memory = MAX_SIZE_TYPE;
 	}
 	qef_cb.qef_sess_max = num_qef_sessions;
-	qef_cb.qef_maxtup = 256*1024;
+	qef_cb.qef_maxtup = DB_MAXROWSIZE;
 
 	if (Sc_main_cb->sc_capabilities & SC_STAR_SERVER)
 	    qef_cb.qef_s1_distrib = DB_2_DISTRIB_SVR;
@@ -3332,7 +3335,7 @@ scd_initiate( CS_INFO_CB  *csib )
 
 	opf_cb.opf_actsess = num_opf_sessions;
 	opf_cb.opf_maxpage = Sc_main_cb->sc_maxpage;
-	opf_cb.opf_maxtup = 256*1024;
+	opf_cb.opf_maxtup = DB_MAXROWSIZE;
 	for (i = 0; i < DB_MAX_CACHE; i++)
 	{
 	  opf_cb.opf_pagesize[i] = Sc_main_cb->sc_pagesize[i];

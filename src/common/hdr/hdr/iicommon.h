@@ -161,6 +161,9 @@
 **          Use DB_EXTFMT_SIZE for register table newcolname IS 'ext_format'
 **	27-Apr-2010 (kschendel) SIR 123639
 **	    Take max # of columns from build config if available.
+**	26-jun-2010 (stephenb)
+**	    Add define for DB_MAXROWSIZE to avoid hard-coded values which
+**	    might vary and cause problems.
 **/
 
 #define                  P2K		 2048
@@ -479,6 +482,7 @@ typedef struct _DB_ERROR
 		    */
 #define                 DB_AREA_MAX     128     /* Max # bytes in AREA */
 #define                 DB_FILE_MAX     12      /* Max # bytes in a filename */
+#define			DB_MAXROWSIZE	256*1024 /* maximum size of a row in the DBMS */
 
 
 /*}

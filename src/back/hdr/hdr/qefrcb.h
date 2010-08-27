@@ -152,11 +152,16 @@
 **          Replace i4 with SIZE_TYPE for memory pool > 2Gig.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      23-jun-2010 (stephenb)
+**          Add QEF_COL_DATA and QEF_INS_DATA structures to support
+**          buffering of insert rows for batch copy optimization
 {@history_template@}
 **/
 
 typedef struct _QEF_ALT QEF_ALT;
 typedef struct _QEF_DATA QEF_DATA;
+typedef struct _QEF_COL_DATA QEF_COL_DATA;
+typedef struct _QEF_INS_DATA QEF_INS_DATA;
 typedef struct _QEF_PARAM QEF_PARAM;
 typedef struct _QEF_RCB QEF_RCB;
 typedef struct _QEF_CB	QEF_CB;
@@ -226,6 +231,10 @@ struct _QEF_ALT
 **      Data blocks can be linked to gether to provide room for
 **	an arbitrary amount of input and output. Each data block
 **	holds one tuple.
+**	** WARNING WARNING WARNING WARNING ****
+**	This control block is cast to DM_MDATA in qeu_r_copy, at least
+**	the first 3 fields must mirror that control block. If you
+**	make any changes to this structure, please check DM_MDATA first.
 **
 ** History:
 **     23-may-86 (daved)
@@ -238,6 +247,55 @@ struct _QEF_DATA
     PTR         dt_data;        /* pointer to the beginning of
                                 ** the data area.
                                 */
+};
+
+/*}
+** Name: QEF_INS_DATA - QEF Insert data
+** 
+** Description:
+** 	When converting single row inserts into blocks of rows
+** 	to leverage on a set based interface (such as COPY), each
+** 	row may have a different format (type, size, and precision).
+** 	This structure supplies the extra information, allowing each row in
+** 	a data block to be different.
+** 	The structure is currently used to convert insert statements
+** 	for use with "copy" protocols. This is possible when running
+** 	several concurrent inserts in batch mode. 
+**
+**	this structure will be kept in lock-step with the QEF_DATA
+**	structure it contains. each "ins_next" insert data will contain
+**	the "ins_data" pointed to by "ins_data->dt_next". QEF_DATA also
+**	has a next pointer because it can live independently of this
+**	structure when all rows a data block have identical input format
+**	
+** History:
+** 	23-jun-2010 (stephenb)
+** 	    Created.
+*/
+struct _QEF_INS_DATA
+{
+    QEF_INS_DATA *ins_next;	/* next value */
+    QEF_DATA	ins_data;	/* internal data */
+    i4		ins_ext_size;	/* external size of this row */
+    QEF_COL_DATA *ins_col;	/* array of column data */
+};
+/*}
+** Name: QEF_COL_DATA - QEF column data (for use in above)
+** 
+** Description:
+** 	Describes each column in a data block. Currently this
+** 	is only used for the inert to copy optimization, where each
+** 	row in a copy buffer may have a different format (requiring
+** 	a column description for each one)
+** 
+** History:
+**	23-jun-2010 (stephenb)
+**	    Created
+*/
+struct _QEF_COL_DATA
+{
+    DB_DATA_VALUE	dtcol_value;	/* type, precision and length */
+    i4			dtcol_offset;	/* offset in above dt_data */
 };
 
 /*}

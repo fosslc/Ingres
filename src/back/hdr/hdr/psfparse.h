@@ -684,6 +684,8 @@
 **	    Add for more thorough syntax error reporting:
 **	    E_PS0C86_ENCRYPT_NOTABLVL, E_PS0C87_ENCRYPT_NOCOLS,
 **	    E_PS0C88_ENCRYPT_NOPASS
+**	24-jun-2010 (stephenb)
+**	    Add E_PS03B4_NO_COPY_CACHE
 **/
 
 /*
@@ -942,6 +944,7 @@
 #define E_PS03B1_NULL_RCB		(E_PS_PRS + 0xB1L)
 #define E_PS03B2_INVALID_CPLENGTH	(E_PS_PRS + 0xB2L)
 #define	E_PS03B3_NULL_QUERY_TREE	(E_PS_PRS + 0xB3L)
+#define E_PS03B4_NO_COPY_CACHE		(E_PS_PRS + 0xB4L)
 
 /*
 **	Errors having to do with hashing and finding cursor control blocks +

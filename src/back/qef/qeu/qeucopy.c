@@ -408,6 +408,10 @@ static DB_STATUS copy_into_child(SCF_FTX *ftx);
 **	19-Mar-2010 (kschendel) SIR 123488
 **	    Allow bulk-load of partitioned tables.
 **	    Allocate a row-temp (if needed) here, not in the parser.
+**	26-jun-2010 (stephenb)
+**	    Add intelligence to cope with small copies. If the copy is
+**	    very small, we won't use the loader or create threads. Currently
+**	    this flag is only set for the insert to copy optimization
 */
 
 DB_STATUS
@@ -542,7 +546,10 @@ QEF_RCB       *qef_rcb)
 
             if ((copy_ctl->tbl_info.tbl_status_mask & (DMT_JNL | DMT_IDXD)) == 0
 		&&
-		(copy_ctl->tbl_info.tbl_encflags & DMT_ENCRYPTED) == 0)
+		(copy_ctl->tbl_info.tbl_encflags & DMT_ENCRYPTED) == 0 
+		/* don't use bulk-load for small copies */
+		&& (qeu_copy->qeu_stat & CPY_SMALL) == 0
+		)
             {
                 copy_ctl->use_load = TRUE;
 		copy_ctl->dmtcb.dmt_lock_mode = DMT_X;
@@ -762,8 +769,10 @@ QEF_RCB       *qef_rcb)
 	** Since we're only creating one extra thread, for now I will
 	** insist that the CUT and thread machinery work -- no fallback
 	** to pure serial copy.
+	** It is not worth creating threads for a very small copy
+	** so we call DMF directly for that case in qeu_r_copy
 	*/
-	if (! copy_ctl->use_load
+	if ((!copy_ctl->use_load && !(qeu_copy->qeu_stat & CPY_SMALL))
 	  || (copy_ctl->tbl_info.tbl_status_mask & DMT_IS_PARTITIONED))
 	{
 	    if (qeu_copy->qeu_direction == CPY_FROM)
@@ -1284,6 +1293,12 @@ QEF_RCB     *qef_rcb)
 **	    luck child can abort and we hang in the cut write.
 **	    Fix missing-value loop, went one too far.
 **	    Cancel check got lost?  put one back in.
+**	26-jun-2010 (stephenb)
+**	    Add code to deal with varying sized and formatted input rows
+**	    in the current copy buffer. This can occur when the client
+**	    sends and describes each row individually, but we want to
+**	    use "copy" (because it's faster). This is only currently
+**	    the case for the batch insert to copy optimization.
 */  
 
 DB_STATUS
@@ -1299,6 +1314,7 @@ QEF_RCB       *qef_rcb)
     i4			err;
     i4			num_cells;
     QEF_DATA    	*dataptr;
+    QEF_INS_DATA	*insptr;
     char		*tuple;
     char		*tmptuple;
     DB_DATA_VALUE   	fromdv;
@@ -1319,8 +1335,31 @@ QEF_RCB       *qef_rcb)
 	** loop over them in turn. We remember there may be multiple
 	** tuples  to  process, so do this for each buffer.
 	*/
-    	count = qeu_copy->qeu_cur_tups;
+	if (qeu_copy->qeu_stat & CPY_INS_OPTIM &&
+		copy_ctl->ulm.ulm_psize < qeu_copy->qeu_ext_length)
+	{
+	    /* 
+	    ** copy came from insert to copy optimization, in this case
+	    ** the row size will vary with each insert, so there is an outside chance
+	    ** that one of the rows is bigger than the temp buffer (which is currently
+	    ** the bigger of the first row and the internal tuple length). In this case
+	    ** we need to re-alloc the temp buffer before we use it. qeu_ext_length
+	    ** will contain the size of the largest external row we saw in this group
+	    */
+	    (void)qec_mfree(&copy_ctl->ulm);
+	    copy_ctl->ulm.ulm_psize = qeu_copy->qeu_ext_length;
+	    status = qec_malloc(&copy_ctl->ulm);
+	    if (status != E_DB_OK)
+	    {
+		qef_error(copy_ctl->ulm.ulm_error.err_code, 0, status, &err,
+		    &qef_rcb->error, 0);
+		return (status);
+	    }
+	    copy_ctl->tmptuple = copy_ctl->ulm.ulm_pptr;		
+	}
+	count = qeu_copy->qeu_cur_tups;
         dataptr = qeu_copy->qeu_input;    
+        insptr = qeu_copy->qeu_insert_data;
 	while (--count >= 0)
 	{
 	    bool first=TRUE;
@@ -1343,13 +1382,32 @@ QEF_RCB       *qef_rcb)
 		    intodv.db_data = (PTR)(tmptuple+cpatt->cp_tup_offset);
 		    intodv.db_collID = -1;
 
-		    fromdv.db_datatype=
-			sqlda->gca_col_desc[cpatt->cp_attseq].gca_attdbv.db_datatype;
-		    fromdv.db_length=
-			sqlda->gca_col_desc[cpatt->cp_attseq].gca_attdbv.db_length;
-		    fromdv.db_prec=
-			sqlda->gca_col_desc[cpatt->cp_attseq].gca_attdbv.db_prec;
-		    fromdv.db_data = (PTR)(tuple+cpatt->cp_ext_offset);
+		    if (qeu_copy->qeu_stat & CPY_INS_OPTIM)
+		    {
+			/* 
+			** for insert optimization, each row may contain
+			** different sized and typed attributes which we store in the
+			** insert pointer
+			*/
+			fromdv.db_datatype=
+				insptr->ins_col[cpatt->cp_attseq].dtcol_value.db_datatype;
+			fromdv.db_length=
+				insptr->ins_col[cpatt->cp_attseq].dtcol_value.db_length;
+			fromdv.db_prec=
+				insptr->ins_col[cpatt->cp_attseq].dtcol_value.db_prec;
+			fromdv.db_data = 
+				(PTR)(tuple+insptr->ins_col[cpatt->cp_attseq].dtcol_offset);		
+		    }
+		    else
+		    {
+			fromdv.db_datatype=
+			    sqlda->gca_col_desc[cpatt->cp_attseq].gca_attdbv.db_datatype;
+			fromdv.db_length=
+			    sqlda->gca_col_desc[cpatt->cp_attseq].gca_attdbv.db_length;
+			fromdv.db_prec=
+			    sqlda->gca_col_desc[cpatt->cp_attseq].gca_attdbv.db_prec;
+			fromdv.db_data = (PTR)(tuple+cpatt->cp_ext_offset);
+		    }
 		    fromdv.db_collID = -1;
 		
 		    if ((status = adc_cvinto(qef_cb->qef_adf_cb,
@@ -1377,15 +1435,35 @@ QEF_RCB       *qef_rcb)
 		    ** Copy from current attribute end to end of tuple
 		    ** to make sure everything is in sync
 		    */
-		    MEcopy(
-		      (PTR)(tuple+
-			    cpatt->cp_ext_offset+
-			    sqlda->gca_col_desc[cpatt->cp_attseq].gca_attdbv.db_length
-			    ),
-		      qeu_copy->qeu_ext_length-
-			    cpatt->cp_ext_offset-
-			    sqlda->gca_col_desc[cpatt->cp_attseq].gca_attdbv.db_length,
-		     (PTR)(tmptuple+cpatt->cp_tup_offset+cpatt->cp_length));
+		    if (qeu_copy->qeu_stat & CPY_INS_OPTIM)
+		    {
+			/* 
+			** copy came from insert optimization. In this case the
+			** external row size an layout may be different for each row so
+			** we store it in the insert pointer
+			*/
+			MEcopy(
+			  (PTR)(tuple+
+				insptr->ins_col[cpatt->cp_attseq].dtcol_offset+
+				insptr->ins_col[cpatt->cp_attseq].dtcol_value.db_length
+				),
+			  insptr->ins_ext_size-
+			      insptr->ins_col[cpatt->cp_attseq].dtcol_offset-
+			      insptr->ins_col[cpatt->cp_attseq].dtcol_value.db_length,
+			 (PTR)(tmptuple+cpatt->cp_tup_offset+cpatt->cp_length));
+		    }
+		    else
+		    {
+			MEcopy(
+			  (PTR)(tuple+
+				cpatt->cp_ext_offset+
+				sqlda->gca_col_desc[cpatt->cp_attseq].gca_attdbv.db_length
+				),
+			  qeu_copy->qeu_ext_length-
+				cpatt->cp_ext_offset-
+				sqlda->gca_col_desc[cpatt->cp_attseq].gca_attdbv.db_length,
+			 (PTR)(tmptuple+cpatt->cp_tup_offset+cpatt->cp_length));
+		    }
 		}
 	    }
 	    /*
@@ -1393,6 +1471,8 @@ QEF_RCB       *qef_rcb)
 	    */
 	    MEcopy((PTR)tmptuple, qeu_copy->qeu_tup_length, (PTR)tuple);
             dataptr = dataptr->dt_next;
+            if (qeu_copy->qeu_stat & CPY_INS_OPTIM)
+        	insptr = insptr->ins_next;
 	}
     }
 
@@ -1482,6 +1562,51 @@ QEF_RCB       *qef_rcb)
 	/* Notice that we don't count bulk-load rows incrementally.
 	** DMF tells us the good news at END time.
 	*/
+    }
+    else if 
+	((qeu_copy->qeu_stat & CPY_SMALL) &&
+	    (copy_ctl->tbl_info.tbl_status_mask & DMT_IS_PARTITIONED) == 0)
+    {
+	DMR_CB	dmrcb;
+	/* 
+	** Unpartitioned small copy doesn't use worker threads, 
+	** just call DMF to add each row
+	*/
+	dmrcb.type = DMR_RECORD_CB;
+	dmrcb.length = sizeof(DMR_CB);
+	dmrcb.dmr_flags_mask = 0;
+	dmrcb.dmr_access_id = copy_ctl->dmtcb.dmt_record_access_id;
+	dmrcb.dmr_data.data_in_size = qeu_copy->qeu_tup_length;
+	
+    	count = qeu_copy->qeu_cur_tups;
+        dataptr = qeu_copy->qeu_input;    
+	while (--count >= 0)
+	{
+	    /* Do the PUT.  Ignore duplicate-key type errors. */
+	    dmrcb.dmr_data.data_address = dataptr->dt_data;
+	    dmrcb.dmr_tid = 0;
+	    status = dmf_call(DMR_PUT, &dmrcb);
+	    if (status == E_DB_OK)
+	    {
+		/* Count actual rows here */
+		++ qeu_copy->qeu_count;
+	    }
+	    else
+	    {
+		if (dmrcb.error.err_code == E_DM0046_DUPLICATE_RECORD ||
+		  dmrcb.error.err_code == E_DM0045_DUPLICATE_KEY ||
+		  dmrcb.error.err_code == E_DM0048_SIDUPLICATE_KEY ||
+		  dmrcb.error.err_code == E_DM0150_DUPLICATE_KEY_STMT ||
+		  dmrcb.error.err_code == E_DM0151_SIDUPLICATE_KEY_STMT)
+		    status = E_DB_OK;
+		else
+		{
+		    copy_ctl->child_error = dmrcb.error;
+		    break;
+		}
+	    }
+	    dataptr = dataptr->dt_next;
+	}
     }
     else
     {
