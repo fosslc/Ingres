@@ -149,6 +149,9 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      20-aug-2010 (stial01)
+**          Fixed E_UL0005_NOMEM/rdu_mrecover() err handling.
+**          rdu_mrecover() don't assume error is in global->rdf_ulmcb.
 **/
 
 /* Static Prototypes */
@@ -1077,11 +1080,11 @@ log all messages for now so that DMT_SHOW errors etc. are reported.
 */
 DB_STATUS
 rdu_mrecover(	RDF_GLOBAL         *global,
+		ULM_RCB		   *ulm_rcb,
 		DB_STATUS           orig_status,
 		RDF_ERROR	    errcode)
 {
     DB_STATUS	    status = E_DB_ERROR;
-    ULM_RCB	    *ulm_rcb;
     RDI_FCB	    *rdi_fcb;	    /* ptr to facility control block
 				    ** initialized at server startup time
 				    */
@@ -1089,7 +1092,6 @@ rdu_mrecover(	RDF_GLOBAL         *global,
 				    ** ulh requires this control block*/
 
     rdi_fcb = (RDI_FCB *)(global->rdfcb->rdf_rb.rdr_fcb);
-    ulm_rcb = &global->rdf_ulmcb;
 
     if (ulm_rcb->ulm_error.err_code == E_UL0005_NOMEM)
     {
@@ -1177,8 +1179,7 @@ rdu_mrecover(	RDF_GLOBAL         *global,
     {
 	/* it was not a memory reclaim error, so handle the error */
 	status = orig_status;
-	rdu_ferror(global, status, &global->rdf_ulmcb.ulm_error,
-	    errcode,0);
+	rdu_ferror(global, status, &ulm_rcb->ulm_error, errcode, 0);
     }
     return(status);
 }
@@ -1227,6 +1228,7 @@ rdu_cstream(RDF_GLOBAL	*global)
 {
     ULM_RCB	    *ulm_rcb;		/* ptr to ULM control block being
 					** initialized */
+    i4		    mrecover_cnt = 0;
     DB_STATUS	    status = E_DB_OK;
     RDI_FCB	    *rdi_fcb;		/* ptr to facility control block
 				    ** initialized at server startup time
@@ -1253,10 +1255,11 @@ rdu_cstream(RDF_GLOBAL	*global)
 	status = ulm_openstream(ulm_rcb);
 	if(DB_FAILURE_MACRO(status))
 	{
-	    TRdisplay("%@ [%x] Garbage-collecting RDF: cstream err %d (poolid %x, memleft %d)\n",
+	    mrecover_cnt++;
+	    TRdisplay("%@ [%x] Garbage-collecting RDF: cstream err %d (poolid %x, memleft %d try %d)\n",
 		global->rdf_sess_id, ulm_rcb->ulm_error.err_code,
-		Rdi_svcb->rdv_poolid, Rdi_svcb->rdv_memleft);
-	    status = rdu_mrecover(global, status, E_RD0118_ULMOPEN);
+		Rdi_svcb->rdv_poolid, Rdi_svcb->rdv_memleft, mrecover_cnt);
+	    status = rdu_mrecover(global, ulm_rcb, status, E_RD0118_ULMOPEN);
 	}
 	else
 	{
@@ -2752,6 +2755,7 @@ rdu_malloc( RDF_GLOBAL	*global,
 					** initialized */
     RDI_FCB	    *rdi_fcb;		/* ptr to facility control block
 					** initialized at server startup time */
+    i4		    mrecover_cnt = 0;
     DB_STATUS	    status;
     bool	    facility_supplied_ulmcb = FALSE; /* set true if RDF is
 					** allocating memory from another
@@ -2936,10 +2940,11 @@ rdu_malloc( RDF_GLOBAL	*global,
 	else
 	{
 	    /* attempt to recover from memory error by garbage collection */
-	    TRdisplay("%@ [%x] Garbage-collecting RDF: err %d psize %d (poolid %x, memleft %d)\n",
-		global->rdf_sess_id, ulm_rcb->ulm_error.err_code,
-		psize, ulm_rcb->ulm_poolid, *ulm_rcb->ulm_memleft);
-	    status = rdu_mrecover(global, status, E_RD000B_MEM_ERROR);
+	    mrecover_cnt++;
+	    TRdisplay("%@ [%x] Garbage-collecting RDF: err %d psize %d (poolid %x, memleft %d try %d)\n",
+		global->rdf_sess_id, ulm_rcb->ulm_error.err_code, psize,
+		ulm_rcb->ulm_poolid, *ulm_rcb->ulm_memleft, mrecover_cnt);
+	    status = rdu_mrecover(global, ulm_rcb, status, E_RD000B_MEM_ERROR);
 	}
 
     } while (DB_SUCCESS_MACRO(status));
