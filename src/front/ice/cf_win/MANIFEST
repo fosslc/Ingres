@@ -19,4 +19,6 @@ IIICEFILE ColdFusion$(DFS)IngresMarkup.vtm : IngresMarkup.vtm ;
 IIICECAZIP ColdFusion$(DFS)ingrescf.caz ;
 
 IIINCLUDE front ice cf_win td ;
-}<<<<
+}
+
+
