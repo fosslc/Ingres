@@ -146,6 +146,10 @@
 ##	    Bug 123648
 ##	    Add support for installing as a user other than 'ingres' for tar
 ##	    based installs.
+##	07-July-2010 (hanje04)
+##	   Bug 124046
+##	   Add license prompt for RPM and -acceptlicnse flag for batch
+##	   operation.
 
 #
 # Multi-platform whoami
@@ -224,7 +228,6 @@ install_rpm()
 Checking for current installations...
 
 EOF
-
     # check for r3, if it's not there check for ingres200x
     instcore=`rpm -q ca-ingres`
     [ $? = 0 ] || instcore=''
@@ -266,22 +269,19 @@ Checking licensing requirements...
 
 EOF
 
+
     ## Check LICENSE has been accepted
-    [ -z "${INGLICRPM}" ] && needlic=false
+    $licaccept && needlic=false
 
     $needlic &&
     {
-	rpm -q $INGLICRPM > /dev/null 2>&1
-	[ $? != 0 ] &&
-	{
-     	    cat << EOF
+	cat << EOF
 The License for $prod_name $prod_rel must be read and accepted before
 installation of this product can commence. 
 Invoking ./ingres-LICENSE...
 
 EOF
-    	    ./ingres-LICENSE || exit 3
-	}
+	./bin/ingres-LICENSE || exit 3
     }
 
     cat << EOF
@@ -592,9 +592,9 @@ EOF
     doinstall=true
     export doinstall
     if $force_tar ; then
-        su $ingusr -c "sh $0 -tar $II_INSTALLATION $instloc $respflag" || exit $? 
+        su $ingusr -c "sh $0 -tar $acclicflag $II_INSTALLATION $instloc $respflag" || exit $? 
     else
-        su $ingusr -c "sh $0 $II_INSTALLATION $instloc $respflag" || exit $?
+        su $ingusr -c "sh $0 $acclicflag $II_INSTALLATION $instloc $respflag" || exit $?
     fi
 
 # Build password validation program if we can
@@ -736,9 +736,9 @@ else # dosetup=true
     $tar xf $ingtar install
     if $userespfile ; then
 	echo "Using response file: $respfile"
-	install/ingbuild -all -exresponse -file="$respfile" $ingtar
+	install/ingbuild ${acclicflag} -all -exresponse -file="$respfile" $ingtar
     else
-	install/ingbuild -express $ingtar
+	install/ingbuild ${acclicflag} -express $ingtar
     fi
 
     ## Start up Ingres
@@ -789,6 +789,8 @@ userespfile=false
 respflag=""
 force_tar=false
 ingusr=ingres
+licaccept=false
+acclicflag=""
 ## Check installation ID if given
 while [ "$1" ]
 do
@@ -830,6 +832,11 @@ do
 		    ingusr=$2
 		    shift ; shift
 		    ;;
+     -acceptlicense)
+		    licaccept=true
+		    acclicflag=-acceptlicense
+		    shift
+		    ;;
 		*/*)
 		    # Installation location
 		    # Check for full path
@@ -857,7 +864,6 @@ EOF
 done
 
 [ "$rpmpkg" = "" -a "$tarpkg" = "true" ] && force_tar="true"
-
 [ "$instloc" ] || instloc=$definst
 II_INSTALLATION=$inst_id
 export II_INSTALLATION
