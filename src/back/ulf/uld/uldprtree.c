@@ -107,6 +107,8 @@
 **          for type parameter - SC930_LTYPE_PARM instead of "PARM" and so on
 **	11-Jun-2010 (kiria01) b123908
 **	    Init ulm_streamid_p for ulm_openstream to fix potential segvs.
+**      17-Aug-2010 (horda03) b124274
+**          Allow trees to be displayed in segments.
 **/
 
 /*
@@ -153,6 +155,9 @@
 ** History:
 **     06-may-86 (jeff)
 **          Adapted from same structure in jutil!fmttree.c in 4.0
+**      17-Aug-2010 (horda03) b124274
+**          Added new_root to indicate that the node is to be
+**          the root of a segment.
 */
 typedef struct _PARATREE
 {
@@ -160,6 +165,7 @@ typedef struct _PARATREE
     struct _PARATREE *rt;
     i4		     x;
     i4		     modifier;
+    i4               new_root;
 } PARATREE;
 
 /*}
@@ -176,6 +182,10 @@ typedef struct _PARATREE
 ** History:
 **     06-may-86 (jeff)
 **          Adapted from jutil!fmttree.c in 4.0
+**      17-Aug-2010 (horda03) b124274
+**          Added segments, num_segments and max_level to contain the list
+**          and number of segment root nodes, and the maximum depth of each
+**          displayed tree segment.
 */
 typedef struct _ULD_CONTROL
 {
@@ -217,7 +227,19 @@ typedef struct _ULD_CONTROL
     VOID	    (*pnod)();
     i4		    pof;
     i4              facility;		/* calling facility */
+    PTR             *segments;          /* Segment root node */
+    i4              *num_segments;      /* Number of segments */
+    i4              max_level;          /* How many levels to display per segment */
 } ULD_CONTROL;
+
+static i4 nodes_per_level [] = { 1, 2, 4, 8, 16, 32, 64, 128, 256 };
+
+typedef struct
+{
+   ULD_CONTROL *control;
+   PTR         root;
+   i4          root_num;
+} ULD_PARAM;
 
 /*}
 ** Name: ULD_STORAGE - Working storage for print tree routine
@@ -232,6 +254,9 @@ typedef struct _ULD_CONTROL
 ** History:
 **     18-Jun-87 (DaveS)
 **          Created new.
+**      17-Aug-2010 (horda03) b124274
+**          Added segments and num_segments to store the root node of
+**          each segmetn and the number of segments.
 */
 typedef struct _ULD_STORAGE
 {
@@ -239,6 +264,8 @@ typedef struct _ULD_STORAGE
    char         mod[MAXH];
    char         ned[MAXH];
    char         pbf[PMX + 1][LLNMX + 1];
+   PTR          segments [PTMX];
+   i4           num_segments;
 } ULD_STORAGE;
 
 /*
@@ -251,6 +278,7 @@ static VOID	walk3 ( PTR tnode, PARATREE *pnode, i4  ch, i4  ph,
 			ULD_CONTROL *control );
 static VOID	prflsh( i4  init, register ULD_CONTROL *control, PTR sc930_trace );
 static VOID	uld_nl( ULD_CONTROL *control );
+static VOID     pr_connect(i4 connect_num, i4 ch, ULD_CONTROL *control );
 
 /*{
 ** Name: uld_prtree	- Format and print a tree
@@ -316,7 +344,7 @@ static VOID	uld_nl( ULD_CONTROL *control );
 **
 **		then the call:
 **
-**		uld_prtree((PTR) Root, printnode, leftson, rightson, 8, 5);
+**		uld_prtree(0, (PTR) Root, printnode, leftson, rightson, 8, 5);
 **
 **		would print a tree where each node is 8 characters wide
 **		by 5 characters long and would contain data1 on the first
@@ -415,9 +443,11 @@ static VOID	uld_nl( ULD_CONTROL *control );
 **	19-Aug-2009 (kibro01) b122509
 **	    Add new uld_prtree_x function which allows an extra sc930-tracing
 **	    parameter to uld_prtree
+**      17-Aug-2010 (horda03) b124274
+**          Allow Trees to be printed in connected segments to aid readability.
 */
 VOID
-uld_prtree_x( PTR root, VOID (*printnode)(), PTR (*leftson)(), PTR (*rightson)(),
+uld_prtree_x( i4 flags, PTR root, VOID (*printnode)(), PTR (*leftson)(), PTR (*rightson)(),
 	    i4  indent, i4  lbl, i4  facility, PTR sc930_trace )
 {
     register i4         i;
@@ -428,6 +458,9 @@ uld_prtree_x( PTR root, VOID (*printnode)(), PTR (*leftson)(), PTR (*rightson)()
     SIZE_TYPE		memleft;
     STATUS		status;
     i4		err_code;
+    i4          max_nodes;
+    ULD_PARAM   *uld_param = 0;
+    
  
     control.facility = facility;
     ulm_rcb.ulm_facility = DB_ULF_ID;
@@ -447,8 +480,8 @@ uld_prtree_x( PTR root, VOID (*printnode)(), PTR (*leftson)(), PTR (*rightson)()
 		  ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
 		  &err_code, 0);
 	 return;
-     }
- 
+    }
+
     /* open the private memory stream and allocate ULD_STORAGE */
     ulm_rcb.ulm_flags = ULM_PRIVATE_STREAM | ULM_OPEN_AND_PALLOC;
     ulm_rcb.ulm_psize	    = sizeof (ULD_STORAGE);
@@ -473,6 +506,34 @@ uld_prtree_x( PTR root, VOID (*printnode)(), PTR (*leftson)(), PTR (*rightson)()
     control.ncmx = indent * 2;
     control.first = 0;
  
+    if (flags & ULD_FLAG_OUT_SEG)
+    {
+       uld_param = (ULD_PARAM *) root;
+
+       root = uld_param->root;
+
+       control.max_level = uld_param->control->max_level;
+       control.segments  = uld_param->control->segments;
+       control.num_segments = uld_param->control->num_segments;
+    }
+    else if (flags & ULD_FLAG_SEGMENTS)
+    {
+       control.segments = storage->segments;
+       control.num_segments = &storage->num_segments;
+       storage->num_segments = 0;
+
+       max_nodes = 132 / control.ncmx;
+
+       for (i = 1; i < sizeof(nodes_per_level)/sizeof(i4); i++)
+       {
+          if (max_nodes < nodes_per_level [i]) break;
+       }
+
+       control.max_level = i - 1;
+    }
+    else
+       control.max_level = 0;
+
     for (i = PMX + 1; i--; )
 	control.pbuf[i] = &(storage->pbf[i][0]);
  
@@ -498,6 +559,11 @@ uld_prtree_x( PTR root, VOID (*printnode)(), PTR (*leftson)(), PTR (*rightson)()
     /* Do the first post-order walk */
     control.maxh = -1;
     pnode = walk1(root, 0, &control);
+
+    if (uld_param)
+    {
+       pnode->new_root = uld_param->root_num;
+    }
  
     /* Do the second pre-order walk */
     control.modfsum = 0;
@@ -510,6 +576,22 @@ uld_prtree_x( PTR root, VOID (*printnode)(), PTR (*leftson)(), PTR (*rightson)()
 	walk3(root, pnode, 0, i, &control);
 	prflsh(0, &control, sc930_trace);
     }
+
+    if ( !uld_param  && control.max_level)
+    {
+       ULD_PARAM u_root;
+
+       u_root.control = &control;
+
+       for (i = 0; i < *control.num_segments; i++ )
+       {
+           u_root.root = control.segments [i];
+
+           u_root.root_num = i + 1;
+
+           uld_prtree_x( ULD_FLAG_OUT_SEG, (PTR) &u_root, printnode, leftson, rightson, indent, -lbl, facility, sc930_trace );
+       }
+    }
  
     /* if we got any memory, return it */
     if (storage)
@@ -520,7 +602,7 @@ VOID
 uld_prtree( PTR root, VOID (*printnode)(), PTR (*leftson)(), PTR (*rightson)(),
 	    i4  indent, i4  lbl, i4  facility)
 {
-    uld_prtree_x(root,printnode,leftson,rightson,indent,lbl,facility,NULL);
+    uld_prtree_x(ULD_FLAG_NONE, root,printnode,leftson,rightson,indent,lbl,facility,NULL);
 }
 
 
@@ -549,6 +631,11 @@ uld_prtree( PTR root, VOID (*printnode)(), PTR (*leftson)(), PTR (*rightson)(),
 ** History:
 **	06-may-86 (jeff)
 **          adapted from walk1() in jutil!fmttree.c in 4.0
+**      17-Aug-2010 (horda03) b124274
+**          If tree to be displayed in segments, at the maximum
+**          depth if the node contains a child mark the node
+**          as a new segment (don't descend into the children
+**          that will be done when the new segment is displayed).
 */
 static PARATREE *
 walk1( PTR tnode, i4  hh, ULD_CONTROL *control )
@@ -559,6 +646,7 @@ walk1( PTR tnode, i4  hh, ULD_CONTROL *control )
     i4			h;
     i4			place;
     PTR			t;
+    PTR                 lson, rson;
  
     h = hh;
     t = tnode;
@@ -571,13 +659,28 @@ walk1( PTR tnode, i4  hh, ULD_CONTROL *control )
 	return (NULL);
  
     p = control->ptp + control->pti++;
+
+    lson = (*control->lson)(t);
+    rson = (*control->rson)(t);
+
+    if ( h && (h == control->max_level) && (lson || rson) )
+    {
+       p->new_root = ++(*control->num_segments);
+       control->segments [ p->new_root - 1] = t;
+
+       l = r = NULL;
+    }
+    else
+    {
+       p->new_root = 0;
  
-    /*
-    ** Walk the left and right subtrees of the users tree and
-    ** attach the corresponding nodes of the parallel tree.
-    */
-    l = p->lf = walk1((*control->lson)(t), h + 1, control);
-    r = p->rt = walk1((*control->rson)(t), h + 1, control);
+       /*
+       ** Walk the left and right subtrees of the users tree and
+       ** attach the corresponding nodes of the parallel tree.
+       */
+       l = p->lf = walk1(lson, h + 1, control);
+       r = p->rt = walk1(rson, h + 1, control);
+    }
  
     /* The rest is pretty much identical to the reference */
     if (l == (PARATREE *) NULL && r == (PARATREE *) NULL)  /* a leaf node */
@@ -680,6 +783,11 @@ walk2( PARATREE *pnode, register ULD_CONTROL *control )
 ** History:
 **	07-may-86 (jeff)
 **          Adapted from walk3() in jutil!fmttree.c in 4.0
+**      17-Aug-2010 (horda03) b124274
+**          If the node is marked as a segment root, then
+**          display the connection box. If this is the
+**          display of the segment root then the root
+**          node is displayed and the tree walk continues.
 */
 static VOID
 walk3( PTR tnode, PARATREE *pnode, i4  ch, i4  ph, ULD_CONTROL *control )
@@ -693,6 +801,18 @@ walk3( PTR tnode, PARATREE *pnode, i4  ch, i4  ph, ULD_CONTROL *control )
     if (ch == ph)
     {
 	control->ilvl = p->x;
+
+        if (p->new_root)
+        {
+           /* Either a terminator for the end of the
+           ** the truncated display, or the start of
+           ** the next segment.
+           */
+           pr_connect( p->new_root, ch, control );
+
+           if (ch) return;
+        }
+
 	(*control->pnod)(t, (PTR) control);
 	return; 
     }
@@ -953,3 +1073,81 @@ prflsh( i4  init, register ULD_CONTROL *control, PTR sc930_trace )
  
     control->first++;
 }
+
+/*
+** Name: pr_connect - Display the connection box
+**
+** Description:
+**      This function prints out a connection box. If the
+**      box is for the root od a segment (ch == 0) then
+**      display the "|" character to signal the flow from
+**      connection box to the root node.
+**
+** Inputs:
+**      connect_num                     Connection number
+**      ch                              Current level
+**      control                         Pointer to control structure
+**
+** Outputs:
+**      None
+**      Returns:
+**          None
+**      Exceptions:
+**          none
+**
+** Side Effects:
+**          Prints connection box
+**
+** History:
+**      17-Aug-2010 (horda03) b124274
+**          Created.
+*/
+static void
+pr_connect( i4 connect_num, i4 ch, ULD_CONTROL *control )
+{
+   char head [200];
+   char buf [200];
+   char conn_str [20];
+   char *cp;
+   i4   i;
+   i4   lead, trail;
+   i4   len;
+
+#define CONNECTION_STR "Connector"
+
+   for(cp = head, i = 0; i < control->isf; i++)
+   {
+      *(cp++) = '-';
+   }
+
+   *cp='\0';
+
+   uld_prnode( (PTR) control, head);
+
+   lead = (control->isf - 1 - sizeof(CONNECTION_STR))/2; /* sizeof(CONNECTION_STR) includes '\0' character */
+   trail = (control->isf - sizeof(CONNECTION_STR))/2;
+
+   STprintf( buf, "|%*s%s%*s|", lead, "", CONNECTION_STR, trail, "" );
+   uld_prnode( (PTR) control, buf);
+
+   for(cp = buf+1; *cp != '|'; *(cp++) = ' ');
+   uld_prnode( (PTR) control, buf);
+
+   STprintf( conn_str, "%d", connect_num);
+   len = STlength( conn_str );
+
+   lead = (control->isf - 2 - len)/2;
+   trail = (control->isf - 1 - len)/2;
+
+   STprintf( buf, "|%*s%s%*s|", lead, "", conn_str, trail, "" );
+   uld_prnode( (PTR) control, buf);
+   
+   uld_prnode( (PTR) control, head);
+
+   if (!ch)
+   {
+      STprintf( buf, "%*s|", control->isf/2, "" );
+      uld_prnode( (PTR) control, buf);
+   }
+}
+
