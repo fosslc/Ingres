@@ -106,6 +106,9 @@ REM	and remove a few other residual directories that are no longer
 REM	used.
 REM 30-Oct-2009 (maspa05) b122744
 REM     Added sig\inglogs
+REM 18-Aug-2010 (drivi01)
+REM	Remove %II_SYSTEM%\ingres\files\dictfile.
+REM	Doesn't appear to be used.
 REM
 mkdir "%II_SYSTEM%"
 mkdir "%II_SYSTEM%\ingres"
@@ -185,7 +188,6 @@ mkdir "%II_SYSTEM%\ingres\files\charsets\wthai"
 mkdir "%II_SYSTEM%\ingres\files\collatio"
 mkdir "%II_SYSTEM%\ingres\files\collation"
 mkdir "%II_SYSTEM%\ingres\files\deu"
-mkdir "%II_SYSTEM%\ingres\files\dictfile"
 mkdir "%II_SYSTEM%\ingres\files\dictfiles"
 mkdir "%II_SYSTEM%\ingres\files\dynamic"
 mkdir "%II_SYSTEM%\ingres\files\english"
