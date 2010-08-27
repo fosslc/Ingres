@@ -687,6 +687,8 @@
 ##	    Change that added config.direct_io should include direct_io_log.
 ##	03-Aug-2010 (miket) SIR 124154
 ##	    Add dmf_crypt_maxkeys to the upgrade list.
+##	25-Aug-2010 (bonro01) BUG 124305
+##	    Remove confusing Independent Storage device prompt.
 ##	    
 #----------------------------------------------------------------------------
 . iisysdep
@@ -2388,27 +2390,9 @@ fi #end of WRITE_RESPONSE mode ****
       if [ -z "$DATA" ] ; then
          echo ""
          prompt "Do you want to continue this setup procedure?" y || exit 1
-         cat << !
-
-Ingres has the capability to guarantee integrity of all committed
-database transactions in the event of a system software failure or
-single storage device failure.  IMPORTANT NOTE: if a second storage
-device fails before recovery from an initial failure has taken place,
-committed transactions may be lost. 
-
-If you intend to take advantage of this capability, you need to
-have at least two independent storage devices available (one in
-addition to the one Ingres is being installed on).  If you do not
-have two independent storage devices available, but would like to take
-advantage of this capability, you should not complete this setup
-procedure at this time.
-
-!
       else
          echo ""
       fi
-
-      prompt "Do you want to continue this setup procedure?" y || exit 1
    }
 }
 
