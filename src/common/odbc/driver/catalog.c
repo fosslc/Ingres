@@ -264,6 +264,10 @@
 **     24-Jun-2010 (Ralph Loen)  Bug 122174
 **         In CatFetchColumn() and CatScale(), treat precision as scale if
 **         the target column is a time or timestamp column.
+**     14-Jul-2010 (Ralph Loen) Bug 124079
+**         In CatGetDBcapabilities(), add fetch of DBMS_TYPE and set
+**         fServerClassVECTORWISE bit in the fServerType field of the
+**         tDBC structure if the DBMS_TYPE is Vectorwise.
 */
 
 /*
@@ -7048,7 +7052,8 @@ BOOL CatGetDBcapabilities(LPDBC pdbc, LPSTMT pstmtparm)
             "cap_capability = 'SQL_MAX_NVCHR_COLUMN_LEN' or "
             "cap_capability = 'SQL_MAX_ROW_LEN' or "
             "cap_capability = 'NATIONAL_CHARACTER_SET' or "
-            "cap_capability = 'SQL_MAX_DECIMAL_PRECISION'";
+            "cap_capability = 'SQL_MAX_DECIMAL_PRECISION' or "
+            "cap_capability = 'DBMS_TYPE'";
 
     if (pdbc->db_name_case)  /* if already resolved, just return */
         return(TRUE);
@@ -7090,7 +7095,11 @@ BOOL CatGetDBcapabilities(LPDBC pdbc, LPSTMT pstmtparm)
         }
         else if (MEcmp(p,"NATIONAL_CHARACTER_SET",22)==0)
             pdbc->is_unicode_enabled = (*q == 'Y' ? TRUE : FALSE);
-
+        else if (MEcmp(p,"DBMS_TYPE",9)==0)
+        {
+            if (!MEcmp(q,"INGRES_VECTORWISE",17))
+                pdbc->fServerClass = fServerClassVECTORWISE; 
+        }
         else if (memcmp(p,"SQL_MAX_DECIMAL_PRECISION",25)==0)
             CVal(q, &pdbc->max_decprec);
         else if (MEcmp(p,"MAX_COLUMNS",11)==0)

@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1992, 2008 Ingres Corporation
+** Copyright (c) 1992, 2010 Ingres Corporation
 */
 
 #include <compat.h>
@@ -417,6 +417,11 @@
 **         In PutParm(), set CVT_TRUNCATION and return SQL_ERROR if
 **         the Length field of the IPD is less than the length referenced
 **         in the OctetLengthPtr of the pipd.
+**    14-Jul-1010 (Ralph Loen)  Bug 124079
+**         In SQLExecDirect_InternalCall(), add 50 instead of 8 in
+**         MEreqmem(), to allow "for readonly" to be potentially tacked on the 
+**         end of a select query.
+**         
 **       
 */
 
@@ -723,10 +728,10 @@ static RETCODE SQLExecDirect_Common(
             cbSqlStr = (SDWORD)STlength (szSqlStr);
 
 		ResetStmt (pstmt, TRUE);     /* clear STMT state and free buffers */
-
         szAPISqlStr = MEreqmem((u_i2)0, cbSqlStr +
-           CountLiteralItems(cbSqlStr, szSqlStr, pstmt->dateConnLevel) + 8,
+           CountLiteralItems(cbSqlStr, szSqlStr, pstmt->dateConnLevel) + 50,
                               TRUE, NULL);
+
         if (szAPISqlStr == NULL)
         {
             UnlockStmt (pstmt);

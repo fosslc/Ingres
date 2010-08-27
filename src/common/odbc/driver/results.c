@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1992, 2009 Ingres Corporation
+** Copyright (c) 1992, 2010 Ingres Corporation
 **
 */
 
@@ -386,6 +386,8 @@
 **         In SQLDescribeCol() return the precision instead of the
 **         column size for the precision argument if the data type is
 **         SQL_DECIMAL or SQL_NUMERIC.
+**    14-Jul-1010 (Ralph Loen)  Bug 124079
+**         Corrected output conversion lengths in GetTimeOrIntervalChar().
 */
 
 
@@ -2210,7 +2212,6 @@ RETCODE GetColumn(
                 pird))
                 return (SQL_ERROR);
         }
-        szValue[pird->OctetLength] = '\0';
         rgbData = &szValue[0];
         cbData = STlength(rgbData);
         if (cbData==0  &&  pard->IndicatorPtr) /* SQLBindCol(pcbValue) */
@@ -4139,7 +4140,7 @@ static UDWORD CvtIngresDateToChar(LPSTMT pstmt, CHAR *rgbData, LPDESCFLD pird)
     LPDBC pdbc = pstmt->pdbcOwner;
 
     ptype = CvtGetSqlType(pird->ConciseType, pstmt->fAPILevel, 
-        pstmt->dateConnLevel);
+        pstmt->fAPILevel);
     fIngApiType = ptype->fIngApiType;
 
     if (pird->fIngApiType == IIAPI_DTE_TYPE && pstmt->dateConnLevel > 
@@ -4666,18 +4667,20 @@ BOOL GetTimeOrIntervalChar(CHAR *pTarget, CHAR *pSource,
     switch (pird->fIngApiType)
     {   
         case IIAPI_INTYM_TYPE:
-            len = ODBC_INTYM_LEN;
+            len = ODBC_INTYM_OUTLENGTH;
             break;
         
         case IIAPI_INTDS_TYPE:
-            len = ODBC_INTDS_LEN;
+            len = ODBC_INTDS_OUTLENGTH;
             break;
  
         case IIAPI_TIME_TYPE:
         case IIAPI_TMWO_TYPE:
-        case IIAPI_TMTZ_TYPE:
-            len = ODBC_TIME_LEN;
+            len = ODBC_TMWO_OUTLENGTH;
             break;
+
+        case IIAPI_TMTZ_TYPE:
+            len = ODBC_TMTZ_OUTLENGTH;
 
         default:
             return FALSE;
@@ -4687,24 +4690,24 @@ BOOL GetTimeOrIntervalChar(CHAR *pTarget, CHAR *pSource,
     fp.fd_envHandle = envHndl;
     fp.fd_srcDesc.ds_dataType   = pird->fIngApiType; 
     fp.fd_srcDesc.ds_nullable   = FALSE;  
-    fp.fd_srcDesc.ds_length     = len;
+    fp.fd_srcDesc.ds_length     = pird->OctetLength;
     fp.fd_srcDesc.ds_precision  = (II_UINT2) pird->IsoTimePrecision;
     fp.fd_srcDesc.ds_scale      = 0;
     fp.fd_srcDesc.ds_columnType = IIAPI_COL_TUPLE;
     fp.fd_srcDesc.ds_columnName = NULL;  
     fp.fd_srcValue.dv_null      = FALSE; 
-    fp.fd_srcValue.dv_length    = (II_UINT2) len;
+    fp.fd_srcValue.dv_length    = (II_UINT2) pird->OctetLength;
     fp.fd_srcValue.dv_value     = pSource; 
           
     fp.fd_dstDesc.ds_dataType   = IIAPI_CHA_TYPE; 
     fp.fd_dstDesc.ds_nullable   = FALSE;
-    fp.fd_dstDesc.ds_length     = (II_UINT2) pird->OctetLength;
+    fp.fd_dstDesc.ds_length     = (II_UINT2) len;
     fp.fd_dstDesc.ds_precision  = (II_UINT2) pird->IsoTimePrecision;
     fp.fd_dstDesc.ds_scale      = (II_UINT2) 0;
     fp.fd_dstDesc.ds_columnType = IIAPI_COL_TUPLE;
     fp.fd_dstDesc.ds_columnName = NULL;
     fp.fd_dstValue.dv_null      = FALSE;
-    fp.fd_dstValue.dv_length    = (II_UINT2) pird->OctetLength;
+    fp.fd_dstValue.dv_length    = (II_UINT2) len;
     fp.fd_dstValue.dv_value     = pTarget; 
 
     IIapi_formatData( &fp );
@@ -4712,7 +4715,7 @@ BOOL GetTimeOrIntervalChar(CHAR *pTarget, CHAR *pSource,
     if (fp.fd_status != IIAPI_ST_SUCCESS)
         return(FALSE);
 
-    CMcpychar(nt,&pTarget[pird->OctetLength]);
+    CMcpychar(nt,&pTarget[len]);
     STtrmwhite(pTarget);
     return(TRUE); 
 }

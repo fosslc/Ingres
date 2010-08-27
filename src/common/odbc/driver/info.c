@@ -252,6 +252,11 @@
 **         Adjusted column size in dataTypeInfo to better match ODBC specs.
 **         In SQLGetTypeInfo(), adjust minimum and maximum scale of 
 **         date/time data types to according to specifications. 
+**    14-Jul-1010 (Ralph Loen)  Bug 124079
+**         In SQLGetInfo_Common, return support for SQL_TIMEDATE_INTERVALS
+**         and full range of SQL_TIMEDATE_FUNCTIONS except
+**         SQL_FN_TSI_FRAC_SECOND.
+**         
 */
 
 static RETCODE SQL_API SQLGetInfo_Common(
@@ -452,15 +457,23 @@ static const UDWORD InfoBitTable[] =
     SQL_SYSTEM_FUNCTIONS,           SQL_FN_SYS_DBNAME | SQL_FN_SYS_USERNAME | 
                                     SQL_FN_SYS_IFNULL,
     SQL_TIMEDATE_ADD_INTERVALS,     0,
-    SQL_TIMEDATE_DIFF_INTERVALS,    0,
-    SQL_TIMEDATE_FUNCTIONS,         SQL_FN_TD_CURDATE | SQL_FN_TD_CURTIME | 
-                                    SQL_FN_TD_DAYNAME | SQL_FN_TD_DAYOFMONTH | 
-                                    SQL_FN_TD_DAYOFWEEK | SQL_FN_TD_DAYOFYEAR |
+    SQL_TIMEDATE_DIFF_INTERVALS,    SQL_FN_TSI_SECOND | SQL_FN_TSI_MINUTE |
+                                    SQL_FN_TSI_HOUR | SQL_FN_TSI_DAY |
+                                    SQL_FN_TSI_WEEK | SQL_FN_TSI_MONTH |
+                                    SQL_FN_TSI_QUARTER | SQL_FN_TSI_YEAR,
+    SQL_TIMEDATE_FUNCTIONS,         SQL_FN_TD_NOW | SQL_FN_TD_CURDATE |
+                                    SQL_FN_TD_DAYOFMONTH | SQL_FN_TD_DAYOFWEEK |
+                                    SQL_FN_TD_DAYOFYEAR | SQL_FN_TD_MONTH |
+                                    SQL_FN_TD_QUARTER | SQL_FN_TD_WEEK |
+                                    SQL_FN_TD_YEAR | SQL_FN_TD_CURTIME |
                                     SQL_FN_TD_HOUR | SQL_FN_TD_MINUTE | 
-                                    SQL_FN_TD_MONTH | SQL_FN_TD_MONTHNAME | 
-                                    SQL_FN_TD_NOW | SQL_FN_TD_QUARTER |
-                                    SQL_FN_TD_SECOND | SQL_FN_TD_WEEK | 
-                                    SQL_FN_TD_YEAR,
+                                    SQL_FN_TD_SECOND | 
+                                    SQL_FN_TD_TIMESTAMPDIFF | 
+                                    SQL_FN_TD_DAYNAME | SQL_FN_TD_MONTHNAME |
+                                    SQL_FN_TD_CURRENT_DATE |
+                                    SQL_FN_TD_CURRENT_TIME |
+                                    SQL_FN_TD_CURRENT_TIMESTAMP |
+                                    SQL_FN_TD_EXTRACT,
     SQL_TXN_ISOLATION_OPTION,       SQL_TXN_READ_UNCOMMITTED | 
                                     SQL_TXN_READ_COMMITTED |
                                     SQL_TXN_REPEATABLE_READ | 
