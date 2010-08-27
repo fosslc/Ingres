@@ -260,6 +260,7 @@ GLOBALREF PSF_SERVBLK     *Psf_srvblk;  /* PSF server control block ptr */
 
 static GCA_COL_ATT *
 pst_sqlatt(
+	PSS_SESBLK	*cb,
 	PST_QNODE	*resdom,
 	GCA_COL_ATT 	*sqlatts,
 	i4		*tup_size);
@@ -3672,7 +3673,7 @@ pst_describe(
 	char	*sp, *dp;
 	i4	cpyamt;
 
-	pst_sqlatt(root->pst_left, sqlda->gca_col_desc,
+	pst_sqlatt(sess_cb, root->pst_left, sqlda->gca_col_desc,
 					&sqlda->gca_tsize);
 	
 	/*
@@ -3824,9 +3825,14 @@ pst_commit_dsql(
 **	    for packing array in one pass.
 **	21-Dec-2001 (gordy)
 **	    GCA_COL_ATT no longer defined with DB_DATA_VALUE: use DB_COPY macro.
+**	1-aug-2010 (stephenb)
+**	    Bug 124172: Ensure that we do not return DB_NODT in the GCA_TD_DATA.
+**	    This is an illegal GCA type for a tuple descriptor and may cause
+**	    issues in the client drivers.
 */
 static GCA_COL_ATT *
 pst_sqlatt(
+	PSS_SESBLK	*cb,
 	PST_QNODE	*resdom,
 	GCA_COL_ATT 	*sqlatts,
 	i4		*tup_size)
@@ -3835,7 +3841,7 @@ pst_sqlatt(
 	    resdom->pst_left->pst_sym.pst_type == PST_RESDOM
 	)
     {
-	sqlatts = pst_sqlatt(resdom->pst_left, sqlatts, tup_size);
+	sqlatts = pst_sqlatt(cb, resdom->pst_left, sqlatts, tup_size);
     }
     else
     {
@@ -3846,7 +3852,117 @@ pst_sqlatt(
 
     if (resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsflags&PST_RS_PRINT)
     {
-	DB_COPY_DV_TO_ATT( &resdom->pst_sym.pst_dataval, sqlatts );
+	/*
+	** Sanity check: GCA does not allow a type of DB_NODT in the tuple
+	** descriptor. Some prepared queries may not provide enough information
+	** in the select list for the parser to determine the type of the result,
+	** so we will continually delay type resolution for the RESDOM (this often
+	** happens if the user provides a variable in the select list). If we
+	** get to here, we know we are about to send the tuple descriptor back
+	** to the client, so we need to perform a final check that we are not
+	** about to send DB_NODT. 
+	** 
+	** In the case of a prepared query, the tuple
+	** descriptor represents our best guess at the returned row format, and
+	** we reserve the right to modify that guess later when the query is
+	** executed and we receive the actual values; so it is acceptable
+	** for us to make an educated guess using the context of the query; if
+	** that fails, we will revert to nullable DB_LTXT_TYPE as a last-ditch effort to
+	** provide a type.
+	** 
+	** NOTE: Currently our "best guess" involves using pst_resolve
+	** to see if we can resolve the result of of an OP node on the RHS
+	** of the resdom node, or just using the current type on the RHS (which
+	** should cover most CONST and VAR). We
+	** may be able to gain some further context in cases where this doesn't
+	** work by looking at the operands that the query variables are used with,
+	** and guessing at the "most likely" result. This becomes insanely
+	** complex since the variable that caused the "unknown" type may be buried
+	** several layers down the parse tree (maybe on the other side of a sub-select)
+	** and we would have to recursively descend the tree until we found it.....this
+	** is a full-scale project for another day, not just a fix, and given
+	** that this is just a "hint" it's probably not worth attempting. Any absolutely
+	** known types are already pre-determined at this stage, and will be used 
+	** if they are there.
+	*/
+	if (resdom->pst_sym.pst_dataval.db_datatype == DB_NODT)
+	{
+	    /* right child with give us our type */
+	    if (resdom->pst_right)
+	    {
+		PST_QNODE	*right = resdom->pst_right;
+		
+		if (right->pst_sym.pst_dataval.db_datatype != DB_NODT)
+		{
+		    /* 
+		    ** right child was filled out (probably after the resdom was
+		    ** created), just use it
+		    */
+			sqlatts->gca_attdbv.db_datatype = 
+				right->pst_sym.pst_dataval.db_datatype;
+			sqlatts->gca_attdbv.db_length = 
+				right->pst_sym.pst_dataval.db_length;
+			sqlatts->gca_attdbv.db_prec = 
+				right->pst_sym.pst_dataval.db_prec;
+		}
+		else
+		{
+		    DB_ERROR	err_blk;
+		    DB_STATUS	status;
+		    
+		    /* right child wasn't filled out, let's make a guess */
+		    switch (right->pst_sym.pst_type)
+		    {
+			case PST_UOP:
+			case PST_BOP:
+			case PST_AOP:
+			case PST_COP:
+			case PST_MOP:
+			/* it's an op node, lets see if we can resolve it now */
+			    status = pst_resolve(cb, (ADF_CB*) cb->pss_adfcb, right, 
+				cb->pss_lang, &err_blk);
+			    if (status == E_DB_OK && 
+				    right->pst_sym.pst_dataval.db_datatype != DB_NODT)
+			    {
+				/* resolved, use the type */
+				sqlatts->gca_attdbv.db_datatype = 
+					right->pst_sym.pst_dataval.db_datatype;
+				sqlatts->gca_attdbv.db_length = 
+					right->pst_sym.pst_dataval.db_length;
+				sqlatts->gca_attdbv.db_prec = 
+					right->pst_sym.pst_dataval.db_prec;
+			    }
+			    else
+			    {
+				/* not resolved, use the fallback */
+				sqlatts->gca_attdbv.db_datatype = -DB_LTXT_TYPE;
+				sqlatts->gca_attdbv.db_length = 1;
+				sqlatts->gca_attdbv.db_prec = 0;
+			    }
+			    break;
+			default:
+			    /* 
+			    ** all other nodes would have been typed already if
+			    ** they could have been; so we're left with the 
+			    ** fallback
+			    */
+			    sqlatts->gca_attdbv.db_datatype = -DB_LTXT_TYPE;
+			    sqlatts->gca_attdbv.db_length = 1;
+			    sqlatts->gca_attdbv.db_prec = 0;
+			    break;
+		    }
+		}
+	    }
+	    else
+	    {
+		/* nothing there, fallback to DB_TXT_TYPE */
+		sqlatts->gca_attdbv.db_datatype = -DB_LTXT_TYPE;
+		sqlatts->gca_attdbv.db_length = 1;
+		sqlatts->gca_attdbv.db_prec = 0;
+	    }
+	}
+	else
+	    DB_COPY_DV_TO_ATT( &resdom->pst_sym.pst_dataval, sqlatts );
 
 	MEcopy(resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname, 
 				DB_ATT_MAXNAME, sqlatts->gca_attname);
