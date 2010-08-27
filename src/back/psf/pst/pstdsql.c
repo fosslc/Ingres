@@ -224,6 +224,9 @@
 **          Changes for Long IDs
 **	30-Jun-2010 (kiria01) b124000
 **	    Rewrite of pst_descinput_walk to remove the recursive nature.
+**      15-Jul-2010 (horda03) B124082
+**          Prevent RECACHE of cached queries failing due to derived table
+**          rngvars.
 */
 
 
@@ -1168,6 +1171,8 @@ pst_prepare(
 **          Update batch copy optimization to allocate memory for
 **          a set of rows so that we can be smart about how to run the 
 **          copy statement.
+**      15-Jul-2010 (horda03) B124082
+**          Don't call pst_showtab() for non TABLE rngvars.
 */
 #define	RT_NODE_SIZE \
 	    sizeof(PST_QNODE) - sizeof(PST_SYMVALUE) + sizeof(PST_RT_NODE)
@@ -2245,7 +2250,8 @@ pst_execute(
 		    /* Update the prototype range table entries. */
 		    for (i = prt_header->pst_rngvar_count - 1; i >= 0; i--)
 		    {
-			if(prt_header->pst_rangetab[i] == NULL)
+			if ( (prt_header->pst_rangetab[i] == NULL) ||
+                             (prt_header->pst_rangetab[i]->pst_rgtype != PST_TABLE) )
 			{
 			    continue;
 			}
