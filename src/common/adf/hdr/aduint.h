@@ -178,6 +178,8 @@
 **	    Add adu_aesdecrypt and adu_aesencrypt.
 **	10-May-2010 (kschendel) b123712
 **	    Added float trunc, ceil, floor.
+**       9-Jul-2010 (hanal04) Bug 124087
+**          Added adu_nvchr_embchartouni() and adu_nvchr_embunitochar()
 */
 
 
@@ -1222,6 +1224,16 @@ FUNC_EXTERN DB_STATUS adu_nvchr_charextract(ADF_CB           *scb,
                                        DB_DATA_VALUE    *dv_1,
                                        DB_DATA_VALUE    *dv_2,
                                        DB_DATA_VALUE    *dv_result);
+
+/* Routine for EMBEDDED coercion from char to uni */
+FUNC_EXTERN DB_STATUS adu_nvchr_embchartouni(ADF_CB	*adf_scb,
+                                       DB_DATA_VALUE	*dv_in,
+                                       DB_DATA_VALUE	*rdv);
+
+/* Routine for EMBEDDED coercion from uni to char */
+FUNC_EXTERN DB_STATUS adu_nvchr_embunitochar(ADF_CB	*adf_scb,
+                                       DB_DATA_VALUE	*dv_in,
+                                       DB_DATA_VALUE	*rdv);
 
 /* Routine for substr1 functions for  nvhar and nvarchar type */
 FUNC_EXTERN DB_STATUS adu_nvchr_substr1(ADF_CB           *scb,
