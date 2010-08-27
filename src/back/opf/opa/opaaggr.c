@@ -3080,6 +3080,10 @@ opa_tproc_parmanal(
 ** History:
 **	18-april-2008 (dougi)
 **	    Written for table procedure support.
+**	25-Jun-2010 (kschendel) b123775
+**	    Cycle checkers can alter the passed-in var no's, don't pass
+**	    VAR node directly (paranoia), also it's an i4 not an OPV_IGVARS
+**	    which is an i2, matters on some platforms.
 */
 
 static bool
@@ -3099,14 +3103,18 @@ opa_tproc_nodeanal(
 	** current cycle varno, it is a cycle. Otherwise, recurse on
 	** tproc referenced in the varno. */
 	if (global->ops_rangetab.opv_base->opv_grv[nodep->
-		pst_sym.pst_value.pst_s_var.pst_vno]->opv_gmask & OPV_TPROC &&
-	    (nodep->pst_sym.pst_value.pst_s_var.pst_vno == *cycle_gvno ||
-	    !opa_tproc_parmanal(global, (OPV_IGVARS *)&(nodep->pst_sym.
-				pst_value.pst_s_var.pst_vno), cycle_gvno)))
+		pst_sym.pst_value.pst_s_var.pst_vno]->opv_gmask & OPV_TPROC)
 	{
-	    *other_gvno = *cycle_gvno;
-	    *cycle_gvno = (OPV_IGVARS)nodep->pst_sym.pst_value.pst_s_var.pst_vno;
-	    return(FALSE);
+	    OPV_IGVARS vno;
+
+	    vno = nodep->pst_sym.pst_value.pst_s_var.pst_vno;
+	    if (vno == *cycle_gvno
+	      || ! opa_tproc_parmanal(global, &vno, cycle_gvno) )
+	    {
+		*other_gvno = *cycle_gvno;
+		*cycle_gvno = vno;
+		return(FALSE);
+	    }
 	}
 
 	return(TRUE);			/* PST_VAR passed the tests */
