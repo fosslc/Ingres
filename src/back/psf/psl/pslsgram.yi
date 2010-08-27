@@ -3557,6 +3557,15 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	    Delete most usages of psy_seqflag as not needed, and move
 **	    the one flag we need (decimal-seen) to a temp flag in
 **	    the iisequence tuple.
+**	06-Jul-2010 (kiria01) b124033
+**	    Handle the string-numeric case with IN/NOT IN lists such that the
+**	    lookup will use correct comparator. The string numeric context is
+**	    usually detected in the resolver but optimising the IN lists was
+**	    obscuring the possibility having forced the datatype of the
+**	    constants to match the column type. The specific case of string
+**	    column expression with a numeric IN-list is now checked for and if
+**	    found, numericnorm functions are injected to retain the string-
+**	    numeric behavior.
 */
 %{
 
@@ -34587,12 +34596,13 @@ predicate:		select_expr comparison select_expr
 	PST_QNODE           *ornode;
 	YYAGG_NODE_PTR	    *agg_node_list = (YYAGG_NODE_PTR *) NULL;
 	PSS_TREEINFO	    *treeinfo;
-	PST_OP_NODE	    opnode;
+	PST_OP_NODE	    opnode, opnode_norm;
 	DB_STATUS	    status;
 	PST_J_ID	    join_id;
 	i4		    pst_node_flags;
 	bool		    use_inlist = TRUE;
 	i4		    cnt = 0;
+	bool		    str_num = FALSE;
 
 	/* 
 	** when we have encountered NOT IN, we may have set $Ycorr_aggr.depth
@@ -34654,8 +34664,8 @@ predicate:		select_expr comparison select_expr
 		    : PST_NOJOIN;
 
 	/*
-	** if expression list contains more than 1 value, we will need to make
-	** copies of select_expr
+	** if expression list contains more than 1 value, we may need to make
+	** copies of select_expr if the list cannot be optimised efficiently.
 	*/
 
 	if ($Yexprlist->pss_next != (PSS_EXLIST *) NULL)
@@ -34706,8 +34716,67 @@ predicate:		select_expr comparison select_expr
 	** in the list.
 	** (Trees were linked in reverse order, but here the order will
 	** be reversed again and constants collected and formally sorted.)
+	**
+	** String-numeric complexity: As we will be attempting to sort this
+	** list of constant expressions and casting the expressions to identical
+	** types to do so, we could lose the opportunity to provide the relaxed
+	** compare for string numeric. Of the two cases, NUM IN (string-list) is
+	** catered for in that if any strings don't successfully coerce to an NUM
+	** constant then they can be dropped from the IN-list as the NUM column
+	** could not match that value ever so it may be dropped from the list and
+	** hence such a list can always be transformed into a (possibly shorter)
+	** NUM IN (NUM-list).
+	** STR IN (NUM-list) however is not so simple. As it is not possible to
+	** predict the numeric format in the STR, we need to use the numericnorm
+	** function that will enable the translation to me made. This will involve
+	** applying the numericnorm function to both sides instead of just casting
+	** the list elements to match the column type. First, detect the potential!
 	*/
-	
+	switch (abs($1->pst_sym.pst_dataval.db_datatype))
+	{
+	case DB_CHR_TYPE:
+	case DB_CHA_TYPE:
+	case DB_VCH_TYPE:
+	case DB_NCHR_TYPE:
+	case DB_NVCHR_TYPE:
+	case DB_TXT_TYPE:
+	case DB_LTXT_TYPE:
+	    switch (abs($Yexprlist->pss_expr->pst_sym.pst_dataval.db_datatype))
+	    {
+	    case DB_INT_TYPE:
+	    case DB_FLT_TYPE:
+	    case DB_DEC_TYPE:
+		{
+		    PST_QNODE **p = &$1, **p2 = p, *t;
+		    /* Force expr list elements to use numericnorm */
+		    str_num = TRUE;
+		    opnode_norm.pst_opno = ADI_NUMNORM_OP;
+		    opnode_norm.pst_opmeta = PST_NOMETA;
+		    opnode_norm.pst_pat_flags = AD_PAT_DOESNT_APPLY;
+		    opnode_norm.pst_joinid = join_id;
+		    while ((t = *p) && t->pst_sym.pst_type == PST_SUBSEL &&
+                        (t = t->pst_left) && t->pst_sym.pst_type == PST_RESDOM)
+		    {
+			p = &t->pst_right;
+		    }
+		    t = *p;
+		    *p = NULL;
+		    if (status = pst_node(cb, &cb->pss_ostream, t, NULL,
+					PST_UOP, (char *)&opnode_norm, sizeof(opnode_norm),
+					DB_NODT, 0, 0, NULL, p, &psq_cb->psq_error,
+					pst_node_flags|PSS_JOINID_PRESET))
+			return status;
+		    while ((t = *p2) && t->pst_sym.pst_type == PST_SUBSEL &&
+			(t = t->pst_left) && t->pst_sym.pst_type == PST_RESDOM)
+		    {
+			/* Subsel present - propagate resolved type data */
+			t->pst_sym.pst_dataval =
+				(*p2)->pst_sym.pst_dataval = (*p)->pst_sym.pst_dataval;
+			p2 = &t->pst_right;
+		    }
+		}
+	    }
+	}
 	for (valnode = $Yexprlist;
 	     valnode != (PSS_EXLIST *) NULL;
 	     valnode = valnode->pss_next)
@@ -34720,7 +34789,18 @@ predicate:		select_expr comparison select_expr
 		(VOID) psf_error(6427L, 0L, PSF_USERERR, &err_code, 
 		    &psq_cb->psq_error, 0);
 	    }
-
+	    if (str_num)
+	    {
+		/* Inject numeric_norm now. If this were a valid constants before then
+		** it still will be after - just of the numericnorm result type */
+		PST_QNODE *t = valnode->pss_expr;
+		valnode->pss_expr = NULL;
+		if (status = pst_node(cb, &cb->pss_ostream, t, NULL,
+			PST_UOP, (char *)&opnode_norm, sizeof(opnode_norm),
+			DB_NODT, 0, 0, NULL, &valnode->pss_expr, &psq_cb->psq_error,
+			pst_node_flags|PSS_JOINID_PRESET))
+		    return status;
+	    }
 	    /* Then new code to pack constant IN-lists into a single "=" BOP. */
 	    if (use_inlist &&
 		valnode->pss_expr->pst_sym.pst_type == PST_CONST && (
