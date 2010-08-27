@@ -302,6 +302,9 @@
 **          dm1cxclean() if crow_locking row_is_consistent() else IsTranActive
 **          dm1cxisnew() Check rcb_new_fullscan, handle the XTABLE case where
 **          new tids are added to rcb_new_tids without any update to the page,
+**      16-Jul-2010 (stial01) (SIR 121619 MVCC, B124076, B124077)
+**          dm1cxisnew() above change dropped a line.
+**        
 */
 
 static	i4	    lowest_offset(i4 page_type, i4 page_size, DMPP_PAGE *b);
@@ -4585,6 +4588,8 @@ dm1cx_isnew(
 	    }
        }
     } while ((curr = curr->rcb_rl_next) != r);
+
+    return (FALSE);
 }
 
 
