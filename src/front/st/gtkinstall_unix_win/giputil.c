@@ -228,6 +228,10 @@
 **	    is actually being installed are written to the response file.
 **	    Replace popup_error_box() with popup_message_box() and add macros
 **	    for popup_error_box() and popup_warning_box()
+**	12-Aug-2010 (hanje04)
+**	    BUG 124241
+**	    Correct "if not VW Install" check so that it actually checks for
+**	    that case. Configuration type, being ignored accross the board.
 **	
 */
 
@@ -483,7 +487,7 @@ write_installation_summary(GtkTextBuffer *buffer)
 						NULL);
     }
 
-    if ( ! instmode & IVW_INSTALL )
+    if (  ~instmode & IVW_INSTALL )
     {
 	/* Configuration type */
 	gtk_text_buffer_insert_with_tags_by_name(buffer,
@@ -1010,7 +1014,7 @@ gen_install_response_file( II_RFAPI_STRING rflocstring )
     }
 
     /* Config Type */
-    if ( ! instmode & IVW_INSTALL )
+    if (  ~instmode & IVW_INSTALL )
     {
 	param.name = II_CONFIG_TYPE;
 	param.value = 
