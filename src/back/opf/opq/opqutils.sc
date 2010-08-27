@@ -3471,6 +3471,9 @@ char		*dst)
 **        Disallow multiple -r flags with the same table name
 **      11-Feb-2010 (maspa05) b123140
 **        Missing parameter in STxcompare in above change
+**      20-Jul-2010 (hanal04) Bug 124100
+**        Do not try to select from iisynonym when we are connected to a
+**        STAR DB. It does not exist.
 */
 bool
 i_rel_list_from_input(
@@ -3570,47 +3573,91 @@ bool		statdump)
 	for (cnt = 0, first = TRUE, es_owner = (char *)&g->opq_owner;;
 	     first = FALSE, es_owner = (char *)&g->opq_dba)
 	{
-            exec sql repeated select t.table_owner, t.num_rows, t.table_type,
-		     t.table_reltid, t.table_reltidx, t.number_pages,
-		     t.table_stats, t.overflow_pages, t.row_width
-                into :es_ownname, :es_nrows, :es_type,
-		     :es_reltid, :es_xreltid, :es_pages,
-		     :es_tstat, :es_ovflow, :es_relwid
-		from  (iitables t left join iisynonyms s on t.table_name = s.table_name)
-		where (t.table_owner = :es_owner) 
-		and   ((t.table_name = :es_relname) or (s.synonym_name = :es_relname));
+            if(g->opq_dbms.dbms_type == OPQ_STAR)
+            {   
+                exec sql repeated select t.table_owner, t.num_rows, t.table_type,
+		         t.table_reltid, t.table_reltidx, t.number_pages,
+		         t.table_stats, t.overflow_pages, t.row_width
+                    into :es_ownname, :es_nrows, :es_type,
+		         :es_reltid, :es_xreltid, :es_pages,
+		         :es_tstat, :es_ovflow, :es_relwid
+		    from  iitables t;
+    
+	        exec sql begin;
+		    /* Trim trailing white space and save table info */
+		    (VOID) STtrmwhite((char *)&rp->relname);
+		    rp->samplename[0] = EOS;
+		    (VOID) STtrmwhite((char *)&rp->ownname);
+		    if (!exrel)
+		    {	/* No need for this if we're excluding the table. */
+		        rp->nsample = (i4)0;
+		        rp->reltid  = es_reltid;
+		        rp->reltidx = es_xreltid;
+		        rp->pages   = es_pages;
+		        rp->overflow= es_ovflow;
+		        rp->ntups = es_nrows;
+                        rp->relwid = es_relwid;
+		        rp->attcount = 0;	    /* count of interesting attributes*/
+                        rp->statset = (bool)FALSE;
+		        if ((es_tstat[0] == 'Y')	/* need to "set statistics" */
+			    &&
+			    (nosetstats))
+			       rp->statset = (bool)TRUE;
+		        rp->sampleok = (bool)TRUE;  /* assume sampling ok */
+		        rp->physinfo = (bool)TRUE;  /* assume phys info retrieved */
+		        rp->withstats = (bool)FALSE;/* assume no stats present */
+		        rp->samplecrtd = (bool)FALSE;/* assume sample tbl not created */
+		        rp->comphist = (bool)FALSE; /* assume no composite histogram */
+		        rp->index = FALSE;	    /* assume base table - not ix */
+		    }
 
-	    exec sql begin;
-		/* Trim trailing white space and save table info */
-		(VOID) STtrmwhite((char *)&rp->relname);
-		rp->samplename[0] = EOS;
-		(VOID) STtrmwhite((char *)&rp->ownname);
-		if (!exrel)
-		{	/* No need for this if we're excluding the table. */
-		    rp->nsample = (i4)0;
-		    rp->reltid  = es_reltid;
-		    rp->reltidx = es_xreltid;
-		    rp->pages   = es_pages;
-		    rp->overflow= es_ovflow;
-		    rp->ntups = es_nrows;
-                    rp->relwid = es_relwid;
-		    rp->attcount = 0;	    /* count of interesting attributes*/
-                    rp->statset = (bool)FALSE;
-		    if ((es_tstat[0] == 'Y')	/* need to "set statistics" */
-			&&
-			(nosetstats))
-			   rp->statset = (bool)TRUE;
-		    rp->sampleok = (bool)TRUE;  /* assume sampling ok */
-		    rp->physinfo = (bool)TRUE;  /* assume phys info retrieved */
-		    rp->withstats = (bool)FALSE;/* assume no stats present */
-		    rp->samplecrtd = (bool)FALSE;/* assume sample tbl not created */
-		    rp->comphist = (bool)FALSE; /* assume no composite histogram */
-		    rp->index = FALSE;	    /* assume base table - not ix */
-		}
+		    cnt++;
+	            exec sql end;
 
-		cnt++;
+            }
+            else
+            {
+                exec sql repeated select t.table_owner, t.num_rows, t.table_type,
+		         t.table_reltid, t.table_reltidx, t.number_pages,
+		         t.table_stats, t.overflow_pages, t.row_width
+                    into :es_ownname, :es_nrows, :es_type,
+		         :es_reltid, :es_xreltid, :es_pages,
+		         :es_tstat, :es_ovflow, :es_relwid
+		    from  (iitables t left join iisynonyms s on t.table_name = s.table_name)
+		    where (t.table_owner = :es_owner) 
+		    and   ((t.table_name = :es_relname) or (s.synonym_name = :es_relname));
+    
+	        exec sql begin;
+		    /* Trim trailing white space and save table info */
+		    (VOID) STtrmwhite((char *)&rp->relname);
+		    rp->samplename[0] = EOS;
+		    (VOID) STtrmwhite((char *)&rp->ownname);
+		    if (!exrel)
+		    {	/* No need for this if we're excluding the table. */
+		        rp->nsample = (i4)0;
+		        rp->reltid  = es_reltid;
+		        rp->reltidx = es_xreltid;
+		        rp->pages   = es_pages;
+		        rp->overflow= es_ovflow;
+		        rp->ntups = es_nrows;
+                        rp->relwid = es_relwid;
+		        rp->attcount = 0;	    /* count of interesting attributes*/
+                        rp->statset = (bool)FALSE;
+		        if ((es_tstat[0] == 'Y')	/* need to "set statistics" */
+			    &&
+			    (nosetstats))
+			       rp->statset = (bool)TRUE;
+		        rp->sampleok = (bool)TRUE;  /* assume sampling ok */
+		        rp->physinfo = (bool)TRUE;  /* assume phys info retrieved */
+		        rp->withstats = (bool)FALSE;/* assume no stats present */
+		        rp->samplecrtd = (bool)FALSE;/* assume sample tbl not created */
+		        rp->comphist = (bool)FALSE; /* assume no composite histogram */
+		        rp->index = FALSE;	    /* assume base table - not ix */
+		    }
 
-	    exec sql end;
+		    cnt++;
+	            exec sql end;
+            }
 
 
 	    if (cnt > 0 || first == FALSE)
