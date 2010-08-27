@@ -172,6 +172,8 @@
 **	    Delete duplicate routine definitions.  Add a couple bool protos.
 **	21-apr-2010 (toumi01) SIR 122403
 **	    Add encryption support and With_r1000_catalogs.
+**      22-Jul-2010 (horda03)
+**          Added prototype for get_table_nr
 */
 
 /*
@@ -583,6 +585,7 @@ FUNC_EXTERN void    xmlprintstats();
 FUNC_EXTERN void    xmlprintrows(int numcols, XF_TABINFO *tp, char *dbname, i4 use64bitEncoder);
 FUNC_EXTERN void    xfxmlloc();
 FUNC_EXTERN i4      get_schema_nr();
+FUNC_EXTERN i4      get_table_nr();
 FUNC_EXTERN i4      get_view_nr();
 FUNC_EXTERN char    *get_version();
 FUNC_EXTERN void    xmldbinfo(char *dbname, char *owner);
