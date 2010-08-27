@@ -211,6 +211,10 @@
 ##	25-May-2010 (hanje04)
 ##	    SIR 123791
 ##	    Re-add '#' accidentally removed by previous change
+##	07-Jul-2010 (hanje04)
+##	    BUG 124046
+##	    Re-add ingres-LICENSE to rpm saveset under 'bin' as it's now used
+##	    by ingres_express_install.sh
 ##                                         
 . readvers
 . (PROG1PRFX)sysdep
@@ -637,11 +641,13 @@ EOF
     fi
 
     # licensing
-    # mklicense -l ${lictype} ||
-    #{
-    #	echo "Failed to create ingres-LICENSE"
-    #	exit 1
-    #}
+    cd bin &&
+        mklicense -l ${lictype} ||
+	{
+    	    echo "Failed to create ingres-LICENSE"
+    	    exit 1
+	}
+    cd ..
     # License now displayed by GUI, just copy license file into place
     if [ -r $ING_SRC/LICENSE.${lictype} ]
     then
