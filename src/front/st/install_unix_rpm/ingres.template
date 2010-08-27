@@ -353,36 +353,6 @@ fi
 
 exit $rc
 
-%posttrans
-[ -z "$RPM_INSTALL_PREFIX" ] && RPM_INSTALL_PREFIX=%prefix
-export II_SYSTEM=$RPM_INSTALL_PREFIX
-PATH=$II_SYSTEM/ingres/bin:$II_SYSTEM/ingres/utility:$PATH
-LD_LIBRARY_PATH=/lib:/usr/lib:$II_SYSTEM/ingres/lib
-export II_SYSTEM PATH LD_LIBRARY_PATH
-instid=`ingprenv II_INSTALLATION`
-ingvalidpw=`ingprenv II_SHADOW_PWD`
-CONFIG_HOST=`iipmhost`
-II_USERID=`iigetres "ii.${CONFIG_HOST}.setup.owner.user"`
-II_GROUPID=`iigetres "ii.${CONFIG_HOST}.setup.owner.group"`
-
-# correct dir ownership
-chown $II_USERID:$II_GROUPID ${II_SYSTEM}/ingres/.
-for dir in bin demo files ice install lib sig utility vdba
-do
-    [ -d "${II_SYSTEM}/ingres/${dir}/." ] && \
-         chown -R $II_USERID:$II_GROUPID ${II_SYSTEM}/ingres/${dir}/.
-done
-chown $II_USERID:$II_GROUPID ${II_SYSTEM}/ingres/version.rel
-[ -f "$ingvalidpw" ] &&
-{
-    chown root:root $ingvalidpw
-    chmod 4755 $ingvalidpw
-}
-
-[ $instid ] &&
-    /sbin/service ingres${instid} configure $II_RESPONSE_FILE || :
-exit 0
-
 %triggerin -- %rpm_basename%-documentation >= 3.0
 #When documentation is installed create link to it
 [ -z "$RPM_INSTALL_PREFIX" ] && RPM_INSTALL_PREFIX=%prefix

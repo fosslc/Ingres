@@ -19,6 +19,10 @@
 ##	16-Jun-2010 (hanje04)
 ##	    Bug 123931
 ##	    Response file is passed as first argument not second
+##	10-Jul-2010 (hanje04)
+##	    BUG 124083
+##	    Don't bail if we can't find a setup script, just report it and
+##	    keep going.
 
 self=`basename $0`
 (LSBENV)
@@ -143,6 +147,16 @@ fi
 if [ $rc = 0 ] ; then
     for scr in `cat $setuptodo`
     do
+	if [ ! -x "${II_SYSTEM}/ingres/utility/${scr}" ]
+	then
+	    cat << EOF
+WARNING:
+Cannot locate setup script: \"${scr}\"
+skipping...
+EOF
+	    purge_todo $scr
+	    continue
+	fi
         sh iigenpostinst -r ingres -v ${versno}-${bldno} -s $scr 
         rc=$?
         if [ $rc = 0 ] ; then

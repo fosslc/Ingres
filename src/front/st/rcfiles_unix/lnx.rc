@@ -95,6 +95,9 @@
 ##	    Write out command for INGSTART and INGSTOP to temp file before 
 ##	    running them using action to work around differences in the 
 ##	    implementation of "action" between RHEL 4,5 & 6.
+##	14-Jul-2010 (hanje04)
+##	    BUG 124083
+##	    Add presetup step to run iiposttrans from here instead of RPM.
 ##
 #
 # /etc/init.d/ingresINST_ID
@@ -359,6 +362,7 @@ case "$1" in
 	;;
     configure)
 	respfile=''
+	presetupcmd=$II_SYSTEM/ingres/utility/iiposttrans
 	setupcmd=$II_SYSTEM/ingres/utility/setupingres
 	# check for response file
 	if [ "$2" ] ; then
@@ -369,11 +373,16 @@ case "$1" in
 		save_status -v 2
 		$exit
 	    fi
-	elif [ -r ${ingdir}/ingrsp.rsp ] ; then
-	    respfile=${ingdir}/ingrsp.rsp
+	elif [ -r ${ingdir}/install.rsp ] ; then
+	    respfile=${ingdir}/install.rsp
 	fi
-	$setupcmd ${respfile:-}
+	$presetupcmd
 	rc=$?
+	if [ $rc = 0 ]
+	then
+	    $setupcmd ${respfile:-}
+	    rc=$?
+	fi
 	if [ $rc = 0 ] ; then
 	    save_status -v 0
 	else
