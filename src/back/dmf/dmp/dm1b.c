@@ -786,6 +786,8 @@
 **          reposition for RCB_P_FETCH, should not reposition to deleted entry
 **	10-May-2010 (stial01)
 **          Init DMP_PINFO with DMP_PINIT, minor changes to TRdisplays
+**	09-Jun-2010 (stial01)
+**          TRdisplay more info when there is an error
 */
 
 
@@ -4502,7 +4504,7 @@ dm1b_get(
 	if (r->rcb_pos_info[RCB_P_GET].bid.tid_i4 != r->rcb_lowtid.tid_i4)
 	{
 	    TRdisplay("DM1B_POSITION_CHECK %~t (%d,%d) (%d,%d)\n",
-		32, r->rcb_tcb_ptr->tcb_rel.relid.db_tab_name,
+		t->tcb_relid_len, r->rcb_tcb_ptr->tcb_rel.relid.db_tab_name,
 		r->rcb_pos_info[RCB_P_GET].bid.tid_tid.tid_page,
 		r->rcb_pos_info[RCB_P_GET].bid.tid_tid.tid_line,
 		r->rcb_lowtid.tid_tid.tid_page,
@@ -11411,6 +11413,7 @@ btree_reposition(
     bool		split_done = FALSE;
     i4			tidpartno;
     i4		    *err_code = &dberr->err_code;
+    i4			local_error;
     DMP_POS_INFO   *savepos;
     DMP_POS_INFO   origpos;
     DMPP_PAGE		**leaf;
@@ -11760,16 +11763,24 @@ btree_reposition(
 
     if (s != E_DB_OK || !key_found) 
     {
-	TRdisplay("DM1B-REPOS pop %d tran %x Bid:(%d,%d) status %d \n"
-	    "\t    POS Bid:(%d,%d) Tid:(%d,%d) LSN=(%x,%x)\n"
-	    "\t    POS cc %d nextleaf %d page_stat %x %v\n",
-	    pop, r->rcb_tran_id.db_low_tran,
+	TRdisplay("DM1B-REPOS Session ID 0x%p op %d page 0x%p (%d,%d) %~t\n"
+	    "    pop %d tran %x lgid %d Bid:(%d,%d) status %d \n"
+	    "    POS Bid:(%d,%d) Tid:(%d,%d) LSN=(%x,%x) Line %d\n"
+	    "    POS cc %d nextleaf %d page_stat %x %v\n"
+	    "    POS page 0x%p page tran %x\n"
+	    "    POS row tran %x row lgid %d\n",
+	    r->rcb_sid, r->rcb_dmr_opcode, leafPinfo->page,
+	    t->tcb_rel.reltid.db_tab_base, t->tcb_rel.reltid.db_tab_index,
+	    t->tcb_relid_len, t->tcb_rel.relid.db_tab_name,
+	    pop, r->rcb_tran_id.db_low_tran, (i4)r->rcb_slog_id_id,
 	    bid->tid_tid.tid_page, bid->tid_tid.tid_line, s,
 	    savepos->bid.tid_tid.tid_page, savepos->bid.tid_tid.tid_line,
 	    savepos->tidp.tid_tid.tid_page, savepos->tidp.tid_tid.tid_line,
-	    savepos->lsn.lsn_low, savepos->lsn.lsn_high,
+	    savepos->lsn.lsn_low, savepos->lsn.lsn_high, savepos->line,
 	    savepos->clean_count, savepos->nextleaf,
-	    savepos->page_stat, PAGE_STAT, savepos->page_stat);
+	    savepos->page_stat, PAGE_STAT, savepos->page_stat,
+	    savepos->page, savepos->tran.db_low_tran,
+	    savepos->row_low_tran, (i4)(savepos->row_lg_id));
 
 	TRdisplay("DM1B-REPOS ");
         dmd_prkey(r, key_ptr, DM1B_PLEAF, (DB_ATTS**)NULL, (i4)0, (i4)0);
@@ -11795,7 +11806,13 @@ btree_reposition(
 		crib->crib_bos_lsn.lsn_low,
 		crib->crib_sequence,
 		crib->crib_lgid_low, crib->crib_lgid_high);
+
+		dmd_pr_mvcc_info(r);
 	}
+
+	/* query will always be printed for E_UL0017 */
+	uleFormat(NULL, E_UL0017_DIAGNOSTIC, (CL_ERR_DESC *)NULL, ULE_LOG, NULL, 
+	    (char *)NULL, (i4)0, (i4 *)NULL, &local_error, 1, 10, "DM1B_REPOS");
 
 	SETDBERR(dberr, 0, E_DM93F6_BAD_REPOSITION);
 	return (E_DB_ERROR);
@@ -12886,7 +12903,7 @@ dm1b_rowlk_access(
     }
 
     if (DMZ_AM_MACRO(5))
-    TRdisplay("REPOSITION after LKWAIT, xid %x table %d bid %x,%x tid %d,%d acc %d\n",
+    TRdisplay("REPOSITION after LKWAIT, xid %x table %d bid %d,%d tid %d,%d acc %d\n",
 	r->rcb_tran_id.db_low_tran, t->tcb_rel.reltid.db_tab_base,
 	save_bid.tid_tid.tid_page, save_bid.tid_tid.tid_line,
 	tid_to_lock->tid_tid.tid_page, tid_to_lock->tid_tid.tid_line, access);
@@ -14597,23 +14614,31 @@ i4		pop,
 i4		line)
 {									
     DMP_TCB	*t = r->rcb_tcb_ptr;
+    DMP_POS_INFO *pos = &r->rcb_pos_info[pop];
+    char	*tup_hdr;
 
-    r->rcb_pos_info[pop].bid.tid_i4 = (bidp)->tid_i4;			
-    DM1B_VPT_GET_PAGE_LOG_ADDR_MACRO(t->tcb_rel.relpgtype, 
-    b, r->rcb_pos_info[pop].lsn);					
-    r->rcb_pos_info[pop].clean_count = 					
-	DM1B_VPT_GET_BT_CLEAN_COUNT_MACRO(t->tcb_rel.relpgtype,b);
-    r->rcb_pos_info[pop].nextleaf =					
-	DM1B_VPT_GET_BT_NEXTPAGE_MACRO(t->tcb_rel.relpgtype, b);
-    r->rcb_pos_info[pop].page_stat =					
-	DM1B_VPT_GET_PAGE_STAT_MACRO(t->tcb_rel.relpgtype, b);
-    r->rcb_pos_info[pop].valid = TRUE;					
-    r->rcb_pos_info[pop].line = __LINE__;				
+    pos->bid.tid_i4 = (bidp)->tid_i4;			
+    DM1B_VPT_GET_PAGE_LOG_ADDR_MACRO(t->tcb_rel.relpgtype, b, pos->lsn);					
+    pos->clean_count =DM1B_VPT_GET_BT_CLEAN_COUNT_MACRO(t->tcb_rel.relpgtype,b);
+    pos->nextleaf = DM1B_VPT_GET_BT_NEXTPAGE_MACRO(t->tcb_rel.relpgtype, b);
+    pos->page_stat = DM1B_VPT_GET_PAGE_STAT_MACRO(t->tcb_rel.relpgtype, b);
+    pos->valid = TRUE;					
+    pos->line = line;				
+    pos->page = b;				
+    pos->tran = DM1B_VPT_GET_PAGE_TRAN_ID_MACRO(t->tcb_rel.relpgtype, b);
+    pos->row_low_tran = 0;
+    pos->row_lg_id = 0;
     if ((bidp)->tid_tid.tid_line != DM_TIDEOF)			
     {									
+	DB_STATUS	entry_status;
+
 	dm1cxtget(t->tcb_rel.relpgtype,			
 	    t->tcb_rel.relpgsize, b, (bidp)->tid_tid.tid_line, 
-	    &r->rcb_pos_info[pop].tidp, (i4*)NULL);				
+	    &pos->tidp, (i4*)NULL);				
+
+	/* save the transaction information for the entry */
+	entry_status = dm1cx_txn_get(t->tcb_rel.relpgtype, b, 
+		(i4)bidp->tid_tid.tid_line, &pos->row_low_tran, &pos->row_lg_id);
 
 	/*
 	** Save key if RCB_P_GET
@@ -14687,8 +14712,8 @@ i4		line)
 		    lock_key.lk_key1 = t->tcb_dcb_ptr->dcb_id;
 		    lock_key.lk_key2 = t->tcb_rel.reltid.db_tab_base;
 		    lock_key.lk_key3 = reltidx;
-		    lock_key.lk_key4 = r->rcb_pos_info[pop].tidp.tid_tid.tid_page;
-		    lock_key.lk_key5 = r->rcb_pos_info[pop].tidp.tid_tid.tid_line;
+		    lock_key.lk_key4 = pos->tidp.tid_tid.tid_page;
+		    lock_key.lk_key5 = pos->tidp.tid_tid.tid_line;
 		    lock_key.lk_key6 = 0;
 		    /* Length of zero returned if no matching key */
 		    s = LKshow(flag, r->rcb_lk_id, (LK_LKID *)NULL, &lock_key, 
@@ -14707,11 +14732,19 @@ i4		line)
     /* For now use dm618 */
     if (DMZ_AM_MACRO(18))
     {
-	TRdisplay("Line %d %~t pop %d position bid %d %d tid %d %d\n",
-	    line, 32, t->tcb_rel.relid.db_tab_name, pop,
-	    r->rcb_pos_info[pop].bid.tid_tid.tid_page,
-	    r->rcb_pos_info[pop].bid.tid_tid.tid_line,
-	    r->rcb_pos_info[pop].tidp.tid_tid.tid_page,
-	    r->rcb_pos_info[pop].tidp.tid_tid.tid_line);
+	TRdisplay("DM1B-SAVEPOS (%d,%d) %~t\n"
+	    "    pop %d tran %x \n"
+	    "    POS Bid:(%d,%d) Tid:(%d,%d) LSN=(%x,%x)\n"
+	    "    POS cc %d nextleaf %d page_stat %x %v\n"
+	    "    POS page 0x%p tran %x\n",
+	    t->tcb_rel.reltid.db_tab_base, t->tcb_rel.reltid.db_tab_index,
+	    t->tcb_relid_len, t->tcb_rel.relid.db_tab_name,
+	    pop, r->rcb_tran_id.db_low_tran,
+	    pos->bid.tid_tid.tid_page, pos->bid.tid_tid.tid_line,
+	    pos->tidp.tid_tid.tid_page, pos->tidp.tid_tid.tid_line,
+	    pos->lsn.lsn_low, pos->lsn.lsn_high,
+	    pos->clean_count, pos->nextleaf,
+	    pos->page_stat, PAGE_STAT, pos->page_stat,
+	    pos->page, pos->tran.db_low_tran);
     }
 }

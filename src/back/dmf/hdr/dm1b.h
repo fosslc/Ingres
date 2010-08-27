@@ -226,6 +226,8 @@
 **          Define macros for setting and checking position information in rcb
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Replace DMPP_PAGE* with DMP_PINFO* where needed.
+**      09-Jun-2010 (stial01)
+**          Init new position information fields.
 **/
 
 
@@ -1605,6 +1607,9 @@ FUNC_EXTERN VOID	dm1b_position_save_fcn(
 	    r->rcb_pos_info[pop].nextleaf = 0;				\
 	    r->rcb_pos_info[pop].valid = FALSE;				\
 	    r->rcb_pos_info[pop].clean_count = DM1B_CC_INVALID;		\
+	    r->rcb_pos_info[pop].page = NULL;				\
+	    r->rcb_pos_info[pop].tran.db_low_tran = 0;			\
+	    r->rcb_pos_info[pop].tran.db_high_tran = 0;			\
 	}
 
 #define DM1B_POSITION_INVALIDATE_MACRO(r, pop)	\
@@ -1615,6 +1620,9 @@ FUNC_EXTERN VOID	dm1b_position_save_fcn(
 	    r->rcb_pos_info[pop].valid = FALSE;				\
 	    r->rcb_pos_info[pop].clean_count = DM1B_CC_INVALID;		\
 	    r->rcb_pos_info[pop].line = __LINE__;			\
+	    r->rcb_pos_info[pop].page = NULL;				\
+	    r->rcb_pos_info[pop].tran.db_low_tran = 0;			\
+	    r->rcb_pos_info[pop].tran.db_high_tran = 0;			\
 	}
 
 #define DM1B_POSITION_FORCE_MACRO(r, pop)				\

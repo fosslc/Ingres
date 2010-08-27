@@ -296,6 +296,8 @@
 **          dm1cxclean() Add rcb param, Skip clean if cursor is positioned on
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      09-Jun-2010 (stial01)
+**          Added dm1cx_txn_get()
 */
 
 static	i4	    lowest_offset(i4 page_type, i4 page_size, DMPP_PAGE *b);
@@ -4676,4 +4678,78 @@ dm1cx_dput(
     lp = DM1B_VPT_BT_SEQUENCE_MACRO(page_type, b);
     dmpp_vpt_set_new_macro(page_type, lp, pos + DM1B_OFFSEQ); 
     return (E_DB_OK);
+}
+
+
+/*
+** Name: dm1cx_txn_get		- Get transaction info for a leaf entry
+**
+** Description:
+**	This routine fetches the transaction information for an entry
+**	It is assumed that the entry is valid.
+**
+** Inputs:
+**      pgtype
+**	b			- the index page to use
+**	child			- the lineid portion of the entry to be fetched
+**
+** Outputs:
+**      row_low_tran
+**      row_lg_id
+**
+** Returns:
+**      DB_STATUS	
+**
+** History:
+**      09-Jun-2010 (stial01)
+**          Created.
+*/
+DB_STATUS
+dm1cx_txn_get(i4 pgtype, DMPP_PAGE *b, i4 child, 
+i4 *row_low_tran, u_i2 *row_lg_id)
+{
+    char	    *key_ptr;
+    DB_STATUS       status;
+    char	    *tup_hdr;
+
+    status = E_DB_OK;
+    if ( row_low_tran )
+	*row_low_tran = 0;
+    if ( row_lg_id )
+	*row_lg_id = 0;
+    if ((i4)child >= DM1B_VPT_GET_BT_KIDS_MACRO(pgtype, b))
+	return (E_DB_ERROR);
+
+    key_ptr = (char *)dm1bvpt_keyof_macro(pgtype, b, (i4)child);
+    if ((pgtype != TCB_PG_V1) && 
+	(DM1B_VPT_GET_PAGE_STAT_MACRO(pgtype, b) & DMPP_INDEX) == 0)
+    {
+	/* Test for deleted row */
+	if (dmpp_vpt_test_free_macro(pgtype,  DM1B_V2_BT_SEQUENCE_MACRO(b),
+		(i4)child + DM1B_OFFSEQ))
+	{
+	    status = E_DB_WARN; /* TID points to deleted record */
+	}
+
+	if ( row_low_tran || row_lg_id )
+	{
+	    tup_hdr = dm1b_vpt_entry_macro(pgtype, b, (i4)child);
+
+	    if ( row_low_tran )
+	    {
+		MECOPY_CONST_4_MACRO(
+		    (PTR)tup_hdr + Dmpp_pgtype[pgtype].dmpp_lowtran_offset,
+		    row_low_tran);
+	    }
+
+	    if ( row_lg_id && Dmpp_pgtype[pgtype].dmpp_has_lgid )
+	    {
+		MECOPY_CONST_2_MACRO(
+		    (PTR)tup_hdr + Dmpp_pgtype[pgtype].dmpp_lgid_offset,
+		    row_lg_id);
+	    }
+	}
+    }
+
+    return (status);
 }

@@ -561,6 +561,9 @@
 **	    Add decryption call.
 **      29-Apr-2010 (stial01)
 **          dm1r_lock_value() set dberr if LOCK_QUOTA_EXCEEDED
+**	09-Jun-2010 (stial01)
+**          TRdisplay table id when there is an error
+**          dm1r_unlock_value, init relid for error messages, not just trace
 */
 
 /*
@@ -986,11 +989,13 @@ delete(
 		TMget_stamp(&tim);
 		TMstamp_str(&tim, err_buffer);
 		STprintf(err_buffer + STlength(err_buffer),
-		    " delete %d: status %d tid [%d,%d] record %p row_tran_id %x row_lg_id %d\n"
+		    " delete %d: status %d tbl(%d,%d) tid [%d,%d] record %p\n"
+		    " row_tran_id %x row_lg_id %d\n"
 		    " crib xid %x rcb tranid %x crib_bos_tranid %x\n"
 		    " log_id %d low_lsn %x commit %x bos %x\n",
-			__LINE__,
-			status,
+			__LINE__, status,
+			t->tcb_rel.reltid.db_tab_base,
+			t->tcb_rel.reltid.db_tab_index,
 			tid->tid_tid.tid_page, tid->tid_tid.tid_line,
 			record,
 			row_tran_id, row_lg_id,
@@ -5866,6 +5871,13 @@ DB_ERROR        *dberr)
     }
 
     lock_list = rcb->rcb_lk_id;
+
+    /* Init relid for errors and trace output */
+    if ( tcb->tcb_rel.relstat2 & TCB2_PARTITION )
+	relid = &tcb->tcb_pmast_tcb->tcb_rel.relid;
+    else
+	relid = &tcb->tcb_rel.relid;
+
     /* Output a lock trace message if tracing is enabled. */
     if ((DMZ_SES_MACRO(1)) || 
 	(rcb->rcb_val_lkid.lk_common == 0 && rcb->rcb_val_lkid.lk_unique == 0))
@@ -5874,13 +5886,9 @@ DB_ERROR        *dberr)
     	lock_key.lk_key1 = (i4)tcb->tcb_dcb_ptr->dcb_id;
     	lock_key.lk_key2 = tcb->tcb_rel.reltid.db_tab_base;
     	lock_key.lk_key3 = tcb->tcb_rel.reltid.db_tab_index;
-	relid = &tcb->tcb_rel.relid;
 	/* Lock against master if this is a partition */
 	if ( tcb->tcb_rel.relstat2 & TCB2_PARTITION )
-	{
 	    lock_key.lk_key3 = 0;
-	    relid = &tcb->tcb_pmast_tcb->tcb_rel.relid;
-	}
 
 	atts_array = tcb->tcb_key_atts;
 	atts_count = tcb->tcb_keys;

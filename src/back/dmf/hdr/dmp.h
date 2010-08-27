@@ -530,6 +530,8 @@
 **	14-May-2010 (thaju02) Bug 123709
 **	    Add LOG_ESC_MACRO to determine if lock escalation msgs are to 
 **	    be suppressed. 
+**      09-Jun-2010 (stial01)
+**          Add fields to DMP_POS_INFO.
 */
 
 /*
@@ -1516,6 +1518,10 @@ struct _DMP_POS_INFO {
     DM_PAGENO	nextleaf;		/* page nextpage */
     i4		line;			/* line number for diagnostics */
     i1		valid;
+    DMPP_PAGE	*page;			/* for debugging */
+    DB_TRAN_ID  tran;			/* for debugging */
+    u_i4	row_low_tran;		/* for debugging */
+    u_i2	row_lg_id;		/* for debugging */
 };
 
 

@@ -310,6 +310,8 @@
 **      10-May-2010 (stial01)
 **          dmve_bid_check() if re-inserting key we are positioned on, no
 **          restrictions on dm1cxclean. Added dmve_bid_check_error.
+**      09-Jun-2010 (stial01)
+**          More mvcc trace output for bid check errors.
 */
 
 /*
@@ -3028,6 +3030,8 @@ DMPP_PAGE	    *page)
 		sizeof(tmprec), (PTR)&tmprec);
 	    dmd_log(FALSE, tmprec, ((DM0L_HEADER *)tmprec)->length);
 	}
+
+	dmd_pr_mvcc_info(rcb);
     }
 
     return (E_DB_OK);

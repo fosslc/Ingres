@@ -559,6 +559,8 @@
 **          dm1bxdelete() More validation of entry to be deleted
 **	10-May-2010 (stial01)
 **          Init DMP_PINFO with DMP_PINIT
+**	09-Jun-2010 (stial01)
+**          TRdisplay more info when there is an error
 **/
 
 /*
@@ -2316,7 +2318,42 @@ dm1bxinsert(
 		(char *)NULL, (i4)0, (i4 *)NULL, err_code, 4,
 		0, child, 0, DM1B_VPT_GET_PAGE_PAGE_MACRO(page_type, b),
 		0, DM1B_VPT_GET_BT_KIDS_MACRO(page_type, b), 0, klen);
-	    dmd_prindex(rcb, b, 1);
+
+	    if (r && !index_update && (row_locking(r) || crow_locking(r)))
+	    {
+		DMP_POS_INFO   *pos;
+
+		pos = &r->rcb_pos_info[RCB_P_ALLOC];
+		TRdisplay("DM1B-PUT Session ID: 0x%p op %d page 0x%p\n"
+		    "    table (%d,%d) %~t\n"
+		    "    tran %x lgid %d Bid:(%d,%d) status %d compare %d\n"
+		    "    POS Bid:(%d,%d) Tid:(%d,%d) LSN=(%x,%x) Line %d\n"
+		    "    POS cc %d nextleaf %d page_stat %x %v\n"
+		    "    POS page 0x%p page tran %x\n"
+		    "    POS row tran %x row lgid %d\n",
+		    r->rcb_sid, r->rcb_dmr_opcode, b,
+		    tcb->tcb_rel.reltid.db_tab_base,
+		    tcb->tcb_rel.reltid.db_tab_index,
+		    sizeof(DB_TAB_NAME), tcb->tcb_rel.relid.db_tab_name,
+		    r->rcb_tran_id.db_low_tran, (i4)r->rcb_slog_id_id,
+		    bid.tid_tid.tid_page, bid.tid_tid.tid_line, status, compare,
+		    pos->bid.tid_tid.tid_page, pos->bid.tid_tid.tid_line,
+		    pos->tidp.tid_tid.tid_page, pos->tidp.tid_tid.tid_line,
+		    pos->lsn.lsn_low, pos->lsn.lsn_high, pos->line,
+		    pos->clean_count, pos->nextleaf,
+		    pos->page_stat, PAGE_STAT, pos->page_stat,
+		    pos->page, pos->tran.db_low_tran,
+		    pos->row_low_tran, (i4)(pos->row_lg_id));
+	    }
+
+	    if (r )
+	    {
+		TRdisplay("DM1B-PUT ");
+		dmd_prkey(r, save_key, index_update ? DM1B_PINDEX : DM1B_PLEAF, 
+			    (DB_ATTS**)NULL, (i4)0, (i4)0);
+		dmd_prindex(r, b, 1);
+	    }
+
 	    SETDBERR(dberr, 0, E_DM93B9_BXINSERT_ERROR);
 	    return (E_DB_ERROR);
 	}
@@ -8350,6 +8387,29 @@ dm1bxreserve(
 			    t->tcb_rel.relpgtype, t->tcb_rel.relpgsize, child );
 		break;
 	    }
+	}
+	else
+	{
+#ifdef xDEBUG
+	    i4		entry_status;
+	    u_i4	rec_low_tran;
+	    u_i2	rec_lg_id;
+
+	    /* Check once more if delete is committed */
+	    entry_status = dm1cx_txn_get(t->tcb_rel.relpgtype, leaf, 
+		(i4)bid->tid_tid.tid_line, &rec_low_tran, &rec_lg_id);
+
+	    if ( entry_status != E_DB_WARN  ||
+	        (!(rec_low_tran == r->rcb_tran_id.db_low_tran &&
+			rec_lg_id == r->rcb_slog_id_id)
+			&& IsTranActive(rec_lg_id, rec_low_tran)) )
+	    {
+		TRdisplay("tran %x %d re-using entry (%d,%d) having tran %x %d\n",
+		r->rcb_tran_id.db_low_tran, (i4)r->rcb_slog_id_id,
+		bid->tid_tid.tid_page, bid->tid_tid.tid_line,
+		rec_low_tran, (i4)rec_lg_id);
+	    }
+#endif
 	}
 
 	/*
