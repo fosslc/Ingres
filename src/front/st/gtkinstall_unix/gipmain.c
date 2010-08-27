@@ -201,6 +201,10 @@
 **	    For installs and modifies, save the response file off to 
 **	    /var/lib/ingres/XX so that we can find it for subsequent
 **	    installations and not inadvertantly overwrite config
+**	01-Jul-2010 (hanje04)
+**	    BUG 124256
+**	    Stop miss reporting errors whilst cleaning up temporary
+**	    files. Also don't give up first error, process the whole list.
 */
 
 # define RF_VARIABLE "export II_RESPONSE_FILE"
@@ -775,11 +779,11 @@ remove_temp_files( void )
 	if ( *stdiofiles[i] )
 	{
 	    LOfroms( PATH & FILENAME, stdiofiles[i], &tmpfileloc );
-	    if ( LOexist( &tmpfileloc ) )
+	    if ( LOexist( &tmpfileloc ) == OK )
         	clstat = LOdelete( &tmpfileloc );
 
 	    if ( clstat != OK )
-		return( clstat );
+		DBG_PRINT("Error occurred removing %s\n", stdiofiles[i]);
 	}
 	i++;
     }
