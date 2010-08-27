@@ -80,9 +80,10 @@ else
       echo "Processing revision: ${CurrentRev}"
       echo "================================"
       echo "Pulling patch: ${CurrentRev} from svn"
-      ChangeList="${CurrentRev}.txt"
-      TempList="${CurrentRev}.tmp"
-      CommitMessage="${CurrentRev}.message"
+
+      ChangeList="${CurrentRev}.import_txt"
+      TempList="${CurrentRev}.import_tmp"
+      CommitMessage="${CurrentRev}.import_msg"
 
       # Get a list of affected files for this revision
       # we're going to update each one in turn by downloading from svn
@@ -165,6 +166,7 @@ else
 
       # Add the revision number to the log
       echo "${CurrentRev}" >> ${RevLog}
+      git add ${RevLog}
 
       # Commit, with the same commit message
       git commit -F ${CommitMessage}
