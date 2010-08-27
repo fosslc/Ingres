@@ -603,6 +603,11 @@ static STATUS check_char(
 **	    Don't hose the flags in the caller's DMTCB.  Just leave them
 **	    alone, so caller doesn't have to recompute the flags to re-use
 **	    the DMTCB.  Recognize new multi-row and manual end-of-row flags.
+**	13-Jul-2010 (jonj)
+**	    When opening etabs, don't use crib_sequence as dmt_sequence;
+**	    dmpe now sets dmt_sequence to the current statement's value,
+**	    which may well differ from the sequence on which the CRIB
+**	    was formed.
 */
 
 DB_STATUS
@@ -734,8 +739,6 @@ DMT_CB   *dmt_cb)
 	    }
 	    if ( crib->crib_rcb_state & RCB_CONSTRAINT )
 	        dmt->dmt_flags_mask |= DMT_CONSTRAINT;
-
-	    dmt->dmt_sequence = crib->crib_sequence;
 
 	    if ( access_mode == DMT_A_WRITE )
 	        dmt->dmt_lock_mode = DMT_MIX;
@@ -1187,6 +1190,10 @@ DMT_CB   *dmt_cb)
 	    else
 	    {
 		/*
+		** Etabs (DMT_CRIBPTR) always use the passed
+		** CRIB regardless of the current dmt_sequence, which
+		** may well be different than what's in crib_sequence.
+		**
 		** If not a constraint and MVCC read_committed 
 		** and this begins a new statement,
 		** then establish the statement's CR point in time
@@ -1200,7 +1207,8 @@ DMT_CB   *dmt_cb)
 		** NB: Parallel threads using shared log transactions
 		**     share the same CRIB (see dmx_begin).
 		*/
-		if ( !(r->rcb_state & RCB_CONSTRAINT) &&
+		if ( !(dmt->dmt_flags_mask & DMT_CRIBPTR) &&
+		     !(r->rcb_state & RCB_CONSTRAINT) &&
 		      r->rcb_crib_ptr->crib_sequence != dmt->dmt_sequence )
 		{
 		    i4		lgShowFlag;
