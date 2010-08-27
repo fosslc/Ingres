@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1987, 2001 Ingres Corporation
+** Copyright (c) 1987, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -538,6 +538,23 @@ IIGCa_call( i4  service_code, GCA_PARMLIST *parmlist, i4  indicators,
 **	    GCA_TERMINATE to be synchronized to protect the sync
 **	    service parms.  Synchronization requires an ACB, so 
 **	    the registration ACB is used.  
+**	23-Aug-10 (rajus01) Bug 124283, SD issues: 146267 and 146126.
+**	    The DBMS server takes program exception during 'ingstart'
+**	    due to mis-configuration of GCF/GCN security parameters.
+**	    SIR 120874 enhanced debugging in DBMS. As a result the CL_ERR_DESC 
+**	    structure has been changed to include errfile and errline. 
+**	    During 'ingstart' the Name Server fails to start due to
+**	    mis-configured security mechanism. The GCN startup is ignored
+**	    during ingstart and it continues to start the DBMS server. The
+**	    DBMS server checks for errline and errfile which were pointing
+**	    to some bogus memory area thus resulting in SEGV. Upon start of the 
+**	    recovery server a GCA_INITIATE request is made and this request 
+**	    fails with GC1003 error. A CL/OS request was not made yet.
+**	    Further GCA/DBMS research indicated that GCA parameter 
+**	    'gca_os_status'of type CL_ERR_DESC needs to be zero filled 
+**	    prior to use. Use CL_CLEAR_ERR to clear the 'gca_os_status' value. 
+**	    Clearing this value elimated the annoying ULE_FORMAT error 
+**	    and program exception in DBMS. 
 */
 
 STATUS
@@ -878,6 +895,7 @@ IIGCa_cb_call
 
 	svc_parms->gc_parms.gc_cb = acb ? acb->gc_cb : NULL;
 	svc_parms->gc_parms.status = 0;
+        CL_CLEAR_ERR(&parmlist->gca_all_parms.gca_os_status);
 	svc_parms->gc_parms.sys_err = &parmlist->gca_all_parms.gca_os_status;
 	svc_parms->gc_parms.flags.run_sync = run_sync;
 	svc_parms->gc_parms.flags.flow_indicator = subchan;
