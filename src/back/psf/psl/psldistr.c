@@ -966,6 +966,9 @@ psl_rg2_reg_distr_idx(
 **	    minor modification to support register procedure
 **	07-jan-02 (toumi01)
 **	    Replace DD_300_MAXCOLUMN with DD_MAXCOLUMN (1024).
+**	11-Jun-2010 (kiria01) b123908
+**	    Initialise pointers after psf_mopen would have invalidated any
+**	    prior content.
 */
 DB_STATUS
 psl_rg3_reg_tvi(
@@ -992,6 +995,7 @@ psl_rg3_reg_tvi(
 
     if (status != E_DB_OK)
 	return (status);
+    sess_cb->pss_stk_freelist = NULL;
 
     /* Allocate the QEU *-level info block for REGISTER */
     status = psf_malloc(sess_cb, &sess_cb->pss_ostream, sizeof(QED_DDL_INFO),
@@ -1796,6 +1800,9 @@ psl_ds1_dircon(
 **	    Condensed from 6.4 Star module psqsttxt.c
 **	24-sep-1992 (barbara)
 **	    Reversed arguments to STcat.
+**	11-Jun-2010 (kiria01) b123908
+**	    Initialise pointers after psf_mopen would have invalidated any
+**	    prior content.
 */
 DB_STATUS
 psl_ds2_dir_exec_immed(
@@ -1833,6 +1840,7 @@ psl_ds2_dir_exec_immed(
 			&psq_cb->psq_error);
     if (status != E_DB_OK)
 	return (status);
+    sess_cb->pss_stk_freelist = NULL;
 
     arg_len = sizeof("execute immediate ") + STlength(exec_arg); 
     status = psf_malloc(sess_cb, &sess_cb->pss_ostream, arg_len + sizeof(PSQ_QDESC) +2,

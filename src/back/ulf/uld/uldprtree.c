@@ -105,6 +105,8 @@
 **     28-Oct-2009 (maspa05) b122725
 **          ult_print_tracefile now uses integer constants instead of string
 **          for type parameter - SC930_LTYPE_PARM instead of "PARM" and so on
+**	11-Jun-2010 (kiria01) b123908
+**	    Init ulm_streamid_p for ulm_openstream to fix potential segvs.
 **/
 
 /*
@@ -450,6 +452,7 @@ uld_prtree_x( PTR root, VOID (*printnode)(), PTR (*leftson)(), PTR (*rightson)()
     /* open the private memory stream and allocate ULD_STORAGE */
     ulm_rcb.ulm_flags = ULM_PRIVATE_STREAM | ULM_OPEN_AND_PALLOC;
     ulm_rcb.ulm_psize	    = sizeof (ULD_STORAGE);
+    ulm_rcb.ulm_streamid_p = NULL;
     if ((status = ulm_openstream(&ulm_rcb)) != E_DB_OK)
     {
 	 (VOID) ule_format(ulm_rcb.ulm_error.err_code, (CL_ERR_DESC *)NULL,

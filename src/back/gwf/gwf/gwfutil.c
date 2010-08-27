@@ -476,6 +476,8 @@ gwu_copen(DMT_CB	*dmt,
 **	06-oct-93 (swm)
 **	    Bug #56443
 **	    Changed tcb_dbid, rcb_dbid to PTR as gwr_database_id is now PTR.
+**	11-Jun-2010 (kiria01) b123908
+**	    Remove possibility of updating released data in ulm_closestream
 */
 DB_STATUS
 gwu_deltcb(GW_RCB *gw_rcb, i4  exist_flag, DB_ERROR *err )
@@ -602,10 +604,15 @@ gwu_deltcb(GW_RCB *gw_rcb, i4  exist_flag, DB_ERROR *err )
 	if (status == E_DB_OK)
 	{
 	    ULM_RCB	ulm_rcb;
-
+	    SIZE_TYPE	memleft;
 	    /*** First deallocate any gateway specific tcb */
-
+	    /* The copy and reassignment of memleft is to avoid
+	    ** an illegal memory access in ulm_closestream
+	    ** which will cause a released block to be updated with the
+	    ** memleft details. */
+	    memleft = tlist->gwt_tcb_memleft;
 	    STRUCT_ASSIGN_MACRO(tlist->gwt_tcb_mstream, ulm_rcb);
+	    ulm_rcb.ulm_memleft = &memleft;
 	    if ((status = ulm_closestream(&ulm_rcb))
 		    != E_DB_OK)
 	    {

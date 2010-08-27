@@ -1366,6 +1366,9 @@ qe_copy->qeu_tup_length = qe_copy->qeu_tup_physical;
 **          specified for the COPY statement. 
 **	05-Feb-2009 (kiria01) b121607
 **	    Changed qmode type to reflect the change from i4 to PSQ_MODE.
+**	11-Jun-2010 (kiria01) b123908
+**	    Initialise pointers after psf_mopen would have invalidated any
+**	    prior content.
 */
 DB_STATUS
 psl_cp2_copstmnt(
@@ -1393,6 +1396,7 @@ psl_cp2_copstmnt(
     status = psf_mopen(sess_cb, QSO_QP_OBJ, &sess_cb->pss_ostream, err_blk);
     if (status != E_DB_OK)
 	return (status);
+    sess_cb->pss_stk_freelist = NULL;
 
     status = psf_malloc(sess_cb, &sess_cb->pss_ostream, sizeof(QEF_RCB),
 		&sess_cb->pss_object, err_blk);

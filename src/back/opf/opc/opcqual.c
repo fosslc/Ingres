@@ -1111,6 +1111,8 @@ opc_cqual(
 **	    for big IN lists.
 **	03-Nov-2009 (kiria01) b122822
 **	    Support both sorted and traditional INLIST form for generality
+**	11-Jun-2010 (kiria01) b123908
+**	    Don't access non-existant fields from PST_OPERAND nodes.
 */
 #define	    OPC_CNSTEXPR    1
 #define	    OPC_NOTCONST    2
@@ -1654,7 +1656,11 @@ opc_cqual1(
         	if (!resqnode)
                     break;
                 lqnode = resqnode->pst_right;   /* point to the operand */
-		cnvrtid = resqnode->pst_sym.pst_value.pst_s_op.pst_oprcnvrtid;
+		/* We should set cnvrtid from resqnode->pst_sym.pst_value
+		** .pst_s_op.pst_oprcnvrtid except this is a PST_OPERAND
+		** node that doesn't have pst_oprcnvrtid! For now it is
+		** sufficient that the value is not ADI_NILCOERCE */
+		cnvrtid = 0;
             }
 	    else
 	    {

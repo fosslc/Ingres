@@ -99,6 +99,8 @@
 **      23-Nov-2005 (horda03) Bug 115554/INGSRV3518
 **          During shutdown, Master Object Header CONDITION memory was not
 **          being released, leading to memory access errors.
+**	11-Jun-2010 (kiria01) b123908
+**	    Init ulm_streamid_p for ulm_openstream to fix potential segvs.
 **/
 
 
@@ -234,7 +236,6 @@ qsr_startup( QSF_RCB *qsf_rb )
 #define	QS0_MIN_HASH_BUCKETS	 100	/* Smallest # hash buckets allowed */
 #define	QS0_MAX_HASH_BUCKETS   MAXI2	/* Largest # hash buckets allowed */
 
-
     /* Calculate size of memory pool to ask ULM for */
     /* -------------------------------------------- */
     if (qsf_rb->qsf_pool_sz > 0)
@@ -276,6 +277,7 @@ qsr_startup( QSF_RCB *qsf_rb )
     /* Open stream and alocate QSR_CB with one effort */
     ulm_rcb.ulm_flags = ULM_PRIVATE_STREAM | ULM_OPEN_AND_PALLOC;
     ulm_rcb.ulm_psize = sizeof(QSR_CB);
+    ulm_rcb.ulm_streamid_p = NULL;
 
     status = ulm_openstream(&ulm_rcb);
     if (DB_FAILURE_MACRO(status))

@@ -73,6 +73,8 @@
 **	    must be exported as REFERENCE_IN_DLL.
 **	12-Oct-2008 (kiria01) SIR121012
 **	    Added MO hooks for PSF.
+**	11-Jun-2010 (kiria01) b123908
+**	    Init ulm_streamid_p for ulm_openstream to fix potential segvs.
 [@history_template@]...
 **/
 
@@ -202,7 +204,6 @@ psq_startup(
     DB_STATUS		status;
     SIZE_TYPE		memleft;
 
-
     /* Start out with no error */
     psq_cb->psq_error.err_code = E_PS0000_OK;
 
@@ -259,6 +260,8 @@ psq_startup(
 	    &psq_cb->psq_error, 0);
 	return (status);
     }
+    ulm_rcb.ulm_streamid_p = NULL;
+    ulm_rcb.ulm_flags = ULM_SHARED_STREAM;
     if ((status = ulm_openstream(&ulm_rcb)) != E_DB_OK)
     {
 	if (ulm_rcb.ulm_error.err_code == E_UL0005_NOMEM)

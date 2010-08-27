@@ -49,6 +49,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	11-Jun-2010 (kiria01) b123908
+**	    Init ulm_streamid_p for ulm_openstream to fix potential segvs.
 **/
 
 /*
@@ -203,6 +205,7 @@ urs_startup(URSB		*ursb)
 	ulm->ulm_flags     = ULM_PRIVATE_STREAM;
 	ulm->ulm_memleft   = &Urs_mgr_cb->ursm_memleft;
 	Urs_mgr_cb->ursm_memleft = URS_APPMEM_DEFAULT;
+	ulm->ulm_streamid_p = NULL;
 	if ((status = ulm_openstream(ulm)) != E_DB_OK)
 	{
 	    urs_error(ulm->ulm_error.err_code, URS_INTERR, 0);
@@ -492,6 +495,7 @@ srvr_memory(URS_MGR_CB	*ursm,
 	ulm->ulm_flags     = ULM_PRIVATE_STREAM | ULM_OPEN_AND_PALLOC;
 	ulm->ulm_memleft   = &ursm->ursm_memleft;
 	ursm->ursm_memleft = URS_APPMEM_DEFAULT;
+	ulm->ulm_streamid_p = NULL;
 	if ((status = ulm_openstream(ulm)) != E_DB_OK)
 	{
 	    urs_error(ulm->ulm_error.err_code, URS_INTERR, 0);
@@ -518,6 +522,7 @@ srvr_memory(URS_MGR_CB	*ursm,
 	ulm->ulm_flags = ULM_PRIVATE_STREAM;
 	ulm->ulm_memleft = &fas->fas_srvr_memleft;
 	fas->fas_srvr_memleft = URS_APPMEM_DEFAULT;
+	ulm->ulm_streamid_p = NULL;
 	if ((status = ulm_openstream(ulm)) != E_DB_OK)
 	{
 	    urs_error(ulm->ulm_error.err_code, URS_INTERR, 0);
@@ -629,6 +634,7 @@ appl_startup(URS_MGR_CB		*ursm,
 	ulm->ulm_flags = ULM_PRIVATE_STREAM;
 	ulm->ulm_memleft = &appl->fas_appl_memleft;
 	appl->fas_appl_memleft = URS_APPMEM_DEFAULT;
+	ulm->ulm_streamid_p = NULL;
 	if ((status = ulm_openstream(ulm)) != E_DB_OK)
 	{
 	    urs_error(ulm->ulm_error.err_code, URS_INTERR, 0);

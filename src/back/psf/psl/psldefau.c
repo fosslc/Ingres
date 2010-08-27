@@ -2105,6 +2105,9 @@ psl_make_default_node(
 **	    Force psl_mk_const_similar to generate coercion to cleanly 
 **	    enable correct datatype to be represented when substituting
 **	    default values.
+**	11-Jun-2010 (kiria01) b123908
+**	    Switch the order of b121034 check to ensure that the block is
+**	    a resdom prior to checking its content.
 */
 DB_STATUS
 psl_check_defaults(
@@ -2297,8 +2300,8 @@ psl_check_defaults(
 	/* But not after the end of the RESDOM list (kibro01) b121034 */
 	pnode = &root_node->pst_left;
 	while ((node = *pnode) &&
-		node->pst_sym.pst_value.pst_s_rsdm.pst_rsno > resdom.pst_rsno &&
-		node->pst_sym.pst_type == PST_RESDOM)
+		node->pst_sym.pst_type == PST_RESDOM &&
+		node->pst_sym.pst_value.pst_s_rsdm.pst_rsno > resdom.pst_rsno)
 	    pnode = &node->pst_left;
 	resdom_node->pst_left = node;
 	*pnode = resdom_node;

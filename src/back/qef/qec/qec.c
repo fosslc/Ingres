@@ -263,6 +263,8 @@
 **          Added QEF_TRACE_IMMEDIATE_ULM_POOLMAP. User can now run
 **          "set trace point qe41 2" to generate a pool map of QEF's
 **          sort and DSH memory pools.
+**	11-Jun-2010 (kiria01) b123908
+**	    Init ulm_streamid_p for ulm_openstream to fix potential segvs.
 **/
 
 
@@ -405,6 +407,7 @@ QEF_SRCB       *qef_srcb )
     ULH_RCB	ulh_rcb;
     ULM_RCB	ulm_rcb;
 
+    MEfill(sizeof(ULM_RCB), 0, (PTR)&ulm_rcb);
     /* Validate request block */
     if (qef_srcb->qef_qpmax < 0 || qef_srcb->qef_dsh_maxmem < 0)
     {
@@ -429,6 +432,7 @@ QEF_SRCB       *qef_srcb )
     /* Open a SHARED memory stream and allocate the QEF server control block */
     ulm_rcb.ulm_flags = ULM_SHARED_STREAM | ULM_OPEN_AND_PALLOC;
     ulm_rcb.ulm_psize = sizeof (QEF_S_CB);
+    ulm_rcb.ulm_streamid_p = NULL;
 
     status = ulm_openstream(&ulm_rcb);
     if (status != E_DB_OK)

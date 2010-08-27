@@ -96,6 +96,8 @@
 **          Removed gwxit.h inclusion which is not required.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	11-Jun-2010 (kiria01) b123908
+**	    Init ulm_streamid_p for ulm_openstream to fix potential segvs.
 */
 
 /*
@@ -320,6 +322,7 @@ gws_init( GW_RCB *gw_rcb )
 	** defining private streams for each session.
 	*/
 	ulm_rcb.ulm_flags = ULM_PRIVATE_STREAM;
+	ulm_rcb.ulm_streamid_p = NULL;
 
 	/* clear the per-exit SCB slots */
 	for (i=0; i < GW_GW_COUNT; ++i)

@@ -114,6 +114,8 @@
 **	    replace nat and longnat with i4
 **      7-oct-2004 (thaju02)
 **          Use SIZE_TYPE for memory pool > 2Gig.
+**	11-Jun-2010 (kiria01) b123908
+**	    Init ulm_streamid_p for ulm_openstream to fix potential segvs.
 **/
 
 /*
@@ -480,6 +482,7 @@ opc_prtree(
     /* open a private memory stream and get the memory in one call */
     ulm_rcb.ulm_flags = ULM_PRIVATE_STREAM | ULM_OPEN_AND_PALLOC;
     ulm_rcb.ulm_psize = sizeof(ULD_STORAGE);
+    ulm_rcb.ulm_streamid_p = NULL;
 
     if ((status = ulm_openstream(&ulm_rcb)) != E_DB_OK)
     {

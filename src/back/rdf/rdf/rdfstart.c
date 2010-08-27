@@ -91,6 +91,8 @@ static DB_STATUS rdf_rcluster(	RDF_GLOBAL	*global,
 **	    in rdu_ferror().
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	11-Jun-2010 (kiria01) b123908
+**	    Init ulm_streamid_p for ulm_openstream to fix potential segvs.
 **/
 
 /*{
@@ -463,6 +465,7 @@ rdf_startup(RDF_GLOBAL	*global,
 	/* create another shared stream to cache cluster information */
 	ulmrcb->ulm_memleft = &Rdi_svcb->rdv_memleft;
 	ulmrcb->ulm_flags = ULM_SHARED_STREAM;
+	ulmrcb->ulm_streamid_p = NULL;
 
 	status = ulm_openstream(ulmrcb); 
 	if (DB_FAILURE_MACRO(status))

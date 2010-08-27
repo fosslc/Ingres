@@ -353,6 +353,9 @@ psl_alter_table(
 **	    specific extension, which is a hinderance to app portability.
 **	    If psl_rngent returns E_DB_INFO it found a session temporary
 **	    table, which is invalid in this context, so return an error.
+**	11-Jun-2010 (kiria01) b123908
+**	    Initialise pointers after psf_mopen would have invalidated any
+**	    prior content.
 */
 DB_STATUS
 psl_alt_tbl(
@@ -482,11 +485,14 @@ psl_alt_tbl(
 
     if (psq_cb->psq_mode == PSQ_ALTERTABLE)
     {
-       status = psf_mopen(sess_cb, QSO_QTREE_OBJ, 
+	status = psf_mopen(sess_cb, QSO_QTREE_OBJ, 
 		          &sess_cb->pss_ostream, err_blk);
 		       
-       if (DB_FAILURE_MACRO(status))
-	   return (status);
+	if (DB_FAILURE_MACRO(status))
+	    return (status);
+	sess_cb->pss_stk_freelist = NULL;
+	sess_cb->pss_object = (PTR) 0;
+	sess_cb->pss_save_qeucb = (PTR) 0;
     }
 
     sess_cb->pss_resrng = rngvar;

@@ -361,6 +361,9 @@
 **	25-Mar-2010 (kiria01) b123535
 **	    Added call to psl_ss_flatten() to apply the flattening of
 **	    subselects in views too.
+**	11-Jun-2010 (kiria01) b123908
+**	    Initialise pointers after psf_mopen would have invalidated any
+**	    prior content.
 */
 DB_STATUS
 psl_cv1_create_view(
@@ -979,6 +982,7 @@ psl_cv1_create_view(
 		&psq_cb->psq_error);
 	    if (DB_FAILURE_MACRO(status))
 		goto cleanup;
+	    sess_cb->pss_stk_freelist = NULL;
 
 	    for (i = 0; i < qtree->pst_rngvar_count; i++)
 	    {
@@ -1656,6 +1660,7 @@ psl_cv2_viewstmnt(
 	    &psq_cb->psq_error);
 	if (status != E_DB_OK)
 	    return (status);
+	sess_cb->pss_stk_freelist = NULL;
     }
 
     /*
