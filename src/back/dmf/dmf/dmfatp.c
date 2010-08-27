@@ -556,6 +556,8 @@
 **          get_table_descriptor() init att->encwid
 **	03-Aug-2010 (miket) SIR 122403
 **	    In get_table_descriptor also set att->encflags.
+**	10-Aug-2010 (miket) SIR 122403 SD 146192
+**	    Audit encrypted tables in hex format.
 **/
 
 /*
@@ -6100,6 +6102,8 @@ PTR         jrecord)
     */
     if (! force_hexdump)
 	td = get_table_descriptor(atp, table_id);
+    if (td && td->data_rac.encrypted_attrs)
+	force_hexdump = TRUE;
 
     /*
     ** Initialize the record buffer.
@@ -6133,7 +6137,7 @@ PTR         jrecord)
     ** If the table is compressed, then uncompress the record and change
     ** our record pointer to point into the uncompress buffer.
     */
-    if (td && (comptype != TCB_C_NONE))
+    if (!force_hexdump && td && (comptype != TCB_C_NONE))
     {
 	/* Reset rowaccessor if journal record compression type doesn't
 	** match what it is currently set for.  The compression-control
@@ -6179,7 +6183,7 @@ PTR         jrecord)
         {
         case DM0LPUT:
 	    row_version = (u_i2)((DM0L_PUT *)jrecord)->put_row_version;
-	    if(td && (td->row_version != row_version))
+	    if(!force_hexdump && td && (td->row_version != row_version))
 	    {
 		convert_row = TRUE;
 	    }
@@ -6187,7 +6191,7 @@ PTR         jrecord)
 
         case DM0LDEL:
 	    row_version = (u_i2)((DM0L_DEL *)jrecord)->del_row_version;
-	    if(td && (td->row_version != row_version))
+	    if(!force_hexdump && td && (td->row_version != row_version))
 	    {
 		convert_row = TRUE;
 	    }
@@ -6219,10 +6223,10 @@ PTR         jrecord)
     l += 12;
 
     /*
-    ** If there is no tuple descriptor, then just format a hex dump
-    ** of the row.
+    ** If there is no tuple descriptor or the table is encrypted,
+    ** then just format a hex dump of the row.
     */
-    if (td == 0)
+    if ((td == 0) || force_hexdump)
     {
 	/*
 	** Hex dump the record.  We have already verified that there
@@ -6707,6 +6711,8 @@ DB_TAB_ID   *table_id)
 	    td->data_rac.att_count = rel_record.relatts;
 	    td->lobj_att_count = 0;
 	    td->row_version = rel_record.relversion;	
+	    if (rel_record.relencflags & TCB_ENCRYPTED)
+		td->data_rac.encrypted_attrs = TRUE;
 	    break;
 	}
 

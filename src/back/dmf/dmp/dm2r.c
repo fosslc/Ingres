@@ -6020,6 +6020,12 @@ BuildRtreeRecord(
 **	28-Apr-2010 (jonj) SD 144272
 **	    Use DMP_PINIT to fully initialize local pinfos, use
 **	    direct references to pinfo.page.
+**	11-Aug-2010 (miket) SIR 122403 SD 146244
+**	    For encryption the difference in the encrypted and unencrypted
+**	    buffer layouts and the fact that the external value can remain
+**	    the same while the internal value changes can confuse the
+**	    tuple change routine adt_compute_part_change, so use
+**	    adt_compute_change instead.
 */
 DB_STATUS
 dm2r_replace(
@@ -6448,7 +6454,8 @@ DB_ERROR	    *dberr )
 	delta_end = 0;
 	adf_cb = r->rcb_adf_cb;
 
-	if ( attset && (t->tcb_rel.relstat2 & TCB2_ALTERED) == 0 )
+	if ( attset && (t->tcb_rel.relstat2 & TCB2_ALTERED) == 0 &&
+		!(t->tcb_rel.relencflags & TCB_ENCRYPTED) )
 	{
 	    status = adt_compute_part_change(adf_cb,r->rcb_tcb_ptr->tcb_rel.relatts,
 		t->tcb_atts_ptr,record, r->rcb_record_ptr,
