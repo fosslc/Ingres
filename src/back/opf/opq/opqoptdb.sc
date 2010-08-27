@@ -1047,6 +1047,12 @@ i4                 attkdom)
 **      27-Nov-2006 (hanal04) Bug 117147
 **          Select column_ingdatatype into :es1_ingtype before using the
 **          value held in :es1_ingtype.
+**	26-july-10 (toumi01) BUG 124136
+**	    By default skip encrypted columns, unless they are named with
+**	    the -a flag or unless -ze is specified. (NOTE: for STAR the -a
+**	    flag must be used else encrypted columns WILL be included, a
+**	    limitation caused by lack of STAR iicolumns support for the
+**	    the attribute "column_encrypted".)
 */
 static bool
 att_list(
@@ -1539,6 +1545,7 @@ char		    **argv)
 	    i4          es1_keysq;
 	    char	*es1_rname;
 	    char	*es1_rowner;
+	    char	es1_encrypted[2];	/* Y/N */
 	exec sql end declare section;
 
         DB_ATT_STR	tempname;
@@ -1557,7 +1564,7 @@ char		    **argv)
           /*   
           **  Beginning of the special handling for Star DB
           **  This section should be removed once 
-          **  column_collid is supported by Star database.
+          **  column_collid and column_encrypted are supported by Star database.
           */
           if (g->opq_dbms.dbms_type & OPQ_STAR)
            {
@@ -1664,10 +1671,11 @@ char		    **argv)
            {
 	    exec sql repeated select column_name, column_datatype,
 		column_length, column_scale, column_collid, column_nulls,
-		column_sequence, key_sequence, column_internal_ingtype
+		column_sequence, key_sequence, column_internal_ingtype,
+		column_encrypted
 		into :es1_atname, :es1_type, :es1_len, :es1_scale,
 		     :es1_collID, :es1_nulls, :es1_atno, :es1_keysq, 
-		     :es1_ingtype
+		     :es1_ingtype, :es1_encrypted
 		from iicolumns
 		where table_name  = :es1_rname and
 		      table_owner = :es1_rowner
@@ -1698,7 +1706,8 @@ char		    **argv)
 		    continue;		/* skip non-keys in indexes/pkeys */
 		else if (adi_dtinfo(g->opq_adfcb, es1_ingtype, &typeflags)
 			== E_DB_OK && !(typeflags & AD_NOHISTOGRAM) &&
-			!overrun && doatt(attlst, es1_atno, ai, es1_keysq))
+			!overrun && doatt(attlst, es1_atno, ai, es1_keysq) &&
+			(opq_global.opq_encstats || es1_encrypted[0] == 'N'))
 		{
 		    if (ai >= g->opq_dbcaps.max_cols)
 		    {
@@ -1772,7 +1781,7 @@ char		    **argv)
          /*   
          **  Beginning of the special handling for Star DB
          **  This section should be removed once 
-         **  column_collid is supported by Star database.
+         **  column_collid and column_encrypted are supported by Star database.
          */
          if (g->opq_dbms.dbms_type & OPQ_STAR)  
           {
@@ -1863,9 +1872,10 @@ char		    **argv)
           {
 	    exec sql repeated select column_name, column_datatype,
 		column_length, column_scale, column_collid, column_nulls,
-		column_sequence, key_sequence
+		column_sequence, key_sequence, column_encrypted
 		into :es1_atname, :es1_type, :es1_len,
-		:es1_scale, :es1_collID, :es1_nulls, :es1_atno, :es1_keysq
+		:es1_scale, :es1_collID, :es1_nulls, :es1_atno, :es1_keysq,
+		:es1_encrypted
 		from iicolumns
 		where table_name  = :es1_rname and
 		      table_owner = :es1_rowner
@@ -1881,7 +1891,8 @@ char		    **argv)
 		    continue;		/* skip non-keys in indexes/pkeys */
 		if (adi_dtinfo(g->opq_adfcb, es1_ingtype, &typeflags)
 			== E_DB_OK && !(typeflags & AD_NOHISTOGRAM) &&
-			!overrun && doatt(attlst, es1_atno, ai, es1_keysq))
+			!overrun && doatt(attlst, es1_atno, ai, es1_keysq) &&
+			(opq_global.opq_encstats || es1_encrypted[0] == 'N'))
 		{
 		    if (ai >= g->opq_dbcaps.max_cols)
 		    {

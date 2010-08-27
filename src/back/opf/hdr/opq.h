@@ -573,6 +573,9 @@ typedef struct _OPQ_DBCAPS
 **	26-oct-05 (inkdo01)
 **	    Add opq_sample flag to distinguish real samples from 
 **	    uses of -zfq option that generate temp tables.
+**	26-jul-10 (toumi01)
+**	    Add opq_encstats flag to request histograms for encrypted
+**	    columns. The default behavior is to skip them.
 */
 typedef struct _OPQ_GLOBAL
 {
@@ -613,6 +616,9 @@ typedef struct _OPQ_GLOBAL
     bool	opq_sample;	/* Flag indicating whether "-zs" parm 
 				** was specified */
     bool	opq_hexout;	/* Flag indicating whether "-zhex" pam
+				** was specified */
+    bool	opq_encstats;	/* Flag indicating whether "-ze" parm asking
+				** for statistics for encrypted columns
 				** was specified */
 } OPQ_GLOBAL;
 

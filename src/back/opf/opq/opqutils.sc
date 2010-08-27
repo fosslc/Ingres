@@ -1893,6 +1893,9 @@ OPS_DTLENGTH	bound_length)
 **	    Add nosetstatistics boolean for new "-zy" optimizedb flag which
 **	    switches off 'set statistics' if it has already been run. This
 **	    change implements SIR 117405.
+**	26-jul-10 (toumi01) BUG 124136
+**	    Add opq_encstats flag to request statistics for encrypted
+**	    columns. The default behavior is to skip them.
 */
 bool
 badarglist(
@@ -1947,6 +1950,7 @@ bool		*nosample)
     g->opq_prec = OPQ_INIPREC;
     g->opq_lvrepf = FALSE;
     g->opq_newrepfest = FALSE;
+    g->opq_encstats = FALSE;
     g->opq_newquery = FALSE;
     g->opq_comppkey = FALSE;
     g->opq_nott = FALSE;
@@ -1988,6 +1992,10 @@ bool		*nosample)
 	else if (optimizedb && !STcompare(temp, "-zdn"))
 	{
 	    g->opq_newrepfest = TRUE;
+	}
+	else if (optimizedb && !STcompare(temp, "-ze"))
+	{
+	    g->opq_encstats = TRUE;
 	}
 	else if (optimizedb && !STcompare(temp, "-zfq"))
 	{
@@ -5008,6 +5016,8 @@ bool		statdump)
 **	    Add more new options - -zcpk, -zdn, -zfq, -znt.
 **	17-july-01 (inkdo01)
 **	    Add "-xr"
+**	26-july-10 (toumi01) BUG 124136
+**	    Add "-ze"
 */
 VOID
 opt_usage(VOID)
@@ -5030,7 +5040,7 @@ opt_usage(VOID)
         SIprintf("           optimizedb [-i filename] [-o filename]\n");
         SIprintf("           [-zv] [-zfq] [-zh] [-zk] [-zlr] [-zx]\n");
         SIprintf("           [-zdn] [-zcpk] [-zu#] [-zr#] [-zn#] [-zs#]\n");
-        SIprintf("           [-znt] [-zc] [-zp] [-zw]\n");
+        SIprintf("           [-znt] [-zc] [-zp] [-zw] [-ze]\n");
         SIprintf("           [ingres flags] dbname\n");
         SIprintf("	         {-rtablename {-acolumnname}} |\n");
         SIprintf("	         {-xrtablename}\n");
