@@ -106,6 +106,9 @@
 **	    Add ult-trace-qep decl.
 **      23-Jun-2010 (stial01) (B123971)
 **          Increase ULD_TSIZE for Long Ids (SIR 121123)
+**      03-aug-2010 (maspa05) bug 124161
+**          Bump sc930 version number for format change - hex output of BYTE
+**          and VBYTE values
 **/
 #ifndef TR_HDR_INCLUDED
 #include <tr.h>
@@ -704,7 +707,7 @@ FUNC_EXTERN void ult_print_tracefile(void *,i2 ,char *);
 FUNC_EXTERN void ult_close_tracefile(void *);
 FUNC_EXTERN bool ult_trace_qep(void);
 
-#define	SC930_VERSION		6	/* version of SC930 output */
+#define	SC930_VERSION		7	/* version of SC930 output */
 /* SC930 output line types */
 #define SC930_LTYPE_UNKNOWN		0
 #define SC930_LTYPE_ADDCURSORID		1
