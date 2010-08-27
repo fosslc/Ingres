@@ -554,6 +554,8 @@
 **	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
 **          Remove table name,owner from log records.
 **          get_table_descriptor() init att->encwid
+**	03-Aug-2010 (miket) SIR 122403
+**	    In get_table_descriptor also set att->encflags.
 **/
 
 /*
@@ -6892,6 +6894,7 @@ DB_TAB_ID   *table_id)
 	    att->type = attrrecord.attfmt;
 	    att->length = attrrecord.attfml;
 	    att->encwid = attrrecord.attencwid;
+	    att->encflags = attrrecord.attencflags;
 	    att->precision = attrrecord.attfmp;
 	    att->key = attrrecord.attkey;
 	    att->flag = attrrecord.attflag;
