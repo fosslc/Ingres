@@ -40,6 +40,8 @@ GLOBALREF	DMC_CRYPT	*Dmc_crypt;
 **	    Created.
 **	25-May-2010 (kschendel)
 **	    Add missing MH include.
+**	20-aug-2010 (miket) SIR 122403
+**	    Trap illegal encryption slot parameter.
 **/
 
 /*{
@@ -113,6 +115,12 @@ dm1e_aes_decrypt(DMP_RCB *r, DMP_ROWACCESS *rac, char *erec, char *prec,
     if (!(t->tcb_rel.relencflags & TCB_ENCRYPTED))
 	t = t->tcb_parent_tcb_ptr;	/* for secondary indices */
     cp = (DMC_CRYPT_KEY *)((PTR)Dmc_crypt + sizeof(DMC_CRYPT));
+    if (r->rcb_enckey_slot < 1)
+    {
+	TRdisplay("%@ Illegal parameter in dm1e_aes_decrypt: r->rcb_enckey_slot = %d\n",
+	    r->rcb_enckey_slot);
+	return (E_DB_ERROR);
+    }
     cp += r->rcb_enckey_slot-1;		/* slot is 1-based */
     MEcopy((PTR)cp->key,sizeof(key),key);	/* cache it locally */
     if ( cp->status == DMC_CRYPT_ACTIVE &&
@@ -292,6 +300,12 @@ dm1e_aes_encrypt(DMP_RCB *r, DMP_ROWACCESS *rac, char *prec, char *erec,
     if (!(t->tcb_rel.relencflags & TCB_ENCRYPTED))
 	t = t->tcb_parent_tcb_ptr;	/* for secondary indices */
     cp = (DMC_CRYPT_KEY *)((PTR)Dmc_crypt + sizeof(DMC_CRYPT));
+    if (r->rcb_enckey_slot < 1)
+    {
+	TRdisplay("%@ Illegal parameter in dm1e_aes_encrypt: r->rcb_enckey_slot = %d\n",
+	    r->rcb_enckey_slot);
+	return (E_DB_ERROR);
+    }
     cp += r->rcb_enckey_slot-1;		/* slot is 1-based */
     MEcopy((PTR)cp->key,sizeof(key),key);	/* cache it locally */
     if ( cp->status == DMC_CRYPT_ACTIVE &&

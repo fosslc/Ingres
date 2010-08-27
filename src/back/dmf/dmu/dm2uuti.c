@@ -6526,6 +6526,9 @@ DB_ERROR            *dberr)
 **	    Modify of catalog-stored AES keys is encrypting for
 **	    128/192/256 bits 3/3/4 blocks, but it should be 2/2/3
 **	    (see dm2u_create code and lengthy comment).
+**	21-Aug-2010 (miket) SIR 122403 SD 146013
+**	    Correct key cache lookup to use the db_tab_base of the record we
+**	    are modifying, not the last one on which we did a get!
 */
 DB_STATUS
 dm2u_modify_encrypt(
@@ -6853,7 +6856,7 @@ DB_ERROR	*dberr)
 	{
 	    /* found the entry for this record ... done */
 	    if ( cp->db_id == t->tcb_dcb_ptr->dcb_id &&
-		 cp->db_tab_base == rel.reltid.db_tab_base )
+		 cp->db_tab_base == m->mx_table_id.db_tab_base )
 		break;
 	    /* found first inactive slot ... remember */
 	    if ( cp->status == DMC_CRYPT_INACTIVE &&
@@ -6868,7 +6871,7 @@ DB_ERROR	*dberr)
 	if (dmu->dmu_enc_flags2 & DMU_NULLPASS)
 	{
 	    if ( cp->db_id == t->tcb_dcb_ptr->dcb_id &&
-		 cp->db_tab_base == rel.reltid.db_tab_base )
+		 cp->db_tab_base == m->mx_table_id.db_tab_base )
 	    {
 		MEfill(sizeof(DMC_CRYPT_KEY), 0, (PTR)cp);
 		cp->status = DMC_CRYPT_INACTIVE;
@@ -6883,7 +6886,7 @@ DB_ERROR	*dberr)
 	*/
 	{
 	    if ( cp->db_id == t->tcb_dcb_ptr->dcb_id &&
-		 cp->db_tab_base == rel.reltid.db_tab_base )
+		 cp->db_tab_base == m->mx_table_id.db_tab_base )
 	    	;			/* reuse our slot */
 	    else
 	    if ( cp_inactive != NULL)
@@ -6910,7 +6913,7 @@ DB_ERROR	*dberr)
 		MEfill(sizeof(DMC_CRYPT_KEY), 0, (PTR)cp);
 		MEcopy((PTR)decrypted_key, keybytes, (PTR)cp->key);
 		cp->db_id = t->tcb_dcb_ptr->dcb_id;
-		cp->db_tab_base = rel.reltid.db_tab_base;
+		cp->db_tab_base = m->mx_table_id.db_tab_base;
 		cp->status = DMC_CRYPT_ACTIVE;
 	    }
 	}
