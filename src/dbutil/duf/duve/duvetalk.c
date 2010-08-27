@@ -476,6 +476,8 @@ DUVE_CB		*duve_cb;
 **	25-feb-1998 (somsa01)
 **	    If SIgetrec() returns ENDFILE, keep trying until it's not.
 **	    This means that stdin is a file.
+**      22-Jul-2010 (coomi01) b124111
+**          Use lower case buffer in test for a 'No' reply.
 */
 
 /* VARARGS4 */
@@ -716,7 +718,7 @@ i4		    *p5_ptr;
 		}
 
 		if ( !STcompare("no", reply1) || 
-		    (reply[0] == 'n' && reply1[1] == '\0') )
+		    (reply1[0] == 'n' && reply1[1] == '\0') )
 		{
 		    break;
 		}
