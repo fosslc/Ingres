@@ -841,7 +841,7 @@ static DB_STATUS position_to_row(
 			DM_TID              *tid,
 			DB_ERROR            *dberr);
 
-DB_STATUS create_new_parts(
+static DB_STATUS create_new_parts(
 			DM2U_MXCB           *m,
 			DB_TAB_NAME         *tabname,
 			DB_OWN_NAME         *owner,
@@ -853,7 +853,7 @@ DB_STATUS create_new_parts(
 			i4                  relstat2,
 			DB_ERROR            *dberr);
 
-DB_STATUS get_online_rel(
+static DB_STATUS get_online_rel(
                         DM2U_MXCB           *m,
                         DB_TAB_ID           *modtemp_tabid,
                         DMU_CB              *index_cbs,
@@ -868,6 +868,19 @@ static DB_STATUS check_archiver(
 				LG_LSN		    *lsn,
 				DB_ERROR	    *dberr);
 
+static DB_STATUS init_readnolock(
+			DM2U_MXCB	*mxcb,
+			DM2U_OSRC_CB	*osrc,
+			DB_ERROR	*dberr);
+
+static DB_STATUS test_redo(
+			DM2U_OMCB	*omcb,
+			DM0L_HEADER	*record,
+			DB_TAB_ID	*log_tabid,
+			DM_PAGENO	log_page,
+			LG_LSN		*log_lsn,
+			bool		*redo,
+			DB_ERROR	*dberr);
 
 /*{
 ** Name: dm2u_modify - Modify a table's structure.
@@ -1457,6 +1470,14 @@ static DB_STATUS check_archiver(
 **	9-Jul-2010 (kschendel) SIR 123450
 **	    Index (btree) key compression is hardwired to old-standard for now.
 **	    So are catalogs (if compressed).
+**	16-Jul-2010 (jonj) BUG 124096
+**	    When modify DMU_ONLINE_START and adding partitions, qeu_modify_prep
+**	    does not create the new partitions. If the subject table is
+**	    already exclusively locked, we skip do_online_modify(), but
+**	    still need to create the partitions that QEU did not.
+**	    Made some static functions static, added function prototypes
+**	    for some that were missing.
+**	    
 */
 DB_STATUS
 dm2u_modify(
@@ -1560,6 +1581,7 @@ DB_ERROR        *dberr)
     i4			attnmsz;
     char		*nextattname;
     DB_ATTS		*curatt;
+    CL_ERR_DESC		sys_err;
 
     CLRDBERR(dberr);
 		
@@ -1654,34 +1676,95 @@ DB_ERROR        *dberr)
 
 	if (!mcb->mcb_temporary)
 	{
-	    i4		control_lock_mode = (mcb->mcb_flagsmask & DMU_ONLINE_START ? 
-								LK_S : lk_mode);
-	    CL_ERR_DESC	sys_err;
+	    i4		length;
+	    LK_LKB_INFO	lock_info;
+	    i4		control_lock_mode;
+
+	    control_lock_mode = lk_mode;
 
 	    if (mcb->mcb_flagsmask & DMU_ONLINE_START)
 	    {
-		lock_key.lk_type = LK_ONLN_MDFY;
+
+		/*
+		** Check the subject table's lock mode, if any,
+		** save it in table_lock_mode.
+		**
+		** If exclusively locked, we won't need an online
+		** modify lock or a control lock, and we won't
+		** need to call do_online_modify(), but because
+		** qeu_modify_prep() didn't create new partitions,
+		** we'll have to do that instead, later.
+		*/
+
+		lock_key.lk_type = LK_TABLE;
 		lock_key.lk_key1 = (i4)dcb->dcb_id;
 		lock_key.lk_key2 = mcb->mcb_tbl_id->db_tab_base;
-		lock_key.lk_key3 = mcb->mcb_tbl_id->db_tab_index;
+		lock_key.lk_key3 = 0;
 		lock_key.lk_key4 = 0;
 		lock_key.lk_key5 = 0;
 		lock_key.lk_key6 = 0;
-		status = LKrequest(dcb->dcb_bm_served == DCB_SINGLE ?
-                                   LK_LOCAL | LK_PHYSICAL : LK_PHYSICAL,
-                                   lk_id, &lock_key, LK_X, (LK_VALUE *)0,
-                                   (LK_LKID *)0, timeout, &sys_err);
-		if (status != OK)
+
+		/* length == 0 if no matching key */
+		status = LKshow(LK_S_OWNER_GRANT, TableLockList,
+				(LK_LKID*)NULL, &lock_key,
+				sizeof(lock_info), (PTR)&lock_info,
+				&length, NULL, &sys_err);
+
+		
+		/* Remember subject table's lock mode, if any */
+		if ( status == OK && length )
+		    table_lock_mode = lock_info.lkb_grant_mode;
+		else
+		    table_lock_mode = LK_N;
+
+		if ( table_lock_mode == LK_X )
+		    control_lock_mode = LK_N;
+		else
 		{
-		    /* FIX ME */
-		    return(status);
+		    lock_key.lk_type = LK_ONLN_MDFY;
+		    lock_key.lk_key1 = (i4)dcb->dcb_id;
+		    lock_key.lk_key2 = mcb->mcb_tbl_id->db_tab_base;
+		    lock_key.lk_key3 = mcb->mcb_tbl_id->db_tab_index;
+		    lock_key.lk_key4 = 0;
+		    lock_key.lk_key5 = 0;
+		    lock_key.lk_key6 = 0;
+		    status = LKrequest(dcb->dcb_bm_served == DCB_SINGLE ?
+				       LK_LOCAL | LK_PHYSICAL : LK_PHYSICAL,
+				       TableLockList, &lock_key, LK_X, 
+				       (LK_VALUE *)NULL, (LK_LKID*)NULL, 
+				       timeout, &sys_err);
+		    if (status != OK)
+		    {
+			uleFormat(NULL, status, &sys_err, ULE_LOG, NULL, NULL, 
+				    0, NULL, &local_error, 0);
+			if ( status == LK_TIMEOUT ) 
+			    SETDBERR(dberr, 0, E_DM004D_LOCK_TIMER_EXPIRED);
+			else if ( status == LK_DEADLOCK )
+			    SETDBERR(dberr, 0, E_DM0042_DEADLOCK);
+			else if ( status == LK_NOLOCKS )
+			    SETDBERR(dberr, 0, E_DM004B_LOCK_QUOTA_EXCEEDED);
+			else if ( status == LK_INTR_FA )
+			    SETDBERR(dberr, 0, E_DM016B_LOCK_INTR_FA);
+			else
+			{
+			    uleFormat(NULL, E_DM901C_BAD_LOCK_REQUEST, &sys_err,
+				      ULE_LOG, NULL, NULL, 0, NULL, &local_error, 
+				      2, 0, LK_X, 0, TableLockList);
+			    SETDBERR(dberr, 0, E_DM926D_TBL_LOCK);
+			}
+			return(E_DB_ERROR);
+		    }
+		    control_lock_mode = LK_S;
 		}
 	    }
 
-	    status = dm2t_control(dcb, mcb->mcb_tbl_id->db_tab_base, TableLockList, 
+	    if ( control_lock_mode != LK_N )
+	    {
+		status = dm2t_control(dcb, mcb->mcb_tbl_id->db_tab_base, TableLockList, 
 			    control_lock_mode, (i4)0, timeout, dberr);
-	    if (status != E_DB_OK)
-		return(E_DB_ERROR);
+		if (status != E_DB_OK)
+		    return(E_DB_ERROR);
+	    }
 	}
     }
 
@@ -4105,27 +4188,38 @@ DB_ERROR        *dberr)
 	*/
 	if (! gateway)
 	{
-	    /*
-	    ** Unless overridden by system configuration option, 
-	    ** temporary files created here employ DI_USER_SYNC_MASK
-	    ** and are sync'd at end via dm2f_force_file().
-	    */
-	    if (dcb->dcb_sync_flag & DCB_NOSYNC_MASK)
-		db_sync_flag = 0;
-	    else
-		db_sync_flag = DI_USER_SYNC_MASK;
-	    if (dmf_svcb->svcb_directio_load)
-		db_sync_flag |= DI_DIRECTIO_MASK;
-	    if (!online_modify)
-		db_sync_flag |= DI_PRIVATE_MASK;
-
-	    table_lock_mode = get_table_lockmode(dcb, m, mcb->mcb_tbl_id);
-
-	    if (!(DMZ_SRT_MACRO(12)) &&
-		(mcb->mcb_flagsmask & DMU_ONLINE_START) &&
-		(table_lock_mode != LK_X))
+	    if ( mcb->mcb_flagsmask & DMU_ONLINE_START )
 	    {
-		if (!((dcb->dcb_bm_served == DCB_MULTIPLE) && 
+		/*
+		** If modify table is exclusively locked or
+		** online modify is prohibited by trace point,
+		** don't do_online_modify(), but we still have to
+		** create any new partitions because qeu_modify_prep()
+		** didn't.
+		*/
+		if ( table_lock_mode == LK_X || DMZ_SRT_MACRO(12) )
+		{
+		    status = dm0p_close_page(t, lk_id, log_id, 
+					DM0P_CLCACHE, dberr);
+		    if (status != E_DB_OK)
+			break;
+
+		    /* If there are new partitions to be created, create them */
+		    if ( m->mx_spcb_count < m->mx_tpcb_count )
+		    {
+			status = create_new_parts(m,
+					&t->tcb_rel.relid,
+					&t->tcb_rel.relowner,
+					mcb->mcb_new_part_def,
+					mcb->mcb_partitions,
+					&m->mx_table_id,
+					mcb->mcb_db_lockmode,
+					relstat,
+					m->mx_new_relstat2,
+					dberr);
+		    }
+		}
+		else if (!((dcb->dcb_bm_served == DCB_MULTIPLE) && 
 				((dcb->dcb_status & DCB_S_FASTCOMMIT) == 0)) &&
 		    ((dcb->dcb_status & DCB_S_ROLLFORWARD) == 0) &&
 		    ((t->tcb_rel.relstat & TCB_CONCUR) == 0) &&
@@ -4140,30 +4234,32 @@ DB_ERROR        *dberr)
 		    t->tcb_rel.reltid.db_tab_index == 0)
 		{
 		    status = do_online_modify(&m, timeout, mcb->mcb_dmu,
-				    mcb->mcb_modoptions, mcb->mcb_mod_options2,
-				    mcb->mcb_kcount, mcb->mcb_key, mcb->mcb_db_lockmode,
-				    &online_tabid, 
-				    mcb->mcb_tup_info, mcb->mcb_has_extensions, mcb->mcb_relstat2, 
-				    (mcb->mcb_flagsmask & ~DMU_ONLINE_START), 
-				    mcb->mcb_rfp_entry, &online_reltup, 
-				    mcb->mcb_new_part_def, mcb->mcb_new_partdef_size,
-				    mcb->mcb_partitions, mcb->mcb_nparts, mcb->mcb_verify,
-				    dberr);
-		    if (status != E_DB_OK)
-			break;
+			    mcb->mcb_modoptions, mcb->mcb_mod_options2,
+			    mcb->mcb_kcount, mcb->mcb_key, mcb->mcb_db_lockmode,
+			    &online_tabid, 
+			    mcb->mcb_tup_info, mcb->mcb_has_extensions, 
+			    mcb->mcb_relstat2, 
+			    (mcb->mcb_flagsmask & ~DMU_ONLINE_START), 
+			    mcb->mcb_rfp_entry, &online_reltup, 
+			    mcb->mcb_new_part_def, mcb->mcb_new_partdef_size,
+			    mcb->mcb_partitions, mcb->mcb_nparts, mcb->mcb_verify,
+			    dberr);
 
-		    online_modify = TRUE;
-		    r = rcb;
-		    m->mx_rcb = r;
-		    m->mx_newtup_cnt = *mcb->mcb_tup_info;
+		    if ( status == E_DB_OK )
+		    {
+			/* From here on, don't rely on DMU_ONLINE_START */
+			online_modify = TRUE;
 
-		    STRUCT_ASSIGN_MACRO(m->mx_bsf_lsn, bsf_lsn);
+			r = rcb;
+			m->mx_rcb = r;
+			m->mx_newtup_cnt = *mcb->mcb_tup_info;
 
-		    /* flush pages */
-		    status = dm0p_close_page(t, lk_id, log_id,
-                                DM0P_CLCACHE, dberr);
-		    if (status != E_DB_OK)
-			break;
+			STRUCT_ASSIGN_MACRO(m->mx_bsf_lsn, bsf_lsn);
+
+			/* flush pages */
+			status = dm0p_close_page(t, lk_id, log_id,
+				    DM0P_CLCACHE, dberr);
+		    }
 		}
 		else
 		{
@@ -4191,12 +4287,26 @@ DB_ERROR        *dberr)
 					t->tcb_rel.relstat,
 					t->tcb_rel.reltid.db_tab_base,
 					t->tcb_rel.reltid.db_tab_index);
-			if (table_lock_mode == LK_X)
-			    TRdisplay("    - table lock mode is X\n");
 		    }
-		    break;
 		}
+
+		if ( status )
+		    break;
 	    }
+
+	    /*
+	    ** Unless overridden by system configuration option, 
+	    ** temporary files created here employ DI_USER_SYNC_MASK
+	    ** and are sync'd at end via dm2f_force_file().
+	    */
+	    if (dcb->dcb_sync_flag & DCB_NOSYNC_MASK)
+		db_sync_flag = 0;
+	    else
+		db_sync_flag = DI_USER_SYNC_MASK;
+	    if (dmf_svcb->svcb_directio_load)
+		db_sync_flag |= DI_DIRECTIO_MASK;
+	    if (!online_modify)
+		db_sync_flag |= DI_PRIVATE_MASK;
 
             for ( tp = m->mx_tpcb_next;
                   tp && status == E_DB_OK;
@@ -11020,44 +11130,7 @@ DB_ERROR	*dberr)
 }
 
 
-i4
-get_table_lockmode(
-DMP_DCB		    *dcb,
-DM2U_MXCB	    *mxcb,
-DB_TAB_ID	    *table_id)
-{
-    LK_LOCK_KEY		lock_key;
-    LK_LKB_INFO		info_buf;
-    CL_ERR_DESC		sys_err;
-    u_i4		info_result;
-    STATUS		s;
-    i4			flag;
-
-    /*
-    ** Format the lock key using the Database Id and the Base TableId.
-    ** Note that base table and secondary index locks collide!!!
-    */
-    lock_key.lk_type = LK_TABLE;
-    lock_key.lk_key1 = dcb->dcb_id;
-    lock_key.lk_key2 = table_id->db_tab_base;
-    lock_key.lk_key3 = 0;
-    lock_key.lk_key4 = 0;
-    lock_key.lk_key5 = 0;
-    lock_key.lk_key6 = 0;
-
-    /* Length of zero returned if no matching key */
-    flag = LK_S_OWNER_GRANT;
-    s = LKshow(flag, mxcb->mx_lk_id, (LK_LKID *)0, &lock_key, 
-		sizeof(info_buf), (PTR)&info_buf, &info_result, 
-		(u_i4 *)0, &sys_err);
-
-    if (s == OK && (info_result != 0))
-	return ((i4)info_buf.lkb_grant_mode);
-    else
-	return ((i4)LK_N);
-}
-
-DB_STATUS
+static DB_STATUS
 init_readnolock(
 DM2U_MXCB	*mxcb,
 DM2U_OSRC_CB	*osrc,
@@ -11148,7 +11221,7 @@ DB_ERROR	*dberr)
     return (status);
 }
 
-
+static DB_STATUS
 test_redo(
 DM2U_OMCB	*omcb,
 DM0L_HEADER	*record,
@@ -11718,7 +11791,7 @@ DB_ERROR	*dberr)
     return(status);
 }
 
-DB_STATUS
+static DB_STATUS
 create_new_parts(
 DM2U_MXCB		*m,
 DB_TAB_NAME		*tabname,
@@ -11794,7 +11867,7 @@ DB_ERROR		*dberr)
     return(status);
 }
 
-DB_STATUS
+static DB_STATUS
 get_online_rel(
 DM2U_MXCB               *m,
 DB_TAB_ID               *modtemp_tabid,
