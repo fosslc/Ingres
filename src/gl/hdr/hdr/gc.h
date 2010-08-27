@@ -194,6 +194,8 @@
 **      04-Jun-2010 (horda03) b123840
 **          Define GCA_INCREMENT_STATE according to GCA_ATOMIC_INCREMENT_STATE
 **          in this header file, rather than have the #ifdef in gcaasync.
+**      14-Jun-2010 (horda03) B123919
+**          Update svc_parms->state atomically on linux too.
 **/
 
 /*
@@ -248,11 +250,11 @@
 ** svc_parms->state in gca_service() needs to be updated
 ** atomically.
 **
-** Currently atomic update of "state" required on VMS.
+** Currently atomic update of "state" required on VMS and Linux.
 ** When defining GCA_ATOMIC_INCREMENT_STATE on other platforms
 ** you need to ensure the AT_ATOMIC_INCREMENT_I4 macro is defined.
 */
-#ifdef VMS
+#if defined(VMS) || defined(int_lnx) || defined(a64_lnx)
 
 #define GCA_ATOMIC_INCREMENT_STATE
 
