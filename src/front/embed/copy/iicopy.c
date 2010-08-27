@@ -4374,6 +4374,9 @@ IIcpfrom_init (
 **      21-Jun-2010 (horda03) b123926
 **          Because adu_unorm() and adu_utf8_unorm() are also called via 
 **          adu_lo_filter() change parameter order.
+**	28-Jun-2010 (kschendel) b123990
+**	    Use column length, not group length, when validating and
+**	    normalizing unicode columns.
 */
 
 static STATUS
@@ -4499,28 +4502,26 @@ IIcpfrom_binary(II_THR_CB *thr_cb, II_CP_STRUCT *copy_blk,
 
 	    DB_DATA_VALUE  dst_dv;
 	    DB_DATA_VALUE  src_dv;
+	    i4 collen;
 
+	    collen = cmap->cp_tuplen;
+	    if (cmap->cp_tuptype < 0)
+		--collen;		/* Don't worry about null indicator */
 	    if (cmap->cp_normbuf == NULL)
-		cmap->cp_normbuf = MEreqmem(0, rowlen * 4, 0, NULL);
+		cmap->cp_normbuf = MEreqmem(0, collen * 4, 0, NULL);
 
 	    if (cmap->cp_srcbuf == NULL)
-		cmap->cp_srcbuf = MEreqmem(0, rowlen, 0, NULL);
+		cmap->cp_srcbuf = MEreqmem(0, collen, 0, NULL);
 
 	    src_dv.db_collID = dst_dv.db_collID = 0;
 	    src_dv.db_datatype = dst_dv.db_datatype = absttype;
-	    src_dv.db_length = dst_dv.db_length = rowlen;
-	    if (cmap->cp_tuptype < 0)
-	    {
-		-- src_dv.db_length;
-		-- dst_dv.db_length;
-		-- rowlen;		/* Don't copy null indicator around */
-	    }
+	    src_dv.db_length = dst_dv.db_length = collen;
 	    src_dv.db_prec = dst_dv.db_prec = cmap->cp_cvprec;
 	    src_dv.db_data = cmap->cp_srcbuf;
 	    dst_dv.db_data = cmap->cp_normbuf;
 
-	    MEcopy (tup_ptr, rowlen, cmap->cp_srcbuf);
-		
+	    MEcopy (tup_ptr, collen, cmap->cp_srcbuf);
+
 	    if ((status = 
 		adu_unorm(IIlbqcb->ii_lq_adf, &src_dv, &dst_dv)) != E_DB_OK)
 	    {
@@ -4532,7 +4533,7 @@ IIcpfrom_binary(II_THR_CB *thr_cb, II_CP_STRUCT *copy_blk,
 		return (FAIL);
 	    }
 
-            MEcopy((PTR)dst_dv.db_data, rowlen, (PTR)tup_ptr);
+            MEcopy((PTR)dst_dv.db_data, collen, (PTR)tup_ptr);
 	}
 
 	tup_ptr += cmap->cp_tuplen;
