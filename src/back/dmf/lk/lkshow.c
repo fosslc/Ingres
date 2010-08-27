@@ -528,6 +528,11 @@ CL_ERR_DESC         *sys_err)
 **	    Switch order in case LK_S_TRAN_LOCKS/LK_S_REL_TRAN_LOCKS; 
 **	    check if llb is a handle to a shared list (LLB_PARENT_SHARED) 
 **	    before check if related llb. 
+**	23-Jul-2010 (kschendel) b124007
+**	    Revert the above (my bad for suggesting it to Julie).
+**	    The real problem was in LKconnect, which shouldn't be moving
+**	    the related list to the shared LLB.  The related list is
+**	    supposed to be in the handle (parent-shared) LLB.
 */
 /* ARGSUSED */
 static STATUS
@@ -1019,6 +1024,33 @@ CL_ERR_DESC	    *sys_err)
 		return (LK_BADPARAM);
 	    }
 
+	    /* Related LLB wanted? */
+	    if (flag == LK_S_REL_TRAN_LOCKS) 
+	    {
+		if (llb->llb_related_llb == 0)
+		{
+		    uleFormat(NULL, E_DMA033_LK_SHOW_NO_REL_LIST, (CL_ERR_DESC *)NULL,
+			ULE_LOG, NULL, (char *)NULL, 0L, (i4 *)NULL,
+			&err_code, 2,
+			0, llb->llb_id.id_id,
+			0, "LK_S_REL_TRAN_LOCKS");
+		    return (LK_BADPARAM);
+		}
+
+		llb = (LLB *)LGK_PTR_FROM_OFFSET(llb->llb_related_llb);
+
+		if (llb->llb_type != LLB_TYPE)
+		{
+		    uleFormat(NULL, E_DMA031_LK_SHOW_BAD_PARAM, (CL_ERR_DESC *)NULL,
+			ULE_LOG, NULL, (char *)NULL, 0L, (i4 *)NULL,
+			&err_code, 5,
+			0, llb->llb_type, 0, LLB_TYPE,
+			0, llb->llb_id.id_id, 0, llb_id->id_id,
+			0, "LK_S_REL_TRAN_LOCKS(2)");
+		    return (LK_BADPARAM);
+		}
+	    }
+
 	    /*
 	    ** If lock list is a handle to a shared list, then use the actual shared
 	    ** list llb, as it's the one actually holding the locks.
@@ -1046,33 +1078,6 @@ CL_ERR_DESC	    *sys_err)
 			0, llb->llb_type, 0, LLB_TYPE,
 			0, llb->llb_id.id_id, 0, llb_id->id_id,
 			0, "LK_S_TRAN_LOCKS/LK_S_REL_TRAN_LOCKS(shared)");
-		    return (LK_BADPARAM);
-		}
-	    }
-
-	    /* Related LLB wanted? */
-	    if (flag == LK_S_REL_TRAN_LOCKS) 
-	    {
-		if (llb->llb_related_llb == 0)
-		{
-		    uleFormat(NULL, E_DMA033_LK_SHOW_NO_REL_LIST, (CL_ERR_DESC *)NULL,
-			ULE_LOG, NULL, (char *)NULL, 0L, (i4 *)NULL,
-			&err_code, 2,
-			0, llb->llb_id.id_id,
-			0, "LK_S_REL_TRAN_LOCKS");
-		    return (LK_BADPARAM);
-		}
-
-		llb = (LLB *)LGK_PTR_FROM_OFFSET(llb->llb_related_llb);
-
-		if (llb->llb_type != LLB_TYPE)
-		{
-		    uleFormat(NULL, E_DMA031_LK_SHOW_BAD_PARAM, (CL_ERR_DESC *)NULL,
-			ULE_LOG, NULL, (char *)NULL, 0L, (i4 *)NULL,
-			&err_code, 5,
-			0, llb->llb_type, 0, LLB_TYPE,
-			0, llb->llb_id.id_id, 0, llb_id->id_id,
-			0, "LK_S_REL_TRAN_LOCKS(2)");
 		    return (LK_BADPARAM);
 		}
 	    }

@@ -858,6 +858,9 @@ CL_ERR_DESC		*sys_err)
 **	17-May-2010 (kschendel) SIR 123565
 **	    When converting to SHARED, don't mark status as SHARED until the
 **	    very end, because that's what other bits of LK look at (unmutexed).
+**	23-Jul-2010 (kschendel) b124007
+**	    Don't move any related list to the new SHARED LLB.  Related lists
+**	    stay with the handle LLB.
 */
 STATUS
 LKconnect(
@@ -938,9 +941,6 @@ CL_ERR_DESC		*sys_err)
 	/* SHARED LLB will start with one connected handle */
 	sllb->llb_connect_count = 1;
 	sllb->llb_shared_llb = 0;
-	/* Move the related list, if any, to the sLLB */
-	sllb->llb_related_llb = cllb->llb_related_llb;
-	cllb->llb_related_llb = 0;
 	sllb->llb_max_lkb = cllb->llb_max_lkb;
 	/* SHARED list is multithreaded, handles are not */
 	sllb->llb_status |= (LLB_SHARED | LLB_MULTITHREAD);
