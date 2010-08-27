@@ -7264,6 +7264,9 @@ DB_DATA_VALUE		*rdv)
 **  History:
 **    11-Jan-2009 (martinb) - Created to support schemes 'Verhoeff',
 **      'VerhoeffNR' and 'Luhn'.
+**	6-jul-2010 (stephenb)
+**	    Correct error parameter, we were passing address of char pointer
+**	    not the char pointer itself.
 */
 
 #define CHECK_DIGIT_NUMERIC 0
@@ -7803,7 +7806,7 @@ generate_luhn_digit(
                 if (CMlower(c))
                     n = (i4)*c - (i4)'a' + 10;
                 else
-                    return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, &c));
+                    return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, c));
             }
             y = (i4)n/10;
             x = n - 10*y; /* ie n==yx */
