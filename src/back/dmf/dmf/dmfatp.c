@@ -558,6 +558,9 @@
 **	    In get_table_descriptor also set att->encflags.
 **	10-Aug-2010 (miket) SIR 122403 SD 146192
 **	    Audit encrypted tables in hex format.
+**	12-Aug-2010 (miket) SIR 122403 SD 146192
+**	    Minor fix for hex encrypted tables - missed test to adjust
+**	    buffer for hex output display.
 **/
 
 /*
@@ -6118,7 +6121,7 @@ PTR         jrecord)
     */
     space_left = atp->atp_sdisplaybuf;
     space_needed = 13;
-    if (td == NULL)
+    if (td == NULL || force_hexdump)
 	space_needed += size * 2;
     if (space_left < space_needed)
     {
