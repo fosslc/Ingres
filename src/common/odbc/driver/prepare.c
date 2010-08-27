@@ -501,7 +501,10 @@
 **         SQLPrepare_InternalCall().
 **  29-Jan-2010 (Ralph Loen) Bug 123175
 **         In ConvertEscAndMarkers(), add blank date support for timestamps.
-**        
+**  25-Jun-2010 (Ralph Loen)    
+**         In ConvertEscAndMarkers(), don't insert the INTERVAL keyword into
+**         the string literal for interval escape sequences.        
+**
 */
 
 
@@ -2429,9 +2432,6 @@ RETCODE ConvertEscAndMarkers(
                             while(CMwhite(p)) CMnext(p);
                             if (!CMcmpcase(p, "'"))
                             {                    
-                                MEcopy("INTERVAL", 8, pTo);
-                                for (i = 0; i < 8; i++)
-                                    CMnext(pTo);
                                 CMnext(pFrom);
                                 length--;
                                 while(CMwhite(pFrom))

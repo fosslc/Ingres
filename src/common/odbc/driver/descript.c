@@ -125,6 +125,9 @@
 **          Expand 01-Jul-2009 fix to include SQLDescribeCol_InternalCall(),
 **          and SQLGetDescField_internalCall(), and SQLColAttributes().  
 **          Include date/time data types.
+**     25-Jun-2010 (Ralph Loen)  Bug 122174
+**          Correct SQL_DESC_OCTET_LENGTH, SQL_DESC_LENGTH, and
+**          SQL_DESC_PRECISION for interval types.
 */
 
 /*
@@ -519,6 +522,7 @@ SQLRETURN  SQL_API SQLColAttribute_InternalCall (
             case IIAPI_TIME_TYPE:
             case IIAPI_TMTZ_TYPE:
             case IIAPI_TMWO_TYPE:
+            case IIAPI_INTDS_TYPE:
                 *i4ValuePtr  = (SQLINTEGER)pird->IsoTimePrecision;
                 break;
 
@@ -1202,6 +1206,7 @@ SQLRETURN  SQL_API SQLGetDescField_InternalCall (
                 case IIAPI_TIME_TYPE:
                 case IIAPI_TMTZ_TYPE:
                 case IIAPI_TMWO_TYPE:
+                case IIAPI_INTDS_TYPE:
                     i2temp = (i2) pxxd->IsoTimePrecision;
                     break;
             }
@@ -1459,6 +1464,7 @@ SQLRETURN  SQL_API SQLGetDescRec_InternalCall (
         case IIAPI_TIME_TYPE:
         case IIAPI_TMTZ_TYPE:
         case IIAPI_TMWO_TYPE:
+        case IIAPI_INTDS_TYPE:
             *PrecisionPtr  = (SQLSMALLINT)pxxd->IsoTimePrecision;
             break;
         
@@ -3148,7 +3154,7 @@ void SetDescDefaultsFromType(LPDBC pdbc, LPDESCFLD pird)
         ** 2.0.  In ODBC 2.0, precision for date/time is the number of
         ** significant digits.       
         */
-        pird->IsoTimePrecision = pird->Scale = pird->Precision;
+        pird->IsoTimePrecision = pird->Scale = (i2) pird->Precision;
         pird->Precision = pird->Length = 20 + pird->IsoTimePrecision;
         pird->ConciseType = SQL_TYPE_TIMESTAMP;
         pird->VerboseType = SQL_DATETIME;
@@ -3166,7 +3172,7 @@ void SetDescDefaultsFromType(LPDBC pdbc, LPDESCFLD pird)
     case IIAPI_TMWO_TYPE:
     case IIAPI_TIME_TYPE:
     case IIAPI_TMTZ_TYPE:
-        pird->IsoTimePrecision = pird->Scale = pird->Precision;
+        pird->IsoTimePrecision = pird->Scale = (i2) pird->Precision;
         pird->Precision = pird->Length = 9 + pird->IsoTimePrecision;
         pird->ConciseType = SQL_TYPE_TIME;
         pird->VerboseType = SQL_DATETIME;
@@ -3194,10 +3200,9 @@ void SetDescDefaultsFromType(LPDBC pdbc, LPDESCFLD pird)
         pird->ConciseType = SQL_INTERVAL_DAY_TO_SECOND;
         pird->VerboseType = SQL_INTERVAL;
         pird->DatetimeIntervalCode = SQL_CODE_DAY_TO_SECOND;
-        pird->IsoTimePrecision = (II_UINT2) pird->Precision;
-        pird->Precision   = 
-        pird->OctetLength =
-        pird->Length      = ODBC_INTDS_OUTLENGTH; 
+        pird->IsoTimePrecision = pird->Scale = pird->Precision;
+        pird->Precision = pird->Length = 10 + pird->IsoTimePrecision;
+        pird->OctetLength = ODBC_INTDS_OUTLENGTH; 
     
         break;
     
