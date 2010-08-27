@@ -808,6 +808,8 @@ NO_OPTIM = dr6_us5
 **          rfp_check_lsn_waiter() Fixed DB_ERROR param to dm2u_load_table
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 */
 
 /*
@@ -1659,6 +1661,7 @@ DMP_DCB		    *dcb)
 	rfp.test_dump_err = 0;
 	rfp.test_excp_err = 0;
 	rfp.test_indx_err = 0;
+#ifdef xDEBUG
 	if (MEcmp(dcb->dcb_name.db_db_name, "test_rfp_dmve_error ", 20) == 0)
 	{
 	    char	*env;
@@ -1678,6 +1681,7 @@ DMP_DCB		    *dcb)
 		    rfp.test_indx_err = 1;
 	    }
 	}
+#endif
 
 	/*
 	** Apply dumps if restoring an online backup.
@@ -10856,8 +10860,8 @@ DB_STATUS	    err_status)
     else if (!tblcb && dmve && dmve->dmve_log_rec)
     {
 	/* this must be database recovery - or we would already have tblcb */
-	/* Call dmve_get_tab to extract table information from log record */
-	dmve_get_tab((char *)dmve->dmve_log_rec, &tabid, &tabname, &ownname);
+	/* Call dmve_get_tabinfo to get table information */
+	dmve_get_tabinfo(dmve, &tabid, &tabname, &ownname);
     }
     else
     {
@@ -11033,8 +11037,9 @@ DB_STATUS	    err_status)
     i4		    loc_err;
     char	    line_buffer[132];
     DB_TAB_ID	    tabid, sconcur_id;
-    DB_TAB_NAME	    tabname, sconcur_name;
-    DB_OWN_NAME	    ownname, sconcur_own;
+    char	    *sconcur_name;
+    DB_TAB_NAME	    tabname;
+    DB_OWN_NAME	    ownname;
     i4		    table_error = jsx->jsx_dberr.err_code;
     i4		    local_error;
     bool	    apply, found;
@@ -11068,14 +11073,12 @@ DB_STATUS	    err_status)
     if (tblcb)
     {
 	STRUCT_ASSIGN_MACRO(tblcb->tblcb_table_id, sconcur_id);
-	STRUCT_ASSIGN_MACRO(tblcb->tblcb_table_name, sconcur_name);
-	STRUCT_ASSIGN_MACRO(tblcb->tblcb_table_owner, sconcur_own);
     }
     else if (!tblcb && rec)
     {
 	/* this must be database recovery - or we would already have tblcb */
-	/* Call dmve_get_tab to extract table information from log record */
-	dmve_get_tab((char *)rec, &sconcur_id, &sconcur_name, &sconcur_own);
+	/* Call dmve_get_tabid to extract table information from log record */
+	dmve_get_tabid((PTR)rec, &sconcur_id);
     }
     else
     {
@@ -11085,14 +11088,13 @@ DB_STATUS	    err_status)
     if (rec->type == DM0LREP)
     {
 	rep = (DM0L_REP *)rec;
-	old = &rep->rep_vbuf[rep->rep_tab_size + rep->rep_own_size];
-	new_row_log_info = &rep->rep_vbuf[rep->rep_tab_size +
-		    rep->rep_own_size + rep->rep_odata_len];
+	old = (((char *)rep) + sizeof(DM0L_REP));
+	new_row_log_info = old + rep->rep_odata_len;
     }
     else if (rec->type == DM0LDEL)
     {
 	del = (DM0L_DEL *)rec;
-	old = &del->del_vbuf[del->del_tab_size + del->del_own_size];
+	old = (((char *)del) + sizeof(DM0L_DEL));
     }
     else
     {
@@ -11108,6 +11110,7 @@ DB_STATUS	    err_status)
     if (sconcur_id.db_tab_base == DM_B_RELATION_TAB_ID &&
 			sconcur_id.db_tab_index == 0)
     {
+	sconcur_name = "iirelation";
 	MEcopy(old, sizeof(DMP_RELATION), (PTR)&oldrel);
 	STRUCT_ASSIGN_MACRO(oldrel.reltid, tabid);
 	STRUCT_ASSIGN_MACRO(oldrel.relid, tabname);
@@ -11197,6 +11200,7 @@ DB_STATUS	    err_status)
     else if (sconcur_id.db_tab_base == DM_B_RELATION_TAB_ID && 
 			sconcur_id.db_tab_index == DM_I_RIDX_TAB_ID)
     {
+	sconcur_name = "iirel_idx";
 	MEcopy(old, sizeof(DMP_RINDEX), (PTR)&oldrindx);
 	STRUCT_ASSIGN_MACRO(oldrindx.relname, tabname);
 	STRUCT_ASSIGN_MACRO(oldrindx.relowner, ownname);
@@ -11204,12 +11208,14 @@ DB_STATUS	    err_status)
     else if (sconcur_id.db_tab_base == DM_B_ATTRIBUTE_TAB_ID && 
 			sconcur_id.db_tab_index == 0)
     {
+	sconcur_name = "iiattribute";
 	MEcopy(old, sizeof(DMP_ATTRIBUTE), (PTR)&oldatt);
 	STRUCT_ASSIGN_MACRO(oldatt.attrelid, tabid);
     }
     else if (sconcur_id.db_tab_base == DM_B_INDEX_TAB_ID && 
 			sconcur_id.db_tab_index == 0)
     {
+	sconcur_name = "iiindex";
 	MEcopy(old, sizeof(DMP_INDEX), (PTR)&oldind);	
 	tabid.db_tab_base = oldind.baseid;
 	tabid.db_tab_base = 0; /* associate with base table */
@@ -11217,6 +11223,7 @@ DB_STATUS	    err_status)
     else if (sconcur_id.db_tab_base == DM_B_DEVICE_TAB_ID && 
 			sconcur_id.db_tab_index == 0)
     {
+	sconcur_name = "iidevices";
 	MEcopy(old, sizeof(DMP_DEVICE), (PTR)&olddev);
 	STRUCT_ASSIGN_MACRO(olddev.devreltid, tabid);
     }
@@ -11241,8 +11248,8 @@ DB_STATUS	    err_status)
     }
 
     TRformat(dmf_diag_put_line, 0, line_buffer, sizeof(line_buffer),
-	    "Error during recovery of table %~t for (%~t, %~t)\n",
-	    sizeof(DB_TAB_NAME), sconcur_name.db_tab_name,
+	    "Error during recovery of catalog %s for (%~t, %~t)\n",
+	    sconcur_name,
 	    sizeof(DB_TAB_NAME), tabname.db_tab_name,
 	    sizeof(DB_OWN_NAME), ownname.db_own_name);
 
@@ -11859,8 +11866,7 @@ u_i4	    phase)
 		    TRformat(dmf_diag_put_line, 0, 
 		    line_buffer, sizeof(line_buffer),
 		    "WARNING: Marking %~t inconsistent\n",
-			sizeof(tblcb->tblcb_table_name),
-			tblcb->tblcb_table_name.db_tab_name);
+			sizeof(DB_TAB_NAME), rel_record.relid.db_tab_name);
 		}
 
 

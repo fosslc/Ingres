@@ -708,6 +708,8 @@ NO_OPTIM=dr6_us5 i64_aix
 **          Set DM1C_CORE_CATALOG for iidevices,iisequence which use phys locks
 **	20-Jul-2010 (kschendel) SIR 124104
 **	    dm2u-create wants compression now.
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 **/
 
 /*
@@ -10462,7 +10464,7 @@ DB_ERROR	    *dberr)
 		STRUCT_ASSIGN_MACRO(put->put_tbl_id, log_tabid);
 		log_page = put->put_tid.tid_tid.tid_page;
 		log_lsn = &put->put_header.lsn;
-		log_row = &put->put_vbuf[put->put_tab_size + put->put_own_size];
+		log_row = ((char *)put) + sizeof(DM0L_PUT);
 		row_version = put->put_row_version;
 		otid = ntid = &put->put_tid;
 	    }
@@ -10472,7 +10474,7 @@ DB_ERROR	    *dberr)
 		STRUCT_ASSIGN_MACRO(del->del_tbl_id, log_tabid);
 		log_page = del->del_tid.tid_tid.tid_page;
 		log_lsn = &del->del_header.lsn;
-		log_row = &del->del_vbuf[del->del_tab_size + del->del_own_size];
+		log_row = ((char *)del) + sizeof(DM0L_DEL);
 		row_version = del->del_row_version;
 		otid = ntid = &del->del_tid;
 	    }
@@ -10483,7 +10485,7 @@ DB_ERROR	    *dberr)
 		log_page = rep->rep_otid.tid_tid.tid_page;
 		log_page2 = rep->rep_ntid.tid_tid.tid_page;
 		log_lsn = &rep->rep_header.lsn;
-		log_row = &rep->rep_vbuf[rep->rep_tab_size + rep->rep_own_size];
+		log_row = ((char *)rep) + sizeof(DM0L_REP);
 		log_new_row = log_row + rep->rep_odata_len;
 		otid = &rep->rep_otid;
 		ntid = &rep->rep_ntid;
@@ -11663,15 +11665,14 @@ DB_ERROR	*dberr)
 		{
 		    DM0L_PUT	*put = (DM0L_PUT *)record;
 
-		    log_row = &put->put_vbuf[put->put_tab_size + put->put_own_size];
+		    log_row = ((char *)put) + sizeof(DM0L_PUT);
 		    MEcopy(log_row, put->put_rec_size, row_image);
 		}
 		else if (record->type == DM0LREP)
 		{
 		    DM0L_REP	*rep = (DM0L_REP *)record;
 
-		    log_row = &rep->rep_vbuf[rep->rep_tab_size + rep->rep_own_size] +
-				rep->rep_odata_len;
+		    log_row = ((char *)rep) + sizeof(DM0L_REP) + rep->rep_odata_len;
 		    MEcopy(log_row, rep->rep_ndata_len, row_image);
 		    *ndata_len = rep->rep_ndata_len;
 		    *nrec_size = rep->rep_nrec_size;

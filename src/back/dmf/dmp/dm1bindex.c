@@ -561,6 +561,8 @@
 **          Init DMP_PINFO with DMP_PINIT
 **	09-Jun-2010 (stial01)
 **          TRdisplay more info when there is an error
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Minor change to TRdisplay.
 **/
 
 /*
@@ -2253,8 +2255,9 @@ dm1bxinsert(
 	    
 	    if (status != E_DB_OK)
 	    {
-		TRdisplay("Key not found %d %d %d (%d,%d %d) (%d) (%d)\n",
+		TRdisplay("Key not found %d %d %d BID:(%d,%d) TID:(%d,%d %d) (%x,%x)\n",
 			get_status, cmp_status, compare,
+			bid.tid_tid.tid_page, bid.tid_tid.tid_line,
 			tmptid.tid_tid.tid_page, tmptid.tid_tid.tid_line,
 			tmppartno,
 			row_low_tran, r->rcb_tran_id.db_low_tran);

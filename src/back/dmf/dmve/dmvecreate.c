@@ -133,6 +133,8 @@
 **	    SIR 120874: dm1s_? functions converted to DB_ERROR *
 **      23-Jun-2010 (stial01) (b123948)
 **          Don't rdf_invalidate if rollforwarddb
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 **/
 
 static DB_STATUS build_location_info(
@@ -207,6 +209,7 @@ DMVE_CB		*dmve_cb)
     i4		actual_size;
 
     CLRDBERR(&dmve->dmve_error);
+    DMVE_CLEAR_TABINFO_MACRO(dmve);
 	
     for (;;)
     {

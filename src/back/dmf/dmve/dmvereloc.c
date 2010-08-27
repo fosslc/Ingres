@@ -136,6 +136,8 @@
 **	    SIR 120874: dm0l_? functions converted to DB_ERROR *
 **	28-Nov-2008 (jonj)
 **	    SIR 120874: dm2f_?, dm2t_? functions converted to DB_ERROR *
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 **/
 
 static DB_STATUS 	dmv_rereloc(
@@ -232,6 +234,7 @@ DMVE_CB		*dmve_cb)
     bool		nloc_recover;
 
     CLRDBERR(&dmve->dmve_error);
+    DMVE_CLEAR_TABINFO_MACRO(dmve);
 	
     for (;;)
     {

@@ -551,6 +551,9 @@
 **	    the returned string has to be null terminated by hand.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
+**          get_table_descriptor() init att->encwid
 **/
 
 /*
@@ -718,6 +721,9 @@ struct _DMF_ATP
     i4		    atp_base_id[JSX_MAX_TBLS];    /* Table id array */
     i4              atp_index_id[JSX_MAX_TBLS];    /* Table index array */
     i4		    atp_base_size[JSX_MAX_TBLS];    /* Table size array */
+    DB_TAB_NAME	    atp_table_name;
+    DB_OWN_NAME	    atp_owner_name;
+    ATP_TBLHCB      *atp_tblhcb_ptr;
     char	    *atp_rowbuf;	/* Buffer used for converting columns */
     char	    *atp_alignbuf;	/* Buffer used on byteswap machines */
     char	    *atp_uncompbuf;	/* Buffer used for uncompressing rows */
@@ -979,6 +985,11 @@ static VOID	write_tuple(
     i2		comptype,
     PTR		jrecord);
 
+static DB_STATUS get_table_reltup(
+    DMF_ATP     *atp,
+    DB_TAB_ID   *table_id,
+    DMP_RELATION *reltup);
+
 static ATP_TD * get_table_descriptor(
     DMF_ATP     *atp,
     DB_TAB_ID   *table_id);
@@ -1024,6 +1035,26 @@ static DB_STATUS lobj_copy(
     PTR		atp_ptr,
     PTR		record,
     i4		*err_code);
+
+static DB_STATUS atp_init_tbl_hash(
+    DMF_ATP		    *atp);
+
+static VOID atp_init_table(
+    DMF_ATP		*atp, 
+    DB_TAB_ID	*table_id,
+    i4		*table_size,
+    char	**table_name,
+    i4		*owner_size,
+    char	**owner_name);
+
+static VOID atp_dm0lcreate(
+    DMF_ATP		*atp, 
+    DM0L_CREATE		*crec);
+
+static VOID atp_dm0ldestroy(
+    DMF_ATP		*atp, 
+    DM0L_DESTROY	*drec);
+
 
 /*{
 ** Name: dmfatp	- Audit Trail Processor.
@@ -1136,7 +1167,7 @@ DMP_DCB	    *dcb)
     bool		lsn_check = FALSE;
     DB_STATUS		local_status;
     EX_CONTEXT          context;
-    char                line_buffer [256];
+    char		line_buffer[256 + DB_TAB_MAXNAME + DB_OWN_MAXNAME];
     DB_ERROR		local_dberr;
     i4			local_err;
     i4			*err_code = &jsx->jsx_dberr.err_code;
@@ -2520,7 +2551,7 @@ ATP_TX	    *tx)
     char		*table_name;
     char		*owner_name;
     char		*rec_ptr;
-    char		line_buffer[256];
+    char		line_buffer[256 + DB_TAB_MAXNAME + DB_OWN_MAXNAME];
     char 		*orec_ptr;	/* for update records ... */
     char 		*nrec_ptr;
     char		*pathsep;
@@ -2782,9 +2813,7 @@ ATP_TX	    *tx)
 	    audit_record.audit_hdr.table_base 
                  = ((DM0L_PUT *)record)->put_tbl_id.db_tab_base;
 	    size = ((DM0L_PUT *)record)->put_rec_size;
-	    table_size = ((DM0L_PUT *)record)->put_tab_size;
-	    owner_size = ((DM0L_PUT *)record)->put_own_size;
-	    rec_ptr = &((DM0L_PUT *)record)->put_vbuf[table_size + owner_size];
+	    rec_ptr = ((char *)record) + sizeof(DM0L_PUT);
 	    status = atp_uncompress(atp, &((DM0L_PUT *)record)->put_tbl_id,
 					(PTR **)&rec_ptr, &size,
 					((DM0L_PUT *)record)->put_comptype, record);
@@ -2797,9 +2826,7 @@ ATP_TX	    *tx)
 	    audit_record.audit_hdr.table_base
                   = ((DM0L_DEL *)record)->del_tbl_id.db_tab_base;
 	    size = ((DM0L_DEL *)record)->del_rec_size;
-	    table_size = ((DM0L_DEL *)record)->del_tab_size;
-	    owner_size = ((DM0L_DEL *)record)->del_own_size;
-	    rec_ptr = &((DM0L_DEL *)record)->del_vbuf[table_size + owner_size];
+	    rec_ptr = ((char *)record) + sizeof(DM0L_DEL);
 	    status = atp_uncompress(atp, &((DM0L_DEL *)record)->del_tbl_id,
 					(PTR **)&rec_ptr, &size,
 					((DM0L_DEL *)record)->del_comptype, record);
@@ -2823,12 +2850,10 @@ ATP_TX	    *tx)
 
 	    audit_record.audit_hdr.table_base 
                   = ((DM0L_REP *)record)->rep_tbl_id.db_tab_base;
-	    table_size = ((DM0L_REP *)record)->rep_tab_size;
-	    owner_size = ((DM0L_REP *)record)->rep_own_size;
 
 	    MEcopy("repold  ", ATP_OP_SIZE, audit_record.audit_hdr.operation);
 	    orec_size = ((DM0L_REP *)record)->rep_orec_size;
-	    orec_ptr = &((DM0L_REP *)record)->rep_vbuf[table_size + owner_size];
+	    orec_ptr = ((char *)record) + sizeof(DM0L_REP);
 
 	    status = atp_uncompress(atp, &((DM0L_REP *)record)->rep_tbl_id,
 					(PTR **)&orec_ptr, &orec_size,
@@ -2927,10 +2952,9 @@ ATP_TX	    *tx)
 	    ** reset orec values as they'll have changed if the tuple
 	    ** is compressed
 	    */
+	    orec_ptr = ((char *)record) + sizeof(DM0L_REP);
 	    orec_size = ((DM0L_REP *)record)->rep_orec_size;
-	    orec_ptr = &((DM0L_REP *)record)->rep_vbuf[table_size + owner_size];
-	    nrec_ptr = &((DM0L_REP *)record)->rep_vbuf[table_size + 
-						    owner_size + orec_size];
+	    nrec_ptr = orec_ptr + orec_size;
 	    nrec_size = ((DM0L_REP *)record)->rep_nrec_size;
 	    ndata_len = ((DM0L_REP *)record)->rep_ndata_len;
 
@@ -3260,10 +3284,8 @@ ATP_TX	    *tx)
 	        break;
  
 	case DM0LPUT:
-		table_size = ((DM0L_PUT *)record)->put_tab_size;
-		owner_size = ((DM0L_PUT *)record)->put_own_size;
-		table_name = &((DM0L_PUT *)record)->put_vbuf[0];
-		owner_name = &((DM0L_PUT *)record)->put_vbuf[table_size];
+		atp_init_table(atp, &((DM0L_PUT *)record)->put_tbl_id,
+			&table_size, &table_name, &owner_size, &owner_name);
 
 		if (atp->atp_jsx->jsx_status2 & JSX2_EXPAND_LOBJS &&
 		    STbcompare(table_name, 7, "iietab_", 7, FALSE) == 0)
@@ -3272,7 +3294,7 @@ ATP_TX	    *tx)
 		}
 
 		size = ((DM0L_PUT *)record)->put_rec_size;
-		rec_ptr = &((DM0L_PUT *)record)->put_vbuf[table_size + owner_size];
+		rec_ptr = ((char *)record) + sizeof(DM0L_PUT);
 		STprintf(line_buffer, "  Insert/Append  : Transaction Id %08x%08x Id (%d,%d)\
 			Table [%*s,%*s]",
 			((DM0L_HEADER *)record)->tran_id.db_high_tran,
@@ -3297,10 +3319,8 @@ ATP_TX	    *tx)
 		break;
     
 	case DM0LREP:
-		table_size = ((DM0L_REP *)record)->rep_tab_size;
-		owner_size = ((DM0L_REP *)record)->rep_own_size;
-		table_name = &((DM0L_REP *)record)->rep_vbuf[0];
-		owner_name = &((DM0L_REP *)record)->rep_vbuf[table_size];
+		atp_init_table(atp, &((DM0L_REP *)record)->rep_tbl_id,
+			&table_size, &table_name, &owner_size, &owner_name);
 
 		if (atp->atp_jsx->jsx_status2 & JSX2_EXPAND_LOBJS &&
 		    STbcompare(table_name, 7, "iietab_", 7, FALSE) == 0)
@@ -3312,9 +3332,8 @@ ATP_TX	    *tx)
 		nrec_size = ((DM0L_REP *)record)->rep_nrec_size;
 		odata_len = ((DM0L_REP *)record)->rep_odata_len;
 		ndata_len = ((DM0L_REP *)record)->rep_ndata_len;
-		orec_ptr = &((DM0L_REP *)record)->rep_vbuf[table_size + owner_size];
-		nrec_ptr = &((DM0L_REP *)record)->rep_vbuf[table_size + 
-			owner_size + odata_len];
+		orec_ptr = ((char *)record) + sizeof(DM0L_REP);
+		nrec_ptr = orec_ptr + odata_len;
 			STprintf(line_buffer, "  Update/Replace : Transaction Id %08x%08x Id (%d,%d)\
 				Table [%*s,%*s]",
 				((DM0L_HEADER *)record)->tran_id.db_high_tran,
@@ -3379,10 +3398,8 @@ ATP_TX	    *tx)
 			break;
 	
 	case DM0LDEL:
-		table_size = ((DM0L_DEL *)record)->del_tab_size;
-		owner_size = ((DM0L_DEL *)record)->del_own_size;
-		table_name = &((DM0L_DEL *)record)->del_vbuf[0];
-		owner_name = &((DM0L_DEL *)record)->del_vbuf[table_size];
+		atp_init_table(atp, &((DM0L_DEL *)record)->del_tbl_id,
+			&table_size, &table_name, &owner_size, &owner_name);
 
 		if (atp->atp_jsx->jsx_status2 & JSX2_EXPAND_LOBJS &&
 		    STbcompare(table_name, 7, "iietab_", 7, FALSE) == 0)
@@ -3391,7 +3408,7 @@ ATP_TX	    *tx)
 		}
 
 		size = ((DM0L_DEL *)record)->del_rec_size;
-		rec_ptr = &((DM0L_DEL *)record)->del_vbuf[table_size + owner_size];
+		rec_ptr = ((char *)record) + sizeof(DM0L_DEL);
 		STprintf(line_buffer, "  Delete : Transaction Id %08x%08x Id (%d,%d)\
 			Table [%*s,%*s]",
 			((DM0L_HEADER *)record)->tran_id.db_high_tran,
@@ -3434,6 +3451,7 @@ ATP_TX	    *tx)
 		sizeof(DB_LOC_NAME), ((DM0L_CREATE *)record)->duc_location);
 	    write_line(atp, line_buffer, STlength(line_buffer));
 	}
+	atp_dm0lcreate(atp, (DM0L_CREATE *)record);
 	break;
     
 	case DM0LDESTROY:
@@ -3449,6 +3467,8 @@ ATP_TX	    *tx)
 	STprintf(line_buffer, "\tLocation %*s",
 	    sizeof(DB_LOC_NAME), ((DM0L_DESTROY *)record)->dud_location);
   	write_line(atp, line_buffer, STlength(line_buffer));
+
+	atp_dm0ldestroy(atp, (DM0L_DESTROY *)record);
 	break;
 
     case DM0LALTER:
@@ -3737,7 +3757,7 @@ i4	    *err_code)
     ATP_B_TX            *b_tx;
     DB_STATUS	    	status;
     DM0L_HEADER	    	*h = (DM0L_HEADER *)record;
-    char	    	line_buffer[256];
+    char		line_buffer[256 + DB_TAB_MAXNAME + DB_OWN_MAXNAME];
     bool	    	verbose;
     bool	    	audit_all;
     DB_TAB_TIMESTAMP    *timestamp = NULL;
@@ -4173,10 +4193,8 @@ PTR	    record)
 	if (index)
 	    break;
 
-	table_size = ((DM0L_PUT *)h)->put_tab_size;
-	owner_size = ((DM0L_PUT *)h)->put_own_size;
-	table_name = &((DM0L_PUT *)h)->put_vbuf[0];
-	owner_name = &((DM0L_PUT *)h)->put_vbuf[table_size];
+	atp_init_table(atp, &((DM0L_PUT *)h)->put_tbl_id,
+		&table_size, &table_name, &owner_size, &owner_name);
 	break;
 
     case DM0LDEL:
@@ -4185,10 +4203,8 @@ PTR	    record)
 	if (index)
 	    break;
 
-	table_size = ((DM0L_DEL *)h)->del_tab_size;
-	owner_size = ((DM0L_DEL *)h)->del_own_size;
-	table_name = &((DM0L_DEL *)h)->del_vbuf[0];
-	owner_name = &((DM0L_DEL *)h)->del_vbuf[table_size];
+	atp_init_table(atp, &((DM0L_DEL *)h)->del_tbl_id,
+		&table_size, &table_name, &owner_size, &owner_name);
 	break;
 
     case DM0LREP:
@@ -4197,10 +4213,8 @@ PTR	    record)
 	if (index)
 	    break;
 
-	table_size = ((DM0L_REP *)h)->rep_tab_size;
-	owner_size = ((DM0L_REP *)h)->rep_own_size;
-	table_name = (char *)&((DM0L_REP *)h)->rep_vbuf[0];
-	owner_name = (char *)&((DM0L_REP *)h)->rep_vbuf[table_size];
+	atp_init_table(atp, &((DM0L_REP *)h)->rep_tbl_id,
+		&table_size, &table_name, &owner_size, &owner_name);
 	break;
 
     case DM0LCREATE:
@@ -5072,6 +5086,11 @@ DMP_DCB	    *dcb)
 
 	atp->atp_dcb = dcb;
 	atp->atp_jsx = jsx;
+
+	atp_init_tbl_hash( atp ); /* call after init atp_jsx */
+
+	MEfill(DB_TAB_MAXNAME, ' ', atp->atp_table_name.db_tab_name);
+	MEfill(DB_OWN_MAXNAME, ' ', atp->atp_owner_name.db_own_name);
 
 	/*
 	** Initialize BT transaction free list.
@@ -6872,6 +6891,7 @@ DB_TAB_ID   *table_id)
 	    att->offset = attrrecord.attoff;
 	    att->type = attrrecord.attfmt;
 	    att->length = attrrecord.attfml;
+	    att->encwid = attrrecord.attencwid;
 	    att->precision = attrrecord.attfmp;
 	    att->key = attrrecord.attkey;
 	    att->flag = attrrecord.attflag;
@@ -8329,8 +8349,6 @@ i4	*err_code)
     DMPE_RECORD		etab_record;
     i4			write_size;
     i4			count;
-    i4			table_size;
-    i4			owner_size;
     u_i2		newlen, seglen, oldlen;
 
     /* NB: "err_code" will point to jsx->jsx_dberr.err_code */
@@ -8386,30 +8404,21 @@ i4	*err_code)
 	switch (h->type)
 	{
 	    case DM0LDEL:
-		table_size = ((DM0L_DEL *)h)->del_tab_size;
-		owner_size = ((DM0L_DEL *)h)->del_own_size;
-		MEcopy( &((DM0L_DEL *)h)->del_vbuf[table_size + owner_size],
+		MEcopy( (char *)h + sizeof(DM0L_DEL),
 			sizeof(DMPE_RECORD), (PTR)&etab_record );
-		STRUCT_ASSIGN_MACRO(((DM0L_DEL *)h)->del_tbl_id,
-				    etab_tbl_id);
+		STRUCT_ASSIGN_MACRO(((DM0L_DEL *)h)->del_tbl_id, etab_tbl_id);
 		break;
 
 	    case DM0LPUT:
-		table_size = ((DM0L_PUT *)h)->put_tab_size;
-		owner_size = ((DM0L_PUT *)h)->put_own_size;
-		MEcopy( &((DM0L_PUT *)h)->put_vbuf[table_size + owner_size],
+		MEcopy( (char *)h + sizeof(DM0L_PUT),
 			sizeof(DMPE_RECORD), (PTR)&etab_record );
-		STRUCT_ASSIGN_MACRO(((DM0L_PUT *)h)->put_tbl_id,
-				    etab_tbl_id);
+		STRUCT_ASSIGN_MACRO(((DM0L_PUT *)h)->put_tbl_id, etab_tbl_id);
 		break;
 
 	    case DM0LREP:
-		table_size = ((DM0L_REP *)h)->rep_tab_size;
-		owner_size = ((DM0L_REP *)h)->rep_own_size;
-		MEcopy( &((DM0L_REP *)h)->rep_vbuf[table_size + owner_size],
+		MEcopy( (char *)h + sizeof(DM0L_REP),
 			sizeof(DMPE_RECORD), (PTR)&etab_record );
-		STRUCT_ASSIGN_MACRO(((DM0L_REP *)h)->rep_tbl_id,
-				    etab_tbl_id);
+		STRUCT_ASSIGN_MACRO(((DM0L_REP *)h)->rep_tbl_id, etab_tbl_id);
 		break;
 	}
 
@@ -8747,8 +8756,6 @@ i4		*err_code)
     DMPE_RECORD		etab_record;
     i4			write_size;
     i4			count;
-    i4			table_size;
-    i4			owner_size;
 
     /* NB: "err_code" will point to jsx->jsx_dberr.err_code */
 
@@ -8802,30 +8809,21 @@ i4		*err_code)
 	switch (h->type)
 	{
 	    case DM0LDEL:
-		table_size = ((DM0L_DEL *)h)->del_tab_size;
-		owner_size = ((DM0L_DEL *)h)->del_own_size;
-		MEcopy( &((DM0L_DEL *)h)->del_vbuf[table_size + owner_size],
+		MEcopy( (char *)h + sizeof(DM0L_DEL),
 			sizeof(DMPE_RECORD), (PTR)&etab_record );
-		STRUCT_ASSIGN_MACRO(((DM0L_DEL *)h)->del_tbl_id,
-				    etab_tbl_id);
+		STRUCT_ASSIGN_MACRO(((DM0L_DEL *)h)->del_tbl_id, etab_tbl_id);
 		break;
 
 	    case DM0LPUT:
-		table_size = ((DM0L_PUT *)h)->put_tab_size;
-		owner_size = ((DM0L_PUT *)h)->put_own_size;
-		MEcopy( &((DM0L_PUT *)h)->put_vbuf[table_size + owner_size],
+		MEcopy( (char *)h + sizeof(DM0L_PUT),
 			sizeof(DMPE_RECORD), (PTR)&etab_record );
-		STRUCT_ASSIGN_MACRO(((DM0L_PUT *)h)->put_tbl_id,
-				    etab_tbl_id);
+		STRUCT_ASSIGN_MACRO(((DM0L_PUT *)h)->put_tbl_id, etab_tbl_id);
 		break;
 
 	    case DM0LREP:
-		table_size = ((DM0L_REP *)h)->rep_tab_size;
-		owner_size = ((DM0L_REP *)h)->rep_own_size;
-		MEcopy( &((DM0L_REP *)h)->rep_vbuf[table_size + owner_size],
+		MEcopy( (char *)h + sizeof(DM0L_REP),
 			sizeof(DMPE_RECORD), (PTR)&etab_record );
-		STRUCT_ASSIGN_MACRO(((DM0L_REP *)h)->rep_tbl_id,
-				    etab_tbl_id);
+		STRUCT_ASSIGN_MACRO(((DM0L_REP *)h)->rep_tbl_id, etab_tbl_id);
 		break;
 	}
 
@@ -9030,5 +9028,607 @@ DB_STATUS format_emptyTuple(
 		ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL, &local_err, 1, 0, 0);
         }
 return status;
+}
+
+
+
+static DB_STATUS
+atp_init_tbl_hash(
+DMF_ATP		    *atp)
+{
+    DMF_JSX		*jsx = atp->atp_jsx;
+    ATP_TBLHCB  	*tblhcb;
+    DB_STATUS		status; i4			i;
+    i4			error;
+
+    CLRDBERR(&jsx->jsx_dberr);
+
+    /*
+    ** Allocate the hash bucket array for the tables
+    */
+    status = dm0m_allocate(
+	sizeof(ATP_TBLHCB) + ( 63 * sizeof(ATP_HASH_ENTRY)),
+	(i4)0, (i4)ATP_TBLHCB_CB,
+	(i4)ATP_TBLHCB_ASCII_ID, (char *)atp,
+	(DM_OBJECT **)&atp->atp_tblhcb_ptr, &jsx->jsx_dberr);
+    if ( status != E_DB_OK )
+	return(status);
+
+    /*
+    ** Initailize the hash bucket array
+    */
+    tblhcb = atp->atp_tblhcb_ptr;
+
+    tblhcb->tblhcb_no_hash_buckets = 63;
+    for (i = 0; i < tblhcb->tblhcb_no_hash_buckets; i++)
+    {
+	tblhcb->tblhcb_hash_array[i].tblhcb_headq_next = (ATP_TBLCB*)
+	    &tblhcb->tblhcb_hash_array[i].tblhcb_headq_next;
+            tblhcb->tblhcb_hash_array[i].tblhcb_headq_prev = (ATP_TBLCB*)
+	    &tblhcb->tblhcb_hash_array[i].tblhcb_headq_next;
+    }
+
+    return (E_DB_OK);
+}
+
+
+/*{
+** Name: atp_allocate_tblcb - Allocate a new tbl control block.
+**
+** Description:
+**
+**
+** Inputs:
+**	atp
+**
+** Outputs:
+**      err_code                        Reason for error code.
+**	Returns:
+**	    E_DB_OK
+**	    E_DB_ERROR
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**
+** History:
+**	21-Jul-2010 (stial01)
+**          Created from rfp_allocate_tblcb.
+*/
+static DB_STATUS
+atp_allocate_tblcb(
+DMF_ATP             *atp,
+ATP_TBLCB	    **tablecb)
+{
+    DMF_JSX	    *jsx = atp->atp_jsx;
+    ATP_TBLCB	    *tblcb;
+    DB_STATUS	    status;
+    i4		    error;
+
+    CLRDBERR(&jsx->jsx_dberr);
+
+    status = dm0m_allocate((i4)
+		(sizeof( ATP_TBLCB ) + sizeof( DMP_RELATION )),
+            (i4)DM0M_ZERO, (i4)ATP_TBL_CB, (i4)ATP_TBLCB_ASCII_ID,
+            (char *)atp, (DM_OBJECT **)&tblcb, &jsx->jsx_dberr);
+    if (status != E_DB_OK)
+    {
+	dmfWriteMsg(&jsx->jsx_dberr, 0, 0);
+        uleFormat(&jsx->jsx_dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,(char *)NULL,
+                (i4)0, NULL, &error, 0);
+	/* already logged */
+	CLRDBERR(&jsx->jsx_dberr);
+        return( E_DB_ERROR );
+    }
+
+    tblcb->tblcb_q_next      =  (ATP_TBLCB *)&tblcb->tblcb_q_next;
+    tblcb->tblcb_q_prev      =  (ATP_TBLCB *)&tblcb->tblcb_q_next;
+
+    *tablecb = tblcb;
+
+    return( E_DB_OK );
+
+}
+
+/*{
+** Name: atp_add_tblcb - Add tblcb to relevent structures
+**
+** Description:
+**
+**
+** Inputs:
+**	atp
+**
+** Outputs:
+**      err_code                        Reason for error code.
+**	Returns:
+**	    E_DB_OK
+**	    E_DB_ERROR
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**
+** History:
+**	21-Jul-2010 (stial01)
+**          Created from rfp_add_tblcb.
+*/
+static VOID
+atp_add_tblcb(
+DMF_ATP             *atp,
+ATP_TBLCB	    *tblcb )
+{
+    ATP_TBLHCB	        *hcb = atp->atp_tblhcb_ptr;
+    ATP_HASH_ENTRY	*h;
+
+    /*
+    ** Put on hash bucket queue
+    */
+    h = &hcb->tblhcb_hash_array[ tblcb->tblcb_table_id.db_tab_base %
+				 hcb->tblhcb_no_hash_buckets ];
+
+    /*
+    ** setup the new tblcb next and previous ptrs
+    */
+    tblcb->tblcb_q_next = h->tblhcb_headq_next;
+    tblcb->tblcb_q_prev = (ATP_TBLCB *)&h->tblhcb_headq_next;
+
+    /*
+    ** As adding to head of the list make last head element point to
+    ** new element
+    */
+    h->tblhcb_headq_next->tblcb_q_prev = tblcb;
+
+    /*
+    ** Make the head of the list point to the new element
+    */
+
+    h->tblhcb_headq_next = tblcb;
+
+    return;
+}
+
+/*{
+** Name: atp_locate_tblcb - Locate a tblcb via table_id.
+**
+** Description: Locate a tblcb via table_id.
+**
+**
+** Inputs:
+**	atp
+**      table_id
+**
+** Outputs:
+**      err_code                        Reason for error code.
+**	Returns:
+**	    E_DB_OK
+**	    E_DB_ERROR
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**
+** History:
+**	21-Jul-2010 (stial01)
+**          Created from rfp_locate_tblcb.
+*/
+static bool
+atp_locate_tblcb(
+DMF_ATP             *atp,
+ATP_TBLCB	    **tblcb,
+DB_TAB_ID	    *tabid)
+{
+    ATP_TBLHCB	        *hcb = atp->atp_tblhcb_ptr;
+    ATP_HASH_ENTRY	*h;
+    ATP_TBLCB		*t;
+
+
+    /*
+    ** determine hash bucket queue
+    */
+    h = &hcb->tblhcb_hash_array[ tabid->db_tab_base %
+				 hcb->tblhcb_no_hash_buckets ];
+
+    /*
+    ** Search the tblcb list chained of this bucket for a tblcb matching
+    ** the requested table
+    */
+    for ( t = h->tblhcb_headq_next;
+	  t != (ATP_TBLCB*)&h->tblhcb_headq_next;
+          t = t->tblcb_q_next )
+    {
+	if ((t->tblcb_table_id.db_tab_base == tabid->db_tab_base)
+	    && (t->tblcb_table_id.db_tab_index == tabid->db_tab_index))
+	{
+	    /*
+	    ** Table found
+	    */
+	    *tblcb = t;
+	    return( TRUE );
+
+	}
+    }
+
+    /*
+    ** Table not found
+    */
+    return( FALSE );
+}
+
+
+/*{
+** Name: atp_int_table - Get table name, owner for specified table id
+**
+** Description:  Get table name, owner for specified table id
+**
+**
+** Inputs:
+**	atp
+**      table_id
+**
+** Outputs:
+**      table_size		length of table name
+**      table_name
+**      owner_size		length of owner name
+**      owner_name
+**
+** Side Effects:
+**
+** History:
+**	21-Jul-2010 (stial01)
+**          Created.
+*/
+static VOID
+atp_init_table(
+DMF_ATP		*atp, 
+DB_TAB_ID	*table_id,
+i4		*table_size,
+char		**table_name,
+i4		*owner_size,
+char		**owner_name)
+{
+    DMF_JSX	*jsx = atp->atp_jsx;
+    bool	found_tblcb;
+    ATP_TBLCB   *tblcb;
+    DMP_RELATION reltup;
+    DB_STATUS	status;
+    DB_ERROR	local_dberr;
+    i4		i;
+    char	*cptr;
+
+    /* Init pointers in case we can't find table info */
+    *table_name = atp->atp_table_name.db_tab_name;
+    *owner_name = atp->atp_owner_name.db_own_name;
+    *table_size = 0;
+    *owner_size = 0;
+
+    for ( found_tblcb = FALSE; ; )
+    {
+	/* Look for this table id in ATP_TBLHCB */
+	found_tblcb = atp_locate_tblcb( atp, &tblcb, table_id);
+	if (found_tblcb)
+	    break;
+
+	/* Look for this table in iirelation, init ATP_TBLCB */
+	status =  get_table_reltup(atp, table_id, &reltup);
+	if (status)
+	    break;
+
+	if (reltup.reltid.db_tab_base == table_id->db_tab_base
+		&& reltup.reltid.db_tab_index  == table_id->db_tab_index)
+	{
+	    status = atp_allocate_tblcb(atp, &tblcb);
+
+	    local_dberr = jsx->jsx_dberr;
+	    if (status != E_DB_OK)
+	    {
+		/* Can't allocate memory, auditdb will just print blank name */
+		break;
+	    }
+	    jsx->jsx_dberr = local_dberr;
+
+	    STRUCT_ASSIGN_MACRO(*table_id, tblcb->tblcb_table_id);
+	    STRUCT_ASSIGN_MACRO(reltup.relid, tblcb->tblcb_table_name);
+	    STRUCT_ASSIGN_MACRO(reltup.relowner, tblcb->tblcb_owner_name);
+
+	    /* Compute blank-stripped lengths of table and owner names */
+	    for ( cptr = (char *)reltup.relid.db_tab_name + DB_TAB_MAXNAME-1,
+			 i = DB_TAB_MAXNAME;
+		  cptr >= (char *)reltup.relid.db_tab_name && *cptr == ' ';
+		  cptr--, i-- );
+	    tblcb->tblcb_table_size = i;
+
+	    for ( cptr = (char *)reltup.relowner.db_own_name + DB_OWN_MAXNAME-1,
+			 i = DB_OWN_MAXNAME;
+		  cptr >= (char *)reltup.relowner.db_own_name && *cptr == ' ';
+		  cptr--, i-- );
+	    tblcb->tblcb_owner_size = i;
+
+	    atp_add_tblcb (atp, tblcb);
+	    found_tblcb = TRUE;
+	    break;
+	}
+     
+	/*
+	** There's one more thing we could do here...
+	** Look for DROP TABLE jnlrec after current jnlrec, init ATP_TBLCB
+	*/
+	break; /* ALWAYS */
+
+    }
+
+    if (found_tblcb)
+    {
+	*table_name = tblcb->tblcb_table_name.db_tab_name;
+	*owner_name = tblcb->tblcb_owner_name.db_own_name;
+	*table_size = tblcb->tblcb_table_size;
+	*owner_size = tblcb->tblcb_owner_size;
+    }
+}
+
+
+/*{
+** Name: get_table_reltup - Get iirelation tuple for input table id
+**
+** Description: Get iirelation tuple for input table id
+**
+**
+** Inputs:
+**	atp
+**      tableid
+**
+** Outputs:
+**      reltup				iirelation tuple
+**      err_code                        Reason for error return status.
+**	Returns:
+**	    E_DB_OK
+**	    E_DB_ERROR
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**
+** History:
+**	21-Jul-2010 (stial01)
+**          Created.
+*/
+static DB_STATUS
+get_table_reltup(
+DMF_ATP     *atp,
+DB_TAB_ID   *table_id,
+DMP_RELATION *reltup)
+{
+    DMF_JSX		*jsx = atp->atp_jsx;
+    ATP_TD		*td = NULL;
+    DMP_RCB		*rel_rcb = NULL;
+    DB_TRAN_ID		tran_id;
+    DM2R_KEY_DESC	key_desc[2];
+    DM_TID		tid;
+    i4		i;
+    i4		idx;
+    i4		local_err;
+    DB_STATUS		status = E_DB_OK;
+    DB_ERROR		local_dberr;
+    DMP_RELATION	rel_record;
+
+    CLRDBERR(&jsx->jsx_dberr);
+    reltup->reltid.db_tab_base = 0;
+    reltup->reltid.db_tab_index = 0;
+
+    for(;;)
+    {
+	tran_id.db_high_tran = 0;
+	tran_id.db_low_tran = 0;
+
+	/* Lookup the table_id in IIRELATION */
+
+	status = dm2r_rcb_allocate(atp->atp_dcb->dcb_rel_tcb_ptr, (DMP_RCB *)0,
+	    &tran_id, dmf_svcb->svcb_lock_list, 0, &rel_rcb, &local_dberr);
+	if (status != E_DB_OK)
+	    break;
+
+	/*  Initialize the RCB. */
+
+	rel_rcb->rcb_lk_mode = RCB_K_IS;
+	rel_rcb->rcb_k_mode = RCB_K_IS;
+	rel_rcb->rcb_access_mode = RCB_A_READ;
+	rel_rcb->rcb_lk_id = dmf_svcb->svcb_lock_list;
+    
+	key_desc[0].attr_operator = DM2R_EQ;
+	key_desc[0].attr_number = DM_1_RELATION_KEY;
+	key_desc[0].attr_value = (char *)&table_id->db_tab_base;
+
+	status = dm2r_position(rel_rcb, DM2R_QUAL, key_desc, (i4)1,
+	      (DM_TID *)0, &local_dberr);
+	if (status != E_DB_OK)
+	    break;
+
+	/* if table is a partition, build tuple desc from master */
+	idx = ((table_id->db_tab_index & DB_TAB_PARTITION_MASK) ?
+		0 : table_id->db_tab_index);
+
+	for (;;)
+	{
+	    /* 
+	    ** Get a qualifying iirelation record.  
+	    */
+	    status = dm2r_get(rel_rcb, &tid, DM2R_GETNEXT, 
+		(char *)&rel_record, &local_dberr);
+	    if (status != E_DB_OK)
+		break;
+
+	    if ((rel_record.reltid.db_tab_base != table_id->db_tab_base) ||
+	    	(rel_record.reltid.db_tab_index != idx))
+		continue;
+
+	    *reltup = rel_record;
+	    break;
+	}
+
+	/*
+	** If the table was not found, then set status to OK since it
+	** is not an error condition and break to below to return
+	** without a table descriptor.
+	*/
+	if (status != E_DB_OK)
+	{
+	    if (local_dberr.err_code == E_DM0055_NONEXT)
+		status = E_DB_OK;
+	    break;
+	}
+
+	status = dm2r_release_rcb(&rel_rcb, &local_dberr);
+
+	break; /* ALWAYS */
+    }
+
+    if (status == E_DB_OK)
+	return (E_DB_OK);
+
+    /*
+    ** If an error occured, then log an error message and return no table
+    ** descriptor.  Auditdb will continue, but references to this table will
+    ** require Hex Dumps.
+    */
+    if (DB_FAILURE_MACRO(status))
+    {
+	if (local_dberr.err_code)
+	    dmfWriteMsg(&local_dberr, 0, 0);
+	dmfWriteMsg(NULL, E_DM120D_ATP_DESCRIBE, 0);
+    }
+
+    if (rel_rcb != 0)
+    {
+	status = dm2r_release_rcb(&rel_rcb, &local_dberr);
+	if (status != E_DB_OK)
+	    dmfWriteMsg(&local_dberr, 0, 0);
+    }
+
+    return (E_DB_ERROR);
+}
+
+
+/*{
+** Name: atp_dm0lcreate - Allocate/init ATP_TBLCB for table created.
+**
+** Description: When auditdb reads a DM0LCREATE log record, allocate/init
+**		ATP_TBLCB context for table created.
+**
+**
+** Inputs:
+**	atp				auditdb context
+**      crec				DM0LCREATE log record
+**
+** Outputs:
+**      None
+**
+** Side Effects:
+**
+** History:
+**	21-Jul-2010 (stial01)
+**          Created.
+*/
+static VOID
+atp_dm0lcreate(
+DMF_ATP		*atp, 
+DM0L_CREATE	*crec)
+{
+    DMF_JSX	*jsx = atp->atp_jsx;
+    ATP_TBLCB   *tblcb;
+    DB_STATUS	status;
+    DB_ERROR	local_dberr;
+    i4		i;
+    char	*cptr;
+
+    for ( ; ; )
+    {
+	status = atp_allocate_tblcb(atp, &tblcb);
+
+	local_dberr = jsx->jsx_dberr;
+	if (status != E_DB_OK)
+	{
+	    /* Can't allocate memory, auditdb will just print blank name */
+	    break;
+	}
+	jsx->jsx_dberr = local_dberr;
+
+	STRUCT_ASSIGN_MACRO(crec->duc_tbl_id, tblcb->tblcb_table_id);
+	STRUCT_ASSIGN_MACRO(crec->duc_name, tblcb->tblcb_table_name);
+	STRUCT_ASSIGN_MACRO(crec->duc_owner, tblcb->tblcb_owner_name);
+
+	/* Compute blank-stripped lengths of table and owner names */
+	for ( cptr = (char *)crec->duc_name.db_tab_name + DB_TAB_MAXNAME-1,
+		     i = DB_TAB_MAXNAME;
+	      cptr >= (char *)crec->duc_name.db_tab_name && *cptr == ' ';
+	      cptr--, i-- );
+	tblcb->tblcb_table_size = i;
+
+	for ( cptr = (char *)crec->duc_owner.db_own_name + DB_OWN_MAXNAME-1,
+		     i = DB_OWN_MAXNAME;
+	      cptr >= (char *)crec->duc_owner.db_own_name && *cptr == ' ';
+	      cptr--, i-- );
+	tblcb->tblcb_owner_size = i;
+
+	atp_add_tblcb (atp, tblcb);
+
+	break; /* ALWAYS */
+    }
+}
+
+
+/*{
+** Name: atp_dm0ldestroy - Find/destroy ATP_TBLCB for table destroyed
+**
+** Description: When auditdb reads a DM0LDESTROY log record, find/destroy
+**		ATP_TBLCB context, it is not needed anymore
+**
+**
+** Inputs:
+**	atp				auditdb context
+**      drec				DM0LDESTROY log record
+**
+** Outputs:
+**      None
+**
+** Side Effects:
+**
+** History:
+**	21-Jul-2010 (stial01)
+**          Created.
+*/
+static VOID
+atp_dm0ldestroy(
+DMF_ATP		*atp, 
+DM0L_DESTROY	*drec)
+{
+    DMF_JSX	*jsx = atp->atp_jsx;
+    bool	found_tblcb;
+    ATP_TBLCB   *tblcb;
+    DMP_RELATION reltup;
+    DB_STATUS	status;
+    DB_ERROR	local_dberr;
+    i4		i;
+    char	*cptr;
+
+    /* Look for this table id in ATP_TBLHCB */
+    if (atp_locate_tblcb( atp, &tblcb, &drec->dud_tbl_id) == FALSE)
+	return;
+     
+    /*
+    ** If on a hash queue then remove it
+    */
+    if ( (tblcb->tblcb_q_next != (ATP_TBLCB *)&tblcb->tblcb_q_next )
+         || (tblcb->tblcb_q_prev != (ATP_TBLCB *)&tblcb->tblcb_q_next ))
+    {
+	tblcb->tblcb_q_prev->tblcb_q_next = tblcb->tblcb_q_next;
+	tblcb->tblcb_q_next->tblcb_q_prev = tblcb->tblcb_q_prev;
+
+    }
+
+    /* free memory */
+    dm0m_deallocate((DM_OBJECT **)&tblcb);
+
+    return;
+
 }
 

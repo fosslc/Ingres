@@ -66,8 +66,10 @@
 **	    log header.  This option accepted only in standalone logdump.
 **	-rrec_type
 **	    dump only log records of type 'rec_type'
-**	-ttablename
+**	-ttablename (no longer supported)
 **	    dump only log records for table named 'tablename'
+**      -i<reltid,reltidx>
+**	    dump only log records for table having table id (reltid,reltidx)
 **	-xtx_id
 **	    dump only log records for transaction 'tx_id'.
 **	-sknumber
@@ -199,6 +201,10 @@ PROGRAM =	ntlogdmp
 **          Allow multiple filenames to handle a partitioned TX log file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
+**          logdump: remove support for -ttablename, add -i(reltid,reltidx)
+**          
 [@history_template@]...
 **/
 
@@ -245,7 +251,7 @@ typedef struct
 #define			LDMP_LOGADDR_START	0x000008
 #define			LDMP_LOGADDR_END	0x000010
 #define			LDMP_DB_ID		0x000020
-#define			LDMP_TNAME		0x000040
+#define			LDMP_TABID		0x000040
 #define			LDMP_RECTYPE		0x000080
 #define			LDMP_SKIP_COUNT		0x000100
 #define			LDMP_STOP_COUNT		0x000200
@@ -264,7 +270,7 @@ typedef struct
     LG_LA	    ldmp_la_start;
     LG_LA	    ldmp_la_end;
     LG_DBID	    ldmp_db_id;
-    char	    ldmp_t_name [DB_TAB_MAXNAME];
+    DB_TAB_ID	    ldmp_tab_id;
     i4	    ldmp_rectype;
     i4	    ldmp_skip_count;
     i4	    ldmp_stop_count;
@@ -290,6 +296,11 @@ static DB_STATUS log_addr(
     char	    *arg,
     i4	    size,
     LG_LA	    *la);
+
+static DB_STATUS
+parse_tabid(
+    char	    *arg,
+    DB_TAB_ID   *tab_id);
 
 static i4  check_table_name(
     LDMP_CB	*ldmp,
@@ -944,7 +955,7 @@ LDMP_CB	    *ldmp)
 	    if (h->database_id != ldmp->ldmp_db_id)
 		continue;
 	}
-	if (ldmp->ldmp_flags & LDMP_TNAME)
+	if (ldmp->ldmp_flags & LDMP_TABID)
 	{
 	    /*
 	    ** If the record is for some other table, skip it
@@ -1163,11 +1174,17 @@ LDMP_CB	    *ldmp)
 		break;
 
 	    case 't':
-		/*  Table name audit. */
+		/* -ttablename Table name audit... Replaced with TABID audit */
+		TRdisplay("Parameter error: '%s'\n", &argv[i][0]);
+		break;
 
-		STmove(&argv[i][2], ' ', sizeof(ldmp->ldmp_t_name),
-			ldmp->ldmp_t_name);
-		ldmp->ldmp_flags |= LDMP_TNAME;
+	    case 'i':
+		    /* -i<reltid,reltidx> TABID audit */
+		    status = parse_tabid(&(argv[i][2]), &ldmp->ldmp_tab_id);
+		    if (status)
+			TRdisplay("Parameter error: '%s'\n", &argv[i][0]);
+		    else
+			ldmp->ldmp_flags |= LDMP_TABID;
 		break;
 
 	    case 'v':
@@ -1268,7 +1285,7 @@ logdump_usage(void)
 	"\t[-as<lga1,lga2,lga3>] [-ae<lga1,lga2,lga3>] [-rrec_type]\n");
 
     TRdisplay(
-	"\t[-ttablename] [-xtx_id] [-sk<number>] [-st<number>] [-verbose]\n");
+	"\t[-i<reltid,reltidx>] [-xtx_id] [-sk<number>] [-st<number>] [-verbose]\n");
 
     return;
 }
@@ -1376,6 +1393,73 @@ LG_LA	    *la)
 }
 
 /*
+** Name: parse_tabid   - parse a table id given in a parameter
+**
+** Description:
+**	This subroutine is used by '-i' to parse a table id.
+**
+** History:
+**	21-Jul-2010 (stial01)
+**	    Created.
+*/
+static DB_STATUS
+parse_tabid(
+char	    *arg,
+DB_TAB_ID   *tab_id)
+{
+    char    *cur_pos = arg;
+    char    *first_comma;
+    char    *end;
+    char    work_buf [100];
+    i4 offset;
+
+    if (*cur_pos != '<')
+    {
+	TRdisplay("Expected '<', found '%c'\n", *cur_pos);
+	TRdisplay("Table id format is '<number,number>, not '%s'\n", arg);
+	return (E_DB_ERROR);
+    }
+
+    cur_pos++;
+
+    first_comma = STchr(cur_pos, ',');
+    if (first_comma == 0)
+    {
+	TRdisplay("First comma was missing from '%s'\n", cur_pos);
+	TRdisplay("Table id format is '<number,number>, not '%s'\n", arg);
+	return (E_DB_ERROR);
+    }
+    STncpy( work_buf, cur_pos, first_comma - cur_pos );
+    work_buf[first_comma - cur_pos] = '\0';
+    if (CVal(work_buf, (i4 *)&tab_id->db_tab_base) != OK)
+    {
+	TRdisplay("Error converting reltid '%s' to integer\n", work_buf);
+	TRdisplay("Table id format is '<number,number>, not '%s'\n", arg);
+	return (E_DB_ERROR);
+    }
+    cur_pos = first_comma + 1;
+
+    end = STchr(cur_pos, '>');
+    if (end == 0)
+    {
+	TRdisplay("Terminating '>' missing from '%s'\n", cur_pos);
+	TRdisplay("Table id format is '<number,number>, not '%s'\n", arg);
+	return (E_DB_ERROR);
+    }
+    STncpy( work_buf, cur_pos, end - cur_pos );
+    work_buf[end - cur_pos] = '\0';
+    if (CVal(work_buf, (i4 *)&tab_id->db_tab_index) != OK)
+    {
+	TRdisplay("Error converting reltidx '%s' to integer.\n", work_buf);
+	TRdisplay("Table id format is '<number,number>, not '%s'\n", arg);
+	return (E_DB_ERROR);
+    }
+
+    return (E_DB_OK);
+}
+
+
+/*
 ** Name: check_table_name   - is this log record for this table?
 **
 ** Description:
@@ -1404,82 +1488,61 @@ check_table_name(
 LDMP_CB	    *ldmp,
 PTR	    record)
 {
-    char	    *table_name = NULL;
-    char	    *owner_name = NULL;
-    i4	    table_length = DB_TAB_MAXNAME;
-    i4	    owner_length = DB_OWN_MAXNAME;
+    DB_TAB_ID	    *table_id = NULL;
     DM0L_HEADER	    *h = (DM0L_HEADER *)record;
 
-    if (ldmp->ldmp_flags & LDMP_TNAME)
+    if (ldmp->ldmp_flags & LDMP_TABID)
     {
 	/*  Now check for a specific table & owner. */
 
 	switch (h->type)
 	{
 	case DM0LPUT:
-	    table_length = ((DM0L_PUT *)h)->put_tab_size;
-	    owner_length = ((DM0L_PUT *)h)->put_own_size;
-	    table_name = &((DM0L_PUT *)h)->put_vbuf[0];
-	    owner_name = &((DM0L_PUT *)h)->put_vbuf[table_length];
+	    table_id = &((DM0L_PUT *)h)->put_tbl_id;
 	    break;
 
 	case DM0LDEL:
-	    table_length = ((DM0L_DEL *)h)->del_tab_size;
-	    owner_length = ((DM0L_DEL *)h)->del_own_size;
-	    table_name = &((DM0L_DEL *)h)->del_vbuf[0];
-	    owner_name = &((DM0L_DEL *)h)->del_vbuf[table_length];
+	    table_id = &((DM0L_DEL *)h)->del_tbl_id;
 	    break;
 
 	case DM0LREP:
-	    table_length = ((DM0L_REP *)h)->rep_tab_size;
-	    owner_length = ((DM0L_REP *)h)->rep_own_size;
-	    table_name = &((DM0L_REP *)h)->rep_vbuf[0];
-	    owner_name = &((DM0L_REP *)h)->rep_vbuf[table_length];
+	    table_id = &((DM0L_REP *)h)->rep_tbl_id;
 	    break;
 
 	case DM0LCREATE:
-	    table_name = ((DM0L_CREATE *)h)->duc_name.db_tab_name;
-	    owner_name = ((DM0L_CREATE *)h)->duc_owner.db_own_name;
+	    table_id = &((DM0L_CREATE *)h)->duc_tbl_id;
 	    break;
 
 	case DM0LDESTROY:
-	    table_name = ((DM0L_DESTROY *)h)->dud_name.db_tab_name;
-	    owner_name = ((DM0L_DESTROY *)h)->dud_owner.db_own_name;
+	    table_id = &((DM0L_DESTROY *)h)->dud_tbl_id;
 	    break;
 
 	case DM0LRELOCATE:
-	    table_name = ((DM0L_RELOCATE *)h)->dur_name.db_tab_name;
-	    owner_name = ((DM0L_RELOCATE *)h)->dur_owner.db_own_name;
+	    table_id = &((DM0L_RELOCATE *)h)->dur_tbl_id;
 	    break;
 
 	case DM0LOLDMODIFY:
-	    table_name = ((DM0L_OLD_MODIFY *)h)->dum_name.db_tab_name;
-	    owner_name = ((DM0L_OLD_MODIFY *)h)->dum_owner.db_own_name;
+	    table_id = &((DM0L_OLD_MODIFY *)h)->dum_tbl_id;
 	    break;
 
 	case DM0LMODIFY:
-	    table_name = ((DM0L_MODIFY *)h)->dum_name.db_tab_name;
-	    owner_name = ((DM0L_MODIFY *)h)->dum_owner.db_own_name;
+	    table_id = &((DM0L_MODIFY *)h)->dum_tbl_id;
 	    break;
 
 	case DM0LINDEX:
-	    table_name = ((DM0L_INDEX *)h)->dui_name.db_tab_name;
-	    owner_name = ((DM0L_INDEX *)h)->dui_owner.db_own_name;
+	    table_id = &((DM0L_INDEX *)h)->dui_tbl_id;
 	    break;
 
 	case DM0LALTER:
-	    table_name = ((DM0L_ALTER *)h)->dua_name.db_tab_name;
-	    owner_name = ((DM0L_ALTER *)h)->dua_owner.db_own_name;
+	    table_id = &((DM0L_ALTER *)h)->dua_tbl_id;
 	    break;
 
 	case DM0LBSF:
-	    table_name = ((DM0L_BSF *)h)->bsf_name.db_tab_name;
-	    owner_name = ((DM0L_BSF *)h)->bsf_owner.db_own_name;
+	    table_id = &((DM0L_BSF *)h)->bsf_tbl_id;
 	    break;
 
 	case DM0LESF:
-	    table_name = ((DM0L_ESF *)h)->esf_name.db_tab_name;
-	    owner_name = ((DM0L_ESF *)h)->esf_owner.db_own_name;
+	    table_id = &((DM0L_ESF *)h)->esf_tbl_id;
 	    break;
 	}
 
@@ -1487,8 +1550,9 @@ PTR	    record)
 	** Lastly, check for a specific table name & system catalogs.
 	*/
 
-	if (table_name &&
-	    (MEcmp(ldmp->ldmp_t_name, table_name, table_length) == 0))
+	if (table_id 
+		&& ldmp->ldmp_tab_id.db_tab_base == table_id->db_tab_base
+		&& ldmp->ldmp_tab_id.db_tab_index == table_id->db_tab_index)
 	{
 	    return (1);
 	}

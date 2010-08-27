@@ -263,6 +263,8 @@
 **          Changes for Long IDs, move consistency check to dmveutil
 **      29-Apr-2010 (stial01)
 **          Use new routintes to compare rows in iirelation, iisequence
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 */
 
 
@@ -407,6 +409,7 @@ DMVE_CB		*dmve)
     DMP_PINFO		*pinfo = NULL;
 
     CLRDBERR(&dmve->dmve_error);
+    DMVE_CLEAR_TABINFO_MACRO(dmve);
 
     for (;;)
     {
@@ -721,8 +724,7 @@ DMP_PINFO	    *pinfo)
     if (log_rec->del_comptype != TCB_C_NONE)
 	update_mode |= DM1C_DMVE_COMP;
 
-    log_row = &log_rec->del_vbuf[log_rec->del_tab_size + log_rec->del_own_size];
-
+    log_row = ((char *)log_rec) + sizeof(*log_rec);
 
     /*
     ** Consistency Checks:
@@ -748,8 +750,8 @@ DMP_PINFO	    *pinfo)
 	uleFormat(NULL, E_DM966D_DMVE_ROW_MISSING, (CL_ERR_DESC *)NULL, ULE_LOG,
 	    NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 6, 
 	    sizeof(DB_DB_NAME), tabio->tbio_dbname->db_db_name,
-	    log_rec->del_tab_size, &log_rec->del_vbuf[0],
-	    log_rec->del_own_size, &log_rec->del_vbuf[log_rec->del_tab_size],
+	    sizeof(DB_TAB_NAME), tabio->tbio_relid->db_tab_name,
+	    sizeof(DB_OWN_NAME), tabio->tbio_relowner->db_own_name,
 	    0, log_rec->del_tid.tid_tid.tid_page,
 	    0, log_rec->del_tid.tid_tid.tid_line,
 	    0, status);
@@ -812,9 +814,8 @@ DMP_PINFO	    *pinfo)
 		(CL_ERR_DESC *)NULL, ULE_LOG,
 		NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 8,
 		sizeof(DB_DB_NAME), tabio->tbio_dbname->db_db_name,
-		log_rec->del_tab_size, &log_rec->del_vbuf[0],
-		log_rec->del_own_size, 
-		&log_rec->del_vbuf[log_rec->del_tab_size],
+		sizeof(DB_TAB_NAME), tabio->tbio_relid->db_tab_name,
+		sizeof(DB_OWN_NAME), tabio->tbio_relowner->db_own_name,
 		0, log_rec->del_tid.tid_tid.tid_page,
 		0, log_rec->del_tid.tid_tid.tid_line,
 		0, record_size, 0, log_rec->del_rec_size,
@@ -1060,7 +1061,7 @@ DMP_PINFO	    *pinfo)
 	rfp_remove_action(dmve, action);
     }
 
-    log_row = &log_rec->del_vbuf[log_rec->del_tab_size + log_rec->del_own_size];
+    log_row = ((char *)log_rec) + sizeof(*log_rec);
 
     /*
     ** Make sure that there is not already a tuple at the spot at which 
@@ -1081,8 +1082,8 @@ DMP_PINFO	    *pinfo)
 	    uleFormat(NULL, E_DM966E_DMVE_ROW_OVERLAP, (CL_ERR_DESC *)NULL, ULE_LOG,
 		NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 5, 
 		sizeof(DB_DB_NAME), tabio->tbio_dbname->db_db_name,
-		log_rec->del_tab_size, &log_rec->del_vbuf[0],
-		log_rec->del_own_size, &log_rec->del_vbuf[log_rec->del_tab_size],
+		sizeof(DB_TAB_NAME), tabio->tbio_relid->db_tab_name,
+		sizeof(DB_OWN_NAME), tabio->tbio_relowner->db_own_name,
 		0, log_rec->del_tid.tid_tid.tid_page,
 		0, log_rec->del_tid.tid_tid.tid_line);
 	    dmd_log(1, (PTR) log_rec, 4096);
@@ -1117,8 +1118,8 @@ DMP_PINFO	    *pinfo)
 	    uleFormat(NULL, E_DM9674_DMVE_PAGE_NOROOM, (CL_ERR_DESC *)NULL, ULE_LOG,
 		NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 6, 
 		sizeof(DB_DB_NAME), tabio->tbio_dbname->db_db_name,
-		log_rec->del_tab_size, &log_rec->del_vbuf[0],
-		log_rec->del_own_size, &log_rec->del_vbuf[log_rec->del_tab_size],
+		sizeof(DB_TAB_NAME), tabio->tbio_relid->db_tab_name,
+		sizeof(DB_OWN_NAME), tabio->tbio_relowner->db_own_name,
 		0, log_rec->del_tid.tid_tid.tid_page,
 		0, log_rec->del_tid.tid_tid.tid_line, 
 		0, log_rec->del_rec_size);
@@ -1160,8 +1161,8 @@ DMP_PINFO	    *pinfo)
 	    DMPP_VPT_GET_PAGE_LRI_MACRO(log_rec->del_pg_type, page, &lri);
 
 	    status = dm0l_del(dmve->dmve_log_id, flags, &log_rec->del_tbl_id, 
-		(DB_TAB_NAME*)&log_rec->del_vbuf[0], log_rec->del_tab_size, 
-		(DB_OWN_NAME*)&log_rec->del_vbuf[log_rec->del_tab_size], log_rec->del_own_size, 
+		tabio->tbio_relid, 0,
+		tabio->tbio_relowner, 0,
 		&log_rec->del_tid, 
 		log_rec->del_pg_type, log_rec->del_page_size,
 		log_rec->del_comptype,

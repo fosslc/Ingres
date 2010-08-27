@@ -655,6 +655,8 @@
 **	    Add E_DM944F_DM2U_MOD_ENCRYPT.
 **	25-Jun-2010 (frima01) Bug 123753
 **	    Change E_DM9580_CONFIG_DBSERVICE_ERROR to be a warning.
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Define new ATP control blobks for auditdb table info.
 */
 
 /*
@@ -944,9 +946,11 @@ blow chunks now!
 #define		DM_LLOC_CB		(57 | DM0M_SHORTTERM)
 #define		DM_CRIB_CB		(58 | DM0M_SHORTTERM)
 #define		DM_BQCB_CB		(59 | DM0M_LONGTERM)
+#define	    	DM_ATP_TBL_CB		(60 | DM0M_LONGTERM)
+#define	    	DM_ATP_TBLHCB_CB	(61 | DM0M_LONGTERM)
 
 /* Don't forget to update this... */
-#define		DM0M_MAX_TYPE		 59
+#define		DM0M_MAX_TYPE		 61 
 
 /*
 **  Define macro for dm0m_check to avoid function call at entry point to all

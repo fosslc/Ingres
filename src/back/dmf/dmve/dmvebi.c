@@ -180,6 +180,8 @@
 **	    SIR 121619 MVCC: Replace dm0p_mutex/unmutex with dmveMutex/Unmutex
 **	    macros.
 **	    Replace DMPP_PAGE* with DMP_PINFO* as needed.
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 **/
 
 static DB_STATUS dmv_unbipage(
@@ -299,6 +301,7 @@ DMVE_CB		*dmve_cb)
     DMP_PINFO		*pinfo = NULL;
 
     CLRDBERR(&dmve->dmve_error);
+    DMVE_CLEAR_TABINFO_MACRO(dmve);
 
     dump_processing = ((log_rec->bi_header.flags & DM0L_DUMP) != 0);
 
@@ -634,7 +637,7 @@ DMP_PINFO	    *pinfo)
 	dm0l_flags = (log_rec->bi_header.flags | DM0L_CLR);
 
 	status = dm0l_bi(dmve->dmve_log_id, dm0l_flags, 
-	    &log_rec->bi_tbl_id, &log_rec->bi_tblname, &log_rec->bi_tblowner, 
+	    &log_rec->bi_tbl_id, tabio->tbio_relid, tabio->tbio_relowner,
 	    log_rec->bi_pg_type, log_rec->bi_loc_cnt, log_rec->bi_loc_id,
 	    log_rec->bi_operation, log_rec->bi_pageno, log_rec->bi_page_size,
 	    &log_rec->bi_page, log_lsn, &lsn, &dmve->dmve_error);

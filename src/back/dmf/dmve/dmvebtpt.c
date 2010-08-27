@@ -312,6 +312,8 @@
 **          restrictions on dm1cxclean. Added dmve_bid_check_error.
 **      09-Jun-2010 (stial01)
 **          More mvcc trace output for bid check errors.
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 */
 
 /*
@@ -519,6 +521,7 @@ DMVE_CB		*dmve)
     DMP_PINFO		*pinfo = NULL;
 
     CLRDBERR(&dmve->dmve_error);
+    DMVE_CLEAR_TABINFO_MACRO(dmve);
 
     if (dmve->dmve_flags & DMVE_MVCC)
 	log_rec->btp_bid.tid_tid.tid_page = 
@@ -661,8 +664,7 @@ DMVE_CB		*dmve)
 
 	if (bid_check && !bid_check_done)
 	{
-	    insert_key = &log_rec->btp_vbuf[log_rec->btp_tab_size + 
-							log_rec->btp_own_size];
+	    insert_key = &log_rec->btp_vbuf[0]; 
 	    if (recovery_action == DMVE_UNDO)
 		opflag = DMVE_FINDKEY;
 	    else
@@ -719,8 +721,8 @@ DMVE_CB		*dmve)
 		    uleFormat(NULL, E_DM9665_PAGE_OUT_OF_DATE, (CL_ERR_DESC *)NULL,
 			ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
 			&loc_error, 8,
-			sizeof(*tbio->tbio_relid), tbio->tbio_relid,
-			sizeof(*tbio->tbio_relowner), tbio->tbio_relowner,
+			sizeof(DB_TAB_NAME), tbio->tbio_relid->db_tab_name,
+			sizeof(DB_OWN_NAME), tbio->tbio_relowner->db_own_name,
 			0, DM1B_VPT_GET_PAGE_PAGE_MACRO(page_type, page),
 			0, DM1B_VPT_GET_PAGE_STAT_MACRO(page_type, page),
 			0, DM1B_VPT_GET_LOG_ADDR_HIGH_MACRO(page_type, page),
@@ -739,8 +741,8 @@ DMVE_CB		*dmve)
 		uleFormat(NULL, E_DM9665_PAGE_OUT_OF_DATE, (CL_ERR_DESC *)NULL,
 		    ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
 		    &loc_error, 8,
-		    sizeof(*tbio->tbio_relid), tbio->tbio_relid,
-		    sizeof(*tbio->tbio_relowner), tbio->tbio_relowner,
+		    sizeof(DB_TAB_NAME), tbio->tbio_relid->db_tab_name,
+		    sizeof(DB_OWN_NAME), tbio->tbio_relowner->db_own_name,
 		    0, DM1B_VPT_GET_PAGE_PAGE_MACRO(page_type, page),
 		    0, DM1B_VPT_GET_PAGE_STAT_MACRO(page_type, page),
 		    0, DM1B_VPT_GET_LOG_ADDR_HIGH_MACRO(page_type, page),
@@ -868,7 +870,7 @@ DM_TID		    *bid)
     if (page == NULL)
 	return (E_DB_OK);
 
-    key = &log_rec->btp_vbuf[log_rec->btp_tab_size + log_rec->btp_own_size];
+    key = &log_rec->btp_vbuf[0];
 
     index_update = ((DM1B_VPT_GET_PAGE_STAT_MACRO(page_type, page) & 
 	DMPP_INDEX) != 0);
@@ -1110,7 +1112,7 @@ DM_TID		    *bid)
     if (page == NULL)
 	return (E_DB_OK);
 
-    key = &log_rec->btp_vbuf[log_rec->btp_tab_size + log_rec->btp_own_size];
+    key = &log_rec->btp_vbuf[0];
 
     index_update = ((DM1B_VPT_GET_PAGE_STAT_MACRO(page_type, page) & 
 	DMPP_INDEX) != 0);
@@ -1191,8 +1193,8 @@ DM_TID		    *bid)
 	uleFormat(NULL, E_DM966A_DMVE_KEY_MISMATCH, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
 	    (char *)NULL, (i4)0, (i4 *)NULL, err_code, 8, 
 	    sizeof(DB_DB_NAME), tabio->tbio_dbname->db_db_name,
-	    log_rec->btp_tab_size, &log_rec->btp_vbuf[0],
-	    log_rec->btp_own_size, &log_rec->btp_vbuf[log_rec->btp_tab_size],
+	    sizeof(DB_TAB_NAME), tabio->tbio_relid->db_tab_name,
+	    sizeof(DB_OWN_NAME), tabio->tbio_relowner->db_own_name,
 	    0, bid->tid_tid.tid_page, 0, bid->tid_tid.tid_line,
 	    5, (index_update ? "INDEX" : "LEAF "),
 	    0, log_rec->btp_bid.tid_tid.tid_page,
@@ -1262,8 +1264,8 @@ DM_TID		    *bid)
 
 	    status = dm0l_btput(dmve->dmve_log_id, flags,
 		&log_rec->btp_tbl_id, 
-		(DB_TAB_NAME*)&log_rec->btp_vbuf[0], log_rec->btp_tab_size, 
-		(DB_OWN_NAME*)&log_rec->btp_vbuf[log_rec->btp_tab_size], log_rec->btp_own_size, 
+		tabio->tbio_relid, 0,
+		tabio->tbio_relowner, 0,
 		log_rec->btp_pg_type, log_rec->btp_page_size,
 		log_rec->btp_cmp_type, 
 		log_rec->btp_loc_cnt, loc_config_id,

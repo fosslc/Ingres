@@ -214,6 +214,8 @@
 **          Changes for Long IDs
 **	13-Apr-2010 (kschendel) SIR 123485
 **	    Open no-coupon to avoid unnecessary LOB overhead.
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 **/
 
 static DB_STATUS dmv_remodify(
@@ -351,6 +353,7 @@ DMVE_CB		*dmve_cb)
     i4		actual_size;
 
     CLRDBERR(&dmve->dmve_error);
+    DMVE_CLEAR_TABINFO_MACRO(dmve);
 	
     for (;;)
     {

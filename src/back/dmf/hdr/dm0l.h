@@ -341,6 +341,8 @@
 **	    SIR 121619 MVCC: Add bufid parameter to dm0l_read() prototype.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 **/
 
 /*
@@ -397,7 +399,6 @@
 #if MAX_RAWDATA_SIZE < (DM_LOC_MAX * DB_LOC_MAXNAME)
     XXXX XXXX MAX_RAWDATA_SIZE is too small!
 #endif
-
 
 
 /*}
@@ -956,8 +957,6 @@ typedef struct
     DM0L_HEADER		bi_header;	/* Standard log record header. */
     DM0L_CRHEADER	bi_crhdr;	/* Header for consistent read */
     DB_TAB_ID		bi_tbl_id;	/* Table Identifier. */
-    DB_TAB_NAME		bi_tblname;	/* Table name. */
-    DB_OWN_NAME  	bi_tblowner;	/* Table owner. */
     i2			bi_pg_type;	/* Page type */
     i2			bi_loc_cnt;	/* Location count */
     i2			bi_loc_id;	/* Loc offset in config file */
@@ -997,8 +996,6 @@ typedef struct
 {
     DM0L_HEADER		ai_header;	/* Standard log record header. */
     DB_TAB_ID		ai_tbl_id;	/* Table Identifier. */
-    DB_TAB_NAME		ai_tblname;	/* Table name. */
-    DB_OWN_NAME  	ai_tblowner;	/* Table owner. */
     i2			ai_pg_type;	/* Page type */
     i2			ai_loc_cnt;	/* Location count */
     i2			ai_loc_id;	/* Loc offset in config file */
@@ -1039,13 +1036,10 @@ typedef struct
     i2			put_pg_type;	/* page type */
     i2			put_cnf_loc_id; /* Loc offset in config file */
     i2			put_loc_cnt;	/* Location count */
-    i2			put_tab_size;	/* Size of table name field */
-    i2			put_own_size;	/* Size of owner name field */
     i4			put_rec_size;	/* Size of record. */
+    i2                  put_comptype;   /* compression type */
     u_i2		put_row_version;/* Row Version #*/
     DMPP_SEG_HDR	put_seg_hdr;	/* Segment header */
-    i2                  put_comptype;   /* compression type */
-    char		put_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME)];
 }   DM0L_PUT;
 
 /*}
@@ -1080,15 +1074,12 @@ typedef struct
     i2			del_pg_type;	/* page type */
     i2			del_cnf_loc_id; /* Loc offset in config file */
     i2			del_loc_cnt;	/* Location count */
-    i2			del_tab_size;	/* Size of table name field */
-    i2			del_own_size;	/* Size of owner name field */
     i4			del_rec_size;	/* Size of record. */
     u_i2		del_row_version;/* Version of Row */
     DMPP_SEG_HDR	del_seg_hdr;	/* Segment header */
     i2                  del_comptype;   /* compression type */
     u_i2		del_olg_id;	/* lg_id of prev change to row */
     u_i4		del_otran_id;	/* tran_id of prev change to row */
-    char		del_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME)];
 }   DM0L_DEL;
 
 /*}
@@ -1156,14 +1147,10 @@ typedef struct
     i2			rep_ocnf_loc_id; /* Old Loc offset in config file */
     i2			rep_ncnf_loc_id; /* New Loc offset in config file */
     i2			rep_loc_cnt;	/* Location count */
-    i2			rep_tab_size;	/* Size of table name field */
-    i2			rep_own_size;	/* Size of owner name field */
     i4			rep_orec_size;	/* Size of old record. */
     i4			rep_nrec_size;	/* Size of new record. */
-    i4			rep_odata_len;	/* Length of data in rep_vbuf that forms
-					** the before image of replace row. */
-    i4			rep_ndata_len;	/* Length of data in rep_vbuf that forms
-					** the after image of replace row. */
+    i4			rep_odata_len;	/* Length of before image of row */
+    i4			rep_ndata_len;	/* Length of after image of row */
     i4			rep_diff_offset;/* Offset in record to spot where old
 					** old and new row versions differ. */
     u_i2		rep_orow_version;/* old row version n#*/
@@ -1171,7 +1158,6 @@ typedef struct
     i2                  rep_comptype;    /* compression type */
     u_i2		rep_olg_id;	/* lg_id of prev change to row */
     u_i4		rep_otran_id;	/* tran_id of prev change to row */
-    char		rep_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME)];
 }   DM0L_REP;
 
 /*}
@@ -1465,8 +1451,8 @@ typedef struct
 {
     DM0L_HEADER		duc_header;         /* Standard log record header. */
     DB_TAB_ID		duc_tbl_id;	    /* Table Identifier. */
-    DB_TAB_NAME		duc_name;	    /* Table name (not used) */
-    DB_OWN_NAME  	duc_owner;	    /* Table owner (not used) */
+    DB_TAB_NAME		duc_name;	    /* Table name */
+    DB_OWN_NAME  	duc_owner;	    /* Table owner */
     i2			duc_allocation;     /* Allocation amount. */
     i2			duc_loc_count;	    /* Number of file locations */
     i4		duc_flags;	    /* Flags field */
@@ -2308,9 +2294,6 @@ typedef struct
     i4             ass_leaf_page; 	/* Leaf page number. */
     i4             ass_old_data;  	/* Old associated data page. */
     i4             ass_new_data;	/* New associated data page. */
-    i2			ass_tab_size;	/* Size of table name field */
-    i2			ass_own_size;	/* Size of owner name field */
-    char		ass_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME)];
 }   DM0L_ASSOC;
 
 /*}
@@ -2346,9 +2329,6 @@ typedef struct
     BITFLD		all_fhdr_hint:1;    /* True if reset fhdr free hint. */
     BITFLD		all_fhdr_hwmap:1;   /* True if set hwmap in fhdr. */
     BITFLD		all_bits_free:30;
-    i2			all_tab_size;	    /* Size of table name field */
-    i2			all_own_size;	    /* Size of owner name field */
-    char		all_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME)]; 
 }   DM0L_ALLOC;
 
 /*}
@@ -2383,9 +2363,6 @@ typedef struct
     i2			dall_free_cnf_loc_id; /* Loc offset in config file */
     BITFLD		dall_fhdr_hint:1;   /* True if set free hint in fhdr. */
     BITFLD		dall_bits_free:31;
-    i2			dall_tab_size;	    /* Size of table name field */
-    i2			dall_own_size;	    /* Size of owner name field */
-    char		dall_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME)]; 
 }   DM0L_DEALLOC;
 
 /*}
@@ -2413,8 +2390,6 @@ typedef struct
 {
     DM0L_HEADER         ext_header;	    /* Standard log record header. */
     DB_TAB_ID           ext_tblid;	    /* Table id */
-    DB_TAB_NAME		ext_tblname;	    /* Table name. */
-    DB_OWN_NAME		ext_tblowner;	    /* Table owner. */
     i4			ext_page_size;	    /* page size of table. */
     i2			ext_pg_type;	    /* page type */
     i2			ext_loc_cnt;	    /* Location count */
@@ -2475,9 +2450,6 @@ typedef struct
     DM_PAGENO		ovf_newpage;	/* New overflow page. */
     DM_PAGENO		ovf_ovfl_ptr;	/* Root's old ovfl pointer. */
     DM_PAGENO		ovf_main_ptr;	/* Root's old main pointer. */
-    i2			ovf_tab_size;	/* Size of table name field */
-    i2			ovf_own_size;	/* Size of owner name field */
-    char		ovf_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME)]; 
 }   DM0L_OVFL;
 
 /*}
@@ -2508,9 +2480,6 @@ typedef struct
     i2			nofull_cnf_loc_id; /* Loc offset in config file */
     i2			nofull_padding;
     DM_PAGENO		nofull_pageno;	/* page number */
-    i2			nofull_tab_size;	/* Size of table name field */
-    i2			nofull_own_size;	/* Size of owner name field */
-    char		nofull_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME)]; 
 } DM0L_NOFULL;
 
 /*}
@@ -2540,8 +2509,6 @@ typedef struct
 {
     DM0L_HEADER         fmap_header;	    /* Standard log record header. */
     DB_TAB_ID           fmap_tblid;	    /* Table id */
-    DB_TAB_NAME		fmap_tblname;	    /* Table name. */
-    DB_OWN_NAME		fmap_tblowner;	    /* Table owner. */
     i4			fmap_page_size;	/* page size of table. */
     i2			fmap_pg_type;	    /* page type */
     i2			fmap_loc_cnt;	    /* Location count */
@@ -2579,8 +2546,6 @@ typedef struct
 {
     DM0L_HEADER         fmap_header;	    /* Standard log record header. */
     DB_TAB_ID           fmap_tblid;         /* Table id */
-    DB_TAB_NAME         fmap_tblname;       /* Table name. */
-    DB_OWN_NAME         fmap_tblowner;      /* Table owner. */
     i4                  fmap_page_size; /* page size of table. */
     i2                  fmap_pg_type;       /* page type */
     i2                  fmap_loc_cnt;       /* Location count */
@@ -2628,8 +2593,6 @@ typedef struct
     i2			btp_cmp_type;	/* key compression type */
     i2			btp_loc_cnt;	/* Location count */
     i2			btp_cnf_loc_id; /* Loc offset in config file */
-    i2			btp_tab_size;	/* Size of table name field */
-    i2			btp_own_size;	/* Size of owner name field */
     i2			btp_key_size;	/* Size of key entry. */
     i2			btp_bid_child;  /* ins pos may be > 512 on INDEX page */
     i2			btp_partno;	/* Partition number */
@@ -2641,7 +2604,7 @@ typedef struct
 #define DM0L_BT_DUPS_ON_OVFL	0x0004		/* Btree uses leaf level
 						** overflow for duplicates */
 
-    char		btp_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME) + DM1B_MAXLEAFLEN];
+    char		btp_vbuf[DM1B_MAXLEAFLEN];
 }   DM0L_BTPUT;
 
 /*}
@@ -2677,13 +2640,11 @@ typedef struct
     i2			btd_cmp_type;	/* key compression type */
     i2			btd_loc_cnt;	/* Location count */
     i2			btd_cnf_loc_id; /* Loc offset in config file */
-    i2			btd_tab_size;	/* Size of table name field */
-    i2			btd_own_size;	/* Size of owner name field */
     i2			btd_key_size;	/* Size of key entry. */
     i2			btd_bid_child;  /* del pos may be > 512 on INDEX page */
     i2			btd_partno;	/* Partition number */
     u_i2		btd_btflags;	/* BTREE flags, see btp_btflags */
-    char		btd_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME) + DM1B_MAXLEAFLEN];
+    char		btd_vbuf[DM1B_MAXLEAFLEN];
 }   DM0L_BTDEL;
 
 /*}
@@ -2724,8 +2685,6 @@ typedef struct
     DM0L_HEADER		spl_header;	/* Standard log record header. */
     DM0L_CRHEADER	spl_crhdr;	/* Header for consistent read */
     DB_TAB_ID		spl_tbl_id;	/* Table Identifier. */
-    DB_TAB_NAME		spl_tblname;	/* Table name. */
-    DB_OWN_NAME		spl_tblowner;	/* Table owner. */
     i4			spl_page_size;	/* page size of table. */
     i2			spl_pg_type;	/* page type */
     i2			spl_cmp_type;	/* key compression type */
@@ -2766,8 +2725,6 @@ typedef struct
     DM0L_HEADER		bto_header;	/* Standard log record header. */
     DM0L_CRHEADER	bto_crhdr;	/* Header for consistent read */
     DB_TAB_ID		bto_tbl_id;	/* Table Identifier. */
-    DB_TAB_NAME		bto_tblname;	/* Table name. */
-    DB_OWN_NAME		bto_tblowner;	/* Table owner. */
     i4			bto_page_size;	/* page size of table. */
     i2			bto_pg_type;	/* page type */
     i2			bto_cmp_type;	/* key compression type */
@@ -2811,8 +2768,6 @@ typedef struct
 {
     DM0L_HEADER		btf_header;	/* Standard log record header. */
     DB_TAB_ID		btf_tbl_id;	/* Table Identifier. */
-    DB_TAB_NAME		btf_tblname;	/* Table name. */
-    DB_OWN_NAME		btf_tblowner;	/* Table owner. */
     i4			btf_page_size;	/* page size of table. */
     i2			btf_pg_type;	/* page type */
     i2			btf_cmp_type;	/* key compression type */
@@ -2853,8 +2808,6 @@ typedef struct
 {
     DM0L_HEADER		btu_header;	/* Standard log record header. */
     DB_TAB_ID		btu_tbl_id;	/* Table Identifier. */
-    DB_TAB_NAME		btu_tblname;	/* Table name. */
-    DB_OWN_NAME		btu_tblowner;	/* Table owner. */
     i4			btu_page_size;	/* page size of table. */
     i2			btu_pg_type;	/* page type */
     i2			btu_cmp_type;	/* key compression type */
@@ -2899,11 +2852,9 @@ typedef struct
     i2			rtd_cnf_loc_id; /* Loc offset in config file */
     u_i2		rtd_hilbertsize;/* Size of Hilbert values */
     DB_DT_ID		rtd_obj_dt_id;	/* Data type of base object */
-    i2			rtd_tab_size;	/* Size of table name field */
-    i2			rtd_own_size;	/* Size of owner name field */
     i2			rtd_stack_size;	/* Size of ancestor stack */
     i2			rtd_key_size;	/* Size of key entry */
-    char		rtd_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME) + DB_MAXRTREE_KEY +
+    char		rtd_vbuf[DB_MAXRTREE_KEY +
 				 (RCB_MAX_RTREE_LEVEL * sizeof(DM_TID))];
 }   DM0L_RTDEL;
 
@@ -2930,11 +2881,9 @@ typedef struct
     i2			rtp_cnf_loc_id; /* Loc offset in config file */
     u_i2		rtp_hilbertsize;/* Size of Hilbert values */
     DB_DT_ID		rtp_obj_dt_id;	/* Data type of base object */
-    i2			rtp_tab_size;	/* Size of table name field */
-    i2			rtp_own_size;	/* Size of owner name field */
     i2			rtp_stack_size;	/* Size of ancestor stack */
     i2			rtp_key_size;	/* Size of key entry */
-    char		rtp_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME) + DB_MAXRTREE_KEY +
+    char		rtp_vbuf[DB_MAXRTREE_KEY +
     				 (RCB_MAX_RTREE_LEVEL * sizeof(DM_TID))];
 }   DM0L_RTPUT;
 
@@ -2963,12 +2912,10 @@ typedef struct
     i2			rtr_cnf_loc_id; /* Loc offset in config file */
     u_i2		rtr_hilbertsize;/* Size of Hilbert values */
     DB_DT_ID		rtr_obj_dt_id;	/* Data type of base object */
-    i2			rtr_tab_size;	/* Size of table name field */
-    i2			rtr_own_size;	/* Size of owner name field */
     i2			rtr_stack_size;	/* Size of ancestor stack */
     i2			rtr_okey_size;	/* Size of old key entry */
     i2			rtr_nkey_size;	/* Size of new key entry */
-    char		rtr_vbuf[(DB_TAB_MAXNAME + DB_OWN_MAXNAME) + (DB_MAXRTREE_KEY * 2) +
+    char		rtr_vbuf[(DB_MAXRTREE_KEY * 2) +
     				 (RCB_MAX_RTREE_LEVEL * sizeof(DM_TID))];
 }   DM0L_RTREP;
 
@@ -2990,8 +2937,6 @@ typedef struct
 {
     DM0L_HEADER         dis_header;     /* Standard log record header. */
     DB_TAB_ID           dis_tbl_id;	/* Table id. */
-    DB_TAB_NAME		dis_tblname;	/* Table name. */
-    DB_OWN_NAME		dis_tblowner;	/* Table owner. */
     i4			dis_page_size;	/* page size of table. */
     i2			dis_pg_type;	/* page type */
     i2			dis_loc_cnt;	/* Location count */

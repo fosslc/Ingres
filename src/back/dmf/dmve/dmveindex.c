@@ -200,6 +200,8 @@
 **          Changes for Long IDs
 **	16-Jul-2010 (kschendel) SIR 123450
 **	    Log record now has actual compression types in it.
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 **/
 
 static DB_STATUS dmv_reindex(
@@ -313,6 +315,7 @@ DMVE_CB		*dmve_cb)
     DB_STATUS		status = E_DB_OK;
 
     CLRDBERR(&dmve->dmve_error);
+    DMVE_CLEAR_TABINFO_MACRO(dmve);
 	
     for (;;)
     {
