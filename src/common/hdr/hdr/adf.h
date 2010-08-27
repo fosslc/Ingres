@@ -2193,6 +2193,8 @@ typedef struct _ADF_CB
 **	30-may-89 (jrb)
 **	    Added ADI_FIND_COMMON to support the relocation of datatype
 **	    resolution into ADF.
+**	11-aug-2010 (stephenb)
+**	    Add ADI_NVL2_FIND_COMMON
 */
 
 typedef	    i2	    ADI_OP_ID;
@@ -2201,6 +2203,13 @@ typedef	    i2	    ADI_OP_ID;
 #define		ADI_FIND_COMMON	    (ADI_OP_ID) -2  /* Tells adi_resolve to */
 						    /* find a common data-  */
 						    /* type.		    */
+#define		ADI_NVL2_FIND_COMMON (ADI_OP_ID) -3 /* same as above for NVL2
+						    ** this tells us we are
+						    ** dealing with an NVL2 OP
+						    ** which needs exceptions
+						    ** in resolving because of
+						    ** it's "ALL" parameters
+						    ** and "ALL" return */
 #define		ADI_DISABLED	    (ADI_OP_ID) -4  /* Flags undefined ope- */
 						    /* rator of a function. */
 

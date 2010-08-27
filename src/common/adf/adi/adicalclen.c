@@ -1104,6 +1104,9 @@ i4                 *adi_rlen;
 **	4-jun-2010 (stephenb)
 **	    Add new case ADI_LONGER23RES to support nvl2, which uniquely
 **	    examines operands 2 and 3 to decide the return type. (Bug 123880)
+**	9-aug-2010 (stephenb)
+**	    ANSI time/timestamp types also have a precision that needs to be upheld.
+**	    (Bug 124210)
 */
 
 # ifdef ADF_BUILD_WITH_PROTOS
@@ -1447,7 +1450,7 @@ DB_DATA_VALUE      *adi_dvr;
 		    case DB_TSW_TYPE:
 			/* Timestamp, fixed length */
 			rlen = ADF_TSTMP_LEN;
-			rprec = 0;
+			rprec = prec[1] > prec[2] ? prec[1] : prec[2];
 			break;
 		    case DB_ADTE_TYPE:
 			/* ANSI date, fixed length */
@@ -1459,7 +1462,7 @@ DB_DATA_VALUE      *adi_dvr;
 		    case DB_TMW_TYPE:
 			/* Time, fixed length */
 			rlen = ADF_TIME_LEN;
-			rprec = 0;
+			rprec = prec[1] > prec[2] ? prec[1] : prec[2];
 			break;
 		    case DB_INYM_TYPE:
 			/* Interval Year/Month, fixed length */
@@ -1469,7 +1472,7 @@ DB_DATA_VALUE      *adi_dvr;
 		    case DB_INDS_TYPE:
 			/* Interval day/sec, fixed length */
 			rlen = ADF_INTDS_LEN;
-			rprec = 0;
+			rprec = prec[1] > prec[2] ? prec[1] : prec[2];
 			break;
 		    default:
 			/* shouldn't get here */

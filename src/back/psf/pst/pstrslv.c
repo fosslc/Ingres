@@ -384,6 +384,10 @@ pst_get_union_resdom_type(
 **	    Don't fold true/false generating operators back to constants.
 **	3-Aug-2010 (kschendel) b124170
 **	    Use joinid from node being resolved when inserting a coercion.
+**	4-aug-2010 (stephenb)
+**	    ADF calls may also return E_AD2009_NOCOERCION when no coercion
+**	    is available, treat as user error. Also fix error handling
+**	    for other ADF calls. (Bug 124209)
 **	12-Aug-2010 (kschendel) b124234
 **	    Don't attempt to constant-fold LONG data.  Even if it works,
 **	    the resulting value described by the coupon is unlikely to
@@ -554,7 +558,8 @@ pst_resolve(
     if (status != E_DB_OK)
     {
 	/* Complain if no applicable function found */
-	if (	adf_scb->adf_errcb.ad_errcode == E_AD2062_NO_FUNC_FOUND)
+	if (	adf_scb->adf_errcb.ad_errcode == E_AD2062_NO_FUNC_FOUND ||
+		adf_scb->adf_errcb.ad_errcode == E_AD2009_NOCOERCION)
 	{
 	    if (children == 1)
 		error->err_code = 2907L;
@@ -650,7 +655,8 @@ pst_resolve(
 	    if (status != E_DB_OK)
 	    {
 		/* Complain if no applicable function found */
-		if (	adf_scb->adf_errcb.ad_errcode == E_AD2062_NO_FUNC_FOUND)
+		if (	adf_scb->adf_errcb.ad_errcode == E_AD2062_NO_FUNC_FOUND
+			|| adf_scb->adf_errcb.ad_errcode == E_AD2009_NOCOERCION)
 		{
 		    if (children == 1)
 			error->err_code = 2907L;
@@ -1034,6 +1040,34 @@ pst_resolve(
 		if (!const_coerce ||
 		    best_fidesc->adi_dt[npars] != base_fidesc->adi_dt[npars])
 		{
+		    /* should return user error for no coercion */
+		    if (	adf_scb->adf_errcb.ad_errcode == E_AD2062_NO_FUNC_FOUND
+			    || adf_scb->adf_errcb.ad_errcode == E_AD2009_NOCOERCION)
+		    {
+			if (children == 1)
+			    error->err_code = 2907L;
+			else
+			    error->err_code = 2908L;
+			return (E_DB_ERROR);
+		    }
+
+		    /* Complain if parameter count is wrong. */
+		    if (  	adf_scb->adf_errcb.ad_errcode == E_AD2061_BAD_OP_COUNT)
+		    {
+			error->err_code = 2903L;
+			return(E_DB_ERROR);
+		    }
+
+		    /* Complain if ambiguous function found */
+		    if (adf_scb->adf_errcb.ad_errcode == E_AD2063_FUNC_AMBIGUOUS)
+		    {
+			if (children == 1)
+			    error->err_code = 2909L;
+			else
+			    error->err_code = 2910L;
+			return (E_DB_ERROR);
+		    }
+		    
 		    error->err_code = E_PS0C05_BAD_ADF_STATUS;
 		    return (E_DB_SEVERE);
 		}
