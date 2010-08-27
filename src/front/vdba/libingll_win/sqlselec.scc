@@ -65,6 +65,11 @@
 **    Remove hardcoded header sizes under rows property page.
 **    Fix some hardcoded random buffer sizes to make the code more error 
 **    resistent.
+** 30-Jun-2010 (drivi01)
+**    Bug #124006
+**    Add new BOOLEAN datatype.
+**    Add routines to interpret boolean datatype being returned from
+**    the server and routines to display the information recieved.
 **/
 /* Turn off POSIX warning for this file until Microsoft fixes this bug */
 #pragma warning(disable: 4996)
@@ -344,6 +349,12 @@ static void GetRowFromSqlda(
 			case IISQ_FLT_TYPE:
 				HandleFloatData((LPVOID)sqlv, decimalFormat, moneyFormat, pFetchInfo, pCol, strItem, nFlags);
 				tuple.AddTail (strItem);
+				break;
+			case IISQ_BOO_TYPE:
+				char bchar[sizeof(char)];
+				MEcopy(sqlv->sqldata, sizeof(char), bchar);
+				strItem.SetString(bchar[0] ? _T("TRUE") : _T("FALSE")) ;
+				tuple.AddTail(strItem);
 				break;
 			case IISQ_NCHR_TYPE:
 				{
@@ -630,6 +641,11 @@ handle_as_char:
 		case IISQ_VBYTE_TYPE:
 			sqlv->sqltype= (sqlv->sqltype < 0)? -IISQ_VBYTE_TYPE: IISQ_VBYTE_TYPE;
 			pBufferColumn->SetBufferSize (sqlv->sqllen + 1 + sizeof (short));
+			sqlv->sqldata = T2A(pBufferColumn->GetBuffer());
+			break;
+		case IISQ_BOO_TYPE:
+			sqlv->sqltype = (sqlv->sqltype < 0)? -IISQ_BOO_TYPE: IISQ_BOO_TYPE;
+			pBufferColumn->SetBufferSize (sqlv->sqllen);
 			sqlv->sqldata = T2A(pBufferColumn->GetBuffer());
 			break;
 

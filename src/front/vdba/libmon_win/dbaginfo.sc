@@ -83,6 +83,9 @@
 **    Ingres VectorWise product has been updated to return INGRES_VECTORWISE
 **    DBMS_TYPE.  Updated the code to recognize VectorWise installation using
 **    DBMS_TYPE for VectorWise instead of version string.
+** 30-Jun-2010 (drivi01)
+**    Bug #124006
+**    Add new BOOLEAN datatype.
 ***********************************************************************/
 
 #include <time.h>
@@ -496,6 +499,7 @@ int ilen;
       { INGTYPE_VARCHAR     , "varchar"         },
       { INGTYPE_LONGVARCHAR , "long varchar"    },
       { INGTYPE_BIGINT      , "bigint"          },
+      { INGTYPE_BOOLEAN     , "boolean"         },
       { INGTYPE_INT8        , "int8"            },
       { INGTYPE_INT4        , "integer"         },
       { INGTYPE_INT2        , "smallint"        },

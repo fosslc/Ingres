@@ -54,6 +54,9 @@
 **    04-Jun-2010 (horda03) b123227
 **      Syntax for drop grant on sequence incorrect. "next" is missing as is the
 **      CASCADE/RESTRICT text at the end.
+**    30-Jun-2010 (drivi01)
+**      Bug #124006
+**      Add new BOOLEAN datatype.
 ******************************************************************************/
 #include "dba.h"
 #include "dbaset.h"
@@ -348,6 +351,7 @@ LPUCHAR GetColTypeStr(LPCOLUMNPARAMS lpColAttr)
          {INGTYPE_VARCHAR     ," varchar("       ,TRUE},
          {INGTYPE_LONGVARCHAR ," long varchar "  ,FALSE},
          {INGTYPE_BIGINT      ," bigint "        ,FALSE},
+         {INGTYPE_BOOLEAN     ," boolean "       ,FALSE},
          {INGTYPE_INT8        ," bigint "        ,FALSE},
          {INGTYPE_INT4        ," int "           ,FALSE},
          {INGTYPE_INT2        ," smallint"       ,FALSE},
@@ -1783,6 +1787,7 @@ int BuildSQLCreTbl(UCHAR **PPstm,LPTABLEPARAMS tblparm)
          {INGTYPE_TEXT        ," text("          ,TRUE},
          {INGTYPE_VARCHAR     ," varchar("       ,TRUE},
          {INGTYPE_LONGVARCHAR ," long varchar "  ,FALSE},
+         {INGTYPE_BOOLEAN     ," boolean"        ,FALSE},
          {INGTYPE_INT8        ,"bigint"          ,FALSE},
          {INGTYPE_INT4        ," int "           ,FALSE},
          {INGTYPE_INT2        ," smallint"       ,FALSE},

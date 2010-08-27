@@ -2363,6 +2363,7 @@ END
 
 STRINGTABLE 
 BEGIN
+    IDS_INGTYPE_BOOL        "boolean"
     IDS_INGTYPE_BIGINT      "bigint"
     IDS_INGTYPE_ADTE        "ansidate"
     IDS_INGTYPE_TMWO        "time without time zone"

@@ -147,6 +147,9 @@
 **    Add new storage structures VECTORWISE and VECTORWISE_IX
 **    to the list of recognized table storage structures in
 **    StorageStruct structure.
+** 30-Jun-2010 (drivi01)
+**    Bug #124006
+**    Add new BOOLEAN datatype.
 */
 
 #define BUGNOTNULLABLE     // remove when the bug is corrected at ingres level
@@ -224,6 +227,7 @@ INGDBATYPES IngToDbaTypes[] = {   // TO BE FINISHED SQL unknown types bellow
   { IISQ_VCH_TYPE,    INGTYPE_VARCHAR,      0},
   { IISQ_LVCH_TYPE,   INGTYPE_LONGVARCHAR,  0},
   { IISQ_INT_TYPE,    INGTYPE_BIGINT,       8},
+  { IISQ_BOO_TYPE,    INGTYPE_BOOLEAN,      0},
   { IISQ_INT_TYPE,    INGTYPE_INT8,         8},
   { IISQ_INT_TYPE,    INGTYPE_INT4,         4},
   { IISQ_INT_TYPE,    INGTYPE_INT2,         2},
@@ -256,6 +260,7 @@ INGDBATYPES IngToDbaTypes[] = {   // TO BE FINISHED SQL unknown types bellow
   { -IISQ_TXT_TYPE,   INGTYPE_TEXT,         0},
   { -IISQ_VCH_TYPE,   INGTYPE_VARCHAR,      0},
   { -IISQ_LVCH_TYPE,  INGTYPE_LONGVARCHAR,  0},
+  { -IISQ_BOO_TYPE,   INGTYPE_BOOLEAN,      0},
   { -IISQ_INT_TYPE,   INGTYPE_BIGINT,       8},
   { -IISQ_INT_TYPE,   INGTYPE_INT8,         8},
   { -IISQ_INT_TYPE,   INGTYPE_INT4,         4},
