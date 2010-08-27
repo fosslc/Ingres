@@ -1,5 +1,5 @@
 /*
-**  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+**  Copyright (C) 2005-2010 Ingres Corporation. All Rights Reserved.
 */
 
 /*
@@ -68,6 +68,17 @@
 **	  calling ShellExecuteEx function, since ShellExecuteEx can not
 **	  subscribe to standard input/output, we must use winstart to
 **	  stop/start ingres.
+** 18-Aug-2010 (lunbr01)  bug 124216
+**    Remove code that depended on the local server listen addresses
+**    being in the format used for named pipes, and instead use the
+**    code for Unix that doesn't depend on the format of the listen
+**    addresses. This is needed on Windows to support using protocol
+**    "tcp_ip" as the local IPC rather than the default named pipes.
+**    IVM code should not depend on the format of the listen addresses.
+**    "#ifdef MAINWIN" had been used to generate the Unix version of
+**    the code.  Hence, the fix is to keep the MAINWIN code and strip
+**    out the non-MAINWIN code that was used to detect and parse pipe
+**    names.
 **/
 
 #include "stdafx.h"
@@ -2431,11 +2442,9 @@ BOOL IsSpecialInstance(char * pinstancename, char * bufResType,char * bufResName
 				case COMP_TYPE_INTERNET_COM:
 					strcpy(bufResType, GetICESvrCompName());
 					break;
-#ifdef MAINWIN  // name server in special list under UNIX
 				case COMP_TYPE_NAME:
 					strcpy(bufResType, GetNameSvrCompName());
 					break;
-#endif
 				default :
 					AfxMessageBox(_T("Internal Error / Msg Type"));
 					strcpy(bufResType, "");
