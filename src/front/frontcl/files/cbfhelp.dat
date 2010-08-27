@@ -391,6 +391,9 @@ rms.opf_old_idxorder.title:		'RMS Gateway OPF secondary index order'
 *.opf_pq_dop.file:			dbmspqdo.hlp
 *.opf_pq_dop.title:			'Parallel Query Thread Count'
 
+*.opf_pq_partthreads.file:		dbmspqpa.hlp
+*.opf_pq_partthreads.title:		'Parallel Query Thread Count for Partitioned Table'
+
 *.opf_pq_threshold.file:		dbmspqth.hlp
 *.opf_pq_threshold.title:		'Parallel Query Threshold'
 
