@@ -6088,6 +6088,9 @@ psl_ct11_tname_name_name(
 **	22-sep-06 (toumi01)
 **	    Check for mixed GTT syntax modes (with and without "session."),
 **	    and forbid this mixing as too confusing in its side effects.
+**	30-jul-10 (gupsh01) bug 124011
+**	    CVupper may cause stack corruption, as it expects null terminated
+**	    string.
 */
 DB_STATUS
 psl_ct12_crname(
@@ -6099,7 +6102,7 @@ psl_ct12_crname(
     DB_STATUS	    status, local_status = E_DB_OK;
     PSS_RNGTAB	    *resrange;
     char	    *ch1, *ch2;
-    char	    tempstr[DB_TAB_MAXNAME];
+    char	    tempstr[DB_TAB_MAXNAME + 1];
     char	    qry[PSL_MAX_COMM_STRING];
     i4	    qry_len;
     i4		    rngvar_info;
@@ -6351,14 +6354,18 @@ psl_ct12_crname(
 	if (*(sess_cb->pss_dbxlate) & CUI_ID_DLM_M)
 	{
 	    MEcopy(tbl_spec->pss_obj_name.db_tab_name,
-		   sizeof(tempstr), tempstr);
+		   sizeof(tempstr) - 1, tempstr);
+
+	    /* CVupper and CVlower expects null terminated string */
+	    tempstr[DB_TAB_MAXNAME] = EOS;
+
 	    if (*(sess_cb->pss_dbxlate) & CUI_ID_REG_U)
 		CVupper(tempstr);
 	    else
 		CVlower(tempstr);
 
 	    if (MEcmp(tbl_spec->pss_obj_name.db_tab_name, 
-		      tempstr, sizeof(tempstr)) != 0)
+		      tempstr, sizeof(tempstr) - 1) != 0)
 	    {
 		(void) psf_error(E_PS045F_WRONG_CASE, 0L, PSF_USERERR,
 			     &err_code, &psq_cb->psq_error, 3,
