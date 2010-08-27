@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1999, 2009 Ingres Corporation All Rights Reserved.
+** Copyright (c) 1999, 2010 Ingres Corporation All Rights Reserved.
 */
 
 package	com.ingres.gcf.jdbc;
@@ -118,6 +118,10 @@ package	com.ingres.gcf.jdbc;
 **            support JDBC 4.0 SQLException hierarchy.
 **	26-Oct-09 (gordy)
 **	    Added support for BOOLEAN data type.
+**	 9-Aug-10 (gordy)
+**	    Track highest row received.  This provides some information
+**	    about the size of the result set prior to determining the
+**	    complete size.
 */
 
 import	java.util.Stack;
@@ -228,6 +232,10 @@ import	com.ingres.gcf.util.SqlStream;
 **	The logical offset and row state must be determined after 
 **	loading rows.
 **
+**	The highest row fetched is tracked in maxRow.  Prior to
+**	fetching any rows, maxRow is set to 0.  If an empty result
+**	set is found, both maxRow and rowCount are set to 0.
+**
 **  Interface Methods:
 **
 **	streamClosed		SQL Stream was closed.
@@ -243,6 +251,7 @@ import	com.ingres.gcf.util.SqlStream;
 **
 **  Protected Data:
 **
+**	maxRow			Highest row found.
 **	activeStream		Active LOB stream.
 **
 **  Protected Methods:
@@ -341,6 +350,8 @@ import	com.ingres.gcf.util.SqlStream;
 **	    Class is exposed outside package, permit access.
 **	20-Jul-07 (gordy)
 **	    New row-set representation based on Row class.
+**	 9-Aug-10 (gordy)
+**	    Added maxRow to track highest record received.
 */
 
 public class
@@ -349,6 +360,7 @@ RsltFtch
     implements MsgConst, DbmsConst, SqlStream.StreamListener
 {
 
+    protected int	maxRow = 0;			// Max row read
     protected SqlStream	activeStream = null;		// Active LOB stream
 
     /*
@@ -1591,6 +1603,8 @@ clearRowset()
 ** History:
 **	20-Jul-07 (gordy)
 **	    Created.
+**	 9-Aug-10 (gordy)
+**	    A current row reference requires a physical refresh.
 */
 
 private boolean
@@ -1735,15 +1749,11 @@ rowInRowset( int reference, int offset )
 	/*
 	** Target is in current row-set.
 	**
-	** A hard limit of 1 pre-fetch row generally
-	** indicates a restriction in the result-set
-	** such as LOB columns or being updatable.
-	** When pre-fetch is restricted, a current
-	** row refresh (offset of 0) requires a
-	** physical fetch of the current row rather
-	** than just using the cached image.
+	** A current row refresh (offset of 0) requires a
+	** physical fetch of the current row rather than 
+	** just using the cached image.
 	*/
-	if ( offset != 0  ||  maxFetch != 1 )
+	if ( offset != 0 )
 	{
 	    logicalRow += offset;
 	    currentRow = (Row)rowSet.get( logicalRow - 1 );
@@ -1912,6 +1922,8 @@ rowInRowset( int reference, int offset )
 **	    Use date/time formatters associated with connection.
 **	26-Oct-09 (gordy)
 **	    Support BOOLEAN columns.
+**	 9-Aug-10 (gordy)
+**	    Set maxRow for highest row created.
 */
 
 private Row
@@ -2087,6 +2099,7 @@ createRow( JdbcRSMD rsmd )
 	** position is incremented for the new row.
 	*/
 	row.id = rowSet.isEmpty() ? cursorRow : ++cursorRow;
+	if ( maxRow < row.id )  maxRow = row.id;
 	row.count = 0;
 	row.status = (row.id == 1) ? Row.FIRST : 0;
 	if ( rowCount > 0 && row.id == rowCount )  row.status |= Row.LAST;
@@ -2439,6 +2452,8 @@ calcTarget( int reference, int offset )
 ** History:
 **	20-Jul-07 (gordy)
 **	    Created.
+**	 9-Aug-10 (gordy)
+**	    Set maxRow to size of result set if determined.
 */
 
 private void
@@ -2677,6 +2692,7 @@ checkResults( boolean load )
 	    }
 
 	    rowCount = size;
+	    maxRow = rowCount;
 	}
     }
 
@@ -2739,6 +2755,8 @@ updateRow( int row )
 ** History:
 **	20-Jul-07 (gordy)
 **	    Created.
+**	 9-Aug-10 (gordy)
+**	    Set maxRow to highest row seen.
 */
 
 private void
@@ -2758,7 +2776,11 @@ updateStatus()
 	    trace.write( tr_id + ": Row-set positioned at row " + rowID );
 
 	for( int index = 0; index < rowSet.size(); index++ )
-	    ((Row)rowSet.get( index )).id = rowID + index;
+	{
+	    Row row = (Row)rowSet.get( index );
+	    row.id = rowID + index;
+	    if ( maxRow < row.id )  maxRow = row.id;
+	}
     }
     return;   
 } // updateStatus
