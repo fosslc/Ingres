@@ -3,10 +3,12 @@
 #
 #       31-Dec-2009 (horda03)
 #            Correct VMS library dependancies.
+#       12-jul-2010 (joea)
+#            The VMS (and Unix) name for the shared libq is SHQLIB.
 
 SubDir ING_SRC common aif specials_vms ;
 
 IISUBSYS common aif specials_vms ;
 
 IISHLIBRARY $(SHAPILIB) ;
-IINEEDLIBS $(SHAPILIB) : SAWLIB APILIB SHCOMPATLIB SHLIBQLIB ;
+IINEEDLIBS $(SHAPILIB) : SHQLIB SAWLIB APILIB SHCOMPATLIB ;
