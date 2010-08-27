@@ -4748,6 +4748,10 @@ OPQ_ALIST 	*attrp)
 **          Do not try to access iirelation. It does not exist in a Star
 **          database. Use iitables.table_subtype <> 'I' to eliminate
 **          gateway tables from the table list.
+**      19-Aug-2010 (hanal04) Bug 124276
+**          Fix for Bug 123898 excluded all Gateway tables. Rework fix
+**          for Bug 123898 and 117368 to use different query text
+**          if we are a STAR DB and use a cursor instead of a SELECT loop.
 */
 bool
 r_rel_list_from_rel_rel(
@@ -4770,7 +4774,8 @@ bool		statdump)
 	char	es_pattern[4];
 	char	es_tabtype[9];
 	char	es_tstat[8 + 1];
-	i4	es_gwid = GW_IMA;
+        char    stmtbuf[2048];
+        char    gwid[5];
     exec sql end declare section;
 
     i4		ri = 0;
@@ -4817,24 +4822,62 @@ bool		statdump)
     ** cannot produce spurious extra rows, leading to reoccurrence of a bug
     ** with the same symptoms as b107881.
     */
-    exec sql select t.table_name, t.table_owner, t.num_rows,
-	     t.table_reltid, t.table_reltidx, t.number_pages,
-	     t.overflow_pages, t.row_width, t.table_type,
-	     t.table_stats
-	into :es_relname, :es_ownname, :es_nrows,
-	     :es_reltid, :es_xreltid, :es_pages,
-	     :es_ovflow, :es_relwid, :es_tabtype,
-	     :es_tstat
-	from iitables t
-	where   t.table_owner in (:es_ownr, :es_dba) and
-		t.table_name  not like :es_pattern and
-		t.table_type  in ('T', 'I') and
-		t.table_subtype <> 'I' and
-		(t.table_name <> 'remotecmdlock' or 
-		 t.table_owner <> '$ingres')
-	order by t.table_name;
+    if(g->opq_dbms.dbms_type == OPQ_STAR)
+    {
+        /* ESQL precompiler does not like lines beyond a certain length   */
+        /* Parameters in this query must match those in the non-star case */
+        STprintf(stmtbuf, "select t.table_name, t.table_owner, t.num_rows, ");
+        STpolycat(4, stmtbuf, "t.table_reltid, t.table_reltidx, ",
+                              "t.number_pages, t.overflow_pages, ",
+                              "t.row_width, t.table_type, t.table_stats ",
+                              stmtbuf);
+        STpolycat(4, stmtbuf, "from iitables t where t.table_owner in (?, ?) ",
+                              "and t.table_name  not like ? and t.table_type ",
+                              "in ('T', 'I') and t.table_subtype <> 'I' and ",
+                              stmtbuf);
+        STpolycat(4, stmtbuf, "(t.table_name <> 'remotecmdlock' or ",
+                              "t.table_owner <> '$ingres') order by ",
+                              "t.table_name",
+                              stmtbuf);
+    }
+    else
+    {
+        /* ESQL precompiler does not like lines beyond a certain length   */
+        /* Parameters in this query must match those in the star case     */
+        STprintf(gwid, "%d ", GW_IMA);
+        STprintf(stmtbuf, "select t.table_name, t.table_owner, t.num_rows, ");
+        STpolycat(4, stmtbuf, "t.table_reltid, t.table_reltidx, ",
+                              "t.number_pages, t.overflow_pages, ",
+                              "t.row_width, t.table_type, t.table_stats ",
+                              stmtbuf);
+        STpolycat(4, stmtbuf, "from iitables t, iirelation i where ",
+                              "t.table_owner in (?, ?) and t.table_name ",
+                              "not like ? and t.table_type  in ('T', 'I') ",
+                              stmtbuf);
+        STpolycat(4, stmtbuf, "and t.table_reltid = i.reltid and ",
+                              "t.table_name = i.relid and i.relgwid <> ",
+                              gwid,
+                              stmtbuf);
+        STpolycat(4, stmtbuf, "and (t.table_name <> 'remotecmdlock' or ",
+                              "t.table_owner <> '$ingres') order by ",
+                              "t.table_name",
+                              stmtbuf);
 
-    exec sql begin;
+    }
+
+    EXEC SQL prepare stmt from :stmtbuf;
+    EXEC SQL declare cs cursor for stmt;
+    EXEC SQL open cs for readonly using :es_ownr, :es_dba, :es_pattern;
+
+    while(1)
+    {
+        EXEC SQL fetch cs into :es_relname, :es_ownname, :es_nrows,
+             :es_reltid, :es_xreltid, :es_pages,
+             :es_ovflow, :es_relwid, :es_tabtype,
+             :es_tstat;
+        if(sqlca.sqlcode)
+            break; 
+
 	/* First check for "-xr" list and skip the OPQ_RLIST build
 	** if current table is in exclusion list. */
 	if (ex_rellst != NULL)
@@ -4874,7 +4917,7 @@ bool		statdump)
 		/* %s: more than %d tables for database  '%s'
 		*/
 		overrun = TRUE;
-		exec sql endselect;
+		break;
 	    }
 	    else
 	    {
@@ -4917,7 +4960,9 @@ bool		statdump)
 # endif /* xDEBUG */
 	    }
 	}
-    exec sql end;
+    }
+
+    EXEC SQL close cs;
 
     /* Indicate the end of list */
     if (!overrun)
