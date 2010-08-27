@@ -256,6 +256,8 @@ $!!         Upgrade all nodes in a clustered environment.
 $!!     24-Jun-2010 (horda03) Bug 122555
 $!!             Add check_lglk_mem to ensure Ingres will connect to a
 $!!             new LG/LK shared memory section.
+$!!     08-Jul-2010 (horda03) Bug 124060
+$!!         Correct dual_log_name config symbol name.
 $!!    
 $!------------------------------------------------------------------------	
 $!
@@ -728,7 +730,7 @@ $    if (dual_log_name_'c_node .eqs. "")
 $    then
 $       dual_log_name_'c_node = default_dual_log
 $
-$       iisetres ii.'c_node'.rcp.dual_log_name "''default_dual_log'"
+$       iisetres ii.'c_node'.rcp.log.dual_log_name "''default_dual_log'"
 $    endif
 $
 $    goto PURGE_OLD_LOG_DATA
