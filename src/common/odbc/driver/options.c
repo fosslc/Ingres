@@ -146,6 +146,10 @@
 **         In SQLSetStmtAttr(), implicitly set cursor type to
 **         SQL_CURSOR_STATIC if SQL_CURSOR_DYNAMIC is requested, instead of
 **         defaulting to SQL_CURSOR_FORWARD_ONLY.
+**     21-Jul-2010 (Ralph Loen) Bug 124112
+**         If the rowset or array size is set via SQLSetStmtAttr(), 
+**         zero out pstmt->crowFetchMax and set pstmt->crowFetch to
+**         the length specifier.
 */
 
 RETCODE EnlistInDTC(LPDBC pdbc, VOID * pITransaction);
@@ -1206,8 +1210,9 @@ RETCODE SQL_API SQLSetConnectAttr_InternalCall(
         pdbc->cQueryTimeout = vParamuint;   /* ignored... */
         break;
 
-    case SQL_ROWSET_SIZE:               /* kludge for VInterdev, per thoda04... */
-        pstmt->pARD->ArraySize   = (UWORD) vParamuint;   /* ignored... */
+    case SQL_ROWSET_SIZE:     
+        pstmt->crowFetchMax = pstmt->pARD->ArraySize = (UWORD) vParamuint;  
+        pstmt->crowMax = 0;
         break;
 
     case SQL_RETRIEVE_DATA:             /* kludge for ADODB.Recordset */
@@ -1765,10 +1770,12 @@ RETCODE SQL_API SQLSetStmtAttr_InternalCall(
         break;
 
     case SQL_ATTR_ROW_ARRAY_SIZE:
-            /* number of rows returned by SQLFetch or SQLFetchScroll.
-               also number of rows in a bookmark array in 
-               bulk bookmark SQLBulkOperations.  Default rowset size is 1 */
-        pstmt->pARD->ArraySize = vParamulen;
+        /* 
+        ** Number of rows returned by SQLFetch or SQLFetchScroll.
+        ** Default rowset size is 1. 
+        */
+        pstmt->crowFetchMax = pstmt->pARD->ArraySize = vParamulen;
+        pstmt->crowMax = 0;
         break;
 
     case SQL_ATTR_ROW_BIND_OFFSET_PTR:
@@ -1818,8 +1825,9 @@ RETCODE SQL_API SQLSetStmtAttr_InternalCall(
 
     case SQL_ROWSET_SIZE:
 
-            /* number of rows in 2.x SQLExtendedFetch rowset (default=1) */
-        pstmt->pARD->ArraySize   = vParamulen;  /* ignored... */
+        /* number of rows in 2.x SQLExtendedFetch rowset (default=1) */
+        pstmt->crowFetchMax = pstmt->pARD->ArraySize = vParamulen;
+        pstmt->crowMax = 0;
         break;
 
     default:

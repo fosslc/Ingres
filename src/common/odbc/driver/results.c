@@ -388,6 +388,10 @@
 **         SQL_DECIMAL or SQL_NUMERIC.
 **    14-Jul-1010 (Ralph Loen)  Bug 124079
 **         Corrected output conversion lengths in GetTimeOrIntervalChar().
+**     21-Jul-2010 (Ralph Loen) Bug 124112
+**         Set the ArraySize field of the IRD (SQL_DESC_ARRAY_SIZE) to
+**         one if SQLFetch() is invoked, which by definition uses no 
+**         arrays.
 */
 
 
@@ -818,6 +822,7 @@ RETCODE SQL_API SQLFetch(
 
     ErrResetStmt (pstmt);        /* clear ODBC error status on STMT */
 
+    pstmt->pARD->ArraySize = 1;
 
     /*
     ** If unfetched segments remain, then SQLGetData() must not have
