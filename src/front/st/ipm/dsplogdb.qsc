@@ -78,6 +78,8 @@
 **          Changes for Long Ids
 **      24-May-2010 (stial01)
 **          Fixed above change.
+**      10-Jun-2010 (stial01)
+**          Fixed above change.
 */
 
 #define		LOC_MAXSIZE		(DB_LOC_MAXNAME * 2)
@@ -418,8 +420,8 @@ LG_DBID db_id;
 	*/
 	if (ldb->db_id == db_id)
 	{
- 	    string_move(db_name, (PTR) ldb->db_buffer, (i4) INGSIZE); /* info is a substr of str */
- 	    db_name[INGSIZE] = EOS;
+ 	    string_move(db_name, (PTR) ldb->db_buffer, (i4) DB_DB_MAXNAME); /* info is a substr of str */
+ 	    db_name[DB_DB_MAXNAME] = EOS;
 	    found = TRUE;
 	    break;
 	}
