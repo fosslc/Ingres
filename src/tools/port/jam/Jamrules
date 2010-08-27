@@ -1407,6 +1407,10 @@
 #       15-Jun-2010 (horda03) b123914
 #           Use VERSFILE rather than VERS and VERS.<platform> for kitinstal.data
 #           dependancy
+#	17-Jun-2010 (hanje04)
+#	    BUG 123943
+#	    Use more restrictive sed mask in IIRemRCComments so it doesn't
+#	    remove the LSB headers
 #
 #
 #####
@@ -9120,7 +9124,7 @@ actions quietly IISedShellVMS
 
 actions IIRemRCComments
 {
-    $(PIPE) $(SED) -e "/^##/d" < $(>) > $(<)
+    $(PIPE) $(SED) -e "/^##$/d" -e "/^##[\t ]/d" < $(>) > $(<)
 }
 
 actions quietly SEDSHW
