@@ -251,6 +251,9 @@
 **	    up to 8 floating parms are placed in the float registers   
 **	    (xmm0-7); so total 14 registers possibly are used in 
 **	    parameter passing.   
+**      18-Jun-2010 (ashco01) Bug 123944.
+**          For i64_hpu load float params into consecutive float registers, 
+**          so increment float_index for FVALs only. 
 */
 /*
 NO_OPTIM=ris_us5 rs4_us5 ris_u64
@@ -660,6 +663,9 @@ ents
 			{
 				floats_passed = 1;
 				float_arg[float_index] = *(f8 *)pv->OL_value;
+# if defined(i64_hpu)
+                                float_index++; /* Increment float_arg index */
+# endif /* i64_hpu */
 			}
 # endif /* axp_osf || i64_hpu || i64_lnx || a64_lnx */
 
@@ -720,14 +726,14 @@ ents
 			}
 			break;
 		}
-# if defined(axp_osf) || defined(i64_hpu) || defined(i64_lnx) || defined(a64_lnx)
+# if defined(axp_osf) || defined(i64_lnx) || defined(a64_lnx)
 		/*
 		** float_index is incremented for all argument
 		** types, not just floats, because argument
 		** register use is not optimised
 		*/
 		float_index++;
-# endif /* axp_osf || i64_hpu || i64_lnx || a64_lnx */
+# endif /* axp_osf || i64_lnx || a64_lnx */
 	}
 
 # ifdef FLEN_BUNCHED_AT_END
