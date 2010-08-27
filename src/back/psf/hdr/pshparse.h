@@ -1458,13 +1458,6 @@ typedef struct _PSS_DECVAR PSS_DECVAR;  /* forward declaration */
 **	structure to allow this to happen without interfering with the go block
 **	in progress.
 **
-**	Note that the pss_yacc member is a pointer to a i4  instead of a
-**	YACC_CB.  The reason is that the YACC_CB contains references to YYSTYPE,
-**	which is only defined by yacc (in ytab.h).  Outside of a yacc directory,
-**	YYSTYPE is undefined.  Therefore, we must allocate a YACC_CB in one of
-**	the language directories.  For example, a YACC_CB for QUEL would be
-**	allocated in the PSL directory.
-**
 ** History:
 **     09-oct-85 (jeff)
 **          written
@@ -1813,6 +1806,15 @@ typedef struct _PSS_DECVAR PSS_DECVAR;  /* forward declaration */
 **	    Add default compression.
 **	30-Jul-2010 (kschendel) b124164
 **	    Drop unused pss-yastr found while checking for uninited stuff.
+**	2-Aug-2010 (kschendel) b124170
+**	    Add a pointer to the parser state (PSS_YYVARS) to the session
+**	    block.  This is long overdue;  we've passed around the yyvars
+**	    pointer all this time, at least partly because yacc always
+**	    generated the yyvars as a local and never hooked things up.
+**	    The parser has been using its own yacc for decades now, and
+**	    that yacc can bloody well do what it's told.
+**	    Access to the parser state is necessary in some low level
+**	    contexts, such as "make constant similar".
 */
 typedef struct _PSS_SESBLK
 {
@@ -1862,6 +1864,7 @@ typedef struct _PSS_SESBLK
     PST_RESTAB	    pss_restab;		/* structure holding result tab info */
     PSS_CURSTAB     pss_curstab;        /* Hash table of cursor ctrl blocks */
     struct _YACC_CB *pss_yacc;		/* Ptr to ctl blk for re-entrant yacc */
+    struct PSS_YYVARS_ *pss_yyvars;	/* Ptr to current parser state */
     i4		    (*pss_parser)();	/* ptr to yacc finite state machine */
 
 /* Trace vector for parser sessions 
@@ -3859,6 +3862,10 @@ typedef struct _PSS_J_QUAL
 **		Added PSS_JOINID_PRESET to allow presetting of pst_join_id.
 **	    05-Dec-2008 (kiria01) b121333
 **		Added PSS_JOINID_PRESET  to allow presetting of pst_
+**	3-Aug-2010 (kschendel) b124170
+**	    Add PSS_JOINID_STD telling pst-node to set the joinid in the
+**	    "standard" manner, using the parser state.  See pst-node for
+**	    the exact definition of "standard manner".
 */
 typedef struct _PSS_DUPRB
 {
@@ -3946,6 +3953,14 @@ typedef struct _PSS_DUPRB
 				    ** set. Don't override.
 				    */
 #define		PSS_FLAGS_PRESET    0x80
+
+				    /* Set this to tell pst_node that it is to
+				    ** set the joinid (for an operator node)
+				    ** in the "standard" manner using parser
+				    ** state.  See pst-node for the exact
+				    ** definition of "standard manner".
+				    */
+#define		PSS_JOINID_STD	    0x100
 
 /*
 ** PSS_DBPALIAS	   a typedef for dbproc id to be used throughout PSF

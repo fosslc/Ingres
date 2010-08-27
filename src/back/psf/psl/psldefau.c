@@ -1490,6 +1490,8 @@ psl_make_def_seq(
 **	    written
 **	25-Jun-2008 (kiria01) SIR120473
 **	    Move pst_isescape into new u_i2 pst_pat_flags.
+**	3-Aug-2010 (kschendel) b124170
+**	    Probably don't need joinid here, but let pst-node decide.
 */
 static DB_STATUS
 psl_make_func_node(
@@ -1509,7 +1511,7 @@ psl_make_func_node(
     status = pst_node(sess_cb, mstream, (PST_QNODE *) NULL, (PST_QNODE *) NULL, 
 		      PST_COP, (char *) &opnode, sizeof(opnode),
 		      DB_NODT, (i2) 0, (i4) 0, (DB_ANYTYPE *) NULL, 
-		      newnode, err_blk, (i4) 0);
+		      newnode, err_blk, PSS_JOINID_STD);
     return(status);
 
 }  /* end psl_make_func_node */

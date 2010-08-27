@@ -382,6 +382,8 @@ pst_get_union_resdom_type(
 **          returned as user errors. (Bug 123884)
 **	14-Jul-2010 (kschendel) b123104
 **	    Don't fold true/false generating operators back to constants.
+**	3-Aug-2010 (kschendel) b124170
+**	    Use joinid from node being resolved when inserting a coercion.
 */
 DB_STATUS
 pst_resolve(
@@ -743,6 +745,7 @@ pst_resolve(
 		    ** of the other side */
 		    op.pst_opmeta = PST_NOMETA;
 		    op.pst_pat_flags = AD_PAT_DOESNT_APPLY;
+		    op.pst_joinid = opnode->pst_sym.pst_value.pst_s_op.pst_joinid;
 		    /* The darn i4 casts are because sizeof is technically
 		    ** a size_t, which is 64-bit on LP64, and gcc complains. */
 		    switch (abs(n_dt))
@@ -816,7 +819,7 @@ pst_resolve(
 			!pst_node(sess_cb, &sess_cb->pss_ostream,
 			*s, res_node, res_node ? PST_BOP : PST_UOP,
 			    (char *)&op, sizeof(op), n_dt, ps, len,
-			    (DB_ANYTYPE *)NULL, &res_node, error, 0) &&
+			    (DB_ANYTYPE *)NULL, &res_node, error, PSS_JOINID_PRESET) &&
 			res_node &&
 			res_node->pst_sym.pst_type == PST_CONST)
 		    {
@@ -853,7 +856,6 @@ pst_resolve(
 	if (!handled && !adi_resolve(adf_scb, &tmp_adi_rslv_blk, FALSE))
 	{
 	    PST_OP_NODE op;
-	    i4 flags = PSS_JOINID_PRESET;
 	    PST_QNODE **p;
 	    PST_QNODE *t;
 	    i = 0;
@@ -898,7 +900,7 @@ pst_resolve(
 		if (status = pst_node(sess_cb, &sess_cb->pss_ostream,
 			t, (PST_QNODE *)NULL, PST_UOP,
 			(char *)&op, sizeof(op), DB_NODT, (i2)0, (i4)0,
-			(DB_ANYTYPE *)NULL, p, error, flags))
+			(DB_ANYTYPE *)NULL, p, error, PSS_JOINID_PRESET))
 		    return (status);
 		/* Having injected the node we need to propagete
 		** the full resolved datatype to any intermediate

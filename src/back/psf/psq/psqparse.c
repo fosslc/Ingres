@@ -599,6 +599,8 @@ psq_parseqry(
 **	    in the middle of the space-fill after an attribute name!
 **	    which caused the att to hash wrong, and later usage of the GTT
 **	    failed with "table does not contain column x".)
+**	2-Aug-2010 (kschendel) b124170
+**	    Init (and clear later) the new yyvars ptr in the sess-cb.
 */
 DB_STATUS
 psq_cbinit(
@@ -674,6 +676,7 @@ psq_cbinit(
 
     sess_cb->pss_lang = psq_cb->psq_qlang;		/* Query language */
     sess_cb->pss_stk_freelist = NULL;
+    sess_cb->pss_yyvars = NULL;
 
 
     return (status);
@@ -755,6 +758,9 @@ psq_cbreturn(
 	/* Clear any cached stack blocks as we're going to
 	** trash the memory stream in here anyway. */
 	sess_cb->pss_stk_freelist = NULL;
+
+	/* Other stuff that shouldn't be left dangling */
+	sess_cb->pss_yyvars = NULL;
 
 	/*
 	** Clear out the user's range table.

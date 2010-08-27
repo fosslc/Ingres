@@ -167,6 +167,23 @@ i4 Psf_nfoldbexpr = 0;
 **	 	    PSS_TYPERES_ONLY   - Perform only type resolution
 **		    PSS_NOTYPERES_ERR  - Don't report type resolution errors.
 **		    PSS_REF_TYPERES    - if error, report special error 
+**		    PSS_XFORM_AVG      - Transforming avg to sum/count, do
+**					 special precision things
+**		    PSS_JOINID_PRESET  - Caller has filled in joinid
+**		    PSS_FLAGS_PRESET   - Caller has filled in flags
+**		    PSS_JOINID_STD     - Fill in (operator) node joinid
+**					 according to the standard method,
+**
+**	(the "standard method" is:
+**	    joinid = PST_NOJOIN;
+**	    if (BTtest(state->qual_depth, state->in_join_search))
+**		joinid = state->pss_join_info.pss_join[state->pss_join_info.depth].join_id
+**	where "state" is the parser state in yyvars.)
+**
+**	If neither joinid flag is set, or if "std" is set and there's no
+**	current parser state for whatever reason, the joinid is set
+**	to PST_NOJOIN.
+**
 ** Outputs:
 **      newnode                         Filled in with pointer to new node
 **	err_code			Filled in with error number on error
@@ -321,6 +338,9 @@ i4 Psf_nfoldbexpr = 0;
 **          elsewhere.
 **	14-Jul-2010 (kschendel) b123104
 **	    Spiff up and/or/not folding slightly, handle not more generically.
+**	3-Aug-2010 (kschendel) b124170
+**	    Add "standard joinid" flag to allow us to set an operator
+**	    node joinid according to current parser state.
 */
 DB_STATUS
 pst_node(
@@ -584,7 +604,8 @@ pst_node(
 		opnode.pst_opno = ADI_MINUS_OP;
 		opnode.pst_opmeta = PST_NOMETA;
 		opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-		opnode.pst_joinid = PST_NOJOIN;
+		/* Set joinid in case caller has PRESET, ours should match */
+		opnode.pst_joinid = ((PST_OP_NODE *)value)->pst_joinid;
 		if (status = pst_node(cb, stream, right, NULL,
 			PST_UOP, (char *)&opnode, sizeof(opnode), DB_NODT, 0, 0,
 			NULL, &tmp, err_blk, flags & ~PSS_TYPERES_ONLY))
@@ -674,7 +695,18 @@ pst_node(
 	    {
 		/* set joinid to PST_NOJOIN for all operator nodes */
 		if (!(flags & PSS_JOINID_PRESET))
+		{
 		    symbol->pst_value.pst_s_op.pst_joinid = PST_NOJOIN;
+		    if (flags & PSS_JOINID_STD && cb->pss_yyvars != NULL)
+		    {
+			if (BTtest(cb->pss_yyvars->qual_depth, cb->pss_yyvars->in_join_search))
+			{
+			    symbol->pst_value.pst_s_op.pst_joinid =
+				cb->pss_yyvars->pss_join_info.pss_join[
+					cb->pss_yyvars->pss_join_info.depth].join_id;
+			}
+		    }
+		}
 		/* initialize mask field */
 		if (!(flags & PSS_FLAGS_PRESET))
 		    symbol->pst_value.pst_s_op.pst_flags = 0;

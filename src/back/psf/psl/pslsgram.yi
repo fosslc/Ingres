@@ -80,7 +80,6 @@
 */
 
 #define YYDEBUG 1
-#define YACC_VARS 1
 #define	MAX_GW_REG_CHARS 2
 #define DROP_BASETABLE	1
 #define DROP_VIEW	2
@@ -3591,6 +3590,14 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **          to a constant.
 **	28-Jul-10 (kiria01) b124142
 **	    Access ADF_NVL_BIT via macro ADF_ISNULL_MACRO
+**	2-Aug-2010 (kschendel) b124170
+**	    YYVARS pointer now exists in the sess cb, teach "push" about it.
+**	    Since many calls to pst-node do the same stuff to set joinid,
+**	    and since pst-node can now (thanks to the above) get at YYVARS
+**	    state, invent a new flag telling pst-node to set joinid in
+**	    "the canonical manner".
+**	    Fix psl-mk-const-similar to generate a coercion op with the
+**	    standard joinid (which was the point of 124170 in the first place).
 */
 %{
 
@@ -3658,8 +3665,6 @@ static DB_STATUS
 psl_usr_func(
 	     char	    *fname,
 	     PSS_SESBLK	    *sess_cb,
-	     bool	    in_join_cond,
-	     PSS_JOIN_INFO  *join_info,
 	     PST_QNODE	    **newnode,
 	     DB_ERROR	    *err_blk);
 static DB_STATUS
@@ -3712,9 +3717,7 @@ psl_simple_compare(
 	u_i4		pat_flags,
 	UCS2		escape_char,
 	PSS_TREEINFO	**treeinfo,
-	bool		in_join_search,
 	bool		in_target_clause,
-	PSS_JOIN_INFO	*join_info,
 	PSQ_CB		*psq_cb);
 
 
@@ -3890,8 +3893,6 @@ psl_patcomp(
 	PSS_SESBLK	*sess_cb,
 	PSQ_CB		*psq_cb,
 	PSS_TREEINFO	*treeinfo,
-	bool		in_join_search,
-	PSS_JOIN_INFO	*join_info,
 	bool		in_target_clause);
 
 DB_STATUS
@@ -28345,10 +28346,9 @@ with_list_element:	tbl_spec dcollist AS LPAREN
 
 	$Ysave_pss_rsdmno[cb->pss_qualdepth] = cb->pss_rsdmno;
 	$Ysave_psq_mode = psq_cb->psq_mode;
-	status = psl_push_yyvars(psq_cb, cb, yyvarspp);
+	status = psl_push_yyvars(psq_cb, cb, &yyvarsp);
 	if (DB_FAILURE_MACRO(status))
 		return(status);
-	yyvarsp = *yyvarspp;
 	/* note WITH clause in qry */
 	cb->pss_ses_flag |= PSS_WITHELEM_INQ;
     }
@@ -28379,7 +28379,8 @@ with_list_element:	tbl_spec dcollist AS LPAREN
 	    $Yprev_yyvarsp->nonupdt_reason |= $Ynonupdt_reason;
 	}
 
-	yyvarsp = *yyvarspp = $Yprev_yyvarsp;
+	yyvarsp = $Yprev_yyvarsp;
+	cb->pss_yyvars = yyvarsp;
 	cb->pss_rsdmno = $Ysave_pss_rsdmno[cb->pss_qualdepth];	/* restore */
 	psq_cb->psq_mode = $Ysave_psq_mode;	/* ditto */
 
@@ -30104,10 +30105,9 @@ select:			SELECT
 	    */
 	    $Ysave_pss_rsdmno[cb->pss_qualdepth] = cb->pss_rsdmno;
 	    $Ysave_psq_mode = psq_cb->psq_mode;
-	    status = psl_push_yyvars(psq_cb, cb, yyvarspp);
+	    status = psl_push_yyvars(psq_cb, cb, &yyvarsp);
 	    if (DB_FAILURE_MACRO(status))
 		return(status);
-	    yyvarsp = *yyvarspp;
 	}
 
 	/*
@@ -31115,7 +31115,8 @@ derived_table:	LPAREN query_expr RPAREN corr_name1 dcollist
 	    $Yprev_yyvarsp->nonupdt_reason |= $Ynonupdt_reason;
 	}
 
-	yyvarsp = *yyvarspp = $Yprev_yyvarsp;
+	yyvarsp = $Yprev_yyvarsp;
+	cb->pss_yyvars = yyvarsp;
 	cb->pss_rsdmno = $Ysave_pss_rsdmno[cb->pss_qualdepth];	/* restore */
 	psq_cb->psq_mode = $Ysave_psq_mode;	/* ditto */
 
@@ -33605,26 +33606,15 @@ boolean_expr:		boolean_term
     {
 	    DB_STATUS		status;
 	    PST_OP_NODE		op;
-	    i4			pst_node_flags = PSS_JOINID_PRESET;
 
 	    MEfill(sizeof(op), 0, &op);
 	    op.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-	    op.pst_joinid = PST_NOJOIN;
-
-	    if (BTtest($Yqual_depth, $Yin_join_search))
-	    {
-		/*
-		** If we are processing a join_search condition, set the joinid
-		** field appropriately.
-		*/
-		op.pst_joinid =
-			$Ypss_join_info.pss_join[$Ypss_join_info.depth].join_id;
-	    }
 
 	    /* will reuse the first PSS_TREEINFO passed from below */
+	    /* Ask pst-node to set joinid */
 	    status = pst_node(cb, &cb->pss_ostream, $1->pss_tree, $3->pss_tree,
 		PST_OR, (PTR) &op, sizeof(PST_OP_NODE), DB_NODT, (i2) 0, (i4) 0,
-		(DB_ANYTYPE *) NULL, &$1->pss_tree, &psq_cb->psq_error, pst_node_flags);
+		(DB_ANYTYPE *) NULL, &$1->pss_tree, &psq_cb->psq_error, PSS_JOINID_STD);
 	    if (status != E_DB_OK)
 	    {
 		return (status);
@@ -33647,26 +33637,15 @@ boolean_term:		boolean_factor
     {
 	    DB_STATUS	 	status;
 	    PST_OP_NODE		op;
-	    i4			pst_node_flags = PSS_JOINID_PRESET;
 
 	    MEfill(sizeof(op), 0, &op);
 	    op.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-	    op.pst_joinid = PST_NOJOIN;
-
-	    if (BTtest($Yqual_depth, $Yin_join_search))
-	    {
-		/*
-		** If we are processing a join_search condition, set the joinid
-		** field appropriately.
-		*/
-		op.pst_joinid =
-		    $Ypss_join_info.pss_join[$Ypss_join_info.depth].join_id;
-	    }
 
 	    /* will reuse the first PSS_TREEINFO passed from below */
+	    /* Ask pst-node to set joinid */
 	    status = pst_node(cb, &cb->pss_ostream, $1->pss_tree, $3->pss_tree,
 		PST_AND, (PTR) &op, sizeof(op), DB_NODT, (i2) 0, (i4) 0,
-		(DB_ANYTYPE *) NULL, &$1->pss_tree, &psq_cb->psq_error, pst_node_flags);
+		(DB_ANYTYPE *) NULL, &$1->pss_tree, &psq_cb->psq_error, PSS_JOINID_STD);
 
 	    if (status != E_DB_OK)
 	    {
@@ -33759,12 +33738,7 @@ boolean_primary:	predicate
 		op.pst_opno = ADI_IITRUE_OP;
 	    op.pst_opmeta = PST_NOMETA;
 	    op.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-	    op.pst_joinid = PST_NOJOIN;
-	    if (BTtest($Yqual_depth, $Yin_join_search))
-	    {
-		op.pst_joinid =
-			$Ypss_join_info.pss_join[$Ypss_join_info.depth].join_id;
-	    }
+
 	    /* A shame we can't reuse the true/false node, which was probably
 	    ** created out of an operator node anyway!  but it's not worth
 	    ** putting in a constant-node flag to figure it out.
@@ -33772,7 +33746,7 @@ boolean_primary:	predicate
 	    status = pst_node(cb,&cb->pss_ostream, NULL, NULL,
 			PST_COP, (char *) &op, sizeof(op),
 			DB_BOO_TYPE, 0, DB_BOO_LEN, NULL,
-			&newnode, &psq_cb->psq_error, PSS_JOINID_PRESET);
+			&newnode, &psq_cb->psq_error, PSS_JOINID_STD);
 	    if (status != E_DB_OK)
 		return (status);
 	    $1->pss_tree = newnode;
@@ -34115,8 +34089,7 @@ predicate:		select_expr comparison select_expr
 	    /* No subselects. */
 	    status = psl_simple_compare(cb, $1, $3, (ADI_OP_ID) $2,
 		(u_i4) AD_PAT_DOESNT_APPLY, (UCS2) 0, &treeinfo,
-		(bool) BTtest($Yqual_depth, $Yin_join_search), 
-		(bool)$Yin_target_clause, &$Ypss_join_info, psq_cb);
+		(bool)$Yin_target_clause, psq_cb);
 	}
 
 	if (DB_FAILURE_MACRO(status))
@@ -34337,7 +34310,7 @@ predicate:		select_expr comparison select_expr
 	PST_OP_NODE	    opnode;
 	DB_STATUS	    status;
 	i4		    pst_node_flags;
-	i4		    joinid = PST_NOJOIN;
+
 	/* "between" predicates are transformed here into the corresponding
 	** ">="/"<=" parse tree nodes. 
 	** "x between [asymmetric] y and z" becomes "x >= y and x <= z". 
@@ -34360,11 +34333,11 @@ predicate:		select_expr comparison select_expr
 		&& ( ( psq_cb->psq_mode == PSQ_CREATE) || 
 		     ( psq_cb->psq_mode == PSQ_ATBL_ADD_COLUMN) ) ) )
 	{
-	    pst_node_flags = PSS_NORES;
+	    pst_node_flags = PSS_NORES | PSS_JOINID_STD;
 	}
 	else
 	{
-	    pst_node_flags = 0;
+	    pst_node_flags = PSS_JOINID_STD;
 	}
 
 	/* Verify collation compatibility between 1st and 2nd/3rd exprs. */
@@ -34394,21 +34367,11 @@ predicate:		select_expr comparison select_expr
 	    return (status);
 	}
 
-	if (BTtest($Yqual_depth, $Yin_join_search))
-	{
-	    /*
-	    ** If we are processing a join_search condition, set the joinid
-	    ** field appropriately.
-	    */
-	    joinid = $Ypss_join_info.pss_join[$Ypss_join_info.depth].join_id;
-	    pst_node_flags |= PSS_JOINID_PRESET;
-	}
 	/* "x >= y" or "x < y" (NOT BETWEEN SYMMETRIC) */
 	MEfill(sizeof(opnode), 0, &opnode);
 	opnode.pst_opno = ADI_GE_OP;
 	opnode.pst_opmeta = PST_NOMETA;
 	opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-	opnode.pst_joinid = joinid;
 	if (!$2 && $3)
 	    opnode.pst_opno = ADI_LT_OP;	/* not between symm. */
 
@@ -34447,7 +34410,6 @@ predicate:		select_expr comparison select_expr
 
 	    MEfill(sizeof(op), 0, &op);
 	    op.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-	    op.pst_joinid = joinid;
 
 	    /* note that treeinfo->pss_tree will point at the resulting tree */
 	    status = pst_node(cb, &cb->pss_ostream, lnode1, rnode1, PST_AND,
@@ -34462,13 +34424,16 @@ predicate:		select_expr comparison select_expr
 
 	    /* [asymmetric] with NOT - just plunk NOT in front for OPF
 	    ** to normalize. For NOT BETWEEN SYMMETRIC the transform is 
-	    ** done here because it is more complex and we're smarter. */
+	    ** done here because it is more complex and we're smarter.
+	    ** (Note, turn off JOINID_STD because NOT nodes aren't operator
+	    ** nodes, there's no joinid!)
+	    */
 	    if (!$2)
 	    {
 		status = pst_node(cb, &cb->pss_ostream, treeinfo->pss_tree, 
 		    (PST_QNODE *) NULL, PST_NOT, (PTR) NULL, 0, DB_NODT, (i2) 0,
 		    (i4) 0, (DB_ANYTYPE *) NULL, &treeinfo->pss_tree,
-		    &psq_cb->psq_error, pst_node_flags&~PSS_JOINID_PRESET);
+		    &psq_cb->psq_error, pst_node_flags&~PSS_JOINID_STD);
 
 		if (DB_FAILURE_MACRO(status))
 		{
@@ -34482,7 +34447,6 @@ predicate:		select_expr comparison select_expr
 
 	    MEfill(sizeof(op), 0, &op);
 	    op.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-	    op.pst_joinid = joinid;
 
 	    /* SYMMETRIC - do the rest in here. */
 
@@ -34743,8 +34707,7 @@ predicate:		select_expr comparison select_expr
 	    status = psl_simple_compare(cb, $1, $4,
 		(ADI_OP_ID) (($2) ? ADI_EQ_OP : ADI_NE_OP),
 		(u_i4) AD_PAT_DOESNT_APPLY, (UCS2) 0, &treeinfo,
-		(bool) BTtest($Yqual_depth, $Yin_join_search), 
-		(bool)$Yin_target_clause, &$Ypss_join_info, psq_cb);
+		(bool)$Yin_target_clause, psq_cb);
 
 	}
 
@@ -34768,7 +34731,6 @@ predicate:		select_expr comparison select_expr
 	PSS_TREEINFO	    *treeinfo;
 	PST_OP_NODE	    opnode, opnode_norm;
 	DB_STATUS	    status;
-	PST_J_ID	    join_id;
 	i4		    pst_node_flags;
 	bool		    use_inlist = TRUE;
 	i4		    scnt = 0, ucnt = 0;
@@ -34805,11 +34767,11 @@ predicate:		select_expr comparison select_expr
 		&& ( ( psq_cb->psq_mode == PSQ_CREATE) || 
 		     ( psq_cb->psq_mode == PSQ_ATBL_ADD_COLUMN) ) ) )
 	{
-	    pst_node_flags = PSS_NORES;
+	    pst_node_flags = PSS_NORES | PSS_JOINID_STD;
 	}
 	else
 	{
-	    pst_node_flags = 0;
+	    pst_node_flags = PSS_JOINID_STD;
 	}
 
         status = psf_malloc(cb, &cb->pss_ostream, sizeof(PSS_TREEINFO), 
@@ -34824,14 +34786,6 @@ predicate:		select_expr comparison select_expr
 	MEfill(sizeof(opnode), 0, &opnode);
 	opnode.pst_opmeta = PST_NOMETA;
 	opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-
-	/*
-	** determine join id based on whether we are processing a join_search
-	** condition
-	*/
-	join_id = (BTtest($Yqual_depth, $Yin_join_search))
-		    ? $Ypss_join_info.pss_join[$Ypss_join_info.depth].join_id
-		    : PST_NOJOIN;
 
 	/*
 	** if expression list contains more than 1 value, we may need to make
@@ -34923,7 +34877,6 @@ predicate:		select_expr comparison select_expr
 		    opnode_norm.pst_opno = ADI_NUMNORM_OP;
 		    opnode_norm.pst_opmeta = PST_NOMETA;
 		    opnode_norm.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-		    opnode_norm.pst_joinid = join_id;
 		    while ((t = *p) && t->pst_sym.pst_type == PST_SUBSEL &&
                         (t = t->pst_left) && t->pst_sym.pst_type == PST_RESDOM)
 		    {
@@ -34931,10 +34884,11 @@ predicate:		select_expr comparison select_expr
 		    }
 		    t = *p;
 		    *p = NULL;
-		    if (status = pst_node(cb, &cb->pss_ostream, t, NULL,
-					PST_UOP, (char *)&opnode_norm, sizeof(opnode_norm),
-					DB_NODT, 0, 0, NULL, p, &psq_cb->psq_error,
-					pst_node_flags|PSS_JOINID_PRESET))
+		    status = pst_node(cb, &cb->pss_ostream, t, NULL,
+				PST_UOP, (char *)&opnode_norm, sizeof(opnode_norm),
+				DB_NODT, 0, 0, NULL, p, &psq_cb->psq_error,
+				pst_node_flags);
+		    if (status != E_DB_OK)
 			return status;
 		    while ((t = *p2) && t->pst_sym.pst_type == PST_SUBSEL &&
 			(t = t->pst_left) && t->pst_sym.pst_type == PST_RESDOM)
@@ -34965,10 +34919,11 @@ predicate:		select_expr comparison select_expr
 		** it still will be after - just of the numericnorm result type */
 		PST_QNODE *t = valnode->pss_expr;
 		valnode->pss_expr = NULL;
-		if (status = pst_node(cb, &cb->pss_ostream, t, NULL,
+		status = pst_node(cb, &cb->pss_ostream, t, NULL,
 			PST_UOP, (char *)&opnode_norm, sizeof(opnode_norm),
 			DB_NODT, 0, 0, NULL, &valnode->pss_expr, &psq_cb->psq_error,
-			pst_node_flags|PSS_JOINID_PRESET))
+			pst_node_flags);
+		if (status != E_DB_OK)
 		    return status;
 	    }
 	    /* Then new code to pack constant IN-lists into a single "=" BOP. */
@@ -34982,11 +34937,10 @@ predicate:		select_expr comparison select_expr
 		    ADF_ISNULL_MACRO(&valnode->pss_expr->pst_sym.pst_dataval))
 		{
 		    opnode.pst_opno = ADI_IIFALSE_OP;
-		    opnode.pst_joinid = join_id;
 		    status = pst_node(cb, &cb->pss_ostream, NULL, NULL,
 				PST_COP, (char *) &opnode, sizeof(opnode), DB_NODT, (i2) 0,
 				(i4) 0, (DB_ANYTYPE *) NULL, &resultnode, &psq_cb->psq_error,
-				pst_node_flags|PSS_JOINID_PRESET);
+				pst_node_flags);
 		    break;
 		}
 		else if (/* A parameter constant ... */
@@ -35091,29 +35045,21 @@ predicate:		select_expr comparison select_expr
 		copynode = $1;
 
 	    opnode.pst_opno = $2 ? ADI_EQ_OP : ADI_NE_OP;
-	    opnode.pst_joinid = join_id;
-	    if (pst_node_flags & PSS_FLAGS_PRESET)
-	    {
-		status = pst_node(cb, &cb->pss_ostream, copynode, valnode->pss_expr,
+	    status = pst_node(cb, &cb->pss_ostream, copynode, valnode->pss_expr,
 			PST_BOP, (char *) &opnode, sizeof(opnode), DB_NODT, (i2) 0,
 			(i4) 0, (DB_ANYTYPE *) NULL, &newnode, &psq_cb->psq_error,
-			pst_node_flags|PSS_JOINID_PRESET);
-		    /* Don't leave the ~PSS_FLAGS_PRESET on too long */
+			pst_node_flags);
+	    if (DB_FAILURE_MACRO(status))
+		return (status);
+	    if (pst_node_flags & PSS_FLAGS_PRESET)
+	    {
+		/* Don't leave flags preset on too long */
 		pst_node_flags &= ~PSS_FLAGS_PRESET;
 		if (opnode.pst_flags & PST_INLISTSORT)
 		    insorted = newnode;
 		else
 		    inlisted = newnode;
 	    }
-	    else
-	    {
-		status = pst_node(cb, &cb->pss_ostream, copynode, valnode->pss_expr,
-			PST_BOP, (char *) &opnode, sizeof(opnode), DB_NODT, (i2) 0,
-			(i4) 0, (DB_ANYTYPE *) NULL, &newnode, &psq_cb->psq_error,
-			pst_node_flags|PSS_JOINID_PRESET);
-	    }
-	    if (DB_FAILURE_MACRO(status))
-		return (status);
 
 	    /* no result, make the op a result, else create an OR node (or AND if NOT) */
 	    if (resultnode)
@@ -35122,7 +35068,6 @@ predicate:		select_expr comparison select_expr
 
 		MEfill(sizeof(op), 0, &op);
 		op.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-		op.pst_joinid = join_id;
 		if ((resultnode->pst_sym.pst_value.pst_s_op.pst_flags|PST_INLIST) ||
 		    (newnode->pst_sym.pst_value.pst_s_op.pst_flags|PST_INLIST))
 		{
@@ -35130,16 +35075,18 @@ predicate:		select_expr comparison select_expr
 		    ** INLIST continuation in a further operator - this will propagate
 		    ** up the list of conjunctions */
 		    op.pst_flags = PST_INLIST;
-	    	    pst_node_flags |= PSS_FLAGS_PRESET;
-		}		
+		    pst_node_flags |= PSS_FLAGS_PRESET;
+		}
 		status = pst_node(cb, &cb->pss_ostream, resultnode, newnode,
 		    $2?PST_OR:PST_AND, (PTR) &op, sizeof(op), DB_NODT, (i2) 0,
 		    (i4) 0, (DB_ANYTYPE *) NULL, &ornode, &psq_cb->psq_error,
-		    pst_node_flags|PSS_JOINID_PRESET);
+		    pst_node_flags);
 		if (DB_FAILURE_MACRO(status))
 		{
 		    return (status);
 		}
+		/* Don't leave on too long */
+		pst_node_flags &= ~PSS_FLAGS_PRESET;
 
 		resultnode = ornode;
 	    }
@@ -35333,8 +35280,7 @@ predicate:		select_expr comparison select_expr
 	status = psl_simple_compare(cb, $1, (PST_QNODE *) NULL,
 	    $2->adi_opid,
 	    (u_i4) AD_PAT_DOESNT_APPLY, (UCS2) 0, &treeinfo,
-	    (bool) BTtest($Yqual_depth, $Yin_join_search), 
-	    (bool)$Yin_target_clause, &$Ypss_join_info, psq_cb);
+	    (bool)$Yin_target_clause, psq_cb);
 
 	if (DB_FAILURE_MACRO(status))
 	{
@@ -35348,13 +35294,6 @@ predicate:		select_expr comparison select_expr
 	PSS_TREEINFO    *treeinfo;
 	DB_STATUS	status;
 	ADI_OP_ID	opid;
-	ADF_CB		*adf_scb = (ADF_CB*) cb->pss_adfcb;
-	i4		lbdt = abs($1->pst_sym.pst_dataval.db_datatype);
-	i4		rbdt = abs($3->pst_sym.pst_dataval.db_datatype);
-	PST_QNODE	*castl = NULL, *castr = NULL, *comp = NULL;
-	ADI_OP_ID	cvopno; /* Only set if castl or castr used */
-	i4		pst_node_flags = $Yin_target_clause ? PSS_NORES : 0;
-	bool		handled = FALSE;
 
 	if ($2 & AD_PAT_FORM_NEGATED)
 	    opid = ADI_NLIKE_OP;
@@ -35364,8 +35303,7 @@ predicate:		select_expr comparison select_expr
 
 	status = psl_simple_compare(cb, $1, $3, opid,
 	    $4->pat_flags, $4->esc, &treeinfo,
-	    (bool)BTtest($Yqual_depth, $Yin_join_search), 
-	    (bool)$Yin_target_clause, &$Ypss_join_info, psq_cb);
+	    (bool)$Yin_target_clause, psq_cb);
 
 	/* Distributed form - don't expose to PATCOMP as
 	** Star has no way to format the constant pattern
@@ -35376,8 +35314,6 @@ predicate:		select_expr comparison select_expr
 	    !$Yin_target_clause)
 	{
 	    status = psl_patcomp(cb, psq_cb, treeinfo,
-			BTtest($Yqual_depth, $Yin_join_search),
-			&$Ypss_join_info,
 			$Yin_target_clause);
 	    if (DB_FAILURE_MACRO(status))
 		return(status);
@@ -35392,44 +35328,32 @@ select_expr:		arith_term
     }
 		|	select_expr UAOP arith_term
     {
-	PST_QNODE              *newnode;
-	PST_OP_NODE	       opnode;
-	DB_STATUS	       status;
-	i4		       pst_node_flags;
+	PST_QNODE	*newnode;
+	PST_OP_NODE	opnode;
+	DB_STATUS	status;
+	i4		pst_node_flags;
 
 	/*
 	** don't do type resolution if parsing target list or a CHECK constraint
 	** specified inside CREATE GTABLE statement, as we may not know the type
 	** of the column (e.g. if it hasn't been defined yet)
 	*/
-	if (   $Yin_target_clause 
+	if (   $Yin_target_clause
 	    || (   cb->pss_stmt_flags & PSS_PARSING_CHECK_CONS
-		&& ( ( psq_cb->psq_mode == PSQ_CREATE) || 
+		&& ( ( psq_cb->psq_mode == PSQ_CREATE) ||
 		     ( psq_cb->psq_mode == PSQ_ATBL_ADD_COLUMN) ) ) )
 	{
-	    pst_node_flags = PSS_NORES;
+	    pst_node_flags = PSS_NORES | PSS_JOINID_STD;
 	}
 	else
 	{
-	    pst_node_flags = 0;
+	    pst_node_flags = PSS_JOINID_STD;
 	}
 
 	MEfill(sizeof(opnode), 0, &opnode);
 	opnode.pst_opno = $2;
 	opnode.pst_opmeta = PST_NOMETA;
 	opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-	opnode.pst_joinid = PST_NOJOIN;
-
-	if (BTtest($Yqual_depth, $Yin_join_search))
-	{
-	    /*
-	    ** If we are processing a join_search condition, set the joinid
-	    ** field appropriately.
-	    */
-	    opnode.pst_joinid =
-		    $Ypss_join_info.pss_join[$Ypss_join_info.depth].join_id;
-	    pst_node_flags |= PSS_JOINID_PRESET;
-	}
 
 	status = pst_node(cb, &cb->pss_ostream, $1, $3,
 	    PST_BOP, (char *) &opnode, sizeof(opnode), DB_NODT, (i2) 0, (i4) 0,
@@ -35464,34 +35388,22 @@ arith_term:		arith_factor
 		&& ( ( psq_cb->psq_mode == PSQ_CREATE) || 
 		     ( psq_cb->psq_mode == PSQ_ATBL_ADD_COLUMN) ) ) )
 	{
-	    pst_node_flags = PSS_NORES;
+	    pst_node_flags = PSS_NORES | PSS_JOINID_STD;
 	}
 	else
 	{
-	    pst_node_flags = 0;
+	    pst_node_flags = PSS_JOINID_STD;
 	}
 
 	MEfill(sizeof(opnode), 0, &opnode);
 	opnode.pst_opno = $2;
 	opnode.pst_opmeta = PST_NOMETA;
 	opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-	opnode.pst_joinid = PST_NOJOIN;
 
 	if ($1->pst_sym.pst_type == PST_SUBSEL)
 	    opnode.pst_opmeta = PST_CARD_01L;
 	if ($3->pst_sym.pst_type == PST_SUBSEL)
 	    opnode.pst_opmeta = PST_CARD_01R;
-
-	if (BTtest($Yqual_depth, $Yin_join_search))
-	{
-	    /*
-	    ** If we are processing a join_search condition, set the joinid
-	    ** field appropriately.
-	    */
-	    opnode.pst_joinid =
-		    $Ypss_join_info.pss_join[$Ypss_join_info.depth].join_id;
-	    pst_node_flags |= PSS_JOINID_PRESET;
-	}
 
 	status = pst_node(cb, &cb->pss_ostream, $1, $3,
 	    PST_BOP, (char *) &opnode, sizeof(opnode), DB_NODT, (i2) 0, (i4) 0,
@@ -35522,29 +35434,18 @@ arith_factor:		primary BAOPH arith_factor
 		&& ( ( psq_cb->psq_mode == PSQ_CREATE) || 
 		     ( psq_cb->psq_mode == PSQ_ATBL_ADD_COLUMN) ) ) )
 	{
-	    pst_node_flags = PSS_NORES;
+	    pst_node_flags = PSS_NORES | PSS_JOINID_STD;
 	}
 	else
 	{
-	    pst_node_flags = 0;
+	    pst_node_flags = PSS_JOINID_STD;
 	}
 
 	MEfill(sizeof(opnode), 0, &opnode);
 	opnode.pst_opno = $2;
 	opnode.pst_opmeta = PST_NOMETA;
 	opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-	opnode.pst_joinid = PST_NOJOIN;
-	if (BTtest($Yqual_depth, $Yin_join_search))
-	{
-	    /*
-	    ** If we are processing a join_search condition, set the joinid
-	    ** field appropriately.
-	    */
-	    opnode.pst_joinid =
-		    $Ypss_join_info.pss_join[$Ypss_join_info.depth].join_id;
-	    pst_node_flags |= PSS_JOINID_PRESET;
-	}
-	
+
 	status = pst_node(cb, &cb->pss_ostream, $1, $3,
 	    PST_BOP, (char *) &opnode, sizeof(opnode), DB_NODT, (i2) 0, (i4) 0,
 	    (DB_ANYTYPE *) NULL, &newnode, &psq_cb->psq_error, pst_node_flags);
@@ -35593,11 +35494,11 @@ primary:		element
 		&& ( ( psq_cb->psq_mode == PSQ_CREATE) || 
 		     ( psq_cb->psq_mode == PSQ_ATBL_ADD_COLUMN) ) ) )
 	{
-	    pst_node_flags = PSS_NORES;
+	    pst_node_flags = PSS_NORES | PSS_JOINID_STD;
 	}
 	else
 	{
-	    pst_node_flags = 0;
+	    pst_node_flags = PSS_JOINID_STD;
 	}
 
 	MEfill(sizeof(opnode), 0, &opnode);
@@ -35619,18 +35520,6 @@ primary:		element
 
 	opnode.pst_opmeta = PST_NOMETA;
 	opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-	opnode.pst_joinid = PST_NOJOIN;
-
-        if (BTtest($Yqual_depth, $Yin_join_search))
-	{
-	    /*
-	    ** If we are processing a join_search condition, set the joinid
-	    ** field appropriately.
-	    */
-	    opnode.pst_joinid =
-		    $Ypss_join_info.pss_join[$Ypss_join_info.depth].join_id;
-	    pst_node_flags |= PSS_JOINID_PRESET;
-	}
 
 	status = pst_node(cb, &cb->pss_ostream, $2, (PST_QNODE *) NULL,
 	    PST_UOP, (char *) &opnode, sizeof(opnode), DB_NODT, (i2) 0, (i4) 0,
@@ -36305,8 +36194,7 @@ constant:		number
     {
 	DB_STATUS	    status;
 
-	status = psl_usr_func("user", cb, BTtest($Yqual_depth, $Yin_join_search),
-	    &$Ypss_join_info, &$$, &psq_cb->psq_error);
+	status = psl_usr_func("user", cb, &$$, &psq_cb->psq_error);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -36314,9 +36202,7 @@ constant:		number
     {
 	DB_STATUS	    status;
 
-	status = psl_usr_func("current_date", cb,
-	    BTtest($Yqual_depth, $Yin_join_search), &$Ypss_join_info,
-	    &$$, &psq_cb->psq_error);
+	status = psl_usr_func("current_date", cb, &$$, &psq_cb->psq_error);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -36324,9 +36210,7 @@ constant:		number
     {
 	DB_STATUS	    status;
 
-	status = psl_usr_func("current_time", cb,
-	    BTtest($Yqual_depth, $Yin_join_search), &$Ypss_join_info,
-	    &$$, &psq_cb->psq_error);
+	status = psl_usr_func("current_time", cb, &$$, &psq_cb->psq_error);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -36334,9 +36218,7 @@ constant:		number
     {
 	DB_STATUS	    status;
 
-	status = psl_usr_func("current_time", cb,
-	    BTtest($Yqual_depth, $Yin_join_search), &$Ypss_join_info,
-	    &$$, &psq_cb->psq_error);
+	status = psl_usr_func("current_time", cb, &$$, &psq_cb->psq_error);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -36344,9 +36226,7 @@ constant:		number
     {
 	DB_STATUS	    status;
 
-	status = psl_usr_func("current_timestamp", cb,
-	    BTtest($Yqual_depth, $Yin_join_search), &$Ypss_join_info,
-	    &$$, &psq_cb->psq_error);
+	status = psl_usr_func("current_timestamp", cb, &$$, &psq_cb->psq_error);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -36354,9 +36234,7 @@ constant:		number
     {
 	DB_STATUS	    status;
 
-	status = psl_usr_func("current_timestamp", cb,
-	    BTtest($Yqual_depth, $Yin_join_search), &$Ypss_join_info,
-	    &$$, &psq_cb->psq_error);
+	status = psl_usr_func("current_timestamp", cb, &$$, &psq_cb->psq_error);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -36364,9 +36242,7 @@ constant:		number
     {
 	DB_STATUS	    status;
 
-	status = psl_usr_func("local_time", cb,
-	    BTtest($Yqual_depth, $Yin_join_search), &$Ypss_join_info,
-	    &$$, &psq_cb->psq_error);
+	status = psl_usr_func("local_time", cb, &$$, &psq_cb->psq_error);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -36374,9 +36250,7 @@ constant:		number
     {
 	DB_STATUS	    status;
 
-	status = psl_usr_func("local_time", cb,
-	    BTtest($Yqual_depth, $Yin_join_search), &$Ypss_join_info,
-	    &$$, &psq_cb->psq_error);
+	status = psl_usr_func("local_time", cb, &$$, &psq_cb->psq_error);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -36384,9 +36258,7 @@ constant:		number
     {
 	DB_STATUS	    status;
 
-	status = psl_usr_func("local_timestamp", cb,
-	    BTtest($Yqual_depth, $Yin_join_search), &$Ypss_join_info,
-	    &$$, &psq_cb->psq_error);
+	status = psl_usr_func("local_timestamp", cb, &$$, &psq_cb->psq_error);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -36394,9 +36266,7 @@ constant:		number
     {
 	DB_STATUS	    status;
 
-	status = psl_usr_func("local_timestamp", cb,
-	    BTtest($Yqual_depth, $Yin_join_search), &$Ypss_join_info,
-	    &$$, &psq_cb->psq_error);
+	status = psl_usr_func("local_timestamp", cb, &$$, &psq_cb->psq_error);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -36404,9 +36274,7 @@ constant:		number
     {
 	DB_STATUS	    status;
 
-	status = psl_usr_func("current_user", cb,
-	    BTtest($Yqual_depth, $Yin_join_search), &$Ypss_join_info,
-	    &$$, &psq_cb->psq_error);
+	status = psl_usr_func("current_user", cb, &$$, &psq_cb->psq_error);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -36414,9 +36282,7 @@ constant:		number
     {
 	DB_STATUS	    status;
 
-	status = psl_usr_func("session_user", cb,
-	    BTtest($Yqual_depth, $Yin_join_search), &$Ypss_join_info,
-	    &$$, &psq_cb->psq_error);
+	status = psl_usr_func("session_user", cb, &$$, &psq_cb->psq_error);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -36424,9 +36290,7 @@ constant:		number
     {
 	DB_STATUS	    status;
 
-	status = psl_usr_func("system_user", cb,
-	    BTtest($Yqual_depth, $Yin_join_search), &$Ypss_join_info,
-	    &$$, &psq_cb->psq_error);
+	status = psl_usr_func("system_user", cb, &$$, &psq_cb->psq_error);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -36434,9 +36298,7 @@ constant:		number
     {
 	DB_STATUS	    status;
 
-	status = psl_usr_func("initial_user", cb,
-	    BTtest($Yqual_depth, $Yin_join_search), &$Ypss_join_info,
-	    &$$, &psq_cb->psq_error);
+	status = psl_usr_func("initial_user", cb, &$$, &psq_cb->psq_error);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -36470,29 +36332,16 @@ constant:		number
 	{
 	    PST_OP_NODE	       opnode;
 	    PST_QNODE	       *newnode;
-	    i4			pst_node_flags = 0;
 
 	    MEfill(sizeof(opnode), 0, &opnode);
 	    opnode.pst_opno = opid;
 	    opnode.pst_opmeta = PST_NOMETA;
 	    opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-	    opnode.pst_joinid = PST_NOJOIN;
-
-	    if (BTtest($Yqual_depth, $Yin_join_search))
-	    {
-		/*
-		** If we are processing a join_search condition, set the joinid
-		** field appropriately.
-		*/
-		opnode.pst_joinid =
-			$Ypss_join_info.pss_join[$Ypss_join_info.depth].join_id;
-		pst_node_flags |= PSS_JOINID_PRESET;
-	    }
 
 	    status = pst_node(cb, &cb->pss_ostream, (PST_QNODE *) NULL,
 		(PST_QNODE *) NULL, PST_COP, (char *) &opnode, sizeof(opnode),
 		DB_NODT, (i2) 0, (i4) 0, (DB_ANYTYPE *) NULL, &newnode,
-		&psq_cb->psq_error, pst_node_flags);
+		&psq_cb->psq_error, PSS_JOINID_STD);
 	    if (status != E_DB_OK)
 	    {
 		return (status);
@@ -37468,8 +37317,7 @@ case_function:		CASE case_body END
 	/* Set up "=" comparison between v1 (copy) and v2. */
 	status = psl_simple_compare(cb, srcecopy, $5,
 		ADI_EQ_OP, (u_i4)AD_PAT_DOESNT_APPLY, (UCS2)0, &treeinfo, 
-		(bool)BTtest($Yqual_depth, $Yin_join_search), (bool)$Yin_target_clause,
-		&$Ypss_join_info, psq_cb);
+		(bool)$Yin_target_clause, psq_cb);
 
 	if (status != E_DB_OK) return (status);
 
@@ -37703,8 +37551,7 @@ case_body:		searched_case
 
 		if (status = psl_simple_compare(cb, srcecopy, to->pst_right->pst_left,
 			ADI_EQ_OP, (u_i4)AD_PAT_DOESNT_APPLY, (UCS2)0, &treeinfo, 
-			(bool)BTtest($Yqual_depth, $Yin_join_search), (bool)$Yin_target_clause,
-			&$Ypss_join_info, psq_cb))
+			(bool)$Yin_target_clause, psq_cb))
 		    return (status);
 
 		/* Finally, replace comparand expression of "when" clause by new
@@ -38240,8 +38087,7 @@ coalesce_list_item:	sel_expr_or_null
 
 	if (status = psl_simple_compare(cb, srcecopy, (PST_QNODE *) NULL,
 		ADI_NONUL_OP, (u_i4) AD_PAT_DOESNT_APPLY, (UCS2) 0, &treeinfo,
-		(bool) BTtest($Yqual_depth, $Yin_join_search), 
-		(bool)$Yin_target_clause, &$Ypss_join_info, psq_cb))
+		(bool)$Yin_target_clause, psq_cb))
 	    return (status);
 
 	/* Build WHOP, WHLIST to contain "when vj is not null then vj". */
@@ -38270,7 +38116,7 @@ cast_expr:		CAST LPAREN sel_expr_or_null as_or_comma cast_type RPAREN
 	ADF_CB		       *adf_scb = (ADF_CB*) cb->pss_adfcb;
 	ADI_OP_ID	       opid;
 	DB_STATUS	       status;
-	i4			pst_node_flags = 0;
+	i4			pst_node_flags = PSS_JOINID_STD;
 	i4			nodetype;
 	{
 	    status = adi_castid(adf_scb, &opid, $5);
@@ -38298,18 +38144,6 @@ cast_expr:		CAST LPAREN sel_expr_or_null as_or_comma cast_type RPAREN
 	    opnode.pst_opno = opid;
 	    opnode.pst_opmeta = PST_NOMETA;
 	    opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-	    opnode.pst_joinid = PST_NOJOIN;
-
-	    if (BTtest($Yqual_depth, $Yin_join_search))
-	    {
-		/*
-		** If we are processing a join_search condition, set the joinid
-		** field appropriately.
-		*/
-		opnode.pst_joinid =
-		    $Ypss_join_info.pss_join[$Ypss_join_info.depth].join_id;
-		pst_node_flags |= PSS_JOINID_PRESET;
-	    }
 
 	    nodetype = PST_UOP;
 	    const_node = NULL;
@@ -51186,7 +51020,7 @@ psl_p_telem(
 		/* Distributed form - don't expose to PATCOMP as
 		** Star has no way to format the constant pattern
 		** form that would ensue from constant folding. */
-		if (status = psl_patcomp(ctx->cb, ctx->psq_cb, &ti, FALSE, NULL, FALSE))
+		if (status = psl_patcomp(ctx->cb, ctx->psq_cb, &ti, FALSE))
 		    break;
 
 		/* Update node in case changed */
@@ -52953,6 +52787,7 @@ psl_for_cond(
 
     /*
     ** Create binary operation node to implement the comparison.
+    ** Default joinid is OK here.
     */
     MEfill(sizeof(gtop), 0, &gtop);
     gtop.pst_opno = ADI_GT_OP;
@@ -53217,6 +53052,8 @@ psl_ifstmt(
 **	28-Jun-2010 (kiria01) b121860
 **	    Allow bias to unicode to be overridden when direct compare is made
 **	    between a column and a constant or constant expression.
+**	3-Aug-2010 (kschendel) b124170
+**	    Drop args used to compute joinid, let pst-node do it now.
 */
 static DB_STATUS
 psl_simple_compare(
@@ -53227,15 +53064,13 @@ psl_simple_compare(
 	u_i4		pat_flags,
 	UCS2		escape_char,
 	PSS_TREEINFO	**treeinfo,
-	bool		in_join_search,
 	bool		in_target_clause,
-	PSS_JOIN_INFO	*join_info,
 	PSQ_CB		*psq_cb)
 {
     PST_OP_NODE	opnode;
     DB_STATUS	status;
     DB_ERROR	*err_blk = &psq_cb->psq_error;
-    i4		pst_node_flags = 0;
+    i4		pst_node_flags = PSS_JOINID_STD;
 
     status = psf_malloc(sess_cb, &sess_cb->pss_ostream, sizeof(PSS_TREEINFO),
 	     (PTR *) treeinfo, err_blk);
@@ -53262,8 +53097,9 @@ psl_simple_compare(
 	     && ( ( psq_cb->psq_mode == PSQ_CREATE) || 
 	     ( psq_cb->psq_mode == PSQ_ATBL_ADD_COLUMN) ) ) )
     {
-	pst_node_flags = PSS_NORES;
+	pst_node_flags |= PSS_NORES;
     }
+
     /* See if the comparison is between a column and a constant
     ** and try to ensure that the column datatype is chosen so
     ** that indexes are not disabled by the comparison rules.
@@ -53299,16 +53135,6 @@ psl_simple_compare(
 				&psq_cb->psq_error, NULL))
 		return(status);
 	}
-    }
-
-    if (in_join_search)
-    {
-	/*
-	** If we are processing a join_search condition, set the joinid
-	** field appropriately.
-	*/
-	opnode.pst_joinid = join_info->pss_join[join_info->depth].join_id;
-	pst_node_flags |= PSS_JOINID_PRESET;
     }
 
     status = pst_node(sess_cb, &sess_cb->pss_ostream, operand1, operand2,
@@ -53489,9 +53315,14 @@ psl_subsel_compare(
 	     && ( ( psq_cb->psq_mode == PSQ_CREATE) || 
 	     ( psq_cb->psq_mode == PSQ_ATBL_ADD_COLUMN) ) ) )
     {
-	pst_node_flags = PSS_NORES;
+	pst_node_flags |= PSS_NORES;
     }
 
+    /* Note that joinid is not set, left at NOJOIN;  flattening uses
+    ** that as a signal to do the right things.
+    ** FIXME I think this is probably wrong, but it keeps the simple
+    ** cases happy for now.  Fix or explain!
+    */
     if (expr != NULL)	    /* will be true except for the EXISTS predicate */
     {
 	status = pst_node(sess_cb, &sess_cb->pss_ostream,
@@ -55894,13 +55725,13 @@ psl_mfunc_param(
 ** History:
 **	02-dec-92 (andre)
 **	    written
+**	3-Aug-2010 (kschendel) b124170
+**	    Drop join info args, ask for standard joinid processing.
 */
 static DB_STATUS
 psl_usr_func(
 	     char	    *fname,
 	     PSS_SESBLK	    *sess_cb,
-	     bool	    in_join_cond,
-	     PSS_JOIN_INFO  *join_info,
 	     PST_QNODE	    **newnode,
 	     DB_ERROR	    *err_blk)
 {
@@ -55910,7 +55741,6 @@ psl_usr_func(
     ADI_OP_ID	    opid;
     ADF_CB	    *adf_scb = (ADF_CB*) sess_cb->pss_adfcb;
     i4	    err_code;
-    i4		    pst_node_flags = 0;
 
     STmove(fname, '\0', sizeof(ADI_OP_NAME), (char *) &funcname);
     status = adi_opid(adf_scb, &funcname, &opid);
@@ -55925,22 +55755,11 @@ psl_usr_func(
     opnode.pst_opno = opid;
     opnode.pst_opmeta = PST_NOMETA;
     opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-    opnode.pst_joinid = PST_NOJOIN;
-
-    if (in_join_cond)
-    {
-	/*
-	** If we are processing a join_search condition, set the joinid field
-	** appropriately.  It has been initialized to PST_NOJOIN in pst_node().
-	*/
-	opnode.pst_joinid = join_info->pss_join[join_info->depth].join_id;
-	pst_node_flags |= PSS_JOINID_PRESET;
-    }
 
     status = pst_node(sess_cb, &sess_cb->pss_ostream, (PST_QNODE *) NULL,
 	(PST_QNODE *) NULL, PST_COP, (char *) &opnode, sizeof(opnode),
 	DB_NODT, (i2) 0, (i4) 0, (DB_ANYTYPE *) NULL, newnode,
-	err_blk, pst_node_flags);
+	err_blk, PSS_JOINID_STD);
 
     return (status);
 
@@ -56206,7 +56025,7 @@ psl_set_function(
     ADF_CB	 *adf_scb = (ADF_CB*) sess_cb->pss_adfcb;
     i4	 err_code;
     bool	avg = FALSE;
-    i4		pst_node_flags = 0;
+    i4		pst_node_flags = PSS_JOINID_STD;
 
     if (distinct == PST_BDISTINCT) distinct = PST_NDISTINCT;
 				/* empty set quantifier is same as ALL */
@@ -56267,18 +56086,6 @@ psl_set_function(
     operator.pst_pat_flags = AD_PAT_DOESNT_APPLY;
     operator.pst_distinct = distinct;
     operator.pst_flags 	  = 0;
-    operator.pst_joinid   = PST_NOJOIN;
-
-    if (BTtest(yyvarsp->qual_depth, yyvarsp->in_join_search))
-    {
-	/*
-	** If we are processing a join_search condition, set the joinid
-	** field appropriately.
-	*/
-	operator.pst_joinid =
-	    yyvarsp->pss_join_info.pss_join[yyvarsp->pss_join_info.depth].join_id;
-	pst_node_flags |= PSS_JOINID_PRESET;
-    }
 
     status = pst_node(sess_cb, &sess_cb->pss_ostream, 
 		      expr1_node, expr2_node,
@@ -56341,7 +56148,6 @@ psl_set_function(
 	}
 	else operator.pst_opno = ADI_CNT_OP;
 	operator.pst_retnull = FALSE;	/* cuz it's count */
-	/*operator.pst_joinid = joinid; - already done */
 	status = pst_node(sess_cb, &sess_cb->pss_ostream, expr1copy,
 			(PST_QNODE *) NULL, PST_AOP, (char *)&operator,
 			sizeof(operator), DB_NODT, (i2)0, (i4)0,
@@ -56366,7 +56172,6 @@ psl_set_function(
 
 	operator.pst_opno = ADI_F8_OP;
 	operator.pst_retnull = TRUE;
-	/*operator.pst_joinid = joinid; - already set*/
 	status = pst_node(sess_cb, &sess_cb->pss_ostream, aghdnode,
 			(PST_QNODE *) NULL, PST_UOP, (char *)&operator,
 			sizeof(operator), DB_NODT, (i2)0, (i4)0,
@@ -56379,7 +56184,6 @@ psl_set_function(
 
 	operator.pst_opno = ADI_DIV_OP;
 	operator.pst_retnull = TRUE;
-	/*operator.pst_joinid = joinid; - already set*/
 	status = pst_node(sess_cb, &sess_cb->pss_ostream, f8opnode,
 			aghd1node, PST_BOP, (char *)&operator,
 			sizeof(operator), DB_NODT, (i2)0, (i4)0,
@@ -57312,7 +57116,7 @@ psl_nary_func(PSS_SESBLK *cb, PSQ_CB *psq_cb,
     i4		base = yyvarsp->arg_base+1;  /* For convenience */
     i4		i;
     i4		numargs;
-    i4		pst_node_flags = 0;		/* PSS_NORES or zero */
+    i4		pst_node_flags = PSS_JOINID_STD;
     i4		pst_type;		/* func node type */
     PST_OP_NODE	opnode;
     PST_QNODE	*dec_node;		/* CONST node for DECIMAL() func */
@@ -57477,18 +57281,6 @@ psl_nary_func(PSS_SESBLK *cb, PSQ_CB *psq_cb,
     opnode.pst_opno = func->adi_opid;
     opnode.pst_opmeta = PST_NOMETA;
     opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-    opnode.pst_joinid = PST_NOJOIN;
-    if (pst_type != PST_CONST &&
-	BTtest(yyvarsp->qual_depth, yyvarsp->in_join_search))
-    {
-	/*
-	** If we are processing a join_search condition, set the joinid
-	** field appropriately.
-	*/
-	opnode.pst_joinid =
-		yyvarsp->pss_join_info.pss_join[yyvarsp->pss_join_info.depth].join_id;
-	pst_node_flags |= PSS_JOINID_PRESET;
-    }
 
     status = pst_node(cb, &cb->pss_ostream,
 		yyvarsp->func_args[base].arg, yyvarsp->func_args[base+1].arg,
@@ -57556,7 +57348,7 @@ psl_chain_bop_fn(
     DB_STATUS	status;
     i4		base = yyvarsp->arg_base+1;  /* For convenience */
     i4		numargs = yyvarsp->arg_ix - base;
-    i4		pst_node_flags = 0;
+    i4		pst_node_flags = PSS_JOINID_STD;
 
     /*
     ** delay arg type resolution if processing target list or a CHECK
@@ -57581,17 +57373,6 @@ psl_chain_bop_fn(
 	opnode.pst_opno = func->adi_opid;
 	opnode.pst_opmeta = PST_NOMETA;
 	opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-	opnode.pst_joinid = PST_NOJOIN;
-	if (BTtest(yyvarsp->qual_depth, yyvarsp->in_join_search))
-	{
-	    /*
-	    ** If we are processing a join_search condition, set the joinid
-	    ** field appropriately.
-	    */
-	    opnode.pst_joinid =
-		    yyvarsp->pss_join_info.pss_join[yyvarsp->pss_join_info.depth].join_id;
-	    pst_node_flags |= PSS_JOINID_PRESET;
-	}
 
 	for (i = 1; i < numargs; i++)
 	{
@@ -58335,6 +58116,8 @@ psl_collation_check(
 **	02-Apr-2010 (kiria01) b123536
 **	    Re-initialise pointers in the new block - see comments in
 **	    yyvarsinit.h
+**	2-Aug-2010 (kschendel) b124170
+**	    Connect new yyvars to session CB.
 */
 static DB_STATUS
 psl_push_yyvars(
@@ -58344,18 +58127,20 @@ psl_push_yyvars(
 
 {
     DB_STATUS	status = E_DB_OK;
+    PSS_YYVARS	*oldvars = *yyvpp;
 
     /* Just include yyvarsinit.h to initialize local instance of 
     ** PSS_YYVARS, then allocate fresh copy and copy it over. */
 
 #define YYVARS	PSS_YYVARS	/* stupid YACC! */
 #include <yyvarsinit.h>
+    /* Beware!  cb->pss_yyvars is now pointing to our local .. fixed below */
 
     /* Local yyvars has been initialized. Save parent into it, allocate
     ** fresh one, then copy local into allocated storage. */
 
-    yyvars.prev_yyvarsp = *yyvpp;
-    yyvars.join_id = yyvars.prev_yyvarsp->join_id; /* join_id persists */
+    yyvars.prev_yyvarsp = oldvars;
+    yyvars.join_id = oldvars->join_id; /* join_id persists */
 
     /* Open memory stream for allocating query tree, if not already
     ** open
@@ -58366,6 +58151,7 @@ psl_push_yyvars(
 	(status = psf_mopen(cb, QSO_QTREE_OBJ, &cb->pss_ostream,
 	&psq_cb->psq_error)) != E_DB_OK)
     {
+	cb->pss_yyvars = oldvars;
         return (status);    /* non-zero return means error */
     }
 
@@ -58373,12 +58159,14 @@ psl_push_yyvars(
 				yyvpp, &psq_cb->psq_error);
     if (DB_FAILURE_MACRO(status))
     {
-	*yyvpp = yyvars.prev_yyvarsp;
+	*yyvpp = oldvars;
+	cb->pss_yyvars = oldvars;
 	return(status);
     }
 
     /* Now copy it over. */
     MEcopy((char *)&yyvars, sizeof(PSS_YYVARS), (char *)*yyvpp);
+    cb->pss_yyvars = *yyvpp;
     /* DEFFERED INITIALISATION of pointers referenceing the block */
     (*yyvpp)->seqp = &(*yyvpp)->sequence;
     QUinit((QUEUE *)&(*yyvpp)->dcol_list);
@@ -59265,6 +59053,8 @@ psl_bool_const_treeinfo(
 **	18-May-2009 (kiria01) SIR120473
 **	    Protect de-reference of tree pointers and honour
 **	    the legacy flag for testing.
+**	3-Aug-2010 (kschendel) b124170
+**	    Drop joinid related args, use "standard" joinid processing.
 */
 
 static DB_STATUS
@@ -59272,8 +59062,6 @@ psl_patcomp(
 	PSS_SESBLK	*sess_cb,
 	PSQ_CB		*psq_cb,
 	PSS_TREEINFO	*treeinfo,
-	bool		in_join_search,
-	PSS_JOIN_INFO	*join_info,
 	bool		in_target_clause)
 {
     DB_STATUS	status = E_DB_OK;
@@ -59283,9 +59071,6 @@ psl_patcomp(
     ADI_OP_ID	cvopno; /* Only set if castl or castr used */
     PSS_TREEINFO *tip = treeinfo;
     GLOBALREF i4	ADU_pat_legacy;
-    PST_J_ID	joinid = PST_NOJOIN;
-    if (join_info && in_join_search)
-	joinid = join_info->pss_join[join_info->depth].join_id;
 
     /*
     ** If legacy processing is to be enabled don't attempt to inject
@@ -59302,7 +59087,7 @@ psl_patcomp(
 		    like->pst_sym.pst_value.pst_s_op.pst_opno,
 		    like->pst_sym.pst_value.pst_s_op.pst_pat_flags,
 		    like->pst_sym.pst_value.pst_s_op.pst_escape, &tip,
-		    in_join_search, FALSE, join_info, psq_cb);
+		    FALSE, psq_cb);
 		tip->pss_tree->pst_sym.pst_value.pst_s_op.pst_joinid =
 			like->pst_sym.pst_value.pst_s_op.pst_joinid;
 		if (tip != treeinfo)
@@ -59402,7 +59187,7 @@ psl_patcomp(
 		status = psl_simple_compare(sess_cb, l, r, opid,
 		    like->pst_sym.pst_value.pst_s_op.pst_pat_flags,
 		    like->pst_sym.pst_value.pst_s_op.pst_escape, &tip,
-		    in_join_search, FALSE, join_info, psq_cb);
+		    FALSE, psq_cb);
 		tip->pss_tree->pst_sym.pst_value.pst_s_op.pst_joinid =
 			like->pst_sym.pst_value.pst_s_op.pst_joinid;
 		if (tip != treeinfo)
@@ -59459,16 +59244,14 @@ psl_patcomp(
 		opnode.pst_opno = cvopno;
 		opnode.pst_opmeta = PST_NOMETA;
 		opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-		opnode.pst_joinid = joinid;
 		status = pst_node(sess_cb, &sess_cb->pss_ostream, r1, (PST_QNODE *) NULL,
 			PST_UOP, (char *) &opnode, sizeof(opnode), DB_NODT, (i2) 0,
 			(i4) 0, (DB_ANYTYPE *) NULL, &castr, &psq_cb->psq_error,
-			PSS_JOINID_PRESET);
+			PSS_JOINID_STD);
 		if (DB_FAILURE_MACRO(status))
 		    return(status);
 		opnode.pst_opno = ADI_PATCOMP_OP;
 		opnode.pst_opmeta = PST_NOMETA;
-		opnode.pst_joinid = joinid;
 		opnode.pst_escape = 0;
 		opnode.pst_pat_flags = like->pst_sym.pst_value.pst_s_op.pst_pat_flags;
 
@@ -59488,7 +59271,7 @@ psl_patcomp(
 		status = pst_node(sess_cb, &sess_cb->pss_ostream, castr, (PST_QNODE *) NULL,
 			PST_UOP, (char *) &opnode, sizeof(opnode), DB_NODT, (i2) 0,
 			(i4) 0, (DB_ANYTYPE *) NULL, &wo->pst_right, &psq_cb->psq_error,
-			PSS_JOINID_PRESET);
+			PSS_JOINID_STD);
 		if (DB_FAILURE_MACRO(status))
 		    return(status);
 		/* Adjust CASEOP node length */
@@ -59505,11 +59288,10 @@ psl_patcomp(
 		opnode.pst_opno = cvopno;
 		opnode.pst_opmeta = PST_NOMETA;
 		opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-		opnode.pst_joinid = joinid;
 		status = pst_node(sess_cb, &sess_cb->pss_ostream, l, (PST_QNODE *) NULL,
 			PST_UOP, (char *) &opnode, sizeof(opnode), DB_NODT, (i2) 0,
 			(i4) 0, (DB_ANYTYPE *) NULL, &castl, &psq_cb->psq_error,
-			PSS_JOINID_PRESET);
+			PSS_JOINID_STD);
 		if (DB_FAILURE_MACRO(status))
 		    return(status);
 	    }
@@ -59517,7 +59299,7 @@ psl_patcomp(
 	    ** join info will be propagated from original node */
 	    status = psl_simple_compare(sess_cb, castl, r, opid,
 		(u_i4)AD_PAT_DOESNT_APPLY, (UCS2)0, &tip,
-		in_join_search, in_target_clause, join_info, psq_cb);
+		in_target_clause, psq_cb);
 	    tip->pss_tree->pst_sym.pst_value.pst_s_op.pst_joinid =
 		    like->pst_sym.pst_value.pst_s_op.pst_joinid;
 	    if (tip != treeinfo)
@@ -59537,17 +59319,15 @@ psl_patcomp(
 		opnode.pst_opno = cvopno;
 		opnode.pst_opmeta = PST_NOMETA;
 		opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-		opnode.pst_joinid = joinid;
 		status = pst_node(sess_cb, &sess_cb->pss_ostream, r, (PST_QNODE *) NULL,
 			PST_UOP, (char *) &opnode, sizeof(opnode), DB_NODT, (i2) 0,
 			(i4) 0, (DB_ANYTYPE *) NULL, &castr, &psq_cb->psq_error,
-			PSS_JOINID_PRESET);
+			PSS_JOINID_STD);
 		if (DB_FAILURE_MACRO(status))
 		    return(status);
 	    }
 	    opnode.pst_opno = ADI_PATCOMP_OP;
 	    opnode.pst_opmeta = PST_NOMETA;
-	    opnode.pst_joinid = joinid;
 	    opnode.pst_escape = 0;
 	    opnode.pst_pat_flags = like->pst_sym.pst_value.pst_s_op.pst_pat_flags;
 
@@ -59567,7 +59347,7 @@ psl_patcomp(
 	    status = pst_node(sess_cb, &sess_cb->pss_ostream, castr, (PST_QNODE *) NULL,
 		    PST_UOP, (char *) &opnode, sizeof(opnode), DB_NODT, (i2) 0,
 		    (i4) 0, (DB_ANYTYPE *) NULL, &comp, &psq_cb->psq_error,
-			PSS_JOINID_PRESET);
+			PSS_JOINID_STD);
 	    if (DB_FAILURE_MACRO(status))
 		return(status);
 
@@ -59594,8 +59374,8 @@ psl_patcomp(
 		    /* Make this IS [NOT] NULL */
 		    status = psl_simple_compare(sess_cb, castl, NULL,
 					ADI_NONUL_OP, (u_i4)AD_PAT_DOESNT_APPLY,
-					(UCS2)0, &tip, in_join_search,
-					in_target_clause, join_info, psq_cb);
+					(UCS2)0, &tip,
+					in_target_clause, psq_cb);
 		else
 		    /* Make simple TRUE or FALSE as not NULLable */
 		    status = psl_bool_const_treeinfo(sess_cb, psq_cb,
@@ -59614,8 +59394,8 @@ psl_patcomp(
 		    /* Make this IS [NOT] NULL */
 		    status = psl_simple_compare(sess_cb, castl, NULL,
 					ADI_NONUL_OP, (u_i4)AD_PAT_DOESNT_APPLY,
-					(UCS2)0, &tip, in_join_search,
-					in_target_clause, join_info, psq_cb);
+					(UCS2)0, &tip,
+					in_target_clause, psq_cb);
 		else
 		    /* Make simple FALSE or TRUE as not NULLable or FALSE */
 		    status = psl_bool_const_treeinfo(sess_cb, psq_cb,
@@ -59667,11 +59447,10 @@ psl_patcomp(
 		    opnode.pst_opno = cvopno;
 		    opnode.pst_opmeta = PST_NOMETA;
 		    opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-		    opnode.pst_joinid = joinid;
 		    status = pst_node(sess_cb, &sess_cb->pss_ostream, l, (PST_QNODE *) NULL,
 			    PST_UOP, (char *) &opnode, sizeof(opnode), DB_NODT, (i2) 0,
 			    (i4) 0, (DB_ANYTYPE *) NULL, &castl, &psq_cb->psq_error,
-			    PSS_JOINID_PRESET);
+			    PSS_JOINID_STD);
 		    if (DB_FAILURE_MACRO(status))
 			return(status);
 		}
@@ -59679,7 +59458,7 @@ psl_patcomp(
 		** join info will be propagated from original node */
 		status = psl_simple_compare(sess_cb, castl, comp, opid,
 		    (u_i4)AD_PAT_DOESNT_APPLY, (UCS2)0, &tip,
-		    in_join_search, in_target_clause, join_info, psq_cb);
+		    in_target_clause, psq_cb);
 		tip->pss_tree->pst_sym.pst_value.pst_s_op.pst_joinid =
 			like->pst_sym.pst_value.pst_s_op.pst_joinid;
 	    }
@@ -59883,7 +59662,7 @@ psl_mk_const_similar(
 	    !pst_node(sess_cb, mstream, *cst, res_node,
 			res_node ? PST_BOP : PST_UOP,
 			(char *)&op, sizeof(op), ndv.db_datatype, ndv.db_prec, ndv.db_length,
-			(DB_ANYTYPE *)NULL, &res_node, err_blk, 0) &&
+			(DB_ANYTYPE *)NULL, &res_node, err_blk, PSS_JOINID_STD) &&
 	    res_node &&
 	    (res_node->pst_sym.pst_type == PST_CONST ||
 		!handled))

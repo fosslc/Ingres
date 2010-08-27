@@ -9781,7 +9781,6 @@ qual:		    LPAREN qual RPAREN
 		op.pst_opno = ADI_IITRUE_OP;
 	    op.pst_opmeta = PST_NOMETA;
 	    op.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-	    op.pst_joinid = PST_NOJOIN;
 	    /* No OJ's in quel */
 	    /* A shame we can't reuse the true/false node, which was probably
 	    ** created out of an operator node anyway!  but it's not worth
@@ -9790,7 +9789,7 @@ qual:		    LPAREN qual RPAREN
 	    status = pst_node(cb,&cb->pss_ostream, NULL, NULL,
 			PST_COP, (char *) &op, sizeof(op),
 			DB_BOO_TYPE, 0, DB_BOO_LEN, NULL,
-			&newnode, &psq_cb->psq_error, PSS_JOINID_PRESET);
+			&newnode, &psq_cb->psq_error, 0);
 	    if (status != E_DB_OK)
 		return (status);
 	    $1 = newnode;
