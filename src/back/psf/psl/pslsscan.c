@@ -4350,6 +4350,13 @@ multi_word_keyword(PSS_SESBLK *pss_cb, PSQ_CB *psq_cb,
 **	28-May-2010 (gupsh01)
 **	    For extra long strings, truncate to the maximum length
 **	    length allowed.
+**	03-Aug-2010 (kiria01) b124158
+**	    Found the ULM corruption and fixed the bug in the 'don't need to normalise'
+**	    optimisation. The ULM bug happens when this routine checks for allocated
+**	    block size of PSS_SBSIZE but the allocation routine only allocates the
+**	    request size (was reserve). The optimisation of returning the raw data
+**	    when no net normalisation happened broke when the save_symnext became
+**	    stale when a new block was allocated.
 */
 static i4
 psl_unorm(
@@ -4437,7 +4444,7 @@ i4	    token)
     {
 	/* check if we need to unorm QDATA */
 	qdv = yacc_cb->yylval.psl_dbval;
-	STRUCT_ASSIGN_MACRO(*qdv, dv1);
+	dv1 = *qdv;
 
 	if (!psl_dtunorm(adf_cb, qdv->db_datatype))
 	    return (token);
@@ -4519,11 +4526,13 @@ dv1.db_length, rdv.db_length);
     if (pss_cb->pss_symnext + reserve >=
 	&pss_cb->pss_symblk->pss_symdata[PSS_SBSIZE - 1])
     {
-	status = psf_symall(pss_cb, psq_cb, reserve);
+	status = psf_symall(pss_cb, psq_cb, PSS_SBSIZE);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return(-1);	/* error */
 	}
+	/* New block means need to clear stale pointer */
+	save_symnext = NULL;
     }
 
     /* ALWAYS align data value */
@@ -4533,7 +4542,7 @@ dv1.db_length, rdv.db_length);
     if (token == QDATA)
     {
 	n_qdv = (DB_DATA_VALUE *)tmp_symnext;
-	STRUCT_ASSIGN_MACRO(*qdv, *n_qdv);
+	*n_qdv = *qdv;
 	tmp_symnext += sizeof(DB_DATA_VALUE);
     }
 
@@ -4578,13 +4587,12 @@ dv1.db_length, rdv.db_length);
     ** pss_symnext or reset yylval,len
     */
     if (norm_str_len == input_str_len &&
-	!MEcmp(input_str, (char *)rdv.db_data + DB_CNTSIZE, norm_str_len))
+	!MEcmp(input_str, (char *)rdv.db_data + DB_CNTSIZE, norm_str_len) &&
+	save_symnext)
     {
 	/* Move back to input token, caller will move the pss_symnext */
-	/* for now always advance so we can test this code
 	pss_cb->pss_symnext = save_symnext;
 	return (token);
-	*/
     }
     else if (ult_check_macro(&pss_cb->pss_trace, 19, &val1, &val2))
     {
