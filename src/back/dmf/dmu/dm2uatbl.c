@@ -164,6 +164,8 @@
 **	    to update the iirelation row for any dependent indexes, hence break 
 **	    out handling of rename columns for dependent indexes into new 
 **	    routine si_rencol_adjust().
+**      23-Jun-2010 (stial01) (b123972)
+**          Fixed test for page type(s) that allow rows spanning pages
 **/
 
 /*
@@ -576,7 +578,7 @@ DB_ERROR	*dberr)
 	}
 	
 	/* Calculate max row size for this page size, page type */
-	if (t->tcb_rel.relpgtype == DM_PG_V5)
+	if (DMPP_VPT_PAGE_HAS_SEGMENTS(t->tcb_rel.relpgtype))
 	   max = DM_TUPLEN_MAX_V5;
 	else
 	   max = dm2u_maxreclen(t->tcb_rel.relpgtype, t->tcb_rel.relpgsize);
