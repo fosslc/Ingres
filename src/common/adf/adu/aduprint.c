@@ -1400,6 +1400,8 @@ ADI_FI_ID	    *instr)
 **	    Update call to use ADF_CB *.
 **      02-Aug-2010 (maspa05) b124161
 **          Output BYTE/VBYTE as hex digits
+**      09-Aug-2010 (maspa05) b124161
+**          change u_i1 to u_tmp_i1 - u_i1 is a #define on VMS
 */
 
 char *
@@ -1429,7 +1431,7 @@ ADF_CB *tzcb)
     i4				i4_tmp;
     i2				i2_tmp, i2_tmp2;
     i1				i1_tmp;
-    u_char 			u_i1;
+    u_char 			u_tmp_i1;
     char			stbuf[2048];
     AD_DTUNION			*dp;
     i8				i8_tmp;
@@ -1656,8 +1658,8 @@ ADF_CB *tzcb)
 	    c_tmp += STlength(c_tmp);
 	    for(i=0; i< blen; i++)
 	    {
-                u_i1=(u_char) data[i];
-                STprintf(c_tmp,"%02x ", u_i1);
+                u_tmp_i1=(u_char) data[i];
+                STprintf(c_tmp,"%02x ", u_tmp_i1);
 		c_tmp += STlength(c_tmp);
 	    }
             break;
