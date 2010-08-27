@@ -27,28 +27,36 @@
 **		SIR 112068
 **		Written.
 **		NOTE: platform related issues to be taken care.
+**	01-Jul-2010 (hanje04)
+**	    BUG 124023
+**	    Explicitly set buffer size (VMIN) to 1 and timeout (VTIME) to 0
+**	    (never) in new termios settings to prevent "lag" on input. Default
+**	    buffer size on Solaris is 4 which leads to a 4 char lag on input.
 */
 
 struct termios org_tty_termios;
 
 /* Set the terminal attributes required by the SIhistgetrec function */
-i4 
+STATUS 
 TEsettmattr()
 {
 	struct termios new_tty_termios;
 	if (tcgetattr(STDINFD, &org_tty_termios) < 0)
-        return -1;
+            return(FAIL);
 	new_tty_termios = org_tty_termios; /* working with a copy */
 
 	/* local modes - 
-		echoing off, canonical off, no signal chars (^Z,^C) */ 
+		echoing off, canonical off, no signal chars (^Z,^C) */
 	new_tty_termios.c_lflag &= ~(ECHO | ICANON | ISIG);
+	/* 1 char buffer, no timeout */
+	new_tty_termios.c_cc[TE_VMIN] = 1;
+	new_tty_termios.c_cc[TE_VTIME] = 0;
 
-	/* set the new tty values */ 
+	/* set the new tty values */
 	if (tcsetattr(STDINFD, TCSANOW, &new_tty_termios) < 0) 
-		return -1;
+		return(FAIL);
 	
-	return 0;
+	return(OK);
 }
 	
 /* Reset the terminal attributes as they were before calling TEsettmattr 
