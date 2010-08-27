@@ -3,11 +3,15 @@
 #
 #	17-Dec-2009 (bonro01)
 #	    Replace unix specific path separators
+#	28-Jul-2010 (drivi01)
+#	    Disable ice on Windows.
 
 SubDir ING_SRC front ice cf_win ;
 
 IISUBSYS front ice cf_win ;
 
+if $(BUILD_ICE)
+{
 IICF ColdFusion ;
 
 IIICEFILE ColdFusion$(DFS)IngresMarkup.vtm : IngresMarkup.vtm ;
@@ -15,3 +19,4 @@ IIICEFILE ColdFusion$(DFS)IngresMarkup.vtm : IngresMarkup.vtm ;
 IIICECAZIP ColdFusion$(DFS)ingrescf.caz ;
 
 IIINCLUDE front ice cf_win td ;
+}<<<<

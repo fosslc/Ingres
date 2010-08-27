@@ -1418,6 +1418,8 @@
 #           libraries
 #	24-Jul-2010 (drivi01)
 #	    Remove ICE from build process.
+#	28-Jul-2010 (drivi01)
+#	    Remove hardcoded dependency of VDBA on SHICEAPILIB.
 #
 #
 #####
@@ -8432,10 +8434,10 @@ rule IISLN
                 _USETOOL $(<) : esqlcc.exe ;
 
             case *front*vdba*mainmfc* :
-               DEPENDS $(<) : $(INGRSWINLIB) $(SHICEAPILIB) $(SHCATO3CNTLIB)
+               DEPENDS $(<) : $(INGRSWINLIB) $(SHCATO3CNTLIB)
                     $(SHCATO3SPNLIB) $(SHCATOLBOXLIB) $(DBADLG1LIB) $(INGRSWINLIB) 
                     $(LIBEXTNCLIB) $(LIBGUIDSLIB) $(LIBWCTRLLIB) $(MAINLIBLIB) ;
-               SEARCH on $(INGRSWINLIB) $(SHICEAPILIB) $(SHCATO3CNTLIB)
+               SEARCH on $(INGRSWINLIB) $(SHCATO3CNTLIB)
                     $(SHCATO3SPNLIB) $(DBADLG1LIB) $(INGRSWINLIB) 
                     $(LIBEXTNCLIB) $(LIBGUIDSLIB) $(LIBWCTRLLIB) $(MAINLIBLIB) 
                     = $(INGLIB) ;
