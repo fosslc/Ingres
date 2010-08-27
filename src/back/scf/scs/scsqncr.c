@@ -2622,6 +2622,11 @@ static char execproc_syntax2[] = " = session.";
 **	28-may-2010 (stephenb)
 **	    add sanity check for no query text case; make sure the number of 
 **	    parameters provided by GCA is the number expected for the saved query
+**	17-jun-2010 (stephenb)
+**	    Turn off copy optimization flag (SCS_INSERT_OPTIM) for errors that will
+**	    terminate the batch. Remove call to QEU_E_COPY when handling
+**	    batch copy optimization errors, the call to scs_copy_error
+**	    does this for us already (Bug 123939)
 */
 DB_STATUS
 scs_sequencer(i4 op_code,
@@ -4247,6 +4252,7 @@ scs_sequencer(i4 op_code,
 		    sscb->sscb_state = SCS_INPUT;
 		    *next_op = CS_EXCHANGE;
 		    /* this is a terminate batch error */
+		    sscb->sscb_flags &= ~SCS_INSERT_OPTIM;
 		    cscb->cscb_eog_error = TRUE;
 		    break;
 		}
@@ -4266,7 +4272,6 @@ scs_sequencer(i4 op_code,
 		{
 		    qe_copy->qeu_stat |= CPY_FAIL;
 		    /* close copy and rollback rows */
-		    (void)qef_call(QEU_E_COPY, qe_ccb);
 		    scs_copy_error(scb, qe_ccb, 0);
 		    sscb->sscb_state = SCS_CP_ERROR;
 		    /* block sent via NO_ASYNC_EXIT */
@@ -4275,6 +4280,7 @@ scs_sequencer(i4 op_code,
 		    sscb->sscb_state = SCS_INPUT;
 		    *next_op = CS_EXCHANGE;
 		    /* this is a terminate batch error */
+		    sscb->sscb_flags &= ~SCS_INSERT_OPTIM;
 		    cscb->cscb_eog_error = TRUE;
 		    break;
 		}
@@ -4317,6 +4323,7 @@ scs_sequencer(i4 op_code,
 		    sscb->sscb_state = SCS_INPUT;
 		    *next_op = CS_EXCHANGE;
 		    /* this is a terminate batch error */
+		    sscb->sscb_flags &= ~SCS_INSERT_OPTIM;
 		    cscb->cscb_eog_error = TRUE;
 		    break;
 		}
