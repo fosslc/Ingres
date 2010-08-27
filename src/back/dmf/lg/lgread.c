@@ -215,6 +215,8 @@ static STATUS	map_page(LG_LXID lx_id, LGC *lgc, CL_ERR_DESC *sys_err);
 **	    SIR 121619 MVCC: Add ability to "read" from log buffers and bulk read
 **	    I/O for any reader that supplies a large enough context block pool
 **	    (see also LGposition, dm0l_allocate).
+**	06-Jul-2010 (jonj) SIR 122696
+**	    Non-header pages now have la_sequence in last 4 bytes of page.
 */
 /* ARGSUSED */
 STATUS
@@ -369,7 +371,7 @@ CL_ERR_DESC	    *sys_err)
 
 	/*  Check to see if the record is contained in the page. */
 
-	if (lgc->lgc_offset + length <= lgc->lgc_size)
+	if (lgc->lgc_offset + length <= lgc->lgc_size-LG_BKEND_SIZE)
 	{
 	    /*	Return pointer to record and update for next call. */
 
@@ -823,6 +825,8 @@ CL_ERR_DESC	    *sys_err)
 **	    SIR 121619 MVCC:
 **	    If dm0p's reading below BOF, quietly return LG_ENDOFILE.
 **	    Make sure lgc_buffer isn't null when checking the block pool.
+**	06-Jul-2010 (jonj) SIR 122696
+**	    lbh_used expanded from u_i2 to i4.
 */
 static STATUS
 LG_read(
@@ -1088,7 +1092,7 @@ CL_ERR_DESC	    *sys_err)
 		    ** yet, but lbb_bytes_used will.
 		    */
 		    lbh = (LBH*)lgc->lgc_buffer;
-		    lbh->lbh_used = (u_i2)lbb->lbb_bytes_used;
+		    lbh->lbh_used = lbb->lbb_bytes_used;
 		}
 		(VOID)LG_unmutex(&lbb->lbb_mutex);
 		return(OK);
@@ -1303,6 +1307,8 @@ CL_ERR_DESC	    *sys_err)
 **	14-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Add ability to read from log buffers,
 **	    and bulk read up to lgc_numblocks.
+**	06-Jul-2010 (jonj) SIR 122696
+**	    Check bookends to ensure page completely written.
 */
 static STATUS
 map_page(
@@ -1441,12 +1447,17 @@ CL_ERR_DESC	    *sys_err)
 	/*
 	** Check the completeness of the page if not read by page,
 	** and if not "read" from the log buffers.
+	**
+	** Check the checksum, thence the corners, each end of which
+	** should be the la_sequence of the log page.
 	*/
 
 	if ( lgc->lgc_position != LG_P_PAGE && (!lgc->lgc_bufid || !*lgc->lgc_bufid) )
 	{
-	    if (LGchk_sum((PTR)lgc->lgc_buffer, lgc->lgc_size) != 
-					lgc->lgc_buffer->lbh_checksum)
+	    if ( LGchk_sum((PTR)lgc->lgc_buffer, lgc->lgc_size) != 
+					lgc->lgc_buffer->lbh_checksum ||
+		 lgc->lgc_buffer->lbh_address.la_sequence !=
+		     *(u_i4*)((char*)lgc->lgc_buffer + lgc->lgc_size-LG_BKEND_SIZE) )
 	    {
 		uleFormat(NULL, E_DMA458_LGREAD_CKSUM_ERROR, (CL_ERR_DESC *)NULL,
 			    ULE_LOG, NULL, NULL, 0, NULL, &err_code, 5,
@@ -1478,7 +1489,7 @@ CL_ERR_DESC	    *sys_err)
 	if ((lgc->lgc_buffer->lbh_address.la_sequence != 
 		lgc->lgc_lga.la_sequence) ||
 	    ((u_i4) lgc->lgc_buffer->lbh_used < (u_i4) sizeof(LBH)) ||
-	    ((u_i4) lgc->lgc_buffer->lbh_used > (u_i4) lgc->lgc_size))
+	    ((u_i4) lgc->lgc_buffer->lbh_used > (u_i4) lgc->lgc_size-LG_BKEND_SIZE))
 	{
 	    if ((lgc->lgc_buffer->lbh_address.la_sequence !=
 						    lgc->lgc_lga.la_sequence))
@@ -1498,7 +1509,7 @@ CL_ERR_DESC	    *sys_err)
 			0, lgc->lgc_buffer->lbh_address.la_offset,
 			0, lgc->lgc_buffer->lbh_used,
 			0, sizeof(LBH),
-			0, lgc->lgc_size);
+			0, lgc->lgc_size-LG_BKEND_SIZE);
 
 	    if (retry)
 	    {

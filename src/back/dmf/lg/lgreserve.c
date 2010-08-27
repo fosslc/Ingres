@@ -706,6 +706,8 @@ STATUS		*async_status)
 **	    partitions writes a ton of forced FCREATE and FRENAME
 **	    log records, causing recovery to run off the end of
 **	    the log.
+**	06-Jul-2010 (jonj) SIR 122696
+**	    Include LG_BKEND_SIZE in page overhead.
 */
 i4
 LG_calc_reserved_space(
@@ -744,7 +746,8 @@ i4		flag)
     ** adding a percentage of this amount to each space reservation.
     */
     space_needed += ((space_needed * sizeof(LBH)) / 
-			(lfb->lfb_header.lgh_size - sizeof(LBH))) + num_records;
+			(lfb->lfb_header.lgh_size-LG_BKEND_SIZE - sizeof(LBH)))
+				+ num_records;
 
     /*
     ** If the reserve flag indicated that an LGforce would be required during

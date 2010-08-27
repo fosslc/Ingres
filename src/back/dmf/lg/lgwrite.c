@@ -950,6 +950,9 @@ CL_ERR_DESC	    *sys_err)
 **	06-May-2010 (jonj)
 **	    When optimized writes are enabled with a single logwriter,
 **	    don't initiate group commit - it's a performance killer.
+**	06-Jul-2010 (jonj) SIR 122696
+**	    Last 4 bytes of non-header pages now reserved for la_sequence,
+**	    excluded from "available" and "bytes_used".
 */
 static STATUS
 LG_write(
@@ -1767,7 +1770,7 @@ CL_ERR_DESC	    *sys_err)
 
     /* Decide if record fits into the current page. */
 
-    span_bytes = size_lr - (lfb->lfb_header.lgh_size - lbb->lbb_bytes_used);
+    span_bytes = size_lr - (lfb->lfb_header.lgh_size-LG_BKEND_SIZE - lbb->lbb_bytes_used);
 
     if (span_bytes > 0)
     {
@@ -1789,9 +1792,9 @@ CL_ERR_DESC	    *sys_err)
 	** Compute the number of additional LBBs we'll need 
 	** to contain this record.
 	*/
-	lxb->lxb_rlbb_count = span_bytes / (lfb->lfb_header.lgh_size -
+	lxb->lxb_rlbb_count = span_bytes / (lfb->lfb_header.lgh_size-LG_BKEND_SIZE -
 					sizeof(LBH));
-	lxb->lxb_rlbb_count += (span_bytes % (lfb->lfb_header.lgh_size -
+	lxb->lxb_rlbb_count += (span_bytes % (lfb->lfb_header.lgh_size-LG_BKEND_SIZE -
 					sizeof(LBH)))
 			              ? 1 : 0;
 
@@ -2126,7 +2129,8 @@ CL_ERR_DESC	    *sys_err)
 
     span_lbb = lbb;
 
-    while (span_lbb->lbb_bytes_used + move_amount > lfb->lfb_header.lgh_size)
+    while (span_lbb->lbb_bytes_used + move_amount > 
+    		lfb->lfb_header.lgh_size-LG_BKEND_SIZE)
     {
 	/*
 	**  Record will span multiple pages. Place the next part 
@@ -2140,13 +2144,13 @@ CL_ERR_DESC	    *sys_err)
 	**  in contiguous space).
 	*/
 
-	avail = lfb->lfb_header.lgh_size - span_lbb->lbb_bytes_used;
+	avail = lfb->lfb_header.lgh_size-LG_BKEND_SIZE - span_lbb->lbb_bytes_used;
 	move_amount -= avail;
 	if (avail > record_length)
 	    avail = record_length;
 	record_length -= avail;
 
-	span_lbb->lbb_bytes_used = lfb->lfb_header.lgh_size;
+	span_lbb->lbb_bytes_used = lfb->lfb_header.lgh_size-LG_BKEND_SIZE;
 	
 	/*
 	** Update the EOF (while holding current LBB's mutex).
@@ -2385,7 +2389,8 @@ CL_ERR_DESC	    *sys_err)
     ** queue it for write, inserting it onto the write queue
     ** and removing it as the current buffer.
     */
-    if (span_lbb->lbb_bytes_used + sizeof(LRH) > lfb->lfb_header.lgh_size)
+    if (span_lbb->lbb_bytes_used + sizeof(LRH) > 
+    	lfb->lfb_header.lgh_size-LG_BKEND_SIZE)
     {
 	/*
 	**  Queue buffer to write queue.
@@ -2904,6 +2909,9 @@ CL_ERR_DESC	    *sys_err)
 **	    is picked as "gprev" by another thread.
 **	21-Mar-2006 (jenjo02)
 **	    Moved LGchk_sum here from write_block.
+**	06-Jul-2010 (jonj) SIR 122696
+**	    Write la_sequence in last 4 bytes of non-header pages,
+**	    lbh_used changed from u_i2 to i4.
 */
 STATUS
 LG_queue_write(
@@ -2943,8 +2951,11 @@ LG_queue_write(
 	    lbb->lbb_forced_lga = lbh->lbh_address;
 
 	    /* Update lbh, histogram and stats */
-	    lbh->lbh_used = (u_i2)lbb->lbb_bytes_used;
-	    lbh->lbh_extra = 0;
+	    lbh->lbh_used = lbb->lbb_bytes_used;
+
+	    /* Bookend la_sequence on the end of the page */
+	    *(u_i4*)((char*)lbh + lfb->lfb_header.lgh_size-LG_BKEND_SIZE) = 
+		lbh->lbh_address.la_sequence;
 
 	    if ( (lfb->lfb_stat.bytes += lbb->lbb_bytes_used) >= 1024 )
 	    {
@@ -3008,6 +3019,7 @@ LG_queue_write(
 	lbh = (LBH *)LGK_PTR_FROM_OFFSET(lbb->lbb_buffer);
 	lbh->lbh_checksum = LGchk_sum((PTR)lbh,
 				      lfb->lfb_header.lgh_size);
+
     }
 
     /* Remove buffer from GCMT's watchful eye */

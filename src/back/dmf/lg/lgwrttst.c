@@ -117,6 +117,9 @@
 **	    Added lgd_mutex_is_locked (TRUE,FALSE) parm to 
 **	    LG_signal_event() calls as part of mutex granularity
 **	    project.
+**	06-Jul-2010 (jonj) SIR 122696
+**	    Last 4 bytes on non-header pages reserved for la_sequence,
+**	    excluded from lbh_used.
 */
 VOID
 LG_check_write_test_1(
@@ -368,7 +371,7 @@ bool	    *sync_write)
     }
     if (BTtest(LG_T_PARTIAL_SPAN,(char *)lgd->lgd_test_bitvec))
     {
-	if ((lbh->lbh_used == lfb->lfb_header.lgh_size) &&
+	if ((lbh->lbh_used == lfb->lfb_header.lgh_size-LG_BKEND_SIZE) &&
 	    ((lbh->lbh_address.la_offset &
 		(lfb->lfb_header.lgh_size - 1))  == 0) )
 	{
@@ -383,10 +386,10 @@ bool	    *sync_write)
     }
     if (BTtest(LG_T_PARTIAL_LAST,(char *)lgd->lgd_test_bitvec))
     {
-	if ((lbh->lbh_used == lfb->lfb_header.lgh_size) &&
+	if ((lbh->lbh_used == lfb->lfb_header.lgh_size-LG_BKEND_SIZE) &&
 	    ((lbh->lbh_address.la_offset &
 		(lfb->lfb_header.lgh_size - 1)) <
-	     (lfb->lfb_header.lgh_size - sizeof(i4))) )
+	     (lfb->lfb_header.lgh_size-LG_BKEND_SIZE - sizeof(i4))) )
 	{
 	    /*
 	    ** This page is full, and the last record on it is incomplete.

@@ -2713,6 +2713,8 @@ CL_ERR_DESC	*sys_err)
 **	    3-element log addresses back in '97.
 **	10-Nov-2009 (kschendel) SIR 122757
 **	    Make sure I/O buffer is aligned.
+**	06-Jul-2010 (jonj) SIR 122696
+**	    Check bookends to ensure page completely written.
 */
 static STATUS
 scan_bof_eof(
@@ -3011,7 +3013,9 @@ CL_ERR_DESC	*sys_err)
 
 	/*	Check that the whole block was written correctly. */
 
-	if (LGchk_sum(abuf, header->lgh_size)==((LBH *)abuf)->lbh_checksum)
+	if ( LGchk_sum(abuf, header->lgh_size) == ((LBH *)abuf)->lbh_checksum &&
+	     ((LBH *)abuf)->lbh_address.la_sequence == 
+	         *(u_i4*)(abuf + header->lgh_size-LG_BKEND_SIZE) )
 	{
 	    /*
 	    **	Keep reading backwards if this page only contains part of a 
@@ -3039,10 +3043,11 @@ CL_ERR_DESC	*sys_err)
 	}
 	else
 	{
-	    TRdisplay("%@ LG: Page <%d,%d,%d> was partially written.\n",
+	    TRdisplay("%@ LG: Page <%d,%d,%d> %d was partially written.\n",
 			((LBH *)abuf)->lbh_address.la_sequence,
 			((LBH *)abuf)->lbh_address.la_block,
-			((LBH *)abuf)->lbh_address.la_offset );
+			((LBH *)abuf)->lbh_address.la_offset,
+			*(u_i4*)(abuf + header->lgh_size-LG_BKEND_SIZE));
 	}
     }
     if (blocks_read > header->lgh_count)
@@ -3108,9 +3113,9 @@ CL_ERR_DESC	*sys_err)
     ** rewrite the log page.
     */
 
-    if (((LBH *)abuf)->lbh_used == header->lgh_size && 
+    if (((LBH *)abuf)->lbh_used == header->lgh_size-LG_BKEND_SIZE && 
 	(((LBH *)abuf)->lbh_address.la_offset) <
-	(header->lgh_size - sizeof(i4)) 
+	(header->lgh_size-LG_BKEND_SIZE - sizeof(i4)) 
        )
     {
 	/* 
@@ -3252,6 +3257,8 @@ CL_ERR_DESC	*sys_err)
 **	    Removed iosb as this is never used/assigned
 **	10-Nov-2009 (kschendel) SIR 122757
 **	    Make sure I/O buffer is aligned.
+**	06-Jul-2010 (jonj) SIR 122696
+**	    Check bookends to ensure page completely written.
 */
 static STATUS
 check_uneven_eof( 
@@ -3320,6 +3327,8 @@ CL_ERR_DESC *sys_err)
 
     if ((LGchk_sum(buffer_dual, header->lgh_size) ==
 					((LBH *)buffer_dual)->lbh_checksum) &&
+	*(u_i4*)(buffer_dual + header->lgh_size-LG_BKEND_SIZE) ==
+	    ((LBH *)buffer_dual)->lbh_address.la_sequence &&
 	((LBH *)buffer_dual)->lbh_address.la_sequence > (seq - 1))
     {
 	/*
@@ -3547,11 +3556,12 @@ CL_ERR_DESC *sys_err)
 	** and we disable the DUAL log.
 	*/
 	if ( (((LBH *)buffer_dual)->lbh_address.la_sequence !=
-	     ((LBH *)buffer_primary)->lbh_address.la_sequence) ||
-	         (((LBH *)buffer_dual)->lbh_address.la_block !=
+		 ((LBH *)buffer_primary)->lbh_address.la_sequence) ||
+	     (((LBH *)buffer_dual)->lbh_address.la_block !=
 		 ((LBH *)buffer_primary)->lbh_address.la_block ) ||
-			(((LBH *)buffer_dual)->lbh_address.la_offset !=
-			((LBH *)buffer_primary)->lbh_address.la_offset))
+	     (((LBH *)buffer_dual)->lbh_address.la_offset !=
+		 ((LBH *)buffer_primary)->lbh_address.la_offset) )
+		 
 	{
 	    TRdisplay("%@ LG: Dual log file is corrupt.\n");
 	    TRdisplay("  : Primary <%d,%d,%d> != Dual <%d,%d,%d>\n",
@@ -3580,15 +3590,24 @@ CL_ERR_DESC *sys_err)
 	*/
 	if ((LGchk_sum(buffer_dual, header->lgh_size) ==
 					((LBH *)buffer_dual)->lbh_checksum) &&
+	     ((LBH *)buffer_dual)->lbh_address.la_sequence ==
+		 *(u_i4*)(buffer_dual + header->lgh_size-LG_BKEND_SIZE) &&
 	    (LGchk_sum(buffer_primary, header->lgh_size) ==
-					((LBH *)buffer_primary)->lbh_checksum))
+					((LBH *)buffer_primary)->lbh_checksum) &&
+	     ((LBH *)buffer_primary)->lbh_address.la_sequence ==
+		 *(u_i4*)(buffer_primary + header->lgh_size-LG_BKEND_SIZE) )
 	{
 	    break;	/* nothing more to do */
 	}
-	else if (LGchk_sum(buffer_dual, header->lgh_size) !=
-					((LBH *)buffer_dual)->lbh_checksum &&
-		 LGchk_sum(buffer_primary, header->lgh_size) ==
-					((LBH *)buffer_primary)->lbh_checksum)
+	else if ( (LGchk_sum(buffer_dual, header->lgh_size) !=
+					((LBH *)buffer_dual)->lbh_checksum ||
+		     ((LBH *)buffer_dual)->lbh_address.la_sequence !=
+			 *(u_i4*)(buffer_dual + header->lgh_size-LG_BKEND_SIZE))
+		   &&
+		   LGchk_sum(buffer_primary, header->lgh_size) ==
+					((LBH *)buffer_primary)->lbh_checksum &&
+		     ((LBH *)buffer_primary)->lbh_address.la_sequence ==
+			 *(u_i4*)(buffer_primary + header->lgh_size-LG_BKEND_SIZE) )
 	{
 	    /*
 	    ** dual was written partially, and primary was written completely.
@@ -3615,10 +3634,15 @@ CL_ERR_DESC *sys_err)
 	    }
 	    break;
 	}
-	else if (LGchk_sum(buffer_primary, header->lgh_size) !=
-				    ((LBH *)buffer_primary)->lbh_checksum &&
-		 LGchk_sum(buffer_dual, header->lgh_size) ==
-					((LBH *)buffer_dual)->lbh_checksum)
+	else if ( (LGchk_sum(buffer_primary, header->lgh_size) !=
+				    ((LBH *)buffer_primary)->lbh_checksum ||
+		     ((LBH *)buffer_primary)->lbh_address.la_sequence !=
+			 *(u_i4*)(buffer_primary + header->lgh_size-LG_BKEND_SIZE))
+		   &&
+		   LGchk_sum(buffer_dual, header->lgh_size) ==
+					((LBH *)buffer_dual)->lbh_checksum &&
+		     ((LBH *)buffer_dual)->lbh_address.la_sequence ==
+			 *(u_i4*)(buffer_dual + header->lgh_size-LG_BKEND_SIZE) )
 	{
 	    /*
 	    ** primary was written partially, and dual was written completely.
