@@ -283,70 +283,73 @@ typedef i4  OPF_QEFTYPE;
 **	    they are to be discarded, together with all best plans.  
 **	    Trace point op216 prints out only the best plans, as they are
 **	    encountered.
+**	05-aug-2010 (wanfr01) b124202
+**	    There are duplicate OPF_STATE flags - that can't be good.
+**	    Switching over to the standard hex flags which are more typo resistant.
 [@history_line@]...
 [@history_template@]...
 */
 typedef i4  OPF_STATE;
-#define                 OPF_SDISTRIBUTED 1
+#define                 OPF_SDISTRIBUTED        0x1
 /* TRUE if this is a distributed thread, -valid only on session startup */
-#define                 OPF_TIDDUPS     2
+#define                 OPF_TIDDUPS             0x2
 /* if this is set then TIDs are not available for duplicate handling
 ** in the optimizer -valid on server startup only */
-#define                 OPF_TIDUPDATES  4
+#define                 OPF_TIDUPDATES          0x4
 /* if this is set then TIDs cannot be used for updating a relation
 ** so that only update by position is allowed -valid on server startup only */
-#define                 OPF_INDEXSUB    8
+#define                 OPF_INDEXSUB            0x8
 /* if this is set then index substitution can only be used if the
 ** all the attributes can be obtained from one index, i.e. TID joins
 ** are not allowed -valid on server startup only */
-#define			OPF_SUBOPTIMIZE 16
+#define			OPF_SUBOPTIMIZE         0x10
 /* bit is set if optimization for flattening should be disabled, this should
 ** only be used for the "sybase bug" in which the subselect references a
 ** table which does not have any rows in it, this will only affect the
 ** current query being optimize */
-#define			OPF_GSUBOPTIMIZE 16
-/* bit is set if on server startup, the "flattening feature" should not
-** be used */
-#define                 OPF_RESOURCE    32
+#define                 OPF_RESOURCE            0x20
 /* set if resource control is enabled for the server, which implies that
 ** enumeration should be turned on for all query plans to get accurate
 ** tuple counts, this mask can be set in opf_smask for either session
 ** startup or server startup */
-#define                 OPF_NOAGGFLAT     64
+#define                 OPF_NOAGGFLAT           0x40
 /* AGGREGATE_FLATTEN server startup flag
 ** - set if corelated aggregates should not be flattened */
-#define                 OPF_COMPLETE    128
+#define                 OPF_COMPLETE            0x80
 /* COMPLETE server startup flag
 ** - set if all relations are assumed to be complete if no 
 ** histogram info is available */
-#define			OPF_OLDJCARD	256
+#define			OPF_OLDJCARD		0x100
 /* set if pre-2.0 join cardinality computations are to be used */
-#define			OPF_OLDCNF	512
+#define			OPF_OLDCNF		0x200
 /* TRUE - ALL where clauses are transformed to conjunctive normal form
 ** (pre-2.0 behaviour) */
-#define			OPF_STATS_NOSTATS_MAX	1024
+#define			OPF_STATS_NOSTATS_MAX	0x400
 /* opf_stats_nostats_max - limit tuple estimates for joins between table
 ** with stats and table without by assuming uniform data distribution */
-#define			OPF_NOAGGCOMBINE	4096
-/* Set to disable combining aggregates during optimizer retry
-** as this may invalidate some query plans */
-#define			OPF_OLDSUBSEL		2048
+#define			OPF_OLDSUBSEL		0x800
 /* opf_old_subsel - don't perform 'not in'/'not exists' -> outer join
 ** transform */
-#define			OPF_HASH_JOIN	4096
+#define			OPF_HASH_JOIN		0x1000
 /* TRUE - hash joins enabled server startup flag; OP162 toggles the current
 effective setting */
-#define			OPF_NEW_ENUM	8192
+#define			OPF_NEW_ENUM		0x2000
 /* TRUE - queries deemed complex enough (with enough tables/indexes) will
 ** be compiled first with the new optimized enumeration heuristic. */
-#define			OPF_OLDIDXORDER	16384
+#define			OPF_OLDIDXORDER		0x4000
 /* opf_old_idxorder - use old 'reverse var' order when adding useful secondary
 ** indices */
-#define			OPF_GREEDY_FACTOR 32768
+#define			OPF_GREEDY_FACTOR	0x8000
 /* opf_greedy_factor - adjust ops_cost by this figure when comparing to jcost
 ** in opn_corput() for greedy enum only */
-#define			OPF_DISABLECARDCHK 65536
+#define			OPF_DISABLECARDCHK	0x10000
 /* Enable legacy ignoring of cardinality checks */
+#define			OPF_GSUBOPTIMIZE	0x20000
+/* bit is set if on server startup, the "flattening feature" should not
+** be used */
+#define			OPF_NOAGGCOMBINE	0x40000
+/* Set to disable combining aggregates during optimizer retry
+** as this may invalidate some query plans */
 
 /*}
 ** Name: OPF_CB - Control Block used to call the optimizer
