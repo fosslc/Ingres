@@ -1943,6 +1943,9 @@ psl_ds2_dir_exec_immed(
 **	    Initialise the ADF_FN_BLK .adf_fi_desc and adf_dv_n members
 **	December 2009 (stephenb)
 **	    Add stream parameter for batch processing.
+**	19-Aug-2010 (kschendel) b124282
+**	    Let's try again.  Initialize adf_fi_desc, adf_pat_flags, and
+**	    especially adf_dv_n members.
 */
 DB_STATUS
 psl_proc_func(
@@ -2474,7 +2477,7 @@ psl_proc_func(
 		    STRUCT_ASSIGN_MACRO(*arg_val, adf_funcblk.adf_1_dv);
 
 		    /* not a LIKE operator */
-		    adf_funcblk.adf_isescape = FALSE;
+		    adf_funcblk.adf_pat_flags = AD_PAT_DOESNT_APPLY;
 
 		    if (adf_func((ADF_CB *) sess_cb->pss_adfcb, &adf_funcblk) !=
 									E_DB_OK)
@@ -2549,9 +2552,11 @@ psl_proc_func(
 	{
 	    /* fill in function ID */
 	    adf_funcblk.adf_fi_id = fi_tab.adi_tab_fi->adi_finstid;
+	    adf_funcblk.adf_fi_desc = NULL;
+	    adf_funcblk.adf_dv_n = 0;	/* Nilary operators */
 
 	    /* not a LIKE operator */
-	    adf_funcblk.adf_isescape = FALSE;
+	    adf_funcblk.adf_pat_flags = AD_PAT_DOESNT_APPLY;
 
 	    if (adf_func((ADF_CB *) sess_cb->pss_adfcb, &adf_funcblk) !=
 								E_DB_OK)

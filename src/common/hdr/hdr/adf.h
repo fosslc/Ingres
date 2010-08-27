@@ -3431,6 +3431,8 @@ enum AD_PAT_FORMS_enum {AD_PAT_FORMS AD_PAT_FORM_MAX,AD_PAT_FORM_MAXNEG=AD_PAT_F
 **	    modified fi_desc as from dtfamily processing. Added adf_dv_n
 **	    so that arg count can be stated and not just inferred.
 **	    Moved the block to the end to allow for varargs more easily
+**	19-Aug-2010 (kschendel) b124282
+**	    Delete compatibility adf_isescape definition.
 */
 
 typedef struct _ADF_FN_BLK
@@ -3474,7 +3476,6 @@ typedef struct _ADF_FN_BLK
 #define adf_2_dv adf_dv[2]		/* Legacy support - 2nd param */
 #define adf_3_dv adf_dv[3]		/* Legacy support - 3rd param */
 #define adf_4_dv adf_dv[4]		/* Legacy support - 4th param */
-#define adf_isescape adf_pat_flags	/* Legacy support - previously boolean i1 */
 
 
 }   ADF_FN_BLK;

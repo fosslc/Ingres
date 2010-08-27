@@ -856,6 +856,8 @@ psq_tqrylen(
 **	    to the total size and not just the piece size.
 **	23-Sep-2009 (kiria01) b122578
 **	    Initialise the ADF_FN_BLK .adf_fi_desc and adf_dv_n members.
+**	19-Aug-2010 (kschendel) b124282
+**	    Make sure fi-desc is always set to something.
 */
 DB_STATUS
 psq_tcnvt(
@@ -942,16 +944,16 @@ psq_tcnvt(
     }         
 
     /* determine the result size. */
+    status = adi_fidesc(adf_cb, adffn.adf_fi_id, &adffn.adf_fi_desc);
+    if (status != E_DB_OK)
+    {
+	goto exit;
+    }
     if (!dv_size)
     {
 	/* Now lets fill in the datatype length info and allocate space for the 
 	** data.
 	*/
-	status = adi_fidesc(adf_cb, adffn.adf_fi_id, &adffn.adf_fi_desc);
-	if (status != E_DB_OK)
-	{
-	    goto exit;
-	}
 	status = adi_0calclen(adf_cb, &adffn.adf_fi_desc->adi_lenspec, 1, &dbval, 
 		&adffn.adf_r_dv);
 	dv_size = adffn.adf_r_dv.db_length;
@@ -991,7 +993,7 @@ psq_tcnvt(
     adffn.adf_r_dv.db_data	= (PTR) string;
     adffn.adf_dv_n		= 1;
     STRUCT_ASSIGN_MACRO(*dbval, adffn.adf_1_dv);
-    adffn.adf_isescape		= FALSE;
+    adffn.adf_pat_flags		= AD_PAT_DOESNT_APPLY;
     if ((status = adf_func(adf_cb, &adffn)) != E_DB_OK)
     {
 	goto exit;

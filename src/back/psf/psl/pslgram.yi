@@ -11793,6 +11793,9 @@ sconvert(
 **	    when the trashed object was later referenced.
 **	22-Feb-1999 (shero03)
 **	    Support 4 operands in adi_0calclen
+**	19-Aug-2010 (kschendel) b124282
+**	    Make sure fi-desc is initialized.  Use pat-flags instead of
+**	    obsolete isescape.
 */
 DB_STATUS
 qdata_cvt(
@@ -11830,6 +11833,11 @@ qdata_cvt(
     {
 	goto exit;
     }         
+    status = adi_fidesc(&adf_cb, adffn.adf_fi_id, &adffn.adf_fi_desc);
+    if (status != E_DB_OK)
+    {
+	goto exit;
+    }
 
     /* determine the result size. */
     if (!dv_size)
@@ -11837,11 +11845,6 @@ qdata_cvt(
 	/* Now lets fill in the datatype length info and
 	** allocate space for the data.
 	*/
-	status = adi_fidesc(&adf_cb, adffn.adf_fi_id, &adffn.adf_fi_desc);
-	if (status != E_DB_OK)
-	{
-	    goto exit;
-	}
 
 	/*	Initialise resultant datatype (used by adi_0calclen)   */
 
@@ -11897,7 +11900,7 @@ qdata_cvt(
     adffn.adf_r_dv.db_prec	= dv_prec;
     adffn.adf_r_dv.db_data	= *value;
     STRUCT_ASSIGN_MACRO(*fval, adffn.adf_1_dv);
-    adffn.adf_isescape		= FALSE;    /* not the LIKE op, so no esc */
+    adffn.adf_pat_flags		= AD_PAT_DOESNT_APPLY;    /* not the LIKE op, so no esc */
     if ((status = adf_func(&adf_cb, &adffn)) != E_DB_OK)
     {
 	goto exit;

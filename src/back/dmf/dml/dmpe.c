@@ -1048,6 +1048,8 @@ dmpe_call(i4        op_code ,
 **	    realize when too much data is being bulk-loaded into an etab.
 **	    Keep track by hand and start loading a new etab when nearing
 **	    the danger point.
+**	19-Aug-2010 (kschendel) b124282
+**	    Make sure we initialize adf pat-flags too.
 */
 static DB_STATUS
 dmpe_put(ADP_POP_CB	*pop_cb)
@@ -1122,6 +1124,7 @@ dmpe_put(ADP_POP_CB	*pop_cb)
 
 	    pcb->pcb_fblk.adf_fi_desc = NULL;
 	    pcb->pcb_fblk.adf_dv_n = 1;
+	    pcb->pcb_fblk.adf_pat_flags = AD_PAT_DOESNT_APPLY;
 	    STRUCT_ASSIGN_MACRO(*input, pcb->pcb_fblk.adf_1_dv);
 	    pcb->pcb_fblk.adf_r_dv.db_length = input->db_length;
 	    status = adf_func(adfcb, &pcb->pcb_fblk);
