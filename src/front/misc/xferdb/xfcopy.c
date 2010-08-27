@@ -533,6 +533,9 @@ xftables(i4 *tcount, i4 output_flags, i4 output_flags2, XF_TABINFO **list_ptr)
 **	    Added call to writeidentity() to support identity columns.
 **	04-Feb-2009 (thaju02)
 **	    Always specify "with page_size=..." clause. (B99758)
+**      23-Jun-2010 (coomi01) b123927
+**          Where just creating tables, and not copying them, allow
+**          journaling if appropriate.
 */
 
 void
@@ -673,7 +676,21 @@ writecreate(XF_TABINFO	*tp, i4 output_flags)
     ** after the copy for better performance
     */
     if (!tp->fecat && !tp->becat && !SetJournaling)
-	xfwrite(Xf_in, ERx(",\nnojournaling"));
+    {
+	if ((output_flags & XF_TAB_CREATEONLY) &&
+	    (tp->journaled[0] == 'Y' || tp->journaled[0] == 'C'))
+	{
+	    /* 
+	    ** Where NO copy is intended on journaled tables, 
+	    ** put flag in immediately.
+	    */
+	    xfwrite(Xf_in, ERx(",\njournaling"));
+	}
+	else
+	{
+	    xfwrite(Xf_in, ERx(",\nnojournaling"));
+	}
+    }
 
     STprintf(tbuf, ERx(",\npage_size = %d"), tp->pagesize); 
     xfwrite(Xf_in, tbuf);
