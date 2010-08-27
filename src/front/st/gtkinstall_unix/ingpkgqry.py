@@ -52,6 +52,10 @@
 ##	25-May-2010 (hanje04)
 ##	    SIR 123791
 ##	    Make sure we get ALL the locations in dblocdict
+##	25-Jun-2010 (hanje04)
+##	    BUG 123984
+##	    Make sure core package is added to ssinfo once we've verified it's
+##	    there
 
 
 # load external modules
@@ -295,6 +299,9 @@ def getRPMSaveSetInfo( location ):
     if re.match( pkg_basename, hdr[ 'name' ] ) == None:
 	print INVALID_PKG_NAME % hdr
 	return None
+    else:
+        # Add core package to ssinfo
+        ssinfo[ 'package' ].append('core')
 
     ssinfo[ 'version' ] = [ "%(version)s-%(release)s" % hdr  ]
     ssinfo[ 'arch' ] = [ "%(arch)s" % hdr ]
