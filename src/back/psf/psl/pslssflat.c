@@ -2590,6 +2590,9 @@ psl_project_corr_vars (
 **	    Created to aid classification of boolean factors so that
 **	    the deeper spanning correlations are not treated like simple
 **	    single depth inner-outers.
+**	10-Aug-2010 (bonro01) b124208
+**	    Fix variable declaration from previous change which causes
+*	    compile errors on windows.
 */
 
 static VOID
@@ -2602,7 +2605,7 @@ psl_analyse_vars(
 {
     DB_STATUS status = E_DB_OK;
     register PST_QNODE *v = tree;
-    register seen = 0;
+    register u_i4 seen = 0;
 
     while (v)
     {
