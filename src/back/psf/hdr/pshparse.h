@@ -1811,6 +1811,8 @@ typedef struct _PSS_DECVAR PSS_DECVAR;  /* forward declaration */
 **	    Add batch_copy_optim and associated defines.
 **	21-Jul-2010 (kschendel) SIR 124104
 **	    Add default compression.
+**	30-Jul-2010 (kschendel) b124164
+**	    Drop unused pss-yastr found while checking for uninited stuff.
 */
 typedef struct _PSS_SESBLK
 {
@@ -1828,7 +1830,6 @@ typedef struct _PSS_SESBLK
     i4	    pss_psessid;	/* parser session id. used for cursor
 					** ids.
 					*/
-    PTR		    pss_yastr;		/* Mem. stream used for yacc CB */
     PSC_CURBLK      pss_firstcursor;    /* Avoid alloc. for 1st cursor/sess. */
     i4		    pss_numcursors;	/* Number of allocated cursors */
     DB_LANG         pss_lang;           /* Query language id */

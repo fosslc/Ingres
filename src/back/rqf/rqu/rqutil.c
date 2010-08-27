@@ -1865,6 +1865,9 @@ rqu_put_data(
 ** History:
 **      20-Nov-1992 (fpang)
 **          Created
+**	30-Jul-2010 (kschendel)
+**	    Send only table name, not trailing blanks, there's lots of 'em
+**	    and it is just annoying when debugging.
 */
 DB_ERRTYPE
 rqu_put_qtxt(
@@ -1880,14 +1883,31 @@ rqu_put_qtxt(
     GCA_DATA_VALUE gdv;
     DD_PACKET	   *pkt;
     char	   *data_ptr;
+    char	   *p;
+    i4		   len;
 
     gdv.gca_type      = DB_QTXT_TYPE;
     gdv.gca_precision = 0;
     gdv.gca_l_value   = 0;
     
     for (pkt = ddpkt; pkt != NULL; pkt = pkt->dd_p3_nxt_p)
-	gdv.gca_l_value += 
-		((pkt->dd_p2_pkt_p) ? pkt->dd_p1_len : sizeof(DD_TAB_NAME));
+    {
+	if (pkt->dd_p2_pkt_p != NULL)
+	    len = pkt->dd_p1_len;
+	else
+	{
+	    data_ptr = (char *)(tmpnm + pkt->dd_p4_slot);
+	    p = data_ptr + sizeof(DD_TAB_NAME);
+	    do
+		--p;
+	    while (p > data_ptr && (*p == ' ' || *p == '\0'));
+	    /* Generated table names are always a lot shorter than DD_TAB_NAME.
+	    ** Leave one of the blanks on the end, just in case.
+	    */
+	    len = p - data_ptr + 2;
+	}
+	gdv.gca_l_value += len;
+    }
 
     do
     {
@@ -1921,8 +1941,13 @@ rqu_put_qtxt(
 	}
 	else
 	{
-	    gdv.gca_l_value = sizeof(DD_TAB_NAME);
 	    data_ptr = (char *)(tmpnm + pkt->dd_p4_slot);
+	    p = data_ptr + sizeof(DD_TAB_NAME);
+	    do
+		--p;
+	    while (p > data_ptr && (*p == ' ' || *p == '\0'));
+	    /* +2 to leave a blank on the end, see above */
+	    gdv.gca_l_value = p - data_ptr + 2;
 	}
 	status = rqu_put_data(assoc, data_ptr, gdv.gca_l_value);
         rqu_dmp_dbdv(rqs, assoc, 

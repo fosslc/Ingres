@@ -155,6 +155,9 @@
 **	    Amended RQTRACE macro to check that rqs_trfmt buffer is allocated.
 **	    Amended RQFMT macro to add buffer size parameter.
 **	    Re-arranged RQF_DBG_LVL() macro.
+**	30-Jul-2010 (kschendel) b124164
+**	    Leave room for newline, null; since TR likes to eat 'em, we'll
+**	    add our own.
 */
 
 #define	    RQF_DBG_LVL(s,n) \
@@ -165,7 +168,7 @@
 #define	    RQTRACE(s,n)	if (RQF_DBG_LVL(s,n)) TRformat
 
 #define	    RQTRBUFSIZE		512
-#define	    RQFMT(s,f)	rqf_format,rqf_neednl(f),s->rqs_trfmt,s->rqs_trsize,f
+#define	    RQFMT(s,f)	rqf_format,rqf_neednl(f),s->rqs_trfmt,s->rqs_trsize-2,f
 
 #define     RQF_NOALIAS_NODE	0x0001L /* connect to a remote node, need */
 					/* password also */

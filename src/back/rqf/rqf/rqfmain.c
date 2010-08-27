@@ -3028,6 +3028,8 @@ rqf_endret(
 **          DB_MAXNAME -1 rather than DB_MAXANME.
 **      06-mar-1996 (nanpr01)
 **          Added pagesize parameter in the rqu_create_tmp call. 
+**	30-Jul-2010 (kschendel)
+**	    Trim off blanks from table name so it isn't massively long.
 */
 DB_ERRTYPE
 rqf_transfer(
@@ -3122,17 +3124,22 @@ rqf_transfer(
 	** see QEF interface. Don't ask why. 
 	*/
 	QEQ_TXT_SEG	*text_segs = create_q->qeq_q4_seg_p;
+	char *p;
 
 	(dest_assoc->rql_nostatments)++;
 	table_name = dest_cb->rqr_tmp + 
 		    text_segs->qeq_s2_pkt_p->dd_p3_nxt_p->dd_p4_slot;
 
 	MEcopy((PTR)table_name, sizeof(tmp_table), tmp_table); 
-	/*
-	** QEF produces a table name from a timestamp, it is 
-	** always less than sizeof DD_TAB_NAME, we can safely terminate.
+	/* Blank strip, null terminate.  This loop is a tiny bit sloppy but
+	** it's safe to assume that generated names do not fill DD_TAB_NAME.
 	*/
-	tmp_table[DB_TAB_MAXNAME - 1] = EOS;
+	p = &tmp_table[sizeof(tmp_table)];
+	do
+	    --p;
+	while (p > &tmp_table[0] && (*p == ' ' || *p == '\0') );
+	*++p = EOS;
+
 	status = rqu_create_tmp(src_assoc, dest_assoc,
 				dest_cb->rqr_q_language,
 				create_q->qeq_q7_col_pp,
@@ -4525,6 +4532,11 @@ rqf_invproc(
 **	    Added check for server tracing or session tracing to determine
 **	    destination of output. This check used to be done by rqf_trace()
 **	    which no longer exists.
+**	30-Jul-2010 (kschendel) b124164
+**	    Be more aggressive about stuffing our own newline, since TRformat
+**	    likes to eat the ones in the format;  and null-terminate the
+**	    string in case someone (eg TRdisplay) likes it that way.
+**	    Done to clean up trace output while chasing 124164.
 */  
 i4
 rqf_format(
@@ -4534,13 +4546,16 @@ rqf_format(
 {
     SCF_CB	scf_cb;
 
+    if (len < 0)
+	return 0;
+
     /* if *arg == 1, add a newline */
 
-    if (arg == (PTR)1)
+    if (arg == (PTR)1 || len == 0)
     {
 	buffer[len++] = '\n';
     }
-
+    buffer[len] = '\0';
     if (len == 0)
 	return 0;
 
@@ -4548,6 +4563,11 @@ rqf_format(
     {
 	/* Server tracing, just output */
 
+	if (buffer[len-1] != '\n')
+	{
+	    buffer[len++] = '\n';
+	    buffer[len] = '\0';
+	}
 	TRdisplay(buffer);
     }
     else

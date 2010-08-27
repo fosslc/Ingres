@@ -590,6 +590,15 @@ psq_parseqry(
 **        Added initialization for sess_cb->pss_audit.
 **	04-may-2010 (miket) SIR 122403
 **	    Init new sess_cb->pss_stmt_flags2.
+**	30-Jul-2010 (kschendel) b124164
+**	    Init create-table statement link.  That thing isn't used by
+**	    DGTT, only by CREATE TABLE;  but DGTT and CREATE go through the
+**	    same code, and if DGTT sees the dangling  pointer, it smashes
+**	    random memory.
+**	    (The smash that brought this to light was zeroing two bytes
+**	    in the middle of the space-fill after an attribute name!
+**	    which caused the att to hash wrong, and later usage of the GTT
+**	    failed with "table does not contain column x".)
 */
 DB_STATUS
 psq_cbinit(
@@ -623,6 +632,9 @@ psq_cbinit(
     sess_cb->pss_tchain  = NULL;
     sess_cb->pss_tchain2 = NULL;
     sess_cb->pss_funarg_stream = NULL;
+    sess_cb->pss_crt_tbl_stmt = NULL;
+    sess_cb->pss_cur_cons_stmt = NULL;
+    sess_cb->pss_curcons = NULL;
 
     /* no rule tree yet */
     sess_cb->pss_row_lvl_usr_rules  =
