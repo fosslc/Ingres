@@ -378,6 +378,10 @@
 **	    HKEY_CLASSES_ROOT\\Ingres_Database_XX where XX is an instance id
 **          is not being removed on uninstall.
 **          Fix the installer to remove this key.
+**	27-Aug-2010 (shust01)
+**	    When creating a response file, the sql92 option (II_ENABLE_SQL92)
+**	    was always being set to NO, no matter what the user selected
+**	    for that option.  bug 124318.
 */
 
 #include <stdio.h>
@@ -4939,7 +4943,7 @@ ingres_create_rspfile(MSIHANDLE hInstall)
     cchValue = sizeof(szBuf)/sizeof(TCHAR);
     ZeroMemory(szBuf, sizeof(TCHAR)*MAX_PATH);
     if (!MsiGetProperty(hInstall, TEXT("INGRES_ENABLESQL92"), szBuf, &cchValue)
-	&& !_stricmp(szBuf, "TRUE"))
+	&& !_stricmp(szBuf, "1"))
 	fprintf(fp, "II_ENABLE_SQL92=\"YES\"\n", szBuf);
     else
 	fprintf(fp, "II_ENABLE_SQL92=\"NO\"\n", szBuf);
