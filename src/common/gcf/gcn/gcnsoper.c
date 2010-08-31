@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004, 2009 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -199,6 +199,8 @@
 **	    operations broken out into their own functions.
 **	 3-Aug-09 (gordy)
 **	    Remove string length restrictions.
+**	27-Aug-10 (gordy)
+**	    Use configured password encoding version for login entries.
 */
 
 /*
@@ -1364,6 +1366,8 @@ gcn_result( GCN_MBUF *mbout, i4 opcode, i4 count )
 **	 3-Aug-09 (gordy)
 **	    Declare default sized temp buffers.  Use dynamic storage
 **	    if actual lengths exceed defaults.
+**	27-Aug-10 (gordy)
+**	    Use configured password encoding version for login entries.
 */
 
 static STATUS
@@ -1407,13 +1411,21 @@ transform_login( char *ibuff, char *obuff )
 	if ( ! tmp )
 	    status = E_GC0121_GCN_NOMEM;
 	else
-	    status = gcn_login( GCN_VLP_LOGIN, 1, TRUE, pv[0], pwd, tmp );
+	    status = gcn_login( GCN_VLP_LOGIN, 
+	    			IIGCn_static.pwd_enc_vers, 
+				TRUE, pv[0], pwd, tmp );
     }
 
     /*
     ** Rebuild the login tuple value.
     */
-    if ( status == OK )  STpolycat( 5, pv[0], ",", tmp, ",", "V1", obuff );
+    if ( status == OK )
+    {
+	char vers[ 32 ];
+
+	STprintf( vers, "V%d", IIGCn_static.pwd_enc_vers );
+	STpolycat( 5, pv[0], ",", tmp, ",", vers, obuff );
+    }
 
     if ( pwd != pbuff )  MEfree( (PTR)pwd );
     if ( tmp != tbuff )  MEfree( (PTR)tmp );

@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004, 2009 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -127,6 +127,8 @@
 **	    gcn_get_server() and gcn_del_server().
 **	21-Jul-09 (gordy)
 **	    Remove string length restrictions.
+**	27-Aug-10 (gordy)
+**	    Added symbols for encoding versions.
 */	
 
 /*
@@ -569,7 +571,9 @@ gcn_use_auth( GCN_RESOLVE_CB *grcb, i4 prot )
 **	    Ensure buffer is large enough to hold encrypted
 **	    password (even though our password is very short!).
 **	21-Jul-09 (gordy)
-*	    Minimum output password buffer size is now better defined.
+**	    Minimum output password buffer size is now better defined.
+**	27-Aug-10 (gordy)
+**	    Added symbols for encoding versions.
 */	
 
 STATUS
@@ -584,7 +588,7 @@ gcn_get_auth( GCN_RESOLVE_CB *grcb, GCN_MBUF *mbout )
     /* 
     ** Encrypt the NOUSER password, so the local GCC can decrypt it.
     */
-    gcn_login( GCN_VLP_COMSVR, 1, TRUE, GCN_NOUSER, GCN_NOPASS, passwd );
+    gcn_login(GCN_VLP_COMSVR, GCN_VLP_V1, TRUE, GCN_NOUSER, GCN_NOPASS, passwd);
 
     /*
     ** Produce the GCN2_RESOLVED message.
@@ -860,7 +864,7 @@ gcn_rem_auth( char *mech, char *host, i4  len, PTR token, i4  *size, PTR buff )
 **
 ** Input:
 **	type	Encryption type: GCN_VLP_CLIENT, GCN_VLP_LOGIN, GCN_VLP_COMSVR.
-**	version	Level of encryption.
+**	version	Level of encryption: GCN_VLP_V0, GCN_VLP_V1.
 **	encrypt	TRUE to encrypt, FALSE to decrypt.
 **	key	Encryption key.
 **	ipb	Password buffer: pwd to encrypt or encrypted pwd to decrypt.
@@ -874,6 +878,8 @@ gcn_rem_auth( char *mech, char *host, i4  len, PTR token, i4  *size, PTR buff )
 ** History:
 **	15-Jul-04 (gordy)
 **	    Created.
+**	27-Aug-10 (gordy)
+**	    Added symbols for encoding versions.
 */
 
 STATUS
@@ -887,7 +893,7 @@ gcn_login( i4 type, i4 version, bool encrypt, char *key, char *ipb, char *opb )
 	if ( ! encrypt )  
 	    switch( version )
 	    {
-	    case 0 :	status = gcn_decrypt( key, ipb, opb );		break;
+	    case GCN_VLP_V0 :	status = gcn_decrypt( key, ipb, opb );	break;
 	    }
 	break;
 
@@ -895,16 +901,18 @@ gcn_login( i4 type, i4 version, bool encrypt, char *key, char *ipb, char *opb )
 	if ( encrypt )
 	    switch( version )
 	    {
-	    case 0 :	status = gcu_encode( key, ipb, opb );		break;
-	    case 1 :	status = gcn_encode( key, 
-			(u_i1 *)IIGCn_static.login_mask, ipb, opb );	break;
+	    case GCN_VLP_V0 :	status = gcu_encode( key, ipb, opb );	break;
+	    case GCN_VLP_V1 :	status = gcn_encode( key, 
+					    (u_i1 *)IIGCn_static.login_mask, 
+					    ipb, opb );			break;
 	    }
 	else
 	    switch( version )
 	    {
-	    case 0 :	status = gcn_decrypt( key, ipb, opb );		break;
-	    case 1 :	status = gcn_decode( key, 
-			(u_i1 *)IIGCn_static.login_mask, ipb, opb );	break;
+	    case GCN_VLP_V0 :	status = gcn_decrypt( key, ipb, opb );	break;
+	    case GCN_VLP_V1 :	status = gcn_decode( key, 
+					    (u_i1 *)IIGCn_static.login_mask, 
+					    ipb, opb );			break;
 	    }
 	break;
 
@@ -912,9 +920,10 @@ gcn_login( i4 type, i4 version, bool encrypt, char *key, char *ipb, char *opb )
 	if ( encrypt )  
 	    switch( version )
 	    {
-	    case 0 :	status = gcu_encode( key, ipb, opb );		break;
-	    case 1 :	status = gcn_encode( key, 
-			(u_i1 *)IIGCn_static.comsvr_mask, ipb, opb );	break;
+	    case GCN_VLP_V0 :	status = gcu_encode( key, ipb, opb );	break;
+	    case GCN_VLP_V1 :	status = gcn_encode( key, 
+					    (u_i1 *)IIGCn_static.comsvr_mask, 
+					    ipb, opb );			break;
 	    }
 	break;
     }

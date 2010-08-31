@@ -4808,6 +4808,10 @@ dm2f_force_list(VOID)
 **	03-dec-2001 (somsa01)
 **	    Make sure we EOS terminate raw_buf before using it in
 **	    CVal().
+**	23-Aug-2010 (jonj)
+**	    Tell DIopen to bypass pagesize validation checks -
+**	    pass DI_RAW_MASK flag.
+**	    Add more diagnostics if DIopen fails.
 */
 DB_STATUS
 dm2f_sense_raw(
@@ -4823,7 +4827,13 @@ DB_ERROR	*dberr)
     CL_ERR_DESC  sys_err;
     i4		one = 1;
     char	raw_buf[DM2F_RAW_BLKSSIZE+1], *rawblocks = &raw_buf[0];
-
+    i4		local_err_code;
+    DB_DB_NAME	db;
+    DB_TAB_NAME	tab;
+    char	*db_name = db.db_db_name;
+    char	*tbl_name = tab.db_tab_name;
+    DB_ERROR	local_dberr;
+   
     CLRDBERR(dberr);
 
     for (;;)
@@ -4832,7 +4842,7 @@ DB_ERROR	*dberr)
 		       path, l_path,
                        DM2F_RAW_BLKSNAME, sizeof(DM2F_RAW_BLKSNAME),
 		       (i4)DM2F_RAW_BLKSSIZE+1, DI_IO_READ, 
-		       DI_SYNC_MASK, &sys_err);
+		       DI_RAW_MASK | DI_SYNC_MASK, &sys_err);
 	if ( cl_status == OK )
 	{
 	    cl_status = DIread(&di_context, &one, 0, rawblocks, &sys_err);
@@ -4861,6 +4871,16 @@ DB_ERROR	*dberr)
 	}
 	else
 	{
+	    uleFormat(&local_dberr, cl_status, &sys_err, ULE_LOG, NULL,
+		NULL, 0, NULL, &local_err_code, 0);
+	    STmove("unknown (raw)", ' ', sizeof(db), db.db_db_name);
+	    STmove("unknown (raw)", ' ', sizeof(tab), tab.db_tab_name);
+	    uleFormat(&local_dberr, E_DM9004_BAD_FILE_OPEN, &sys_err, ULE_LOG,
+		NULL, 0, NULL, NULL, &local_err_code, 5,
+		sizeof(DB_DB_NAME), db_name, sizeof(DB_TAB_NAME), tbl_name,
+		l_path, path, sizeof(DM2F_RAW_BLKSNAME), DM2F_RAW_BLKSNAME,
+		0, 0);
+
 	    SETDBERR(dberr, 0, E_DM923F_DM2F_OPEN_ERROR);
 	    status = E_DB_ERROR;
 	}

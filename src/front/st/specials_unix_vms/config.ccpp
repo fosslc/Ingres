@@ -223,7 +223,8 @@
 **	    Add dbmsmxky.hlp.
 **	4-Aug-2010 (kschendel) SD 145507
 **	    Add missing help for degree-of-parallelism, sole-cache.
-**	    
+**	27-Aug-10 (gordy)
+**	    Added GCN config param for password encoding version.
 */
 
 PART   config
@@ -439,6 +440,7 @@ PART   config
       FILE gcnexpint.hlp
       FILE gcninter.hlp
       FILE gcnlnode.hlp
+      FILE gcnpwdvers.hlp
       FILE gcnregtype.hlp
       FILE gcnrmech.hlp
       FILE gcnrnode.hlp

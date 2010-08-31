@@ -67,6 +67,10 @@ EXEC SQL INCLUDE <xf.sh>;
 **          Need to consider the version of Ingres connected to. Ingres prior
 **          to Release 9.3 did not have an "unordered_flag" nor "ident_flag"
 **          in the iisequences_view.
+**      31-Aug-2010 (horda03) b124304
+**          When I converted the EXEC SQL used to insert rows in the temp. table for
+**          sequences, I failed to change a '%' to '%%' because in a STprintf the
+**          '%' denotes a format specifier - need '%%' to get a '%' in the query.
 **/
 
 /* # define's */
@@ -417,6 +421,8 @@ write_dbevent(
 **      26-Aug-2010 (horda03) b124304
 **          If connected to an Ingres version prior to 9.3, then "Unordered_flag"
 **          will not exist.
+**      31-Aug-2010 (horda03) b124304
+**          Correct use of '%' in the INSERT query, now that STprintf is being used.
 */
 
 void
@@ -478,7 +484,7 @@ EXEC SQL END DECLARE SECTION;
                     "FROM iisequences, iicolumns "
                     "WHERE ( (seq_owner = '%s' OR '' = '%s') AND "
                             "(table_name = '%s') AND "
-                            "(column_default_val like 'next value for%') AND "
+                            "(column_default_val like 'next value for%%') AND "
                             "(seq_name = substring (column_default_val from "
                                         "( locate(column_default_val, '.') + 2 ) "
                                         "for ( length(column_default_val) - "

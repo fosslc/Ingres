@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004, 2009 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 SQLSTATE_MAPPING_REQUIRED
 
@@ -258,13 +258,14 @@ SQLSTATE_MAPPING_REQUIRED
 **	    Modified the E_GC0163 error message which kind of mislead
 **	    the test engineers while testing vnode configured for direct
 **	    connects from netutil/Test menu option.
-**
 **	 3-Aug-09 (gordy)
 **	    Added E_GC011F_GCN_BAD_RECFMT.
 **      08-Apr-10 (ashco01) Bug: 123551 
 **          Added E_GC0173_GCN_HOSTNAME_MISMATCH informational message to
 **          report difference between local hostname and config.dat
 **          '.local_vnode' value. 
+**	27-Aug-10 (gordy)
+**	    Added E_GC0106_GCN_CONFIG_VALUE for invalid config values.
 */
 
 #define _GC_CLASS 12
@@ -450,6 +451,9 @@ E_GC0104_GCN_USERS_FILE:SS50000_MISC_ERRORS
 "Cannot open users file to verify user's privileges."
 E_GC0105_GCN_CHAR_INIT:SS50000_MISC_ERRORS
 "Error while processing character set attribute file."
+E_GC0106_GCN_CONFIG_VALUE:SS50000_MISC_ERRORS
+"Name Server configuration parameter '%0c' value '%1c' is invalid.
+Default value for this parameter will be used instead."
 E_GC0110_GCN_SYNTAX_ERR:SS50000_MISC_ERRORS
 "Syntax Error: %0c"
 E_GC011F_GCN_BAD_RECFMT:SS50000_MISC_ERRORS

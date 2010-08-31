@@ -1438,6 +1438,11 @@ i4	    (*user_routine)();		/* Function to get/put rows */
 **	    logging was never turned back on for program.  Fix.
 **	18-Aug-2010 (kschendel) b124272
 **	    Set unorm flag for unicode columns or utf8 charsets.
+**	30-Aug-2010 (kschendel) SIR 122974
+**	    CSV/SSV delimiter should be newline if it's the last non-dummy
+**	    column in the list, not the last column.  This change allows for
+**	    the semi-traditional "extra blank line" input, for example
+**	    copy foo(c1=c0csv, ..., cn=c0csv, xx=d0nl) from ...
 */
 
 static STATUS
@@ -1462,6 +1467,7 @@ IIcpinit( II_LBQ_CB *IIlbqcb, II_CP_STRUCT *copy_blk, i4  msg_type )
     i4			cp_namelen;
     i4			max_rowlen;
     i4			absttype;
+    i4			last_nondummy;	/* Index of last non-dummy domain */
     bool		non_lob_group;
     bool		all_chr_type;
     bool		chr_row_type;
@@ -1469,6 +1475,7 @@ IIcpinit( II_LBQ_CB *IIlbqcb, II_CP_STRUCT *copy_blk, i4  msg_type )
 
  
     copy_blk->cp_rowcount = 0;
+    last_nondummy = -1;
  
     /*
     ** Fill in the Copy control block from the CGA_C_INTO/CGA_C_FROM
@@ -1653,7 +1660,7 @@ IIcpinit( II_LBQ_CB *IIlbqcb, II_CP_STRUCT *copy_blk, i4  msg_type )
 		    != sizeof(i4))
 	    return ((num_read < 0) ? FAIL : E_CO0022_COPY_INIT_ERR);
 	copy_map->cp_isdelim = i2_val;
- 
+
 	/* number of delimiter characters - gca_l_delim_cp */ 
 	if ((num_read = IIcgc_get_value(cgc, msg_type, IICGC_VVAL, &dbv2)) 
 		    != sizeof(i4))
@@ -1668,6 +1675,19 @@ IIcpinit( II_LBQ_CB *IIlbqcb, II_CP_STRUCT *copy_blk, i4  msg_type )
 	if ((num_read = IIcgc_get_value(cgc, msg_type, IICGC_VVAL, &dbv)) 
 		    != CPY_MAX_DELIM)
 	    return ((num_read < 0) ? FAIL : E_CO0022_COPY_INIT_ERR);
+
+	/* Track last non-dummy or csv for CSV/SSV handling later.
+	** The idea is that a CSV/SSV domain uses newline delimiter
+	** when it's the last domain, or is only followed by (non-CSV)
+	** dummies.  This sort of thing allows a trailing CSV to be
+	** followed by xx=d0nl to eat blank lines after each row,
+	** something that copydb likes to do.
+	*/
+	if (copy_map->cp_rowtype != CPY_DUMMY_TYPE
+	  || (copy_map->cp_isdelim > 0
+	      && (copy_map->cp_delim[0] == CPY_CSV_DELIM
+		  || copy_map->cp_delim[0] == CPY_SSV_DELIM)) )
+	    last_nondummy = i;
  
 	/* attribute map - gca_tupmap_cp */
 	if ((num_read = IIcgc_get_value(cgc, msg_type, IICGC_VVAL, &dbv4)) 
@@ -1974,12 +1994,12 @@ IIcpinit( II_LBQ_CB *IIlbqcb, II_CP_STRUCT *copy_blk, i4  msg_type )
 	    {
 		/* It's CSV or SSV format.  Turn on the CSV flag and set
 		** the delimiter to comma, or semicolon, or newline if
-		** we're on the very last column.
+		** there are no real-column or CSV domains following.
 		*/
 		copy_map->cp_csv = TRUE;
 		if (copy_map->cp_delim[0] == CPY_SSV_DELIM)
 		    copy_map->cp_ssv = TRUE;
-		if (i == copy_blk->cp_num_domains-1)
+		if (i == last_nondummy)
 		    copy_map->cp_delim[0] = '\n';
 		else if (copy_map->cp_delim[0] == CPY_CSV_DELIM)
 		    copy_map->cp_delim[0] = ',';

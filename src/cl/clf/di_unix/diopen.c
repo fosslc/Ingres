@@ -272,6 +272,10 @@
 **	    the di-file with "user sync" regardless of O_SYNC existence.
 **	6-Nov-2009 (kschendel) SIR 122757
 **	    Update direct-io handling, double check page size.
+**	23-Aug-2010 (jonj)
+**	    Don't check pagesize if DI_RAW_MASK: the size of the raw file
+**	    is retrieved from the first DM2F_RAW_BLKSSIZE+1 bytes of the
+**	    file, which doesn't pass the pagesize checks.
 */
 STATUS
 DIopen(
@@ -298,8 +302,9 @@ DIopen(
 	(pathlength == 0)		||
 	(filelength > DI_FILENAME_MAX)	||
 	(filelength == 0)		||
-	pagesize < 512 || pagesize > DI_MAX_PAGESIZE ||
-	(pagesize & 511) != 0          ||
+	(!(flags & DI_RAW_MASK) &&
+	    (pagesize < 512 || pagesize > DI_MAX_PAGESIZE ||
+	    (pagesize & 511) != 0))          ||
         (mode != DI_IO_READ && mode != DI_IO_WRITE))
     {
 	return (DI_BADPARAM);		

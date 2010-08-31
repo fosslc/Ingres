@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1987, 2009 Ingres Corporation All Rights Reserved.
+** Copyright (c) 1987, 2010 Ingres Corporation All Rights Reserved.
 */
 
 /**
@@ -150,6 +150,8 @@
 **          Added E_GC0173_GCN_HOSTNAME_MISMATCH informational message to
 **          report difference between local hostname and config.dat
 **          '.local_vnode' value. 
+**	27-Aug-10 (gordy)
+**	    Added E_GC0106_GCN_CONFIG_VALUE for invalid config values.
 **/
 
 #ifndef GCN_INCLUDED
@@ -228,6 +230,7 @@ IIGCn_call( i4 service_code, GCN_CALL_PARMS *params );
 # define	E_GC0103_GCN_NOT_USER		(STATUS) (E_GCF_MASK + 0x0103)
 # define	E_GC0104_GCN_USERS_FILE		(STATUS) (E_GCF_MASK + 0x0104)
 # define	E_GC0105_GCN_CHAR_INIT		(STATUS) (E_GCF_MASK + 0x0105)
+# define	E_GC0106_GCN_CONFIG_VALUE	(STATUS) (E_GCF_MASK + 0x0106)
 # define	E_GC0110_GCN_SYNTAX_ERR		(STATUS) (E_GCF_MASK + 0x0110)
 # define	E_GC011F_GCN_BAD_RECFMT		(STATUS) (E_GCF_MASK + 0x011F)
 # define	E_GC0120_GCN_BAD_RECLEN		(STATUS) (E_GCF_MASK + 0x0120)
