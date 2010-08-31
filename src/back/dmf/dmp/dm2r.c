@@ -4751,6 +4751,9 @@ rtree_position(
 **	    After doing the put, if there are LOB's, do a pget to fix up
 **	    the coupons with "get" info.  The record might be going to
 **	    a rule dbproc later.
+**	30-Aug-2010 (miket) SIR 122403 SD 146530
+**	    We need to re-encrypt after dupe update to refresh the coupon
+**	    with the table id of the permanent etab.
 */
 DB_STATUS
 dm2r_put(
@@ -5099,17 +5102,33 @@ dm2r_put(
 	}
 
 	/*
-	**  If compression is turned on, re-compress the record, now
+	**  If there are encrypted columns, re-encrypt the record. Then,
+	**  if compression is turned on, re-compress the record, now
 	**  that the actual coupon has been put into the record. This
 	**  will also get the right size of the newly compressed
 	**  record.
+	**
+	** FIXME This re-encrypting and re-compressing is ugly. But it
+	** works, and I dare not make a bigger change on the cusp of
+	** a code freeze. Added this reminder comment that this bears
+	** revisiting when we are in here again. (MikeT - 30 Aug 2010)
 	*/
+
+	if ( status == E_DB_OK && t->tcb_rel.relencflags & TCB_ENCRYPTED )
+	{
+	    status = dm1e_aes_encrypt(r, &t->tcb_data_rac, record,
+			r->rcb_erecord_ptr, dberr);
+	    if (status != E_DB_OK)
+		return(status);
+	    rec = r->rcb_erecord_ptr;
+	}
 
 	if ( status == E_DB_OK && t->tcb_data_rac.compression_type != TCB_C_NONE )
 	{
 	    rec = crec = r->rcb_record_ptr;
 	    status = (*t->tcb_data_rac.dmpp_compress)(&t->tcb_data_rac,
-		record,
+		(t->tcb_rel.relencflags & TCB_ENCRYPTED) ?
+		r->rcb_erecord_ptr : record,
 		(i4)t->tcb_rel.relwid, rec, &rec_len);
 	    if ( status )
 		SETDBERR(dberr, 0, E_DM9381_DM2R_PUT_RECORD);

@@ -3672,6 +3672,8 @@ DB_ERROR	*dberr)
 **	    Init "built" in the loop, since there is a continue statement.
 **	28-May-2010 (jonj)
 **	    If partition not found, wait for busy master before building.
+**	30-Aug-2010 (miket)
+**	    Fix debug TRdisplay format string.
 */
 DB_STATUS
 dm2t_fix_tcb(
@@ -3705,7 +3707,7 @@ DB_ERROR            *dberr)
 	((dcb == 0) || (dcb->dcb_type != DCB_CB)))
 	dmd_check(E_DM9322_DM2T_FIND_TCB);
     if (DMZ_TBL_MACRO(10))
-    TRdisplay("DM2T_FIX_TCB    (%%d,%d,%d)\n",
+    TRdisplay("DM2T_FIX_TCB    (%d,%d,%d)\n",
 	db_id, table_id->db_tab_base, table_id->db_tab_index);
 #endif
 
