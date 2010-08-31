@@ -45,6 +45,9 @@
 **	    Move common DI definitions here to fix VMS compile problem.
 **	15-Mar-2010 (smeke01) b119529
 **	    DM0P_BSTAT fields bs_gw_pages and bs_gw_io are now u_i8s.
+**	23-Aug-2010 (jonj)
+**	    Add DI_RAW_MASK to amend Karl's changes for SIR 122757,
+**	    which broke raw.
 **/
 
 /* masks for the DIopen() flags argument:
@@ -68,6 +71,10 @@
 **	some concurrency issues are not relevant.  (For instance,
 **	the file EOF in the DI_IO can always be believed, io_sem is
 **	not needed, etc.)
+** RAW: opening a raw device to retrieve number of blocks in the
+**	raw file. This flag is needed to override the check of
+**	minimum, aligned "pagesize", as only the first DM2F_RAW_BLKSSIZE+1
+**	bytes are read from the file.
 */
 
 # define		DI_SYNC_MASK		0x001
@@ -76,6 +83,7 @@
 # define		DI_NOT_LRU_MASK		0x008
 # define		DI_DIRECTIO_MASK	0x010
 # define		DI_PRIVATE_MASK		0x020
+# define		DI_RAW_MASK		0x040
 
 /* DI return status codes common to all platforms.
 ** Platforms may define additional return codes, but those additions are
