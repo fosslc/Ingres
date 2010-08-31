@@ -2658,6 +2658,11 @@ static char execproc_syntax2[] = " = session.";
 **	    error), but we would like to generate a nice error when it occurs
 **	    rather than causing a SEGV; so we should not assume that sscb_troot
 **	    contains anything.
+**	10-aug-2010 (stephenb)
+**	    7-jul change above should also apply GCA_RETPROC since we support
+**	    "execute procedure" in batch. Make sure we allocate a new message
+**	    when sending GCA_RETPROC in batch otherwise we may get an
+**	    inconsistent queue.
 */
 DB_STATUS
 scs_sequencer(i4 op_code,
@@ -10280,16 +10285,71 @@ massive_for_exit:
 		    && (!(qry_status & GCA_FAIL_MASK)))
 	    {
 		i4 len;
+		GCA_RP_DATA	*rpdata;
+		
+		if (cscb->cscb_in_group)
+		{
+		    /*
+		    ** when in batch mode we will queue up the
+		    ** messages on cscb_mnext until the batch is done, so we have
+		    ** to allocate memory for each one.
+		    ** This is here because of the non-async nature of
+		    ** GCA_SEND and the way in which the DAS server works. The DAS
+		    ** server might continue to send messages for a batch without
+		    ** reading the receive queue. If the DBMS sends any
+		    ** responses before DAS is ready to read them, we may end up
+		    ** in a send/receive deadlock where the DBMS has sent a
+		    ** response and is waiting for the DAS server to read it, and
+		    ** the DAS server has sent more queries for the batch and is 
+		    ** waiting for the DBMS to read them.
+		    ** Saving up the responses is not the ideal solution since it
+		    ** imposes on the DBMS processing and continues to eat through
+		    ** the session's SCF memory while the batch is processing, but
+		    ** since GCA has no way to queue the send request and 
+		    ** asynchronously return, we have no choice. If the user's batch
+		    ** is too big, we may exhaust the SCF memory pool, in which case
+		    ** the batch will be terminated and the user will receive an
+		    ** error. If we ever code an async GCA_SEND, we should change this 
+		    ** processing.
+		    */
+		    status = sc0m_allocate(SCU_MZERO_MASK,
+			    sizeof(SCC_GCMSG) + sizeof(GCA_RP_DATA),
+			    DB_SCF_ID,
+			    (PTR)SCS_MEM,
+			    SCG_TAG,
+			    (PTR *)&message);
+		    if (status != E_DB_OK)
+		    {
+			cscb->cscb_eog_error = TRUE;
+			sc0e_0_put(status, 0);
+			sc0e_0_uput(status, 0);
+			sc0e_0_uput(E_SC0206_CANNOT_PROCESS, 0);
+			sscb->sscb_state = SCS_INPUT;
+			*next_op = CS_EXCHANGE;
+			qry_status |= GCA_FAIL_MASK;
+			scd_note(E_DB_SEVERE, DB_SCF_ID);
+		    }
+		    message->scg_marea = (PTR)message + sizeof(SCC_GCMSG);
+		    /* mark for deallocation after message send */
+		    message->scg_mask = SCG_QDONE_DEALLOC_MASK;
+		    rpdata = (GCA_RP_DATA *)message->scg_marea;
+		}
+		else
+		{
+		    message = &cscb->cscb_rpmmsg;
+		    message->scg_mask = SCG_NODEALLOC_MASK;
+		    rpdata = cscb->cscb_rpdata;
 
-		message = &cscb->cscb_rpmmsg;
+		}
+
 		message->scg_mtype = sscb->sscb_rsptype;
 		message->scg_next = (SCC_GCMSG *) &cscb->cscb_mnext;
 		message->scg_prev = cscb->cscb_mnext.scg_prev;
 		cscb->cscb_mnext.scg_prev->scg_next = message;
 		cscb->cscb_mnext.scg_prev = message;
-		message->scg_mask = SCG_NODEALLOC_MASK;
 		message->scg_msize = sizeof(GCA_RP_DATA);
-		cscb->cscb_rpdata->gca_retstat = qe_ccb->qef_dbp_status;
+		rpdata->gca_retstat = qe_ccb->qef_dbp_status;
+		
 
 		/*
 		** The procedure name has already been normalized and case
@@ -10305,27 +10365,27 @@ massive_for_exit:
 		         proc_qid.db_cur_name[len-1] != ' ' )  break;
 
 		if ( len >
-		     sizeof(cscb->cscb_rpdata->gca_id_proc.gca_name) )
+		     sizeof(rpdata->gca_id_proc.gca_name) )
 		{
-		    cscb->cscb_rpdata->gca_id_proc.gca_index[0] = 0;
-		    cscb->cscb_rpdata->gca_id_proc.gca_index[1] = 0;
+		    rpdata->gca_id_proc.gca_index[0] = 0;
+		    rpdata->gca_id_proc.gca_index[1] = 0;
 
 		    MEfill(
-			sizeof(cscb->cscb_rpdata->gca_id_proc.gca_name),
+			sizeof(rpdata->gca_id_proc.gca_name),
 			' ',
-			(PTR)cscb->cscb_rpdata->gca_id_proc.gca_name );
+			(PTR)rpdata->gca_id_proc.gca_name );
 		}
 		else
 		{
-		    cscb->cscb_rpdata->gca_id_proc.gca_index[0] =
+		    rpdata->gca_id_proc.gca_index[0] =
 			proc_qid.db_cursor_id[0];
-		    cscb->cscb_rpdata->gca_id_proc.gca_index[1] =
+		    rpdata->gca_id_proc.gca_index[1] =
 			proc_qid.db_cursor_id[1];
 
 		    MEmove(sizeof(proc_qid.db_cur_name),
 			(PTR)&proc_qid.db_cur_name, ' ',
-			sizeof(cscb->cscb_rpdata->gca_id_proc.gca_name),
-			(PTR)&cscb->cscb_rpdata->gca_id_proc.gca_name);
+			sizeof(rpdata->gca_id_proc.gca_name),
+			(PTR)&rpdata->gca_id_proc.gca_name);
 		}
 
 		if ( tdesc != NULL && tdata != NULL )
@@ -10344,6 +10404,8 @@ massive_for_exit:
 		    && !ult_check_macro(&Sc_main_cb->sc_trace_vector, SCT_NOBYREF,
 				       NULL,NULL)))
 	    {
+		GCA_RE_DATA	*rdata;
+		
 		if (cscb->cscb_in_group)
 		{
 		    /*
@@ -10389,16 +10451,13 @@ massive_for_exit:
 		    message->scg_marea = (PTR)message + sizeof(SCC_GCMSG);
 		    /* mark for deallocation after message send */
 		    message->scg_mask = SCG_QDONE_DEALLOC_MASK;
-		    /* set row count */
-		    ((GCA_RE_DATA *)message->scg_marea)->gca_rowcount = 
-			((qry_status & GCA_FAIL_MASK)
-			 ? -1
-			 : cquery->cur_row_count);
+		    rdata = (GCA_RE_DATA *)message->scg_marea;
 		}
 		else
 		{
 		    message = &cscb->cscb_rspmsg;
 		    message->scg_mask = 0;
+		    rdata = cscb->cscb_rdata;
 		}
 
 		message->scg_mtype = sscb->sscb_rsptype;
@@ -10422,23 +10481,23 @@ massive_for_exit:
 		{
 		    message->scg_msize = sizeof(GCA_RE_DATA);
 		}
-		cscb->cscb_rdata->gca_rqstatus = qry_status;
-		cscb->cscb_rdata->gca_rowcount =
+		rdata->gca_rqstatus = qry_status;
+		rdata->gca_rowcount =
 		    ((qry_status & GCA_FAIL_MASK)
 		     ? -1
 		     : cquery->cur_row_count);
 		cquery->cur_row_count = -1;
-		cscb->cscb_rdata->gca_rhistamp =
+		rdata->gca_rhistamp =
 		    sscb->sscb_comstamp.db_tab_high_time;
-		cscb->cscb_rdata->gca_rlostamp =
+		rdata->gca_rlostamp =
 		    sscb->sscb_comstamp.db_tab_low_time;
 
 		/* Stuff scrollable cursor info in GCA. qe_ccb may have
 		** been cleared by now, in which case the fields should
 		** be copied into cquery right after the QEQ_QUERY call,
 		** then copied to the GCA from there. */
-		cscb->cscb_rdata->gca_errd0 = rowstat;
-		cscb->cscb_rdata->gca_errd1 = curspos;
+		rdata->gca_errd0 = rowstat;
+		rdata->gca_errd1 = curspos;
 
 		/*
 		** XA support - if xa commit/rollback, send
@@ -10454,7 +10513,7 @@ massive_for_exit:
 				&(cscb->cscb_rdata->gca_errd5));
 		}
 */
-                if ((cscb->cscb_rdata->gca_rowcount == 1) &&
+                if ((rdata->gca_rowcount == 1) &&
                     (cquery->cur_val_logkey & (QEF_TABKEY | QEF_OBJKEY)))
                 {
                     /* if a system maintained logical key has been
@@ -10462,15 +10521,15 @@ massive_for_exit:
 		     ** to be returned to the client.
 		     */
                     if (cquery->cur_val_logkey & QEF_TABKEY)
-                        cscb->cscb_rdata->gca_rqstatus |= GCA_TABKEY_MASK;
+                        rdata->gca_rqstatus |= GCA_TABKEY_MASK;
 
                     if (cquery->cur_val_logkey & QEF_OBJKEY)
-                        cscb->cscb_rdata->gca_rqstatus |= GCA_OBJKEY_MASK;
+                        rdata->gca_rqstatus |= GCA_OBJKEY_MASK;
 
 
                     MEcopy( ((PTR) &cquery->cur_logkey),
 			       sizeof(cquery->cur_logkey),
-			       ((PTR) cscb->cscb_rdata->gca_logkey));
+			       ((PTR) rdata->gca_logkey));
                 }
 	    }
 	    sscb->sscb_qmode = 0;
