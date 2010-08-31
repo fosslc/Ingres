@@ -279,7 +279,8 @@
 --#	    and correct valid values for UNIX
 --#	25-Jun-2010 (frima01) BUG 123622
 --#	    Replace wrong comment symbol from last change.
---#
+--#	27-Aug-10 (gordy)
+--#	    Added GCN config param for password encoding version.
 --#
 -- configuration system preferences
 # ifdef NT_GENERIC
@@ -373,6 +374,7 @@
 (PROG4PRFX).$.gcn.ticket_expire:		1800, MIN = 60;
 (PROG4PRFX).$.gcn.ticket_cache_size:	10, MIN = 1, MAX = 10;
 (PROG4PRFX).$.gcn.compress_point:	50, MIN = 0, MAX = 100;
+(PROG4PRFX).$.gcn.pwd_encode_version:	-1, MIN = -1, MAX = 1, SIGNED_INT;
 (PROG4PRFX).$.gcn.mechanisms:		"";
 (PROG4PRFX).$.gcn.registry_type:	"none", VALID = { "none", "slave",
 							 "peer", "master" };

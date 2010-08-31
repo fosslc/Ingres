@@ -1,0 +1,9 @@
+/#-- Copyright (c) 2004 Ingres Corporation
+ Encoding version for login passwords stored in the Name Server
+ VNODE database.  Setting only applies to passwords being added 
+ or updated.  Existing password encodings are not affected.
+ 
+ Version 0 is the orignal encoding provided with early releases 
+ of Ingres.  Version 1 includes platform specific information in 
+ the encoding to ensure that the database files cannot be used 
+ on other machines.  May be set to -1 for the default encoding.

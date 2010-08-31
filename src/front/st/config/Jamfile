@@ -90,6 +90,8 @@
 #	    Add dbmsmxky.hlp
 #	4-Aug-2010 (kschendel) SD 145507
 #	    Add missing help for degree-of-parallelism, sole-cache.
+#	27-Aug-20 (gordy)
+#	    Add gcnpwdvers.hlp.
 
 SubDir ING_SRC front st config ;
 
@@ -334,6 +336,7 @@ File $(INGMSG)$(DFS)gcncomppoint.hlp : gcncomppoint.hlp ;
 File $(INGMSG)$(DFS)gcnexpint.hlp : gcnexpint.hlp ;
 File $(INGMSG)$(DFS)gcninter.hlp : gcninter.hlp ;
 File $(INGMSG)$(DFS)gcnlnode.hlp : gcnlnode.hlp ;
+File $(INGMSG)$(DFS)gcnpwdvers.hlp : gcnpwdvers.hlp ;
 File $(INGMSG)$(DFS)gcnregtype.hlp : gcnregtype.hlp ;
 File $(INGMSG)$(DFS)gcnrmech.hlp : gcnrmech.hlp ;
 File $(INGMSG)$(DFS)gcnrnode.hlp : gcnrnode.hlp ;

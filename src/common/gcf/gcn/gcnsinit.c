@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004, 2009 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -162,6 +162,8 @@
 **	    Removed SERVERS queue, own server key no longer saved.
 **	 3-Aug-09 (gordy)
 **	    Remove string length restrictions.
+**	27-Aug-10 (gordy)
+**	    Added config param for login password encoding version.
 */
 
 /*
@@ -242,6 +244,9 @@ static HASH_INFO hash_info[] =
 **	    Provide max username buffer.  Dynamically allocate storage
 **	    for username, server type, local vnode, remote vnode and
 **	    remote mechanism.
+**	27-Aug-10 (gordy)
+**	    Added config param for login password encoding version.
+**	    Log warnings for invalid values.
 */
 
 STATUS
@@ -268,6 +273,7 @@ gcn_srv_init( VOID  )
     */
     IIGCn_static.max_user_sessions = GCN_MAX_SESSIONS;
     IIGCn_static.timeout = GCN_TIMEOUT;
+    IIGCn_static.pwd_enc_vers = GCN_VLP_V1;
     IIGCn_static.compress_point = GCN_COMPRESS_POINT;
     IIGCn_static.registry_type = GCN_REG_NONE;
     IIGCn_static.bedcheck_interval = GCN_TIME_CLEANUP;
@@ -316,6 +322,35 @@ gcn_srv_init( VOID  )
     if ( ! STcasecmp( tmp, ERx("ON") ) )
 	IIGCn_static.flags |= GCN_CLUSTERED;
 
+    gcn_get_pmsym( "!.pwd_encode_version", "-1", tmp, sizeof( tmp ) );
+
+    if ( *tmp )
+    {
+	STATUS	status;
+	i4	version;
+
+	if ( (status = CVal( tmp, &version )) == OK )
+	    switch( version )
+	    {
+	    case GCN_VLP_V0 : IIGCn_static.pwd_enc_vers = GCN_VLP_V0;	break;
+	    case GCN_VLP_V1 : IIGCn_static.pwd_enc_vers = GCN_VLP_V1;	break;
+	    case -1         : /* Default */				break;
+	    default         : status = FAIL;				break;
+	    }
+
+	if ( status != OK )
+	{
+	    ER_ARGUMENT earg[2];
+
+	    earg[0].er_value = ERx("pwd_encode_version");
+	    earg[0].er_size = STlength( earg[0].er_value );
+	    earg[1].er_value = tmp;
+	    earg[1].er_size = STlength( earg[1].er_value );
+
+	    gcu_erlog( 0, 1, E_GC0106_GCN_CONFIG_VALUE, NULL, 2, (PTR)earg );
+	}
+    }
+
     gcn_get_pmsym( "!.compress_point", "", tmp, sizeof( tmp ) );
     if ( *tmp )  CVal( tmp, &IIGCn_static.compress_point );
 
@@ -328,7 +363,14 @@ gcn_srv_init( VOID  )
 	IIGCn_static.registry_type = GCN_REG_MASTER;
     else  if ( STcasecmp( tmp, ERx("none") ) )
     {
-	/* Should we log an error for invalid type? */
+	ER_ARGUMENT earg[2];
+
+	earg[0].er_value = ERx("registry_type");
+	earg[0].er_size = STlength( earg[0].er_value );
+	earg[1].er_value = tmp;
+	earg[1].er_size = STlength( earg[1].er_value );
+
+	gcu_erlog( 0, 1, E_GC0106_GCN_CONFIG_VALUE, NULL, 2, (PTR)earg );
     }
 
     gcn_get_pmsym( "!.check_type", "", tmp, sizeof( tmp ) );
@@ -352,7 +394,14 @@ gcn_srv_init( VOID  )
 		IIGCn_static.flags |= GCN_BCHK_CLASS;
 	    else
 	    {
-		/* Should we log an error for invalid type? */
+		ER_ARGUMENT earg[2];
+
+		earg[0].er_value = ERx("check_type");
+		earg[0].er_size = STlength( earg[0].er_value );
+		earg[1].er_value = word[i];
+		earg[1].er_size = STlength( earg[1].er_value );
+
+		gcu_erlog(0, 1, E_GC0106_GCN_CONFIG_VALUE, NULL, 2, (PTR)earg);
 	    }
 	}
     }

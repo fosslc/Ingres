@@ -132,6 +132,9 @@ gcn.expire_interval.title:		'Expire Interval'
 gcn.local_vnode.file:		        gcnlnode.hlp	
 gcn.local_vnode.title:			'Local Virtual Node'
 
+gcn.pwd_encode_version.file:		gcnpwdvers.hlp
+gcn.pwd_encode_version.title:		'Password File Encoding Version'
+
 gcn.registry_type.file:			gcnregtype.hlp
 gcn.registry_type.title:		'Registry Type'
 

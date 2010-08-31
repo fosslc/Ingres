@@ -1,6 +1,7 @@
 /*
-** Copyright (c) 1989, 2009 Ingres Corporation
+** Copyright (c) 1989, 2010 Ingres Corporation
 */
+
 #ifndef GCNINT_H_INCLUDED
 #define GCNINT_H_INCLUDED
 
@@ -174,6 +175,9 @@
 **	 24-Nov-2009 (frima01) Bug 122490
 **	    Moved IIgcn_check and gcn_seterr_func prototypes to gcn.h
 **	    in order to include them in front end modules.
+**	27-Aug-10 (gordy)
+**	    Added password encoding version for VNODE login passwords.
+**	    Added symbols for encoding versions.
 */
 
 #define		MAXLINE			1024
@@ -219,6 +223,9 @@
 # define GCN_VLP_CLIENT		0
 # define GCN_VLP_LOGIN		1
 # define GCN_VLP_COMSVR		2
+
+# define GCN_VLP_V0		0
+# define GCN_VLP_V1		1
 
 # define GCN_SYS_COUNT 		1
 # define GCN_USER_COUNT		2
@@ -627,6 +634,8 @@ typedef struct
 **	    ever reached. 
 **	 3-Aug-09 (gordy)
 **	    Allocate strings to remove length restrictions.
+**	27-Aug-10 (gordy)
+**	    Added password encoding version.
 */
 
 typedef struct 
@@ -652,6 +661,7 @@ typedef struct
 	i4		adm_sess_count;	
 	i4		session_count;
 	i4		language;
+	i4		pwd_enc_vers;
 	i4		compress_point;
 	i4		ticket_cache_size;
 	i4		ticket_exp_time;

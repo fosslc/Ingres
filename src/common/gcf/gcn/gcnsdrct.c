@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004, 2009 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -58,6 +58,8 @@
 **	    encrypted passwords and authentication certificates.
 **	21-Jul-09 (gordy)
 **	    Remove string length restrictions.
+**	27-Aug-10 (gordy)
+**	    Added symbols for encoding versions.
 */	
 
 
@@ -97,6 +99,8 @@
 **	    Removed delegated authentication from grcb and added 
 **	    as parameters.  Declare default sized buffer.  Use
 **	    dynamic storage if actual length exceeds default size.
+**	27-Aug-10 (gordy)
+**	    Added symbols for encoding versions.
 */	
 
 STATUS
@@ -122,7 +126,7 @@ gcn_direct( GCN_RESOLVE_CB *grcb, GCN_MBUF *mbout, i4 deleg_len, PTR deleg )
 	      ? buff : (char *)MEreqmem( 0, len + 1, FALSE, NULL );
 	if ( ! ptr )  return(  E_GC0121_GCN_NOMEM );
 
-        gcn_login( GCN_VLP_COMSVR, 1, TRUE, grcb->usr, grcb->pwd, ptr );
+        gcn_login(GCN_VLP_COMSVR, GCN_VLP_V1, TRUE, grcb->usr, grcb->pwd, ptr);
     }
 
     status = gcn_connect_info( grcb, mbout, 

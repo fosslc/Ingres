@@ -259,6 +259,7 @@ ii.*.*.*.psf_vch_prec:                  boolean
 *.*.gcn.default_server_class:		string
 *.*.gcn.expire_interval:		seconds
 *.*.gcn.local_vnode:			'virtual node'
+*.*.gcn.pwd_encode_version:		integer
 *.*.gcn.registry_type:			'installation type'
 *.*.gcn.remote_mechanism:		'none, default, mechanism name'
 *.*.gcn.remote_vnode:			'virtual node'
