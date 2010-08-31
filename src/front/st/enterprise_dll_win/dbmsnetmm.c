@@ -4722,6 +4722,9 @@ ingres_browseforfile(MSIHANDLE hInstall)
 **	12-Aug-2009 (drivi01)
 **	    Add II_COMPONENT_SPATIAL to the routines that generate
 **	    response file.
+**	27-Aug-2010 (drivi01)
+**	    Remove II_COMPONENT_ICE.  We don't want it added anymore
+**	    to generated response file.
 */
 UINT __stdcall
 ingres_create_rspfile(MSIHANDLE hInstall)
@@ -4810,8 +4813,6 @@ ingres_create_rspfile(MSIHANDLE hInstall)
 	fprintf(fp, "II_COMPONENT_SPATIAL=\"YES\"\n");
     else
 	fprintf(fp, "II_COMPONENT_SPATIAL=\"NO\"\n");
-
-    fprintf(fp,"II_COMPONENT_ICE=\"NO\"\n" );
 
 
     if (bDBMSInstalled || bNetInstalled)
