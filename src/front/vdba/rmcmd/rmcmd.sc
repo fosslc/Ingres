@@ -388,6 +388,10 @@
 **	09-Sep-2009 (bonro01) bug 122490
 **	    Previous change causes build problems on Windows
 **	    Exclude the headers from Windows.
+**  25-Aug-2010 (drivi01) Bug #124306
+**      Remove hard coded length of szCommand buffer.
+**      Rmcmd buffer should be able to handle long ids, expand
+**      the buffer accordingly.
 */
 /*
 PROGRAM =       rmcmd
@@ -1329,7 +1333,7 @@ main()
 {
     exec sql begin declare section;
         int hdl;
-        char szCommand [4000];
+        char szCommand [RMCMDLINELEN*15+4000];
         char    stmt [2048];
         char  username[100];
         char  *user=NULL;

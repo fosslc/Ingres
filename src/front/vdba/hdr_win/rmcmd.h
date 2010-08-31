@@ -21,10 +21,16 @@
 **  01-June-2005 (lakvi01)
 **     Added RES_HDL_NOTGRANTED, for users not having privileges for
 **     rmcmd.
+**  25-Aug-2010 (drivi01) Bug #124306
+**     Remove hard coded length for RMCMDLINELEN.
+**     Rmcmd buffer should be able to handle long ids.
 */
 
 #ifndef __RMCMD_INCLUDED__
 #define __RMCMD_INCLUDED__
+
+#include <iicommon.h>
+#include <compat.h>
 
 #define RES_NOTINGRES 10000
 
@@ -42,7 +48,7 @@
 
 #define RMSUPERUSER "INGRES" /*TO BE FINISHED to avoid multiple occurences*/
 
-#define RMCMDLINELEN (256 + 1)
+#define RMCMDLINELEN (DB_MAXNAME*4 + 3)
     
 typedef struct rmcmdparams {
    int isession;
