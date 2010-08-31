@@ -786,6 +786,8 @@ NO_OPTIM=dr6_us5 pym_us5
 **          Correct setting of rel_v9.reldatawid and rel_v9.reltotdatawid.
 **      25-Jun-2010 (frima01) Bug 123753
 **          Change E_DM9580_CONFIG_DBSERVICE_ERROR to be a warning.
+**      30-aug-2010 (stial01)
+**          upgrade_iirel_row() fix relstat/relstat2 initialization
 */
 
 /*
@@ -12374,7 +12376,7 @@ DM0C_CNF	*cnf)
 	    }
 
 	    /* Make sure relstat2 doesn't contain any extra bits! */
-	    rel_v9.relstat2 &= ~TCB2_RELSTAT2_ALL;
+	    rel_v9.relstat2 &= TCB2_RELSTAT2_ALL;
 
 	    /* Allow duplicates in iiextended_relation, easier to do here
 	    ** than in upgradedb!
@@ -12384,7 +12386,7 @@ DM0C_CNF	*cnf)
 		rel_v9.relstat |= TCB_DUPLICATES;
 
 	    /* Make sure relstat doesn't contain any extra bits! */
-	    rel_v9.relstat &= ~TCB_RELSTAT_ALL;
+	    rel_v9.relstat &= TCB_RELSTAT_ALL;
 
 	    /* To prepare for the possible reclamation of TCB_GATEWAY, make
 	    ** sure that the two gateway-ID columns are zero if TCB_GATEWAY
