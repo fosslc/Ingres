@@ -2906,6 +2906,10 @@ opc_cescape(
 **	27-oct-2009 (gupsh01)
 **	    Fixed the length calculation for nvarchar result when the result length
 **	    exceeds DB_MAXSTRING.
+**	25-aug-2010 (stephenb)
+**	    Fiddling with UTF8 length here is un-necesary since it's done in PSF
+**	    and if we do it before callin opc_cqial1, it will screw up
+**	    the resdom. Remove the code. (Bug 124302)
 */
 static VOID
 opc_cresdoms(
@@ -3056,74 +3060,6 @@ opc_cresdoms(
 
 		break;
 	    }
-	}
-	/* Else, same stuff for UTF8 db and char/varchar. */
-        else if ((global->ops_adfcb->adf_utf8_flag & AD_UTF8_ENABLED) &&
-		(abs(rdi->opc_srcop.opr_dt) == DB_VCH_TYPE ||
-		abs(rdi->opc_srcop.opr_dt) == DB_CHA_TYPE ||
-		abs(rdi->opc_srcop.opr_dt) == DB_TXT_TYPE ||
-		abs(rdi->opc_srcop.opr_dt) == DB_CHR_TYPE) &&
-		abs(resdom->pst_sym.pst_dataval.db_datatype) != DB_LVCH_TYPE)
-	{
-	    DB_DT_ID    restype = resdom->pst_sym.pst_dataval.db_datatype;
-	    i4 maxutf8str = DB_UTF8_MAXSTRING;
-
-	    /* Assign result length from resdom (should match column that the
-	    ** data source is to be used with). If one is nullable and the other
-	    ** isn't, increment/decrement as needed. All this is to make Unicode
-	    ** normalization operate on a large enough buffer. */
-
-	    /* First check if the operation is between valid character types 
-	    ** This could be an operation between character types and date 
-	    ** datatype. Try to make the best guess about the result length. 
-	    */
-	    if (( abs(restype) != DB_VCH_TYPE ) &&
-		 ( abs(restype) != DB_TXT_TYPE ) &&
-		 ( abs(restype) != DB_CHR_TYPE ) &&
-		 ( abs(restype) != DB_CHA_TYPE ))
-	    {
-		/* If the result type is a logical key type then
-		** do not change the size of the normalized result
-		*/
-		if (( abs(restype) == DB_LOGKEY_TYPE ) ||
-		    ( abs(restype) == DB_TABKEY_TYPE ))
-	    	  rdi->opc_srcop.opr_len = 
-		    min(resdom->pst_right->pst_sym.pst_dataval.db_length, 
-			  DB_MAXSTRING);
-		else
-	    	  rdi->opc_srcop.opr_len = 
-		    min(max(resdom->pst_sym.pst_dataval.db_length,
-		    	     resdom->pst_right->pst_sym.pst_dataval.db_length), 
-			DB_MAXSTRING);
-	
-	    }
-	    else /* Assign results from resdom */
-	    {
-	        rdi->opc_srcop.opr_len = resdom->pst_sym.pst_dataval.db_length;
-
-		if (resdom->pst_sym.pst_dataval.db_datatype < 0)
-		  rdi->opc_srcop.opr_len--;
-	    }
-
-		
-	    /* Adjust length for nullability (bug 120171) */
-	    if (rdi->opc_srcop.opr_dt < 0 )
-	    {
-	      maxutf8str++;
-	      rdi->opc_srcop.opr_len ++;    
-	    }
-
-	    if (abs(rdi->opc_srcop.opr_dt) == DB_VCH_TYPE ||
-	         abs(rdi->opc_srcop.opr_dt) == DB_TXT_TYPE)
-	    {
-	      maxutf8str += 2;
-	      if ((abs(restype) == DB_CHA_TYPE || 
-		   abs(restype) == DB_CHR_TYPE))
-	        rdi->opc_srcop.opr_len += 2;    
-	    }
-
-	    if (rdi->opc_srcop.opr_len > maxutf8str)
-	      rdi->opc_srcop.opr_len = maxutf8str;
 	}
 
 	(VOID) opc_cqual1(global, cnode, resdom->pst_right, 
