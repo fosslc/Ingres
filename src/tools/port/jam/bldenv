@@ -165,7 +165,6 @@ umask 002
 set +u 
 PATH=$PATH:/usr/local/bin
 
-xvers=27 # Xerces version
 config_string=unknown
 gtk_need=false
 rpm_need=false
@@ -316,9 +315,14 @@ case ${unames} in
 	    if [ "$os" = "Fedora" ] ; then
 		OSVER=FEDORA
 		rel=`cat /etc/redhat-release | cut -d' ' -f3`
-		if [ $rel -gt 8 ]
+		if [ $rel -ge 13 ]
 		then
+			xvers=30
+                elif [ $rel -eq 12 ]
+                then 
 			xvers=28
+                else
+			xvers=27
 		fi
 	    fi
 	    if [ -x /usr/bin/yum ] ; then

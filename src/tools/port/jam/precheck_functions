@@ -277,7 +277,7 @@ check_for_pam()
       # look for shared library, since the library extension 
       # and version may be different, just look for libpam.*
       libpamfound=1
-      for searchdir in /lib /usr/lib /usr/local/lib 
+      for searchdir in /lib /usr/lib /usr/local/lib /usr/lib64
       do
         ls ${searchdir}/libpam.* 1> /dev/null 2> /dev/null
 	[ $? = 0 ] && libpamfound=0 && break
