@@ -1308,6 +1308,13 @@ static DB_STATUS SIcomplete(
 **	01-Sep-2010 (miket) SIR 122403
 **	    Adjust encrypted record buffer to correct overrun flagged in
 **	    dbms log ("Memory overrun rcb_hl_ptr").
+**	07-Sep-2010 (miket) SIR 122403
+**	    Replace AES_BLOCK (=16) lucky WAG for additional buffer required
+**	    for rcb_erecord_ptr with the actual extra needed by MODIFY for
+**	    tacking on hash bucket, partition no, and tid8 (=14). Since the
+**	    three record buffers can end up being used in common ways while
+**	    doing compression and encryption processing, make all three the
+**	    same size.
 */
 DB_STATUS
 dm2r_rcb_allocate(
@@ -1384,9 +1391,9 @@ DB_ERROR	    *dberr )
 	{	
 	    /* lint truncation warnings if size of ptr > int, but code valid */
 	    status = dm0m_allocate(sizeof(DMP_RCB) +
-		DB_ALIGN_MACRO(t->tcb_rel.relwid +
+		DB_ALIGN_MACRO(t->tcb_rel.relwid + MODIFY_BUCKET_PNO_TID8_SZ +
 			t->tcb_data_rac.worstcase_expansion) * rec_buffers +
-		AES_BLOCK + DB_ALIGN_MACRO(klen) * key_buffers +
+		DB_ALIGN_MACRO(klen) * key_buffers +
 		sizeof(ADF_CB) + seglen,
 		DM0M_ZERO, (i4)RCB_CB, (i4)RCB_ASCII_ID,
 		(char *)t, (DM_OBJECT **)rcb, dberr);
@@ -1421,18 +1428,20 @@ DB_ERROR	    *dberr )
 	p = (char *) r + sizeof(DMP_RCB);
 
 	r->rcb_record_ptr = p;
-	p += t->tcb_rel.relwid + t->tcb_data_rac.worstcase_expansion;
+	p += t->tcb_rel.relwid + t->tcb_data_rac.worstcase_expansion +
+	    MODIFY_BUCKET_PNO_TID8_SZ;
 	p = ME_ALIGN_MACRO(p, sizeof(PTR));
 
 	r->rcb_srecord_ptr = p;
-	p += t->tcb_rel.relwid + t->tcb_data_rac.worstcase_expansion;
+	p += t->tcb_rel.relwid + t->tcb_data_rac.worstcase_expansion +
+	    MODIFY_BUCKET_PNO_TID8_SZ;
 	p = ME_ALIGN_MACRO(p, sizeof(PTR));
 
 	if (rec_buffers == 3)		/* encryption */
 	{
 	    r->rcb_erecord_ptr = p;
 	    p += t->tcb_rel.relwid + t->tcb_data_rac.worstcase_expansion +
-		AES_BLOCK;
+		MODIFY_BUCKET_PNO_TID8_SZ;
 	    p = ME_ALIGN_MACRO(p, sizeof(PTR));
 	}
 

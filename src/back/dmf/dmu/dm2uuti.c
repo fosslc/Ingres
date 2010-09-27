@@ -748,6 +748,9 @@ i4 dm2uu_tab_id_warn_now  = DM2UU_TAB_ID_WARN_NOW;
 **	19-Aug-2010 (miket) SIR 122403
 **	    Preserve extra stuff that might be at the end of the sort
 **	    record across encryption processing: bucket, partition, tid8.
+**	07-Sep-2010 (miket) SIR 122403
+**	    Use (new) MODIFY_BUCKET_PNO_TID8_SZ instead of one-off size
+**	    definition. We care about this size when we allocate the rcb.
 */
 
 DB_STATUS
@@ -1052,8 +1055,7 @@ DB_ERROR	    *dberr)
 			local_status = dm1e_aes_encrypt(r, &t->tcb_data_rac,
 			    record, r->rcb_erecord_ptr, dberr);
 			/* (may) need to preserve bucket, partition, tid8 */
-			MEcopy(record+m->mx_width,
-			    sizeof(i4)+sizeof(u_i2)+sizeof(DM_TID8),
+			MEcopy(record+m->mx_width, MODIFY_BUCKET_PNO_TID8_SZ,
 			    r->rcb_erecord_ptr+m->mx_width);
 			record = r->rcb_erecord_ptr;
 		    }
@@ -1064,8 +1066,7 @@ DB_ERROR	    *dberr)
 			local_status = dm1e_aes_encrypt(r, &m->mx_data_rac,
 			    record, r->rcb_erecord_ptr, dberr);
 			/* (may) need to preserve bucket, partition, tid8 */
-			MEcopy(record+m->mx_width,
-			    sizeof(i4)+sizeof(u_i2)+sizeof(DM_TID8),
+			MEcopy(record+m->mx_width, MODIFY_BUCKET_PNO_TID8_SZ,
 			    r->rcb_erecord_ptr+m->mx_width);
 			record = r->rcb_erecord_ptr;
 		    }
