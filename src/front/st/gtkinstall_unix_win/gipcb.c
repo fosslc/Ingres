@@ -208,6 +208,10 @@
 **	    in on_typical_inst_clicked() for IVW_INSTALL mode
 **	    IVW blocksize and groupsize need to be rounded to the next 
 **	    power of 2. Use GIPnextPow2() to do this.
+**	10-Sep-2010 (hanje04)
+**	    BUG 124396
+**	    SD 146763
+**	    Correct all ambiguous instmode logic
 */
 
 static STATUS update_location_entry( i4 locidx, GtkEntry *entry );
@@ -615,7 +619,7 @@ on_checkdbmspkg_toggled                (GtkToggleButton *togglebutton,
 	gtk_widget_set_sensitive( db_loc_frame, pkgs_to_install & PKG_DBMS ?
 						TRUE : FALSE );
 
-	if ( ! (instmode & IVW_INSTALL) )
+	if ( ~instmode & IVW_INSTALL)
 	{
 	    db_ansi_config = lookup_widget( IngresInstall, "db_ansi_config" );
 	    gtk_widget_set_sensitive( db_ansi_config,

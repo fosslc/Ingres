@@ -232,6 +232,10 @@
 **	    BUG 124241
 **	    Correct "if not VW Install" check so that it actually checks for
 **	    that case. Configuration type, being ignored accross the board.
+**	10-Sep-2010 (hanje04)
+**	    BUG 124396
+**	    SD 146763
+**	    Correct all ambiguous instmode logic
 **	
 */
 
@@ -533,7 +537,7 @@ write_installation_summary(GtkTextBuffer *buffer)
 
 
     /* Give more of a summary for the advanced install */
-    if ( ! (instmode & BASIC_INSTALL) )
+    if ( ~instmode & BASIC_INSTALL )
     {
 	if ( pkgs_to_install & PKG_DBMS )
 	{
@@ -644,7 +648,7 @@ write_installation_summary(GtkTextBuffer *buffer)
 				"Dual logging disabled\n",
 				-1 );
 
-	    if ( ! (instmode & IVW_INSTALL) )
+	    if ( ~instmode & IVW_INSTALL)
 	    {
 	        gtk_text_buffer_insert_with_tags_by_name(buffer,
 						&iter,
@@ -750,7 +754,7 @@ write_installation_summary(GtkTextBuffer *buffer)
 						NULL);
 	gtk_text_buffer_insert(buffer, &iter, "\n", -1);
 
-	if ( ! instmode & IVW_INSTALL )
+	if ( ~instmode & IVW_INSTALL )
 	{
 	    gtk_text_buffer_insert(buffer,
 				&iter,
