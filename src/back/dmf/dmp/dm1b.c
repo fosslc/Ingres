@@ -794,6 +794,9 @@
 **	16-Aug-2010 (jonj) SD 146221
 **	    dm1r_crow_lock(flags) now DM1R_LK_? instead of LK_? to avoid
 **	    collisions with lk.h defines.
+**	31-Aug-2010 (miket) SIR 122403
+**	    For dm1e_aes calls follow dmf convention of breaking or
+**	    continuing with status test rather than returning on error.
 */
 
 
@@ -3074,7 +3077,7 @@ retry:
 		s = dm1e_aes_decrypt(r, &t->tcb_data_rac, rec_ptr, record,
 			r->rcb_erecord_ptr, dberr);
 		if (s != E_DB_OK)
-		    return(s);
+		    break;
 		rec_ptr = record;
 	    }
 	}
@@ -4277,7 +4280,7 @@ dm1b_get(
 		    s = dm1e_aes_decrypt(r, &t->tcb_data_rac, rec_ptr, record,
 				r->rcb_erecord_ptr, dberr);
 		    if (s != E_DB_OK)
-			return(s);
+			break;
 		    rec_ptr = record;
 		}
 
@@ -4871,7 +4874,7 @@ dm1b_get(
 	    s = dm1e_aes_decrypt(r, &t->tcb_data_rac, rec_ptr, record,
 			r->rcb_erecord_ptr, dberr);
 	    if (s != E_DB_OK)
-		return(s);
+		break;
 	    rec_ptr = record;
 	}
 
@@ -8470,7 +8473,7 @@ dm1badupcheck(
 		    s = dm1e_aes_decrypt(r, &t->tcb_data_rac, wrec_ptr, wrec,
 				r->rcb_erecord_ptr, dberr);
 		    if (s != E_DB_OK)
-			return(s);
+			break;
 		    wrec_ptr = wrec;
 		}
 
@@ -13729,7 +13732,7 @@ records from data page %d\n",
 	    s = dm1e_aes_decrypt(r, &t->tcb_data_rac, rec_ptr, record,
 			r->rcb_erecord_ptr, dberr);
 	    if (s != E_DB_OK)
-		return(s);
+		break;
 	    rec_ptr = record;
 	}
 
