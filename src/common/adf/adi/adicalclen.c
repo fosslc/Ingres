@@ -1111,6 +1111,9 @@ i4                 *adi_rlen;
 **	    Allow ADI_LEN_INDIRECT with constant length specifiers to override
 **	    ADE_LEN_UNKNOWN thus avoiding such functions from propagating VLTs
 **	    unnecessarily.
+**	20-Sep-2010 (kiria01) b124438
+**	    Slight correction to last change to handle minimum char size
+**	    correctly.
 */
 
 # ifdef ADF_BUILD_WITH_PROTOS
@@ -2557,7 +2560,8 @@ DB_DATA_VALUE      *adi_dvr;
 		nullen++;
 	    /* Use the second argument if the length is valid or
 	    ** otherwise use minlen */
-	    adi_dvr->db_length = rlen >= minlen+nullen ? rlen : minlen;
+	    if (rlen < minlen + nullen)
+		rlen = minlen;
 	}
     }
 	
