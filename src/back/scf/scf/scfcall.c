@@ -794,6 +794,8 @@ scf_handler( EX_ARGS *ex_args )
 **	    Add trace point sc930 value 2 for QEP tracing as well.
 **	06-sep-2010 (maspa05) SIR 124363
 **	    Add trace point sc925 for logging long-running queries
+**	07-sep-2010 (maspa05) SIR 124363
+**	    Allow a ceiling as well as a threshold value for sc925
 */
 DB_STATUS
 scf_trace(DB_DEBUG_CB  *trace_cb)
@@ -995,14 +997,25 @@ scf_trace(DB_DEBUG_CB  *trace_cb)
   	case	925:
   	    if (trace_cb->db_trswitch == DB_TR_ON)
   	    {
-		if (trace_cb->db_value_count==0)
-  		  ult_set_trace_longqry(0);
-		else
-  		  ult_set_trace_longqry(trace_cb->db_vals[0]);
+		switch (trace_cb->db_value_count)
+		{
+                  case 0:
+	            sc0e_trace("sc925 requires at least one parameter - threshold value");
+		    break;
+		  case 1:
+  		    ult_set_trace_longqry(trace_cb->db_vals[0],0);
+		    break;
+		  default:
+		    if (trace_cb->db_vals[1] <= trace_cb->db_vals[0])
+	              sc0e_trace("ceiling value must exceed threshold value");
+		    else
+  		      ult_set_trace_longqry(trace_cb->db_vals[0],
+		                            trace_cb->db_vals[1]);
+		}
   	    }
   	    else
   	    {
-  		ult_set_trace_longqry(0);
+  		ult_set_trace_longqry(0,0);
   	    } 
   	    break;
   	    
@@ -1082,7 +1095,7 @@ scf_trace(DB_DEBUG_CB  *trace_cb)
 	    sc0e_trace(" 922\tDump cross server event memory\n");
 	    sc0e_trace(" 923\tAlter SCE event processing - (help = 1000)\n");
 	    sc0e_trace(" 924\tDump query before error \n");
-	    sc0e_trace(" 925 n\tLog long-running queries (> n secs)\n");
+	    sc0e_trace(" 925 x [y]\tLog long-running queries (> x, < y secs)\n");
 	    sc0e_trace(" 930\tServer-based Query Tracing ");
 	    sc0e_trace("\t   0\t\t- turn off");
 	    sc0e_trace("\t  [1]   \t- turn on");

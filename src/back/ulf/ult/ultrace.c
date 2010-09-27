@@ -639,19 +639,32 @@ ult_close_tracefile(void *file)
 ** History:
 **      06-sep-2010 (maspa05) SIR 124363
 **          Created.
+**      07-sep-2010 (maspa05) SIR 124363
+**          Now have two values - a max and min.
 */
 
-static i4 trace_longqry = 0;
+static i4 trace_longqry_min = 0,trace_longqry_max=0;
 void
-ult_set_trace_longqry(i4 value)
+ult_set_trace_longqry(i4 val1,i4 val2)
 {
-      if (value != trace_longqry && value != 0 )
+      /* if we're changing the setting then log a message */
+
+      if (val1 == 0 && trace_longqry_min != 0) 
+	TRdisplay("SC925 no longer tracing long-running queries\n");
+
+      if ((val1 !=0) &&
+	  ((val1 != trace_longqry_min) || 
+	   (val2 != trace_longqry_max)))
       {
 	TRdisplay("SC925 tracing queries which take longer than %d secs\n",
-			value);
+			val1);
+	if (val2 != 0)
+	   TRdisplay("      but less than %d secs\n", val2);
+
       }
 
-      trace_longqry = value;
+      trace_longqry_min = val1;
+      trace_longqry_max = val2;
 }
 
 /*{
@@ -676,10 +689,16 @@ ult_set_trace_longqry(i4 value)
 ** History:
 **      06-sep-2010 (maspa05) SIR 124363
 **          Created.
+**      07-sep-2010 (maspa05) SIR 124363
+**          Now have two values - a max and min. 
 */
 
-i4
-ult_trace_longqry()
+void
+ult_trace_longqry(i4 *val1, i4 *val2)
 {
-	return (trace_longqry);
+
+	*val1=trace_longqry_min;
+
+	*val2=trace_longqry_max;
+
 }

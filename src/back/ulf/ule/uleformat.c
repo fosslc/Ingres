@@ -410,6 +410,8 @@ ule_initiate( char *node_name, i4  l_node_name, char *server_name,
 **          Save latest error code for SC930 output
 **      06-sep-2010 (maspa05) SIR 124363
 **          I_QE3000_LONGRUNNING_QUERY added to errors which dump query text.
+**      07-sep-2010 (maspa05) SIR 124363
+**          Removed the above as now write to DBMS log instead
 **	    
 */
 /* VARARGS31 */
@@ -865,7 +867,6 @@ i4	    num_parms,
     if (sid && error_code != 0 &&
 	(trace_errno == -1 || 
 	trace_errno == error_code ||
-	error_code == I_QE3000_LONGRUNNING_QUERY ||
 	error_code == E_DM_MASK + 0x002A || /* E_DM002A_BAD_PARAMETER */
 	error_code == E_SC0206_CANNOT_PROCESS ||
 	error_code == E_SC0220_SESSION_ERROR_MAX ||
@@ -912,7 +913,7 @@ i4	    num_parms,
 		prbuf += i;
 	    }
 	}
-	if (prev_qlen && prev_qbuf && error_code != I_QE3000_LONGRUNNING_QUERY)
+	if (prev_qlen && prev_qbuf)
 	{
 	    STprintf(MessageArea, ERx("LQuery: "));
 	    hdr_size = STlength(MessageArea);

@@ -1157,6 +1157,8 @@ bool		size_check)
 **	    Move a couple variable declarations closer to their use point.
 **	06-sep-2010 (maspa05) SIR 124363
 **	    Trace point sc925 - log long-running queries
+**	07-sep-2010 (maspa05) SIR 124363
+**	    ult_trace_longqry now takes two arguments and returns a bool
 */
 
 DB_STATUS
@@ -1191,14 +1193,14 @@ qeq_subplan_init(QEF_RCB *qef_rcb, QEE_DSH *dsh,
 	i4 cson;
 	STATUS csret;
 	TIMERSTAT init_tstat;
- 	i4           lqry_time;
+	i4 lqry_thresh;
  
-	/* trace point sc925 set? */
-        lqry_time=ult_trace_longqry();
- 
+	/* check whether sc925 is set */
+ 	ult_trace_longqry(&lqry_thresh,&val2);
+
 	/* initialize the queries begining cpu, dio, and wall clock numbers */
- 	if ((ult_check_macro(&qef_cb->qef_trace, 91, &val1, &val2)) ||
- 	   (lqry_time != 0))
+ 	if (ult_check_macro(&qef_cb->qef_trace, 91, &val1, &val2) ||
+	    lqry_thresh != 0)
 	{
 
 	    cson = 1;

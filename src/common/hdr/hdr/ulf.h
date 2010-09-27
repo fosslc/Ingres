@@ -116,6 +116,8 @@
 **      06-sep-2010 (maspa05) SIR 124363
 **          Added ult_trace_longqry() and ult_set_trace_longqry() for trace 
 **          point sc925
+**      07-sep-2010 (maspa05) SIR 124363
+**          ult_trace_longqry() and ult_set_trace_longqry() now take two values
 **/
 #ifndef TR_HDR_INCLUDED
 #include <tr.h>
@@ -759,5 +761,5 @@ FUNC_EXTERN void ult_close_tracefile(void *);
 ** ult_trace_longqry - check if sc925 tracing is set
 ** ult_set_trace_longqry - set value for sc925
 */
-FUNC_EXTERN void ult_set_trace_longqry(i4 );
-FUNC_EXTERN i4 ult_trace_longqry();
+FUNC_EXTERN void ult_set_trace_longqry(i4,i4);
+FUNC_EXTERN void ult_trace_longqry(i4 *,i4 *);

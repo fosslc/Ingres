@@ -127,6 +127,8 @@ SQLSTATE_MAPPING_REQUIRED
 **	    Better msg for alter table not valid for encrypted tables.
 **	06-sep-2010 (maspa05) SIR 124363
 **	    Added I_QE3000_LONGRUNNING_QUERY for trace point sc925
+**	07-sep-2010 (maspa05) SIR 124363
+**	    Added I_QE3001_LONGRUNNING_QUERY for trace point sc925
 */
 
 
@@ -3734,6 +3736,28 @@ User: %2c, Database: %3c"
 **	%1d - threshold value for long-running query
 **	%2c - user
 **	%3c - database
+**
+** Explanation:
+**	A query exceeded the time threshold set for long-running queries by
+**      trace point sc925
+**
+** System Status:
+**	Informational only
+**
+** Recommendation:
+**	None
+*/
+I_QE3001_LONGRUNNING_QUERY:SS5000B_INTERNAL_ERROR
+"Long-running query detected (execution took %0d seconds,
+the threshold is %1d seconds, ceiling is %2d seconds)
+User: %3c, Database: %4c"
+/*%
+** Parameters:
+**	%0d - elapsed time of query
+**	%1d - threshold value for long-running query
+**	%2d - ceiling value for long-running query
+**	%3c - user
+**	%4c - database
 **
 ** Explanation:
 **	A query exceeded the time threshold set for long-running queries by
