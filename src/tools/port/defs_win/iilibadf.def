@@ -667,5 +667,4 @@ adu_fltfloor		@541
 adu_soundex_dm		@542
 adu_nvchr_embchartouni  @543
 adu_nvchr_embunitochar  @544
-adu_norm_date_hash	@545
-adu_2strtomny_strict	@546
+adu_2strtomny_strict	@545
