@@ -236,6 +236,11 @@
 **	    BUG 124396
 **	    SD 146763
 **	    Correct all ambiguous instmode logic
+**	21-Sep-2010 (hanje04)
+**	    BUG 124396
+**	    SD 146763
+**	    Fix resposne file generation in addMiscOps(). SQL92 and
+**	    CREATE_DEMO_DB were being skipped. Other potentially could be too.
 **	
 */
 
@@ -245,6 +250,7 @@ const char instance_name_descrip[] = { "Ingres supports multiple instances insta
 static II_RFAPI_STATUS gen_install_response_file( II_RFAPI_STRING rflocstring );
 static II_RFAPI_STATUS gen_upgrade_response_file( II_RFAPI_STRING rflocstring );
 static II_RFAPI_STATUS gen_modify_response_file( II_RFAPI_STRING rflocstring );
+static II_RFAPI_STATUS addMiscOp( II_RFAPI_HANDLE *Handleptr, misc_op_info *miscop, MISCOPS miscops );
 static void gen_rf_name(void);
 
 void
@@ -1545,39 +1551,25 @@ addMiscOps( II_RFAPI_HANDLE *Handleptr, MISCOPS miscops )
 		    param.value = (II_RFAPI_PVALUE)WinServicePwd;
 		    param.vlen = STlen( WinServicePwd );
 		    rfstat = IIrfapi_addParam( Handleptr, &param );
-
-		    if ( rfstat != II_RF_ST_OK )
-			break;
-
 		}
 		break;
 	    case GIP_OP_WIN_INSTALL_DEMO:
-		if ( ~instmode & RFGEN_WIN )
-		    break;
-	    case GIP_OP_SQL92:
+		if ( instmode & RFGEN_WIN )
+		    rfstat=addMiscOp( Handleptr, misc_ops_info[i], miscops );
+		break;
 	    case GIP_OP_INSTALL_DEMO:
-		if ( ~pkgs_to_install & PKG_DBMS )
-		    break; /* skip for non DBMS installs */
+	    case GIP_OP_SQL92:
+		/* skip for non DBMS installs */
+		if ( pkgs_to_install&PKG_DBMS == PKG_DBMS )
+		    rfstat=addMiscOp( Handleptr, misc_ops_info[i], miscops );
+		break;
 	    case GIP_OP_UPGRADE_USER_DB:
-		if ( ~ug_mode & UM_UPG )
-		    break; /* skip if not upgrade */
+		if ( ug_mode & UM_UPG )
+		    rfstat=addMiscOp( Handleptr, misc_ops_info[i], miscops );
+		break; /* skip if not upgrade */
 	    default:
 		/* for the rest say "YES" if it's on and "NO" if it's not. */
-		if ( miscops & misc_ops_info[i]->bit )
-		{
-		    param.value = "YES"; 
-		    param.vlen = STlen("YES");
-		}
-		else
-		{
-		    param.value = "NO"; 
-		    param.vlen = STlen("NO");
-		}
-
-        	/* add parameters for the ones that are set  */
-		param.name = misc_ops_info[i]->rfapi_name;
-		rfstat = IIrfapi_addParam( Handleptr, &param );
-		break;
+		rfstat=addMiscOp( Handleptr, misc_ops_info[i], miscops );
 	}
 		
 	i++;
@@ -1585,6 +1577,23 @@ addMiscOps( II_RFAPI_HANDLE *Handleptr, MISCOPS miscops )
 
     return( rfstat );
     
+}
+
+static II_RFAPI_STATUS
+addMiscOp( II_RFAPI_HANDLE *Handleptr, misc_op_info *miscop, MISCOPS miscops )
+{
+    II_RFAPI_PARAM	param; /* RF API parameter info */
+    II_RFAPI_STATUS 	rfstat = II_RF_ST_OK ;
+    bool		yes = miscops&miscop->bit ;
+    
+    param.value = yes ? "YES": "NO" ; 
+    param.vlen = STlen(param.value) ;
+
+    /* add parameters for the ones that are set  */
+    param.name = miscop->rfapi_name;
+    rfstat = IIrfapi_addParam( Handleptr, &param );
+  
+    return( rfstat );
 }
 
 void 
