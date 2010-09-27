@@ -399,6 +399,10 @@
 **         Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
 **         SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
 **         platforms.
+**     08-Sep-2010 (Ralph Loen) Bug 124307
+**         In Getcolumn(), removed unneeded call to GetWCharChar() for 
+**         coercions of SQL_C_TINYINT and SQL_C_BIT from Unicode types.
+**
 */
 
 
@@ -2048,6 +2052,7 @@ RETCODE GetColumn(
     ODBC_TIME * t;
     UCHAR  decimal_char = (UCHAR)pstmt->pdbcOwner->szDecimal[0];
     SQL_NUMERIC_STRUCT *ns;
+
     TRACE_INTL (pstmt, "GetColumn");
 
     /*
@@ -2615,10 +2620,6 @@ RETCODE GetColumn(
         case SQL_WCHAR:
         case SQL_WVARCHAR:
         case SQL_WLONGVARCHAR:
-            rc = GetWCharChar (pard, rgbData, cbData, 
-                pstmt->pdbcOwner->multibyteFillChar);
-            if (pird->blobLen)
-                pird->blobLen /= sizeof(SQLWCHAR);
         case SQL_CHAR:
         case SQL_VARCHAR:
         case SQL_LONGVARCHAR:
