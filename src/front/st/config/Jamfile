@@ -92,6 +92,8 @@
 #	    Add missing help for degree-of-parallelism, sole-cache.
 #	27-Aug-20 (gordy)
 #	    Add gcnpwdvers.hlp.
+#        8-Aug-2010 (hanal04) Bug 124180
+#           Add dbmsmnyc.hlp
 
 SubDir ING_SRC front st config ;
 
@@ -222,6 +224,7 @@ File $(INGMSG)$(DFS)dbmsltsc.hlp : dbmsltsc.hlp ;
 File $(INGMSG)$(DFS)dbmsltut.hlp : dbmsltut.hlp ;
 FILE $(INGMSG)$(DFS)dbmsmdep.hlp : dbmsmdep.hlp ;
 FILE $(INGMSG)$(DFS)dbmsmlst.hlp : dbmsmlst.hlp ;
+FILE $(INGMSG)$(DFS)dbmsmnyc.hlp : dbmsmnyc.hlp ;
 FILE $(INGMSG)$(DFS)dbmsmxky.hlp : dbmsmxky.hlp ;
 File $(INGMSG)$(DFS)dbmsname.hlp : dbmsname.hlp ;
 File $(INGMSG)$(DFS)dbmsnrst.hlp : dbmsnrst.hlp ;
