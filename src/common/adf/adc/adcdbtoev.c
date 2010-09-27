@@ -50,6 +50,8 @@
 **	    Jasmine & Ingres.
 **	21-May-2009 (kiria01) b122051
 **	    Reduce uninit'ed collID
+**	03-Sep-2010 (kiria01) b124352
+**	    Correct typo in previous change.
 [@history_template@]...
 **/
 
@@ -185,7 +187,7 @@ DB_DATA_VALUE	   *ev_value)
 		    ev_value->db_datatype = -(abs(tmp_ev.db_datatype));
 		    ev_value->db_length = tmp_ev.db_length + 1;
 		    ev_value->db_prec = tmp_ev.db_prec;
-		    ev_value->db_prec = tmp_ev.db_collID;
+		    ev_value->db_collID = tmp_ev.db_collID;
 		}
 	    }
 	    else
