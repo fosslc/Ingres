@@ -312,6 +312,15 @@
 **	    (Re)set GCwinsock2_shutting_down to FALSE in GCwinsock2_init()
 **	    to handle applications that may call "init" and "term" multiple
 **	    times, such as ingstart with II_GC_PROT=tcp_ip.
+**	30-Aug-2010 (Bruce Lunsford) Bug 124325
+**	    Function closesocket(), which is issued during disconnect,
+**	    does not always disconnect "gracefully", causing messages
+**	    to occasionally be dropped that have been sent but not yet
+**	    received by the other side. This can result in hung sessions
+**	    or connection abort errorlog messages in Ingres servers.
+**	    Fixed by calling DisconnectEx() prior to closesocket();
+**	    this forces "graceful" disconnect, rather than relying
+**	    on implicit graceful disconnect, which doesn't always work.
 */
 
 /* FD_SETSIZE is the maximum number of sockets that can be
@@ -499,6 +508,7 @@ static HANDLE				hDisconnectThread = NULL;
 static LPFN_ACCEPTEX			lpfnAcceptEx = NULL;
 static LPFN_CONNECTEX			lpfnConnectEx = NULL;
 static LPFN_GETACCEPTEXSOCKADDRS	lpfnGetAcceptExSockaddrs = NULL;
+static LPFN_DISCONNECTEX		lpfnDisconnectEx = NULL;
 
 
 /* Function pointer for QueueUserAPC */
@@ -665,6 +675,8 @@ VOID		gc_tdump( char *buf, i4 len );
 **	    times, such as ingstart with II_GC_PROT=tcp_ip.
 **	    Otherwise, after 2nd or subsequent "init", code still
 **	    thinks the driver is shutting down.
+**	30-Aug-2010 (Bruce Lunsford) Bug 124325
+**	    Get address of Winsock extension function DisconnectEx().
 */
 
 STATUS
@@ -846,6 +858,7 @@ GCwinsock2_init(GCC_PCE * pptr)
 	GUID		GuidAcceptEx = WSAID_ACCEPTEX;
 	GUID		GuidConnectEx = WSAID_CONNECTEX;
 	GUID		GuidGetAcceptExSockaddrs = WSAID_GETACCEPTEXSOCKADDRS;
+	GUID		GuidDisconnectEx = WSAID_DISCONNECTEX;
 	DWORD		dwBytes;
 	HANDLE		ThreadHandle;
 	u_i4		tid;
@@ -872,6 +885,10 @@ GCwinsock2_init(GCC_PCE * pptr)
 	WSAIoctl(sd, SIO_GET_EXTENSION_FUNCTION_POINTER,
 		 &GuidGetAcceptExSockaddrs, sizeof(GuidGetAcceptExSockaddrs),
 		 &lpfnGetAcceptExSockaddrs, sizeof(lpfnGetAcceptExSockaddrs),
+		 &dwBytes, NULL, NULL);
+
+	WSAIoctl(sd, SIO_GET_EXTENSION_FUNCTION_POINTER, &GuidDisconnectEx,
+		 sizeof(GuidDisconnectEx), &lpfnDisconnectEx, sizeof(lpfnDisconnectEx),
 		 &dwBytes, NULL, NULL);
 
 	closesocket(sd);
@@ -1165,6 +1182,12 @@ GCwinsock2_init(GCC_PCE * pptr)
 **	    Add support for timeouts on receives. For backward compatibility
 **	    to GCC TL which doesn't pass a timeout value in the parm_list,
 **	    only check timeout if PCE option PCT_ENABLE_TIMEOUTS is on.
+**	30-Aug-2010 (Bruce Lunsford) Bug 124325
+**	    In GCC_DISCONNECT, precede closesocket() call with a
+**	    DisconnectEx() call to force a graceful disconnect, rather
+**	    than relying on closesocket()'s implicit graceful disconnect,
+**	    which doesn't always work. Sent messages were occasionally
+**	    being dropped.
 */
 
 STATUS
@@ -1912,6 +1935,23 @@ GCwinsock2(i4 function_code, GCC_P_PLIST *parm_list)
 	    GCTRACE(2)("GCwinsock2 %s %d: GCC_DISCONNECT %p PendingIOs=%d\n",
 			proto, pcb->id, parm_list, pcb->AsyncIoRunning);
 
+	    /*
+	    ** Precede closesocket() call with a DisconnectEx() call
+	    ** to force a graceful disconnect, rather than relying
+	    ** on closesocket()'s implicit graceful disconnect, which
+	    ** doesn't always work. Sent messages were occasionally
+	    ** being dropped before being received by the other side
+	    ** of the connection, resulting in either hung sessions
+	    ** or alarming (but generally benign) connection abort
+	    ** messages in the error log. Microsoft documentation
+	    ** officially prescribes using SO_LINGER socket option or
+	    ** shutdown() function for graceful connection shutdowns,
+	    ** but also describes (in a comment) that DisconnectEx()
+	    ** is the only way that always works, which is why it
+	    ** was chosen here.
+	    */
+	    if (lpfnDisconnectEx)
+		lpfnDisconnectEx(pcb->sd, NULL, 0, 0);
 	    /*
 	    ** OK to issue closesocket() here because it returns
 	    ** immediately and does a graceful shutdown of the socket
@@ -4989,6 +5029,9 @@ worker_thread_err_exit:
 **	13-Apr-2010 (Bruce Lunsford) Sir 122679
 **	    Add trace to exit and a blank line before entry and after exit
 **	    for easier tracking of IO completion processing in trace output.
+**	30-Aug-2010 (Bruce Lunsford) Bug 124325
+**	    Add trace when caller's callback routine was already called
+**	    and I/O callback is hence just a NO-OP...to improve trace diags.
 */
 
 VOID CALLBACK
@@ -5011,7 +5054,11 @@ GCwinsock2_AIO_Callback(DWORD dwError, DWORD BytesTransferred, WSAOVERLAPPED *lp
     ** gone, and hence cannot be used.
     */
     if (lpPerIoData->state == PIOD_ST_SKIP_CALLBK)
+    {
+	GCTRACE(5)("GCwinsock2_AIO_Callback: %p Skip callback (done previously)\n",
+		    parm_list);
 	goto AIO_Callback_err_exit;
+    }
 
     proto = parm_list->pce->pce_pid;
 
