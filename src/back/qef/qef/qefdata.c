@@ -166,6 +166,9 @@
 **	    enabled/disabled to unlock/locked.
 **	25-aug-2010 (miket) SIR 122403 SD 145781
 **	    Better msg for alter table not valid for encrypted tables.
+**	09-Sep-2010 (miket) SIR 122403 SD 145781
+**	    Fix cut-and-paste error; associate with E_DM00AD and 9413
+**	    message E_QE0193 and not E_QE0192.
 */
 
 /* Jam hints
@@ -383,7 +386,7 @@ GLOBALDEF const QEF_ERR_MAP Qef_err_map[] =
     E_DM00A5_ATBL_UNSUPPORTED,            -1L,		            -1,     1,	
     E_DM00A6_ATBL_COL_INDEX_KEY,          -1L,		            -1,     0,	
     E_DM00A7_ATBL_COL_INDEX_SEC,          -1L,		            -1,     0,	
-    E_DM00AD_ENCRYPT_NO_ALTER_TABLE, E_QE0192_PASSPHRASE_FAILED_CRC, 9413,   1,
+    E_DM00AD_ENCRYPT_NO_ALTER_TABLE, E_QE0193_ENCRYPT_NO_ALTER_TABLE, 9413, 1,
     E_DM00D0_LOCK_MANAGER_ERROR,    E_QE008C_LOCK_MANAGER_ERROR,    -1,	    1,
     E_DM00D1_BAD_SYSCAT_MOD,	    E_QE008D_BAD_SYSCAT_MOD,	    -1,	    0,
     E_DM0100_DB_INCONSISTENT,	    E_QE0099_DB_INCONSISTENT,	    38,	    1,
