@@ -3612,6 +3612,11 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	29-Aug-2010 (frima01) Bug 124098
 **	    Correct pls_checklen to use STlength instead of sizeof()
 **	    in psf_error call.
+**      11-Aug-2010 (hanal04) Bug 124180
+**          If PSQ_MONEY_COMPAT is set check SCONST values to see if they
+**          contain a money string (currency symbol supplied) and if so
+**          establish a money constant instead of a string constant. This
+**          has been implemented for backward compatibility with 2.0 and 2.6.
 */
 %{
 
@@ -35980,25 +35985,96 @@ constant:		number
 	PST_CNST_NODE	       cconst;
 	PST_QNODE	       *newnode;
 	i4			constSize;
+        i4                     mny_const = FALSE;
+        DB_DATA_VALUE		mny_dbv;
+        char			*mn;
 
-	/* Non-parameter text constant node */
-	cconst.pst_tparmtype = PST_USER;
-	cconst.pst_parm_no = 0;
-	cconst.pst_pmspec  = PST_PMNOTUSED;
-	cconst.pst_cqlang = DB_SQL;
-	cconst.pst_origtxt = (char *) NULL;
-	constSize = $1->db_t_count + DB_CNTSIZE;
-	/* STAR may need to create a global tempTbl and VARCHAR(0) is invalid */
-	if (constSize == DB_CNTSIZE)
-	    ++constSize;
-	status = pst_node(cb, &cb->pss_ostream, (PST_QNODE *) NULL,
-	    (PST_QNODE *) NULL, PST_CONST, (char *) &cconst, sizeof(cconst),
-	    DB_VCH_TYPE, (i2) 0, constSize, 
-	    (DB_ANYTYPE *) $1, &newnode, &psq_cb->psq_error, (i4) 0);
+        if(psq_cb->psq_flag2 & PSQ_MONEY_COMPAT)
+        {
+            ADF_CB              *adf_scb = (ADF_CB*) cb->pss_adfcb;
+            DB_DATA_VALUE	src_dbv;
+            DB_STATUS		mny_status;
+            ADI_LENSPEC		lenspec;
+            DB_DATA_VALUE       *pop[2];
+            ADI_FI_ID		cvid;
+            ADI_FI_DESC		*adi_fdesc;
+
+            src_dbv.db_datatype = DB_VCH_TYPE;
+            src_dbv.db_data = (PTR) $1;
+            src_dbv.db_length = $1->db_t_count + DB_CNTSIZE;
+
+            mny_dbv.db_datatype = DB_MNY_TYPE;
+
+            pop[0] = &src_dbv;
+            pop[1] = &mny_dbv;
+
+            MEfill(sizeof(adi_fdesc), '\0', (char *)&adi_fdesc);
+            mny_status = adi_ficoerce(adf_scb, DB_VCH_TYPE, DB_MNY_TYPE, &cvid);
+            if (mny_status != E_DB_OK)
+                return(mny_status);
+            mny_status = adi_fidesc(adf_scb, cvid, &adi_fdesc);
+            if (mny_status != E_DB_OK)
+                return(mny_status);
+
+            mny_status = adi_0calclen(adf_scb, &adi_fdesc->adi_lenspec, 1,
+                                      &pop[0], &mny_dbv);
+            if (mny_status != E_DB_OK)
+                return(mny_status);
+
+            mny_status = psf_malloc(cb, &cb->pss_ostream, mny_dbv.db_length,
+                                &mn, &psq_cb->psq_error);
+            if (mny_status != E_DB_OK)
+                return(mny_status);
+
+            mny_dbv.db_data = (PTR)mn;
+
+            mny_status = adu_2strtomny_strict(adf_scb, &src_dbv, &mny_dbv, TRUE);
+
+            if(mny_status == E_DB_OK)
+            {
+                mny_const = TRUE;
+            }
+        }
+
+        if(mny_const)
+        {
+	    /* Non-parameter money  constant node */
+	    cconst.pst_tparmtype = PST_USER;
+	    cconst.pst_parm_no = 0;
+	    cconst.pst_pmspec  = PST_PMNOTUSED;
+	    cconst.pst_cqlang = DB_SQL;
+	    cconst.pst_origtxt = (char *) NULL;
+	    constSize = mny_dbv.db_length;
+
+	    status = pst_node(cb, &cb->pss_ostream, (PST_QNODE *) NULL,
+	        (PST_QNODE *) NULL, PST_CONST, (char *) &cconst, sizeof(cconst),
+	        DB_MNY_TYPE, (i2) 0, constSize, 
+	        (DB_ANYTYPE *)mn, &newnode, &psq_cb->psq_error, (i4) 0);
+        }
+        else
+        {
+	    /* Non-parameter text constant node */
+	    cconst.pst_tparmtype = PST_USER;
+	    cconst.pst_parm_no = 0;
+	    cconst.pst_pmspec  = PST_PMNOTUSED;
+	    cconst.pst_cqlang = DB_SQL;
+	    cconst.pst_origtxt = (char *) NULL;
+	    constSize = $1->db_t_count + DB_CNTSIZE;
+	    /* STAR may need to create a global tempTbl and VARCHAR(0) 
+            ** is invalid 
+            */
+	    if (constSize == DB_CNTSIZE)
+	        ++constSize;
+	    status = pst_node(cb, &cb->pss_ostream, (PST_QNODE *) NULL,
+	        (PST_QNODE *) NULL, PST_CONST, (char *) &cconst, sizeof(cconst),
+	        DB_VCH_TYPE, (i2) 0, constSize, 
+	        (DB_ANYTYPE *) $1, &newnode, &psq_cb->psq_error, (i4) 0);
+        }
 	if (status != E_DB_OK)
 	{
 	    return (status);
 	}
+        
 
 	$$ = newnode;
     }

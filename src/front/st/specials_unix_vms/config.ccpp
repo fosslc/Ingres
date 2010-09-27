@@ -225,6 +225,8 @@
 **	    Add missing help for degree-of-parallelism, sole-cache.
 **	27-Aug-10 (gordy)
 **	    Added GCN config param for password encoding version.
+**      11-Aug-2010 (hanal04) Bug 124180
+**          Added dbmsmnyc.hlp
 */
 
 PART   config
@@ -332,6 +334,7 @@ PART   config
       FILE dbmsltut.hlp
       FILE dbmsmdep.hlp
       FILE dbmsmlst.hlp
+      FILE dbmsmnyc.hlp
       FILE dbmsmxky.hlp
       FILE dbmsname.hlp
       FILE dbmsnrst.hlp

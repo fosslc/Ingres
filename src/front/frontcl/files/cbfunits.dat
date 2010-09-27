@@ -55,6 +55,7 @@
 *.*.*.*.log_readnolock:                boolean
 *.*.*.mechanisms:                      'mechanism list'
 *.*.*.*.mechanisms:                    'mechanism list'
+*.*.*.*.money_compat:			boolean
 *.*.*.*.name_service:			boolean
 *.*.*.*.num_slaves:			processes
 *.*.*.*.outbound_limit:		connections

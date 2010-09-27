@@ -453,6 +453,9 @@ typedef struct _SCD_ALIST
 **          hard-coded 24
 **      29-apr-2010 (stephenb)
 **          Add sc_batch_copy_optim.
+**      11-Aug-2010 (hanal04) Bug 124180
+**          Added sc_money_compat for backwards compatibility of money
+**          string constants.
 */
 typedef struct _SC_MAIN_CB
 {
@@ -528,6 +531,7 @@ CSP_SERVER,LIC_VIOL_REJECT,IS_MT"
                                               ** triggered by an update
                                               ** if true.
                                               */
+    i2              sc_money_compat;          /* Check const strs for money */
     i4		    sc_session_chk_interval; /* Session check interval */
 #define                 SC_DEF_SESS_CHK_INTERVAL 30
     i4		    sc_soleserver;	/* are we the only server in the inst */

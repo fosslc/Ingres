@@ -101,6 +101,9 @@ LIBRARY = IMPSCFLIBDATA
 **          Added MustLog_DB_Lst to hold Must Log DB list. 
 **      10-Feb-2010 (smeke01) b123249
 **          Changed MOintget to MOuintget for unsigned integer values.
+**      11-Aug-2010 (hanal04) Bug 124180
+**          Added money_compat for backwards compatibility of money
+**          string constants.
 */
 
 /*
@@ -316,6 +319,12 @@ GLOBALDEF MO_CLASS_DEF Scd_classes[] =
 	CL_OFFSETOF( SC_MAIN_CB, sc_acc),
 	MOintget, MOnoset,
 	SC_MAIN_CB_ADDR, MOcdata_index },
+
+  { 0, "exp.scf.scd.money_compat", sizeof(Sc_main_cb->sc_money_compat),
+	MO_READ,  0,
+        CL_OFFSETOF( SC_MAIN_CB, sc_money_compat),
+        MOintget, MOnoset,
+        SC_MAIN_CB_ADDR, MOcdata_index },
 
   { 0, "exp.scf.scd.rule_depth", sizeof(Sc_main_cb->sc_rule_depth),
 	MO_READ,  0,

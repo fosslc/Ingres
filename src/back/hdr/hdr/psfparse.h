@@ -686,6 +686,8 @@
 **	    E_PS0C88_ENCRYPT_NOPASS
 **	24-jun-2010 (stephenb)
 **	    Add E_PS03B4_NO_COPY_CACHE
+**      11-Aug-2010 (hanal04) Bug 124180
+**          Added PSQ_MONEY_COMPAT. Set if money_compat true in config.dat.
 **/
 
 /*
@@ -3224,6 +3226,11 @@ typedef struct _PSQ_CB
 					/* 
 					** set ==> GCA_LOCATOR_MASK is on
 					*/
+#define     PSQ_MONEY_COMPAT		0x0008L
+					/*
+                                        ** Set if constant strings are to be
+                                        ** parsed for money.
+                                        */
     bool	    psq_vch_prec;	/* varchar precedence */
  
                                         /*

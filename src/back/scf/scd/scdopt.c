@@ -371,6 +371,9 @@ NO_OPTIM=dr6_us5
 **	29-Jul-2010 (miket) BUG 124154
 **	    Improve dmf_crypt_maxkeys handling.
 **	    Supply missing break in CRYPT_MAXKEYS.
+**      11-Aug-2010 (hanal04) Bug 124180
+**          Added money_compat for backwards compatibility of money
+**          string constants.
 */
 
 /*
@@ -641,11 +644,11 @@ struct _SCD_OPT {
 # define	SCO_QEF_HASHJOIN_MAX	    213 /* Hashjoin allocation max */
 #define		SCO_FLATNCARD		    214 /* Disable sing-select card check */
 #define		SCO_INLIST_THRESH	    215 /* IN LIST key threshold */
-
 #define		SCO_PAGETYPE_V6		    216
 #define		SCO_PAGETYPE_V7		    217
 #define		SCO_CRYPT_MAXKEYS	    218 /* max crypt shmem keys */
 #define		SCO_BATCH_COPY_OPTIM	    219
+#define		SCO_MONEY_COMPAT            220
 static SCD_OPT scd_opttab[] =
 {
     /* echoing first so the rest get echoed */
@@ -888,6 +891,7 @@ static SCD_OPT scd_opttab[] =
     SCO_PAGETYPE_V6,		'z',	'3',	"!.pagetype_v6", /*default on*/
     SCO_PAGETYPE_V7,		'z',	'3',	"!.pagetype_v7", /*default on*/
     SCO_BATCH_COPY_OPTIM,		'z',	' ',	"!.batch_copy_optim",
+    SCO_MONEY_COMPAT,   	't',	' ',	"!.money_compat",
     0, 0, 0, 0
 } ;
 
@@ -2132,6 +2136,10 @@ scd_options(
 	   case SCO_AMBREP_64COMPAT:
 		psq_cb->psq_flag |= PSQ_AMBREP_64COMPAT;
 		break;
+
+           case SCO_MONEY_COMPAT:
+                Sc_main_cb->sc_money_compat = TRUE;
+                break;
 
 	    case SCO_16K_STATUS:
 		   cache_16k_on = TRUE;

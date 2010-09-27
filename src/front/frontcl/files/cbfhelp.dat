@@ -352,6 +352,9 @@ rms.log_readnolock.title:              'Log errors for readlock nolock'
 *.mechanisms.file:                      mechanisms.hlp
 *.mechanisms.title:			'Dynamically-loaded Mechanism List'
 
+*.money_compat.file:			dbmsmnyc.hlp
+*.money_compat.title:			'Money Compatibility'
+
 *.name_service.file:			dbmsname.hlp
 dbms.name_service.title:		'DBMS Name Service'
 star.name_service.title:		'Star Name Service'

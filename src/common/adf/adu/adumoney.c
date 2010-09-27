@@ -1482,19 +1482,13 @@ DB_DATA_VALUE	*mny_dv)
 
 
 /*
-** Name: adu_2strtomny() - Convert string to internal money representation.
-**			   All money fields are stored as doubles, rounded to
-**			   the nearest cent.
+** Name: adu_2strtomny() - This is the function used by the resovler to convert
+**                         a "money" string into internal representation. It
+**                         is a wrapper for adu_2strtomny_strict() and passes
+**                         FALSE in the strict parameter.
 **
 ** Description:
-**	  This routine converts a "money" string to an internal money
-**	representation.  All money fields are stored as doubles, rounded to
-**	the nearest cent.  Valid string input formats are:
-**
-**	    "[MONEY_SYMBOL][sign]{blanks}{digits}{decimal_char}{digits}"
-**
-**	The resulting money value is rounded up if the third digit
-**	after the "international decimal char" is greate than or equal to '5'.
+**	 Used by the resolver. Is a wrapper for adu_2strtomny_strict().
 **
 ** Inputs:
 **	adf_scb				Pointer to an ADF session control block.
@@ -1573,6 +1567,117 @@ DB_DATA_VALUE	*mny_dv)
 **	    none
 **
 ** History:
+**	11-Aug-2010 (hanal04) Bug 124180
+**	    Modified to become a wrapper for adu_2strtomny_strict()
+*/
+
+DB_STATUS
+adu_2strtomny(
+ADF_CB		*adf_scb,
+DB_DATA_VALUE	*str_dv,
+DB_DATA_VALUE	*mny_dv)
+{
+    return(adu_2strtomny_strict(adf_scb, str_dv, mny_dv, FALSE));
+}
+
+/*
+** Name: adu_2strtomny_strict() - Convert string to internal money 
+**                         representation. All money fields are stored as 
+**                         doubles, rounded to the nearest cent.
+**                         
+** WARNING: MUST NOT BE REFERENCED BY THE RESOLVER. NON-STANDARD ARGUMENTS.
+**
+** Description:
+**	  This routine converts a "money" string to an internal money
+**	representation.  All money fields are stored as doubles, rounded to
+**	the nearest cent.  Valid string input formats are:
+**
+**	    "[MONEY_SYMBOL][sign]{blanks}{digits}{decimal_char}{digits}"
+**
+**	The resulting money value is rounded up if the third digit
+**	after the "international decimal char" is greate than or equal to '5'.
+**
+** Inputs:
+**	adf_scb				Pointer to an ADF session control block.
+**	    .adf_errcb			ADF_ERROR struct.
+**		.ad_ebuflen		The length, in bytes, of the buffer
+**					pointed to by ad_errmsgp.
+**		.ad_errmsgp		Pointer to a buffer to put formatted
+**					error message in, if necessary.
+**      str_dv                          DB_DATA_VALUE describing the string
+**					data value to be converted.
+**	    .db_datatype		Its type, character or text string.
+**	    .db_length			Its length.
+**	    .db_data			If type is character, a ptr to the
+**					character string; else type is text
+**					and this is a ptr to a DB_TEXT_STRING.
+**		[.db_t_count]		Length of a "text" string.
+**		[.db_t_text]		Ptr to the "text" string.
+**	adf_scb				ADF control block which contains
+**					money format description.
+**	    .adf_decimal		DB_DECIMAL struct.
+**		.db_decspec		TRUE if decimal character is specified
+**					in .db_decimal.  If FALSE, '.' will be
+**					used as the decimal character.
+**              .db_decimal             If .db_decspec is TRUE, then this is
+**					the decimal character to use.
+**					    ***                            ***
+**					    *** NOTE THAT THIS IS A "nat", ***
+**					    *** NOT A "char".              ***
+**					    ***                            ***
+**	    .adf_mfmt			DB_MONY_FMT struct.
+**		.db_mny_sym		Ptr to the money symbol to be used.
+**		.db_mny_lort		Is the money symbol suppossed to be
+**					leading or trailing.
+**	strict				Boolean which indicates whether a
+**                                      strict money format is required.
+**                                      (i.e. correct currency symbol in the
+**                                      correct position).
+** Outputs:
+**	adf_scb				Pointer to an ADF session control block.
+**	    .adf_errcb			ADF_ERROR struct.  If an
+**					error occurs the following fields will
+**					be set.  NOTE: if .ad_ebuflen = 0 or
+**					.ad_errmsgp = NULL, no error message
+**					will be formatted.
+**		.ad_errcode		ADF error code for the error.
+**		.ad_errclass		Signifies the ADF error class.
+**		.ad_usererr		If .ad_errclass is ADF_USER_ERROR,
+**					this field is set to the corresponding
+**					user error which will either map to
+**					an ADF error code or a user-error code.
+**		.ad_emsglen		The length, in bytes, of the resulting
+**					formatted error message.
+**		.adf_errmsgp		Pointer to the formatted error message.
+**	mny_dv				DB_DATA_VALUE describing the money
+**					value to be assigned.
+**	    .db_data			Ptr to AD_MONEYNTRNL struct.
+**		.mny_cents		The money value result.
+**
+**	Returns:
+**	      The following DB_STATUS codes may be returned:
+**	    E_DB_OK, E_DB_WARN, E_DB_ERROR, E_DB_SEVERE, E_DB_FATAL
+**
+**	      If a DB_STATUS code other than E_DB_OK is returned, the caller
+**	    can look in the field adf_scb.adf_errcb.ad_errcode to determine
+**	    the ADF error code.  The following is a list of possible ADF error
+**	    codes that can be returned by this routine:
+**
+**	    E_AD0000_OK			Completed successfully.
+**	    E_AD5020_BADCH_MNY		An illegal character was found in a
+**					money string or a legal money string
+**					character was found in the wrong 
+**					position in the string.
+**	    E_AD5021_MNY_SIGN		A sign character in the money string
+**					either occured in the wrong position
+**					or occured twice.
+**	    E_AD5022_DECPT_MNY		A decimal point character occured more
+**					than once in the money string.
+**
+**	Exceptions:
+**	    none
+**
+** History:
 **	19-may-86 (ericj)
 **	    Converted for Jupiter.  Removed formatting setup code; this
 **	    should already have been done by adg_init()
@@ -1582,13 +1687,18 @@ DB_DATA_VALUE	*mny_dv)
 **	    Converted CH calls into CM calls.
 **	02-sep-2005 (gupsh01)
 **	    Fixed money to unicode coercion case.
+**      11-Aug-2010 (hanal04) Bug 124180
+**          Copied from adu_2strtomny() with added paramter 'strict'.
+**          If strict == TRUE we return a failure if this is not an
+**          explicit money string.
 */
 
 DB_STATUS
-adu_2strtomny(
+adu_2strtomny_strict(
 ADF_CB		*adf_scb,
 DB_DATA_VALUE	*str_dv,
-DB_DATA_VALUE	*mny_dv)
+DB_DATA_VALUE	*mny_dv,
+bool		strict)
 {
     register char	*p;
     char		*ptemp;
@@ -1793,6 +1903,9 @@ DB_DATA_VALUE	*mny_dv)
 	CMbytedec(l, p);
 	CMnext(p);
     }
+
+    if(strict && !got_dollar)
+        return (adu_error(adf_scb, E_AD5020_BADCH_MNY, 0));
 
     while (places < 2)
     {
