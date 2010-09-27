@@ -321,6 +321,16 @@
 **	    Fixed by calling DisconnectEx() prior to closesocket();
 **	    this forces "graceful" disconnect, rather than relying
 **	    on implicit graceful disconnect, which doesn't always work.
+**	08-Sep-2010 (Bruce Lunsford) Bug 124389
+**	    Last fix (for bug 124325) caused a regression for shared
+**	    (GCsave/restore'd) sockets when II_GC_PROT=tcp_ip.  The
+**	    new call to DisconnectEx() disconnected "too well", making
+**	    the shared socket unusable by the other process.  Example
+**	    is that createdb would fail.  Fix is to not issue
+**	    DisconnectEx() for shared sockets.  Added shared_socket_flag
+**	    in PCB to track if socket is shared.  Also added check of
+**	    return code from closesocket() in GCC_DISCONNECT with tracing
+**	    to improve diagnostics.
 */
 
 /* FD_SETSIZE is the maximum number of sockets that can be
@@ -450,6 +460,7 @@ typedef struct _PCB2
 
     volatile LONG	DisconnectAsyncIoWaits;
     bool		skipped_callbk_flag; /* If TRUE, a callback was skipped */
+    bool		shared_socket_flag;  /* GCsave sets this to TRUE */
     char		*b1;		    /* start of receive buffer */
     char		*b2;		    /* end   of receive buffer */
     /*
@@ -1188,6 +1199,15 @@ GCwinsock2_init(GCC_PCE * pptr)
 **	    than relying on closesocket()'s implicit graceful disconnect,
 **	    which doesn't always work. Sent messages were occasionally
 **	    being dropped.
+**	08-Sep-2010 (Bruce Lunsford) Bug 124389
+**	    Last fix (for bug 124325) caused a regression for shared
+**	    (GCsave/restore'd) sockets when II_GC_PROT=tcp_ip.  The
+**	    new call to DisconnectEx() disconnected "too well", making
+**	    the shared socket unusable by the other process.  Example
+**	    is that createdb would fail.  Fix is to not issue
+**	    DisconnectEx() for shared sockets.  Also added check of
+**	    return code from closesocket() with tracing to improve
+**	    diagnostics.
 */
 
 STATUS
@@ -1950,7 +1970,7 @@ GCwinsock2(i4 function_code, GCC_P_PLIST *parm_list)
 	    ** is the only way that always works, which is why it
 	    ** was chosen here.
 	    */
-	    if (lpfnDisconnectEx)
+	    if ( (pcb->shared_socket_flag != TRUE) && lpfnDisconnectEx )
 		lpfnDisconnectEx(pcb->sd, NULL, 0, 0);
 	    /*
 	    ** OK to issue closesocket() here because it returns
@@ -1960,9 +1980,18 @@ GCwinsock2(i4 function_code, GCC_P_PLIST *parm_list)
 	    ** processing which is unnecessary and slower...better to
 	    ** get the disconnect started sooner, rather than later.
 	    */
-	    closesocket(pcb->sd);
-	    GCTRACE(2)("GCwinsock2 %s %d: GCC_DISCONNECT %p Closed socket=0x%p\n",
-			proto, pcb->id, parm_list, pcb->sd);
+	    rval = closesocket(pcb->sd);
+	    if (rval)
+	    {
+		status = WSAGetLastError();
+		GCTRACE(1)("GCwinsock2 %s %d: GCC_DISCONNECT %p Failed to close socket=0x%p status=%d\n",
+			    proto, pcb->id, parm_list, pcb->sd, status);
+	    }
+	    else
+	    {
+		GCTRACE(2)("GCwinsock2 %s %d: GCC_DISCONNECT %p Closed socket=0x%p\n",
+			    proto, pcb->id, parm_list, pcb->sd);
+	    }
 
 	    /*
 	    ** If we have skipped any callbacks to the caller's completion
@@ -3798,6 +3827,8 @@ GCwinsock2_exit(GCC_PCE * pptr)
 **  History:
 **	13-Apr-2010 (Bruce Lunsford) Sir 122679
 **	    Created for GCsave local IPC processing.
+**	08-Sep-2010 (Bruce Lunsford) Bug 124389
+**	    Turn on flag to indicate socket is shared (across processes).
 */
 STATUS
 GCwinsock2_save(char *buffer, i4 *buf_len_in, PCB2 *pcb)
@@ -3859,6 +3890,8 @@ GCwinsock2_save(char *buffer, i4 *buf_len_in, PCB2 *pcb)
     MEcopy( &save_data, sizeof(save_data), buffer );
     *buf_len_in = sizeof(save_data);  /* Tell caller how much data was saved */
 
+    pcb->shared_socket_flag = TRUE;
+
     return(OK);
 }
 
@@ -3884,6 +3917,8 @@ GCwinsock2_save(char *buffer, i4 *buf_len_in, PCB2 *pcb)
 **  History:
 **	13-Apr-2010 (Bruce Lunsford) Sir 122679
 **	    Created for GCrestore local IPC processing.
+**	08-Sep-2010 (Bruce Lunsford) Bug 124389
+**	    Turn on flag to indicate socket is shared (across processes).
 */
 STATUS
 GCwinsock2_restore(char *buffer, GCC_PCE *pptr, PCB2 **lpPcb)
@@ -3901,6 +3936,8 @@ GCwinsock2_restore(char *buffer, GCC_PCE *pptr, PCB2 **lpPcb)
     */
     if ( (pcb = GCwinsock2_get_pcb(pptr, TRUE)) == NULL )
 	return(FAIL);
+
+    pcb->shared_socket_flag = TRUE;
 
     pcb->id = save_data.id;
     pcb->sd = save_data.sd;
