@@ -138,6 +138,11 @@
 **          Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
 **          SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
 **          platforms.
+**     06-Sep-2010 (Ralph Loen) Bug 124348
+**          Added version of SQLColAttribute() and 
+**          SQLColAttribute_InternalCall() dependent on the _WIN64 macro for
+**          compatibility with MS implementation.
+**          
 */
 
 /*
@@ -282,6 +287,7 @@ DescPermissionTable[] =
 **    SQL_ERROR
 **
 */
+#ifdef _WIN64
 SQLRETURN  SQL_API SQLColAttribute (
     SQLHSTMT     StatementHandle,
     SQLUSMALLINT ColumnNumber,
@@ -290,6 +296,16 @@ SQLRETURN  SQL_API SQLColAttribute (
     SQLSMALLINT  BufferLength,
     SQLSMALLINT *StringLengthPtr,
     SQLLEN      *NumericAttributePtr)
+#else
+SQLRETURN  SQL_API SQLColAttribute (
+    SQLHSTMT     StatementHandle,
+    SQLUSMALLINT ColumnNumber,
+    SQLUSMALLINT FieldIdentifier,
+    SQLPOINTER   ValuePtrParm,
+    SQLSMALLINT  BufferLength,
+    SQLSMALLINT *StringLengthPtr,
+    SQLPOINTER   NumericAttributePtr)
+#endif
 {
     return SQLColAttribute_InternalCall(
                  StatementHandle,
@@ -301,6 +317,16 @@ SQLRETURN  SQL_API SQLColAttribute (
                  NumericAttributePtr);
 }
 
+#ifdef _WIN64
+SQLRETURN  SQL_API SQLColAttribute_InternalCall (
+    SQLHSTMT     StatementHandle,
+    SQLUSMALLINT ColumnNumber,
+    SQLUSMALLINT FieldIdentifier,
+    SQLPOINTER   ValuePtrParm,
+    SQLSMALLINT  BufferLength,
+    SQLSMALLINT *StringLengthPtr,
+    SQLLEN      *NumericAttributePtr)
+#else
 SQLRETURN  SQL_API SQLColAttribute_InternalCall (
     SQLHSTMT     StatementHandle,
     SQLUSMALLINT ColumnNumber,
@@ -309,6 +335,7 @@ SQLRETURN  SQL_API SQLColAttribute_InternalCall (
     SQLSMALLINT  BufferLength,
     SQLSMALLINT *StringLengthPtr,
     SQLPOINTER   NumericAttributePtr)
+#endif
 {
     LPSTMT       pstmt       = (LPSTMT)StatementHandle;
     CHAR        *ValuePtr    = (CHAR *)ValuePtrParm;
@@ -1399,7 +1426,7 @@ SQLRETURN  SQL_API SQLGetDescRec_InternalCall (
     SQLSMALLINT *StringLengthPtr,
     SQLSMALLINT *TypePtr,
     SQLSMALLINT *SubTypePtr,
-    SQLINTEGER      *LengthPtr,
+    SQLLEN      *LengthPtr,
     SQLSMALLINT *PrecisionPtr,
     SQLSMALLINT *ScalePtr,
     SQLSMALLINT *NullablePtr)

@@ -14,6 +14,9 @@ XX##     platforms.
 XX##  04-Sep-2010 (Ralph Loen) Bug 124348
 XX##     Removed "##" markers from comment begin and end delimiters.  Otherwise
 XX##     ccpp leaves them in and the ODBC can't compile.
+XX##  06-Sep-2010 (Ralph Loen) Bug 124348
+XX##     Added version of SQLColAttribute() dependent on _WIN64 macro for
+XX##     compatibility with MS implementation.
 XX*/
 XX#ifndef __SQLTYPES
 XX#define __SQLTYPES
@@ -802,11 +805,17 @@ XXSQLRETURN SQL_API  SQLCancel(SQLHSTMT StatementHandle);
 XX
 XXSQLRETURN SQL_API  SQLCloseCursor(SQLHSTMT StatementHandle);
 XX
-XXSQLRETURN SQL_API  SQLColAttribute(SQLHSTMT StatementHandle,
+XX#ifdef _WIN64
+XXSQLRETURN  SQL_API SQLColAttribute (SQLHSTMT StatementHandle,
 XX           SQLUSMALLINT ColumnNumber, SQLUSMALLINT FieldIdentifier,
-XX           SQLPOINTER CharacterAttribute,
-XX           SQLSMALLINT BufferLength,
+XX           SQLPOINTER CharacterAttribute, SQLSMALLINT BufferLength,
 XX           SQLSMALLINT *StringLength, SQLLEN *NumericAttribute);
+XX#else
+XXSQLRETURN  SQL_API SQLColAttribute (SQLHSTMT StatementHandle,
+XX           SQLUSMALLINT ColumnNumber, SQLUSMALLINT FieldIdentifier,
+XX           SQLPOINTER CharacterAttribute, SQLSMALLINT BufferLength,
+XX           SQLSMALLINT *StringLength, SQLPOINTER NumericAttribute);
+XX#endif
 XX
 XXSQLRETURN  SQL_API SQLColumns(SQLHSTMT StatementHandle,
 XX           SQLCHAR *CatalogName, SQLSMALLINT NameLength1,

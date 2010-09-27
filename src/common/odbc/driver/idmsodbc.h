@@ -358,6 +358,9 @@
 **         Ingres server by default.
 **    13-Aug-2010 (Ralph Loen) Bug 124235
 **         Added ErrGetSqlcaMessageLen().
+**     06-Sep-2010 (Ralph Loen) Bug 124348
+**          Added version of SQLColAttribute_InternalCall() dependent on 
+**          the _WIN64 macro for compatibility with MS implementation.
 */
 #ifndef _INC_IDMSODBC
 #define _INC_IDMSODBC
@@ -1918,14 +1921,17 @@ RETCODE SetColVar(LPSTMT, LPDESCFLD papd, LPDESCFLD pipd);
 void    SetDescDefaultsFromType(LPDBC pdbc, LPDESCFLD pird);
 void    SetServerClass (LPDBC pdbc);
 RETCODE SetTransaction (LPDBC, LPSESS);
-SQLRETURN  SQL_API SQLColAttribute_InternalCall (
-                           SQLHSTMT     StatementHandle,
-                           SQLUSMALLINT ColumnNumber,
-                           SQLUSMALLINT FieldIdentifier,
-                           SQLPOINTER   ValuePtrParm,
-                           SQLSMALLINT  BufferLength,
-                           SQLSMALLINT *StringLengthPtr,
-                           SQLPOINTER   NumericAttributePtr);
+#ifdef _WIN64
+SQLRETURN  SQL_API SQLColAttribute_InternalCall (SQLHSTMT StatementHandle,
+           SQLUSMALLINT ColumnNumber, SQLUSMALLINT FieldIdentifier,
+           SQLPOINTER CharacterAttribute, SQLSMALLINT BufferLength,
+           SQLSMALLINT *StringLength, SQLLEN *NumericAttribute);
+#else
+SQLRETURN  SQL_API SQLColAttribute_InternalCall (SQLHSTMT StatementHandle,
+           SQLUSMALLINT ColumnNumber, SQLUSMALLINT FieldIdentifier,
+           SQLPOINTER CharacterAttribute, SQLSMALLINT BufferLength,
+           SQLSMALLINT *StringLength, SQLPOINTER NumericAttribute);
+#endif
 RETCODE SQL_API SQLColAttributes_InternalCall(  /* superceded by SQLColAttribute */
                            SQLHSTMT     hstmt,
                            UWORD        icol,
@@ -2030,7 +2036,7 @@ SQLRETURN  SQL_API SQLGetDescRec_InternalCall (
                            SQLSMALLINT *StringLengthPtr,
                            SQLSMALLINT *TypePtr,
                            SQLSMALLINT *SubTypePtr,
-                           SQLINTEGER      *LengthPtr,
+                           SQLLEN      *LengthPtr,
                            SQLSMALLINT *PrecisionPtr,
                            SQLSMALLINT *ScalePtr,
                            SQLSMALLINT *NullablePtr);

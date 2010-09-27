@@ -90,6 +90,9 @@
 **      Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
 **      SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
 **      platforms.
+**   06-Sep-2010 (Ralph Loen) Bug 124348
+**      Added version of SQLColAttribute() dependent on _WIN64 macro for
+**      compatibility with MS implementation.
 */ 
 
 /*
@@ -129,6 +132,7 @@
 **      Created.
 */ 
 
+#ifdef _WIN64
 SQLRETURN SQL_API SQLColAttributeW(
     SQLHSTMT         hstmt,
     SQLUSMALLINT     ColumnNumber,
@@ -137,6 +141,16 @@ SQLRETURN SQL_API SQLColAttributeW(
     SQLSMALLINT      BufferLength,       /*   count of bytes */
     SQLSMALLINT     *StringLengthPtr,    /* ->count of bytes */
     SQLLEN          *NumericAttributePtr) 
+#else
+SQLRETURN SQL_API SQLColAttributeW(
+    SQLHSTMT         hstmt,
+    SQLUSMALLINT     ColumnNumber,
+    SQLUSMALLINT     FieldIdentifier,
+    SQLPOINTER       ValuePtr,
+    SQLSMALLINT      BufferLength,       /*   count of bytes */
+    SQLSMALLINT     *StringLengthPtr,    /* ->count of bytes */
+    SQLPOINTER       NumericAttributePtr) 
+#endif
 {
     pSTMT pstmt = (pSTMT)hstmt;
     RETCODE rc, traceRet = 1;
