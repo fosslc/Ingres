@@ -3571,6 +3571,9 @@ dm2d_del_db(
 **          This is so when we call dm0c_open it will know if this is a
 **          readonlydb (cnf in II_DATABASE) as opposed to a database being
 **          opened read-only (e.g. inconsistent or incremental rfwd)
+**	13-Sep-2010 (jonj) B124426
+**	    Allow MVCC lock level in read-only database, dmx_begin,
+**	    dmt_open expect it.
 */
 DB_STATUS
 dm2d_open_db(
@@ -4380,16 +4383,16 @@ dm2d_open_db(
 	** Allow MVCC protocols when appropriate.
 	**
 	** DB must not be iidbdb, not locked exclusively, 
-	** opened for write, logged, fast commit, not DMCM
+	** read-only or write and logged, fast commit, not DMCM
 	** and not in use by recovery of any sort.
 	**
 	** If DB has been alterdb'd to disable MVCC,
 	** then don't use it.
 	*/
 	if ( cnf->cnf_dsc->dsc_dbid != IIDBDB_ID &&
-	     dcb->dcb_access_mode != DCB_A_READ &&
 	     dcb->dcb_status & DCB_S_FASTCOMMIT &&
-	     !(flag & DM2D_NLG) &&
+	     (dcb->dcb_access_mode == DCB_A_READ ||
+	      !(flag & DM2D_NLG)) &&
 	     !(dcb->dcb_status & (DCB_S_ROLLFORWARD |
 	     			  DCB_S_ONLINE_RCP |
 				  DCB_S_RECOVER |
