@@ -3609,6 +3609,9 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **          Delay push of scope from insertkwd: to valueskwd:
 **          This distinguishes INSERT ... SELECT from INSERT ... VALUES.
 **      17-Aug-2010 (horda03) b124274
+**	29-Aug-2010 (frima01) Bug 124098
+**	    Correct pls_checklen to use STlength instead of sizeof()
+**	    in psf_error call.
 */
 %{
 
@@ -59794,7 +59797,7 @@ i4 psl_checklen( char *ident , u_i4 max , char *objstr, DB_ERROR *psq_error)
         {
             i4 err_code;
             (VOID) psf_error(2733, 0L, PSF_USERERR, &err_code,
-                psq_error, 3, sizeof(objstr), objstr, 0, ident, sizeof(max), &max);
+                psq_error, 3, STlength(objstr), objstr, 0, ident, sizeof(max), &max);
             return E_DB_ERROR;
 	}
 	return E_DB_OK;
