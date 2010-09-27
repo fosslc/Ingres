@@ -799,6 +799,8 @@
 **	    continuing with status test rather than returning on error.
 **      01-Sep-2010 (stial01) SD 146583, B124340
 **          Fixed redo_dupcheck handling.
+**      10-Sep-2010 (stial01) SD 146724, B124395
+**          dm1b_bulk_put() invalidate RCB_P_ALLOC position after dm1b_put
 */
 
 
@@ -5569,6 +5571,18 @@ dm1b_bulk_put(
 	/* Insert the row */
 	s = dm1b_put(rcb, leafPinfo, dataPinfo, &local_bid, &local_tid, rec_ptr,
 			dmpe_key, dmpe_size, opflag, dberr);
+
+	/*
+	** Invalidate RCB_P_ALLOC position after each dm1b_put
+	**
+	** if crow_locking() there are no page locks on leaf/data pages
+	** -> dm1b_allocate/dm1bxreserve for the 1st segment 
+	** -> dm1b_search(DM1C_SPLIT)/dm1bxreserve as needed
+	** -> dm1b_search(DM1C_OPTIM) does not do dm1bxreserve
+	** put without reserve is okay if we keep the buffer locked
+	** during (dm1cxhas_room, dm1b_put)
+	*/
+	DM1B_POSITION_INIT_MACRO(r, RCB_P_ALLOC);
 
 #ifdef xDEBUG
 	TRdisplay("bulk put seg(%d,%d) line %d bid (%d,%d) tid (%d,%d)\n", 
