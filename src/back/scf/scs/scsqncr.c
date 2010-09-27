@@ -13827,6 +13827,11 @@ scs_input(SCD_SCB *scb,
 **	    cases slip through, and it's simpler to fix here than in QEF. :-)
 **      02-Sep-2010 (maspa05) sir 124346
 **          Save error code for SC930 output
+**      20-sep-2010 (stephenb)
+**          QEF may return E_DM006A_TRAN_ACCESS_CONFLICT when update
+**          operations are attempted in a read-only transaction or database.
+**          This should not cause vague SCF errors in the log; add a case
+**          for it here.
 */
 VOID
 scs_qef_error(DB_STATUS status,
@@ -13881,6 +13886,19 @@ scs_qef_error(DB_STATUS status,
 	scb->scb_sscb.sscb_force_abort = SCS_FAPENDING;
 	if (scb->scb_cscb.cscb_batch_count > 0)
 	    scb->scb_cscb.cscb_eog_error = TRUE;
+    }
+    else if (err_code == E_DM006A_TRAN_ACCESS_CONFLICT)
+    {
+	/* 
+	** update operation attempted in a read-only
+	** transaction or database. QEF has already raised a user
+	** error through SCC_ERROR, so report the original error
+	** message in the log rather than falling through to vague
+	** QEF error message below
+	*/
+	sc0e_0_put(err_code, 0);
+	sc0e_0_put(E_SC0206_CANNOT_PROCESS, 0);
+	sc0e_0_uput(E_SC0206_CANNOT_PROCESS, 0);
     }
     else if (scb->scb_sscb.sscb_flags & SCS_STAR)
     {
