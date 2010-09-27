@@ -501,10 +501,10 @@
 **         SQLPrepare_InternalCall().
 **  29-Jan-2010 (Ralph Loen) Bug 123175
 **         In ConvertEscAndMarkers(), add blank date support for timestamps.
-**  25-Jun-2010 (Ralph Loen)    
+**  25-Jun-2010 (Ralph Loen)  Bug 122174
 **         In ConvertEscAndMarkers(), don't insert the INTERVAL keyword into
 **         the string literal for interval escape sequences.        
-**    14-Jul-2010 (Ralph Loen)  Bug 124079
+**  14-Jul-2010 (Ralph Loen)  Bug 124079
 **         In ParseConvert(), converted date/time scalars to use 
 **         ISO syntax for targets supporting ISO syntax (IIAPI_LEVEL_3 or
 **         later).  The exception is DAYNAME() for Vectorwise, which is 
@@ -530,6 +530,10 @@
 **         Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
 **         SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
 **         platforms.
+**   25-Jun-2010 (Ralph Loen) Bug 124427
+**         Change of 25-Jun-2010 mistakenly removed INTERVAL keyword 
+**         from interval literals in ConvertEscAndMarkers().  Re-instating 
+**         insertion of INTERVAL keyword.
 */
 
 typedef enum
@@ -2584,6 +2588,9 @@ RETCODE ConvertEscAndMarkers(
                             while(CMwhite(p)) CMnext(p);
                             if (!CMcmpcase(p, "'"))
                             {                    
+                                MEcopy("INTERVAL", 8, pTo);
+                                for (i = 0; i < 8; i++)
+                                    CMnext(pTo);
                                 CMnext(pFrom);
                                 length--;
                                 while(CMwhite(pFrom))
