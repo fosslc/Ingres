@@ -83,6 +83,8 @@ GLOBALREF	DMC_CRYPT	*Dmc_crypt;
 **	    Change rcb_enckey_slot base from 0 to 1 for sanity checking.
 **	24-Aug-2010 (miket) SIR 122403
 **	    Clarify the bad CRC msg by adding computed and stored adjectives.
+**	07-Sep-2010 (miket) SIR 122403
+**	    Optimization: move contiguous plain text columns at one go.
 [@history_template@]...
 */
 DB_STATUS
@@ -95,6 +97,7 @@ dm1e_aes_decrypt(DMP_RCB *r, DMP_ROWACCESS *rac, char *erec, char *prec,
     u_i4	rk[RKLENGTH(AES_256_BITS)];
     i4		nrounds, keybits, keybytes;
     i4		att, blk, cbc;
+    i4		plain_bytes;
     u_i4	crc;
     i4		crclen;
     i4		error;
@@ -166,11 +169,20 @@ dm1e_aes_decrypt(DMP_RCB *r, DMP_ROWACCESS *rac, char *erec, char *prec,
     }
 
     nrounds = adu_rijndaelSetupDecrypt(rk, key, keybits);
+    plain_bytes = 0;	/* no plain text bytes yet */
 
     for (att = 0; att < rac->att_count; att++)
     {
 	if (rac->att_ptrs[att]->encflags & ATT_ENCRYPT)
 	{
+	    /* move any plain text bytes we've been saving up */
+	    if (plain_bytes)
+	    {
+		MEcopy(erec,plain_bytes,prec);
+		erec += plain_bytes;
+		prec += plain_bytes;
+		plain_bytes = 0;
+	    }
 	    if (aes_trace)
 		TRdisplay("\tAES %d-bit decrypt blocks:\n",keybits);
 	    /* (1) decrypt the data block by block */
@@ -226,11 +238,12 @@ dm1e_aes_decrypt(DMP_RCB *r, DMP_ROWACCESS *rac, char *erec, char *prec,
 	}
 	else
 	{
-	    MEcopy(erec,rac->att_ptrs[att]->length,prec);
-	    erec += rac->att_ptrs[att]->length;
-	    prec += rac->att_ptrs[att]->length;
+	    plain_bytes += rac->att_ptrs[att]->length;
 	}
     }
+    /* move any residual plain text bytes */
+    if (plain_bytes)
+	MEcopy(erec,plain_bytes,prec);
 
     return(s);
 }
@@ -279,6 +292,7 @@ dm1e_aes_encrypt(DMP_RCB *r, DMP_ROWACCESS *rac, char *prec, char *erec,
     u_i4	rk[RKLENGTH(AES_256_BITS)];
     i4		nrounds, keybits, keybytes;
     i4		att, blk, cbc;
+    i4		plain_bytes;
     u_i4	rand_i4;
     u_i4	crc;
     i4		crclen;
@@ -352,11 +366,20 @@ dm1e_aes_encrypt(DMP_RCB *r, DMP_ROWACCESS *rac, char *prec, char *erec,
     }
 
     nrounds = adu_rijndaelSetupEncrypt(rk, key, keybits);
+    plain_bytes = 0;	/* no plain text bytes yet */
 
     for (att = 0; att < rac->att_count; att++)
     {
 	if (rac->att_ptrs[att]->encflags & ATT_ENCRYPT)
 	{
+	    /* move any plain text bytes we've been saving up */
+	    if (plain_bytes)
+	    {
+		MEcopy(prec,plain_bytes,erec);
+		prec += plain_bytes;
+		erec += plain_bytes;
+		plain_bytes = 0;
+	    }
 	    p = erec;
 	    /* (0) clear the encrypted data area */
 	    MEfill((u_i2)rac->att_ptrs[att]->encwid, 0, p);
@@ -407,11 +430,12 @@ dm1e_aes_encrypt(DMP_RCB *r, DMP_ROWACCESS *rac, char *prec, char *erec,
 	}
 	else
 	{
-	    MEcopy(prec,rac->att_ptrs[att]->length,erec);
-	    prec += rac->att_ptrs[att]->length;
-	    erec += rac->att_ptrs[att]->length;
+	    plain_bytes += rac->att_ptrs[att]->length;
 	}
     }
+    /* move any residual plain text bytes */
+    if (plain_bytes)
+	MEcopy(prec,plain_bytes,erec);
 
     return(s);
 }
