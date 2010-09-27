@@ -191,10 +191,13 @@ INGLOGS_VERSION="1.27"
 # 14-May-2010 (hanal04) Bug 123291
 #    Ensure LOGDIR is unique to the inglogs process to avoid conflict
 #    with concurrent instances (and associated hang).
+# 08-Sep-2010 (hanje04)
+#    BUG 124390
+#    SD 146293
+#    Remove LSBENV tag, not supported for LSB builds yet and causes errors.
 #
 #####################################################################
 #
-(LSBENV)
 show_usage()
 {
    echo "Usage: `basename $0` [-nosystemconfig] [-nosystemstate]"
