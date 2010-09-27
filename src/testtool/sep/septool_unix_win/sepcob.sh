@@ -1,6 +1,6 @@
 :
 #
-# Copyright (c) 2004 Ingres Corporation
+# Copyright (c) 2004, 2010 Ingres Corporation
 #
 # This script makes a code that can be run using the Ingres-linked RTS.
 # It also builds the executable ingrts for you also.
@@ -55,6 +55,8 @@
 ##      01-Aug-2004 (hanch04)
 ##          First line of a shell script needs to be a ":" and
 ##          then the copyright should be next.
+##      25-Aug-2010 (hweho01)
+##          For su4.us5 platform, remove "-mt" from the LDLIBMACH list.
 
 
 # First, check args and determine $qsuffix, $preproc, and $sfile:
@@ -164,6 +166,9 @@ fi
 
 # prepares Ingres Micro Focus Run-Time System
 
+# Remove '-mt' from the LDLIBMACH list for Solaris/Sparc.
+[ "$VERS" = "su4_us5" ] && LDLIBMACH=`echo $LDLIBMACH | sed 's/\-mt//g'`
+
 # extract 3 Ingres Micro Focus COBOL support modules
 
 ar xv $II_SYSTEM/ingres/lib/libingres.a iimfdata.o
@@ -180,6 +185,7 @@ then
 else
    libingfiles=`ls $II_SYSTEM/ingres/lib/libingres*.a`
 fi
+
 cob -x -o $sfile.exe $sfile.cbl $libingfiles $libs $LDLIBMACH
 echo cob -x -o $sfile.exe $sfile.cbl $libingfiles $libs $LDLIBMACH
 exit
