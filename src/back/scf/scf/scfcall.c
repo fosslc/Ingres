@@ -798,6 +798,9 @@ scf_handler( EX_ARGS *ex_args )
 **	    Add trace point sc925 for logging long-running queries
 **	07-sep-2010 (maspa05) SIR 124363
 **	    Allow a ceiling as well as a threshold value for sc925
+**      22-Sep-2010 (hanal04) Bug 124364
+**          Added sc_trace_stack. When set sc924 tracing will call
+**          CS_dump_stack(). Default is off.
 */
 DB_STATUS
 scf_trace(DB_DEBUG_CB  *trace_cb)
@@ -986,13 +989,25 @@ scf_trace(DB_DEBUG_CB  *trace_cb)
 	    if (trace_cb->db_trswitch == DB_TR_ON)
 	    {
 		if (trace_cb->db_value_count == 0)
+                {
 		    Sc_main_cb->sc_trace_errno  = -1;
-		else
+                    Sc_main_cb->sc_trace_stack  = 0;
+                }
+		else if (trace_cb->db_value_count == 1)
+                {
 		    Sc_main_cb->sc_trace_errno = trace_cb->db_vals[0];
+                    Sc_main_cb->sc_trace_stack  = 0;
+                }
+                else
+                {
+                    Sc_main_cb->sc_trace_errno = trace_cb->db_vals[0];
+                    Sc_main_cb->sc_trace_stack  = trace_cb->db_vals[1];
+                }
 	    }
 	    else
 	    {
 		Sc_main_cb->sc_trace_errno = 0;
+                Sc_main_cb->sc_trace_stack = 0;
 	    } 
 	    break;
 	    

@@ -456,6 +456,9 @@ typedef struct _SCD_ALIST
 **      11-Aug-2010 (hanal04) Bug 124180
 **          Added sc_money_compat for backwards compatibility of money
 **          string constants.
+**      22-Sep-2010 (hanal04) Bug 124364
+**          Added sc_trace_stack. When set sc924 tracing will call
+**          CS_dump_stack().
 */
 typedef struct _SC_MAIN_CB
 {
@@ -653,6 +656,7 @@ CSP_SERVER,LIC_VIOL_REJECT,IS_MT"
     i4              sc_dmcm;                /* DMCM protocol */
     bool	    sc_psf_vch_prec;        /* varchar precedence */
     i4		    sc_trace_errno;
+    i4		    sc_trace_stack;
 
     struct				    /* session/thread counts: */
     {
