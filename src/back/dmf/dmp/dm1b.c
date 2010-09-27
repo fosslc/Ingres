@@ -8252,6 +8252,9 @@ btree_search(
 **	22-Apr-2010 (kschendel) SIR 123485
 **	    Process coupons if doing full row duplicate checking and there
 **	    are blobs, otherwise dmpe now complains about lack of context.
+**	10-Sep-2010 (jonj)
+**	    More for B124340 fix. Unfix/unlock data buffer before waiting
+**	    for (c)row lock to avoid silent deadlock with dmve.
 */
 static DB_STATUS
 dm1badupcheck(
@@ -8393,6 +8396,15 @@ dm1badupcheck(
 	    if (DM1B_DUPCHECK_NEED_ROW_LOCK_MACRO(r, *leaf, row_lg_id, row_low_tran))
 	    {
 		dm0pUnlockBuf(r, leafPinfo);
+
+		/* Unfix, unpin data buffer before waiting for lock */
+		if ( dataPinfo.page )
+		{
+		    /* NB: unfix also unpins */
+		    s = dm0p_unfix_page(r, DM0P_UNFIX, &dataPinfo, dberr);
+		    if (s != E_DB_OK)
+			break;
+		}
 
 		if ( crow_locking(r) )
 		{
