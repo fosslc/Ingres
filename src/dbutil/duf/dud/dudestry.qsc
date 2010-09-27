@@ -160,6 +160,8 @@ EXEC SQL include SQLCA;
 **          Fix incompatible version message.
 **	13-Jan-2010 (wanfr01) Bug 123139
 **	    Include cv.h for function defintions
+**      31-Aug-2010 (maspa05) bug 124328
+**          Added support for -P flag to pass dbms password on command line
 **/
 
 /*
@@ -333,6 +335,9 @@ char	*argv[];
 ##  char	    node_dbname[GCC_L_NODE + DB_MAXNAME + 2 + 1];
 ##  char	    dummy_arg[DB_MAXNAME + 1];
 ##  char	    dbms_vers[32];
+##  char            *db_passwd = "";
+    char            passwd[DB_MAXNAME+4];
+
     i4		    idx1, idx2;
     char	    fe_vers[] = GV_VER;
 
@@ -434,7 +439,15 @@ char	*argv[];
     {
 	STcopy(DU_DBDBNAME, node_dbname);
     }
-##  ingres Dud_appl_flag dba_override node_dbname "-Z"
+
+    /* pass DBMS password through to connect string */
+    if (dud_dbenv.du_db_passwd_given)
+    {
+        STpolycat(2, "-P", dud_dbenv.du_db_passwd, passwd);
+        db_passwd = passwd;
+    }
+
+##  ingres Dud_appl_flag dba_override node_dbname "-Z" db_passwd
 
     /* Set a flag that the dbdb has been opened. */
 
@@ -1395,6 +1408,9 @@ char		*dbname;
 **	    on the commnad line.
 **	12-may-1997 (nanpr01)
 **	    -uflag can be used by anyone to destroy a database.
+**	31-aug-2010 (maspa05) b124328
+**	    Added support for -P parameter to allow DBMS password on command
+**          line
 [@history_template@]...
 */
 DU_STATUS
@@ -1407,6 +1423,7 @@ DU_ERROR	    *dud_errcb;
 {
     char	    *p;
     char	    *colon_ptr;		/* to detect node name syntax */
+    char            *db_passwd;
     u_i4       idmode = 0;
     u_i4           normal_len;
     DB_STATUS       status;
@@ -1426,6 +1443,11 @@ DU_ERROR	    *dud_errcb;
 	*/
 	STcopy(dud_dbenv->du_usrinit, dud_dbenv->du_xusrname);
     }
+
+    /* initialize dbms password to null */
+    dud_dbenv->du_db_passwd[0]=EOS;
+    dud_dbenv->du_db_passwd_given=FALSE;
+
 
     /* The first arg is the program being executed. */
 
@@ -1492,6 +1514,27 @@ DU_ERROR	    *dud_errcb;
 	      case 'l':
 		dud_modes->dud_nowait_flag = TRUE;
 		break;
+
+	      case 'P':
+                   dud_dbenv->du_db_passwd_given=TRUE;
+                   /* if -P passed with no parameter prompt for value
+                      (done by IIUIpassword) - this is consistent with tm etc
+                   */
+                   if (p[2]==EOS)
+                   {
+                       db_passwd=IIUIpassword(ERx("-P"));
+                       if (db_passwd == NULL)
+                         return(du_error(dud_errcb, E_DU351D_INT_PASS_FAIL,
+                                 0, 0));
+                       else
+                         /* IIUpassword returns -Ppasswd */
+                         STcopy(db_passwd+2, dud_dbenv->du_db_passwd);
+                   }
+                else
+                   STcopy(&p[2], dud_dbenv->du_db_passwd);
+
+		break;
+
 
 	      default:
 		return(du_error(dud_errcb, E_DU3101_UNKNOWN_FLAG_DS, 2, 0, p));
