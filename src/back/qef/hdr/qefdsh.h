@@ -1714,6 +1714,8 @@ typedef struct _QEE_PART_QUAL QEE_PART_QUAL;
 **	    Create to make runtime CB accessing easier.
 **	21-Jul-2007 (kschendel) SIR 122513
 **	    Add partition qual address for orig, K/T-joins.
+**	10-Sep-2010 (kschendel) b124341
+**	    Add cvmat for SE-join.
 **
 */
 
@@ -1747,6 +1749,9 @@ typedef struct _QEE_XADDRS
 
     /* "correlation compare" for sejoin only */
     struct _ADE_EXCB *qex_ccompare;
+
+    /* "correlation materialize" for sejoin only */
+    struct _ADE_EXCB *qex_cvmat;
 
     /* "join key compare": joinkey in simple join, kqual in k/se join */
     struct _ADE_EXCB *qex_joinkey;

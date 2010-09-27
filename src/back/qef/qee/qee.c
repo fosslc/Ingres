@@ -421,6 +421,8 @@
 **	12-May-2010 (kschendel) b123565
 **	    Kill shd_options, not used, replace with shd_row_no for
 **	    parallel query fixup.
+**	10-Sep-2010 (kschendel) b124341
+**	    SEjoin replaced kcompare with cvmat CX's, fix a couple places here.
 **/
 /*
 NO_OPTIM = a64_sol
@@ -3298,7 +3300,7 @@ qee_cract(
 			    qen_adf[j++] =
 				qep_node->node_qen.qen_sejoin.sejn_itmat;
 			    qen_adf[j++] =
-				qep_node->node_qen.qen_sejoin.sejn_kcompare;
+				qep_node->node_qen.qen_sejoin.sejn_cvmat;
 			    qen_adf[j++] =
 				qep_node->node_qen.qen_sejoin.sejn_ccompare;
 			    /* readjust index if no correlation */
@@ -5865,6 +5867,8 @@ qee_build_byref_tdesc(
 **	11-May-2010 (kschendel/zhi/alex) b123565
 **	    Change call so that we can arrange to only resolve the proper
 **	    QP sub-action under a parallel union EXCH.
+**	10-Sep-2010 (kschendel) b124341
+**	    Replace SEjoin's kcompare with cvmat.
 **
 */
 
@@ -5951,8 +5955,8 @@ static const struct _qee_xoffsets qee_sejn_xoffsets[] = {
 		CL_OFFSETOF(QEE_XADDRS, qex_okmat)},
     {CL_OFFSETOF(QEN_NODE, node_qen.qen_sejoin.sejn_ccompare),
 		CL_OFFSETOF(QEE_XADDRS, qex_ccompare)},
-    {CL_OFFSETOF(QEN_NODE, node_qen.qen_sejoin.sejn_kcompare),
-		CL_OFFSETOF(QEE_XADDRS, qex_kcompare)},
+    {CL_OFFSETOF(QEN_NODE, node_qen.qen_sejoin.sejn_cvmat),
+		CL_OFFSETOF(QEE_XADDRS, qex_cvmat)},
     {CL_OFFSETOF(QEN_NODE, node_qen.qen_sejoin.sejn_kqual),
 		CL_OFFSETOF(QEE_XADDRS, qex_joinkey)},
     {CL_OFFSETOF(QEN_NODE, node_qen.qen_sejoin.sejn_oqual),

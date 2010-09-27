@@ -1159,6 +1159,8 @@ bool		size_check)
 **	    Trace point sc925 - log long-running queries
 **	07-sep-2010 (maspa05) SIR 124363
 **	    ult_trace_longqry now takes two arguments and returns a bool
+**	10-Sep-2010 (kschendel) b124341
+**	    Replace SEjoin's kcompare with cvmat.
 */
 
 DB_STATUS
@@ -1755,7 +1757,7 @@ qeq_subplan_init(QEF_RCB *qef_rcb, QEE_DSH *dsh,
 	    if (status)
 		return (status);
 
-	    status = qeq_ade(dsh, node->node_qen.qen_sejoin.sejn_kcompare);
+	    status = qeq_ade(dsh, node->node_qen.qen_sejoin.sejn_cvmat);
 	    if (status)
 		return (status);
 
