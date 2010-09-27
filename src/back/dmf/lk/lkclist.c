@@ -330,6 +330,9 @@ NO_OPTIM = rs4_us5 ris_u64 i64_aix r64_us5
 **	    care must be taken to prevent corruption of the list.
 **	27-Apr-2007 (jonj)
 **	    Mark shared LLB as MULTITHREAD as well as the sharers.
+**	23-Sep-2010 (jonj) B124486
+**	    If LK_RECOVER_LLID, scrutinize the lock list more 
+**	    closely - must look like an LLB and match on id_instance.
 */
 STATUS
 LKcreate_list(
@@ -431,6 +434,18 @@ CL_ERR_DESC		*sys_err)
 	lbk_table = (SIZE_TYPE *)LGK_PTR_FROM_OFFSET(lkd->lkd_lbk_table);
 	recov_llb = (LLB *)LGK_PTR_FROM_OFFSET(lbk_table[recov_list_id->id_id]);
 	LGK_VERIFY_ADDR( recov_llb, sizeof(LLB) );
+
+	/* Must look like an LLB and match id_instance */
+	if ( recov_llb->llb_type != LLB_TYPE ||
+	     recov_llb->llb_id.id_instance != recov_list_id->id_instance )
+	{
+	    uleFormat(NULL, E_CL102B_LK_CREATE_BADPARAM, (CL_ERR_DESC *)NULL, ULE_LOG,
+			    NULL, (char *)NULL, 0L, (i4 *)NULL, &err_code, 3,
+			    0, recov_list_id->id_id,
+	    		    0, recov_llb->llb_type,
+			    0, recov_llb->llb_id.id_id);
+	    return (LK_BADPARAM);
+	}
 	recov_llb->llb_status |= LLB_RECOVER;
 	recov_llb->llb_status &= ~LLB_NOINTERRUPT;
 	CSget_cpid(&recov_llb->llb_cpid);

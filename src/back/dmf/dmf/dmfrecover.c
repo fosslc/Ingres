@@ -3568,6 +3568,8 @@ i4		num_nodes)
 **	    of a valid willing-commit transaction.
 **	    Integrate inifa01's fix for 111693 INGREP 153: only track the
 **	    transaction ID if it's higher!
+**	23-Sep-2010 (jonj) B124486
+**	    Don't do rcp_archive() if online recovery (pass-abort, for example)
 */
 DB_STATUS
 dmr_analysis_pass(
@@ -4178,8 +4180,12 @@ i4		node_id)
     {
         TRdisplay("%@ RCP-P1: Analysis Pass Complete%s.\n",nodequalbuf);
 
-	/* FIX ME if we can't archive should we continue? */
-	status = rcp_archive(rcp, lctx);
+	/* Only if offline recovery */
+	if ( rcp->rcp_action != RCP_R_ONLINE )
+	{
+	    /* FIX ME if we can't archive should we continue? */
+	    status = rcp_archive(rcp, lctx);
+	}
 
 	return (E_DB_OK);
     }

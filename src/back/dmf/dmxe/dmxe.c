@@ -699,6 +699,11 @@
 **	    then do nothing.
 **	04-Feb-2010 (jonj)
 **	    SIR 121619 MVCC: Add bufid parameter to dm0l_read().
+**	23-Sep-2010 (jonj) B124486
+**	    If PASS_ABORT and DMXE_DELAY_UNLOCK, return E_DB_ERROR
+**	    with E_DM9509_DMXE_PASS_ABORT to keep dmx_abort from
+**	    releasing the lock list - the RCP needs it to
+**	    recover the transaction.
 */
 DB_STATUS
 dmxe_abort(
@@ -1668,6 +1673,16 @@ DB_ERROR	    *dberr)
 		0, dcb->dcb_id,
 		sizeof(DB_DB_NAME), dcb->dcb_name.db_db_name);
 	    dmd_check(E_DMF029_DMXE_PASS_ABORT);
+	}
+
+	if ( flag & DMXE_DELAY_UNLOCK )
+	{
+	    /*
+	    ** Tell dmx_abort to NOT release lock list,
+	    ** needed by pass abort in RCP
+	    */
+	    SETDBERR(dberr, 0, E_DM9509_DMXE_PASS_ABORT);
+	    return(E_DB_ERROR);
 	}
 
 	return (E_DB_OK);
