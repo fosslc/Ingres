@@ -218,6 +218,8 @@
 **          copying string elements.  In ConvertUCS2ToUCS4() and
 **          ConvertUCS4ToUCS2(), use an intermediate buffer for copying
 **          string elements.
+**     24-Sep-2010 (thoda04) Bug 124307
+**          In ConvertUCS4ToUCS2(), let casting handle big/little endian.
 */
 
 /*
@@ -680,11 +682,8 @@ RETCODE ConvertUCS4ToUCS2(
 {
     SQLINTEGER     i;
     u_i4       sizeofSQLWCHAR = sizeof(SQLWCHAR);
-    union
-    {
-       u_i4 p4;
-       u_i2 p2[2];
-    } ucs;
+    u_i4       tmp4;
+    u_i2       tmp2;
 
     char *p = (char *)p2;
 
@@ -694,12 +693,11 @@ RETCODE ConvertUCS4ToUCS2(
     /* assume that p2 and p4 point to same buffer */
     /* and process left to right */
 
-    ucs.p2[0] = 0;
-    ucs.p2[1] = 0;
     for (i=0; i < len; i++, p2++, p4++)
     {
-        I4ASSIGN_MACRO(*p4, ucs.p4); 
-        I2ASSIGN_MACRO(ucs.p2[1], *p2);
+        I4ASSIGN_MACRO(*p4, tmp4); 
+        tmp2 = (u_i2)tmp4;
+        I2ASSIGN_MACRO(tmp2, *p2);
     }
 
     return SQL_SUCCESS;
