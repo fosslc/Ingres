@@ -928,6 +928,10 @@
 **  20-Jul-2010 (drivi01)
 **	    Add newly exposed configuration parameters to the post installation.
 **	    Handle upgrade cases.
+**  09-Sep-2010 (drivi01)
+**	Add newly exposed gcn.pwd_encode_version parameter to the post 
+**      installer to make sure it is installed on upgrades.
+
 **	    
 */
 /* Turn off POSIX warning for this file until Microsoft fixes this bug */
@@ -3137,6 +3141,9 @@ CInstallation::SetConfigDat()
 	** Newly exposed parameters in release 10.0, may have existing values
 	** especially in future releases. (Upgrade Scenario only)
 	*/
+	cmd.Format("-keep pwd_encode_version \"%s\\ingres\\files\\dbms.rfm",
+		   (LPCSTR)m_installPath);
+	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);	
 	cmd.Format("-keep offline_error_action \"%s\\ingres\\files\\dbms.rfm",
 		   (LPCSTR)m_installPath);
 	Exec(m_installPath + "\\ingres\\utility\\iiinitres.exe", cmd, FALSE);
