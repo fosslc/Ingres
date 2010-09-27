@@ -5472,11 +5472,13 @@ qeq_close_dsh_nodes(QEE_DSH *dsh)
 **	18-Jun-2010 (kschendel) b123775
 **	    Tproc DSH cleanup is now sent through here, so skip anything
 **	    that tproc cleanup shouldn't do:  in particular, commit/abort.
-**	06-sep-2010 (masap05) SIR 124363
+**	06-sep-2010 (maspa05) SIR 124363
 **	    Trace point sc925 - log long-running queries to errlog.log
-**	07-sep-2010 (masap05) SIR 124363
+**	07-sep-2010 (maspa05) SIR 124363
 **	    Log to DBMS log instead of erlog.log.
 **          Also added a 'ceiling' value to SC925.
+**	08-sep-2010 (maspa05) SIR 124363
+**	    Add Session ID to SC925 output
 */
 DB_STATUS
 qeq_cleanup(
@@ -5625,7 +5627,7 @@ bool	    release )
  				DB_OWN_MAXNAME,dbuser.db_own_name,
  				DB_DB_MAXNAME,dbname.db_db_name);
 			}
-			TRdisplay("%t\n",erbuflen,erbuf);
+			TRdisplay("[%x]%t\n",qef_cb->qef_ses_id,erbuflen,erbuf);
 			TRdisplay("Query: %t\n",qlen,qbuf);
 
 		    }
