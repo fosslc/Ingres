@@ -4469,6 +4469,8 @@ error_exit:
 **	10-Aug-2010 (kiria01) b124227
 **	    Address in-list constants. Although we did descend them - they didn't
 **	    generally tie to the BOP for the LHS expression.
+**	09-Sep-2010 (kiria01) b124385
+**	    Catch case where UTF8 CHAR field picks up an NVCHAR cast.
 */
 
 static DB_STATUS
@@ -4660,6 +4662,12 @@ pst_descinput_walk(
 			if (parent->pst_sym.pst_value.pst_s_op.pst_opno == ADI_LIKE_OP ||
 			    parent->pst_sym.pst_value.pst_s_op.pst_opno == ADI_NLIKE_OP)
 			{
+			    if (parent->pst_left->pst_sym.pst_type == PST_UOP &&
+				parent->pst_left->pst_sym.pst_value.pst_s_op.pst_opno == ADI_NVCHAR_OP)
+			    {
+				/* UTF8 VAR can be masked by NVCHAR cast with LIKE */
+				parent = parent->pst_left;
+			    }
 			    dv = &parent->pst_left->pst_sym.pst_dataval;
 			    desc->gca_attdbv.db_datatype = dv->db_datatype;
 			    desc->gca_attdbv.db_length = dv->db_length;
