@@ -5469,6 +5469,8 @@ qeq_close_dsh_nodes(QEE_DSH *dsh)
 **	18-Jun-2010 (kschendel) b123775
 **	    Tproc DSH cleanup is now sent through here, so skip anything
 **	    that tproc cleanup shouldn't do:  in particular, commit/abort.
+**	06-sep-2010 (masap05) SIR 124363
+**	    Trace point sc925 - log long-running queries to errlog.log
 */
 DB_STATUS
 qeq_cleanup(
@@ -5538,6 +5540,62 @@ bool	    release )
 	{
 	    if ( ( !ddb_b ) && ( dsh != ( QEE_DSH * ) NULL ) )
 	    {
+		/* trace point sc925 - long-running queries */    
+ 		i4           lqry_thresh;
+ 
+ 	        lqry_thresh=ult_trace_longqry();
+ 	        if (lqry_thresh != 0 )
+ 		{
+ 		    i4 lqry_time;
+ 
+ 		    qen_bcost_begin(dsh, &tstat, NULL);
+ 		    lqry_time=tstat.stat_wc - dsh->dsh_twc;
+ 		    if (lqry_time > lqry_thresh)
+		    {
+		    /* get username and database for error message */
+ 		        i4 error;
+ 		        DB_DB_NAME  dbname;
+ 		        DB_OWN_NAME dbuser;
+ 		        SCF_SCI         info[2];
+ 		        SCF_CB          scf_cb;
+ 		        DB_STATUS	    l_status;
+ 
+ 		        info[0].sci_code = SCI_USERNAME;
+ 		        info[0].sci_length = sizeof(dbuser);
+ 		        info[0].sci_aresult = (char *) &dbuser;
+ 		        info[0].sci_rlength = 0;
+ 		        info[1].sci_code = SCI_DBNAME;
+ 		        info[1].sci_length = sizeof(dbname);
+ 		        info[1].sci_aresult = (char *) &dbname;
+ 		        info[1].sci_rlength = 0;
+ 		        scf_cb.scf_length = sizeof(SCF_CB);
+ 		        scf_cb.scf_type = SCF_CB_TYPE;
+ 		        scf_cb.scf_ascii_id = SCF_ASCII_ID;
+ 		        scf_cb.scf_facility = DB_QEF_ID;
+ 		        scf_cb.scf_session = DB_NOSESSION;
+ 		        scf_cb.scf_len_union.scf_ilength = 2;
+ 		        scf_cb.scf_ptr_union.scf_sci = (SCI_LIST *) &info[0];
+ 		        l_status = scf_call(SCU_INFORMATION, &scf_cb);
+ 		        if (l_status != E_DB_OK)
+ 		        {
+ 		            TRdisplay("qeq_cleanup:sc925 SCU_INFO call failed with status=%x\n",
+ 				    l_status);
+ 		            STcopy("<unknown>",dbname.db_db_name);
+ 		            STcopy("<unknown>",dbuser.db_own_name);
+ 		        }
+ 
+ 
+ 		        ule_format(I_QE3000_LONGRUNNING_QUERY, 
+ 				(CL_SYS_ERR *)0, ULE_LOG, NULL,
+ 			        (char *)0, (i4)0, (i4 *)0, &error, 4,
+ 				sizeof(lqry_time),&lqry_time,
+ 			        sizeof(lqry_thresh), &lqry_thresh,
+ 				DB_OWN_MAXNAME,dbuser.db_own_name,
+ 				DB_DB_MAXNAME,dbname.db_db_name);
+		    }
+ 
+ 		}
+ 
 		/* if trace flag qe91 is set */
 		if (ult_check_macro(&qef_cb->qef_trace, 91, &val1, &val2))
 		{

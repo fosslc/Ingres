@@ -58,6 +58,9 @@
 **          ult_set_always_trace() and ult_always_trace() now use an integer
 **          bitmask. Ditch the separate *_qep_* functions.
 **          Add EQY end-query record.
+**      06-sep-2010 (maspa05) SIR 124363
+**          Added ult_trace_longqry() and ult_set_trace_longqry() for trace
+**          point sc925
 **/
 
 /*{
@@ -615,3 +618,68 @@ ult_close_tracefile(void *file)
 	SIclose(f);
 }
 
+/*{
+** Name: ult_set_trace_longqry	- Set whether SC925 trace is on for this server
+**
+** Description:
+**      Sets the trace_longqry static variable for this server.
+**
+** Inputs:
+**      value to set the trace_longqry flag to. 0 is OFF
+**
+** Outputs:
+**	Returns:
+**	    none
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	    none
+**
+** History:
+**      06-sep-2010 (maspa05) SIR 124363
+**          Created.
+*/
+
+static i4 trace_longqry = 0;
+void
+ult_set_trace_longqry(i4 value)
+{
+      if (value != trace_longqry && value != 0 )
+      {
+	TRdisplay("SC925 tracing queries which take longer than %d secs\n",
+			value);
+      }
+
+      trace_longqry = value;
+}
+
+/*{
+** Name: ult_trace_longqry	- Return whether SC925 trace is on
+**
+** Description:
+**      Returns value of trace_longquery which is != 0 if on and is the
+**       threshold value for a long-running query.
+**
+** Inputs:
+**
+** Outputs:
+**	Returns:
+**	    trace_longqry - threshold value for what is considered a long
+**                          running query, in seconds. 0 means tracing is off.
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	    none
+**
+** History:
+**      06-sep-2010 (maspa05) SIR 124363
+**          Created.
+*/
+
+i4
+ult_trace_longqry()
+{
+	return (trace_longqry);
+}

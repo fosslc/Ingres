@@ -125,6 +125,8 @@ SQLSTATE_MAPPING_REQUIRED
 **	    enabled/disabled to unlock/locked.
 **	25-aug-2010 (miket) SIR 122403 SD 145781
 **	    Better msg for alter table not valid for encrypted tables.
+**	06-sep-2010 (maspa05) SIR 124363
+**	    Added I_QE3000_LONGRUNNING_QUERY for trace point sc925
 */
 
 
@@ -3722,6 +3724,28 @@ cause dependent constraints to be abandoned."
 I_QE2038_CONSTRAINT_TAB_IDX_ERR:SS5000B_INTERNAL_ERROR
 "Attempt to perform DDL operations on a table/index which would
 cause dependent constraints to be abandoned."
+I_QE3000_LONGRUNNING_QUERY:SS5000B_INTERNAL_ERROR
+"Long-running query detected (execution took %0d seconds,
+the threshold is %1d seconds)
+User: %2c, Database: %3c"
+/*%
+** Parameters:
+**	%0d - elapsed time of query
+**	%1d - threshold value for long-running query
+**	%2c - user
+**	%3c - database
+**
+** Explanation:
+**	A query exceeded the time threshold set for long-running queries by
+**      trace point sc925
+**
+** System Status:
+**	Informational only
+**
+** Recommendation:
+**	None
+*/
+
 E_QE7600_LDB_GENERIC_ERR:SS50000_MISC_ERRORS
 "QEF detected a general failure reported by an LDB."
 E_QE7601_LDB_BAD_SQL_QRY:SS42000_SYN_OR_ACCESS_ERR

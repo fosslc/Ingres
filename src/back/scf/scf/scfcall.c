@@ -171,6 +171,8 @@
 **          format). Added SC930 to SC1000 output (SC trace point help)
 **          set notrace point sc930 now turns off sc930
 **          ult_set_always_trace uses bitmask now
+**	06-sep-2010 (maspa05) SIR 124363
+**	    Add trace point sc925 for logging long-running queries
 **/
 
 
@@ -790,6 +792,8 @@ scf_handler( EX_ARGS *ex_args )
 **	    Add trace point SC930 for session tracing.
 **	19-Aug-2009 (kibro01) b122509
 **	    Add trace point sc930 value 2 for QEP tracing as well.
+**	06-sep-2010 (maspa05) SIR 124363
+**	    Add trace point sc925 for logging long-running queries
 */
 DB_STATUS
 scf_trace(DB_DEBUG_CB  *trace_cb)
@@ -988,6 +992,20 @@ scf_trace(DB_DEBUG_CB  *trace_cb)
 	    } 
 	    break;
 	    
+  	case	925:
+  	    if (trace_cb->db_trswitch == DB_TR_ON)
+  	    {
+		if (trace_cb->db_value_count==0)
+  		  ult_set_trace_longqry(0);
+		else
+  		  ult_set_trace_longqry(trace_cb->db_vals[0]);
+  	    }
+  	    else
+  	    {
+  		ult_set_trace_longqry(0);
+  	    } 
+  	    break;
+  	    
 	case	930:
 	    if (trace_cb->db_trswitch == DB_TR_ON)
 	    {
@@ -1064,6 +1082,7 @@ scf_trace(DB_DEBUG_CB  *trace_cb)
 	    sc0e_trace(" 922\tDump cross server event memory\n");
 	    sc0e_trace(" 923\tAlter SCE event processing - (help = 1000)\n");
 	    sc0e_trace(" 924\tDump query before error \n");
+	    sc0e_trace(" 925 n\tLog long-running queries (> n secs)\n");
 	    sc0e_trace(" 930\tServer-based Query Tracing ");
 	    sc0e_trace("\t   0\t\t- turn off");
 	    sc0e_trace("\t  [1]   \t- turn on");

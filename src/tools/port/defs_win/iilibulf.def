@@ -32,6 +32,8 @@
 ;	    Bug 122509: Add uld_prtree_x and ult_trace_qep
 ;	02-sep-2010 (maspa05) SIR 124345
 ;	    remove ult_trace_qep and ult_set_trace_qep
+;	06-sep-2010 (maspa05) SIR 124363
+;	    add ult_trace_longqry and ult_set_trace_longqry
 ;
 
 EXPORTS
@@ -96,4 +98,6 @@ uld_mathex_xlate	@58
 uld_prtree_x		@59
 ;ult_trace_qep		@60
 ;ult_set_trace_qep	@61
+ult_trace_longqry	@62
+ult_set_trace_longqry	@63
 

@@ -113,6 +113,9 @@
 **          Added SC930 bitmask flags for granularity in tracing. 
 **          Added SC930_LTYPE_ENDQRY for EQY end query record
 **          ult_always_trace() and ult_always_trace now return/pass an i4
+**      06-sep-2010 (maspa05) SIR 124363
+**          Added ult_trace_longqry() and ult_set_trace_longqry() for trace 
+**          point sc925
 **/
 #ifndef TR_HDR_INCLUDED
 #include <tr.h>
@@ -749,3 +752,12 @@ FUNC_EXTERN void ult_close_tracefile(void *);
 #define SC930_LTYPE_REQUEL		26
 #define SC930_LTYPE_REQUERY		27
 #define SC930_LTYPE_ENDQRY		28
+
+/* 
+** SC925 trace functions
+**
+** ult_trace_longqry - check if sc925 tracing is set
+** ult_set_trace_longqry - set value for sc925
+*/
+FUNC_EXTERN void ult_set_trace_longqry(i4 );
+FUNC_EXTERN i4 ult_trace_longqry();

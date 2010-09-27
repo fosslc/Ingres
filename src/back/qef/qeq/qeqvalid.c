@@ -1155,6 +1155,8 @@ bool		size_check)
 **	    complex parallel queries work.
 **	19-May-2010 (kschendel) b123759
 **	    Move a couple variable declarations closer to their use point.
+**	06-sep-2010 (maspa05) SIR 124363
+**	    Trace point sc925 - log long-running queries
 */
 
 DB_STATUS
@@ -1189,9 +1191,14 @@ qeq_subplan_init(QEF_RCB *qef_rcb, QEE_DSH *dsh,
 	i4 cson;
 	STATUS csret;
 	TIMERSTAT init_tstat;
-
+ 	i4           lqry_time;
+ 
+	/* trace point sc925 set? */
+        lqry_time=ult_trace_longqry();
+ 
 	/* initialize the queries begining cpu, dio, and wall clock numbers */
-	if (ult_check_macro(&qef_cb->qef_trace, 91, &val1, &val2))
+ 	if ((ult_check_macro(&qef_cb->qef_trace, 91, &val1, &val2)) ||
+ 	   (lqry_time != 0))
 	{
 
 	    cson = 1;
