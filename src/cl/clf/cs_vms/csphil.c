@@ -136,6 +136,10 @@ History:
 	    on Unix.  Correct function signatures and other tyding up.
         21-jan-2010 (joea)
             Replace CS_ssprsm calls by CSswitch.
+        12-aug-2010 (joea)
+            Replace VMS exception handling by POSIX signals as done on Unix.
+            Disable EX_DEBUG in hello as it causes nasty side effect in
+            KPS code.
 
 PROGRAM  = csphil
 
@@ -160,27 +164,21 @@ NEEDLIBS = COMPAT MALLOCLIB
 # include <cs.h>
 # include <cx.h>
 # include <er.h>
-#ifdef EX_DEBUG
 # include <ex.h>
-#endif
 # include <me.h>
 # include <si.h>
 # include <tr.h>
 # include <lo.h>
 # include <pm.h>
-
-/* # include <clnfile.h> */
-/* # include <fdset.h> */
-/* # include <csev.h> */
-/* # include <cssminfo.h> */
+#include <vmsclient.h>
 # include <clsigs.h>
 # include <exhdef.h>
 # include <csinternal.h>
 #include <stdlib.h>	/* for calloc and free */
 #include <unistd.h>	/* for getpid */
-/* # include "cslocal.h" */
 
-/* GLOBALREF	CS_SMCNTRL	*Cs_sm_cb; */
+
+FUNC_EXTERN GCsetMode(i2 mode);
 
 
 # define N	12		/* number of threads */
@@ -573,7 +571,7 @@ CS_INFO_CB *csib)
     i4 i;
     STATUS stat;
     CL_ERR_DESC	err;
-#ifdef EX_DEBUG
+#ifdef EX_DEBUG_NO
     EX_CONTEXT context;
 
     if (EXdeclare(ex_handler, &context) != OK) {
@@ -582,6 +580,10 @@ CS_INFO_CB *csib)
 	EXdelete();
 	return FAIL;
     }
+#endif
+#if !defined(axm_vms)
+    signal(SIGSEGV, SIG_DFL);
+    signal(SIGBUS, SIG_DFL);
 #endif
 
     SIsem.cs_value = 0;
@@ -606,7 +608,7 @@ CS_INFO_CB *csib)
     if( Noisy )
 	SIfprintf(stderr, "World begins, philosophers wonder why.\n" );
 
-#ifdef EX_DEBUG
+#ifdef EX_DEBUG_NO
     EXdelete();
 #endif
     return( stat );
@@ -809,7 +811,7 @@ i4 errnum, i4 arg1, i4 arg2)
 #endif
     if(errnum != E_CS0018_NORMAL_SHUTDOWN)
 	PCexit(FAIL);
-    PCexit(OK);
+    return OK;
 }
 
 /*
@@ -973,11 +975,20 @@ char	*argv[];
 
     MEadvise( ME_INGRES_ALLOC );
 
+    EXsetclient(EX_INGRES_DBMS);
+
+    GCsetMode((i2)GC_SERVER_MODE);
     TRset_file(TR_F_OPEN, TR_OUTPUT, TR_L_OUTPUT, &syserr);
 
     PMinit();
 
     status = PMload((LOCATION *)NULL, (PM_ERR_FUNC *)0);
+
+#if !defined(axm_vms)
+    /* default some signals */
+    signal(SIGSEGV, SIG_DFL);
+    signal(SIGBUS, SIG_DFL);
+#endif
 
     /* setup big CS parameter block to set stuff up */
     cb.cs_scnt = n_phils;	/* Number of sessions */

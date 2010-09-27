@@ -10,6 +10,7 @@
 # include	<tr.h>
 # include	<nm.h>
 # include	<cv.h>
+#include <signal.h>
 # include       <descrip.h>
 # include       <snalu0def.h>
 # include       <snalibdef.h>
@@ -73,6 +74,8 @@
 **          (remote peer).
 **	29-aug-2003 (abbjo03)
 **	    Changes to use VMS headers provided by HP.
+**      23-aug-2010 (joea)
+**          Use VAXC$ESTABLISH to set up exception handlers.
 */
 
 /*
@@ -563,10 +566,10 @@ top:
 
 	    /*
 	    ** Declare an exception handler, since RTL signals errors.
-	    ** Note that LIB$ESTABLISH does not return any value.
+	    ** Note that VAXC$ESTABLISH does not return any value.
 	    */
 
-	    lib$establish( lib$sig_to_ret );
+	    VAXC$ESTABLISH( lib$sig_to_ret );
 
 	    for( i = 0; i < 5; i++ )
 	    {

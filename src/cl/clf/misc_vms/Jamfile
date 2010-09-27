@@ -12,6 +12,8 @@
 #	    Reinstate Alpha frontmain.mar.
 #       24-nov-2009 (stegr01)
 #           replace IILIBOBJECT by Object for Itanium build
+#       23-aug-2010 (joea)
+#           Don't build unused modules.
 
 SubDir ING_SRC cl clf misc_vms ;
 
@@ -28,4 +30,4 @@ else
     Object $(FRONTMAIN) : frontmain.c ;
 }
 
-IILIBRARY COMPATLIB : frontstart.c miscvalue.c miscerr.msg astjacket.c astmgmt.c pthreadmgmt.c ;
+IILIBRARY COMPATLIB : frontstart.c miscvalue.c miscerr.msg ;

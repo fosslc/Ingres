@@ -132,6 +132,8 @@
 **         Get rid of event flags - even the async qio calls release 
 **         the efn before the i/o is known to have completed
 **         store ICB on stack for Itanium 
+**      07-sep-2010 (joea)
+**         Remove cpres_catch exception handler on i64_vms.
 */
 
 GLOBALREF CS_SYSTEM           Cs_srv_block;
@@ -684,6 +686,7 @@ cpres_mbx_assign(PID pid, CP_CHANNEL **CPchan)
     return (FAIL);
 }
 
+#if defined(axm_vms)
 /*
 ** Name: cpres_catch      - Catch any exceptions.
 **
@@ -729,7 +732,6 @@ cpres_catch( struct chf$signal_array *sigs, struct chf$mech_array *mechs)
    uint64 invo_value          = EX_DECLARE;
    i4     sts;
 
-#if defined(ALPHA)
    uint64 invo_mask           = 0x0FFFCul | ((uint64) 0X03FCul << (BITS_IN(uint64) / 2));
    int    establishers_handle = lib$get_invo_handle( jmpbuf );
    
@@ -739,37 +741,6 @@ cpres_catch( struct chf$signal_array *sigs, struct chf$mech_array *mechs)
 
    sys$goto_unwind(&establishers_handle, jmpbuf+2, &invo_value, 0);
 
-#elif defined(IA64)
-    uint64  establishers_handle;
-    i4      gr_mask[4];
-    i4      fr_mask[4];
-    i4      msk;
-    i4      k;
-
-    sts = lib$i64_get_invo_handle(jmpbuf, &establishers_handle);
-    if (!(sts & STS$M_SUCCESS)) /* returns 0 == fail, 1==success */
-    {
-        /* lib$signal (SS$_DEBUG); */
-        /* if we carry on after this we'll just get an accvio ... so resignal */
-        return (SS$_RESIGNAL);
-    }
-
-    for (k=0; k<4; k++) gr_mask[k] = jmpbuf->libicb$o_gr_valid[k];
-    fr_mask[0] = jmpbuf->libicb$l_fr_valid;
-    msk = (jmpbuf->libicb$ph_f32_f127) ? 0xFFFFFFFF : 0;
-    for (k=1; k<4; k++) fr_mask[k] = msk;
-
-    sts = lib$i64_put_invo_registers( establishers_handle, jmpbuf, gr_mask, fr_mask );
-
-    /* Return to CSCPdeclare() call, but EX_DECLARE returned */
-
-    /* (target_invo, target_pc, new_retval1, new_retval2) */
-
-    sys$goto_unwind_64(&establishers_handle, &jmpbuf->libicb$ih_pc, &invo_value, 0);
-#else
-#error "cpres_catch:: missing code for this platform"
-#endif
-   
    /* Should never reach here */
 
    TRdisplay( "%@ cscpres_catch:: SYS$GOTO_UNWIND failed\n\n");
@@ -778,6 +749,7 @@ cpres_catch( struct chf$signal_array *sigs, struct chf$mech_array *mechs)
 
    return SS$_RESIGNAL;
 }
+#endif
 
 /*
 ** Name: cpres_mbx_read_complete	- QIO read completion handler.
@@ -829,6 +801,7 @@ cpres_mbx_read_complete( PTR astprm )
     }
     else
     {
+#if defined(axm_vms)
        i4 sts = 0; /* In the followin context 0 == success */
        EX_CONTEXT cpres_context;
 
@@ -841,20 +814,12 @@ cpres_mbx_read_complete( PTR astprm )
        **   will return to the "if" statement below with EX_DECLARE if an
        **   exception occurs.
        */
-#if defined(ALPHA)
 
 #define CSCPdeclare( y ) ( VAXC$ESTABLISH( cpres_catch ), \
                            EXgetctx( (y)->iijmpbuf))
 
        if (CSCPdeclare( &cpres_context ) ) sts = 1;
 
-#elif defined(IA64)
-
-       /* init returns 0 as a failure, get_curr always returns 0 as success */
-
-       sts = lib$i64_init_invo_context(&cpres_context.iijmpbuf, LIBICB$K_INVO_CONTEXT_VERSION, 0);
-       sts = (sts) ? lib$i64_get_curr_invo_context(&cpres_context.iijmpbuf) : 1;
-#endif
        if (sts)
        {
           TRdisplay( "%@ cpres::Exception occured for W_PID = %08x W_SID = %08x, S_PID = %08x, S_SID = %08x, S_AST = %d\n",
@@ -863,11 +828,14 @@ cpres_mbx_read_complete( PTR astprm )
                      cpres_msg_buffer.sender_in_ast );
        }
        else
+#endif
            CSresume(cpres_msg_buffer.wakeup_sid);
 
+#if defined(axm_vms)
 #define CSCPdelete() (VAXC$ESTABLISH( NULL ))
 
        CSCPdelete();
+#endif
     }
 
     /* Hang another read */

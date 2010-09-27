@@ -1,11 +1,14 @@
 # include	<compat.h>
 # include	<ssdef.h>
 # include	<starlet.h>
+#include <signal.h>
 /*
 **
 **	19-jul-2000 (kinte01)
 **	   Correct prototype definitions by adding missing includes
 **	   and missing external function declarations
+**      12-aug-2010 (joea)
+**          Use VAXC$ESTABLISH to set up exception handlers.
 */
 
 FUNC_EXTERN STATUS CS_setup();
@@ -19,7 +22,7 @@ int CS_lcexh();
 */
 cs_jmp_start()
 {
-	lib$establish(CS_lcexh);
+	VAXC$ESTABLISH(CS_lcexh);
 
 	/* Startup and run the thread. */
 	CS_setup();
