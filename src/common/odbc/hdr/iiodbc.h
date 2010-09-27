@@ -1,7 +1,7 @@
 /* 
-** Copyright (c) 2004, 2009 Ingres Corporation 
+** Copyright (c) 2004, 2010 Ingres Corporation 
 */ 
-/** 
+/*
 ** Name: iiodbc.h - ODBC CLI definitions
 ** 
 ** Description: 
@@ -27,6 +27,10 @@
 **      Added sqlstate SQL_HY107.
 **   23-Mar-2009 (Ralph Loen) Bug 121838
 **      Add support for SQLGetFunctions().
+**   03-Sep-2010 (Ralph Loen) Bug 124348
+**      Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
+**      SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
+**      platforms.
 */
 
 #define BOOL bool
@@ -217,7 +221,7 @@ typedef SQLRETURN (SQL_API *IIODBC_DRIVER_FN)();
 SQLINTEGER SQL_API SQLGetPrivateProfileString(
     const char *  szSection, const char *szEntry,
     const char *szDefault, char *szBuffer,
-    SQLINTEGER cbBuffer, const char *szFile);
+    SQLLEN cbBuffer, const char *szFile);
 
 i4 GetODBCTrace();
 RETCODE ConvertUCS2ToUCS4( u_i2 *p2, u_i4 *p4, SQLINTEGER len);

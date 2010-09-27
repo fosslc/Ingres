@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004 Ingres Corporation 
+** Copyright (c) 2010 Ingres Corporation 
 */ 
 
 #include <compat.h>
@@ -39,10 +39,13 @@
 **    04-Oct-04 (hweho01)
 **        Avoid compiler error on AIX platform, put include
 **        files of sql.h and sqlext.h after st.h.
-**   15-Jul-2005 (hanje04)
-**	Include iiodbcfn.h and tracefn.h which are the new home for the 
-**	ODBC CLI function pointer definitions.
-** 
+**    15-Jul-2005 (hanje04)
+**        Include iiodbcfn.h and tracefn.h which are the new home for the 
+**        ODBC CLI function pointer definitions.
+**    03-Sep-2010 (Ralph Loen) Bug 124348
+**        Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
+**        SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
+**        platforms.
 */ 
 
 /*
@@ -92,7 +95,7 @@ SQLRETURN  SQL_API SQLColAttributes (
     SQLPOINTER   ValuePtrParm,
     SQLSMALLINT  BufferLength,
     SQLSMALLINT *StringLengthPtr,
-    SQLINTEGER  *pfDesc)
+    SQLLEN      *pfDesc)
 {
     RETCODE rc, traceRet = 1;
     pSTMT pstmt = (pSTMT)StatementHandle;
@@ -192,7 +195,7 @@ SQLRETURN  SQL_API SQLColAttribute (
     SQLPOINTER   ValuePtrParm,
     SQLSMALLINT  BufferLength,
     SQLSMALLINT *StringLengthPtr,
-    SQLPOINTER   NumericAttributePtr)
+    SQLLEN      *NumericAttributePtr)
 {
     pSTMT pstmt = (pSTMT)StatementHandle;
     RETCODE rc, traceRet = 1;;
@@ -461,7 +464,7 @@ SQLRETURN  SQL_API SQLGetDescRec (
     SQLSMALLINT *StringLengthPtr,
     SQLSMALLINT *TypePtr,
     SQLSMALLINT *SubTypePtr,
-    SQLINTEGER      *LengthPtr,
+    SQLLEN      *LengthPtr,
     SQLSMALLINT *PrecisionPtr,
     SQLSMALLINT *ScalePtr,
     SQLSMALLINT *NullablePtr)
@@ -658,12 +661,12 @@ SQLRETURN  SQL_API SQLSetDescRec (
     SQLSMALLINT RecNumber,
     SQLSMALLINT VerboseType,
     SQLSMALLINT SubType,
-    SQLINTEGER  Length,
+    SQLLEN      Length,
     SQLSMALLINT Precision,
     SQLSMALLINT Scale,
     SQLPOINTER  DataPtr,
-    SQLINTEGER  *StringLengthPtr,
-    SQLINTEGER  *IndicatorPtr)
+    SQLLEN  *StringLengthPtr,
+    SQLLEN  *IndicatorPtr)
 {
     RETCODE rc, traceRet = 1;
     pDESC pdesc;

@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004 Ingres Corporation 
+** Copyright (c) 2010 Ingres Corporation 
 */ 
 
 #include <compat.h>
@@ -37,7 +37,10 @@
 **      Activated support for SQLSetPos().
 **   07-Feb-2008 (Ralph Loen) SIR 119723
 **      Activated support for SQLSetScrollOptions().
-** 
+**   03-Sep-2010 (Ralph Loen) Bug 124348
+**      Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
+**      SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
+**      platforms.
 */ 
 
 /*
@@ -80,8 +83,8 @@
 SQLRETURN SQL_API SQLExtendedFetch(
     SQLHSTMT           hstmt,
     SQLUSMALLINT       fFetchType,
-    SQLINTEGER         irow,
-    SQLUINTEGER        *pcrow,
+    SQLLEN          irow,
+    SQLULEN           *pcrow,
     SQLUSMALLINT       *rgfRowStatus)
 
 {
@@ -232,7 +235,7 @@ SQLRETURN SQL_API SQLSetPos(
 SQLRETURN SQL_API SQLSetScrollOptions(
     SQLHSTMT           hstmt,
     SQLUSMALLINT       fConcurrency,
-    SQLINTEGER         crowKeyset,
+    SQLLEN             crowKeyset,
     SQLUSMALLINT       crowRowset)
 {
     pSTMT pstmt = (pSTMT)hstmt;

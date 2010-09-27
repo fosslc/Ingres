@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2006 Ingres Corporation
+** Copyright (c) 2010 Ingres Corporation
 */
 
 # if defined(dgi_us5)
@@ -206,6 +206,10 @@
 **          Unicode string by 2 instead of sizeof(SQLWCHAR), since
 **          this equates to 4 on UCS4 systems, but the string has already
 **          been converted to UCS2.
+**     03-Sep-2010 (Ralph Loen) Bug 124348
+**          Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
+**          SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
+**          platforms.
 */
 
 /*
@@ -929,7 +933,7 @@ SQLRETURN SQL_API SQLColAttributeW(
     SQLPOINTER       ValuePtr,
     SQLSMALLINT      BufferLength,       /*   count of bytes */
     SQLSMALLINT     *StringLengthPtr,    /* ->count of bytes */
-    SQLPOINTER       NumericAttributePtr) 
+    SQLLEN          *NumericAttributePtr) 
 {
     LPSTMT           pstmt = (LPSTMT)hstmt;
     SQLRETURN        rc, rc2;
@@ -1071,7 +1075,7 @@ SQLRETURN SQL_API SQLDescribeColW(
     SQLSMALLINT      cbWideColNameMax,   /*   count of chars */
     SQLSMALLINT     *pcbWideColName,     /* ->count of chars */
     SQLSMALLINT     *pfSqlType,
-    SQLUINTEGER         *pcbColDef,          /* ->ColumnSize in chars; may cause MS KB Q249803*/
+    SQLULEN         *pcbColDef,          /* ->ColumnSize in chars; may cause MS KB Q249803*/
     SQLSMALLINT     *pibScale,
     SQLSMALLINT     *pfNullable)
 {
@@ -1516,7 +1520,7 @@ SQLRETURN SQL_API SQLGetDescRecW(
     SQLSMALLINT     *pcbWideColName,   /* ->count of chars */
     SQLSMALLINT     *pfType,
     SQLSMALLINT     *pfSubType,
-    SQLINTEGER          *pLength,
+    SQLLEN          *pLength,
     SQLSMALLINT     *pPrecision, 
     SQLSMALLINT     *pScale,
     SQLSMALLINT     *pNullable)
@@ -1957,7 +1961,7 @@ SQLRETURN SQL_API SQLGetTypeInfoW(
 SQLRETURN SQL_API SQLSetConnectOptionW(
     SQLHDBC          hdbc,
     SQLUSMALLINT     fOption,
-    SQLUINTEGER          vParam)
+    SQLULEN          vParam)
 {
     SQLINTEGER StringLength = SQL_NTS;
 

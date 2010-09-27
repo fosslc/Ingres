@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2000, 2006 Ingres Corporation
+** Copyright (c) 2000, 2010 Ingres Corporation
 */
 
 #include <compat.h>
@@ -134,6 +134,10 @@
 **     24-Aug-2010 (Ralph Loen) Bug 124300
 **          In SQLGetDescRec_InternalCall(), don't fill an unreferenced
 **          SubTypePtr.
+**     03-Sep-2010 (Ralph Loen) Bug 124348
+**          Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
+**          SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
+**          platforms.
 */
 
 /*
@@ -285,7 +289,7 @@ SQLRETURN  SQL_API SQLColAttribute (
     SQLPOINTER   ValuePtrParm,
     SQLSMALLINT  BufferLength,
     SQLSMALLINT *StringLengthPtr,
-    SQLPOINTER   NumericAttributePtr)
+    SQLLEN      *NumericAttributePtr)
 {
     return SQLColAttribute_InternalCall(
                  StatementHandle,
@@ -935,7 +939,7 @@ SQLRETURN  SQL_API SQLGetDescField_InternalCall (
         if (ValuePtr)
             *lenValuePtr = pdesc->Count;
         if (StringLengthPtr)
-           *StringLengthPtr = sizeof(SQLINTEGER);
+           *StringLengthPtr = sizeof(SQLSMALLINT);
 #else
         if (ValuePtr)
             I2ASSIGN_MACRO(pdesc->Count, *i2ValuePtr);
@@ -1368,7 +1372,7 @@ SQLRETURN  SQL_API SQLGetDescRec (
     SQLSMALLINT *StringLengthPtr,
     SQLSMALLINT *TypePtr,
     SQLSMALLINT *SubTypePtr,
-    SQLINTEGER      *LengthPtr,
+    SQLLEN      *LengthPtr,
     SQLSMALLINT *PrecisionPtr,
     SQLSMALLINT *ScalePtr,
     SQLSMALLINT *NullablePtr)
@@ -1966,12 +1970,12 @@ SQLRETURN  SQL_API SQLSetDescRec (
     SQLSMALLINT RecNumber,
     SQLSMALLINT VerboseType,
     SQLSMALLINT SubType,
-    SQLINTEGER      Length,
+    SQLLEN      Length,
     SQLSMALLINT Precision,
     SQLSMALLINT Scale,
     SQLPOINTER  DataPtr,
-    SQLINTEGER     *StringLengthPtr,
-    SQLINTEGER     *IndicatorPtr)
+    SQLLEN     *StringLengthPtr,
+    SQLLEN     *IndicatorPtr)
 {
     SQLRETURN   rc    = SQL_SUCCESS;
     LPDESC      pdesc = (LPDESC)DescriptorHandle;

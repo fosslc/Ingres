@@ -395,6 +395,10 @@
 **     24-Aug-2010 (Ralph Loen) Bug 124300
 **         In SQLDescribeCol_InternalCall(), allow for null terminator when
 **         returning the column name argument.
+**     03-Sep-2010 (Ralph Loen) Bug 124348
+**         Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
+**         SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
+**         platforms.
 */
 
 
@@ -450,8 +454,8 @@ RETCODE SQL_API SQLBindCol(
     UWORD         icol,         /* ColumnNumber     */
     SWORD         fCType,       /* TargetType       */
     SQLPOINTER    rgbValue,     /* TargetValuePtr   */
-    SQLINTEGER        cbValueMax,   /* BufferLength     */
-    SQLINTEGER        *pcbValue)    /* StrLen_or_IndPtr */
+    SQLLEN        cbValueMax,   /* BufferLength     */
+    SQLLEN        *pcbValue)    /* StrLen_or_IndPtr */
 {
     LPSTMT        pstmt          = (LPSTMT)hstmt;
     SWORD         VerboseCType   = fCType;
@@ -609,7 +613,7 @@ RETCODE SQL_API SQLDescribeCol(
     SWORD        cbColNameMax,
     SWORD      * pcbColName,
     SWORD      * pfSqlType,
-    SQLUINTEGER    * pcbColDef,
+    SQLULEN    * pcbColDef,
     SWORD      * pibScale,
     SWORD      * pfNullable)
 {
@@ -883,7 +887,7 @@ RETCODE SQL_API SQLFetch(
 SQLRETURN SQL_API SQLFetchScroll(
     SQLHSTMT     hstmt,
     SQLSMALLINT  FetchOrientation,
-    SQLINTEGER FetchOffset)
+    SQLLEN       FetchOffset)
 {
     LPSTMT  pstmt = (LPSTMT)hstmt;
     RETCODE rc;
@@ -1108,8 +1112,8 @@ RETCODE   FetchRowset(
 SQLRETURN SQL_API SQLExtendedFetch(
     SQLHSTMT       hstmt,
     SQLUSMALLINT   FetchOrientation,
-    SQLINTEGER     FetchOffset,
-    SQLUINTEGER *  RowCountPtr,
+    SQLLEN         FetchOffset,
+    SQLULEN     *  RowCountPtr,
     SQLUSMALLINT * RowStatusArray)
 {
     LPSTMT  pstmt = (LPSTMT)hstmt;
@@ -1599,8 +1603,8 @@ RETCODE SQL_API SQLGetData(
     UWORD        icol,
     SWORD        fCType,
     SQLPOINTER   rgbValue,
-    SQLINTEGER       cbValueMax,
-    SQLINTEGER     * pcbValue)
+    SQLLEN       cbValueMax,
+    SQLLEN       * pcbValue)
 {
     LPSTMT  pstmt = (LPSTMT)hstmt;
     RETCODE      rc;
@@ -4466,7 +4470,6 @@ static UDWORD CvtIngresMnyToDec(CHAR     * rgbData, LPDESCFLD pird)
 */
 RETCODE GetProcedureReturn(LPSTMT pstmt) 
 {
-    SWORD i;
     LPDESC     pAPD=pstmt->pAPD;   /* -> application parameter descriptor */
     LPDESC     pIPD=pstmt->pIPD;   /* -> implementation parameter descriptor */
     LPDESCFLD  papd;

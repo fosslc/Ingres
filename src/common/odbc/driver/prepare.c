@@ -526,6 +526,10 @@
 **         the DAYOFYEAR(), DAYOFMONTH() and MONTHNAME() scalars, and
 **         calculate the buffer length depending on the scalar and the
 **         length of the referenced column name.
+**   03-Sep-2010 (Ralph Loen) Bug 124348
+**         Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
+**         SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
+**         platforms.
 */
 
 typedef enum
@@ -829,11 +833,11 @@ RETCODE SQL_API SQLBindParameter(
     SWORD         fParamType,   /* InputOutputType  */
     SWORD         fCType,       /* ValueType        */
     SWORD         fSqlType,     /* ParameterType    */
-    SQLUINTEGER   cbColDef,     /* ColumnSize       */
+    SQLULEN       cbColDef,     /* ColumnSize       */
     SWORD         ibScale,      /* DecimalDigits    */
     SQLPOINTER    rgbValue,     /* ParameterValuePtr*/
-    SQLINTEGER    cbValueMax,   /* BufferLength     */
-    SQLINTEGER    *pcbValue)    /* StrLen_or_IndPtr */
+    SQLLEN        cbValueMax,   /* BufferLength     */
+    SQLLEN      *pcbValue)    /* StrLen_or_IndPtr */
 {
     LPSTMT        pstmt = (LPSTMT)hstmt;
     LPDBC         pdbc;

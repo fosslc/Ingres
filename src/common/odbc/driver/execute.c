@@ -421,8 +421,10 @@
 **         In SQLExecDirect_InternalCall(), add 50 instead of 8 in
 **         MEreqmem(), to allow "for readonly" to be potentially tacked on the 
 **         end of a select query.
-**         
-**       
+**     03-Sep-2010 (Ralph Loen) Bug 124348
+**          Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
+**          SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
+**          platforms.
 */
 
 /*
@@ -1086,7 +1088,7 @@ RETCODE SQL_API SQLParamData(
 RETCODE SQL_API SQLPutData(
     SQLHSTMT    hstmt,
     SQLPOINTER  DataPtr,
-    SQLINTEGER      cbValue)
+    SQLLEN      cbValue)
 {
     LPSTMT  pstmt    = (LPSTMT)hstmt;
     char *rgbValue = DataPtr;

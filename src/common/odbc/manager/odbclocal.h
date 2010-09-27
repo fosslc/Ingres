@@ -1,5 +1,5 @@
 /* 
-** Copyright (c) 2004, 2007 Ingres Corporation 
+** Copyright (c) 2010 Ingres Corporation 
 */ 
 /** 
 ** Name: odbclocal.h - Ingres ODBC CLI private data definitions.
@@ -36,6 +36,10 @@
 **      and MultiByteToWideChar().
 **   23-Jul-07 (Ralph Loen) SIR 117786
 **      Added include of tm.h so that VMS can compile the SYSTIME structure.
+**   03-Sep-2010 (Ralph Loen) Bug 124348
+**      Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
+**      SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
+**      platforms.
 */
 typedef struct
 {
@@ -394,11 +398,6 @@ typedef struct
 GLOBALREF IIODBC_CB IIodbc_cb;
 GLOBALREF BOOL block_init;
 
-SQLINTEGER SQL_API SQLGetPrivateProfileString(
-    const char *  szSection, const char *szEntry,
-    const char *szDefault, char *szBuffer,
-    SQLINTEGER cbBuffer, const char *szFile);
-   
 RETCODE IIodbc_allocEnv(pENV *);
 RETCODE IIodbc_allocDbc(pENV, pDBC *);
 RETCODE IIodbc_allocStmt(pDBC, pSTMT *);

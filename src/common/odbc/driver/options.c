@@ -155,8 +155,12 @@
 **         SQLGetConnectAttr().  Addd support for SQL_MAX_ROWS in 
 **         SQLGetConnectAttr().  Deprecate support for statement-level
 **         attributes if version is SQL_OV_ODBC3 or later.
-**	31-Jul-3010 (kschendel) 124131
+**     31-Jul-3010 (kschendel) 124131
 **	   Fix above for gcc 4.4 compiler complaints.
+**     03-Sep-2010 (Ralph Loen) Bug 124348
+**         Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
+**         SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
+**         platforms.
 */
 
 RETCODE EnlistInDTC(LPDBC pdbc, VOID * pITransaction);
@@ -473,7 +477,7 @@ SQLRETURN  SQL_API SQLGetEnvAttr (
 SQLRETURN SQL_API SQLSetScrollOptions(
     SQLHSTMT           hstmt,
     SQLUSMALLINT       fConcurrency,
-    SQLINTEGER         crowKeyset,
+    SQLLEN             crowKeyset,
     SQLUSMALLINT       crowRowset)
 {
     LPSTMT       pstmt  = (LPSTMT)hstmt;
@@ -1225,8 +1229,7 @@ RETCODE SQL_API SQLSetConnectAttr_InternalCall(
         pdbc->cRetrieveData = (UWORD)vParamuint;
         break;
         
-    case SQL_BIND_TYPE:     /* SQLExtendedFetch option  */
-        pstmt->pARD->BindType = vParamuint;
+    case SQL_BIND_TYPE:     /* SQLExtendedFetch option ignored  */
         break;
 
     case SQL_KEYSET_SIZE:   /* SQLExtendedFetch option ignored */
@@ -1245,7 +1248,7 @@ RETCODE SQL_API SQLSetConnectAttr_InternalCall(
         break;
 
     case SQL_CURSOR_TYPE:
-        if (pstmt->fAPILevel >= IIAPI_LEVEL_5)
+        if (pdbc->fAPILevel >= IIAPI_LEVEL_5)
         {
             if (vParamuint == SQL_CURSOR_FORWARD_ONLY || vParamuint ==
                 SQL_CURSOR_STATIC || vParamuint== SQL_CURSOR_KEYSET_DRIVEN)
@@ -1319,7 +1322,7 @@ RETCODE SQL_API SQLSetConnectAttr_InternalCall(
 RETCODE SQL_API SQLSetConnectOption(
     SQLHDBC    hdbc,
     UWORD      fOption,
-    SQLUINTEGER vParam)
+    SQLULEN vParam)
 {
     SQLINTEGER StringLength = SQL_NTS;
 
@@ -1844,7 +1847,7 @@ RETCODE SQL_API SQLSetStmtAttr_InternalCall(
 RETCODE SQL_API SQLSetStmtOption(
     SQLHSTMT hstmt,
     SQLUSMALLINT fOption,
-    SQLUINTEGER  vParam)
+    SQLULEN  vParam)
 {
     SQLINTEGER StringLength = SQL_NTS;
 
