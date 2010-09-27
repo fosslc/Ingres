@@ -926,6 +926,14 @@ pst_prepare(
 **	according to the saved 'qmode'.  Certain fields in PSF session
 **	control block and parser control block are also restored.
 **
+**	If the prototype indicates that QP caching is possible, look up
+**	the cached QP and query text.  Assuming they are still there and
+**	haven't been kicked out of QSF, verify that the compiled QP
+**	is compatible with the actual parameters sent with the
+**	execute or cursor-open statement.  More checking will be done
+**	by the caller, so this isn't the final word on whether the
+**	cached plan is usable.
+**
 ** Inputs:
 **      psq_cb                          ptr to the parser control block.
 **      sess_cb                         ptr to PSF session control block.
@@ -1174,6 +1182,12 @@ pst_prepare(
 **          copy statement.
 **      15-Jul-2010 (horda03) B124082
 **          Don't call pst_showtab() for non TABLE rngvars.
+**	2-Sep-2010 (kschendel) b124347
+**	    A cached QP with parameters have to match actual parameters
+**	    in length and precision, not just type.  (Consider an NCHAR
+**	    parameter that was 33 on the first invocation that cached the
+**	    QP, but is 50 long on the second invocation.)
+**	    Change xDEBUG to trace point PS152 to make debugging easier.
 */
 #define	RT_NODE_SIZE \
 	    sizeof(PST_QNODE) - sizeof(PST_SYMVALUE) + sizeof(PST_RT_NODE)
@@ -1264,11 +1278,16 @@ pst_execute(
     {
 	char	*p;
 	bool	found = TRUE;
+	bool	dyntrace;
+	i4	val1, val2;
 
-#ifdef xDEBUG
-	TRdisplay("PST_EXECUTE: stmt (%s, %d), session: %d, pss_proto: %p\n",
+	dyntrace = ult_check_macro(&sess_cb->pss_trace, PSS_CACHEDYN_TRACE, &val1, &val2);
+
+	if (dyntrace)
+	{
+	    TRdisplay("%@ PST_EXECUTE: stmt (%s, %d), session: %lx, pss_proto: %p\n",
 		sname, proto->pst_checksum, psq_cb->psq_sessid, proto);
-#endif
+	}
 
 	/* See if QP is in QSF. TRANS_OR_DEFINE is used to make a shareable 
 	** object. Contrary to some comments in QSF, a single "master" 
@@ -1316,19 +1335,18 @@ pst_execute(
 	    return(status);
 	}
 
-#ifdef xDEBUG
 	/* TRdisplay the syntax for debugging purposes. */
-	if (proto->pst_syntax)
+	if (dyntrace && proto->pst_syntax)
 	{
+	    char syntax[1000];
 	    i4	synlen = (proto->pst_syntax_length > 999) ? 999 :
 				proto->pst_syntax_length;
 
 	    MEcopy(proto->pst_syntax, synlen, &syntax[0]);
 	    syntax[synlen] = 0;
-	    TRdisplay("PST_EXECUTE: open repeat query: %d, %s\n", 
-					proto->pst_checksum, &syntax);
+	    TRdisplay("%@ PST_EXECUTE: open repeat query: %d, %s\n", 
+					proto->pst_checksum, syntax);
 	}
-#endif
 
 	if (qsf_rb.qsf_t_or_d == QSO_WASTRANSLATED)
 	{
@@ -1342,10 +1360,11 @@ pst_execute(
 
 	    qp = ((QEF_QP_CB *)qsf_rb.qsf_root);
 
-#ifdef xDEBUG
-	    TRdisplay("PST_EXECUTE: parms for : %d - %d, %d\n",
-		proto->pst_checksum, qp->qp_nparams, sess_cb->pss_dmax-3);
-#endif
+	    if (dyntrace)
+	    {
+		TRdisplay("%@ PST_EXECUTE: parms for %d, QP: %d, actual: %d\n",
+		    proto->pst_checksum, qp->qp_nparams, sess_cb->pss_dmax-3);
+	    }
 
 	    if (qp->qp_status & QEQP_SCROLL_CURS)
 		scroll = TRUE;			/* check scrollable, too */
@@ -1363,33 +1382,63 @@ pst_execute(
 	    else if (qp->qp_nparams > 0)
 	    {
 		i4	i, dtbits;
+		DB_DATA_VALUE *actualdv, *qpdv;
+		DB_DATA_VALUE **actualdvp, **qpdvp;
+		DB_DT_ID dtype;
 
 		/* Loop over parms - assuring all types and lengths match, 
-		** and that there are no LOB parms. */
+		** and that there are no LOB parms.
+		** Variable length parameters haven't been turned into VLUP's
+		** yet.  (That happens in pst_prmsub later on.)  Need to test
+		** for variable length types specifically.
+		*/
+		qpdvp = qp->qp_params;
+		actualdvp = sess_cb->pss_qrydata + 3;
 		for (i = 0; i < qp->qp_nparams; i++)
-		 if (qp->qp_params[i]-> db_datatype != 
-			sess_cb->pss_qrydata[i+3]->db_datatype)
-		 {
-#ifdef xDEBUG
-		    TRdisplay("PST_EXECUTE: repeat dynamic parm mis-match %2d, (%3d), (%3d)\n",
-			i, qp->qp_params[i]->db_datatype,
-			sess_cb->pss_qrydata[i+3]->db_datatype);
-#endif
-		    repeat = FALSE;
-		 }
-		 else {
-#ifdef xDEBUG
-		    TRdisplay("PST_EXECUTE: repeat dynamic parm OK %2d, (%3d), (%3d)\n",
-			i, qp->qp_params[i]->db_datatype,
-			sess_cb->pss_qrydata[i+3]->db_datatype);
-#endif
-		    status = adi_dtinfo(sess_cb->pss_adfcb, sess_cb->
-				pss_qrydata[i+3]->db_datatype, &dtbits);
-		    if (status != E_DB_OK)
-			return(status);
-		    if (dtbits & AD_PERIPHERAL)
+		{
+		    qpdv = *qpdvp++;
+		    actualdv = *actualdvp++;
+		    if (dyntrace)
+		    {
+			TRdisplay("%@ PST_EXECUTE: repeat dynamic parm[%d]\n\t qp type,len,prec = (%d,%d,%d), actual = (%d,%d,%d)\n",
+			    i, qpdv->db_datatype,qpdv->db_length,qpdv->db_prec,
+			    actualdv->db_datatype,actualdv->db_length,actualdv->db_prec);
+		    }
+		    if (qpdv->db_datatype != actualdv->db_datatype)
+		    {
 			repeat = FALSE;
-		 }
+			break;
+		    }
+		    dtype = abs(qpdv->db_datatype);
+		    /* Check for VLUP type, they are OK */
+		    if (dtype == DB_VCH_TYPE || dtype == DB_NVCHR_TYPE
+		      || dtype == DB_TXT_TYPE || dtype == DB_VBYTE_TYPE)
+			continue;
+
+		    if (qpdv->db_length != actualdv->db_length
+		      || (dtype == DB_DEC_TYPE
+			  && qpdv->db_prec != actualdv->db_prec) )
+		    {
+			repeat = FALSE;
+			break;
+		    }
+		    else
+		    {
+			status = adi_dtinfo(sess_cb->pss_adfcb, dtype, &dtbits);
+			if (status != E_DB_OK)
+			    return(status);
+			if (dtbits & AD_PERIPHERAL)
+			{
+			    repeat = FALSE;
+			    break;
+			}
+		    }
+		} /* for */
+		if (dyntrace)
+		{
+		    TRdisplay("%@ PST_EXECUTE: cached QP is%s usable so far\n",
+			repeat ? "" : " NOT");
+		}
 	    }
 
 	    /* If still repeat, tell parser so existing plan can be reused. 
