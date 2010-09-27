@@ -797,6 +797,8 @@
 **	31-Aug-2010 (miket) SIR 122403
 **	    For dm1e_aes calls follow dmf convention of breaking or
 **	    continuing with status test rather than returning on error.
+**      01-Sep-2010 (stial01) SD 146583, B124340
+**          Fixed redo_dupcheck handling.
 */
 
 
@@ -1255,6 +1257,7 @@ dm1b_allocate(
     i4         	    split_count = 0;
     bool            requalify_leaf;
     bool            redo_dupcheck;
+    i4		    redo_dupcount = 0;
     char            *leafkey = key;
     DB_ERROR	    local_dberr;
     i4		    *err_code = &dberr->err_code;
@@ -1563,6 +1566,21 @@ dm1b_allocate(
 
 	if (s != E_DB_OK)
 	    break;
+
+	if (redo_dupcheck)
+	{
+	    redo_dupcount++;
+	    /*
+	    ** for unique btree, redo_cnt should never be > 1
+	    ** for non-unique btree (noduplicates) redo_count should 
+	    ** never be > max concurrent transactions
+	    */
+#ifdef xDEBUG
+	    if (redo_dupcount > dmf_svcb->svcb_xid_lg_id_max)
+		TRdisplay("dupcheck redo_cnt %d mytran %x \n", 
+		    redo_dupcount, r->rcb_tran_id.db_low_tran);
+#endif
+	}
 
 	/*
 	** If only checking duplicates, then report success.
@@ -2509,7 +2527,10 @@ dm1b_dupcheck(
 		    dm0pUnlockBuf(r, leafPinfo);
 
 		    if ( crow_locking(r) )
+		    {
+			/* this will get PHYS lock and then unlock */
 			s = dm1r_crow_lock(r, DM1R_LK_PHYSICAL, &localtid, NULL, dberr);
+		    }
 		    else
 		    {
 			/* Don't clear lock coupling in rcb */
@@ -2530,7 +2551,7 @@ dm1b_dupcheck(
 		    if ( s != E_DB_OK )
 		        break;
 		    *redo_dupcheck = TRUE;
-		    return (E_DB_OK);
+		    break;
 		}
 
 		if (get_status == E_DB_OK) 
@@ -8374,7 +8395,10 @@ dm1badupcheck(
 		dm0pUnlockBuf(r, leafPinfo);
 
 		if ( crow_locking(r) )
+		{
+		    /* this will get PHYS lock and then unlock */
 		    s = dm1r_crow_lock(r, DM1R_LK_PHYSICAL, &localtid, NULL, dberr);
+		}
 		else
 		{
 		    /* Don't clear lock coupling in rcb */
@@ -8394,7 +8418,7 @@ dm1badupcheck(
 		if ( s != E_DB_OK )
 		    break;
 		*redo_dupcheck = TRUE;
-		return (E_DB_OK);
+		break;
 	    }
 
 	    if (get_status == E_DB_OK)
