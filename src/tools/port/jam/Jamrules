@@ -1448,6 +1448,8 @@
 #           Added IIAWK rule/action to generate .h files (in psl) from
 #           some source. Also fixed dependencies in other AWK based
 #           rules to ensure correct build order used.
+#       09-aug-2010 (joea)
+#           Correct _IIAWK action on VMS: need to quote uppercase params.
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -10726,7 +10728,7 @@ else if $(VMS)
 	        if f$parse("$(<:D)") .eqs. "" then create /dir $(<:D)
 
                 set default $(<:D)
-		$(AWK) -v OUT=$(<:BS) -f $(>:BS)
+		$(AWK) -v "OUT=$(<:BS)" -f $(>:BS)
 	}
 	actions FiRoc
 	{
