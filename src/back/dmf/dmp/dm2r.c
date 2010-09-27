@@ -1305,6 +1305,9 @@ static DB_STATUS SIcomplete(
 **	    Instead of TMget_stamp use TMhrnow, because the result of the
 **	    former is supposed to be opaque (we should not reference
 **	    tm_stamp.tms_usec). This fixes portability to VMS.
+**	01-Sep-2010 (miket) SIR 122403
+**	    Adjust encrypted record buffer to correct overrun flagged in
+**	    dbms log ("Memory overrun rcb_hl_ptr").
 */
 DB_STATUS
 dm2r_rcb_allocate(
@@ -1383,7 +1386,7 @@ DB_ERROR	    *dberr )
 	    status = dm0m_allocate(sizeof(DMP_RCB) +
 		DB_ALIGN_MACRO(t->tcb_rel.relwid +
 			t->tcb_data_rac.worstcase_expansion) * rec_buffers +
-		DB_ALIGN_MACRO(klen) * key_buffers +
+		AES_BLOCK + DB_ALIGN_MACRO(klen) * key_buffers +
 		sizeof(ADF_CB) + seglen,
 		DM0M_ZERO, (i4)RCB_CB, (i4)RCB_ASCII_ID,
 		(char *)t, (DM_OBJECT **)rcb, dberr);
@@ -1428,7 +1431,8 @@ DB_ERROR	    *dberr )
 	if (rec_buffers == 3)		/* encryption */
 	{
 	    r->rcb_erecord_ptr = p;
-	    p += t->tcb_rel.relwid + t->tcb_data_rac.worstcase_expansion;
+	    p += t->tcb_rel.relwid + t->tcb_data_rac.worstcase_expansion +
+		AES_BLOCK;
 	    p = ME_ALIGN_MACRO(p, sizeof(PTR));
 	}
 

@@ -779,6 +779,9 @@ DB_ERROR     	*dberr )
 **	    LOB columns.  If we're qualifying, there is some remote chance
 **	    that the where-clause will involve LOBs, so copy the BQCB
 **	    pointer from the calling RCB into our temporary ones.
+**	01-Sep-2010 (miket) SIR 122403
+**	    Copy rcb->rcb_enckey_slot to arcb blocks for aggregate
+**	    processing of encrypted tables.
 */
 static DB_STATUS
 build_sagg_actions(
@@ -891,6 +894,7 @@ DB_ERROR     	*dberr )
 		arcb->rcb_uiptr = rcb->rcb_uiptr;
 		/* won't need any lobs in the row */
 		arcb->rcb_state |= RCB_NO_CPN;
+		arcb->rcb_enckey_slot = rcb->rcb_enckey_slot;
 
 		/* passed-in RCB should point to a valid message area if
 		** it was opened in the normal way by a user (dmtopen).
@@ -992,6 +996,7 @@ DB_ERROR     	*dberr )
             arcb->rcb_k_mode = RCB_K_IS;
             arcb->rcb_access_mode = RCB_A_READ;
 	    arcb->rcb_uiptr = rcb->rcb_uiptr;
+	    arcb->rcb_enckey_slot = rcb->rcb_enckey_slot;
 	    STRUCT_ASSIGN_MACRO(rcb->rcb_adf_cb->adf_errcb,
 			arcb->rcb_adf_cb->adf_errcb);
 
