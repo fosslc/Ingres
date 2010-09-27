@@ -2724,6 +2724,10 @@ DB_ERROR	*dberr)
 **	    Start kids with DMF facility.
 **	27-Apr-2010 (kschendel)
 **	    Shorten thread names so they aren't truncated.
+**	03-Sep-2010 (miket) SIR 122403 SD 146662
+**	    No threads for encryption because
+**	    (1) threaded load paths not all encryption enabled
+**	    (2) possible collision on encryption work buffer
 */
 i4
 SpawnDMUThreads(
@@ -2750,7 +2754,8 @@ i4		thread_type)
     */
     if ((m->mx_dcb->dcb_status & DCB_S_ROLLFORWARD) || 
 	(m->mx_flags & MX_ONLINE_MODIFY) ||
-	 (m->mx_width > 32768))
+	(m->mx_width > 32768) ||
+	(t->tcb_rel.relencflags & TCB_ENCRYPTED))
 	avail_threads = 0;
     else
 	avail_threads = m->mx_xcb->xcb_scb_ptr->scb_dop;
