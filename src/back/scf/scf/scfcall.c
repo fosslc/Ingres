@@ -173,6 +173,8 @@
 **          ult_set_always_trace uses bitmask now
 **	06-sep-2010 (maspa05) SIR 124363
 **	    Add trace point sc925 for logging long-running queries
+**      08-sep-2010 (maspa05) SIR 124345
+**          SC930 2 should switch on tracing when run by itself
 **/
 
 
@@ -1036,8 +1038,7 @@ scf_trace(DB_DEBUG_CB  *trace_cb)
 		  case 1:
 		    trace_val=ult_always_trace();
 		    trace_val |= SC930_TRACE;
-		    trace_val &= ~SC930_QEP_FULL;
-		    trace_val &= ~SC930_QEP_SEG;
+		    trace_val &= ~(SC930_QEP_FULL|SC930_QEP_SEG);
                     ult_set_always_trace(trace_val,Sc_main_cb->sc_pid);
 		    break;
 		  case 2:
@@ -1047,17 +1048,17 @@ scf_trace(DB_DEBUG_CB  *trace_cb)
 		      case 0:
 		      case 1:
 		        trace_val &= ~SC930_QEP_FULL;
-		        trace_val |= SC930_QEP_SEG;
+		        trace_val |= (SC930_TRACE|SC930_QEP_SEG);
                         ult_set_always_trace(trace_val,Sc_main_cb->sc_pid);
 		        break;
 		      case 2:
-		        trace_val |= SC930_QEP_FULL;
+		        trace_val |= (SC930_TRACE|SC930_QEP_FULL);
 		        trace_val &= ~SC930_QEP_SEG;
                         ult_set_always_trace(trace_val,Sc_main_cb->sc_pid);
 		        break;
 		      case 3:
-		        trace_val &= ~SC930_QEP_FULL;
-		        trace_val &= ~SC930_QEP_SEG;
+		        trace_val |= SC930_TRACE;
+		        trace_val &= ~(SC930_QEP_FULL|SC930_QEP_SEG);
                         ult_set_always_trace(trace_val,Sc_main_cb->sc_pid);
 		        break;
 		      default:
