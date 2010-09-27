@@ -72,6 +72,7 @@
 #include    <pthread_exception.h>
 #endif
 
+#include    <erfac.h>
 
 #if defined(hp3_us5)
 #pragma OPT_LEVEL 2
@@ -2663,6 +2664,8 @@ static char execproc_syntax2[] = " = session.";
 **	    "execute procedure" in batch. Make sure we allocate a new message
 **	    when sending GCA_RETPROC in batch otherwise we may get an
 **	    inconsistent queue.
+**      02-sep-2010 (maspa05) SIR 124346
+**          Add end-query SC930 record - with error number and rowcount.
 */
 DB_STATUS
 scs_sequencer(i4 op_code,
@@ -10801,6 +10804,54 @@ massive_for_exit:
 	}
     }
 
+    /* SC930 - log end of query */
+    if ((sscb->sscb_state == SCS_INPUT) &&
+        (ult_always_trace() & SC930_TRACE))
+    {
+
+          SCC_CSCB	*cscb;		/* Convenience: scb->scb_cscb */
+
+          void *f = ult_open_tracefile((PTR)scb->cs_scb.cs_self);
+
+          cscb = &scb->scb_cscb;
+
+          if (f)
+          {
+	      char tmp[45],fac_str[5];
+              u_i4 fac_code,just_err,i;
+
+	      if (scb->cs_scb.cs_sc930_err == 0)
+	      {
+ 		  STprintf(tmp,"%d:",
+		  	  cscb->cscb_rdata->gca_rowcount);
+	      }
+	      else
+	      {
+ 	        fac_code=(scb->cs_scb.cs_sc930_err >> 16) & 0x7fff;
+ 	        just_err=scb->cs_scb.cs_sc930_err & 0xffff; 
+                
+		/* if for any reason we can't find the facilty code then
+		 * output it as hex */
+
+ 	        STprintf(fac_str,"%04X",fac_code);
+ 
+ 		for (i=0; i < NUMFAC; ++i)
+ 	  	  if (Factab[i].num== fac_code)
+ 		  {
+ 		    STprintf(fac_str,"E_%2s",Factab[i].fac);
+ 		    break;
+ 		  }
+ 
+ 		STprintf(tmp,"%d:%4s%04X",
+			cscb->cscb_rdata->gca_rowcount,
+		        fac_str,just_err);
+	      }
+ 	      ult_print_tracefile(f,SC930_LTYPE_ENDQRY,tmp);
+ 	      ult_close_tracefile(f);
+ 	    }
+	    scb->cs_scb.cs_sc930_err=0;
+    }
+
     sscb->sscb_cfac = DB_CLF_ID;
     return(ret_val <= E_DB_ERROR ? E_DB_OK : ret_val);
 }
@@ -13648,7 +13699,7 @@ scs_input(SCD_SCB *scb,
 	    sscb->sscb_dmm = 0;
 	}
 	else if (sscb->sscb_dmm)
-	{
+	{	
 	    sc0e_put(E_SC022C_PREMATURE_MSG_END, 0, 2,
 		     sizeof(rv->gca_message_type),
 		     (PTR)&rv->gca_message_type,
@@ -13774,6 +13825,8 @@ scs_input(SCD_SCB *scb,
 **	    Handle E_QE0122_ALREADY_REPORTED as if it were QE0025, i.e. just
 **	    eat it.  QEF usually translates QE0122 to QE0025, but some
 **	    cases slip through, and it's simpler to fix here than in QEF. :-)
+**      02-Sep-2010 (maspa05) sir 124346
+**          Save error code for SC930 output
 */
 VOID
 scs_qef_error(DB_STATUS status,
@@ -13789,7 +13842,16 @@ scs_qef_error(DB_STATUS status,
 	/*
 	** These are user errors and
 	** should have been returned as such
+	**
+	** However save the error_blame error code for SC930 tracing
+	** unless we've already got an error code - in which case assume 
+	** it's more meaningful and keep it
 	*/
+
+        if (scb->cs_scb.cs_sc930_err==0)
+	    scb->cs_scb.cs_sc930_err=error_blame;
+
+
     }
     else if ((err_code == E_QE000D_NO_MEMORY_LEFT)
 	|| (err_code == E_QE000E_ACTIVE_COUNT_EXCEEDED))

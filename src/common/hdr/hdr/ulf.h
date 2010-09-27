@@ -109,6 +109,10 @@
 **      03-aug-2010 (maspa05) bug 124161
 **          Bump sc930 version number for format change - hex output of BYTE
 **          and VBYTE values
+**      25-aug-2010 (maspa05)
+**          Added SC930 bitmask flags for granularity in tracing. 
+**          Added SC930_LTYPE_ENDQRY for EQY end query record
+**          ult_always_trace() and ult_always_trace now return/pass an i4
 **/
 #ifndef TR_HDR_INCLUDED
 #include <tr.h>
@@ -696,18 +700,25 @@ FUNC_EXTERN DB_STATUS ult_clrval( ULT_TVECT *vector, i4  flag );
 ** SC930 trace functions
 **
 **   ult_always_trace - check if SC930 tracing is set
+**   ult_set_always_trace - set a trace value for SC930
 **   ult_open_tracefile - open the session specific trace file
 **   ult_print_tracefile - print to the trace file
 **   ult_close_tracefile - close the trace file
 */
 
-FUNC_EXTERN bool ult_always_trace(void);
+FUNC_EXTERN i4 ult_always_trace(void);
+FUNC_EXTERN void ult_set_always_trace(i4,i4);
 FUNC_EXTERN void *ult_open_tracefile(void *);
 FUNC_EXTERN void ult_print_tracefile(void *,i2 ,char *);
 FUNC_EXTERN void ult_close_tracefile(void *);
-FUNC_EXTERN bool ult_trace_qep(void);
 
-#define	SC930_VERSION		7	/* version of SC930 output */
+#define	SC930_VERSION		8	/* version of SC930 output */
+
+/* SC930 trace flags */
+#define SC930_TRACE               0x00000001  /* SC930 tracing ON */
+#define SC930_QEP_SEG             0x00000002  /* QEPs in segmented style */
+#define SC930_QEP_FULL            0x00000004  /* QEPs in old 'full' style */
+
 /* SC930 output line types */
 #define SC930_LTYPE_UNKNOWN		0
 #define SC930_LTYPE_ADDCURSORID		1
@@ -737,3 +748,4 @@ FUNC_EXTERN bool ult_trace_qep(void);
 #define SC930_LTYPE_QUERY		25
 #define SC930_LTYPE_REQUEL		26
 #define SC930_LTYPE_REQUERY		27
+#define SC930_LTYPE_ENDQRY		28

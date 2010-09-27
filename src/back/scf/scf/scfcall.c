@@ -166,6 +166,11 @@
 **	    Use new forms of sc0ePut(), uleFormat().
 **      16-nov-2008 (stial01)
 **          Redefined name constants without trailing blanks.
+**      02-sep-2010 (maspa05) SIRs 124345, 124346
+**          extra SC930 options including QEP SEGMENTED and QEP FULL (original
+**          format). Added SC930 to SC1000 output (SC trace point help)
+**          set notrace point sc930 now turns off sc930
+**          ult_set_always_trace uses bitmask now
 **/
 
 
@@ -984,13 +989,59 @@ scf_trace(DB_DEBUG_CB  *trace_cb)
 	    break;
 	    
 	case	930:
+	    if (trace_cb->db_trswitch == DB_TR_ON)
 	    {
-		bool trace_on = (trace_cb->db_vals[0] != 0);
-		bool qep_on = (trace_cb->db_vals[0] >= 2);
-		ult_set_always_trace (trace_on,Sc_main_cb->sc_pid);
-		ult_set_trace_qep (qep_on,Sc_main_cb->sc_pid);
-		break;
+		i4 trace_val;
+		i2 v1,v2;
+
+		v1=(trace_cb->db_value_count==0? 1:trace_cb->db_vals[0]);
+		v2=(trace_cb->db_value_count==1? 0:trace_cb->db_vals[1]);
+
+		switch (v1)
+		{
+		  case 0:
+	            ult_set_always_trace(0,Sc_main_cb->sc_pid);
+		    break;
+		  case 1:
+		    trace_val=ult_always_trace();
+		    trace_val |= SC930_TRACE;
+		    trace_val &= ~SC930_QEP_FULL;
+		    trace_val &= ~SC930_QEP_SEG;
+                    ult_set_always_trace(trace_val,Sc_main_cb->sc_pid);
+		    break;
+		  case 2:
+		    trace_val=ult_always_trace();
+		    switch (v2)
+		    {
+		      case 0:
+		      case 1:
+		        trace_val &= ~SC930_QEP_FULL;
+		        trace_val |= SC930_QEP_SEG;
+                        ult_set_always_trace(trace_val,Sc_main_cb->sc_pid);
+		        break;
+		      case 2:
+		        trace_val |= SC930_QEP_FULL;
+		        trace_val &= ~SC930_QEP_SEG;
+                        ult_set_always_trace(trace_val,Sc_main_cb->sc_pid);
+		        break;
+		      case 3:
+		        trace_val &= ~SC930_QEP_FULL;
+		        trace_val &= ~SC930_QEP_SEG;
+                        ult_set_always_trace(trace_val,Sc_main_cb->sc_pid);
+		        break;
+		      default:
+	                sc0e_trace("invalid value for QEP style (1=Seg,2=Full,3=Off)");
+		        break;
+		    }
+		    break;
+		  default:
+	            sc0e_trace("invalid sc930 parameter");
+		    break;
+		}
 	    }
+	    else
+	        ult_set_always_trace(0,Sc_main_cb->sc_pid);
+	    break;
 
 	case	1000:
 	    sc0e_trace("Valid SCF trace flags are:\n");
@@ -1013,6 +1064,12 @@ scf_trace(DB_DEBUG_CB  *trace_cb)
 	    sc0e_trace(" 922\tDump cross server event memory\n");
 	    sc0e_trace(" 923\tAlter SCE event processing - (help = 1000)\n");
 	    sc0e_trace(" 924\tDump query before error \n");
+	    sc0e_trace(" 930\tServer-based Query Tracing ");
+	    sc0e_trace("\t   0\t\t- turn off");
+	    sc0e_trace("\t  [1]   \t- turn on");
+	    sc0e_trace("\t   2 [1]\t- include QEPs (segmented style)");
+	    sc0e_trace("\t   2  2 \t- include QEPs (full style)");
+	    sc0e_trace("\t   2  3 \t- turn off QEPs");
 	    break;
 	    
 	default:

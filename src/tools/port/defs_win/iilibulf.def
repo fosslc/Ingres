@@ -30,6 +30,8 @@
 ;	    Bug 122119: Add uld_mathex_xlate.
 ;	09-Sep-2009 (bonro01)
 ;	    Bug 122509: Add uld_prtree_x and ult_trace_qep
+;	02-sep-2010 (maspa05) SIR 124345
+;	    remove ult_trace_qep and ult_set_trace_qep
 ;
 
 EXPORTS
@@ -92,6 +94,6 @@ ult_always_trace	@56
 ult_set_tracefile	@57
 uld_mathex_xlate	@58
 uld_prtree_x		@59
-ult_trace_qep		@60
-ult_set_trace_qep	@61
+;ult_trace_qep		@60
+;ult_set_trace_qep	@61
 

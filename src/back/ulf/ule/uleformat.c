@@ -405,6 +405,8 @@ ule_initiate( char *node_name, i4  l_node_name, char *server_name,
 **          Remove artificial limit of 16384 characters when writing query
 **          text to the errlog.log. We already write this in ER_MAX_LEN
 **          chunks so there's no need to truncate it.
+**      02-sep-2010 (maspa05) SIR 124346
+**          Save latest error code for SC930 output
 **	    
 */
 /* VARARGS31 */
@@ -562,6 +564,7 @@ i4	    num_parms,
     }
     if (!language)
 	language = 1;
+
 
     /* package up the stack parameters into an ER_ARGUMENT array */
 
@@ -838,6 +841,16 @@ i4	    num_parms,
 	
 	status = ERsend(ER_ERROR_MSG, (PTR)&buffer,
 		    PrefixLen + length, &sys_err);
+    }
+
+ 
+    /* save error for SC930 trace output */
+    if (ult_always_trace() & SC930_TRACE)
+    {
+        CS_SCB   *cs_scb;
+	CSget_scb(&cs_scb);  
+
+        cs_scb->cs_sc930_err=error_code;
     }
 
     /*

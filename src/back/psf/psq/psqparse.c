@@ -104,6 +104,8 @@
 **	01-Jul-2010 (kiria01) b124000
 **	    Initialise pss_stk_freelist when memory streams are created
 **	    in support of flattened recursion for things such as pst_treedup.
+**      02-sep-2010 (maspa05) sir 124346
+**          ult_always_trace() uses bitmask flags now
 **/
 
 
@@ -423,7 +425,7 @@ psq_parseqry(
     /* print the qry buffer as long as this isn't a retry 
     ** - although allow through the RECREATE case since it's useful
     ** for debugging to log reparsing an object */
-    if (ult_always_trace() && 
+    if ((ult_always_trace() & SC930_TRACE) && 
 	( ((sess_cb->pss_retry & PSS_REFRESH_CACHE)==0) ||
 	  (sess_cb->pss_dbp_flags & PSS_RECREATE) != 0 ) )
     {

@@ -1950,6 +1950,8 @@ struct _CS_CONDITION
 **	07-Oct-2008 (smeke01) b120907
 **	    Added new field to handle platform-specific storage of
 **	    OS thread id (as opposed to thread library thread id). 
+**	02-sep-2010 (maspa05) SIR 124346
+**	    Added cs_sc930_err to store latest error code for SC930 trace
 **
 */
 
@@ -2391,6 +2393,7 @@ _DEFINESEND
 #if defined(VMS) && defined(KPS_THREADS)
     KPB_PQ          kpb;                /* KP Services block address (64 bit) */
 #endif
+    i4              cs_sc930_err;       /* saved error for SC930 logging */
 };
 
 /*

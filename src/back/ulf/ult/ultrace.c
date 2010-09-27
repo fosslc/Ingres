@@ -54,6 +54,10 @@
 **          tokenize everything after the '?' as query text.
 **	25-May-2010 (kschendel)
 **	    Tighten up declarations a little, () -> (void).
+**      02-sep-2010 (maspa05) SIR 124345, 124346
+**          ult_set_always_trace() and ult_always_trace() now use an integer
+**          bitmask. Ditch the separate *_qep_* functions.
+**          Add EQY end-query record.
 **/
 
 /*{
@@ -239,11 +243,13 @@ ult_clrval( ULT_TVECT *vector, i4  flag )
 **
 ** Side Effects:
 **	    none
+**      02-sep-2010 (maspa05) SIR 124345, 124346
+**          always_tracing change to i4 bitmask
 */
 
-static bool always_tracing = FALSE;
+static i4 always_tracing = 0;
 static i4 ult_pid = 0;
-bool
+i4
 ult_always_trace(void)
 {
       return (always_tracing);
@@ -272,76 +278,36 @@ ult_always_trace(void)
 ** History:
 **	13-May-2009 (kibro01) b122062
 **	    Log in dbms.log the fact that SC930 has switched on or off.
+**      02-sep-2010 (maspa05) SIR 124345, 124346
+**          always_tracing change to i4 bitmask
 */
 
 void
-ult_set_always_trace(bool value,i4 pid)
+ult_set_always_trace(i4 value,i4 pid)
 {
-      if (value != always_tracing)
+      if (value != always_tracing )
       {
-	TRdisplay("SC930 tracing %s on %d (ver=%d)\n",value?"ENABLED":"DISABLED",pid,
-			SC930_VERSION);
+         if (
+             always_tracing == 0)
+         {
+	    TRdisplay("SC930 tracing ENABLED on %d (ver=%d)\n",
+			    pid, SC930_VERSION);
+	 }
+	 else 
+	 {
+            if (value == 0)
+	      TRdisplay("SC930 tracing DISABLED on %d (ver=%d)\n",
+			    pid, SC930_VERSION);
+	    else
+	    {
+	      TRdisplay("SC930 tracing flags changed from %x to %x on %d (ver=%d)\n",
+			    always_tracing,value,pid, SC930_VERSION);
+	    }
+	 }
+
       }
       always_tracing = value;
       ult_pid = pid;
-}
-
-/*{
-** Name: ult_set_trace_qep	- Set whether SC930 tracing outputs QEPs too
-**
-** Description:
-**      Sets the trace_qep static variable for this server.
-**
-** Inputs:
-**      value to set the trace_qep flag to
-**
-** Outputs:
-**	Returns:
-**	    none
-**	Exceptions:
-**	    none
-**
-** Side Effects:
-**	    none
-**
-** History:
-*/
-
-static bool trace_qep = FALSE;
-void
-ult_set_trace_qep(bool value)
-{
-      if (value != trace_qep)
-      {
-	TRdisplay("SC930 QEP %s on\n",value?"ENABLED":"DISABLED");
-      }
-      trace_qep = value;
-}
-
-/*{
-** Name: ult_trace_qep	- Return whether SC930 traces QEPs
-**
-** Description:
-**      Returns TRUE if SC930 tracing also applies to QEPs
-**
-** Inputs:
-**
-** Outputs:
-**	Returns:
-**	    trace_qep (true/false)
-**	Exceptions:
-**	    none
-**
-** Side Effects:
-**	    none
-**
-** History:
-*/
-
-bool
-ult_trace_qep(void)
-{
-	return (trace_qep);
 }
 
 
@@ -447,7 +413,7 @@ ult_open_tracefile(void *code)
 
 	if (!tname)
 	{
-		ult_set_always_trace(FALSE,0);
+		ult_set_always_trace(0,0);
 		return(NULL);
 	}
 	LOcopy(tname, fname_tmp, &loc_copy);
@@ -481,6 +447,9 @@ ult_open_tracefile(void *code)
 **
 ** Side Effects:
 **	    none
+**
+**      02-sep-2010 (maspa05) SIR 124345, 124346
+**          Add SC930_LTYPE_ENDQRY, EQY end-query record.
 */
 
 void
@@ -495,7 +464,7 @@ ult_print_tracefile(void *file, i2 type, char *string)
 	
 	if (!f)
 	{
-		ult_set_always_trace(FALSE,0);
+		ult_set_always_trace(0,0);
 		return;
 	}
 
@@ -592,19 +561,25 @@ ult_print_tracefile(void *file, i2 type, char *string)
 				type_str="REQUERY";
                                 last_sep='?';
 				break;
+ 		case SC930_LTYPE_ENDQRY:
+ 				type_str="EQY";
+ 				break;
 		case SC930_LTYPE_UNKNOWN:
 		default:
 				type_str="UNKNOWN";
 				prt_timestamp=FALSE;
 
 	}
-	if (prt_timestamp)
+        if (prt_timestamp)
+    	{
+           TMhrnow(&hr);
+           SIfprintf(f,"%s:%ld/%ld%c%s\n",
+			     type_str,hr.tv_sec,hr.tv_nsec,last_sep,string);
+        }
+        else
 	{
-	    TMhrnow(&hr);
-	    SIfprintf(f,"%s:%ld/%ld%c%s\n",type_str,hr.tv_sec,hr.tv_nsec,last_sep,string);
-	}
-	else
-	    SIfprintf(f,"%s%c%s\n",type_str,last_sep,string);
+          SIfprintf(f,"%s%c%s\n",type_str,last_sep,string);
+        }
 
 }
 
@@ -634,7 +609,7 @@ ult_close_tracefile(void *file)
 	FILE *f = (FILE*)file;
 	if (!f)
 	{
-		ult_set_always_trace(FALSE,0);
+		ult_set_always_trace(0,0);
 		return;
 	}
 	SIclose(f);
