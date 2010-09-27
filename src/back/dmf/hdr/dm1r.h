@@ -91,6 +91,8 @@
 **	    dm1r_lk_convert, dm1r_crow_lock prototypes.
 **      12-Jul-2010 (stial01) (SIR 121619 MVCC, B124077)
 **          Added row_is_consistent() prototype.
+**      15-Sep-2010 (stial01) (SIR 121619 MVCC, SD 146756, B124453)
+**          Moved row_is_consistent() prototype to dmp.h
 **/
 
 /*
@@ -251,8 +253,3 @@ FUNC_EXTERN DB_STATUS dm1r_get_segs(
 FUNC_EXTERN DB_STATUS dm1r_check_lock(
 				DMP_RCB		*rcb,
 				DM_TID		*tid);
-
-FUNC_EXTERN bool row_is_consistent(
-DMP_RCB		*r,
-u_i4		row_low_tran,
-u_i2		row_lg_id);
