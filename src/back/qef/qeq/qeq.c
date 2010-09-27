@@ -4023,6 +4023,7 @@ i4		mode )
 
     }
 
+
     /* decrement the count of open query/cursor so that
     ** qeq_cleanup can do the right thing */
     if (qef_cb->qef_open_count > 0 && mode == QEQ_QUERY)
@@ -5289,6 +5290,9 @@ QEE_DSH	    *dsh
 **	    Extract from qeq-cleanup.
 **	11-May-2010 (kschendel)
 **	    OPC now only sets NODEACT when there's really something there.
+**      21-Sep-2010 (horda03) b124315
+**          Check all the actions. The ahd_next list may "miss" actions
+**          due to flow changes introduced by IF statements.
 */
 
 void
@@ -5301,7 +5305,7 @@ qeq_close_dsh_nodes(QEE_DSH *dsh)
 
     for (action = dsh->dsh_qp_ptr->qp_ahd; 
 	 action != NULL;
-	 action = action->ahd_next)
+	 action = action->ahd_list)
     {
 	if ( action->ahd_flags & QEA_NODEACT )
 	{

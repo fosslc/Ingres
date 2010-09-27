@@ -2292,12 +2292,20 @@ struct _QEF_RELATED_OBJECT
 **	    Added support for Alter table rename table/column. 
 **	2-Jul-2010 (kschendel) b124004
 **	    Drop qhd_rup, not used.
+**      21-Sep-2010 (horda03) b124315
+**          Normally each Action flows into the next action, chained together
+**          by ahd_next. In a DBP though, an IF statement changes the flow, such
+**          that the FALSE flow is in ahd_next but the TRUE flow is in
+**          qhd_obj.qhd_if.ahd_true. When closing a DSH need to check ALL actions
+**          so that CLOSE actions can be performed (as required), added ahd_list
+**          to maintain the complete list of actions for the QP.
 */
 struct _QEF_AHD
 {
     /* standard stuff */
     QEF_AHD     *ahd_next;       /* The next control block */
     QEF_AHD     *ahd_prev;       /* The previous one */
+    QEF_AHD     *ahd_list;       /* List of all actions for statement (IF cause branches) */
     SIZE_TYPE   ahd_length;      /* size of the control block */
     i2          ahd_type;        /* type of control block */
 #define QEAHD_CB    1
