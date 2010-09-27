@@ -1754,6 +1754,10 @@ qee_hash_doinit(QEF_RCB *rcb, QEE_DSH *dsh, QEF_AHD *act,
 **	    "bmem quality" indicator from the optimizer.  Sometimes it
 **	    can be pretty sure of its numbers, and sometimes they are
 **	    just wild guesses.
+**	28-Jun-2010 (smeke01) b123969
+**	    Added diagnostic tracepoint QE72 which facilitates the setting
+**	    of partition size and number of partitions respectively for hash
+**	    join.
 */
 DB_STATUS
 qee_hashInit(
@@ -1778,6 +1782,7 @@ qee_hashInit(
     DB_STATUS	status;
     DB_CMP_LIST	*lastcmp;
     bool	shrink;			/* Termination enforcer */
+    i4		tp_csize, tp_pcount; /* used by trace point QE72 */
 
     /* If we already did this hash join, just return. */
     if (hbase->hsh_msize != 0)
@@ -2090,6 +2095,22 @@ qee_hashInit(
     hbase->hsh_rbsize = rbufsize;
     hbase->hsh_bvsize = bvsize;
     hbase->hsh_msize = needmem;
+
+    /* Diagnostic trace point QE72 - set hash parameters pn size and pn count */
+    if (ult_check_macro(&qefcb->qef_trace, QEF_TRACE_PARAMS_72, &tp_csize, &tp_pcount))
+    {
+	/* 
+	** Overwrite the calculated values only if we have
+	** at least minimal values to work with
+	*/
+	TRdisplay("%@ %^ Trace point QE72: csize was %d, pcount was %d;", hbase->hsh_csize, hbase->hsh_pcount);
+	if (tp_csize >= browsz && tp_csize >= hbase->hsh_prowsz && tp_pcount > 1) 
+	{
+	    hbase->hsh_csize = tp_csize;
+	    hbase->hsh_pcount = tp_pcount;
+	}
+	TRdisplay(" csize now %d, pcount now %d\n", hbase->hsh_csize, hbase->hsh_pcount);
+    }
 
 #if 0
 /* Note! disable this code until page-compression on work files is actually

@@ -1233,6 +1233,9 @@ opj_cartprod(
 **	    Swap cardinality fields when inner and outer co nodes are reversed
 **	    and updated call to opb_gbfbm to hand down co node to pick up
 **	    cardinality info from the parse tree boolean factors.
+**	28-Jun-2010 (smeke01) b123969
+**	    Added diagnostic tracepoint OP217 which forces optimiser to use
+**	    hash joins. Requires xDEBUG to be defined in opjjoinop.c
 */
 static VOID
 opj_exact(
@@ -1690,6 +1693,13 @@ opj_exact(
 		  use_hashjoin = FALSE;
 	    }
 
+# if defined(xDEBUG) && defined (OPT_F089_FORCE_HASHJOIN)
+	    if (subquery->ops_global->ops_cb->ops_check &&
+		opt_strace(subquery->ops_global->ops_cb, OPT_F089_FORCE_HASHJOIN))
+	    {	/* op217 - force optimiser to use hash joins */
+		use_hashjoin = TRUE;
+	    }
+# endif
 	    if (use_hashjoin)
 	    {
 		OPS_WIDTH	outsz, insz;

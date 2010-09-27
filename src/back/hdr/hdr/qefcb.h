@@ -550,6 +550,10 @@ typedef struct _QES_DDB_SES
 **	    qen_exchange_serial(). 
 **      13-Sep-2010 (kschendel) Bug 123720
 **          Add qef_trsem for valid parallel-query output.
+**	28-Jun-2010 (smeke01) b123969
+**	    Added diagnostic tracepoint QE72 which facilitates the setting
+**	    of partition size and number of partitions respectively for hash
+**	    join. 
 */
 /* FIXME:  This structure should have been reorganized for better alignment */
 struct _QEF_CB
@@ -653,6 +657,9 @@ struct _QEF_CB
 					** code instead of the normal exchange node code.
 					** Useful for analysing problems with parallel 
 					** query plans */
+#define QEF_TRACE_PARAMS_72  72		/* Set values for partition size and number of
+					** partitions respectively, for hash join.
+					** Intended for diagnostic use. */
 #define QEF_TRACE_HASH_DEBUG	    89	/* Massive debug output from hash
 					** join, hash aggregation */
 

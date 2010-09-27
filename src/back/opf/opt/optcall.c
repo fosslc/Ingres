@@ -210,6 +210,10 @@
 **	    they are to be discarded, together with all best plans.  
 **	    Trace point op216 prints out only the best plans, as they are
 **	    encountered.
+**	28-Jun-2010 (smeke01) b123969
+**	    Added diagnostic tracepoint OP217 (OPT_F089_FORCE_HASHJOIN) which
+**	    forces optimiser to use hash joins. Requires xDEBUG to be defined
+**	    in opjjoinop.c.
 */
 
 DB_STATUS
@@ -391,6 +395,7 @@ opt_call(
 	case OPT_F086_DUMP_QTREE2:
 	case OPT_F087_ALLFRAGS:
 	case OPT_F088_BESTPLANS:
+	case OPT_F089_FORCE_HASHJOIN:
 	case OPT_F090_FORCE_EXCHANGE:
             if (debug_cb->db_value_count > 0)
 		return( E_DB_ERROR );	    /* these flags have no values */
