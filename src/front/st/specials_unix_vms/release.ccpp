@@ -414,6 +414,8 @@
 **	20-Apr-2010 (hanje04)
 **	    SIR 123296
 **	    Add logrotate to setupsup for LSB builds.
+**      09-Sep-2010 (rajus01) SD issue 146492, Bug 124381
+**          Add kerberos64 part for hybrid builds.
 */
 
 RELEASE Ingres
@@ -458,6 +460,9 @@ PACKAGE dbmsnet
    INCLUDE dbms64
 # endif
    INCLUDE net
+# ifdef conf_BUILD_ARCH_32_64
+   INCLUDE net64
+# endif
    INCLUDE tm
    INCLUDE das
    INCLUDE odbc
@@ -482,6 +487,9 @@ PACKAGE dbmsstar
    INCLUDE dbms64
 # endif
    INCLUDE net
+# ifdef conf_BUILD_ARCH_32_64
+   INCLUDE net64
+# endif
    INCLUDE star
    INCLUDE tm
    INCLUDE das
@@ -534,6 +542,9 @@ PACKAGE custominst
    INCLUDE c2audit
 # ifdef R_NET
    INCLUDE net
+# ifdef conf_BUILD_ARCH_32_64
+   INCLUDE net64
+# endif
 # endif /* R_NET */
 # ifdef R_OME
    INCLUDE ome
@@ -1204,6 +1215,18 @@ PACKAGE net
       DEFINITION kerberos.prt
 # endif /* R_MIT_KERBEROS */
 
+# ifdef conf_BUILD_ARCH_32_64
+PACKAGE net64
+
+   NEED net
+   INCLUDE basic64
+   PREFER dbms
+
+# ifdef R_MIT_KERBEROS
+   PART kerberos64
+      DEFINITION kerberos64.prt
+# endif /* R_MIT_KERBEROS */
+# endif /* ARCH_32_64 */
 # endif /* R_NET */
 
 

@@ -48,6 +48,12 @@ gcf.mech.title:				'Security Mechanisms'
 gcf.mechanism_location.file:		gcfmechloc.hlp
 gcf.mechanism_location.title:		'Dynamically-loaded Mechanism Location'
 
+gcf.mechanism_location_lp32.file:	gcfmechloc32.hlp
+gcf.mechanism_location_lp32.title:	'Dynamically-loaded Mechanism Location for 32-bit Kerberos library'
+
+gcf.mechanism_location_lp64.file:	gcfmechloc64.hlp
+gcf.mechanism_location_lp64.title:	'Dynamically-loaded Mechanism Location for 64-bit Kerberos library'
+
 gcf.remote_auth_error.file:		gcfremote.hlp
 gcf.remote_auth_error.title:		'Remote Authorization Error Handling'
 

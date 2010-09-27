@@ -1,0 +1,32 @@
+/*
+** Copyright (c) 2010 Ingres Corporation
+*/
+/*
+** Generic part file for 64-bit Kerberos
+*/
+
+/*
+** History
+**	10-Sep-2010 (rajus01) SD issue 146492, Bug 124381 
+**	    Created.
+*/
+
+PART  kerberos64
+
+/*
+** ingres!lib
+*/
+
+DIRECTORY ingres!LIB_TGT!lp64
+BUILD_DIR (ING_BUILD)!LIB_BLD!lp64
+# ifdef VMS
+    {
+      EXECUTABLE libgcskrb
+      PERMISSION s:re,o:rwed,g:re,w:re
+    }
+# else
+    {
+    EXECUTABLE libgcskrb.$SLSFX.2.0
+    PERMISSION s:re,o:rwed,g:re,w:re
+    }
+#endif  /* VMS */
