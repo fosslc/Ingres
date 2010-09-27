@@ -64,6 +64,10 @@
 ##	    BUG 124284
 ##	    Only close() cfgfile if we've opened it in findInstID(). Improve
 ##	    error meessage too.
+##	22-Sep-2010 (hanje04)
+##	    BUG 124480
+##	    SD 126680
+##	    Correct package name for 32bit RPM so we find it when we look.
 
 
 # load external modules
@@ -99,7 +103,7 @@ xmlok=False
 # WARNING! Correct generation of XML is dependent on the order of ingpkgs
 # entires matching EXACTLY those defined be PKGIDX in front!st!hdr gip.h
 # DO NOT ALTER UNLESS PKGIDX unless has also been changed
-ingpkgs = ( 'core', 'sup32', 'abf', 'bridge', 'c2', 'das', 'dbms', \
+ingpkgs = ( 'core', '32bit', 'abf', 'bridge', 'c2', 'das', 'dbms', \
 	'esql', 'i18n', 'ice', 'jdbc', 'net', 'odbc', 'ome', 'qr_run', 'rep', \
 	'star', 'tux', 'vision', 'documentation' )
 ingpkgsdict = dict( zip( ingpkgs, range( 0, len( ingpkgs ) ) ) )
