@@ -871,6 +871,9 @@ PTR        dms_cb)
 **	    copy system generated (identity column) sequences to the SCB
 **	    so that we can use them for the last_identity() SQL function
 **	    through dmf_last_id().
+**      15-sep-2010 (coomi01) b124448
+**          When journaling sequence increments, must take DCB mutex
+**          before SeqGen mutex.
 */
 DB_STATUS dms_next_seq(
 PTR        dms_cb)
@@ -889,6 +892,7 @@ PTR        dms_cb)
     u_char	    tdec[20];
     i4		    tprec, tscale;
     EX_CONTEXT	    ex;
+    bool            releaseDCB;
     DML_SCB	    *dml_scb;
 
     CLRDBERR(&dms->error);
@@ -959,6 +963,29 @@ PTR        dms_cb)
 	    {
 		/* NEXT VALUE: */
 
+                /*
+                ** When there is any potential that journaling
+                ** a sequence update is likely we must take the
+                ** DCB mutex *before* the SeqGen mutex. Else we
+                ** risk a mutex deadlock should qeq_validate
+                ** attempt to take the same mutex pair.
+                ** Order matters!
+                **
+                ** If unclear, we are prempting the call for a
+                ** mutex within dm2d_check_db_backup_status()
+                */
+                releaseDCB = FALSE;
+                if ((0 == (xcb->xcb_flags & XCB_NOLOGGING)) &&
+                    (dcb->dcb_status & DCB_S_JOURNAL))
+                {
+                    releaseDCB = TRUE;
+                    dm0s_mlock(&dcb->dcb_mutex);
+                    dcb->dcb_status |= DCB_S_MLOCKED;
+                }
+
+                /*
+                ** Now take the SeqGen mutex
+                */
 		dm0s_mlock(&s->seq_mutex);
 
 		/*
@@ -969,8 +996,19 @@ PTR        dms_cb)
 		*/
 		if ( s->seq_cache == 0 )
 		{
+                    /*
+                    ** We may now attempt to journal the sequence fetch
+                    ** ~ We'll need the DCB mutex to do it
+                    */
 		    dms_fetch_iiseq((PTR)dms, xcb, s);
 		}
+
+                /* Release DCB immediately */
+                if (releaseDCB)
+                {
+                    dcb->dcb_status &= ~(DCB_S_MLOCKED);
+                    dm0s_munlock(&dcb->dcb_mutex);
+                }
 		
 		if ( dms->error.err_code == 0 &&
 		     dms_seq->seq_value.data_out_size != s->seq_dlen )
