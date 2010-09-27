@@ -873,6 +873,11 @@ pst_showtab(
 **	    which he possesses no privileges
 **	29-dec-93 (robf)
 **          Audit procedure owner on MAC failure.
+**	7-Sep-2010 (kschendel) b124367
+**	    Make sure DBPINFO is cleared out.  Junk in the db_mask word
+**	    can cause all sorts of problems.  The observed symptom was a
+**	    bad error message from a table proc caused by the mask showing
+**	    DBP_ROW_PROC, but almost anything could happen.
 */
 DB_STATUS
 pst_dbpshow(
@@ -1121,6 +1126,8 @@ info:
     */
     if (dbp_mask & PSS_NEWDBP)
     {
+	/* Make sure masks, etc are initialized */
+	MEfill(sizeof(PSS_DBPINFO), 0, (PTR) dbpinfo);
 	STRUCT_ASSIGN_MACRO(*dbpname, dbpinfo->pss_ptuple.db_dbpname);
 	/*
 	** Note that we use rdr_owner, so if PSS_NEWDBP && PSS_DBP_BY_OWNER,
