@@ -228,6 +228,10 @@ opn_ecomb(
 **          Let caller figure out whether CP's are allowable.  Caller is now
 **          doing a connectedness analysis, so all we need to do is detect
 **          a disconnected combination and reject it if CP's are not allowed.
+**	26-jul-10 (smeke01) b124049
+**	    Loosen heuristic 2 to allow the combination to include a placement
+**	    index without its primary iff the index is joinable to at least
+**	    one other table in the combination.
 */
 static bool
 opn_combgen(
@@ -278,7 +282,8 @@ opn_combgen(
 	**  - var is replacement index and corresponding primary is also
 	**    in combination,
 	**  - var is Tjoin index (not replacement) and corresponding
-	**    primary is NOT in combination,
+	**    primary is NOT in combination, unless the index is joinable
+	**    to at least one other table in the combination.
 	**  - 2 indexes (either placement or replacement) in combination 
 	**    map same base table, and
 	**  - var doesn't join other vars in combination and caller has
@@ -288,16 +293,47 @@ opn_combgen(
 
 	failure = FALSE;
 
-	/* First loop checks first 2 conditions. */
+	/* Check 1st condition */
 	for (i = -1; (i = BTnext(i, (char *)&combmap, maxvars)) >= 0;)
 	{
 	    varp = vbase->opv_rt[i];
-	    if (varp->opv_mask & OPV_CPLACEMENT && 
-		!BTtest(varp->opv_index.opv_poffset, (char *)&combmap) ||
-		varp->opv_mask & OPV_CINDEX &&
+	    if (varp->opv_mask & OPV_CINDEX &&
 		BTtest(varp->opv_index.opv_poffset, (char *)&combmap))
+	    {
 		failure = TRUE;
+		break;
+	    }
 	}
+
+	if (failure)
+	    continue;
+
+	/* Check 2nd condition */
+	for (i = -1; (i = BTnext(i, (char *)&combmap, maxvars)) >= 0;)
+	{
+	    varp = vbase->opv_rt[i];
+	    if (varp->opv_mask & OPV_CPLACEMENT) 
+	    {
+		if (!BTtest(varp->opv_index.opv_poffset, (char *)&combmap))
+		{
+		    /* 
+		    ** It is OK to have a placement index without its primary
+		    ** iff the index is joinable to at least one other table
+		    ** in the combination.
+		    */
+		    MEcopy((char *)&combmap, sizeof(OPV_BMVARS), (char *)&workmap);
+		    BTclearmask(maxvars, (char *)&evarp[i].opn_varmap, (char *)&workmap);
+		    BTand(maxvars, (char *)&evarp[i].opn_joinable, (char *)&workmap);
+		    /* workmap is other-vars this evar is joinable to */
+		    if (BTnext(-1, (char *)&workmap, maxvars) < 0)
+		    {
+			failure = TRUE;
+			break;
+		    }
+		}
+	    }
+	}
+
 	if (failure)
 	    continue;
 
@@ -487,6 +523,10 @@ opn_eperm(
 **	    may be no alternatives.
 **	29-mar-05 (dougi)
 **	    Made a correction to 3-june change.
+**	26-jul-10 (smeke01) b124049
+**	    Remove restriction that a placement index cannot be last in a
+**	    permutation (and thus appear without its primary table).
+**	    
 [@history_line@]...
 */
 static bool
@@ -597,12 +637,17 @@ opn_permgen(
 	** set to flag the fact that all 3 nodes of the plan fragment are
 	** a single unit to be saved in any resulting composite. */
 
-	if (n > 2 && evarp[pvector[2]].opn_evmask & OPN_EVTABLE &&
-		evarp[pvector[2]].u.v.opn_varp->opv_mask & OPV_CPLACEMENT)
-	 failure = TRUE;			/* placement indexes must be
-						** first in permutation */
-	if (failure)
-	    continue;
+	/*
+	** We have now loosened opn_combgen() heuristic 2 so that a placement
+	** index CAN appear in a combination without its primary (base) table.
+	** Therefore it is possible for a placement index to come last in the
+	** permutation. So we have removed the heuristic here that used to
+	** prevent that possibility. Being cautious, we have kept the heuristic
+	** that insists that where a placement index appears first or second,
+	** the corresponding primary table must appear next.
+	** Note that if this function is re-written and this heuristic is kept,
+	** it should be generalised to values of n > 3.
+	*/
 
 	if ((evarp[pvector[0]].opn_evmask & OPN_EVTABLE &&
 	    (varp = evarp[pvector[0]].u.v.opn_varp)->opv_mask & OPV_CPLACEMENT &&
@@ -691,7 +736,7 @@ opn_permgen(
 	}
 
 	if (evarp[pvector[1]].opn_evmask & OPN_EVTABLE &&
-		varp->opv_mask & OPV_CPLACEMENT)
+		(evarp[pvector[1]].u.v.opn_varp)->opv_mask & OPV_CPLACEMENT)
 	    subquery->ops_lawholetree = TRUE;	/* set this funny flag */
 
 	/* We only get here if this one is valid. */
