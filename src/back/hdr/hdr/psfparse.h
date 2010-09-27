@@ -2525,6 +2525,8 @@ typedef struct _PST_OBJDEP
 **	    conflicts. Add PSQ_SETBATCHCOPYOPTIM.
 **	20-Jul-2010 (kschendel) SIR 124104
 **	    Add a place to pass in create-compression.
+**	12-aug-2010 (stephenb)
+**	    Resolve flag conflict in psq_flags2
 */
 typedef enum psq_mode_enum {
 #define PSQ_MODES_MACRO \
@@ -3222,7 +3224,7 @@ typedef struct _PSQ_CB
 					 ** set ==> set if the default cursor 
 					 ** mode is readonly 
 					 */
-#define	    PSQ_LOCATOR			0x0004L
+#define	    PSQ_LOCATOR			0x00020L
 					/* 
 					** set ==> GCA_LOCATOR_MASK is on
 					*/
