@@ -872,6 +872,9 @@ psy_build_audit_info(
 **	    PSS_IFNULL_AGHEAD_MULTI, PSS_IFNULL_AGHEAD and PSS_AGHEAD_MULTI.
 **	13-Dec-2008 (kiria01)
 **	    Initialise build_indep_obj_list lest it mislead.
+**      9-jun-2010 (huazh01)
+**          Search for possible nested derived table after adding derived 
+**          tables into a view's range table. (b123615)
 */
 DB_STATUS
 psy_view(
@@ -891,7 +894,7 @@ psy_view(
     PST_QNODE		    *r, *tree_copy, *der_tab[PST_NUMVARS];
     DB_STATUS		    status = E_DB_OK;
     PST_VRMAP		    viewmap;
-    i4			    i;
+    i4			    i, j;
     i4			    map[PST_NUMVARS];
     i4			    vn_map[PST_NUMVARS];
     i4		    err_code;
@@ -950,7 +953,7 @@ psy_view(
     bool		    build_audit;
     DB_TAB_ID               tabid;
     GLOBALREF PSF_SERVBLK   *Psf_srvblk;
-    
+
     /* Check the query mode */
     switch (qmode)
     {
@@ -2141,9 +2144,8 @@ psy_view(
 	    ** and we need to complain.
 	    */
 
-	    i = BTnext(-1, (char *) &viewmap, PST_NUMVARS);
-
-	    if (i == -1 && sess_cb->pss_resrng == rngvar)
+	    if ((BTcount((char *)&viewmap, PST_NUMVARS) == 0) && 
+                sess_cb->pss_resrng == rngvar)
 	    {
 		/* Looks like somebody has an update in mind, but
 		** there is no real relation to update.
@@ -2161,7 +2163,7 @@ psy_view(
 
 	    /* Look for derived tables and WITH list elements in this view's 
 	    ** range table and add their tables to the viewmap. */
-	    for (; i >= 0; i = BTnext(i, (char *)&viewmap, PST_NUMVARS))
+	    for (i = -1; (i = BTnext(i, (char *)&viewmap, PST_NUMVARS)) != -1;)
 	    {
 		PST_VRMAP	dtmap;
 
@@ -2170,7 +2172,17 @@ psy_view(
 		    continue;		/* only for dertabs & WITH elems */
 
 		(VOID)psy_varset(vtree->pst_rangetab[i]->pst_rgroot, &dtmap);
-		BTor(BITS_IN(dtmap), (char *)&dtmap, (char *)&viewmap);
+
+                /* b123615:
+                ** search for nested derived table after adding dtmap into
+                ** viewmap.
+                */
+                if (BTcount((char *)&dtmap, PST_NUMVARS) &&
+                    !BTsubset((char *)&dtmap, (char *)&viewmap, PST_NUMVARS) &&
+                    (j = BTnext(-1, (char *)&dtmap, PST_NUMVARS)) < i)
+                    i = j - 1; 
+
+                BTor(BITS_IN(dtmap), (char *)&dtmap, (char *)&viewmap);
 	    }
 
 	    /* In a separate loop (to assure the viewmap is complete), 
@@ -2201,7 +2213,6 @@ psy_view(
 		 (i = BTnext(i, (char *) &viewmap, PST_NUMVARS)) != -1;
 		)
 	    {
-		i4		j;
 		i4		type;
 		char		*old_mask;
 		PST_J_MASK	tmp_mask;
