@@ -218,6 +218,10 @@
 **	    prototype for dm2u_modify_encrypt.
 **	20-Jul-2010 (kschendel) SIR 124104
 **	    Pass in compression to create.
+**	27-Aug-2010 (jonj)
+**	    SIR 120874 broke reporting of raw location information by
+**	    QEF. Modified dm2u_raw_location_free() prototype to pass
+**	    locid for use by SETDBERR there.
 */
 
 /*
@@ -740,6 +744,7 @@ FUNC_EXTERN DB_STATUS dm2u_raw_location_free(
 		DMP_DCB             *dcb,
 		DML_XCB             *xcb,
 		DB_LOC_NAME         *location,
+		i4		locid,
 		DB_ERROR	*dberr);
 
 FUNC_EXTERN DB_STATUS dm2u_put_dupchktbl(

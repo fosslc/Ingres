@@ -7204,12 +7204,16 @@ DB_ERROR	    *dberr)
 ** History:
 **	12-mar-1999 (nanpr01)
 **	    Created.
+**	27-Aug-2010 (jonj)
+**	    Pass locid parameter to communicate location index
+**	    to QEF via SETDBERR.
 */
 DB_STATUS
 dm2u_raw_location_free(
 DMP_DCB             *dcb,
 DML_XCB             *xcb,
 DB_LOC_NAME         *location,
+i4		    locid,
 DB_ERROR	    *dberr)
 {
     DMP_RCB             *rcb = 0;
@@ -7257,7 +7261,7 @@ DB_ERROR	    *dberr)
 	{
     	    /* Close the table. */
 	    status = dm2t_close(rcb, DM2T_NOPURGE, dberr);
-	    SETDBERR(dberr, 0, E_DM0190_RAW_LOCATION_OCCUPIED);
+	    SETDBERR(dberr, locid, E_DM0190_RAW_LOCATION_OCCUPIED);
 	    return(E_DB_ERROR);
 	}
     }
@@ -7305,7 +7309,7 @@ DB_ERROR	    *dberr)
 	{
     	    /* Close the table. */
 	    status = dm2t_close(rcb, DM2T_NOPURGE, dberr);
-	    SETDBERR(dberr, 0, E_DM0190_RAW_LOCATION_OCCUPIED);
+	    SETDBERR(dberr, locid, E_DM0190_RAW_LOCATION_OCCUPIED);
 	    return(E_DB_ERROR);
 	}
     }
