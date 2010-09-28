@@ -746,6 +746,7 @@ ascs_get_data(
 	case DB_MLINE_TYPE:
 	case DB_POLY_TYPE:
 	case DB_MPOLY_TYPE:
+	case DB_GEOMC_TYPE:
 	case DB_BOO_TYPE:
 	case DB_DIF_TYPE:
 	case DB_ALL_TYPE:

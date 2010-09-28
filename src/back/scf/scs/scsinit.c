@@ -836,6 +836,9 @@ NO_OPTIM =
 **	    Re-type some ptr's as the proper struct pointer.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      11-Aug-2010 (hanal04) Bug 124180
+**          Added money_compat for backwards compatibility of money
+**          string constants.
 **/
 
 /*
@@ -4158,6 +4161,9 @@ scs_initiate(SCD_SCB *scb )
             if(!(Sc_main_cb->sc_rule_upd_prefetch_off))
                 psq_cb->psq_flag2 |= PSQ_RULE_UPD_PREFETCH;
 
+            if(Sc_main_cb->sc_money_compat)
+                psq_cb->psq_flag2 |= PSQ_MONEY_COMPAT;
+
 	    status = psq_call(PSQ_BGN_SESSION, psq_cb,
 				scb->scb_sscb.sscb_psscb);
 	    if (status)
@@ -5841,6 +5847,10 @@ scs_icsxlate(SCD_SCB	*scb ,
 **	    dbcmptlvl is now an integer.
 **	22-Apr-2010 (kschendel) SIR 123485
 **	    Remove a couple bad deallocs of tmptupmem, found by accident.
+**      09-aug-2010 (maspa05) b123189, b123960
+**          Set DMC2_READONLYDB for true readonly database (DU_RDONLY) so
+**          we can tell the difference between a readonlydb and one opened
+**          for read-only access
 */
 DB_STATUS
 scs_dbdb_info(SCD_SCB *scb ,
@@ -6954,6 +6964,12 @@ scs_dbdb_info(SCD_SCB *scb ,
 	    }
 	    else
 	    {
+
+	if (scb->scb_sscb.sscb_ics.ics_dbstat & DU_RDONLY)
+	{
+	    scb->scb_sscb.sscb_ics.ics_db_access_mode = DMC_A_READ;
+	    scb->scb_sscb.sscb_ics.ics_dmf_flags2 |= DMC2_READONLYDB;
+	}
 		/* This isn't an open, it just looks for the target dbcb */
 
 		if ((status = scs_dbopen(&scb->scb_sscb.sscb_ics.ics_dbname,
@@ -7795,7 +7811,10 @@ scs_dbdb_info(SCD_SCB *scb ,
     {
     	scb->scb_sscb.sscb_ics.ics_loc = &location;
 	if (scb->scb_sscb.sscb_ics.ics_dbstat & DU_RDONLY)
+	{
 	    scb->scb_sscb.sscb_ics.ics_db_access_mode = DMC_A_READ;
+	    scb->scb_sscb.sscb_ics.ics_dmf_flags2 |= DMC2_READONLYDB;
+	}
 
     	status = scs_dbopen(0, 0, 0, scb, error, 0, dmc, &dbt, 0);
     	if (status)

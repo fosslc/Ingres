@@ -1918,6 +1918,8 @@ psl_md7_modkeyname(
 **	    base can mess up extension tables.
 **	26-Feb-2004 (schka24)
 **	    Fill in number of partitions for qef.
+**	19-Jun-2010 (kiria01) b123951
+**	    Add extra parameter to psl_rngent for WITH support.
 */
 DB_STATUS
 psl_md8_modtable(
@@ -1947,7 +1949,7 @@ psl_md8_modtable(
     {
 	status = psl_rngent(&sess_cb->pss_auxrng, -1, "",
 	    &tblspec->pss_obj_name, sess_cb, FALSE, &rngvar, PSQ_MODIFY,
-	    err_blk, &rngvar_info);
+	    err_blk, &rngvar_info, NULL);
     }
 
     if (DB_FAILURE_MACRO(status))

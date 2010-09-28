@@ -1,5 +1,5 @@
 --
---  Copyright (c) 1992, 2004  Ingres Corporation.  All rights reserved.
+--  Copyright (c) 1992, 2010  Ingres Corporation.  All rights reserved.
 --
 --  This file contains the configuration rules shared by INGRES/DBMS,
 --  INGRES/Net and INGRES/Star, INGRES/Bridge.
@@ -277,7 +277,13 @@
 --#	    SIR 123622
 --#	    Add default value for history_recall for non-unix platforms
 --#	    and correct valid values for UNIX
---#
+--#	25-Jun-2010 (frima01) BUG 123622
+--#	    Replace wrong comment symbol from last change.
+--#	27-Aug-10 (gordy)
+--#	    Added GCN config param for password encoding version.
+--#	08-Sep-10 (rajus01) Bug 124381, SD issue 146492
+--#	    Added mechanism_location.lp32 and mechanism_location.lp64 for
+--#	    hybrid platforms.
 --#
 -- configuration system preferences
 # ifdef NT_GENERIC
@@ -371,6 +377,7 @@
 (PROG4PRFX).$.gcn.ticket_expire:		1800, MIN = 60;
 (PROG4PRFX).$.gcn.ticket_cache_size:	10, MIN = 1, MAX = 10;
 (PROG4PRFX).$.gcn.compress_point:	50, MIN = 0, MAX = 100;
+(PROG4PRFX).$.gcn.pwd_encode_version:	-1, MIN = -1, MAX = 1, SIGNED_INT;
 (PROG4PRFX).$.gcn.mechanisms:		"";
 (PROG4PRFX).$.gcn.registry_type:	"none", VALID = { "none", "slave",
 							 "peer", "master" };
@@ -390,9 +397,15 @@
 (PROG4PRFX).$.gcf.mechanisms:		"";
 # ifdef NT_GENERIC
 (PROG4PRFX).$.gcf.mechanism_location:	"`(PROG4PRFX)(PROG2PRFX)loc bin`";
-# else
+-- Linux/Unix Hybrid systems  (32+64)
+#elif defined(conf_BUILD_ARCH_32_64)
+-- 64-bit ADD_ON package
+(PROG4PRFX).$.gcf.mechanism_location_lp32: "`(PROG4PRFX)(PROG2PRFX)loc lib`";
+(PROG4PRFX).$.gcf.mechanism_location_lp64: "`(PROG4PRFX)(PROG2PRFX)loc lib64`";
+# else 
+-- Linux/Unix (pure 32-bit, 64-bit builds)
 (PROG4PRFX).$.gcf.mechanism_location:	"`(PROG4PRFX)(PROG2PRFX)loc lib`";
-# endif
+# endif 
 (PROG4PRFX).$.gcf.remote_auth_error:	"ignore", VALID = {"ignore", "fail"};
 (PROG4PRFX).$.gcf.mech.ingres.enabled:	"true", VALID = { "true", "false" };
 (PROG4PRFX).$.gcf.mech.ingres.expirations_required:	"no", VALID = { "yes", "no" };
@@ -761,7 +774,7 @@
 (PROG4PRFX).*.config.svr_slots:         32, MIN = 32, MAX = 128;
 #endif /* UNIX */
 
-# Terminal monitor config
+-- Terminal monitor config
 # ifdef UNIX
 (PROG4PRFX).*.tm.history_recall:	"true", VALID = { "true", "false" } ;
 # else

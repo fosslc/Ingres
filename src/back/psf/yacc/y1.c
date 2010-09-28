@@ -67,6 +67,11 @@ NEEDLIBS = BYACCLIB COMPATLIB
 **         9-apr removal of int -> long define on lp64 caused segv on 64 bit
 **         arch with alignment restrictions.  When using the mem[] array for
 **         struct items, make sure it's aligned.
+**	2-Aug-2010 (kschendel) b124170
+**	    byacc has to generate "reentrant" and "functions",
+**	    remove pointless testing from cluttering the code.
+**	    Internal funcs don't have to pass yyvarsp / yyvarspp any more,
+**	    it's in the PSS_SESBLK now.
 */
 
 # include   <compat.h>
@@ -308,47 +313,52 @@ others()
 	fdebug = (FILE *)NULL;
     ZAPFILE(&debugloc);
 
-    if (functions)
+    c = 0;
+    PLOOP(0,i)
     {
-	c = 0;
-	PLOOP(0,i)
+	if ((c = funcid(i)) && (c != lastc))
 	{
-	    if ((c = funcid(i)) && (c != lastc))
-	    {
-		lastc = c;
-		SIfprintf(ftable, "FUNC_EXTERN\ti4\t%s%diftn();\n", prefix, c);
-		SIfprintf(fileptr,"FUNC_EXTERN\ti4\t%s%diftn();\n", prefix, c);
-	    }
+	    lastc = c;
+	    SIfprintf(ftable, "FUNC_EXTERN\ti4\t%s%diftn();\n", prefix, c);
+	    SIfprintf(fileptr,"FUNC_EXTERN\ti4\t%s%diftn();\n", prefix, c);
 	}
-	/* A little c tutorial:  const foo *ptr -> pointer to const foo
-	** foo * const ptr -> const pointer to foo
-	** We want the latter.
-	*/
-	SIfprintf(fileptr, "\n\nGLOBALDEF \ti4\t(* const %sfunc[])()=\n{",
-	    prefix);
-	if (Filespecs[YYFUNC].filegiven)
-	    SIfprintf(ftable, "\n\nextern\ti4\t(*%sfunc[])();\n", prefix);
-	j = 0;
-	PLOOP(0,i)
-	{
-	    if (j != 0)
-	    {
-		SIputc(',', fileptr);
-	    }
-	    j++;
-
-	    if (c = funcid(i))
-	    {
-		SIfprintf(fileptr, "\n\t%s%diftn", prefix, c);
-	    }
-	    else
-	    {
-		SIfprintf(fileptr, "\n\t(i4 (*)()) NULL");
-	    }
-	}
-
-	SIfprintf(fileptr, "\n};\n");
     }
+    /* A little c tutorial:  const foo *ptr -> pointer to const foo
+    ** foo * const ptr -> const pointer to foo
+    ** We want the latter.
+    ** Don't worry about ansi-style args in the function table.  It just
+    ** has names and there's no cross-check.
+    */
+    SIfprintf(fileptr, "\n\nGLOBALDEF \ti4\t(* const %sfunc[])()=\n{",
+	prefix);
+    if (Filespecs[YYFUNC].filegiven)
+    {
+	SIfprintf(ftable, "\n\ntypedef i4 (*YY_PSLFN_PTR)(YACC_CB *, i4, DB_STATUS *,%s *",
+		argtype);
+	for (i = 0; i < Numparams; i++)
+	    SIfprintf(ftable, ",%s", Params[i].parmtype);
+	SIfprintf(ftable, ");\nextern YY_PSLFN_PTR %sfunc[];\n", prefix);
+    }
+    j = 0;
+    PLOOP(0,i)
+    {
+	if (j != 0)
+	{
+	    SIputc(',', fileptr);
+	}
+	j++;
+
+	if (c = funcid(i))
+	{
+	    SIfprintf(fileptr, "\n\t%s%diftn", prefix, c);
+	}
+	else
+	{
+	    SIfprintf(fileptr, "\n\t(i4 (*)()) NULL");
+	}
+    }
+
+    SIfprintf(fileptr, "\n};\n");
 
     /* copy parser text */
 
@@ -359,24 +369,20 @@ others()
 	    c = SIgetc(finput);
 	    switch (c)
 	    {
-		case 'A':
 		case 'B':
-		    if ((c == 'A' && !functions) || (c == 'B' && functions))
+		    /* copy actions */
+		    if (SIopen(&actloc, "r", &faction) != OK)
 		    {
-			/* copy actions */
-			if (SIopen(&actloc, "r", &faction) != OK)
-			{
-			    LOtos(&actloc, &err_buf);
-			    ERROR(STprintf(stbuf,
-				"cannot reopen action tempfile %s", err_buf));
-			}
-
-			while ((c = SIgetc(faction)) != EOF)
-			    SIputc(c, ftable);
-			SIclose(faction);
-			faction = (FILE *)NULL;
-			ZAPFILE(&actloc);
+			LOtos(&actloc, &err_buf);
+			ERROR(STprintf(stbuf,
+			    "cannot reopen action tempfile %s", err_buf));
 		    }
+
+		    while ((c = SIgetc(faction)) != EOF)
+			SIputc(c, ftable);
+		    SIclose(faction);
+		    faction = (FILE *)NULL;
+		    ZAPFILE(&actloc);
 		    c = SIgetc(finput);
 		    break;
 		case 'D':
@@ -384,11 +390,8 @@ others()
 		    i4	prevparm = FALSE;
 
 		    SIfprintf(ftable, "%sparse(", prefix);
-		    if (reentrant)
-		    {
-			prevparm = TRUE;
-			SIfprintf(ftable, "cb");
-		    }
+		    prevparm = TRUE;
+		    SIfprintf(ftable, "cb");
 		    for (i = 0; i < Numparams; i++)
 		    {
 			if (prevparm)
@@ -397,8 +400,7 @@ others()
 			SIfprintf(ftable, Params[i].parmname);
 		    }
 		    SIputc(')', ftable);
-		    if (reentrant)
-			SIfprintf(ftable, "\n%s\t*cb;", argtype);
+		    SIfprintf(ftable, "\n%s\t*cb;", argtype);
 		    for (i = 0; i < Numparams; i++)
 		    {
 			SIfprintf(ftable, "\n%s\t%s;", Params[i].parmtype,
@@ -408,17 +410,13 @@ others()
 		    break;
 		    }
 		case 'C':
-		    if (reentrant)
-			SIfprintf(ftable, "yacc_cb->");
+		    SIfprintf(ftable, "yacc_cb->");
 		    c = SIgetc(finput);
 		    break;
 		case 'E':
-		    if (reentrant)
-		    {
-			SIfprintf(ftable, "cb");
-			if (Numparams)
-			    SIputc(',', ftable);
-		    }
+		    SIfprintf(ftable, "cb");
+		    if (Numparams)
+			SIputc(',', ftable);
 
 		    for (i = 0; i < Numparams; i++)
 		    {
@@ -433,36 +431,24 @@ others()
 		    c = SIgetc(finput);
 		    break;
 		case 'G':
-		    if (functions)
-		    {
-			if (reentrant)
-			{
-			    SIfprintf(ftable, ", cb");
-			    if (Numparams)
-				SIputc(',', ftable);
-			}
+		    SIfprintf(ftable, ", cb");
+		    if (Numparams)
+			SIputc(',', ftable);
 
-			for (i = 0; i < Numparams; i++)
-			{
-			    SIfprintf(ftable, "%s", Params[i].parmname);
-			    if (i < Numparams - 1)
-				SIputc(',', ftable);
-			}
+		    for (i = 0; i < Numparams; i++)
+		    {
+			SIfprintf(ftable, "%s", Params[i].parmname);
+			if (i < Numparams - 1)
+			    SIputc(',', ftable);
 		    }
 		    c = SIgetc(finput);
 		    break;
 		case 'H':
-		    if (reentrant)
-		    {
-			SIfprintf(ftable, "(YACC_CB *) (cb->%s)", structname);
-		    }
+		    SIfprintf(ftable, "(YACC_CB *) (cb->%s)", structname);
 		    c = SIgetc(finput);
 		    break;
 		case 'I':
-		    if (reentrant)
-		    {
-			SIfprintf(ftable, ", cb");
-		    }
+		    SIfprintf(ftable, ", cb");
 
 		    for (i = 0; i < Numparams; i++)
 		    {

@@ -73,6 +73,9 @@
 **	    Added IIapi_validDataValue().
 **	26-Oct-09 (gordy)
 **	    Boolean type supported at GCA_PROTOCOL_LEVEL_68.
+**      17-Aug-2010 (thich01)
+**          Spatial types supported at GCA_PROTOCOL_LEVEL_69.  Make changes to
+**          treat spatial types like LBYTEs or NBR type as BYTE.
 */
 
 
@@ -611,6 +614,21 @@ IIapi_validDescriptor( IIAPI_STMTHNDL *stmtHndl,
 	    else  if (  descriptor[ i ].ds_length != IIAPI_BOOL_LEN )
 		return( E_AP0024_INVALID_DATA_SIZE );
 	    break;
+
+	case IIAPI_GEOM_TYPE :
+	case IIAPI_POINT_TYPE :
+	case IIAPI_MPOINT_TYPE :
+	case IIAPI_LINE_TYPE :
+	case IIAPI_MLINE_TYPE :
+	case IIAPI_POLY_TYPE :
+	case IIAPI_MPOLY_TYPE :
+	case IIAPI_NBR_TYPE :
+	case IIAPI_GEOMC_TYPE :
+	    if ( connHndl  &&
+		 connHndl->ch_partnerProtocol < GCA_PROTOCOL_LEVEL_69 )
+		return( E_AP002E_LVL7_DATA_TYPE );
+	    break;
+
 	}
     }
 
@@ -656,6 +674,7 @@ IIapi_validDataValue( II_LONG count,
     	switch( desc->ds_dataType )
 	{
 	case IIAPI_BYTE_TYPE :
+	case IIAPI_NBR_TYPE :
 	case IIAPI_CHR_TYPE :
 	case IIAPI_CHA_TYPE :
 	case IIAPI_NCHA_TYPE :
@@ -667,6 +686,14 @@ IIapi_validDataValue( II_LONG count,
 	case IIAPI_LBYTE_TYPE :
 	case IIAPI_LVCH_TYPE :
 	case IIAPI_LNVCH_TYPE :
+	case IIAPI_GEOM_TYPE :
+	case IIAPI_POINT_TYPE :
+	case IIAPI_MPOINT_TYPE :
+	case IIAPI_LINE_TYPE :
+	case IIAPI_MLINE_TYPE :
+	case IIAPI_POLY_TYPE :
+	case IIAPI_MPOLY_TYPE :
+	case IIAPI_GEOMC_TYPE :
 	    /*
 	    ** DV must contain the embeded segment length indicator.
 	    */

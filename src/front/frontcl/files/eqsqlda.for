@@ -1,5 +1,5 @@
 C
-C Copyright (c) 2004 Ingres Corporation
+C Copyright (c) 2004, 2010 Ingres Corporation
 C
 
 C
@@ -23,7 +23,12 @@ C       17-sep-1993     - Added new byte datatype codes. (sandyd)
 C       22-apr-1994     - Added datatype code for W4GL objects. (timt)
 C       07-jan-2002	- Updated IISQ_MAX_COLS to 1024 (toumi01)
 C       18-nov-2009     - Add IISQ_BOO_TYPE (joea)
-C
+C       29-jul-2010     - Increased the size of sqlnamec from 34 to 
+C			  258, to match with the IISQD_NAMELEN in  
+C			  IISQLDA (iisqlda.h). (hweho01) SIR 121123 
+C       17-aug-2010     - Add spatial IISQ types skipped 60 for SECL 
+C                         consistency. (thich01)
+c
 
 C
 C IISQLVAR - Single element of SQLDA variable as described in manual.
@@ -35,7 +40,7 @@ C
 		integer*4	sqlind		! Address of 2-byte integer
 		structure /IISQLNAME/ sqlname
 		    integer*2 	  sqlnamel
-		    character*34  sqlnamec
+		    character*258 sqlnamec
 		end structure
 	end structure
 
@@ -92,3 +97,13 @@ C
 	parameter IISQ_VBYTE_TYPE = 24	! Byte Varying - Input, Output
 	parameter IISQ_LBYTE_TYPE = 25	! Long Byte - Output
         parameter IISQ_OBJ_TYPE = 45    ! Object - Output
+        parameter IISQ_GEOM_TYPE = 56;  ! Spatial
+        parameter IISQ_POINT_TYPE = 57;
+        parameter IISQ_MPOINT_TYPE = 58;
+        parameter IISQ_LINE_TYPE = 59;
+        parameter IISQ_MLINE_TYPE = 61;
+        parameter IISQ_POLY_TYPE = 62;
+        parameter IISQ_MPOLY_TYPE = 63;
+        parameter IISQ_NBR_TYPE = 64;
+        parameter IISQ_GEOMC_TYPE = 65;
+

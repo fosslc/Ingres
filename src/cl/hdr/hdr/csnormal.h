@@ -991,6 +991,9 @@ static int pthread_create_detached = 1;
 **          Add defines for CScas8() and CSadjust_i8counter. Re-define
 **          CSadjust_counter() and CScas() to built-ins on GCC platforms
 **          that have them.
+**      14-sep-2010 (stephenb)
+**          Reverse meaning of CScas, CScas4, and CScas8 returns; Ingres appears
+**          to want them defined the opposite way to the system builtins
 */
 
 
@@ -1950,6 +1953,8 @@ struct _CS_CONDITION
 **	07-Oct-2008 (smeke01) b120907
 **	    Added new field to handle platform-specific storage of
 **	    OS thread id (as opposed to thread library thread id). 
+**	02-sep-2010 (maspa05) SIR 124346
+**	    Added cs_sc930_err to store latest error code for SC930 trace
 **
 */
 
@@ -2391,6 +2396,7 @@ _DEFINESEND
 #if defined(VMS) && defined(KPS_THREADS)
     KPB_PQ          kpb;                /* KP Services block address (64 bit) */
 #endif
+    i4              cs_sc930_err;       /* saved error for SC930 logging */
 };
 
 /*
@@ -3108,7 +3114,9 @@ FUNC_EXTERN i4 CS_tas(CS_ASET *);
 ** then the function in csinterface.c will be used
 */
 # define CSadjust_i8counter(a, b)	__sync_add_and_fetch(a, b)
-# define CScas8(a, b, c)		__sync_bool_compare_and_swap(a, b, c)
+# define  CScas8(a, b, c) \
+	(__sync_bool_compare_and_swap((a), (b), (c)) == 0)
+
 # elif defined (conf_CAS8_ENABLED)
 /*
 ** There are currently no platforms which define conf_CAS8_ENABLED which
@@ -3131,8 +3139,10 @@ FUNC_EXTERN i4 CS_tas(CS_ASET *);
 ** the built-ins to define CScas.
 */
 # define CSadjust_counter(a, b)		__sync_add_and_fetch(a, b)
-# define CScas(a, b, c)			__sync_bool_compare_and_swap(a, b, c)
-# define CScas4(a, b, c)		__sync_bool_compare_and_swap(a, b, c)
+# define CScas(a, b, c) \
+   (__sync_bool_compare_and_swap((a), (b), (c)) == 0)
+# define CScas4(a, b, c) \
+   (__sync_bool_compare_and_swap((a), (b), (c)) == 0)
 # define CScasptr(a, b, c)		__sync_bool_compare_and_swap(a, b, c)
 # elif defined(conf_CAS_ENABLED)
 

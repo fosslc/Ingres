@@ -98,6 +98,9 @@ $!!     14-Jan-2010 (horda03) Bug 123153
 $!!             Add pan_cluster_cmd, pan_cluster_set_notdefined, 
 $!!             pan_cluster_min_set, pan_cluster_iigetres, get_nodes,
 $!!             display_nodes.
+$!!     24-Jun-2010 (horda03) Bug 122555
+$!!             Add check_lglk_mem to ensure Ingres will connect to a
+$!!             new LG/LK shared memory section.
 $!!
 $! ------------------------------------------------------------------------
 $!
@@ -493,6 +496,7 @@ $   pan_cluster_min_set   :== 'callsh' _pan_cluster_min_set
 $   pan_cluster_iigetres  :== 'callsh' _pan_cluster_iigetres
 $   get_nodes             :== 'callsh' _get_nodes
 $   display_nodes         :== 'callsh' _display_nodes
+$   check_lglk_mem        :== 'callsh' _check_lglk_mem
 $!
 $   iishlib_'self'_ltime == ""
 $!
@@ -501,7 +505,7 @@ $   iishlib_messages_on  :== SET MESSAGE/FAC/ID/SEV/TEXT
 $!
 $!  Primary definitions as defined in sysdef.com
 $!  assume if iisetres is defined, all required symbols are defined.
-$!  defien a flag to indicate that the clean opperation should remove these 
+$!  define a flag to indicate that the clean opperation should remove these 
 $!  definitions
 $!
 $   if "''iisetres'" .EQS. ""
@@ -2887,6 +2891,92 @@ $ node_list = node_list + last_node
 $
 $ echo "	''node_list'"
 $
+$ exit 
+$!
+$ ENDSUBROUTINE
+$!
+$!------------------------------------------------------------------------
+$!
+$! Subroutine:  _check_lglk_mem
+$!
+$! Usage:
+$! Check whether Logging/Locking shared memory section is in use. If it is
+$! it defines the logical that causes a new memory section to be created.
+$!
+$! Input:
+$!      P1 - Installation ID
+$!
+$! Output:
+$!
+$!    ii_status_ok      - New memory section will be used.
+$!    ii_status_warning - Ingres Online - memory section in use.
+$!
+$! Side effects
+$!
+$!      May define/undefine at SYSTEM level GBL$II_<inst_id>_LGLKDATA.MEM logical
+$!
+$!------------------------------------------------------------------------
+$!
+$ _check_lglk_mem: SUBROUTINE
+$!
+$ inst_id = P1
+$
+$ lglk_mem = "lglkdata.mem"
+$ lgk_mem_log = F$FAO( "GBL$II_!AS_!AS", inst_id, lglk_mem)
+$
+$ old_pid = ""
+$
+$ SET NOON
+$
+$test_online:
+$ rcpstat -online -silent
+$
+$ error_condition '$severity'
+$
+$ if iishlib_err .eq. ii_status_ok
+$ then
+$    ! Ingres is up and online. So leave things as is.
+$    ! Warn that Ingres ONLINE
+$
+$    iishlib_err == ii_status_warning
+$
+$    SET ON
+$
+$    exit
+$ endif
+$
+$ val = F$TRNLNM(  "''lgk_mem_log'", "LNM$SYSTEM" )
+$
+$ IF val .NES. ""
+$ THEN
+$    DEASSIGN/SYS 'lgk_mem_log'
+$
+$    old_pid = F$ELEMENT( 3, "_", val)
+$
+$    GOTO test_online
+$ ENDIF
+$
+$ ! Ingres not online, so check no process connected to
+$ ! shared memory.
+$
+$ rcpstat -connected -silent
+$ error_condition '$severity'
+$
+$ if iishlib_err .eq. ii_status_ok
+$ then
+$    if old_pid .eqs. ""
+$    then
+$       pid = F$GETJPI(0, "PID")
+$    else
+$       pid = F$FAO( "!XL", %x'old_pid' + 1) ! Pick a new (unique) value
+$    endif
+$
+$    DEFINE/SYS 'lgk_mem_log' 'F$FAO( """II_!AS_!AS_!AS""", inst_id, lglk_mem, "''pid'")'
+$ else
+$    iishlib_err == ii_status_ok
+$ endif
+$
+$ SET ON
 $ exit 
 $!
 $ ENDSUBROUTINE

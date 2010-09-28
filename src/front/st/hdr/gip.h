@@ -101,6 +101,13 @@
 **	26-May-2010 (hanje04)
 **	    SIR 123791
 **	    Define TYPICAL_VECTORWISE set of packages to be installed.
+**	14-Jul-2010 (hanje04)
+**	    BUG 124081
+**	    Added defns. for location to save the response file
+**	22-Sep-2010 (hanje04)
+**	    BUG 124480
+**	    SD 126680
+**	    Add PKG_SUP32 to FULL_INSTALL for 64bit platforms.
 ** 
 */
 
@@ -110,6 +117,8 @@
 /* Default Install Information */
 #define DEFAULT_CHAR_SET 17 /* iso88591 */
 #define RESPONSE_FILE_NAME "iirfinstall"
+#define RESPONSE_FILE_SAVE_NAME "install.rsp"
+#define RESPONSE_FILE_SAVE_DIR "/var/lib/ingres/%s"
 #define STDOUT_LOGFILE_NAME "/tmp/iiinstall_stdout"
 #define STDERR_LOGFILE_NAME "/tmp/iiinstall_stderr"
 #define MAX_FNAME 256
@@ -362,8 +371,15 @@ typedef u_i4 PKGLST;
 #define TYPICAL_SERVER (PKG_CORE|PKG_DBMS|PKG_NET|PKG_ODBC|PKG_ABF)
 #define TYPICAL_VECTORWISE (PKG_CORE|PKG_DBMS|PKG_NET|PKG_ODBC)
 #define TYPICAL_CLIENT (PKG_CORE|PKG_NET|PKG_ODBC)
+#ifdef LP64
 #define FULL_INSTALL (PKG_CORE|PKG_DBMS|PKG_NET|PKG_ODBC|PKG_REP|PKG_ABF| \
-					 PKG_STAR)					 
+					 PKG_STAR|PKG_SUP32)	
+#else
+#define FULL_INSTALL (PKG_CORE|PKG_DBMS|PKG_NET|PKG_ODBC|PKG_REP|PKG_ABF| \
+					 PKG_STAR)	
+#endif
+
+
 /*
 ** Obsolete packages are NOT defined to RFAPI
 ** so represent them with GIP_OBS_PKG

@@ -205,6 +205,8 @@
 **	    Fixup the error parameters.
 **	21-may-1999 (hanch04)
 **	    Replace STbcompare with STcasecmp,STncasecmp,STcmp,STncmp
+**	19-Jun-2010 (kiria01) b123951
+**	    Add extra parameter to psl0_rngent for WITH support.
 */
 DB_STATUS
 psl_rg1_reg_distr_tv(
@@ -375,7 +377,7 @@ psl_rg1_reg_distr_tv(
 
     status = psl0_rngent(&sess_cb->pss_auxrng, -1, rngvar_name, &tabname,
 	sess_cb, TRUE, &resrange, psq_cb->psq_mode, err_blk,
-	tbls_to_lookup, &rngvar_info, lookup_mask);
+	tbls_to_lookup, &rngvar_info, lookup_mask, NULL);
 
 
     if (sess_cb->pss_distr_sflags & PSS_REFRESH)
@@ -966,6 +968,9 @@ psl_rg2_reg_distr_idx(
 **	    minor modification to support register procedure
 **	07-jan-02 (toumi01)
 **	    Replace DD_300_MAXCOLUMN with DD_MAXCOLUMN (1024).
+**	11-Jun-2010 (kiria01) b123908
+**	    Initialise pointers after psf_mopen would have invalidated any
+**	    prior content.
 */
 DB_STATUS
 psl_rg3_reg_tvi(
@@ -992,6 +997,7 @@ psl_rg3_reg_tvi(
 
     if (status != E_DB_OK)
 	return (status);
+    sess_cb->pss_stk_freelist = NULL;
 
     /* Allocate the QEU *-level info block for REGISTER */
     status = psf_malloc(sess_cb, &sess_cb->pss_ostream, sizeof(QED_DDL_INFO),
@@ -1796,6 +1802,9 @@ psl_ds1_dircon(
 **	    Condensed from 6.4 Star module psqsttxt.c
 **	24-sep-1992 (barbara)
 **	    Reversed arguments to STcat.
+**	11-Jun-2010 (kiria01) b123908
+**	    Initialise pointers after psf_mopen would have invalidated any
+**	    prior content.
 */
 DB_STATUS
 psl_ds2_dir_exec_immed(
@@ -1833,6 +1842,7 @@ psl_ds2_dir_exec_immed(
 			&psq_cb->psq_error);
     if (status != E_DB_OK)
 	return (status);
+    sess_cb->pss_stk_freelist = NULL;
 
     arg_len = sizeof("execute immediate ") + STlength(exec_arg); 
     status = psf_malloc(sess_cb, &sess_cb->pss_ostream, arg_len + sizeof(PSQ_QDESC) +2,
@@ -1933,6 +1943,9 @@ psl_ds2_dir_exec_immed(
 **	    Initialise the ADF_FN_BLK .adf_fi_desc and adf_dv_n members
 **	December 2009 (stephenb)
 **	    Add stream parameter for batch processing.
+**	19-Aug-2010 (kschendel) b124282
+**	    Let's try again.  Initialize adf_fi_desc, adf_pat_flags, and
+**	    especially adf_dv_n members.
 */
 DB_STATUS
 psl_proc_func(
@@ -2464,7 +2477,7 @@ psl_proc_func(
 		    STRUCT_ASSIGN_MACRO(*arg_val, adf_funcblk.adf_1_dv);
 
 		    /* not a LIKE operator */
-		    adf_funcblk.adf_isescape = FALSE;
+		    adf_funcblk.adf_pat_flags = AD_PAT_DOESNT_APPLY;
 
 		    if (adf_func((ADF_CB *) sess_cb->pss_adfcb, &adf_funcblk) !=
 									E_DB_OK)
@@ -2539,9 +2552,11 @@ psl_proc_func(
 	{
 	    /* fill in function ID */
 	    adf_funcblk.adf_fi_id = fi_tab.adi_tab_fi->adi_finstid;
+	    adf_funcblk.adf_fi_desc = NULL;
+	    adf_funcblk.adf_dv_n = 0;	/* Nilary operators */
 
 	    /* not a LIKE operator */
-	    adf_funcblk.adf_isescape = FALSE;
+	    adf_funcblk.adf_pat_flags = AD_PAT_DOESNT_APPLY;
 
 	    if (adf_func((ADF_CB *) sess_cb->pss_adfcb, &adf_funcblk) !=
 								E_DB_OK)

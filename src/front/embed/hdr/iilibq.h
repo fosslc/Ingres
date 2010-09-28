@@ -1639,6 +1639,7 @@ GLOBALREF	II_GLB_CB	*IIglbcb;
 		|| abs((dbv)->db_datatype) == DB_MLINE_TYPE	\
 		|| abs((dbv)->db_datatype) == DB_POLY_TYPE	\
 		|| abs((dbv)->db_datatype) == DB_MPOLY_TYPE	\
+		|| abs((dbv)->db_datatype) == DB_GEOMC_TYPE \
 		|| abs((dbv)->db_datatype) == DB_LBIT_TYPE      \
 	        || abs((dbv)->db_datatype) == DB_LNVCHR_TYPE)
 
@@ -1676,6 +1677,7 @@ GLOBALREF	II_GLB_CB	*IIglbcb;
 		|| abs(dt) == DB_MLINE_TYPE    \
 		|| abs(dt) == DB_POLY_TYPE    \
 		|| abs(dt) == DB_MPOLY_TYPE    \
+		|| abs(dt) == DB_GEOMC_TYPE  \
 	        || abs(dt) == DB_LBIT_TYPE     \
 		|| abs(dt) == DB_LNVCHR_TYPE)
 

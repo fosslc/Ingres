@@ -19,8 +19,13 @@
 --              22-apr-1994     - Added datatype code for W4GL objects. (timt)
 --              20-Mar-2002	- Updated IISQ_MAX_COLS to 1024. (toumi01)
 --              18-nov-2009     - Add IISQ_BOO_TYPE. (joea)
---
--- Copyright (c) 2004 Ingres Corporation
+
+--              29-Jul-2010     - Increase the size of sqlnamec from 34 to 
+--				  258, to match with the IISQD_NAMELEN in  
+--				  IISQLDA. (hweho01) S121123
+--              17-aug-2010     - Add IISQ spatial types skipped 60 for SECL
+--                                consistency. (thic01)-
+-- Copyright (c) 2004, 2010 Ingres Corporation
 --
 
 with SYSTEM;
@@ -54,6 +59,15 @@ package	ESQLDA is
     IISQ_VBYTE_TYPE: constant := 24;    -- Byte Varying - Input, Output
     IISQ_LBYTE_TYPE: constant := 25;    -- Long Byte - Output
     IISQ_OBJ_TYPE:  constant := 45;     -- 4GL object - Output
+    IISQ_GEOM_TYPE: constant := 56;     -- Spatial types
+    IISQ_POINT_TYPE: constant := 57;
+    IISQ_MPOINT_TYPE: constant := 58;
+    IISQ_LINE_TYPE: constant := 59;
+    IISQ_MLINE_TYPE: constant := 61;
+    IISQ_POLY_TYPE: constant := 62;
+    IISQ_MPOLY_TYPE: constant := 63;
+    IISQ_NBR_TYPE: constant := 64;
+    IISQ_GEOMC_TYPE: constant := 65;
 
 
     --
@@ -68,7 +82,7 @@ package	ESQLDA is
     type IISQL_NAME is
 	record
 	    sqlnamel: Short_Integer;
-	    sqlnamec: String(1..34);
+	    sqlnamec: String(1..258);
 	end record;
 
     --

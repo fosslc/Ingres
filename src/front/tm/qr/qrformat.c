@@ -305,6 +305,7 @@ qrinitsz(
 	         qrdatatype == DB_MLINE_TYPE ||
 	         qrdatatype == DB_POLY_TYPE ||
 	         qrdatatype == DB_MPOLY_TYPE ||
+	         qrdatatype == DB_GEOMC_TYPE ||
 	         qrdatatype == DB_LBIT_TYPE  || 
 		 qrdatatype == DB_LNVCHR_TYPE )
 	    {

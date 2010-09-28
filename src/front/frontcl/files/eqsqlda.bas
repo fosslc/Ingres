@@ -1,5 +1,5 @@
 !
-! Copyright (c) 2004 Ingres Corporation
+! Copyright (c) 2004, 2010 Ingres Corporation
 !
 
 !
@@ -27,6 +27,11 @@
 !	    Undo 19-apr-1999 change since int is not a BASIC datatype.
 !       18-nov-2009 (joea)
 !           Add IISQ_BOO_TYPE.
+!       29-jul-2010 (hweho01) SIR 121123
+!           Increased the size of sqlnamec from 34 to 258, to match 
+!           with the IISQD_NAMELEN in IISQLDA (iisqlda.h).
+!       17-aug-2010 (thich01)
+!           Add IISQ spatial types skipped 60 for SECL consistency
 
 !
 ! IISQ_MAX_COLS - Maximum number of columns returned from INGRES
@@ -52,7 +57,7 @@
 
 		group sqlname
 		    word	sqlnamel
-		    string  	sqlnamec = 34
+		    string  	sqlnamec = 258
 		end group sqlname
 	    
 	    end group sqlvar
@@ -95,3 +100,13 @@
 	declare integer constant IISQ_BYTE_TYPE = 23	! Byte - In/Out
 	declare integer constant IISQ_VBYTE_TYPE = 24	! Byte Varying - In/Out
 	declare integer constant IISQ_LBYTE_TYPE = 25	! Long Byte - Out
+	declare integer constant IISQ_GEOM_TYPE = 56;   ! Spatial 
+	declare integer constant IISQ_POINT_TYPE = 57;
+	declare integer constant IISQ_MPOINT_TYPE = 58;
+	declare integer constant IISQ_LINE_TYPE = 59;
+	declare integer constant IISQ_MLINE_TYPE = 61;
+	declare integer constant IISQ_POLY_TYPE = 62;
+	declare integer constant IISQ_MPOLY_TYPE = 63;
+        declare integer constant IISQ_NBR_TYPE = 64;
+	declare integer constant IISQ_GEOMC_TYPE = 65;
+

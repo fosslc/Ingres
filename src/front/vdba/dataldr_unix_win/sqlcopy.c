@@ -20,6 +20,11 @@
 ** 12-May-2006 (thaju02)
 **    In GenerateCopySyntax(), if LNOBFILE/COLACT_LNOB use 'long nvarchar'
 **    for column's copy format. 
+** 11-Aug-2010 (kschendel) b124231
+**	Properly generate the trailing nl delimiter when there are
+**	sequence columns.  Apparently the old COPY code somehow managed
+**	to eat a trailing newline even when it's not being asked for,
+**	but the new COPY code only does exactly what it's told.
 */
 
 #include "stdafx.h"
@@ -150,44 +155,42 @@ char* GenerateCopySyntax(DTSTRUCT* pDataStructure, int num)
 	/*
 	** Put the sequence columns at the end:
 	*/
-	listField = pField->listField;
-	while (listField)
+	if (nHasSequence > 0)
 	{
-		int nNullable = (listField->nColAction & COLACT_WITHNULL);;
-		if (!(listField->nColAction & COLACT_SEQUENCE))
+		listField = pField->listField;
+		while (listField)
 		{
-			listField = listField->next;
-			continue;
-		}
+			int nNullable = (listField->nColAction & COLACT_WITHNULL);;
+			if (!(listField->nColAction & COLACT_SEQUENCE))
+			{
+				listField = listField->next;
+				continue;
+			}
 
-		if (nOne == 0)
-		{
+			if (nOne == 0)
+			{
+				m = ConcateStrings (
+					&strOut, 
+					", ",
+					consttchszReturn, 
+					(char*)0);
+				if (!m)
+					return 0;
+			}
+
+			STprintf (szColName, "\"%s\"", listField->szColumnName);
 			m = ConcateStrings (
 				&strOut, 
-				", ",
-				consttchszReturn, 
+				szColName,                 /* column name */
+				"=varchar(0) ",            /* read format */
 				(char*)0);
-			if (!m)
-				return 0;
+			nOne = 0;
+			listField = listField->next;
 		}
-
-		STprintf (szColName, "\"%s\"", listField->szColumnName);
 		m = ConcateStrings (
-			&strOut, 
-			szColName,                 /* column name */
-			"=varchar(0) ",            /* read format */
-			(char*)0);
-#if defined (_ADD_NL_)
-		if (listField->next == NULL)
-		{
-			m = ConcateStrings (
 				&strOut, 
 				"nl ",
 				(char*)0);
-		}
-#endif
-		nOne = 0;
-		listField = listField->next;
 	}
 
 	m = ConcateStrings (

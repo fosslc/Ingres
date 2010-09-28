@@ -157,9 +157,13 @@
 **          opc_iqp_init() if opf_locator, return locator instead of blob.
 **      06-nov-2006 (stial01)
 **          Changes to return lob/locator as specified by opf_locator
+**	17-Aug-2010 (thich01)
+**	    Make changes to treat spatial types like LBYTEs.
 **	18-Aug-2009 (drivi01)
 **	    Fixed precedence warnings and other warnings in efforts
 **	    to port to Visual Studio 2009.
+**      21-Sep-2010 (horda03) b124315
+**          Modified opc_resolveif to create a list of all actions.
 [@history_template@]...
 **/
 
@@ -178,7 +182,8 @@ opc_resolveif(
 	OPS_STATE	*global,
 	i4		for_depth,
 	PST_STATEMENT	*cur_stmt,
-	PST_STATEMENT	*last_stmt );
+	PST_STATEMENT	*last_stmt,
+        QEF_AHD         **last_ahd );
 
 static VOID
 opc_mtlist(
@@ -322,6 +327,8 @@ opc_deferred_cpahd_build(
 **	10-march-2009 (dougi) bug 121773
 **	    Changes to identify query plans for cached dynamic queries with 
 **	    LOB locators enabled.
+**	1-Jul-2010 (kschendel) b124004
+**	    Kill qp_upd_cb, add qp-fetch-ahd.
 */
 VOID
 opc_iqp_init(
@@ -632,7 +639,6 @@ opc_iqp_init(
     ** headers are built, these fields will be filled in or increased to thier
     ** correct values.
     */
-    qp->qp_upd_cb = -1;
     qp->qp_key_row = -1;
     qp->qp_key_sz = max( sizeof (i4), sizeof (ALIGN_RESTRICT) );
     qp->qp_row_cnt = 0;
@@ -647,6 +653,7 @@ opc_iqp_init(
     qp->qp_sort_cnt = 0;
     qp->qp_ahd_cnt = 0;
     qp->qp_ahd = NULL;
+    qp->qp_fetch_ahd = NULL;
     qp->qp_ndbp_params = 0;
     qp->qp_dbp_params = NULL;
     qp->qp_pcx_cnt = 0;
@@ -690,7 +697,6 @@ opc_iqp_init(
     global->ops_cstate.opc_rparms = NULL;
     global->ops_cstate.opc_cparms = NULL;
     global->ops_cstate.opc_pvrow_dbp = -1;
-    global->ops_cstate.opc_stmtno = 0;
     global->ops_cstate.opc_flags = 0;
     global->ops_cstate.opc_topdecvar = NULL;
     global->ops_cstate.opc_curnode = NULL;
@@ -819,6 +825,8 @@ opc_iqp_init(
 **	    Support offset/first "n" parameters.
 **	18-mar-2010 (gupsh01) SIR 123444
 **	    Added support for alter table ...rename table/column.
+**	21-Jun-2010 (kschendel) b123775
+**	    Delete unused statement no.
 */
 VOID
 opc_cqp_continue(
@@ -1162,11 +1170,6 @@ opc_cqp_continue(
     else if (new_ahd)
 	new_ahd->ahd_stmtno = -1;
 
-    /* Now that we're finish with this statement, let's increment the statement
-    ** number to get ready for the next one.
-    */
-    global->ops_cstate.opc_stmtno ++;
-
     /* Handle the audit information for each statement. */
     statementp = global->ops_statement;
 
@@ -1310,6 +1313,8 @@ opc_cqp_continue(
 **	    Flag scrollable cursors in qp_sqlda.
 **	30-oct-2007 (dougi)
 **	    Add repeat query parameter descriptor array for cached dynamic.
+**      21-Sep-2010 (horda03) b124315
+**          Prime an empty list of actions for opc_resolveif to create.
 */
 VOID
 opc_fqp_finish(
@@ -1319,6 +1324,7 @@ opc_fqp_finish(
     OPC_OBJECT_ID   *obj;
     i4		    row_size;
     DB_STATUS	    status;
+    QEF_AHD         *last_ahd = NULL;
 
     /* First, lets finish the if statements by pointing them at thier
     ** then and else actions, and set the qp_ahd field at the first
@@ -1333,10 +1339,10 @@ opc_fqp_finish(
 	/* Connect all the actions together into the action list used by    */
 	/* QEF. */
 	if (global->ops_inAfterRules)
-	    opc_resolveif(global, 0, global->ops_firstAfterRule,
-		(PST_STATEMENT *)NULL);
-	else opc_resolveif(global, 0, global->ops_firstBeforeRule,
-		(PST_STATEMENT *)NULL);
+	    opc_resolveif(global, 0, global->ops_firstAfterRule, 
+		(PST_STATEMENT *)NULL, &last_ahd);
+	else opc_resolveif(global, 0, global->ops_firstBeforeRule, 
+		(PST_STATEMENT *)NULL, &last_ahd);
 
 	/*
 	** Set the rule action list of the triggering statement to point to the
@@ -1364,8 +1370,8 @@ opc_fqp_finish(
 	    if (global->ops_cstate.opc_flags & OPC_REGPROC)
 	    {
 		/* call opc_resolve to get the QP_AHD pointer for this regproc*/
-		opc_resolveif(global, 0, global->ops_procedure->pst_stmts,
-			     (PST_STATEMENT *) NULL);
+		opc_resolveif(global, 0, global->ops_procedure->pst_stmts, 
+			     (PST_STATEMENT *) NULL, &last_ahd);
 		qp->qp_ddq_cb.qeq_d4_total_cnt = 0;
 		qp->qp_ddq_cb.qeq_d5_fixed_cnt = 0;
 	    }
@@ -1386,8 +1392,8 @@ opc_fqp_finish(
 		    qp->qp_ddq_cb.qeq_d5_fixed_cnt = 0;
 	    }
 	    
-	    opc_resolveif(global, 0, global->ops_procedure->pst_stmts,
-				(PST_STATEMENT *) NULL);
+	    opc_resolveif(global, 0, global->ops_procedure->pst_stmts, 
+				(PST_STATEMENT *) NULL, &last_ahd);
 
 	    /* figure out if this query plan can return at most one tuple. */
 	    if (global->ops_procedure->pst_isdbp == FALSE)
@@ -2451,13 +2457,16 @@ opc_lsparms(
 **          The body of an if stmt may be emptied if constant folding detects
 **          a fixed 'false' in the boolean condition. We need to defend against
 **          the empty adh that results.
+**      21-Sep-2010 (horda03) b124315
+**          Add last_ahd parameter to specify the last ahd processed.
 */
 static VOID
 opc_resolveif(
 	OPS_STATE	*global,
 	i4		for_depth,
 	PST_STATEMENT	*cur_stmt,
-	PST_STATEMENT	*last_stmt )
+	PST_STATEMENT	*last_stmt,
+        QEF_AHD         **last_ahd )
 {
     QEF_QP_CB		    *qp = global->ops_cstate.opc_qp;
     OPC_PST_STATEMENT	    *opc_pst;
@@ -2535,6 +2544,15 @@ opc_resolveif(
 	    */
 	    cur_ahd->ahd_prev->ahd_next = next_ahd;
 	    cur_ahd->ahd_prev = NULL;
+
+            if (*last_ahd)
+            {
+               /* Not the first action, so add to end of list */
+               (*last_ahd)->ahd_list = cur_ahd;
+            }
+            *last_ahd = cur_ahd;
+            
+
 	    if (qp->qp_ahd == NULL)
 	    {
 		qp->qp_ahd = cur_ahd;
@@ -2559,7 +2577,7 @@ opc_resolveif(
 		    cur_ahd->qhd_obj.qhd_if.ahd_true = opc_pst->opc_stmtahd;
 		    opc_resolveif(global, for_depth,
 				    cur_stmt->pst_specific.pst_if.pst_true,
-				    cur_stmt->pst_next);
+				    cur_stmt->pst_next, last_ahd);
 		}
 
 		if (cur_stmt->pst_specific.pst_if.pst_false != NULL)
@@ -2569,7 +2587,7 @@ opc_resolveif(
 		    cur_ahd->qhd_obj.qhd_if.ahd_false = opc_pst->opc_stmtahd;
 		    opc_resolveif(global, for_depth,
 				    cur_stmt->pst_specific.pst_if.pst_false,
-				    cur_stmt->pst_next);
+				    cur_stmt->pst_next, last_ahd);
 		}
 		/* if this IF was really a for-loop body, we're now done
 		** with the FOR loop, reduce nesting.
@@ -2770,6 +2788,14 @@ i4		*bits)
 		rdv->db_length = ADP_LOC_PERIPH_SIZE;
 		break;
 	case	DB_LBYTE_TYPE:
+	case 	DB_GEOM_TYPE:
+	case 	DB_POINT_TYPE:
+	case 	DB_MPOINT_TYPE:
+	case 	DB_LINE_TYPE:
+	case 	DB_MLINE_TYPE:
+	case 	DB_POLY_TYPE:
+	case 	DB_MPOLY_TYPE:
+	case 	DB_GEOMC_TYPE:
 		rdv->db_datatype = DB_LBLOC_TYPE;
 		rdv->db_length = ADP_LOC_PERIPH_SIZE;
 		break;

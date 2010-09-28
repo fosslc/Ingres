@@ -63,6 +63,8 @@
 **          Move Init ADF_CB in DMVE_CB to dmve_fix_tabio
 **	16-Nov-2009 (kschendel) SIR 122890
 **	    Don't include dudbms when not needed.
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 **/
 
 /*
@@ -129,6 +131,7 @@ DMVE_CB		*dmve)
     i4		error;
 
     CLRDBERR(&dmve->dmve_error);
+    DMVE_CLEAR_TABINFO_MACRO(dmve);
     dmve->dmve_logfull = 0;
 
     /*

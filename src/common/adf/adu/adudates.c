@@ -350,6 +350,14 @@
 **          Do not negate the values of Ingresdate' intervals when the
 **          interval is negative. '-11 hrs -22 mins' is being stored as
 **          '-10 hrs 38 mins'.
+**      30-Jun-2010 (horda03) B124003
+**          INTERVAL function reports E_US10DC when used on an INTERVAL YTOM or
+**          INTERVAL DTOS.
+**      01-Jul-2010 (horda03) B123234
+**          Altered the E_US10D9 message as date_trunc only works on absolute dates,
+**          the date_part function may/may not work on an Interval, it depends on
+**          the 'unit' being requested (for example 'week' will not work on an
+**          interval. For this latter case, added new error E_US10F5.
 */
 
 /*  Static variable references	*/
@@ -3653,6 +3661,11 @@ i4		    *tzoff)
 **          Legacy, empty INGRES date values may be interpreted as an
 **          interval. Check AD_DN_LENGTH is set before assuming we have
 **          an interval.
+**      24-Jun-2010 (horda03) B123987
+**          An ingresdate interval string can be longer than AD_1DTE_OUTLENGTH,
+**          (at this time around 57 characters). So only limit the length of
+**          the output to the size of the (temp) buffer used to construct the
+**          interval string.
 */
 
 DB_STATUS
@@ -3669,7 +3682,7 @@ DB_DATA_VALUE	    *str_dv)
 			ns;
     i4			signmult;
     char		tmpbuffer[15];
-    char		temp[128];
+    char		temp[AD_11_MAX_STRING_LEN+1];
     i4			max_str_len;
     AD_NEWDTNTRNL	ndatev;
     DB_DATA_VALUE	str2_dv;
@@ -3706,22 +3719,9 @@ DB_DATA_VALUE	    *str_dv)
     /* max length of date output string */
     MEfill ((u_i2) sizeof(temp), NULLCHAR, (PTR) &temp);
 
-    /* for interval types set the max length */
-    switch (date_dv->db_datatype)
-    {
-	case DB_DTE_TYPE:
-    	    if (max_str_len > AD_1DTE_OUTLENGTH)
-	        max_str_len = AD_1DTE_OUTLENGTH;
-	    break;
-	case DB_INYM_TYPE:
-    	    if (max_str_len > AD_9INYM_OUTLENGTH)
-	        max_str_len = AD_9INYM_OUTLENGTH;
-	    break;
-	case DB_INDS_TYPE:
-    	    if (max_str_len > AD_10INDS_OUTLENGTH)
-	        max_str_len = AD_10INDS_OUTLENGTH;
-	    break;
-    }
+    /* Limit the output string to the size of temp */
+    if (max_str_len > sizeof(temp))
+       max_str_len = sizeof(temp);
 
     nd = &ndatev;
     if (db_stat = adu_6to_dtntrnl (adf_scb, date_dv, nd))
@@ -7667,6 +7667,8 @@ AD_NEWDTNTRNL  *datep)
 **	03-oct-06 (toumi01)
 **	    Correct interval computation - need AD_40DTE_SECPERDAY multiplier.
 **	    Remove unused variable tlowday.
+**      30-Jun-2010 (horda03) B124003
+**          Allow parts of an Interval to be extracted.
 */
 
 DB_STATUS
@@ -7694,13 +7696,7 @@ DB_DATA_VALUE  *result)
 
         res	= (f8 *)result->db_data;
 
-        if ((
-	     (datep->dn_dttype == DB_DTE_TYPE) &&
-	     (datep->dn_status & AD_DN_ABSOLUTE)
-	    )
-         || (datep->dn_dttype == DB_INYM_TYPE)
-         || (datep->dn_dttype == DB_INDS_TYPE)
-        )
+        if (datep->dn_status & AD_DN_ABSOLUTE)
 	    return(adu_error(adf_scb, E_AD505E_NOABSDATES, 0));
 
 	if (datep->dn_status == AD_DN_NULL)
@@ -8215,6 +8211,11 @@ DB_DATA_VALUE       *date_result)
 **	    Ensure all TZ adjustments are performed for presentation.
 **	11-May-2008 (kiria01) b120004
 **	    Apply any defered application of time/timezone if needed.
+**      01-Jul-2010 (horda03) B123234
+**          Allow parts of an Interval to be selected.
+**          As Intervals are now allowed, only adjust for GMT when
+**          Absolute date with time used. Note, Quarter, Timezone Hour/Minute,
+**          Week Number and ISO Week number are not permitted on Intervals,
 */
 
 DB_STATUS
@@ -8240,15 +8241,6 @@ DB_DATA_VALUE       *result)
 	/* If `empty date', just return zero */
 	component = 0;
     }
-    else if (((datep->dn_dttype == DB_DTE_TYPE) &&
-	      (!(datep->dn_status & AD_DN_ABSOLUTE))
-	     )
-             || (datep->dn_dttype == DB_INYM_TYPE)
-             || (datep->dn_dttype == DB_INDS_TYPE))
-    {
-	/* ... otherwise, if not an absolute date, return error */
-	return (adu_error(adf_scb, (i4) E_AD505D_DATEABS, 0));
-    }
     else
     {
 	/* ... otherwise, process normally */
@@ -8264,7 +8256,7 @@ DB_DATA_VALUE       *result)
 	    if (db_stat = adu_dtntrnl_pend_time(adf_scb, datep))
 		return (db_stat);
 	}
-	if (datep->dn_status & AD_DN_TIMESPEC)
+	if (datep->dn_status & (AD_DN_ABSOLUTE | AD_DN_TIMESPEC) == (AD_DN_ABSOLUTE | AD_DN_TIMESPEC))
 	{
 	    /*
 	    ** If timespec is selected then the time is GMT.
@@ -8279,6 +8271,21 @@ DB_DATA_VALUE       *result)
 	if (db_stat = ad0_8getdateclass(adf_scb, inter_spec , &dateclass))
 	    return (db_stat);
 
+        if( !(datep->dn_status & AD_DN_ABSOLUTE) )
+        {
+           /* Dealing with an Inverval, so not all date classes apply.
+           ** Verify a supported date class has been specified.
+           */
+           switch (dateclass)
+           {
+              case 'Q':  /* Quarter */
+              case 'R':  /* Timezone Hour */
+              case 'T':  /* Timezone Minute */
+              case 'W':  /* Week Number*/
+              case 'w':  /* ISO Week Number*/
+                 return (adu_error(adf_scb, (i4) E_AD5079_INTERVAL_IN_ABS_FUNC, 0));
+           }
+        }
 	/* select appropriate component to extract */
 	switch (dateclass)
 	{

@@ -2176,6 +2176,9 @@ char	*typename;
       case DB_MPOLY_TYPE:
 	tn = ERx("DB_MPOLY_TYPE");
 	break;
+      case DB_GEOMC_TYPE:
+	tn = ERx("DB_GEOMC_TYPE");
+	break;
       case DB_LVCH_TYPE:
 	tn = ERx("DB_LVCH_TYPE");
 	break;
@@ -2694,7 +2697,7 @@ DB_DATA_VALUE	*dbv;
              || type == DB_GEOM_TYPE  || type == DB_POINT_TYPE
              || type == DB_MPOINT_TYPE || type == DB_LINE_TYPE
              || type == DB_MLINE_TYPE || type == DB_POLY_TYPE
-             || type == DB_MPOLY_TYPE
+             || type == DB_MPOLY_TYPE || type == DB_GEOMC_TYPE
 	     || type == DB_LBYTE_TYPE || type == DB_LVCH_TYPE)
     {
 	/* Make sure that client line length will not overflow local buffers */
@@ -2707,7 +2710,7 @@ DB_DATA_VALUE	*dbv;
             type == DB_GEOM_TYPE   || type == DB_POINT_TYPE ||
             type == DB_MPOINT_TYPE || type == DB_LINE_TYPE  ||
             type == DB_MLINE_TYPE  || type == DB_POLY_TYPE  ||
-            type == DB_MPOLY_TYPE )
+            type == DB_MPOLY_TYPE  || type == DB_GEOMC_TYPE )
                 _VOID_ gtr_longval(trs, indent, cp, left, dbv);
         else
         {

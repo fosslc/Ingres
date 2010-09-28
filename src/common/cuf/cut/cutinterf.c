@@ -486,6 +486,9 @@ cut_create_buf(
 **	    up using the same buf-thread block - ugh.
 **	17-Sep-2004 (jenjo02)
 **	    Track high water mark of attaches.
+**      21-jul-2010 (huazh01)
+**          assign the return status of cut_thread_init() into 'status' 
+**          before testing it with E_DB_INFO. (124094)
 */
 DB_STATUS
 cut_attach_buf(
@@ -548,7 +551,7 @@ cut_attach_buf(
     /* 
     ** check thread is initialized in cut, init if not
     */
-    if (status = cut_thread_init((PTR *)&cur_thread, error) > E_DB_INFO)
+    if ((status = cut_thread_init((PTR *)&cur_thread, error)) > E_DB_INFO)
     {
 	cur_thread = (CUT_TCB*)NULL;
 	/* error is already logged, keep going */

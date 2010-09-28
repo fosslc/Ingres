@@ -49,6 +49,8 @@
 #           Add logrotate.ccpp
 #       21-May-2010 (bonro01)
 #           Add conditional compilation for ICE
+#	09-Sep-2010 (rajus01)
+#	    Add kerberos64.ccpp
 
 SubDir ING_SRC front st specials_unix_vms ;
 
@@ -79,7 +81,7 @@ IIPRT zoneinfo64.ccpp zoneinfo.ccpp wview.ccpp w4v3cats.ccpp
 	relnotes.ccpp rdb.ccpp rbf.ccpp raat.ccpp
 	qbf.ccpp pro-bridge.ccpp orrun.ccpp ormw.ccpp ordev.ccpp
 	oracle.ccpp oldmsg.ccpp odbc64.ccpp odbc.ccpp netu.ccpp net.ccpp
-	namesrv.ccpp mwvdba.ccpp mwruntime.ccpp montools64.ccpp
+	kerberos64.ccpp namesrv.ccpp mwvdba.ccpp mwruntime.ccpp montools64.ccpp
 	montools.ccpp messages64.ccpp messages.ccpp lib64.ccpp lib.ccpp
 	kitinstal-msgs.ccpp kerberos.ccpp install.ccpp
 	ingmenu.ccpp ingenv.ccpp iievutil.ccpp 
@@ -94,7 +96,7 @@ IIPRT zoneinfo64.ccpp zoneinfo.ccpp wview.ccpp w4v3cats.ccpp
 	api64.ccpp api.ccpp advisor.ccpp accessdb.ccpp abfdemo.ccpp
 	abf_patch.ccpp abf.ccpp i18n.ccpp i18n64.ccpp supp32.ccpp
 	zoneinfo32.ccpp collation32.ccpp ucharmaps32.ccpp packman.ccpp
-	demodb.ccpp logrotate.ccpp geo.ccpp ;
+	demodb.ccpp logrotate.ccpp geo.ccpp geodeps.ccpp ;
 
 IIINSTALLHLP abf.hlp advisor.hlp api.hlp api64.hlp
 	bridge.hlp c2audit.hlp currform.hlp custominst.hlp das.hlp
@@ -103,7 +105,7 @@ IIINSTALLHLP abf.hlp advisor.hlp api.hlp api64.hlp
 	esql.hlp esql64.hlp esqlada.hlp esqlbas.hlp esqlc.hlp
 	esqlcc.hlp esqlcob.hlp esqlfor.hlp esqlpas.hlp fortunoff.hlp
 	ingbase.hlp ingbuild.hlp
-	installf.hlp mwvisualtools.hlp net.hlp
+	installf.hlp mwvisualtools.hlp net.hlp net64.hlp
 	netclient.hlp odbc.hlp oldmsg.hlp ome.hlp ome64.hlp oracle.hlp
 	oraclepackage.hlp ordev.hlp ordevpkg.hlp orrun.hlp orrunpkg.hlp
 	qr_run.hlp qr_tools.hlp rdb.hlp

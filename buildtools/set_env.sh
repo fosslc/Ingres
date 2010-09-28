@@ -74,9 +74,6 @@ do
 	    noclear=true
 	    shift
 	    ;;
-        -clear)
-            shift
-            ;;
     	*)
 	    usage
 	    return 1

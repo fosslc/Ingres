@@ -67,6 +67,8 @@
 **	    Update GCA API to LEVEL 5
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      12-Aug-2010 (horda03) b124109
+**          Defined prototype for gws_gt_parent_gw_sess().
 **/
 
 /* forward declarations */
@@ -659,6 +661,8 @@ FUNC_EXTERN DB_STATUS gwx_commit(GW_RCB *gw_rcb);
 FUNC_EXTERN VOID gwf_error();
 
 GW_SESSION *gws_gt_gw_sess( void );
+
+GW_SESSION *gws_gt_parent_gw_sess( void );
 
 DB_STATUS gwu_copen(DMT_CB	*dmt,
 		    DMR_CB	*dmr,

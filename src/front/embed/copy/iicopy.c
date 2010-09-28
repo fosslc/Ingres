@@ -594,6 +594,14 @@ loc_alloc(i4 n1,i4 n2,PTR *p)
 **	10-Mar-2010 (kschendel) SIR 122974
 **	    Squeeze out a bit more performance by eliminating rowleft in favor
 **	    of a guard pointer.
+**      01-Jul-2010 (horda03) B124010
+**          If the file for a COPY FROM cannot be opened, then terminate the
+**          command but don't ABORT it. If the COPY was to a Global Temporary
+**          Table, aborting the COPY in this instance will drop the table,
+**          but no data has been transferred, so the GTT has not been modified.
+**	18-Aug-2010 (kschendel) b124272
+**	    Data for ordinary char-type columns has to be unormed when the
+**	    installation character set is UTF8.
 */ 
 
 /* Not sure why these aren't declared elsewhere, but whatever... */
@@ -745,6 +753,12 @@ static STATUS IICPvcValCheck(
 	char *col_aligned, 
 	II_CP_MAP *copy_map,
 	II_CP_STRUCT *copy_blk );
+
+static STATUS IIcp_unorm(
+	ADF_CB *adfcb,
+	II_CP_MAP *cmap,
+	PTR tup_ptr,
+	II_CP_STRUCT *cblk);
 
 static void IICPdecompress(
 	ROW_DESC *rdesc,
@@ -1411,6 +1425,24 @@ i4	    (*user_routine)();		/* Function to get/put rows */
 **	10-May-2010 (kschendel) SIR 122974
 **	    Very large binary (non-converting) COPY FROM needs an unusually
 **	    large read size.
+**	7-Jul-2010 (kschendel) SIR 124038
+**	    Allow Windows to specify a filetype so that advanced users can
+**	    control the file interpretation mode.  (CRLF conversion, control-Z
+**	    as EOF.)
+**	4-Aug-2010 (kschendel) b124193
+**	    Re-enable the error-log file if copy from program.
+**	    At one point, I had thought to implement this by seeking the
+**	    input (since COPY no longer constructs an entire input row).
+**	    This would have been impossible for copy from program.
+**	    This was changed to copy on the fly to an error row buffer, but
+**	    logging was never turned back on for program.  Fix.
+**	18-Aug-2010 (kschendel) b124272
+**	    Set unorm flag for unicode columns or utf8 charsets.
+**	30-Aug-2010 (kschendel) SIR 122974
+**	    CSV/SSV delimiter should be newline if it's the last non-dummy
+**	    column in the list, not the last column.  This change allows for
+**	    the semi-traditional "extra blank line" input, for example
+**	    copy foo(c1=c0csv, ..., cn=c0csv, xx=d0nl) from ...
 */
 
 static STATUS
@@ -1435,6 +1467,7 @@ IIcpinit( II_LBQ_CB *IIlbqcb, II_CP_STRUCT *copy_blk, i4  msg_type )
     i4			cp_namelen;
     i4			max_rowlen;
     i4			absttype;
+    i4			last_nondummy;	/* Index of last non-dummy domain */
     bool		non_lob_group;
     bool		all_chr_type;
     bool		chr_row_type;
@@ -1442,6 +1475,7 @@ IIcpinit( II_LBQ_CB *IIlbqcb, II_CP_STRUCT *copy_blk, i4  msg_type )
 
  
     copy_blk->cp_rowcount = 0;
+    last_nondummy = -1;
  
     /*
     ** Fill in the Copy control block from the CGA_C_INTO/CGA_C_FROM
@@ -1626,7 +1660,7 @@ IIcpinit( II_LBQ_CB *IIlbqcb, II_CP_STRUCT *copy_blk, i4  msg_type )
 		    != sizeof(i4))
 	    return ((num_read < 0) ? FAIL : E_CO0022_COPY_INIT_ERR);
 	copy_map->cp_isdelim = i2_val;
- 
+
 	/* number of delimiter characters - gca_l_delim_cp */ 
 	if ((num_read = IIcgc_get_value(cgc, msg_type, IICGC_VVAL, &dbv2)) 
 		    != sizeof(i4))
@@ -1641,6 +1675,19 @@ IIcpinit( II_LBQ_CB *IIlbqcb, II_CP_STRUCT *copy_blk, i4  msg_type )
 	if ((num_read = IIcgc_get_value(cgc, msg_type, IICGC_VVAL, &dbv)) 
 		    != CPY_MAX_DELIM)
 	    return ((num_read < 0) ? FAIL : E_CO0022_COPY_INIT_ERR);
+
+	/* Track last non-dummy or csv for CSV/SSV handling later.
+	** The idea is that a CSV/SSV domain uses newline delimiter
+	** when it's the last domain, or is only followed by (non-CSV)
+	** dummies.  This sort of thing allows a trailing CSV to be
+	** followed by xx=d0nl to eat blank lines after each row,
+	** something that copydb likes to do.
+	*/
+	if (copy_map->cp_rowtype != CPY_DUMMY_TYPE
+	  || (copy_map->cp_isdelim > 0
+	      && (copy_map->cp_delim[0] == CPY_CSV_DELIM
+		  || copy_map->cp_delim[0] == CPY_SSV_DELIM)) )
+	    last_nondummy = i;
  
 	/* attribute map - gca_tupmap_cp */
 	if ((num_read = IIcgc_get_value(cgc, msg_type, IICGC_VVAL, &dbv4)) 
@@ -1947,12 +1994,12 @@ IIcpinit( II_LBQ_CB *IIlbqcb, II_CP_STRUCT *copy_blk, i4  msg_type )
 	    {
 		/* It's CSV or SSV format.  Turn on the CSV flag and set
 		** the delimiter to comma, or semicolon, or newline if
-		** we're on the very last column.
+		** there are no real-column or CSV domains following.
 		*/
 		copy_map->cp_csv = TRUE;
 		if (copy_map->cp_delim[0] == CPY_SSV_DELIM)
 		    copy_map->cp_ssv = TRUE;
-		if (i == copy_blk->cp_num_domains-1)
+		if (i == last_nondummy)
 		    copy_map->cp_delim[0] = '\n';
 		else if (copy_map->cp_delim[0] == CPY_CSV_DELIM)
 		    copy_map->cp_delim[0] = ',';
@@ -2448,10 +2495,14 @@ IIcpinit( II_LBQ_CB *IIlbqcb, II_CP_STRUCT *copy_blk, i4  msg_type )
 	** as all values are legal.  Check anything else.
 	*/
 	if (copy_blk->cp_direction == CPY_INTO)
+	{
 	    copy_map->cp_valchk = 0;
+	    copy_map->cp_unorm = FALSE;
+	}
 	else
 	{
 	    copy_map->cp_valchk = 1;
+	    copy_map->cp_unorm = FALSE;
 	    if (copy_map->cp_cvid == ADI_NOFI
 	      && (absrtype == CPY_DUMMY_TYPE
 		    || copy_map->cp_tuplob
@@ -2479,10 +2530,24 @@ IIcpinit( II_LBQ_CB *IIlbqcb, II_CP_STRUCT *copy_blk, i4  msg_type )
 	    /* Note that the above test turns off valchk for binary
 	    ** nchar, nvarchar.  Those are not valchk'ed, rather they are
 	    ** unormed.
+	    ** Also need to unorm ordinary character-string columns if
+	    ** the character set is UTF8.
+	    ** Note that declared-UTF8 (i.e. nchar/nvarchar) don't need to
+	    ** be unormed if they are being coerced, the coercion does it.
+	    ** We only need the unorm if there's no coercion (binary) or
+	    ** if the coercion won't know about "hidden" UTF8-ness.
 	    */
-	    if (copy_map->cp_valchk
+	    if ( (IIlbqcb->ii_lq_adf->adf_utf8_flag & AD_UTF8_ENABLED
+		  && (absttype == DB_CHR_TYPE
+		      || absttype == DB_CHA_TYPE
+		      || absttype == DB_VCH_TYPE
+		      || absttype == DB_TXT_TYPE
+		      || absttype == DB_LVCH_TYPE))
 	      || (copy_map->cp_cvid == ADI_NOFI
-		  && (absttype == DB_NCHR_TYPE || absttype == DB_NVCHR_TYPE)))
+		  && (absttype == DB_NCHR_TYPE || absttype == DB_NVCHR_TYPE
+		      || absttype == DB_LNVCHR_TYPE)) )
+		copy_map->cp_unorm = TRUE;
+	    if (copy_map->cp_valchk || copy_map->cp_unorm)
 		cgroup->cpg_validate = TRUE;
 	}
     }
@@ -2504,6 +2569,7 @@ IIcpinit( II_LBQ_CB *IIlbqcb, II_CP_STRUCT *copy_blk, i4  msg_type )
     */
     if ((copy_blk->cp_status & CPY_PROGRAM) == 0)
     {
+	copy_blk->cp_filetype = -1;	/* Not chosen yet */
 #ifdef VMS 
 	/*
 	** VMS only: Check if filename includes the file type. 
@@ -2573,8 +2639,40 @@ IIcpinit( II_LBQ_CB *IIlbqcb, II_CP_STRUCT *copy_blk, i4  msg_type )
 		return (E_CO0019_NOBINARY);
 	    }
 	}
-	else
-#endif /* VMS */
+#elif NT_GENERIC
+	/* Windows:  allow B or T as filetypes.  Note that unlike VMS,
+	** which has historically allowed ,binary etc (or even ,booger
+	** since it only checks the first letter), for Windows I'll
+	** require a single letter at the end of the filename.
+	** No spaces between comma and filetype.  E.g.
+	** 'foo.dat,T' is correct.  'foo.dat, t' is not and will cause
+	** 'foo.dat, t' to be used as the filename.
+	** "fname_length" is set up above, it INCLUDES the trailing null.
+	*/
+	--fname_length;		/* Don't include null */
+	cp = &copy_blk->cp_filename[fname_length-1];
+	if (fname_length > 2 && *(cp-1) == ',')
+	{
+	    if (*cp == 't' || *cp == 'T')
+	    {
+		/* Text mode requested */
+
+		*(cp-1) = '\0';
+		copy_blk->cp_filetype = SI_TXT;
+	    }
+	    else if (*cp == 'b' || *cp == 'B')
+	    {
+		/* Binary mode requested */
+		/* Unlike VMS, Windows has no restriction on using binary;
+		** it's really a translation mode, not a true file type.
+		*/
+
+		*(cp-1) = '\0';
+		copy_blk->cp_filetype = SI_BIN;
+	    }
+	}
+#endif /* VMS or Windows */
+	if (copy_blk->cp_filetype == -1)
 	{
 	    /*
 	    ** Use default filetypes.
@@ -2628,7 +2726,7 @@ IIcpinit( II_LBQ_CB *IIlbqcb, II_CP_STRUCT *copy_blk, i4  msg_type )
     ** Don't however log if there are LOB's, too hard.
     */
     copy_blk->cp_rowlog = (copy_blk->cp_logname != NULL);
-    if (copy_blk->cp_program || copy_blk->cp_has_blobs )
+    if (copy_blk->cp_has_blobs )
 	copy_blk->cp_rowlog = FALSE;
     if (copy_blk->cp_rowlog && copy_blk->cp_direction == CPY_FROM)
     {
@@ -4371,6 +4469,14 @@ IIcpfrom_init (
 **          Having called adu_unorm() to convert to NFD/NFC we need to copy
 **          the result to the tuple that is being inserted, not the
 **          copy buffer that's being read.
+**      21-Jun-2010 (horda03) b123926
+**          Because adu_unorm() and adu_utf8_unorm() are also called via 
+**          adu_lo_filter() change parameter order.
+**	28-Jun-2010 (kschendel) b123990
+**	    Use column length, not group length, when validating and
+**	    normalizing unicode columns.
+**	20-Aug-2010 (kschendel) b124272
+**	    Fix typo in 124272 fix from earlier this week.  (status -> sts)
 */
 
 static STATUS
@@ -4449,8 +4555,7 @@ IIcpfrom_binary(II_THR_CB *thr_cb, II_CP_STRUCT *copy_blk,
     for (cmap = cgroup->cpg_first_map; cmap <= cgroup->cpg_last_map; ++cmap)
     {
 	absttype = abs(cmap->cp_tuptype);
-	if (!cmap->cp_valchk
-	  && absttype != DB_NCHR_TYPE && absttype != DB_NVCHR_TYPE)
+	if (!cmap->cp_valchk && !cmap->cp_unorm)
 	{
 	    /* No action on this one */
 	    tup_ptr += cmap->cp_tuplen;
@@ -4484,52 +4589,11 @@ IIcpfrom_binary(II_THR_CB *thr_cb, II_CP_STRUCT *copy_blk,
 		return (FAIL);
 	}
 
-	if (absttype == DB_NCHR_TYPE || absttype == DB_NVCHR_TYPE)
+	if (cmap->cp_unorm)
 	{
-	    /* Binary unicode, need to normalize the representation.
-	    ** Since this is binary copy, tup and row types/lengths are
-	    ** necessarily the same.  Do the normalization into a work
-	    ** buffer in case the value grows larger than the column
-	    ** has room for.  (Which should throw a truncation warning,
-	    ** but doesn't at present...)
-	    */
-
-	    DB_DATA_VALUE  dst_dv;
-	    DB_DATA_VALUE  src_dv;
-
-	    if (cmap->cp_normbuf == NULL)
-		cmap->cp_normbuf = MEreqmem(0, rowlen * 4, 0, NULL);
-
-	    if (cmap->cp_srcbuf == NULL)
-		cmap->cp_srcbuf = MEreqmem(0, rowlen, 0, NULL);
-
-	    src_dv.db_collID = dst_dv.db_collID = 0;
-	    src_dv.db_datatype = dst_dv.db_datatype = absttype;
-	    src_dv.db_length = dst_dv.db_length = rowlen;
-	    if (cmap->cp_tuptype < 0)
-	    {
-		-- src_dv.db_length;
-		-- dst_dv.db_length;
-		-- rowlen;		/* Don't copy null indicator around */
-	    }
-	    src_dv.db_prec = dst_dv.db_prec = cmap->cp_cvprec;
-	    src_dv.db_data = cmap->cp_srcbuf;
-	    dst_dv.db_data = cmap->cp_normbuf;
-
-	    MEcopy (tup_ptr, rowlen, cmap->cp_srcbuf);
-		
-	    if ((status = 
-		adu_unorm(IIlbqcb->ii_lq_adf, &dst_dv, &src_dv, 0)) != E_DB_OK)
-	    {
-		char err_buf[15];
-		CVla(copy_blk->cp_rowcount + 1, err_buf);
-		IIlocerr(GE_LOGICAL_ERROR, E_CO003A_ROW_FORMAT_ERR,
-				II_ERR, 2, err_buf, cmap->cp_name);
-		copy_blk->cp_warnings++;
+	    sts = IIcp_unorm(IIlbqcb->ii_lq_adf, cmap, tup_ptr, copy_blk);
+	    if (sts != OK)
 		return (FAIL);
-	    }
-
-            MEcopy((PTR)dst_dv.db_data, rowlen, (PTR)tup_ptr);
 	}
 
 	tup_ptr += cmap->cp_tuplen;
@@ -4650,6 +4714,12 @@ IIcpfrom_binary(II_THR_CB *thr_cb, II_CP_STRUCT *copy_blk,
 **	2-Mar-2010 (kschendel) SIR 122974
 **	    The original COPY code did \-escaping for dummy format (d0)
 **	    as well as c0, fix here.
+**	18-Aug-2010 (kschendel) b124272
+**	    Normalize coerced result if needed, e.g. char column in UTF8
+**	    character set.
+**	    Also fix bug, for BYTE-ALIGN platforms make sure we value
+**	    check and unorm from the aligned value, which hasn't been
+**	    copied back into the tuple buffer yet.
 */
 
 static STATUS
@@ -5456,15 +5526,24 @@ got_value:
 		** I don't know why this isn't part of the coercions from
 		** UTF8, but whatever ... [kschendel]
 		*/
-		if (absrtype == DB_UTF8_TYPE)
+		if (absrtype == DB_UTF8_TYPE || cmap->cp_unorm)
 		{
 		    u_char *next_char, *val_end;
 
-		    /* UTF8 has been set up as a db-text-string above.
-		    ** val-end is actually end+1 here.
-		    */
-		    next_char = &txt_ptr->db_t_text[0];
-		    val_end = &txt_ptr->db_t_text[txt_ptr->db_t_count];
+		    if (cmap->cp_counted	/* varchar, utf8, varbyte */
+		      || absrtype == DB_TXT_TYPE)
+		    {
+			/* value has been set up as a db-text-string above.
+			** val-end is actually end+1 here.
+			*/
+			next_char = &txt_ptr->db_t_text[0];
+			val_end = &txt_ptr->db_t_text[txt_ptr->db_t_count];
+		    }
+		    else
+		    {
+			next_char = val_start;
+			val_end = next_char + vallen;
+		    }
 
 		    while (next_char < val_end)
 		    {
@@ -5561,7 +5640,12 @@ got_value:
 		*/
 		if (! noconv && cmap->cp_valchk)
 		{
-		    if (IICPvcValCheck( IIlbqcb, tup_ptr, cmap, copy_blk ) != OK)
+		    if (IICPvcValCheck( IIlbqcb, aligned_tupval, cmap, copy_blk ) != OK)
+			noconv = TRUE;	/* Stop converting */
+		}
+		if (! noconv && cmap->cp_unorm)
+		{
+		    if (IIcp_unorm(IIlbqcb->ii_lq_adf, cmap, aligned_tupval, copy_blk) != OK)
 			noconv = TRUE;	/* Stop converting */
 		}
 #ifdef BYTE_ALIGN
@@ -5570,7 +5654,7 @@ got_value:
 		    MEcopy(aligned_tupval, cmap->cp_adf_fnblk.adf_r_dv.db_length, tup_ptr);
 		}
 #endif
-	    }
+	    } /* If null else not null */
 
 	} /* if really converting */
 
@@ -6406,6 +6490,9 @@ IIcp_isnull(II_CP_MAP *cmap, u_char *val_start, i4 vallen)
 **	10-Mar-2010 (kschendel) SIR 122974
 **	    Spiff up a bit more by not maintaining byte-left, just compare
 **	    against a buffer end guard.
+**	5-Aug-2010 (kschendel) b124197
+**	    Turn off "continue" when we get an error here, since continuing
+**	    would be worse than fruitless.
 */
 
 static i4
@@ -6422,13 +6509,14 @@ cp_refill(u_char **dataend_p, u_char **rowptr_p, II_CP_STRUCT *copy_blk)
 
     if (copy_blk->cp_at_eof)
     {
-	if (copy_blk->cp_refill_control == COPY_REFILL_EOF_FAILS)
-	    return (COPY_FAIL);
-	else if (copy_blk->cp_refill_control == COPY_REFILL_EOF_NL)
+	if (copy_blk->cp_refill_control == COPY_REFILL_EOF_NL)
 	{
 	    ++ *rowptr_p;
 	    return ('\n');
 	}
+	copy_blk->cp_continue = FALSE;
+	if (copy_blk->cp_refill_control == COPY_REFILL_EOF_FAILS)
+	    return (COPY_FAIL);
 	else
 	    return (COPY_EOF);
     }
@@ -6442,7 +6530,10 @@ cp_refill(u_char **dataend_p, u_char **rowptr_p, II_CP_STRUCT *copy_blk)
 	{
 	    len = val_end - copy_blk->cp_valstart + 1;
 	    if (len > copy_blk->cp_rbuf_worksize)
+	    {
+		copy_blk->cp_continue = FALSE;
 		return (COPY_FAIL);		/* Issue message here??? */
+	    }
 	    MEcopy((PTR) copy_blk->cp_valstart, len, copy_blk->cp_readbuf-len);
 	}
 	copy_blk->cp_valstart = (u_char *) copy_blk->cp_readbuf - len;
@@ -6486,6 +6577,7 @@ cp_refill(u_char **dataend_p, u_char **rowptr_p, II_CP_STRUCT *copy_blk)
 		if (copy_blk->cp_program)
 		    err = E_CO003C_PROG_READ_ERR;
 		IIlocerr(GE_LOGICAL_ERROR, err, II_ERR, 1, err_buf);
+		copy_blk->cp_continue = FALSE;
 		return (COPY_FAIL);
 	    }
 	}
@@ -6504,17 +6596,20 @@ cp_refill(u_char **dataend_p, u_char **rowptr_p, II_CP_STRUCT *copy_blk)
 	copy_blk->cp_at_eof = TRUE;
 	if (fillptr == (u_char *) copy_blk->cp_readbuf)
 	{
-	    if (copy_blk->cp_refill_control == COPY_REFILL_EOF_FAILS)
-		return (COPY_FAIL);
-	    else if (copy_blk->cp_refill_control == COPY_REFILL_EOF_NL)
+	    if (copy_blk->cp_refill_control == COPY_REFILL_EOF_NL)
 	    {
+		/* Leave "continue" alone for this one case */
 		*dataend_p = rowptr;
 		*rowptr_p = rowptr;
 		return ('\n');
 	    }
+	    copy_blk->cp_continue = FALSE;
+	    if (copy_blk->cp_refill_control == COPY_REFILL_EOF_FAILS)
+		return (COPY_FAIL);
 	    else
 		return (COPY_EOF);
 	}
+	copy_blk->cp_continue = FALSE;
 	return (COPY_FAIL);
     }
 
@@ -6699,6 +6794,10 @@ IIcpdbwrite( II_LBQ_CB *IIlbqcb, II_CP_STRUCT *copy_blk, II_CP_GROUP *cgroup)
 **	    domain list with xx=d1 instead of nl=d1, but then of course
 **	    the \r\n's come back, putting all your counted-length domains
 **	    at risk of failure.)
+**      01-Jul-2010 (horda03) B124010
+**          If SIfopen fails for a COPY FROM, then don't abort the
+**          query, just end. Thus preserving a Global Temp. Table
+**          (if it was the target of the copy).
 */
 static i4
 IIcpfopen(II_CP_STRUCT *copy_blk)
@@ -6735,8 +6834,18 @@ IIcpfopen(II_CP_STRUCT *copy_blk)
         status = SIfopen(&loc, "r", copy_blk->cp_filetype,
             rec_len, &copy_blk->cp_file_ptr);
 	if (status)
+        {
+            /* As the COPY failed to open the file for reading, no
+            ** data has been copied to the table, so no need to
+            ** Abort. We don't want to abort the COPY in this circumstance
+            ** as if the table is a Global Temporary Table it would
+            ** be dropped.
+            */
+            copy_blk->cp_status |= CPY_NOABORT;
+
 	    IIlocerr(GE_HOST_ERROR, E_CO0005_FILE_OPEN_ERR, II_ERR,
 		     1, copy_blk->cp_filename);
+        }
 	copy_blk->cp_at_eof = FALSE;
     }
  
@@ -8076,6 +8185,83 @@ IICPvcValCheck( II_LBQ_CB *IIlbqcb, char *col_aligned,
     }
     return (status);
 }
+
+/*
+** Name: IIcp_unorm -- Unicode normalization
+**
+** Description:
+**
+**	When reading data into NCHAR/NVARCHAR columns, or filling an ordinary
+**	char-type column with UTF8 character set enabled, the resulting
+**	data may have to be normalized.  UTF8 to N[V]CHAR does the
+**	normalization as part of the coercion.  If there's no coercion,
+**	though, or if the character set is UTF8 (but the column type is
+**	something ordinarily string-y), the row to tuple type coercion
+**	either doesn't exist or doesn't know about UTF8.  In either case
+**	we need to normalize now.
+**
+** Inputs:
+**	adfcb			Thread ADF_CB pointer
+**	cmap			Column info for column
+**	tup_ptr			Pointer to data in the tuple buffer
+**	cblk			COPY control block (for errors)
+**
+** Outputs:
+**	returns OK/FAIL status
+**	Data is normalized in the tuple buffer
+**
+** History:
+**	18-Aug-2010 (kschendel) b124272
+**	    Centralize normalization for copy.
+*/
+
+static STATUS
+IIcp_unorm(ADF_CB *adfcb, II_CP_MAP *cmap, PTR tup_ptr, II_CP_STRUCT *cblk)
+{
+
+    DB_DATA_VALUE  dst_dv;
+    DB_DATA_VALUE  src_dv;
+    DB_STATUS status;
+    i4 absttype;
+    i4 collen;
+
+    absttype = abs(cmap->cp_tuptype);
+    collen = cmap->cp_tuplen;
+    if (cmap->cp_tuptype < 0)
+	--collen;		/* Don't worry about null indicator */
+    if (cmap->cp_normbuf == NULL)
+	cmap->cp_normbuf = MEreqmem(0, collen * 4, 0, NULL);
+
+    if (cmap->cp_srcbuf == NULL)
+	cmap->cp_srcbuf = MEreqmem(0, collen, 0, NULL);
+
+    src_dv.db_collID = dst_dv.db_collID = 0;
+    src_dv.db_datatype = dst_dv.db_datatype = absttype;
+    src_dv.db_length = dst_dv.db_length = collen;
+    src_dv.db_prec = dst_dv.db_prec = cmap->cp_cvprec;
+    src_dv.db_data = cmap->cp_srcbuf;
+    dst_dv.db_data = cmap->cp_normbuf;
+
+    MEcopy (tup_ptr, collen, cmap->cp_srcbuf);
+
+    if (absttype == DB_NCHR_TYPE || absttype == DB_NVCHR_TYPE)
+	status = adu_unorm(adfcb, &src_dv, &dst_dv);
+    else
+	status = adu_utf8_unorm(adfcb, &src_dv, &dst_dv);
+    if (status != E_DB_OK)
+    {
+	char err_buf[15];
+	CVla(cblk->cp_rowcount + 1, err_buf);
+	IIlocerr(GE_LOGICAL_ERROR, E_CO003A_ROW_FORMAT_ERR,
+			II_ERR, 2, err_buf, cmap->cp_name);
+	cblk->cp_warnings++;
+	return (FAIL);
+    }
+
+    MEcopy((PTR)dst_dv.db_data, collen, (PTR)tup_ptr);
+    return (OK);
+
+} /* IIcp_unorm */
 
 /*{
 +*  Name: IICPdecompress - Decompress for bulk COPY

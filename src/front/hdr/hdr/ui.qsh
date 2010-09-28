@@ -138,6 +138,8 @@
 **	01-apr-2010 (toumi01) SIR 122403
 **	    For encryption add rel_datawid, rel_totdatawid,
 **	    encrypted_columns, encryption_type.
+**	20-Jul-2010 (bonro01)
+**	    Update version for Ingres 10.1
 */
  
 #ifndef UI_HDR_INCLUDED
@@ -215,6 +217,7 @@ EXEC SQL BEGIN DECLARE SECTION;
 #define UI_LEVEL_920			"00920" /* version 9.20 */
 #define UI_LEVEL_930			"00930" /* version 9.30 */
 #define UI_LEVEL_1000			"01000" /* version 10.00 */
+#define UI_LEVEL_1010			"01010" /* version 10.10 */
  
 /*************************************************************************
    This section is for IIUIdci_initcap() IIUIdcs_sqllevel()

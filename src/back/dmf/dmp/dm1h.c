@@ -601,6 +601,9 @@
 **	22-Apr-2010 (kschendel) SIR 123485
 **	    Process coupons if doing full row duplicate checking and there
 **	    are blobs, otherwise dmpe now complains about lack of context.
+**	16-Aug-2010 (jonj) SD 146221
+**	    dm1r_crow_lock(flags) now DM1R_LK_? instead of LK_? to avoid
+**	    collisions with lk.h defines.
 */
 DB_STATUS
 dm1h_allocate(
@@ -803,7 +806,7 @@ DB_ERROR       *dberr)
 		    dm0pUnlockBuf(r, pinfo);
 
 		    if ( crow_locking(r) )
-		        s = dm1r_crow_lock(r, LK_PHYSICAL, &tid_to_lock, NULL, dberr);
+		        s = dm1r_crow_lock(r, DM1R_LK_PHYSICAL, &tid_to_lock, NULL, dberr);
 		    else
 		    {
 			/* don't clear lock coupling in rcb */
@@ -1649,6 +1652,8 @@ DB_ERROR        *dberr)
 **	    Initialise ADF_CB structure
 **      21-may-2009 (huazh01)
 **          Allocate hash buffer using MEreqmem(). (b122075)
+**	24-aug-2010 (miket) SIR 122403
+**	    Special processing for hash on encrypted attrs.
 */
 
 DB_STATUS
@@ -1661,6 +1666,7 @@ i4            buckets,
 i4            *hash_val, 
 DB_ERROR       *dberr)
 {
+    DMP_TCB		*t = rcb->rcb_tcb_ptr;
     char                *k;
     i4                  i;
     i4                  length;
@@ -1684,6 +1690,19 @@ DB_ERROR       *dberr)
           *hash_val = -1; 
           return (E_DB_ERROR);
        }
+    }
+    if (rcb->rcb_ehashbuf == NULL && t->tcb_data_rac.encrypted_attrs)
+    {
+	i4 ebufsize = t->tcb_rel.relwid + t->tcb_data_rac.worstcase_expansion;
+	if (ebufsize > HASH_BUFLEN)
+	    ebufsize = HASH_BUFLEN;
+	rcb->rcb_ehashbuf = (char *)MEreqmem(0, ebufsize, FALSE, &local_stat);
+	if (rcb->rcb_ehashbuf == NULL || local_stat)
+	{
+	    SETDBERR(dberr, 0, E_DM9425_MEMORY_ALLOCATE);
+	    *hash_val = -1;
+	    return (E_DB_ERROR);
+	}
     }
   
     for (i = 0; i < count; i++)
@@ -1712,6 +1731,35 @@ DB_ERROR       *dberr)
             break;
         }
     
+	/*
+	** We have normalized our plaintext, and adjusted the length
+	** accordingly (which we pass on to the encryption routine below).
+	** Now create a one-off data rac for our one-and-only encrypted
+	** index column (this is the only allowable use of hashed encrypted
+	** data). The net result is that the computed bucket derives from an
+	** encryption of our data (though because of normalization probably
+	** not the same encrypted value used to store it). This avoids the
+	** issue of secure hashes (which have a poor reputation at best)
+	** and the additional issue that HSH_CRC32 does not pretend to
+	** be cryptographically secure.
+	*/
+	if (att[i]->encflags & ATT_ENCRYPT)
+	{
+	    DB_STATUS s;
+	    DMP_ROWACCESS tmp_rac;
+	    DB_ATTS tmp_atts;
+	    DB_ATTS *tmp_attsp = &tmp_atts;
+	    MEcopy((PTR)&t->tcb_data_rac, sizeof(DMP_ROWACCESS), (PTR)&tmp_rac);
+	    MEcopy((PTR)att[i], sizeof(DB_ATTS), (PTR)&tmp_atts);
+	    tmp_atts.length = length;	/* adjust based on hashprep */
+	    tmp_rac.att_count = 1;
+	    tmp_rac.att_ptrs = &tmp_attsp;
+	    s = dm1e_aes_encrypt(rcb, &tmp_rac, k, rcb->rcb_ehashbuf, dberr);
+	    if (s != E_DB_OK)
+		return(s);
+	    length = att[i]->encwid;
+	    k = rcb->rcb_ehashbuf;
+	}
         /*  Process the next attribute. */
 
 	HSH_CRC32(k, length, &init);

@@ -1992,6 +1992,15 @@ opb_nulljoin(
 **	    last element.
 **      02-Apr-2010 (thich01)
 **          Add an exception for GEOM family when checking for Peripherals. 
+**	24-Jul-2010 (kiria01) b124124
+**	    Don't just check for pre-sorted - perform sort, biased to pre-sorted
+**	    data.
+**	28-Jul-2010 (kiria01) b124138
+**	    REPEATABLE queries with parameters in the IN list should block attempts
+**	    to pre-sort for ADE_COMPAREN.
+**	14-Sep-2010 (thich01)
+**	    Change the order of the GEOM family exception to ensure the
+**	    conditions are checked correctly.
 */
 bool
 opb_bfinit(
@@ -2385,10 +2394,10 @@ opb_bfinit(
 
 
 	    /* If this is an unsorted compacted IN-list, make a scan
-	    ** and see if it is actually sorted & appropriate for
+	    ** and see if it is can be made sorted & appropriate for
 	    ** the SORT compares. For this the datatypes must match
-	    ** the LHS and the values must be present and ascending
-	    ** ordered. If sucessful we'll set the bit for sorted.
+	    ** the LHS and the values must be present.
+	    ** If sucessful we'll set the bit for sorted.
 	    ** We do this if NE as well as EQ - it might not help the
 	    ** key build but will help execution. */
 	    if ((root->pst_sym.pst_value.pst_s_op.pst_flags &
@@ -2399,43 +2408,89 @@ opb_bfinit(
 			subquery->ops_global->ops_cb->ops_server->opg_ne))
 	    {
 		PST_QNODE **p = &root->pst_right, *q;
-		DB_DATA_VALUE *l = &root->pst_left->pst_sym.pst_dataval;
-		DB_DATA_VALUE *d = NULL;
+		DB_DATA_VALUE *ld = &root->pst_left->pst_sym.pst_dataval;
+		PST_QNODE *prior = NULL;
 		i4 cnt = 0;
 
 		while (*p)
 		{
 		    DB_DATA_VALUE *pd = &(*p)->pst_sym.pst_dataval;
 		    q = (*p)->pst_left;
-		    if (!pd->db_data)
-			/* Give up - nodata to work with */
+		    if (!pd->db_data ||
+			(*p)->pst_sym.pst_type != PST_CONST ||
+			(*p)->pst_sym.pst_value.pst_s_cnst.pst_tparmtype == PST_RQPARAMNO)
+			/* Give up - nodata to work with or a REPEAT parameter */
 			goto notsorted;
 
 		    if (pd->db_datatype < 0 && pd->db_length >= 0)
 		    {
-			pd->db_datatype = -pd->db_datatype;
-			if (((u_char*)pd->db_data)[--pd->db_length] & ADF_NVL_BIT)
+			if (((u_char*)pd->db_data)[pd->db_length-1] & ADF_NVL_BIT)
 			{
-			    /* drop the NULL const unless this was only 1 left */
-			    if (root->pst_right->pst_left)
-				*p = q;
-			    continue;
+			    /* A NULL present means an unknown result - drop all other
+			    ** elements from the list & leave degraded */
+			    root->pst_right = *p;
+			    (*p)->pst_left = NULL;
+			    break;
 			}
-			/* Otherwise we've un-NULLed it. */
+			/* Otherwise un-NULL it. */
+			pd->db_datatype = -pd->db_datatype;
+			pd->db_length--;
 		    }
-		    if (pd->db_datatype != abs(l->db_datatype) ||
+		    if (pd->db_datatype != abs(ld->db_datatype) ||
 			pd->db_datatype == DB_DEC_TYPE &&
-				pd->db_prec != l->db_prec)
+				pd->db_prec != ld->db_prec)
 			/* Mismatch - can't make sorted */
 			goto notsorted;
 
-		    if (d) /* Prior data item if any */
+		    if (prior) /* Prior data item if any */
 		    {
 			i4 cmp;
-			if (adc_compare(subquery->ops_global->ops_adfcb, d, pd, &cmp) ||
-				cmp > 0)
-			    goto notsorted;
-
+			if (adc_compare(subquery->ops_global->ops_adfcb,
+						&prior->pst_sym.pst_dataval, pd, &cmp))
+			    goto notsorted; /* Error in compare - give up */
+			if (cmp > 0)
+			{
+			    /* Out of order - specifically this must be
+			    ** before the point we are currently at but
+			    ** as we cannot back track, we need to find
+			    ** insertion point from the root :-( */
+			    register PST_QNODE **p1 = &root->pst_right;
+			    PST_QNODE *hold = *p;
+			    /* Unlink from current position */
+			    *p = q;
+			    /* Search from the root like before except we can
+			    ** dispense with most of the checks as they have all
+			    ** passed already. Also we know we need to insert before
+			    ** 'prior' */
+			    while (*p1 != prior)
+			    {
+				if (adc_compare(subquery->ops_global->ops_adfcb,
+						&(*p1)->pst_sym.pst_dataval, pd, &cmp))
+				    goto notsorted; /* Error in compare - give up */
+				if (!cmp)
+				    /* Simply forget this duplicate & resume outer loop */
+				    break;
+				if (cmp > 0)
+				{
+				    hold->pst_left = *p1;
+				    *p1 = hold;
+				    break;
+				}
+				p1 = &(*p1)->pst_left;
+			    }
+			    if (*p1 == prior)
+			    {
+				hold->pst_left = prior;
+				*p1 = hold;
+				if (++cnt >= MAXI2-2)
+				    /* Too big for ADE_COMPAREN - very unlikely as eSQL
+				    ** has similar limit. In fact parser now should not
+				    ** exceed this as better to do several mass compares
+				    ** than to chain compares */
+				    goto notsorted;
+			    }
+			    continue;
+			}
 			if (!cmp)
 			{
 			    /* Drop duplicate */
@@ -2444,17 +2499,18 @@ opb_bfinit(
 			    continue;
 			}
 		    }
-		    if (++cnt > MAXI2-1)
-			/* Too big for ADE_COMPAREN - very unlikely as eSQL has similar limit */
+		    if (++cnt >= MAXI2-2)
+			/* Too big for ADE_COMPAREN - See comment above.  */
 			goto notsorted;
 
-		    d = pd;
+		    prior = *p;
 		    p = &(*p)->pst_left;
 		}
 		/* We fell out clean so can treat as a compatible sorted list */
 		root->pst_sym.pst_value.pst_s_op.pst_flags |= PST_INLISTSORT;
 
-notsorted:	;
+notsorted:	/* Reset constant in case list rearranged */
+		constant = root->pst_right;
 	    }
 
 	    /* Sanity test that we have at least 2 values.
@@ -2618,18 +2674,25 @@ notsorted:	;
                        Unless the long type is a member of the GEOM family.*/
                     status = adi_dtinfo(subquery->ops_global->ops_adfcb,
                         lvar->pst_sym.pst_dataval.db_datatype, &dtmask);
-                    if (status != E_DB_OK || 
-                        ((dtmask & AD_PERIPHERAL) && adi_dtfamily_retrieve(lvar->pst_sym.pst_dataval.db_datatype) != DB_GEOM_TYPE))
-                        break;
- 
+                    if (status != E_DB_OK) break;
+                    if (dtmask & AD_PERIPHERAL)
+                    {
+                        DB_DT_ID family = adi_dtfamily_retrieve(lvar->pst_sym.pst_dataval.db_datatype);
+                        if(family != DB_GEOM_TYPE)
+                           break;
+                    } 
                     if (lvar->pst_sym.pst_type == PST_VAR &&
                         rvar->pst_sym.pst_type == PST_VAR)
                     {
                         status = adi_dtinfo(subquery->ops_global->ops_adfcb,
                             rvar->pst_sym.pst_dataval.db_datatype, &dtmask);
-                        if (status != E_DB_OK || 
-                            ((dtmask & AD_PERIPHERAL) && adi_dtfamily_retrieve(rvar->pst_sym.pst_dataval.db_datatype) != DB_GEOM_TYPE))
-                            break;      /* check 2nd operand, too */
+                        if (status != E_DB_OK) break;
+                        if (dtmask & AD_PERIPHERAL)
+                        {
+                            DB_DT_ID family = adi_dtfamily_retrieve(rvar->pst_sym.pst_dataval.db_datatype);
+                            if(family != DB_GEOM_TYPE)
+                               break;      /* check 2nd operand, too */
+                        } 
  
                         bfp->opb_mask |= OPB_SPATJ;
                         subquery->ops_bfs.opb_mask |= OPB_GOTSPATJ;

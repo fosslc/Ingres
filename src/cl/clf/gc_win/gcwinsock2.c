@@ -292,6 +292,45 @@
 **	    GCwinsock2_restore() to support GCsave() and GCrestore()
 **	    (and are called by those routines).  These functions are
 **	    only used when running under GCA CL (ie, as local IPC).
+**	14-Jun-2010 (Bruce Lunsford) Bug 123954
+**	    Trace showed bogus value (often very large) for # of bytes
+**	    gotten after reissuing WSARecv() following receipt of a
+**	    partial message.  Fixed by initializing dwBytes to zero.
+**	    Also add explanatory traces when required to reissue recv.
+**	23-Jun-2010 (Bruce Lunsford) Sir 123953
+**	    Change default for TCP_NODELAY socket option from OFF to ON
+**	    since it improves response time in some cases, but never
+**	    seems to hurt response time.  Also add new Ingres config
+**	    names to enable or disable it, which are more "intuitive"
+**	    than the old names, while keeping the old (for now) for
+**	    backward compatibility (even though never documented).
+**	    New names: II_TCPIP_NODELAY    and !.tcp_ip.nodelay.
+**	    Old names: II_WINSOCK2_NODELAY and !.winsock2_nodelay.
+**	16-Aug-2010 (Bruce Lunsford) Bug 124263
+**	    Ingstart.exe may crash or take (up to 30 seconds) longer than it
+**	    should to start Ingres if II_GC_PROT=tcp_ip (from sir 122679).
+**	    (Re)set GCwinsock2_shutting_down to FALSE in GCwinsock2_init()
+**	    to handle applications that may call "init" and "term" multiple
+**	    times, such as ingstart with II_GC_PROT=tcp_ip.
+**	30-Aug-2010 (Bruce Lunsford) Bug 124325
+**	    Function closesocket(), which is issued during disconnect,
+**	    does not always disconnect "gracefully", causing messages
+**	    to occasionally be dropped that have been sent but not yet
+**	    received by the other side. This can result in hung sessions
+**	    or connection abort errorlog messages in Ingres servers.
+**	    Fixed by calling DisconnectEx() prior to closesocket();
+**	    this forces "graceful" disconnect, rather than relying
+**	    on implicit graceful disconnect, which doesn't always work.
+**	08-Sep-2010 (Bruce Lunsford) Bug 124389
+**	    Last fix (for bug 124325) caused a regression for shared
+**	    (GCsave/restore'd) sockets when II_GC_PROT=tcp_ip.  The
+**	    new call to DisconnectEx() disconnected "too well", making
+**	    the shared socket unusable by the other process.  Example
+**	    is that createdb would fail.  Fix is to not issue
+**	    DisconnectEx() for shared sockets.  Added shared_socket_flag
+**	    in PCB to track if socket is shared.  Also added check of
+**	    return code from closesocket() in GCC_DISCONNECT with tracing
+**	    to improve diagnostics.
 */
 
 /* FD_SETSIZE is the maximum number of sockets that can be
@@ -421,6 +460,7 @@ typedef struct _PCB2
 
     volatile LONG	DisconnectAsyncIoWaits;
     bool		skipped_callbk_flag; /* If TRUE, a callback was skipped */
+    bool		shared_socket_flag;  /* GCsave sets this to TRUE */
     char		*b1;		    /* start of receive buffer */
     char		*b2;		    /* end   of receive buffer */
     /*
@@ -466,7 +506,7 @@ static i4				GCwinsock2_use_count = 0;
 static bool				GCwinsock2_shutting_down = FALSE;
 static bool				is_win9x = FALSE;
 static i4				GCWINSOCK2_timeout;
-static bool				GCWINSOCK2_nodelay = FALSE;
+static bool				GCWINSOCK2_nodelay = TRUE;
 static bool				GCWINSOCK2_event_q = FALSE;
 static HANDLE				GCwinsock2CompletionPort = NULL;
 static HANDLE				hGCwinsock2Process       = NULL;
@@ -479,6 +519,7 @@ static HANDLE				hDisconnectThread = NULL;
 static LPFN_ACCEPTEX			lpfnAcceptEx = NULL;
 static LPFN_CONNECTEX			lpfnConnectEx = NULL;
 static LPFN_GETACCEPTEXSOCKADDRS	lpfnGetAcceptExSockaddrs = NULL;
+static LPFN_DISCONNECTEX		lpfnDisconnectEx = NULL;
 
 
 /* Function pointer for QueueUserAPC */
@@ -630,6 +671,23 @@ VOID		gc_tdump( char *buf, i4 len );
 **	    option for tcp_ip as a local (GCA CL) protocol (instead of
 **	    pipes.  IO Completion Port logic can be enabled by setting
 **	    II_WINSOCK2_CONCURRENT_THREADS to a non-zero numeric value.
+**	23-Jun-2010 (Bruce Lunsford) Sir 123953
+**	    Change default for TCP_NODELAY socket option from OFF to ON
+**	    since it improves response time in some cases, but never
+**	    seems to hurt response time.  Also add new Ingres config
+**	    names to enable or disable it, which are more "intuitive"
+**	    than the old names, while keeping the old (for now) for
+**	    backward compatibility (even though never documented).
+**	    New names: II_TCPIP_NODELAY    and !.tcp_ip.nodelay.
+**	    Old names: II_WINSOCK2_NODELAY and !.winsock2_nodelay.
+**	16-Aug-2010 (Bruce Lunsford) Bug 124263
+**	    (Re)set GCwinsock2_shutting_down to FALSE to handle
+**	    applications that may call "init" and "term" multiple
+**	    times, such as ingstart with II_GC_PROT=tcp_ip.
+**	    Otherwise, after 2nd or subsequent "init", code still
+**	    thinks the driver is shutting down.
+**	30-Aug-2010 (Bruce Lunsford) Bug 124325
+**	    Get address of Winsock extension function DisconnectEx().
 */
 
 STATUS
@@ -660,6 +718,7 @@ GCwinsock2_init(GCC_PCE * pptr)
 		proto, GCwinsock2_use_count, WSAStartup_called);
 
     GCwinsock2_use_count++;	/* Increment # times init called */
+    GCwinsock2_shutting_down = FALSE;
 
     if (GCwinsock2_startup_WSA() == FAIL)
 	    return FAIL;
@@ -711,17 +770,22 @@ GCwinsock2_init(GCC_PCE * pptr)
 	GCWINSOCK2_timeout = atoi(ptr);
 
     /*
-    ** Should TCP_NODELAY be set on sockets?
+    ** Should TCP_NODELAY be set on sockets?  (default is ON)
     */
-    NMgtAt("II_WINSOCK2_NODELAY", &ptr);
-    if ( ((ptr && *ptr) || (PMget("!.winsock2_nodelay", &ptr) == OK)) &&
-	 (STcasecmp( ptr, "ON" ) == 0) )
+    NMgtAt("II_TCPIP_NODELAY", &ptr);
+    if ( !(ptr && *ptr) )
+	NMgtAt("II_WINSOCK2_NODELAY", &ptr);  /* for backward compat */
+    if ( ((ptr && *ptr) ||
+	  (PMget("!.tcp_ip.nodelay", &ptr) == OK) ||
+	  (PMget("!.winsock2_nodelay", &ptr) == OK)) &&  /*for backward compat*/
+	 (STcasecmp( ptr, "OFF" ) == 0) )
     {
-	GCWINSOCK2_nodelay = TRUE;
-	GCTRACE(1)("GCwinsock2_init %s: TCP_NODELAY option is ON\n", proto);
+	GCWINSOCK2_nodelay = FALSE;
     }
     else
-	GCWINSOCK2_nodelay = FALSE;
+	GCWINSOCK2_nodelay = TRUE;
+    GCTRACE(1)("GCwinsock2_init %s: TCP_NODELAY option is %s\n", proto,
+		GCWINSOCK2_nodelay ? "ON" : "OFF" );
 
     /*
     ** Get pointer to WinSock 2.2 protocol's control entry in table.
@@ -805,6 +869,7 @@ GCwinsock2_init(GCC_PCE * pptr)
 	GUID		GuidAcceptEx = WSAID_ACCEPTEX;
 	GUID		GuidConnectEx = WSAID_CONNECTEX;
 	GUID		GuidGetAcceptExSockaddrs = WSAID_GETACCEPTEXSOCKADDRS;
+	GUID		GuidDisconnectEx = WSAID_DISCONNECTEX;
 	DWORD		dwBytes;
 	HANDLE		ThreadHandle;
 	u_i4		tid;
@@ -831,6 +896,10 @@ GCwinsock2_init(GCC_PCE * pptr)
 	WSAIoctl(sd, SIO_GET_EXTENSION_FUNCTION_POINTER,
 		 &GuidGetAcceptExSockaddrs, sizeof(GuidGetAcceptExSockaddrs),
 		 &lpfnGetAcceptExSockaddrs, sizeof(lpfnGetAcceptExSockaddrs),
+		 &dwBytes, NULL, NULL);
+
+	WSAIoctl(sd, SIO_GET_EXTENSION_FUNCTION_POINTER, &GuidDisconnectEx,
+		 sizeof(GuidDisconnectEx), &lpfnDisconnectEx, sizeof(lpfnDisconnectEx),
 		 &dwBytes, NULL, NULL);
 
 	closesocket(sd);
@@ -1124,6 +1193,21 @@ GCwinsock2_init(GCC_PCE * pptr)
 **	    Add support for timeouts on receives. For backward compatibility
 **	    to GCC TL which doesn't pass a timeout value in the parm_list,
 **	    only check timeout if PCE option PCT_ENABLE_TIMEOUTS is on.
+**	30-Aug-2010 (Bruce Lunsford) Bug 124325
+**	    In GCC_DISCONNECT, precede closesocket() call with a
+**	    DisconnectEx() call to force a graceful disconnect, rather
+**	    than relying on closesocket()'s implicit graceful disconnect,
+**	    which doesn't always work. Sent messages were occasionally
+**	    being dropped.
+**	08-Sep-2010 (Bruce Lunsford) Bug 124389
+**	    Last fix (for bug 124325) caused a regression for shared
+**	    (GCsave/restore'd) sockets when II_GC_PROT=tcp_ip.  The
+**	    new call to DisconnectEx() disconnected "too well", making
+**	    the shared socket unusable by the other process.  Example
+**	    is that createdb would fail.  Fix is to not issue
+**	    DisconnectEx() for shared sockets.  Also added check of
+**	    return code from closesocket() with tracing to improve
+**	    diagnostics.
 */
 
 STATUS
@@ -1872,6 +1956,23 @@ GCwinsock2(i4 function_code, GCC_P_PLIST *parm_list)
 			proto, pcb->id, parm_list, pcb->AsyncIoRunning);
 
 	    /*
+	    ** Precede closesocket() call with a DisconnectEx() call
+	    ** to force a graceful disconnect, rather than relying
+	    ** on closesocket()'s implicit graceful disconnect, which
+	    ** doesn't always work. Sent messages were occasionally
+	    ** being dropped before being received by the other side
+	    ** of the connection, resulting in either hung sessions
+	    ** or alarming (but generally benign) connection abort
+	    ** messages in the error log. Microsoft documentation
+	    ** officially prescribes using SO_LINGER socket option or
+	    ** shutdown() function for graceful connection shutdowns,
+	    ** but also describes (in a comment) that DisconnectEx()
+	    ** is the only way that always works, which is why it
+	    ** was chosen here.
+	    */
+	    if ( (pcb->shared_socket_flag != TRUE) && lpfnDisconnectEx )
+		lpfnDisconnectEx(pcb->sd, NULL, 0, 0);
+	    /*
 	    ** OK to issue closesocket() here because it returns
 	    ** immediately and does a graceful shutdown of the socket
 	    ** in background (default behavior of closesocket()).
@@ -1879,9 +1980,18 @@ GCwinsock2(i4 function_code, GCC_P_PLIST *parm_list)
 	    ** processing which is unnecessary and slower...better to
 	    ** get the disconnect started sooner, rather than later.
 	    */
-	    closesocket(pcb->sd);
-	    GCTRACE(2)("GCwinsock2 %s %d: GCC_DISCONNECT %p Closed socket=0x%p\n",
-			proto, pcb->id, parm_list, pcb->sd);
+	    rval = closesocket(pcb->sd);
+	    if (rval)
+	    {
+		status = WSAGetLastError();
+		GCTRACE(1)("GCwinsock2 %s %d: GCC_DISCONNECT %p Failed to close socket=0x%p status=%d\n",
+			    proto, pcb->id, parm_list, pcb->sd, status);
+	    }
+	    else
+	    {
+		GCTRACE(2)("GCwinsock2 %s %d: GCC_DISCONNECT %p Closed socket=0x%p\n",
+			    proto, pcb->id, parm_list, pcb->sd);
+	    }
 
 	    /*
 	    ** If we have skipped any callbacks to the caller's completion
@@ -3717,6 +3827,8 @@ GCwinsock2_exit(GCC_PCE * pptr)
 **  History:
 **	13-Apr-2010 (Bruce Lunsford) Sir 122679
 **	    Created for GCsave local IPC processing.
+**	08-Sep-2010 (Bruce Lunsford) Bug 124389
+**	    Turn on flag to indicate socket is shared (across processes).
 */
 STATUS
 GCwinsock2_save(char *buffer, i4 *buf_len_in, PCB2 *pcb)
@@ -3778,6 +3890,8 @@ GCwinsock2_save(char *buffer, i4 *buf_len_in, PCB2 *pcb)
     MEcopy( &save_data, sizeof(save_data), buffer );
     *buf_len_in = sizeof(save_data);  /* Tell caller how much data was saved */
 
+    pcb->shared_socket_flag = TRUE;
+
     return(OK);
 }
 
@@ -3803,6 +3917,8 @@ GCwinsock2_save(char *buffer, i4 *buf_len_in, PCB2 *pcb)
 **  History:
 **	13-Apr-2010 (Bruce Lunsford) Sir 122679
 **	    Created for GCrestore local IPC processing.
+**	08-Sep-2010 (Bruce Lunsford) Bug 124389
+**	    Turn on flag to indicate socket is shared (across processes).
 */
 STATUS
 GCwinsock2_restore(char *buffer, GCC_PCE *pptr, PCB2 **lpPcb)
@@ -3820,6 +3936,8 @@ GCwinsock2_restore(char *buffer, GCC_PCE *pptr, PCB2 **lpPcb)
     */
     if ( (pcb = GCwinsock2_get_pcb(pptr, TRUE)) == NULL )
 	return(FAIL);
+
+    pcb->shared_socket_flag = TRUE;
 
     pcb->id = save_data.id;
     pcb->sd = save_data.sd;
@@ -4948,6 +5066,9 @@ worker_thread_err_exit:
 **	13-Apr-2010 (Bruce Lunsford) Sir 122679
 **	    Add trace to exit and a blank line before entry and after exit
 **	    for easier tracking of IO completion processing in trace output.
+**	30-Aug-2010 (Bruce Lunsford) Bug 124325
+**	    Add trace when caller's callback routine was already called
+**	    and I/O callback is hence just a NO-OP...to improve trace diags.
 */
 
 VOID CALLBACK
@@ -4970,7 +5091,11 @@ GCwinsock2_AIO_Callback(DWORD dwError, DWORD BytesTransferred, WSAOVERLAPPED *lp
     ** gone, and hence cannot be used.
     */
     if (lpPerIoData->state == PIOD_ST_SKIP_CALLBK)
+    {
+	GCTRACE(5)("GCwinsock2_AIO_Callback: %p Skip callback (done previously)\n",
+		    parm_list);
 	goto AIO_Callback_err_exit;
+    }
 
     proto = parm_list->pce->pce_pid;
 
@@ -5361,6 +5486,11 @@ GCwinsock2_async_completion( GCC_P_PLIST *parm_list )
 **	    connection having been closed (BytesTransferred == 0);
 **	    can be used by caller to detect closed socket.  Also
 **	    clear pcb->tot_rcv if error occurs, as done elsewhere.
+**	14-Jun-2010 (Bruce Lunsford) Bug 123954
+**	    Trace showed bogus value (often very large) for # of bytes
+**	    gotten after reissuing WSARecv() following receipt of a
+**	    partial message.  Fixed by initializing dwBytes to zero.
+**	    Also add explanatory traces when required to reissue recv.
 */
 bool 
 GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS *lpstatus, DWORD BytesTransferred_in, PER_IO_DATA *lpPerIoData)
@@ -5371,7 +5501,7 @@ GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS *lpstatus, DWORD BytesTransfer
     char		*proto;
     PCB2		*pcb;
     int			i;
-    DWORD		dwBytes;
+    DWORD		dwBytes = 0;
     DWORD		dwBytes_wanted;
     i4			len;
     i4			len_prefix = lpPerIoData->block_mode ? 0 : 2;
@@ -5486,10 +5616,15 @@ GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS *lpstatus, DWORD BytesTransfer
     if (pcb->rcv_bptr < parm_list->buffer_ptr)
     {
 	/*
-	** Haven't received the all of the 2-byte length header yet.
+	** Haven't received all of the 2-byte length header yet.
 	** We need to issue another recv to get the rest of the
 	** message (or at least the header).
 	*/
+	GCTRACE(2)( "GCwinsock2_OP_RECV_complete %s %d: %p Partial length hdr recvd(need minimum %d bytes more)...reissue WSARecv() for %d bytes into 0x%p\n",
+		proto, pcb->id, parm_list,
+		parm_list->buffer_ptr - pcb->rcv_bptr,
+		pcb->tot_rcv,
+		pcb->rcv_bptr );
 
 	ZeroMemory(&lpPerIoData->Overlapped, sizeof(OVERLAPPED));
 	lpPerIoData->wbuf.buf = pcb->rcv_bptr;
@@ -5512,8 +5647,8 @@ GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS *lpstatus, DWORD BytesTransfer
 		return TRUE; /* GCC_RECEIVE is done */
 	    }
 	}
-	GCTRACE(4)( "GCwinsock2_OP_RECV_complete %s %d: %p want %d bytes got %d bytes\n",
-		    proto, pcb->id, parm_list, dwBytes_wanted, dwBytes );
+	GCTRACE(2)( "GCwinsock2_OP_RECV_complete %s %d: %p reissued WSARecv() for hdr+msg: Want %d bytes got %d\n",
+		proto, pcb->id, parm_list, dwBytes_wanted, dwBytes );
 
 	return FALSE;  /* GCC_RECEIVE is not yet done...need more data. */
     }  /* End if still need rest of 2-byte length header */
@@ -5555,6 +5690,13 @@ GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS *lpstatus, DWORD BytesTransfer
     if( len < 0 )
     {
 	pcb->tot_rcv = -len;
+	GCTRACE(2)( "GCwinsock2_OP_RECV_complete %s %d: %p Partial message recvd(%d of %d)...reissue WSARecv() for remaining %d bytes into 0x%p\n",
+		proto, pcb->id, parm_list,
+		pcb->rcv_bptr - parm_list->buffer_ptr,
+		parm_list->buffer_lng,
+		pcb->tot_rcv,
+		pcb->rcv_bptr );
+
 	ZeroMemory(&lpPerIoData->Overlapped, sizeof(OVERLAPPED));
 	lpPerIoData->wbuf.buf = pcb->rcv_bptr;
 	lpPerIoData->wbuf.len = dwBytes_wanted = pcb->tot_rcv;
@@ -5575,9 +5717,8 @@ GCwinsock2_OP_RECV_complete(DWORD dwError, STATUS *lpstatus, DWORD BytesTransfer
 		return TRUE; /* GCC_RECEIVE is done */
 	    }
 	}
-	GCTRACE(4)( "GCwinsock2_OP_RECV_complete %s %d: %p Want %d bytes got %d, msg len %d remaining %d\n",
-		proto, pcb->id, parm_list, dwBytes_wanted, dwBytes,
-		parm_list->buffer_lng, -len );
+	GCTRACE(2)( "GCwinsock2_OP_RECV_complete %s %d: %p reissued WSARecv() for msg: Want %d bytes got %d\n",
+		proto, pcb->id, parm_list, dwBytes_wanted, dwBytes );
 	return FALSE;  /* GCC_RECEIVE is not yet done...need more data. */
     }  /* End if len < 0 */
 

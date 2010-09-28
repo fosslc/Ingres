@@ -78,6 +78,9 @@
 **    Added function CanObjectExistInVectorWise which returns
 **    TRUE or FALSE depending on if the object supported by
 **    VectorWise.
+** 30-Jun-2010 (drivi01)
+**    Bug #124006
+**    Add new BOOLEAN datatype.
 ********************************************************************/
 
 #include "dba.h" 
@@ -841,6 +844,7 @@ int ilen;
       { INGTYPE_VARCHAR     , "varchar"         },
       { INGTYPE_LONGVARCHAR , "long varchar"    },
       { INGTYPE_BIGINT      , "bigint"          },
+      { INGTYPE_BOOLEAN     , "boolean"         },
       { INGTYPE_INT8        , "int8"            },
       { INGTYPE_INT4        , "integer"         },
       { INGTYPE_INT2        , "smallint"        },

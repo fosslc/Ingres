@@ -55,6 +55,8 @@ static volatile bool  in_sysrep = FALSE;      /* Used to prevent recursion
 **	01-dec-2000	(kinte01)
 **	    Bug 103393 - removed nat, longnat, u_nat, & u_longnat
 **	    from VMS CL as the use is no longer allowed
+**      07-sep-2010 (joea)
+**          For i64_vms, move EXsetclient to exsignal.c.
 */
 static VOID ex_print_error(PTR arg1, i4 msg_length, char *msg_buffer)
 {
@@ -224,6 +226,7 @@ EXsigarr_sys_report( i4 *sigarr, char *buffer )
     return result;
 }
 
+#if defined(axm_vms)
 /*{
 ** Name:	EXsetclient - Set client information for the EX subsystem
 **
@@ -276,5 +279,6 @@ EXsigarr_sys_report( i4 *sigarr, char *buffer )
 STATUS
 EXsetclient(i4 client)
 {
-    return(EX_OK);
+    return(EX_OK1);
 }
+#endif

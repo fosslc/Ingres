@@ -675,7 +675,14 @@
 **          GetProcParamNames() contingent on IIAPI_LEVEL_6, since
 **          databases at this level don't require the parameters to be
 **          named.
-**          
+**    14-Jul-1010 (Ralph Loen)  Bug 124079
+**          In ScanProcParamNamesAndBuildDescriptor(), don't skip
+**          GetProcParamNames() if the target db is Vectorwise.  In
+**          GetServerInfo(), set the release version to the same as Ingres 
+**          10.0 for Vectorwise servers, and disable OPT_INGRESDATE and
+**          OPT_BLANKDATEisNULL for Vectorwise servers.`
+**   17-Aug-2010 (thich01)
+**          Make changes to treat spatial types like LBYTEs or NBR type as BYTE.
 **     
 */
 
@@ -1277,6 +1284,7 @@ static BOOL PutProcLiteralParm(LPDESCFLD pipd,
 		break;
 
 	case IIAPI_BYTE_TYPE:
+	case IIAPI_NBR_TYPE:
 		cbData = cbData / 2;
 		pipd->OctetLength = cbData; 
 		pipd->DataPtr = odbc_malloc((size_t)(pipd->OctetLength));
@@ -1562,9 +1570,10 @@ BOOL ScanProcParmsAndBuildDescriptor(
 
     /*
     ** Ingres 10 and later supports positional DB procedure parameters,
-    ** so there is no need to get the names of the parameters.
+    ** so there is no need to get the names of the parameters.  Vectorwise
+    ** currently does not support positional parameters.
     */
-    if (pdbc->fAPILevel < IIAPI_LEVEL_6)
+    if (pdbc->fAPILevel < IIAPI_LEVEL_6 || isServerClassVECTORWISE(pdbc) )
     {
         rc = GetProcParamNames(pSession, pstmt, pProcIPD, szProcName, szSchema);
                  /* Search and read the catalog for the procedure column names,
@@ -1613,9 +1622,17 @@ static BOOL hasLongDataColumn(LPSTMT  pstmt)
     for (i = 0, pird = pIRD->pcol + 1;  /* pird -> 1st IRD (after bookmark) */
          i < IRDCount;  i++, pird++)    /* loop through the result columns */
     {
-        if (pird->fIngApiType == IIAPI_LVCH_TYPE  ||
+        if (pird->fIngApiType == IIAPI_LVCH_TYPE   ||
+            pird->fIngApiType == IIAPI_GEOM_TYPE   ||
+            pird->fIngApiType == IIAPI_POINT_TYPE  ||
+            pird->fIngApiType == IIAPI_MPOINT_TYPE ||
+            pird->fIngApiType == IIAPI_LINE_TYPE   ||
+            pird->fIngApiType == IIAPI_MLINE_TYPE  ||
+            pird->fIngApiType == IIAPI_POLY_TYPE   ||
+            pird->fIngApiType == IIAPI_MPOLY_TYPE  ||
+            pird->fIngApiType == IIAPI_GEOMC_TYPE  ||
 # ifdef IIAPI_LNVCH_TYPE
-            pird->fIngApiType == IIAPI_LBYTE_TYPE ||
+            pird->fIngApiType == IIAPI_LBYTE_TYPE  ||
             pird->fIngApiType == IIAPI_LNVCH_TYPE)
 # else
             pird->fIngApiType == IIAPI_LBYTE_TYPE)
@@ -1980,6 +1997,7 @@ static BOOL odbc_setDescr( LPSTMT pstmt, IIAPI_QUERYTYPE apiQueryType )
             {
             case IIAPI_CHA_TYPE:
             case IIAPI_BYTE_TYPE:
+            case IIAPI_NBR_TYPE:
                 OctetLength = sizeof(SQLCHAR);
                 break;
 
@@ -3063,6 +3081,14 @@ static void MoveData(LPSTMT pstmt, LPDESCFLD pard, LPDESCFLD pird)
                 break;
 
         case IIAPI_LBYTE_TYPE:
+        case IIAPI_GEOM_TYPE :
+        case IIAPI_POINT_TYPE :
+        case IIAPI_MPOINT_TYPE :
+        case IIAPI_LINE_TYPE :
+        case IIAPI_MLINE_TYPE :
+        case IIAPI_POLY_TYPE :
+        case IIAPI_MPOLY_TYPE :
+        case IIAPI_GEOMC_TYPE :
                 rc2 = MoveBinChar(pstmt, pard, rgbData, cbData); 
                 break;
 
@@ -3077,6 +3103,14 @@ static void MoveData(LPSTMT pstmt, LPDESCFLD pard, LPDESCFLD pird)
         {
         case IIAPI_LVCH_TYPE:
         case IIAPI_LBYTE_TYPE:
+        case IIAPI_GEOM_TYPE :
+        case IIAPI_POINT_TYPE :
+        case IIAPI_MPOINT_TYPE :
+        case IIAPI_LINE_TYPE :
+        case IIAPI_MLINE_TYPE :
+        case IIAPI_POLY_TYPE :
+        case IIAPI_MPOLY_TYPE :
+        case IIAPI_GEOMC_TYPE :
 # ifdef IIAPI_LNVCH_TYPE
         case IIAPI_LNVCH_TYPE:
 # endif
@@ -3418,9 +3452,17 @@ static BOOL odbc_getColumnsLong(SESS * pSession, LPSTMT pstmt)
         { 
             pirdSave = pird;
             pardSave = pard;
-            if (pird->fIngApiType == IIAPI_LVCH_TYPE  ||  /* break on blob */
+            if (pird->fIngApiType == IIAPI_LVCH_TYPE   ||  /* break on blob */
+                pird->fIngApiType == IIAPI_GEOM_TYPE   ||
+                pird->fIngApiType == IIAPI_POINT_TYPE  ||
+                pird->fIngApiType == IIAPI_MPOINT_TYPE ||
+                pird->fIngApiType == IIAPI_LINE_TYPE   ||
+                pird->fIngApiType == IIAPI_MLINE_TYPE  ||
+                pird->fIngApiType == IIAPI_POLY_TYPE   ||
+                pird->fIngApiType == IIAPI_MPOLY_TYPE  ||
+                pird->fIngApiType == IIAPI_GEOMC_TYPE  ||
 # ifdef IIAPI_LNVCH_TYPE
-                pird->fIngApiType == IIAPI_LBYTE_TYPE ||
+                pird->fIngApiType == IIAPI_LBYTE_TYPE  ||
                 pird->fIngApiType == IIAPI_LNVCH_TYPE)
 # else
                 pird->fIngApiType == IIAPI_LBYTE_TYPE)
@@ -3710,8 +3752,16 @@ static BOOL odbc_getUnboundColumnsLong(SESS * pSession, LPSTMT pstmt)
         { 
             pirdSave = pird;
             pardSave = pard;
-            if (pird->fIngApiType == IIAPI_LVCH_TYPE  ||  /* break on blob */
-                pird->fIngApiType == IIAPI_LBYTE_TYPE ||
+            if (pird->fIngApiType == IIAPI_LVCH_TYPE   ||  /* break on blob */
+                pird->fIngApiType == IIAPI_LBYTE_TYPE  ||
+                pird->fIngApiType == IIAPI_GEOM_TYPE   ||
+                pird->fIngApiType == IIAPI_POINT_TYPE  ||
+                pird->fIngApiType == IIAPI_MPOINT_TYPE ||
+                pird->fIngApiType == IIAPI_LINE_TYPE   ||
+                pird->fIngApiType == IIAPI_MLINE_TYPE  ||
+                pird->fIngApiType == IIAPI_POLY_TYPE   ||
+                pird->fIngApiType == IIAPI_MPOLY_TYPE  ||
+                pird->fIngApiType == IIAPI_GEOMC_TYPE  ||
                 pird->fIngApiType == IIAPI_LNVCH_TYPE)
             {
                 break;
@@ -5731,6 +5781,7 @@ BOOL GetServerInfo(SESS * pSession, LPSQLCA psqlca, LPDBC pdbc)
     char        part3[5] = "0";  /* part after slash */
     char      * part     = &part1[0];
     BOOL        notrelease6x = TRUE;
+    BOOL        isVectorwise = FALSE;
     SIZE_TYPE   digitlimit=2;
 
     char szRelease[100];
@@ -5772,6 +5823,9 @@ BOOL GetServerInfo(SESS * pSession, LPSQLCA psqlca, LPDBC pdbc)
                                  "6.2/01 (mvs.mxa/09)"
                                  "II 2.5/0006 (su4.us5/39)"
                                  "EC DB2 2.2/9904"  */
+	if (*p == 'V')
+            isVectorwise = TRUE;
+
     if (*p=='6')
        {
 			/*	Since Ingres 6.x does not allow 3 level qualifier
@@ -5843,6 +5897,18 @@ BOOL GetServerInfo(SESS * pSession, LPSQLCA psqlca, LPDBC pdbc)
 	p = &szUnicode[2];   /* p points past 2-byte length field to unicode level */
 	if (*p == '1')
 	    pdbc->fOptions |= OPT_UNICODE;  /* server supports NCHAR */
+
+        /*
+        ** If Vectorwise, make the release level the same as Ingres 10.0.
+        ** Ignore "Send Date/Time as Ingres Date" and "Return empty string 
+        ** DATE values as NULL configuration settings.
+        */
+        if (isVectorwise)
+        {
+            pdbc->fRelease = 10000000;
+            pdbc->fOptions &= ~OPT_INGRESDATE;
+            pdbc->fOptions &= ~OPT_BLANKDATEisNULL;
+        }
 
 	return(TRUE);
 }

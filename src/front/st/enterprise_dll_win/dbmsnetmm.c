@@ -374,6 +374,14 @@
 **	    that will be invoked by the "Monitor Ingres Cache Statistics" menu item
 **	    that sets up the environment, loads the perf DLL and the counters
 **	    before invoking "perfmon" with the given parameter.
+**	02-Aug-2010 (drivi01)
+**	    HKEY_CLASSES_ROOT\\Ingres_Database_XX where XX is an instance id
+**          is not being removed on uninstall.
+**          Fix the installer to remove this key.
+**	27-Aug-2010 (shust01)
+**	    When creating a response file, the sql92 option (II_ENABLE_SQL92)
+**	    was always being set to NO, no matter what the user selected
+**	    for that option.  bug 124318.
 */
 
 #include <stdio.h>
@@ -2407,7 +2415,7 @@ ingres_delete_file_associations(MSIHANDLE hInstall)
 
 
         dwSize = sizeof(temp);
-        if (MsiGetProperty( hInstall, "DBATools", temp, &dwSize)==ERROR_SUCCESS)
+        if (MsiGetProperty( hInstall, "DBATools", temp, &dwSize)==ERROR_SUCCESS && temp[0])
 	    isDBATools=TRUE;
 
 	/* Delete VDBA and IIA file associations set in registry*/
@@ -3942,7 +3950,7 @@ ingres_create_vista_shortcut(MSIHANDLE hInstall)
     if (!IsVista()) return ERROR_SUCCESS;
 
     dwSize = sizeof(szBuf);
-    if (MsiGetProperty(hInstall, "DBATools", szBuf, &dwSize ) != ERROR_SUCCESS)
+    if (MsiGetProperty(hInstall, "DBATools", szBuf, &dwSize ) != ERROR_SUCCESS && szBuf[0])
     {
 	return (ERROR_INSTALL_FAILURE);
     }
@@ -4718,6 +4726,9 @@ ingres_browseforfile(MSIHANDLE hInstall)
 **	12-Aug-2009 (drivi01)
 **	    Add II_COMPONENT_SPATIAL to the routines that generate
 **	    response file.
+**	27-Aug-2010 (drivi01)
+**	    Remove II_COMPONENT_ICE.  We don't want it added anymore
+**	    to generated response file.
 */
 UINT __stdcall
 ingres_create_rspfile(MSIHANDLE hInstall)
@@ -4806,8 +4817,6 @@ ingres_create_rspfile(MSIHANDLE hInstall)
 	fprintf(fp, "II_COMPONENT_SPATIAL=\"YES\"\n");
     else
 	fprintf(fp, "II_COMPONENT_SPATIAL=\"NO\"\n");
-
-    fprintf(fp,"II_COMPONENT_ICE=\"NO\"\n" );
 
 
     if (bDBMSInstalled || bNetInstalled)
@@ -4934,7 +4943,7 @@ ingres_create_rspfile(MSIHANDLE hInstall)
     cchValue = sizeof(szBuf)/sizeof(TCHAR);
     ZeroMemory(szBuf, sizeof(TCHAR)*MAX_PATH);
     if (!MsiGetProperty(hInstall, TEXT("INGRES_ENABLESQL92"), szBuf, &cchValue)
-	&& !_stricmp(szBuf, "TRUE"))
+	&& !_stricmp(szBuf, "1"))
 	fprintf(fp, "II_ENABLE_SQL92=\"YES\"\n", szBuf);
     else
 	fprintf(fp, "II_ENABLE_SQL92=\"NO\"\n", szBuf);
@@ -5123,7 +5132,7 @@ ingres_installfinalize(MSIHANDLE hInstall)
     int isDBATools = TRUE;
 
     dwSize = sizeof(szBuf);
-    if (MsiGetProperty( hInstall, "DBATools", szBuf, &dwSize)==ERROR_SUCCESS)
+    if (MsiGetProperty( hInstall, "DBATools", szBuf, &dwSize)==ERROR_SUCCESS && szBuf[0])
 	isDBATools=TRUE;
 
     dwSize=sizeof(szII_SYSTEM);

@@ -82,6 +82,8 @@
 **	10-Dec-2008 (jonj)
 **	    SIR 120874: Remove last vestiges of CL_SYS_ERR,
 **	    old form uleFormat.
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 **/
 
 /*{
@@ -143,6 +145,7 @@ DMVE_CB		*dmve_cb)
     DMP_DCB		dcb;
 
     CLRDBERR(&dmve->dmve_error);
+    DMVE_CLEAR_TABINFO_MACRO(dmve);
 	
     if (log_rec->je_header.length != sizeof(DM0L_JNLEOF) || 
 	log_rec->je_header.type != DM0LJNLEOF||

@@ -1150,6 +1150,7 @@ DB_DATA_VALUE	*adc_rdv)
       case DB_MLINE_TYPE:
       case DB_POLY_TYPE:
       case DB_MPOLY_TYPE:
+      case DB_GEOMC_TYPE:
       case DB_LNVCHR_TYPE:
 	/* Long Varchar datatype, a fixed length datatype, internally */
 

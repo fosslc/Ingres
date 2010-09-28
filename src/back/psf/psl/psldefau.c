@@ -275,6 +275,7 @@ psl_2col_ingres_default(
         case DB_MLINE_TYPE:
         case DB_POLY_TYPE:
         case DB_MPOLY_TYPE:
+        case DB_GEOMC_TYPE:
 	case DB_VCH_TYPE:
 	case DB_LVCH_TYPE:
 	case DB_NCHR_TYPE:
@@ -1501,6 +1502,8 @@ psl_make_def_seq(
 **	    written
 **	25-Jun-2008 (kiria01) SIR120473
 **	    Move pst_isescape into new u_i2 pst_pat_flags.
+**	3-Aug-2010 (kschendel) b124170
+**	    Probably don't need joinid here, but let pst-node decide.
 */
 static DB_STATUS
 psl_make_func_node(
@@ -1520,7 +1523,7 @@ psl_make_func_node(
     status = pst_node(sess_cb, mstream, (PST_QNODE *) NULL, (PST_QNODE *) NULL, 
 		      PST_COP, (char *) &opnode, sizeof(opnode),
 		      DB_NODT, (i2) 0, (i4) 0, (DB_ANYTYPE *) NULL, 
-		      newnode, err_blk, (i4) 0);
+		      newnode, err_blk, PSS_JOINID_STD);
     return(status);
 
 }  /* end psl_make_func_node */
@@ -2116,6 +2119,9 @@ psl_make_default_node(
 **	    Force psl_mk_const_similar to generate coercion to cleanly 
 **	    enable correct datatype to be represented when substituting
 **	    default values.
+**	11-Jun-2010 (kiria01) b123908
+**	    Switch the order of b121034 check to ensure that the block is
+**	    a resdom prior to checking its content.
 */
 DB_STATUS
 psl_check_defaults(
@@ -2308,8 +2314,8 @@ psl_check_defaults(
 	/* But not after the end of the RESDOM list (kibro01) b121034 */
 	pnode = &root_node->pst_left;
 	while ((node = *pnode) &&
-		node->pst_sym.pst_value.pst_s_rsdm.pst_rsno > resdom.pst_rsno &&
-		node->pst_sym.pst_type == PST_RESDOM)
+		node->pst_sym.pst_type == PST_RESDOM &&
+		node->pst_sym.pst_value.pst_s_rsdm.pst_rsno > resdom.pst_rsno)
 	    pnode = &node->pst_left;
 	resdom_node->pst_left = node;
 	*pnode = resdom_node;

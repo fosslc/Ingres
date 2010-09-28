@@ -471,6 +471,7 @@ dc_dumpdesc()
 	    || datatype == DB_MLINE_TYPE
 	    || datatype == DB_POLY_TYPE
 	    || datatype == DB_MPOLY_TYPE
+	    || datatype == DB_GEOMC_TYPE
 	    || datatype == DB_LBIT_TYPE)
 	    adflength = atinfo.extern_length;
 	else

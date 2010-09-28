@@ -249,6 +249,12 @@
 **          Do not create V1 catalogs (they might use data compression)
 **      27-May-2010 (stial01)
 **          Limit above change to SCONCUR catalogs which use phys locking
+**      14-Jul-2010 (stial01)
+**          Default is V6, use V7 only when rows span pages
+**	12-Aug-2010 (kschendel) b124236
+**	    Rearrange preplace a little so that we always zero the row's
+**	    short-term coupon parts no matter what.  Spiff up pvalidate
+**	    (trace point 722) to be more thorough about examining the coupon.
 */
 
 
@@ -401,6 +407,8 @@ dm1c_cmpcontrol_size(i4 compression_type,
 ** History:
 **	25-Feb-2008 (kschendel) SIR 122739
 **	    New wrapper for modify's use.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Pass compression type to called routine.
 */
 
 i4
@@ -410,8 +418,8 @@ dm1c_compexpand(i4 compression_type, DB_ATTS **att_ptrs, i4 att_count)
 	return (0);
     else
 	return (
-		(*dm1c_compexpand_v[compression_type])(att_ptrs,
-							att_count)
+		(*dm1c_compexpand_v[compression_type])(compression_type,
+					att_ptrs, att_count)
 		);
 } /* dm1c_compexpand */
 
@@ -449,6 +457,8 @@ dm1c_compexpand(i4 compression_type, DB_ATTS **att_ptrs, i4 att_count)
 ** History:
 **	21-Feb-2008 (kschendel) SIR 122739
 **	    Written for overhauled row-accessor structuring
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Pass compression type to compexpand routine.
 */
 
 DB_STATUS
@@ -462,8 +472,8 @@ dm1c_rowaccess_setup(DMP_ROWACCESS *rac)
 	rac->worstcase_expansion = 0;
     else
 	rac->worstcase_expansion =
-		(*dm1c_compexpand_v[rac->compression_type])(rac->att_ptrs,
-							 rac->att_count);
+		(*dm1c_compexpand_v[rac->compression_type])(
+			rac->compression_type, rac->att_ptrs, rac->att_count);
     if (dm1c_cmpcontrol_setup_v[rac->compression_type] != NULL)
     {
 	status = (*dm1c_cmpcontrol_setup_v[rac->compression_type])(rac);
@@ -544,7 +554,8 @@ dm1c_getpgtype(
 	*/
 	if (page_size == DM_COMPAT_PGSIZE)
 	    *page_type = TCB_PG_V1;
-	else if (config_pgtypes & SVCB_CONFIG_V6)
+	else if (config_pgtypes & (SVCB_CONFIG_V6 | SVCB_CONFIG_V7))
+	    /* ETABS use V6 if V6 or V7 configured */
 	    *page_type = TCB_PG_V6;
 	else if (config_pgtypes & SVCB_CONFIG_V4)
 	    *page_type = TCB_PG_V4;
@@ -572,7 +583,8 @@ dm1c_getpgtype(
 	if (page_size == DM_COMPAT_PGSIZE && (config_pgtypes & SVCB_CONFIG_V1) &&
 			(create_flags & DM1C_CREATE_CLUSTERED) == 0)
 	    *page_type = TCB_PG_V1;
-	else if (config_pgtypes & SVCB_CONFIG_V6)
+	else if (config_pgtypes & (SVCB_CONFIG_V6 | SVCB_CONFIG_V7))
+	    /* INDEX/TEMPS use V6 if V6 or V7 configured */
 	    *page_type = TCB_PG_V6;
 	else if (config_pgtypes & SVCB_CONFIG_V4)
 	    *page_type = TCB_PG_V4;
@@ -593,12 +605,14 @@ dm1c_getpgtype(
 			(create_flags & DM1C_CREATE_CLUSTERED) == 0 &&
 			(create_flags & DM1C_CREATE_CORE) == 0)
 	    *page_type = TCB_PG_V1;
-	else if ((config_pgtypes & SVCB_CONFIG_V7) &&
-	    (create_flags & DM1C_CREATE_CORE) == 0 &&
-	    (create_flags & DM1C_CREATE_CATALOG) == 0)
-	    *page_type = TCB_PG_V7;
+	else if ((create_flags & (DM1C_CREATE_CORE | DM1C_CREATE_CATALOG)) 
+		&& config_pgtypes & (SVCB_CONFIG_V6 | SVCB_CONFIG_V7))
+	    /* CORE/CATALOG use V6 if V6 or V7 configured */
+	    *page_type = TCB_PG_V6;
 	else if (config_pgtypes & SVCB_CONFIG_V6)
 	    *page_type = TCB_PG_V6;
+	else if (config_pgtypes & SVCB_CONFIG_V7)
+	    *page_type = TCB_PG_V7;
 	else if (config_pgtypes & SVCB_CONFIG_V3)
 	    *page_type = TCB_PG_V3;
 	else if (page_size == DM_COMPAT_PGSIZE && (create_flags & DM1C_CREATE_CLUSTERED) == 0)
@@ -1373,7 +1387,7 @@ dm1c_pput(
     {
 	DB_STATUS lstatus;
 	DB_ERROR  ldberr;
-	lstatus = dm1c_pvalidate("INSERT  ", atts, rcb, record, &ldberr);
+	lstatus = dm1c_pvalidate("INSERT", atts, rcb, record, &ldberr);
     }
 
     return(status);
@@ -1462,6 +1476,11 @@ dm1c_pput(
 **	    the server isn't careful enough about initializing in-memory
 **	    coupons for that to work out.
 **	    Run the loop using the BQCB to skip to the LOB atts.
+**	12-Aug-2010 (kschendel) b124236
+**	    Be way more paranoid about cleaning the short-term part of
+**	    the coupon.  In particular, it's necessary even if the old
+**	    and new coupons are "the same", since the new coupon may
+**	    have had its short-term part dirtied by a previous get.
 */
 DB_STATUS
 dm1c_preplace(
@@ -1495,6 +1514,13 @@ dm1c_preplace(
     i4			*err_code = &dberr->err_code;
 
     CLRDBERR(dberr);
+
+    if (DMZ_TBL_MACRO(22) && status == E_DB_OK)
+    {
+	DB_STATUS lstatus;
+	DB_ERROR  ldberr;
+	lstatus = dm1c_pvalidate("REPL old", atts, rcb, old, &ldberr);
+    }
 
     pop_cb.pop_type = ADP_POP_TYPE;
     pop_cb.pop_length = sizeof(pop_cb);
@@ -1569,52 +1595,41 @@ dm1c_preplace(
 	    ** We can't tell "was_empty = ''" from "old = old", so let the
 	    ** former look like something actually is updated.
 	    */
-	    if (!old_empty && !new_empty
-	      && (new_cpn->cpn_flags & DMPE_CPN_FINAL) == 0
-	      && old_cpn->cpn_log_key.tlk_low_id == new_cpn->cpn_log_key.tlk_low_id
-	      && old_cpn->cpn_log_key.tlk_high_id == new_cpn->cpn_log_key.tlk_high_id
-	      && old_cpn->cpn_etab_id == new_cpn->cpn_etab_id)
+	    if (old_empty || new_empty
+	      || (new_cpn->cpn_flags & DMPE_CPN_FINAL)
+	      || old_cpn->cpn_log_key.tlk_low_id != new_cpn->cpn_log_key.tlk_low_id
+	      || old_cpn->cpn_log_key.tlk_high_id != new_cpn->cpn_log_key.tlk_high_id
+	      || old_cpn->cpn_etab_id != new_cpn->cpn_etab_id)
 	    {
-		continue;
-	    }
 
-	    /* Delete the old value if there is one.  Preserve the
-	    ** old-value logical key (if any) so that we can re-use it.
-	    */
-	    if (!old_empty)
-	    {
-		save_logkey = old_cpn->cpn_log_key;
-		pop_cb.pop_coupon = &old_dv;
-		/* Init pop_info with target table info */
-		blob_work.flags = BLOBWKSP_ACCESSID | BLOBWKSP_ATTID;
-		blob_work.access_id = rcb;
-		blob_work.base_attid = bqcb_att->bqcb_att_id;
-		pop_cb.pop_info = (PTR)&blob_work;
-		status = dmpe_delete(&pop_cb);
-		old_cpn->cpn_log_key = save_logkey;
-	    }
-	    /* Now, if the new value is empty, or shows "final" (put optim),
-	    ** just copy back the (preened) new coupon into the new row.
-	    **
-	    ** For all other cases, dmpe-move the new value into a proper
-	    ** permanent etab, telling dmpe-move to use/update the old
-	    ** coupon as the output coupon.  This way we re-use any valid
-	    ** logical key in the old coupon, avoiding wastage.
-	    ** Then we'll stuff the old coupon into the new row.
-	    */
-	    if (status == E_DB_OK)
-	    {
-		if (new_cpn->cpn_flags & DMPE_CPN_FINAL || new_empty)
+		updated = TRUE;
+
+		/* Delete the old value if there is one.  Preserve the
+		** old-value logical key (if any) so that we can re-use it.
+		*/
+		if (!old_empty)
 		{
-		    /* Copy back the new coupon in case we preened it.
-		    ** Make sure short-term part is clean incase "final".
-		    */
-		    new_cpn->cpn_base_id = new_cpn->cpn_att_id = new_cpn->cpn_flags = 0;
-		    MEcopy( (PTR) new_value.buf,
-				    new_dv.db_length,
-				    (PTR) &new[lob_att->offset]);
+		    save_logkey = old_cpn->cpn_log_key;
+		    pop_cb.pop_coupon = &old_dv;
+		    /* Init pop_info with target table info */
+		    blob_work.flags = BLOBWKSP_ACCESSID | BLOBWKSP_ATTID;
+		    blob_work.access_id = rcb;
+		    blob_work.base_attid = bqcb_att->bqcb_att_id;
+		    pop_cb.pop_info = (PTR)&blob_work;
+		    status = dmpe_delete(&pop_cb);
+		    old_cpn->cpn_log_key = save_logkey;
 		}
-		else
+		/* Now, if the new value is empty, or shows "final" (put optim),
+		** just copy back the (preened) new coupon into the new row.
+		**
+		** For all other cases, dmpe-move the new value into a proper
+		** permanent etab, telling dmpe-move to use/update the old
+		** coupon as the output coupon.  This way we re-use any valid
+		** logical key in the old coupon, avoiding wastage.
+		** Then we'll stuff the old coupon into the new row.
+		*/
+		if (status == E_DB_OK && !new_empty
+		  && (new_cpn->cpn_flags & DMPE_CPN_FINAL) == 0)
 		{
 		    /* Move new lob data on top of old coupon.
 		    ** "New" isn't empty, make sure null indicator for old
@@ -1641,33 +1656,35 @@ dm1c_preplace(
 			** Glue the bits together...
 			*/
 			MEcopy((PTR) old_cpn, sizeof(DMPE_COUPON), (PTR) new_cpn);
-			/* Make sure short-term part is clean now */
-			new_cpn->cpn_base_id = new_cpn->cpn_att_id = new_cpn->cpn_flags = 0;
-			MEcopy( (PTR) new_value.buf,
-				    new_dv.db_length,
-				    (PTR) &new[lob_att->offset]);
 		    }
 		}
-	    }
-	    if (status != E_DB_OK)
-	    {
-		if (DMZ_REC_MACRO(3))
+		if (status != E_DB_OK)
 		{
-		    /* DM803 ignores errors */
-		    if (DB_FAILURE_MACRO(status))
+		    if (DMZ_REC_MACRO(3))
 		    {
-			uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
-			    (char *)NULL, (i4)0, (i4 *)NULL, err_code, 0);
+			/* DM803 ignores errors */
+			if (DB_FAILURE_MACRO(status))
+			{
+			    uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
+				(char *)NULL, (i4)0, (i4 *)NULL, err_code, 0);
+			}
+			status = E_DB_OK;
+			CLRDBERR(dberr);
 		    }
-		    status = E_DB_OK;
-		    CLRDBERR(dberr);
-		}
-		else
-		{
-		    break;
+		    else
+		    {
+			break;
+		    }
 		}
 	    }
-	    updated = TRUE;
+	    /* We now have a possibly changed new coupon.  Regardless of what
+	    ** just went on, make sure that the short-term part of the
+	    ** coupon is clean, and stuff it back into the row.
+	    */
+	    new_cpn->cpn_base_id = new_cpn->cpn_att_id = new_cpn->cpn_flags = 0;
+	    MEcopy( (PTR) new_value.buf,
+			new_dv.db_length,
+			(PTR) &new[lob_att->offset]);
 	} /* if non-dropped LOB */
     } /* for each att */
 
@@ -1694,7 +1711,6 @@ dm1c_preplace(
     {
 	DB_STATUS lstatus;
 	DB_ERROR  ldberr;
-	lstatus = dm1c_pvalidate("REPL old", atts, rcb, old, &ldberr);
 	lstatus = dm1c_pvalidate("REPL new", atts, rcb, new, &ldberr);
     }
 
@@ -2012,18 +2028,43 @@ dm1c_pvalidate(
 	DB_ERROR	   *dberr)
 {
     DMP_TCB		*t = rcb->rcb_tcb_ptr;
+    DMPE_BQCB		*bqcb;
+    DMPE_BQCB_ATT	*bqcb_att;
     DMPE_COUPON		*cpn;
     char		*cpn_chr;
     DMPE_COUPON		tmp_cpn;
-    i4		i;
+    i4			bqcb_att_cnt;
+    i4			i;
     DMP_ET_LIST		*etlist;
+    ADP_PERIPHERAL	p;
     bool		found = FALSE;
 
     CLRDBERR(dberr);
+    bqcb = rcb->rcb_bqcb_ptr;
+    if (bqcb == NULL)
+    {
+	TRdisplay("%@ dm1c_pvalidate(%s): ERROR, no bqcb for rcb %p baseid %d\n",
+		where, rcb, t->tcb_rel.reltid.db_tab_base);
+    }
+    else
+    {
+	bqcb_att_cnt = bqcb->bqcb_natts;
+	bqcb_att = &bqcb->bqcb_atts[0];
+    }
 
     /* Validate etab id in coupon is an etab for this table */
     for (i = 1; i <= rcb->rcb_tcb_ptr->tcb_rel.relatts; i++)
     {
+	if (atts[i].flag & ATT_PERIPHERAL && bqcb != NULL)
+	{
+	    -- bqcb_att_cnt;
+	    if (i != bqcb_att->bqcb_att_id || bqcb_att_cnt < 0)
+	    {
+		TRdisplay("%@ dm1c_pvalidate(%s): ERROR, periph att %d, bqcb att %d, bqcb natts %d\n",
+			where, i, bqcb_att->bqcb_att_id, bqcb->bqcb_natts);
+	    }
+	    ++bqcb_att;
+	}
 	if ( (atts[i].flag & ATT_PERIPHERAL) &&
 	     (atts[i].ver_dropped == 0) )
 	{
@@ -2036,9 +2077,31 @@ dm1c_pvalidate(
 	    cpn = (DMPE_COUPON *) &((ADP_PERIPHERAL *)
 			&record[atts[i].offset])->per_value.val_coupon;
 	    if ((char *)cpn != cpn_chr)
-		 TRdisplay("DMPE VALIDATE WARNING cpn %x %x\n", cpn, cpn_chr);
+		 TRdisplay("%@ dm1c_pvalidate(%s) bad alignment cpn %p %p\n", cpn, cpn_chr);
 
 	    MEcopy(cpn_chr, sizeof(DMPE_COUPON), &tmp_cpn);
+	    /* Don't check short-term part if "old" coupon, we don't care
+	    ** about it, the important one is the new coupon.
+	    */
+	    if ((tmp_cpn.cpn_base_id != 0 || tmp_cpn.cpn_att_id != 0
+	      || tmp_cpn.cpn_flags != 0) && STcompare(where,"REPL old") != 0)
+	    {
+		TRdisplay("%@ dm1c_pvalidate(%s) nonzero short-term cpn: baseid %d, attid %d, flags %x col %d\n",
+			where, tmp_cpn.cpn_base_id, tmp_cpn.cpn_att_id,
+			tmp_cpn.cpn_flags, i);
+	    }
+	    MEcopy(&record[atts[i].offset], sizeof(ADP_PERIPHERAL), (PTR) &p);
+	    if (p.per_length0 == 0 && p.per_length1 == 0)
+		continue;
+	    if (tmp_cpn.cpn_flags & DMPE_CPN_TEMP)
+	    {
+		if (tmp_cpn.cpn_etab_id > 0)
+		{
+		    TRdisplay("%@ dm1c_pvalidate(%s): temp coupon says etab id %d, base %d col %d\n",
+			where,tmp_cpn.cpn_etab_id,t->tcb_rel.reltid.db_tab_base,i);
+		}
+		continue;
+	    }
 
 	    for (etlist = rcb->rcb_tcb_ptr->tcb_et_list->etl_next;
 			etlist != rcb->rcb_tcb_ptr->tcb_et_list;
@@ -2053,9 +2116,9 @@ dm1c_pvalidate(
 
 	    if (!found)
 	    {
-		TRdisplay("DMPE VALIDATE WARNING: %s %~t col %d %d etab %d\n",
+		TRdisplay("%@ dm1c_pvalidate(%s): wrong etab %~t col %d base %d etab %d\n",
 		    where,
-		    32, t->tcb_rel.relid.db_tab_name, i,
+		    t->tcb_relid_len, t->tcb_rel.relid.db_tab_name, i,
 		    t->tcb_rel.reltid.db_tab_base, tmp_cpn.cpn_etab_id);
 	    }
 	}

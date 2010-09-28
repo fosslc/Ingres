@@ -456,7 +456,7 @@ static void OnCommand (HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
                     ltb = ltb->next;
                 }
 
-                iret = DlgAuditDBTable (hwnd, &tempTable);
+                iret = DlgAllDBTable (hwnd, &tempTable);
                 if (iret == TRUE)
                 {
                     ls = tempTable.lpTable;

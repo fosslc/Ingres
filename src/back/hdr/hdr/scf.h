@@ -304,6 +304,9 @@
 **	    dbmsinfo('pagetype_v7')
 **	28-may-2010 (stephenb)
 **	    Add message E_SC02A1_INCORRECT_QUERY_PARMS
+**      12-Aug-2010 (horda03) b124109
+**          Added SCI_PARENT_SCB to obtain a factotum thread's (ultimate) parent
+**          SCI_SCB information.
 */
 
 /*
@@ -979,6 +982,8 @@ typedef struct _SCF_CB SCF_CB;
 **	26-Oct-2009 (kiria01) SIR 121883
 **	    Scalar sub-query support: Added SCI_FLATCHKCARD for
 **	    CARDINALITY_CHECK
+**      22-Sep-2010 (hanal04) Bug 124364
+**          Added SCI_TRACE_STACK. 
 */
 typedef struct _SCF_SCI
 {
@@ -1373,6 +1378,12 @@ typedef struct _SCF_SCI
 						*/
 #define			SCI_PAGETYPE_V6	    136 /* Y if V6 pgtype available */
 #define			SCI_PAGETYPE_V7	    137 /* Y if V7 pgtype available */
+#define			SCI_PARENT_SCB      138 /* returns ptr to parent scb by fac
+                                                ** for factotum threads. Null otherwise
+                                                */
+#define			SCI_TRACE_STACK	    139 /* Flag error tracing for
+                                                ** inclusion of stack dump.
+                                                */
 
 
     char	    *sci_aresult;

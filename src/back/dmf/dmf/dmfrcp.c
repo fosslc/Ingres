@@ -2350,6 +2350,9 @@ rcp_shutdown(DB_ERROR *dberr)
 **	    dmfrcp finds that db is marked inconsistent and performs 
 **	    shutdown of rcp along with dbms. Don't shutdown rcp if
 **	    db is inconsistent due to rollforwarddb failure. (B111325)
+**	09-aug-2010 (maspa05) b123189, b123960
+**	    Set DCB_S_RODB flag on dcb_status if the database is a readonly
+**          database
 **	 
 */
 static DB_STATUS
@@ -2431,7 +2434,7 @@ i4	    open_database)
 	dcb.dcb_db_type = DCB_PUBLIC;
 	MEcopy((PTR)&dcb.dcb_name, LK_KEY_LENGTH, (PTR)&db_key.lk_key1);
 	db_key.lk_type = LK_OPEN_DB;
-	dcb.dcb_status = 0;
+	dcb.dcb_status = (database.db_status & DB_RODB) ? DCB_S_RODB : 0;
 
 	if (open_database == 0)
 	{

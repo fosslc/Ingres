@@ -40,13 +40,20 @@ REM
 REM History:
 REM	13-Feb-1996 (somsa01)
 REM		Created from sepcob.sh .
-REM	19-dec-2001 (somsa01)
-REM		Use ingres64.lib on Win64.
-REM	02-oct-2003 (somsa01)
-REM		Ported to NT_AMD64.
-REM	18-aug-2004 (drivi01)
-REM		Updated link library names to new 
-REM		jam names.
+REM	18-Apr-2001 (rogch01)
+REM		Filter out COFF / OMF linker warnings.  They are benign.
+REM	 7-Feb-2002 (rogch01)
+REM		Changes for Merant Net Express, which provides cbllink for
+REM		linking.
+REM	25-Sep-2003 (rogch01)
+REM		Add sql-sqlcode hack as for Unix, lose use of cblnames.
+REM		cblnames is called by cbllink.  When referencing it directly,
+REM		multiply defined symbols appear - because there are two files
+REM		created with them in, one by cbllink, one by cblnames.
+REM	08-Jul-2010 (drivi01)
+REM		Add libcmt.lib to the link line to resolve security_cookie
+REM		symbol in the binaries. The symbol is there due to /GS flag
+REM		that is used by the compiler by default.
 REM
 
 REM First, check args and determine $qsuffix, $preproc, and $sfile:
@@ -62,6 +69,9 @@ if "%1"=="quel" set preproc=eqcbl
 
 if "%1"=="sql" set qsuffix=scb
 if "%1"=="sql" set preproc=esqlcbl
+
+if "%1"=="sql-sqlcode" set qsuffix=scb
+if "%1"=="sql-sqlcode" set preproc=esqlcbl -sqlcode
 
 if "%1"=="" PCecho "ERROR: invalid query language: %1. Must be 'quel' or 'sql'"
 if "%1"=="" goto END
@@ -102,11 +112,7 @@ if errorlevel 1 goto END
 REM compile and link the executable 
 
 cobol %sfile%.cbl /case /litlink;
-cblnames -s -m%sfile% %sfile%.obj
-
-if "%CPU%"=="IA64" link /OUT:%sfile%.exe /NODEFAULTLIB:libc %sfile%.obj cbllds.obj %libs% %II_SYSTEM%\ingres\lib\libingres64.lib msvcrt.lib mfrts32.lib kernel32.lib user32.lib advapi32.lib& goto END
-if "%CPU%"=="AMD64" link /OUT:%sfile%.exe /NODEFAULTLIB:libc %sfile%.obj cbllds.obj %libs% %II_SYSTEM%\ingres\lib\libingres64.lib msvcrt.lib mfrts32.lib kernel32.lib user32.lib advapi32.lib& goto END
-link /OUT:%sfile%.exe /NODEFAULTLIB:libc %sfile%.obj cbllds.obj %libs% %II_SYSTEM%\ingres\lib\libingres.lib msvcrt.lib mfrts32.lib kernel32.lib user32.lib advapi32.lib
+cbllink -O%sfile%.exe %sfile%.obj %libs% libingres.lib libcmt.lib
 
 :END
 endlocal

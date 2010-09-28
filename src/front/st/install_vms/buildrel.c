@@ -136,6 +136,8 @@
 **           report success for .obj files on Itanium - SIfopen assumes that
 **           the record format is variable (which it is on Alpha) - however
 **           on Itanium the record format is undefined (since it's an ELF format)
+**	14-July-2010 (bonro01)
+**	    Add Beta LICENSE to ingbuild.
 */
  
 
@@ -183,7 +185,7 @@ GLOBALDEF char *respfilename = NULL; /* user supplied response file name */
 GLOBALDEF char *license_file = NULL;
 GLOBALDEF char *gpl_lic = "gpl" ;
 GLOBALDEF char *com_lic = "com" ;
-GLOBALDEF char *emb_lic = "emb" ;
+GLOBALDEF char *beta_lic = "beta" ;
 GLOBALDEF char *eval_lic = "eval" ;
 GLOBALDEF char *license_type = NULL ;
 GLOBALDEF char *build_timestamp = NULL;
@@ -339,8 +341,8 @@ main(i4 argc, char *argv[])
 		    license_type = gpl_lic;
 		else if (STcompare(argv[argvx], com_lic) == 0)
 		    license_type = com_lic;
-		else if (STcompare(argv[argvx], emb_lic) == 0)
-		    license_type = emb_lic;
+		else if (STcompare(argv[argvx], beta_lic) == 0)
+		    license_type = beta_lic;
 		else if (STcompare(argv[argvx], eval_lic) == 0)
 		    license_type = eval_lic;
 		else

@@ -26,6 +26,8 @@
 ** History:
 **	1-jun-2010 (horda03)
 **	    Created
+**      14-Jun-2010 (horda03) B123919
+**          Add AT_ATOMIC_INCREMENT_I4 for linux.
 **/
 
 /* Name: AT_ATOMIC_INCREMENT_I4
@@ -37,6 +39,25 @@
 #ifdef VMS
 
 # define AT_ATOMIC_INCREMENT_I4( s ) __ATOMIC_INCREMENT_LONG( &(s) )
+
+#elif defined(int_lnx) || defined(a64_lnx)
+
+# define AT_ATOMIC_INCREMENT_I4( s ) at_lnx_increment_i4( &(s), 1 )
+
+static __inline__ i4
+at_lnx_increment_i4( i4 *s, i4 add )
+{
+   /* add "add" to "*s". After operation
+   ** "add" holds the original value of *s
+   */
+   __asm__ __volatile__(
+          "lock ; xaddl %0, %1"
+          : "+r" (add), "+m" (*s)
+          : : "memory");
+
+   return  add;
+}
+
 
 #else
 

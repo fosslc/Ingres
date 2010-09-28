@@ -200,6 +200,11 @@
 **	    Add adu_aesdecrypt and adu_aesencrypt.
 **	10-May-2010 (kschendel) b123712
 **	    Added float trunc, ceil, floor.
+**       9-Jul-2010 (hanal04) Bug 124087
+**          Added adu_nvchr_embchartouni() and adu_nvchr_embunitochar()
+**      11-Aug-2010 (hanal04) Bug 124180
+**          Added adu_2strtomny_strict() for backwards compatibility of
+**          money string constants.
 */
 
 
@@ -744,6 +749,8 @@ FUNC_EXTERN ADU_NORM1_FUNC adu_multipolygon_fromText;
 FUNC_EXTERN ADU_NORM1_FUNC adu_multipolygon_fromWKB;
 FUNC_EXTERN ADU_NORM1_FUNC adu_geometry_fromText;
 FUNC_EXTERN ADU_NORM1_FUNC adu_geometry_fromWKB;
+FUNC_EXTERN ADU_NORM1_FUNC adu_geometrycollection_fromText;
+FUNC_EXTERN ADU_NORM1_FUNC adu_geometrycollection_fromWKB;
 
 FUNC_EXTERN ADU_NORM2_FUNC adu_point_srid_fromText;
 FUNC_EXTERN ADU_NORM2_FUNC adu_point_srid_fromWKB;
@@ -759,6 +766,8 @@ FUNC_EXTERN ADU_NORM2_FUNC adu_multipolygon_srid_fromText;
 FUNC_EXTERN ADU_NORM2_FUNC adu_multipolygon_srid_fromWKB;
 FUNC_EXTERN ADU_NORM2_FUNC adu_geometry_srid_fromText;
 FUNC_EXTERN ADU_NORM2_FUNC adu_geometry_srid_fromWKB;
+FUNC_EXTERN ADU_NORM2_FUNC adu_geometrycollection_srid_fromText;
+FUNC_EXTERN ADU_NORM2_FUNC adu_geometrycollection_srid_fromWKB;
 
 /* The following functions act on all geospatial types. */
 FUNC_EXTERN ADU_NORM1_FUNC adu_geom_asText; /* Convert a geometry to WKT. */
@@ -1377,6 +1386,16 @@ FUNC_EXTERN DB_STATUS adu_nvchr_charextract(ADF_CB           *scb,
                                        DB_DATA_VALUE    *dv_2,
                                        DB_DATA_VALUE    *dv_result);
 
+/* Routine for EMBEDDED coercion from char to uni */
+FUNC_EXTERN DB_STATUS adu_nvchr_embchartouni(ADF_CB	*adf_scb,
+                                       DB_DATA_VALUE	*dv_in,
+                                       DB_DATA_VALUE	*rdv);
+
+/* Routine for EMBEDDED coercion from uni to char */
+FUNC_EXTERN DB_STATUS adu_nvchr_embunitochar(ADF_CB	*adf_scb,
+                                       DB_DATA_VALUE	*dv_in,
+                                       DB_DATA_VALUE	*rdv);
+
 /* Routine for substr1 functions for  nvhar and nvarchar type */
 FUNC_EXTERN DB_STATUS adu_nvchr_substr1(ADF_CB           *scb,
                                        DB_DATA_VALUE    *dv_1,
@@ -1467,5 +1486,11 @@ FUNC_EXTERN DB_STATUS adu_nvchr_utf8_bldkey( ADF_CB          *scb,
 					i4              semantics,
 					ADC_KEY_BLK     *key_block);
 FUNC_EXTERN ADU_NORM1_FUNC adu_numeric_norm;
+
+FUNC_EXTERN DB_STATUS adu_2strtomny_strict( ADF_CB		*adf_scb,
+					DB_DATA_VALUE		*str_dv,
+					DB_DATA_VALUE		*mny_dv,
+					bool			strict);
+
 FUNC_EXTERN ADU_NORM2_FUNC adu_aesdecrypt;
 FUNC_EXTERN ADU_NORM2_FUNC adu_aesencrypt;

@@ -61,6 +61,14 @@
 **	    Additions for subroutine-threaded code (STCODE).
 **	29-Aug-2005 (schka24)
 **	    Add a couple more CX-segment flags.
+**	04-Aug-2010 (kiria01) b124160
+**	    Raised limit handling on vlts. Now we have a ADE_MXVLTS_SOFT
+**	    upto which the stack will be used and beyond, the limit can
+**	    get to ADE_MXVLTS which is the max supported in the CXHEAD.
+**	    To handle this memory will be allocated temporarily to extend
+**	    the workspace. Based on this the soft limit bas been lowered
+**	    from what it was as it no longer needs to represent the hard
+**	    limit.
 **/
 
 
@@ -126,8 +134,9 @@
                                                     /* I just chose my       */
                                                     /* favorite number.      */
 
-#define		    ADE_MXVLTS      500	    /* Max # VLTs in any CX */
-
+#define		    ADE_MXVLTS		MAXI2	    /* Max # VLTs in any CX */
+#define		    ADE_MXVLTS_SOFT	100	    /* Max # VLTs that we handle
+						    ** directly on the stack */
 #define		    ADE_END_OFFSET_LIST	    (-1)    /* Offset list terminater */
 						    /* for CX's.              */
 

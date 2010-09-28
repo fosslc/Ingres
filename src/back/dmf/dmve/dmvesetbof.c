@@ -52,6 +52,8 @@
 **	14-Nov-2008 (jonj)
 **	    SIR 120874 Change function prototypes to pass DB_ERROR *dberr
 **	    instead of i4 *err_code, use new form uleFormat.
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 **/
 
 /*{
@@ -97,6 +99,7 @@ DMVE_CB		*dmve_cb)
     DB_STATUS		error;
 
     CLRDBERR(&dmve->dmve_error);
+    DMVE_CLEAR_TABINFO_MACRO(dmve);
 	
 	if (log_rec->sb_header.length != sizeof(DM0L_SETBOF) || 
 	    log_rec->sb_header.type != DM0LSETBOF ||

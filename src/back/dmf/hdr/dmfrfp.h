@@ -77,6 +77,8 @@
 **	10-Nov-2008 (jonj)
 **	    SIR 120874 Change function prototypes to pass DB_ERROR *dberr
 **	    instead of i4 *err_code.
+**	01-Jul-2010 (thaju02) Bug 123982
+**	    Added RFP_TX_EMINI_JUMP.
 */
 
 /*
@@ -526,6 +528,7 @@ struct _DMF_RFP
 #define	RFP_TX_COMPLETE		        0x0001
 #define	RFP_TX_CLR_JUMP		        0x0002
 #define	RFP_TX_ABS_JUMP		        0x0004
+#define	RFP_TX_EMINI_JUMP               0x0008
 	LG_LXID		    tx_id;	     /* The LG internal xact id. */
 	LG_LSN		    tx_clr_lsn;	     /* LSN of compensated record 
 					     ** if CLR_JUMP is asserted 

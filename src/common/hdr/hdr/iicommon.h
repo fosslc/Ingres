@@ -3,6 +3,7 @@
 */
 #ifndef    COMMON_INCLUDE
 #define                 COMMON_INCLUDE  0
+#include <wchar.h>
 #include <gl.h>
 /**
 ** Name: IICOMMON.H - Types and names used by ingres both DBMS and FEs
@@ -169,6 +170,13 @@
 **          Use DB_EXTFMT_SIZE for register table newcolname IS 'ext_format'
 **	27-Apr-2010 (kschendel) SIR 123639
 **	    Take max # of columns from build config if available.
+**	26-jun-2010 (stephenb)
+**	    Add define for DB_MAXROWSIZE to avoid hard-coded values which
+**	    might vary and cause problems.
+**     13-Aug-2010 (hanal04) Bug 124250
+**        Moved AFE_NTEXT_STRING from afe.h to iicommon.h
+**     19-Aug-2010 (thich01)
+**        Left a space at 60 for GCA SECL TYPE.
 **/
 
 #define                  P2K		 2048
@@ -487,6 +495,7 @@ typedef struct _DB_ERROR
 		    */
 #define                 DB_AREA_MAX     128     /* Max # bytes in AREA */
 #define                 DB_FILE_MAX     12      /* Max # bytes in a filename */
+#define			DB_MAXROWSIZE	256*1024 /* maximum size of a row in the DBMS */
 
 
 /*}
@@ -1199,10 +1208,12 @@ _DEFINE(GEOM,   56, BYTE, LV,   18, 18, 18, 18  /* Spatial Long Byte */)\
 _DEFINE(POINT,  57, BYTE, LV,   18, 18, 18, 18  /* Point Long Byte */)\
 _DEFINE(MPOINT, 58, BYTE, LV,   18, 18, 18, 18  /* MPoint Long Byte */)\
 _DEFINE(LINE,   59, BYTE, LV,   18, 18, 18, 18  /* Line Long Byte */)\
-_DEFINE(MLINE,  60, BYTE, LV,   18, 18, 18, 18  /* MLine Long Byte */)\
-_DEFINE(POLY,   61, BYTE, LV,   18, 18, 18, 18  /* Poly Long Byte */)\
-_DEFINE(MPOLY,  62, BYTE, LV,   18, 18, 18, 18  /* MPoly Long Byte */)\
-_DEFINE(NBR,    63, BYTE, BASE,  0,  0,  0,  0  /* NBR type for Rtree */)\
+_DEFINE(60,     60, NONE, BASE,  0,  0,  0,  0  /* Unused - was SECL*/)\
+_DEFINE(MLINE,  61, BYTE, LV,   18, 18, 18, 18  /* MLine Long Byte */)\
+_DEFINE(POLY,   62, BYTE, LV,   18, 18, 18, 18  /* Poly Long Byte */)\
+_DEFINE(MPOLY,  63, BYTE, LV,   18, 18, 18, 18  /* MPoly Long Byte */)\
+_DEFINE(NBR,    64, BYTE, BASE,  0,  0,  0,  0  /* NBR type for Rtree */)\
+_DEFINE(GEOMC,	65,	BYTE, LV,	18,	18,	18,	18	/* GeomColl Long Byte */)\
 _DEFINEEND
 
 /*
@@ -1341,6 +1352,20 @@ typedef struct _DB_TEXT_STRING
     u_i2            db_t_count;         /* The number of chars in the string */
     u_char          db_t_text[1];       /* The actual string */
 }   DB_TEXT_STRING;
+
+/*
+** Name: AFE_NTEXT_STRING - NVARCHAR datatype
+**
+** Description:
+**      This structure is comparable to DB_TEXT_STRING but is designed for
+**      NVARCHAR datatypes. Its main purpose is to deal with alignment of the
+**      wchar_t member. Moved from afe.h.
+*/
+typedef struct
+{
+    u_i2        afe_t_count;
+    wchar_t     afe_t_text[1];
+} AFE_NTEXT_STRING;
 
 /*
 ** Name: DEFINE_DB_TEXT_STRING - for defining local VARCHAR data.

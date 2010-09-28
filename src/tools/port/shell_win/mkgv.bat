@@ -69,6 +69,9 @@ REM	    in gv.rc now that we changed version to II 9.1.0 (int.w32/00).
 REM	    The product version we end up with is 9.10.0.
 REM	20-Dec-2006 (drivi01)
 REM	    Remove "32-bit" or "64-bit" strings from "Microsoft Windows Version".
+REM	23-Jun-2010 (drivi01)
+REM	    Automatically update copyright year in gv.rc.template,
+REM	    so the copyright year always reflects current year.
 REM
 REM
 call readvers
@@ -142,10 +145,11 @@ ccpp -s ING_VER | cut -d " " -f2 | %AWK_CMD% "{print \"set RELVER1=\" $0}" > var
 ccpp -s ING_VER | cut -d "." -f3 | %AWK_CMD% "{print \"set RELVER2=\" $0}" >> varset.bat
 ccpp -s ING_VER | cut -d " " -f2 | cut -d "." -f1,2 | sed -e "s/\./, /g" | %AWK_CMD% "{print \"set RELVER3=\" $0}" >> varset.bat
 ccpp -s ING_VER | cut -d " " -f2 | cut -d "." -f1,2 | %AWK_CMD% "{print \"set RELVER4=\" $0}" >> varset.bat
+
 call varset.bat
 rm varset.bat
 if "%inc%"=="" set inc=00
-sed -e "s:RELVER1:%RELVER1%:g" -e "s:RELVER2:%RELVER2%:g" -e "s:RELVER3:%RELVER3%:g" -e "s:RELVER4:%RELVER4%:g" -e "s:BUILDNUM:%BUILD%%INC%:g" "%ING_SRC%"\cl\clf\gv_win\gv.rc.template > "%ING_SRC%"\cl\clf\gv_win\gv.rc
+sed -e "s:RELVER1:%RELVER1%:g" -e "s:RELVER2:%RELVER2%:g" -e "s:RELVER3:%RELVER3%:g" -e "s:RELVER4:%RELVER4%:g" -e "s:BUILDNUM:%BUILD%%INC%:g" -e "s:YEAR:%date:~10, 4%:g" "%ING_SRC%"\cl\clf\gv_win\gv.rc.template > "%ING_SRC%"\cl\clf\gv_win\gv.rc
 endlocal
 
 REM

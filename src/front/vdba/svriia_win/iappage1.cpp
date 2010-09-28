@@ -59,6 +59,12 @@
 **    allow header option to set skip lines at 1.  If skip lines is
 **    increased to 2 or above, the headers become unchecked as we're 
 **    no longer just skipping headers.
+** 07-Sep-2010 (drivi01)
+**    Fix SEGV on some machines. Update routines to consistently
+**    use tchar functions.  Do not use pointer from _tgetenv
+**    as a directory buffer, copy it to another variable first
+**    and use a new buffer.  Otherwise routines may end up
+**    accessing unallocated memory in the buffer.
 **/
 
 #include "stdafx.h"
@@ -760,12 +766,17 @@ void CuPPage1::OnButton2ImportFile()
 	    _T("CSV Files (*.csv)|*.csv|dBASE Files (*.dbf)|*.dbf|Text files (*.txt)|*.txt|All files (*.*)|*.*||"));
 #endif
 	
-	TCHAR* pUProfile = _tgetenv(_T("USERPROFILE"));
-	if (pUProfile != NULL)
+	TCHAR profile[MAX_PATH];
+	TCHAR *pUProfile = _tgetenv(_T("USERPROFILE"));
+
+	memset(profile, 0, sizeof(profile));
+	_tcsncpy(profile, pUProfile, sizeof(profile)-1);
+
+	if (*profile != '\0')
 	{
-	      strcat(pUProfile, "\\Documents");
-	      if (access(pUProfile, 00) == 0)
-		      dlg.m_ofn.lpstrInitialDir=pUProfile;
+	      _tcscat(profile, _T("\\Documents"));
+	      if (access(profile, 00) == 0)
+		      dlg.m_ofn.lpstrInitialDir=profile;
 	}
 	else
 	     dlg.m_ofn.lpstrInitialDir=NULL;

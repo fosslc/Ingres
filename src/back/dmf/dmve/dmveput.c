@@ -207,6 +207,10 @@
 **          Changes for Long IDs, move consistency check to dmveutil
 **      29-Apr-2010 (stial01)
 **          Use new routintes to compare rows in iirelation, iisequence
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
+**      16-sep-2010 (stial01) (B124463, SD 146781)
+**          dmv_reput() fix iirtemp handling for compressed iirtemp
 */
 
 static DB_STATUS	dmv_reput(
@@ -326,6 +330,7 @@ DMVE_CB		*dmve)
     DMP_PINFO		*pinfo = NULL;
 
     CLRDBERR(&dmve->dmve_error);
+    DMVE_CLEAR_TABINFO_MACRO(dmve);
 
     for (;;)
     {
@@ -403,8 +408,8 @@ DMVE_CB		*dmve)
 		    uleFormat(NULL, E_DM9665_PAGE_OUT_OF_DATE, (CL_ERR_DESC *)NULL,
 			ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
 			&loc_error, 8,
-			sizeof(*tbio->tbio_relid), tbio->tbio_relid,
-			sizeof(*tbio->tbio_relowner), tbio->tbio_relowner,
+			sizeof(DB_TAB_NAME), tbio->tbio_relid->db_tab_name,
+			sizeof(DB_OWN_NAME), tbio->tbio_relowner->db_own_name,
 			0, DMPP_VPT_GET_PAGE_PAGE_MACRO(page_type, page),
 			0, DMPP_VPT_GET_PAGE_STAT_MACRO(page_type, page),
 			0, DMPP_VPT_GET_LOG_ADDR_HIGH_MACRO(page_type, page),
@@ -423,8 +428,8 @@ DMVE_CB		*dmve)
 		uleFormat(NULL, E_DM9665_PAGE_OUT_OF_DATE, (CL_ERR_DESC *)NULL,
 		    ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
 		    &loc_error, 8,
-		    sizeof(*tbio->tbio_relid), tbio->tbio_relid,
-		    sizeof(*tbio->tbio_relowner), tbio->tbio_relowner,
+		    sizeof(DB_TAB_NAME), tbio->tbio_relid->db_tab_name,
+		    sizeof(DB_OWN_NAME), tbio->tbio_relowner->db_own_name,
 		    0, DMPP_VPT_GET_PAGE_PAGE_MACRO(page_type, page),
 		    0, DMPP_VPT_GET_PAGE_STAT_MACRO(page_type, page),
 		    0, DMPP_VPT_GET_LOG_ADDR_HIGH_MACRO(page_type, page),
@@ -581,6 +586,8 @@ DMP_PINFO	    *pinfo)
     DMPP_ACC_PLV	*plv = dmve->dmve_plv;
     LG_LRI		lri;
     DMPP_PAGE		*page = pinfo->page;
+    char		creltup[sizeof(DMP_RELATION)+50]; /* compress expand*/
+    i4			csize;
 
     CLRDBERR(&dmve->dmve_error);
  
@@ -590,7 +597,7 @@ DMP_PINFO	    *pinfo)
     if (page == NULL)
 	return (E_DB_OK);
 
-    log_row = &log_rec->put_vbuf[log_rec->put_tab_size + log_rec->put_own_size];
+    log_row = ((char *)log_rec) + sizeof(*log_rec);
 
     /*
     ** Redo recovery must follow row locking protocols if phys locking
@@ -622,8 +629,8 @@ DMP_PINFO	    *pinfo)
 	    uleFormat(NULL, E_DM966E_DMVE_ROW_OVERLAP, (CL_ERR_DESC *)NULL, ULE_LOG,
 		NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 5, 
 		sizeof(DB_DB_NAME), tabio->tbio_dbname->db_db_name,
-		log_rec->put_tab_size, &log_rec->put_vbuf[0],
-		log_rec->put_own_size, &log_rec->put_vbuf[log_rec->put_tab_size],
+		sizeof(DB_TAB_NAME), tabio->tbio_relid->db_tab_name,
+		sizeof(DB_OWN_NAME), tabio->tbio_relowner->db_own_name,
 		0, log_rec->put_tid.tid_tid.tid_page,
 		0, log_rec->put_tid.tid_tid.tid_line);
 	    dmd_log(1, (PTR) log_rec, 4096);
@@ -657,8 +664,8 @@ DMP_PINFO	    *pinfo)
 	    uleFormat(NULL, E_DM9674_DMVE_PAGE_NOROOM, (CL_ERR_DESC *)NULL, ULE_LOG,
 		NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 6, 
 		sizeof(DB_DB_NAME), tabio->tbio_dbname->db_db_name,
-		log_rec->put_tab_size, &log_rec->put_vbuf[0],
-		log_rec->put_own_size, &log_rec->put_vbuf[log_rec->put_tab_size],
+		sizeof(DB_TAB_NAME), tabio->tbio_relid->db_tab_name,
+		sizeof(DB_OWN_NAME), tabio->tbio_relowner->db_own_name,
 		0, log_rec->put_tid.tid_tid.tid_page,
 		0, log_rec->put_tid.tid_tid.tid_line, 
 		0, log_rec->put_rec_size);
@@ -677,9 +684,9 @@ DMP_PINFO	    *pinfo)
         (log_rec->put_header.flags & DM0L_TEMP_IIRELATION) &&
         /* TEMPORARY FIX for bogus DM0L_TEMP_IIRELATION due to the
         ** fix for Bug 107828.
-        */
-        (log_rec->put_tab_size == 7) &&
-        (STbcompare( log_rec->put_vbuf, 7, "iirtemp", 7, TRUE) == 0))
+	*/
+	(MEcmp(tabio->tbio_relid->db_tab_name, "iirtemp", 7) == 0 ||
+	MEcmp(tabio->tbio_relid->db_tab_name, "IIRTEMP", 7) == 0))
     {
 	/* The row is a temporary iirelation entry which represents a
 	** non-journaled table. For consistency purposes we must mask
@@ -690,6 +697,10 @@ DMP_PINFO	    *pinfo)
 	DMP_RELATION   cur_rel;
 	DB_STATUS      rel_status;
         DB_TAB_ID      rel_id;
+	DMP_TCB        *t;
+
+	/* This might be partial tcb, but it will always have basic info */
+	t = (DMP_TCB *)((char *)tabio - CL_OFFSETOF(DMP_TCB, tcb_table_io));
 
 	MEcopy((PTR) &log_rel->reltid, sizeof(DB_TAB_ID), (PTR)&rel_id);
 
@@ -702,9 +713,30 @@ DMP_PINFO	    *pinfo)
 	    SETDBERR(&dmve->dmve_error, 0, E_DM963B_REDO_PUT);
 	    return(E_DB_ERROR);
 	}
+
 	if(rel_status == E_DB_OK)
 	{
-	    MEcopy((PTR) &cur_rel, sizeof(DMP_RELATION), (PTR)log_rel);
+	    DMP_TCB *iirel_tcb = dcb->dcb_rel_tcb_ptr;
+
+	    /*
+	    ** This is iirtemp
+	    ** Use the dcb_rel_tcb_ptr which should always be init 
+	    ** and have the same rac
+	    */
+	    status = (*iirel_tcb->tcb_data_rac.dmpp_compress)
+		(&iirel_tcb->tcb_data_rac, 
+		(char *)&cur_rel, sizeof(DMP_RELATION), creltup, &csize);
+
+	    if (csize == log_rec->put_rec_size)
+		MEcopy((PTR)creltup, csize, (PTR)log_rel);
+	    else
+	    {
+		/* should not happen */
+		TRdisplay("DM0LPUT fix iirtemp for %~t rec_size %d csize %d\n",
+		    cur_rel.relid.db_tab_name, log_rec->put_rec_size, csize);
+		SETDBERR(&dmve->dmve_error, 0, E_DM963B_REDO_PUT);
+		return(E_DB_ERROR);
+	    }
 	}
     }
 
@@ -836,7 +868,7 @@ DMP_PINFO	    *pinfo)
     else
 	reclaim_space = TRUE;
 
-    log_row = &log_rec->put_vbuf[log_rec->put_tab_size + log_rec->put_own_size];
+    log_row = ((char *)log_rec) + sizeof(*log_rec);
 
 
     /*
@@ -852,8 +884,8 @@ DMP_PINFO	    *pinfo)
 	uleFormat(NULL, E_DM966D_DMVE_ROW_MISSING, (CL_ERR_DESC *)NULL, ULE_LOG,
 	    NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 6, 
 	    sizeof(DB_DB_NAME), tabio->tbio_dbname->db_db_name,
-	    log_rec->put_tab_size, &log_rec->put_vbuf[0],
-	    log_rec->put_own_size, &log_rec->put_vbuf[log_rec->put_tab_size],
+	    sizeof(DB_TAB_NAME), tabio->tbio_relid->db_tab_name,
+	    sizeof(DB_OWN_NAME), tabio->tbio_relowner->db_own_name,
 	    0, log_rec->put_tid.tid_tid.tid_page,
 	    0, log_rec->put_tid.tid_tid.tid_line,
 	    0, status);
@@ -914,8 +946,8 @@ DMP_PINFO	    *pinfo)
 	    uleFormat(NULL, E_DM966C_DMVE_TUPLE_MISMATCH, (CL_ERR_DESC *)NULL, ULE_LOG,
 		NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 8, 
 		sizeof(DB_DB_NAME), tabio->tbio_dbname->db_db_name,
-		log_rec->put_tab_size, &log_rec->put_vbuf[0],
-		log_rec->put_own_size, &log_rec->put_vbuf[log_rec->put_tab_size],
+		sizeof(DB_TAB_NAME), tabio->tbio_relid->db_tab_name,
+		sizeof(DB_OWN_NAME), tabio->tbio_relowner->db_own_name,
 		0, log_rec->put_tid.tid_tid.tid_page,
 		0, log_rec->put_tid.tid_tid.tid_line,
 		0, record_size, 0, log_rec->put_rec_size,
@@ -963,8 +995,8 @@ DMP_PINFO	    *pinfo)
 	    ** The CLR for a PUT need not contain the entire row, just the tid.
 	    */
 	    status = dm0l_put(dmve->dmve_log_id, flags, &log_rec->put_tbl_id, 
-		(DB_TAB_NAME*)&log_rec->put_vbuf[0], log_rec->put_tab_size, 
-		(DB_OWN_NAME*)&log_rec->put_vbuf[log_rec->put_tab_size], log_rec->put_own_size, 
+		tabio->tbio_relid, 0,
+		tabio->tbio_relowner, 0,
 		&log_rec->put_tid, 
 		log_rec->put_pg_type, log_rec->put_page_size,
 		log_rec->put_comptype,

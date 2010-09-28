@@ -150,7 +150,7 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-**	6-Jun-2010 (kschendel)
+**	6-Jun-2010 (kschendel) b123923
 **	    Allow alter table alter column with lob only if type doesn't change.
 */
 
@@ -353,6 +353,11 @@ psl_alter_table(
 **	    specific extension, which is a hinderance to app portability.
 **	    If psl_rngent returns E_DB_INFO it found a session temporary
 **	    table, which is invalid in this context, so return an error.
+**	11-Jun-2010 (kiria01) b123908
+**	    Initialise pointers after psf_mopen would have invalidated any
+**	    prior content.
+**	19-Jun-2010 (kiria01) b123951
+**	    Add extra parameter to psl_rngent for WITH support.
 */
 DB_STATUS
 psl_alt_tbl(
@@ -399,7 +404,7 @@ psl_alt_tbl(
 	status = psl_rngent(&sess_cb->pss_auxrng, sess_cb->pss_qualdepth, 
 			           tbl_spec->pss_orig_obj_name,
 			    &tbl_spec->pss_obj_name, sess_cb, FALSE, rngvarp,
-			    psq_cb->psq_mode, err_blk, &rngvar_info);
+			    psq_cb->psq_mode, err_blk, &rngvar_info, NULL);
 	if (status == E_DB_INFO)	/* oops, we found a session.table */
 	{
 	    (VOID) psf_error(E_PS0BD2_NOT_SUPP_ON_TEMP, 0L, PSF_USERERR,
@@ -482,11 +487,14 @@ psl_alt_tbl(
 
     if (psq_cb->psq_mode == PSQ_ALTERTABLE)
     {
-       status = psf_mopen(sess_cb, QSO_QTREE_OBJ, 
+	status = psf_mopen(sess_cb, QSO_QTREE_OBJ, 
 		          &sess_cb->pss_ostream, err_blk);
 		       
-       if (DB_FAILURE_MACRO(status))
-	   return (status);
+	if (DB_FAILURE_MACRO(status))
+	    return (status);
+	sess_cb->pss_stk_freelist = NULL;
+	sess_cb->pss_object = (PTR) 0;
+	sess_cb->pss_save_qeucb = (PTR) 0;
     }
 
     sess_cb->pss_resrng = rngvar;
@@ -1504,7 +1512,7 @@ psl_atbl_partcheck(
 **	Returns E_DB_OK or error status.
 **
 ** History:
-**	6-Jun-2010 (kschendel)
+**	6-Jun-2010 (kschendel) b123923
 **	    Prevent alter table alter column with lobs, except for degenerate
 **	    and SRID cases.
 */
@@ -1531,7 +1539,9 @@ psl_atbl_alter_lob(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
     ** combination rejects the alter.
     */
     if (old_bits & AD_PERIPHERAL && new_bits & AD_PERIPHERAL
-      && dmt_att->att_type == dmu_att->attr_type)
+      && (dmt_att->att_type == dmu_att->attr_type
+      || abs(dmt_att->att_type) == DB_GEOM_TYPE
+      || abs(dmu_att->attr_type) == DB_GEOM_TYPE))
 	return (E_DB_OK);
 
     (void) psf_error(3859, 0, PSF_USERERR, &err_code, &psq_cb->psq_error, 0);

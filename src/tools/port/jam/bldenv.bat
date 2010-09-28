@@ -86,8 +86,10 @@ REM	    - Use windows NUL: rather than MK C:/nul.
 REM	    - Only set II_JDK_HOME stuff in include/lib paths if it's set
 REM	    (by the outside, it's not normally set).
 REM	    - .NET stuff is now in dotnet2_win, fix here.
-REM 22-Mar-2010 (troal01)
-REM      Add GEOSROOT to point to where the GEOS binaries and headers are
+REM	22-Mar-2010 (troal01)
+REM	     Add GEOSROOT to point to where the GEOS binaries and headers are
+REM	22-Mar-2010 (troal01)
+REM	     Add PROJROOT to point to where the Proj.4 binaries and headers are
 REM	07-Apr-2010 (drivi01)
 REM	     Add routines for setting up environment on x64.
 REM	     Use cygwin shell for the build instead of MKS shell.  MKS shell
@@ -99,6 +101,26 @@ REM          fail with an unrecognised flag. Store the flag in %FLEX_FLAG%
 REM          which is then appended to FLEX by Jamdefs.
 REM          If FLEX_FLAG is already set then use that value, otherwise set
 REM          it based on the detected version of flex.
+REM	09-Aug-2010 (drivi01)
+REM	     Fix CPU variable setting and move it closer to the top.
+REM	     Replace all references to PROCESSOR_ARCHITECTURE with CPU 
+REM	     references.
+REM	10-Aug-2010 (drivi01)
+REM	     In cygwin 1.7 diff.exe version 2.9 returns every line as 
+REM	     the diff.  To avoid this, set DIFF environment variable
+REM	     for piccolo to "diff --strip-trailing-cr" to avoid
+REM	     the whole file being returned as diff.
+REM	12-Aug-2010 (drivi01)
+REM	     Set CYGWIN to nodosfilewarning to prevent cygwin 1.7 
+REM	     from throwing errors about DOS paths instead of POSIX.
+REM	     Fix compiler setup on x86 by fixing %CPU% variable.
+REM	     Fix the logic around Unix tools setup.
+REM	     Verify that PATH is setup correctly for cygwin and
+REM	     MKS, so that link.exe, rebase.exe and find.exe are
+REM	     picked up from correct places, this is done by
+REM	     putting compiler at the head of the PATH, then
+REM	     unix tools and then C:\windows\system32.
+REM	     Move DIFF_SET after AWK_SET to ensure AWK_CMD is set.
 REM
 
 :TRUNK_LOOP
@@ -118,23 +140,31 @@ SET ING_BUILD=%II_SYSTEM%\ingres
 :DEBUG_SET
 if "%DEBUG%"=="" SET /P DEBUG=DEBUG build status (ON or OFF, default OFF):
 if "%DEBUG%"=="" SET DEBUG=OFF
-if "%DEBUG%"=="OFF" SET DEBUG=& goto MSVC_LOOP
-if "%DEBUG%"=="ON" goto MSVC_LOOP
+if "%DEBUG%"=="OFF" SET DEBUG=& goto CPU_SET
+if "%DEBUG%"=="ON" goto CPU_SET
 echo Invalid setting for DEBUG.
 goto DEBUG_SET
+
+:CPU_SET
+if NOT "%PROCESSOR_ARCHITEW6432%"=="" SET CPU=%PROCESSOR_ARCHITEW6432% && goto CPU_SET2
+SET CPU=%PROCESSOR_ARCHITECTURE%
+:CPU_SET2
+if "%CPU%"=="x86" SET CPU=i386
+if "%CPU%"=="i386" SET config_string=int_w32
+if "%CPU%"=="IA64" SET config_string=i64_win
+if "%CPU%"=="AMD64" SET config_string=a64_win
 
 :MSVC_LOOP
 if "%MSVCDir%"=="" SET INCLUDE=
 if "%MSVCDir%"=="" SET LIB=
 if "%MSVCDir%"=="" SET /P MSVCLoc=Root location of the Microsoft Visual Studio 2008 compiler (default is C:\Program Files\Microsoft Visual Studio 9.0): 
 if "%MSVCLoc%"=="" SET MSVCLoc=C:\Program Files\Microsoft Visual Studio 9.0
-if "%PROCESSOR_ARCHITECTURE%"=="AMD64" if not exist "%MSVCLoc%\VC\vcvarsall.bat" echo Invalid compiler path specified. & goto MSVC_LOOP
-if "%PROCESSOR_ARCHITECTURE%"=="AMD64" if "%MSVCDir%"=="" call "%MSVCLoc%\VC\vcvarsall.bat" amd64 & set MSVCLoc=
-if "%PROCESSOR_ARCHITECTURE%"=="x86" if not exist "%MSVCLoc%\Common7\Tools\vsvars32.bat" echo Invalid compiler path specified. & goto MSVC_LOOP
-if "%PROCESSOR_ARCHITECTURE%"=="x86" if "%MSVCDir%"=="" call "%MSVCLoc%\Common7\Tools\vsvars32.bat"& set MSVCLoc=
-@echo on
+if "%CPU%"=="AMD64" if not exist "%MSVCLoc%\VC\vcvarsall.bat" echo Invalid compiler path specified. & goto MSVC_LOOP
+if "%CPU%"=="AMD64" if "%MSVCDir%"=="" call "%MSVCLoc%\VC\vcvarsall.bat" amd64 & set MSVCLoc=
+if "%CPU%"=="x86" if not exist "%MSVCLoc%\Common7\Tools\vsvars32.bat" echo Invalid compiler path specified. & goto MSVC_LOOP
+if "%CPU%"=="x86" if "%MSVCDir%"=="" call "%MSVCLoc%\Common7\Tools\vsvars32.bat"& set MSVCLoc=
+if "%CPU%"=="i386" if "%MSVCDir%"=="" call "%MSVCLoc%\Common7\Tools\vsvars32.bat"& set MSVCLoc=
 if NOT "%WindowsSdkDir%"=="" if x%MT%==x SET MT="%WindowsSdkDir%\bin\mt.exe" & set PATH=%WindowsSdkDir%\bin;%PATH%
-@echo off
 goto OTHERS
 
 :OTHERS
@@ -156,7 +186,6 @@ if exist "%XERCESCROOT%\bin\xerces-c_2_8.dll" set XERCVERS=2_8
 if exist "%XERCESCROOT%\bin\xerces-c_3_0.dll" set XERCVERS=3_0
 if "%XERCVERS"=="" echo XERCVERS could not be determined
 echo XERCVERS=  %XERCVERS%
-
 :GEOS_LOOP
 if "%GEOSROOT%"=="" SET /P GEOSROOT=Root location of GEOS source and lib (default is %ING_ROOT%\geos):
 if "%GEOSROOT%"=="" SET GEOSROOT=%ING_ROOT%\geos
@@ -165,23 +194,31 @@ SET GEOS_LOC=%GEOSROOT%\lib
 SET GEOS_INC=%GEOSROOT%\inc
 SET PATH=%GEOS_LOC%;%PATH%
 
+:PROJ_LOOP
+if "%PROJROOT%"=="" SET /P PROJROOT=Root location of PROJ source and lib (default is %ING_ROOT%\proj):
+if "%PROJROOT%"=="" SET PROJROOT=%ING_ROOT%\proj
+if not exist "%PROJROOT%" echo %PROJROOT% does not exist& SET PROJROOT=& goto PROJ_LOOP
+SET PROJ_LOC=%PROJROOT%\lib
+SET PROJ_INC=%PROJROOT%\include
+SET PATH=%PROJ_LOC%;%PATH%
+
 :KERBEROS_LOOP
 if "%KRB5HDR%"=="" SET /P KRB5HDR=Location of Kerberos header files (default is %ING_ROOT%\Kerberos5):
 if "%KRB5HDR%"=="" SET KRB5HDR=%ING_ROOT%\Kerberos5
 if not exist "%KRB5HDR%" echo %KRB5HDR% does not exist& SET KRB5HDR=& goto KERBEROS_LOOP
-goto CAZIPXP
-
-:CAZIPXP
-if "%CAZIPXP%"=="" SET /P CAZIPXP=Location of cazipxp (default is %ING_ROOT%\cazipxp):
-if "%CAZIPXP%"=="" SET CAZIPXP=%ING_ROOT%\cazipxp
-if not exist "%CAZIPXP%" echo %CAZIPXP% does not exist& SET CAZIPXP=& goto CAZIPXP
 
 REM Check if Cygwin is installed
-if "%USE_CYGWIN%"=="TRUE" goto FLEX_SET
-SET USE_CYGWIN=
+:CYGWIN_CHK
+if "%USE_CYGWIN%"=="TRUE" goto CHK_UNXLOC
+if "%USE_CGYWIN%"=="" (
 which cygpath.exe > nul: 2>&1
 if errorlevel 1 goto CHK_UNXLOC
 SET USE_CYGWIN=TRUE
+if "%CYGWIN%"=="" SET CYGWIN=nodosfilewarning 
+goto FLEX_SET 
+) else (
+goto GET_UNXLOC
+)
 
 :CHK_UNXLOC
 which ls.exe > nul: 2>&1
@@ -196,11 +233,11 @@ rm settmp.bat
 goto FLEX_SET
 
 :GET_UNXLOC
-SET /P MKSLOC=Root location of the UNIX tools: 
+SET /P MKSLOC=Bin location of the UNIX tools: 
 if not exist "%MKSLOC%\ls.exe" echo This location does not contain the appropriate set of UNIX tools.& goto GET_UNXLOC
-SET PATH=%WindowsSdkDir%\bin;%MKSLOC%;%PATH%
-
+SET PATH=%WindowsSdkDir%\bin;%MKSLOC%;%PATH% & goto CYGWIN_CHK
 :FLEX_SET
+if "%USE_CYGWIN%"=="" goto SHELL_SET
 REM if FLEX_FLAG is not set then set according to version of flex 
 if NOT "%FLEX_FLAG%"=="" goto SHELL_SET
 SET FLEX_FLAG=--nounistd
@@ -214,18 +251,31 @@ if %FLEXVER% LSS 31 SET FLEX_FLAG=
 SET FLEXVER=
 
 :SHELL_SET
-@echo on
-if "%PROCESSOR_ARCHITECTURE%"=="AMD64" if "%USE_CYGWIN%"=="" SET /P SHELL=Full path to the cygwin shell (default C:\cygwin\bin\sh.exe):
-if "%PROCESSOR_ARCHITECTURE%"=="AMD64" if "%USE_CYGWIN%"=="" if "%SHELL%"=="" set SHELL=c:\cygwin\bin\sh.exe & goto AWK_SET
-if "%PROCESSOR_ARCHITECTURE%"=="AMD64" if "%USE_CYGWIN%"=="" if NOT "%SHELL%"=="" goto AWK_SET
-if exist "%MKSLOC%\sh.exe" SET SHELL=%MKSLOC%\sh.exe& goto AWK_SET
-if exist "%MKSLOC%\zsh.exe" SET SHELL=%MKSLOC%\zsh.exe
+if "%CPU%"=="AMD64" if NOT "%USE_CYGWIN%"=="" SET /P SHELL=Full path to the cygwin shell (default C:\cygwin\bin\sh.exe):
+if "%CPU%"=="AMD64" if NOT "%USE_CYGWIN%"=="" if "%SHELL%"=="" set SHELL=c:\cygwin\bin\sh.exe & goto AWK_SET
+if "%CPU%"=="AMD64" if NOT "%USE_CYGWIN%"=="" if NOT "%SHELL%"=="" goto AWK_SET
+if not "%MKSLOC%"=="" if exist "%MKSLOC%\sh.exe" SET SHELL=%MKSLOC%\sh.exe& goto AWK_SET
+if not "%MKSLOC%"=="" if exist "%MKSLOC%\zsh.exe" SET SHELL=%MKSLOC%\zsh.exe& goto AWK_SET
+if "%MKSLOC%"=="" if not "%USE_CYGWIN%"=="" set SHELL=zsh& goto AWK_SET
+set SHELL=sh 
+
 
 :AWK_SET
-@echo off
 REM prefer gawk, as awk.exe on Cygwin is a symlink and cmd doesn't like it.
-if exist "%MKSLOC%\gawk.exe" SET AWK_CMD=gawk& goto MISC
-if exist "%MKSLOC%\awk.exe" SET AWK_CMD=awk
+if not "%MKSLOC%"=="" if exist "%MKSLOC%\gawk.exe" SET AWK_CMD=gawk& goto DIFF_SET
+if not "%MKSLOC%"=="" if exist "%MKSLOC%\awk.exe" SET AWK_CMD=awk& goto DIFF_SET
+if "%MKSLOC%"=="" if not "%USE_CYGWIN%"=="" set AWK_CMD=gawk&goto DIFF_SET
+set AWK_CMD=awk
+
+:DIFF_SET
+if "%USE_CYGWIN%"=="" goto MISC
+REM if this is cygwin and diff version is 2.9, then we need to strip the trailing CR
+REM to avoid diffs in the whole file.
+printf "SET DIFFVER=" > settmp.bat
+diff --version |%AWK_CMD% 'NR==1 {print $4$5$6$7}'|cut -d. -f1,2,3 --output-delimiter=|cut -b1,3,5 >> settmp.bat
+call settmp.bat
+rm settmp.bat
+if %DIFFVER% GEQ 29 SET DIFF="diff --strip-trailing-cr" & goto MISC
 
 :MISC
 SET DD_RSERVERS=%II_SYSTEM%\ingres\rep
@@ -245,12 +295,6 @@ if not exist "%II_CDIMAGE_DIR%" mkdir %II_CDIMAGE_DIR%
 if not exist "%II_MM_DIR%" mkdir %II_MM_DIR%
 
 :MISC2
-SET CPU=%PROCESSOR_ARCHITECTURE%
-if "%CPU%"=="x86" SET CPU=i386
-if "%CPU%"=="i386" SET config_string=int_w32
-if "%CPU%"=="IA64" SET config_string=i64_win
-if "%CPU%"=="AMD64" SET config_string=a64_win
-
 if exist "%ING_SRC%\tools\port\conf\VERS" goto VERS_EXIST
 cp %ING_SRC%\tools\port\conf\VERS.%config_string% %ING_SRC%\tools\port\conf\VERS
 

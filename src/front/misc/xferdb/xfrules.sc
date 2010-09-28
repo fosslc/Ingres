@@ -63,6 +63,14 @@ EXEC SQL INCLUDE <xf.sh>;
 **	    Add support for sequences.
 **      28-jan-2009 (stial01)
 **          Use DB_MAXNAME for database objects.
+**      26-Aug-2010 (horda03) b124304
+**          Need to consider the version of Ingres connected to. Ingres prior
+**          to Release 9.3 did not have an "unordered_flag" nor "ident_flag"
+**          in the iisequences_view.
+**      31-Aug-2010 (horda03) b124304
+**          When I converted the EXEC SQL used to insert rows in the temp. table for
+**          sequences, I failed to change a '%' to '%%' because in a STprintf the
+**          '%' denotes a format specifier - need '%%' to get a '%' in the query.
 **/
 
 /* # define's */
@@ -410,6 +418,11 @@ write_dbevent(
 **	14-nov-2008 (dougi)
 **	    Don't copy sequences defined with identity columns and drop all
 **	    options for unordered sequences.
+**      26-Aug-2010 (horda03) b124304
+**          If connected to an Ingres version prior to 9.3, then "Unordered_flag"
+**          will not exist.
+**      31-Aug-2010 (horda03) b124304
+**          Correct use of '%' in the INSERT query, now that STprintf is being used.
 */
 
 void
@@ -425,6 +438,7 @@ EXEC SQL BEGIN DECLARE SECTION;
     char	seqrestartf[2], seqcachef[2], seqcyclef[2], seqorderf[2];
     char	sequnord[2];
     char        *obj_name;
+    char        tmp_tbl_cmd [1024];
 EXEC SQL END DECLARE SECTION;
 
     char	buf[256];
@@ -438,17 +452,21 @@ EXEC SQL END DECLARE SECTION;
 
     if (With_sequences && With_20_catalogs)
     {
-        EXEC SQL DECLARE GLOBAL TEMPORARY TABLE
-            session.seq_list AS SELECT seq_name, seq_owner, data_type,
-                seq_length, seq_precision, trim(char(next_value)) as next_value,
-                trim(char(increment_value)) as increment_value, 
-                trim(char(min_value)) as min_value,
-                trim(char(max_value)) as max_value, cache_size, start_flag,
-                incr_flag, min_flag, max_flag, restart_flag,
-                cache_flag, cycle_flag, order_flag, unordered_flag
-            FROM iisequences
-            WHERE (1 = 0)
-            ON COMMIT PRESERVE ROWS WITH NORECOVERY;
+        STprintf(tmp_tbl_cmd, 
+            "DECLARE GLOBAL TEMPORARY TABLE "
+            "session.seq_list AS SELECT seq_name, seq_owner, data_type, "
+                "seq_length, seq_precision, trim(char(next_value)) as next_value, "
+                "trim(char(increment_value)) as increment_value,  "
+                "trim(char(min_value)) as min_value, "
+                "trim(char(max_value)) as max_value, cache_size, start_flag, "
+                "incr_flag, min_flag, max_flag, restart_flag, "
+                "cache_flag, cycle_flag, order_flag, %s "
+            "FROM iisequences "
+            "WHERE (1 = 0) "
+            "ON COMMIT PRESERVE ROWS WITH NORECOVERY",
+            With_r930_catalogs ? "unordered_flag" : "'N' as unordered_flag");
+
+        EXEC SQL EXECUTE IMMEDIATE :tmp_tbl_cmd;
 
         if (Objcount && Obj_list)
         {
@@ -456,35 +474,45 @@ EXEC SQL END DECLARE SECTION;
 
             while(status)
             {
-                EXEC SQL INSERT into session.seq_list SELECT seq_name, 
-                    seq_owner, data_type, seq_length, seq_precision,
-                    trim(char(next_value)), trim(char(increment_value)),
-                    trim(char(min_value)), trim(char(max_value)), cache_size,
-                    start_flag, incr_flag, min_flag, max_flag, restart_flag,
-                    cache_flag, cycle_flag, order_flag, unordered_flag
-                FROM iisequences, iicolumns
-                WHERE ( (seq_owner = :Owner OR '' = :Owner) AND
-                        (table_name = :obj_name) AND
-                        (column_default_val like 'next value for%') AND
-                        (seq_name = substring (column_default_val from
-                                    ( locate(column_default_val, '.') + 2 )
-                                    for ( length(column_default_val) -
-                                    locate(column_default_val, '.') - 2 ) ) ) );
+                STprintf(tmp_tbl_cmd, 
+                    "INSERT into session.seq_list SELECT seq_name, "
+                        "seq_owner, data_type, seq_length, seq_precision, "
+                        "trim(char(next_value)), trim(char(increment_value)), "
+                        "trim(char(min_value)), trim(char(max_value)), cache_size, "
+                        "start_flag, incr_flag, min_flag, max_flag, restart_flag, "
+                        "cache_flag, cycle_flag, order_flag, %s "
+                    "FROM iisequences, iicolumns "
+                    "WHERE ( (seq_owner = '%s' OR '' = '%s') AND "
+                            "(table_name = '%s') AND "
+                            "(column_default_val like 'next value for%%') AND "
+                            "(seq_name = substring (column_default_val from "
+                                        "( locate(column_default_val, '.') + 2 ) "
+                                        "for ( length(column_default_val) - "
+                                        "locate(column_default_val, '.') - 2 ) ) ) )",
+                    With_r930_catalogs ? "unordered_flag" : "'N'",
+                    Owner, Owner, obj_name);
+
+                EXEC SQL EXECUTE IMMEDIATE :tmp_tbl_cmd;
 
                 status = IIUGhsHtabScan(Obj_list, TRUE, &entry_key, &obj_name);
             }
         }
         else
         {
-            EXEC SQL INSERT into session.seq_list SELECT seq_name, seq_owner, 
-                    data_type, seq_length, seq_precision, 
-                    trim(char(next_value)), trim(char(increment_value)), 
-                    trim(char(min_value)), trim(char(max_value)), cache_size, 
-                    start_flag, incr_flag, min_flag, max_flag, restart_flag,
-                    cache_flag, cycle_flag, order_flag, unordered_flag
-                FROM iisequences
-                WHERE (seq_owner = :Owner OR '' = :Owner) AND
-		    (IDENT_FLAG <> 'Y');
+            STprintf(tmp_tbl_cmd, 
+                "INSERT into session.seq_list SELECT seq_name, seq_owner,  "
+                        "data_type, seq_length, seq_precision,  "
+                        "trim(char(next_value)), trim(char(increment_value)),  "
+                        "trim(char(min_value)), trim(char(max_value)), cache_size,  "
+                        "start_flag, incr_flag, min_flag, max_flag, restart_flag, "
+                        "cache_flag, cycle_flag, order_flag, %s "
+                    "FROM iisequences "
+                    "WHERE (seq_owner = '%s' OR '' = '%s') %s",
+                 With_r930_catalogs ? "unordered_flag" : "'N'",
+                 Owner, Owner,
+                 With_r930_catalogs ? "AND (ident_flag <> 'Y')" : "");
+
+            EXEC SQL EXECUTE IMMEDIATE :tmp_tbl_cmd;
         }
 
         /* SELECT DISTINCT as Objlist may have generated duplicates */
@@ -636,8 +664,13 @@ xfidcolumns(XF_TABINFO *tlistp)
     xfwrite(Xf_out, "		ELSE ' ' END) ||\n");
     xfwrite(Xf_out, "        TRIM(TRAILING FROM case WHEN seql_flag = 'Y' THEN ' sequential '\n");
     xfwrite(Xf_out, "		ELSE ' ' END) ||\n");
+
+    /* Note: Identity columns added in Ingres 9.3, so OK to use unordered_flag here. This function will
+    **       not be called is COPYDB/UNLOADDB an earlier Ingres release.
+    */
     xfwrite(Xf_out, "        TRIM(TRAILING FROM case WHEN unordered_flag = 'Y' THEN ' unordered '\n");
     xfwrite(Xf_out, "		ELSE ' ' END) || ';\\p\\g'\n");
+       
     xfwrite(Xf_out, "    FROM iisequences \n");
 
     /* Loop over tables looking for identity sequences. For each, paste

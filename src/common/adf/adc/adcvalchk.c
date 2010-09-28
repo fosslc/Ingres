@@ -399,6 +399,7 @@ DB_DATA_VALUE	    *adc_dv)
       case DB_MLINE_TYPE:
       case DB_POLY_TYPE:
       case DB_MPOLY_TYPE:
+      case DB_GEOMC_TYPE:
       case DB_NCHR_TYPE:
       case DB_LNVCHR_TYPE:
       case DB_LBLOC_TYPE:

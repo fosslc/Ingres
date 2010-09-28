@@ -561,12 +561,19 @@
 **	    Add decryption call.
 **      29-Apr-2010 (stial01)
 **          dm1r_lock_value() set dberr if LOCK_QUOTA_EXCEEDED
+**	09-Jun-2010 (stial01)
+**          TRdisplay table id when there is an error
+**          dm1r_unlock_value, init relid for error messages, not just trace
+**      12-Jul-2010 (stial01) (SIR 121619 MVCC, B124076, B124077)
+**          Created is_row_consistent() from code in dm1r_crow_lock()
+**          Changed params to dmpp_clean accessor (pass the rcb)
+**          dm1r_get() DM1C_BYTID LockBufForUpd so dmpp_isnew (rootpage)
+**          can detect ambiguous updates. 
 */
 
 /*
 **  function prototypes
 */
-
 static DB_STATUS
 dm1r_rowlk_access(
 	DMP_RCB        *rcb,
@@ -986,11 +993,13 @@ delete(
 		TMget_stamp(&tim);
 		TMstamp_str(&tim, err_buffer);
 		STprintf(err_buffer + STlength(err_buffer),
-		    " delete %d: status %d tid [%d,%d] record %p row_tran_id %x row_lg_id %d\n"
+		    " delete %d: status %d tbl(%d,%d) tid [%d,%d] record %p\n"
+		    " row_tran_id %x row_lg_id %d\n"
 		    " crib xid %x rcb tranid %x crib_bos_tranid %x\n"
 		    " log_id %d low_lsn %x commit %x bos %x\n",
-			__LINE__,
-			status,
+			__LINE__, status,
+			t->tcb_rel.reltid.db_tab_base,
+			t->tcb_rel.reltid.db_tab_index,
 			tid->tid_tid.tid_page, tid->tid_tid.tid_line,
 			record,
 			row_tran_id, row_lg_id,
@@ -1550,6 +1559,11 @@ delete(
 **	    Change qual-function call to speed up the normal CX case.
 **	14-Apr-2010 (kschendel) SIR 123485
 **	    Updated pget call.
+**	23-Aug-2010 (miket) SIR 122403 SD 145904
+**	    For SIs on encrypted tables preserve the SI tid just beyond the
+**	    encrypted index data value in the buffer, where some lookup code
+**	    expects to find it. Also, avoid unnecessary decryption calls for
+**	    non-encrypted indexes on encrypted tables.
 */
 
 DB_STATUS
@@ -1591,6 +1605,7 @@ dm1r_get(
 	bool		skip_reading_page = FALSE;
 	DB_ERROR	local_dberr;
 	i4	        *err_code = &dberr->err_code;
+	bool		cr_page;
 
     CLRDBERR(dberr);
 
@@ -1946,14 +1961,26 @@ dm1r_get(
 	    }
 
 	    /* If there are encrypted table or si columns, decrypt. */
-	    if ( t->tcb_rel.relencflags & TCB_ENCRYPTED ||
-		(t->tcb_parent_tcb_ptr && 
-		 t->tcb_parent_tcb_ptr->tcb_rel.relencflags & TCB_ENCRYPTED) )
+	    if ( (t->tcb_rel.relencflags & TCB_ENCRYPTED ||
+		 (t->tcb_parent_tcb_ptr && 
+		  t->tcb_parent_tcb_ptr->tcb_rel.relencflags & TCB_ENCRYPTED)) &&
+		 (t->tcb_data_rac.encrypted_attrs) )
 	    {
 		s = dm1e_aes_decrypt(r, &t->tcb_data_rac, rec_ptr, record,
 			r->rcb_erecord_ptr, dberr);
 		if (s != E_DB_OK)
 		    return(s);
+		/*
+		** Code below for SI update will expect the index tid
+		** to be right after the ENCRYPTED index column in the
+		** buffer, while code displaying the index will expect
+		** the tid to be right after the DECRYPTED value in the
+		** buffer; replicate it to keep everyone happy.
+		*/
+		if ( opflag & DM1C_GET_SI_UPD )
+		    MEcopy((char*)(rec_ptr + record_size - sizeof(DM_TID)),
+			sizeof(DM_TID),
+			(char*)(record + record_size - sizeof(DM_TID)));
 		rec_ptr = record;
 	    }
 
@@ -2337,8 +2364,31 @@ dm1r_get(
 	    if (rec_ptr != record)
 		MEcopy(rec_ptr, record_size, record);
 
+	    /* is row from CR page */
+	    if (r->rcb_data.page && 
+		DMPP_VPT_IS_CR_PAGE(t->tcb_rel.relpgtype, r->rcb_data.page) )
+		cr_page = TRUE;
+	    else
+		cr_page = FALSE;
+
 	    /* Unlock buffer */
 	    dm0pUnlockBuf(r, &r->rcb_data);
+
+	    if  (r->rcb_update_mode == RCB_U_DEFERRED && (opflag & DM1C_BYTID) 
+		    && cr_page)
+	    {
+		/* Returning CR row, check for ambiguous update on ROOT */
+		dm0pLockBufForUpd(r, &r->rcb_data);
+		if ((*t->tcb_acc_plv->dmpp_isnew)(r, r->rcb_data.page,
+			    (i4)localtid.tid_tid.tid_line))
+		{
+		    SETDBERR(dberr, 0, E_DM0047_CHANGED_TUPLE);
+		    /* Unlock buffer */
+		    dm0pUnlockBuf(r, &r->rcb_data);
+		    return (E_DB_ERROR);
+		}
+		dm0pUnlockBuf(r, &r->rcb_data);
+	    }
 
 	    if (row_locking(r)
 		&& (r->rcb_iso_level == RCB_CURSOR_STABILITY)
@@ -3838,13 +3888,13 @@ dm1r_rcb_update(
 ** Inputs:
 **	rcb		    - The RCB control block
 **	tid		    - the row we're locking.
-**	flags		    - LK_NOWAIT, LK_PHYSICAL or zero.
-**			      LK_NOWAIT is used whenever the buffer
+**	flags		    - DM1R_LK_NOWAIT, DM1R_LK_PHYSICAL or zero.
+**			      DM1R_LK_NOWAIT is used whenever the buffer
 **			      is locked, to avoid deadlock.
-**			      LK_PHYSICAL is used when duplicate
+**			      DM1R_LK_PHYSICAL is used when duplicate
 **			      checking.
 **	page		    - pointer to pointer to page where TID lives,
-**			      NULL when LK_PHYSICAL duplicate checking.
+**			      NULL when DM1R_LK_PHYSICAL duplicate checking.
 **
 ** Outputs:
 **	dberr		    - reason for error return
@@ -3871,6 +3921,9 @@ dm1r_rcb_update(
 **	    SIR 121619 MVCC: Blob support: simply return if tcb_extended;
 **	    the row containing the blob column has already been locked
 **	    and checked for update conflicts.
+**	16-Aug-2010 (jonj) SD 146221
+**	    Input "flags" now DM1R_LK_? defines to avoid collisions with
+**	    lk.h LK_? flags.
 */
 DB_STATUS
 dm1r_crow_lock(
@@ -3905,6 +3958,7 @@ DB_ERROR	*dberr)
     DMP_PINFO	*PinfoPtr;
     DML_XCB	    *next_r_queue;
     DMP_RCB	    *next_rcb;
+    i4		lk_flags;
 
     CLRDBERR(dberr);
 
@@ -3969,14 +4023,21 @@ DB_ERROR	*dberr)
     lock_key.lk_key5 = tid->tid_tid.tid_line;
     lock_key.lk_key6 = 0;
 
+    /* Transform DM1R_LK_? flags to those known by LK */
+    lk_flags = LK_STATUS;
+    if ( flags & DM1R_LK_PHYSICAL )
+        lk_flags |= LK_PHYSICAL;
+    if ( flags & DM1R_LK_NOWAIT )
+        lk_flags |= LK_NOWAIT;
+
     /* Output a lock trace message if tracing is enabled. */
     if (DMZ_SES_MACRO(1))
-	dmd_lock(&lock_key, r->rcb_lk_id, LK_REQUEST, flags, LK_X,
+	dmd_lock(&lock_key, r->rcb_lk_id, LK_REQUEST, lk_flags, LK_X,
 	    r->rcb_timeout, &r->rcb_tran_id, relid, &d->dcb_name);
 
     /* Request a logical/physical lock on the row. */
 
-    cl_status = LKrequest(flags | LK_STATUS, r->rcb_lk_id, &lock_key, LK_X,
+    cl_status = LKrequest(lk_flags, r->rcb_lk_id, &lock_key, LK_X,
 	    (LK_VALUE *)NULL, &lock_id, r->rcb_timeout, &sys_err);
 
     for (;;)
@@ -3997,7 +4058,7 @@ DB_ERROR	*dberr)
 
 	    if ( pinfo &&
 	         crow_locking(r) &&
-		 !(flags & LK_PHYSICAL) &&
+		 !(lk_flags & LK_PHYSICAL) &&
 		 lock_id.lk_unique &&
 		 r->rcb_crow_tid.tid_i4 != tid->tid_i4 )
 	    {
@@ -4056,87 +4117,24 @@ DB_ERROR	*dberr)
 		*/	   
 		if ( row_low_tran && row_low_tran != r->rcb_tran_id.db_low_tran )
 		{
-		    /*
-		    ** If row has been updated by a later-starting transaction,
-		    ** then it wins the race.
-		    **
-		    ** As we only cache only db_low_tran and discard db_high_tran,
-		    ** watch for db_low_tran wrap. svcb_last_tranid is the 
-		    ** last transaction id assigned by LG.
-		    **
-		    ** If READ_COMMITTED, return E_DM0029_ROW_UPDATE_CONFLICT
-		    ** to QEF. That'll induce it to retry the statement with
-		    ** a fresh CRIB and crib_bos_tranid.
-		    */
-		    VOLATILE_ASSIGN_MACRO(dmf_svcb->svcb_last_tranid, LastTranid);
-
-		    if ( row_low_tran > crib->crib_bos_tranid ||
-			 (row_low_tran < crib->crib_bos_tranid &&
-			  crib->crib_bos_tranid > LastTranid &&
-			  row_low_tran <= LastTranid) )
+		    if (!row_is_consistent(r, row_low_tran, row_lg_id))
 		    {
 			if ( r->rcb_iso_level == RCB_SERIALIZABLE ||
 			     r->rcb_state & RCB_CURSOR )
-			{
 			    SETDBERR(dberr, 0, E_DM0020_UNABLE_TO_SERIALIZE);
-			}
 			else
 			    SETDBERR(dberr, 0, E_DM0029_ROW_UPDATE_CONFLICT);
 			status = E_DB_ERROR;
 		    }
 
-		    /*
-		    ** If there were uncommitted transactions at our CR point in time
-		    ** and this update was made by one of them, then the earlier
-		    ** transaction wins.
-		    **
-		    ** If READ_COMMITTED, return E_DM0029_ROW_UPDATE_CONFLICT
-		    ** to QEF. That'll induce it to retry the statement with
-		    ** a fresh CRIB and new crib_bos_tranid.
-		    */
-		    else if ( crib->crib_lgid_low )
-		    {
-			if ( row_lg_id )
-			{
-			    if ( CRIB_XID_WAS_ACTIVE(crib, row_lg_id, row_low_tran) )
-			    {
-				if ( r->rcb_iso_level == RCB_SERIALIZABLE ||
-				     r->rcb_state & RCB_CURSOR )
-				{
-				    SETDBERR(dberr, 0, E_DM0020_UNABLE_TO_SERIALIZE);
-				}
-				else
-				    SETDBERR(dberr, 0, E_DM0029_ROW_UPDATE_CONFLICT);
-				status = E_DB_ERROR;
-			    }
-			}
-			else
-			{
-			    /*
-			    ** row_lg_id unknown (V3/V4), have to do it the slow way,
-			    ** scan the crib xid_array for matching tran_id.
-			    */
-			    for ( i = crib->crib_lgid_low;
-				  i <= crib->crib_lgid_high && status == E_DB_OK;
-				  i++ )
-			    {
-				if ( crib->crib_xid_array[i] == row_low_tran )
-				{
-				    if ( r->rcb_iso_level == RCB_SERIALIZABLE ||
-					 r->rcb_state & RCB_CURSOR )
-				    {
-					SETDBERR(dberr, 0, E_DM0020_UNABLE_TO_SERIALIZE);
-				    }
-				    else
-					SETDBERR(dberr, 0, E_DM0029_ROW_UPDATE_CONFLICT);
-				    status = E_DB_ERROR;
-				}
-			    }
-			}
-		    }
-
 		    if ( get_status && status == E_DB_OK )
 		    {
+			/*
+			** Shut off MVCC tracing if enabled, otherwise the
+			** iidbms log is so cluttered as to be unreadable.
+			*/
+			d->dcb_status &= ~DCB_S_MVCC_TRACE;
+
 			/* This is always due to wrongheaded make_consistent */
 			TRdisplay("%@ dm1r_crow_lock:%d rcb %p tran %x page %p DELETED TID: [%d,%d]"
 				  " row_lg_id %d row_low_tran %x %w\n",
@@ -4161,6 +4159,9 @@ DB_ERROR	*dberr)
 				next_rcb->rcb_tcb_ptr->tcb_rel.reltid.db_tab_base,
 				next_rcb->rcb_tcb_ptr->tcb_rel.reltid.db_tab_index);
 			}
+
+			/* Dump diagnostics to log */
+			dmd_pr_mvcc_info(r);
 
 			dmd_check(E_DM0029_ROW_UPDATE_CONFLICT);
 		    }
@@ -4298,7 +4299,7 @@ DB_ERROR	*dberr)
 	    ** LK_RELLOG let's LKrelease know it's ok to release this single logical
 	    ** lock rather than just ignoring the release.
 	    */
-	    if ( flags & LK_PHYSICAL || 
+	    if ( lk_flags & LK_PHYSICAL || 
 		    (dberr->err_code == E_DM0029_ROW_UPDATE_CONFLICT &&
 		     cl_status == LK_NEW_LOCK && lock_id.lk_unique) )
 	    {
@@ -4343,7 +4344,7 @@ DB_ERROR	*dberr)
 		    (d->dcb_status & DCB_S_RECOVER))
 	    {
 		dmd_lkrqst_trace(dmd_put_line, &lock_key, r->rcb_lk_id, 
-		    LK_REQUEST, flags, LK_X, 
+		    LK_REQUEST, lk_flags, LK_X, 
 		    r->rcb_timeout, &r->rcb_tran_id,
 		    relid, &d->dcb_name);
 		dmd_lock_info(DMTR_LOCK_LISTS | DMTR_LOCK_USER_LISTS |
@@ -4420,7 +4421,7 @@ DB_ERROR	*dberr)
 	** return and let caller unlock the buffers and do the escalate
 	*/
 	if ( dberr->err_code == E_DM004B_LOCK_QUOTA_EXCEEDED &&
-	     !(flags & LK_NOWAIT) )
+	     !(lk_flags & LK_NOWAIT) )
 	{
 	    /*
 	    ** Escalate to table level locking because 
@@ -4518,6 +4519,110 @@ DB_ERROR	*dberr)
     }
 
     return(status);
+}
+
+/* 
+** Name: row_is_consistent    - is row is read consistent according to CRIB
+**
+** Description:
+**
+**      Given a the row_low_tran and row_lg_id, check if the row is
+**      consistent, i.e. committed before the consistent read point in time
+**      described by the transactions "crib"
+**
+** Inputs:
+**	rcb		    - The RCB control block
+**      row_low_tran
+**      row_lg_id
+**
+** Outputs:
+**      None
+**
+** Returns:
+**      TRUE/FALSE
+**
+** Side Effects:
+**      None
+**
+** History:
+**	12-Jul-2010 (stial01)
+**	    Created from code in dm1r_crow_lock(), also needed for page clean.
+*/
+bool
+row_is_consistent(
+DMP_RCB		*r,
+u_i4		row_low_tran,
+u_i2		row_lg_id)
+{
+    LG_CRIB	*crib = r->rcb_crib_ptr;
+    u_i4	LastTranid;
+    i4		i;
+
+    /*
+    ** NB: rcb_tran_id is the "real" transaction id used
+    **     to mark page/row updates.
+    **
+    **	   crib_bos_tranid is an artificial tranid acquired
+    **	   to mark the beginning of a statement when Read Committed
+    **	   and will never appear in any page or row as
+    **	   the "tranid of update".
+    **
+    **	   When Serializable, crib_bos_tranid will be the
+    **	   real rcb_tran_id.
+    */	   
+    if ( row_low_tran && row_low_tran != r->rcb_tran_id.db_low_tran )
+    {
+	/*
+	** If row has been updated by a later-starting transaction,
+	** then it wins the race.
+	**
+	** As we only cache only db_low_tran and discard db_high_tran,
+	** watch for db_low_tran wrap. svcb_last_tranid is the 
+	** last transaction id assigned by LG.
+	**
+	** If READ_COMMITTED, return E_DM0029_ROW_UPDATE_CONFLICT
+	** to QEF. That'll induce it to retry the statement with
+	** a fresh CRIB and crib_bos_tranid.
+	*/
+	VOLATILE_ASSIGN_MACRO(dmf_svcb->svcb_last_tranid, LastTranid);
+
+	if ( row_low_tran > crib->crib_bos_tranid ||
+	     (row_low_tran < crib->crib_bos_tranid &&
+	      crib->crib_bos_tranid > LastTranid &&
+	      row_low_tran <= LastTranid) )
+	    return (FALSE);
+
+	/*
+	** If there were uncommitted transactions at our CR point in time
+	** and this update was made by one of them, then the earlier
+	** transaction wins.
+	**
+	** If READ_COMMITTED, return E_DM0029_ROW_UPDATE_CONFLICT
+	** to QEF. That'll induce it to retry the statement with
+	** a fresh CRIB and new crib_bos_tranid.
+	*/
+	else if ( crib->crib_lgid_low )
+	{
+	    if ( row_lg_id )
+	    {
+		if ( CRIB_XID_WAS_ACTIVE(crib, row_lg_id, row_low_tran) )
+		    return (FALSE);
+	    }
+	    else
+	    {
+		/*
+		** row_lg_id unknown (V3/V4), have to do it the slow way,
+		** scan the crib xid_array for matching tran_id.
+		*/
+		for ( i = crib->crib_lgid_low; i <= crib->crib_lgid_high; i++ )
+		{
+		    if ( crib->crib_xid_array[i] == row_low_tran )
+			return (FALSE);
+		}
+	    }
+	}
+    }
+    return (TRUE);
 }
 
 
@@ -4631,7 +4736,7 @@ DB_ERROR       *dberr)
     ** too many logical locks.
     */
     status = dm1r_crow_lock(r, 
-			    (dm0pBufIsLocked(&r->rcb_data)) ? LK_NOWAIT : 0,
+			    (dm0pBufIsLocked(&r->rcb_data)) ? DM1R_LK_NOWAIT : 0,
 			    tid_to_lock,
 			    (DMP_PINFO*)NULL,
 			    dberr);
@@ -5866,6 +5971,13 @@ DB_ERROR        *dberr)
     }
 
     lock_list = rcb->rcb_lk_id;
+
+    /* Init relid for errors and trace output */
+    if ( tcb->tcb_rel.relstat2 & TCB2_PARTITION )
+	relid = &tcb->tcb_pmast_tcb->tcb_rel.relid;
+    else
+	relid = &tcb->tcb_rel.relid;
+
     /* Output a lock trace message if tracing is enabled. */
     if ((DMZ_SES_MACRO(1)) || 
 	(rcb->rcb_val_lkid.lk_common == 0 && rcb->rcb_val_lkid.lk_unique == 0))
@@ -5874,13 +5986,9 @@ DB_ERROR        *dberr)
     	lock_key.lk_key1 = (i4)tcb->tcb_dcb_ptr->dcb_id;
     	lock_key.lk_key2 = tcb->tcb_rel.reltid.db_tab_base;
     	lock_key.lk_key3 = tcb->tcb_rel.reltid.db_tab_index;
-	relid = &tcb->tcb_rel.relid;
 	/* Lock against master if this is a partition */
 	if ( tcb->tcb_rel.relstat2 & TCB2_PARTITION )
-	{
 	    lock_key.lk_key3 = 0;
-	    relid = &tcb->tcb_pmast_tcb->tcb_rel.relid;
-	}
 
 	atts_array = tcb->tcb_key_atts;
 	atts_count = tcb->tcb_keys;
@@ -6603,9 +6711,7 @@ dm1r_allocate(
 	    /* if row/crow/phys locking can only clean committed deletes */
 	    page_cleaned = TRUE;
 	    dm0pMutex(tbio, (i4)0, r->rcb_lk_id, pinfo);
-	    status = (*t->tcb_acc_plv->dmpp_clean)(
-		    t->tcb_rel.relpgtype, t->tcb_rel.relpgsize, pinfo->page,
-		    &r->rcb_tran_id, 0, &clean_bytes);
+	    status = (*t->tcb_acc_plv->dmpp_clean)(r, pinfo->page,&clean_bytes);
 	    dm0pUnmutex(tbio, (i4)0, r->rcb_lk_id, pinfo);
 	    if (status != E_DB_OK)
 		break;
@@ -6621,7 +6727,7 @@ dm1r_allocate(
 	{
 	    /* Can't wait if buffer is locked */
 	    status = dm1r_crow_lock(r, 
-	    		(dm0pBufIsLocked(pinfo)) ? LK_NOWAIT : 0, 
+	    		(dm0pBufIsLocked(pinfo)) ? DM1R_LK_NOWAIT : 0, 
 			tid, NULL, dberr);
 	}
 	else if ((t->tcb_rel.relstat & TCB_INDEX) == 0)
@@ -8307,5 +8413,6 @@ dbg_dm723(
 **   dm1r_replace -> replace segs - dm0l_row_unpack
 **   grep DB_MAXTUP,DM_MAXTUP
 */
+
 
 

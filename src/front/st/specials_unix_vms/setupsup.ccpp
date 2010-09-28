@@ -194,6 +194,10 @@
 **	10-Mar-2010 (hanje04)
 **	    SIR 123296
 **	    Add lsb.rfm for LSB builds
+**	15-Jul-2010 (hanje04)
+**	    BUG 124083
+**	    Add iiposttrans script to replace problematic %posttrans scriptlet
+**	    in core RPM.
 */
 
 PART  setupsup
@@ -326,6 +330,7 @@ PART  setupsup
      SCRIPT (PROG1PRFX)corepreun
      SCRIPT (PROG1PRFX)dbmspreinst
      SCRIPT setupingres
+     SCRIPT (PROG1PRFX)posttrans
 # endif
 
 #if defined(sparc_sol) && defined(conf_BUILD_ARCH_32_64)

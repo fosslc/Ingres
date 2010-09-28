@@ -27,12 +27,16 @@
 **	25-jan-06 (dougi)
 **	    Changed action calls to pass YYVARS** instead of YYVARS* to
 **	    allow recursion on derived tables (subselects in FROM clauses).
+**	2-Aug-2010 (kschendel) b124170
+**	    Undo above, and in fact don't pass YYVARS at all now, we can
+**	    now set it from the cb.  Drop a couple defines (like YYREENTER)
+**	    that have fixed values for the parser yacc and can't be
+**	    changed anyway.
 */
 
 /*
 ** yacc user known macros and defines
 */
-#ifdef		YYFUNCTIONS
 #	ifdef    VMS
 #		define  YYACCVAL	MAXI4
 #		define  YYABORTVAL	E_DB_ERROR
@@ -59,12 +63,6 @@
 	return(E_DB_OK);\
     }
 #	define YYABORT	(VOID)EXsignal(EX_PSF_LJMP, 2, (long)YYABORTVAL,yystatusp)
-#else
-#	define YYERROR	goto yyerrlab
-#	define YYACCVAL	E_DB_OK
-#	define YYACCEPT	return(YYACCVAL)
-#	define YYABORT	return(E_DB_ERROR)
-#endif
 
 #define YYBACKUP( newtoken, newvalue )\
 {\
@@ -83,26 +81,14 @@
 /*
 ** user known globals
 */
-#ifndef	YYREENTER
-i4  $Fdebug;			/* set to 1 to get debugging */
-#endif
 
 /*
 ** driver internal defines
 */
 #define YYFLAG		(-1000)
 
-/* 
-** If not defined we need to define YYVARS, even though it won't be used,
-** because -S option requires it.
-*/
-#ifdef YACC_VARS
 #define	    YYVARS	PSS_YYVARS
-#else
-typedef	i4	YYVARS;
-#endif
 
-#ifdef		YYFUNCTIONS
 /*{
 ** Name: YY_1HANDLER, YY_2HANDLER	- Exception handlers for the YACC generated
 ** parser.
@@ -178,7 +164,6 @@ EX_ARGS            *exargs;
     EXdelete();
     return(status);
 }
-#endif
 
 /*
 ** yyparse - return E_DB_OK if worked, E_DB_ERROR if syntax error not recovered
@@ -187,35 +172,25 @@ EX_ARGS            *exargs;
 DB_STATUS
 $D
 {
-#ifndef	YYREENTER
-	register YYSTYPE *yypvt;	/* top of value stack for $vars */
-	i4		 yyerr_decl;
-	YYSTYPE yyv[ YYMAXDEPTH ];	/* value stack */
-	i4 yys[ YYMAXDEPTH ];		/* state stack */
-
-	YYSTYPE *yypv;			/* top of value stack */
-	i4 *yyps;			/* top of state stack */
-
-	i4 yystate;			/* current state */
-	i4 yytmp;			/* extra var (lasts between blocks) */
-
-	i4 yynerrs;			/* number of errors */
-	i4 yyerrflag;			/* error recovery flag */
-	i4 yychar;			/* current input token number */
-#else
 	YACC_CB *yacc_cb = $H;
-#endif
 
-#ifndef YACC_VARS
-	YYVARS	yyvars, *yyvarsp = &yyvars, **yyvarspp = &yyvarsp;
-#endif
-#ifdef	YYFUNCTIONS
 	EX_CONTEXT	context;
 	DB_STATUS	yystatus, *yystatusp = &yystatus;
+	YY_PSLFN_PTR	func_check;
 
-#ifdef YACC_VARS
+/* No code before here!  declarations only!  yyvarsinit declares YYVARS
+** (which is, of course, PSS_YYVARS, as declared above)
+*/
 #include "yyvarsinit.h"	
-#endif
+
+	/* The only reason for doing this is to make sure that our
+	** declaration of YY_PSLFN_PTR (used at the action function call
+	** site) matches at least one, and hence all, of the generated
+	** action functions.  There's no $-param for an action function
+	** name, have to code it in.
+	*/
+	func_check = $F1iftn;	/* Assignment doesn't compile if problem */
+
 	/*
 	** Handle all exceptions here, They will be primarily generated
 	** by execution of YYERROR, YYABORT, YYACCEPT.
@@ -248,11 +223,6 @@ $D
 			return (yystatus);
 		}
 	}
-#else
-#ifdef YACC_VARS
-#include "yyvarsinit.h"	
-#endif
-#endif
 
 	/*
 	** Initialize externals - yyparse may be called more than once
@@ -685,23 +655,9 @@ result.
 		$Cyyps = yy_ps;
 		$Cyypv = yy_pv;
 	}
-#ifdef		YYFUNCTIONS
-	if ($Ffunc[$Cyytmp] != (i4 (*)()) NULL)
-#ifdef		YYREENTER
+	if ($Ffunc[$Cyytmp] != (YY_PSLFN_PTR) NULL)
 	    $Cyyerr_decl = (*$Ffunc[$Cyytmp])(yacc_cb, $Cyytmp,
-		yystatusp, yyvarspp$G);
-#else
-# ifdef rtp_us5
-	{
-	    /* AIX cc needs temp to avoid "compiler loop" fatal (daveb) */
-	    i4  (*f)() = $Ffunc[$Cyytmp];
-	    $Cyyerr_decl = (*f)(yacc.cb, $Cyytmp, yystatusp, yyvarspp$G);
-	}
-# else	
-	    $Cyyerr_decl = (*$Ffunc[$Cyytmp])($Cyypvt, &$Cyyval,
-		$Cyytmp, yystatusp$G);
-# endif
-#endif		/* YYREENTER */
+		yystatusp $G);
 	else
 	    $Cyyerr_decl = 0;
 
@@ -718,15 +674,6 @@ result.
 	     return ($Cyyerr_decl);
 	}
 	/*    goto yyerrlab;		 * Error recovery */
-#else
-	/*
-	** code supplied by user is placed in this switch
-	*/
-	switch( $Cyytmp )
-	{
-		$A
-	}
-#endif
 	goto yystack;		/* reset registers in driver code */
 }
 

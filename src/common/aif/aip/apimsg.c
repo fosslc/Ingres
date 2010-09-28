@@ -86,6 +86,11 @@
 **	    procedure output parameters.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	29-Jul-10 (gordy)
+**	    Use the actual message buffer size when a buffer is
+**	    retrieved from the free queue.
+**      17-Aug-2010 (thich01)
+**          Make changes to treat spatial types like LBYTEs.
 */
 
 
@@ -200,6 +205,9 @@ static	bool		dynamic_open( char * );
 ** History:
 **	25-Mar-10 (gordy)
 **	    Created.
+**	29-Jul-10 (gordy)
+**	    Use the actual message buffer size when a buffer is
+**	    retrieved from the free queue.
 */
 
 IIAPI_MSG_BUFF *
@@ -210,9 +218,13 @@ IIapi_allocMsgBuffer( IIAPI_HNDL *handle )
     u_i1		*ptr = NULL;
     i4			size = DB_MAXTUP;
 
-    if ( connHndl  &&
-	 ! (ptr = (u_i1 *)QUremove( connHndl->ch_msgQueue.q_next )) )
-	size = max( size, connHndl->ch_sizeAdvise );
+    if ( connHndl )
+    {
+	if ( (ptr = (u_i1 *)QUremove( connHndl->ch_msgQueue.q_next )) )
+	    size = ((IIAPI_MSG_BUFF *)ptr)->size;
+	else
+	    size = max( size, connHndl->ch_sizeAdvise );
+    }
 
     /*
     ** Allocate the message buffer.  The data buffer is
@@ -5873,6 +5885,14 @@ formatDataValue( IIAPI_STMTHNDL *stmtHndl, IIAPI_DESCRIPTOR *descriptor,
     case IIAPI_LVCH_TYPE :
     case IIAPI_LBYTE_TYPE :
     case IIAPI_LNVCH_TYPE :
+    case IIAPI_GEOM_TYPE :
+    case IIAPI_POINT_TYPE :
+    case IIAPI_MPOINT_TYPE :
+    case IIAPI_LINE_TYPE :
+    case IIAPI_MLINE_TYPE :
+    case IIAPI_POLY_TYPE :
+    case IIAPI_MPOLY_TYPE :
+    case IIAPI_GEOMC_TYPE :
 	/*
 	** LOB values are treated as a single data segment
 	** (no more segments to follow).

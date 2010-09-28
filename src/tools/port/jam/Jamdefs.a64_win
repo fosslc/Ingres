@@ -39,6 +39,14 @@
 #           Default to --nounistd for cygwin but no flag for MKS based on
 #           current versions of flex in both.
 #           Can be overriden by setting FLEX_FLAG in environment
+#       26-Jul-2010 (horda03)
+#          The definition of  defined within this file causes
+#          the shell commands executed by JAM to be echoed to the
+#          screen. If user now sets the environment variable
+#               set _ECHO=OFF
+#          then by default the shell commands are not echoed. The
+#          command "jam -dx" when _ECHO == "OFF" will display
+#          then shell commands.
 #
 #
 # Tell Jamdefs that this include worked:
@@ -332,7 +340,10 @@ CCMACH64	default = -DBUILD_ARCH64 $(CPUFLAGS) $(CDEBUG) $(RUNTIME) $(ERR_LVL) $(
 CCMACH32	default = -DBUILD_ARCH32 $(CMPORTS) $(CPUFLAGS) $(CDEBUG) $(RUNTIME) $(ERR_LVL) $(PLATFORM32) $(PREPROCESS) -DDESKTOP -DDEVIL -DINCLUDE_ALL_CL_PROTOS -DNT_GENERIC -DSEP -DSEPDEBUG -DDOUBLEBYTE -DxCL_NO_AUTH_STRING_EXISTS -DINGRESII $(DBFLAG) $(EDFLAG) $(DECFLAG) $(DEVFLAGS) $(THREADS) $(RMWARNINGS) ;
 WINNT	default = -D_WIN32_WINNT=0x0500 ;
 # CC	default = "CC" ;
-JAMSHELL = cmd /C % ;
+if $(JAMSHELL_ECHO) != "OFF"
+{       
+   JAMSHELL ?= cmd /C % ;
+}
 VISUALC  = "" ;
 C++ 	 = cl.exe ;
 CC32	 ?= \"%VSINSTALLDIR%\\VC\\bin\\cl.exe\" ;

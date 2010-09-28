@@ -50,6 +50,8 @@
 ;	    ingres_set_installlvl_dotnet.
 ;	18-Mar-2009 (drivi01)
 ;	    Added ingres_warn_remove_dbms.
+;	03-Aug-2010 (horda03) B124173
+;	    Added ingres_check_rspfile.
 ;
 EXPORTS
 	ingres_verify_paths
@@ -88,4 +90,5 @@ EXPORTS
 	ingres_set_installlvl_doc
 	ingres_set_installlvl_dotnet
 	ingres_warn_remove_dbms
+	ingres_check_rspfile
 

@@ -731,6 +731,8 @@
 **         SIR 123296
 **         Add LSB option, writable files are stored under ADMIN, logs under
 **         LOG and read-only under FILES location.
+**	23-Sep-2010 (bonro01)
+**	    Remove -icesvr from ingstart
 */ 
 
 # include <compat.h>
@@ -2122,6 +2124,7 @@ def_ii_gc_port();
 	return( OK );
 }
 
+#if defined(conf_BUILD_ICE)
 /*
 **  Start an ice server.
 */
@@ -2169,6 +2172,7 @@ def_ii_gc_port();
 
 	return( OK );
 }
+#endif
 
 /*
 ** Name: start_oracle
@@ -2492,7 +2496,9 @@ PROCESS_LIST *net_list;		/* Net processlist */
 PROCESS_LIST *bridge_list;	/* Bridge processlist */
 PROCESS_LIST *das_list;		/* DAS processlist */
 PROCESS_LIST *star_list;	/* Star process list */
+#if defined(conf_BUILD_ICE)
 PROCESS_LIST *icesvr_list;	/* Ice server process list */
+#endif
 PROCESS_LIST *oracle_list;	/* Oracle Gateway process list */
 PROCESS_LIST *informix_list;	/* Informix Gateway process list */
 PROCESS_LIST *mssql_list;	/* Microsoft SQL Server Gateway process list */
@@ -3137,12 +3143,14 @@ i4  ii_gc_port_val;
 			startup_mask = PCM_ACP;
 			continue;
 		    }
+#if defined(conf_BUILD_ICE)
 		    if( STbcompare( argp, 0, ERx( "icesvr" ), 0, TRUE ) == 0 &&
 			p2 == NULL )
 		    {
 			startup_mask = PCM_ICE;
 			continue;
 		    }
+#endif
 		    if( STbcompare( argp, 0, ERx( "oracle" ), 0, TRUE ) == 0 )
 		    {
 			startup_mask = PCM_ORACLE;
@@ -3220,13 +3228,25 @@ i4  ii_gc_port_val;
 			SIfprintf( stderr, tmp_buf );
 		}
 		else
+#if defined(conf_BUILD_ICE)
 			STprintf( tmp_buf, ERx( "\nUsage: %s [ -iigcn | -dmfrcp | -dmfacp | -client | -rmcmd | -icesvr |\n\t-{iidbms|iigcc|iigcb|iigcd|iistar|oracle|informix|mssql|sybase|\n\tdb2udb}[=name] ]\n\n"),argv[0] );
+#else
+			STprintf( tmp_buf, ERx( "\nUsage: %s [ -iigcn | -dmfrcp | -dmfacp | -client | -rmcmd |\n\t-{iidbms|iigcc|iigcb|iigcd|iistar|oracle|informix|mssql|sybase|\n\tdb2udb}[=name] ]\n\n"),argv[0] );
+#endif
 			SIfprintf( stderr, tmp_buf);
 # else
 # ifdef VMS
+#if defined(conf_BUILD_ICE)
                 STprintf( tmp_buf, ERx( "\nUsage: %s [ -iigcn | -dmfrcp | -dmfacp | -rmcmd | -icesvr | -{iidbms|iigcc|iigcb|iigcd|iistar|oracle|rms|rdb}[=name] ]\n\n"), argv[0]);
+#else
+                STprintf( tmp_buf, ERx( "\nUsage: %s [ -iigcn | -dmfrcp | -dmfacp | -rmcmd | -{iidbms|iigcc|iigcb|iigcd|iistar|oracle|rms|rdb}[=name] ]\n\n"), argv[0]);
+#endif
 # else
+#if defined(conf_BUILD_ICE)
                 STprintf( tmp_buf, ERx( "\nUsage: %s [ -iigcn | -dmfrcp | -dmfacp | -rmcmd | -icesvr | -{iidbms|iigcc|iigcb|iigcd|iistar|oracle|informix|sybase|db2udb}[=name] ]\n\n"), argv[0]);
+#else
+                STprintf( tmp_buf, ERx( "\nUsage: %s [ -iigcn | -dmfrcp | -dmfacp | -rmcmd | -{iidbms|iigcc|iigcb|iigcd|iistar|oracle|informix|sybase|db2udb}[=name] ]\n\n"), argv[0]);
+#endif
 # endif /* VMS */
 		if ( RshUtil )
 		{
@@ -3649,8 +3669,10 @@ else
 	/* build Star server startup list */
 	build_startup_list( &star_list, ERx( "star" ) );	
 
+#if defined(conf_BUILD_ICE)
 	/* build ice server startup list */
 	build_startup_list( &icesvr_list, ERx( "icesvr" ) );
+#endif
 
 	/* build Oracle Gateway startup list */
 	build_startup_list( &oracle_list, ERx( "oracle" ) );	
@@ -3692,12 +3714,14 @@ else
 		ERROR( ERget( S_ST051B_star_needs_dbms ) ); 
 	}
 
+#if defined(conf_BUILD_ICE)
 	if( p1 == NULL &&
 		startup_total( dbms_list ) == 0 &&
 		startup_total( icesvr_list ) > 0 )
 	{
 		ERROR( ERget( S_ST0575_icesvr_needs_dbms ) );
 	}
+#endif
 
 	if( p1 == NULL &&
 		startup_total( dbms_list ) == 0 &&
@@ -4308,11 +4332,13 @@ else
 				ERROR( tmp_buf );
 			}
 		}
+#if defined(conf_BUILD_ICE)
 		else if( startup_mask & PCM_ICE )
 		{
 			if( start_icesvr( p2 ) != OK )
 				ERROR( ERget( S_ST0576_icesvr_failed ) );
 		}
+#endif
 		else if( startup_mask & PCM_ORACLE )
 		{
 			if( start_oracle( p2 ) != OK )
@@ -4490,6 +4516,7 @@ else
 	    }
 	}
 
+#if defined(conf_BUILD_ICE)
 	if ( startup_mask & PCM_ICE )
 	{
 	    for( cur = icesvr_list; cur != NULL; cur = cur->next )
@@ -4501,6 +4528,7 @@ else
 		    }
 	    }
 	}
+#endif
 
 	if ( startup_mask & PCM_ORACLE )
 	{

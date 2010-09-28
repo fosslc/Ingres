@@ -45,6 +45,10 @@ REM		Remove bufferoverflowu.lib dependency as the library was
 REM		removed in Visual Studio 2008 compiler and also for pure 
 REM		64-bit use libingres.lib instead of ingres64.lib or 
 REM		libapi64.lib.
+REM	8-Jul-2010 (drivi01)
+REM		Add libcmt.lib to the link line.  It is needed to resolve 
+REM		security_cookie symbol that is now built into binaries 
+REM		with /GS compiler flag.
 REM
 set CMD=seplnk
 setlocal
@@ -196,7 +200,7 @@ if not "%do_it%"=="true" goto DONE
 set libingfiles=%II_SYSTEM%\ingres\lib\libingres.lib %II_SYSTEM%\ingres\lib\iilibapi.lib
 
 REM :RUNCC
-  %CC% /nologo -DNT_GENERIC %cc_sw% -Fe%filnam%.exe %cfilnam% %libingfiles% msvcrt.lib kernel32.lib user32.lib advapi32.lib %bufferlib%
+  %CC% /nologo -DNT_GENERIC %cc_sw% -Fe%filnam%.exe %cfilnam% %libingfiles% msvcrt.lib kernel32.lib user32.lib advapi32.lib libcmt.lib
 
   if not exist %filnam%.exe.manifest goto DONE
   if not "%WindowsSdkDir%"=="" if x%MT%==x set MT="%WindowsSdkDir:\\=\%bin\mt.exe"

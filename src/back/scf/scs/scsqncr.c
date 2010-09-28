@@ -72,6 +72,7 @@
 #include    <pthread_exception.h>
 #endif
 
+#include    <erfac.h>
 
 #if defined(hp3_us5)
 #pragma OPT_LEVEL 2
@@ -90,6 +91,13 @@
 */
 
 #define	IIXA_XID_STRING_LENGTH		351
+/* 
+** Optimum number of tuples for DMF load for copy
+** NOTE: Testing shows this to be less than 100 regardless of row size; 
+** large chains in the linked list of rows appear to affect performance
+** this is something we should look at in DMF at some point
+*/
+#define BEST_LOAD_TUPS			100
 
 
 #define XA_XID_EQL_MACRO(a,b)  \
@@ -1505,6 +1513,8 @@ GLOBALREF SC_MAIN_CB *Sc_main_cb; /* server control block */
 **	    Add "psitional parm" flag to QEF structures for nameless proc parms.
 **	19-Apr-2009 (gupsh01) SIR 123444
 **	    Added support for rename table/column.
+**	21-Jul-2010 (kschendel) SIR 124104
+**	    Add (stub) set create_compression.
 */
 typedef struct _SQNCR_TBL
 {
@@ -1716,6 +1726,7 @@ static  const SQNCR_TBL   sqncr_tbl[] = {
 /* PSQ_FREELOCATOR */		{SQ_PSF_MASK, 0},
 /* PSQ_ATBL_RENAME_COLUMN */	{SQ_PSF_MASK | SQ_OPF_MASK, 0},
 /* PSQ_ATBL_RENAME_TABLE */	{SQ_PSF_MASK | SQ_OPF_MASK, 0},
+/* PSQ_CREATECOMP */		{SQ_PSF_MASK, 0},
 	{0,0}
 };
 static char execproc_syntax[] = "execute procedure ";
@@ -2622,6 +2633,39 @@ static char execproc_syntax2[] = " = session.";
 **	28-may-2010 (stephenb)
 **	    add sanity check for no query text case; make sure the number of 
 **	    parameters provided by GCA is the number expected for the saved query
+**	17-jun-2010 (stephenb)
+**	    Turn off copy optimization flag (SCS_INSERT_OPTIM) for errors that will
+**	    terminate the batch. Remove call to QEU_E_COPY when handling
+**	    batch copy optimization errors, the call to scs_copy_error
+**	    does this for us already (Bug 123939)
+**	22-Jun-2010 (kschendel) b123775
+**	    Ensure no bogus rowcount added to running total if query returns
+**	    asking for a tproc recreate, by ensuring that we go through the
+**	    ERROR path and not the WARNING path.  Restore qmode once the
+**	    tproc QP is loaded and before we attempt to re-enter QEF.
+**	24-jun-2010 (stephenb)
+**	    Add inteligence for loading groups of rows in batched insert to copy
+**	    optimization. We will delay the start of the copy, and only
+**	    call QEF to load the data when PSF tells us it has filled the
+**	    buffer.
+**	7-jul-2010 (stephenb)
+**	    We need to delay sending of GCA messages for all batch
+**	    processing to avoid a send/recieve deadlock. Update message
+**	    handling for batches.
+**	20-jul-2010 (stephenb)
+**	    During a query re-try, if the sequencer incorrectly re-sets the query
+**	    state, we may end up trying to parse a query that has no query text
+**	    (e.g. a cursor fetch). This should never happen (i.e. it's a code
+**	    error), but we would like to generate a nice error when it occurs
+**	    rather than causing a SEGV; so we should not assume that sscb_troot
+**	    contains anything.
+**	10-aug-2010 (stephenb)
+**	    7-jul change above should also apply GCA_RETPROC since we support
+**	    "execute procedure" in batch. Make sure we allocate a new message
+**	    when sending GCA_RETPROC in batch otherwise we may get an
+**	    inconsistent queue.
+**      02-sep-2010 (maspa05) SIR 124346
+**          Add end-query SC930 record - with error number and rowcount.
 */
 DB_STATUS
 scs_sequencer(i4 op_code,
@@ -3944,7 +3988,7 @@ scs_sequencer(i4 op_code,
 		    if (sscb->sscb_flags & SCS_INSERT_OPTIM)
 			notext_copy_optim = TRUE;
 		}
-		else
+		else if (scb->scb_sscb.sscb_troot)
 		    /* we got query text, so save number of parms for sanity check */
 		    scb->scb_sscb.sscb_cquery.cur_qry_parms = 
 			((PSQ_QDESC *) scb->scb_sscb.sscb_troot)->psq_dnum;
@@ -4203,55 +4247,11 @@ scs_sequencer(i4 op_code,
 
 	    if (ps_ccb->psq_ret_flag & PSQ_INSERT_TO_COPY)
 	    {
-		/*
-		** Initialize the QEF control block.
-		** Set QEF error flag to INTERNAL so user messages won't
-		** be sent directly to the Front End.
+		/* 
+		** nothing to do here, we have delayed copy
+		** start until we have a buffer full of rows
+		** to load
 		*/
-
-		qe_ccb = (QEF_RCB *) sscb->sscb_cpy_qeccb;
-		qe_copy = qe_ccb->qeu_copy;
-		qe_ccb->qef_cb = sscb->sscb_qescb;
-		qe_ccb->qef_sess_id = scb->cs_scb.cs_self;
-		qe_ccb->qef_db_id = sscb->sscb_ics.ics_opendb_id;
-		qe_ccb->qef_eflag = QEF_INTERNAL;
-
-		/*
-		** Initialize some of the copy control block fields.
-		*/
-		qe_copy->qeu_sbuf = NULL;
-		qe_copy->qeu_sptr = NULL;
-		qe_copy->qeu_ssize = 0;
-		qe_copy->qeu_sused = 0;
-		qe_copy->qeu_partial_tup = FALSE;
-		qe_copy->qeu_error = FALSE;
-
-		qe_copy->qeu_uputerr[0] = 0;
-		qe_copy->qeu_uputerr[1] = 0;
-		qe_copy->qeu_uputerr[2] = 0;
-		qe_copy->qeu_uputerr[3] = 0;
-		qe_copy->qeu_uputerr[4] = 0;
-		qe_copy->qeu_stat = CPY_OK;
-		/*
-		** Call QEF to initialize COPY processing.  This will begin
-		** a single statement transaction and prepare for reading
-		** or writing of tuples.
-		*/
-		status = qef_call(QEU_B_COPY, qe_ccb);
-		if (DB_FAILURE_MACRO(status))
-		{
-		    scs_qef_error(status, qe_ccb->error.err_code,
-					E_SC0210_SCS_SQNCR_ERROR, scb);
-
-		    qry_status = GCA_FAIL_MASK;
-		    sscb->sscb_state = SCS_INPUT;
-		    *next_op = CS_EXCHANGE;
-		    /* this is a terminate batch error */
-		    cscb->cscb_eog_error = TRUE;
-		    break;
-		}
-		/* store QEF_RCB for next time */
-		sscb->sscb_cpy_qeccb = (PTR) qe_ccb;
 		/* we already have a row, process it */
 		ps_ccb->psq_ret_flag |= PSQ_CONTINUE_COPY;
 	    }
@@ -4260,23 +4260,104 @@ scs_sequencer(i4 op_code,
 	    {
 		qe_ccb = (QEF_RCB *)sscb->sscb_cpy_qeccb;
 		qe_copy = qe_ccb->qeu_copy;
-		qe_copy->qeu_stat = CPY_OK;
-		status = qef_call(QEU_R_COPY, qe_ccb);
-		if (DB_FAILURE_MACRO(status))
+		/*
+		** check if we need to load the data. This can be:
+		** 1) we are finished with the batch, or:
+		** 2) PSF asked us to load because there may not be enough
+		**    space left in the buffer for the next row, or:
+		** 3) This is not a small batch and we already reached the
+		**    optimum number of buffered rows for DMF
+		*/
+		if (ps_ccb->psq_ret_flag & PSQ_FINISH_COPY ||
+			qe_copy->qeu_load_buf ||
+			((sscb->sscb_flags & SCS_COPY_STARTED) &&
+				(qe_copy->qeu_stat & CPY_SMALL) == 0 && 
+				qe_copy->qeu_cur_tups >= BEST_LOAD_TUPS ))
 		{
-		    qe_copy->qeu_stat |= CPY_FAIL;
-		    /* close copy and rollback rows */
-		    (void)qef_call(QEU_E_COPY, qe_ccb);
-		    scs_copy_error(scb, qe_ccb, 0);
-		    sscb->sscb_state = SCS_CP_ERROR;
-		    /* block sent via NO_ASYNC_EXIT */
-		    sscb->sscb_cfac = DB_CLF_ID;
-		    qry_status = GCA_FAIL_MASK;
-		    sscb->sscb_state = SCS_INPUT;
-		    *next_op = CS_EXCHANGE;
-		    /* this is a terminate batch error */
-		    cscb->cscb_eog_error = TRUE;
-		    break;
+		    if ((sscb->sscb_flags & SCS_COPY_STARTED) == 0)
+		    {
+			/* start copy */
+			qe_ccb->qef_cb = sscb->sscb_qescb;
+			qe_ccb->qef_sess_id = scb->cs_scb.cs_self;
+			qe_ccb->qef_db_id = sscb->sscb_ics.ics_opendb_id;
+			qe_ccb->qef_eflag = QEF_INTERNAL;
+    
+			/*
+			** Initialize some of the copy control block fields.
+			*/
+			qe_copy->qeu_sbuf = NULL;
+			qe_copy->qeu_sptr = NULL;
+			qe_copy->qeu_ssize = 0;
+			qe_copy->qeu_sused = 0;
+			qe_copy->qeu_partial_tup = FALSE;
+			qe_copy->qeu_error = FALSE;
+    
+			qe_copy->qeu_uputerr[0] = 0;
+			qe_copy->qeu_uputerr[1] = 0;
+			qe_copy->qeu_uputerr[2] = 0;
+			qe_copy->qeu_uputerr[3] = 0;
+			qe_copy->qeu_uputerr[4] = 0;
+			qe_copy->qeu_stat = CPY_INS_OPTIM;
+			/*
+			** Call QEF to initialize COPY processing.  This will begin
+			** a single statement transaction and prepare for reading
+			** or writing of tuples.
+			*/
+			if (ps_ccb->psq_ret_flag & PSQ_FINISH_COPY)
+			{
+			    /*
+			    ** we want to finish the copy, but we are only just
+			    ** about to start it, which means there is less than
+			    ** one buffer full of rows. these very small numbers
+			    ** of rows require special consideration in the copy
+			    ** code, so we will set a flag to allow copy to
+			    ** make smarter decisions based on the fact that
+			    ** the copy size is very small
+			    */
+			    qe_copy->qeu_stat |= CPY_SMALL;
+			}
+			status = qef_call(QEU_B_COPY, qe_ccb);
+			if (DB_FAILURE_MACRO(status))
+			{
+			    scs_qef_error(status, qe_ccb->error.err_code,
+						E_SC0210_SCS_SQNCR_ERROR, scb);
+    
+			    qry_status = GCA_FAIL_MASK;
+			    sscb->sscb_state = SCS_INPUT;
+			    *next_op = CS_EXCHANGE;
+			    /* this is a terminate batch error */
+			    sscb->sscb_flags &= ~SCS_INSERT_OPTIM;
+			    cscb->cscb_eog_error = TRUE;
+			    break;
+			}
+			sscb->sscb_flags |= SCS_COPY_STARTED;
+		    }
+		    /* load the data */
+		    qe_copy->qeu_stat |= CPY_INS_OPTIM;
+		    status = qef_call(QEU_R_COPY, qe_ccb);
+		    if (DB_FAILURE_MACRO(status))
+		    {
+			qe_copy->qeu_stat |= CPY_FAIL;
+			/* close copy and rollback rows */
+			scs_copy_error(scb, qe_ccb, 0);
+			sscb->sscb_state = SCS_CP_ERROR;
+			/* block sent via NO_ASYNC_EXIT */
+			sscb->sscb_cfac = DB_CLF_ID;
+			qry_status = GCA_FAIL_MASK;
+			sscb->sscb_state = SCS_INPUT;
+			*next_op = CS_EXCHANGE;
+			/* this is a terminate batch error */
+			cscb->cscb_eog_error = TRUE;
+			sscb->sscb_flags &= ~SCS_COPY_STARTED;
+			break;
+		    }
+		    /* and re-set the buffer */
+		    qe_copy->qeu_cleft = qe_copy->qeu_csize;
+		    qe_copy->qeu_cptr = qe_copy->qeu_cbuf;
+		    qe_copy->qeu_cur_tups = 0;
+		    qe_copy->qeu_input = NULL;
+		    qe_copy->qeu_insert_data = NULL;
+		    qe_copy->qeu_load_buf = FALSE;
 		}
 		cquery->cur_row_count = 1;
 		if ((ps_ccb->psq_ret_flag & PSQ_FINISH_COPY) == 0)
@@ -4304,6 +4385,35 @@ scs_sequencer(i4 op_code,
 		qe_ccb = (QEF_RCB *)sscb->sscb_cpy_qeccb;
 		qe_copy = qe_ccb->qeu_copy;
 		qe_copy->qeu_stat = CPY_OK;
+		/*
+		** check if we have any leftover rows to load
+		*/
+		if (qe_copy->qeu_cur_tups > 0)
+		{
+		    /* load rows in the current buffer */
+		    status = qef_call(QEU_R_COPY, qe_ccb);
+		    if (DB_FAILURE_MACRO(status))
+		    {
+			qe_copy->qeu_stat |= CPY_FAIL;
+			/* close copy and rollback rows */
+			(void)qef_call(QEU_E_COPY, qe_ccb);
+			scs_copy_error(scb, qe_ccb, 0);
+			sscb->sscb_state = SCS_CP_ERROR;
+			/* block sent via NO_ASYNC_EXIT */
+			sscb->sscb_cfac = DB_CLF_ID;
+			qry_status = GCA_FAIL_MASK;
+			sscb->sscb_state = SCS_INPUT;
+			*next_op = CS_EXCHANGE;
+			/* this is a terminate batch error */
+			cscb->cscb_eog_error = TRUE;
+			break;
+		    }
+		    /* and re-set the buffer */
+		    qe_copy->qeu_cleft = qe_copy->qeu_csize;
+		    qe_copy->qeu_cptr = qe_copy->qeu_cbuf;
+		    qe_copy->qeu_cur_tups = 0;
+		    qe_copy->qeu_input = NULL;		    
+		}
 		status = qef_call(QEU_E_COPY, qe_ccb);
 		if (DB_FAILURE_MACRO(status))
 		{
@@ -4317,9 +4427,12 @@ scs_sequencer(i4 op_code,
 		    sscb->sscb_state = SCS_INPUT;
 		    *next_op = CS_EXCHANGE;
 		    /* this is a terminate batch error */
+		    sscb->sscb_flags &= ~SCS_INSERT_OPTIM;
 		    cscb->cscb_eog_error = TRUE;
+		    sscb->sscb_flags &= ~SCS_COPY_STARTED;
 		    break;
 		}
+		sscb->sscb_flags &= ~SCS_COPY_STARTED;
 
 		if (ps_ccb->psq_ret_flag & PSQ_CONTINUE_COPY)
 		{
@@ -5921,14 +6034,24 @@ scs_sequencer(i4 op_code,
 		** as was checked above.
 		*/
 
+		/* If we are retrying after loading a table-proc QP,
+		** restore the original query mode now.
+		*/
+		if (is_tproc_load_qp)
+		{
+		    STRUCT_ASSIGN_MACRO(cur_qp_saved, cquery->cur_qp);
+		    qmode = sscb->sscb_qmode = qmode_saved;
+		    is_tproc_load_qp = FALSE;
+		}
+
                 /* If RETRIEVE or FETCH or row producing procedure, then
 		** determine output buffers.
 		** Don't do this however if this is a return-back for
-		** reloading a QP while in a rowproc, output buffers are
-		** already positioned and we don't want to touch them.
+		** reloading a QP, output buffers are already positioned
+		** and we don't want to touch them.
 		*/
-                if (qmode == PSQ_RETRIEVE || qmode == PSQ_RETCURS ||
-			(rowproc && !qef_wants_ruleqp) )
+                if ((qmode == PSQ_RETRIEVE || qmode == PSQ_RETCURS || rowproc)
+		  && !qef_wants_ruleqp)
 		{
 		    char *row_buf;
 
@@ -6145,16 +6268,11 @@ scs_sequencer(i4 op_code,
 		    	sscb->sscb_ics.ics_db_access_mode == DMC_A_READ)
 			qe_ccb->qef_qacc = QEF_READONLY;
 
-                    if (is_tproc_load_qp)
-                    {
-                        /* restore qp */
-                        STRUCT_ASSIGN_MACRO(cur_qp_saved, cquery->cur_qp);
-                    }
-
 		    status = qef_call(QEQ_QUERY, qe_ccb);
 		}
 
-                if (qe_ccb->error.err_code == E_QE030F_LOAD_TPROC_QP)
+                if (status != E_DB_OK
+		  && qe_ccb->error.err_code == E_QE030F_LOAD_TPROC_QP)
                 {
                     /* Remember tproc qp needs to be recompiled and reloaded */
                     if (!qmode_saved)
@@ -6164,6 +6282,7 @@ scs_sequencer(i4 op_code,
 
                     STRUCT_ASSIGN_MACRO(cquery->cur_qp, cur_qp_saved);
                     is_tproc_load_qp = TRUE;
+		    status = E_DB_ERROR;	/* Eschew warn status */
                 }
 
 		/* Note, this looks slightly premature, but rowprocs can't
@@ -6239,14 +6358,6 @@ scs_sequencer(i4 op_code,
                                         cquery->cur_logkey);
 
                         }
-                    }
-
-                    if (is_tproc_load_qp)
-                    {
-                        /* If reloaing tproc, restore the old qmode
-                         * so that tproc rows can be returned.
-                         */
-                        qmode = sscb->sscb_qmode = qmode_saved;
                     }
 
 		    /* Queue rows for output if row-returning query */
@@ -6351,7 +6462,7 @@ scs_sequencer(i4 op_code,
 			|| (qe_ccb->error.err_code == E_QE0119_LOAD_QP)
 			|| (qe_ccb->error.err_code == E_QE0301_TBL_SIZE_CHANGE)
 			|| (qe_ccb->error.err_code == E_QE0303_PARSE_EXECIMM_QTEXT)
-                        || (qe_ccb->error.err_code == E_QE030F_LOAD_TPROC_QP))
+                        || is_tproc_load_qp)
 		       )
 		    {
 			/* bug 38565 -- don't count table size increase against
@@ -6378,8 +6489,7 @@ scs_sequencer(i4 op_code,
 							E_QE0119_LOAD_QP)
 				    || (qe_ccb->error.err_code ==
 							E_QE0301_TBL_SIZE_CHANGE)
-                                    || (qe_ccb->error.err_code ==
-                                                        E_QE030F_LOAD_TPROC_QP)
+                                    || is_tproc_load_qp
 				   )
 			       )
 			    {
@@ -6405,8 +6515,7 @@ scs_sequencer(i4 op_code,
 				    sscb->sscb_noretries = 0;
 				}
 				/* Save full alias */
-				STRUCT_ASSIGN_MACRO(*(QSO_NAME *)
-						    &qe_ccb->qef_dbpname,
+				STRUCT_ASSIGN_MACRO(qe_ccb->qef_dbpname,
 						    qef_psf_alias);
 			    }
 			    else if (qmode == PSQ_EXEDBP)
@@ -8746,6 +8855,7 @@ scs_sequencer(i4 op_code,
 	    case PSQ_ALLJOURNAL:
 	    case PSQ_SCARDCHK:
 	    case PSQ_SNOCARDCHK:
+	    case PSQ_CREATECOMP:
 
 	    /* the following qmodes are obsolete */
 	    case PSQ_OBSOLETE:
@@ -10178,16 +10288,71 @@ massive_for_exit:
 		    && (!(qry_status & GCA_FAIL_MASK)))
 	    {
 		i4 len;
+		GCA_RP_DATA	*rpdata;
+		
+		if (cscb->cscb_in_group)
+		{
+		    /*
+		    ** when in batch mode we will queue up the
+		    ** messages on cscb_mnext until the batch is done, so we have
+		    ** to allocate memory for each one.
+		    ** This is here because of the non-async nature of
+		    ** GCA_SEND and the way in which the DAS server works. The DAS
+		    ** server might continue to send messages for a batch without
+		    ** reading the receive queue. If the DBMS sends any
+		    ** responses before DAS is ready to read them, we may end up
+		    ** in a send/receive deadlock where the DBMS has sent a
+		    ** response and is waiting for the DAS server to read it, and
+		    ** the DAS server has sent more queries for the batch and is 
+		    ** waiting for the DBMS to read them.
+		    ** Saving up the responses is not the ideal solution since it
+		    ** imposes on the DBMS processing and continues to eat through
+		    ** the session's SCF memory while the batch is processing, but
+		    ** since GCA has no way to queue the send request and 
+		    ** asynchronously return, we have no choice. If the user's batch
+		    ** is too big, we may exhaust the SCF memory pool, in which case
+		    ** the batch will be terminated and the user will receive an
+		    ** error. If we ever code an async GCA_SEND, we should change this 
+		    ** processing.
+		    */
+		    status = sc0m_allocate(SCU_MZERO_MASK,
+			    sizeof(SCC_GCMSG) + sizeof(GCA_RP_DATA),
+			    DB_SCF_ID,
+			    (PTR)SCS_MEM,
+			    SCG_TAG,
+			    (PTR *)&message);
+		    if (status != E_DB_OK)
+		    {
+			cscb->cscb_eog_error = TRUE;
+			sc0e_0_put(status, 0);
+			sc0e_0_uput(status, 0);
+			sc0e_0_uput(E_SC0206_CANNOT_PROCESS, 0);
+			sscb->sscb_state = SCS_INPUT;
+			*next_op = CS_EXCHANGE;
+			qry_status |= GCA_FAIL_MASK;
+			scd_note(E_DB_SEVERE, DB_SCF_ID);
+		    }
+		    message->scg_marea = (PTR)message + sizeof(SCC_GCMSG);
+		    /* mark for deallocation after message send */
+		    message->scg_mask = SCG_QDONE_DEALLOC_MASK;
+		    rpdata = (GCA_RP_DATA *)message->scg_marea;
+		}
+		else
+		{
+		    message = &cscb->cscb_rpmmsg;
+		    message->scg_mask = SCG_NODEALLOC_MASK;
+		    rpdata = cscb->cscb_rpdata;
 
-		message = &cscb->cscb_rpmmsg;
+		}
+
 		message->scg_mtype = sscb->sscb_rsptype;
 		message->scg_next = (SCC_GCMSG *) &cscb->cscb_mnext;
 		message->scg_prev = cscb->cscb_mnext.scg_prev;
 		cscb->cscb_mnext.scg_prev->scg_next = message;
 		cscb->cscb_mnext.scg_prev = message;
-		message->scg_mask = SCG_NODEALLOC_MASK;
 		message->scg_msize = sizeof(GCA_RP_DATA);
-		cscb->cscb_rpdata->gca_retstat = qe_ccb->qef_dbp_status;
+		rpdata->gca_retstat = qe_ccb->qef_dbp_status;
+		
 
 		/*
 		** The procedure name has already been normalized and case
@@ -10203,27 +10368,27 @@ massive_for_exit:
 		         proc_qid.db_cur_name[len-1] != ' ' )  break;
 
 		if ( len >
-		     sizeof(cscb->cscb_rpdata->gca_id_proc.gca_name) )
+		     sizeof(rpdata->gca_id_proc.gca_name) )
 		{
-		    cscb->cscb_rpdata->gca_id_proc.gca_index[0] = 0;
-		    cscb->cscb_rpdata->gca_id_proc.gca_index[1] = 0;
+		    rpdata->gca_id_proc.gca_index[0] = 0;
+		    rpdata->gca_id_proc.gca_index[1] = 0;
 
 		    MEfill(
-			sizeof(cscb->cscb_rpdata->gca_id_proc.gca_name),
+			sizeof(rpdata->gca_id_proc.gca_name),
 			' ',
-			(PTR)cscb->cscb_rpdata->gca_id_proc.gca_name );
+			(PTR)rpdata->gca_id_proc.gca_name );
 		}
 		else
 		{
-		    cscb->cscb_rpdata->gca_id_proc.gca_index[0] =
+		    rpdata->gca_id_proc.gca_index[0] =
 			proc_qid.db_cursor_id[0];
-		    cscb->cscb_rpdata->gca_id_proc.gca_index[1] =
+		    rpdata->gca_id_proc.gca_index[1] =
 			proc_qid.db_cursor_id[1];
 
 		    MEmove(sizeof(proc_qid.db_cur_name),
 			(PTR)&proc_qid.db_cur_name, ' ',
-			sizeof(cscb->cscb_rpdata->gca_id_proc.gca_name),
-			(PTR)&cscb->cscb_rpdata->gca_id_proc.gca_name);
+			sizeof(rpdata->gca_id_proc.gca_name),
+			(PTR)&rpdata->gca_id_proc.gca_name);
 		}
 
 		if ( tdesc != NULL && tdata != NULL )
@@ -10242,13 +10407,32 @@ massive_for_exit:
 		    && !ult_check_macro(&Sc_main_cb->sc_trace_vector, SCT_NOBYREF,
 				       NULL,NULL)))
 	    {
-		if (sscb->sscb_flags & SCS_INSERT_OPTIM)
+		GCA_RE_DATA	*rdata;
+		
+		if (cscb->cscb_in_group)
 		{
 		    /*
-		    ** for the insert to copy optimization we will queue up the
-		    ** messages on cscb_mnext until the copy is done, so we have
-		    ** to allocate memory for each one. Message type will always
-		    ** be GCA_RESPONSE
+		    ** when in batch mode we will queue up the
+		    ** messages on cscb_mnext until the batch is done, so we have
+		    ** to allocate memory for each one.
+		    ** This is here because of the non-async nature of
+		    ** GCA_SEND and the way in which the DAS server works. The DAS
+		    ** server might continue to send messages for a batch without
+		    ** reading the receive queue. If the DBMS sends any
+		    ** responses before DAS is ready to read them, we may end up
+		    ** in a send/receive deadlock where the DBMS has sent a
+		    ** response and is waiting for the DAS server to read it, and
+		    ** the DAS server has sent more queries for the batch and is 
+		    ** waiting for the DBMS to read them.
+		    ** Saving up the responses is not the ideal solution since it
+		    ** imposes on the DBMS processing and continues to eat through
+		    ** the session's SCF memory while the batch is processing, but
+		    ** since GCA has no way to queue the send request and 
+		    ** asynchronously return, we have no choice. If the user's batch
+		    ** is too big, we may exhaust the SCF memory pool, in which case
+		    ** the batch will be terminated and the user will receive an
+		    ** error. If we ever code an async GCA_SEND, we should change this 
+		    ** processing.
 		    */
 		    status = sc0m_allocate(SCU_MZERO_MASK,
 			    sizeof(SCC_GCMSG) + sizeof(GCA_RE_DATA),
@@ -10258,6 +10442,7 @@ massive_for_exit:
 			    (PTR *)&message);
 		    if (status != E_DB_OK)
 		    {
+			cscb->cscb_eog_error = TRUE;
 			sc0e_0_put(status, 0);
 			sc0e_0_uput(status, 0);
 			sc0e_0_uput(E_SC0206_CANNOT_PROCESS, 0);
@@ -10269,16 +10454,13 @@ massive_for_exit:
 		    message->scg_marea = (PTR)message + sizeof(SCC_GCMSG);
 		    /* mark for deallocation after message send */
 		    message->scg_mask = SCG_QDONE_DEALLOC_MASK;
-		    /* set row count */
-		    ((GCA_RE_DATA *)message->scg_marea)->gca_rowcount = 
-			((qry_status & GCA_FAIL_MASK)
-			 ? -1
-			 : cquery->cur_row_count);
+		    rdata = (GCA_RE_DATA *)message->scg_marea;
 		}
 		else
 		{
 		    message = &cscb->cscb_rspmsg;
 		    message->scg_mask = 0;
+		    rdata = cscb->cscb_rdata;
 		}
 
 		message->scg_mtype = sscb->sscb_rsptype;
@@ -10302,23 +10484,23 @@ massive_for_exit:
 		{
 		    message->scg_msize = sizeof(GCA_RE_DATA);
 		}
-		cscb->cscb_rdata->gca_rqstatus = qry_status;
-		cscb->cscb_rdata->gca_rowcount =
+		rdata->gca_rqstatus = qry_status;
+		rdata->gca_rowcount =
 		    ((qry_status & GCA_FAIL_MASK)
 		     ? -1
 		     : cquery->cur_row_count);
 		cquery->cur_row_count = -1;
-		cscb->cscb_rdata->gca_rhistamp =
+		rdata->gca_rhistamp =
 		    sscb->sscb_comstamp.db_tab_high_time;
-		cscb->cscb_rdata->gca_rlostamp =
+		rdata->gca_rlostamp =
 		    sscb->sscb_comstamp.db_tab_low_time;
 
 		/* Stuff scrollable cursor info in GCA. qe_ccb may have
 		** been cleared by now, in which case the fields should
 		** be copied into cquery right after the QEQ_QUERY call,
 		** then copied to the GCA from there. */
-		cscb->cscb_rdata->gca_errd0 = rowstat;
-		cscb->cscb_rdata->gca_errd1 = curspos;
+		rdata->gca_errd0 = rowstat;
+		rdata->gca_errd1 = curspos;
 
 		/*
 		** XA support - if xa commit/rollback, send
@@ -10334,7 +10516,7 @@ massive_for_exit:
 				&(cscb->cscb_rdata->gca_errd5));
 		}
 */
-                if ((cscb->cscb_rdata->gca_rowcount == 1) &&
+                if ((rdata->gca_rowcount == 1) &&
                     (cquery->cur_val_logkey & (QEF_TABKEY | QEF_OBJKEY)))
                 {
                     /* if a system maintained logical key has been
@@ -10342,15 +10524,15 @@ massive_for_exit:
 		     ** to be returned to the client.
 		     */
                     if (cquery->cur_val_logkey & QEF_TABKEY)
-                        cscb->cscb_rdata->gca_rqstatus |= GCA_TABKEY_MASK;
+                        rdata->gca_rqstatus |= GCA_TABKEY_MASK;
 
                     if (cquery->cur_val_logkey & QEF_OBJKEY)
-                        cscb->cscb_rdata->gca_rqstatus |= GCA_OBJKEY_MASK;
+                        rdata->gca_rqstatus |= GCA_OBJKEY_MASK;
 
 
                     MEcopy( ((PTR) &cquery->cur_logkey),
 			       sizeof(cquery->cur_logkey),
-			       ((PTR) cscb->cscb_rdata->gca_logkey));
+			       ((PTR) rdata->gca_logkey));
                 }
 	    }
 	    sscb->sscb_qmode = 0;
@@ -10361,15 +10543,15 @@ massive_for_exit:
 	    {
 		*next_op = CS_INPUT;
 	    }
-	    else if (sscb->sscb_flags & SCS_INSERT_OPTIM &&
-		    !(ps_ccb->psq_ret_flag & PSQ_FINISH_COPY) &&
+	    else if (cscb->cscb_in_group &&
+		    !cscb->cscb_gci.gca_end_of_group &&
 		    qry_status != GCA_FAIL_MASK)
 	    {
 		/*
-		** if we are in an insert-to-copy optimization, then
-		** we can't return the result until the copy is done.
+		** if we are in a batch, then
+		** we can't return the result until the batch is done.
 		** The messages are already queued, so we'll just
-		** keep grabbing the next input until the copy is done
+		** keep grabbing the next input until the batch is done
 		*/
 		*next_op = CS_INPUT;
 	    }
@@ -10620,6 +10802,54 @@ massive_for_exit:
 		sc0m_deallocate(0, &sscb->sscb_troot);
 	    }
 	}
+    }
+
+    /* SC930 - log end of query */
+    if ((sscb->sscb_state == SCS_INPUT) &&
+        (ult_always_trace() & SC930_TRACE))
+    {
+
+          SCC_CSCB	*cscb;		/* Convenience: scb->scb_cscb */
+
+          void *f = ult_open_tracefile((PTR)scb->cs_scb.cs_self);
+
+          cscb = &scb->scb_cscb;
+
+          if (f)
+          {
+	      char tmp[45],fac_str[5];
+              u_i4 fac_code,just_err,i;
+
+	      if (scb->cs_scb.cs_sc930_err == 0)
+	      {
+ 		  STprintf(tmp,"%d:",
+		  	  cscb->cscb_rdata->gca_rowcount);
+	      }
+	      else
+	      {
+ 	        fac_code=(scb->cs_scb.cs_sc930_err >> 16) & 0x7fff;
+ 	        just_err=scb->cs_scb.cs_sc930_err & 0xffff; 
+                
+		/* if for any reason we can't find the facilty code then
+		 * output it as hex */
+
+ 	        STprintf(fac_str,"%04X",fac_code);
+ 
+ 		for (i=0; i < NUMFAC; ++i)
+ 	  	  if (Factab[i].num== fac_code)
+ 		  {
+ 		    STprintf(fac_str,"E_%2s",Factab[i].fac);
+ 		    break;
+ 		  }
+ 
+ 		STprintf(tmp,"%d:%4s%04X",
+			cscb->cscb_rdata->gca_rowcount,
+		        fac_str,just_err);
+	      }
+ 	      ult_print_tracefile(f,SC930_LTYPE_ENDQRY,tmp);
+ 	      ult_close_tracefile(f);
+ 	    }
+	    scb->cs_scb.cs_sc930_err=0;
     }
 
     sscb->sscb_cfac = DB_CLF_ID;
@@ -13469,7 +13699,7 @@ scs_input(SCD_SCB *scb,
 	    sscb->sscb_dmm = 0;
 	}
 	else if (sscb->sscb_dmm)
-	{
+	{	
 	    sc0e_put(E_SC022C_PREMATURE_MSG_END, 0, 2,
 		     sizeof(rv->gca_message_type),
 		     (PTR)&rv->gca_message_type,
@@ -13591,7 +13821,17 @@ scs_input(SCD_SCB *scb,
 **	    prototyped.
 **      21-Jul-1999 (wanya01)
 **          Send E_SC0206_CANNOT_PROCESS to FE. (Bug 98017)
-[@history_template@]...
+**	23-Jun-2010 (kschendel) b123775
+**	    Handle E_QE0122_ALREADY_REPORTED as if it were QE0025, i.e. just
+**	    eat it.  QEF usually translates QE0122 to QE0025, but some
+**	    cases slip through, and it's simpler to fix here than in QEF. :-)
+**      02-Sep-2010 (maspa05) sir 124346
+**          Save error code for SC930 output
+**      20-sep-2010 (stephenb)
+**          QEF may return E_DM006A_TRAN_ACCESS_CONFLICT when update
+**          operations are attempted in a read-only transaction or database.
+**          This should not cause vague SCF errors in the log; add a case
+**          for it here.
 */
 VOID
 scs_qef_error(DB_STATUS status,
@@ -13601,13 +13841,22 @@ scs_qef_error(DB_STATUS status,
 {
     scd_note(status, DB_QEF_ID);
 
-    if ((err_code == E_QE0025_USER_ERROR) ||
-		    (err_code == E_QE0015_NO_MORE_ROWS))
+    if (err_code == E_QE0025_USER_ERROR || err_code == E_QE0122_ALREADY_REPORTED
+		|| err_code == E_QE0015_NO_MORE_ROWS)
     {
 	/*
 	** These are user errors and
 	** should have been returned as such
+	**
+	** However save the error_blame error code for SC930 tracing
+	** unless we've already got an error code - in which case assume 
+	** it's more meaningful and keep it
 	*/
+
+        if (scb->cs_scb.cs_sc930_err==0)
+	    scb->cs_scb.cs_sc930_err=error_blame;
+
+
     }
     else if ((err_code == E_QE000D_NO_MEMORY_LEFT)
 	|| (err_code == E_QE000E_ACTIVE_COUNT_EXCEEDED))
@@ -13637,6 +13886,19 @@ scs_qef_error(DB_STATUS status,
 	scb->scb_sscb.sscb_force_abort = SCS_FAPENDING;
 	if (scb->scb_cscb.cscb_batch_count > 0)
 	    scb->scb_cscb.cscb_eog_error = TRUE;
+    }
+    else if (err_code == E_DM006A_TRAN_ACCESS_CONFLICT)
+    {
+	/* 
+	** update operation attempted in a read-only
+	** transaction or database. QEF has already raised a user
+	** error through SCC_ERROR, so report the original error
+	** message in the log rather than falling through to vague
+	** QEF error message below
+	*/
+	sc0e_0_put(err_code, 0);
+	sc0e_0_put(E_SC0206_CANNOT_PROCESS, 0);
+	sc0e_0_uput(E_SC0206_CANNOT_PROCESS, 0);
     }
     else if (scb->scb_sscb.sscb_flags & SCS_STAR)
     {

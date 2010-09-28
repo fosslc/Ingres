@@ -54,6 +54,8 @@
 ** 27-May-2010 (drivi01)
 **    Add iicommon.h to the headers to include GL_MAXNAME constant definition
 **    in constdef.h.
+** 23-Jun-2010 (drivi01) 
+**    Fix some hardcoded buffer length for long id change.
 */
 
 #include "constdef.h"
@@ -720,7 +722,7 @@ static BOOL QueryDetailUser (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CaU
 		char Profile_name [DBOBJECTLEN];
 		char Expire_date  [MAXDATELEN];
 		char*usrname= T2A((LPTSTR)(LPCTSTR)strUser);
-		char Lim_sec_label[128+1];
+		char Lim_sec_label[DBOBJECTLEN*2];
 		char Creatdb[2], Trace[2], Audit_all[2], Security[2],
 		Maintain_locations[2], Operator[2], Maintain_users[2],
 		Maintain_audit[2], Auditor[2], Audit_query_text[2];
@@ -1010,7 +1012,7 @@ static BOOL QueryDetailGroup (CaLLQueryInfo* pQueryInfo, CaGroup* pObject)
 	CStringList& listMember = pObjectDetail->GetListMember();
 
 	EXEC SQL BEGIN DECLARE SECTION;
-		char szMember [128];
+		char szMember [DBOBJECTLEN*2];
 		char* name = T2A((LPTSTR)(LPCTSTR)strObjectName);
 	EXEC SQL END DECLARE SECTION;
 
@@ -1333,7 +1335,7 @@ static BOOL QueryDetailProfile (CaLLQueryInfo* pQueryInfo, CaSession* pSession, 
 		char Default_group[DBOBJECTLEN];
 		char Expire_date[MAXDATELEN];
 		char*profname= T2A((LPTSTR)(LPCTSTR)strObjectName);
-		char Lim_sec_label[128+1];
+		char Lim_sec_label[DBOBJECTLEN*2];
 		char Creatdb[2], Trace[2], Audit_all[2], Security[2];
 		char Maintain_locations[2], Operator[2], Maintain_users[2];
 		char Maintain_audit[2], Auditor[2], Audit_query_text[2];
@@ -1816,7 +1818,7 @@ static BOOL QueryDetailRole (CaLLQueryInfo* pQueryInfo, CaSession* pSession, CaR
 		long lInternpasswd;
 		short sNullInd;
 		char*rolname=T2A((LPTSTR)(LPCTSTR)strObjectName);
-		char Lim_sec_label[128+1];
+		char Lim_sec_label[DBOBJECTLEN*2];
 		char Creatdb[2], Trace[2], Audit_all[2], Security[2];
 		char Maintain_locations[2], Operator[2], Maintain_users[2];
 		char Maintain_audit[2], Auditor[2], Audit_query_text[2];
@@ -3594,8 +3596,8 @@ static BOOL QueryDetailTVIGrantee (CaLLQueryInfo* pQueryInfo, CaGrantee* pGrante
 	//strGrantee.MakeLower();
 
 	EXEC SQL BEGIN DECLARE SECTION;
-		char  szPermitUser[48];
-		char  szPermitType[128];
+		char  szPermitUser[DBOBJECTLEN+48];
+		char  szPermitType[DBOBJECTLEN*2];
 		char  chType[2];
 		char* lpObject = T2A((LPTSTR)(LPCTSTR)strObject);
 		char* lpObjectOwner = T2A((LPTSTR)(LPCTSTR)strObjectOwner);

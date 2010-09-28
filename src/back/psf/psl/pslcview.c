@@ -361,6 +361,12 @@
 **	25-Mar-2010 (kiria01) b123535
 **	    Added call to psl_ss_flatten() to apply the flattening of
 **	    subselects in views too.
+**	11-Jun-2010 (kiria01) b123908
+**	    Initialise pointers after psf_mopen would have invalidated any
+**	    prior content.
+**	21-Jul-2010 (troal01)
+**		SRID and GeomType should now be set properly in iiattribute on
+**		creation of views with geometry types.
 */
 DB_STATUS
 psl_cv1_create_view(
@@ -770,11 +776,11 @@ psl_cv1_create_view(
 	attr->attr_collID = resdom->pst_sym.pst_dataval.db_collID;
         attr->attr_seqTuple = (DB_IISEQUENCE *) NULL;
 
-	/*
-	 * Put in geospatial attributes
-	 */
-	attr->attr_geomtype = -1;
-	attr->attr_srid = -1;
+    /*
+     * default geospatial values
+     */
+    attr->attr_srid = -1;
+    attr->attr_geomtype = -1;
 
 	attr->attr_encflags = 0;
 	attr->attr_encwid = 0;
@@ -826,6 +832,11 @@ psl_cv1_create_view(
 	    attr->attr_flags_mask = attribute->att_flags;
 	    attr->attr_defaultID  = attribute->att_defaultID;
 	    attr->attr_defaultTuple  = (DB_IIDEFAULT *) NULL;
+		/*
+		 * Make sure the right geospatial attributes are set
+		 */
+		attr->attr_geomtype = attribute->att_geomtype;
+		attr->attr_srid = attribute->att_srid;
 	}
     }
 
@@ -979,6 +990,7 @@ psl_cv1_create_view(
 		&psq_cb->psq_error);
 	    if (DB_FAILURE_MACRO(status))
 		goto cleanup;
+	    sess_cb->pss_stk_freelist = NULL;
 
 	    for (i = 0; i < qtree->pst_rngvar_count; i++)
 	    {
@@ -1656,6 +1668,7 @@ psl_cv2_viewstmnt(
 	    &psq_cb->psq_error);
 	if (status != E_DB_OK)
 	    return (status);
+	sess_cb->pss_stk_freelist = NULL;
     }
 
     /*

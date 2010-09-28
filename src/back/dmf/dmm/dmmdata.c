@@ -117,6 +117,10 @@ LIBRARY = IMPDMFLIBDATA
 **      14-May-2010 (stial01)
 **          Add relattnametot to iirelation, move attname to end of iiattribute
 **          Clean up attdef macro, define relextra,attexta as byte
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Core catalogs use OLD STANDARD compression.  dm2d isn't quite
+**	    smart enough to figure out multiple core-catalog compression types,
+**	    and now is not the time to teach it.
 */
 
 /* dmmcre.c */
@@ -231,13 +235,13 @@ GLOBALDEF DMP_RELATION DM_core_relations[DM_CORE_REL_CNT] =
 {
     {
         /* reltid,relid,relwid,relkeys,relidxcount,relstat,relmin,relcomptype */
-	reldef(REL_TABID, "iirelation", sizeof(DMP_RELATION), 1, 1, REL_RELSTAT, 16, TCB_C_STANDARD)
+	reldef(REL_TABID, "iirelation", sizeof(DMP_RELATION), 1, 1, REL_RELSTAT, 16, TCB_C_STD_OLD)
     },
     {
-	reldef(RIDX_TABID, "iirel_idx", sizeof(DMP_RINDEX), 2, 0, RIDX_RELSTAT,  8, TCB_C_STANDARD)
+	reldef(RIDX_TABID, "iirel_idx", sizeof(DMP_RINDEX), 2, 0, RIDX_RELSTAT,  8, TCB_C_STD_OLD)
     },
     {
-	reldef(ATT_TABID, "iiattribute", sizeof(DMP_ATTRIBUTE), 2, 0, ATT_RELSTAT, 32, TCB_C_STANDARD)
+	reldef(ATT_TABID, "iiattribute", sizeof(DMP_ATTRIBUTE), 2, 0, ATT_RELSTAT, 32, TCB_C_STD_OLD)
     },
     {
 	reldef(IND_TABID, "iiindex", DMP_INDEX_SIZE, 1, 0, IND_RELSTAT, 8, TCB_C_NONE)

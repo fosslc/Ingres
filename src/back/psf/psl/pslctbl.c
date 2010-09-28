@@ -544,11 +544,17 @@ static char * psl_seckey_attr_name(
 **	    Add support for autostruct with options.
 **	04-may-2010 (miket) SIR 122403
 **	    Check for anatomically incorrect encryption specifications.
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Pass in with-clauses, check for compression, use default.
+**	28-Jul-2010 (kschendel) SIR 124104
+**	    Also set pst_compress in the create table header so that it
+**	    can be passed along to auto-structure.
 */
 DB_STATUS
 psl_ct1_create_table(
 	PSS_SESBLK	*sess_cb,
 	PSQ_CB		*psq_cb,
+	PSS_WITH_CLAUSE	*with_clauses,
 	PSS_CONS	*cons_list)
 {
     DB_ERROR			*err_blk= &psq_cb->psq_error;
@@ -737,6 +743,36 @@ psl_ct1_create_table(
 	return(E_DB_ERROR);
     }
     /* PASSPHRASE= specified but no ENCRYPTION= is checked in psl_nm_eq_nm */
+
+    /* Default the COMPRESSION if not specified and not $ingres (don't
+    ** want to change how catalogs are compressed!).
+    */
+    if (MEcmp((PTR) &dmu_cb->dmu_owner, (PTR) sess_cb->pss_cat_owner, sizeof(DB_OWN_NAME)) != 0
+      && ! PSS_WC_TST_MACRO(PSS_WC_COMPRESSION, with_clauses))
+    {
+	chr = (DMU_CHAR_ENTRY *)
+		(((char *) dmu_cb->dmu_char_array.data_address)
+		+ dmu_cb->dmu_char_array.data_in_size);
+	chr->char_id = DMU_COMPRESSED;
+	chr->char_value = sess_cb->pss_create_compression;
+	dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
+	if (sess_cb->pss_create_compression == DMU_C_ON)
+	    sess_cb->pss_restab.pst_compress = PST_DATA_COMP;
+	else if (sess_cb->pss_create_compression == DMU_C_HIGH)
+	    sess_cb->pss_restab.pst_compress = PST_HI_DATA_COMP;
+	else
+	    sess_cb->pss_restab.pst_compress = 0;
+    }
+
+    /* Stuff compression into create-table node header too, makes it easy
+    ** for opc to find and pass to QEF.
+    */
+
+    if (sess_cb->pss_crt_tbl_stmt)
+    {
+	sess_cb->pss_crt_tbl_stmt->pst_specific.pst_createTable.pst_compress =
+		sess_cb->pss_restab.pst_compress;
+    }
 
 #ifdef	xDEBUG
     {
@@ -5762,10 +5798,10 @@ psl_ct10_crt_tbl_kwd(
 	/*
 	**  in the REGISTER TABLE command the storage structure is never
 	**  compressed, so the variable sess_cb->pss_restab.pst_compress is
-	**  initiated as FALSE
+	**  initiated as 0.
 	*/
  
-	sess_cb->pss_restab.pst_compress = FALSE;    /* no compressed structure   */
+	sess_cb->pss_restab.pst_compress = 0;    /* no compressed structure   */
 						/* in REGISTER TABLE command */
 	sess_cb->pss_restab.pst_struct = 0L;
     }
@@ -6089,6 +6125,11 @@ psl_ct11_tname_name_name(
 **	22-sep-06 (toumi01)
 **	    Check for mixed GTT syntax modes (with and without "session."),
 **	    and forbid this mixing as too confusing in its side effects.
+**	19-Jun-2010 (kiria01) b123951
+**	    Add extra parameter to psl0_rngent for WITH support.
+**	30-jul-10 (gupsh01) bug 124011
+**	    CVupper may cause stack corruption, as it expects null terminated
+**	    string.
 */
 DB_STATUS
 psl_ct12_crname(
@@ -6100,7 +6141,7 @@ psl_ct12_crname(
     DB_STATUS	    status, local_status = E_DB_OK;
     PSS_RNGTAB	    *resrange;
     char	    *ch1, *ch2;
-    char	    tempstr[DB_TAB_MAXNAME];
+    char	    tempstr[DB_TAB_MAXNAME + 1];
     char	    qry[PSL_MAX_COMM_STRING];
     i4	    qry_len;
     i4		    rngvar_info;
@@ -6352,14 +6393,18 @@ psl_ct12_crname(
 	if (*(sess_cb->pss_dbxlate) & CUI_ID_DLM_M)
 	{
 	    MEcopy(tbl_spec->pss_obj_name.db_tab_name,
-		   sizeof(tempstr), tempstr);
+		   sizeof(tempstr) - 1, tempstr);
+
+	    /* CVupper and CVlower expects null terminated string */
+	    tempstr[DB_TAB_MAXNAME] = EOS;
+
 	    if (*(sess_cb->pss_dbxlate) & CUI_ID_REG_U)
 		CVupper(tempstr);
 	    else
 		CVlower(tempstr);
 
 	    if (MEcmp(tbl_spec->pss_obj_name.db_tab_name, 
-		      tempstr, sizeof(tempstr)) != 0)
+		      tempstr, sizeof(tempstr) - 1) != 0)
 	    {
 		(void) psf_error(E_PS045F_WRONG_CASE, 0L, PSF_USERERR,
 			     &err_code, &psq_cb->psq_error, 3,
@@ -6447,7 +6492,7 @@ psl_ct12_crname(
 	status = psl0_rngent(&sess_cb->pss_auxrng, -1, "",
 			    &tbl_spec->pss_obj_name, sess_cb, TRUE, &resrange,
 			    psq_cb->psq_mode, &psq_cb->psq_error,
-	    		    tbls_to_lookup, &rngvar_info, lookup_mask);
+	    		    tbls_to_lookup, &rngvar_info, lookup_mask, NULL);
     }
     if (DB_FAILURE_MACRO(status))
 	return (status);

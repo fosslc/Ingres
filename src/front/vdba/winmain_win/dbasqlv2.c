@@ -67,6 +67,9 @@
 **      Add routine for creation of VectorWise table.
 **    02-Jun-2010 (drivi01)
 **      Update szCol to use MAXOBJECTNAME instead of hardcoded value.
+**    30-Jun-2010 (drivi01)
+**      Bug #124006
+**      Add new BOOLEAN datatype.
 *******************************************************************************/
 #include <assert.h>
 #include "dba.h"
@@ -517,6 +520,9 @@ LPTSTR VDBA20xAlterColumnFormat (LPCOLUMNPARAMS lpCol, LPOBJECTLIST lpReferences
     case INGTYPE_BIGINT:
         m = ConcateStrings (&lpString, "bigint ", (LPTSTR)0);
         break;
+    case INGTYPE_BOOLEAN:
+        m = ConcateStrings (&lpString, "boolean ", (LPTSTR)0);
+        break;
     case INGTYPE_INT8:
         m = ConcateStrings (&lpString, "int8 ", (LPTSTR)0);
         break;
@@ -698,6 +704,10 @@ LPTSTR VDBA20xColumnFormat (LPCOLUMNPARAMS lpCol, LPOBJECTLIST lpReferences, LPT
         break;
     case INGTYPE_LONGVARCHAR:
         m = ConcateStrings (&lpString, "long varchar ", (LPTSTR)0);
+        bGenerateDefault = FALSE;
+        break;
+    case INGTYPE_BOOLEAN:
+        m = ConcateStrings (&lpString, "boolean ", (LPTSTR)0);
         bGenerateDefault = FALSE;
         break;
     case INGTYPE_BIGINT:

@@ -1409,7 +1409,53 @@
 #       15-Jun-2010 (horda03) b123914
 #           Use VERSFILE rather than VERS and VERS.<platform> for kitinstal.data
 #           dependancy
-#
+#	17-Jun-2010 (hanje04)
+#	    BUG 123943
+#	    Use more restrictive sed mask in IIRemRCComments so it doesn't
+#	    remove the LSB headers
+#	3-Jul-2009 (warmerdam)
+#	    Added HDRPROJ and src/common/adf/adu to IISUBSYS for geospatial.
+#       23-Jul-2010 (horda03)
+#           A jam in the genxml directory on NT fails to build the genxml
+#           utility because it is unable to find the iilibadf shared library.
+#           The IINEEDLIBSW rule is missing the search directories for shared
+#           libraries
+#	24-Jul-2010 (drivi01)
+#	    Remove ICE from build process.
+#	28-Jul-2010 (drivi01)
+#	    Remove hardcoded dependency of VDBA on SHICEAPILIB.
+#	28-Jul-2010 (drivi01)
+#	    When msg file in front facilities get updated.  Mnx files
+#	    aren't rebuilt b/c there is no dependecy on msg files from
+#	    mkfecat script.
+#	    Add dependency of fe.cat.msg file on msg files in front.
+#	09-Aug-2010 (drivi01)
+#	    Port CCLEXW action to cygwin 1.7.  Add u2d conversions
+#	    to convert all files to DOS format in the intermediate
+#	    steps to avoid syntax errors.
+#       13-Aug-2010 (horda03) b124249
+#           Rebuild version.rel when the VERS file changes.
+#	13-Aug-2010 (drivi01)
+#	    Cygwin 1.7 expects shell files on Windows to be
+#	    binary and prefers POSIX paths.
+#	    Update ShellNt rule to convert shell files to
+#	    binary format at build time.
+#	16-Aug-2010 (drivi01)
+#	    Fix $(USE_CYGWIN) in ShellNT action to 
+#	    environment variable %USE_CYGWIN% check.
+#       17-Aug-2010 (horda03) b124249
+#           Rather than specify VERS or VERS.<platform> use VERSFILE for
+#           version.rel dependency.
+#       19-Aug-2010 (coomi01) b124278
+#           Add IIOPTIM to compile and link stages for rule IITOOLSEXE
+#       20-Aug-2010 (horda03)
+#           Added IIAWK rule/action to generate .h files (in psl) from
+#           some source. Also fixed dependencies in other AWK based
+#           rules to ensure correct build order used.
+#       09-aug-2010 (joea)
+#           Correct _IIAWK action on VMS: need to quote uppercase params.
+#	31-Aug-2010 (troal01)
+#	    Added IIGeoLibs rule
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -1481,6 +1527,7 @@
 # IIFiH adgfi_defn.h : fi_defn.awk fi_defn.txt ;
 # IIAduPatHdr adupatexec_ops.h : adupatexec.awk adupatexec.dotty ;
 # IIAduPatBdy adupatexec_inc.i : adupatexec.awk adupatexec.dotty ;
+# IIAWK target | awk_file source ;
 #
 # IIUTILBAT files ; -- bulk files (bat and others) for $INGUTIL
 # IIBINBAT files ; -- bulk files (bat and others) for $INGBIN
@@ -2033,7 +2080,8 @@ rule IIEsqlHdr
     LOCATE on $(_t) = $(INGFILES) ;
 
 }
-
+if $(BUILD_ICE)
+{
 rule IIICECAZIP
 {
   if $(NT)
@@ -2058,6 +2106,7 @@ rule IIICECAZIP
 	#_USETOOL $(<) : cazipxp.exe ;
 	Clean clean : $(INGICE)/$(<) ;	
   }
+}
 }
 
 rule IICF
@@ -2631,8 +2680,10 @@ rule IITOOLSEXE
 		case *.cpp : C++FLAGS on $(_g) += $(CMPORTS) $(EHFLAG) $(WCHART) ;
 		case * : CCFLAGS on $(_g) += $(CMPORTS) ;
 		}
+		OPTIM on $(_g) ?= $(IIOPTIM) ;
 	}
 
+    LINKFLAGS on $(<) = $(CCLDMACH) $(IIOPTIM) ;
     MAIN $(<) : $(>) ; 
     if ! $(NT) 
     { 
@@ -2854,6 +2905,31 @@ rule IITOOLSWNTEXE
 		      $(<:S=.$(EXESFX)).manifest ;
 }
 
+rule IIAWK
+{
+        local t = [ FGristFiles $(<) ] ;
+        local s = [ FGristFiles $(>) ] ;
+
+        _IIAWK $(t) : $(s) ;
+        DEPENDS $(t) : $(s) ;
+        DEPENDS hdrs : $(t) ;
+
+        LOCATE on $(t) = $(SEARCH_SOURCE) ;
+        SEARCH on $(s) = $(SEARCH_SOURCE) ;
+        DEPENDS $(<) : $(>) ;
+	SEARCH on $(<) = $(SEARCH_SOURCE) ;
+	SEARCH on $(>) = $(SEARCH_SOURCE) ;
+
+        Clean clean : $(t) ; 
+        if $(VERSHB)
+        {
+            DEPENDS <$(SOURCE_GRIST)!$(SUFHB)>$(<) : $(s) ;
+            LOCATE on <$(SOURCE_GRIST)!$(SUFHB)>$(<) = $(SEARCH_SOURCE) ;
+            SEARCH on <$(SOURCE_GRIST)!$(SUFHB)>$(<) = $(SEARCH_SOURCE) ;
+        }
+}
+
+
 rule IIFiRoc
 {
 	local t = [ FGristFiles $(<) ] ;
@@ -2862,9 +2938,12 @@ rule IIFiRoc
 	FiRoc $(t) : $(s) ;
 	DEPENDS $(t) : $(s) ;
 	DEPENDS hdrs : $(t) ;
+        DEPENDS $(<) : $(>) ;
 
 	LOCATE on $(t) = $(SEARCH_SOURCE) ;
 	SEARCH on $(s) = $(SEARCH_SOURCE) ;
+	SEARCH on $(<) = $(SEARCH_SOURCE) ;
+	SEARCH on $(>) = $(SEARCH_SOURCE) ;
 
 	Clean clean : $(t) ;
 	if $(VERSHB)
@@ -2883,9 +2962,12 @@ rule IIFiRocLu
 	FiRocLu $(t) : $(s) ;
 	DEPENDS $(t) : $(s) ;
 	DEPENDS hdrs : $(t) ;
+        DEPENDS $(<) : $(>) ;
 
 	LOCATE on $(t) = $(SEARCH_SOURCE) ;
 	SEARCH on $(s) = $(SEARCH_SOURCE) ;
+	SEARCH on $(<) = $(SEARCH_SOURCE) ;
+	SEARCH on $(>) = $(SEARCH_SOURCE) ;
 
 	Clean clean : $(t) ;
 	if $(VERSHB)
@@ -2904,9 +2986,12 @@ rule IIFiH
 	FiH $(t) : $(s) ;
 	DEPENDS $(t) : $(s) ;
 	DEPENDS hdrs : $(t) ;
+        DEPENDS $(<) : $(>) ;
 
 	LOCATE on $(t) = $(SEARCH_SOURCE) ;
 	SEARCH on $(s) = $(SEARCH_SOURCE) ;
+	SEARCH on $(<) = $(SEARCH_SOURCE) ;
+	SEARCH on $(>) = $(SEARCH_SOURCE) ;
 
 	Clean clean : $(t) ;
 }
@@ -2918,8 +3003,11 @@ rule IIAduPatHdr
 	AduPatHdr $(t) : $(s) ;
 	DEPENDS $(t) : $(s) ;
 	DEPENDS hdrs : $(t) ;
+        DEPENDS $(<) : $(>) ;
 	LOCATE on $(t) = $(SEARCH_SOURCE) ;
 	SEARCH on $(s) = $(SEARCH_SOURCE) ;
+	SEARCH on $(<) = $(SEARCH_SOURCE) ;
+	SEARCH on $(>) = $(SEARCH_SOURCE) ;
 	Clean clean : $(t) ;
 }
 
@@ -2930,8 +3018,11 @@ rule IIAduPatBdy
 	AduPatBdy $(t) : $(s) ;
 	DEPENDS $(t) : $(s) ;
 	DEPENDS hdrs : $(t) ;
+        DEPENDS $(<) : $(>) ;
 	LOCATE on $(t) = $(SEARCH_SOURCE) ;
 	SEARCH on $(s) = $(SEARCH_SOURCE) ;
+	SEARCH on $(<) = $(SEARCH_SOURCE) ;
+	SEARCH on $(>) = $(SEARCH_SOURCE) ;
 	Clean clean : $(t) ;
 }
 
@@ -3269,7 +3360,7 @@ rule IISUBSYS
 	case common/adf/adl   :
 			HDRS = $(HDRS) $(HDRICE) $(HDRFRONT) $(HDRSAX) ;
         case common/adf/adu  :
-			HDRS = $(HDRS) $(HDRGEOS) ;
+			HDRS = $(HDRS) $(HDRGEOS) $(HDRPROJ) ;
 	case common/adf/ads   :
 			if $(NT)
 			{
@@ -3907,14 +3998,21 @@ rule IINEEDLIBSW
 			     local SUFLIB  = .$(LIBSFX) ;
 			     INCLUDES $(<:S=.$(EXESFX)) : $($(l)DATA:S=.$(SLSFX)) ;
 			     LIBS $(<) : $($(l)) ;
+                             SEARCH on $($(l)) = $(INGBIN) ;
+                             SEARCH on $($(l):S=.$(LIBSFX)) = $(INGLIB) ;
 			case SH*LIB* : 
 			     local SUFLIB  = .$(LIBSFX) ;
 			     INCLUDES $(<:S=.$(EXESFX)) : $($(l)DATA:S=.$(SLSFX)) ;
 			     INCLUDES $(<:S=.$(EXESFX)) : $($(l):S=.$(SLSFX)) ;
 			     LIBS $(<) : $($(l)) ;
 			     LIBS $(<) : $($(l)DATA) ;
+                             SEARCH on $($(l)) = $(INGBIN) ;
+                             SEARCH on $($(l)DATA) = $(INGBIN) ;
+                             SEARCH on $($(l):S=.$(LIBSFX)) = $(INGLIB) ;
+                             SEARCH on $($(l)DATA:S=.$(LIBSFX)) = $(INGLIB) ;
 			case * :
 			     LIBS $(<) : $($(l)) ;
+                             SEARCH on $($(l)) = $(INGLIB) ;
 
 		} #switch $(l)
 
@@ -4754,10 +4852,13 @@ rule IINOOPTIM
 {
         if ! $(NT)
         {
+
           local _o = [ FGristFiles $(<) ] ;
           local i ;
           local j ;
           local debug = "n" ;
+
+
           for i in $(>)
           {
             if "$(i)" = "$(VERS)" || "$(i)" = "all"
@@ -6001,6 +6102,10 @@ rule IIMSGHDR
 	  DEPENDS hdrs : msghdrs ;
 	  DEPENDS msghdrs : $(T) ;
 	  DEPENDS $(T) : $(S) ;
+	  switch $(_f)
+	  {
+		case *front!* : DEPENDS $(FECATMSG) : $(T) ;
+	  }
 
 	  LOCATE on $(T) = $(SEARCH_SOURCE) ;
 	  SEARCH on $(S) = $(SEARCH_SOURCE) ;
@@ -7887,6 +7992,61 @@ rule IIXERCLIB
 	}
 }
 
+rule IIGeoLibs
+{
+    if $(NT)
+    {
+        geodeps_destination = $(INGBIN) ;
+        geodeps_search_location = $(GEOSROOT)$(DFS)lib $(PROJROOT)$(DFS)lib ;
+    }
+    else if $(UNIX)
+    {
+        geodeps_destination = $(INGLIB) ;
+        geodeps_search_location = $(GEOS_LOC) $(PROJ_LOC) ;
+    }
+    #not supported yet
+    else
+    {
+        return ;
+    }
+    for f in $(<)
+    {
+        local _s1 = [ FGristFiles $(f) ] ;
+        local _t1 = $(f) ;
+        
+        FILE $(_t1) : $(_s1) ;
+        
+        DEPENDS shlibs : $(_t1) ;
+        
+        LOCATE on $(_t1) = $(geodeps_destination) ;
+        SEARCH on $(_s1) = $(geodeps_search_location) ;
+        
+        MODE on $(_t1) = $(EXEMODE) ;
+        Chmod $(_t1) ;
+        
+        Clean clean : $(_t1) ;
+        
+        #deal with hybrid builds
+        if $(VERSHB)
+        {
+            local _hbs1 = $(f:G=hb) ;
+            local _hbt1 = $(SUFHB)$(DFS)$(f) ;
+
+            FILE $(_hbt1) : $(_hbs1) ;
+
+            DEPENDS shlibs : $(_hbt1) ;
+
+            LOCATE on $(_hbt1) = $(INGLIB) ;
+            SEARCH on $(_hbs1) = $(GEOSHB_LOC) $(PROJHB_LOC) ;
+
+            MODE on $(_hbt1) = $(EXEMODE) ;
+            Chmod $(_hbt1) ;
+
+            Clean clean : $(_hbt1) ;
+        }
+    }
+}
+
 rule IMPLIBRARY
 {
     IMPLIBRARYFROMOBJECTS $(<) : $(>:S=$(SUFOBJ)) ;
@@ -8103,6 +8263,8 @@ rule IIVERSREL
 	}
 	Depends files : $($(<)) ;
 	LOCATE on $($(<)) = $(ING_BUILDROOT) ;
+
+	Depends $($(<)) : $(VERSFILE) ;
 
 	MODE on $($(<)) = $(FILEMODE) ;
 	Chmod $($(<)) ;
@@ -8416,10 +8578,10 @@ rule IISLN
                 _USETOOL $(<) : esqlcc.exe ;
 
             case *front*vdba*mainmfc* :
-               DEPENDS $(<) : $(INGRSWINLIB) $(SHICEAPILIB) $(SHCATO3CNTLIB)
+               DEPENDS $(<) : $(INGRSWINLIB) $(SHCATO3CNTLIB)
                     $(SHCATO3SPNLIB) $(SHCATOLBOXLIB) $(DBADLG1LIB) $(INGRSWINLIB) 
                     $(LIBEXTNCLIB) $(LIBGUIDSLIB) $(LIBWCTRLLIB) $(MAINLIBLIB) ;
-               SEARCH on $(INGRSWINLIB) $(SHICEAPILIB) $(SHCATO3CNTLIB)
+               SEARCH on $(INGRSWINLIB) $(SHCATO3CNTLIB)
                     $(SHCATO3SPNLIB) $(DBADLG1LIB) $(INGRSWINLIB) 
                     $(LIBEXTNCLIB) $(LIBGUIDSLIB) $(LIBWCTRLLIB) $(MAINLIBLIB) 
                     = $(INGLIB) ;
@@ -9021,13 +9183,14 @@ actions _PBCopyFile
 	if not exist $(<:D) mkdir $(<:D)
 	$(CP) $(>) $(<) 
 }
-
+if $(BUILD_ICE)
+{
 actions _CAZIP
 {
 	$(CD) $(>)
 	cazipxp -r -w *.* $(<) 
 }
-
+}
 actions _INSTALLICE
 {
 	if not exist $(<) mkdir $(<)
@@ -9124,7 +9287,7 @@ actions quietly IISedShellVMS
 
 actions IIRemRCComments
 {
-    $(PIPE) $(SED) -e "/^##/d" < $(>) > $(<)
+    $(PIPE) $(SED) -e "/^##$/d" -e "/^##[\t ]/d" < $(>) > $(<)
 }
 
 actions quietly SEDSHW
@@ -9994,8 +10157,10 @@ actions CCSY2YFW
 actions CCLEXW
 {
 	$(CD) $(>:D)
-	$(FLEX) $(>) 
+	$(FLEX) $(>)
+	if NOT "%USE_CYGWIN%"=="" u2d $(>) 
 	copy lex.yy.c $(>:S=.c)
+	if NOT "%USE_CYGWIN%"=="" u2d $(>:S=.c)
 }
 
 actions CCLEXWHB
@@ -10396,6 +10561,7 @@ actions piecemeal quietly ShellNT
     echo { print } >> awk.input
 
     $(AWK) -f awk.input < $(>) > $(<)
+    if not "%USE_CYGWIN%"=="" d2u $(<)
     $(RM) awk.input
 }
 
@@ -10587,6 +10753,11 @@ actions EsqlHdr
 
 if $(NT)
 {
+	actions _IIAWK
+	{
+		cd $(>[2]:D)
+                $(AWK) -v OUT=$(<:BS) -f $(>:BS)
+	}
 	actions FiRoc
 	{
 	        cd $(>[2]:D)
@@ -10615,6 +10786,13 @@ if $(NT)
 }
 else if $(VMS)
 {
+	actions _IIAWK
+	{
+	        if f$parse("$(<:D)") .eqs. "" then create /dir $(<:D)
+
+                set default $(<:D)
+		$(AWK) -v "OUT=$(<:BS)" -f $(>:BS)
+	}
 	actions FiRoc
 	{
 	        if f$parse("$(<:D)") .eqs. "" then create /dir $(<:D)
@@ -10651,6 +10829,10 @@ else if $(VMS)
 }
 else
 {
+	actions _IIAWK
+	{
+		$(AWK) -v OUT=$(<) -f $(>)
+	}
 	actions FiRoc
 	{
 		$(AWK) -v roc_file=$(<) -f $(>)

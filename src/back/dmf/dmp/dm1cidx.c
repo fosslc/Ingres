@@ -296,6 +296,15 @@
 **          dm1cxclean() Add rcb param, Skip clean if cursor is positioned on
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      09-Jun-2010 (stial01)
+**          Added dm1cx_txn_get()
+**      12-Jul-2010 (stial01) (SIR 121619 MVCC, B124076, B124077)
+**          dm1cxclean() if crow_locking row_is_consistent() else IsTranActive
+**          dm1cxisnew() Check rcb_new_fullscan, handle the XTABLE case where
+**          new tids are added to rcb_new_tids without any update to the page,
+**      16-Jul-2010 (stial01) (SIR 121619 MVCC, B124076, B124077)
+**          dm1cxisnew() above change dropped a line.
+**        
 */
 
 static	i4	    lowest_offset(i4 page_type, i4 page_size, DMPP_PAGE *b);
@@ -4143,11 +4152,25 @@ dm1cxclean(i4 page_type, i4 page_size, DMPP_PAGE *b,
 	    }
 
 	    /* Check if delete is committed */
-	    if ( IsTranActive(lg_id, low_tran) )
+	    if (crow_locking(r))
+	    {
+		/*
+		** Don't reclaim unless committed before consistent read
+		** point in time described by the transactions "crib"
+		*/
+		if (!row_is_consistent(r, low_tran, lg_id))
+		{
+		    /* skip and don't delete */
+		    pos++;
+		    continue;
+		}
+	    }
+	    else if ( IsTranActive(lg_id, low_tran) )
 	    {
 		pos++;
 		continue;
 	    }
+	    /* committed/consistent, ok to reclaim */
 	}
 
 	if (getpos && DMPP_VPT_IS_CR_PAGE(page_type, b))
@@ -4437,7 +4460,8 @@ dm1cx_isnew(
 		DMPP_PAGE      *leaf,
 		i4		child)
 {
-    i4		page_type = r->rcb_tcb_ptr->tcb_rel.relpgtype;
+    DMP_TCB	*t = r->rcb_tcb_ptr;
+    i4		page_type = t->tcb_rel.relpgtype;
     DM_LINEID	*lp = DM1B_VPT_BT_SEQUENCE_MACRO(page_type, leaf);
     DM_TID	get_tid;
     char	*tup_hdr;
@@ -4447,6 +4471,7 @@ dm1cx_isnew(
     DMP_RCB	*curr;
     i4		i;
     i4		partno;
+    bool	check_newtids = FALSE;
 
     /*
     ** FIX ME can't do this optimization because it doesn't work for
@@ -4456,7 +4481,8 @@ dm1cx_isnew(
     ** Before this optimization can be done, we need to pass the DMR_XTABLE
     ** flag down from dmr_get to dm2r_get to dm1r/dm1b get, down to the isnew
     ** accessor (See bug scripts for b103961)
-    if (r->rcb_logging &&
+    ** (unless we always call defer_add_new for XTABLE case in dm2r_replace)
+    if (r->rcb_new_fullscan == FALSE && r->rcb_logging &&
 	!LSN_GTE(DM1B_VPT_ADDR_PAGE_LOG_ADDR_MACRO(page_type, leaf),
 			&r->rcb_oldest_lsn))
 	return (FALSE);
@@ -4480,25 +4506,13 @@ dm1cx_isnew(
 	MECOPY_CONST_4_MACRO(
 	    (PTR)tup_hdr + Dmpp_pgtype[page_type].dmpp_lowtran_offset,
 	    &low_tran);
-	if (low_tran == r->rcb_tran_id.db_low_tran)
-	{
-	    if (page_type == TCB_PG_V2)
-	    {
-		MECOPY_CONST_4_MACRO(
-		(PTR)tup_hdr + Dmpp_pgtype[page_type].dmpp_hightran_offset,
-		&high_tran);
-	    }
-	    else
-		high_tran = r->rcb_tran_id.db_high_tran;
-
-	    MECOPY_CONST_4_MACRO(
-		(PTR)tup_hdr + Dmpp_pgtype[page_type].dmpp_seqnum_offset,
-		&seq_num);
-	    if (seq_num == r->rcb_seq_number
-		&& high_tran == r->rcb_tran_id.db_high_tran)
-		return (TRUE);
-	}
-	return (FALSE);
+	MECOPY_CONST_4_MACRO(
+	    (PTR)tup_hdr + Dmpp_pgtype[page_type].dmpp_seqnum_offset,
+	    &seq_num);
+	if (low_tran == r->rcb_tran_id.db_low_tran
+		&& seq_num == r->rcb_seq_number)
+	    return (TRUE);
+	check_newtids = r->rcb_new_fullscan;
     }
     else 
     {
@@ -4517,58 +4531,65 @@ dm1cx_isnew(
 	  (PTR)tup_hdr + Dmpp_pgtype[page_type].dmpp_lowtran_offset,
 	  &low_tran);
 
-	if (low_tran == r->rcb_tran_id.db_low_tran)
-	{
-	    /*
-	    ** In dm1bindex we stored the TID, not the BID in the rcb
-	    ** compare the TID for this entry
-	    */
-	    dm1bvpt_kidget_macro(page_type, leaf, (i4)child, &get_tid, &partno);
-	    /*
-	    ** The "TID" of a Clustered leaf entry is always its BID,
-	    ** unless the entry has been reserved (0,DM_TIDEOF), or
-	    ** it's a Range entry.
-	    */
-	    if ( DM1B_VPT_GET_PAGE_STAT_MACRO(page_type, leaf) & DMPP_CLUSTERED &&
-		 child != DM1B_LRANGE && child != DM1B_RRANGE &&
-		 get_tid.tid_tid.tid_page != 0  &&
-		 get_tid.tid_tid.tid_line != DM_TIDEOF )
-	    {  
-		get_tid.tid_tid.tid_page = DM1B_VPT_GET_PAGE_PAGE_MACRO(page_type, leaf);
-		get_tid.tid_tid.tid_line = child;
-	    }
-
-	    /* Check all new tids for this table, this sequence number */
-	    curr = r;
-	    do
-	    {
-	       if (curr->rcb_update_mode == RCB_U_DEFERRED
-		    && curr->rcb_seq_number == r->rcb_seq_number
-		    && curr->rcb_new_cnt)
-	       {
-		    i4	left, right, middle;
-		    DM_TID  *midtidp;
-
-		    left = 0;
-		    right = curr->rcb_new_cnt - 1;
-		    
-		    while (left <= right)
-		    {
-			middle = (left + right)/2;
-
-			midtidp = curr->rcb_new_tids + middle;
-			if (get_tid.tid_i4 == midtidp->tid_i4)
-			    return (TRUE);
-			else if (get_tid.tid_i4 < midtidp->tid_i4)
-			    right = middle - 1;
-			else
-			    left = middle + 1;
-		    }
-	       }
-	    } while ((curr = curr->rcb_rl_next) != r);
-	}
-	return (FALSE);
+	if (low_tran == r->rcb_tran_id.db_low_tran || r->rcb_new_fullscan)
+	    check_newtids = TRUE;
     }
+
+    if (!check_newtids)
+	return (FALSE);
+
+    /*
+    ** MUST check rcb_new_tids
+    **
+    ** In dm1bindex we stored the TID, not the BID in the rcb
+    ** compare the TID for this entry
+    */
+    dm1bvpt_kidget_macro(page_type, leaf, (i4)child, &get_tid, &partno);
+
+    /*
+    ** The "TID" of a Clustered leaf entry is always its BID,
+    ** unless the entry has been reserved (0,DM_TIDEOF), or
+    ** it's a Range entry.
+    */
+    if ( DM1B_VPT_GET_PAGE_STAT_MACRO(page_type, leaf) & DMPP_CLUSTERED &&
+	 child != DM1B_LRANGE && child != DM1B_RRANGE &&
+	 get_tid.tid_tid.tid_page != 0  &&
+	 get_tid.tid_tid.tid_line != DM_TIDEOF )
+    {  
+	get_tid.tid_tid.tid_page = DM1B_VPT_GET_PAGE_PAGE_MACRO(page_type,leaf);
+	get_tid.tid_tid.tid_line = child;
+    }
+
+    curr = r;
+    do
+    {
+       /* check for matching table, sequence number */
+       if (curr->rcb_update_mode == RCB_U_DEFERRED
+	    && curr->rcb_seq_number == r->rcb_seq_number
+	    && curr->rcb_new_cnt)
+       {
+	    i4	left, right, middle;
+	    DM_TID  *midtidp;
+
+	    left = 0;
+	    right = curr->rcb_new_cnt - 1;
+	    
+	    while (left <= right)
+	    {
+		middle = (left + right)/2;
+
+		midtidp = curr->rcb_new_tids + middle;
+		if (get_tid.tid_i4 == midtidp->tid_i4)
+		    return (TRUE);
+		else if (get_tid.tid_i4 < midtidp->tid_i4)
+		    right = middle - 1;
+		else
+		    left = middle + 1;
+	    }
+       }
+    } while ((curr = curr->rcb_rl_next) != r);
+
+    return (FALSE);
 }
 
 
@@ -4676,4 +4697,78 @@ dm1cx_dput(
     lp = DM1B_VPT_BT_SEQUENCE_MACRO(page_type, b);
     dmpp_vpt_set_new_macro(page_type, lp, pos + DM1B_OFFSEQ); 
     return (E_DB_OK);
+}
+
+
+/*
+** Name: dm1cx_txn_get		- Get transaction info for a leaf entry
+**
+** Description:
+**	This routine fetches the transaction information for an entry
+**	It is assumed that the entry is valid.
+**
+** Inputs:
+**      pgtype
+**	b			- the index page to use
+**	child			- the lineid portion of the entry to be fetched
+**
+** Outputs:
+**      row_low_tran
+**      row_lg_id
+**
+** Returns:
+**      DB_STATUS	
+**
+** History:
+**      09-Jun-2010 (stial01)
+**          Created.
+*/
+DB_STATUS
+dm1cx_txn_get(i4 pgtype, DMPP_PAGE *b, i4 child, 
+i4 *row_low_tran, u_i2 *row_lg_id)
+{
+    char	    *key_ptr;
+    DB_STATUS       status;
+    char	    *tup_hdr;
+
+    status = E_DB_OK;
+    if ( row_low_tran )
+	*row_low_tran = 0;
+    if ( row_lg_id )
+	*row_lg_id = 0;
+    if ((i4)child >= DM1B_VPT_GET_BT_KIDS_MACRO(pgtype, b))
+	return (E_DB_ERROR);
+
+    key_ptr = (char *)dm1bvpt_keyof_macro(pgtype, b, (i4)child);
+    if ((pgtype != TCB_PG_V1) && 
+	(DM1B_VPT_GET_PAGE_STAT_MACRO(pgtype, b) & DMPP_INDEX) == 0)
+    {
+	/* Test for deleted row */
+	if (dmpp_vpt_test_free_macro(pgtype,  DM1B_V2_BT_SEQUENCE_MACRO(b),
+		(i4)child + DM1B_OFFSEQ))
+	{
+	    status = E_DB_WARN; /* TID points to deleted record */
+	}
+
+	if ( row_low_tran || row_lg_id )
+	{
+	    tup_hdr = dm1b_vpt_entry_macro(pgtype, b, (i4)child);
+
+	    if ( row_low_tran )
+	    {
+		MECOPY_CONST_4_MACRO(
+		    (PTR)tup_hdr + Dmpp_pgtype[pgtype].dmpp_lowtran_offset,
+		    row_low_tran);
+	    }
+
+	    if ( row_lg_id && Dmpp_pgtype[pgtype].dmpp_has_lgid )
+	    {
+		MECOPY_CONST_2_MACRO(
+		    (PTR)tup_hdr + Dmpp_pgtype[pgtype].dmpp_lgid_offset,
+		    row_lg_id);
+	    }
+	}
+    }
+
+    return (status);
 }

@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004, 2009 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include <compat.h>
@@ -312,6 +312,8 @@
 **	17-Dec-2009 (Bruce Lunsford) Sir 122536
 **	    Remove special Windows IIPROMPT code which is no longer
 **	    needed (and no longer serves its original purpose).
+**	27-Aug-10 (gordy)
+**	    Added symbols for encoding versions.
 **/
 
 /*
@@ -1602,6 +1604,8 @@ gcn_rslv_err( GCN_RESOLVE_CB *grcb, STATUS status )
 **	    authentication from grcb and added as parameters.  Declare
 **	    default sized buffers.  Use dynamic storage if length
 **	    exceeds default size.
+**	27-Aug-10 (gordy)
+**	    Added symbols for encoding versions.
 */
 
 STATUS
@@ -1715,7 +1719,7 @@ gcn_rslv_done
 	    return( E_GC0121_GCN_NOMEM );
 	}
 
-	gcn_login( GCN_VLP_COMSVR, 1, TRUE, grcb->usr, grcb->pwd, pwd );
+	gcn_login(GCN_VLP_COMSVR, GCN_VLP_V1, TRUE, grcb->usr, grcb->pwd, pwd);
     }
 
     if ( protocol < GCA_PROTOCOL_LEVEL_63 )

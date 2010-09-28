@@ -3,6 +3,9 @@
 **
 */
 
+#ifndef QSF_H_INCLUDED
+#define QSF_H_INCLUDED
+
 /**
 ** Name: QSF.H - All external definitions needed to use the 
 **
@@ -101,6 +104,8 @@
 **	    Add "session commit", session uncommitted object list to more
 **	    correctly handle the problem of deleting named objects that
 **	    are rolled-back instead of committed.
+**	22-Jun-2010 (kschendel) b123775
+**	    Multiple inclusion protection.
 */
 
 
@@ -620,3 +625,5 @@ typedef struct _QSF_RCB
 
 FUNC_EXTERN DB_STATUS	qsf_call( i4 qsf_operation, QSF_RCB *qsf_rb );
 FUNC_EXTERN DB_STATUS	qsf_trace( DB_DEBUG_CB *qsf_debug_cb );
+
+#endif

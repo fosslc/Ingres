@@ -1611,6 +1611,15 @@ static READONLY struct
 **	13-Apr-2010 (kschendel) SIR 123485
 **	    Accept "no coupon" access modes;  for ordinary read/write with
 **	    LOB's in the table, find or create BQCB, save in RCB.
+**	27-Jul-2010 (toumi01) BUG 124133
+**	    Store shm encryption keys by dbid/relid, not just relid! Doh!
+**	04-Aug-2010 (miket) SIR 122403
+**	    Change encryption activation terminology from
+**	    enabled/disabled to unlock/locked.
+**	    Change rcb_enckey_slot base from 0 to 1 for sanity checking.
+**	13-Sep-2010 (jonj) B124426
+**	    Add one last sanity check - if DB isn't DCB_S_MVCC, change
+**	    lockLevel to row. Should never happen, but JIC...
 */
 DB_STATUS
 dm2t_open(
@@ -2126,6 +2135,14 @@ DB_ERROR            *dberr)
 		      sizeof(DB_DB_NAME), dcb->dcb_name.db_db_name);
 		    status = E_DB_ERROR;
 		    break;
+		}
+		else if ( !(dcb->dcb_status & DCB_S_MVCC) )
+		{
+		    /*
+		    ** Final sanity check. If database, for whatever
+		    ** reason, isn't prepared for MVCC, silently use ROW.
+		    */
+		    lockLevel = RCB_K_ROW;
 		}
 		else
 		{
@@ -2791,7 +2808,7 @@ DB_ERROR            *dberr)
 
 	/* If this is an encrypted table, locate its key in Dmc_crypt and
 	** save the slot number in the RCB. Will not find it if encryption
-	** is not enabled yet. Indices inherit the encryption of the parent.
+	** is not unlocked yet. Indices inherit the encryption of the parent.
 	*/
 	r->rcb_enckey_slot = 0;
 	if ( (Dmc_crypt != NULL) &&
@@ -2805,9 +2822,10 @@ DB_ERROR            *dberr)
 	    for ( cp = (DMC_CRYPT_KEY *)((PTR)Dmc_crypt + sizeof(DMC_CRYPT)),
 			i = 0 ; i < Dmc_crypt->seg_active ; cp++, i++ )
 	    {
-		if ( cp->db_tab_base == tcb->tcb_rel.reltid.db_tab_base )
+		if ( cp->db_id == dcb->dcb_id &&
+		     cp->db_tab_base == tcb->tcb_rel.reltid.db_tab_base )
 		{
-		    r->rcb_enckey_slot = i;
+		    r->rcb_enckey_slot = i+1;	/* slot is 1-based */
 		    break;
 		}
 	    }
@@ -3665,6 +3683,8 @@ DB_ERROR	*dberr)
 **	    Init "built" in the loop, since there is a continue statement.
 **	28-May-2010 (jonj)
 **	    If partition not found, wait for busy master before building.
+**	30-Aug-2010 (miket)
+**	    Fix debug TRdisplay format string.
 */
 DB_STATUS
 dm2t_fix_tcb(
@@ -3698,7 +3718,7 @@ DB_ERROR            *dberr)
 	((dcb == 0) || (dcb->dcb_type != DCB_CB)))
 	dmd_check(E_DM9322_DM2T_FIND_TCB);
     if (DMZ_TBL_MACRO(10))
-    TRdisplay("DM2T_FIX_TCB    (%%d,%d,%d)\n",
+    TRdisplay("DM2T_FIX_TCB    (%d,%d,%d)\n",
 	db_id, table_id->db_tab_base, table_id->db_tab_index);
 #endif
 
@@ -12137,6 +12157,10 @@ copy_from_master(DMP_TCB *tcb, DMP_TCB *master_tcb)
 **	    Set flag for btree-leaf-uses-overflow-for-duplicates.
 **	27-May-2010 (gupsh01) BUG 123823
 **	    Fix error handling for error E_DM0075_BAD_ATTRIBUTE_ENTRY. 
+**	09-aug-2010 (maspa05) b123189, b123960
+**	    Use dcb_status of DCB_S_RODB to check if database is readonly i.e.
+**          always only has one location. This distinguishes it from a database
+**          opened in read-only mode.
 */
 
 static DB_STATUS
@@ -12360,7 +12384,7 @@ DB_ERROR	*dberr)
 		    ** A readonly database has only one location. Do not
 		    ** compare logical names, because they will be different.
 		    */
-		    if (dcb->dcb_access_mode == DCB_A_READ)
+		    if (dcb->dcb_status & DCB_S_RODB)
 		    {
 		      STRUCT_ASSIGN_MACRO(dcb->dcb_ext->ext_entry[i].logical, 
 			t->tcb_table_io.tbio_location_array[k].loc_name); 
@@ -15637,6 +15661,8 @@ rep_catalog(
 **          bug 117355. 
 **	11-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Index key compression is always pinned to OLD STANDARD.
 */
 
 DB_STATUS
@@ -15740,7 +15766,7 @@ DB_ERROR	*dberr)
 			  rel->relcmptlvl == DMF_T4_VERSION) )
 			keys = rel->relatts;
 		    key_cmpcontrol_size = dm1c_cmpcontrol_size(
-				TCB_C_STANDARD, keys,
+				TCB_C_STD_OLD, keys,
 				rel->relversion);
 		    key_cmpcontrol_size = DB_ALIGN_MACRO(key_cmpcontrol_size);
 		}
@@ -15787,7 +15813,7 @@ DB_ERROR	*dberr)
 		    {
 			/* Key compression hardwired to "standard" for now */
 			leaf_cmpcontrol_size = dm1c_cmpcontrol_size(
-				TCB_C_STANDARD, rel->relatts,
+				TCB_C_STD_OLD, rel->relatts,
 				rel->relversion);
 			leaf_cmpcontrol_size = DB_ALIGN_MACRO(leaf_cmpcontrol_size);
 		    }
@@ -16110,8 +16136,8 @@ DB_ERROR	*dberr)
 	t->tcb_data_rac.compression_type = rel->relcomptype;
 	if (rel->relstat & TCB_INDEX_COMP)
 	{
-	    t->tcb_index_rac.compression_type = TCB_C_STANDARD;
-	    t->tcb_leaf_rac.compression_type = TCB_C_STANDARD;
+	    t->tcb_index_rac.compression_type = TCB_C_STD_OLD;
+	    t->tcb_leaf_rac.compression_type = TCB_C_STD_OLD;
 	}
 
 	/*

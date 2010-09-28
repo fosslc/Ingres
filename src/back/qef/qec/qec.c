@@ -263,6 +263,8 @@
 **          Added QEF_TRACE_IMMEDIATE_ULM_POOLMAP. User can now run
 **          "set trace point qe41 2" to generate a pool map of QEF's
 **          sort and DSH memory pools.
+**	11-Jun-2010 (kiria01) b123908
+**	    Init ulm_streamid_p for ulm_openstream to fix potential segvs.
 **/
 
 
@@ -405,6 +407,7 @@ QEF_SRCB       *qef_srcb )
     ULH_RCB	ulh_rcb;
     ULM_RCB	ulm_rcb;
 
+    MEfill(sizeof(ULM_RCB), 0, (PTR)&ulm_rcb);
     /* Validate request block */
     if (qef_srcb->qef_qpmax < 0 || qef_srcb->qef_dsh_maxmem < 0)
     {
@@ -429,6 +432,7 @@ QEF_SRCB       *qef_srcb )
     /* Open a SHARED memory stream and allocate the QEF server control block */
     ulm_rcb.ulm_flags = ULM_SHARED_STREAM | ULM_OPEN_AND_PALLOC;
     ulm_rcb.ulm_psize = sizeof (QEF_S_CB);
+    ulm_rcb.ulm_streamid_p = NULL;
 
     status = ulm_openstream(&ulm_rcb);
     if (status != E_DB_OK)
@@ -1813,7 +1817,6 @@ qec_trace_immediate(QEF_CB *qef_cb, i4 val_count, i4 val1, i4 val2)
 **			QEF_ON		    auto commit enabled
 **			QEF_OFF		    auto commit disabled
 **			
-**	    .qef_open_count		    number of open cursors
 **	    .error.err_code
 **                                      E_QE0000_OK
 **      Returns:
@@ -1850,7 +1853,10 @@ qec_trace_immediate(QEF_CB *qef_cb, i4 val_count, i4 val1, i4 val2)
 **	21-jan-94 (iyer)
 **	    In qec_info(), copy QEF_CB.qef_tran_id to QEF_RCB.qef_tran_id
 **	    in support of dbmsinfo('db_tran_id').
-[@history_line@]...
+**	24-Jun-2010 (kschendel) b123775
+**	    Drop return of open-count.  No caller cared, and having the
+**	    open count in two places with the same name was just asking
+**	    for trouble.
 */
 DB_STATUS
 qec_info(
@@ -1858,7 +1864,6 @@ QEF_CB       *qef_cb )
 {
 
     qef_cb->qef_rcb->qef_version 	= QEF_VERSION;
-    qef_cb->qef_rcb->qef_open_count 	= qef_cb->qef_open_count;
     qef_cb->qef_rcb->qef_stm_error	= qef_cb->qef_stm_error;
     qef_cb->qef_rcb->qef_spoint		= &qef_cb->qef_savepoint;
     qef_cb->qef_rcb->qef_upd_rowcnt 	= qef_cb->qef_upd_rowcnt; 

@@ -592,6 +592,8 @@
 **	    SIR 121619 MVCC: Add DB_PG_V6, DB_PG_V7
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	12-Jul-2010 (bonro01)
+**          Add DB_STATVERS_6DBV1010 for 10.1 release. 
 **/
 
 #define                 DB_OLDMAXNAME   24
@@ -2274,6 +2276,10 @@ typedef struct _DB_IIEVENT
 **	    Add flags for sequenctial/unordered sequences.
 **      23-June-2009 (coomi01) b122208
 **          Add #defines for decimal precision and bcd string length 
+**	27-Jun-2010 (kschendel) b123986
+**	    Add a parser flag "decimal number seen in option" for parsing
+**	    convenience.  This used to be psy_seqflag but there's no psy_cb
+**	    when parsing a create table with identity column...
 */
 #define DB_IISEQUENCE_DECPREC 31
 #define DB_IISEQUENCE_DECLEN  DB_PREC_TO_LEN_MACRO(DB_IISEQUENCE_DECPREC)
@@ -2340,6 +2346,11 @@ typedef struct _DB_IISEQUENCE
 #define	DBS_SYSTEM_GENERATED 0x10000	/* sequence generated for identity
 					** column */
 
+/* The following flag is for parser convenience ONLY, and MUST be cleared
+** by the time the parser is exited.
+*/
+#define DBS_DECSEEN	0x40000000	/* Decimal number seen in sequence
+					** options while parsing */
 	char	dbs_free[8];		/* Get rid of me */
 } DB_IISEQUENCE;
 
@@ -2939,6 +2950,7 @@ typedef struct _DB_STAT_VERSION
 # define        DB_STATVERS_6DBV920		"00920   "
 # define        DB_STATVERS_6DBV930		"00930   "
 # define        DB_STATVERS_6DBV1000		"01000   "
+# define        DB_STATVERS_6DBV1010		"01010   "
 
 
 

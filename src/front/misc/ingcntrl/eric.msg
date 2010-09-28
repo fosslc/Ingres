@@ -85,6 +85,8 @@
 **		Added new error message of E_IC004C for unextenddb utility. 
 **	28-Dec-2004 (jenjo02)
 **		Tweaked E_IC004C text.
+**      17-Jun-2010 (coomi01) b123913
+**              Add new error message E_IC0052 for unextenddb utility.
 **/
 
 # define	_IC_CLASS	83
@@ -397,7 +399,9 @@ E_IC0154_Usage_required	"Missing Usage for a Location.
 You must enter a Usage type for each Location before you Save."
 E_IC004C_Errors_unextending_db	
 "Error(s) occurred unextending database '%0c' from location '%1c'."
-
+E_IC0052_Error_last_db_workloc
+"Must have at least one \"Work\" location for database '%0c',\n
+unextenddb will not proceed on any request(s) made."
 S_IC005A_select_extension_type
 "Select which type of extension will apply to\n
 the '%s' database:"

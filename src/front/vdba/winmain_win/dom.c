@@ -71,6 +71,15 @@
 **  12-May-2010 (drivi01)
 **     For newly added "Create Index" menu item, added
 **     case statement to handle the selection.
+**  30-Jun-2010 (drivi01)
+**     ICE is being removed from release 10.0.
+**     Remove ICE from the DOM tree.
+**  30-Aug-2010 (drivi01)
+**     Remove comments around ICE code and add ifdef around it instead.
+**     If precompiler flag BUILD_ICE is added, then ICE menu will
+**     appear in the tree.
+**     Remove bogus record from being added to the DOM tree to stop
+**     SEGVs when the record is being removed when user exists VDBA. 
 *****************************************************************************/
 
 // ---   IMPORTANT NOTES !!!    ---
@@ -2121,11 +2130,13 @@ static BOOL NEAR DomFillTree(LPDOMDATA lpDomData, int domCreateMode, HWND hwndMd
           if (recIdSub == 0)
             return FALSE;
 
+#ifdef BUILD_ICE
           // ICE
           LoadString(hResource, IDS_TREE_ICE_STATIC, buf, sizeof(buf));
           lpRecord = AllocAndFillRecord(OT_STATIC_ICE, FALSE,
                                         NULL, NULL, NULL, 0,
                                         buf, NULL, NULL, NULL);
+	  
           if (!lpRecord)
             return FALSE;
           recIdSt = TreeAddRecord(lpDomData, buf, 0, recIdSt, 0, lpRecord);
@@ -2134,7 +2145,8 @@ static BOOL NEAR DomFillTree(LPDOMDATA lpDomData, int domCreateMode, HWND hwndMd
           recIdSub = AddDummySubItem(lpDomData, recIdSt);
           if (recIdSub == 0)
             return FALSE;
-
+			
+#endif
           // INSTALLATION LEVEL SETTINGS
           LoadString(hResource, IDS_TREE_INSTALL_STATIC, buf, sizeof(buf));
           lpRecord = AllocAndFillRecord(OT_STATIC_INSTALL, FALSE,

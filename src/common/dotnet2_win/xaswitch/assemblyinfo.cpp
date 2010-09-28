@@ -14,7 +14,7 @@ using namespace System::Runtime::CompilerServices;
 
 [assembly: AssemblyConfigurationAttribute("")];
 [assembly: AssemblyCompanyAttribute("Ingres Corporation")]
-[assembly: AssemblyCopyrightAttribute("© 2006, 2009 Ingres Corporation. All Rights Reserved.")]
+[assembly: AssemblyCopyrightAttribute("© 2006, 2010 Ingres Corporation. All Rights Reserved.")]
 [assembly: AssemblyTrademarkAttribute("")];
 [assembly: AssemblyCultureAttribute("")];
 //[assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)];
@@ -31,7 +31,7 @@ using namespace System::Runtime::CompilerServices;
 // by using the '*' as shown below:
 
 [assembly: AssemblyVersionAttribute(    "2.1.0.0000")];
-[assembly: AssemblyFileVersionAttribute("2.1.1000.0001")]
+[assembly: AssemblyFileVersionAttribute("2.1.1010.0001")]
 
 //
 // In order to sign your assembly you must specify a key to use. Refer to the 

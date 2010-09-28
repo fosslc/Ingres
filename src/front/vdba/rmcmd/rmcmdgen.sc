@@ -81,6 +81,10 @@
 **     (bug 113216) cleaned up query in launchremotecmd procedure
 **  23-feb-2005 (stial01)
 **     Explicitly set isolation level after connect
+**  25-Aug-2010 (drivi01) Bug #124306
+**     Remove hard coded length of stmt buffer.
+**     Rmcmd buffer should be able to handle long ids, expand
+**     the buffer accordingly.
 *********************************************************************/
 
 /*
@@ -205,7 +209,7 @@ main()
                             "grant register,raise on dbevent rmcmdstp to %s with grant option"
                            };
   exec sql begin declare section;
-    char    stmt[2048];
+    char    stmt[RMCMDLINELEN*8+2048];
   exec sql end declare section;
 
 

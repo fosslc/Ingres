@@ -613,7 +613,7 @@ extenddb	extenddb	PROCESS	-+	-llocation [dbname...|-nodb] [-aarea_dir] [-Udata,c
 	locname		-l%S	0	Location name?		-l%S
 	database	'%S'	0	Database name(end with RETURN)?	%S
 	lusage		-U%S	0	Location usage(data,ckp,jnl,dmp,work|awork)?	-U%S
-	dbusage		-D%S	0	Database usage(data,work|awork)?	-D%S
+	dbusage		-D%S	0	Database usage(data|work|awork|data,work|data,awork)?	-D%S
 	rawpct		-r%N	0	Rawpct(0-100)?		-r%N
 	drop		-drop	0	?	-drop
 	nodb		-nodb	0	?	-nodb
@@ -623,7 +623,7 @@ unextenddb	unextenddb	PROCESS	-+	-llocation [dbname...] [-Udata,ckp,jnl,dmp,work
 	locname		-l%S	0	Location name?		-l%S
 	database	'%S'	0	Database name(end with RETURN)?	%S
 	lusage		-U%S	0	Location usage(data,ckp,jnl,dmp,work|awork)?	-U%S
-	dbusage		-D%S	0	Database usage(data,work|awork)?	-D%S
+	dbusage		-D%S	0	Database usage(data|work|awork|data,work|data,awork)?	-D%S
 	user		-u'%S'	0	?	-u%-
 	password	-P
 genxml		genxml		PROCESS	-	dbname [-uuser] [-P] [-GgroupID] [-dest=dir] [-xmlfile=filename] [-dtdfile=filename] [-title_doctype=title] [-metadata_only] [-internal_dtd] [-referred_dtd] [{table}]

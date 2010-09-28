@@ -84,6 +84,10 @@
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Add DMPP_VPT_ADDR_TRAN_ID_MACRO, PAGE_STAT define
 **	    DMPP_CREAD page_stat flag.
+**	4-Aug-2010 (kschendel) b124190
+**	    Fix up clear-hdr macro so that it clears the v6 tuple header's
+**	    sequence number.  Forgetting to do this leads to random and
+**	    unpredictable "ambiguous replace" errors on simple updates.
 */
 
 /*
@@ -564,6 +568,10 @@ union _DMPP_TUPLE_HDR
 	((DMPP_TUPLE_HDR_V6 *)hdr)->low_tran[1] = '\0';		\
 	((DMPP_TUPLE_HDR_V6 *)hdr)->low_tran[2] = '\0';		\
 	((DMPP_TUPLE_HDR_V6 *)hdr)->low_tran[3] = '\0';		\
+	((DMPP_TUPLE_HDR_V6 *)hdr)->sequence_num[0] = '\0';	\
+	((DMPP_TUPLE_HDR_V6 *)hdr)->sequence_num[1] = '\0';	\
+	((DMPP_TUPLE_HDR_V6 *)hdr)->sequence_num[2] = '\0';	\
+	((DMPP_TUPLE_HDR_V6 *)hdr)->sequence_num[3] = '\0';	\
 	((DMPP_TUPLE_HDR_V6 *)hdr)->lg_id[0] = '\0';		\
 	((DMPP_TUPLE_HDR_V6 *)hdr)->lg_id[1] = '\0';		\
 	((DMPP_TUPLE_HDR_V6 *)hdr)->ver_number[0] = '\0';	\

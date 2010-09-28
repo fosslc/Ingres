@@ -697,6 +697,8 @@ NO_OPTIM = dr6_us5
 **	    sequence.
 **	28-Apr-2010 (kschendel)
 **	    Update Julie's cross (above) to use DB_ERROR.
+**	09-Jun-2010 (thaju02) Bug 123887
+**	    In write_jnlswitch(), if jnl does not exist, just continue.
 */
 
 /*
@@ -9248,7 +9250,12 @@ DB_ERROR	*dberr)
                         DM0J_FORWARD, (DB_TAB_ID *)0,
                         (DM0J_CTX **)&jnl, dberr);
         if (status != E_DB_OK)
-            break;
+	{
+	    if (dberr->err_code == E_DM9034_BAD_JNL_NOT_FOUND)
+		return(E_DB_OK);
+	    else
+		break;
+	}
 
         MEfill(sizeof(jsrec), 0, (char *)&jsrec);
         jsrec.js_header.length = sizeof(DM0L_JNL_SWITCH);

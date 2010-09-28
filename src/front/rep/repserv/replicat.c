@@ -71,6 +71,8 @@
 **          Upgrade to IIAPI_VERSION_5 to allow ANSI Dates.
 **      05-nov-2009 (joea)
 **          Upgrade to IIAPI_VERSION_7 to support BOOLEAN.
+**      30-aug-2010 (thich01) 
+**          Upgrade to IIAPI_VERSION_8 to support spatial types.
 **/
 
 /*
@@ -114,7 +116,7 @@ char	*argv[])
 	/* Use the INGRES memory allocator */
 	(void)MEadvise(ME_INGRES_ALLOC);
 
-	if (IIsw_initialize(&RSenv, IIAPI_VERSION_7) != IIAPI_ST_SUCCESS)
+	if (IIsw_initialize(&RSenv, IIAPI_VERSION_8) != IIAPI_ST_SUCCESS)
 		PCexit(FAIL);
 
 	/* Initialize character set attribute table */

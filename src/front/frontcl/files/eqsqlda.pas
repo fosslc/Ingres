@@ -1,5 +1,5 @@
 {
-| Copyright (c) 2004 Ingres Corporation
+| Copyright (c) 2004, 2010 Ingres Corporation
 }
 
 {
@@ -13,7 +13,6 @@
 |  Defines:
 |	IISQLDA		- SQLDA type definition that programs use.
 |	Constants and type codes required for using the SQLDA.
-|
 |  History:
 |	20-oct-1987	- Written (neil)
 |       27-apr-1990	- Updated IISQ_MAX_COLS to 300 (barbara)
@@ -22,6 +21,11 @@
 |       17-sep-1993	- Added new byte datatype codes. (sandyd)
 |       07-jan-2002	- Updated IISQ_MAX_COLS to 1024 (toumi01)
 |       18-nov-2009     - Add IISQ_BOO_TYPE (joea)
+|       29-jul-2010     - Increase the size of sqlname from 34 to  
+|			  258, match with IISQD_NAMELEN in IISQLDA 
+|			  ( iisqlda.h). (hweho01) SIR 121123 
+|       17-aug-2010     - Add IISQ spatial types skipped 60 for SECL 
+|                         consistency(thich01)
 }
 
 {
@@ -42,7 +46,7 @@
 	    sqllen:	II_int2;
 	    sqldata:	Integer;		{ Address of any type }
 	    sqlind:	Integer;		{ Address of 2-byte integer }
-	    sqlname:	Varying[34] of Char;
+	    sqlname:	Varying[258] of Char;
 	end;
 
 {
@@ -94,3 +98,12 @@
 	IISQ_BYTE_TYPE = 23;	{ Byte - Input, Output }
 	IISQ_VBYTE_TYPE = 24;	{ Byte Varying - Input, Output }
 	IISQ_LBYTE_TYPE = 25;	{ Long Byte - Output }
+	IISQ_GEOM_TYPE = 56;    { Spatial types }
+	IISQ_POINT_TYPE = 57;
+	IISQ_MPOINT_TYPE = 58;
+	IISQ_LINE_TYPE = 59;
+	IISQ_MLINE_TYPE = 61;
+	IISQ_POLY_TYPE = 62;
+	IISQ_MPOLY_TYPE = 63;
+	IISQ_NBR_TYPE = 64;
+	IISQ_GEOMC_TYPE = 65;

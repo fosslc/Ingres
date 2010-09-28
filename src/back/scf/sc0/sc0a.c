@@ -628,7 +628,7 @@ sc0a_qrytext_param(
 	if(bdt==DB_LVCH_TYPE || bdt==DB_LBYTE_TYPE  || bdt==DB_GEOM_TYPE  ||
 	   bdt==DB_POINT_TYPE || bdt==DB_MPOINT_TYPE || bdt==DB_LINE_TYPE ||
 	   bdt==DB_MLINE_TYPE || bdt==DB_POLY_TYPE || bdt==DB_MPOLY_TYPE ||
-	   bdt==DB_LBIT_TYPE
+	   bdt==DB_LBIT_TYPE  || bdt==DB_GEOMC_TYPE
 	   || qrydata->db_length+name_len+15>sizeof(qrytext))
 	{
 		STcopy("Long Varchar/Byte/Bit Value", qrytext);

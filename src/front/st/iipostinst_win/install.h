@@ -144,6 +144,9 @@
 **	    supported open API calls.
 **	    Added 2 new functions to handle new API calls: CreateVirtualNode
 **	    and CheckAPIError.
+**	30-Jun-2010 (drivi01) Bug #123753
+**	    Add StartOneServer function.
+**	
 **
 */
 
@@ -383,6 +386,7 @@ public:
     BOOL SetEnvironmentFile();
     BOOL CleanSharedMemory();
     BOOL StartServer(BOOL Comment=TRUE);
+    BOOL StartOneServer(char *server_name);
     BOOL IsBusy();
     VOID RetrieveHostname(CHAR *HostName);
     

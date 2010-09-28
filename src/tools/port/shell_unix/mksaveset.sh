@@ -211,6 +211,12 @@
 ##	25-May-2010 (hanje04)
 ##	    SIR 123791
 ##	    Re-add '#' accidentally removed by previous change
+##	07-Jul-2010 (hanje04)
+##	    BUG 124046
+##	    Re-add ingres-LICENSE to rpm saveset under 'bin' as it's now used
+##	    by ingres_express_install.sh
+##	14-July-2010 (bonro01)
+##	    Add Beta LICENSE to ingbuild.
 ##                                         
 . readvers
 . (PROG1PRFX)sysdep
@@ -281,10 +287,10 @@ do
 		    gpl|\
 		    com|\
 		   eval|\
-		     emb) lictype=$2
+		     beta) lictype=$2
 			  shift
 			  ;;
-		      *) echo "$2 is not a valid license: use gpl, com, emb or  eval"
+		      *) echo "$2 is not a valid license: use gpl, com, beta or  eval"
 			 exit 1
 			 ;;
 		esac
@@ -637,11 +643,13 @@ EOF
     fi
 
     # licensing
-    # mklicense -l ${lictype} ||
-    #{
-    #	echo "Failed to create ingres-LICENSE"
-    #	exit 1
-    #}
+    cd bin &&
+        mklicense -l ${lictype} ||
+	{
+    	    echo "Failed to create ingres-LICENSE"
+    	    exit 1
+	}
+    cd ..
     # License now displayed by GUI, just copy license file into place
     if [ -r $ING_SRC/LICENSE.${lictype} ]
     then

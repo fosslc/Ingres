@@ -45,6 +45,9 @@
 **          A standard interface is expected by fcn lookup / execute
 **          operations. Force NFC normalization is now achieved by temporarily
 **          updating the adf_uninorm_flag in the ADF_CB.
+**      21-Jun-2010 (horda03) b123926
+**          Because adu_unorm() and adu_utf8_unorm() are also called via 
+**          adu_lo_filter() change parameter order.
 **/
 
 #include <compat.h>
@@ -235,6 +238,7 @@ commonstr:
     case DB_MLINE_TYPE:
     case DB_POLY_TYPE:
     case DB_MPOLY_TYPE:
+    case DB_GEOMC_TYPE:
     case DB_LBLOC_TYPE:
 	da_ctx->binary = !da_ctx->unicode;
 	da_ctx->utf8 = FALSE;
@@ -604,7 +608,7 @@ adu_patda_get(AD_PAT_DA_CTX *da_ctx)
 	if (da_ctx->unicode)
         {
             da_ctx->adf_scb->adf_uninorm_flag = AD_UNINORM_NFC;
-	    db_stat = adu_unorm(da_ctx->adf_scb, &da_ctx->norm_dv, da_ctx->segment_dv);
+	    db_stat = adu_unorm(da_ctx->adf_scb, da_ctx->segment_dv, &da_ctx->norm_dv);
             da_ctx->adf_scb->adf_uninorm_flag = saved_uninorm_flag;
         }
 	else

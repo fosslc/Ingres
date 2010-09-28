@@ -870,7 +870,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib msvcprt.lib ingrswin.lib libingres.lib iiiceapi.lib htmlhelp.lib"
+				AdditionalDependencies="msvcrt.lib msvcprt.lib ingrswin.lib libingres.lib htmlhelp.lib"
 				OutputFile="..\App\vdba.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
@@ -973,7 +973,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="ingrswin.lib libingres.lib iiiceapi.lib htmlhelp.lib"
+				AdditionalDependencies="ingrswin.lib libingres.lib htmlhelp.lib"
 				OutputFile="..\App\vdba.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"

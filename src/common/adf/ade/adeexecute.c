@@ -485,6 +485,15 @@ NO_OPTIM = rs4_us5 su4_u42 su4_cmw i64_aix r64_us5
 **          Add cases for BOO_ISFALSE, BOO_NOFALSE, BOO_ISTRUE, BOO_NOTRUE,
 **          BOO_EQ_BOO, BOO_NE_BOO, BOO_GT_BOO, BOO_LE_BOO, BOO_LT_BOO,
 **          BOO_GE_BOO, BOO_ISUNKN and BOO_NOUNKN in ade_execute_cx.
+**      21-Jun-2010 (horda03) b123926
+**          Because adu_unorm() and adu_utf8_unorm() are also called via 
+**          adu_lo_filter() change parameter order.
+**	04-Aug-2010 (kiria01) b124160
+**	    Raised limit handling on vlts. Now we have a ADE_MXVLTS_SOFT
+**	    upto which the stack will be used and beyond, the limit can
+**	    get to ADE_MXVLTS which is the max supported in the CXHEAD.
+**	    To handle this memory will be allocated temporarily to extend
+**	    the workspace.
 **/
 
 
@@ -505,7 +514,7 @@ static  DB_STATUS   ad0_fill_vltws(ADF_CB             *adf_scb,
 				   i4                 nbases,
 				   PTR                bases[],
 				   i4                 *nvlts,
-				   ADE_VLT_WS_STRUCT  vlt_ws[]);
+				   ADE_VLT_WS_STRUCT  **vlt_ws);
 
 #ifdef COUNTS
 static i4  adfi_counts[1027] = {0};
@@ -630,7 +639,8 @@ i4                 *ade_needed;
 # endif
 {
     ADE_CXHEAD          *cxhead = (ADE_CXHEAD *) ade_cx;
-    ADE_VLT_WS_STRUCT   vlt_ws[ADE_MXVLTS];
+    ADE_VLT_WS_STRUCT   _vlt_ws[ADE_MXVLTS_SOFT];
+    ADE_VLT_WS_STRUCT	*vlt_ws = _vlt_ws;
     i4                  nvlts;
     i4                  i;
     DB_STATUS           db_stat = E_DB_OK;
@@ -640,7 +650,7 @@ i4                 *ade_needed;
 
     if (    cxhead->cx_n_vlts
 	&&  !(db_stat = ad0_fill_vltws(adf_scb, ade_cx, ade_nbases, ade_bases,
-				       &nvlts, vlt_ws)
+				       &nvlts, &vlt_ws)
 	     )
        )
     {
@@ -649,6 +659,8 @@ i4                 *ade_needed;
 	    *ade_needed += vlt_ws[i].vlt_len;
 	    ADE_ROUNDUP_MACRO(*ade_needed, sizeof(ALIGN_RESTRICT));
 	}
+	if (vlt_ws != _vlt_ws)
+	    MEfree(vlt_ws);
     }
 
     return(db_stat);
@@ -1345,6 +1357,22 @@ i4                 *ade_needed;
 **          updating the adf_uninorm_flag in the ADF_CB.
 **	18-Mar-2010 (kiria01) b123438
 **	    Added SINGLETON aggregate for scalar sub-query support.
+**      21-Jun-2010 (horda03) b123926
+**          Because adu_unorm() and adu_utf8_unorm() are also called via 
+**          adu_lo_filter() change parameter order.
+**	14-Jul-2010 (kschendel) b123104
+**	    Replace settrue/false with ii_true and ii_false.  Same execution,
+**	    different FI numbers.
+**	28-Jul-2010 (kiria01) b124142
+**	    Split aggregate SINGLETON function into two deferring the error
+**	    check into SINGLECHK. This allows the aggregate to summarise the
+**	    record state whilst in derived tables and hence not cause errors
+**	    to be raised with records that will not be part of the result set.
+**	    The method of flagging the potential error is to use ADF_SING_BIT
+**	    alongside ADF_NVL_BIT to be picked up by SINGLECHK.
+**	    Tighten the access to ADF_NVL_BIT.
+**       7-Sep-2010 (hanal04) Bug 124384
+**          Add missing break to NCHR ADE_LEN_UNKNOWN case.
 */
 
 
@@ -1867,6 +1895,7 @@ if (f->ins_icode >= 0) adfi_counts[f->ins_icode]++;
 #ifdef ADE_FRONTEND
 			  if (oprP[0]->opr_dt < 0)
 #endif
+			    /* Set NULL bit & implicitly clear SING bit */
 			    *((u_char *)data[0] + oprP[0]->opr_len - 1) = ADF_NVL_BIT;
 			}
 			else /* 5CXI_CLR_SKIP */
@@ -1942,7 +1971,8 @@ if (f->ins_icode >= 0) adfi_counts[f->ins_icode]++;
 #ifdef ADE_FRONTEND
 			if (oprP[0]->opr_dt < 0)
 #endif
-		        *((u_char *)data[0] + oprP[0]->opr_len - 1) = ADF_NVL_BIT;
+			    /* Set NULL bit & implicitly clear SING bit */
+			    *((u_char *)data[0] + oprP[0]->opr_len - 1) = ADF_NVL_BIT;
 		        f = (ADE_INSTRUCTION *)((char *)cxbase
 						+ next_instr_offset);
 		        next_instr_offset =
@@ -2036,9 +2066,9 @@ if (f->ins_icode >= 0) adfi_counts[f->ins_icode]++;
 
 		if ((dv[0].db_datatype == DB_NVCHR_TYPE) || 
 		    (dv[0].db_datatype == DB_NCHR_TYPE))
-		    db_stat = adu_unorm(adf_scb, &dv[0], &dv[1]);
+		    db_stat = adu_unorm(adf_scb, &dv[1], &dv[0]);
 		else
-		    db_stat = adu_utf8_unorm(adf_scb, &dv[0], &dv[1]);
+		    db_stat = adu_utf8_unorm(adf_scb, &dv[1], &dv[0]);
 
 		if (db_stat != E_DB_OK)
 		  return(db_stat);
@@ -2102,6 +2132,7 @@ if (f->ins_icode >= 0) adfi_counts[f->ins_icode]++;
 	       )
 	    {
 		if (oprP[0]->opr_dt < 0)	    /* nullable result */
+		    /* Set NULL bit & implicitly clear SING bit */
 		    *((u_char *)data[0] + oprP[0]->opr_len - 1) = ADF_NVL_BIT;
 		else
 		    return(adu_error(adf_scb, E_AD1012_NULL_TO_NONNULL, 0));
@@ -2125,6 +2156,7 @@ if (f->ins_icode >= 0) adfi_counts[f->ins_icode]++;
 			/* Some aggs return NULL this way. */
 			if (oprP[0]->opr_dt < 0)	    /* nullable result */
 			{
+			    /* Set NULL bit & implicitly clear SING bit */
 			    *((u_char *)data[0] + oprP[0]->opr_len - 1) = ADF_NVL_BIT;
 			    db_stat = E_DB_OK;
 			}
@@ -2175,8 +2207,9 @@ if (f->ins_icode >= 0) adfi_counts[f->ins_icode]++;
 		    /* Process null result. */
 		    if (oprP[0]->opr_dt < 0)
 		    {
+			/* Set NULL bit & implicitly clear SING bit */
 			*((u_char *)data[0] + oprP[0]->opr_len-1) = ADF_NVL_BIT;
-			db_stat = E_DB_OK;	/* set null and change stat */
+			db_stat = E_DB_OK;
 		    }
 		    else return(db_stat);
 
@@ -2201,8 +2234,8 @@ if (f->ins_icode >= 0) adfi_counts[f->ins_icode]++;
 		    return(adu_error(adf_scb,
 			E_AD1012_NULL_TO_NONNULL, 0));
 		}
+		/* Set NULL bit & implicitly clear SING bit */
 		*((u_char *)data[0] + oprP[0]->opr_len - 1) = ADF_NVL_BIT;
-							/* set null result */
 		break;
 	    }
 	    else if (oprP[0]->opr_dt < 0)
@@ -2300,22 +2333,27 @@ if (f->ins_icode >= 0) adfi_counts[f->ins_icode]++;
 
 	    break;
 
-	  case ADE_SINGLETON:	/* final computation for inline aggs */
-	    if (*(i4 *)data[2] == 0)
+	  case ADE_SINGLETON:	/* final computation for inline SINGLETON */
+	    /* Also see ADFI_1463_SINGLETON_ALL and ADFI_1474_SINGLECHK */
+	    if (*(i4*)data[2] == 0)
 	    {
 		/* Count is zero - result is null */
 		if (oprP[0]->opr_dt > 0)
 		{
-		    return(adu_error(adf_scb,
-			E_AD1012_NULL_TO_NONNULL, 0));
+		    /* Ouput should be nullable */
+		    return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0,
+			    "ADE_SINGLETON not nullable"));
 		}
+		/* Set NULL bit & implicitly clear SING bit */
 		*((u_char *)data[0] + oprP[0]->opr_len - 1) = ADF_NVL_BIT;
-							/* set null result */
 	    }
 	    else
 	    {
-		/* Copy input including any null bit */
+		/* Copy input including any null/flag byte */
 		MEcopy(data[1], oprP[0]->opr_len, data[0]);
+		/* If count is more than one - set SING bit */
+		if (*(i4 *)data[2] > 1)
+		    *((u_char *)data[0] + oprP[0]->opr_len - 1) |= ADF_SING_BIT;
 	    }
 	    break;
 
@@ -2524,6 +2562,7 @@ if (f->ins_icode >= 0) adfi_counts[f->ins_icode]++;
                               case DB_NCHR_TYPE:
                                 dv[im1].db_length = (*(i2 *)((char *)data[i] - 
                                         DB_CNTSIZE)) * sizeof(UCS2) ; 
+                                break;
 
 			      default:
 				/* all other types */
@@ -3028,8 +3067,7 @@ do_adccompare:
 	          {
 	              ln1 = *(u_i2*)c1;
 	              c1 += 2;
-		      if (ln1 < 0  ||  
-			  ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		      if (((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
 			    (ln1 > adf_scb->adf_maxstring/2)) ||
 			  ln1 > adf_scb->adf_maxstring)
 			  return (adu_error(adf_scb, E_AD1014_BAD_VALUE_FOR_DT, 0));
@@ -3041,8 +3079,7 @@ do_adccompare:
 	          {
 	              ln2 = *(u_i2*)c2;
 	              c2 += 2;
-		      if (ln2 < 0  ||
-			  ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		      if (((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
 			    (ln2 > adf_scb->adf_maxstring/2)) ||
 			  ln2 > adf_scb->adf_maxstring)
 			  return (adu_error(adf_scb, E_AD1014_BAD_VALUE_FOR_DT, 0));
@@ -3340,7 +3377,7 @@ utf8_compare:
 	  }
 	  break;
 
-	  case ADE_SETTRUE:
+	  case ADFI_895_II_TRUE:
 	    /* Reset CX value to TRUE and CX compare to 1EQ2.  This is used
 	    ** by MAIN segment of aggregate computation, because the raggf
 	    ** driver uses the BYCOMPARE results to decide whether to emit
@@ -3349,13 +3386,15 @@ utf8_compare:
 	    ** the driver.  If we get as far as the aggregation code in
 	    ** the CX, we know that the driver wants to see TRUE, which is
 	    ** what this operator does.  In an ideal world, ADE_SETTRUE
-	    ** would not be generated into a CX that did not involve
+	    ** would not be generated into an agg CX that did not involve
 	    ** CASE expressions.
+	    ** ii_true and ii_false are also used to present the results
+	    ** of a constant-folded expression such as "where 1=0".
 	    */
 	    cx_value = ADE_TRUE;
 	    ade_excb->excb_cmp = ADE_1EQ2;
 	    break;
-	  case ADE_SETFALSE:
+	  case ADFI_894_II_FALSE:
 	    cx_value = ADE_NOT_TRUE;
 	    ade_excb->excb_cmp = ADE_1LT2;
 	    break;
@@ -3370,10 +3409,25 @@ utf8_compare:
 	    break;
 
 	  case ADFI_1463_SINGLETON_ALL:
-	    if ((*(i4 *)data[2]))
-		return db_stat = adu_error(adf_scb, E_AD1028_NOT_ZEROONE_ROWS, 0);
-	    MEcopy(data[1], oprP[0]->opr_len, data[0]);
-	    (*(i4 *)data[2])++;
+	    /* Also see ADFI_1474_SINGLECHK_ALL aggregate and ADE_SINGLETON */
+	    if (oprP[0]->opr_dt > 0)
+		/* Ouput should be nullable */
+		return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0,
+			"singleton not nullable"));
+	    /* Set count (=data[2]) to 1 or 2 depending on whether unique.
+	    ** We don't just increment due to overflow */
+	    if (*(i4 *)data[2] == 0)
+	    {
+		*(i4 *)data[2] = 1;
+		/* Pass through data. As lenspec ADI_O1 is uesd the
+		** lengths match unless input is not nullable in which
+		** case we need to zero the NULL & SING bits */
+		MEmove(oprP[1]->opr_len, data[1], 0,
+			oprP[0]->opr_len, data[0]);
+	    }
+	    else
+		*(i4 *)data[2] = 2;
+
 	    break;
 
 	  case ADFI_081_ANY_C_ALL:
@@ -3836,8 +3890,8 @@ utf8_compare:
 			return(adu_error(adf_scb,
 			    E_AD1012_NULL_TO_NONNULL, 0));
 		    }
+		    /* Set NULL bit & implicitly clear SING bit */
 		    *((u_char *)data[0] + oprP[0]->opr_len - 1) = ADF_NVL_BIT;
-							/* set null result */
 		    break;
 		}
 		else if (oprP[0]->opr_dt < 0)
@@ -3882,8 +3936,8 @@ utf8_compare:
 			return(adu_error(adf_scb,
 			    E_AD1012_NULL_TO_NONNULL, 0));
 		    }
+		    /* Set NULL bit & implicitly clear SING bit */
 		    *((u_char *)data[0] + oprP[0]->opr_len - 1) = ADF_NVL_BIT;
-							/* set null result */
 		    break;
 		}
 		else if (oprP[0]->opr_dt < 0)
@@ -3928,8 +3982,8 @@ utf8_compare:
 			return(adu_error(adf_scb,
 			    E_AD1012_NULL_TO_NONNULL, 0));
 		    }
+		    /* Set NULL bit & implicitly clear SING bit */
 		    *((u_char *)data[0] + oprP[0]->opr_len - 1) = ADF_NVL_BIT;
-							/* set null result */
 		    break;
 		}
 		else if (oprP[0]->opr_dt < 0)
@@ -3970,8 +4024,8 @@ utf8_compare:
 			return(adu_error(adf_scb,
 			    E_AD1012_NULL_TO_NONNULL, 0));
 		    }
+		    /* Set NULL bit & implicitly clear SING bit */
 		    *((u_char *)data[0] + oprP[0]->opr_len - 1) = ADF_NVL_BIT;
-							/* set null result */
 		    break;
 		}
 		else if (oprP[0]->opr_dt < 0)
@@ -4826,8 +4880,7 @@ strCompare:
 	    {
 	        ln1 = *(u_i2*)c1;
 	        c1 += 2;
-		if (ln1 < 0  ||
-		    ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		if (((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
 		     (ln1 > adf_scb->adf_maxstring/2)) ||
 		    ln1 > adf_scb->adf_maxstring)
 		    return (adu_error(adf_scb, E_AD1014_BAD_VALUE_FOR_DT, 0));
@@ -4840,8 +4893,7 @@ strCompare:
 	    {
 	        ln2 = *(u_i2*)c2;
 	        c2 += 2;
-		if (ln2 < 0  ||
-		    ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		if (((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
 		     (ln2 > adf_scb->adf_maxstring/2)) ||
 		    (ln2 > adf_scb->adf_maxstring))
 		    return (adu_error(adf_scb, E_AD1014_BAD_VALUE_FOR_DT, 0));
@@ -5992,6 +6044,27 @@ strCompare:
                 *(f8 *)data[0] = tempf;
             break;
 
+	  case ADFI_1474_SINGLECHK_ALL:
+	    /* Also see ADFI_1463_SINGLETON_ALL aggregate and ADE_SINGLETON */
+	    if (oprP[1]->opr_dt > 0)
+		/* Input should be nullable */
+		return (adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0,
+			"singlechk p1 not nullable"));
+
+	    /* Raise error if SING bit set */
+	    if ((data[1])[oprP[1]->opr_len - 1] & ADF_SING_BIT)
+		return db_stat = adu_error(adf_scb, E_AD1028_NOT_ZEROONE_ROWS, 0);
+	    /* Otherwise we need to copy the input. Note that output might be non-nullable */
+	    if (oprP[0]->opr_dt > 0)
+	    {
+		if ((data[1])[oprP[1]->opr_len - 1] & ADF_NVL_BIT)
+		    return db_stat = adu_error(adf_scb, E_AD1012_NULL_TO_NONNULL, 0);
+	    }
+	    /* As lenspec ADI_O1 is used, the output length should be used
+	    ** - if not nullable, will simply drop the flags byte */
+	    MEcopy(data[1], oprP[0]->opr_len, data[0]);
+	    break;
+
 	  case ADFI_595_ROWCNT_I:        /* ii_row_count */
 	  {
             /* Get input values */
@@ -6618,7 +6691,7 @@ ADE_OPERAND        *op)
 ** Outputs:
 **      nvlts                           Number of VLTs in the vlt work space
 **					array.
-**      vlt_ws                          VLT work space array.
+**      vlt_ws                          VLT work space array pointer address.
 **
 **	Returns:
 **	      The following DB_STATUS codes may be returned:
@@ -6681,7 +6754,7 @@ PTR                cx,
 i4                 nbases,
 PTR                bases[],
 i4                 *nvlts,
-ADE_VLT_WS_STRUCT  vlt_ws[])
+ADE_VLT_WS_STRUCT  **pvlt_ws)
 {
     ADE_CXHEAD          *cxhead = (ADE_CXHEAD *) cx;
     i4             nexti;
@@ -6701,7 +6774,8 @@ ADE_VLT_WS_STRUCT  vlt_ws[])
     DB_STATUS           db_stat;
     DB_DT_ID		bdt;
     DB_DT_ID		out_bdt;
-
+    ADE_VLT_WS_STRUCT   *vlt_ws = *pvlt_ws; /* We start with ADE_MXVLTS_SOFT */
+    bool		vlt_grown = FALSE;
 
     *nvlts = 0;
 
@@ -6721,11 +6795,21 @@ ADE_VLT_WS_STRUCT  vlt_ws[])
 	iptr = (ADE_INSTRUCTION *) ((char *) cx + nexti);
 	if (iptr->ins_icode == ADE_CALCLEN)
 	{
-#ifdef    xDEBUG
 	    if (*nvlts >= ADE_MXVLTS)
 		return(adu_error(adf_scb, E_AD550E_TOO_MANY_VLTS, 0));
-#endif /* xDEBUG */
-
+	    if (vlt_grown == FALSE &&
+		*nvlts >= ADE_MXVLTS_SOFT)
+	    {
+		/* Allocate temporary memory - caller will free */
+		PTR tmp = MEreqmem(0, ADE_MXVLTS*sizeof(ADE_VLT_WS_STRUCT), FALSE, &status);
+		if (!tmp)
+		    return(adu_error(adf_scb, E_AD550E_TOO_MANY_VLTS, 0));
+		/* Copy existing */
+		MEcopy((PTR)vlt_ws, ADE_MXVLTS_SOFT*sizeof(ADE_VLT_WS_STRUCT), tmp);
+		/* Adopt the block as current */
+		*pvlt_ws = vlt_ws = (ADE_VLT_WS_STRUCT*)tmp;
+		vlt_grown = TRUE;
+	    }
 	    /* Now let's process the VLT for this ADE_CALCLEN instruction */
 	    /* ---------------------------------------------------------- */
 

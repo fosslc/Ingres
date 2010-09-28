@@ -684,6 +684,10 @@
 **	    Add for more thorough syntax error reporting:
 **	    E_PS0C86_ENCRYPT_NOTABLVL, E_PS0C87_ENCRYPT_NOCOLS,
 **	    E_PS0C88_ENCRYPT_NOPASS
+**	24-jun-2010 (stephenb)
+**	    Add E_PS03B4_NO_COPY_CACHE
+**      11-Aug-2010 (hanal04) Bug 124180
+**          Added PSQ_MONEY_COMPAT. Set if money_compat true in config.dat.
 **/
 
 /*
@@ -942,6 +946,7 @@
 #define E_PS03B1_NULL_RCB		(E_PS_PRS + 0xB1L)
 #define E_PS03B2_INVALID_CPLENGTH	(E_PS_PRS + 0xB2L)
 #define	E_PS03B3_NULL_QUERY_TREE	(E_PS_PRS + 0xB3L)
+#define E_PS03B4_NO_COPY_CACHE		(E_PS_PRS + 0xB4L)
 
 /*
 **	Errors having to do with hashing and finding cursor control blocks +
@@ -2518,6 +2523,10 @@ typedef struct _PST_OBJDEP
 **	29-apr-2010 (stephenb)
 **	    Move batch flags from psq_flags to psq_flags2 to to avoid
 **	    conflicts. Add PSQ_SETBATCHCOPYOPTIM.
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Add a place to pass in create-compression.
+**	12-aug-2010 (stephenb)
+**	    Resolve flag conflict in psq_flags2
 */
 typedef enum psq_mode_enum {
 #define PSQ_MODES_MACRO \
@@ -2713,6 +2722,7 @@ _DEFINE(PSQ_FREELOCATOR,       189,"FREE LOCATOR")\
 _DEFINE(PSQ_ATBL_RENAME_COLUMN,190,"PSQ_ATBL_RENAME_COLUMN")\
 _DEFINE(PSQ_ATBL_RENAME_TABLE, 191,"PSQ_ATBL_RENAME_TABLE")\
 _DEFINE(PSQ_SETBATCHCOPYOPTIM, 192, "SET BATCH_COPY_OPTIM")\
+_DEFINE(PSQ_CREATECOMP,        193,"SET CREATE_COMPRESSION")\
 _ENDDEFINE
 #define _DEFINE(n,v,x) n=v,
 #define _ENDDEFINE PSQ_MODE_MAX
@@ -2795,7 +2805,7 @@ typedef struct _PSQ_CB
     PTR		    psq_cp_qefrcb;	/* stashed QEF_RCB for insert to copy 
 					** optimization, see comment in scs.h */
     i4		    psq_qso_lkid;	/* lock ID for QSF */
-    i4		    psq_parser_compat;	/* Parser compatability flags.
+    i2		    psq_parser_compat;	/* Parser compatability flags.
 					** General flags to make the parser
 					** do "stuff" to be compatible with
 					** older clients, unusual situations,
@@ -2815,6 +2825,10 @@ typedef struct _PSQ_CB
 #define	    PSQ_I4_TIDS		0x0002
 
 
+    i2		    psq_create_compression; /* Place to pass create-compression
+					** startup config option: passed
+					** to parser facility CB.
+					*/
     u_i4	    psq_flag;		/*
 					** holds assorted bitflag instructions,
 					** defined below:
@@ -3210,10 +3224,15 @@ typedef struct _PSQ_CB
 					 ** set ==> set if the default cursor 
 					 ** mode is readonly 
 					 */
-#define	    PSQ_LOCATOR			0x0004L
+#define	    PSQ_LOCATOR			0x00020L
 					/* 
 					** set ==> GCA_LOCATOR_MASK is on
 					*/
+#define     PSQ_MONEY_COMPAT		0x0008L
+					/*
+                                        ** Set if constant strings are to be
+                                        ** parsed for money.
+                                        */
     bool	    psq_vch_prec;	/* varchar precedence */
  
                                         /*
@@ -5553,6 +5572,11 @@ typedef struct _PSF_QUEUE PSF_QUEUE;
 **          has supplied, noprivileges and nodefault_privileges options.
 **	17-nov-2008 (dougi)
 **	    Added psy_idseq_defp[] for identity columns.
+**	27-Jun-2010 (kschendel) b123986
+**	    There isn't any psy-cb for create table, move psy-seqflag
+**	    to a temporary flag in the iisequence tuple.  (The alternative
+**	    of moving it to the YYVARS area was going to be a lot more work!)
+**	    The only flag we needed in psy_seqflag was "decimal seen" anyway.
 */
 typedef struct _PSY_CB
 {
@@ -5605,7 +5629,7 @@ typedef struct _PSY_CB
     i4		    psy_istree;		/* TRUE iff there is an input tree */
     DB_TAB_NAME	    psy_tabname[PSY_MAXTABS]; /* Names of table to work on */
     PST_QNODE	    *psy_idseq_defp[PSY_MAXTABS]; /* IIDEFAULT ids for identity
-					** sequences */
+					** sequences during DROP */
     QSO_OBID	    psy_textout;	/* QSF id for formatted query text */
     i4		    psy_tabprinted;	/* TRUE means tabname has been printed*/
     PTR		    psy_tupptr;		/*
@@ -5741,16 +5765,6 @@ typedef struct _PSY_CB
 #define			PSY_ALMDISCONNECT  0x0400  /* WHEN DISCONNECT */
 #define			PSY_ALMEVENT  	0x0800   /* WITH DBEVENT */
 #define			PSY_ALMEVTEXT  	0x01000  /* WITH DBEVENT TEXT */
-    i4		    psy_seqflag;	/* A flag used in conjunction with
-   					** CREATE/ALTER/DROP SEQUENCE
-   					*/
-#define			PSY_CSEQ	0x01	/* CREATE SEQUENCE */
-#define			PSY_ASEQ	0x02	/* ALTER  SEQUENCE */
-#define			PSY_DSEQ	0x04	/* DROP   SEQUENCE */
-#define			PSY_DECOPT	0x08	/* at least one option is 
-						** decimal constant. */
-#define			PSY_DECTYPE	0x10	/* sequence type declared
-						** decimal */
     i4		    psy_auflag;		/* A flag used in conjuunction with
 					** ENABLE/DISABLE SECURITY_AUDIT
 					*/
@@ -6376,6 +6390,8 @@ typedef	struct	_PST_COL_ID
 **	    Alter table Add/Drop column create table flags.
 **	15-oct-2009 (gupsh01)
 **	    Fix define values. 
+**	28-Jul-2010 (kschendel) SIR 124104
+**	    Add compression so that auto structure can maintain compression.
 */
 typedef	struct	_PST_CREATE_TABLE
 {
@@ -6387,8 +6403,14 @@ typedef	struct	_PST_CREATE_TABLE
 #define       PST_ATBL_ALTER_COLUMN   5L     /* alter table alter column */
                                   /* may eventually allow temp tables,etc */
 
-    i4	pst_autostruct;		/* flag field for auto structure options */
+    i2	pst_autostruct;		/* flag field for auto structure options */
 				/* Flags defined in PST_RESTAB */
+    i2	pst_compress;		/* Compression flags, same as PST_RESTAB */
+				/* OPF doesn't care much about this, it depends
+				** on the pst_restab or DMU char stuff, but
+				** it does pass this along to the create
+				** integrity action for use by auto-structure
+				*/
     struct _QEU_CB	*pst_createTableQEUCB;	 
 				 /* the DMU_CB in this QEUCB describes table */
 }	PST_CREATE_TABLE;
@@ -6624,6 +6646,8 @@ typedef	struct	_PST_CREATE_PROCEDURE
 **	3-may-2007 (dougi)
 **	    Added flag to force base table structure to btree on constrained
 **	    columns.
+**	28-Jul-2010 (kschendel) SIR 124104
+**	    Add compression so that auto structure can maintain compression.
 */
 typedef	struct	_PST_CREATE_INTEGRITY
 {
@@ -6743,8 +6767,17 @@ typedef	struct	_PST_CREATE_INTEGRITY
     PST_COL_ID	      *pst_key_collist;
 		/* linked list of column ids to be turned into index
 		*/
-    i4		      pst_key_count;
+    i2		      pst_key_count;
 		/* count of columns in key column list */
+    i2		      pst_compress;
+		/* Compression indicator, same as PST_RESTAB.  The path to
+		** get here is sess_cb->pss_restab.pst_compress is copied
+		** to pst_createTable.pst_compress is copied (by opc) to
+		** pst_createIntegrity.pst_compress.  Goofy, but it's the
+		** simplest way to do it.
+		** Note that the compression indicator is only set when
+		** auto-structure is asked for.
+		*/
     PST_RESTAB	      pst_indexopts;
 		/* constraint index options */
 

@@ -24,6 +24,12 @@
 ##          set without xml2 header location.
 ##       2-Jun-2010 (maspa05)
 ##          Check for minimum version of gtk (2.4)
+##      31-Aug-2010 (troal01)
+##          Check for GEOS/Proj in /usr/local/lib otherwise set LOC to /usr/lib
+##      31-Aug-2010 (rosan01)
+##          Check /usr/lib64 for pam when on 64 bit machines
+##      31-Aug-2010 (troal01)
+##          Renamed PROJ64_LOC and GEOS64_LOC to PROJHB_LOC and GEOSHB_LOC
 
 # check_for_file ENVVARIABLE string1 string2 ...
 # checks whether one of the given strings is a file
@@ -277,7 +283,7 @@ check_for_pam()
       # look for shared library, since the library extension 
       # and version may be different, just look for libpam.*
       libpamfound=1
-      for searchdir in /lib /usr/lib /usr/local/lib 
+      for searchdir in /lib /usr/lib /usr/local/lib /usr/lib64
       do
         ls ${searchdir}/libpam.* 1> /dev/null 2> /dev/null
 	[ $? = 0 ] && libpamfound=0 && break
@@ -377,19 +383,56 @@ check_for_geos ()
     #If GEOS locations aren't specified, set them to defaults
     [ -z "$GEOS_LOC" ] && 
     {
-        export GEOS_LOC="/usr/local/lib"
-        echo "GEOS_LOC was not set, using /usr/local/lib"
+        if [ -e /usr/local/lib/libgeos.so ] ; then
+            export GEOS_LOC="/usr/local/lib"
+        else
+            export GEOS_LOC="/usr/lib"
+        fi
+        echo "GEOS_LOC was not set, using $GEOS_LOC"
     }
     [ -z "$GEOS_INC" ] && 
     {
-        export GEOS_INC="/usr/local/include"
-        echo "GEOS_INC was not set, using /usr/local/include"
+        if [ -e /usr/local/include/geos_c.h ] ; then
+            export GEOS_INC="/usr/local/include"
+        else
+            export GEOS_INC="/usr/include"
+        fi
+        echo "GEOS_INC was not set, using $GEOS_INC"
     }
     [ $geos64_need = "true" ] &&
-    [ -z "$GEOS64_LOC" ] && 
+    [ -z "$GEOSHB_LOC" ] && 
     {
-        export GEOS64_LOC="/usr/local/32bit/lib"
-        echo "GEOS64_LOC was not set, using /usr/local/32bit/lib"
+        export GEOSHB_LOC="/usr/local/32bit/lib"
+        echo "GEOSHB_LOC was not set, using /usr/local/32bit/lib"
+    }
+}
+
+check_for_proj ()
+{
+    #If PROJ locations aren't specified, set them to defaults
+    [ -z "$PROJ_LOC" ] && 
+    {
+        if [ -e /usr/local/lib/libproj.so ] ; then
+            export PROJ_LOC="/usr/local/lib"
+        else
+            export PROJ_LOC="/usr/lib"
+        fi
+        echo "PROJ_LOC was not set, using $PROJ_LOC"
+    }
+    [ -z "$PROJ_INC" ] && 
+    {
+        if [ -e /usr/local/include/proj_api.h ] ; then
+            export PROJ_INC="/usr/local/include"
+        else
+            export PROJ_INC="/usr/include"
+        fi
+        echo "PROJ_INC was not set, using $PROJ_INC"
+    }
+    [ $proj64_need = "true" ] &&
+    [ -z "$PROJHB_LOC" ] && 
+    {
+        export PROJHB_LOC="/usr/local/32bit/lib"
+        echo "PROJHB_LOC was not set, using /usr/local/32bit/lib"
     }
 }
 
@@ -422,6 +465,9 @@ precheck ()
 
   # check for GEOS
   [ "$geos_need" = "true" ] && check_for_geos
+
+  # check for PROJ
+  [ "$proj_need" = "true" ] && check_for_proj
 
   # gtk if needed
   [ "$gtk_need" = "true" ] && check_for_gtk

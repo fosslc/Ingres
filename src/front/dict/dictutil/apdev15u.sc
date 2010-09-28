@@ -47,6 +47,12 @@ static VOID	so_clean_up();
 **	    b116674.
 **	26-Aug-2009 (kschendel) b121804
 **	    Bool prototypes to keep gcc 4.3 happy.
+**	27-Jul-2010 (frima01) Bug 124137
+**	    Add exit if no argument has been passed to avoid
+**	    segmentation violation when accessing arguments.
+**	02-Aug-2010 (bonro01) Bug 124137
+**	    Previous change causes compile error on Windows.
+**	    Move code after variable definitions.
 **/
 
 FUNC_EXTERN bool        IIDDigIsGateway();
@@ -93,6 +99,9 @@ EXEC SQL begin declare section;
   i4       dbservice;
   char	   iidbdbname[DB_MAXNAME+1];
 EXEC SQL end   declare section;
+
+    if (argc < 2)
+	PCexit(FAIL);
 
         
         for (i=0; i< argc; i++)

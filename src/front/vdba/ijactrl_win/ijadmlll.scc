@@ -29,6 +29,8 @@
 ** 25-May-2010 (drivi01) Bug 123817
 **    Fix the object length to allow for long IDs.
 **    Remove hard coded constants, use DB_MAXNAME instead.
+** 17-Aug-2010 (thich01)
+**    Make changes to treat spatial NBR type as BYTE.
 **/
 
 
@@ -163,6 +165,7 @@ BOOL CaIjaCursor::Fetch(CStringList& tuple, int& nCount)
 				case IISQ_CHA_TYPE:
 				case IISQ_VCH_TYPE:
 				case IISQ_BYTE_TYPE:
+				case IISQ_NBR_TYPE:
 				case IISQ_VBYTE_TYPE:
 					{
 						// check whether displayable contents

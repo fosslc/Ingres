@@ -361,13 +361,21 @@ GM_domain( i4  next, char *this, char **new )
 **	12-oct-1993 (tad)
 **	    Bug #56449
 **	    Changed %x to %p for pointer values.
+**      12-Aug-2010 (horda03) B124109
+**          If this is a Factotum thread, then need to duplicate the
+**          domain list of the parent as the parent may not be using
+**          the default domain.
 */
 static GM_SCB *
 GM_gt_scb( void )
 {
     GW_SESSION	*gw_sess;
+    GW_SESSION	*parent_gw_sess;
     GM_SCB	*scb = NULL;
+    GM_SCB	*parent_scb;
     char	sem_name[ CS_SEM_NAME_LEN + GM_MIB_PLACE_LEN ];
+    DB_STATUS   status = E_DB_WARN;
+    SPBLK       *sp;
 
     do
     {
@@ -393,8 +401,37 @@ GM_gt_scb( void )
 		      STprintf( sem_name, "GM sess %p", scb ));
 	SPinit( &scb->gs_domain, STcompare );
 
-	/* FIXME -- should be SERVER */
-	if( GM_ad_domain( GM_globals.gwm_def_domain ) != E_DB_OK )
+        if ( ( (parent_gw_sess = gws_gt_parent_gw_sess()) == NULL ) ||
+	     ( (parent_scb = (GM_SCB *)parent_gw_sess->gws_exit_scb[ GW_IMA ]) == NULL ) ||
+             ( (status = GM_gt_sem( &parent_scb->gs_sem )) != OK ) ||
+             ( (sp = SPfhead( &parent_scb->gs_domain )) == NULL) )
+        {
+           if (status == OK)
+           {
+              /* Release the parent_scb's semaphore if we acquired it */
+
+              GM_release_sem( &parent_scb->gs_sem );
+           }
+
+	   /* FIXME -- should be SERVER */
+           status = GM_ad_domain(GM_globals.gwm_def_domain);
+        }
+        else
+        {
+           /* Duplicate the parents Domain list. */
+
+           for(; sp; sp = SPfnext(sp))
+           {
+              if ( (status = GM_ad_domain( sp->key )) )
+              {
+                 break;
+              }
+           }
+
+           GM_release_sem( &parent_scb->gs_sem );
+        }
+
+	if( status != E_DB_OK )
 	{
 	    /* "GWM: Internal error:  error starting domain for
 	       session %0x, scb %1x" */

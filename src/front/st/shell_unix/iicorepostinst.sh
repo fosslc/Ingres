@@ -35,6 +35,13 @@
 ##	02-Jun-2010 (hanje04)
 ##	    BUG 123856
 ##	    Use su if we can't find runuser
+##	16-Jun-2010 (hanje04)
+##	    BUG 123929
+##	    Run iisetres as $II_USERID not $II_GROUPID
+##	25-Jun-2010 (hanje04)
+##	    BUG 124005
+##	    Run mkrc as $II_USERID so that the generated script is owned by
+##	    $II_USERID and not root
 
 ## Need II_SYSTEM to be set
 [ -z "$II_SYSTEM" ] &&
@@ -173,7 +180,7 @@ II_INSTALLATION configured as $II_INSTALLATION.
 
         CONFIG_HOST=`iipmhost`
 	$runuser -m -c "$II_SYSTEM/ingres/utility/iisetres \"ii.${CONFIG_HOST}.setup.owner.user\" $II_USERID" $II_USERID
-	$runuser -m -c "$II_SYSTEM/ingres/utility/iisetres \"ii.${CONFIG_HOST}.setup.owner.group\" $II_GROUPID" $II_GROUPID
+	$runuser -m -c "$II_SYSTEM/ingres/utility/iisetres \"ii.${CONFIG_HOST}.setup.owner.group\" $II_GROUPID" $II_USERID
     fi
 
 }
@@ -249,7 +256,9 @@ do_setup()
     {
 	inst_id=`ingprenv II_INSTALLATION`
 	mkrc -r
-	mkrc && mkrc -i
+	[ -f "$II_SYSTEM/ingres/files/rcfiles/ingres${inst_id}" ] &&
+	    rm -f "$II_SYSTEM/ingres/files/rcfiles/ingres${inst_id}"
+	( $runuser -m -c "mkrc" $II_USERID ) && mkrc -i
 	( [ "$II_START_ON_BOOT" = "NO" ] || [ "$START_ON_BOOT" = "NO" ] ) &&
 	{
 	    if [ -x /usr/sbin/update-rc.d ] ; then

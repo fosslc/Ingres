@@ -83,6 +83,14 @@
 **	12-Feb-2009 (frima01) b120004
 **	    Changed AD_TZ_HOURSNEW to use abs() since it didn't
 **	    work properly with negative values on Unixware.
+**	13-jun-2010 (stephenb)
+**	    Add ADU_BIGGEST_MACRO to support expanding date lengths
+**	    in aducalclen
+**      24-Jun-2010 (horda03) B123987
+**          Added AD_11DTE_INTRN_OUTLENGTH for the length of an Ingredate
+**          Interval (when coverted to a string. Also added
+**          AD_11_MAX_STRING_LEN which is set to the maximum length
+**          a string for a DATE (ANSI or INGRESDATE) will take.
 **/
 
 
@@ -441,6 +449,12 @@ typedef struct _AD_AGGDATE
 **  MACRO to tell how many days in a given year ... leap year calculation:
 */
 #define ADU_DYSIZE_MACRO(x) (((x)%4==0 && (x)%100!=0 || (x)%400==0) ? 366 : 365)
+/*
+** MACRO for biggest of 3 values, used to calculate output length
+** in adicalclen
+*/
+#define ADU_BIGGEST_MACRO(a, b, c) \
+(a > b && a > c) ? a : ((b > a && b > c) ? b : c)
 
 
 /*
@@ -467,6 +481,12 @@ typedef struct _AD_AGGDATE
 					    /* Max string '9999 yrs 12 mos' */
 #define     AD_10INDS_OUTLENGTH       45    /* string length of INDS output */
       /* Max string '3649635 days 23 hrs 59 mins 59.999999999 secs' */
+#define     AD_11DTE_INTRV_OUTLENGTH  57    /* string length of an ingresdate interval */
+      /* Max string '-9999 yrs -11 mos -3600000 days -19 hrs -39 mins -30 secs' */
+#define     AD_11_MAX_STRING_LEN      AD_11DTE_INTRV_OUTLENGTH
+                                            /* Maximum string length of
+                                            ** any date type.
+                                            */
 
 
 #define	    AD_2DTE_MSPERSEC	    1000.0  /* # msecs in a second (as flt) */

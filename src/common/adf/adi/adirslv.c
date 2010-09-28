@@ -14,6 +14,7 @@
 #include    <adudate.h>
 #include    <adfint.h>
 #include    <adfops.h>
+#include    <adffiids.h>
 
 /**
 **
@@ -431,6 +432,10 @@ static const char opnames[] = ADI_OPS_MACRO;
 **      13-may-2010 (horda03) B123704
 **          Don't consider functions where the parameter types must match.
 **          That is when ADI_F65536_PAR1MATCH or ADI_F131072_PAR2MATCH set.
+**      4-jun-2010 (stephenb)
+**          Add nvl2 to "ifnull" coercion exception (Bug 123880)
+**      6-aug-2010 (stephenb)
+**          Correctly detect NVL2 from ADI_NVL2_FIND_COMMON (Bug 124211)
 */
 
 # ifdef ADF_BUILD_WITH_PROTOS
@@ -513,6 +518,9 @@ bool		varchar_precedence;
        cl_0 = ad0_type_class(idts[0]);
        cl_1 = ad0_type_class(idts[1]);
     }
+    
+    /* init fi_desc */
+    adi_rslv_blk->adi_fidesc = NULL;
 
     /* Since every datatype has an equals comparison fi, using equals as
     ** the operation for ADI_FIND_COMMON will implement the proper semantics;
@@ -525,7 +533,8 @@ bool		varchar_precedence;
     ** family type will have an EQ operator and requires further work for
     ** 'find common'
     */
-    if (op == ADI_FIND_COMMON && (idts[0] == DB_LVCH_TYPE || 
+    if ((op == ADI_FIND_COMMON || op == ADI_NVL2_FIND_COMMON)
+	    && (idts[0] == DB_LVCH_TYPE || 
                  idts[0] == DB_LBYTE_TYPE || 
 		idts[0] == DB_LNVCHR_TYPE))
     {
@@ -536,7 +545,8 @@ bool		varchar_precedence;
         return(st);
     }
     if ((st = adi_fitab(adf_scb,
-			op == ADI_FIND_COMMON  ?  ADI_EQ_OP  :  op,
+			op == ADI_FIND_COMMON || op == ADI_NVL2_FIND_COMMON ?  
+				ADI_EQ_OP  :  op,
 			&fi_tab)
 	 ) != E_DB_OK)
     {
@@ -593,7 +603,7 @@ bool		varchar_precedence;
 	/* for ADI_FIND_COMMON we only want fi's with the same input dts
 	** and the better not be both ALL
 	*/
-	if (op == ADI_FIND_COMMON &&
+	if ((op == ADI_FIND_COMMON || op == ADI_NVL2_FIND_COMMON) &&
 		(curr_fi->adi_dt[0] != curr_fi->adi_dt[1] ||
 			curr_fi->adi_dt[0] == DB_ALL_TYPE))
 	    continue;
@@ -672,6 +682,7 @@ bool		varchar_precedence;
 	    if (curr_fi->adi_fitype == ADI_COMPARISON &&
 		adf_scb->adf_qlang == DB_SQL &&
 		op != ADI_FIND_COMMON &&
+		op != ADI_NVL2_FIND_COMMON &&
 		num_cdts == 2 &&
 		cdts[0] == DB_ALL_TYPE &&
 		cdts[1] == DB_ALL_TYPE)
@@ -728,13 +739,12 @@ bool		varchar_precedence;
 		ad0_type_class(cdts[curr_dt]) == ad0_type_class(idts[curr_dt]))
 		continue;
 
-	    /* not allowed to coerce an abstract type except in IFNULL context */
+	    /* not allowed to coerce an abstract type except in IFNULL/NVL2 context */
 	    if ((Adf_globs->Adi_dtptrs[midts[curr_dt]]->
 		    adi_dtstat_bits & AD_INTR) == 0 &&
-		curr_fi->adi_fiopid != ADI_IFNUL_OP)
-	    {
+		curr_fi->adi_fiopid != ADI_IFNUL_OP &&
+		op != ADI_NVL2_FIND_COMMON)
 		break;
-	    }
 
 	    /* see if we can coerce fi's input dt to caller's dt */
 	    if ((st = adi_tycoerce(adf_scb, idts[curr_dt], &mask)) != E_DB_OK)
@@ -1318,6 +1328,18 @@ PREC_TY		prec_ty;
 **              ingresdate > ts_wo_tz > ts_w_ltz > ts_w_tz >
 **                    ansidate > time_wo_tz > time_w_ltz > time_w_tz >
 **                          int_ym > int_ds
+**      2-jun-2010 (stephenb)
+**          Add case for NVL2. This function is composed entirely of
+**          DB_ANY_TYPE parameters and returns DB_ANY_TYPE. It can be
+**          passed and return anything, so we have to decide at runtime 
+**          how to resolve the type. What we do is use the actual types passed
+**          in parameter 2 and parameter 3 and call adi_resolve() to resolve
+**          those to a common type using the standard type resolution rules. (Bug 123880)
+**      6-aug-2010 (stephenb)
+**          Pass NVL2 op id to resolver. (bug 124211)
+**	10-Aug-2010 (kiria01) b124217
+**	    Make sure that the secondary ALL params are correctly mapped to
+**	    member type.
 */
 DB_STATUS
 adi_dtfamily_resolve(
@@ -1353,6 +1375,39 @@ ADI_RSLV_BLK	     *adi_rslv_blk
       {
 	member = abs(adi_rslv_blk->adi_dt[1]);
 	family = DB_ALL_TYPE;
+      }
+      else if (oldfidesc->adi_finstid == ADFI_1457_NVL2_ANY)
+      {
+	  /*
+	  ** case for NVL2. This function can be passed and return any type,
+	  ** so we have to make a runtime decision on what type to use. The way 
+	  ** we do this is to send the actual types of parameter2 and parameter3 to 
+	  ** adi_resolve and let it decide the best common type using the standard
+	  ** resolve rules (see comment in adi_resolve).
+	  */  
+	  if (adi_rslv_blk->adi_dt[1] != adi_rslv_blk->adi_dt[2])
+	  {
+	      ADI_RSLV_BLK	tmp_resolve;
+			      
+	      STRUCT_ASSIGN_MACRO(*adi_rslv_blk, tmp_resolve);
+	      /* shift dt's (we don't care about parm1) */
+	      tmp_resolve.adi_dt[0] = adi_rslv_blk->adi_dt[1];
+	      tmp_resolve.adi_dt[1] = adi_rslv_blk->adi_dt[2];
+	      tmp_resolve.adi_num_dts = 2;
+	      tmp_resolve.adi_op_id = ADI_NVL2_FIND_COMMON;
+	      /* resolve parm2 and parm3 to best common type */
+	      if (adi_resolve(adf_scb, &tmp_resolve, FALSE) != E_DB_OK)
+		  return(E_DB_ERROR);
+	    
+	      member = abs(tmp_resolve.adi_fidesc->adi_dt[0]);
+	      family = DB_ALL_TYPE;
+	  }
+	  else
+	  {
+	      /* both the same, no resolution needed, just use it */
+	      member = abs(adi_rslv_blk->adi_dt[1]);
+	      family = DB_ALL_TYPE;
+	  }
       }
 
       for (i = 0; i < numdts; i++)
@@ -1426,7 +1481,13 @@ ADI_RSLV_BLK	     *adi_rslv_blk
           {
               // Nothing to do here.
           }
-	  else if (family != DB_ALL_TYPE)
+	  else if (family == DB_ALL_TYPE)
+	  {
+	    if (member != 0)
+		newfidesc->adi_dt[i] = member;
+		continue;
+	  }
+	  else
       	    return(adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 0));
 
 	  newfidesc->adi_dt[i]= idts[i];
@@ -1437,7 +1498,10 @@ ADI_RSLV_BLK	     *adi_rslv_blk
       ** have been updated with member information */
       for (i = 0; i < numdts; i++)
       {
-        if ((newfidesc->adi_dt[i] == family) && (member != 0))
+	if (i==0 && oldfidesc->adi_finstid == ADFI_1457_NVL2_ANY)
+	    /* leave parm1 as-is, it's just the null indicator */
+	    newfidesc->adi_dt[0] = abs(adi_rslv_blk->adi_dt[0]);
+	if ((newfidesc->adi_dt[i] == family) && (member != 0))
 	  newfidesc->adi_dt[i]= member;
       }
 
@@ -1546,6 +1610,8 @@ ADI_RSLV_BLK	     *adi_rslv_blk
           if (newfidesc->adi_lenspec.adi_lncompute == ADI_FIXED)
 	     newfidesc->adi_lenspec.adi_fixedsize = len[1];
       }
+      else if (oldfidesc->adi_finstid == ADFI_1457_NVL2_ANY)
+ 	  newfidesc->adi_dtresult = member;
     }
     else
         return(adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 0));

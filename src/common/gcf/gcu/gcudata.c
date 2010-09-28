@@ -87,6 +87,8 @@
 **	    Added Boolean datatype.
 **	22-Jan-10 (gordy)
 **	    DOUBLEBYTE code generalized for multi-byte charset processing.
+**      17-Aug-2010 (thich01)
+**          Added spatial GCA types.
 */
 
 /*
@@ -211,6 +213,15 @@ gcx_datatype[] =
 	GCA_TYPE_LTXT,		"LONG TEXT",
 	GCA_TYPE_LCHAR,		"LONG CHAR",
 	GCA_TYPE_LBYTE,		"LONG BYTE",
+	GCA_TYPE_GEOM,		"GEOMETRY",
+	GCA_TYPE_POINT,		"POINT",
+	GCA_TYPE_MPOINT,	"MULTIPOINT",
+	GCA_TYPE_LINE,		"LINESTRING",
+	GCA_TYPE_MLINE,		"MULTILINESTRING",
+	GCA_TYPE_POLY,		"POLYGON",
+	GCA_TYPE_MPOLY,		"MULTIPOLYGON",
+	GCA_TYPE_NBR,		"NBR",
+	GCA_TYPE_GEOMC,		"GEOMETRY COLLECTION",
 	GCA_TYPE_LNCHR,		"LONG UCS2",
 	GCA_TYPE_LCLOC,		"LONG CHAR Locator",
 	GCA_TYPE_LBLOC,		"LONG BYTE Locator",
@@ -247,6 +258,15 @@ gcx_datatype[] =
 	GCA_TYPE_LTXT_N,	"Nullable LONG TEXT",
 	GCA_TYPE_LCHAR_N,	"Nullable LONG CHAR",
 	GCA_TYPE_LBYTE_N,	"Nullable LONG BYTE",
+	GCA_TYPE_GEOM_N,	"Nullable GEOMETRY",
+	GCA_TYPE_POINT_N,	"Nullable POINT",
+	GCA_TYPE_MPOINT_N,	"Nullable MULTIPOINT",
+	GCA_TYPE_LINE_N,	"Nullable LINESTRING",
+	GCA_TYPE_MLINE_N,	"Nullable MULTILINESTRING",
+	GCA_TYPE_POLY_N,	"Nullable POLYGON",
+	GCA_TYPE_MPOLY_N,	"Nullable MULTIPOLYGON",
+	GCA_TYPE_NBR_N,		"Nullable NBR",
+	GCA_TYPE_GEOMC_N,	"GEOMETRY COLLECTION",
 	GCA_TYPE_LNCHR_N,	"Nullable LONG UCS2",
 	GCA_TYPE_LCLOC_N,	"Nullable LONG CHAR Locator",
 	GCA_TYPE_LBLOC_N,	"Nullable LONG BYTE Locator",

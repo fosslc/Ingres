@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2006 Ingres Corporation 
+** Copyright (c) 2010 Ingres Corporation 
 */ 
 
 #include <compat.h>
@@ -38,7 +38,10 @@
 **      Added SQLDescribeParam().
 **   13-Mar-2007 (Ralph Loen) SIR 117786
 **      Tightened up treatement of ODBC connection states.
-** 
+**   03-Sep-2010 (Ralph Loen) Bug 124348
+**      Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
+**      SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
+**      platforms.
 */ 
 
 /*
@@ -410,7 +413,7 @@ RETCODE SQL_API SQLParamData(
 RETCODE SQL_API SQLPutData(
     SQLHSTMT    hstmt,
     SQLPOINTER  DataPtr,
-    SQLINTEGER  cbValue)
+    SQLLEN      cbValue)
 {
     RETCODE rc, traceRet = 1;
     pSTMT pstmt = (pSTMT)hstmt;

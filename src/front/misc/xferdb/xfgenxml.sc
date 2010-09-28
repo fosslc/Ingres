@@ -12,6 +12,7 @@
 # include       <lo.h>
 # include	<gl.h>
 # include	<nm.h>
+# include	<pc.h>
 # include	<sl.h>
 # include	<iicommon.h>
 # include	<fe.h>
@@ -201,6 +202,9 @@ bool printedRowTag = FALSE;
 **          xmlprintrows.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      22-Jul-2010 (horda03) b123992
+**          genxml is aborting when xf_encode_buffer needs to alter the
+**          size of the output buffer. Fixed some compiler warnings too.
 **/
 
 /* # define's */
@@ -220,6 +224,67 @@ GLOBALREF       TXT_HANDLE      *Xf_xml_dtd;
 /* extern's */
 GLOBALREF bool With_multi_locations;
 FUNC_EXTERN ADF_CB	*FEadfcb();
+
+/*{
+** Name: init_encode_tables -   Initialise encode table arrays
+**
+**
+** Description:
+**       Initialises the ctable and dtable arrays.
+**
+**
+** Inputs:   NONE
+**
+** Outputs:
+**
+**      Returns:
+**
+** History:
+**      22-Jul-2010 (horda03)
+**         Created.
+*/
+static void
+init_encode_tables()
+{
+    i4 i;
+
+    dtableInit = 1;
+
+    for(i= 0;i<9;i++)
+    {
+        dtable[i]= (unsigned char)('A'+i);
+        dtable[i+9]= (unsigned char)('J'+i);
+        dtable[26+i]= (unsigned char)('a'+i);
+        dtable[26+i+9]= (unsigned char)('j'+i);
+    }
+    for(i= 0;i<8;i++)
+    {
+        dtable[i+18]= (unsigned char)('S'+i);
+        dtable[26+i+18]= (unsigned char)('s'+i);
+    }
+    for(i= 0;i<10;i++)
+    {
+        dtable[52+i]= (unsigned char)('0'+i);
+    }
+    dtable[62]= '+';
+    dtable[63]= '/';
+
+    /*
+    ** Mark xml degenerate characters
+    */
+    for (i=0;i<0x7F;i++)
+       ctable[i] = FALSE;
+    for (i=0x7F;i<0xFF;i++)
+       ctable[i] = TRUE;
+    for (i=1;i<0x20;i++)
+       ctable[i] = TRUE;
+    /*
+    ** WhiteSpaces should not trigger encoding
+    ** - 0x0D not included, because on input it is replaced by 0x0A
+    **   according to the XML 1.1 standard.
+    */
+    ctable[0x09] = ctable[0x0A] = ctable[0x20] = FALSE;
+}
 
 /*{
 ** Name: xmldtd -   Create a dtd information for the table. 
@@ -268,6 +333,8 @@ FUNC_EXTERN ADF_CB	*FEadfcb();
 **	30-MAY-2002 (gupsh01)
 **	    Added has_default attribute to meta_columns. The earlier 
 **	    default_value now holds the actual value of the attribute.
+**  19-Aug-2010 (troal01)
+**      Added srid to meta_columns for Ingres Geospatial
 */
 void 
 xmldtd(bool internal_dtd, char *title_doctype) 
@@ -357,7 +424,8 @@ xmldtd(bool internal_dtd, char *title_doctype)
     xfwrite(Xf_xml_dtd , ERx("\t\t\t is_foreign_key  CDATA \t #IMPLIED\n"));
     xfwrite(Xf_xml_dtd , ERx("\t\t\t precision \t CDATA \t #IMPLIED\n"));
     xfwrite(Xf_xml_dtd , ERx("\t\t\t scale \t\t CDATA \t #IMPLIED\n"));
-    xfwrite(Xf_xml_dtd , ERx("\t\t\t column_label \t CDATA \t #IMPLIED >\n"));
+    xfwrite(Xf_xml_dtd , ERx("\t\t\t column_label \t CDATA \t #IMPLIED\n"));
+    xfwrite(Xf_xml_dtd , ERx("\t\t\t srid  \t\t CDATA \t #IMPLIED >\n"));
 
     /* write meta_index information */
     xfwrite(Xf_xml_dtd ,
@@ -438,7 +506,6 @@ xmldtd(bool internal_dtd, char *title_doctype)
 void
 xmldbinfo(char *dbname, char *owner)
 {
-    char *ver;
     char	tbuf[256];
 
     /* db_name */
@@ -611,14 +678,18 @@ static	char lfmt[] = "%ld";
 **	    Added support for ANSI date/time types.
 **      21-Jan-2009 (coomi01) b121370
 **          Add support for unicode datatypes NCHAR, NVARCHAR and LONG NVARCHAR.
-**  16-Jun-2009 (thich01)
-**      Add GEOM type.
+**      16-Jun-2009 (thich01)
+**          Add GEOM type.
 **      30-Jul-2009 (coomi01) b122370
 **          Use xfxmlwrite() to send default value correctly.
-**  20-Aug-2009 (thich01)
-**      Add all spatial types.
+**      20-Aug-2009 (thich01)
+**          Add all spatial types.
 **      28-Oct-2009 (coomi01) b122786
 **          Add test to ensure no attempt to deref a null pointer on default value.
+**      17-Aug-2010 (thich01)
+**          Add NBR and GEOMC spatial types.
+**  19-Aug-2010 (troal01)
+**      Added SRID to the schema for Ingres Geospatial
 */
 i4
 xmlprintcols (XF_TABINFO *tp)
@@ -764,6 +835,12 @@ xmlprintcols (XF_TABINFO *tp)
         case DB_MPOLY_TYPE:
             xfwrite(Xf_out, ERx("\"MPOLY\""));
             break;
+        case DB_NBR_TYPE:
+            xfwrite(Xf_out, ERx("\"NBR\""));
+            break;
+        case DB_GEOMC_TYPE:
+            xfwrite(Xf_out, ERx("\"GEOMC\""));
+            break;
         case DB_NCHR_TYPE:
             xfwrite(Xf_out, ERx("\"NCHAR\""));
             break;
@@ -802,6 +879,7 @@ xmlprintcols (XF_TABINFO *tp)
         case DB_LOGKEY_TYPE:
         case DB_TABKEY_TYPE:
         case DB_BYTE_TYPE:
+        case DB_NBR_TYPE:
 	    STprintf(tbuf, ERx("\n\t\t column_width=\"%d\""),
 	        length);
 	    xfwrite(Xf_out,tbuf ); 
@@ -836,6 +914,7 @@ xmlprintcols (XF_TABINFO *tp)
         case DB_MLINE_TYPE:
         case DB_POLY_TYPE:
         case DB_MPOLY_TYPE:
+        case DB_GEOMC_TYPE:
 	default:
             break;
         }
@@ -888,6 +967,14 @@ xmlprintcols (XF_TABINFO *tp)
 
 	/* column label exists */
 	xfwrite(Xf_out, ERx("\n\t\t column_label=\" \""));
+	
+	/* SRID */
+	if(cp->srid != -1)
+	{
+	    STprintf(tbuf, ERx("\n\t\t srid=\"%d\""),
+	        cp->srid);
+	    xfwrite(Xf_out, tbuf );
+	}
 
 	xfwrite(Xf_out, ERx("/>\n"));		
     }
@@ -1234,8 +1321,7 @@ i4  use64bitEncoder;
     VCH *vchp = NULL;
     i4  i=0;
     i4  j=0;
-    char *mem;
-    char col_name[DB_MAXNAME];
+    char col_name[FE_MAXNAME];
     char	nbuf[((2 * DB_MAXNAME) + 2 + 1)];
     char tbuff[256];
     ADF_CB *ladfcb;
@@ -1533,7 +1619,7 @@ i4  use64bitEncoder;
 	{
 	    if (*(cp+1) != EOS || (*cp != '.' && *cp != ','))
 	    {
-		ii_decimal = ladfcb->adf_decimal.db_decimal;
+		ii_decimal = (char) ladfcb->adf_decimal.db_decimal;
 	    }
 	    else
 	    {
@@ -1541,7 +1627,7 @@ i4  use64bitEncoder;
 	    }
 	}
 	else
-	    ii_decimal = ladfcb->adf_decimal.db_decimal;
+	    ii_decimal = (char) ladfcb->adf_decimal.db_decimal;
 	MEfree(cp);
     }
     
@@ -2279,29 +2365,14 @@ Get_HandlerLBYTE(HDLR_PARAM *hdlr)
     int j = 0;
     int n = 0;
     unsigned char c;
-    unsigned char dtable[256];
     unsigned char out_seg[2665];
     unsigned char igroup[3], ogroup[4];
     bool hiteos = FALSE;
 
-    for(i= 0;i<9;i++)
+    if (!dtableInit)
     {
-	dtable[i]= 'A'+i;
-	dtable[i+9]= 'J'+i;
-	dtable[26+i]= 'a'+i;
-	dtable[26+i+9]= 'j'+i;
+       init_encode_tables();
     }
-    for(i= 0;i<8;i++)
-    {
-	dtable[i+18]= 'S'+i;
-	dtable[26+i+18]= 's'+i;
-    }
-    for(i= 0;i<10;i++)
-    {
-	dtable[52+i]= '0'+i;
-    }
-    dtable[62]= '+';
-    dtable[63]= '/';
 
     max_len = 1998;
     data_end = 0;
@@ -2401,11 +2472,13 @@ Get_HandlerLBYTE(HDLR_PARAM *hdlr)
 **         Remove reference to undeclared variable.
 **      16-Sep-2009 (coomi01) b122598
 **         Allow whitespaces through as a printable.
+**      22-Jul-2010 (horda03) b123992
+**         Need to update *obuf with newBuf.
 */
 i4
 xf_encode_buffer(unsigned char *ibuf, u_i4 ilen, char **obuf, bool *degenerate)
 {
-    i4 i = 0;
+    u_i4 i = 0;
     i4 j = 0;
     i4 n = 0;
     u_i4  olen;
@@ -2437,42 +2510,7 @@ xf_encode_buffer(unsigned char *ibuf, u_i4 ilen, char **obuf, bool *degenerate)
     */
     if (0 == dtableInit)
     {
-	dtableInit = 1;
-
-	for(i=0;i<9;i++)
-	{
-	    dtable[i]= 'A'+i;
-	    dtable[i+9]= 'J'+i;
-	    dtable[26+i]= 'a'+i;
-	    dtable[26+i+9]= 'j'+i;
-	}
-	for(i= 0;i<8;i++)
-	{
-	    dtable[i+18]= 'S'+i;
-	    dtable[26+i+18]= 's'+i;
-	}
-	for(i= 0;i<10;i++)
-	{
-	    dtable[52+i]= '0'+i;
-	}
-	dtable[62]= '+';
-	dtable[63]= '/';
-
-	/* 
-	** Mark xml degenerate characters 
-	*/
-	for (i=0;i<0x7F;i++)
-	    ctable[i] = FALSE;
-	for (i=0x7F;i<0xFF;i++)
-	    ctable[i] = TRUE;
-	for (i=1;i<0x20;i++)
-	    ctable[i] = TRUE;
-	/*
-	** WhiteSpaces should not trigger encoding 
-	** - 0x0D not included, because on input it is replaced by 0x0A
-	**   according to the XML 1.1 standard. 
-	*/
-	ctable[0x09] = ctable[0x0A] = ctable[0x20] = FALSE;
+	init_encode_tables();
     }
 
     hiteos = FALSE;
@@ -2518,8 +2556,13 @@ xf_encode_buffer(unsigned char *ibuf, u_i4 ilen, char **obuf, bool *degenerate)
 	    /* 
 	    ** Check for output size problems
 	    */
-	    if ((j > olen-5) || (olen < 5))
+	    if (((u_i4)j > olen-5) || (olen < 5))
 	    {
+		i4 j_move;
+		char *copy_from;
+		char *copy_to;
+		u_i2 move_bytes;
+
 		/* 
 		** New allocate, copy over, release old, and carry on. 
 		*/
@@ -2534,8 +2577,22 @@ xf_encode_buffer(unsigned char *ibuf, u_i4 ilen, char **obuf, bool *degenerate)
 		    return 0;
 		}
 
-		MEmove(j, *obuf, 0, j, newBuf);
+                /* MEmove limited to a u_i2 bytes, so partition the
+                ** copy accordingly.
+                */
+                for(j_move=j, copy_from = *obuf, copy_to = newBuf; j_move > 0;
+                    j_move -= MAXI2)
+                {
+                   move_bytes = (j_move >= MAXI2) ? MAXI2 : (u_i2) j_move;
+
+                   MEmove(move_bytes, copy_from, 0, move_bytes, copy_to);
+
+                   copy_from += MAXI2;
+                   copy_to   += MAXI2;
+                }
+
 		MEfree(*obuf);
+		*obuf = newBuf;
 	    }
 
 	    for(n=0;n<4;n++)

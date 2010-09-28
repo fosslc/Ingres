@@ -86,6 +86,18 @@
 ##	02-Jun-2010 (hanje04)
 ##	    BUG 123856
 ##	    Use su if we can't find runuser
+##	17-Jun-2010 (hanje04)
+##	    BUG 123941
+##	    "action" doesn't like "eval" being used on RHEL 4. Seems to be fine
+##	    without it
+##	28-Jun-2010 (hanje04)
+##	    BUG 123941
+##	    Write out command for INGSTART and INGSTOP to temp file before 
+##	    running them using action to work around differences in the 
+##	    implementation of "action" between RHEL 4,5 & 6.
+##	14-Jul-2010 (hanje04)
+##	    BUG 124083
+##	    Add presetup step to run iiposttrans from here instead of RPM.
 ##
 #
 # /etc/init.d/ingresINST_ID
@@ -202,10 +214,10 @@ fi
 cd $II_SYSTEM/ingres >> /dev/null 2>&1
 
 # Check all need ingres utilities are present and correct
-test -x $II_SYSTEM/ingres/utility/ingstart  && INGSTART="$runuser -m -c \"$II_SYSTEM/ingres/utility/ingstart\" $II_USERID"
+test -x $II_SYSTEM/ingres/utility/ingstart  && INGSTART="$runuser $II_USERID -m -c \"$II_SYSTEM/ingres/utility/ingstart\""
 test "$INGSTART" || { echo "$II_SYSTEM/ingres/utility/ingstart does not exist"; save_status -v 5 ; $exit ; }
 
-test -x $II_SYSTEM/ingres/utility/ingstop  && INGSTOP="$runuser -m -c \"$II_SYSTEM/ingres/utility/ingstop -kill\" $II_USERID"
+test -x $II_SYSTEM/ingres/utility/ingstop  && INGSTOP="$runuser $II_USERID -m -c \"$II_SYSTEM/ingres/utility/ingstop -kill\""
 test "$INGSTOP" || { echo " $II_SYSTEM/ingres/utility/ingstop does not exist"; save_status -v 5 ; $exit ; }
 
 test -x $II_SYSTEM/ingres/utility/syscheck  && SYSCHECK="$runuser -m -c \"$II_SYSTEM/ingres/utility/syscheck\" $II_USERID"
@@ -270,7 +282,10 @@ case "$1" in
 	else
 	    # Start Ingres
 --REDHAT_CFG
-	    action "$startmsg": eval "$INGSTART > /dev/null"
+	    echo "$INGSTART > /dev/null 2>&1" > /tmp/ingstart.$$
+	    action "$startmsg": sh /tmp/ingstart.$$
+	    rc=$?
+	    [ -f /tmp/ingstart.$$ ] && rm -f /tmp/ingstart.$$
 --REDHAT_CFG_END
 --SUSE_CFG
 	    echo $startmsg
@@ -292,8 +307,10 @@ case "$1" in
 	    action "$stpmsg": true
 	    rc=0
 	else
-	    action "$stpmsg": eval "$INGSTOP > /dev/null"
+	    echo "$INGSTOP > /dev/null 2>&1" > /tmp/ingstop.$$
+	    action "$stpmsg": sh /tmp/ingstop.$$
 	    rc=$?
+	    [ -f /tmp/ingstop.$$ ] && rm -f /tmp/ingstop.$$
 	fi
 --REDHAT_CFG_END
 --SUSE_CFG
@@ -345,6 +362,7 @@ case "$1" in
 	;;
     configure)
 	respfile=''
+	presetupcmd=$II_SYSTEM/ingres/utility/iiposttrans
 	setupcmd=$II_SYSTEM/ingres/utility/setupingres
 	# check for response file
 	if [ "$2" ] ; then
@@ -355,11 +373,16 @@ case "$1" in
 		save_status -v 2
 		$exit
 	    fi
-	elif [ -r ${ingdir}/ingrsp.rsp ] ; then
-	    respfile=${ingdir}/ingrsp.rsp
+	elif [ -r ${ingdir}/install.rsp ] ; then
+	    respfile=${ingdir}/install.rsp
 	fi
-	$setupcmd ${respfile:-}
+	$presetupcmd
 	rc=$?
+	if [ $rc = 0 ]
+	then
+	    $setupcmd ${respfile:-}
+	    rc=$?
+	fi
 	if [ $rc = 0 ] ; then
 	    save_status -v 0
 	else

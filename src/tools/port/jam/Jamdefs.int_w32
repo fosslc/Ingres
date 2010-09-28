@@ -149,6 +149,23 @@
 #           Default to --nounistd for cygwin but no flag for MKS based on
 #           current versions of flex in both.
 #           Can be overriden by setting FLEX_FLAG in environment
+#	22-Mar-2010 (troal01)
+#	    Add PROJLIB for geospatial.
+#       26-Jul-2010 (horda03)
+#          The definition of JAMSHELL defined within this file causes
+#          the shell commands executed by JAM to be echoed to the
+#          screen. If user now sets the environment variable
+#               set JAMSHELL_ECHO=OFF
+#          then by default the shell commands are not echoed. The
+#          command "jam -dx" when JAMSHELL_ECHO == "OFF" will display
+#          then shell commands.
+#	12-Aug-2010 (drivi01)
+#	   Force the use of gawk with cygwin 1.7 to produce correct
+#	   output files and avoid missing carriage returns which 
+#	   forces the whole file to be on 1 line.  
+#	   gawk ensures that the file is produced in the readable format.
+#	31-Aug-2010 (thich01)
+#	    Add WITH_GEO for platforms where spatial is not supported.
 #
 #VARS
 #
@@ -191,6 +208,7 @@ VERSIONLIB	default = version.lib ;
 PSAPILIB      	default = psapi.lib ;
 HTMLHELPLIB	default = htmlhelp.lib ;
 GEOSLIB		default = $(GEOS_LOC)/geos_c_i.lib ;
+PROJLIB		default = $(PROJ_LOC)/proj_i.lib ;
 GV     		default = \"$(ING_SRC)/cl/clf/gv/gver.obj\" ;
 APACHECORE	default = $(ING_SRC)/front/ice/lib/ApacheCore.lib ;
 #TERMDR		default = $(ING_SRC)/front/frontcl/termdr/termdr.obj ;
@@ -203,9 +221,12 @@ CD		= "cd /d" ;
 CP		= "cp -f" ;
 RM		= "rm -f" ;
 CHMOD		= chmod ;
+FLEX		= flex ;
+AWK_CMD        ?= awk ; 
 if $(USE_CYGWIN)
 {
    FLEX_FLAG       ?=  --nounistd ;
+   AWK_CMD         = gawk ;
 }
 FLEX		= flex $(FLEX_FLAG) ;
 LEX 		= flex ;
@@ -451,10 +472,13 @@ MACROS = -DDESKTOP -DDEVIL -DWIN32 -DINCLUDE_ALL_CL_PROTOS -DNT_GENERIC -DSEP -D
 #Variables
 #
 VERS	default = "int_w32" ;
-CCMACH	default = $(CPUFLAGS) $(CDEBUG) $(RUNTIME) $(ERR_LVL) $(PLATFORM) $(PREPROCESS) $(MACROS) $(DBFLAG) $(EDFLAG) $(DECFLAG) $(DEVFLAGS) $(THREADS) $(RMWARNINGS) ;
+CCMACH	default = $(CPUFLAGS) $(CDEBUG) $(RUNTIME) $(ERR_LVL) $(PLATFORM) $(PREPROCESS) $(MACROS) $(DBFLAG) $(EDFLAG) $(DECFLAG) $(DEVFLAGS) $(THREADS) $(RMWARNINGS) $(WITH_GEO) ;
 WINNT	default = -D_WIN32_WINNT=0x0500 ;
 CC	default = "CC" ;
-JAMSHELL	default = cmd /C % ;
+if $(JAMSHELL_ECHO) != "OFF"
+{
+   JAMSHELL ?= cmd /C % ;
+}
 VISUALC = "" ;
 C++	 = cl.exe ;
 LINK	 = link.exe ;
@@ -463,7 +487,7 @@ LDLIBMACH = /nologo $(DLLFLAGS) ;
 LINKFLAGS = /nologo $(MISCFLAGS) $(DLLFLAGS) ;
 CCLDMACH  = /nologo $(DLLFLAGS) ;
 
-LINKLIBS = $(SYSLIBS) $(ADVAPILIB) $(NETAPILIB) $(USERLIB) $(GDILIB) $(MORELIB) $(RPCLIB) $(CLUSAPI) $(GV) $(PSAPILIB) $(GEOSLIB) ;
+LINKLIBS = $(SYSLIBS) $(ADVAPILIB) $(NETAPILIB) $(USERLIB) $(GDILIB) $(MORELIB) $(RPCLIB) $(CLUSAPI) $(GV) $(PSAPILIB) $(GEOSLIB) $(PROJLIB) ;
 STDHDRS  = \"$(VISUALC)\\include\" ;
 KEEPOBJ = true ;
 SHELLHEADER = "" ;

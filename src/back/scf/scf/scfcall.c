@@ -166,6 +166,15 @@
 **	    Use new forms of sc0ePut(), uleFormat().
 **      16-nov-2008 (stial01)
 **          Redefined name constants without trailing blanks.
+**      02-sep-2010 (maspa05) SIRs 124345, 124346
+**          extra SC930 options including QEP SEGMENTED and QEP FULL (original
+**          format). Added SC930 to SC1000 output (SC trace point help)
+**          set notrace point sc930 now turns off sc930
+**          ult_set_always_trace uses bitmask now
+**	06-sep-2010 (maspa05) SIR 124363
+**	    Add trace point sc925 for logging long-running queries
+**      08-sep-2010 (maspa05) SIR 124345
+**          SC930 2 should switch on tracing when run by itself
 **/
 
 
@@ -785,6 +794,13 @@ scf_handler( EX_ARGS *ex_args )
 **	    Add trace point SC930 for session tracing.
 **	19-Aug-2009 (kibro01) b122509
 **	    Add trace point sc930 value 2 for QEP tracing as well.
+**	06-sep-2010 (maspa05) SIR 124363
+**	    Add trace point sc925 for logging long-running queries
+**	07-sep-2010 (maspa05) SIR 124363
+**	    Allow a ceiling as well as a threshold value for sc925
+**      22-Sep-2010 (hanal04) Bug 124364
+**          Added sc_trace_stack. When set sc924 tracing will call
+**          CS_dump_stack(). Default is off.
 */
 DB_STATUS
 scf_trace(DB_DEBUG_CB  *trace_cb)
@@ -973,24 +989,106 @@ scf_trace(DB_DEBUG_CB  *trace_cb)
 	    if (trace_cb->db_trswitch == DB_TR_ON)
 	    {
 		if (trace_cb->db_value_count == 0)
+                {
 		    Sc_main_cb->sc_trace_errno  = -1;
-		else
+                    Sc_main_cb->sc_trace_stack  = 0;
+                }
+		else if (trace_cb->db_value_count == 1)
+                {
 		    Sc_main_cb->sc_trace_errno = trace_cb->db_vals[0];
+                    Sc_main_cb->sc_trace_stack  = 0;
+                }
+                else
+                {
+                    Sc_main_cb->sc_trace_errno = trace_cb->db_vals[0];
+                    Sc_main_cb->sc_trace_stack  = trace_cb->db_vals[1];
+                }
 	    }
 	    else
 	    {
 		Sc_main_cb->sc_trace_errno = 0;
+                Sc_main_cb->sc_trace_stack = 0;
 	    } 
 	    break;
 	    
+  	case	925:
+  	    if (trace_cb->db_trswitch == DB_TR_ON)
+  	    {
+		switch (trace_cb->db_value_count)
+		{
+                  case 0:
+	            sc0e_trace("sc925 requires at least one parameter - threshold value");
+		    break;
+		  case 1:
+  		    ult_set_trace_longqry(trace_cb->db_vals[0],0);
+		    break;
+		  default:
+		    if (trace_cb->db_vals[1] <= trace_cb->db_vals[0])
+	              sc0e_trace("ceiling value must exceed threshold value");
+		    else
+  		      ult_set_trace_longqry(trace_cb->db_vals[0],
+		                            trace_cb->db_vals[1]);
+		}
+  	    }
+  	    else
+  	    {
+  		ult_set_trace_longqry(0,0);
+  	    } 
+  	    break;
+  	    
 	case	930:
+	    if (trace_cb->db_trswitch == DB_TR_ON)
 	    {
-		bool trace_on = (trace_cb->db_vals[0] != 0);
-		bool qep_on = (trace_cb->db_vals[0] >= 2);
-		ult_set_always_trace (trace_on,Sc_main_cb->sc_pid);
-		ult_set_trace_qep (qep_on,Sc_main_cb->sc_pid);
-		break;
+		i4 trace_val;
+		i2 v1,v2;
+
+		v1=(trace_cb->db_value_count==0? 1:trace_cb->db_vals[0]);
+		v2=(trace_cb->db_value_count==1? 0:trace_cb->db_vals[1]);
+
+		switch (v1)
+		{
+		  case 0:
+	            ult_set_always_trace(0,Sc_main_cb->sc_pid);
+		    break;
+		  case 1:
+		    trace_val=ult_always_trace();
+		    trace_val |= SC930_TRACE;
+		    trace_val &= ~(SC930_QEP_FULL|SC930_QEP_SEG);
+                    ult_set_always_trace(trace_val,Sc_main_cb->sc_pid);
+		    break;
+		  case 2:
+		    trace_val=ult_always_trace();
+		    switch (v2)
+		    {
+		      case 0:
+		      case 1:
+		        trace_val &= ~SC930_QEP_FULL;
+		        trace_val |= (SC930_TRACE|SC930_QEP_SEG);
+                        ult_set_always_trace(trace_val,Sc_main_cb->sc_pid);
+		        break;
+		      case 2:
+		        trace_val |= (SC930_TRACE|SC930_QEP_FULL);
+		        trace_val &= ~SC930_QEP_SEG;
+                        ult_set_always_trace(trace_val,Sc_main_cb->sc_pid);
+		        break;
+		      case 3:
+		        trace_val |= SC930_TRACE;
+		        trace_val &= ~(SC930_QEP_FULL|SC930_QEP_SEG);
+                        ult_set_always_trace(trace_val,Sc_main_cb->sc_pid);
+		        break;
+		      default:
+	                sc0e_trace("invalid value for QEP style (1=Seg,2=Full,3=Off)");
+		        break;
+		    }
+		    break;
+		  default:
+	            sc0e_trace("invalid sc930 parameter");
+		    break;
+		}
 	    }
+	    else
+	        ult_set_always_trace(0,Sc_main_cb->sc_pid);
+	    break;
 
 	case	1000:
 	    sc0e_trace("Valid SCF trace flags are:\n");
@@ -1013,6 +1111,13 @@ scf_trace(DB_DEBUG_CB  *trace_cb)
 	    sc0e_trace(" 922\tDump cross server event memory\n");
 	    sc0e_trace(" 923\tAlter SCE event processing - (help = 1000)\n");
 	    sc0e_trace(" 924\tDump query before error \n");
+	    sc0e_trace(" 925 x [y]\tLog long-running queries (> x, < y secs)\n");
+	    sc0e_trace(" 930\tServer-based Query Tracing ");
+	    sc0e_trace("\t   0\t\t- turn off");
+	    sc0e_trace("\t  [1]   \t- turn on");
+	    sc0e_trace("\t   2 [1]\t- include QEPs (segmented style)");
+	    sc0e_trace("\t   2  2 \t- include QEPs (full style)");
+	    sc0e_trace("\t   2  3 \t- turn off QEPs");
 	    break;
 	    
 	default:

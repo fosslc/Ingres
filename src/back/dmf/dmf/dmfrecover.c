@@ -565,6 +565,8 @@
 **          Changes for Long IDs, db_buffer holds (dbname, owner.. )
 **      24-May-2010 (stial01)
 **          Minor change to TRdisplay
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 **/
 /*
 ** Forward function references and global definitions
@@ -3566,6 +3568,8 @@ i4		num_nodes)
 **	    of a valid willing-commit transaction.
 **	    Integrate inifa01's fix for 111693 INGREP 153: only track the
 **	    transaction ID if it's higher!
+**	23-Sep-2010 (jonj) B124486
+**	    Don't do rcp_archive() if online recovery (pass-abort, for example)
 */
 DB_STATUS
 dmr_analysis_pass(
@@ -4128,7 +4132,7 @@ i4		node_id)
 	    if (rdb)
 	    {
 		MEcopy((char *)&record->lsn, sizeof(record->lsn), (char *)&lsn);
-		dmve_get_tab(record, &tabid, NULL, NULL);
+		dmve_get_tabid((PTR)record, &tabid);
 		if (rcp->rcp_verbose)
 		{
 		    TRdisplay("\t<%d,%d,%d>\tNon-Redo operation on DB: %x.\n",
@@ -4176,8 +4180,12 @@ i4		node_id)
     {
         TRdisplay("%@ RCP-P1: Analysis Pass Complete%s.\n",nodequalbuf);
 
-	/* FIX ME if we can't archive should we continue? */
-	status = rcp_archive(rcp, lctx);
+	/* Only if offline recovery */
+	if ( rcp->rcp_action != RCP_R_ONLINE )
+	{
+	    /* FIX ME if we can't archive should we continue? */
+	    status = rcp_archive(rcp, lctx);
+	}
 
 	return (E_DB_OK);
     }
@@ -4544,7 +4552,7 @@ i4		node_id)
 	** If a Non-Redo operation has been performed on this table subsequent
 	** to this log record, then we cannot redo this operation.
 	*/
-	dmve_get_tab(record, &tabid, NULL, NULL);
+	dmve_get_tabid((PTR)record, &tabid);
 	lookup_nonredo(rcp, dbid, &tabid, &rdmu);
 	if (rdmu && (LSN_GTE(&rdmu->lsn, &lsn)))
 	{
@@ -5213,7 +5221,7 @@ RCP		*rcp)
 	rtbl = NULL;
 	if (rtx->rtx_rdb->rdb_status & RDB_TABLE_RECOVERY_ERROR)
 	{
-	   dmve_get_tab(record, &tabid, NULL, NULL);
+	   dmve_get_tabid((PTR)record, &tabid);
 	   lookup_invalid_tbl(rtx->rtx_rdb, &tabid, record, &rtbl);
 	   if (rtbl &&
 		(rtbl->rtbl_flag & RTBL_IGNORE_TABLE) ||
@@ -8866,7 +8874,7 @@ RTBL		**return_tbl)
 
     *return_tbl = NULL;
 
-    dmve_get_tab(record, &loc_tabid, (DB_TAB_NAME*)0, (DB_OWN_NAME *)0);
+    dmve_get_tabid((PTR)record, &loc_tabid);
     if (loc_tabid.db_tab_base != tabid->db_tab_base ||
 	loc_tabid.db_tab_index != tabid->db_tab_index)
     {
@@ -8947,13 +8955,12 @@ DM0L_HEADER	*record)
     DM_PAGENO	    err_pages[3]; /* max pages for a log record */
     i4		    err_page_cnt = 0;
     i4		    error_action;
-    
 
     error_action = Db_recovery_error_action;
 
     CLRDBERR(&rcp->rcp_dberr);
 
-    dmve_get_tab(record, &tabid, &tabname, &ownname);
+    dmve_get_tabinfo(dmve, &tabid, &tabname, &ownname);
 
     /* Is there a table associated with this log record */
     if (tabid.db_tab_base == 0)

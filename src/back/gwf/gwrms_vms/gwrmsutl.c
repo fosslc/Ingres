@@ -408,6 +408,7 @@ rms_movestring
       case DB_MLINE_TYPE:
       case DB_POLY_TYPE:
       case DB_MPOLY_TYPE:
+      case DB_GEOMC_TYPE:
         outlength = dest->db_length;
         break;
 
@@ -527,6 +528,7 @@ rms_straddr
         case DB_MLINE_TYPE:
         case DB_POLY_TYPE:
         case DB_MPOLY_TYPE:
+        case DB_GEOMC_TYPE:
             *str_ptr = (char *) dv->db_data;
             break;
 

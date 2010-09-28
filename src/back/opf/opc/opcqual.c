@@ -1111,6 +1111,12 @@ opc_cqual(
 **	    for big IN lists.
 **	03-Nov-2009 (kiria01) b122822
 **	    Support both sorted and traditional INLIST form for generality
+**	11-Jun-2010 (kiria01) b123908
+**	    Don't access non-existant fields from PST_OPERAND nodes.
+**	14-Jul-2010 (kschendel) b123104
+**	    Don't need boolean constant specials any more, all boolean
+**	    constants in a where clause context should have been translated
+**	    to ii_true() or ii_false().
 */
 #define	    OPC_CNSTEXPR    1
 #define	    OPC_NOTCONST    2
@@ -1654,7 +1660,11 @@ opc_cqual1(
         	if (!resqnode)
                     break;
                 lqnode = resqnode->pst_right;   /* point to the operand */
-		cnvrtid = resqnode->pst_sym.pst_value.pst_s_op.pst_oprcnvrtid;
+		/* We should set cnvrtid from resqnode->pst_sym.pst_value
+		** .pst_s_op.pst_oprcnvrtid except this is a PST_OPERAND
+		** node that doesn't have pst_oprcnvrtid! For now it is
+		** sufficient that the value is not ADI_NILCOERCE */
+		cnvrtid = 0;
             }
 	    else
 	    {
@@ -2023,33 +2033,15 @@ opc_cqual1(
 	 case PST_USER:
 	    /* This is a constant expression, so do any compiling into the
 	    ** virgin segment. See the comment in the operator case above.
-	    ** One special case however, TRUE or FALSE should be instanciated
-	    ** as instructions ADE_SETTRUE or ADE_SETFALSE instead of going
-	    ** into VIRGIN segment.
 	    */
-	    if (root->pst_sym.pst_dataval.db_datatype == DB_BOO_TYPE)
-	    {
-		opc_adinstr(global, cadf, !*(char*)root->pst_sym.pst_dataval.db_data
-				? ADE_SETFALSE
-				: ADE_SETTRUE, ADE_SMAIN, 0, 0, 0);
-	    }
-	    else if (root->pst_sym.pst_dataval.db_datatype == -DB_BOO_TYPE)
-	    {
-		opc_adinstr(global, cadf,
-			(((char*)root->pst_sym.pst_dataval.db_data)[1] & ADF_NVL_BIT) ||
-					!*(char*)root->pst_sym.pst_dataval.db_data
-				? ADE_SETFALSE
-				: ADE_SETTRUE, ADE_SMAIN, 0, 0, 0);
-	    }
-		ret = OPC_CNSTEXPR;
-		segment = ADE_SVIRGIN;
+	    ret = OPC_CNSTEXPR;
+	    segment = ADE_SVIRGIN;
 
-		/* This is a constant that appears directly in the const
-		** node, so compile it into the CX and fill in ops[0]/
-		*/
-		opc_adconst(global, cadf, &root->pst_sym.pst_dataval, &ops[0],
-			    root->pst_sym.pst_value.pst_s_cnst.pst_cqlang,
-								    segment);
+	    /* This is a constant that appears directly in the const
+	    ** node, so compile it into the CX and fill in ops[0]/
+	    */
+	    opc_adconst(global, cadf, &root->pst_sym.pst_dataval, &ops[0],
+			root->pst_sym.pst_value.pst_s_cnst.pst_cqlang, segment);
 
 	    break;
 
@@ -2914,6 +2906,10 @@ opc_cescape(
 **	27-oct-2009 (gupsh01)
 **	    Fixed the length calculation for nvarchar result when the result length
 **	    exceeds DB_MAXSTRING.
+**	25-aug-2010 (stephenb)
+**	    Fiddling with UTF8 length here is un-necesary since it's done in PSF
+**	    and if we do it before callin opc_cqial1, it will screw up
+**	    the resdom. Remove the code. (Bug 124302)
 */
 static VOID
 opc_cresdoms(
@@ -3064,74 +3060,6 @@ opc_cresdoms(
 
 		break;
 	    }
-	}
-	/* Else, same stuff for UTF8 db and char/varchar. */
-        else if ((global->ops_adfcb->adf_utf8_flag & AD_UTF8_ENABLED) &&
-		(abs(rdi->opc_srcop.opr_dt) == DB_VCH_TYPE ||
-		abs(rdi->opc_srcop.opr_dt) == DB_CHA_TYPE ||
-		abs(rdi->opc_srcop.opr_dt) == DB_TXT_TYPE ||
-		abs(rdi->opc_srcop.opr_dt) == DB_CHR_TYPE) &&
-		abs(resdom->pst_sym.pst_dataval.db_datatype) != DB_LVCH_TYPE)
-	{
-	    DB_DT_ID    restype = resdom->pst_sym.pst_dataval.db_datatype;
-	    i4 maxutf8str = DB_UTF8_MAXSTRING;
-
-	    /* Assign result length from resdom (should match column that the
-	    ** data source is to be used with). If one is nullable and the other
-	    ** isn't, increment/decrement as needed. All this is to make Unicode
-	    ** normalization operate on a large enough buffer. */
-
-	    /* First check if the operation is between valid character types 
-	    ** This could be an operation between character types and date 
-	    ** datatype. Try to make the best guess about the result length. 
-	    */
-	    if (( abs(restype) != DB_VCH_TYPE ) &&
-		 ( abs(restype) != DB_TXT_TYPE ) &&
-		 ( abs(restype) != DB_CHR_TYPE ) &&
-		 ( abs(restype) != DB_CHA_TYPE ))
-	    {
-		/* If the result type is a logical key type then
-		** do not change the size of the normalized result
-		*/
-		if (( abs(restype) == DB_LOGKEY_TYPE ) ||
-		    ( abs(restype) == DB_TABKEY_TYPE ))
-	    	  rdi->opc_srcop.opr_len = 
-		    min(resdom->pst_right->pst_sym.pst_dataval.db_length, 
-			  DB_MAXSTRING);
-		else
-	    	  rdi->opc_srcop.opr_len = 
-		    min(max(resdom->pst_sym.pst_dataval.db_length,
-		    	     resdom->pst_right->pst_sym.pst_dataval.db_length), 
-			DB_MAXSTRING);
-	
-	    }
-	    else /* Assign results from resdom */
-	    {
-	        rdi->opc_srcop.opr_len = resdom->pst_sym.pst_dataval.db_length;
-
-		if (resdom->pst_sym.pst_dataval.db_datatype < 0)
-		  rdi->opc_srcop.opr_len--;
-	    }
-
-		
-	    /* Adjust length for nullability (bug 120171) */
-	    if (rdi->opc_srcop.opr_dt < 0 )
-	    {
-	      maxutf8str++;
-	      rdi->opc_srcop.opr_len ++;    
-	    }
-
-	    if (abs(rdi->opc_srcop.opr_dt) == DB_VCH_TYPE ||
-	         abs(rdi->opc_srcop.opr_dt) == DB_TXT_TYPE)
-	    {
-	      maxutf8str += 2;
-	      if ((abs(restype) == DB_CHA_TYPE || 
-		   abs(restype) == DB_CHR_TYPE))
-	        rdi->opc_srcop.opr_len += 2;    
-	    }
-
-	    if (rdi->opc_srcop.opr_len > maxutf8str)
-	      rdi->opc_srcop.opr_len = maxutf8str;
 	}
 
 	(VOID) opc_cqual1(global, cnode, resdom->pst_right, 
@@ -4870,6 +4798,10 @@ opc_crupcurs(
 **	    for big IN lists.
 **	03-Nov-2009 (kiria01) b122822
 **	    Support both sorted and traditional INLIST form for generality
+**	14-Jul-2010 (kschendel) b123104
+**	    Don't need boolean constant specials any more, all boolean
+**	    constants in a where clause context should have been translated
+**	    to ii_true() or ii_false().
 */
 static VOID
 opc_crupcurs1(
@@ -5482,27 +5414,7 @@ opc_crupcurs1(
 	    break;
 
 	 case PST_USER:
-	    /* This is a constant expression, so do any compiling into the
-	    ** virgin segment. See the comment in the operator case above.
-	    ** One special case however, TRUE or FALSE should be instanciated
-	    ** as instructions ADE_SETTRUE or ADE_SETFALSE instead of going
-	    ** into VIRGIN segment.
-	    */
-	    if (root->pst_sym.pst_dataval.db_datatype == DB_BOO_TYPE)
-	    {
-		opc_adinstr(global, cadf, !*(char*)root->pst_sym.pst_dataval.db_data
-				? ADE_SETFALSE
-				: ADE_SETTRUE, ADE_SMAIN, 0, 0, 0);
-	    }
-	    else if (root->pst_sym.pst_dataval.db_datatype == -DB_BOO_TYPE)
-	    {
-		opc_adinstr(global, cadf,
-			(((char*)root->pst_sym.pst_dataval.db_data)[1] & ADF_NVL_BIT) ||
-					!*(char*)root->pst_sym.pst_dataval.db_data
-				? ADE_SETFALSE
-				: ADE_SETTRUE, ADE_SMAIN, 0, 0, 0);
-	    }
-
+	    /* This is a constant expression */
             opc_adconst(global, cadf, &root->pst_sym.pst_dataval, &ops[0],
 			root->pst_sym.pst_value.pst_s_cnst.pst_cqlang, ADE_SMAIN);
 	    break;

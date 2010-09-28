@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1992, 2009 Ingres Corporation
+** Copyright (c) 1992, 2010 Ingres Corporation
 **
 */
 
@@ -382,6 +382,27 @@
 **     23-Mar-2010 (Ralph Loen) SIR 123465
 **         Trace raw and converted data in GetColumn() with new odbc_hexdump() 
 **         function.
+**     24-Jun-2010 (Ralph Loen)  Bug 122174
+**         In SQLDescribeCol() return the precision instead of the
+**         column size for the precision argument if the data type is
+**         SQL_DECIMAL or SQL_NUMERIC.
+**    14-Jul-1010 (Ralph Loen)  Bug 124079
+**         Corrected output conversion lengths in GetTimeOrIntervalChar().
+**     21-Jul-2010 (Ralph Loen) Bug 124112
+**         Set the ArraySize field of the IRD (SQL_DESC_ARRAY_SIZE) to
+**         one if SQLFetch() is invoked, which by definition uses no 
+**         arrays.
+**     24-Aug-2010 (Ralph Loen) Bug 124300
+**         In SQLDescribeCol_InternalCall(), allow for null terminator when
+**         returning the column name argument.
+**     03-Sep-2010 (Ralph Loen) Bug 124348
+**         Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
+**         SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
+**         platforms.
+**     08-Sep-2010 (Ralph Loen) Bug 124307
+**         In Getcolumn(), removed unneeded call to GetWCharChar() for 
+**         coercions of SQL_C_TINYINT and SQL_C_BIT from Unicode types.
+**
 */
 
 
@@ -437,8 +458,8 @@ RETCODE SQL_API SQLBindCol(
     UWORD         icol,         /* ColumnNumber     */
     SWORD         fCType,       /* TargetType       */
     SQLPOINTER    rgbValue,     /* TargetValuePtr   */
-    SQLINTEGER        cbValueMax,   /* BufferLength     */
-    SQLINTEGER        *pcbValue)    /* StrLen_or_IndPtr */
+    SQLLEN        cbValueMax,   /* BufferLength     */
+    SQLLEN        *pcbValue)    /* StrLen_or_IndPtr */
 {
     LPSTMT        pstmt          = (LPSTMT)hstmt;
     SWORD         VerboseCType   = fCType;
@@ -596,7 +617,7 @@ RETCODE SQL_API SQLDescribeCol(
     SWORD        cbColNameMax,
     SWORD      * pcbColName,
     SWORD      * pfSqlType,
-    SQLUINTEGER    * pcbColDef,
+    SQLULEN    * pcbColDef,
     SWORD      * pibScale,
     SWORD      * pfNullable)
 {
@@ -653,23 +674,30 @@ RETCODE SQL_API SQLDescribeCol_InternalCall(
     if ( pfNullable)
         *pfNullable = pird->Nullable;
     if ((pstmt->fOptions & OPT_CONVERTINT8TOINT4) && (pird->ConciseType == SQL_BIGINT))
-	   {
-		   *pfSqlType = SQL_INTEGER;
-		   *pfNullable = 0;
-	   }
+    {
+        *pfSqlType = SQL_INTEGER;
+        *pfNullable = 0;
+    }
+
     if ( pcbColDef)
-       {if      (pird->ConciseType == SQL_FLOAT  ||
-                 pird->ConciseType == SQL_DOUBLE)
-            *pcbColDef = 15;
-        else if (pird->ConciseType == SQL_REAL)
-            *pcbColDef = 7;
-        else
+    {
+        switch (pird->ConciseType)
+        {
+        case SQL_NUMERIC:
+        case SQL_DECIMAL:
             *pcbColDef = pird->Precision;
-       }
+            break;
+
+        default: 
+            *pcbColDef = pird->Length;
+            break;
+        }
+    }
+
     if ( pibScale)
         *pibScale = pird->Scale;
 
-    rc = GetChar (pstmt, pird->Name, (CHAR *)szColName, cbColNameMax, pcbColName);
+    rc = GetChar (pstmt, pird->Name, (CHAR *)szColName, cbColNameMax+1, pcbColName);
 
     UnlockStmt (pstmt);
     return rc;
@@ -805,6 +833,7 @@ RETCODE SQL_API SQLFetch(
 
     ErrResetStmt (pstmt);        /* clear ODBC error status on STMT */
 
+    pstmt->pARD->ArraySize = 1;
 
     /*
     ** If unfetched segments remain, then SQLGetData() must not have
@@ -862,7 +891,7 @@ RETCODE SQL_API SQLFetch(
 SQLRETURN SQL_API SQLFetchScroll(
     SQLHSTMT     hstmt,
     SQLSMALLINT  FetchOrientation,
-    SQLINTEGER FetchOffset)
+    SQLLEN       FetchOffset)
 {
     LPSTMT  pstmt = (LPSTMT)hstmt;
     RETCODE rc;
@@ -1087,8 +1116,8 @@ RETCODE   FetchRowset(
 SQLRETURN SQL_API SQLExtendedFetch(
     SQLHSTMT       hstmt,
     SQLUSMALLINT   FetchOrientation,
-    SQLINTEGER     FetchOffset,
-    SQLUINTEGER *  RowCountPtr,
+    SQLLEN         FetchOffset,
+    SQLULEN     *  RowCountPtr,
     SQLUSMALLINT * RowStatusArray)
 {
     LPSTMT  pstmt = (LPSTMT)hstmt;
@@ -1578,8 +1607,8 @@ RETCODE SQL_API SQLGetData(
     UWORD        icol,
     SWORD        fCType,
     SQLPOINTER   rgbValue,
-    SQLINTEGER       cbValueMax,
-    SQLINTEGER     * pcbValue)
+    SQLLEN       cbValueMax,
+    SQLLEN       * pcbValue)
 {
     LPSTMT  pstmt = (LPSTMT)hstmt;
     RETCODE      rc;
@@ -2023,6 +2052,7 @@ RETCODE GetColumn(
     ODBC_TIME * t;
     UCHAR  decimal_char = (UCHAR)pstmt->pdbcOwner->szDecimal[0];
     SQL_NUMERIC_STRUCT *ns;
+
     TRACE_INTL (pstmt, "GetColumn");
 
     /*
@@ -2199,7 +2229,6 @@ RETCODE GetColumn(
                 pird))
                 return (SQL_ERROR);
         }
-        szValue[pird->OctetLength] = '\0';
         rgbData = &szValue[0];
         cbData = STlength(rgbData);
         if (cbData==0  &&  pard->IndicatorPtr) /* SQLBindCol(pcbValue) */
@@ -2591,10 +2620,6 @@ RETCODE GetColumn(
         case SQL_WCHAR:
         case SQL_WVARCHAR:
         case SQL_WLONGVARCHAR:
-            rc = GetWCharChar (pard, rgbData, cbData, 
-                pstmt->pdbcOwner->multibyteFillChar);
-            if (pird->blobLen)
-                pird->blobLen /= sizeof(SQLWCHAR);
         case SQL_CHAR:
         case SQL_VARCHAR:
         case SQL_LONGVARCHAR:
@@ -4128,7 +4153,7 @@ static UDWORD CvtIngresDateToChar(LPSTMT pstmt, CHAR *rgbData, LPDESCFLD pird)
     LPDBC pdbc = pstmt->pdbcOwner;
 
     ptype = CvtGetSqlType(pird->ConciseType, pstmt->fAPILevel, 
-        pstmt->dateConnLevel);
+        pstmt->fAPILevel);
     fIngApiType = ptype->fIngApiType;
 
     if (pird->fIngApiType == IIAPI_DTE_TYPE && pstmt->dateConnLevel > 
@@ -4446,7 +4471,6 @@ static UDWORD CvtIngresMnyToDec(CHAR     * rgbData, LPDESCFLD pird)
 */
 RETCODE GetProcedureReturn(LPSTMT pstmt) 
 {
-    SWORD i;
     LPDESC     pAPD=pstmt->pAPD;   /* -> application parameter descriptor */
     LPDESC     pIPD=pstmt->pIPD;   /* -> implementation parameter descriptor */
     LPDESCFLD  papd;
@@ -4655,18 +4679,20 @@ BOOL GetTimeOrIntervalChar(CHAR *pTarget, CHAR *pSource,
     switch (pird->fIngApiType)
     {   
         case IIAPI_INTYM_TYPE:
-            len = ODBC_INTYM_LEN;
+            len = ODBC_INTYM_OUTLENGTH;
             break;
         
         case IIAPI_INTDS_TYPE:
-            len = ODBC_INTDS_LEN;
+            len = ODBC_INTDS_OUTLENGTH;
             break;
  
         case IIAPI_TIME_TYPE:
         case IIAPI_TMWO_TYPE:
-        case IIAPI_TMTZ_TYPE:
-            len = ODBC_TIME_LEN;
+            len = ODBC_TMWO_OUTLENGTH;
             break;
+
+        case IIAPI_TMTZ_TYPE:
+            len = ODBC_TMTZ_OUTLENGTH;
 
         default:
             return FALSE;
@@ -4676,24 +4702,24 @@ BOOL GetTimeOrIntervalChar(CHAR *pTarget, CHAR *pSource,
     fp.fd_envHandle = envHndl;
     fp.fd_srcDesc.ds_dataType   = pird->fIngApiType; 
     fp.fd_srcDesc.ds_nullable   = FALSE;  
-    fp.fd_srcDesc.ds_length     = len;
+    fp.fd_srcDesc.ds_length     = pird->OctetLength;
     fp.fd_srcDesc.ds_precision  = (II_UINT2) pird->IsoTimePrecision;
     fp.fd_srcDesc.ds_scale      = 0;
     fp.fd_srcDesc.ds_columnType = IIAPI_COL_TUPLE;
     fp.fd_srcDesc.ds_columnName = NULL;  
     fp.fd_srcValue.dv_null      = FALSE; 
-    fp.fd_srcValue.dv_length    = (II_UINT2) len;
+    fp.fd_srcValue.dv_length    = (II_UINT2) pird->OctetLength;
     fp.fd_srcValue.dv_value     = pSource; 
           
     fp.fd_dstDesc.ds_dataType   = IIAPI_CHA_TYPE; 
     fp.fd_dstDesc.ds_nullable   = FALSE;
-    fp.fd_dstDesc.ds_length     = (II_UINT2) pird->OctetLength;
+    fp.fd_dstDesc.ds_length     = (II_UINT2) len;
     fp.fd_dstDesc.ds_precision  = (II_UINT2) pird->IsoTimePrecision;
     fp.fd_dstDesc.ds_scale      = (II_UINT2) 0;
     fp.fd_dstDesc.ds_columnType = IIAPI_COL_TUPLE;
     fp.fd_dstDesc.ds_columnName = NULL;
     fp.fd_dstValue.dv_null      = FALSE;
-    fp.fd_dstValue.dv_length    = (II_UINT2) pird->OctetLength;
+    fp.fd_dstValue.dv_length    = (II_UINT2) len;
     fp.fd_dstValue.dv_value     = pTarget; 
 
     IIapi_formatData( &fp );
@@ -4701,7 +4727,7 @@ BOOL GetTimeOrIntervalChar(CHAR *pTarget, CHAR *pSource,
     if (fp.fd_status != IIAPI_ST_SUCCESS)
         return(FALSE);
 
-    CMcpychar(nt,&pTarget[pird->OctetLength]);
+    CMcpychar(nt,&pTarget[len]);
     STtrmwhite(pTarget);
     return(TRUE); 
 }

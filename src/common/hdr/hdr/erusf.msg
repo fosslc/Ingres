@@ -463,6 +463,27 @@ SQLSTATE_MAPPING_REQUIRED
 **	    Added E_US0A00_2560 and corrected column alias syntax in error text.
 **	09-Jun-2010 (gupsh01) b123841.
 **	    Added error E_US24C4_9412.
+**      23-Jun-2010 (coomi01) b123763
+**	    Add error E_US18E8_6376 for attempts to alter iidbdb locations.
+**      01-Jul-2010 (horda03) B123234
+**          Altered the E_US10D9 message as date_trunc only works on absolute dates,
+**          the date_part function may/may not work on an Interval, it depends on
+**          the 'unit' being requested (for example 'week' will not work on an
+**          interval. For this latter case, added new error E_US10F5.
+**	29-Jul-2010 (miket) SIR 122403
+**	    Clarify language for msg E_US24BF.
+**	30-Jul-2010 (miket) SIR 122403
+**	    Improve content/format for E_US0F0F, and add encrypt clause.
+**	03-Aug-2010 (miket) SIR 122403
+**	    Add "ENCRYPT" to US1586
+**	10-Aug-2010 (kiria01) b124217
+**	    Added message E_US0B7A_2938 for GREATEST, LEAST, GREATER
+**	    and LESSER functions to display better type mismatch error.
+**	25-aug-2010 (miket) SIR 122403 SD 145781
+**	    Better msg for alter table not valid for encrypted tables.
+**	26-aug-2010 (miket) SIR 122403 SD 146509
+**	    Clarify msg E_US24C2_9410 - an encrypted index can contain
+**	    only the one encrypted column.
 */
 
 #define _US_CLASS   0
@@ -3203,6 +3224,11 @@ E_US0B78_2936:SS42000_SYN_OR_ACCESS_ERR
 "line %0d, Syntax error. Invalid trim specification value %1c."
 E_US0B79_2937:SS42000_SYN_OR_ACCESS_ERR
 "line %0d, Syntax error. Invalid date/time specification value %1c."
+E_US0B7A_2938:SS42000_SYN_OR_ACCESS_ERR
+"line %0d, The '%1c' function requires that all its parameters must have
+the same datatype as the first or be of a datatype that can be coerced to match.
+In this instance, there is a '%3c' parameter that cannot be coerced to datatype '%2c'."
+
 /*%
 ** Parameters:
 **	%0d  - line number
@@ -4238,16 +4264,16 @@ E_US0F0D_3853:SS42000_SYN_OR_ACCESS_ERR
 **/
 E_US0F0F_3855:SS42000_SYN_OR_ACCESS_ERR
 "line %0d, Syntax error on '%1c'.  The correct syntax is:
-\n CREATE TABLE tablename (
-\n   columnname format [default_clause] [null_clause] 
-[column_constraint]
-\n | table_constraint
-\n   {, ... } )
-\n   [with_clause]
+\n CREATE TABLE tablename
+\n   ( columnname format [default_clause] [null_clause]
+\n     [column_constraint] [collate_clause] [encrypt_clause]
+\n     | table_constraint
+\n     {, ... }
+\n   ) [with_clause]
 \n
 \n CREATE TABLE tablename [(colname_list)]
 \n   AS subselect
-\n   [with_clause] "
+\n      [with_clause]"
 /*%
 ** Parameters:
 **	%0d - line number
@@ -5183,7 +5209,7 @@ E_US10D7_4311:SS22007_INV_DATETIME_FMT
 E_US10D8_4312:SS5000O_INVALID_FUNC_ARG_TYPE
 "function dow (day-of-week) only valid on absolute dates."
 E_US10D9_4313:SS5000O_INVALID_FUNC_ARG_TYPE
-"the date_trunc and date_part functions only work on absolute dates."
+"the date_trunc function will work on absolute dates only."
 E_US10DA_4314:SS22008_DATETIME_FLD_OVFLOW
 "weeks are not implemented in dates."
 E_US10DB_4315:SS5000O_INVALID_FUNC_ARG_TYPE
@@ -5251,6 +5277,8 @@ E_US10F3_DATE_ARITH_NOABS:SS42000_SYN_OR_ACCESS_ERR
 "The operators unary-'+', unary-'-', '*' and '/' cannot be used with absolute dates."
 E_US10F4_ANSISPEC:SS42000_SYN_OR_ACCESS_ERR
 "Incorrect ANSI trim specification. Only one character allowed"
+E_US10F5_4341:SS5000O_INVALID_FUNC_ARG_TYPE
+"The date function/date_part('unit') used is for absolute dates only."
 E_US1130_4400:SS22000_DATA_EXCEPTION
 "illegal character to integer conversion or non-numeric character
 in money field."
@@ -5909,7 +5937,7 @@ E_US1586_5510:SS42000_SYN_OR_ACCESS_ERR
 "MODIFY: Invalid option '%0c'.
 \n Try one of the following:
 \n   [C]ISAM, [C]HASH, [C]HEAP, [C]HEAPSORT, [C]BTREE, CLUSTERED, MERGE,
-\n   TRUNCATED, REORGANIZE, REORGANISE, RELOCATE, [NO]PERSISTENCE"
+\n   TRUNCATED, REORGANIZE, REORGANISE, RELOCATE, [NO]PERSISTENCE, ENCRYPT"
 E_US1587_5511:SS42501_COL_NOT_FOUND
 "MODIFY %0c: bad column name '%1c'."
 E_US1588_5512:SS42000_SYN_OR_ACCESS_ERR
@@ -8962,6 +8990,22 @@ returned by the Ingres password encryption routine."
 E_US18E7_6375:SS5000A_QUERY_ERROR
 "%0c: This operation is not allowed."
 /*%
+** Parameters:
+**	none
+**
+** Explanation:
+**	The user attempted to adapt location details for iidbdb.
+**	This could give rise chicken/egg problems as dbms comes up. 
+**
+** System Status:
+**	The statement is aborted.
+**
+** Recommendation:
+**	There should be no reason for the user to attempt this.
+*/
+E_US18E8_6376_EXT_IIDBDB_LOC:SS50000_MISC_ERRORS
+"Locations for IIDBDB may not be adjusted."
+/*%
 ** Parameters: 
 **	%0c - specified operation
 **
@@ -11579,8 +11623,10 @@ options are AES128/16 AES192/24 AES256/32."
 **	Correct the syntax error and retry.
 */
 E_US24BF_9407:SS5000A_QUERY_ERROR
-"A query has been issued against an encrypted table for which encryption
-is not enabled. Please contact your system administrator."
+"A query has been issued against a table for which encryption has not
+been unlocked with the MODIFY statement. This unlock statement must be
+issued every time the Ingres installation is restarted. Please contact
+your system administrator."
 E_US24C0_9408:SS5000A_QUERY_ERROR
 "The table is not encrypted."
 E_US24C1_9409:SS5000A_QUERY_ERROR
@@ -11589,7 +11635,7 @@ E_US24C2_9410:SS5000A_QUERY_ERROR
 "The key for a modify or index operation is of a datatype which
 is either non-keyable or non-sortable. All key fields must be both
 keyable and sortable and (for primary keys) cannot be encrypted. An
-encrypted index may contain only a single encrypted column."
+encrypted index may contain only the one encrypted column."
 E_US24C3_9411:SS5000A_QUERY_ERROR
 "Invalid encrypted index. An encrypted index must: (1) contain only one
 column, (2) that column must be encrypted with NOSALT, (3) the index
@@ -11597,5 +11643,7 @@ must be of structure HASH."
 E_US24C4_9412:SS50000_MISC_ERRORS
 "line '%0d', string constant supplied exceeds the maximum limit of '%1d' for
 UTF8 installation."
+E_US24C5_9413:SS50000_MISC_ERRORS
+"The ALTER TABLE statement is not supported for encrypted tables."
 
 NO_SQLSTATE_MAPPING

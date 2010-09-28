@@ -48,6 +48,9 @@
 **	    Boolean data type.
 **	    Batch processing: IIapi_batch().
 **	    Positional (unnamed) DB procedure parameeters.
+**
+**	IIAPI_VERSION_8
+**	    Spatial data types.
 ##
 ## History:
 ##      01-sep-93 (ctham)
@@ -194,6 +197,10 @@
 ##	15-Apr-10 (gordy)
 ##	    Noted that positional database procedure parameters are
 ##	    are supported at IIAPI_VERSION_7/IIAPI_LEVEL_6.
+##      17-Aug-2010 (thich01)
+##          Added IIAPI_NBR_TYPE and II_API_GEOMC_TYPE
+##      19-Aug-2010 (thich01)
+**          Left a space at 60 for GCA SECL TYPE.
 */
 
 # ifndef __IIAPI_H__
@@ -589,9 +596,11 @@ typedef II_INT2 IIAPI_DT_ID;
 # define IIAPI_POINT_TYPE   ((IIAPI_DT_ID) 57)  /* Point Long Byte */
 # define IIAPI_MPOINT_TYPE  ((IIAPI_DT_ID) 58)  /* MPoint Long Byte */
 # define IIAPI_LINE_TYPE    ((IIAPI_DT_ID) 59)  /* Line Long Byte */
-# define IIAPI_MLINE_TYPE   ((IIAPI_DT_ID) 60)  /* MLine Long Byte */
-# define IIAPI_POLY_TYPE    ((IIAPI_DT_ID) 61)  /* Poly Long Byte */
-# define IIAPI_MPOLY_TYPE   ((IIAPI_DT_ID) 62)  /* Mpoly Long Byte */
+# define IIAPI_MLINE_TYPE   ((IIAPI_DT_ID) 61)  /* MLine Long Byte */
+# define IIAPI_POLY_TYPE    ((IIAPI_DT_ID) 62)  /* Poly Long Byte */
+# define IIAPI_MPOLY_TYPE   ((IIAPI_DT_ID) 63)  /* Mpoly Long Byte */
+# define IIAPI_NBR_TYPE     ((IIAPI_DT_ID) 64)  /* NBR Byte */
+# define IIAPI_GEOMC_TYPE   ((IIAPI_DT_ID) 65)	/* Geomc Long Byte */
 # define IIAPI_IDATE_TYPE	IIAPI_DTE_TYPE
 # define IIAPI_ADATE_TYPE	IIAPI_DATE_TYPE
 

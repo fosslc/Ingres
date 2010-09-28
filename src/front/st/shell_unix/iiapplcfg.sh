@@ -36,6 +36,9 @@
 ##	07-Oct-2009 (hanje04)
 ##	    Bug 122658
 ##	    connect_limit for BI should be 64 not the default (32).
+##	26-Aug-2010 (hanje04)
+##	    BUG 124313
+##	    Correct values which differ from DDS.
 
 
 basename=`basename $0`
@@ -163,7 +166,7 @@ apply_config_txn()
     iisetres -v "ii.${CONFIG_HOST}.dbms.private.*.p32k.dmf_separate" ON &&
     iisetres -v "ii.${CONFIG_HOST}.dbms.*.system_isolation"  read_committed &&
     iisetres -v "ii.${CONFIG_HOST}.dbms.*.system_lock_level"  row &&
-    iisetres -v "ii.${CONFIG_HOST}.dbms.*.system_maxlocks"  1200 &&
+    iisetres -v "ii.${CONFIG_HOST}.dbms.*.system_maxlocks"  1500 &&
     iisetres -v "ii.${CONFIG_HOST}.dbms.*.table_auto_structure"  ON  &&
     iisetres -v "ii.${CONFIG_HOST}.rcp.lock.per_tx_limit"  3250 &&
     iisetres -v "ii.${CONFIG_HOST}.rcp.log.buffer_count"  100
@@ -185,7 +188,9 @@ apply_config_bi()
     iisetres -v +p "ii.${CONFIG_HOST}.dbms.*.opf_memory"  50000000 &&
     iisetres -v "ii.${CONFIG_HOST}.dbms.*.opf_new_enum"  ON &&
     iisetres -v "ii.${CONFIG_HOST}.dbms.*.opf_timeout_factor"  1 &&
+    iisetres -v "ii.${CONFIG_HOST}.dbms.private.*.dmf_group_size"  32  &&
     iisetres -v "ii.${CONFIG_HOST}.dbms.private.*.p8k.dmf_separate" ON &&
+    iisetres -v "ii.${CONFIG_HOST}.dbms.private.*.p8k.dmf_group_size"  32  &&
     iisetres -v "ii.${CONFIG_HOST}.dbms.private.*.cache.p16k_status" ON &&
     iisetres -v "ii.${CONFIG_HOST}.dbms.private.*.p16k.dmf_separate" ON &&
     iisetres -v "ii.${CONFIG_HOST}.dbms.private.*.cache.p32k_status" ON &&
@@ -196,7 +201,7 @@ apply_config_bi()
     iisetres -v "ii.${CONFIG_HOST}.dbms.*.system_readlock"  nolock &&
     iisetres -v "ii.${CONFIG_HOST}.dbms.*.table_auto_structure"  ON &&
     iisetres -v "ii.${CONFIG_HOST}.rcp.lock.per_tx_limit"  15000 &&
-    iisetres -v "ii.${CONFIG_HOST}.rcp.lock.lock_limit"  325000 &&
+    iisetres -v +p "ii.${CONFIG_HOST}.rcp.lock.lock_limit"  325000 &&
     iisetres -v "ii.${CONFIG_HOST}.rcp.log.buffer_count"  50
     rc=$?
 
@@ -221,7 +226,7 @@ apply_config_cm()
     iisetres -v "ii.${CONFIG_HOST}.dbms.*.system_lock_level"  row &&
     iisetres -v "ii.${CONFIG_HOST}.dbms.*.system_readlock"  nolock  &&
     iisetres -v "ii.${CONFIG_HOST}.rcp.lock.per_tx_limit"  15000 &&
-    iisetres -v "ii.${CONFIG_HOST}.rcp.lock.lock_limit"  100000 &&
+    iisetres -v +p "ii.${CONFIG_HOST}.rcp.lock.lock_limit"  325000 &&
     iisetres -v "ii.${CONFIG_HOST}.rcp.log.buffer_count"  200 
     rc=$?
 
@@ -293,6 +298,7 @@ revert_config()
     echo_cmd "Reverting to (PROD1NAME) System Defaults..."
     iisetres -p "ii.${CONFIG_HOST}.dbms.*.opf_active_limit"  32
     iisetres -p "ii.${CONFIG_HOST}.dbms.*.opf_memory"  10240000
+    iisetres -p "ii.${CONFIG_HOST}.rcp.lock.lock_limit"  325000
     for p in $allparms
     do
 	iiinitres $p $II_CONFIG/dbms.rfm

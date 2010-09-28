@@ -32,6 +32,9 @@
 **  25-May-2010 (drivi01) Bug 123817
 **    Fix the object length to allow for long IDs.
 **    Remove hard coded constants, use DB_MAXNAME instead.
+** 30-Jun-2010 (drivi01)
+**    Bug #124006
+**    Add new BOOLEAN datatype.
 ********************************************************************/
 
 #ifndef DBA_HEADER
@@ -561,6 +564,7 @@ typedef unsigned char * LPUCHAR;
 #define INGTYPE_INYM         35     // interval year to month
 #define INGTYPE_INDS         36     // interval day to second
 #define INGTYPE_IDTE         37     // ingresdate
+#define INGTYPE_BOOLEAN	     38     // boolean
 
 
 #define REPLIC_FULLPEER      1   /* these values should not be changed */

@@ -106,6 +106,11 @@
 **         Add support for "StringTruncation" connection string attribute.
 **         If set to Y, string truncation errors are reported.  If set to
 **         N (default), strings are truncated silently.
+**     09-Jun-2010 (Ralph Loen) Bug 123864
+**          In ConfigDSN(), tightened code for BlankDate, Date1582,
+**          IngresDate, StringTruncation, and FetchWholeLob.  Imprecisions
+**          in copying buffers led to these items not being configured
+**          if not specified with defaults.
 */
 /*
 **Jam hints
@@ -160,7 +165,7 @@ const char WITHOPTION[]         = "WITHOPTION=";
 const char DISABLECATUNDERSCORE[]  = "DISABLECATUNDERSCORE=";
 const char CATUNDERSCORE[]    = "DISABLECATUNDERSCORE=";
 const char ALLOWPROCEDUREUPDATE[]  = "ALLOWPROCEDUREUPDATE=";
-const char INI_MULTIBYTEFILLCHAR[] = KEY_MULTIBYTEFILLCHAR;
+const char MULTIBYTEFILLCHAR[] = "MULTIBYTEFILLCHAR=";
 const char CONVERTTHREEPARTNAMES[] = "CONVERTTHREEPARTNAMES=";
 const char USESYSTABLES[]          = "USESYSTABLES=";
 const char BLANKDATE[]             = "BLANKDATE=";
@@ -173,7 +178,7 @@ const char CONVERTINT8TOINT4[]     = "CONVERTINT8TOINT4=";
 const char ALLOWUPDATE[]           = "ALLOWUPDATE=";
 const char DEFAULTTOCHAR[]         = "DEFAULTTOCHAR=";
 const char INGRESDATE[]            = "INGRESDATE=";
-const char STRINGTRUNCATION[]      = "STRINGTRUNCATION=";
+const char STRING_TRUNCATION[]      = "STRINGTRUNCATION=";
 
 /* We support Intersolv synonym too. */
 const char DATASOURCENAME[] = "DATASOURCENAME=";
@@ -204,7 +209,6 @@ const char INI_DATASOURCENAME[]		= KEY_DATASOURCENAME;
 const char INI_SERVERNAME[]			= KEY_SERVERNAME;
 const char INI_SRVR[]				= KEY_SRVR;
 const char INI_DB[]					= KEY_DB;
-const char INI_DEFAULTS[]			= KEY_DEFAULTS;
 const char INI_SELECTLOOPS[]	         = KEY_SELECTLOOPS;
 const char INI_PROMPTUIDPWD[]	         = KEY_PROMPTUIDPWD;
 const char INI_READONLY[]	         = KEY_READONLY;
@@ -219,6 +223,7 @@ const char INI_NUMERIC_OVERFLOW[]	 = KEY_NUMERIC_OVERFLOW;
 const char INI_SUPPORTIIDECIMAL[]	 = KEY_SUPPORTIIDECIMAL;
 const char INI_CATSCHEMANULL[]	         = KEY_CATSCHEMANULL;
 const char INI_CONVERTINT8TOINT4[]   = KEY_CONVERTINT8TOINT4;
+const char INI_MULTIBYTEFILLCHAR[]   = KEY_MULTIBYTEFILLCHAR;
 const char INI_ALLOWUPDATE[]         = KEY_ALLOWUPDATE;
 const char INI_DEFAULTTOCHAR[]         = KEY_DEFAULTTOCHAR;
 const char INI_INGRESDATE[]            = KEY_INGRESDATE;
@@ -482,180 +487,266 @@ BOOL INSTAPI ConfigDSN(
     if (!SetDriverInfo(lpszDriver))
         return FALSE;
     
-    //
-    //  Extract DSN from attribute string, if any:
-       for (sz = (char *)lpszAttr; sz && *sz; sz += STlength(sz) + 1)
-       {
-          if (STbcompare((char *)DSN, 4, sz, 4, TRUE) == 0 && !*szDSN)
-                STlcopy(sz + sizeof DSN - 1, szDSN, sizeof szDSN - 1);
-          else
-          if (STbcompare((char *)DATASOURCENAME, 15, sz, 15, TRUE) == 0 && !*szDSN)
-                STlcopy(sz + sizeof DATASOURCENAME - 1, szDSN, sizeof szDSN - 1);
-          else
-          if (STbcompare((char *)DESCRIPTION, 12, sz, 12, TRUE) == 0 && !*szDescription)
-              STlcopy(sz + sizeof DESCRIPTION - 1, szDescription, sizeof szDescription - 1);
-          else
-          if (STbcompare((char *)SERVERTYPE, 11, sz, 11, TRUE) == 0 && !*szServerType)
-               STlcopy(sz + sizeof SERVERTYPE - 1, szServerType, sizeof szServerType - 1);
-          else
-          if (STbcompare((char *)SERVERNAME, 11, sz, 11, TRUE) == 0 && !*szServer)
-               STlcopy(sz + sizeof SERVERNAME - 1, szServer, sizeof szServer - 1);
-          else
-          if (STbcompare((char *)VNODE, 6, sz, 6, TRUE) == 0 && !*szServer)
-               STlcopy(sz + sizeof VNODE - 1, szServer, sizeof szServer - 1);
-          else
-          if (STbcompare((char *)SRVR, 5, sz, 5, TRUE) == 0 && !*szServer)
-              STlcopy(sz + sizeof SRVR - 1, szServer, sizeof szServer - 1);
-          else
-          if (STbcompare((char *)DATABASE, 9, sz, 9, TRUE) == 0 && !*szDBName)
-               STlcopy(sz + sizeof DATABASE - 1, szDBName, sizeof szDBName - 1);
-          else
-          if (STbcompare((char *)DB, 3, sz, 3, TRUE) == 0 && !*szDBName)
-                STlcopy(sz + sizeof DB - 1, szDBName, sizeof szDBName - 1);
-          else
-          if (STbcompare((char *)ROLENAME, 9, sz, 9, TRUE) == 0 && !*szRoleName)
-               STlcopy(sz + sizeof ROLENAME - 1, szRoleName, sizeof szRoleName - 1);
-          else
-          if (STbcompare((char *)ROLEPWD, 8, sz, 8, TRUE) == 0 && !*szRolePWD)
-               STlcopy(sz + sizeof ROLEPWD - 1, szRolePWD, sizeof szRolePWD - 1);
-          else
-          if (STbcompare((char *)PROMPTUIDPWD, 13, sz, 13, TRUE) == 0 && !*szPrompt)
-             {STlcopy(sz + sizeof PROMPTUIDPWD - 1, szPrompt, sizeof szPrompt - 1);
-              if (*szPrompt == 'Y'  ||  *szPrompt == 'y')
-                   strcpy(szPrompt, "Y");  /* normalize the value */
-              else strcpy(szPrompt, "N");
-             }
-           else
-           if (_memicmp (GROUP, sz, 6) == 0 && !*szGroup)
-               strncpy (szGroup, sz + sizeof GROUP - 1, sizeof szGroup - 1);
-          else
-          if (STbcompare((char *)DSNREADONLY, 9, sz, 9, TRUE) == 0 && !*szReadOnly)
-          {
-              STlcopy(sz + sizeof DSNREADONLY - 1, szReadOnly, sizeof szReadOnly - 1);
-              if (*szReadOnly == 'Y'  ||  *szReadOnly == 'y')
-                   strcpy(szReadOnly, "Y");  /* normalize the value */
-              else 
-                   strcpy(szReadOnly, "N");
-           }
-          else
-          if (STbcompare((char *)WITHOPTION, 11, sz, 11, TRUE) == 0 && !*szWithOption)
-               STlcopy(sz + sizeof WITHOPTION - 1, szWithOption, sizeof szWithOption - 1);
-          else
-          if (STbcompare((char *)BLANKDATE, 10, sz, 10, TRUE) == 0 && !*szBlankDate)
-             {STlcopy(sz + sizeof BLANKDATE - 1, szBlankDate, sizeof szBlankDate - 1);
-              if (*szBlankDate == 'N'  ||  *szBlankDate == 'n')
-                   strcpy(szBlankDate, "NULL");  /* normalize the value */
-              else strcpy(szBlankDate, " ");     /* user supplied not NULL value*/
-             }
-          else
-          if (STbcompare((char *)DATE1582, 9, sz, 9, TRUE) == 0 && !*szDate1582)
-             {STlcopy(sz + sizeof DATE1582 - 1, szDate1582, sizeof szDate1582 - 1);
-             if (*szDate1582 == 'N'  ||  *szDate1582 == 'n')
-                  strcpy(szDate1582, "NULL");  /* normalize the value */
-             else strcpy(szDate1582, " ");     /* user supplied not NULL value*/
-             }
-          else
-          if (STbcompare((char *)CATCONNECT,11, sz,11, TRUE) == 0 && !*szCatConnect)
-             {STlcopy(sz + sizeof CATCONNECT - 1, szCatConnect, sizeof szCatConnect - 1);
-              if (*szCatConnect == 'Y'  ||  *szCatConnect == 'y')
-                   strcpy(szCatConnect, "Y");  /* normalize the value */
-              else strcpy(szCatConnect, "N");
-             }
-          else
-          if (STbcompare((char *)SELECTLOOPS,12, sz,12, TRUE) == 0 && !*szSelectLoops)
-             {STlcopy(sz + sizeof SELECTLOOPS - 1, szSelectLoops, sizeof szSelectLoops - 1);
-              if (*szSelectLoops == 'Y'  ||  *szSelectLoops == 'y')
-                   strcpy(szSelectLoops, "Y");  /* normalize the value */
-              else strcpy(szSelectLoops, "N");
-             }
-          else
-          if (STbcompare((char *)NUMERIC_OVERFLOW,17, sz,17, TRUE) == 0 && !*szNumOverflow)
-             {STlcopy(sz + sizeof NUMERIC_OVERFLOW - 1, szNumOverflow, sizeof szNumOverflow - 1);
-              if (*szNumOverflow == 'I'  ||  *szNumOverflow == 'i')
-                   strcpy(szNumOverflow, "Ignore");  /* normalize the value */
-              else strcpy(szNumOverflow, "Fatal");
-             }
-          else
-          if (STbcompare((char *)CATSCHEMANULL,14, sz, 14, TRUE) == 0 && !*szCatSchemaNULL)
-             {STlcopy(sz + sizeof CATSCHEMANULL - 1, szCatSchemaNULL, sizeof szCatSchemaNULL - 1);
-              if (*szCatSchemaNULL == 'Y'  ||  *szCatSchemaNULL == 'y')
-                   strcpy(szCatSchemaNULL, "Y");  /* normalize the value */
-              else strcpy(szCatSchemaNULL, "N");
-             }
-          else
-          if (STbcompare((char *)CATUNDERSCORE,14, sz, 14, TRUE) == 0 && !*szCatUnderscoreDisabled)
-             {STlcopy(sz + sizeof CATUNDERSCORE - 1, szCatUnderscoreDisabled, sizeof szCatUnderscoreDisabled - 1);
-              if (*szCatUnderscoreDisabled == 'Y'  ||  *szCatUnderscoreDisabled == 'y')
-                   strcpy(szCatUnderscoreDisabled, "Y");  /* normalize the value */
-              else strcpy(szCatUnderscoreDisabled, "N");
-             }
-          else
-          if (STbcompare((char *)ALLOWPROCEDUREUPDATE,21, sz, 21, TRUE) == 0 && !*szAllowProcedureUpdate)
-             {STlcopy(sz + sizeof ALLOWPROCEDUREUPDATE - 1, szAllowProcedureUpdate, sizeof szAllowProcedureUpdate - 1);
-              if (*szAllowProcedureUpdate == 'Y'  ||  *szAllowProcedureUpdate == 'y')
-                   strcpy(szAllowProcedureUpdate, "Y");  /* normalize the value */
-              else strcpy(szAllowProcedureUpdate, "N");
-             }
-          else
-          if (STbcompare((char *)CONVERTTHREEPARTNAMES,22, sz, 22, TRUE) == 0 && !*sz3PartNames)
-             {STlcopy(sz + sizeof CONVERTTHREEPARTNAMES - 1, sz3PartNames, sizeof sz3PartNames - 1);
-              if (*sz3PartNames == 'Y'  ||  *sz3PartNames == 'y')
-                   strcpy(sz3PartNames, "Y");  /* normalize the value */
-              else strcpy(sz3PartNames, "N");
-             }
-          else
-          if (STbcompare((char *)SUPPORTIIDECIMAL,17, sz, 17, TRUE) == 0 && !*szIIDECIMAL)
-             {STlcopy(sz + sizeof SUPPORTIIDECIMAL - 1, szIIDECIMAL, sizeof szIIDECIMAL - 1);
-              if (*szIIDECIMAL == 'Y'  ||  *szIIDECIMAL == 'y')
-                   strcpy(szIIDECIMAL, "Y");  /* normalize the value */
-              else strcpy(szIIDECIMAL, "N");
-             }
-          else
-          if (STbcompare((char *)USESYSTABLES,13, sz, 13, TRUE) == 0 && !*szSYSTABLES)
-             {STlcopy(sz + sizeof USESYSTABLES - 1, szSYSTABLES, sizeof szSYSTABLES - 1);
-              if (*szSYSTABLES == 'Y'  ||  *szSYSTABLES == 'y')
-                   strcpy(szSYSTABLES, "Y");  /* normalize the value */
-              else strcpy(szSYSTABLES, "N");
-             }
-		  else
-          if (STbcompare((char *)CONVERTINT8TOINT4,18, sz, 18, TRUE) == 0 && !*szConvertInt8ToInt4)
-             {STlcopy(sz + sizeof CONVERTINT8TOINT4 - 1, szConvertInt8ToInt4, sizeof szConvertInt8ToInt4 - 1);
-              if (*szConvertInt8ToInt4 == 'Y'  ||  *szConvertInt8ToInt4 == 'y')
-                   strcpy(szConvertInt8ToInt4, "Y");  /* normalize the value */
-              else strcpy(szConvertInt8ToInt4, "N");
-             }
-		  
-		  else
-          if (STbcompare((char *)ALLOWUPDATE,11, sz, 11, TRUE) == 0 && !*szAllowUpdate)
-             {STlcopy(sz + sizeof ALLOWUPDATE - 1, szAllowUpdate, sizeof szAllowUpdate - 1);
-              if (*szAllowUpdate == 'Y'  ||  *szAllowUpdate == 'y')
-                   strcpy(szAllowUpdate, "Y");  /* normalize the value */
-              else strcpy(szAllowUpdate, "N");
-             }
-		  else
-          if (STbcompare((char *)DEFAULTTOCHAR,15, sz, 15, TRUE) == 0 
-              && !*szDefaultToChar)
-          {
-              STlcopy(sz + sizeof(szDefaultToChar) - 1, szDefaultToChar, 
-                  sizeof(szDefaultToChar) - 1);
-              CVupper(szDefaultToChar); 
-          }
-          if (STbcompare((char *)INGRESDATE,10, sz, 10, TRUE) == 0 
-              && !*szIngresDate)
-          {
-              STlcopy(sz + sizeof(szIngresDate) - 1, szIngresDate, 
-                  sizeof(szIngresDate) - 1);
-              CVupper(szIngresDate); 
-          }
-          if (STbcompare((char *)STRINGTRUNCATION,16, sz, 16, TRUE) == 0 
-              && !*szStringTruncation)
-          {
-              STlcopy(sz + sizeof(szStringTruncation) - 1, szStringTruncation, 
-                  sizeof(szStringTruncation) - 1);
-              CVupper(szStringTruncation); 
-          }
-
-       }
+    /*
+    **  Extract DSN from attribute string, if any.
+    */
+    for (sz = (char *)lpszAttr; sz && *sz; sz += STlength(sz) + 1)
+    {
+        if (STbcompare((char *)DSN, 4, sz, 4, TRUE) == 0 && !*szDSN)
+            STlcopy(sz + sizeof DSN - 1, szDSN, sizeof szDSN - 1);
+        else
+        if (STbcompare((char *)DATASOURCENAME, 15, sz, 15, TRUE) == 0 
+            && !*szDSN)
+            STlcopy(sz + sizeof DATASOURCENAME - 1, szDSN, sizeof szDSN - 1);
+        else
+        if (STbcompare((char *)DESCRIPTION, 12, sz, 12, TRUE) == 0 
+            && !*szDescription)
+            STlcopy(sz + sizeof DESCRIPTION - 1, szDescription, 
+                sizeof szDescription - 1);
+        else
+        if (STbcompare((char *)SERVERTYPE, 11, sz, 11, TRUE) == 0 
+            && !*szServerType)
+            STlcopy(sz + sizeof SERVERTYPE - 1, szServerType, 
+                sizeof szServerType - 1);
+        else
+        if (STbcompare((char *)SERVERNAME, 11, sz, 11, TRUE) == 0 
+            && !*szServer)
+            STlcopy(sz + sizeof SERVERNAME - 1, szServer, 
+                sizeof szServer - 1);
+        else
+        if (STbcompare((char *)VNODE, 6, sz, 6, TRUE) == 0 && !*szServer)
+            STlcopy(sz + sizeof VNODE - 1, szServer, sizeof szServer - 1);
+        else
+        if (STbcompare((char *)SRVR, 5, sz, 5, TRUE) == 0 && !*szServer)
+            STlcopy(sz + sizeof SRVR - 1, szServer, sizeof szServer - 1);
+        else
+        if (STbcompare((char *)DATABASE, 9, sz, 9, TRUE) == 0 && !*szDBName)
+            STlcopy(sz + sizeof DATABASE - 1, szDBName, sizeof szDBName - 1);
+        else
+        if (STbcompare((char *)DB, 3, sz, 3, TRUE) == 0 && !*szDBName)
+            STlcopy(sz + sizeof DB - 1, szDBName, sizeof szDBName - 1);
+        else
+        if (STbcompare((char *)ROLENAME, 9, sz, 9, TRUE) == 0 && !*szRoleName)
+            STlcopy(sz + sizeof ROLENAME - 1, szRoleName, 
+                sizeof szRoleName - 1);
+        else
+        if (STbcompare((char *)ROLEPWD, 8, sz, 8, TRUE) == 0 && !*szRolePWD)
+            STlcopy(sz + sizeof ROLEPWD - 1, szRolePWD, sizeof szRolePWD - 1);
+        else
+        if (STbcompare((char *)PROMPTUIDPWD, 13, sz, 13, TRUE) == 0 
+            && !*szPrompt)
+        {
+            STlcopy(sz + sizeof PROMPTUIDPWD - 1, szPrompt, 
+                sizeof szPrompt - 1);
+            if (*szPrompt == 'Y'  ||  *szPrompt == 'y')
+                STcopy("Y", szPrompt);  /* normalize the value */
+            else 
+                STcopy("N", szPrompt);
+        }
+        else
+        if (STbcompare((char *)GROUP, 6, sz, 6, TRUE) == 0 && !*szGroup)
+            STlcopy (sz + sizeof GROUP - 1, szGroup, sizeof szGroup - 1);
+        else
+        if (STbcompare((char *)DSNREADONLY, 9, sz, 9, TRUE) == 0 
+            && !*szReadOnly)
+        {
+            STlcopy(sz + sizeof DSNREADONLY - 1, szReadOnly, 
+                sizeof szReadOnly - 1);
+            if (*szReadOnly == 'Y'  ||  *szReadOnly == 'y')
+                STcopy("Y", szReadOnly);  /* normalize the value */
+            else 
+                STcopy("N", szReadOnly);
+        }
+        else
+        if (STbcompare((char *)WITHOPTION, 11, sz, 11, TRUE) == 0 
+            && !*szWithOption)
+            STlcopy(sz + sizeof WITHOPTION - 1, szWithOption, 
+                sizeof szWithOption - 1);
+        else
+        if (STbcompare((char *)BLANKDATE, 10, sz, 10, TRUE) == 0 
+            && !*szBlankDate)
+        {
+            STlcopy(sz + sizeof BLANKDATE - 1, szBlankDate, 
+                sizeof szBlankDate - 1);
+            if (*szBlankDate == 'N'  ||  *szBlankDate == 'n')
+                 STcopy("NULL", szBlankDate);  /* normalize the value */
+            else 
+                STcopy(" ", szBlankDate); /* user supplied not NULL value*/
+        }
+        else
+        if (STbcompare((char *)DATE1582, 9, sz, 9, TRUE) == 0 && !*szDate1582)
+        {
+            STlcopy(sz + sizeof DATE1582 - 1, szDate1582, 
+                sizeof szDate1582 - 1);
+            if (*szDate1582 == 'N'  ||  *szDate1582 == 'n')
+                STcopy("NULL", szDate1582);  /* normalize the value */
+             else 
+                STcopy(" ", szDate1582);     /* user supplied not NULL value*/
+        }
+        else
+        if (STbcompare((char *)CATCONNECT,11, sz,11, TRUE) == 0 
+            && !*szCatConnect)
+        {
+            STlcopy(sz + sizeof CATCONNECT - 1, szCatConnect, 
+                sizeof szCatConnect - 1);
+            if (*szCatConnect == 'Y'  ||  *szCatConnect == 'y')
+                STcopy("Y",szCatConnect);  /* normalize the value */
+            else 
+                STcopy("N",szCatConnect);
+        }
+        else
+        if (STbcompare((char *)SELECTLOOPS,12, sz,12, TRUE) == 0 
+            && !*szSelectLoops)
+        {
+            STlcopy(sz + sizeof SELECTLOOPS - 1, szSelectLoops, 
+                sizeof szSelectLoops - 1);
+            if (*szSelectLoops == 'Y'  ||  *szSelectLoops == 'y')
+                STcopy("Y",szSelectLoops);  /* normalize the value */
+            else 
+                STcopy("N",szSelectLoops);
+        }
+        else
+        if (STbcompare((char *)NUMERIC_OVERFLOW,17, sz,17, TRUE) == 0 
+            && !*szNumOverflow)
+        {
+            STlcopy(sz + sizeof NUMERIC_OVERFLOW - 1, szNumOverflow, 
+                sizeof szNumOverflow - 1);
+            if (*szNumOverflow == 'I'  ||  *szNumOverflow == 'i')
+                STcopy("Ignore",szNumOverflow);  /* normalize the value */
+            else 
+                STcopy("Fatal", szNumOverflow);
+        }
+        else
+        if (STbcompare((char *)CATSCHEMANULL,14, sz, 14, TRUE) == 0 
+            && !*szCatSchemaNULL)
+        {
+            STlcopy(sz + sizeof CATSCHEMANULL - 1, szCatSchemaNULL, 
+                sizeof szCatSchemaNULL - 1);
+            if (*szCatSchemaNULL == 'Y'  ||  *szCatSchemaNULL == 'y')
+                STcopy("Y",szCatSchemaNULL);  /* normalize the value */
+            else 
+                STcopy("N",szCatSchemaNULL);
+        }
+        else
+        if (STbcompare((char *)CATUNDERSCORE,14, sz, 14, TRUE) == 0 
+            && !*szCatUnderscoreDisabled)
+        {
+            STlcopy(sz + sizeof CATUNDERSCORE - 1, szCatUnderscoreDisabled, 
+                sizeof szCatUnderscoreDisabled - 1);
+            if (*szCatUnderscoreDisabled == 'Y' ||  
+                *szCatUnderscoreDisabled == 'y')
+                STcopy("Y",szCatUnderscoreDisabled);  /* normalize the value */
+            else 
+                STcopy("N",szCatUnderscoreDisabled);
+        }
+        else
+        if (STbcompare((char *)ALLOWPROCEDUREUPDATE,21, sz, 21, TRUE) == 0 
+            && !*szAllowProcedureUpdate)
+        {
+            STlcopy(sz + sizeof ALLOWPROCEDUREUPDATE - 1, 
+                szAllowProcedureUpdate, sizeof szAllowProcedureUpdate - 1);
+            if (*szAllowProcedureUpdate == 'Y'  ||  
+                *szAllowProcedureUpdate == 'y')
+                STcopy("Y",szAllowProcedureUpdate);  /* normalize the value */
+            else 
+                STcopy("N",szAllowProcedureUpdate);
+        }
+        else
+        if (STbcompare((char *)CONVERTTHREEPARTNAMES,22, sz, 22, TRUE) == 0 
+            && !*sz3PartNames)
+        {
+            STlcopy(sz + sizeof CONVERTTHREEPARTNAMES - 1, sz3PartNames, 
+                sizeof sz3PartNames - 1);
+            if (*sz3PartNames == 'Y'  ||  *sz3PartNames == 'y')
+                STcopy("Y",sz3PartNames);  /* normalize the value */
+            else 
+                STcopy("N",sz3PartNames);
+        }
+        else
+        if (STbcompare((char *)SUPPORTIIDECIMAL,17, sz, 17, TRUE) == 0 
+            && !*szIIDECIMAL)
+        {
+            STlcopy(sz + sizeof SUPPORTIIDECIMAL - 1, szIIDECIMAL, 
+                sizeof szIIDECIMAL - 1);
+            if (*szIIDECIMAL == 'Y'  ||  *szIIDECIMAL == 'y')
+                STcopy("Y",szIIDECIMAL);  /* normalize the value */
+            else 
+                STcopy("N",szIIDECIMAL);
+        }
+        else
+        if (STbcompare((char *)USESYSTABLES,13, sz, 13, TRUE) == 0 
+            && !*szSYSTABLES)
+        {
+            STlcopy(sz + sizeof USESYSTABLES - 1, szSYSTABLES, 
+                sizeof szSYSTABLES - 1);
+            if (*szSYSTABLES == 'Y' ||  *szSYSTABLES == 'y')
+                STcopy("Y",szSYSTABLES);  /* normalize the value */
+            else 
+                STcopy("N",szSYSTABLES);
+        }
+        else
+        if (STbcompare((char *)CONVERTINT8TOINT4,18, sz, 18, TRUE) == 0 
+            && !*szConvertInt8ToInt4)
+        {
+            STlcopy(sz + sizeof CONVERTINT8TOINT4 - 1, szConvertInt8ToInt4, 
+                sizeof szConvertInt8ToInt4 - 1);
+            if (*szConvertInt8ToInt4 == 'Y'  ||  *szConvertInt8ToInt4 == 'y')
+                STcopy("Y",szConvertInt8ToInt4);  /* normalize the value */
+            else 
+                STcopy("N",szConvertInt8ToInt4);
+        }
+        else
+        if (STbcompare((char *)MULTIBYTEFILLCHAR,17, sz, 17, TRUE) == 0 
+            && !*szMultibyteFillChar)
+        {
+            STlcopy(sz + sizeof MULTIBYTEFILLCHAR - 1, szMultibyteFillChar, 
+                sizeof (char));
+        }
+        else
+        if (STbcompare((char *)ALLOWUPDATE,11, sz, 11, TRUE) == 0 
+            && !*szAllowUpdate)
+        {
+            STlcopy(sz + sizeof ALLOWUPDATE - 1, szAllowUpdate, 
+                sizeof szAllowUpdate - 1);
+            if (*szAllowUpdate == 'Y'  ||  *szAllowUpdate == 'y')
+                STcopy("Y",szAllowUpdate);  /* normalize the value */
+            else 
+                STcopy("N",szAllowUpdate);
+        }
+        else
+        if (STbcompare((char *)DEFAULTTOCHAR,15, sz, 15, TRUE) == 0 
+            && !*szDefaultToChar)
+        {
+            STlcopy(sz + sizeof(DEFAULTTOCHAR) - 1, szDefaultToChar, 
+                sizeof(szDefaultToChar) - 1);
+            if (*szDefaultToChar == 'Y'  ||  *szAllowUpdate == 'y')
+                STcopy("Y",szDefaultToChar);  /* normalize the value */
+            else 
+                STcopy("N",szDefaultToChar);
+        }
+        else
+        if (STbcompare((char *)INGRESDATE,10, sz, 10, TRUE) == 0 
+            && !*szIngresDate)
+        {
+            STlcopy(sz + sizeof(INGRESDATE) - 1, szIngresDate, 
+                sizeof(szIngresDate) - 1);
+            if (*szIngresDate == 'Y'  ||  *szIngresDate == 'y')
+                STcopy("Y",szIngresDate);  /* normalize the value */
+            else 
+                STcopy("N",szIngresDate);
+        }
+        else
+        if (STbcompare((char *)STRING_TRUNCATION, 18, sz, 18, TRUE) == 0 
+            && !*szStringTruncation)
+        {
+            STlcopy(sz + sizeof(STRING_TRUNCATION) - 1, szStringTruncation, 
+                sizeof(szStringTruncation) - 1);
+            if (*szStringTruncation == 'Y'  ||  *szStringTruncation == 'y')
+                STcopy("Y",szStringTruncation);  /* normalize the value */
+            else 
+                STcopy("N",szStringTruncation);
+        }
+    }
         
     //
     //  If no parent window, try to do configuration without dialogs:
@@ -734,133 +825,163 @@ BOOL AutoConfig (
 
 // if case ODBC_CONFIG_DSN and ODBC.INI does not contain dbname for this DSN,
 // assume DSN does not exist
-        if (fReq == ODBC_CONFIG_DSN)
-        {
-            *tszDBName = 0;
-            SQLGetPrivateProfileString(szDSN, DSN_OPTIONS_DBNAME, "", 
-                tszDBName, LEN_DBNAME + 1, ODBC_INI);
-            if (!*tszDBName)
-                return FALSE;
-        }
-        if (*szServer)
-        {
-            wsprintf (szServerSect, "Vnode %s", szServer);
-        }
+    if (fReq == ODBC_CONFIG_DSN)
+    {
+        *tszDBName = 0;
+        SQLGetPrivateProfileString(szDSN, DSN_OPTIONS_DBNAME, "", 
+            tszDBName, LEN_DBNAME + 1, ODBC_INI);
+        if (!*tszDBName)
+            return FALSE;
+    }
+    if (*szServer)
+    {
+        wsprintf (szServerSect, "Vnode %s", szServer);
+    }
 
-        //
-        //  Parse attribute string for valid key names,
-        //  and add them to the correct registry section:
-        //
-        for (; *szAttr != EOS; szAttr += STlength(szAttr), CMnext(szAttr) )
+    //
+    //  Parse attribute string for valid key names,
+    //  and add them to the correct registry section:
+    //
+    for (; *szAttr != EOS; szAttr += STlength(szAttr), CMnext(szAttr) )
+    {
+        if (p = (char *) STindex(szAttr, "=" ,0))
         {
-            if (p = (char *) STindex(szAttr, "=" ,0))
+            MEfill(sizeof szKey, 0, szKey);
+            MEcopy(szAttr, min (p - szAttr, sizeof szKey - 1), szKey );
+            szAttr = p;
+            CMnext(szAttr);
+
+            for (p=szKey; *p!=EOS; CMnext(p) )  /* conv key to upper case */
+                CMtoupper (p, p); 
+
+            for (i = 0; i < KEYTABMAX; i++)
             {
-                MEfill(sizeof szKey, 0, szKey);
-                MEcopy(szAttr, min (p - szAttr, sizeof szKey - 1), szKey );
-                szAttr = p;
-                CMnext(szAttr);
- 
-                for (p=szKey; *p!=EOS; CMnext(p) )  /* conv key to upper case */
-                       CMtoupper (p, p); 
-
-
-                for (i = 0; i < KEYTABMAX; i++)
+                if (STcompare(szKey, KEYTAB[i].szKey) == 0)
                 {
-                    if (STcompare(szKey, KEYTAB[i].szKey) == 0)
+                    switch (KEYTAB[i].fSection)
                     {
-                        switch (KEYTAB[i].fSection)
+                    case SEC_SERVER:
+                    if (*szServer)
+                        break;
+                    
+                    break;
+                    
+                    case SEC_DATASOURCE:
+                        if (STcompare(szKey,KEY_DESCRIPTION_UP) ==0)
+                            SQLWritePrivateProfileString(szDSN, 
+                                DSN_OPTIONS_DESCRIPTION, szAttr, ODBC_INI);
+                        else if (STcompare(szKey,KEY_SERVER_UP) ==0 || 
+                            STcompare(szKey,KEY_SERVERNAME) ==0 ||
+                            STcompare(szKey,KEY_SRVR) ==0)
+                                SQLWritePrivateProfileString(szDSN, 
+                                    DSN_OPTIONS_SERVER, szAttr, ODBC_INI);
+                        else if (STcompare(szKey,KEY_DATABASE_UP)==0 || 
+                            strcmp(szKey,KEY_DB)==0)
+                                SQLWritePrivateProfileString(szDSN, 
+                                    DSN_OPTIONS_DBNAME, szAttr, ODBC_INI);
+                        else if (STcompare(szKey,KEY_SERVERTYPE_UP)==0)
+                            SQLWritePrivateProfileString(szDSN, 
+                                DSN_OPTIONS_SERVERTYPE, szAttr, ODBC_INI);
+                        else if (STcompare(szKey,KEY_WITHOPTION)==0)
+                            SQLWritePrivateProfileString(szDSN, 
+                                DSN_OPTIONS_WITHOPTION, szAttr, ODBC_INI);
+                        else if (STcompare(szKey,KEY_ROLENAME)==0)
+                            SQLWritePrivateProfileString(szDSN, 
+                                DSN_OPTIONS_ROLENAME, szAttr, ODBC_INI);
+                        else if (STcompare(szKey,KEY_ROLEPWD)==0)
                         {
-                        case SEC_SERVER:
-
-                            if (*szServer)
-                            break;
-							break;
-                        case SEC_DATASOURCE:
-							//UtWriteIniString ((*szDSN) ? szDSN : INI_DEFAULTS, szKey, szAttr);
-					if (STcompare(szKey,KEY_DESCRIPTION_UP) ==0)
-						SQLWritePrivateProfileString(szDSN, DSN_OPTIONS_DESCRIPTION, szAttr, ODBC_INI);
-					if (STcompare(szKey,KEY_SERVER_UP) ==0 || 
-					    STcompare(szKey,KEY_SERVERNAME) ==0 ||
-					    STcompare(szKey,KEY_SRVR) ==0)
-						SQLWritePrivateProfileString(szDSN, DSN_OPTIONS_SERVER, szAttr, ODBC_INI);
-					if (STcompare(szKey,KEY_DATABASE_UP)==0 || strcmp(szKey,KEY_DB)==0)
-						SQLWritePrivateProfileString(szDSN, DSN_OPTIONS_DBNAME, szAttr, ODBC_INI);
-					if (STcompare(szKey,KEY_SERVERTYPE_UP)==0)
-						SQLWritePrivateProfileString(szDSN, DSN_OPTIONS_SERVERTYPE, szAttr, ODBC_INI);
-					if (STcompare(szKey,KEY_WITHOPTION)==0)
-						SQLWritePrivateProfileString(szDSN, DSN_OPTIONS_WITHOPTION, szAttr, ODBC_INI);
-					if (STcompare(szKey,KEY_ROLENAME)==0)
-						SQLWritePrivateProfileString(szDSN, DSN_OPTIONS_ROLENAME, szAttr, ODBC_INI);
-					if (STcompare(szKey,KEY_ROLEPWD)==0)
-					{
-						if (STlength(szRolePWD) > 0)
-							EncryptPWD(szRoleName, szRolePWD); /* encrypts the pw */
-						SQLWritePrivateProfileString(szDSN, DSN_OPTIONS_ROLEPWD,  szRolePWD, ODBC_INI);
-					}
-					if (STcompare(szKey,KEY_PROMPTUIDPWD)==0)
-						SQLWritePrivateProfileString(szDSN, DSN_OPTIONS_PROMPT, szPrompt, ODBC_INI);
-                                        if (STcompare(szKey,KEY_GROUP)==0)
-						SQLWritePrivateProfileString(szDSN, DSN_OPTIONS_GROUP, szGroup, ODBC_INI);
-					if (STcompare(szKey,KEY_READONLY)==0)
-						SQLWritePrivateProfileString(szDSN, DSN_OPTIONS_PROMPT, szReadOnly, ODBC_INI);
-                                        // Begin "Advanced" options
-					if (STcompare(szKey,KEY_SELECTLOOPS)==0)
-						SQLWritePrivateProfileString(szDSN, DSN_OPTIONS_SELECTLOOPS, szSelectLoops, ODBC_INI);
-					if (STcompare(szKey,KEY_DISABLECATUNDERSCORE)==0)
-						SQLWritePrivateProfileString(szDSN, DSN_OPTIONS_CATUNDERSCORE, szCatUnderscoreDisabled, ODBC_INI);
-					if (STcompare(szKey,KEY_CONVERTTHREEPARTNAMES)==0)
-						SQLWritePrivateProfileString(szDSN, DSN_OPTIONS_3_PART_NAMES, sz3PartNames, ODBC_INI);
-					if (STcompare(szKey,KEY_USESYSTABLES)==0)
-						SQLWritePrivateProfileString(szDSN, DSN_OPTIONS_SYSTABLES, szSYSTABLES, ODBC_INI);
-					if (STcompare(szKey,KEY_BLANKDATE)==0)
-						SQLWritePrivateProfileString(szDSN, DSN_OPTIONS_BLANKDATE, szBlankDate, ODBC_INI);
-					if (STcompare(szKey,KEY_DATE1582)==0)
-						SQLWritePrivateProfileString(szDSN, DSN_OPTIONS_DATE1582, szDate1582, ODBC_INI);
-					if (STcompare(szKey,KEY_CATCONNECT)==0)
-						SQLWritePrivateProfileString(szDSN, DSN_OPTIONS_CATCONNECT, szCatConnect, ODBC_INI);
-					if (STcompare(szKey,KEY_NUMERIC_OVERFLOW)==0)
-						SQLWritePrivateProfileString(szDSN, DSN_OPTIONS_NUMOVERFLOW,  szNumOverflow, ODBC_INI);
-					if (STcompare(szKey,KEY_SUPPORTIIDECIMAL)==0)
-						SQLWritePrivateProfileString(szDSN, DSN_OPTIONS_IIDECIMAL, szIIDECIMAL, ODBC_INI);
-					if (STcompare(szKey,KEY_CATSCHEMANULL)==0)
-						SQLWritePrivateProfileString(szDSN, DSN_OPTIONS_CATSCHEMANULL, szCatSchemaNULL, ODBC_INI);
-					if (STcompare(szKey,KEY_ALLOWPROCEDUREUPDATE)==0)
-					    SQLWritePrivateProfileString(szDSN, DSN_OPTIONS_ALLOWPROCEDUREUPDATE, szAllowProcedureUpdate, ODBC_INI);
-                                       if (STcompare(szKey,KEY_MULTIBYTEFILLCHAR)==0)
-                                           SQLWritePrivateProfileString(szDSN, 
-DSN_OPTIONS_MULTIBYTEFILLCHAR, szMultibyteFillChar, ODBC_INI);
-				    if (STcompare(szKey,KEY_CONVERTINT8TOINT4)==0)
-						SQLWritePrivateProfileString(szDSN, DSN_OPTIONS_CONVERTINT8TOINT4, szConvertInt8ToInt4, ODBC_INI);
-					if (STcompare(szKey,KEY_ALLOWUPDATE)==0)
-						SQLWritePrivateProfileString(szDSN, DSN_OPTIONS_ALLOWUPDATE, szAllowUpdate, ODBC_INI);
-
-					if (!STcompare(szKey,KEY_DEFAULTTOCHAR))
-					    SQLWritePrivateProfileString(szDSN,
-                                            DSN_OPTIONS_DEFAULTTOCHAR, 
-                                            szDefaultToChar, ODBC_INI);
-
-					if (!STcompare(szKey,KEY_INGRESDATE))
-					    SQLWritePrivateProfileString(szDSN,
-                                            DSN_OPTIONS_INGRESDATE, 
-                                            szIngresDate, ODBC_INI);
-                                        
-					if (!STcompare(szKey,KEY_STRING_TRUNCATION))
-					    SQLWritePrivateProfileString(szDSN,
-                                            DSN_OPTIONS_STRINGTRUNCATION, 
-                                            szStringTruncation, ODBC_INI);
-                                        
-					break;
-
-                        case SEC_OPTIONS:
-
-                            break;
+                            if (STlength(szRolePWD) > 0)
+                                EncryptPWD(szRoleName, szRolePWD); /* encrypts 
+                                                                      the pw */
+                                SQLWritePrivateProfileString(szDSN, 
+                                    DSN_OPTIONS_ROLEPWD,  szRolePWD, ODBC_INI);
                         }
+                        else if (STcompare(szKey,KEY_PROMPTUIDPWD)==0)
+                            SQLWritePrivateProfileString(szDSN, 
+                                DSN_OPTIONS_PROMPT, szPrompt, ODBC_INI);
+                        else if (STcompare(szKey,KEY_GROUP)==0)
+                            SQLWritePrivateProfileString(szDSN, 
+                                DSN_OPTIONS_GROUP, szGroup, ODBC_INI);
+                        else if (STcompare(szKey,KEY_READONLY)==0)
+                            SQLWritePrivateProfileString(szDSN, 
+                                DSN_OPTIONS_READONLY, 
+                                    szReadOnly, ODBC_INI);
+                        // Begin "Advanced" options
+                        else if (STcompare(szKey,KEY_SELECTLOOPS)==0)
+                            SQLWritePrivateProfileString(szDSN, 
+                                DSN_OPTIONS_SELECTLOOPS, szSelectLoops, 
+                                    ODBC_INI);
+                        else if (STcompare(szKey,KEY_DISABLECATUNDERSCORE)==0)
+                            SQLWritePrivateProfileString(szDSN, 
+                                DSN_OPTIONS_CATUNDERSCORE,
+                                    szCatUnderscoreDisabled, ODBC_INI);
+                        else if (STcompare(szKey,KEY_CONVERTTHREEPARTNAMES)==0)
+                            SQLWritePrivateProfileString(szDSN, 
+                                DSN_OPTIONS_3_PART_NAMES, 
+                                    sz3PartNames, ODBC_INI);
+                        else if (STcompare(szKey,KEY_USESYSTABLES)==0)
+                            SQLWritePrivateProfileString(szDSN, 
+                                DSN_OPTIONS_SYSTABLES, szSYSTABLES, ODBC_INI);
+                        else if (STcompare(szKey,KEY_BLANKDATE)==0)
+                            SQLWritePrivateProfileString(szDSN, 
+                                DSN_OPTIONS_BLANKDATE, szBlankDate, ODBC_INI);
+                        else if (STcompare(szKey,KEY_DATE1582)==0)
+                            SQLWritePrivateProfileString(szDSN, 
+                                DSN_OPTIONS_DATE1582, szDate1582, ODBC_INI);
+                        else if (STcompare(szKey,KEY_CATCONNECT)==0)
+                            SQLWritePrivateProfileString(szDSN, 
+                                DSN_OPTIONS_CATCONNECT, szCatConnect, ODBC_INI);
+                        else if (STcompare(szKey,KEY_NUMERIC_OVERFLOW)==0)
+                            SQLWritePrivateProfileString(szDSN, 
+                                DSN_OPTIONS_NUMOVERFLOW, szNumOverflow, 
+                                    ODBC_INI);
+                        else if (STcompare(szKey,KEY_SUPPORTIIDECIMAL)==0)
+                            SQLWritePrivateProfileString(szDSN, 
+                                DSN_OPTIONS_IIDECIMAL, szIIDECIMAL, ODBC_INI);
+                        else if (STcompare(szKey,KEY_CATSCHEMANULL)==0)
+                            SQLWritePrivateProfileString(szDSN, 
+                                DSN_OPTIONS_CATSCHEMANULL, szCatSchemaNULL, 
+                                    ODBC_INI);
+                        else if (STcompare(szKey,KEY_ALLOWPROCEDUREUPDATE)==0)
+                            SQLWritePrivateProfileString(szDSN, 
+                                DSN_OPTIONS_ALLOWPROCEDUREUPDATE,
+                                    szAllowProcedureUpdate, ODBC_INI);
+                        else if (STcompare(szKey,KEY_MULTIBYTEFILLCHAR)==0)
+                            SQLWritePrivateProfileString(szDSN, 
+                                DSN_OPTIONS_MULTIBYTEFILLCHAR, 
+                                    szMultibyteFillChar, ODBC_INI);
+                        else if (STcompare(szKey,KEY_CONVERTINT8TOINT4)==0)
+                            SQLWritePrivateProfileString(szDSN, 
+                                DSN_OPTIONS_CONVERTINT8TOINT4,
+                                    szConvertInt8ToInt4, ODBC_INI);
+                        else if (STcompare(szKey,KEY_ALLOWUPDATE)==0)
+                            SQLWritePrivateProfileString(szDSN, 
+                                DSN_OPTIONS_ALLOWUPDATE, szAllowUpdate, 
+                                    ODBC_INI);
+                        else if (!STcompare(szKey,KEY_DEFAULTTOCHAR))
+                            SQLWritePrivateProfileString(szDSN,
+                                DSN_OPTIONS_DEFAULTTOCHAR, 
+                                    szDefaultToChar, ODBC_INI);
+                        else if (!STcompare(szKey,KEY_INGRESDATE))
+                            SQLWritePrivateProfileString(szDSN,
+                                DSN_OPTIONS_INGRESDATE, szIngresDate, ODBC_INI);
+                        else if (!STcompare(szKey,KEY_STRING_TRUNCATION))
+                            SQLWritePrivateProfileString(szDSN,
+                                DSN_OPTIONS_STRINGTRUNCATION, 
+                                    szStringTruncation, ODBC_INI);
+                                    
+                        break;
+
+                    case SEC_OPTIONS:
+
                         break;
                     }
+                    break;
                 }
             }
         }
-        return TRUE;
+    }
+    return TRUE;
 
     case ODBC_REMOVE_DSN:
 

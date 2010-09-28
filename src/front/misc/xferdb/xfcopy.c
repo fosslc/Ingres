@@ -215,6 +215,8 @@
 **	    Add encryption support.
 **  20-Aug-2009 (thich01)
 **      Add all other spatial types.
+**	27-Jul-2010 (troal01)
+**	    Add srid/geospatial support
 **/
 /* # define's */
 /* GLOBALDEF's */
@@ -537,6 +539,12 @@ xftables(i4 *tcount, i4 output_flags, i4 output_flags2, XF_TABINFO **list_ptr)
 **	    Added call to writeidentity() to support identity columns.
 **	04-Feb-2009 (thaju02)
 **	    Always specify "with page_size=..." clause. (B99758)
+**      23-Jun-2010 (coomi01) b123927
+**          Where just creating tables, and not copying them, allow
+**          journaling if appropriate.
+**      29-Jun-2010 (coomi01) b123927
+**          Adjust test for former code change to operate in 
+**          the negative
 */
 
 void
@@ -626,6 +634,12 @@ writecreate(XF_TABINFO	*tp, i4 output_flags)
 	    xfwrite(Xf_in, att_spec.dbut_name);
 	}
 
+	if (ap->srid != -1)
+	{
+		STprintf(tbuf, ERx(" SRID %d "), ap->srid);
+		xfwrite(Xf_in, tbuf);
+	}
+
 	/* check nullability in spec */
 	if (ap->nulls[0] == 'N')
 	    xfwrite(Xf_in, ERx(" not null"));
@@ -677,7 +691,27 @@ writecreate(XF_TABINFO	*tp, i4 output_flags)
     ** after the copy for better performance
     */
     if (!tp->fecat && !tp->becat && !SetJournaling)
-	xfwrite(Xf_in, ERx(",\nnojournaling"));
+    {
+	if (((tp->journaled[0] == 'Y' || tp->journaled[0] == 'C')) &&
+	    ( output_flags &&
+	      !((output_flags & XF_PRINT_TOTAL)  ||
+		(output_flags & XF_TAB_COPYONLY) || 
+		(output_flags & XF_ORDER_CCM )   ||
+		(output_flags & XF_XMLFLAG))
+		)
+	    )
+	{
+	    /* 
+	    ** Where NO copy is intended on journaled tables, 
+	    ** put flag in immediately.
+	    */
+	    xfwrite(Xf_in, ERx(",\njournaling"));
+	}
+	else
+	{
+	    xfwrite(Xf_in, ERx(",\nnojournaling"));
+	}
+    }
 
     STprintf(tbuf, ERx(",\npage_size = %d"), tp->pagesize); 
     xfwrite(Xf_in, tbuf);
@@ -983,6 +1017,10 @@ writecopy(XF_TABINFO *tp, i4 output_flags, char *cpfile)
 
            case DB_MPOLY_TYPE:
                xfwrite(Xf_both, ERx("multipolygon(0)"));
+               break;
+
+           case DB_GEOMC_TYPE:
+               xfwrite(Xf_both, ERx("geomcollection(0)"));
                break;
 
 	   case DB_NCHR_TYPE:

@@ -54,7 +54,7 @@
 
 usage()
 {
-    echo "Usage: buildAndTest.sh [-noclean] [-nobuild] [-keepenv] [-testloc <location>] [<installation_code>]"
+    echo "Usage: buildAndTest.sh [-noclean] [-nobuild] [-testloc <location>] [<installation_code>]"
     echo "Where:"
     echo "	-nobuild - Do not build the code"
     echo "	-noclean - Do not delete existing build test and installation directories"

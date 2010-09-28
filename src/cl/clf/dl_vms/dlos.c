@@ -17,7 +17,7 @@
 # include <nm.h>
 # include <si.h>
 # include <st.h>
-
+#include <signal.h>
 # include <dl.h>
 # include "dlint.h"
 
@@ -70,7 +70,7 @@ i4 *lookupfcn;
 {
     i4 status;
 
-    LIB$ESTABLISH(handle_all);		
+    VAXC$ESTABLISH(handle_all);		
 
     CVupper(lookupname);
     d_lookupfcn->dsc$w_length = STlength(lookupname);
@@ -82,7 +82,7 @@ i4 *lookupfcn;
         if (! (is_err_keynotfou(status) && lookupname == NULL))
             return DL_OSLOAD_FAIL;
     }
-    LIB$REVERT(); 
+    VAXC$ESTABLISH(NULL);
     return(OK);
 }
 
@@ -129,6 +129,8 @@ i4 *lookupfcn;
 **	    Replace II_VMS_ITEM_LIST_3 by ILE3.
 **	11-nov-2008 (joea)
 **	    Use CL_CLEAR_ERR to initialize CL_ERR_DESC.
+**      23-aug-2010 (joea)
+**          Use VAXC$ESTABLISH to set up exception handlers.
 */
 STATUS
 DLosprepare(locp, syms, errp, dlhandle)

@@ -238,6 +238,7 @@ DB_DATA_VALUE	   *adi_castdv)
       case DB_MLINE_TYPE:
       case DB_POLY_TYPE:
       case DB_MPOLY_TYPE:
+      case DB_GEOMC_TYPE:
 	*adi_oid = ADI_LONG_BYTE;
 	break;
 

@@ -848,6 +848,7 @@ DB_DATA_VALUE	*put_dbv;
 		    || basetype == DB_MLINE_TYPE
 		    || basetype == DB_POLY_TYPE
 		    || basetype == DB_MPOLY_TYPE
+		    || basetype == DB_GEOMC_TYPE
 		    || basetype == DB_LBIT_TYPE
 		    || basetype == DB_QTXT_TYPE) ? TRUE : FALSE;
 

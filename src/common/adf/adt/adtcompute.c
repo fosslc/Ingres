@@ -350,6 +350,7 @@ i4		    *adt_nkey_change)	/* Place to put cmp result. */
               case DB_MLINE_TYPE:
               case DB_POLY_TYPE:
               case DB_MPOLY_TYPE:
+              case DB_GEOMC_TYPE:
 	      case DB_LNVCHR_TYPE:
 	      case DB_BYTE_TYPE:
 	      case DB_TABKEY_TYPE:

@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1993, 2004 Ingres Corporation
+** Copyright (c) 1993, 2010 Ingres Corporation
 */
 
 #include <compat.h>
@@ -146,9 +146,25 @@
 **         In SQLSetStmtAttr(), implicitly set cursor type to
 **         SQL_CURSOR_STATIC if SQL_CURSOR_DYNAMIC is requested, instead of
 **         defaulting to SQL_CURSOR_FORWARD_ONLY.
+**     21-Jul-2010 (Ralph Loen) Bug 124112
+**         If the rowset or array size is set via SQLSetStmtAttr(), 
+**         zero out pstmt->crowFetchMax and set pstmt->crowFetch to
+**         the length specifier.
+**     27-Jul-2010 (Ralph Loen) Bug 124131
+**         Add support for SQL_ROWSET_SIZE in SQLSetConnectAttr() and    
+**         SQLGetConnectAttr().  Addd support for SQL_MAX_ROWS in 
+**         SQLGetConnectAttr().  Deprecate support for statement-level
+**         attributes if version is SQL_OV_ODBC3 or later.
+**     31-Jul-3010 (kschendel) 124131
+**	   Fix above for gcc 4.4 compiler complaints.
+**     03-Sep-2010 (Ralph Loen) Bug 124348
+**         Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
+**         SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
+**         platforms.
 */
 
 RETCODE EnlistInDTC(LPDBC pdbc, VOID * pITransaction);
+BOOL isL2StatementAttr(SQLINTEGER attr);
 
 /*
 **  SQLGetConnectAttr
@@ -195,7 +211,7 @@ RETCODE SQL_API SQLGetConnectAttr_InternalCall(
     SQLINTEGER  *pStringLength)
 {
     LPDBC       pdbc         = (LPDBC)hdbc;
-    SQLUINTEGER vParam;
+    SQLUINTEGER vParam = 0;
     SQLHANDLE   Handle;
     SQLINTEGER  StringLength = sizeof(SQLUINTEGER);  /* default Stringlength */
     RETCODE     rc;
@@ -210,27 +226,39 @@ RETCODE SQL_API SQLGetConnectAttr_InternalCall(
         return SQL_SUCCESS;
     }
 
+    /*
+    ** Statement-level attributes are deprecated for ODBC 3.x and
+    ** later.
+    */
+    if (isL2StatementAttr(fOption) && (pdbc->penvOwner->ODBCVersion 
+        >= SQL_OV_ODBC3))
+        return ErrUnlockDbc(SQL_HY092, pdbc);
+        
     switch (fOption)    /* get connection attributes */
     {
+    case SQL_MAX_ROWS:
+        vParam = pdbc->crowMax;
+        break;
+
+    case SQL_ROWSET_SIZE:
+        vParam = pdbc->crowFetchMax;
+        break;
+
     case SQL_ATTR_ACCESS_MODE:
         vParam = (SQLUINTEGER) (pdbc->fOptions & OPT_READONLY) ? SQL_MODE_READ_ONLY
                                                    : SQL_MODE_READ_WRITE;
-        MEcopy((PTR)&vParam, sizeof(SQLUINTEGER), (PTR)pvParamParameter);
         break;
 
     case SQL_ATTR_ASYNC_ENABLE:
         vParam = (SQLUINTEGER) pdbc->fAsyncEnable;
-        MEcopy((PTR)&vParam, sizeof(SQLUINTEGER), (PTR)pvParamParameter);
         break;
 
     case SQL_ATTR_AUTOCOMMIT:
         vParam = (SQLUINTEGER) (pdbc->fOptions & OPT_AUTOCOMMIT) ? TRUE : FALSE;
-        MEcopy((PTR)&vParam, sizeof(SQLUINTEGER), (PTR)pvParamParameter);
         break;
 
     case SQL_ATTR_AUTO_IPD:   /* automatic population of IPD after SQLPrepare */
         vParam = (SQLUINTEGER) SQL_FALSE;
-        MEcopy((PTR)&vParam, sizeof(SQLUINTEGER), (PTR)pvParamParameter);
         break;
 
     case SQL_ATTR_CONNECTION_DEAD:
@@ -242,12 +270,10 @@ RETCODE SQL_API SQLGetConnectAttr_InternalCall(
                        SQL_CD_FALSE; /* Connection is open/available */
         if (pdbc->fOptions & OPT_LONGDISPLAY) /* if EDS Mapper, autocommit DM confusion */
            vParam = (SQLUINTEGER) SQL_CD_TRUE;  /* makes connection closed/dead to the pool*/
-        MEcopy((PTR)&vParam, sizeof(SQLUINTEGER), (PTR)pvParamParameter);
         break;
 
     case SQL_ATTR_CONNECTION_TIMEOUT:
         vParam = (SQLUINTEGER) pdbc->cConnectionTimeout;
-        MEcopy((PTR)&vParam, sizeof(SQLUINTEGER), (PTR)pvParamParameter);
         break;
 
     case SQL_ATTR_CURRENT_CATALOG:
@@ -255,17 +281,14 @@ RETCODE SQL_API SQLGetConnectAttr_InternalCall(
                                BufferLength, pStringLength);
         UnlockDbc (pdbc);
         return rc;
-
-    case SQL_ATTR_LOGIN_TIMEOUT:
+   case SQL_ATTR_LOGIN_TIMEOUT:
         vParam = (SQLUINTEGER) pdbc->cLoginTimeout;
-        MEcopy((PTR)&vParam, sizeof(SQLUINTEGER), (PTR)pvParamParameter);
         break;
 
     case SQL_ATTR_METADATA_ID:
         vParam = (SQLUINTEGER) pdbc->fMetadataID; /* How to treat catalog string argument*/
                    /*    SQL_FALSE            not treated as identifier */
                    /*    SQL_TRUE             treated as identifier */
-        MEcopy((PTR)&vParam, sizeof(SQLUINTEGER), (PTR)pvParamParameter);
         break;
 
     case SQL_ATTR_ODBC_CURSORS:
@@ -275,29 +298,19 @@ RETCODE SQL_API SQLGetConnectAttr_InternalCall(
     case SQL_ATTR_PACKET_SIZE:
 
         vParam = (SQLUINTEGER) pdbc->cPacketSize;
-        MEcopy((PTR)&vParam, sizeof(SQLUINTEGER), (PTR)pvParamParameter);
         break;
 
     case SQL_ATTR_QUIET_MODE:
         Handle = pdbc->hQuietMode;
-        MEcopy((PTR)&Handle, sizeof(SQLHANDLE), (PTR)pvParamParameter);
         break;
 
-    case SQL_ATTR_TRANSLATE_LIB:         /* later, maybe... */
-/*
-**
-**      strcpy ((UCHAR     *)pvParam, pdbc->szTransDLL);
-**      break;
-*/
-    case SQL_ATTR_TRANSLATE_OPTION:      /* later, maybe... */
-/*      *pvParam = pdbc->fTransOpt;
-**      break;
-*/
-        return ErrUnlockDbc (SQL_HYC00, pdbc); /* optional feature not implemented */
+    case SQL_ATTR_TRANSLATE_LIB:        
+    case SQL_ATTR_TRANSLATE_OPTION:    
+        /* optional feature not implemented */
+        return ErrUnlockDbc (SQL_HYC00, pdbc); 
 
     case SQL_ATTR_TXN_ISOLATION:
         vParam = (SQLUINTEGER) pdbc->fIsolation;
-        MEcopy((PTR)&vParam, sizeof(SQLUINTEGER), (PTR)pvParamParameter);
         break;
 
     default:
@@ -307,6 +320,11 @@ RETCODE SQL_API SQLGetConnectAttr_InternalCall(
 
     if (pStringLength)  /* if want length of returned string */
        *pStringLength = (SQLINTEGER)StringLength;
+
+    if (fOption == SQL_ATTR_QUIET_MODE)
+        MEcopy((PTR)&Handle, sizeof(SQLHANDLE), (PTR)pvParamParameter);
+    else
+        MEcopy((PTR)&vParam, sizeof(SQLUINTEGER), (PTR)pvParamParameter);
 
     UnlockDbc (pdbc);
 
@@ -459,7 +477,7 @@ SQLRETURN  SQL_API SQLGetEnvAttr (
 SQLRETURN SQL_API SQLSetScrollOptions(
     SQLHSTMT           hstmt,
     SQLUSMALLINT       fConcurrency,
-    SQLINTEGER         crowKeyset,
+    SQLLEN             crowKeyset,
     SQLUSMALLINT       crowRowset)
 {
     LPSTMT       pstmt  = (LPSTMT)hstmt;
@@ -699,7 +717,7 @@ SQLRETURN  SQL_API SQLGetStmtAttr_InternalCall (
         *pvParamulen = pstmt->cMaxLength;
         break;
 
-/*  case SQL_ATTR_MAX_ROWS: */
+/*    case SQL_ATTR_MAX_ROWS same as SQL_MAX_ROWS */ 
     case SQL_MAX_ROWS:
 
             /* Maximum number of rows to return to an application
@@ -932,45 +950,53 @@ RETCODE SQL_API SQLSetConnectAttr_InternalCall(
 
     ErrResetDbc (pdbc);        /* clear any errors on DBC */
 
-
+    /*
+    ** Statement-level attributes are deprecated for ODBC 3.x and
+    ** later.
+    */
+    if (isL2StatementAttr(fOption) && (pdbc->penvOwner->ODBCVersion 
+        >= SQL_OV_ODBC3))
+         return ErrUnlockDbc(SQL_HY092, pdbc);
+    
     switch (fOption)    /* set connection attributes */
     {
     case SQL_ATTR_ACCESS_MODE:
         if ((vParamuint == SQL_MODE_READ_ONLY  &&  (pdbc->fOptions & OPT_READONLY)) ||
             (vParamuint == SQL_MODE_READ_WRITE && !(pdbc->fOptions & OPT_READONLY)))
-           {
+        {
             pdbc->fOptionsSet |= OPT_READONLY;  /* Remember option was set by
                                                    user and not defaulted */
             break;  /* just return OK because there's no change of state */
-           }
+        }
         
         rc1 = SQLTransact_InternalCall (NULL, pdbc, SQL_COMMIT);
 
         switch (vParamuint)
+        {
+        case SQL_MODE_READ_ONLY:
+
+            if(!(pdbc->fOptions & OPT_ALLOWUPDATE))
             {
-            case SQL_MODE_READ_ONLY:
-
-				if(!(pdbc->fOptions & OPT_ALLOWUPDATE))
-				{
-					pdbc->fOptions |= OPT_READONLY;
-					break;
-				}
-
-            case SQL_MODE_READ_WRITE:
-
-                if (isDriverReadOnly(pdbc))  /* if Read Only driver, ignore it */
-                   { rc = ErrState (SQL_01000, pdbc, F_OD0151_IDS_ERR_NOT_READ_ONLY);
-                     UnlockDbc (pdbc);
-                     return rc;
-                   }
-
-                pdbc->fOptions &= ~OPT_READONLY;
+                pdbc->fOptions |= OPT_READONLY;
                 break;
+            }
 
-            default:
+        case SQL_MODE_READ_WRITE:
 
-                return ErrUnlockDbc (SQL_HY024, pdbc);
-            }  /* end switch (vParam) */
+            if (isDriverReadOnly(pdbc))  /* if Read Only driver, ignore it */
+            { 
+                rc = ErrState (SQL_01000, pdbc, F_OD0151_IDS_ERR_NOT_READ_ONLY);
+                UnlockDbc (pdbc);
+                return rc;
+            }
+
+            pdbc->fOptions &= ~OPT_READONLY;
+            break;
+
+        default:
+
+            return ErrUnlockDbc (SQL_HY024, pdbc);
+        }  /* end switch (vParam) */
 
         pdbc->sessMain.fStatus &= ~SESS_SESSION_SET;    /* Enable SetTransaction */
         pdbc->fOptionsSet |= OPT_READONLY;              /* Remember for next SQLConnect */
@@ -990,70 +1016,75 @@ RETCODE SQL_API SQLSetConnectAttr_InternalCall(
         /* if already in the right mode just skip the change, and don't close */
         if ((vParamuint==SQL_AUTOCOMMIT_ON  &&  !(pdbc->fOptions & OPT_AUTOCOMMIT)) ||
             (vParamuint==SQL_AUTOCOMMIT_OFF &&   (pdbc->fOptions & OPT_AUTOCOMMIT)))
-          if (vParamuint==SQL_AUTOCOMMIT_ON)
-          {
-            /*  switching from manual-commit mode to auto-commit mode */
-            /*
-            **  Turning autocommit on commits the transaction if started.
-            **  Note that we would return SQL_SUCCESS_WITH_INFO and a
-            **  message when it actually does a commit, if only the ODBC
-            **  Driver Manager worked correctly.  But the stupid DM seems to
-            **  think that implies an error, and then does not reissue the
-            **  connect option if the DBC is reused.
-            */
-            /*
-            if (pdbc->sessMain.fStatus & SESS_STARTED ||
-                pdbc->sessCat.fStatus  & SESS_STARTED)
-                rc = SQLTransact (NULL, pdbc, SQL_COMMIT);
-            */
-            /* 
-            As per Programmer's Reference, changing from manual-commit
-            mode to auto-commit mode commits any open transactions on
-            the connection.
-            */
-            if ( (psess->tranHandle) &&
-                 (!(psess->fStatus & SESS_AUTOCOMMIT_ON_ISSUED)) )
-                 rc = SQLTransact_InternalCall (NULL, pdbc, SQL_COMMIT);
-            pdbc->fOptions |= OPT_AUTOCOMMIT;
-            /* if SetTransaction had a chance to set transaction isolation 
-               then go ahead and set autocommit=on */
-            if (pdbc->psqb->pSession->fStatus & (SESS_STARTED | SESS_SESSION_SET))
+        {
+            if (vParamuint==SQL_AUTOCOMMIT_ON)
             {
-                /*  before changing autocommit mode we need to close
-                    a statement */
-                for (pstmt = pdbc->pstmtFirst; pstmt; pstmt = pstmt->pstmtNext)
-                    if (pstmt->stmtHandle)  /* close it */
-                       {pstmt->fStatus &= ~(STMT_OPEN | STMT_CLOSED |
-                                            STMT_EOF | STMT_CONST |
-                                            STMT_CATALOG | STMT_API_CURSOR_OPENED);
-                        odbc_close(pstmt);
-                       }
-                rc = odbc_AutoCommit(pdbc->psqb,TRUE); 
-            }
-          } /*  end if switching from manual-commit mode to auto-commit mode */
-          else
-          { /*  switching from auto-commit mode to manual-commit mode */
-            pdbc->fOptions &= ~OPT_AUTOCOMMIT;
-             /* if API autocommit on, then we need to change it and close resultsets
+                /*  
+                **  Switching from manual-commit mode to auto-commit mode.
+                **
+                **  Turning autocommit on commits the transaction if started.
+                **  Note that we would return SQL_SUCCESS_WITH_INFO and a
+                **  message when it actually does a commit, if only the ODBC
+                **  Driver Manager worked correctly.  But the stupid DM seems to
+                **  think that implies an error, and then does not reissue the
+                **  connect option if the DBC is reused.
+                **
+                **  As per Programmer's Reference, changing from manual-commit
+                **  mode to auto-commit mode commits any open transactions on
+                **  the connection.
+                */
+                if ( (psess->tranHandle) &&
+                    (!(psess->fStatus & SESS_AUTOCOMMIT_ON_ISSUED)) )
+                    rc = SQLTransact_InternalCall (NULL, pdbc, SQL_COMMIT);
+                
+                pdbc->fOptions |= OPT_AUTOCOMMIT;
+                /* if SetTransaction had a chance to set transaction isolation 
+                   then go ahead and set autocommit=on */
+                if (pdbc->psqb->pSession->fStatus & (SESS_STARTED | SESS_SESSION_SET))
+                {
+                    /*  before changing autocommit mode we need to close
+                        a statement */
+                    for (pstmt = pdbc->pstmtFirst; pstmt; pstmt = pstmt->pstmtNext)
+                    {
+                        if (pstmt->stmtHandle)  /* close it */
+                        {
+                            pstmt->fStatus &= ~(STMT_OPEN | STMT_CLOSED |
+                                                STMT_EOF | STMT_CONST |
+                                                STMT_CATALOG | STMT_API_CURSOR_OPENED);
+                            odbc_close(pstmt);
+                        }
+                    }
+                    rc = odbc_AutoCommit(pdbc->psqb,TRUE); 
+                }
+            } /*  end if switching from manual-commit mode to auto-commit mode */
+            else
+            { /*  switching from auto-commit mode to manual-commit mode */
+                pdbc->fOptions &= ~OPT_AUTOCOMMIT;
+                /* if API autocommit on, then we need to change it and close resultsets
                 else API autocommit is off (due to simulated autocommit (due to 
                 open cursors)) then leave MS Access resultsets open */
-            if (psess->fStatus & SESS_AUTOCOMMIT_ON_ISSUED)
-            {
-               /*  before changing autocommit mode we need to close
+                if (psess->fStatus & SESS_AUTOCOMMIT_ON_ISSUED)
+                {
+                /*  before changing autocommit mode we need to close
                    open resultsets; otherwise, API returns SQLSTATE 25000
                    and msg "The requested operation cannot be performed
                    with active queries." */
-               for (pstmt = pdbc->pstmtFirst; pstmt; pstmt = pstmt->pstmtNext)
-                   if (pstmt->stmtHandle)  /* close it */
-                      {pstmt->fStatus &= ~(STMT_OPEN | STMT_CLOSED |
+                    for (pstmt = pdbc->pstmtFirst; pstmt; pstmt = pstmt->pstmtNext)
+                    {
+                        if (pstmt->stmtHandle)  /* close it */
+                        {
+                            pstmt->fStatus &= ~(STMT_OPEN | STMT_CLOSED |
                                            STMT_EOF | STMT_CONST |
                                            STMT_CATALOG | STMT_API_CURSOR_OPENED);
-                       odbc_close(pstmt);
-                      }
-               rc = odbc_AutoCommit(pdbc->psqb,FALSE);
-            }  /* end if API autocommit on */
-          } /*  end else switching from auto-commit mode to manual-commit mode */
-
+                            odbc_close(pstmt);
+                        }
+                    }
+                    rc = odbc_AutoCommit(pdbc->psqb,FALSE);
+                }  /* end if API autocommit on */
+            } /*  end else switching from auto-commit mode to manual-commit mode */
+        } /* end if ((vParamuint==SQL_AUTOCOMMIT_ON  &&  
+          ** !(pdbc->fOptions & OPT_AUTOCOMMIT)) ...
+          */
         pdbc->fOptionsSet |= OPT_AUTOCOMMIT;  /* indicate user set the option */
         break;
 
@@ -1101,23 +1132,6 @@ RETCODE SQL_API SQLSetConnectAttr_InternalCall(
         pdbc->hQuietMode = (SQLHANDLE)pValue;
         break;
 
-/*                                         later, maybe
-    case SQL_ATTR_TRANSLATE_LIB:
-        strncpy (
-            pdbc->szTransDLL,
-            (UCHAR     *)vParam,
-            sizeof (pdbc->szTransDLL) - 1);
-
-        rc = LoadTransDLL (pdbc);
-        if (rc == SQL_ERROR)
-            return (rc); (unlock DBC here...)
-        break;
-
-    case SQL_ATTR_TRANSLATE_OPTION:
-        pdbc->fTransOpt = vParam;
-        break;
-*/
-
     case SQL_TXN_ISOLATION:
         /*
         **  This is invalid if a transaction is started.
@@ -1147,8 +1161,9 @@ RETCODE SQL_API SQLSetConnectAttr_InternalCall(
                         **  Return SQL_SUCCESS_WITH_INFO if this is the case. 
                         */
                         dw |= SQL_TXN_SERIALIZABLE;
-                        if (vParamuint == SQL_TXN_REPEATABLE_READ || 
-                            vParamuint == SQL_TXN_READ_COMMITTED)
+                    
+                    if (vParamuint == SQL_TXN_REPEATABLE_READ || 
+                        vParamuint == SQL_TXN_READ_COMMITTED)
                         rc = ErrState (SQL_01S02, pdbc, 
                             F_OD0057_IDS_ERR_OPTION_CHANGE); 
                 }
@@ -1175,7 +1190,6 @@ RETCODE SQL_API SQLSetConnectAttr_InternalCall(
         /*
         ** begin STATEMENT options set at connection level
         */
-
     case SQL_MAX_LENGTH:
         /*
         **  Don't allow setting truncation longer than we can ever get:
@@ -1202,23 +1216,23 @@ RETCODE SQL_API SQLSetConnectAttr_InternalCall(
         pdbc->fOptionsSet |= OPT_NOSCAN;
         break;
 
-    case SQL_QUERY_TIMEOUT:             /* kludge for ACCESS, per DL... */
-        pdbc->cQueryTimeout = vParamuint;   /* ignored... */
+    case SQL_QUERY_TIMEOUT:             
+        pdbc->cQueryTimeout = vParamuint;   
         break;
 
-    case SQL_ROWSET_SIZE:               /* kludge for VInterdev, per thoda04... */
-        pstmt->pARD->ArraySize   = (UWORD) vParamuint;   /* ignored... */
+    case SQL_ROWSET_SIZE:     
+        pdbc->crowFetchMax = (UWORD) vParamuint;  
+        pdbc->crowMax = 0;
         break;
 
-    case SQL_RETRIEVE_DATA:             /* kludge for ADODB.Recordset */
+    case SQL_RETRIEVE_DATA:            
         pdbc->cRetrieveData = (UWORD)vParamuint;
         break;
-
-    case SQL_BIND_TYPE:                 /* SQLExtendedFetch option  */
-        pstmt->pARD->BindType = vParamuint;
+        
+    case SQL_BIND_TYPE:     /* SQLExtendedFetch option ignored  */
         break;
 
-    case SQL_KEYSET_SIZE:               /* SQLExtendedFetch option ignored */
+    case SQL_KEYSET_SIZE:   /* SQLExtendedFetch option ignored */
         break;
 
     case SQL_CONCURRENCY:
@@ -1226,16 +1240,15 @@ RETCODE SQL_API SQLSetConnectAttr_InternalCall(
             vParamuint == SQL_CONCUR_LOCK       ||
             vParamuint == SQL_CONCUR_VALUES)
             pdbc->fConcurrency = (UWORD)vParamuint;
-        else
-        if (vParamuint == SQL_CONCUR_ROWVER)
-           {
+        else if (vParamuint == SQL_CONCUR_ROWVER)
+        {
             pdbc->fConcurrency = SQL_CONCUR_VALUES;
             return ErrUnlockDbc (SQL_01S02, pdbc);
-           }
+        }
         break;
 
     case SQL_CURSOR_TYPE:
-        if (pstmt->fAPILevel >= IIAPI_LEVEL_5)
+        if (pdbc->fAPILevel >= IIAPI_LEVEL_5)
         {
             if (vParamuint == SQL_CURSOR_FORWARD_ONLY || vParamuint ==
                 SQL_CURSOR_STATIC || vParamuint== SQL_CURSOR_KEYSET_DRIVEN)
@@ -1246,60 +1259,43 @@ RETCODE SQL_API SQLSetConnectAttr_InternalCall(
         return ErrUnlockDbc (SQL_01S02, pdbc);
         break;
 
-                  /* unsupported STMT options */
+    /* unsupported STMT options */
     case SQL_SIMULATE_CURSOR:
-    case SQL_TRANSLATE_DLL:         /* later, maybe... */
-    case SQL_TRANSLATE_OPTION:      /* later, maybe... */
+    case SQL_TRANSLATE_DLL:     
+    case SQL_TRANSLATE_OPTION:   
     case SQL_USE_BOOKMARKS:
 
-        return ErrUnlockDbc(SQL_HYC00, pdbc); /* optional feature not implemented */
+        return ErrUnlockDbc(SQL_HYC00, pdbc); 
+        /* optional feature not implemented */
 
     default:
 
         return ErrUnlockDbc(SQL_HY092, pdbc);
     }    /* end switch (fOption) for connection attributes */
 
-
     /*
     **  Statement options get set in all allocated STMT's.
     */
     switch (fOption)    /* statement options */
     {
-/*  case SQL_CURRENT_QUALIFIER: */      /* ignore */
     case SQL_MAX_LENGTH:                /* Stmt options */
     case SQL_MAX_ROWS:
+    case SQL_ROWSET_SIZE:
     case SQL_NOSCAN:
-    case SQL_QUERY_TIMEOUT:             /* kludge, we don't really do it */
-/*  case SQL_TRANSLATE_DLL:  */         /* maybe someday */
+    case SQL_QUERY_TIMEOUT:         
+    case SQL_CURSOR_TYPE:
+    case SQL_CONCURRENCY:
 
         /* loop through all statements */
         for (pstmt = pdbc->pstmtFirst; pstmt; pstmt = pstmt->pstmtNext)
         {
-            switch (fOption)
+            rc = SQLSetStmtAttr_InternalCall((SQLHSTMT)pstmt, fOption, 
+                (SQLPOINTER)(SCALARP)vParamulen, SQL_NTS);
+            if (rc == SQL_ERROR)
             {
-        /*  case SQL_CURRENT_QUALIFIER:
-        **
-        **        if (pstmt->fStatus & STMT_OPEN)
-        **            return ErrUnlockDbc (SQL_24000, pdbc);
-        **        break;
-        */
-
-        /*  case SQL_TRANSLATE_DLL:
-        **
-        **      pstmt->fOptions |= OPT_TRANSLATE;
-        **      break;
-        */
-
-            default:
-
-                rc = SQLSetStmtAttr_InternalCall((SQLHSTMT)pstmt, fOption, 
-                       (SQLPOINTER)(SCALARP)vParamulen, SQL_NTS);
-                if (rc == SQL_ERROR)
-                {
-                    UnlockDbc (pdbc);
-                    return rc;
-                }
-            }  /* end switch (fOption) */
+                UnlockDbc (pdbc);
+                return rc;
+            } 
         }  /* end for loop through all statements */
         break;
     }  /* end switch (fOption) for statement options */
@@ -1326,7 +1322,7 @@ RETCODE SQL_API SQLSetConnectAttr_InternalCall(
 RETCODE SQL_API SQLSetConnectOption(
     SQLHDBC    hdbc,
     UWORD      fOption,
-    SQLUINTEGER vParam)
+    SQLULEN vParam)
 {
     SQLINTEGER StringLength = SQL_NTS;
 
@@ -1765,10 +1761,13 @@ RETCODE SQL_API SQLSetStmtAttr_InternalCall(
         break;
 
     case SQL_ATTR_ROW_ARRAY_SIZE:
-            /* number of rows returned by SQLFetch or SQLFetchScroll.
-               also number of rows in a bookmark array in 
-               bulk bookmark SQLBulkOperations.  Default rowset size is 1 */
+        /* 
+        ** Number of rows returned by SQLFetch or SQLFetchScroll.
+        ** Default rowset size is 1. 
+        */
         pstmt->pARD->ArraySize = vParamulen;
+        pstmt->crowFetchMax = (UWORD)vParamulen;
+        pstmt->crowMax = 0;
         break;
 
     case SQL_ATTR_ROW_BIND_OFFSET_PTR:
@@ -1818,8 +1817,10 @@ RETCODE SQL_API SQLSetStmtAttr_InternalCall(
 
     case SQL_ROWSET_SIZE:
 
-            /* number of rows in 2.x SQLExtendedFetch rowset (default=1) */
-        pstmt->pARD->ArraySize   = vParamulen;  /* ignored... */
+        /* number of rows in 2.x SQLExtendedFetch rowset (default=1) */
+        pstmt->pARD->ArraySize = vParamulen;
+        pstmt->crowFetchMax = (UWORD)vParamulen;
+        pstmt->crowMax = 0;
         break;
 
     default:
@@ -1846,7 +1847,7 @@ RETCODE SQL_API SQLSetStmtAttr_InternalCall(
 RETCODE SQL_API SQLSetStmtOption(
     SQLHSTMT hstmt,
     SQLUSMALLINT fOption,
-    SQLUINTEGER  vParam)
+    SQLULEN  vParam)
 {
     SQLINTEGER StringLength = SQL_NTS;
 
@@ -2004,3 +2005,47 @@ RETCODE LoadTransDLL(
     return SQL_SUCCESS;
 }
 #endif
+
+/*
+** Name: isL2StatementAttr
+**
+** Description:
+**      Determines whether attribute is a Level 2 statement-level attribute.
+**
+** Input:
+**      attr            Attribute.
+**
+** Output:
+**      None.
+**
+** Returns:
+**      TRUE if Level 2 statement-level attribute, otherwise FALSE.
+**
+** History:
+**      29-Jul-2010 (Ralph Loen) Bug 124131
+**         Created.
+**
+*/
+BOOL isL2StatementAttr(SQLINTEGER attr)
+{
+    switch(attr)
+    {
+    case SQL_QUERY_TIMEOUT:
+    case SQL_MAX_ROWS:
+    case SQL_NOSCAN:
+    case SQL_MAX_LENGTH:
+    case SQL_ASYNC_ENABLE:
+    case SQL_BIND_TYPE:
+    case SQL_CURSOR_TYPE:
+    case SQL_CONCURRENCY:
+    case SQL_KEYSET_SIZE:
+    case SQL_ROWSET_SIZE:
+    case SQL_SIMULATE_CURSOR:
+    case SQL_RETRIEVE_DATA:
+    case SQL_USE_BOOKMARKS:
+    case SQL_GET_BOOKMARK:
+    case SQL_ROW_NUMBER:
+        return TRUE;
+    }
+    return FALSE;
+}

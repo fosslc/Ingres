@@ -159,6 +159,8 @@
 **	    SIR 121619 MVCC: Replace dm0p_mutex/unmutex with dmveMutex/Unmutex
 **	    macros.
 **	    Replace DMPP_PAGE* with DMP_PINFO* as needed.
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 **/
 
 /*
@@ -275,6 +277,7 @@ DMVE_CB		*dmve_cb)
     DMP_PINFO		*leafpinfo = NULL;
 
     CLRDBERR(&dmve->dmve_error);
+    DMVE_CLEAR_TABINFO_MACRO(dmve);
 
     /*
     ** Store previous page number into a local variable.  This value may
@@ -517,8 +520,8 @@ DMVE_CB		*dmve_cb)
 		    uleFormat(NULL, E_DM9665_PAGE_OUT_OF_DATE, (CL_ERR_DESC *)NULL,
 			ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
 			&loc_error, 8,
-			sizeof(*tbio->tbio_relid), tbio->tbio_relid,
-			sizeof(*tbio->tbio_relowner), tbio->tbio_relowner,
+			sizeof(DB_TAB_NAME), tbio->tbio_relid->db_tab_name,
+			sizeof(DB_OWN_NAME), tbio->tbio_relowner->db_own_name,
 			0, DM1B_VPT_GET_PAGE_PAGE_MACRO(page_type, ovfl),
 			0, DM1B_VPT_GET_PAGE_STAT_MACRO(page_type, ovfl),
 			0, DM1B_VPT_GET_LOG_ADDR_HIGH_MACRO(page_type, ovfl),
@@ -536,8 +539,8 @@ DMVE_CB		*dmve_cb)
 		    uleFormat(NULL, E_DM9665_PAGE_OUT_OF_DATE, (CL_ERR_DESC *)NULL,
 			ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
 			&loc_error, 8,
-			sizeof(*tbio->tbio_relid), tbio->tbio_relid,
-			sizeof(*tbio->tbio_relowner), tbio->tbio_relowner,
+			sizeof(DB_TAB_NAME), tbio->tbio_relid->db_tab_name,
+			sizeof(DB_OWN_NAME), tbio->tbio_relowner->db_own_name,
 			0, DM1B_VPT_GET_PAGE_PAGE_MACRO(page_type, leaf),
 			0, DM1B_VPT_GET_PAGE_STAT_MACRO(page_type, leaf),
 			0, DM1B_VPT_GET_LOG_ADDR_HIGH_MACRO(page_type, leaf),
@@ -556,8 +559,8 @@ DMVE_CB		*dmve_cb)
 		uleFormat(NULL, E_DM9665_PAGE_OUT_OF_DATE, (CL_ERR_DESC *)NULL,
 		    ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
 		    &loc_error, 8,
-		    sizeof(*tbio->tbio_relid), tbio->tbio_relid,
-		    sizeof(*tbio->tbio_relowner), tbio->tbio_relowner,
+		    sizeof(DB_TAB_NAME), tbio->tbio_relid->db_tab_name,
+		    sizeof(DB_OWN_NAME), tbio->tbio_relowner->db_own_name,
 		    0, DM1B_VPT_GET_PAGE_PAGE_MACRO(page_type, ovfl),
 		    0, DM1B_VPT_GET_PAGE_STAT_MACRO(page_type, ovfl),
 		    0, DM1B_VPT_GET_LOG_ADDR_HIGH_MACRO(page_type, ovfl),
@@ -573,8 +576,8 @@ DMVE_CB		*dmve_cb)
 		uleFormat(NULL, E_DM9665_PAGE_OUT_OF_DATE, (CL_ERR_DESC *)NULL,
 		    ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
 		    &loc_error, 8,
-		    sizeof(*tbio->tbio_relid), tbio->tbio_relid,
-		    sizeof(*tbio->tbio_relowner), tbio->tbio_relowner,
+		    sizeof(DB_TAB_NAME), tbio->tbio_relid->db_tab_name,
+		    sizeof(DB_OWN_NAME), tbio->tbio_relowner->db_own_name,
 		    0, DM1B_VPT_GET_PAGE_PAGE_MACRO(page_type, leaf),
 		    0, DM1B_VPT_GET_PAGE_STAT_MACRO(page_type, leaf),
 		    0, DM1B_VPT_GET_LOG_ADDR_HIGH_MACRO(page_type, leaf),
@@ -1011,8 +1014,8 @@ DMP_PINFO	    *leafpinfo)
 	    dm0l_flags = (log_rec->bto_header.flags | DM0L_CLR);
 
 	    status = dm0l_btovfl(dmve->dmve_log_id, dm0l_flags, 
-		&log_rec->bto_tbl_id, &log_rec->bto_tblname, 
-		&log_rec->bto_tblowner,
+		&log_rec->bto_tbl_id, tabio->tbio_relid, 
+		tabio->tbio_relowner,
 		log_rec->bto_pg_type, log_rec->bto_page_size,
 		log_rec->bto_cmp_type, 
 		log_rec->bto_loc_cnt, log_rec->bto_klen,

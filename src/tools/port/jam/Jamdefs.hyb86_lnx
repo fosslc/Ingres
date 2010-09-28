@@ -95,6 +95,14 @@
 #	10-may-2010 (stephenb)
 #	    -march=i486 becomes -march=i586. support for 64-bit atomic built-ins
 #	    only came in pentium architecture
+#	3-Jul-2010 (warmerdam)
+#	    Add PROJ_LOC and PROJ64_LOC for geospatial library locations
+#	31-Aug-2010 (troal01)
+#	    Added the PROJ/GEOS64_LOC to LDLIBMACH32
+#	31-Aug-2010 (thich01)
+#	    Add WITH_GEO for platforms where spatial is not supported.
+#	31-Aug-2010 (troal01)
+#	    Renamed PROJ64_LOC and GEOS64_LOC to PROJHB_LOC and GEOSHB_LOC
 #
 
 # Tell Jamdefs that this include worked:
@@ -117,8 +125,8 @@ CD      = "cd" ;
 CC      default = "cc" ;
 CCDEBUG = "-g" ;
 CPP     default = "/lib/cpp" ;
-CCMACH32 = -DBUILD_ARCH32 -m32 -march=i586 -fsigned-char -fno-strength-reduce -D_REENTRANT -DLINUX -D_GNU_SOURCE -DXLIB_ILLEGAL_ACCESS -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE ;
-CCMACH64 = -DBUILD_ARCH64 -m64 -fsigned-char -fno-strength-reduce -fno-omit-frame-pointer -Wno-write-strings -D_REENTRANT -DLINUX -D_GNU_SOURCE -DXLIB_ILLEGAL_ACCESS ;
+CCMACH32 = -DBUILD_ARCH32 -m32 -march=i586 -fsigned-char -fno-strength-reduce -D_REENTRANT -DLINUX -D_GNU_SOURCE -DXLIB_ILLEGAL_ACCESS -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE $(WITH_GEO) ;
+CCMACH64 = -DBUILD_ARCH64 -m64 -fsigned-char -fno-strength-reduce -fno-omit-frame-pointer -Wno-write-strings -D_REENTRANT -DLINUX -D_GNU_SOURCE -DXLIB_ILLEGAL_ACCESS $(WITH_GEO) ;
 
 # The -rdynamic here is probably not needed, but doesn't hurt.
 CCLDMACH32 = -m32 -rdynamic ;	# appropriate LDORIGIN gets tacked on
@@ -156,8 +164,8 @@ CGISFX = cgi ;
 LDLIBPATH64 = /usr/local/ssl/lib /lib64 /usr/lib64 /usr/local/lib64 ;
 LDLIBPATH32 = /lib /usr/lib /usr/local/lib ;
 LIBMACH = ;
-LDLIBMACH64 = -L $(GEOS_LOC) -lpthread -lrt -lm -lc -lcrypt -ldl -lgcc_s -lgeos_c ;
-LDLIBMACH32 = -L $(GEOS_LOC) -L $(GEOS64_LOC) -lpthread -lrt -lm -lc -lcrypt -ldl -shared-libgcc -lgeos_c ;
+LDLIBMACH64 = -L $(GEOS_LOC) -L $(PROJ_LOC) -lpthread -lrt -lm -lc -lcrypt -ldl -lgcc_s -lgeos_c -lproj ;
+LDLIBMACH32 = -L $(GEOS_LOC) -L $(PROJ_LOC) -L $(GEOSHB_LOC) -L $(PROJHB_LOC) -lpthread -lrt -lm -lc -lcrypt -ldl -shared-libgcc -lgeos_c -lproj ;
 LD_ICE_FLAGS = ;
 ICE_EXT               = so ;
 CGI_EXT               = cgi ;

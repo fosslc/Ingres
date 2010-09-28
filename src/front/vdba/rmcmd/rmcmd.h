@@ -15,12 +15,17 @@
 **		that "globalref"-handling pragma is unnecessary.
 **  22-Oct-2003 (schph01)
 **      (SIR #111153) now have rmcmd run under any user id
+**  25-Aug-2010 (drivi01) Bug #124306
+**      Remove hard coded length for RMCMDLINELEN.
+**      Rmcmd buffer should be able to handle long ids.
 ********************************************************************/
 
 #ifndef __RMCMD_INCLUDED__
 #define __RMCMD_INCLUDED__
 
 #include "dba.h"
+#include <iicommon.h>
+#include <compat.h>
 #define RES_NOTINGRES 10000
 
 #define RES_HDL_ERROR (-1)
@@ -36,7 +41,7 @@
 
 #define MAX_USER_NAME_LEN (256 + 1)
 
-#define RMCMDLINELEN (256 + 1)
+#define RMCMDLINELEN (DB_MAXNAME*4 + 3)
     
 typedef struct rmcmdparams {
    int isession;

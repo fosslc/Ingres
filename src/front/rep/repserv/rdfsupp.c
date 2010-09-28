@@ -509,6 +509,11 @@ d.column_sequence != 0 ORDER BY 1"),
 			c->coldesc.ds_dataType = DB_MPOLY_TYPE;
 			t->has_blob = TRUE;
                 }
+		else if (STequal(datatype, ERx("GEOMC")))
+		{
+			c->coldesc.ds_dataType = DB_GEOMC_TYPE;
+			t->has_blob = TRUE;
+                }
 		else if (STequal(datatype, ERx("LONG VARCHAR")))
 		{
 			c->coldesc.ds_dataType = DB_LVCH_TYPE;

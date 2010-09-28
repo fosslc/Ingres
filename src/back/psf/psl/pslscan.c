@@ -202,6 +202,11 @@
 **	18-Mar-2010 (kiria01) b123438
 **	    Avoid editing the sorted token list directly. See
 **	    pslscanprep.awk.
+**      21-Jun-2010 (horda03) b123926
+**          Because adu_unorm() and adu_utf8_unorm() are also called via 
+**          adu_lo_filter() change parameter order.
+**	21-Jul-2010 (kschendel) SIR 124104
+**	    Add set [no]create_compression.
 */
 
 /*
@@ -458,6 +463,7 @@ static const SECONDARY      Setwords[] = {
 			{ "aggregate",    SETAGGR,     PSL_GOVAL  },
 			{ "autocommit",	  SETAUTOCOMMIT, PSL_GOVAL},
 		        { "cpufactor",    SETCPUFACT,  PSL_GOVAL  },
+		        { "create_compression",  SETCREATECOMPRESSION,  PSL_ONSET  },
 		        { "date_format",  SETDATEFMT,  PSL_GOVAL  },
 			{ "decimal",      SETDECIMAL,  PSL_GOVAL  },
 			{ "flatten",	  SETFLATTEN,  PSL_ONSET  },
@@ -477,6 +483,7 @@ static const SECONDARY      Setwords[] = {
 			{ "maxrow",	  SETMXROW,    PSL_ONSET  },
 			{ "money_format", SETMNYFMT,   PSL_GOVAL  },
 			{ "money_prec",   SETMNYPREC,  PSL_GOVAL  },
+		        { "nocreate_compression",  SETCREATECOMPRESSION,  PSL_OFFSET  },
 			{ "noflatten",    SETFLATTEN,  PSL_OFFSET },
 			{ "nohash",       SETHASH,     PSL_OFFSET },
 			{ "noio_trace",   SETIOTRACE,  PSL_OFFSET },
@@ -2384,9 +2391,9 @@ dv1.db_length, rdv.db_length);
 
     /* Do the unorm */
     if (rdv.db_datatype == DB_NVCHR_TYPE)
-	status = adu_unorm(adf_cb, &rdv, &dv1, 0);
+	status = adu_unorm(adf_cb, &dv1, &rdv);
     else
-	status = adu_utf8_unorm(adf_cb, &rdv, &dv1);
+	status = adu_utf8_unorm(adf_cb, &dv1, &rdv);
     if (status)
     {
 	status = psl_unorm_error(pss_cb, psq_cb, &rdv, &dv1, status);

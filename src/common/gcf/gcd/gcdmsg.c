@@ -92,6 +92,9 @@
 **	    segments until ready to process.  Extraction is done by
 **	    referencing the message segment rather than copying to a
 **	    new buffer.
+**	02-Sep-10 (thich01)
+**	    Change IIAPI_VERSION_7 to VERSION_8 in MSG_PROTO_7 since DAM 
+**	    protocol level is not being bumped.
 */	
 
 
@@ -1816,7 +1819,7 @@ gcd_msg_version ( u_i2 msg_proto )
         case MSG_PROTO_6:
             return IIAPI_VERSION_6;
 	case MSG_PROTO_7:
-	    return IIAPI_VERSION_7;
+	    return IIAPI_VERSION_8;
         default:
             break;
      }

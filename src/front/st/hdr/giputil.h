@@ -45,6 +45,10 @@
 **	27-May-2010 (hanje04)
 **	    SIR 123791
 **	    Add prototype for GIPnextPow2(), GIPisPow2 macro.
+**	14-Jul-2010 (hanje04)
+**	    BUG 124081
+**	    Add popup_message_box() and replace popup_error_box() with
+**	    wrapper macro. Add same for popup_warning_box()
 */
 
 /* MACROS */
@@ -102,7 +106,12 @@ II_RFAPI_STATUS
 addMiscOps				( II_RFAPI_HANDLE *Handleptr,
 					MISCOPS miscops );
 void 
-popup_error_box				( gchar *errmsg );
+popup_message_box				( const char *title,
+						 gchar *errmsg );
+# define ERROR_DIALOG_TITLE "Error"
+# define WARN_DIALOG_TITLE "Warning"
+# define popup_error_box(msg)		popup_message_box( ERROR_DIALOG_TITLE, msg)
+# define popup_warning_box(msg)		popup_message_box( WARN_DIALOG_TITLE, msg)
 
 STATUS
 inst_name_in_use			( char	*instname );
@@ -170,3 +179,6 @@ write_file_to_text_buffer		(char *fileloc,
 
 i4
 GIPnextPow2				(i4  num);
+
+STATUS
+gen_rf_save_name(char *fname, char *instid);

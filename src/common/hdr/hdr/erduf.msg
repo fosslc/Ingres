@@ -206,6 +206,8 @@
 **	    Add W_DU1874_UPGR_NOT_STAR_OWNER.
 **      27-may-2010 (maspa05) sir 123793
 **          Added message W_DU1875_UPGRADEDB_ENC, W_DU1876_UPGRADEDB_ABF
+**      31-Aug-2010 (maspa05) b124328
+**          Add E_DU351D_INT_PASS_FAIL
 */
 
 
@@ -15555,6 +15557,21 @@ you have connected to a DBMS running in an installation with version\n
 %2c, these versions are incompatible.\n
 Please log onto the remote machine to run this utility or use an\n
 installation that is compatible."
+E_DU351D_INT_PASS_FAIL
+"Internal validation of password parameter failed."
+/*%
+** Parameters:
+**      none
+**
+** Explanation:
+**      createdb or destroydb failed when checking the -P parameter
+**
+** System Status:
+**      the command exits, no databases are created or destroyed.
+**
+** Recommendation:
+**	This should not occur, call Ingres Corporation Technical Support.
+*/
 E_DU3600_INTERRUPT
 "  Interrupt  --  aborting."
 E_DU3601_ACCESS_VIOLATION

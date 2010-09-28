@@ -135,6 +135,9 @@
 ;	20-Apr-2010 (toumi01) SIR 122403
 ;	    Add for encryption: dm1e_aes_decrypt dm1e_aes_encrypt
 ;	    dm2u_modify_encrypt
+;	28-Jul-2010 (drivi01) Bug 121123 Change 506311.
+;	    Remove dmve_get_tab, dmve_name_unpack.
+;	    Add dmve_get_tabinfo, dmve_get_tabid.
 ;
 EXPORTS
 LGCnode_names		@1				
@@ -859,7 +862,7 @@ dmve_location		@723
 dmve_del_location		@724				
 dmve_location_check		@725				
 dmve_modify		@726				
-dmve_name_unpack		@727				
+;dmve_name_unpack		@727				
 dmve_nofull		@728				
 dmve_ovfl		@729				
 dmve_partial_recov_check		@730				
@@ -927,7 +930,7 @@ dmh_close		@791
 LKkey_to_string		@792				
 lgk_get_counts		@793					
 dm0d_merge		@794
-dmve_get_tab		@795
+;dmve_get_tab		@795
 ;dmf_write_msg_with_args	@796
 dm0m_init		@797
 dmxCheckForInterrupt	@798
@@ -965,3 +968,5 @@ dmpe_query_end		@828
 dm1e_aes_decrypt	@829
 dm1e_aes_encrypt	@830
 dm2u_modify_encrypt	@831
+dmve_get_tabinfo	@832
+dmve_get_tabid		@833

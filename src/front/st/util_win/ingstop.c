@@ -436,6 +436,8 @@
 **	    are not in the format II\svrtype\....  Just use the server
 **	    type, which is also displayed in the iinamu output, regardless
 **	    of local protocol.
+**	23-Sep-2010 (bonro01)
+**	    Remove -icesvr from ingstop.
 */
 
 /*
@@ -584,7 +586,9 @@ typedef struct {
 	PROCESS_LIST *bridge_list;	/* Bridge process list */
 	PROCESS_LIST *das_list;		/* DAS process list */
 	PROCESS_LIST *star_list;	/* Star process list */
+#if defined(conf_BUILD_ICE)
 	PROCESS_LIST *icesvr_list;	/* Ice server process list */
+#endif
 	PROCESS_LIST *oracle_list;	/* Oracle Gateway process list */
 	PROCESS_LIST *informix_list;	/* Informix Gateway process list */
 	PROCESS_LIST *mssql_list;	/* Microsoft SQL Server Gateway */
@@ -606,7 +610,9 @@ static void stop_star( BOOL flag );
 static void stop_dbms( BOOL flag );
 static void open_dbms( );
 static void stop_rmcmd( );
+#if defined(conf_BUILD_ICE)
 static void stop_icesvr( BOOL flag );
+#endif
 static void stop_oracle( );
 static void stop_informix( );
 static void stop_sybase( );
@@ -634,11 +640,19 @@ FUNC_EXTERN PID PCget_PidFromName(PTR);
 FUNC_EXTERN DWORD PCsearch_Pid(PTR, DWORD);
 static BOOL check_cache_sharing (void);
 
+#if defined(conf_BUILD_ICE)
 static char *usage = "\nUsage:\n      %sstop [-iigcn|-dmfrcp|-dmfacp|-client|"
                      "-rmcmd|-icesvr|[-iidbms|-iigcc|\n\t-iigcb|-iigcd|-iistar|"
                      "-oracle|-informix|-mssql|-sybase|-db2udb]] "
                      "[-f]\n\t[ -timeout=minutes ] [ -kill ] [ -show | -check] "
                      "[ -force | -immediate ]\n";
+#else
+static char *usage = "\nUsage:\n      %sstop [-iigcn|-dmfrcp|-dmfacp|-client|"
+                     "-rmcmd|[-iidbms|-iigcc|\n\t-iigcb|-iigcd|-iistar|"
+                     "-oracle|-informix|-mssql|-sybase|-db2udb]] "
+                     "[-f]\n\t[ -timeout=minutes ] [ -kill ] [ -show | -check] "
+                     "[ -force | -immediate ]\n";
+#endif
 
 # define USAGE() {F_PRINT(usage,SystemExecName);exit(1);}
 
@@ -659,7 +673,9 @@ static char iidbms_key[MAX_SERVER_CLASSES][GL_MAXNAME];
 static char iirecovery_key[GL_MAXNAME]  = "IUSVR";
 static int  num_star_classes;
 static char iistar_key[MAX_SERVER_CLASSES][GL_MAXNAME];
+#if defined(conf_BUILD_ICE)
 static char icesvr_key[GL_MAXNAME]      = "ICESVR";
+#endif
 static char iirmcmd_key[GL_MAXNAME]     = "RMCMD";
 static char oracle_key[GL_MAXNAME]      = "ORACLE";
 static char informix_key[GL_MAXNAME]    = "INFORMIX";
@@ -676,7 +692,9 @@ static char iigcc[GL_MAXNAME]           = "iigcc";
 static char iigcb[GL_MAXNAME]           = "iigcb";
 static char iigcd[GL_MAXNAME]           = "iigcd";
 static char iidbms[GL_MAXNAME]          = "iidbms";
+#if defined(conf_BUILD_ICE)
 static char icesvr[GL_MAXNAME]          = "icesvr";
+#endif
 static char rmcmd[GL_MAXNAME]           = "rmcmd";
 static char dmfrcp[GL_MAXNAME]          = "dmfrcp";
 static char iiclean[MAX_LOC+1]          = "ipcclean.exe";
@@ -717,8 +735,10 @@ int         iistar_count = 0;
 char        iistar_id[256];
 int         iirmcmd_count = 0;
 char        iirmcmd_id[256];
+#if defined(conf_BUILD_ICE)
 int         icesvr_count = 0;
 char        icesvr_id[256];
+#endif
 int         oracle_count = 0;
 char        oracle_id[256];
 int         informix_count = 0;
@@ -751,7 +771,9 @@ BOOL        shut_sybase  = FALSE;
 BOOL        shut_mssql   = FALSE;
 BOOL        shut_odbc    = FALSE;
 BOOL        shut_db2udb  = FALSE;
+#if defined(conf_BUILD_ICE)
 BOOL        shut_icesvr  = FALSE;
+#endif
 BOOL        shut_star    = FALSE;
 BOOL        shut_dbms    = FALSE;
 BOOL        shut_gcc     = FALSE;
@@ -924,11 +946,13 @@ main( int argc, char *argv[] )
 	    Individual = TRUE;
 	    shut_db2udb = TRUE;
 	}
+#if defined(conf_BUILD_ICE)
 	else if (STcasecmp( argv[i], ERx("-icesvr") ) == 0)
 	{
 	    Individual = TRUE;
 	    shut_icesvr = TRUE;
 	}
+#endif
 	else if (STbcompare( argv[i], 7, ERx("-iistar"), 7, TRUE ) == 0)
 	{
 	    char	*p1;
@@ -1480,6 +1504,7 @@ main( int argc, char *argv[] )
 	}
     }
 
+#if defined(conf_BUILD_ICE)
     if ( (!Individual) || (Individual && shut_icesvr) )
     {
 	if (icesvr_count > 0)
@@ -1502,6 +1527,7 @@ main( int argc, char *argv[] )
 	    PRINT( ERget( S_ST060B_no_ice ) );
 	}
     }
+#endif
 
     if ( (!Individual) || (Individual && shut_star) )
     {
@@ -1596,8 +1622,10 @@ skip_printfs:
 	    stop_odbc();
 	if (shut_db2udb)
 	    stop_db2udb();
+#if defined(conf_BUILD_ICE)
 	if (shut_icesvr)
 	    stop_icesvr(TRUE);
+#endif
 	if (shut_star)
 	    stop_star(TRUE);
 	if (shut_dbms)
@@ -1616,7 +1644,10 @@ skip_printfs:
         }
 	if (iidbms_count > 0 || iigcc_count > 0 || iistar_count > 0 ||
 	    iigcd_count > 0 ||
-	    icesvr_count > 0 || iigcb_count > 0)
+#if defined(conf_BUILD_ICE)
+	    icesvr_count > 0 || 
+#endif
+	    iigcb_count > 0)
 	{
 	    get_procs();
 	    find_procs();
@@ -1644,8 +1675,10 @@ skip_printfs:
 		    stop_odbc();
 		if (shut_db2udb)
 		    stop_db2udb();
+#if defined(conf_BUILD_ICE)
 		if (shut_icesvr)
 		    stop_icesvr(FALSE);
+#endif
 		if (shut_star)
 		    stop_star(FALSE);
 		if (shut_dbms)
@@ -1693,7 +1726,9 @@ skip_printfs:
 
 	if (servicekill)
 	{
+#if defined(conf_BUILD_ICE)
             stop_icesvr( FALSE );
+#endif
             stop_star( FALSE );
             stop_dbms( FALSE );
 	    if( check_cache_sharing() != TRUE && iidbms_count > 0 )
@@ -1704,7 +1739,9 @@ skip_printfs:
 	}
 	else
 	{
+#if defined(conf_BUILD_ICE)
        	    stop_icesvr( TRUE );
+#endif
             stop_star( TRUE );
             stop_dbms( TRUE );
 	    if( check_cache_sharing() != TRUE && iidbms_count > 0 )
@@ -1724,7 +1761,10 @@ skip_printfs:
         }
         if (iidbms_count > 0 || iigcc_count > 0 || iistar_count > 0 ||
             iigcd_count > 0 ||
-            icesvr_count > 0 || iigcb_count > 0)
+#if defined(conf_BUILD_ICE)
+            icesvr_count > 0 || 
+#endif
+	    iigcb_count > 0)
         {
             get_procs();
             find_procs();
@@ -1745,7 +1785,9 @@ skip_printfs:
                 stop_gcc( FALSE );
                 stop_gcd( FALSE );
                 stop_gcb( FALSE );
+#if defined(conf_BUILD_ICE)
                 stop_icesvr( FALSE );
+#endif
                 stop_star( FALSE );
                 stop_dbms( FALSE );
                 stop_rcp( immediate );
@@ -2027,6 +2069,7 @@ find_procs( )
 	}
     }
 
+#if defined(conf_BUILD_ICE)
     kp = icesvr_id;
     p = readbuf;
     while (p = find_key( p, icesvr_key, &id_len ))
@@ -2036,6 +2079,7 @@ find_procs( )
         kp += id_len + 1;
         icesvr_count++;
     }
+#endif
 
     kp = oracle_id;
     p = readbuf;
@@ -2240,10 +2284,12 @@ get_procs( )
 	append_show_to_command_file(db2udb_key);
     }
 
+#if defined(conf_BUILD_ICE)
     if ( (!Individual) || (Individual && shut_icesvr) )
     {
 	append_show_to_command_file(icesvr_key);
     }
+#endif
 
     if ( (!Individual) || (Individual && shut_rmcmd) )
     {
@@ -2857,6 +2903,7 @@ stop_dbms( BOOL shut )
 
 
 
+#if defined(conf_BUILD_ICE)
 static
 void
 stop_icesvr( BOOL shut )
@@ -2933,6 +2980,7 @@ stop_icesvr( BOOL shut )
 
     }
 }
+#endif
 
 static
 void
@@ -3588,8 +3636,10 @@ build_server_list( SERVER_LIST *list )
 **       In the meantime, just leave these others out...
 */
 # ifdef _TEMP_NOTE_
+#if defined(conf_BUILD_ICE)
     /* build ice server startup list */
     build_startup_list( &(list->icesvr_list), ERx( "icesvr" ) );
+#endif
 
     /* build Oracle Gateway startup list */
     build_startup_list( &(list->oracle_list), ERx( "oracle" ) );
@@ -3713,9 +3763,11 @@ check_server_list( SERVER_LIST *list )
 **       In the meantime, just leave these others out...
 */
 # ifdef _SEE_NOTE_ABOVE_
+#if defined(conf_BUILD_ICE)
     /* check ice server startup list */
     if (list->icesvr_list && list->icesvr_list->count != icesvr_count)
 	++rc;
+#endif
     /* check Oracle Gateway startup list */
     if (list->oracle_list && list->oracle_list->count != oracle_count)
 	++rc;

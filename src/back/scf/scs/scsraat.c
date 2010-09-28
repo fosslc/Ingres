@@ -417,6 +417,9 @@ static STATUS scs_raat_bigbuffer(SCD_SCB *scb, i4 buf_size);
 **	28-Aug-2009 (kschendel) b121804
 **	    Rename allocate-big-buffer to avoid conflict with
 **	    front-end routine.  Fix a broken call to it.
+**	26-Jul-2010 (hweho01) SIR 123485
+**	    Add dmf_call with DMPE_QUERY_END after the DMR_PUT operation, to  
+**	    close the load table.  
 **	
 */
 DB_STATUS
@@ -2018,6 +2021,14 @@ scs_raat_call(i4  op_code,
                     }
 
 		    status = dmf_call(DMR_PUT, &dmr_cb);
+		    if (status)
+		    {
+			err_code = dmr_cb.error.err_code;
+			break;
+		    }
+
+		    dmr_cb.dmr_flags_mask = 0;
+		    status = dmf_call(DMPE_QUERY_END, &dmr_cb);
 		    if (status)
 		    {
 			err_code = dmr_cb.error.err_code;

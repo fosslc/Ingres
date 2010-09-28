@@ -366,6 +366,8 @@
 **	    Straighten out new vs old sync flags, allow direct-io option.
 **	12-Apr-2010 (kschendel) SIR 123485
 **	    Open tables no-coupon to avoid unnecessary LOB processing.
+**	27-Aug-2010 (jonj)
+**	    Pass location's "k" index to dm2u_raw_location_free.
 */
 DB_STATUS
 dm2u_relocate(
@@ -591,7 +593,7 @@ DB_ERROR	*dberr)
 			    break;
 			}
 			status = dm2u_raw_location_free(dcb, xcb, &location[k],
-					dberr);
+					k, dberr);
 			if (status != E_DB_OK)
 			{
 			    compare = 1;

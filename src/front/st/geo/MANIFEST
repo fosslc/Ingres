@@ -2,9 +2,20 @@
 # YAM MANIFEST file for front!st!geo
 #
 # History:
-#       13-Jul-2004 (hanje04)
+#       16-Mar-2010 (troal01)
 #           Added
+#       31-Aug-2010 (troal01)
+#           Added calls to the IIGeoLibs rule
 
 IISUBSYS front st geo ;
 
 IIDFILES geo : srs.dat ;
+
+if $(NT)
+{
+    IIGeoLibs $(SHGEOSCLIB) $(SHPROJLIB) ;
+}
+else
+{
+    IIGeoLibs $(SHGEOSLIB) $(SHGEOSCLIB) $(SHPROJLIB) ;
+}

@@ -167,6 +167,23 @@ i4 Psf_nfoldbexpr = 0;
 **	 	    PSS_TYPERES_ONLY   - Perform only type resolution
 **		    PSS_NOTYPERES_ERR  - Don't report type resolution errors.
 **		    PSS_REF_TYPERES    - if error, report special error 
+**		    PSS_XFORM_AVG      - Transforming avg to sum/count, do
+**					 special precision things
+**		    PSS_JOINID_PRESET  - Caller has filled in joinid
+**		    PSS_FLAGS_PRESET   - Caller has filled in flags
+**		    PSS_JOINID_STD     - Fill in (operator) node joinid
+**					 according to the standard method,
+**
+**	(the "standard method" is:
+**	    joinid = PST_NOJOIN;
+**	    if (BTtest(state->qual_depth, state->in_join_search))
+**		joinid = state->pss_join_info.pss_join[state->pss_join_info.depth].join_id
+**	where "state" is the parser state in yyvars.)
+**
+**	If neither joinid flag is set, or if "std" is set and there's no
+**	current parser state for whatever reason, the joinid is set
+**	to PST_NOJOIN.
+**
 ** Outputs:
 **      newnode                         Filled in with pointer to new node
 **	err_code			Filled in with error number on error
@@ -319,6 +336,14 @@ i4 Psf_nfoldbexpr = 0;
 **          Preventing a fold of a Subtree may cause Bug 123455. Allow
 **          the fold to continue as the E_OP0A91 error has been handled
 **          elsewhere.
+**	14-Jul-2010 (kschendel) b123104
+**	    Spiff up and/or/not folding slightly, handle not more generically.
+**	3-Aug-2010 (kschendel) b124170
+**	    Add "standard joinid" flag to allow us to set an operator
+**	    node joinid according to current parser state.
+**	10-Aug-2010 (kiria01) b124217
+**	    Added message E_US0B7A_2938 for GREATEST, LEAST, GREATER
+**	    and LESSER functions to display better type mismatch error.
 */
 DB_STATUS
 pst_node(
@@ -349,8 +374,7 @@ pst_node(
     i4		err_code;
     i4		val1;
     i4		val2;
-    bool 	bval;
-    PST_QNODE   *folded_node = NULL;
+    bool 	bval, folded;
 
     /*
     ** Note that if PSS_TYPERES_ONLY is set, node has been already allocated,
@@ -443,78 +467,81 @@ pst_node(
 	}
     }
 
-    /* Constant fold on AND/OR/NOT where these appear as nodes */
+    /* Constant fold on AND/OR/NOT where these appear as nodes.
+    ** Thanks to the bottom-up construction of the parse tree, the operands
+    ** will already have been transformed to iitrue/iifalse operators if
+    ** they are boolean from constant folding.
+    */
+    folded = FALSE;
     switch (type)
     {
     case PST_OR:
+	/* t OR x -> t, f OR x -> x */
 	if (pst_is_const_bool(left, &bval))
         {
+	    folded = TRUE;
             if (bval)
             {
                *newnode = left;
-               folded_node = right;
-               break;
             }
             else
             {
                *newnode = right;
-               folded_node = left;
             }
         }
         else if (pst_is_const_bool(right, &bval))
         {
+	    folded = TRUE;
             if (bval)
             {
                *newnode = right;
-               folded_node = left;
-               break;
             }
             else
             {
                *newnode = left;
-               folded_node = right;
             }
         }
         break;
     case PST_AND:
+	/* t AND x -> x, f AND x -> f */
 	if (pst_is_const_bool(left, &bval))
         {
+	    folded = TRUE;
             if (bval)
             {
                *newnode = right;
-               folded_node = left;
             }
             else
             {
                *newnode = left;
-               folded_node = right;
             }
         }
         else if (pst_is_const_bool(right, &bval))
         {
+	    folded = TRUE;
             if (bval)
             {
                *newnode = left;
-               folded_node = right;
             }
             else
             {
                *newnode = right;
-               folded_node = left;
             }
         }
         break;
     case PST_NOT:
 	if (pst_is_const_bool(left, &bval))
 	{
-	    *(bool*)left->pst_sym.pst_dataval.db_data = bval ? 0 : 1;
+	    folded = TRUE;
+	    pst_not_bool(left);
 	    *newnode = left;
 	}
 	else if (left && left->pst_sym.pst_type == PST_NOT)
+	{
+	    folded = TRUE;
 	    *newnode = left->pst_left;
-	else
-	    break;
-	return E_DB_OK;
+	}
+	break;
     case PST_WHLIST:
 	if (right && right->pst_sym.pst_type == PST_WHOP &&
 		right->pst_left &&
@@ -531,27 +558,28 @@ pst_node(
 		** TYPERES_ONLY it won't be. */
 		if (flags & PSS_TYPERES_ONLY)
 		    (*newnode)->pst_left = left;
-		break; /* To pick up normal allocation */
 	    }
 	    else
+	    {
+		/* "when false then ..." just elide this WHLIST */
+		folded = TRUE;
 		*newnode = left;
+	    }
 	}
-	else
-	    break;
-	return E_DB_OK;
+	break;
     case PST_CASEOP:
 	if (left && left->pst_sym.pst_type == PST_WHLIST &&
-		!left->pst_left &&
+		left->pst_left == NULL &&
 		left->pst_right &&
 		left->pst_right->pst_sym.pst_type == PST_WHOP &&
-		!left->pst_right->pst_left &&
+		left->pst_right->pst_left == NULL &&
 		(flags & PSS_NORES) == 0)
 	{
+	    /* Must be case when true then xxx end, just need xxx */
+	    folded = TRUE;
 	    *newnode = left->pst_right->pst_right;
 	}
-	else
-	    break;
-	return E_DB_OK;
+	break;
     case PST_BOP:
 	if (((PST_OP_NODE *)value)->pst_opno == ADI_SUB_OP && (
 		abs(left->pst_sym.pst_dataval.db_datatype) == DB_INT_TYPE ||
@@ -579,7 +607,8 @@ pst_node(
 		opnode.pst_opno = ADI_MINUS_OP;
 		opnode.pst_opmeta = PST_NOMETA;
 		opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-		opnode.pst_joinid = PST_NOJOIN;
+		/* Set joinid in case caller has PRESET, ours should match */
+		opnode.pst_joinid = ((PST_OP_NODE *)value)->pst_joinid;
 		if (status = pst_node(cb, stream, right, NULL,
 			PST_UOP, (char *)&opnode, sizeof(opnode), DB_NODT, 0, 0,
 			NULL, &tmp, err_blk, flags & ~PSS_TYPERES_ONLY))
@@ -595,8 +624,8 @@ pst_node(
 	break;
     }
 
-    /* If folded_node set then nothing more to do. */
-    if (folded_node)
+    /* If folded set then nothing more to do. */
+    if (folded)
     {
        return E_DB_OK;
     }
@@ -669,7 +698,18 @@ pst_node(
 	    {
 		/* set joinid to PST_NOJOIN for all operator nodes */
 		if (!(flags & PSS_JOINID_PRESET))
+		{
 		    symbol->pst_value.pst_s_op.pst_joinid = PST_NOJOIN;
+		    if (flags & PSS_JOINID_STD && cb->pss_yyvars != NULL)
+		    {
+			if (BTtest(cb->pss_yyvars->qual_depth, cb->pss_yyvars->in_join_search))
+			{
+			    symbol->pst_value.pst_s_op.pst_joinid =
+				cb->pss_yyvars->pss_join_info.pss_join[
+					cb->pss_yyvars->pss_join_info.depth].join_id;
+			}
+		    }
+		}
 		/* initialize mask field */
 		if (!(flags & PSS_FLAGS_PRESET))
 		    symbol->pst_value.pst_s_op.pst_flags = 0;
@@ -854,6 +894,12 @@ pst_node(
 		    return(E_DB_ERROR);		/* case-specific error */
 		else
 		{
+		    if (err_blk->err_code == E_PS0C05_BAD_ADF_STATUS && (
+			symbol->pst_value.pst_s_op.pst_opno == ADI_GREATEST_OP ||
+			symbol->pst_value.pst_s_op.pst_opno == ADI_LEAST_OP ||
+			symbol->pst_value.pst_s_op.pst_opno == ADI_LESSER_OP ||
+			symbol->pst_value.pst_s_op.pst_opno == ADI_GREATER_OP))
+			err_blk->err_code = 2938;
 		    return (pst_rserror(cb->pss_lineno, node, err_blk));
 		}
 	    }
@@ -1134,19 +1180,23 @@ pst_map(
 **	    Windows has a different size for bool - use sizeof.
 **	06-May-2009 (kiria01) b121012
 **	    Remove the char access to bool data - again for Windows.
+**	14-Jul-2010 (kschendel) b123104
+**	    The iitrue and iifalse operators are constants too.
 */
 bool
 pst_is_const_bool(
     PST_QNODE *node,
     bool *bval)
 {
+    i1 local_bval;
 
 #   ifdef PSF_FOLD_DEBUG
 
     Psf_nbexpr++;
 #   endif
-    if (node &&
-	node->pst_sym.pst_type == PST_CONST &&
+    if (node == NULL)
+	return FALSE;
+    if (node->pst_sym.pst_type == PST_CONST &&
 	node->pst_sym.pst_value.pst_s_cnst.pst_tparmtype == PST_USER &&
 	node->pst_sym.pst_value.pst_s_cnst.pst_parm_no == 0 &&
 	node->pst_sym.pst_dataval.db_data)
@@ -1157,23 +1207,84 @@ pst_is_const_bool(
 	case -DB_BOO_TYPE:
 	    if (node->pst_sym.pst_dataval.db_length != DB_BOO_LEN+1)
 		break;
-	    *bval = (((char*)node->pst_sym.pst_dataval.db_data)[DB_BOO_LEN] & ADF_NVL_BIT) != 0
+	    local_bval = (((char*)node->pst_sym.pst_dataval.db_data)[DB_BOO_LEN] & ADF_NVL_BIT) != 0
 			? FALSE
-			: *(bool*)node->pst_sym.pst_dataval.db_data;
+			: *(i1 *)node->pst_sym.pst_dataval.db_data;
 #	    ifdef PSF_FOLD_DEBUG
 	     Psf_nfoldbexpr++;
 #	    endif
+	    *bval = (local_bval != 0);
 	    return TRUE;
 	case DB_BOO_TYPE:
 	    if (node->pst_sym.pst_dataval.db_length != DB_BOO_LEN)
 		break;
-	    *bval = *(bool*)node->pst_sym.pst_dataval.db_data;
+	    local_bval = *(i1 *)node->pst_sym.pst_dataval.db_data;
 #	    ifdef PSF_FOLD_DEBUG
 	     Psf_nfoldbexpr++;
 #	    endif
+	    *bval = (local_bval != 0);
+	    return TRUE;
+	}
+    }
+    else if (node->pst_sym.pst_type == PST_COP)
+    {
+	if (node->pst_sym.pst_value.pst_s_op.pst_opno == ADI_IITRUE_OP)
+	{
+	    *bval = TRUE;
+	    return TRUE;
+	}
+	else if (node->pst_sym.pst_value.pst_s_op.pst_opno == ADI_IIFALSE_OP)
+	{
+	    *bval = FALSE;
 	    return TRUE;
 	}
     }
     return FALSE;
 }
+
+/*
+** Name: pst_not_bool -- NOT a constant boolean operator/constant node.
+**
+** Description:
+**	This little routine simply inverts the sense of a constant true/false
+**	node.  If the node is iitrue/iifalse, we reverse the operator;
+**	if the node is a BOOLEAN constant, we reverse the sense of the
+**	constant value.  In general, one would expect the operator
+**	case here; because of the bottom-up parsing, a boolean-primary
+**	that ends up being a constant gets converted to iitrue/iifalse
+**	before the NOT is applied.  Still, best to be careful.
+**
+** Inputs:
+**	node			Pointer to CONST or OP node, which is a
+**				constant as recognized by pst-is-const-bool.
+**
+** Outputs:
+**	Sense of the node is reversed.
+**	Returns nothing.
+**
+** History:
+**	14-Jul-2010 (kschendel) b123104
+**	    Introduce iitrue/iifalse operators to fix OJ joinid problems.
+*/
 
+void
+pst_not_bool(PST_QNODE *node)
+{
+
+    if (node->pst_sym.pst_type == PST_CONST)
+    {
+	i1 *valptr = (i1 *) node->pst_sym.pst_dataval.db_data;
+	*valptr = (*valptr == 0);	/* Reverse it */
+    }
+    else
+    {
+	ADI_FI_ID fid = node->pst_sym.pst_value.pst_s_op.pst_fdesc->adi_cmplmnt;
+	ADI_FI_DESC *f;
+
+	/* Error at this point is "impossible" if pst-is-const-bool. */
+	(void) adi_fidesc(NULL, fid, &f);
+	node->pst_sym.pst_value.pst_s_op.pst_opno = f->adi_fiopid;
+	node->pst_sym.pst_value.pst_s_op.pst_opinst = fid;
+	node->pst_sym.pst_value.pst_s_op.pst_fdesc = f;
+    }
+} /* pst_not_bool */

@@ -61,6 +61,18 @@
 ** 07-Aug-2009 (drivi01)
 **    Added pragma to disable warning 4996 about deprecated POSIX
 **    functions which is a bug.
+** 23-Jun-2010 (drivi01)
+**    Remove hardcoded header sizes under rows property page.
+**    Fix some hardcoded random buffer sizes to make the code more error 
+**    resistent.
+** 30-Jun-2010 (drivi01)
+**    Bug #124006
+**    Add new BOOLEAN datatype.
+**    Add routines to interpret boolean datatype being returned from
+**    the server and routines to display the information recieved.
+** 17-Aug-2010 (thich01)
+**    Make changes to treat spatial IISQ types like LBYTEs or NBR type as
+**    BYTE.
 **/
 /* Turn off POSIX warning for this file until Microsoft fixes this bug */
 #pragma warning(disable: 4996)
@@ -101,6 +113,7 @@ EXEC SQL INCLUDE SQLDA;
 #define TRAIL_MONEY 1
 #define NONE_MONY   2
 #define MAX_MONEY_FORMAT 4*sizeof(TCHAR)
+#define BUF_SIZE 1000
 
 #define FIELD_OUTFORMAT_NON              0
 #define FIELD_OUTFORMAT_MONEYSYMBOL      1
@@ -340,29 +353,45 @@ static void GetRowFromSqlda(
 				HandleFloatData((LPVOID)sqlv, decimalFormat, moneyFormat, pFetchInfo, pCol, strItem, nFlags);
 				tuple.AddTail (strItem);
 				break;
+			case IISQ_BOO_TYPE:
+				char bchar[sizeof(char)];
+				MEcopy(sqlv->sqldata, sizeof(char), bchar);
+				strItem.SetString(bchar[0] ? _T("TRUE") : _T("FALSE")) ;
+				tuple.AddTail(strItem);
+				break;
 			case IISQ_NCHR_TYPE:
 				{
 					// check whether displayable contents
 					char* lpstr = (char*)sqlv->sqldata;
-					char buf[1000]; /* long enough in the context of the SQL/Test display - given normal windows size */
-
+					char buf[BUF_SIZE]; /* long enough in the context of the SQL/Test display - given normal windows size */
+					char *pBuf=buf;
+					int bAlloc = FALSE;
+					int buflen = BUF_SIZE;
+					if (wcslen((LPCWSTR)sqlv->sqldata) > BUF_SIZE)
+					{
+						buflen = wcslen((LPCWSTR)sqlv->sqldata);
+						pBuf = (char *)malloc(buflen+2);
+						bAlloc = TRUE;
+					}
 					if (lpstr) {
 						int ires = WideCharToMultiByte(CP_ACP, /*CP_THREAD_ACP doesn't seem to work */
 								 0,         // performance and mapping flags
 								(LPCWSTR)lpstr, // address of wide-character string
 								-1,             
-								(LPSTR)buf,
-								sizeof(buf),  NULL, NULL);
+								(LPSTR)pBuf,
+								buflen,  NULL, NULL);
 						if (!ires)
-						   buf[0]='\0';
+						   pBuf[0]='\0';
  
-						strItem = buf;
+						strItem = pBuf;
 						strItem.TrimRight();
 					}
 					else
 						strItem = _T("");
 
 					tuple.AddTail (strItem);
+					if (bAlloc && pBuf)
+						free(pBuf);
 				}
 				break;
 			case IISQ_NVCHR_TYPE:
@@ -370,26 +399,36 @@ static void GetRowFromSqlda(
 				{
 					char* lpstr   = (char*)sqlv->sqldata + sizeof(short);
 					short nLendta = * ((short *)sqlv->sqldata);
-					char buf[1000];  /* long enough in the context of the SQL/Test display - given normal windows size */
-
+					char buf[BUF_SIZE];  /* long enough in the context of the SQL/Test display - given normal windows size */
+					char *pBuf=buf;
+					int buflen = BUF_SIZE;
+					int bAlloc = FALSE;
+					if (wcslen((LPCWSTR)sqlv->sqldata) > BUF_SIZE)
+					{
+						buflen=wcslen((LPCWSTR)sqlv->sqldata);
+						pBuf = (char *)malloc(buflen+2);
+						bAlloc = TRUE;
+					}
 					if (lpstr) {
-						memset(buf,'\0',sizeof(buf)); /* ensures trailing \0 (avoids DBCS scan on target up to nLendta chars) */
+						memset(pBuf,'\0',buflen); /* ensures trailing \0 (avoids DBCS scan on target up to nLendta chars) */
 						int ires = WideCharToMultiByte(CP_ACP, /*CP_THREAD_ACP doesn't seem to work */
 								 0,         // performance and mapping flags
 								(LPCWSTR)lpstr, // address of wide-character string
 								nLendta,             
-								(LPSTR)buf,
-								sizeof(buf)-2,  NULL, NULL);
+								(LPSTR)pBuf,
+								buflen,  NULL, NULL);
 						if (!ires)
-							buf[0]='\0';
+							pBuf[0]='\0';
  
-						strItem = buf;
+						strItem = pBuf;
 						strItem.TrimRight();
 					}
 					else
 						strItem = _T("");
 
 					tuple.AddTail (strItem);
+					if (bAlloc && pBuf)
+						free(pBuf);
 				}
 				break;
 
@@ -418,8 +457,17 @@ static void GetRowFromSqlda(
 				}
 				break;
 			case IISQ_BYTE_TYPE:
+			case IISQ_NBR_TYPE:
 			case IISQ_VBYTE_TYPE:
 			case IISQ_LBYTE_TYPE:
+			case IISQ_GEOM_TYPE:
+			case IISQ_POINT_TYPE:
+			case IISQ_MPOINT_TYPE:
+			case IISQ_LINE_TYPE:
+			case IISQ_MLINE_TYPE:
+			case IISQ_POLY_TYPE:
+			case IISQ_MPOLY_TYPE:
+			case IISQ_GEOMC_TYPE:
 				{
 					char* lpstr   = (char*)sqlv->sqldata + sizeof(short);
 					short nLendta = * ((short *)sqlv->sqldata);
@@ -475,7 +523,7 @@ static void InitializeHeader(
 	USES_CONVERSION;
 	int iBaseType = 0;
 	IISQLVAR* sqlv;
-	TCHAR tchszHeader [64];
+	TCHAR tchszHeader [DBOBJECTLEN];
 	CaColumn* pColumnHeader = NULL;
 	while (!listBufferColumn.IsEmpty())
 		delete listBufferColumn.RemoveHead();
@@ -491,8 +539,8 @@ static void InitializeHeader(
 		sqlv = &pSqlda->sqlvar[i];
 
 		int nMax = sqlv->sqlname.sqlnamel+1;
-		if (nMax > 64)
-			nMax = 64;
+		if (nMax > DBOBJECTLEN)
+			nMax = DBOBJECTLEN;
 		lstrcpyn (tchszHeader, (LPCTSTR)sqlv->sqlname.sqlnamec, nMax);
 		pColumnHeader = new CaColumn (tchszHeader, _T("???"), abs (sqlv->sqltype));
 		pColumnHeader->SetLength(sqlv->sqllen);
@@ -599,12 +647,26 @@ handle_as_char:
 			sqlv->sqldata = T2A(pBufferColumn->GetBuffer());
 			break;
 		case IISQ_LBYTE_TYPE:
+		case IISQ_GEOM_TYPE:
+		case IISQ_POINT_TYPE:
+		case IISQ_MPOINT_TYPE:
+		case IISQ_LINE_TYPE:
+		case IISQ_MLINE_TYPE:
+		case IISQ_POLY_TYPE:
+		case IISQ_MPOLY_TYPE:
+		case IISQ_GEOMC_TYPE:
 			// recover only the first 64 characters
 			sqlv->sqllen = 64;
 		case IISQ_BYTE_TYPE:
+		case IISQ_NBR_TYPE:
 		case IISQ_VBYTE_TYPE:
 			sqlv->sqltype= (sqlv->sqltype < 0)? -IISQ_VBYTE_TYPE: IISQ_VBYTE_TYPE;
 			pBufferColumn->SetBufferSize (sqlv->sqllen + 1 + sizeof (short));
+			sqlv->sqldata = T2A(pBufferColumn->GetBuffer());
+			break;
+		case IISQ_BOO_TYPE:
+			sqlv->sqltype = (sqlv->sqltype < 0)? -IISQ_BOO_TYPE: IISQ_BOO_TYPE;
+			pBufferColumn->SetBufferSize (sqlv->sqllen);
 			sqlv->sqldata = T2A(pBufferColumn->GetBuffer());
 			break;
 
@@ -1051,6 +1113,7 @@ int INGRESII_GetSqlDisplayType(int nInternalIngresDataType)
 	case IISQ_MNY_TYPE:
 		return SQLACT_NUMBER_FLOAT;
 	case IISQ_BYTE_TYPE:
+	case IISQ_NBR_TYPE:
 	case IISQ_VBYTE_TYPE:
 		return SQLACT_TEXT;
 

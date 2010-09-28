@@ -1,6 +1,9 @@
 #!/bin/sh
 ##  08-Jun-2010 (thich01)
 ##     Added set -- to clear passed in arguments
+##  17-Aug-2010 (thich01)
+##     Added quit op to allow jam to stop building on error by default. Changed
+##     response text to make it more clear.
 
 # This is a simple script to help you run the build with less overhead.
 # It will automatically set up your environment and run the build.
@@ -21,21 +24,25 @@ DEBUGOPT=""
 REBUILDOPT=""
 CLEANOPT=""
 
-function usage()
+usage()
 {
   cat <<STOP
 Usage: -a to force a rebuild (i.e. jam -a)
        -c to clean a build (i.e. jam clean)
        -g to compile with extra debugging information
+       -q to turn off the jam -q option, which will make jam complete the whole process, even when encountering an error.
        -h for this help text.
 STOP
 }
 
-while getopts "acghn" options; do
+QUITOPT="-q"
+
+while getopts "acghq" options; do
   case $options in
      a ) REBUILDOPT="-a";;
      c ) CLEANOPT="clean";;
      g ) DEBUGOPT="-sIIOPTIM=-g";;
+     q ) QUITOPT="";;
      h ) usage
        exit 1;;
     \? ) usage
@@ -97,7 +104,7 @@ echo " "
 echo "RESULTS:"
 cd $ING_ROOT/src/tools/port/jam/; jam >> ${LOGFILE} 2>&1
 cd $ING_SRC; mkjams >> ${LOGFILE} 2>&1 
-jam $REBUILDOPT $DEBUGOPT >> ${LOGFILE} 2>&1
+jam $QUITOPT $REBUILDOPT $DEBUGOPT >> ${LOGFILE} 2>&1
 
 # Check if the build succeeded or failed by the presence of
 # skipped or failed targets
@@ -107,7 +114,7 @@ then
   echo "Some compile targets failed."
   RETURN=1
 else
-  echo "No compile targets failed."
+  echo "All compile targets were successful."
 fi
 grep "skipped" ${LOGFILE} > /dev/null 2>&1
 if [ $? -eq 0 ]
@@ -115,7 +122,7 @@ then
   echo "Some compile targets were skipped."
   RETURN=1
 else
-  echo "No compile targets were skipped."
+  echo "All compile targets were executed."
 fi
 
 buildrel -a >> ${LOGFILE} 2>&1

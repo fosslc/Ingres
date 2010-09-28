@@ -1410,6 +1410,7 @@ register DB_DATA_VALUE	*rdv)
           case DB_MLINE_TYPE:
           case DB_POLY_TYPE:
           case DB_MPOLY_TYPE:
+          case DB_GEOMC_TYPE:
 	  {
 		ADP_PERIPHERAL	    *periph = (ADP_PERIPHERAL *) dv1->db_data;
 
@@ -2425,6 +2426,7 @@ register DB_DATA_VALUE	*rdv)
 	|| (dv1->db_datatype == DB_MLINE_TYPE)
 	|| (dv1->db_datatype == DB_POLY_TYPE)
 	|| (dv1->db_datatype == DB_MPOLY_TYPE)
+	|| (dv1->db_datatype == DB_GEOMC_TYPE)
 	|| (dv1->db_datatype == DB_LNVCHR_TYPE))
     {
 	size = 0;
@@ -2800,6 +2802,7 @@ DB_DATA_VALUE	    *rdv)
       case DB_MLINE_TYPE:
       case DB_POLY_TYPE:
       case DB_MPOLY_TYPE:
+      case DB_GEOMC_TYPE:
       case DB_LNLOC_TYPE:
 	return ( adu_lvch_move(adf_scb, dv1, rdv));
 	break;
@@ -3804,6 +3807,8 @@ DB_DATA_VALUE     *rdv)
 **	25-Apr-2009 (kiria01) SIR121788
 **	    Re-add LBYTE <-> LVCH with no translation as there are benefits
 **	    in performance.
+**	7-jun-2010 (stephenb)
+**	    Add missing case for DB_LTXT_TYPE in long->not-long 
 */
 DB_STATUS
 adu_lvch_move(
@@ -4060,6 +4065,7 @@ DB_DATA_VALUE	   *dv_out)
 	    
 	    	    case DB_VCH_TYPE:
 	    	    case DB_TXT_TYPE:
+	    	    case DB_LTXT_TYPE:
 	    	    case DB_VBYTE_TYPE:
 	    	    case DB_UTF8_TYPE:
 		    case DB_NVCHR_TYPE:
@@ -4093,6 +4099,7 @@ DB_DATA_VALUE	   *dv_out)
 
 		case DB_VCH_TYPE:
 		case DB_TXT_TYPE:
+		case DB_LTXT_TYPE:
 		case DB_VBYTE_TYPE:
 		case DB_NVCHR_TYPE:
 		    res_dv = dv_out;
@@ -4156,6 +4163,7 @@ DB_DATA_VALUE	   *dv_out)
 		  abs(dv_in->db_datatype) == DB_MLINE_TYPE ||
 		  abs(dv_in->db_datatype) == DB_POLY_TYPE ||
 		  abs(dv_in->db_datatype) == DB_MPOLY_TYPE ||
+		  abs(dv_in->db_datatype) == DB_GEOMC_TYPE ||
                   abs(dv_in->db_datatype) == DB_GEOM_TYPE) &&
 		(abs(dv_out->db_datatype) == DB_LVCH_TYPE ||
 		  abs(dv_out->db_datatype) == DB_POINT_TYPE ||
@@ -4164,6 +4172,7 @@ DB_DATA_VALUE	   *dv_out)
 		  abs(dv_out->db_datatype) == DB_MLINE_TYPE ||
 		  abs(dv_out->db_datatype) == DB_POLY_TYPE ||
 		  abs(dv_out->db_datatype) == DB_MPOLY_TYPE ||
+		  abs(dv_in->db_datatype) == DB_GEOMC_TYPE ||
                   abs(dv_out->db_datatype) == DB_GEOM_TYPE) ||
 		(abs(dv_in->db_datatype) == DB_LVCH_TYPE ||
 		  abs(dv_in->db_datatype) == DB_POINT_TYPE ||
@@ -4172,6 +4181,7 @@ DB_DATA_VALUE	   *dv_out)
 		  abs(dv_in->db_datatype) == DB_MLINE_TYPE ||
 		  abs(dv_in->db_datatype) == DB_POLY_TYPE ||
 		  abs(dv_in->db_datatype) == DB_MPOLY_TYPE ||
+		  abs(dv_in->db_datatype) == DB_GEOMC_TYPE ||
                   abs(dv_in->db_datatype) == DB_GEOM_TYPE) &&
 		 (abs(dv_out->db_datatype) == DB_LBYTE_TYPE ||
 		  abs(dv_out->db_datatype) == DB_POINT_TYPE ||
@@ -4180,6 +4190,7 @@ DB_DATA_VALUE	   *dv_out)
 		  abs(dv_out->db_datatype) == DB_MLINE_TYPE ||
 		  abs(dv_out->db_datatype) == DB_POLY_TYPE ||
 		  abs(dv_out->db_datatype) == DB_MPOLY_TYPE ||
+		  abs(dv_in->db_datatype) == DB_GEOMC_TYPE ||
                   abs(dv_out->db_datatype) == DB_GEOM_TYPE) )
 	{
 	    /* long --> long, let underlying handler do it all
@@ -6307,6 +6318,7 @@ register DB_DATA_VALUE	*rdv)
           case DB_MLINE_TYPE:
           case DB_POLY_TYPE:
           case DB_MPOLY_TYPE:
+          case DB_GEOMC_TYPE:
 	  {
 		ADP_PERIPHERAL	    *periph = (ADP_PERIPHERAL *) dv1->db_data;
 
@@ -6343,6 +6355,7 @@ register DB_DATA_VALUE	*rdv)
           case DB_MLINE_TYPE:
           case DB_POLY_TYPE:
           case DB_MPOLY_TYPE:
+          case DB_GEOMC_TYPE:
 	  {
 		ADP_PERIPHERAL	    *periph = (ADP_PERIPHERAL *) dv1->db_data;
 
@@ -7327,6 +7340,9 @@ DB_DATA_VALUE		*rdv)
 **  History:
 **    11-Jan-2009 (martinb) - Created to support schemes 'Verhoeff',
 **      'VerhoeffNR' and 'Luhn'.
+**	6-jul-2010 (stephenb)
+**	    Correct error parameter, we were passing address of char pointer
+**	    not the char pointer itself.
 */
 
 #define CHECK_DIGIT_NUMERIC 0
@@ -7866,7 +7882,7 @@ generate_luhn_digit(
                 if (CMlower(c))
                     n = (i4)*c - (i4)'a' + 10;
                 else
-                    return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, &c));
+                    return(adu_error(adf_scb, E_AD2056_CHECK_DIGIT_STRING, 2, 1, c));
             }
             y = (i4)n/10;
             x = n - 10*y; /* ie n==yx */

@@ -112,6 +112,8 @@
 ##	17-Jun-2009 (kschendel) SIR 122138
 ##	    Use RELID param from VERS before using config.  Remove
 ##	    any other hybrid guessing, let readvers do it.
+##	31-Aug-2010 (rosan01)
+##          Enable custom version string for geospatial branch builds
 
 CMD=`basename $0`
 
@@ -135,9 +137,6 @@ done
 
 # Set up the suffix:
 
-# (Right now, there are only 2 known suffixes, OL and DBL.
-# Others can be added.)
-
 # The order in which suffixes are concatenated is significant.
 # Check with Release Management before adding new suffixes into the mix.
 
@@ -157,6 +156,8 @@ EOF
 		rm /tmp/nptl.$$
 		;;
 esac
+
+[ "$conf_GEO" ] && suffix="${suffix}_GEO"
 
 # Output the release id:
 # Use option RELID from vers if given;

@@ -137,6 +137,10 @@
 !	    Need to add/remove relevant functions for VMS compilation
 !       04-jun-2010 (joea)
 !           Correct cross-integration of 12-feb-2010.
+!       12-jul-2010 (joea)
+!           Add MHtrunc.
+!       07-sep-2010 (joea)
+!           Add EXdelete.
 !	    
 IDENT=compatlib
 GSMATCH=LEQUAL,126,0
@@ -588,7 +592,9 @@ SYMBOL_VECTOR=(MOptrout=PROCEDURE, -
 		MHround=PROCEDURE, -
 		CM_isDBL=DATA, -
 		CV_fvp=DATA, -
-		ST_fvp=DATA)
+		ST_fvp=DATA, -
+                MHtrunc=PROCEDURE, -
+		EXdelete=PROCEDURE)
 INGLIB:libcompat/library
 psect_attr=ii_address_data,nowrt,shr,lcl
 cluster=ii_address_data

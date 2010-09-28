@@ -37,6 +37,7 @@
 #include    <dmp.h>
 #include    <dm0c.h>
 #include    <dmm.h>
+#include    <dmfcrypt.h>
 
 /**
 **
@@ -143,6 +144,10 @@
 [@history_template@]...
 **/
 
+/*
+** globals
+*/
+GLOBALREF	DMC_CRYPT	*Dmc_crypt;
 /*
 **  Defines of other constants.
 */
@@ -290,6 +295,11 @@ static DB_STATUS destroy_loc_list(
 **          Check status of DIdirdelete(), if it is equal to DI_BADDELETE,
 **          setup error message info structure to contain the path of the 
 **          directory that failed to be deleted.
+**	09-aug-2010 (maspa05) b123189, b123960
+**	    Set dcb_status for readonly database
+**	20-aug-2010 (miket) SIR 122403
+**	    When destroying a database, free up all the encryption key slots
+**	    in shared memory for tables in that database.
 */
 
 static STATUS
@@ -548,7 +558,10 @@ DMM_CB    *dmm_cb)
 
     /*	Change config access/service. */
     if (dmm->dmm_db_access & DU_RDONLY)
+    {
 	cnf_flag |= DM0C_READONLY;
+	dcb.dcb_status |= DCB_S_RODB;
+    }
     	
     open_status = dm0c_open(&dcb, cnf_flag, xcb->xcb_lk_id, &cnf, &open_dberr);
     if (open_status)
@@ -772,6 +785,29 @@ DMM_CB    *dmm_cb)
 	if (status)
 	    break;
 
+	/* Clean up any cached encryption keys for this database */
+	if (Dmc_crypt != NULL)
+	{
+	    DMC_CRYPT_KEY *cp;
+	    int	i;
+	    STATUS local_status;
+
+	    local_status = CSp_semaphore(TRUE, &Dmc_crypt->crypt_sem);
+	    if (local_status == OK)
+	    {
+		for ( cp = (DMC_CRYPT_KEY *)
+			((PTR)Dmc_crypt + sizeof(DMC_CRYPT)),
+			i = 0 ; i < Dmc_crypt->seg_active ; cp++, i++ )
+		{
+		    if (cp->db_id == cnf->cnf_dsc->dsc_dbid)
+		    {
+			MEfill(sizeof(DMC_CRYPT_KEY), 0, (PTR)cp);
+			cp->status = DMC_CRYPT_INACTIVE;
+		    }
+		}
+		CSv_semaphore(&Dmc_crypt->crypt_sem);
+	    }
+	}
 
 	/* Clean up any cached DML_SEQ's for this database */
 	dms_destroy_db(cnf->cnf_dsc->dsc_dbid);

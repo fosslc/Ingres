@@ -56,6 +56,8 @@
 **      Treat all spatial types the same as LBYTE.
 **      09-mar-2010 (thich01)
 **          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
+**	03-Sep-2010 (kiria01) b124352
+**	    Correct typo in previous change.
 [@history_template@]...
 **/
 
@@ -191,7 +193,7 @@ DB_DATA_VALUE	   *ev_value)
 		    ev_value->db_datatype = -(abs(tmp_ev.db_datatype));
 		    ev_value->db_length = tmp_ev.db_length + 1;
 		    ev_value->db_prec = tmp_ev.db_prec;
-		    ev_value->db_prec = tmp_ev.db_collID;
+		    ev_value->db_collID = tmp_ev.db_collID;
 		}
 	    }
 	    else
@@ -342,6 +344,7 @@ DB_DATA_VALUE	   *ev_value)
     case DB_MLINE_TYPE:
     case DB_POLY_TYPE:
     case DB_MPOLY_TYPE:
+    case DB_GEOMC_TYPE:
 	ev_value->db_length = db_value->db_length;
 	ev_value->db_datatype = db_value->db_datatype;
 	ev_value->db_prec = db_value->db_prec;

@@ -1056,6 +1056,7 @@ i4			*size)
       case DB_MLINE_TYPE:
       case DB_POLY_TYPE:
       case DB_MPOLY_TYPE:
+      case DB_GEOMC_TYPE:
       case DB_LNVCHR_TYPE:
       {
 	    ADP_PERIPHERAL	    *periph = (ADP_PERIPHERAL *) dv->db_data;
@@ -1383,6 +1384,7 @@ i4		    *str_len)
         case DB_MLINE_TYPE:
         case DB_POLY_TYPE:
         case DB_MPOLY_TYPE:
+        case DB_GEOMC_TYPE:
 	case DB_LNVCHR_TYPE:
         {
 	    ADP_PERIPHERAL	    *periph = (ADP_PERIPHERAL *) dv->db_data;

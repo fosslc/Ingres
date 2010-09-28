@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1992, 2009 Ingres Corporation
+** Copyright (c) 1992, 2010 Ingres Corporation
 */
 
 #include <compat.h>
@@ -501,9 +501,42 @@
 **         SQLPrepare_InternalCall().
 **  29-Jan-2010 (Ralph Loen) Bug 123175
 **         In ConvertEscAndMarkers(), add blank date support for timestamps.
-**        
+**  25-Jun-2010 (Ralph Loen)  Bug 122174
+**         In ConvertEscAndMarkers(), don't insert the INTERVAL keyword into
+**         the string literal for interval escape sequences.        
+**  14-Jul-2010 (Ralph Loen)  Bug 124079
+**         In ParseConvert(), converted date/time scalars to use 
+**         ISO syntax for targets supporting ISO syntax (IIAPI_LEVEL_3 or
+**         later).  The exception is DAYNAME() for Vectorwise, which is 
+**         supported via the non-ISO scalar dow(). 
+**         Some of the ISO scalars are fairly large, which requires
+**         bulletproofing, to make sure the converted scalar fits in the
+**         query and does not overwrite existing query info.  Thus,
+**         escape sequences are re-written so that only single spaces are
+**         allowed between the brackets when spaces exist.  All queries now
+**         use CountLiteralItems() to advise on required memory, instead of
+**         a fudge factor of 1,000 bytes.  CountLiteralItems() was re-written
+**         to allow for the largest scalar--currently 550 for DAYOFWEEK().
+**         Added support for TIMESTAMPDIFF(), MONTHNAME() and EXTRACT().
+**   19-Jul-2010 (Ralph Loen) Bug 124101
+**         Added support for comment for slash-asterisk comment delimiters.
+**   03-Aug-2010 (Ralph Loen) Bug 124079
+**         Revised DAYOFYEAR() to include adjustments for leap years in the
+**         Gregorian calendar.  Revised CountLiteralItems to look for
+**         the DAYOFYEAR(), DAYOFMONTH() and MONTHNAME() scalars, and
+**         calculate the buffer length depending on the scalar and the
+**         length of the referenced column name.
+**   17-Aug-2010 (thich01)
+**         Make changes to treat spatial types like LBYTEs or NBR type as BYTE.
+**   03-Sep-2010 (Ralph Loen) Bug 124348
+**         Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
+**         SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
+**         platforms.
+**   25-Jun-2010 (Ralph Loen) Bug 124427
+**         Change of 25-Jun-2010 mistakenly removed INTERVAL keyword 
+**         from interval literals in ConvertEscAndMarkers().  Re-instating 
+**         insertion of INTERVAL keyword.
 */
-
 
 typedef enum
 {
@@ -511,6 +544,7 @@ typedef enum
     TOK_ALL,
     TOK_AUTOCOMMIT,
     TOK_ALTER,
+    TOK_BEGIN_COMMENT,
     TOK_COMMIT,
     TOK_COPY,
     TOK_CREATE,
@@ -527,6 +561,7 @@ typedef enum
     TOK_ESC_CALL,
     TOK_ESC_BRACECALL,
     TOK_ESC_TILDEV,
+    TOK_END_COMMENT,
     TOK_GRANT,
     TOK_IDENTIFIER,
     TOK_IDMS,
@@ -597,6 +632,8 @@ RETCODE         SetColVar     (LPSTMT, LPDESCFLD papd, LPDESCFLD pipd);
 
 static const char ODBC_STD_ESC[] = "--(*VENDOR(Microsoft),PRODUCT(ODBC)";
 static BOOL removeEndSemicolon(LPSTR szSqlStr);
+static void editComment(char **pFrom, char **pTo, i4 *length);
+static TOKEN  FetchToken( LPSTR  szToken);
 static const char    nt[] = "\0";
 
 
@@ -802,11 +839,11 @@ RETCODE SQL_API SQLBindParameter(
     SWORD         fParamType,   /* InputOutputType  */
     SWORD         fCType,       /* ValueType        */
     SWORD         fSqlType,     /* ParameterType    */
-    SQLUINTEGER   cbColDef,     /* ColumnSize       */
+    SQLULEN       cbColDef,     /* ColumnSize       */
     SWORD         ibScale,      /* DecimalDigits    */
     SQLPOINTER    rgbValue,     /* ParameterValuePtr*/
-    SQLINTEGER    cbValueMax,   /* BufferLength     */
-    SQLINTEGER    *pcbValue)    /* StrLen_or_IndPtr */
+    SQLLEN        cbValueMax,   /* BufferLength     */
+    SQLLEN      *pcbValue)    /* StrLen_or_IndPtr */
 {
     LPSTMT        pstmt = (LPSTMT)hstmt;
     LPDBC         pdbc;
@@ -1556,7 +1593,6 @@ RETCODE SQL_API SQLNativeSql_InternalCall(
     LPDBC       pdbc     = (LPDBC)hdbc;
     CHAR      * szSqlStr = (CHAR*)InStatementText;
     SQLINTEGER  cbSqlStr =        TextLength1;
-    SQLINTEGER  marginForEscapeFnExpansion = 2000;
     LPSTMT      pstmt;
     RETCODE     rc, rc2;
     CHAR      * szAPISqlStr;
@@ -1564,27 +1600,29 @@ RETCODE SQL_API SQLNativeSql_InternalCall(
 
     if (!LockDbc (pdbc)) return SQL_INVALID_HANDLE;
 
+    TRACE_INTL(pdbc,"SQLNativeSql_InternalCall");
+
     ErrResetDbc (pdbc);        /* clear ODBC error status on DBC */
+
+    rc = AllocStmt(pdbc, &pstmt);  /* allocate a work statement */
+    if (rc == SQL_ERROR)
+    {
+        UnlockDbc (pdbc);
+        return rc; 
+    }
 
     if (cbSqlStr == SQL_NTS)
         cbSqlStr = STlength (szSqlStr);
 
     /* alloc a buffer with a safety margin for escape substitutions */
-    szAPISqlStr = 
-        MEreqmem(0, cbSqlStr + marginForEscapeFnExpansion, TRUE, NULL);
+    szAPISqlStr = MEreqmem(0, cbSqlStr + 
+         CountLiteralItems(cbSqlStr, (CHAR*)szSqlStr, pstmt->dateConnLevel) 
+             + 50, TRUE, NULL);
     if (szAPISqlStr == NULL)    /* allocate a work string */
        {UnlockDbc (pdbc);
         return ErrState (SQL_HY001, pdbc, F_OD0013_IDS_SQL_SAVE);
        }
 
-    rc = AllocStmt(pdbc, &pstmt);  /* allocate a work statement */
-    if (rc == SQL_ERROR)
-       {MEfree (szAPISqlStr);
-        UnlockDbc (pdbc);
-        return rc; 
-       }
-
-    TRACE_INTL(pstmt,"SQLNativeSql_InternalCall");
     if (pstmt->fAPILevel > IIAPI_LEVEL_3)
         ConvertEscAndMarkers(szSqlStr, &cbSqlStr, szAPISqlStr, &cbAPISqlStr,
             pstmt->dateConnLevel);
@@ -1745,8 +1783,8 @@ RETCODE SQL_API SQLPrepare_InternalCall(
         cbSqlStr = (SDWORD)STlength ((char*)szSqlStr);
 
     szAPISqlStr = MEreqmem(0, cbSqlStr + 
-         CountLiteralItems(cbSqlStr, (CHAR*)szSqlStr, pstmt->dateConnLevel) + 8,
-                           TRUE, NULL);
+         CountLiteralItems(cbSqlStr, (CHAR*)szSqlStr, pstmt->dateConnLevel) 
+            + 50, TRUE, NULL);
     if (szAPISqlStr == NULL)
     {
         UnlockStmt (pstmt);
@@ -2174,14 +2212,64 @@ RETCODE ConvertParmMarkers(
     CHAR     * pFrom;
     CHAR     * pTo;
     II_BOOL    fQuote = FALSE;
+    i2         beginBracket = 0;
+    i2         spaceCount = 0;
     CHAR       bQuote;
     SQLINTEGER     length=*cbSqlStr;
+    BOOL       fComment = FALSE;
+    i4         i;
 
     pFrom = szSqlStr;
     pTo       = szAPISqlStr;
     
     while (*pFrom != EOS  &&  length)
     {
+         /*
+         ** Comments are ignored, but a space is inserted after the beginning
+         ** and end of the comment markers.  This is necessary because
+         ** ParstToken() requires all tokens to separated by spaces.
+         */
+         if (!fComment && (length >= 4) && (!STbcompare(pFrom,2,"/*",2,TRUE)))
+         {
+             fComment = TRUE;
+             CMcpychar(" ", pTo);
+             CMnext(pTo);
+             for (i = 0; i < 2; i++)
+             {
+                 CMcpychar(pFrom, pTo);
+                 CMnext(pFrom);
+                 CMnext(pTo);
+                 length--;
+             }
+             continue;
+         }
+ 
+         if (fComment)
+         {
+             if (length >= 2 && (!STbcompare(pFrom,2,"*/",2,TRUE))) 
+             {
+                 fComment = FALSE;
+                 for (i = 0; i < 2; i++)
+                 {
+                     CMcpychar(pFrom, pTo);
+                     CMnext(pFrom);
+                     CMnext(pTo);
+                     length--;
+                 }
+                 CMcpychar(" ", pTo);
+                 CMnext(pTo);
+             }
+             else
+             {
+                 CMcpychar(pFrom, pTo);
+                 CMnext(pFrom);
+                 CMnext(pTo);
+                 length--;
+             }
+             continue;
+         }
+ 
+
         if (fQuote)   /* ignore chars if in quote */
         {
             if (!CMcmpcase(pFrom,&bQuote))  /* end of literal value */ 
@@ -2190,6 +2278,7 @@ RETCODE ConvertParmMarkers(
                 bQuote = 0;
             }
             CMcpychar(pFrom,pTo); 
+            spaceCount = 0;
         }
         else
         {
@@ -2198,6 +2287,7 @@ RETCODE ConvertParmMarkers(
                 fQuote = TRUE;
                 CMcpychar(pFrom,&bQuote);
                 CMcpychar(pFrom,pTo); 
+                spaceCount = 0;
             }
             else
             {
@@ -2207,15 +2297,32 @@ RETCODE ConvertParmMarkers(
                     CMnext(pTo); 
                     CMnext(pTo);
                     CMnext(pTo);
+                    spaceCount = 0;
                 }
                 else
                 {
-                    CMcpychar(pFrom,pTo); 
+                    /*
+                    ** Multiple spaces between left and right
+                    ** brackets are converted to single spaces.  This
+                    ** allows scalar conversions to be more predictable.
+                    */
+                    if (beginBracket && !CMcmpcase(pFrom, " "))
+                        spaceCount++;
+                    else
+                        spaceCount = 0;
+                    if (spaceCount < 2)
+                        CMcpychar(pFrom,pTo);
                 }
             }
+            if (!CMcmpcase(pFrom,"{"))
+                beginBracket++;
+            else if (!CMcmpcase(pFrom,"}"))
+                beginBracket--;
         }
+
         CMnext(pFrom);
-        CMnext(pTo);
+        if (spaceCount < 2)
+            CMnext(pTo);
         length--;
     }
     CMcpychar(nt,pTo); 
@@ -2279,11 +2386,59 @@ RETCODE ConvertEscAndMarkers(
     BOOL       isTimestamp = FALSE;
     SQLSMALLINT underscoreCount=0;
     BOOL    fQuote = FALSE;
+    i2      beginBracket = 0;
+    i2      spaceCount = 0;
     char    bQuote;
     UWORD   len = 0;
+    BOOL    fComment = FALSE;
      
     while (*pFrom != EOS  && length)
     {
+        /*
+        ** Comments are ignored, but a space is inserted after the beginning
+        ** and end of the comment markers.  This is necessary because
+        ** ParstToken() requires all tokens to separated by spaces.
+        */
+        if (!fComment && (length >= 4) && (!STbcompare(pFrom,2,"/*",2,TRUE)))
+        {
+            fComment = TRUE;
+            CMcpychar(" ", pTo);
+            CMnext(pTo);
+            for (i = 0; i < 2; i++)
+            {
+                CMcpychar(pFrom, pTo);
+                CMnext(pFrom);
+                CMnext(pTo);
+                length--;
+            }
+            continue;
+        }
+
+        if (fComment)
+        {
+            if (length >= 2 && (!STbcompare(pFrom,2,"*/",2,TRUE)))
+            {
+                fComment = FALSE;
+                for (i = 0; i < 2; i++)
+                {
+                    CMcpychar(pFrom, pTo);
+                    CMnext(pFrom);
+                    CMnext(pTo);
+                    length--;
+                }
+                CMcpychar(" ", pTo);
+                CMnext(pTo);
+            }
+            else
+            {
+                CMcpychar(pFrom, pTo);
+                CMnext(pFrom);
+                CMnext(pTo);
+                length--;
+            }
+            continue;
+        }
+
         if (fQuote)   /* ignore chars if in quote */
         {
             if (!CMcmpcase(pFrom,&bQuote))  /* end of literal value */ 
@@ -2312,6 +2467,12 @@ RETCODE ConvertEscAndMarkers(
         }
         else if (!CMcmpcase(pFrom,"{"))
         {
+            /*
+            ** Multiple spaces between left and right
+            ** brackets are converted to single spaces.  This
+            ** allows scalar conversions to be more predictable.
+            */
+            beginBracket++;
             p = pFrom;
             CMnext(p);
             while(CMwhite(p)) CMnext(p);
@@ -2493,6 +2654,8 @@ RETCODE ConvertEscAndMarkers(
                 }
             }
         }
+
+
         if ((isDate || isTimestamp) && (dateConnLevel < IIAPI_LEVEL_4) 
             && pFrom[0] == '-')
         {
@@ -2507,11 +2670,24 @@ RETCODE ConvertEscAndMarkers(
         }
         else if ((!dateTime) || (CMcmpcase(pFrom,"{") && CMcmpcase(pFrom,"}")))
         {
-            CMcpychar(pFrom,pTo); 
-            CMnext(pTo);  
+            if (beginBracket && !CMcmpcase(pFrom, " "))      
+                spaceCount++;
+            else
+                spaceCount = 0;
+            if (spaceCount < 2)
+            {
+                CMcpychar(pFrom,pTo); 
+                CMnext(pTo);  
+            }
         }
-        if ((dateTime) && (!CMcmpcase(pFrom,"}")))
+
+        if (!CMcmpcase(pFrom,"}"))
+        {
             dateTime = FALSE;
+            if (!fQuote)
+                beginBracket--;
+        }
+
         if (length)
         {
             CMnext(pFrom);
@@ -2526,7 +2702,7 @@ RETCODE ConvertEscAndMarkers(
         *cbAPISqlStr = (SDWORD)*cbSqlStr;  /* where is will be caught downstream */
     else
         *cbAPISqlStr = (SDWORD)STlength (szAPISqlStr);
-    
+
     return(SQL_SUCCESS);
 
 }
@@ -2660,7 +2836,6 @@ RETCODE ParseCommand(
     UWORD       c       = 0;
     SDWORD      cb      = 0;
     SQLINTEGER      cbSpace = 0;
-    SQLINTEGER  marginForEscapeFnExpansion = 2000;
     BOOL        fView   = FALSE;
     CHAR     *  sz;
     /*UWORD len, i; */
@@ -2694,8 +2869,9 @@ RETCODE ParseCommand(
     if (!rePrepared)
     {
         /* alloc a buffer with a safety margin for escape substitutions */
-        pstmt->szSqlStr = MEreqmem(0, cb + marginForEscapeFnExpansion, TRUE, 
-            NULL);
+         pstmt->szSqlStr = MEreqmem(0, cbSqlStr + 
+         CountLiteralItems(cbSqlStr, (CHAR*)szSqlStr, pstmt->dateConnLevel) 
+             + 50, TRUE, NULL);
     }
 
     if (pstmt->szSqlStr == NULL)
@@ -2861,6 +3037,13 @@ RETCODE ParseCommand(
         pstmt->fStatus |= STMT_CANBEPREPARED; /* can be PREPAREd/EXECUTEd */
 	break;
 
+    case TOK_BEGIN_COMMENT:
+        break;
+
+    case TOK_END_COMMENT:
+        break;
+
+
     case TOK_GRANT:
         /*
         **  Find column list in GRANT UPDATE for IDMS
@@ -2942,32 +3125,32 @@ RETCODE ParseCommand(
 
 	default:
         if (STbcompare (p, (i4)STlength(p),(char *) ODBC_STD_ESC, 4,TRUE) == 0)
-		{   
-			p1 = p;
-			CMnext(p1); CMnext(p1); CMnext(p1); CMnext(p1);
+        {   
+            p1 = p;
+            CMnext(p1); CMnext(p1); CMnext(p1); CMnext(p1);
             if ((sz = STindex (p1, ")",0)) != NULL)
             {
-				CMnext(sz); 
-				if ((sz = STindex (sz, ")", 0)) != NULL)
-				{
-					/* len = sz + 1 - p; */
-					pTemp = MEreqmem(0, cb + 1, TRUE, NULL);
-					if (pTemp == NULL)
-						return ErrState (SQL_HY001, pstmt, F_OD0013_IDS_SQL_SAVE);
-                    /*
-					for (i = 0, sz = pTemp; i < len; i++)
-						if (p[i] != ' ') *sz++ = p[i];
-					*sz = EOS;
-					*/
-					CMnext(sz);
-					CMcpychar(nt,sz);
-					STzapblank(p,pTemp);
-					if (STbcompare (pTemp,(i4)STlength(pTemp), (char *) ODBC_STD_ESC,sizeof(ODBC_STD_ESC),TRUE) == 0)
-						pstmt->fCommand = CMD_EXECPROC;
-			    MEfree(pTemp);
-				}
-			}
-	 }
+                CMnext(sz); 
+                if ((sz = STindex (sz, ")", 0)) != NULL)
+                {
+                        /* len = sz + 1 - p; */
+                        pTemp = MEreqmem(0, cb + 1, TRUE, NULL);
+                        if (pTemp == NULL)
+                                return ErrState (SQL_HY001, pstmt, F_OD0013_IDS_SQL_SAVE);
+    /*
+                        for (i = 0, sz = pTemp; i < len; i++)
+                                if (p[i] != ' ') *sz++ = p[i];
+                        *sz = EOS;
+                        */
+                        CMnext(sz);
+                        CMcpychar(nt,sz);
+                        STzapblank(p,pTemp);
+                        if (STbcompare (pTemp,(i4)STlength(pTemp), (char *) ODBC_STD_ESC,sizeof(ODBC_STD_ESC),TRUE) == 0)
+                                pstmt->fCommand = CMD_EXECPROC;
+            MEfree(pTemp);
+                }
+            }
+        }
 		 break;
     }
 
@@ -3046,30 +3229,30 @@ RETCODE ParseCommand(
 **
 **   convert ODBC time/date functions to Ingres specific
 */
-static void ConvertDateFn (LPSTR p, LPSTR pStart, UWORD cbEscape,
+static void ConvertDateFn (LPSTMT pstmt,LPSTR p, LPSTR pStart, UWORD cbEscape,
 					LPSTR pDatePortion, CHAR *bNull)
 {
-	char * szTemp;	
-	CHAR     * p1;
+    char * szTemp;	
+    CHAR     * p1;
 
-	while (CMwhite(p)) CMnext(p);
-	if ( !CMcmpcase(p,"(") )
-	{
-	    p1 = pStart + STlength(pStart);
+    while (CMwhite(p)) CMnext(p);
+    if ( !CMcmpcase(p,"(") )
+    {
+        p1 = pStart + STlength(pStart);
         MEfill (cbEscape, ' ', p1 - cbEscape);
-		CMnext(p);
-       	p1 = p +  STlength(p);
-		CMcpychar(bNull,p1); /* Don't restore the saved character, again, zero */
-		bNull[0] = '\0';    /* it, at the general restore it is checked for zero */
-		szTemp = MEreqmem(0, STlength(pStart) + 8, TRUE, NULL);  /* alloc work area */
-		STcopy(p, szTemp);
-		MEcopy(" date_part('", 12, pStart);
-		MEcopy(pDatePortion, 3, pStart+12);
-		MEcopy("',", 2, pStart+15);
-		STcopy(szTemp,pStart+17); 
-		MEfree ((PTR)szTemp);                    /* free work area */ 
-	}
-	return;
+        CMnext(p);
+        p1 = p +  STlength(p);
+        CMcpychar(bNull,p1); /* Don't restore the saved character, again, zero */
+        bNull[0] = '\0';    /* it, at the general restore it is checked for zero */
+        szTemp = MEreqmem(0, STlength(pStart) + 8, TRUE, NULL);  /* alloc work area */
+        STcopy(p, szTemp);
+        MEcopy(" date_part('", 12, pStart);
+        MEcopy(pDatePortion, 3, pStart+12);
+        MEcopy("',", 2, pStart+15);
+        STcopy(szTemp,pStart+17); 
+        MEfree ((PTR)szTemp);                    /* free work area */
+    }
+    return;
 }
 
 
@@ -3250,9 +3433,10 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
     CHAR     *  p1;
     LPDBC       pdbc = pstmt->pdbcOwner;
     CHAR     *  bNull = pstmt->bNull;
-    CHAR        buf[500]; 
+    CHAR        buf[1000]; 
     i4         len;
     i4         i;
+    i4         bufLen;
 
     typedef struct
     {
@@ -3548,6 +3732,9 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
     }
         
     case TOK_ESC_FUNCTION:
+    {
+        BOOL curTime = FALSE;
+    
         /* if called by PutParm then cannot use scalar functions */
         if (!pNextScan)
             return FALSE;
@@ -3580,7 +3767,8 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
             {
                 len = STlength(sqlToScalarTbl[i].sqlType);
                 p1 = STstrindex(p, sqlToScalarTbl[i].sqlType, 0, FALSE);
-                if (p1 && !STbcompare (p1, len, sqlToScalarTbl[i].sqlType, len, TRUE ))
+                if (p1 && !STbcompare (p1, len, sqlToScalarTbl[i].sqlType, 
+                    len, TRUE ))
                 {
                     p1 = STindex(p, "(", 0);
                     p2 = STindex(p, ",", 0);
@@ -3592,8 +3780,13 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
                     p1 = p + STlength(tmp1);
                     MEfill((p3 - p1)+1, ' ', p1);
                     p += STlength (p);
-                    CMcpychar(bNull,p); /* Don't restore the saved character, again, zero */
-                    bNull[0] = '\0';    /* it, at the general restore it is checked for zero */
+                    /*
+                    ** Null terminate the string instead of restoring the
+                    ** saved character, since the revised query overwrites
+                    ** the original query string.
+                    */
+                    CMcpychar(bNull,p); 
+                    bNull[0] = '\0';    
                     return TRUE;
                 }
             }
@@ -3617,8 +3810,13 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
                 szEscape += STlength (szEscape);
                 MEfill (cbEscape,' ',szEscape - cbEscape);
                 p += STlength (p);
-                CMcpychar(bNull,p); /* Don't restore the saved character, again, zero */
-                bNull[0] = '\0';    /* it, at the general restore it is checked for zero */
+                /*
+                ** Null terminate the string instead of restoring the
+                ** saved character, since the revised query overwrites
+                ** the original query string.
+                */
+                CMcpychar(bNull,p); 
+                bNull[0] = '\0';    
                 return TRUE;
             }
             break;
@@ -3634,8 +3832,13 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
                 szEscape += STlength (szEscape);
                 MEfill (cbEscape, ' ',szEscape - cbEscape);
                 p += STlength (p);
-                CMcpychar(bNull,p); /* Don't restore the saved character, again, zero */
-                bNull[0] = '\0';    /* it, at the general restore it is checked for zero */
+                /*
+                ** Null terminate the string instead of restoring the
+                ** saved character, since the revised query overwrites
+                ** the original query string.
+                */
+                CMcpychar(bNull,p); 
+                bNull[0] = '\0';    
                 return TRUE;
             }
             break;
@@ -3654,8 +3857,13 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
                 szEscape += STlength (szEscape);
                 MEfill (cbEscape,' ',szEscape - cbEscape);
                 p += STlength (p);
-                CMcpychar(bNull,p);  /* Don't restore the saved character, again, zero */
-                    bNull[0] = '\0';   /* it, at the general restore it is checked for zero */
+                /*
+                ** Null terminate the string instead of restoring the
+                ** saved character, since the revised query overwrites
+                ** the original query string.
+                */
+                CMcpychar(bNull,p);  
+                bNull[0] = '\0';   
                 return TRUE;
             }
             break;
@@ -3676,16 +3884,97 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
                 if (!CMcmpcase(p,")") )
                 {
                     CMcpychar(" ",p); 
-                    MEcopy("date('today')",13,pStart);
+                    if (fAPILevel < IIAPI_LEVEL_4) 
+                       MEcopy("date('today')",13,pStart);
+                    else 
+                       MEcopy("current_date",12,pStart);
+                }
+            }
+            break; 
+        }
+        if (!STbcompare(p,12,"CURRENT_DATE",12, TRUE))
+        {
+            p += 12;
+            while (CMwhite(p)) CMnext(p);
+            if (!CMcmpcase(p,"("))
+            {
+                CMcpychar(" ",p); 
+                CMnext(p);
+                while (CMwhite(p) ) CMnext(p);
+                if (!CMcmpcase(p,")") )
+                {
+                    CMcpychar(" ",p); 
+                    if (fAPILevel < IIAPI_LEVEL_4) 
+                       MEcopy("date('today')   ",16,pStart);
+                    else 
+                       MEcopy("current_date    ",16,pStart);
+                }
+            }
+            break; 
+        }
+        if (!STbcompare(p,17,"CURRENT_TIMESTAMP",17,TRUE))
+        {
+            p += 17;
+            while (CMwhite(p)) CMnext(p);
+            if (!CMcmpcase(p,"(") )
+            {
+                CMcpychar(" ",p); 
+                CMnext(p);
+                while (CMwhite(p)) CMnext(p);
+                if (!CMcmpcase(p,")") )
+                {
+                    p += STlength (p);
+                    /*
+                    ** Null terminate the string instead of restoring the
+                    ** saved character, since the revised query overwrites
+                    ** the original query string.
+                    */
+                    CMcpychar(bNull,p); 
+                    bNull[0] = '\0'; 
+                    count = (i4)STlength (p);
+                    if (count == 0)
+                        count = 1;    /* to move the null terminator  */
+                    /* 
+                    ** pstmt->szNull is not updated, the inserted string 
+                    ** doesn't contain escape character, it will be 
+                    ** skipped anyway 
+                    */
+                    if (fAPILevel < IIAPI_LEVEL_4)
+                    {
+                        memmove(pStart+34,p,count);
+                        MEcopy("date ( 'now' )                    ",
+                            34,pStart);
+                    }
+                    else
+                    {
+                        memmove(pStart+34,p,count);
+                        MEcopy("timestamp_wo_tz(current_timestamp)",
+                            34,pStart);
+                    }     
+
+                    if (pNextScan)
+                        *pNextScan = pStart + 34;
+
+                    return TRUE;
                 }
             }
             break; 
         }
         if (!STbcompare(p,7,"CURTIME",7,TRUE))
         {
+            curTime = TRUE;
+            p += 7;
+        }
+        else if (!STbcompare(p,12,"CURRENT_TIME",12,TRUE))
+        {
+            curTime = TRUE;
+            p += 12;
+        }
+        if (curTime)
+        {
+            curTime = FALSE;
             if (!isServerClassINGRES(pstmt->pdbcOwner))
                 return FALSE;
-            p += 7;
             while (CMwhite(p)) CMnext(p);
             if (!CMcmpcase(p,"("))
             {
@@ -3695,16 +3984,34 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
                 if (!CMcmpcase(p,")"))
                 {
                     p += STlength (p);
-                    CMcpychar(bNull,p); /* Don't restore the saved character, again, zero */
-                    bNull[0] = '\0';    /* it, at the general restore it is checked for zero */
+                    /*
+                    ** Null terminate the string instead of restoring the
+                    ** saved character, since the revised query overwrites
+                    ** the original query string.
+                    */
+                    CMcpychar(bNull,p); 
+                    bNull[0] = '\0';   
                     count = (i4)STlength (p);
                     if (count == 0)
                         count = 1;
-                    memmove(pStart+29,p,count);
-                    MEcopy(" right(char(date('now')),14) ",29,pStart);
-                    if (pNextScan)
-                    *pNextScan = pStart + 29;
-                     /* pstmt->szNull is not updated, the inserted 
+                    if (fAPILevel < IIAPI_LEVEL_4) 
+                    {
+                        memmove(pStart+29,p,count);
+                        MEcopy(" right(char(date('now')),14) ",29,pStart);
+                        if (pNextScan)
+                            *pNextScan = pStart + 29;
+                    
+                    }
+                    else
+                    {
+                        memmove(pStart+26,p,count);
+                        MEcopy(" time_wo_tz(current_time) ",26,
+                            pStart);
+                        if (pNextScan)
+                            *pNextScan = pStart + 26;
+                    
+                    }
+                    /* pstmt->szNull is not updated, the inserted 
                     ** string doesn't contain
                     ** escape character, it will be skipped anyway 
                     */
@@ -3717,6 +4024,9 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
         {
             if (!isServerClassINGRES(pstmt->pdbcOwner))
                 return FALSE;
+	    if (isServerClassVECTORWISE(pstmt->pdbcOwner))
+		return FALSE;
+
             MEcopy("    dow",7,p);
             if (pNextScan)
             {
@@ -3727,8 +4037,13 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
                 szEscape += STlength (szEscape);
                 MEfill (cbEscape,' ',szEscape - cbEscape);
                 p += STlength (p);
-                  CMcpychar(bNull,p); /* Don't restore the saved character, again, zero */
-                bNull[0] = '\0';    /* it, at the general restore it is checked for zero */
+                CMcpychar(bNull,p); 
+                /*
+                ** Null terminate the string instead of restoring the
+                ** saved character, since the revised query overwrites
+                ** the original query string.
+                */
+                bNull[0] = '\0';    
                 return TRUE;
             }
             break; 
@@ -3737,16 +4052,34 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
         {
             if (!isServerClassINGRES(pstmt->pdbcOwner))
                 return FALSE;
-            p += 10;
-            ConvertDateFn(p,pStart,cbEscape,"day",bNull);
-            if (pNextScan)
-            *pNextScan = pStart + DATE_PART_LEN;
-            return TRUE;
+            if (fAPILevel < IIAPI_LEVEL_4)
+            {
+                p += 10;
+                ConvertDateFn(pstmt, p,pStart,cbEscape,"day",bNull);
+                if (pNextScan)
+                    *pNextScan = pStart + DATE_PART_LEN;
+                    return TRUE;
+            }
+            else
+            {
+                /*
+                ** Convert to DAY().
+                */
+                MEfill (7, ' ', p+3);
+                p += 10;
+                if (pNextScan)
+                    *pNextScan = pStart + DATE_PART_LEN;
+                break;
+            }
+       
         }
         if (!STbcompare(p,9,"DAYOFWEEK",9,TRUE))
         {
             if (!isServerClassINGRES(pstmt->pdbcOwner))
                 return FALSE;
+            if (fAPILevel < IIAPI_LEVEL_4)
+                return FALSE;
+
             p += 9;
             while (CMwhite(p)) CMnext(p);
             if ( !CMcmpcase(p,"(") )
@@ -3769,19 +4102,36 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
                 if (!CMcmpcase(p,")"))
                 {
                     CMcpychar(nt,p); 
-                    STprintf(buf," int4(interval('days',%s-(date_trunc('wk',%s)-'2 days')))",p1,p1);
+                    STprintf(buf, " 1 + mod( 5 + (mod((day(%s) + " \
+                        "((26*(coalesce(case when month(%s) <= 2 then " \
+                        "month(%s) + 12 else month(%s) end) + 1)) / 10)" \
+                        " + coalesce(case when month(%s) <= 2 then " \
+                        "mod((year(%s) - 1), 100) else mod(year(%s), " \
+                        "100) end) + coalesce(case when month(%s) <= 2 " \
+                        "then mod((year(%s) - 1), 100) else mod(year(%s), " \
+                        "100) end) / 4 + coalesce(case when month(%s) <= " \
+                        "2 then (year(%s) - 1) / 100 else year(%s) / 100 " \
+                        "end) / 4 + (5 * coalesce(case when month(%s) <= " \
+                        "2 then (year(%s) - 1) / 100 else year(%s) / " \
+                        "100 end))), 7)), 7)", p1, p1, p1, p1, p1, p1, p1, 
+                            p1, p1, p1, p1, p1, p1, p1, p1, p1);
                     CMnext(p);
                     p += STlength (p);
-                    CMcpychar(bNull,p); /* Don't restore the saved character, again, zero */
-                    bNull[0] = '\0';    /* it, at the general restore it is checked for zero */
+                    CMcpychar(bNull,p); 
+                    /*
+                    ** Null terminate the string instead of restoring the
+                    ** saved character, since the revised query overwrites
+                    ** the original query string.
+                    */
+                    bNull[0] = '\0';    
                     count = (i4)STlength (p);
                     if (count == 0)
                         count = 1;
-                    /*MEmove(count,p,' ',count,pStart+STlength(buf));  */
-                    memmove(pStart+STlength(buf),p,count);
-                    MEcopy(buf,STlength(buf),pStart);
+                    bufLen = STlength(buf);
+                    memmove(pStart+bufLen,p,count);
+                    MEcopy(buf,bufLen,pStart);
                     if (pNextScan)
-                *pNextScan = pStart + 22;
+                        *pNextScan = pStart + bufLen;
                     return TRUE;
                 }
             }
@@ -3791,6 +4141,7 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
         {
             if (!isServerClassINGRES(pstmt->pdbcOwner))
                 return FALSE;
+
             p += 9;
             while (CMwhite(p)) CMnext(p);
             if (!CMcmpcase(p,"("))
@@ -3813,19 +4164,48 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
                 if (!CMcmpcase(p,")"))
                 {
                     CMcpychar(nt,p); 
-    STprintf(buf," int4(interval('days',%s-date_trunc('yr',%s)))+1",p1,p1);
+                    if (fAPILevel < IIAPI_LEVEL_4)
+                        STprintf(buf," int4(interval('days',%s-date_trunc" \
+                            "('yr',%s)))+1",p1,p1);
+                    else
+                        STprintf(buf, "coalesce (case when (mod(year(%s),400)" \
+                            " = 0 ) then 366-integer(left(varchar(ansidate(" \
+                            "varchar(year(%s)) + '-12-31') - ansidate(%s)), " \
+                            "locate(varchar(ansidate(varchar(year(%s)) + " \
+                            "'-12-31') -ansidate(%s)), ' '))) end, " \
+                            "case when (mod(year(%s), 100) = 0 ) then " \
+                            "365-integer(left(varchar(ansidate(varchar(" \
+                            "year(%s)) + '-12-31') - ansidate(%s)), " \
+                            "locate(varchar(ansidate(varchar(year(%s)) + " \
+                            "'-12-31') - ansidate(%s)), ' '))) end, " \
+                            "case when (mod(year(%s), 4) = 0 ) then " \
+                            "366-integer(left(varchar(ansidate(varchar(" \
+                            "year(%s)) + '-12-31') - ansidate(%s)), " \
+                            "locate(varchar(ansidate(varchar(year(%s)) + " \
+                            "'-12-31') - ansidate(%s)), ' '))) " \
+                            "else 365-integer(left(varchar(ansidate(" \
+                            "varchar(year(%s)) + '-12-31') - ansidate(%s)), " \
+                            "locate(varchar(ansidate(varchar(year(%s)) + " \
+                            "'-12-31') - ansidate(%s)), ' '))) end)",
+                            p1, p1, p1, p1, p1, p1, p1, p1, p1, p1, p1, 
+                            p1, p1, p1, p1, p1, p1, p1, p1); 
                     CMnext(p);
                     p += STlength(p);
-                    CMcpychar(bNull,p); /* Don't restore the saved character, again, zero */
-                    bNull[0] = '\0';    /* it, at the general restore it is checked for zero */
+                    /*
+                    ** Null terminate the string instead of restoring the
+                    ** saved character, since the revised query overwrites
+                    ** the original query string.
+                    */
+                    CMcpychar(bNull,p); 
+                    bNull[0] = '\0';    
                     count = (i4)STlength(p);
                     if (count == 0)
                         count = 1;
-                    /*MEmove(count,p,' ',count,pStart+STlength(buf));  */
-                    memmove(pStart+STlength(buf),p,count);
-                    MEcopy(buf,STlength(buf),pStart);
+                    bufLen = STlength(buf);
+                    memmove(pStart+bufLen,p,count);
+                    MEcopy(buf,bufLen,pStart);
                     if (pNextScan)
-                    *pNextScan = pStart + 22;
+                        *pNextScan = pStart + bufLen;
                     return TRUE;
                 }
             }
@@ -3835,6 +4215,8 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
         {
             if (!isServerClassINGRES(pstmt->pdbcOwner))
                 return FALSE;
+            if (fAPILevel < IIAPI_LEVEL_4)
+                return FALSE;
             p += 9;
             while (CMwhite(p)) CMnext(p);
             if (!CMcmpcase(p,"("))
@@ -3856,56 +4238,274 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
                 }
                 if (!CMcmpcase(p,")"))
                 {
-                    CMcpychar(nt,p); 
-                    STprintf(buf,
-                        "right(shift(_date(interval('sec',%s-date('123169'))),3),3)",
-                        p1);
-                    CMnext(p);
+                    char *monthNameQuery = "coalesce(case when month(%s) = 1 " \
+                        "then 'jan' end, case when month(%s) = 2 then " \
+                        "'feb' end, case when month(%s) = 3 then 'mar' end, " \
+                        "case when month(%s) = 4 then 'apr' end, case when " \
+                        "month(%s) = 5 then 'may' end, case when month(%s) " \
+                        "= 6 then 'jun' end, case when month(%s) = 7 then " \
+                        "'jul' end, case when month(%s) = 8 then 'aug' end, " \
+                        "case when month(%s) = 9 then 'sep' end, case when " \
+                        "month(%s) = 10 then 'oct' end, case when month(%s) " \
+                        "= 11 then 'nov' end, case when month(%s) = 12 then " \
+                        "'dec' end)"; 
+ 
+                    CMcpychar(nt,p);
+                    STprintf(buf, monthNameQuery, p1, p1, p1, p1, p1, p1,
+                        p1, p1, p1, p1, p1, p1);
+		    CMnext(p);
                     p += STlength(p);
-                    CMcpychar(bNull,p); /* Don't restore the saved character, again, zero */
-                    bNull[0] = '\0';    /* it, at the general restore it is checked for zero */
+                    /*
+                    ** Null terminate the string instead of restoring the
+                    ** saved character, since the revised query overwrites
+                    ** the original query string.
+                    */
+                    CMcpychar(bNull,p); 
+                    bNull[0] = '\0';   
                     count = (i4)STlength(p);
                     if (count == 0)
                         count = 1;
-                    /*MEmove(count,p,' ',count,pStart+STlength(buf));  */
-                    memmove(pStart+STlength(buf),p,count);
-                    MEcopy(buf,STlength(buf),pStart);
+                    bufLen = STlength(buf);
+                    memmove(pStart+bufLen,p,count);
+                    MEcopy(buf,bufLen,pStart);
                     if (pNextScan)
-                    *pNextScan = pStart + 33;
+                        *pNextScan = pStart + bufLen;
                     return TRUE;
                 }
             }
-            break; 
+            break;
         }
+        if (!STbcompare(p,13,"TIMESTAMPDIFF",13,TRUE))
+        {
+            char *p2;
+            char *diffStr = NULL;
+            if (!isServerClassINGRES(pstmt->pdbcOwner))
+                return FALSE;
+            p += 13;
+            while (CMwhite(p)) CMnext(p);
+            if (!CMcmpcase(p,"("))
+            {
+                CMnext(p);
+                count = 1;
+                while (CMwhite(p)) CMnext(p);
+                if (!STbcompare(p, 12,"SQL_TSI_YEAR",12, TRUE))
+                {
+                    if (fAPILevel < IIAPI_LEVEL_5)
+                        diffStr = "int4 (interval('years',date(" \
+                            "%s) - date (%s)))";
+                    else
+                        diffStr = "int4(round((%s - %s)/interval " \
+                            "'31556952' second, 0))";
+                    p += 12;
+                    p1 = STindex(p, ",", 0);
+                    CMnext(p1);
+                    p2 = STindex(p1, ",",0);
+                    *p2 = '\0';
+                    CMnext(p2);
+                    p = STindex(p2, ")", 0);
+                    *p = '\0';
+                    CMnext(p);
+                }
+                else if (!STbcompare(p, 13,"SQL_TSI_MONTH",13, TRUE))
+                {
+                    if (fAPILevel < IIAPI_LEVEL_5)
+                        diffStr = "int4(interval('months',date(" \
+                            "%s) - date(%s)))";
+                    else
+                        diffStr = "int4(round(12.0*((%s - %s)/interval " \
+                        "'31556952' second), 0))";
+                    p += 13;
+                    p1 = STindex(p, ",", 0);
+                    CMnext(p1);
+                    p2 = STindex(p1, ",",0);
+                    *p2 = '\0';
+                    CMnext(p2);
+                    p = STindex(p2, ")", 0);
+                    *p = '\0';
+                    CMnext(p);
+                }
+                else if (!STbcompare(p, 11,"SQL_TSI_DAY",11, TRUE))
+                {
+                    if (fAPILevel < IIAPI_LEVEL_5)
+                        diffStr = "int4(interval('days',date(" \
+                            "%s) - date(%s)))";
+                    else
+                        diffStr = "int4(round(365.2425*((%s - %s)/interval " \
+                        "'31556952' second), 0))";
+                    p += 11;
+                    p1 = STindex(p, ",", 0);
+                    CMnext(p1);
+                    p2 = STindex(p1, ",",0);
+                    *p2 = '\0';
+                    CMnext(p2);
+                    p = STindex(p2, ")", 0);
+                    *p = '\0';
+                    CMnext(p);
+                }
+                else if (!STbcompare(p, 12,"SQL_TSI_HOUR",12, TRUE))
+                {
+                    if (fAPILevel < IIAPI_LEVEL_5)
+                        diffStr = "int4(interval('hours',date(" \
+                            "%s) - date(%s)))";
+                    else
+                        diffStr = "int4(round(365.2425*24*((%s - " \
+                           "%s) / interval '31556952' second), 0))";
+                    p += 12;
+                    p1 = STindex(p, ",", 0);
+                    CMnext(p1);
+                    p2 = STindex(p1, ",",0);
+                    *p2 = '\0';
+                    CMnext(p2);
+                    p = STindex(p2, ")", 0);
+                    *p = '\0';
+                    CMnext(p);
+                }
+                else if (!STbcompare(p, 14,"SQL_TSI_MINUTE",14, TRUE))
+                {
+                    if (fAPILevel < IIAPI_LEVEL_5)
+                        diffStr = "int4(interval('minutes',date(" \
+                            "%s) - date(%s)))";
+                    else
+                        diffStr = "int4(round(365.2425*24*60*((%s - " \
+                            "%s)/interval '31556952' second), 0))";
+                    p += 14;
+                    p1 = STindex(p, ",", 0);
+                    CMnext(p1);
+                    p2 = STindex(p1, ",",0);
+                    *p2 = '\0';
+                    CMnext(p2);
+                    p = STindex(p2, ")", 0);
+                    *p = '\0';
+                    CMnext(p);
+                }
+                else if (!STbcompare(p, 14,"SQL_TSI_SECOND",14, TRUE))
+                {
+                    if (fAPILevel < IIAPI_LEVEL_5)
+                        diffStr = "int4(interval('seconds',date(" \
+                            "%s) - date(%s)))";
+                    else
+                        diffStr = "int4(round(365.2425*24*60*60*((%s - " \
+                            "%s)/interval '31556952' second), 0))";
+                    p += 14;
+                    p1 = STindex(p, ",", 0);
+                    CMnext(p1);
+                    p2 = STindex(p1, ",",0);
+                    *p2 = '\0';
+                    CMnext(p2);
+                    p = STindex(p2, ")", 0);
+                    *p = '\0';
+                    CMnext(p);
+                }
+                else if (!STbcompare(p, 15,"SQL_TSI_QUARTER",15, TRUE))
+                {
+                    if (fAPILevel < IIAPI_LEVEL_5)
+                        diffStr = "int4(4.0*(interval('years',date(" \
+                            "%s) - date(%s))))";
+                    else
+                        diffStr = "int4(round(4.0*((%s - %s)/interval " \
+                        "'31556952' second), 0))";
+                    p += 15;
+                    p1 = STindex(p, ",", 0);
+                    CMnext(p1);
+                    p2 = STindex(p1, ",",0);
+                    *p2 = '\0';
+                    CMnext(p2);
+                    p = STindex(p2, ")", 0);
+                    *p = '\0';
+                    CMnext(p);
+                }
+                
+                if (diffStr == NULL)
+                    return FALSE;
+                
+                STprintf(buf, diffStr, p2, p1);
+                p += STlength(p);
+
+                /*
+                ** Null terminate the string instead of restoring the
+                ** saved character, since the revised query overwrites
+                ** the original query string.
+                */
+                CMcpychar(bNull,p); 
+                bNull[0] = '\0';   
+                count = (i4)STlength(p);
+                if (count == 0)
+                    count = 1;
+                bufLen = STlength(buf);
+                memmove(pStart+bufLen,p,count);
+                MEcopy(buf,bufLen,pStart);
+                if (pNextScan)
+                    *pNextScan = pStart + bufLen;
+                return TRUE;
+            }
+            break;
+        }
+
         if (!STbcompare(p,4,"HOUR",4,TRUE))
         {
             if (!isServerClassINGRES(pstmt->pdbcOwner))
                 return FALSE;
             p += 4;
-            ConvertDateFn(p,pStart,cbEscape,"hrs",bNull);
-            if (pNextScan)
-            *pNextScan = pStart + DATE_PART_LEN;
-            return TRUE;
+            if (fAPILevel < IIAPI_LEVEL_4)
+            {
+                ConvertDateFn(pstmt,p,pStart,cbEscape,"hrs",bNull);
+                if (pNextScan)
+                    *pNextScan = pStart + DATE_PART_LEN;
+                return TRUE;
+            }
+            else
+            {    
+                /*
+                ** Convert to HOUR() scalar.
+                */
+                if (pNextScan)
+                    *pNextScan = pStart + DATE_PART_LEN;
+                break;
+            }
         }
         if (!STbcompare(p,6,"MINUTE",6,TRUE))
         {
             if (!isServerClassINGRES(pstmt->pdbcOwner))
                 return FALSE;
             p += 6;
-            ConvertDateFn(p,pStart,cbEscape,"min",bNull);
-            if (pNextScan)
-            *pNextScan = pStart + DATE_PART_LEN;
-            return TRUE;
+            if (fAPILevel < IIAPI_LEVEL_4)
+            {
+                ConvertDateFn(pstmt,p,pStart,cbEscape,"min",bNull);
+                if (pNextScan)
+                    *pNextScan = pStart + DATE_PART_LEN;
+                return TRUE;
+            }
+            else
+            {
+                /*
+                ** Convert to MINUTE() scalar.
+                */
+                if (pNextScan)
+                    *pNextScan = pStart + DATE_PART_LEN;
+                break;
+            }
         }
         if (!STbcompare(p,5,"MONTH",5,TRUE))
         {
             if (!isServerClassINGRES(pstmt->pdbcOwner))
                 return FALSE;
             p += 5;
-            ConvertDateFn(p,pStart,cbEscape,"mos",bNull);
-            if (pNextScan)
-            *pNextScan = pStart + DATE_PART_LEN;
-            return TRUE;
+            if (fAPILevel < IIAPI_LEVEL_4)
+            {
+                ConvertDateFn(pstmt,p,pStart,cbEscape,"mos",bNull);
+                if (pNextScan)
+                    *pNextScan = pStart + DATE_PART_LEN;
+                return TRUE;
+            }
+            else
+            {
+                /*
+                ** Convert to MONTH() scalar.
+                */
+                if (pNextScan)
+                    *pNextScan = pStart + DATE_PART_LEN;
+                break;
+            }
         }
         if (!STbcompare(p,3,"NOW",3,TRUE))
         {
@@ -3919,20 +4519,37 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
                 if (!CMcmpcase(p,")") )
                 {
                     p += STlength (p);
-                    CMcpychar(bNull,p); /* Don't restore the saved character, again, zero */
-                    bNull[0] = '\0';    /* it, at the general restore it is checked for zero */
+                    CMcpychar(bNull,p); 
+                    /*
+                    ** Null terminate the string instead of restoring the
+                    ** saved character, since the revised query overwrites
+                    ** the original query string.
+                    */
+                    bNull[0] = '\0';    
                     count = (i4)STlength (p);
                     if (count == 0)
                         count = 1;    /* to move the null terminator  */
-                    /*MEmove(count,p,' ',count,pStart+11);  */
-                    memmove(pStart+11,p,count);
-                    MEcopy("date('now')",11,pStart);
-                    if (pNextScan)
-                *pNextScan = pStart + 11;
-                    /* pstmt->szNull is not updated, the inserted string 
+                    /* 
+                    ** pstmt->szNull is not updated, the inserted string 
                     ** doesn't contain escape character, it will be 
                     ** skipped anyway 
                     */
+                    if (fAPILevel < IIAPI_LEVEL_4)
+                    {  
+                        memmove(pStart+11,p,count);
+                        MEcopy("date('now')",11,pStart);
+                        if (pNextScan)
+                            *pNextScan = pStart + 11;
+                    }
+                    else
+                    {
+                        memmove(pStart+34,p,count);
+                        MEcopy("timestamp_wo_tz(current_timestamp)",
+                            34,pStart);
+                        if (pNextScan)
+                            *pNextScan = pStart + 34;
+                    }
+
                     return TRUE;
                 }
             }
@@ -3943,40 +4560,165 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
             if (!isServerClassINGRES(pstmt->pdbcOwner))
                 return FALSE;
             p += 7;
-            ConvertDateFn(p,pStart,cbEscape,"qtr",bNull);
-            if (pNextScan)
-            *pNextScan = pStart + DATE_PART_LEN;
-            return TRUE;
+            if (fAPILevel < IIAPI_LEVEL_4)
+            {
+                ConvertDateFn(pstmt,p,pStart,cbEscape,"qtr",bNull);
+                *pNextScan = pStart + DATE_PART_LEN;
+                return TRUE;
+            }
+            else
+            {
+                if (pNextScan)
+                    *pNextScan = pStart + DATE_PART_LEN;
+                break;
+            }
         }
         if (!STbcompare(p,6,"SECOND",6,TRUE))
         {
             if (!isServerClassINGRES(pstmt->pdbcOwner))
                 return FALSE;
             p += 6;
-            ConvertDateFn(p,pStart,cbEscape,"sec",bNull);
-            if (pNextScan)
-            *pNextScan = pStart + DATE_PART_LEN;
-            return TRUE;
+            if (fAPILevel < IIAPI_LEVEL_4)
+            {
+                ConvertDateFn(pstmt,p,pStart,cbEscape,"sec",bNull);
+                *pNextScan = pStart + DATE_PART_LEN;
+                return TRUE;
+            }
+            else
+            {
+                /*
+                ** Convert to MINUTE() scalar.
+                */
+                if (pNextScan)
+                    *pNextScan = pStart + DATE_PART_LEN;
+                break;
+            }
         }
         if (!STbcompare(p,4,"WEEK",4,TRUE))
         {
             if (!isServerClassINGRES(pstmt->pdbcOwner))
                 return FALSE;
             p += 4;
-            ConvertDateFn(p,pStart,cbEscape,"wks",bNull);
-            if (pNextScan)
-            *pNextScan = pStart + DATE_PART_LEN;
-            return TRUE;
+            if (fAPILevel < IIAPI_LEVEL_4)
+            {
+                ConvertDateFn(pstmt,p,pStart,cbEscape,"wks",bNull);
+                if (pNextScan)
+                    *pNextScan = pStart + DATE_PART_LEN;
+                return TRUE;
+            }
+            else
+            {
+                /*
+                ** Convert to WEEK() scalar.
+                */
+                if (pNextScan)
+                    *pNextScan = pStart + DATE_PART_LEN;
+                break;
+            }
+        }
+        if (!STbcompare(p,7,"EXTRACT",7,TRUE))
+        {
+            if (!isServerClassINGRES(pstmt->pdbcOwner))
+                return FALSE;
+            if (fAPILevel < IIAPI_LEVEL_4)
+            {
+                /*
+                ** Re-constitute EXTRACT (XXX FROM yyy) into
+                ** XXX(yyy) before calling ConvertDateFn().
+                */
+                MEfill (7, ' ', p);
+                p += 7;
+                while (CMwhite(p)) CMnext(p);
+                CMcpychar(" ", p);
+                if (p1 = STstrindex(p, "YEAR", 0, TRUE))
+                {
+                    p1 = STstrindex(p1, "FROM", 0, TRUE);
+                    MEfill (4, ' ', p1);
+                    CMcpychar("(",p1+3);
+                    while (CMwhite(p)) CMnext(p);
+                    p += 4;
+                    ConvertDateFn(pstmt,p,pStart,cbEscape,"yrs",bNull);
+                }
+	        else if (p1 = STstrindex(p, "MONTH", 0, TRUE))
+                {
+                    p1 = STstrindex(p1, "FROM", 0, TRUE);
+                    MEfill (4, ' ', p1);
+                    CMcpychar("(",p1+3);
+                    while (CMwhite(p)) CMnext(p);
+                    p += 5;
+                    ConvertDateFn(pstmt,p,pStart,cbEscape,"mos",bNull);
+                }
+                else if (p1 = STstrindex(p, "DAY", 0, TRUE))
+                {         
+                    p1 = STstrindex(p1, "FROM", 0, TRUE);
+                    MEfill (4, ' ', p1);
+                    CMcpychar("(",p1+3);
+                    while (CMwhite(p)) CMnext(p);
+                    p += 3;
+                    ConvertDateFn(pstmt,p,pStart,cbEscape,"day",bNull);
+                }
+                else if (p1 = STstrindex(p, "HOUR", 0, TRUE))
+                {                   
+                    p1 = STstrindex(p1, "FROM", 0, TRUE);
+                    MEfill (4, ' ', p1);
+                    CMcpychar("(",p1+3);
+                    while (CMwhite(p)) CMnext(p);
+                    p += 4;
+                    ConvertDateFn(pstmt,p,pStart,cbEscape,"hrs",bNull);
+                }
+                else if (p1 = STstrindex(p, "MINUTE", 0, TRUE))
+                {                   
+                    p1 = STstrindex(p1, "FROM", 0, TRUE);
+                    MEfill (4, ' ', p1);
+                    CMcpychar("(",p1+3);
+                    while (CMwhite(p)) CMnext(p);
+                    p += 6;
+                    ConvertDateFn(pstmt,p,pStart,cbEscape,"min",bNull);
+                }
+                else if (p1 = STstrindex(p, "SECOND", 0, TRUE))
+                {                   
+                    p1 = STstrindex(p1, "FROM", 0, TRUE);
+                    MEfill (4, ' ', p1);
+                    CMcpychar("(",p1+3);
+                    while (CMwhite(p)) CMnext(p);
+                    p += 6;
+                    ConvertDateFn(pstmt,p,pStart,cbEscape,"sec",bNull);
+                }
+                if (pNextScan)
+                    *pNextScan = pStart + DATE_PART_LEN;
+                return TRUE;
+            }
+            else
+            {
+                /*
+                ** Convert to EXTRACT() scalar.
+                */
+		p += 7;
+                if (pNextScan)
+                    *pNextScan = pStart + DATE_PART_LEN;
+                break;
+            }
         }
         if (!STbcompare(p,4,"YEAR",4,TRUE))
         {
             if (!isServerClassINGRES(pstmt->pdbcOwner))
                 return FALSE;
             p += 4;
-            ConvertDateFn(p,pStart,cbEscape,"yrs",bNull);
-            if (pNextScan)
-            *pNextScan = pStart + DATE_PART_LEN;
-            return TRUE;
+            if (fAPILevel < IIAPI_LEVEL_4)
+            {
+                ConvertDateFn(pstmt,p,pStart,cbEscape,"yrs",bNull);
+                *pNextScan = pStart + DATE_PART_LEN;
+                return TRUE;
+            }
+            else
+            {
+                /*
+                ** Convert to YEAR() scalar.
+                */
+                if (pNextScan)
+                    *pNextScan = pStart + DATE_PART_LEN;
+                break;
+            }
         }
         if (!STbcompare(p,4,"USER",4,TRUE))
         {
@@ -3990,12 +4732,16 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
                 if (!CMcmpcase(p,")") )
                 {
                     p += STlength (p);
-                    CMcpychar(bNull,p); /* Don't restore the saved character, again, zero */
-                    bNull[0] = '\0';    /* it, at the general restore it is checked for zero */
+                    /*
+                    ** Null terminate the string instead of restoring the
+                    ** saved character, since the revised query overwrites
+                    ** the original query string.
+                    */
+                    CMcpychar(bNull,p); 
+                    bNull[0] = '\0';    
                     count = (i4)STlength(p);
                     if (count == 0)
                         count = 1;    /* to move the null terminator  */
-                    /*MEmove(count,p,' ',count,pStart+20);  */
                     memmove(pStart+20,p,count);
                     MEcopy("dbmsinfo('username')",20,pStart);
                     if (pNextScan)
@@ -4017,8 +4763,13 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
                 if (!CMcmpcase(p,")") )
                 {
                     p += STlength(p);
-                    CMcpychar(bNull,p); /* Don't restore the saved character, again, zero */
-                    bNull[0] = '\0';    /* it, at the general restore it is checked for zero */
+                    /*
+                    ** Null terminate the string instead of restoring the
+                    ** saved character, since the revised query overwrites
+                    ** the original query string.
+                    */
+                    CMcpychar(bNull,p); 
+                    bNull[0] = '\0';    
                     count = (i4)STlength(p);
                     if (count == 0)
                         count = 1;    /* to move the null terminator  */
@@ -4033,7 +4784,7 @@ BOOL ParseConvert (LPSTMT pstmt, LPSTR szEscape, LPSTR * pNextScan, BOOL isaPara
             break;
         }
         break;
-    
+    }
     case TOK_ESC_ESCAPE:
     
         MEcopy ("ESCAPE", 6, szEscape);
@@ -4450,11 +5201,82 @@ static VOID  ParseSpace(
 **  Return id for a syntax token.
 **
 **  On entry: szToken-->SQL syntax token
-**            fUpper  = TRUE if not case sensitive
 **
 **  Returns:  token id
 */
 static TOKEN  ParseToken(
+    LPSTR  szToken)
+{
+    TOKEN   token = TOK_VOID;
+    char    *p = szToken;
+    BOOL fComment = FALSE;
+
+    token = FetchToken(szToken);
+    
+    /*
+    ** If the token is not the beginning of a comment, we're done.
+    */
+    if (token != TOK_BEGIN_COMMENT)
+        goto end;
+    else
+        fComment = TRUE;
+
+    while (p)
+    {
+        p = strtok(NULL, " ");
+        if (!p)
+        {
+            token = TOK_VOID;
+            goto end;
+        }
+
+        /* 
+        ** Swallow multiple "/*" markers.
+        */
+        token = FetchToken(p);
+        if (token == TOK_BEGIN_COMMENT)
+        {
+            fComment = TRUE;
+                continue;
+        }
+
+        if (fComment)
+        {
+            if (token == TOK_END_COMMENT)
+                fComment = FALSE;            
+
+            /*
+            ** Keep looping through the query string until the end comment
+            ** marker is found.
+            */
+            continue;
+        }
+        goto end;
+    }
+
+end:
+    /*
+    ** If no markers are found other than a comment marker, treat as
+    ** invalid syntax.
+    */
+    if (token == TOK_BEGIN_COMMENT || 
+        token == TOK_END_COMMENT)
+        token = TOK_VOID;
+
+    return token;
+}
+
+/*
+**  FetchToken
+**
+**  Return id for a syntax token.
+**
+**  On entry: szToken-->SQL syntax token
+**            fUpper  = TRUE if not case sensitive
+**
+**  Returns:  token id
+*/
+static TOKEN  FetchToken(
     LPSTR  szToken)
 {
     SQLINTEGER  i;
@@ -4470,11 +5292,13 @@ static TOKEN  ParseToken(
     TOK_AUTOCOMMIT,    "AUTOCOMMIT",
     TOK_ALL,           "ALL",
     TOK_ALTER,         "ALTER",
+    TOK_BEGIN_COMMENT, "/*",
     TOK_COMMIT,        "COMMIT",
-    TOK_COPY,          "COPY", 
+    TOK_COPY,          "COPY",
     TOK_CREATE,        "CREATE",
     TOK_DELETE,        "DELETE",
     TOK_DROP,          "DROP",
+    TOK_END_COMMENT,   "*/",
     TOK_ESC_DATE,      "D",
     TOK_ESC_ESCAPE,    "ESCAPE",
     TOK_ESC_FUNCTION,  "FN",
@@ -4507,23 +5331,22 @@ static TOKEN  ParseToken(
     TOK_WRITE,         "WRITE",
     TOK_IDENTIFIER,    ""
     };
-    
+
     if (!szToken || *szToken == EOS)
         return TOK_VOID;
-    
+
     i = STlength(szToken);
     if (i > sizeof(szTokenUpper)-1)
         return TOK_VOID;
     STcopy(szToken, szTokenUpper);   /* copy token to upper case work area */
     CVupper(szTokenUpper);           /* convert token to upper case */
-    
+
     for (i = 0; TOKEN_TABLE[i].token != TOK_IDENTIFIER; i++)
         if (STcompare(TOKEN_TABLE[i].sz, szTokenUpper) == 0)
             break;
 
     return TOKEN_TABLE[i].token;
 }
-
 
 /*
 **  ParseTrace
@@ -4809,6 +5632,15 @@ RETCODE PrepareSqlda(
         case IIAPI_BYTE_TYPE:
         case IIAPI_VBYTE_TYPE:
         case IIAPI_LBYTE_TYPE:
+        case IIAPI_GEOM_TYPE :
+        case IIAPI_POINT_TYPE :
+        case IIAPI_MPOINT_TYPE :
+        case IIAPI_LINE_TYPE :
+        case IIAPI_MLINE_TYPE :
+        case IIAPI_POLY_TYPE :
+        case IIAPI_MPOLY_TYPE :
+        case IIAPI_NBR_TYPE :
+        case IIAPI_GEOMC_TYPE :
 # ifdef IIAPI_NCHA_TYPE
         case IIAPI_NCHA_TYPE:
         case IIAPI_NVCH_TYPE:
@@ -5110,6 +5942,14 @@ UDWORD SetColOffset(
     else
     if (pird->fIngApiType == IIAPI_LVCH_TYPE   ||
         pird->fIngApiType == IIAPI_LBYTE_TYPE  ||
+        pird->fIngApiType == IIAPI_GEOM_TYPE   ||
+        pird->fIngApiType == IIAPI_POINT_TYPE  ||
+        pird->fIngApiType == IIAPI_MPOINT_TYPE ||
+        pird->fIngApiType == IIAPI_LINE_TYPE   ||
+        pird->fIngApiType == IIAPI_MLINE_TYPE  ||
+        pird->fIngApiType == IIAPI_POLY_TYPE   ||
+        pird->fIngApiType == IIAPI_MPOLY_TYPE  ||
+        pird->fIngApiType == IIAPI_GEOMC_TYPE  ||
 # ifdef IIAPI_LNVCH_TYPE
         pird->fIngApiType == IIAPI_LTXT_TYPE   ||
         pird->fIngApiType == IIAPI_LNVCH_TYPE)
@@ -5559,7 +6399,12 @@ CHAR     * ScanNumber(CHAR * p, II_INT2 * papiDataType)
 
 DWORD CountLiteralItems(SQLINTEGER cbSqlStr, CHAR * p, UDWORD fAPILevel)
 {
-    int count=0;
+    i2 count=0;
+    i2 columnNameLength=0;
+    i2 i;
+    i2 varLen=0;
+    i2 queryLen=0;
+
     if (!p)
          return count;
 
@@ -5568,7 +6413,79 @@ DWORD CountLiteralItems(SQLINTEGER cbSqlStr, CHAR * p, UDWORD fAPILevel)
         if(!CMcmpcase(p,"?")) 
             count +=3;
         else if ( fAPILevel > IIAPI_LEVEL_3 && !CMcmpcase(p, "{"))
-            count += 6;
+        {
+            CMnext(p);
+            cbSqlStr--;
+            while (CMwhite(p)) 
+            {
+                cbSqlStr--;
+                CMnext(p);
+            }
+ 
+            /*
+            ** The function scalars DAYOFWEEK, DAYOFYEAR and MONTHNAME
+            ** can range in length from 500 to 750 characters, and
+            ** reiterate the column name multiple times.
+            ** Discover the column name length and add it to the
+            ** count, multiplied by the number of occurrences.
+            ** Otherwise, 550 is a safe margin for converted scalars.
+            */
+            if (!STbcompare (p, 2, "fn", 2, TRUE))
+            {
+                CMnext(p);
+                CMnext(p);
+                cbSqlStr -= 2;
+
+                while(CMwhite(p)) 
+                {
+                    CMnext(p);
+                    cbSqlStr--;
+                }
+                if (!STbcompare(p,9,"DAYOFWEEK",9,TRUE))
+                {
+                    queryLen = 550;
+                    varLen = 18;
+                }
+                else if (!STbcompare( p,9,"MONTHNAME",9,TRUE))
+                {
+                    queryLen = 500;
+                    varLen = 14;
+                }
+                else if (!STbcompare(p,9,"DAYOFYEAR",9,TRUE))
+                {
+                    queryLen = 750;
+                    varLen = 20;
+                }
+                if (varLen)
+                {
+                    for (i = 0; i < 9; i++)
+                        CMnext(p);
+                    cbSqlStr -= 9;
+                    while(CMwhite(p)) 
+                    {
+                        cbSqlStr--;
+                        CMnext(p);
+                    }
+                    CMnext(p);
+                    cbSqlStr--;
+                    while (*p && CMcmpcase(p,")")) 
+                    {
+                        columnNameLength++;
+                        CMnext(p);
+                        cbSqlStr--;
+                    }
+                    count += (varLen*columnNameLength) + queryLen;
+                    varLen = 0;
+                    columnNameLength = 0;
+                    queryLen = 0;
+                }
+                else
+                    count += 550;
+            }
+            else
+                count += 30;
+        }
+        
         CMnext(p);
     }
     return count;

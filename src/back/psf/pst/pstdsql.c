@@ -222,6 +222,11 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	30-Jun-2010 (kiria01) b124000
+**	    Rewrite of pst_descinput_walk to remove the recursive nature.
+**      15-Jul-2010 (horda03) B124082
+**          Prevent RECACHE of cached queries failing due to derived table
+**          rngvars.
 */
 
 
@@ -237,10 +242,25 @@ GLOBALREF PSF_SERVBLK     *Psf_srvblk;  /* PSF server control block ptr */
 #define	GCA_COL_ATT_SIZE \
     (((((GCA_COL_ATT*)0)->gca_attname - (char*)0) + DB_ATT_MAXNAME + \
       sizeof(ALIGN_RESTRICT) - 1) & ~(sizeof(ALIGN_RESTRICT) - 1))
+/*
+** defines for batched insert to copy optimization.
+**  - BEST_COPYBUF_SIZE is the optimum buffer size for determining whether
+**    to use the DMF bulk loader. If the batch contains less data than this
+**    we will not use the DMF bulk loader. This is a 
+**    fixed buffer size as opposed to a fixed number of rows. The buffer
+**    must be at least this size so that we can tell that we have at least
+**    enough rows in the batch to merit using the DMF bulk loader.
+**  - MIN_COPYBUF_ROWS is the minimum number of rows in the buffer (since that
+**    might be larger than the above based on a max row size of 256k). We need
+**    at least this number of rows to make the bulk loader worthwhile
+*/
+#define BEST_COPYBUF_SIZE	450*1024
+#define MIN_COPYBUF_ROWS	5
 
 
 static GCA_COL_ATT *
 pst_sqlatt(
+	PSS_SESBLK	*cb,
 	PST_QNODE	*resdom,
 	GCA_COL_ATT 	*sqlatts,
 	i4		*tup_size);
@@ -255,11 +275,7 @@ static DB_STATUS pst_descinput_walk(
 	PSQ_CB *psq_cb,
 	PST_PROTO *proto,
 	GCA_COL_ATT *desc_base,
-	PST_QNODE *root,
-	i4 context_type,
-	i4 context_length,
-	i2 context_prec,
-	bool *have_parm);
+	PST_QNODE **root);
 
 /*{
 ** Name: pst_prepare	- Semantic routine for SQL's PREPARE.
@@ -910,6 +926,14 @@ pst_prepare(
 **	according to the saved 'qmode'.  Certain fields in PSF session
 **	control block and parser control block are also restored.
 **
+**	If the prototype indicates that QP caching is possible, look up
+**	the cached QP and query text.  Assuming they are still there and
+**	haven't been kicked out of QSF, verify that the compiled QP
+**	is compatible with the actual parameters sent with the
+**	execute or cursor-open statement.  More checking will be done
+**	by the caller, so this isn't the final word on whether the
+**	cached plan is usable.
+**
 ** Inputs:
 **      psq_cb                          ptr to the parser control block.
 **      sess_cb                         ptr to PSF session control block.
@@ -1152,6 +1176,18 @@ pst_prepare(
 **          Batch flags are now on psq_flag2. Add support for user
 **          over-ride of batch optimization through config and 
 **          session "set" statement.
+**      24-jun-2010 (stephenb)
+**          Update batch copy optimization to allocate memory for
+**          a set of rows so that we can be smart about how to run the 
+**          copy statement.
+**      15-Jul-2010 (horda03) B124082
+**          Don't call pst_showtab() for non TABLE rngvars.
+**	2-Sep-2010 (kschendel) b124347
+**	    A cached QP with parameters have to match actual parameters
+**	    in length and precision, not just type.  (Consider an NCHAR
+**	    parameter that was 33 on the first invocation that cached the
+**	    QP, but is 50 long on the second invocation.)
+**	    Change xDEBUG to trace point PS152 to make debugging easier.
 */
 #define	RT_NODE_SIZE \
 	    sizeof(PST_QNODE) - sizeof(PST_SYMVALUE) + sizeof(PST_RT_NODE)
@@ -1242,11 +1278,16 @@ pst_execute(
     {
 	char	*p;
 	bool	found = TRUE;
+	bool	dyntrace;
+	i4	val1, val2;
 
-#ifdef xDEBUG
-	TRdisplay("PST_EXECUTE: stmt (%s, %d), session: %d, pss_proto: %p\n",
+	dyntrace = ult_check_macro(&sess_cb->pss_trace, PSS_CACHEDYN_TRACE, &val1, &val2);
+
+	if (dyntrace)
+	{
+	    TRdisplay("%@ PST_EXECUTE: stmt (%s, %d), session: %lx, pss_proto: %p\n",
 		sname, proto->pst_checksum, psq_cb->psq_sessid, proto);
-#endif
+	}
 
 	/* See if QP is in QSF. TRANS_OR_DEFINE is used to make a shareable 
 	** object. Contrary to some comments in QSF, a single "master" 
@@ -1294,19 +1335,18 @@ pst_execute(
 	    return(status);
 	}
 
-#ifdef xDEBUG
 	/* TRdisplay the syntax for debugging purposes. */
-	if (proto->pst_syntax)
+	if (dyntrace && proto->pst_syntax)
 	{
+	    char syntax[1000];
 	    i4	synlen = (proto->pst_syntax_length > 999) ? 999 :
 				proto->pst_syntax_length;
 
 	    MEcopy(proto->pst_syntax, synlen, &syntax[0]);
 	    syntax[synlen] = 0;
-	    TRdisplay("PST_EXECUTE: open repeat query: %d, %s\n", 
-					proto->pst_checksum, &syntax);
+	    TRdisplay("%@ PST_EXECUTE: open repeat query: %d, %s\n", 
+					proto->pst_checksum, syntax);
 	}
-#endif
 
 	if (qsf_rb.qsf_t_or_d == QSO_WASTRANSLATED)
 	{
@@ -1320,10 +1360,11 @@ pst_execute(
 
 	    qp = ((QEF_QP_CB *)qsf_rb.qsf_root);
 
-#ifdef xDEBUG
-	    TRdisplay("PST_EXECUTE: parms for : %d - %d, %d\n",
-		proto->pst_checksum, qp->qp_nparams, sess_cb->pss_dmax-3);
-#endif
+	    if (dyntrace)
+	    {
+		TRdisplay("%@ PST_EXECUTE: parms for %d, QP: %d, actual: %d\n",
+		    proto->pst_checksum, qp->qp_nparams, sess_cb->pss_dmax-3);
+	    }
 
 	    if (qp->qp_status & QEQP_SCROLL_CURS)
 		scroll = TRUE;			/* check scrollable, too */
@@ -1341,33 +1382,63 @@ pst_execute(
 	    else if (qp->qp_nparams > 0)
 	    {
 		i4	i, dtbits;
+		DB_DATA_VALUE *actualdv, *qpdv;
+		DB_DATA_VALUE **actualdvp, **qpdvp;
+		DB_DT_ID dtype;
 
 		/* Loop over parms - assuring all types and lengths match, 
-		** and that there are no LOB parms. */
+		** and that there are no LOB parms.
+		** Variable length parameters haven't been turned into VLUP's
+		** yet.  (That happens in pst_prmsub later on.)  Need to test
+		** for variable length types specifically.
+		*/
+		qpdvp = qp->qp_params;
+		actualdvp = sess_cb->pss_qrydata + 3;
 		for (i = 0; i < qp->qp_nparams; i++)
-		 if (qp->qp_params[i]-> db_datatype != 
-			sess_cb->pss_qrydata[i+3]->db_datatype)
-		 {
-#ifdef xDEBUG
-		    TRdisplay("PST_EXECUTE: repeat dynamic parm mis-match %2d, (%3d), (%3d)\n",
-			i, qp->qp_params[i]->db_datatype,
-			sess_cb->pss_qrydata[i+3]->db_datatype);
-#endif
-		    repeat = FALSE;
-		 }
-		 else {
-#ifdef xDEBUG
-		    TRdisplay("PST_EXECUTE: repeat dynamic parm OK %2d, (%3d), (%3d)\n",
-			i, qp->qp_params[i]->db_datatype,
-			sess_cb->pss_qrydata[i+3]->db_datatype);
-#endif
-		    status = adi_dtinfo(sess_cb->pss_adfcb, sess_cb->
-				pss_qrydata[i+3]->db_datatype, &dtbits);
-		    if (status != E_DB_OK)
-			return(status);
-		    if (dtbits & AD_PERIPHERAL)
+		{
+		    qpdv = *qpdvp++;
+		    actualdv = *actualdvp++;
+		    if (dyntrace)
+		    {
+			TRdisplay("%@ PST_EXECUTE: repeat dynamic parm[%d]\n\t qp type,len,prec = (%d,%d,%d), actual = (%d,%d,%d)\n",
+			    i, qpdv->db_datatype,qpdv->db_length,qpdv->db_prec,
+			    actualdv->db_datatype,actualdv->db_length,actualdv->db_prec);
+		    }
+		    if (qpdv->db_datatype != actualdv->db_datatype)
+		    {
 			repeat = FALSE;
-		 }
+			break;
+		    }
+		    dtype = abs(qpdv->db_datatype);
+		    /* Check for VLUP type, they are OK */
+		    if (dtype == DB_VCH_TYPE || dtype == DB_NVCHR_TYPE
+		      || dtype == DB_TXT_TYPE || dtype == DB_VBYTE_TYPE)
+			continue;
+
+		    if (qpdv->db_length != actualdv->db_length
+		      || (dtype == DB_DEC_TYPE
+			  && qpdv->db_prec != actualdv->db_prec) )
+		    {
+			repeat = FALSE;
+			break;
+		    }
+		    else
+		    {
+			status = adi_dtinfo(sess_cb->pss_adfcb, dtype, &dtbits);
+			if (status != E_DB_OK)
+			    return(status);
+			if (dtbits & AD_PERIPHERAL)
+			{
+			    repeat = FALSE;
+			    break;
+			}
+		    }
+		} /* for */
+		if (dyntrace)
+		{
+		    TRdisplay("%@ PST_EXECUTE: cached QP is%s usable so far\n",
+			repeat ? "" : " NOT");
+		}
 	    }
 
 	    /* If still repeat, tell parser so existing plan can be reused. 
@@ -1505,17 +1576,40 @@ pst_execute(
 		** may run several batches of executes against the same proto. So 
 		** we will use the proto stream. The memory
 		** for the stream will be eventually freed when we commit.
+		** Memory for the copy input row buffer is allocated here;
+		** ultimately we fill it out in pst_cpdata when we get the input
+		** from each query.
 		*/
 		if (psq_cb->psq_cp_qefrcb == NULL)
 		{
 		    /* first batched execution of this query */
-			    
+		    /*
+		    ** Define size of row buffer; a buffer around 450k determines
+		    ** the break point for 
+		    ** the DMF bulk loader (no matter how many rows that fits), but
+		    ** we want room for at least MIN_COPYBUF_ROWS to allow the loader
+		    ** to do something useful.
+		    */
+		    i4		rowbuf_size = BEST_COPYBUF_SIZE;
+		    if (MIN_COPYBUF_ROWS*rngvar.pss_tabdesc->tbl_width > 
+			BEST_COPYBUF_SIZE)
+			rowbuf_size = 
+				MIN_COPYBUF_ROWS*rngvar.pss_tabdesc->tbl_width;
+		    /*
+		    ** allocate memory from proto stream for:
+		    **  - The QEF_RCB
+		    **  - The QEU_COPY struct
+		    **  - The DMR_CB struct
+		    **  - rowbuf_size to store input rows 
+		    **    and associated structures
+		    */
 		    if ((status = psf_malloc(sess_cb, &proto->pst_ostream,
-			    sizeof(QEF_RCB) + sizeof(QEU_COPY) + sizeof(DMR_CB),
+			    sizeof(QEF_RCB) + sizeof(QEU_COPY) + sizeof(DMR_CB) +
+			    rowbuf_size,
 			    &qef_rcb,
 			    &psq_cb->psq_error)) != E_DB_OK)
 			return (status);
-		    		    
+		    		   
 		    psq_cb->psq_cp_qefrcb = (PTR)qef_rcb;
 		    qef_rcb->qeu_copy = (QEU_COPY *) (psq_cb->psq_cp_qefrcb + 
 			    sizeof(QEF_RCB));
@@ -1525,6 +1619,20 @@ pst_execute(
 				    sizeof(QEU_COPY));
 		    dmr_cb   = qe_copy->qeu_dmrcb;
 		    dmr_cb->dmr_char_array.data_in_size = 0;
+		    		    		    
+		    qe_copy->qeu_cbuf = qe_copy->qeu_cptr =
+			    psq_cb->psq_cp_qefrcb + 
+			    sizeof(QEF_RCB) + sizeof(QEU_COPY) +
+			    sizeof(DMR_CB);
+		    
+		    qe_copy->qeu_input = NULL;
+		    qe_copy->qeu_insert_data = NULL;
+		    qe_copy->qeu_ext_length = 0;
+		   
+		    qe_copy->qeu_cleft = qe_copy->qeu_csize = rowbuf_size;
+		    
+		    qe_copy->qeu_stat = CPY_INS_OPTIM;
+		    qe_copy->qeu_load_buf = FALSE;
 		    
 		    /* get query tree */
 		    prt_pnode = (PST_PROCEDURE *) qsf_rb.qsf_root;
@@ -2192,7 +2300,8 @@ pst_execute(
 		    /* Update the prototype range table entries. */
 		    for (i = prt_header->pst_rngvar_count - 1; i >= 0; i--)
 		    {
-			if(prt_header->pst_rangetab[i] == NULL)
+			if ( (prt_header->pst_rangetab[i] == NULL) ||
+                             (prt_header->pst_rangetab[i]->pst_rgtype != PST_TABLE) )
 			{
 			    continue;
 			}
@@ -3093,6 +3202,12 @@ pst_execute(
 **	22-Jan-2009 (kibro01) b120460
 **	    Don't recurse over constants in case this is a huge
 **	    IN-clause.
+**      06-jul-2010 (huazh01)
+**          Flatten recursive call on pst_prmsub(). (b124031)
+**	14-Jul-2010 (kschendel) b123104
+**	    Keep boolean constants out of the parse tree when opf expects
+**	    operators.  If a compare op folds to true or false, turn it into
+**	    operator iitrue or iifalse.
 */
 DB_STATUS
 pst_prmsub(
@@ -3110,76 +3225,85 @@ pst_prmsub(
     DB_DT_ID		adatatype;
     DB_DT_ID		dtype;
     i4			err_code;
-    PST_QNODE		*node = *nodep;
+ 
+    PST_QNODE		*node;
+
     bool		bval;
+    PST_STK             stk;
+    bool                descend = TRUE;
 
-    while (node)
+    PST_STK_INIT(stk, sess_cb);
+
+    while (nodep && *nodep)
     {
+	node = *nodep; 
 
-      /*
-      ** If the current node is a constant node and its param number
-      ** is non-zero,  put the corresponding value from the input
-      ** parameter list in pst_dataval and zero out the param number.
-      */
-      if (node->pst_sym.pst_type == PST_CONST &&
+	/*
+	** If the current node is a constant node and its param number
+	** is non-zero,  put the corresponding value from the input
+	** parameter list in pst_dataval and zero out the param number.
+	*/
+	if (node->pst_sym.pst_type == PST_CONST &&
 	(parm_no = node->pst_sym.pst_value.pst_s_cnst.pst_parm_no) > 0)
-      {
-	--parm_no;
-	MEcopy((PTR) plist[parm_no], sizeof(DB_DATA_VALUE),
-		(PTR) &node->pst_sym.pst_dataval);
-
-	if ((status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
-		    (i4)(plist[parm_no]->db_length),
-		    &node->pst_sym.pst_dataval.db_data,
-		    &psq_cb->psq_error)) != E_DB_OK)
-	    return (status);
-
-	MEcopy(plist[parm_no]->db_data, plist[parm_no]->db_length,
-		node->pst_sym.pst_dataval.db_data);
-
-	/* See if it has to be a VLUP. */
-	if (repeat_dyn && 
-		((dtype = abs(plist[parm_no]->db_datatype)) == DB_VCH_TYPE ||
-		dtype == DB_NVCHR_TYPE || dtype == DB_VBYTE_TYPE ||
-		dtype == DB_TXT_TYPE))
 	{
-	    node->pst_sym.pst_dataval.db_length = ADE_LEN_UNKNOWN;
-	    node->pst_sym.pst_value.pst_s_cnst.pst_tparmtype = PST_RQPARAMNO;
+	    --parm_no;
+	    MEcopy((PTR) plist[parm_no], sizeof(DB_DATA_VALUE),
+		    (PTR) &node->pst_sym.pst_dataval);
+
+	    if ((status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
+			(i4)(plist[parm_no]->db_length),
+			&node->pst_sym.pst_dataval.db_data,
+			&psq_cb->psq_error)) != E_DB_OK)
+		return (status);
+
+	    MEcopy(plist[parm_no]->db_data, plist[parm_no]->db_length,
+		    node->pst_sym.pst_dataval.db_data);
+
+	    /* See if it has to be a VLUP. */
+	    if (repeat_dyn &&
+		    ((dtype = abs(plist[parm_no]->db_datatype)) == DB_VCH_TYPE ||
+		    dtype == DB_NVCHR_TYPE || dtype == DB_VBYTE_TYPE ||
+		    dtype == DB_TXT_TYPE))
+	    {
+		node->pst_sym.pst_dataval.db_length = ADE_LEN_UNKNOWN;
+		node->pst_sym.pst_value.pst_s_cnst.pst_tparmtype = PST_RQPARAMNO;
+	    }
+
+	    /* If not repeat query, reset parm no. */
+	    if (!repeat_dyn)
+	    {
+		node->pst_sym.pst_value.pst_s_cnst.pst_parm_no = 0;
+		node->pst_sym.pst_value.pst_s_cnst.pst_tparmtype = PST_USER;
+		/* remember that this was a user provided constant */
+	    }
 	}
 
-	/* If not repeat query, reset parm no. */
-	if (!repeat_dyn)
+	if (descend && 
+	  (node->pst_left || node->pst_right))
 	{
-	    node->pst_sym.pst_value.pst_s_cnst.pst_parm_no = 0;
-	    node->pst_sym.pst_value.pst_s_cnst.pst_tparmtype = PST_USER;
-	    /* remember that this was a user provided constant */
+	    pst_push_item(&stk, (PTR)nodep);
+
+	    if (node->pst_left)
+	    {
+		if (node->pst_right)
+		{
+		    /* Delay right sub-tree */
+		    pst_push_item(&stk, (PTR)&node->pst_right);
+		    if (node->pst_right->pst_right ||
+			    node->pst_right->pst_left)
+			/* Mark that node just pushed will need descending */
+			pst_push_item(&stk, (PTR)PST_DESCEND_MARK);
+		}
+		nodep = &node->pst_left; 
+		continue; 
+	    }
+	    else if (node->pst_right)
+	    {
+		nodep = &node->pst_right; 
+		continue; 
+	    }
 	}
-      }
-      /*
-      ** If there is the right child, recursively process it.
-      */
 
-      if (node->pst_right)
-      {
-	if ((status = pst_prmsub(psq_cb, sess_cb, &node->pst_right, plist,
-			repeat_dyn)) != E_DB_OK)
-	    return (status);
-      }
-
-      /*
-      ** If there is the left child, recursively process it.
-      */
-
-      if (node->pst_left && (
-	(node->pst_left->pst_sym.pst_type != PST_CONST) ||
-	(!node->pst_left->pst_left) ||
-	(node->pst_left->pst_left->pst_sym.pst_type != PST_CONST)
-	) )
-      {
-	if ((status = pst_prmsub(psq_cb, sess_cb, &node->pst_left, plist,
-			repeat_dyn)) != E_DB_OK)
-	    return (status);
-      }
 
       /*
       ** If the node is AGHEAD, and we are parsing OPEN CURSOR for parameterized
@@ -3196,8 +3320,8 @@ pst_prmsub(
       ** the tree to the BYHEAD's right child to get the type and length.
       */
     
-      switch (node->pst_sym.pst_type)
-      {
+	switch (node->pst_sym.pst_type)
+	{
 	case PST_AGHEAD:
 	case PST_SUBSEL:
 	{
@@ -3219,18 +3343,17 @@ pst_prmsub(
 		node->pst_sym.pst_dataval.db_prec = src_dbval->db_prec;
 	    }
 	    
-	    break;
+	    /*FALLTHROUGH*/
 	}
 	case PST_ROOT:
 	{
 	    if (node->pst_sym.pst_value.pst_s_root.pst_union.pst_next)
 	    {
-		if ((status = pst_prmsub(psq_cb, sess_cb,
-			&node->pst_sym.pst_value.pst_s_root.pst_union.pst_next,
-			plist, repeat_dyn)) != E_DB_OK)
-		    return (status);
+                pst_push_item(&stk, 
+                   (PTR)&node->pst_sym.pst_value.pst_s_root.pst_union.pst_next);
+		/* Mark that the union will need descending */
+		pst_push_item(&stk, (PTR)PST_DESCEND_MARK);
 	    }
-
 	    break;
 	}
 	case PST_UOP:
@@ -3256,6 +3379,9 @@ pst_prmsub(
 	case PST_COP:
 	case PST_MOP:
 	{
+	    bool bval;
+	    i4 joinid = node->pst_sym.pst_value.pst_s_op.pst_joinid;
+
 	    /*
 	    ** If the current node is an operator node, resolve data type
 	    ** This also will constant fold the operator and any required
@@ -3271,9 +3397,48 @@ pst_prmsub(
 		    &psq_cb->psq_error));
 	    }
 
+	    /* If we turned the node into a boolean TRUE/FALSE, turn it
+	    ** back into a boolean operator, so that the joinid isn't lost.
+	    */
+	    if (pst_is_const_bool(node, &bval)
+	      && node->pst_sym.pst_type == PST_CONST)
+	    {
+		/* pst-resolve must have made the change from operator to
+		** constant in-place.  Simply change it back.
+		*/
+		MEfill(sizeof(PST_OP_NODE), 0, &node->pst_sym.pst_value.pst_s_op);
+		node->pst_sym.pst_value.pst_s_op.pst_opno = ADI_IIFALSE_OP;
+		if (bval)
+		    node->pst_sym.pst_value.pst_s_op.pst_opno = ADI_IITRUE_OP;
+		node->pst_sym.pst_value.pst_s_op.pst_opmeta = PST_NOMETA;
+		node->pst_sym.pst_value.pst_s_op.pst_pat_flags = AD_PAT_DOESNT_APPLY;
+		node->pst_sym.pst_value.pst_s_op.pst_joinid = joinid;
+		node->pst_sym.pst_type = PST_COP;
+		node->pst_sym.pst_dataval.db_datatype = DB_BOO_TYPE;
+		node->pst_sym.pst_dataval.db_length = DB_BOO_LEN;
+		node->pst_sym.pst_dataval.db_prec = 0;
+		node->pst_sym.pst_dataval.db_collID = 0;
+		node->pst_sym.pst_dataval.db_data = NULL;
+		node->pst_left = node->pst_right = NULL;
+		/* re-resolve to fill in operator stuff */
+		status = pst_resolve(sess_cb, (ADF_CB *) sess_cb->pss_adfcb, node,
+			sess_cb->pss_lang, &psq_cb->psq_error);
+		if (DB_FAILURE_MACRO(status))
+		{
+		    return (pst_rserror(sess_cb->pss_lineno, node,
+			&psq_cb->psq_error));
+		}
+	    }
+
 	    break;
 	}
 
+	/* Note that for OR, AND, NOT, if we discover at this late date
+	** that one side is constant true/false, we can count on it
+	** being an iitrue/iifalse that was generated during operator
+	** constant folding, just above.  Playing link games should
+	** suffice in most if not all cases of and/or/not folding.
+	*/
 	case PST_OR:
 	    if (pst_is_const_bool(node->pst_left, &bval))
 		*nodep = bval ? node->pst_left : node->pst_right;
@@ -3291,7 +3456,7 @@ pst_prmsub(
 	case PST_NOT:
 	    if (pst_is_const_bool(node->pst_left, &bval))
 	    {
-		*(bool*)node->pst_left->pst_sym.pst_dataval.db_data = bval ? 0 : 1;
+		pst_not_bool(node->pst_left);
 		*nodep = node->pst_left;
 	    }
 	    else if (node->pst_left && node->pst_left->pst_sym.pst_type == PST_NOT)
@@ -3307,7 +3472,7 @@ pst_prmsub(
 		{
 		    /* make this the else and drop the rest */
 		    node->pst_right->pst_left = NULL;
-		    (*nodep)->pst_left = NULL;
+		    node->pst_left = NULL;
 		}
 		else
 		    *nodep = node->pst_left;
@@ -3326,7 +3491,6 @@ pst_prmsub(
 	    break;
 
 	case PST_RESDOM:
-	{
 	    if (node->pst_right != (PST_QNODE *) NULL)
 	    {
 		/*
@@ -3396,18 +3560,21 @@ pst_prmsub(
 		}
 	    }
 	    break;
+	} /* switch */
+
+	nodep = (PST_QNODE**)pst_pop_item(&stk); 
+
+	if (nodep == PST_DESCEND_MARK)
+	{
+	    descend = TRUE; 
+	    nodep = (PST_QNODE**)pst_pop_item(&stk);
+	    continue; 
 	}
-      }
-      if (node->pst_left && node->pst_left->pst_left && 
-	node->pst_left->pst_sym.pst_type == PST_CONST &&
-	node->pst_left->pst_left->pst_sym.pst_type == PST_CONST)
-      {
-	node = node->pst_left;
-      } else
-      {
-	break;
-      }
+	else
+	    descend = FALSE; 
     }
+
+    pst_pop_all(&stk);
 
     return (E_DB_OK);
 }
@@ -3555,7 +3722,7 @@ pst_describe(
 	char	*sp, *dp;
 	i4	cpyamt;
 
-	pst_sqlatt(root->pst_left, sqlda->gca_col_desc,
+	pst_sqlatt(sess_cb, root->pst_left, sqlda->gca_col_desc,
 					&sqlda->gca_tsize);
 	
 	/*
@@ -3707,9 +3874,14 @@ pst_commit_dsql(
 **	    for packing array in one pass.
 **	21-Dec-2001 (gordy)
 **	    GCA_COL_ATT no longer defined with DB_DATA_VALUE: use DB_COPY macro.
+**	1-aug-2010 (stephenb)
+**	    Bug 124172: Ensure that we do not return DB_NODT in the GCA_TD_DATA.
+**	    This is an illegal GCA type for a tuple descriptor and may cause
+**	    issues in the client drivers.
 */
 static GCA_COL_ATT *
 pst_sqlatt(
+	PSS_SESBLK	*cb,
 	PST_QNODE	*resdom,
 	GCA_COL_ATT 	*sqlatts,
 	i4		*tup_size)
@@ -3718,7 +3890,7 @@ pst_sqlatt(
 	    resdom->pst_left->pst_sym.pst_type == PST_RESDOM
 	)
     {
-	sqlatts = pst_sqlatt(resdom->pst_left, sqlatts, tup_size);
+	sqlatts = pst_sqlatt(cb, resdom->pst_left, sqlatts, tup_size);
     }
     else
     {
@@ -3729,7 +3901,117 @@ pst_sqlatt(
 
     if (resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsflags&PST_RS_PRINT)
     {
-	DB_COPY_DV_TO_ATT( &resdom->pst_sym.pst_dataval, sqlatts );
+	/*
+	** Sanity check: GCA does not allow a type of DB_NODT in the tuple
+	** descriptor. Some prepared queries may not provide enough information
+	** in the select list for the parser to determine the type of the result,
+	** so we will continually delay type resolution for the RESDOM (this often
+	** happens if the user provides a variable in the select list). If we
+	** get to here, we know we are about to send the tuple descriptor back
+	** to the client, so we need to perform a final check that we are not
+	** about to send DB_NODT. 
+	** 
+	** In the case of a prepared query, the tuple
+	** descriptor represents our best guess at the returned row format, and
+	** we reserve the right to modify that guess later when the query is
+	** executed and we receive the actual values; so it is acceptable
+	** for us to make an educated guess using the context of the query; if
+	** that fails, we will revert to nullable DB_LTXT_TYPE as a last-ditch effort to
+	** provide a type.
+	** 
+	** NOTE: Currently our "best guess" involves using pst_resolve
+	** to see if we can resolve the result of of an OP node on the RHS
+	** of the resdom node, or just using the current type on the RHS (which
+	** should cover most CONST and VAR). We
+	** may be able to gain some further context in cases where this doesn't
+	** work by looking at the operands that the query variables are used with,
+	** and guessing at the "most likely" result. This becomes insanely
+	** complex since the variable that caused the "unknown" type may be buried
+	** several layers down the parse tree (maybe on the other side of a sub-select)
+	** and we would have to recursively descend the tree until we found it.....this
+	** is a full-scale project for another day, not just a fix, and given
+	** that this is just a "hint" it's probably not worth attempting. Any absolutely
+	** known types are already pre-determined at this stage, and will be used 
+	** if they are there.
+	*/
+	if (resdom->pst_sym.pst_dataval.db_datatype == DB_NODT)
+	{
+	    /* right child with give us our type */
+	    if (resdom->pst_right)
+	    {
+		PST_QNODE	*right = resdom->pst_right;
+		
+		if (right->pst_sym.pst_dataval.db_datatype != DB_NODT)
+		{
+		    /* 
+		    ** right child was filled out (probably after the resdom was
+		    ** created), just use it
+		    */
+			sqlatts->gca_attdbv.db_datatype = 
+				right->pst_sym.pst_dataval.db_datatype;
+			sqlatts->gca_attdbv.db_length = 
+				right->pst_sym.pst_dataval.db_length;
+			sqlatts->gca_attdbv.db_prec = 
+				right->pst_sym.pst_dataval.db_prec;
+		}
+		else
+		{
+		    DB_ERROR	err_blk;
+		    DB_STATUS	status;
+		    
+		    /* right child wasn't filled out, let's make a guess */
+		    switch (right->pst_sym.pst_type)
+		    {
+			case PST_UOP:
+			case PST_BOP:
+			case PST_AOP:
+			case PST_COP:
+			case PST_MOP:
+			/* it's an op node, lets see if we can resolve it now */
+			    status = pst_resolve(cb, (ADF_CB*) cb->pss_adfcb, right, 
+				cb->pss_lang, &err_blk);
+			    if (status == E_DB_OK && 
+				    right->pst_sym.pst_dataval.db_datatype != DB_NODT)
+			    {
+				/* resolved, use the type */
+				sqlatts->gca_attdbv.db_datatype = 
+					right->pst_sym.pst_dataval.db_datatype;
+				sqlatts->gca_attdbv.db_length = 
+					right->pst_sym.pst_dataval.db_length;
+				sqlatts->gca_attdbv.db_prec = 
+					right->pst_sym.pst_dataval.db_prec;
+			    }
+			    else
+			    {
+				/* not resolved, use the fallback */
+				sqlatts->gca_attdbv.db_datatype = -DB_LTXT_TYPE;
+				sqlatts->gca_attdbv.db_length = 1;
+				sqlatts->gca_attdbv.db_prec = 0;
+			    }
+			    break;
+			default:
+			    /* 
+			    ** all other nodes would have been typed already if
+			    ** they could have been; so we're left with the 
+			    ** fallback
+			    */
+			    sqlatts->gca_attdbv.db_datatype = -DB_LTXT_TYPE;
+			    sqlatts->gca_attdbv.db_length = 1;
+			    sqlatts->gca_attdbv.db_prec = 0;
+			    break;
+		    }
+		}
+	    }
+	    else
+	    {
+		/* nothing there, fallback to DB_TXT_TYPE */
+		sqlatts->gca_attdbv.db_datatype = -DB_LTXT_TYPE;
+		sqlatts->gca_attdbv.db_length = 1;
+		sqlatts->gca_attdbv.db_prec = 0;
+	    }
+	}
+	else
+	    DB_COPY_DV_TO_ATT( &resdom->pst_sym.pst_dataval, sqlatts );
 
 	MEcopy(resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname, 
 				DB_ATT_MAXNAME, sqlatts->gca_attname);
@@ -3952,7 +4234,6 @@ DB_STATUS
 pst_descinput(PSQ_CB *psq_cb, PSS_SESBLK *sess_cb, char *sname)
 {
 
-    bool have_parm;			/* See tree walker */
     DB_STATUS status;
     GCA_COL_ATT *desc_base;		/* First param descriptor */
     GCA_TD_DATA *sqlda;			/* Start of sqlda area in QSF */
@@ -3962,7 +4243,6 @@ pst_descinput(PSQ_CB *psq_cb, PSS_SESBLK *sess_cb, char *sname)
     i4 i;
     PST_PROTO *proto;			/* Prepared statement prototype hdr */
     PST_PROCEDURE *prt_pnode;
-    PST_QNODE *prt_root;
     PST_QTREE *prt_qtree;
     PST_RNGENTRY **prt_rangetab;	/* Pointer to range table ptr array */
     PST_STATEMENT *prt_stmt;
@@ -4075,11 +4355,9 @@ pst_descinput(PSQ_CB *psq_cb, PSS_SESBLK *sess_cb, char *sname)
 	    prt_qtree = prt_stmt->pst_specific.pst_create_view.pst_view_tree;
 	else
 	    prt_qtree = prt_stmt->pst_specific.pst_tree;
-	prt_root = prt_qtree->pst_qtree;
 
-	have_parm = FALSE;
 	status = pst_descinput_walk(sess_cb, psq_cb,
-			proto, desc_base, prt_root, 0, 0, 0, &have_parm);
+			proto, desc_base, &prt_qtree->pst_qtree);
 	if (status != E_DB_OK)
 	    goto error_exit;
 	/* Walk qtree's range table entries looking for "derived tables",
@@ -4091,9 +4369,8 @@ pst_descinput(PSQ_CB *psq_cb, PSS_SESBLK *sess_cb, char *sname)
 	    if ((*prt_rangetab)->pst_rgtype == PST_DRTREE ||
 		(*prt_rangetab)->pst_rgtype == PST_WETREE)
 	    {
-		have_parm = FALSE;
 		status = pst_descinput_walk(sess_cb, psq_cb, proto, desc_base,
-			(*prt_rangetab)->pst_rgroot, 0, 0, 0, &have_parm);
+						&(*prt_rangetab)->pst_rgroot);
 		if (status != E_DB_OK)
 		    goto error_exit;
 	    }
@@ -4141,8 +4418,7 @@ error_exit:
 **	for parameter markers (they're in CONST nodes).  If one is found,
 **	and if there's some sort of type context set higher up in the
 **	tree, that type is returned in the parameter marker's SQLDA
-**	entry.  If we have a marker with no type context, a flag
-**	(have_parm) is returned to the caller, so that we can guess at
+**	entry.  If we have a marker with no type context, we guess at
 **	a type for things like "expr OP ?".
 **
 **	The most reliable way to supply type context is from a RESDOM
@@ -4170,15 +4446,9 @@ error_exit:
 **	psq_cb			PSQ_CB * query parse info block
 **	proto			PST_PROTO * pointer to prototype header
 **	desc_base		Pointer to &sqlda.sqlvar[0]
-**	node			PST_QNODE * current query tree node
-**	context_type		Datatype context for this node
-**	context_length		Datatype length for this node
-**	context_prec		Datatype precision for this node
-**	have_parm		bool * (an output)
+**	node			PST_QNODE ** current query tree node
 **
 ** Outputs:
-**	*have_parm		Returned TRUE if node is a parameter marker
-**				and we don't have any current type available
 **	Fills in type info in sqlda
 **	Returns E_DB_OK or error
 **
@@ -4190,203 +4460,382 @@ error_exit:
 **	04-Mar-2009 (kiria01) SIR120473
 **	    With UTF8 active, also dig past any cast operator from
 **	    the PATCOMP fixup.
+**	30-Jun-2010 (kiria01) b124000
+**	    Rewrite of function to remove the recursive nature. The recursion
+**	    is simply replaced by a stack of 'to be done' pointers and a suitable
+**	    algorithmn to handle the depth first needs of the original code.
+**	    The stack used is initially in the frame of the function but if needed
+**	    can expand into session heap.
+**	10-Aug-2010 (kiria01) b124227
+**	    Address in-list constants. Although we did descend them - they didn't
+**	    generally tie to the BOP for the LHS expression.
+**	09-Sep-2010 (kiria01) b124385
+**	    Catch case where UTF8 CHAR field picks up an NVCHAR cast.
 */
 
 static DB_STATUS
-pst_descinput_walk(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
-	PST_PROTO *proto, GCA_COL_ATT *desc_base,
-	PST_QNODE *node, i4 context_type, i4 context_length,
-	i2 context_prec, bool *have_parm)
+pst_descinput_walk(
+    PSS_SESBLK *sess_cb,
+    PSQ_CB *psq_cb,
+    PST_PROTO *proto,
+    GCA_COL_ATT *desc_base,
+    PST_QNODE **nodep)
 {
-
-
-    ADI_OPINFO opinfo;		/* Operator info for op node */
-    DB_STATUS op_status;	/* Operator info status */
-    DB_STATUS status;		/* Usual status thing */
+    PST_STK stk;
+    DB_STATUS status = E_DB_OK;
     GCA_COL_ATT *desc;		/* SQLDA entry for parameter */
     i4 err_code;		/* Junk */
     i4 parm_no;			/* Parameter marker number */
-    i4 node_type;		/* The node type */
-    PST_QNODE *left, *right;	/* L & R tree pointers */
+    bool descend = TRUE;
+    PST_QNODE *inlist_bop = NULL;
 
-    /* See if we have reached a parameter node with some sort of
-    ** useful type context, if so, note that type in our SQLDA.
-    */
-    node_type = node->pst_sym.pst_type;
-    if (node_type == PST_CONST
-      && (parm_no = node->pst_sym.pst_value.pst_s_cnst.pst_parm_no) > 0)
+    PST_STK_INIT(stk, sess_cb);
+
+    /* We will Descend the source tree via the address of a pointer to the tree.
+    ** Allocations will be done in place and full copies taken of the current node
+    ** and the allocated address written back to the address of a pointer now to
+    ** the top of the new tree. (Immediatly after allocation the left and right
+    ** pointer in the new block will refer to the OLD respective subtrees) */
+    while (nodep)
     {
-	/* Change param number from 1-origin to 0-origin index */
-	parm_no--;
-	if (parm_no > proto->pst_maxparm)
+	PST_QNODE *node = *nodep;
+	/****** Start reduced recursion, depth first tree scan ******/
+	if (descend && (node->pst_left || node->pst_right))
 	{
-	    TRdisplay("%@ psf_descinput_walk: param marker ix %d higher than max %d at node %p\n",
-			parm_no, proto->pst_maxparm, node);
-	    (void) psf_error(E_PS0002_INTERNAL_ERROR, 0,
-			PSF_INTERR, &err_code, &psq_cb->psq_error, 0);
-	    return (E_DB_ERROR);
-	}
-
-	/* Address that parm in the sqlda, see if we've figured a type
-	** for it already.
-	** Caution here, NOT &desc_base[parm_no]!  because of the
-	** screwy way that gca-col-att struct is defined.
-	*/
-
-	desc = (GCA_COL_ATT *) ((char *) desc_base + (parm_no * GCA_COL_ATT_SIZE));
-	if (desc->gca_attdbv.db_datatype != 0)
-	    return (E_DB_OK);
-
-	/* If we have some sort of type available from above, record it.
-	** If not, inform the caller that some help is needed.
-	*/
-
-	if (context_type != 0)
-	{
-	    desc->gca_attdbv.db_datatype = (i2)context_type;
-	    desc->gca_attdbv.db_length = (i2)context_length;
-	    desc->gca_attdbv.db_prec = context_prec;
-	}
-	else
-	{
-	    *have_parm = TRUE;
-	}
-    }
-
-    left = node->pst_left;
-    right = node->pst_right;
-
-    /* If we're an ATT resdom, take the type "context" from the resdom.
-    ** This will help out the simple INSERT and UPDATE cases.
-    ** If we're an ADI_OPERATOR op, leave the type context alone;
-    ** these are things like + and - which are in general not type-
-    ** changing operations.  For anything else, who knows what can
-    ** happen, so don't pass any context down.
-    ** Leave type context alone for CONST nodes;  the only way they
-    ** have children is for IN-lists, and the same context should apply
-    ** to all the IN-elements.
-    */
-    if (node_type == PST_RESDOM)
-    {
-	i4 targtype = node->pst_sym.pst_value.pst_s_rsdm.pst_ttargtype;
-
-	if (targtype == PST_ATTNO || targtype == PST_LOCALVARNO
-	  || targtype == PST_DBPARAMNO || targtype == PST_BYREF_DBPARAMNO
-	  || targtype == PST_RESROW_COL)
-	{
-	    context_type = node->pst_sym.pst_dataval.db_datatype;
-	    context_length = node->pst_sym.pst_dataval.db_length;
-	    context_prec = node->pst_sym.pst_dataval.db_prec;
-	} 
-	else
-	{
-	    context_type = 0; context_length = 0; context_prec = 0;
-	}
-    }
-    else if (node_type == PST_UOP || node_type == PST_BOP
-      || node_type == PST_MOP || node_type == PST_COP)
-    {
-	op_status = adi_op_info(sess_cb->pss_adfcb,
-			node->pst_sym.pst_value.pst_s_op.pst_opno, &opinfo);
-	if (op_status != E_DB_OK || opinfo.adi_optype != ADI_OPERATOR)
-	{
-	    context_type = 0; context_length = 0; context_prec = 0;
-	}
-	/* else leave them alone for operators */
-
-	/* If dealing with LIKE family of operators the parse tree is
-	** likely to have a PATCOMP UOP for 2nd parameter and probably with
-	** a further conversion UOP below. If so, we'll
-	** dereference the rhs to make it appear that the two/three operators
-	** are really just parts of a single operator. */
-	if (op_status == E_DB_OK && right && left &&
-	    (opinfo.adi_opid == ADI_LIKE_OP || opinfo.adi_opid == ADI_NLIKE_OP))
-	{
-	    ADI_OPINFO opinfo2;
-	    if (!adi_op_info(sess_cb->pss_adfcb,
-		    right->pst_sym.pst_value.pst_s_op.pst_opno, &opinfo2) &&
-		    opinfo2.adi_opid == ADI_PATCOMP_OP)
+	    switch (node->pst_sym.pst_type)
 	    {
-		right = right->pst_left;
-		if (right &&
-			right->pst_sym.pst_type == PST_UOP &&
-			right->pst_left)
-		    right = right->pst_left;
+	    case PST_ROOT:
+	    case PST_SUBSEL:
+		if (node->pst_sym.pst_value.pst_s_root.pst_union.pst_next)
+		{
+		    pst_push_item(&stk,
+			(PTR)&node->pst_sym.pst_value.pst_s_root.pst_union.pst_next);
+		    /* Mark that the top node needs descending (and allocating) */
+		    pst_push_item(&stk, (PTR)PST_DESCEND_MARK);
+		}
+		break;
+	    case PST_BOP:
+		if ((node->pst_sym.pst_value.pst_s_op.pst_flags & PST_INLIST) &&
+			node->pst_right &&
+			node->pst_right->pst_sym.pst_type == PST_CONST)
+		{
+		    /* We have that the RHS is a compact list of constants
+		    ** and the LHS is arbitrary. For this node we will switch
+		    ** the traverse order so that RHS is traversed before LHS
+		    ** allowing us to readily scope the RHS of the BOP */
+		    inlist_bop = node;
+		    pst_push_item(&stk, (PTR)nodep);
+		    /* Delay LHS */
+		    pst_push_item(&stk, (PTR)&node->pst_left);
+		    if (node->pst_left->pst_right ||
+				node->pst_left->pst_left)
+			/* Mark that the top node needs descending */
+			pst_push_item(&stk, (PTR)PST_DESCEND_MARK);
+		    nodep = &node->pst_right;
+		    continue;
+		}
+		break;
 	    }
-	    if (left->pst_sym.pst_type == PST_UOP)
-		left = left->pst_left;
+	    /* Delay node evaluation */
+	    pst_push_item(&stk, (PTR)nodep);
+	    if (node->pst_left)
+	    {
+		if (node->pst_right)
+		{
+		    /* Delay RHS */
+		    pst_push_item(&stk, (PTR)&node->pst_right);
+		    if (node->pst_right->pst_right ||
+				node->pst_right->pst_left)
+			/* Mark that the top node needs descending */
+			pst_push_item(&stk, (PTR)PST_DESCEND_MARK);
+		}
+		nodep = &node->pst_left;
+		continue;
+	    }
+	    else if (node->pst_right)
+	    {
+		nodep = &node->pst_right;
+		continue;
+	    }
 	}
 
-    }
-    else if (node_type != PST_CONST)
-    {
-	context_type = 0; context_length = 0; context_prec = 0;
-    }
-
-    /* Try left, right subtrees */
-    if (left != NULL)
-    {
-	*have_parm = FALSE;
-	status = pst_descinput_walk(sess_cb, psq_cb, proto, desc_base,
-			left, context_type, context_length,
-			context_prec, have_parm);
-	if (status != E_DB_OK)
-	    return (status);
-	if (*have_parm && node_type == PST_BOP && right != NULL
-	  && op_status == E_DB_OK
-	  && (opinfo.adi_optype == ADI_COMPARISON || opinfo.adi_optype == ADI_OPERATOR)
-	  && right->pst_sym.pst_dataval.db_datatype != 0)
+	/*** Depth first traverse ***/
+	if (node->pst_sym.pst_type == PST_CONST)
 	{
-	    /* We have "? binop expr", take a swing at using expr's type */
-	    status = pst_descinput_walk(sess_cb, psq_cb, proto, desc_base,
-			left,
-			right->pst_sym.pst_dataval.db_datatype,
-			right->pst_sym.pst_dataval.db_length,
-			right->pst_sym.pst_dataval.db_prec,
-			have_parm);
-	    if (status != E_DB_OK)
-		return (status);
-	}
-    }
-    if (right != NULL)
-    {
-	*have_parm = FALSE;
-	status = pst_descinput_walk(sess_cb, psq_cb, proto, desc_base,
-			right, context_type, context_length,
-			context_prec, have_parm);
-	if (status != E_DB_OK)
-	    return (status);
-	if (*have_parm && node_type == PST_BOP && left != NULL
-	  && op_status == E_DB_OK
-	  && (opinfo.adi_optype == ADI_COMPARISON || opinfo.adi_optype == ADI_OPERATOR)
-	  && left->pst_sym.pst_dataval.db_datatype != 0)
-	{
-	    /* We have "expr binop ?", take a swing at using expr's type */
-	    status = pst_descinput_walk(sess_cb, psq_cb, proto, desc_base,
-			right,
-			left->pst_sym.pst_dataval.db_datatype,
-			left->pst_sym.pst_dataval.db_length,
-			left->pst_sym.pst_dataval.db_prec,
-			have_parm);
-	    if (status != E_DB_OK)
-		return (status);
-	}
-    }
+	    i4 parm_no = node->pst_sym.pst_value.pst_s_cnst.pst_parm_no - 1;
+	    if (parm_no >= 0)
+	    {
+		PST_QNODE *parent = pst_parent_node(&stk, NULL);
+		if (parm_no > proto->pst_maxparm)
+		{
+		    TRdisplay("%@ psf_descinput_walk: param marker ix %d higher than max %d at node %p\n",
+				parm_no, proto->pst_maxparm, node);
+		    (void) psf_error(E_PS0002_INTERNAL_ERROR, 0,
+				PSF_INTERR, &err_code, &psq_cb->psq_error, 0);
+		    return (E_DB_ERROR);
+		}
+		desc = (GCA_COL_ATT *)((char *)desc_base + (parm_no * GCA_COL_ATT_SIZE));
+		if (desc->gca_attdbv.db_datatype == DB_NODT &&
+		    inlist_bop)
+		{
+		    DB_DATA_VALUE *dv = &inlist_bop->pst_left->pst_sym.pst_dataval;
+		    /* case 2 - in-list */
+		    desc->gca_attdbv.db_datatype = dv->db_datatype;
+		    desc->gca_attdbv.db_length = dv->db_length;
+		    desc->gca_attdbv.db_prec = dv->db_prec;
+		    /* If the inlist_bop is also the parent then we are at the end of
+		    ** the list of constants (descended first) */
+		    if (inlist_bop == parent)
+			inlist_bop = NULL;
+		}
+		else if (desc->gca_attdbv.db_datatype == DB_NODT)
+		{
+		    /* Need to try guess the likely datatype based on one of the
+		    ** patterns below:
+		    **
+		    ** RSD       1)where RSD is ATTNO,LOCALVARNO,DBPARAMNO,
+		    **   \       BYREF_DBPARAMNO or RESROW_COL. use type of RSD
+		    **    ?
+		    **
+		    **    OP     2)where op is a comparison.
+		    **   /  \    use type of VAR (VAR might be general)
+		    ** VAR   ?
+		    **
+		    **   OP      3)where OP is explicit coercion operator.
+		    **  /  \     use type of OP
+		    ** ?   any
+		    **
+		    **    OP     4)where op is LIKE or NLIKE and UOP is PATCOMP.
+		    **   /  \    use type of VAR (VAR might be general but not ?)
+		    ** VAR  UOP
+		    **      /
+		    **     ?
+		    **
+		    **   OP      5)where op is LIKE or NLIKE and UOP is PATCOMP.
+		    **  /  \     use type of VAR (VAR might be general but not ?)
+		    ** ?   UOP
+		    **     /
+		    **   VAR
+		    **
+		    **     MOP   6)Params of MOPs could be guessed from adi DT info
+		    **     / \
+		    **   OPR  ?
+		    **   / \
+		    ** OPR  ?
+		    **   \
+		    **    ?
+		    */
+		    PST_QNODE *pparent = !parent ? NULL : pst_parent_node(&stk, parent);
+		    DB_DATA_VALUE *dv = &parent->pst_sym.pst_dataval;
+		    desc->gca_attdbv.db_datatype = 0;
+		    desc->gca_attdbv.db_length = 0;
+		    desc->gca_attdbv.db_prec = 0;
 
-    /* Special case additional walking for special case tree nodes */
-    if (node_type == PST_ROOT
-      && node->pst_sym.pst_value.pst_s_root.pst_union.pst_next != NULL)
-    {
-	status = pst_descinput_walk(sess_cb, psq_cb, proto, desc_base,
-			node->pst_sym.pst_value.pst_s_root.pst_union.pst_next,
-			0, 0, 0, have_parm);
-	if (status != E_DB_OK)
-	    return (status);
-	*have_parm = FALSE;
-    }
-    return (E_DB_OK);
+		    if (pparent &&
+			pparent->pst_sym.pst_type == PST_UOP &&
+			pparent->pst_sym.pst_value.pst_s_op.pst_opno == ADI_PATCOMP_OP)
+			parent = pparent;
 
-} /* pst_descinput_walk */
+		    if (parent->pst_sym.pst_type == PST_RESDOM)
+		    {
+			/* Case 1 */
+			i4 targtype = parent->pst_sym.pst_value.pst_s_rsdm.pst_ttargtype;
+
+			switch (targtype)
+			{
+			case PST_ATTNO:
+			case PST_LOCALVARNO:
+			case PST_DBPARAMNO:
+			case PST_BYREF_DBPARAMNO:
+			case PST_RESROW_COL:
+			    desc->gca_attdbv.db_datatype = dv->db_datatype;
+			    desc->gca_attdbv.db_length = dv->db_length;
+			    desc->gca_attdbv.db_prec = dv->db_prec;
+			    break;
+			}
+		    }
+		    else if (parent->pst_sym.pst_type == PST_UOP &&
+			     parent->pst_sym.pst_value.pst_s_op.pst_opno == ADI_PATCOMP_OP)
+		    {
+			/* Case 4 */
+			parent = pst_parent_node(&stk, parent); /* LIKE? */
+			if (parent->pst_sym.pst_value.pst_s_op.pst_opno == ADI_LIKE_OP ||
+			    parent->pst_sym.pst_value.pst_s_op.pst_opno == ADI_NLIKE_OP)
+			{
+			    if (parent->pst_left->pst_sym.pst_type == PST_UOP &&
+				parent->pst_left->pst_sym.pst_value.pst_s_op.pst_opno == ADI_NVCHAR_OP)
+			    {
+				/* UTF8 VAR can be masked by NVCHAR cast with LIKE */
+				parent = parent->pst_left;
+			    }
+			    dv = &parent->pst_left->pst_sym.pst_dataval;
+			    desc->gca_attdbv.db_datatype = dv->db_datatype;
+			    desc->gca_attdbv.db_length = dv->db_length;
+			    desc->gca_attdbv.db_prec = dv->db_prec;
+			}
+		    }
+		    else if (parent->pst_sym.pst_type == PST_BOP &&
+			     parent->pst_left == node &&
+			     (parent->pst_sym.pst_value.pst_s_op.pst_opno == ADI_LIKE_OP ||
+			      parent->pst_sym.pst_value.pst_s_op.pst_opno == ADI_NLIKE_OP) &&
+			     parent->pst_right->pst_sym.pst_type == PST_UOP &&
+			     parent->pst_right->pst_sym.pst_value.pst_s_op.pst_opno == ADI_PATCOMP_OP)
+		    {
+			/* Case 5 */
+			dv = &parent->pst_right->pst_sym.pst_dataval;
+			desc->gca_attdbv.db_datatype = dv->db_datatype;
+			desc->gca_attdbv.db_length = dv->db_length;
+			desc->gca_attdbv.db_prec = dv->db_prec;
+		    }
+		    else if (parent->pst_sym.pst_type == PST_UOP ||
+			     parent->pst_sym.pst_type == PST_BOP)
+		    {
+			/* Cases 2 or 3 */
+			ADI_OPINFO opinfo;
+			ADI_FI_TAB fi_tab;
+			ADI_OP_ID opno = parent->pst_sym.pst_value.pst_s_op.pst_opno;
+
+			dv = &parent->pst_sym.pst_dataval;
+
+			if (adi_op_info(sess_cb->pss_adfcb, opno, &opinfo) == E_DB_OK &&
+			    adi_fitab(sess_cb->pss_adfcb, opno, &fi_tab) == E_DB_OK)
+			{
+			    PST_QNODE *ot = parent->pst_left;
+			    i4 pn = 1; /* Assume ? on RHS (param 1) */
+			    i4 npar = 2;
+			    if (parent->pst_sym.pst_type == PST_UOP)
+				npar = 1;
+			    if (ot == node)
+			    {
+				ot = parent->pst_right;
+				pn = 0; /* Assumed wrong, ? on LHS */
+			    }
+			    if (opinfo.adi_optype == ADI_COMPARISON)
+			    {
+				/* case 2 */
+				dv = &ot->pst_sym.pst_dataval;
+				desc->gca_attdbv.db_datatype = dv->db_datatype;
+				desc->gca_attdbv.db_length = dv->db_length;
+				desc->gca_attdbv.db_prec = dv->db_prec;
+			    }
+			    else if (opinfo.adi_optype == ADI_NORM_FUNC &&
+				dv->db_datatype != DB_NODT &&
+				dv->db_length != 0)
+			    {
+				/* case 3 */
+				/* Could use awaited EXPL_COERCION info - for the moment
+				** spread net wider  */
+				desc->gca_attdbv.db_datatype = dv->db_datatype;
+				desc->gca_attdbv.db_length = dv->db_length;
+				desc->gca_attdbv.db_prec = dv->db_prec;
+			    }
+			    else if (ot && opinfo.adi_optype == ADI_OPERATOR &&
+				ot->pst_sym.pst_dataval.db_datatype != DB_NODT &&
+				ot->pst_sym.pst_dataval.db_length != 0)
+			    {
+				/* case 3 */
+				/* Could use awaited ASSOC info*/
+				dv = &ot->pst_sym.pst_dataval;
+				desc->gca_attdbv.db_datatype = dv->db_datatype;
+				desc->gca_attdbv.db_length = dv->db_length;
+				desc->gca_attdbv.db_prec = dv->db_prec;
+			    }
+			    else
+			    {
+				i4 i;
+    				DB_DT_ID insp_dt = DB_NODT;
+				ADI_FI_DESC *fi = fi_tab.adi_tab_fi;
+				for (i = 0; i < fi_tab.adi_lntab; i++, fi++)
+				{
+				    if (fi->adi_fiflags & ADI_F4096_SQL_CLOAKED)
+					continue;
+				    if (fi->adi_numargs != npar)
+					continue;
+				    if (insp_dt == DB_NODT)
+					insp_dt = fi->adi_dt[pn];
+				    else if (insp_dt != fi->adi_dt[pn])
+				    {
+					insp_dt = DB_NODT;
+					break;
+				    }
+				}
+				if (insp_dt != DB_NODT && insp_dt != DB_ALL_TYPE)
+				{
+				    desc->gca_attdbv.db_datatype = -insp_dt;
+				    if (insp_dt == DB_INT_TYPE)
+					desc->gca_attdbv.db_length = sizeof(i4)+1;
+				    else if (insp_dt == DB_FLT_TYPE)
+					desc->gca_attdbv.db_length = sizeof(f8)+1;
+				}
+			    }
+			}
+		    }
+		    else if (parent->pst_sym.pst_type == PST_OPERAND ||
+			     parent->pst_sym.pst_type == PST_MOP)
+		    {
+			/* Case 6 */
+			ADI_OPINFO opinfo;
+			ADI_FI_TAB fi_tab;
+			ADI_FI_DESC *fi;
+			ADI_OP_ID opno;
+			pparent = parent;
+			while (pparent->pst_sym.pst_type == PST_OPERAND)
+			    pparent = pst_parent_node(&stk, pparent);
+			opno = pparent->pst_sym.pst_value.pst_s_op.pst_opno;
+			if (adi_op_info(sess_cb->pss_adfcb, opno, &opinfo) == E_DB_OK &&
+			    adi_fitab(sess_cb->pss_adfcb, opno, &fi_tab) == E_DB_OK)
+			{
+			    PST_QNODE *p = pparent;
+			    i4 pn, npar = 0;
+			    i4 i;
+			    DB_DT_ID insp_dt = DB_NODT;
+			    ADI_FI_DESC *fi = fi_tab.adi_tab_fi;
+			    while (p)
+			    {
+				if (p->pst_right == node)
+				    pn = npar;
+				npar++;
+				p = p->pst_left;
+			    }
+			    for (i = 0; i < fi_tab.adi_lntab; i++, fi++)
+			    {
+				if (fi->adi_fiflags & ADI_F4096_SQL_CLOAKED)
+				    continue;
+				if (fi->adi_numargs != npar)
+				    continue;
+				if (insp_dt == DB_NODT)
+				    insp_dt = fi->adi_dt[pn];
+				else if (insp_dt != fi->adi_dt[pn])
+				{
+				    insp_dt = DB_NODT;
+				    break;
+				}
+			    }
+			    if (insp_dt != DB_NODT && insp_dt != DB_ALL_TYPE)
+			    {
+				desc->gca_attdbv.db_datatype = -insp_dt;
+				if (insp_dt == DB_INT_TYPE)
+				    desc->gca_attdbv.db_length = sizeof(i4)+1;
+				else if (insp_dt == DB_FLT_TYPE)
+				    desc->gca_attdbv.db_length = sizeof(f8)+1;
+			    }
+			}
+		    }
+		    else
+		    {
+			/* Future - scan applicable FI_DEFNs to narrow scope */
+			;
+		    }
+		}
+	    }
+	}
+	nodep = (PST_QNODE**)pst_pop_item(&stk);
+	if (descend = (nodep == PST_DESCEND_MARK))
+	    nodep = (PST_QNODE**)pst_pop_item(&stk);
+    }
+    pst_pop_all(&stk);
+    return status;
+}
 
 /*
 ** Name: pst_cpdata - fill out copy buffer's data for "insert to copy" optimization
@@ -4417,7 +4866,7 @@ pst_descinput_walk(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
 ** 	None.
 ** 
 ** Side Effects:
-** 	fills out sqlda of qeu_copy
+** 	fills out copy buffer and decides whether to ask copy to load data
 ** 
 ** Returns:
 ** 	DB_STATUS
@@ -4432,6 +4881,10 @@ pst_descinput_walk(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
 **	30-mar-2010 (stephenb)
 **	    Correct error introduced in last change. We need to work
 **	    out the biggest row size *before* allocating the memory
+**	25-jun-2010 (stephenb)
+**	    Code inteligence to use new row buffer. We now collect the
+**	    input rows in the buffer until we fill it up, and then set the
+**	    flag to ask QEF to load the data in one pass
 */
 
 DB_STATUS
@@ -4445,14 +4898,17 @@ pst_cpdata(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PST_QNODE *tree, bool use_qsf)
     i4			rowsize = 0;
     DB_STATUS		status;
     i4			attno;
+    QEF_INS_DATA	*qef_ins_data;
     QEF_DATA		*data;
     QEU_CPATTINFO	*cpatt;
     QSF_RCB		qsf_rb;
     PSQ_QDESC		*qdesc;
     QEU_CPATTINFO	*att_array;
+    QEF_COL_DATA	*col_val;
     i4			err_code = 0;
     i4			i;
     i4			bytecount = 0;
+    i4			block_size;
 
 
     
@@ -4466,6 +4922,24 @@ pst_cpdata(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PST_QNODE *tree, bool use_qsf)
     qef_rcb  = (QEF_RCB *) psq_cb->psq_cp_qefrcb;
     qe_copy  = qef_rcb->qeu_copy;
     sqlda = (GCA_TD_DATA *) qe_copy->qeu_tdesc;
+    
+    /* get memory from the buffer for the attribute data values */
+    block_size = (sqlda->gca_l_col_desc+1) * sizeof(QEF_COL_DATA);
+    if (qe_copy->qeu_cleft < block_size)
+    {
+	/* 
+	** not enough cache for this block; this should never happen
+	** since we check that we have at least enough after each row,
+	** otherwise we ask copy to load the buffer and empty it.
+	*/
+	(VOID) psf_error(E_PS03B4_NO_COPY_CACHE, 0,
+		PSF_CALLERR, &err_code, &psq_cb->psq_error, 0);
+	return (E_DB_ERROR);
+    }    
+   
+    col_val = (QEF_COL_DATA *)qe_copy->qeu_cptr;
+    qe_copy->qeu_cptr += block_size;
+    qe_copy->qeu_cleft -= block_size;
     
     if (use_qsf)
     {
@@ -4489,7 +4963,18 @@ pst_cpdata(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PST_QNODE *tree, bool use_qsf)
 	    return (E_DB_ERROR);
 	}
 	qdesc = (PSQ_QDESC *)qsf_rb.qsf_root;
-	
+	/* 
+	** When we use QSF for the input data we are being called directly by 
+	** the sequencer (no parsing has been done) and we have not yet opened
+	** the session's output stream. If we came via the usual route the output
+	** stream would be opened in pst_execute when we copy the query
+	** tree from the proto. The output stream represents the result of
+	** PSF processing, so we'll open it here.
+	*/
+	if ((status = psf_mopen(sess_cb, QSO_QP_OBJ, &sess_cb->pss_ostream,
+		    &psq_cb->psq_error)) != E_DB_OK)
+	    return (status);
+	    
 	/* NOTE: we are depending here on the fact that the att array
 	** is constructed in the order of the query parameters, which will
 	** also be the order of the data values in the query block. This
@@ -4513,12 +4998,9 @@ pst_cpdata(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PST_QNODE *tree, bool use_qsf)
 		return (E_DB_ERROR);
 	    }
 	    attno = att_array[i].cp_attseq;
-	    sqlda->gca_col_desc[attno].gca_attdbv.db_datatype = 
-		    qdesc->psq_qrydata[i]->db_datatype;
-	    sqlda->gca_col_desc[attno].gca_attdbv.db_length = 
-		    qdesc->psq_qrydata[i]->db_length;
-	    sqlda->gca_col_desc[attno].gca_attdbv.db_prec = 
-		    qdesc->psq_qrydata[i]->db_prec;
+	    col_val[attno].dtcol_value.db_datatype = qdesc->psq_qrydata[i]->db_datatype;
+	    col_val[attno].dtcol_value.db_length = qdesc->psq_qrydata[i]->db_length;
+	    col_val[attno].dtcol_value.db_prec = qdesc->psq_qrydata[i]->db_prec;
 	    rowsize += qdesc->psq_qrydata[i]->db_length;
 	}
     }
@@ -4540,58 +5022,90 @@ pst_cpdata(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PST_QNODE *tree, bool use_qsf)
 		const_node = node->pst_right;
 		/* user provided constants only */
 		attno = node->pst_sym.pst_value.pst_s_rsdm.pst_ntargno;
-		sqlda->gca_col_desc[attno].gca_attdbv.db_datatype = 
+		col_val[attno].dtcol_value.db_datatype = 
 			const_node->pst_sym.pst_dataval.db_datatype;
-		sqlda->gca_col_desc[attno].gca_attdbv.db_length = 
+		col_val[attno].dtcol_value.db_length = 
 			const_node->pst_sym.pst_dataval.db_length;
-		sqlda->gca_col_desc[attno].gca_attdbv.db_prec = 
+		col_val[attno].dtcol_value.db_prec = 
 			const_node->pst_sym.pst_dataval.db_prec;
 		rowsize += const_node->pst_sym.pst_dataval.db_length;
 	    }
 	}
     }
-    /* now we know the external row size */
-    qe_copy->qeu_ext_length = rowsize; 	    
-   
-    /* allocate memory for the input record */
-    if (use_qsf)
-    {
-	/* 
-	 * WARNING: we assume that we have not yet opened the output stream if
-	** use_qsf is set, on the basis that we didn't yet build the query
-	** tree (otherwise we would be using it). Specifically, the output
-	** stream is usually opened in pst_execute when we copy the query
-	** tree from the proto.
-	*/
-	if ((status = psf_mopen(sess_cb, QSO_QP_OBJ, &sess_cb->pss_ostream,
-		    &psq_cb->psq_error)) != E_DB_OK)
-	    return (status);
-    }
-
-    if ((status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
-	    sizeof(QEF_DATA),  
-	    &data,
-	    &psq_cb->psq_error)) != E_DB_OK)
-    return (status);
-    qe_copy->qeu_input = data;
-    data->dt_next = NULL;
-
-    /*
-    ** Now adjust rowsize to longer of extern and real length
-    */
-    if (qe_copy->qeu_ext_length < qe_copy->qeu_tup_length)
-	rowsize = qe_copy->qeu_tup_length;
-
-    if ((status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
-	    rowsize ,  
-	    &data->dt_data,
-	    &psq_cb->psq_error)) != E_DB_OK)
-    return (status);
-
-    qe_copy->qeu_input->dt_size = rowsize;
+    /* now we know the external row size, is it longer than current max? */
+    if (rowsize > qe_copy->qeu_ext_length)
+	qe_copy->qeu_ext_length = rowsize;
 
     
-    /* and copy the data in */
+    /*
+    ** get memory from the buffer for the row
+    */
+    if (rowsize < qe_copy->qeu_tup_length)
+	block_size = qe_copy->qeu_tup_length + sizeof(QEF_INS_DATA);
+    else
+	block_size = rowsize + sizeof(QEF_INS_DATA);
+    if (qe_copy->qeu_cleft < block_size)
+    {
+	/* 
+	** not enough cache for this row; this is an outside exception
+	** case which we try to avoid by checking if we have enough left
+	** after processing each row. But since the user can pass any amount
+	** of data up to DB_MAXROWSIZE (currently 256k), we might end up here.
+	** we will always load the data and empty the buffer if we get here
+	** so we'll just use some cache from the query output stream to cover 
+	** this row.
+	*/
+	if ((status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
+		block_size,  
+		&qef_ins_data,
+		&psq_cb->psq_error)) != E_DB_OK)
+	return (status);
+	qe_copy->qeu_load_buf = TRUE;
+    }
+    else
+    {
+	qef_ins_data = (QEF_INS_DATA *)qe_copy->qeu_cptr;
+	qe_copy->qeu_cptr += block_size;
+	qe_copy->qeu_cleft -= block_size;
+    }
+    qef_ins_data->ins_next = NULL;
+    data = &qef_ins_data->ins_data;
+    data->dt_data = (PTR)qef_ins_data + sizeof(QEF_INS_DATA);
+    data->dt_next = NULL;
+
+    qef_ins_data->ins_col = col_val;
+    qef_ins_data->ins_ext_size = rowsize;
+    /* 
+    ** adjust rowsize to longer of extern and internal length,
+    ** this is how much of the buffer we will use
+    */
+    if (rowsize < qe_copy->qeu_tup_length)
+	rowsize = qe_copy->qeu_tup_length;
+    data->dt_size = rowsize;
+    /* 
+    ** and add the data block to the end of the linked list 
+    */
+    if (qe_copy->qeu_insert_data == NULL)
+    {
+	/* first row */
+	qe_copy->qeu_ins_last = qef_ins_data;
+	qe_copy->qeu_insert_data = qef_ins_data;
+	qe_copy->qeu_input = data;
+	qe_copy->qeu_cur_tups = 1;
+    }
+    else
+    {
+	/*
+	** add current to end of list (QEF_DATA and
+	** QEF_INS_DATA linked lists are kept in lock-step)
+	*/
+	qe_copy->qeu_ins_last->ins_next = qef_ins_data;
+	qe_copy->qeu_ins_last->ins_data.dt_next = data;
+	qe_copy->qeu_ins_last = qef_ins_data;
+	qe_copy->qeu_cur_tups++;
+    }
+   
+    /* then copy the data in */
     if (use_qsf)
     {
 	/* copy directly from query parms */
@@ -4605,11 +5119,11 @@ pst_cpdata(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PST_QNODE *tree, bool use_qsf)
 		if (cpatt->cp_attseq == attno)
 		    break;
 	    }
-	    cpatt->cp_ext_offset = bytecount;
+	    cpatt->cp_ext_offset = col_val[attno].dtcol_offset = bytecount;
 
 	    MEcopy(qdesc->psq_qrydata[i]->db_data, 
 		    qdesc->psq_qrydata[i]->db_length,
-		    qe_copy->qeu_input->dt_data + cpatt->cp_ext_offset);
+		    data->dt_data + cpatt->cp_ext_offset);
 	    bytecount += qdesc->psq_qrydata[i]->db_length;
 	}
     }
@@ -4631,14 +5145,30 @@ pst_cpdata(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PST_QNODE *tree, bool use_qsf)
 		    if (cpatt->cp_attseq == attno)
 			break;
 		}
-		cpatt->cp_ext_offset = bytecount;
+		cpatt->cp_ext_offset = col_val[attno].dtcol_offset = bytecount;
 		MEcopy(const_node->pst_sym.pst_dataval.db_data, 
 			const_node->pst_sym.pst_dataval.db_length,
-			qe_copy->qeu_input->dt_data + cpatt->cp_ext_offset);
+			data->dt_data + cpatt->cp_ext_offset);
 		bytecount += const_node->pst_sym.pst_dataval.db_length;
 	    }
 	}
     }
+    /*
+    ** check if we need to load the current buffer and empty it.
+    ** This is determined by trying to predict the size of the next row
+    ** (including column data), we do this by using the biggest of
+    ** the biggest external row size and the internal row size. If we don't
+    ** have enough buffer space for it we'll ask QEF to load the current buffer.
+    ** This should be ample for almost all cases; if we drop in here again and
+    ** we really don't have enough space we'll just use the query stream for the
+    ** row (see above).
+    */
+    block_size = (qe_copy->qeu_ext_length > qe_copy->qeu_tup_length ? 
+	    qe_copy->qeu_ext_length : qe_copy->qeu_tup_length) + 
+	    sizeof(QEF_INS_DATA) +
+	    + ((sqlda->gca_l_col_desc+1) * sizeof(QEF_COL_DATA));
+    if (!qe_copy->qeu_load_buf && qe_copy->qeu_cleft < block_size)
+	qe_copy->qeu_load_buf = TRUE;
     
     STRUCT_ASSIGN_MACRO(sess_cb->pss_ostream.psf_mstream, psq_cb->psq_result);
     psq_cb->psq_qso_lkid = sess_cb->pss_ostream.psf_mlock;

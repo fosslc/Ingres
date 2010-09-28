@@ -12,6 +12,8 @@ $!!	   Actually implement the logic.
 $!!    06-nov-2007 (bolke01) Bug 119420
 $!!      Modify the yypp tool to work from current
 $!!        directory as well as top level ING_SRC
+$!!    06-sep-2010 (horda03)
+$!!      Handle multiple -D flags.
 $!!
 $ echo := write sys$output
 $ define /nolog tmp SYS$SCRATCH
@@ -36,6 +38,7 @@ $! Make sure we have yapp available to us
 $!
 $ yapp 
 $ if $severity .ne. 1 then exit %x2c
+$ defs=""
 $ i=1
 $while:
 $	if p'i .eqs. "" then goto endwhile
@@ -46,13 +49,13 @@ $	else	if p'i .eqs. "-S" .or. p'i .eqs. "-s"
 $	then	i=i + 1
 $		sym=p'i
 $	else	if f$extr(0, 2, p'i) .eqs. "-D"
-$	then	if "''defs'" .nes. ""
-$		then	defs=defs+" "+p'i
-$		else	defs=p'i
+$	then	if defs .nes. ""
+$		then	defs=F$FAO("!AS ""!AS""", defs, p'i)
+$		else	defs=F$FAO("""!AS""", p'i)
 $		endif
 $	else	if f$extr(0, 2, p'i) .eqs. "-H"
 $	then	if "''hist'" .nes. ""
-$		then	hist=hist+" "+p'i
+$		then	hist=hist+" "+p'i`
 $		else	hist=p'i
 $		endif
 $	else	if f$extr(0, 1, p'i) .eqs. "-"
@@ -104,7 +107,7 @@ $! dopts="''IIVERS_optdef'"
 $!
 $ cat := type /nohead
 $ pipe cat ING_SRC:[tools.port'noise'.conf]CONFIG., 'files' > tmp:cat-yypp.tmp
-$ pipe yapp "''dvers'" "''dconf'" 'dopts' "''defs'" 'hist' tmp:cat-yypp.tmp | -
+$ pipe yapp "''dvers'" "''dconf'" 'dopts' 'defs' 'hist' tmp:cat-yypp.tmp | -
 	sed -e "/^[ 	]*$/d"
 $ del tmp:cat-yypp.tmp;*
 $!

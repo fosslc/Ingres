@@ -28,6 +28,8 @@
 **  History:
 **	26-Dec-02 (gordy)
 **	    Extracted from GCC.
+**	27-Jul-2010 (frima01) Bug 124137
+**	    Evaluate return code of NMloc to avoid using corrupt pointers.
 */
 
 
@@ -91,7 +93,8 @@ gcu_read_cset( bool (*callback)(char *, u_i4) )
     /*
     ** Open gcccset.nam in $II_SYSTEM/files/charsets.
     */
-    NMloc( FILES, 0, (char *)NULL, &file_loc );
+    if (NMloc( FILES, 0, (char *)NULL, &file_loc ) != OK )
+	return (1); /* return 1 as number of line on which error occurred */
     LOfaddpath( &file_loc, "charsets", &file_loc );
     LOfstfile( "gcccset.nam", &file_loc );
 

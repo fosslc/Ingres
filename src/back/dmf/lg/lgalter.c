@@ -729,6 +729,9 @@ static STATUS LG_alter(
 **	17-Feb-2010 (jonj)
 **	    SIR 121619 MVCC: Add LG_A_RBBLOCKS, LG_A_RFBLOCKS for
 **	    buffered log reads.
+**	06-Jul-2010 (jonj) SIR 122696
+**	    Back off LG_BKEND_SIZE when computing minimum number
+**	    of buffers (LG_A_BCNT).
 */
 STATUS
 LGalter(
@@ -841,7 +844,8 @@ CL_ERR_DESC	    *sys_err)
 	*/
 	if (*(i4 *)item <
 		(LG_MAX_RSZ /
-		    (lgd->lgd_local_lfb.lfb_header.lgh_size - sizeof(LBH))) + 3)
+		    (lgd->lgd_local_lfb.lfb_header.lgh_size-LG_BKEND_SIZE
+		    	- sizeof(LBH))) + 3)
 	{
 	    uleFormat(NULL, E_DMA400_LG_BAD_BCNT_ALTER, (CL_ERR_DESC *)NULL,
 			ULE_LOG, NULL, NULL, 0, NULL,

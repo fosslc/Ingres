@@ -596,6 +596,7 @@ DB_DATA_VALUE       *adc_emptydv)	/* Ptr to empty data value */
       case DB_MLINE_TYPE:
       case DB_POLY_TYPE:
       case DB_MPOLY_TYPE:
+      case DB_GEOMC_TYPE:
       case DB_LBIT_TYPE:
       case DB_LNVCHR_TYPE:
 	{

@@ -49,6 +49,9 @@
 **    Bug 115560
 **    Add flags to the ALTERDB structure for controlling command line
 **    arguments to the alterdb command.
+** 20-Aug-2010 (drivi01)
+**    Add a new function to the header DlgAllDBTable.
+**    
 */
 
 #ifndef _DBADLG1_H
@@ -75,6 +78,7 @@
  BOOL  WINAPI __export DlgAuditDB                   (HWND hwndOwner, LPAUDITDBPARAMS       lpauditdb);
  BOOL  WINAPI __export DlgAuditDBFile               (HWND hwndOwner, LPAUDITDBFPARAMS      lpauditdbfparams);
  BOOL  WINAPI __export DlgAuditDBTable              (HWND hwndOwner, LPAUDITDBTPARAMS      lpauditdbtparams);
+ BOOL  WINAPI __export DlgAllDBTable              (HWND hwndOwner, LPAUDITDBTPARAMS      lpauditdbtparams);
  BOOL  WINAPI __export DlgCDDS                      (HWND hwndOwner, LPREPCDDS             lpcdds);
  BOOL  WINAPI __export DlgCDDSv11                   (HWND hwndOwner, LPREPCDDS             lpcdds);
  BOOL  WINAPI __export DlgConfSvr                   (HWND hwndOwner);
@@ -684,6 +688,7 @@ int WINAPI __export DlgAlterRole (HWND hwndOwner, LPROLEPARAMS  lproleparams );
 int WINAPI __export DlgAddUser2Group (HWND hwndOwner, LPGROUPUSERPARAMS lpgroupuserparams);
 int WINAPI __export DlgAuditDB (HWND hwndOwner, LPAUDITDBPARAMS lpauditdb);
 int WINAPI __export DlgAuditDBTable (HWND hwndOwner, LPAUDITDBTPARAMS lpauditdbtparams);
+int WINAPI __export DlgAllDBTable (HWND hwndOwner, LPAUDITDBTPARAMS lpauditdbtparams);
 int WINAPI __export DlgAuditDBFile (HWND hwndOwner, LPAUDITDBFPARAMS lpauditdbfparams);
 int WINAPI __export DlgOptimizeDB (HWND hwndOwner, LPOPTIMIZEDBPARAMS lpoptimizedb);
 int WINAPI __export DlgSpecifyColumns (HWND hwndOwner, LPSPECIFYCOLPARAMS lpspecifycolparams);

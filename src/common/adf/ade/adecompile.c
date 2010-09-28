@@ -1495,6 +1495,8 @@ ade_verlabs(PTR	cxptr,
 **	    for big IN lists.
 **	18-Mar-2010 (kiria01) b123438
 **	    Added SINGLETON aggregate for scalar sub-query support.
+**	14-Jul-2010 (kschendel) b123104
+**	    Settrue/false no longer special cases.
 */
 
 DB_STATUS
@@ -1576,8 +1578,6 @@ i4                 *ade_unaligned)
 	case ADE_PMQUEL:
 	case ADE_NO_PMQUEL:
 	case ADE_PMFLIPFLOP:
-	case ADE_SETTRUE:
-	case ADE_SETFALSE:
 	    if (ade_nops != 0)
 		status = E_AD5502_WRONG_NUM_OPRS;
 	    break;
@@ -2685,7 +2685,8 @@ i4                 *ade_unaligned)
 	    if (j == DB_LVCH_TYPE || j == DB_LBYTE_TYPE || j == DB_LNVCHR_TYPE
 	      || j == DB_GEOM_TYPE || j == DB_POINT_TYPE || j == DB_MPOINT_TYPE
               || j == DB_LINE_TYPE || j == DB_MLINE_TYPE || j == DB_POLY_TYPE
-              || j == DB_MPOLY_TYPE || tmp_opr.opr_len == ADE_LEN_UNKNOWN)
+              || j == DB_MPOLY_TYPE || j == DB_GEOMC_TYPE
+              || tmp_opr.opr_len == ADE_LEN_UNKNOWN)
 	    cxseg->seg_flags |= ADE_CXSEG_FANCY;
 	}
 	ADE_SET_OPERAND_MACRO(&tmp_opr, optr);

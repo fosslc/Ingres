@@ -104,6 +104,8 @@
 !            FEset_money_format and FEset_date_format
 !	    Added FEapply_null, FEapply_decimal, FEapply_money_prec, 
 !            FEapply_money_format and FEapply_date_format
+!       16-sep-2010 (joea)
+!           Add adu_2strtomny_strict.
 !
 IDENT=libqlib
 GSMATCH=LEQUAL,126,0
@@ -771,7 +773,8 @@ SYMBOL_VECTOR=(IIbreak=PROCEDURE,-
                 FEapply_decimal=PROCEDURE,-
                 FEapply_money_prec=PROCEDURE,-
                 FEapply_money_format=PROCEDURE,-
-                FEapply_date_format=PROCEDURE)
+                FEapply_date_format=PROCEDURE,-
+                adu_2strtomny_strict=PROCEDURE)
 INGLIB:libui/library, -
 INGLIB:libqsys/library, -
 INGLIB:libq/library, -

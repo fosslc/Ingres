@@ -55,6 +55,17 @@
 **		to get around shell execution errors, updating 
 **		allocated_pages datatype to SIZE_TYPE to be consistent
 **		with ME parameters and cleanup the general warnings.
+**	25-Jun-2010 (drivi01)
+**		Add code to recognize different Token types.  
+**		The existing code assumes that there will always be
+**		a linked token attached to the current token
+**		which is not true for Windows 2008.
+**		The new code routines will determine if the
+**		linked token exists and if it doesn't it will
+**		the current token to initiate sub process.
+**		On Windows 2008, the process is always elevated
+**		there's no way to launch a process with stripped
+**		token.
 */
 /*
 DEST = TOOLS
@@ -357,6 +368,7 @@ char *prog_name;
 		char buf[64];
 		HANDLE hToken, hToken2 = NULL;
 		TOKEN_LINKED_TOKEN linked_token;
+		TOKEN_ELEVATION_TYPE elevation_type;
 		DWORD dwSize;
 
 		if (OpenProcessToken( GetCurrentProcess(), 
@@ -371,16 +383,44 @@ char *prog_name;
 				SIflush(stderr);
 				_exit(509);
 			}
-			if (!GetTokenInformation(hToken, TokenLinkedToken, 
-				(LPVOID)&linked_token, sizeof(linked_token), &dwSize))
+			if (!GetTokenInformation(hToken, TokenElevationType,
+				(LPVOID)&elevation_type, sizeof(elevation_type), &dwSize))
 			{
-				STprintf(buf, "GetTokenInfo: (%d)\r\n", GetLastError());
+				STprintf(buf, "GetTokenInformation, TokenElevationType: (%d)\r\n", GetLastError());
 				SIfprintf(stderr, "%s\n", buf);
 				SIflush(stderr);
 				_exit(509);
 			}
 			else
-				hToken2 = linked_token.LinkedToken;
+			{
+				switch(elevation_type)
+				{
+				    case TokenElevationTypeFull:
+				    {
+					if (!GetTokenInformation(hToken, TokenLinkedToken, 
+						(LPVOID)&linked_token, sizeof(linked_token), &dwSize))
+					{
+					    STprintf(buf, "GetTokenInfo: (%d)\r\n", GetLastError());
+					    SIfprintf(stderr, "%s\n", buf);
+					    SIflush(stderr);
+					    _exit(509);
+					}
+					else
+					    hToken2 = linked_token.LinkedToken;
+					break;
+				    }
+				    case TokenElevationTypeLimited:
+				    {
+					STprintf(buf, "Sep tool should be run from Elevated cmd prompt.\r\nCurrent process has wrong elevation.\r\nRestart the script in the elevated command prompt.\r\n");
+					SIfprintf(stderr, "%s\n", buf);
+					SIflush(stderr);
+					_exit(509);
+				    }
+				    case TokenElevationTypeDefault:
+					hToken2 = hToken;  //If no linked token exist, just use the current token
+					break;
+				}
+			}
 		}
 
 		if (hToken2)

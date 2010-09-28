@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004, 2009 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include <compat.h>
@@ -71,6 +71,8 @@
 **	    encrypted passwords and authentication certificates.
 **	18-Aug-09 (gordy)
 **	    Remove string length restrictions.
+**	27-Aug-10 (gordy)
+**	    Added symbols for encoding versions.
 */
 
 /*
@@ -329,6 +331,8 @@ gcn_ir_comsvr( GCN_RESOLVE_CB *grcb )
 **	21-Jul-09 (gordy)
 **	    Removed fixed length definitions.  Minimum output
 **	    password buffer size is now better defined.
+**	27-Aug-10 (gordy)
+**	    Added symbols for encoding versions.
 */
 
 STATUS
@@ -344,7 +348,7 @@ gcn_ir_bedcheck( GCN_RESOLVE_CB *grcb, GCN_MBUF *mbreq, GCN_MBUF *mbmsg )
     ** Build GCA_FASTSELECT resolved connection info.
     */
     gcn_ir_proto( grcb, NULL );
-    gcn_login( GCN_VLP_COMSVR, 1, TRUE, GCN_NOUSER, GCN_NOPASS, passwd );
+    gcn_login(GCN_VLP_COMSVR, GCN_VLP_V1, TRUE, GCN_NOUSER, GCN_NOPASS, passwd);
     if ( (status = gcn_connect_info( grcb, mbreq, 
     				     GCN_NOUSER, passwd, 0, NULL )) != OK )
 	return( status );

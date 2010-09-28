@@ -161,6 +161,10 @@
 **	xx-Apr-2010 (iwawong)
 **		Added issimple isempty x y numpoints
 **		for the coordinate space.
+**	14-Jul-2010 (kschendel) b123104
+**	    Add ii_true and ii_false to solve outer join constant folding bug.
+**	28-Jul-2010 (kiria01) b124142
+**	    Added SINGLECHK
 **/
 
 /*
@@ -434,63 +438,67 @@ _DEFINE(SINGLETON,     238  /* singleton               */)\
 _DEFINE(AES_DECRYPT,   239  /* aes_decrypt             */)\
 _DEFINE(AES_ENCRYPT,   240  /* aes_encrypt             */)\
 _DEFINE(SOUNDEX_DM,    241  /* soundex_dm              */)\
-_DEFINE(POINT,         242  /* point()                 */)\
-_DEFINE(X,             243  /* x(point)                */)\
-_DEFINE(Y,             244  /* y(point)                */)\
-_DEFINE(BPOINT,        245  /* blob point operators    */)\
-_DEFINE(LINE,          246  /* Line operators          */)\
-_DEFINE(POLY,          247  /* Polygon operators       */)\
-_DEFINE(MPOINT,        248  /* multi point operators   */)\
-_DEFINE(MLINE,         249  /* multi Line operators    */)\
-_DEFINE(MPOLY,         250  /* multi Polygon operators */)\
-_DEFINE(GEOMWKT,       251  /* Well known text ops     */)\
-_DEFINE(GEOMWKB,       252  /* Well known binary ops   */)\
-_DEFINE(NBR,           253  /* Spatial nbr op          */)\
-_DEFINE(HILBERT,       254  /* Spatial hilbert op      */)\
-_DEFINE(OVERLAPS,      255  /* overlaps(geom, geom     */)\
-_DEFINE(INSIDE,        256  /* inside(geom, geom)    */)\
-_DEFINE(PERIMETER,     257  /* perimeter(geom)    */)\
-_DEFINE(GEOMNAME,      258  /* iigeomname()            */)\
-_DEFINE(GEOMDIMEN,     259  /* iigeomdimensions()      */)\
-_DEFINE(DIMENSION,     260  /* dimension(geom)         */)\
-_DEFINE(GEOMETRY_TYPE, 261  /* geometrytype(geom)      */)\
-_DEFINE(BOUNDARY,	   262  /* boundary(geom)          */)\
-_DEFINE(ENVELOPE,	   263  /* envelope(geom)		   */)\
-_DEFINE(EQUALS,		   264  /* equals(geom, geom)      */)\
-_DEFINE(DISJOINT,	   265	/* disjoint(geom, geom)	   */)\
-_DEFINE(INTERSECTS,	   266	/* intersects(geom, geom)  */)\
-_DEFINE(TOUCHES,	   267	/* touches(geom, geom)	   */)\
-_DEFINE(CROSSES,	   268	/* crosses(geom, geom)	   */)\
-_DEFINE(WITHIN,		   269	/* within(geom, geom)	   */)\
-_DEFINE(CONTAINS,	   270	/* contains(geom, geom)	   */)\
-_DEFINE(RELATE,		   271	/* relate(geom, geom, char)*/)\
-_DEFINE(DISTANCE,	   272	/* distance(geom, geom)    */)\
-_DEFINE(INTERSECTION,  273	/* intersection(geom, geom)*/)\
-_DEFINE(DIFFERENCE,	   274	/* difference(geom, geom)  */)\
-_DEFINE(SYMDIFF,	   275	/* symdifference(geom, geom)*/)\
-_DEFINE(BUFFER,	   	   276	/* buffer()				   */)\
-_DEFINE(CONVEXHULL,	   277	/* convexhull(geom)        */)\
-_DEFINE(POINTN,	   	   278	/* pointn(linestring)      */)\
-_DEFINE(STARTPOINT,	   279  /* startpoint(curve)	   */)\
-_DEFINE(ENDPOINT,	   280  /* endpoint(curve)		   */)\
-_DEFINE(ISCLOSED,	   281  /* isclosed(curve)		   */)\
-_DEFINE(ISRING,		   282  /* isring(curve)		   */)\
-_DEFINE(STLENGTH,	   283  /* st_length(curve)		   */)\
-_DEFINE(CENTROID,	   284  /* centroid(surface)	   */)\
-_DEFINE(PNTONSURFACE,  285  /* pointonsurface(surface) */)\
-_DEFINE(AREA,  		   286  /* area(surface) 		   */)\
-_DEFINE(EXTERIORRING,  287  /* exteriorring(polygon)   */)\
-_DEFINE(NINTERIORRING, 288  /* numinteriorring(polygon)*/)\
-_DEFINE(INTERIORRINGN, 289  /* interiorringn(polygon, i)*/)\
-_DEFINE(NUMGEOMETRIES, 290 	/* numgeometries(geomcoll) */)\
-_DEFINE(GEOMETRYN,	   291  /* geometryn(geomcoll)	   */)\
-_DEFINE(ISEMPTY,       292  /* ISEMPTY(geom)           */)\
-_DEFINE(ISSIMPLE,      293  /* ISSIMPLE(geom)          */)\
-_DEFINE(UNION,		   294  /* union(geom, geom)       */)\
-_DEFINE(SRID,		   295  /* SRID(geom)              */)\
-_DEFINE(NUMPOINTS,	   296  /* NUMPOINTS(linestring)   */)\
-_DEFINE(TRANSFORM,	   297  /* TRANSFORM(geom)         */)\
-_DEFINE(GEOMWKTRAW,    298  /* AsTextRaw(geom)         */)\
+_DEFINE(IIFALSE,       242  /* ii_false                */)\
+_DEFINE(IITRUE,        243  /* ii_true                 */)\
+_DEFINE(SINGLECHK,     244  /* singlechk               */)\
+_DEFINE(POINT,         245  /* point()                 */)\
+_DEFINE(X,             246  /* x(point)                */)\
+_DEFINE(Y,             247  /* y(point)                */)\
+_DEFINE(BPOINT,        248  /* blob point operators    */)\
+_DEFINE(LINE,          249  /* Line operators          */)\
+_DEFINE(POLY,          250  /* Polygon operators       */)\
+_DEFINE(MPOINT,        251  /* multi point operators   */)\
+_DEFINE(MLINE,         252  /* multi Line operators    */)\
+_DEFINE(MPOLY,         253  /* multi Polygon operators */)\
+_DEFINE(GEOMWKT,       254  /* Well known text ops     */)\
+_DEFINE(GEOMWKB,       255  /* Well known binary ops   */)\
+_DEFINE(NBR,           256  /* Spatial nbr op          */)\
+_DEFINE(HILBERT,       257  /* Spatial hilbert op      */)\
+_DEFINE(OVERLAPS,      258  /* overlaps(geom, geom     */)\
+_DEFINE(INSIDE,        259  /* inside(geom, geom)    */)\
+_DEFINE(PERIMETER,     260  /* perimeter(geom)    */)\
+_DEFINE(GEOMNAME,      261  /* iigeomname()            */)\
+_DEFINE(GEOMDIMEN,     262  /* iigeomdimensions()      */)\
+_DEFINE(DIMENSION,     263  /* dimension(geom)         */)\
+_DEFINE(GEOMETRY_TYPE, 264  /* geometrytype(geom)      */)\
+_DEFINE(BOUNDARY,	   265  /* boundary(geom)          */)\
+_DEFINE(ENVELOPE,	   266  /* envelope(geom)		   */)\
+_DEFINE(EQUALS,		   267  /* equals(geom, geom)      */)\
+_DEFINE(DISJOINT,	   268	/* disjoint(geom, geom)	   */)\
+_DEFINE(INTERSECTS,	   269	/* intersects(geom, geom)  */)\
+_DEFINE(TOUCHES,	   270	/* touches(geom, geom)	   */)\
+_DEFINE(CROSSES,	   271	/* crosses(geom, geom)	   */)\
+_DEFINE(WITHIN,		   272	/* within(geom, geom)	   */)\
+_DEFINE(CONTAINS,	   273	/* contains(geom, geom)	   */)\
+_DEFINE(RELATE,		   274	/* relate(geom, geom, char)*/)\
+_DEFINE(DISTANCE,	   275	/* distance(geom, geom)    */)\
+_DEFINE(INTERSECTION,  276	/* intersection(geom, geom)*/)\
+_DEFINE(DIFFERENCE,	   277	/* difference(geom, geom)  */)\
+_DEFINE(SYMDIFF,	   278	/* symdifference(geom, geom)*/)\
+_DEFINE(BUFFER,	   	   279	/* buffer()				   */)\
+_DEFINE(CONVEXHULL,	   280	/* convexhull(geom)        */)\
+_DEFINE(POINTN,	   	   281	/* pointn(linestring)      */)\
+_DEFINE(STARTPOINT,	   282  /* startpoint(curve)	   */)\
+_DEFINE(ENDPOINT,	   283  /* endpoint(curve)		   */)\
+_DEFINE(ISCLOSED,	   284  /* isclosed(curve)		   */)\
+_DEFINE(ISRING,		   285  /* isring(curve)		   */)\
+_DEFINE(STLENGTH,	   286  /* st_length(curve)		   */)\
+_DEFINE(CENTROID,	   287  /* centroid(surface)	   */)\
+_DEFINE(PNTONSURFACE,  288  /* pointonsurface(surface) */)\
+_DEFINE(AREA,  		   289  /* area(surface) 		   */)\
+_DEFINE(EXTERIORRING,  290  /* exteriorring(polygon)   */)\
+_DEFINE(NINTERIORRING, 291  /* numinteriorring(polygon)*/)\
+_DEFINE(INTERIORRINGN, 292  /* interiorringn(polygon, i)*/)\
+_DEFINE(NUMGEOMETRIES, 293 	/* numgeometries(geomcoll) */)\
+_DEFINE(GEOMETRYN,	   294  /* geometryn(geomcoll)	   */)\
+_DEFINE(ISEMPTY,       295  /* ISEMPTY(geom)           */)\
+_DEFINE(ISSIMPLE,      296  /* ISSIMPLE(geom)          */)\
+_DEFINE(UNION,		   297  /* union(geom, geom)       */)\
+_DEFINE(SRID,		   298  /* SRID(geom)              */)\
+_DEFINE(NUMPOINTS,	   299  /* NUMPOINTS(linestring)   */)\
+_DEFINE(TRANSFORM,	   300  /* TRANSFORM(geom)         */)\
+_DEFINE(GEOMWKTRAW,    301  /* AsTextRaw(geom)         */)\
+_DEFINE(GEOMC,		   302	/* GeomColl operators	   */)\
 _DEFINEEND
 
 

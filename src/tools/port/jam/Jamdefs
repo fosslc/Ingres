@@ -559,10 +559,14 @@
 #	    Update Xerces to 3.0.
 #	    Add Windows specific libraries and dependencies for 
 #	    potential hybrid build.
-#	
 #       25-May-2010 (horda03)
 #           On VMS LIBFELIB.EXE is built using RAATLIB and ABFRTLIB, so include
 #           these in LIBQ_LIBS.
+#	16-Jun-2010 (warmerdam)
+#	    Added HDRPROJ for PROJ geospatial headers.
+#	31-Aug-2010 (troal01)
+#	    Added SHGEOSLIB, SHGEOSCLIB, and SHPROJLIB
+#	
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE DEFINITIONS and EXCEPTIONS
 #
@@ -974,6 +978,7 @@ HDRTOOLS	= [ FDirName $(ING_SRC) tools port hdr_unix_vms ] ;
 HDRSTRESS	= [ FDirName $(ING_SRC) tst stress gcf esql ] ;
 
 HDRGEOS		= $(GEOS_INC) ;
+HDRPROJ		= $(PROJ_INC) ;
 
 #
 #set HDRPATTERN
@@ -2673,6 +2678,21 @@ else
     }
 }
 
+#
+# GEOS and Proj.4 shared libraries
+#
+if ! $(NT)
+{
+    SHGEOSLIB = libgeos.$(SLSFX) ;
+    SHGEOSCLIB = libgeos_c.$(SLSFX) ;
+    SHPROJLIB = libproj.$(SLSFX) ;
+}
+else
+{
+    SHGEOSLIB = geos.$(SLSFX) ;
+    SHGEOSCLIB = geos_c.$(SLSFX) ;
+    SHPROJLIB = proj.$(SLSFX) ;
+}
 
 # HDRSAX uses Xerces definitions, can define now.
 if $(VMS)

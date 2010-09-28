@@ -16,8 +16,11 @@
 *     *		Increased max columns from 300 to 1024	
 *     *     18-nov-2009 (joea)
 *     *         Add type code for BOOLEAN as valid in SQLDA.
+*     *     29-jul-2010 (hweho01) SIR 121123
+*     *         Increased the size of SQLNAMEC from 34 to 258, to match
+*     *         with the IISQD_NAMELEN in IISQLDA (iisqlda.h).
 *     *
-*     * Copyright (c) 2004 Ingres Corporation
+*     * Copyright (c) 2004, 2010 Ingres Corporation
 *     *
 
        01 SQLDA EXTERNAL.
@@ -32,7 +35,7 @@
              07 SQLIND          USAGE POINTER SYNC.
              07 SQLNAME.
                 49 SQLNAMEL     PIC S9(4) USAGE COMP.
-                49 SQLNAMEC     PIC X(34).
+                49 SQLNAMEC     PIC X(258).
 
        01 IISQLHDLR EXTERNAL.
           05 SQLARG             USAGE POINTER.

@@ -284,6 +284,7 @@ static	DB_STATUS   create_temporary_table(
 			i4		    relstat,
 			i4		    relstat2,
 			i4		    structure,
+			i4		    compression,
 			i4		    ntab_width,
 			i4		    attr_count,
 			DMF_ATTR_ENTRY	    **attr_entry,
@@ -670,6 +671,12 @@ static	DB_STATUS   create_temporary_table(
 **	    wants to know when the table is registered, not when it is used
 **	17-Apr-2008 (kibro01) b120276
 **	    Initialise ADF_CB structure
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Allow compression to be passed in.
+**	28-Jul-2010 (kschendel) SIR 124104
+**	    Fix up the above change so that we select the proper page size
+**	    and type based on the worst-case-expanded row width, not the
+**	    unexpanded row width.
 */
 DB_STATUS
 dmu_create(DMU_CB        *dmu_cb)
@@ -698,6 +705,7 @@ dmu_create(DMU_CB        *dmu_cb)
     i4         	    db_lockmode;
     i4         	    ntab_width;
     i4         	    ntab_data_width;
+    i4		    worstcase_width;
     DB_DATA_VALUE   adc_dv1;
     DB_STATUS       s;
     ADF_CB          adf_cb;
@@ -713,6 +721,7 @@ dmu_create(DMU_CB        *dmu_cb)
     i4	    	    extend = 0;
     i4	    	    unique = 0;
     i4	    	    modoptions = 0;
+    i4		    compression = TCB_C_NONE;
     i4	    	    tup_info;
     i4		    bits;
     SXF_ACCESS	    access;
@@ -847,6 +856,18 @@ dmu_create(DMU_CB        *dmu_cb)
 
 		case DMU_EXTEND:
 		    extend = char_entry[i].char_value;
+		    break;
+
+		case DMU_COMPRESSED:
+		    if (char_entry[i].char_value == DMU_C_ON)
+		    {
+			compression = TCB_C_STANDARD;
+			/* Note for 9.x cross: check byte_compression option,
+			** use std-old if not set.
+			*/
+		    }
+		    else if (char_entry[i].char_value == DMU_C_HIGH)
+			compression = TCB_C_HICOMPRESS;
 		    break;
 
 		case DMU_DATAFILL:
@@ -1126,7 +1147,52 @@ dmu_create(DMU_CB        *dmu_cb)
 	    break;	    	
 	}
 
-	if (ntab_width > DM_TUPLEN_MAX_V5)
+	worstcase_width = ntab_width;
+	if (compression != TCB_C_NONE)
+	{
+	    DB_ATTS *att_array;
+	    DB_ATTS **attptrs, **attpp;
+	    DMF_ATTR_ENTRY **dmfatt;
+	    DMP_MISC *misc;
+	    i4 size, row_expansion;
+
+	    /* Well, this is a pain.  We need DB_ATTS style attributes for
+	    ** computing the worst-case expansion, but what we have are
+	    ** DMF_ATT_ENTRY's.  Build a temporary copy of the attributes
+	    ** in DB_ATTS form.  Only the type info needs to be filled in.
+	    */
+	    size = attr_count * (DB_ALIGN_MACRO(sizeof(DB_ATTS)) + DB_ALIGN_MACRO(sizeof(DB_ATTS *)) );
+	    status = dm0m_allocate(size + sizeof(DMP_MISC), DM0M_ZERO,
+			MISC_CB, MISC_ASCII_ID, NULL,
+			(DM_OBJECT **) &misc, &dmu->error);
+	    if (status != E_DB_OK)
+		break;
+	    att_array = (DB_ATTS *)((char *) misc + sizeof(DMP_MISC));
+	    misc->misc_data = (char *) att_array;
+	    attptrs = (DB_ATTS **)((char *) att_array + attr_count * DB_ALIGN_MACRO(sizeof(DB_ATTS)));
+	    i = attr_count;
+	    attpp = attptrs;
+	    dmfatt = attr_entry;
+	    while (--i >= 0)
+	    {
+		att_array->length = (*dmfatt)->attr_size;
+		att_array->type = (*dmfatt)->attr_type;
+		att_array->precision = (*dmfatt)->attr_precision;
+		att_array->encflags = (*dmfatt)->attr_encflags;
+		att_array->encwid = (*dmfatt)->attr_encwid;
+		/* Other members including versions are pre-zeroed */
+		*attpp++ = att_array++;
+		++dmfatt;
+	    }
+	    /* All of that just so that we can do this: */
+	    row_expansion = dm1c_compexpand(compression, attptrs, attr_count);
+	    worstcase_width += row_expansion;
+
+	    /* Drop the temp atts now */
+	    dm0m_deallocate((DM_OBJECT **)&misc);
+	}
+
+	if (worstcase_width > DM_TUPLEN_MAX_V5)
 	{
 	    SETDBERR(&dmu->error, 0, E_DM0103_TUPLE_TOO_WIDE);
 	    break;
@@ -1134,7 +1200,7 @@ dmu_create(DMU_CB        *dmu_cb)
 
 	/* choose page type */
 	status = dm1c_getpgtype(page_size, pgtype_flags,
-			ntab_width, &page_type);
+			worstcase_width, &page_type);
 
 	if (status != E_DB_OK)
 	{
@@ -1153,7 +1219,7 @@ dmu_create(DMU_CB        *dmu_cb)
 	** look for a bigger page size that will hold the row
 	*/
 	if ((status != E_DB_OK ||
-		ntab_width > dm2u_maxreclen(page_type, page_size))
+		worstcase_width > dm2u_maxreclen(page_type, page_size))
 		&& used_default_page_size)
 	{
 	    i4 pgsize;
@@ -1170,10 +1236,10 @@ dmu_create(DMU_CB        *dmu_cb)
 
 		/* choose page type */
 		status = dm1c_getpgtype(pgsize, pgtype_flags, 
-			    ntab_width, &pgtype);
+			    worstcase_width, &pgtype);
 
 		if (status != E_DB_OK ||
-			ntab_width > dm2u_maxreclen(pgtype, pgsize))
+			worstcase_width > dm2u_maxreclen(pgtype, pgsize))
 		    continue;
 
 		page_size = pgsize;
@@ -1203,7 +1269,7 @@ dmu_create(DMU_CB        *dmu_cb)
 	** because duplicate row checking will only be done if 
 	** this table is later modified to non unique btree/hash/isam
 	*/
-	if (ntab_width > dm2u_maxreclen(page_type, page_size) &&
+	if (worstcase_width > dm2u_maxreclen(page_type, page_size) &&
 						!duplicates && !view)
 	{
 	    SETDBERR(&dmu->error, 0, E_DM0159_NODUPLICATES);
@@ -1367,8 +1433,8 @@ dmu_create(DMU_CB        *dmu_cb)
 			&dmu->dmu_table_name, 
 			&dmu->dmu_owner, location, loc_count, 
 			&dmu->dmu_tbl_id,
-			relstat, relstat2, structure, ntab_width, attr_count, 
-			attr_entry,
+			relstat, relstat2, structure, compression,
+			ntab_width, attr_count, attr_entry,
 			allocation, extend, page_size, recovery,
 			tbl_pri,
 			&dmu->error);
@@ -1378,7 +1444,7 @@ dmu_create(DMU_CB        *dmu_cb)
 	status = dm2u_create(odcb->odcb_dcb_ptr, xcb, &dmu->dmu_table_name, 
 			&dmu->dmu_owner, location, loc_count, 
 			&dmu->dmu_tbl_id, &dmu->dmu_idx_id, index, view, 
-			relstat, relstat2, structure, ntab_width,
+			relstat, relstat2, structure, compression, ntab_width,
 			ntab_data_width, attr_count, 
 			attr_entry, db_lockmode,
 			allocation, extend, page_type, page_size,
@@ -1710,9 +1776,11 @@ dmu_create(DMU_CB        *dmu_cb)
 **          X-integrate change 432896(sarjo01)
 **          Bug 67867: Added characteristic DMT_C_SYS_MAINTAINED to propagate
 **          flag DM2U_SYS_MAINTAINED for temp tables.
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Pass optional compression.
 */
 
-#define NUM_TEMP_CHARACTERISTICS 7
+#define NUM_TEMP_CHARACTERISTICS 8
 
 static DB_STATUS
 create_temporary_table(
@@ -1726,6 +1794,7 @@ DB_TAB_ID	    *tbl_id,
 i4		    relstat,
 i4		    relstat2,
 i4		    structure,
+i4		    compression,
 i4		    ntab_width,
 i4		    attr_count,
 DMF_ATTR_ENTRY	    **attr_entry,
@@ -1772,6 +1841,8 @@ DB_ERROR	    *errcb)
     characteristics[6].char_id = DMT_C_SYS_MAINTAINED;
     characteristics[6].char_value =
                   (relstat & TCB_SYS_MAINTAINED) ? DMT_C_ON : DMT_C_OFF;
+    characteristics[7].char_id = DMT_C_COMPRESSED;
+    characteristics[7].char_value = compression; /* TCB_C_xxx */
     dmt_cb.dmt_char_array.data_address = (PTR)characteristics;
     dmt_cb.dmt_char_array.data_in_size = NUM_TEMP_CHARACTERISTICS *
                               sizeof(DMT_CHAR_ENTRY);

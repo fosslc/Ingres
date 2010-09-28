@@ -90,6 +90,9 @@
 **    For the types of strings this buffer is used it needs to be at least
 **    three times MAXOBJECTNAME to account for long ids and also
 **    big enough to contain some SQL query language.
+**  24-Jun-2010 (drivi01)
+**    Expand the size of bufrequest and remove hardcoded legnth.
+**    The buffer should be big enough to fit at least 2 MAXOBJECTNAME.
 ******************************************************************************/
 
 #include <fcntl.h> 
@@ -1517,7 +1520,7 @@ int DBADropObject(LPUCHAR lpVirtNode,int iobjecttype,void *lpparameters, ...)
    char connectname[2*MAXOBJECTNAME+2+1];
    int iret, Sesshdl;
    UCHAR *pSQLstm;
-   char bufrequest[200];
+   char bufrequest[2*MAXOBJECTNAME+200];
    int ilocsession;
 
    if (!lpparameters)

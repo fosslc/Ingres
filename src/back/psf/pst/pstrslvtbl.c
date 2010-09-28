@@ -153,6 +153,8 @@
 **	    Check db_tab_index > 0 for index, not simply != 0.
 **	13-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	19-Jun-2010 (kiria01) b123951
+**	    Add extra parameter to psl0_rngent for WITH support.
 */
 DB_STATUS
 pst_resolve_table(
@@ -240,7 +242,7 @@ pst_resolve_table(
 
 	status = psl0_rngent(&sess_cb->pss_auxrng, -1, "", &tab_name, sess_cb,
 	    TRUE, &cur_var, 0, &err_blk, PSS_USRTBL | PSS_DBATBL | PSS_INGTBL,
-	    &rngvar_info, 0);	
+	    &rngvar_info, 0, NULL);	
     }
     else
     {

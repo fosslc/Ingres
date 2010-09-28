@@ -71,6 +71,8 @@
 **         LOG and read-only under FILES location.
 **	31-Mar-10 (rajus0) SIR 123372, Bug 123277
 **	    Add "batch" config, "send_ingres_dates" driver properites.
+**	30-Jul-10 (gordy)
+**	    Add "send_integer_booleans" driver properties.
 */
 
 
@@ -110,8 +112,9 @@
 #define PROP_MNY_PREC_ID  	16 
 #define PROP_DATE_ALIAS_ID 	17
 #define PROP_SND_ING_DATE_ID	18
+#define	PROP_SND_INT_BOOL_ID	19
 
-#define PROP_MAX		19
+#define PROP_MAX		20
 
 
 //property names
@@ -134,6 +137,7 @@
 #define PROP_MNY_PREC_NAME	"money_precision"
 #define PROP_DATE_ALIAS_NAME	"date_alias"
 #define PROP_SND_ING_DATE_NAME	"send_ingres_dates"
+#define	PROP_SND_INT_BOOL_NAME	"send_integer_booleans"
 
 
 //property values
@@ -156,6 +160,7 @@
 #define PROP_MNY_PREC_VAL  	"II_MONEY_PREC equivalent" 
 #define PROP_DATE_ALIAS_VAL	"ingresdate/ansidate"	
 #define PROP_SND_ING_DATE_VAL	"true/false (default:false)"
+#define PROP_SND_INT_BOOL_VAL	"true/false (default:false)"
 
 #define PROP_TRACE_LOG_ID	0	
 #define PROP_TRACE_DRV_ID	1
@@ -280,6 +285,7 @@ static struct
     { PROP_MNY_PREC_ID,		PROP_MNY_PREC_NAME, 	PROP_MNY_PREC_VAL }, 
     { PROP_DATE_ALIAS_ID,	PROP_DATE_ALIAS_NAME,	PROP_DATE_ALIAS_VAL },
     { PROP_SND_ING_DATE_ID,	PROP_SND_ING_DATE_NAME,	PROP_SND_ING_DATE_VAL },
+    { PROP_SND_INT_BOOL_ID,	PROP_SND_INT_BOOL_NAME,	PROP_SND_INT_BOOL_VAL },
 };
 
 static struct

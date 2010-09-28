@@ -1283,7 +1283,7 @@ GLOBALCONSTDEF	 ADI_DATATYPE     Adi_1RO_datatypes[] = {
                 NULL }
     },
 /* GeometryCollection type - to be treated the same as LBYTE */
-    { { "GeometryCollection" },    DB_GEOM_TYPE, DB_GEOM_TYPE,
+    { { "geometrycollection" },    DB_GEOMC_TYPE, DB_GEOM_TYPE,
             (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
                 AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
     { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,
@@ -1298,9 +1298,9 @@ GLOBALCONSTDEF	 ADI_DATATYPE     Adi_1RO_datatypes[] = {
         adc_2tmcvt_rti,     adc_1dbtoev_ingres, NULL,
         NULL }
     },
-/* Geometry type - synonym of Geometry Collection.  
+/* Geometry type - abstract container of Geometry Family 
    To be treated the same as LBYTE */
-    { { "Geometry" },    DB_GEOM_TYPE, DB_GEOM_TYPE,
+    { { "geometry" },    DB_GEOM_TYPE, DB_GEOM_TYPE,
             (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
                 AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
     { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,
@@ -1316,7 +1316,7 @@ GLOBALCONSTDEF	 ADI_DATATYPE     Adi_1RO_datatypes[] = {
         NULL }
     },
 /* Point in the geometry family */
-    { { "Point" },    DB_POINT_TYPE, DB_GEOM_TYPE,
+    { { "point" },    DB_POINT_TYPE, DB_GEOM_TYPE,
             (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
                 AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
     { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,
@@ -1332,7 +1332,7 @@ GLOBALCONSTDEF	 ADI_DATATYPE     Adi_1RO_datatypes[] = {
         NULL }
     },
 /* MultiPoint in the geometry family */
-    { { "MultiPoint" },    DB_MPOINT_TYPE, DB_GEOM_TYPE,
+    { { "multipoint" },    DB_MPOINT_TYPE, DB_GEOM_TYPE,
             (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
                 AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
     { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,
@@ -1348,7 +1348,7 @@ GLOBALCONSTDEF	 ADI_DATATYPE     Adi_1RO_datatypes[] = {
         NULL }
     },
 /* LineString in the geometry family*/
-    { { "LineString" },    DB_LINE_TYPE, DB_GEOM_TYPE,
+    { { "linestring" },    DB_LINE_TYPE, DB_GEOM_TYPE,
             (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
                 AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
     { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,
@@ -1364,7 +1364,7 @@ GLOBALCONSTDEF	 ADI_DATATYPE     Adi_1RO_datatypes[] = {
         NULL }
     },
 /* MultiLineString in the geometry family*/
-    { { "MultiLineString" },    DB_MLINE_TYPE, DB_GEOM_TYPE,
+    { { "multilinestring" },    DB_MLINE_TYPE, DB_GEOM_TYPE,
             (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
                 AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
     { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,
@@ -1380,7 +1380,7 @@ GLOBALCONSTDEF	 ADI_DATATYPE     Adi_1RO_datatypes[] = {
         NULL }
     },
 /* Polygon in the geometry family */
-    { { "Polygon" },    DB_POLY_TYPE, DB_GEOM_TYPE,
+    { { "polygon" },    DB_POLY_TYPE, DB_GEOM_TYPE,
             (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
                 AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
     { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,
@@ -1396,7 +1396,7 @@ GLOBALCONSTDEF	 ADI_DATATYPE     Adi_1RO_datatypes[] = {
         NULL }
     },
 /* MultiPolygon in the geometry family */
-    { { "MultiPolygon" },    DB_MPOLY_TYPE, DB_GEOM_TYPE,
+    { { "multipolygon" },    DB_MPOLY_TYPE, DB_GEOM_TYPE,
             (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
                 AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
     { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,

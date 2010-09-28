@@ -159,6 +159,10 @@
 **          rtrees.  Still disallow other index types.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      19-Jul-2010 (thich01)
+**          Slight change to where dt family is checked for GEOM rtree.  This
+**          seems to be a more reliable place to check, as it was failing
+**          when it was in the if.
 */
 		
 static DB_STATUS psl_validate_rtree(
@@ -826,6 +830,8 @@ psl_ci2_index_prefix(
 **	    Allow "session." to be optional when creating index for GTT.
 **	19-Mar-2007 (kibro01) b117391
 **	    Don't allow creation of indices on IMA GW tables
+**	19-Jun-2010 (kiria01) b123951
+**	    Add extra parameter to psl0_rngent for WITH support.
 */
 DB_STATUS
 psl_ci3_indexrel(
@@ -861,7 +867,7 @@ psl_ci3_indexrel(
 	    tbls_to_lookup |= PSS_SESTBL;
 	status = psl0_rngent(&sess_cb->pss_auxrng, -1, "",
 	    &tbl_spec->pss_obj_name, sess_cb, FALSE, &rngtab, PSQ_INDEX,
-	    err_blk, tbls_to_lookup, &rngvar_info, 0);
+	    err_blk, tbls_to_lookup, &rngvar_info, 0, NULL);
 
 	if (DB_SUCCESS_MACRO(status) && !rngtab)
 	{
@@ -1124,16 +1130,19 @@ psl_ci4_indexcol(
 	}
     }
 
-    /* Allow GEOM family types to get past the check key as an exception for
-     * rtree indexing. */
     status = psl_check_key(sess_cb, err_blk, (DB_DT_ID) attribute->att_type);
-    if (DB_FAILURE_MACRO(status) && 
-        adi_dtfamily_retrieve(attribute->att_type) != DB_GEOM_TYPE)
+    if (DB_FAILURE_MACRO(status))
     {
-	_VOID_ psf_error(2180L, 0L, PSF_USERERR, &err_code, err_blk, 2,
-	    sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-	    psf_trmwhite(DB_ATT_MAXNAME, (char *) &attname), &attname);
-	return (status);
+        /* Allow GEOM family types to get past the check key as an exception
+         * for rtree indexing. */
+        DB_DT_ID dtfam = adi_dtfamily_retrieve(attribute->att_type);
+        if (dtfam != DB_GEOM_TYPE)
+        {
+	    _VOID_ psf_error(2180L, 0L, PSF_USERERR, &err_code, err_blk, 2,
+	        sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
+	        psf_trmwhite(DB_ATT_MAXNAME, (char *) &attname), &attname);
+	    return (status);
+        }
     }
 
     /* Store the column name in the DMU_CB key entry array */

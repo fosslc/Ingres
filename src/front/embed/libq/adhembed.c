@@ -1526,6 +1526,12 @@ DB_EMBEDDED_DATA	*adh_ev;
 **          feingres.qsc which works for tm, but not for esqlc. (b114944)
 **	02-aug-2006 (gupsh01)
 **	    Added support for ANSI date/time data types.
+**      15-Jul-2010 (hanal04) Bug 124087
+**          Comments for adh_chrcvt() explain why embedded string variables 
+**          should not use afe_cvinto() but we still were for the unicoerce
+**          case. Call the new adu_nvchr_embchartouni() or
+**          adu_nvchr_embunitochar() functions as required when dealing
+**          with unicode coercions.
 */
 
 DB_STATUS
@@ -1537,9 +1543,9 @@ DB_EMBEDDED_DATA	*adh_ev;
     DB_STATUS		db_stat = E_DB_OK;
     DB_DATA_VALUE	dv, *dvp;
     i4			prec;
-    bool 		unicoerce = FALSE;
     i4			dtextlen = 0;
     bool  		adh_date_class = FALSE;
+    i4			unicoerce = FALSE;
 
     adf_scb->adf_errcb.ad_errcode = E_DB_OK;	/* Default */
     /*
@@ -1590,14 +1596,15 @@ DB_EMBEDDED_DATA	*adh_ev;
     ** drop through afe_cvinto().
     */
     unicoerce = adh_dounicoerce (adh_dv, adh_ev);
-    if (unicoerce == TRUE)
+    if (unicoerce != 0)
     {
 	II_THR_CB *thr_cb = IILQthThread();
         II_LBQ_CB *IIlbqcb = thr_cb->ii_th_session;
 
 	db_stat = adh_ucolinit(IIlbqcb, 0);
     }
-    else if (   (   adh_ev->ed_type == DB_CHR_TYPE 
+
+    if (   (   adh_ev->ed_type == DB_CHR_TYPE 
 	    || adh_ev->ed_type == DB_VCH_TYPE
 	    || adh_ev->ed_type == DB_VBYTE_TYPE
 	    || adh_ev->ed_type == DB_CHA_TYPE
@@ -1617,7 +1624,29 @@ DB_EMBEDDED_DATA	*adh_ev;
 	   )
        ) 
     {
-	  return (adh_chrcvt(adf_scb, adh_dv, adh_ev));
+	if (unicoerce)
+        {
+            dv.db_datatype = adh_ev->ed_type;
+            dv.db_length = adh_ev->ed_length;
+            dv.db_prec = 0;
+            dv.db_data = adh_ev->ed_data;
+            dvp = &dv;
+
+            if (unicoerce > 0)
+            {
+                /* Unicode to non-unicode coercion required */
+                return(adu_nvchr_embunitochar(adf_scb, adh_dv, dvp));
+            }
+            else if (unicoerce < 0)
+            {
+                /* Non-unicode to unicode coercion required */
+                return(adu_nvchr_embchartouni(adf_scb, adh_dv, dvp));
+            }
+        }
+        else
+        {
+	    return (adh_chrcvt(adf_scb, adh_dv, adh_ev));
+        }
     }
 
    if ((abs(adh_dv->db_datatype) == DB_DTE_TYPE) ||
@@ -1713,17 +1742,8 @@ DB_EMBEDDED_DATA	*adh_ev;
 	    }
 	    else
 	    {
-		  /** for unicode coercion and for char datatype the 
-		  ** length is same as the input length */ 
-		  if ((unicoerce == TRUE) && 
-		      (abs(adh_dv->db_datatype) == DB_NCHR_TYPE) ||
-		      (abs(adh_dv->db_datatype) == DB_NVCHR_TYPE)) 
-		  {
-		    dv.db_length = adh_ev->ed_length;
-		  }  
-		  else
-		  /* Bad conversion; don't risk overwriting */
-		    dv.db_length = 0;
+                /* Bad conversion; don't risk overwriting */
+                dv.db_length = 0;
 	    }
 	}
 	else if (adh_ev->ed_type == DB_DEC_TYPE)
@@ -2026,7 +2046,7 @@ DB_EMBEDDED_DATA	*adh_ev;
 	    for (i = 0; i < dvlen / 4; ++i, ++pi, ++po)
 		*po = (u_i4)*pi;
 	}
-	else
+        else
 	{
 	    MEcopy(frmptr, (u_i2)dvlen, toptr);
 	}
@@ -2432,8 +2452,9 @@ i4	setnfc;
 **
 ** Output:
 **
-**		TRUE  		Unicode coercion is required.
-**		False		Unicode coercion is not required.
+**		1     		Unicode to non-unicode coercion is required.
+**		-1    		Non-unicode to unicode coercion is required.
+**		0    	 	Unicode coercion is not required.
 **
 ** Returns:
 **
@@ -2443,6 +2464,10 @@ i4	setnfc;
 **	29-oct-2004 (gupsh01)
 **	    adh_ev is actually of type DB_EMBEDDED_DATA not 
 **	    DB_DATA_VALUE.
+**      15-Jul-2010 (hanal04) Bug 124087
+**          We need to know whether there is no unicode coercion,
+**          char to uni, or uni to char coercion required. Return
+**          an i4 so we can return one of three states.
 */
 i4
 adh_dounicoerce (adh_dv, adh_ev)
@@ -2462,8 +2487,10 @@ DB_EMBEDDED_DATA	*adh_ev;
 	  (abs(adh_ev->ed_type) == DB_LNVCHR_TYPE)) 
         is_uni_edv = TRUE;
 
-      if (is_uni_dbv != is_uni_edv)
-	return TRUE;
-      else 
-	return FALSE;
+      if (is_uni_dbv > is_uni_edv)
+	return 1;
+      else if (is_uni_dbv < is_uni_edv)
+	return -1;
+      else
+        return 0;
 }

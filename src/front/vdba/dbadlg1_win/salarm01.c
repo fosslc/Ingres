@@ -17,6 +17,11 @@
 //    bug 104243 The third parameter in Edit_GetText() function, specifies
 //    the maximum number of characters to copy to the buffer, including
 //    the NULL character and this last was missing.
+// 20-Aug-2010 (drivi01)
+//    Updated a call to CAListBoxFillTables function which
+//    was updated to include the 3rd parameter.
+//    The 3rd parameter is set to FALSE here to specify that
+//    only Ingres tables should be displayed.
 ********************************************************************/
 
 #include "dll.h"
@@ -160,7 +165,7 @@ static BOOL OnInitDialog (HWND hwnd, HWND hwndFocus, LPARAM lParam)
    // Get the available table names and insert them into the table list 
    // 
    
-   if (!CAListBoxFillTables (hwndTables, lpsecurity->DBName))
+   if (!CAListBoxFillTables (hwndTables, lpsecurity->DBName, FALSE))
    {
        CAListBoxDestroyItemData (hwndTables);
        return FALSE;

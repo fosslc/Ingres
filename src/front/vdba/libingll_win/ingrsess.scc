@@ -101,6 +101,8 @@
 ** 27-May-2010 (drivi01)
 **    Add iicommon.h to the headers to include GL_MAXNAME constant definition
 **    in constdef.h.
+** 23-Jun-2010 (drivi01) 
+**    Fix some hardcoded buffer length for long id change.
 
 **/
 /* Turn off POSIX warning for this file until Microsoft fixes this bug */
@@ -463,7 +465,7 @@ BOOL INGRESII_llQueryUserInCurrentSession (CString &username)
 {
 	USES_CONVERSION;
 	EXEC SQL BEGIN DECLARE SECTION;
-		char  szUserName  [64];
+		char  szUserName  [DBOBJECTLEN];
 	EXEC SQL END DECLARE SECTION;
 
 	//
@@ -488,7 +490,7 @@ CString INGRESII_llQueryRolePassword (LPCTSTR lpszRoleName, CaLLQueryInfo* pQuer
 	USES_CONVERSION;
 	EXEC SQL BEGIN DECLARE SECTION;
 		char* lpRoleID  = T2A((LPTSTR)lpszRoleName);
-		char  szRolePass [256]; 
+		char  szRolePass [DBOBJECTLEN*4]; 
 	EXEC SQL END DECLARE SECTION;
 
 	ASSERT(pSessionManager);
@@ -779,7 +781,7 @@ BOOL INGRESII_llGetAutoCommit (CaSession* pInfo)
 {
 	USES_CONVERSION;
 	EXEC SQL BEGIN DECLARE SECTION;
-		char  szResult [64];
+		char  szResult [DBOBJECTLEN];
 		int nSession = pInfo->GetSessionNum();
 	EXEC SQL END DECLARE SECTION;
 

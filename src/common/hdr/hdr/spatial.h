@@ -94,6 +94,8 @@ GLOBALCONSTREF GEOM_TYPE geom_type_mapping[];
 #define GEOM_TYPE_UNDEFINED -1
 #define SRID_UNDEFINED -1
 #define FULL_PRECISION -1 //Used for astext when rounding or not
+#define GENERIC_GEOMETRY -42 //Used in _fromText/_fromWKB functions to
+                             //indicate abstract geometry type
 /*
  * Current storage version for geospatial data and list of
  * old storage versions. This is necessary for handling the data

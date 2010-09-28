@@ -162,6 +162,8 @@
 **	    SIR 121619 MVCC: Replace dm0p_mutex/unmutex with dmveMutex/Unmutex
 **	    macros.
 **	    Replace DMPP_PAGE* with DMP_PINFO* as needed.
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 **/
 
 /*
@@ -278,6 +280,7 @@ DMVE_CB		*dmve_cb)
     DMP_PINFO		*fmappinfo = NULL;
 
     CLRDBERR(&dmve->dmve_error);
+    DMVE_CLEAR_TABINFO_MACRO(dmve);
 
     MEfill(sizeof(LK_LKID), 0, &lockid);
     MEfill(sizeof(LK_LKID), 0, &fhdr_lockid);
@@ -466,8 +469,8 @@ DMVE_CB		*dmve_cb)
 		    uleFormat(NULL, E_DM9665_PAGE_OUT_OF_DATE, (CL_ERR_DESC *)NULL,
 			ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
 			&loc_error, 8,
-			sizeof(*tbio->tbio_relid), tbio->tbio_relid,
-			sizeof(*tbio->tbio_relowner), tbio->tbio_relowner,
+			sizeof(DB_TAB_NAME), tbio->tbio_relid->db_tab_name,
+			sizeof(DB_OWN_NAME), tbio->tbio_relowner->db_own_name,
 			0, DM1P_VPT_GET_FHDR_PAGE_PAGE_MACRO(page_type, fhdr),
 			0, DM1P_VPT_GET_FHDR_PAGE_STAT_MACRO(page_type, fhdr),
 			0, DM1P_VPT_GET_FHDR_LOGADDR_HI_MACRO(page_type, fhdr),
@@ -486,8 +489,8 @@ DMVE_CB		*dmve_cb)
 		    uleFormat(NULL, E_DM9665_PAGE_OUT_OF_DATE, (CL_ERR_DESC *)NULL,
 			ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
 			&loc_error, 8,
-			sizeof(*tbio->tbio_relid), tbio->tbio_relid,
-			sizeof(*tbio->tbio_relowner), tbio->tbio_relowner,
+			sizeof(DB_TAB_NAME), tbio->tbio_relid->db_tab_name,
+			sizeof(DB_OWN_NAME), tbio->tbio_relowner->db_own_name,
 			0, DM1P_VPT_GET_FMAP_PAGE_PAGE_MACRO(page_type, fmap),
 			0, DM1P_VPT_GET_FMAP_PAGE_STAT_MACRO(page_type, fmap),
 			0, DM1P_VPT_GET_FMAP_LOGADDR_HI_MACRO(page_type, fmap),
@@ -506,8 +509,8 @@ DMVE_CB		*dmve_cb)
 		uleFormat(NULL, E_DM9665_PAGE_OUT_OF_DATE, (CL_ERR_DESC *)NULL,
 		    ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
 		    &loc_error, 8,
-		    sizeof(*tbio->tbio_relid), tbio->tbio_relid,
-		    sizeof(*tbio->tbio_relowner), tbio->tbio_relowner,
+		    sizeof(DB_TAB_NAME), tbio->tbio_relid->db_tab_name,
+		    sizeof(DB_OWN_NAME), tbio->tbio_relowner->db_own_name,
 		    0, DM1P_VPT_GET_FHDR_PAGE_PAGE_MACRO(page_type, fhdr),
 		    0, DM1P_VPT_GET_FHDR_PAGE_STAT_MACRO(page_type, fhdr),
 		    0, DM1P_VPT_GET_FHDR_LOGADDR_HI_MACRO(page_type, fhdr),
@@ -523,8 +526,8 @@ DMVE_CB		*dmve_cb)
 		uleFormat(NULL, E_DM9665_PAGE_OUT_OF_DATE, (CL_ERR_DESC *)NULL,
 		    ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
 		    &loc_error, 8,
-		    sizeof(*tbio->tbio_relid), tbio->tbio_relid,
-		    sizeof(*tbio->tbio_relowner), tbio->tbio_relowner,
+		    sizeof(DB_TAB_NAME), tbio->tbio_relid->db_tab_name,
+		    sizeof(DB_OWN_NAME), tbio->tbio_relowner->db_own_name,
 		    0, DM1P_VPT_GET_FMAP_PAGE_PAGE_MACRO(page_type, fmap),
 		    0, DM1P_VPT_GET_FMAP_PAGE_STAT_MACRO(page_type, fmap),
 		    0, DM1P_VPT_GET_FMAP_LOGADDR_HI_MACRO(page_type, fmap),
@@ -730,8 +733,8 @@ DM0L_FMAP	    *log_rec)
 	    uleFormat(NULL, E_DM9676_DMVE_FMAP_FHDR_STATE, (CL_ERR_DESC *)NULL, ULE_LOG,
 		NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 6,
 		sizeof(DB_DB_NAME), tabio->tbio_dbname->db_db_name,
-		sizeof(DB_TAB_NAME), &log_rec->fmap_tblname,
-		sizeof(DB_OWN_NAME), &log_rec->fmap_tblowner,
+		sizeof(DB_TAB_NAME), tabio->tbio_relid->db_tab_name,
+		sizeof(DB_OWN_NAME), tabio->tbio_relowner->db_own_name,
 		0, DM1P_VPT_GET_FHDR_PAGE_PAGE_MACRO(page_type, fhdr),
 		0, DM1P_VPT_GET_FHDR_COUNT_MACRO(page_type, fhdr),
 		0, log_rec->fmap_map_index);
@@ -926,8 +929,8 @@ DMPP_ACC_PLV	    *loc_plv)
 	    uleFormat(NULL, E_DM9676_DMVE_FMAP_FHDR_STATE, (CL_ERR_DESC *)NULL, ULE_LOG,
 		NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 6,
 		sizeof(DB_DB_NAME), tabio->tbio_dbname->db_db_name,
-		sizeof(DB_TAB_NAME), &log_rec->fmap_tblname,
-		sizeof(DB_OWN_NAME), &log_rec->fmap_tblowner,
+		sizeof(DB_TAB_NAME), tabio->tbio_relid->db_tab_name,
+		sizeof(DB_OWN_NAME), tabio->tbio_relowner->db_own_name,
 		0, DM1P_VPT_GET_FHDR_PAGE_PAGE_MACRO(page_type, fhdr),
 		0, DM1P_VPT_GET_FHDR_COUNT_MACRO(page_type, fhdr),
 		0, (log_rec->fmap_map_index + 1));
@@ -945,8 +948,8 @@ DMPP_ACC_PLV	    *loc_plv)
 	    uleFormat(NULL, E_DM9677_DMVE_FMAP_FMAP_STATE, (CL_ERR_DESC *)NULL, ULE_LOG,
 		NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 6,
 		sizeof(DB_DB_NAME), tabio->tbio_dbname->db_db_name,
-		sizeof(DB_TAB_NAME), &log_rec->fmap_tblname,
-		sizeof(DB_OWN_NAME), &log_rec->fmap_tblowner,
+		sizeof(DB_TAB_NAME), tabio->tbio_relid->db_tab_name,
+		sizeof(DB_OWN_NAME), tabio->tbio_relowner->db_own_name,
 		0, DM1P_VPT_GET_FMAP_PAGE_PAGE_MACRO(page_type, fmap),
 		0, DM1P_VPT_GET_FMAP_SEQUENCE_MACRO(page_type, fmap),
 		0, log_rec->fmap_map_index);
@@ -979,7 +982,7 @@ DMPP_ACC_PLV	    *loc_plv)
 
 	    status = dm0l_fmap(dmve->dmve_log_id, dm0l_flags, 
 		&log_rec->fmap_tblid,
-		&log_rec->fmap_tblname, &log_rec->fmap_tblowner, 
+		tabio->tbio_relid, tabio->tbio_relowner,
 		log_rec->fmap_pg_type, log_rec->fmap_page_size,
 		log_rec->fmap_loc_cnt, 
 		log_rec->fmap_fhdr_pageno, log_rec->fmap_fmap_pageno, 

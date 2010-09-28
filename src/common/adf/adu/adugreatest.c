@@ -27,6 +27,8 @@
 **  History:	
 **	06-Sep-2009 (kiria01) SIR 122894
 **	    Created adding GREATEST and LEAST generic polyadic functions.
+**	28-Jul-2010 (kiria01) b124142
+**	    Tightened ADF_NVL_BIT handling.
 **/
 
 
@@ -71,7 +73,7 @@ DB_DATA_VALUE	*rdv)
     {
 	d1 = *dv1;
 	d1.db_datatype = -d1.db_datatype;
-	if (((char*)d1.db_data)[--d1.db_length] != ADF_NVL_BIT)
+	if (~((char*)d1.db_data)[--d1.db_length] & ADF_NVL_BIT)
 	    dv1 = &d1;
 	else
 	    ret = dv2;
@@ -80,7 +82,7 @@ DB_DATA_VALUE	*rdv)
     {
 	d2 = *dv2;
 	d2.db_datatype = -d2.db_datatype;
-	if (((char*)d2.db_data)[--d2.db_length] != ADF_NVL_BIT)
+	if (~((char*)d2.db_data)[--d2.db_length] & ADF_NVL_BIT)
 	{
 	    if (ret)
 		ret = &d2;
@@ -91,6 +93,7 @@ DB_DATA_VALUE	*rdv)
 	    ret = dv1;
 	else if (rdv->db_datatype < 0)
 	{
+	    /* Set NULL bit & implicitly clear SING bit */
 	    ((char*)rdv->db_data)[rdv->db_length-1] = ADF_NVL_BIT;
 	    return E_DB_OK;
 	}
@@ -188,7 +191,7 @@ DB_DATA_VALUE	*rdv)
     {
 	d1 = *dv1;
 	d1.db_datatype = -d1.db_datatype;
-	if (((char*)d1.db_data)[--d1.db_length] != ADF_NVL_BIT)
+	if (~((char*)d1.db_data)[--d1.db_length] & ADF_NVL_BIT)
 	    dv1 = &d1;
 	else
 	    ret = dv2;
@@ -197,7 +200,7 @@ DB_DATA_VALUE	*rdv)
     {
 	d2 = *dv2;
 	d2.db_datatype = -d2.db_datatype;
-	if (((char*)d2.db_data)[--d2.db_length] != ADF_NVL_BIT)
+	if (~((char*)d2.db_data)[--d2.db_length] & ADF_NVL_BIT)
 	{
 	    if (ret)
 		ret = &d2;
@@ -208,6 +211,7 @@ DB_DATA_VALUE	*rdv)
 	    ret = dv1;
 	else if (rdv->db_datatype < 0)
 	{
+	    /* Set NULL bit & implicitly clear SING bit */
 	    ((char*)rdv->db_data)[rdv->db_length-1] = ADF_NVL_BIT;
 	    return E_DB_OK;
 	}

@@ -65,6 +65,10 @@
 ##	    script returns a non-zero return code.
 ##	02-Jun-2009 (hanje04)
 ##	    Add support for OSX
+##	23-Sep-2010 (hweho01)
+##	    Add checking for file existences, such as ingsetenv or  
+##          generated setup script file before executing or copying. 
+##          Avoid "No such file or directory" error. 
 #-------------------------------------------------------------------
 
 #
@@ -303,7 +307,8 @@ EOF
 		"$II_SYSTEM/ingres/bin/ingvalidpw"
 
 	# Set II_SHADOW_PWD if we need to
-	[ -f /etc/shadow -o /etc/security/passwd ] && \
+	[ -f $II_SYSTEM/ingres/bin/ingsetenv -a \
+	 \( -f /etc/shadow -o /etc/security/passwd \) ] && \
 	    $II_SYSTEM/ingres/bin/ingsetenv II_SHADOW_PWD $II_SYSTEM/ingres/bin/ingvalidpw
     fi
 
@@ -332,7 +337,12 @@ EOF
     }
 # Copy it to home directory if we can
     [ "$homedir" != "$II_SYSTEM/ingres" ] && \
-        su $userid -c "cp -f $II_SYSTEM/ingres/.ing*sh $homedir"
+    {
+	if ls $II_SYSTEM/ingres/.ing*sh >/dev/null 2>&1
+	then
+          su $userid -c "cp -f $II_SYSTEM/ingres/.ing*sh $homedir"
+	fi
+    }
 
 
 else # dosetup=true 

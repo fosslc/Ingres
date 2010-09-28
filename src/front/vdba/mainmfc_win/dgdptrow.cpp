@@ -85,6 +85,10 @@
 **    the constant is defined in main.h now. and main.h is included
 **    in dom.h.
 **    Remove hard coded buffer size.
+** 22-Jun-2010 (maspa05)
+**    Bug 123847
+**    Call GetConnected when destroying the "DOM/Table/Rows" tab. This checks 
+**    for and disconnects any database sessions marked as "released".
 */
 
 #include "stdafx.h"
@@ -178,6 +182,11 @@ void CuDlgDomPropTableRows::PostNcDestroy()
 
 void CuDlgDomPropTableRows::OnDestroy() 
 {
+
+// GetConnected removes sessions marked as "released"
+
+	short p = m_SqlQuery.GetConnected(m_strNode,NULL);
+
 	CDialog::OnDestroy();
 }
 

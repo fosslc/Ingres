@@ -117,17 +117,22 @@
 **		stack that will get corrupted!
 **      02-Jun-2010 (coomi01) b123821
 **           Init save_seq_ops array.
+**	2-Aug-2010 (kschendel) b124170
+**	    Point cb to yyvars variable, remove some indirection.
+**	    Note: if setting up recursive parser for derived tables, caller
+**	    will need to repair the cb->pss_yyvars pointer ASAP.
 **     
 **/
 
 
-YYVARS	yyvars, *yyvarsp = &yyvars, **yyvarspp = &yyvarsp;
+YYVARS	yyvars;
 i4	i;
 
-#ifndef DERIVED_TABLE
+/* Connect session cb with this YYVARS. */
+cb->pss_yyvars = &yyvars;
+
 /* Not a yyvars, but I'd rather put this here than byacc.par */
 cb->pss_yacc->yy_partalt_kwds = FALSE;
-#endif
 
 yyvars.prev_yyvarsp = (PSS_YYVARS *) NULL;
 yyvars.with_journaling 	= 0;
@@ -238,7 +243,6 @@ if (cb->pss_distrib & DB_3_DDB_SESS)
 
     yyvars.xlated_qry.pss_q_list.pss_skip = 0;
 
-#ifndef DERIVED_TABLE
     /* BB_FIX_ME:Shouldn't the following three assignments take
     ** place in psq_call()
     */
@@ -251,6 +255,5 @@ if (cb->pss_distrib & DB_3_DDB_SESS)
 
     /* we may not assume that the LDB id is the same as that of CDB */
     psq_cb->psq_ldbdesc->dd_l5_ldb_id = DD_0_IS_UNASSIGNED;
-#endif
 
 }

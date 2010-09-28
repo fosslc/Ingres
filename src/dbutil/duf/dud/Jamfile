@@ -3,6 +3,8 @@
 #
 # 13-aug-2009 (horda03)
 #   destroydb built with static libraries on VMS
+# 02-sep-2010 (maspa05) b124328
+#   Windows needs libq and VMS needs libui for IIUIpassword()
 
 SubDir ING_SRC dbutil duf dud ;
 
@@ -12,12 +14,12 @@ IISUBSYS dbutil duf dud ;
 IIBINEXE destroydb : dudestry.qsc ;
 if $(VMS)
 {
-   IINEEDLIBS destroydb : DBUTILLIB LIBQLIB GCFLIB CUFLIB UGLIB AFELIB ADFLIB COMPATLIB ;
+   IINEEDLIBS destroydb : DBUTILLIB LIBQLIB GCFLIB CUFLIB UILIB UGLIB AFELIB ADFLIB COMPATLIB ;
 }
 else
 {
    IINEEDLIBS destroydb : DBUTILLIB SHQLIB SHCOMPATLIB SHFRAMELIB ;
-   IINEEDLIBSW destroydb : SHCUFLIB SHEMBEDLIB ;
+   IINEEDLIBSW destroydb : SHQLIB SHCUFLIB SHEMBEDLIB ;
 }
 
 IILIBRARY DBUTILLIB : duddata.c ;

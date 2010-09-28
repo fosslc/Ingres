@@ -70,6 +70,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**      12-Aug-2010 (horda03) b124109
+**          Add support for op218 (force use of EXCHANGE nodes)
 **/
 
 /*{
@@ -200,6 +202,18 @@
 **	    Rename OP129.
 **	22-mar-10 (smeke01) b123457
 **	    Add op214 (OPT_F086_DUMP_QTREE2).
+**	13-may-10 (smeke01) b123727
+**	    Add trace points op215 (OPT_F087_ALLFRAGS) and
+**	    op216 (OPT_F088_BESTPLANS).
+**	    Trace point op215 prints all query fragments (strictly 'all query
+**	    fragments that have made it into an OPO_CO structure'), even if
+**	    they are to be discarded, together with all best plans.  
+**	    Trace point op216 prints out only the best plans, as they are
+**	    encountered.
+**	28-Jun-2010 (smeke01) b123969
+**	    Added diagnostic tracepoint OP217 (OPT_F089_FORCE_HASHJOIN) which
+**	    forces optimiser to use hash joins. Requires xDEBUG to be defined
+**	    in opjjoinop.c.
 */
 
 DB_STATUS
@@ -379,6 +393,10 @@ opt_call(
 	case OPT_F084_TBLAUTOSTRUCT:
 	case OPT_F085_MISSINGSTATS:
 	case OPT_F086_DUMP_QTREE2:
+	case OPT_F087_ALLFRAGS:
+	case OPT_F088_BESTPLANS:
+	case OPT_F089_FORCE_HASHJOIN:
+	case OPT_F090_FORCE_EXCHANGE:
             if (debug_cb->db_value_count > 0)
 		return( E_DB_ERROR );	    /* these flags have no values */
 	    break;			    /* Flag is defined */

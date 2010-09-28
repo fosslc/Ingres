@@ -147,6 +147,8 @@ dm2u_conv_etab(
 **      16-May-2005 (zhahu02)
 **      Updated for not dereferencing a NULL pointer to avoid sigsegv 
 **      for upgrading (INGSRV3306/b114526).
+**      23-Sep-2010 (horda03) b124485
+**         Don't check 't' if status not OK, t may not have been defined.
 */
 DB_STATUS
 dm2u_convert(
@@ -215,7 +217,9 @@ dm2u_convert(
 	    table_open = TRUE;
 	}
         if (rcb == NULL)
-        break;
+        {
+           break;
+        }
 	t = rcb->rcb_tcb_ptr;
 
 
@@ -276,15 +280,15 @@ dm2u_convert(
 
     } while (FALSE) ;
 
-    if (( t->tcb_rel.relstat & TCB_GATEWAY ) == 0 &&
-	( t->tcb_rel.relstat & TCB_VIEW ) == 0)
+    if ( (status == E_DB_OK) && rcb && 
+         ( (t->tcb_rel.relstat & (TCB_GATEWAY|TCB_VIEW) ) == 0) )
     {
 	/*
 	** We may have been called to convert tables having extensions
 	** As of 2.5 we expect that extension tables are created when
 	** the table is created/altered
 	*/
-	if (status == E_DB_OK && (t->tcb_rel.relstat2 & TCB2_HAS_EXTENSIONS) &&
+	if ((t->tcb_rel.relstat2 & TCB2_HAS_EXTENSIONS) &&
 	    (t->tcb_rel.relcmptlvl == DMF_T3_VERSION ||  /* Ingres 1.2 */
 	       t->tcb_rel.relcmptlvl == DMF_T4_VERSION))    /* Ingres 2.0 */
 	{

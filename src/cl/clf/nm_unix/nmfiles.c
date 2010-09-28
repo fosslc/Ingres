@@ -208,6 +208,8 @@ NO_OPTIM = sgi_us5
 **	    not $II_SYSTEM
 **	13-Jan-2010 (wanfr01) Bug 123139
 **	    Optimizations for single byte
+**	08-Sep-2010 (rajus01) SD issue 146492, Bug 124381
+**	    Add LIB32 and LIB64.
 **/
 
 /* # defines */
@@ -617,6 +619,16 @@ NMloc(
 	case LIB:
 		symbol = "II_LIBRARY";
 		dname = "lib";
+		break;
+
+	case LIB32:
+		symbol = "II_LIBRARY32";
+		dname = "lib/lp32";
+		break;
+
+	case LIB64:
+		symbol = "II_LIBRARY64";
+		dname = "lib/lp64";
 		break;
 
 	case SUBDIR:

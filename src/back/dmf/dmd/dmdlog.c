@@ -196,6 +196,8 @@
 **	    SIR 120874 Modified to use new DB_ERROR based uleFormat 
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs, db_buffer holds (dbname, owner ...)
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 */
 
 /*
@@ -586,11 +588,9 @@ i4		    l_line_buf)
 	    DM0L_BI	    *r = (DM0L_BI*)h;
 
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
-	    	"%12* TABLE: (%d,%d) NAME(%~t,%~t) PAGE: %d Size %d Op: %w\n",
+	    	"%12* TABLE: (%d,%d) PAGE: %d Size %d Op: %w\n",
 		r->bi_tbl_id.db_tab_base, r->bi_tbl_id.db_tab_index,
-		sizeof(r->bi_tblname), &r->bi_tblname,
-		sizeof(r->bi_tblowner), &r->bi_tblowner, r->bi_pageno, 
-		r->bi_page_size,
+		r->bi_pageno, r->bi_page_size,
 		DM0L_BI_OPERATION, r->bi_operation);
 
 	    if (verbose_flag)
@@ -605,11 +605,9 @@ i4		    l_line_buf)
 	    DM0L_AI	    *r = (DM0L_AI*)h;
 
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
-	    	"%12* TABLE: (%d,%d) NAME(%~t,%~t) PAGE: %d Size %d Op: %w\n",
+	    	"%12* TABLE: (%d,%d) PAGE: %d Size %d Op: %w\n",
 		r->ai_tbl_id.db_tab_base, r->ai_tbl_id.db_tab_index,
-		sizeof(r->ai_tblname), &r->ai_tblname,
-		sizeof(r->ai_tblowner), &r->ai_tblowner, r->ai_pageno, 
-		r->ai_page_size,
+		r->ai_pageno, r->ai_page_size,
 		DM0L_BI_OPERATION, r->ai_operation);
 
 	    if (verbose_flag)
@@ -624,16 +622,14 @@ i4		    l_line_buf)
 	    DM0L_PUT	    *r = (DM0L_PUT*)h;
 
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
-	    	"%12* TABLE: (%d,%d) NAME(%~t,%~t) TID: [%d,%d] SIZE: %d\n",
+	    	"%12* TABLE: (%d,%d) TID: [%d,%d] SIZE: %d\n",
 		r->put_tbl_id.db_tab_base, r->put_tbl_id.db_tab_index,
-		r->put_tab_size, &r->put_vbuf[0],
-		r->put_own_size, &r->put_vbuf[r->put_tab_size],
 		r->put_tid.tid_tid.tid_page, r->put_tid.tid_tid.tid_line,
 		r->put_rec_size);
 
 	    if (verbose_flag)
 	    {
-		rec_ptr = (PTR)&r->put_vbuf[r->put_tab_size + r->put_own_size];
+		rec_ptr = (PTR) (((char *)r) + sizeof(DM0L_PUT));
 		dmd_hexdump_contents(format_routine, "    TUPLE", 9, rec_ptr, 
 		    r->put_rec_size, line_buf);
 	    }
@@ -646,16 +642,14 @@ i4		    l_line_buf)
 	    DM0L_DEL	    *r = (DM0L_DEL*)h;
 
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
-	    	"%12* TABLE: (%d,%d) NAME(%~t,%~t) TID: [%d,%d] SIZE: %d\n",
+	    	"%12* TABLE: (%d,%d) TID: [%d,%d] SIZE: %d\n",
 		r->del_tbl_id.db_tab_base, r->del_tbl_id.db_tab_index,
-		r->del_tab_size, &r->del_vbuf[0],
-		r->del_own_size, &r->del_vbuf[r->del_tab_size],
 		r->del_tid.tid_tid.tid_page, r->del_tid.tid_tid.tid_line,
 		r->del_rec_size);
 
 	    if (verbose_flag)
 	    {
-		rec_ptr = (PTR)&r->del_vbuf[r->del_tab_size + r->del_own_size];
+		rec_ptr = (PTR) (((char *)r) + sizeof(DM0L_DEL));
 		dmd_hexdump_contents(format_routine, "    TUPLE", 9, rec_ptr, 
 		    r->del_rec_size, line_buf);
 	    }
@@ -667,10 +661,8 @@ i4		    l_line_buf)
 	    DM0L_REP	    *r = (DM0L_REP*)h;
 
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
-	    	"%12* TABLE: (%d,%d) NAME(%~t,%~t) OTID: [%d,%d] NTID: [%d,%d] SIZE: old %d, new %d\n", 
+	    	"%12* TABLE: (%d,%d) OTID: [%d,%d] NTID: [%d,%d] SIZE: old %d, new %d\n", 
 		r->rep_tbl_id.db_tab_base, r->rep_tbl_id.db_tab_index,
-		r->rep_tab_size, &r->rep_vbuf[0],
-		r->rep_own_size, &r->rep_vbuf[r->rep_tab_size],
 		r->rep_otid.tid_tid.tid_page, r->rep_otid.tid_tid.tid_line,
 		r->rep_ntid.tid_tid.tid_page, r->rep_ntid.tid_tid.tid_line,
 		r->rep_orec_size, r->rep_nrec_size);
@@ -680,7 +672,7 @@ i4		    l_line_buf)
 
 	    if (verbose_flag)
 	    {
-		rec_ptr = (PTR)&r->rep_vbuf[r->rep_tab_size + r->rep_own_size];
+		rec_ptr = (PTR) (((char *)r) + sizeof(DM0L_REP));
 
 		if (r->rep_header.flags & DM0L_COMP_REPL_OROW)
 		{
@@ -695,8 +687,7 @@ i4		    l_line_buf)
 			r->rep_odata_len, line_buf);
 		}
 
-		rec_ptr = (PTR)&r->rep_vbuf[r->rep_tab_size + r->rep_own_size +
-					    r->rep_odata_len];
+		rec_ptr = (PTR)rec_ptr + r->rep_odata_len;
 		dmd_hexdump_contents(format_routine, 
 		    "    COMPRESSED NEW ROW", 22, rec_ptr, 
 		    r->rep_ndata_len, line_buf);
@@ -1226,10 +1217,8 @@ i4		    l_line_buf)
             DM0L_ASSOC      *r = (DM0L_ASSOC*)h;
 
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
-            	"%12* TABLE: (%d, %d) NAME(%~t,%~t) Leaf:%d Old:%d New:%d\n",
+            	"%12* TABLE: (%d, %d) Leaf:%d Old:%d New:%d\n",
 		r->ass_tbl_id.db_tab_base, r->ass_tbl_id.db_tab_index, 
-                r->ass_tab_size, &r->ass_vbuf[0],
-                r->ass_own_size, &r->ass_vbuf[r->ass_tab_size],
 		r->ass_leaf_page, r->ass_old_data, r->ass_new_data);
         }
         break;
@@ -1239,10 +1228,8 @@ i4		    l_line_buf)
             DM0L_ALLOC      *r = (DM0L_ALLOC*)h;
 
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
-	    	"%12* TABLE: (%d,%d) NAME(%~t,%~t) Page: %d\n",
+	    	"%12* TABLE: (%d,%d) Page: %d\n",
 		r->all_tblid.db_tab_base, r->all_tblid.db_tab_index, 
-		r->all_tab_size, &r->all_vbuf[0],
-		r->all_own_size, &r->all_vbuf[r->all_tab_size],
                 r->all_free_pageno);
         }
         break;
@@ -1252,10 +1239,8 @@ i4		    l_line_buf)
             DM0L_DEALLOC    *r = (DM0L_DEALLOC*)h;
 
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
-	    	"%12* TABLE: (%d,%d) NAME(%~t,%~t) Page: %d\n",
+	    	"%12* TABLE: (%d,%d) Page: %d\n",
 		r->dall_tblid.db_tab_base, r->dall_tblid.db_tab_index, 
-		r->dall_tab_size, &r->dall_vbuf[0],
-		r->dall_own_size, &r->dall_vbuf[r->dall_tab_size],
                 r->dall_free_pageno);
         }
         break;
@@ -1265,10 +1250,8 @@ i4		    l_line_buf)
             DM0L_EXTEND     *r = (DM0L_EXTEND *)h;
 
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
-	    	"%12* TABLE: (%d,%d) NAME(%~t,%~t) Old_pages:%d New_pages:%d\n",
+	    	"%12* TABLE: (%d,%d) Old_pages:%d New_pages:%d\n",
 		r->ext_tblid.db_tab_base, r->ext_tblid.db_tab_index, 
-		sizeof(r->ext_tblname), &r->ext_tblname,
-		sizeof(r->ext_tblowner), &r->ext_tblowner,
                 r->ext_old_pages, r->ext_new_pages);
         }
         break;
@@ -1278,10 +1261,8 @@ i4		    l_line_buf)
             DM0L_OVFL      *r = (DM0L_OVFL*)h;
 
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
-	    	"%12* TABLE: (%d,%d) NAME(%~t,%~t) New:%d Parent:%d Ovfl:%d Main:%d\n",
+	    	"%12* TABLE: (%d,%d) New:%d Parent:%d Ovfl:%d Main:%d\n",
 		r->ovf_tbl_id.db_tab_base, r->ovf_tbl_id.db_tab_index, 
-		r->ovf_tab_size, &r->ovf_vbuf[0],
-		r->ovf_own_size, &r->ovf_vbuf[r->ovf_tab_size],
 		r->ovf_newpage, r->ovf_page, r->ovf_ovfl_ptr, r->ovf_main_ptr); 
 	}
         break;
@@ -1291,10 +1272,8 @@ i4		    l_line_buf)
             DM0L_NOFULL      *r = (DM0L_NOFULL*)h;
 
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
-	     	"%12* TABLE: (%d,%d) NAME(%~t,%~t) Page:%d\n",
+	     	"%12* TABLE: (%d,%d) Page:%d\n",
 		r->nofull_tbl_id.db_tab_base, r->nofull_tbl_id.db_tab_index, 
-		r->nofull_tab_size, &r->nofull_vbuf[0],
-		r->nofull_own_size, &r->nofull_vbuf[r->nofull_tab_size],
 		r->nofull_pageno);
 	}
         break;
@@ -1304,10 +1283,8 @@ i4		    l_line_buf)
             DM0L_FMAP      *r = (DM0L_FMAP*)h;
 
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
-	    	"%12* TABLE: (%d,%d) NAME(%~t,%~t) Page:%d Index:%d\n",
+	    	"%12* TABLE: (%d,%d) Page:%d Index:%d\n",
 		r->fmap_tblid.db_tab_base, r->fmap_tblid.db_tab_index, 
-		sizeof(r->fmap_tblname), &r->fmap_tblname,
-		sizeof(r->fmap_tblowner), &r->fmap_tblowner,
 		r->fmap_fmap_pageno, r->fmap_map_index);
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
 	    	"%16* FHDR page: %d First used:%d First free:%d Last used: %d\n",
@@ -1321,10 +1298,8 @@ i4		    l_line_buf)
             DM0L_UFMAP      *r = (DM0L_UFMAP*)h;
 
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
-	    	"%12* TABLE: (%d,%d) NAME(%~t,%~t) Page:%d Index:%d\n",
+	    	"%12* TABLE: (%d,%d) Page:%d Index:%d\n",
 		r->fmap_tblid.db_tab_base, r->fmap_tblid.db_tab_index, 
-		sizeof(r->fmap_tblname), &r->fmap_tblname,
-		sizeof(r->fmap_tblowner), &r->fmap_tblowner,
 		r->fmap_fmap_pageno, r->fmap_map_index);
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
 	    	"%16* FHDR page: %d First used:%d Last used: %d\n",
@@ -1337,17 +1312,15 @@ i4		    l_line_buf)
             DM0L_BTPUT	    *r = (DM0L_BTPUT*)h;
 
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
-	    	"%12* TABLE: (%d,%d) NAME(%~t,%~t) Bid:(%d,%d) Tid:(%d,%d) Partno: %d\n",
+	    	"%12* TABLE: (%d,%d) Bid:(%d,%d) Tid:(%d,%d) Partno: %d\n",
 		r->btp_tbl_id.db_tab_base, r->btp_tbl_id.db_tab_index, 
-		r->btp_tab_size, &r->btp_vbuf[0],
-		r->btp_own_size, &r->btp_vbuf[r->btp_tab_size],
 		r->btp_bid.tid_tid.tid_page, r->btp_bid.tid_tid.tid_line,
 		r->btp_tid.tid_tid.tid_page, r->btp_tid.tid_tid.tid_line,
 		r->btp_partno);
 
 	    if (verbose_flag)
 	    {
-		rec_ptr = (PTR)&r->btp_vbuf[r->btp_tab_size + r->btp_own_size];
+		rec_ptr = (PTR) (((char *)r) + sizeof(DM0L_BTPUT));
 		dmd_hexdump_contents(format_routine, "    KEY", 7, rec_ptr, 
 		    r->btp_key_size, line_buf);
 	    }
@@ -1359,17 +1332,15 @@ i4		    l_line_buf)
             DM0L_BTDEL	    *r = (DM0L_BTDEL*)h;
 
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
-	    	"%12* TABLE: (%d,%d) NAME(%~t,%~t) Bid:(%d,%d) Tid:(%d,%d), Partno: %d\n",
+	    	"%12* TABLE: (%d,%d) Bid:(%d,%d) Tid:(%d,%d), Partno: %d\n",
 		r->btd_tbl_id.db_tab_base, r->btd_tbl_id.db_tab_index, 
-		r->btd_tab_size, &r->btd_vbuf[0],
-		r->btd_own_size, &r->btd_vbuf[r->btd_tab_size],
 		r->btd_bid.tid_tid.tid_page, r->btd_bid.tid_tid.tid_line,
 		r->btd_tid.tid_tid.tid_page, r->btd_tid.tid_tid.tid_line,
 		r->btd_partno);
 
 	    if (verbose_flag)
 	    {
-		rec_ptr = (PTR)&r->btd_vbuf[r->btd_tab_size + r->btd_own_size];
+		rec_ptr = (PTR) (((char *)r) + sizeof(DM0L_BTDEL));
 		dmd_hexdump_contents(format_routine, "    KEY", 7, rec_ptr, 
 		    r->btd_key_size, line_buf);
 	    }
@@ -1384,10 +1355,8 @@ i4		    l_line_buf)
 	    desc_key = (char *)&r->spl_vbuf + r->spl_page_size;
 
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
-	      "%12* TABLE: (%d,%d) NAME(%~t,%~t) Old:%d New:%d Pos:%d Dir:%d Rlen:%d\n",
+	      "%12* TABLE: (%d,%d) Old:%d New:%d Pos:%d Dir:%d Rlen:%d\n",
 		r->spl_tbl_id.db_tab_base, r->spl_tbl_id.db_tab_index, 
-		sizeof(r->spl_tblname), &r->spl_tblname,
-		sizeof(r->spl_tblowner), &r->spl_tblowner,
 		r->spl_cur_pageno, r->spl_sib_pageno, r->spl_split_pos,
 		r->spl_split_dir, r->spl_range_klen); 
 
@@ -1407,10 +1376,8 @@ i4		    l_line_buf)
             DM0L_BTOVFL    *r = (DM0L_BTOVFL*)h;
 	
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
-	    	"%12* TABLE: (%d,%d) NAME(%~t,%~t) Leaf:%d Ovfl:%d TidSize: %d\n",
+	    	"%12* TABLE: (%d,%d) Leaf:%d Ovfl:%d TidSize: %d\n",
 		r->bto_tbl_id.db_tab_base, r->bto_tbl_id.db_tab_index, 
-		sizeof(r->bto_tblname), &r->bto_tblname,
-		sizeof(r->bto_tblowner), &r->bto_tblowner,
 		r->bto_leaf_pageno, r->bto_ovfl_pageno,
 		r->bto_tidsize); 
 
@@ -1437,10 +1404,8 @@ i4		    l_line_buf)
             DM0L_BTFREE    *r = (DM0L_BTFREE*)h;
 
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
-	    	"%12* TABLE: (%d,%d) NAME(%~t,%~t) Leaf:%d Ovfl:%d Prev: %d Tidsize: %d\n",
+	    	"%12* TABLE: (%d,%d) Leaf:%d Ovfl:%d Prev: %d Tidsize: %d\n",
 		r->btf_tbl_id.db_tab_base, r->btf_tbl_id.db_tab_index, 
-		sizeof(r->btf_tblname), &r->btf_tblname,
-		sizeof(r->btf_tblowner), &r->btf_tblowner,
 		r->btf_mainpage, r->btf_ovfl_pageno, r->btf_prev_pageno,
 		r->btf_tidsize); 
 
@@ -1474,10 +1439,8 @@ i4		    l_line_buf)
             DM0L_BTUPDOVFL	*r = (DM0L_BTUPDOVFL*)h;
 
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
-	    	"%12* TABLE: (%d,%d) NAME(%~t,%~t) Leaf:%d Ovfl:%d\n",
+	    	"%12* TABLE: (%d,%d) Leaf:%d Ovfl:%d\n",
 		r->btu_tbl_id.db_tab_base, r->btu_tbl_id.db_tab_index, 
-		sizeof(r->btu_tblname), &r->btu_tblname,
-		sizeof(r->btu_tblowner), &r->btu_tblowner,
 		r->btu_mainpage, r->btu_pageno); 
 
 	    if (verbose_flag)
@@ -1517,10 +1480,9 @@ i4		    l_line_buf)
             DM0L_DISASSOC	*r = (DM0L_DISASSOC*)h;
 
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
-	    	"%12* TABLE: (%d,%d) NAME(%~t,%~t) Page: %d\n",
+	    	"%12* TABLE: (%d,%d) Page: %d\n",
 		r->dis_tbl_id.db_tab_base, r->dis_tbl_id.db_tab_index, 
-		sizeof(r->dis_tblname), &r->dis_tblname,
-		sizeof(r->dis_tblowner), &r->dis_tblowner, r->dis_pageno); 
+		r->dis_pageno); 
 	}
         break;
 
@@ -1529,16 +1491,14 @@ i4		    l_line_buf)
             DM0L_RTDEL	    *r = (DM0L_RTDEL*)h;
 
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
-	    	"%12* TABLE: (%d,%d) NAME(%~t,%~t) Bid:(%d,%d) Tid:(%d,%d)\n",
+	    	"%12* TABLE: (%d,%d) Bid:(%d,%d) Tid:(%d,%d)\n",
 		r->rtd_tbl_id.db_tab_base, r->rtd_tbl_id.db_tab_index, 
-		r->rtd_tab_size, &r->rtd_vbuf[0],
-		r->rtd_own_size, &r->rtd_vbuf[r->rtd_tab_size],
 		r->rtd_bid.tid_tid.tid_page, r->rtd_bid.tid_tid.tid_line,
 		r->rtd_tid.tid_tid.tid_page, r->rtd_tid.tid_tid.tid_line);
 
 	    if (verbose_flag)
 	    {
-		rec_ptr = (PTR)&r->rtd_vbuf[r->rtd_tab_size + r->rtd_own_size];
+		rec_ptr = (PTR) (((char *)r) + sizeof(DM0L_RTDEL));
 		dmd_hexdump_contents(format_routine, "    KEY", 7, rec_ptr, 
 		    r->rtd_key_size, line_buf);
 	    }
@@ -1550,16 +1510,14 @@ i4		    l_line_buf)
             DM0L_RTPUT	    *r = (DM0L_RTPUT*)h;
 
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
-	    	"%12* TABLE: (%d,%d) NAME(%~t,%~t) Bid:(%d,%d) Tid:(%d,%d)\n",
+	    	"%12* TABLE: (%d,%d) Bid:(%d,%d) Tid:(%d,%d)\n",
 		r->rtp_tbl_id.db_tab_base, r->rtp_tbl_id.db_tab_index, 
-		r->rtp_tab_size, &r->rtp_vbuf[0],
-		r->rtp_own_size, &r->rtp_vbuf[r->rtp_tab_size],
 		r->rtp_bid.tid_tid.tid_page, r->rtp_bid.tid_tid.tid_line,
 		r->rtp_tid.tid_tid.tid_page, r->rtp_tid.tid_tid.tid_line);
 
 	    if (verbose_flag)
 	    {
-		rec_ptr = (PTR)&r->rtp_vbuf[r->rtp_tab_size + r->rtp_own_size];
+		rec_ptr = (PTR) (((char *)r) + sizeof(DM0L_RTPUT));
 		dmd_hexdump_contents(format_routine, "    KEY", 7, rec_ptr, 
 		    r->rtp_key_size, line_buf);
 	    }
@@ -1571,19 +1529,17 @@ i4		    l_line_buf)
             DM0L_RTREP	    *r = (DM0L_RTREP*)h;
 
 	    TRformat(format_routine, 0, line_buf, l_line_buf,
-	    	"%12* TABLE: (%d,%d) NAME(%~t,%~t) Bid:(%d,%d) Tid:(%d,%d)\n",
+	    	"%12* TABLE: (%d,%d) Bid:(%d,%d) Tid:(%d,%d)\n",
 		r->rtr_tbl_id.db_tab_base, r->rtr_tbl_id.db_tab_index, 
-		r->rtr_tab_size, &r->rtr_vbuf[0],
-		r->rtr_own_size, &r->rtr_vbuf[r->rtr_tab_size],
 		r->rtr_bid.tid_tid.tid_page, r->rtr_bid.tid_tid.tid_line,
 		r->rtr_tid.tid_tid.tid_page, r->rtr_tid.tid_tid.tid_line);
 
 	    if (verbose_flag)
 	    {
-		rec_ptr = (PTR)&r->rtr_vbuf[r->rtr_tab_size + r->rtr_own_size];
+		rec_ptr = (PTR) (((char *)r) + sizeof(DM0L_RTREP));
 		dmd_hexdump_contents(format_routine, "    OKEY", 8, rec_ptr, 
 		    r->rtr_okey_size, line_buf);
-		rec_ptr = (PTR)&r->rtr_vbuf[r->rtr_tab_size + r->rtr_own_size + r->rtr_okey_size];
+		rec_ptr = rec_ptr + r->rtr_okey_size;
 		dmd_hexdump_contents(format_routine, "    NKEY", 8, rec_ptr, 
 		    r->rtr_nkey_size, line_buf);
 	    }

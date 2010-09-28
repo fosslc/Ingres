@@ -10,6 +10,9 @@
 #include    <st.h>
 #include    <tr.h>
 #include    <cv.h>
+#include    <mh.h>
+#include    <nm.h>
+#include    <lo.h>
 #include    <iicommon.h>
 #include    <adf.h>
 #include    <adp.h>
@@ -17,11 +20,14 @@
 #include    <adftrace.h>
 #include    <adfint.h>
 #include    <aduint.h>
-#include    <geos_c.h>
 #include    <aduspatial.h>
 #include    <spatial.h>
+#ifdef _WITH_GEO
+#include    <geos_c.h>
+#include    <proj_api.h>
+#endif
 /*
-**  Name: ADUPOINT.C - implements ADF function instances for point datatype.
+**  Name: ADUSPATIAL.C - implements ADF function instances for spatial datatypes.
 **
 **  Description:
 **        This file contains the routines that implement the ADF function
@@ -76,6 +82,9 @@
 **          Updates for rtree indexing.
 **      07-Apr-2010 (troal01)
 **          Changes and bugfixes to many SQL functions
+**      31-Aug-2010 (thich01)
+**          Allow geos and proj.4 calls to be compiled out for platforms where
+**          spatial is not supported.
 */
 
 /*
@@ -84,9 +93,11 @@
 DB_STATUS
 getSRS(ADF_CB *adf_scb, DB_SPATIAL_REF_SYS *srs, i4 srid);
 
-//Structure to make it easier to stream the geometry data into and out of
-//storage.  The bounding box (envelope) and actual geometry are stored in WKB
-//format in a combined stream.  The size of each stream is specified.
+/* 
+ * Structure to make it easier to stream the geometry data into and out of
+ * storage.  The bounding box (envelope) and actual geometry are stored in WKB
+ * format in a combined stream.  The size of each stream is specified.
+ */
 typedef struct _storedGeom
 {
     i2 version;
@@ -104,7 +115,7 @@ typedef struct _geomNBR
     i4 y_hi;
 } geomNBR_t;
 
-//Debuging function that will make WKB more human readable.
+/* Debuging function that will make WKB more human readable */
 void
 printHEX(const unsigned char *bytes, size_t n)
 {
@@ -118,7 +129,7 @@ printHEX(const unsigned char *bytes, size_t n)
     TRdisplay("\n");
 }
 
-//This function allows GEOS to display notification messages.
+/* This function allows GEOS to display notification messages. */
 void
 geos_Notice(const char *fmt, ...)
 {
@@ -132,7 +143,7 @@ geos_Notice(const char *fmt, ...)
     return;
 }
 
-//This function allows GEOS to display error messages.
+/* This function allows GEOS to display error messages. */
 void
 geos_Error(const char *fmt, ...)
 {
@@ -160,7 +171,8 @@ bool db_datatype_is_geom(i4 db_datatype)
     return FALSE;
 }
 
-/* Combine a blob into a char*
+/* 
+ * Combine a blob into a char*
  * output is allocated here but is the responsibility of the caller to free.
 */
 DB_STATUS
@@ -189,7 +201,7 @@ i4 *length)
     i4                  realLen = 0;
     char                buffer[DB_GW4_MAXSTRING + DB_CNTSIZE];
 
-    // Get the total length of the incoming dv.
+    /* Get the total length of the incoming dv. */
     status = adu_size(adf_scb, dv_in, length);
     if (status != E_DB_OK)
     {
@@ -197,9 +209,11 @@ i4 *length)
             "adu_long_to_cstr: couldn't get incoming length."));
     }
 
-    // Allocate memory for the output string.
-    // +1 for the NULL delim which is not included
-    // in the length
+    /* 
+     * Allocate memory for the output string.
+     * +1 for the NULL delim which is not included
+     * in the length
+     */
     result = MEmalloc(*length + 1);
     if(result == NULL)
     {
@@ -207,10 +221,10 @@ i4 *length)
             "adu_long_to_cstr: out of memory."));
     }
 
-    //Use a for loop to allow break outs on error.
+    /* Use a for loop to allow break outs on error. */
     for (;;)
     {
-        //Get some info on the incoming datatype.
+        /* Get some info on the incoming datatype. */
         status = adi_dtinfo(adf_scb, dv_in->db_datatype, &inbits);
         if (status)
             break;
@@ -229,13 +243,13 @@ i4 *length)
             if (status = adi_dtinfo(adf_scb, dv_in->db_datatype, &inbits))
                 break;
         }
-        //Get the underlying data type of the blob segments.
+        /* Get the underlying data type of the blob segments. */
         status = adi_per_under(adf_scb, dv_in->db_datatype, &under_dv);
         cpn_dv.db_datatype = dv_in->db_datatype;
         if (status)
             break;
 
-        //Setup the basics for the segments
+        /* Setup the basics for the segments */
         pop_cb.pop_length = sizeof(pop_cb);
         pop_cb.pop_type = ADP_POP_TYPE;
         pop_cb.pop_ascii_id = ADP_POP_ASCII_ID;
@@ -250,8 +264,10 @@ i4 *length)
         cpn_dv.db_data = (PTR) 0;
         pop_cb.pop_info = 0;
 
-        //Allocate a work area for the segments.  The internal maximum is fine
-        //here as each segement will be smaller than the max.
+        /*
+         * Allocate a work area for the segments.  The internal maximum is fine
+         * here as each segement will be smaller than the max.
+         */
         if (segspace == NULL)
         {
             segspace = (char *)MEreqmem(0, DB_GW4_MAXSTRING + DB_CNTSIZE,
@@ -259,7 +275,7 @@ i4 *length)
         }
         work.adf_agwork.db_data = segspace;
 
-        //More segment setup.
+        /* More segment setup. */
         p = (ADP_PERIPHERAL *) dv_in->db_data;
         cpn_dv.db_data = (PTR) p;
 
@@ -269,10 +285,10 @@ i4 *length)
         pop_cb.pop_segment->db_length = under_dv.db_length;
         pop_cb.pop_segment->db_prec = under_dv.db_prec;
 
-        //Start looping through the segments.
+        /* Start looping through the segments. */
         do
         {
-            //Get a segment from disk.
+            /* Get a segment from disk. */
             status = (*Adf_globs->Adi_fexi[ADI_01PERIPH_FEXI].adi_fcn_fexi)(
                                 ADP_GET, &pop_cb);
             if (status)
@@ -287,22 +303,27 @@ i4 *length)
             }
             pop_cb.pop_continuation &= ~ADP_C_BEGIN_MASK;
 
-            //Get the actual data out of the segment since some types include
-            //other information.
+            /*
+             * Get the actual data out of the segment since some types include
+             * other information.
+             */
             if (status = adu_3straddr(adf_scb, pop_cb.pop_segment, &temp))
                 break;
 
-            //Get the size of the actual data.
+            /* Get the size of the actual data. */
             if (status = adu_size(adf_scb, pop_cb.pop_segment, &tempLen))
                 break;
 
-            //Keep track of the size of the acutal data.
+            /* Keep track of the size of the acutal data. */
             realLen += tempLen;
 
-            //Concat each segment into one location
+            /* Concat each segment into one location */
             if((outputPos + tempLen) > *length)
             {
-                //Ensure the last segment doesn't go over the allocated size.
+                /*
+                 * Ensure the last segment doesn't go over the allocated
+                 * size.
+                 */
                 lastSegLen = *length - outputPos;
                 MEcopy((unsigned char*)temp, 
                        lastSegLen,
@@ -324,13 +345,13 @@ i4 *length)
         break;
     }
 
-    //Clean up the work area.
+    /* Clean up the work area. */
     if (segspace)
         MEfree((PTR)segspace);
 
-    //Set the output.
+    /* Set the output. */
     *length = realLen;
-    //NULL delimit the result:
+    /* NULL delimit the result: */
     result[realLen] = '\0';
     *output = result;
 
@@ -364,13 +385,15 @@ DB_DATA_VALUE *dv_out)
         return(adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 2, 0,
             "lvch fexi null"));
 
-    //Use a for loop to allow break outs on error.
+    /* Use a for loop to allow break outs on error. */
     for (;;)
     {
-        //Initialize this to null as it may be allocated later and this will
-        //ensure proper cleanup on break.
+        /* 
+         * Initialize this to null as it may be allocated later and this will
+         * ensure proper cleanup on break.
+         */
         segment_dv.db_data = NULL;
-        //Get some info on the incoming datatype.
+        /* Get some info on the incoming datatype. */
         status = adi_dtinfo(adf_scb, dv_in->db_datatype, &inbits);
         if (status)
             break;
@@ -388,12 +411,12 @@ DB_DATA_VALUE *dv_out)
             if (status = adi_dtinfo(adf_scb, dv_in->db_datatype, &inbits))
                 break;
         }
-        //Get some info on the outgoing datatype.
+        /* Get some info on the outgoing datatype. */
         status = adi_dtinfo(adf_scb, dv_out->db_datatype, &outbits);
         if (status)
             break;
 
-        //Get the underlying data type of the blob segments.
+        /* Get the underlying data type of the blob segments. */
         if (inbits & AD_PERIPHERAL)
         {
             status = adi_per_under(adf_scb, dv_in->db_datatype, &under_dv);
@@ -407,7 +430,7 @@ DB_DATA_VALUE *dv_out)
         if (status)
             break;
 
-        //Setup the basics for the segments
+        /* Setup the basics for the segments */
         pop_cb.pop_length = sizeof(pop_cb);
         pop_cb.pop_type = ADP_POP_TYPE;
         pop_cb.pop_ascii_id = ADP_POP_ASCII_ID;
@@ -423,8 +446,10 @@ DB_DATA_VALUE *dv_out)
         cpn_dv.db_data = (PTR) 0;
         pop_cb.pop_info = 0;
 
-        //Allocate a work area for the segments. Do not use the max size here as
-        //some geometries will be larger than the internal max.
+        /*
+         * Allocate a work area for the segments. Do not use the max size here
+         * as some geometries will be larger than the internal max.
+         */
         if (segspace == NULL)
         {
             segspace = (char *)MEreqmem(0, dv_in->db_length, FALSE, NULL);
@@ -435,7 +460,7 @@ DB_DATA_VALUE *dv_out)
         {
             /* not-long --> long */
 
-            //More segment setup.
+            /* More segment setup. */
             p = (ADP_PERIPHERAL *) dv_out->db_data;
             p->per_tag = ADP_P_COUPON;
             cpn_dv.db_data = dv_out->db_data;
@@ -446,8 +471,10 @@ DB_DATA_VALUE *dv_out)
             work.adf_agwork.db_datatype = under_dv.db_datatype;
             work.adf_agwork.db_prec = under_dv.db_prec;
 
-            //No coercion required here as all wkb streams are vbytes
-            //effectively.
+            /*
+             * No coercion required here as all wkb streams are vbytes
+             * effectively.
+             */
             MECOPY_VAR_MACRO((PTR) dv_in->db_data, (u_i4)dv_in->db_length,
                 (PTR) work.adf_agwork.db_data);
             work.adf_agwork.db_length = dv_in->db_length;
@@ -455,8 +482,10 @@ DB_DATA_VALUE *dv_out)
             dv_in = &work.adf_agwork;
 
             pop_cb.pop_continuation = ADP_C_BEGIN_MASK;
-            //Copy a piece into segment memory.  This is to ensure there are no
-            //missed or doubled up bytes.
+            /*
+             * Copy a piece into segment memory.  This is to ensure there are no
+             * missed or doubled up bytes.
+             */
             segment_dv.db_data = MEmalloc(under_dv.db_length);
             if(segment_dv.db_data == NULL)
                 break;
@@ -471,12 +500,14 @@ DB_DATA_VALUE *dv_out)
                        &segment_dv.db_data[DB_CNTSIZE]);
             }
             p->per_length0 = 0;
-            //Set the actual length of the data in the coupon information.
+            /* Set the actual length of the data in the coupon information. */
             p->per_length1 = dv_in->db_length;
-            //Initialize a counter so it can keep track of how much more data is
-            //to be segmented.
+            /* 
+             * Initialize a counter so it can keep track of how much more data
+             * is to be segmented.
+             */
             length = dv_in->db_length;
-            //Loop through each segment.
+            /* Loop through each segment. */
             do
             {
                 if (segment_dv.db_datatype == DB_NVCHR_TYPE)
@@ -484,13 +515,15 @@ DB_DATA_VALUE *dv_out)
                 else
                     bytes = length;
     
-                //If more data is left than can be held in the under lying data
-                //type, use the under type length.
+                /*
+                 * If more data is left than can be held in the under lying data
+                 * type, use the under type length.
+                 */
                 if ((bytes + 2) > under_dv.db_length)
                 {
-                    //Set the size of the segment.
+                    /* Set the size of the segment. */
                     segment_dv.db_length = under_dv.db_length;
-                    //Set the size of the actual data in the segment.
+                    /* Set the size of the actual data in the segment. */
                     if (segment_dv.db_datatype == DB_NVCHR_TYPE)
                         ((DB_TEXT_STRING *) segment_dv.db_data)->db_t_count =
                             (under_dv.db_length - 2) / sizeof(UCS2);
@@ -500,13 +533,15 @@ DB_DATA_VALUE *dv_out)
                 }
                 else
                 {
-                    //Last segment is smaller than underlying data type so use
-                    //its size.
+                    /*
+                     * Last segment is smaller than underlying data type so use
+                     * its size.
+                     */
                     segment_dv.db_length = bytes + 2;
                     ((DB_TEXT_STRING *) segment_dv.db_data)->db_t_count = bytes;
                     pop_cb.pop_continuation |= ADP_C_END_MASK;
                 }
-                //Write the segment to disk.
+                /* Write the segment to disk. */
                 status = (*Adf_globs->Adi_fexi[ADI_01PERIPH_FEXI].adi_fcn_fexi)
                             (ADP_PUT, &pop_cb);
                 pop_cb.pop_continuation &= ~ADP_C_BEGIN_MASK;
@@ -518,11 +553,11 @@ DB_DATA_VALUE *dv_out)
                 if (pop_cb.pop_continuation & ADP_C_END_MASK)
                     break;
 
-                //Subtract the length of the last segment from the total.
+                /* Subtract the length of the last segment from the total. */
                 done = ((DB_TEXT_STRING *) segment_dv.db_data)->db_t_count;
                 length = length - done;
 
-                //Copy the next bit of data into the segment memory.
+                /* Copy the next bit of data into the segment memory. */
                 if(length + 2 > under_dv.db_length)
                     MEcopy(&dv_in->db_data[dv_in->db_length - length], 
                            under_dv.db_length - DB_CNTSIZE,
@@ -544,7 +579,7 @@ DB_DATA_VALUE *dv_out)
         break;
     }
 
-    //Clean up allocated memory.
+    /* Clean up allocated memory. */
     if (segspace)
         MEfree((PTR)segspace);
     if (segment_dv.db_data)
@@ -553,7 +588,7 @@ DB_DATA_VALUE *dv_out)
     return(status);
 }
 
-//Convert a blob stream into a stored geometry structure.
+/* Convert a blob stream into a stored geometry structure. */
 DB_STATUS
 dataValueToStoredGeom(ADF_CB *adf_scb, DB_DATA_VALUE *dv_in, 
                       storedGeom_t *geomData, bool isWKB)
@@ -562,11 +597,17 @@ dataValueToStoredGeom(ADF_CB *adf_scb, DB_DATA_VALUE *dv_in,
     i4 geomDataSize;
     unsigned char *geoWKB = NULL;
 
-    //Set the combinedWKB holder to NULL to ensure it's not cleaned up later.
+    /*
+     * Set the combinedWKB holder to NULL to ensure it's not cleaned up 
+     * later.
+     */
     geomData->combinedWKB = NULL;
 
-    //Since blobs are not guaranteed to store the WKB stream in one concurrent
-    //variable convert from blob to char so that the WKB stream is all together.
+    /* 
+     * Since blobs are not guaranteed to store the WKB stream in one concurrent
+     * variable convert from blob to char so that the WKB stream is all 
+     * together.
+     */
     status = adu_long_to_cstr(adf_scb, dv_in, &geoWKB, &geomDataSize);
     if(status != E_DB_OK)
     {
@@ -576,8 +617,10 @@ dataValueToStoredGeom(ADF_CB *adf_scb, DB_DATA_VALUE *dv_in,
 
     if(!isWKB)
     {
-        //Break the stream up into the appropriate stucture.
-        //First the version so we know how to proceed
+        /* 
+         * Break the stream up into the appropriate stucture.
+         * First the version so we know how to proceed
+         */
         I2ASSIGN_MACRO(geoWKB[0], geomData->version);
 
         switch(geomData->version)
@@ -604,7 +647,7 @@ dataValueToStoredGeom(ADF_CB *adf_scb, DB_DATA_VALUE *dv_in,
         geomData->srid = -1;
         geomData->geomSize = geomDataSize;
     }
-    //Move the pointer past the two i4s and get the combined WKB stream.
+    /* Move the pointer past the two i4s and get the combined WKB stream. */
     geomData->combinedWKB = MEmalloc(geomData->envelopeSize + 
                                      geomData->geomSize);
     if(geomData->combinedWKB == NULL)
@@ -643,7 +686,7 @@ dataValueToStoredGeom(ADF_CB *adf_scb, DB_DATA_VALUE *dv_in,
         MEcopy(geoWKB, geomData->geomSize, geomData->combinedWKB);
     }
 
-    //Clean up the memory.
+    /* Clean up the memory. */
     if(geoWKB != NULL)
     {
         MEsysfree(geoWKB);
@@ -652,7 +695,7 @@ dataValueToStoredGeom(ADF_CB *adf_scb, DB_DATA_VALUE *dv_in,
     return status;
 }
 
-//Convert a stored geometry structure into a blob stream.
+/* Convert a stored geometry structure into a blob stream. */
 DB_STATUS
 storedGeomToDataValue(ADF_CB *adf_scb, storedGeom_t geomData,
                       DB_DATA_VALUE *dv_out)
@@ -662,7 +705,7 @@ storedGeomToDataValue(ADF_CB *adf_scb, storedGeom_t geomData,
     i4 geomDataSize, noEnvelope = 0;
     i4 srid;
 
-    //Set the db_data holder to NULL to ensure it's not cleaned up later.
+    /* Set the db_data holder to NULL to ensure it's not cleaned up later. */
     dv_wkb->db_data = NULL;
 
     geomDataSize = geomData.envelopeSize + geomData.geomSize;
@@ -670,8 +713,10 @@ storedGeomToDataValue(ADF_CB *adf_scb, storedGeom_t geomData,
     switch(geomData.version)
     {
     case SPATIAL_DATA_V1:
-        //The blob stream includes the sizes of the two WKB streams, three i4s
-        //and one i2.
+        /* 
+         * The blob stream includes the sizes of the two WKB streams, three i4s
+         * and one i2.
+         */
         dv_wkb->db_length = geomDataSize + (sizeof(i4) * 3 + sizeof(i2)) +
                             DB_CNTSIZE;
         break;
@@ -689,7 +734,7 @@ storedGeomToDataValue(ADF_CB *adf_scb, storedGeom_t geomData,
             "storedGeomToDataValue: out of memory."));
     }
 
-    //Copy all the data into one continuous stream.
+    /* Copy all the data into one continuous stream. */
     switch(geomData.version)
     {
     case SPATIAL_DATA_V1:
@@ -723,7 +768,8 @@ storedGeomToDataValue(ADF_CB *adf_scb, storedGeom_t geomData,
     return status;
 }
 
-//Convert a geos geometry into a stored geometry structure.
+#ifdef _WITH_GEO
+/* Convert a geos geometry into a stored geometry structure. */
 DB_STATUS
 geosToStoredGeom(ADF_CB *adf_scb, GEOSGeometry *geometry, 
                  GEOSContextHandle_t handle, storedGeom_t *geomData,
@@ -735,21 +781,29 @@ geosToStoredGeom(ADF_CB *adf_scb, GEOSGeometry *geometry,
     unsigned char *envelopeWKB = NULL, *geomWKB = NULL;
     i4 geomDataSize;
 
-    //Set the combinedWKB holder to NULL to ensure it's not cleaned up later.
+    /*
+     * Set the combinedWKB holder to NULL to ensure it's not cleaned up 
+     * later.
+     */
     geomData->combinedWKB = NULL;
 
-    //Set version to current
+    /* Set version to current */
     geomData->version = CURRENT_SPATIAL_DATA_V;
 
-    //Get the SRID
+    /* Get the SRID */
     geomData->srid = GEOSGetSRID_r(handle, geometry);
 
-    //Create a new WKB writer.
+    /* Create a new WKB writer. */
     wkbWriter = GEOSWKBWriter_create_r(handle);
 
-    //If the geometry is empty, the envelope would be an empty point
-    //and this can not be represented as a WKB, hence we disallow
-    //envelopes for these cases
+    /* Allow 3D */
+    GEOSWKBWriter_setOutputDimension_r( handle, wkbWriter, 3 );
+
+    /*
+     * If the geometry is empty, the envelope would be an empty point
+     * and this can not be represented as a WKB, hence we disallow
+     * envelopes for these cases
+     */
     if(GEOSisEmpty_r(handle, geometry))
     {
         includeEnvelope = FALSE;
@@ -757,7 +811,7 @@ geosToStoredGeom(ADF_CB *adf_scb, GEOSGeometry *geometry,
 
     if(includeEnvelope)
     {
-        //Calculate the bounding box (envelope) and convert it to WKB.
+        /* Calculate the bounding box (envelope) and convert it to WKB. */
         envelopeGeometry = GEOSEnvelope_r(handle, geometry);
         envelopeWKB = GEOSWKBWriter_write_r(handle, wkbWriter,
                                             envelopeGeometry,
@@ -770,7 +824,7 @@ geosToStoredGeom(ADF_CB *adf_scb, GEOSGeometry *geometry,
                 "geosToStoredGeom: Bad conversion from geom to WKB."));
         }
 
-        //Clean up the GEOS geometry no longer required.
+        /* Clean up the GEOS geometry no longer required. */
         GEOSGeom_destroy_r(handle, envelopeGeometry);
         envelopeGeometry = NULL;
     }
@@ -790,7 +844,7 @@ geosToStoredGeom(ADF_CB *adf_scb, GEOSGeometry *geometry,
     }
     else
     {
-        //Convert the geometry into WKB.
+        /* Convert the geometry into WKB. */
         geomWKB = GEOSWKBWriter_write_r(handle, wkbWriter, geometry,
                                         &geomData->geomSize);
         if(geomWKB == NULL)
@@ -829,12 +883,12 @@ geosToStoredGeom(ADF_CB *adf_scb, GEOSGeometry *geometry,
                 "geosToStoredGeom: Bad conversion from geom to WKB."));
         }
 
-        //Clean up the WKB writer.
+        /* Clean up the WKB writer. */
         GEOSWKBWriter_destroy_r(handle, wkbWriter);
 
         geomDataSize = geomData->envelopeSize + geomData->geomSize;
 
-        //Put both WKB streams into one continuous stream.
+        /* Put both WKB streams into one continuous stream. */
         geomData->combinedWKB = MEmalloc(geomDataSize);
         if(geomData->combinedWKB == NULL)
         {
@@ -860,7 +914,7 @@ geosToStoredGeom(ADF_CB *adf_scb, GEOSGeometry *geometry,
                &geomData->combinedWKB[geomData->envelopeSize]);
     }
 
-    //Clean up the separate streams.
+    /* Clean up the separate streams. */
     if(envelopeWKB != NULL)
     {
         MEsysfree(envelopeWKB);
@@ -887,7 +941,7 @@ storedGeomToGeos(ADF_CB *adf_scb, GEOSContextHandle_t handle,
 
     if( getEnv )
     {
-        //Only convert the envelope.
+        /* Only convert the envelope. */
         geomSize = geomData->envelopeSize;
         geomWKB = &geomData->combinedWKB[0];
     }
@@ -902,14 +956,7 @@ storedGeomToGeos(ADF_CB *adf_scb, GEOSContextHandle_t handle,
      */
     if(geomData->geomSize == 0)
     {
-/*        GEOSWKTReader *wktReader;
-
-        wktReader = GEOSWKTReader_create_r(handle);*/
-
-        *geometry = GEOSGeom_createEmptyPoint_r(handle);//GEOSWKTReader_read_r(handle, wktReader, "POINT EMPTY");
-
-        //GEOSWKTReader_destroy_r(handle, wktReader);
-
+        *geometry = GEOSGeom_createEmptyPoint_r(handle);
         if(*geometry == NULL)
         {
             return (adu_error(adf_scb, E_AD5600_GEOSPATIAL_USER, 2, 0,
@@ -918,13 +965,13 @@ storedGeomToGeos(ADF_CB *adf_scb, GEOSContextHandle_t handle,
     }
     else
     {
-        //create a WKB reader.
+        /* create a WKB reader. */
         wkbReader = GEOSWKBReader_create_r(handle);
 
-        //Create a GEOS geometry structure from the geometry WKB.
+        /* Create a GEOS geometry structure from the geometry WKB. */
         *geometry = GEOSWKBReader_read_r(handle, wkbReader, geomWKB, geomSize);
 
-        //Clean up the allocated memory that we're done with now.
+        /* Clean up the allocated memory that we're done with now. */
         GEOSWKBReader_destroy_r(handle, wkbReader);
 
         if(*geometry == NULL)
@@ -934,7 +981,7 @@ storedGeomToGeos(ADF_CB *adf_scb, GEOSContextHandle_t handle,
         }
     }
 
-    //Set the SRID
+    /* Set the SRID */
     GEOSSetSRID_r(handle, *geometry, geomData->srid);
 
     return E_DB_OK;
@@ -947,8 +994,10 @@ adu_nbrToGeos(ADF_CB *adf_scb, GEOSContextHandle_t handle, geomNBR_t *nbr,
     GEOSCoordSequence *coordSeq;
     GEOSGeometry *linegeo = NULL;
 
-    //Create a coordinate sequence to hold the NBR data so we can calculate
-    //a centroid.
+    /* 
+     * Create a coordinate sequence to hold the NBR data so we can calculate
+     * a centroid.
+     */
     coordSeq = GEOSCoordSeq_create_r(handle, 2, 2);
     if(coordSeq == NULL)
     {
@@ -956,8 +1005,10 @@ adu_nbrToGeos(ADF_CB *adf_scb, GEOSContextHandle_t handle, geomNBR_t *nbr,
             "adu_geom_nbrToGeos: Cannot create coordinate sequence."));
     }
 
-    //Add the NBR data to the coord seq and create a line string from the
-    //data.
+    /* 
+     * Add the NBR data to the coord seq and create a line string from the
+     * data.
+     */
     GEOSCoordSeq_setX_r(handle, coordSeq, 0, nbr->x_low);
     GEOSCoordSeq_setY_r(handle, coordSeq, 0, nbr->y_low);
     GEOSCoordSeq_setX_r(handle, coordSeq, 1, nbr->x_hi);
@@ -1075,11 +1126,11 @@ bool includeEnvelope)
             MEsysfree(geomData.combinedWKB);
             geomData.combinedWKB = NULL;
         }
-        //Error code/message handled in geosToStoredGeom
+        /* Error code/message handled in geosToStoredGeom */
         return status;
     }
 
-    //calculate combined length of stored geometry
+    /* calculate combined length of stored geometry */
     if(combinedLength != NULL)
     {
         *combinedLength = geomData.envelopeSize + geomData.geomSize;
@@ -1093,7 +1144,7 @@ bool includeEnvelope)
             MEsysfree(geomData.combinedWKB);
             geomData.combinedWKB = NULL;
         }
-        //Error code/message handled in storedGeomToDataValue
+        /* Error code/message handled in storedGeomToDataValue */
         return status;
     }
 
@@ -1105,9 +1156,12 @@ bool includeEnvelope)
 
     return E_DB_OK;
 }
+#endif
 
-//Convert the envelope included in the streamed geom data into an NBR used for
-//rtree indexing.
+/*
+ * Convert the envelope included in the streamed geom data into an NBR used for
+ * rtree indexing.
+ */
 DB_STATUS
 adu_geom_nbr(
 ADF_CB          *adf_scb,
@@ -1115,6 +1169,9 @@ DB_DATA_VALUE   *dv1_in,
 DB_DATA_VALUE   *dv2_in,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     storedGeom_t geomData;
     GEOSContextHandle_t handle;
@@ -1136,17 +1193,19 @@ DB_DATA_VALUE   *dv_out)
         return E_DB_OK;
     }
 
-    //If an NBR is coming in, then there's no work to be done.  This can happen
-    //during index creation.  After the initial call using the GEOM data this
-    //function is called again when writing the index table.  The second call
-    //uses the NBR returned from the first call.
+    /* 
+     * If an NBR is coming in, then there's no work to be done.  This can happen
+     * during index creation.  After the initial call using the GEOM data this
+     * function is called again when writing the index table.  The second call
+     * uses the NBR returned from the first call.
+     */
     if (dv1_in->db_datatype == DB_NBR_TYPE)
     {
         dv_out = dv1_in;
     }
     else
     {
-        //Convert the streamed data into a more usable structure.
+        /* Convert the streamed data into a more usable structure. */
         status = dataValueToStoredGeom(adf_scb, dv1_in, &geomData, FALSE);
         if(status != E_DB_OK)
         {
@@ -1163,17 +1222,17 @@ DB_DATA_VALUE   *dv_out)
             ADF_SETNULL_MACRO(dv_out);
             return E_DB_OK;
         }
-        //Initialize geos
+        /* Initialize geos */
         handle = initGEOS_r(geos_Notice, geos_Error);
 
-        //create a WKB reader.
+        /* create a WKB reader. */
         wkbReader = GEOSWKBReader_create_r(handle);
 
-        //Create a GEOS geometry structure from the geometry WKB.
+        /* Create a GEOS geometry structure from the geometry WKB. */
         geometry = GEOSWKBReader_read_r(handle, wkbReader, 
                                         geomData.combinedWKB,
                                         geomData.envelopeSize);
-        //Done with the reader and geometry structure, clean up.
+        /* Done with the reader and geometry structure, clean up. */
         GEOSWKBReader_destroy_r(handle, wkbReader);
         if(geomData.combinedWKB != NULL)
         {
@@ -1190,8 +1249,10 @@ DB_DATA_VALUE   *dv_out)
         geoType = GEOSGeomTypeId_r(handle, geometry);
         if(geoType == GEOS_POLYGON)
         {
-            //Turn the envelope polygon into a ring type so we can extract the
-            //coordinate sequence.
+            /* 
+             * Turn the envelope polygon into a ring type so we can extract the
+             * coordinate sequence.
+             */
             ring = GEOSGetExteriorRing_r(handle, geometry);
             if(ring == NULL)
             {
@@ -1201,11 +1262,11 @@ DB_DATA_VALUE   *dv_out)
                     "adu_geom_nbr: Failed to extract ring."));
             }
         }
-        //It's an evelope of a point so make the ring equal to the geometry.
+        /* It's an evelope of a point so make the ring equal to the geometry. */
         else
             ring = geometry;
 
-        //Get the coord seq so we can extract the x and y values.
+        /* Get the coord seq so we can extract the x and y values. */
         coordSeq = GEOSGeom_getCoordSeq_r(handle, ring);
         if(coordSeq == NULL)
         {
@@ -1215,8 +1276,10 @@ DB_DATA_VALUE   *dv_out)
                     "adu_geom_nbr: Failed to extract coord seq."));
         }
 
-        //Get the first and third points for the min x,y and max x,y of an
-        //NBR.  Convert the doubles to integers as NBR is int based.
+        /* 
+         * Get the first and third points for the min x,y and max x,y of an
+         * NBR.  Convert the doubles to integers as NBR is int based.
+         */
         GEOSCoordSeq_getX_r(handle, coordSeq, 0, &x_low);
         GEOSCoordSeq_getY_r(handle, coordSeq, 0, &y_low);
         nbr.x_low = x_low;
@@ -1231,14 +1294,18 @@ DB_DATA_VALUE   *dv_out)
         }
         else
         {
-            //An envelope of a point will only be a point.  Make the nbr hi
-            //equal to the lows.
+            /* 
+             * An envelope of a point will only be a point.  Make the nbr hi
+             * equal to the lows.
+             */
             nbr.x_hi = x_low;
             nbr.y_hi = y_low;
         }
-        /* Simple round up.  Since the nbr is stored in integers, any decimals
+        /* 
+         * Simple round up.  Since the nbr is stored in integers, any decimals
          * should be rounded up to include them in the nbr. e.g. 2.12 becomes
-         * 3.  But 2.00 stays 2. */
+         * 3.  But 2.00 stays 2.
+         */
         if(x_low > nbr.x_low) nbr.x_low += 1;
         if(y_low > nbr.y_low) nbr.y_low += 1;
         if(x_hi > nbr.x_hi) nbr.x_hi += 1;
@@ -1247,20 +1314,21 @@ DB_DATA_VALUE   *dv_out)
         dv_out->db_length = sizeof(geomNBR_t);
         MEcopy((unsigned char*)&nbr, dv_out->db_length, dv_out->db_data);
 
-        //Clean up all the geos items hanging around.
+        /* Clean up all the geos items hanging around. */
         GEOSGeom_destroy_r(handle, geometry); 
         finishGEOS_r(handle);
     }
 
     return status;
+#endif
 }
 
-/**
+/*
  * Interleave the bits from two input integer values
  * @param odd integer holding bit values for odd bit positions
  * @param even integer holding bit values for even bit positions
  * @return the integer that results from interleaving the input bits
-*/ 
+ */ 
 int interleaveBits(int odd, int even)
 {
     int val = 0;
@@ -1285,7 +1353,7 @@ int interleaveBits(int odd, int even)
     return val;
 }
 
-/**
+/*
  * Find the Hilbert order (=vertex index) for the given grid cell 
  * coordinates.
  * @param x cell column (from 0)
@@ -1293,7 +1361,7 @@ int interleaveBits(int odd, int even)
  * @param r resolution of Hilbert curve (grid will have Math.pow(2,r) 
  * rows and cols)
  * @return Hilbert order 
-*/ 
+ */ 
 int encode(int x, int y)
 {
     int r = 24;
@@ -1316,13 +1384,16 @@ int encode(int x, int y)
     return interleaveBits(hodd, heven);
 }
 
-//Calculate a hilbert value based on an NBR.
+/* Calculate a hilbert value based on an NBR. */
 DB_STATUS
 adu_geom_hilbert(
 ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSContextHandle_t handle;
     GEOSGeometry *tempLine = NULL, *geometry = NULL, *centroid = NULL;
@@ -1339,9 +1410,9 @@ DB_DATA_VALUE   *dv_out)
         return E_DB_OK;
     }
 
-    //Cast the data into the known NBR structure.
+    /* Cast the data into the known NBR structure. */
     nbr = (geomNBR_t *)dv_in->db_data;
-    //Initialize GEOS
+    /* Initialize GEOS */
     handle = initGEOS_r(geos_Notice, geos_Error);
 
     status = adu_nbrToGeos(adf_scb, handle, nbr, &geometry);
@@ -1352,28 +1423,34 @@ DB_DATA_VALUE   *dv_out)
         "adu_geom_hilbert: Failed to convert nbr to geos geometry."));
     }    
 
-    //Calculate the centroid.  This works from a line since we're always
-    //working with rectangles in 2D.
+    /* 
+     * Calculate the centroid.  This works from a line since we're always
+     * working with rectangles in 2D.
+     */
     centroid = GEOSGetCentroid_r(handle, geometry);
 
-    //Get the x and y values of the centroid to calculate hilbert value.
+    /* Get the x and y values of the centroid to calculate hilbert value. */
     GEOSGeomGetX_r(handle, centroid, &x);
     GEOSGeomGetY_r(handle, centroid, &y);
 
-    //A hilbert value is a calculation of where a given point would 'fit' on
-    //a space filling hilbert curve.  The curve should be of a sufficient order
-    //to fit in enough granularity.
+    /* 
+     * A hilbert value is a calculation of where a given point would 'fit' on
+     * a space filling hilbert curve.  The curve should be of a sufficient order
+     * to fit in enough granularity.
+     */
     hilbertVal = encode(x, y);
     MEcopy((unsigned char*)&hilbertVal, sizeof(i8), dv_out->db_data);
 
-    //Clean up the geos items.
+    /* Clean up the geos items. */
     GEOSGeom_destroy_r(handle, geometry);
     GEOSGeom_destroy_r(handle, centroid);
     finishGEOS_r(handle);
 
     return status;
+#endif
 }
 
+#ifdef _WITH_GEO
 DB_STATUS
 geomToGeomComparison(
 ADF_CB           *adf_scb,
@@ -1449,7 +1526,6 @@ GEOSGeometry * (*GEOSFunction) (GEOSContextHandle_t, const GEOSGeometry *,
     DB_STATUS status = E_DB_OK;
     GEOSContextHandle_t handle;
     GEOSGeometry *g1 = NULL, *g2 = NULL, *gr = NULL;
-    GEOSWKTWriter *wktWriter;
 
     /*
      * If either input is NULL, return NULL
@@ -1508,80 +1584,126 @@ GEOSGeometry * (*GEOSFunction) (GEOSContextHandle_t, const GEOSGeometry *,
     finishGEOS_r(handle);
     return status;
 }
+#endif
 
-//Specify a point is expected from the input WKB.
+/* Specify a point is expected from the input WKB. */
 DB_STATUS
 adu_point_fromWKB(
 ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromWKB(adf_scb, dv_in, NULL, dv_out, GEOS_POINT);
+#endif
 }
 
-//Specify a linestring is expected from the input WKB.
+/* Specify a linestring is expected from the input WKB. */
 DB_STATUS
 adu_linestring_fromWKB(
 ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromWKB(adf_scb, dv_in, NULL, dv_out, GEOS_LINESTRING);
+#endif
 }
 
-//Specify a polygon is expected from the input WKB.
+/* Specify a polygon is expected from the input WKB. */
 DB_STATUS
 adu_polygon_fromWKB(
 ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromWKB(adf_scb, dv_in, NULL, dv_out, GEOS_POLYGON);
+#endif
 }
 
-//Specify a multipoint is expected from the input WKB.
+/* Specify a multipoint is expected from the input WKB. */
 DB_STATUS
 adu_multipoint_fromWKB(
 ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromWKB(adf_scb, dv_in, NULL, dv_out, GEOS_MULTIPOINT);
+#endif
 }
 
-//Specify a multilinestring is expected from the input WKB.
+/* Specify a multilinestring is expected from the input WKB.*/
 DB_STATUS
 adu_multilinestring_fromWKB(
 ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromWKB(adf_scb, dv_in, NULL, dv_out, GEOS_MULTILINESTRING);
+#endif
 }
 
-//Specify a multipoygon is expected from the input WKB.
+/* Specify a multipoygon is expected from the input WKB. */
 DB_STATUS
 adu_multipolygon_fromWKB(
 ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromWKB(adf_scb, dv_in, NULL, dv_out, GEOS_MULTIPOLYGON);
+#endif
 }
 
-//Specify a geometry collection is expected from the input WKB.
+/* Specify a geometry collection is expected from the input WKB. */
+DB_STATUS
+adu_geometrycollection_fromWKB(
+ADF_CB          *adf_scb,
+DB_DATA_VALUE   *dv_in,
+DB_DATA_VALUE   *dv_out)
+{
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
+    return adu_geo_fromWKB(adf_scb, dv_in, NULL, dv_out,
+                           GEOS_GEOMETRYCOLLECTION);
+#endif
+}
+
+/* Specify a geometry is expected from the input WKB. */
 DB_STATUS
 adu_geometry_fromWKB(
 ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromWKB(adf_scb, dv_in, NULL, dv_out, 
-                           GEOS_GEOMETRYCOLLECTION);
+    		GENERIC_GEOMETRY);
+#endif
 }
 
-//Specify a point is expected from the input WKB.
-//SRID specified
+/* 
+ * Specify a point is expected from the input WKB.
+ * SRID specified
+ */
 DB_STATUS
 adu_point_srid_fromWKB(
 ADF_CB          *adf_scb,
@@ -1589,11 +1711,17 @@ DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_srid,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromWKB(adf_scb, dv_in, dv_srid, dv_out, GEOS_POINT);
+#endif
 }
 
-//Specify a linestring is expected from the input WKB.
-//SRID specified
+/*
+ * Specify a linestring is expected from the input WKB.
+ * SRID specified
+ */
 DB_STATUS
 adu_linestring_srid_fromWKB(
 ADF_CB          *adf_scb,
@@ -1601,11 +1729,17 @@ DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_srid,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromWKB(adf_scb, dv_in, dv_srid, dv_out, GEOS_LINESTRING);
+#endif
 }
 
-//Specify a polygon is expected from the input WKB.
-//SRID specified
+/* 
+ * Specify a polygon is expected from the input WKB.
+ * SRID specified
+ */
 DB_STATUS
 adu_polygon_srid_fromWKB(
 ADF_CB          *adf_scb,
@@ -1613,11 +1747,17 @@ DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_srid,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromWKB(adf_scb, dv_in, dv_srid, dv_out, GEOS_POLYGON);
+#endif
 }
 
-//Specify a multipoint is expected from the input WKB.
-//SRID specified
+/*
+ * Specify a multipoint is expected from the input WKB.
+ * SRID specified
+ */
 DB_STATUS
 adu_multipoint_srid_fromWKB(
 ADF_CB          *adf_scb,
@@ -1625,11 +1765,17 @@ DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_srid,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromWKB(adf_scb, dv_in, dv_srid, dv_out, GEOS_MULTIPOINT);
+#endif
 }
 
-//Specify a multilinestring is expected from the input WKB.
-//SRID specified
+/* 
+ * Specify a multilinestring is expected from the input WKB.
+ * SRID specified
+ */
 DB_STATUS
 adu_multilinestring_srid_fromWKB(
 ADF_CB          *adf_scb,
@@ -1637,12 +1783,18 @@ DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_srid,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromWKB(adf_scb, dv_in, dv_srid, dv_out, 
                            GEOS_MULTILINESTRING);
+#endif
 }
 
-//Specify a multipoygon is expected from the input WKB.
-//SRID specified
+/* 
+ * Specify a multipoygon is expected from the input WKB.
+ * SRID specified
+ */
 DB_STATUS
 adu_multipolygon_srid_fromWKB(
 ADF_CB          *adf_scb,
@@ -1650,11 +1802,36 @@ DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_srid,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromWKB(adf_scb, dv_in, dv_srid, dv_out, GEOS_MULTIPOLYGON);
+#endif
 }
 
-//Specify a geometry collection is expected from the input WKB.
-//SRID specified
+/* 
+ * Specify a geometry collection is expected from the input WKB.
+ * SRID specified
+ */
+DB_STATUS
+adu_geometrycollection_srid_fromWKB(
+ADF_CB          *adf_scb,
+DB_DATA_VALUE   *dv_in,
+DB_DATA_VALUE   *dv_srid,
+DB_DATA_VALUE   *dv_out)
+{
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
+    return adu_geo_fromWKB(adf_scb, dv_in, dv_srid, dv_out,
+                           GEOS_GEOMETRYCOLLECTION);
+#endif
+}
+
+/* 
+ * Specify a geometry is expected from the input WKB.
+ * SRID specified
+ */
 DB_STATUS
 adu_geometry_srid_fromWKB(
 ADF_CB          *adf_scb,
@@ -1662,12 +1839,19 @@ DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_srid,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromWKB(adf_scb, dv_in, dv_srid, dv_out, 
-                           GEOS_GEOMETRYCOLLECTION);
+    		GENERIC_GEOMETRY);
+#endif
 }
 
-//Accept a geometry specified with WKB as input.  Compute a bounding box
-//(envelope) and convert it to WKB.  Stream both WKB into storage.
+#ifdef _WITH_GEO
+/*
+ * Accept a geometry specified with WKB as input.  Compute a bounding box
+ * (envelope) and convert it to WKB.  Stream both WKB into storage.
+ */
 DB_STATUS
 adu_geo_fromWKB(
 ADF_CB          *adf_scb,
@@ -1693,9 +1877,9 @@ i4 expectedGeoType)
         return E_DB_OK;
     }
 
-    //Initialize GEOS
+    /* Initialize GEOS */
     handle = initGEOS_r( geos_Notice, geos_Error );
-    //Convert the input WKB into a geos geometry.
+    /* Convert the input WKB into a geos geometry. */
     status = dataValueToGeos(adf_scb, dv_in, handle, &geometry, TRUE);
     if(status != E_DB_OK)
     {
@@ -1704,10 +1888,12 @@ i4 expectedGeoType)
             "adu_geo_fromWKB: Could not convert input into geos geometry."));
     }
 
-    //Check if we processed the expected geometry type.  If we're expecting
-    //a geometry collection then all types are valid.
+    /* 
+     * Check if we processed the expected geometry type.  If we're expecting
+     * a geometry collection then all types are valid.
+     */
     processedGeoType = GEOSGeomTypeId_r(handle, geometry);
-    if(expectedGeoType != GEOS_GEOMETRYCOLLECTION &&
+    if(expectedGeoType != GENERIC_GEOMETRY &&
        expectedGeoType != processedGeoType)
     {
         GEOSGeom_destroy_r(handle, geometry);
@@ -1716,7 +1902,7 @@ i4 expectedGeoType)
             "adu_geo_fromWKB: Wrong geometry type result."));
     }
 
-    //Two argument version called
+    /* Two argument version called */
     if(dv_srid != NULL)
     {
         switch(dv_srid->db_length)
@@ -1745,8 +1931,10 @@ i4 expectedGeoType)
 
     GEOSSetSRID_r(handle, geometry, srid);
 
-    //Convert the geos geometry into our GEOM structure and stream it into
-    //the return data value.
+    /* 
+     * Convert the geos geometry into our GEOM structure and stream it into
+     * the return data value.
+     */
     status = geosToDataValue(adf_scb, geometry, handle, dv_out, &combLen,
                               TRUE);
     if(status != E_DB_OK)
@@ -1757,86 +1945,132 @@ i4 expectedGeoType)
             "adu_geo_fromWKB: Failed to convert geos to datavalue."));
     }
 
-    //Clean up the geometry and finalize GEOS.
+    /* Clean up the geometry and finalize GEOS. */
     GEOSGeom_destroy_r(handle, geometry);
     finishGEOS_r(handle);
 
     return status;
 }
+#endif
 
-//Specify a point is expected from the input WKT.
+/* Specify a point is expected from the input WKT. */
 DB_STATUS
 adu_point_fromText(
 ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromText(adf_scb, dv_in, NULL, dv_out, GEOS_POINT);
+#endif
 }
 
-//Specify a linestring is expected from the input WKT.
+/* Specify a linestring is expected from the input WKT. */
 DB_STATUS
 adu_linestring_fromText(
 ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromText(adf_scb, dv_in, NULL, dv_out, GEOS_LINESTRING);
+#endif
 }
 
-//Specify a polygon is expected from the input WKT.
+/* Specify a polygon is expected from the input WKT. */
 DB_STATUS
 adu_polygon_fromText(
 ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromText(adf_scb, dv_in, NULL, dv_out, GEOS_POLYGON);
+#endif
 }
 
-//Specify a multipoint is expected from the input WKT.
+/* Specify a multipoint is expected from the input WKT. */
 DB_STATUS
 adu_multipoint_fromText(
 ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromText(adf_scb, dv_in, NULL, dv_out, GEOS_MULTIPOINT);
+#endif
 }
 
-//Specify a multilinestring is expected from the input WKT.
+/* Specify a multilinestring is expected from the input WKT. */
 DB_STATUS
 adu_multilinestring_fromText(
 ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromText(adf_scb, dv_in, NULL, dv_out, GEOS_MULTILINESTRING);
+#endif
 }
 
-//Specify a multipolygon is expected from the input WKT.
+/* Specify a multipolygon is expected from the input WKT. */
 DB_STATUS
 adu_multipolygon_fromText(
 ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromText(adf_scb, dv_in, NULL, dv_out, GEOS_MULTIPOLYGON);
+#endif
 }
 
-//Specify a geometry collection is expected from the input WKT.
+/* Specify a geometry collection is expected from the input WKT. */
+DB_STATUS
+adu_geometrycollection_fromText(
+ADF_CB          *adf_scb,
+DB_DATA_VALUE   *dv_in,
+DB_DATA_VALUE   *dv_out)
+{
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
+    return adu_geo_fromText(adf_scb, dv_in, NULL, dv_out,
+                            GEOS_GEOMETRYCOLLECTION);
+#endif
+}
+
+/* Specify a geometry is expected from the input WKT. */
 DB_STATUS
 adu_geometry_fromText(
 ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromText(adf_scb, dv_in, NULL, dv_out, 
-                            GEOS_GEOMETRYCOLLECTION);
+    		GENERIC_GEOMETRY);
+#endif
 }
 
-//Specify a point is expected from the input WKT.
-//Speficies SRID
+/* 
+ * Specify a point is expected from the input WKT.
+ * Speficies SRID
+ */
 DB_STATUS
 adu_point_srid_fromText(
 ADF_CB          *adf_scb,
@@ -1844,11 +2078,17 @@ DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_srid,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromText(adf_scb, dv_in, dv_srid, dv_out, GEOS_POINT);
+#endif
 }
 
-//Specify a linestring is expected from the input WKT.
-//Speficies SRID
+/*
+ * Specify a linestring is expected from the input WKT.
+ * Speficies SRID
+ */
 DB_STATUS
 adu_linestring_srid_fromText(
 ADF_CB          *adf_scb,
@@ -1856,11 +2096,17 @@ DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_srid,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromText(adf_scb, dv_in, dv_srid, dv_out, GEOS_LINESTRING);
+#endif
 }
 
-//Specify a polygon is expected from the input WKT.
-//Speficies SRID
+/*
+ * Specify a polygon is expected from the input WKT.
+ * Speficies SRID
+ */
 DB_STATUS
 adu_polygon_srid_fromText(
 ADF_CB          *adf_scb,
@@ -1868,11 +2114,17 @@ DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_srid,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromText(adf_scb, dv_in, dv_srid, dv_out, GEOS_POLYGON);
+#endif
 }
 
-//Specify a multipoint is expected from the input WKT.
-//Speficies SRID
+/*
+ * Specify a multipoint is expected from the input WKT.
+ * Speficies SRID
+ */
 DB_STATUS
 adu_multipoint_srid_fromText(
 ADF_CB          *adf_scb,
@@ -1880,11 +2132,17 @@ DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_srid,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromText(adf_scb, dv_in, dv_srid, dv_out, GEOS_MULTIPOINT);
+#endif
 }
 
-//Specify a multilinestring is expected from the input WKT.
-//Speficies SRID
+/*
+ * Specify a multilinestring is expected from the input WKT.
+ * Speficies SRID
+ */
 DB_STATUS
 adu_multilinestring_srid_fromText(
 ADF_CB          *adf_scb,
@@ -1892,12 +2150,18 @@ DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_srid,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromText(adf_scb, dv_in, dv_srid, dv_out, 
                             GEOS_MULTILINESTRING);
+#endif
 }
 
-//Specify a multipolygon is expected from the input WKT.
-//Speficies SRID
+/*
+ * Specify a multipolygon is expected from the input WKT.
+ * Speficies SRID
+ */
 DB_STATUS
 adu_multipolygon_srid_fromText(
 ADF_CB          *adf_scb,
@@ -1905,12 +2169,37 @@ DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_srid,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromText(adf_scb, dv_in, dv_srid, dv_out,
                             GEOS_MULTIPOLYGON);
+#endif
 }
 
-//Specify a geometry collection is expected from the input WKT.
-//Speficies SRID
+/* 
+ * Specify a geometry collection is expected from the input WKT.
+ * Speficies SRID
+ */
+DB_STATUS
+adu_geometrycollection_srid_fromText(
+ADF_CB          *adf_scb,
+DB_DATA_VALUE   *dv_in,
+DB_DATA_VALUE   *dv_srid,
+DB_DATA_VALUE   *dv_out)
+{
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
+    return adu_geo_fromText(adf_scb, dv_in, dv_srid, dv_out,
+                            GEOS_GEOMETRYCOLLECTION);
+#endif
+}
+
+/* 
+ * Specify a geometry collection is expected from the input WKT.
+ * Speficies SRID
+ */
 DB_STATUS
 adu_geometry_srid_fromText(
 ADF_CB          *adf_scb,
@@ -1918,13 +2207,20 @@ DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_srid,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return adu_geo_fromText(adf_scb, dv_in, dv_srid, dv_out,
-                            GEOS_GEOMETRYCOLLECTION);
+    		GENERIC_GEOMETRY);
+#endif
 }
 
-//Accept a geometry specified with WKT as input.  Convert the geometry to WKB.
-//Compute a bounding box (envelope) and convert it to WKB.  Stream both WKB
-//into storage.
+#ifdef _WITH_GEO
+/*
+ * Accept a geometry specified with WKT as input.  Convert the geometry to WKB.
+ * Compute a bounding box (envelope) and convert it to WKB.  Stream both WKB
+ * into storage.
+ */
 DB_STATUS
 adu_geo_fromText(
 ADF_CB          *adf_scb,
@@ -1950,7 +2246,7 @@ i4 expectedGeoType)
         return E_DB_OK;
     }
 
-    //Convert the incoming data to a unsigned char
+    /* Convert the incoming data to a unsigned char */
     status = adu_long_to_cstr(adf_scb, dv_in, &c_ptr, &len);
     if(status != E_DB_OK)
     {
@@ -1958,10 +2254,10 @@ i4 expectedGeoType)
                     "geo_fromText: Bad copy from lvch to char."));
     }
 
-    //Initialize GEOS and create a new WKT reader.
+    /* Initialize GEOS and create a new WKT reader. */
     handle = initGEOS_r( geos_Notice, geos_Error );
     wktReader = GEOSWKTReader_create_r(handle);
-    //Convert the WKT into a GEOS geometry.
+    /* Convert the WKT into a GEOS geometry. */
     geometry = GEOSWKTReader_read_r(handle, wktReader, c_ptr);
     if(geometry == NULL)
     {
@@ -1970,13 +2266,15 @@ i4 expectedGeoType)
         return (adu_error(adf_scb, E_AD5600_GEOSPATIAL_USER, 2, 0,
             "adu_geo_fromText: Bad conversion from WKT into geom"));
     }
-    //Clean up the WKT reader.
+    /* Clean up the WKT reader. */
     GEOSWKTReader_destroy_r(handle, wktReader);
 
-    //Check if the processed WKT resulted in the type that was expected.  If
-    //a geometry collection is expected then all types are valid.
+    /*
+     * Check if the processed WKT resulted in the type that was expected.  If
+     * a geometry is expected then all types are valid.
+     */
     processedGeoType = GEOSGeomTypeId_r(handle, geometry);
-    if(expectedGeoType != GEOS_GEOMETRYCOLLECTION &&
+    if(expectedGeoType != GENERIC_GEOMETRY &&
        expectedGeoType != processedGeoType)
     {
         GEOSGeom_destroy_r(handle, geometry);
@@ -1985,7 +2283,7 @@ i4 expectedGeoType)
             "adu_geo_fromText: Wrong geometry type result."));
     }
 
-    //Two argument version called
+    /* Two argument version called */
     if(dv_srid != NULL)
     {
         switch(dv_srid->db_length)
@@ -2014,32 +2312,40 @@ i4 expectedGeoType)
 
     GEOSSetSRID_r(handle, geometry, srid);
 
-    //Convert the geos geometry into our GEOM structure and stream it into
-    //the return data value.
+    /* 
+     * Convert the geos geometry into our GEOM structure and stream it into
+     * the return data value.
+     */
     status = geosToDataValue(adf_scb, geometry, handle, dv_out, &combLen,
                               TRUE);
     if(status != E_DB_OK)
     {
         GEOSGeom_destroy_r(handle, geometry);
         finishGEOS_r(handle);
-        //Error code/message set iin geosToDataValue
+        /* Error code/message set iin geosToDataValue */
         return status;
     }
 
-    //Clean up the geometry and finalize GEOS.
+    /* Clean up the geometry and finalize GEOS. */
     GEOSGeom_destroy_r(handle, geometry);
     finishGEOS_r(handle);
     return status;
 }
+#endif
 
-//This function takes the stored data, splits out the geometry from the stream
-//and returns it.
+/* 
+ * This function takes the stored data, splits out the geometry from the stream
+ * and returns it.
+ */
 DB_STATUS
 adu_geom_asBinary(
 ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     i4 geomDataSize;
     DB_DATA_VALUE dv_txt, dv_wkb;
@@ -2052,7 +2358,7 @@ DB_DATA_VALUE   *dv_out)
         return E_DB_OK;
     }
 
-    //De-stream the data value into a stored geometry stucture.
+    /* De-stream the data value into a stored geometry stucture. */
     status = dataValueToStoredGeom(adf_scb, dv_in, &geomData, FALSE);
     if(status != E_DB_OK)
     {
@@ -2065,8 +2371,10 @@ DB_DATA_VALUE   *dv_out)
             "asBinary: Failed to convert datavalue to geom data."));
     }
 
-    //Create space for the geometry WKB and copy out just the geometry WKB by
-    //starting the pointer at the size of the envelope WKB.
+    /* 
+     * Create space for the geometry WKB and copy out just the geometry WKB by
+     * starting the pointer at the size of the envelope WKB.
+     */
     dv_wkb.db_data = MEmalloc(geomData.geomSize);
     if(dv_wkb.db_data == NULL)
     {
@@ -2081,18 +2389,18 @@ DB_DATA_VALUE   *dv_out)
     MEcopy(&geomData.combinedWKB[geomData.envelopeSize], geomData.geomSize, 
            dv_wkb.db_data);
 
-    //Clean up the memory no longer required.
+    /* Clean up the memory no longer required. */
     if(geomData.combinedWKB != NULL)
     {
         MEsysfree(geomData.combinedWKB);
         geomData.combinedWKB = NULL;
     }
 
-    //Fill out the rest of the data structure.
+    /* Fill out the rest of the data structure. */
     dv_wkb.db_length = geomData.geomSize;
     dv_wkb.db_datatype = DB_VBYTE_TYPE;
 
-    //Convert back to blob in case the data is too large.
+    /* Convert back to blob in case the data is too large. */
     status = adu_wkbDV_to_long( adf_scb, &dv_wkb, dv_out );
     if (status != E_DB_OK)
     {
@@ -2105,7 +2413,7 @@ DB_DATA_VALUE   *dv_out)
             "asBinary: Failed to convert WKB to long data value."));
     }
 
-    //Clean up the data structure and finalize GEOS.
+    /* Clean up the data structure and finalize GEOS. */
     if(dv_wkb.db_data != NULL)
     {
         MEsysfree(dv_wkb.db_data);
@@ -2113,6 +2421,7 @@ DB_DATA_VALUE   *dv_out)
     }
 
     return status;
+#endif
 }
 
 DB_STATUS geom_to_text(
@@ -2122,6 +2431,9 @@ DB_DATA_VALUE   *dv_out,
 i4 trim,
 i4 precision)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     DB_DATA_VALUE dv_wkt;
     GEOSContextHandle_t handle;
@@ -2134,7 +2446,7 @@ i4 precision)
         return E_DB_OK;
     }
 
-    //Initialize geos and convert the input data into a geos geometry
+    /* Initialize geos and convert the input data into a geos geometry */
     handle = initGEOS_r( geos_Notice, geos_Error );
     status = dataValueToGeos(adf_scb, dv_in, handle, &geometry, FALSE);
     if(status != E_DB_OK)
@@ -2144,12 +2456,13 @@ i4 precision)
                 "adu_geo_asTest: Bad conversion data value to GEOS"));
     }
 
-    //Create a WKT writer and convert the GEOS geometry to WKT.
+    /* Create a WKT writer and convert the GEOS geometry to WKT. */
     wktWriter = GEOSWKTWriter_create_r(handle);
     GEOSWKTWriter_setTrim_r(handle, wktWriter, trim);
     GEOSWKTWriter_setRoundingPrecision_r(handle, wktWriter, precision);
+    GEOSWKTWriter_setOutputDimension_r(handle, wktWriter, 3 ); /* allow 3D */
     dv_wkt.db_data = GEOSWKTWriter_write_r(handle, wktWriter, geometry);
-    //Clean up the WKT writer and the GEOS geometry.
+    /* Clean up the WKT writer and the GEOS geometry. */
     GEOSWKTWriter_destroy_r(handle, wktWriter);
     GEOSGeom_destroy_r(handle, geometry);
     if( dv_wkt.db_data == NULL)
@@ -2159,13 +2472,13 @@ i4 precision)
             "adu_geo_asText: Bad conversion from geom to WKT"));
     }
 
-    //Fill out the rest of the data structure.
+    /* Fill out the rest of the data structure. */
     dv_wkt.db_length = STlen(dv_wkt.db_data);
     dv_wkt.db_datatype = DB_VBYTE_TYPE;
 
-    //Convert back to blob in case the data is too large.
+    /* Convert back to blob in case the data is too large. */
     status = adu_wkbDV_to_long( adf_scb, &dv_wkt, dv_out );
-    //Clean up the non long wkt db_data
+    /* Clean up the non long wkt db_data */
     if(dv_wkt.db_data != NULL)
     {
         MEsysfree(dv_wkt.db_data);
@@ -2177,20 +2490,27 @@ i4 precision)
             "asText: Failed to convert WKT to long data value."));
     }
 
-    //Clean up GEOS.
+    /* Clean up GEOS. */
     finishGEOS_r(handle);
     return status;
+#endif
 }
 
-//This function takes the stored data, splits out the geometry from the stream
-//and converts it to WKT.
+/* 
+ * This function takes the stored data, splits out the geometry from the stream
+ * and converts it to WKT.
+ */
 DB_STATUS
 adu_geom_asText(
 ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return geom_to_text(adf_scb, dv_in, dv_out, TRUE, FULL_PRECISION);
+#endif
 }
 
 DB_STATUS
@@ -2199,7 +2519,11 @@ ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return geom_to_text(adf_scb, dv_in, dv_out, FALSE, FULL_PRECISION);
+#endif
 }
 
 DB_STATUS
@@ -2209,6 +2533,9 @@ DB_DATA_VALUE   *dv1,
 DB_DATA_VALUE   *dv2,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     i4 precision = 0;
 
     switch(dv2->db_length)
@@ -2231,6 +2558,7 @@ DB_DATA_VALUE   *dv_out)
     }
 
     return geom_to_text(adf_scb, dv1, dv_out, FALSE, precision);
+#endif
 }
 
 DB_STATUS
@@ -2239,6 +2567,9 @@ ADF_CB           *adf_scb,
 DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSContextHandle_t handle;
     GEOSGeometry *geometry = NULL;
@@ -2268,6 +2599,7 @@ DB_DATA_VALUE    *rdv)
     GEOSGeom_destroy_r(handle, geometry);
     finishGEOS_r(handle);
     return status;
+#endif
 }
 
 DB_STATUS
@@ -2276,6 +2608,9 @@ ADF_CB           *adf_scb,
 DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSContextHandle_t handle;
     GEOSGeometry *geometry = NULL;
@@ -2314,6 +2649,7 @@ DB_DATA_VALUE    *rdv)
     GEOSFree_r(handle, geomType);
     finishGEOS_r(handle);
     return status;
+#endif
 }
 
 /*
@@ -2326,6 +2662,9 @@ ADF_CB        *adf_scb,
 DB_DATA_VALUE *dv1,
 DB_DATA_VALUE *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSContextHandle_t handle;
     GEOSGeometry *geometry = NULL, *boundary = NULL;
@@ -2338,7 +2677,10 @@ DB_DATA_VALUE *rdv)
 
     handle = initGEOS_r( geos_Notice, geos_Error );
 
-    //We need to handle nullable data types, adu expects them to be non-nullable
+    /*
+     * We need to handle nullable data types, adu expects them to be
+     * non-nullable
+     */
     dv1->db_datatype = abs(dv1->db_datatype);
 
     status = dataValueToGeos(adf_scb, dv1, handle, &geometry, FALSE);
@@ -2394,6 +2736,7 @@ DB_DATA_VALUE *rdv)
     GEOSGeom_destroy_r(handle, boundary);
     finishGEOS_r(handle);
     return status;
+#endif
 }
 
 /*
@@ -2407,6 +2750,9 @@ ADF_CB           *adf_scb,
 DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     storedGeom_t geomData;
     GEOSContextHandle_t handle;
@@ -2428,7 +2774,7 @@ DB_DATA_VALUE    *rdv)
             "adu_envelope: Failed to convert data value to stored geometry."));
     }
 
-    //Make sure to convert the envelope, pass TRUE.
+    /* Make sure to convert the envelope, pass TRUE. */
     status = storedGeomToGeos(adf_scb, handle, &geomData, &geometry, TRUE);
     if(status != E_DB_OK)
     {
@@ -2452,6 +2798,7 @@ DB_DATA_VALUE    *rdv)
     GEOSGeom_destroy_r(handle, geometry);
     finishGEOS_r(handle);
     return status;
+#endif
 }
 
 /*
@@ -2465,7 +2812,11 @@ DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *dv2,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return geomToGeomComparison(adf_scb, dv1, dv2, rdv, &GEOSEquals_r);
+#endif
 }
 
 /*
@@ -2479,7 +2830,11 @@ DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *dv2,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return geomToGeomComparison(adf_scb, dv1, dv2, rdv, &GEOSDisjoint_r);
+#endif
 }
 
 /*
@@ -2493,7 +2848,11 @@ DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *dv2,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return geomToGeomComparison(adf_scb, dv1, dv2, rdv, &GEOSIntersects_r);
+#endif
 }
 
 /*
@@ -2507,7 +2866,11 @@ DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *dv2,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return geomToGeomComparison(adf_scb, dv1, dv2, rdv, &GEOSTouches_r);
+#endif
 }
 
 /*
@@ -2521,7 +2884,11 @@ DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *dv2,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return geomToGeomComparison(adf_scb, dv1, dv2, rdv, &GEOSCrosses_r);
+#endif
 }
 
 /*
@@ -2536,7 +2903,11 @@ DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *dv2,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return geomToGeomComparison(adf_scb, dv2, dv1, rdv, &GEOSWithin_r);
+#endif
 }
 
 /*
@@ -2550,7 +2921,11 @@ DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *dv2,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return geomToGeomComparison(adf_scb, dv1, dv2, rdv, &GEOSContains_r);
+#endif
 }
 
 /*
@@ -2564,7 +2939,11 @@ DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *dv2,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return geomToGeomComparison(adf_scb, dv2, dv1, rdv, &GEOSContains_r);
+#endif
 }
 
 DB_STATUS
@@ -2574,6 +2953,9 @@ DB_DATA_VALUE   *dv1,
 DB_DATA_VALUE   *dv2,
 DB_DATA_VALUE   *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     if(dv1->db_datatype == DB_NBR_TYPE && dv2->db_datatype == DB_NBR_TYPE)
     {
         geomNBR_t *nbr1, *nbr2;
@@ -2590,6 +2972,7 @@ DB_DATA_VALUE   *rdv)
         return E_DB_OK;
     }
     return geomToGeomComparison(adf_scb, dv1, dv2, rdv, &GEOSOverlaps_r);
+#endif
 }
 
 DB_STATUS
@@ -2598,6 +2981,9 @@ ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv1,
 DB_DATA_VALUE   *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSGeometry *geom = NULL;
     GEOSContextHandle_t handle;
@@ -2635,6 +3021,7 @@ DB_DATA_VALUE   *rdv)
     finishGEOS_r(handle);
 
     return status;
+#endif
 }
 
 /*
@@ -2648,6 +3035,9 @@ DB_DATA_VALUE    *dv2,
 DB_DATA_VALUE    *dv3,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSContextHandle_t handle;
     GEOSGeometry *g1 = NULL, *g2 = NULL;
@@ -2694,6 +3084,7 @@ DB_DATA_VALUE    *rdv)
     GEOSGeom_destroy_r(handle, g2);
     finishGEOS_r(handle);
     return status;
+#endif
 }
 
 /*
@@ -2706,6 +3097,9 @@ DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *dv2,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSContextHandle_t handle;
     GEOSGeometry *g1 = NULL, *g2 = NULL;
@@ -2719,7 +3113,10 @@ DB_DATA_VALUE    *rdv)
 
     handle = initGEOS_r(geos_Notice, geos_Error);
 
-    //We need to handle nullable data types, adu expects them to be non-nullable
+    /* 
+     * We need to handle nullable data types, adu expects them to be 
+     * non-nullable
+     */
     dv1->db_datatype = abs(dv1->db_datatype);
 
     status = dataValueToGeos(adf_scb, dv1, handle,&g1, FALSE);
@@ -2730,7 +3127,10 @@ DB_DATA_VALUE    *rdv)
             "adu_distance: Failed to convert data value 1 to GEOSGeometry"));
     }
 
-    //We need to handle nullable data types, adu expects them to be non-nullable
+    /* 
+     * We need to handle nullable data types, adu expects them to be 
+     * non-nullable
+     */
     dv2->db_datatype = abs(dv2->db_datatype);
 
     status = dataValueToGeos(adf_scb, dv2, handle,&g2, FALSE);
@@ -2765,6 +3165,7 @@ DB_DATA_VALUE    *rdv)
     GEOSGeom_destroy_r(handle, g2);
     finishGEOS_r(handle);
     return status;
+#endif
 }
 
 /*
@@ -2777,7 +3178,11 @@ DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *dv2,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return geomToGeomReturnsGeom(adf_scb, dv1, dv2, rdv, &GEOSIntersection_r);
+#endif
 }
 
 /*
@@ -2790,7 +3195,11 @@ DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *dv2,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return geomToGeomReturnsGeom(adf_scb, dv1, dv2, rdv, &GEOSDifference_r);
+#endif
 }
 
 /*
@@ -2803,6 +3212,9 @@ DB_DATA_VALUE   *dv1_in,
 DB_DATA_VALUE   *dv2_in,
 DB_DATA_VALUE   *dv_out)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     /* If these are NBR types, then a union is a new NBR that contains both.*/
     if(dv1_in->db_datatype == DB_NBR_TYPE && dv2_in->db_datatype == DB_NBR_TYPE)
     {
@@ -2821,6 +3233,7 @@ DB_DATA_VALUE   *dv_out)
     else
         return geomToGeomReturnsGeom(adf_scb, dv1_in, dv2_in, dv_out,
                                      &GEOSUnion_r);
+#endif
 }
 
 /*
@@ -2833,7 +3246,11 @@ DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *dv2,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     return geomToGeomReturnsGeom(adf_scb, dv1, dv2, rdv, &GEOSSymDifference_r);
+#endif
 }
 
 /*
@@ -2846,6 +3263,9 @@ DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *dv2,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     const int default_quadsegs = 8;
     DB_STATUS status;
     GEOSGeometry *geometry, *buffer;
@@ -2903,6 +3323,7 @@ DB_DATA_VALUE    *rdv)
     GEOSGeom_destroy_r(handle, buffer);
     finishGEOS_r(handle);
     return E_DB_OK;
+#endif
 }
 
 /*
@@ -2916,6 +3337,9 @@ DB_DATA_VALUE    *dv2,
 DB_DATA_VALUE    *dv3,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     const int default_quadsegs = 8;
     DB_STATUS status;
     GEOSGeometry *geometry, *buffer;
@@ -2923,6 +3347,7 @@ DB_DATA_VALUE    *rdv)
     f8 distance;
 
     return E_DB_OK;
+#endif
 }
 
 /*
@@ -2934,6 +3359,9 @@ ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv1,
 DB_DATA_VALUE   *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSGeometry *geometry, *convexhull;
     GEOSContextHandle_t handle;
@@ -2974,6 +3402,7 @@ DB_DATA_VALUE   *rdv)
     finishGEOS_r(handle);
 
     return status;
+#endif
 }
 
 /*
@@ -2986,6 +3415,9 @@ DB_DATA_VALUE   *dv1,
 DB_DATA_VALUE   *dv2,
 DB_DATA_VALUE   *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSGeometry *linestring = NULL, *point = NULL;
     GEOSContextHandle_t handle;
@@ -3028,7 +3460,10 @@ DB_DATA_VALUE   *rdv)
 
     handle = initGEOS_r( geos_Notice, geos_Error );
 
-    //We need to handle nullable data types, adu expects them to be non-nullable
+    /* 
+     * We need to handle nullable data types, adu expects them to be 
+     * non-nullable
+     */
     dv1->db_datatype = abs(dv1->db_datatype);
 
     status = dataValueToGeos(adf_scb, dv1, handle, &linestring, FALSE);
@@ -3040,7 +3475,7 @@ DB_DATA_VALUE   *rdv)
     }
 
     points = GEOSGeomGetNumPoints_r(handle, linestring);
-    //OGC starts arrays at 1, GEOS does not, subtract
+    /* OGC starts arrays at 1, GEOS does not, subtract */
     position--;
 
     /*
@@ -3074,6 +3509,7 @@ DB_DATA_VALUE   *rdv)
     finishGEOS_r(handle);
 
     return status;
+#endif
 }
 
 /*
@@ -3085,6 +3521,9 @@ ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv1,
 DB_DATA_VALUE   *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSGeometry *curve = NULL, *point = NULL;
     GEOSContextHandle_t handle;
@@ -3107,7 +3546,10 @@ DB_DATA_VALUE   *rdv)
     }
 
     handle = initGEOS_r( geos_Notice, geos_Error );
-    //We need to handle nullable data types, adu expects them to be non-nullable
+    /* 
+     * We need to handle nullable data types, adu expects them to be 
+     * non-nullable
+     */
     dv1->db_datatype = abs(dv1->db_datatype);
 
     status = dataValueToGeos(adf_scb, dv1, handle, &curve, FALSE);
@@ -3138,6 +3580,7 @@ DB_DATA_VALUE   *rdv)
     finishGEOS_r(handle);
 
     return status;
+#endif
 }
 
 /*
@@ -3149,6 +3592,9 @@ ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv1,
 DB_DATA_VALUE   *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSGeometry *curve = NULL, *point = NULL;
     GEOSContextHandle_t handle;
@@ -3171,7 +3617,10 @@ DB_DATA_VALUE   *rdv)
     }
 
     handle = initGEOS_r( geos_Notice, geos_Error );
-    //We need to handle nullable data types, adu expects them to be non-nullable
+    /* 
+     * We need to handle nullable data types, adu expects them to be 
+     * non-nullable
+     */
     dv1->db_datatype = abs(dv1->db_datatype);
 
     status = dataValueToGeos(adf_scb, dv1, handle, &curve, FALSE);
@@ -3201,6 +3650,7 @@ DB_DATA_VALUE   *rdv)
     finishGEOS_r(handle);
 
     return status;
+#endif
 
 }
 
@@ -3213,6 +3663,9 @@ ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv1,
 DB_DATA_VALUE   *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSGeometry *curve = NULL, *pcurve;
     GEOSContextHandle_t handle;
@@ -3275,6 +3728,7 @@ DB_DATA_VALUE   *rdv)
     finishGEOS_r(handle);
 
     return status;
+#endif
 }
 
 /*
@@ -3286,6 +3740,9 @@ ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv1,
 DB_DATA_VALUE   *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSGeometry *curve = NULL;
     GEOSContextHandle_t handle;
@@ -3323,6 +3780,7 @@ DB_DATA_VALUE   *rdv)
     finishGEOS_r(handle);
 
     return status;
+#endif
 }
 
 /*
@@ -3334,6 +3792,9 @@ ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv1,
 DB_DATA_VALUE   *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSGeometry *curve = NULL, *pcurve;
     GEOSContextHandle_t handle;
@@ -3395,6 +3856,7 @@ DB_DATA_VALUE   *rdv)
     finishGEOS_r(handle);
 
     return status;
+#endif
 }
 
 /*
@@ -3406,6 +3868,9 @@ ADF_CB           *adf_scb,
 DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSGeometry *surface = NULL, *point = NULL;
     GEOSContextHandle_t handle;
@@ -3446,6 +3911,7 @@ DB_DATA_VALUE    *rdv)
     finishGEOS_r(handle);
 
     return status;
+#endif
 }
 
 /*
@@ -3457,6 +3923,9 @@ ADF_CB           *adf_scb,
 DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSGeometry *surface = NULL, *point = NULL;
     GEOSContextHandle_t handle;
@@ -3497,6 +3966,7 @@ DB_DATA_VALUE    *rdv)
     finishGEOS_r(handle);
 
     return status;
+#endif
 }
 
 /*
@@ -3508,6 +3978,9 @@ ADF_CB           *adf_scb,
 DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSGeometry *surface = NULL;
     GEOSContextHandle_t handle;
@@ -3556,6 +4029,7 @@ DB_DATA_VALUE    *rdv)
     finishGEOS_r(handle);
 
     return status;
+#endif
 }
 
 /*
@@ -3567,6 +4041,9 @@ ADF_CB           *adf_scb,
 DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSGeometry *polygon = NULL;
     const GEOSGeometry *linestring = NULL;
@@ -3613,6 +4090,7 @@ DB_DATA_VALUE    *rdv)
     finishGEOS_r(handle);
 
     return status;
+#endif
 }
 
 /*
@@ -3624,6 +4102,9 @@ ADF_CB           *adf_scb,
 DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSGeometry *polygon = NULL, *one_poly;
     GEOSContextHandle_t handle;
@@ -3648,7 +4129,10 @@ DB_DATA_VALUE    *rdv)
 
     handle = initGEOS_r( geos_Notice, geos_Error );
 
-    //We need to handle nullable data types, adu expects them to be non-nullable
+    /* 
+     * We need to handle nullable data types, adu expects them to be 
+     * non-nullable
+     */
     dv1->db_datatype = abs(dv1->db_datatype);
 
     status = dataValueToGeos(adf_scb, dv1, handle, &polygon, FALSE);
@@ -3690,6 +4174,7 @@ DB_DATA_VALUE    *rdv)
     finishGEOS_r(handle);
 
     return status;
+#endif
 }
 
 /*
@@ -3702,6 +4187,9 @@ DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *dv2,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSGeometry *polygon = NULL;
     const GEOSGeometry *linestring = NULL;
@@ -3740,7 +4228,10 @@ DB_DATA_VALUE    *rdv)
     }
     handle = initGEOS_r( geos_Notice, geos_Error );
 
-    //We need to handle nullable data types, adu expects them to be non-nullable
+    /*
+     * We need to handle nullable data types, adu expects them to be 
+     * non-nullable
+     */
     dv1->db_datatype = abs(dv1->db_datatype);
 
     status = dataValueToGeos(adf_scb, dv1, handle, &polygon, FALSE);
@@ -3756,7 +4247,7 @@ DB_DATA_VALUE    *rdv)
      */
     numRings = GEOSGetNumInteriorRings_r(handle, polygon);
 
-    //OGC starts arrays at 1, GEOS does not, subtract
+    /* OGC starts arrays at 1, GEOS does not, subtract */
     n--;
 
     /*
@@ -3790,6 +4281,7 @@ DB_DATA_VALUE    *rdv)
     finishGEOS_r(handle);
 
     return status;
+#endif
 }
 
 /*
@@ -3801,6 +4293,9 @@ ADF_CB           *adf_scb,
 DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSGeometry *geomcoll = NULL;
     GEOSContextHandle_t handle;
@@ -3817,7 +4312,7 @@ DB_DATA_VALUE    *rdv)
      * If not a type of geometrycollection, return NULL
      * NOTE: This is how PostGIS handles it
      */
-    if(dt != DB_GEOM_TYPE && dt != DB_MPOINT_TYPE && dt != DB_MPOLY_TYPE
+    if(dt != DB_GEOMC_TYPE && dt != DB_MPOINT_TYPE && dt != DB_MPOLY_TYPE
             && dt != DB_MLINE_TYPE)
     {
         ADF_SETNULL_MACRO(rdv);
@@ -3825,7 +4320,10 @@ DB_DATA_VALUE    *rdv)
     }
     handle = initGEOS_r( geos_Notice, geos_Error );
 
-    //We need to handle nullable data types, adu expects them to be non-nullable
+    /* 
+     * We need to handle nullable data types, adu expects them to be 
+     * non-nullable
+     */
     dv1->db_datatype = abs(dv1->db_datatype);
 
     status = dataValueToGeos(adf_scb, dv1, handle, &geomcoll, FALSE);
@@ -3847,6 +4345,7 @@ DB_DATA_VALUE    *rdv)
     finishGEOS_r(handle);
 
     return status;
+#endif
 }
 
 /*
@@ -3859,6 +4358,9 @@ DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *dv2,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSGeometry *geomcoll = NULL;
     const GEOSGeometry *geom = NULL;
@@ -3875,7 +4377,7 @@ DB_DATA_VALUE    *rdv)
      * If a non-collection type is passed, return NULL
      * NOTE: This is how PostGIS handles it
      */
-    if(dt != DB_GEOM_TYPE && dt != DB_MPOINT_TYPE && dt != DB_MPOLY_TYPE
+    if(dt != DB_GEOMC_TYPE && dt != DB_MPOINT_TYPE && dt != DB_MPOLY_TYPE
             && dt != DB_MLINE_TYPE)
     {
         ADF_SETNULL_MACRO(rdv);
@@ -3901,7 +4403,10 @@ DB_DATA_VALUE    *rdv)
             "adu_geometryn: invalid length passed with data value 2"));
     }
 
-    //We need to handle nullable data types, adu expects them to be non-nullable
+    /* 
+     * We need to handle nullable data types, adu expects them to be 
+     * non-nullable
+     */
     dv1->db_datatype = abs(dv1->db_datatype);
 
     handle = initGEOS_r( geos_Notice, geos_Error );
@@ -3915,7 +4420,7 @@ DB_DATA_VALUE    *rdv)
     }
 
     numGeoms = GEOSGetNumGeometries_r(handle, geomcoll);
-    //OGC starts arrays at 1, GEOS does not, subtract
+    /* OGC starts arrays at 1, GEOS does not, subtract */
     n--;
 
     /*
@@ -3949,6 +4454,7 @@ DB_DATA_VALUE    *rdv)
     finishGEOS_r(handle);
 
     return status;
+#endif
 }
 
 /*
@@ -3960,6 +4466,9 @@ ADF_CB            *adf_scb,
 DB_DATA_VALUE    *dv1,
 DB_DATA_VALUE    *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     i4 srid = 0;
     GEOSGeometry *geometry;
@@ -3990,6 +4499,7 @@ DB_DATA_VALUE    *rdv)
     finishGEOS_r(handle);
 
     return status;
+#endif
 }
 
 /*
@@ -4003,6 +4513,9 @@ ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv1,
 DB_DATA_VALUE   *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSGeometry *geometry = NULL;
     GEOSContextHandle_t handle;
@@ -4034,6 +4547,7 @@ DB_DATA_VALUE   *rdv)
     finishGEOS_r(handle);
 
     return status;
+#endif
 }
 
 /*
@@ -4047,6 +4561,9 @@ ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv1,
 DB_DATA_VALUE   *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSGeometry *geometry = NULL;
     GEOSContextHandle_t handle;
@@ -4090,6 +4607,7 @@ DB_DATA_VALUE   *rdv)
     finishGEOS_r(handle);
 
     return status;
+#endif
 }
 
 /*
@@ -4102,21 +4620,26 @@ ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv1,
 DB_DATA_VALUE   *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSGeometry *geometry = NULL, *line;
     GEOSContextHandle_t handle;
     i4 np = 0, geoms;
 
-    //Initialize the handle for GEOS
+    /* Initialize the handle for GEOS */
     if(ADI_ISNULL_MACRO(dv1))
     {
         ADF_SETNULL_MACRO(rdv);
         return E_DB_OK;
     }
 
-    //Make sure it's a linestring or mlinestring
-    //If not, return NULL
-    //NOTE: This is how PostGIS handles it
+    /*
+     * Make sure it's a linestring or mlinestring
+     * If not, return NULL
+     * NOTE: This is how PostGIS handles it
+     */
     if(abs(dv1->db_datatype) != DB_LINE_TYPE &&
        abs(dv1->db_datatype) != DB_MLINE_TYPE)
     {
@@ -4126,10 +4649,16 @@ DB_DATA_VALUE   *rdv)
 
     handle = initGEOS_r(geos_Notice, geos_Error);
 
-    //We need to handle nullable data types, adu expects them to be non-nullable
+    /* 
+     * We need to handle nullable data types, adu expects them to be 
+     * non-nullable
+     */
     dv1->db_datatype = abs(dv1->db_datatype);
 
-    //Convert the geometry out from adf session control block and pt data value
+    /* 
+     * Convert the geometry out from adf session control block and pt data
+     * value
+     */
     status = dataValueToGeos(adf_scb, dv1, handle, &geometry, FALSE);
     if(status != E_DB_OK)
     {
@@ -4157,7 +4686,7 @@ DB_DATA_VALUE   *rdv)
     }
     else
     {
-        //Get the number of points from the line
+        /* Get the number of points from the line */
         np = GEOSGeomGetNumPoints_r(handle, geometry);
     }
 
@@ -4169,14 +4698,15 @@ DB_DATA_VALUE   *rdv)
             "adu_numpoints: Failed to get number of points from the LineString."));
     }
 
-    //Copy the resulting x value into return data value
+    /* Copy the resulting x value into return data value */
     MEcopy(&np, sizeof(i4), rdv->db_data);
 
-    //Clean stuffs up
+    /* Clean stuffs up */
     GEOSGeom_destroy_r(handle, geometry);
     finishGEOS_r(handle);
 	
     return E_DB_OK;
+#endif
 }
 
 DB_STATUS
@@ -4185,6 +4715,9 @@ ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv1,
 DB_DATA_VALUE   *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     i4 i = 0;
     const char *invalid_type = "INVALID_TYPE";
@@ -4231,6 +4764,7 @@ DB_DATA_VALUE   *rdv)
     }
 
     return status;
+#endif
 }
 
 DB_STATUS
@@ -4239,6 +4773,9 @@ ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv1,
 DB_DATA_VALUE   *rdv)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     i4 i = 0;
     i4 dt;
@@ -4278,9 +4815,164 @@ DB_DATA_VALUE   *rdv)
     MEcopy(&geometry_types[i].dimensions, rdv->db_length, rdv->db_data);
 
     return status;
+#endif
 }
 
-/* Compare a line, linear ring or point, as a GEOS coordSeq.
+DB_STATUS
+adu_point_x(
+ADF_CB          *adf_scb,
+DB_DATA_VALUE   *pt_dv,
+DB_DATA_VALUE   *rdv)
+{
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
+	DB_STATUS status = E_DB_OK;
+	GEOSGeometry *geometry = NULL;
+	GEOSContextHandle_t handle;
+	f8 x;
+	
+	/* Initialize the handle for GEOS */
+	if(ADI_ISNULL_MACRO(pt_dv))
+	{
+		ADF_SETNULL_MACRO(rdv);
+		return E_DB_OK;
+	}
+	
+	/* Make sure it's a point */
+	if(abs(pt_dv->db_datatype) != DB_POINT_TYPE)
+	{
+    	return (adu_error(adf_scb, E_AD5600_GEOSPATIAL_USER, 2, 0,
+		"adu_point_x: Only Point is allowed."));
+	}
+	
+	handle = initGEOS_r(geos_Notice, geos_Error);
+	
+	/* 
+ 	 * We need to handle nullable data types, adu expects them to be 
+ 	 * non-nullable
+ 	 */
+	pt_dv->db_datatype = abs(pt_dv->db_datatype);
+
+	/*
+	 * Convert the geometry out from adf session control block and pt data
+	 * value
+	 */
+	status = dataValueToGeos(adf_scb, pt_dv, handle, &geometry, FALSE);
+	if(status != E_DB_OK)
+	{
+		finishGEOS_r(handle);
+		return (adu_error(adf_scb, E_AD5601_GEOSPATIAL_INTERNAL, 2, 0,
+                                "adu_point_x: Failed to convert data value to GEOSGeometry."));
+	}
+	
+	/*
+	 * If it's an empty point, return NULL
+	 * NOTE: This is how PostGIS handles it
+	 */
+	if(GEOSisEmpty_r(handle, geometry))
+	{
+        ADF_SETNULL_MACRO(rdv);
+        return E_DB_OK;
+	}
+
+	/* Get the x value from the point */
+	status = GEOSGeomGetX_r(handle, geometry, &x);
+	if(!status){
+		GEOSGeom_destroy_r(handle, geometry);
+		finishGEOS_r(handle);
+		return (adu_error(adf_scb, E_AD5601_GEOSPATIAL_INTERNAL, 2, 0,
+				"adu_point_x: Failed to get x value from GEOSGeometry."));
+	}
+	
+	/* Copy the resulting x value into return data value */
+	MEcopy(&x, sizeof(f8), rdv->db_data);
+	
+	/* Clean stuffs up */
+	GEOSGeom_destroy_r(handle, geometry);
+	finishGEOS_r(handle);
+
+ 	return E_DB_OK;
+#endif
+}
+
+DB_STATUS
+adu_point_y(
+ADF_CB          *adf_scb,
+DB_DATA_VALUE   *pt_dv,
+DB_DATA_VALUE   *rdv)
+{
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
+	DB_STATUS status = E_DB_OK;
+	GEOSGeometry *geometry = NULL;
+	GEOSContextHandle_t handle;
+	f8 y;
+	
+	/* initialize the handle for GEOS */
+	if(ADI_ISNULL_MACRO(pt_dv)){
+		ADF_SETNULL_MACRO(rdv);
+		return E_DB_OK;
+	}
+
+	/* Make sure it's a point */
+	if(abs(pt_dv->db_datatype)!= DB_POINT_TYPE){
+		return(adu_error(adf_scb, E_AD5600_GEOSPATIAL_USER, 2, 0,
+		"adu_point_y: Only Point is allowed."));
+	}
+
+	handle = initGEOS_r(geos_Notice, geos_Error);
+
+    /* We need to handle nullable data types, adu expects them to be 
+     * non-nullable
+     */
+    pt_dv->db_datatype = abs(pt_dv->db_datatype);
+
+	/* Convert the geometry out from adf session control block and pt data 
+	 * value
+	 */
+	status = dataValueToGeos(adf_scb, pt_dv, handle, &geometry, FALSE);
+	if(status != E_DB_OK){
+		finishGEOS_r(handle);
+		return (adu_error(adf_scb, E_AD5601_GEOSPATIAL_INTERNAL, 2, 0,
+			"adu_point_y: Failed to convert data value to GEOSGeometry."));
+	}
+
+	/*
+     * If it's an empty point, return NULL
+     * NOTE: This is how PostGIS handles it
+     */
+    if(GEOSisEmpty_r(handle, geometry))
+    {
+        ADF_SETNULL_MACRO(rdv);
+        return E_DB_OK;
+    }
+
+
+	/* Get the y value from the point */
+	status = GEOSGeomGetY_r(handle, geometry, &y);
+	if(!status){
+		GEOSGeom_destroy_r(handle, geometry);
+		finishGEOS_r(handle);
+		return (adu_error(adf_scb, E_AD5601_GEOSPATIAL_INTERNAL, 2, 0,
+				"adu_point_y: Failed to get y value from GEOSGeometry."));
+	}
+
+	/* Copy the result y value into return data value */
+	MEcopy(&y, sizeof(f8), rdv->db_data);
+
+	/* Clean stuffs up */
+	GEOSGeom_destroy_r(handle, geometry);
+	finishGEOS_r(handle);
+	
+	return E_DB_OK;
+#endif
+}
+
+#ifdef _WITH_GEO
+/*
+ * Compare a line, linear ring or point, as a GEOS coordSeq.
  * Used for rtree indexing.  Returns 1 is g1 > g2, 0 if g1 = g2, -1 if g1< g2.
  * Each point is compared to get the final result.
  */
@@ -4337,7 +5029,8 @@ i4 coordSeq_cmp(GEOSContextHandle_t handle, const GEOSGeometry *g1,
     return result;
 }
 
-/* Compares two polygons by breaking them up into their linear ring pieces and
+/* 
+ * Compares two polygons by breaking them up into their linear ring pieces and
  * called coordSeq_cmp
  */
 i4 polygon_cmp(GEOSContextHandle_t handle, const GEOSGeometry *g1, 
@@ -4369,7 +5062,8 @@ i4 polygon_cmp(GEOSContextHandle_t handle, const GEOSGeometry *g1,
     return result;
 }
 
-/* Compares 2 geometries by determining the type and breaking the type up
+/* 
+ * Compares 2 geometries by determining the type and breaking the type up
  * accordingly.
  * lines, linear rings and points call coordSeq_cmp.
  * Polygons call polygon_cmp.
@@ -4442,8 +5136,10 @@ i4 geom_cmp(GEOSContextHandle_t handle, const GEOSGeometry *g1,
         }
     }
 }
+#endif
 
-/* Compare two geometries for rtree indexing.
+/* 
+ * Compare two geometries for rtree indexing.
  * Returns 1 for g1 > g2, 0 for g1 = g2, -1 for g1 < g2.
  * Geos equals is only a boolean return so this function breaks the geometries
  * up to compare types then each geometry point by point.
@@ -4455,12 +5151,15 @@ DB_DATA_VALUE       *dv1,
 DB_DATA_VALUE       *dv2,
 i4                  *cmp_result)
 {
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
     DB_STATUS status = E_DB_OK;
     GEOSContextHandle_t handle;
     GEOSGeometry *g1 = NULL, *g2 = NULL;
     i4 g1Type, g2Type;
 
-    //Nulls are treated as greater.
+    /* Nulls are treated as greater. */
     if(ADI_ISNULL_MACRO(dv1) && ADI_ISNULL_MACRO(dv2))
     {
         *cmp_result = 0;
@@ -4477,7 +5176,7 @@ i4                  *cmp_result)
         return E_DB_OK;
     }
 
-    //NBR Types can be compared directly, no geos processing required.
+    /* NBR Types can be compared directly, no geos processing required. */
     if(dv1->db_datatype == DB_NBR_TYPE && dv2->db_datatype == DB_NBR_TYPE)
     {
         geomNBR_t *nbr1, *nbr2, *nbrOut;
@@ -4565,7 +5264,404 @@ i4                  *cmp_result)
                                    (const GEOSGeometry*)g2, g1Type, g2Type);
     }
     return status;
+#endif
 }
+
+/************************************************************************/
+/*                           adjust_angles()                            */
+/*                                                                      */
+/*      Translate angular values between degrees and radians or back.   */
+/************************************************************************/
+
+static void adjust_angles( double *xyz, int num_points, double mult_factor )
+
+{
+    int i;
+
+    for( i = 0; i < num_points; i++ )
+    {
+        xyz[i*3+0] *= mult_factor;
+        xyz[i*3+1] *= mult_factor;
+    }
+}
+
+/************************************************************************/
+/*                         geos_pj_transform()                          */
+/************************************************************************/
+#ifdef _WITH_GEO
+static
+int geos_pj_transform( GEOSGeometry *geom, GEOSContextHandle_t hCtx,
+                       projPJ src_pj, projPJ dst_pj )
+
+{
+    int  geom_type = GEOSGeomTypeId_r( hCtx, geom );
+    DB_STATUS           status = E_DB_OK;
+
+    switch( geom_type )
+    {
+      case GEOS_POLYGON:
+      {
+          int   sub_geom_count = GEOSGetNumInteriorRings_r( hCtx, geom );
+          int   i;
+
+          for( i = -1; i < sub_geom_count; i++ )
+          {
+              const GEOSGeometry *sub_geom;
+
+              if( i == -1 )
+                  sub_geom = GEOSGetExteriorRing_r( hCtx, geom );
+              else
+                  sub_geom = GEOSGetInteriorRingN_r( hCtx, geom, i );
+                                                     
+              if( !geos_pj_transform( (GEOSGeometry *) sub_geom, hCtx, 
+                                      src_pj, dst_pj ) )
+                  return 0;
+          }
+
+          return 1;
+      }
+      break;
+
+      case GEOS_MULTIPOINT:
+      case GEOS_MULTILINESTRING:
+      case GEOS_MULTIPOLYGON:
+      case GEOS_GEOMETRYCOLLECTION:
+      {
+          int   sub_geom_count = GEOSGetNumGeometries_r( hCtx, geom );
+          int   i;
+
+          for( i = 0; i < sub_geom_count; i++ )
+          {
+              const GEOSGeometry *sub_geom;
+
+              sub_geom = GEOSGetGeometryN_r( hCtx, geom, i );
+              if( !geos_pj_transform( (GEOSGeometry *) sub_geom, hCtx, 
+                                      src_pj, dst_pj ) )
+                  return 0;
+          }
+
+          return 1;
+      }
+      break;
+
+      case GEOS_POINT:
+      case GEOS_LINESTRING:
+      case GEOS_LINEARRING:
+      {
+          const GEOSCoordSequence *coords = GEOSGeom_getCoordSeq_r(hCtx,geom);
+          unsigned int num_points, i, dims;
+          double *xyz;
+          int err;
+
+          GEOSCoordSeq_getSize_r( hCtx, coords, &num_points );
+          xyz = (double *) MEcalloc(num_points*sizeof(double)*3,&status);
+
+          GEOSCoordSeq_getDimensions_r( hCtx, coords, &dims );
+
+          for( i = 0; i < num_points; i++ )
+          {
+              GEOSCoordSeq_getX_r( hCtx, coords, i, xyz + 3*i + 0 );
+              GEOSCoordSeq_getY_r( hCtx, coords, i, xyz + 3*i + 1 );
+              if( dims > 2 )
+              {
+                  GEOSCoordSeq_getZ_r( hCtx, coords, i, xyz + 3*i + 2 );
+
+                  /*
+                  ** The following code should be removable once the patch
+                  ** for geos #345 is in wide use. 
+                  */
+                  if( !MHdfinite(xyz[3*i+2]) )
+                  {
+                      xyz[3*i+2] = 0.0;
+                      dims = 2;
+                  }
+              }
+          }
+          
+          if( pj_is_latlong( src_pj ) )
+              adjust_angles( xyz, num_points, DEG_TO_RAD );
+
+          err = pj_transform( src_pj, dst_pj, num_points, 3, 
+                              xyz + 0, xyz + 1, xyz + 2 );
+
+          if( err != 0 )
+          {
+              MEfree( xyz );
+              return 0;
+          }
+          
+          if( pj_is_latlong( dst_pj ) )
+              adjust_angles( xyz, num_points, RAD_TO_DEG );
+
+          /*
+          ** The following is based on the assumption that the coordinate
+          ** sequence can be forcably updated in place.  Very dirty!
+          */
+          for( i = 0; i < num_points; i++ )
+          {
+              GEOSCoordSeq_setX_r( hCtx, (GEOSCoordSequence*) coords, 
+                                   i, xyz[3*i + 0] );
+              GEOSCoordSeq_setY_r( hCtx, (GEOSCoordSequence*) coords, 
+                                   i, xyz[3*i + 1] );
+              if( dims > 2 )
+                  GEOSCoordSeq_setZ_r( hCtx, (GEOSCoordSequence*) coords, 
+                                       i, xyz[3*i + 2] );
+          }
+
+          MEfree( xyz );
+
+          return 1;
+      }
+      break;
+
+      default:
+        return 0;
+    }
+
+    return 1;
+}
+
+/************************************************************************/
+/*                           ii_init_proj4()                            */
+/************************************************************************/
+
+static void ii_init_proj4()
+
+{
+    static int initialized = 0;
+
+    if( initialized )
+        return;
+
+    {
+        LOCATION loc;
+        const char *geo_dir;
+
+	NMloc(FILES, FILENAME & PATH, (char *) NULL, &loc);
+	LOfaddpath(&loc, "geo", &loc);
+        
+        /* Obtusely the search path is the last place pj_open_lib() looks
+         * for files, so system grid shift files will be found ahead of
+         * those in the ingres geo directory 
+         */
+
+        geo_dir = loc.path;
+        pj_set_searchpath( 1, &geo_dir );
+
+        initialized = 1;
+    }
+}
+                    
+/************************************************************************/
+/*                           geos_transform()                           */
+/************************************************************************/
+
+static int geos_transform( GEOSGeometry *geom, GEOSContextHandle_t hCtx,
+                           const char *src_srs, 
+                           const char *dst_srs )
+{
+    projPJ src_pj, dst_pj;
+    int result;
+
+    ii_init_proj4();
+
+    src_pj = pj_init_plus( src_srs );
+    if( src_pj == NULL )
+        return 0;
+
+    dst_pj = pj_init_plus( dst_srs );
+    if( dst_pj == NULL )
+        return 0;
+
+    result = geos_pj_transform( geom, hCtx, src_pj, dst_pj );
+
+    pj_free( src_pj );
+    pj_free( dst_pj );
+
+    return result;
+}
+#endif
+
+/*
+ * Perform reprojection of a geometry. 
+ */
+DB_STATUS
+adu_transform(
+ADF_CB          *adf_scb,
+DB_DATA_VALUE   *dv1,
+DB_DATA_VALUE   *dv2,
+DB_DATA_VALUE   *rdv)
+{
+#ifndef _WITH_GEO
+    return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
+#else
+    DB_STATUS status = E_DB_OK;
+    GEOSGeometry *geom = NULL;
+    GEOSContextHandle_t handle;
+    i4 dt = abs(dv1->db_datatype);
+    int dst_srid, src_srid;
+    DB_SPATIAL_REF_SYS src_srs_row, dst_srs_row;
+
+    if(ADI_ISNULL_MACRO(dv1) || ADI_ISNULL_MACRO(dv2))
+    {
+        ADF_SETNULL_MACRO(rdv);
+        return E_DB_OK;
+    }
+
+    switch(dv2->db_length)
+    {
+      case 1:
+        dst_srid = *(i1 *) dv2->db_data;
+        break;
+      case 2:
+        dst_srid = *(i2 *) dv2->db_data;
+        break;
+      case 4:
+        dst_srid = *(i4 *) dv2->db_data;
+        break;
+      case 8:
+        dst_srid = *(i8 *) dv2->db_data;
+        break;
+      default:
+        return (adu_error(adf_scb, E_AD5601_GEOSPATIAL_INTERNAL, 2, 0,
+                          "adu_transform: invalid srid passed with data value 2"));
+    }
+
+    /* 
+     * Transform geometry.
+     */
+    handle = initGEOS_r( geos_Notice, geos_Error );
+
+    status = dataValueToGeos(adf_scb, dv1, handle, &geom, FALSE);
+    if(status != E_DB_OK)
+    {
+    	finishGEOS_r(handle);
+        return (adu_error(adf_scb, E_AD5601_GEOSPATIAL_INTERNAL, 2, 0,
+                          "adu_transform: Failed to convert data value to GEOSGeometry."));
+    }
+
+    src_srid = GEOSGetSRID_r( handle, geom );
+
+    if( src_srid < 1 )
+    {
+    	finishGEOS_r(handle);
+        return (adu_error(adf_scb, E_AD5600_GEOSPATIAL_USER, 2, 0,
+                          "adu_transform: source geometry lacks SRID."));
+    }
+
+    /*
+     * Lookup SRIDs to get proj.4 coordinate system definitions.
+     */
+    
+    status = getSRS( adf_scb, &src_srs_row, src_srid );
+    if( status != E_DB_OK )
+        return status;
+
+    if( STlen(src_srs_row.srs_proj4text) == 0 )
+    {
+    	finishGEOS_r(handle);
+        return (adu_error(adf_scb, E_AD5600_GEOSPATIAL_USER, 2, 0,
+                          "adu_transform: source SRID %d lacks proj4text.",
+                          src_srid));
+    }
+
+    status = getSRS( adf_scb, &dst_srs_row, dst_srid );
+    if( status != E_DB_OK )
+        return status;
+
+    if( STlen(dst_srs_row.srs_proj4text) == 0 )
+    {
+    	finishGEOS_r(handle);
+        return (adu_error(adf_scb, E_AD5600_GEOSPATIAL_USER, 2, 0,
+                          "adu_transform: destination SRID %d lacks proj4text.",
+                          dst_srid));
+    }
+
+    /*
+     *  Perform the transformation.
+     */
+    if( !geos_transform( geom, handle, 
+                         src_srs_row.srs_proj4text, 
+                         dst_srs_row.srs_proj4text ) )
+    {
+        GEOSGeom_destroy_r(handle, geom);
+    	finishGEOS_r(handle);
+        return (adu_error(adf_scb, E_AD5600_GEOSPATIAL_USER, 2, 0,
+                          "adu_transform: Failure in geos_transform()."));
+    }
+
+    /* 
+     * Convert back into WKB. 
+     */
+    status = geosToDataValue(adf_scb, geom, handle, rdv, NULL, FALSE);
+
+    /*
+     * Clean up
+     */
+    GEOSGeom_destroy_r(handle, geom);
+    finishGEOS_r(handle);
+
+    return status;
+#endif
+}
+
+#ifdef _WITH_GEO
+/*
+ * Takes an ADF_CB, DB_SPATIAL_REF_SYS pointer and an i4 srid
+ * All errors are handled in this function, if it returns
+ * anything but E_DB_OK, just abort, do not create a new
+ * error message.
+ */
+DB_STATUS
+getSRS(ADF_CB *adf_scb, DB_SPATIAL_REF_SYS *srs, i4 srid)
+{
+    DB_STATUS status;
+    i4 errcode;
+
+    /*
+     * Safety check
+     */
+    if(srs == NULL)
+    {
+        return (adu_error(adf_scb, E_AD5601_GEOSPATIAL_INTERNAL, 2, 0,
+                          "populateSRS: passed a null pointer to srs."));
+    }
+
+    /*
+     * Assign the SRID to the struct then look it up using the FEXI
+     */
+    srs->srs_srid = srid;
+    status = (*Adf_globs->Adi_fexi[ADI_08GETSRS_FEXI].adi_fcn_fexi) (srs, &errcode);
+
+    /*
+     * If we have an error let's translate it if we can.
+     */
+    if(status != E_DB_OK)
+    {
+        switch(errcode)
+        {
+        case E_AD5603_NO_TRANSACTION:
+            adu_error(adf_scb, E_AD5600_GEOSPATIAL_USER, 2, 0,
+                      "No transaction found, couldn't look up spatial reference system.");
+            break;
+        case E_AD5604_SRS_NONEXISTENT:
+            adu_error(adf_scb, E_AD5600_GEOSPATIAL_USER, 2, 0,
+                      "spatial_ref_sys table not found.");
+            break;
+        case E_AD5605_INVALID_SRID:
+            adu_error(adf_scb, E_AD5600_GEOSPATIAL_USER, 2, 0,
+                      "An invalid SRID was specified.");
+            break;
+        default:
+            adu_error(adf_scb, E_AD5601_GEOSPATIAL_INTERNAL, 2, 0,
+                      "populateSRS: failed to retrieve spatial reference system");
+        }
+        return status;
+    }
+
+    return E_DB_OK;
+}
+#endif
 
 /*********************************************
  * Original prototype code before moving to LBYTE base type.
@@ -4579,8 +5675,6 @@ DB_DATA_VALUE   *pt_dv,
 DB_DATA_VALUE   *str_dv)
 {
     i4 dum1, dum2;
-
-    //if (ult_check_macro(&Adf_globs->Adf_trvect,ADF_013_PT_TRACE,&dum1,&dum2))
 
     TRdisplay("Reached adu_pttostr -- need work here\n");
 
@@ -4606,7 +5700,6 @@ DB_DATA_VALUE   *pt_dv)
     char               *end_ptr = NULL;
     bool                comma_fnd = FALSE;
 
-    //if (ult_check_macro(&Adf_globs->Adf_trvect,ADF_013_PT_TRACE,&dum1,&dum2))
       TRdisplay("adu_strtopt: start and datatype = %d\n", str_dv->db_datatype);
 
     if ((str_dv->db_datatype == DB_NCHR_TYPE) ||
@@ -4637,17 +5730,19 @@ DB_DATA_VALUE   *pt_dv)
       if ((status = adu_lenaddr(adf_scb, str_dv, &len, &c_ptr)) != E_DB_OK)
         return (status);
 
-    // String is not NULL terminated, so add the EOS.
+    /* String is not NULL terminated, so add the EOS. */
     if (len < DB_MAXSTRING)
       c_ptr[len] = EOS;
     else
       c_ptr[DB_MAXSTRING] = EOS;
 
-    // eat whitespace.  - maybe call adu_squeezewhite, removes leading,
-    // trailing, and reduces other all multiple whitespace to single.
-    //  If only need to handle spaces ' ', then probably more efficient
-    //  to handle here by advancing ptr. If need to handle other kinds,
-    //  better to use the generic function.
+    /*
+     * eat whitespace.  - maybe call adu_squeezewhite, removes leading,
+     * trailing, and reduces other all multiple whitespace to single.
+     *  If only need to handle spaces ' ', then probably more efficient
+     *  to handle here by advancing ptr. If need to handle other kinds,
+     *  better to use the generic function.
+     */
 
     while (*c_ptr == ' ')
       c_ptr++;
@@ -4719,140 +5814,6 @@ DB_DATA_VALUE   *rdv)
     ((AD_PT_INTRNL *)rdv->db_data)->y = *(double *) dv2->db_data;
 
     return (E_DB_OK);
-}
-
-DB_STATUS
-adu_point_x(
-ADF_CB          *adf_scb,
-DB_DATA_VALUE   *pt_dv,
-DB_DATA_VALUE   *rdv)
-{
-	DB_STATUS status = E_DB_OK;
-	GEOSGeometry *geometry = NULL;
-	GEOSContextHandle_t handle;
-	f8 x;
-	
-	//Initialize the handle for GEOS
-	if(ADI_ISNULL_MACRO(pt_dv))
-	{
-		ADF_SETNULL_MACRO(rdv);
-		return E_DB_OK;
-	}
-	
-	//Make sure it's a point
-	if(abs(pt_dv->db_datatype) != DB_POINT_TYPE)
-	{
-    	return (adu_error(adf_scb, E_AD5600_GEOSPATIAL_USER, 2, 0,
-		"adu_point_x: Only Point is allowed."));
-	}
-	
-	handle = initGEOS_r(geos_Notice, geos_Error);
-	
-	//We need to handle nullable data types, adu expects them to be non-nullable
-	pt_dv->db_datatype = abs(pt_dv->db_datatype);
-
-	//Convert the geometry out from adf session control block and pt data value
-	status = dataValueToGeos(adf_scb, pt_dv, handle, &geometry, FALSE);
-	if(status != E_DB_OK)
-	{
-		finishGEOS_r(handle);
-		return (adu_error(adf_scb, E_AD5601_GEOSPATIAL_INTERNAL, 2, 0,
-                                "adu_point_x: Failed to convert data value to GEOSGeometry."));
-	}
-	
-	/*
-	 * If it's an empty point, return NULL
-	 * NOTE: This is how PostGIS handles it
-	 */
-	if(GEOSisEmpty_r(handle, geometry))
-	{
-        ADF_SETNULL_MACRO(rdv);
-        return E_DB_OK;
-	}
-
-	//Get the x value from the point
-	status = GEOSGeomGetX_r(handle, geometry, &x);
-	if(!status){
-		GEOSGeom_destroy_r(handle, geometry);
-		finishGEOS_r(handle);
-		return (adu_error(adf_scb, E_AD5601_GEOSPATIAL_INTERNAL, 2, 0,
-				"adu_point_x: Failed to get x value from GEOSGeometry."));
-	}
-	
-	//Copy the resulting x value into return data value
-	MEcopy(&x, sizeof(f8), rdv->db_data);
-	
-	//Clean stuffs up
-	GEOSGeom_destroy_r(handle, geometry);
-	finishGEOS_r(handle);
-
- 	return E_DB_OK;
-}
-
-DB_STATUS
-adu_point_y(
-ADF_CB          *adf_scb,
-DB_DATA_VALUE   *pt_dv,
-DB_DATA_VALUE   *rdv)
-{
-	DB_STATUS status = E_DB_OK;
-	GEOSGeometry *geometry = NULL;
-	GEOSContextHandle_t handle;
-	f8 y;
-	
-	//initialize the handle for GEOS
-	if(ADI_ISNULL_MACRO(pt_dv)){
-		ADF_SETNULL_MACRO(rdv);
-		return E_DB_OK;
-	}
-
-	//Make sure it's a point
-	if(abs(pt_dv->db_datatype)!= DB_POINT_TYPE){
-		return(adu_error(adf_scb, E_AD5600_GEOSPATIAL_USER, 2, 0,
-		"adu_point_y: Only Point is allowed."));
-	}
-
-	handle = initGEOS_r(geos_Notice, geos_Error);
-
-    //We need to handle nullable data types, adu expects them to be non-nullable
-    pt_dv->db_datatype = abs(pt_dv->db_datatype);
-
-	//Convert the geometry out from adf session control block and pt data value
-	status = dataValueToGeos(adf_scb, pt_dv, handle, &geometry, FALSE);
-	if(status != E_DB_OK){
-		finishGEOS_r(handle);
-		return (adu_error(adf_scb, E_AD5601_GEOSPATIAL_INTERNAL, 2, 0,
-			"adu_point_y: Failed to convert data value to GEOSGeometry."));
-	}
-
-	/*
-     * If it's an empty point, return NULL
-     * NOTE: This is how PostGIS handles it
-     */
-    if(GEOSisEmpty_r(handle, geometry))
-    {
-        ADF_SETNULL_MACRO(rdv);
-        return E_DB_OK;
-    }
-
-
-	//Get the y value from the point
-	status = GEOSGeomGetY_r(handle, geometry, &y);
-	if(!status){
-		GEOSGeom_destroy_r(handle, geometry);
-		finishGEOS_r(handle);
-		return (adu_error(adf_scb, E_AD5601_GEOSPATIAL_INTERNAL, 2, 0,
-				"adu_point_y: Failed to get y value from GEOSGeometry."));
-	}
-
-	//Copy the result y value into return data value
-	MEcopy(&y, sizeof(f8), rdv->db_data);
-
-	//Clean stuffs up
-	GEOSGeom_destroy_r(handle, geometry);
-	finishGEOS_r(handle);
-	
-	return E_DB_OK;
 }
 
 /*
@@ -4977,125 +5938,3 @@ DB_DATA_VALUE       *pt_dv2)
 
     return (E_DB_OK);
 }
-
-/*
- * Perform reprojection of a geometry. 
- */
-DB_STATUS
-adu_transform(
-ADF_CB          *adf_scb,
-DB_DATA_VALUE   *dv1,
-DB_DATA_VALUE   *dv2,
-DB_DATA_VALUE   *rdv)
-{
-    DB_STATUS status = E_DB_OK;
-    GEOSGeometry *geom = NULL;
-    GEOSContextHandle_t handle;
-    i4 dt = abs(dv1->db_datatype);
-    int srid;
-
-    if(ADI_ISNULL_MACRO(dv1) || ADI_ISNULL_MACRO(dv2))
-    {
-        ADF_SETNULL_MACRO(rdv);
-        return E_DB_OK;
-    }
-
-    switch(dv2->db_length)
-    {
-      case 1:
-        srid = *(i1 *) dv2->db_data;
-        break;
-      case 2:
-        srid = *(i2 *) dv2->db_data;
-        break;
-      case 4:
-        srid = *(i4 *) dv2->db_data;
-        break;
-      case 8:
-        srid = *(i8 *) dv2->db_data;
-        break;
-      default:
-        return (adu_error(adf_scb, E_AD5601_GEOSPATIAL_INTERNAL, 2, 0,
-                          "adu_transform: invalid srid passed with data value 2"));
-    }
-
-    handle = initGEOS_r( geos_Notice, geos_Error );
-
-    status = dataValueToGeos(adf_scb, dv1, handle, &geom, FALSE);
-    if(status != E_DB_OK)
-    {
-    	finishGEOS_r(handle);
-        return (adu_error(adf_scb, E_AD5601_GEOSPATIAL_INTERNAL, 2, 0,
-                          "adu_geometryn: Failed to convert data value to GEOSGeometry."));
-    }
-
-    /* 
-     * For now no actual work is being done.  
-     */
-
-    status = geosToDataValue(adf_scb, geom, handle, rdv, NULL, FALSE);
-
-    /*
-     * Clean up
-     */
-    GEOSGeom_destroy_r(handle, geom);
-    finishGEOS_r(handle);
-
-    return status;
-}
-/*
- * Takes an ADF_CB, DB_SPATIAL_REF_SYS pointer and an i4 srid
- * All errors are handled in this function, if it returns
- * anything but E_DB_OK, just abort, do not create a new
- * error message.
- */
-DB_STATUS
-getSRS(ADF_CB *adf_scb, DB_SPATIAL_REF_SYS *srs, i4 srid)
-{
-    DB_STATUS status;
-    i4 errcode;
-
-    /*
-     * Safety check
-     */
-    if(srs == NULL)
-    {
-        return (adu_error(adf_scb, E_AD5601_GEOSPATIAL_INTERNAL, 2, 0,
-                          "populateSRS: passed a null pointer to srs."));
-    }
-
-    /*
-     * Assign the SRID to the struct then look it up using the FEXI
-     */
-    srs->srs_srid = srid;
-    status = (*Adf_globs->Adi_fexi[ADI_08GETSRS_FEXI].adi_fcn_fexi) (srs, &errcode);
-
-    /*
-     * If we have an error let's translate it if we can.
-     */
-    if(status != E_DB_OK)
-    {
-        switch(errcode)
-        {
-        case E_AD5603_NO_TRANSACTION:
-            adu_error(adf_scb, E_AD5600_GEOSPATIAL_USER, 2, 0,
-                      "No transaction found, couldn't look up spatial reference system.");
-            break;
-        case E_AD5604_SRS_NONEXISTENT:
-            adu_error(adf_scb, E_AD5600_GEOSPATIAL_USER, 2, 0,
-                      "spatial_ref_sys table not found.");
-            break;
-        case E_AD5605_INVALID_SRID:
-            adu_error(adf_scb, E_AD5600_GEOSPATIAL_USER, 2, 0,
-                      "An invalid SRID was specified.");
-            break;
-        default:
-            adu_error(adf_scb, E_AD5601_GEOSPATIAL_INTERNAL, 2, 0,
-                      "populateSRS: failed to retrieve spatial reference system");
-        }
-        return status;
-    }
-
-    return E_DB_OK;
-}
-

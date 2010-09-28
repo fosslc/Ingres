@@ -1,5 +1,5 @@
 /*
-**  Copyright (C) 2005-2006 Ingres Corporation. All Rights Reserved.
+**  Copyright (C) 2005-2010 Ingres Corporation. All Rights Reserved.
 **
 **  Project : CA/Ingres Visual Manager
 **
@@ -92,7 +92,22 @@
 **     currently broken line will not actually break the logic of the 
 **     routine.
 **     Cleanup warning in this file for unreferenced pathBuf.
-** 
+** 18-Aug-2010 (lunbr01)  bug 124216
+**     On Windows, ivm crashes in find_procs() if II_GC_PROT=tcp_ip.
+**     This is because code depends on pipe names, rather than TCP/IP
+**     ports, in iinamu output. Code should be generic and not dependent
+**     on format of local listen ports, which ifdef MAINWIN code already is.
+**     "#ifdef MAINWIN" had been used to generate the Unix version of
+**     the code.  Hence, the fix is to keep the MAINWIN code and strip
+**     out the non-MAINWIN code that was used to detect and parse pipe
+**     names.  Also fixed a problem in finding the instance string, and
+**     simplified the code a bit, such as:
+**     1. Removed FormatKey2Find() and replaced calls to it with simple
+**        sprintf().
+**     2. Removed code checking for master name server (Ingres undoc'd
+**        "discovery" feature) since remote name servers do not show
+**        up in iinamu "show servers" output and, hence, do not need
+**        to be skipped.
 */
 
 //#define WORKGROUP_EDITION //to be #defined at the makefile or environment level
@@ -426,9 +441,7 @@ BOOL LLGetComponentInstances (CaTreeComponentItemData* pComponent, CTypedPtrList
 		case COMP_TYPE_DASVR        :
 		case COMP_TYPE_BRIDGE       :
 		case COMP_TYPE_INTERNET_COM :
-#ifdef MAINWIN // under UNIX, the name server is in the special list
 		case COMP_TYPE_NAME         :
-#endif
 			{
 				// loop on the "special instances"
 				CaParseInstanceInfo * pInstance = NULL;
@@ -567,9 +580,7 @@ BOOL LLGetComponentInstances (CaTreeComponentItemData* pComponent, CTypedPtrList
 			case COMP_TYPE_DASVR        :
 			case COMP_TYPE_BRIDGE       :
 			case COMP_TYPE_INTERNET_COM :
-#ifdef MAINWIN // under UNIX, the name server is in the special list
 			case COMP_TYPE_NAME         :
-#endif
 			{
 				// don't take those of the "special instances" list (already managed)
 				CaParseInstanceInfo * pInstance = NULL;
@@ -680,30 +691,27 @@ static void MoveInstanceString(char * pdest, char * psrc)
 
 }
 
-static void FormatKey2Find(char * pdest, char * pinstall, char * pCompKey)
-{
-#ifdef MAINWIN
-	sprintf(pdest," %s ",pCompKey);
-#else
-	sprintf(pdest,"%s\\%s\\",pinstall, pCompKey);
-#endif
-	return;
-}
-
 static char * Move2InstanceStringStart(char *p)
 {
-#ifdef MAINWIN
-	p=_tcsinc(p); //skip leading space 
+    /*
+    ** 2nd column of iinamu output is an object name, which is generally
+    ** an asterisk (*) but may be a database name or other things.
+    ** We want to skip past the object name and find the instance string,
+    ** which is the listen address.
+    */
+    BOOL	bFoundObjName = FALSE;
 	while ( *p) { 
-		if (isspace( *p )) { // found first space after the "key" (server class)
-			while (isspace( *p )) // look for first non_blank character
-					p=_tcsinc(p);
-			return p;
-		}
-		p=_tcsinc(p);
+	    if (isspace( *p )) { // found first space after the "key" (server class) or obj name
+		while (isspace( *p )) // look for first non_blank character
+		    p=_tcsinc(p);
+		if (bFoundObjName)
+		    return p;
+		else
+		    bFoundObjName = TRUE;   // next look for listen addr
+	    }
+	    p=_tcsinc(p);
 	}
 	// if nothing found, p points to the trailing \0
-#endif // under NT, the pointer already points to the start of the instance string: nothing to do
 	return p;
 }
 
@@ -743,27 +751,7 @@ find_procs( )
 	bSecondaryLog = FALSE;
 	bArchive	  = FALSE;
 
-#ifdef MAINWIN // FormatKey2Find() function not called here because of the difference between iigcn_key and gcn_server_class
-	sprintf(kbuf, " %s ",iigcn_key); 
-#else
-    sprintf( kbuf, "%s\\%s", ii_install, gcn_server_class );
-#endif
-    /*
-     ** First, skip past the master name server if it's running
-     */
-    if (( p = find_key( p, gcn_server_class)) !=NULL )
-    {
-		p2 = find_key(p, ii_install);
-		p = find_key(p, kbuf);
-		/* Is this a regular name server, if installation id 
-		**follows and it isn't server name then it's master
-		*/
-		if (strcmp(p, p2) != 0)
-		{
-			p = Move2InstanceStringStart(p);
-			MoveInstanceString(iigcn_id, p);
-		}
-    }
+	sprintf(kbuf, "%s ", iigcn_key); 
     p = readbuf;
     while (( p = find_key( p, kbuf)) != NULL )
     {
@@ -771,7 +759,8 @@ find_procs( )
 		MoveInstanceString(iigcn_id, p);
 	iigcn_count++;
     }
-	FormatKey2Find(kbuf, ii_install, iigcc_key);
+
+	sprintf(kbuf, "%s ", iigcc_key); 
     kp = iigcc_id;
     p = readbuf;
     while (p = find_key( p, kbuf ))
@@ -787,7 +776,7 @@ find_procs( )
         iigcc_count++;
     }
 
-	FormatKey2Find(kbuf, ii_install, iijdbc_key);
+	sprintf(kbuf, "%s ", iijdbc_key); 
     kp = iijdbc_id;
     p = readbuf;
     while (p = find_key( p, kbuf ))
@@ -803,7 +792,7 @@ find_procs( )
         iijdbc_count++;
     }
 
-	FormatKey2Find(kbuf, ii_install, iidas_key);
+	sprintf(kbuf, "%s ", iidas_key); 
     kp = iidas_id;
     p = readbuf;
     while (p = find_key( p, kbuf ))
@@ -820,7 +809,7 @@ find_procs( )
     }
 
 
-	FormatKey2Find(kbuf, ii_install, iigcb_key);
+	sprintf(kbuf, "%s ", iigcb_key); 
     kp = iigcb_id;
     p = readbuf;
     while (p = find_key( p, kbuf ))
@@ -838,7 +827,7 @@ find_procs( )
 
     if (Is_w95)
     {
-		FormatKey2Find(kbuf, ii_install, iigws_key);
+		sprintf(kbuf, "%s ", iigws_key); 
     	kp = iigws_id;
     	p = readbuf;
     	while (p = find_key( p, kbuf ))
@@ -855,7 +844,7 @@ find_procs( )
     	}
     }
 
-	FormatKey2Find(kbuf, ii_install, rmcmd_key);
+	sprintf(kbuf, "%s ", rmcmd_key); 
     kp = iirmcmd_id;
     p = readbuf;
     while (p = find_key( p, kbuf ))
@@ -874,7 +863,7 @@ find_procs( )
     kp = iidbms_id;
     for (i = 0; i <= num_dbms_classes; i++)
     {
-	FormatKey2Find(kbuf, ii_install, iidbms_key[i]);
+	sprintf(kbuf, "%s ", iidbms_key[i]); 
 	p = readbuf;
 	while (p = find_key( p, kbuf ))
 	{
@@ -893,7 +882,8 @@ find_procs( )
 			iidbms_count++;
 	}
     }
-	FormatKey2Find(kbuf, ii_install, iirecovery_key);
+
+	sprintf(kbuf, "%s ", iirecovery_key); 
     kp = iirecovery_id;
     p = readbuf;
     while (p = find_key( p, kbuf ))
@@ -912,7 +902,7 @@ find_procs( )
     kp = iistar_id;
     for (i = 0; i <= num_star_classes; i++)
     {
-	FormatKey2Find(kbuf, ii_install, iistar_key[i]);
+	sprintf(kbuf, "%s ", iistar_key[i]); 
 	p = readbuf;
 	while (p = find_key( p, kbuf ))
 	{
@@ -932,7 +922,7 @@ find_procs( )
 	}
     }
 
-	FormatKey2Find(kbuf, ii_install, icesvr_key);
+	sprintf(kbuf, "%s ", icesvr_key); 
     kp = icesvr_id;
     p = readbuf;
     while (p = find_key( p, kbuf ))
@@ -948,7 +938,7 @@ find_procs( )
         icesvr_count++;
     }
 
-	FormatKey2Find(kbuf, ii_install, oracle_key);
+	sprintf(kbuf, "%s ", oracle_key); 
     kp = oracle_id;
     p = readbuf;
     while (p = find_key( p, kbuf ))
@@ -963,7 +953,8 @@ find_procs( )
         *kp++ = '\0';
         oracle_count++;
     }
-	FormatKey2Find(kbuf, ii_install, db2udb_key);
+
+	sprintf(kbuf, "%s ", db2udb_key); 
     kp = db2udb_id;
     p = readbuf;
     while (p = find_key( p, kbuf ))
@@ -978,7 +969,8 @@ find_procs( )
         *kp++ = '\0';
         db2udb_count++;
     }
-	FormatKey2Find(kbuf, ii_install, informix_key);
+
+	sprintf(kbuf, "%s ", informix_key); 
     kp = informix_id;
     p = readbuf;
     while (p = find_key( p, kbuf ))
@@ -993,7 +985,8 @@ find_procs( )
         *kp++ = '\0';
         informix_count++;
     }
-	FormatKey2Find(kbuf, ii_install, sybase_key);
+
+	sprintf(kbuf, "%s ", sybase_key); 
     kp = sybase_id;
     p = readbuf;
     while (p = find_key( p, kbuf ))
@@ -1008,7 +1001,8 @@ find_procs( )
         *kp++ = '\0';
         sybase_count++;
     }
-	FormatKey2Find(kbuf, ii_install, mssql_key);
+
+	sprintf(kbuf, "%s ", mssql_key); 
     kp = mssql_id;
     p = readbuf;
     while (p = find_key( p, kbuf ))
@@ -1023,7 +1017,8 @@ find_procs( )
         *kp++ = '\0';
         mssql_count++;
     }
-	FormatKey2Find(kbuf, ii_install, odbc_key);
+
+	sprintf(kbuf, "%s ", odbc_key); 
     kp = odbc_id;
     p = readbuf;
     while (p = find_key( p, kbuf ))
@@ -1041,6 +1036,18 @@ find_procs( )
 #ifndef MAINWIN
 	// if special message not already having been displayed, look for "lost" instances 
 	// (not found in the known components, nor in the special instance list)
+	// NOTE: Though this code is Windows "named pipe"-specific, leave it
+	//       in so as not to lose "minor" existing functionality that
+	//       looks for "lost" instances (rare).  The code will not
+	//       work in the generic case (like tcp/ip for local IPC),
+	//       which is why it was #ifndef'd.  To fix for generic
+	//       case would likely require a major change to the flow
+	//       of entire function code above; suggest processing iinamu
+	//       output once sequentially rather than "by server/component"
+	//       repeatedly and blanking out used instances in iinamu output.
+	//       If II_GC_PROT=tcp_ip on Windows, the code is essentially
+	//       a no-op and behaves like Unix/tcp_ip local IPC where the
+	//       code is not even generated.
 	if (!bGetInstMsgSpecialInstanceDisplayed) {
 		char buflostinstance[100];
 		sprintf( kbuf, "%s\\", ii_install);

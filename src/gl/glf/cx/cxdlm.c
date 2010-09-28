@@ -163,6 +163,8 @@
 **	    aid debugging of VMS proxy locks.
 **	09-oct-2008 (stegr01/joea)
 **	    Replace II_VMS_ITEM_LIST_3 by ILE3.
+**      03-sep-2010 (joea)
+**          In CXdlm_get_blki, if a lock has been granted, update rqmode.
 */
 
 
@@ -3340,6 +3342,7 @@ CXdlm_get_blki( u_i4 flags, CX_REQ_CB *preq, i4 which_buf,
 	    {
 	    case LKI$C_GRANTED:
 		queue = CX_BLKI_GRANTQ;
+                rqmode = grmode;
 		break;
 	    case LKI$C_CONVERT:
 		queue = CX_BLKI_CONVQ;

@@ -964,6 +964,18 @@ NO_OPTIM=su4_cmw i64_aix
 **	    Fix net-change logic for width for ALTER TABLE.
 **	09-Jun-2010 (jonj) SIR 121123
 **	    Adapt hash of owner, table_name to long names.
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Add compression to the ridiculously long parameter list.
+**	08-aug-2010 (miket) SIR 122403
+**	    Improve AES key generation and encryption:
+**	    (1) ensure full use of key space (MHrand2 tends to return
+**		00s for high bits but I don't want to rock the CL boat)
+**	    (2) make sure encrypted blocks are unpredictable by filling
+**		the pad space with random bits rather than 00s
+**	    (3) seed the random number generator for table create
+**	27-Aug-2010 (jonj)
+**	    Pass location's "k" index to dm2u_raw_location_free.
+**	    Remove redundant SETDBERR.
 */
 
 /* ****FIXME THIS parameter list is simply ridiculous.  Just pass
@@ -988,6 +1000,7 @@ i4		    view,
 i4		    relstat,
 u_i4		    relstat2,
 i4		    structure,
+i4		    compression,
 i4		    ntab_width,
 i4		    ntab_data_width,
 i4		    attr_count,
@@ -1311,6 +1324,8 @@ DB_ERROR	    *errcb)
 	has_extensions = 1;
 	relstat2 |= TCB2_BSWAP;		/* Always set on new tables */
     }
+    if (compression != TCB_C_NONE)
+	relstat |= TCB_COMPRESSED;
 
     if (((dcb->dcb_status & DCB_S_JOURNAL) != DCB_S_JOURNAL) && (journal))
     {
@@ -2104,12 +2119,11 @@ DB_ERROR	    *errcb)
 			if (dcb->dcb_ext->ext_entry[i].flags & DCB_RAW)
 			{
 			    status = dm2u_raw_location_free(dcb, xcb, 
-					&location[k], errcb); 
+					&location[k], k, errcb); 
 	    		    if (status != E_DB_OK)
 			    {
 				compare = 1;
-				SETDBERR(errcb, k, E_DM0190_RAW_LOCATION_OCCUPIED);
-				status = E_DB_ERROR;	
+				/* dm2u_raw_location_free has set errcb info */
 				break;
 			    }
 			    loc_array[k].loc_status |= LOC_RAW;
@@ -2265,7 +2279,7 @@ DB_ERROR	    *errcb)
 	/* Set Table's Page Type */
 	relrecord.relpgtype = page_type;
 
-        relrecord.relcomptype = TCB_C_NONE;
+        relrecord.relcomptype = compression;
 
 	if (relstat & TCB_IS_PARTITIONED)
 	{
@@ -2389,17 +2403,18 @@ DB_ERROR	    *errcb)
 	** - store the type of encrytion as a flag
 	** - generate a key for the selected type and
 	**	- append a validating hash
+	**	- fill the padding with random bits
 	**	- encrypt the lot with the user passphrase
-	** Layout of key / hash / 0-pad / extra bytes is as follow:
+	** Layout of key / hash / ?-pad / 0-extra bytes is as follow:
 	** AES 128
 	** <----BLOCK1----><----BLOCK2---->
-	** KKKKKKKKKKKKKKKKhhhh000000000000................................
+	** KKKKKKKKKKKKKKKKhhhh????????????00000000000000000000000000000000
 	** AES 192
 	** <----BLOCK1----><----BLOCK2---->
-	** KKKKKKKKKKKKKKKKKKKKKKKKhhhh0000................................
+	** KKKKKKKKKKKKKKKKKKKKKKKKhhhh????00000000000000000000000000000000
 	** AES 256
 	** <----BLOCK1----><----BLOCK2----><----BLOCK3---->
-	** KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKhhhh000000000000................
+	** KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKhhhh????????????0000000000000000
 	** Note that the original design called for a SHA-1 hash rather
 	** than the Ingres hash, and requires up to 4 blocks, as shown
 	** below. For various reasons of software licensing and storage
@@ -2409,13 +2424,13 @@ DB_ERROR	    *errcb)
 	** or some other lengthier hash be desired for a later release.
 	** AES 128
 	** <----BLOCK1----><----BLOCK2----><----BLOCK3---->
-	** KKKKKKKKKKKKKKKKhhhhhhhhhhhhhhhhhhhh000000000000................
+	** KKKKKKKKKKKKKKKKhhhhhhhhhhhhhhhhhhhh????????????0000000000000000
 	** AES 192
 	** <----BLOCK1----><----BLOCK2----><----BLOCK3---->
-	** KKKKKKKKKKKKKKKKKKKKKKKKhhhhhhhhhhhhhhhhhhhh0000................
+	** KKKKKKKKKKKKKKKKKKKKKKKKhhhhhhhhhhhhhhhhhhhh????0000000000000000
 	** AES 256
 	** <----BLOCK1----><----BLOCK2----><----BLOCK3----><----BLOCK4---->
-	** KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKhhhhhhhhhhhhhhhhhhhh000000000000
+	** KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKhhhhhhhhhhhhhhhhhhhh????????????
 	*/
 	if (dmu_enc_flags & DMU_ENCRYPTED)
 	{
@@ -2427,6 +2442,14 @@ DB_ERROR	    *errcb)
 	    u_i4 rk[RKLENGTH(AES_256_BITS)];
 	    u_char *et, *pt, *pprev;
 	    u_i4 crc;
+	    HRSYSTIME hrtime;
+	    i4 temprand = MHrand2();
+
+	    /* seed the random generator: kick the can an arbitrary distance
+	    ** down the road from an arbitrary starting point
+	    */
+	    TMhrnow(&hrtime);
+	    MHsrand2(hrtime.tv_nsec * temprand);
 
 	    relrecord.relencver = TCB_ENC_VER_1;
 	    relrecord.relencflags = TCB_ENCRYPTED;
@@ -2475,7 +2498,18 @@ DB_ERROR	    *errcb)
 		** random u_i4s to fill in the key for the AES type.
 		*/
 		for ( i = 0 ; i < (keybytes / sizeof(u_i4)) ; i++ )
+		{
 		    u_key.rand_i4[i] = MHrand2();
+		    u_key.rand_i4[i] *= MHrand2(); /* ensure high bits */
+		}
+	    }
+	    /* fill the padding after the crc with random bits */
+	    for ( i = (keybytes / sizeof(u_i4)) + 1,	/* +1/-1 skips crc */
+		  j = (blocks * sizeof(u_i4)) - (keybytes / sizeof(u_i4)) - 1 ;
+		  j > 0 ; i++, j-- )
+	    {
+		u_key.rand_i4[i] = MHrand2();
+		u_key.rand_i4[i] *= MHrand2(); /* ensure high bits */
 	    }
 	    /* fill in the hash */
 	    crc = -1;

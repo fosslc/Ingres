@@ -783,6 +783,7 @@ gw02__fmt
         case    DB_MLINE_TYPE:
         case    DB_POLY_TYPE:
         case    DB_MPOLY_TYPE:
+        case	DB_GEOMC_TYPE:
 	    xatt->glength = att->att_width;
             break;
 	default:
@@ -811,6 +812,7 @@ gw02__fmt
         case    DB_MLINE_TYPE:
         case    DB_POLY_TYPE:
         case    DB_MPOLY_TYPE:
+        case	DB_GEOMC_TYPE:
 	    xatt->gtype = RMSGW_NL_FIXSTR;
 	    break;
 

@@ -1629,7 +1629,8 @@ rms_istrcvt
                      outdv->db_datatype != DB_MLINE_TYPE &&
                      outdv->db_datatype != DB_POLY_TYPE &&
                      outdv->db_datatype != DB_MPOLY_TYPE &&
-                     outdv->db_datatype != DB_LBYTE_TYPE )
+                     outdv->db_datatype != DB_LBYTE_TYPE &&
+                     outdv->db_datatype != DB_GEOMC_TYPE)
                 {
                     /*
                     ** we want to keep the nulls for byte and lbyte types

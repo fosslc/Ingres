@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2008, 2009 Ingres Corporation
+** Copyright (c) 2008, 2010 Ingres Corporation
 */
 
 #include <compat.h>
@@ -61,6 +61,8 @@
 **	    Moved the LSA_REPOST logic to gcd_gca_activate() to resolve the
 **	    hang issue on VMS platform from an iimonitor session 
 **	    after 2 successful attempts. 
+**	24-Aug-10 (gordy)
+**	    Register support for DAS MIB.
 */	
 
 static	PTR		gca_cb = NULL;
@@ -783,6 +785,8 @@ gcd_gca_activate()
 ** History:
 **	 2-Jun-99 (gordy)
 **	    Created.
+**	24-Aug-10 (gordy)
+**	    Register support for DAS MIB.
 */
 
 STATUS
@@ -814,6 +818,7 @@ gcd_gca_init( )
     parms.gca_rg_parms.gca_l_so_vector = 0;
     parms.gca_rg_parms.gca_served_object_vector = NULL;
     parms.gca_rg_parms.gca_installn_id = "";
+    parms.gca_rg_parms.gca_modifiers = GCA_RG_DASVR;
 	    
     IIGCa_cb_call( &gca_cb, GCA_REGISTER, 
 		   &parms, GCA_SYNC_FLAG, NULL, -1, &status );

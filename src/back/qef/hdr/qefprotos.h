@@ -251,6 +251,8 @@
 **	    Pass dsh to retrow action.
 **	19-May-2010 (kschendel) b123775
 **	    Make close-temp-tables utility global for tprocs.
+**	21-Jun-2010 (kschendel) b123775
+**	    Combine qeq-dsh in progress and is-tproc flags into an enum.
 */
 
 /*	QEC functions	*/
@@ -625,7 +627,7 @@ qee_fetch(
 	QEE_DSH		**dsh,
 	i4		page_count,
 	QSF_RCB		*qsf_rcb,
-        bool            isTproc);
+        bool            is_tproc);
 
 FUNC_EXTERN	bool
 qee_chkeob(
@@ -1993,14 +1995,24 @@ FUNC_EXTERN VOID
 qeq_unwind_dsh_resources(
 QEE_DSH	    *dsh);
 
+/* Enum for calling qeq-dsh to get a db procedure or possibly tproc DSH. */
+typedef enum {
+    QEQDSH_NORMAL,		/* Pass if DSH is for an ordinary QP */
+    QEQDSH_IN_PROGRESS,		/* Pass if DSH is for a DB procedure or some
+				** similar QP (such as an execute immediate)
+				** which is created while another QP is
+				** in progress.
+				*/
+    QEQDSH_TPROC		/* Pass if DSH is for a table procedure */
+} QEQ_DSH_QPTYPE;
+
 FUNC_EXTERN DB_STATUS
 qeq_dsh(
 QEF_RCB		*qef_rcb,
 i4		must_find,
 QEE_DSH		**dsh,
-bool		in_progress,
-i4              page_count,
-bool            isTproc );
+QEQ_DSH_QPTYPE	qptype,
+i4              page_count);
 
 FUNC_EXTERN VOID
 qeq_nccalls(

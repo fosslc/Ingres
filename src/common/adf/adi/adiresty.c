@@ -157,6 +157,8 @@
 **	    Add last_identity exception
 **	18-Mar-2010 (kiria01) b123438
 **	    Support SINGLETON aggregate for scalar sub-query support.
+**	28-Jul-2010 (kiria01) b124142
+**	    SINGLETON should always be nullable.
 */
 
 # ifdef ADF_BUILD_WITH_PROTOS
@@ -201,7 +203,6 @@ DB_DT_ID	*adi_res_dt;
 	if (adf_scb->adf_qlang == DB_SQL
 	  &&  op != ADI_CNT_OP
 	  &&  op != ADI_CNTAL_OP
-	  &&  op != ADI_SINGLETON_OP
 	  &&  op != ADI_ANY_OP)
 	    *adi_res_dt = - *adi_res_dt;	/* Agg result is nullable */
     }

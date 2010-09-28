@@ -185,6 +185,8 @@ static DB_STATUS 	dmv_redestroy(
 **	13-Jul-2007 (kibro01) b118695
 **	    DM0L_DESTROY structure may be larger if the number of locations
 **	    exceeds DM_MAX_LOC
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 */
 DB_STATUS
 dmve_destroy(
@@ -198,6 +200,7 @@ DMVE_CB		*dmve_cb)
     i4		actual_size;
 
     CLRDBERR(&dmve->dmve_error);
+    DMVE_CLEAR_TABINFO_MACRO(dmve);
 
     for (;;)
     {

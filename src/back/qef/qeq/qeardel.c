@@ -190,6 +190,10 @@
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: If E_DM0029_ROW_UPDATE_CONFLICT returned,
 **	    invalidate the QP and retry.
+**	2-Jul-2010 (kschendel) b124004
+**	    Fix before-rule if in-place delete, wasn't setting partition into
+**	    the TID.  (Not sure if OPC will compile things in-place if there
+**	    is a before rule, but let's get it right just in case.)
 */
 DB_STATUS
 qea_rdelete(
@@ -203,12 +207,13 @@ i4		    state )
     i4		err;
     DB_STATUS		status	= E_DB_OK;
     DMR_CB		*dmr_cb, *pdmr_cb;
-    PTR			output;
+    PTR			*assoc_cbs = assoc_dsh->dsh_cbs;
+    PTR			output, save_addr;
     char		*tidinput;  /* location of tid */
     DB_TID8		bigtid;
+    i4			odmr_cb_ix;
     u_i2		partno = 0;
-    char		*partnop = (char *)&partno;
-    
+
     if (dsh->dsh_qefcb->qef_c1_distrib & DB_3_DDB_SESS)    /* distributed? */
     {
 	/* make sure we have a positioned record */
@@ -247,7 +252,8 @@ i4		    state )
 	    break;
 
 	/* Address the DMR_CB for performing the DELETE. */
-	dmr_cb = (DMR_CB*) assoc_dsh->dsh_cbs[act->qhd_obj.qhd_qep.ahd_odmr_cb];
+	odmr_cb_ix = act->qhd_obj.qhd_qep.ahd_odmr_cb;
+	dmr_cb = (DMR_CB*) assoc_cbs[odmr_cb_ix];
 	if (state == DSH_CT_CONTINUE3)
 	{
 	    /* After a BEFORE rule, retrieve DMR CB, tid */
@@ -257,8 +263,7 @@ i4		    state )
 	      && act->qhd_obj.qhd_qep.ahd_part_def)
 	    {
 		partno = bigtid.tid.tid_partno;
-		dmr_cb = (DMR_CB *)assoc_dsh->dsh_cbs[act->
-				qhd_obj.qhd_qep.ahd_odmr_cb+partno+1];
+		dmr_cb = (DMR_CB *)assoc_cbs[odmr_cb_ix + partno + 1];
 	    }
 	}
 	else
@@ -290,18 +295,33 @@ i4		    state )
 
 	    /* The delete operation will leave the cursor unpositioned */
 	    assoc_dsh->dsh_positioned = FALSE;
-	
-	    /* create the new tuple */
-	    output = dmr_cb->dmr_data.data_address;
 
-	    /* Delete the row.						    */
-	    /* If the cursor is positioned (ahd_tidoffset == -1), delete the    */
-	    /* row at the current position. If the cursor is not positioned	    */
-	    /* (e.g., the current row has been found via a secondary index),    */
-	    /* delete the row by TID. */
+	    /* Use fetch row for holding update row if need be */
+	    output = assoc_dsh->dsh_row[assoc_dsh->dsh_qp_ptr->qp_fetch_ahd->qhd_obj.qhd_qep.ahd_ruprow];
+
+	    /* Delete the row. */
+	    /* If the cursor is positioned (ahd_tidoffset == -1), delete the
+	    ** row at the current position. If the cursor is not positioned
+	    ** (e.g., the current row has been found via a secondary index),
+	    ** delete the row by TID.
+	    */
 
 	    if (act->qhd_obj.qhd_qep.ahd_tidoffset == -1)
 	    {
+		if (act->qhd_obj.qhd_qep.ahd_part_def != NULL)
+		{
+		    i4 orig_node = act->qhd_obj.qhd_qep.ahd_ruporig;
+		    if (orig_node == -1)
+		    {
+			TRdisplay("%@ qea_rdel: missing ahd_ruporig\n");
+			dsh->dsh_error.err_code = E_QE0002_INTERNAL_ERROR;
+			status = E_DB_ERROR;
+			break;
+		    }
+		    partno = assoc_dsh->dsh_xaddrs[orig_node]->
+						qex_status->node_ppart_num;
+		    dmr_cb = (DMR_CB *) assoc_cbs[odmr_cb_ix + partno + 1];
+		}
 		dmr_cb->dmr_flags_mask = DMR_CURRENT_POS;
 	    }
 	    else
@@ -319,14 +339,13 @@ i4		    state )
 		{
 		    I8ASSIGN_MACRO(*tidinput, bigtid);
 		}
-		dmr_cb->dmr_tid = bigtid.tid_i4.tid;
 		partno = bigtid.tid.tid_partno;
 
 		/* Check for partitioning and set up DMR_CB. */
 		if (act->qhd_obj.qhd_qep.ahd_part_def)
 		{
 		    status = qeq_part_open(qef_rcb, assoc_dsh, NULL, 0, 
-			act->qhd_obj.qhd_qep.ahd_odmr_cb,
+			odmr_cb_ix,
 			act->qhd_obj.qhd_qep.ahd_dmtix, partno);
 			
 		    if (status != E_DB_OK)
@@ -334,20 +353,21 @@ i4		    state )
 			dsh->dsh_error.err_code = assoc_dsh->dsh_error.err_code;
 			return(status);
 		    }
-		    pdmr_cb = (DMR_CB *)assoc_dsh->dsh_cbs[act->
-			qhd_obj.qhd_qep.ahd_odmr_cb+partno+1];
-
-		    MEcopy((PTR)&dmr_cb->dmr_tid, sizeof(DB_TID),
-				(PTR)&pdmr_cb->dmr_tid);
+		    pdmr_cb = (DMR_CB *)assoc_cbs[odmr_cb_ix + partno + 1];
+		    STRUCT_ASSIGN_MACRO(dmr_cb->dmr_data, pdmr_cb->dmr_data);
 		    dmr_cb = pdmr_cb;
 		}
 		dmr_cb->dmr_flags_mask = DMR_BY_TID;
+		dmr_cb->dmr_tid = bigtid.tid_i4.tid;
 
 		if (act->qhd_obj.qhd_qep.ahd_after_act != NULL ||
 		    act->qhd_obj.qhd_qep.ahd_before_act != NULL)
 	    	{
 		    /* get the tuple to be updated. */
+		    save_addr = dmr_cb->dmr_data.data_address;
+		    dmr_cb->dmr_data.data_address = output;
 		    status = dmf_call(DMR_GET, dmr_cb);
+		    dmr_cb->dmr_data.data_address = save_addr;
 		    if (status != E_DB_OK)
 		    {
 			dsh->dsh_error.err_code = dmr_cb->error.err_code;

@@ -230,6 +230,11 @@
 **      26-oct-2009 (joea)
 **          Add cases for E_AD106A_INV_STR_FOR_BOOL_CAST and
 **          E_AD106B_INV_INT_FOR_BOOL_CAST in aduErrorFcn.
+**      01-Jul-2010 (horda03) B123234
+**          Convert E_AD5079_INTERVAL_IN_ABS_FUNC to E_US10F5_INTERVAL_IN_ABS_FUNC
+**      31-Aug-2010 (thich01)
+**          Add E_AD5606_SPATIAL_NOT_SUPPORTED for platforms where spatial is
+**          not supported.
 **/
     
 
@@ -532,6 +537,8 @@ static	i4	    dum2;	/* Dummy to give to ult_check_macro() */
 **	    E_US1196_NOT_ZEROONE_ROWS for SINGLETON aggregate.
 **      23-Mar-2010 (hanal04) Bug 122436
 **          Map E_AD2085_LOCATE_NEEDS_STR to E_US1072_BAD_LOCATE_ARG.
+**      01-Jul-2010 (horda03) B123234
+**          Convert E_AD5079_INTERVAL_IN_ABS_FUNC to E_US10F5_INTERVAL_IN_ABS_FUNC
 **          
 [@history_template@]...
 */
@@ -987,6 +994,10 @@ i4		    pcnt,
 	adf_errcb->ad_usererr	= E_US10ED_ANSITIME_INTVLADD;
 	break;
 
+      case E_AD5079_INTERVAL_IN_ABS_FUNC:
+	adf_errcb->ad_usererr	= E_US10F5_INTERVAL_IN_ABS_FUNC;
+	break;
+
       case E_AD5092_DATE_DIV_BY_ZERO:
 	adf_errcb->ad_usererr	= E_US10F1_DATE_DIV_BY_ZERO;
 	break;
@@ -1097,6 +1108,7 @@ i4		    pcnt,
       case E_AD5091_DATE_DIV:
       case E_AD50A0_BAD_UUID_PARM:
       case E_AD5600_GEOSPATIAL_USER:
+      case E_AD5606_SPATIAL_NOT_SUPPORTED:
       case E_AD8999_FUNC_NOT_IMPLEMENTED:
 	adf_errcb->ad_usererr	= adf_errorcode;
 	break;

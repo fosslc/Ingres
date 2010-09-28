@@ -2499,6 +2499,9 @@ scs_scopy(SCD_SCB *scb,
 ** History:
 **	2-Jul-1993 (daveb)
 **	    prototyped.
+**	17-jun-2010 (stephenb)
+**	    Check if copy has ended already before ending it, otherwise
+**	    we may try to reference null values. (Bug 123939)
 */
 VOID
 scs_copy_error(SCD_SCB	*scb,
@@ -2520,25 +2523,28 @@ scs_copy_error(SCD_SCB	*scb,
 	qe_copy->qeu_stat |= CPY_FAIL;
 
     /*
-    ** Call QEF to end copy statement
+    ** Call QEF to end copy statement if not ended already.
     */
-    status = qef_call(QEU_E_COPY, qe_ccb);
-    if (DB_FAILURE_MACRO(status))
+    if (qe_copy != NULL && qe_copy->qeu_copy_ctl != NULL)
     {
-	if ((qe_ccb->error.err_code == E_QE0002_INTERNAL_ERROR)
-	    || (qe_ccb->error.err_code == E_QE001D_FAIL))
+	status = qef_call(QEU_E_COPY, qe_ccb);
+	if (DB_FAILURE_MACRO(status))
 	{
-	    sc0e_0_put(E_SC0251_COPY_CLOSE_ERROR, 0);
-	    sc0e_0_put(qe_ccb->error.err_code, 0);
-	    scs_cpsave_err(qe_copy, E_SC0251_COPY_CLOSE_ERROR);
-	}
-	else /* rest are scs' fault */
-	{
-	    sc0e_0_put(E_SC0251_COPY_CLOSE_ERROR, 0);
-	    sc0e_0_put(E_SC0024_INTERNAL_ERROR, 0);
-	    sc0e_0_put(qe_ccb->error.err_code, 0);
-	    sc0e_0_put(E_SC0210_SCS_SQNCR_ERROR, 0);
-	    scs_cpsave_err(qe_copy, E_SC0251_COPY_CLOSE_ERROR);
+	    if ((qe_ccb->error.err_code == E_QE0002_INTERNAL_ERROR)
+		|| (qe_ccb->error.err_code == E_QE001D_FAIL))
+	    {
+		sc0e_0_put(E_SC0251_COPY_CLOSE_ERROR, 0);
+		sc0e_0_put(qe_ccb->error.err_code, 0);
+		scs_cpsave_err(qe_copy, E_SC0251_COPY_CLOSE_ERROR);
+	    }
+	    else /* rest are scs' fault */
+	    {
+		sc0e_0_put(E_SC0251_COPY_CLOSE_ERROR, 0);
+		sc0e_0_put(E_SC0024_INTERNAL_ERROR, 0);
+		sc0e_0_put(qe_ccb->error.err_code, 0);
+		sc0e_0_put(E_SC0210_SCS_SQNCR_ERROR, 0);
+		scs_cpsave_err(qe_copy, E_SC0251_COPY_CLOSE_ERROR);
+	    }
 	}
     }
 

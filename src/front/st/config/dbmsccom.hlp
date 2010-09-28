@@ -1,0 +1,11 @@
+/#-- Copyright (c) 2010 Ingres Corporation
+  This resource controls the default table compression to use when a
+  table is defined using a CREATE TABLE or DECLARE GLOBAL TEMPORARY
+  TABLE statement.
+
+  Valid values are NONE, DATA, or HIDATA.
+
+  This resource only applies to the simple CREATE/DECLARE TABLE form.
+  It does not apply to CREATE/DECLARE TABLE AS SELECT.
+
+  The default is NONE.

@@ -29,6 +29,10 @@
 **	    Prototype for math exception lookup.
 **	19-Aug-2009 (kibro01) b122509
 **	    Add uld_prtree_x for sc930 tracing
+**      17-Aug-2010 (horda03) b124274
+**          Add flags parameter to uld_prtree_x, and permitted
+**          values. Note if ULD_FLAG_SEGMENTS specified
+**          the QEP will be dividied into connected segments.
 */
 
 typedef struct _ULD_TSTATE
@@ -135,6 +139,10 @@ FUNC_EXTERN DB_STATUS uld_tree_to_text( PTR handle, i4  qmode,
 				        ULD_TSTRING **tstring, DB_ERROR *error,
 				        DB_LANG language );
 
-FUNC_EXTERN VOID uld_prtree_x( PTR root, VOID (*printnode)(), PTR (*leftson)(),
+FUNC_EXTERN VOID uld_prtree_x( i4 flags, PTR root, VOID (*printnode)(), PTR (*leftson)(),
 	PTR (*rightson)(), i4  indent, i4  lbl, i4  facility, PTR sc930_trace );
+
+#define ULD_FLAG_NONE     0x00000000
+#define ULD_FLAG_SEGMENTS 0x00000001
+#define ULD_FLAG_OUT_SEG  0x00000002 /* For use within uldprtree.c only */
 

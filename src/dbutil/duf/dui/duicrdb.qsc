@@ -320,8 +320,6 @@ exec sql include SQLCA;     /* Embedded SQL Communications Area */
 **          Fixed iidbcapabilities rows that are dependent on DB_MAXNAME
 **	 1-Oct-09 (gordy)
 **	    Added SQL_MAX_PROCEDURE_NAME_LEN capability row.
-**	15-Mar-2010 (troal01)
-**	    duc_create_stdcat_views now requires du_geo_flag to be passed.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
 */
@@ -911,8 +909,7 @@ DUC_MODE_VECT   *duc_modes;
 
 	/* Create all standard catalog views */
 	duc_create_stdcat_views(duc_dbenv->du_dbname, 
-		(duc_dbenv->du_dbservice & DU_NAME_UPPER) ? TRUE : FALSE,
-		duc_dbenv->du_geo_flag);
+		(duc_dbenv->du_dbservice & DU_NAME_UPPER) ? TRUE : FALSE);
 
 
 	return(E_DB_OK);

@@ -340,6 +340,12 @@ FUNC_EXTERN char	*IIUGdmlStr();
 **          XF_NO_SEQUENCES is set. When -add_drop was used for tables
 **          that use sequences we were failing to add a DROP befor the
 **          generated CREATE SEQUENCE.
+**	21-jul-2010 (kschendel) SIR 124104
+**	    Output a "set nocreate_compression" statement to disable any
+**	    default compression, since the rest of xferdb assumes that
+**	    nocompression is the default.
+**	19-Aug-2010 (troal01)
+**	    Added geometry_columns to xf_is_fecat and xf_is_cat
 */
 void
 xfcrscript(char *owner, char *progname, char *dbaname, bool portable, 
@@ -512,6 +518,12 @@ xfcrscript(char *owner, char *progname, char *dbaname, bool portable,
 
 	/* Fix bug 56902, 54327: scripts leave tm in QUEL */
 	xfwrite(Xf_in, ERx("\\sql\n"));
+    }
+
+    /* Emit set nocreate_compression */
+    if (!With_distrib)
+    {
+	xfwrite(Xf_in, "set nocreate_compression\n\\p\\g\n");
     }
 
     /*
@@ -830,6 +842,8 @@ xf_is_cat(char *name)
 {
 	if (!STncasecmp(name, "spatial_ref_sys", 15))
 		return (TRUE);
+	if (!STncasecmp(name, "geometry_columns", 16))
+		return (TRUE);
     if (name != NULL && ((*name == 'i' && name[1] == 'i')
 		      || (*name == 'I' && name[1] == 'I')))
 	return (TRUE);
@@ -858,6 +872,8 @@ bool
 xf_is_fecat(char *name)
 {
 	if (!STncasecmp(name, "spatial_ref_sys", 15))
+		return (TRUE);
+	if (!STncasecmp(name, "geometry_columns", 16))
 		return (TRUE);
     if (name != NULL && ((*name == 'i' && name[1] == 'i' && name[2] == '_')
 		      || (*name == 'I' && name[1] == 'I' && name[2] == '_')))

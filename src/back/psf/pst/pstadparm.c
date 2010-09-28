@@ -280,6 +280,8 @@ pst_adparm(
 **          be improved for FE support of OME.
 **	04-Nov-2004 (gupsh01)
 **	    Added support for nvarchar types.
+**	3-Aug-2010 (kschendel)
+**	    Let pst-node figure out join id.
 */
 DB_STATUS
 pst_2adparm(
@@ -404,12 +406,11 @@ pst_2adparm(
 	opnode.pst_opno = ADI_UNORM_OP;
 	opnode.pst_opmeta = PST_NOMETA;
 	opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-	opnode.pst_joinid = PST_NOJOIN;
 
 	status = pst_node( sess_cb, &sess_cb->pss_ostream, *newnode, NULL,
 	    PST_UOP, (char *)&opnode, sizeof(opnode), 
 	    DB_NODT, (i2)0, (i4)0, (DB_ANYTYPE *)NULL, 
-	    newnode, &psq_cb->psq_error, PSS_JOINID_PRESET);
+	    newnode, &psq_cb->psq_error, PSS_JOINID_STD);
     }
 
     return (status);

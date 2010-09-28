@@ -530,6 +530,15 @@
 **	14-May-2010 (thaju02) Bug 123709
 **	    Add LOG_ESC_MACRO to determine if lock escalation msgs are to 
 **	    be suppressed. 
+**      09-Jun-2010 (stial01)
+**          Add fields to DMP_POS_INFO.
+**      12-Jul-2010 (stial01) (SIR 121619 MVCC, B124076)
+**          Added rcb_new_fullscan
+**	09-aug-2010 (maspa05) b123189, b123960
+**	    Add DCB_S_RODB to indicate database is a readonly database (as
+**          opposed to a database merely opened for read-only access)
+**      15-Sep-2010 (stial01) (SIR 121619 MVCC, SD 146756, B124453)
+**          Moved row_is_consistent() prototype to dmp.h
 */
 
 /*
@@ -880,11 +889,13 @@ struct _DMP_DCB
 #define			DCB_S_HAS_RAW	    0x100000L /* DB has a raw location,
 						    ** set at DB open time,
 						    ** not at ADD time. */
+#define                 DCB_S_RODB         0x200000L /* readonly database */
 /* String values of above bits */
 #define	DCB_STATUS	"\
 JOURNAL,EXCLUSIVE,ROLLFORWARD,ONLINE_RCP,RECOVER,FASTCOMMIT,INVALID,\
 BACKUP,SYNC,PRODUCTION,NOBACKUP,REPLICATE,DMCM,REPCATS,MLOCKED,\
-MVCC,MVCC_DISABLED,MVCC_TRACE,MVCC_JTRACE,MUST_LOG,HAS_RAW"
+MVCC,MVCC_DISABLED,MVCC_TRACE,MVCC_JTRACE,MUST_LOG,HAS_RAW,\
+READONLYDB"
 
     LG_LA	    dcb_backup_addr;	    /* On-line backup starting log
 					    ** address. */
@@ -1435,6 +1446,8 @@ struct _DMP_PINFO
 **
 ** 	19-Feb-2008 (kschendel)
 **	    Created to better encapsulate row compression.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Pass compression type to worst-case-expansion calculator.
 */
 
 typedef struct _DMP_ROWACCESS DMP_ROWACCESS;
@@ -1461,6 +1474,7 @@ typedef DB_STATUS (*DMP_RACFUN_UNCMP)(	/* Decompress function pointer */
 
 /* these aren't in the ROWACCESS struct but are related */
 typedef i4 (*DMP_RACFUN_XPN)(		/* worstcase expansion amount */
+	i4 compression_type,
 	DB_ATTS **atts,
 	i4 att_count);
 
@@ -1516,6 +1530,10 @@ struct _DMP_POS_INFO {
     DM_PAGENO	nextleaf;		/* page nextpage */
     i4		line;			/* line number for diagnostics */
     i1		valid;
+    DMPP_PAGE	*page;			/* for debugging */
+    DB_TRAN_ID  tran;			/* for debugging */
+    u_i4	row_low_tran;		/* for debugging */
+    u_i2	row_lg_id;		/* for debugging */
 };
 
 
@@ -1836,6 +1854,9 @@ struct _DMP_POS_INFO {
 **	    Add bqcb pointer, manual end-of-row flag.
 **	    Delete rcb_row_version, wasn't being set much of the time, and
 **	    isn't really needed.
+**	25-Aug-2010 (miket) SIR 122403 SD 145904
+**	    Add rcb_ehashbuf for computing hashes on encrypted attrs
+**	    in dm1h_newhash.
 */
 
 struct _DMP_RCB
@@ -1951,7 +1972,8 @@ struct _DMP_RCB
 					    ** row hits dm1c_pput or preplace.
 					    ** Manual e-o-r is for COPY.
 					    */
-    BITFLD	    rcb_bits_free:23;	    /* reserved for future use */
+    BITFLD          rcb_new_fullscan:1;     /* isnew MUST scan rcb_new_tids */
+    BITFLD	    rcb_bits_free:22;	    /* reserved for future use */
     i4         	    rcb_iso_level;          /* Isolation level. */         
 #define                  RCB_READ_UNCOMMITTED    1L
 #define                  RCB_CURSOR_STABILITY    2L
@@ -2339,6 +2361,9 @@ REC_PTR_VALID"
                                             ** allocated on either dm1h_hash,
                                             ** dm1h_newhash, dm1h_keyhash or
                                             ** dm1h_hash_uchar
+                                            */
+    PTR             rcb_ehashbuf;           /* buffer used in dm1h_newhash
+                                            ** for encrypted attrs
                                             */
     i4 	    	    rcb_val_logkey;         /* rcb_logkey is a valid logkey 
 					    ** assigned by an insert if either
@@ -3626,6 +3651,15 @@ CLOSE_ERROR,TMPMOD_WAIT,INCONS_IDX,FLUSH,VALIDATED,SHOWONLY,BEING_RELEASED"
 					    ** cannot be used. It breaks
 					    ** the iitables view.
 					    */
+/* All of the relstat flag bits.  *Update if any relstat flags are changed* */
+#define TCB_RELSTAT_ALL (TCB_CATALOG | TCB_NOUPDT | TCB_PRTUPS | TCB_INTEGS \
+ | TCB_CONCUR | TCB_VIEW | TCB_VBASE | TCB_INDEX | TCB_COMPRESSED  \
+ | TCB_INDEX_COMP | TCB_IS_PARTITIONED | TCB_PROALL | TCB_PROTECT  \
+ | TCB_EXTCATALOG | TCB_JON | TCB_UNIQUE | TCB_IDXD | TCB_JOURNAL  \
+ | TCB_NORECOVER | TCB_ZOPTSTAT | TCB_DUPLICATES | TCB_MULTIPLE_LOC  \
+ | TCB_GATEWAY | TCB_RULE | TCB_SYS_MAINTAINED | TCB_GW_NOUPDT | TCB_COMMENT \
+ | TCB_SYNONYM | TCB_VGRANT_OK | TCB_SECURE)
+
 /* String values of above bits */
 #define	RELSTAT	"\
 CATALOG,NOUPDT,PRTUPS,INTEGS,CONCUR,VIEW,VBASE,INDEX,BINARY,\
@@ -3633,6 +3667,7 @@ COMPRESSED,INDEX_COMP,PARTITIONED,PROALL,PROTECT,EXTCATALOG,\
 JON,UNIQUE,IDXD,JOURNAL,NORECOVER,ZOPTSTAT,DUPLICATES,\
 MULTIPLE_LOC,GATEWAY,RULE,SYS_MAINTAINED,GW_NOUPDT,COMMENT,\
 SYNONYM,VGRANT_OK,SECURE,80000000"
+
      u_i4	     relstat2;
 #define			 TCB2_EXTENSION	    0x00000001L
 					    /*
@@ -3757,9 +3792,19 @@ SYNONYM,VGRANT_OK,SECURE,80000000"
 #define 		TCB2_BSWAP		0x04000000L
 					    /* Byte swap peripheral per_key
 					    ** for better performance */
+
+/* All relstat2 bits.  *You Must Update This if you add more flags!* */
+#define TCB2_RELSTAT2_ALL (TCB2_EXTENSION | TCB2_HAS_EXTENSIONS | TCB_PERSISTS_OVER_MODIFIES \
+ | TCB_SUPPORTS_CONSTRAINT | TCB_SYSTEM_GENERATED | TCB_NOT_DROPPABLE \
+ | TCB_STATEMENT_LEVEL_UNIQUE | TCB2_READONLY | TCB2_CONCURRENT_ACCESS \
+ | TCB2_PHYS_INCONSISTENT | TCB2_LOGICAL_INCONSISTENT | TCB2_TBL_RECOVERY_DISALLOWED \
+ | TCB2_ALTERED | TCB2_PARALLEL_IDX | TCB_NOT_UNIQUE | TCB2_PARTITION \
+ | TCB_ROW_AUDIT | TCB_ALARM | TCB2_PHYSLOCK_CONCUR | TCB_SESSION_TEMP \
+ | TCB2_BSWAP)
+
 /* String values of above bits */
 #define	RELSTAT2	"\
-EXTENTION,HAS_EXTENSIONS,PERSISTENT,SUPPORTS_CONSTRAINT,SYS_GEN,\
+EXTENSION,HAS_EXTENSIONS,PERSISTENT,SUPPORTS_CONSTRAINT,SYS_GEN,\
 NOT_DROPPABLE,STMT_LEVEL_UNIQUE,READONLY,CONCURRENT,PHYS_INCONSIST,\
 LOG_INCONSIST,NO_TBL_RECOV,ALTERED,PARALLEL_IDX,NOT_UNIQUE,PARTITION,\
 GLOBAL_INDEX,PHYSLOCK_CONCUR,40000,80000,100000,200000,400000,ROW_AUDIT,ALARM,\
@@ -3807,10 +3852,17 @@ SESSION_TEMP,BSWAP"
      u_i4	     relextend;
      i2		     relcomptype;	    /* Type of compression employed */
 #define 		TCB_C_NONE	    0
-#define 		TCB_C_STANDARD	    1
+#define 		TCB_C_STD_OLD	    1	/* Old standard compression */
 #define 		TCB_C_OLD	    2	/* See below */
+#define			TCB_C_STANDARD	    3	/* New standard compression */
 #define                 TCB_C_HICOMPRESS    7
 #define 		TCB_C_DEFAULT	    TCB_C_STANDARD /* for normal */
+
+	/* Here, "old compression" is the old interpretation of standard
+	** compression, which squished out NULLs and stored CHAR as VARCHAR
+	** with trailing blanks eliminated.  "New compression" is the
+	** same general idea but includes BYTE and VARBYTE types as well.
+	*/
 
 	/* Note, the TCB_C_OLD compression type is not really stored
 	** in relcomptype.  Somewhere in ancient times, the standard
@@ -4576,3 +4628,10 @@ struct _DMP_RNL_ONLINE {
 	  ((DMZ_LCK_MACRO(6)) ||                                        \
 	   (dmf_svcb->svcb_log_err & SVCB_LOG_LPR_UT))))
 
+/*
+**  Forward and/or External function references.
+*/
+FUNC_EXTERN bool row_is_consistent(
+DMP_RCB		*r,
+u_i4		row_low_tran,
+u_i2		row_lg_id);

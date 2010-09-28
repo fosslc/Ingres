@@ -992,6 +992,17 @@ NO_OPTIM=dr6_us5 i64_aix
 **          dm2r_position() use logical value locks if not releasing
 **          dm2r_put() release value lock after put (not after allocate)
 **          base_delete_put() release value lock after put (not after allocate)
+**      12-Jul-2010 (stial01) (SIR 121619 MVCC, B124076)
+**          dm2r_replace() if row/crow_locking, defer_add_new() else dmpp_dput()
+**      19-Jul-2010 (thich01)
+**          Need to setup a coupon when inserting into a table with an rtree
+**          index already associated with it.
+**	20-Aug-2010 (miket) SIR 122403 SD 145904
+**	    Encrypted indexes get the encryption shm slot number from the base
+**	    table parent.
+**	31-Aug-2010 (miket) SIR 122403
+**	    For dm1e_aes calls follow dmf convention of breaking or
+**	    continuing with status test rather than returning on error.
 */
 
 static DB_STATUS BuildRtreeRecord(
@@ -1295,6 +1306,20 @@ static DB_STATUS SIcomplete(
 **	    the tcb_mutex.
 **	13-Apr-2010 (kschendel) SIR 123485
 **	    Init bqcb ptr and manual EOR flag.  Drop row version.
+**	4-jun-2010 (toumi01) SIR 122403
+**	    Instead of TMget_stamp use TMhrnow, because the result of the
+**	    former is supposed to be opaque (we should not reference
+**	    tm_stamp.tms_usec). This fixes portability to VMS.
+**	01-Sep-2010 (miket) SIR 122403
+**	    Adjust encrypted record buffer to correct overrun flagged in
+**	    dbms log ("Memory overrun rcb_hl_ptr").
+**	07-Sep-2010 (miket) SIR 122403
+**	    Replace AES_BLOCK (=16) lucky WAG for additional buffer required
+**	    for rcb_erecord_ptr with the actual extra needed by MODIFY for
+**	    tacking on hash bucket, partition no, and tid8 (=14). Since the
+**	    three record buffers can end up being used in common ways while
+**	    doing compression and encryption processing, make all three the
+**	    same size.
 */
 DB_STATUS
 dm2r_rcb_allocate(
@@ -1316,7 +1341,7 @@ DB_ERROR	    *dberr )
     i4			rec_buffers;
     i4                  klen;
     i4			seglen = 0;
-    TM_STAMP		tm_stamp;
+    HRSYSTIME		hrtime;
     DB_ERROR		local_dberr;
     i4		    *err_code = &dberr->err_code;
 
@@ -1337,11 +1362,11 @@ DB_ERROR	    *dberr )
     {
 	i4 tempi = MHrand2();
 	rec_buffers++;			/* erecord */
-	TMget_stamp(&tm_stamp);
+	TMhrnow(&hrtime);
 	/* seed the random generator: kick the can an arbitrary distance
-	** (tms_usc) down the road from an arbitrary starting point (tempi)
+	** (tv_nsec) down the road from an arbitrary starting point (tempi)
 	*/
-	MHsrand2(tm_stamp.tms_usec * tempi);
+	MHsrand2(hrtime.tv_nsec * tempi);
     }
 
     if (t->tcb_table_type == TCB_BTREE)
@@ -1371,7 +1396,7 @@ DB_ERROR	    *dberr )
 	{	
 	    /* lint truncation warnings if size of ptr > int, but code valid */
 	    status = dm0m_allocate(sizeof(DMP_RCB) +
-		DB_ALIGN_MACRO(t->tcb_rel.relwid +
+		DB_ALIGN_MACRO(t->tcb_rel.relwid + MODIFY_BUCKET_PNO_TID8_SZ +
 			t->tcb_data_rac.worstcase_expansion) * rec_buffers +
 		DB_ALIGN_MACRO(klen) * key_buffers +
 		sizeof(ADF_CB) + seglen,
@@ -1408,17 +1433,20 @@ DB_ERROR	    *dberr )
 	p = (char *) r + sizeof(DMP_RCB);
 
 	r->rcb_record_ptr = p;
-	p += t->tcb_rel.relwid + t->tcb_data_rac.worstcase_expansion;
+	p += t->tcb_rel.relwid + t->tcb_data_rac.worstcase_expansion +
+	    MODIFY_BUCKET_PNO_TID8_SZ;
 	p = ME_ALIGN_MACRO(p, sizeof(PTR));
 
 	r->rcb_srecord_ptr = p;
-	p += t->tcb_rel.relwid + t->tcb_data_rac.worstcase_expansion;
+	p += t->tcb_rel.relwid + t->tcb_data_rac.worstcase_expansion +
+	    MODIFY_BUCKET_PNO_TID8_SZ;
 	p = ME_ALIGN_MACRO(p, sizeof(PTR));
 
 	if (rec_buffers == 3)		/* encryption */
 	{
 	    r->rcb_erecord_ptr = p;
-	    p += t->tcb_rel.relwid + t->tcb_data_rac.worstcase_expansion;
+	    p += t->tcb_rel.relwid + t->tcb_data_rac.worstcase_expansion +
+		MODIFY_BUCKET_PNO_TID8_SZ;
 	    p = ME_ALIGN_MACRO(p, sizeof(PTR));
 	}
 
@@ -1628,6 +1656,7 @@ DB_ERROR	    *dberr )
     r->rep_prio_rcb    = NULL;
     r->rep_cdds_rcb    = NULL;
     r->rcb_new_cnt = 0;
+    r->rcb_new_fullscan = 0;
     r->rcb_opt_extend = t->tcb_rel.relextend;
     r->rcb_bulk_cnt = 0;
     r->rcb_bulk_misc = NULL;
@@ -3598,6 +3627,8 @@ dm2r_get(
 **          rcb_ll_op_type and rcb_ll_given so that the respective dm1X_get()
 **          calls can correctly set DMA_ACC_BYKEY, thereby flagging
 **          dma_row_access() to write an audit record for the keyed SELECT.
+**	25-Aug-2010 (miket) SIR 122403
+**	    Remove encryption debugging code and dev-only trace point.
 */
 DB_STATUS
 dm2r_position(
@@ -3820,14 +3851,6 @@ dm2r_position(
         return (status);
     }
 
-/* CRYPT_FIXME hack to (partially) work around bad hash encrypted SI lookup.
-** For some reason (length of plain text vs. encrypted text difference?)
-** we are not hashing to the right page for the lookup, or are building
-** the encrypted SI incorrectly. This change forces us to read the entire
-** index where we do indeed find our match and achieve our TJOIN select.
-*/
-if (t->tcb_parent_tcb_ptr->tcb_rel.relencflags & TCB_ENCRYPTED)
-flag |= DM2R_ALL;
     /*	Handle the position for full scan case. */
     if (flag & DM2R_ALL)
     {
@@ -4749,6 +4772,9 @@ rtree_position(
 **	    After doing the put, if there are LOB's, do a pget to fix up
 **	    the coupons with "get" info.  The record might be going to
 **	    a rule dbproc later.
+**	30-Aug-2010 (miket) SIR 122403 SD 146530
+**	    We need to re-encrypt after dupe update to refresh the coupon
+**	    with the table id of the permanent etab.
 */
 DB_STATUS
 dm2r_put(
@@ -4983,8 +5009,6 @@ dm2r_put(
     {
 	status = dm1e_aes_encrypt(r, &t->tcb_data_rac, rec,
 			r->rcb_erecord_ptr, dberr);
-	if (status != E_DB_OK)
-	    return(status);
 	rec = r->rcb_erecord_ptr;
     }
 
@@ -5098,17 +5122,31 @@ dm2r_put(
 	}
 
 	/*
-	**  If compression is turned on, re-compress the record, now
+	**  If there are encrypted columns, re-encrypt the record. Then,
+	**  if compression is turned on, re-compress the record, now
 	**  that the actual coupon has been put into the record. This
 	**  will also get the right size of the newly compressed
 	**  record.
+	**
+	** FIXME This re-encrypting and re-compressing is ugly. But it
+	** works, and I dare not make a bigger change on the cusp of
+	** a code freeze. Added this reminder comment that this bears
+	** revisiting when we are in here again. (MikeT - 30 Aug 2010)
 	*/
+
+	if ( status == E_DB_OK && t->tcb_rel.relencflags & TCB_ENCRYPTED )
+	{
+	    status = dm1e_aes_encrypt(r, &t->tcb_data_rac, record,
+			r->rcb_erecord_ptr, dberr);
+	    rec = r->rcb_erecord_ptr;
+	}
 
 	if ( status == E_DB_OK && t->tcb_data_rac.compression_type != TCB_C_NONE )
 	{
 	    rec = crec = r->rcb_record_ptr;
 	    status = (*t->tcb_data_rac.dmpp_compress)(&t->tcb_data_rac,
-		record,
+		(t->tcb_rel.relencflags & TCB_ENCRYPTED) ?
+		r->rcb_erecord_ptr : record,
 		(i4)t->tcb_rel.relwid, rec, &rec_len);
 	    if ( status )
 		SETDBERR(dberr, 0, E_DM9381_DM2R_PUT_RECORD);
@@ -5289,6 +5327,15 @@ dm2r_put(
     ** may not be set for Partitions.
     */
 
+    /* Reconstitute short-term part of coupons in case QEF wants the
+    ** record for more "stuff" such as rule firing.
+    ** This is moved to happen before the index stuff below.  For spatial
+    ** rtree indexes the data are LOBs.  Therefore all coupon stuff needs to
+    ** happen before any indexing happens.
+    */
+    if (status == E_DB_OK && t->tcb_rel.relstat2 & TCB2_HAS_EXTENSIONS)
+	status = dm1c_pget(t->tcb_atts_ptr, r, record, dberr);
+
     if ( status == E_DB_OK && t->tcb_update_idx && !r->rcb_siAgents )
     {
 	i4 cancel_ix;	/* ordinal position of index in progress */
@@ -5339,12 +5386,6 @@ dm2r_put(
 	    }
 	}
     }
-
-    /* Reconstitute short-term part of coupons in case QEF wants the
-    ** record for more "stuff" such as rule firing.
-    */
-    if (status == E_DB_OK && t->tcb_rel.relstat2 & TCB2_HAS_EXTENSIONS)
-	status = dm1c_pget(t->tcb_atts_ptr, r, record, dberr);
 
     /*
     ** check for replication and perform data capture in necesary
@@ -6015,6 +6056,12 @@ BuildRtreeRecord(
 **	28-Apr-2010 (jonj) SD 144272
 **	    Use DMP_PINIT to fully initialize local pinfos, use
 **	    direct references to pinfo.page.
+**	11-Aug-2010 (miket) SIR 122403 SD 146244
+**	    For encryption the difference in the encrypted and unencrypted
+**	    buffer layouts and the fact that the external value can remain
+**	    the same while the internal value changes can confuse the
+**	    tuple change routine adt_compute_part_change, so use
+**	    adt_compute_change instead.
 */
 DB_STATUS
 dm2r_replace(
@@ -6444,7 +6491,8 @@ DB_ERROR	    *dberr )
 	delta_end = 0;
 	adf_cb = r->rcb_adf_cb;
 
-	if ( attset && (t->tcb_rel.relstat2 & TCB2_ALTERED) == 0 )
+	if ( attset && (t->tcb_rel.relstat2 & TCB2_ALTERED) == 0 &&
+		!(t->tcb_rel.relencflags & TCB_ENCRYPTED) )
 	{
 	    status = adt_compute_part_change(adf_cb,r->rcb_tcb_ptr->tcb_rel.relatts,
 		t->tcb_atts_ptr,record, r->rcb_record_ptr,
@@ -6508,22 +6556,34 @@ DB_ERROR	    *dberr )
 	    }
 	    else
 	    {
-		if ((flag & DM2R_XTABLE) && 
-		    (r->rcb_update_mode == RCB_U_DEFERRED || crow_locking(r)))
+		if ((flag & DM2R_XTABLE) && r->rcb_update_mode == RCB_U_DEFERRED)
 		{
 		    /*
-		    ** Do deferred put proessing if crow_locking so we can
-		    ** ignore changes by our own transaction without mvcc undo
+		    ** If row locking/crow locking add the tid to rcb_new_tids
+		    ** instead of doing unlogged updates to the row header
+		    ** which could interfere with mvcc undo processing
 		    */
-		    dm0pMutex(&t->tcb_table_io, (i4)0, r->rcb_lk_id,
+		    if (row_locking(r) || crow_locking(r))
+		    {
+			/* Don't do unlogged deferred processing on page */
+			status = defer_add_new(r, &r->rcb_currenttid, 
+				FALSE, err_code);
+		    }
+		    else
+		    {
+			/* Must first swap from CR to Root */
+			dm0pLockBufForUpd(r, &r->rcb_data);
+			dm0pMutex(&t->tcb_table_io, (i4)0, r->rcb_lk_id,
 				    &r->rcb_data);
-		    status = (*t->tcb_acc_plv->dmpp_dput)(r, 
+			status = (*t->tcb_acc_plv->dmpp_dput)(r, 
 				r->rcb_data.page, &r->rcb_currenttid,err_code);
+			dm0pUnmutex(&t->tcb_table_io, (i4)0, r->rcb_lk_id, 
+				    &r->rcb_data);
+			/* Release exclusive readlock on Root, restore CR */
+			dm0pUnlockBuf(r, &r->rcb_data);
+		    }
 		    if ( status )
 			SETDBERR(dberr, 0, *err_code);
-
-		    dm0pUnmutex(&t->tcb_table_io, (i4)0, r->rcb_lk_id, 
-				    &r->rcb_data);
 		}	
 		/* give error message to QEF */
 		if (status == E_DB_OK)
@@ -6621,12 +6681,8 @@ DB_ERROR	    *dberr )
 
     /* If there are encrypted columns, encrypt the record */
     if (t->tcb_rel.relencflags & TCB_ENCRYPTED)
-    {
 	status = dm1e_aes_encrypt(r, &t->tcb_data_rac, newrecord,
 			r->rcb_erecord_ptr, dberr);
-	if (status != E_DB_OK)
-	    return(status);
-    }
 
     /*  Check for compressed storage. */
     if ( status == E_DB_OK &&
@@ -10294,7 +10350,7 @@ si_put(
 	    status = dm1e_aes_encrypt(r, &it->tcb_data_rac, ir->rcb_record_ptr,
 			ir->rcb_erecord_ptr, dberr);
 	    if (status != E_DB_OK)
-		return(status);
+		break;
 	    rec = ir->rcb_erecord_ptr;
 	}
 	else
@@ -10339,6 +10395,8 @@ si_put(
 	    switch (it->tcb_rel.relspec)
 	    {
 	    case TCB_HASH:
+		/* indexes use the base record encryption slot */
+		ir->rcb_enckey_slot = r->rcb_enckey_slot;
 		status = dm1h_allocate(ir, &ir->rcb_data,
 				&ir->rcb_si_newtid, ir->rcb_record_ptr, crec,
 		    		rec_len, alloc_flag, dberr);
@@ -10731,6 +10789,8 @@ si_delete(
 	switch (it->tcb_rel.relspec)
 	{
 	    case TCB_HASH:
+		/* indexes use the base record encryption slot */
+		ir->rcb_enckey_slot = r->rcb_enckey_slot;
 		status = dm1h_search(ir, &ir->rcb_data,
 		    ir->rcb_s_key_ptr, DM1C_FIND_SI_UPD, DM1C_EXACT,
 		    &ir->rcb_lowtid, dberr);
@@ -10797,6 +10857,8 @@ si_delete(
 	    */
 	    tid.tid_i4 = r->rcb_si_oldtid.tid_i4;
 
+	    /* indexes use the base record encryption slot */
+	    ir->rcb_enckey_slot = r->rcb_enckey_slot;
 	    status = dm1r_get(ir, &tid, ir->rcb_record_ptr,
 		DM1C_GETNEXT | DM1C_GET_SI_UPD, dberr);
 	}
@@ -10987,6 +11049,9 @@ si_delete(
 **	28-Apr-2010 (jonj) SD 144272
 **	    Remove indirect references to pinfo.page, use DMP_PINIT to
 **	    fully init pinfos.
+**	24-Aug-2010 (miket) SIR 122403 SD 145904
+**	    Encrypted indexes get the encryption shm slot number from the base
+**	    table parent. Encrypt SIs on replace.
 */
 static DB_STATUS
 si_replace(
@@ -11326,6 +11391,8 @@ si_replace(
 	    switch (it->tcb_rel.relspec)
 	    {
 	    case TCB_HASH:
+		/* indexes use the base record encryption slot */
+		ir->rcb_enckey_slot = r->rcb_enckey_slot;
 		status = dm1h_search(ir, &ir->rcb_data,
 		    ir->rcb_s_key_ptr,
 		    DM1C_FIND_SI_UPD, DM1C_EXACT, &ir->rcb_lowtid, dberr);
@@ -11400,6 +11467,8 @@ si_replace(
 		*/
 		oldtid.tid_i4 = r->rcb_si_oldtid.tid_i4;
 
+		/* indexes use the base record encryption slot */
+		ir->rcb_enckey_slot = r->rcb_enckey_slot;
 		status = dm1r_get(ir, &oldtid, ir->rcb_record_ptr,
 			DM1C_GETNEXT | DM1C_GET_SI_UPD, dberr);
 
@@ -11412,6 +11481,15 @@ si_replace(
 
 	    newrecord = ir->rcb_srecord_ptr;
 	    oldrecord = ir->rcb_record_ptr;
+
+	    /* Encrypt the index if needed. */
+	    if (t->tcb_data_rac.encrypted_attrs)
+	    {
+		status = dm1e_aes_encrypt(r, &it->tcb_data_rac, newrecord,
+			ir->rcb_erecord_ptr, dberr);
+		if (status != E_DB_OK)
+		    break;
+	    }
 
 	    /*  Compute the sizes of the old and new records. */
 
@@ -11458,6 +11536,8 @@ si_replace(
 		switch (it->tcb_rel.relspec)
 		{
 		case TCB_HASH:
+		    /* indexes use the base record encryption slot */
+		    ir->rcb_enckey_slot = r->rcb_enckey_slot;
 		    status = dm1h_allocate(ir, &newdataPinfo, &newtid,
 				newrecord, crec, newlength, alloc_flag, dberr);
 		    break;
@@ -11576,6 +11656,10 @@ si_replace(
 	    */
 	    if (it->tcb_rel.relcomptype != TCB_C_NONE)
 		newrecord = crec;
+
+	    /* if encrypted, pass the encrypted record to replace */
+	    if (t->tcb_data_rac.encrypted_attrs)
+		newrecord = ir->rcb_erecord_ptr;
 
 	    /* This is constant */
 	    delta_end = it->tcb_rel.relwid;

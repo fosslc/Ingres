@@ -215,6 +215,7 @@ scs_compress(GCA_TD_DATA *tup_desc, char *local_row_buf,
              case DB_MLINE_TYPE:
              case DB_POLY_TYPE:
              case DB_MPOLY_TYPE:
+             case DB_GEOMC_TYPE:
              {
                 ADP_PERIPHERAL periph;
                 MEcopy((PTR)local_row_buf,ADP_HDR_SIZE, (PTR)&periph);

@@ -397,6 +397,8 @@ EXEC SQL include SQLCA;
 **	    byte-izing the bitmap columns.
 **	10-May-2010 (frima01) Bug 123753
 **	    Update duc_iilgmo to recreate lgmo_xa_reduced_reg.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Add comment re is_compressed and iitables, no code change.
 */
 
 
@@ -812,15 +814,15 @@ bool		convert_flag;
 	duc_create_catalog("iidistval");
 	duc_create_catalog("iipartname");
 
-	/* spatial_ref_sys for Ingres Geospatial */
-	if(dbenv->du_geo_flag && STncasecmp(dbenv->du_dbname, "imadb", 5))
+	duc_create_catalog("spatial_ref_sys");
+        /* spatial_ref_sys EPSG Data for Ingres Geospatial */
+	if(dbenv->du_srid_flag && STncasecmp(dbenv->du_dbname, "imadb", 5))
 	{
-        duc_create_catalog("spatial_ref_sys");
 	    duc_init_srs();
-        /* spatial_ref_sys to hash on srid */
-        duc_modify_catalog("spatial_ref_sys");
     }
-	
+	/* spatial_ref_sys to hash on srid */
+        duc_modify_catalog("spatial_ref_sys");
+ 
 	/* Print an informational message. */
 	if ((du_error(duc_errcb, I_DU0203_MOD_DBMS_CATS, 0))
 	    != E_DU_OK
@@ -4016,8 +4018,7 @@ bool		star_flag)
 STATUS
 duc_create_stdcat_views(
 char            *dbname,
-bool		upcase,
-bool        geo)
+bool		upcase)
 {
     bool	is_iidbdb;
     i4		i;
@@ -4031,8 +4032,6 @@ bool        geo)
     for (i = 0; i < MAX_STDCAT_VIEWS; i++)
     {
 	if (Du_stdcat[i].du_dbflag == DU_IIDBDB && !is_iidbdb)
-	    continue;
-	if (Du_stdcat[i].du_obj_id == DU_GEOM_COLS && !geo)
 	    continue;
 	/* Star views get created AFTER star catalogs */
 	if (Du_stdcat[i].du_dbflag == DU_STAR)
@@ -4547,7 +4546,11 @@ bool		upcase)
 	    ** never be more than 4 (even though the mathematical limit is 6). 
 	    ** 4 is the upper limit because the relstat 0x01 and 0x4000 bits 
 	    ** should never be set at the same time as the relstat2 0x10 bit.
-	    **          
+	    ** 
+	    ** Note that all relcomptype's less than 7 translate to "Y"
+	    ** for is_compressed (if TCB_COMPRESSED is set).  This means
+	    ** that iitables does not distinguish between old-style and
+	    ** new-style standard compression, which is just fine.
 	    */
 	    exec sql create view iitables as select
 	    relid table_name,

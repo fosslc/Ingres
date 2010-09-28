@@ -987,6 +987,8 @@ struct _CS_CONDITION
 **	to some of the fields.  Any changes in this structure will require
 **	changes to the offset definitions in CSLL.MAR as well.
 **
+**	02-sep-2010 (maspa05) SIR 124346
+**	    Added cs_sc930_err to store latest error code for SC930 trace
 ******************************************************************************/
 
 struct _CS_SCB
@@ -1126,6 +1128,7 @@ _DEFINESEND
     PTR             cs_ditgiop;		/* A place for DI gatherWrite to
 					** anchor a work area.
 					*/
+    i4              cs_sc930_err;       /* saved error for SC930 logging */
 };
 
 /*}

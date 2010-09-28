@@ -3,6 +3,7 @@
 // Used by enterprise.rc
 //
 #define IDI_ICON2                       2
+#define IDS_ACCEPT_TERMS		3
 
 // Next default values for new objects
 // 

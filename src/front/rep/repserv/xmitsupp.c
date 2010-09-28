@@ -69,6 +69,9 @@
 **	    data in UTF8 instance.
 **      10-mar-2008 (stial01)
 **          Init ttime fields to avoid unorm errors if UTF8 (b121769)
+**      17-Aug-2010 (thich01)
+**          Add geospatial types to IIAPI types.  Make changes to treat spatial
+**          types like LBYTEs.
 **/
 
 static II_PTR iiq_qryHandle;
@@ -176,6 +179,14 @@ RS_TRANS_ROW	*row)
 			row->tbl_desc->num_regist_cols; ++col, ++dv)
 		{
 			if (col->coldesc.ds_dataType == IIAPI_LVCH_TYPE ||
+				col->coldesc.ds_dataType == IIAPI_GEOM_TYPE ||
+				col->coldesc.ds_dataType == IIAPI_POINT_TYPE ||
+				col->coldesc.ds_dataType == IIAPI_MPOINT_TYPE ||
+				col->coldesc.ds_dataType == IIAPI_LINE_TYPE ||
+				col->coldesc.ds_dataType == IIAPI_MLINE_TYPE ||
+				col->coldesc.ds_dataType == IIAPI_POLY_TYPE ||
+				col->coldesc.ds_dataType == IIAPI_MPOLY_TYPE ||
+				col->coldesc.ds_dataType == IIAPI_GEOMC_TYPE ||
 				col->coldesc.ds_dataType == IIAPI_LBYTE_TYPE &&
 					dv->dv_value)
 			{

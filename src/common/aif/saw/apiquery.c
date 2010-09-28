@@ -60,6 +60,8 @@
 **	    Added getQinfoParm as input parameter to II_swSelect functions.
 **      05-nov-2009 (joea)
 **          Initialize qy_flags parameter in IIsw_queryQry.
+**      17-Aug-2010 (thich01)
+**          Make changes to treat spatial types like LBYTEs.
 **/
 
 /*{
@@ -120,7 +122,15 @@ IIAPI_GETEINFOPARM	*errParm)
 		{
 			/* skip over non-blob columns */
 			if (parmDesc[i].ds_dataType == IIAPI_LVCH_TYPE ||
-				parmDesc[i].ds_dataType == IIAPI_LBYTE_TYPE)
+				parmDesc[i].ds_dataType == IIAPI_LBYTE_TYPE ||
+				parmDesc[i].ds_dataType == IIAPI_GEOM_TYPE ||
+				parmDesc[i].ds_dataType == IIAPI_POINT_TYPE ||
+				parmDesc[i].ds_dataType == IIAPI_MPOINT_TYPE ||
+				parmDesc[i].ds_dataType == IIAPI_LINE_TYPE ||
+				parmDesc[i].ds_dataType == IIAPI_MLINE_TYPE ||
+				parmDesc[i].ds_dataType == IIAPI_POLY_TYPE ||
+				parmDesc[i].ds_dataType == IIAPI_MPOLY_TYPE ||
+				parmDesc[i].ds_dataType == IIAPI_GEOMC_TYPE ) 
 			{
 				if (i - baseCol)
 				{
@@ -342,7 +352,23 @@ IIAPI_GETEINFOPARM	*errParm)
 		/* skip over non-blob columns */
 		if (gdescParm.gd_descriptor[i].ds_dataType == IIAPI_LVCH_TYPE
 			|| gdescParm.gd_descriptor[i].ds_dataType ==
-			IIAPI_LBYTE_TYPE)
+			IIAPI_LBYTE_TYPE
+			|| gdescParm.gd_descriptor[i].ds_dataType == 
+			IIAPI_GEOM_TYPE
+			|| gdescParm.gd_descriptor[i].ds_dataType == 
+			IIAPI_POINT_TYPE
+			|| gdescParm.gd_descriptor[i].ds_dataType == 
+			IIAPI_MPOINT_TYPE
+			|| gdescParm.gd_descriptor[i].ds_dataType == 
+			IIAPI_LINE_TYPE
+			|| gdescParm.gd_descriptor[i].ds_dataType == 
+			IIAPI_MLINE_TYPE
+			|| gdescParm.gd_descriptor[i].ds_dataType == 
+			IIAPI_POLY_TYPE
+			|| gdescParm.gd_descriptor[i].ds_dataType == 
+			IIAPI_MPOLY_TYPE
+			|| gdescParm.gd_descriptor[i].ds_dataType == 
+			IIAPI_GEOMC_TYPE ) 
 		{
 			if (i - baseCol)
 			{

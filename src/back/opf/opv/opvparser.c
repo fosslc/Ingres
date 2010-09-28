@@ -418,6 +418,9 @@ opv_tproc(
 **	    Light "partitioned" flag if partitioned table seen.
 **	18-april-2008 (dougi)
 **	    Add support for table procedures.
+**	8-Jul-2010 (wanfr01) b123949
+**	    If rdf_gdesc failed with an error, don't use the column 
+**	    information - it may not be fully initialized.
 */
 bool
 opv_parser(
@@ -550,13 +553,12 @@ opv_parser(
 					    ** avoided */
 		)
 	    {
+		gbase->opv_grv[gvar] = NULL;
 		if (abort)
 		    opx_verror( status, E_OP0004_RDF_GETDESC,
 			rdfcb->rdf_error.err_code);
 		else
 		{
-		    gbase->opv_grv[gvar] = NULL; /* deallocate
-				** variable if index cannot be found */
 		    return (TRUE);	/* indicate failure to get RDF
 				    ** descriptor */
 		}
@@ -629,8 +631,11 @@ opv_parser(
 		    grvp->opv_relation = rdfcb->rdf_info_blk; /* save ptr to
 					    ** new info block */
 		    if (status != E_RD0000_OK)
+		    {
+			gbase->opv_grv[gvar] = NULL;
 			opx_verror( E_DB_ERROR, E_OP0004_RDF_GETDESC,
 			    rdfcb->rdf_error.err_code);
+		    }
 		    timeptr = &grvp->opv_relation->rdr_rel->tbl_date_modified;
 		    if (timeptr->db_tab_high_time != psftimeptr->db_tab_high_time
 			||

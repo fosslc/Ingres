@@ -620,6 +620,18 @@
 --#	    later date. Locations created by RPM.
 --# 29-apr-2010 (stephenb)
 --#		Add rule for batch_copy_optim
+--#
+--#	20-Jul-2010 (kschendel) SIR 124104
+--#	    Add create_compression.
+--#	02-Aug-2010 (miket) SIR 124154
+--#	    Add dmf_crypt_maxkeys with initial default value of 180, the
+--#	    max keys that fit on one memory page (at least for 64-bit
+--#	    Linux).
+--#	 4-Aug-2010 (wanfr01) b124188
+--#	    Remove opf_one_rel_opt - crossed in accidentally
+--#     11-Aug-2010 (hanal04) Bug 124180
+--#         Added money_compat for backwards compatibility of money
+--#         string constants.
 
 -- location setup resources
 # ifdef UNIX 
@@ -771,6 +783,7 @@ ii.$.dbms.$.cpu_statistics: 	IF ( ii.$.dbms.$.session_accounting == ON )
 				ELSE
 					OFF
 				ENDIF;
+ii.$.dbms.$.create_compression: "NONE", VALID = { "NONE", "DATA", "HIDATA" };
 ii.$.dbms.$.cursor_default_open:    "UPDATE" , VALID = { "UPDATE", "READONLY" };
 ii.$.dbms.$.cursor_limit: 	16;
 ii.$.dbms.$.cursor_update_mode:	IF ( ii.$.fixed_prefs.iso_entry_sql-92 == ON )
@@ -797,6 +810,7 @@ ii.$.dbms.$.dmcm:               IF ( ii.$.config.cluster_mode == ON ||
                                 ENDIF;
 --# the MAX here is simply to keep memory requirements within reason
 ii.$.dbms.$.dmf_build_pages:   16, MIN = 1, MAX = 256;
+ii.$.dbms.$.dmf_crypt_maxkeys:	180;
 ii.$.dbms.$.dmf_db_cache_size:	40;
 ii.$.dbms.$.dmf_int_sort_size:	512K, MIN=100K;
 ii.$.dbms.$.dmf_tbl_cache_size: 40;
@@ -837,6 +851,7 @@ ii.$.dbms.$.log_esc_lpr_ut:   OFF;
 ii.$.dbms.$.log_esc_lpt_sc:   OFF;
 ii.$.dbms.$.log_esc_lpt_ut:   OFF;
 ii.$.dbms.$.mechanisms:       "none";
+ii.$.dbms.$.money_compat:       OFF;
 ii.$.dbms.$.mustlog_db_list:	"";	
 ii.$.dbms.$.name_service: 	ON;
 ii.$.dbms.$.opf_active_limit:	0.2 * ii.$.dbms.$.connect_limit,
@@ -853,7 +868,6 @@ ii.$.dbms.$.opf_old_jcard:	OFF;
 ii.$.dbms.$.opf_old_cnf:	OFF;
 ii.$.dbms.$.opf_old_idxorder:	OFF;
 ii.$.dbms.$.opf_old_subsel:	OFF;
-ii.$.dbms.$.opf_one_rel_opt:	OFF;
 ii.$.dbms.$.opf_pq_dop:		0, MIN = 0;
 ii.$.dbms.$.opf_pq_threshold:	1000;
 ii.$.dbms.$.opf_pq_partthreads:	8, MIN = 0;

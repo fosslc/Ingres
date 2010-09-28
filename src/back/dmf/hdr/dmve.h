@@ -124,6 +124,8 @@
 **          Added prototypes for dmve_iirel_cmp, dmve_iiseq_cmp
 **      10-May-2010 (stial01)
 **          Added dmve_bid_check_error
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 **/
 
 
@@ -322,7 +324,14 @@ struct _DMVE_CB
     char	    *dmve_prev_rec;	/* for tracing mvcc undo failure */
     i4		    *dmve_prev_cnt;     /* for tracing mvcc undo failure */
     i4		    dmve_prev_size;    /* for tracing mvcc undo failure */
-
+    struct
+    {
+	DB_TAB_ID	tabid;
+	DB_OWN_STR	ownstr;
+	DB_TAB_STR	tabstr;
+	i2		ownlen;
+	i2		tablen;
+    } dmve_tabinfo;
 };
 
 /*}
@@ -694,6 +703,16 @@ FUNC_EXTERN DB_STATUS   dmve_get_iirel_row(
 			DB_TAB_ID           *rel_id,
 			DMP_RELATION        *rel_row);
 
+FUNC_EXTERN VOID dmve_get_tabinfo(
+			DMVE_CB		    *dmve,
+			DB_TAB_ID	    *tabid,
+			DB_TAB_NAME	    *tabname,
+			DB_OWN_NAME	    *ownname);
+
+FUNC_EXTERN VOID dmve_get_tabid(
+			PTR		    record,
+			DB_TAB_ID	    *tabid);
+
 FUNC_EXTERN DB_STATUS   dmve_clean(
 			DMVE_CB		    *dmve,
 			DMP_PINFO           *pinfo,
@@ -746,3 +765,15 @@ char		*rec1,
 i4		size1,
 char		*rec2,
 i4		size2);
+
+/*
+** DMVE_CLEAR_TABINFO_MACRO
+** This macro is called at the beginning of every dmve entry point
+**
+** Clear table info in the DMVE_CB.
+** 
+*/ 
+#define DMVE_CLEAR_TABINFO_MACRO(dmve)					\
+{									\
+	dmve->dmve_tabinfo.tabid.db_tab_base = 0;			\
+}

@@ -89,6 +89,8 @@ i4	adf_func();
 **          Initialise fnblk (ADF_FN_BLK) to avoid spurious results.
 **	23-Sep-2009 (kiria01) b122578
 **	    Initialise the ADF_FN_BLK adf_dv_n member.
+**	19-Aug-2010 (kschendel) b124282
+**	    isescape deprecated, initialize pat-flags.
 */
 STATUS
 afe_clinstd(cb, instd, ops, result)
@@ -108,13 +110,14 @@ DB_DATA_VALUE	*result;
 		return afe_error(cb, E_AF6001_WRONG_NUMBER, 0);
 	}
 
+	/* This clears adf_fn_desc among others */
         MEfill(sizeof(fnblk), '\0', (PTR)&fnblk);
 
 	/*
-	**	LOAD THE FUNCTION INSTANCE ID 
+	**	LOAD THE FUNCTION INSTANCE ID
 	*/
 	fnblk.adf_fi_id = instd;	/* this is correct, but ICK */
-	fnblk.adf_isescape = FALSE;	/* it's not an ESCAPE ... */
+	fnblk.adf_pat_flags = AD_PAT_DOESNT_APPLY; /* (better) not (be) LIKE */
 	fnblk.adf_dv_n = ops->afe_opcnt;
 	/* 	LOAD THE OPERAND DB_DATA_VALUES		*/ 
 	for (i = 0; i <= ops->afe_opcnt; i++)

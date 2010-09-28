@@ -177,6 +177,8 @@
 **	    SIR 121619 MVCC: Replace dm0p_mutex/unmutex with dmveMutex/Unmutex
 **	    macros.
 **	    Replace DMPP_PAGE* with DMP_PINFO* as needed.
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 **/
 
 /*{
@@ -360,7 +362,7 @@ DMVE_CB		*dmve_cb)
     DMP_PINFO		*pinfo = NULL;
 
     CLRDBERR(&dmve->dmve_error);
-
+    DMVE_CLEAR_TABINFO_MACRO(dmve);
 
     rcb = master_rcb = NULL;
     for (;;)

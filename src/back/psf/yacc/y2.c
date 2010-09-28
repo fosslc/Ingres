@@ -52,6 +52,11 @@
 **          Replace READONLY/WSCREADONLY by const.
 **	13-Jan-2010 (wanfr01) Bug 123139
 **	    Include cv.h for function defintions
+**	2-Aug-2010 (kschendel) b124170
+**	    byacc has to generate "reentrant", remove bogus testing.
+**	    Ditto for "functions".
+**	    Internal funcs don't have to pass yyvarsp / yyvarspp any more,
+**	    it's in the PSS_SESBLK now.  Arrange to pick it up from there.
 */
 
 # define IDENTIFIER 257
@@ -131,10 +136,7 @@ GLOBALREF   char    had_act[NPROD];
 GLOBALREF   i4      gen_lines;
 /* flag for whether to include runtime debugging */
 GLOBALREF   i4      gen_testing;
-GLOBALREF   i4	    functions;
 GLOBALREF   i4	    switchsize;
-/* TRUE means make re-entrant parser */
-GLOBALREF   i4	    reentrant;
 /* Control block type for re-entrant parser */
 GLOBALREF   char    argtype[50];
 GLOBALREF   LOCATION	actloc;
@@ -264,7 +266,6 @@ char   *argv[];
 
 		case 'r': 
 		case 'R': 
-		    reentrant = TRUE;
 		    STcopy(argv[1] + 1, argtype);
 		    /*
 		    ** To terminate inner loop, set argv[1] pointing to last
@@ -275,7 +276,6 @@ char   *argv[];
 
 		case 'S':
 		case 's':
-		    functions = TRUE;
 		    if (*(argv[1] + 1) != '\0')
 		    {
 			if (CVal(argv[1] + 1, &switchsize) != OK)
@@ -422,14 +422,8 @@ char   *argv[];
 	ERROR(STprintf(stbuf, "bad filename %s for C file", oname));
     if (SIopen(&oloc, "w", &ftable) != OK)
 	ERROR(STprintf(stbuf, "cannot open %s", oname));
-    if (functions)
-    {
-	SIfprintf(ftable, "#define\tYYFUNCTIONS\n");
-	SIfprintf(ftable, "#define\tYY_1HANDLER\t%s_1handle\n", prefix);
-	SIfprintf(ftable, "#define\tYY_2HANDLER\t%s_2handle\n", prefix);
-    }
-    if (reentrant)
-	SIfprintf(ftable, "#define\tYYREENTER\n");
+    SIfprintf(ftable, "#define\tYY_1HANDLER\t%s_1handle\n", prefix);
+    SIfprintf(ftable, "#define\tYY_2HANDLER\t%s_2handle\n", prefix);
     SIfprintf(ftable, "#define\tYYPRINTF\t%s\n", printfunc);
 
     for (i = 0; i < NUMSPECS; i++)
@@ -730,20 +724,9 @@ char   *argv[];
 
     SIfprintf(ftable, "#define yyclearin %schar = -1\n", prefix);
     SIfprintf(ftable, "#define yyerrok %serrflag = 0\n", prefix);
-    if (!reentrant)
-    {
-	SIfprintf(ftable, "extern i4  %schar;\nextern i4  %serrflag;\n",
-	    prefix, prefix);
-    }
     SIfprintf(ftable, "#ifndef YYMAXDEPTH\n#define YYMAXDEPTH 150\n#endif\n");
     if (!ntypes)
 	SIfprintf(ftable, "#ifndef YYSTDEF\n#define YYSTYPE i4\n#endif\n");
-    if (!reentrant)
-    {
-	SIfprintf(ftable,
-	    "GLOBALDEF YYSTYPE %slval ZERO_FILL, %sval ZERO_FILL;\n",
-	    prefix, prefix);
-    }
     SIfprintf(ftable, "typedef i4  yytabelem;\n");
 
     prdptr[0] = mem;
@@ -820,67 +803,31 @@ more_rule:
 	{
 	    had_act[nprod] = 1;
 	    levprd[nprod] |= ACTFLAG;
-	    if (functions)	/* if actions go in functions */
+	    if ((++casecnt) % switchsize == 1)
 	    {
-		if ((++casecnt) % switchsize == 1)
-		{
-		    i4	    k;
+		i4	    k;
 
-		    ftncnt++;   /* new function name */
-		    if (reentrant)
-		    {
-			SIfprintf(faction, "\ni4\n%s%diftn(yacc_cb, yyrule",
-				  prefix, ftncnt); 
-		    }
-		    else
-		    {
-			SIfprintf(faction,
-				  "\ni4\n%s%diftn(yypvt, pyyval, yyrule",
-				  prefix, ftncnt); 
-		    }
-		    SIfprintf(faction, ", yystatusp, yyvarspp");
-		    if (reentrant)
-		    {
-			SIfprintf(faction, ", cb");
-		    }
-		    for (k = 0; k < Numparams; k++)
-		    {
-			SIfprintf(faction, ", %s", Params[k].parmname);
-		    }
-		    if (reentrant)
-		    {
-			SIfprintf(faction, ")\nYACC_CB\t\t*yacc_cb;");
-		    }
-		    else
-		    {
-			SIfprintf(faction, ")\nYYSTYPE *yypvt, *pyyval;");
-		    }
-		    SIfprintf(faction, "\ni4\t\tyyrule;");
-		    if (reentrant)
-			SIfprintf(faction, "\n%s\t*cb;", argtype);
-		    SIfprintf(faction, "\nDB_STATUS\t*yystatusp;"); 
-		    SIfprintf(faction, "\nYYVARS\t\t**yyvarspp;"); 
-		    for (k = 0; k < Numparams; k++)
-		    {
-			SIfprintf(faction, "\n%s\t%s;", Params[k].parmtype,
-				Params[k].parmname);
-		    }
-		    SIfprintf(faction, "\n{\n    YYVARS\t*yyvarsp = *yyvarspp;\n\tswitch(yyrule)\n\t{");
+		ftncnt++;   /* new function name */
+		SIfprintf(faction, "\ni4\n%s%diftn(YACC_CB *yacc_cb, i4 yyrule",
+			      prefix, ftncnt); 
+		SIfprintf(faction, ", DB_STATUS *yystatusp, %s *cb", argtype);
+		for (k = 0; k < Numparams; k++)
+		{
+		    SIfprintf(faction, "\n,%s\t%s", Params[k].parmtype,
+			    Params[k].parmname);
 		}
-		ftname[nprod] = ftncnt;
+		SIfprintf(faction, ")\n{\n    YYVARS\t*yyvarsp = cb->pss_yyvars;\n\tswitch(yyrule)\n\t{");
 	    }
+	    ftname[nprod] = ftncnt;
 
 	    SIfprintf(faction, "\ncase %d:", nprod);
 	    cpyact(mem - prdptr[nprod] - 1);
 	    SIfprintf(faction, " break;\n");
 
-	    if (functions)	/* if actions go in functions */
+	    if ((casecnt % switchsize) == 0)
 	    {
-		if ((casecnt % switchsize) == 0)
-		{
-		    /* close switch */
-		    SIfprintf(faction, "\t}\n\treturn(0);\n}\n");
-		}
+		/* close switch */
+		SIfprintf(faction, "\t}\n\treturn(0);\n}\n");
 	    }
 
 	    if ((t = gettok()) == IDENTIFIER)
@@ -993,7 +940,7 @@ finact()
  /* finish action routine */
 
     /* Close off last switch and function if actions being put in functions */
-    if (functions && ((casecnt % switchsize) != 0))
+    if ((casecnt % switchsize) != 0)
     {
 	SIfprintf(faction, "}\n\treturn(0);\n}\n");
     }
@@ -1465,8 +1412,6 @@ cpyunion()
 			SIfprintf(fdefine, " YYSTYPE;\n");
 		    else
 			SIfprintf(ftable, " YYSTYPE;\n");
-		    if (!reentrant && fdefine)
-			SIfprintf(fdefine, "extern YYSTYPE %slval;\n", prefix);
 		    return;
 		}
 	}
@@ -1561,14 +1506,7 @@ cpyact(offset)
 	SIfprintf(faction, "if (TRUE)\t/* NOBYPASS */\n");
     else
     {
-    	if (functions)
-    	{
-	    SIfprintf(faction, "if (!((*yyvarspp)->bypass_actions))\n");
-    	}
-    	else
-    	{
-	    SIfprintf(faction, "if (!(yyvars.bypass_actions))\n");
-    	}
+	SIfprintf(faction, "if (!(yyvarsp->bypass_actions))\n");
     }
 
     /*
@@ -1626,20 +1564,7 @@ swt:
 		    **  take a pointer to yyval which must be dereferenced.  If
 		    **  not, we can just use yyval.
 		    */
-		    if (functions)
-		    {
-			if (reentrant)
-			    SIfprintf(faction, "yacc_cb->yyval");
-			else
-			    SIfprintf(faction, "*pyyval");
-		    }
-		    else
-		    {
-			if (reentrant)
-			    SIfprintf(faction, "yacc_cb->yyval");
-			else
-			    SIfprintf(faction, "%sval", prefix);
-		    }
+		    SIfprintf(faction, "yacc_cb->yyval");
 		    if (ntypes)
 		    {		/* put out the proper tag... */
 			if (tok < 0)
@@ -1648,14 +1573,7 @@ swt:
 		    }
 		    goto loop;
 		case 'Y':		    
-		    if (functions)
-		    {
-			SIfprintf(faction, "yyvarsp->");
-		    }
-		    else
-		    {
-			SIfprintf(faction, "yyvars.");
-		    }
+		    SIfprintf(faction, "yyvarsp->");
 		    goto loop;
 		case '-':
 		    s = -s;
@@ -1678,10 +1596,7 @@ swt:
 				j + offset));
 			}
 
-			if (reentrant)
-			{
-			    SIfprintf(faction, "yacc_cb->");
-			}
+			SIfprintf(faction, "yacc_cb->");
 			SIfprintf(faction, "yypvt[-%d]", -j);
 			if (ntypes)
 			{		/* put out the proper tag */

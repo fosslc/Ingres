@@ -89,6 +89,10 @@
 **	    SIR 121619 MVCC: Add function prototype for dm1r_crow_lock().
 **	    Replace DMPP_PAGE** with DMP_PINFO in dm1r_allocate, 
 **	    dm1r_lk_convert, dm1r_crow_lock prototypes.
+**      12-Jul-2010 (stial01) (SIR 121619 MVCC, B124077)
+**          Added row_is_consistent() prototype.
+**      15-Sep-2010 (stial01) (SIR 121619 MVCC, SD 146756, B124453)
+**          Moved row_is_consistent() prototype to dmp.h
 **/
 
 /*

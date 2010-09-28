@@ -9,6 +9,7 @@
 *.*.*.*.*.*:				unknown
 *.*.*.*.active_limit:			connections
 *.*.*.*.async_io:			boolean
+*.*.*.*.batch_copy_optim:		boolean
 *.*.*.*.blob_data:                      string
 *.*.*.*.blob_len:                     bytes
 *.*.*.*.cache_dynamic:			boolean
@@ -20,6 +21,7 @@
 *.*.*.*.connect_limit:			connections
 *.*.*.*.core_enabled:			boolean
 *.*.*.*.cpu_statistics:		boolean
+*.*.*.*.create_compression:		string
 *.*.*.*.cursor_limit:			cursors
 *.*.*.*.cursor_update_mode:		string
 *.*.*.*.cursor_default_open:		string
@@ -28,6 +30,7 @@
 *.*.*.*.database_limit:		databases
 *.*.*.*.default_journaling:		boolean
 *.*.*.*.define_address:		boolean
+*.*.*.*.degree_of_parallelism:		threads
 *.*.*.direct_io:			boolean
 *.*.*.*.distributed_recovery:		boolean
 *.*.*.*.di_zero_bufsize:		bytes
@@ -52,6 +55,7 @@
 *.*.*.*.log_readnolock:                boolean
 *.*.*.mechanisms:                      'mechanism list'
 *.*.*.*.mechanisms:                    'mechanism list'
+*.*.*.*.money_compat:			boolean
 *.*.*.*.name_service:			boolean
 *.*.*.*.num_slaves:			processes
 *.*.*.*.outbound_limit:		connections
@@ -122,6 +126,7 @@ ii.*.*.*.psf_vch_prec:                  boolean
 *.*.*.*.server_class:			string
 *.*.*.*.session_accounting:		boolean
 *.*.*.*.size_io_buf:			bytes
+*.*.*.*.sole_cache:			boolean
 *.*.*.*.sole_server:			boolean
 *.*.*.*.stack_size:			bytes
 *.*.*.*.system_isolation:              string
@@ -143,6 +148,7 @@ ii.*.*.*.psf_vch_prec:                  boolean
 *.*.dbms.*.blob_etab_structure:        string
 *.*.dbms.*.vch_compression:		boolean
 *.*.dbms.*.dmf_build_pages:            'data pages'
+*.*.dbms.*.dmf_crypt_maxkeys:		'encryption keys'
 *.*.dbms.*.dmf_db_cache_size:		'entries'
 *.*.dbms.*.dmf_tbl_cache_size:		'entries'
 *.*.dbms.*.dmf_int_sort_size:		bytes
@@ -233,6 +239,8 @@ ii.*.*.*.psf_vch_prec:                  boolean
 *.*.gcb.*.*.port:			'listen address'
 *.*.gcb.*.*.status:			boolean
 *.*.gcf.mechanism_location:		'directory path'
+*.*.gcf.mechanism_location_lp32:	'32-bit directory path'
+*.*.gcf.mechanism_location_lp64:	'64-bit directory path'
 *.*.gcf.password_mechanism:		'none, default, mechanism name'
 *.*.gcf.remote_auth_error:		'ignore or fail'
 *.*.gcf.remote_mechanism:		'none, default, mechanism name'
@@ -254,6 +262,7 @@ ii.*.*.*.psf_vch_prec:                  boolean
 *.*.gcn.default_server_class:		string
 *.*.gcn.expire_interval:		seconds
 *.*.gcn.local_vnode:			'virtual node'
+*.*.gcn.pwd_encode_version:		integer
 *.*.gcn.registry_type:			'installation type'
 *.*.gcn.remote_mechanism:		'none, default, mechanism name'
 *.*.gcn.remote_vnode:			'virtual node'

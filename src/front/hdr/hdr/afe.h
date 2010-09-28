@@ -4,7 +4,6 @@
 */
 #ifndef AFE_H_INCLUDED
 #define AFE_H_INCLUDED
-#include <wchar.h>
 #include	<eraf.h>
 
 /**
@@ -79,6 +78,8 @@
 **	24-Feb-2010 (frima01) Bug 122490
 **	    Add function prototypes as neccessary to eliminate
 **	    gcc 4.3 warnings.
+**     13-Aug-2010 (hanal04) Bug 124250
+**        Moved AFE_NTEXT_STRING from afe.h to iicommon.h
 **/
 
 
@@ -207,20 +208,6 @@
 */
 
 # define	AFE_DCL_TXT_MACRO(size)	struct {u_i2 count; u_char text[size];}
-
-/*
-** Name: AFE_NTEXT_STRING - NVARCHAR datatype
-**
-** Description:
-**      This structure is comparable to DB_TEXT_STRING but is designed for
-**      NVARCHAR datatypes. Its main purpose is to deal with alignment of the
-**	wchar_t member. This may need to be moved to common.
-*/
-typedef struct
-{
-    u_i2        afe_t_count;
-    wchar_t     afe_t_text[1];
-} AFE_NTEXT_STRING;
 
 /*{
 ** Name:	AFE_NULLABLE() -	Is a Data Type Nullable?

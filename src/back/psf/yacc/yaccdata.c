@@ -28,6 +28,9 @@
 **	28-feb-08 (smeke01) b120003
 **	    On Windows escape all backslashes in the input filename so that the 
 **	    emit #line directives option works without warnings.
+**	2-Aug-2010 (kschendel) b124170
+**	    byacc has to generate "reentrant", delete variable.
+**	    Likewise for "functions".
 */
 
 
@@ -171,10 +174,7 @@ GLOBALDEF   char    had_act[NPROD] ZERO_FILL;
 GLOBALDEF   i4      gen_lines = 1;
 /* flag for whether to include runtime debugging */
 GLOBALDEF   i4      gen_testing = 0;
-GLOBALDEF   i4      functions = FALSE;       
 GLOBALDEF   i4      switchsize = DEFCASESIZE;
-/* TRUE means make re-entrant parser */
-GLOBALDEF   i4      reentrant ZERO_FILL;
 /* Control block type for re-entrant parser */
 GLOBALDEF   char    argtype[50] ZERO_FILL;
 GLOBALDEF   LOCATION    actloc ZERO_FILL;

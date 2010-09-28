@@ -93,6 +93,8 @@
 **	    In fact, make the static map const.
 **	10-Jun-2009 (hweho01)
 **	    Changed  level/version numbers for 10.0 release.
+**	20-Jul-2010 (bonro01)
+**	    Changed version to Ingres 10.1
 **/
 
 /*
@@ -183,7 +185,7 @@ static  const struct	DU_dbcaps_value_struct
 	char	*cap_value;
 	i4	cap_level;
     }	DU_dbcaps_value[] = {
-	1,  "COMMON/SQL_LEVEL",	    "01000",    1000,
+	1,  "COMMON/SQL_LEVEL",	    "01010",    1010,
 	1,  "OPEN/SQL_LEVEL",	    "00904",    904,
 	1,  "DBMS_TYPE",	    "INGRES",   0,
 	1,  "DB_NAME_CASE",	    "LOWER",    0,
@@ -191,8 +193,8 @@ static  const struct	DU_dbcaps_value_struct
 	1,  "DB_REAL_USER_CASE",    "LOWER",	0,
 	1,  "DISTRIBUTED",	    "N",	1,
 	1,  "INGRES",		    "Y",	1,
-	1,  "INGRES/QUEL_LEVEL",    "01000",	1000,
-	1,  "INGRES/SQL_LEVEL",	    "01000",    1000,
+	1,  "INGRES/QUEL_LEVEL",    "01010",	1010,
+	1,  "INGRES/SQL_LEVEL",	    "01010",    1010,
 	1,  "OWNER_NAME",	    "QUOTED",   2,
 	1,  "SAVEPOINTS",	    "Y",	1,
 	1,  "UNIQUE_KEY_REQ",	    "N",	1,

@@ -10,10 +10,14 @@
 #	    Add cxppp.c, cxppptest.
 #	12-feb-2008 (joea)
 #	    Add cxdmd.c.
+#       05-aug-2010 (joea)
+#           Compile cxdmd.c with NOOPTIM on i64_vms.
 #
 SubDir ING_SRC gl glf cx ;
 
 IISUBSYS gl glf cx ;
+
+IINOOPTIM cxdmd.c : i64_vms ;
 
 if ! $(NT)
 {

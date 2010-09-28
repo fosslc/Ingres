@@ -13,6 +13,15 @@
 **          with earlier Ingres versions.
 **      17-nov-2003 (loera01)
 **          Cast SQLCODE to RETCODE.
+**    12-Aug-2010 (Ralph Loen) Bug 124235
+**          For tsqlca_msg, converted SQLERM to a dynamic pointer and  
+**          added SQLLEN.  For tsqlca_msg, removed obsolete SQLSREL,
+**          SQLLNO, SQLARC, SQLFJB, SQLRS4, SQLRS5, SQLERRP 
+**          and SQLWARN fields.
+**    13-Aug-2010 (Ralph Loen) Bug 124235
+**          Renamed SQLLEN field in tsqlca_msg to SQL_MSG_LEN.
+**          SQLLEN is an ODBC definition macro and causes the debugger
+**          in Devstudio to produce confusing information.
 */
 
  /*******************************************************************
@@ -37,7 +46,8 @@ typedef struct tsqlca_msg * LPSQLCAMSG;
 
 typedef struct tsqlca_msg
 {
-    char           SQLERM[256];    /* Text of error message         */
+    char           *SQLERM;        /* Text of error message         */
+    WORD           SQL_MSG_LEN;    /* Length of error message       */
     LPSQLCAMSG     SQLPTR;         /* ptr to next sqlca_msg_type    */
     RETCODE        SQLCODE;        /* SQL error code                */
     long           SQLERC;         /* Extended info error code      */
@@ -51,24 +61,14 @@ typedef struct tsqlca_msg
 
     char           SQLCAID[8];     /* SQLCA* eyecatcher             */
     RETCODE        SQLCODE;        /* SQL error code                */
-    long           SQLSS1[2];      /* Reserved                      */
     long           SQLERC;         /* Extended info error code      */
-    i4             SQLSREL;        /* Server release number         */
     i4             SQLNRP;         /* Number of rows processed      */
-    i4             SQLRS2;         /* reserved                      */
     i4             SQLSER;         /* Error offset                  */
-    i4             SQLRS3;         /* reserved                      */
-    i4             SQLLNO;         /* Source file line number       */
     i4             SQLMCT;         /* error message count           */
-    i4             SQLARC;         /* archive info                  */
-    i4             SQLFJB;         /* #free jnl buffers             */
-    i4             SQLRS4[2];      /* reserved                      */
+    i4             SQLRS2;         /* procedure return value        */
+    i4             SQLRS3;         /* TRUE if prot return value     */
     i4             SQLERL;         /* Length of error message       */
-#define SQLCA_BASE_LEN   72
     char           SQLSTATE[5];    /* ANSI SQLSTATE value           */
-    char           SQLRS5[11];     /* reserved                      */
-    char           SQLERRP[8];     /* DB2T                          */
-    char           SQLWARN[8];     /* DB2T                          */
     LPSQLCAMSG     SQLPTR;         /* -> next sqlca msg if exists   */
     void *         pdbc;           /* -> parent connection          */
     DWORD          irowCurrent;    /* Current row of rowset in error*/

@@ -54,6 +54,12 @@
 **    04-Jun-2010 (horda03) b123227
 **      Syntax for drop grant on sequence incorrect. "next" is missing as is the
 **      CASCADE/RESTRICT text at the end.
+**    30-Jun-2010 (drivi01)
+**      Bug #124006
+**      Add new BOOLEAN datatype.
+**    25-Aug-2010 (drivi01) Bug #124306
+**      Remove all hard coded buffers for replication tasks
+**      to get long ids to work.
 ******************************************************************************/
 #include "dba.h"
 #include "dbaset.h"
@@ -102,8 +108,8 @@ static char szBuffer[MAXOBJECTNAME];
 
 static BOOL DBACreateReplicRules(LPUCHAR lpNodeName, LPUCHAR lpDBName,LPUCHAR lpTblName, int callsession)
 {
-   char buf[200];
-   char buf2[200];
+   char buf[MAXOBJECTNAME*3+200];
+   char buf2[MAXOBJECTNAME*3+200];
    char bufUser[100];
    if (!DBAGetUserName(lpNodeName,bufUser)) {
       ActivateSession(callsession);
@@ -123,8 +129,8 @@ static BOOL DBACreateReplicRulesV11(LPUCHAR lpNodeName, LPUCHAR lpDBName,
                                     LPUCHAR lpTblName , int TblNumber   ,
                                     int callsession)
 {
-   char buf[200];
-   char buf2[200];
+   char buf[MAXOBJECTNAME*3+200];
+   char buf2[MAXOBJECTNAME*3+200];
    char bufUser[100];
 	char szgateway[200];
 	BOOL bHasGWSuffix = GetGWClassNameFromString(lpNodeName, szgateway);
@@ -148,8 +154,8 @@ static BOOL DBACreateReplicRulesV11(LPUCHAR lpNodeName, LPUCHAR lpDBName,
 
 static BOOL DBACreateReplicSup(LPUCHAR lpNodeName, LPUCHAR lpDBName,LPUCHAR lpTblName, int callsession)
 {
-   char buf[200];
-   char buf2[200];
+   char buf[MAXOBJECTNAME*3+200];
+   char buf2[MAXOBJECTNAME*3+200];
    char bufUser[100];
    if (!DBAGetUserName(lpNodeName,bufUser)) {
       ActivateSession(callsession);
@@ -169,8 +175,8 @@ static BOOL DBACreateReplicSupV11(LPUCHAR lpNodeName, LPUCHAR lpDBName,
                                   LPUCHAR lpTblName , int TblNumber   ,
                                   int callsession  )
 {
-   char buf[200];
-   char buf2[200];
+   char buf[MAXOBJECTNAME*3+200];
+   char buf2[MAXOBJECTNAME*3+200];
    char bufUser[100];
 	char szgateway[200];
 	BOOL bHasGWSuffix = GetGWClassNameFromString(lpNodeName, szgateway);
@@ -195,7 +201,7 @@ static BOOL DBACreateReplicSupV11(LPUCHAR lpNodeName, LPUCHAR lpDBName,
 static BOOL DBADropReplicRules(LPUCHAR lpTableName)
 
 {
-   char bufrequest[100];
+   char bufrequest[MAXOBJECTNAME+100];
    int iret,i;
    BOOL bResult = TRUE;
    char * strings[]={
@@ -220,7 +226,7 @@ static BOOL DBADropReplicRules(LPUCHAR lpTableName)
 static BOOL DBADropReplicRulesV11(LPUCHAR lpTableName)
 
 {
-   char bufrequest[100];
+   char bufrequest[MAXOBJECTNAME+100];
    int iret,i;
    BOOL bResult = TRUE;
    char * strings[]={
@@ -240,7 +246,7 @@ static BOOL DBADropReplicRulesV11(LPUCHAR lpTableName)
 
 static DBADropReplicSup(LPUCHAR lpTableName)
 {
-   char bufrequest[100];
+   char bufrequest[MAXOBJECTNAME+100];
    int iret,i;
    char * strings[]={"drop table %s_s"  ,
                       "drop table %s_a"
@@ -256,7 +262,7 @@ static DBADropReplicSup(LPUCHAR lpTableName)
 
 static DBADropReplicSupV11(LPUCHAR lpTableName)
 {
-   char bufrequest[100];
+   char bufrequest[MAXOBJECTNAME+100];
    int iret,i;
 
    char * strings[]={"drop table %ssha",
@@ -281,7 +287,7 @@ static DBADropReplicSupV11(LPUCHAR lpTableName)
 
 static DBADropReplicSupV11Oi20(LPUCHAR lpTableName)
 {
-   char bufrequest[100];
+   char bufrequest[MAXOBJECTNAME+100];
    int iret,i,Maxlen;
 
    char * strings[]={"drop table %ssha",
@@ -348,6 +354,7 @@ LPUCHAR GetColTypeStr(LPCOLUMNPARAMS lpColAttr)
          {INGTYPE_VARCHAR     ," varchar("       ,TRUE},
          {INGTYPE_LONGVARCHAR ," long varchar "  ,FALSE},
          {INGTYPE_BIGINT      ," bigint "        ,FALSE},
+         {INGTYPE_BOOLEAN     ," boolean "       ,FALSE},
          {INGTYPE_INT8        ," bigint "        ,FALSE},
          {INGTYPE_INT4        ," int "           ,FALSE},
          {INGTYPE_INT2        ," smallint"       ,FALSE},
@@ -1783,6 +1790,7 @@ int BuildSQLCreTbl(UCHAR **PPstm,LPTABLEPARAMS tblparm)
          {INGTYPE_TEXT        ," text("          ,TRUE},
          {INGTYPE_VARCHAR     ," varchar("       ,TRUE},
          {INGTYPE_LONGVARCHAR ," long varchar "  ,FALSE},
+         {INGTYPE_BOOLEAN     ," boolean"        ,FALSE},
          {INGTYPE_INT8        ,"bigint"          ,FALSE},
          {INGTYPE_INT4        ," int "           ,FALSE},
          {INGTYPE_INT2        ," smallint"       ,FALSE},
@@ -4377,7 +4385,7 @@ int ModifyChgStorage(LPSTORAGEPARAMS lpStorageParams)
 
 int BuildSQLCDDS    (UCHAR **PPstm, LPREPCDDS lpCdds, LPUCHAR lpNodeName, LPUCHAR lpDBName, int isession)
 {
-  char         achBufReq[500];
+  char         achBufReq[MAXOBJECTNAME*8+500];
   LPOBJECTLIST lpO;
   int          iret;
 
@@ -4542,7 +4550,7 @@ values ('%s','%s','%s','%s')",
            (((LPDD_REGISTERED_TABLES)(lpO->lpObject))->table_created[0]    !='T')&&
            (((LPDD_REGISTERED_TABLES)(lpO->lpObject))->table_created_ini[0]=='T')
           ) {
-           UCHAR buf[120];
+           UCHAR buf[MAXOBJECTNAME*2+120];
            BOOL bResult;
            int iret;
            bResult=DBADropReplicSup(
@@ -4571,7 +4579,7 @@ values ('%s','%s','%s','%s')",
            (((LPDD_REGISTERED_TABLES)(lpO->lpObject))->rules_created[0]    !='R')&&
            (((LPDD_REGISTERED_TABLES)(lpO->lpObject))->rules_created_ini[0]=='R')
           ) {
-           UCHAR buf[120];
+           UCHAR buf[MAXOBJECTNAME*2+120];
            BOOL bResult;
            int iret;
            bResult=DBADropReplicRules(
@@ -4597,7 +4605,7 @@ endfunc:
 //PS 
 int BuildSQLCDDSV11 (UCHAR **PPstm, LPREPCDDS lpCdds, LPUCHAR lpNodeName, LPUCHAR lpDBName, int isession)
 {
-  char         achBufReq[500];
+  char         achBufReq[MAXOBJECTNAME*8+500];
   LPOBJECTLIST lpO;
   int          iret;
 
@@ -4877,7 +4885,7 @@ int BuildSQLCDDSV11 (UCHAR **PPstm, LPREPCDDS lpCdds, LPUCHAR lpNodeName, LPUCHA
            (((LPDD_REGISTERED_TABLES)(lpO->lpObject))->rules_created[0]    =='R')&&
            (((LPDD_REGISTERED_TABLES)(lpO->lpObject))->rules_created_ini[0]!='R')
           ) {
-           UCHAR buf[120];
+           UCHAR buf[MAXOBJECTNAME*2+120];
            char Proc[MAXOBJECTNAME];
            int tablelen;
            DBACreateReplicRulesV11( lpNodeName,
@@ -4915,7 +4923,7 @@ int BuildSQLCDDSV11 (UCHAR **PPstm, LPREPCDDS lpCdds, LPUCHAR lpNodeName, LPUCHA
            (((LPDD_REGISTERED_TABLES)(lpO->lpObject))->rules_created[0]    !='R')&&
            (((LPDD_REGISTERED_TABLES)(lpO->lpObject))->rules_created_ini[0]=='R')
           ) {
-           UCHAR buf[120];
+           UCHAR buf[MAXOBJECTNAME*2+120];
            char Proc[MAXOBJECTNAME];
            BOOL bResult;
            int iret,tablelen;
@@ -4968,7 +4976,7 @@ endfunc:
 
 int BuildSQLDropCDDS    (UCHAR **PPstm, LPREPCDDS lpCdds)
 {
-  char         achBufReq[512];
+  char         achBufReq[MAXOBJECTNAME*8+512];
   LPOBJECTLIST lpO;
   int          iret;
 
@@ -5017,7 +5025,7 @@ endfunc:
 
 int BuildSQLDropCDDSV11  (UCHAR **PPstm, LPREPCDDS lpCdds)
 {
-  char         achBufReq[512];
+  char         achBufReq[MAXOBJECTNAME*8+512];
   int          iret;
 
   wsprintf(achBufReq,"delete from dd_cdds where cdds_no = %d",lpCdds->cdds);
@@ -5058,7 +5066,7 @@ endfunc:
 
 int GenAlterReplicConnection (LPREPLCONNECTPARAMS pOldReplConnectParams ,LPREPLCONNECTPARAMS pReplConnectParams)
 {
-   char bufrequest[400];
+   char bufrequest[MAXOBJECTNAME*6+400];
    int iret;
   if (pOldReplConnectParams->bLocalDb == TRUE)
     {
@@ -5139,7 +5147,7 @@ int GenAlterReplicConnection (LPREPLCONNECTPARAMS pOldReplConnectParams ,LPREPLC
 
 int GenAlterReplicConnectionV11 (LPREPLCONNECTPARAMS pOldReplConnectParams ,LPREPLCONNECTPARAMS pReplConnectParams)
 {
-  char bufrequest[400];
+  char bufrequest[MAXOBJECTNAME*6+400];
   int iret;
   if (pOldReplConnectParams->bLocalDb == TRUE)  {
     wsprintf (bufrequest,

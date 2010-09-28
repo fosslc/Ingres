@@ -67,6 +67,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	11-Jun-2010 (kiria01) b123908
+**	    Init ulm_streamid_p for ulm_openstream to fix potential segvs.
 **/
 
 /*
@@ -1158,6 +1160,7 @@ urs_begin_parm(URS_MGR_CB	*ursm,
 	ulm->ulm_flags = ULM_PRIVATE_STREAM;
 	ulm->ulm_memleft = &ursb->ursb_memleft;
 	ursb->ursb_memleft = URS_APPMEM_DEFAULT;
+	ulm->ulm_streamid_p = NULL;
 	if ((status = ulm_openstream(ulm)) != E_DB_OK)
 	{
 	    urs_error(ulm->ulm_error.err_code, URS_INTERR, 0);

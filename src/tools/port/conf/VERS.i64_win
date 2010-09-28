@@ -5,6 +5,7 @@
 
 #set: config i64_win
 #set: build 00
+WITH_GEO = -D_WITH_GEO ; #set option: WITH_GEO
 
 # Any jam definitions go here, e.g. VAR = value ;
 # Don't forget spaces around the = and before the ;

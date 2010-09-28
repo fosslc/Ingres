@@ -366,6 +366,8 @@
 **	    Init new sess_cb->pss_stmt_flags2.
 **	19-May-2010 (kiria01) b123766
 **	    Get cardinality check default from server block not psq_cb
+**	21-Jul-2010 (kschendel) SIR 124104
+**	    Initialize default compression from facility cb.
 */
 DB_STATUS
 psq_bgn_session(
@@ -853,6 +855,8 @@ psq_bgn_session(
 
     /* Cursor id set to 0, no cursors open yet */
     sess_cb->pss_crsid = 0;
+
+    sess_cb->pss_create_compression = Psf_srvblk->psf_create_compression;
 
     return (E_DB_OK);
 }

@@ -1313,6 +1313,7 @@ GM_attr_type( i4  type )
     case DB_MLINE_TYPE:         t = ERx("multiline"); break;
     case DB_POLY_TYPE:          t = ERx("polygon"); break;
     case DB_MPOLY_TYPE:         t = ERx("multipolygon"); break;
+    case DB_GEOMC_TYPE:			t = ERx("geomcollection"); break;
     default:			t = "unknown type"; break;
     }
     return( t );

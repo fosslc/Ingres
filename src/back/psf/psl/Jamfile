@@ -5,6 +5,8 @@
 #       Turned off optimizer for pslsscan.c on AMD Solaris port.
 #       Got E_US09D5 error during iidbdb creation.
 #       Compiler version: Sun C 5.7 patch 117837-01.
+#    20-Aug-2010 (horda03)
+#       Automate pslscantoks.h and pslsscantoks.h creation.
 #
 
 SubDir ING_SRC back psf psl ;
@@ -23,3 +25,6 @@ IINOOPTIM pslgram.c : dgi_us5 int_lnx int_rpl ibm_lnx i64_aix ;
 IINOOPTIM pslsgram.c : rs4_us5 dgi_us5 int_lnx int_rpl ibm_lnx usl_us5 i64_aix ;
 IINOOPTIM pslsscan.c : a64_sol ;
 
+
+IIAWK pslscantoks.h : pslscanprep.awk pslscantoks.dat ;
+IIAWK pslsscantoks.h : pslscanprep.awk pslsscantoks.dat ;

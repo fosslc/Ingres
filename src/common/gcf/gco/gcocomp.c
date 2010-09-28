@@ -200,6 +200,9 @@
 **	    Added support for Boolean type.
 **	22-Jan-10 (gordy)
 **	    DOUBLEBYTE code generalized for multi-byte charset processing.
+**      17-Aug-2010 (thich01)
+**          Added spatial GCA types and treat them all as GCO_DT_LBYT or
+**          GCO_DT_BYTE for NBR type.
 */
 
 /*
@@ -2400,6 +2403,15 @@ gco_map_ddt( GCA_ELEMENT *ela, i4  *gco_type, i4  flags )
 	case GCA_TYPE_LCLOC :	type = GCO_DT_LCLOC;	break;
 	case GCA_TYPE_BYTE :	type = GCO_DT_BYTE;	break;
 	case GCA_TYPE_LBYTE :	type = GCO_DT_LBYT;	break;
+	case GCA_TYPE_GEOM :    type = GCO_DT_LBYT;     break;
+	case GCA_TYPE_POINT :   type = GCO_DT_LBYT;     break;
+	case GCA_TYPE_MPOINT :  type = GCO_DT_LBYT;     break;
+	case GCA_TYPE_LINE :    type = GCO_DT_LBYT;     break;
+	case GCA_TYPE_MLINE :   type = GCO_DT_LBYT;     break;
+	case GCA_TYPE_POLY :    type = GCO_DT_LBYT;     break;
+	case GCA_TYPE_MPOLY :   type = GCO_DT_LBYT;     break;
+	case GCA_TYPE_NBR :     type = GCO_DT_BYTE;     break;
+	case GCA_TYPE_GEOMC :   type = GCO_DT_LBYT;     break;
 	case GCA_TYPE_LBLOC :	type = GCO_DT_LBLOC;	break;
 	case GCA_TYPE_QTXT :	type = GCO_DT_QTXT;	break;
 	case GCA_TYPE_NCHR :	type = GCO_DT_NCHAR;	break;

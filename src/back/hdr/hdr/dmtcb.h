@@ -502,6 +502,9 @@ typedef struct
 **	    Add manual-blob-logkey-gen and multi-row flags.  Both of these
 **	    are for the new BLOB logic that uses the BQCB for context during
 **	    the query lifetime.
+**	04-Aug-2010 (miket) SIR 122403
+**	    Add dmt_enc_locked to provide feedback to callers about the
+**	    lock status of encrypted tables.
 */
 typedef struct _DMT_CB
 {
@@ -656,6 +659,7 @@ typedef struct _DMT_CB
 #define                 DMT_U_DIRECT        2L
     bool            dmt_mustlock;           /* flag indicating query is an
                                             ** update - disables noreadlock */
+    bool            dmt_enc_locked;         /* table is encrypted and locked */
 
     DB_TAB_TIMESTAMP
 		    dmt_timestamp;	    /* Date of that structural change.*/
@@ -744,6 +748,8 @@ typedef struct _DMT_CB
 **	    Added DMT_C_TABLE_PRIORITY
 **	23-nov-2006 (dougi)
 **	    Add DMT_C_VIEWS back into the fold.
+**	20-Jul-2010 (kschendel) SIR 124104
+**	    Invent compression characteristic.
 */
 typedef struct _DMT_CHAR_ENTRY
 {
@@ -875,6 +881,13 @@ typedef struct _DMT_CHAR_ENTRY
 						/* Specifies requested page
 						** type for a temporary table.
 						*/
+#define			DMT_C_COMPRESSED    34L
+						/* Compression type if any.
+						** *NOTE* Passes TCB_C_xxx as
+						** value, for use within DMF.
+						** Not for external use.
+						*/
+
     i4         char_value;             /* Value of characteristic. */
 #define                 DMT_C_ON            1L
 #define                 DMT_C_OFF           0L
@@ -1212,6 +1225,8 @@ typedef struct
 **	01-apr-2010 (toumi01) SIR 122403
 **	    Add tbl_data_width; because of encryption a relation has both
 **	    a physical width and a (possibly smaller) logical width.
+**	9-Jul-2010 (kschendel) SIR 123450
+**	    Add new standard compression type.
 */
 typedef struct _DMT_TBL_ENTRY
 {
@@ -1329,10 +1344,11 @@ typedef struct _DMT_TBL_ENTRY
     i4	    tbl_temporary;	    /* non-zero means that this table
 					    ** is a temporary table */
     i4		   tbl_comp_type;	    /* Compression scheme */
-#define		       DMT_C_NONE	  0L
-#define		       DMT_C_STANDARD	  1L
-#define		       DMT_C_OLD	  2L
-#define		       DMT_C_HICOMPRESS   7L
+#define		       DMT_C_NONE	  0
+#define		       DMT_C_STD_OLD	  1
+#define		       DMT_C_OLD	  2
+#define		       DMT_C_STANDARD	  3
+#define		       DMT_C_HICOMPRESS   7
     i4		   tbl_pg_type;		    /* The page type for this table */
 #define		       DMT_PG_STANDARD	  0L
 #define		       DMT_PG_SYSCAT	  2L

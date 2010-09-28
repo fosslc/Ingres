@@ -770,6 +770,8 @@ opa_uview(
 **      1-mar-94 (ed)
 **          - ojid's which have variable defined as inner should be considered
 **          as possible ojid's for where clause labelling 
+**	19-Jun-2010 (kiria01) b123951
+**	    Init joinid to an expected default.
 [@history_template@]...
 */
 static PST_J_ID
@@ -789,7 +791,7 @@ opa_fojid(
     original = viewid;
     subquery = gstate->opa_gfather;
     global = subquery->ops_global;
-    inner = PST_NOJOIN;
+    inner = joinid = PST_NOJOIN;
     for(;(inner = BTnext((i4)-1, (char *)&rangep->pst_inner_rel, (i4)BITS_IN(rangep->pst_inner_rel)))<0;)
     {
         /* look for the view, or view parent which has an
@@ -5648,7 +5650,8 @@ opa_const(
 **      30-may-01 (inkdo01)
 **          Change all "count(column)" f.i.'s to ADFI_090_COUNT_C_ALL so parse
 **          trees from earlier releases generate right code.
-[@history_template@]...
+**	14-Jul-2010 (kschendel) b123104
+**	    Use symbolic definition for count-all FI.
 */
 static VOID
 opa_generate(
@@ -5817,9 +5820,9 @@ opa_generate(
         case PST_AOP:
         {
             if ((*agg_qnode)->pst_sym.pst_value.pst_s_op.pst_opno == ADI_CNT_OP)
-                (*agg_qnode)->pst_sym.pst_value.pst_s_op.pst_opinst = 90;
+                (*agg_qnode)->pst_sym.pst_value.pst_s_op.pst_opinst = ADFI_090_COUNT_C_ALL;
                                                 /* all count(col)'s are now 
-                                                ** ADFI_090_COUNT_ALL */
+                                                ** ADFI_090_COUNT_C_ALL */
         }       /* then drop into PST_COP */
         case PST_COP:
         {

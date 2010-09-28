@@ -183,6 +183,10 @@
 **	    Hybrid add-on symbol changed, fix here.
 **      24-nov-2009 (joea)
 **          Change II_BOOLEAN to 38.  Add missing operators.
+**      17-Aug-2010 (thich01)
+**          Add spatial II types and spatial II ops.
+**  19-Aug-2010 (thich01)
+**      Left a space at 60 for GCA SECL TYPE.
 */
 /*
 **	11-may-2006
@@ -420,6 +424,18 @@ typedef short II_DT_ID;
     ** datatypes must be coercable to/from this datatype. This type is also
     ** used for representing a typeless NULL. This data type may never be
     ** stored in the database.
+    */
+#define 		II_GEOM 	((II_DT_ID) 56)
+#define 		II_POINT 	((II_DT_ID) 57)
+#define 		II_MPOINT 	((II_DT_ID) 58)
+#define 		II_LINE 	((II_DT_ID) 59)
+#define 		II_MLINE 	((II_DT_ID) 61)
+#define 		II_POLY 	((II_DT_ID) 62)
+#define 		II_MPOLY 	((II_DT_ID) 63)
+#define 		II_NBR 		((II_DT_ID) 64)
+#define 		II_GEOMC 	((II_DT_ID) 65)
+    /* New spatial datatypes.  These are internal types and are all LBYTE data
+    ** under the 'covers.'
     */
 
    /* Spatial datatypes */
@@ -701,6 +717,65 @@ typedef short II_OP_ID;
 #define II_BOO_OP            (II_OP_ID)229  /* boolean                 */
 #define II_CMPTVER_OP        (II_OP_ID)230  /* iicmptversion           */ 
 #define II_NVL2_OP           (II_OP_ID)235  /* NVL2                    */
+
+#define II_X_OP              (II_OP_ID)245  /* x(point)                 */
+#define II_Y_OP              (II_OP_ID)246  /* y(point)                 */
+#define II_BPOINT_OP         (II_OP_ID)247  /* blob point operators     */
+#define II_LINE_OP           (II_OP_ID)248  /* Line operators           */
+#define II_POLY_OP           (II_OP_ID)249  /* Polygon operators        */
+#define II_MPOINT_OP         (II_OP_ID)250  /* multi point operators    */
+#define II_MLINE_OP          (II_OP_ID)251  /* multi Line operators     */
+#define II_MPOLY_OP          (II_OP_ID)252  /* multi Polygon operators  */
+#define II_GEOMWKT_OP        (II_OP_ID)253  /* Well known text ops      */
+#define II_GEOMWKB_OP        (II_OP_ID)254  /* Well known binary ops    */
+#define II_NBR_OP            (II_OP_ID)255  /* Spatial nbr op           */
+#define II_HILBERT_OP        (II_OP_ID)256  /* Spatial hilbert op       */
+#define II_OVERLAPS_OP       (II_OP_ID)257  /* overlaps(geom, geom      */
+#define II_INSIDE_OP         (II_OP_ID)258  /* inside(geom, geom)       */
+#define II_PERIMETER_OP      (II_OP_ID)259  /* perimeter(geom)          */
+#define II_GEOMNAME_OP       (II_OP_ID)260  /* iigeomname()             */
+#define II_GEOMDIMEN_OP      (II_OP_ID)261  /* iigeomdimensions()       */
+#define II_DIMENSION_OP      (II_OP_ID)262  /* dimension(geom)          */
+#define II_GEOMETRY_TYPE_OP  (II_OP_ID)263  /* geometrytype(geom)       */
+#define II_BOUNDARY_OP       (II_OP_ID)264  /* boundary(geom)           */
+#define II_ENVELOPE_OP       (II_OP_ID)265  /* envelope(geom)           */
+#define II_EQUALS_OP         (II_OP_ID)266  /* equals(geom, geom)       */
+#define II_DISJOINT_OP       (II_OP_ID)267  /* disjoint(geom, geom)     */
+#define II_INTERSECTS_OP     (II_OP_ID)268  /* intersects(geom, geom)   */
+#define II_TOUCHES_OP        (II_OP_ID)269  /* touches(geom, geom)      */
+#define II_CROSSES_OP        (II_OP_ID)270  /* crosses(geom, geom)      */
+#define II_WITHIN_OP         (II_OP_ID)271  /* within(geom, geom)       */
+#define II_CONTAINS_OP       (II_OP_ID)272  /* contains(geom, geom)     */
+#define II_RELATE_OP         (II_OP_ID)273  /* relate(geom, geom, char) */
+#define II_DISTANCE_OP       (II_OP_ID)274  /* distance(geom, geom)     */
+#define II_INTERSECTION_OP   (II_OP_ID)275  /* intersection(geom, geom) */
+#define II_DIFFERENCE_OP     (II_OP_ID)276  /* difference(geom, geom)   */
+#define II_SYMDIFF_OP        (II_OP_ID)277  /* symdifference(geom, geom)*/
+#define II_BUFFER_OP         (II_OP_ID)278  /* buffer()                 */
+#define II_CONVEXHULL_OP     (II_OP_ID)279  /* convexhull(geom)         */
+#define II_POINTN_OP         (II_OP_ID)280  /* pointn(linestring)       */
+#define II_STARTPOINT_OP     (II_OP_ID)281  /* startpoint(curve)        */
+#define II_ENDPOINT_OP       (II_OP_ID)282  /* endpoint(curve)          */
+#define II_ISCLOSED_OP       (II_OP_ID)283  /* isclosed(curve)          */
+#define II_ISRING_OP         (II_OP_ID)284  /* isring(curve)            */
+#define II_STLENGTH_OP       (II_OP_ID)285  /* st_length(curve)         */
+#define II_CENTROID_OP       (II_OP_ID)286  /* centroid(surface)        */
+#define II_PNTONSURFACE_OP   (II_OP_ID)287  /* pointonsurface(surface)  */
+#define II_AREA_OP           (II_OP_ID)288  /* area(surface)            */
+#define II_EXTERIORRING_OP   (II_OP_ID)289  /* exteriorring(polygon)    */
+#define II_NINTERIORRING_OP  (II_OP_ID)290  /* numinteriorring(polygon) */
+#define II_INTERIORRINGN_OP  (II_OP_ID)291  /* interiorringn(polygon, i)*/
+#define II_NUMGEOMETRIES_OP  (II_OP_ID)292  /* numgeometries(geomcoll)  */
+#define II_GEOMETRYN_OP      (II_OP_ID)293  /* geometryn(geomcoll)      */
+#define II_ISEMPTY_OP        (II_OP_ID)294  /* ISEMPTY(geom)            */
+#define II_ISSIMPLE_OP       (II_OP_ID)295  /* ISSIMPLE(geom)           */
+#define II_UNION_OP          (II_OP_ID)296  /* union(geom, geom)        */
+#define II_SRID_OP           (II_OP_ID)297  /* SRID(geom)               */
+#define II_NUMPOINTS_OP      (II_OP_ID)298  /* NUMPOINTS(linestring)    */
+#define II_TRANSFORM_OP      (II_OP_ID)299  /* TRANSFORM(geom)          */
+#define II_GEOMWKTRAW_OP     (II_OP_ID)300  /* AsTextRaw(geom)          */
+#define II_GEOMC_OP          (II_OP_ID)301  /* GeomColl operators       */
+
 
 /*}
 ** Name: II_FI_ID - Function Instance Identifier

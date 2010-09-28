@@ -31,6 +31,16 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 1                       ICON                    "res\\enterprise.ico"
 IDI_ICON2               ICON                    "res\\enterprise.ico"
 
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    IDS_ACCEPT_TERMS        "{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1033{\\fonttbl{\\f0\\fnil\\fprq1\\fcharset0 Courier New;}{\\f1\\fswiss\\fcharset0 Arial;}}{\\colortbl ;\\red163\\green21\\blue21;}{\\*\\generator Msftedit 5.41.21.2500;}\\viewkind4\\uc1\\pard\\cf1\\f0\\fs20 Accept the terms in the license agreement in %s\\cf0\\f1\\par}"
+END
+
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
 //

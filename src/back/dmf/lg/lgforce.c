@@ -997,6 +997,9 @@ CL_ERR_DESC	    *sys_err)
 **	    Maintain (new) lfb_fq_leof.
 **	20-Sep-2006 (kschendel)
 **	    Buffer wait queue moved to LFB, update here.
+**	14-Jul-2010 (jonj) Bug 124085
+**	    Lock header's LBB mutex before modifying the LBB
+**	    to avoid collisions with MVCC LGread(bufid).
 */
 STATUS
 LG_write_headers( LG_ID *lx_id, register LFB *lfb, STATUS *async_status )
@@ -1106,6 +1109,10 @@ LG_write_headers( LG_ID *lx_id, register LFB *lfb, STATUS *async_status )
     ** block for 2 times.
     */
 
+    /* Lock the header LBB's mutex before modifying the LBB */
+    if (status = LG_mutex(SEM_EXCL, &lbb->lbb_mutex))
+	return(status);
+
     buf_ptr = (char *)LGK_PTR_FROM_OFFSET(lbb->lbb_buffer);
 
     MEmove(sizeof(LG_HEADER), (PTR)&lfb->lfb_header, '\0', 1024, buf_ptr);
@@ -1117,10 +1124,6 @@ LG_write_headers( LG_ID *lx_id, register LFB *lfb, STATUS *async_status )
     lbb->lbb_lga.la_block    = 0;
     lbb->lbb_lga.la_offset   = 0;
     lbb->lbb_state = LBB_MODIFIED;
-
-    /* Lock the header LBB's mutex */
-    if (status = LG_mutex(SEM_EXCL, &lbb->lbb_mutex))
-	return(status);
 
     /* Must wait for header to hit the disk */
     if (lxb)

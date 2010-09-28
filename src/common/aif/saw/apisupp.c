@@ -61,6 +61,8 @@
 **	    Remove u_i2 casts from MEcopy calls.
 **      05-nov-2009 (joea)
 **          Add support for IIAPI_VERSION_7 in IIsw_initialize.
+**      30-aug-2010 (thich0)
+**          Add support for IIAPI_VERSION_8 in IIsw_initialize.
 **/
 
 # define E_SW0001_INTERNAL_ERROR	0xEA0001
@@ -113,7 +115,7 @@ i4	version)
 	  init_parm.in_version = (envHandle ? IIAPI_VERSION_2 : IIAPI_VERSION_1);
 	else 
 	{
-            if (version >= IIAPI_VERSION_1 && version <= IIAPI_VERSION_7)
+            if (version >= IIAPI_VERSION_1 && version <= IIAPI_VERSION_8)
 		init_parm.in_version = version;
 	  else 
             return (E_SW0001_INTERNAL_ERROR);

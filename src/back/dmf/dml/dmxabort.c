@@ -510,6 +510,10 @@ static	DB_STATUS   empty_temporary_tables();
 **	    XCB's XCCB list now has to be mutex protected.
 **	13-Apr-2010 (kschendel) SIR 123485
 **	    Force LOB query-end upon abort.
+**	23-Sep-2010 (jonj) B124486
+**	    dmxe_abort will return E_DM9509_DMXE_PASS_ABORT
+**	    if rollback failed. If it does, don't
+**	    release the lock list; the RCP needs it.
 */
 DB_STATUS
 dmx_abort(
@@ -892,12 +896,13 @@ DMX_CB    *dmx_cb)
 	    savepoint_id, &spcb->spcb_lsn, &dmx->error); 
 	if (status != E_DB_OK)
 	{
-	    if ((dmx->error.err_code != E_DM004B_LOCK_QUOTA_EXCEEDED) &&
-	    	(dmx->error.err_code != E_DM0096_ERROR_ABORTING_TRAN) &&
-	        (dmx->error.err_code != E_DM004D_LOCK_TIMER_EXPIRED) &&
-	        (dmx->error.err_code != E_DM0100_DB_INCONSISTENT) &&
-	        (dmx->error.err_code != E_DM010C_TRAN_ABORTED) &&
-		(dmx->error.err_code != E_DM004A_INTERNAL_ERROR))
+	    if ( dmx->error.err_code != E_DM004B_LOCK_QUOTA_EXCEEDED &&
+	    	 dmx->error.err_code != E_DM0096_ERROR_ABORTING_TRAN &&
+	         dmx->error.err_code != E_DM004D_LOCK_TIMER_EXPIRED &&
+	         dmx->error.err_code != E_DM0100_DB_INCONSISTENT &&
+	         dmx->error.err_code != E_DM010C_TRAN_ABORTED &&
+		 dmx->error.err_code != E_DM004A_INTERNAL_ERROR &&
+		 dmx->error.err_code != E_DM9509_DMXE_PASS_ABORT )
 	    {
 		uleFormat( &dmx->error, 0, NULL, ULE_LOG , NULL, 
 		    (char * )NULL, 0L, (i4 *)NULL, 
@@ -920,23 +925,32 @@ DMX_CB    *dmx_cb)
 	    }
 
 	    /*
-	    ** Break to bottom to return the abort error unless DB_INCONSISTENT
-	    ** is returned.  In this case, the transaction context will have
-	    ** been successfully removed even though the abort could not
-	    ** be properly processed (since the database is inconsistent).
-	    ** So we fall through to complete processing of the XCB cleanup.
-	    ** This will allow us to remove this session later without getting
-	    ** "transaction in progress" errors.
+	    ** If pass-abort, do NOT release lock list; it's needed
+	    ** by the RCP to recover the transaction.
 	    */
-	    if (dmx->error.err_code != E_DM0100_DB_INCONSISTENT)
-		break;
+	    if ( dmx->error.err_code == E_DM9509_DMXE_PASS_ABORT )
+	        abort &= ~DMXE_DELAY_UNLOCK;
+	    else
+	    {
+		/*
+		** Break to bottom to return the abort error unless DB_INCONSISTENT
+		** is returned.  In this case, the transaction context will have
+		** been successfully removed even though the abort could not
+		** be properly processed (since the database is inconsistent).
+		** So we fall through to complete processing of the XCB cleanup.
+		** This will allow us to remove this session later without getting
+		** "transaction in progress" errors.
+		*/
+		if (dmx->error.err_code != E_DM0100_DB_INCONSISTENT)
+		    break;
 
-	    db_inconsist_error = TRUE;
-	    abort &= ~DMXE_DELAY_UNLOCK; /* Locklist already gone if error */
+		db_inconsist_error = TRUE;
+		abort &= ~DMXE_DELAY_UNLOCK; /* Locklist already gone if error */
 
-	    /* Transaction context is gone, ignore savepoints */
-	    dmx->dmx_option &= ~DMX_SP_ABORT;
-	    savepoint_id = 0;
+		/* Transaction context is gone, ignore savepoints */
+		dmx->dmx_option &= ~DMX_SP_ABORT;
+		savepoint_id = 0;
+	    }
 	}
 
 	/*

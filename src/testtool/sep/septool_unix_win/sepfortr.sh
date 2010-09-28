@@ -1,6 +1,6 @@
 :
 #
-# Copyright (c) 2004 Ingres Corporation
+# Copyright (c) 2004, 2010 Ingres Corporation
 #
 # This script makes an executable file from a FORTRAN source file.
 # It is called as an OS/TCL command from the SEP FORTRAN tests.
@@ -42,6 +42,12 @@
 #
 #   But DON'T set SEP_FORTRAN_LD from within a SEP script! Always set it 
 #   BEFORE you invoke SEP or Listexec!
+#
+# About the 64-bit tests on Unix hybrid platforms:
+#
+#   For the hybrid platforms (su9_us5, a64_sol, hp2_us5 and r64_us5), 
+#   if the environment variable "FORTRAN_64" is set, the 64-bit test program
+#   will be built.
 
 #
 ## History:
@@ -60,6 +66,9 @@
 ##          then the copyright should be next.
 ##   2-Nov-2006 (hanal04) Bug 117020
 ##      Added $CCLDMACH to compile line to ensure compiler flags are included.
+##   31-Aug-2010 (hweho01)
+##      Include the 64-bit support for hybrid platforms, add a new switch
+##      "FORTRAN_64". 
 ##
 
 . $II_SYSTEM/ingres/utility/iisysdep
@@ -132,8 +141,21 @@ else
 	ldflags="$libs $SEP_FORTRAN_LD"
 fi
 
+preproc_opt=""
+
+test_64bit=false
+[ ! -z "$FORTRAN_64" ] && test_64bit=true
+
+/* setup the 64 bit options for preprocessor, library  and compiler */
+if [ "$test_64bit" = "true" ] ; then
+preproc_opt="-g64"
+SEP_FORTRAN_LD="$II_SYSTEM/ingres/lib/lp64/libingres.a"
+ldflags="$libs $SEP_FORTRAN_LD"
+CCLDMACH="$CCLDMACH64"
+LDLIBMACH="$LDLIBMACH64"
+fi
 	
-if $preproc $sfile
+if $preproc $preproc_opt $sfile
 then :
 else
 	echo "ERROR: \"$preproc\" failed on $sfile"
@@ -144,7 +166,7 @@ echo $compiler  -o $sfile.exe $sfile.f $CCLDMACH $ldflags $LDLIBMACH
 if $compiler  -o $sfile.exe $sfile.f $CCLDMACH $ldflags $LDLIBMACH
 then :
 else
-	echo "ERROR: \"$compiler\" failed on $sfile.a"
+	echo "ERROR: \"$compiler\" failed on $sfile.f"
 	echo "       Command was: $compiler -o $sfile.exe $sfile.f $CCLDMACH $ldflags $LDLIBMACH"
 	echo "       Check to make sure \"$compiler\" is in your path" 
 	exit 1

@@ -177,6 +177,9 @@ ad0_nvchr_casemap(
 **          A standard interface is expected by fcn lookup / execute
 **          operations. Force NFC normalization is now achieved by temporarily
 **          updating the adf_uninorm_flag in the ADF_CB.
+**      21-Jun-2010 (horda03) b123926
+**          Because adu_unorm() and adu_utf8_unorm() are also called via 
+**          adu_lo_filter() change parameter order.
 */
 
 /*{
@@ -647,9 +650,9 @@ ADC_KEY_BLK	*key_block)
 	{
 	    result = adu_nvchr_coerce(scb, &key_block->adc_kdv, &normdv);
 	    if (key_block->adc_lokey.db_data && result == E_DB_OK)
-		result = adu_unorm(scb, &key_block->adc_lokey, &normdv);
+		result = adu_unorm(scb, &normdv, &key_block->adc_lokey);
 	    if (key_block->adc_hikey.db_data && result == E_DB_OK)
-		result = adu_unorm(scb, &key_block->adc_hikey, &normdv);
+		result = adu_unorm(scb, &normdv, &key_block->adc_hikey);
 	}
 	break;
 
@@ -660,7 +663,7 @@ ADC_KEY_BLK	*key_block)
 	{
 	    result = adu_nvchr_coerce(scb, &key_block->adc_kdv, &normdv);
 	    if (result == E_DB_OK)
-		result = adu_unorm(scb, &key_block->adc_hikey, &normdv);
+		result = adu_unorm(scb, &normdv, &key_block->adc_hikey);
 	}
 	break;
 
@@ -671,7 +674,7 @@ ADC_KEY_BLK	*key_block)
 	{
 	    result = adu_nvchr_coerce(scb, &key_block->adc_kdv, &normdv);
 	    if (result == E_DB_OK)
-		result = adu_unorm(scb, &key_block->adc_lokey, &normdv);
+		result = adu_unorm(scb, &normdv, &key_block->adc_lokey);
 	}
 	break;
 
@@ -725,7 +728,7 @@ ADC_KEY_BLK	*key_block)
 	    /* We coerce the pattern into a temporary buffer which will be normallised*/
 	    result = adu_nvchr_coerce(scb, &key_block->adc_kdv, &normdv);
 	    if (result == E_DB_OK)
-		result = adu_unorm(scb, &normdv2, &normdv);
+		result = adu_unorm(scb, &normdv, &normdv2);
 
 	    /* Now we must scan pattern and split into high and low */
 	    if (result == E_DB_OK)
@@ -1097,9 +1100,9 @@ ADC_KEY_BLK	*key_block)
 	{
 	    result = adu_nvchr_coerce(scb, &key_block->adc_kdv, &normdv);
 	    if (key_block->adc_lokey.db_data && result == E_DB_OK)
-		result = adu_unorm(scb, &key_block->adc_lokey, &normdv);
+		result = adu_unorm(scb, &normdv, &key_block->adc_lokey);
 	    if (key_block->adc_hikey.db_data && result == E_DB_OK)
-		result = adu_unorm(scb, &key_block->adc_hikey, &normdv);
+		result = adu_unorm(scb, &normdv, &key_block->adc_hikey);
 	}
 	break;
 
@@ -1110,7 +1113,7 @@ ADC_KEY_BLK	*key_block)
 	{
 	    result = adu_nvchr_coerce(scb, &key_block->adc_kdv, &normdv);
 	    if (result == E_DB_OK)
-		result = adu_unorm(scb, &key_block->adc_hikey, &normdv);
+		result = adu_unorm(scb, &normdv, &key_block->adc_hikey);
 	}
 	break;
 
@@ -1121,7 +1124,7 @@ ADC_KEY_BLK	*key_block)
 	{
 	    result = adu_nvchr_coerce(scb, &key_block->adc_kdv, &normdv);
 	    if (result == E_DB_OK)
-		result = adu_unorm(scb, &key_block->adc_lokey, &normdv);
+		result = adu_unorm(scb, &normdv, &key_block->adc_lokey);
 	}
 	break;
 
@@ -1162,7 +1165,7 @@ ADC_KEY_BLK	*key_block)
 	    /* We coerce the pattern into a temporary buffer which will be normallised*/
 	    result = adu_nvchr_coerce(scb, &key_block->adc_kdv, &normdv);
 	    if (result == E_DB_OK)
-		result = adu_unorm(scb, &normdv2, &normdv);
+		result = adu_unorm(scb, &normdv, &normdv2);
 
 	    /* Now we must scan pattern and split into high and low */
 	    if (result == E_DB_OK)
@@ -3714,7 +3717,7 @@ DB_DATA_VALUE     *rdv)
 
     if ((db_stat = adu_moveunistring (adf_scb, outstr, retlen, &tempdb) 
 		!= E_DB_OK) || 
-        (db_stat = adu_unorm (adf_scb, rdv, &tempdb)
+        (db_stat = adu_unorm (adf_scb, &tempdb, rdv)
 		!= E_DB_OK))
     {
 	if (bigbuf != NULL)
@@ -5470,10 +5473,614 @@ i4		    caseflag
     tempdb.db_collID = rdv->db_collID;
     db_stat = adu_moveunistring (adf_scb, outstr, resultlen, &tempdb); 
 
-    if (db_stat = adu_unorm (adf_scb, rdv, &tempdb) != E_DB_OK)
+    if (db_stat = adu_unorm (adf_scb, &tempdb, rdv) != E_DB_OK)
         return (db_stat);
     if (bigbuf != NULL)
 	MEfree((PTR) bigbuf);
+
+    return db_stat;
+}
+
+/*{
+** Name: adu_nvchr_embchartouni - converts character datatypes to unicode 
+**       datatypes.
+**
+** Description:
+**      This will carry out coercion from character datatypes char and
+**      varchar to unicode datatypes nchar and nvarchar. It is STRICTLY
+**      intended for EMBEDDED usage but lives in adu because of 
+**      header dependencies. Non-Embedded users should call
+**      adu_nvchr_chartouni().
+**
+** Inputs:
+**      scb                             scb
+**      dv_in                           Data value to be converted
+**      dv_out                          Location to place result
+**
+** Outputs:
+**      *dv_out                         Result is filled in here
+**          .db_data                    Contains result
+**          .db_length                  Contains length of result
+**
+**      Returns:
+**          DB_STATUS
+**
+**      Exceptions:
+**          none
+**
+** Side Effects:
+**          none
+**
+** History:
+**      9-Jul-2010 (hanal04) Bug 124087
+**          Created from adu_nvchr_chattouni. Provide a unicoerce version
+**          of adh_chrcvt() in libq.
+**     13-Aug-2010 (hanal04) Bug 124250
+**          Use AFE_NTEXT_STRING not DB_NVCHR_STRING as AFE_NTEXT_STRING
+**          may be padded by the compiler when a wchar_t is 4 bytes long.
+*/
+DB_STATUS
+adu_nvchr_embchartouni (
+               ADF_CB            *adf_scb,
+               DB_DATA_VALUE     *dv_in,
+               DB_DATA_VALUE     *rdv)
+{
+    char	*instr;
+    UCS2	*outstr;
+    i4		index = 0;
+    i4		pos = 0;
+    i4		count = 0;
+    i4		inlen = 0;
+    i4		outlen = 0;
+    DB_STATUS	db_stat;
+    i2		retlen = 0;
+    i2		resultlen = 0;
+    ADU_MAP_INFO	*map = NULL;
+    u_char	*scanner;
+    u_i2	local_value;
+    bool	NO_MAP = FALSE;
+    u_i2	res = 0;
+    u_char	byteseq[4]; 
+    int		bytecnt = 0;
+    u_i4	bval;
+    i4		i;
+    DB_DATA_VALUE	ldbv, *pldbv; /* Local DBV */
+    
+    /* adu_lenaddr() does not expect nullable type. */
+    if (dv_in->db_datatype < 0)
+    {
+        STRUCT_ASSIGN_MACRO(*dv_in, ldbv);
+        ldbv.db_datatype = abs(ldbv.db_datatype);
+        ldbv.db_length--;
+        pldbv = &ldbv;
+    }
+    else
+    {
+        pldbv = dv_in;
+    }
+
+    if (db_stat = adu_lenaddr(adf_scb, pldbv, &inlen, &instr))
+        return (db_stat);
+
+    if (db_stat = adu_7straddr(adf_scb, rdv, &outstr))
+        return (db_stat);
+
+    if (rdv->db_datatype == DB_NVCHR_TYPE)
+        outlen = (rdv->db_length - DB_CNTSIZE) / sizeof (UCS2);
+    else if (rdv->db_datatype == DB_NCHR_TYPE)
+        outlen = (rdv->db_length) / sizeof (UCS2);
+    else
+	return (adu_error(adf_scb, E_AD5001_BAD_STRING_TYPE, 0));
+
+    /* For UTF8 character set we will compute the unicode value*/
+    if (check_utf8())
+    {
+      if ((db_stat = adu_utf8_to_ucs2 (adf_scb, (u_char **)&instr,
+                (const u_char *)(instr+inlen), &outstr,
+                outstr+outlen, &retlen)) != OK)
+        return db_stat;
+
+      resultlen = retlen;
+    }
+    else 
+    {
+        map = (ADU_MAP_INFO *) (Adf_globs->Adu_maptbl);
+
+        if ((map == NULL) || (map->charmapptr == NULL))
+          return (adu_error(adf_scb, E_AD5017_NOMAPTBL_FOUND, 0));
+
+	scanner = (u_char *) instr;
+	for(; (inlen > 0) && (count < outlen) ; CMnext(scanner))
+        {
+	  bytecnt = CMbytecnt(scanner);
+	  CMcpychar(scanner, byteseq);
+
+	  bval = byteseq[0];
+	  for (i=1 ;i < bytecnt; i++)
+	    bval = bval | byteseq[i] << (i * 8);
+
+	  /* Validate the byte value. 
+	  ** FIXME: Do not validate if users request so. */
+
+	  bval =  BT_SWAP_BYTES_MACRO(bval); 
+
+	  db_stat = adu_map_check_validity (map->validity_tbl, &bval);
+	  if (db_stat)
+	    return (adu_error(adf_scb, E_AD5015_INVALID_BYTESEQ, 
+					  2, bytecnt, byteseq));	
+
+          res =  adu_map_get_chartouni ((map->charmapptr)->charmap, 
+	 				 &bval);
+	 /* Retrieve the unicode value */
+	  if (res == 0xFFFD)
+	  { 
+	    /* Found unmapped character */
+	    return (adu_error(adf_scb, E_AD5011_NOCHARMAP_FOUND, 
+				  2, bytecnt, scanner));	
+	  }
+	  else  
+	  {
+	     outstr[count] = res;
+	  }
+        inlen-=bytecnt;
+	  count++;
+        }
+        resultlen = count;
+    }
+
+    if(sizeof(wchar_t) != 2)
+    {
+        /* Platform needs result in 4 byte wchar_t characters */
+        /* resultlen is the number of 2 byte UCS2 characters  */
+        if (resultlen * 2 > outlen)
+        {
+            resultlen = outlen / 2;
+        }
+    }
+
+    if(rdv->db_datatype == DB_NCHR_TYPE)
+    {
+        /* Embedded NCHRs need to be null terminated */
+        outstr[resultlen < outlen ? resultlen++ : outlen - 1] = U_NULL;
+    }
+
+    if(sizeof(wchar_t) != 2)
+    {
+        i4      i;
+        u_i4    *p_out;
+        u_i2    *p_in;
+        char    *bufp;
+        bool    gotmemory = FALSE;
+        u_i4    *resbuf;
+        u_char  *odata;
+
+        /* Define unibuffer lengths to be used locally */
+        #define UNI_OUTBUF_LEN    2000
+        #define UNI_INBUF_LEN     (UNI_OUTBUF_LEN / 2)
+
+        char    work_buffer[UNI_OUTBUF_LEN];
+
+        if (resultlen * 2 > UNI_INBUF_LEN)
+        {
+            /* Allocate a suitably sized working buffer */
+            resbuf = (u_i4 *)MEreqmem(0, resultlen * 2, TRUE, &db_stat);
+            if (resbuf != NULL)
+                gotmemory = TRUE;
+            else
+            {
+                return E_DB_ERROR;
+            }
+        }
+        else
+        {
+            resbuf = (u_i4 *)work_buffer;
+        }
+
+        if (rdv->db_datatype == DB_NVCHR_TYPE)
+        {
+            odata = (u_char *)((AFE_NTEXT_STRING *)rdv->db_data)->afe_t_text;
+
+            /* Set the count in the output buffer */
+            ((DB_NVCHR_STRING *)rdv->db_data)->count = resultlen;
+        }
+        else
+        {
+            odata = (u_char *)rdv->db_data;
+        }
+
+        p_out = (u_i4 *)resbuf;
+        p_in = outstr;
+
+        for (i = 0; i < resultlen; ++i, ++p_in, ++p_out)
+            *p_out = (u_i2)*p_in;
+
+        MEcopy (resbuf, resultlen * sizeof(wchar_t), odata);
+
+        if (gotmemory)
+            MEfree ((char *)resbuf);
+    }
+    else
+    {
+        db_stat = adu_moveunistring (adf_scb, outstr, resultlen, rdv);
+    }
+
+    return (db_stat);
+}
+
+/*{
+** Name: adu_embnvchr_unitochar - converts unicode datatypes to character 
+**       datatypes.
+**
+** Description:
+**      This will carry out coercion from unicode datatypes nchar and
+**      nvarchar to character datatypes char and varchar. It is STRICTLY
+**      intended for EMBEDDED usage but lives in adu because of
+**      header dependencies. Non-Embedded users should call
+**      adu_nvchr_chartouni().
+**
+** Inputs:
+**      scb                             scb
+**      dv_in                           Data value to be converted
+**      dv_out                          Location to place result
+**
+** Outputs:
+**      *dv_out                         Result is filled in here
+**          .db_data                    Contains result
+**          .db_length                  Contains length of result
+**
+**      Returns:
+**          DB_STATUS
+**
+**      Exceptions:
+**          none
+**
+** Side Effects:
+**          none
+**
+** History:
+**      9-Jul-2010 (hanal04) Bug 124087
+**          Created from adu_nvchr_unitochar. Provide a unicoerce version
+**          of adh_chrcvt() in libq.
+*/
+DB_STATUS
+adu_nvchr_embunitochar (ADF_CB     *adf_scb,
+              DB_DATA_VALUE     *dv_in,
+              DB_DATA_VALUE     *rdv)
+{
+    UCS2        *instr = 0;
+    char        *outstr = 0;
+    u_i2        result = 0;
+    i4          index = 0;
+    i4          pos = 0;
+    i4          count = 0;              /* input codepoint position  */
+    i4          inlen = 0;
+    i4          outlen = 0;
+    i4          subc = 0;
+    DB_STATUS   db_stat;
+    bool        NOTFOUND = TRUE;
+    i2          retlen = 0;
+    i2          resultlen = 0;          /* output character position */
+    ADUUCETAB   *cetbl = (ADUUCETAB *) adf_scb->adf_ucollation;
+    UCS2        basechar;
+    UCS2        *comblist;
+    STATUS      stat = OK;
+    u_i2        uni_char;
+    u_i2        uni_char_err;
+    u_i4        subchar = 0x1A;
+    u_i2        subchar1 = 0x1A;
+    i4          i = 0;
+    i4          normcstrlen = 0;
+    bool        substitution_on = FALSE;
+    bool        substitution_err = FALSE;
+    u_i2        bytenum;
+    DB_DATA_VALUE       ldbv, *pldbv; /* Local DBV */
+
+    /* adu_lenaddr() does not expect nullable type. */
+    if (dv_in->db_datatype < 0)
+    {
+        STRUCT_ASSIGN_MACRO(*dv_in, ldbv);
+        ldbv.db_datatype = abs(ldbv.db_datatype);
+        ldbv.db_length--;
+        pldbv = &ldbv;
+    }
+    else
+    {
+        pldbv = dv_in;
+    }
+
+    if (db_stat = adu_lenaddr(adf_scb, pldbv, &inlen, (char **)&instr))
+          return (db_stat);
+
+    if (db_stat = adu_3straddr(adf_scb, rdv, &outstr))
+          return (db_stat);
+
+    inlen /= sizeof (UCS2);
+
+    /* Output length is not known at this time.
+    ** Calculate the length, based on space available in rdv.
+    */
+    switch (rdv->db_datatype)
+    {
+        case DB_CHA_TYPE:
+        case DB_CHR_TYPE:
+        case DB_BYTE_TYPE:
+           outlen = rdv->db_length;
+           break;
+
+        case DB_TXT_TYPE:
+        case DB_LTXT_TYPE:
+        case DB_VCH_TYPE:
+        case DB_VBYTE_TYPE:
+           outlen = rdv->db_length - DB_CNTSIZE;
+     break; 
+    }
+
+    if (check_utf8())
+    {
+        if ((db_stat = (adu_ucs2_to_utf8 (adf_scb, &instr, instr+inlen, 
+            (u_char **)&outstr,(const u_char*)(outstr+outlen), 
+                &retlen))) != OK)
+          return db_stat;
+        resultlen = retlen;
+    }
+    else 
+    {
+        /* If cetbl does not exist, combining characters cannot be looked up 
+        ** front has to make a call to aducolinit to get coercion working.
+        */
+        if ( cetbl == NULL )
+           return (adu_error(adf_scb, E_AD5012_UCETAB_NOT_EXISTS, 0));
+
+        /* Handle substitution for unmapped characters */ 
+        if (Adf_globs->Adu_maptbl != NULL)
+        {
+            subchar1 = (((ADU_MAP_INFO *)
+                           (Adf_globs->Adu_maptbl))->header)->subchar1;
+
+            if (subchar1 != 0 )
+                subchar = subchar1;
+            else
+                subchar = (((ADU_MAP_INFO *)
+                          (Adf_globs->Adu_maptbl))->header)->subchar;
+
+            if (adf_scb->adf_unisub_status == AD_UNISUB_ON)
+                substitution_on = TRUE;
+            if (adf_scb->adf_unisub_char[0] != '\0')
+                subchar = adf_scb->adf_unisub_char[0]; /* FIXME for double byte */
+	    if (!substitution_on && !subchar)
+		subchar = '?';
+        }
+        else
+            return (adu_error(adf_scb, E_AD5017_NOMAPTBL_FOUND, 0));
+
+        /* Allocate working buffer */
+        comblist = (UCS2 *) MEreqmem (0, sizeof(UCS2) * inlen, TRUE, &stat);
+
+        /*
+        ** Loop termination condition updated to test input codepoint array
+        ** and output character lengths do not exceed their maximums; together
+        ** with a null codepoint check.
+        */
+        for (;
+		    ((count < inlen) && (resultlen < outlen));
+		    count+=1)
+        {
+            subc = 0;  /* Reset count of combining code points found */
+            normcstrlen = 0;  /* Reset length of NFC version of string */
+
+            /* if the end of string of the inlength found, we are done */
+            /* removed null termination of output string */
+
+            /* obtain the next codepoint */
+            uni_char = instr[count];
+
+            /*
+            ** check to see if uni_char is a base codepoint of a character, if
+            ** not set it to a 'harmless' character to indicate the lack of
+            ** a base codepoint.
+            */
+            basechar = (cetbl[uni_char].comb_class == 0) ? uni_char : 0;
+
+            /*
+            ** If the current codepoint from the input string is a base
+            ** codepoint then collect the list of combining codepoints,
+            ** if any. Comb class !=0 means we have a combining character
+            ** This action may also be required for character type Mc.
+            */
+            if (basechar)
+            {
+                /*
+                ** Scan the input string for combining codepoints and copy
+                ** them into a temporary buffer.  Do not start if the
+                ** current codepoint is the last one in the input array or
+                ** if the codepoint is a Unicode null or
+                ** if the codepoint is not a combining one.
+                ** Stop if a non-combining codepoint or
+                ** if the end of the string or
+                ** if a Unicode null is encountered.
+                **
+                ** NB. uni_char is assigned within the condition and assumes
+                ** that each sub-condition is evaluated in order.
+                */
+                for (pos=count+1;
+                    (pos < inlen) && 
+		      (uni_char = instr[pos]) && /* assignment */
+                      (cetbl[uni_char].comb_class != 0);
+                    pos+=1, subc+=1 )
+                {
+                    comblist[subc] = uni_char;  /* copy combining codepoint */
+                }
+                /*
+                ** Update loop counter to set the current posistion to the end
+                ** of the combining sequence or unchanged if no codepoint of
+                ** combining class is detected.
+                ** The next iteration should set the counter to be the start
+                ** of the next character or the end of the string.
+                */
+                count = pos-1;
+            }
+            /*
+            ** Convert the substring to Normal form C if there is a base
+            ** codepoint and combining characters
+            */
+            if  (basechar && subc > 0)
+            {
+                stat = adu_map_conv_normc (adf_scb, cetbl, 
+                    basechar, 
+                    comblist, subc, 
+                    comblist, &normcstrlen);
+        
+                /* find the equivalent local character */
+                for (i=0; i < normcstrlen; i++)
+                {
+                    result = adu_map_get_unitochar (
+                      (((ADU_MAP_INFO *)(Adf_globs->Adu_maptbl))->unimapptr)->unimap, 
+                      &comblist[i]);
+
+                    if ((result == 0) && (comblist[i] != 0))    
+                    {
+                        uni_char = comblist[i];
+                        /* Try for other equivalent unicode characters if any */
+			for(;;)
+                        {
+			    UCS2 save_bc = comblist[i];
+			    comblist[i] = adu_get_recomb (adf_scb, save_bc, 0);
+			    if (comblist[i] == FAIL)
+				break;
+                            result = adu_map_get_unitochar (
+                                (((ADU_MAP_INFO *)(Adf_globs->Adu_maptbl))->unimapptr)->unimap
+                                , &comblist[i]);
+
+                            if (result == 0 && comblist[i] != 0 && comblist[i] != save_bc)
+                                continue;
+                            else 
+                                break;
+                        }
+                    }
+
+		    if ((result == 0) && (comblist[i] != 0))
+		    {
+			adf_scb->adf_const_const |= AD_CNST_USUPLMT;
+			outstr[resultlen++] = subchar;
+			if (!substitution_err && !substitution_on) 
+                        {
+                            uni_char_err = uni_char;
+                            substitution_err = TRUE;
+                        }
+                    }
+                    else     
+                    {
+                        bytenum = BT_BYTE_NUMS_MACRO (result);
+                        result = BT_SWAP_BYTES_MACRO (result);  
+#ifdef BYTE_SWAP
+                        if (bytenum == 1)
+                          outstr[resultlen] = *((char *)(&result) + 1);
+                        else
+#endif
+                        {
+			    /*
+			    ** Bug 123389 (zhayu01)
+			    ** If bytenum + resultlen is larger than outlen,
+                            ** break out the loop.
+			    */
+			    if (bytenum + resultlen > outlen)
+			        break;
+                            MEcopy( (PTR)&result, bytenum, &outstr[resultlen]);
+                        }
+
+                        resultlen += bytenum;
+                    }
+                }
+            }
+            else 
+            {
+                /*
+                ** Either basechar is zero or subc is zero here.
+                ** If basechar is zero, indicating a baseless combining
+                ** codepoint, set basechar to the codepoint from the input
+                ** string and treat the combining codepoint as a single
+                ** Unicode character.
+                */
+                if (basechar == 0)
+                {
+                    basechar = instr[count];
+                }
+                result = adu_map_get_unitochar (
+                    (((ADU_MAP_INFO *)(Adf_globs->Adu_maptbl))->unimapptr)->unimap, 
+                    &basechar);
+
+                if ((result == 0) && (basechar != 0))
+                {
+                    uni_char = basechar;
+		    for (;;)
+                    {
+			UCS2 save_bc = basechar;
+			basechar = adu_get_recomb (adf_scb, save_bc, 0);
+			if (basechar == FAIL)
+			    break;
+			result = adu_map_get_unitochar (
+                          (((ADU_MAP_INFO *)(Adf_globs->Adu_maptbl))->unimapptr)->unimap
+                          , &basechar);
+                        if (result == 0 && basechar != 0 && basechar != save_bc)
+                            continue;
+                        else 
+                            break;
+                    }                  
+                }
+
+                if ((result == 0) && (basechar != 0))
+                {
+		    adf_scb->adf_const_const |= AD_CNST_USUPLMT;
+                    if (substitution_on) 
+			result = subchar;
+                    else
+                    {
+                        adu_error(adf_scb, E_AD5016_NOUNIMAP_FOUND, 2, 
+                            sizeof(uni_char), &uni_char);
+                        MEfree ((char *)comblist);
+                        return (E_DB_ERROR);    
+                    }
+                }           
+
+                bytenum = BT_BYTE_NUMS_MACRO (result); 
+                result = BT_SWAP_BYTES_MACRO (result);
+#ifdef BYTE_SWAP
+                if (bytenum == 1)
+                    outstr[resultlen] = *((char *)(&result) + 1);
+                else
+#endif
+                {
+		    /*
+		    ** Bug 123389 (zhayu01)
+		    ** If bytenum + resultlen is larger than outlen,
+                    ** break out the loop.
+		    */
+		    if (bytenum + resultlen > outlen)
+	 	        break;
+                    MEcopy( (PTR)&result, bytenum, &outstr[resultlen]);
+                }
+
+                resultlen += bytenum;
+            }
+        }
+
+        /* free work buffer */
+        MEfree((char *)comblist);
+    }
+
+    db_stat = adu_movestring (adf_scb, (u_char *)outstr, resultlen, pldbv->db_datatype, rdv);
+    if (substitution_err)
+    {
+        adu_error(adf_scb, E_AD5016_NOUNIMAP_FOUND, 2, 
+			sizeof(uni_char_err), &uni_char_err);
+        return (E_DB_ERROR);
+    }
+
+    if((rdv->db_datatype == DB_CHR_TYPE) || (rdv->db_datatype == DB_CHA_TYPE))
+    {
+        /* Embedded value needs to be null terminated */
+        outstr[resultlen < outlen ? resultlen : outlen - 1] = U_NULL;
+    }
 
     return db_stat;
 }

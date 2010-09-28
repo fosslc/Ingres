@@ -92,6 +92,8 @@ namespace Ingres.ProviderInternals
 	**	    Don't try to replace ":myvar" host variables with "?".
 	**	    Added 'CREATE PROCEDURE' to getQueryType().
 	**	    Added keyword 'KW_CREATE'.  Added queryType 'QT_CREATE_PROC'.
+	**	13-Jul-10 (gordy, ported by thoda04) B124115
+	**	    Treat comments in SQL text as white space.
 	*/
 
 
@@ -174,6 +176,7 @@ namespace Ingres.ProviderInternals
 	**	hex2bin		    Convert hex string to byte array.
 	**	nextToken	    Scan for next token.
 	**	prevToken	    Scan for previous token.
+	**	comment  	    Scan a comment.
 	**	match		    Find match for character pair.
 	**	keyword		    Determine keyword ID of a token.
 	**	isIdentChar	    Is character permitted in an identifier.
@@ -220,6 +223,8 @@ namespace Ingres.ProviderInternals
 	**	    ANSI Date/Time data type support.  Added conn so all connection 
 	**	    info is available. Added ANSI Date/Time literal prefix/suffix,
 	**	    constants and escape functions.
+	**	13-Jul-10 (gordy, ported by thoda04) B124115
+	**	    Added comment() to scan comments in SQL text.
 	*/
 
 	class
@@ -2277,6 +2282,8 @@ namespace Ingres.ProviderInternals
 		**	13-Jun-00 (gordy)
 		**	    Support all specific punctuation.  Scanning of numerics now
 		**	    done by helper method, so only scan integers not decimals.
+		**	13-Jul-10 (gordy, ported by thoda04) B124115
+		**	    Skip comments in SQL text (treat like white space).
 		*/
 
 		private int
@@ -2284,13 +2291,32 @@ namespace Ingres.ProviderInternals
 		{
 			int	    type;
 			char    ch;
+			bool    scanning = true;
 
-			while( token_end < txt_len  &&  
-				Char.IsWhiteSpace( text[ token_end ] ) )  token_end++;
+			/*
+			** Scan for start of next token skipping white space and comments.
+			*/
+			while( scanning )
+			{
+				/*
+				** Scanning begins at end of current token.
+				*/
+				while( token_end < txt_len  &&  
+					Char.IsWhiteSpace( text[ token_end ] ) )  token_end++;
 
-			token_beg = token_end;
-			if ( token_end >= txt_len )  return( EOF );
-			token_end = token_beg + 1;
+				token_beg = token_end;
+				if ( token_end >= txt_len )  return( EOF );
+
+				if ((token_end = comment(text, token_beg, txt_len)) == token_beg)
+				{
+					/*
+					** Found start of next token.  Initially,
+					** the token is just a single character.
+					*/
+					token_end = token_beg + 1;
+					scanning = false;
+				}
+			}  // end while( scanning )
 
 			switch( (ch = text[ token_beg ]) )
 			{
@@ -2462,6 +2488,60 @@ namespace Ingres.ProviderInternals
 
 			return( type );
 		} // prevToken
+
+
+		/*
+		** Name: comment
+		**
+		** Description:
+		**	Scan a comment.  Returns position just following the 
+		**	terminating delimiter.  If starting delimiter is not 
+		**	at the position provided or terminating delimiter is 
+		**	not found, the provided starting position is returned.
+		**
+		** Input:
+		**	txt	    Text.
+		**	beg	    Starting position of comment.
+		**	end	    End of text.
+		**
+		** Output:
+		**	None.
+		**
+		** Returns:
+		**	int	    Position following comment.
+		**
+		** History:
+		**	13-Jul-10 (gordy, ported by thoda04)
+		**	    Created.
+		*/
+
+		private int
+		comment(char[] txt, int beg, int end)
+		{
+			int pos = beg;
+
+			/*
+			** Check for start-of-comment.
+			*/
+			if (pos >= end || txt[pos++] != '/') return (beg);
+			if (pos >= end || txt[pos++] != '*') return (beg);
+
+			/*
+			** Scan looking for end-of-comment.
+			** Return end position if found.
+			*/
+			while (pos < end)
+				if (txt[pos++] == '*')
+				{
+					if (pos >= end) break;
+					if (txt[pos] == '/') return (pos + 1);
+				}
+
+			/*
+			** Failed to find end-of-comment.
+			*/
+			return (beg);
+		}  // end comment
 
 
 		/*

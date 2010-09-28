@@ -1,9 +1,9 @@
 
-		Building and Installing Ingres ® on Linux
+		Building and Installing Ingres ï¿½ on Linux
 
 
   Note: this is a living document; for the latest version please see
-  http://www.ingres.com/.
+  http://code.ingres.com/ingres/main/src/INSTALL.
 
   Introduction
   ------------
@@ -47,8 +47,7 @@
   Ingres has been developed and tested at Ingres Corporation with
   various Linux distributions running the Linux 2.4 & 2.6 kernels and GNU
   GCC versions 3.3.2 and 3.3.3, along with the compatible GNU libraries and
-  tools.  Note: problems have been encountered compiling Ingres with GCC
-  release 4.0; for the present, please do not use that compiler version.
+  tools.
 
 
   Preparing to build
@@ -65,12 +64,19 @@
       o gcc and accompanying tools such as ar, ld, flex, etc.
       o g++ development package
       o Jam
-      o PAM development package
+      o PAM library and development packages
 
   Most Linux distributions provide a "developer" logical package that
   includes all the required components except for Jam.  Jam can be
   installed from your Linux distribution's packages, or can be downloaded
   from the websites mentioned above in the Introduction.
+  
+  The PAM library packages may be required in both 32bit and 64bit versions
+  depending on whether you are creating a Hybrid Ingres build and whether
+  the PAMLIB flag is defined in the platform Jamdefs file.  Hybrid
+  builds requiring both 32bit and 64bit libraries are a64_lnx, a64_sol,
+  hp2_us5, i64_hpu, i64_lnx, and su9_us5.
+  Linux platforms require the "pam" and "pam-devel" RPM's to be installed.
 
   The Ingres build tree should be located in a directory owned by the
   ingres user (/home/ingres is fine).  The root of this build tree is
@@ -85,20 +91,20 @@
   and testing:
 
 	ingres_source
-	|-- INSTALL	this file
-	|-- README	general introduction
-	|-- TESTING	acceptance testing directions
-	...
 	|-- Kerberos5/	Kerberos headers
 	|-- build/	output of Ingres build process
 	|-- install/	bootstrap partial install for build process
 	|-- pax/	special Portable Archive Interchange for Ingres
 	|-- release/	staging area for Ingres install media
 	|-- src/	Ingres source tree
+	...
+	|-- src/INSTALL	this file
+	|-- src/README	general introduction
+	|-- src/tst/	Ingres test tool source and test scripts
+	|-- src/tst/suites/doc/TESTING	acceptance testing directions
 	|-- tools/	Ingres test tool executables
-	|-- tst/	Ingres test tool source and test scripts
 	|-- tstinst/	Ingres full installation for acceptance testing
-	`-- xerces-c-src_2_5_0/  Xerces C headers and library
+	`-- xerces-c-src_2_7_0/  Xerces C headers and library
 
   Note:
       o Xerces and Kerberos need not be located in this tree; see below
@@ -116,13 +122,20 @@
   these settings are already configured in the Ingres code base (using
   platform conditional #ifdef expressions) or are automatically detected
   by the build process.  A few settings, especially in a file called
-  $ING_ROOT/src/tools/port/conf/VERS, can be set by the programmer who is
-  building Ingres to control product options and identification.  The VERS
-  file provided in this source tree can be used as-is.  However, should
-  you build modified versions of the source code, you should change the
+  $ING_ROOT/src/tools/port/conf/VERS.<ID>, can be set by the programmer who is
+  building Ingres to control product options and identification. Where <ID> is
+  the platform identifier of the platform that you are building on.  
+  The VERS.<ID> file provided in this source tree can be used as-is.  However, 
+  should you build modified versions of the source code, you should change the
   "build=" setting in VERS so that the product identification (visible
   in various signon and log messages) clearly distinguishes the version
-  that your user is running.
+  that your user is running. A file called $ING_ROOT/src/tools/port/conf/VERS
+  can be created as an override for the default VERS.<ID> file. The doc for
+  configuring the VERS file can be found in the following file
+  $ING_ROOT/src/tools/port/conf/README.txt
+  Additional custom configuration for Ingres builds can be found in
+  Jamdefs.<ID> files and documentation for setting these custom settings can be
+  found here: $ING_ROOT/src/tools/port/jam/README.txt
 
   For example, a setting of "build=42" in VERS would yield a message
   like this:
@@ -153,8 +166,8 @@
   "gcf" (network communication), and "jdbc" (java support).
 
 
-  Building Ingres
-  ---------------
+  Building Ingres Process
+  -----------------------
 
   Sign on as the ingres user and untar the Ingres source code build tree.
   The ingres_source directory at the root of this build tree is the ING_ROOT
@@ -179,10 +192,10 @@
   build process is straightforward and is well documented; please see
   the instructions in the xerces-c-src_2_7_0 directory.  Alternatively,
   you may be able to download a binary version of Xerces for your system
-  from the apache.org site. Note: This version of Xerces will NOT compile
-  under Red Hat Enterprise Server (RHEL) 4.0. If you wish to build the Ingres 
-  source code on this version of Linux, the Xerces library should be built
-  in a compatable environment and move to the RHEL 4.0 system.
+  from the apache.org site. 
+
+  Building Required 3rd party code
+  --------------------------------
 
   For the Linux platform only, a special version of pax (the Portable Archive
   Interchange program) is required for the build. Modifications have been
@@ -197,6 +210,61 @@
 
 	cd $ING_ROOT/pax
 	jam	
+
+  The Xerces code comes uncompiled, but the default Ingres build require
+  the libraries for Xerces version 2.7.0.  In order to create the libraries
+  from the supplied source, execute the following commands.
+
+  To build:
+
+	export XERCESCROOT=/my/own/.../xerces-c-src_2_7_0
+	cd $XERCESCROOT/src/xercesc
+	./configure
+	make
+
+  For Hybrid platforms like a64_lnx you will need both 64bit and 32bit
+  versions of the xerces libraries.  By default the 64bit libraries will be
+  built on 64bit linux, so you will need to configure Xerces to build 32bit
+  and build a separate Xerces build area for the 32bit versions.  Extract
+  the xerces code to a separate directory and execute the following commands.
+  The Ingres build requires the 32bit xerces library to exist under the
+  64bit library in a separate lp32 directory. So the 64bit library will be
+  located at $XERCESCROOT/lib and the 32bit at $XERCESCROOT/lib/lp32.
+    
+  To build:
+
+	export XERCESCROOT=/my/own/.../xerces-c-src_2_7_0-32
+	cd $XERCESCROOT/src/xercesc
+	./runConfigure -p linux -b 32
+	make
+	mkdir /my/own/.../xerces-c-src_2_7_0/lib/lp32
+	cp -p $XERCESCROOT/lib/libxerces-c.so.27.0 \
+	      /my/own/.../xerces-c-src_2_7_0/lib/lp32
+	export XERCESCROOT=/my/own/.../xerces-c-src_2_7_0
+
+  With the introduction of the new Ingres Geospatial you will now also need
+  the GEOS library to compile Ingres. The source can be found here:
+    http://trac.osgeo.org/geos/
+  You will need version 3.3.0 or if not available the SVN trunk version at:
+    http://svn.osgeo.org/geos/trunk
+  GEOS_LOC should point to the directory
+  where the .so libraries are installed. The build system will by default
+  check either /usr/local/lib or /usr/lib. GEOS_INC will point to the directory
+  where the GEOS headers are located (/usr/local/include and /usr/include by
+  default). GEOS64_LOC should point to the directory where the 32 bit versions
+  of the libraries are located if doing a 64 bit hybrid build.
+    
+  For the new Ingres Geospatial you will also need the Proj library. 
+  The source can be found here:
+    http://trac.osgeo.org/proj/
+  Version 4.7.0 or newer is recommended but you might have success with an
+  older version. PROJ_LOC (defaults to /usr/local/lib or /usr/lib) points to
+  where the libraries are. PROJ_INC will point to the proj_api.h header 
+  (/usr/local/include or /usr/include by default). PROJ64_LOC should point to
+  the 32 bit libraries if doing a hybrid build. 
+
+  Building Ingres
+  ---------------
 
   When all of the necessary components have been downloaded (Ingres source
   tree, Xerces and Kerberos components, pax source tree), you are ready
@@ -217,7 +285,7 @@
   bldenv script.  For example:
 
 	export ING_ROOT=`pwd`
-	export XERCESCROOT=/my/own/xerces-c-src_2_5_0
+	export XERCESCROOT=/my/own/xerces-c-src_2_7_0
 	export XERCESLOC=$XERCESCROOT/lib
 	export KRB5HDR=/my/own/Kerberos5/hdr
 	source src/tools/port/jam/bldenv
@@ -233,6 +301,13 @@
   II_SYSTEM	run-time Ingres root location for the build process
   II_MANIFEST_DIR  location of Ingres component inventories
   TERM_INGRES	terminal setting for Ingres front end tools such as ABF
+
+  The ING_TST variable is meant to point to the Ingres testing files if
+  they are available.  The Ingres source tar does not contain these test
+  files under the src/tst directory, but the test files can be downloaded
+  via subversion from http://code.ingres.com/ingres/main/src/tst
+  The test files are not required to build Ingres, but can be useful to
+  test the valid operation of Ingres after it is built.
 
   Note that the PATH and CDPATH settings are also modified for the build
   process.
@@ -370,13 +445,15 @@
   --------------
 
   The open source Ingres tree contains a limited set of acceptance tests
-  to verify the integrity of your Ingres build.  For this automated
-  testing the Ingres installation should be located in $ING_ROOT/tstinst.
-  Use the above Ingres runtime environment setup script as an example
-  for preparing for testing.  The example assumes that ING_ROOT is
-  /home/ingres/ingres2006; modify this as needed based on the location of
+  to verify the integrity of your Ingres build. These test can be downloaded 
+  via subversion from http://code.ingres.com/ingres/main/src/tst
+  For this automated testing the Ingres installation should be located in 
+  $ING_ROOT/tstinst.  Use the above Ingres runtime environment setup script
+  as an example for preparing for testing.  The example assumes that ING_ROOT
+  is /home/ingres/ingres2006; modify this as needed based on the location of
   your Ingres build area.
 
   For further information about the acceptance tests please see the file
-  named TESTING.
+  named TESTING.  The TESTING file can be found in subversion here:
+  http://code.ingres.com/ingres/main/src/tst/suites/doc/TESTING
 

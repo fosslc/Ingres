@@ -71,6 +71,8 @@
 **	    Add formatting/display of table/object keys.
 **	13-May-2005 (kodse01)
 **	    replace %ld with %d for old nat and long nat variables.
+**      17-Aug-2010 (thich01)
+**          Make changes to treat spatial types like LBYTEs or NBR type as BYTE.
 */
 
 
@@ -1739,6 +1741,14 @@ ait_printData
 	    break;
 
 	case IIAPI_LBYTE_TYPE:
+	case IIAPI_GEOM_TYPE :
+	case IIAPI_POINT_TYPE :
+	case IIAPI_MPOINT_TYPE :
+	case IIAPI_LINE_TYPE :
+	case IIAPI_MLINE_TYPE :
+	case IIAPI_POLY_TYPE :
+	case IIAPI_MPOLY_TYPE :
+	case IIAPI_GEOMC_TYPE :
 	case IIAPI_LTXT_TYPE:
 	case IIAPI_LVCH_TYPE:
 	case IIAPI_TXT_TYPE:
@@ -1750,6 +1760,7 @@ ait_printData
 	    break;
 
 	case IIAPI_BYTE_TYPE:
+	case IIAPI_NBR_TYPE:
 	case IIAPI_CHA_TYPE:
 	case IIAPI_CHR_TYPE:
 	    ait_formatString( (char *)dataValue->dv_value, 
@@ -2126,6 +2137,14 @@ ait_printfmtData
 	    break;
 
 	case IIAPI_LBYTE_TYPE:
+	case IIAPI_GEOM_TYPE :
+	case IIAPI_POINT_TYPE :
+	case IIAPI_MPOINT_TYPE :
+	case IIAPI_LINE_TYPE :
+	case IIAPI_MLINE_TYPE :
+	case IIAPI_POLY_TYPE :
+	case IIAPI_MPOLY_TYPE :
+	case IIAPI_GEOMC_TYPE :
 	case IIAPI_LTXT_TYPE:
 	case IIAPI_LVCH_TYPE:
 	case IIAPI_TXT_TYPE:
@@ -2137,6 +2156,7 @@ ait_printfmtData
 	    break;
 
 	case IIAPI_BYTE_TYPE:
+	case IIAPI_NBR_TYPE:
 	case IIAPI_CHA_TYPE:
 	case IIAPI_CHR_TYPE:
 	    ait_formatString( (char *)dataValue->dv_value, 

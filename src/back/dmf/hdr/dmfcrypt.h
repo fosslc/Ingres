@@ -19,11 +19,14 @@
 ** Name: DMC_CRYPT - encryption global control block
 **
 ** Description:
-**	contains enabled keys for encryption
+**	contains active unlocked keys for encryption
 **
 ** History:
 **	13-apr-2010 (toumi01) SIR 122403
 **	    Created.
+**	04-Aug-2010 (miket) SIR 122403
+**	    Change encryption activation terminology from
+**	    enabled/disabled to unlock/locked.
 */
 typedef struct _DMC_CRYPT
 {
@@ -36,17 +39,20 @@ typedef struct _DMC_CRYPT
 ** Name: DMC_CRYPT_KEY
 **
 ** Description:
-**	contains individual enabled key entries
+**	contains individual active unlocked key entries
 **
 ** History:
 **	13-apr-2010 (toumi01) SIR 122403
 **	    Created.
+**	27-jul-2010 (toumi01)
+**	    Need to qualify key by database id!
 */
 typedef struct _DMC_CRYPT_KEY
 {
     i4		status;
 #define		DMC_CRYPT_INACTIVE	0L
 #define		DMC_CRYPT_ACTIVE	1L
+    i4		db_id;			/* id of the database */
     i4		db_tab_base;		/* encryption is on base tables */
     u_char	key[AES_256_BYTES];
 } DMC_CRYPT_KEY;

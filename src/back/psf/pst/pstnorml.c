@@ -242,11 +242,12 @@ pst_node_size(
 ** Name: pst_treedup	- Duplicate a view tree
 **
 ** Description:
-**	This function is a more sophisticated version of the original
-**	pst_treedup.  In addition to copying the tree passed to it, it may
-**	perform requested services for the caller.  For the time being it
-**	"understands" 2 opcodes: PSS_1DUP_SEEK_AGHEAD and PST_2DUP_RESET_JOINID.
-**	Meanings of the masks are as follows:
+**	This function is a rewrite of the enhanced version of the original
+**	pst_treedup. This rewrite removes the recursion requirements and generally
+**	speeds things up abit.
+**	In addition to copying the tree passed to it, it may perform requested
+**	services for the caller.  For the time being it
+**	"understands" 5 opcodes and the meanings of the masks are as follows:
 **	PSS_1DUP_SEEK_AGHEAD --  while duplicating a tree, search for
 **				 occurrences of AGHEAD with BYHEAD as its left
 **				 child. If found, set an apprpriate bit in
@@ -275,6 +276,11 @@ pst_node_size(
 **				 PST_AOP, PST_BOP, PST_UOP, PST_COP), and if
 **				 pst_joinid is != PST_NOJOIN, increment it by
 **				 dup_cb->pst_numjoins.
+**	PSS_3DUP_RENUMBER_BYLIST if set - renumber the bylist resdoms.
+**	PSS_MAP_VAR_TO_RULEVAR --'replace' VAR node with copy of subtree in
+**				 .pss_1ptr
+**	PSS_5DUP_ATTACH_AGHEAD --if set, add AGHEAD addresses to YYAGG_NODE_PTR
+**				 list, the head of which is in .pss_1ptr
 **
 **	To produce a copy of the original tree, it traverses the tree,
 **	allocating space for each node based on the length in the node's
@@ -293,7 +299,7 @@ pst_node_size(
 **
 ** Outputs:
 **	dup_rb		    ptr to dup. request block
-**      pss_dup			    Filled in with pointer to copy
+**      *pss_dup			    Filled in with pointer to copy
 **	*pss_tree_info		    may be set if a condition for which we
 **				    are looking has occured
 **	    PSS_GROUP_BY_IN_TREE    found an AGHEAD whose left child is a BYHEAD
@@ -384,361 +390,252 @@ pst_node_size(
 **	22-Jan-2009 (kibro01) b120460
 **	    Don't recurse down CONSTS either, like with RESDOM nodes.
 **	    IN-clauses with many parameters end up with this.
+**	30-Jun-2010 (kiria01) b124000
+**	    Rewrite of function to remove the recursive nature. The recursion
+**	    is simply replaced by a stack of 'to be done' pointers and a suitable
+**	    algorithmn to handle the depth first needs of the original code.
+**	    The stack used is initially in the from of the caller but if needed
+**	    can expand into session heap.
 */
 
-#define RESDOMS_OR_CONSTS(a)	\
-	( (a)->pst_left && \
-	 ( \
-	  ( \
-	   (a)->pst_sym.pst_type == PST_RESDOM && \
-	   (a)->pst_left->pst_sym.pst_type == PST_RESDOM \
-	  ) || \
-	  ( \
-	   (a)->pst_sym.pst_type == PST_CONST && \
-	   (a)->pst_left->pst_sym.pst_type == PST_CONST \
-	  ) \
-	 ) \
-	)
 
 DB_STATUS
 pst_treedup(
 	PSS_SESBLK	   *sess_cb,
 	PSS_DUPRB	   *dup_rb)
 {
-    DB_STATUS           status;
-    PST_QNODE		*newtree;
-    PST_QNODE		*origtree = dup_rb->pss_tree;
-    PST_QNODE		**duptree = dup_rb->pss_dup;
-    i4			size, symsize;
-    i4			datasize;
-    i4			*savemask;
-    i4			tree_info;
-    i4		err_code;
-    PST_J_ID		new_j_id;
-    i4			renumber = -1;
+    DB_STATUS status = E_DB_OK;
+    i4 err_code;
+    PST_STK stk;
+    PST_QNODE **nodep;
+    bool descend = TRUE;
+    PST_QNODE *subsel = NULL;
 
-    if (origtree == (PST_QNODE *) NULL)
+    if (dup_rb->pss_op_mask & PSS_1DUP_SEEK_AGHEAD)
     {
-	*duptree = (PST_QNODE *) NULL;
-	return (E_DB_OK);
+	if (dup_rb->pss_tree_info)
+	    *dup_rb->pss_tree_info = 0;
+	else
+	{
+	    psf_error(E_PS0002_INTERNAL_ERROR, 0L, PSF_INTERR,
+		      &err_code, dup_rb->pss_err_blk, 0);
+	    return E_DB_ERROR;
+	}
     }
+    if (!(*dup_rb->pss_dup = dup_rb->pss_tree))
+	return status;
 
-    while (origtree)
+    PST_STK_INIT(stk, sess_cb);
+
+    /* We will Descend the source tree via the address of a pointer to the tree.
+    ** Allocations will be done in place and full copies taken of the current node
+    ** and the allocated address written back to the address of a pointer now to
+    ** the top of the new tree. (Immediatly after allocation the left and right
+    ** pointer in the new block will refer to the OLD respective subtrees) */
+    nodep = dup_rb->pss_dup;
+    while (nodep)
     {
-        new_j_id = PST_NOJOIN;
-        tree_info = 0;
+	PST_QNODE *node = *nodep;
+	/* Copy the node insitu unless this is a non-terminal that we've already
+	** copied, in which case descend will be FALSE */
+	if (descend || !node->pst_left && !node->pst_right)
+	{
+	    PST_QNODE *onode = node, *ovar = NULL;
+	    i4 nsize, datasize;
+	    /* 'descend' will be set if we are seeing a non-terminal for the first
+	    ** time or a leaf node. Either way we allocate the duplicate and might
+	    ** stack it if needed. */
 
-        if (   origtree->pst_sym.pst_type == PST_VAR
-	    && dup_rb->pss_op_mask & PSS_MAP_VAR_TO_RULEVAR)
-        {
-	    /*
-	    ** we were asked to map VAR node into RULEVAR - temporarily set origtree
-	    ** to the RULEVAR node which will be replicated
-	    */
-	    origtree = (PST_QNODE *) dup_rb->pss_1ptr;
-        }
-    
-        /*
-        ** Determine the size of the variant part of the node and the size of data
-        */
-        status = pst_node_size(&origtree->pst_sym, &symsize, &datasize,
-			   dup_rb->pss_err_blk);
-        if (DB_FAILURE_MACRO(status))
-        {
-	    return(status);
-        }
-    
-        switch (origtree->pst_sym.pst_type)
-        {
-	    case PST_BOP:
-	    case PST_AND:
-	    case PST_OR:
-	    case PST_UOP:
-	    case PST_AOP:
-	    case PST_COP:
-	    case PST_MOP:
+	    if (onode->pst_sym.pst_type == PST_VAR &&
+		dup_rb->pss_op_mask & PSS_MAP_VAR_TO_RULEVAR)
 	    {
-	        /*
-	        ** If we were requested to update join (group) id, AND there are
-	            ** joins in the rest of the query, AND this op_node is a
-	        ** part of a join_search condition, save the new group_id to be
-	        ** assigned to the copy of the node.  If there are no joins in the
-	        ** rest of the tree, the old group_id will be used; if node was not
-	        ** a part of join_search condition, then there is no reason to reset
-	        ** its group_id.
-	        */
-	        if (dup_rb->pss_op_mask & PSS_2DUP_RESET_JOINID &&
-	            dup_rb->pss_num_joins != PST_NOJOIN	    &&
-	            (new_j_id = origtree->pst_sym.pst_value.pst_s_op.pst_joinid) !=
-								         PST_NOJOIN)
-	        {
-		    new_j_id += dup_rb->pss_num_joins;
-	        }
-	        break;
+		/* We were asked to map VAR node into RULEVAR - temporarily set onode
+		** and nodep to refer to the RULEVAR node which will be replicated.
+		** As nodep roves over the pointers in the new copy, we may assign
+		** the rulevar tree into the current. (ovar refers to real VAR) */
+		ovar = onode;
+		onode = *nodep = (PST_QNODE *)dup_rb->pss_1ptr;
+		/* Assert nodetype */
+		if (onode->pst_sym.pst_type != PST_RULEVAR)
+		{
+		    psf_error(E_PS0002_INTERNAL_ERROR, 0L, PSF_INTERR,
+			      &err_code, dup_rb->pss_err_blk, 0);
+		    status = E_DB_ERROR;
+		    goto cleanup_exit;
+		}
+	    }
+	    if (status = pst_node_size(&onode->pst_sym, &nsize, &datasize,
+			   dup_rb->pss_err_blk))
+		goto cleanup_exit;
+
+	    /* Allocate enough space */
+	    nsize += sizeof(PST_QNODE) - sizeof(PST_SYMVALUE);
+	    if (status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
+			    nsize + datasize, nodep, dup_rb->pss_err_blk))
+		goto cleanup_exit;
+
+	    node = *nodep; /* The new memory */
+	    /* Copy the old node to the new node */
+	    MEcopy((PTR)onode, nsize, (PTR)node);
+	    if (datasize)
+	    {
+		/* NOTE:
+		** Of the allocated memory, the initial part was for the node itself
+		** and the remaining datasize bytes will be used for the datavalue */
+		node->pst_sym.pst_dataval.db_data = (char*)node + nsize;
+		MEcopy((PTR)onode->pst_sym.pst_dataval.db_data,
+			datasize, (PTR) node->pst_sym.pst_dataval.db_data);
 	    }
 
-	    /*
-	    ** Note that pst_node_size will report error if invalid node type is
-	    ** detected
-	    */
-        }
-
-        /*
-        ** allocate enough space (data value included), i.e. space for the constant
-        ** part of the node (common to all node types), variable part, and data
-        ** if any.
-        */
-        size = sizeof(PST_QNODE) - sizeof(PST_SYMVALUE) + symsize + datasize;
-
-        /*
-        ** Perform consistency check
-        */
-        if (origtree->pst_sym.pst_len != symsize + datasize)
-        {
-           /* Original tree was garbled somehow. */
-           symsize += datasize;
-
-	    (VOID) psf_error(E_PS0D32_RDF_INV_NODE, 0L, PSF_INTERR,
-            &err_code, dup_rb->pss_err_blk, 3,
-               sizeof(i4), &symsize,
-               sizeof(origtree->pst_sym.pst_len), &origtree->pst_sym.pst_len,
-               sizeof(origtree->pst_sym.pst_type), &origtree->pst_sym.pst_type
-               );
-	    return(E_DB_ERROR);
-        }
-
-        status = psf_malloc(sess_cb, dup_rb->pss_mstream, size, (PTR *) duptree,
-			    dup_rb->pss_err_blk);
-        if (status != E_DB_OK)
-	    return (status);
-
-        newtree = *duptree;
-    
-        /* Copy the old node to the new node */
-
-        size = sizeof(PST_QNODE) - sizeof(PST_SYMVALUE) + symsize;
-        (VOID) MEcopy((PTR) origtree, size, (PTR) newtree);
-
-        if (datasize != 0)
-        {
-	    /*
-	    ** note that of the allocated memory,
-	    ** (sizeof(PST_QNODE) - sizeof(PST_SYMVALUE) + symsize) bytes
-	    ** have been used to copy the node, the remaining datasize bytes
-	    ** will be used to contain the datavalue
-	    */
-	    newtree->pst_sym.pst_dataval.db_data = (char *) newtree + size;
-	
-	    MEcopy((PTR) origtree->pst_sym.pst_dataval.db_data,
-	        datasize,
-	        (PTR) newtree->pst_sym.pst_dataval.db_data);
-        }
-
-        /*
-        ** we are done copying node pointed at by ORIGTREE; if we were asked to map
-        ** VAR nodes into RULEVAR nodes, here's a good spot to reset origtree to
-        ** point at the VAR node passed in by the caller + we need to overwrite
-        ** attribute number in the rule node with the attribute number from the VAR
-        ** node
-        */
-        if (   dup_rb->pss_tree->pst_sym.pst_type == PST_VAR
-	    && dup_rb->pss_op_mask & PSS_MAP_VAR_TO_RULEVAR)
-        {
-	    origtree = dup_rb->pss_tree;
-	    newtree->pst_sym.pst_value.pst_s_rule.pst_rltno =
-	        origtree->pst_sym.pst_value.pst_s_var.pst_atno.db_att_id;
-        }
-
-        /*
-        ** If this is an operator node, and its group_id needs to be reset, do it
-        ** here
-        */
-        if (new_j_id != PST_NOJOIN)
-        {
-	    newtree->pst_sym.pst_value.pst_s_op.pst_joinid = new_j_id;
-        }
-
-        /* we were asked to search for AGHEAD/BYHEAD combinations */
-        if (dup_rb->pss_op_mask & PSS_1DUP_SEEK_AGHEAD)
-        {
-	    /*
-	    ** If node is ROOT or SUBSEL, we need to store indicator of whether
-	    ** AGHEAD/BYHEAD combinations in pst_mask1 of the ROOT or SUBSEL node;
-	    ** if, on the other hand, node is an AGHEAD with a BYHEAD for a left
-	    ** child, set a bit in *pss_tree_info accordingly
-	    */
-	    if (newtree->pst_sym.pst_type == PST_ROOT ||
-	        newtree->pst_sym.pst_type == PST_SUBSEL)
+	    if (ovar)
 	    {
-	        /* First save the tree_info mask passed by the caller */
-	        savemask = dup_rb->pss_tree_info;
-
-	        dup_rb->pss_tree_info = &tree_info;
+		/* Nodetype Asserted above */
+		node->pst_sym.pst_value.pst_s_rule.pst_rltno =
+		    ovar->pst_sym.pst_value.pst_s_var.pst_atno.db_att_id;
 	    }
-	    else if (newtree->pst_sym.pst_type == PST_AGHEAD &&
-		     newtree->pst_left->pst_sym.pst_type == PST_BYHEAD)
+	}
+
+	/****** Start reduced recursion, depth first tree scan ******/
+	if (descend && (node->pst_left || node->pst_right))
+	{
+	    switch (node->pst_sym.pst_type)
 	    {
-	        *dup_rb->pss_tree_info |= PSS_GROUP_BY_IN_TREE;
-	    }
-        }
-
-        /*
-        ** Check if the newly copied node is a PST_AGHEAD and the caller requested
-        ** that AGHEAD's be inserted into the list of AGHEAD's
-        */
-        if (dup_rb->pss_op_mask & PSS_5DUP_ATTACH_AGHEAD &&
-	    newtree->pst_sym.pst_type == PST_AGHEAD)
-        {
-	    YYAGG_NODE_PTR         *new_agg_node;
-
-	    /* save location of new agg head */
-	    status = psf_malloc(sess_cb, dup_rb->pss_mstream, (i4) sizeof(YYAGG_NODE_PTR), 
-	        (PTR *) &new_agg_node, dup_rb->pss_err_blk);
-	    if (status != E_DB_OK)
-	        return (status);
-
-	    new_agg_node->agg_next = *((YYAGG_NODE_PTR **) dup_rb->pss_1ptr);
-	    new_agg_node->agg_node = newtree;
-	    *((YYAGG_NODE_PTR **) dup_rb->pss_1ptr) = new_agg_node;
-        }
-
-        /*
-        ** Now duplicate the right sub-tree.  First we need to reset some
-        ** fields in the dup_rb
-        ** Left subtree is done in the main while loop if it's RESDOM, or by
-	** recursion otherwise.
-        */
-
-        newtree->pst_left = NULL;
-        if (!(RESDOMS_OR_CONSTS(origtree)))
-        {
-            dup_rb->pss_tree = origtree->pst_left;
-            dup_rb->pss_dup  = &newtree->pst_left;
-            status = pst_treedup(sess_cb, dup_rb);
-    
-            if (status != E_DB_OK)
-	        return (status);
-        }
-
-        dup_rb->pss_tree = origtree->pst_right;
-        dup_rb->pss_dup  = &newtree->pst_right;
-        status = pst_treedup(sess_cb, dup_rb);
-
-        if (status != E_DB_OK)
-	    return (status);
-
-        if (renumber > 0)
-	    newtree->pst_sym.pst_value.pst_s_rsdm.pst_rsno = renumber--;
-
-        switch (origtree->pst_sym.pst_type)
-        {
 	    case PST_ROOT:
 	    case PST_SUBSEL:
-	    {
-	        /* duplicate a union */
-	    
-	        i4		u_mask = 0;
-	    
-	        dup_rb->pss_tree =
-		      origtree->pst_sym.pst_value.pst_s_root.pst_union.pst_next;
-	        dup_rb->pss_dup  =
-		      &newtree->pst_sym.pst_value.pst_s_root.pst_union.pst_next;
-	        if (dup_rb->pss_op_mask & PSS_1DUP_SEEK_AGHEAD)
-	        {
-		    dup_rb->pss_tree_info = &u_mask;
-	        }
-	    
-	        status = pst_treedup(sess_cb, dup_rb);
-
-	        if (status != E_DB_OK)
-		    return (status);
-
-	        /*
-	        ** If we were asked to look for AGGHEAD/BYHEAD combination, before
-	        ** we have reset dup_rb->pss_tree_info to &u_mask it contained
-	        ** &tree_info.  Bits that may be set in tree_info and u_mask and
-	        ** their meaning is as follows: 
-	        **
-	        ** PSS_GROUP_BY_IN_TREE	-   tree rooted in this node contained
-	        **				    an AGGHED with a BYHEAD for a left
-	        **				    child with no intervening SUBSELs -
-	        **				    set PST_3GROUP_BY in
-	        **				    pst_s_root.pst_mask1 but do NOT
-	        **				    pass this info to the caller unless
-	        **				    we are processing a ROOT node
-	        */
-
-	        if (dup_rb->pss_op_mask & PSS_1DUP_SEEK_AGHEAD)
-	        {
-		    if (tree_info & PSS_GROUP_BY_IN_TREE)
-		    {
-		        newtree->pst_sym.pst_value.pst_s_root.pst_mask1 |=
-		            PST_3GROUP_BY;
-		    }
-		    else
-		    {
-		        newtree->pst_sym.pst_value.pst_s_root.pst_mask1 &=
-		            ~PST_3GROUP_BY;
-		    }
-		
-		    /*
-		    ** propagate info about AGGHEAD/BYHEAD combinations to the
-		    ** original caller (i.e. we will not propagate it "up the tree")
-		    ** or to other members of the union
-		    */
-		    if (origtree->pst_sym.pst_type == PST_ROOT)
-		    {
-		        *savemask |= (u_mask | tree_info) & PSS_GROUP_BY_IN_TREE;
-		    }
-
-		    /*
-		    ** restore the mask ptr that would be reset for ROOT and SUBSEL
-		    */
-		    dup_rb->pss_tree_info = savemask;
-	        }
-
-	        break;
+		if (node->pst_sym.pst_value.pst_s_root.pst_union.pst_next)
+		{
+		    pst_push_item(&stk,
+			(PTR)&node->pst_sym.pst_value.pst_s_root.pst_union.pst_next);
+		    /* Mark that the top node needs descending (and allocating) */
+		    pst_push_item(&stk, (PTR)PST_DESCEND_MARK);
+		}
+		subsel = node; /* Track enclosing root/subsel */
+		/* Clear GB flag & let be set if seen (via subsel) */
+		subsel->pst_sym.pst_value.pst_s_root.pst_mask1 &= ~PST_3GROUP_BY;
+		break;
 	    }
-	    case PST_BYHEAD:
+	    /* Delay node evaluation */
+	    pst_push_item(&stk, (PTR)nodep);
+	    if (node->pst_left)
 	    {
-	        /*
-	        ** Done processing subtree rooted in BYHEAD.  If caller requested
-	        ** that we renumber elements of the BY-lists, do it now.
-	        */
-	        if (dup_rb->pss_op_mask & PSS_3DUP_RENUMBER_BYLIST)
-	        {
-		    register PST_QNODE  *bylist_elem;
-
-		    /* If this is the top of the BY list, count the RESDOM nodes
-		    ** and use that to renumber as we loop (not recurse) down the
-		    ** list.
-		    */
-		    for (bylist_elem = origtree->pst_left, renumber = 0;
-		         bylist_elem->pst_sym.pst_type == PST_RESDOM;
-		         bylist_elem = bylist_elem->pst_left, renumber++)
-		    ;
-	        }
-	        break;
+		if (node->pst_right)
+		{
+		    /* Delay RHS */
+		    pst_push_item(&stk, (PTR)&node->pst_right);
+		    if (node->pst_right->pst_right ||
+				node->pst_right->pst_left)
+			/* Mark that the top node needs descending */
+			pst_push_item(&stk, (PTR)PST_DESCEND_MARK);
+		}
+		nodep = &node->pst_left;
+		continue;
 	    }
-        }
+	    else if (node->pst_right)
+	    {
+		nodep = &node->pst_right;
+		continue;
+	    }
+	}
 
-        if (RESDOMS_OR_CONSTS(origtree))
-        {
-            dup_rb->pss_tree = origtree = origtree->pst_left;
-            dup_rb->pss_dup  = duptree = &newtree->pst_left;
-        } else
-        {
-	    /* Do recursion unless this is RESDOM list */
-	    origtree=NULL;
-        }
+	/*** Depth first traverse ***/
+	switch (node->pst_sym.pst_type)
+	{
+	case PST_UOP:
+	case PST_BOP:
+	case PST_MOP:
+	case PST_AOP:
+	case PST_COP:
+	case PST_AND:
+	case PST_OR:
+	    if (dup_rb->pss_op_mask & PSS_2DUP_RESET_JOINID &&
+		dup_rb->pss_num_joins != PST_NOJOIN &&
+		node->pst_sym.pst_value.pst_s_op.pst_joinid != PST_NOJOIN)
+	    {
+		/* Add max as offset to get new number */
+		node->pst_sym.pst_value.pst_s_op.pst_joinid += dup_rb->pss_num_joins;
+
+		if (node->pst_sym.pst_value.pst_s_op.pst_joinid > PST_NUMVARS - 1)
+		{
+		    /* Exceeded joinids */
+		    psf_error(3100L, 0L, PSF_USERERR, &err_code, dup_rb->pss_err_blk, 0);
+		    status = E_DB_ERROR;
+		    goto cleanup_exit;
+		}
+	    }
+	    break;
+	case PST_AGHEAD:
+	    if (dup_rb->pss_op_mask & PSS_5DUP_ATTACH_AGHEAD)
+	    {
+		YYAGG_NODE_PTR *new_agg_node;
+
+		/* Save location of new agg head */
+		if (status = psf_malloc(sess_cb, dup_rb->pss_mstream,
+				    (i4) sizeof(YYAGG_NODE_PTR), 
+				    (PTR *)&new_agg_node, dup_rb->pss_err_blk))
+		    goto cleanup_exit;
+		new_agg_node->agg_next = *((YYAGG_NODE_PTR **)dup_rb->pss_1ptr);
+		new_agg_node->agg_node = node;
+		*((YYAGG_NODE_PTR **)dup_rb->pss_1ptr) = new_agg_node;
+	    }
+	    /* The check for PSS_1DUP_SEEK_AGHEAD and action of setting of
+	    ** PSS_GROUP_BY_IN_TREE is handled in BYHEAD directly
+	    ** and the outer setting of PSS_GROUP_BY_IN_TREE to return
+	    ** the .pss_tree_info is done in the top PST_ROOT nodes */
+	    break;
+	case PST_ROOT:
+	    if (dup_rb->pss_op_mask & PSS_1DUP_SEEK_AGHEAD)
+	    {
+		/* For root neet to update real caller .pss_tree_info */
+		if (node->pst_sym.pst_value.pst_s_root.pst_mask1 & PST_3GROUP_BY)
+		    *dup_rb->pss_tree_info |= PSS_GROUP_BY_IN_TREE;
+	    }
+	    break;
+	case PST_SUBSEL:
+	    /* Nothing much to do now - the PSS_1DUP_SEEK_AGHEAD check for
+	    ** PSS_GROUP_BY_IN_TREE is done directly in the BYHEAD by accessing
+	    ** the ansestor nodes appropriatly. */
+	    /* Reset 'active subsel' */
+	    subsel = pst_antecedant_by_2types(&stk, NULL, PST_SUBSEL, PST_ROOT);
+	    break;
+	case PST_BYHEAD:
+	    if (dup_rb->pss_op_mask & PSS_1DUP_SEEK_AGHEAD)
+	    {
+		PST_QNODE *rt_node = pst_antecedant_by_1type(&stk, NULL, PST_AGHEAD);
+		/* For us to find a BYHEAD implies an explicit, user specified, GROUP BY
+		** as opposed to one we've added. If this flag is noted in the subsel code
+		** on uncorrelated, we will leave the subselect unflattend */
+		if (subsel)
+		    subsel->pst_sym.pst_value.pst_s_root.pst_mask1 |= PST_3GROUP_BY;
+		if (rt_node)
+		    rt_node->pst_sym.pst_value.pst_s_root.pst_mask1 |= PST_3GROUP_BY;
+	    }
+	    if (dup_rb->pss_op_mask & PSS_3DUP_RENUMBER_BYLIST)
+	    {
+		register PST_QNODE *bylist_elem = node->pst_left;
+		i4 renumber = 0;
+		/* If this is the top of the BY list, count the RESDOM nodes
+		** and use to renumber. */
+		while(bylist_elem->pst_sym.pst_type == PST_RESDOM)
+		{
+		    renumber++;
+		    bylist_elem = bylist_elem->pst_left;
+		}
+		bylist_elem = node->pst_left;
+		while (bylist_elem->pst_sym.pst_type == PST_RESDOM)
+		{
+		    bylist_elem->pst_sym.pst_value.pst_s_rsdm.pst_rsno = renumber--;
+		    bylist_elem = bylist_elem->pst_left;
+		}
+	    }
+	    break;
+	}
+	nodep = (PST_QNODE**)pst_pop_item(&stk);
+	if (descend = (nodep == PST_DESCEND_MARK))
+	    nodep = (PST_QNODE**)pst_pop_item(&stk);
     }
-    /*
-    ** restore ptr to the original tree and addr of the ptr to the copy to
-    ** values passed by the caller
-    */
-    dup_rb->pss_tree      = origtree;
-    dup_rb->pss_dup	  = duptree;
-    return (E_DB_OK);
+cleanup_exit:
+    pst_pop_all(&stk);
+    return status;
 }
 
 /*{
@@ -762,7 +659,13 @@ pst_treedup(
 **	    None
 **
 ** Side Effects:
-**	May allocate memory.
+**	May allocate session memory.
+**
+** Return:
+**	E_DB_OK		Everything fine
+**	E_DB_WARN	A NULL was attempted to be pushed but has been
+**			ignored as this would be retrieved as an
+**			end-of-stack condition.
 **
 ** History:
 **	27-Oct-2009 (kiria01) SIR 121883
@@ -776,7 +679,7 @@ pst_push_item(PST_STK *base, PTR item)
     /* Point to true list head block */
     struct PST_STK1 *stk = base->stk.link;
     if (!item)
-	return sts;
+	return E_DB_WARN;
     if (!stk)
 	stk = &base->stk;
 
@@ -923,8 +826,8 @@ pst_pop_all(PST_STK *base)
 **	As can be seen, a non-terminal node is seen at beginning of scope
 **	when we also push it onto the stack (a true parent). However, we also
 **	have to push on the stack an entry for any descendant sub-tree of
-**	this non-terminal that we are not immediatly decsnting - so we can
-**	come back to it. Clearly, pushing this entry on the stack is must
+**	this non-terminal that we are not immediately descending - so we can
+**	come back to it. Clearly, pushing this entry on the stack, it must
 **	be distinguished from a parent node with children are being processed.
 **	To do this we add a marker on the stack that tells us that the next
 **	node popped from the stack must be decended (properly processed). Such
@@ -1746,6 +1649,9 @@ pst_non_const_core(
 **	02-Nov-2009 (kiria01) 
 **	    Created to normalise an expression so that equivalents
 **	    are more cheaply found.
+**	15-Jun-2010 (kschendel) b123921
+**	    Don't reference past the end of *node when copying to fake.
+**	    Most parse tree nodes aren't as large as the full PST_QNODE.
 */
 
 DB_STATUS
@@ -1789,7 +1695,12 @@ pst_qtree_norm(
 		PST_QNODE *l, *c, **p = nodep;
 		bool reresolve = FALSE;
 
-		fake = **nodep;
+		/* *Not* fake = **nodep since the node will be allocated
+		** exact-size, and we mustn't copy past the end of *nodep.
+		*/
+		MEcopy((PTR) (*nodep),
+			sizeof(PST_QNODE) - sizeof(PST_SYMVALUE) + sizeof(PST_OP_NODE),
+			(PTR) &fake);
 		if ((*p)->pst_sym.pst_value.pst_s_op.pst_fdesc)
 		{
 		    (*p)->pst_sym.pst_value.pst_s_op.pst_fdesc = NULL;
@@ -1935,7 +1846,13 @@ pst_qtree_norm(
 	case PST_OR:
 	    {
 		PST_QNODE *l, *c, **p = nodep;
-		fake = **nodep;
+
+		/* *Not* fake = **nodep since the node will be allocated
+		** exact-size, and we mustn't copy past the end of *nodep.
+		*/
+		MEcopy((PTR) (*nodep),
+			sizeof(PST_QNODE) - sizeof(PST_SYMVALUE) + sizeof(PST_OP_NODE),
+			(PTR) &fake);
 		do
 		{
 		    while ((l = (*p)->pst_left) &&
@@ -2091,10 +2008,10 @@ pst_qtree_dot1(
 	PST_SYMVALUE *v;
 
 	if (node->pst_left)
-	    SIfprintf(fd, "n%p->n%p[weight=100,style=solid,label=left,tailport=sw,headport=n]",
+	    SIfprintf(fd, "n%p->n%p[weight=100,style=solid,label=left,tailport=sw,headport=n]\n",
 		node, node->pst_left);
 	if (node->pst_right)
-	    SIfprintf(fd, "n%p->n%p[weight=100,style=solid,label=right,tailport=se,headport=n]",
+	    SIfprintf(fd, "n%p->n%p[weight=100,style=solid,label=right,tailport=se,headport=n]\n",
 		node, node->pst_right);
 	sprintf(dbv, "%d,%d,%d,%d,%d",
 		node->pst_sym.pst_dataval.db_datatype,
@@ -2469,8 +2386,8 @@ pst_qtree_dot(
 	    if (rngvar->pss_used &&
 		rngvar->pss_rgno >= 0)
 	    {
-		char name[sizeof(rngvar->pss_tabname)+1];
-		char cv[sizeof(rngvar->pss_rgname)+1];
+		char name[sizeof(rngvar->pss_tabname)];
+		char cv[sizeof(rngvar->pss_rgname)];
 		char *ty1;
 		switch(rngvar->pss_rgtype)
 		{
@@ -2482,14 +2399,14 @@ pst_qtree_dot(
 		default: ty1 = "bad type";
 		}
 		MEcopy((PTR)rngvar->pss_rgname,
-		    sizeof(cv)-1,cv);
+		    sizeof(cv),cv);
 		cv[sizeof(cv)-1] = 0;
 		STtrmwhite(cv);
 		MEcopy((PTR)&rngvar->pss_tabname,
-		    sizeof(name)-1,name);
+		    sizeof(name),name);
 		cv[sizeof(name)-1] = 0;
 		STtrmwhite(name);
-		SIfprintf(fd, "n%p->n%p[style=dotted,label=\"pst_rngvar[%d]\"]",
+		SIfprintf(fd, "n%p->n%p[style=dotted,label=\"pst_rngvar[%d]\"]\n",
 			prv, rngvar, i);
 
 		if (rngvar->pss_qtree)

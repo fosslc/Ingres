@@ -24,35 +24,39 @@
 #    This tool keeps a manifest of revisions it has successfully merged
 #    and thus preserves state through comitting this file in the repository.
 #
+#    This tool could be modified to be generic fairly easily.
+#
 # History:
 # ========
-#      Jun-6-2010 (rosan01 - Andrew Ross)
+#      Jun-06-2010 (Andrew Ross)
 #          Initial version.
+#      Aug-26-2010 (Andrew Ross)
+#          Updates to handle binaries better. Copy the changes over top rather
+#          than apply patches.
+#          Sped up the tool by only downloading files we care about.
+#          Added proper support for deleted files.
 
 # TODO:
 # Generic improvements:
 # =====================
-# - better handling for binaries: detect them in the patch,
-#   and svn export them to copy them to git. particularly for mixed
-#   source & binary patches
-# - better handling for new files: use git status to detect &
-#   add new files automatically
+# Urgent
+# ------
+# - Add error handling function with msg & return params
+# - put the stuff we want to exclude into a file instead
+
+# Minor
+# -----
 # - getopts for option handling
+# - config file for defaults
 # - add help/usage
 # - consider syslog for logging
-
-# Ingres specific improvements:
-# =============================
-# - find a way to deal with checked in files that also have the same extension
-#   as those in .gitingore
-# - detect if we're running from trunk
-# - better handling for content under tst: detect and ignore it (since the test cases in tst and pdfs in techpub are not being copied to github)
 
 URL="http://code.ingres.com/ingres/main"
 SVNLatest=`svn info ${URL} | grep "Last Changed Rev:" | awk '{print $4}'`
 RevLog="svn_import/imported_revisions.txt"
 GitLatest=`tail -1 ${RevLog}`
 NOW=`date +"%h%d-%Y-%H%M"`
+OriginalDir=`pwd`
 
 echo "Now: ${NOW} svn: rev >${SVNLatest}< git: rev >${GitLatest}<"
 
@@ -76,31 +80,98 @@ else
       echo "Processing revision: ${CurrentRev}"
       echo "================================"
       echo "Pulling patch: ${CurrentRev} from svn"
-      PatchFile="${CurrentRev}.patch"
-      CommitMessage="${CurrentRev}.message"
-      # Generate a patchfile from svn
-      svn diff -r${PreviousRev}:${CurrentRev} ${URL} > ${PatchFile}
+
+      ChangeList="${CurrentRev}.import_txt"
+      TempList="${CurrentRev}.import_tmp"
+      CommitMessage="${CurrentRev}.import_msg"
+
+      # Get a list of affected files for this revision
+      # we're going to update each one in turn by downloading from svn
+      # then delete any files that have been deleted
+      svn log -vq -r${PreviousRev}:${CurrentRev} ${URL} > ${TempList}
+
+      # make sure we've got the list... we can't do anything without it
+      if [ $? != 0 ]
+      then
+        echo "ERROR: pulling patch failed for ${CurrentRev}"
+        echo "Cannot continue. Exiting"
+        exit 1
+      fi
+
+      # Format the output so that we can process it
+      cat ${TempList} | egrep '^ {3}[ADMR] ' | sort -u |\
+                 sed "s/\/main\///g" | grep -v "src/tst" |\
+                 grep -v "src/tools/techpub/pdf" > ${ChangeList}
+
+      # First, process all the files that were added or modified
+      cat ${ChangeList} | grep -v "^D" | awk '{print $2}' |\
+      while read File
+      do
+        echo "    Updating: ${File}"
+        TargetDir=`dirname ${File}`
+        Target="${URL}/${File}"
+        JustFileName=`basename ${File}`
+ 
+        # check if the directory involved exists, if not, add it
+        if [ ! -d ${TargetDir} ]
+        then
+          mkdir -p ${TargetDir}
+        fi
+
+        cd ${TargetDir}
+        if [ $? != 0 ]
+        then
+          echo "ERROR: I can't get into directory: ${TargetDir}"
+          echo "Cannot continue. Exiting"
+          exit 1
+        fi
+        
+        # Get the file from subversion and overwrite the local copy
+        svn export -r ${CurrentRev} ${Target}
+        # make sure this worked...
+        if [ $? != 0 ]
+        then
+          echo "ERROR: pulling file failed for revision: ${CurrentRev} and file: ${Target}"
+          echo "Please re-run the import for this revision and it should recover."
+          echo "Cannot continue. Exiting"
+          exit 1
+        fi
+
+        git add ${JustFileName}
+        cd ${OriginalDir}
+      done # Looping for each changed file
+
+      # Then, delete all the files that were deleted
+      # This is a local-only operation at this point so it's best to do last
+      # after we know the updates worked successfully
+      cat ${ChangeList} | grep "^D" |\
+      while read DeletedFile
+      do
+        echo "    Deleting: ${DeletedFile}"
+        git rm ${DeletedFile}
+        #TODO: double check that it actually removed
+        #      complain and exit if we didn't find it to avoid a bigger mess
+      done
 
       # Grab the commit message
       svn log -r${PreviousRev}:${CurrentRev} ${URL} > ${CommitMessage}
-
-      #echo "Applying patch"
-      patch -p0 < ${PatchFile}
-      
+      # make sure this worked...
       if [ $? != 0 ]
       then
-        echo "ERROR: patch failed for ${CurrentRev}"
+        echo "ERROR: pulling commit message for revision: ${CurrentRev} failed"
+        echo "Please re-run the import for this revision and it should recover."
         echo "Cannot continue. Exiting"
         exit 1
       fi
 
       # Add the revision number to the log
       echo "${CurrentRev}" >> ${RevLog}
+      git add ${RevLog}
 
       # Commit, with the same commit message
-      git commit -a -F ${CommitMessage}
+      git commit -F ${CommitMessage}
 
-    done
+    done # Looping for each revision
   fi
 fi
 

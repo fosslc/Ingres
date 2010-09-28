@@ -3357,6 +3357,9 @@ DB_DATA_VALUE	   *locator_dv)
 ** History:
 **	19-May-2009 (kiria01) SIR121788
 **         Created.
+**      18-Aug-2010 (hanal04) Bug 124271
+**         Correct setting of shd_l1_check. UTF-8 NVCH to VCH shows
+**         the old code was wrong.
 */
 
 /*
@@ -3409,16 +3412,7 @@ adu_long_coerce_slave(ADF_CB	    *scb,
     {
 	/* Size ok */
 	if (dv_out->db_datatype == DB_VCH_TYPE)
-	{
-	    register char *e = p + size;
-	    register i4 l;
-	    do
-	    {
-		l = CMbytecnt(p);
-		p += l;
-		work->adw_shared.shd_l1_check++;
-	    } while (p < e);
-	}
+            work->adw_shared.shd_l1_check += size;
 	else
 	    work->adw_shared.shd_l1_check += size / ctx->multiplier;
 	work->adw_shared.shd_exp_action = ADW_CONTINUE;

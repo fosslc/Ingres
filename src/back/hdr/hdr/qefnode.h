@@ -1215,28 +1215,32 @@ struct _QEN_TJOIN
 **	    Replaced remaining QEN_ADF instances by pointers.
 **	4-Jun-2009 (kschendel) b122118
 **	    Move things around a little for less padding.
+**	10-Sep-2010 (kschendel) b124341
+**	    Delete kcompare, add cvmat.  okmat is now a combination materialize
+**	    and compare CX.
 */
 struct _QEN_SEJOIN
 {
     QEN_NODE   *sejn_out;       /* outer node */
     QEN_NODE   *sejn_inner;     /* inner node */
-    i4		sejn_hget;	/* Index into DSH->DSH_CB for the DMR_CB 
-				** to get/put tuple to hold file. 
+    i4		sejn_hget;	/* Index into DSH->DSH_CB for the DMR_CB
+				** to get/put tuple to hold file.
 				*/
     i4          sejn_hfile;     /* hold file number - index into DSH->DSH_HOLD
-				** structure. This number may be identical in 
+				** structure. This number may be identical in
 				** more than one SEjoin node, which indicates
 				** that the hold file is to be shared. See
 				** description of sejn_hcreate.
 				*/
     QEN_ADF	*sejn_itmat;	/* materialize the inner tuple */
-    QEN_ADF	*sejn_okmat;	/* materialize the join key and join
-				** correlation into the row buffer
+    QEN_ADF	*sejn_okmat;	/* materialize the join key into a row buffer.
+				** Also compares previous and current keys.
+				** INIT segment is materialize, MAIN is compare
 				*/
-    QEN_ADF	*sejn_ccompare; /* compare correlation key created by okmat
-				** to the next key in sejn_outer.
+    QEN_ADF	*sejn_cvmat;	/* Materialize outer correlation values into
+				** the row buffer.
 				*/
-    QEN_ADF	*sejn_kcompare;	/* compare current key created by okmat
+    QEN_ADF	*sejn_ccompare; /* compare correlation key created by cvmat
 				** to the next key in sejn_outer.
 				*/
     QEN_ADF	*sejn_kqual;	/* qualify tuples on the join key. that's
@@ -1670,6 +1674,12 @@ struct _QEN_EXCH
 **          Add tproc_qpix;
 **	8-dec-2008 (dougi)
 **	    Replaced tproc_qpix with tproc_qpidptr.
+**	17-Jun-2010 (kschendel) b123775
+**	    Put qpidptr back to an index (resource entry index).  We'll
+**	    store the translated cursor ID in the DSH resource entry,
+**	    not the QP resource entry.  (Probably can get away with doing
+**	    it in the QP entry, even though it's supposed to be readonly,
+**	    but it's just as easy and less worry in the dsh side.)
 */
 
 struct _QEN_TPROC
@@ -1677,14 +1687,13 @@ struct _QEN_TPROC
     DB_TAB_ID		tproc_dbpID;		/* ID of procedure  */
 
     QEN_ADF		*tproc_parambuild;	/* CX to build actual parms */
-    i4			tproc_pcount;		/* Actual parameter count. */
+    QEN_ADF		*tproc_qual;	    /* qualify tuples */
     struct _QEF_CP_PARAM *tproc_params;		/* Actual parameter list */
+    i4			tproc_pcount;		/* Actual parameter count. */
 
     i4			tproc_dshix;		/* CBs offset of proc DSH ptr */
-    PTR			tproc_qpidptr;		/* ptr to qp cursor ID in
-						** validation structure */
-
-    QEN_ADF		*tproc_qual;	    /* qualify tuples */
+    i4			tproc_resix;		/* Resource entry index, for
+						** storing cursor ID */
     i4			tproc_flag;	    /* flag field */
 };
 

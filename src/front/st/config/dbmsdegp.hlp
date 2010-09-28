@@ -1,0 +1,15 @@
+/#-- Copyright (c) 2010 Ingres Corporation
+
+  The degree_of_parallelism resource controls the maximum number of threads
+  used by DMF for parallelized MODIFY and CREATE INDEX operations.
+  Partitioned table modifies and parallel create index statements are
+  among those affected by this resource.  Larger values may improve
+  performance on machines with many CPU's and plentiful disk resources.
+  A value of zero forces serial execution, which may improve the on-disk
+  layout of the resulting table files in some situations.
+
+  This resource does not control parallel DML queries, such as select,
+  insert, update, or delete.  See the opf_pq_dop resource for controlling
+  DML parallelism.
+
+  The default is 4 threads.

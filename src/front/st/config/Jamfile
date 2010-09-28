@@ -84,6 +84,18 @@
 #	    Add dbmscpop.hlp
 #    07-May-2010 (stial01) SIR 122205
 #	Add recoffline.hlp, reconline.hlp
+#	20-Jul-2010 (kschendel) SIR 124104
+#	    Add dbmsccom.hlp.
+#	02-Aug-2010 (miket) SIR 124154
+#	    Add dbmsmxky.hlp
+#	4-Aug-2010 (kschendel) SD 145507
+#	    Add missing help for degree-of-parallelism, sole-cache.
+#	27-Aug-2010 (gordy)
+#	    Add gcnpwdvers.hlp.
+#        8-Aug-2010 (hanal04) Bug 124180
+#           Add dbmsmnyc.hlp
+#	09-Sep-2010 (rajus01) SD issue 146492, Bug 124381
+#	    Add gcfmechloc32.hlp, gcfmechloc64.hlp.
 
 SubDir ING_SRC front st config ;
 
@@ -167,6 +179,7 @@ File $(INGMSG)$(DFS)dbmsbufc.hlp : dbmsbufc.hlp ;
 File $(INGMSG)$(DFS)dbmscach.hlp : dbmscach.hlp ;
 File $(INGMSG)$(DFS)dbmscady.hlp : dbmscady.hlp ;
 File $(INGMSG)$(DFS)dbmscard.hlp : dbmscard.hlp ;
+File $(INGMSG)$(DFS)dbmsccom.hlp : dbmsccom.hlp ;
 File $(INGMSG)$(DFS)dbmsclim.hlp : dbmsclim.hlp ;
 File $(INGMSG)$(DFS)dbmscore.hlp : dbmscore.hlp ;
 File $(INGMSG)$(DFS)dbmscpus.hlp : dbmscpus.hlp ;
@@ -174,6 +187,7 @@ File $(INGMSG)$(DFS)dbmscrsr.hlp : dbmscrsr.hlp ;
 File $(INGMSG)$(DFS)dbmscrop.hlp : dbmscrop.hlp ;
 File $(INGMSG)$(DFS)dbmscurs.hlp : dbmscurs.hlp ;
 File $(INGMSG)$(DFS)dbmsdefs.hlp : dbmsdefs.hlp ;
+File $(INGMSG)$(DFS)dbmsdegp.hlp : dbmsdegp.hlp ;
 File $(INGMSG)$(DFS)dbmsdlim.hlp : dbmsdlim.hlp ;
 File $(INGMSG)$(DFS)dbmsdlst.hlp : dbmsdlst.hlp ;
 File $(INGMSG)$(DFS)dbmsdmbp.hlp : dbmsdmbp.hlp ;
@@ -212,6 +226,8 @@ File $(INGMSG)$(DFS)dbmsltsc.hlp : dbmsltsc.hlp ;
 File $(INGMSG)$(DFS)dbmsltut.hlp : dbmsltut.hlp ;
 FILE $(INGMSG)$(DFS)dbmsmdep.hlp : dbmsmdep.hlp ;
 FILE $(INGMSG)$(DFS)dbmsmlst.hlp : dbmsmlst.hlp ;
+FILE $(INGMSG)$(DFS)dbmsmnyc.hlp : dbmsmnyc.hlp ;
+FILE $(INGMSG)$(DFS)dbmsmxky.hlp : dbmsmxky.hlp ;
 File $(INGMSG)$(DFS)dbmsname.hlp : dbmsname.hlp ;
 File $(INGMSG)$(DFS)dbmsnrst.hlp : dbmsnrst.hlp ;
 File $(INGMSG)$(DFS)dbmsopfa.hlp : dbmsopfa.hlp ;
@@ -271,6 +287,7 @@ File $(INGMSG)$(DFS)dbmsrupd.hlp : dbmsrupd.hlp ;
 File $(INGMSG)$(DFS)dbmsscfr.hlp : dbmsscfr.hlp ;
 File $(INGMSG)$(DFS)dbmssess.hlp : dbmssess.hlp ;
 File $(INGMSG)$(DFS)dbmssiob.hlp : dbmssiob.hlp ;
+File $(INGMSG)$(DFS)dbmssolc.hlp : dbmssolc.hlp ;
 File $(INGMSG)$(DFS)dbmssole.hlp : dbmssole.hlp ;
 File $(INGMSG)$(DFS)dbmssrvr.hlp : dbmssrvr.hlp ;
 File $(INGMSG)$(DFS)dbmsssiz.hlp : dbmsssiz.hlp ;
@@ -307,6 +324,8 @@ File $(INGMSG)$(DFS)gcfmechkerbenabled.hlp : gcfmechkerbenabled.hlp ;
 File $(INGMSG)$(DFS)gcfmechsysenabled.hlp : gcfmechsysenabled.hlp ;
 File $(INGMSG)$(DFS)gcfmechnullenabled.hlp : gcfmechnullenabled.hlp ;
 File $(INGMSG)$(DFS)gcfmechloc.hlp : gcfmechloc.hlp ;
+File $(INGMSG)$(DFS)gcfmechloc32.hlp : gcfmechloc32.hlp ;
+File $(INGMSG)$(DFS)gcfmechloc64.hlp : gcfmechloc64.hlp ;
 File $(INGMSG)$(DFS)gcfremote.hlp : gcfremote.hlp ;
 File $(INGMSG)$(DFS)gcfsecuremech.hlp : gcfsecuremech.hlp ;
 File $(INGMSG)$(DFS)gcfpwdmech.hlp : gcfpwdmech.hlp ;
@@ -324,6 +343,7 @@ File $(INGMSG)$(DFS)gcncomppoint.hlp : gcncomppoint.hlp ;
 File $(INGMSG)$(DFS)gcnexpint.hlp : gcnexpint.hlp ;
 File $(INGMSG)$(DFS)gcninter.hlp : gcninter.hlp ;
 File $(INGMSG)$(DFS)gcnlnode.hlp : gcnlnode.hlp ;
+File $(INGMSG)$(DFS)gcnpwdvers.hlp : gcnpwdvers.hlp ;
 File $(INGMSG)$(DFS)gcnregtype.hlp : gcnregtype.hlp ;
 File $(INGMSG)$(DFS)gcnrmech.hlp : gcnrmech.hlp ;
 File $(INGMSG)$(DFS)gcnrnode.hlp : gcnrnode.hlp ;

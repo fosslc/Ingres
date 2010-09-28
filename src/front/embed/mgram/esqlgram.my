@@ -815,6 +815,10 @@ static bool   set_role=FALSE;
 **       23-Apr-2010 (smeke01) b123626
 **          Added explicit derived_table production to enable a derived table
 **          to appear on the right hand side of a join operator.
+**	 26-Aug-2010 (miket) SIR 122403 SD 146503
+**	    Add support for encryption, and make TO optional in MODIFY as
+**	    it is in the back end grammar, to allow statements like
+**	    "MODIFY FOO ENCRYPT WITH PASSPHRASE='this is a secret'".
 **
 ** Rules to apply when writing new grammar parts:
 **
@@ -890,6 +894,7 @@ static bool   set_role=FALSE;
 	tSERIALIZABLE	tREAD		tPARTITION
 	tWITHOUT	tWITHCASE	tWOCASE
         tFALSE          tTRUE           tUNKNOWN	tRENAME
+	tENCRYPT
 
 /* Special embedded SQL keywords (directives, cursors, control flow etc.) */
 %token	tCALL		tCLOSE		tCONNECT	tCONTINUE
@@ -2833,7 +2838,7 @@ crcol_spec_constrt: crcol_spec
 		    $$.i = $1.i;
 		}
 ;
-crcol_spec:	sql_id crcol_type crcol_collate
+crcol_spec:	sql_id crcol_type crcol_collate crcol_encrypt
 {
 		    $$.i = $2.i;
 }
@@ -2915,6 +2920,10 @@ crcol_type:	sql_name dec_nullfmt_list
 ;
 crcol_collate:	/* nothing */
 	|	sql_collate sql_name
+;
+crcol_encrypt:	/* nothing */
+	|	sql_encrypt
+	|	sql_encrypt sql_name
 ;
 tbl_constraint_def:tbl_constraint
 		{
@@ -7001,8 +7010,8 @@ help_all:	tHLP_ALL
 *- EXEC SQL MODIFY [TABLE] [location:]table WITH With_Clause
 */
 
-modify:		modify_key loc_tblname mod_opt_part sql_to mod_type sql_opt_unique mod_keys 
-		mod_qual
+modify:		modify_key loc_tblname mod_opt_part sql_opt_to mod_type
+		sql_opt_unique mod_keys mod_qual
 	|	modify_key loc_tblname sql_with_clause
 ;
 modify_key:	tMODIFY modify_table
@@ -7033,6 +7042,7 @@ mod_type:	sql_id mod_opt_n
 		{
 		    db_key( $1.s );
 		}
+	|	sql_encrypt
 ;
 /* Hack so that "mod_type" can parse PRIORITY=n */
 mod_opt_n:	/* empty */
@@ -8335,6 +8345,12 @@ sql_to:		tTO
 		    db_key( $1.s );
 		}
 ;
+sql_opt_to:	/* Empty */
+	|	tTO
+		{
+		    db_key( $1.s );
+		}
+;
 sql_using:	tUSING 
 		{
 		    db_key( $1.s );
@@ -8413,6 +8429,11 @@ sql_without:	tWITHOUT
 		}
 ;
 sql_collate:	tCOLLATE
+		{
+		    db_key( $1.s );
+		}
+;
+sql_encrypt:	tENCRYPT
 		{
 		    db_key( $1.s );
 		}

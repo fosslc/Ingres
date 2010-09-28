@@ -2,13 +2,21 @@
 #	20-Jun-2009 SIR 122138
 #	    Implement new Datallegro-style VERS file format which can
 #	    control jam variables as well as shell/compile options.
+#	27-Jul-2010 (drivi01)
+#	    Comment out BUILD_ICE to stop ICE from building.
+#	31-Aug-2010 (thich01)
+#	    Add WITH_GEO for platforms where spatial is not supported.
 
 #set: config int_w32
 #set: build 00
 #set: inc 00
+# This should not be submitted to main
+#set: option GEO
+
 
 # Any jam definitions go here, e.g. VAR = value ;
 # Don't forget spaces around the = and before the ;
-BUILD_ICE = "TRUE" ;    #set: option BUILD_ICE
+#BUILD_ICE = "TRUE" ;    #set: option BUILD_ICE
 
 PLATFORM_JAMDEFS = int_w32 ;
+WITH_GEO = -D_WITH_GEO ; #set option: WITH_GEO

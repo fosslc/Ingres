@@ -46,6 +46,12 @@
 **    Add a default flag OFN_EXPLORER back to display
 **    nicer dialog consistent with the rest of the application.
 **    Could not reproduce the hang.
+** 07-Sep-2010 (drivi01)
+**    Fix SEGV on some machines. Update routines to consistently
+**    use tchar functions.  Do not use pointer from _tgetenv
+**    as a directory buffer, copy it to another variable first
+**    and use a new buffer.  Otherwise routines may end up
+**    accessing unallocated memory in the buffer.
 **/
 
 
@@ -766,15 +772,18 @@ void CuIeaPPage1::OnButtonFile2BeCreated()
 	    NULL,
 	    OFN_HIDEREADONLY /*| OFN_OVERWRITEPROMPT*/,
 	    _T("CSV File (*.csv)|*.csv|dBASE File (*.dbf)|*.dbf|Text File (*.txt)|*.txt|XML file (*.xml)|*.xml||"));
-    
-	 /*Added as fix for bug 112435*/
  
-	TCHAR* pUProfile = _tgetenv(_T("USERPROFILE"));
-	if (pUProfile != NULL)
+	TCHAR profile[MAX_PATH];
+	TCHAR *pUProfile = _tgetenv(_T("USERPROFILE"));
+
+	memset(profile, 0, sizeof(profile));
+	_tcsncpy(profile, pUProfile, sizeof(profile)-1);
+
+	if (*profile != '\0')
 	{
-	      strcat(pUProfile, "\\Documents");
-	      if (access(pUProfile, 00) == 0)	
-		      dlg.m_ofn.lpstrInitialDir=pUProfile;
+	      _tcscat(profile, _T("\\Documents"));
+	      if (access(profile, 00) == 0)
+		      dlg.m_ofn.lpstrInitialDir=profile;
 	}
 	else
 	     dlg.m_ofn.lpstrInitialDir=NULL;

@@ -219,6 +219,8 @@ static char shwsess[] = "fshowsess";
 **          to eliminate gcc 4.3 warnings.
 **      22-apr-2010 (stial01)
 **          Changes for Long Ids
+**      18-Aug-2010 (frima01) Bug 124251
+**          Specify length of user names as FE_MAXNAME.
 */
 
 /*
@@ -1239,7 +1241,7 @@ char *servdata;
 	    s_scan(&bufptr, 4, "past sessid, dbname");
 	    bufptr++;						/* past " " */
 	    FIXLEN_GET(curr_sessinfo->database, 
-		sizeof(curr_sessinfo->database), "dbname");
+		FE_MAXNAME,"dbname");
 	    d_print("\tdatabase=\"%s\"\n", curr_sessinfo->database);
 	    if (*bufptr == '(')		/* dbname(exclusive) possiblility */
 	    {
@@ -1248,26 +1250,26 @@ char *servdata;
 	    }
 	    s_scan(&bufptr, 2, "past owned by");	/* past "(Owned by:" */
 	    bufptr++;					/* past " " */
-	    FIXLEN_GET(curr_sessinfo->dba, sizeof(curr_sessinfo->dba), "dba");
+	    FIXLEN_GET(curr_sessinfo->dba, FE_MAXNAME, "dba");
 	    d_print("\tdba=\"%s\"\n", curr_sessinfo->dba);
 	    bufptr += 2;					/* past " )" */
 	}
 	s_scan(&bufptr, 1, "past user");		/* past "User:" */
 	bufptr++;					/* past " " */
  	FIXLEN_GET(curr_sessinfo->apparent_user,
-		sizeof(curr_sessinfo->apparent_user), "app user");
+		FE_MAXNAME, "app user");
 	d_print("\tapparent_user=\"%s\"\n", curr_sessinfo->apparent_user);
 	bufptr += 2;					/* past " (" */
 	/* get real user */
  	FIXLEN_GET(curr_sessinfo->real_user,
-		sizeof(curr_sessinfo->real_user), "realuser");
+		FE_MAXNAME, "realuser");
 	d_print("\treal_user=\"%s\"\n", curr_sessinfo->real_user);
 	bufptr++;					/* past ")" */
 
  	s_scan(&bufptr, 5, "past user name at session startup");/* past that */
  	bufptr++;					/* past " " */
  	FIXLEN_GET(curr_sessinfo->startup_user,
-		sizeof(curr_sessinfo->startup_user), "startup_user");
+		FE_MAXNAME, "startup_user");
  	d_print("\tstartup_user=\"%s\"\n", curr_sessinfo->startup_user);
 
 	s_scan(&bufptr, 1, "past terminal");		/* past "Terminal:" */

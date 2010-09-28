@@ -3506,6 +3506,9 @@ DMS_SRT_CB        *s)
 **	    Add occasional cancel checks, but only if non-parallel.
 **	    (For parallel sort, parent will check during suspend.)
 */
+#ifdef WIN64
+#pragma optimize("t", off)
+#endif
 static DB_STATUS
 do_merge(
 DMS_SRT_CB          *sort_cb,
@@ -3715,6 +3718,9 @@ i4		    passes)
     }
     return (E_DB_ERROR);
 }
+#ifdef WIN64
+#pragma optimize("", on)
+#endif
 
 /*{
 ** Name: read_record	- Read the next record from a merge input run.

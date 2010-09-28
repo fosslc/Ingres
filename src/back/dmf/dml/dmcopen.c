@@ -276,6 +276,8 @@
 **	    it should only be set for "internal" errors.  The effect was that
 **	    the first time an error db was opened and marked inconsistent,
 **	    the user would see "error initializing DMF".
+**      09-aug-2010 (maspa05) b123189, b123960
+**          Pass flag for readonlydb through to dm2d_open_db
 */
 
 DB_STATUS
@@ -389,6 +391,9 @@ DMC_CB    *dmc_cb)
 	}
 	if (dmc->dmc_lock_mode == DMC_L_EXCLUSIVE)
 	    odcb->odcb_lk_mode = ODCB_X;
+
+	if (dmc->dmc_flags_mask2 &  DMC2_READONLYDB)
+	    flag_mask |= DM2D_READONLYDB;
 
 	status = dm2d_open_db(odcb->odcb_dcb_ptr, odcb->odcb_access_mode,
 	    odcb->odcb_lk_mode, scb->scb_lock_list, flag_mask, &dmc->error);

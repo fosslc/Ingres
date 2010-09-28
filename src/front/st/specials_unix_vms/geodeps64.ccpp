@@ -1,0 +1,24 @@
+/*
+** Copyright (c) 2010 Ingres Corporation
+*/
+/*
+** Part file for Ingres Geospatial dependency libraries
+*/
+
+/*
+** History
+**  Aug-30-2010 (troal01)
+**      Created.
+*/
+
+PART  geodeps64
+
+#ifndef VMS
+#ifndef conf_LSB_BUILD
+    DIRECTORY (PROD2NAME)!LIB_TGT!lp64
+    BUILD_DIR (ING_BUILD)!LIB_BLD!lp64
+      EXECUTABLE libgeos.$SLSFX
+      EXECUTABLE libgeos_c.$SLSFX
+      EXECUTABLE libproj.$SLSFX
+#endif /* Do nothing if LSB_BUILD */
+#endif /* VMS not supported */

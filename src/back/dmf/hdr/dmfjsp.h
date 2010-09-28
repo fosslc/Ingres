@@ -330,8 +330,14 @@
 **          Added E_DM1415_ALT_MUSTLOG_DISABLED, E_DM1416_ALT_MUSTLOG_ENABLED,
 **          JSX2_ALTDB_DMUSTLOG and JSX2_ALTDB_EMUSTLOG for new alterdb
 **          options -disable_mustlog and -enable_mustlog.
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Define new ATP control blobks for auditdb table info.
 [@history_template@]...
 **/
+
+typedef struct _ATP_TBLHCB	ATP_TBLHCB;
+typedef struct _ATP_TBLCB	ATP_TBLCB;
+typedef struct _ATP_HASH_ENTRY	ATP_HASH_ENTRY;
 
 
 /*
@@ -1138,6 +1144,68 @@ typedef struct _TBLLST_CTX
     char	tbuf[TBLLST_BKZ];
 # define	TBLLST_MAX_TAB	(TBLLST_BKZ / sizeof(DB_TAB_NAME))
 } TBLLST_CTX;
+
+
+/*
+** Name: ATP_TBLCB - auditdb cb holds info on table being audited
+**
+** Description: ATP_TBLCB holds info on table being audited
+**
+** History
+**	16-Jul-2010 (created)
+*/
+struct    _ATP_TBLCB
+{
+    ATP_TBLCB	    *tblcb_q_next;	     /* TBL hash queue for base */
+    ATP_TBLCB	    *tblcb_q_prev;
+    SIZE_TYPE	    tblcb_length;
+    i2		    tblcb_type;
+#define	    ATP_TBL_CB			DM_ATP_TBL_CB
+    i2		    tblcb_s_reserved;
+    PTR		    tblcb_l_reserved;
+    PTR		    tblcb_owner;
+    i4	    tblcb_ascii_id;
+#define	ATP_TBLCB_ASCII_ID		 CV_C_CONST_MACRO('#', 'T', 'B', 'L')
+    DB_TAB_ID	    tblcb_table_id;
+    i2		    tblcb_owner_size;	  /* owner name size */
+    i2		    tblcb_table_size;     /* table name size */
+    DB_OWN_NAME     tblcb_owner_name;	  /* owner name */
+    DB_TAB_NAME     tblcb_table_name;	  /* place holder for table name */
+					  /* only table_size + 1 valid */
+};
+
+/*
+** Name: ATP_TBLHCB - auditdb control block holding information
+**                    on tables being audited.
+**
+** Description:
+**
+**
+** History
+**	16-Jul-2010 (created)
+*/
+struct      _ATP_TBLHCB
+{
+    ATP_TBLCB	    *tblhcb_q_next;	
+    ATP_TBLCB	    *tblhcb_q_prev;
+    SIZE_TYPE	    tblhcb_length;
+    i2		    tblhcb_type;
+#define		ATP_TBLHCB_CB		DM_ATP_TBLHCB_CB
+    i2              tblhcb_s_reserved;         /* Reserved for future use. */
+    PTR             tblhcb_l_reserved;         /* Reserved for future use. */
+    PTR             tblhcb_owner;              /* Owner of control block for
+                                               ** memory manager.  HCB will be
+                                               ** owned by the server. 
+					       */
+    i4         tblhcb_ascii_id;           
+#define  ATP_TBLHCB_ASCII_ID    	CV_C_CONST_MACRO('#', 'A', 'C', 'B')
+    i4	    tblhcb_no_hash_buckets;
+    struct    _ATP_HASH_ENTRY
+    {
+	ATP_TBLCB   *tblhcb_headq_next;
+	ATP_TBLCB   *tblhcb_headq_prev;
+    } tblhcb_hash_array[1];
+};
 
 /* Function prototype definitions. */
 

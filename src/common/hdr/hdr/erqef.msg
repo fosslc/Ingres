@@ -120,6 +120,19 @@ SQLSTATE_MAPPING_REQUIRED
 **	    Add E_QE016C_RENAME_TAB_HAS_OBJS for rename tables.
 **	21-apr-2010 (toumi01) SIR 122403
 *	    Add messages for encryption.
+**	29-jul-2010 (miket) SIR 122403
+**	    E_QE0083_ERROR_MODIFYING_TABLE:SS50000_MISC_ERRORS can
+**	    be caused by user error setting dmf_crypt_maxkeys, so hint
+**	    that the error log would be a good place to look.
+**	04-aug-2010 (miket) SIR 122403
+**	    Change encryption activation terminology from
+**	    enabled/disabled to unlock/locked.
+**	25-aug-2010 (miket) SIR 122403 SD 145781
+**	    Better msg for alter table not valid for encrypted tables.
+**	06-sep-2010 (maspa05) SIR 124363
+**	    Added I_QE3000_LONGRUNNING_QUERY for trace point sc925
+**	07-sep-2010 (maspa05) SIR 124363
+**	    Added I_QE3001_LONGRUNNING_QUERY for trace point sc925
 */
 
 
@@ -390,7 +403,9 @@ E_QE0081_ERROR_OPENING_TABLE:SS50000_MISC_ERRORS
 E_QE0082_ERROR_CLOSING_TABLE:SS50000_MISC_ERRORS
 "Error closing a table."
 E_QE0083_ERROR_MODIFYING_TABLE:SS50000_MISC_ERRORS
-"Error modifying a table."
+"Error modifying a table.
+\n Associated error messages which provide more detailed information about the
+problem can be found in the error log (errlog.log)"
 E_QE0084_ERROR_INDEXING_TABLE:SS50000_MISC_ERRORS
 "Error creating an index for a table."
 E_QE0085_ERROR_SORTING:SS50000_MISC_ERRORS
@@ -1623,12 +1638,14 @@ E_QE0181_RENAME_COL_HAS_OBJS:SS42000_SYN_OR_ACCESS_ERR
 "Rename of column %0c for table %1c owned by %2c, is not permitted as 
 one or more objects eg procedures, views, or non grant compatible permits
 depend on it. Check the error log (errlog.log) for details."
-E_QE0190_ENCRYPTION_DISABLED:SS42000_SYN_OR_ACCESS_ERR
-"Encryption is not enabled for the table."
+E_QE0190_ENCRYPTION_LOCKED:SS42000_SYN_OR_ACCESS_ERR
+"Encryption is locked for the table."
 E_QE0191_RECORD_NOT_ENCRYPTED:SS42000_SYN_OR_ACCESS_ERR
-"An attempt was made to enable encryption for a non-encrypted table."
+"An attempt was made to unlock encryption for a non-encrypted table."
 E_QE0192_PASSPHRASE_FAILED_CRC:SS42000_SYN_OR_ACCESS_ERR
 "The user-specified passphrase was used to decrypt a stored AES key and failed the CRC check. This usually indicates a user error specifying the passphrase."
+E_QE0193_ENCRYPT_NO_ALTER_TABLE:SS42000_SYN_OR_ACCESS_ERR
+"The ALTER TABLE statement is not supported for encrypted tables."
 /*%
 ** Parameters:
 **	%0c - Column name
@@ -3713,6 +3730,50 @@ cause dependent constraints to be abandoned."
 I_QE2038_CONSTRAINT_TAB_IDX_ERR:SS5000B_INTERNAL_ERROR
 "Attempt to perform DDL operations on a table/index which would
 cause dependent constraints to be abandoned."
+I_QE3000_LONGRUNNING_QUERY:SS5000B_INTERNAL_ERROR
+"Long-running query detected (execution took %0d seconds,
+the threshold is %1d seconds)
+User: %2c, Database: %3c"
+/*%
+** Parameters:
+**	%0d - elapsed time of query
+**	%1d - threshold value for long-running query
+**	%2c - user
+**	%3c - database
+**
+** Explanation:
+**	A query exceeded the time threshold set for long-running queries by
+**      trace point sc925
+**
+** System Status:
+**	Informational only
+**
+** Recommendation:
+**	None
+*/
+I_QE3001_LONGRUNNING_QUERY:SS5000B_INTERNAL_ERROR
+"Long-running query detected (execution took %0d seconds,
+the threshold is %1d seconds, ceiling is %2d seconds)
+User: %3c, Database: %4c"
+/*%
+** Parameters:
+**	%0d - elapsed time of query
+**	%1d - threshold value for long-running query
+**	%2d - ceiling value for long-running query
+**	%3c - user
+**	%4c - database
+**
+** Explanation:
+**	A query exceeded the time threshold set for long-running queries by
+**      trace point sc925
+**
+** System Status:
+**	Informational only
+**
+** Recommendation:
+**	None
+*/
+
 E_QE7600_LDB_GENERIC_ERR:SS50000_MISC_ERRORS
 "QEF detected a general failure reported by an LDB."
 E_QE7601_LDB_BAD_SQL_QRY:SS42000_SYN_OR_ACCESS_ERR

@@ -1128,6 +1128,7 @@ rowformat( char *tab_name, char *col_name, bool is_null, bool is_base64, char *d
         case DB_MLINE_TYPE:
         case DB_POLY_TYPE:
         case DB_MPOLY_TYPE:
+        case DB_GEOMC_TYPE:
 	    /* Output as variable length types */
 	    /* Embedded nulls will not print for binary
 	    ** but this wont work for blobs anyway
@@ -1200,6 +1201,7 @@ rowformat( char *tab_name, char *col_name, bool is_null, bool is_base64, char *d
         case DB_MLINE_TYPE:
         case DB_POLY_TYPE:
         case DB_MPOLY_TYPE:
+        case DB_GEOMC_TYPE:
 	    /* Output as variable length types */
 	    /* Embedded nulls will not print for binary
 	    ** but this wont work for blobs anyway

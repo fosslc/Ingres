@@ -102,6 +102,9 @@ $!!             the value to get calculated using the formula in DBMS.CRS.
 $!!	11-Nov-2008 (upake01)
 $!!         SIR 118402 - Skip running "Selective Purge" routine when the command procedure
 $!!             terminates with errors.
+$!!     24-Jun-2010 (horda03) Bug 122555
+$!!             Call check_lglk_mem to ensure Ingres will connect to a
+$!!             new LG/LK shared memory section.
 $!!
 $!  DEST = utility
 $! ------------------------------------------------------------------------
@@ -233,7 +236,7 @@ $ fileext 	 = "_" + f$cvtime() - "-" - "-" - " " - ":" - ":" - "."
 $ config_file 	 = ""
 $ CONFIG_HOST 	 = f$getsyi( "NODENAME" )
 $ ii_system 	 = ""
-$ ii_installation = ""
+$ ii_installation = f$trnlnm("II_INSTALLATION")
 $ num_parts 	 = 0
 $ warnings 	 = 0
 $ have_protect_dat = 0
@@ -377,11 +380,9 @@ $!
 $!   Check if instance is up.
 $!
 $ if test .eq. 0 
-$ then 
-$    rcpstat -online -silent
-$! 
-$    error_condition '$severity'
-$    if iishlib_err .eq. ii_status_ok
+$ then
+$    check_lglk_mem "''ii_installation'"
+$    if iishlib_err .eq. ii_status_warning
 $    then 
 $      error_box -
 	"Ingres must be shutdown before converting to a cluster configuration." -
@@ -400,7 +401,6 @@ $! logging_offline: Logging system is off line
 $!
 $!   Prompt for user confirmation.
 $!
-$ ii_installation = f$trnlnm("II_INSTALLATION")
 $ echo " "
 $ IF (ii_installation_must_exist .eqs. "TRUE")
 $ THEN

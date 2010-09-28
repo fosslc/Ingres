@@ -89,6 +89,10 @@
 **	    Added gcd_combine_qdata() for batch processing support.
 **	13-May-10 (gordy)
 **	    Save RCB for re-use.
+**      17-Aug-2010 (thich01)
+**          Make changes to treat spatial types like LBYTEs or NBR type as BYTE.
+**      30-Aug-2010 (thich01)
+**          Added IIAPI_VERSION_8
 */	
 
 /*
@@ -126,6 +130,7 @@ static struct
     { IIAPI_VERSION_5, 0 },
     { IIAPI_VERSION_6, 0 },
     { IIAPI_VERSION_7, 0 },
+    { IIAPI_VERSION_8, 0 },
 };
 
 
@@ -151,6 +156,8 @@ static struct
 **	    Created.
 **	26-Oct-09 (gordy)
 **	    Added API version 7.
+**	30-Aug-10 (thich01)
+**	    Added API version 8.
 */
 
 STATUS 
@@ -167,6 +174,7 @@ gcd_get_env( u_i2 api_vers, PTR *hndl )
     case IIAPI_VERSION_5 :
     case IIAPI_VERSION_6 :
     case IIAPI_VERSION_7 :
+    case IIAPI_VERSION_8 :
     {
 	u_i2 version = api_vers - 1;
 
@@ -208,6 +216,10 @@ gcd_get_env( u_i2 api_vers, PTR *hndl )
 ** History:
 **	 20-Nov-07 (rajus01) Bug 119505, SD Issue: 122906
 **	    Created.
+**	24-Aug-10 (gordy)
+**	    Add API version 7.
+**	 30-Aug-10 (thich01)
+**	    Added version 7.
 */
 void 
 gcd_rel_env( u_i2 api_vers )
@@ -220,6 +232,8 @@ gcd_rel_env( u_i2 api_vers )
 	case IIAPI_VERSION_4:
 	case IIAPI_VERSION_5:
 	case IIAPI_VERSION_6:
+	case IIAPI_VERSION_7:
+	case IIAPI_VERSION_8:
 	{
 	    u_i2 version = api_vers - 1;
 	    if(  api_env[version].api_envhndl )
@@ -232,7 +246,7 @@ gcd_rel_env( u_i2 api_vers )
 	default:
         {
 	    int i;
-	    for ( i=0; i < IIAPI_VERSION_6; i++ )
+	    for ( i=0; i < IIAPI_VERSION_8; i++ )
 		if( api_env[i].api_envhndl )
 		{
 		    gcd_api_term( api_env[i].api_envhndl );
@@ -1071,12 +1085,29 @@ alloc_qdata( QDATA *qdata, u_i2 max_rows, bool alloc_buffers )
     data = (IIAPI_DATAVALUE *)qdata->data;
 
     for( col = length = seg_len = 0; col < qdata->max_cols; col++ )
-	if ( desc[ col ].ds_dataType == IIAPI_LVCH_TYPE  ||
-	     desc[ col ].ds_dataType == IIAPI_LNVCH_TYPE ||
-	     desc[ col ].ds_dataType == IIAPI_LBYTE_TYPE )
-	    seg_len = max( seg_len, desc[ col ].ds_length );
-	else
-	    length += desc[ col ].ds_length;
+	switch( desc[ col ].ds_dataType)
+	{
+	     case IIAPI_LVCH_TYPE:
+	     case IIAPI_LNVCH_TYPE: 
+	     case IIAPI_LBYTE_TYPE:
+	     case IIAPI_GEOM_TYPE:
+	     case IIAPI_POINT_TYPE:
+	     case IIAPI_MPOINT_TYPE:
+	     case IIAPI_LINE_TYPE:
+	     case IIAPI_MLINE_TYPE:
+	     case IIAPI_POLY_TYPE:
+	     case IIAPI_MPOLY_TYPE:
+	     case IIAPI_GEOMC_TYPE:
+	     {
+		seg_len = max( seg_len, desc[ col ].ds_length );
+		break;
+	     }
+	     default:
+	     {
+		length += desc[ col ].ds_length;
+		break;
+	     }
+	}
 
     if ( (blen = (length * qdata->max_rows)) > qdata->db_max )
     {
@@ -1106,14 +1137,28 @@ alloc_qdata( QDATA *qdata, u_i2 max_rows, bool alloc_buffers )
 
     for( row = dv = length = 0; row < qdata->max_rows; row++ )
 	for( col = 0; col < qdata->max_cols; col++, dv++ )
-	    if ( desc[ col ].ds_dataType == IIAPI_LVCH_TYPE  ||
-		 desc[ col ].ds_dataType == IIAPI_LNVCH_TYPE ||
-		 desc[ col ].ds_dataType == IIAPI_LBYTE_TYPE )
-		    data[ dv ].dv_value = (char *)qdata->blob_buff;
-	    else
+	    switch( desc[ col ].ds_dataType)
 	    {
-		data[ dv ].dv_value = (char *)qdata->data_buff + length;
-		length += desc[ col ].ds_length;
+		 case IIAPI_LVCH_TYPE:
+		 case IIAPI_LNVCH_TYPE:
+		 case IIAPI_LBYTE_TYPE:
+		 case IIAPI_GEOM_TYPE:
+		 case IIAPI_POINT_TYPE:
+		 case IIAPI_MPOINT_TYPE:
+		 case IIAPI_LINE_TYPE:
+		 case IIAPI_MLINE_TYPE:
+		 case IIAPI_POLY_TYPE:
+		 case IIAPI_MPOLY_TYPE:
+		 case IIAPI_GEOMC_TYPE:
+		 {
+		    data[ dv ].dv_value = (char *)qdata->blob_buff;
+		    break;
+		 }
+		 default:
+		 {
+		    data[ dv ].dv_value = (char *)qdata->data_buff + length;
+		    length += desc[ col ].ds_length;
+		 }
 	    }
 
     return( TRUE );

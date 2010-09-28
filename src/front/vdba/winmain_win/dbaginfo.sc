@@ -262,6 +262,9 @@
 **    in the structure to avoid left over garbage in the memory 
 **    be picked up by tables. Primarily this is done to zero out
 **    Ingres Vectorwise storage structure type.
+** 27-Jul-2010 (drivi01)
+**    Add #ifndef NOUSEICEAPI to remove ice code that can be enabled
+**    at any time by enable NOUSEICEAPI from a solution.
 ******************************************************************************/
 
 #include <time.h>
@@ -6810,9 +6813,9 @@ void DBAginfoFree()
   exec sql begin declare section;
     long isession;
   exec sql end declare section;
-
+#ifndef NOUSEICEAPI
 	ICE_C_Terminate();
-
+#endif
   while (staticplldbadata){
     pcur=staticplldbadata->pnext;
     ESL_FreeMem(staticplldbadata);
@@ -6874,9 +6877,9 @@ int DBACloseNodeSessions(UCHAR * lpNodeName,BOOL bAllGWNodes, BOOL bAllUsers) //
   char localstring[MAXOBJECTNAME];
   char localhost[MAXOBJECTNAME];
   BOOL bWantToCloseLocal;
-
+#ifndef NOUSEICEAPI
 	ICE_C_Terminate();
-
+#endif
 	if (bAllGWNodes || bAllUsers ) {
 		lstrcpy(bufNodeWithoutGWandUsr,lpNodeName);
 		if (bAllGWNodes)

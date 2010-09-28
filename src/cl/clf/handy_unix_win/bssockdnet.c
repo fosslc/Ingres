@@ -15,6 +15,7 @@
 # include	<ctype.h>
 # include	<clsigs.h>
 # include	<bsi.h>
+# include	<cv.h>
 
 # ifdef	xCL_006_FCNTL_H_EXISTS
 # include	<fcntl.h>
@@ -105,6 +106,9 @@
 **          Set is_remote to TRUE in BS_PARMS.
 **	4-Dec-2008 (kschendel)
 **	    Declare errno correctly (i.e. via errno.h).
+**      17-jun-2010 (shust01)
+**          Include cv.h header file to resolve CVupper() being undefined.
+**          Bug 123139.
 */
 
 #ifdef	xCL_041_DECNET_EXISTS

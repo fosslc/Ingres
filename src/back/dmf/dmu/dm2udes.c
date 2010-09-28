@@ -505,6 +505,8 @@ GLOBALREF	DMC_CRYPT	*Dmc_crypt;
 **	    iidevices, so don't do it.
 **	09-Jun-2010 (jonj) SIR 121123
 **	    Adapt hash of owner, table_name to long names.
+**	27-Jul-2010 (toumi01) BUG 124133
+**	    Store shm encryption keys by dbid/relid, not just relid! Doh!
 */
 DB_STATUS
 dm2u_destroy(
@@ -994,7 +996,8 @@ DB_ERROR	*dberr)
 		keycount < Dmc_crypt->seg_active ; cp++, keycount++ )
 	{
 	    /* found the entry for this record */
-	    if ( cp->db_tab_base == table_id.db_tab_base )
+	    if ( cp->db_id == dcb->dcb_id &&
+		 cp->db_tab_base == table_id.db_tab_base )
 	    {
 		found_it = TRUE;
 		break;
@@ -1004,7 +1007,8 @@ DB_ERROR	*dberr)
 	{
 	    CSp_semaphore(TRUE, &Dmc_crypt->crypt_sem);
 	    /* if dirty read is verified, delete the entry */
-	    if ( cp->db_tab_base == table_id.db_tab_base )
+	    if ( cp->db_id == dcb->dcb_id &&
+		 cp->db_tab_base == table_id.db_tab_base )
 	    {
 		MEfill(sizeof(DMC_CRYPT_KEY), 0, (PTR)cp);
 		cp->status = DMC_CRYPT_INACTIVE;

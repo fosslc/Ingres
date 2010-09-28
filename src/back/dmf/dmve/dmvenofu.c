@@ -140,6 +140,8 @@
 **	    Replace DMPP_PAGE* with DMP_PINFO* as needed.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
+**          Remove table name,owner from log records.
 **/
 
 
@@ -261,6 +263,7 @@ DMVE_CB		*dmve)
     DMP_PINFO		*pinfo = NULL;
 
     CLRDBERR(&dmve->dmve_error);
+    DMVE_CLEAR_TABINFO_MACRO(dmve);
 
     for (;;)
     {
@@ -344,8 +347,8 @@ DMVE_CB		*dmve)
 		    uleFormat(NULL, E_DM9665_PAGE_OUT_OF_DATE, (CL_ERR_DESC *)NULL,
 			ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
 			&loc_error, 8,
-			sizeof(*tbio->tbio_relid), tbio->tbio_relid,
-			sizeof(*tbio->tbio_relowner), tbio->tbio_relowner,
+			sizeof(DB_TAB_NAME), tbio->tbio_relid->db_tab_name,
+			sizeof(DB_OWN_NAME), tbio->tbio_relowner->db_own_name,
 			0, DMPP_VPT_GET_PAGE_PAGE_MACRO(page_type, data),
 			0, DMPP_VPT_GET_PAGE_STAT_MACRO(page_type, data),
 			0, DMPP_VPT_GET_LOG_ADDR_HIGH_MACRO(page_type, data),
@@ -364,8 +367,8 @@ DMVE_CB		*dmve)
 		uleFormat(NULL, E_DM9665_PAGE_OUT_OF_DATE, (CL_ERR_DESC *)NULL,
 		    ULE_LOG, NULL, (char *)NULL, (i4)0, (i4 *)NULL,
 		    &loc_error, 8,
-		    sizeof(*tbio->tbio_relid), tbio->tbio_relid,
-		    sizeof(*tbio->tbio_relowner), tbio->tbio_relowner,
+		    sizeof(DB_TAB_NAME), tbio->tbio_relid->db_tab_name,
+		    sizeof(DB_OWN_NAME), tbio->tbio_relowner->db_own_name,
 		    0, DMPP_VPT_GET_PAGE_PAGE_MACRO(page_type, data),
 		    0, DMPP_VPT_GET_PAGE_STAT_MACRO(page_type,data),
 		    0, DMPP_VPT_GET_LOG_ADDR_HIGH_MACRO(page_type, data),
@@ -531,8 +534,8 @@ DMP_PINFO           *pinfo)
 	    
 	    status = dm0l_nofull(dmve->dmve_log_id, dm0l_flags, 
 		&log_rec->nofull_tbl_id, 
-		(DB_TAB_NAME*)&log_rec->nofull_vbuf[0], log_rec->nofull_tab_size, 
-		(DB_OWN_NAME*)&log_rec->nofull_vbuf[log_rec->nofull_tab_size], log_rec->nofull_own_size, 
+		tabio->tbio_relid, 0,
+		tabio->tbio_relowner, 0,
 		log_rec->nofull_pg_type, log_rec->nofull_page_size,
 		log_rec->nofull_pageno,
 		log_rec->nofull_cnf_loc_id, log_rec->nofull_loc_cnt, 

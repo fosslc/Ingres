@@ -53,6 +53,9 @@
 **	    Changed to support 64-bit integers.
 **	15-june-2008 (dougi)
 **	    Add support for unordered (random) sequences.
+**	27-Jun-2010 (kschendel) b123986
+**	    Make csequence and parmcheck aware of the fact that pss_object
+**	    is not a PSY_CB during create table with identity columns.
 **/
 
 static u_char dec_mini8[] = {0, 0, 0, 0, 0, 0, 0x92, 0x23, 0x37, 0x20, 0x36,
@@ -69,30 +72,31 @@ static u_char dec_mini8[] = {0, 0, 0, 0, 0, 0, 0x92, 0x23, 0x37, 0x20, 0x36,
 **	parameters).
 **
 ** Inputs:
-**	sess_cb				Pointer to session control block.
-**	    .pss_object			PSY_CB pointer.
+**	sess_cb			Pointer to session control block.
+**	seqp			Pointer to sequence tuple;  might
+**				be either psy_tuple or the sequence
+**				tuple in the yyvars area, depending
+**				on context (create seq vs identity col).
+**	err_blk			To be filled in if error.
 **
 ** Outputs:
-**      psy_cb
-**	    .psy_tuple
-**	       .psy_sequence		Sequence tuple to insert.
-**		  .dbs_name		Name of sequence filled in by the grammar.
-**		  .dbs_type		Sequence data type.
-**		  .dbs_length		Size.
-**		  .dbs_start		Start value.
-**		  .dbs_incr		Increment value.
-**		  .dbs_max		Maximum value.
-**		  .dbs_min		Minimum value.
-**		  .dbs_cache		Cache size.
-**		  .dbs_flag		Various flag values.
-**					Internal fields (create date, unique
-**					sequence and text ids) are filled in just
-**					before storage when the ids are
-**					constructed. 
-**					The owner of the sequence is filled in
-**					this routine from pss_user before
-**					storing.
-**	    .psy_error.err_code		Filled in if an error happens:
+**	seqp			Sequence tuple to insert.
+**	  .dbs_name		Name of sequence filled in by the grammar.
+**	  .dbs_type		Sequence data type.
+**	  .dbs_length		Size.
+**	  .dbs_start		Start value.
+**	  .dbs_incr		Increment value.
+**	  .dbs_max		Maximum value.
+**	  .dbs_min		Minimum value.
+**	  .dbs_cache		Cache size.
+**	  .dbs_flag		Various flag values.
+**				Internal fields (create date, unique
+**				sequence and text ids) are filled in just
+**				before storage when the ids are
+**				constructed. 
+**				The owner of the sequence is filled in
+**				this routine from pss_user before
+**				storing.
 **
 **	Returns:
 **	    E_DB_OK, E_DB_WARN, E_DB_ERROR, E_DB_FATAL
@@ -114,6 +118,9 @@ static u_char dec_mini8[] = {0, 0, 0, 0, 0, 0, 0x92, 0x23, 0x37, 0x20, 0x36,
 **	    negative sequences.
 **	14-feb-2009 (dougi) bug 121657
 **	    Make default max/min consistent with start values.
+**	27-Jun-2010 (kschendel) b123986
+**	    Don't ever reference psy_cb, because there isn't one if
+**	    this is create table with identity columns.
 */
 
 DB_STATUS
@@ -124,15 +131,20 @@ psl_csequence(
 {
     f8			f8temp;
     i4                err_code;
+    i4			seqflag = seqp->dbs_flag;
     DB_STATUS	       status;
-    PSY_CB		*psy_cb;
     PTR			bigerrtok;
     i4			bigerrtoksz;
-    bool			bigerr = FALSE;
-    bool			ascseq;
-    bool			parmerr;
-    char			dec0 = MH_PK_PLUS;
+    bool		bigerr = FALSE;
+    bool		ascseq;
+    bool		parmerr;
+    char		dec0 = MH_PK_PLUS;
 					/* dec(1) constant 0 */
+
+    /* Make sure that the actual tuple won't end up with the temp
+    ** parser flag in it!
+    */
+    seqp->dbs_flag &= ~DBS_DECSEEN;
 
     /* Check for sequence parameters whose values exceed the declared
     ** sequence type.
@@ -143,9 +155,7 @@ psl_csequence(
     ** platforms, since decimal is a constructed type on all.
     */
 
-    psy_cb = (PSY_CB *) cb->pss_object;
-
-    if (seqp->dbs_type == DB_INT_TYPE && psy_cb->psy_seqflag & PSY_DECOPT)
+    if (seqp->dbs_type == DB_INT_TYPE && seqflag & DBS_DECSEEN)
     {
 	/* At least one parm is bigger than a INT8, search for it so
 	** its name can be put in the message. */
@@ -172,8 +182,7 @@ psl_csequence(
 	    bigerrtoksz = sizeof("MINVAL");
 	}
     }
-    else if ((psy_cb->psy_seqflag & (PSY_DECOPT | PSY_DECTYPE)) ||
-		seqp->dbs_type == DB_DEC_TYPE)
+    else if (seqflag & DBS_DECSEEN || seqp->dbs_type == DB_DEC_TYPE)
     {
 	DB_DATA_VALUE minmaxdv;
 	i4	decsize = sizeof(seqp->dbs_start.decval);
@@ -653,6 +662,7 @@ psl_asequence(
     DB_IISEQUENCE     *newseqp;
     PTR			bigerrtok;
     i4			bigerrtoksz;
+    i4			seqflag;
     bool			bigerr = FALSE;
     bool	      ascseq, parmerr;
 
@@ -660,6 +670,11 @@ psl_asequence(
     psy_cb = (PSY_CB *) cb->pss_object;
 
     newseqp = &psy_cb->psy_tuple.psy_sequence;
+    seqflag = newseqp->dbs_flag;
+    /* Make sure that the actual tuple won't end up with the temp
+    ** parser flag in it!
+    */
+    newseqp->dbs_flag &= ~DBS_DECSEEN;
 
     /* Replacement tuple is addr'ed by newseqp. It also contains the 
     ** new values. Now we merge values from old tuple with new. First,
@@ -705,7 +720,7 @@ psl_asequence(
     if (newseqp->dbs_flag & (DBS_RESTART | DBS_INCR | DBS_MAXVAL | 
 	DBS_MINVAL | DBS_NOMAXVAL | DBS_NOMINVAL))
      if (newseqp->dbs_type == DB_INT_TYPE )
-      if (psy_cb->psy_seqflag & PSY_DECOPT)
+      if (seqflag & DBS_DECSEEN)
       {
 	/* At least one parm is bigger than a INT4 (otherwise, DECOPT wouldn't
 	** be set) - search for it so its name can be put in the message. 
@@ -739,7 +754,7 @@ psl_asequence(
 	    bigerrtoksz = sizeof("MINVAL");
 	}
      }
-     else /* DB_INT_TYPE but no PSY_DECOPT */
+     else /* DB_INT_TYPE but no DBS_DECSEEN */
      {
 	/* Integer parameters. */
 	i8	maxival = MAXI8;
@@ -1315,6 +1330,9 @@ psl_asequence(
 **	    Number of parameters (0) missing from psf_error().
 **	2-dec-2008 (dougi) BUG 121302
 **	    Fix syntax error on "start with" option in identity column def.
+**	27-Jun-2010 (kschendel) b123986
+**	    Don't ever reference psy_cb, because there isn't one if
+**	    this is create table with identity columns.
 */
 
 DB_STATUS
@@ -1328,7 +1346,6 @@ psl_seq_parmcheck(
 {
     i4                err_code;
     DB_STATUS	       status;
-    PSY_CB		*psy_cb;
     i8			intval;
     i8			*iparmp;
     PTR			dparmp;
@@ -1345,8 +1362,6 @@ psl_seq_parmcheck(
 	psl_yerror(3, cb, psq_cb);
 	return(E_DB_ERROR);
     }
-
-    psy_cb = (PSY_CB *) cb->pss_object;
 
     /* Set a few locals. */
     switch(flag) {
@@ -1440,7 +1455,7 @@ psl_seq_parmcheck(
 	    MEcopy(dparmp, sizeof(tempdec), &tempdec);
 	    MHpkneg(tempdec, 31, 0, dparmp);
 	}
-	psy_cb->psy_seqflag |= PSY_DECOPT;
+	seqp->dbs_flag |= DBS_DECSEEN;
 				/* flag at least 1 decimal constant */
     }
 

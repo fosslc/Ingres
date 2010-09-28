@@ -1019,6 +1019,9 @@ bool		try_compress)
 **	    Refine/move Jim's hash pointer table fixes from above.
 **	31-Mar-2010 (smeke01 b123516
 **	    Add BCANDIDATE/PCANDIDATE to trace displays.
+**	24-Jun-2010 (smeke01) b123456
+**	    Whenever we set the flag HASH_NOHASHT in hbase->hsh_flags, make
+**	    sure that we also unset the HASH_BUILD_OJS flag.
 */
  
 DB_STATUS
@@ -1057,6 +1060,7 @@ QEN_HASH_BASE	*hbase)
 
     hbase->hsh_firstbr = NULL;		/* Clean out saved state */
     hbase->hsh_nextbr = NULL;
+    hbase->hsh_flags &= ~HASH_BUILD_OJS;
     hbase->hsh_flags |= HASH_NOHASHT;
 
     /* An empty, available-for-use partition buffer includes the immediately
@@ -1743,6 +1747,7 @@ QEN_HASH_BASE	*hbase)
 		*/
 	    }
 
+	    hbase->hsh_flags &= ~HASH_BUILD_OJS;
 	    hbase->hsh_flags |= HASH_NOHASHT;
 	    if (hbase->hsh_flags & HASH_CARTPROD) return(E_DB_OK);
 					/* next part is an "all same"
@@ -3236,6 +3241,8 @@ bool		try_compress)
 **	    Initialise pojset on each loop to avoid erroneous hash join results
 **	22-Dec-08 (kibro01) b121373
 **	    Unset ojmask so we don't get erroneous full outer join results
+**	24-Jun-10 (smeke01) b123968
+**	    Move the initialisation of allojs to the top of the main for-loop.
 */
  
 DB_STATUS
@@ -3346,9 +3353,10 @@ QEN_OJMASK	*ojmask)
 
     recurse = (hlink->hsl_level > 0 &&
 		(hlink->hsl_flags & HSL_BOTH_LOADED) == 0);
-    allojs = FALSE;
     for ( ; ; )
     {
+   	allojs = FALSE;
+
 	/* Before executing the big loop, check if we've just finished 
 	** all the probe1 calls (and subsequent left join calls). If so,
 	** execute logic to flush probe rows which split to partitions not 

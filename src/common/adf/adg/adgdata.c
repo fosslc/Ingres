@@ -122,13 +122,13 @@ GLOBALCONSTDEF struct geom_types_struct geometry_types[] =
 
 GLOBALCONSTDEF GEOM_TYPE geom_type_mapping[] =
 {
-        { -1, 0 }, //Geometry type, not instantiable.
+        { DB_GEOM_TYPE, 0 }, //Geometry type, not instantiable.
         { DB_POINT_TYPE, 1 },
         { DB_LINE_TYPE, 2 },
         { DB_POLY_TYPE, 3 },
         { DB_MPOINT_TYPE, 4 },
         { DB_MLINE_TYPE, 5 },
         { DB_MPOLY_TYPE, 6 },
-        { DB_GEOM_TYPE, 7 }, //GeometryCollection
+        { DB_GEOMC_TYPE, 7 }, //GeometryCollection
         { -1, GEOM_TYPE_UNDEFINED}
 };

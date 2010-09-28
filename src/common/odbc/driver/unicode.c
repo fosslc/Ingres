@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2006 Ingres Corporation
+** Copyright (c) 2010 Ingres Corporation
 */
 
 # if defined(dgi_us5)
@@ -193,6 +193,33 @@
 **     23-Apr-2010 (Ralph Loen) Bug 123629
 **          In SQLBrowseConnectW(), don't invoke ResetDbc() if
 **          bcConnectCalled is set in the connection handle.
+**    13-Aug-2010 (Ralph Loen) Bug 124235
+**          In SQLGetDiagRecW(), SQLGetDiagFieldW(), and SQLGetErrorW(),
+**          replaced ceiling of SQL_MAX_MESSAGE_LENGTH with
+**          the result of ErrGetSqlcaMessageLen().  Unicode conversion
+**          workspaces are not potentially dynamic.
+**     24-Aug-2010 (Ralph Loen) Bug 124300
+**          In ConvertWCharToChar(), allow for two bytes of the length 
+**          indicator for the returned varchar.
+**     25-Aug-2010 (Ralph Loen) Bug 124307
+**          In ConvertWCharToChar(), multiply the length of source
+**          Unicode string by 2 instead of sizeof(SQLWCHAR), since
+**          this equates to 4 on UCS4 systems, but the string has already
+**          been converted to UCS2.
+**     03-Sep-2010 (Ralph Loen) Bug 124348
+**          Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
+**          SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
+**          platforms.
+**     04-Sep-2010 (Ralph Loen) Bug 124348
+**          Provided different version of SQLColAttributeW() based on _WIN64
+**          to match the MS implementation.
+**     08-Sep-2010 (Ralph Loen) Bug 124307
+**          In ConvertCharToWChar, use ConvertUCS2ToUCS4() instead of
+**          copying string elements.  In ConvertUCS2ToUCS4() and
+**          ConvertUCS4ToUCS2(), use an intermediate buffer for copying
+**          string elements.
+**     24-Sep-2010 (thoda04) Bug 124307
+**          In ConvertUCS4ToUCS2(), let casting handle big/little endian.
 */
 
 /*
@@ -231,8 +258,9 @@ RETCODE ConvertCharToWChar(
     RETCODE    rc    = SQL_SUCCESS;
     IIAPI_CONVERTPARM   cv;
     BOOL isUcs4 = (sizeof(SQLWCHAR) == 4 ? TRUE : FALSE);
-    i2 i; 
     i2 *ucs2buf = NULL;
+    i2 nt = 0;
+    i4 nt4 = 0;
 
     if (cbValue == SQL_NTS)              /* if length NTS, get length */
     {
@@ -242,9 +270,13 @@ RETCODE ConvertCharToWChar(
             cbValue = 0;
     }
 
-    if (szValue == NULL  ||  cbValue <= 0)  /* if no input string, return 0 now*/
+    if (szValue == NULL  ||  cbValue <= 0)  /* if no input string, */
+                                            /* return 0 now*/
     {
-        if (rgbWideValue  &&  cbWideValueMax>0)  /* room in buffer for null-term? */
+        /* 
+        ** Room in buffer for null-term? 
+        */
+        if (rgbWideValue  &&  cbWideValueMax>0) 
             *rgbWideValue = 0;
         if (pcbValue)
             *pcbValue = 0;
@@ -334,8 +366,10 @@ RETCODE ConvertCharToWChar(
             return SQL_ERROR;
     }
 
- /* szWideValue -> Unicode string
-    cbWideValue  = Unicode string length in characters */
+    /* 
+    ** szWideValue -> Unicode string
+    ** cbWideValue  = Unicode string length in characters 
+    */
 
     if (pcbValue)   /* if SWORD destination count field present */
        *pcbValue = (SWORD)cbValue;
@@ -356,13 +390,15 @@ RETCODE ConvertCharToWChar(
         {
             if (isUcs4)
             {
-                for (i = 0; i < cbValue; i++)
-                    rgbWideValue[i] = ucs2buf[i]; 
+                ConvertUCS2ToUCS4(ucs2buf, rgbWideValue, cbValue);
+                /* Null terminate. */
+                I4ASSIGN_MACRO(nt4,*(rgbWideValue+cbValue));
             }
             else
+            {
                 memcpy (rgbWideValue, szWideValue, cbWideValue);
-
-            *(rgbWideValue+cbValue)=0;  /* null terminate */
+                *(rgbWideValue+cbValue) = nt;  /* null terminate */
+            }
         }
         else
         {   /* need to truncate some */
@@ -371,13 +407,16 @@ RETCODE ConvertCharToWChar(
                 cbValue = cbWideValueMax - 1;
                 if (isUcs4)
                 {
-                    for (i = 0; i < cbValue; i++)
-                        rgbWideValue[i] = ucs2buf[i]; 
+                    ConvertUCS2ToUCS4(ucs2buf, rgbWideValue, cbValue);
+                    /* Null terminate. */
+                    I4ASSIGN_MACRO(nt4,*(rgbWideValue+cbValue));
                 }
                 else
-                    memcpy (rgbWideValue, szWideValue, cbValue*sizeof(SQLWCHAR));
-
-                *(rgbWideValue + cbValue) = 0;
+                {
+                    memcpy (rgbWideValue, szWideValue, 
+                        cbValue*sizeof(SQLWCHAR));
+                    *(rgbWideValue + cbValue) = nt;
+                }
             }
             rc = SQL_SUCCESS_WITH_INFO;
             if (lpv) 
@@ -399,7 +438,7 @@ RETCODE ConvertCharToWChar(
 **  On entry: lpv          -->DBC or STMT block or NULL for errors.
 **            szWideValue  -->Wide (Unicode) string to convert.
 **            cbWideValue   = length in char of input buffer
-                                 or SQL_NTS if null-terminated.
+**                               or SQL_NTS if null-terminated.
 **            rgbValue     -->where to return null-terminated ANSI string.
 **            cbValueMax    = length of output buffer.
 **            pcbValue      = where to return length (SWORD) of ANSI string
@@ -429,7 +468,7 @@ RETCODE ConvertWCharToChar(
     IIAPI_CONVERTPARM   cv;
     BOOL isUcs4 = (sizeof(SQLWCHAR) == 4 ? TRUE : FALSE);
     u_i2 *ucs2buf = NULL;
-
+ 
     if (cbWideValue == SQL_NTS)              /* if length NTS, get length */
     {
         if (szWideValue)
@@ -440,21 +479,22 @@ RETCODE ConvertWCharToChar(
 
     if (szWideValue == NULL  ||  rgbValue == NULL  ||
         cbWideValue <= 0)  /* if no input string, return 0 now*/
-       {
+    {
         if (rgbValue  &&  cbValueMax>0)  /* room in buffer? */
-           *rgbValue = '\0';
+            *rgbValue = '\0';
         if (pcbValue)
-           *pcbValue = 0;
+            *pcbValue = 0;
         if (pdwValue)
-           *pdwValue = 0;
+            *pdwValue = 0;
         if (plenValue)
-           *plenValue = 0;
+            *plenValue = 0;
         return SQL_SUCCESS;
-       }
+    }
 
     if (isUcs4)
     {
-        ucs2buf = (u_i2 *)MEreqmem(0, ((cbWideValue+1)*sizeof(u_i2)), TRUE, NULL);
+        ucs2buf = (u_i2 *)MEreqmem(0, ((cbWideValue+1)*sizeof(u_i2)), 
+            TRUE, NULL);
         if (ucs2buf == NULL)  /* no memory!? */
         {
             if (lpv)
@@ -468,7 +508,7 @@ RETCODE ConvertWCharToChar(
         ConvertUCS4ToUCS2((u_i4*)szWideValue, (u_i2*)ucs2buf, cbWideValue);
     }
 
-    cbWideValue *= sizeof(SQLWCHAR); 
+    cbWideValue *= sizeof(i2); 
 
     szValue = MEreqmem(0, cbValueMax+2, TRUE, NULL);
 
@@ -483,8 +523,10 @@ RETCODE ConvertWCharToChar(
             return SQL_ERROR;
     }
 
- /* szValue -> target buffer to hold character string
-    cbValue  = target buffer length in bytes */
+    /* 
+    ** szValue -> target buffer to hold character string
+    ** cbValue  = target buffer length in bytes 
+    */
 
     if (cbWideValue)     /* convert the Unicode string to character */
     {
@@ -503,13 +545,13 @@ RETCODE ConvertWCharToChar(
         cv.cv_srcValue.dv_length    = (II_UINT2) cbWideValue;
         cv.cv_dstDesc.ds_dataType   = IIAPI_VCH_TYPE;
         cv.cv_dstDesc.ds_nullable   = FALSE;
-        cv.cv_dstDesc.ds_length     = (II_UINT2)cbValueMax;
+        cv.cv_dstDesc.ds_length     = (II_UINT2)cbValueMax+2;
         cv.cv_dstDesc.ds_precision  = 0;
         cv.cv_dstDesc.ds_scale      = 0;
         cv.cv_dstDesc.ds_columnType = IIAPI_COL_TUPLE;
         cv.cv_dstDesc.ds_columnName = NULL;
         cv.cv_dstValue.dv_null      = FALSE;
-        cv.cv_dstValue.dv_length    = (II_UINT2)cbValueMax;
+        cv.cv_dstValue.dv_length    = (II_UINT2)cbValueMax+2;
         cv.cv_dstValue.dv_value     = szValue;
 
         IIapi_convertData(&cv);  
@@ -536,9 +578,10 @@ RETCODE ConvertWCharToChar(
     cbValue = *(u_i2 *)szValue;
     szData = szValue + sizeof(u_i2);
     
-
- /* szData -> character string
-    cbValue  = character string length in bytes */
+    /* 
+    ** szData -> character string
+    ** cbValue  = character string length in bytes 
+    */
 
     if (pcbValue)   /* if destination count field (SWORD) present */
        *pcbValue = (SWORD)cbValue;
@@ -551,6 +594,7 @@ RETCODE ConvertWCharToChar(
                     /* number of character excluding null-term char*/
 
     if (rgbValue)   /* if destination buffer present */
+    {
         if (cbValue < cbValueMax) /* fits well into the target buffer*/
         {
             memcpy (rgbValue, szData, cbValue);
@@ -559,13 +603,15 @@ RETCODE ConvertWCharToChar(
         else
         {   /* need to truncate some */
             if (cbValueMax > 0)
-               {cbValue = (u_i2)cbValueMax - 1;
+            {
+                cbValue = (u_i2)cbValueMax - 1;
                 memcpy (rgbValue, szData, cbValue);
                 *(rgbValue + cbValue) = '\0';
-               }
+            }
             rc = SQL_SUCCESS_WITH_INFO;
             if (lpv) ErrState (SQL_01004, lpv);
         }
+    }
 
     if (szValue)
         MEfree((PTR)szValue); /* free work area for work string */
@@ -596,7 +642,8 @@ RETCODE ConvertUCS2ToUCS4(
 {
     SQLINTEGER     i;
     u_i4       sizeofSQLWCHAR = sizeof(SQLWCHAR);
-    u_i4       tempui4;
+    u_i2       tmp2;
+    u_i4       tmp4;
 
     if (sizeofSQLWCHAR != 4)  /* return if not needed */
         return SQL_SUCCESS;
@@ -605,11 +652,11 @@ RETCODE ConvertUCS2ToUCS4(
     p4 = p4 + len - 1;    /* and process right to left */
 
     for (i=0; i < len; i++, p2--, p4--)
-        {
- /*      *p4 = *p2;               */
-         tempui4 = *p2;
-         I4ASSIGN_MACRO(tempui4, *p4);
-        }
+    {
+        I2ASSIGN_MACRO(*p2, tmp2);
+        tmp4 = (u_i4)tmp2;
+        I4ASSIGN_MACRO(tmp4, *p4);
+    }
 
     return SQL_SUCCESS;
 }
@@ -635,15 +682,23 @@ RETCODE ConvertUCS4ToUCS2(
 {
     SQLINTEGER     i;
     u_i4       sizeofSQLWCHAR = sizeof(SQLWCHAR);
+    u_i4       tmp4;
+    u_i2       tmp2;
+
+    char *p = (char *)p2;
 
     if (sizeofSQLWCHAR != 4)  /* return if not needed */
         return SQL_SUCCESS;
 
-        /* assume that p2 and p4 point to same buffer */
-        /* and process left to right */
+    /* assume that p2 and p4 point to same buffer */
+    /* and process left to right */
 
     for (i=0; i < len; i++, p2++, p4++)
-        *p2 = (u_i2)(*p4);
+    {
+        I4ASSIGN_MACRO(*p4, tmp4); 
+        tmp2 = (u_i2)tmp4;
+        I2ASSIGN_MACRO(tmp2, *p2);
+    }
 
     return SQL_SUCCESS;
 }
@@ -907,16 +962,25 @@ static SQLRETURN   CatalogFunction(
     return rc;
 }
 
-
-
+#ifdef _WIN64
 SQLRETURN SQL_API SQLColAttributeW(
     SQLHSTMT         hstmt,
     SQLUSMALLINT     ColumnNumber,
     SQLUSMALLINT     FieldIdentifier,
     SQLPOINTER       ValuePtr,
     SQLSMALLINT      BufferLength,       /*   count of bytes */
-    SQLSMALLINT     *StringLengthPtr,    /* ->count of bytes */
+    SQLSMALLINT      *StringLengthPtr,    /* ->count of bytes */
+    SQLLEN           *NumericAttributePtr) 
+#else
+SQLRETURN SQL_API SQLColAttributeW(
+    SQLHSTMT         hstmt,
+    SQLUSMALLINT     ColumnNumber,
+    SQLUSMALLINT     FieldIdentifier,
+    SQLPOINTER       ValuePtr,
+    SQLSMALLINT      BufferLength,       /*   count of bytes */
+    SQLSMALLINT      *StringLengthPtr,    /* ->count of bytes */
     SQLPOINTER       NumericAttributePtr) 
+#endif
 {
     LPSTMT           pstmt = (LPSTMT)hstmt;
     SQLRETURN        rc, rc2;
@@ -1058,7 +1122,7 @@ SQLRETURN SQL_API SQLDescribeColW(
     SQLSMALLINT      cbWideColNameMax,   /*   count of chars */
     SQLSMALLINT     *pcbWideColName,     /* ->count of chars */
     SQLSMALLINT     *pfSqlType,
-    SQLUINTEGER         *pcbColDef,          /* ->ColumnSize in chars; may cause MS KB Q249803*/
+    SQLULEN         *pcbColDef,          /* ->ColumnSize in chars; may cause MS KB Q249803*/
     SQLSMALLINT     *pibScale,
     SQLSMALLINT     *pfNullable)
 {
@@ -1102,49 +1166,76 @@ SQLRETURN SQL_API SQLErrorW(
     SQLRETURN    rc, rc2 = SQL_SUCCESS;
     SQLCHAR      szSqlStateWk    [SQL_SQLSTATE_SIZE+1]="";
     SQLWCHAR     szWideSqlStateWk[SQL_SQLSTATE_SIZE+1]={0};
-    SQLCHAR      szErrorMsgWk[512];
+    SQLCHAR      szErrorMsgWk[SQL_MAX_MESSAGE_LENGTH];
+    char         *szValue = (char *)&szErrorMsgWk[0];
+    WORD         len = SQL_MAX_MESSAGE_LENGTH;
+    LPDBC        pdbc = (LPDBC)hdbc;
+    LPSTMT       pstmt = (LPSTMT)hstmt;
+    SQLCA_TYPE   *psqlca = NULL;
+    BOOL         dynAlloc = FALSE;
+
+    if (!(pdbc && pstmt))
+    {
+        if (pdbc)
+            psqlca = &pdbc->sqlca;
+        else if (pstmt)
+            psqlca = &pstmt->sqlca;
+    }
+
+    if (psqlca)   
+    {
+        len = ErrGetSqlcaMessageLen(1, psqlca);
+
+        if (len > SQL_MAX_MESSAGE_LENGTH - 50)
+        {
+            len += 100;
+            szValue = MEreqmem(0, len, TRUE, NULL);
+            dynAlloc = TRUE;
+        }
+        else
+            len = SQL_MAX_MESSAGE_LENGTH;
+    }
 
     if ((henv  &&  ((LPENV )henv)                       ->isMerant311) ||
         (hdbc  &&  ((LPDBC )hdbc)            ->penvOwner->isMerant311) ||
         (hstmt &&  ((LPSTMT)hstmt)->pdbcOwner->penvOwner->isMerant311))
+    {
                               /* call ASCII entry point if Merant 3.11*/
-        return SQLError_InternalCall(henv, hdbc, hstmt,
-                  (SQLCHAR*)szSqlState, pfNativeError,
-                  (SQLCHAR*)szErrorMsg, cbErrorMsgMax, pcbErrorMsg);
-
-/*
-   {    char s[80]= "cbErrorMsgMax = ";
-        char t[80];
-        itoa((int)cbErrorMsgMax, t, (int)10);
-           strcat(s,t); 
-        MessageBox(NULL, s, "SQLErrorW", MB_ICONSTOP|MB_OK);
+        rc = SQLError_InternalCall(henv, hdbc, hstmt,
+            (SQLCHAR*)szSqlState, pfNativeError,
+            (SQLCHAR*)szErrorMsg, cbErrorMsgMax, pcbErrorMsg);
+        goto end;
     }
-*/
+
     rc = SQLError_InternalCall(henv, hdbc, hstmt,
                   szSqlStateWk, pfNativeError,
-                  szErrorMsgWk, sizeof(szErrorMsgWk), pcbErrorMsg);
+                  szValue, len, pcbErrorMsg);
     if (rc != SQL_SUCCESS  &&  rc != SQL_SUCCESS_WITH_INFO)
-        return rc;
+        goto end;
 
     if (szSqlState)          /* move SQLSTATE back */
-       {
+    {
         rc2 = ConvertCharToWChar(NULL,
-             (CHAR*)szSqlStateWk,    SQL_SQLSTATE_SIZE,     /* source */
-             szWideSqlStateWk,                       /* target */
-             sizeof(szWideSqlStateWk)/sizeof(SQLWCHAR),
-             NULL, NULL, NULL);
+            (CHAR*)szSqlStateWk,    SQL_SQLSTATE_SIZE,     /* source */
+            szWideSqlStateWk,                       /* target */
+            sizeof(szWideSqlStateWk)/sizeof(SQLWCHAR),
+            NULL, NULL, NULL);
         memcpy(szSqlState, szWideSqlStateWk, SQL_SQLSTATE_SIZE*sizeof(SQLWCHAR));
-       }
+    }
 
     if (rc2 == SQL_SUCCESS)
         rc2 = ConvertCharToWChar(NULL,   /* move Error Message Text back */
-            (CHAR*)szErrorMsgWk,    SQL_NTS     ,  /* source */
+            (CHAR*)szValue,    SQL_NTS     ,  /* source */
             szErrorMsg,      cbErrorMsgMax,        /* target */
             pcbErrorMsg, NULL, NULL);
 
     if (rc == SQL_SUCCESS)   /* upgrade the msg level */
         rc =  rc2;
 
+end:
+    if (dynAlloc)
+        MEfree((PTR)szValue);
+    
     return rc;
 }
 
@@ -1476,7 +1567,7 @@ SQLRETURN SQL_API SQLGetDescRecW(
     SQLSMALLINT     *pcbWideColName,   /* ->count of chars */
     SQLSMALLINT     *pfType,
     SQLSMALLINT     *pfSubType,
-    SQLINTEGER          *pLength,
+    SQLLEN          *pLength,
     SQLSMALLINT     *pPrecision, 
     SQLSMALLINT     *pScale,
     SQLSMALLINT     *pNullable)
@@ -1524,15 +1615,57 @@ SQLRETURN SQL_API SQLGetDiagFieldW(
     SQLPOINTER       rgbDiagInfoOrig   = rgbDiagInfo;
     SQLSMALLINT      cbDiagInfoMaxOrig = cbDiagInfoMax;
     short            bNeedConversion=FALSE;
-    char             DescWk[512];
+    char             DescWk[SQL_MAX_MESSAGE_LENGTH];
+    char         *szValue = &DescWk[0];
+    WORD         len = SQL_MAX_MESSAGE_LENGTH;
+    LPDBC        pdbc;
+    LPSTMT       pstmt;
+    LPDESC       pdesc;
+    SQLCA_TYPE *psqlca = NULL;
+    BOOL         dynAlloc = FALSE;
+
+    switch (fHandleType)
+    {
+    case SQL_HANDLE_DBC:
+        pdbc = (LPDBC)handle;
+        psqlca = &pdbc->sqlca;
+        break;
+
+    case SQL_HANDLE_STMT:
+        pstmt = (LPSTMT)handle;
+        psqlca = &pstmt->sqlca;
+        break;
+
+    case SQL_HANDLE_DESC:
+        pdesc = (LPDESC)handle;
+        psqlca = &pdesc->sqlca;
+        break;
+    }
+
+    if (psqlca)
+    {
+        len = ErrGetSqlcaMessageLen(iRecord, psqlca);
+
+        if (len > SQL_MAX_MESSAGE_LENGTH - 50)
+        {
+            len += 100;
+            szValue = MEreqmem(0, len, TRUE, NULL);
+            dynAlloc = TRUE;
+        }
+        else
+            len = SQL_MAX_MESSAGE_LENGTH;
+    }
 
     if ((fHandleType==SQL_HANDLE_ENV  &&  ((LPENV )handle)                      ->isMerant311) ||
         (fHandleType==SQL_HANDLE_DBC  &&  ((LPDBC )handle)           ->penvOwner->isMerant311) ||
         (fHandleType==SQL_HANDLE_STMT &&  ((LPSTMT)handle)->pdbcOwner->penvOwner->isMerant311) ||
         (fHandleType==SQL_HANDLE_DESC &&  ((LPDESC)handle)     ->pdbc->penvOwner->isMerant311))
-                              /* call ASCII entry point if Merant 3.11*/
-        return SQLGetDiagField_InternalCall(fHandleType, handle, iRecord, fDiagField,
-                         rgbDiagInfo, cbDiagInfoMax, pcbDiagInfo);
+    {
+        /* call ASCII entry point if Merant 3.11*/
+        rc = SQLGetDiagField_InternalCall(fHandleType, handle, iRecord, fDiagField,
+            rgbDiagInfo, cbDiagInfoMax, pcbDiagInfo);
+        goto end;
+    }
 
     if (fDiagField == SQL_DIAG_DYNAMIC_FUNCTION ||
         fDiagField == SQL_DIAG_CLASS_ORIGIN     ||
@@ -1541,20 +1674,20 @@ SQLRETURN SQL_API SQLGetDiagFieldW(
         fDiagField == SQL_DIAG_SERVER_NAME      ||
         fDiagField == SQL_DIAG_SQLSTATE         ||
         fDiagField == SQL_DIAG_SUBCLASS_ORIGIN)
-           {
+        {
             bNeedConversion=TRUE;
-            rgbDiagInfo   = DescWk;
-            cbDiagInfoMax = sizeof(DescWk);
-           }
+            rgbDiagInfo   = szValue;
+            cbDiagInfoMax = len;
+        }
 
     rc = SQLGetDiagField_InternalCall(fHandleType, handle, iRecord, fDiagField,
-                         rgbDiagInfo, cbDiagInfoMax, pcbDiagInfo);
+        rgbDiagInfo, cbDiagInfoMax, pcbDiagInfo);
 
     if (rc != SQL_SUCCESS  &&  rc != SQL_SUCCESS_WITH_INFO)
-        return rc;
+        goto end;
 
     if (bNeedConversion==FALSE)  /* if not a name, we're all done */
-        return rc;
+        goto end;
 
     rc2 = ConvertCharToWChar(NULL,    /* move name back as wide (Unicode)*/
                          rgbDiagInfo,   SQL_NTS,             /* source */
@@ -1567,7 +1700,10 @@ SQLRETURN SQL_API SQLGetDiagFieldW(
     if (pcbDiagInfo && (rc == SQL_SUCCESS  ||  rc == SQL_SUCCESS_WITH_INFO))
        *pcbDiagInfo = (SQLSMALLINT)(*pcbDiagInfo * sizeof(SQLWCHAR));
                              /* return length as byte length */
-
+end:
+    if (dynAlloc)
+        MEfree((PTR)szValue);
+    
     return rc;
 }
 
@@ -1585,46 +1721,89 @@ SQLRETURN SQL_API SQLGetDiagRecW(
     SQLRETURN    rc, rc2 = SQL_SUCCESS;
     char         szSqlStateWk    [SQL_SQLSTATE_SIZE+1]="";
     SQLWCHAR     szWideSqlStateWk[SQL_SQLSTATE_SIZE+1]={0};
-    char         szErrorMsgWk[512];
+    char         szErrorMsgWk[SQL_MAX_MESSAGE_LENGTH];
+    char         *szValue = &szErrorMsgWk[0];
+    WORD         len = SQL_MAX_MESSAGE_LENGTH;
+    LPDBC        pdbc;
+    LPSTMT       pstmt;
+    LPDESC       pdesc;
+    SQLCA_TYPE *psqlca = NULL;
+    BOOL         dynAlloc = FALSE;
 
+    switch (fHandleType)
+    {
+    case SQL_HANDLE_DBC:
+        pdbc = (LPDBC)handle;
+        psqlca = &pdbc->sqlca;
+        break;
+
+    case SQL_HANDLE_STMT:
+        pstmt = (LPSTMT)handle;
+        psqlca = &pstmt->sqlca;
+        break;
+
+    case SQL_HANDLE_DESC:
+        pdesc = (LPDESC)handle;
+        psqlca = &pdesc->sqlca;
+        break;
+    }
+
+    if (psqlca)
+    {
+        len = ErrGetSqlcaMessageLen(iRecord, psqlca);
+
+        if (len > SQL_MAX_MESSAGE_LENGTH - 50)
+        {
+            len += 100;
+            szValue = MEreqmem(0, len, TRUE, NULL);
+            dynAlloc = TRUE;
+        }
+        else
+            len = SQL_MAX_MESSAGE_LENGTH;
+    }
+    
     if ((fHandleType==SQL_HANDLE_ENV  &&  ((LPENV )handle)                      ->isMerant311) ||
         (fHandleType==SQL_HANDLE_DBC  &&  ((LPDBC )handle)           ->penvOwner->isMerant311) ||
         (fHandleType==SQL_HANDLE_STMT &&  ((LPSTMT)handle)->pdbcOwner->penvOwner->isMerant311) ||
         (fHandleType==SQL_HANDLE_DESC &&  ((LPDESC)handle)     ->pdbc->penvOwner->isMerant311))
+    {
                               /* call ASCII entry point if Merant 3.11*/
-        return SQLGetDiagRec_InternalCall(fHandleType, handle, iRecord,
+        rc = SQLGetDiagRec_InternalCall(fHandleType, handle, iRecord,
                        (SQLCHAR*)szSqlState, pfNativeError,
-                       (SQLCHAR*)szErrorMsg, cbErrorMsgMax, pcbErrorMsg);
+                       (SQLCHAR*)szValue, cbErrorMsgMax, pcbErrorMsg);
+        goto end;
+    }
 
     rc = SQLGetDiagRec_InternalCall(fHandleType, handle, iRecord,
-                       (SQLCHAR*)szSqlStateWk, pfNativeError,
-                       (SQLCHAR*)szErrorMsgWk, sizeof(szErrorMsgWk), pcbErrorMsg);
+        (SQLCHAR*)szSqlStateWk, pfNativeError,
+        (SQLCHAR*)szValue, len, pcbErrorMsg);
     if (rc != SQL_SUCCESS  &&  rc != SQL_SUCCESS_WITH_INFO)
-        return rc;
+        goto end;
 
     if (szSqlState)          /* move SQLSTATE back */
-       {
+    {
         rc2 = ConvertCharToWChar(NULL,
-             szSqlStateWk,    sizeof(szSqlStateWk),                      /* source */
-             szWideSqlStateWk,sizeof(szWideSqlStateWk)/sizeof(SQLWCHAR), /* target */
-             NULL, NULL, NULL);
+            szSqlStateWk,    sizeof(szSqlStateWk),                      /* source */
+            szWideSqlStateWk,sizeof(szWideSqlStateWk)/sizeof(SQLWCHAR), /* target */
+            NULL, NULL, NULL);
         if (SQL_SUCCEEDED(rc2))
             memcpy(szSqlState, szWideSqlStateWk, (SQL_SQLSTATE_SIZE+1)*sizeof(SQLWCHAR));
-       }
+    }
 
     if (SQL_SUCCEEDED(rc2))
         rc2 = ConvertCharToWChar(NULL,   /* move Error Message Text back */
-         szErrorMsgWk,    SQL_NTS     ,  /* source */
-         szErrorMsg,      cbErrorMsgMax, /* target */
-         pcbErrorMsg, NULL, NULL);
+            szValue,    SQL_NTS     ,  /* source */
+            szErrorMsg,      cbErrorMsgMax, /* target */
+            pcbErrorMsg, NULL, NULL);
 
     if (rc2 != SQL_SUCCESS)   /* upgrade the msg level */
         rc =  rc2;
-
+    
+end:
+    if (dynAlloc)
+        MEfree((PTR)szValue);
     return rc;
 }
-
-
 
 #endif
 
@@ -1829,7 +2008,7 @@ SQLRETURN SQL_API SQLGetTypeInfoW(
 SQLRETURN SQL_API SQLSetConnectOptionW(
     SQLHDBC          hdbc,
     SQLUSMALLINT     fOption,
-    SQLUINTEGER          vParam)
+    SQLULEN          vParam)
 {
     SQLINTEGER StringLength = SQL_NTS;
 
