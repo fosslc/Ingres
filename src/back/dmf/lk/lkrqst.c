@@ -2154,6 +2154,10 @@ CL_ERR_DESC         *sys_err)
 **	    looking for implicit conversions.
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Keep stats by lock type.
+**      28-Sep-2010 (horda03)
+**          The wrong value (LK_NOINTERRUPT) was being used to check for a
+**          lock list that was not interruptable, this could allow lock
+**          requests to be interrupted that shouldn't be (and vice versa).
 */
 static STATUS
 LK_request(
@@ -3035,7 +3039,7 @@ CL_ERR_DESC	    *sys_err)
 		    status = LK_LOG_LOCK;
 	    }
 
-	    if ( status == LK_OK && llb->llb_status & LK_NOINTERRUPT )
+	    if ( status == LK_OK && llb->llb_status & LLB_NOINTERRUPT )
 	        status = LK_NOINTRWAIT;
 	    else if ( status == LK_GRANTED && intend_to_covering && flags & LK_STATUS )
 	        status = LK_COV_LOCK;
