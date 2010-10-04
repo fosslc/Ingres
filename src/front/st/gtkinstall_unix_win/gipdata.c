@@ -116,6 +116,9 @@
 **	25-May-2010 (hanje04)
 **	    SIR 123791
 **	    Correct typo in ivw_block_size. Unit should be VWKB not VWMB.
+**      27-Sep-2010 (hanje04)
+**          BUG 124480
+**          Add support for 32bit package.
 */
 
 
@@ -892,6 +895,7 @@ static package pkg_sup32 = {
 		PKG_CORE,
 		"Ingres 32bit Support",
 		"32bit",
+		II_COMPONENT_32BIT,
 		TRUE };
 static package pkg_lgpl = {
 		PKG_LGPL,

@@ -19,6 +19,8 @@
 **	    replace nat and longnat with i4
 **	08-Sep-2010 (rajus01) SD issue 146492, Bug 124381
 **	    Add LIB32 and LIB64.
+**      30-sep-2010 (joea)
+**          Wrap above change with an #ifndef VMS.
 */
 
 # include <compat.h>
@@ -110,10 +112,12 @@ static STATUS get_nm_symbol( char *dirname, i4  *symbol )
         *symbol = BIN;
     else  if ( ! STbcompare( dirname, 0, "lib", 0, TRUE ) )
         *symbol = LIB;
+#ifndef VMS
     else  if ( ! STbcompare( dirname, 0, "lib32", 0, TRUE ) )
         *symbol = LIB32;
     else  if ( ! STbcompare( dirname, 0, "lib64", 0, TRUE ) )
         *symbol = LIB64;
+#endif
     else  if ( ! STbcompare( dirname, 0, "files", 0, TRUE ) )
         *symbol = FILES;
     else

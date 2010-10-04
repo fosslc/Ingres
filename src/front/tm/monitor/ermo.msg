@@ -389,3 +389,4 @@ E_MO0071_STAR_not_supported "QUEL is not supported in this release of distribute
 ** User Action:
 **	The user must use SQL to perform queries on a STAR database.
 */
+E_MO0072_Both_Dayfile_options "The -d and +d to disable and enable the dayfile are mutually exclusive.\n"

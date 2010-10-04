@@ -89,10 +89,12 @@
 **	    added new reserved words:  endfor, endrepeat, leave, result, row
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**    26-Aug-2010 (thaju02) B123865
+**        Add reserved word: grouping
 */
 
 
-# define	SRWL_CNT			151
+# define	SRWL_CNT			152
 # define	SRWL_NEXT_PRIME		157
 # define	SRWL_MAX_LGTH		19
 								/*
@@ -347,6 +349,10 @@
 		},
 		{
 			ERx("group"),
+			ERx(UI_LEVEL_NONE)
+		},
+		{
+			ERx("grouping"),
 			ERx(UI_LEVEL_NONE)
 		},
 		{

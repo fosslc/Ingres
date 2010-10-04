@@ -1456,6 +1456,8 @@
 #           Correct _IIAWK action on VMS: need to quote uppercase params.
 #	31-Aug-2010 (troal01)
 #	    Added IIGeoLibs rule
+#	01-Oct-2010 (bonro01)
+#	    Fix Windows build problems using cygwin
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -1894,7 +1896,7 @@ rule IIBFILES
 { 
     if $(NT)
     {
-        IIBULKCOPY $(ING_BUILD)/$(<) : $(>) ;
+        IIBULKCOPY $(ING_BUILD)$(SLASH)$(<) : $(>) ;
     }
     else
     {    
@@ -9577,6 +9579,15 @@ if $(VMS)
 	$(CHMOD) $(FILEMODE) $(<)
     }
 }
+else if $(NT)
+{
+    actions _COLDATA
+    {
+	set II_CONFIG=$(ING_BUILD)$(SLASH)files 
+	aducompile $(>) $(<:D=) $(ADUCOMPFLAGS:D=)
+	$(CHMOD) $(FILEMODE) $(<)
+    }
+}
 else
 {
     actions _COLDATA
@@ -10568,7 +10579,7 @@ actions piecemeal quietly ShellNT
 actions _IIRCTORES bind RCHDR 
 {
     $(CD) $(<:D)
-    rm $(>:S=.res) 
+    $(RM) $(>:S=.res) 
     rc $(RCFLAGS) $(RCHDR) $(>)
     $(TOUCH) $(>) 
 }
