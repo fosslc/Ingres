@@ -291,6 +291,8 @@
 **          Replace READONLY/WSCREADONLY by const.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      15-Sep-2010 (thaju02) B124344
+**          Directory may contain spaces. Created qea_findpathlen().
 **/
 
 /*
@@ -373,6 +375,11 @@ DB_DB_NAME              *dbname,
 DMM_LOC_LIST            **loc_list,
 i4                 *ext_countp
 );
+
+i4
+qea_findpathlen(
+char		*parm,
+i4		len);
 
 
 /*{
@@ -1126,6 +1133,45 @@ i4	    len )
 }
 
 /*{
+** Name: QEA_FINDPATHLEN - determine path length
+**
+** Description:
+**      this routine scans the input parameter character string 
+**	backwards looking for the first non-whitespace character. 
+**	The return value is not to exceed the original length of 
+**	the input parameter.
+**
+** Inputs:
+**      parm	pointer to a char string parameter
+**      len	max size (bytes) of char string in parm
+**
+** Outputs: none
+**
+** Returns:
+**	number of non-white characters in parm
+**
+** History:
+**      15-Sep-2010 (thaju02) B124344
+**	    Created.
+*/
+i4
+qea_findpathlen(
+char  *parm,
+i4    len)
+{
+    char    *x = parm + len;
+    i4      i;
+
+    for(i = len; i >= 0; i--)
+    {
+	CMprev(x, parm);
+        if (!CMwhite(x))
+   	    return (i);
+    }
+    return (len);
+}
+
+/*{
 ** Name: QEA_0LIST_FILE	- implement iiQEF_listfile Internal Procedure
 **
 ** Description:
@@ -1204,6 +1250,8 @@ i4	    len )
 ** History:
 **      14-apr-1989  (teg)
 **	    Initial Creation.
+**      15-Sep-2010 (thaju02) B124344
+**          Directory may contain spaces. Use qea_findpathlen().
 [@history_template@]...
 */
 DB_STATUS
@@ -1237,7 +1285,7 @@ QEE_DSH			*dsh )
     STRUCT_ASSIGN_MACRO(db_parm[0].dbp_dbv, row_dbv);
     dmm_cb.dmm_db_location.data_address  =
 	    (char *) dsh->dsh_row[db_parm[0].dbp_rowno] + db_parm[0].dbp_offset;
-    real_length = qea_findlen( (char *)dmm_cb.dmm_db_location.data_address,
+    real_length = qea_findpathlen( (char *)dmm_cb.dmm_db_location.data_address,
 				row_dbv.db_length);
     dmm_cb.dmm_db_location.data_in_size  = real_length;
     dmm_cb.dmm_db_location.data_out_size = real_length;
@@ -1349,6 +1397,8 @@ QEE_DSH			*dsh )
 ** History:
 **      14-apr-1989  (teg)
 **	    Initial Creation.
+**      15-Sep-2010 (thaju02) B124344
+**          Directory may contain spaces. Use qea_findpathlen().
 [@history_template@]...
 */
 DB_STATUS
@@ -1379,7 +1429,7 @@ QEE_DSH			*dsh )
     STRUCT_ASSIGN_MACRO(db_parm[0].dbp_dbv, row_dbv);
     dmm_cb.dmm_db_location.data_address  =
 	    (char *) dsh->dsh_row[db_parm[0].dbp_rowno] + db_parm[0].dbp_offset;
-    real_length = qea_findlen( (char *)dmm_cb.dmm_db_location.data_address,
+    real_length = qea_findpathlen( (char *)dmm_cb.dmm_db_location.data_address,
 				row_dbv.db_length);    
     dmm_cb.dmm_db_location.data_in_size  = real_length;
     dmm_cb.dmm_db_location.data_out_size = real_length;
