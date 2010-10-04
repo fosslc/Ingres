@@ -428,6 +428,10 @@
 **     08-Sep-2010 (Ralph Loen) Bug 124307
 **          Use new PutTinyInt() function for coercing datatypes into
 **          SQL_BIT and SQL_TINYINT.
+**     01-Oct-2010 (Ralph Loen) Bug 124517
+**          In PutParm(), use tinyValue buffer for SQL_C_UTINYINT.  Group
+**          treatment of SQL_C_STINYINT with SQL_C_TINYINT instead of
+**          SQL_C_UTINYINT.
 */
 
 /*
@@ -2379,7 +2383,8 @@ static RETCODE PutParm(
 
         case SQL_C_UTINYINT:
 
-            uintValue = *(UCHAR*)rgbValue;
+            tinyValue = *(UCHAR*)rgbValue;
+            uintValue = (SQLUINTEGER)tinyValue;
             break;
 
         case SQL_C_SBIGINT:
@@ -3100,10 +3105,9 @@ numStrCvtError:
         MEfree(workBuff);
         break;
     }
-    case SQL_C_UTINYINT:
-    case SQL_C_STINYINT:
     case SQL_C_USHORT:
     case SQL_C_ULONG:
+    case SQL_C_UTINYINT:
 
         switch (fSqlType)
         {
@@ -3162,6 +3166,7 @@ numStrCvtError:
 
     case SQL_C_BIT:
     case SQL_C_TINYINT:
+    case SQL_C_STINYINT:
     case SQL_C_SHORT:
     case SQL_C_SSHORT:
     case SQL_C_LONG:
