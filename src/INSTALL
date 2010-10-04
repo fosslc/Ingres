@@ -91,18 +91,18 @@
   and testing:
 
 	ingres_source
-	|-- INSTALL	this file
-	|-- README	general introduction
-	|-- TESTING	acceptance testing directions
-	...
 	|-- Kerberos5/	Kerberos headers
 	|-- build/	output of Ingres build process
 	|-- install/	bootstrap partial install for build process
 	|-- pax/	special Portable Archive Interchange for Ingres
 	|-- release/	staging area for Ingres install media
 	|-- src/	Ingres source tree
+	...
+	|-- src/INSTALL	this file
+	|-- src/README	general introduction
+	|-- src/tst/	Ingres test tool source and test scripts
+	|-- src/tst/suites/doc/TESTING	acceptance testing directions
 	|-- tools/	Ingres test tool executables
-	|-- tst/	Ingres test tool source and test scripts
 	|-- tstinst/	Ingres full installation for acceptance testing
 	`-- xerces-c-src_2_7_0/  Xerces C headers and library
 
@@ -281,6 +281,13 @@
   II_MANIFEST_DIR  location of Ingres component inventories
   TERM_INGRES	terminal setting for Ingres front end tools such as ABF
 
+  The ING_TST variable is meant to point to the Ingres testing files if
+  they are available.  The Ingres source tar does not contain these test
+  files under the src/tst directory, but the test files can be downloaded
+  via subversion from http://code.ingres.com/ingres/main/src/tst
+  The test files are not required to build Ingres, but can be useful to
+  test the valid operation of Ingres after it is built.
+
   Note that the PATH and CDPATH settings are also modified for the build
   process.
 
@@ -417,13 +424,15 @@
   --------------
 
   The open source Ingres tree contains a limited set of acceptance tests
-  to verify the integrity of your Ingres build.  For this automated
-  testing the Ingres installation should be located in $ING_ROOT/tstinst.
-  Use the above Ingres runtime environment setup script as an example
-  for preparing for testing.  The example assumes that ING_ROOT is
-  /home/ingres/ingres2006; modify this as needed based on the location of
+  to verify the integrity of your Ingres build. These test can be downloaded 
+  via subversion from http://code.ingres.com/ingres/main/src/tst
+  For this automated testing the Ingres installation should be located in 
+  $ING_ROOT/tstinst.  Use the above Ingres runtime environment setup script
+  as an example for preparing for testing.  The example assumes that ING_ROOT
+  is /home/ingres/ingres2006; modify this as needed based on the location of
   your Ingres build area.
 
   For further information about the acceptance tests please see the file
-  named TESTING.
+  named TESTING.  The TESTING file can be found in subversion here:
+  http://code.ingres.com/ingres/main/src/tst/suites/doc/TESTING
 

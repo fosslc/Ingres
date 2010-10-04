@@ -1014,6 +1014,8 @@ i4	typ;
 **			Enabled -P flag to be used as -P<user-password> in the command line.
 **			Also to accept -R<rolename/Role-password> in the command line. 
 **			It does not prompt for passwords if provided in command line.
+**               4-Oct-2010 (hanal04) Bug 124532
+**                      Add +d option in-line with documentation.
 */
 
 
@@ -1031,6 +1033,7 @@ register char	**argv;
 	char		*with_ptr;
 	char		*cp;
 	bool		passwd_flag = FALSE;
+        bool		day_flag = FALSE;
 
 	static char	vdelim_str[2]="|";
 
@@ -1071,6 +1074,15 @@ register char	**argv;
 			break;
 
 		    case 'd':
+                        if(day_flag)
+                        {
+                            IIUGerr(E_MO0072_Both_Dayfile_options, 
+                                    UG_ERR_FATAL, 0);
+                        }
+                        else
+                        {
+                            day_flag = TRUE;
+                        }
 			Nodayfile = 1;
 			break;
 
@@ -1248,6 +1260,19 @@ register char	**argv;
 			/* set up WITH clause for CONNECT */
 			with_ptr = STalloc(*argv + 2);
 			IIUIswc_SetWithClause(with_ptr);
+			break;
+
+		    case 'd':
+                        if(day_flag)
+                        {
+                            IIUGerr(E_MO0072_Both_Dayfile_options, 
+                                    UG_ERR_FATAL, 0);
+                        }
+                        else
+                        {
+                            day_flag = TRUE;
+                        }
+			Nodayfile = 0;
 			break;
 
                     case 's':

@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004 Ingres Corporation
+** Copyright (c) 2010 Ingres Corporation
 */
 
 /*
@@ -56,6 +56,8 @@
 **         Added E_GC1027_GCF_MECH_DISABLED and E_GC1028_GCF_MECH_UNSUPPORTED.
 **	28-Mar-08 (rajus01) SD issue 126704, Bug 120136
 **	    Added E_GC1029_GCS_PASSWORD_LEN.
+**	08-Sep-10 (rajus01) SD issue 146492, Bug 124381
+**	    For hybrid platforms define the GCS_CNF_PATH accordingly.
 */
 
 #ifndef _GCS_H_INCLUDED_
@@ -123,7 +125,15 @@ typedef struct
 #define	GCS_CNF_RSTRCT_SRV_AUTH	"%s.%s.gcf.restrict_srv_auth"	/* true/false */
 #define	GCS_CNF_REM_MECH	"%s.%s.gcf.remote_mechanism"	/* mech name */
 #define	GCS_CNF_RSTRCT_REM_AUTH	"%s.%s.gcf.restrict_rem_auth"	/* true/false */
+# if defined(conf_BUILD_ARCH_32_64) && defined (BUILD_ARCH32)
+#define GCS_CNF_PATH		"%s.%s.gcf.mechanism_location_lp32"	/* directory */
+# else
+# if defined(conf_BUILD_ARCH_32_64) && defined (BUILD_ARCH64)
+#define GCS_CNF_PATH		"%s.%s.gcf.mechanism_location_lp64" /* directory */
+# else
 #define GCS_CNF_PATH		"%s.%s.gcf.mechanism_location"	/* directory */
+# endif
+# endif
 #define GCS_CNF_LOAD		"%s.%s.gcf.mechanisms"		/* mech list */
 #define GCS_CNF_SRV_LOAD	"!.mechanisms"			/* mech list */
 #define GCS_CNF_MECH_ENABLED	"%s.%s.gcf.mech.%s.enabled"	/* true,false */

@@ -1107,6 +1107,13 @@ i4                 *adi_rlen;
 **	9-aug-2010 (stephenb)
 **	    ANSI time/timestamp types also have a precision that needs to be upheld.
 **	    (Bug 124210)
+**	13-Sep-2010 (kiria01) b124438
+**	    Allow ADI_LEN_INDIRECT with constant length specifiers to override
+**	    ADE_LEN_UNKNOWN thus avoiding such functions from propagating VLTs
+**	    unnecessarily.
+**	20-Sep-2010 (kiria01) b124438
+**	    Slight correction to last change to handle minimum char size
+**	    correctly.
 */
 
 # ifdef ADF_BUILD_WITH_PROTOS
@@ -2494,12 +2501,6 @@ DB_DATA_VALUE      *adi_dvr;
 		    (i4 *) &adi_lenspec->adi_lncompute));
     }				    /* end of switch statement */
 
-    adi_dvr->db_prec = rprec;
-    adi_dvr->db_length = rlen;
-    
-    if (rlen == ADE_LEN_UNKNOWN)
-	return (adu_error(adf_scb, E_AD2022_UNKNOWN_LEN, 0));
-
     /* 
     ** If these are string function with 2 arguments than we want
     ** to use the second argument as the result length
@@ -2559,10 +2560,17 @@ DB_DATA_VALUE      *adi_dvr;
 		nullen++;
 	    /* Use the second argument if the length is valid or
 	    ** otherwise use minlen */
-	    adi_dvr->db_length = rlen >= minlen+nullen ? rlen : minlen;
+	    if (rlen < minlen + nullen)
+		rlen = minlen;
 	}
     }
 	
+    adi_dvr->db_prec = rprec;
+    adi_dvr->db_length = rlen;
+    
+    if (rlen == ADE_LEN_UNKNOWN)
+	return (adu_error(adf_scb, E_AD2022_UNKNOWN_LEN, 0));
+
     /*
     ** b116215:
     ** we now inherit collation specification if:

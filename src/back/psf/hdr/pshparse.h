@@ -561,6 +561,8 @@
 **	    Add pst-not-bool proto.
 **	20-Jul-2010 (kschendel) SIR 124104
 **	    Pass with-clauses to psl-ct1-create-table.
+**	2-Sep-2010 (kschendel) b124347
+**	    Add trace point PS152 to trace some cache-dynamic decisions.
 */
 
 /*
@@ -604,6 +606,8 @@
 **				set trace point ps150
 **			    y voila!
 **    N	    23 (ps151)	-   enable 6.4 ambiguous replace semantics
+**    N	    24 (ps152)  -   Trace a few cache_dynamic things like whether a
+**			    cached QP was used or rejected.
 **    N	    47 (ps175)	-   print out info in PSS_CONS list of constraints
 **    N	    48 (ps176)	-   causes "dummy" NOT NULL constraints to be generated
 **    			    for not null columns (used for testing this feature
@@ -660,6 +664,7 @@
 #define	    PSS_OPNODE_CHILDREN_TRACE	    21	/* PS149 */
 #define	    PSS_ENABLE_DROP_SCHEMA	    22
 #define	    PSS_AMBREP_64COMPAT		    23  /* PS151 */
+#define	    PSS_CACHEDYN_TRACE		    24	/* PS152 */
 #define	    PSS_PRINT_PSS_CONS		    47	/* PS175 */
 #define	    PSS_GENERATE_NOT_NULL_CONS	    48
 #define	    PSS_ALLOW_SET_PROC_STMT_RULE    49	/* PS177 */

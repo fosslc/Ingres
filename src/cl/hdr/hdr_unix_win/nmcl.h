@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1987, 2004 Ingres Corporation
+** Copyright (c) 1987, 2010 Ingres Corporation
 */
 
 /**
@@ -52,6 +52,8 @@
 **	10-Mar-2010 (hanje04)
 **	   SIR 123296
 **	   Add UBIN as new location, used by LSB builds.
+**	08-Sep-2010 (rajus01) SD issue 146492, Bug 124381
+**	    Add LIB32, LIB64.
 **/
 
 /*
@@ -155,3 +157,5 @@ FUNC_EXTERN STATUS NMstIngAt(
 # define	ADMIN		9
 # define	LOG		10
 # define	UBIN		11
+# define	LIB32		12
+# define	LIB64		13

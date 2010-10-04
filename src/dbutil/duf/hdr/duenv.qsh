@@ -183,6 +183,9 @@ FUNC_EXTERN STATUS du_dmp_ingpath();	/* Generate an Ingres dump
 **	    Added du_uninfc_flag.
 **	12-Nov-2009 (kschendel) SIR 122882
 **	    cmptlvl is reinterpreted as integer.
+**      31-aug-2010 (maspa05) bug 124328
+**          Added du_db_passwd, du_db_passwd_given for -P flag on createdb and 
+**          destroydb
 */
 
 #ifndef DU_TAIL_LEN
@@ -265,6 +268,9 @@ FUNC_EXTERN STATUS du_dmp_ingpath();	/* Generate an Ingres dump
 						    ** untranslated, 
 						    ** but normalized
 						    */
+##	char	    du_db_passwd[DB_MAXNAME + 4];   /* DBMS password (-P) */
+	bool	    du_db_passwd_given;             /* DBMS password specified 
+	                                            */
 ##	char	    du_dba_iidbdb[DU_USR_SIZE + 4]; /* dba for database,
 						    ** translated according to
 						    ** the iidbdb semantics

@@ -1233,6 +1233,9 @@ opj_cartprod(
 **	    Swap cardinality fields when inner and outer co nodes are reversed
 **	    and updated call to opb_gbfbm to hand down co node to pick up
 **	    cardinality info from the parse tree boolean factors.
+**	28-Jun-2010 (smeke01) b123969
+**	    Added diagnostic tracepoint OP217 which forces optimiser to use
+**	    hash joins. Requires xDEBUG to be defined in opjjoinop.c
 */
 static VOID
 opj_exact(
@@ -1690,6 +1693,13 @@ opj_exact(
 		  use_hashjoin = FALSE;
 	    }
 
+# if defined(xDEBUG) && defined (OPT_F089_FORCE_HASHJOIN)
+	    if (subquery->ops_global->ops_cb->ops_check &&
+		opt_strace(subquery->ops_global->ops_cb, OPT_F089_FORCE_HASHJOIN))
+	    {	/* op217 - force optimiser to use hash joins */
+		use_hashjoin = TRUE;
+	    }
+# endif
 	    if (use_hashjoin)
 	    {
 		OPS_WIDTH	outsz, insz;
@@ -6973,12 +6983,17 @@ opj_partvars(OPS_STATE *global)
 **	    Set join-time partition pruning request bitmaps before opc.
 **      26-apr-2010 (huazh01)
 **          Disable parallel query processing on Ingres Star. (b123637)
+**      02-sep-2010 (maspa05) SIR 124345
+**          use bitmask flags on ult_always_trace() instead of separate
+**          functions. Added to allow different QEP output segmented and
+**          'full'
 [@history_line@]...
 */
 VOID
 opj_joinop(
 	OPS_STATE          *global)
 {
+    i4                  sc930_trace;
     OPS_SUBQUERY        **subqpp;	    /* ptr to ptr needed to remove
                                             ** subselects from execution list */
     OPS_CB		*opscb = ops_getcb();
@@ -7116,7 +7131,8 @@ opj_joinop(
 					/* spiffy new QEP dumper */
 	}
     }
-    if (ult_trace_qep())
+    sc930_trace=ult_always_trace();
+    if (sc930_trace & (SC930_QEP_FULL|SC930_QEP_SEG) )
     {
 	OPS_SUBQUERY	    *next_subquery;
 	opscb->sc930_trace = ult_open_tracefile((PTR)opscb->ops_sid);

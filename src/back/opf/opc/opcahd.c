@@ -1002,6 +1002,8 @@ opc_ahd_build(
 **	1-Jul-2010 (kschendel) b124004
 **	    Set fetch-action in QP header for TID-returning actions, might be
 **	    a cursor fetch and RUP/RDEL compiling will need that action.
+**      21-Sep-2010 (horda03) b124315
+**          Initialise ahd->ahd_list.
 */
 static QEF_AHD *
 opc_qepahd(
@@ -1050,6 +1052,7 @@ opc_qepahd(
 
     /* Now lets fill in the boiler plate stuff */
     ahd->ahd_next = ahd->ahd_prev = ahd;
+    ahd->ahd_list = NULL;
     ahd->ahd_length = sizeof (QEF_AHD) - sizeof(ahd->qhd_obj) + sizeof(QEF_QEP);
     ahd->ahd_type = QEAHD_CB;
     ahd->ahd_ascii_id = QEAHD_ASCII_ID;

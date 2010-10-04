@@ -19,6 +19,7 @@
 #include    <stdarg.h>
 #include    <erclf.h>
 #include    <dmf.h>
+#include    <qefmain.h>
 
 /**
 **
@@ -405,6 +406,15 @@ ule_initiate( char *node_name, i4  l_node_name, char *server_name,
 **          Remove artificial limit of 16384 characters when writing query
 **          text to the errlog.log. We already write this in ER_MAX_LEN
 **          chunks so there's no need to truncate it.
+**      02-sep-2010 (maspa05) SIR 124346
+**          Save latest error code for SC930 output
+**      06-sep-2010 (maspa05) SIR 124363
+**          I_QE3000_LONGRUNNING_QUERY added to errors which dump query text.
+**      07-sep-2010 (maspa05) SIR 124363
+**          Removed the above as now write to DBMS log instead
+**      22-Sep-2010 (hanal04) Bug 124364
+**          Added SCI_TRACE_STACK. When sc924 tracing and stacks have
+**          been explicitly requested we will call CS_dump_stack().
 **	    
 */
 /* VARARGS31 */
@@ -440,7 +450,7 @@ i4	    num_parms,
     CL_ERR_DESC	    sys_err;
     i4              language;
     SCF_SESSION	    sid;
-    SCF_SCI	    info[9];
+    SCF_SCI	    info[10];
     SCF_CB	    scf_cb;
     ER_ARGUMENT     er_args[NUM_ER_ARGS];
     char	    hex_chars[16] = {'0','1','2','3','4','5','6','7',
@@ -457,6 +467,7 @@ i4	    num_parms,
     i4		    prev_qlen = 0;
     i4		    psqlen = 0;
     i4		    trace_errno = 0;
+    i4		    trace_stack = 0;
     i4		    prlen;
     char	    *prbuf;
     i2		    hdr_size;
@@ -552,7 +563,11 @@ i4	    num_parms,
 	info[8].sci_length = sizeof(psqlen);
 	info[8].sci_aresult = (char *) &psqlen;
 	info[8].sci_rlength = 0;
-	scf_cb.scf_len_union.scf_ilength = 9;
+	info[9].sci_code = SCI_TRACE_STACK;
+	info[9].sci_length = sizeof(trace_stack);
+	info[9].sci_aresult = (char *) &trace_stack;
+	info[9].sci_rlength = 0;
+	scf_cb.scf_len_union.scf_ilength = 10;
     }
     status = scf_call(SCU_INFORMATION, &scf_cb);
     if (status)
@@ -562,6 +577,7 @@ i4	    num_parms,
     }
     if (!language)
 	language = 1;
+
 
     /* package up the stack parameters into an ER_ARGUMENT array */
 
@@ -840,6 +856,16 @@ i4	    num_parms,
 		    PrefixLen + length, &sys_err);
     }
 
+ 
+    /* save error for SC930 trace output */
+    if (ult_always_trace() & SC930_TRACE)
+    {
+        CS_SCB   *cs_scb;
+	CSget_scb(&cs_scb);  
+
+        cs_scb->cs_sc930_err=error_code;
+    }
+
     /*
     ** Maybe print current and last query to the errlog.log and II_DBMS_LOG
     ** Can trigger this using "set trace point sc924",
@@ -914,6 +940,11 @@ i4	    num_parms,
 		prbuf += i;
 	    }
 	}
+        if ((trace_errno == error_code) && (trace_stack != 0))
+        {
+            /* SC924 with stack tracing */
+            CS_dump_stack(0, 0, 0, TRUE);
+        }
     }
     
     if ( *uleError == 0 )

@@ -223,8 +223,12 @@
 **	    Add dbmsmxky.hlp.
 **	4-Aug-2010 (kschendel) SD 145507
 **	    Add missing help for degree-of-parallelism, sole-cache.
-**	27-Aug-10 (gordy)
+**	27-Aug-2010 (gordy)
 **	    Added GCN config param for password encoding version.
+**      11-Aug-2010 (hanal04) Bug 124180
+**          Added dbmsmnyc.hlp
+**	13-Sep-2010 (rajus01) SD issue 146492, Bug 124381
+**	    Added gcfmechloc32.hlp and gcfmechloc64.hlp for hybrid builds.
 */
 
 PART   config
@@ -332,6 +336,7 @@ PART   config
       FILE dbmsltut.hlp
       FILE dbmsmdep.hlp
       FILE dbmsmlst.hlp
+      FILE dbmsmnyc.hlp
       FILE dbmsmxky.hlp
       FILE dbmsname.hlp
       FILE dbmsnrst.hlp
@@ -413,6 +418,10 @@ PART   config
       FILE gccloglv.hlp
       FILE gcfmechan.hlp 
       FILE gcfmechloc.hlp
+#ifdef conf_BUILD_ARCH_32_64
+      FILE gcfmechloc32.hlp
+      FILE gcfmechloc64.hlp
+#endif
       FILE gcfremote.hlp
       FILE gcfsecuremech.hlp
       FILE gcfmechingenabled.hlp

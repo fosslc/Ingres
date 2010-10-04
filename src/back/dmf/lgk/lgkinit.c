@@ -168,7 +168,9 @@
 **      19-apr-2010 (maspa05) bug 123595
 **          Changed ID_UUID_SEM_INIT for unix to use cross-process routine
 **          CS_cp_synch_init, which requires a status parameter.
-**          
+**      29-sep-2010 (joea)
+**          In a cluster, give LGK_initialize a second chance to create
+**          or attach to shared memory.
 */
 
 
@@ -499,7 +501,11 @@ char		*lgk_info)
 	LGK_base.lgk_mem_ptr = (PTR)NULL;
 	
 	/* Give up if unable to get memory in one minute */
+#if defined(conf_CLUSTER_BUILD)
+        if (retries > 1)
+#else
 	if ( retries )
+#endif
 	{
 	    if ( retries < 60 )
 		PCsleep(1000);
@@ -525,6 +531,10 @@ char		*lgk_info)
 				       ME_MSHARED_MASK | ME_IO_MASK),
 				      pages, mem_name, (PTR*)&lgk_mem,
 				      &allocated_pages, sys_err);
+#if defined(conf_CLUSTER_BUILD)
+                if (ret_val && !retries)
+                    continue;  /* try one more time */
+#endif
 	    }
 	    if (ret_val)
 	    {

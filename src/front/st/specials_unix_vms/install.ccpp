@@ -397,6 +397,8 @@
 **	    Hybrid add-on symbol changed, fix here.
 **	21-May-2010 (bonro01)
 **	    Add conditional compilation for ICE
+**	13-Sep-2010 (rajus01) SD issue 146492, Bug 124381
+**	    Add net64.hlp.
 */
 
 
@@ -457,6 +459,9 @@ DIRECTORY (PROD2NAME)!install
       FILE mwvisualtools.hlp
 # endif /* VMS */
       FILE net.hlp
+#ifdef conf_BUILD_ARCH_32_64
+      FILE net64.hlp
+#endif
       FILE netclient.hlp
       FILE oldmsg.hlp
       FILE ome.hlp

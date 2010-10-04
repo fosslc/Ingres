@@ -108,6 +108,8 @@
 **	    DSH rows can pop up multiple times, especially in pquals, use
 **	    a bitmap to avoid listing a row more than once (would leak
 **	    memory in QEF, at least for 1:N exchanges).
+**	10-Sep-2010 (kschendel) b124341
+**	    SEjoin changed to delete kcompare and add cvmat, fix here.
 **/
 
 /*
@@ -898,7 +900,7 @@ opc_exnodearrcnt(
 		arrcnts[IX_CX]++;
 	    if (sejnp->sejn_okmat != NULL)
 		arrcnts[IX_CX]++;
-	    if (sejnp->sejn_kcompare != NULL)
+	    if (sejnp->sejn_cvmat != NULL)
 		arrcnts[IX_CX]++;
 	    if (sejnp->sejn_kqual != NULL)
 		arrcnts[IX_CX]++;
@@ -1241,8 +1243,8 @@ opc_exnodearrset(
 		array2[arrcnts[IX_CX]++] = sejnp->sejn_oqual->qen_pos;
 	    if (sejnp->sejn_okmat != NULL)
 		array2[arrcnts[IX_CX]++] = sejnp->sejn_okmat->qen_pos;
-	    if (sejnp->sejn_kcompare != NULL)
-		array2[arrcnts[IX_CX]++] = sejnp->sejn_kcompare->qen_pos;
+	    if (sejnp->sejn_cvmat != NULL)
+		array2[arrcnts[IX_CX]++] = sejnp->sejn_cvmat->qen_pos;
 	    if (sejnp->sejn_kqual != NULL)
 		array2[arrcnts[IX_CX]++] = sejnp->sejn_kqual->qen_pos;
 	    opc_exnodearrset(global, sejnp->sejn_out, array1, array2, arrcnts);

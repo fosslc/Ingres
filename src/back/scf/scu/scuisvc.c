@@ -383,6 +383,8 @@ GLOBALREF SC_MAIN_CB	*Sc_main_cb;        /* central scf cb */
 **	    Scalar sub-query support: Added CARDINALITY_CHECK
 **      12-Aug-2010 (horda03) b124109
 **          Added SCI_PARENT_SCB.
+**      22-Sep-2010 (hanal04) Bug 124364
+**          Added CSI_TRACE_STACK. 
 */
 typedef struct _SCI_INFO_TABLE
 {
@@ -542,6 +544,7 @@ static  const SCI_INFO_TABLE Sci_info_table[] = {
     { SCI_IGNORE, 0 },  /* SCI_PAGETYPE_V6 */
     { SCI_IGNORE, 0 },  /* SCI_PAGETYPE_V7 */
     { SCI_PARENT_SCB, sizeof(PTR) },
+    { SCI_TRACE_STACK, sizeof(i4) },
     {0}
 };
 
@@ -1743,6 +1746,10 @@ scu_information(SCF_CB	*cb, SCD_SCB *scb )
 
 	case SCI_TRACE_ERRNO:
 	    where = (PTR)&Sc_main_cb->sc_trace_errno;
+	    break;
+
+	case SCI_TRACE_STACK:
+	    where = (PTR)&Sc_main_cb->sc_trace_stack;
 	    break;
 
 	case SCI_PREV_QBUF:

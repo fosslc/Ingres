@@ -247,6 +247,10 @@
 **	    o_lkb - if not, continue the search.
 **	09-Dec-2008 (jonj)
 **	    SIR 120874: use new form uleFormat, CL_CLEAR_ERR.
+**      07-sep-2010 (jonj/joea)
+**          For shared lock lists, llb_stamp may not be the same value as
+**          lkb_lkreq.request_id. The message is stamped with
+**          lkb_lkreq.request_id, not llb_stamp, when originated.
 */
 
 

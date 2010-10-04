@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004 Ingres Corporation 
+** Copyright (c) 2010 Ingres Corporation 
 */ 
 
 #include <compat.h>
@@ -42,6 +42,10 @@
 **   13-Mar-2007 (Ralph Loen) SIR 117786
 **      Tightened up treatement of ODBC connection states.  Replaced
 **      call to SQLFreeStmt() with a call to the driver. 
+**   03-Sep-2010 (Ralph Loen) Bug 124348
+**      Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
+**      SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
+**      platforms.
 */ 
 
 /*
@@ -158,11 +162,11 @@ SQLRETURN SQL_API SQLBindParameter(
     SWORD         fParamType,   /* InputOutputType  */
     SWORD         fCType,       /* ValueType        */
     SWORD         fSqlType,     /* ParameterType    */
-    SQLUINTEGER   cbColDef,     /* ColumnSize       */
+    SQLULEN       cbColDef,     /* ColumnSize       */
     SWORD         ibScale,      /* DecimalDigits    */
     SQLPOINTER    rgbValue,     /* ParameterValuePtr*/
-    SQLINTEGER    cbValueMax,   /* BufferLength     */
-    SQLINTEGER   *pcbValue)    /* StrLen_or_IndPtr */
+    SQLLEN        cbValueMax,   /* BufferLength     */
+    SQLLEN       *pcbValue)    /* StrLen_or_IndPtr */
 {
     RETCODE rc, traceRet = 1;
     pSTMT pstmt = (pSTMT)hstmt;
@@ -242,10 +246,10 @@ SQLRETURN  SQL_API SQLBindParam(
     SQLUSMALLINT ParameterNumber,
     SQLSMALLINT ValueType,
     SQLSMALLINT ParameterType, 
-    SQLUINTEGER LengthPrecision,
+    SQLULEN     LengthPrecision,
     SQLSMALLINT ParameterScale, 
     SQLPOINTER ParameterValue,
-    SQLINTEGER *StrLen_or_Ind)
+    SQLLEN     *StrLen_or_Ind)
 {
     RETCODE rc, traceRet = 1;
     pSTMT pstmt = (pSTMT)StatementHandle;
@@ -877,10 +881,10 @@ SQLRETURN  SQL_API SQLSetParam(
     SQLUSMALLINT ParameterNumber, 
     SQLSMALLINT ValueType,
     SQLSMALLINT ParameterType, 
-    SQLUINTEGER LengthPrecision,
+    SQLULEN LengthPrecision,
     SQLSMALLINT ParameterScale, 
     SQLPOINTER ParameterValue,
-    SQLINTEGER *StrLen_or_Ind)
+    SQLLEN *StrLen_or_Ind)
 {
     pSTMT pstmt = (pSTMT)StatementHandle;
     RETCODE traceRet = 1;

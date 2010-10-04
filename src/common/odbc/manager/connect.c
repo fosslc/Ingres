@@ -1,6 +1,6 @@
 /*
 /*
-** Copyright (c) 2004, 2007 Ingres Corporation 
+** Copyright (c) 2010 Ingres Corporation 
 */ 
 
 #include <compat.h>
@@ -101,7 +101,10 @@
 **      Renamed DRV_STR_CAIPT_TR_FILE as DRV_STR_ALT_TRACE_FILE.
 **   23-March-2009 (Ralph Loen) Bug 121838
 **      Add support for SQLGetFunctions().
-** 
+**   03-Sep-2010 (Ralph Loen) Bug 124348
+**      Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
+**      SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
+**      platforms.
 */ 
 
 #ifndef NT_GENERIC
@@ -1638,7 +1641,7 @@ SQLINTEGER SQL_API SQLGetPrivateProfileString(
     const char *szEntry,
     const char *szDefault,
     char *szBuffer,
-    SQLINTEGER cbBuffer,
+    SQLLEN cbBuffer,
     const char *szFile)
 {
     i4 i,j,count = 0;
@@ -1785,7 +1788,7 @@ SQLINTEGER SQL_API SQLGetPrivateProfileString(
     const char *szEntry,
     const char *szDefault,
     char *szBuffer,
-    SQLINTEGER cbBuffer,
+    SQLLEN cbBuffer,
     const char *szFile)
 {
     i4 lRet;

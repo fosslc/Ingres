@@ -130,6 +130,8 @@
 ;	    Add adu_soundex_dm for change 504949 for bug 122320
 ;        9-Jul-2010 (hanal04) Bug 124087
 ;           Added adu_nvchr_embunitochar() and adu_nvchr_embchartouni()
+;       11-Aug-2010 (hanal04) Bug 124180
+;           Added adu_2strtomny_strict().
 
 EXPORTS
 adb_breakpoint		@1				
@@ -665,3 +667,4 @@ adu_fltfloor		@541
 adu_soundex_dm		@542
 adu_nvchr_embchartouni  @543
 adu_nvchr_embunitochar  @544
+adu_2strtomny_strict	@545

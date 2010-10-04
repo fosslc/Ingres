@@ -4,7 +4,6 @@
 # include	<compat.h>
 # include	<excl.h>
 # include	<starlet.h>
-# include       <astjacket.h>
 
 /*
 **
@@ -19,9 +18,18 @@
 **	    from VMS CL as the use is no longer allowed
 **      22-dec-2008 (stegr01)
 **          Itanium VMS port.
+**      12-aug-2010 (joea)
+**          Replace VMS exception handling by POSIX signals as done on Unix.
 */
 
 static	setcount = 0;
+
+/* Zero means deliver immediately, nz means log and deliver later */
+GLOBALDEF i4	EXintr_count ZERO_FILL;
+
+/* Use these to count SIGINTS and SIGQUITS while interrupts are masked. */
+GLOBALDEF i4	EXsigints ZERO_FILL;
+GLOBALDEF i4	EXsigquits ZERO_FILL;
 
 void
 EXinterrupt(i4 new_state)

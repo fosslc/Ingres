@@ -3,7 +3,7 @@
 
 
   Note: This is a living document; for the latest version please see
-  http://www.ingres.com/.
+  http://code.ingres.com/ingres/main/src/INSTALL.WIN
 
   Introduction
   ------------
@@ -74,9 +74,6 @@
   link.exe, which interferes with link.exe from Visual Studio. Verify that it 
   is either removed or is in the PATH after Visual Studio version of link.exe.
 
-  Ingres has a zipping tool, which is used during the build process on
-  Windows. This tool, cazipxp, is provided with Ingres source. 
-
   The Microsoft .NET Framework 2.0 or later is required for the Ingres 
   .NET Data Provider version 2.1.  This package can be downloaded from 
   http://www.microsoft.com/. Verify that Microsoft Windows SDK v6.0A was
@@ -119,7 +116,6 @@
       o Microsoft .NET Framework 2.0 or later
       o Flex
       o Jam
-      o cazipxp
 
   Note: Ingres Database Server does not require Ingres .NET Data Provider 2.1 
   and the Frequent Flyer Demo for proper operation; these are additional 
@@ -147,12 +143,12 @@
 	|-- mergemodules/	staging area for Ingres Merge Modules
 	|-- release/		staging area for InstallShield generated binaries
 	|-- src/		Ingres source tree
-			
 		|-- INSTALL.WIN		this file
 		|-- LICENSE		Ingres License
 		|-- README		general introduction
-
 	...
+        |-- src/tst/	Ingres test tool source and test scripts
+        |-- src/tst/suites/doc/TESTING  acceptance testing directions
 	|-- tools/		Ingres test tool executables
 	|-- xerces-c-windows_2000-msvc_60/  Xerces C headers and library
 
@@ -278,6 +274,13 @@
   MSVCLoc       path to the location of Microsoft Visual Studio 2008 
   CAZIPXP	root directory of where cazipxp binary is located
 
+  The ING_TST variable is meant to point to the Ingres testing files if
+  they are available.  The Ingres source tar does not contain these test
+  files under the src/tst directory, but the test files can be downloaded
+  via subversion from http://code.ingres.com/ingres/main/src/tst
+  The test files are not required to build Ingres, but can be useful to
+  test the valid operation of Ingres after it is built.
+
   Note that the PATH settings are also modified for the build process.
 
   Next, bootstrap the build.  This includes building mkjam and mkjams,
@@ -325,17 +328,8 @@
 	buildrel -a
 
   If the Ingres build is successful, buildrel will report select missing
-  file(s) if CAZIPXP variable was not pointing at the correct locations of 
-  these file(s) :
+  file(s).
 
-	cazipxp.exe		- This utility needs to be copied to
-				  %ING_BUILD%\bin for it to be
-				  picked up.
-
-  The "missing" file is ONLY required if you are packaging the build
-  into a CD image. It is not necessary when utilizing a build as an
-  Ingres instance (see the "Installing Ingres" section below).
-  
   As a final auditing step, make sure that all the files needed for
   Ingres acceptance testing were correctly built:
 
@@ -397,11 +391,13 @@
   --------------
 
   The open source Ingres tree contains a limited set of acceptance tests
-  to verify the integrity of your Ingres build.  For this automated
-  testing the Ingres installation should be located in %ING_ROOT%\tstinst.
-  Alternatively, you can turn your %ING_ROOT%\build area into an Ingres
-  instance and use it instead (see prior section for information).
+  to verify the integrity of your Ingres build.  These test can be downloaded
+  via subversion from http://code.ingres.com/ingres/main/src/tst
+  For this automated testing the Ingres installation should be located in
+  %ING_ROOT%\tstinst.  Alternatively, you can turn your %ING_ROOT%\build area
+  into an Ingres instance and use it instead (see prior section for information).
 
   For further information about the acceptance tests please see the file
-  named TESTING.
+  named TESTING.  The TESTING file can be found in subversion here:
+  http://code.ingres.com/ingres/main/src/tst/suites/doc/TESTING
 

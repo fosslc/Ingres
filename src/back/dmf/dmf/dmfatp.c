@@ -8550,6 +8550,8 @@ i4	*err_code)
 **	    For repold/new, if no corresponding lobj del/ins record found
 **	    (lobj data was not updated), then write out a '{LOBJ COUPON}' 
 **	    placeholder. (B119967)
+**	31-Aug-2010 (thaju02) B124207
+**	    Write out null indicator only if lobj is nullable.
 */
 
 static DB_STATUS
@@ -8697,7 +8699,9 @@ FILE		**fdesc)
 		empty_dv.db_data = (char*)&null_data;
 		status = adc_getempty(&adf_cb, &empty_dv);
 		if ( status == E_DB_OK )
-		    status = CPwrite(DB_CNTSIZE + 1, empty_dv.db_data, &count, fdesc);
+		    status = CPwrite(
+			lobj_dttype < 0 ? DB_CNTSIZE + 1 : DB_CNTSIZE, 
+			empty_dv.db_data, &count, fdesc);
 	    }
 	}
     }

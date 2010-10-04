@@ -1,7 +1,7 @@
 /*
-** Copyright (c) 2004 Ingres Corporation
+** Copyright (c) 2010 Ingres Corporation
 */
-/*
+##/*
 ##
 ##  19-Apr-2004 (loera01)
 ##     Created.
@@ -9,8 +9,11 @@
 ##     Defined ODBCINT64 as "long long" on Unix.
 ##  10-aug-2004 (somsa01)
 ##     Added SQLLEN define for WIN64.
-##
-*/
+##  03-Sep-2010 (Ralph Loen) Bug 124348
+##     Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
+##     SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
+##     platforms.
+##*/
 #ifndef __SQLTYPES
 #define __SQLTYPES
 
@@ -36,7 +39,7 @@
 #endif
 
 #ifdef __cplusplus
-extern "C" { 			/* Assume C declarations for C++   */
+extern "C" {                    /* Assume C declarations for C++   */
 #endif  /* __cplusplus */
 
 /* API declaration data types */
@@ -82,7 +85,7 @@ typedef unsigned long   SQLSETPOSIROW;
 #endif
 
 /* generic data structures */
-typedef void*					SQLHANDLE;
+typedef void*                   SQLHANDLE;
 typedef SQLHANDLE               SQLHENV;
 typedef SQLHANDLE               SQLHDBC;
 typedef SQLHANDLE               SQLHSTMT;
@@ -97,7 +100,7 @@ typedef short int               SWORD;
 typedef unsigned long int       UDWORD;
 typedef unsigned short int      UWORD;
 #ifndef _WIN64
-/* typedef UDWORD                  SQLUINTEGER; */
+/* typedef UDWORD               SQLUINTEGER; */
 #endif
 
 typedef signed long             SLONG;
@@ -105,21 +108,21 @@ typedef signed short            SSHORT;
 typedef unsigned long           ULONG;
 typedef unsigned short          USHORT;
 typedef double                  SDOUBLE;
-typedef double            		LDOUBLE; 
+typedef double                  LDOUBLE; 
 typedef float                   SFLOAT;
 
-typedef void*              		HENV;
-typedef void*              		HDBC;
-typedef void*              		HSTMT;
+typedef void*                   HENV;
+typedef void*                   HDBC;
+typedef void*                   HSTMT;
 
-typedef SQLCHAR         SQLTCHAR;
+typedef SQLCHAR                 SQLTCHAR;
 
 #if defined(WIN32) || defined(OS2)
 typedef HWND                    SQLHWND;
 #elif defined (UNIX)
 /* change following two lines as needed for particular flavor of UNIX */
-/* typedef Widget                  SQLHWND; */
-typedef SQLPOINTER                 SQLHWND;
+/* typedef Widget               SQLHWND; */
+typedef SQLPOINTER              SQLHWND;
 #else
 /* placehold for future O/S GUI window handle definition */
 typedef SQLPOINTER              SQLHWND;
@@ -135,7 +138,7 @@ typedef struct tagDATE_STRUCT
         SQLUSMALLINT   day;
 } DATE_STRUCT;
 
-typedef DATE_STRUCT	SQL_DATE_STRUCT;
+typedef DATE_STRUCT     SQL_DATE_STRUCT;
 
 typedef struct tagTIME_STRUCT
 {
@@ -144,7 +147,7 @@ typedef struct tagTIME_STRUCT
         SQLUSMALLINT   second;
 } TIME_STRUCT;
 
-typedef TIME_STRUCT	SQL_TIME_STRUCT;
+typedef TIME_STRUCT     SQL_TIME_STRUCT;
 
 typedef struct tagTIMESTAMP_STRUCT
 {
@@ -157,7 +160,7 @@ typedef struct tagTIMESTAMP_STRUCT
         SQLUINTEGER    fraction;
 } TIMESTAMP_STRUCT;
 
-typedef TIMESTAMP_STRUCT	SQL_TIMESTAMP_STRUCT;
+typedef TIMESTAMP_STRUCT        SQL_TIMESTAMP_STRUCT;
 
 
 /*
@@ -167,73 +170,73 @@ typedef TIMESTAMP_STRUCT	SQL_TIMESTAMP_STRUCT;
 
 typedef enum 
 {
-	SQL_IS_YEAR						= 1,
-	SQL_IS_MONTH					= 2,
-	SQL_IS_DAY						= 3,
-	SQL_IS_HOUR						= 4,
-	SQL_IS_MINUTE					= 5,
-	SQL_IS_SECOND					= 6,
-	SQL_IS_YEAR_TO_MONTH			= 7,
-	SQL_IS_DAY_TO_HOUR				= 8,
-	SQL_IS_DAY_TO_MINUTE			= 9,
-	SQL_IS_DAY_TO_SECOND			= 10,
-	SQL_IS_HOUR_TO_MINUTE			= 11,
-	SQL_IS_HOUR_TO_SECOND			= 12,
-	SQL_IS_MINUTE_TO_SECOND			= 13
+    SQL_IS_YEAR                 = 1,
+    SQL_IS_MONTH                = 2,
+    SQL_IS_DAY                  = 3,
+    SQL_IS_HOUR                 = 4,
+    SQL_IS_MINUTE               = 5,
+    SQL_IS_SECOND               = 6,
+    SQL_IS_YEAR_TO_MONTH        = 7,
+    SQL_IS_DAY_TO_HOUR          = 8,
+    SQL_IS_DAY_TO_MINUTE        = 9,
+    SQL_IS_DAY_TO_SECOND        = 10,
+    SQL_IS_HOUR_TO_MINUTE       = 11,
+    SQL_IS_HOUR_TO_SECOND       = 12,
+    SQL_IS_MINUTE_TO_SECOND     = 13
 } SQLINTERVAL;
 
 
 typedef struct tagSQL_YEAR_MONTH
 {
-		SQLUINTEGER		year;
-		SQLUINTEGER		month;
+    SQLUINTEGER year;
+    SQLUINTEGER month;
 } SQL_YEAR_MONTH_STRUCT;
 
 typedef struct tagSQL_DAY_SECOND
 {
-		SQLUINTEGER		day;
-		SQLUINTEGER		hour;
-		SQLUINTEGER		minute;
-		SQLUINTEGER		second;
-		SQLUINTEGER		fraction;
+    SQLUINTEGER day;
+    SQLUINTEGER hour;
+    SQLUINTEGER minute;
+    SQLUINTEGER second;
+    SQLUINTEGER fraction;
 } SQL_DAY_SECOND_STRUCT;
 
 typedef struct tagSQL_INTERVAL_STRUCT
 {
-	SQLINTERVAL		interval_type;
-	SQLSMALLINT		interval_sign;
-	union {
-		SQL_YEAR_MONTH_STRUCT		year_month;
-		SQL_DAY_SECOND_STRUCT		day_second;
-	} intval;
+    SQLINTERVAL     interval_type;
+    SQLSMALLINT     interval_sign;
+    union 
+    {
+        SQL_YEAR_MONTH_STRUCT   year_month;
+        SQL_DAY_SECOND_STRUCT   day_second;
+    } intval;
 
 } SQL_INTERVAL_STRUCT;
-
 
 #endif	/* __SQLDATE	*/
 
 /* the ODBC C types for SQL_C_SBIGINT and SQL_C_UBIGINT */
 #if (_MSC_VER >= 900)
-#define ODBCINT64	__int64
+#define ODBCINT64       __int64
 #else
 #define ODBCINT64       long long
 #endif  
 
 /* If using other compilers, define ODBCINT64 to the 
-	approriate 64 bit integer type */
+   approriate 64 bit integer type */
 #ifdef ODBCINT64
-typedef ODBCINT64	SQLBIGINT;
-typedef unsigned ODBCINT64	SQLUBIGINT;
+typedef ODBCINT64               SQLBIGINT;
+typedef unsigned ODBCINT64      SQLUBIGINT;
 #endif
 
 /* internal representation of numeric data type */
-#define SQL_MAX_NUMERIC_LEN		16
+#define SQL_MAX_NUMERIC_LEN     16
 typedef struct tagSQL_NUMERIC_STRUCT
 {
-	SQLCHAR		precision;
-	SQLSCHAR	scale;
-	SQLCHAR		sign;	/* 1 if positive, 0 if negative */
-	SQLCHAR		val[SQL_MAX_NUMERIC_LEN];
+    SQLCHAR     precision;
+    SQLSCHAR    scale;
+    SQLCHAR     sign;   /* 1 if positive, 0 if negative */
+    SQLCHAR     val[SQL_MAX_NUMERIC_LEN];
 } SQL_NUMERIC_STRUCT;
 
 #ifdef GUID_DEFINED
@@ -319,35 +322,35 @@ typedef struct  tagSQLGUID
 #define SQL_DESC_OCTET_LENGTH           1013
 #define SQL_DESC_ALLOC_TYPE             1099
 
-#define SQL_DESC_ARRAY_SIZE		20
-#define SQL_DESC_ARRAY_STATUS_PTR	21
-#define SQL_DESC_AUTO_UNIQUE_VALUE	SQL_COLUMN_AUTO_INCREMENT
-#define SQL_DESC_BASE_COLUMN_NAME	22
-#define SQL_DESC_BASE_TABLE_NAME	23
-#define SQL_DESC_BIND_OFFSET_PTR	24
-#define SQL_DESC_BIND_TYPE		25
-#define SQL_DESC_CASE_SENSITIVE	        SQL_COLUMN_CASE_SENSITIVE
-#define SQL_DESC_CATALOG_NAME		SQL_COLUMN_QUALIFIER_NAME
-#define SQL_DESC_CONCISE_TYPE		SQL_COLUMN_TYPE
-#define SQL_DESC_DATETIME_INTERVAL_PRECISION	26
-#define SQL_DESC_DISPLAY_SIZE		SQL_COLUMN_DISPLAY_SIZE
-#define SQL_DESC_FIXED_PREC_SCALE	SQL_COLUMN_MONEY
-#define SQL_DESC_LABEL			SQL_COLUMN_LABEL
-#define SQL_DESC_LITERAL_PREFIX		27
-#define SQL_DESC_LITERAL_SUFFIX		28
-#define SQL_DESC_LOCAL_TYPE_NAME	29
-#define	SQL_DESC_MAXIMUM_SCALE		30
-#define SQL_DESC_MINIMUM_SCALE		31
-#define SQL_DESC_NUM_PREC_RADIX		32
-#define SQL_DESC_PARAMETER_TYPE		33
-#define SQL_DESC_ROWS_PROCESSED_PTR	34
-#define SQL_DESC_ROWVER			35
-#define SQL_DESC_SCHEMA_NAME	SQL_COLUMN_OWNER_NAME
-#define SQL_DESC_SEARCHABLE	SQL_COLUMN_SEARCHABLE
-#define SQL_DESC_TYPE_NAME	SQL_COLUMN_TYPE_NAME
-#define SQL_DESC_TABLE_NAME	SQL_COLUMN_TABLE_NAME
-#define SQL_DESC_UNSIGNED	SQL_COLUMN_UNSIGNED
-#define SQL_DESC_UPDATABLE	SQL_COLUMN_UPDATABLE
+#define SQL_DESC_ARRAY_SIZE             20
+#define SQL_DESC_ARRAY_STATUS_PTR       21
+#define SQL_DESC_AUTO_UNIQUE_VALUE      SQL_COLUMN_AUTO_INCREMENT
+#define SQL_DESC_BASE_COLUMN_NAME       22
+#define SQL_DESC_BASE_TABLE_NAME        23
+#define SQL_DESC_BIND_OFFSET_PTR        24
+#define SQL_DESC_BIND_TYPE              25
+#define SQL_DESC_CASE_SENSITIVE         SQL_COLUMN_CASE_SENSITIVE
+#define SQL_DESC_CATALOG_NAME           SQL_COLUMN_QUALIFIER_NAME
+#define SQL_DESC_CONCISE_TYPE           SQL_COLUMN_TYPE
+#define SQL_DESC_DATETIME_INTERVAL_PRECISION    26
+#define SQL_DESC_DISPLAY_SIZE           SQL_COLUMN_DISPLAY_SIZE
+#define SQL_DESC_FIXED_PREC_SCALE       SQL_COLUMN_MONEY
+#define SQL_DESC_LABEL                  SQL_COLUMN_LABEL
+#define SQL_DESC_LITERAL_PREFIX         27
+#define SQL_DESC_LITERAL_SUFFIX         28
+#define SQL_DESC_LOCAL_TYPE_NAME        29
+#define	SQL_DESC_MAXIMUM_SCALE          30
+#define SQL_DESC_MINIMUM_SCALE          31
+#define SQL_DESC_NUM_PREC_RADIX         32
+#define SQL_DESC_PARAMETER_TYPE         33
+#define SQL_DESC_ROWS_PROCESSED_PTR     34
+#define SQL_DESC_ROWVER                 35
+#define SQL_DESC_SCHEMA_NAME    SQL_COLUMN_OWNER_NAME
+#define SQL_DESC_SEARCHABLE     SQL_COLUMN_SEARCHABLE
+#define SQL_DESC_TYPE_NAME      SQL_COLUMN_TYPE_NAME
+#define SQL_DESC_TABLE_NAME     SQL_COLUMN_TABLE_NAME
+#define SQL_DESC_UNSIGNED       SQL_COLUMN_UNSIGNED
+#define SQL_DESC_UPDATABLE      SQL_COLUMN_UPDATABLE
 
 /* identifiers of fields in the diagnostics area */
 #define SQL_DIAG_RETURNCODE                         1
@@ -728,17 +731,17 @@ typedef struct  tagSQLGUID
 #define SQL_NC_LOW                                  2
 
 /* SQL_OUTER_JOIN_CAPABILITIES bitmasks */
-#define SQL_OUTER_JOIN_LEFT               0x00000001L
+#define SQL_OUTER_JOIN_LEFT            0x00000001L
 #define SQL_OJ_LEFT                    SQL_OUTER_JOIN_LEFT
-#define SQL_OUTER_JOIN_RIGHT              0x00000002L
+#define SQL_OUTER_JOIN_RIGHT           0x00000002L
 #define SQL_OJ_RIGHT                   SQL_OUTER_JOIN_RIGHT 
-#define SQL_OUTER_JOIN_FULL               0x00000004L
+#define SQL_OUTER_JOIN_FULL            0x00000004L
 #define SQL_OJ_FULL                    SQL_OUTER_JOIN_FULL 
-#define SQL_OUTER_JOIN_NESTED             0x00000008L
+#define SQL_OUTER_JOIN_NESTED          0x00000008L
 #define SQL_OJ_NESTED                  SQL_OUTER_JOIN_NESTED 
-#define SQL_OUTER_JOIN_NOT_ORDERED        0x00000010L
+#define SQL_OUTER_JOIN_NOT_ORDERED     0x00000010L
 #define SQL_OJ_NOT_ORDERED             SQL_OUTER_JOIN_NOT_ORDERED 
-#define SQL_OUTER_JOIN_INNER              0x00000020L
+#define SQL_OUTER_JOIN_INNER           0x00000020L
 #define SQL_OJ_INNER                   SQL_OUTER_JOIN_INNER 
 #define SQL_OUTER_JOIN_ALL_COMPARISON_OPS 0x00000040L
 #define SQL_OJ_ALL_COMPARISON_OPS      SQL_OUTER_JOIN_ALL_COMPARISON_OPS 
@@ -766,38 +769,43 @@ typedef struct  tagSQLGUID
 #define SQL_TRANSACTION_SERIALIZABLE      0x00000008L
 #define SQL_TXN_SERIALIZABLE      SQL_TRANSACTION_SERIALIZABLE   
 
-SQLRETURN SQL_API  SQLAllocConnect(SQLHENV EnvironmentHandle,
-           SQLHDBC *ConnectionHandle);
+SQLRETURN SQL_API SQLAllocConnect(SQLHENV EnvironmentHandle,
+    SQLHDBC *ConnectionHandle);
 
-SQLRETURN SQL_API  SQLAllocEnv(SQLHENV *EnvironmentHandle);
+SQLRETURN SQL_API SQLAllocEnv(SQLHENV *EnvironmentHandle);
 
-SQLRETURN SQL_API  SQLAllocHandle(SQLSMALLINT HandleType,
-           SQLHANDLE InputHandle, SQLHANDLE *OutputHandle);
+SQLRETURN SQL_API SQLAllocHandle(SQLSMALLINT HandleType,
+    SQLHANDLE InputHandle, SQLHANDLE *OutputHandle);
 
-SQLRETURN SQL_API  SQLAllocStmt(SQLHDBC ConnectionHandle,
-           SQLHANDLE *StatementHandle);
+SQLRETURN SQL_API SQLAllocStmt(SQLHDBC ConnectionHandle,
+    SQLHANDLE *StatementHandle);
 
-SQLRETURN SQL_API  SQLBindCol(SQLHSTMT StatementHandle,
-           UWORD ColumnNumber, SQLSMALLINT BufferType,
-           SQLPOINTER Data, SQLINTEGER BufferLength,
-           SQLINTEGER *StrLen_or_Ind);
+SQLRETURN  SQL_API SQLBindCol(SQLHSTMT StatementHandle,
+    SQLUSMALLINT ColumnNumber, SQLSMALLINT TargetType,
+    SQLPOINTER TargetValue, SQLLEN BufferLength,
+    SQLLEN *StrLen_or_Ind);
 
 SQLRETURN  SQL_API SQLBindParam(SQLHSTMT StatementHandle,
-           SQLUSMALLINT ParameterNumber, SQLSMALLINT ValueType,
-           SQLSMALLINT ParameterType, SQLUINTEGER LengthPrecision, 
-	   SQLSMALLINT ParameterScale, SQLPOINTER ParameterValue,
-           SQLINTEGER *StrLen_or_Ind);
+    SQLUSMALLINT ParameterNumber, SQLSMALLINT ValueType,
+    SQLSMALLINT ParameterType, SQLULEN LengthPrecision, 
+    SQLSMALLINT ParameterScale, SQLPOINTER ParameterValue,
+    SQLLEN *StrLen_or_Ind);
 
 SQLRETURN SQL_API  SQLCancel(SQLHSTMT StatementHandle);
 
 SQLRETURN SQL_API  SQLCloseCursor(SQLHSTMT StatementHandle);
 
-SQLRETURN SQL_API  SQLColAttribute(SQLHSTMT StatementHandle,
+#ifdef _WIN64
+SQLRETURN  SQL_API SQLColAttribute (SQLHSTMT StatementHandle,
            SQLUSMALLINT ColumnNumber, SQLUSMALLINT FieldIdentifier,
-           SQLPOINTER CharacterAttribute,
-           SQLSMALLINT BufferLength,
+           SQLPOINTER CharacterAttribute, SQLSMALLINT BufferLength,
+           SQLSMALLINT *StringLength, SQLLEN *NumericAttribute);
+#else
+SQLRETURN  SQL_API SQLColAttribute (SQLHSTMT StatementHandle,
+           SQLUSMALLINT ColumnNumber, SQLUSMALLINT FieldIdentifier,
+           SQLPOINTER CharacterAttribute, SQLSMALLINT BufferLength,
            SQLSMALLINT *StringLength, SQLPOINTER NumericAttribute);
-
+#endif
 
 SQLRETURN  SQL_API SQLColumns(SQLHSTMT StatementHandle,
            SQLCHAR *CatalogName, SQLSMALLINT NameLength1,
@@ -822,7 +830,7 @@ SQLRETURN  SQL_API SQLDataSources(SQLHENV EnvironmentHandle,
 SQLRETURN SQL_API  SQLDescribeCol(SQLHSTMT StatementHandle,
            UWORD ColumnNumber, SQLCHAR *ColumnName,
            SWORD BufferLength, SWORD *NameLength,
-           SWORD *DataType, SQLUINTEGER *ColumnSize,
+           SWORD *DataType, SQLULEN *ColumnSize,
            SWORD *DecimalDigits, SWORD *Nullable);
 
 SQLRETURN SQL_API  SQLDisconnect(SQLHDBC ConnectionHandle);
@@ -844,7 +852,7 @@ SQLRETURN SQL_API  SQLExecute(SQLHSTMT StatementHandle);
 SQLRETURN SQL_API  SQLFetch(SQLHSTMT StatementHandle);
 
 SQLRETURN SQL_API  SQLFetchScroll(SQLHSTMT StatementHandle,
-           SQLSMALLINT FetchOrientation, SQLINTEGER FetchOffset);
+           SQLSMALLINT FetchOrientation, SQLLEN FetchOffset);
 
 SQLRETURN SQL_API  SQLFreeConnect(SQLHDBC ConnectionHandle);
 
@@ -868,8 +876,8 @@ SQLRETURN SQL_API  SQLGetCursorName(SQLHSTMT StatementHandle,
 
 SQLRETURN SQL_API  SQLGetData(SQLHSTMT StatementHandle,
            UWORD ColumnNumber, SQLSMALLINT TargetType,
-           SQLPOINTER TargetValue, SQLINTEGER BufferLength,
-           SQLINTEGER *StrLen_or_Ind);
+           SQLPOINTER TargetValue, SQLLEN BufferLength,
+           SQLLEN *StrLen_or_Ind);
 
 SQLRETURN SQL_API  SQLGetDescField(SQLHDESC DescriptorHandle,
            SQLSMALLINT RecordNumber, SQLSMALLINT FieldIdentifier,
@@ -880,9 +888,8 @@ SQLRETURN SQL_API  SQLGetDescField(SQLHDESC DescriptorHandle,
 SQLRETURN SQL_API  SQLGetDescRec(SQLHDESC DescriptorHandle,
            SQLSMALLINT RecordNumber, SQLCHAR *Name,
            SQLSMALLINT BufferLength, SQLSMALLINT *NameLength,
-
            SQLSMALLINT *Type, SQLSMALLINT *SubType,
-           SQLINTEGER *Length, SQLSMALLINT *Precision,
+           SQLLEN *Length, SQLSMALLINT *Precision,
            SQLSMALLINT *Scale, SQLSMALLINT *Nullable);
 
 SQLRETURN SQL_API  SQLGetDiagField(SQLSMALLINT HandleType,
@@ -890,19 +897,17 @@ SQLRETURN SQL_API  SQLGetDiagField(SQLSMALLINT HandleType,
            SQLSMALLINT DiagIdentifier, SQLPOINTER DiagInfo,
            SQLSMALLINT BufferLength, SQLSMALLINT *StringLength);
 
-
 SQLRETURN SQL_API  SQLGetDiagRec(SQLSMALLINT HandleType, 
            SQLHANDLE Handle, SQLSMALLINT RecordNumber, SQLCHAR *Sqlstate,
            SQLINTEGER *NativeError, SQLCHAR *MessageText,
            SQLSMALLINT BufferLength, SQLSMALLINT *TextLength);
-
 
 SQLRETURN SQL_API  SQLGetEnvAttr(SQLHENV EnvironmentHandle,
            SQLINTEGER Attribute, SQLPOINTER Value,
            SQLINTEGER BufferLength, SQLINTEGER *StringLength);
 
 SQLRETURN  SQL_API SQLGetFunctions(SQLHDBC ConnectionHandle,
-	   SQLUSMALLINT FunctionId, SQLUSMALLINT *Supported);
+           SQLUSMALLINT FunctionId, SQLUSMALLINT *Supported);
 
 SQLRETURN SQL_API  SQLGetInfo(SQLHDBC ConnectionHandle,
            UWORD InfoType, SQLPOINTER InfoValue,
@@ -929,32 +934,31 @@ SQLRETURN SQL_API  SQLPrepare(SQLHSTMT StatementHandle,
            SQLCHAR *StatementText, SQLINTEGER TextLength);
 
 SQLRETURN SQL_API  SQLPutData(SQLHSTMT StatementHandle,
-           SQLPOINTER Data, SQLINTEGER StrLen_or_Ind);
+           SQLPOINTER Data, SQLLEN StrLen_or_Ind);
 
 SQLRETURN SQL_API  SQLRowCount(SQLHSTMT StatementHandle,
-           SQLINTEGER *RowCount);
+           SQLLEN *RowCount);
 
 SQLRETURN SQL_API  SQLSetConnectAttr(SQLHDBC ConnectionHandle,
            SQLINTEGER Attribute, SQLPOINTER Value,
            SQLINTEGER StringLength);
 
 SQLRETURN  SQL_API SQLSetConnectOption(SQLHDBC ConnectionHandle,
-           SQLUSMALLINT Option, SQLUINTEGER Value);
+           SQLUSMALLINT Option, SQLULEN Value);
 
 SQLRETURN SQL_API  SQLSetCursorName(SQLHSTMT StatementHandle,
            SQLCHAR *CursorName, SQLSMALLINT NameLength);
 
 SQLRETURN SQL_API  SQLSetDescField(SQLHDESC DescriptorHandle,
            SQLSMALLINT RecordNumber, SQLSMALLINT FieldIdentifier,
-
            SQLPOINTER Value, SQLINTEGER BufferLength);
 
 SQLRETURN SQL_API  SQLSetDescRec(SQLHDESC DescriptorHandle,
            SQLSMALLINT RecordNumber, SQLSMALLINT Type,
-           SQLSMALLINT SubType, SQLINTEGER Length,
+           SQLSMALLINT SubType, SQLLEN Length,
            SQLSMALLINT Precision, SQLSMALLINT Scale,
-           SQLPOINTER Data, SQLINTEGER *StringLength,
-           SQLINTEGER *Indicator);
+           SQLPOINTER Data, SQLLEN *StringLength,
+           SQLLEN *Indicator);
 
 SQLRETURN SQL_API  SQLSetEnvAttr(SQLHENV EnvironmentHandle,
            SQLINTEGER Attribute, SQLPOINTER Value,
@@ -962,16 +966,16 @@ SQLRETURN SQL_API  SQLSetEnvAttr(SQLHENV EnvironmentHandle,
 
 SQLRETURN  SQL_API SQLSetParam(SQLHSTMT StatementHandle,
            SQLUSMALLINT ParameterNumber, SQLSMALLINT ValueType,
-           SQLSMALLINT ParameterType, SQLUINTEGER LengthPrecision,
+           SQLSMALLINT ParameterType, SQLULEN LengthPrecision,
            SQLSMALLINT ParameterScale, SQLPOINTER ParameterValue,
-           SQLINTEGER *StrLen_or_Ind);
+           SQLLEN *StrLen_or_Ind);
 
 SQLRETURN SQL_API  SQLSetStmtAttr(SQLHSTMT StatementHandle,
            SQLINTEGER Attribute, SQLPOINTER Value,
            SQLINTEGER StringLength);
 
 SQLRETURN  SQL_API SQLSetStmtOption(SQLHSTMT StatementHandle,
-           SQLUSMALLINT Option, SQLUINTEGER Value);
+           SQLUSMALLINT Option, SQLULEN Value);
 
 SQLRETURN  SQL_API SQLSpecialColumns(SQLHSTMT StatementHandle,
            SQLUSMALLINT IdentifierType, SQLCHAR *CatalogName,

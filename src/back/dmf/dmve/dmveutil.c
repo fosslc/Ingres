@@ -172,6 +172,8 @@
 **          Remove table name,owner from log records.
 **	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
 **          dmve_get_tabinfo() copy table name only if tabname not null
+**      16-sep-2010 (stial01) (B124463, SD 146781)
+**          dmve_fix_tabio() fix initialization of table,owner 
 **/
 
 /*
@@ -456,6 +458,8 @@ DMP_TABLE_IO	**table_io)
 		    status = E_DB_ERROR;
 		    break;
 		}
+		table_name = reltup.relid;
+		table_owner = reltup.relowner;
 	    }
 
 	    /*

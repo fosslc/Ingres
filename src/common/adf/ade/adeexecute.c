@@ -1371,6 +1371,8 @@ i4                 *ade_needed;
 **	    The method of flagging the potential error is to use ADF_SING_BIT
 **	    alongside ADF_NVL_BIT to be picked up by SINGLECHK.
 **	    Tighten the access to ADF_NVL_BIT.
+**       7-Sep-2010 (hanal04) Bug 124384
+**          Add missing break to NCHR ADE_LEN_UNKNOWN case.
 */
 
 
@@ -2560,6 +2562,7 @@ if (f->ins_icode >= 0) adfi_counts[f->ins_icode]++;
                               case DB_NCHR_TYPE:
                                 dv[im1].db_length = (*(i2 *)((char *)data[i] - 
                                         DB_CNTSIZE)) * sizeof(UCS2) ; 
+                                break;
 
 			      default:
 				/* all other types */

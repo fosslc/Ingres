@@ -55,6 +55,7 @@
 *.*.*.*.log_readnolock:                boolean
 *.*.*.mechanisms:                      'mechanism list'
 *.*.*.*.mechanisms:                    'mechanism list'
+*.*.*.*.money_compat:			boolean
 *.*.*.*.name_service:			boolean
 *.*.*.*.num_slaves:			processes
 *.*.*.*.outbound_limit:		connections
@@ -238,6 +239,8 @@ ii.*.*.*.psf_vch_prec:                  boolean
 *.*.gcb.*.*.port:			'listen address'
 *.*.gcb.*.*.status:			boolean
 *.*.gcf.mechanism_location:		'directory path'
+*.*.gcf.mechanism_location_lp32:	'32-bit directory path'
+*.*.gcf.mechanism_location_lp64:	'64-bit directory path'
 *.*.gcf.password_mechanism:		'none, default, mechanism name'
 *.*.gcf.remote_auth_error:		'ignore or fail'
 *.*.gcf.remote_mechanism:		'none, default, mechanism name'

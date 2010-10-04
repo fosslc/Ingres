@@ -3609,6 +3609,17 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **          Delay push of scope from insertkwd: to valueskwd:
 **          This distinguishes INSERT ... SELECT from INSERT ... VALUES.
 **      17-Aug-2010 (horda03) b124274
+**	29-Aug-2010 (frima01) Bug 124098
+**	    Correct pls_checklen to use STlength instead of sizeof()
+**	    in psf_error call.
+**      11-Aug-2010 (hanal04) Bug 124180
+**          If PSQ_MONEY_COMPAT is set check SCONST values to see if they
+**          contain a money string (currency symbol supplied) and if so
+**          establish a money constant instead of a string constant. This
+**          has been implemented for backward compatibility with 2.0 and 2.6.
+**	10-Sep-2010 (kiria01) b124439
+**	    Added length checks to validate the potential for key truncation
+**	    whan calling psl_mk_const_similar() in key contexts.
 */
 %{
 
@@ -3914,6 +3925,15 @@ psl_mk_const_similar(
 	PST_QNODE	**cst,
 	DB_ERROR	*err_blk,
 	bool		*handled);
+
+static DB_STATUS
+psl_mk_similar_lenchk(
+	PSS_SESBLK	*sess_cb,
+	PSF_MSTREAM	*mstream,
+	PST_QNODE	**expr,
+	PST_QNODE	*orig_cst,
+	PST_QNODE	*cast_cst,
+	DB_ERROR	*err_blk);
 
 static i4
 psl_checklen( 
@@ -35977,25 +35997,96 @@ constant:		number
 	PST_CNST_NODE	       cconst;
 	PST_QNODE	       *newnode;
 	i4			constSize;
+        i4                     mny_const = FALSE;
+        DB_DATA_VALUE		mny_dbv;
+        char			*mn;
 
-	/* Non-parameter text constant node */
-	cconst.pst_tparmtype = PST_USER;
-	cconst.pst_parm_no = 0;
-	cconst.pst_pmspec  = PST_PMNOTUSED;
-	cconst.pst_cqlang = DB_SQL;
-	cconst.pst_origtxt = (char *) NULL;
-	constSize = $1->db_t_count + DB_CNTSIZE;
-	/* STAR may need to create a global tempTbl and VARCHAR(0) is invalid */
-	if (constSize == DB_CNTSIZE)
-	    ++constSize;
-	status = pst_node(cb, &cb->pss_ostream, (PST_QNODE *) NULL,
-	    (PST_QNODE *) NULL, PST_CONST, (char *) &cconst, sizeof(cconst),
-	    DB_VCH_TYPE, (i2) 0, constSize, 
-	    (DB_ANYTYPE *) $1, &newnode, &psq_cb->psq_error, (i4) 0);
+        if(psq_cb->psq_flag2 & PSQ_MONEY_COMPAT)
+        {
+            ADF_CB              *adf_scb = (ADF_CB*) cb->pss_adfcb;
+            DB_DATA_VALUE	src_dbv;
+            DB_STATUS		mny_status;
+            ADI_LENSPEC		lenspec;
+            DB_DATA_VALUE       *pop[2];
+            ADI_FI_ID		cvid;
+            ADI_FI_DESC		*adi_fdesc;
+
+            src_dbv.db_datatype = DB_VCH_TYPE;
+            src_dbv.db_data = (PTR) $1;
+            src_dbv.db_length = $1->db_t_count + DB_CNTSIZE;
+
+            mny_dbv.db_datatype = DB_MNY_TYPE;
+
+            pop[0] = &src_dbv;
+            pop[1] = &mny_dbv;
+
+            MEfill(sizeof(adi_fdesc), '\0', (char *)&adi_fdesc);
+            mny_status = adi_ficoerce(adf_scb, DB_VCH_TYPE, DB_MNY_TYPE, &cvid);
+            if (mny_status != E_DB_OK)
+                return(mny_status);
+            mny_status = adi_fidesc(adf_scb, cvid, &adi_fdesc);
+            if (mny_status != E_DB_OK)
+                return(mny_status);
+
+            mny_status = adi_0calclen(adf_scb, &adi_fdesc->adi_lenspec, 1,
+                                      &pop[0], &mny_dbv);
+            if (mny_status != E_DB_OK)
+                return(mny_status);
+
+            mny_status = psf_malloc(cb, &cb->pss_ostream, mny_dbv.db_length,
+                                &mn, &psq_cb->psq_error);
+            if (mny_status != E_DB_OK)
+                return(mny_status);
+
+            mny_dbv.db_data = (PTR)mn;
+
+            mny_status = adu_2strtomny_strict(adf_scb, &src_dbv, &mny_dbv, TRUE);
+
+            if(mny_status == E_DB_OK)
+            {
+                mny_const = TRUE;
+            }
+        }
+
+        if(mny_const)
+        {
+	    /* Non-parameter money  constant node */
+	    cconst.pst_tparmtype = PST_USER;
+	    cconst.pst_parm_no = 0;
+	    cconst.pst_pmspec  = PST_PMNOTUSED;
+	    cconst.pst_cqlang = DB_SQL;
+	    cconst.pst_origtxt = (char *) NULL;
+	    constSize = mny_dbv.db_length;
+
+	    status = pst_node(cb, &cb->pss_ostream, (PST_QNODE *) NULL,
+	        (PST_QNODE *) NULL, PST_CONST, (char *) &cconst, sizeof(cconst),
+	        DB_MNY_TYPE, (i2) 0, constSize, 
+	        (DB_ANYTYPE *)mn, &newnode, &psq_cb->psq_error, (i4) 0);
+        }
+        else
+        {
+	    /* Non-parameter text constant node */
+	    cconst.pst_tparmtype = PST_USER;
+	    cconst.pst_parm_no = 0;
+	    cconst.pst_pmspec  = PST_PMNOTUSED;
+	    cconst.pst_cqlang = DB_SQL;
+	    cconst.pst_origtxt = (char *) NULL;
+	    constSize = $1->db_t_count + DB_CNTSIZE;
+	    /* STAR may need to create a global tempTbl and VARCHAR(0) 
+            ** is invalid 
+            */
+	    if (constSize == DB_CNTSIZE)
+	        ++constSize;
+	    status = pst_node(cb, &cb->pss_ostream, (PST_QNODE *) NULL,
+	        (PST_QNODE *) NULL, PST_CONST, (char *) &cconst, sizeof(cconst),
+	        DB_VCH_TYPE, (i2) 0, constSize, 
+	        (DB_ANYTYPE *) $1, &newnode, &psq_cb->psq_error, (i4) 0);
+        }
 	if (status != E_DB_OK)
 	{
 	    return (status);
 	}
+        
 
 	$$ = newnode;
     }
@@ -53158,6 +53249,8 @@ psl_simple_compare(
     DB_STATUS	status;
     DB_ERROR	*err_blk = &psq_cb->psq_error;
     i4		pst_node_flags = PSS_JOINID_STD;
+    PST_QNODE	*cnst = NULL;
+    PST_QNODE	*cast = NULL;
 
     status = psf_malloc(sess_cb, &sess_cb->pss_ostream, sizeof(PSS_TREEINFO),
 	     (PTR *) treeinfo, err_blk);
@@ -53199,7 +53292,7 @@ psl_simple_compare(
 	operator != ADI_NLIKE_OP)
     {
 	PST_QNODE *var = operand1;  /* Assume col op const */
-	PST_QNODE *cnst = operand2;
+	cnst = operand2;
 	if (var->pst_sym.pst_type != PST_VAR)
 	{
 	    var = operand2;  /* Might be const op col */
@@ -53221,6 +53314,7 @@ psl_simple_compare(
 					: &operand1,
 				&psq_cb->psq_error, NULL))
 		return(status);
+	    cast = (var == operand1) ? operand2 : operand1;
 	}
     }
 
@@ -53245,6 +53339,12 @@ psl_simple_compare(
 
     (*treeinfo)->pss_mask = (i4) 0;
 
+    if (cast)
+    {
+	return psl_mk_similar_lenchk(sess_cb, &sess_cb->pss_ostream,
+				&(*treeinfo)->pss_tree, cnst, cast,
+				&psq_cb->psq_error);
+    }
     return(E_DB_OK);
 }
 
@@ -53343,6 +53443,8 @@ psl_subsel_compare(
     DB_STATUS	status;
     DB_ERROR	*err_blk = &psq_cb->psq_error;
     i4		pst_node_flags = 0;
+    PST_QNODE	*cnst = NULL;
+    PST_QNODE	*cast = NULL;
 
     if (subsel_illegal)
     {
@@ -53368,6 +53470,25 @@ psl_subsel_compare(
 	if (status = psl_subsel(sess_cb, psq_cb, subsel))
 	{
 	    return (status);
+	}
+	if (operator != ADI_LIKE_OP &&
+	    operator != ADI_NLIKE_OP &&
+	    expr->pst_sym.pst_type == PST_CONST &&
+	    (expr->pst_sym.pst_value.pst_s_cnst.pst_tparmtype == PST_USER ||
+	     expr->pst_sym.pst_value.pst_s_cnst.pst_tparmtype == PST_RQPARAMNO) &&
+	    (expr->pst_sym.pst_dataval.db_datatype == DB_NODT ||
+	     abs(expr->pst_sym.pst_dataval.db_datatype) == DB_NVCHR_TYPE ||
+	     abs(expr->pst_sym.pst_dataval.db_datatype) == DB_NCHR_TYPE) &&
+	    subsel->pst_left->pst_right->pst_sym.pst_dataval.db_datatype != DB_NODT)
+	{
+	    cnst = expr;
+            /* Try to cast constant to type of result */
+	    if (status = psl_mk_const_similar(sess_cb, &sess_cb->pss_ostream,
+				&subsel->pst_left->pst_right->pst_sym.pst_dataval,
+				&expr,
+				&psq_cb->psq_error, NULL))
+		return(status);
+	    cast = expr;
 	}
     }
 
@@ -53419,6 +53540,16 @@ psl_subsel_compare(
 			(DB_ANYTYPE *) NULL,
 			&(*treeinfo)->pss_tree, &psq_cb->psq_error,
 			pst_node_flags);
+	if (DB_FAILURE_MACRO(status))
+	{
+	    return (status);
+	}
+	if (cast)
+	{
+	    status =  psl_mk_similar_lenchk(sess_cb, &sess_cb->pss_ostream,
+				    &(*treeinfo)->pss_tree, cnst, cast,
+				    &psq_cb->psq_error);
+	}
     }
     else
     {
@@ -59607,6 +59738,9 @@ psl_patcomp(
 **	    Improve handling of conversion to decimal especially where the
 **	    target precision and length are prescribed. Also preserve
 **	    nullability.
+**	24-Sep-2010 (kiria01) b124457
+**	    Don't just rely on length being specified by db_length of result
+**	    for strings but explicitly add second parameter to cast.
 */
 
 DB_STATUS
@@ -59724,6 +59858,35 @@ psl_mk_const_similar(
 		return status;
 	    }
 	    status = adi_castid(sess_cb->pss_adfcb, &op.pst_opno, &ndv);
+	    {
+		i4 len = ndv.db_length;
+		PST_CNST_NODE cconst;
+
+		switch (op.pst_opno)
+		{
+		case ADI_NVCHAR_OP:
+		case ADI_VARCH_OP:
+		case ADI_TEXT_OP:
+		case ADI_VBYTE_OP:
+		    len -= DB_CNTSIZE;
+		    /*FALLTHROUGH*/
+		case ADI_NCHAR_OP:
+		case ADI_ASCII_OP:
+		case ADI_CHAR_OP:
+		case ADI_BYTE_OP:
+		    cconst.pst_tparmtype = PST_USER;
+		    cconst.pst_parm_no = 0;
+		    cconst.pst_pmspec  = PST_PMNOTUSED;
+		    cconst.pst_cqlang = DB_SQL;
+		    cconst.pst_origtxt = (char *) NULL;
+		    if (op.pst_opno == ADI_NCHAR_OP || op.pst_opno == ADI_NVCHAR_OP) 
+			len /= sizeof(UCS2);
+		    status = pst_node(sess_cb, mstream, NULL, NULL,
+				PST_CONST, (char *)&cconst, sizeof(cconst),
+				DB_INT_TYPE, 0, sizeof(len), (DB_ANYTYPE *)&len,
+				&res_node, err_blk, 0);
+		}
+	    }
 	}
 	if (handled)
 	{
@@ -59766,6 +59929,192 @@ psl_mk_const_similar(
     return status;
 }
 
+
+/*
+** Name:	psl_mk_similar_lenchk
+**
+** Description:	this function supports the psl_mk_const_similar for those cases
+**		where a comparison BOP has a CONST compared (usually a parameter)
+**		and where a CAST to match the non-const side (usually a VAR) would
+**		improve use of indexes etc. Such a cast applied to strings may cause
+**		a truncation that could cause unwarranted matches.
+**		This routine will ensure that the compare be augmented with a sanity
+**		check that the cast does still equate to the const and has not been
+**		significantly truncated for the purpose of comparison.
+**		For non-repeat params, this check could be folded up and made
+**		redundant.
+**
+**
+** Input:
+**	sess_cb			PSF session CB
+**	adf_scd			ADF DB
+**	expr			Address of pointer to the BOP
+**	orig_cst		Address of the original constant
+**	cast_cst		Address of the cast for of constant. Might be
+**				an expression now.
+**	
+** Output:
+**	bop			Address of pointer to the BOP
+**				may be updated if sucessful change in which case
+**				will be the top AND.
+**	err_blk			may be filled in if an error occurs
+**
+** Side effects:
+**	will allocate memory
+**
+** Returns:
+**	E_DB_OK, E_DB_ERROR
+**
+** History:
+**	10-Sep-2010 (kiria01) b124439
+**	    Created to properly guard against outsize constants in the compares.
+*/
+
+static DB_STATUS
+psl_mk_similar_lenchk(
+	PSS_SESBLK	*sess_cb,
+	PSF_MSTREAM	*mstream,
+	PST_QNODE	**expr,
+	PST_QNODE	*orig_cst,
+	PST_QNODE	*cast_cst,
+	DB_ERROR	*err_blk)
+{
+    PST_OP_NODE	opnode;
+    PST_QNODE *chk = NULL;
+    PST_QNODE *n_chk = NULL;
+    PST_QNODE *v2 = NULL;
+    DB_STATUS status = E_DB_OK;
+
+    if (orig_cst->pst_sym.pst_type != PST_CONST)
+	return status;
+    if ((*expr)->pst_sym.pst_type != PST_BOP)
+	return status;
+    /*
+    **	The correct augmentation is dependant on the operator:
+    **	V = C	->	V = CAST(C) AND C = CAST(C)
+    **	V <> C	->	V <> CAST(C) OR C <> CAST(C)
+    **	V < C	->	V < CAST(C) OR V = CAST(C) AND C <> CAST(C)
+    **	V > C	->	V > CAST(C)
+    **	V <= C	->	V <= CAST(C)
+    **	V >= C	->	V >= CAST(C) AND C = CAST(C) OR
+    **					V > CAST(C) AND C <> CAST(C)
+    **
+    **	with chk := C = CAST(C)
+    **	and n_chk := C <> CAST(C)
+    **	V > C	->	V > CAST(C)
+    **	V <= C	->	V <= CAST(C)
+    **	V = C	->	V = CAST(C) AND chk
+    **	V >= C	->	V >= CAST(C) AND chk OR
+    **					V > CAST(C) AND n_chk
+    **	V <> C	->	V <> CAST(C) OR n_chk
+    **	V < C	->	V < CAST(C) OR V = CAST(C) AND n_chk
+    */
+    MEfill(sizeof(opnode), 0, &opnode);
+    opnode.pst_opmeta = PST_NOMETA;
+    opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
+
+    /* setup chk, n_chk and v2 */
+    switch ((*expr)->pst_sym.pst_value.pst_s_op.pst_opno)
+    {
+    case ADI_GT_OP: /* 	V > CAST(C) */
+    case ADI_LE_OP: /*	V <= CAST(C) */
+	/* Nothing else to do */
+	return status;
+
+    case ADI_EQ_OP:
+    case ADI_GE_OP:
+	opnode.pst_opno = ADI_EQ_OP;
+	if (status = pst_node(sess_cb, mstream, orig_cst, cast_cst,
+		PST_BOP, (char *)&opnode, sizeof(opnode), 0, 0, 0,
+		(DB_ANYTYPE *)NULL, &chk, err_blk, PSS_JOINID_STD))
+	    return status;
+	/*FALLTHROUGH*/
+	if ((*expr)->pst_sym.pst_value.pst_s_op.pst_opno == ADI_EQ_OP)
+	    break;
+    
+    case ADI_NE_OP:
+    case ADI_LT_OP:
+	opnode.pst_opno = ADI_NE_OP;
+	if (status = pst_node(sess_cb, mstream, orig_cst, cast_cst,
+			PST_BOP, (char *)&opnode, sizeof(opnode), 0, 0, 0,
+			(DB_ANYTYPE *)NULL, &n_chk, err_blk, PSS_JOINID_STD))
+	    return status;
+	if ((*expr)->pst_sym.pst_value.pst_s_op.pst_opno != ADI_NE_OP)
+	{
+	    PSS_DUPRB dup_rb;
+	    dup_rb.pss_op_mask = 0;
+	    dup_rb.pss_num_joins = PST_NOJOIN;
+	    dup_rb.pss_tree_info = NULL;
+	    dup_rb.pss_mstream = mstream;
+	    dup_rb.pss_err_blk = err_blk;
+	    dup_rb.pss_tree = (*expr)->pst_left;
+	    dup_rb.pss_dup = &v2;
+
+	    if (dup_rb.pss_tree == cast_cst)
+		dup_rb.pss_tree = (*expr)->pst_right;
+	    if (status = pst_treedup(sess_cb, &dup_rb))
+		return (status);
+	}
+	break;
+	
+    }
+
+    opnode.pst_opno = 0;
+    opnode.pst_opmeta = 0;
+    switch ((*expr)->pst_sym.pst_value.pst_s_op.pst_opno)
+    {
+    case ADI_EQ_OP: /*	V = CAST(C)	AND chk */
+	if (status = pst_node(sess_cb, mstream, *expr, chk,
+			PST_AND, (char *)&opnode, sizeof(opnode), 0, 0, 0,
+			(DB_ANYTYPE *)NULL, expr, err_blk, PSS_JOINID_STD))
+	    return status;
+	break;
+    case ADI_NE_OP: /*	V <> CAST(C)	OR n_chk */
+	if (status = pst_node(sess_cb, mstream, *expr, n_chk,
+			PST_OR, (char *)&opnode, sizeof(opnode), 0, 0, 0,
+			(DB_ANYTYPE *)NULL, expr, err_blk, PSS_JOINID_STD))
+	    return status;
+	break;
+    case ADI_GE_OP: /*	V >= CAST(C)	AND chk OR v2 > CAST(C) AND n_chk */
+	if (status = pst_node(sess_cb, mstream, *expr, chk,
+			PST_AND, (char *)&opnode, sizeof(opnode), 0, 0, 0,
+			(DB_ANYTYPE *)NULL, expr, err_blk, PSS_JOINID_STD))
+	    return status;
+	opnode.pst_opno = ADI_GT_OP;
+	if (status = pst_node(sess_cb, mstream, v2, cast_cst,
+		PST_BOP, (char *)&opnode, sizeof(opnode), 0, 0, 0,
+		(DB_ANYTYPE *)NULL, &v2, err_blk, PSS_JOINID_STD))
+	    return status;
+	opnode.pst_opno = 0;
+	if (status = pst_node(sess_cb, mstream, v2, n_chk,
+			PST_AND, (char *)&opnode, sizeof(opnode), 0, 0, 0,
+			(DB_ANYTYPE *)NULL, &v2, err_blk, PSS_JOINID_STD))
+	    return status;
+	if (status = pst_node(sess_cb, mstream, *expr, v2,
+			PST_OR, (char *)&opnode, sizeof(opnode), 0, 0, 0,
+			(DB_ANYTYPE *)NULL, expr, err_blk, PSS_JOINID_STD))
+	    return status;
+	break;
+    case ADI_LT_OP: /*	V < CAST(C)	OR v2 = CAST(C) AND n_chk */
+	opnode.pst_opno = ADI_EQ_OP;
+	if (status = pst_node(sess_cb, mstream, v2, cast_cst,
+		PST_BOP, (char *)&opnode, sizeof(opnode), 0, 0, 0,
+		(DB_ANYTYPE *)NULL, &v2, err_blk, PSS_JOINID_STD))
+	    return status;
+	opnode.pst_opno = 0;
+	if (status = pst_node(sess_cb, mstream, v2, n_chk,
+			PST_AND, (char *)&opnode, sizeof(opnode), 0, 0, 0,
+			(DB_ANYTYPE *)NULL, &v2, err_blk, PSS_JOINID_STD))
+	    return status;
+	if (status = pst_node(sess_cb, mstream, *expr, v2,
+			PST_OR, (char *)&opnode, sizeof(opnode), 0, 0, 0,
+			(DB_ANYTYPE *)NULL, expr, err_blk, PSS_JOINID_STD))
+	    return status;
+	break;
+    }
+    return status;
+}
+
 /*
 ** Name:	psl_checklen
 **
@@ -59794,7 +60143,7 @@ i4 psl_checklen( char *ident , u_i4 max , char *objstr, DB_ERROR *psq_error)
         {
             i4 err_code;
             (VOID) psf_error(2733, 0L, PSF_USERERR, &err_code,
-                psq_error, 3, sizeof(objstr), objstr, 0, ident, sizeof(max), &max);
+                psq_error, 3, STlength(objstr), objstr, 0, ident, sizeof(max), &max);
             return E_DB_ERROR;
 	}
 	return E_DB_OK;

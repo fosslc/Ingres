@@ -7,6 +7,8 @@
 **      Port from assembler to C for VMS itanium port
 **      24-nov-2009 (stegr01)
 **      Change maximum DECC version from 7.2 to 7.3
+**      23-aug-2010 (joea)
+**          Use VAXC$ESTABLISH to set up exception handlers.
 **
 **/
 
@@ -70,6 +72,7 @@
 
 #include <lib$routines>
 #include <starlet>
+#include <signal.h>
 
 #ifndef FALSE
 #define FALSE 0
@@ -162,7 +165,7 @@ i4
 rms_common (RMS_FUNC rms_func, struct RAB *rab, bool *ctrlc_seen)
 {
     i4 sts = RMS$_SUC;
-    lib$establish (ctrlc_handler);
+    VAXC$ESTABLISH (ctrlc_handler);
 
 #ifdef TEST_ME
     signal_ctrlc();

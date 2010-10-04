@@ -748,6 +748,9 @@ i4 dm2uu_tab_id_warn_now  = DM2UU_TAB_ID_WARN_NOW;
 **	19-Aug-2010 (miket) SIR 122403
 **	    Preserve extra stuff that might be at the end of the sort
 **	    record across encryption processing: bucket, partition, tid8.
+**	07-Sep-2010 (miket) SIR 122403
+**	    Use (new) MODIFY_BUCKET_PNO_TID8_SZ instead of one-off size
+**	    definition. We care about this size when we allocate the rcb.
 */
 
 DB_STATUS
@@ -1052,8 +1055,7 @@ DB_ERROR	    *dberr)
 			local_status = dm1e_aes_encrypt(r, &t->tcb_data_rac,
 			    record, r->rcb_erecord_ptr, dberr);
 			/* (may) need to preserve bucket, partition, tid8 */
-			MEcopy(record+m->mx_width,
-			    sizeof(i4)+sizeof(u_i2)+sizeof(DM_TID8),
+			MEcopy(record+m->mx_width, MODIFY_BUCKET_PNO_TID8_SZ,
 			    r->rcb_erecord_ptr+m->mx_width);
 			record = r->rcb_erecord_ptr;
 		    }
@@ -1064,8 +1066,7 @@ DB_ERROR	    *dberr)
 			local_status = dm1e_aes_encrypt(r, &m->mx_data_rac,
 			    record, r->rcb_erecord_ptr, dberr);
 			/* (may) need to preserve bucket, partition, tid8 */
-			MEcopy(record+m->mx_width,
-			    sizeof(i4)+sizeof(u_i2)+sizeof(DM_TID8),
+			MEcopy(record+m->mx_width, MODIFY_BUCKET_PNO_TID8_SZ,
 			    r->rcb_erecord_ptr+m->mx_width);
 			record = r->rcb_erecord_ptr;
 		    }
@@ -2724,6 +2725,10 @@ DB_ERROR	*dberr)
 **	    Start kids with DMF facility.
 **	27-Apr-2010 (kschendel)
 **	    Shorten thread names so they aren't truncated.
+**	03-Sep-2010 (miket) SIR 122403 SD 146662
+**	    No threads for encryption because
+**	    (1) threaded load paths not all encryption enabled
+**	    (2) possible collision on encryption work buffer
 */
 i4
 SpawnDMUThreads(
@@ -2750,7 +2755,8 @@ i4		thread_type)
     */
     if ((m->mx_dcb->dcb_status & DCB_S_ROLLFORWARD) || 
 	(m->mx_flags & MX_ONLINE_MODIFY) ||
-	 (m->mx_width > 32768))
+	(m->mx_width > 32768) ||
+	(t->tcb_rel.relencflags & TCB_ENCRYPTED))
 	avail_threads = 0;
     else
 	avail_threads = m->mx_xcb->xcb_scb_ptr->scb_dop;
@@ -7204,12 +7210,16 @@ DB_ERROR	    *dberr)
 ** History:
 **	12-mar-1999 (nanpr01)
 **	    Created.
+**	27-Aug-2010 (jonj)
+**	    Pass locid parameter to communicate location index
+**	    to QEF via SETDBERR.
 */
 DB_STATUS
 dm2u_raw_location_free(
 DMP_DCB             *dcb,
 DML_XCB             *xcb,
 DB_LOC_NAME         *location,
+i4		    locid,
 DB_ERROR	    *dberr)
 {
     DMP_RCB             *rcb = 0;
@@ -7257,7 +7267,7 @@ DB_ERROR	    *dberr)
 	{
     	    /* Close the table. */
 	    status = dm2t_close(rcb, DM2T_NOPURGE, dberr);
-	    SETDBERR(dberr, 0, E_DM0190_RAW_LOCATION_OCCUPIED);
+	    SETDBERR(dberr, locid, E_DM0190_RAW_LOCATION_OCCUPIED);
 	    return(E_DB_ERROR);
 	}
     }
@@ -7305,7 +7315,7 @@ DB_ERROR	    *dberr)
 	{
     	    /* Close the table. */
 	    status = dm2t_close(rcb, DM2T_NOPURGE, dberr);
-	    SETDBERR(dberr, 0, E_DM0190_RAW_LOCATION_OCCUPIED);
+	    SETDBERR(dberr, locid, E_DM0190_RAW_LOCATION_OCCUPIED);
 	    return(E_DB_ERROR);
 	}
     }

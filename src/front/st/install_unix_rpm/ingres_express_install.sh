@@ -150,6 +150,8 @@
 ##	   Bug 124046
 ##	   Add license prompt for RPM and -acceptlicnse flag for batch
 ##	   operation.
+##	23-Sep-2010 (hweho01)
+##	    Correct the message typo at the beginning of the installation.  
 
 #
 # Multi-platform whoami
@@ -731,7 +733,7 @@ else # dosetup=true
     fi
 
 # Install the save set
-    echo "Begining installation..."
+    echo "Beginning installation..."
     cd $II_SYSTEM/ingres >> /dev/null
     $tar xf $ingtar install
     if $userespfile ; then

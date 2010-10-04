@@ -291,6 +291,10 @@ opa_modqual(
 **	    Prevent link of non-correlated, single valued SQs (SAGGs)
 **	    (but this is a good candidate for a fix to back out if subselects
 **	    start going wrong).
+**      04-aug-2010 (huazh01)
+**          Modify the above fix. do not skip SAGG if a PST_VAR in child agg's
+**          'bylist' has been added into main subquery as a non-printing resdom.
+**          (b124187)
 [@history_line@]...
 */
 VOID
@@ -298,7 +302,16 @@ opa_link(
 	OPS_STATE          *global)
 {
     OPS_SUBQUERY           *subquery;   /* used to traverse subquery list */
+    OPS_SUBQUERY           *mainSqry; 
+    PST_QNODE              *p1, *p2, *bylist; 
+    bool                   found = FALSE; 
+    
     {
+        mainSqry = global->ops_subquery;
+
+        while (mainSqry->ops_sqtype != OPS_MAIN)
+              mainSqry = mainSqry->ops_next;
+
 	/* traverse the list of subqueries and update the visibility maps
         ** - a visibility map for an aggregate is a bitmap of the temporary
         ** range variables which are visible in the bylist of the aggregrate
@@ -362,14 +375,67 @@ opa_link(
 		    {	/* look at all parents and update visibility maps */
 			/* Skip SQL SAGGs with no predicates. They must be 
 			** non-correlated single value SQs and we don't want
-			** to cause them to link back. */
+			** to cause them to link back. 
+                        **
+                        ** b124187: Child agg must be visible (linked to) SAGG if child's
+                        ** bylist appears in the main subquery as non-printing resdoms.
+                        ** Otherwise, the non-printing resdom in the main query will appear
+                        ** to be in an eqcls by itself, causing a cart-prod and duplicated 
+                        ** rows. 
+                        */
 			if (father->ops_sqtype == OPS_SAGG &&
 			    father->ops_root && 
 			    father->ops_root->pst_sym.pst_value.pst_s_root.
 				pst_qlang == DB_SQL &&
 			    (father->ops_root->pst_right == NULL ||
 			    father->ops_root->pst_right->pst_sym.pst_type == PST_QLEND))
-			    continue;
+                        {
+                            p1 = mainSqry->ops_root;
+                            found = FALSE;
+
+                            while (p1)
+                            {
+                                 if (p1->pst_sym.pst_type == PST_RESDOM &&
+                                     p1->pst_right &&
+                                     p1->pst_right->pst_sym.pst_type == PST_VAR &&
+                                     !(p1->pst_sym.pst_value.pst_s_rsdm.pst_rsflags & 
+                                         PST_RS_PRINT))
+                                 {
+                                    if (concurrent->ops_agg.opa_fbylist)
+                                       p2 = concurrent->ops_agg.opa_fbylist;
+                                    else
+                                       p2 = concurrent->ops_agg.opa_byhead->pst_left;
+
+                                    while (p2)
+                                    {
+                                       if (p2->pst_sym.pst_type == PST_RESDOM  &&
+                                           p2->pst_right &&
+                                           p2->pst_right->pst_sym.pst_type == PST_VAR &&
+                                           p2->pst_right->pst_sym.pst_value.pst_s_var.pst_vno
+                                           ==
+                                           p1->pst_right->pst_sym.pst_value.pst_s_var.pst_vno
+                                           &&
+                                           p2->pst_right->pst_sym.pst_value.pst_s_var.\
+		   				pst_atno.db_att_id ==
+                                           p1->pst_right->pst_sym.pst_value.pst_s_var.\
+						pst_atno.db_att_id)
+                                       {
+                                           found = TRUE;
+                                           break;
+                                       }
+                                       p2 = p2->pst_left;
+                                    }
+                                 }
+
+                                 if (found)
+                                    break;
+
+                                 p1 = p1->pst_left;
+                            }
+
+                            if (!found)
+                               continue;
+                        }
 			BTset((i4)ivarno, (char *)&father->ops_agg.opa_visible);
                                                 /* function aggregate is visible
                                                 ** its immediate parent always

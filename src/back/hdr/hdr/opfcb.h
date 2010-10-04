@@ -171,6 +171,9 @@
 **     12-Aug-2010 (horda03) b124109
 **          Added trace point OP218 which forces optimiser to insert EXCHANGE
 **          nodes (when Parallel queries enabled).
+**	28-Jun-2010 (smeke01) b123969
+**	    Added diagnostic tracepoint OP217 which forces optimiser to use
+**	    hash joins. Requires xDEBUG to be defined in opjjoinop.c.
 **/
 
 /*}
@@ -2457,6 +2460,11 @@ typedef i4 OPX_ERROR;
 #define			OPT_F088_BESTPLANS	88
 /* SET TRACE POINT OP216
 ** - print just the best query plans in the order they are found.
+*/
+#define			OPT_F089_FORCE_HASHJOIN 89
+/* SET TRACE POINT OP217
+** Force the optimiser to use hash joins.
+** (Diagnostic use only - requires xDEBUG defined in opjjoinop.c)
 */
 #define			OPT_F090_FORCE_EXCHANGE 90
 /* SET TRACE POINT OP218

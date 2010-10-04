@@ -281,6 +281,13 @@
 ##	20-Feb-2010 (hanje04)
 ##	   SIR 123296
 ##	   Add support for LSB builds
+##	14-Sep-2010 (rajus01) Bug 124381, SD issue 146492
+##	   Set the mechanism_location_lp32 to the value pointed by 
+##	   mechanism_location in the case of upgrade. The mechanism_location
+##	   _lp64 will remain unmodified. And remove the config parameter 
+##	   mechanism_location as it is no longer required for
+##	   the hybrid platforms.
+##	   
 ##
 #  PROGRAM = (PROG1PRFX)sunet
 #
@@ -407,6 +414,14 @@ done
     
 trap "rm -f ${cfgloc}/config.lck /tmp/*.$$ 1>/dev/null \
 2>/dev/null; exit 1" 0 1 2 3 15
+
+SEC_MECH_LOC=`iigetres ii.$CONFIG_HOST.gcf.mechanism_location`
+if [ -n "$SEC_MECH_LOC" ] ; then 
+if [ x"$conf_BUILD_ARCH_32_64" = x"TRUE" ] ; then
+$DOIT iisetres -v "ii.$CONFIG_HOST.gcf.mechanism_location_lp32" "$SEC_MECH_LOC"
+$DOIT iiremres "ii.$CONFIG_HOST.gcf.mechanism_location"
+fi
+fi
 
 do_setup()
 {

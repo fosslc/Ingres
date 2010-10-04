@@ -537,6 +537,8 @@
 **	09-aug-2010 (maspa05) b123189, b123960
 **	    Add DCB_S_RODB to indicate database is a readonly database (as
 **          opposed to a database merely opened for read-only access)
+**      15-Sep-2010 (stial01) (SIR 121619 MVCC, SD 146756, B124453)
+**          Moved row_is_consistent() prototype to dmp.h
 */
 
 /*
@@ -4626,3 +4628,10 @@ struct _DMP_RNL_ONLINE {
 	  ((DMZ_LCK_MACRO(6)) ||                                        \
 	   (dmf_svcb->svcb_log_err & SVCB_LOG_LPR_UT))))
 
+/*
+**  Forward and/or External function references.
+*/
+FUNC_EXTERN bool row_is_consistent(
+DMP_RCB		*r,
+u_i4		row_low_tran,
+u_i2		row_lg_id);

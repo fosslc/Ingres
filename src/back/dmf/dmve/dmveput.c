@@ -209,6 +209,8 @@
 **          Use new routintes to compare rows in iirelation, iisequence
 **	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
 **          Remove table name,owner from log records.
+**      16-sep-2010 (stial01) (B124463, SD 146781)
+**          dmv_reput() fix iirtemp handling for compressed iirtemp
 */
 
 static DB_STATUS	dmv_reput(
@@ -584,6 +586,8 @@ DMP_PINFO	    *pinfo)
     DMPP_ACC_PLV	*plv = dmve->dmve_plv;
     LG_LRI		lri;
     DMPP_PAGE		*page = pinfo->page;
+    char		creltup[sizeof(DMP_RELATION)+50]; /* compress expand*/
+    i4			csize;
 
     CLRDBERR(&dmve->dmve_error);
  
@@ -680,8 +684,9 @@ DMP_PINFO	    *pinfo)
         (log_rec->put_header.flags & DM0L_TEMP_IIRELATION) &&
         /* TEMPORARY FIX for bogus DM0L_TEMP_IIRELATION due to the
         ** fix for Bug 107828.
-        */
-        (STbcompare(tabio->tbio_relid->db_tab_name, 7, "iirtemp", 7, TRUE) ==0))
+	*/
+	(MEcmp(tabio->tbio_relid->db_tab_name, "iirtemp", 7) == 0 ||
+	MEcmp(tabio->tbio_relid->db_tab_name, "IIRTEMP", 7) == 0))
     {
 	/* The row is a temporary iirelation entry which represents a
 	** non-journaled table. For consistency purposes we must mask
@@ -692,6 +697,10 @@ DMP_PINFO	    *pinfo)
 	DMP_RELATION   cur_rel;
 	DB_STATUS      rel_status;
         DB_TAB_ID      rel_id;
+	DMP_TCB        *t;
+
+	/* This might be partial tcb, but it will always have basic info */
+	t = (DMP_TCB *)((char *)tabio - CL_OFFSETOF(DMP_TCB, tcb_table_io));
 
 	MEcopy((PTR) &log_rel->reltid, sizeof(DB_TAB_ID), (PTR)&rel_id);
 
@@ -704,9 +713,30 @@ DMP_PINFO	    *pinfo)
 	    SETDBERR(&dmve->dmve_error, 0, E_DM963B_REDO_PUT);
 	    return(E_DB_ERROR);
 	}
+
 	if(rel_status == E_DB_OK)
 	{
-	    MEcopy((PTR) &cur_rel, sizeof(DMP_RELATION), (PTR)log_rel);
+	    DMP_TCB *iirel_tcb = dcb->dcb_rel_tcb_ptr;
+
+	    /*
+	    ** This is iirtemp
+	    ** Use the dcb_rel_tcb_ptr which should always be init 
+	    ** and have the same rac
+	    */
+	    status = (*iirel_tcb->tcb_data_rac.dmpp_compress)
+		(&iirel_tcb->tcb_data_rac, 
+		(char *)&cur_rel, sizeof(DMP_RELATION), creltup, &csize);
+
+	    if (csize == log_rec->put_rec_size)
+		MEcopy((PTR)creltup, csize, (PTR)log_rel);
+	    else
+	    {
+		/* should not happen */
+		TRdisplay("DM0LPUT fix iirtemp for %~t rec_size %d csize %d\n",
+		    cur_rel.relid.db_tab_name, log_rec->put_rec_size, csize);
+		SETDBERR(&dmve->dmve_error, 0, E_DM963B_REDO_PUT);
+		return(E_DB_ERROR);
+	    }
 	}
     }
 

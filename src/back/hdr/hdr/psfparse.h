@@ -686,6 +686,8 @@
 **	    E_PS0C88_ENCRYPT_NOPASS
 **	24-jun-2010 (stephenb)
 **	    Add E_PS03B4_NO_COPY_CACHE
+**      11-Aug-2010 (hanal04) Bug 124180
+**          Added PSQ_MONEY_COMPAT. Set if money_compat true in config.dat.
 **/
 
 /*
@@ -2523,6 +2525,8 @@ typedef struct _PST_OBJDEP
 **	    conflicts. Add PSQ_SETBATCHCOPYOPTIM.
 **	20-Jul-2010 (kschendel) SIR 124104
 **	    Add a place to pass in create-compression.
+**	12-aug-2010 (stephenb)
+**	    Resolve flag conflict in psq_flags2
 */
 typedef enum psq_mode_enum {
 #define PSQ_MODES_MACRO \
@@ -3220,10 +3224,15 @@ typedef struct _PSQ_CB
 					 ** set ==> set if the default cursor 
 					 ** mode is readonly 
 					 */
-#define	    PSQ_LOCATOR			0x0004L
+#define	    PSQ_LOCATOR			0x00020L
 					/* 
 					** set ==> GCA_LOCATOR_MASK is on
 					*/
+#define     PSQ_MONEY_COMPAT		0x0008L
+					/*
+                                        ** Set if constant strings are to be
+                                        ** parsed for money.
+                                        */
     bool	    psq_vch_prec;	/* varchar precedence */
  
                                         /*

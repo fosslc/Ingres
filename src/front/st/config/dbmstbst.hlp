@@ -6,7 +6,7 @@
 
   If the auto structure option is selected and there is at least one
   primary key, unique or foreign key constraint defined in the CREATE
-  TABLE statement, the table will be created with base table strcture
+  TABLE statement, the table will be created with base table structure
   BTREE on the constrained columns. If more than one constraint is
   defined, the base table structure will be based on a primary key 
   constraint before a unique constraint, and a unique constraint before

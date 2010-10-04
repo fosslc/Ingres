@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2006 Ingres Corporation
+** Copyright (c) 2010 Ingres Corporation
 */
 
 # if defined(dgi_us5)
@@ -206,6 +206,20 @@
 **          Unicode string by 2 instead of sizeof(SQLWCHAR), since
 **          this equates to 4 on UCS4 systems, but the string has already
 **          been converted to UCS2.
+**     03-Sep-2010 (Ralph Loen) Bug 124348
+**          Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
+**          SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
+**          platforms.
+**     04-Sep-2010 (Ralph Loen) Bug 124348
+**          Provided different version of SQLColAttributeW() based on _WIN64
+**          to match the MS implementation.
+**     08-Sep-2010 (Ralph Loen) Bug 124307
+**          In ConvertCharToWChar, use ConvertUCS2ToUCS4() instead of
+**          copying string elements.  In ConvertUCS2ToUCS4() and
+**          ConvertUCS4ToUCS2(), use an intermediate buffer for copying
+**          string elements.
+**     24-Sep-2010 (thoda04) Bug 124307
+**          In ConvertUCS4ToUCS2(), let casting handle big/little endian.
 */
 
 /*
@@ -244,8 +258,9 @@ RETCODE ConvertCharToWChar(
     RETCODE    rc    = SQL_SUCCESS;
     IIAPI_CONVERTPARM   cv;
     BOOL isUcs4 = (sizeof(SQLWCHAR) == 4 ? TRUE : FALSE);
-    i2 i; 
     i2 *ucs2buf = NULL;
+    i2 nt = 0;
+    i4 nt4 = 0;
 
     if (cbValue == SQL_NTS)              /* if length NTS, get length */
     {
@@ -255,9 +270,13 @@ RETCODE ConvertCharToWChar(
             cbValue = 0;
     }
 
-    if (szValue == NULL  ||  cbValue <= 0)  /* if no input string, return 0 now*/
+    if (szValue == NULL  ||  cbValue <= 0)  /* if no input string, */
+                                            /* return 0 now*/
     {
-        if (rgbWideValue  &&  cbWideValueMax>0)  /* room in buffer for null-term? */
+        /* 
+        ** Room in buffer for null-term? 
+        */
+        if (rgbWideValue  &&  cbWideValueMax>0) 
             *rgbWideValue = 0;
         if (pcbValue)
             *pcbValue = 0;
@@ -347,8 +366,10 @@ RETCODE ConvertCharToWChar(
             return SQL_ERROR;
     }
 
- /* szWideValue -> Unicode string
-    cbWideValue  = Unicode string length in characters */
+    /* 
+    ** szWideValue -> Unicode string
+    ** cbWideValue  = Unicode string length in characters 
+    */
 
     if (pcbValue)   /* if SWORD destination count field present */
        *pcbValue = (SWORD)cbValue;
@@ -369,13 +390,15 @@ RETCODE ConvertCharToWChar(
         {
             if (isUcs4)
             {
-                for (i = 0; i < cbValue; i++)
-                    rgbWideValue[i] = ucs2buf[i]; 
+                ConvertUCS2ToUCS4(ucs2buf, rgbWideValue, cbValue);
+                /* Null terminate. */
+                I4ASSIGN_MACRO(nt4,*(rgbWideValue+cbValue));
             }
             else
+            {
                 memcpy (rgbWideValue, szWideValue, cbWideValue);
-
-            *(rgbWideValue+cbValue)=0;  /* null terminate */
+                *(rgbWideValue+cbValue) = nt;  /* null terminate */
+            }
         }
         else
         {   /* need to truncate some */
@@ -384,13 +407,16 @@ RETCODE ConvertCharToWChar(
                 cbValue = cbWideValueMax - 1;
                 if (isUcs4)
                 {
-                    for (i = 0; i < cbValue; i++)
-                        rgbWideValue[i] = ucs2buf[i]; 
+                    ConvertUCS2ToUCS4(ucs2buf, rgbWideValue, cbValue);
+                    /* Null terminate. */
+                    I4ASSIGN_MACRO(nt4,*(rgbWideValue+cbValue));
                 }
                 else
-                    memcpy (rgbWideValue, szWideValue, cbValue*sizeof(SQLWCHAR));
-
-                *(rgbWideValue + cbValue) = 0;
+                {
+                    memcpy (rgbWideValue, szWideValue, 
+                        cbValue*sizeof(SQLWCHAR));
+                    *(rgbWideValue + cbValue) = nt;
+                }
             }
             rc = SQL_SUCCESS_WITH_INFO;
             if (lpv) 
@@ -412,7 +438,7 @@ RETCODE ConvertCharToWChar(
 **  On entry: lpv          -->DBC or STMT block or NULL for errors.
 **            szWideValue  -->Wide (Unicode) string to convert.
 **            cbWideValue   = length in char of input buffer
-                                 or SQL_NTS if null-terminated.
+**                               or SQL_NTS if null-terminated.
 **            rgbValue     -->where to return null-terminated ANSI string.
 **            cbValueMax    = length of output buffer.
 **            pcbValue      = where to return length (SWORD) of ANSI string
@@ -442,7 +468,7 @@ RETCODE ConvertWCharToChar(
     IIAPI_CONVERTPARM   cv;
     BOOL isUcs4 = (sizeof(SQLWCHAR) == 4 ? TRUE : FALSE);
     u_i2 *ucs2buf = NULL;
-
+ 
     if (cbWideValue == SQL_NTS)              /* if length NTS, get length */
     {
         if (szWideValue)
@@ -453,21 +479,22 @@ RETCODE ConvertWCharToChar(
 
     if (szWideValue == NULL  ||  rgbValue == NULL  ||
         cbWideValue <= 0)  /* if no input string, return 0 now*/
-       {
+    {
         if (rgbValue  &&  cbValueMax>0)  /* room in buffer? */
-           *rgbValue = '\0';
+            *rgbValue = '\0';
         if (pcbValue)
-           *pcbValue = 0;
+            *pcbValue = 0;
         if (pdwValue)
-           *pdwValue = 0;
+            *pdwValue = 0;
         if (plenValue)
-           *plenValue = 0;
+            *plenValue = 0;
         return SQL_SUCCESS;
-       }
+    }
 
     if (isUcs4)
     {
-        ucs2buf = (u_i2 *)MEreqmem(0, ((cbWideValue+1)*sizeof(u_i2)), TRUE, NULL);
+        ucs2buf = (u_i2 *)MEreqmem(0, ((cbWideValue+1)*sizeof(u_i2)), 
+            TRUE, NULL);
         if (ucs2buf == NULL)  /* no memory!? */
         {
             if (lpv)
@@ -496,8 +523,10 @@ RETCODE ConvertWCharToChar(
             return SQL_ERROR;
     }
 
- /* szValue -> target buffer to hold character string
-    cbValue  = target buffer length in bytes */
+    /* 
+    ** szValue -> target buffer to hold character string
+    ** cbValue  = target buffer length in bytes 
+    */
 
     if (cbWideValue)     /* convert the Unicode string to character */
     {
@@ -549,9 +578,10 @@ RETCODE ConvertWCharToChar(
     cbValue = *(u_i2 *)szValue;
     szData = szValue + sizeof(u_i2);
     
-
- /* szData -> character string
-    cbValue  = character string length in bytes */
+    /* 
+    ** szData -> character string
+    ** cbValue  = character string length in bytes 
+    */
 
     if (pcbValue)   /* if destination count field (SWORD) present */
        *pcbValue = (SWORD)cbValue;
@@ -564,6 +594,7 @@ RETCODE ConvertWCharToChar(
                     /* number of character excluding null-term char*/
 
     if (rgbValue)   /* if destination buffer present */
+    {
         if (cbValue < cbValueMax) /* fits well into the target buffer*/
         {
             memcpy (rgbValue, szData, cbValue);
@@ -572,13 +603,15 @@ RETCODE ConvertWCharToChar(
         else
         {   /* need to truncate some */
             if (cbValueMax > 0)
-               {cbValue = (u_i2)cbValueMax - 1;
+            {
+                cbValue = (u_i2)cbValueMax - 1;
                 memcpy (rgbValue, szData, cbValue);
                 *(rgbValue + cbValue) = '\0';
-               }
+            }
             rc = SQL_SUCCESS_WITH_INFO;
             if (lpv) ErrState (SQL_01004, lpv);
         }
+    }
 
     if (szValue)
         MEfree((PTR)szValue); /* free work area for work string */
@@ -609,7 +642,8 @@ RETCODE ConvertUCS2ToUCS4(
 {
     SQLINTEGER     i;
     u_i4       sizeofSQLWCHAR = sizeof(SQLWCHAR);
-    u_i4       tempui4;
+    u_i2       tmp2;
+    u_i4       tmp4;
 
     if (sizeofSQLWCHAR != 4)  /* return if not needed */
         return SQL_SUCCESS;
@@ -618,11 +652,11 @@ RETCODE ConvertUCS2ToUCS4(
     p4 = p4 + len - 1;    /* and process right to left */
 
     for (i=0; i < len; i++, p2--, p4--)
-        {
- /*      *p4 = *p2;               */
-         tempui4 = *p2;
-         I4ASSIGN_MACRO(tempui4, *p4);
-        }
+    {
+        I2ASSIGN_MACRO(*p2, tmp2);
+        tmp4 = (u_i4)tmp2;
+        I4ASSIGN_MACRO(tmp4, *p4);
+    }
 
     return SQL_SUCCESS;
 }
@@ -648,15 +682,23 @@ RETCODE ConvertUCS4ToUCS2(
 {
     SQLINTEGER     i;
     u_i4       sizeofSQLWCHAR = sizeof(SQLWCHAR);
+    u_i4       tmp4;
+    u_i2       tmp2;
+
+    char *p = (char *)p2;
 
     if (sizeofSQLWCHAR != 4)  /* return if not needed */
         return SQL_SUCCESS;
 
-        /* assume that p2 and p4 point to same buffer */
-        /* and process left to right */
+    /* assume that p2 and p4 point to same buffer */
+    /* and process left to right */
 
     for (i=0; i < len; i++, p2++, p4++)
-        *p2 = (u_i2)(*p4);
+    {
+        I4ASSIGN_MACRO(*p4, tmp4); 
+        tmp2 = (u_i2)tmp4;
+        I2ASSIGN_MACRO(tmp2, *p2);
+    }
 
     return SQL_SUCCESS;
 }
@@ -920,16 +962,25 @@ static SQLRETURN   CatalogFunction(
     return rc;
 }
 
-
-
+#ifdef _WIN64
 SQLRETURN SQL_API SQLColAttributeW(
     SQLHSTMT         hstmt,
     SQLUSMALLINT     ColumnNumber,
     SQLUSMALLINT     FieldIdentifier,
     SQLPOINTER       ValuePtr,
     SQLSMALLINT      BufferLength,       /*   count of bytes */
-    SQLSMALLINT     *StringLengthPtr,    /* ->count of bytes */
+    SQLSMALLINT      *StringLengthPtr,    /* ->count of bytes */
+    SQLLEN           *NumericAttributePtr) 
+#else
+SQLRETURN SQL_API SQLColAttributeW(
+    SQLHSTMT         hstmt,
+    SQLUSMALLINT     ColumnNumber,
+    SQLUSMALLINT     FieldIdentifier,
+    SQLPOINTER       ValuePtr,
+    SQLSMALLINT      BufferLength,       /*   count of bytes */
+    SQLSMALLINT      *StringLengthPtr,    /* ->count of bytes */
     SQLPOINTER       NumericAttributePtr) 
+#endif
 {
     LPSTMT           pstmt = (LPSTMT)hstmt;
     SQLRETURN        rc, rc2;
@@ -1071,7 +1122,7 @@ SQLRETURN SQL_API SQLDescribeColW(
     SQLSMALLINT      cbWideColNameMax,   /*   count of chars */
     SQLSMALLINT     *pcbWideColName,     /* ->count of chars */
     SQLSMALLINT     *pfSqlType,
-    SQLUINTEGER         *pcbColDef,          /* ->ColumnSize in chars; may cause MS KB Q249803*/
+    SQLULEN         *pcbColDef,          /* ->ColumnSize in chars; may cause MS KB Q249803*/
     SQLSMALLINT     *pibScale,
     SQLSMALLINT     *pfNullable)
 {
@@ -1516,7 +1567,7 @@ SQLRETURN SQL_API SQLGetDescRecW(
     SQLSMALLINT     *pcbWideColName,   /* ->count of chars */
     SQLSMALLINT     *pfType,
     SQLSMALLINT     *pfSubType,
-    SQLINTEGER          *pLength,
+    SQLLEN          *pLength,
     SQLSMALLINT     *pPrecision, 
     SQLSMALLINT     *pScale,
     SQLSMALLINT     *pNullable)
@@ -1957,7 +2008,7 @@ SQLRETURN SQL_API SQLGetTypeInfoW(
 SQLRETURN SQL_API SQLSetConnectOptionW(
     SQLHDBC          hdbc,
     SQLUSMALLINT     fOption,
-    SQLUINTEGER          vParam)
+    SQLULEN          vParam)
 {
     SQLINTEGER StringLength = SQL_NTS;
 

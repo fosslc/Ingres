@@ -619,6 +619,9 @@ static STATUS duc_goodClientList();
 **				checkpoint.  Similar to db_locationname
 **              -page_size      The page size for the system catalogs for that   
 **                              database  
+**
+**              -Pdbms_passwd   DBMS password 
+**
 **	Diagnostics:
 **		No database name specified.
 **		You are not a valid INGRES user
@@ -748,6 +751,8 @@ static STATUS duc_goodClientList();
 **         If we are creating IIDBDB call iiqef_alter_db() to update the
 **         CBF file with the db_service flags we have established before
 **         we exit.
+**      31-Aug-2010 (maspa05) bug 124328
+**         Added -P flag to pass DBMS password on the command line
 */
 
 main(argc, argv)
@@ -761,6 +766,8 @@ char	    *argv[];
     EX_CONTEXT		context;
 ##  char		*dba_override = "";
     char		override[64];
+##  char		*db_passwd = "";
+    char		passwd[DB_MAXNAME+4];
     char		tmp_buf[DU_APPL_FLAG_MAX];
 
     DU_STATUS		duc_db_envinit();
@@ -950,7 +957,14 @@ char	    *argv[];
 		STcopy(duc_dbenv.dbdbnamePlusService, node_dbname);
 	    }
 
-##	    ingres Duc_appl_flag DU_1DBA_DBDB_FLAG "-Z"
+            /* pass DBMS password through to connect string */
+	    if (duc_dbenv.du_db_passwd_given)
+	    {
+		STpolycat(2, "-P", duc_dbenv.du_db_passwd, passwd);
+		db_passwd = passwd;
+	    }
+
+##	    ingres Duc_appl_flag DU_1DBA_DBDB_FLAG "-Z" db_passwd
 ##		node_dbname
 	    Duc_iidbdb_read = TRUE;
 	    duc_dbenv.du_dbopen	=   TRUE;
@@ -997,7 +1011,7 @@ char	    *argv[];
 
 ##	    exit
 
-##	    ingres Duc_appl_flag dba_override node_dbname "-Z"
+##	    ingres Duc_appl_flag dba_override node_dbname "-Z" db_passwd
 
 ##	    set session isolation level serializable
 
@@ -1038,7 +1052,7 @@ char	    *argv[];
 	    	{
 		    STcopy(duc_dbenv.dbnamePlusService, node_dbname);
 	    	}
-##	    	ingres "+w" "-l" Duc_appl_flag DU_1DBA_DBDB_FLAG "-Z"
+##	    	ingres "+w" "-l" Duc_appl_flag DU_1DBA_DBDB_FLAG "-Z" db_passwd
 ##			node_dbname
 	    	duc_dbenv.du_dbopen = TRUE;
 	    }
@@ -1121,7 +1135,7 @@ char	    *argv[];
 	    {
 		STcopy(duc_dbenv.dbdbnamePlusService, node_dbname);
 	    }
-##	    ingres Duc_appl_flag node_dbname "-Z"
+##	    ingres Duc_appl_flag node_dbname "-Z" db_passwd
 	    duc_dbenv.du_dbopen = TRUE;
 
 ##	    set session isolation level serializable
@@ -1207,7 +1221,7 @@ char	    *argv[];
 	    SIflush(stdout);
 IIlq_Protect(TRUE);    
 
-##  ingres Duc_appl_flag "+w" "-l" DU_1DBA_DBDB_FLAG duc_dbenv.du_dbname
+##  ingres Duc_appl_flag "+w" "-l" DU_1DBA_DBDB_FLAG db_passwd duc_dbenv.du_dbname
            duc_dbenv.du_dbopen = TRUE;
             
 ##	    set session isolation level serializable
@@ -2884,6 +2898,8 @@ static DU_STATUS
 ##  char    	DU_effective_dba[DB_MAXNAME+4];
     /* construct name of form node::database, so 2 for "::" */
 ##  char	node_dbname[GCC_L_NODE + DB_MAXNAME + 2 + 1];
+##  char		*db_passwd = "";
+    char		passwd[DB_MAXNAME+4];
 
     if (!STcompare(DU_DBDBNAME, duc_dbenv->du_dbname))
 	STcopy(DU_1DBA_DBDB_FLAG, DU_effective_dba);
@@ -2906,7 +2922,15 @@ static DU_STATUS
     {
 	STcopy(duc_dbenv->dbnamePlusService, node_dbname);
     }
-##  ingres Duc_appl_flag "+w" "-l" DU_1DBA_DBDB_FLAG node_dbname
+
+    /* pass DBMS password through to connect string */
+    if (STlength(duc_dbenv->du_db_passwd) > 0)
+    {
+	STpolycat(2, "-P", duc_dbenv->du_db_passwd, passwd);
+	db_passwd = passwd;
+    }
+
+##  ingres Duc_appl_flag "+w" "-l" DU_1DBA_DBDB_FLAG db_passwd node_dbname
     duc_dbenv->du_dbopen	= TRUE;
     IIlq_Protect(TRUE);
 
@@ -3821,6 +3845,8 @@ DU_STATUS
 **	31-aug-2007 (gupsh01)
 **	    Return the collation name with E_DU3070_BAD_COLLATION,
 **	    when a unicode collation supplied is not valid.
+**	31-aug-2010 (maspa05) bug 124328
+**	    Added -P flag to pass dbms password on command line
 */
 DU_STATUS
 duc_get_args(argc, argv, duc_modes, duc_dbenv, duc_errcb)
@@ -3853,6 +3879,7 @@ DU_ERROR	    *duc_errcb;
      i4             page_size; 
     bool	    dash_i_specified = FALSE;
     bool	    dash_n_specified = FALSE;
+    char            *db_passwd;
     
     /* Get the process's user name */
     du_get_usrname(duc_dbenv->du_usrinit);
@@ -3920,6 +3947,11 @@ DU_ERROR	    *duc_errcb;
         }
     }
     STcopy(argv[0], duc_modes->duc_progname);
+
+    /* initialize dbms password to null */
+    duc_dbenv->du_db_passwd[0]=EOS;
+    duc_dbenv->du_db_passwd_given=FALSE;
+
 /*
 we can't validate location-names here, since
 we need the settings for REG_ID and DELIM_ID
@@ -4179,6 +4211,25 @@ in duc_db_evinit()
 		argv--;
 
                 break;
+
+	      case 'P':
+                    duc_dbenv->du_db_passwd_given=TRUE;
+                    /* if -P passed with no parameter prompt for value
+                       (done by IIUIpassword) - this is consistent with tm etc
+                    */
+                    if (p[2]==EOS)
+                    {
+                       db_passwd=IIUIpassword(ERx("-P"));
+                       if (db_passwd == NULL)
+		         return(du_error(duc_errcb, E_DU351D_INT_PASS_FAIL,
+                                 0, 0));
+                       else
+                         /* IIUpassword returns -Ppasswd */
+                         STcopy(db_passwd+2, duc_dbenv->du_db_passwd);
+                    }
+                    else
+                      STcopy(&p[2], duc_dbenv->du_db_passwd);
+                    break;
 
 	      default:
 		return(du_error(duc_errcb, E_DU3121_UNKNOWN_FLAG_CR, 2, 0, p));

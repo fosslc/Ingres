@@ -1409,6 +1409,8 @@ typedef CS_SEMAPHORE	DM_MUTEX;
 **	    SVCB_CONFIG_V6, SVCB_CONFIG_V7
 **	08-Mar-2010 (thaju02)
 **	    svcb_maxtuplen is obsolete; not used.
+**      17-Sep-2010 (maspa05) b124388
+**          Add OBJ_P_MEREQ for ShortTerm pools allocated via MEreqmem
 */
 struct _DM_SVCB
 {
@@ -1504,6 +1506,7 @@ BATCHMODE,IOMASTER,READAHEAD,MT,AFFINITY,NO_REP,ULOCKS"
 	u_i2	    obj_pool;	    	    /* Which pool */
 #define			OBJ_P_STATIC	    0xffff /* Static SCB pool */
 #define			OBJ_P_SCF	    0xfffe /* SCB pool from SCF */
+#define			OBJ_P_MEREQ	    0xfffd /* SCB pool from MEreqmem */
 	PTR	    obj_scb;		    /* SCB if shortterm memory */
 	PTR	    obj_owner;		    /* Control block owner. */
 	i4	    obj_tag;		    /* Hex dump visible tag. */

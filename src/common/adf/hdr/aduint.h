@@ -180,6 +180,9 @@
 **	    Added float trunc, ceil, floor.
 **       9-Jul-2010 (hanal04) Bug 124087
 **          Added adu_nvchr_embchartouni() and adu_nvchr_embunitochar()
+**      11-Aug-2010 (hanal04) Bug 124180
+**          Added adu_2strtomny_strict() for backwards compatibility of
+**          money string constants.
 */
 
 
@@ -1325,5 +1328,11 @@ FUNC_EXTERN DB_STATUS adu_nvchr_utf8_bldkey( ADF_CB          *scb,
 					i4              semantics,
 					ADC_KEY_BLK     *key_block);
 FUNC_EXTERN ADU_NORM1_FUNC adu_numeric_norm;
+
+FUNC_EXTERN DB_STATUS adu_2strtomny_strict( ADF_CB		*adf_scb,
+					DB_DATA_VALUE		*str_dv,
+					DB_DATA_VALUE		*mny_dv,
+					bool			strict);
+
 FUNC_EXTERN ADU_NORM2_FUNC adu_aesdecrypt;
 FUNC_EXTERN ADU_NORM2_FUNC adu_aesencrypt;

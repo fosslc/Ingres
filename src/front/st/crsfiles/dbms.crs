@@ -629,6 +629,9 @@
 --#	    Linux).
 --#	 4-Aug-2010 (wanfr01) b124188
 --#	    Remove opf_one_rel_opt - crossed in accidentally
+--#     11-Aug-2010 (hanal04) Bug 124180
+--#         Added money_compat for backwards compatibility of money
+--#         string constants.
 
 -- location setup resources
 # ifdef UNIX 
@@ -848,6 +851,7 @@ ii.$.dbms.$.log_esc_lpr_ut:   OFF;
 ii.$.dbms.$.log_esc_lpt_sc:   OFF;
 ii.$.dbms.$.log_esc_lpt_ut:   OFF;
 ii.$.dbms.$.mechanisms:       "none";
+ii.$.dbms.$.money_compat:       OFF;
 ii.$.dbms.$.mustlog_db_list:	"";	
 ii.$.dbms.$.name_service: 	ON;
 ii.$.dbms.$.opf_active_limit:	0.2 * ii.$.dbms.$.connect_limit,

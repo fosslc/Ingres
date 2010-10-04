@@ -1,0 +1,13 @@
+/#-- Copyright (c) 2010 Ingres Corporation
+  Old versions of Ingres would allow character strings containing
+  currency symbols to be used in calculations. Current type resolution
+  rules generate errors unless the string values are explicitly cast as
+  money.
+
+  The money_compat option allows the user to enable the old type
+  resolution for string constants that contain a valid currency 
+  symbol (leading or trailing).
+
+  The default is "OFF"; if the user wishes to allow string constants
+  to be checked for money values, set the value to "ON".
+

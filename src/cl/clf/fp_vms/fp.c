@@ -4,6 +4,7 @@
 
 #include    <compat.h>
 #include    <fp.h>
+#include <signal.h>
 /*
 **
 **  Name: FP.C - Floating Point functions for the CL.
@@ -49,11 +50,10 @@ FUNC_EXTERN double	MTH$DSQRT(double *x);
 FUNC_EXTERN double	MTH$RANDOM(i4 gseed);
 FUNC_EXTERN double	OTS$POWDJ(double x, i4 i);
 FUNC_EXTERN double	OTS$POWDD(double x, double i);
-FUNC_EXTERN VOID	lib$establish(long func());
 FUNC_EXTERN long	lib$sig_to_ret();
 
 /*
-** These two internal functions really look strange.  lib$establish sets a
+** These two internal functions really look strange.  VAXC$ESTABLISH sets a
 ** signal handler that never returns from the function that established it.
 ** Therefore, we set up these dummy functions with a signal handler that
 ** converts signals into return statuses.  Then, we try to access the floating
@@ -70,7 +70,7 @@ FUNC_EXTERN long	lib$sig_to_ret();
 static STATUS
 ffinite_internal(float *f)
 {
-    lib$establish(lib$sig_to_ret);
+    VAXC$ESTABLISH(lib$sig_to_ret);
 
     if (*f)
 	return(0);
@@ -81,7 +81,7 @@ ffinite_internal(float *f)
 static STATUS
 dfinite_internal(double *d)
 {
-    lib$establish(lib$sig_to_ret);
+    VAXC$ESTABLISH(lib$sig_to_ret);
 
     if (*d)
 	return(0);
@@ -351,7 +351,7 @@ i_FPipow(double x, i4 i, double *result)
 {
     i4	underflow = 1;
 
-    lib$establish(lib$sig_to_ret);
+    VAXC$ESTABLISH(lib$sig_to_ret);
 
     *result = OTS$POWDJ(x, i);
     return(OK);
@@ -490,7 +490,7 @@ i_FPpow(double x, double y, double *result)
 {
     i4	underflow = 1;
 
-    lib$establish(lib$sig_to_ret);
+    VAXC$ESTABLISH(lib$sig_to_ret);
 
     *result = OTS$POWDD(x, y);
     return(OK);
@@ -677,7 +677,7 @@ i_FPdmath( int opp, double x, double y, double *result )
 {
     i4	underflow = 1;
 
-    lib$establish(lib$sig_to_ret);
+    VAXC$ESTABLISH(lib$sig_to_ret);
 
     switch(opp)
     {

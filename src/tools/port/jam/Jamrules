@@ -1448,6 +1448,10 @@
 #           Added IIAWK rule/action to generate .h files (in psl) from
 #           some source. Also fixed dependencies in other AWK based
 #           rules to ensure correct build order used.
+#       09-aug-2010 (joea)
+#           Correct _IIAWK action on VMS: need to quote uppercase params.
+#	01-Oct-2010 (bonro01)
+#	    Fix Windows build problems using cygwin
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -1886,7 +1890,7 @@ rule IIBFILES
 { 
     if $(NT)
     {
-        IIBULKCOPY $(ING_BUILD)/$(<) : $(>) ;
+        IIBULKCOPY $(ING_BUILD)$(SLASH)$(<) : $(>) ;
     }
     else
     {    
@@ -9512,6 +9516,15 @@ if $(VMS)
 	$(CHMOD) $(FILEMODE) $(<)
     }
 }
+else if $(NT)
+{
+    actions _COLDATA
+    {
+	set II_CONFIG=$(ING_BUILD)$(SLASH)files 
+	aducompile $(>) $(<:D=) $(ADUCOMPFLAGS:D=)
+	$(CHMOD) $(FILEMODE) $(<)
+    }
+}
 else
 {
     actions _COLDATA
@@ -10503,7 +10516,7 @@ actions piecemeal quietly ShellNT
 actions _IIRCTORES bind RCHDR 
 {
     $(CD) $(<:D)
-    rm $(>:S=.res) 
+    $(RM) $(>:S=.res) 
     rc $(RCFLAGS) $(RCHDR) $(>)
     $(TOUCH) $(>) 
 }
@@ -10726,7 +10739,7 @@ else if $(VMS)
 	        if f$parse("$(<:D)") .eqs. "" then create /dir $(<:D)
 
                 set default $(<:D)
-		$(AWK) -v OUT=$(<:BS) -f $(>:BS)
+		$(AWK) -v "OUT=$(<:BS)" -f $(>:BS)
 	}
 	actions FiRoc
 	{

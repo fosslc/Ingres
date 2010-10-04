@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <signal.h>
 #include <varargs.h>
 
 #include <ssdef.h>
@@ -65,6 +66,8 @@ static i4 UTed_handler(struct  chf$signal_array *sig, struct  chf$mech_array *me
 **
 ** History:
 **    10-Dec-2008 (stegr01)   Initial Version
+**      23-aug-2010 (joea)
+**          Use VAXC$ESTABLISH to set up exception handlers.
 */
 
 i4
@@ -79,7 +82,7 @@ UTedcall (i4 (*func)(), u_i4 arglist[])
     ** to us with the appropriate condition value
     */
 
-    lib$establish(UTed_handler);
+    VAXC$ESTABLISH(UTed_handler);
 
     /*
     ** if we're currently trapping ^C then disallow it temporarily
@@ -231,7 +234,7 @@ va_dcl
     ** so convert the signals to a return sts
     */
 
-    lib$establish (lib$sig_to_ret);
+    VAXC$ESTABLISH (lib$sig_to_ret);
 
     return (lib$find_image_symbol (fildsc, symdsc, symval, imgdsc, flags));
 }

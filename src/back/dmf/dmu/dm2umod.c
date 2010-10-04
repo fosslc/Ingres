@@ -7696,6 +7696,12 @@ DB_ERROR	*dberr)
     return(status);
 }
 
+/*{
+**
+** History:
+**	27-Aug-2010 (jonj)
+**	    Pass loc_id to dm2u_raw_location_free.
+*/
 static DB_STATUS
 AddNewLocation(
 DM2U_MXCB	*m,
@@ -7752,7 +7758,7 @@ DB_ERROR	*dberr)
 		    return(E_DB_ERROR);
 		}
 		status = dm2u_raw_location_free(dcb, m->mx_xcb,
-				&loc->loc_name, dberr);
+				&loc->loc_name, loc_id, dberr);
 		if (status != E_DB_OK)
 		    return(status);
 		loc->loc_status |= LOC_RAW;

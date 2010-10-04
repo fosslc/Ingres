@@ -109,6 +109,8 @@
 **	    Init ulm_streamid_p for ulm_openstream to fix potential segvs.
 **      17-Aug-2010 (horda03) b124274
 **          Allow trees to be displayed in segments.
+**      02-sep-2010 (maspa05) sir 124345
+**          Add segmented output for SC930 trace
 **/
 
 /*
@@ -445,6 +447,8 @@ static VOID     pr_connect(i4 connect_num, i4 ch, ULD_CONTROL *control );
 **	    parameter to uld_prtree
 **      17-Aug-2010 (horda03) b124274
 **          Allow Trees to be printed in connected segments to aid readability.
+**      02-sep-2010 (maspa05) sir 124345
+**          Add segmented output for SC930 trace
 */
 VOID
 uld_prtree_x( i4 flags, PTR root, VOID (*printnode)(), PTR (*leftson)(), PTR (*rightson)(),
@@ -462,6 +466,13 @@ uld_prtree_x( i4 flags, PTR root, VOID (*printnode)(), PTR (*leftson)(), PTR (*r
     ULD_PARAM   *uld_param = 0;
     
  
+    /* if this if for an SC930 trace check to see if we want
+     * the segmented style QEP */
+
+    if (sc930_trace &&
+	(ult_always_trace() & SC930_QEP_SEG))
+	    flags |= ULD_FLAG_SEGMENTS;
+
     control.facility = facility;
     ulm_rcb.ulm_facility = DB_ULF_ID;
     ulm_rcb.ulm_sizepool = sizeof(ULD_STORAGE) + 1024;

@@ -21,6 +21,7 @@
 
 #include    <sp.h>
 #include    <mo.h>
+#include <signal.h>
 
 #include    <machconf.h>
 #include    <descrip.h>
@@ -709,6 +710,8 @@
 **      10-mar-2010 (joea)
 **          In CSadd_thread, if CS_alloc_stack returns an error, call
 **          cs_scbdealloc and cs_reject before returning to the caller.
+**      12-aug-2010 (joea)
+**          Use VAXC$ESTABLISH to set up exception handlers.
 **/
 
 /*
@@ -2229,7 +2232,6 @@ i4      *active_count)
 	else
 	    (*Cs_srv_block.cs_elog)(E_CS0018_NORMAL_SHUTDOWN, 0, 0);
     }
-    sys$canexh(&Cs_srv_block.cs_exhblock);    
     PCexit(OK);
 }
 
@@ -2472,7 +2474,7 @@ IICSdispatch()
     EX_CONTEXT		excontext;
     CS_INFO_CB		csib;
     FUNC_EXTERN	STATUS	cs_handler();
-    FUNC_EXTERN int	Cs_last_chance();
+    FUNC_EXTERN int	CS_last_chance();
     bool		recovery_server = FALSE;
 
 
@@ -2511,7 +2513,7 @@ IICSdispatch()
 	/*	occurred, and go back to sleep */
 
 	status = sys$setexv(2, /* means last chance -- no VMS constants */
-		     Cs_last_chance, 
+		     CS_last_chance, 
 		     PSL$C_USER, 
 		     &Cs_old_last_chance); /* usually dbg's, but calling it */
 					   /* hoses the server (dbg does)   */
@@ -7252,7 +7254,7 @@ CS_SID  sid)
 		Cs_srv_block.cs_async = 1;
 	    }
 	}
-	lib$establish(handler);
+	VAXC$ESTABLISH(handler);
 
 	/* CS_RCVR_EVENT we've already checked */
 	if ( eid != CS_RCVR_EVENT && (*Cs_srv_block.cs_attn)(eid, scb) )

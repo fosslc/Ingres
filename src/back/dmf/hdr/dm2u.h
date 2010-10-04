@@ -218,6 +218,14 @@
 **	    prototype for dm2u_modify_encrypt.
 **	20-Jul-2010 (kschendel) SIR 124104
 **	    Pass in compression to create.
+**	27-Aug-2010 (jonj)
+**	    SIR 120874 broke reporting of raw location information by
+**	    QEF. Modified dm2u_raw_location_free() prototype to pass
+**	    locid for use by SETDBERR there.
+**	07-Sep-2010 (miket) SIR 122403
+**	    Create MODIFY_BUCKET_PNO_TID8_SZ to centralize the definition of
+**	    size of the fields that may be tacked on to a record for MODIFY
+**	    processing: bucket, partition, tid8.
 */
 
 /*
@@ -316,6 +324,12 @@ typedef struct  _DM2U_MOD_CB	DM2U_MOD_CB;
 #define                 DM2U_GATEWAY	    0x10000L
 #define			DM2U_ONLINE_END	    0x20000L
 #define			DM2U_ONLINE_MODIFY  0x40000L
+
+/*
+** Define the length of the fields added to modify buffers (hash bucket,
+** partition number, tid8).
+*/
+#define MODIFY_BUCKET_PNO_TID8_SZ sizeof(i4)+sizeof(u_i2)+sizeof(DM_TID8)
 
 struct _DM2U_FREEPG_CB
 {
@@ -740,6 +754,7 @@ FUNC_EXTERN DB_STATUS dm2u_raw_location_free(
 		DMP_DCB             *dcb,
 		DML_XCB             *xcb,
 		DB_LOC_NAME         *location,
+		i4		locid,
 		DB_ERROR	*dberr);
 
 FUNC_EXTERN DB_STATUS dm2u_put_dupchktbl(

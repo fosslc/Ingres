@@ -1155,6 +1155,12 @@ bool		size_check)
 **	    complex parallel queries work.
 **	19-May-2010 (kschendel) b123759
 **	    Move a couple variable declarations closer to their use point.
+**	06-sep-2010 (maspa05) SIR 124363
+**	    Trace point sc925 - log long-running queries
+**	07-sep-2010 (maspa05) SIR 124363
+**	    ult_trace_longqry now takes two arguments and returns a bool
+**	10-Sep-2010 (kschendel) b124341
+**	    Replace SEjoin's kcompare with cvmat.
 */
 
 DB_STATUS
@@ -1189,9 +1195,14 @@ qeq_subplan_init(QEF_RCB *qef_rcb, QEE_DSH *dsh,
 	i4 cson;
 	STATUS csret;
 	TIMERSTAT init_tstat;
+	i4 lqry_thresh;
+ 
+	/* check whether sc925 is set */
+ 	ult_trace_longqry(&lqry_thresh,&val2);
 
 	/* initialize the queries begining cpu, dio, and wall clock numbers */
-	if (ult_check_macro(&qef_cb->qef_trace, 91, &val1, &val2))
+ 	if (ult_check_macro(&qef_cb->qef_trace, 91, &val1, &val2) ||
+	    lqry_thresh != 0)
 	{
 
 	    cson = 1;
@@ -1746,7 +1757,7 @@ qeq_subplan_init(QEF_RCB *qef_rcb, QEE_DSH *dsh,
 	    if (status)
 		return (status);
 
-	    status = qeq_ade(dsh, node->node_qen.qen_sejoin.sejn_kcompare);
+	    status = qeq_ade(dsh, node->node_qen.qen_sejoin.sejn_cvmat);
 	    if (status)
 		return (status);
 

@@ -1617,6 +1617,9 @@ static READONLY struct
 **	    Change encryption activation terminology from
 **	    enabled/disabled to unlock/locked.
 **	    Change rcb_enckey_slot base from 0 to 1 for sanity checking.
+**	13-Sep-2010 (jonj) B124426
+**	    Add one last sanity check - if DB isn't DCB_S_MVCC, change
+**	    lockLevel to row. Should never happen, but JIC...
 */
 DB_STATUS
 dm2t_open(
@@ -2132,6 +2135,14 @@ DB_ERROR            *dberr)
 		      sizeof(DB_DB_NAME), dcb->dcb_name.db_db_name);
 		    status = E_DB_ERROR;
 		    break;
+		}
+		else if ( !(dcb->dcb_status & DCB_S_MVCC) )
+		{
+		    /*
+		    ** Final sanity check. If database, for whatever
+		    ** reason, isn't prepared for MVCC, silently use ROW.
+		    */
+		    lockLevel = RCB_K_ROW;
 		}
 		else
 		{

@@ -494,6 +494,10 @@
 **	13-Nov-2009 (kiria01) SIR 121883
 **	    Updated symbol names and notes.
 [@history_template@]...
+**	10-Sep-2010 (kschendel) b124341
+**	    Because of VLUP issues, outer key materialize and new vs old
+**	    compare are all in the okmat now.  Split correlation value
+**	    materialize into its own CX just to keep things straight.
 */
 
 DB_STATUS
@@ -503,6 +507,7 @@ QEF_RCB		*rcb,
 QEE_DSH		*dsh,
 i4		function)
 {
+    ADF_CB	    *adf_cb = dsh->dsh_adf_cb;
     QEF_CB	    *qef_cb = dsh->dsh_qefcb;
     DMR_CB	    *dmr_cb;
     DMT_CB	    *dmt_cb;
@@ -711,9 +716,22 @@ i4		function)
 	    qen_status->node_status = QEN1_EXECUTED;
 
 	    /* now materialize the first join key */
-	    status = qen_execute_cx(dsh, node_xaddrs->qex_okmat);
+	    ade_excb = node_xaddrs->qex_okmat;
+	    ade_excb->excb_seg = ADE_SINIT;
+	    status = ade_execute_cx(adf_cb, ade_excb);
 	    if (status != E_DB_OK)
-		break;
+	    {
+		if ((status = qef_adf_error(&adf_cb->adf_errcb, 
+		    status, qef_cb, &dsh->dsh_error)) != E_DB_OK)
+		    break;
+	    }
+	    /* and any initial correlation values */
+	    if (node_xaddrs->qex_cvmat != NULL)
+	    {
+		status = qen_execute_cx(dsh, node_xaddrs->qex_cvmat);
+		if (status != E_DB_OK)
+		    break;
+	    }
 	}
 	else	/* For the subsequent times only */
 	{
@@ -730,24 +748,39 @@ i4		function)
 
 	    /* compare the join key of the new outer to previous one. */
 	    new_to_old = ADE_1ISNULL;
-	    ade_excb = node_xaddrs->qex_kcompare;
-	    if (ade_excb != NULL)
+	    ade_excb = node_xaddrs->qex_okmat;
+	    ade_excb->excb_seg = ADE_SMAIN;
+	    status = ade_execute_cx(adf_cb, ade_excb);
+	    if (status != E_DB_OK)
 	    {
-		status = qen_execute_cx(dsh, ade_excb);
-		if (status != E_DB_OK)
+		if ((status = qef_adf_error(&adf_cb->adf_errcb, 
+		    status, qef_cb, &dsh->dsh_error)) != E_DB_OK)
 		    break;
-		new_to_old = ade_excb->excb_cmp;
 	    }
+	    new_to_old = ade_excb->excb_cmp;
 
 	    /* materialize the new join key if we have a new key or if
 	    ** the correlation value changes */
 
-	    if (new_to_old != NEW_EQ_OLD || corr_val_changed == TRUE)
+	    if (new_to_old != NEW_EQ_OLD)
 	    {
-		status = qen_execute_cx(dsh, node_xaddrs->qex_okmat);
+		/* excb still points at okmat */
+		ade_excb->excb_seg = ADE_SINIT;
+		status = ade_execute_cx(adf_cb, ade_excb);
+		if (status != E_DB_OK)
+		{
+		    if ((status = qef_adf_error(&adf_cb->adf_errcb, 
+			status, qef_cb, &dsh->dsh_error)) != E_DB_OK)
+			break;
+		}
+	    }
+	    if (corr_val_changed == TRUE)
+	    {
+		status = qen_execute_cx(dsh, node_xaddrs->qex_cvmat);
 		if (status != E_DB_OK)
 		    break;
 	    }
+
 
 	    /* added as a fix for bugs 45204/45687 */
 

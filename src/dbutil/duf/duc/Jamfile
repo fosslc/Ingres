@@ -7,7 +7,8 @@
 #       19-apr-2010 (hanje04)
 #           BUG 123296
 #           Add wrapper script for createdb for LSB builds
-
+#       02-sep-2010 (maspa05) b124328
+#          Windows needs libq and VMS needs libui for IIUIpassword()
 SubDir ING_SRC dbutil duf duc ;
 
 IISUBSYS dbutil duf duc ;
@@ -22,10 +23,10 @@ if $(UNIX)
 if ! $(VMS)
 {
     IINEEDLIBS createdb : DBUTILLIB SHEMBEDLIB SHCOMPATLIB SHFRAMELIB ;
-    IINEEDLIBSW createdb : SHCUFLIB SHADFLIB ;
+    IINEEDLIBSW createdb : SHQLIB SHCUFLIB SHADFLIB ;
 }
 else
 {
-    IINEEDLIBS createdb : DBUTILLIB LIBQLIB LIBQGCALIB GCFLIB CUFLIB UGLIB AFELIB ADFLIB COMPATLIB ;
+    IINEEDLIBS createdb : DBUTILLIB LIBQLIB LIBQGCALIB GCFLIB CUFLIB UILIB UGLIB AFELIB ADFLIB COMPATLIB ;
 }
 IILIBRARY DBUTILLIB : ducommon.qsc ducdata.c ;

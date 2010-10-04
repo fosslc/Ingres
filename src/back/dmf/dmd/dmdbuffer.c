@@ -265,6 +265,9 @@ dmd_buffer(VOID)
 ** History:
 **	15-Mar-2010 (smeke01) b119529
 **	    First version. Created from lines cut from dmd_buffer().
+**	27-Aug-2010 (thaju02) B124324
+**	    Changed TRdisplay from 'u' to 'lu' since DM0P_BMSTAT members 
+**	    are now u_i8.
 */
 VOID
 dmd_summary_statistics(DM0P_BSTAT *bs, i4 pgsize, i4 indent)
@@ -299,29 +302,29 @@ dmd_summary_statistics(DM0P_BSTAT *bs, i4 pgsize, i4 indent)
     */
     TRdisplay("%#* %5(%20s %)\n",
 	indent_data, "               GWAIT", "               GSYNC", "            FREEWAIT", "            GW PAGES", "              GW I/O");
-    TRdisplay("%#* %5(%20u %)\n",
+    TRdisplay("%#* %5(%20lu %)\n",
 	indent_data, bs->bs_gwait, bs->bs_gsyncwr, bs->bs_fwait,
 	bs->bs_gw_pages, bs->bs_gw_io);
     TRdisplay("%#* %6(%20s %)\n",
 	indent_data, "           FIX CALLS", "                HITS", "               CHECK", "             REFRESH", "                READ", "                TOSS");
-    TRdisplay("%#* %6(%20u %)\n",
+    TRdisplay("%#* %6(%20lu %)\n",
 	indent_data, bs->bs_fix[BMCB_PTYPES], bs->bs_hit[BMCB_PTYPES],
 		bs->bs_check[BMCB_PTYPES], bs->bs_refresh[BMCB_PTYPES],
 		bs->bs_reads[BMCB_PTYPES], bs->bs_toss[BMCB_PTYPES]);
     TRdisplay("%#* %6(%20s %)\n",
 	indent_data, "         UNFIX CALLS", "               DIRTY", "               FORCE", "               WRITE", "              IOWAIT", "                SYNC");
-    TRdisplay("%#* %6(%20u %)\n",
+    TRdisplay("%#* %6(%20lu %)\n",
 	indent_data, bs->bs_unfix[BMCB_PTYPES], bs->bs_dirty[BMCB_PTYPES],
 		bs->bs_force[BMCB_PTYPES], bs->bs_writes[BMCB_PTYPES],
 		bs->bs_iowait[BMCB_PTYPES], bs->bs_syncwr[BMCB_PTYPES]);
     TRdisplay("%#* %5(%20s %)\n",
 	indent_data, "               MWAIT", "               PWAIT", "              FCWAIT", "             RECLAIM", "             REPLACE");
-    TRdisplay("%#* %5(%20u %)\n",
+    TRdisplay("%#* %5(%20lu %)\n",
 	indent_data, bs->bs_mwait[BMCB_PTYPES], bs->bs_pwait[BMCB_PTYPES], bs->bs_fcwait[BMCB_PTYPES],
 		bs->bs_reclaim[BMCB_PTYPES], bs->bs_replace[BMCB_PTYPES]);
     TRdisplay("%#* %2(%20s %)\n",
 	indent_data, "            GREADIOS", "           GWRITEIOS");
-    TRdisplay("%#* %2(%20u %)\n",
+    TRdisplay("%#* %2(%20lu %)\n",
 	indent_data, bs->bs_greads[BMCB_PTYPES], bs->bs_gwrites[BMCB_PTYPES]);
     /* Don't show CR stats if none */
     if ( bs->bs_crreq[BMCB_PTYPES] )
@@ -329,20 +332,20 @@ dmd_summary_statistics(DM0P_BSTAT *bs, i4 pgsize, i4 indent)
 	TRdisplay("%#* %6(%20s %)\n",
 	    indent_data, 
 	    "               CRREQ", "              CRALOC", "               CRMAT", "                NOCR", "              CRTOSS", "               RTOSS");
-	TRdisplay("%#* %6(%20u %)\n",
+	TRdisplay("%#* %6(%20lu %)\n",
 	    indent_data, bs->bs_crreq[BMCB_PTYPES], bs->bs_craloc[BMCB_PTYPES],
 		bs->bs_crmat[BMCB_PTYPES], bs->bs_nocr[BMCB_PTYPES], 
 		bs->bs_crtoss[BMCB_PTYPES], bs->bs_roottoss[BMCB_PTYPES]);
 	TRdisplay("%#* %4(%20s %)\n",
 	    indent_data, 
 	    "               CRHIT", "               LREAD", "             LREADIO", "               LUNDO");
-	TRdisplay("%#* %4(%20u %)\n",
+	TRdisplay("%#* %4(%20lu %)\n",
 	    indent_data, bs->bs_crhit[BMCB_PTYPES], bs->bs_lread[BMCB_PTYPES], 
 		bs->bs_lreadio[BMCB_PTYPES], bs->bs_lundo[BMCB_PTYPES]);
 	TRdisplay("%#* %3(%20s %)\n",
 	    indent_data, 
 	    "               JREAD", "               JUNDO", "                JHIT");
-	TRdisplay("%#* %3(%20u %)\n",
+	TRdisplay("%#* %3(%20lu %)\n",
 	    indent_data, bs->bs_jread[BMCB_PTYPES], bs->bs_jundo[BMCB_PTYPES],
 		bs->bs_jhit[BMCB_PTYPES]);
     }
@@ -358,27 +361,27 @@ dmd_summary_statistics(DM0P_BSTAT *bs, i4 pgsize, i4 indent)
 	    TRdisplay("%#* %6(%20s %)\n",
 		indent_data,
 		"           FIX CALLS", "                HITS", "               CHECK", "             REFRESH", "                READ", "                TOSS");
-	    TRdisplay("%#* %6(%20u %)\n",
+	    TRdisplay("%#* %6(%20lu %)\n",
 		indent_data, bs->bs_fix[i], bs->bs_hit[i],
 			bs->bs_check[i], bs->bs_refresh[i],
 			bs->bs_reads[i], bs->bs_toss[i]);
 	    TRdisplay("%#* %6(%20s %)\n",
 		indent_data,
 		"         UNFIX CALLS", "               DIRTY", "               FORCE", "               WRITE", "              IOWAIT", "                SYNC");
-	    TRdisplay("%#* %6(%20u %)\n",
+	    TRdisplay("%#* %6(%20lu %)\n",
 		indent_data, bs->bs_unfix[i], bs->bs_dirty[i],
 			bs->bs_force[i], bs->bs_writes[i],
 			bs->bs_iowait[i], bs->bs_syncwr[i]);
 	    TRdisplay("%#* %5(%20s %)\n",
 		indent_data, 
 		"               MWAIT", "               PWAIT", "              FCWAIT", "             RECLAIM", "             REPLACE");
-	    TRdisplay("%#* %5(%20u %)\n",
+	    TRdisplay("%#* %5(%20lu %)\n",
 		indent_data, bs->bs_mwait[i], bs->bs_pwait[i], bs->bs_fcwait[i],
 			bs->bs_reclaim[i], bs->bs_replace[i]);
 	    TRdisplay("%#* %2(%20s %)\n",
 		indent_data, 
 		"            GREADIOS", "           GWRITEIOS");
-	    TRdisplay("%#* %2(%20u %)\n", 
+	    TRdisplay("%#* %2(%20lu %)\n", 
 		indent_data, bs->bs_greads[i], bs->bs_gwrites[i]);
 
 	    /* Don't show CR stats if none */
@@ -387,20 +390,20 @@ dmd_summary_statistics(DM0P_BSTAT *bs, i4 pgsize, i4 indent)
 		TRdisplay("%#* %6(%20s %)\n",
 		    indent_data, 
 		    "               CRREQ", "              CRALOC", "               CRMAT", "                NOCR", "              CRTOSS", "               RTOSS");
-		TRdisplay("%#* %6(%20u %)\n",
+		TRdisplay("%#* %6(%20lu %)\n",
 		    indent_data, bs->bs_crreq[i], bs->bs_craloc[i],
 			bs->bs_crmat[i], bs->bs_nocr[i], 
 			bs->bs_crtoss[i], bs->bs_roottoss[i]);
 		TRdisplay("%#* %4(%20s %)\n",
 		    indent_data, 
 		    "               CRHIT", "               LREAD", "             LREADIO", "               LUNDO");
-		TRdisplay("%#* %4(%20u %)\n",
+		TRdisplay("%#* %4(%20lu %)\n",
 		    indent_data, bs->bs_crhit[i], bs->bs_lread[i], 
 		        bs->bs_lreadio[i], bs->bs_lundo[i]);
 		TRdisplay("%#* %3(%20s %)\n",
 		    indent_data, 
 		    "               JREAD", "               JUNDO", "                JHIT");
-		TRdisplay("%#* %3(%20u %)\n",
+		TRdisplay("%#* %3(%20lu %)\n",
 		    indent_data, bs->bs_jread[i], bs->bs_jundo[i],
 		bs->bs_jhit[i]);
 	    }

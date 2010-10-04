@@ -373,6 +373,9 @@ char		*dba;
 **         Added support to handle raw directories. When retrieveing directory
 **         information, retrieve "status" value from iiextend table, which 
 **         shows whether the directory is in a raw-location or not
+**	15-Sep-2010 (thaju02) B124344
+**	   Dbms path may contain spaces. Do not remove spaces within the 
+**	   path rather only trailing whitespace.
 [@history_template@]...
 */
 duve_0mk_purgelist(duve_cb)
@@ -438,7 +441,8 @@ DUVE_CB		*duve_cb;
 	    j = duve_cb->duve_pcnt;
 	    len = STzapblank(dbname, duve_cb->duve_dirs->dir[j].duvedb);
 	    len = STzapblank(dba, duve_cb->duve_dirs->dir[j].duvedba);
-	    len = STzapblank(area, duve_cb->duve_dirs->dir[j].duve_area);
+	    STcopy(area, duve_cb->duve_dirs->dir[j].duve_area);
+	    len = STtrmwhite(duve_cb->duve_dirs->dir[j].duve_area);
 	    len = STzapblank(loc, duve_cb->duve_dirs->dir[j].duveloc);
 	    if (STcompare(dbdev, duve_cb->duve_dirs->dir[j].duveloc)
 	    == DU_IDENTICAL)
@@ -707,6 +711,9 @@ DUVE_CB		*duve_cb;
 **	    establish the case of the attribute names in this relation.
 **      29-Mar-2005 (chopr01) (b113078)
 **         Added support to handle extended raw location
+**      15-Sep-2010 (thaju02) B124344
+**         Dbms path may contain spaces. Do not remove spaces within the
+**         path rather only trailing whitespace.
 [@history_template@]...
 */
 duve_2mk_filelist( dirlist, list_tbl, list_own, duve_cb)
@@ -757,7 +764,7 @@ DUVE_CB		    *duve_cb;
 			  duve_cb->duve_msg) != E_DU_OK)
 	    return ( (DU_STATUS) DUVE_BAD);
     }
-    len = STzapblank(dbms_path, dbms_path);
+    len = STtrmwhite(dbms_path);
 
     (VOID) STcopy (list_tbl, tabnam);
     (VOID) STcopy (list_own, ownnam);

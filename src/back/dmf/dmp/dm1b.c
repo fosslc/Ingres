@@ -794,6 +794,13 @@
 **	16-Aug-2010 (jonj) SD 146221
 **	    dm1r_crow_lock(flags) now DM1R_LK_? instead of LK_? to avoid
 **	    collisions with lk.h defines.
+**	31-Aug-2010 (miket) SIR 122403
+**	    For dm1e_aes calls follow dmf convention of breaking or
+**	    continuing with status test rather than returning on error.
+**      01-Sep-2010 (stial01) SD 146583, B124340
+**          Fixed redo_dupcheck handling.
+**      10-Sep-2010 (stial01) SD 146724, B124395
+**          dm1b_bulk_put() invalidate RCB_P_ALLOC position after dm1b_put
 */
 
 
@@ -1252,6 +1259,7 @@ dm1b_allocate(
     i4         	    split_count = 0;
     bool            requalify_leaf;
     bool            redo_dupcheck;
+    i4		    redo_dupcount = 0;
     char            *leafkey = key;
     DB_ERROR	    local_dberr;
     i4		    *err_code = &dberr->err_code;
@@ -1560,6 +1568,21 @@ dm1b_allocate(
 
 	if (s != E_DB_OK)
 	    break;
+
+	if (redo_dupcheck)
+	{
+	    redo_dupcount++;
+	    /*
+	    ** for unique btree, redo_cnt should never be > 1
+	    ** for non-unique btree (noduplicates) redo_count should 
+	    ** never be > max concurrent transactions
+	    */
+#ifdef xDEBUG
+	    if (redo_dupcount > dmf_svcb->svcb_xid_lg_id_max)
+		TRdisplay("dupcheck redo_cnt %d mytran %x \n", 
+		    redo_dupcount, r->rcb_tran_id.db_low_tran);
+#endif
+	}
 
 	/*
 	** If only checking duplicates, then report success.
@@ -2506,7 +2529,10 @@ dm1b_dupcheck(
 		    dm0pUnlockBuf(r, leafPinfo);
 
 		    if ( crow_locking(r) )
+		    {
+			/* this will get PHYS lock and then unlock */
 			s = dm1r_crow_lock(r, DM1R_LK_PHYSICAL, &localtid, NULL, dberr);
+		    }
 		    else
 		    {
 			/* Don't clear lock coupling in rcb */
@@ -2527,7 +2553,7 @@ dm1b_dupcheck(
 		    if ( s != E_DB_OK )
 		        break;
 		    *redo_dupcheck = TRUE;
-		    return (E_DB_OK);
+		    break;
 		}
 
 		if (get_status == E_DB_OK) 
@@ -3074,7 +3100,7 @@ retry:
 		s = dm1e_aes_decrypt(r, &t->tcb_data_rac, rec_ptr, record,
 			r->rcb_erecord_ptr, dberr);
 		if (s != E_DB_OK)
-		    return(s);
+		    break;
 		rec_ptr = record;
 	    }
 	}
@@ -4277,7 +4303,7 @@ dm1b_get(
 		    s = dm1e_aes_decrypt(r, &t->tcb_data_rac, rec_ptr, record,
 				r->rcb_erecord_ptr, dberr);
 		    if (s != E_DB_OK)
-			return(s);
+			break;
 		    rec_ptr = record;
 		}
 
@@ -4871,7 +4897,7 @@ dm1b_get(
 	    s = dm1e_aes_decrypt(r, &t->tcb_data_rac, rec_ptr, record,
 			r->rcb_erecord_ptr, dberr);
 	    if (s != E_DB_OK)
-		return(s);
+		break;
 	    rec_ptr = record;
 	}
 
@@ -5545,6 +5571,18 @@ dm1b_bulk_put(
 	/* Insert the row */
 	s = dm1b_put(rcb, leafPinfo, dataPinfo, &local_bid, &local_tid, rec_ptr,
 			dmpe_key, dmpe_size, opflag, dberr);
+
+	/*
+	** Invalidate RCB_P_ALLOC position after each dm1b_put
+	**
+	** if crow_locking() there are no page locks on leaf/data pages
+	** -> dm1b_allocate/dm1bxreserve for the 1st segment 
+	** -> dm1b_search(DM1C_SPLIT)/dm1bxreserve as needed
+	** -> dm1b_search(DM1C_OPTIM) does not do dm1bxreserve
+	** put without reserve is okay if we keep the buffer locked
+	** during (dm1cxhas_room, dm1b_put)
+	*/
+	DM1B_POSITION_INIT_MACRO(r, RCB_P_ALLOC);
 
 #ifdef xDEBUG
 	TRdisplay("bulk put seg(%d,%d) line %d bid (%d,%d) tid (%d,%d)\n", 
@@ -8228,6 +8266,9 @@ btree_search(
 **	22-Apr-2010 (kschendel) SIR 123485
 **	    Process coupons if doing full row duplicate checking and there
 **	    are blobs, otherwise dmpe now complains about lack of context.
+**	10-Sep-2010 (jonj)
+**	    More for B124340 fix. Unfix/unlock data buffer before waiting
+**	    for (c)row lock to avoid silent deadlock with dmve.
 */
 static DB_STATUS
 dm1badupcheck(
@@ -8370,8 +8411,20 @@ dm1badupcheck(
 	    {
 		dm0pUnlockBuf(r, leafPinfo);
 
+		/* Unfix, unpin data buffer before waiting for lock */
+		if ( dataPinfo.page )
+		{
+		    /* NB: unfix also unpins */
+		    s = dm0p_unfix_page(r, DM0P_UNFIX, &dataPinfo, dberr);
+		    if (s != E_DB_OK)
+			break;
+		}
+
 		if ( crow_locking(r) )
+		{
+		    /* this will get PHYS lock and then unlock */
 		    s = dm1r_crow_lock(r, DM1R_LK_PHYSICAL, &localtid, NULL, dberr);
+		}
 		else
 		{
 		    /* Don't clear lock coupling in rcb */
@@ -8391,7 +8444,7 @@ dm1badupcheck(
 		if ( s != E_DB_OK )
 		    break;
 		*redo_dupcheck = TRUE;
-		return (E_DB_OK);
+		break;
 	    }
 
 	    if (get_status == E_DB_OK)
@@ -8470,7 +8523,7 @@ dm1badupcheck(
 		    s = dm1e_aes_decrypt(r, &t->tcb_data_rac, wrec_ptr, wrec,
 				r->rcb_erecord_ptr, dberr);
 		    if (s != E_DB_OK)
-			return(s);
+			break;
 		    wrec_ptr = wrec;
 		}
 
@@ -13729,7 +13782,7 @@ records from data page %d\n",
 	    s = dm1e_aes_decrypt(r, &t->tcb_data_rac, rec_ptr, record,
 			r->rcb_erecord_ptr, dberr);
 	    if (s != E_DB_OK)
-		return(s);
+		break;
 	    rec_ptr = record;
 	}
 

@@ -1,5 +1,9 @@
 /*
 ** Copyright (c) 1985, 2009 Ingres Corporation
+*/
+#include <compat.h>
+
+/*
 **
 ** EXi.h -- EX Internal Definitions File.
 **
@@ -86,15 +90,14 @@
 **	    Conditionally reinstate previous Alpha version.
 **	30-jun-2009 (joea)
 **	    Re-merge Unix function signatures.
+**      12-aug-2010 (joea)
+**          Replace VMS exception handling by POSIX signals as done on Unix.
 */
 
-#if defined(axm_vms)
+#define EXMAXARG        100
+
 EX_CONTEXT **i_EXtop(void);
 void i_EXpop(EX_CONTEXT **excp);
-#else
-EX_CONTEXT      **i_EXtop( void );
-VOID            i_EXpop(EX_CONTEXT **);
-#endif
 EX_CONTEXT *i_EXnext(EX_CONTEXT *context);
 
 void i_EXpush(EX_CONTEXT *context);

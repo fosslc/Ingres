@@ -46,6 +46,9 @@
 #include    <qefcat.h>
 #include    <sxf.h>
 #include    <qefprotos.h>
+
+#include    <ercl.h>
+
 /**
 **
 **  Name: QEQ.C - query processing routines
@@ -4020,6 +4023,7 @@ i4		mode )
 
     }
 
+
     /* decrement the count of open query/cursor so that
     ** qeq_cleanup can do the right thing */
     if (qef_cb->qef_open_count > 0 && mode == QEQ_QUERY)
@@ -5286,6 +5290,9 @@ QEE_DSH	    *dsh
 **	    Extract from qeq-cleanup.
 **	11-May-2010 (kschendel)
 **	    OPC now only sets NODEACT when there's really something there.
+**      21-Sep-2010 (horda03) b124315
+**          Check all the actions. The ahd_next list may "miss" actions
+**          due to flow changes introduced by IF statements.
 */
 
 void
@@ -5298,7 +5305,7 @@ qeq_close_dsh_nodes(QEE_DSH *dsh)
 
     for (action = dsh->dsh_qp_ptr->qp_ahd; 
 	 action != NULL;
-	 action = action->ahd_next)
+	 action = action->ahd_list)
     {
 	if ( action->ahd_flags & QEA_NODEACT )
 	{
@@ -5469,6 +5476,13 @@ qeq_close_dsh_nodes(QEE_DSH *dsh)
 **	18-Jun-2010 (kschendel) b123775
 **	    Tproc DSH cleanup is now sent through here, so skip anything
 **	    that tproc cleanup shouldn't do:  in particular, commit/abort.
+**	06-sep-2010 (maspa05) SIR 124363
+**	    Trace point sc925 - log long-running queries to errlog.log
+**	07-sep-2010 (maspa05) SIR 124363
+**	    Log to DBMS log instead of erlog.log.
+**          Also added a 'ceiling' value to SC925.
+**	08-sep-2010 (maspa05) SIR 124363
+**	    Add Session ID to SC925 output
 */
 DB_STATUS
 qeq_cleanup(
@@ -5538,6 +5552,92 @@ bool	    release )
 	{
 	    if ( ( !ddb_b ) && ( dsh != ( QEE_DSH * ) NULL ) )
 	    {
+		/* trace point sc925 - long-running queries */    
+ 		i4    lqry_thresh,lqry_ceil;
+ 
+ 	        ult_trace_longqry(&lqry_thresh,&lqry_ceil);
+ 	        if (lqry_thresh != 0 )
+ 		{
+ 		    i4 lqry_time;
+ 
+ 		    qen_bcost_begin(dsh, &tstat, NULL);
+ 		    lqry_time=tstat.stat_wc - dsh->dsh_twc;
+
+ 		    if ((lqry_time > lqry_thresh) && 
+			((lqry_ceil == 0) || (lqry_time <lqry_ceil)))
+		    {
+		    /* get username,database and query text for error message */
+ 		        i4 error,qlen,erbuflen=0;
+ 		        DB_DB_NAME  dbname;
+ 		        DB_OWN_NAME dbuser;
+ 		        SCF_SCI         info[4];
+ 		        SCF_CB          scf_cb;
+ 		        DB_STATUS	    l_status;
+			char        erbuf[ER_MAX_LEN];
+			char        *qbuf,noqry[]="<query details unavailable>";
+ 
+ 		        info[0].sci_code = SCI_USERNAME;
+ 		        info[0].sci_length = sizeof(dbuser);
+ 		        info[0].sci_aresult = (char *) &dbuser;
+ 		        info[0].sci_rlength = 0;
+ 		        info[1].sci_code = SCI_DBNAME;
+ 		        info[1].sci_length = sizeof(dbname);
+ 		        info[1].sci_aresult = (char *) &dbname;
+ 		        info[1].sci_rlength = 0;
+			info[2].sci_code = SCI_QBUF;
+			info[2].sci_length = sizeof(qbuf);
+			info[2].sci_aresult = (char *) &qbuf;
+			info[2].sci_rlength = 0;
+			info[3].sci_code = SCI_QLEN;
+			info[3].sci_length = sizeof(qlen);
+			info[3].sci_aresult = (char *) &qlen;
+			info[3].sci_rlength = 0;
+ 		        scf_cb.scf_length = sizeof(SCF_CB);
+ 		        scf_cb.scf_type = SCF_CB_TYPE;
+ 		        scf_cb.scf_ascii_id = SCF_ASCII_ID;
+ 		        scf_cb.scf_facility = DB_QEF_ID;
+ 		        scf_cb.scf_session = DB_NOSESSION;
+ 		        scf_cb.scf_len_union.scf_ilength = 4;
+ 		        scf_cb.scf_ptr_union.scf_sci = (SCI_LIST *) &info[0];
+ 		        l_status = scf_call(SCU_INFORMATION, &scf_cb);
+ 		        if (l_status != E_DB_OK)
+ 		        {
+ 		            TRdisplay("qeq_cleanup:sc925 SCU_INFO call failed with status=%x\n",
+ 				    l_status);
+ 		            STcopy("<unknown>",dbname.db_db_name);
+ 		            STcopy("<unknown>",dbuser.db_own_name);
+			    qlen=STlength(noqry);
+			    qbuf=noqry;
+ 		        }
+ 
+                        if (lqry_ceil == 0)
+			{
+ 		          ule_format(I_QE3000_LONGRUNNING_QUERY, 
+ 				(CL_SYS_ERR *)0, ULE_LOOKUP, NULL,
+ 			        erbuf, ER_MAX_LEN,&erbuflen, &error, 4,
+ 				sizeof(lqry_time),&lqry_time,
+ 			        sizeof(lqry_thresh), &lqry_thresh,
+ 				DB_OWN_MAXNAME,dbuser.db_own_name,
+ 				DB_DB_MAXNAME,dbname.db_db_name);
+			}
+			else
+			{
+ 		          ule_format(I_QE3001_LONGRUNNING_QUERY, 
+ 				(CL_SYS_ERR *)0, ULE_LOOKUP, NULL,
+ 			        erbuf, ER_MAX_LEN,&erbuflen, &error, 5,
+ 				sizeof(lqry_time),&lqry_time,
+ 			        sizeof(lqry_thresh), &lqry_thresh,
+ 			        sizeof(lqry_ceil), &lqry_ceil,
+ 				DB_OWN_MAXNAME,dbuser.db_own_name,
+ 				DB_DB_MAXNAME,dbname.db_db_name);
+			}
+			TRdisplay("[%x]%t\n",qef_cb->qef_ses_id,erbuflen,erbuf);
+			TRdisplay("Query: %t\n",qlen,qbuf);
+
+		    }
+ 
+ 		}
+ 
 		/* if trace flag qe91 is set */
 		if (ult_check_macro(&qef_cb->qef_trace, 91, &val1, &val2))
 		{

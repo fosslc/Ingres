@@ -1215,28 +1215,32 @@ struct _QEN_TJOIN
 **	    Replaced remaining QEN_ADF instances by pointers.
 **	4-Jun-2009 (kschendel) b122118
 **	    Move things around a little for less padding.
+**	10-Sep-2010 (kschendel) b124341
+**	    Delete kcompare, add cvmat.  okmat is now a combination materialize
+**	    and compare CX.
 */
 struct _QEN_SEJOIN
 {
     QEN_NODE   *sejn_out;       /* outer node */
     QEN_NODE   *sejn_inner;     /* inner node */
-    i4		sejn_hget;	/* Index into DSH->DSH_CB for the DMR_CB 
-				** to get/put tuple to hold file. 
+    i4		sejn_hget;	/* Index into DSH->DSH_CB for the DMR_CB
+				** to get/put tuple to hold file.
 				*/
     i4          sejn_hfile;     /* hold file number - index into DSH->DSH_HOLD
-				** structure. This number may be identical in 
+				** structure. This number may be identical in
 				** more than one SEjoin node, which indicates
 				** that the hold file is to be shared. See
 				** description of sejn_hcreate.
 				*/
     QEN_ADF	*sejn_itmat;	/* materialize the inner tuple */
-    QEN_ADF	*sejn_okmat;	/* materialize the join key and join
-				** correlation into the row buffer
+    QEN_ADF	*sejn_okmat;	/* materialize the join key into a row buffer.
+				** Also compares previous and current keys.
+				** INIT segment is materialize, MAIN is compare
 				*/
-    QEN_ADF	*sejn_ccompare; /* compare correlation key created by okmat
-				** to the next key in sejn_outer.
+    QEN_ADF	*sejn_cvmat;	/* Materialize outer correlation values into
+				** the row buffer.
 				*/
-    QEN_ADF	*sejn_kcompare;	/* compare current key created by okmat
+    QEN_ADF	*sejn_ccompare; /* compare correlation key created by cvmat
 				** to the next key in sejn_outer.
 				*/
     QEN_ADF	*sejn_kqual;	/* qualify tuples on the join key. that's

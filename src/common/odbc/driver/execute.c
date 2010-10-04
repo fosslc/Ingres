@@ -421,8 +421,17 @@
 **         In SQLExecDirect_InternalCall(), add 50 instead of 8 in
 **         MEreqmem(), to allow "for readonly" to be potentially tacked on the 
 **         end of a select query.
-**         
-**       
+**     03-Sep-2010 (Ralph Loen) Bug 124348
+**          Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
+**          SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
+**          platforms.
+**     08-Sep-2010 (Ralph Loen) Bug 124307
+**          Use new PutTinyInt() function for coercing datatypes into
+**          SQL_BIT and SQL_TINYINT.
+**     01-Oct-2010 (Ralph Loen) Bug 124517
+**          In PutParm(), use tinyValue buffer for SQL_C_UTINYINT.  Group
+**          treatment of SQL_C_STINYINT with SQL_C_TINYINT instead of
+**          SQL_C_UTINYINT.
 */
 
 /*
@@ -430,6 +439,7 @@
 */
 static UDWORD  PutCharBin  (LPDESCFLD, LPDESCFLD, CHAR*, CHAR*, SQLUINTEGER, UDWORD, BOOL);
 static UDWORD  PutCharChar (LPDESCFLD, LPDESCFLD, CHAR*, CHAR*, SQLUINTEGER, UDWORD, CHAR, BOOL );
+static UDWORD  PutTinyInt  (CHAR*, SCHAR, SWORD, BOOL);
 static UDWORD  PutInt      (CHAR*, SDWORD, SWORD, BOOL);
 static UDWORD  PutInt64      (CHAR*, ODBCINT64, SWORD, BOOL);
 static UDWORD  PutNumChar  (LPDESCFLD, LPDESCFLD, CHAR*, CHAR*, UWORD);
@@ -459,7 +469,6 @@ BOOL isCNumberType(SWORD type);
 #ifndef MAXI4
 #define MAXI4 0x7fffffff
 #endif
-
 
 /*
 **  SQLCancel
@@ -1086,7 +1095,7 @@ RETCODE SQL_API SQLParamData(
 RETCODE SQL_API SQLPutData(
     SQLHSTMT    hstmt,
     SQLPOINTER  DataPtr,
-    SQLINTEGER      cbValue)
+    SQLLEN      cbValue)
 {
     LPSTMT  pstmt    = (LPSTMT)hstmt;
     char *rgbValue = DataPtr;
@@ -1994,6 +2003,49 @@ static UDWORD PutCharChar(
 
 
 /*
+**  PutTinyInt
+**
+**  Put tiny value into the parameter buffer.
+**
+**  On entry: rgbData  -->where to set parm data.
+**            tinyValue  = tiny value.
+**            fSqlType  = SQL data type of parm.
+**            fUnsigned = C data type is unsigned.
+**
+**  Returns:  CVT_SUCCESS           OK.
+**            CVT_OUT_OF_RANGE      Won't fit.
+**            CVT_INVALID           Wrong type.
+*/
+static UDWORD PutTinyInt(
+    CHAR     *  rgbData,
+    SCHAR       tinyValue,
+    SWORD       fSqlType,
+    BOOL        fUnsigned)
+{
+    switch (fSqlType)
+    {
+    case SQL_BIT:
+
+        if (tinyValue != 0 && tinyValue != 1) return CVT_OUT_OF_RANGE;
+        rgbData[0] = tinyValue;
+        break;
+
+    case SQL_TINYINT:
+
+        *(SCHAR*)rgbData = tinyValue;
+        break;
+
+    default:
+
+        return CVT_INVALID;
+        break;
+
+    }
+    return CVT_SUCCESS;
+}
+
+
+/*
 **  PutInt
 **
 **  Put integer value into the parameter buffer.
@@ -2015,25 +2067,6 @@ static UDWORD PutInt(
 {
     switch (fSqlType)
     {
-    case SQL_BIT:
-
-        if (intValue != 0 && intValue != 1) return CVT_OUT_OF_RANGE;
-        *(SWORD *)rgbData = (SWORD)intValue;
-        break;
-
-    case SQL_TINYINT:
-
-        if (fUnsigned)
-        {
-            if (intValue < 0 || intValue > 127) return CVT_OUT_OF_RANGE;
-        }
-        else
-        {
-            if (intValue < -128 || intValue > 127) return CVT_OUT_OF_RANGE;
-        }
-        *(SWORD *)rgbData = (SWORD)intValue;
-        break;
-
     case SQL_SMALLINT:
 
         if (fUnsigned)
@@ -2190,6 +2223,7 @@ static RETCODE PutParm(
     SDWORD      intValue;            /* conversion work buffers... */
     ODBCINT64   int64Value;
     UDWORD      uintValue;           /* conversion work buffers... */
+    SCHAR       tinyValue;
     SDOUBLE     floatValue;
     DATE_STRUCT dateValue;
     ISO_TIME_STRUCT timeValue;
@@ -2343,12 +2377,14 @@ static RETCODE PutParm(
         case SQL_C_TINYINT:
         case SQL_C_STINYINT:
 
-            intValue = *(SCHAR*)rgbValue;
+            tinyValue = *(SCHAR*)rgbValue;
+            intValue = (SQLINTEGER)tinyValue;
             break;
 
         case SQL_C_UTINYINT:
 
-            uintValue = *(UCHAR*)rgbValue;
+            tinyValue = *(UCHAR*)rgbValue;
+            uintValue = (SQLUINTEGER)tinyValue;
             break;
 
         case SQL_C_SBIGINT:
@@ -2676,7 +2712,19 @@ numStrCvtError:
         }
         case SQL_BIT:
         case SQL_TINYINT:
-        case SQL_SMALLINT:
+
+        rc = CvtCharInt (&intValue, rgbValue, cbValue);
+            if (rc != CVT_SUCCESS)
+                break;
+
+            if (intValue < -128 || intValue > 255)
+                return CVT_OUT_OF_RANGE;
+
+            tinyValue = (SCHAR)intValue;
+            rc = PutTinyInt (rgbData, tinyValue, fSqlType, FALSE);
+            break;
+
+		case SQL_SMALLINT:
         case SQL_INTEGER:
 
             rc = CvtCharInt (&intValue, rgbValue, cbValue);
@@ -3003,6 +3051,17 @@ numStrCvtError:
 
         case SQL_BIT:
         case SQL_TINYINT:
+            
+            if ((rc = CVal(workBuff, (i4 *)&intValue)) == OK)
+            {
+                if (intValue < -128 || intValue > 255)
+                    return CVT_OUT_OF_RANGE;
+
+                tinyValue = (SCHAR)intValue;
+                rc = PutTinyInt (rgbData, tinyValue, fSqlType, FALSE);
+            }
+            break;
+
         case SQL_SMALLINT:
         case SQL_INTEGER:
         {
@@ -3046,9 +3105,9 @@ numStrCvtError:
         MEfree(workBuff);
         break;
     }
-    case SQL_C_UTINYINT:
     case SQL_C_USHORT:
     case SQL_C_ULONG:
+    case SQL_C_UTINYINT:
 
         switch (fSqlType)
         {
@@ -3074,6 +3133,13 @@ numStrCvtError:
 
         case SQL_BIT:
         case SQL_TINYINT:
+
+            if (uintValue > 255)
+                return CVT_OUT_OF_RANGE;
+
+            rc = PutTinyInt (rgbData, (SDWORD)uintValue, fSqlType, TRUE);
+            break;
+
         case SQL_SMALLINT:
         case SQL_INTEGER:
 
@@ -3169,11 +3235,23 @@ numStrCvtError:
 
         case SQL_BIT:
         case SQL_TINYINT:
+            if (intValue < -128 || intValue > 255)
+                return CVT_OUT_OF_RANGE;
+
+            tinyValue = (SCHAR)intValue;
+            rc = PutTinyInt (rgbData, tinyValue, fSqlType, FALSE);
+            break;
+
         case SQL_SMALLINT:
         case SQL_INTEGER:
-        case SQL_BIGINT:
 
             rc = PutInt (rgbData, intValue, fSqlType, FALSE);
+            break;
+
+        case SQL_BIGINT:
+
+            int64Value = (SQLBIGINT)intValue;
+            rc = PutInt64 (rgbData, intValue, fSqlType, FALSE);
             break;
 
         case SQL_REAL:
@@ -3220,6 +3298,15 @@ numStrCvtError:
 
         case SQL_BIT:
         case SQL_TINYINT:
+
+            intValue = (UDWORD)int64Value;
+            if (intValue < -128 || intValue > 255)
+                return CVT_OUT_OF_RANGE;
+
+            tinyValue = (SCHAR)intValue;
+            rc = PutTinyInt (rgbData, tinyValue, fSqlType, FALSE);
+            break;
+
         case SQL_SMALLINT:
         case SQL_INTEGER:
             intValue = (SDWORD)int64Value;
@@ -3285,29 +3372,26 @@ numStrCvtError:
             break;
 
         case SQL_BIT:
-
-            if (floatValue < 0. || floatValue >= 2.)
-            {
-                rc = CVT_OUT_OF_RANGE;
-                break;
-            }
-            else
-            if (floatValue != 0. && floatValue != 1.)
-            {
-                rc = CVT_TRUNCATION;
-                break;
-            }
-
         case SQL_TINYINT:
+
+            intValue = (SDWORD)floatValue;
+            
+            if (intValue < -128 || intValue > 255)
+                return CVT_OUT_OF_RANGE;
+            
+            tinyValue = (SCHAR)intValue;
+            rc = PutTinyInt (rgbData, tinyValue, fSqlType, FALSE);
+            break;
+
         case SQL_SMALLINT:
         case SQL_INTEGER:
 
             rc = PutInt (rgbData, (SDWORD)floatValue, fSqlType, FALSE);
             break;
 
-		case SQL_BIGINT:
+        case SQL_BIGINT:
 
-			rc = PutInt64 (rgbData, (ODBCINT64)floatValue, fSqlType, FALSE);
+            rc = PutInt64 (rgbData, (ODBCINT64)floatValue, fSqlType, FALSE);
             break;
 
         case SQL_REAL:

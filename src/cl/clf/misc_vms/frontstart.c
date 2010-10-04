@@ -13,7 +13,7 @@
 # include	<st.h>
 # include	<pc.h>
 # include	<eventflag.h>
-
+#include <signal.h>
 # include 	<descrip.h>
 # include 	<efndef.h>
 # include 	<iosbdef.h>
@@ -97,7 +97,8 @@
 **          to fix some weird Posix thread rundown problem where the
 **          exit handler thread (thread -3) seems to get deadlocked with the
 **          primary thread (thread 1) after calling sys$exit()
-**
+**      12-aug-2010 (joea)
+**          Use VAXC$ESTABLISH to set up exception handlers.
 **/
 
 /* # define's */
@@ -339,6 +340,9 @@ i4	(*main_rtn)();
 	i4 	argc;		/* Number of arguments for main_rtn */
 	char 	*argv[64];	/* arguments for main_rtn */
 
+#if defined(axm_vms)
+        DECC$CRTL_INIT();
+#endif
 	/* The first argument is the name from the IFD */
 	STcopy(ifd_file->dsc$a_pointer, image_name);
 	image_name[ifd_file->dsc$w_length] = EOS;
@@ -373,7 +377,7 @@ i4	(*main_rtn)();
 	open_SIfiles();
 
 	/* Establish exception hander */
-	lib$establish(except_handler);	
+	VAXC$ESTABLISH(except_handler);	
 
 	/* Establish control-c exception handler */
 

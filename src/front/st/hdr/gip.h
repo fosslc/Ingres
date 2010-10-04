@@ -104,6 +104,10 @@
 **	14-Jul-2010 (hanje04)
 **	    BUG 124081
 **	    Added defns. for location to save the response file
+**	22-Sep-2010 (hanje04)
+**	    BUG 124480
+**	    SD 126680
+**	    Add PKG_SUP32 to FULL_INSTALL for 64bit platforms.
 ** 
 */
 
@@ -367,8 +371,15 @@ typedef u_i4 PKGLST;
 #define TYPICAL_SERVER (PKG_CORE|PKG_DBMS|PKG_NET|PKG_ODBC|PKG_ABF)
 #define TYPICAL_VECTORWISE (PKG_CORE|PKG_DBMS|PKG_NET|PKG_ODBC)
 #define TYPICAL_CLIENT (PKG_CORE|PKG_NET|PKG_ODBC)
+#ifdef LP64
 #define FULL_INSTALL (PKG_CORE|PKG_DBMS|PKG_NET|PKG_ODBC|PKG_REP|PKG_ABF| \
-					 PKG_STAR)					 
+					 PKG_STAR|PKG_SUP32)	
+#else
+#define FULL_INSTALL (PKG_CORE|PKG_DBMS|PKG_NET|PKG_ODBC|PKG_REP|PKG_ABF| \
+					 PKG_STAR)	
+#endif
+
+
 /*
 ** Obsolete packages are NOT defined to RFAPI
 ** so represent them with GIP_OBS_PKG

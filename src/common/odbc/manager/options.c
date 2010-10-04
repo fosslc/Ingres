@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004, 2007 Ingres Corporation 
+** Copyright (c) 2010 Ingres Corporation 
 */ 
 #include <compat.h>
 #include <cs.h>
@@ -77,6 +77,10 @@ void IIodbc_timeOutThread();
 **  04-Dec-2009 (Ralph Loen) Bug 123012
 **      In SQLSetConnectAttr(), treat pValue as an integer, rather than a 
 **      pointer to an integer, if the attribute is SQL_ATTR_AUTOCOMMIT.
+**  03-Sep-2010 (Ralph Loen) Bug 124348
+**      Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
+**      SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
+**      platforms.
 */ 
 
 /*
@@ -670,7 +674,7 @@ RETCODE SQL_API SQLSetConnectAttr(
 RETCODE SQL_API SQLSetConnectOption(
     SQLHDBC    hdbc,
     UWORD      fOption,
-    SQLUINTEGER vParam)
+    SQLULEN    vParam)
 {
     RETCODE rc, traceRet = 1;
     pDBC pdbc = (pDBC)hdbc;
@@ -1006,7 +1010,7 @@ RETCODE SQL_API SQLSetStmtAttr(
 RETCODE SQL_API SQLSetStmtOption(
     SQLHSTMT hstmt,
     SQLUSMALLINT fOption,
-    SQLUINTEGER  vParam)
+    SQLULEN      vParam)
 {
     RETCODE rc, traceRet = 1;
     pSTMT pstmt = (pSTMT)hstmt;

@@ -971,6 +971,9 @@ NO_OPTIM=su4_cmw i64_aix
 **	    (2) make sure encrypted blocks are unpredictable by filling
 **		the pad space with random bits rather than 00s
 **	    (3) seed the random number generator for table create
+**	27-Aug-2010 (jonj)
+**	    Pass location's "k" index to dm2u_raw_location_free.
+**	    Remove redundant SETDBERR.
 */
 
 /* ****FIXME THIS parameter list is simply ridiculous.  Just pass
@@ -2108,12 +2111,11 @@ DB_ERROR	    *errcb)
 			if (dcb->dcb_ext->ext_entry[i].flags & DCB_RAW)
 			{
 			    status = dm2u_raw_location_free(dcb, xcb, 
-					&location[k], errcb); 
+					&location[k], k, errcb); 
 	    		    if (status != E_DB_OK)
 			    {
 				compare = 1;
-				SETDBERR(errcb, k, E_DM0190_RAW_LOCATION_OCCUPIED);
-				status = E_DB_ERROR;	
+				/* dm2u_raw_location_free has set errcb info */
 				break;
 			    }
 			    loc_array[k].loc_status |= LOC_RAW;

@@ -38,6 +38,8 @@ REM	17-Apr-2009 (hanal04) Bug 121951
 REM	    	Correct LOOP4 to prevent a hang with grep waiting for CTRL-D
 REM             from the terminal. Initialise cfilnam and filnam at the start 
 REM             of each iteration.
+REM	13-Sep-2010 (drivi01)
+REM		Remove /Wp64 flag for x64 it's deprecated.
 
 set CMD=sepcc
 
@@ -85,8 +87,8 @@ set include_dirs=/I%II_SYSTEM%\\ingres\\files
 if not "%ING_SRC%"=="" set include_dirs=/I%ING_SRC%\\gl\\hdr\\hdr /I%ING_SRC%\\cl\\hdr\\hdr /I%ING_SRC%\\cl\\clf\\hdr /I%ING_SRC%\\front\\hdr\\hdr /I%ING_SRC%\\front\\frontcl\\hdr /I%ING_SRC%\\common\\hdr\\hdr /I%II_SYSTEM%\\ingres\\files
 
 if not "%CCFLAGS%"=="" set cc_sw=%CCFLAGS% 
-if "%CPU%"=="IA64" set cc_sw=%cc_sw% -DNT_IA64 /Wp64
-if "%CPU%"=="AMD64" set cc_sw=%cc_sw% -DNT_AMD64 /Wp64
+if "%CPU%"=="IA64" set cc_sw=%cc_sw% -DNT_IA64 
+if "%CPU%"=="AMD64" set cc_sw=%cc_sw% -DNT_AMD64 
 if "%CC%"=="" set CC=CL
 
 set line_args=%1

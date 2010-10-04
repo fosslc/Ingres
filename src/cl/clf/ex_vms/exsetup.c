@@ -2,8 +2,7 @@
 ** Copyright (c) 1993, 2009 Ingres Corporation
 */
 # include	<compat.h>
-# include	<excl.h>
-#include <ints.h>
+#include <ex.h>
 #include "exi.h"
 
 /*
@@ -31,32 +30,57 @@
 **          On Itanium, align the beginning of jmp_buf block if not octaword
 **          aligned and save the address in iijmpbuf.  Call
 **          lib$i64_init_invo_context to initialize it.
+**      07-sep-2010 (joea)
+**          On i64_vms, replace VMS exception handling by POSIX signals as
+**          done on Unix.
 */
 
-STATUS 
+#if defined(i64_vms)
+FUNC_EXTERN void i_EXestablish(void);
+
+static bool exsetfirst = TRUE;
+
+/* dummies for shared library only */
+int
+EXcatch()
+{
+    return OK;
+}
+
+int
+EXgetctx()
+{
+    return OK;
+}
+
+int
+EXunsave_handler()
+{
+    return OK;
+}
+#elif defined(axm_vms)
+#undef EXdelete
+STATUS
+EXdelete()
+{
+    return OK;
+}
+#endif
+
+void 
 EXsetup(STATUS (*handler)(EX_ARGS *args), EX_CONTEXT *context)
 {
         context->prev_context = 0;
 
+#if defined(i64_vms)
+    if (exsetfirst)
+    {
+        exsetfirst = FALSE;
+        i_EXestablish();
+    }
+#endif
 	context->handler_address = handler;
 	context->address_check = (PTR)context;
 
 	i_EXpush(context);
-
-#if defined(i64_vms)
-    context->iijmpbuf = (INVO_CONTEXT_BLK *)context->jmpbuf_blk;
-    if (((int)context->iijmpbuf & 0xFFFFFFF0) != (int)context->iijmpbuf)
-    {
-        int64 *aligned_icb = (int64 *)((char *)context->iijmpbuf
-                                       + sizeof(int64));
-        context->iijmpbuf = (INVO_CONTEXT_BLK *)
-            ((int64)((char *)aligned_icb + 15) & ~15);
-    }
-
-    if (lib$i64_init_invo_context(context->iijmpbuf,
-                                  LIBICB$K_INVO_CONTEXT_VERSION, 0) == 0)
-        return FAIL;
-#endif
-
-	return OK;
 }

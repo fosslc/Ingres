@@ -836,6 +836,9 @@ NO_OPTIM =
 **	    Re-type some ptr's as the proper struct pointer.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      11-Aug-2010 (hanal04) Bug 124180
+**          Added money_compat for backwards compatibility of money
+**          string constants.
 **/
 
 /*
@@ -4157,6 +4160,9 @@ scs_initiate(SCD_SCB *scb )
  
             if(!(Sc_main_cb->sc_rule_upd_prefetch_off))
                 psq_cb->psq_flag2 |= PSQ_RULE_UPD_PREFETCH;
+
+            if(Sc_main_cb->sc_money_compat)
+                psq_cb->psq_flag2 |= PSQ_MONEY_COMPAT;
 
 	    status = psq_call(PSQ_BGN_SESSION, psq_cb,
 				scb->scb_sscb.sscb_psscb);

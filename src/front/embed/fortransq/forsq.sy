@@ -138,6 +138,8 @@
 **	    Added gr_rcnt for row procs.
 **	30-apr-2003 (devjo01)
 **	    Tighten up test for SQLSTATE variable. b93910.
+**      17-sep-2010 (coomi01) b124461
+**          Allow integer*8 declarations
 */
 
 
@@ -661,7 +663,7 @@ Fothr_star_len:	/* EMPTY */
 		    switch (gr->gr_type) {
 		      case T_INT:
 			if (gr->F_size != 1 && gr->F_size != 4 
-			    && gr->F_size != 2)
+			    && gr->F_size != 2 && gr->F_size != 8)
 			  er_write( E_E1000C_hfBADSIZE, EQ_ERROR, 0 );
 			break;
 		      case T_FLOAT:

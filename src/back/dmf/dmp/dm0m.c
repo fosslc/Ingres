@@ -646,6 +646,8 @@ dm0m_allocate(
 **	    Support ShortTerm Session-owned pools.
 **	16-Nov-2009 (kschendel) SIR 122890
 **	    Track total DMF memory allocation for stats.
+**	15-Sep-2010 (maspa05) b124388
+**	    Make sure obj_pool is initialised.
 */
 static DB_STATUS
 expand_pool(
@@ -710,6 +712,11 @@ expand_pool(
 	scf_cb.scf_scm.scm_out_pages = adjusted_size / SCU_MPAGESIZE;
 	scf_cb.scf_scm.scm_addr = 
 		MEreqmem(0, adjusted_size, FALSE, &mestatus);
+
+	/* If MEreqmem succeeded mark the new pool as having been 
+	 * allocated via MEreqmem */
+        if ( scf_cb.scf_scm.scm_addr )
+	   ((DM_OBJECT *) scf_cb.scf_scm.scm_addr)->obj_pool = OBJ_P_MEREQ; 
     }
     else
     {

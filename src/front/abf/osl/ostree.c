@@ -1248,6 +1248,11 @@ OSNODE *node;
 **		extra blank appears when concatenating hex char to character
 **		string; in osmkconst(), n_length should be set to half when  
 ** 		type is tkXCONST 
+**      26-Aug-2010 (hanal04) Bug 124309
+**              Added II_MONEY_COMPAT environment variable which allows
+**              money SCONST values to be treated as DCONST (decimal)
+**              values. This provides backwards compatibility for old
+**              ABF applications.
 */
 OSNODE *
 osmkconst (type, value)
@@ -1255,6 +1260,8 @@ i4	type;
 char	*value;
 {
     register OSNODE	*np;
+    static i2		money_compat = -1;
+    char		*ptr;
 
     OSNODE	*ostralloc();
 
@@ -1262,6 +1269,64 @@ char	*value;
 	osuerr(OSNOMEM, 1, ERx("osmkconst"));
     else
     {
+        if(money_compat < 0)
+        {
+            money_compat = 0; /* OFF by default */
+            NMgtAt("II_MONEY_COMPAT", &ptr);
+            if (ptr != NULL && *ptr != EOS)
+            {
+                if(STbcompare("ON", 2, ptr, 0, TRUE) == 0)
+                    money_compat = 1;
+            }
+        }
+
+        if(money_compat && (type == tkSCONST))
+        {
+            /* If we have a money string set type to tkDCONST
+            ** and drop the currency sign from value
+            */
+            DB_DATA_VALUE	src, dst;
+            ADF_CB		*adf_cb;
+            DB_STATUS		mny_status;
+            float		mny[2]; /* In case money gets bigger */
+            i4			symlen;
+
+            adf_cb = FEadfcb();
+
+            src.db_datatype = DB_CHA_TYPE;
+            src.db_data = value;
+            src.db_length = STlength(value);
+            src.db_prec = 0;
+
+            dst.db_datatype = DB_MNY_TYPE;
+            dst.db_data = (PTR)&mny;
+            dst.db_length = sizeof(mny);
+            dst.db_prec = 0;
+
+            mny_status = adu_2strtomny_strict(adf_cb, &src, &dst, TRUE);
+            if(mny_status == E_DB_OK)
+            {
+                /* We have a money string and the user wants it treated as
+                ** money. Remove currency symbol from value string and treat
+                ** as DECIMAL to get the desired results. 
+                */
+                symlen = STlength(adf_cb->adf_mfmt.db_mny_sym);
+
+                if(STbcompare(adf_cb->adf_mfmt.db_mny_sym, symlen,
+                              value, 0, TRUE) == 0)
+                {
+                    /* Leading Currency symbol, advance value beyond it */
+                    value += symlen;
+                }
+                else
+                {
+                    /* Trailing Currency symbol truncate value */
+                    *(value + src.db_length - symlen) = EOS;
+                }
+                type = tkDCONST;
+            }
+        }
+
 	np->n_token = type;
 	np->n_const = value;
 	np->n_flags = N_READONLY;

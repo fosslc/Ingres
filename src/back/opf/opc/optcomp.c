@@ -2680,6 +2680,8 @@ opt_prqep(
 **	    Drop high/low, not used.
 **	19-May-2010 (kschendel) b123759
 **	    Added pqual count to the exchange node arrays.
+**	10-Sep-2010 (kschendel) b124341
+**	    SEjoin replace kcompare with cvmat.
 */
 static VOID
 opt_qenode(
@@ -3608,7 +3610,7 @@ opt_qenode(
 
 	opt_adf(global, sejn->sejn_itmat, "sejn_itmat");
 	opt_adf(global, sejn->sejn_okmat, "sejn_okmat");
-	opt_adf(global, sejn->sejn_kcompare, "sejn_kcompare");
+	opt_adf(global, sejn->sejn_cvmat, "sejn_cvmat");
 	opt_adf(global, sejn->sejn_ccompare, "sejn_ccompare");
 	opt_adf(global, sejn->sejn_kqual, "sejn_kqual");
 	opt_adf(global, sejn->sejn_oqual, "sejn_oqual");

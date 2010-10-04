@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004, 2007 Ingres Corporation 
+** Copyright (c) 2010 Ingres Corporation 
 */ 
 
 #include <compat.h>
@@ -86,7 +86,13 @@
 **      For SQLDriverConnectW() and SQLDriverConnect(), convert the 
 **      connection information to ASCII before storing in the connection
 **      pool--if connection pooling is enabled.
-** 
+**   03-Sep-2010 (Ralph Loen) Bug 124348
+**      Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
+**      SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
+**      platforms.
+**   06-Sep-2010 (Ralph Loen) Bug 124348
+**      Added version of SQLColAttribute() dependent on _WIN64 macro for
+**      compatibility with MS implementation.
 */ 
 
 /*
@@ -126,6 +132,16 @@
 **      Created.
 */ 
 
+#ifdef _WIN64
+SQLRETURN SQL_API SQLColAttributeW(
+    SQLHSTMT         hstmt,
+    SQLUSMALLINT     ColumnNumber,
+    SQLUSMALLINT     FieldIdentifier,
+    SQLPOINTER       ValuePtr,
+    SQLSMALLINT      BufferLength,       /*   count of bytes */
+    SQLSMALLINT     *StringLengthPtr,    /* ->count of bytes */
+    SQLLEN          *NumericAttributePtr) 
+#else
 SQLRETURN SQL_API SQLColAttributeW(
     SQLHSTMT         hstmt,
     SQLUSMALLINT     ColumnNumber,
@@ -134,6 +150,7 @@ SQLRETURN SQL_API SQLColAttributeW(
     SQLSMALLINT      BufferLength,       /*   count of bytes */
     SQLSMALLINT     *StringLengthPtr,    /* ->count of bytes */
     SQLPOINTER       NumericAttributePtr) 
+#endif
 {
     pSTMT pstmt = (pSTMT)hstmt;
     RETCODE rc, traceRet = 1;
@@ -426,7 +443,7 @@ SQLRETURN SQL_API SQLDescribeColW(
     SQLSMALLINT      cbWideColNameMax,   /*   count of chars */
     SQLSMALLINT     *pcbWideColName,     /* ->count of chars */
     SQLSMALLINT     *pfSqlType,
-    SQLUINTEGER         *pcbColDef,          /* ->ColumnSize in chars */
+    SQLULEN         *pcbColDef,          /* ->ColumnSize in chars */
     SQLSMALLINT     *pibScale,
     SQLSMALLINT     *pfNullable)
 {
@@ -1082,7 +1099,7 @@ SQLRETURN SQL_API SQLGetDescRecW(
     SQLSMALLINT     *pcbWideColName,   /* ->count of chars */
     SQLSMALLINT     *pfType,
     SQLSMALLINT     *pfSubType,
-    SQLINTEGER          *pLength,
+    SQLLEN          *pLength,
     SQLSMALLINT     *pPrecision, 
     SQLSMALLINT     *pScale,
     SQLSMALLINT     *pNullable)
@@ -2222,7 +2239,7 @@ SQLRETURN SQL_API SQLGetTypeInfoW(
 RETCODE SQL_API SQLSetConnectOptionW(
     SQLHDBC    hdbc,
     UWORD      fOption,
-    SQLUINTEGER    vParam)
+    SQLULEN    vParam)
 {
     RETCODE rc, traceRet = 1;
     pDBC pdbc = (pDBC)hdbc;

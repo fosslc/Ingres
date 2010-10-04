@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004 Ingres Corporation 
+** Copyright (c) 2010 Ingres Corporation 
 */ 
 
 #include <compat.h>
@@ -42,6 +42,10 @@
 **   24-Nov-2009 (Ralph Loen) Bug 122956
 **      In SQLFetchScroll(), return an error with sqlstate HY106 (invalid
 **      argument) if the FetchOrientation argument is invalid.
+**   03-Sep-2010 (Ralph Loen) Bug 124348
+**      Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
+**      SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
+**      platforms.
 */ 
 
 /*
@@ -86,8 +90,8 @@ RETCODE SQL_API SQLBindCol(
     UWORD         icol,         /* ColumnNumber     */
     SWORD         fCType,       /* TargetType       */
     SQLPOINTER    rgbValue,     /* TargetValuePtr   */
-    SQLINTEGER    cbValueMax,   /* BufferLength     */
-    SQLINTEGER   *pcbValue)    /* StrLen_or_IndPtr */
+    SQLLEN        cbValueMax,   /* BufferLength     */
+    SQLLEN        *pcbValue)    /* StrLen_or_IndPtr */
 {
     RETCODE rc, traceRet = 1;
     pSTMT pstmt = (pSTMT)hstmt;
@@ -171,7 +175,7 @@ RETCODE SQL_API SQLDescribeCol(
     SWORD        cbColNameMax,
     SWORD      * pcbColName,
     SWORD      * pfSqlType,
-    SQLUINTEGER    * pcbColDef,
+    SQLULEN    * pcbColDef,
     SWORD      * pibScale,
     SWORD      * pfNullable)
 {
@@ -313,7 +317,7 @@ RETCODE SQL_API SQLFetch(
 SQLRETURN SQL_API SQLFetchScroll(
     SQLHSTMT     hstmt,
     SQLSMALLINT  FetchOrientation,
-    SQLINTEGER   FetchOffset)
+    SQLLEN       FetchOffset)
 {
     RETCODE rc, traceRet = 1;
     pSTMT pstmt = (pSTMT)hstmt;
@@ -407,8 +411,8 @@ RETCODE SQL_API SQLGetData(
     UWORD        icol,
     SWORD        fCType,
     SQLPOINTER   rgbValue,
-    SQLINTEGER   cbValueMax,
-    SQLINTEGER  *pcbValue)
+    SQLLEN       cbValueMax,
+    SQLLEN       *pcbValue)
 {
     RETCODE rc, traceRet = 1;
     pSTMT pstmt = (pSTMT)hstmt;
@@ -683,7 +687,7 @@ RETCODE SQL_API SQLNumParams(
 */ 
 RETCODE SQL_API SQLRowCount(
     SQLHSTMT     hstmt,
-    SQLINTEGER     * pcrow)
+    SQLLEN       * pcrow)
 {
     RETCODE rc, traceRet = 1;
     pSTMT pstmt = (pSTMT)hstmt;
