@@ -57,6 +57,9 @@
 **	    Add rfapiopsinfo[] array to store "option-section header" pairs
 **	    so that whole sections can more easily be excluded when not using
 **	    II_RF_OP_WRITE_DEFAULTS.
+**      27-Sep-2010 (hanje04)
+**          BUG 124480
+**          Add support for 32bit package.
 **
 */
 
@@ -637,6 +640,16 @@ static RFAPI_VAR ii_component_star = {
 			"YES"
 			};
 
+static RFAPI_VAR ii_component_32bit = {
+			II_COMPONENT_32BIT,
+			"II_COMPONENT_32BIT",
+			"Ingres 32bit Runtime",
+			II_RF_DP_LINUX,
+			II_RF_DP_LINUX,
+			"NO",
+			NULL
+			};
+
 static RFAPI_VAR ii_component_replicator = {
 			II_COMPONENT_REPLICATOR,
 			"II_COMPONENT_REPLICATOR",
@@ -692,6 +705,7 @@ GLOBALDEF RFAPI_VAR *pkg_info[] = {
 		&ii_component_net,
 		&ii_component_odbc,
 		&ii_component_star,
+		&ii_component_32bit,
 		&ii_component_replicator,
 		&ii_component_fronttools,
 		&ii_component_jdbc_client,

@@ -72,6 +72,9 @@
 **	    BUG 123081
 **	    Add II_RF_OP_APPEND for appending to existing response file rather
 **	    than creating a new one.
+**	27-Sep-2010 (hanje04)
+**	    BUG 124480
+**	    Add support for 32bit package.
 ** 
 */
 
@@ -164,6 +167,7 @@ typedef enum _II_RFAPI_PNAME {
 		II_COMPONENT_NET,
 		II_COMPONENT_ODBC,
 		II_COMPONENT_STAR,
+		II_COMPONENT_32BIT,
 		II_COMPONENT_REPLICATOR,
 		II_COMPONENT_FRONTTOOLS,
 		II_COMPONENT_JDBC_CLIENT,
