@@ -4733,6 +4733,9 @@ ingres_browseforfile(MSIHANDLE hInstall)
 **	27-Aug-2010 (drivi01)
 **	    Remove II_COMPONENT_ICE.  We don't want it added anymore
 **	    to generated response file.
+**	27-Sep-2010 (drivi01)
+**	    Rename response file parameter II_ENABLE_WINTCP to 
+**	    II_ENABLE_TCPIP for generated response files.
 */
 UINT __stdcall
 ingres_create_rspfile(MSIHANDLE hInstall)
@@ -5000,9 +5003,9 @@ ingres_create_rspfile(MSIHANDLE hInstall)
 
     if (!MsiGetFeatureState(hInstall, "IngresTCPIP", &iInstalled, &iAction)
 	&& (iInstalled == INSTALLSTATE_LOCAL || iAction == INSTALLSTATE_LOCAL))
-	fprintf(fp, "II_ENABLE_WINTCP=\"YES\"\n" );
+	fprintf(fp, "II_ENABLE_TCPIP=\"YES\"\n" );
     else
-	fprintf(fp, "II_ENABLE_WINTCP=\"NO\"\n" );
+	fprintf(fp, "II_ENABLE_TCPIP=\"NO\"\n" );
 
     if (!MsiGetFeatureState(hInstall, "IngresNetBIOS", &iInstalled, &iAction)
 	&& (iInstalled == INSTALLSTATE_LOCAL || iAction == INSTALLSTATE_LOCAL))
