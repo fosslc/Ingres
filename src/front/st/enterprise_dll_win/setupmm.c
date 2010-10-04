@@ -334,6 +334,10 @@
 **          file happens to be a directory, then output a warning.
 **          The functions exits with "INGRES_CONTINUE" set to "YES" if the
 **          Response file is to be written, "NO" otherwise.
+**      27-Sep-2010 (shust01)
+**          When creating a response file and a 'traditional' installation
+**          is chosen, that information does not appear in the response
+**          file. bug 124503.
 */
 #include <windows.h>
 #include <msi.h>
@@ -2037,7 +2041,7 @@ ingres_set_properties(MSIHANDLE hInstall)
 		MsiSetProperty(hInstall, "CONFIG_TYPE", "2");
 	else if (lpReturnedString[0] && !_stricmp(lpReturnedString, "CM"))
 		MsiSetProperty(hInstall, "CONFIG_TYPE", "3");
-	else if (lpReturnedString[0] && !_stricmp(lpReturnedString, "NULL"))
+	else if (lpReturnedString[0] && !_stricmp(lpReturnedString, "TRAD"))
 		MsiSetProperty(hInstall, "CONFIG_TYPE", "1");
 	else if (lpReturnedString[0] && !_stricmp(lpReturnedString, "TXN"))
 		MsiSetProperty(hInstall, "CONFIG_TYPE", "0");

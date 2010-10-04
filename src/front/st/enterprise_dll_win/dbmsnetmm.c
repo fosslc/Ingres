@@ -382,6 +382,10 @@
 **	    When creating a response file, the sql92 option (II_ENABLE_SQL92)
 **	    was always being set to NO, no matter what the user selected
 **	    for that option.  bug 124318.
+**	27-Sep-2010 (shust01)
+**	    When creating a response file and a 'traditional' installation 
+**	    is chosen, that information does not appear in the response  
+**	    file. bug 124503.
 */
 
 #include <stdio.h>
@@ -5036,6 +5040,8 @@ ingres_create_rspfile(MSIHANDLE hInstall)
     {
 	if (!_stricmp(szBuf, "0"))
 	     fprintf(fp, "II_CONFIG_TYPE=\"TXN\"\n", szBuf);
+	if (!_stricmp(szBuf, "1"))
+	     fprintf(fp, "II_CONFIG_TYPE=\"TRAD\"\n", szBuf);
 	if (!_stricmp(szBuf, "2"))
 	     fprintf(fp, "II_CONFIG_TYPE=\"BI\"\n", szBuf);
 	if (!_stricmp(szBuf, "3"))
