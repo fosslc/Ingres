@@ -3627,6 +3627,9 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	10-Sep-2010 (kiria01) b124439
 **	    Added length checks to validate the potential for key truncation
 **	    whan calling psl_mk_const_similar() in key contexts.
+**	04-Oct-2010 (maspa05) b124531
+**	    Return error if user attempts to SET TRACE RECORD to invalid
+**          directory.
 */
 %{
 
@@ -42588,8 +42591,23 @@ settrace:	    settracestmnt strsetparam
 	    {
 		if (psq_cb->psq_flag & PSQ_ALLOW_TRACEFILE_CHANGE)
 		{
+
 		    /* set trace record filename */
-		    ult_set_tracefile($3);
+		    if (ult_set_tracefile($3) != OK)
+                    {
+                       LOCATION *loc=ult_tracefile_loc();
+
+		       if (loc)
+		       (VOID)psf_error(E_UL0401_BAD_TRACE_DIR,0L,PSF_USERERR,
+			&err_code, &psq_cb->psq_error, 2, 
+                        (i4) STlength($3), $3,
+                        STlength(loc->path),loc->path);
+                       else
+		       (VOID)psf_error(E_UL0400_BAD_TRACE_DIR,0L,PSF_USERERR,
+			&err_code, &psq_cb->psq_error, 1, 
+                        (i4) STlength($3), $3);
+		       return (E_DB_ERROR);
+                    }
 		} else
 		{
 		    (VOID)psf_error(E_US1712_TRACE_PERM,0L,PSF_USERERR,
