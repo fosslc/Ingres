@@ -5359,6 +5359,8 @@
 #define IDS_I_G_NO_QUERY_COST_LIMIT     57386
 #define IDS_I_G_CREATE_SEQUENCE         57387
 #define IDS_I_G_NO_CREATE_SEQUENCE      57388
+#define IDS_ERR_REG_COL_TOO_LONG	57390
+#define IDS_ERR_SHORT_REG_COL_TOO_LONG	57389
 #define ID_FILE_NEW                     0xE100
 #define ID_FILE_OPEN                    0xE101
 #define ID_FILE_CLOSE                   0xE102

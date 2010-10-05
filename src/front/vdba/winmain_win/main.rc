@@ -1576,7 +1576,8 @@ IDS_ERR_CONNECTLOCAL_OPINGDTUSED	"Problem connecting to the local node.\n /OPING
 IDS_ERR_ONLY_ING_OR_STAR_CANBESTPD	"Only INGRES or STAR servers can be Shutdown."
 IDS_ERR_CANNOT_SCAN_DBEV_CLOSEW		"Cannot Scan DBEvents. Please Close DBEvent trace Windows"
 IDS_ERR_CANNOT_SCAN_DBEV_MON_NOTUTD	"Cannot Scan DBEvents. Replication Monitor Data may not be up to date"
-
+IDS_ERR_REG_COL_TOO_LONG		"Error adding registered column information for table %s.%s. The column %s name is too long."
+IDS_ERR_SHORT_REG_COL_TOO_LONG		"Error adding registered column information."
 IDS_NONE_							"<none>"
 
 
