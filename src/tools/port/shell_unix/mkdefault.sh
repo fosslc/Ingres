@@ -776,6 +776,8 @@
 ##          Added check for geo compile time definition
 ##	31-Aug-2010 (troal01)
 ##	    Renamed PROJ64_LOC and GEOS64_LOC to PROJHB_LOC and GEOSHB_LOC
+##	21-Sept-2010 (troal01)
+##	    If conf_WITH_GEO is set, make sure we link to libgeos and libproj
 
 TMP=/tmp/libc.nm
 trap 'rm -f $TMP' 0 1 2 13 15
@@ -1618,7 +1620,22 @@ case $vers in
 	    suffix="-lpthread -lfpe -lmutex -lm -lc -lcurses "
 	    ;;
      *_lnx|\
-    int_rpl) suffix="-L$GEOS_LOC -L$GEOSHB_LOC -L$PROJ_LOC -L$PROJHB_LOC -lpthread -lrt -lm -lc -lcrypt -ldl -lgcc_s -lgeos_c -lproj "
+    int_rpl)
+	    if [ "$conf_WITH_GEO" ] ; then
+	    	if [ "$build_arch" = '32+64' ] ; then
+	    		prefix32 = "-L$GEOSHB_LOC -L$PROJHB_LOC"
+	    		prefix64 = "-L$GEOS_LOC -L$PROJ_LOC"
+	    	elif [ "$build_arch" = '64+32' ] ; then
+	    		prefix32 = "-L$GEOS_LOC -L$PROJ_LOC"
+	    		prefix64 = "-L$GEOSHB_LOC -L$PROJHB_LOC"
+	    	else
+	    		prefix = "-L$GEOS_LOC -L$PROJ_LOC"
+	    	fi
+	        GEOS_LD="-lgeos -lgeos_c -lproj"
+	    else
+	        GEOS_LD=""
+	    fi
+	    suffix="-lpthread -lrt -lm -lc -lcrypt -ldl -lgcc_s $GEOS_LD"
 	    ;; 
    *_osx) suffix="-bind_at_load -framework CoreServices -framework DirectoryService -framework Security"
 	    [ -f /usr/lib/libcc_dynamic.a ] && suffix="-lcc_dynamic $suffix"

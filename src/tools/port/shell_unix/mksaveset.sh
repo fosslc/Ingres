@@ -316,6 +316,7 @@ done
 set - `cat $ING_BUILD/version.rel` 
 release=$2
 nptlbuild=`head -1 $ING_BUILD/version.rel |cut -d')' -f2`
+nptlbuild=`echo $nptlbuild |cut -d'_' -f1`
 case $vers in
     int_lnx|\
     int_rpl)

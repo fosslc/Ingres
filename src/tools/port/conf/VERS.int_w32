@@ -6,9 +6,11 @@
 #	    Comment out BUILD_ICE to stop ICE from building.
 #	31-Aug-2010 (thich01)
 #	    Add WITH_GEO for platforms where spatial is not supported.
+#	30-Sep-2010 (troal01)
+#	    Fixed a typo in set option WITH_GEO
 
 #set: config int_w32
-#set: build 00
+#set: build 01
 #set: inc 00
 # This should not be submitted to main
 #set: option GEO
@@ -19,4 +21,4 @@
 #BUILD_ICE = "TRUE" ;    #set: option BUILD_ICE
 
 PLATFORM_JAMDEFS = int_w32 ;
-WITH_GEO = -D_WITH_GEO ; #set option: WITH_GEO
+WITH_GEO = -D_WITH_GEO ; #set: option WITH_GEO

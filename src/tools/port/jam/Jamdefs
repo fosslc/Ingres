@@ -566,6 +566,8 @@
 #	    Added HDRPROJ for PROJ geospatial headers.
 #	31-Aug-2010 (troal01)
 #	    Added SHGEOSLIB, SHGEOSCLIB, and SHPROJLIB
+#	30-Sep-2010 (troal01)
+#	    Added GEOSLIB, GEOSCLIB, PROJLIB, SHGEOSLIBHB, SHGEOSCLIBHB, and SHPROJLIBHB
 #	
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE DEFINITIONS and EXCEPTIONS
@@ -2679,13 +2681,19 @@ else
 }
 
 #
-# GEOS and Proj.4 shared libraries
+# GEOS and Proj.4 libraries
 #
 if ! $(NT)
 {
     SHGEOSLIB = libgeos.$(SLSFX) ;
     SHGEOSCLIB = libgeos_c.$(SLSFX) ;
     SHPROJLIB = libproj.$(SLSFX) ;
+    GEOSLIB = $(GEOS_LOC)$(DFS)libgeos.$(LIBSFX) ;
+    GEOSCLIB = $(GEOS_LOC)$(DFS)libgeos_c.$(LIBSFX) ;
+    PROJLIB = $(PROJ_LOC)$(DFS)libproj.$(LIBSFX) ;
+    GEOSLIBHB = $(GEOSHB_LOC)$(DFS)libgeos.$(LIBSFX) ;
+    GEOSCLIBHB = $(GEOSHB_LOC)$(DFS)libgeos_c.$(LIBSFX) ;
+    PROJLIBHB = $(PROJHB_LOC)$(DFS)libproj.$(LIBSFX) ;	
 }
 else
 {

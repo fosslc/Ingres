@@ -1,0 +1,8 @@
+
+This version of Ingres includes the following noteworthy updates:
+
+- fixed a geos crash on Fedora 13 related to gcc optimization
+- fixed issues with rtree indexing
+- fixed issues preventing .deb packages (for Ubuntu, Debian)
+- fixed an issue with ingbuild needing geos/proj.4 libraries, it can now install and add the libs automatically
+- merged in the latest bug fixes from main (including those for Ingres 10.0's GA release)

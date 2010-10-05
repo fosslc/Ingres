@@ -16,6 +16,8 @@
 **          fails to run without it.
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	30-Sep-2010 (troal01)
+**	    Added GEODEPS if R_GEODEPS is defined.
 */ 
 
 PART	supp32
@@ -57,6 +59,14 @@ PART	supp32
       LINK libxerces-c.$SLSFX.$XERCVERS
       LINK libxerces-c.$SLSFX
 # endif /* xerces */
+# ifdef R_GEODEPS /* R_GEODEPS */
+      EXECUTABLE libgeos-$GEOS_VERS.$SLSFX
+      LINK libgeos.$SLSFX
+      EXECUTABLE libgeos_c.$SLSFX.$GEOSC_VERS
+      LINK libgeos_c.$SLSFX
+      EXECUTABLE libproj.$SLSFX.$PROJ_VERS
+      LINK libproj.$SLSFX
+# endif /* R_GEODEPS */
       PERMISSION s:re,o:rwed,g:re,w:re
    }
 # endif /* R_SHLIBS */

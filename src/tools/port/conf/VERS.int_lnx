@@ -8,6 +8,8 @@
 #           Remove ICE from standard builds
 #	31-Aug-2010 (thich01)
 #	    Add WITH_GEO for platforms where spatial is not supported.
+#	30-Sep-2010 (troal01)
+#	    Fixed a typo in set option WITH_GEO
 
 
 #set: config32 int_lnx
@@ -16,7 +18,7 @@
 #set: option DBL
 #set: option B64
 #set: option CAS_ENABLED
-#set: build 00
+#set: build 01
 # This should not be submitted to main
 #set: option GEO
 
@@ -34,4 +36,4 @@ XERCES_ARCH ?= 32 ;	# but change to 64 if building on a 64-bit box
 
 PAX_CHECK = TRUE ;
 PLATFORM_JAMDEFS = hyb86_lnx ;
-WITH_GEO = -D_WITH_GEO ; #set option: WITH_GEO
+WITH_GEO = -D_WITH_GEO ; #set: option WITH_GEO

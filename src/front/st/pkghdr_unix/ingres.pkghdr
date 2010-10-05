@@ -17,12 +17,8 @@
 %rpmprereq_tag% %{__tar}
 %rpmprereq_tag% %{_bindir}/ipcs
 %rpmprereq_tag% %{__awk}
-%provides_tag% %rpm_basename%-qr_run
-%provides_tag% %rpm_basename%-esql
-%replaces_tag% ca-ingres%rpm_specname%
-%replaces_tag% ca-ingres-qr_run
-%replaces_tag% ca-ingres-esql
-%replaces_tag% ingres2006%rpm_specname%
+%provides_tag% %rpm_basename%-qr_run, %rpm_basename%-esql
+%replaces_tag% ca-ingres%rpm_specname%, ca-ingres-qr_run, ca-ingres-esql, ingres2006%rpm_specname%
 %autoreq_tag% %rpm_autoreq_off%
 %define_tag% %rpm_unpack_term_off%
 %define_tag% %rpm_missing_doc_term_off%

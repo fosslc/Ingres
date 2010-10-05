@@ -8,6 +8,8 @@
 #	    platform specific Jamdefs.
 #	10-Aug-2010 (bonro01)
 #	    Remove ICE from x64 and fix the build specification.
+#	30-Sep-2010 (troal01)
+#	    Fixed a typo in set option WITH_GEO
 
 
 #set: config32 int_w32
@@ -26,4 +28,4 @@ XERCES_ARCH ?= 64 ;
 
 PLATFORM_JAMDEFS = a64_win ;
 
-WITH_GEO = -D_WITH_GEO ; #set option: WITH_GEO
+WITH_GEO = -D_WITH_GEO ; #set: option WITH_GEO

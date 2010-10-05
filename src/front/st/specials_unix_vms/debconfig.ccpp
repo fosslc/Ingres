@@ -30,6 +30,8 @@
 **          Change product name from Ingres 2006 to Ingres.
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Hybrid add-on symbol changed, fix here.  Use BUILD_ICE.
+**      29-Sep-2010 (thich01)
+**          Change versions to 10.1.
 */
 
 
@@ -62,12 +64,12 @@ $sub %pkg_sulist% setuplist
 /* product info */
 $sub %product_name% (PROD1NAME)
 $sub %product_brandname% Ingres
-$sub %product_version% 9
-$sub %product_release% 3.0
+$sub %product_version% 10 
+$sub %product_release% 1.0
 $sub %rpm_product% (PROD1NAME) Business Open Source Database
 $sub %rpm_basename% (PROD_PKGNAME)
-$sub %rpm_version% 9.3.0-110
-$sub %rpm_release% 110
+$sub %rpm_version% 10.1.0-01
+$sub %rpm_release% BUILD_NO 
 $sub %rpm_doc_prefix% /usr/share/doc
 $sub %rpm_vendor% Ingres Corporation <support@ingres.com>
 $sub %rpm_license% gpl

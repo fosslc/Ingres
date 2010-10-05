@@ -1456,6 +1456,12 @@
 #           Correct _IIAWK action on VMS: need to quote uppercase params.
 #	31-Aug-2010 (troal01)
 #	    Added IIGeoLibs rule
+#	21-Sept-2010 (troal01)
+#	    Updated IIGeoLibs to create symlinks
+#	30-Sept-2010 (troal01)
+#	    IINEEDLIBS updated to only link the geospatial dependencies when
+#	    necessary. Also don't dynamically link with ingbuild. GEOS_VERS
+#	    GEOSC_VERS and PROJ_VERS added to SEPCCPP rule.
 #	01-Oct-2010 (bonro01)
 #	    Fix Windows build problems using cygwin
 #
@@ -3901,24 +3907,29 @@ rule IINEEDLIBS
 	   }
 	}
 
-	
 	if ! $(NT)
-	{
-	if $(<:S) != .o
 	{
 		if $(<:S) != .o
 		{
-	    	  LINKLIBS on $(<) += $(LDLIBMACH) ;
-		}
-		if $(VERSHB)
-		{
-		  if $(<:S) != .o
-		  {
-	    	    LINKLIBS on $(SUFHB)/$(<) += $(LDLIBMACHHB) ;
-		  }
+			LINKLIBS on $(<) += $(LDLIBMACH) ;
+			#if this is not ingbuild, and WITH_GEO is defined AND
+			#we're linking in either ADFLIB or INGRESLIB
+			#we must also link to libgeos, libgeos_c and libproj			
+			if ! ingbuild in $(<) && $(WITH_GEO) && ( ADFLIB in $(>) || LIBINGRES in $(>) || INGRESLIB in $(>) )
+			{
+				LINKLIBS on $(<) += -L$(GEOS_LOC) -L$(PROJ_LOC) -lgeos -lgeos_c -lproj ;
+			}
+			if $(VERSHB)
+			{
+				#same as above but for the hybrid versions
+				LINKLIBS on $(SUFHB)/$(<) += $(LDLIBMACH) ;
+				if ! ingbuild in $(<) && $(WITH_GEO) && ( ADFLIB in $(>) || LIBINGRES in $(>) || INGRESLIB in $(>) )
+				{
+					LINKLIBS on $(SUFHB)/$(<) += -L$(GEOSHB_LOC) -L$(PROJHB_LOC) -lgeos -lgeos_c -lproj ;
+				}
+			}
 		}
 	}
-        }
 
 
 	for _l in $(>)
@@ -8013,12 +8024,32 @@ rule IIGeoLibs
     }
     for f in $(<)
     {
-        local _s1 = [ FGristFiles $(f) ] ;
-        local _t1 = $(f) ;
-        
+        local _t1 = EMPTY ;
+        if $(f:B) = libgeos
+        {
+	        _t1 = $(f:B)-$(GEOS_VERS).$(SLSFX) ;
+        }
+        else if $(f:B) = libgeos_c
+        {
+        	_t1 = $(f).$(GEOSC_VERS) ;
+        }
+        else if $(f:B) = libproj
+        {
+        	_t1 = $(f).$(PROJ_VERS) ;
+        }
+        if $(NT)
+        {
+        	_t1 = $(f) ;
+        }
+        local _t2 = $(f) ;
+        local _s1 = [ FGristFiles $(_t1) ] ;
+
         FILE $(_t1) : $(_s1) ;
         
-        DEPENDS shlibs : $(_t1) ;
+        #The libs must be copied before any utility that is linked with them
+        #is run, otherwise it might not be able to find the .so files it needs
+        #to function properly.
+        DEPENDS $(ADFLIB) : $(_t1) ;
         
         LOCATE on $(_t1) = $(geodeps_destination) ;
         SEARCH on $(_s1) = $(geodeps_search_location) ;
@@ -8026,25 +8057,52 @@ rule IIGeoLibs
         MODE on $(_t1) = $(EXEMODE) ;
         Chmod $(_t1) ;
         
-        Clean clean : $(_t1) ;
+        if ! $(NT)
+        {
+		    IISYMLINK $(_t2) : $(_t1) ;
+	        DEPENDS $(_t1) : $(_t2) ;
+	        LOCATE on $(_t2) = $(geodeps_destination) ;
+	        Clean clean : $(_t1) $(_t2) ;
+        }
+        else
+        {
+        	Clean clean : $(_t1) ;
+        }
+        
         
         #deal with hybrid builds
         if $(VERSHB)
         {
-            local _hbs1 = $(f:G=hb) ;
             local _hbt1 = $(SUFHB)$(DFS)$(f) ;
+            if $(f:B) = libgeos
+            {
+                _hbt1 = $(SUFHB)$(DFS)$(f:B)-$(GEOS_VERS).$(SLSFX) ;
+            }
+            else if $(f:B) = libgeos_c
+            {
+                _hbt1 = $(SUFHB)$(DFS)$(f).$(GEOSC_VERS) ;
+	        }
+            else if $(f:B) = libproj
+            {
+                _hbt1 = $(SUFHB)$(DFS)$(f).$(PROJ_VERS) ;
+            }
+            local _hbt2 = $(SUFHB)$(DFS)$(f) ;
+            local _hbs1 = $(_t1:G=hb) ;
 
             FILE $(_hbt1) : $(_hbs1) ;
+            IISYMLINK $(_hbt2) : $(_hbt1) ;
 
-            DEPENDS shlibs : $(_hbt1) ;
+            DEPENDS $(ADFLIB) : $(_hbt1) ;
+            DEPENDS $(_hbt1) : $(_hbt2) ;
 
             LOCATE on $(_hbt1) = $(INGLIB) ;
+            LOCATE on $(_hbt2) = $(INGLIB) ;
             SEARCH on $(_hbs1) = $(GEOSHB_LOC) $(PROJHB_LOC) ;
 
             MODE on $(_hbt1) = $(EXEMODE) ;
             Chmod $(_hbt1) ;
 
-            Clean clean : $(_hbt1) ;
+            Clean clean : $(_hbt1) $(_hbt2) ;
         }
     }
 }
@@ -9333,6 +9391,8 @@ else
 	. shlibinfo
 	$(SED) "-e s/\$SLSFX/$SLSFX/" "-e s/\${slvers}/${slvers}/g" \
 	    "-e s/\$XERCVERS/$XERCVERS/" "-e s/\$XERCLIB/$XERCLIB/g" \
+	    "-e s/\$GEOS_VERS/$GEOS_VERS/" "-e s/\$PROJ_VERS/$PROJ_VERS/" \
+	    "-e s/\$GEOSC_VERS/$GEOSC_VERS/" \
 	    '-e s:^XX::' '-e s:(PROG0PRFX)::g' \
             '-e s:(PROG1PRFX):ii:g' '-e s:(PROG2PRFX):ing:g' \
             '-e s:(PROG3PRFX):II:g' '-e s:(PROG4PRFX):ii:g' \

@@ -9,6 +9,8 @@
 # 	    Created from VERS.int_lnx_LSB
 #       31-Aug-2010 (thich01)
 #           Add WITH_GEO for platforms where spatial is not supported.
+#       30-Sep-2010 (troal01)
+#           Fixed a typo in set option WITH_GEO
 
 
 
@@ -36,4 +38,4 @@ PAX_CHECK = FALSE ;
 PLATFORM_JAMDEFS = hyb86_lnx ;
 BUILD_GTK_INST = FALSE ;
 BUILD_GTK_GUI = FALSE ;
-WITH_GEO = -D_WITH_GEO ; #set option: WITH_GEO
+WITH_GEO = -D_WITH_GEO ; #set: option WITH_GEO

@@ -9,6 +9,8 @@
 ** History
 **  Aug-30-2010 (troal01)
 **      Created.
+**	Sept-21-2010 (troal01)
+**	    Added symlinks.
 */
 
 PART  geodeps64
@@ -17,8 +19,11 @@ PART  geodeps64
 #ifndef conf_LSB_BUILD
     DIRECTORY (PROD2NAME)!LIB_TGT!lp64
     BUILD_DIR (ING_BUILD)!LIB_BLD!lp64
-      EXECUTABLE libgeos.$SLSFX
-      EXECUTABLE libgeos_c.$SLSFX
-      EXECUTABLE libproj.$SLSFX
+      EXECUTABLE libgeos-$GEOS_VERS.$SLSFX
+      LINK libgeos.$SLSFX
+      EXECUTABLE libgeos_c.$SLSFX.$GEOSC_VERS
+      LINK libgeos_c.$SLSFX
+      EXECUTABLE libproj.$SLSFX.$PROJ_VERS
+      LINK libproj.$SLSFX
 #endif /* Do nothing if LSB_BUILD */
 #endif /* VMS not supported */

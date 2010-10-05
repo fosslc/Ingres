@@ -772,6 +772,8 @@
 **	    Update version for Ingres 10.1
 **	31-Aug-2010 (troal01)
 **	    Added R_GEODEPS for Linux 32/64 bit if not LSB build
+**	30-Sep-2010 (troal01)
+**	    Only define R_GEODEPS if conf_WITH_GEO is defined
 */
 
 /*
@@ -1350,7 +1352,6 @@
 # endif /* config_BUILD_MDB */
 # if (defined(int_lnx) || defined(a64_lnx)) && ! defined(conf_LSB_BUILD)
 # define R_PACKMAN
-# define R_GEODEPS
 # endif /* ! rpath or LSB linux */
 # endif /* LINUX */
 
@@ -1428,6 +1429,13 @@
 # define R_INGRES
 # define R_EQUEL
 # define R_ABF
+
+/*
+** geospatial
+*/
+# if defined(conf_WITH_GEO)
+# define R_GEODEPS
+# endif /* conf_WITH_GEO */
 
 /*
 ** miscellany

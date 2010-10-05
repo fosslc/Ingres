@@ -188,7 +188,7 @@ if exist "%XERCESCROOT%\bin\xerces-c_2_7.dll" set XERCVERS=2_7
 if exist "%XERCESCROOT%\bin\xerces-c_2_8.dll" set XERCVERS=2_8
 if exist "%XERCESCROOT%\bin\xerces-c_3_0.dll" set XERCVERS=3_0
 if "%XERCVERS"=="" echo XERCVERS could not be determined
-echo XERCVERS=  %XERCVERS%
+echo XERCVERS=%XERCVERS%
 :GEOS_LOOP
 if "%GEOSROOT%"=="" SET /P GEOSROOT=Root location of GEOS source and lib (default is %ING_ROOT%\geos):
 if "%GEOSROOT%"=="" SET GEOSROOT=%ING_ROOT%\geos

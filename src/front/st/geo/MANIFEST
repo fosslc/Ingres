@@ -6,16 +6,21 @@
 #           Added
 #       31-Aug-2010 (troal01)
 #           Added calls to the IIGeoLibs rule
+#       30-Sep-2010 (troal01)
+#           Only call IIGeoLibs if WITH_GEO is defined.
 
 IISUBSYS front st geo ;
 
 IIDFILES geo : srs.dat ;
 
-if $(NT)
+if $(WITH_GEO)
 {
-    IIGeoLibs $(SHGEOSCLIB) $(SHPROJLIB) ;
-}
-else
-{
-    IIGeoLibs $(SHGEOSLIB) $(SHGEOSCLIB) $(SHPROJLIB) ;
+	if $(NT)
+	{
+	    IIGeoLibs $(SHGEOSCLIB) $(SHPROJLIB) ;
+	}
+	else
+	{
+	    IIGeoLibs $(SHGEOSLIB) $(SHGEOSCLIB) $(SHPROJLIB) ;
+	}
 }
