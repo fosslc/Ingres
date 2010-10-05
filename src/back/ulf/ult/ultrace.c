@@ -61,6 +61,8 @@
 **      06-sep-2010 (maspa05) SIR 124363
 **          Added ult_trace_longqry() and ult_set_trace_longqry() for trace
 **          point sc925
+**      04-oct-2010 (maspa05) bug 124531
+**          Added validation for set new directory for SC930. 
 **/
 
 /*{
@@ -290,20 +292,19 @@ ult_set_always_trace(i4 value,i4 pid)
 {
       if (value != always_tracing )
       {
-         if (
-             always_tracing == 0)
+         if (always_tracing == 0)
          {
-	    TRdisplay("SC930 tracing ENABLED on %d (ver=%d)\n",
+	    TRdisplay("%@ SC930 tracing ENABLED on %d (ver=%d)\n",
 			    pid, SC930_VERSION);
 	 }
 	 else 
 	 {
             if (value == 0)
-	      TRdisplay("SC930 tracing DISABLED on %d (ver=%d)\n",
+	      TRdisplay("%@ SC930 tracing DISABLED on %d (ver=%d)\n",
 			    pid, SC930_VERSION);
 	    else
 	    {
-	      TRdisplay("SC930 tracing flags changed from %x to %x on %d (ver=%d)\n",
+	      TRdisplay("%@ SC930 tracing flags changed from %x to %x on %d (ver=%d)\n",
 			    always_tracing,value,pid, SC930_VERSION);
 	    }
 	 }
@@ -325,12 +326,18 @@ ult_set_always_trace(i4 value,i4 pid)
 **
 ** Outputs:
 **	Returns:
-**	    none
+**	    OK             - set tracefile ok
+**          E_DB_ERROR     - filename blank
+**          error status from LOexist()
+**
 **	Exceptions:
 **	    none
 **
 ** Side Effects:
 **	    none
+**      04-oct-2010 (maspa05) 
+**          do validation on new trace directory and revert to old value if
+**          new one does not exist.
 */
 
 static char trace_dir [MAX_LOC+1];
@@ -338,13 +345,44 @@ static char trace_dir [MAX_LOC+1];
 static LOCATION trace_loc;
 static LOCATION *tracefile = NULL;
 
-void
+STATUS
 ult_set_tracefile(char *newvalue)
 {
+    STATUS status;
+    char old_dir [MAX_LOC+1];
+    LOCATION *oldtrace=tracefile;
+
+    /* don't allow blank filename */
+    if (!newvalue ||
+        newvalue[0]==EOS)
+    {
+        TRdisplay("%@ Unable to set SC930 trace directory to ''\n");
+	return(E_DB_ERROR);
+    }
+
+    /* save old directory if we've got one */
+    if (tracefile)
+      STcopy(trace_dir, old_dir);
+
     STcopy(newvalue, trace_dir);
 
     LOfroms( PATH, trace_dir, &trace_loc);
     tracefile = &trace_loc;
+    status=LOexist(tracefile);
+    if (status!=OK)
+    {
+       TRdisplay("%@ Unable to set SC930 trace directory to '%s'\n",newvalue);
+       tracefile=oldtrace;
+       if (tracefile)
+       {
+           STcopy(old_dir,trace_dir);
+           TRdisplay("%@ reverting to '%s'\n",tracefile->path);
+       }
+    }
+    else
+       TRdisplay("%@ SC930 trace directory set to '%s'\n",newvalue);
+
+    return(status);
 }
 
 
@@ -368,7 +406,7 @@ ult_set_tracefile(char *newvalue)
 **	    none
 */
 
-static LOCATION *
+PTR 
 ult_tracefile_loc(void)
 {
 	char *tmp = NULL;
@@ -377,8 +415,10 @@ ult_tracefile_loc(void)
 	NMgtAt("II_SC930_LOC",&tmp);
 	if (!tmp || (*tmp == EOS))
 		return (NULL);
-	ult_set_tracefile(tmp);
-	return (tracefile);
+	if (ult_set_tracefile(tmp)==OK)
+	    return (tracefile);
+	else
+	    return(NULL);
 }
 
 
@@ -416,6 +456,7 @@ ult_open_tracefile(void *code)
 
 	if (!tname)
 	{
+                TRdisplay("%@ Disabling SC930 as trace directory not set\n");
 		ult_set_always_trace(0,0);
 		return(NULL);
 	}

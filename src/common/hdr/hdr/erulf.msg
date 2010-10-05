@@ -12,6 +12,8 @@ SQLSTATE_MAPPING_REQUIRED
 **	    Fix typos.
 **      09-jul-2003 (stial01)
 **          Added E_UL0017_DIAGNOSTIC
+**      04-oct-2010 (maspa05) bug 124531
+**          Added E_UL0400_BAD_TRACE_DIR and E_UL0401_BAD_TRACE_DIR
 */
 
 
@@ -193,5 +195,41 @@ E_UL030A_BAD_LANGUAGE:SS5000B_INTERNAL_ERROR
 "bad language ID found for query tree to text conversion."
 E_UL030B_BAD_QUERYMODE:SS5000B_INTERNAL_ERROR
 "consistency check - unexpected query mode."
+E_UL0400_BAD_TRACE_DIR:SS5000B_INTERNAL_ERROR
+"unable to set trace directory to '%0c'
+- check directory exists and is writeable. Trace directory remains unset."
+/*%
+** Parameters:
+**	'%0c' - name of trace directory.
+**
+** Explanation:
+**	This error will occur when SET TRACE RECORD fails if the directory
+**      cannot be found or written to, and the directory was previously not set
+**
+** System Status:
+**	The statement fails. The trace directory is not set.
+**
+** Recommendation:
+**	Re-run SET TRACE RECORD to a valid directory.
+*/
+E_UL0401_BAD_TRACE_DIR:SS5000B_INTERNAL_ERROR
+"unable to set trace directory to '%0c'
+- check directory exists and is writeable. Trace directory remains '%1c'"
+/*%
+** Parameters:
+**	'%0c' - name of trace directory.
+**	'%1c' - name of previous trace directory.
+**
+** Explanation:
+**	This error will occur when SET TRACE RECORD fails if the directory
+**      cannot be found or written to, and the trace directory was previously
+**      set.
+**
+** System Status:
+**	The statement fails. The trace directory remains unchanged.
+**
+** Recommendation:
+**	Re-run SET TRACE RECORD to a valid directory.
+*/
 
 NO_SQLSTATE_MAPPING

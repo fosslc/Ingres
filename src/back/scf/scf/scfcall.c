@@ -801,6 +801,8 @@ scf_handler( EX_ARGS *ex_args )
 **      22-Sep-2010 (hanal04) Bug 124364
 **          Added sc_trace_stack. When set sc924 tracing will call
 **          CS_dump_stack(). Default is off.
+**      04-oct-2010 (maspa05) Bug 124531
+**          Do not turn on SC930 tracing if trace directory not set.
 */
 DB_STATUS
 scf_trace(DB_DEBUG_CB  *trace_cb)
@@ -1041,8 +1043,20 @@ scf_trace(DB_DEBUG_CB  *trace_cb)
 	    {
 		i4 trace_val;
 		i2 v1,v2;
+		PTR loc=ult_tracefile_loc();
 
 		v1=(trace_cb->db_value_count==0? 1:trace_cb->db_vals[0]);
+
+		/* unless we're switching off tracing (v1=0) then
+		 * complain if log directory not set */
+		if (!loc && v1 != 0 )
+		{
+	           sc0e_trace("trace directory has not been set or is invalid, tracing will not be enabled.");
+	           sc0e_trace("Please enter 'SET TRACE RECORD <logdir>' or set II_SC930_LOC and re-try.");
+		   TRdisplay("%@ SC930 not enabled because trace directory not set\n");
+		   break;
+		}
+
 		v2=(trace_cb->db_value_count==1? 0:trace_cb->db_vals[1]);
 
 		switch (v1)
@@ -1083,7 +1097,6 @@ scf_trace(DB_DEBUG_CB  *trace_cb)
 		    break;
 		  default:
 	            sc0e_trace("invalid sc930 parameter");
-		    break;
 		}
 	    }
 	    else

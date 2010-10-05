@@ -118,6 +118,10 @@
 **          point sc925
 **      07-sep-2010 (maspa05) SIR 124363
 **          ult_trace_longqry() and ult_set_trace_longqry() now take two values
+**      04-oct-2010 (maspa05) Bug 124531
+**          Added E_UL0400_BAD_TRACE_DIR and E_UL0401_BAD_TRACE_DIR.
+**          ult_set_tracefile() now returns STATUS
+**          ult_tracefile_loc() now extern
 **/
 #ifndef TR_HDR_INCLUDED
 #include <tr.h>
@@ -251,6 +255,11 @@ typedef i4 ULF_LOG;
 #define			E_UL030A_BAD_LANGUAGE	    (E_UL_MASK + 0x030AL)
 #define			E_UL030B_BAD_QUERYMODE	    (E_UL_MASK + 0x030BL)
 
+/*
+** Error codes for ULT
+*/
+#define			E_UL0400_BAD_TRACE_DIR	    (E_UL_MASK + 0x0400)
+#define			E_UL0401_BAD_TRACE_DIR	    (E_UL_MASK + 0x0401)
 /*
 [@type_definitions@]
 */
@@ -709,6 +718,8 @@ FUNC_EXTERN DB_STATUS ult_clrval( ULT_TVECT *vector, i4  flag );
 **   ult_open_tracefile - open the session specific trace file
 **   ult_print_tracefile - print to the trace file
 **   ult_close_tracefile - close the trace file
+**   ult_set_tracefile - sets the value of the trace directory
+**   ult_tracefile_loc - returns current trace directory (NULL if not set)
 */
 
 FUNC_EXTERN i4 ult_always_trace(void);
@@ -716,6 +727,8 @@ FUNC_EXTERN void ult_set_always_trace(i4,i4);
 FUNC_EXTERN void *ult_open_tracefile(void *);
 FUNC_EXTERN void ult_print_tracefile(void *,i2 ,char *);
 FUNC_EXTERN void ult_close_tracefile(void *);
+FUNC_EXTERN STATUS ult_set_tracefile(char *);
+FUNC_EXTERN PTR ult_tracefile_loc(void);
 
 #define	SC930_VERSION		8	/* version of SC930 output */
 
