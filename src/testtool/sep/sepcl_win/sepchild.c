@@ -66,6 +66,10 @@
 **		On Windows 2008, the process is always elevated
 **		there's no way to launch a process with stripped
 **		token.
+**	01-Oct-2010 (drivi01)
+**		Added temporary fix on Windows 2008 to stop the hang.
+**		The new change will bypass Vista code and execute
+**		all commands in Administrative mode.
 */
 /*
 DEST = TOOLS
@@ -359,7 +363,21 @@ char *prog_name;
 			bSkip = TRUE;
 			break;
 		}
-
+	/*
+	** If this is Windows 2008, skip the Vista portion of the code for
+	** now.  All the tests will be run with Admin privileges.
+	** This is a temporary solution until the hang in the Vista
+	** routines is fixed on Win 2008.
+	*/ 
+	if (GVvista())
+	{
+		OSVERSIONINFOEX	OSVers = { 0 };
+		OSVers.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
+		if (GetVersionEx((OSVERSIONINFOEX *)&OSVers) &&
+			(OSVers.wProductType != VER_NT_WORKSTATION) &&
+				OSVers.dwMajorVersion == 6)
+			bSkip = TRUE;
+	}
 	prog_name = (*full_prog_name) ? full_prog_name : NULL;
 	
 	if (GVvista() && !bSkip)
