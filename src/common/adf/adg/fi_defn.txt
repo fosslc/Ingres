@@ -497,6 +497,10 @@
 #	    Asking for NOTVIRGIN is hardly an optimal solution but it will
 #	    have to do, until opc / qef / dmf is taught to do a better job
 #	    of either LOB temps or temp lifetimes or both.
+#	4-Oct-2010 (kschendel) b124535
+#	    Remove VARFI from text(all) coercion, any to-text coercions that
+#	    need VARFI (actually CHKVARFI) e.g. dec->text have specific
+#	    FI's.  VARFI was interfering with constant folding.
 #
 
 group ADI_COMPARISON
@@ -5554,7 +5558,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_557_TEXT_ALL
 	    description text  :  text(all)
-	    flags ADI_F1_VARFI|ADI_F64_ALLSKIPUNI
+	    flags ADI_F64_ALLSKIPUNI
 	    lenspec ADI_LEN_INDIRECT 557
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_TXT_TYPE
@@ -5579,7 +5583,7 @@ group ADI_NORM_FUNC
 
 	fi ADFI_587_TEXT_ALL_I
 	    description text  :  text(all, i)
-	    flags ADI_F1_VARFI|ADI_F64_ALLSKIPUNI
+	    flags ADI_F64_ALLSKIPUNI
 	    lenspec ADI_LEN_INDIRECT 587
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_TXT_TYPE

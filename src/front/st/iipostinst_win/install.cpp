@@ -931,7 +931,11 @@
 **  09-Sep-2010 (drivi01)
 **	Add newly exposed gcn.pwd_encode_version parameter to the post 
 **      installer to make sure it is installed on upgrades.
-
+**  01-Sep-2010 (drivi01)
+**      ODBC driver design has changed, ODBC is now installed 1 driver
+**      per installation.  We will now install ODBC driver marked by
+**      installation id instead of version number.
+**      Rename Read Only driver to contain "Read Only" appended to the name.
 **	    
 */
 /* Turn off POSIX warning for this file until Microsoft fixes this bug */
@@ -7049,15 +7053,16 @@ CInstallation::SetODBCEnvironment()
     {
 		sprintf(szODBCDriverFileName, "%s\\ingres\\bin\\caiiod35.dll", m_installPath);
 		sprintf(szODBCReadOnly, "N");
+		sprintf(szOdbcRegName, "SOFTWARE\\ODBC\\ODBCINST.INI\\Ingres %s", m_installationcode);
     }
     if (m_setup_IngresODBC && m_setup_IngresODBCReadOnly)
     {
 		sprintf(szODBCDriverFileName, "%s\\ingres\\bin\\caiiro35.dll", m_installPath);
 		sprintf(szODBCReadOnly, "Y");
+		sprintf(szOdbcRegName, "SOFTWARE\\ODBC\\ODBCINST.INI\\Ingres %s Read Only", m_installationcode);
     }
     sprintf(szODBCSetupFileName,  "%s\\ingres\\bin\\caiioc35.dll", m_installPath);
 
-    sprintf(szOdbcRegName, "SOFTWARE\\ODBC\\ODBCINST.INI\\Ingres %d.%d", ii_ver.major, ii_ver.minor);
     if(!RegCreateKeyEx(HKEY_LOCAL_MACHINE, szOdbcRegName, 0, NULL, 
 		REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKey, &dwDisposition))
     {
@@ -7086,7 +7091,10 @@ CInstallation::SetODBCEnvironment()
     if(!RegCreateKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\ODBC\\ODBCINST.INI\\ODBC Drivers", 0, NULL, 
 		REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKey, &dwDisposition))
     {
-	sprintf(szOdbcDrvName, "Ingres %d.%d", ii_ver.major, ii_ver.minor);
+	if (m_setup_IngresODBC && !m_setup_IngresODBCReadOnly)
+		sprintf(szOdbcDrvName, "Ingres %s", m_installationcode);
+	if (m_setup_IngresODBC && m_setup_IngresODBCReadOnly)	
+		sprintf(szOdbcDrvName, "Ingres %s Read Only", m_installationcode);
 	RegSetValueEx(hKey, szOdbcDrvName, 0, REG_SZ, (CONST BYTE *)"Installed", strlen("Installed")+1);
 	RegCloseKey(hKey);
     }
@@ -7095,12 +7103,17 @@ CInstallation::SetODBCEnvironment()
     WritePrivateProfileString(szOdbcDrvName, "Driver", szODBCDriverFileName, szODBCINIFileName);
     WritePrivateProfileString(szOdbcDrvName, "Setup", szODBCSetupFileName, szODBCINIFileName);
     WritePrivateProfileString(szOdbcDrvName, "32Bit", "1", szODBCINIFileName);
-
+    
     DeleteRegValue("setup_ingresodbc");
     DeleteRegValue("setup_ingresodbcreadonly");
     DeleteRegValue(odbc->m_name);
 	
-    if(!RegCreateKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\ODBC\\ODBCINST.INI\\Ingres", 0, NULL, 
+    if (m_setup_IngresODBC && !m_setup_IngresODBCReadOnly)
+		sprintf(szOdbcRegName, "SOFTWARE\\ODBC\\ODBCINST.INI\\Ingres");
+    if (m_setup_IngresODBC && m_setup_IngresODBCReadOnly)
+		sprintf(szOdbcRegName, "SOFTWARE\\ODBC\\ODBCINST.INI\\Ingres Read Only");
+
+    if(!RegCreateKeyEx(HKEY_LOCAL_MACHINE, szOdbcRegName, 0, NULL, 
 		REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKey, &dwDisposition))
     {
 	RegSetValueEx(hKey, "Driver", 0, REG_SZ, (CONST BYTE *)szODBCDriverFileName, strlen(szODBCDriverFileName)+1);
@@ -7126,17 +7139,22 @@ CInstallation::SetODBCEnvironment()
 	RegCloseKey(hKey);
     }
 
+	if (m_setup_IngresODBC && !m_setup_IngresODBCReadOnly)
+		sprintf(szOdbcDrvName, "Ingres");
+	if (m_setup_IngresODBC && m_setup_IngresODBCReadOnly)	
+		sprintf(szOdbcDrvName, "Ingres Read Only");
     if(!RegCreateKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\ODBC\\ODBCINST.INI\\ODBC Drivers", 0, NULL, 
 		REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKey, &dwDisposition))
     {
-	RegSetValueEx(hKey, "Ingres", 0, REG_SZ, (CONST BYTE *)"Installed", strlen("Installed")+1);
+	RegSetValueEx(hKey, szOdbcDrvName, 0, REG_SZ, (CONST BYTE *)"Installed", strlen("Installed")+1);
 	RegCloseKey(hKey);
     }
 
-    WritePrivateProfileString("ODBC 32 bit Drivers", "Ingres (32 bit)", "Installed", szODBCINIFileName);
-    WritePrivateProfileString("Ingres (32 bit)", "Driver", szODBCDriverFileName, szODBCINIFileName);
-    WritePrivateProfileString("Ingres (32 bit)", "Setup", szODBCSetupFileName, szODBCINIFileName);
-    WritePrivateProfileString("Ingres (32 bit)", "32Bit", "1", szODBCINIFileName);
+    strcat(szOdbcDrvName, " (32 bit)");
+    WritePrivateProfileString("ODBC 32 bit Drivers", szOdbcDrvName, "Installed", szODBCINIFileName);
+    WritePrivateProfileString(szOdbcDrvName, "Driver", szODBCDriverFileName, szODBCINIFileName);
+    WritePrivateProfileString(szOdbcDrvName, "Setup", szODBCSetupFileName, szODBCINIFileName);
+    WritePrivateProfileString(szOdbcDrvName, "32Bit", "1", szODBCINIFileName);
 
     DeleteRegValue("setup_ingresodbc");
     DeleteRegValue("setup_ingresodbcreadonly");

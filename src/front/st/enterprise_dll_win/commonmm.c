@@ -1063,6 +1063,122 @@ OtherInstallationsExist(char *cur_code, char *code)
 	}
 	return FALSE;
 }
+/*
+**  Name: IsOtherODBCDriver
+**
+**  Description:
+**	Check if there exist Ingres ODBC drivers other than the one being 
+**	removed. Only search for Read Only driver if the driver being 
+**	removed is read only, or read/write if the driver being removed 
+**	is of the same type.
+**
+**  Inputs:
+**	cur_code	the identifier of the installation being removed
+**	bReadOnly	whether the driver being removed and being searched
+**			for is read only or not
+**
+**  Outputs:
+**	strDrvPath	the path to the still installed driver
+**	Returns:
+**	    TRUE	exist
+**	    FALSE	not exist
+**	Exceptions:
+**	    None.
+**
+**  History:
+**	15-Sep-2010 (drivi01)
+**	    Created.
+*/
+BOOL 
+IsOtherODBCDriver(char *cur_code, char *strDrvPath, BOOL bReadOnly)
+{
+	char *RegKey = "SOFTWARE\\ODBC\\ODBCINST.INI";
+	char *RegKey3 = "SOFTWARE\\IngresCorporation\\Ingres";
+	char RegKey2[MAX_PATH+1];
+	char RegKey4[MAX_PATH+1];
+	char ii_system[MAX_PATH+1];
+	char *szReadOnly = "Read Only";
+	HKEY hRegKey, hRegKey2;
+	int i = 0;
+	BOOL bRet = FALSE;
+	BOOL bUpdate = FALSE;
+
+	/* First check if the "Ingres Read Only"/"Ingres" Driver 
+	** specified in the registry
+	** is from the installation/ODBC driver you're removing.
+	** If it is not then we don't need to update anything.
+	** If it is, then see if there's another driver of the same
+	** type (for example Read Only for Read Only or Read/Write for
+	** Read/Write available in the different installation 
+	*/
+	if (bReadOnly)
+		sprintf(RegKey2, "%s\\Ingres Read Only", RegKey);
+	else
+		sprintf(RegKey2, "%s\\Ingres", RegKey);
+	if (!RegOpenKeyEx(HKEY_LOCAL_MACHINE, RegKey2, 0, KEY_QUERY_VALUE, &hRegKey))
+	{
+		DWORD dwType;
+		char drvPath[MAX_PATH+1];
+		DWORD dwSize=sizeof(drvPath);
+		if (!RegQueryValueEx(hRegKey, "Driver", NULL, &dwType, (BYTE *)drvPath, &dwSize))
+		{
+			sprintf(RegKey4, "%s\\%s_Installation", RegKey3, cur_code);
+			if(!RegOpenKeyEx(HKEY_LOCAL_MACHINE,RegKey4,0,KEY_QUERY_VALUE,&hRegKey2))
+			{
+				dwSize=sizeof(ii_system);
+				if(!RegQueryValueEx(hRegKey2,"II_SYSTEM",NULL,&dwType,(BYTE *)ii_system,&dwSize))
+				{
+					if (*ii_system && strstr(drvPath, ii_system)!=NULL)
+						bUpdate = TRUE;
+				}
+			}
+		}
+	}
+	if(bUpdate && !RegOpenKeyEx(HKEY_LOCAL_MACHINE,RegKey,0,KEY_ENUMERATE_SUB_KEYS|KEY_QUERY_VALUE,&hRegKey))
+	{
+		LONG retCode;
+		for (i, retCode = 0; !retCode; i++)
+		{
+			char subKey[MAX_PATH];
+			DWORD dwSize;
+			HKEY hSubKey;
+
+			dwSize=sizeof(subKey);
+			retCode = RegEnumKeyEx(hRegKey, i, subKey, &dwSize, NULL, NULL, NULL, NULL);
+			if (!retCode && strstr(subKey, cur_code) == NULL && strstr(subKey, "Ingres") != NULL && 
+				stricmp(subKey, "Ingres") != 0 && stricmp(subKey, "Ingres Read Only") != 0 &&
+				((bReadOnly && strstr(subKey, szReadOnly)!=NULL) ||
+					(!bReadOnly && strstr(subKey, szReadOnly) == NULL)))
+			{
+				if (!RegOpenKeyEx(hRegKey, subKey, 0, KEY_QUERY_VALUE, &hSubKey))
+				{
+					DWORD dwType;
+					char drvPath[MAX_PATH+1];
+					char drvType[MAX_PATH+1];
+					DWORD dwSize2=sizeof(drvType);
+					if (!RegQueryValueEx(hSubKey, "DriverReadOnly", NULL, &dwType, (BYTE *)drvType, &dwSize2))
+					{
+						if ((bReadOnly && stricmp(drvType, "Y") == 0) ||
+							(!bReadOnly && stricmp(drvType, "N") == 0 ))
+						{
+						dwSize2=(sizeof(drvPath));
+						if (!RegQueryValueEx(hSubKey,"Driver",NULL,&dwType,(BYTE *)drvPath,&dwSize2))
+						{
+							strcpy(strDrvPath, drvPath);
+							RegCloseKey(hSubKey);
+							bRet = TRUE;
+							break;
+						}
+						}
+					}
+				}
+				RegCloseKey(hSubKey);
+			} 
+		} /* for */
+	}
+	RegCloseKey(hRegKey);
+	return bRet;
+}
 
 /*
 **  Name: GetInstallPath

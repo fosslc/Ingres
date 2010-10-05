@@ -392,6 +392,10 @@ pst_get_union_resdom_type(
 **	    Don't attempt to constant-fold LONG data.  Even if it works,
 **	    the resulting value described by the coupon is unlikely to
 **	    last until execution time.
+**	24-Sep-2010 (smeke01) b123993
+**	    For SQL, the flag value for pmspec for the replacement constant
+**	    must always be PST_PMNOTUSED. For QUEL, base the flag value on the
+**	    value(s) seen in the original operand constants.
 */
 DB_STATUS
 pst_resolve(
@@ -422,6 +426,7 @@ pst_resolve(
     i1			const_cand = Psf_fold/*TRUE*/;
     i4		val1;
     i4		val2;
+    PST_PMSPEC		pmspec = PST_PMNOTUSED;
 #ifdef    xDEBUG
     SCF_CB		scf_cb;
     SCF_SCI		sci_list[1];
@@ -1226,6 +1231,25 @@ pst_resolve(
 
 	pop[npars] = &ops[npars];
 
+	/*
+	** (QUEL) If we do end up folding the constant operand(s) into a single
+	** constant to replace the operator, we need to fill in a value for
+	** the flag pst_pmspec on the replacement constant. The flag can
+	** take the values (in logical though not integer order) PST_PMNOTUSED,
+	** PST_PMMAYBE, PST_PMUSED. We keep a high-water mark in this order
+	** as the values are found in the constant operand(s).
+	*/
+	if (lang == DB_QUEL && const_cand && lqnode->pst_sym.pst_type == PST_CONST)
+	{
+	    PST_PMSPEC cnst_pmspec = lqnode->pst_sym.pst_value.pst_s_cnst.pst_pmspec;
+
+	    if (cnst_pmspec != PST_PMNOTUSED && cnst_pmspec != pmspec &&
+		pmspec != PST_PMUSED)
+	    {
+		pmspec = cnst_pmspec;
+	    }
+	}
+
 	npars++;
 	if (opnode->pst_sym.pst_type == PST_MOP)
 	{
@@ -1388,7 +1412,7 @@ pst_resolve(
 			    opnode->pst_sym.pst_dataval.db_length;
 	    opnode->pst_sym.pst_value.pst_s_cnst.pst_tparmtype = PST_USER;
 	    opnode->pst_sym.pst_value.pst_s_cnst.pst_parm_no = 0;
-	    opnode->pst_sym.pst_value.pst_s_cnst.pst_pmspec = PST_PMMAYBE;
+	    opnode->pst_sym.pst_value.pst_s_cnst.pst_pmspec = pmspec;
 	    opnode->pst_sym.pst_value.pst_s_cnst.pst_cqlang = adf_scb->adf_qlang;
 	    opnode->pst_sym.pst_value.pst_s_cnst.pst_origtxt = NULL;
 	}

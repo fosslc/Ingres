@@ -34,6 +34,8 @@
 ;	    remove ult_trace_qep and ult_set_trace_qep
 ;	06-sep-2010 (maspa05) SIR 124363
 ;	    add ult_trace_longqry and ult_set_trace_longqry
+;	04-oct-2010 (maspa05) Bug 124541
+;           add ult_tracefile_loc
 ;
 
 EXPORTS
@@ -100,4 +102,5 @@ uld_prtree_x		@59
 ;ult_set_trace_qep	@61
 ult_trace_longqry	@62
 ult_set_trace_longqry	@63
+ult_tracefile_loc	@64
 

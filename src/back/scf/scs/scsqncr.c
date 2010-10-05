@@ -2666,6 +2666,9 @@ static char execproc_syntax2[] = " = session.";
 **	    inconsistent queue.
 **      02-sep-2010 (maspa05) SIR 124346
 **          Add end-query SC930 record - with error number and rowcount.
+**      04-oct-2010 (maspa05) Bug 124534
+**          Rowcounts for batched queries were incorrect. Need to check the
+**          list of GCA response messages to find the latest.
 */
 DB_STATUS
 scs_sequencer(i4 op_code,
@@ -10819,11 +10822,33 @@ massive_for_exit:
           {
 	      char tmp[45],fac_str[5];
               u_i4 fac_code,just_err,i;
+	      GCA_RE_DATA   *rdata;
+	      SCC_GCMSG     *message;
+
+	      /* batch executed queries don't use the GCA_RE_DATA that's
+	       * part of the CSCB itself but create a linked list of them
+	       * instead.
+	       *
+	       * so in the case of batch queries find the latest in order
+	       * to get the correct rowcount */
+	      
+	      if (cscb->cscb_in_group)
+	      {
+		 message=scb->scb_cscb.cscb_mnext.scg_next;
+		 while (message != (SCC_GCMSG *) &scb->scb_cscb.cscb_mnext) 
+		 {
+		    rdata=(GCA_RE_DATA *)message->scg_marea;
+		    message=message->scg_next;
+		 }
+
+	      }
+	      else
+		 rdata= cscb->cscb_rdata;
 
 	      if (scb->cs_scb.cs_sc930_err == 0)
 	      {
  		  STprintf(tmp,"%d:",
-		  	  cscb->cscb_rdata->gca_rowcount);
+		  	  rdata->gca_rowcount);
 	      }
 	      else
 	      {
@@ -10843,7 +10868,7 @@ massive_for_exit:
  		  }
  
  		STprintf(tmp,"%d:%4s%04X",
-			cscb->cscb_rdata->gca_rowcount,
+			rdata->gca_rowcount,
 		        fac_str,just_err);
 	      }
  	      ult_print_tracefile(f,SC930_LTYPE_ENDQRY,tmp);

@@ -84,12 +84,14 @@
 **          Added ingresdate to the list for data type processing.
 **      05-nov-2009 (joea)
 **          Add tests for "boolean" in expand_ddl and expand_ddk.
+**	29-Sep-2010 (drivi01)
+**	    Remove unused defines for hardcoded buffers.
+**	    Remove hardcoded value for DLNM_SIZE and replace it 
+**	    with DB_MAX_DELIMID+1.
 **/
 
-# define MAX_SIZE		50000
-# define MAX_STRING		2008
 # define MAX_INDEX_COLS		31
-# define DLNM_SIZE		128
+# define DLNM_SIZE		DB_MAX_DELIMID+1
 # define COL_ALIAS_PREFIX	ERx("col")
 # define COL_ALIAS_NDIGITS	3
 # define BLANK			' '

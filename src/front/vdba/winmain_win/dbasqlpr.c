@@ -60,6 +60,10 @@
 **    25-Aug-2010 (drivi01) Bug #124306
 **      Remove all hard coded buffers for replication tasks
 **      to get long ids to work.
+**    01-Oct-2010 (drivi01)
+**	Added a routine to check column length for replicated columns
+**	to make sure that columns being registered are 252 characters 
+**      or less to avoid obscure errors from replicator server.
 ******************************************************************************/
 #include "dba.h"
 #include "dbaset.h"
@@ -4798,10 +4802,25 @@ int BuildSQLCDDSV11 (UCHAR **PPstm, LPREPCDDS lpCdds, LPUCHAR lpNodeName, LPUCHA
                     ((LPDD_REGISTERED_TABLES)  (lpO->lpObject))->tableowner,
                     ((LPDD_REGISTERED_COLUMNS)(lpO2->lpObject))->columnname
                 );
-          iret = ExecSQLImm(achBufReq,FALSE, NULL, NULL, NULL);
+			if (strlen(((LPDD_REGISTERED_COLUMNS)(lpO2->lpObject))->columnname) >  (DB_MAXNAME - 4))
+			{
+				char message[MAXOBJECTNAME+200];
+				char finalMessage[MAXOBJECTNAME*4+200];
+				LoadString(GetModuleHandle(NULL), IDS_ERR_REG_COL_TOO_LONG, message, sizeof(message));
+				sprintf(finalMessage, message, ((LPDD_REGISTERED_TABLES)  (lpO->lpObject))->tableowner, 
+					((LPDD_REGISTERED_TABLES)  (lpO->lpObject))->tablename,
+					((LPDD_REGISTERED_COLUMNS)(lpO2->lpObject))->columnname);
+				LoadString(GetModuleHandle(NULL), IDS_ERR_SHORT_REG_COL_TOO_LONG, message, sizeof(message));
+				ErrorMessage2 (message, finalMessage);
+				goto endfunc;
+			}
+			else
+			{
+	          iret = ExecSQLImm(achBufReq,FALSE, NULL, NULL, NULL);
 
-          if (iret!=RES_SUCCESS)
-            goto endfunc;
+		      if (iret!=RES_SUCCESS)
+			    goto endfunc;
+			}
         }
         else {
           // if this column is not replicated column_sequence = 0
