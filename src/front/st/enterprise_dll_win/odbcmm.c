@@ -72,6 +72,10 @@
 **	    in release 2.
 **	16-Jun-2008 (drivi01)
 **	    Update "Ingres 2006" ODBC driver with "Ingres 9.2".
+**	01-Sep-2010 (drivi01) 
+**	    ODBC driver design has changed, ODBC is now installed 1 driver 
+**	    per installation.  We will now install ODBC driver marked by 
+**	    installation id instead of version number. 
 */
 
 #include <stdio.h>
@@ -126,49 +130,11 @@ SetODBCEnvironment(BOOL setup_IngresODBC, BOOL setup_IngresODBCReadOnly, BOOL bR
 		sprintf(szODBCReadOnly, "Y");
 	}
 	sprintf(szODBCSetupFileName,  "%s\\ingres\\bin\\caiioc35.dll", szII_SYSTEM);
-	sprintf(szODBCReg, "SOFTWARE\\ODBC\\ODBCINST.INI\\Ingres %s", ING_VERS);
-	if(!RegCreateKeyEx(HKEY_LOCAL_MACHINE, szODBCReg, 0, NULL, 
-		REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKey, &dwDisposition))
-	{
-		/* Check out if the ODBC already registered. */
-		RegSetValueEx(hKey, "Driver", 0, REG_SZ, (CONST BYTE *)szODBCDriverFileName, strlen(szODBCDriverFileName)+1);
-		RegSetValueEx(hKey, "Setup", 0, REG_SZ, (CONST BYTE *)szODBCSetupFileName, strlen(szODBCSetupFileName)+1);
-		RegSetValueEx(hKey, "APILevel", 0, REG_SZ, (CONST BYTE *)"1", strlen("1")+1);
-		RegSetValueEx(hKey, "ConnectFunctions", 0, REG_SZ, (CONST BYTE *)"YYN", strlen("YYN")+1);
-		RegSetValueEx(hKey, "DriverODBCVer", 0, REG_SZ, (CONST BYTE *)"03.50", strlen("03.50")+1);
-		RegSetValueEx(hKey, "DriverReadOnly", 0, REG_SZ, (CONST BYTE *)szODBCReadOnly, strlen(szODBCReadOnly)+1);
-		RegSetValueEx(hKey, "DriverType", 0, REG_SZ, (CONST BYTE *)"Ingres", strlen("Ingres")+1);
-		RegSetValueEx(hKey, "FileUsage", 0, REG_SZ, (CONST BYTE *)"0", strlen("0")+1);
-		RegSetValueEx(hKey, "SQLLevel", 0, REG_SZ, (CONST BYTE *)"0", strlen("0")+1);
-		RegSetValueEx(hKey, "CPTimeout", 0, REG_SZ, (CONST BYTE *)"60", strlen("60")+1);
-		dwSize = ( DWORD) sizeof ( dwUsageCount);
-		if (RegQueryValueEx(hKey, "UsageCount", NULL, &dwType, (LPBYTE)&dwUsageCount, &dwSize))
-			dwUsageCount = 1;
-		else
-		{
-			if (bRollback) dwUsageCount = dwUsageCount + 1;
-		}
-		RegSetValueEx(hKey, "UsageCount", 0, REG_DWORD, (LPBYTE)&dwUsageCount, sizeof(DWORD));
-		RegSetValueEx(hKey, "Vendor", 0, REG_SZ, (CONST BYTE *)"Ingres Corporation", strlen("Ingres Corporation")+1);
-
-		RegCloseKey(hKey);
-	}
-	
-	if(!RegCreateKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\ODBC\\ODBCINST.INI\\ODBC Drivers", 0, NULL, 
-		REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKey, &dwDisposition))
-	{
-		char szRegKey[MAX_PATH];
-		sprintf(szRegKey, "Ingres %s", ING_VERS);
-		RegSetValueEx(hKey, szRegKey, 0, REG_SZ, (CONST BYTE *)"Installed", strlen("Installed")+1);
-		RegCloseKey(hKey);
-	}
-	sprintf(szDrvName, "Ingres %s (32 bit)", ING_VERS);
-	WritePrivateProfileString("ODBC 32 bit Drivers", szDrvName, "Installed", szODBCINIFileName);
-	WritePrivateProfileString(szDrvName, "Driver", szODBCDriverFileName, szODBCINIFileName);
-	WritePrivateProfileString(szDrvName, "Setup", szODBCSetupFileName, szODBCINIFileName);
-	WritePrivateProfileString(szDrvName, "32Bit", "1", szODBCINIFileName);
-
-	if (!RegCreateKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\ODBC\\ODBCINST.INI\\Ingres", 0, NULL,
+	if (setup_IngresODBC && !setup_IngresODBCReadOnly)
+		sprintf(szODBCReg, "SOFTWARE\\ODBC\\ODBCINST.INI\\Ingres");
+	if (setup_IngresODBC && setup_IngresODBCReadOnly)
+		sprintf(szODBCReg, "SOFTWARE\\ODBC\\ODBCINST.INI\\Ingres Read Only");
+	if (!RegCreateKeyEx(HKEY_LOCAL_MACHINE, szODBCReg, 0, NULL,
 		REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKey, &dwDisposition))
 	{
 		RegSetValueEx(hKey, "Driver", 0, REG_SZ, (CONST BYTE *)szODBCDriverFileName, strlen(szODBCDriverFileName)+1);
@@ -224,9 +190,9 @@ SetODBCEnvironment(BOOL setup_IngresODBC, BOOL setup_IngresODBCReadOnly, BOOL bR
 **	    Created.
 */
 int
-IsReadOnlyDriver()
+IsReadOnlyDriver(char *cur_id)
 {
-	char szII_SYSTEM[MAX_PATH+1];
+	char szII_SYSTEM[MAX_PATH+1], szKeyLoc[MAX_PATH], szKeyLoc2[MAX_PATH];
 	HKEY hKey;
 	DWORD dwSize, dwType;
 	TCHAR tchValue[2048];
@@ -237,13 +203,16 @@ IsReadOnlyDriver()
 	*tchValue=0;
 	GetEnvironmentVariable("II_SYSTEM", szII_SYSTEM, sizeof(szII_SYSTEM));
 
-	if(!RegOpenKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\ODBC\\ODBCINST.INI\\Ingres", 0, KEY_QUERY_VALUE | KEY_ALL_ACCESS, &hKey))
+	sprintf(szKeyLoc, "SOFTWARE\\ODBC\\ODBCINST.INI\\Ingres Read Only");
+	sprintf(szKeyLoc2, "SOFTWARE\\ODBC\\ODBCINST.INI\\Ingres %s Read Only", cur_id);	
+	if(!RegOpenKeyEx(HKEY_LOCAL_MACHINE, szKeyLoc, 0, KEY_QUERY_VALUE | KEY_ALL_ACCESS, &hKey) ||
+		!RegOpenKeyEx(HKEY_LOCAL_MACHINE, szKeyLoc2, 0, KEY_QUERY_VALUE | KEY_ALL_ACCESS, &hKey))
 	{
 		dwSize = sizeof(tchValue);
 		if (RegQueryValueEx(hKey, "Driver", NULL, &dwType, (LPBYTE)tchValue, &dwSize) == ERROR_SUCCESS)
 		{
-			if (strstr(tchValue, szII_SYSTEM)>=0)
-				if (strstr(tchValue, "caiiro") > 0) 
+			if (strstr(tchValue, szII_SYSTEM) != NULL)
+				if (strstr(tchValue, "caiiro") != NULL) 
 					ret_val=TRUE;
 		}
 		RegCloseKey(hKey);
@@ -439,18 +408,6 @@ ingres_set_odbc_reg_entries (MSIHANDLE ihnd)
 		sprintf(KeyNameODBC, "SOFTWARE\\ODBC\\ODBCINST.INI\\Ingres");
 		if (!RegOpenKeyEx(HKEY_LOCAL_MACHINE, KeyNameODBC, 0, KEY_QUERY_VALUE, &hKey2))
 		{
-			/* the comment out part is a better way of doing the check but Ingres isn't ready for it
-			** b/c of older releases DriverReadOnly can't be trusted yet.
-			*/
-			/*dwSize=sizeof(tchValue);
-			if ((status = RegQueryValueEx(hKey2, "DriverReadOnly", 0, NULL, (BYTE *)tchValue, &dwSize)) == ERROR_SUCCESS)
-			{
-				if (!strcmp(tchValue, "Y"))
-					status = RegSetValueEx( hKey, "setup_ingresodbcreadonly", 0,
-							REG_SZ, "1", strlen("1") + 1 );
-			}		
-			else if (status == ERROR_FILE_NOT_FOUND)
-			{*/
 			dwSize=sizeof(tchValue);
 			if (!RegQueryValueEx(hKey2, "Driver", 0, NULL, (BYTE *)tchValue, &dwSize))
 			{
@@ -462,7 +419,6 @@ ingres_set_odbc_reg_entries (MSIHANDLE ihnd)
 					MsiSetProperty( ihnd, "INGRES_ODBC_READONLY", "1" );
 				}
 			}
-			//}		
 			RegCloseKey(hKey2);
 		}
 	}
@@ -613,7 +569,10 @@ ingres_remove_odbc_files (MSIHANDLE ihnd)
     TCHAR	tchValue[2048], tchValue2[2048];
     HINSTANCE	hLib;
     char	cur_id[3], id[3], ii_system[2048];
-    BOOL	setup_IngresODBC, setup_IngresODBCReadOnly; 
+	char szDrvName[MAX_PATH], szDrvName2[MAX_PATH];
+	char szWindowsDir[MAX_PATH];
+	char szODBCINIFileName[MAX_PATH];
+	int bReadOnly = FALSE;
 
     dwSize = sizeof(tchValue);
     if (MsiGetProperty( ihnd, "CustomActionData", tchValue,
@@ -657,44 +616,41 @@ ingres_remove_odbc_files (MSIHANDLE ihnd)
 	PSQLREMOVEDRIVERPROC pSQLRemoveDriver = (PSQLREMOVEDRIVERPROC)GetProcAddress(hLib, "SQLRemoveDriver");
 	if (pSQLRemoveDriver) 
 	{
-		char szDrvName[MAX_PATH];
+		int ret = FALSE;
 		/* before removing the driver figure out if it was read-only driver 
 		** just in case if we have to rollback.
 		*/
-		if (IsReadOnlyDriver())
+		if (IsReadOnlyDriver(cur_id))
+		{
 			MsiSetProperty( ihnd, "INGRES_ODBC_READONLY", "1" );
-		dwSize=sizeof(tchValue);
-		dwError = MsiGetProperty(ihnd, "INGRES_ODBC_READONLY", tchValue, &dwSize);
-	    sprintf(szDrvName, "Ingres %s", ING_VERS);
-	    pSQLRemoveDriver(szDrvName, TRUE, &dwSize);
-	    pSQLRemoveDriver("Ingres", TRUE, &dwSize);
+			bReadOnly=TRUE;
+		}
+		if (bReadOnly)
+		{
+			sprintf(szDrvName, "Ingres %s Read Only", cur_id);
+			sprintf(szDrvName2, "Ingres Read Only");
+		}
+		else
+		{
+			sprintf(szDrvName, "Ingres %s", cur_id);
+			sprintf(szDrvName2, "Ingres");
+		}
+		ret = pSQLRemoveDriver(szDrvName2, TRUE, &dwSize);
+		ret = pSQLRemoveDriver(szDrvName, TRUE, &dwSize);
+	
 	}
     }
 
-    if (OtherInstallationsExist(cur_id, id) && GetInstallPath(id, ii_system))
+	if (IsOtherODBCDriver(cur_id, tchValue, bReadOnly))
     {
-	/* Restore ODBC driver. */
-	sprintf(tchValue, "%s\\ingres\\bin\\caiiod35.dll", ii_system);
-	sprintf(tchValue2,"%s\\ingres\\bin\\caiiro35.dll", ii_system);
-
-	if (GetFileAttributes(tchValue) != -1)
-	{
-	    setup_IngresODBC=1;
-	    setup_IngresODBCReadOnly=0;
-	}
-	else if (GetFileAttributes(tchValue2) != -1)
-	{
-	    setup_IngresODBC=1;
-	    setup_IngresODBCReadOnly=1;
-	}
-	else
-	{
-	    setup_IngresODBC=0;
-	    setup_IngresODBCReadOnly=0;
-	}
-
-	SetEnvironmentVariable("II_SYSTEM", ii_system);
-	SetODBCEnvironment(setup_IngresODBC, setup_IngresODBCReadOnly, 0);
+		char *pIi_system;
+		/* Restore ODBC driver. */
+		strcpy(tchValue2, tchValue);
+		pIi_system = strstr(tchValue2, "\\ingres\\bin\\");
+		*pIi_system = '\0';
+		pIi_system = tchValue2;
+		SetEnvironmentVariable("II_SYSTEM", pIi_system);
+		SetODBCEnvironment(TRUE, bReadOnly, 0);
     }
 
     return (ERROR_SUCCESS);
