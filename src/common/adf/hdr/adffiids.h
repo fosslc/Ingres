@@ -345,8 +345,6 @@
 **	    Added ADFI_1395_DATE_SUB_VCH for relaxed dates
 **	12-Dec-2008 (kiria01) b121297
 **	    Added ADFI_1396_DATE_ADD_VCH for relaxed dates
-**      17-Dec-2008 (macde01)
-**          Added FI's for DB_PT_TYPE (POINT datatype).
 **  28-Feb-2009 (thich01)
 **      Added FI's for fromtext spatial ops
 **	12-Mar-2009 (kiria01) SIR121788
@@ -1797,24 +1795,8 @@
 #define ADFI_1473_IFNULL_LNVCH_LNVCH	(ADI_FI_ID)1473 /* ifnull(lnvarchar,long_nvarchar) */
 #define ADFI_1474_SINGLECHK_ALL		(ADI_FI_ID)1474 /* all := singlechk(all) */
 /* Spatial starts at 1600 */
-#define ADFI_1600_POINT_TO_C            (ADI_FI_ID)1600 /* point -> c      */
-#define ADFI_1601_POINT_TO_TEXT         (ADI_FI_ID)1601 /* point -> text   */
-#define ADFI_1602_C_TO_POINT            (ADI_FI_ID)1602 /* c -> point      */
-#define ADFI_1603_TEXT_TO_POINT         (ADI_FI_ID)1603 /* text -> point   */
 #define ADFI_1604_POINT_X               (ADI_FI_ID)1604 /* x(point)        */
 #define ADFI_1605_POINT_Y               (ADI_FI_ID)1605 /* y(point)        */
-#define ADFI_1606_POINT_EQ_POINT        (ADI_FI_ID)1606 /* point = point    */
-#define ADFI_1607_POINT_NE_POINT        (ADI_FI_ID)1607 /* point != point   */
-#define ADFI_1608_POINT_FROM_STR        (ADI_FI_ID)1608 /* point(text)      */
-#define ADFI_1609_VARCHAR_TO_POINT      (ADI_FI_ID)1609 /* varchar -> point */
-#define ADFI_1610_POINT_TO_VARCHAR      (ADI_FI_ID)1610 /* point -> varchar */
-#define ADFI_1611_POINT_COPYTO_C        (ADI_FI_ID)1611 /* point -copy-> c */
-#define ADFI_1612_POINT_COPYTO_CHAR     (ADI_FI_ID)1612 /* point -copy-> char */
-#define ADFI_1613_POINT_COPYTO_TEXT     (ADI_FI_ID)1613 /* point -copy-> text */
-#define ADFI_1614_POINT_COPYTO_VARCHAR  (ADI_FI_ID)1614 /* point -copy-> varchar*/
-#define ADFI_1615_POINT_FROM_FLOATS     (ADI_FI_ID)1615 /* point(float,float) */
-#define ADFI_1616_POINT_TO_POINT        (ADI_FI_ID)1616 /* point -> point     */
-#define ADFI_1617_POINT_POINT           (ADI_FI_ID)1617 /* point(point)       */
 #define ADFI_1618_POINT_FROM_TEXT       (ADI_FI_ID)1618 /* pointfromtext(text) */
 #define ADFI_1619_POINT_FROM_WKB        (ADI_FI_ID)1619 /* pointfromwkb(bin) */
 #define ADFI_1620_LINE_FROM_TEXT        (ADI_FI_ID)1620 /* linefromtext(text) */

@@ -340,9 +340,6 @@
 #	    the erroneous flag setting from ADFI_1270_ANSIDATE_SUB_ANSIDATE
 #	12-Dec-2008 (kiria01) b121297
 #	    Added ADFI_1396_DATE_ADD_VCH for relaxed dates
-#	17-Dec-2008 (macde01)
-#	    Added ADFI_1397_POINT_TO_C to ADFI_1414_POINT_POINT (inclusive)
-#	    for DB_PT_TYPE.
 #       28-jan-2009 (stial01)
 #           Use defines for iitypename(), iistructure() result
 #	12-Feb-2009 (kiria01) SIR 121012
@@ -732,14 +729,6 @@ group ADI_COMPARISON
 	    null_preinst ADE_3CXI_CMP_SET_SKIP
 	    result DB_BOO_TYPE
 	    operands DB_NVCHR_TYPE DB_NVCHR_TYPE
-
-	fi ADFI_1607_POINT_NE_POINT
-	    description boolean  : point != point
-	    complement ADFI_1606_POINT_EQ_POINT
-	    lenspec ADI_FIXED sizeof(bool)
-	    null_preinst ADE_3CXI_CMP_SET_SKIP
-	    result DB_BOO_TYPE
-	    operands DB_PT_TYPE DB_PT_TYPE
 
     operator ADI_LT_OP
 
@@ -1339,14 +1328,6 @@ group ADI_COMPARISON
 	    null_preinst ADE_3CXI_CMP_SET_SKIP
 	    result DB_BOO_TYPE
 	    operands DB_LTXT_TYPE DB_LTXT_TYPE
-
-	fi ADFI_1606_POINT_EQ_POINT
-	    description boolean  :  point = point
-	    complement ADFI_1607_POINT_NE_POINT
-	    lenspec ADI_FIXED sizeof(bool)
-	    null_preinst ADE_3CXI_CMP_SET_SKIP
-	    result DB_BOO_TYPE
-	    operands DB_PT_TYPE DB_PT_TYPE
 
     operator ADI_GT_OP
 
@@ -9078,52 +9059,6 @@ group ADI_NORM_FUNC
 
     operator ADI_POINT_OP
 
-	fi ADFI_1608_POINT_FROM_STR
-	    description point  : point(text)
-	    lenspec ADI_FIXED 16
-	    null_preinst ADE_1CXI_SET_SKIP
-	    result DB_PT_TYPE
-	    operands DB_TXT_TYPE
-	    routine adu_strtopt
-
-	fi ADFI_1615_POINT_FROM_FLOATS
-	    description point  : point(float,float)
-	    lenspec ADI_FIXED 16
-	    null_preinst ADE_1CXI_SET_SKIP
-	    result DB_PT_TYPE
-	    operands DB_FLT_TYPE DB_FLT_TYPE
-	    routine adu_2flt_to_pt
-
-	fi ADFI_1617_POINT_POINT
-	    description point  :  point(point)
-	    lenspec ADI_FIXED 16
-	    null_preinst ADE_1CXI_SET_SKIP
-	    result DB_PT_TYPE
-	    operands DB_PT_TYPE
-	    routine adu_pt_to_pt
-
-    operator ADI_X_OP
-
-	fi ADFI_1604_POINT_X
-	    description double  : x(point)
-	    lenspec ADI_FIXED 8
-	    null_preinst ADE_0CXI_IGNORE
-	    result DB_FLT_TYPE
-	    operands DB_GEOM_TYPE
-	    routine adu_point_x
-
-    operator ADI_Y_OP
-
-	fi ADFI_1605_POINT_Y
-	    description double  : y(point)
-	    lenspec ADI_FIXED 8
-	    null_preinst ADE_0CXI_IGNORE
-	    result DB_FLT_TYPE
-	    operands DB_GEOM_TYPE
-	    routine adu_point_y
-
-    operator ADI_BPOINT_OP
-
     fi ADFI_1618_POINT_FROM_TEXT
         description bpoint    : pointfromtext(text)
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
@@ -9156,6 +9091,26 @@ group ADI_NORM_FUNC
 	    operands DB_LBYTE_TYPE DB_INT_TYPE
 	    routine adu_point_srid_fromWKB
         
+    operator ADI_X_OP
+
+	fi ADFI_1604_POINT_X
+	    description double  : x(point)
+	    lenspec ADI_FIXED 8
+	    null_preinst ADE_0CXI_IGNORE
+	    result DB_FLT_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_point_x
+
+    operator ADI_Y_OP
+
+	fi ADFI_1605_POINT_Y
+	    description double  : y(point)
+	    lenspec ADI_FIXED 8
+	    null_preinst ADE_0CXI_IGNORE
+	    result DB_FLT_TYPE
+	    operands DB_GEOM_TYPE
+	    routine adu_point_y
+
     operator ADI_LINE_OP
 
     fi ADFI_1620_LINE_FROM_TEXT
@@ -10276,42 +10231,6 @@ group ADI_COPY_COERCION
 	    operands DB_UTF8_TYPE
 	    routine adu_nvchr_strutf8conv
 
-	fi ADFI_1611_POINT_COPYTO_C
-	    description c  :  point -copy-> c
-	    flags ADI_F1_VARFI
-	    lenspec ADI_FIXED 35
-	    null_preinst ADE_1CXI_SET_SKIP
-	    result DB_CHR_TYPE
-	    operands DB_PT_TYPE
-	    routine adu_pttostr
-
-	fi ADFI_1612_POINT_COPYTO_CHAR
-	    description char  :  point -copy-> char
-	    flags ADI_F1_VARFI
-	    lenspec ADI_FIXED 35
-	    null_preinst ADE_1CXI_SET_SKIP
-	    result DB_CHA_TYPE
-	    operands DB_PT_TYPE
-	    routine adu_pttostr
-
-	fi ADFI_1613_POINT_COPYTO_TEXT
-	    description text  :  point -copy-> text
-	    flags ADI_F1_VARFI
-	    lenspec ADI_FIXED 35+DB_CNTSIZE
-	    null_preinst ADE_1CXI_SET_SKIP
-	    result DB_TXT_TYPE
-	    operands DB_PT_TYPE
-	    routine adu_pttostr
-
-	fi ADFI_1614_POINT_COPYTO_VARCHAR
-	    description varchar  :  point -copy-> varchar
-	    flags ADI_F1_VARFI
-	    lenspec ADI_FIXED 35+DB_CNTSIZE
-	    null_preinst ADE_1CXI_SET_SKIP
-	    result DB_VCH_TYPE
-	    operands DB_PT_TYPE
-	    routine adu_pttostr
-   
 group ADI_COERCION
 
     operator ADI_NOOP
@@ -12572,65 +12491,6 @@ group ADI_COERCION
 	    result DB_LNVCHR_TYPE
 	    operands DB_LBYTE_TYPE
 	    routine adu_long_coerce
-
-
-	fi ADFI_1600_POINT_TO_C
-	    description c  :  point -> c
-	    flags ADI_F1_VARFI
-	    lenspec ADI_FIXED 35
-	    null_preinst ADE_1CXI_SET_SKIP
-	    result DB_CHR_TYPE
-	    operands DB_PT_TYPE
-	    routine adu_pttostr
-
-	fi ADFI_1601_POINT_TO_TEXT
-	    description text  :  point -> text
-	    flags ADI_F1_VARFI
-	    lenspec ADI_FIXED 35
-	    null_preinst ADE_1CXI_SET_SKIP
-	    result DB_TXT_TYPE
-	    operands DB_PT_TYPE
-	    routine adu_pttostr
-
-	fi ADFI_1602_C_TO_POINT
-	    description point  :  c -> point
-	    lenspec ADI_FIXED 16
-	    null_preinst ADE_1CXI_SET_SKIP
-	    result DB_PT_TYPE
-	    operands DB_CHR_TYPE
-	    routine adu_strtopt
-
-	fi ADFI_1603_TEXT_TO_POINT
-	    description point  :  text -> point
-	    lenspec ADI_FIXED 16
-	    null_preinst ADE_1CXI_SET_SKIP
-	    result DB_PT_TYPE
-	    operands DB_TXT_TYPE
-	    routine adu_strtopt
-
-	fi ADFI_1609_VARCHAR_TO_POINT
-	    description point  :  varchar -> point
-	    lenspec ADI_FIXED 16
-	    null_preinst ADE_1CXI_SET_SKIP
-	    result DB_PT_TYPE
-	    operands DB_VCH_TYPE
-	    routine adu_strtopt
-
-	fi ADFI_1610_POINT_TO_VARCHAR
-	    description varchar  :  point -> varchar
-	    lenspec ADI_FIXED 35
-	    null_preinst ADE_1CXI_SET_SKIP
-	    result DB_VCH_TYPE
-	    operands DB_PT_TYPE
-	    routine adu_pttostr
-
-	fi ADFI_1616_POINT_TO_POINT
-	    description point  :  point -> point
-	    lenspec ADI_RESLEN
-	    null_preinst ADE_1CXI_SET_SKIP
-	    result DB_PT_TYPE
-	    operands DB_PT_TYPE
-	    routine adu_pt_to_pt
 
     fi ADFI_1632_GEOM_TO_GEOM
 	    description geom  :  geom -> geom

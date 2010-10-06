@@ -12,8 +12,6 @@
 #include    <adfint.h>
 #include    <adudate.h>
 #include    <adumoney.h>
-#include    <adftrace.h>
-#include    <aduspatial.h>
 
 /**
 **
@@ -142,8 +140,6 @@
 **          Added support for unicode long nvarchar datatype.
 **      16-oct-2006 (stial01)
 **          Added length check for locator datatypes
-**      25-Nov-2008 (macde01)
-**          Added length check for point datatype (DB_PT_TYPE).
 **  16-Jun-2009 (thich01)
 **      Treat GEOM type the same as LBYTE.
 **  20-Aug-2009 (thich01)
@@ -1292,19 +1288,6 @@ DB_DATA_VALUE	*adc_rdv)
 	    }
 	    break;
 	}
-      case DB_PT_TYPE:
-        if (adc_rdv != NULL)
-        {
-            adc_rdv->db_datatype = DB_PT_TYPE;
-            adc_rdv->db_length   = ADF_PT_LEN;
-            adc_rdv->db_prec     = 0;
-        }
-        if (adc_is_usr  &&  adc_dv->db_length != 0)
-            db_stat = adu_error(adf_scb, E_AD2007_DT_IS_FIXLEN, 0);
-        else if (!adc_is_usr  &&  adc_dv->db_length != ADF_PT_LEN)
-            db_stat = adu_error(adf_scb, E_AD2005_BAD_DTLEN, 0);
-
-        break;
 
       default:
 	db_stat = adu_error(adf_scb, E_AD9999_INTERNAL_ERROR, 0);

@@ -20,7 +20,6 @@
 #include    <adftrace.h>
 #include    <adfint.h>
 #include    <aduint.h>
-#include    <aduspatial.h>
 #include    <spatial.h>
 #ifdef _WITH_GEO
 #include    <geos_c.h>
@@ -862,7 +861,7 @@ geosToStoredGeom(ADF_CB *adf_scb, GEOSGeometry *geometry,
             if(GEOSGeomTypeId_r(handle, geometry) == GEOS_GEOMETRYCOLLECTION ||
                     GEOSGeomTypeId_r(handle, geometry) == GEOS_MULTIPOINT)
             {
-                GEOSGeometry *ngeom;
+                const GEOSGeometry *ngeom;
 
                 i4 i, n = GEOSGetNumGeometries_r(handle, geometry);
                 for(i = 0; i < n; i++)
@@ -3667,7 +3666,8 @@ DB_DATA_VALUE   *rdv)
     return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
 #else
     DB_STATUS status = E_DB_OK;
-    GEOSGeometry *curve = NULL, *pcurve;
+    GEOSGeometry *curve = NULL;
+    const GEOSGeometry *pcurve;
     GEOSContextHandle_t handle;
     i4 isClosed = 1;
     i4 i, curves = 0;
@@ -3796,7 +3796,8 @@ DB_DATA_VALUE   *rdv)
     return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
 #else
     DB_STATUS status = E_DB_OK;
-    GEOSGeometry *curve = NULL, *pcurve;
+    GEOSGeometry *curve = NULL;
+    const GEOSGeometry *pcurve;
     GEOSContextHandle_t handle;
     f8 length = 0, templ = 0;
     i4 i;
@@ -4106,7 +4107,8 @@ DB_DATA_VALUE    *rdv)
     return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
 #else
     DB_STATUS status = E_DB_OK;
-    GEOSGeometry *polygon = NULL, *one_poly;
+    GEOSGeometry *polygon = NULL;
+    const GEOSGeometry *one_poly;
     GEOSContextHandle_t handle;
     i4 numRings = 0;
 
@@ -4624,7 +4626,8 @@ DB_DATA_VALUE   *rdv)
     return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
 #else
     DB_STATUS status = E_DB_OK;
-    GEOSGeometry *geometry = NULL, *line;
+    GEOSGeometry *geometry = NULL;
+    const GEOSGeometry *line;
     GEOSContextHandle_t handle;
     i4 np = 0, geoms;
 
@@ -5662,279 +5665,3 @@ getSRS(ADF_CB *adf_scb, DB_SPATIAL_REF_SYS *srs, i4 srid)
     return E_DB_OK;
 }
 #endif
-
-/*********************************************
- * Original prototype code before moving to LBYTE base type.
- * This will eventually be cleaned up
- */
-
-DB_STATUS
-adu_pttostr(
-ADF_CB          *adf_scb,
-DB_DATA_VALUE   *pt_dv,
-DB_DATA_VALUE   *str_dv)
-{
-    i4 dum1, dum2;
-
-    TRdisplay("Reached adu_pttostr -- need work here\n");
-
-    return (E_DB_OK);
-}
-
-
-DB_STATUS
-adu_strtopt(
-ADF_CB          *adf_scb,
-DB_DATA_VALUE   *str_dv,
-DB_DATA_VALUE   *pt_dv)
-{
-    DB_STATUS           status = E_DB_OK;
-    i4 dum1, dum2;
-    double x, y;
-    DB_DATA_VALUE       cdata;
-    char                utemp[64] = {'0'};   /* NOT SAFE - this is user 
-                                             formatted, unknown amount
-                                             of whitespace. */
-    i4                  len;
-    char               *c_ptr;
-    char               *end_ptr = NULL;
-    bool                comma_fnd = FALSE;
-
-      TRdisplay("adu_strtopt: start and datatype = %d\n", str_dv->db_datatype);
-
-    if ((str_dv->db_datatype == DB_NCHR_TYPE) ||
-        (str_dv->db_datatype == DB_NVCHR_TYPE))
-    {
-      TRdisplay("coercing .. \n");
-      if (str_dv->db_datatype == DB_NVCHR_TYPE)
-      {
-        cdata.db_datatype = DB_VCH_TYPE;
-        cdata.db_length = 
-          (str_dv->db_length - DB_CNTSIZE)/sizeof(UCS2) + DB_CNTSIZE;
-      }
-      else if (str_dv->db_datatype == DB_NCHR_TYPE)
-      {
-        cdata.db_datatype = DB_CHA_TYPE;
-        cdata.db_length = str_dv->db_length/sizeof(UCS2);
-      }
-
-      cdata.db_data = (PTR) utemp;
-
-      if ((status = adu_nvchr_coerce(adf_scb, str_dv, &cdata)) != E_DB_OK)
-        return (status);
-
-      if ((status = adu_lenaddr(adf_scb, &cdata, &len, &c_ptr)) != E_DB_OK)
-         return (status);
-    }
-    else
-      if ((status = adu_lenaddr(adf_scb, str_dv, &len, &c_ptr)) != E_DB_OK)
-        return (status);
-
-    /* String is not NULL terminated, so add the EOS. */
-    if (len < DB_MAXSTRING)
-      c_ptr[len] = EOS;
-    else
-      c_ptr[DB_MAXSTRING] = EOS;
-
-    /*
-     * eat whitespace.  - maybe call adu_squeezewhite, removes leading,
-     * trailing, and reduces other all multiple whitespace to single.
-     *  If only need to handle spaces ' ', then probably more efficient
-     *  to handle here by advancing ptr. If need to handle other kinds,
-     *  better to use the generic function.
-     */
-
-    while (*c_ptr == ' ')
-      c_ptr++;
-
-    /* Need to add new error codes */
-    if (*c_ptr != '(')
-      return (adu_error(adf_scb, E_AD1021_BAD_ERROR_PARAMS, 0));
-
-    c_ptr++;               /* Skip bracket '('  */
-    while (*c_ptr == ' ')   /* Skip more whitespace */
-      c_ptr++;
-
-    errno=0;
-    end_ptr = c_ptr;
-    x = strtod(c_ptr, &end_ptr);
-    if ((errno != 0) || (c_ptr == end_ptr))
-      return (adu_error(adf_scb, E_AD1021_BAD_ERROR_PARAMS, 0));
-
-    c_ptr = end_ptr;         /* Skip number, it was processed  */
-
-    /* Skip all white space and the comma */
-
-    while ((*c_ptr == ' ') || (*c_ptr == ','))
-    {
-      if (*c_ptr == ',')
-        comma_fnd = TRUE;
-      c_ptr++;
-    }
-
-    /* Verify command was found */
-    if (!comma_fnd)
-      return (adu_error(adf_scb, E_AD1021_BAD_ERROR_PARAMS, 0));
-
-    errno=0;
-    end_ptr = c_ptr;
-    y = strtod(c_ptr, &end_ptr);
-    if ((errno != 0) || (c_ptr == end_ptr))
-      return (adu_error(adf_scb, E_AD1021_BAD_ERROR_PARAMS, 0));
-
-    c_ptr = end_ptr;         /* Skip number, it was processed  */
-    while (*c_ptr == ' ')   /* Skip more whitespace */
-      c_ptr++;
-
-    if (*c_ptr != ')')
-      return (adu_error(adf_scb, E_AD1021_BAD_ERROR_PARAMS, 0));
-
-    c_ptr++;   /* Skip bracket '0'  */
-    while (*c_ptr == ' ')   /* Skip more whitespace */
-      c_ptr++;
-
-    if (*c_ptr != EOS)
-      return (adu_error(adf_scb, E_AD1021_BAD_ERROR_PARAMS, 0));
-
-    F8ASSIGN_MACRO(x, ((AD_PT_INTRNL *) pt_dv->db_data)->x);
-
-    F8ASSIGN_MACRO(y, ((AD_PT_INTRNL *) pt_dv->db_data)->y);
-
-    return (E_DB_OK);
-}
-
-DB_STATUS
-adu_2flt_to_pt(
-ADF_CB          *adf_scb,
-DB_DATA_VALUE   *dv1,
-DB_DATA_VALUE   *dv2,
-DB_DATA_VALUE   *rdv)
-{
-    ((AD_PT_INTRNL *)rdv->db_data)->x = *(double *) dv1->db_data;
-    ((AD_PT_INTRNL *)rdv->db_data)->y = *(double *) dv2->db_data;
-
-    return (E_DB_OK);
-}
-
-/*
-** Name: adu_1pt_cmp()
-**
-** Description:
-**      This routine compares two point values.
-**
-** Inputs:
-**      adf_scb                         Pointer to an ADF session control block.
-**          .adf_errcb                  ADF_ERROR struct.
-**              .ad_ebuflen             The length, in bytes, of the buffer
-**                                      pointed to by ad_errmsgp.
-**              .ad_errmsgp             Pointer to a buffer to put formatted
-**                                      error message in, if necessary.
-**      adc_dv1                         Pointer to the 1st data value
-**                                      to compare.
-**              .db_datatype            Datatype id of 1st data value.
-**              .db_length              Length of 1st data value.
-**              .db_data                Pointer to the actual data for
-**                                      1st data value.
-**      adc_dv2                         Pointer to the 2nd data value
-**                                      to compare.
-**              .db_datatype            Datatype id of 2nd data value.
-**                                      (Must be same as
-**                                      adc_dv1->db_datatype.)
-**              .db_length              Length of 2nd data value.
-**              .db_data                Pointer to the actual data for
-**                                      2nd data value.
-**      adc_cmp_result                  Pointer to the i4  to put the
-**                                      comparison result.
-**
-** Outputs:
-**      adf_scb                         Pointer to an ADF session control block.
-**          .adf_errcb                  ADF_ERROR struct.  If an
-**                                      error occurs the following fields will
-**                                      be set.  NOTE: if .ad_ebuflen = 0 or
-**                                      .ad_errmsgp = NULL, no error message
-**                                      will be formatted.
-**              .ad_errcode             ADF error code for the error.
-**              .ad_errclass            Signifies the ADF error class.
-**              .ad_usererr             If .ad_errclass is ADF_USER_ERROR,
-**                                      this field is set to the corresponding
-**                                      user error which will either map to
-**                                      an ADF error code or a user-error code.
-**              .ad_emsglen             The length, in bytes, of the resulting
-**                                      formatted error message.
-**              .adf_errmsgp            Pointer to the formatted error message.
-**     *adc_cmp_result                  Result of comparison.  This is
-**                                      guaranteed to be:
-**                                          < 0   if 1st < 2nd
-**                                          = 0   if 1st = 2nd
-**                                          > 0   if 1st > 2nd
-**
-**      Returns:
-**            The following DB_STATUS codes may be returned:
-**          E_DB_OK, E_DB_WARN, E_DB_ERROR, E_DB_SEVERE, E_DB_FATAL
-**
-**            If a DB_STATUS code other than E_DB_OK is returned, the caller
-**          can look in the field adf_scb.adf_errcb.ad_errcode to determine
-**          the ADF error code.  The following is a list of possible ADF error
-**          codes that can be returned by this routine:
-**
-**          E_AD0000_OK                 Operation succeeded.
-**
-**      Exceptions:
-**          none
-**
-** Side Effects:
-**          none
-**
-** History:
-**      02-Dec-08 (macde01)
-**          Created for POINT spatial datatype.
-**
-*/
-
-DB_STATUS
-adu_1pt_cmp(
-ADF_CB              *adf_scb,
-DB_DATA_VALUE       *adc_dv1,
-DB_DATA_VALUE       *adc_dv2,
-i4                  *adc_cmp_result)
-{
-    i4        dum1;
-    i4        dum2;
-    double x1 = ((AD_PT_INTRNL *) adc_dv1->db_data)->x;
-    double y1 = ((AD_PT_INTRNL *) adc_dv1->db_data)->y;
- 
-    double x2 = ((AD_PT_INTRNL *) adc_dv2->db_data)->x;
-    double y2 = ((AD_PT_INTRNL *) adc_dv2->db_data)->y;
-
-    if (ult_check_macro(&Adf_globs->Adf_trvect,ADF_013_PT_TRACE,&dum1,&dum2))
-        TRdisplay("adu_1pt_cmp: start\n");
-
-
-    if ((x1 == x2) && (y1 == y2))
-        *adc_cmp_result = 0;
-    else
-        if ((x1 < x2) || ((x1 == x2) && (y1 < y2)))
-            *adc_cmp_result = -1;
-        else
-            *adc_cmp_result = 1;
-
-    if (ult_check_macro(&Adf_globs->Adf_trvect,ADF_013_PT_TRACE,&dum1,&dum2))
-        TRdisplay("%@  adu_1pt_cmp result=%d\n", *adc_cmp_result);
-
-    return(E_DB_OK);
-}
-
-DB_STATUS
-adu_pt_to_pt(
-ADF_CB              *adf_scb,
-DB_DATA_VALUE       *pt_dv1,
-DB_DATA_VALUE       *pt_dv2)
-{
-    if (ult_check_macro(&Adf_globs->Adf_trvect,ADF_013_PT_TRACE,&dum1,&dum2))
-        TRdisplay("adu_pt_to_pt: start\n");
-
-    MEcopy( (PTR) pt_dv1->db_data, pt_dv2->db_length,
-            (PTR) pt_dv2->db_data);
-
-    return (E_DB_OK);
-}

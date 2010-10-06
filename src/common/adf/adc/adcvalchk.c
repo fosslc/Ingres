@@ -692,13 +692,6 @@ DB_DATA_VALUE	    *adc_dv)
             }
             break;
 
-      case DB_PT_TYPE:
-        /* Currently all ranges of x and y are valid, since it is    */
-        /* dependent on the projection used, and should be validated */
-        /* against that when its ready (PROJ.4 library?)             */
-        break;
-
-
       default:
 	return (adu_error(adf_scb, E_AD9999_INTERNAL_ERROR, 0));
     }	/* end of switch stmt */

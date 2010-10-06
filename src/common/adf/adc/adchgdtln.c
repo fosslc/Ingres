@@ -426,8 +426,6 @@ DB_DATA_VALUE	    *adc_hgdv;
 **	    to be treated as raw collation data alongside DB_CHA_TYPE.
 **	    If this is not done, CE entries get compated using CHAR semantics
 **	    which is so wrong.
-**      17-Dec-2008 (macde01)
-**          Added support for DB_PT_TYPE.
 */
 
 DB_STATUS
@@ -607,12 +605,6 @@ UTF8merge:
 	    adc_hgdv->db_length = DB_MAX_HIST_LENGTH;
 	break;
 	
-      case DB_PT_TYPE:
-        adc_hgdv->db_datatype   = adc_fromdv->db_datatype;
-        adc_hgdv->db_prec       = 0;
-        adc_hgdv->db_length     = adc_fromdv->db_length;
-        break;
-
       default:
 	return(adu_error(adf_scb, E_AD9999_INTERNAL_ERROR, 0));
 

@@ -131,8 +131,6 @@
 **	    byte data as a stream of hex digits.
 **	27-Oct-2008 (kiria01) SIR120473
 **	    Added DB_PAT_TYPE types to display
-**      07-Jan-2009 (macde01)
-**          Added DB_PT_TYPE type to display.
 **  16-Jun-2009 (thich01)
 **      Add GEOM type.
 **      Treat GEOM type the same as LBYTE.
@@ -209,7 +207,7 @@ static char	*type_name[] = {
     NULL,	    "DB_LTXT_TYPE", NULL,	    NULL,
     NULL,	    NULL,	    NULL,	    NULL,
     NULL,	    NULL,	    NULL,	    NULL,
-    NULL,	    NULL,	    "DB_LOGKEY_TYPE", "DB_PT_TYPE",
+    NULL,	    NULL,	    "DB_LOGKEY_TYPE", NULL,
     "DB_GEOM_TYPE", "DB_POINT_TYPE", "DB_MPOINT_TYPE",	"DB_LINE_TYPE",
 /* 60 - 79  60 is left for SECL*/
     NULL,	    "DB_MLINE_TYPE", "DB_POLY_TYPE", "DB_MPOLY_TYPE",

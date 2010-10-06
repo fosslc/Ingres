@@ -14,8 +14,6 @@
 #include    <adumoney.h>
 #include    <ulf.h>
 #include    <adfint.h>
-#include    <adftrace.h>
-#include    <aduspatial.h>
 
 /**
 **
@@ -95,8 +93,6 @@
 **	08-Feb-2008 (kiria01) b119885
 **	    Change dn_time to dn_seconds to avoid the inevitable confusion with
 **	    the dn_time in AD_DATENTRNL.
-**      17-Dec-2008 (macde01)
-**          Added a case for DB_PT_TYPE to adc_1getempty_rti.
 **  16-Jun-2009 (thich01)
 **      Treat GEOM type the same as LBYTE.
 **      10-aug-2009 (joea)
@@ -434,8 +430,6 @@ DB_DATA_VALUE	    *adc_emptydv;
 **	18-Feb-2008 (kiria01) b120004
 **	    Consolidate timezone handling. This involves using the macros
 **	    for dealing with the raw TZ fields.
-**      17-Dec-2008 (macde01)
-**          Added a case for DB_PT_TYPE.
 **	24-Jun-2009 (gupsh01)
 **	    Fix setting the locator values at constant offset of
 **	    ADP_HDR_SIZE in the ADP_PERIPHERAL structure, irrespective
@@ -633,11 +627,6 @@ DB_DATA_VALUE       *adc_emptydv)	/* Ptr to empty data value */
       case DB_NVCHR_TYPE:
 	((DB_NVCHR_STRING *) adc_emptydv->db_data)->count = 0;
 	break;
-
-      case DB_PT_TYPE: 
-        ((AD_PT_INTRNL *) adc_emptydv->db_data)->x = 0.0;
-        ((AD_PT_INTRNL *) adc_emptydv->db_data)->y = 0.0;
-        break;
 
       default:
 	return(adu_error(adf_scb, E_AD9999_INTERNAL_ERROR, 0));

@@ -262,8 +262,6 @@
 **	    Added patcomp.
 **      18-dec-2008 (joea)
 **          Replace READONLY/WSCREADONLY by const.
-**      07-Jan-2009 (macde01)
-**          Added point, x, and y operators for DB_PT_TYPE.
 **  28-Feb-2009 (thich01)
 **      Added the fromtext operators for spatial types.
 **	12-Mar-2009 (kiria01) SIR121788
@@ -903,21 +901,21 @@ GLOBALDEF   const	ADI_OPRATION    Adi_2RO_operations[] = {
 	DB_SQL        ,     ADI_INGRES_6|ADI_ANSI|ADI_DB2,  
 		ADO_LIKE_CNT,  		    ADZ_LIKE_FIIDX},
 
-{ {"pointfromtext"},       ADI_BPOINT_OP,    ADI_NORM_FUNC,      ADI_PREFIX,
+{ {"pointfromtext"},       ADI_POINT_OP,    ADI_NORM_FUNC,      ADI_PREFIX,
                            DB_SQL,           ADI_INGRES_6                 ,
-                           ADO_BPOINT_CNT,   ADZ_BPOINT_FIIDX},
+                           ADO_POINT_CNT,   ADZ_POINT_FIIDX},
 
-{ {"st_pointfromtext"},       ADI_BPOINT_OP,    ADI_NORM_FUNC,      ADI_PREFIX,
+{ {"st_pointfromtext"},       ADI_POINT_OP,    ADI_NORM_FUNC,      ADI_PREFIX,
                            DB_SQL,           ADI_INGRES_6                 ,
-                           ADO_BPOINT_CNT,   ADZ_BPOINT_FIIDX},
+                           ADO_POINT_CNT,   ADZ_POINT_FIIDX},
 
-{ {"pointfromwkb"},        ADI_BPOINT_OP,    ADI_NORM_FUNC,      ADI_PREFIX,
+{ {"pointfromwkb"},        ADI_POINT_OP,    ADI_NORM_FUNC,      ADI_PREFIX,
                            DB_SQL,           ADI_INGRES_6                 ,
-                           ADO_BPOINT_CNT,   ADZ_BPOINT_FIIDX},
+                           ADO_POINT_CNT,   ADZ_POINT_FIIDX},
 
-{ {"st_pointfromwkb"},        ADI_BPOINT_OP,    ADI_NORM_FUNC,      ADI_PREFIX,
+{ {"st_pointfromwkb"},        ADI_POINT_OP,    ADI_NORM_FUNC,      ADI_PREFIX,
                            DB_SQL,           ADI_INGRES_6                 ,
-                           ADO_BPOINT_CNT,   ADZ_BPOINT_FIIDX},
+                           ADO_POINT_CNT,   ADZ_POINT_FIIDX},
 
 { {"linefromtext"},        ADI_LINE_OP,      ADI_NORM_FUNC,      ADI_PREFIX,
                            DB_SQL,           ADI_INGRES_6                 ,
@@ -1499,10 +1497,6 @@ GLOBALDEF   const	ADI_OPRATION    Adi_2RO_operations[] = {
 { {"pi"},		ADI_PI_OP,	ADI_NORM_FUNC,	    ADI_PREFIX,
 	DB_SQL|DB_QUEL,     ADI_INGRES_6                 ,  
 		ADO_PI_CNT,  		    ADZ_PI_FIIDX},
-
-{ {"point"},         ADI_POINT_OP,     ADI_NORM_FUNC,      ADI_PREFIX,
-       DB_SQL,             ADI_INGRES_6                 ,
-               ADO_POINT_CNT,                ADZ_POINT_FIIDX},
 
 { {"position"},		ADI_POS_OP,	ADI_NORM_FUNC,	    ADI_PREFIX,
 	DB_SQL,     	    ADI_INGRES_6                 ,  

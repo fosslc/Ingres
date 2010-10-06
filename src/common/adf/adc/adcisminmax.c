@@ -301,8 +301,6 @@ DB_DATA_VALUE  *adc_dv;
 **          Argument is now a nat.  See adf.h for details.
 **	12-may-04 (inkdo01)
 **	    Added support for bigint.
-**      17-Dec-2008 (macde01)
-**          Add support for DB_PT_TYPE.
 */
 
 DB_STATUS
@@ -342,10 +340,6 @@ DB_DATA_VALUE	    *adc_dv)
 	/* Now, we can evaluate the value */
 	switch (dt)
 	{
-          case DB_PT_TYPE:
-            TRdisplay("Error: adc_1isminmax_rti for DB_PT_TYPE, not coded\n");
-            break;
-
 	  case DB_BOO_TYPE:
             if (((DB_ANYTYPE *)data)->db_booltype == DB_FALSE)
 		adf_scb->adf_errcb.ad_errcode = E_AD0117_IS_MINIMUM;

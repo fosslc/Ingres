@@ -567,8 +567,6 @@ i4		    *adc_buflen;
 **	    can can be upto four bytes long. Use CMbytecnt to ensure
 **	    we do not assume that a multbyte string can only be a maximum
 **	    of two bytes long. (Bug 120865)
-**      17-Dec-2008 (macde01)
-**          Add support for DB_PT_TYPE.
 */
 
 DB_STATUS
@@ -882,10 +880,6 @@ i4		    *adc_width)
 	*adc_width = length + 3;
 	break;
 
-      case DB_PT_TYPE:
-        TRdisplay("Error: adc_1klen_rti for DB_PT_TYPE - not coded yet\n");
-        break;
-
       default:
 	db_stat = adu_error(adf_scb, E_AD2004_BAD_DTID, 0);
 	break;
@@ -1006,8 +1000,6 @@ i4		    *adc_width)
 **          Added byte string datatypes.
 **	12-may-04 (inkdo01)
 **	    Added support for bigint.
-**      17-Dec-2008 (macde01)
-**          Add support for DB_PT_TYPE.
 [@history_template@]...
 */
 
@@ -1354,10 +1346,6 @@ i4		    *adc_buflen)
 	break;
       }
       
-      case DB_PT_TYPE:
-        TRdisplay("Error: adc_2kcvt_rti for DB_PT_TYPE -- not coded yet\n");
-        break;
-
       default:
 	db_stat = adu_error(adf_scb, E_AD2004_BAD_DTID, 0);
 	break;

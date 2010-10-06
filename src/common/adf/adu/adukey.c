@@ -1904,10 +1904,6 @@ ADC_KEY_BLK	    *adc_kblk)
 	** All unhandled datatypes will need a full scan */
 	switch (adc_kblk->adc_kdv.db_datatype)
 	{
-      /* Doesn't belong here, needs its own function in this file */
-      case DB_PT_TYPE:
-        TRdisplay("Error: adu_mbldkey for DB_PT_TYPE, not coded\n");
-        break;
 
 	case DB_MNY_TYPE:
 	case DB_FLT_TYPE:

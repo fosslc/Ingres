@@ -10,7 +10,6 @@
 #include    <ulf.h>
 #include    <adfint.h>
 #include    <adfhist.h>
-#include    <aduspatial.h>
 
 /**
 **
@@ -631,8 +630,6 @@ DB_DATA_VALUE	    *adc_min_dvhg;
 **	    Timestamp histogram elements are only i4's.
 **	15-may-2007 (dougi)
 **	    Add support for UTF8-enabled server.
-**      17-Dec-2008 (macde01)
-**          Add support for DB_PT_TYPE.
 */
 
 DB_STATUS
@@ -770,11 +767,6 @@ UTF8merge:
 	    *cpuni++ = AD_NCHR2_DHMIN_VAL;
 	break;
 
-      case DB_PT_TYPE:
-        ((AD_PT_INTRNL *) adc_min_dvdhg->db_data)->x = -FMAX;
-        ((AD_PT_INTRNL *) adc_min_dvdhg->db_data)->y = -FMAX;
-        break;
-
       default:
 	db_stat = adu_error(adf_scb, E_AD9999_INTERNAL_ERROR, 0);
 	break;
@@ -884,8 +876,6 @@ UTF8merge:
 **	    Timestamp histogram elements are only i4's.
 **	15-may-2007 (dougi)
 **	    Add support for UTF8-enabled server.
-**      17-Dec-2008 (macde01)
-**          Add support for DB_PT_TYPE.
 */
 
 DB_STATUS
@@ -1018,10 +1008,6 @@ UTF8merge:
 	for (i = II_COUNT_ITEMS(adc_min_dvhg->db_length, UCS2); i; i--)
 	    *cpuni++ = AD_NCHR3_HMIN_VAL;
 	break;
-
-      case DB_PT_TYPE:
-        TRdisplay("Error:  adc_1hmin_rti for DB_PT_TYPE, not coded\n");
-        break;
 
       default:
 	db_stat = adu_error(adf_scb, E_AD9999_INTERNAL_ERROR, 0);

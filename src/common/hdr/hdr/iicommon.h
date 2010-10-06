@@ -131,8 +131,6 @@
 **	    types to 16000. 
 **      10-sep-2008 (gupsh01)
 **          Added utf8 expansion factors
-**      25-Nov-2008 (macde01)
-**          Add point datatype (DB_PT_TYPE).
 **    21-Jan-2009 (horda03) Bug 121519
 **        Due to the way filenames are constructed for table IDs, the range
 **        of possible table_id's (for permanent tables) is 0 to 0x4643C824. 
@@ -961,9 +959,6 @@ typedef i2 DB_DT_ID;
 **        DB_LCLOC_TYPE   36        lvchar locator
 **        DB_BOO_TYPE     38        "boolean"
 **
-** New types for spatial datatypes **
-**        DB_PT_TYPE      55        spatial point
-**
 ** The following types are not stored in relations **
 **
 **
@@ -1066,8 +1061,6 @@ typedef i2 DB_DT_ID;
 **
 **        DB_NQTXT_TYPE       54  Type for qry text containing a nchar
 **                                or nvarchar text when send thru GCF
-**
-**        DB_PT_TYPE          55  Type for spatial POINT
 **
 **/
 
@@ -1203,7 +1196,7 @@ _DEFINE(QTXT,   51, CHAR, BASE,  0,  0,  0,  0  /* Type for qry text  */)\
 _DEFINE(TFLD,   52, CHAR, BASE,  0,  0,  0,  0  /* Type for table     */)\
 _DEFINE(DEC_CHR,53, NUMB, BASE,  0,  0,  0,  0  /* Type for decimal literal */)\
 _DEFINE(NQTXT,  54, NCHAR,PAD,   0,  0,  0,  0  /* Type for qry text */)\
-_DEFINE(PT,     55, NUMB, BASE,  0,  0,  0,  0  /* Type for spatial point */)\
+_DEFINE(55,     55, NONE, BASE,  0,  0,  0,  0  /* Unused - was prototype for spatial */)\
 _DEFINE(GEOM,   56, BYTE, LV,   18, 18, 18, 18  /* Spatial Long Byte */)\
 _DEFINE(POINT,  57, BYTE, LV,   18, 18, 18, 18  /* Point Long Byte */)\
 _DEFINE(MPOINT, 58, BYTE, LV,   18, 18, 18, 18  /* MPoint Long Byte */)\

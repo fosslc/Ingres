@@ -486,10 +486,6 @@ DB_DATA_VALUE	    *adc_maxdv;
 **	    Break out the case for byte/varbyte from char/varchar
 **	    which should not be checked against restricted adf_maxstring 
 **	    length in UTF8 installations.
-**      17-Dec-2008 (macde01)
-**          Add support for DB_PT_TYPE.
-**	14-Aug-2009 (troal01)
-**	    Fixed crash bug if adc_maxdv or adc_mindv was NULL.
 */
 
 DB_STATUS
@@ -507,9 +503,6 @@ DB_DATA_VALUE	    *adc_maxdv)
     UCS2 		*cpuni; 
     DB_NVCHR_STRING     *chr;
     u_i2 		zero = 0;
-
-    if ((adc_mindv != NULL && adc_mindv->db_datatype == DB_PT_TYPE) || (adc_maxdv != NULL && adc_maxdv->db_datatype == DB_PT_TYPE))
-        TRdisplay("Error: adc_1minmaxdv_rti for DB_PT_TYPE not coded yet\n");
 
     /* Process the `min' */
     /* ----------------- */

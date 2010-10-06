@@ -10,7 +10,6 @@
 #include    <ulf.h>
 #include    <adfint.h>
 #include    <adfhist.h>
-#include    <aduspatial.h>
 
 /**
 **
@@ -630,8 +629,6 @@ DB_DATA_VALUE	    *adc_max_dvhg;
 **	    Timestamp histogram elements are only i4's.
 **	15-may-2007 (dougi)
 **	    Add support for UTF8-enabled server.
-**      17-Dec-2008 (macde01)
-**          Add support for DB_PT_TYPE.
 */
 
 DB_STATUS
@@ -770,10 +767,6 @@ UTF8merge:
             *cpuni++ = AD_NCHR4_DHMAX_VAL;
        break;
 
-      case DB_PT_TYPE:
-        TRdisplay("Error: adc_1dhmax_rti for DB_PT_TYPE - not coded\n");
-        break;
-
       default:
 	db_stat = adu_error(adf_scb, E_AD9999_INTERNAL_ERROR, 0);
 	break;
@@ -883,8 +876,6 @@ UTF8merge:
 **	    Timestamp histogram elements are only i4's.
 **	15-may-2007 (dougi)
 **	    Add support for UTF8-enabled server.
-**      17-Dec-2008 (macde01)
-**          Add support for DB_PT_TYPE.
 */
 
 DB_STATUS
@@ -1022,12 +1013,6 @@ UTF8merge:
 	    *cpuni++ = AD_NCHR5_HMAX_VAL;
         break;
      
-      case DB_PT_TYPE:
-        /* TODO: Need to verify these values */
-        ((AD_PT_INTRNL *) adc_max_dvhg->db_data)->x = FMAX;
-        ((AD_PT_INTRNL *) adc_max_dvhg->db_data)->y = FMAX;
-        break;
-
       default:
 	db_stat = adu_error(adf_scb, E_AD9999_INTERNAL_ERROR, 0);
 	break;

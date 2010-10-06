@@ -146,8 +146,6 @@
 **	    input field is character data with semantic meaning. 
 **	27-Oct-2008 (kiria01) SIR120473
 **	    Added prototype for separated pattern compiler.
-**      17-Dec-2008 (macde01)
-**          Added new function refs associated with DB_PT_TYPE datatype.
 **	05-Jan-2008 (kiria01) SIR120473
 **	    Switch eptr to esc_dv to allow for tracking datatype
 **  28-Feb-2009 (thich01)
@@ -719,22 +717,9 @@ FUNC_EXTERN ADU_NORM2_FUNC adu_25strposition;	/* ANSI position function */
 FUNC_EXTERN ADU_NORM3_FUNC adu_26positionfrom;  /* ANSI position FROM */
 FUNC_EXTERN ADU_NORM0_FUNC adu_last_id;   	/* last identity in session */
 
-FUNC_EXTERN ADU_NORM1_FUNC adu_strtopt;         /* This routine converts a */
-                                                /* string to a point.      */
-FUNC_EXTERN ADU_NORM1_FUNC adu_pttostr;         /* This routine converts a */
-                                                /* point to a string.      */
-FUNC_EXTERN ADU_NORM2_FUNC adu_2flt_to_pt;      /* Returns point from      */
-                                                /* point(float,float).     */
-FUNC_EXTERN ADU_NORM1_FUNC adu_point_x;         /* Routine to x(point)     */
-FUNC_EXTERN ADU_NORM1_FUNC adu_point_y;         /* Routine to y(point)     */
- 
-FUNC_EXTERN ADU_NORM1_FUNC adu_pt_to_pt;    /* This routine converts a point
-                                            ** data value into a point data
-                                            ** value.  This is used for copying
-                                            ** a point data value into a tuple
-                                            ** buffer. */
-
-/* The following functions will verify well known text and conver to blob.*/
+/*
+ * The following functions convert from well known text, or well known binary.
+ */
 FUNC_EXTERN ADU_NORM1_FUNC adu_point_fromText;
 FUNC_EXTERN ADU_NORM1_FUNC adu_point_fromWKB;
 FUNC_EXTERN ADU_NORM1_FUNC adu_linestring_fromText;
@@ -847,6 +832,12 @@ FUNC_EXTERN ADU_NORM2_FUNC adu_geometryn; /* OGC 1.1 geometryn SQL function */
 FUNC_EXTERN ADU_NORM2_FUNC adu_pointn; /* OGC 1.1 pointn SQL function */
 FUNC_EXTERN ADU_NORM1_FUNC adu_numpoints; /* OGC 1.1 numpoints SQL function */
 
+/*
+ * Point functions
+ */
+FUNC_EXTERN ADU_NORM1_FUNC adu_point_x;         /* Routine to x(point)     */
+FUNC_EXTERN ADU_NORM1_FUNC adu_point_y;         /* Routine to y(point)     */
+ 
 /* The following are used by iigeometries */
 FUNC_EXTERN ADU_NORM1_FUNC adu_geom_name;
 FUNC_EXTERN ADU_NORM1_FUNC adu_geom_dimensions;
@@ -1126,9 +1117,6 @@ FUNC_EXTERN ADU_COMPARE_FUNC adu_nvchrcomp;
 FUNC_EXTERN ADU_NORM3_FUNC adu_tableinfo;  /* Routine to do the tableinfo()
                                            ** func.
 					   */
-FUNC_EXTERN ADU_COMPARE_FUNC adu_1pt_cmp;  /* Compare 2 point data values. 
-                                           */
-
 FUNC_EXTERN ADU_COMPARE_FUNC adu_rtree_cmp; /* Compare geometries for rtree*/
 
 /*

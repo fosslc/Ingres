@@ -194,8 +194,6 @@ LIBRARY = IMPADFLIBDATA
 **	    Added DB_PAT_TYPE datatype for PATCOMP support.
 **      18-dec-2008 (joea)
 **          Replace READONLY/WSCREADONLY by const.
-**      25-Nov-08 (macde01)
-**          Add new spatial datatype POINT (DB_PT_TYPE).
 **  27-Feb-2009 (thich01)
 **      Add the spatial types as blob synonyms.
 **	09-Apr-2009 (kiria01) b121903
@@ -1266,21 +1264,6 @@ GLOBALCONSTDEF	 ADI_DATATYPE     Adi_1RO_datatypes[] = {
 		adc_2tmcvt_rti,     NULL,               NULL,
 		NULL
 	    }
-    },
-/*
-** point (native version)
-*/
-    { { "pointNative" },    DB_PT_TYPE, 0, AD_INDB, 0,
-        { 0, }, { 0, }, NULL, { FALSE, FALSE, 0, 0, 0 }, 0,
-            {   adc_1lenchk_rti,    adu_1pt_cmp,        adu_mbldkey,
-                adc_1getempty_rti,  adc_1klen_rti,      adc_2kcvt_rti,
-                adc_1valchk_rti,    adc_inplace_hashprep, adc_1helem_rti,
-                adc_1hmin_rti,      adc_1hmax_rti,      adc_2dhmin_rti,
-                adc_1dhmax_rti,     adc_1isminmax_rti,  NULL,
-                adc_1hg_dtln_rti,   NULL,               adc_1minmaxdv_rti,
-                NULL,               NULL,               adc_1tmlen_rti,
-                adc_2tmcvt_rti,     NULL,               NULL,
-                NULL }
     },
 /* GeometryCollection type - to be treated the same as LBYTE */
     { { "geometrycollection" },    DB_GEOMC_TYPE, DB_GEOM_TYPE,
