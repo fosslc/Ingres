@@ -24,6 +24,18 @@ git clone http://github.com/ingres/Ingres.git ~/ingres/server
 
 (either of these will create a copy of the latest code in ~/ingres/server)
 
+Prerequisites:
+==============
+
+This version of Ingres includes geospatial types and functions built-in.
+As a result, it requires two additional libraries. They are:
+1) GEOS which is acquired here: http://trac.osgeo.org/geos/
+2) Proj.4 which is acquired here: http://trac.osgeo.org/proj/
+
+Other dependencies will be double-checked by the runbuild script.
+It can usually tell you what you're missing and where to get it.
+
+
 To run the build (the easy way):
 ================================
 
