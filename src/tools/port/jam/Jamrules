@@ -1464,6 +1464,9 @@
 #	    GEOSC_VERS and PROJ_VERS added to SEPCCPP rule.
 #	01-Oct-2010 (bonro01)
 #	    Fix Windows build problems using cygwin
+#	06-Oct-2010 (troal01)
+#	    Add GEOLINKSTATIC to IITOOLSEXE and modified IINEEDLIBS to link
+#	    in the geospatial dependencies statically if binary is in that list
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -2695,6 +2698,7 @@ rule IITOOLSEXE
     MAIN $(<) : $(>) ; 
     if ! $(NT) 
     { 
+	GEOLINKSTATIC += $(<:S=$(SUFEXE)) ;
 	LOCATE on $(<:S=$(SUFEXE)) = $(INGTOOLSBIN) ; 
     }  
     else
@@ -3911,22 +3915,35 @@ rule IINEEDLIBS
 	{
 		if $(<:S) != .o
 		{
-			LINKLIBS on $(<) += $(LDLIBMACH) ;
-			#if this is not ingbuild, and WITH_GEO is defined AND
-			#we're linking in either ADFLIB or INGRESLIB
-			#we must also link to libgeos, libgeos_c and libproj			
-			if ! ingbuild in $(<) && $(WITH_GEO) && ( ADFLIB in $(>) || LIBINGRES in $(>) || INGRESLIB in $(>) )
+			LINKLIBS on $(<) += $(LDLIBMACH) ;		    
+			#if WITH_GEO is defined we need to do some special handling of
+			#the linking of binaries that need ADFLIB, LIBINGRES or INGRESLIB
+			if $(WITH_GEO) && ( ADFLIB in $(>) || LIBINGRES in $(>) || INGRESLIB in $(>) )
 			{
-				LINKLIBS on $(<) += -L$(GEOS_LOC) -L$(PROJ_LOC) -lgeos -lgeos_c -lproj ;
+				#if it requires a static link we must also link with C++
+				if $(<) in $(GEOLINKSTATIC)
+				{
+					LINKLIBS on $(<) += $(GEOSCLIB) $(GEOSLIB) $(PROJLIB) ; 
+					LINK on $(<) = $(C++) ;
+					if $(VERSHB)
+					{
+						LINKLIBS on $(SUFHB)$(DFS)$(<) += $(GEOSCLIBHB) $(GEOSLIBHB) $(PROJLIBHB) ;
+						LINK on $(SUFHB)$(DFS)$(<) = $(C++) ;
+					}
+				}
+				#otherwise we dynamically link libgeos/libproj, if required.
+				else
+				{
+					LINKLIBS on $(<) += -L$(GEOS_LOC) -L$(PROJ_LOC) -lgeos -lgeos_c -lproj ;
+					if $(VERSHB)
+					{
+						LINKLIBS on $(SUFHB)/$(<) += -L$(GEOSHB_LOC) -L$(PROJHB_LOC) -lgeos -lgeos_c -lproj ;
+					}
+				}
 			}
 			if $(VERSHB)
 			{
-				#same as above but for the hybrid versions
 				LINKLIBS on $(SUFHB)/$(<) += $(LDLIBMACH) ;
-				if ! ingbuild in $(<) && $(WITH_GEO) && ( ADFLIB in $(>) || LIBINGRES in $(>) || INGRESLIB in $(>) )
-				{
-					LINKLIBS on $(SUFHB)/$(<) += -L$(GEOSHB_LOC) -L$(PROJHB_LOC) -lgeos -lgeos_c -lproj ;
-				}
 			}
 		}
 	}

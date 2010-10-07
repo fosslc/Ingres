@@ -22,17 +22,17 @@
 ##	GTKHDR - Headers needed to build GTK appllications. (uses pkg-config)
 ##	PAXLOC - Location pax binary
 ##
-##      Geospatial Ingres uses the GEOS and PROJ.4 libraries.  The following 
-##      variables can be used to specify the locations.
+##	Geospatial Ingres uses the GEOS and PROJ.4 libraries.  The following 
+##	variables can be used to specify the locations.
 ##
-##      GEOS_INC - Location of the GEOS headers.
-##      GEOS_LOC - Location of the GEOS libraries.
-##      GEOSHB_LOC - If building in 64 bit, both 64 and 32 bit versions of 
-##                   the GEOS libraries are required.
-##      PROJ_INC - Location of the PROJ.4 headers.
-##      PROJ_LOC - Location of the PROJ.4 libraries.
-##      PROJHB_LOC - If building in 64 bit, both 64 and 32 bit versions of 
-##                   the PROJ.4 libraries are required.
+##	GEOS_INC - Location of the GEOS headers.
+##	GEOS_LOC - Location of the GEOS libraries.
+##	GEOSHB_LOC - If building hybrid, both 64 and 32 bit versions of 
+##			the GEOS libraries are required.
+##	PROJ_INC - Location of the PROJ.4 headers.
+##	PROJ_LOC - Location of the PROJ.4 libraries.
+##	PROJHB_LOC - If building hybrid, both 64 and 32 bit versions of 
+##			the PROJ.4 libraries are required.
 ##
 ########################################################3
 ##
@@ -179,6 +179,8 @@
 ##        Enhance logic for how we set Fedora xerces version (F13 = xerces 3.0)
 ##    31-Aug-2010 (troal01)
 ##        Renamed PROJ64_LOC and GEOS64_LOC to PROJHB_LOC and GEOSHB_LOC
+##    5-Oct-2010 (troal01)
+##        Removed proj64_need and geos64_need, rhybrid used instead.
 ##
 umask 002
 set +u 
@@ -187,9 +189,7 @@ PATH=$PATH:/usr/local/bin
 xvers=27 # Xerces version
 config_string=unknown
 geos_need=false
-geos64_need=false
 proj_need=false
-proj64_need=false
 gtk_need=false
 rpm_need=false
 libxml2_need=false
@@ -297,14 +297,10 @@ case ${unames} in
 		xcc_need=i686-unknown-linux-gnu
 		xcc_name=${xcc_need}-gcc
 		rhybrid=true
-                geos64_need=true
-                proj64_need=true
 		;;
         x86_64)
 		config_string=a64_lnx
 		rhybrid=true
-                geos64_need=true
-                proj64_need=true
 		;;
         ppc64)
 		config_string=ppc_lnx

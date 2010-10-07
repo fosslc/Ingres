@@ -4,9 +4,8 @@
 # History:
 #	24-jan-2005 (abbjo03)
 #	    ingbuild and iichksum are only delivered on Unix.
-#	30-Sep-2010 (troal01)
-#	    If WITH_GEO is defined, we must statically link ingbuild with our new
-#	    dependencies as well as link it with C++ since libgeos.a is a C++ lib.
+#	06-Oct-2010 (troal01)
+#	    Add ingbuild to GEOLINKSTATIC.
 
 SubDir ING_SRC front st install ;
 
@@ -15,21 +14,12 @@ IISUBSYS front st install ;
 if $(UNIX)
 {
 IIUTILEXE ingbuild : ipmain.sc ;
+GEOLINKSTATIC += ingbuild ;
 
 IINEEDLIBS ingbuild : INSTALLLIB UFLIB RUNSYSLIB RUNTIMELIB
 	FDLIB FTLIB FEDSLIB UILIB LIBQSYSLIB LIBQLIB UGLIB FMTLIB
 	AFELIB LIBQGCALIB SQLCALIB GCFLIB ADFLIB CUFLIB SQLCALIB
 	COMPATLIB ;
-if $(WITH_GEO)
-{
-	IINEEDLIBS ingbuild : GEOSCLIB GEOSLIB PROJLIB ;
-	LINK on ingbuild = $(C++) ;
-	# We also need to handle the hybrid binary
-	if $(VERSHB)
-	{
-		LINK on $(SUFHB)$(DFS)ingbuild = $(C++) ;
-	}
-}
 IIUNDEFS ingbuild : II_copyright ;
 }
 
