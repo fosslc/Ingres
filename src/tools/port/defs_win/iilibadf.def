@@ -137,7 +137,8 @@
 ;           Added adu_2strtomny_strict().
 ;	24-Aug-2010 (troal01)
 ;	    Added the four geometrycollection defs
-
+;	08-Oct-2010 (troal01)
+;	    Removed old POINT prototype definitions
 EXPORTS
 adb_breakpoint		@1				
 adb_optab_print		@2				
@@ -673,7 +674,6 @@ adu_soundex_dm		@542
 adu_nvchr_embchartouni  @543
 adu_nvchr_embunitochar  @544
 adu_2strtomny_strict	@545
-adu_1pt_cmp     @546
 adu_transform   @547
 adu_geometry_srid_fromWKB       @548
 adu_geometry_srid_fromText      @549
@@ -748,22 +748,16 @@ adu_linestring_fromWKB  @617
 adu_linestring_fromText @618
 adu_point_fromWKB       @619
 adu_point_fromText      @620
-adu_pt_to_pt    @621
-adu_2flt_to_pt  @622
-adu_point_y     @623
-adu_point_x     @624
-adu_strtopt     @625
-adu_pttostr     @626
-db_datatype_is_geom @627
-adt_key_incr		@628
-adt_key_decr		@629
-adi_dtfamily_retrieve	@630
-adu_rtree_cmp		@631
-adu_numpoints		@632
-adu_inside			@633
-adu_geom_asTextRaw  @634
-adu_geom_asTextRound @635
-adu_geometrycollection_srid_fromWKB @636
-adu_geometrycollection_srid_fromText @637
-adu_geometrycollection_fromWKB @638
-adu_geometrycollection_fromText @639
+adu_point_y     @621
+adu_point_x     @622
+db_datatype_is_geom @623
+adi_dtfamily_retrieve	@624
+adu_rtree_cmp		@625
+adu_numpoints		@626
+adu_inside			@627
+adu_geom_asTextRaw  @628
+adu_geom_asTextRound @629
+adu_geometrycollection_srid_fromWKB @630
+adu_geometrycollection_srid_fromText @631
+adu_geometrycollection_fromWKB @632
+adu_geometrycollection_fromText @633

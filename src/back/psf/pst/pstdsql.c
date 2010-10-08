@@ -4887,6 +4887,8 @@ pst_descinput_walk(
 **	    flag to ask QEF to load the data in one pass
 **      04-oct-2010 (maspa05) bug 124543
 **          Add in extra PARM and QRY lines for SC930 tracing. 
+**	08-Oct-2010 (troal01)
+**	    Removed i=0, it was causing compile error on Windows.
 */
 
 DB_STATUS
@@ -4971,7 +4973,6 @@ pst_cpdata(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PST_QNODE *tree, bool use_qsf)
 
 	if (ult_always_trace())
 	{
-	   i=0;
            void *f = ult_open_tracefile((PTR)psq_cb->psq_sessid);
 	   if (f)
 	   {
