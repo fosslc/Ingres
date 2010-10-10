@@ -93,6 +93,10 @@
 **   06-Sep-2010 (Ralph Loen) Bug 124348
 **      Added version of SQLColAttribute() dependent on _WIN64 macro for
 **      compatibility with MS implementation.
+**   07-Oct-2010 (Ralph Loen) Bug 124570
+**      Clone revised treatment of ConvertUCS2ToUCS4() and ConvertUCS4ToUCS2()
+**      from the driver.  This addresses potential byte-alignment issues on
+**      64-bit platforms.
 */ 
 
 /*
@@ -270,14 +274,24 @@ SQLRETURN SQL_API SQLConnectW(
     applyLock(SQL_HANDLE_DBC, pdbc);
     if (szWideDSN)
     {
-        ConvertWCharToChar( szWideDSN, cbWideDSN, pWork, OCFG_MAX_STRLEN, NULL, NULL, NULL);
-        if (!SQLGetPrivateProfileString ((char *)pWork, KEY_DATABASE, "", database,
-            sizeof(database),ODBC_INI))
+        ret = ConvertWCharToChar( szWideDSN, cbWideDSN, pWork, 
+            OCFG_MAX_STRLEN, NULL, NULL, NULL);
+        if (!SQL_SUCCEEDED(ret))
         {
+            insertErrorMsg(pdbc, SQL_HANDLE_DBC, SQL_HY001,
+                SQL_ERROR, NULL, 0);
+            rc = SQL_ERROR;
             releaseLock(SQL_HANDLE_DBC, pdbc);
+            goto routine_exit;
+        }
+
+        if (!SQLGetPrivateProfileString ((char *)pWork, KEY_DATABASE, 
+            "", database, sizeof(database),ODBC_INI))
+        {
             insertErrorMsg(pdbc, SQL_HANDLE_DBC, SQL_IM002,
                 SQL_ERROR, NULL, 0);
             rc = SQL_ERROR;
+            releaseLock(SQL_HANDLE_DBC, pdbc);
             goto routine_exit;
         }
     }
@@ -288,13 +302,31 @@ SQLRETURN SQL_API SQLConnectW(
             pdbc->dsn = STalloc(pWork);
         if (szWideUID)
         {
-            ConvertWCharToChar( szWideUID, cbWideUID, pWork, OCFG_MAX_STRLEN, NULL, NULL, NULL);
+            ret = ConvertWCharToChar( szWideUID, cbWideUID, pWork, 
+                OCFG_MAX_STRLEN, NULL, NULL, NULL);
+             if (!SQL_SUCCEEDED(ret))
+            {
+                insertErrorMsg(pdbc, SQL_HANDLE_DBC, SQL_HY001,
+                    SQL_ERROR, NULL, 0);
+                rc = SQL_ERROR;
+                releaseLock(SQL_HANDLE_DBC, pdbc);
+                goto routine_exit;
+            }
             if (cbWideUID > 0 || cbWideUID == SQL_NTS)
                 pdbc->uid = STalloc(pWork);
         }
         if (szWidePWD)
         {
-            ConvertWCharToChar( szWidePWD, cbWidePWD, pWork, OCFG_MAX_STRLEN, NULL, NULL, NULL);
+            ret = ConvertWCharToChar( szWidePWD, cbWidePWD, pWork, 
+                OCFG_MAX_STRLEN, NULL, NULL, NULL);
+            if (!SQL_SUCCEEDED(ret))
+            {
+                insertErrorMsg(pdbc, SQL_HANDLE_DBC, SQL_HY001,
+                    SQL_ERROR, NULL, 0);
+                rc = SQL_ERROR;
+                releaseLock(SQL_HANDLE_DBC, pdbc);
+                goto routine_exit;
+            }
             if (cbWidePWD > 0 || cbWidePWD == SQL_NTS)
             {
                 GChostname(hostname, sizeof(hostname));
@@ -2645,8 +2677,18 @@ SQLRETURN SQL_API SQLDriverConnectW(
 
     resetErrorBuff(hdbc, SQL_HANDLE_DBC);
     
-    ConvertWCharToChar( szWideConnStrIn, cbWideConnStrIn, (char *)pWork, 
+    ret = ConvertWCharToChar( szWideConnStrIn, cbWideConnStrIn, (char *)pWork, 
         OCFG_MAX_STRLEN, NULL, NULL, NULL);
+
+    if (!SQL_SUCCEEDED(ret))
+    {
+        applyLock(SQL_HANDLE_DBC, pdbc);
+        insertErrorMsg(hdbc, SQL_HANDLE_DBC, SQL_HY001,
+           SQL_ERROR, F_OD0015_IDS_WORKAREA, 0);
+        releaseLock(SQL_HANDLE_DBC, pdbc);
+        rc = SQL_ERROR;
+        goto routine_exit;
+    }
 
     if (penv->pooling)
     {
@@ -3665,13 +3707,14 @@ exit_routine:
 **
 **  On exit:  Data is copied to buffer, possibly truncated, null terminated.
 **
-**  Returns:  
-**            SQL_SUCCESS           String returned successfully.
-**            SQL_ERROR             Unsuccessful conversion.
-**            SQL_SUCCESS_WITH_INFO String truncation.
-**  History:
-**   26-Feb-1007 (Ralph Loen) SIR 117786
-**      Created from common!odbc!driver unicode.c.
+**  Returns:  SQL_SUCCESS           String returned successfully.
+**            SQL_ERROR             Unsuccessful conversion.   
+**            SQL_SUCCESS_WITH_INFO String truncation.   
+**  History:   
+**   26-Feb-2007 (Ralph Loen) SIR 117786   
+**      Created from common!odbc!driver unicode.c. 
+**   07-Oct-2010 (Ralph Loen) Bug 124570
+**      Fill error message block upon errors.
 */
 RETCODE ConvertCharToWChar(
     char     * szValue,
@@ -3687,8 +3730,9 @@ RETCODE ConvertCharToWChar(
     RETCODE    rc    = SQL_SUCCESS;
     IIAPI_CONVERTPARM   cv;
     BOOL isUcs4 = (sizeof(SQLWCHAR) == 4 ? TRUE : FALSE);
-    i2 i; 
     i2 *ucs2buf = NULL;
+    i2 nt = 0;
+    i4 nt4 = 0;
 
     if (cbValue == SQL_NTS)              /* if length NTS, get length */
     {
@@ -3698,9 +3742,13 @@ RETCODE ConvertCharToWChar(
             cbValue = 0;
     }
 
-    if (szValue == NULL  ||  cbValue <= 0)  /* if no input string, return 0 now*/
+    if (szValue == NULL  ||  cbValue <= 0)  /* if no input string, */
+                                            /* return 0 now*/
     {
-        if (rgbWideValue  &&  cbWideValueMax>0)  /* room in buffer for null-term? */
+        /* 
+        ** Room in buffer for null-term? 
+        */
+        if (rgbWideValue  &&  cbWideValueMax>0) 
             *rgbWideValue = 0;
         if (pcbValue)
             *pcbValue = 0;
@@ -3764,8 +3812,10 @@ RETCODE ConvertCharToWChar(
         return SQL_ERROR;
     }
 
- /* szWideValue -> Unicode string
-    cbWideValue  = Unicode string length in characters */
+    /* 
+    ** szWideValue -> Unicode string
+    ** cbWideValue  = Unicode string length in characters 
+    */
 
     if (pcbValue)   /* if SWORD destination count field present */
        *pcbValue = (SWORD)cbValue;
@@ -3786,13 +3836,15 @@ RETCODE ConvertCharToWChar(
         {
             if (isUcs4)
             {
-                for (i = 0; i < cbValue; i++)
-                    rgbWideValue[i] = ucs2buf[i]; 
+                ConvertUCS2ToUCS4(ucs2buf, rgbWideValue, cbValue);
+                /* Null terminate. */
+                I4ASSIGN_MACRO(nt4,*(rgbWideValue+cbValue));
             }
             else
+            {
                 memcpy (rgbWideValue, szWideValue, cbWideValue);
-
-            *(rgbWideValue+cbValue)=0;  /* null terminate */
+                *(rgbWideValue+cbValue) = nt;  /* null terminate */
+            }
         }
         else
         {   /* need to truncate some */
@@ -3801,13 +3853,16 @@ RETCODE ConvertCharToWChar(
                 cbValue = cbWideValueMax - 1;
                 if (isUcs4)
                 {
-                    for (i = 0; i < cbValue; i++)
-                        rgbWideValue[i] = ucs2buf[i]; 
+                    ConvertUCS2ToUCS4(ucs2buf, rgbWideValue, cbValue);
+                    /* Null terminate. */
+                    I4ASSIGN_MACRO(nt4,*(rgbWideValue+cbValue));
                 }
                 else
-                    memcpy (rgbWideValue, szWideValue, cbValue*sizeof(SQLWCHAR));
-
-                *(rgbWideValue + cbValue) = 0;
+                {
+                    memcpy (rgbWideValue, szWideValue, 
+                        cbValue*sizeof(SQLWCHAR));
+                    *(rgbWideValue + cbValue) = nt;
+                }
             }
             rc = SQL_SUCCESS_WITH_INFO;
         }
@@ -3818,6 +3873,7 @@ RETCODE ConvertCharToWChar(
     return rc;
 }
 
+
 /*
 **  ConvertWCharToChar
 **
@@ -3825,7 +3881,7 @@ RETCODE ConvertCharToWChar(
 **
 **  On entry: szWideValue  -->Wide (Unicode) string to convert.
 **            cbWideValue   = length in char of input buffer
-**                              or SQL_NTS if null-terminated.
+**                               or SQL_NTS if null-terminated.
 **            rgbValue     -->where to return null-terminated ANSI string.
 **            cbValueMax    = length of output buffer.
 **            pcbValue      = where to return length (SWORD) of ANSI string
@@ -3837,13 +3893,14 @@ RETCODE ConvertCharToWChar(
 **
 **  On exit:  Data is copied to buffer, possibly truncated, null terminated.
 **
-**  Returns:  
-**            SQL_SUCCESS           String returned successfully.
-**            SQL_ERROR             Unsuccessful conversion.
-**            SQL_SUCCESS_WITH_INFO String truncation.
-**  History:
-**   26-Feb-1007 (Ralph Loen) SIR 117786
-*      Created from common!odbc!driver unicode.c.
+**  Returns:  SQL_SUCCESS           String returned successfully.
+**            SQL_ERROR             Unsuccessful conversion.   
+**            SQL_SUCCESS_WITH_INFO String truncation.   
+**  History:   
+**   26-Feb-2007 (Ralph Loen) SIR 117786   
+**      Created from common!odbc!driver unicode.c. 
+**   07-Oct-2010 (Ralph Loen) Bug 124570
+**      Fill error message block upon errors.
 */
 RETCODE ConvertWCharToChar(
     SQLWCHAR * szWideValue,
@@ -3860,7 +3917,7 @@ RETCODE ConvertWCharToChar(
     IIAPI_CONVERTPARM   cv;
     BOOL isUcs4 = (sizeof(SQLWCHAR) == 4 ? TRUE : FALSE);
     u_i2 *ucs2buf = NULL;
-
+ 
     if (cbWideValue == SQL_NTS)              /* if length NTS, get length */
     {
         if (szWideValue)
@@ -3871,35 +3928,39 @@ RETCODE ConvertWCharToChar(
 
     if (szWideValue == NULL  ||  rgbValue == NULL  ||
         cbWideValue <= 0)  /* if no input string, return 0 now*/
-       {
+    {
         if (rgbValue  &&  cbValueMax>0)  /* room in buffer? */
-           *rgbValue = '\0';
+            *rgbValue = '\0';
         if (pcbValue)
-           *pcbValue = 0;
+            *pcbValue = 0;
         if (pdwValue)
-           *pdwValue = 0;
+            *pdwValue = 0;
         if (plenValue)
-           *plenValue = 0;
+            *plenValue = 0;
         return SQL_SUCCESS;
-       }
+    }
 
     if (isUcs4)
     {
-        ucs2buf = (u_i2 *)MEreqmem(0, ((cbWideValue+1)*sizeof(u_i2)), TRUE, NULL);
+        ucs2buf = (u_i2 *)MEreqmem(0, ((cbWideValue+1)*sizeof(u_i2)), 
+            TRUE, NULL);
         if (ucs2buf == NULL)  /* no memory!? */
             return SQL_ERROR;
+
         ConvertUCS4ToUCS2((u_i4*)szWideValue, (u_i2*)ucs2buf, cbWideValue);
     }
 
-    cbWideValue *= sizeof(SQLWCHAR); 
+    cbWideValue *= sizeof(i2); 
 
     szValue = MEreqmem(0, cbValueMax+2, TRUE, NULL);
 
     if (szValue == NULL)  /* no memory!? */
         return SQL_ERROR;
 
- /* szValue -> target buffer to hold character string
-    cbValue  = target buffer length in bytes */
+    /* 
+    ** szValue -> target buffer to hold character string
+    ** cbValue  = target buffer length in bytes 
+    */
 
     if (cbWideValue)     /* convert the Unicode string to character */
     {
@@ -3918,13 +3979,13 @@ RETCODE ConvertWCharToChar(
         cv.cv_srcValue.dv_length    = (II_UINT2) cbWideValue;
         cv.cv_dstDesc.ds_dataType   = IIAPI_VCH_TYPE;
         cv.cv_dstDesc.ds_nullable   = FALSE;
-        cv.cv_dstDesc.ds_length     = (II_UINT2)cbValueMax;
+        cv.cv_dstDesc.ds_length     = (II_UINT2)cbValueMax+2;
         cv.cv_dstDesc.ds_precision  = 0;
         cv.cv_dstDesc.ds_scale      = 0;
         cv.cv_dstDesc.ds_columnType = IIAPI_COL_TUPLE;
         cv.cv_dstDesc.ds_columnName = NULL;
         cv.cv_dstValue.dv_null      = FALSE;
-        cv.cv_dstValue.dv_length    = (II_UINT2)cbValueMax;
+        cv.cv_dstValue.dv_length    = (II_UINT2)cbValueMax+2;
         cv.cv_dstValue.dv_value     = szValue;
 
         IIapi_convertData(&cv);  
@@ -3941,8 +4002,10 @@ RETCODE ConvertWCharToChar(
     cbValue = *(u_i2 *)szValue;
     szData = szValue + sizeof(u_i2);
     
- /* szData -> character string
-    cbValue  = character string length in bytes */
+    /* 
+    ** szData -> character string
+    ** cbValue  = character string length in bytes 
+    */
 
     if (pcbValue)   /* if destination count field (SWORD) present */
        *pcbValue = (SWORD)cbValue;
@@ -3955,6 +4018,7 @@ RETCODE ConvertWCharToChar(
                     /* number of character excluding null-term char*/
 
     if (rgbValue)   /* if destination buffer present */
+    {
         if (cbValue < cbValueMax) /* fits well into the target buffer*/
         {
             memcpy (rgbValue, szData, cbValue);
@@ -3963,12 +4027,14 @@ RETCODE ConvertWCharToChar(
         else
         {   /* need to truncate some */
             if (cbValueMax > 0)
-               {cbValue = (u_i2)cbValueMax - 1;
+            {
+                cbValue = (u_i2)cbValueMax - 1;
                 memcpy (rgbValue, szData, cbValue);
                 *(rgbValue + cbValue) = '\0';
-               }
+            }
             rc = SQL_SUCCESS_WITH_INFO;
         }
+    }
 
     if (szValue)
         MEfree((PTR)szValue); /* free work area for work string */
@@ -3991,10 +4057,6 @@ RETCODE ConvertWCharToChar(
 **  On exit:  Data is copied to buffer, possibly truncated, null terminated.
 **
 **  Returns:  SQL_SUCCESS           String returned successfully.
-**
-**  History:
-**   26-Feb-1007 (Ralph Loen) SIR 117786
-**      Created from common!odbc!driver unicode.c.
 */
 RETCODE ConvertUCS2ToUCS4(
     u_i2     * p2,
@@ -4003,7 +4065,8 @@ RETCODE ConvertUCS2ToUCS4(
 {
     SQLINTEGER     i;
     u_i4       sizeofSQLWCHAR = sizeof(SQLWCHAR);
-    u_i4       tempui4;
+    u_i2       tmp2;
+    u_i4       tmp4;
 
     if (sizeofSQLWCHAR != 4)  /* return if not needed */
         return SQL_SUCCESS;
@@ -4012,11 +4075,11 @@ RETCODE ConvertUCS2ToUCS4(
     p4 = p4 + len - 1;    /* and process right to left */
 
     for (i=0; i < len; i++, p2--, p4--)
-        {
- /*      *p4 = *p2;               */
-         tempui4 = *p2;
-         I4ASSIGN_MACRO(tempui4, *p4);
-        }
+    {
+        I2ASSIGN_MACRO(*p2, tmp2);
+        tmp4 = (u_i4)tmp2;
+        I4ASSIGN_MACRO(tmp4, *p4);
+    }
 
     return SQL_SUCCESS;
 }
@@ -4034,10 +4097,6 @@ RETCODE ConvertUCS2ToUCS4(
 **  On exit:  Data is copied to buffer, possibly truncated, null terminated.
 **
 **  Returns:  SQL_SUCCESS           String returned successfully.
-**
-**  History:
-**   26-Feb-1007 (Ralph Loen) SIR 117786
-**     Created from common!odbc!driver unicode.c.
 */
 RETCODE ConvertUCS4ToUCS2(
     u_i4     * p4,
@@ -4046,6 +4105,10 @@ RETCODE ConvertUCS4ToUCS2(
 {
     SQLINTEGER     i;
     u_i4       sizeofSQLWCHAR = sizeof(SQLWCHAR);
+    u_i4       tmp4;
+    u_i2       tmp2;
+
+    char *p = (char *)p2;
 
     if (sizeofSQLWCHAR != 4)  /* return if not needed */
         return SQL_SUCCESS;
@@ -4054,7 +4117,11 @@ RETCODE ConvertUCS4ToUCS2(
     /* and process left to right */
 
     for (i=0; i < len; i++, p2++, p4++)
-        *p2 = (u_i2)(*p4);
+    {
+        I4ASSIGN_MACRO(*p4, tmp4); 
+        tmp2 = (u_i2)tmp4;
+        I2ASSIGN_MACRO(tmp2, *p2);
+    }
 
     return SQL_SUCCESS;
 }
