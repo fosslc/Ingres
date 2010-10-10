@@ -561,6 +561,9 @@
 #       25-May-2010 (horda03)
 #           On VMS LIBFELIB.EXE is built using RAATLIB and ABFRTLIB, so include
 #           these in LIBQ_LIBS.
+#    20-Sep-2010 (hanje04)
+#  	    Fix build for FC 13/ Xerces 3.x, add XERCLIB to handle lib
+#  	    naming anomalies between 2.x and 3.0
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE DEFINITIONS and EXCEPTIONS
 #
@@ -2635,6 +2638,7 @@ INGINSTALL2	= Ingres.Install.dll ;
 if ! $(NT)
 {
     XERCVERS ?= 27 ; # default to 25 if not set elsewhere
+    XERCLIB ?= libxerces-c.$(SLSFX).$(XERCVERS).0 ;
     SHXERCESLIB = libxerces-c.$(SLSFX) ;
     SHXERCESLIB_LINKFLAG = -lxerces-c ;
     SHXERCESLIBHB = $(SUFHB)/libxerces-c.$(SLSFX) ;
@@ -2653,7 +2657,7 @@ if ! $(NT)
     }
     else
     {
-	XERCESCLIB = libxerces-c.$(SLSFX).$(XERCVERS).0 ;
+	XERCESCLIB = $(XERCLIB) ;
     }
 }
 else

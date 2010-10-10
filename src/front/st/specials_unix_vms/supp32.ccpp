@@ -16,6 +16,9 @@
 **          fails to run without it.
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**      20-Sep-2010 (hanje04)
+**          Fix build for FC 13/ Xerces 3.x, add XERCLIB to handle lib
+**          naming anomalies between 2.x and 3.0
 */ 
 
 PART	supp32
@@ -52,7 +55,7 @@ PART	supp32
 # elif defined(OSX)
       EXECUTABLE libxerces-c.$XERCVERS.$SLSFX
 # else
-      EXECUTABLE libxerces-c.$SLSFX.$XERCVERS.0
+      EXECUTABLE $XERCLIB
 # endif
       LINK libxerces-c.$SLSFX.$XERCVERS
       LINK libxerces-c.$SLSFX
