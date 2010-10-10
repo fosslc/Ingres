@@ -197,6 +197,9 @@
 **          not be blocked because of the existence of dependencies that
 **          would be broken by an actual modify. Turn off dependency checking
 **          for no-op modify operations such as table_debug.
+**	08-Oct-2010 (miket) SIR 122403 BUG 124543 SD 146855
+**	    MODIFY <table> ENCRYPT is also a MODIFY that does not modify the
+**	    table structure, so set PSL_MDF_NO_OP.
 [@history_template@]...
 */
 
@@ -370,7 +373,7 @@ static const struct _MODIFY_STORNAMES
 	 DMU_TO_STATEMENT_LEVEL_UNIQUE, DMU_C_ON, PSS_WC_UNIQUE_SCOPE, PSL_MDF_UNIQUESCOPE
 	},
 	{"encrypt",
-	 DMU_ENCRYPT, DMU_C_OFF, -1, 0
+	 DMU_ENCRYPT, DMU_C_OFF, -1, PSL_MDF_NO_OP
 	},
 	{"table_verify",
 	 DMU_VERIFY, DMU_V_VERIFY, -1, PSL_MDF_PPART_ONLY
