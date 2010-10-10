@@ -209,6 +209,13 @@
 **	    BUG 123942
 **	    If only renamed instance exist, UM_RENAME won't be set so
 **	    test for UM_TRUE also when creating temp rename location.
+**	04-Oct-2010 (hanje04)
+**	    BUG 124537
+**	    Improve error reporting in install_control_thread().
+**	    If an error occurs generating a response file, generating the 
+**	    command line or spawning the installation process. Popup an
+**	    error box to the user and abort the installation.
+**	    Consolidate out/err display variables too.
 */
 
 # define RF_VARIABLE "export II_RESPONSE_FILE"
@@ -888,11 +895,14 @@ install_control_thread( void *arg )
     GtkWidget		*OutTextView;
     GtkWidget		*ErrTextView;
     GtkWidget		*InstProgBar;
-    GtkTextBuffer	*inst_out_buffer;
-    GtkTextBuffer	*inst_err_buffer;
+    GtkTextBuffer	*out_buffer;
+    GtkTextBuffer	*err_buffer;
     II_RFAPI_STATUS	rfstat;
     PID			ppid;
     char	*inst_cmdline;
+    char	*errstr = NULL;
+# define MAX_ERR_LEN 250
+    char	errbuf[MAX_ERR_LEN];
     int	i = 1; /* loop counter */
 
     /* initialize log file names */
@@ -901,20 +911,59 @@ install_control_thread( void *arg )
     STprintf( inst_stderr, "%s.%d", STDERR_LOGFILE_NAME, ppid );
 
     /* generate response file */
-    rfstat = generate_response_file();
+    if ( rfstat = generate_response_file() != II_RF_ST_OK )
+    {
+# define ERROR_CREATE_RF_FAIL "Response file creation failed with:\n\t"
+	STlpolycat( 2, MAX_ERR_LEN,
+		ERROR_CREATE_RF_FAIL,
+		IIrfapi_errString( rfstat ), &errbuf[0] );
+	errstr = errbuf;
+    }
 	
-    if ( rfstat != II_RF_ST_OK )
-        DBG_PRINT( "ERROR: Failed to create response file with error %s\n",
-			IIrfapi_errString(rfstat) );
-
     /* generate installation command line */
-    if ( generate_command_line( &inst_cmdline ) != OK )
-	DBG_PRINT( "ERROR: Failed to generate command line\n" );
+    if ( errstr == NULL && generate_command_line( &inst_cmdline ) != OK )
+    {
+# define ERROR_GEN_CMD_FAIL "Failed to generate command line"
+	errstr = ERROR_GEN_CMD_FAIL;
+        DBG_PRINT( "Command line is %s\n", inst_cmdline );
+    }
 
-    DBG_PRINT( "Command line is %s\n", inst_cmdline );
+    if ( errstr == NULL && do_install( inst_cmdline ) != OK )
+    {
+# define ERROR_RUN_CMD_FAIL  "Failed to spawn installation process"
+	errstr = ERROR_RUN_CMD_FAIL;
+        DBG_PRINT( "Command line is %s\n", inst_cmdline );
+    }
 
-    if ( do_install( inst_cmdline ) != OK )
-	DBG_PRINT( "ERROR: Failed to lauch install process\n" );
+    if ( errstr != NULL )
+    {
+	/*
+	** Something went wrong before the install was launched
+	** notify the user and bail
+	*/
+
+	/* mark the stage as failed */
+	stage_names[current_stage]->status = ST_FAILED;
+
+	/* write output to failure window */
+	gdk_threads_enter();
+	ErrTextView = lookup_widget( IngresInstall, ug_mode & UM_INST ?
+						"InstFailErrorTextView" :
+						"UpgFailErrorTextView" );
+	err_buffer = gtk_text_view_get_buffer( GTK_TEXT_VIEW( ErrTextView ) );
+	gtk_text_buffer_set_text( err_buffer, errstr, STlen(errstr) );
+
+        /* notify user */
+	popup_error_box( errstr );
+
+	/* move on again */
+	on_master_next_clicked( NULL, NULL );
+
+	gdk_threads_leave();
+
+	/* quit thread */
+	return(NULL); 
+    }
 
     /* get GTK thread lock before doing GTK stuff */
     gdk_threads_enter();
@@ -923,16 +972,17 @@ install_control_thread( void *arg )
     OutTextView = lookup_widget( IngresInstall, ug_mode & UM_INST ?
 						"InstOutTextView" :
 						"UpgOutTextView" );
-    inst_out_buffer = gtk_text_view_get_buffer( GTK_TEXT_VIEW(
+    out_buffer = gtk_text_view_get_buffer( GTK_TEXT_VIEW(
 						 OutTextView ) );
     ErrTextView = lookup_widget( IngresInstall, ug_mode & UM_INST ?
 						"InstErrTextView" :
 						"UpgErrTextView" );
-    inst_err_buffer = gtk_text_view_get_buffer( GTK_TEXT_VIEW(
+    err_buffer = gtk_text_view_get_buffer( GTK_TEXT_VIEW(
 						 ErrTextView ) );
     InstProgBar = lookup_widget( IngresInstall, ug_mode & UM_INST ?
 						"installprogress" : 
 						"upgprogress" );
+
     gtk_progress_bar_set_pulse_step( GTK_PROGRESS_BAR( InstProgBar ), 0.01 );
 
     /* release GTK thread lock so that we don't hang the app whilst we sleep */
@@ -946,12 +996,10 @@ install_control_thread( void *arg )
 	{
             /*  wait and then try again, the output files may just be empty */
 	    DBG_PRINT( "Calling write_file_to_text_buffer()\n" );
-	    if ( write_file_to_text_buffer( inst_stdout,
-					inst_out_buffer ) != OK )
+	    if ( write_file_to_text_buffer( inst_stdout, out_buffer ) != OK )
 		DBG_PRINT( "ERROR: Failed to write to output buffer\n" );
 
-	    if ( write_file_to_text_buffer( inst_stderr,
-					inst_err_buffer ) != OK )
+	    if ( write_file_to_text_buffer( inst_stderr, err_buffer ) != OK )
 		DBG_PRINT( "ERROR: Failed to write to output buffer\n" );
 	    
 	    /* reset counter */
@@ -972,19 +1020,14 @@ install_control_thread( void *arg )
     } while ( childinfo.alive ) ;
 
     /* one last read to make sure we got everything */
-    if ( write_file_to_text_buffer( inst_stdout, inst_out_buffer ) != OK )
+    if ( write_file_to_text_buffer( inst_stdout, out_buffer ) != OK )
 	DBG_PRINT( "ERROR: Failed to write to output buffer\n" );
 
-    if ( write_file_to_text_buffer( inst_stderr, inst_err_buffer ) != OK )
+    if ( write_file_to_text_buffer( inst_stderr, err_buffer ) != OK )
 	DBG_PRINT( "ERROR: Failed to write to output buffer\n" );
 
     if ( childinfo.exit_status != OK )
     {
-	GtkWidget	*FailErrTextView;
-	GtkWidget	*FailOutTextView;
-        GtkTextBuffer	*fail_err_buffer;
-        GtkTextBuffer	*fail_out_buffer;
-
 # define ERROR_COULD_NOT_COMPLETE_INSTALL "The installation process did not\ncomplete successfully"
 	/* take GTK thread lock */
 	gdk_threads_enter();
@@ -993,24 +1036,23 @@ install_control_thread( void *arg )
 	stage_names[current_stage]->status = ST_FAILED;
 
 	/* write output to failure window */
-	FailErrTextView = lookup_widget( IngresInstall, ug_mode & UM_INST ?
+	ErrTextView = lookup_widget( IngresInstall, ug_mode & UM_INST ?
 						"InstFailErrorTextView" :
 						"UpgFailErrorTextView" );
-	fail_err_buffer = gtk_text_view_get_buffer( GTK_TEXT_VIEW(
-						 FailErrTextView ) );
+	err_buffer = gtk_text_view_get_buffer( GTK_TEXT_VIEW( ErrTextView ) );
 
-	FailOutTextView = lookup_widget( IngresInstall, ug_mode & UM_INST ?
+	OutTextView = lookup_widget( IngresInstall, ug_mode & UM_INST ?
 						"InstFailOutputTextView" :
 						"UpgFailOutputTextView" );
-	fail_out_buffer = gtk_text_view_get_buffer( GTK_TEXT_VIEW(
-						 FailOutTextView ) );
+	out_buffer = gtk_text_view_get_buffer( GTK_TEXT_VIEW( OutTextView ) );
+
 	/* Release the lock before calling write_file_to_buffer() */
 	gdk_threads_leave();
 
-	if ( write_file_to_text_buffer( inst_stderr, fail_err_buffer ) != OK )
+	if ( write_file_to_text_buffer( inst_stderr, err_buffer ) != OK )
 	     DBG_PRINT( "ERROR: Failed to write to error buffer\n" );
 
-	if ( write_file_to_text_buffer( inst_stdout, fail_out_buffer ) != OK )
+	if ( write_file_to_text_buffer( inst_stdout, out_buffer ) != OK )
 	     DBG_PRINT( "ERROR: Failed to write to output buffer\n" );
 
     }

@@ -45,6 +45,8 @@
 **	    Added pattern related MO access
 **      09-Feb-2010 (smeke01) b123226, b113797 
 **	    MOlongout/MOulongout now take i8/u_i8 parameter.
+**	04-Oct-2010 (kiria01) b124065
+**	    Fix compiler warnings.
 */
 
 static STATUS	ADFmo_dt_index(
@@ -98,7 +100,7 @@ static MO_CLASS_DEF ADFmo_adg_dt_classes[] =
 	CL_OFFSETOF(ADI_DATATYPE, adi_dtstat_bits),
 	MOintget, MOnoset, (PTR)0, ADFmo_dt_index
     },
-    { 0 }
+    { 0 , NULL, 0, 0, 0, 0, NULL, NULL, NULL, NULL}
 };
 
 
@@ -143,7 +145,7 @@ static MO_CLASS_DEF ADFmo_adg_op_classes[] =
 	CL_OFFSETOF(ADI_OPRATION, adi_opcntfi),
 	MOintget, MOnoset, (PTR)0, ADFmo_op_index
     },
-    { 0 }
+    { 0 , NULL, 0, 0, 0, 0, NULL, NULL, NULL, NULL}
 };
 
 static char fi_index[] = "exp.adf.adg.fi_ix";
@@ -208,7 +210,7 @@ static MO_CLASS_DEF ADFmo_adg_fi_classes[] =
 	CL_OFFSETOF(ADI_FI_DESC, adi_dt[3]),
 	MOintget, MOnoset, (PTR)0, ADFmo_fi_index
     },
-    { 0 }
+    { 0 , NULL, 0, 0, 0, 0, NULL, NULL, NULL, NULL}
 };
 
 
@@ -577,7 +579,7 @@ static MO_CLASS_DEF ADFmo_adu_pat_control[] =
 	sizeof(i4), MO_READ | MO_DBA_WRITE | MO_SERVER_WRITE | MO_SYSTEM_WRITE | MO_SECURITY_WRITE,
 	0, 0, MOintget, MOintset, (PTR)&ADU_pat_seg_sz, MOcdata_index
     },
-    {0}
+    { 0 , NULL, 0, 0, 0, 0, NULL, NULL, NULL, NULL}
 };
 
 

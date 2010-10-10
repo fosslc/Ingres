@@ -3623,6 +3623,9 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	04-Oct-2010 (maspa05) b124531
 **	    Return error if user attempts to SET TRACE RECORD to invalid
 **          directory.
+**       5-Oct-2010 (hanal04) Bug 124529
+**          Turn off cache_dynamic for prepared statements with VLUPs
+**          in the target list.
 */
 %{
 
@@ -27585,7 +27588,8 @@ prepare:	prepare_kwrd generic_ident prep_from opt_repeat prepare_stmt_list
     {
 	DB_STATUS   status;
 
-	if (psq_cb->psq_mode != PSQ_RETRIEVE)
+	if ((psq_cb->psq_mode != PSQ_RETRIEVE) || 
+            (cb->pss_stmt_flags2 & PSS_STMT_NO_CACHEDYN))
 	    $4 = $Yrepeat_dyn = FALSE;
 
 	/* Extract information from PSQ_CB and PSS_SESBLK.
@@ -27603,7 +27607,8 @@ prepare:	prepare_kwrd generic_ident prep_from opt_repeat prepare_stmt_list
     {
 	DB_STATUS   status;
 
-	if (psq_cb->psq_mode != PSQ_RETRIEVE)
+	if ((psq_cb->psq_mode != PSQ_RETRIEVE) || 
+            (cb->pss_stmt_flags2 & PSS_STMT_NO_CACHEDYN))
 	    $7 = $Yrepeat_dyn = FALSE;
 
 	/* Extract information from PSQ_CB and PSS_SESBLK.
@@ -36317,7 +36322,10 @@ constant:		number
 
 	++cb->pss_highparm;
 	if ($Yin_target_clause)
-	   ++cb->pss_targparm;
+        {
+           ++cb->pss_targparm;
+           cb->pss_stmt_flags2 |= PSS_STMT_NO_CACHEDYN;
+        }
 	const_node.pst_tparmtype = PST_USER;
 	if ($Yrepeat_dyn && psq_mode == PSQ_RETRIEVE)
 	    const_node.pst_tparmtype = PST_RQPARAMNO;

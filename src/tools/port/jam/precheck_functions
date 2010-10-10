@@ -24,6 +24,9 @@
 ##          set without xml2 header location.
 ##       2-Jun-2010 (maspa05)
 ##          Check for minimum version of gtk (2.4)
+##    20-Sep-2010 (hanje04)
+##	  Fix build for FC 13/ Xerces 3.x. Determine version from source
+##	  instead of using "hard coded" xvers.
 
 # check_for_file ENVVARIABLE string1 string2 ...
 # checks whether one of the given strings is a file
@@ -172,16 +175,36 @@ check_for_xerces ()
   else
     [ "$XERCESCROOT" ] || unset XERCESCROOT
   fi
+  # library naming varies between versions
+  xmaj=`grep "^#[ \t]*define[ \t]*XERCES_VERSION_MAJOR" \
+	${XERCESCROOT}/include/xercesc/util/XercesVersion.hpp | cut -d' ' -f3`
+  xmin=`grep "^#[ \t]*define[ \t]*XERCES_VERSION_MINOR" \
+	${XERCESCROOT}/include/xercesc/util/XercesVersion.hpp | cut -d' ' -f3`
+
+  case "$xmaj" in 
+    3)
+	xvers=${xmaj}.${xmin}
+	xlibvers=$xvers
+	xlibname=libxerces-c-${xlibvers}.${slsfx}
+	;;
+    2)
+	xvers=${xmaj}${xmin}
+	xlibvers=${xvers}.0
+	xlibname=libxerces-c.${slsfx}.${xlibvers}
+	;;
+     *) xlibname=unknown
+	;;
+  esac
   if $rhybrid ; then
-    if [ -f /usr/lib64/libxerces-c.${slsfx}.${xvers}.0 ] ; then
+    if [ -f /usr/lib64/${xlibname} ] ; then
         XERCESLOCHB=/usr/lib
         XERCESLOC=/usr/lib64
     fi
   else
-    if [ -f /usr/lib/libxerces-c.${slsfx}.${xvers}.0 ] ; then
+    if [ -f /usr/lib/${xlibname} ] ; then
         XERCESLOC=/usr/lib
     fi
-    if [ -f /usr/lib64/libxerces-c.${slsfx}.${xvers}.0 ] ; then
+    if [ -f /usr/lib64/${xlibname} ] ; then
         XERCESLOCHB=/usr/lib64
     fi
   fi
@@ -220,7 +243,9 @@ check_for_xerces ()
   [ "$XERCESCROOT" ] || return 1
   
   XERCVERS=$xvers
+  XERCLIB=$xlibname
   export XERCVERS
+  export XERCLIB
   export XERCESCROOT
   export XERCESLOC
   [ "$XERCESLOCHB" ] && export XERCESLOCHB

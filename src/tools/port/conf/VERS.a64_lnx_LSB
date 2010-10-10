@@ -7,6 +7,9 @@
 #	21-Apr-2010
 #	    SIR 123296
 # 	    Created from VERS.int_lnx_LSB
+# 	20-Sept-2010
+# 	    SIR 123296
+# 	    Bump version
 
 
 #set: config32 int_lnx
@@ -27,7 +30,7 @@ SVR_ARLIB = "TRUE" ; #set: option SVR_AR
 # int_lnx is a hybrid capable build that is built in pure 32 bits.
 BUILD_ARCH = "64" ;	#set: arch 64
 XERCES_ARCH ?= 64 ;	# but change to 64 if building on a 64-bit box
-SLVERS = 10.0.0 ; # Used for versioning UDT and SPAT shlibs
+SLVERS = 10.1.0 ; # Used for versioning UDT and SPAT shlibs
 
 PAX_CHECK = FALSE ;
 PLATFORM_JAMDEFS = hyb86_lnx ;

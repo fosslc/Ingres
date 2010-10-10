@@ -249,6 +249,7 @@ BEGIN
     IDS_INSTALLJRE          "Installing Java Runtime...\t\t\t\t"
     IDS_INSTALL_ENG_ACROBAT "The locale setting of the target machine does not match the language version of the Adobe Acrobat Reader packaged with this version of Ingres. Do you want to install it anyway?"
     IDS_LOADDEMODB          "Loading Demonstration Database Data...\t"
+    IDS_UPGRADEDEMODB	    "Updating Demonstration Database...\t"
     IDS_SUCCEEDED2          "Ingres installation complete!"
     IDS_TITLE_DBA           "Ingres DBA Tools %s Configuration"
     IDS_ADDING_VNODES	    "Adding Virtual Nodes...\t\t"

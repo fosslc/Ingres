@@ -101,6 +101,9 @@
 **	    SIR 123296
 **	    Use LIB_TGT instead of 'lib' for LSB builds so we can handle 64bit
 **	    builds which install under /usr/lib64
+**     20-Sep-2010 (hanje04)
+**          Fix build for FC 13/ Xerces 3.x, add XERCLIB to handle lib
+**          naming anomalies between 2.x and 3.0
 */
 
 /*
@@ -177,7 +180,7 @@ PART  sharelib
       LINK $XERCLIB$SLSFX.$XERCVERS
       LINK $XERCLIB$SLSFX
 # elif ! defined(conf_LSB_BUILD)
-      EXECUTABLE libxerces-c.$SLSFX.$XERCVERS.0
+      EXECUTABLE $XERCLIB
       LINK libxerces-c.$SLSFX.$XERCVERS
       LINK libxerces-c.$SLSFX
 # endif

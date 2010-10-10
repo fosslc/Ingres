@@ -301,6 +301,9 @@
 **      05-feb-2009 (joea)
 **          Use CMischarset_doublebyte and CMischarset_utf8, instead of
 **          CMget_attr.
+**	04-Oct-2010 (kiria01) b124065
+**	    Cater for support of eqv operator in coercions and the name
+**	    changes for the operator table (now built from fi_defn.txt)
 **/
 
 
@@ -312,11 +315,11 @@
 
 GLOBALDEF				i4				adg_startup_instances=0;
 GLOBALCONSTREF			ADI_DATATYPE	    Adi_1RO_datatypes[];
-GLOBALCONSTREF			ADI_OPRATION	    Adi_2RO_operations[];
+GLOBALCONSTREF			ADI_OPRATION	    Adi_3RO_operations[];
 GLOBALCONSTREF			ADI_FI_DESC	    Adi_fis[];
 GLOBALCONSTREF			ADI_FI_LOOKUP	    Adi_fi_lkup[];
 GLOBALCONSTREF			i4		    Adi_dts_size;
-GLOBALCONSTREF			i4		    Adi_ops_size;
+GLOBALCONSTREF			i4		    Adi_3RO_ops_size;
 GLOBALCONSTREF			i4		    Adi_fis_size;
 GLOBALCONSTREF			i4		    Adi_fil_size;
 
@@ -517,7 +520,7 @@ adg_srv_size()
 	** Set static for size of operator table -- useful in debugging the
 	** adding of new adt's code
 	*/
-	sz_optab = Adi_ops_size;
+	sz_optab = Adi_3RO_ops_size;
 	if (sz_optab % s)
 	    sz_optab += (s - (sz_optab % s));
     }
@@ -818,8 +821,8 @@ i4		    c2secure;
 
     /* Point to the operations table */
     /* ----------------------------- */
-    scb->Adi_operations = (ADI_OPRATION *)&Adi_2RO_operations[0];
-    scb->Adi_op_size = Adi_ops_size;
+    scb->Adi_operations = (ADI_OPRATION *)&Adi_3RO_operations[0];
+    scb->Adi_op_size = Adi_3RO_ops_size;
     scb->Adi_fis = (ADI_FI_DESC *)Adi_fis;
     scb->Adi_fi_size = Adi_fis_size;
     scb->Adi_fi_lkup = (ADI_FI_LOOKUP *)Adi_fi_lkup;
@@ -1061,8 +1064,8 @@ DB_ERROR           *error;
 	** operation table.
 	*/
 	
-	size_object = (char *) &Adi_2RO_operations[1] -
-			    (char *) &Adi_2RO_operations[0];
+	size_object = (char *) &Adi_3RO_operations[1] -
+			    (char *) &Adi_3RO_operations[0];
 	current_size = new_objects->add_fo_cnt * size_object;
 	if (current_size % sizeof(ALIGN_RESTRICT))
 	    current_size += (sizeof(ALIGN_RESTRICT) -
@@ -1884,8 +1887,8 @@ DB_ERROR	    *error)
     }
     else
     {
-	op = (ADI_OPRATION *)&Adi_2RO_operations[0];
-	size = Adi_ops_size;
+	op = (ADI_OPRATION *)&Adi_3RO_operations[0];
+	size = Adi_3RO_ops_size;
     }
 	
     MEcopy( (PTR)  op,
@@ -2019,7 +2022,7 @@ DB_ERROR	    *error)
 	    else
 	    {
 		for (j = 0, CMbyteinc(j, cp), CMnext(cp);
-			    j < sizeof(no->fod_name) && *cp;
+			    j < (i4)sizeof(no->fod_name) && *cp;
 			CMbyteinc(j, cp), CMnext(cp))
 		{
 		    if (!CMnmchar(cp) || (CMalpha(cp) && !CMlower(cp)))
@@ -2653,7 +2656,7 @@ DB_ERROR	    *error)
 				   /* are cool now... "long varchar" */
 
 		    for (j = 0, CMbyteinc(j, cp), CMnext(cp);
-				j < sizeof(nd->dtd_name) && *cp;
+				j < (i4)sizeof(nd->dtd_name) && *cp;
 			    CMbyteinc(j, cp), CMnext(cp))
 		    {
 			if (CMspace(cp))
@@ -4023,9 +4026,9 @@ DB_ERROR	   *error)
 	if ((compare_table[currfi->adi_fitype].sort_order
 				 < compare_table[prevfi->adi_fitype].sort_order)
 	      ||
-		((currfi->adi_fitype == prevfi->adi_fitype)
-		&&
-		    (currfi->adi_fiopid < prevfi->adi_fiopid)
+		(currfi->adi_fitype == prevfi->adi_fitype &&
+		    currfi->adi_fitype != ADI_COERCION &&
+		    currfi->adi_fiopid < prevfi->adi_fiopid
 		))
 	{
 	    /* Error -- items must be sorted */

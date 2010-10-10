@@ -402,6 +402,8 @@
 **     08-Sep-2010 (Ralph Loen) Bug 124307
 **         In Getcolumn(), removed unneeded call to GetWCharChar() for 
 **         coercions of SQL_C_TINYINT and SQL_C_BIT from Unicode types.
+**     01-Oct-2010 (frima01) Bug 124348
+**         Replaced SQLINTEGER with SQLLEN in SQLRowCount too.
 **
 */
 
@@ -1939,7 +1941,7 @@ RETCODE SQL_API SQLNumParams(
 
 RETCODE SQL_API SQLRowCount(
     SQLHSTMT     hstmt,
-    SQLINTEGER     * pcrow)
+    SQLLEN     * pcrow)
 {
     LPSTMT  pstmt = (LPSTMT)hstmt;
     SDWORD  crow;

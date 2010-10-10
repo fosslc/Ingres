@@ -195,6 +195,7 @@
 #define IDS_BI_CONFIG			57437
 #define IDS_CM_CONFIG			57438
 #define IDS_TXN_CONFIG			57439
+#define IDS_UPGRADEDEMODB		57440
 
 // Next default values for new objects
 // 

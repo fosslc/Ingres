@@ -1,4 +1,6 @@
-# Copyright (c) 2007, 2008 Ingres Corporation
+function rights(){
+	copyright = "Copyright (c) 2007,2008,2009,2010 Ingres Corporation"
+}
 #
 #
 #
@@ -6,12 +8,14 @@
 # into a bunch of output files:
 #
 # Usage:
-#   To build the adgfi_defn.roc file:
-#       nawk -vroc_file=adgfi_defn.roc -f fi_defn.awk fi_defn.txt
-#   To build the adgfi_defn_lu.roc file:
-#       nawk -vroclu_file=adgfi_defn_lu.roc -f fi_defn.awk fi_defn.txt
+#   To build the adgfi_defn.c file:
+#       nawk -vroc_file=adgfi_defn.c -f fi_defn.awk fi_defn.txt
+#   To build the adgfi_defn_lu.c file:
+#       nawk -vroclu_file=adgfi_defn_lu.c -f fi_defn.awk fi_defn.txt
 #   To build the adgfi_defn.h file:
 #       nawk -vh_file=adgfi_defn.h -f fi_defn.awk fi_defn.txt
+#   To build the adgop_defn.c file:
+#	nawk -vop_file=adgop_defn.c -f fi_defn.awk fi_defn.txt
 #
 # (Use "awk" instead of "nawk" on non-Solaris machines.)
 #
@@ -56,7 +60,15 @@
 #       18-dec-2008 (joea)
 #           Replace READONLY/WSCREADONLY by const.
 #	aug-2009 (stephenb)
-#		include adudate.h
+#	    include adudate.h
+#	11-Sep-2009 (kiria01)
+#	    Add eqv_operator for those coercions that have
+#	    equivalent explicit forms.
+#	04-Oct-2010 (kiria01) b124065
+#	    Expanded operator definition to encompass adgoptab.roc
+#	    requirements thereby rendering it redundant. Added checks
+#	    for operator equivalence to link implict with explicit
+#	    coercions.
 #
 
 # Routine to issue a marginally useful error and stop.
@@ -107,8 +119,12 @@ function fi_flush()
     # Defaults for optional things
     if (complement == "")
 	complement = "ADI_NOFI";
-    if (flags == "")
+    if (flags == ""){
 	flags = "ADI_F0_NOFIFLAGS";
+	if (def_flags != "") flags = def_flags;
+    }else{
+	if (def_flags != "") flags = flags"|"def_flags;
+    }
     if (lenspec_size == "")
     {
 	lenspec_size = 0;
@@ -131,20 +147,25 @@ function fi_flush()
 	routine_b = "NULL";
     if (routine_e == "")
 	routine_e = "NULL"
-
+    if (eqv_op == ""){
+	cur_op_out = cur_op
+    }else{
+	# Check eqv return types are consistent
+	cur_op_out = eqv_op	
+	eqv_op = ""
+    }
     # Output FI stuff to FI description file
     if (roc_file != "")
     {
 	print "/*" >descfile;
 	printf "** [%d]:  %s\n",fidesc_ix, description >descfile;
 	print "*/" >descfile;
-	printf "{ %s, %s,\n", fi, complement >descfile;
-	printf "  %s, %s, %s,\n", cur_group, flags, cur_op >descfile;
-	printf "  {%s, %s, %s}, %s, %s,\n", lenspec_op, lenspec_size,
+	printf "{%s, %s, %s,\n", fi, complement, cur_group >descfile;
+	printf " %s, %s,\n", flags, cur_op_out >descfile;
+	printf " {%s, %s, %s}, %s, %s,\n", lenspec_op, lenspec_size,
 			lenspec_ps, wslen, null_preinst >descfile;
-	printf "  %d, %s,\n", operands, result >descfile;
-	printf "    %s, %s, %s, %s\n", operand_dt[0], operand_dt[1],
-			operand_dt[2], operand_dt[3] >descfile;
+	printf " %d, %s,   %s, %s, %s, %s,\n", operands, result,
+		operand_dt[0], operand_dt[1], operand_dt[2], operand_dt[3] >descfile;
 	print "}," >descfile;
     }
     # Count another operator FI
@@ -174,7 +195,11 @@ function fi_flush()
 function op_flush()
 {
     if (cur_op != "ADI_NOOP" && h_file != "")
-	printf "#define ADO_%s_CNT\t%d\n",cur_op_root,cur_op_count >incfile;
+    {
+	if (cur_op_count==0)cur_op_ix="ADZ_NOFIIDX"
+	print "#define ADZ_"cur_op_root"_FIIDX\t"cur_op_ix >incfile;
+	print "#define ADO_"cur_op_root"_CNT\t"cur_op_count >incfile;
+    }
 
     cur_op = "";
     cur_op_count = 0;
@@ -183,24 +208,21 @@ function op_flush()
 
 # Initialize the current operator count, and output files.
 BEGIN {
+	rights();
 	cur_op = "";
 	cur_op_count = 0;
 # Defaults
-	if (roc_file == "" && h_file == "" && roclu_file == "")
+	if (roc_file == "" && h_file == "" && roclu_file == "" && op_file == "")
 	{
-	    descfile = "newfi_defn.roc";
-	    lkupfile = "newfi_defn_lu.roc";
-	    incfile = "newfi_defn.h";
-	    roc_file = "";
-	    roclu_file = "";
-	    h_file = "";
+	    roc_file = "newfi_defn.roc";
+	    roclu_file = "newfi_defn_lu.roc";
+	    h_file = "newfi_defn.h";
+	    op_file = "newop_defn.c";
         }
-	else
-	{
-	    if (roc_file != "") descfile = roc_file;
-	    if (h_file != "") incfile = h_file;
-	    if (roclu_file != "") lkupfile = roclu_file;
-	}
+	if (roc_file != "") descfile = roc_file;
+	if (h_file != "") incfile = h_file;
+	if (roclu_file != "") lkupfile = roclu_file;
+	if (op_file != "") opfile = op_file;
 	fidesc_ix = 0;
 	fi = "";
 	max_fi_no = -1;
@@ -209,6 +231,7 @@ BEGIN {
 	    #
 	    # Generate header for 'incfile'
 	    #
+	    print "/*\n**\t"copyright"\n*/" >incfile;
 	    print "/**" >incfile;
 	    print "** Name: ADFFI_DEFN.H - Contains number of fi's for each op and op type" >incfile;
 	    print "**" >incfile;
@@ -232,21 +255,13 @@ BEGIN {
 	    print "**	function instance, modify fi_defn.txt and run fi_defn.awk;" >incfile;
 	    print "**/" >incfile;
 	    print "" >incfile;
-	    print "/* The following operations have no associated function instances */" >incfile;
-	    print "#define ADO_EXIST_CNT 0" >incfile;
-	    print "#define ADZ_EXIST_FIIDX ADZ_NOFIIDX" >incfile;
-	    print "" >incfile;
-	    print "#define ADO_NXIST_CNT 0" >incfile;
-	    print "#define ADZ_NXIST_FIIDX ADZ_NOFIIDX" >incfile;
 	}
 	#
 	# Generate header for 'descfile'
 	#
     	if (roc_file != "")
 	{
-	    print "/*" >descfile;
-	    print "** Copyright (c) 2007 Ingres Corporation" >descfile;
-	    print "*/" >descfile;
+	    print "/*\n**\t"copyright"\n*/" >descfile;
 	    print "#include <compat.h>" >descfile;
 	    print "#include <gl.h>" >descfile;
 	    print "#include <iicommon.h>" >descfile;
@@ -316,9 +331,7 @@ BEGIN {
 	#
     	if (roclu_file != "")
 	{
-	    print "/*" >lkupfile;
-	    print "** Copyright (c) 2007 Ingres Corporation" >lkupfile;
-	    print "*/" >lkupfile;
+	    print "/*\n**\t"copyright"\n*/" >lkupfile;
 	    print "/* Jam hints" >lkupfile;
 	    print "**" >lkupfile;
 	    print "LIBRARY = IMPADFLIBDATA" >lkupfile;
@@ -385,6 +398,35 @@ BEGIN {
 	    print "/*----------------------------------------------------------------------------*/" >lkupfile;
 	    print "" >lkupfile;
 	}
+	if (op_file != "")
+	{
+	    print "/*\n**\t"copyright"\n*/" >opfile;
+	    print "#include    <compat.h>">opfile
+	    print "#include    <gl.h>">opfile
+	    print "#include    <sl.h>">opfile
+	    print "#include    <iicommon.h>">opfile
+	    print "#include    <adf.h>">opfile
+	    print "#include    <adfops.h>">opfile
+	    print "#include    <ulf.h>">opfile
+	    print "#include    <adfint.h>">opfile
+	    print "#include    \"adgfi_defn.h\"">opfile
+	    print "">opfile
+	    print "/**">opfile
+	    print "**">opfile
+	    print "**  Name: ADGOPTAB.ROC - ADF's operation table.">opfile
+	    print "**">opfile
+	    print "**  Description:">opfile
+	    print "**      This file contains the operation table initialization which is a table">opfile
+	    print "**      of ADI_OPRATION structures, one per operation.  These structures hold">opfile
+	    print "**      everything the ADF internals will need for any operation.">opfile
+	    print "**" >opfile;
+	    print "**	** DO NOT MAKE MANUAL CHANGES TO THIS FILE **" >opfile;
+	    print "**" >opfile;
+	    print "**	This file is generated from fi_defn.txt by the AWK program fi_defn.awk." >opfile;
+	    print "**	To change function instance info, modify fi_defn.txt and run fi_defn.awk;" >opfile;
+	    print "*/" >opfile;
+	    print "GLOBALDEF   const       ADI_OPRATION    Adi_3RO_operations[] = {">opfile
+	}
 }
 
 # Ignore empty lines, comment lines
@@ -414,7 +456,6 @@ $1 == "group" {
 	next;
 }
 
-
 # operator line ends FI and operator, starts a new operator, outputs
 # current FI index as the operator's starting index for the h_file file.
 $1 == "operator" {
@@ -422,10 +463,19 @@ $1 == "operator" {
 	    fi_flush();
 	if (cur_op != "")
 	    op_flush();
-    
+	expl_coercion = 0
+	def_flags = ""
 	cur_op = $2;
+	if ($3 == "type" && ($4 == "ADI_PREFIX" || $4 == "ADI_INFIX" || $4 == "ADI_POSTFIX" )){
+	    op_usage=$4
+	}else if (cur_op != "ADI_NOOP"){
+	    fi_error("operator "cur_op" missing or invalid 'type'")
+	}
 	if (cur_op != "ADI_NOOP")
 	{
+	    if (cur_op in ops)
+		fi_error("operator "cur_op" multiple definition");
+	    ops[cur_op] = 1
 	    # Split off leading ADI_ and trailing _OP.
 	    # A couple stupid special cases for operators not named
 	    # ADI_blah_OP:
@@ -438,14 +488,86 @@ $1 == "operator" {
 		s = substr(cur_op,index(cur_op,"_")+1);
 		cur_op_root = substr(s,1,index(s,"_OP")-1);
 	    }
-	    if (h_file != "")
-	    {
-		printf "\n#define ADZ_%s_FIIDX\t%d\n",cur_op_root,fidesc_ix >incfile;
-	    }
+	    cur_op_ix=fidesc_ix
 	}
+	valid_systems=""
+	nameseen=0
 	next;
 }
+$1 ~ ".*name" {isalias=0;}
+$1 ~ ".*alias" {isalias=1;}
+$1 == "name" || $1 == "sqlname" || $1 == "quelname" ||
+$1 == "alias" || $1 == "sqlalias" || $1 == "quelalias" {
+	name=$2
+	if (substr(name,length(name),1) == "\"" && length(name) != 1){
+	    sup=$3;val=$4
+	}else{
+	    name=$2" "$3
+	    if (substr(name,length(name),1) == "\""){
+		sup=$4;val=$5
+	    }else{
+		name=$2" "$3" "$4
+		if (substr(name,length(name),1) == "\""){
+		    sup=$5;val=$6
+		}else{
+		     fi_error("operator "cur_op" name error")
+		}
+	    }
+	}
+	if (sup == "support"){
+	    systems=val
+	}else{
+	    systems=valid_systems
+	}
+	if (nameseen==0){
+	    if (isalias==1){
+		fi_error("operator "cur_op" missing 'name' before 'alias'");
+	    }
+	    nameseen=1
+	    valid_systems=systems
+	}else{
+	    if (isalias==0){
+		fi_error("operator "cur_op" duplicate 'name' seen, use 'alias'")
+	    }
+	}
+	if (substr($1,1,3) == "sql"){
+	    qlang = "DB_SQL";
+	}else if (substr($1,1,4) == "quel"){
+	    qlang = "DB_QUEL";
+	}else{
+	    qlang = "DB_SQL|DB_QUEL";
+	}
+	if (op_file != "")
+	{
+	    print "{{"name"},"cur_op","cur_group","op_usage","qlang","\
+		systems",ADO_"cur_op_root"_CNT,ADZ_"cur_op_root"_FIIDX},">opfile
+	}
+	next
+}
 
+$1 == "comment" {
+	next
+}
+
+$1 == "def_flags" {
+	if (NF != 2)
+	    fi_error("def_flags requires a parameter")
+	if (def_flags != ""){
+	    fi_error("double def_flags seen")
+	}
+	if (fi != ""){
+	    fi_error("def_flags is an operator qualifier")
+	}
+	def_flags=$2
+	if (def_flags ~ "ADI_F524288_EXPL_COERCION"){
+	    if (cur_group == "ADI_NORM_FUNC"){
+		expl_coercion = 1
+	    }else{
+		fi_error("expl_coercion only valid in ADI_NORM_FUNC group");
+	    }
+	}
+	next
+}
 
 # fi line ends FI, starts a new function instance definition.
 $1 == "fi" {
@@ -513,6 +635,26 @@ $1 == "result" {
 	if (result != "")
 	    fi_error("double result datatype");
 	result = $2;
+	if (expl_coercion) {
+		# Use the return type to link with cast
+		if (result in cast_ops) {
+			if (cast_ops[result] != cur_op)
+				fi_error("return type conflict in cast operator")
+		} else {
+			cast_ops[result] = cur_op
+		}
+	}else if (cur_group == "ADI_COERCION") {
+		if (result in cast_ops) {
+			if (eqv_op != "") {
+				if (eqv_op != cast_ops[result])
+					fi_error("eqv type conflict in operator")
+			} else {
+				eqv_op = cast_ops[result]
+			}
+		} else if(eqv_op != "") {
+			fi_error("eqv defined inconsistantly: "eqv_op)
+		}
+	}
 	next;
 }
 
@@ -522,8 +664,9 @@ $1 == "operands" || $1 == "operand" {
 	operands = NF - 1;
 	if (operands > 4)
 	    fi_error("too many operands");
-	for (i=0; i<operands; i++)
+	for (i=0; i<operands; i++){
 	    operand_dt[i] = $(i+2);
+	}
 	next;
 }
 
@@ -548,7 +691,18 @@ $1 == "routine" {
 	}
 	next;
 }
-
+$1 == "eqv_operator" {
+	if (eqv_op != "")
+		fi_error("double eqv_operator");
+	if (cur_group != "ADI_COERCION")
+		fi_error("eqv_operator only valid in coercions");
+	if (NF != 2)
+		fi_error("eqv_operator needs 1 parameter");
+	if (!($2 in ops))
+		fi_error("eqv_operator "$2" not defined");
+	eqv_op = $2
+	next
+}
 # stcode stuff to go here
 
 # Anything else is an error line.
@@ -607,5 +761,12 @@ END {
 	    print "" >lkupfile;
 	    print "GLOBALDEF const i4 Adi_fil_size = sizeof(Adi_fi_lkup);" >lkupfile;
 	    close(lkupfile);
+	}
+	if (op_file != "")
+	{
+	    print "{ {\"\"}, ADI_NOOP, -1, -1, 0, 0, 0, ADI_NOFI}">opfile
+	    print "}; /* ADF's OPERATION table */">opfile
+	    print "GLOBALDEF const i4 Adi_3RO_ops_size = sizeof(Adi_3RO_operations);">opfile
+	    close(opfile)
 	}
 }

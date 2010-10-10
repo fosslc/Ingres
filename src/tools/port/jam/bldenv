@@ -159,6 +159,9 @@
 ##	  Trac #570
 ##	  Building in 'mock' (chroot build tool) revealed some minor
 ##	  issues with the LSB build. Make sure installcmd gets set.
+##    20-Sep-2010 (hanje04)
+##	  Fix build for FC 13/ Xerces 3.x, remove "hard coded" xvers in
+##	  favour of determining version from source in precheck_functions
 ##
 
 umask 002
@@ -314,16 +317,6 @@ case ${unames} in
 	    os=`cat /etc/redhat-release | cut -d' ' -f1`
 	    if [ "$os" = "Fedora" ] ; then
 		OSVER=FEDORA
-		rel=`cat /etc/redhat-release | cut -d' ' -f3`
-		if [ $rel -ge 13 ]
-		then
-			xvers=30
-                elif [ $rel -eq 12 ]
-                then 
-			xvers=28
-                else
-			xvers=27
-		fi
 	    fi
 	    if [ -x /usr/bin/yum ] ; then
 		yum=true

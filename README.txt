@@ -1,28 +1,25 @@
-Ingres is a feature rich and robust database (RDBMS)
 
-It is licensed under the GPL license, version 2.
 
 Supported Platforms
 ===================
 
-For more information on building Ingres, including supported platforms see:
-http://community.ingres.com/wiki/Building_Ingres_FAQ
+We intend to support the build on all major distributions and operating systems.
 
-If you need help, visit:
-http://webchat.freenode.net/?channels=#ingres
-(tip: make up a unique nickname)
+Please note: As of April 29, 2008 only Fedora Core 8 - 32 bit builds and runs
+cleanly with no issues. 
+
+Other platforms including Ubuntu (32 bit/64 bit), Fedora (64 bit), Suse,
+Windows, and MacOS are almost clean. If you run into an issue, please check
+http://bugs.ingres.com to see if the issue is an existing one.
+
+If it is a new issue, please raise a ticket. Thank you.
 
 
 To get the latest version of Ingres server source code:
 =======================================================
 
-To get the latest code:
-
 svn co http://code.ingres.com/ingres/main ~/ingres/server
-OR, alternatively if you prefer git:
-git clone http://github.com/ingres/Ingres.git ~/ingres/server
-
-(either of these will create a copy of the latest code in ~/ingres/server)
+(this will create a copy of the latest code in ~/ingres/server)
 
 To run the build (the easy way):
 ================================
@@ -48,16 +45,7 @@ To install and use an instance:
 
 2) Run buildtools/createdbms <2 character installation ID>
 
-You can install many instances of Ingres on the same machine provided
-the installation ID's do not conflict.
-
-for example:
-buildtools/createdbms A1
-
 3) source buildtools/test_env.sh <same installation ID>
-
-for example:
-buildtools/test_env.sh A1
 
 ingstart (will start the dbms)
 ingstop (will stop the dbms)
@@ -66,10 +54,6 @@ To build, install and run an automated test suite:
 ==================================================
 Become root.
 buildtools/buildAndTest.sh <2 character installation ID>
-
-for example:
-
-buildtools/buildAndTest.sh A1
 
 To run the build (the less easy way):
 =====================================
@@ -80,9 +64,7 @@ Visit: http://community.ingres.com/wiki/Category:DBMS
 Where to get help/contact us:
 =============================
 
-Internet Relay Chat (IRC):
-http://webchat.freenode.net/?channels=#ingres
-
 comp.databases.ingres
-http://groups.google.com/group/comp.databases.ingres/topics
+(http://groups.google.com/group/comp.databases.ingres/topics)
 
+IRC channel #ingres in irc.freenode.net

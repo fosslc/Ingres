@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004, 2008 Ingres Corporation. All Rights Reserved.
+** Copyright (c) 2004, 2010 Ingres Corporation. All Rights Reserved.
 */
 
 using System;
@@ -31,6 +31,8 @@ namespace Ingres.Install
 	**	    in the Visual Studio/Toolbox/Choose Item list.
 	**	26-Jun-08 (thoda04)
 	**	    Generalize add of DbProvider entry with any PublicKeyToken to support DP 2.1.
+	**	 6-Oct-10 (thoda04) Bug 124533
+	**	    Define the data provider to .NET 4.0 and to .NET 64-bit Frameworks.
 	*/
 
 	/// <summary>
@@ -51,6 +53,19 @@ namespace Ingres.Install
 
 		private String[] dbProviderFactoriesPath = new String[]
 			{ "configuration", "system.data", "DbProviderFactories" };
+
+		/// <summary>
+		/// List of Frameworks that need machine.config updated.
+		/// </summary>
+		private String[] dbMachineConfigList =
+			{
+				null,                      //  default framework for the platform
+				@"Framework\v2.0.50727",   // .NET 2.0, 3.0, 3.5 for x86
+				@"Framework64\v2.0.50727", // .NET 2.0, 3.0, 3.5 for x64
+				@"Framework\v4.0.30319",   // .NET 4.0           for x86
+				@"Framework64\v4.0.30319", // .NET 4.0           for x64
+			};
+
 		private Hashtable ingresProviderSearchKeys = new Hashtable();
 		private string    ingresProviderElement;
 		private string ingresProviderElementNew = null;
@@ -94,9 +109,14 @@ namespace Ingres.Install
 			//    "vsinstaller Install() called", "Debugging");
 
 			ingresProviderElementNew = ingresProviderElement;
-			ChangeMachineConfig();
 
-			// save the old value in stateStater in case we need to rollback
+			// update the .NET Frameworks' machine.config files
+			foreach (string machineConfig in dbMachineConfigList)
+			{
+				ChangeMachineConfig(machineConfig);
+			}
+
+			// save the old value in stateSaver in case we need to rollback
 			if (ingresProviderElementOld != ingresProviderElementNew)
 				stateSaver["Ingres DbProvider"] = ingresProviderElementOld;
 
@@ -117,7 +137,13 @@ namespace Ingres.Install
 				return;
 
 			ingresProviderElementNew = null;
-			ChangeMachineConfig();
+
+			// update the .NET Frameworks' machine.config files
+			foreach (string machineConfig in dbMachineConfigList)
+			{
+				ChangeMachineConfig(machineConfig);
+			}
+
 			stateSaver["Ingres DbProvider"] = ingresProviderElementOld;
 
 //			RemoveToolBoxItems();
@@ -150,7 +176,12 @@ namespace Ingres.Install
 			if (rollbackState.ContainsKey("Ingres DbProvider") == false)
 				return;
 			ingresProviderElementNew = savedState["Ingres DbProvider"] as String;
-			ChangeMachineConfig();
+
+			// update the .NET Frameworks' machine.config files
+			foreach (string machineConfig in dbMachineConfigList)
+			{
+				ChangeMachineConfig(machineConfig);
+			}
 		}
 
 		public override string HelpText
@@ -161,28 +192,53 @@ namespace Ingres.Install
 			}
 		}
 
-		private void ChangeMachineConfig()
+		private void ChangeMachineConfig(string machineConfig)
 		{
-			MachineConfigXmlDocument doc = new MachineConfigXmlDocument();
+			MachineConfigXmlDocument doc = new MachineConfigXmlDocument(machineConfig);
+			if (doc.Exists == false)
+				return;
+
+			//System.Windows.Forms.MessageBox.Show(
+			//    "Changing " + doc.machineConfigFilename, "ChangeMachineConfig");
+
 			doc.Load();   // load machine.config as XML document
 
 			// locate the "DbProviderFactories" element
 			XPathNavigator navigator = doc.CreateNavigator(dbProviderFactoriesPath);
 			if (navigator == null)
-				return;  // something is very wrong if we can find the DB Providers
+			{
+				//System.Windows.Forms.MessageBox.Show(
+				//    "Could not locate \"DbProviderFactories\" element!!",
+				//    "ChangeMachineConfig");
+				return;  // something is very wrong if we can't find the DB Providers
+			}
 
 			// locate the old <add name="Ingres Data Provider" ... />
 			XPathNavigator providerNavigator =
 				FindChildElement(navigator, ingresProviderSearchKeys);
 			if (providerNavigator != null)
 			{
+				//System.Windows.Forms.MessageBox.Show(
+				//    "DeletingSelf the old <add name=\"Ingres Data Provider\"...",
+				//    "ChangeMachineConfig");
 				ingresProviderElementOld = providerNavigator.OuterXml;
 				providerNavigator.DeleteSelf();  // if found, delete the old entry
+			}
+			else
+			{
+				//System.Windows.Forms.MessageBox.Show(
+				//    "Could not locate the old <add name=\"Ingres Data Provider\"...",
+				//    "ChangeMachineConfig");
 			}
 
 			// create the <add name="Ingres Data Provider" invariant="Ingres.Client" ...
 			if (ingresProviderElementNew != null)
+			{
+				//System.Windows.Forms.MessageBox.Show(
+				//    "Creating the new <add name=\"Ingres Data Provider\"...",
+				//    "ChangeMachineConfig");
 				navigator.AppendChild(ingresProviderElementNew);
+			}
 
 			doc.Save();  // save the machine.config
 		}
@@ -463,15 +519,108 @@ namespace Ingres.Install
 
 		class MachineConfigXmlDocument : XmlDocument
 		{
+			/// <summary>
+			/// The base ConfigurationFileMap.MachineConfigFilename
+			/// machine.config in lower case.
+			/// </summary>
+			private string configurationFileMapMachineConfigFilenameLower;
+			/// <summary>
+			/// The full path machine.config for the specified version if Exists == true
+			/// or the full path machine.config of the default version if Exists == false.
+			/// </summary>
 			public string machineConfigFilename;  // full path of machine.config
 
-			public MachineConfigXmlDocument(): base()
+			/// <summary>
+			/// Obtain the XmlDocument for the default machine.config
+			/// for the default .NET Framework version.
+			/// </summary>
+			public MachineConfigXmlDocument(): this(null)
+			{ }
+
+			/// <summary>
+			/// Obtain the XmlDocument for the machine.config 
+			/// in the specified .NET Framework version.
+			/// If the specified version does not exits or
+			/// if the specified version matches the default version,
+			/// then Exists is set to false.
+			/// </summary>
+			/// <param name="version"></param>
+			public MachineConfigXmlDocument(string version): base()
 			{
 				// Gets the full path and filename of machine.config.
 				// Usually in the example form of
-				//    C:\WINDOWS\Microsoft.NET\Framework\v2.0.nnnnn\machine.config
+				//  C:\WINDOWS\Microsoft.NET\Framework\v2.0.50727\CONFIG\machine.config
 				ConfigurationFileMap fileMap = new ConfigurationFileMap();
 				machineConfigFilename = fileMap.MachineConfigFilename;
+				configurationFileMapMachineConfigFilenameLower =
+					machineConfigFilename.ToLowerInvariant();
+
+				if (version == null)  // return if the default version desired.
+				{
+					Exists = true;    // default base version always exists
+					return;
+				}
+
+
+				// find the machine.config install root directory,
+				// build the full path and filename for the specified version, e.g.
+				//  C:\WINDOWS\Microsoft.NET\Framework\v4.0.30319\CONFIG\machine.config
+				// and check if the specified version exists
+				int i, j;
+				j = machineConfigFilename.ToLowerInvariant().LastIndexOf(
+					@"\config\machine.config");
+
+				i = j;
+				while (--i >= 0)  // scan backwards past "v2.0..." or "v4.0..."
+				{
+					if (machineConfigFilename[i] == '\\')
+						break;
+				}  // end while
+
+				while (--i >= 0)  // scan backwards past "Framework"
+				{
+					if (machineConfigFilename[i] == '\\')
+						break;
+				}  // end while
+
+				if (i < 0)  // if < 0 then something very wrong if we did not
+					return; //   backscan up to "C:\WINDOWS\Microsoft.NET\"
+
+				string possibleConfigFilename =
+					machineConfigFilename.Substring(0, i + 1) +
+					version +
+					@"\Config\machine.config";
+
+				try
+				{
+					if (System.IO.File.Exists(possibleConfigFilename))
+					{
+						// if the specified version matches the default version
+						// then pretend that it does not exist.
+						if (possibleConfigFilename.ToLowerInvariant() ==
+							configurationFileMapMachineConfigFilenameLower)
+							return;
+
+						machineConfigFilename = possibleConfigFilename;
+						Exists = true;
+					}
+				}
+				/* ignore any Exception and leave machineConfigFilename unchanged 
+				 * and leave Exists as false.
+				 */
+				catch (Exception)
+				{ }
+			}
+
+			private bool exists = false;
+			/// <summary>
+			/// The specified version does not exist or
+			/// the specified version is actually the default version.
+			/// </summary>
+			public bool  Exists
+			{
+				          get { return exists;  }
+				protected set { exists = value; }
 			}
 
 			public void Load()
@@ -481,6 +630,8 @@ namespace Ingres.Install
 
 			public void Save()
 			{
+				if (Exists == false)
+					return;
 				base.Save(machineConfigFilename);
 			}
 
