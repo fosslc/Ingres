@@ -1452,6 +1452,8 @@
 #           Correct _IIAWK action on VMS: need to quote uppercase params.
 #	01-Oct-2010 (bonro01)
 #	    Fix Windows build problems using cygwin
+#	04-Oct-2010 (kiria01) b124065
+#	    Added build rules to generate operator table.
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -1521,6 +1523,7 @@
 # IIFiRoc adgfi_defn.roc : fi_defn.awk fi_defn.txt ;
 # IIFiRocLu adgfi_defn_lu.roc : fi_defn.awk fi_defn.txt ;
 # IIFiH adgfi_defn.h : fi_defn.awk fi_defn.txt ;
+# IIOpC adgop_defn.c : fi_defn.awk fi_defn.txt ;
 # IIAduPatHdr adupatexec_ops.h : adupatexec.awk adupatexec.dotty ;
 # IIAduPatBdy adupatexec_inc.i : adupatexec.awk adupatexec.dotty ;
 # IIAWK target | awk_file source ;
@@ -2964,6 +2967,26 @@ rule IIFiRocLu
 	SEARCH on $(s) = $(SEARCH_SOURCE) ;
 	SEARCH on $(<) = $(SEARCH_SOURCE) ;
 	SEARCH on $(>) = $(SEARCH_SOURCE) ;
+
+	Clean clean : $(t) ;
+	if $(VERSHB)
+	{
+	    DEPENDS <$(SOURCE_GRIST)!$(SUFHB)>$(<) : $(s) ;
+	    LOCATE on <$(SOURCE_GRIST)!$(SUFHB)>$(<) = $(SEARCH_SOURCE) ;
+	    SEARCH on <$(SOURCE_GRIST)!$(SUFHB)>$(<) = $(SEARCH_SOURCE) ;
+	}
+}
+
+rule IIOpC
+{
+	local t = [ FGristFiles $(<) ] ;
+	local s = [ FGristFiles $(>) ] ;
+
+	OpC $(t) : $(s) ;
+	DEPENDS $(t) : $(s) ;
+	DEPENDS hdrs : $(t) ;
+	LOCATE on $(t) = $(SEARCH_SOURCE) ;
+	SEARCH on $(s) = $(SEARCH_SOURCE) ;
 
 	Clean clean : $(t) ;
 	if $(VERSHB)
@@ -10721,6 +10744,11 @@ if $(NT)
 	        cd $(>[2]:D)
 		$(AWK) -v h_file=$(<:BS) -f $(>:BS)
 	}
+	actions OpC
+	{
+		cd $(>[2]:D)
+		$(AWK) -v op_file=$(<:BS) -f $(>:BS)
+	}
 	actions AduPatHdr
 	{
 		cd $(>[2]:D)
@@ -10762,6 +10790,13 @@ else if $(VMS)
                 set default $(<:D)
 		$(AWK) -v h_file=$(<:BS) -f $(>:BS)
 	}
+	actions OpC
+	{
+		if f$parse("$(<:D)") .eqs. "" then create /dir $(<:D)
+
+		set default $(<:D)
+		$(AWK) -v op_file=$(<:BS) -f $(>:BS)
+	}
 	actions AduPatHdr
 	{
 		if f$parse("$(<:D)") .eqs. "" then create /dir $(<:D)
@@ -10792,6 +10827,10 @@ else
 	actions FiH
 	{
 		$(AWK) -v h_file=$(<) -f $(>)
+	}
+	actions OpC
+	{
+		$(AWK) -v op_file=$(<) -f $(>)
 	}
 	actions AduPatHdr
 	{

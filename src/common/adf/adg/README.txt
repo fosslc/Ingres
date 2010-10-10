@@ -14,6 +14,9 @@
 #		No longer any need to hand edit the extra files or
 #		store the intermediates in piccolo (or check the
 #		intermediates or integrate them
+#	04-Oct-2010 (kiria01) b124065
+#		Updated comments to cover removal of adgoptab.roc from
+#		the build and its data being managed in fi_defn.txt
 #
 
 Adding new operators
@@ -25,7 +28,17 @@ Adding new operators
 	This is a short document detailing how to add a new operator
 	to the DBMS.
 
-	Operators are listed in the operator table in 'adgoptab.roc'.
+	The source file for most of this is fi_defn.txt. This file
+	contains the operator information and the associated function
+	instance information. This file is 'compiled' by the awk script
+	fi_defn.awk into 4 separate, related files:
+
+		adgfi_defn.h
+		adgfi_defn.c
+		adgfi_defn_lu.c
+		adgop_defn.c
+
+	Operators are listed in the operator table in 'adop_defn.c'.
 	Operators are not just the usual infix operators like + or =,
 	but also prefix-notation functions (SUM(), left(), etc);  zero-
 	operand functions (dba(), or session_user);  implicit type
@@ -33,23 +46,19 @@ Adding new operators
 	All these things are "operators".
 
 	They map to one or more 'function instances' in the f.i. table
-	adgfi_defn.roc.  A function instance (FI) is one specific
+	adgfi_defn.c.  A function instance (FI) is one specific
 	implementation of the operator based on operand type.  So, there
 	is one FI for int + int, a different FI for float + float, but
 	both implement the "ADD" operator ADI_ADD_OP.
 
-	Function instances are defined in fi_defn.txt, a text file.
-	it is processed by the AWK program fi_defn.awk to
-	produce FI description and lookup tables.
-
-	The fi description table in adgfi_defn.roc is ordered by operator
+	The fi description table in adgfi_defn.c is ordered by operator
 	type (comparison, operator, function, etc) and within type,
 	by operator ID number.  (There is no particular ordering within
 	FI's for one operator, unless some order is useful to type
 	resolution.)
 
 	The f.i may be mapped to the underlying function call by a fast
-	lookup table in adgfi_defn_lu.roc.  This table is indexed by FI
+	lookup table in adgfi_defn_lu.c.  This table is indexed by FI
 	number.
 
 	By the way, there's no need for a FI for *every* possible type
@@ -61,10 +70,12 @@ Adding new operators
 2.	Links between the various tables
 	--------------------------------
 
-	Every operator has one or more entries in adgoptab.roc.
+	Every operator has one or more entries in adgop_defn.c.
 	(Multiple entries are possible if an operator has synonyms,
 	for instance "dba" and "_dba" are both the zero-operand
 	"return the name of the database owner" function operator.)
+	These aliases can be easily added as will be seen from a quick
+	read of the fi_defn.txt source.
 	Each operator has an operator ID that looks like ADI_xxx_OP.
 
 	Every function instance has one entry in the FI description
@@ -77,7 +88,7 @@ Adding new operators
 	various other stuff).
 
 	Every function instance has one entry in the FI lookup
-	table, adgfilkup.roc.  This table is ordered by FI number,
+	table, adgfi_defn_lu.c.  This table is ordered by FI number,
 	which is convenient for runtime execution.  The FI lookup table
 	contains a pointer back to the FI description table, as well
 	as routine addresses for the adu or adc functions that implement
@@ -89,185 +100,199 @@ Adding new operators
 	This section illustrates the links between the various tables
 	using the function 'left()' as an example.
 
-a)	adgoptab.roc
+a)	fi_defn.txt
+
+	This text data file contains all the operator and function
+	instance definitions that implement each operator.
+
+	As examples, below are definitions for an infix operator,
+	a post fix operator and the more usual prefix function.
+
+-----------------------------------------------
+	Example 1 - infix operator <>
+-----------------------------------------------
+group ADI_COMPARISON
+    ...
+    operator ADI_NE_OP type ADI_INFIX
+        def_flags ADI_F262144_ASSOCIATIVE
+        name "<>" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
+        alias "!="
+
+	...
+        fi ADFI_008_C_NE_C
+            description boolean  :  c != c
+            complement ADFI_000_C_EQ_C
+            lenspec ADI_FIXED DB_BOO_LEN
+            null_preinst ADE_3CXI_CMP_SET_SKIP
+            result DB_BOO_TYPE
+            operands DB_CHR_TYPE DB_CHR_TYPE
+	...
+
+	The 'type ADI_INFIX' defines the infix nature of this
+	operator and the 'def_flags ADI_F262144_ASSOCIATIVE'
+	will ensure that all the fi elements inherit the flag.
+	The 'name "<>"' indicates that this is the primary name
+	of the operator and it applies to all languages and
+	supported by ADI_INGRES_6,ADI_ANSI and ADI_DB2. There is
+	also an alias defined by 'alias "!="' for all languages.
+
+	As this infix operator happens to be in the ADI_COMPARISON
+	group, the 'complement ADFI_000_C_EQ_C' defines its negative
+	peer and the 'lenspec ADI_FIXED DB_BOO_LEN' and the
+	'result DB_BOO_TYPE' are required for comparisons.
+
+
+-----------------------------------------------
+	Example 2 - postfix operator IS NULL
+-----------------------------------------------
+group ADI_COMPARISON
+   ...
+   operator ADI_ISNUL_OP type ADI_POSTFIX
+        name "is null" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
+	...
+        fi ADFI_516_ALL_ISNULL
+            description boolean  :  all isnull
+            complement ADFI_517_ALL_ISNOTNULL
+            lenspec ADI_FIXED DB_BOO_LEN
+            null_preinst ADE_0CXI_IGNORE
+            result DB_BOO_TYPE
+            operands DB_ALL_TYPE
+	...
+
+	The 'type ADI_POSTFIX' defines the postfix nature of this
+	operator and presently these all happen to be comparisons
+	albeit single parameter ones.
+
+
+-----------------------------------------------
+	Example 3 - prefix function
+-----------------------------------------------
+group ADI_NORM_FUNC
+    ...
+    operator ADI_DATE_OP type ADI_PREFIX
+        def_flags ADI_F524288_EXPL_COERCION
+        name "date" support ADI_INGRES_6|ADI_DB2
+        alias "ingresdate" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
+	...
+        fi ADFI_125_DATE_C
+            description date  :  date(c)
+            flags ADI_F16384_CHKVARFI
+            lenspec ADI_FIXED 12
+            null_preinst ADE_1CXI_SET_SKIP
+            result DB_DTE_TYPE
+            operands DB_CHR_TYPE
+            routine adu_14strtodate
+
+        fi ADFI_280_DATE_CHAR
+            description date  :  date(char)
+            flags ADI_F16384_CHKVARFI
+            lenspec ADI_FIXED 12
+            null_preinst ADE_1CXI_SET_SKIP
+            result DB_DTE_TYPE
+            operands DB_CHA_TYPE
+            routine adu_14strtodate
+	...
+
+	The 'type ADI_PREFIX' defines the postfix nature of this
+	operator and it sets 'def_flags ADI_F524288_EXPL_COERCION' as
+	a default flag for the FIs. The 'name "date"' indicates the
+	primary name for this operator which also has 'alias "ingresdate"'
+	but the absence of ADI_ANSI on date ensures that only ingresdate
+	gets appropriatly mapped if ansi enabled.
+
+	On the FIs, these have both got 'flags ADI_F16384_CHKVARFI' which
+	is a special case of the ADI_F1_VARFI. These flags control constant
+	folding, the latter says do not fold ever and the CHKVARFI says
+	fold but ONLY if the params can be treated as real constants. In
+	case of DATEs, CHKVARFI asserts that only dates that are constant
+	and complete - no missing parts that needed supplimenting from
+	current date - will be treated as truly constant and therefore
+	foldable.
+
+	These FIs happen to have 'routine adu_14strtodate' which
+	indicates that the routine can be called directly without needing
+	to be compiled. If no 'routine' is specified, then the function
+	will be implemented in-line in ade_execute_cx(). This may also
+	be the case if 'routine' is present but then there will simply
+	two means of calling the FI.
+
+a)	adgop_defn.c
+	------------
+	This file is generated from the fi_defn.txt file using fi_defn.awk
+	and it builds the table:
+
+		GLOBALDEF const ADI_OPRATION Adi_3RO_operations[];
+
+	This will contain a row for each operator name or alias and defines
+	the range of indicies relevant to that operator in the lookup table
+	called Adi_fi_lkup defined in adgfi_defn_lu.c:
+
+b)	adgfi_defn_lu.c
+	---------------
+	This file is also generated from the fi_defn.txt file using
+	fi_defn.awk and it builds the lookup table:
+
+		GLOBALCONSTDEF ADI_FI_LOOKUP Adi_fi_lkup[];
+
+	This provides addresses into the main FI table Adi_fis[] and also
+	carries the three addresses of the routines related to that FI. The
+	first routine will be that of 'routine' or NULL if not specified.
+	The 2nd and 3rd relate to routines in support of aggregates.
+	The Adi_fis[] table is defined in the file adgfi_defn.c:
+
+c)	adgfi_defn.c
 	------------
 
-/*----------------------------------------------------------------------------*/
-/*  Each array element in the table looks like this:                 */
-/*----------------------------------------------------------------------------*/
-/*{ {op_name},          op_id,		type_of_op,	    op_usage,	      */
-/*	valid_qlangs,	    valid_systems,				      */
-/*		#_fi's,			    index_into_fi_table		    } */
-/*----------------------------------------------------------------------------*/
+	This file is also generated from the fi_defn.txt file using
+	fi_defn.awk and it builds the FI table itself defining the FI
+	specific information:
 
-example: left()
+		GLOBALDEF const ADI_FI_DESC Adi_fis[];
 
-{ {"left"},  ADI_LEFT_OP,	ADI_NORM_FUNC,	    ADI_PREFIX,
-	DB_SQL|DB_QUEL,	    ADI_INGRES_6,
-		ADO_LEFT_CNT,   ADZ_LEFT_FIIDX},
+	Besides the FI identifier, it contains the FI ID of any compliment
+	FI (comparison only), the type of the FI such as prefix, infix or
+	postfix and any flags to apply. In addition the result and parameter
+	datatypes are described here along with instrictions about NULL
+	handling, how to calculate the result length and whether there are
+	any memory workspace requirements.
 
-
-	ADI_LEFT_OP is the operator definition.  You define that
-	by hand in common!hdr!hdr adfops.h at the end of the table
-	macro ADI_OPS_MACRO. The MACROs in adfops.h make sure that
-	the name looks like ADI_blah_OP and that the assigned value
-	is unique and contiguous.
-
-	Left() is a "normal" (as opposed to predicate) function and
-	uses prefix syntax.  It's available in both QUEL and SQL.
-
-	ADO_LEFT_CNT is the number of FI's for this operator.
-	ADZ_LEFT_FIIDX is the index in the FI description table
-	(adgfi_defn.roc) of the first FI implementing this operator.
-
-	These latter two #define's are generated by fi_defn.awk
-	as part of the function instance table generation process.
-	The defines are located in common!adf!adg adgfi_defn.h.
-
-b)	fi_defn.txt
-
-	This text data file contains all the function instance
-	definitions that implement each operator.
-
-	A couple of the entries for left() look like this:
-
-------------------------------------------
-    operator ADI_LEFT_OP
-
-	fi ADFI_160_LEFT_C_I
-	    description c  :  left(c,i)
-	    lenspec ADI_O1
-	    null_preinst ADE_1CXI_SET_SKIP
-	    result DB_CHR_TYPE
-	    operands DB_CHR_TYPE DB_INT_TYPE
-	    routine adu_6strleft
-
-	fi ADFI_298_LEFT_CHAR_I
-	    description char  :  left(char,i)
-	    lenspec ADI_O1
-	    null_preinst ADE_1CXI_SET_SKIP
-	    result DB_CHA_TYPE
-	    operands DB_CHA_TYPE DB_INT_TYPE
-	    routine adu_6strleft
-------------------------------------------
-
-	Left() is a normal function, so it goes into the "ADI_NORM_FUNC"
-	group in fi_defn.txt.
-
-	According to the numeric value of ADI_LEFT_OP (xxx), the operator
-	and fi entries belong between ADI_INTERVAL_OP (xxx) and
-	ADI_CHLEN_OP (xxx).
-
-	Two FI definitions are listed, one for the "c" implementation
-	of left(), and one for the "char" implementation.
-
-
-c) adgfi_defn.roc
-
-	This is the FI description table, and it's generated from the
-	fi_defn.txt file by an AWK program fi_defn.awk.  An entry
-	looks like:
-
-/*----------------------------------------------------------------------------*/
-/* /* [nnnn]:  Comment describing the function instance ...                   */
-/*                                                                            */
-/*  {   fi_ID,                          complment_fi_ID,                      */
-/*          type_of_fi,         fi_flags,		op_ID,                */
-/*              {     length_spec    },   aggr_w/s_dv_length, null_pre-instr, */
-/*                  #_args,  result_dt,                                       */
-/*                           arg_#1_dt,                                       */
-/*                           arg_#2_dt,                                       */
-/*                           arg_#3_dt,                                       */
-/*                           arg_#4_dt    }                                   */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
-	Type resolution for a left() usage will examine the entries
-	for the left() operator, and choose the one with the most
-	appropriate type.  The FI description entry will yield the
-	FI number, which is compiled into the compiled expression (CX).
-	At runtime, the FI number is used to look up the execution
-	routine in the FI lookup table.
-
-	The two entries corresponding to the c and char FI entries
-	shown above, look like:
-
-	/*
-	** [479]:  c  :  left(c,i)
-	*/
-	{ ADFI_160_LEFT_C_I, ADI_NOFI,
-	  ADI_NORM_FUNC, ADI_F0_NOFIFLAGS, ADI_LEFT_OP,
-	  {ADI_O1, 0, 0}, 0, ADE_1CXI_SET_SKIP,
-	  2, DB_CHR_TYPE,
-	    DB_CHR_TYPE, DB_INT_TYPE, DB_NODT, DB_NODT
-	},
-	/*
-	** [480]:  char  :  left(char,i)
-	*/
-	{ ADFI_298_LEFT_CHAR_I, ADI_NOFI,
-	  ADI_NORM_FUNC, ADI_F0_NOFIFLAGS, ADI_LEFT_OP,
-	  {ADI_O1, 0, 0}, 0, ADE_1CXI_SET_SKIP,
-	  2, DB_CHA_TYPE,
-	    DB_CHA_TYPE, DB_INT_TYPE, DB_NODT, DB_NODT
-	},
-
- adgfi_defn_lu.roc
-
-	This is the FI lookup table, also generated from the fi_defn.txt
-	file by the fi_defn.awk AWK program.  An entry looks like:
-
-/*----------------------------------------------------------------------------*/
-/*                                                                            */
-/*  { pointer into      & f.i.          & agbgn         & agend        /* f.i.*/
-/*     f.i. table,       routine,        routine,        routine }     /* ID  */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
-	The FI number indexes this table directly.  So, at execution
-	time, given a FI number, we can get the execution routine (if
-	there is one), plus a pointer back to the FI description table
-	for flags and other info.
-
-	The two entries for the two left() FI's shown above look like:
-
-	{ &Adi_fis[479], adu_6strleft, NULL, NULL }, /* ADFI_160_LEFT_C_I */
-
-	and
-
-	{ &Adi_fis[480], adu_6strleft, NULL, NULL }, /* ADFI_298_LEFT_CHAR_I */
-
-	at indexes 160 and 298 respectively.
+d)	adgfi_defn.h
+	------------
+	This is the final product of fi_defn.awk compiling fi_defn.txt.
+	It consists of the list of definitions that capture the index
+	bounds of each operator within the Adi_fi_lkup[]. The bounds are
+	retained in the operator table Adi_3RO_operations[].
 
 
 3. Adding new operators or FI's
    ----------------------------
 
-a) Adding entry to adgoptab.roc
-   ----------------------------
-
-   New operator requires:
-
-   - correct new entry (see adgoptab.roc)
-   - new #define constant ADI_xxx_OP to identify the operator 
-	(see common!hdr!hdr	adfops.h)
-   - new #define constants ADFI_nnn_yyyy for the function instance(s) that
-     implement the operator.  
-	(see common!adf!hdr	adffiids.h)
-
-	If you're adding a FI to an existing operator, you need the
-	new ADFI_nnn_yyy definition, but you don't need to mess with
-	adgoptab.roc or the op definitions in adfops.h.
-
-	You don't need to worry about the ADO_xxx_CNT or ADZ_xxx_FIIDX
-	#define constants -- the fi_defn.awk process regenerates those.
-
-b) Adding entry to fi_defn.txt
+a) Adding entry to fi_defn.txt
    ------------------------------
 
    New operator requires:
+
+   - correct new entry at the end of the appropriate 'group'
+
+   - new #define constant ADI_xxx_OP to identify the operator. This will
+     be added in common!hdr!hdr adfops.h to the end of ADI_OPS_MACRO
+     in the main code line. Once defined, the operator number should
+     not be moved.
+
+   - new #define constants ADFI_nnn_yyyy for the function instance(s) that
+     implement the operator. These are defined in common!adf!hdr adffiids.h
+     or occasionally in common!hdr!hdr adf.h for FIs that need special
+     handling in the code.
+
+     If you're adding a FI to an existing operator, you need the new
+     ADFI_nnn_yyy definition, but the op definition in adfops.h will be
+     already there.
+
+   New operator requires:
    - correct new operator and FI entries (see fi_defn.txt for format)
-	Entries must be properly located within group according
-	to operator ID number (NOT alphabetically!).
+     Entries must be properly located within group according to operator
+     ID number (NOT alphabetically!). Usually this will be at the end of
+     the appropriate 'group'
 
    New FI for existing operator requires:
    - new FI entry under the operator entry in fi_defn.txt
@@ -285,7 +310,7 @@ c) Updating generated tables
 	After modifying fi_defn.txt, run fi_defn.awk from jam.
 
 	Never attempt to hand edit data in adgfi_defn.roc or adgfi_defn.h.
-	fi_defn.txt must is the primary source of FI definition info.
+	fi_defn.txt must is the primary source of FI and OP definition info.
 	Fix things there, or in the awk process.
 
 	** Running fi_defn.awk WAS NOT PART OF THE JAM BUILD PROCESS. **
@@ -294,7 +319,7 @@ c) Updating generated tables
 	its now automated in the build.
 
 	Note that fi_defn.txt and fi_defn.awk are both under source
-	code control. adgfi_defn.roc, and adgfi_defn.h are NOT under source
+	code control. adgfi_defn* and adgop_defn* are NOT under source
 	code control as they are just intermediate files.  
 
 d) Add new executor function
@@ -311,6 +336,12 @@ d) Add new executor function
 	in-line in adeexecute.c, PLUS there must be a specific
 	handler (not the generic fallback) for STCODE execution
 	in adehandler.c.
+
+	However, even if FI code is implemented in-line in adeexecute.c
+	there is good sense to add the 'routine' definition as well if
+	the routine is available. This will aid the performance of
+	adf_func() enabling it to not need to compile the CX instructions
+	needed to execute the inline code.
 
 
 APPENDIX:
