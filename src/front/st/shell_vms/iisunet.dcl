@@ -130,6 +130,8 @@ $!!         gcn_lcl_vnode is defined on SYSTEM level installations.
 $!!         ii_gcn_lcl_vnode should be defined.
 $!!     14-Jan-2010 (horda03) Bug 123153
 $!!         Upgrade all nodes in a clustered environment.
+$!!     30-Sep-2010 (horda03) Bug 124519
+$!!         Handle an empty string "remote_vnode" CBF parameter.
 $!----------------------------------------------------------------------------
 $!
 $ on control_c then goto EXIT_FAIL
@@ -1097,7 +1099,12 @@ $       echo "II_TIMEZONE_NAME configured as ''ii_timezone_name'."
 $    endif
 $    pan_cluster_cmd "''nodes'" iisetres "ii." ".lnm.ii_timezone_name ""''ii_timezone_name'"""
 $
-$    iigetres ii.'node_name.gcn.remote_vnode remote_vnode
+$    if (f$trnlnm( "remote_vnode", "lnm$process") .nes. "")
+$    then
+$       deassign "remote_vnode"
+$    endif
+$
+$    PIPE iigetres ii.'node_name.gcn.remote_vnode remote_vnode 2>NLA0:
 $    set_message_off
 $    remove_vnode =  f$trnlnm( "remote_vnode")
 $    deassign "remote_vnode"
