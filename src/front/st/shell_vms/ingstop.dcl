@@ -137,27 +137,13 @@ $!!             message only if the ingstop command was the one that issued
 $!!             the rcp shutdown instruction.
 $!!             Tidy up 2-3 "if-endif" in the same block that existed one
 $!!             after the other for the same condition into one "if-endif".
+$!!     05-Oct-2010 (ashco01) Manual cross-int of 2.6 change 495113.
+$!!             Original comment: 13-Jun-2007 (ashco01) Bug 116043.
+$!!             Added command tail parameter validation to prevent ingstop
+$!!             executing when an invalid or mis-spelled action is specified.
+$!!             Only valid options on VMS are "". "-FORCE" & "-F".
+$!!             Also removed redundant VMS OS Version check.
 $!=========================================================================
-$!
-$! Check VMS version
-$!
-$ vermajor = f$extract( 1, 1, f$getsyi( "version" ) )
-$ verminor = f$extract( 3, 1, f$getsyi( "version" ) )
-$!
-$! Check VMS Architecture against version
-$!
-$!    Process Alpha Open VMS
-$ if (vermajor .eq. 7) .and. (verminor .ge. 3) then goto VERSION_OK
-$ if vermajor .ge. 8 then goto VERSION_OK
-$ type sys$input
- --------------------------------------------------------------------------------
-|                      ************* ERROR *************                         |
-| You must be running Alpha OpenVMS 7.3 or higher to use this shutdown procedure |
-|                      *********************************                         |
- --------------------------------------------------------------------------------
-$ goto NORMAL_EXIT
-$!
-$ VERSION_OK:
 $!
 $! Define local symbols
 $!
@@ -169,6 +155,16 @@ $!
 $ saved_message_format	= f$environment( "MESSAGE" ) ! save message format
 $ on error then goto GENERIC_ERROR_HANDLER
 $ askuser="FALSE" ! ### REMOVE askuser LATER
+$!
+$! Validate command tail parameters
+$!
+$ if (p1 .nes. "") .and. (p1 .nes. "-FORCE") .and. (p1 .nes. "-F")
+$ then
+$     echo ""
+$     echo "Usage: ingstop [ -force | -f ]"
+$     echo ""
+$     goto NORMAL_EXIT
+$ endif
 $!
 $! Initialize active process counters. 
 $!
