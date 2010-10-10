@@ -8269,6 +8269,13 @@ btree_search(
 **	10-Sep-2010 (jonj)
 **	    More for B124340 fix. Unfix/unlock data buffer before waiting
 **	    for (c)row lock to avoid silent deadlock with dmve.
+**	04-Oct-2010 (miket) SIR 122403
+**	    Do not test TCB_ENCRYPTED when deciding whether or not to call
+**	    dm1c_get for compression processing. It is leftover from feature
+**	    prototyping and can result in a useless no-op call.
+**	04-Oct-2010 (miket) SIR 122403 BUG 124541 SD 147136
+**	    Allocate a local encryption work buffer (compare wrec) so that
+**	    we don't contend on the rcb encryption work buffer.
 */
 static DB_STATUS
 dm1badupcheck(
@@ -8300,6 +8307,7 @@ dm1badupcheck(
     DB_STATUS       get_status;
     char            *wrec;
     char	    *wrec_ptr;
+    char	    *erec_ptr;
     i4         wrec_size;   /* Size of record retrieved off
                                         ** page. */
     i4         local_err_code;     
@@ -8327,13 +8335,21 @@ dm1badupcheck(
         return (E_DB_OK);
 
     if (r->rcb_tupbuf == NULL)
-	r->rcb_tupbuf = dm0m_tballoc((t->tcb_rel.relwid + 
+    {
+	i4	buffers = 1;
+	if (t->tcb_rel.relencflags & TCB_ENCRYPTED)
+	    buffers++;
+	r->rcb_tupbuf = dm0m_tballoc(buffers*(t->tcb_rel.relwid + 
 					t->tcb_data_rac.worstcase_expansion));
+    }
     if ((wrec = r->rcb_tupbuf) == NULL)
     {
 	SETDBERR(dberr, 0, E_DM923D_DM0M_NOMORE);
 	return (E_DB_ERROR);
     }
+    else if (t->tcb_rel.relencflags & TCB_ENCRYPTED)
+	erec_ptr = r->rcb_tupbuf + t->tcb_rel.relwid +
+			t->tcb_data_rac.worstcase_expansion;
 
     adf_cb = r->rcb_adf_cb;
     localbid.tid_i4 = bid->tid_i4;
@@ -8494,7 +8510,6 @@ dm1badupcheck(
 		/* Additional processing if compressed, altered, or segmented */
 		if (s == E_DB_OK &&
 		    (t->tcb_data_rac.compression_type != TCB_C_NONE ||
-		    (t->tcb_rel.relencflags & TCB_ENCRYPTED) ||
 		    row_version != t->tcb_rel.relversion ||
 		    t->tcb_seg_rows))
 		{
@@ -8521,7 +8536,7 @@ dm1badupcheck(
 		    t->tcb_rel.relencflags & TCB_ENCRYPTED)
 		{
 		    s = dm1e_aes_decrypt(r, &t->tcb_data_rac, wrec_ptr, wrec,
-				r->rcb_erecord_ptr, dberr);
+				erec_ptr, dberr);
 		    if (s != E_DB_OK)
 			break;
 		    wrec_ptr = wrec;
@@ -13266,6 +13281,10 @@ char      *dstbuf)
 **	    Removed bogus dm0p_check_logfull().
 **	13-Apr-2006 (jenjo02)
 **	    CLUSTERED leaf entries -are- the row.
+**	04-Oct-2010 (miket) SIR 122403
+**	    Do not test TCB_ENCRYPTED when deciding whether or not to call
+**	    dm1c_get for compression processing. It is leftover from feature
+**	    prototyping and can result in a useless no-op call.
 **	    
 */
 DB_STATUS
@@ -13682,7 +13701,6 @@ tid = (%d,%d) rnl_btree_flags = %x\n",
 	/* Additional get processing if compressed, altered, or segmented */
 	if (s == E_DB_OK && 
 	    (t->tcb_data_rac.compression_type != TCB_C_NONE ||
-	    (t->tcb_rel.relencflags & TCB_ENCRYPTED) ||
 	    row_version != r->rcb_proj_relversion ||
 	    t->tcb_seg_rows))
 	{
