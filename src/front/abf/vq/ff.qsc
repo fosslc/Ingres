@@ -145,6 +145,9 @@
 **	    Compiler warning fixes.
 **	23-Aug-2009 (kschendel) 121804
 **	    Update some of the function declarations to fix gcc 4.3 problems.
+**      20-Jul-2007 (hanal04) Bug 118783
+**          Remove GRAPH options from the vision menus. vigraph was
+**          deprecated a long time ago.
 **/
 
 /* # define's */
@@ -480,7 +483,6 @@ static i4  frm_order[] =
 	MF_BROWSE,
 	MF_QBF,
 	MF_REPORT,
-	MF_GRAPH,
 	MF_USER,
 	MF_OSLPROC,
 	MF_HLPROC,
@@ -593,7 +595,6 @@ PTR context;
 		frm_info[ MF_USER    ].name = ERget(F_VQ0005_user); 
 		frm_info[ MF_QBF     ].name = ERget(F_VQ0006_qbf); 
 		frm_info[ MF_REPORT  ].name = ERget(F_VQ0007_report); 
-		frm_info[ MF_GRAPH   ].name = ERget(F_VQ0008_graph); 
 		frm_info[ MF_OSLPROC ].name = ERget(F_VQ0009_oslproc); 
 		frm_info[ MF_HLPROC  ].name = ERget(F_VQ000A_hlproc); 
 		frm_info[ MF_DBPROC  ].name = ERget(F_VQ000B_dbproc); 
@@ -605,7 +606,6 @@ PTR context;
 		frm_info[ MF_USER    ].desc = ERget(F_VQ0010_user_desc); 
 		frm_info[ MF_QBF     ].desc = ERget(F_VQ0011_qbf_desc); 
 		frm_info[ MF_REPORT  ].desc = ERget(F_VQ0012_report_desc); 
-		frm_info[ MF_GRAPH   ].desc = ERget(F_VQ0013_graph_desc);
 		frm_info[ MF_OSLPROC ].desc = ERget(F_VQ0014_oslproc_desc); 
 		frm_info[ MF_HLPROC  ].desc = ERget(F_VQ0015_hlproc_desc); 
 		frm_info[ MF_DBPROC  ].desc = ERget(F_VQ0016_dbproc_desc); 
