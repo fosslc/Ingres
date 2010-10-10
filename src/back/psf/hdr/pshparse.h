@@ -1820,6 +1820,11 @@ typedef struct _PSS_DECVAR PSS_DECVAR;  /* forward declaration */
 **	    that yacc can bloody well do what it's told.
 **	    Access to the parser state is necessary in some low level
 **	    contexts, such as "make constant similar".
+**       5-Oct-2010 (hanal04) Bug 124529
+**          Add pss_stmt_flags2 to make room for PSS_STMT_NO_CACHEDYN. 
+**          Used to disable cache dynamic on a statement level basis. 
+**          Currently only used with prepared statements with VLUPs in 
+**          the target list.
 */
 typedef struct _PSS_SESBLK
 {
@@ -2319,6 +2324,9 @@ ULT_VECTOR_MACRO(PSS_TBITS, PSS_TVAO) pss_trace;
 					/* table-level ENCRYPTION= parsed */
 #define		PSS_2_PASSPHRASE	0x0002L
 					/* table-level PASSPHRASE= parsed */
+#define     PSS_STMT_NO_CACHEDYN        0x0004L
+                                        /* indicates this is query must not
+                                        ** be cached */
 i4		    pss_flattening_flags;
 
 					/*
