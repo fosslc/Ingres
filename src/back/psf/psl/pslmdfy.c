@@ -192,6 +192,11 @@
 **	    only modifies from table structure changes.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**       6-Oct-2010 (hanal04) Bug 124553
+**          Modify operations that do not actually modify the table should
+**          not be blocked because of the existence of dependencies that
+**          would be broken by an actual modify. Turn off dependency checking
+**          for no-op modify operations such as table_debug.
 [@history_template@]...
 */
 
@@ -239,6 +244,13 @@ static DB_STATUS psl_md_part_unique(
 #define PSL_MDF_CLUSTERED	0x0100		/* Clustered Btree */
 
 #define PSL_MDF_NOINDEX         0x0200          /* Don't allow on 2ary index */
+
+/* Some operations are unnecessarily blocked because an actual modify would
+** break constraints defined on the table. If the operation is guaranteed
+** NOT to break any dependencies it can be defined as a no-op in which
+** dependency checking can be safely skipped. Use with CAUTION.
+*/
+#define PSL_MDF_NO_OP 		0x0400		/* Table is NOT modified */
 
 /* Here's the action name table itself.
 ** Every action generates a DMU characteristics entry unless the char-id
@@ -370,7 +382,7 @@ static const struct _MODIFY_STORNAMES
 	 DMU_VERIFY, DMU_V_PATCH, -1, PSL_MDF_PPART_ONLY
 	},
 	{"table_debug",
-	 DMU_VERIFY, DMU_V_DEBUG, -1, PSL_MDF_PPART_ONLY
+	 DMU_VERIFY, DMU_V_DEBUG, -1, PSL_MDF_PPART_ONLY | PSL_MDF_NO_OP
 	},
 	{"checklink",
 	 0, 0, 0, PSL_MDF_ERROR
@@ -1422,6 +1434,16 @@ psl_md4_modstorname(
                     return (E_DB_ERROR);
 	    }
 	}
+        
+        if (stornames_ptr->special_flags & PSL_MDF_NO_OP)
+        {
+            /* Table will NOT be modified so skip dependency checking 
+            ** this serves as an optimisation and also prevents
+            ** operations from failing when there is no need to
+            ** block the operation.
+            */
+            dmu_cb->dmu_flags_mask |= DMU_NODEPENDENCY_CHECK;
+        }
 
 	/* Action passes tests, begin the dmu characteristics array
 	** with the specified ID and value.
