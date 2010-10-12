@@ -689,6 +689,8 @@
 ##	    Add dmf_crypt_maxkeys to the upgrade list.
 ##	25-Aug-2010 (bonro01) BUG 124305
 ##	    Remove confusing Independent Storage device prompt.
+##	07-Oct-2010 (frima01) SIR 124560
+##	    On upgrade always upgrade demodb if existent.
 ##	    
 #----------------------------------------------------------------------------
 . iisysdep
@@ -3835,14 +3837,16 @@ fi
 # Create and load demo databases if we need to
 CREATE_DEMODB=NO
 DEMODB_ERROR=''
+$READ_RESPONSE && \
+    CREATE_DEMODB=`iiread_response II_DEMODB_CREATE $RESINFILE`
+
 if [ -d "$II_DATABASE/ingres/data/default/demodb" ] && [ "$UPGRADE_DBS" = "false" ] ; then
     cat << !
-You have chosen not to upgrade the user databases at this time. As such
-demodb cannot be reloaded until the database has been upgraded using the
-'upgradedb' utility.
+Upgrading  demodb...
 
-Contact Ingres Corporation Technical Support for more information.
 !
+    upgradedb demodb
+    CREATE_DEMODB="YES"
 else
     $BATCH ||
     {
@@ -3862,8 +3866,6 @@ which will be used by the Ingres demonstration applications.
             check_response_write II_DEMODB_CREATE $CREATE_DEMODB replace
     }
 
-    $READ_RESPONSE && \
-	CREATE_DEMODB=`iiread_response II_DEMODB_CREATE $RESINFILE`
 fi
 
 if [ "$WRITE_RESPONSE" = 'false' ] ; then
@@ -3872,6 +3874,7 @@ if [ "$WRITE_RESPONSE" = 'false' ] ; then
         if [ -d "$II_SYSTEM/ingres/data/default/demodb" ] ; then
             # turn off journaling before data is reloaded in existing db
 	    $DOIT ckpdb -w -j demodb
+	    echo
         else
 	    cat << !
 Creating demodb...
@@ -3893,6 +3896,7 @@ Contact Ingres Corporation Technical Support for assistance.
     # load data
     if [ "$CREATE_DEMODB" = "YES" ] && [ -z "$DEMODB_ERROR" ] ; then
 	cat << !
+
 Populating demodb...
 
 !
