@@ -689,6 +689,8 @@
 ##	    Add dmf_crypt_maxkeys to the upgrade list.
 ##	25-Aug-2010 (bonro01) BUG 124305
 ##	    Remove confusing Independent Storage device prompt.
+##	06-Oct-2010 (frima01) BUG 124558
+##	    Correct sed command determining TMP_RELEASE.
 ##	07-Oct-2010 (frima01) SIR 124560
 ##	    On upgrade always upgrade demodb if existent.
 ##	    
@@ -1840,7 +1842,7 @@ if [ -d "$II_DATABASE" -a -d $II_DATABASE/ingres/data/default/iidbdb ] ; then
   TMP_II_CHARSET=`ingprenv II_CHARSET${TMP_II_INSTALLATION}`
   if [ "$TMP_II_CHARSET" = "UTF8" ]; then
     TMP_VERSION=`head -1 $II_SYSTEM/ingres/version.rel | sed -e 's/^.*(//' -e 's#/.*$##' -e 's/[.]//' `
-    TMP_RELEASE=`grep config.dbms.ii ${cfgloc}/config.dat | sed -e s/^.*config.dbms.ii// -e s/${TMP_VERSION}.*$//`
+    TMP_RELEASE=`grep config.dbms.ii ${cfgloc}/config.dat | sed -e 's/^.*config.dbms.ii//' -e s/${TMP_VERSION}.*$// `
     if [ $TMP_RELEASE -lt 920 ]; then
       cat << !
 
