@@ -108,6 +108,9 @@
 **   08-Oct-2010 (Ralph Loen) Bug 124578
 **      Supply a placeholder string for the output string argument in
 **      SQLBrowseConnect() if the argument is NULL.
+**   11-Oct-2010 (Ralph Loen) Bug 124578
+**      Clean up treatment of placeholder variables outLen and outStr
+**      in SQLBrowseConnect().
 */ 
 
 #ifndef NT_GENERIC
@@ -1551,6 +1554,9 @@ RETCODE SQL_API SQLFreeEnv(
 **      if the argument is NULL; this allows SQLBrowseConnect() to
 **      return SQL_NEED_DATA on first invocation and attempt a
 **      connection on the second invocation.
+**    11-Oct-2010 (Ralph Loen) Bug 124578
+**      Clean up treatment of placeholder variables outLen and outStr
+**      in SQLBrowseConnectW().
 */ 
 
 SQLRETURN SQL_API SQLBrowseConnect(
@@ -1561,8 +1567,8 @@ SQLRETURN SQL_API SQLBrowseConnect(
     SQLSMALLINT        cbConnStrOutMax,
     SQLSMALLINT       *pcbConnStrOut)
 {
-    SQLCHAR *outStr = NULL;
-    SQLSMALLINT outLen = 0;
+    SQLCHAR *outStr;
+    SQLSMALLINT outLen = MAX_CONNSTR_OUTLEN;
     BOOL allocStr = FALSE;
     pDBC pdbc = (pDBC)hdbc;
     RETCODE rc = SQL_SUCCESS, traceRet = 1;
@@ -1589,8 +1595,7 @@ SQLRETURN SQL_API SQLBrowseConnect(
     */
     if (!szConnStrOut)
     {
-        outStr = (SQLCHAR *) MEreqmem(0, MAX_CONNSTR_OUTLEN, TRUE, NULL);
-        outLen = MAX_CONNSTR_OUTLEN;
+        outStr = (SQLCHAR *) MEreqmem(0, outLen, TRUE, NULL);
         allocStr = TRUE;
     }
     else

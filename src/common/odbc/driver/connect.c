@@ -348,6 +348,10 @@
 **     26-Apr-2010 (Ralph Loen) SIR 123641
 **         In SQLBrowseConnect(), replace list of hard-coded driver names
 **         with "Ingres XX", where XX is the value of II_INSTALLATION.
+**     10-Oct-2010 (Ralph Loen) Bug 124578
+**         Set bcConnectCalled to FALSE upon SQLDisconnect(), in case
+**         SQLBrowseConnect() is called after a disconnecton the same
+**         connection handle.
 ** 
 */
 
@@ -1194,6 +1198,7 @@ RETCODE SQL_API SQLDisconnect(
     pdbc->max_byte_column_length = 0; 
     pdbc->max_vbyt_column_length = 0;
     pdbc->fRelease = 0; 
+    pdbc->bcConnectCalled = FALSE;
 
 #ifdef _WIN32
     if (pdbc->hMSDTCTransactionCompleting)  /* if handle was allocated, free it  */
