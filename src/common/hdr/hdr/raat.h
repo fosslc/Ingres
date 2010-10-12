@@ -88,6 +88,8 @@
 ##	    structures, so they match with the fields of control  
 ##	    blocks in dmtcb.h after the recent enhancements   
 ##	    such as long ID and column encryption supports.
+##      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+##          Store blank trimmed names in DMT_ATT_ENTRY
 ##
 */
 
@@ -215,7 +217,6 @@ typedef struct _RAAT_QRY_ID
 */
 typedef struct
 {
-    char	 att_name[RAAT_MAXNAME];     /* Name of the attribute. */
     int	 att_number;		   /* Attribute number. */
     int	 att_offset;		   /* Offset to attribute. */
     int      att_type;              /* Data type for attribute. */
@@ -253,6 +254,9 @@ typedef struct
     short       attr_geomtype;         /* Geometry type code */
     short       att_encflags;
     int         att_encwid; 
+				      /* RAAT does DMT_SHOW DMT_NO_ATTNAMES */
+    short	att_nmlen;	      /* NOTE RAAT doesn't use att_nmlen */
+    char	*att_nmstr;	      /* NOTE RAAT doesn't use att_nmstr */
 }   RAAT_ATT_ENTRY;
 
 /*}

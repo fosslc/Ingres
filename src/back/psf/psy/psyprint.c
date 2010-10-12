@@ -59,6 +59,8 @@
 **	    block in psy_put.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 **/
 
 /*{
@@ -293,12 +295,10 @@ psy_print(
 		/* If there was no range variable, put question marks */
 		if (lastvar != (PSS_RNGTAB *) NULL)
 		{
-		    /* NULL terminate and trim blanks from column name */
-		    MEcopy((char *) &lastvar->pss_attdesc[i4align]->att_name,
-			DB_ATT_MAXNAME, buf);
-		    buf[DB_ATT_MAXNAME] = '\0';
-		    slength = STtrmwhite(buf);
-		    status = psy_put(mstream, buf, slength, block, err_blk);
+		    status = psy_put(mstream, 
+			lastvar->pss_attdesc[i4align]->att_nmstr,
+			lastvar->pss_attdesc[i4align]->att_nmlen,
+			block, err_blk);
 		    if (DB_FAILURE_MACRO(status))
 			return (status);
 		}
@@ -353,11 +353,10 @@ psy_print(
 
 		/* Get the column name from the result range variable */
 		lastvar = &rngtab->pss_rsrng;
-		MEcopy((char *) &lastvar->pss_attdesc[i4align]->att_name,
-		    DB_ATT_MAXNAME, buf);
-		buf[DB_ATT_MAXNAME] = '\0';
-		slength = STtrmwhite(buf);
-		status = psy_put(mstream, buf, slength, block, err_blk);
+		status = psy_put(mstream,
+			lastvar->pss_attdesc[i4align]->att_nmstr,
+			lastvar->pss_attdesc[i4align]->att_nmlen,
+			block, err_blk);
 		if (DB_FAILURE_MACRO(status))
 		    return (status);
 

@@ -100,6 +100,8 @@
 **	    replace nat and longnat with i4
 **      24-Feb-2004 (kodse01)
 **          Removed gwxit.h inclusion which is not required.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 */
 
 /*}
@@ -345,8 +347,7 @@ GWX_RCB	    *gwx_rcb;
 
 		GM_1error( (GWX_RCB *)0, E_GW8181_OBJ_MISSING_IS_CLAUSE,
 			  GM_ERR_USER,
-			  GM_dbslen( dmt_att->att_name.db_att_name ),
-			  (PTR)&dmt_att->att_name );
+			  dmt_att->att_nmlen, dmt_att->att_nmstr );
 		db_stat = E_DB_ERROR;
 		break;
 	    }
@@ -361,8 +362,7 @@ GWX_RCB	    *gwx_rcb;
 		       'VALUE', or 'PERMISSIONS'" */
 		    GM_2error( (GWX_RCB *)0, E_GW8182_OBJ_BAD_IS_CLAUSE,
 			      GM_ERR_USER,
-			      GM_dbslen( dmt_att->att_name.db_att_name ),
-			      (PTR)&dmt_att->att_name,
+			      dmt_att->att_nmlen, dmt_att->att_nmstr,
 			      0, src );
 		    break;
 		}
@@ -494,7 +494,7 @@ GWX_RCB	    *gwx_rcb;
     i4			i;
     
     char		*tblname = gwx_rcb->xrcb_tab_name->db_tab_name;
-    char		*err_att;
+    DMT_ATT_ENTRY	*err_att;
     GW_RSB		*rsb = (GW_RSB *)gwx_rcb->xrcb_rsb;
     GW_TCB		*tcb = rsb->gwrsb_tcb;
     GM_XREL_TUPLE	*xrel = (GM_XREL_TUPLE *)tcb->gwt_xrel.data_address;
@@ -527,8 +527,8 @@ GWX_RCB	    *gwx_rcb;
 		
 		GM_2error( (GWX_RCB *)0, E_GW8182_OBJ_BAD_IS_CLAUSE,
 			  GM_ERR_USER,
-			  GM_dbslen( gwm_atts[i].gma_dmt_att->att_name.db_att_name ),
-			  (PTR)&gwm_atts[i].gma_dmt_att->att_name,
+			  gwm_atts[i].gma_dmt_att->att_nmlen,
+			  gwm_atts[i].gma_dmt_att->att_nmstr,
 			  0, (PTR)gwm_atts[i].gma_col_classid );
 		
 		db_stat = E_DB_ERROR;
@@ -553,17 +553,17 @@ GWX_RCB	    *gwx_rcb;
 	    if( gwm_atts[0].gma_key_type != GMA_SERVER && 
 	       gwm_atts[0].gma_key_type != GMA_VNODE )
 	    {
-		err_att = gwm_atts[0].gma_key_dmt_att->att_name.db_att_name;
+		err_att = gwm_atts[0].gma_key_dmt_att;
 		err_stat = E_GW8188_NOT_PLACE;
 	    }
 	    if( gwm_atts[1].gma_key_type != GMA_CLASSID )
 	    {
-		err_att = gwm_atts[1].gma_key_dmt_att->att_name.db_att_name;
+		err_att = gwm_atts[1].gma_key_dmt_att;
 		err_stat = E_GW8189_NOT_CLASSID;
 	    }
 	    if( gwm_atts[2].gma_key_type != GMA_INSTANCE )
 	    {
-		err_att = gwm_atts[2].gma_key_dmt_att->att_name.db_att_name;
+		err_att = gwm_atts[2].gma_key_dmt_att;
 		err_stat = E_GW818A_NOT_INSTANCE;
 	    }
 	    if( !(xrel_flags & GM_UNIQUE) )
@@ -579,8 +579,7 @@ GWX_RCB	    *gwx_rcb;
 	    {
 		if( gwm_atts[1].gma_key_type != GMA_CLASSID )
 		{
-		    err_att = 
-			gwm_atts[1].gma_key_dmt_att->att_name.db_att_name;
+		    err_att = gwm_atts[1].gma_key_dmt_att;
 		    err_stat = E_GW8189_NOT_CLASSID;
 		}
 		if( xrel_flags & GM_UNIQUE )
@@ -592,8 +591,7 @@ GWX_RCB	    *gwx_rcb;
 	    {
 		if( gwm_atts[1].gma_key_type != GMA_INSTANCE )
 		{
-		    err_att = 
-			gwm_atts[1].gma_key_dmt_att->att_name.db_att_name;
+		    err_att = gwm_atts[1].gma_key_dmt_att;
 		    err_stat = E_GW818A_NOT_INSTANCE;
 		}
 		if( !(xrel_flags & GM_UNIQUE) )
@@ -603,7 +601,7 @@ GWX_RCB	    *gwx_rcb;
 	    }
 	    else
 	    {
-		err_att = gwm_atts[0].gma_key_dmt_att->att_name.db_att_name;
+		err_att = gwm_atts[0].gma_key_dmt_att;
 		err_stat = E_GW818D_NOT_PLACE_CLASSID;
 	    }
 	    break;
@@ -614,7 +612,7 @@ GWX_RCB	    *gwx_rcb;
 	       gwm_atts[0].gma_key_type != GMA_VNODE &&
 	       gwm_atts[0].gma_key_type != GMA_CLASSID )
 	    {
-		err_att = gwm_atts[0].gma_key_dmt_att->att_name.db_att_name;
+		err_att = gwm_atts[0].gma_key_dmt_att;
 		err_stat = E_GW818D_NOT_PLACE_CLASSID;
 	    }
 	    if( xrel_flags & GM_UNIQUE )
@@ -647,7 +645,7 @@ GWX_RCB	    *gwx_rcb;
 	    {
 		GM_2error( gwx_rcb, err_stat, GM_ERR_USER,
 			  GM_dbslen( tblname ), (PTR)tblname,
-			  GM_dbslen( err_att ), (PTR)err_att);
+			  err_att->att_nmlen, err_att->att_nmstr);
 	    }
 	}
     }
@@ -1337,8 +1335,8 @@ GO_fmt_tuple( GO_RSB *go_rsb, GM_GKEY *key, char *cbuf, i4  perms,
 	    GM_3error( (GWX_RCB *)0, E_GW8186_BAD_ATTR_TYPE, GM_ERR_INTERNAL,
 		      sizeof( gwm_att->gma_type ), (PTR)&gwm_att->gma_type,
 		      sizeof( col ), (PTR)&col,
-		      GM_dbslen( gwm_att->gma_dmt_att->att_name.db_att_name ),
-		      (PTR)&gwm_att->gma_dmt_att->att_name );
+		      gwm_att->gma_dmt_att->att_nmlen,
+		      gwm_att->gma_dmt_att->att_nmstr );
 
 	    db_stat = E_DB_ERROR;
 	    break;

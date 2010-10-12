@@ -158,6 +158,8 @@
 **          COPY INTO change the string's length to be
 **          AD_11_MAX_STRING_LEN to cater for maximum interval
 **          length. 
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 **	    
 */
 
@@ -592,16 +594,16 @@ qe_copy->qeu_tup_length = qe_copy->qeu_tup_physical;
                  cpdom_desc != NULL;
                  cpdom_desc = cpdom_desc->cp_next)
             {
-		char tmp_name[DB_ATT_MAXNAME+1];
                 if (cpdom_desc->cp_type == CPY_DUMMY_TYPE) continue;
 
-		/* Space-pad the parsed name, since otherwise it will only
-	 	** check it as a prefix in STbcompare. (kibro01) b121642
+		/* 
+		** cp_domname is not blank padded
+		** Use STlength to get compare length for cui_compare
+	 	** so that is compared correctly for b121642
 		*/
-		STmove(cpdom_desc->cp_domname, ' ', sizeof(tmp_name), tmp_name);
-                if (STbcompare(tmp_name, DB_ATT_MAXNAME,
-			att_entry->att_name.db_att_name, DB_ATT_MAXNAME,
-			FALSE) == 0)
+		if (cui_compare(STlength(cpdom_desc->cp_domname), 
+			cpdom_desc->cp_domname,
+			att_entry->att_nmlen, att_entry->att_nmstr) == 0)
                    break;
             }
 
@@ -623,10 +625,7 @@ qe_copy->qeu_tup_length = qe_copy->qeu_tup_physical;
                 {
                    /* Mandatory column value not present */
                    (void) psf_error(2779L, 0L, PSF_USERERR, &err_code,
-                                    err_blk, 1,
-                                    psf_trmwhite(sizeof(DB_ATT_NAME),
-                                                 (char *) &att_entry->att_name),
-                                    &att_entry->att_name);
+			err_blk, 1, att_entry->att_nmlen, att_entry->att_nmstr);
 
                    return E_DB_ERROR;
                 }
@@ -1687,8 +1686,10 @@ psl_cp4_coparam(
 	if (status != E_DB_OK)
 	    return(status);
 
-	STmove((char *) &att_entry->att_name, '\0', DB_ATT_MAXNAME,
-	     cpdom_desc->cp_domname);
+	/* don't blank pad cp_domname, it is mostly referenced as a string */
+	MEfill(sizeof(cpdom_desc->cp_domname), 0, cpdom_desc->cp_domname);
+	cui_move(att_entry->att_nmlen, att_entry->att_nmstr, '\0',
+		att_entry->att_nmlen + 1, cpdom_desc->cp_domname);
 
 	cpdom_desc->cp_tupmap = att_entry->att_number - 1;
 	status = adi_dtinfo(adf_scb, att_entry->att_type, &dt_bits);
@@ -1824,7 +1825,7 @@ psl_cp5_cospecs(
     DMT_ATT_ENTRY	*coldesc;
     char		*delimiter;
     DB_STATUS		status = E_DB_OK;
-    DB_ATT_NAME		colname;
+    i4			dom_nmlen;
     i4		err_code;
 
     if (~sess_cb->pss_distrib & DB_3_DDB_SESS)
@@ -1840,13 +1841,13 @@ psl_cp5_cospecs(
     */
     if ((sess_cb->pss_stmt_flags & PSS_CP_DUMMY_COL) == 0)
     {
-	STmove(domname, ' ', sizeof(DB_ATT_NAME), (char *) &colname);
-	coldesc = pst_coldesc(sess_cb->pss_resrng, &colname);
+	dom_nmlen = STlength(domname);
+	coldesc = pst_coldesc(sess_cb->pss_resrng, domname, dom_nmlen);
 	if (coldesc == (DMT_ATT_ENTRY *) NULL)
 	{
-	    (VOID) psf_error(5801L, 0L, PSF_USERERR, &err_code,
-		err_blk, 2, STlength(domname),
-		domname, sizeof(DB_TAB_NAME),
+	    (VOID) psf_error(5801L, 0L, PSF_USERERR, &err_code, err_blk, 2,
+		dom_nmlen, domname, 
+		sizeof(DB_TAB_NAME), 
 		&sess_cb->pss_resrng->pss_tabdesc->tbl_name);
 	    return (E_DB_ERROR);
 	}

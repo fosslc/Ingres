@@ -156,6 +156,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 */
 		
 static DB_STATUS psl_validate_rtree(
@@ -421,7 +423,7 @@ psl_ci1_create_index(
 			** it to the index.
 			*/
 			status=psl_ci4_indexcol(sess_cb,
-				att_entry->att_name.db_att_name,
+				att_entry->att_nmstr,
 				err_blk,
 				TRUE);
 			if(status!=E_DB_OK)
@@ -1035,11 +1037,10 @@ psl_ci4_indexcol(
     i4             err_code;
     QEU_CB		*qeu_cb;
     DMU_CB		*dmu_cb;
-    DB_ATT_NAME		attname;
     DMT_ATT_ENTRY	*attribute;
     DMU_KEY_ENTRY	**key;
     i4			i;
-    char		tid[DB_ATT_MAXNAME];
+    i4			col_nmlen;
 
     /* Count index columns and give error if too many */
     if (sess_cb->pss_rsdmno == DB_MAXKEYS)
@@ -1060,8 +1061,8 @@ psl_ci4_indexcol(
     dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
 
     /* Make sure the column exists */
-    STmove(colname, ' ', sizeof(DB_ATT_NAME), (char *) &attname);
-    attribute = pst_coldesc(sess_cb->pss_resrng, &attname);
+    col_nmlen = STlength(colname);
+    attribute = pst_coldesc(sess_cb->pss_resrng, colname, col_nmlen);
     if (attribute == (DMT_ATT_ENTRY *) NULL)
     {
 	_VOID_ psf_error(5302L, 0L, PSF_USERERR, &err_code,
@@ -1073,24 +1074,21 @@ psl_ci4_indexcol(
     ** Check for duplicates and `tid' column names.
     */
 
-    /* Normalize the `tid' attribute name */
-    STmove(((*sess_cb->pss_dbxlate & CUI_ID_REG_U) ? "TID" : "tid"),
-	   ' ', DB_ATT_MAXNAME, tid);
-
     /* Is the name equal to "tid" */
-    if (!MEcmp(attname.db_att_name, tid, DB_ATT_MAXNAME))
+    if (cui_compare(col_nmlen, colname, 
+        3, ((*sess_cb->pss_dbxlate & CUI_ID_REG_U) ? "TID" : "tid")) == 0)
     {
 	_VOID_ psf_error(2105L, 0L, PSF_USERERR, &err_code, err_blk, 2,
 	    sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-	    psf_trmwhite(DB_ATT_MAXNAME, (char *) &attname), &attname);
+	    col_nmlen, colname);
 	return (E_DB_ERROR);
     }
 
     key = (DMU_KEY_ENTRY **) dmu_cb->dmu_key_array.ptr_address;
     for (i = dmu_cb->dmu_key_array.ptr_in_count; i > 0; i--, key++)
     {
-	if (!MEcmp((char *) &attname, (char *) &(*key)->key_attr_name,
-		sizeof(DB_ATT_NAME)))
+	if (cui_compare(col_nmlen, colname, 
+		DB_ATT_MAXNAME, (*key)->key_attr_name.db_att_name) == 0)
 	{
 	    /*
 	    ** Found already. Check "cond_add" option to determine
@@ -1112,7 +1110,7 @@ psl_ci4_indexcol(
     {
 	_VOID_ psf_error(2180L, 0L, PSF_USERERR, &err_code, err_blk, 2,
 	    sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-	    psf_trmwhite(DB_ATT_MAXNAME, (char *) &attname), &attname);
+	    col_nmlen, colname);
 	return (status);
     }
 
@@ -1129,7 +1127,8 @@ psl_ci4_indexcol(
     if (DB_FAILURE_MACRO(status))
 	return (status);
 
-    STRUCT_ASSIGN_MACRO(attname, (*key)->key_attr_name);
+    cui_move(col_nmlen, colname, ' ', 
+		DB_ATT_MAXNAME, (*key)->key_attr_name.db_att_name);
     (*key)->key_order = DMU_ASCENDING;
 
     /* SQL allows one to specify ASCENDING/DESCENDING but it is ignored in R6 */
@@ -2291,7 +2290,6 @@ psl_validate_rtree(
     ADF_CB          	*adf_scb;
     char	    	*tabname;
     DMT_ATT_ENTRY   	*attr;
-    DB_ATT_NAME		attrname;
     DMU_KEY_ENTRY	**key;
     ADI_DT_RTREE	rtree_blk;
     i4		err_code;
@@ -2350,9 +2348,8 @@ psl_validate_rtree(
     /* Ensure that the key's data type has all appropiate functions */
     /* First, find the key's attribute by locating its name */
     key = (DMU_KEY_ENTRY **)dmu_cb->dmu_key_array.ptr_address;
-    STmove((char *) &(*key)->key_attr_name, ' ',
-           sizeof(DB_ATT_NAME), (char *)&attrname);
-    attr = pst_coldesc(sess_cb->pss_resrng, &attrname); 
+    attr = pst_coldesc(sess_cb->pss_resrng,
+	    (*key)->key_attr_name.db_att_name, DB_ATT_MAXNAME);
     status = adi_dt_rtree(adf_scb, attr->att_type, &rtree_blk);
     if (DB_FAILURE_MACRO(status))
     {

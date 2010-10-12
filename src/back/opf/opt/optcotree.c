@@ -7,6 +7,7 @@
 #include    <gl.h>
 #include    <cs.h>
 #include    <iicommon.h>
+#include    <cui.h>
 #include    <dbdbms.h>
 #include    <ddb.h>
 #include    <ulm.h>
@@ -349,6 +350,8 @@
 **          Changes for Long IDs
 **      17-Aug-2010 (horda03) b124274
 **          Enable segmented QEPs.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 **/
 struct	tab
 {
@@ -1614,14 +1617,8 @@ opt_paname(
 	    return;
 	}
 
-	att_name = (DB_ATT_NAME *)&grvp->opv_relation->
-	    rdr_attr[dmfattr.db_att_id]->att_name;
-	{
-	    i4                 length;
-	    length = opt_noblanks((i4)sizeof(*att_name), (char *)att_name);
-	    MEcopy((PTR)att_name, length, (PTR)attrname);
-	    attrname->buf[length]=0;		/* null terminate the string */
-	}
+	STcopy(grvp->opv_relation->rdr_attr[dmfattr.db_att_id]->att_nmstr,
+		(PTR)attrname);
 	return;
     }
 }
@@ -4508,10 +4505,7 @@ opt_prattr(
 	(i4)sizeof(global->ops_trace.opt_trformat),
 	"    Attr no= %d, name= %.#s, off= %d, key= %d,",
 	    (i4)attrp->att_number,
-	    opt_noblanks( sizeof(attrp->att_name.db_att_name),
-				 (char *)attrp->att_name.db_att_name
-			),
-	    attrp->att_name.db_att_name,
+	    attrp->att_nmlen, attrp->att_nmstr,
 	    (i4)attrp->att_offset,
 	    attrp->att_key_seq_number);
 	{

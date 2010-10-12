@@ -10,6 +10,7 @@
 #include    <me.h>
 #include    <st.h>
 #include    <iicommon.h>
+#include    <cui.h>
 #include    <dbdbms.h>
 #include    <ddb.h>
 #include    <dmf.h>
@@ -89,6 +90,8 @@
 **	19-Jun-2010 (kiria01) b123951
 **	    Moved pst_swelem to psl_swelem for WITH support as it is more
 **	    than just a name lookup.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 [@history_template@]...
 **/
 
@@ -1553,6 +1556,9 @@ pst_sdent(
     i4			i, j, totlen, offset;
     DB_STATUS           status;
     i4		err_code;
+    i4		    attr_nametot;
+    i4		    n;
+    char	    *nextname;
 
     rptr = (PSS_RNGTAB *) NULL;
 
@@ -1571,12 +1577,25 @@ pst_sdent(
     }
 
     /* Count up the RESDOMs and allocate attr array. */
-    for (i = 0, totlen = 0, nodep=root->pst_left; nodep && 
-	nodep->pst_sym.pst_type == PST_RESDOM; i++, nodep = nodep->pst_left)
+    for (i = 0, totlen = 0, nodep=root->pst_left;
+	    nodep && nodep->pst_sym.pst_type == PST_RESDOM;
+		i++, nodep = nodep->pst_left)
+    {
 	totlen += nodep->pst_sym.pst_dataval.db_length;
+    }
+
+    /*
+    ** We could calculate exact RESDOM name sizes, however if there is
+    ** an "Override column list"... i.e.
+    ** if ($Ydcol_list.queue.q_next != (QUEUE *)&$Ydcol_list)
+    ** then it might not be big enough for the override column list
+    ** Allocate DB_ATT_MAXNAME + 1 for each RESDOM name
+    */
+    attr_nametot = i * (DB_ATT_MAXNAME + 1);
 
     status = psf_malloc(sess_cb, &sess_cb->pss_ostream, (sizeof(PTR) +
-		sizeof(DMT_ATT_ENTRY)) * i + sizeof(PTR), &attarray, err_blk);
+		sizeof(DMT_ATT_ENTRY)) * i + sizeof(PTR) + attr_nametot, 
+		&attarray, err_blk);
 				/* 1 extra ptr because array is 1-origin */
 
     if (status != E_DB_OK)
@@ -1643,6 +1662,7 @@ pst_sdent(
     MEfill(sizeof(DB_LOC_NAME), (u_char)' ', (char *)&tblptr->tbl_location);
     STRUCT_ASSIGN_MACRO(tblptr->tbl_location, tblptr->tbl_filename);
     tblptr->tbl_attr_count = i;
+    tblptr->tbl_attr_nametot = attr_nametot;
     tblptr->tbl_width = totlen;
     /* All the other DMT_TBL_ENTRY fields are being left 0 until 
     ** something happens that suggests other values. */
@@ -1651,6 +1671,7 @@ pst_sdent(
     ** DMT_ATT_ENTRY entries. */
     attrp = (DMT_ATT_ENTRY *)&attarray[i+1];
     attarray[0] = (DMT_ATT_ENTRY *) NULL;
+    nextname = (char *)attrp + (i * sizeof(DMT_ATT_ENTRY));
     for (j = 0, offset = 0, nodep = root->pst_left; j < i; 
 		j++, attrp = &attrp[1], nodep = nodep->pst_left)
     {
@@ -1658,8 +1679,25 @@ pst_sdent(
 	** back to front. */
 	attarray[i-j] = attrp;
 	MEfill(sizeof(DMT_ATT_ENTRY), (u_char) 0, (char *)attrp);
-	MEcopy((char *)&nodep->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
-		sizeof(DB_ATT_NAME), (char *)&attrp->att_name);
+
+	/* Compute blank stripped length of attribute name */
+	n = cui_trmwhite(DB_ATT_MAXNAME,
+		(char *)&nodep->pst_sym.pst_value.pst_s_rsdm.pst_rsname);
+
+	attrp->att_nmstr = nextname;
+	attrp->att_nmlen = n;
+	cui_move(n, (char *)&nodep->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
+		'\0', n + 1, nextname);
+
+	/*
+	** We could use exact RESDOM name size, however if there is
+	** an "Override column list"... i.e.
+	** if ($Ydcol_list.queue.q_next != (QUEUE *)&$Ydcol_list)
+	** then it might not be big enough for the override column list
+	** Skip over DB_ATT_MAXNAME + 1 for each RESDOM name
+	*/
+	nextname += (DB_ATT_MAXNAME + 1);
+
 	attrp->att_number = i-j;
 	attrp->att_type = nodep->pst_sym.pst_dataval.db_datatype;
 	attrp->att_width = nodep->pst_sym.pst_dataval.db_length;
@@ -1678,6 +1716,7 @@ pst_sdent(
     rdrinfop->rdr_rel = tblptr;
     rdrinfop->rdr_attr = attarray;
     rdrinfop->rdr_no_attr = i;
+    rdrinfop->rdr_attnametot = attr_nametot;
     rdrinfop->rdr_view = (RDD_VIEW *)&rdrinfop[1];
 				/* address word following the RDR_INFO */
     rdrinfop->rdr_view->qry_root_node = (PTR)root;
@@ -1774,6 +1813,10 @@ pst_stproc(
     i4			i, j, totlen, offset;
     DB_STATUS           status;
     i4		err_code;
+    i4		    dmt_mem_size;
+    i4		    attr_nametot;
+    char	    *nextname;
+    i4		    n;
 
     rptr = (PSS_RNGTAB *) NULL;
 
@@ -1833,13 +1876,29 @@ pst_stproc(
     /* Load iiprocedure_parameter rows for both parms and result cols. */
     i = dbptupp->db_parameterCount + dbptupp->db_rescolCount;
 
-    status = psf_malloc(sess_cb, &sess_cb->pss_ostream, (sizeof(PTR) +
-		sizeof(DMT_ATT_ENTRY)) * i + sizeof(PTR), &attarray, err_blk);
-				/* 1 extra ptr because array is 1-origin */
+    /*
+    ** We could calculate exact parameter name size, however if there is
+    ** an "Override column list"... i.e.
+    ** if ($Ydcol_list.queue.q_next != (QUEUE *)&$Ydcol_list)
+    ** then it might not be big enough for the override column list
+    ** Allocate DB_ATT_MAXNAME + 1 for each parameter name
+    */
+    attr_nametot = i * (DB_ATT_MAXNAME + 1);
+
+    /* 1 extra ptr because array is 1-origin */
+    dmt_mem_size = ((i+1) * sizeof(DMT_ATT_ENTRY *))
+	+ (i * sizeof(DMT_ATT_ENTRY))
+	+ attr_nametot;
+
+    status = psf_malloc(sess_cb, &sess_cb->pss_ostream, dmt_mem_size,
+		&attarray, err_blk);
+
+    attrp = (DMT_ATT_ENTRY *)&attarray[i+1];
+    attarray[0] = (DMT_ATT_ENTRY *)NULL;
+    nextname = (char *)(attrp + i);
 
     /* Set up attr pointer arrays for both parms and result columns. */
-    for (j = 1, attrp = (DMT_ATT_ENTRY *)&attarray[i+1],
-	attarray[0] = (DMT_ATT_ENTRY *)NULL; j <= i; j++, attrp = &attrp[1])
+    for (j = 1; j <= i; j++, attrp++)
     {
 	attarray[j] = attrp;
 	MEfill(sizeof(DMT_ATT_ENTRY), (u_char)0, (char *)attrp);
@@ -1928,7 +1987,22 @@ pst_stproc(
 					dbptupp->db_rescolCount;
 	    }
 
-	    STRUCT_ASSIGN_MACRO(param_tup->dbpp_name, attrp->att_name);
+	    /* Compute blank stripped length of attribute name */
+	    n = cui_trmwhite(DB_PARM_MAXNAME, param_tup->dbpp_name.db_att_name);
+
+	    attrp->att_nmstr = nextname;
+	    attrp->att_nmlen = n;
+	    cui_move(n, param_tup->dbpp_name.db_att_name, '\0', n + 1, nextname);
+
+	    /*
+	    ** We could use exact parameter name size, however if there is
+	    ** an "Override column list"... i.e.
+	    ** if ($Ydcol_list.queue.q_next != (QUEUE *)&$Ydcol_list)
+	    ** then it might not be big enough for the override column list
+	    ** Skip over DB_ATT_MAXNAME + 1 for each parameter name
+	    */
+	    nextname += (DB_ATT_MAXNAME + 1);
+
 	    attrp->att_type = param_tup->dbpp_datatype;
 	    attrp->att_width = param_tup->dbpp_length;
 	    attrp->att_prec = param_tup->dbpp_precision;
@@ -2017,7 +2091,8 @@ pst_stproc(
     MEfill(sizeof(DB_LOC_NAME), (u_char)' ', (char *)&tblptr->tbl_location);
     STRUCT_ASSIGN_MACRO(tblptr->tbl_location, tblptr->tbl_filename);
     tblptr->tbl_attr_count = dbptupp->db_rescolCount +
-					dbptupp->db_parameterCount;
+				    dbptupp->db_parameterCount;
+    tblptr->tbl_attr_nametot = attr_nametot;
     tblptr->tbl_width = dbptupp->db_resrowWidth;
     tblptr->tbl_date_modified.db_tab_high_time = dbptupp->db_created;
     /* All the other DMT_TBL_ENTRY fields are being left 0 until 
@@ -2028,6 +2103,7 @@ pst_stproc(
     rdrinfop->rdr_rel = tblptr;
     rdrinfop->rdr_attr = rescarray;
     rdrinfop->rdr_no_attr = tblptr->tbl_attr_count;
+    rdrinfop->rdr_attnametot = tblptr->tbl_attr_nametot;
     rdrinfop->rdr_view = (RDD_VIEW *)&rdrinfop[1];
 				/* address word following the RDR_INFO */
     rdrinfop->rdr_view->qry_root_node = (PTR)root;

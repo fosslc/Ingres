@@ -211,6 +211,8 @@
 **          Remove table name,owner from log records.
 **      16-sep-2010 (stial01) (B124463, SD 146781)
 **          dmv_reput() fix iirtemp handling for compressed iirtemp
+**      01-oct-2010 (stial01) (B124463, SD 146781)
+**          Minor change to above fix, point to the new row instead of copying.
 */
 
 static DB_STATUS	dmv_reput(
@@ -697,10 +699,6 @@ DMP_PINFO	    *pinfo)
 	DMP_RELATION   cur_rel;
 	DB_STATUS      rel_status;
         DB_TAB_ID      rel_id;
-	DMP_TCB        *t;
-
-	/* This might be partial tcb, but it will always have basic info */
-	t = (DMP_TCB *)((char *)tabio - CL_OFFSETOF(DMP_TCB, tcb_table_io));
 
 	MEcopy((PTR) &log_rel->reltid, sizeof(DB_TAB_ID), (PTR)&rel_id);
 
@@ -727,8 +725,9 @@ DMP_PINFO	    *pinfo)
 		(&iirel_tcb->tcb_data_rac, 
 		(char *)&cur_rel, sizeof(DMP_RELATION), creltup, &csize);
 
+	    /* point log_row at the compressed current iirelation tuple */
 	    if (csize == log_rec->put_rec_size)
-		MEcopy((PTR)creltup, csize, (PTR)log_rel);
+		log_row = creltup;
 	    else
 	    {
 		/* should not happen */

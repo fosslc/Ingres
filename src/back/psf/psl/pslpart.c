@@ -14,6 +14,7 @@
 #include    <cm.h>
 #include    <cs.h>
 #include    <iicommon.h>
+#include    <cui.h>
 #include    <dbdbms.h>
 #include    <ddb.h>
 #include    <dmf.h>
@@ -115,6 +116,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 */
 
 /* Local routine prototypes */
@@ -2049,7 +2052,6 @@ ppd_lookup_column(PSS_SESBLK *sess_cb, i4 qmode, PST_QNODE *qry_tree,
 	char *colname, i2 *col_typep)
 {
 
-    DB_ATT_NAME fullname;		/* Blank-extended name */
     DMT_ATT_ENTRY *dmt_att_ptr;		/* Attr entry in standard RDF info */
     DMT_ATT_ENTRY **dmt_attrs;		/* Ptr to DMT-style attr-ptr array */
     DMF_ATTR_ENTRY **attrs;		/* Pointer to DMU attr-pointer array */
@@ -2058,14 +2060,15 @@ ppd_lookup_column(PSS_SESBLK *sess_cb, i4 qmode, PST_QNODE *qry_tree,
     i4 ncols;
     PST_QNODE *qry_node;		/* Scan select query tree */
     QEU_CB *qeucb;			/* QEF qeu instructions */
+    i4		col_nmlen;
+    i4		tmp_nmlen;
 
     /* Find the DMU CB being built, might need it */
 
     qeucb = (QEU_CB *) sess_cb->pss_object;
     dmucb = (DMU_CB *) qeucb->qeu_d_cb;
 
-    /* Column names are typically space-padded out */
-    STmove(colname, ' ', sizeof(DB_ATT_NAME), fullname.db_att_name);
+    col_nmlen = STlength(colname);
 
     /* Do the right thing depending on what query we have */
     switch (qmode)
@@ -2077,8 +2080,10 @@ ppd_lookup_column(PSS_SESBLK *sess_cb, i4 qmode, PST_QNODE *qry_tree,
 	ncols = dmucb->dmu_attr_array.ptr_in_count;
 	for (i = 0; i < ncols; ++i, ++attrs)
 	{
-	    if (MEcmp(fullname.db_att_name, (*attrs)->attr_name.db_att_name,
-			sizeof(DB_ATT_NAME)) == 0)
+	    tmp_nmlen = cui_trmwhite(DB_ATT_MAXNAME, 
+			(*attrs)->attr_name.db_att_name);
+	    if (cui_compare(col_nmlen, colname, 
+			tmp_nmlen, (*attrs)->attr_name.db_att_name) == 0)
 	    {
 		/* Found it */
 		*col_typep = (*attrs)->attr_type;
@@ -2095,7 +2100,7 @@ ppd_lookup_column(PSS_SESBLK *sess_cb, i4 qmode, PST_QNODE *qry_tree,
     case PSQ_MODIFY:
 	/* Modify */
 	/* Pretty easy, ask column looker-upper for the column */
-	dmt_att_ptr = pst_coldesc(sess_cb->pss_resrng, &fullname);
+	dmt_att_ptr = pst_coldesc(sess_cb->pss_resrng, colname, col_nmlen);
 	if (dmt_att_ptr == NULL)
 	    return (0);			/* Not found */
 	*col_typep = dmt_att_ptr->att_type;
@@ -2126,9 +2131,10 @@ ppd_lookup_column(PSS_SESBLK *sess_cb, i4 qmode, PST_QNODE *qry_tree,
 	while (qry_node != NULL && qry_node->pst_sym.pst_type == PST_RESDOM)
 	{
 	    /* Looking at a resdom, see if it's the one we want */
-	    if (MEcmp(fullname.db_att_name,
-			qry_node->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
-			sizeof(DB_ATT_NAME)) == 0)
+	    tmp_nmlen = cui_trmwhite(DB_ATT_MAXNAME, 
+			qry_node->pst_sym.pst_value.pst_s_rsdm.pst_rsname);
+	    if (cui_compare(col_nmlen, colname, tmp_nmlen, 
+		qry_node->pst_sym.pst_value.pst_s_rsdm.pst_rsname) == 0)
 	    {
 		/* Found it */
 		*col_typep = qry_node->pst_sym.pst_dataval.db_datatype;

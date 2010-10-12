@@ -157,6 +157,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 */
 
 
@@ -2225,9 +2227,7 @@ psl_check_defaults(
 		/* Base table mandatory column value not present */
 		(void) psf_error(2781L, 0L, PSF_USERERR, &err_code,
 				 err_blk, 3,
-				 psf_trmwhite(sizeof(DB_ATT_NAME), 
-					      (char *) &att->att_name),
-				 &att->att_name,
+				 att->att_nmlen, att->att_nmstr,
 				 psf_trmwhite(sizeof(DB_TAB_NAME), 
 					      resrng->pss_tabname.db_tab_name),
 				 &resrng->pss_tabname.db_tab_name,
@@ -2239,10 +2239,7 @@ psl_check_defaults(
 	    {
 		/* Mandatory column value not present */
 		(void) psf_error(2779L, 0L, PSF_USERERR, &err_code,
-				 err_blk, 1,
-				 psf_trmwhite(sizeof(DB_ATT_NAME), 
-					      (char *) &att->att_name),
-				 &att->att_name);
+				 err_blk, 1, att->att_nmlen, att->att_nmstr);
 	    }		
 	    return (E_DB_ERROR);
 	}
@@ -2279,8 +2276,8 @@ psl_check_defaults(
 
 	/* Fill out resdom with attribute info
 	 */
-	MEcopy((char *) att->att_name.db_att_name, DB_ATT_MAXNAME,
-	       (char *) resdom.pst_rsname);
+	cui_move(att->att_nmlen, att->att_nmstr, ' ',
+	       DB_ATT_MAXNAME, (char *) resdom.pst_rsname);
 	resdom.pst_rsno      = att->att_number;
 	resdom.pst_ntargno   = att->att_number;
 	resdom.pst_ttargtype = PST_ATTNO;

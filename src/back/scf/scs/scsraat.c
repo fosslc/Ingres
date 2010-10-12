@@ -257,6 +257,8 @@
 **	    Re-type some ptr's as the proper struct pointer.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 */
 
 /* Forward declarations */
@@ -973,9 +975,24 @@ scs_raat_call(i4  op_code,
 
 		    /*
 		    ** Now finish getting table info.  This time use RCB.
+		    ** RAAT doesn't need attribute names
+		    ** which is good because attribute names are not 
+		    ** in the DMT_ATT_ENTRY anymore
+		    ** (if RAAT did need the attribute names...
+		    ** we would need to set dmt_attr_names and 
+		    ** re-format SCS_RAAT_MSG to hold DMT_ATT_ENTRY and
+		    ** attribute names)
+		    ** 
 		    */
 		    dmt_shw_cb.dmt_flags_mask =
-                        DMT_M_ATTR | DMT_M_ACCESS_ID | DMT_M_MULTIBUF;
+                        DMT_M_ATTR | DMT_M_NO_ATTR_NAMES | 
+			DMT_M_ACCESS_ID | DMT_M_MULTIBUF;
+
+		    /* DMT_M_NO_ATTR_NAMES !!! */
+		    dmt_shw_cb.dmt_attr_names.ptr_address = NULL;
+		    dmt_shw_cb.dmt_attr_names.ptr_in_count = 0;
+		    dmt_shw_cb.dmt_attr_array.ptr_size = 0;
+
                     raat_mptr = scb->scb_sscb.sscb_raat_message;
                     raat_mptr->message.scg_mask =
 			(SCG_NODEALLOC_MASK | SCG_NOT_EOD_MASK);

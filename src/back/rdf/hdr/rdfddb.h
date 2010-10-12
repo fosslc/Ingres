@@ -44,6 +44,8 @@
 **	    replace nat and longnat with i4
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 **/
 
 /*
@@ -625,6 +627,8 @@ struct _RDD_RCB
 #define			RDD_NOTFOUND	0x0004L
 				    /* no tuple was found */
     DMT_ATT_ENTRY   **rdd_attr;	    /* pointer to array of pointers */
+    char	    *rdd_attr_names; /* attr names */
+    i4		    rdd_attr_nametot; /* size of name memory */
     DD_COLUMN_DESC  **rdd_mapattr;  /* pointer to array of pointers */
     DMT_IDX_ENTRY   **rdd_indx;	    /* pointer to array of pointers */
     RDD_HISTO	    *rdd_statp;     /* array of histo info */ 

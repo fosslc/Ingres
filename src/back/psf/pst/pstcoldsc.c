@@ -9,6 +9,7 @@
 #include    <qu.h>
 #include    <sl.h>
 #include    <iicommon.h>
+#include    <cui.h>
 #include    <dbdbms.h>
 #include    <ddb.h>
 #include    <dmf.h>
@@ -44,6 +45,8 @@
 **      16-sep-93 (smc)
 **          Added/moved <cs.h> for CS_SID. Added history_template so we
 **          can automate this next time.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 [@history_template@]...
 **/
 
@@ -87,20 +90,25 @@
 DMT_ATT_ENTRY *
 pst_coldesc(
 	PSS_RNGTAB         *rngentry,
-	DB_ATT_NAME        *colname)
+	char	           *colname,
+	i4		   colnamelen)
 {
     register i4	bucket;
     register u_char	*p;
     register RDD_BUCKET_ATT *column;
     register i4	i;
 
+    /* Don't assume the name was blank trimmed */
+    colnamelen = cui_trmwhite(colnamelen, colname);
+
     /* First, check for existence of column hash. If not there, just 
     ** loop over all the attr descriptors. */
     if (rngentry->pss_colhsh == NULL)
     {
 	for (i = 1; i <= rngentry->pss_tabdesc->tbl_attr_count; i++)
-	 if (!MEcmp(rngentry->pss_attdesc[i]->att_name.db_att_name,
-	    (char *) colname, sizeof(DB_ATT_NAME)))
+	if (cui_compare(rngentry->pss_attdesc[i]->att_nmlen,
+		rngentry->pss_attdesc[i]->att_nmstr,
+		colnamelen, colname) == 0)
 	    return(rngentry->pss_attdesc[i]);
 
 	return ((DMT_ATT_ENTRY *) NULL);	/* no match - return NULL */
@@ -108,8 +116,8 @@ pst_coldesc(
 
     /* Otherwise, find the right hash bucket */
     bucket = 0;
-    p = (u_char *) colname->db_att_name;
-    for (i = 0; i < sizeof(DB_ATT_NAME); i++)
+    p = (u_char *) colname;
+    for (i = 0; i < colnamelen; i++)
     {
 	bucket += *p;
 	p++;
@@ -121,8 +129,8 @@ pst_coldesc(
     /* Now, search through the bucket for the column name */
     while (column != (RDD_BUCKET_ATT *) NULL)
     {
-	if (!MEcmp(column->attr->att_name.db_att_name,
-	    (char *) colname, sizeof(DB_ATT_NAME)))
+	if (cui_compare(column->attr->att_nmlen, column->attr->att_nmstr,
+		colnamelen, colname) == 0)
 	{
 	    break;
 	}

@@ -98,6 +98,8 @@
 **	    Need uls.h to satisfy gcc 4.3.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 [@history_template@]...
 */
 
@@ -455,8 +457,8 @@ opc_atname(
 	}
 	else
 	{
-	    att_name = (char *)&grvp->opv_relation->
-		rdr_attr[dmfattr.db_att_id]->att_name.db_att_name[0];
+	    att_name = grvp->opv_relation->rdr_attr[dmfattr.db_att_id]->att_nmstr;
+	    length = grvp->opv_relation->rdr_attr[dmfattr.db_att_id]->att_nmlen;
 	}
 	length = opt_noblanks((i4)length, (char *)att_name);
 

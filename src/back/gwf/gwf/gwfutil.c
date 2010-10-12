@@ -24,6 +24,7 @@
 #include    <gwf.h>
 #include    <gwfint.h>
 #include    <gwftrace.h>
+#include    <cui.h>
 
 
 /**
@@ -120,6 +121,8 @@
 **          Removed gwxit.h inclusion which is not required.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 */
 
 static DB_STATUS gwu_xattr_build_info( GW_TCB	    *tlist,
@@ -1553,6 +1556,7 @@ gwu_xattr_build_info( GW_TCB	    *tlist,
     GW_SESSION	    *session = (GW_SESSION *)gw_rcb->gwr_session_id;
     char	    *ptr;	    /* NOT a 'PTR'! */
     DMT_ATT_ENTRY   *tmpattr;
+    DMT_ATT_ENTRY   *gwattr;
     i4		    i;
     i4		    column_count;
     DB_TAB_ID	    base_tab_id;    /* needed for gateway secondary indexes */
@@ -1561,6 +1565,8 @@ gwu_xattr_build_info( GW_TCB	    *tlist,
     DMR_ATTR_ENTRY  *attkey_ptr[2];
     GW_EXTCAT_HDR   *ext_header;
     i4		    xcol;
+    char	    *nextname;
+    i4		    nameused = 0;
 
     for (;;)
     {
@@ -1572,7 +1578,9 @@ gwu_xattr_build_info( GW_TCB	    *tlist,
 	** we allocate the extended attribute array.
 	*/
 	ulm_rcb->ulm_psize = (sizeof(GW_ATT_ENTRY) *
-		(gw_rcb->gwr_table_entry->tbl_attr_count + 1) );
+	    (gw_rcb->gwr_table_entry->tbl_attr_count + 1) ) +
+	    gw_rcb->gwr_table_entry->tbl_attr_nametot;
+
 	if ((status = ulm_palloc(ulm_rcb)) != E_DB_OK)
 	{
 	    (VOID) gwf_error(ulm_rcb->ulm_error.err_code, GWF_INTERR, 0);
@@ -1581,6 +1589,8 @@ gwu_xattr_build_info( GW_TCB	    *tlist,
 	    break;
 	}
 	tlist->gwt_attr = (GW_ATT_ENTRY *)ulm_rcb->ulm_pptr;
+	nextname = (char *)(tlist->gwt_attr + 
+		(gw_rcb->gwr_table_entry->tbl_attr_count + 1));
 
 	/* initialize dmt_sequence */
 /*	dmt.dmt_sequence = gw_rcb->gwr_gw_sequence;	*/
@@ -1716,13 +1726,33 @@ gwu_xattr_build_info( GW_TCB	    *tlist,
 	    if (i < tlist->gwt_table.tbl_attr_count)
 	    {
 		/* Last entry is only a temporary buffer, no attribute entry */
-		STRUCT_ASSIGN_MACRO(*tmpattr, tlist->gwt_attr[i].gwat_attr);
+		gwattr = &tlist->gwt_attr[i].gwat_attr;
+
+		STRUCT_ASSIGN_MACRO(*tmpattr, *gwattr);
+		if (nameused + tmpattr->att_nmlen > 
+		    gw_rcb->gwr_table_entry->tbl_attr_nametot)
+		{
+		    status = E_DB_ERROR;
+		    (VOID) gwf_error(err->err_code, GWF_INTERR, 0);
+		    err->err_code = E_GW021A_GWU_XATTR_BLD_ERROR;
+		    break;
+		}
+
+		gwattr->att_nmstr = nextname;
+		cui_move(tmpattr->att_nmlen, tmpattr->att_nmstr, '\0',
+			tmpattr->att_nmlen + 1, gwattr->att_nmstr);
+		nextname += (tmpattr->att_nmlen + 1);
+		nameused += (tmpattr->att_nmlen + 1);
+
 		tmpattr++;
 	    }
 	    tlist->gwt_attr[i].gwat_xattr.data_address = ptr;
 	    tlist->gwt_attr[i].gwat_xattr.data_in_size = xattlen;
 	    ptr += xattlen;
 	}
+
+	if (status)
+	    break;
 
 	/* initialize dmt_sequence */
 /*	dmt.dmt_sequence = gw_rcb->gwr_gw_sequence;	*/

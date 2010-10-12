@@ -10,6 +10,7 @@ NO_OPTIM =  sos_us5 i64_aix
 #include    <gl.h>
 #include    <cs.h>
 #include    <iicommon.h>
+#include    <cui.h>
 #include    <dbdbms.h>
 #include    <ddb.h>
 #include    <ulm.h>
@@ -111,6 +112,8 @@ NO_OPTIM =  sos_us5 i64_aix
 **	    to be treated as raw collation data alongside DB_CHA_TYPE.
 **      16-nov-2008 (stial01)
 **          Redefined name constants without trailing blanks.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 [@history_line@]...
 **/
 
@@ -2719,8 +2722,9 @@ oph_temphist(
 	    i4	len1, len2;
 
 	    att2 = rdrinfo->rdr_attr[i];
-	    if (MEcmp((PTR)&att1->att_name, (PTR)&att2->att_name,
-			sizeof(DB_ATT_NAME)) != 0) continue;
+	    if (cui_compare(att1->att_nmlen, att1->att_nmstr, 
+			att2->att_nmlen, att2->att_nmstr) != 0)
+		continue;
 						/* look for name match */
 	    if (abs(att1->att_type) != abs(att2->att_type)) break;
 						/* names match, types don't */

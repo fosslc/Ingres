@@ -44,7 +44,6 @@
 #include    <psldef.h>
 #include    <psyaudit.h>
 #include    <uld.h>
-#include    <cui.h>
 
 /*
 **  NO_OPTIM=dgi_us5 int_lnx int_rpl i64_aix
@@ -430,6 +429,8 @@
 **          Changes for Long IDs
 **      15-apr-2010 (stial01)
 **          Fixed length used when copying name
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 */
 
 /* static functions and constants declaration */
@@ -1446,7 +1447,8 @@ psl_ct2s_crt_tbl_as_select(
 	    /* Look up the attribute 
 	     */
 	    attribute = pst_coldesc(rngtabp,
-		&ssnode->pst_right->pst_sym.pst_value.pst_s_var.pst_atname);
+	    ssnode->pst_right->pst_sym.pst_value.pst_s_var.pst_atname.db_att_name,
+		DB_ATT_MAXNAME);
 
 	    /* Check for attribute not found 
 	     */
@@ -7341,7 +7343,7 @@ psl_ct14_typedesc(
 	DMT_ATT_ENTRY	*alt_attr;
 
 	alt_attr = pst_coldesc(sess_cb->pss_resrng,
-                        &cur_attr->attr_name);
+                        cur_attr->attr_name.db_att_name, DB_ATT_MAXNAME);
 
 	/* Check to see if column is known (kibro01) b119624 */
 	if (alt_attr == NULL)
@@ -7390,6 +7392,14 @@ psl_ct14_typedesc(
 	    MEfill(sizeof(RDR_INFO), 0, (PTR)&rdrinfo);
 	    rdrinfo.rdr_attr = &alt_attr;
 	    rdrinfo.rdr_no_attr = 1;
+
+	    /*
+	    ** rdf_call() -> rdf_gdesc() -> rdu_default_bld()
+	    ** rdr_attnametot is not used by rdu_default_bld()
+	    ** resrng nametot:sess_cb->pss_resrng->pss_tabdesc->tbl_attr_nametot
+	    ** alt_attr nametot: alt_attr->att_nmlen + 1
+	    */
+	    rdrinfo.rdr_attnametot = alt_attr->att_nmlen + 1;
 	    pst_rdfcb_init(&rdf_cb, sess_cb);
 	    rdf_cb.rdf_rb.rdr_types_mask  = RDR_ATTRIBUTES;
 	    rdf_cb.rdf_rb.rdr_2types_mask = RDR2_DEFAULT;

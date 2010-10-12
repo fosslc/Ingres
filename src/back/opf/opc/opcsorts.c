@@ -54,6 +54,7 @@
 #define        OPC_SORTS	TRUE
 #include    <opxlint.h>
 #include    <opclint.h>
+#include    <cui.h>
 
 /**
 **
@@ -154,6 +155,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 [@history_template@]...
 **/
 
@@ -552,11 +555,15 @@ opc_tscatts(
     i4			rsno;
     OPC_TGPART		*tsoffsets = 
 				subqry->ops_compile.opc_sortinfo.opc_tsoffsets;
+    i4			dmf_mem_size;
 
     *pacount = ntargs;
-    atts = ( DMF_ATTR_ENTRY **) opu_qsfmem(global, 
-			DB_ALIGN_MACRO(ntargs * sizeof(DMF_ATTR_ENTRY *)) +
-			ntargs * sizeof(DMF_ATTR_ENTRY) );
+
+    /* allocate space for DMF attr pointers, entries */
+    dmf_mem_size = DB_ALIGN_MACRO(sizeof (DMF_ATTR_ENTRY *) * ntargs)
+     + (sizeof (DMF_ATTR_ENTRY ) * ntargs);
+
+    atts = ( DMF_ATTR_ENTRY **) opu_qsfmem(global, dmf_mem_size);
     att = (DMF_ATTR_ENTRY *) ME_ALIGN_MACRO((atts + ntargs), DB_ALIGN_SZ);
 
     for (resdom = target;
@@ -1720,11 +1727,14 @@ opc_tlqnatts(
     DB_STATUS	    status;
     QEF_QP_CB		*qp = global->ops_cstate.opc_qp;
 
-	/* dmtsize holds the size of the DMT_ATT_ENTRY array */
-    i4			dmt_size;
+    i4			dmt_mem_size;
+    char		*nextname;
+    char		attbuf[sizeof(DB_ATT_NAME) + 1];
+    i4			namelen;
 
 	/* iatt points to the current DMT_ATT_ENTRY being built. */
     DMT_ATT_ENTRY	*iatt;
+    DMT_ATT_ENTRY	*att;
 
 	/* iattno holds the attribute number of the current attribute
 	** in the virtual relation that this QEN node creates.
@@ -1779,10 +1789,16 @@ opc_tlqnatts(
 
     qn->qen_natts = tginfo->opc_nresdom;
 
-    /* allocate space for the qen_atts array */
-    dmt_size = sizeof (qn->qen_atts[0]) * qn->qen_natts;
-    qn->qen_atts = (DMT_ATT_ENTRY **) opu_qsfmem(global, dmt_size);
-    MEfill(dmt_size, (u_char)0, (PTR)qn->qen_atts);
+    /* allocate space for att pointers, entries and fake names like 'ra%d' */
+    dmt_mem_size = DB_ALIGN_MACRO(sizeof (DMT_ATT_ENTRY *) * qn->qen_natts)
+     + (sizeof (DMT_ATT_ENTRY ) * qn->qen_natts)
+     + (32 * qn->qen_natts);
+
+    qn->qen_atts = (DMT_ATT_ENTRY **) opu_qsfmem(global, dmt_mem_size);
+    att = (DMT_ATT_ENTRY *) ME_ALIGN_MACRO((qn->qen_atts + qn->qen_natts), 
+		DB_ALIGN_SZ);
+    nextname = (char *)att + (sizeof(DMT_ATT_ENTRY) * qn->qen_natts);
+    MEfill(dmt_mem_size, (u_char)0, (PTR)qn->qen_atts);
 
     /* begin the compilation of the qen_prow CX */
 #ifdef OPT_F045_QENPROW
@@ -1824,8 +1840,7 @@ opc_tlqnatts(
     /* For each resdom in the target list */
     for (resdom = top_resdom; 
 	    resdom != NULL && resdom->pst_sym.pst_type == PST_RESDOM;
-	    resdom = resdom->pst_left
-	)
+	    resdom = resdom->pst_left, att++)
     {
  	if (resdom->pst_right && resdom->pst_right->pst_sym.pst_type == PST_SEQOP)
  	    continue;			/* skip sequences */
@@ -1841,13 +1856,16 @@ opc_tlqnatts(
 	    opx_error(E_OP0899_BAD_TARGNO);
 	}
 
-	qn->qen_atts[iattno - 1] = iatt = 
-		   (DMT_ATT_ENTRY *) opu_qsfmem(global, sizeof (DMT_ATT_ENTRY));
+	qn->qen_atts[iattno - 1] = iatt = att;
 
-	STprintf(iatt->att_name.db_att_name, "ra%d", iattno);
-	STmove(iatt->att_name.db_att_name, ' ', 
-				    sizeof (iatt->att_name.db_att_name), 
-						    iatt->att_name.db_att_name);
+	/* The fake resdom name 'ra%d' */
+	STprintf(attbuf, "ra%d", iattno);
+	namelen = STlength(attbuf);
+	iatt->att_nmstr = nextname;
+	iatt->att_nmlen = namelen;
+	cui_move(namelen, attbuf, '\0', namelen + 1, iatt->att_nmstr);
+	nextname += (namelen + 1);
+
 	iatt->att_number = iattno;
 	iatt->att_offset = tginfo->opc_tsoffsets[rsno].opc_toffset;
 	iatt->att_type = tginfo->opc_tsoffsets[rsno].opc_tdatatype;

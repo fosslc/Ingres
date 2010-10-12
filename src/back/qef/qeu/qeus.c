@@ -43,6 +43,7 @@
 #include    <rdf.h>
 #include    <tm.h>
 #include    <usererror.h>
+#include    <cui.h>
 
 #include    <ade.h>
 #include    <dudbms.h>
@@ -427,6 +428,8 @@
 **          Changes for Long IDs
 **	22-apr-2010 (toumi01) SIR 122403
 **	    Add support for column encryption.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 [@history_template@]...
 **/
 
@@ -616,6 +619,7 @@ static DB_STATUS setupAttrInfo(
 	DMU_CB		*dmucb,
 	DMT_SHW_CB	*dmtshow,
 	i4		natts,
+	i4		nametot,
 	ULM_RCB		*ulm,
 	i4		*err_code);
 
@@ -3828,6 +3832,7 @@ qeu_modify_prep(QEU_CB *qeucb, DMU_CB *dmucb, ULM_RCB *ulm,
     DMU_PHYPART_CHAR *phypart_ptr;	/* Ptr to one phys-partition directive */
     i4 dim;				/* A dimension index */
     i4 natts;				/* Count of attributes */
+    i4 nametot;				/* size of all attribute names */
     i4 newdims;				/* Number of (new) dimensions */
     i4 new_nparts;			/* Number of new physical partitions */
     i4 nparts;				/* A partition counter */
@@ -3959,6 +3964,7 @@ qeu_modify_prep(QEU_CB *qeucb, DMU_CB *dmucb, ULM_RCB *ulm,
 	return (E_DB_OK);
 
     natts = tbl->tbl_attr_count;	/* For later */
+    nametot = tbl->tbl_attr_nametot;
     MEcopy(tbl->tbl_name.db_tab_name, DB_TAB_MAXNAME, masterNameAsciz);
     masterNameAsciz[DB_TAB_MAXNAME] = '\0';
 
@@ -4214,7 +4220,7 @@ qeu_modify_prep(QEU_CB *qeucb, DMU_CB *dmucb, ULM_RCB *ulm,
     */
     STRUCT_ASSIGN_MACRO(dmucb->dmu_tbl_id, dmtshow->dmt_tab_id);
     STRUCT_ASSIGN_MACRO(*dmucb, cre_dmucb);
-    status = setupAttrInfo(&cre_dmucb, dmtshow, natts, ulm, err_code);
+    status = setupAttrInfo(&cre_dmucb, dmtshow, natts, nametot, ulm, err_code);
     if (DB_FAILURE_MACRO(status))
 	return (status);
     cre_dmucb.dmu_char_array.data_address = (PTR) &cre_char_array[0];
@@ -4639,7 +4645,7 @@ newPPcharArray(DMU_CB *dmucb, ULM_RCB *ulm, i4 nparts, DM_DATA *pp_desc)
 
 static DB_STATUS
 setupAttrInfo(DMU_CB *dmucb, DMT_SHW_CB *dmtshow,
-	i4 natts, ULM_RCB *ulm, i4 *err_code)
+	i4 natts, i4 nametot, ULM_RCB *ulm, i4 *err_code)
 
 {
 
@@ -4652,22 +4658,28 @@ setupAttrInfo(DMU_CB *dmucb, DMT_SHW_CB *dmtshow,
     DMF_ATTR_ENTRY **dmu_attpp;		/* A dmu pointer pointer */
     DMF_ATTR_ENTRY *dmu_att_base;	/* Base of dmu attr entries */
     DMF_ATTR_ENTRY *dmu_attp;		/* A dmu entry pointer */
+    i4		    dmt_mem_size;
     i4 i;
+    char *nextname;
 
     /* "show" attr numbers are 1-origined: */
     ++ natts;
 
     /* Allocate space for DMT show pointer array followed by attrs */
-    ulm->ulm_psize = natts * (sizeof(DMT_ATT_ENTRY **) + sizeof(DMT_ATT_ENTRY));
+    dmt_mem_size = (natts * sizeof(DMT_ATT_ENTRY *))
+		    + (natts * sizeof(DMT_ATT_ENTRY))
+		    + nametot;
+    ulm->ulm_psize = dmt_mem_size;
     status = qec_malloc(ulm);
     if (DB_FAILURE_MACRO(status))
     {
 	*err_code = ulm->ulm_error.err_code;
 	return (status);
     }
+
     attp_base = (DMT_ATT_ENTRY **) ulm->ulm_pptr;
-    dmtshow->dmt_attr_array.ptr_address = (PTR) attp_base;
-    att_base = (DMT_ATT_ENTRY *) ((PTR) attp_base + natts * sizeof(DMT_ATT_ENTRY **));
+    att_base = (DMT_ATT_ENTRY *) (attp_base + natts);
+    nextname = (char *)(att_base + natts);
 
     /* Initialize the pointers */
     attpp = attp_base;
@@ -4676,8 +4688,14 @@ setupAttrInfo(DMU_CB *dmucb, DMT_SHW_CB *dmtshow,
     do
 	*attpp++ = attp++;
     while (--i > 0);
+
+    dmtshow->dmt_attr_array.ptr_address = (PTR) attp_base;
     dmtshow->dmt_attr_array.ptr_in_count = natts;
     dmtshow->dmt_attr_array.ptr_size = sizeof(DMT_ATT_ENTRY);
+
+    dmtshow->dmt_attr_names.ptr_address = (PTR) nextname;
+    dmtshow->dmt_attr_names.ptr_in_count = 1;
+    dmtshow->dmt_attr_names.ptr_size = nametot;
 
     /* Now do it all over again for the DMU attribute array.
     ** For some idiotic reason, the DMU attribute descriptor is DIFFERENT!
@@ -4722,7 +4740,10 @@ setupAttrInfo(DMU_CB *dmucb, DMT_SHW_CB *dmtshow,
     {
 	attp = *attpp;
 	dmu_attp = *dmu_attpp;
-	MEcopy(&attp->att_name, sizeof(DB_ATT_NAME), &dmu_attp->attr_name);
+
+	cui_move(attp->att_nmlen, attp->att_nmstr, ' ',
+			sizeof(DB_ATT_NAME), dmu_attp->attr_name.db_att_name);
+
 	dmu_attp->attr_type = attp->att_type;
 	dmu_attp->attr_size = attp->att_width;
 	dmu_attp->attr_precision = attp->att_prec;
@@ -5564,6 +5585,7 @@ lookupTableInfo(
     DMT_TBL_ENTRY	*tableEntry;
     i4		numberOfAttributes;
     i4		numberOfIndices;
+    char	*nextname;
 
     /* allocate a DMT_SHW_CB and a table entry descriptor */
 
@@ -5595,6 +5617,12 @@ lookupTableInfo(
 			sizeof( DMT_ATT_ENTRY ),
 			&dmt_shw_cb->dmt_attr_array );
 	if ( status != E_DB_OK )	return( status );
+
+	GET_MEMORY(  tableEntry->tbl_attr_nametot , &nextname);
+	if ( status != E_DB_OK )	return( status );
+	dmt_shw_cb->dmt_attr_names.ptr_address = nextname;
+	dmt_shw_cb->dmt_attr_names.ptr_in_count = 1;
+	dmt_shw_cb->dmt_attr_names.ptr_size = tableEntry->tbl_attr_nametot;
 
         dmt_shw_cb->dmt_flags_mask |= DMT_M_ATTR;
     }
@@ -5901,9 +5929,8 @@ buildPersistentIndexDMU_CB(
 	attributeNumber = indexDMT_IDX_ENTRY->idx_attr_id[ i ];
 	attributeEntry = attributePointers[ attributeNumber ];
 
-	MEcopy( ( PTR ) &attributeEntry->att_name,
-		sizeof( DB_ATT_NAME ),
-		( PTR ) &keyEntry->key_attr_name );
+	cui_move(attributeEntry->att_nmlen, attributeEntry->att_nmstr, ' ',
+		sizeof(DB_ATT_NAME), keyEntry->key_attr_name.db_att_name );
 
 	keyEntry->key_order = DMU_ASCENDING;
 

@@ -83,6 +83,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 [@history_template@]...
 **/
 
@@ -236,11 +238,12 @@ pst_adresdom(
     ADF_CB	*adf_scb;
     i2          null_adjust = 0;
     i4			temp_collID;
+    i4		att_nmlen;
 
     /* Convert column name to a null-terminated string. */
     (VOID) MEcopy((PTR) attname, sizeof(DB_ATT_NAME), (PTR) colname);
     colname[sizeof(DB_ATT_NAME)] = '\0';
-    (VOID) STtrmwhite(colname);
+    att_nmlen = STtrmwhite(colname);
 
     /* For these operations, the result domain comes from the result table */
     if (psq_cb->psq_mode == PSQ_APPEND || psq_cb->psq_mode == PSQ_PROT)
@@ -272,7 +275,7 @@ pst_adresdom(
 	}
 
 	/* Get the column description */
-	coldesc = pst_coldesc(resrange, (DB_ATT_NAME *) attname);
+	coldesc = pst_coldesc(resrange, attname, att_nmlen);
 	if (coldesc == (DMT_ATT_ENTRY *) NULL)
 	{
 	    psf_error(2100L, 0L, PSF_USERERR, &err_code, &psq_cb->psq_error, 4,
@@ -329,7 +332,7 @@ pst_adresdom(
 	}
 
 	/* Get the column description */
-	coldesc = pst_coldesc(resrange, (DB_ATT_NAME *) attname);
+	coldesc = pst_coldesc(resrange, attname, att_nmlen);
 	if (coldesc == (DMT_ATT_ENTRY *) NULL)
 	{
 	    psf_error(2100L, 0L, PSF_USERERR, &err_code, &psq_cb->psq_error, 4,
@@ -395,8 +398,8 @@ pst_adresdom(
 
 	/* Set up column descriptor */
 	coldesc = &column;
-	MEcopy((char *) attname, sizeof(DB_ATT_NAME),
-	    (char *) &coldesc->att_name);
+	coldesc->att_nmstr = attname;
+	coldesc->att_nmlen = att_nmlen;
 
 #ifdef NO
 	/*
@@ -430,8 +433,8 @@ pst_adresdom(
 	** from the right child.
 	*/
 	coldesc = &column;
-	MEcopy((char *) attname, sizeof(DB_ATT_NAME),
-	    (char *) &coldesc->att_name);
+	coldesc->att_nmstr = attname;
+	coldesc->att_nmlen = att_nmlen;
 
 	/*
 	** Count columns.  Give error if too many.  One extra for tid.
@@ -464,8 +467,8 @@ pst_adresdom(
     /* Not for update until we know otherwise */
     resdom.pst_rsupdt = FALSE;
     resdom.pst_rsflags = PST_RS_PRINT;
-    MEcopy((char *) &coldesc->att_name, sizeof(DB_ATT_NAME),
-	(char *) resdom.pst_rsname);
+    cui_move(sizeof(DB_ATT_NAME), attname, ' ',
+		sizeof(DB_ATT_NAME), (char *) resdom.pst_rsname);
     temp_collID = coldesc->att_collID;
 
     /* If client can not handle i8 INTs downgrade to i4 */

@@ -13,6 +13,7 @@
 #include    <st.h>
 #include    <qu.h>
 #include    <iicommon.h>
+#include    <cui.h>
 #include    <dbdbms.h>
 #include    <ddb.h>
 #include    <dmf.h>
@@ -30,7 +31,6 @@
 #include    <pshparse.h>
 #include    <usererror.h>
 #include    <psftrmwh.h>
-#include    <cui.h>
 
 /*
 **
@@ -181,6 +181,8 @@
 **          Changes for Long IDs
 **	28-Jul-2010 (kschendel) SIR 124104
 **	    Key count in statement node changed to i2, fix here.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 */
 
 /* function prototypes for static functions
@@ -811,6 +813,8 @@ psl_ver_cons_columns(
     DB_STATUS	    status;
     char	    command[PSL_MAX_COMM_STRING];
     i4	    length;
+    i4		    n;
+    char	    *nextname;
 
     *colid_listp = (PST_COL_ID *) NULL;
 
@@ -898,19 +902,29 @@ psl_ver_cons_columns(
 						(colno != -1))
 	     if (dmtatt)
 	     {
+		/* Compute blank stripped length of attribute name */
+		n = cui_trmwhite(DB_ATT_MAXNAME, 
+			(attrs[colno-1])->attr_name.db_att_name);
+
 		/* Since att_array is (DMT_ATTR_ENTRY **) and attrs is
 		** (DMU_ATTR_ENTRY **), allocate a DMT_ATTR_ENTRY and 
 		** copy field by field. */
 		status = psf_malloc(sess_cb, &sess_cb->pss_ostream, 
-			sizeof(DMT_ATT_ENTRY), 
+			sizeof(DMT_ATT_ENTRY) + (n + 1), 
 			(PTR *) &att_array[attcolno], err_blk);
 		if (DB_FAILURE_MACRO(status))
 		    return(status);
 
 		MEfill(sizeof(DMT_ATT_ENTRY), (u_char)0, 
 					(PTR)att_array[attcolno]);
-		MEcopy((char *)&(attrs[colno-1])->attr_name, DB_ATT_MAXNAME,
-			(char *)&(att_array[attcolno])->att_name);
+		nextname = (char *)(&att_array[attcolno]) 
+			+ sizeof(DMT_ATT_ENTRY);
+
+		(att_array[attcolno])->att_nmlen = n;
+		(att_array[attcolno])->att_nmstr = nextname;
+		cui_move(n, (attrs[colno-1])->attr_name.db_att_name, '\0',
+				n + 1, nextname);
+
 		(att_array[attcolno])->att_type = (attrs[colno-1])->attr_type;
 		(att_array[attcolno])->att_width = (attrs[colno-1])->attr_size;
 		(att_array[attcolno])->att_prec = 
@@ -925,9 +939,10 @@ psl_ver_cons_columns(
 
 	if  ( (!newtbl) && (colno == -1) )
 	      
-	{   /* existing table; get info from RDF
-	     */
-	    att = pst_coldesc(rngvar, &curcol->psy_colnm);
+	{
+	    /* existing table; get info from RDF */
+	    att = pst_coldesc(rngvar,
+		curcol->psy_colnm.db_att_name, DB_ATT_MAXNAME);
 	    
 	    if (att != (DMT_ATT_ENTRY *) NULL)
 		colno = att->att_number;	
@@ -943,8 +958,7 @@ psl_ver_cons_columns(
 
 	if (colno == -1)
 	{
-	    /* get command string to pass to error routine
-	     */
+	    /* get command string to pass to error routine */
 	    psl_command_string(qmode, DB_SQL, command, &length);
 
 	    _VOID_ psf_error(E_PS0483_CONS_NO_COL, 0L, PSF_USERERR,
@@ -3107,7 +3121,8 @@ psl_ver_ref_types(
 
 	/* fill in column info for the two columns
 	 */
-	STRUCT_ASSIGN_MACRO(cur_ref_col->att_name, varnode.pst_atname);
+	cui_move(cur_ref_col->att_nmlen, cur_ref_col->att_nmstr, ' ',
+		DB_ATT_MAXNAME, varnode.pst_atname.db_att_name);
 
 	status = pst_node(sess_cb, &sess_cb->pss_ostream, 
 			  (PST_QNODE *) NULL, (PST_QNODE *) NULL, 
@@ -3141,7 +3156,8 @@ psl_ver_ref_types(
 	     */
 	    cur_col_dmt = (DMT_ATT_ENTRY *) cons_att_array[colno];
 
-	    STRUCT_ASSIGN_MACRO(cur_col_dmt->att_name, varnode.pst_atname);
+	    cui_move(cur_col_dmt->att_nmlen, cur_col_dmt->att_nmstr, ' ',
+		DB_ATT_MAXNAME, varnode.pst_atname.db_att_name);
 
 	    status = pst_node(sess_cb, &sess_cb->pss_ostream, 
 			      (PST_QNODE *) NULL, (PST_QNODE *) NULL, 

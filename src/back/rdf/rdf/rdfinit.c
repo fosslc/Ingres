@@ -26,6 +26,7 @@
 #include	<rdfddb.h>
 #include	<ex.h>
 #include	<rdfint.h>
+#include	<cui.h>
 
 /**
 **
@@ -79,6 +80,8 @@
 **	    SIR 120874: Use CLRDBERR, SETDBERR to value DB_ERROR structure.
 **	    Pass pointer to facilities DB_ERROR instead of just its err_code
 **	    in rdu_ferror().
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 **/
 
 /*{
@@ -223,7 +226,10 @@ rdf_initialize( RDF_GLOBAL	*global,
 	** for tid attribute entries.
 	*/
 	if (rdf_ccb->rdf_fac_id == DB_PSF_ID)
+	{
 		ulm_rcb->ulm_psize += 2*sizeof(DMT_ATT_ENTRY);
+		ulm_rcb->ulm_psize += 2 * (sizeof(DB_ATT_NAME) + 1);
+	}
 
 	/* Allocate a block just large enough for our needs */
 	ulm_rcb->ulm_blocksize = ulm_rcb->ulm_psize;
@@ -260,11 +266,15 @@ rdf_initialize( RDF_GLOBAL	*global,
 	    fcbptr->rdi_utiddesc = (DMT_ATT_ENTRY *)
                 (((char *)ulm_rcb->ulm_pptr) + sizeof(RDI_FCB)
 					     + sizeof(DMT_ATT_ENTRY));
+	    fcbptr->rdi_tiddesc->att_nmstr = (char *)fcbptr->rdi_utiddesc +
+				sizeof(DMT_ATT_ENTRY);
+	    fcbptr->rdi_utiddesc->att_nmstr = fcbptr->rdi_tiddesc->att_nmstr +
+				sizeof(DB_ATT_NAME) + 1;
 
-	    STmove("tid", ' ', sizeof(DB_ATT_NAME),
-		(char *) &fcbptr->rdi_tiddesc->att_name);
-	    STmove("TID", ' ', sizeof(DB_ATT_NAME),
-		(char *) &fcbptr->rdi_utiddesc->att_name);
+	    cui_move(3, "tid", '\0', 4, fcbptr->rdi_tiddesc->att_nmstr);
+	    fcbptr->rdi_tiddesc->att_nmlen = 3;
+	    cui_move(3, "TID", '\0', 4, fcbptr->rdi_utiddesc->att_nmstr);
+	    fcbptr->rdi_utiddesc->att_nmlen = 3;
 	    fcbptr->rdi_tiddesc->att_number = 0L;
 	    fcbptr->rdi_utiddesc->att_number = 0L;
 	    fcbptr->rdi_tiddesc->att_offset = 0L;
