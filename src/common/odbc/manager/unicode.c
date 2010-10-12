@@ -97,6 +97,9 @@
 **      Clone revised treatment of ConvertUCS2ToUCS4() and ConvertUCS4ToUCS2()
 **      from the driver.  This addresses potential byte-alignment issues on
 **      64-bit platforms.
+**   08-Oct-2010 (Ralph Loen) Bug 124578
+**      Supply a placeholder string for the output string argument in
+**      SQLBrowseConnectW() if the argument is NULL.
 */ 
 
 /*
@@ -3624,6 +3627,11 @@ SQLRETURN SQL_API SQLDriversW(
 ** History: 
 **    14-jun-04 (loera01)
 **      Created.
+**   08-Oct-2010 (Ralph Loen) Bug 124578
+**      Supply a placeholder string for the output string argument
+**      if the argument is NULL; this allows SQLBrowseConnectW() to 
+**      return SQL_NEED_DATA on first invocation and attempt a 
+**      connection on the second invocation.
 */ 
 
 SQLRETURN SQL_API SQLBrowseConnectW(
@@ -3635,6 +3643,10 @@ SQLRETURN SQL_API SQLBrowseConnectW(
     SQLSMALLINT    *pcbConnStrOut)
 {
     pDBC pdbc = (pDBC)hdbc;
+    SQLWCHAR *outStr = NULL;
+    SQLSMALLINT outLen = 0;
+    BOOL allocStr = FALSE;
+
     RETCODE rc = SQL_SUCCESS, traceRet = 1;
 
     ODBC_TRACE_ENTRY(ODBC_TR_TRACE, IITraceSQLBrowseConnectW(hdbc, szConnStrIn, 
@@ -3655,22 +3667,34 @@ SQLRETURN SQL_API SQLBrowseConnectW(
         goto exit_routine;
     }
 
+
+    /*
+    ** If the application supplied no output string, supply a placeholder.
+    */
+    if (!szConnStrOut)
+    {
+        outStr = (SQLCHAR *) MEreqmem(0, MAX_CONNSTR_OUTLEN * 
+            sizeof(SQLWCHAR), TRUE, NULL);
+        outLen = MAX_CONNSTR_OUTLEN;
+        allocStr = TRUE;
+    }
+    else
+    {
+        outStr = szConnStrOut;
+        outLen = cbConnStrOutMax;
+    }
+
     resetErrorBuff(hdbc, SQL_HANDLE_DBC);
 
     rc = IIodbc_connectPhase1(pdbc);
     if (rc == SQL_SUCCESS)
     {
-        pdbc->hdr.state = C3;
-        rc = IIodbc_connectPhase2(pdbc);
-        if (SQL_SUCCEEDED(rc))
-        {
-            rc = IIBrowseConnectW(pdbc->hdr.driverHandle,
-                szConnStrIn,
-                cbConnStrIn,
-                szConnStrOut,
-                cbConnStrOutMax,
-                pcbConnStrOut);
-        }
+        rc = IIBrowseConnectW(pdbc->hdr.driverHandle,
+            szConnStrIn,
+            cbConnStrIn,
+            outStr,
+            outLen,
+            pcbConnStrOut);
     }
     applyLock(SQL_HANDLE_DBC, pdbc);
     if (rc != SQL_SUCCESS)
@@ -3685,6 +3709,13 @@ SQLRETURN SQL_API SQLBrowseConnectW(
     releaseLock(SQL_HANDLE_DBC, pdbc);
 
 exit_routine:
+
+    if (allocStr)
+    {
+        MEfree((PTR)outStr);
+        szConnStrOut = NULL;
+    }
+
     ODBC_TRACE(ODBC_TR_TRACE, IITraceReturn(traceRet, SQL_ERROR));
     return rc;
 }
