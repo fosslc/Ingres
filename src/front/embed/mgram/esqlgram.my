@@ -821,6 +821,9 @@ static bool   set_role=FALSE;
 **	    "MODIFY FOO ENCRYPT WITH PASSPHRASE='this is a secret'".
 **	 06-Oct-2010 (kiria01) b124564
 **	    Add missing WITH grammar for common table expressions.
+**	 11-Oct-2010 (kiria01) b124564
+**	    Revised grammar for DECLARE CURSOR to avoid the empty branch of
+**	    query_with from erroneously triggering the error production.
 **
 ** Rules to apply when writing new grammar parts:
 **
@@ -3632,6 +3635,7 @@ ins_scalar_bif: sname_lparen sql_rparen
 ** a REPEATED keyword is found in a cursor UPDATE statement.
 */
 update:		upd_repkey update_body
+	|	wupd_repkey query_with_body select_key update_body
 ;
 upd_repkey:	tUPDATE
 		{
@@ -3645,6 +3649,20 @@ upd_repkey:	tUPDATE
 		    if (eq->eq_flags & EQ_FIPS) 
 			    er_write( E_EQ0505_FIPS_STATMT, EQ_WARN, 1, 
 			        ERx("REPEATED UPDATE") );
+		}
+;
+wupd_repkey:	tWITH
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sSQL, $1.s, NULL );
+		    gr->gr_func = tUPDATE;
+		}
+	|	tREPEAT tWITH
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sREPEAT, $1.s, $2.s );
+		    gr->gr_func = tUPDATE;
+		    if (eq->eq_flags & EQ_FIPS)
+			er_write( E_EQ0505_FIPS_STATMT, EQ_WARN, 1,
+			    ERx("REPEATED UPDATE") );
 		}
 ;
 update_body:	update_csr_body
@@ -3712,7 +3730,8 @@ update_csr_where:
 ;
 updcol_asgn_list:
 		updcol_asgn_list1
-	|	crp_unq_coln_list sql_eq sql_lparen select_full sql_rparen
+	|	sql_eq sql_lparen select_full sql_rparen
+	|	sql_lparen crunq_coln_list sql_rparen sql_eq sql_lparen select_full sql_rparen
 ;
 updcol_asgn_list1:
 		updcol_asgn
@@ -4605,22 +4624,41 @@ select_head:	select_key select_firstn select_all esubselect_tgt
 **	CSR_UPD_LIST	(0x10)	if there was a UPDATE list in the UPDATE clause
 **	CSR_UPDATE_LIST (0x18)	UPD_LIST always implies UPDATE
 */
-csr_select_sub: query_with csr_select_full csr_select_order csr_select_offset 
-	csr_select_fetch csr_sel_update
+csr_select_sub: sql_with query_with_body
+			csr_select_full csr_select_order csr_select_offset 
+				csr_select_fetch csr_sel_update
 		{
-		    if ($2.i == CSR_NO_FROM)
+		    if ($3.i == CSR_NO_FROM)
 		    {
 			/*
 			** If there isn't a FROM clause, then the FOR UPDATE
 			** clause is illegal.
 			** We accept it in order to give a good error message.
 			*/
-			if ($6.i != CSR_STATIC)
+			if ($7.i != CSR_STATIC)
 			    er_write( E_EQ0133_sqNOFROM, EQ_ERROR, 0 );
-			$$.i = $2.i;
+			$$.i = $3.i;
 		    } else
 		    {
-			$$.i = $2.i | $6.i;
+			$$.i = $3.i | $7.i;
+		    }
+		}
+	|	csr_select_full csr_select_order csr_select_offset 
+			csr_select_fetch csr_sel_update
+		{
+		    if ($1.i == CSR_NO_FROM)
+		    {
+			/*
+			** If there isn't a FROM clause, then the FOR UPDATE
+			** clause is illegal.
+			** We accept it in order to give a good error message.
+			*/
+			if ($5.i != CSR_STATIC)
+			    er_write( E_EQ0133_sqNOFROM, EQ_ERROR, 0 );
+			$$.i = $1.i;
+		    } else
+		    {
+			$$.i = $1.i | $5.i;
 		    }
 		}
 ;
