@@ -1454,6 +1454,10 @@
 #	    Fix Windows build problems using cygwin
 #	04-Oct-2010 (kiria01) b124065
 #	    Added build rules to generate operator table.
+#       25-Aug-2010 (hanal04) Bug 124194
+#           Build Hybrid versions of abfmain.obj and abfimain.obj.
+#           With no i8 support and 64-bit pointers some applications
+#           can only be run when built 32-bit.
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -6820,6 +6824,30 @@ rule IIAbfObj
                 LOCATE on $(_t) = $(INGLIB) ;
 		RmTemps $(_t) : $(_tmp) ;
                 Clean clean : $(_t) ;
+        }
+
+        if $(VERSHB)
+        {
+            for i in $(<)
+            {
+                    local _hbtmp = $(SUFHB)/$(i:S=$(SUFOBJ)) ;
+                    local _hbt = $(SUFHB)/$(i:S=.obj) ;
+
+                    Depends $(_hbtmp) : $(SEARCH_SOURCE)/$(SUFHB) ;
+                    MkDir $(SEARCH_SOURCE)/$(SUFHB) ;
+
+                    LIBOBJECT $(_hbtmp) : $(i) ;
+                    FILE $(_hbt) : $(_hbtmp) ;
+    
+                    DEPENDS $(_hbt) : $(_hbtmp) ;
+                    DEPENDS files : $(_hbt) ;
+                    LOCATE on $(_hbtmp) = $(SEARCH_SOURCE) ;
+                    LOCATE on $(_hbt) = $(INGLIB) ;
+                    CCFLAGS on $(_hbtmp) = $(CCFLAGSHB) ;
+                    RmTemps $(_hbt) : $(_hbtmp) ;
+                    Clean clean : $(_hbt) ;
+            }
+
         }
     }
     else
