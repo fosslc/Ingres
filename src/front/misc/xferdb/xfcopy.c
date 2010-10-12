@@ -539,6 +539,8 @@ xftables(i4 *tcount, i4 output_flags, i4 output_flags2, XF_TABINFO **list_ptr)
 **      29-Jun-2010 (coomi01) b123927
 **          Adjust test for former code change to operate in 
 **          the negative
+**	07-Oct-2010 (miket) SIR 122403
+**	    Fix xfwrite for MODIFY ENCRYPT PASSPHRASE to avoid extraneous \p\g.
 */
 
 void
@@ -795,9 +797,8 @@ writecreate(XF_TABINFO	*tp, i4 output_flags)
 	xfwrite(Xf_in, ERx("modify "));
 	xfwrite_id(Xf_in, tp->name);
 	xfwrite(Xf_in, ERx(" encrypt with passphrase = 'TEMPORARY PASSPHRASE'"));
+	xfwrite(Xf_in, GO_STMT);
     }
-
-    xfwrite(Xf_in, GO_STMT);
 
 }
 

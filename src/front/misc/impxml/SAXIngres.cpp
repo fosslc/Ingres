@@ -32,6 +32,8 @@
 **	   quiet compiler warnings.
 **	   Also add version specific definitions of parser funtions to
 **	   allow building against Xerces 2.x and 3.x
+**	07-Oct-2010 (miket) SIR 122403 BUG 124542 SD 147137
+**	   Add column encryption support.
 */
 
 #if defined(NT_GENERIC) || defined(LINUX) || defined(DARWIN)
@@ -178,6 +180,10 @@ set_meta_table_attributes(XF_TABINFO *table, char **att_name,
             STcopy(value[i], table->is_unique);
         else if (STequal(att_name[i],"persistent"))
             STcopy(value[i], table->persistent);
+        else if (STequal(att_name[i],"encrypted_columns"))
+            STcopy(value[i], table->encrypted_columns);
+        else if (STequal(att_name[i],"encryption_type"))
+            STcopy(value[i], table->encryption_type);
        /* else give out error that the attribute is not recognized */
       }
 }
@@ -282,6 +288,14 @@ set_tabcol_attributes(XF_COLINFO  *cp, char **att_name,
         else if (STequal (att_name[i], "scale"))
 	{
             CVal(value[i], &scale);
+	}
+        else if (STequal (att_name[i], "column_encrypted"))
+	{
+            STcopy (value[i], cp->column_encrypted);
+	}
+        else if (STequal (att_name[i], "column_encrypt_salt"))
+	{
+            STcopy (value[i], cp->column_encrypt_salt);
 	}
        /* else give out error that the attribute is not recognized */
     }
@@ -634,6 +648,10 @@ XF_COLINFO *mkcollist(XF_COLINFO  *cp)
       STcopy (temp->has_default, element->has_default);
     if (temp->audit_key) 
       STcopy (temp->audit_key, element->audit_key);
+    if (temp->column_encrypted)
+      STcopy (temp->column_encrypted, element->column_encrypted);
+    if (temp->column_encrypt_salt)
+      STcopy (temp->column_encrypt_salt, element->column_encrypt_salt);
  
     element->col_next = new_list; 
     new_list = element; 
