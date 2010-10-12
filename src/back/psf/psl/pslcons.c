@@ -1665,6 +1665,8 @@ psl_add_schema_table(
 **
 **	8-may-1998 (inkdo01)
 **	    Written as part of constraint index with option enhancement.
+**      8-Oct-2010 (hanal04) Bug 124561
+**          Add handling of compression settings for the index.
 */
 static
 DB_STATUS
@@ -1852,6 +1854,47 @@ psl_ixopts_text(
 	if (DB_FAILURE_MACRO(status)) return(status);
 	firstwith = FALSE;
     }	/* end of "page_size = n" */
+
+    if (cons->pss_restab.pst_compress != 0) /* COMPRESSION=(...) */
+    {
+	char	*compression;
+
+	if (!firstwith)		/* prepend with ", ", if necessary */
+	{
+	    status = psq_tadd(text_chain, (u_char *) ERx(", "),
+		sizeof(ERx(", ")) - 1, &result, err_blk);
+	    if (DB_FAILURE_MACRO(status)) return(status);
+	}
+
+	switch(cons->pss_restab.pst_compress) {
+	 case PST_INDEX_COMP:
+	    compression = "KEY";
+	    break;
+
+	 case PST_NO_INDEX_COMP:
+	    compression = "NOKEY";
+	    break;
+
+	 case PST_DATA_COMP:
+	    compression = "DATA";
+	    break;
+
+	 case PST_NO_DATA_COMP:
+	    compression = "NODATA";
+	    break;
+
+	 default:
+	    compression = "unsupported";
+	    break;
+	}
+
+	STprintf(tbuf, ERx("COMPRESSION = (%s)"), compression);
+	status = psq_tadd(text_chain, (u_char *)tbuf, STlength(tbuf), 
+	    &result, err_blk);
+	if (DB_FAILURE_MACRO(status)) return(status);
+	firstwith = FALSE;
+
+    }
 
     /* Stupid ol' location needs doing, too. */
     if (cons->pss_restab.pst_resloc.data_address != 0)	/* "location = (...)" */

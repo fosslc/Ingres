@@ -7641,6 +7641,8 @@ opc_createIntegrityAHD(
 **	28-Jul-2010 (kschendel) SIR 124104
 **	    Pass along compression setting, so that it can be maintained
 **	    if qef decides to do a modify (e.g. for autostruct).
+**       8_Oct-2010 (hanal04) Bug 124561
+**          If QCI_INDEX_WITH_OPTS pass along the idx's compression setting.
 */
 
 #define	COPY_STRUCT( a, b )	\
@@ -7804,10 +7806,13 @@ copyIntegrityDetails(
 	qefDetails->qci_idx_alloc   = psfDetails->pst_indexopts.pst_alloc;
 	qefDetails->qci_idx_extend  = psfDetails->pst_indexopts.pst_extend;
 	qefDetails->qci_idx_struct  = psfDetails->pst_indexopts.pst_struct;
+        qefDetails->qci_compress    = psfDetails->pst_indexopts.pst_compress;
     }
-
-    /* Copy the compression setting, just in case we have autostruct */
-    qefDetails->qci_compress = psfDetails->pst_compress;
+    else
+    {
+        /* Copy the compression setting, just in case we have autostruct */
+        qefDetails->qci_compress = psfDetails->pst_compress;
+    }
 
     return;
 } /* copyIntegrityDetails */

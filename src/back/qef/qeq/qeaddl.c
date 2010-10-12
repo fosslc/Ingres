@@ -9585,6 +9585,8 @@ textOfUniqueIndex(
 ** History:
 **	1-apr-98 (inkdo01)
 **	    Written as part of support for constraint index with options.
+**      8-Oct-2010 (hanal04) Bug 124561
+**          Add handling of compression settings.
 [@history_line@]...
 */
 
@@ -9598,6 +9600,7 @@ addWithopts(
     char	*ixstruct = "BTREE";
     char	withstring[80];		/* space for assembling options */
     char	*withopt = &withstring[0];
+    char        *compression = "unsupported";
 
 
     /* Add the structure type */
@@ -9615,6 +9618,30 @@ addWithopts(
     addString( evolvingString, ixstruct, 5, NO_PUNCTUATION, NO_QUOTES);
 
     /* Now check for the various index with clause options */
+
+    if (details->qci_compress)
+    {
+        switch (details->qci_compress) {
+         case PST_INDEX_COMP:
+            compression = "KEY";
+            break;
+
+         case PST_NO_INDEX_COMP:
+            compression = "NOKEY";
+            break;
+
+         case PST_DATA_COMP:
+            compression = "DATA";
+            break;
+
+         case PST_NO_DATA_COMP:
+            compression = "NODATA";
+            break;
+        }
+        sprintf(withopt, ", COMPRESSION=(%s)", compression);
+        addString( evolvingString, withopt, STlength(withopt),
+            NO_PUNCTUATION, NO_QUOTES);
+    }
 
     if (details->qci_idx_fillfac)
     {

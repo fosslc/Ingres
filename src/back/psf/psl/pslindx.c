@@ -1328,6 +1328,10 @@ psl_ci5_indexlocname(
 **	17-Nov-2009 (kschendel) SIR 122890
 **	    Revise call to pass yyvarsp directly, similar to the create-table
 **	    variant (psl_ct8_cr_lst_elem).
+**       8-Oct-2010 (hanal04) Bug 124561
+**          When PSQ_CONS and compression settings are specified we SEGV'd.
+**          Store the compression details in pss_restab.pst_compress
+**          as the dmu_cb is not available.
 */
 DB_STATUS
 psl_lst_elem(
@@ -1412,94 +1416,139 @@ psl_lst_elem(
 	bool		dcomp_chr = FALSE;
 	bool		kcomp_chr = FALSE;
 
-	/*
-	** WITH COMPRESSION=([NO]KEY,[NO|HI]DATA)
-	*/
+        if(qmode == PSQ_CONS)
+        {
+            /* Need to store compression settings in pss_curcons->pss_restab
+            ** and make use of them in psl_ixopts_text()
+            **
+            ** We may need to specify
+            ** sess_cb->pss_curcons->pss_restab.pst_structure = DB_BTRE_STORE;
+            ** as well as the pst_compress. Not sure if this will over-ride
+            ** the requested structure type or whether we can allow the default.
+            */
+            if (!STcasecmp(element, "key"))
+            {
+                sess_cb->pss_curcons->pss_restab.pst_compress = PST_INDEX_COMP;
+            }
+            else if (STcasecmp(element, "nokey") == 0)
+            {
+                sess_cb->pss_curcons->pss_restab.pst_compress = PST_NO_INDEX_COMP;
+            }
+            else if (STcasecmp(element, "data") == 0)
+            {
+                sess_cb->pss_curcons->pss_restab.pst_compress = PST_DATA_COMP;
+            }
+ /* let hidata fall through to error case. Karls says it's not allowed
+            else if (STcasecmp(element, "hidata") == 0)
+            {
+                sess_cb->pss_curcons->pss_restab.pst_compress = PST_HI_DATA_COMP;
+            }
+ */
+            else if (STcasecmp(element, "nodata") == 0)
+            {
+                sess_cb->pss_curcons->pss_restab.pst_compress = PST_NO_DATA_COMP;
+            }
+            else
+            {
+                (VOID) psf_error(E_PS0BC5_KEY_OR_DATA_ONLY, 0L, PSF_USERERR,
+                            &err_code, err_blk, 3,
+                            length, command,
+                            sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
+                            STlength(element), element);
+                return (E_DB_ERROR);
+            }
+        }
+        else
+        {
+	    /*
+	    ** WITH COMPRESSION=([NO]KEY,[NO|HI]DATA)
+	    */
 
-	if (dmu_cb->dmu_char_array.data_in_size >=
-	    PSS_MAX_INDEX_CHARS * sizeof (DMU_CHAR_ENTRY))
-	{
-	    /* Invalid with clause - too many options */
-	    _VOID_ psf_error(5344L, 0L, PSF_USERERR, &err_code, err_blk, 1,
-		length, command);
-	    return (E_DB_ERROR);
-	}
-
-	/*
-	** Determine whether there are already any DMU_INDEX_COMP or
-	** DMU_COMPRESSED characteristics built.
-	*/
-	chr = (DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address;
-	chr_lim = (DMU_CHAR_ENTRY *)
-	    ((char *) chr + dmu_cb->dmu_char_array.data_in_size);
-
-	for (; chr < chr_lim; chr++)
-	{
-	    if (chr->char_id == DMU_COMPRESSED)
+	    if (dmu_cb->dmu_char_array.data_in_size >=
+	        PSS_MAX_INDEX_CHARS * sizeof (DMU_CHAR_ENTRY))
 	    {
-		dcomp_chr = TRUE;
-		if (kcomp_chr)
-		    break;
+	        /* Invalid with clause - too many options */
+	        _VOID_ psf_error(5344L, 0L, PSF_USERERR, &err_code, err_blk, 1,
+		    length, command);
+	        return (E_DB_ERROR);
 	    }
-	    else if (chr->char_id == DMU_INDEX_COMP)
+    
+	    /*
+	    ** Determine whether there are already any DMU_INDEX_COMP or
+	    ** DMU_COMPRESSED characteristics built.
+	    */
+	    chr = (DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address;
+	    chr_lim = (DMU_CHAR_ENTRY *)
+	        ((char *) chr + dmu_cb->dmu_char_array.data_in_size);
+    
+	    for (; chr < chr_lim; chr++)
 	    {
-		kcomp_chr = TRUE;
-		if (dcomp_chr)
-		    break;
+	        if (chr->char_id == DMU_COMPRESSED)
+	        {
+		    dcomp_chr = TRUE;
+		    if (kcomp_chr)
+		        break;
+	        }
+	        else if (chr->char_id == DMU_INDEX_COMP)
+	        {
+		    kcomp_chr = TRUE;
+		    if (dcomp_chr)
+		        break;
+	        }
 	    }
-	}
+    
+	    /*
+	    ** Validate the keyword, and add a new characteristic if valid.
+	    */
+	    chr = chr_lim;
+    
+	    if (!STcasecmp(element, "key"))
+	    {
+	        chr->char_id = DMU_INDEX_COMP;
+	        chr->char_value = DMU_C_ON;
+	    }
+	    else if (STcasecmp(element, "nokey") == 0)
+	    {
+	        chr->char_id = DMU_INDEX_COMP;
+	        chr->char_value = DMU_C_OFF;
+	    }
+	    else if (STcasecmp(element, "data") == 0)
+	    {
+	        chr->char_id = DMU_COMPRESSED;
+	        chr->char_value = DMU_C_ON;
+	    }
+	    else if (STcasecmp(element, "hidata") == 0)
+	    {
+	        chr->char_id = DMU_COMPRESSED;
+	        chr->char_value = DMU_C_HIGH;
+	    }
+	    else if (STcasecmp(element, "nodata") == 0)
+	    {
+	        chr->char_id = DMU_COMPRESSED;
+	        chr->char_value = DMU_C_OFF;
+	    }
+	    else
+	    {
+	        (VOID) psf_error(E_PS0BC5_KEY_OR_DATA_ONLY, 0L, PSF_USERERR,
+			    &err_code, err_blk, 3,
+			    length, command,
+			    sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
+			    STlength(element), element);
+	        return (E_DB_ERROR);
+	    }
+    
+	    if (   (kcomp_chr && chr->char_id == DMU_INDEX_COMP)
+	        || (dcomp_chr && chr->char_id == DMU_COMPRESSED))
+	    {
+	        _VOID_ psf_error(E_PS0BC4_COMPRESSION_TWICE,
+		        0L, PSF_USERERR, &err_code, err_blk, 2,
+		        length, command,
+		        sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno);
+	        return (E_DB_ERROR);
+	    }
 
-	/*
-	** Validate the keyword, and add a new characteristic if valid.
-	*/
-	chr = chr_lim;
-
-	if (!STcasecmp(element, "key"))
-	{
-	    chr->char_id = DMU_INDEX_COMP;
-	    chr->char_value = DMU_C_ON;
-	}
-	else if (STcasecmp(element, "nokey") == 0)
-	{
-	    chr->char_id = DMU_INDEX_COMP;
-	    chr->char_value = DMU_C_OFF;
-	}
-	else if (STcasecmp(element, "data") == 0)
-	{
-	    chr->char_id = DMU_COMPRESSED;
-	    chr->char_value = DMU_C_ON;
-	}
-	else if (STcasecmp(element, "hidata") == 0)
-	{
-	    chr->char_id = DMU_COMPRESSED;
-	    chr->char_value = DMU_C_HIGH;
-	}
-	else if (STcasecmp(element, "nodata") == 0)
-	{
-	    chr->char_id = DMU_COMPRESSED;
-	    chr->char_value = DMU_C_OFF;
-	}
-	else
-	{
-	    (VOID) psf_error(E_PS0BC5_KEY_OR_DATA_ONLY, 0L, PSF_USERERR,
-			&err_code, err_blk, 3,
-			length, command,
-			sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-			STlength(element), element);
-	    return (E_DB_ERROR);
-	}
-
-	if (   (kcomp_chr && chr->char_id == DMU_INDEX_COMP)
-	    || (dcomp_chr && chr->char_id == DMU_COMPRESSED))
-	{
-	    _VOID_ psf_error(E_PS0BC4_COMPRESSION_TWICE,
-		    0L, PSF_USERERR, &err_code, err_blk, 2,
-		    length, command,
-		    sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno);
-	    return (E_DB_ERROR);
-	}
-
-	dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
+	    dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
+        }
     }
     else if ((list_clause == PSS_NLOC_CLAUSE) ||
     	     (list_clause == PSS_OLOC_CLAUSE))
