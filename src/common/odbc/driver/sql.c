@@ -680,8 +680,14 @@
 **          GetProcParamNames() if the target db is Vectorwise.  In
 **          GetServerInfo(), set the release version to the same as Ingres 
 **          10.0 for Vectorwise servers, and disable OPT_INGRESDATE and
-**          OPT_BLANKDATEisNULL for Vectorwise servers.`
-**     
+**          OPT_BLANKDATEisNULL for Vectorwise servers.
+**    12-Oct-2010 (Ralph Loen) Bug 124581
+**          Removal of QST_DESCRIBE resulted in a memory leak for
+**          prepared select queries using select loops.
+**          In the QRY_SETD case of odbc_query_sm(), invoke 
+**          PrepareSqldaAndBuffer() with the prepare_or_describe argument set 
+**          to SQLDESCRIB if the select query is prepared: in this case, only 
+**          the sqlda needs to be allocated, not the fetch buffer.
 */
 
 /*
@@ -7273,6 +7279,13 @@ static void GetCapabilitiesFromDSN(char * pDSN, LPDBC pdbc)
 **    20-Nov-2009 (Ralph Loen)
 **          The QST_DESCRIBE query type is now obsolete.  Instead,
 **          the QST_PREPARE query type sets the sequence to QRY_GETD.
+**    12-Oct-2010 (Ralph Loen)  Bug 124581
+**          Removal of QST_DESCRIBE resulted in a memory leak for
+**          prepared select queries using select loops.  
+**          In the QRY_SETD case invoke PrepareSqldaAndBuffer() with the 
+**          prepare_or_describe argument set to SQLDESCRIB if the
+**          select query is prepared: in this case, only the sqlda needs 
+**          to be allocated, not the fetch buffer.
 */
 
 RETCODE odbc_query_sm( QRY_CB *qry_cb )
@@ -7475,7 +7488,8 @@ RETCODE odbc_query_sm( QRY_CB *qry_cb )
         ** Set up fetch buffer SQLDA, buffer offsets, and 
         ** allocate the buffer.
         */
-	rc = PrepareSqldaAndBuffer (pstmt, SQLPREPARE);
+        rc = PrepareSqldaAndBuffer (pstmt, sequence_type == QST_PREPARE ?
+             SQLDESCRIB : SQLPREPARE);
 	if (rc == SQL_ERROR)
 	{
             sequence = QRY_CANCEL; 
