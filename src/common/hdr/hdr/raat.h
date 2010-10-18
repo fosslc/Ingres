@@ -90,6 +90,8 @@
 ##	    such as long ID and column encryption supports.
 ##      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 ##          Store blank trimmed names in DMT_ATT_ENTRY
+##      03-oct-2010 (stial01) (SIR 121123 Long Ids)
+##          Sync DMT_ATT_ENTRY/RAAT_ATT_ENTRY and DMT_TBL_ENTRY/RAAT_TBL_ENTRY
 ##
 */
 
@@ -254,6 +256,7 @@ typedef struct
     short       attr_geomtype;         /* Geometry type code */
     short       att_encflags;
     int         att_encwid; 
+    short	att_spare;	/* not used */
 				      /* RAAT does DMT_SHOW DMT_NO_ATTNAMES */
     short	att_nmlen;	      /* NOTE RAAT doesn't use att_nmlen */
     char	*att_nmstr;	      /* NOTE RAAT doesn't use att_nmstr */
@@ -332,6 +335,7 @@ typedef struct _RAAT_TBL_ENTRY
     char        tbl_location[RAAT_LOC_MAXNAME];  /* First Table location name.*/
     char        tbl_filename[RAAT_LOC_MAXNAME];  /* Table file name. */
     int         tbl_attr_count;         /* Table attribute count. */
+    int         tbl_attr_nametot;         /* size of attribute names */
     int         tbl_index_count;        /* Count of indexes on table. */
     int         tbl_width;              /* Table record width. */
     int         tbl_data_width;         /* Table logical data width. */

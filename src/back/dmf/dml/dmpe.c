@@ -526,6 +526,8 @@
 **          dmpe_buffered_put() Allocate LONGTERM memory for rcb_bulk_misc
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**      13-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Minor fix to 01-oct-2010 change
 **/
 
 /*
@@ -4073,7 +4075,7 @@ dmpe_begin_dml(ADP_POP_CB *pop_cb, DMPE_PCB **pcbp, bool is_put)
 		    /* DMT_M_NO_ATTR_NAMES !!! */
 		    dmt_shw.dmt_attr_names.ptr_address = NULL;
 		    dmt_shw.dmt_attr_names.ptr_in_count = 0;
-		    dmt_shw.dmt_attr_array.ptr_size = 0;
+		    dmt_shw.dmt_attr_names.ptr_size = 0;
 
 		    dmt_shw.dmt_table.data_address = NULL;
 		    dmt_shw.dmt_table.data_in_size = 0;

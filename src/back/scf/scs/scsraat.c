@@ -259,6 +259,8 @@
 **          Changes for Long IDs
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**      13-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Sync DMT_ATT_ENTRY/RAAT_ATT_ENTRY and DMT_TBL_ENTRY/RAAT_TBL_ENTRY
 */
 
 /* Forward declarations */
@@ -720,6 +722,15 @@ scs_raat_call(i4  op_code,
 		    PSQ_CB		psq_cb;
 		    i4			temptbl = FALSE;
 
+		    if (sizeof(RAAT_ATT_ENTRY) != sizeof(DMT_ATT_ENTRY) ||
+			sizeof(RAAT_TBL_ENTRY) != sizeof(DMT_TBL_ENTRY))
+		    {
+			TRdisplay("scs_raat_call() internal error ATT_ENTRY (%d %d) TBL_ENTRY (%d %d)\n",
+			    sizeof(RAAT_ATT_ENTRY), sizeof(DMT_ATT_ENTRY),
+			    sizeof(RAAT_TBL_ENTRY), sizeof(DMT_TBL_ENTRY));
+			err_code = E_SC0372_NO_MESSAGE_AREA;
+			break;
+		    }
 
 		    if (scb->scb_sscb.sscb_raat_message == NULL)
 		    {
@@ -991,7 +1002,7 @@ scs_raat_call(i4  op_code,
 		    /* DMT_M_NO_ATTR_NAMES !!! */
 		    dmt_shw_cb.dmt_attr_names.ptr_address = NULL;
 		    dmt_shw_cb.dmt_attr_names.ptr_in_count = 0;
-		    dmt_shw_cb.dmt_attr_array.ptr_size = 0;
+		    dmt_shw_cb.dmt_attr_names.ptr_size = 0;
 
                     raat_mptr = scb->scb_sscb.sscb_raat_message;
                     raat_mptr->message.scg_mask =
