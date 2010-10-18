@@ -9,6 +9,9 @@
 # 	    Created from VERS.int_lnx_LSB
 #       31-Aug-2010 (thich01)
 #           Add WITH_GEO for platforms where spatial is not supported.
+# 	20-Sept-2010
+# 	    SIR 123296
+# 	    Bump version
 #       30-Sep-2010 (troal01)
 #           Fixed a typo in set option WITH_GEO
 

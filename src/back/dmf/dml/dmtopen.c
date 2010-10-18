@@ -611,6 +611,10 @@ static STATUS check_char(
 **	04-Aug-2010 (miket) SIR 122403
 **	    Give callers fair warning about an encrypted table that is
 **	    locked. They may or may not want to continue.
+**	05-Oct-2010 (jonj) B124549
+**	    Split CRIB connection into two statements; some compilers
+**	    overoptimize the single statement, corrupting crib_next,
+**	    crib_prev.
 */
 
 DB_STATUS
@@ -1179,8 +1183,8 @@ DMT_CB   *dmt_cb)
 			/* Link cursor crib to transaction's cursor crib list */
 			curscrib->crib_next = r->rcb_crib_ptr->crib_next;
 			curscrib->crib_prev = r->rcb_crib_ptr;
-			r->rcb_crib_ptr->crib_next->crib_prev =
-			    r->rcb_crib_ptr->crib_next = curscrib;
+			r->rcb_crib_ptr->crib_next->crib_prev = curscrib;
+			r->rcb_crib_ptr->crib_next = curscrib;
 
 			/* Show statement on which the CRIB is based */
 			curscrib->crib_sequence = dmt->dmt_sequence;

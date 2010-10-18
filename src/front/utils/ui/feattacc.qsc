@@ -78,6 +78,10 @@ exec sql include	<ui.sh>;
 **	25-Feb-2009 (drivi01)
 **	    Fixup nilli array to be of length 20. This change is 
 **	    related to change for bug 120451 in this file.
+**      18-Oct-2010 (hanal04) Bug 124320
+**          In iiuiAttrInfo() make sure db_prec is set for non-decimal
+**          types or afe_tyoutput() will fail to include the precision
+**          for timestamps etc.
 **/
 
 /*{
@@ -505,7 +509,7 @@ EXEC SQL END DECLARE SECTION;
 		if ( AFE_DATATYPE(&dbvalue) != DB_DEC_TYPE )
 		{
 			dbvalue.db_length = info->extern_length;
-			dbvalue.db_prec = 0;
+			dbvalue.db_prec = info->scale;
 		}
 		else
 		{ /* decimal type */

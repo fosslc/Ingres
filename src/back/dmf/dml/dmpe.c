@@ -528,6 +528,10 @@
 **	    Fix "table too large" (DM0138) when bulk-loading etabs. (b120497)
 **      28-Apr-2010 (stial01)
 **          dmpe_buffered_put() Allocate LONGTERM memory for rcb_bulk_misc
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
+**      13-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Minor fix to 01-oct-2010 change
 **/
 
 /*
@@ -1827,6 +1831,8 @@ dmpe_put(ADP_POP_CB	*pop_cb)
 **	    Call dml-begin routine to get context set up.  Use context
 **	    for opening etabs.  Using txn-logging as a key for DM11 tracing
 **	    on gets is weird, delete.
+**	18-Oct-2010 (troal01)
+**	    Before SRID is rewritten, check that it's the first segment.
 */
 static DB_STATUS
 dmpe_get(i4	  op_code ,
@@ -2123,7 +2129,8 @@ dmpe_get(i4	  op_code ,
 		 */
 		if(op_code == ADP_GET && !(pop_cb->pop_continuation & ADP_C_MOVE_MASK) &&
 				db_datatype_is_geom(pop_cb->pop_coupon->db_datatype) &&
-				pcb->pcb_bqcb != NULL)
+				pcb->pcb_bqcb != NULL && (pcb->pcb_record->prd_segment0 == 0 &&
+				pcb->pcb_record->prd_segment1 == 1))
 		{
 			i2 geo_vers;
 			i4 srid_tcb;
@@ -4134,7 +4141,21 @@ dmpe_begin_dml(ADP_POP_CB *pop_cb, DMPE_PCB **pcbp, bool is_put)
 		    dmt_shw.dmt_tab_id.db_tab_base = base_id;
 		    dmt_shw.dmt_tab_id.db_tab_index = 0;
 		    dmt_shw.dmt_char_array.data_in_size = 0;
-		    dmt_shw.dmt_flags_mask = DMT_M_ATTR;
+
+		    /*
+		    ** We don't need the attribute names
+		    ** If we did, we should do the extra DMT_SHOW
+		    ** to get the tbl_attr_count and tbl_attr_nametot
+		    ** instead of doing MEreq for the worst case 
+		    ** DB_MAX_COLS * (DB_ATT_MAXNAME + 1)
+		    */
+		    dmt_shw.dmt_flags_mask = DMT_M_ATTR | DMT_M_NO_ATTR_NAMES;
+
+		    /* DMT_M_NO_ATTR_NAMES !!! */
+		    dmt_shw.dmt_attr_names.ptr_address = NULL;
+		    dmt_shw.dmt_attr_names.ptr_in_count = 0;
+		    dmt_shw.dmt_attr_names.ptr_size = 0;
+
 		    dmt_shw.dmt_table.data_address = NULL;
 		    dmt_shw.dmt_table.data_in_size = 0;
 		    dmt_shw.dmt_char_array.data_address = NULL;

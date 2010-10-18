@@ -3,8 +3,9 @@
 */
 #ifndef    COMMON_INCLUDE
 #define                 COMMON_INCLUDE  0
-#include <wchar.h>
 #include <gl.h>
+#include <systypes.h>
+#include <wchar.h>
 /**
 ** Name: IICOMMON.H - Types and names used by ingres both DBMS and FEs
 **
@@ -175,6 +176,9 @@
 **        Moved AFE_NTEXT_STRING from afe.h to iicommon.h
 **     19-Aug-2010 (thich01)
 **        Left a space at 60 for GCA SECL TYPE.
+**     13-Oct-2010 (hanal04) Bug 124250
+**        Include systypes.h with wchar.h to resolve build
+**        problems on HP Itanium.
 **/
 
 #define                  P2K		 2048

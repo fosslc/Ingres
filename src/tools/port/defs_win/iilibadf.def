@@ -133,12 +133,15 @@
 ;	    Add adu_soundex_dm for change 504949 for bug 122320
 ;        9-Jul-2010 (hanal04) Bug 124087
 ;           Added adu_nvchr_embunitochar() and adu_nvchr_embchartouni()
+;	15-Jul-2010 (smeke01) b123950
+;	    Added adu_norm_date_hash.
 ;       11-Aug-2010 (hanal04) Bug 124180
 ;           Added adu_2strtomny_strict().
 ;	24-Aug-2010 (troal01)
 ;	    Added the four geometrycollection defs
 ;	08-Oct-2010 (troal01)
 ;	    Removed old POINT prototype definitions
+
 EXPORTS
 adb_breakpoint		@1				
 adb_optab_print		@2				
@@ -674,6 +677,7 @@ adu_soundex_dm		@542
 adu_nvchr_embchartouni  @543
 adu_nvchr_embunitochar  @544
 adu_2strtomny_strict	@545
+adu_norm_date_hash	@546
 adu_transform   @547
 adu_geometry_srid_fromWKB       @548
 adu_geometry_srid_fromText      @549

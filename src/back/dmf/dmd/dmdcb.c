@@ -681,6 +681,8 @@ DM_OBJECT	   *obj)
 **	    Add the BQCB.
 **	29-Jun-2010 (jonj)
 **	    Add buf_cr_undo, buf_cr_where to DM0P_BUFFER stuff.
+**	05-Oct-2010 (jonj) B124549
+**	    Add more stuff from the CRIB, show RCB's CRIB.
 */
 static STATUS
 ex_handler(
@@ -1549,11 +1551,40 @@ TRdisplay("         ATTID  OFFSET  TYPE    LENGTH PREC KEY KOFFSET\n");
 	    RCB_LK_TYPE, rcb->rcb_k_type, 
 	    LOCK_MODE, rcb->rcb_k_mode,
 	    RCB_K_DURATION, rcb->rcb_k_duration);
-	TRdisplay("    Isolation Lvl: %w  CSRR Flags: %v  DMR opcode %d  CRIB: 0x%p\n",
+	TRdisplay("    Isolation Lvl: %w  CSRR Flags: %v  DMR opcode %d\n",
 	    RCB_ISO_LEVEL, rcb->rcb_iso_level, 
 	    RCB_CSRR_FLAGS, rcb->rcb_csrr_flags,
-	    rcb->rcb_dmr_opcode,
-	    rcb->rcb_crib_ptr);
+	    rcb->rcb_dmr_opcode);
+	/* Display CRIB contents, if any */
+	if ( crib = rcb->rcb_crib_ptr )
+	{
+	    TRdisplay("    CRIB: 0x%p next: 0x%p prev: 0x%p\n",
+	    	crib, crib->crib_next, crib->crib_prev);
+	    TRdisplay("          Low LSN:(%x,%x) Last Commit:(%x,%x) Bos LSN:(%x,%x)\n",
+		crib->crib_low_lsn.lsn_high,
+		crib->crib_low_lsn.lsn_low,
+		crib->crib_last_commit.lsn_high,
+		crib->crib_last_commit.lsn_low,
+		crib->crib_bos_lsn.lsn_high,
+		crib->crib_bos_lsn.lsn_low);
+	    TRdisplay("          Bos Tranid: 0x%x Sequence: %d Xid Array: 0x%p\n",
+	        crib->crib_bos_tranid,
+		crib->crib_sequence,
+		crib->crib_xid_array);
+	    TRdisplay("          Cursid: 0x%p Inuse: %d RCB State: %v\n",
+	        crib->crib_cursid,
+		crib->crib_inuse,
+		RCB_STATE, crib->crib_rcb_state);
+	    TRdisplay("          Active Transactions: %d...%d\n",
+	        crib->crib_lgid_low,
+		crib->crib_lgid_high);
+	    for ( i = crib->crib_lgid_low; i <= crib->crib_lgid_high; i++ )
+	    {
+	        if ( crib->crib_xid_array[i] )
+		    TRdisplay("          %4d: 0x%x\n",
+		        i, crib->crib_xid_array[i]);
+	    }
+	}
 	TRdisplay("    Partition %d  Rcb_reltid:",
 	    rcb->rcb_partno);
 	if ( rcb->rcb_reltid )
@@ -2073,7 +2104,11 @@ TRdisplay("         ATTID  OFFSET  TYPE    LENGTH PREC KEY KOFFSET\n");
 	        crib->crib_bos_tranid,
 		crib->crib_sequence,
 		crib->crib_xid_array);
-	    TRdisplay("          Active Transactions: %d,%d\n",
+	    TRdisplay("          Cursid: 0x%p Inuse: %d RCB State: %v\n",
+	        crib->crib_cursid,
+		crib->crib_inuse,
+		RCB_STATE, crib->crib_rcb_state);
+	    TRdisplay("          Active Transactions: %d...%d\n",
 	        crib->crib_lgid_low,
 		crib->crib_lgid_high);
 	    for ( i = crib->crib_lgid_low; i <= crib->crib_lgid_high; i++ )
@@ -2113,7 +2148,11 @@ TRdisplay("         ATTID  OFFSET  TYPE    LENGTH PREC KEY KOFFSET\n");
 	    crib->crib_bos_tranid,
 	    crib->crib_sequence,
 	    crib->crib_xid_array);
-	TRdisplay("          Active Transactions: %d,%d\n",
+	TRdisplay("          Cursid: 0x%p Inuse: %d RCB State: %v\n",
+	    crib->crib_cursid,
+	    crib->crib_inuse,
+	    RCB_STATE, crib->crib_rcb_state);
+	TRdisplay("          Active Transactions: %d...%d\n",
 	    crib->crib_lgid_low,
 	    crib->crib_lgid_high);
 	for ( i = crib->crib_lgid_low; i <= crib->crib_lgid_high; i++ )
@@ -2122,6 +2161,7 @@ TRdisplay("         ATTID  OFFSET  TYPE    LENGTH PREC KEY KOFFSET\n");
 		TRdisplay("          %4d: 0x%x\n",
 		    i, crib->crib_xid_array[i]);
 	}
+	break;
 
     case XCCB_CB:
 	xccb = (DML_XCCB *) obj;

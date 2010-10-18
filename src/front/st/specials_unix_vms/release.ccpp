@@ -418,6 +418,9 @@
 **	    Added GEODEPS part
 **      09-Sep-2010 (rajus01) SD issue 146492, Bug 124381
 **          Add kerberos64 part for hybrid builds.
+**      25-Aug-2010 (hanal04) Bug 124194
+**          Added abf32.ccp for reverse Hybrids to give users the ability
+**          to link old ABF apps in 32-bit.
 */
 
 RELEASE Ingres
@@ -1898,6 +1901,9 @@ PACKAGE i18n64
 /* 32bit Support for 64bit platorms */
 #ifdef conf_BUILD_ARCH_64_32
 PACKAGE supp32
+
+   PART abf32
+	DEFINITION abf32.prt
 
    PART supp32
 	DEFINITION supp32.prt

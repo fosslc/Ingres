@@ -819,6 +819,11 @@ static bool   set_role=FALSE;
 **	    Add support for encryption, and make TO optional in MODIFY as
 **	    it is in the back end grammar, to allow statements like
 **	    "MODIFY FOO ENCRYPT WITH PASSPHRASE='this is a secret'".
+**	 06-Oct-2010 (kiria01) b124564
+**	    Add missing WITH grammar for common table expressions.
+**	 11-Oct-2010 (kiria01) b124564
+**	    Revised grammar for DECLARE CURSOR to avoid the empty branch of
+**	    query_with from erroneously triggering the error production.
 **
 ** Rules to apply when writing new grammar parts:
 **
@@ -2772,14 +2777,14 @@ creat_col_spec: sql_lparen crcol_spec_list sql_rparen
 			      ERx("CREATE TABLE"));
 		    }
 		}
-	|	crp_unq_coln_list sql_as select_full select_order
+	|	crp_unq_coln_list sql_as query_with select_full select_order
 					select_off_fetch
 		{
 		    if (eq->eq_flags & EQ_FIPS)
 			    er_write( E_EQ0506_FIPS_CLAUSE, EQ_WARN, 2, 
 			        ERx("AS SELECT"), ERx("CREATE TABLE") );
 		}
-	|	sql_lparen crcol_spec_list sql_rparen sql_as select_full
+	|	sql_lparen crcol_spec_list sql_rparen sql_as query_with select_full
 					select_order select_off_fetch
 		{
 		    if (eq->eq_flags & EQ_FIPS)
@@ -3108,11 +3113,11 @@ creuser_key:	tCRE_USER
 +* EXEC SQL CREATE VIEW view-name [(column-list)] AS FullSelect
 **	[WITH with_clause]
 */
-create_view:	create_vkey schema_obj crp_unq_coln_list sql_as select_full
+create_view:	create_vkey schema_obj crp_unq_coln_list sql_as query_with select_full
 		sql_opt_with_clause
 		{
 		    /* UNION views are non-FIPS */
-		    if (eq->eq_flags & EQ_FIPS && $5.i == 1)
+		    if (eq->eq_flags & EQ_FIPS && $6.i == 1)
 			    er_write( E_EQ0506_FIPS_CLAUSE, EQ_WARN, 2, 
 			        ERx("UNION"), ERx("CREATE VIEW") );
 		}
@@ -3465,7 +3470,7 @@ insert_val:	tDEFAULT tVALUES
 	|	insert_obj
 ;
 insert_obj:	ins_val_key sql_lparen ins_expr_list sql_rparen
-	|	select_sub select_order select_off_fetch
+	|	query_with select_sub select_order select_off_fetch
 ;
 opt_override:	/* empty */
 	|	tOVERRIDING tSYSTEM tVALUE
@@ -3630,6 +3635,7 @@ ins_scalar_bif: sname_lparen sql_rparen
 ** a REPEATED keyword is found in a cursor UPDATE statement.
 */
 update:		upd_repkey update_body
+	|	wupd_repkey query_with_body select_key update_body
 ;
 upd_repkey:	tUPDATE
 		{
@@ -3643,6 +3649,20 @@ upd_repkey:	tUPDATE
 		    if (eq->eq_flags & EQ_FIPS) 
 			    er_write( E_EQ0505_FIPS_STATMT, EQ_WARN, 1, 
 			        ERx("REPEATED UPDATE") );
+		}
+;
+wupd_repkey:	tWITH
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sSQL, $1.s, NULL );
+		    gr->gr_func = tUPDATE;
+		}
+	|	tREPEAT tWITH
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sREPEAT, $1.s, $2.s );
+		    gr->gr_func = tUPDATE;
+		    if (eq->eq_flags & EQ_FIPS)
+			er_write( E_EQ0505_FIPS_STATMT, EQ_WARN, 1,
+			    ERx("REPEATED UPDATE") );
 		}
 ;
 update_body:	update_csr_body
@@ -3709,8 +3729,13 @@ update_csr_where:
 		}
 ;
 updcol_asgn_list:
+		updcol_asgn_list1
+	|	sql_eq sql_lparen select_full sql_rparen
+	|	sql_lparen crunq_coln_list sql_rparen sql_eq sql_lparen select_full sql_rparen
+;
+updcol_asgn_list1:
 		updcol_asgn
-	|	updcol_asgn_list sql_comma updcol_asgn
+	|	updcol_asgn_list1 sql_comma updcol_asgn
 ;
 updcol_asgn:	crunq_col_name sql_eq expr_or_subqry
 ;
@@ -3819,6 +3844,7 @@ eselect_head:	eselect_repkey select_firstn select_all esubselect_tgt
 		{
 		    /* don't set until after call to gr_mechanism */ 
 		}
+	|	ewith_repkey query_with_body select_key select_firstn select_all esubselect_tgt
 ;
 eselect_repkey: tSELECT
 		{
@@ -3833,6 +3859,26 @@ eselect_repkey: tSELECT
 		    }		
 		}
 	|	tREPEAT tSELECT
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sREPEAT, $1.s, $2.s );
+		    if (eq->eq_flags & EQ_FIPS) 
+			    er_write( E_EQ0505_FIPS_STATMT, EQ_WARN, 1, 
+			        ERx("REPEATED SELECT") );
+		}
+;
+ewith_repkey: tWITH
+		{
+		    gr_mechanism( GR_EQSTMT, GR_sSQL, $1.s, NULL );
+		    esq->flag |= ESQ_REG_SELECT;
+		    esl_query( ESL_START_QUERY );
+		    /* special case for singleton select */
+		    if (eq->eq_flags & EQ_ENDIF)
+		    {
+			gr->gr_flag |= GR_ENDIF;
+			eq->eq_flags &= ~EQ_ENDIF;
+		    }		
+		}
+	|	tREPEAT tWITH
 		{
 		    gr_mechanism( GR_EQSTMT, GR_sREPEAT, $1.s, $2.s );
 		    if (eq->eq_flags & EQ_FIPS) 
@@ -4382,7 +4428,7 @@ own_tbl_corr:	sql_id opt_tproc_spec
 		}
 ;
 sql_optas:	sql_as
-	|
+	|	/* EMPTY */
 ;
 tbl_corr_id:	schema_obj
 	|	schema_obj sql_id
@@ -4578,8 +4624,27 @@ select_head:	select_key select_firstn select_all esubselect_tgt
 **	CSR_UPD_LIST	(0x10)	if there was a UPDATE list in the UPDATE clause
 **	CSR_UPDATE_LIST (0x18)	UPD_LIST always implies UPDATE
 */
-csr_select_sub: csr_select_full csr_select_order csr_select_offset 
-	csr_select_fetch csr_sel_update
+csr_select_sub: sql_with query_with_body
+			csr_select_full csr_select_order csr_select_offset 
+				csr_select_fetch csr_sel_update
+		{
+		    if ($3.i == CSR_NO_FROM)
+		    {
+			/*
+			** If there isn't a FROM clause, then the FOR UPDATE
+			** clause is illegal.
+			** We accept it in order to give a good error message.
+			*/
+			if ($7.i != CSR_STATIC)
+			    er_write( E_EQ0133_sqNOFROM, EQ_ERROR, 0 );
+			$$.i = $3.i;
+		    } else
+		    {
+			$$.i = $3.i | $7.i;
+		    }
+		}
+	|	csr_select_full csr_select_order csr_select_offset 
+			csr_select_fetch csr_sel_update
 		{
 		    if ($1.i == CSR_NO_FROM)
 		    {
@@ -4896,6 +4961,22 @@ update_key:	tUPDATE
 		    db_key( $1.s );
 		}
 ;
+
+/* Common table expression productions */
+query_with:
+		/* EMPTY */
+	|	sql_with query_with_body 
+;
+
+query_with_body:
+		with_list_element 
+	|	query_with_body sql_comma with_list_element 
+;
+
+with_list_element:
+		sql_id dt_collist sql_as sql_lparen select_full sql_rparen 
+;
+
 
 /*
 +* ---- Predicates ----
@@ -9486,7 +9567,9 @@ ce_buf:		host_retvar
 								    gr->gr_id );
 			}
 		    } else	/* Error in host_retvar */
+		    {
 			;
+		    }
 		    arg_var_add( gr->gr_sym, gr->gr_id );
 		}
 ;

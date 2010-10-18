@@ -4,6 +4,8 @@
 #	31-Jul-2007 (kiria01) b117955
 #	    With change to fi_defn.awk and integration into jam
 #	    include rules for these
+#	04-Oct-2010 (kiria01) b124065
+#	    Add adgop_defn.c as built from fi_defn.txt
 
 SubDir ING_SRC common adf adg ;
 
@@ -12,9 +14,10 @@ IISUBSYS common adf adg ;
 IIFiH adgfi_defn.h : fi_defn.awk fi_defn.txt ;
 IIFiRoc adgfi_defn.roc : fi_defn.awk fi_defn.txt ;
 IIFiRocLu adgfi_defn_lu.roc : fi_defn.awk fi_defn.txt ;
+IIOpC adgop_defn.c : fi_defn.awk fi_defn.txt ;
 
 IILIBRARY ADFLIB : adgvlup.c adgstartup.c adgshutdown.c adgrelease.c
 	adgmo.c adginit.c adgfexi.c ;
 
 IILIBRARY IMPADFLIBDATA : adgdata.c adgdttab.roc
-	adgfi_defn.roc adgfi_defn_lu.roc adgoptab.roc ;
+	adgfi_defn.roc adgfi_defn_lu.roc adgop_defn.c ;

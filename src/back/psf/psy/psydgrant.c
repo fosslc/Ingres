@@ -33,6 +33,7 @@
 #include    <pshparse.h>
 #include    <psftrmwh.h>
 #include    <psyaudit.h>
+#include    <cui.h>
 
 /**
 **
@@ -195,6 +196,8 @@
 **          is issued.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 [@history_template@]...
 **/
 
@@ -3546,20 +3549,17 @@ psy_attmap_to_str(
 
     for (;;)
     {
-	register i4	name_len;
 
-	name_len = psf_trmwhite(sizeof(DB_ATT_NAME),
-	    (char *) &attr_descr[*offset]->att_name);
-
-	if (name_len + len + CMbytecnt(",") > str_len)
+	if (attr_descr[*offset]->att_nmlen + len + CMbytecnt(",") > str_len)
 	{
 	    /* no more names can be added to the string */
 	    break;
 	}
 
-	MEcopy((PTR) &attr_descr[*offset]->att_name, name_len,
-	    (PTR) (str + len));
-	len += name_len;
+	cui_move(attr_descr[*offset]->att_nmlen,
+	    attr_descr[*offset]->att_nmstr, ' ',
+	    attr_descr[*offset]->att_nmlen, (PTR) (str + len));
+	len += attr_descr[*offset]->att_nmlen;
 	CMcpychar(",", (str + len));
 	len += CMbytecnt(",");
 
@@ -9982,9 +9982,8 @@ psy_prvtxt(
     */
     i = BTnext(0, attmap, DB_MAX_COLS + 1);
 
-    col_name = (u_char *) &attdesc[i]->att_name;
-    col_nm_len = psf_trmwhite((u_i4) sizeof(DB_ATT_NAME),
-	(char *) col_name);
+    col_name = attdesc[i]->att_nmstr;
+    col_nm_len = attdesc[i]->att_nmlen;
 
     status = psl_norm_id_2_delim_id(&col_name, &col_nm_len, delim_col_name, 
 	err_blk);
@@ -10002,9 +10001,8 @@ psy_prvtxt(
         if (DB_FAILURE_MACRO(status))
 	    return(status);
 
-        col_name = (u_char *) &attdesc[i]->att_name;
-        col_nm_len = psf_trmwhite((u_i4) sizeof(DB_ATT_NAME),
-	    (char *) col_name);
+        col_name = attdesc[i]->att_nmstr;
+        col_nm_len = attdesc[i]->att_nmlen;
 
         status = psl_norm_id_2_delim_id(&col_name, &col_nm_len, delim_col_name, 
 	    err_blk);

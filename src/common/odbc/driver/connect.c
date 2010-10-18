@@ -351,6 +351,10 @@
 **     30-Aug-2010 (thich01)
 **         In AllocEnv() added API initialization of IIAPI_VERSION_8 to 
 **         support spatial types.
+**     10-Oct-2010 (Ralph Loen) Bug 124578
+**         Set bcConnectCalled to FALSE upon SQLDisconnect(), in case
+**         SQLBrowseConnect() is called after a disconnecton the same
+**         connection handle.
 ** 
 */
 
@@ -1197,6 +1201,7 @@ RETCODE SQL_API SQLDisconnect(
     pdbc->max_byte_column_length = 0; 
     pdbc->max_vbyt_column_length = 0;
     pdbc->fRelease = 0; 
+    pdbc->bcConnectCalled = FALSE;
 
 #ifdef _WIN32
     if (pdbc->hMSDTCTransactionCompleting)  /* if handle was allocated, free it  */

@@ -68,6 +68,11 @@
 ##	    BUG 124480
 ##	    SD 126680
 ##	    Correct package name for 32bit RPM so we find it when we look.
+##	04-Oct-2010 (hanje04)
+##	    BUG 124284/124536
+##	    SD 147034
+##	    Move close() outside of while loop in findInstID(), to stop it 
+##	    prematurely being closed.
 
 
 # load external modules
@@ -253,7 +258,7 @@ def findInstID( instloc ):
 	
 	    # and move on
 	    ent = cfgfile.readline()
-	    cfgfile.close()
+	cfgfile.close()
     return instid
 
 def findAuxLoc( instloc ):

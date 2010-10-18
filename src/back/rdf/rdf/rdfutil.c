@@ -152,6 +152,8 @@
 **      20-aug-2010 (stial01)
 **          Fixed E_UL0005_NOMEM/rdu_mrecover() err handling.
 **          rdu_mrecover() don't assume error is in global->rdf_ulmcb.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 **/
 
 /* Static Prototypes */
@@ -1429,6 +1431,7 @@ rdu_dstream(	RDF_GLOBAL         *global,
               /* if using private cache, do not destroy shared default cache object */
               infoblk->rdr_types &= (~RDR_ATTRIBUTES);
               infoblk->rdr_attr = NULL;
+              infoblk->rdr_attr_names = NULL;
               infoblk->rdr_2_types &= (~RDR2_DEFAULT);
            }
            else
@@ -1658,6 +1661,7 @@ rdu_private(	RDF_GLOBAL         *global,
 	{
 	    usr_infoblk->rdr_rel = sys_infoblk->rdr_rel;
 	    usr_infoblk->rdr_no_attr = sys_infoblk->rdr_no_attr;
+	    usr_infoblk->rdr_attnametot = sys_infoblk->rdr_attnametot;
 	    usr_infoblk->rdr_no_index = sys_infoblk->rdr_no_index;
 	    types |= RDR_RELATION;
 	    if (sys_infoblk->rdr_types & RDR_DST_INFO)
@@ -1674,6 +1678,7 @@ rdu_private(	RDF_GLOBAL         *global,
 	if (sys_infoblk->rdr_types & RDR_ATTRIBUTES)
 	{
 	    usr_infoblk->rdr_attr = sys_infoblk->rdr_attr;
+	    usr_infoblk->rdr_attr_names = sys_infoblk->rdr_attr_names;
 	    usr_infoblk->rdr_pp_array = sys_infoblk->rdr_pp_array;
 	    types |= RDR_ATTRIBUTES;
 	}
@@ -1842,6 +1847,7 @@ rdu_drop_attachments(RDF_GLOBAL *global, RDR_INFO *infoblk, i4 session_reqd)
              /* if using private cache, do not destroy shared default cache object */
             infoblk->rdr_types &= (~RDR_ATTRIBUTES);
             infoblk->rdr_attr = NULL;
+            infoblk->rdr_attr_names = NULL;
             infoblk->rdr_2_types &= (~RDR2_DEFAULT);
            }
            else
@@ -2155,6 +2161,7 @@ rdu_rulh(RDF_GLOBAL *global)
               /* if using private cache, do not destroy shared default cache object */
               infoblk->rdr_types &= (~RDR_ATTRIBUTES);
               infoblk->rdr_attr = NULL;
+              infoblk->rdr_attr_names = NULL;
               infoblk->rdr_2_types &= (~RDR2_DEFAULT);
            }
            else

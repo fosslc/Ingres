@@ -7,7 +7,7 @@
 # include	<me.h>
 
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2010 Ingres Corporation
 **
 ** ol.c -- The "C" source of 'OLpcall()'.
 **
@@ -258,6 +258,9 @@
 **          For a64_lnx, parameters passed by value following a float
 **          parameter  are mis-positioned or corrupt. Increment float
 **          and non-float parameter pointers independently.
+**	11-Oct-2010 (drivi01)
+**	    Update a64_win to use the same routines as a64_lnx
+**	    to fix alignment problem with floats.
 */
 /*
 NO_OPTIM=ris_us5 rs4_us5 ris_u64
@@ -388,7 +391,7 @@ void load_float_regs40(f8 float_arg0, f8 float_arg1, f8 float_arg2, f8 float_arg
 }
 # endif /* i64_hpu || i64_lnx */
 
-# if defined(a64_lnx)
+# if defined(a64_lnx) || defined(a64_win)
 void load_float_regs2(f8 float_arg0, f8 float_arg1)
 {
 }
@@ -400,7 +403,7 @@ void load_float_regs14(f8 float_arg0, f8 float_arg1, f8 float_arg2, f8 float_arg
 	f8 float_arg9, f8 float_arg10, f8 float_arg11, f8 float_arg12, f8 float_arg13)
 {
 }
-# endif /* a64_lnx */
+# endif /* a64_lnx || a64_win */
 
 i4
 OLpcall (func, pv, pc, lang, rettype, retvalue)
@@ -477,14 +480,14 @@ OL_RET		*retvalue;
 	FLEN_STRUCT		*sp = fstrs;
 # endif
 
-# if defined(a64_lnx)
+# if defined(a64_lnx) || defined(a64_win)
 # define FREGS	14            	
 	f8			float_arg[FREGS];
 	i4			float_index;
 	i4			floats_passed;
-# endif /* a64_lnx */
+# endif /* a64_lnx || a64_win */
 
-# if defined(axp_osf) || defined(i64_hpu) || defined (i64_lnx) || defined(a64_lnx)
+# if defined(axp_osf) || defined(i64_hpu) || defined (i64_lnx) || defined(a64_lnx) || defined(a64_win)
 	/*
 	** initialise float_args array to zeros to avoid exceptions
 	*/
@@ -492,7 +495,7 @@ OL_RET		*retvalue;
 		float_arg[float_index] = 0.0;
 	float_index = 0;
 	floats_passed = 0;
-# endif /* axp_osf || i64_hpu || i64_lnx */
+# endif /* axp_osf || i64_hpu || i64_lnx || a64_win */
 
 	if( retvalue == NULL )
 	    retvalue = &real_ret;
@@ -657,7 +660,7 @@ ents
 				ris_flt_arg[float_cnt++] = *(f8 *)pv->OL_value;
 # endif /* aix */
 
-# if defined(axp_osf) || defined(i64_hpu) || defined(i64_lnx) || defined(a64_lnx)
+# if defined(axp_osf) || defined(i64_hpu) || defined(i64_lnx) || defined(a64_lnx) || defined(a64_win)
 			/*
 			** float_index is incremented for all argument
 			** types, not just floats, because argument
@@ -671,7 +674,7 @@ ents
                                 float_index++; /* Increment float_arg index */
 # endif /* i64_hpu || a64_lnx */
 			}
-# endif /* axp_osf || i64_hpu || i64_lnx || a64_lnx */
+# endif /* axp_osf || i64_hpu || i64_lnx || a64_lnx || a64_win */
 
 # endif /* xCL_085_PASS_DOUBLES_UNALIGNED */
 
@@ -733,14 +736,14 @@ ents
 			}
 			break;
 		}
-# if defined(axp_osf) || defined(i64_lnx)
+# if defined(axp_osf) || defined(i64_lnx) || defined(a64_win)
 		/*
 		** float_index is incremented for all argument
 		** types, not just floats, because argument
 		** register use is not optimised
 		*/
 		float_index++;
-# endif /* axp_osf || i64_lnx */
+# endif /* axp_osf || i64_lnx || a64_win */
 	}
 
 # ifdef FLEN_BUNCHED_AT_END
@@ -782,10 +785,10 @@ ents
 						float_arg[2], float_arg[3],
 						float_arg[4], float_arg[5]);
 # endif /* axp_osf */
-# if defined(i64_hpu) || defined(i64_lnx) || defined(a64_lnx)
+# if defined(i64_hpu) || defined(i64_lnx) || defined(a64_lnx) || defined(a64_win)
 			    if (floats_passed)
 				load_float_regs2(float_arg[0], float_arg[1]);
-# endif /* i64_hpu || i64_lnx || a64_lnx */
+# endif /* i64_hpu || i64_lnx || a64_lnx || a64_win */
 
 			    if (rettype == OL_PTR)
 			    {
@@ -819,10 +822,10 @@ ents
 						float_arg[2], float_arg[3],
 						float_arg[4], float_arg[5]);
 # endif /* axp_osf */
-# if defined(i64_hpu) || defined(i64_lnx) || defined(a64_lnx)
+# if defined(i64_hpu) || defined(i64_lnx) || defined(a64_lnx) || defined (a64_win)
 			    if (floats_passed)
 				load_float_regs4(float_arg[0], float_arg[1], float_arg[2], float_arg[3]);
-# endif /* i64_hpu || i64_lnx || a64_lnx */
+# endif /* i64_hpu || i64_lnx || a64_lnx || a64_win */
 			    if (rettype == OL_PTR)
 			    {
 				retvalue->OL_ptr =
@@ -858,7 +861,7 @@ ents
 						float_arg[2], float_arg[3],
 						float_arg[4], float_arg[5]);
 # endif /* axp_osf */
-# if defined(a64_lnx)
+# if defined(a64_lnx) || defined(a64_win)
 			    if (floats_passed)
 				load_float_regs14(float_arg[0], float_arg[1],
 						  float_arg[2], float_arg[3],
@@ -867,7 +870,7 @@ ents
 						  float_arg[8], float_arg[9], 
 						  float_arg[10], float_arg[11],
 						  float_arg[12], float_arg[13]);
-# endif /* a64_lnx */
+# endif /* a64_lnx || a64_win */
 # if defined(i64_hpu) || defined(i64_lnx)
 			    if (floats_passed)
 				load_float_regs40(float_arg[0], float_arg[1], float_arg[2], float_arg[3], float_arg[4],
@@ -941,10 +944,10 @@ ents
 						float_arg[2], float_arg[3],
 						float_arg[4], float_arg[5]);
 # endif /* axp_osf */
-# if defined(i64_hpu) || defined(i64_lnx) || defined(a64_lnx)
+# if defined(i64_hpu) || defined(i64_lnx) || defined(a64_lnx) || defined(a64_win)
 			    if (floats_passed)
 				load_float_regs4(float_arg[0], float_arg[1], float_arg[2], float_arg[3]);
-# endif /* i64_hpu || i64_lnx */
+# endif /* i64_hpu || i64_lnx || a64_win */
 			    retvalue->OL_float =
 				(*(f8 (*)())func)(av[0], av[1], av[2], av[3] );
 				break;
@@ -971,7 +974,7 @@ ents
 						float_arg[2], float_arg[3],
 						float_arg[4], float_arg[5]);
 # endif /* axp_osf */
-# if defined(a64_lnx)
+# if defined(a64_lnx) || defined(a64_win)
 			    if (floats_passed)
 				load_float_regs14(float_arg[0], float_arg[1],
 						  float_arg[2], float_arg[3],
@@ -980,7 +983,7 @@ ents
 						  float_arg[8], float_arg[9], 
 						  float_arg[10], float_arg[11],
 						  float_arg[12], float_arg[13]);
-# endif /* a64_lnx */
+# endif /* a64_lnx || a64_win */
 # if defined(i64_hpu) || defined(i64_lnx)
 			    if (floats_passed)
 				load_float_regs40(float_arg[0], float_arg[1], float_arg[2], float_arg[3], float_arg[4],
@@ -1022,10 +1025,10 @@ ents
 						float_arg[2], float_arg[3],
 						float_arg[4], float_arg[5]);
 # endif /* axp_osf */
-# if defined(i64_hpu) || defined(i64_lnx) || defined(a64_lnx)
+# if defined(i64_hpu) || defined(i64_lnx) || defined(a64_lnx) || defined(a64_win)
 			    if (floats_passed)
 				load_float_regs2(float_arg[0], float_arg[1]);
-# endif /* i64_hpu || i64_lnx */
+# endif /* i64_hpu || i64_lnx || a64_win */
 				    ret = (*(char * (*)())func)(av[0], av[1]); break;
 		             case 3:
 		             case 4:
@@ -1040,10 +1043,10 @@ ents
 						float_arg[2], float_arg[3],
 						float_arg[4], float_arg[5]);
 # endif /* axp_osf */
-# if defined(i64_hpu) || defined(i64_lnx) || defined(a64_lnx)
+# if defined(i64_hpu) || defined(i64_lnx) || defined(a64_lnx) || defined(a64_win)
 			    if (floats_passed)
 				load_float_regs4(float_arg[0], float_arg[1], float_arg[2], float_arg[3]);
-# endif /* i64_hpu || i64_lnx */
+# endif /* i64_hpu || i64_lnx || a64_win */
 				    ret = (*(char * (*)())func)(av[0], av[1], av[2],
 	                                 av[3] ); break;
 		             default:
@@ -1069,7 +1072,7 @@ ents
 						float_arg[2], float_arg[3],
 						float_arg[4], float_arg[5]);
 # endif /* axp_osf */
-# if defined(a64_lnx)
+# if defined(a64_lnx) || defined(a64_win)
 			    if (floats_passed)
 				load_float_regs14(float_arg[0], float_arg[1],
 						  float_arg[2], float_arg[3],
@@ -1078,7 +1081,7 @@ ents
 						  float_arg[8], float_arg[9], 
 						  float_arg[10], float_arg[11],
 						  float_arg[12], float_arg[13]);
-# endif /* a64_lnx */
+# endif /* a64_lnx || a64_win */
 # if defined(i64_hpu) || defined(i64_lnx)
 			    if (floats_passed)
 				load_float_regs40(float_arg[0], float_arg[1], float_arg[2], float_arg[3], float_arg[4],

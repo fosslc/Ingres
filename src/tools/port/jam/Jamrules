@@ -1464,6 +1464,12 @@
 #	    GEOSC_VERS and PROJ_VERS added to SEPCCPP rule.
 #	01-Oct-2010 (bonro01)
 #	    Fix Windows build problems using cygwin
+#	04-Oct-2010 (kiria01) b124065
+#	    Added build rules to generate operator table.
+#       25-Aug-2010 (hanal04) Bug 124194
+#           Build Hybrid versions of abfmain.obj and abfimain.obj.
+#           With no i8 support and 64-bit pointers some applications
+#           can only be run when built 32-bit.
 #	06-Oct-2010 (troal01)
 #	    Add GEOLINKSTATIC to IITOOLSEXE and modified IINEEDLIBS to link
 #	    in the geospatial dependencies statically if binary is in that list
@@ -1536,6 +1542,7 @@
 # IIFiRoc adgfi_defn.roc : fi_defn.awk fi_defn.txt ;
 # IIFiRocLu adgfi_defn_lu.roc : fi_defn.awk fi_defn.txt ;
 # IIFiH adgfi_defn.h : fi_defn.awk fi_defn.txt ;
+# IIOpC adgop_defn.c : fi_defn.awk fi_defn.txt ;
 # IIAduPatHdr adupatexec_ops.h : adupatexec.awk adupatexec.dotty ;
 # IIAduPatBdy adupatexec_inc.i : adupatexec.awk adupatexec.dotty ;
 # IIAWK target | awk_file source ;
@@ -2990,6 +2997,26 @@ rule IIFiRocLu
 	}
 }
 
+rule IIOpC
+{
+	local t = [ FGristFiles $(<) ] ;
+	local s = [ FGristFiles $(>) ] ;
+
+	OpC $(t) : $(s) ;
+	DEPENDS $(t) : $(s) ;
+	DEPENDS hdrs : $(t) ;
+	LOCATE on $(t) = $(SEARCH_SOURCE) ;
+	SEARCH on $(s) = $(SEARCH_SOURCE) ;
+
+	Clean clean : $(t) ;
+	if $(VERSHB)
+	{
+	    DEPENDS <$(SOURCE_GRIST)!$(SUFHB)>$(<) : $(s) ;
+	    LOCATE on <$(SOURCE_GRIST)!$(SUFHB)>$(<) = $(SEARCH_SOURCE) ;
+	    SEARCH on <$(SOURCE_GRIST)!$(SUFHB)>$(<) = $(SEARCH_SOURCE) ;
+	}
+}
+
 rule IIFiH
 {
 	local t = [ FGristFiles $(<) ] ;
@@ -3911,6 +3938,7 @@ rule IINEEDLIBS
 	   }
 	}
 
+	
 	if ! $(NT)
 	{
 		if $(<:S) != .o
@@ -6833,6 +6861,30 @@ rule IIAbfObj
                 LOCATE on $(_t) = $(INGLIB) ;
 		RmTemps $(_t) : $(_tmp) ;
                 Clean clean : $(_t) ;
+        }
+
+        if $(VERSHB)
+        {
+            for i in $(<)
+            {
+                    local _hbtmp = $(SUFHB)/$(i:S=$(SUFOBJ)) ;
+                    local _hbt = $(SUFHB)/$(i:S=.obj) ;
+
+                    Depends $(_hbtmp) : $(SEARCH_SOURCE)/$(SUFHB) ;
+                    MkDir $(SEARCH_SOURCE)/$(SUFHB) ;
+
+                    LIBOBJECT $(_hbtmp) : $(i) ;
+                    FILE $(_hbt) : $(_hbtmp) ;
+    
+                    DEPENDS $(_hbt) : $(_hbtmp) ;
+                    DEPENDS files : $(_hbt) ;
+                    LOCATE on $(_hbtmp) = $(SEARCH_SOURCE) ;
+                    LOCATE on $(_hbt) = $(INGLIB) ;
+                    CCFLAGS on $(_hbtmp) = $(CCFLAGSHB) ;
+                    RmTemps $(_hbt) : $(_hbtmp) ;
+                    Clean clean : $(_hbt) ;
+            }
+
         }
     }
     else
@@ -10861,6 +10913,11 @@ if $(NT)
 	        cd $(>[2]:D)
 		$(AWK) -v h_file=$(<:BS) -f $(>:BS)
 	}
+	actions OpC
+	{
+		cd $(>[2]:D)
+		$(AWK) -v op_file=$(<:BS) -f $(>:BS)
+	}
 	actions AduPatHdr
 	{
 		cd $(>[2]:D)
@@ -10902,6 +10959,13 @@ else if $(VMS)
                 set default $(<:D)
 		$(AWK) -v h_file=$(<:BS) -f $(>:BS)
 	}
+	actions OpC
+	{
+		if f$parse("$(<:D)") .eqs. "" then create /dir $(<:D)
+
+		set default $(<:D)
+		$(AWK) -v op_file=$(<:BS) -f $(>:BS)
+	}
 	actions AduPatHdr
 	{
 		if f$parse("$(<:D)") .eqs. "" then create /dir $(<:D)
@@ -10932,6 +10996,10 @@ else
 	actions FiH
 	{
 		$(AWK) -v h_file=$(<) -f $(>)
+	}
+	actions OpC
+	{
+		$(AWK) -v op_file=$(<) -f $(>)
 	}
 	actions AduPatHdr
 	{

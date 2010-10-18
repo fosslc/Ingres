@@ -1,6 +1,13 @@
 
 This version of Ingres includes the following noteworthy updates:
 
+10.1.0-3
+- Fixed ST_Within()
+- Merged latest from 10.0.0's GA
+- Loadbuild fix to make compiling with Xerces less of a hair pulling excercise
+- Fixes for Windows 64 bit
+
+10.1.0-2
 - fixed a geos crash on Fedora 13 related to gcc optimization
 - fixed issues with rtree indexing
 - fixed issues preventing .deb packages (for Ubuntu, Debian)

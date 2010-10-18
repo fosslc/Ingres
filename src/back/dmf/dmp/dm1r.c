@@ -569,6 +569,8 @@
 **          Changed params to dmpp_clean accessor (pass the rcb)
 **          dm1r_get() DM1C_BYTID LockBufForUpd so dmpp_isnew (rootpage)
 **          can detect ambiguous updates. 
+**      13-Oct-2010 (stial01) (b124602)
+**          put() update_mode=DM1C_DIRECT for dmpp_delete/reclaim reserved rec.
 */
 
 /*
@@ -2926,8 +2928,9 @@ put(
 			&get_rec_size);
 		if (get_rec_size != record_size)
 		{
+		    /* update_mode is DM1C_DIRECT for this delete (b124602) */
 		    (*t->tcb_acc_plv->dmpp_delete)(t->tcb_rel.relpgtype,
-			t->tcb_rel.relpgsize, pinfo->page, (i4)update_mode,
+			t->tcb_rel.relpgsize, pinfo->page, (i4)DM1C_DIRECT,
 			(i4)TRUE, (DB_TRAN_ID *)NULL, (u_i2)0, tid, get_rec_size);
 		}
 	    }

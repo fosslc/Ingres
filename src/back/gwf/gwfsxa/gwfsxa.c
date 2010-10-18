@@ -113,6 +113,8 @@
 **          Use DB_EXTFMT_SIZE for register table newcolname IS 'ext_format'
 **	11-Jun-2010 (kiria01) b123908
 **	    Init ulm_streamid_p for ulm_openstream to fix potential segvs.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 */
 
 GLOBALREF	GW_FACILITY	*Gwf_facility;
@@ -570,8 +572,8 @@ gwsxa_tabf( GWX_RCB     *gwx_rcb )
 		/*
 		**	nuke blanks & change length
 		*/
-		attname=col->att_name.db_att_name;
-		gwsxa_zapblank(attname, sizeof(col->att_name.db_att_name));
+		attname=col->att_nmstr;
+		gwsxa_zapblank(attname, col->att_nmlen);
 		if (GWF_SXA_SESS_MACRO(  1))
 		{
 			gwf_display(gwf_scctalk, 0, trbuf, sizeof(trbuf) - 1,

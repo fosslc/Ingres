@@ -163,6 +163,8 @@
 **          Slight change to where dt family is checked for GEOM rtree.  This
 **          seems to be a more reliable place to check, as it was failing
 **          when it was in the if.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 */
 		
 static DB_STATUS psl_validate_rtree(
@@ -255,7 +257,6 @@ psl_ci1_create_index(
     DMT_ATT_ENTRY	    *att_entry;
     i4			    dcomptype = (i4)FALSE;
     DMU_KEY_ENTRY **key;
-    DB_ATT_NAME attrname;
 
     qeu_cb = (QEU_CB *) sess_cb->pss_object;
     dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
@@ -388,16 +389,16 @@ psl_ci1_create_index(
     /* Note that indexes can't be partitioned (yet) */
     /* Check for GEOM family and only allow rtrees */
     key = (DMU_KEY_ENTRY **)dmu_cb->dmu_key_array.ptr_address;
-    STmove((char *) &(*key)->key_attr_name, ' ', sizeof(DB_ATT_NAME),
-           (char *)&attrname);
-    att_entry = pst_coldesc(sess_cb->pss_resrng, &attrname);
+    att_entry = pst_coldesc(sess_cb->pss_resrng,
+            (*key)->key_attr_name.db_att_name, DB_ATT_MAXNAME);
     if(adi_dtfamily_retrieve(att_entry->att_type) == DB_GEOM_TYPE && 
        sstruct != DB_RTRE_STORE )
     {
         //GEOM types can only be rtrees.
         _VOID_ psf_error(2180L, 0L, PSF_USERERR, &err_code, err_blk, 2,
                 sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-                psf_trmwhite(DB_ATT_MAXNAME, (char *) &attrname), &attrname);
+                psf_trmwhite(DB_ATT_MAXNAME, (*key)->key_attr_name.db_att_name),
+                (*key)->key_attr_name.db_att_name);
         return E_DB_ERROR;
     }
     status = psl_validate_options(sess_cb, PSQ_INDEX, with_clauses, sstruct,
@@ -444,7 +445,7 @@ psl_ci1_create_index(
 			** it to the index.
 			*/
 			status=psl_ci4_indexcol(sess_cb,
-				att_entry->att_name.db_att_name,
+				att_entry->att_nmstr,
 				err_blk,
 				TRUE);
 			if(status!=E_DB_OK)
@@ -1058,11 +1059,10 @@ psl_ci4_indexcol(
     i4             err_code;
     QEU_CB		*qeu_cb;
     DMU_CB		*dmu_cb;
-    DB_ATT_NAME		attname;
     DMT_ATT_ENTRY	*attribute;
     DMU_KEY_ENTRY	**key;
     i4			i;
-    char		tid[DB_ATT_MAXNAME];
+    i4			col_nmlen;
 
     /* Count index columns and give error if too many */
     if (sess_cb->pss_rsdmno == DB_MAXKEYS)
@@ -1083,8 +1083,8 @@ psl_ci4_indexcol(
     dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
 
     /* Make sure the column exists */
-    STmove(colname, ' ', sizeof(DB_ATT_NAME), (char *) &attname);
-    attribute = pst_coldesc(sess_cb->pss_resrng, &attname);
+    col_nmlen = STlength(colname);
+    attribute = pst_coldesc(sess_cb->pss_resrng, colname, col_nmlen);
     if (attribute == (DMT_ATT_ENTRY *) NULL)
     {
 	_VOID_ psf_error(5302L, 0L, PSF_USERERR, &err_code,
@@ -1096,24 +1096,21 @@ psl_ci4_indexcol(
     ** Check for duplicates and `tid' column names.
     */
 
-    /* Normalize the `tid' attribute name */
-    STmove(((*sess_cb->pss_dbxlate & CUI_ID_REG_U) ? "TID" : "tid"),
-	   ' ', DB_ATT_MAXNAME, tid);
-
     /* Is the name equal to "tid" */
-    if (!MEcmp(attname.db_att_name, tid, DB_ATT_MAXNAME))
+    if (cui_compare(col_nmlen, colname, 
+        3, ((*sess_cb->pss_dbxlate & CUI_ID_REG_U) ? "TID" : "tid")) == 0)
     {
 	_VOID_ psf_error(2105L, 0L, PSF_USERERR, &err_code, err_blk, 2,
 	    sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-	    psf_trmwhite(DB_ATT_MAXNAME, (char *) &attname), &attname);
+	    col_nmlen, colname);
 	return (E_DB_ERROR);
     }
 
     key = (DMU_KEY_ENTRY **) dmu_cb->dmu_key_array.ptr_address;
     for (i = dmu_cb->dmu_key_array.ptr_in_count; i > 0; i--, key++)
     {
-	if (!MEcmp((char *) &attname, (char *) &(*key)->key_attr_name,
-		sizeof(DB_ATT_NAME)))
+	if (cui_compare(col_nmlen, colname, 
+		DB_ATT_MAXNAME, (*key)->key_attr_name.db_att_name) == 0)
 	{
 	    /*
 	    ** Found already. Check "cond_add" option to determine
@@ -1140,7 +1137,7 @@ psl_ci4_indexcol(
         {
 	    _VOID_ psf_error(2180L, 0L, PSF_USERERR, &err_code, err_blk, 2,
 	        sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-	        psf_trmwhite(DB_ATT_MAXNAME, (char *) &attname), &attname);
+	    col_nmlen, colname);
 	    return (status);
         }
     }
@@ -1158,7 +1155,8 @@ psl_ci4_indexcol(
     if (DB_FAILURE_MACRO(status))
 	return (status);
 
-    STRUCT_ASSIGN_MACRO(attname, (*key)->key_attr_name);
+    cui_move(col_nmlen, colname, ' ', 
+		DB_ATT_MAXNAME, (*key)->key_attr_name.db_att_name);
     (*key)->key_order = DMU_ASCENDING;
 
     /* SQL allows one to specify ASCENDING/DESCENDING but it is ignored in R6 */
@@ -1358,6 +1356,10 @@ psl_ci5_indexlocname(
 **	17-Nov-2009 (kschendel) SIR 122890
 **	    Revise call to pass yyvarsp directly, similar to the create-table
 **	    variant (psl_ct8_cr_lst_elem).
+**       8-Oct-2010 (hanal04) Bug 124561
+**          When PSQ_CONS and compression settings are specified we SEGV'd.
+**          Store the compression details in pss_restab.pst_compress
+**          as the dmu_cb is not available.
 */
 DB_STATUS
 psl_lst_elem(
@@ -1442,94 +1444,139 @@ psl_lst_elem(
 	bool		dcomp_chr = FALSE;
 	bool		kcomp_chr = FALSE;
 
-	/*
-	** WITH COMPRESSION=([NO]KEY,[NO|HI]DATA)
-	*/
+        if(qmode == PSQ_CONS)
+        {
+            /* Need to store compression settings in pss_curcons->pss_restab
+            ** and make use of them in psl_ixopts_text()
+            **
+            ** We may need to specify
+            ** sess_cb->pss_curcons->pss_restab.pst_structure = DB_BTRE_STORE;
+            ** as well as the pst_compress. Not sure if this will over-ride
+            ** the requested structure type or whether we can allow the default.
+            */
+            if (!STcasecmp(element, "key"))
+            {
+                sess_cb->pss_curcons->pss_restab.pst_compress = PST_INDEX_COMP;
+            }
+            else if (STcasecmp(element, "nokey") == 0)
+            {
+                sess_cb->pss_curcons->pss_restab.pst_compress = PST_NO_INDEX_COMP;
+            }
+            else if (STcasecmp(element, "data") == 0)
+            {
+                sess_cb->pss_curcons->pss_restab.pst_compress = PST_DATA_COMP;
+            }
+ /* let hidata fall through to error case. Karls says it's not allowed
+            else if (STcasecmp(element, "hidata") == 0)
+            {
+                sess_cb->pss_curcons->pss_restab.pst_compress = PST_HI_DATA_COMP;
+            }
+ */
+            else if (STcasecmp(element, "nodata") == 0)
+            {
+                sess_cb->pss_curcons->pss_restab.pst_compress = PST_NO_DATA_COMP;
+            }
+            else
+            {
+                (VOID) psf_error(E_PS0BC5_KEY_OR_DATA_ONLY, 0L, PSF_USERERR,
+                            &err_code, err_blk, 3,
+                            length, command,
+                            sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
+                            STlength(element), element);
+                return (E_DB_ERROR);
+            }
+        }
+        else
+        {
+	    /*
+	    ** WITH COMPRESSION=([NO]KEY,[NO|HI]DATA)
+	    */
 
-	if (dmu_cb->dmu_char_array.data_in_size >=
-	    PSS_MAX_INDEX_CHARS * sizeof (DMU_CHAR_ENTRY))
-	{
-	    /* Invalid with clause - too many options */
-	    _VOID_ psf_error(5344L, 0L, PSF_USERERR, &err_code, err_blk, 1,
-		length, command);
-	    return (E_DB_ERROR);
-	}
-
-	/*
-	** Determine whether there are already any DMU_INDEX_COMP or
-	** DMU_COMPRESSED characteristics built.
-	*/
-	chr = (DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address;
-	chr_lim = (DMU_CHAR_ENTRY *)
-	    ((char *) chr + dmu_cb->dmu_char_array.data_in_size);
-
-	for (; chr < chr_lim; chr++)
-	{
-	    if (chr->char_id == DMU_COMPRESSED)
+	    if (dmu_cb->dmu_char_array.data_in_size >=
+	        PSS_MAX_INDEX_CHARS * sizeof (DMU_CHAR_ENTRY))
 	    {
-		dcomp_chr = TRUE;
-		if (kcomp_chr)
-		    break;
+	        /* Invalid with clause - too many options */
+	        _VOID_ psf_error(5344L, 0L, PSF_USERERR, &err_code, err_blk, 1,
+		    length, command);
+	        return (E_DB_ERROR);
 	    }
-	    else if (chr->char_id == DMU_INDEX_COMP)
+    
+	    /*
+	    ** Determine whether there are already any DMU_INDEX_COMP or
+	    ** DMU_COMPRESSED characteristics built.
+	    */
+	    chr = (DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address;
+	    chr_lim = (DMU_CHAR_ENTRY *)
+	        ((char *) chr + dmu_cb->dmu_char_array.data_in_size);
+    
+	    for (; chr < chr_lim; chr++)
 	    {
-		kcomp_chr = TRUE;
-		if (dcomp_chr)
-		    break;
+	        if (chr->char_id == DMU_COMPRESSED)
+	        {
+		    dcomp_chr = TRUE;
+		    if (kcomp_chr)
+		        break;
+	        }
+	        else if (chr->char_id == DMU_INDEX_COMP)
+	        {
+		    kcomp_chr = TRUE;
+		    if (dcomp_chr)
+		        break;
+	        }
 	    }
-	}
+    
+	    /*
+	    ** Validate the keyword, and add a new characteristic if valid.
+	    */
+	    chr = chr_lim;
+    
+	    if (!STcasecmp(element, "key"))
+	    {
+	        chr->char_id = DMU_INDEX_COMP;
+	        chr->char_value = DMU_C_ON;
+	    }
+	    else if (STcasecmp(element, "nokey") == 0)
+	    {
+	        chr->char_id = DMU_INDEX_COMP;
+	        chr->char_value = DMU_C_OFF;
+	    }
+	    else if (STcasecmp(element, "data") == 0)
+	    {
+	        chr->char_id = DMU_COMPRESSED;
+	        chr->char_value = DMU_C_ON;
+	    }
+	    else if (STcasecmp(element, "hidata") == 0)
+	    {
+	        chr->char_id = DMU_COMPRESSED;
+	        chr->char_value = DMU_C_HIGH;
+	    }
+	    else if (STcasecmp(element, "nodata") == 0)
+	    {
+	        chr->char_id = DMU_COMPRESSED;
+	        chr->char_value = DMU_C_OFF;
+	    }
+	    else
+	    {
+	        (VOID) psf_error(E_PS0BC5_KEY_OR_DATA_ONLY, 0L, PSF_USERERR,
+			    &err_code, err_blk, 3,
+			    length, command,
+			    sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
+			    STlength(element), element);
+	        return (E_DB_ERROR);
+	    }
+    
+	    if (   (kcomp_chr && chr->char_id == DMU_INDEX_COMP)
+	        || (dcomp_chr && chr->char_id == DMU_COMPRESSED))
+	    {
+	        _VOID_ psf_error(E_PS0BC4_COMPRESSION_TWICE,
+		        0L, PSF_USERERR, &err_code, err_blk, 2,
+		        length, command,
+		        sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno);
+	        return (E_DB_ERROR);
+	    }
 
-	/*
-	** Validate the keyword, and add a new characteristic if valid.
-	*/
-	chr = chr_lim;
-
-	if (!STcasecmp(element, "key"))
-	{
-	    chr->char_id = DMU_INDEX_COMP;
-	    chr->char_value = DMU_C_ON;
-	}
-	else if (STcasecmp(element, "nokey") == 0)
-	{
-	    chr->char_id = DMU_INDEX_COMP;
-	    chr->char_value = DMU_C_OFF;
-	}
-	else if (STcasecmp(element, "data") == 0)
-	{
-	    chr->char_id = DMU_COMPRESSED;
-	    chr->char_value = DMU_C_ON;
-	}
-	else if (STcasecmp(element, "hidata") == 0)
-	{
-	    chr->char_id = DMU_COMPRESSED;
-	    chr->char_value = DMU_C_HIGH;
-	}
-	else if (STcasecmp(element, "nodata") == 0)
-	{
-	    chr->char_id = DMU_COMPRESSED;
-	    chr->char_value = DMU_C_OFF;
-	}
-	else
-	{
-	    (VOID) psf_error(E_PS0BC5_KEY_OR_DATA_ONLY, 0L, PSF_USERERR,
-			&err_code, err_blk, 3,
-			length, command,
-			sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-			STlength(element), element);
-	    return (E_DB_ERROR);
-	}
-
-	if (   (kcomp_chr && chr->char_id == DMU_INDEX_COMP)
-	    || (dcomp_chr && chr->char_id == DMU_COMPRESSED))
-	{
-	    _VOID_ psf_error(E_PS0BC4_COMPRESSION_TWICE,
-		    0L, PSF_USERERR, &err_code, err_blk, 2,
-		    length, command,
-		    sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno);
-	    return (E_DB_ERROR);
-	}
-
-	dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
+	    dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
+        }
     }
     else if ((list_clause == PSS_NLOC_CLAUSE) ||
     	     (list_clause == PSS_OLOC_CLAUSE))
@@ -2320,7 +2367,6 @@ psl_validate_rtree(
     ADF_CB          	*adf_scb;
     char	    	*tabname;
     DMT_ATT_ENTRY   	*attr;
-    DB_ATT_NAME		attrname;
     DMU_KEY_ENTRY	**key;
     ADI_DT_RTREE	rtree_blk;
     i4		err_code;
@@ -2379,9 +2425,8 @@ psl_validate_rtree(
     /* Ensure that the key's data type has all appropiate functions */
     /* First, find the key's attribute by locating its name */
     key = (DMU_KEY_ENTRY **)dmu_cb->dmu_key_array.ptr_address;
-    STmove((char *) &(*key)->key_attr_name, ' ',
-           sizeof(DB_ATT_NAME), (char *)&attrname);
-    attr = pst_coldesc(sess_cb->pss_resrng, &attrname); 
+    attr = pst_coldesc(sess_cb->pss_resrng,
+	    (*key)->key_attr_name.db_att_name, DB_ATT_MAXNAME);
     status = adi_dt_rtree(adf_scb, attr->att_type, &rtree_blk);
     if (DB_FAILURE_MACRO(status))
     {

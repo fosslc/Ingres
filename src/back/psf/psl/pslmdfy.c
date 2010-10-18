@@ -14,6 +14,7 @@
 #include    <tm.h>
 #include    <cm.h>
 #include    <iicommon.h>
+#include    <cui.h>
 #include    <dbdbms.h>
 #include    <ddb.h>
 #include    <dmf.h>
@@ -36,7 +37,6 @@
 #include    <psftrmwh.h>
 #include    <psyaudit.h>
 #include    <usererror.h>
-#include    <cui.h>
 
 /*
 ** Name: PSLMDFY.C:	this file contains functions used by both SQL and/or
@@ -192,6 +192,16 @@
 **	    only modifies from table structure changes.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**       6-Oct-2010 (hanal04) Bug 124553
+**          Modify operations that do not actually modify the table should
+**          not be blocked because of the existence of dependencies that
+**          would be broken by an actual modify. Turn off dependency checking
+**          for no-op modify operations such as table_debug.
+**	08-Oct-2010 (miket) SIR 122403 BUG 124543 SD 146855
+**	    MODIFY <table> ENCRYPT is also a MODIFY that does not modify the
+**	    table structure, so set PSL_MDF_NO_OP.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 [@history_template@]...
 */
 
@@ -239,6 +249,13 @@ static DB_STATUS psl_md_part_unique(
 #define PSL_MDF_CLUSTERED	0x0100		/* Clustered Btree */
 
 #define PSL_MDF_NOINDEX         0x0200          /* Don't allow on 2ary index */
+
+/* Some operations are unnecessarily blocked because an actual modify would
+** break constraints defined on the table. If the operation is guaranteed
+** NOT to break any dependencies it can be defined as a no-op in which
+** dependency checking can be safely skipped. Use with CAUTION.
+*/
+#define PSL_MDF_NO_OP 		0x0400		/* Table is NOT modified */
 
 /* Here's the action name table itself.
 ** Every action generates a DMU characteristics entry unless the char-id
@@ -358,7 +375,7 @@ static const struct _MODIFY_STORNAMES
 	 DMU_TO_STATEMENT_LEVEL_UNIQUE, DMU_C_ON, PSS_WC_UNIQUE_SCOPE, PSL_MDF_UNIQUESCOPE
 	},
 	{"encrypt",
-	 DMU_ENCRYPT, DMU_C_OFF, -1, 0
+	 DMU_ENCRYPT, DMU_C_OFF, -1, PSL_MDF_NO_OP
 	},
 	{"table_verify",
 	 DMU_VERIFY, DMU_V_VERIFY, -1, PSL_MDF_PPART_ONLY
@@ -370,7 +387,7 @@ static const struct _MODIFY_STORNAMES
 	 DMU_VERIFY, DMU_V_PATCH, -1, PSL_MDF_PPART_ONLY
 	},
 	{"table_debug",
-	 DMU_VERIFY, DMU_V_DEBUG, -1, PSL_MDF_PPART_ONLY
+	 DMU_VERIFY, DMU_V_DEBUG, -1, PSL_MDF_PPART_ONLY | PSL_MDF_NO_OP
 	},
 	{"checklink",
 	 0, 0, 0, PSL_MDF_ERROR
@@ -1422,6 +1439,16 @@ psl_md4_modstorname(
                     return (E_DB_ERROR);
 	    }
 	}
+        
+        if (stornames_ptr->special_flags & PSL_MDF_NO_OP)
+        {
+            /* Table will NOT be modified so skip dependency checking 
+            ** this serves as an optimisation and also prevents
+            ** operations from failing when there is no need to
+            ** block the operation.
+            */
+            dmu_cb->dmu_flags_mask |= DMU_NODEPENDENCY_CHECK;
+        }
 
 	/* Action passes tests, begin the dmu characteristics array
 	** with the specified ID and value.
@@ -1558,7 +1585,8 @@ psl_md5_modkeys(
 	    return (status);
 
 	/* Look up column name */
-	STmove(sess_cb->pss_resrng->pss_attdesc[1]->att_name.db_att_name, ' ', 
+	cui_move(sess_cb->pss_resrng->pss_attdesc[1]->att_nmlen,
+	    sess_cb->pss_resrng->pss_attdesc[1]->att_nmstr, ' ', 
 	    sizeof(DB_ATT_NAME), (char *) &(*key)->key_attr_name);
 
 	status = psl_check_key(sess_cb, err_blk,
@@ -1740,6 +1768,7 @@ psl_md7_modkeyname(
     register i4	    i;
     i4			    colno;
     i4			    storage_struct;
+    i4			    key_nmlen;
 
     qeu_cb = (QEU_CB *) sess_cb->pss_object;
     dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
@@ -1785,8 +1814,9 @@ psl_md7_modkeyname(
     }
 
     /* Look up column name */
-    STmove(keyname, ' ', sizeof(DB_ATT_NAME), (char *) &attname);
-    attribute = pst_coldesc(sess_cb->pss_resrng, &attname);
+    key_nmlen = STlength(keyname);
+    cui_move(key_nmlen, keyname, ' ', sizeof(DB_ATT_NAME), (char *) &attname);
+    attribute = pst_coldesc(sess_cb->pss_resrng, keyname, key_nmlen);
     if (attribute == (DMT_ATT_ENTRY *) NULL)
     {
 	(VOID) psf_error(5511L, 0L, PSF_USERERR, &err_code,
@@ -2445,7 +2475,8 @@ psl_md_logpartname(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
     /* Look for the name, dimension by dimension.  (Each dimension has
     ** its own names array.)
     */
-    STmove(logname, ' ', sizeof(DB_NAME), &pname.db_name[0]);
+    cui_move(STlength(logname), logname, ' ', 
+		sizeof(DB_NAME), &pname.db_name[0]);
     found = FALSE;
     for (dim = 0; dim < part_def_ptr->ndims; ++dim)
     {
@@ -2686,7 +2717,6 @@ static DB_STATUS
 psl_md_reconstruct(PSS_SESBLK *sess_cb, DMU_CB *dmucb,
 	PSS_YYVARS *yyvarsp, DB_ERROR *err_blk)
 {
-    char colname[DB_ATT_MAXNAME+1];	/* Possible "tidp" */
     DB_STATUS status;			/* Called routine status */
     DMT_ATT_ENTRY **table_atts;		/* Table's attribute pointer array */
     DMT_TBL_ENTRY *tblinfo;		/* Table information area */
@@ -2754,11 +2784,10 @@ psl_md_reconstruct(PSS_SESBLK *sess_cb, DMU_CB *dmucb,
 	    ** just do this blindly.)  DMF is used to including tidp as
 	    ** an add-on, if we include it here DMF complains.
 	    */
-	    MEcopy(&(table_atts[keycol_ptr[keycount-1]])->att_name,
-		DB_ATT_MAXNAME, &colname[0]);
-	    colname[DB_ATT_MAXNAME] = '\0';
-	    STtrmwhite(colname);
-	    if (STcasecmp(colname,"tidp") == 0)
+	    if (cui_compare( (table_atts[keycol_ptr[keycount-1]])->att_nmlen,
+		(table_atts[keycol_ptr[keycount-1]])->att_nmstr,
+		4, ((*sess_cb->pss_dbxlate & CUI_ID_REG_U) ? ERx("TIDP") : 
+			ERx("tidp"))) == 0)
 		-- keycount;
 	}
 	/* We need one DMU_KEY_ENTRY for each key.  The pointers are
@@ -2773,9 +2802,9 @@ psl_md_reconstruct(PSS_SESBLK *sess_cb, DMU_CB *dmucb,
 	do
 	{
 	    /* Fill in this entry with name and sort direction for column */
-	    MEcopy(&(table_atts[*keycol_ptr])->att_name,
-		sizeof(DB_ATT_NAME),
-		&key_array->key_attr_name);
+	    cui_move((table_atts[*keycol_ptr])->att_nmlen,
+		(table_atts[*keycol_ptr])->att_nmstr, ' ',
+		sizeof(DB_ATT_NAME), key_array->key_attr_name.db_att_name);
 	    key_array->key_order = DMU_ASCENDING;
 	    if ( (table_atts[*keycol_ptr])->att_flags & ATT_DESCENDING)
 		key_array->key_order = DMU_DESCENDING;
@@ -3039,7 +3068,8 @@ psl_md_part_unique(PSS_SESBLK *sess_cb, DMU_CB *dmucb,
     {
 	/* Lookup attribute name for this key, must exist */
 
-	attribute = pst_coldesc(sess_cb->pss_resrng, &(*keyptr_ptr)->key_attr_name);
+	attribute = pst_coldesc(sess_cb->pss_resrng, 
+		    (*keyptr_ptr)->key_attr_name.db_att_name, DB_ATT_MAXNAME);
 	*keyarray_ptr++ = attribute->att_number;
 	++ keyptr_ptr;
     }

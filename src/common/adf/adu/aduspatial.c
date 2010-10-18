@@ -84,6 +84,8 @@
 **      31-Aug-2010 (thich01)
 **          Allow geos and proj.4 calls to be compiled out for platforms where
 **          spatial is not supported.
+**      18-Oct-2010 (troal01)
+**          adu_within had the argument order reversed, fixed it.
 */
 
 /*
@@ -2905,7 +2907,7 @@ DB_DATA_VALUE    *rdv)
 #ifndef _WITH_GEO
     return (adu_error(adf_scb, E_AD5606_SPATIAL_NOT_SUPPORTED, 2, 0));
 #else
-    return geomToGeomComparison(adf_scb, dv2, dv1, rdv, &GEOSWithin_r);
+    return geomToGeomComparison(adf_scb, dv1, dv2, rdv, &GEOSWithin_r);
 #endif
 }
 

@@ -484,6 +484,8 @@ SQLSTATE_MAPPING_REQUIRED
 **	26-aug-2010 (miket) SIR 122403 SD 146509
 **	    Clarify msg E_US24C2_9410 - an encrypted index can contain
 **	    only the one encrypted column.
+**      28-Sep-2010 (gupsh01) BUG 124572.
+**	    Added rename options to alter table syntax error E_US0F0A_3850.
 */
 
 #define _US_CLASS   0
@@ -4196,6 +4198,8 @@ E_US0F0A_3850:SS42000_SYN_OR_ACCESS_ERR
 \n   | ADD [COLUMN] columnname format [default_clause] [null_clause] 
 [column_constraint]
 \n   | DROP [COLUMN] column_name RESTRICT | CASCADE
+\n   | RENAME TO new_table_name
+\n   | RENAME [COLUMN] old_column_name TO new_column_name
 \n   | ALTER [COLUMN] columnname format [default_clause] [null_clause]"
 /*%
 ** Parameters:

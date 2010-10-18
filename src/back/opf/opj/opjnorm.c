@@ -8,6 +8,7 @@
 #include    <bt.h>
 #include    <me.h>
 #include    <iicommon.h>
+#include    <cui.h>
 #include    <dbdbms.h>
 #include    <ddb.h>
 #include    <ulm.h>
@@ -126,6 +127,8 @@
 **          fields in rdr_rel (DMT_TBL_ENTRY), need to limit the copying 
 **          to the string length only. Since these fields are initialized,
 **          so the remaining spaces would be set properly.    
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 **/
 
 
@@ -2150,6 +2153,13 @@ opj_orreplace(
 
     RDR_INFO	*rdr;
     PST_RNGENTRY **rngp;
+    char	*nextname;
+    i4		dmt_mem_size;
+    DMT_ATT_ENTRY	*att_array;
+    DMT_ATT_ENTRY	*attrp;
+    i4			n;
+    i4			attused;
+    i4			attr_nametot;
 
  
     /* Start by checking for VARs which compared to same constant in
@@ -2215,9 +2225,18 @@ opj_orreplace(
      constnode->pst_right = NULL;   /* clear right link for last col if
 				** last VAR was a common factor */
 
-    /* Create new range table entry to contain temporary table 
-    ** definition. */
+    /* Compute blank stripped length of attribute names */
+    for (i = 0, attr_nametot = 0; i < ttabcols; i++)
+    {
+	varnode = opj_orstatp->var_array[i];
 
+	/* Compute blank stripped length of attribute names */
+	n = cui_trmwhite(DB_ATT_MAXNAME,
+		(char *)&varnode->pst_sym.pst_value.pst_s_var.pst_atname); 
+	attr_nametot += (n+1);
+    }
+
+    /* Create new range table entry to contain temporary table definition. */
     grvno = global->ops_rangetab.opv_gv;	/* grab next number */
     (VOID)opv_parser(global, grvno, OPS_MAIN, FALSE, FALSE, FALSE);
 				/* create global rt entry */
@@ -2227,15 +2246,24 @@ opj_orreplace(
     rdr->rdr_rel = (DMT_TBL_ENTRY *) opu_memory(global, 
 		sizeof(DMT_TBL_ENTRY));
     MEfill(sizeof(DMT_TBL_ENTRY), (u_char)0, (char *)rdr->rdr_rel);
-    rdr->rdr_attr = (DMT_ATT_ENTRY **) opu_memory(global, (ttabcols+1) *
-		sizeof(DMT_ATT_ENTRY *));
+
+    dmt_mem_size = ((ttabcols+1) * sizeof(DMT_ATT_ENTRY *))
+	+ ((ttabcols+1) * sizeof(DMT_ATT_ENTRY))
+	+ attr_nametot;
+
+    rdr->rdr_attr = (DMT_ATT_ENTRY **) opu_memory(global, dmt_mem_size);
     rdr->rdr_attr[0] = NULL;	/* first is empty (for TID) */
+    att_array = (DMT_ATT_ENTRY *)((char *)rdr->rdr_attr + 
+		    ((ttabcols+1) * sizeof(DMT_ATT_ENTRY *)));
+    nextname = (char *)att_array + ((ttabcols+1) * sizeof(DMT_ATT_ENTRY));
+
     global->ops_rangetab.opv_base->opv_grv[grvno]->opv_relation = rdr;
     global->ops_rangetab.opv_base->opv_grv[grvno]->opv_gmask 
 		|= OPV_MCONSTTAB;  /* indicate wacky temptab */
     MEcopy("$memory_res_table ", 18, (char *)&rdr->rdr_rel->tbl_name); 
     MEcopy("$internal ", 10, (char *)&rdr->rdr_rel->tbl_owner);  
     rdr->rdr_no_attr = ttabcols;
+    rdr->rdr_rel->tbl_attr_nametot = attr_nametot;
     rdr->rdr_rel->tbl_attr_count = ttabcols;
     rdr->rdr_rel->tbl_width = ttabrowsize;
     rdr->rdr_rel->tbl_storage_type = DMT_HEAP_TYPE;
@@ -2284,9 +2312,8 @@ opj_orreplace(
     ** where clause, and DMT_ATT_ENTRYs to define "column". */
 
     attoff = 0;			/* for offset computation */
-    for (i = 0; i < ttabcols; i++)
+    for (i = 0, attrp = att_array; i < ttabcols; i++, attrp++)
      {		/* non-common factors are what we're after here */
-	DMT_ATT_ENTRY	*attrp;
 	DB_DATA_VALUE	*dataval;
 
 	/* first, fiddle the parse tree */
@@ -2303,21 +2330,26 @@ opj_orreplace(
 	bopnode->pst_right->pst_sym.pst_dataval.db_length = 
 		opj_orstatp->const_size[i];
 				/* store the correct (max) length */
-	MEcopy((char *)&varnode->pst_sym.pst_value.pst_s_var.pst_atname, 
-		sizeof(DB_ATT_NAME), 
-		(char *)&bopnode->pst_right->pst_sym.pst_value.pst_s_var.
-		pst_atname);
+	bopnode->pst_right->pst_sym.pst_value.pst_s_var.pst_atname =
+		    varnode->pst_sym.pst_value.pst_s_var.pst_atname;
 	andnode->pst_left = bopnode;	/* and sew 'em all together */
 	andnode->pst_right = (*node);
 	(*node) = andnode;
 
 	/* Now build the attribute descriptor */
-	rdr->rdr_attr[attno.db_att_id] = attrp = 
-		(DMT_ATT_ENTRY *) opu_memory(global, 
-				sizeof(DMT_ATT_ENTRY));
+	rdr->rdr_attr[attno.db_att_id] = attrp;
 	MEfill(sizeof(DMT_ATT_ENTRY), (u_char)0, (char *)attrp);
-	MEcopy((char *)&varnode->pst_sym.pst_value.pst_s_var.pst_atname, 
-		sizeof(DB_ATT_NAME), (char *)&attrp->att_name);
+
+	/* Compute blank stripped length of attribute names */
+	n = cui_trmwhite(DB_ATT_MAXNAME,
+		(char *)&varnode->pst_sym.pst_value.pst_s_var.pst_atname); 
+
+	attrp->att_nmstr = nextname;
+	attrp->att_nmlen = n;
+	cui_move(n, varnode->pst_sym.pst_value.pst_s_var.pst_atname.db_att_name,
+		    '\0', n + 1, nextname); 
+	nextname += (n + 1);
+
 	attrp->att_number = attno.db_att_id;
 	attrp->att_offset = attoff;
 	attrp->att_type   = dataval->db_datatype;

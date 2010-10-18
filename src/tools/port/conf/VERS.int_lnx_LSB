@@ -12,6 +12,9 @@
 # 	    No GUI or PAX for LSB builds
 #	31-Aug-2010 (thich01)
 #	    Add WITH_GEO for platforms where spatial is not supported.
+# 	20-Sept-2010
+# 	    SIR 123296
+# 	    Bump version
 
 
 #set: config32 int_lnx

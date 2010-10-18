@@ -4887,6 +4887,11 @@ pst_descinput_walk(
 **	    flag to ask QEF to load the data in one pass
 **      04-oct-2010 (maspa05) bug 124543
 **          Add in extra PARM and QRY lines for SC930 tracing. 
+**      05-oct-2010 (maspa05) bug 124543
+**          Remove extraneous assignment which broke Windows build
+**	7-oct-2010 (stephenb)
+**	    qeu_cptr needs to be aligned on a bus boudary to pervent bus
+**	    errors on some platforms
 **	08-Oct-2010 (troal01)
 **	    Removed i=0, it was causing compile error on Windows.
 */
@@ -5061,6 +5066,8 @@ pst_cpdata(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PST_QNODE *tree, bool use_qsf)
 	block_size = qe_copy->qeu_tup_length + sizeof(QEF_INS_DATA);
     else
 	block_size = rowsize + sizeof(QEF_INS_DATA);
+    /* round to bus size */
+    block_size = DB_ALIGN_MACRO(block_size);
     if (qe_copy->qeu_cleft < block_size)
     {
 	/* 

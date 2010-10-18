@@ -2944,6 +2944,14 @@ typedef	    i2	    ADI_FI_ID;
 **      13-May-2010 (horda03) B123704
 **          Added ADI_F65536_PAR1MATCH and ADI_F131072_PAR2MATCH. This required
 **          changing adi_fiflags to an i4.
+**	04-Oct-2010 (kiria01) b124065
+**	    Expanded operator definition to encompass adgoptab.roc requirements
+**	    thereby rendering it redundant. Added ADI_F262144_ASSOCIATIVE,
+**	    ADI_F524288_EXPL_COERCION and ADI_F1048576_MUTABLE_RETN flags for
+**	    operator definitions. These need to be stored in the FI definition
+**	    data as there needs to be control per FI as to the interpretation
+**	    of an operator characteristic. Eg: '+' is associative but not when
+**	    the parameters imply CONCAT.
 */
 
 typedef struct
@@ -3078,6 +3086,24 @@ typedef struct
 #define                 ADI_F131072_PAR2MATCH 131072 /* Parameter 2 must match
                                         ** function's 2nd parameter type.
                                         */
+#define			ADI_F262144_ASSOCIATIVE 262144 /* FI is associative.
+					** The FI is for an operator or function
+					** whose parameter order may swap over
+					** without affecting the result. Useful
+					** for parse tree normalisation or code
+					** genertion where swapping the tree
+					** about may yield better code. */
+#define			ADI_F524288_EXPL_COERCION 524288 /* Explicit coercion.
+					** This operator represents an explicit
+					** type converter and as such may also
+					** be used implicitly if needed. Useful
+					** to know whether a cast has been
+					** requested that might be merged away
+					** into a mutable return */
+#define			ADI_F1048576_MUTABLE_RETN 1048576 /* Function may allow
+					** its  return type to be altered to
+					** match a given type specified by an
+					** explicit coercion */
     ADI_OP_ID       adi_fiopid;         /* Operator id for this f.i.
 					*/
     ADI_LENSPEC     adi_lenspec;        /* Method for computing result length.

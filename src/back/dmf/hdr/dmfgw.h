@@ -32,6 +32,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 */
 
 /* Function prototype definitions. */
@@ -51,6 +53,7 @@ FUNC_EXTERN DB_STATUS dmf_gwt_register(
     DB_OWN_NAME		    *table_owner,
     DB_TAB_ID		    *table_id,
     i4		    attr_count,
+    i4			    attr_nametot,
     DMF_ATTR_ENTRY	    **attr_list,
     DM_DATA		    *gwchar_array,
     DM_PTR		    *gwattr_array,

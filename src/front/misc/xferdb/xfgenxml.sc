@@ -205,6 +205,8 @@ bool printedRowTag = FALSE;
 **      22-Jul-2010 (horda03) b123992
 **          genxml is aborting when xf_encode_buffer needs to alter the
 **          size of the output buffer. Fixed some compiler warnings too.
+**	07-Oct-2010 (miket) SIR 122403 BUG 124542 SD 147137
+**	   Add column encryption support.
 **/
 
 /* # define's */
@@ -408,6 +410,8 @@ xmldtd(bool internal_dtd, char *title_doctype)
     xfwrite(Xf_xml_dtd , ERx("\t\t\t key_compression CDATA \t #REQUIRED\n"));
     xfwrite(Xf_xml_dtd , ERx("\t\t\t journaling \t CDATA \t #REQUIRED\n"));
     xfwrite(Xf_xml_dtd , ERx("\t\t\t unique_keys \t CDATA \t #REQUIRED\n"));
+    xfwrite(Xf_xml_dtd , ERx("\t\t\t encrypted_columns \t CDATA \t #IMPLIED\n"));
+    xfwrite(Xf_xml_dtd , ERx("\t\t\t encryption_type \t CDATA \t #IMPLIED\n"));
     xfwrite(Xf_xml_dtd , ERx("\t\t\t table_structure CDATA \t #REQUIRED>\n"));
  
     xfwrite(Xf_xml_dtd ,
@@ -425,6 +429,8 @@ xmldtd(bool internal_dtd, char *title_doctype)
     xfwrite(Xf_xml_dtd , ERx("\t\t\t precision \t CDATA \t #IMPLIED\n"));
     xfwrite(Xf_xml_dtd , ERx("\t\t\t scale \t\t CDATA \t #IMPLIED\n"));
     xfwrite(Xf_xml_dtd , ERx("\t\t\t column_label \t CDATA \t #IMPLIED\n"));
+    xfwrite(Xf_xml_dtd , ERx("\t\t\t column_encrypted \t CDATA \t #IMPLIED\n"));
+    xfwrite(Xf_xml_dtd , ERx("\t\t\t column_encrypt_salt \t CDATA \t #IMPLIED\n"));
     xfwrite(Xf_xml_dtd , ERx("\t\t\t srid  \t\t CDATA \t #IMPLIED >\n"));
 
     /* write meta_index information */
@@ -967,6 +973,16 @@ xmlprintcols (XF_TABINFO *tp)
 
 	/* column label exists */
 	xfwrite(Xf_out, ERx("\n\t\t column_label=\" \""));
+
+	/* column_encrypted */
+        STprintf(tbuf, ERx("\n\t\t column_encrypted=\"%s\""),
+            cp->column_encrypted);
+	xfwrite(Xf_out, tbuf );
+
+	/* column_encrypt_salt */
+        STprintf(tbuf, ERx("\n\t\t column_encrypt_salt=\"%s\""),
+            cp->column_encrypt_salt);
+	xfwrite(Xf_out, tbuf );
 	
 	/* SRID */
 	if(cp->srid != -1)
@@ -1084,8 +1100,18 @@ xmltabinfo(XF_TABINFO *tp)
    xfwrite(Xf_out, tbuf);
 
    /* is_unique*/
-   STprintf( tbuf, ERx("\t\t unique_keys=\"%s\">\n"),
+   STprintf( tbuf, ERx("\t\t unique_keys=\"%s\"\n"),
 	tp->is_unique);
+   xfwrite(Xf_out, tbuf);
+
+   /* encrypted_columns */
+   STprintf( tbuf, ERx("\t\t encrypted_columns=\"%s\"\n"),
+	tp->encrypted_columns);
+   xfwrite(Xf_out, tbuf);
+
+   /* encryption_type */
+   STprintf( tbuf, ERx("\t\t encryption_type=\"%s\">\n"),
+	tp->encryption_type);
    xfwrite(Xf_out, tbuf);
 
    cnt = xmlprintcols(tp);

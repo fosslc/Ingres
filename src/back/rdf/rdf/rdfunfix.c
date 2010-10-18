@@ -114,6 +114,8 @@ NO_OPTIM=nc4_us5
 **	    SIR 120874: Use CLRDBERR, SETDBERR to value DB_ERROR structure.
 **	    Pass pointer to facilities DB_ERROR instead of just its err_code
 **	    in rdu_ferror().
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 **/
 
 /*{
@@ -457,6 +459,7 @@ rdf_unfix(  RDF_GLOBAL	*global,
 		/* in use by sys, don't destroy shared default cache object */
 		usr_infoblk->rdr_types &= (~RDR_ATTRIBUTES);
 		usr_infoblk->rdr_attr = NULL; 
+		usr_infoblk->rdr_attr_names = NULL; 
 		usr_infoblk->rdr_2_types &= (~RDR2_DEFAULT);
 	      }
 	      else 

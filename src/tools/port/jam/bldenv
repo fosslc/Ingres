@@ -179,14 +179,17 @@
 ##        Enhance logic for how we set Fedora xerces version (F13 = xerces 3.0)
 ##    31-Aug-2010 (troal01)
 ##        Renamed PROJ64_LOC and GEOS64_LOC to PROJHB_LOC and GEOSHB_LOC
+##    20-Sep-2010 (hanje04)
+##	  Fix build for FC 13/ Xerces 3.x, remove "hard coded" xvers in
+##	  favour of determining version from source in precheck_functions
 ##    5-Oct-2010 (troal01)
 ##        Removed proj64_need and geos64_need, rhybrid used instead.
 ##
+
 umask 002
 set +u 
 PATH=$PATH:/usr/local/bin
 
-xvers=27 # Xerces version
 config_string=unknown
 geos_need=false
 proj_need=false
@@ -340,17 +343,6 @@ case ${unames} in
 	    os=`cat /etc/redhat-release | cut -d' ' -f1`
 	    if [ "$os" = "Fedora" ] ; then
 		OSVER=FEDORA
-		rel=`cat /etc/redhat-release | cut -d' ' -f3`
-                if [ $rel -ge 13 ]
-                then
-                        xvers=30
-                elif [ $rel -eq 12 ]
-                then
-                        xvers=28
-                else
-                        xvers=27
-                fi
-
 	    fi
 	    if [ -x /usr/bin/yum ] ; then
 		yum=true

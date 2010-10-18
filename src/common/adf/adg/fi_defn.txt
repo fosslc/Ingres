@@ -8,16 +8,19 @@
 # (FI) data for Ingres's builtin functions.  The output generated from this
 # file is:
 #
-#	The function instance description table (for adgfitab.roc)
+#	The function instance description table (for adgfi_defn.c)
 #		(one entry per FI, arranged in an order convenient
 #		for type resolution and operator-to-FI translation)
 #
-#	The function instance lookup table (for adgfilkup.roc)
+#	The function instance lookup table (for adgfi_defn_lu.c)
 #		(one entry per FI, arranged by FI number, convenient
 #		for runtime execution or code generation)
 #
+#	The operator definition loopkup table (adfop_defn.c)
+#		(one entry per operator name or alias)
+#
 #	A bunch of #defines giving various indexes into the FI description
-#	table, and counts of FI's per operator (for adfopfis.h)
+#	table, and counts of FI's per operator (for adgfi_defn.h)
 #
 #	The STCODE generator table for function instances (for adgstgen.roc)
 #
@@ -28,27 +31,46 @@
 #
 # Data file structure:
 #
-# This file is generally structured thus:
+# This file is a list of group definition, each of which will be a list of
+# operator definitions, and these in turn may be followed by fi definitons
 #
-# group adi-operator-type
-#   operator adi-operator
-#	fi description (fi implementing that operator)
-#	fi description
+# group <adi-operator-type>
+#   operator <adi-operator> [type <op-type>]
+#	[def_flags <def-flags>]
+#	[sql|quel]name <op-name> [support <sup-flags>]
+#	[[sql|quel]alias <op-alias> [support <sup-flags>]]
+#	fi <fi-id> 
+#	fi ...
 #	...
 #   operator ...
 #   ...
-# group
-# ....
+# group ...
+# ...
 #
 # The groups MUST appear in the order: ADI_COMPARISON, ADI_OPERATOR,
 # ADI_AGG_FUNC, ADI_NORM_FUNC, ADI_PRED_FUNC, ADI_COPY_COERCION,
 # and finally ADI_COERCION.  (This is not quite the order of the #define
 # values for the operator types, oddly enough.)
 #
-# Within each group, the operator ID's must appear in sorted order by
+# Within each group, the <adi-operator> ID's must appear in sorted order by
 # operator ID.  This means numeric #define value, NOT alphabetical
 # order!  You must refer to adfops.h in common!hdr!hdr to get the proper
 # operator ID ordering.
+#
+# The 'op-type' will be ADI_PREFIX, ADI_INFIX or ADI_POSTFIX
+#
+# The 'def-flags' will define the flags that will be or'd into the fi flags
+# of the fi-definitions for that operator.
+#
+# The 'op-name' or 'op-alias' will be a quoted name for the operator. If
+# 'name' (or 'alias') is used, the operator will be applicable to both SQL
+# and Quel. If 'sqlname' is used, the operator will be restricted to SQL,
+# and 'quelname' restricted to Quel. Similarly for 'sqlalias' and
+# 'quelalias'. The 'sup-flags' will define the supported standards for this
+# symbol name and will be a combination of ADI_INGRES_6, ADI_ANSI and
+# ADI_DB2 as appropriate. If omitted, this will default from the main name
+# entry of which there may only be one per operator. This primary name will
+# be the one used to report should the operator ID be looked up.
 #
 # All FI's for a given operator must appear together.  Ordering is generally
 # not specified.  If some particular order is needed for proper type
@@ -529,11 +551,20 @@
 #	    Remove VARFI from text(all) coercion, any to-text coercions that
 #	    need VARFI (actually CHKVARFI) e.g. dec->text have specific
 #	    FI's.  VARFI was interfering with constant folding.
-#
+#	04-Oct-2010 (kiria01) b124065
+#	    Expanded operator definition to encompass adgoptab.roc requirements
+#	    thereby rendering it redundant.
+#       15-Jul-2010 (smeke01) b123950
+#           Add function instance ADFI_1475_NORM_DATE_HASH / adu_norm_date_hash
+#           for operator ADI_DATEHASH_OP / norm_date_hash.
+
 
 group ADI_COMPARISON
 
-    operator ADI_NE_OP
+    operator ADI_NE_OP type ADI_INFIX
+	def_flags ADI_F262144_ASSOCIATIVE
+	name "<>" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
+	alias "!="
 
 	fi ADFI_1348_NUMERIC_NE
 	    description boolean  :  all != all
@@ -730,7 +761,8 @@ group ADI_COMPARISON
 	    result DB_BOO_TYPE
 	    operands DB_NVCHR_TYPE DB_NVCHR_TYPE
 
-    operator ADI_LT_OP
+    operator ADI_LT_OP type ADI_INFIX
+	name "<" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_1349_NUMERIC_LT
 	    description boolean  :  all < all
@@ -927,7 +959,8 @@ group ADI_COMPARISON
 	    result DB_BOO_TYPE
 	    operands DB_NVCHR_TYPE DB_NVCHR_TYPE
 
-    operator ADI_LE_OP
+    operator ADI_LE_OP type ADI_INFIX
+	name "<=" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_1352_NUMERIC_LE
 	    description boolean  :  all <= all
@@ -1124,7 +1157,9 @@ group ADI_COMPARISON
 	    result DB_BOO_TYPE
 	    operands DB_NVCHR_TYPE DB_NVCHR_TYPE
 
-    operator ADI_EQ_OP
+    operator ADI_EQ_OP type ADI_INFIX
+	def_flags ADI_F262144_ASSOCIATIVE
+	name "=" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_1347_NUMERIC_EQ
 	    description boolean  :  all = all
@@ -1329,7 +1364,8 @@ group ADI_COMPARISON
 	    result DB_BOO_TYPE
 	    operands DB_LTXT_TYPE DB_LTXT_TYPE
 
-    operator ADI_GT_OP
+    operator ADI_GT_OP type ADI_INFIX
+	name ">" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_1351_NUMERIC_GT
 	    description boolean  :  all > all
@@ -1526,7 +1562,8 @@ group ADI_COMPARISON
 	    result DB_BOO_TYPE
 	    operands DB_NVCHR_TYPE DB_NVCHR_TYPE
 
-    operator ADI_GE_OP
+    operator ADI_GE_OP type ADI_INFIX
+	name ">=" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_1350_NUMERIC_GE
 	    description boolean  :  all >= all
@@ -1723,7 +1760,8 @@ group ADI_COMPARISON
 	    result DB_BOO_TYPE
 	    operands DB_NVCHR_TYPE DB_NVCHR_TYPE
 
-    operator ADI_ISNUL_OP
+    operator ADI_ISNUL_OP type ADI_POSTFIX
+	name "is null" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_516_ALL_ISNULL
 	    description boolean  :  all isnull
@@ -1829,7 +1867,8 @@ group ADI_COMPARISON
 	    result DB_BOO_TYPE
 	    operands DB_NVCHR_TYPE
 
-    operator ADI_NONUL_OP
+    operator ADI_NONUL_OP type ADI_POSTFIX
+	name "is not null" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_517_ALL_ISNOTNULL
 	    description boolean  :  all isnotnull
@@ -1935,7 +1974,8 @@ group ADI_COMPARISON
 	    result DB_BOO_TYPE
 	    operands DB_NVCHR_TYPE
 
-    operator ADI_LIKE_OP
+    operator ADI_LIKE_OP type ADI_INFIX
+	sqlname "like" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_246_C_LIKE_C
 	    description boolean  :  c like all
@@ -1995,7 +2035,8 @@ group ADI_COMPARISON
 	    result DB_BOO_TYPE
 	    operands DB_LNVCHR_TYPE DB_ALL_TYPE
 
-    operator ADI_NLIKE_OP
+    operator ADI_NLIKE_OP type ADI_INFIX
+	sqlname "not like" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_250_C_NOTLIKE_C
 	    description boolean  :  c notlike all
@@ -2055,7 +2096,8 @@ group ADI_COMPARISON
 	    result DB_BOO_TYPE
 	    operands DB_LNVCHR_TYPE DB_ALL_TYPE
 
-    operator ADI_ISINT_OP
+    operator ADI_ISINT_OP type ADI_POSTFIX
+	name "is integer" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_1357_ALL_ISINT
 	    description boolean  :  all is integer
@@ -2065,7 +2107,8 @@ group ADI_COMPARISON
 	    result DB_BOO_TYPE
 	    operands DB_ALL_TYPE
 
-    operator ADI_NOINT_OP
+    operator ADI_NOINT_OP type ADI_POSTFIX
+	name "is not integer" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_1358_ALL_ISNOTINT
 	    description boolean  :  all is integer
@@ -2075,7 +2118,8 @@ group ADI_COMPARISON
 	    result DB_BOO_TYPE
 	    operands DB_ALL_TYPE
 
-    operator ADI_ISDEC_OP
+    operator ADI_ISDEC_OP type ADI_POSTFIX
+	name "is decimal" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_1359_ALL_ISDEC
 	    description boolean  :  all is decimal
@@ -2085,7 +2129,8 @@ group ADI_COMPARISON
 	    result DB_BOO_TYPE
 	    operands DB_ALL_TYPE
 
-    operator ADI_NODEC_OP
+    operator ADI_NODEC_OP type ADI_POSTFIX
+	name "is not decimal" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_1360_ALL_ISNOTDEC
 	    description boolean  :  all is decimal
@@ -2095,7 +2140,8 @@ group ADI_COMPARISON
 	    result DB_BOO_TYPE
 	    operands DB_ALL_TYPE
 
-    operator ADI_ISFLT_OP
+    operator ADI_ISFLT_OP type ADI_POSTFIX
+	name "is float" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_1361_ALL_ISFLT
 	    description boolean  :  ALL is float
@@ -2105,7 +2151,8 @@ group ADI_COMPARISON
 	    result DB_BOO_TYPE
 	    operands DB_ALL_TYPE
 
-    operator ADI_NOFLT_OP
+    operator ADI_NOFLT_OP type ADI_POSTFIX
+	name "is not float" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_1362_ALL_ISNOTFLT
 	    description boolean  :  ALL is float
@@ -2115,7 +2162,8 @@ group ADI_COMPARISON
 	    result DB_BOO_TYPE
 	    operands DB_ALL_TYPE
 
-    operator ADI_ISFALSE_OP
+    operator ADI_ISFALSE_OP type ADI_POSTFIX
+	sqlname "is false" support ADI_INGRES_6|ADI_ANSI
 
         fi ADFI_1418_BOO_ISFALSE
             description boolean  :  boolean is false
@@ -2125,7 +2173,8 @@ group ADI_COMPARISON
             result DB_BOO_TYPE
             operands DB_BOO_TYPE
 
-    operator ADI_NOFALSE_OP
+    operator ADI_NOFALSE_OP type ADI_POSTFIX
+	sqlname "is not false" support ADI_INGRES_6|ADI_ANSI
 
         fi ADFI_1419_BOO_NOFALSE
             description boolean  :  boolean is not false
@@ -2135,7 +2184,8 @@ group ADI_COMPARISON
             result DB_BOO_TYPE
             operands DB_BOO_TYPE
 
-    operator ADI_ISTRUE_OP
+    operator ADI_ISTRUE_OP type ADI_POSTFIX
+	sqlname "is true" support ADI_INGRES_6|ADI_ANSI
 
         fi ADFI_1420_BOO_ISTRUE
             description boolean  :  boolean is true
@@ -2145,7 +2195,8 @@ group ADI_COMPARISON
             result DB_BOO_TYPE
             operands DB_BOO_TYPE
 
-    operator ADI_NOTRUE_OP
+    operator ADI_NOTRUE_OP type ADI_POSTFIX
+	sqlname "is not true" support ADI_INGRES_6|ADI_ANSI
 
         fi ADFI_1421_BOO_NOTRUE
             description boolean  :  boolean is not true
@@ -2155,7 +2206,8 @@ group ADI_COMPARISON
             result DB_BOO_TYPE
             operands DB_BOO_TYPE
 
-    operator ADI_ISUNKN_OP
+    operator ADI_ISUNKN_OP type ADI_POSTFIX
+	sqlname "is unknown" support ADI_INGRES_6|ADI_ANSI
 
         fi ADFI_1431_BOO_ISUNKN
             description boolean  :  boolean is unknown
@@ -2165,7 +2217,8 @@ group ADI_COMPARISON
             result DB_BOO_TYPE
             operands DB_BOO_TYPE
 
-    operator ADI_NOUNKN_OP
+    operator ADI_NOUNKN_OP type ADI_POSTFIX
+	sqlname "is not unknown" support ADI_INGRES_6|ADI_ANSI
 
         fi ADFI_1432_BOO_NOUNKN
             description boolean  :  boolean is not unknown
@@ -2175,7 +2228,8 @@ group ADI_COMPARISON
             result DB_BOO_TYPE
             operands DB_BOO_TYPE
 
-    operator ADI_IIFALSE_OP
+    operator ADI_IIFALSE_OP type ADI_PREFIX
+	name "ii_false" support ADI_INGRES_6
 
 	fi ADFI_894_II_FALSE
 	    description boolean: ii_false()
@@ -2184,7 +2238,8 @@ group ADI_COMPARISON
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_BOO_TYPE
 
-    operator ADI_IITRUE_OP
+    operator ADI_IITRUE_OP type ADI_PREFIX
+	name "ii_true" support ADI_INGRES_6
 
 	fi ADFI_895_II_TRUE
 	    description boolean: ii_true()
@@ -2195,7 +2250,9 @@ group ADI_COMPARISON
 
 group ADI_OPERATOR
 
-    operator ADI_MUL_OP
+    operator ADI_MUL_OP type ADI_INFIX
+	def_flags ADI_F262144_ASSOCIATIVE
+	name "*" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_059_F_MUL_F
 	    description f  :  f * f
@@ -2352,7 +2409,9 @@ group ADI_OPERATOR
 	    operands DB_VCH_TYPE DB_MNY_TYPE 
 	    routine adu_10mny_multu
 
-    operator ADI_POW_OP
+    operator ADI_POW_OP type ADI_INFIX
+	name "**" support ADI_INGRES_6
+	alias "power"
 
 	fi ADFI_073_F_POW_F
 	    description f  :  f ** f
@@ -2369,7 +2428,8 @@ group ADI_OPERATOR
 	    operands DB_FLT_TYPE DB_INT_TYPE
 	    routine adu_2int_pow
 
-    operator ADI_ADD_OP
+    operator ADI_ADD_OP type ADI_INFIX
+	name "+" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_1274_DATE_ADD_INYM
 	    description date  :  date + interval_ytom
@@ -2426,6 +2486,7 @@ group ADI_OPERATOR
 
 	fi ADFI_049_F_ADD_F
 	    description f  :  f + f
+	    flags ADI_F262144_ASSOCIATIVE
 	    lenspec ADI_SHORTER
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_FLT_TYPE
@@ -2433,6 +2494,7 @@ group ADI_OPERATOR
 
 	fi ADFI_518_DEC_ADD_DEC
 	    description dec  :  dec + dec
+	    flags ADI_F262144_ASSOCIATIVE
 	    lenspec ADI_DECADD
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_DEC_TYPE
@@ -2440,6 +2502,7 @@ group ADI_OPERATOR
 
 	fi ADFI_050_I_ADD_I
 	    description i  :  i + i
+	    flags ADI_F262144_ASSOCIATIVE
 	    lenspec ADI_FIXED 8
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_INT_TYPE
@@ -2447,6 +2510,7 @@ group ADI_OPERATOR
 
 	fi ADFI_051_MONEY_ADD_MONEY
 	    description money  :  money + money
+	    flags ADI_F262144_ASSOCIATIVE
 	    lenspec ADI_FIXED 8
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_MNY_TYPE
@@ -2634,7 +2698,8 @@ group ADI_OPERATOR
 	    operands DB_NVCHR_TYPE DB_NVCHR_TYPE
 	    routine adu_4strconcat
 
-    operator ADI_SUB_OP
+    operator ADI_SUB_OP type ADI_INFIX
+	name "-" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_1264_TMWO_SUB_TMWO
 	    description interval_dtos :  time_wo_tz - time_wo_tz 
@@ -2738,7 +2803,8 @@ group ADI_OPERATOR
 	    operands DB_MNY_TYPE DB_MNY_TYPE
 	    routine adu_12mny_subu
 
-    operator ADI_DIV_OP
+    operator ADI_DIV_OP type ADI_INFIX
+	name "/" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_066_F_DIV_F
 	    description f  :  f / f
@@ -2894,7 +2960,8 @@ group ADI_OPERATOR
 	    operands DB_VCH_TYPE DB_MNY_TYPE 
 	    routine adu_8mny_divu
 
-    operator ADI_PLUS_OP
+    operator ADI_PLUS_OP type ADI_PREFIX
+	name " +" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_075_PLUS_F
 	    description f  :  + f
@@ -2934,7 +3001,8 @@ group ADI_OPERATOR
 	    operands DB_DTE_TYPE
 	    routine adu_date_plus
 
-    operator ADI_MINUS_OP
+    operator ADI_MINUS_OP type ADI_PREFIX
+	name " -" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_078_MINUS_F
 	    description f  :  - f
@@ -2976,7 +3044,8 @@ group ADI_OPERATOR
 
 group ADI_AGG_FUNC
 
-    operator ADI_ANY_OP
+    operator ADI_ANY_OP type ADI_PREFIX
+	name "any" support ADI_INGRES_6
 
 	fi ADFI_081_ANY_C_ALL
 	    description i  :  any(c) (or any other type)
@@ -3082,7 +3151,9 @@ group ADI_AGG_FUNC
 	    operands DB_NVCHR_TYPE
 	    routine adu_N1a_any adu_B0a_noagwork adu_E0a_anycount
 
-    operator ADI_AVG_OP
+    operator ADI_AVG_OP type ADI_PREFIX
+	name "avg" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
+	quelalias "avgu" support ADI_INGRES_6
 
 	fi ADFI_087_AVG_F
 	    description f  :  avg(f)
@@ -3127,7 +3198,9 @@ group ADI_AGG_FUNC
 	    operands DB_DTE_TYPE
 	    routine adu_N0d_tot_date adu_B0a_noagwork adu_E3d_avg_date
 
-    operator ADI_CNT_OP
+    operator ADI_CNT_OP type ADI_PREFIX
+	name "count" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
+	quelalias "countu" support ADI_INGRES_6
 
 	fi ADFI_090_COUNT_C_ALL
 	    description i  :  count(c) (or any other type)
@@ -3233,7 +3306,8 @@ group ADI_AGG_FUNC
 	    operands DB_VCH_TYPE
 	    routine adu_N2a_count adu_B0a_noagwork adu_E0a_anycount
 
-    operator ADI_CNTAL_OP
+    operator ADI_CNTAL_OP type ADI_PREFIX
+	sqlname "count(*)" support ADI_INGRES_6|ADI_ANSI
 
 	fi ADFI_396_COUNTSTAR
 	    description i  :  count(*)
@@ -3242,7 +3316,8 @@ group ADI_AGG_FUNC
 	    result DB_INT_TYPE
 	    routine adu_N2a_count adu_B0a_noagwork adu_E0a_anycount
 
-    operator ADI_MAX_OP
+    operator ADI_MAX_OP type ADI_PREFIX
+	name "max" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_096_MAX_C
 	    description c  :  max(c)
@@ -3349,7 +3424,8 @@ group ADI_AGG_FUNC
 	    operands DB_NVCHR_TYPE
 	    routine adu_N6s_max_str adu_B0s_minmax_str adu_E0s_minmax_str
 
-    operator ADI_MIN_OP
+    operator ADI_MIN_OP type ADI_PREFIX
+	name "min" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_102_MIN_C
 	    description c  :  min(c)
@@ -3456,7 +3532,9 @@ group ADI_AGG_FUNC
 	    operands DB_NVCHR_TYPE
 	    routine adu_N5s_min_str adu_B0s_minmax_str adu_E0s_minmax_str
 
-    operator ADI_SUM_OP
+    operator ADI_SUM_OP type ADI_PREFIX
+	name "sum" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
+	quelalias "sumu" support ADI_INGRES_6
 
 	fi ADFI_108_SUM_F
 	    description f  :  sum(f)
@@ -3501,7 +3579,16 @@ group ADI_AGG_FUNC
 	    operands DB_DTE_TYPE
 	    routine adu_N0d_tot_date adu_B0a_noagwork adu_E4d_sum_date
 
-    operator ADI_CORR_OP
+    operator ADI_EXIST_OP type ADI_PREFIX
+	comment "Pseudo-op implemented in parser"
+	sqlname "exists" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
+
+    operator ADI_NXIST_OP type ADI_PREFIX
+	comment "Pseudo-op implemented in parser"
+	sqlname "not exists" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
+
+    operator ADI_CORR_OP type ADI_PREFIX
+	sqlname "corr" support ADI_INGRES_6
 
 	fi ADFI_832_CORR_FLT
 	    description float :  corr(float, float)
@@ -3513,7 +3600,8 @@ group ADI_AGG_FUNC
 	    operands DB_FLT_TYPE DB_FLT_TYPE
 	    routine adu_N7a_corrr2 adu_B0a_noagwork adu_E7a_corr
 
-    operator ADI_COVAR_POP_OP
+    operator ADI_COVAR_POP_OP type ADI_PREFIX
+	sqlname "covar_pop" support ADI_INGRES_6
 
 	fi ADFI_833_COVAR_POP_FLT
 	    description float :  covar_pop(float, float)
@@ -3525,7 +3613,8 @@ group ADI_AGG_FUNC
 	    operands DB_FLT_TYPE DB_FLT_TYPE
 	    routine adu_N8a_covsxy adu_B0a_noagwork adu_E8a_cpop
 
-    operator ADI_COVAR_SAMP_OP
+    operator ADI_COVAR_SAMP_OP type ADI_PREFIX
+	sqlname "covar_samp" support ADI_INGRES_6
 
 	fi ADFI_834_COVAR_SAMP_FLT
 	    description float :  covar_samp(float, float)
@@ -3537,7 +3626,8 @@ group ADI_AGG_FUNC
 	    operands DB_FLT_TYPE DB_FLT_TYPE
 	    routine adu_N8a_covsxy adu_B0a_noagwork adu_E9a_csamp
 
-    operator ADI_REGR_AVGX_OP
+    operator ADI_REGR_AVGX_OP type ADI_PREFIX
+	sqlname "regr_avgx" support ADI_INGRES_6
 
 	fi ADFI_835_REGR_AVGX_FLT
 	    description float :  regr_avgx(float, float)
@@ -3549,7 +3639,8 @@ group ADI_AGG_FUNC
 	    operands DB_FLT_TYPE DB_FLT_TYPE
 	    routine adu_N9a_ravgx adu_B0a_noagwork adu_E10a_ravgx
 
-    operator ADI_REGR_AVGY_OP
+    operator ADI_REGR_AVGY_OP type ADI_PREFIX
+	sqlname "regr_avgy" support ADI_INGRES_6
 
 	fi ADFI_836_REGR_AVGY_FLT
 	    description float :  regr_avgy(float, float)
@@ -3561,7 +3652,8 @@ group ADI_AGG_FUNC
 	    operands DB_FLT_TYPE DB_FLT_TYPE
 	    routine adu_N10a_ravgy adu_B0a_noagwork adu_E11a_ravgy
 
-    operator ADI_REGR_COUNT_OP
+    operator ADI_REGR_COUNT_OP type ADI_PREFIX
+	sqlname "regr_count" support ADI_INGRES_6
 
 	fi ADFI_837_REGR_COUNT_ANY
 	    description i  :  regr_count(all, all)
@@ -3573,7 +3665,8 @@ group ADI_AGG_FUNC
 	    operands DB_ALL_TYPE DB_ALL_TYPE
 	    routine adu_N11a_rcnt adu_B0a_noagwork adu_E12a_rcnt
 
-    operator ADI_REGR_INTERCEPT_OP
+    operator ADI_REGR_INTERCEPT_OP type ADI_PREFIX
+	sqlname "regr_intercept" support ADI_INGRES_6
 
 	fi ADFI_838_REGR_INTERCEPT_FLT
 	    description float :  regr_intercept(float, float)
@@ -3585,7 +3678,8 @@ group ADI_AGG_FUNC
 	    operands DB_FLT_TYPE DB_FLT_TYPE
 	    routine adu_N12a_rintsl adu_B0a_noagwork adu_E13a_rint
 
-    operator ADI_REGR_R2_OP
+    operator ADI_REGR_R2_OP type ADI_PREFIX
+	sqlname "regr_r2" support ADI_INGRES_6
 
 	fi ADFI_839_REGR_R2_FLT
 	    description float :  regr_r2(float, float)
@@ -3597,7 +3691,8 @@ group ADI_AGG_FUNC
 	    operands DB_FLT_TYPE DB_FLT_TYPE
 	    routine adu_N7a_corrr2 adu_B0a_noagwork adu_E14a_rr2
 
-    operator ADI_REGR_SLOPE_OP
+    operator ADI_REGR_SLOPE_OP type ADI_PREFIX
+	sqlname "regr_slope" support ADI_INGRES_6
 
 	fi ADFI_840_REGR_SLOPE_FLT
 	    description float :  regr_slope(float, float)
@@ -3609,7 +3704,8 @@ group ADI_AGG_FUNC
 	    operands DB_FLT_TYPE DB_FLT_TYPE
 	    routine adu_N12a_rintsl adu_B0a_noagwork adu_E15a_rslope
 
-    operator ADI_REGR_SXX_OP
+    operator ADI_REGR_SXX_OP type ADI_PREFIX
+	sqlname "regr_sxx" support ADI_INGRES_6
 
 	fi ADFI_841_REGR_SXX_FLT
 	    description float :  regr_sxx(float, float)
@@ -3621,7 +3717,8 @@ group ADI_AGG_FUNC
 	    operands DB_FLT_TYPE DB_FLT_TYPE
 	    routine adu_N13a_rsxx adu_B0a_noagwork adu_E16a_rsxx
 
-    operator ADI_REGR_SXY_OP
+    operator ADI_REGR_SXY_OP type ADI_PREFIX
+	sqlname "regr_sxy" support ADI_INGRES_6
 
 	fi ADFI_842_REGR_SXY_FLT
 	    description float :  regr_sxy(float, float)
@@ -3633,7 +3730,8 @@ group ADI_AGG_FUNC
 	    operands DB_FLT_TYPE DB_FLT_TYPE
 	    routine adu_N8a_covsxy adu_B0a_noagwork adu_E17a_rsxy
 
-    operator ADI_REGR_SYY_OP
+    operator ADI_REGR_SYY_OP type ADI_PREFIX
+	sqlname "regr_syy" support ADI_INGRES_6
 
 	fi ADFI_843_REGR_SYY_FLT
 	    description float :  regr_syy(float, float)
@@ -3645,7 +3743,8 @@ group ADI_AGG_FUNC
 	    operands DB_FLT_TYPE DB_FLT_TYPE
 	    routine adu_N14a_rsyy adu_B0a_noagwork adu_E18a_rsyy
 
-    operator ADI_STDDEV_POP_OP
+    operator ADI_STDDEV_POP_OP type ADI_PREFIX
+	sqlname "stddev_pop" support ADI_INGRES_6
 
 	fi ADFI_844_STDDEV_POP_FLT
 	    description float :  stddev_pop(float)
@@ -3655,7 +3754,8 @@ group ADI_AGG_FUNC
 	    result DB_FLT_TYPE
 	    operands DB_FLT_TYPE
 
-    operator ADI_STDDEV_SAMP_OP
+    operator ADI_STDDEV_SAMP_OP type ADI_PREFIX
+	sqlname "stddev_samp" support ADI_INGRES_6
 
 	fi ADFI_845_STDDEV_SAMP_FLT
 	    description float :  stddev_samp(float)
@@ -3665,7 +3765,8 @@ group ADI_AGG_FUNC
 	    result DB_FLT_TYPE
 	    operands DB_FLT_TYPE
 
-    operator ADI_VAR_POP_OP
+    operator ADI_VAR_POP_OP type ADI_PREFIX
+	sqlname "var_pop" support ADI_INGRES_6
 
 	fi ADFI_846_VAR_POP_FLT
 	    description float :  var_pop(float)
@@ -3675,7 +3776,8 @@ group ADI_AGG_FUNC
 	    result DB_FLT_TYPE
 	    operands DB_FLT_TYPE
 
-    operator ADI_VAR_SAMP_OP
+    operator ADI_VAR_SAMP_OP type ADI_PREFIX
+	sqlname "var_samp" support ADI_INGRES_6
 
 	fi ADFI_847_VAR_SAMP_FLT
 	    description float :  var_samp(float)
@@ -3685,7 +3787,8 @@ group ADI_AGG_FUNC
 	    result DB_FLT_TYPE
 	    operands DB_FLT_TYPE
 
-    operator ADI_SINGLETON_OP
+    operator ADI_SINGLETON_OP type ADI_PREFIX
+	name "singleton" support ADI_INGRES_6
 
 	fi ADFI_1463_SINGLETON_ALL
 	    description all : singleton(all)
@@ -3698,7 +3801,8 @@ group ADI_AGG_FUNC
 
 group ADI_NORM_FUNC
 
-    operator ADI_BNTIM_OP
+    operator ADI_BNTIM_OP type ADI_PREFIX
+	name "_bintim" support ADI_INGRES_6
 
 	fi ADFI_442__BINTIM
 	    description i  :  _bintim()
@@ -3715,7 +3819,8 @@ group ADI_NORM_FUNC
 	    result DB_INT_TYPE
 	    operands DB_INT_TYPE
 
-    operator ADI_BIOC_OP
+    operator ADI_BIOC_OP type ADI_PREFIX
+	name "_bio_cnt" support ADI_INGRES_6
 
 	fi ADFI_200__BIO_CNT
 	    description i  :  _bio_cnt()
@@ -3724,7 +3829,8 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_INT_TYPE
 
-    operator ADI_CHRD_OP
+    operator ADI_CHRD_OP type ADI_PREFIX
+	name "_cache_read" support ADI_INGRES_6
 
 	fi ADFI_205__CACHE_READ
 	    description i  :  _cache_read()
@@ -3733,7 +3839,8 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_INT_TYPE
 
-    operator ADI_CHREQ_OP
+    operator ADI_CHREQ_OP type ADI_PREFIX
+	name "_cache_req" support ADI_INGRES_6
 
 	fi ADFI_204__CACHE_REQ
 	    description i  :  _cache_req()
@@ -3742,7 +3849,8 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_INT_TYPE
 
-    operator ADI_CHRRD_OP
+    operator ADI_CHRRD_OP type ADI_PREFIX
+	name "_cache_rread" support ADI_INGRES_6
 
 	fi ADFI_207__CACHE_RREAD
 	    description i  :  _cache_rread()
@@ -3751,7 +3859,8 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_INT_TYPE
 
-    operator ADI_CHSIZ_OP
+    operator ADI_CHSIZ_OP type ADI_PREFIX
+	name "_cache_size" support ADI_INGRES_6
 
 	fi ADFI_208__CACHE_SIZE
 	    description i  :  _cache_size()
@@ -3760,7 +3869,8 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_INT_TYPE
 
-    operator ADI_CHUSD_OP
+    operator ADI_CHUSD_OP type ADI_PREFIX
+	name "_cache_used" support ADI_INGRES_6
 
 	fi ADFI_209__CACHE_USED
 	    description i  :  _cache_used()
@@ -3769,7 +3879,8 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_INT_TYPE
 
-    operator ADI_CHWR_OP
+    operator ADI_CHWR_OP type ADI_PREFIX
+	name "_cache_write" support ADI_INGRES_6
 
 	fi ADFI_206__CACHE_WRITE
 	    description i  :  _cache_write()
@@ -3778,7 +3889,8 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_INT_TYPE
 
-    operator ADI_CPUMS_OP
+    operator ADI_CPUMS_OP type ADI_PREFIX
+	name "_cpu_ms" support ADI_INGRES_6
 
 	fi ADFI_197__CPU_MS
 	    description i  :  _cpu_ms()
@@ -3787,7 +3899,8 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_INT_TYPE
 
-    operator ADI_BDATE_OP
+    operator ADI_BDATE_OP type ADI_PREFIX
+	name "_date" support ADI_INGRES_6
 
 	fi ADFI_195__DATE_I
 	    description c  :  _date(i)
@@ -3798,7 +3911,8 @@ group ADI_NORM_FUNC
 	    operands DB_INT_TYPE
 	    routine adu_1cvrt_date
 
-    operator ADI_DIOC_OP
+    operator ADI_DIOC_OP type ADI_PREFIX
+	name "_dio_cnt" support ADI_INGRES_6
 
 	fi ADFI_199__DIO_CNT
 	    description i  :  _dio_cnt()
@@ -3807,7 +3921,8 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_INT_TYPE
 
-    operator ADI_ETSEC_OP
+    operator ADI_ETSEC_OP type ADI_PREFIX
+	name "_et_sec" support ADI_INGRES_6
 
 	fi ADFI_198__ET_SEC
 	    description i  :  _et_sec()
@@ -3816,7 +3931,8 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_INT_TYPE
 
-    operator ADI_PFLTC_OP
+    operator ADI_PFLTC_OP type ADI_PREFIX
+	name "_pfault_cnt" support ADI_INGRES_6
 
 	fi ADFI_201__PFAULT_CNT
 	    description i  :  _pfault_cnt()
@@ -3825,7 +3941,8 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_INT_TYPE
 
-    operator ADI_PHPAG_OP
+    operator ADI_PHPAG_OP type ADI_PREFIX
+	name "_phys_page" support ADI_INGRES_6
 
 	fi ADFI_203__PHYS_PAGE
 	    description i  :  _phys_page()
@@ -3834,7 +3951,8 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_INT_TYPE
 
-    operator ADI_BTIME_OP
+    operator ADI_BTIME_OP type ADI_PREFIX
+	name "_time" support ADI_INGRES_6
 
 	fi ADFI_196__TIME_I
 	    description c  :  _time(i)
@@ -3845,7 +3963,8 @@ group ADI_NORM_FUNC
 	    operands DB_INT_TYPE
 	    routine adu_2cvrt_time
 
-    operator ADI_VERSN_OP
+    operator ADI_VERSN_OP type ADI_PREFIX
+	name "_version" support ADI_INGRES_6
 
 	fi ADFI_210__VERSION
 	    description c  :  _version()
@@ -3853,7 +3972,8 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_CHR_TYPE
 
-    operator ADI_WSPAG_OP
+    operator ADI_WSPAG_OP type ADI_PREFIX
+	name "_ws_page" support ADI_INGRES_6
 
 	fi ADFI_202__WS_PAGE
 	    description i  :  _ws_page()
@@ -3862,7 +3982,8 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_INT_TYPE
 
-    operator ADI_ABS_OP
+    operator ADI_ABS_OP type ADI_PREFIX
+	name "abs" support ADI_INGRES_6
 
 	fi ADFI_111_ABS_F
 	    description f  :  abs(f)
@@ -3893,7 +4014,10 @@ group ADI_NORM_FUNC
 	    operands DB_MNY_TYPE
 	    routine adu_3mny_absu
 
-    operator ADI_ASCII_OP
+    operator ADI_ASCII_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "c" support ADI_INGRES_6
+	alias "ascii"
 
 	fi ADFI_539_ASCII_ALL
 	    description c  :  ascii(all)
@@ -3945,7 +4069,8 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE DB_INT_TYPE
 	    routine adu_nvchr_2args
 
-    operator ADI_ATAN_OP
+    operator ADI_ATAN_OP type ADI_PREFIX
+	name "atan" support ADI_INGRES_6
 
 	fi ADFI_120_ATAN_F
 	    description f  :  atan(f)
@@ -3954,7 +4079,8 @@ group ADI_NORM_FUNC
 	    result DB_FLT_TYPE
 	    operands DB_FLT_TYPE
 
-    operator ADI_DBMSI_OP
+    operator ADI_DBMSI_OP type ADI_PREFIX
+	name "dbmsinfo" support ADI_INGRES_6
 
 	fi ADFI_397_DBMSINFO_VARCHAR
 	    description varchar  :  dbmsinfo(varchar)
@@ -3965,7 +4091,9 @@ group ADI_NORM_FUNC
 	    operands DB_VCH_TYPE
 	    routine adu_dbmsinfo
 
-    operator ADI_CHAR_OP
+    operator ADI_CHAR_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "char" support ADI_INGRES_6
 
 	fi ADFI_540_CHAR_ALL
 	    description char  :  char(all)
@@ -4017,7 +4145,8 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE DB_INT_TYPE
 	    routine adu_nvchr_2args
 
-    operator ADI_CNCAT_OP
+    operator ADI_CNCAT_OP type ADI_PREFIX
+	name "concat" support ADI_INGRES_6
 
 	fi ADFI_121_CONCAT_C_C
 	    description c  :  concat(c,c)
@@ -4175,7 +4304,8 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE DB_NVCHR_TYPE
 	    routine adu_4strconcat
 
-    operator ADI_TYNAM_OP
+    operator ADI_TYNAM_OP type ADI_PREFIX
+	name "iitypename" support ADI_INGRES_6
 
 	fi ADFI_398_IITYPENAME_I
 	    description char  :  iitypename(i)
@@ -4185,7 +4315,8 @@ group ADI_NORM_FUNC
 	    operands DB_INT_TYPE
 	    routine adu_typename
 
-    operator ADI_COS_OP
+    operator ADI_COS_OP type ADI_PREFIX
+	name "cos" support ADI_INGRES_6
 
 	fi ADFI_124_COS_F
 	    description f  :  cos(f)
@@ -4194,7 +4325,10 @@ group ADI_NORM_FUNC
 	    result DB_FLT_TYPE
 	    operands DB_FLT_TYPE
 
-    operator ADI_DATE_OP
+    operator ADI_DATE_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "date" support ADI_INGRES_6|ADI_DB2
+	alias "ingresdate" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_125_DATE_C
 	    description date  :  date(c)
@@ -4258,7 +4392,9 @@ group ADI_NORM_FUNC
 	    operands DB_DTE_TYPE
 	    routine adu_2datetodate
 
-    operator ADI_DPART_OP
+    operator ADI_DPART_OP type ADI_PREFIX
+	name "date_part" support ADI_INGRES_6
+	alias "extract"
 
 	fi ADFI_128_DATE_PART_C_DATE
 	    description i  :  date_part(c,date)
@@ -4296,7 +4432,8 @@ group ADI_NORM_FUNC
 	    operands DB_VCH_TYPE DB_DTE_TYPE
 	    routine adu_dextract
 
-    operator ADI_DTRUN_OP
+    operator ADI_DTRUN_OP type ADI_PREFIX
+	name "date_trunc" support ADI_INGRES_6
 
 	fi ADFI_132_DATE_TRUNC_C_DATE
 	    description date  :  date_trunc(c,date)
@@ -4334,7 +4471,9 @@ group ADI_NORM_FUNC
 	    operands DB_VCH_TYPE DB_DTE_TYPE
 	    routine adu_dtruncate
 
-    operator ADI_DBA_OP
+    operator ADI_DBA_OP type ADI_PREFIX
+	name "dba" support ADI_INGRES_6
+	alias "_dba"
 
 	fi ADFI_211_DBA
 	    description c  :  dba()
@@ -4343,7 +4482,8 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_CHR_TYPE
 
-    operator ADI_DOW_OP
+    operator ADI_DOW_OP type ADI_PREFIX
+	name "dow" support ADI_INGRES_6
 
 	fi ADFI_127_DOW_DATE
 	    description c  :  dow(date)
@@ -4354,7 +4494,8 @@ group ADI_NORM_FUNC
 	    operands DB_DTE_TYPE
 	    routine adu_1dayofweek
 
-    operator ADI_EXP_OP
+    operator ADI_EXP_OP type ADI_PREFIX
+	name "exp" support ADI_INGRES_6
 
 	fi ADFI_134_EXP_F
 	    description f  :  exp(f)
@@ -4363,7 +4504,9 @@ group ADI_NORM_FUNC
 	    result DB_FLT_TYPE
 	    operands DB_FLT_TYPE
 
-    operator ADI_F4_OP
+    operator ADI_F4_OP type ADI_PREFIX
+	comment "ADI_F524288_EXPL_COERCION set on F8"
+	name "float4" support ADI_INGRES_6
 
 	fi ADFI_135_FLOAT4_C
 	    description f  :  float4(c)
@@ -4445,7 +4588,9 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE
 	    routine adu_1flt_coerce
 
-    operator ADI_F8_OP
+    operator ADI_F8_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "float8" support ADI_INGRES_6
 
 	fi ADFI_140_FLOAT8_C
 	    description f  :  float8(c)
@@ -4527,7 +4672,10 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE
 	    routine adu_1flt_coerce
 
-    operator ADI_I1_OP
+    operator ADI_I1_OP type ADI_PREFIX
+	comment "ADI_F524288_EXPL_COERCION set on I8"
+	name "int1" support ADI_INGRES_6
+	alias "tinyint"
 
 	fi ADFI_145_INT1_C
 	    description i  :  int1(c)
@@ -4609,7 +4757,10 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE
 	    routine adu_1int_coerce
 
-    operator ADI_I2_OP
+    operator ADI_I2_OP type ADI_PREFIX
+	comment "ADI_F524288_EXPL_COERCION set on I8"
+	name "int2" support ADI_INGRES_6
+	alias "smallint"
 
 	fi ADFI_150_INT2_C
 	    description i  :  int2(c)
@@ -4691,7 +4842,11 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE
 	    routine adu_1int_coerce
 
-    operator ADI_I4_OP
+    operator ADI_I4_OP type ADI_PREFIX
+	comment "ADI_F524288_EXPL_COERCION set on I8"
+	name "int" support ADI_INGRES_6
+	alias "int4"
+	alias "integer"
 
 	fi ADFI_155_INT4_C
 	    description i  :  int4(c)
@@ -4773,7 +4928,8 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE
 	    routine adu_1int_coerce
 
-    operator ADI_INTVL_OP
+    operator ADI_INTVL_OP type ADI_PREFIX
+	name "interval" support ADI_INGRES_6
 
 	fi ADFI_130_INTERVAL_C_DATE
 	    description f  :  interval(c,date)
@@ -4807,7 +4963,8 @@ group ADI_NORM_FUNC
 	    operands DB_VCH_TYPE DB_DTE_TYPE
 	    routine adu_intrvl_in
 
-    operator ADI_LEFT_OP
+    operator ADI_LEFT_OP type ADI_PREFIX
+	name "left" support ADI_INGRES_6
 
 	fi ADFI_160_LEFT_C_I
 	    description c  :  left(c,i)
@@ -4893,7 +5050,8 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE DB_INT_TYPE
 	    routine adu_nvchr_left
 
-    operator ADI_LEN_OP
+    operator ADI_LEN_OP type ADI_PREFIX
+	name "length" support ADI_INGRES_6|ADI_DB2
 
 	fi ADFI_162_LENGTH_C
 	    description i  :  length(c)
@@ -4999,7 +5157,8 @@ group ADI_NORM_FUNC
 	    operands DB_LNVCHR_TYPE
 	    routine adu_nvchr_length
 
- operator ADI_LOC_OP
+ operator ADI_LOC_OP type ADI_PREFIX
+	name "locate" support ADI_INGRES_6
 
 	fi ADFI_164_LOCATE_ALL_ALL
 	    description i  :  locate(all,all)
@@ -5019,7 +5178,9 @@ group ADI_NORM_FUNC
             operands DB_NVCHR_TYPE DB_NVCHR_TYPE
             routine adu_nvchr_locate
 
-    operator ADI_LOG_OP
+    operator ADI_LOG_OP type ADI_PREFIX
+	name "ln" support ADI_INGRES_6
+	alias "log"
 
 	fi ADFI_166_LOG_F
 	    description f  :  log(f)
@@ -5028,7 +5189,9 @@ group ADI_NORM_FUNC
 	    result DB_FLT_TYPE
 	    operands DB_FLT_TYPE
 
-    operator ADI_LOWER_OP
+    operator ADI_LOWER_OP type ADI_PREFIX
+	name "lowercase" support ADI_INGRES_6
+	alias  "lower"
 
 	fi ADFI_167_LOWERCASE_C
 	    description c  :  lowercase(c)
@@ -5106,7 +5269,8 @@ group ADI_NORM_FUNC
 	    operands DB_INT_TYPE
 	    routine adu_ascii
 
-    operator ADI_MOD_OP
+    operator ADI_MOD_OP type ADI_PREFIX
+	name "mod" support ADI_INGRES_6
 
 	fi ADFI_169_MOD_I_I
 	    description i  :  mod(i,i)
@@ -5115,7 +5279,9 @@ group ADI_NORM_FUNC
 	    result DB_INT_TYPE
 	    operands DB_INT_TYPE DB_INT_TYPE
 
-    operator ADI_MONEY_OP
+    operator ADI_MONEY_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "money" support ADI_INGRES_6
 
 	fi ADFI_170_MONEY_F
 	    description money  :  money(f)
@@ -5197,7 +5363,8 @@ group ADI_NORM_FUNC
 	    operands DB_MNY_TYPE
 	    routine adu_2mnytomny
 
-    operator ADI_PAD_OP
+    operator ADI_PAD_OP type ADI_PREFIX
+	name "pad" support ADI_INGRES_6
 
 	fi ADFI_446_PAD_C
 	    description text  :  pad(c)
@@ -5247,7 +5414,8 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE
 	    routine adu_nvchr_pad
 
-    operator ADI_RIGHT_OP
+    operator ADI_RIGHT_OP type ADI_PREFIX
+	name "right" support ADI_INGRES_6
 
 	fi ADFI_175_RIGHT_C_I
 	    description c  :  right(c,i)
@@ -5333,7 +5501,8 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE DB_INT_TYPE
 	    routine adu_nvchr_right
 
-    operator ADI_SHIFT_OP
+    operator ADI_SHIFT_OP type ADI_PREFIX
+	name "shift" support ADI_INGRES_6
 
 	fi ADFI_177_SHIFT_C_I
 	    description c  :  shift(c,i)
@@ -5408,7 +5577,8 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE DB_INT_TYPE
 	    routine adu_nvchr_shift
 
-    operator ADI_SIN_OP
+    operator ADI_SIN_OP type ADI_PREFIX
+	name "sin" support ADI_INGRES_6
 
 	fi ADFI_179_SIN_F
 	    description f  :  sin(f)
@@ -5417,7 +5587,8 @@ group ADI_NORM_FUNC
 	    result DB_FLT_TYPE
 	    operands DB_FLT_TYPE
 
-    operator ADI_SIZE_OP
+    operator ADI_SIZE_OP type ADI_PREFIX
+	name "size" support ADI_INGRES_6
 
 	fi ADFI_180_SIZE_C
 	    description i  :  size(c)
@@ -5523,7 +5694,8 @@ group ADI_NORM_FUNC
 	    operands DB_LNVCHR_TYPE
 	    routine adu_12strsize
 
-    operator ADI_SQRT_OP
+    operator ADI_SQRT_OP type ADI_PREFIX
+	name "sqrt" support ADI_INGRES_6
 
 	fi ADFI_182_SQRT_F
 	    description f  :  sqrt(f)
@@ -5532,7 +5704,8 @@ group ADI_NORM_FUNC
 	    result DB_FLT_TYPE
 	    operands DB_FLT_TYPE
 
-    operator ADI_SQZ_OP
+    operator ADI_SQZ_OP type ADI_PREFIX
+	name "squeeze" support ADI_INGRES_6
 
 	fi ADFI_445_SQUEEZE_C
 	    description text  :  squeeze(c)
@@ -5582,7 +5755,10 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE
 	    routine adu_nvchr_squeezewhite
 
-    operator ADI_TEXT_OP
+    operator ADI_TEXT_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "text" support ADI_INGRES_6
+	alias "vchar"
 
 	fi ADFI_557_TEXT_ALL
 	    description text  :  text(all)
@@ -5634,7 +5810,9 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE DB_INT_TYPE
 	    routine adu_nvchr_2args
 
-    operator ADI_TRIM_OP
+    operator ADI_TRIM_OP type ADI_PREFIX
+	name "trim" support ADI_INGRES_6 type ADI_PREFIX
+	sqlalias "rtrim" support ADI_INGRES_6
 
 	fi ADFI_190_TRIM_C
 	    description text  :  trim(c)
@@ -5684,7 +5862,9 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE
 	    routine adu_nvchr_trim
 
-    operator ADI_UPPER_OP
+    operator ADI_UPPER_OP type ADI_PREFIX
+	name "uppercase" support ADI_INGRES_6
+	alias "upper"
 
 	fi ADFI_192_UPPERCASE_C
 	    description c  :  uppercase(c)
@@ -5762,7 +5942,8 @@ group ADI_NORM_FUNC
 	    operands DB_INT_TYPE
 	    routine adu_ascii
 
-    operator ADI_USRLN_OP
+    operator ADI_USRLN_OP type ADI_PREFIX
+	name "iiuserlen" support ADI_INGRES_6
 
 	fi ADFI_400_IIUSERLEN_I_I
 	    description i  :  iiuserlen(i,i)
@@ -5772,7 +5953,13 @@ group ADI_NORM_FUNC
 	    operands DB_INT_TYPE DB_INT_TYPE
 	    routine adu_userlen
 
-    operator ADI_USRNM_OP
+    operator ADI_USRNM_OP type ADI_PREFIX
+	name "user" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
+	alias "current_user"
+	alias "usercode" support ADI_INGRES_6
+	alias "username" support ADI_INGRES_6
+	alias "_usercode" support ADI_INGRES_6
+	alias "_username" support ADI_INGRES_6
 
 	fi ADFI_212_USERNAME
 	    description c  :  username()
@@ -5781,7 +5968,9 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_CHR_TYPE
 
-    operator ADI_VARCH_OP
+    operator ADI_VARCH_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "varchar" support ADI_INGRES_6
 
 	fi ADFI_558_VARCHAR_ALL
 	    description varchar  :  varchar(all)
@@ -5833,7 +6022,8 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE DB_INT_TYPE
 	    routine adu_nvchr_2args
 
-    operator ADI_HEX_OP
+    operator ADI_HEX_OP type ADI_PREFIX
+	name "hex" support ADI_INGRES_6
 
 	fi ADFI_368_HEX_CHAR
 	    description varchar  :  hex(char)
@@ -5867,7 +6057,9 @@ group ADI_NORM_FUNC
 	    operands DB_ALL_TYPE
 	    routine adu_hex
 
-    operator ADI_IFNUL_OP
+    operator ADI_IFNUL_OP type ADI_PREFIX
+	name "ifnull" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
+	alias "nvl"
 
 	fi ADFI_374_IFNULL_DATE_DATE
 	    description date  :  ifnull(date,date)
@@ -5996,7 +6188,8 @@ group ADI_NORM_FUNC
             routine adu_ifnull
 
 
-    operator ADI_STRUC_OP
+    operator ADI_STRUC_OP type ADI_PREFIX
+	name "iistructure" support ADI_INGRES_6
 
 	fi ADFI_399_IISTRUCTURE_I
 	    description char  :  iistructure(i)
@@ -6006,7 +6199,8 @@ group ADI_NORM_FUNC
 	    operands DB_INT_TYPE
 	    routine adu_17structure
 
-    operator ADI_DGMT_OP
+    operator ADI_DGMT_OP type ADI_PREFIX
+	name "date_gmt" support ADI_INGRES_6
 
 	fi ADFI_401_DATE_GMT_DATE
 	    description char  :  date_gmt(date)
@@ -6016,7 +6210,8 @@ group ADI_NORM_FUNC
 	    operands DB_DTE_TYPE
 	    routine adu_dgmt
 
-    operator ADI_CHA12_OP
+    operator ADI_CHA12_OP type ADI_PREFIX
+	name "iichar12" support ADI_INGRES_6
 
 	fi ADFI_402_IICHAR12_C
 	    description char  :  iichar12(c)
@@ -6050,7 +6245,8 @@ group ADI_NORM_FUNC
 	    operands DB_VCH_TYPE
 	    routine adu_1strtostr
 
-    operator ADI_CHEXT_OP
+    operator ADI_CHEXT_OP type ADI_PREFIX
+	name "charextract" support ADI_INGRES_6
 
 	fi ADFI_890_CHAREXTRACT_C_I
 	    description varchar  :  charextract(c,i)
@@ -6100,7 +6296,8 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE DB_INT_TYPE
 	    routine adu_nvchr_charextract
 
-    operator ADI_NTRMT_OP
+    operator ADI_NTRMT_OP type ADI_PREFIX
+	name "ii_notrm_txt" support ADI_INGRES_6
 
 	fi ADFI_414_II_NOTRM_TXT_CHAR
 	    description text  :  ii_notrm_txt(char)
@@ -6110,7 +6307,8 @@ group ADI_NORM_FUNC
 	    operands DB_CHA_TYPE
 	    routine adu_notrm
 
-    operator ADI_NTRMV_OP
+    operator ADI_NTRMV_OP type ADI_PREFIX
+	name "ii_notrm_vch" support ADI_INGRES_6
 
 	fi ADFI_415_II_NOTRM_VCH_CHAR
 	    description varchar  :  ii_notrm_vch(char)
@@ -6120,7 +6318,8 @@ group ADI_NORM_FUNC
 	    operands DB_CHA_TYPE
 	    routine adu_notrm
 
-    operator ADI_XYZZY_OP
+    operator ADI_XYZZY_OP type ADI_PREFIX
+	name "xyzzy" support ADI_INGRES_6
 
 	fi ADFI_433_XYZZY_VARCHAR
 	    description varchar  :  xyzzy(all)
@@ -6131,7 +6330,8 @@ group ADI_NORM_FUNC
 	    operands DB_ALL_TYPE
 	    routine adu_xyzzy
 
-    operator ADI_HXINT_OP
+    operator ADI_HXINT_OP type ADI_PREFIX
+	name "iihexint" support ADI_INGRES_6
 
 	fi ADFI_438_IIHEXINT_TEXT
 	    description i  :  iihexint(text)
@@ -6149,7 +6349,8 @@ group ADI_NORM_FUNC
 	    operands DB_VCH_TYPE
 	    routine adu_hxnum
 
-    operator ADI_TB2DI_OP
+    operator ADI_TB2DI_OP type ADI_PREFIX
+	name "ii_tabid_di" support ADI_INGRES_6
 
 	fi ADFI_443_II_TABID_DI_I_I
 	    description char  :  ii_tabid_di(i,i)
@@ -6159,7 +6360,8 @@ group ADI_NORM_FUNC
 	    operands DB_INT_TYPE DB_INT_TYPE
 	    routine adu_tb2di
 
-    operator ADI_DI2TB_OP
+    operator ADI_DI2TB_OP type ADI_PREFIX
+	name "ii_di_tabid" support ADI_INGRES_6
 
 	fi ADFI_444_II_DI_TABID_CHAR
 	    description i  :  ii_di_tabid(char)
@@ -6169,7 +6371,8 @@ group ADI_NORM_FUNC
 	    operands DB_CHA_TYPE
 	    routine adu_di2tb
 
-    operator ADI_DVDSC_OP
+    operator ADI_DVDSC_OP type ADI_PREFIX
+	name "ii_dv_desc" support ADI_INGRES_6
 
 	fi ADFI_654_II_DV_DESC_ALLTYPE
 	    description varchar  :  ii_dv_desc(alltype)
@@ -6179,7 +6382,11 @@ group ADI_NORM_FUNC
 	    operands DB_ALL_TYPE
 	    routine adu_dvdsc
 
-    operator ADI_DEC_OP
+    operator ADI_DEC_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "decimal" support ADI_INGRES_6|ADI_DB2
+	alias "dec"
+	alias "numeric"
 
 	fi ADFI_541_DEC_C_I
 	    description dec  :  decimal(c,i)
@@ -6261,7 +6468,8 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE DB_INT_TYPE
 	    routine adu_2dec_convert
 
-    operator ADI_ETYPE_OP
+    operator ADI_ETYPE_OP type ADI_PREFIX
+	name "ii_ext_type" support ADI_INGRES_6
 
 	fi ADFI_504_II_EXT_TYPE
 	    description int  :  ii_ext_typename(i, i)
@@ -6271,7 +6479,8 @@ group ADI_NORM_FUNC
 	    operands DB_INT_TYPE DB_INT_TYPE
 	    routine adu_exttype
 
-    operator ADI_ELENGTH_OP
+    operator ADI_ELENGTH_OP type ADI_PREFIX
+	name "ii_ext_length" support ADI_INGRES_6
 
 	fi ADFI_505_II_EXT_LENGTH
 	    description int	  :  ii_ext_length(i, i)
@@ -6281,7 +6490,9 @@ group ADI_NORM_FUNC
 	    operands DB_INT_TYPE DB_INT_TYPE
 	    routine adu_extlength
 
-    operator ADI_LOGKEY_OP
+    operator ADI_LOGKEY_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "object_key" support ADI_INGRES_6
 
 	fi ADFI_474_LOGKEY_CHAR
 	    description logical_key  :  logical_key(char)
@@ -6299,7 +6510,9 @@ group ADI_NORM_FUNC
 	    operands DB_LOGKEY_TYPE
 	    routine adu_2logkeytologkey
 
-    operator ADI_TABKEY_OP
+    operator ADI_TABKEY_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "table_key" support ADI_INGRES_6
 
 	fi ADFI_493_TABKEY_CHAR
 	    description table_key  :  table_key(char)
@@ -6317,7 +6530,8 @@ group ADI_NORM_FUNC
 	    operands DB_TABKEY_TYPE
 	    routine adu_2logkeytologkey
 
-    operator ADI_IFTRUE_OP
+    operator ADI_IFTRUE_OP type ADI_PREFIX
+	name "ii_iftrue" support ADI_INGRES_6
 
 	fi ADFI_604_II_IFTRUE_I_ALL
 	    description all  :  ii_iftrue(i,all)
@@ -6328,7 +6542,8 @@ group ADI_NORM_FUNC
 	    operands DB_INT_TYPE DB_ALL_TYPE
 	    routine adu_iftrue
 
-    operator ADI_RESTAB_OP
+    operator ADI_RESTAB_OP type ADI_PREFIX
+	name "resolve_table" support ADI_INGRES_6
 
 	fi ADFI_605_RESTAB_TEXT
 	    description varchar  :  resolve_table(text, text)
@@ -6348,7 +6563,8 @@ group ADI_NORM_FUNC
 	    operands DB_VCH_TYPE DB_VCH_TYPE
 	    routine adu_restab
 
-    operator ADI_GMTSTAMP_OP
+    operator ADI_GMTSTAMP_OP type ADI_PREFIX
+	name "gmt_timestamp" support ADI_INGRES_6
 
 	fi ADFI_615_GMT_TIMESTAMP_I
 	    description char  :  gmt_timestamp(i)
@@ -6358,7 +6574,8 @@ group ADI_NORM_FUNC
 	    operands DB_INT_TYPE
 	    routine adu_18cvrt_gmt
 
-    operator ADI_CPNDMP_OP
+    operator ADI_CPNDMP_OP type ADI_PREFIX
+	name "ii_cpn_dump" support ADI_INGRES_6
 
 	fi ADFI_619_CPNDMP_LVCH
 	    description varchar   :  ii_cpn_dump(long_varchar)
@@ -6368,7 +6585,9 @@ group ADI_NORM_FUNC
 	    operands DB_LVCH_TYPE
 	    routine adu_cpn_dump
 
-    operator ADI_BIT_OP
+    operator ADI_BIT_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	sqlname "bit" support ADI_INGRES_6
 
 	fi ADFI_683_BIT_VARCHAR
 	    description bit  :  bit(varchar)
@@ -6402,7 +6621,9 @@ group ADI_NORM_FUNC
 	    operands DB_VBIT_TYPE
 	    routine adu_mb_move_bits
 
-    operator ADI_VBIT_OP
+    operator ADI_VBIT_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	sqlname "varbit" support ADI_INGRES_6
 
 	fi ADFI_687_VBIT_VARCHAR
 	    description vbit  :  vbit(varchar)
@@ -6436,7 +6657,8 @@ group ADI_NORM_FUNC
 	    operands DB_VBIT_TYPE
 	    routine adu_mb_move_bits
 
-    operator ADI_ROWCNT_OP
+    operator ADI_ROWCNT_OP type ADI_PREFIX
+	name "ii_row_count" support ADI_INGRES_6
 
 	fi ADFI_595_ROWCNT_I
 	    description i  :  ii_row_count(i,i)
@@ -6446,7 +6668,8 @@ group ADI_NORM_FUNC
 	    result DB_INT_TYPE
 	    operands DB_INT_TYPE DB_INT_TYPE
 
-    operator ADI_SESSUSER_OP
+    operator ADI_SESSUSER_OP type ADI_PREFIX
+	name "session_user" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_618_SESSUSER
 	    description char  :  session_user()
@@ -6455,7 +6678,8 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_CHA_TYPE
 
-    operator ADI_SYSUSER_OP
+    operator ADI_SYSUSER_OP type ADI_PREFIX
+	name "system_user" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_596_SYSUSER
 	    description char  :  system_user()
@@ -6464,7 +6688,8 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_CHA_TYPE
 
-    operator ADI_INITUSER_OP
+    operator ADI_INITUSER_OP type ADI_PREFIX
+	name "initial_user" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
 
 	fi ADFI_651_INITUSER
 	    description char  :  initial_user()
@@ -6473,7 +6698,8 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_CHA_TYPE
 
-    operator ADI_ALLOCPG_OP
+    operator ADI_ALLOCPG_OP type ADI_PREFIX
+	name "iitotal_allocated_pages" support ADI_INGRES_6
 
 	fi ADFI_652_IITOTAL_ALLOC_PG
 	    description i  :  iitotal_allocated_pages(i,i)
@@ -6484,7 +6710,8 @@ group ADI_NORM_FUNC
 	    operands DB_INT_TYPE DB_INT_TYPE
 	    routine adu_allocated_pages
 
-    operator ADI_OVERPG_OP
+    operator ADI_OVERPG_OP type ADI_PREFIX
+	name "iitotal_overflow_pages" support ADI_INGRES_6
 
 	fi ADFI_653_IITOTAL_OVERFL_PG
 	    description i  :  iitotal_overflow_pages(i,i)
@@ -6495,7 +6722,10 @@ group ADI_NORM_FUNC
 	    operands DB_INT_TYPE DB_INT_TYPE
 	    routine adu_overflow_pages
 
-    operator ADI_BYTE_OP
+    operator ADI_BYTE_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	sqlname "byte" support ADI_INGRES_6
+	sqlalias "binary"
 
 	fi ADFI_748_BYTE_CHAR
 	    description byte  :  byte(char)
@@ -6594,7 +6824,10 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE DB_INT_TYPE
 	    routine adu_nvchr_2args
 
-    operator ADI_VBYTE_OP
+    operator ADI_VBYTE_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	sqlname "varbyte" support ADI_INGRES_6
+	alias "varbinary"
 
 	fi ADFI_749_VARBYTE_VARCHAR
 	    description vbyte  :  varbyte(varchar)
@@ -6694,7 +6927,8 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE DB_INT_TYPE
 	    routine adu_nvchr_2args
 
-    operator ADI_LOLK_OP
+    operator ADI_LOLK_OP type ADI_PREFIX
+	sqlname "ii_lolk" support ADI_INGRES_6
 
 	fi ADFI_750_II_LOLK_LVCH
 	    description table_key  :  ii_lolk(all)
@@ -6712,7 +6946,8 @@ group ADI_NORM_FUNC
 	    operands DB_LBYTE_TYPE
 	    routine adu_lolk
 
-    operator ADI_PTYPE_OP
+    operator ADI_PTYPE_OP type ADI_PREFIX
+	name "iipermittype" support ADI_INGRES_6
 
 	fi ADFI_789_II_PERM_TYPE
 	    description char	   : iipermittype(int, int)
@@ -6722,7 +6957,8 @@ group ADI_NORM_FUNC
 	    operands DB_INT_TYPE DB_INT_TYPE
 	    routine adu_perm_type
 
-    operator ADI_SOUNDEX_OP
+    operator ADI_SOUNDEX_OP type ADI_PREFIX
+	name "soundex" support ADI_INGRES_6
 
 	fi ADFI_790_SOUNDEX_C
 	    description char  :  soundex(c)
@@ -6772,7 +7008,8 @@ group ADI_NORM_FUNC
 	    operands DB_VBYTE_TYPE
 	    routine adu_19strsoundex
 
-    operator ADI_BDATE4_OP
+    operator ADI_BDATE4_OP type ADI_PREFIX
+	name "_date4" support ADI_INGRES_6
 
 	fi ADFI_981__DATE4_I
 	    description c  :  _date4(i)
@@ -6783,7 +7020,8 @@ group ADI_NORM_FUNC
 	    operands DB_INT_TYPE
 	    routine adu_1cvrt_date4
 
-    operator ADI_INTEXT_OP
+    operator ADI_INTEXT_OP type ADI_PREFIX
+	name "intextract" support ADI_INGRES_6
 
 	fi ADFI_805_INTEXTRACT_BYTE
 	    description int2  :  intextract(byte,i)
@@ -6801,7 +7039,8 @@ group ADI_NORM_FUNC
 	    operands DB_VBYTE_TYPE DB_INT_TYPE
 	    routine adu_intextract
 
-    operator ADI_ISDST_OP
+    operator ADI_ISDST_OP type ADI_PREFIX
+	name "isdst" support ADI_INGRES_6
 
 	fi ADFI_1202_ISDST_DATE
 	    description i  :  isdst(date)
@@ -6811,7 +7050,8 @@ group ADI_NORM_FUNC
 	    operands DB_DTE_TYPE
 	    routine adu_date_isdst
 
-    operator ADI_CURDATE_OP
+    operator ADI_CURDATE_OP type ADI_PREFIX
+	name "current_date" support ADI_INGRES_6|ADI_ANSI
 
 	fi ADFI_1233_CURRENT_DATE
 	    description ansichar  :  current_date()
@@ -6820,7 +7060,8 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_ADTE_TYPE
 
-    operator ADI_CURTIME_OP
+    operator ADI_CURTIME_OP type ADI_PREFIX
+	name "current_time" support ADI_INGRES_6|ADI_ANSI
 
 	fi ADFI_1234_CURRENT_TIME
 	    description timewtz :  current_time()
@@ -6829,7 +7070,8 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_TMW_TYPE
 
-    operator ADI_CURTMSTMP_OP
+    operator ADI_CURTMSTMP_OP type ADI_PREFIX
+	name "current_timestamp" support ADI_INGRES_6|ADI_ANSI
 
 	fi ADFI_1235_CURRENT_TMSTMP
 	    description tmstmpwtz  :  current_timestamp()
@@ -6838,7 +7080,8 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_TSW_TYPE
 
-    operator ADI_LCLTIME_OP
+    operator ADI_LCLTIME_OP type ADI_PREFIX
+	name "local_time" support ADI_INGRES_6|ADI_ANSI
 
 	fi ADFI_1236_LOCAL_TIME
 	    description timelcl :  local_time()
@@ -6847,7 +7090,8 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_TME_TYPE
 
-    operator ADI_LCLTMSTMP_OP
+    operator ADI_LCLTMSTMP_OP type ADI_PREFIX
+	name "local_timestamp" support ADI_INGRES_6|ADI_ANSI
 
 	fi ADFI_1237_LOCAL_TMSTMP
 	    description tmstmplcl :  local_timestamp()
@@ -6856,7 +7100,8 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_TSTMP_TYPE
 
-    operator ADI_SESSION_PRIV_OP
+    operator ADI_SESSION_PRIV_OP type ADI_PREFIX
+	name "session_priv" support ADI_INGRES_6
 
 	fi ADFI_954_SESSION_PRIV
 	    description char  :  session_priv(all)
@@ -6867,7 +7112,8 @@ group ADI_NORM_FUNC
 	    operands DB_ALL_TYPE
 	    routine adu_sesspriv
 
-    operator ADI_IITBLSTAT_OP
+    operator ADI_IITBLSTAT_OP type ADI_PREFIX
+	name "iitblstat" support ADI_INGRES_6
 
 	fi ADFI_955_IITBLSTAT
 	    description int  :  iitblstat(int)
@@ -6878,7 +7124,9 @@ group ADI_NORM_FUNC
 	    operands DB_INT_TYPE
 	    routine adu_iitblstat
 
-    operator ADI_LONG_VARCHAR
+    operator ADI_LONG_VARCHAR type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "long_varchar" support ADI_INGRES_6
 
 	fi ADFI_1088_LVCH_CHAR
 	    description long_varchar  :  long_varchar(char)
@@ -6953,7 +7201,10 @@ group ADI_NORM_FUNC
 	    operands DB_LBYTE_TYPE
 	    routine adu_lvch_move
 
-    operator ADI_LONG_BYTE
+    operator ADI_LONG_BYTE type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "long_byte" support ADI_INGRES_6
+	alias "long_binary"
 
 	fi ADFI_1095_LBYTE_C
 	    description lbyte  : lbyte(c)
@@ -7064,7 +7315,9 @@ group ADI_NORM_FUNC
 	    operands DB_LNVCHR_TYPE
 	    routine adu_long_coerce
 
-    operator ADI_BIT_ADD_OP
+    operator ADI_BIT_ADD_OP type ADI_PREFIX
+	def_flags ADI_F262144_ASSOCIATIVE
+	sqlname "bit_add" support ADI_INGRES_6
 
 	fi ADFI_796_BIT_ADD_BYTE
 	    description byte  :  bit_add(byte, byte)
@@ -7074,7 +7327,9 @@ group ADI_NORM_FUNC
 	    operands DB_BYTE_TYPE DB_BYTE_TYPE
 	    routine adu_bit_add
 
-    operator ADI_BIT_AND_OP
+    operator ADI_BIT_AND_OP type ADI_PREFIX
+	def_flags ADI_F262144_ASSOCIATIVE
+	sqlname "bit_and" support ADI_INGRES_6
 
 	fi ADFI_797_BIT_AND_BYTE
 	    description byte  :  bit_and(byte, byte)
@@ -7084,7 +7339,8 @@ group ADI_NORM_FUNC
 	    operands DB_BYTE_TYPE DB_BYTE_TYPE
 	    routine adu_bit_and
 
-    operator ADI_BIT_NOT_OP
+    operator ADI_BIT_NOT_OP type ADI_PREFIX
+	sqlname "bit_not" support ADI_INGRES_6
 
 	fi ADFI_798_BIT_NOT_BYTE
 	    description byte  :  bit_not(byte)
@@ -7094,7 +7350,9 @@ group ADI_NORM_FUNC
 	    operands DB_BYTE_TYPE
 	    routine adu_bit_not
 
-    operator ADI_BIT_OR_OP
+    operator ADI_BIT_OR_OP type ADI_PREFIX
+	def_flags ADI_F262144_ASSOCIATIVE
+	sqlname "bit_or" support ADI_INGRES_6
 
 	fi ADFI_799_BIT_OR_BYTE
 	    description byte  :  bit_or(byte, byte)
@@ -7104,7 +7362,9 @@ group ADI_NORM_FUNC
 	    operands DB_BYTE_TYPE DB_BYTE_TYPE
 	    routine adu_bit_or
 
-    operator ADI_BIT_XOR_OP
+    operator ADI_BIT_XOR_OP type ADI_PREFIX
+	def_flags ADI_F262144_ASSOCIATIVE
+	sqlname "bit_xor" support ADI_INGRES_6
 
 	fi ADFI_800_BIT_XOR_BYTE
 	    description byte  :  bit_xor(byte, byte)
@@ -7114,7 +7374,8 @@ group ADI_NORM_FUNC
 	    operands DB_BYTE_TYPE DB_BYTE_TYPE
 	    routine adu_bit_xor
 
-    operator ADI_IPADDR_OP
+    operator ADI_IPADDR_OP type ADI_PREFIX
+	sqlname "ii_ipaddr" support ADI_INGRES_6
 
 	fi ADFI_801_IPADDR_C
 	    description byte  :  ii_ipaddr(c)
@@ -7184,7 +7445,8 @@ group ADI_NORM_FUNC
 	    operands DB_VCH_TYPE
 	    routine adu_ipaddr
 
-    operator ADI_HASH_OP
+    operator ADI_HASH_OP type ADI_PREFIX
+	name "hash" support ADI_INGRES_6
 
 	fi ADFI_807_HASH_ALL
 	    description int4  :  hash(all)
@@ -7194,7 +7456,8 @@ group ADI_NORM_FUNC
 	    operands DB_ALL_TYPE
 	    routine adu_hash
 
-    operator ADI_RANDOMF_OP
+    operator ADI_RANDOMF_OP type ADI_PREFIX
+	name "randomf" support ADI_INGRES_6
 
 	fi ADFI_808_RANDOMF_VOID
 	    description f  :  randomf(void)
@@ -7222,7 +7485,8 @@ group ADI_NORM_FUNC
 	    operands DB_FLT_TYPE DB_FLT_TYPE
 	    routine adu_randomf_rangef
 
-    operator ADI_RANDOM_OP
+    operator ADI_RANDOM_OP type ADI_PREFIX
+	name "random" support ADI_INGRES_6
 
 	fi ADFI_811_RANDOM_VOID
 	    description int  :  random(void)
@@ -7241,7 +7505,8 @@ group ADI_NORM_FUNC
 	    operands DB_INT_TYPE DB_INT_TYPE
 	    routine adu_random_range
 
-    operator ADI_UUID_CREATE_OP
+    operator ADI_UUID_CREATE_OP type ADI_PREFIX
+	name "uuid_create" support ADI_INGRES_6
 
 	fi ADFI_813_UUID_CREATE_VOID
 	    description byte  :  uuid_create(void)
@@ -7251,7 +7516,8 @@ group ADI_NORM_FUNC
 	    result DB_BYTE_TYPE
 	    routine adu_uuid_create
 
-    operator ADI_UUID_TO_CHAR_OP
+    operator ADI_UUID_TO_CHAR_OP type ADI_PREFIX
+	name "uuid_to_char" support ADI_INGRES_6
 
 	fi ADFI_814_UUID_TO_CHAR_BYTE
 	    description char :  uuid_to_char(byte)
@@ -7261,7 +7527,8 @@ group ADI_NORM_FUNC
 	    operands DB_BYTE_TYPE
 	    routine adu_uuid_to_char
 
-    operator ADI_UUID_FROM_CHAR_OP
+    operator ADI_UUID_FROM_CHAR_OP type ADI_PREFIX
+	name "uuid_from_char" support ADI_INGRES_6
 
 	fi ADFI_815_UUID_FROM_CHAR_C
 	    description byte :  uuid_from_char(c)
@@ -7295,7 +7562,8 @@ group ADI_NORM_FUNC
 	    operands DB_VCH_TYPE
 	    routine adu_uuid_from_char
 
-    operator ADI_UUID_COMPARE_OP
+    operator ADI_UUID_COMPARE_OP type ADI_PREFIX
+	name "uuid_compare" support ADI_INGRES_6
 
 	fi ADFI_819_UUID_COMPARE_BYTE_BYTE
 	    description int :  uuid_compare(byte,byte)
@@ -7305,7 +7573,9 @@ group ADI_NORM_FUNC
 	    operands DB_BYTE_TYPE DB_BYTE_TYPE
 	    routine adu_uuid_compare
 
-    operator ADI_SUBSTRING_OP
+    operator ADI_SUBSTRING_OP type ADI_PREFIX
+	sqlname "substring" support ADI_INGRES_6
+	alias "substr"
 
 	fi ADFI_820_SUBSTRING_C_INT
 	    description varchar  :  substring(c, int)
@@ -7463,7 +7733,8 @@ group ADI_NORM_FUNC
 	    operands DB_LNVCHR_TYPE DB_INT_TYPE DB_INT_TYPE
 	    routine adu_14lvch_substrlen
 
-    operator ADI_UNHEX_OP
+    operator ADI_UNHEX_OP type ADI_PREFIX
+	name "unhex" support ADI_INGRES_6
 
 	fi ADFI_828_UNHEX_CHAR
 	    description varchar  :  unhex(char)
@@ -7497,7 +7768,8 @@ group ADI_NORM_FUNC
 	    operands DB_ALL_TYPE
 	    routine adu_unhex
 
-    operator ADI_TABLEINFO_OP
+    operator ADI_TABLEINFO_OP type ADI_PREFIX
+	name "iitableinfo" support ADI_INGRES_6
 
 	fi ADFI_1074_TABLEINFO
 	    description i  :  iitableinfo(varchar, i,i)
@@ -7508,7 +7780,8 @@ group ADI_NORM_FUNC
 	    operands DB_VCH_TYPE DB_INT_TYPE DB_INT_TYPE
 	    routine adu_tableinfo
 
-    operator ADI_POS_OP
+    operator ADI_POS_OP type ADI_PREFIX
+	sqlname "position" support ADI_INGRES_6
 
 	fi ADFI_878_POS_STR_STR
 	    description i  :  position(str,str)
@@ -7684,7 +7957,8 @@ group ADI_NORM_FUNC
 	    operands DB_LBYTE_TYPE DB_LBYTE_TYPE DB_INT_TYPE
 	    routine adu_18lvch_position
 
-    operator ADI_ATRIM_OP
+    operator ADI_ATRIM_OP type ADI_PREFIX
+	sqlname "atrim" support ADI_INGRES_6
 
 	fi ADFI_884_ATRIM_C
 	    description text  :  ANSI trim(c)
@@ -7732,7 +8006,8 @@ group ADI_NORM_FUNC
 	    result DB_NVCHR_TYPE
 	    operands DB_NVCHR_TYPE DB_CHA_TYPE
 
-    operator ADI_CHLEN_OP
+    operator ADI_CHLEN_OP type ADI_PREFIX
+	sqlname "character_length" support ADI_INGRES_6|ADI_ANSI
 
 	fi ADFI_848_CHLEN_C
 	    description i  :  char_length(c)
@@ -7814,7 +8089,8 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE
 	    routine adu_nvchr_length
 
-    operator ADI_OCLEN_OP
+    operator ADI_OCLEN_OP type ADI_PREFIX
+	sqlname "octet_length" support ADI_INGRES_6|ADI_ANSI
 
 	fi ADFI_858_OCLEN_C
 	    description i  :  octet_length(c)
@@ -7896,7 +8172,8 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE
 	    routine adu_23octetlength
 
-    operator ADI_BLEN_OP
+    operator ADI_BLEN_OP type ADI_PREFIX
+	sqlname "bit_length" support ADI_INGRES_6
 
 	fi ADFI_868_BLEN_C
 	    description i  :  bit_length(c)
@@ -7976,7 +8253,9 @@ group ADI_NORM_FUNC
 	    result DB_INT_TYPE
 	    operands DB_NVCHR_TYPE
 
-    operator ADI_NCHAR_OP
+    operator ADI_NCHAR_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "nchar" support ADI_INGRES_6
 
 	fi ADFI_1106_NCHAR_ALL
 	    description nchar  :  nchar(all)
@@ -7994,7 +8273,9 @@ group ADI_NORM_FUNC
 	    operands DB_ALL_TYPE DB_INT_TYPE
 	    routine adu_nvchr_2args
 
-    operator ADI_NVCHAR_OP
+    operator ADI_NVCHAR_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "nvarchar" support ADI_INGRES_6
 
 	fi ADFI_1107_NVCHAR_ALL
 	    description nvarchar  :  nvarchar(all)
@@ -8012,7 +8293,8 @@ group ADI_NORM_FUNC
 	    operands DB_ALL_TYPE DB_INT_TYPE
 	    routine adu_nvchr_2args
 
-    operator ADI_UTF16TOUTF8_OP
+    operator ADI_UTF16TOUTF8_OP type ADI_PREFIX
+	name "iiutf16_to_utf8" support ADI_INGRES_6
 
 	fi ADFI_1108_UTF16TOUTF8_NCHR
 	    description varchar  :  iiutf16_to_utf8(nchar)
@@ -8030,7 +8312,8 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE
 	    routine adu_nvchr_toutf8
 
-    operator ADI_UTF8TOUTF16_OP
+    operator ADI_UTF8TOUTF16_OP type ADI_PREFIX
+	name "iiutf8_to_utf16" support ADI_INGRES_6
 
 	fi ADFI_1110_UTF8TOUTF16_NCHR
 	    description nchar  :  iiutf8_to_utf16(varchar)
@@ -8048,7 +8331,10 @@ group ADI_NORM_FUNC
 	    operands DB_VCH_TYPE
 	    routine adu_nvchr_fromutf8
 
-    operator ADI_I8_OP
+    operator ADI_I8_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "bigint" support ADI_INGRES_6
+	alias "int8"
 
 	fi ADFI_1116_INT8_C
 	    description i  :  int8(c)
@@ -8130,7 +8416,8 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE
 	    routine adu_1int_coerce
 
-    operator ADI_COWGT_OP
+    operator ADI_COWGT_OP type ADI_PREFIX
+	name "collation_weight" support ADI_INGRES_6
 
 	fi ADFI_1190_COWGT_C
 	    description varbyte : collation_weight(c)
@@ -8196,7 +8483,9 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE DB_INT_TYPE
 	    routine adu_ucollweightn
 
-    operator ADI_ADTE_OP
+    operator ADI_ADTE_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "ansidate" support ADI_INGRES_6|ADI_ANSI
 
 	fi ADFI_1238_ANSI_DATE
 	    description ansidate  :  ansidate(all)
@@ -8207,7 +8496,10 @@ group ADI_NORM_FUNC
 	    operands DB_ALL_TYPE
 	    routine adu_21ansi_strtodt
 
-    operator ADI_TMWO_OP
+    operator ADI_TMWO_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "time" support ADI_INGRES_6|ADI_ANSI
+	alias "time_wo_tz"
 
 	fi ADFI_1239_ANSI_TMWO
 	    description timewotz  :  time_wo_tz(all)
@@ -8218,7 +8510,9 @@ group ADI_NORM_FUNC
 	    operands DB_ALL_TYPE
 	    routine adu_21ansi_strtodt
 
-    operator ADI_TMW_OP
+    operator ADI_TMW_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "time_with_tz" support ADI_INGRES_6|ADI_ANSI
 
 	fi ADFI_1240_ANSI_TMW
 	    description timewtz  :  time_with_tz(all)
@@ -8229,7 +8523,9 @@ group ADI_NORM_FUNC
 	    operands DB_ALL_TYPE
 	    routine adu_21ansi_strtodt
 
-    operator ADI_TME_OP
+    operator ADI_TME_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "time_local" support ADI_INGRES_6|ADI_ANSI
 
 	fi ADFI_1241_ANSI_LCTME
 	    description time  :  time_local(all)
@@ -8240,7 +8536,10 @@ group ADI_NORM_FUNC
 	    operands DB_ALL_TYPE
 	    routine adu_21ansi_strtodt
 
-    operator ADI_TSWO_OP
+    operator ADI_TSWO_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "timestamp" support ADI_INGRES_6|ADI_ANSI
+	alias "timestamp_wo_tz"
 
 	fi ADFI_1242_ANSI_TSWO
 	    description tmstmpwotz  :  timestamp_wo_tz(all)
@@ -8251,7 +8550,9 @@ group ADI_NORM_FUNC
 	    operands DB_ALL_TYPE
 	    routine adu_21ansi_strtodt
 
-    operator ADI_TSW_OP
+    operator ADI_TSW_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "timestamp_with_tz" support ADI_INGRES_6|ADI_ANSI
 
 	fi ADFI_1243_ANSI_TSW
 	    description tmstmpwtz  :  timestamp_with_tz(all)
@@ -8262,7 +8563,9 @@ group ADI_NORM_FUNC
 	    operands DB_ALL_TYPE
 	    routine adu_21ansi_strtodt
 
-    operator ADI_TSTMP_OP
+    operator ADI_TSTMP_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "timestamp_local" support ADI_INGRES_6|ADI_ANSI
 
 	fi ADFI_1244_ANSI_TSTMP
 	    description tmstmp  :  timestamp_local(all)
@@ -8273,7 +8576,9 @@ group ADI_NORM_FUNC
 	    operands DB_ALL_TYPE
 	    routine adu_21ansi_strtodt
 
-    operator ADI_INDS_OP
+    operator ADI_INDS_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "interval_dtos" support ADI_INGRES_6|ADI_ANSI
 
 	fi ADFI_1245_ANSI_INDS
 	    description tmstmp  :  interval_dtos(all)
@@ -8284,7 +8589,9 @@ group ADI_NORM_FUNC
 	    operands DB_ALL_TYPE
 	    routine adu_21ansi_strtodt
 
-    operator ADI_INYM_OP
+    operator ADI_INYM_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "interval_ytom" support ADI_INGRES_6|ADI_ANSI
 
 	fi ADFI_1246_ANSI_INYM
 	    description tmstmp  :  interval_ytom(all)
@@ -8295,7 +8602,8 @@ group ADI_NORM_FUNC
 	    operands DB_ALL_TYPE
 	    routine adu_21ansi_strtodt
 
-    operator ADI_YPART_OP
+    operator ADI_YPART_OP type ADI_PREFIX
+	name "year" support ADI_INGRES_6
 
 	fi ADFI_1247_YEARPART
 	    description i  :  year(date/time)
@@ -8306,7 +8614,8 @@ group ADI_NORM_FUNC
 	    operands DB_DTE_TYPE
 	    routine adu_year_part
 
-    operator ADI_QPART_OP
+    operator ADI_QPART_OP type ADI_PREFIX
+	name "quarter" support ADI_INGRES_6
 
 	fi ADFI_1248_QUARTERPART
 	    description i  :  quarter(date/time)
@@ -8317,7 +8626,8 @@ group ADI_NORM_FUNC
 	    operands DB_DTE_TYPE
 	    routine adu_quarter_part
 
-    operator ADI_MPART_OP
+    operator ADI_MPART_OP type ADI_PREFIX
+	name "month" support ADI_INGRES_6
 
 	fi ADFI_1249_MONTHPART
 	    description i  :  month(date/time)
@@ -8328,7 +8638,8 @@ group ADI_NORM_FUNC
 	    operands DB_DTE_TYPE
 	    routine adu_month_part
 
-    operator ADI_WPART_OP
+    operator ADI_WPART_OP type ADI_PREFIX
+	name "week" support ADI_INGRES_6
 
 	fi ADFI_1250_WEEKPART
 	    description i  :  week(date/time)
@@ -8339,7 +8650,8 @@ group ADI_NORM_FUNC
 	    operands DB_DTE_TYPE
 	    routine adu_week_part
 
-    operator ADI_WIPART_OP
+    operator ADI_WIPART_OP type ADI_PREFIX
+	name "week_iso" support ADI_INGRES_6
 
 	fi ADFI_1251_WEEKISOPART
 	    description i  :  week_iso(date/time)
@@ -8350,7 +8662,8 @@ group ADI_NORM_FUNC
 	    operands DB_DTE_TYPE
 	    routine adu_weekiso_part
 
-    operator ADI_DYPART_OP
+    operator ADI_DYPART_OP type ADI_PREFIX
+	name "day" support ADI_INGRES_6
 
 	fi ADFI_1252_DAYPART
 	    description i  :  day(date/time)
@@ -8361,7 +8674,8 @@ group ADI_NORM_FUNC
 	    operands DB_DTE_TYPE
 	    routine adu_day_part
 
-    operator ADI_HPART_OP
+    operator ADI_HPART_OP type ADI_PREFIX
+	name "hour" support ADI_INGRES_6
 
 	fi ADFI_1253_HOURPART
 	    description i  :  hour(date/time)
@@ -8372,7 +8686,8 @@ group ADI_NORM_FUNC
 	    operands DB_DTE_TYPE
 	    routine adu_hour_part
 
-    operator ADI_MIPART_OP
+    operator ADI_MIPART_OP type ADI_PREFIX
+	name "minute" support ADI_INGRES_6
 
 	fi ADFI_1254_MINUTEPART
 	    description i  :  minute(date/time)
@@ -8383,7 +8698,8 @@ group ADI_NORM_FUNC
 	    operands DB_DTE_TYPE
 	    routine adu_minute_part
 
-    operator ADI_SPART_OP
+    operator ADI_SPART_OP type ADI_PREFIX
+	name "second" support ADI_INGRES_6
 
 	fi ADFI_1255_SECONDPART
 	    description i  :  second(date/time)
@@ -8394,7 +8710,8 @@ group ADI_NORM_FUNC
 	    operands DB_DTE_TYPE
 	    routine adu_second_part
 
-    operator ADI_MSPART_OP
+    operator ADI_MSPART_OP type ADI_PREFIX
+	name "microsecond" support ADI_INGRES_6
 
 	fi ADFI_1256_MICROSECONDPART
 	    description i  :  microsecond(date/time)
@@ -8405,7 +8722,8 @@ group ADI_NORM_FUNC
 	    operands DB_DTE_TYPE
 	    routine adu_microsecond_part
 
-    operator ADI_NPART_OP
+    operator ADI_NPART_OP type ADI_PREFIX
+	name "nanosecond" support ADI_INGRES_6
 
 	fi ADFI_1257_NANOSECONDPART
 	    description i  :  nanosecond(date/time)
@@ -8416,7 +8734,8 @@ group ADI_NORM_FUNC
 	    operands DB_DTE_TYPE
 	    routine adu_nanosecond_part
 
-    operator ADI_ROUND_OP
+    operator ADI_ROUND_OP type ADI_PREFIX
+	name "round" support ADI_INGRES_6
 
 	fi ADFI_1283_DECROUND
 	    description dec  :  round(dec, i)
@@ -8434,7 +8753,9 @@ group ADI_NORM_FUNC
 	    operands DB_FLT_TYPE DB_INT_TYPE
 	    routine adu_fltround
 
-    operator ADI_TRUNC_OP
+    operator ADI_TRUNC_OP type ADI_PREFIX
+	name "trunc" support ADI_INGRES_6
+	alias "truncate"
 
 	fi ADFI_1284_DECTRUNC
 	    description dec  :  trunc[ate](dec, i)
@@ -8452,7 +8773,9 @@ group ADI_NORM_FUNC
 	    operands DB_FLT_TYPE DB_INT_TYPE
 	    routine adu_flttrunc
 
-    operator ADI_CEIL_OP
+    operator ADI_CEIL_OP type ADI_PREFIX
+	name "ceil" support ADI_INGRES_6
+	alias "ceiling"
 
 	fi ADFI_1285_DECCEIL
 	    description dec  :  ceil[ing](dec)
@@ -8470,7 +8793,8 @@ group ADI_NORM_FUNC
 	    operands DB_FLT_TYPE
 	    routine adu_fltceil
 
-    operator ADI_FLOOR_OP
+    operator ADI_FLOOR_OP type ADI_PREFIX
+	name "floor" support ADI_INGRES_6
 
 	fi ADFI_1286_DECFLOOR
 	    description dec  :  floor(dec)
@@ -8488,7 +8812,8 @@ group ADI_NORM_FUNC
 	    operands DB_FLT_TYPE
 	    routine adu_fltfloor
 
-    operator ADI_CHR_OP
+    operator ADI_CHR_OP type ADI_PREFIX
+	name "chr" support ADI_INGRES_6
 
 	fi ADFI_1287_CHR
 	    description dec  :  chr(int)
@@ -8498,7 +8823,8 @@ group ADI_NORM_FUNC
 	    operands DB_INT_TYPE
 	    routine adu_chr
 
-    operator ADI_LTRIM_OP
+    operator ADI_LTRIM_OP type ADI_PREFIX
+	sqlname "ltrim" support ADI_INGRES_6
 
 	fi ADFI_1288_LTRIM_CHAR
 	    description char  :  ltrim(char)
@@ -8530,7 +8856,8 @@ group ADI_NORM_FUNC
 	    result DB_NVCHR_TYPE
 	    operands DB_NVCHR_TYPE
 
-    operator ADI_LPAD_OP
+    operator ADI_LPAD_OP type ADI_PREFIX
+	sqlname "lpad" support ADI_INGRES_6
 
 	fi ADFI_1298_LPAD_VARCHAR
 	    description varchar  :  lpad(varchar,n)
@@ -8564,7 +8891,8 @@ group ADI_NORM_FUNC
 	    operands DB_CHA_TYPE DB_INT_TYPE DB_VCH_TYPE
 	    routine adu_27alpad
 
-    operator ADI_RPAD_OP
+    operator ADI_RPAD_OP type ADI_PREFIX
+	sqlname "rpad" support ADI_INGRES_6
 
 	fi ADFI_1302_RPAD_VARCHAR
 	    description varchar  :  rpad(varchar,n)
@@ -8598,7 +8926,8 @@ group ADI_NORM_FUNC
 	    operands DB_CHA_TYPE DB_INT_TYPE DB_VCH_TYPE
 	    routine adu_28arpad
 
-    operator ADI_REPL_OP
+    operator ADI_REPL_OP type ADI_PREFIX
+	name "replace" support ADI_INGRES_6
 
 	fi ADFI_1306_REPL_VARCH_VARCH_VARCH
 	    description varchar  :  replace(varchar,varchar,varchar)
@@ -8634,7 +8963,8 @@ group ADI_NORM_FUNC
 	    operands DB_VBYTE_TYPE DB_VBYTE_TYPE DB_VBYTE_TYPE
 	    routine adu_29replace_raw
 
-    operator ADI_ACOS_OP
+    operator ADI_ACOS_OP type ADI_PREFIX
+	name "acos" support ADI_INGRES_6
 
 	fi ADFI_1308_ACOS_F
 	    description f  :  acos(f)
@@ -8643,7 +8973,8 @@ group ADI_NORM_FUNC
 	    result DB_FLT_TYPE
 	    operands DB_FLT_TYPE
 
-    operator ADI_ASIN_OP
+    operator ADI_ASIN_OP type ADI_PREFIX
+	name "asin" support ADI_INGRES_6
 
 	fi ADFI_1309_ASIN_F
 	    description f  :  asin(f)
@@ -8652,7 +8983,8 @@ group ADI_NORM_FUNC
 	    result DB_FLT_TYPE
 	    operands DB_FLT_TYPE
 
-    operator ADI_TAN_OP
+    operator ADI_TAN_OP type ADI_PREFIX
+	name "tan" support ADI_INGRES_6
 
 	fi ADFI_1310_TAN_F
 	    description f  :  tan(f)
@@ -8661,7 +8993,8 @@ group ADI_NORM_FUNC
 	    result DB_FLT_TYPE
 	    operands DB_FLT_TYPE
 
-    operator ADI_PI_OP
+    operator ADI_PI_OP type ADI_PREFIX
+	name "pi" support ADI_INGRES_6
 
 	fi ADFI_1311_PI
 	    description f  :  pi()
@@ -8669,7 +9002,8 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_FLT_TYPE
 
-    operator ADI_SIGN_OP
+    operator ADI_SIGN_OP type ADI_PREFIX
+	name "sign" support ADI_INGRES_6
 
 	fi ADFI_1312_SIGN_I
 	    description i  :  sign(i)
@@ -8692,7 +9026,8 @@ group ADI_NORM_FUNC
 	    result DB_INT_TYPE
 	    operands DB_DEC_TYPE
 
-    operator ADI_ATAN2_OP
+    operator ADI_ATAN2_OP type ADI_PREFIX
+	name "atan2" support ADI_INGRES_6
 
 	fi ADFI_1315_ATAN2_F_F
 	    description f  :  atan2(f, f)
@@ -8701,7 +9036,8 @@ group ADI_NORM_FUNC
 	    result DB_FLT_TYPE
 	    operands DB_FLT_TYPE DB_FLT_TYPE
 
-    operator ADI_BYTEXT_OP
+    operator ADI_BYTEXT_OP type ADI_PREFIX
+	name "byteextract" support ADI_INGRES_6
 
 	fi ADFI_406_BYTEEXTRACT_C_I
 	    description char  :  byteextract(c,i)
@@ -8735,7 +9071,8 @@ group ADI_NORM_FUNC
 	    operands DB_VCH_TYPE DB_INT_TYPE
 	    routine adu_16strindex
 
-	operator ADI_NUMNORM_OP
+    operator ADI_NUMNORM_OP type ADI_PREFIX
+	sqlname "numericnorm" support ADI_INGRES_6
 
 	fi ADFI_1375_NUMERIC_NORM
 	    description byte : numericnorm(all)
@@ -8746,7 +9083,8 @@ group ADI_NORM_FUNC
 	    operands DB_ALL_TYPE
 	    routine adu_numeric_norm
 
-	operator ADI_UNORM_OP
+    operator ADI_UNORM_OP type ADI_PREFIX
+	name "unorm" support ADI_INGRES_6
 
 	fi ADFI_1388_UNORM_UTF8
 	    description varchar  :  unorm(str)
@@ -8766,7 +9104,8 @@ group ADI_NORM_FUNC
 	    operands DB_NVCHR_TYPE
 	    routine adu_unorm
 
-	operator ADI_PATCOMP_OP
+    operator ADI_PATCOMP_OP type ADI_PREFIX
+	sqlname "patcomp" support ADI_INGRES_6
 
 	fi ADFI_1392_PATCOMP_VCH
 	    description pat : pat_compile(varchar)
@@ -8792,7 +9131,9 @@ group ADI_NORM_FUNC
 	    result DB_PAT_TYPE
 	    operands DB_NVCHR_TYPE
 
-    operator ADI_LNVCHR_OP
+    operator ADI_LNVCHR_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	name "long_nvarchar" support ADI_INGRES_6
 
 	fi ADFI_1400_LNVCHR_LVCH
 	    description long_nvarchar  :  long_nvarchar(long_varchar)
@@ -8868,7 +9209,8 @@ group ADI_NORM_FUNC
 	    operands DB_LTXT_TYPE
 	    routine adu_lvch_move
 	   
-    operator ADI_LASTID_OP
+    operator ADI_LASTID_OP type ADI_PREFIX
+	name "last_identity" support ADI_INGRES_6
 
 	fi ADFI_1441_LAST_IDENTITY
 	    description i  :  last_identity()
@@ -8878,7 +9220,9 @@ group ADI_NORM_FUNC
 	    result DB_INT_TYPE
 	    routine adu_last_id
 
-    operator ADI_BOO_OP
+    operator ADI_BOO_OP type ADI_PREFIX
+	def_flags ADI_F524288_EXPL_COERCION
+	sqlname "boolean" support ADI_INGRES_6
 
         fi ADFI_1442_BOO_CHAR
             description boolean :  boolean(char)
@@ -8928,7 +9272,8 @@ group ADI_NORM_FUNC
             operands DB_BOO_TYPE
             routine adu_bool_coerce
 
-    operator ADI_CMPTVER_OP
+    operator ADI_CMPTVER_OP type ADI_PREFIX
+	name "iicmptversion" support ADI_INGRES_6
 
 	fi ADFI_1451_CMPTVER
 	    description varchar : iicmptversion(i)
@@ -8939,7 +9284,9 @@ group ADI_NORM_FUNC
 	    routine adu_cmptversion
 
 
-    operator ADI_GREATEST_OP
+    operator ADI_GREATEST_OP type ADI_PREFIX
+	def_flags ADI_F262144_ASSOCIATIVE
+	name "greatest" support ADI_INGRES_6
 
 	fi ADFI_1452_GREATEST_ALL_ALL
 	    description all : greatest(all,all)
@@ -8951,7 +9298,9 @@ group ADI_NORM_FUNC
 	    routine adu_greatest
 
 
-    operator ADI_LEAST_OP
+    operator ADI_LEAST_OP type ADI_PREFIX
+	def_flags ADI_F262144_ASSOCIATIVE
+	name "least" support ADI_INGRES_6
 
 	fi ADFI_1453_LEAST_ALL_ALL
 	    description all : least(all,all)
@@ -8963,7 +9312,9 @@ group ADI_NORM_FUNC
 	    routine adu_least
 
 
-    operator ADI_GREATER_OP
+    operator ADI_GREATER_OP type ADI_PREFIX
+	def_flags ADI_F262144_ASSOCIATIVE
+	name "greater" support ADI_INGRES_6
 
 	fi ADFI_1454_GREATER_ALL_ALL
 	    description all : greater(all,all)
@@ -8975,7 +9326,9 @@ group ADI_NORM_FUNC
 	    routine adu_greatest
 
 
-    operator ADI_LESSER_OP
+    operator ADI_LESSER_OP type ADI_PREFIX
+	def_flags ADI_F262144_ASSOCIATIVE
+	name "lesser" support ADI_INGRES_6
 
 	fi ADFI_1455_LESSER_ALL_ALL
 	    description all : lesser(all,all)
@@ -8986,7 +9339,8 @@ group ADI_NORM_FUNC
 	    operands DB_ALL_TYPE DB_ALL_TYPE
 	    routine adu_least
 	   
-	operator ADI_NVL2_OP
+    operator ADI_NVL2_OP type ADI_PREFIX
+	name "nvl2" support ADI_INGRES_6|ADI_ANSI|ADI_DB2
  
 	fi ADFI_1457_NVL2_ANY
 	    description all  :  nvl2(all,all,all)
@@ -8997,7 +9351,8 @@ group ADI_NORM_FUNC
 	    operands DB_ALL_TYPE DB_ALL_TYPE DB_ALL_TYPE
 	    routine adu_nvl2
 	    
-    operator ADI_GENERATEDIGIT_OP
+    operator ADI_GENERATEDIGIT_OP type ADI_PREFIX
+	name "generate_digit" support ADI_INGRES_6
 
 	fi ADFI_1458_GENERATEDIGIT
 	    description varchar  :  generate_digit(varchar,varchar)
@@ -9007,7 +9362,8 @@ group ADI_NORM_FUNC
 	    operands DB_VCH_TYPE DB_VCH_TYPE
 	    routine adu_strgenerate_digit
 
-    operator ADI_VALIDATEDIGIT_OP
+    operator ADI_VALIDATEDIGIT_OP type ADI_PREFIX
+	name "validate_digit" support ADI_INGRES_6
 
 	fi ADFI_1459_VALIDATEDIGIT
 	    description int  :  validate_digit(varchar,varchar)
@@ -9017,7 +9373,8 @@ group ADI_NORM_FUNC
 	    operands DB_VCH_TYPE DB_VCH_TYPE
 	    routine adu_strvalidate_digit
 
-    operator ADI_AES_DECRYPT_OP
+    operator ADI_AES_DECRYPT_OP type ADI_PREFIX
+	name "aes_decrypt" support ADI_INGRES_6
 
 	fi ADFI_1464_AES_DECRYPT_VARBYTE
 	    description varbyte  :  aes_decrypt(varbyte,varbyte)
@@ -9027,7 +9384,8 @@ group ADI_NORM_FUNC
 	    operands DB_VBYTE_TYPE DB_VBYTE_TYPE
 	    routine adu_aesdecrypt
 
-    operator ADI_AES_ENCRYPT_OP
+    operator ADI_AES_ENCRYPT_OP type ADI_PREFIX
+	name "aes_encrypt" support ADI_INGRES_6
 
 	fi ADFI_1465_AES_ENCRYPT_VARBYTE
 	    description varbyte  :  aes_encrypt(varbyte,varbyte)
@@ -9037,7 +9395,8 @@ group ADI_NORM_FUNC
 	    operands DB_VBYTE_TYPE DB_VBYTE_TYPE
 	    routine adu_aesencrypt
 	    
-    operator ADI_SOUNDEX_DM_OP
+    operator ADI_SOUNDEX_DM_OP type ADI_PREFIX
+	name "soundex_dm" support ADI_INGRES_6
 
 	fi ADFI_1470_SOUNDEX_DM
 	    description varchar  :  soundex_dm(varchar)
@@ -9047,7 +9406,8 @@ group ADI_NORM_FUNC
 	    operands DB_VCH_TYPE
 	    routine adu_soundex_dm
 
-    operator ADI_SINGLECHK_OP
+    operator ADI_SINGLECHK_OP type ADI_PREFIX
+	name "singlechk" support ADI_INGRES_6
 
 	fi ADFI_1474_SINGLECHK_ALL
 	    description all : singlechk(all)
@@ -9057,10 +9417,25 @@ group ADI_NORM_FUNC
 	    result DB_ALL_TYPE
 	    operands DB_ALL_TYPE
 
-    operator ADI_POINT_OP
+    operator ADI_DATEHASH_OP type ADI_PREFIX
+	name "norm_date_hash" support ADI_INGRES_6
+
+	fi ADFI_1475_NORM_DATE_HASH
+	    description char  :  norm_date_hash(date)
+	    lenspec ADI_FIXED 12
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_DTE_TYPE
+	    operands DB_DTE_TYPE
+	    routine adu_norm_date_hash
+
+    operator ADI_POINT_OP type ADI_PREFIX
+        name "pointfromtext" support ADI_INGRES_6
+        alias "st_pointfromtext"
+        alias "pointfromwkb"
+        alias "st_pointfromwkb"
 
     fi ADFI_1618_POINT_FROM_TEXT
-        description bpoint    : pointfromtext(text)
+        description point    : pointfromtext(text)
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_POINT_TYPE
@@ -9068,7 +9443,7 @@ group ADI_NORM_FUNC
 	    routine adu_point_fromText
         
     fi ADFI_1619_POINT_FROM_WKB
-        description bpointbin    : pointfromwkb(lbyte)
+        description pointbin    : pointfromwkb(lbyte)
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_POINT_TYPE
@@ -9076,7 +9451,7 @@ group ADI_NORM_FUNC
 	    routine adu_point_fromWKB
         
     fi ADFI_1679_POINT_S_FROM_TEXT
-        description bpoint    : pointfromtext(text, int)
+        description point    : pointfromtext(text, int)
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_POINT_TYPE
@@ -9084,14 +9459,16 @@ group ADI_NORM_FUNC
 	    routine adu_point_srid_fromText
         
     fi ADFI_1680_POINT_S_FROM_WKB
-        description bpointbin    : pointfromwkb(lbyte, int)
+        description pointbin    : pointfromwkb(lbyte, int)
 	    lenspec ADI_FIXED sizeof(ADP_PERIPHERAL)
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_POINT_TYPE
 	    operands DB_LBYTE_TYPE DB_INT_TYPE
 	    routine adu_point_srid_fromWKB
         
-    operator ADI_X_OP
+    operator ADI_X_OP type ADI_PREFIX
+        name "x" support ADI_INGRES_6
+        alias "st_x"
 
 	fi ADFI_1604_POINT_X
 	    description double  : x(point)
@@ -9101,7 +9478,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE
 	    routine adu_point_x
 
-    operator ADI_Y_OP
+    operator ADI_Y_OP type ADI_PREFIX
+        name "y" support ADI_INGRES_6
+        alias "st_y"
 
 	fi ADFI_1605_POINT_Y
 	    description double  : y(point)
@@ -9111,7 +9490,11 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE
 	    routine adu_point_y
 
-    operator ADI_LINE_OP
+    operator ADI_LINE_OP type ADI_PREFIX
+        name "linefromtext" support ADI_INGRES_6
+        alias "st_linefromtext"
+        alias "linefromwkb"
+        alias "st_linefromwkb"
 
     fi ADFI_1620_LINE_FROM_TEXT
         description line    : linefromtext(text)
@@ -9145,7 +9528,11 @@ group ADI_NORM_FUNC
 	    operands DB_LBYTE_TYPE DB_INT_TYPE
 	    routine adu_linestring_srid_fromWKB
         
-    operator ADI_POLY_OP
+    operator ADI_POLY_OP type ADI_PREFIX
+        name "polyfromtext" support ADI_INGRES_6
+        alias "st_polyfromtext"
+        alias "polyfromwkb"
+        alias "st_polyfromwkb"
 
     fi ADFI_1622_POLY_FROM_TEXT
         description poly    : polyfromtext(text)
@@ -9179,7 +9566,11 @@ group ADI_NORM_FUNC
 	    operands DB_LBYTE_TYPE DB_INT_TYPE
 	    routine adu_polygon_srid_fromWKB
         
-    operator ADI_MPOINT_OP
+    operator ADI_MPOINT_OP type ADI_PREFIX
+        name "mpointfromtext" support ADI_INGRES_6
+        alias "st_mpointfromtext"
+        alias "mpointfromwkb"
+        alias "st_mpointfromwkb"
 
     fi ADFI_1624_MPOINT_FROM_TEXT
         description mpoint    : mpointfromtext(text)
@@ -9213,7 +9604,11 @@ group ADI_NORM_FUNC
 	    operands DB_LBYTE_TYPE DB_INT_TYPE
 	    routine adu_multipoint_srid_fromWKB
         
-    operator ADI_MLINE_OP
+    operator ADI_MLINE_OP type ADI_PREFIX
+        name "mlinefromtext" support ADI_INGRES_6
+        alias "st_mlinefromtext"
+        alias "mlinefromwkb"
+        alias "st_mlinefromwkb"
 
     fi ADFI_1626_MLINE_FROM_TEXT
         description mline    : mlinefromtext(text)
@@ -9247,7 +9642,11 @@ group ADI_NORM_FUNC
 	    operands DB_LBYTE_TYPE DB_INT_TYPE
 	    routine adu_multilinestring_srid_fromWKB
         
-    operator ADI_MPOLY_OP
+    operator ADI_MPOLY_OP type ADI_PREFIX
+        name "mpolyfromtext" support ADI_INGRES_6
+        alias "st_mpolyfromtext"
+        alias "mpolyfromwkb"
+        alias "st_mpolyfromwkb"
 
     fi ADFI_1628_MPOLY_FROM_TEXT
         description mpoly    : mpolyfromtext(text)
@@ -9281,7 +9680,15 @@ group ADI_NORM_FUNC
 	    operands DB_LBYTE_TYPE DB_INT_TYPE
 	    routine adu_multipolygon_srid_fromWKB
         
-    operator ADI_GEOMWKT_OP
+    operator ADI_GEOMWKT_OP type ADI_PREFIX
+        name "geometryfromtext" support ADI_INGRES_6
+        alias "st_geometryfromtext"
+        alias "geomfromtext"
+        alias "st_geomfromtext"
+        alias "asText"
+        alias "st_asText"
+        alias "asTextRound"
+        alias "st_asTextRound"
 
     fi ADFI_1630_GEOM_AS_TEXT
         description geom    : asText(geom)
@@ -9315,7 +9722,13 @@ group ADI_NORM_FUNC
 	    operands DB_LVCH_TYPE DB_INT_TYPE
 	    routine adu_geometry_srid_fromText
         
-    operator ADI_GEOMWKB_OP
+    operator ADI_GEOMWKB_OP type ADI_PREFIX
+        name "geometryfromwkb" support ADI_INGRES_6
+        alias "st_geometryfromwkb"
+        alias "geomfromwkb"
+        alias "st_geomfromwkb"
+        alias "asBinary"
+        alias "st_asBinary"
 
     fi ADFI_1631_GEOM_AS_BINARY
         description geom    : asBinary(geom)
@@ -9341,7 +9754,8 @@ group ADI_NORM_FUNC
 	    operands DB_LBYTE_TYPE DB_INT_TYPE
 	    routine adu_geometry_srid_fromWKB
         
-    operator ADI_NBR_OP
+    operator ADI_NBR_OP type ADI_PREFIX
+        name "nbr" support ADI_INGRES_6
 
     fi ADFI_1633_NBR
         description geom    : nbr(geom, geom)
@@ -9351,7 +9765,8 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE DB_GEOM_TYPE
 	    routine adu_geom_nbr
 
-    operator ADI_HILBERT_OP
+    operator ADI_HILBERT_OP type ADI_PREFIX
+        name "hilbert" support ADI_INGRES_6
 
     fi ADFI_1634_HILBERT
         description geom    : hilbert(geom)
@@ -9361,7 +9776,9 @@ group ADI_NORM_FUNC
 	    operands DB_NBR_TYPE
 	    routine adu_geom_hilbert
 
-    operator ADI_OVERLAPS_OP
+    operator ADI_OVERLAPS_OP type ADI_PREFIX
+        name "overlaps" support ADI_INGRES_6
+        alias "st_overlaps"
 
     fi ADFI_1635_OVERLAPS
         description boolean    : overlaps(geom, geom)
@@ -9371,7 +9788,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE DB_GEOM_TYPE
 	    routine adu_geom_overlaps
 
-    operator ADI_INSIDE_OP
+    operator ADI_INSIDE_OP type ADI_PREFIX
+        name "inside" support ADI_INGRES_6
+        alias "st_inside"
 
     fi ADFI_1636_INSIDE
         description boolean    : inside(geom, geom)
@@ -9381,7 +9800,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE DB_GEOM_TYPE
 	    routine adu_inside
 
-    operator ADI_PERIMETER_OP
+    operator ADI_PERIMETER_OP type ADI_PREFIX
+        name "perimeter" support ADI_INGRES_6
+        alias "st_perimeter"
 
     fi ADFI_1637_PERIMETER
         description geom    : perimeter(geom)
@@ -9391,7 +9812,8 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE
 	    routine adu_geom_perimeter
 
-    operator ADI_GEOMNAME_OP
+    operator ADI_GEOMNAME_OP type ADI_PREFIX
+        name "iigeomname" support ADI_INGRES_6
 
     fi ADFI_1643_GEOM_NAME
         description char    : iigeomname(i)
@@ -9401,7 +9823,8 @@ group ADI_NORM_FUNC
 	    operands DB_INT_TYPE
 	    routine adu_geom_name
 
-    operator ADI_GEOMDIMEN_OP
+    operator ADI_GEOMDIMEN_OP type ADI_PREFIX
+        name "iigeomdimensions" support ADI_INGRES_6
 
     fi ADFI_1644_GEOM_DIMEN
         description int    : iigeomdimensions(i)
@@ -9411,7 +9834,9 @@ group ADI_NORM_FUNC
 	    operands DB_INT_TYPE
 	    routine adu_geom_dimensions
 
-	operator ADI_DIMENSION_OP
+    operator ADI_DIMENSION_OP type ADI_PREFIX
+        name "dimension" support ADI_INGRES_6
+        alias "st_dimension"
 
     fi ADFI_1645_DIMENSION
         description i    : dimension(geom)
@@ -9421,7 +9846,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE
 	    routine adu_dimension
 
-	operator ADI_GEOMETRY_TYPE_OP
+    operator ADI_GEOMETRY_TYPE_OP type ADI_PREFIX
+        name "geometrytype" support ADI_INGRES_6
+        alias "st_geometrytype"
 
     fi ADFI_1646_GEOMETRY_TYPE
         description varchar : geometrytype(geom)
@@ -9431,7 +9858,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE
 	    routine adu_geometry_type
 	    
-	operator ADI_BOUNDARY_OP
+    operator ADI_BOUNDARY_OP type ADI_PREFIX
+        name "boundary" support ADI_INGRES_6
+        alias "st_boundary"
 
     fi ADFI_1647_BOUNDARY
         description geom : boundary(geom)
@@ -9441,7 +9870,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE
 	    routine adu_boundary
 
-	operator ADI_ENVELOPE_OP
+    operator ADI_ENVELOPE_OP type ADI_PREFIX
+        name "envelope" support ADI_INGRES_6
+        alias "st_envelope"
 
     fi ADFI_1648_ENVELOPE
         description geom : envelope(geom)
@@ -9451,7 +9882,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE
 	    routine adu_envelope
 
-	operator ADI_EQUALS_OP
+    operator ADI_EQUALS_OP type ADI_PREFIX
+        name "equals" support ADI_INGRES_6
+        alias "st_equals"
 
     fi ADFI_1649_EQUALS
         description int : equals(geom, geom)
@@ -9461,7 +9894,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE DB_GEOM_TYPE
 	    routine adu_equals
 
-	operator ADI_DISJOINT_OP
+    operator ADI_DISJOINT_OP type ADI_PREFIX
+        name "disjoint" support ADI_INGRES_6
+        alias "st_disjoint"
 
     fi ADFI_1650_DISJOINT
         description int : disjoint(geom, geom)
@@ -9471,7 +9906,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE DB_GEOM_TYPE
 	    routine adu_disjoint
 
-	operator ADI_INTERSECTS_OP
+    operator ADI_INTERSECTS_OP type ADI_PREFIX
+        name "intersects" support ADI_INGRES_6
+        alias "st_intersects"
 
     fi ADFI_1651_INTERSECTS
         description int : intersects(geom, geom)
@@ -9481,7 +9918,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE DB_GEOM_TYPE
 	    routine adu_intersects
 
-	operator ADI_TOUCHES_OP
+    operator ADI_TOUCHES_OP type ADI_PREFIX
+        name "touches" support ADI_INGRES_6
+        alias "st_touches"
 
     fi ADFI_1652_TOUCHES
         description int : touches(geom, geom)
@@ -9491,7 +9930,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE DB_GEOM_TYPE
 	    routine adu_touches
 
-	operator ADI_CROSSES_OP
+    operator ADI_CROSSES_OP type ADI_PREFIX
+        name "crosses" support ADI_INGRES_6
+        alias "st_crosses"
 
     fi ADFI_1653_CROSSES
         description int : crosses(geom, geom)
@@ -9501,7 +9942,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE DB_GEOM_TYPE
 	    routine adu_crosses
 
-	operator ADI_WITHIN_OP
+    operator ADI_WITHIN_OP type ADI_PREFIX
+        name "within" support ADI_INGRES_6
+        alias "st_within"
 
     fi ADFI_1654_WITHIN
         description int : within(geom, geom)
@@ -9511,7 +9954,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE DB_GEOM_TYPE
 	    routine adu_within
 
-	operator ADI_CONTAINS_OP
+    operator ADI_CONTAINS_OP type ADI_PREFIX
+        name "contains" support ADI_INGRES_6
+        alias "st_contains"
 
     fi ADFI_1655_CONTAINS
         description int : contains(geom, geom)
@@ -9521,7 +9966,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE DB_GEOM_TYPE
 	    routine adu_contains
 
-	operator ADI_RELATE_OP
+    operator ADI_RELATE_OP type ADI_PREFIX
+        name "relate" support ADI_INGRES_6
+        alias "st_relate"
 
     fi ADFI_1656_RELATE
         description int : relate(geom, geom, char)
@@ -9531,7 +9978,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE DB_GEOM_TYPE DB_CHR_TYPE
 	    routine adu_relate
 
-	operator ADI_DISTANCE_OP
+    operator ADI_DISTANCE_OP type ADI_PREFIX
+        name "distance" support ADI_INGRES_6
+        alias "st_distance"
 
     fi ADFI_1657_DISTANCE
         description f : distance(geom, geom)
@@ -9541,7 +9990,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE DB_GEOM_TYPE
 	    routine adu_distance
 
-	operator ADI_INTERSECTION_OP
+    operator ADI_INTERSECTION_OP type ADI_PREFIX
+        name "intersection" support ADI_INGRES_6
+        alias "st_intersection"
 
     fi ADFI_1658_INTERSECTION
         description geom : intersection(geom, geom)
@@ -9551,7 +10002,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE DB_GEOM_TYPE
 	    routine adu_intersection
 
-	operator ADI_DIFFERENCE_OP
+    operator ADI_DIFFERENCE_OP type ADI_PREFIX
+        name "difference" support ADI_INGRES_6
+        alias "st_difference"
 
     fi ADFI_1659_DIFFERENCE
         description geom : difference(geom, geom)
@@ -9561,7 +10014,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE DB_GEOM_TYPE
 	    routine adu_difference
 
-	operator ADI_SYMDIFF_OP
+    operator ADI_SYMDIFF_OP type ADI_PREFIX
+        name "symdifference" support ADI_INGRES_6
+        alias "st_symdifference"
 
     fi ADFI_1660_SYMDIFF
         description geom : symdifference(geom, geom)
@@ -9571,7 +10026,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE DB_GEOM_TYPE
 	    routine adu_sym_difference
 
-	operator ADI_BUFFER_OP
+    operator ADI_BUFFER_OP type ADI_PREFIX
+        name "buffer" support ADI_INGRES_6
+        alias "st_buffer"
 
     fi ADFI_1661_BUFFER_ONE
         description geom : buffer(geom, f)
@@ -9589,7 +10046,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE DB_FLT_TYPE DB_VCH_TYPE
 	    routine adu_buffer_two
 
-	operator ADI_CONVEXHULL_OP
+    operator ADI_CONVEXHULL_OP type ADI_PREFIX
+        name "convexhull" support ADI_INGRES_6
+        alias "st_convexhull"
 
     fi ADFI_1663_CONVEXHULL
         description geom : convexhull(geom)
@@ -9599,7 +10058,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE
 	    routine adu_convexhull
 
-	operator ADI_POINTN_OP
+    operator ADI_POINTN_OP type ADI_PREFIX
+        name "pointn" support ADI_INGRES_6
+        alias "st_pointn"
 
     fi ADFI_1664_POINTN
         description geom : pointn(geom, i)
@@ -9609,7 +10070,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE DB_INT_TYPE
 	    routine adu_pointn
 
-	operator ADI_STARTPOINT_OP
+    operator ADI_STARTPOINT_OP type ADI_PREFIX
+        name "startpoint" support ADI_INGRES_6
+        alias "st_startpoint"
 
     fi ADFI_1665_STARTPOINT
         description geom : startpoint(geom)
@@ -9619,7 +10082,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE
 	    routine adu_startpoint
 
-	operator ADI_ENDPOINT_OP
+    operator ADI_ENDPOINT_OP type ADI_PREFIX
+        name "endpoint" support ADI_INGRES_6
+        alias "st_endpoint"
 
     fi ADFI_1666_ENDPOINT
         description geom : endpoint(geom)
@@ -9629,7 +10094,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE
 	    routine adu_endpoint
 
-	operator ADI_ISCLOSED_OP
+    operator ADI_ISCLOSED_OP type ADI_PREFIX
+        name "isclosed" support ADI_INGRES_6
+        alias "st_isclosed"
 
     fi ADFI_1667_ISCLOSED
         description i : isclosed(geom)
@@ -9639,7 +10106,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE
 	    routine adu_isclosed
 
-	operator ADI_ISRING_OP
+    operator ADI_ISRING_OP type ADI_PREFIX
+        name "isring" support ADI_INGRES_6
+        alias "st_isring"
 
     fi ADFI_1668_ISRING
         description i : isring(geom)
@@ -9649,7 +10118,8 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE
 	    routine adu_isring
 
-	operator ADI_STLENGTH_OP
+    operator ADI_STLENGTH_OP type ADI_PREFIX
+        name "st_length" support ADI_INGRES_6
 
     fi ADFI_1669_STLENGTH
         description f : st_length(geom)
@@ -9659,7 +10129,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE
 	    routine adu_stlength
 
-	operator ADI_CENTROID_OP
+    operator ADI_CENTROID_OP type ADI_PREFIX
+        name "centroid" support ADI_INGRES_6
+        alias "st_centroid"
 
     fi ADFI_1670_CENTROID
         description geom : centroid(geom)
@@ -9669,7 +10141,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE
 	    routine adu_centroid
 
-	operator ADI_PNTONSURFACE_OP
+    operator ADI_PNTONSURFACE_OP type ADI_PREFIX
+        name "pointonsurface" support ADI_INGRES_6
+        alias "st_pointonsurface"
 
     fi ADFI_1671_PNTONSURFACE
         description geom : pointonsurface(geom)
@@ -9679,7 +10153,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE
 	    routine adu_pointonsurface
 
-	operator ADI_AREA_OP
+    operator ADI_AREA_OP type ADI_PREFIX
+        name "area" support ADI_INGRES_6
+        alias "st_area"
 
     fi ADFI_1672_AREA
         description f : area(geom)
@@ -9689,7 +10165,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE
 	    routine adu_area
 
-	operator ADI_EXTERIORRING_OP
+    operator ADI_EXTERIORRING_OP type ADI_PREFIX
+        name "exteriorring" support ADI_INGRES_6
+        alias "st_exteriorring"
 
     fi ADFI_1673_EXTERIORRING
         description geom : exteriorring(geom)
@@ -9699,7 +10177,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE
 	    routine adu_exteriorring
 
-	operator ADI_NINTERIORRING_OP
+    operator ADI_NINTERIORRING_OP type ADI_PREFIX
+        name "numinteriorring" support ADI_INGRES_6
+        alias "st_numinteriorring"
 
     fi ADFI_1674_NINTERIORRING
         description i : numinteriorring(geom)
@@ -9709,7 +10189,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE
 	    routine adu_numinteriorring
 
-	operator ADI_INTERIORRINGN_OP
+    operator ADI_INTERIORRINGN_OP type ADI_PREFIX
+        name "interiorringn" support ADI_INGRES_6
+        alias "st_interiorringn"
 
     fi ADFI_1675_INTERIORRINGN
         description geom : interiorringn(geom, i)
@@ -9719,7 +10201,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE DB_INT_TYPE
 	    routine adu_interiorringn
 
-	operator ADI_NUMGEOMETRIES_OP
+    operator ADI_NUMGEOMETRIES_OP type ADI_PREFIX
+        name "numgeometries" support ADI_INGRES_6
+        alias "st_numgeometries"
 
     fi ADFI_1676_NUMGEOMETRIES
         description i : numgeometries(geom)
@@ -9729,7 +10213,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE
 	    routine adu_numgeometries
 
-	operator ADI_GEOMETRYN_OP
+    operator ADI_GEOMETRYN_OP type ADI_PREFIX
+        name "geometryn" support ADI_INGRES_6
+        alias "st_geometryn"
 
     fi ADFI_1677_GEOMETRYN
         description geom : geometryn(geom, i)
@@ -9739,7 +10225,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE DB_INT_TYPE
 	    routine adu_geometryn
 
-    operator ADI_ISEMPTY_OP
+    operator ADI_ISEMPTY_OP type ADI_PREFIX
+        name "isempty" support ADI_INGRES_6
+        alias "st_isempty"
 
     fi ADFI_1639_ISEMPTY
         description i : isempty(geom) : int - 1 = TRUE, 0 = FALSE, -1 = OTHERWISE
@@ -9749,7 +10237,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE
 	    routine adu_isempty
 	
-    operator ADI_ISSIMPLE_OP
+    operator ADI_ISSIMPLE_OP type ADI_PREFIX
+        name "issimple" support ADI_INGRES_6
+        alias "st_issimple"
 
     fi ADFI_1640_ISSIMPLE
         description i : issimple(geom) : int - 1 = TRUE, 0 = FALSE, -1 = OTHERWISE
@@ -9759,7 +10249,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE
 	    routine adu_issimple
 
-    operator ADI_UNION_OP
+    operator ADI_UNION_OP type ADI_PREFIX
+        name "union" support ADI_INGRES_6
+        alias "st_union"
 
     fi ADFI_1638_UNION
         description geom    : union(geom, geom)
@@ -9769,7 +10261,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE DB_GEOM_TYPE
 	    routine adu_geom_union
 
-    operator ADI_SRID_OP
+    operator ADI_SRID_OP type ADI_PREFIX
+        name "srid" support ADI_INGRES_6
+        alias "st_srid"
 
     fi ADFI_1678_SRID
         description i : srid(geom)
@@ -9779,7 +10273,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE
 	    routine adu_srid
 	
-    operator ADI_NUMPOINTS_OP
+    operator ADI_NUMPOINTS_OP type ADI_PREFIX
+        name "numpoints" support ADI_INGRES_6
+        alias "st_numpoints"
 
     fi ADFI_1693_NUMPOINTS
 	description i : numpoints(geom) : integer
@@ -9789,7 +10285,9 @@ group ADI_NORM_FUNC
     	    operands DB_GEOM_TYPE
     	    routine adu_numpoints
 
-    operator ADI_TRANSFORM_OP
+    operator ADI_TRANSFORM_OP type ADI_PREFIX
+        name "transform" support ADI_INGRES_6
+        alias "st_transform"
 
     fi ADFI_1696_TRANSFORM
         description geom : transform(geom,srid) 
@@ -9799,7 +10297,9 @@ group ADI_NORM_FUNC
 	    operands DB_GEOM_TYPE DB_INT_TYPE
 	    routine adu_transform
 	    
-	operator ADI_GEOMWKTRAW_OP
+    operator ADI_GEOMWKTRAW_OP type ADI_PREFIX
+        name "asTextRaw" support ADI_INGRES_6
+        alias "st_asTextRaw"
 
     fi ADFI_1694_GEOM_AS_TEXT_RAW
         description geom    : asTextRaw(geom)
@@ -9809,7 +10309,11 @@ group ADI_NORM_FUNC
         operands DB_GEOM_TYPE
         routine adu_geom_asTextRaw
 	
-    operator ADI_GEOMC_OP
+    operator ADI_GEOMC_OP type ADI_PREFIX
+        name "geomcollfromtext" support ADI_INGRES_6
+        alias "st_geomcollfromtext"
+        alias "geomcollfromwkb"
+        alias "st_geomcollfromwkb"
 
     fi ADFI_1697_GEOMC_FROM_TEXT
         description geomc    : geomcollfrom(text)
@@ -9843,6 +10347,8 @@ group ADI_NORM_FUNC
         operands DB_LBYTE_TYPE DB_INT_TYPE
         routine adu_geometrycollection_srid_fromWKB
         
+
+
 group ADI_COPY_COERCION
 
     operator ADI_NOOP

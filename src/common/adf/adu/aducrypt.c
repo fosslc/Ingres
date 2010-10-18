@@ -23,6 +23,9 @@
 **
 **  History:    
 **      14-dec-2009 (toumi01) -- created for SIR 122403
+**	14-oct-2010 (miket) SIR 122403
+**	   A design refinement: normalize the varbyte length to little-
+**	   endian so that explicitly encrypted data is more portable.
 **/
 
 /*  Defines of other constants  */
@@ -138,6 +141,15 @@ DB_DATA_VALUE     *rdv)
 	psave += AES_BLOCK;
     }
 
+#ifdef BIG_ENDIAN_INT
+    /* normalize the plaintext length to little-endian for portability */
+    {
+	uchar swap = rdv->db_data[0];
+	rdv->db_data[0] = rdv->db_data[1];
+	rdv->db_data[1] = swap;
+    }
+#endif
+
     /* if decrypted data fails sanity check return nothing */
     sizer = (u_i2)((DB_TEXT_STRING *) rdv->db_data)->db_t_count;
     if (sizer > rdv->db_length - sizeof(u_i2))
@@ -208,7 +220,10 @@ DB_DATA_VALUE     *rdv)
 			nrounds;
     unsigned char key[KEYLENGTH(KEYBITS)];
     u_i4 rk[RKLENGTH(KEYBITS)];
-    unsigned char residue[AES_BLOCK];
+    unsigned char localbuf[AES_BLOCK];
+#ifdef BIG_ENDIAN_INT
+    bool		swapped = FALSE;
+#endif
 
     /* check and set up the parameters */
     if ((db_stat = adu_lenaddr(adf_scb, dv1, &size1, &p1)) != E_DB_OK)
@@ -249,11 +264,31 @@ DB_DATA_VALUE     *rdv)
     i = size1/AES_BLOCK;
     for ( ; i > 0; i-- )
     {
+#ifdef BIG_ENDIAN_INT
+	/* normalize the plaintext length to little-endian for portability */
+	if (!swapped)
+	{
+	    uchar swap;
+	    /* a copy of the 1st AES block for swapping the length bytes */
+	    MEcopy(p1, AES_BLOCK, localbuf);
+	    swap = localbuf[0];
+	    localbuf[0] = localbuf[1];
+	    localbuf[1] = swap;
+	    p1 = localbuf;		/* for a moment p1 -> localbuf */
+	}
+#endif
 	/* CBC cipher mode */
 	if (pprevblk)
 	    for ( j = 0 ; j < AES_BLOCK ; j++ )
 		p1[j] ^= pprevblk[j];
 	adu_rijndaelEncrypt(rk, nrounds, p1, psave);
+#ifdef BIG_ENDIAN_INT
+	if (!swapped)
+	{
+	    swapped = TRUE;
+	    p1 = dv1->db_data;		/* restore p1 to usual value */
+	}
+#endif
 	pprevblk = psave;
 	p1 += AES_BLOCK;
 	psave += AES_BLOCK;
@@ -265,13 +300,22 @@ DB_DATA_VALUE     *rdv)
     */
     if (size1 > 0)
     {
-	MEfill((u_i2)sizeof(residue), 0, (PTR)&residue);
-	MEcopy(p1, size1, residue);
+	MEfill((u_i2)sizeof(localbuf), 0, (PTR)&localbuf);
+	MEcopy(p1, size1, localbuf);
+#ifdef BIG_ENDIAN_INT
+	/* normalize the plaintext length to little-endian for portability */
+	if (!swapped)
+	{
+	    uchar swap = localbuf[0];
+	    localbuf[0] = localbuf[1];
+	    localbuf[1] = swap;
+	}
+#endif
 	/* CBC cipher mode */
 	if (pprevblk)
 	    for ( j = 0 ; j < AES_BLOCK ; j++ )
-		residue[j] ^= pprevblk[j];
-	adu_rijndaelEncrypt(rk, nrounds, residue, psave);
+		localbuf[j] ^= pprevblk[j];
+	adu_rijndaelEncrypt(rk, nrounds, localbuf, psave);
     }
     /*
     ** result length preordained for ADI_O1AES

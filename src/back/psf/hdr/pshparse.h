@@ -563,6 +563,8 @@
 **	    Pass with-clauses to psl-ct1-create-table.
 **	2-Sep-2010 (kschendel) b124347
 **	    Add trace point PS152 to trace some cache-dynamic decisions.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 */
 
 /*
@@ -1820,6 +1822,11 @@ typedef struct _PSS_DECVAR PSS_DECVAR;  /* forward declaration */
 **	    that yacc can bloody well do what it's told.
 **	    Access to the parser state is necessary in some low level
 **	    contexts, such as "make constant similar".
+**       5-Oct-2010 (hanal04) Bug 124529
+**          Add pss_stmt_flags2 to make room for PSS_STMT_NO_CACHEDYN. 
+**          Used to disable cache dynamic on a statement level basis. 
+**          Currently only used with prepared statements with VLUPs in 
+**          the target list.
 */
 typedef struct _PSS_SESBLK
 {
@@ -2319,6 +2326,9 @@ ULT_VECTOR_MACRO(PSS_TBITS, PSS_TVAO) pss_trace;
 					/* table-level ENCRYPTION= parsed */
 #define		PSS_2_PASSPHRASE	0x0002L
 					/* table-level PASSPHRASE= parsed */
+#define     PSS_STMT_NO_CACHEDYN        0x0004L
+                                        /* indicates this is query must not
+                                        ** be cached */
 i4		    pss_flattening_flags;
 
 					/*
@@ -7111,7 +7121,8 @@ pst_clrrng(
 FUNC_EXTERN DMT_ATT_ENTRY *
 pst_coldesc(
 	PSS_RNGTAB         *rngentry,
-	DB_ATT_NAME        *colname);
+	char		   *colname,
+	i4		   colnamelen);
 FUNC_EXTERN DB_STATUS
 pst_prepare(
 	PSQ_CB             *psq_cb,

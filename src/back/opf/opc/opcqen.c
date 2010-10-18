@@ -140,6 +140,8 @@
 **	    Changes to support reorganization of QEF_AHD, QEN_NODE structs.
 **	3-Jun-2009 (kschendel) b122118
 **	    Minor cleanup, delete unused adbase parameters.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 [@history_template@]...
 **/
 
@@ -719,10 +721,12 @@ opc_qnatts(
 	*/
     RDR_INFO		*rel;
 
-	/* dmt_size holds the size of the array that is required to hold
-	** the attribute description that we are producing.
-	*/
-    i4			dmt_size;
+    DMT_ATT_ENTRY	*rel_att;
+    i4			dmt_mem_size;
+    char		*nextname;
+    char		attbuf[sizeof(DB_ATT_NAME) + 1];
+    char		*att_nmstr;
+    i4			att_nmlen;
 
 	/* Iatt and prev_iatt point the the current and previous attribute
 	** descriptions that we are building.
@@ -776,9 +780,17 @@ opc_qnatts(
     /* If there are one or more atts */
     if (qn->qen_natts > 0)
     {
-	/* figure out how big our attribute description will be */
-	dmt_size = sizeof (qn->qen_atts[0]) * qn->qen_natts;
-	qn->qen_atts = (DMT_ATT_ENTRY **) opu_qsfmem(global, dmt_size);
+	/*
+	/* alloc space for att pointers
+	** 
+        ** We could allocate the DMT_ATT_ENTRY and space for attribute names
+	** if we loop through and calculate attr_nametot
+	** (or generate short attribute names (rel%d,%d,%d) with
+	** tab_base,tab_index,attid, but this might make the op150 output
+	** difficult to read)
+	*/
+	dmt_mem_size = DB_ALIGN_MACRO(sizeof (DMT_ATT_ENTRY *) * qn->qen_natts);
+	qn->qen_atts = (DMT_ATT_ENTRY **) opu_qsfmem(global, dmt_mem_size);
 
 	/* begin the compilation of the qen_prow CX */
 #ifdef OPT_F045_QENPROW
@@ -854,12 +866,7 @@ opc_qnatts(
 		rel = NULL;
 	    }
 
-	    /* fill in the next element in qn->qen_atts; */
-	    qn->qen_atts[qn->qen_natts] = 
-	       (DMT_ATT_ENTRY *) opu_qsfmem(global, sizeof (DMT_ATT_ENTRY));
-
-	    iatt = qn->qen_atts[qn->qen_natts];
-
+	    rel_att = NULL;
 	    if (rel == NULL)
 	    {
 		/* If this isn't a function attribute, and we don't have
@@ -867,40 +874,58 @@ opc_qnatts(
 		** make up a name for the attribute. This can happen
 		** for data that is returned through QEN_QP nodes.
 		*/
-		STprintf(iatt->att_name.db_att_name, "ratt%d", eqcno);
-		STmove(iatt->att_name.db_att_name, ' ', 
-				sizeof (iatt->att_name.db_att_name), 
-						iatt->att_name.db_att_name);
+		STprintf(attbuf, "ratt%d", eqcno);
 	    }
 	    else if (jatt->opz_attnm.db_att_id == DB_IMTID)
 	    {
 		/* if the attribute is a tid, then fill in a hard coded
 		** name, because it doesn't appear elsewhere.
 		*/
-		STmove(((*global->ops_cb->ops_dbxlate & CUI_ID_REG_U) ?
-			"TID" : "tid"), ' ',
-		       sizeof (iatt->att_name.db_att_name), 
-		       iatt->att_name.db_att_name);
+		STprintf(attbuf, "%s", 
+		    (*global->ops_cb->ops_dbxlate & CUI_ID_REG_U) ?
+		    "TID" : "tid");
 	    }
 	    else if (jatt->opz_attnm.db_att_id == OPZ_FANUM)
 	    {
 		/* Like tids, if this is a function att, then we don't
 		** have a name for this att, so make one up.
 		*/
-		STprintf(iatt->att_name.db_att_name, "fatt%d", eqcno);
-		STmove(iatt->att_name.db_att_name, ' ', 
-				sizeof (iatt->att_name.db_att_name), 
-						iatt->att_name.db_att_name);
+		STprintf(attbuf, "fatt%d", eqcno);
 	    }
 	    else
 	    {
 		/* Otherwise, we have a relation description, and it holds
 		** a name for our attibute, so use it.
 		*/
-		STRUCT_ASSIGN_MACRO(*rel->rdr_attr[jatt->opz_attnm.db_att_id],
-		    *qn->qen_atts[qn->qen_natts]);
+		rel_att = rel->rdr_attr[jatt->opz_attnm.db_att_id];
 	    }
 
+	    if (rel_att)
+	    {
+		att_nmstr = rel_att->att_nmstr;
+		att_nmlen = rel_att->att_nmlen;
+	    }
+	    else
+	    {
+		/* a fake attr name */
+		att_nmstr = attbuf;
+		att_nmlen = STlength(attbuf);
+	    }
+
+	    /* Alloc/fill in the next element in qn->qen_atts; */
+	    qn->qen_atts[qn->qen_natts] = (DMT_ATT_ENTRY *) opu_qsfmem(global, 
+			sizeof (DMT_ATT_ENTRY) + att_nmlen + 1);
+	    iatt = qn->qen_atts[qn->qen_natts];
+
+	    if (rel_att)
+		STRUCT_ASSIGN_MACRO(*rel_att, *iatt);
+	    else
+		MEfill(sizeof(*iatt), 0, (PTR)iatt);
+
+	    nextname = (char *)(iatt + 1);
+	    iatt->att_nmstr = nextname;
+	    iatt->att_nmlen = att_nmlen;
+	    cui_move(att_nmlen,att_nmstr, '\0', att_nmlen + 1, iatt->att_nmstr);
 	    
 	    /* fill in the rest of the info in a fairly straight forward
 	    ** way.

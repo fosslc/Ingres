@@ -8,6 +8,7 @@
 #include    <cs.h>
 #include    <st.h>
 #include    <iicommon.h>
+#include    <cui.h>
 #include    <dbdbms.h>
 #include    <pc.h>
 #include    <dbms.h>
@@ -212,6 +213,8 @@
 **	    For encryption project add att_encflags, att_encwid.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 **/
 
 /* Static function prototype defintions. */
@@ -344,6 +347,7 @@ DB_ERROR    *dberr)
 **	table_owner	- owner of table as registered to Ingres database.
 **	table_id	- Ingres table id for this table.
 **	attr_count	- number of columns in table.
+**	attr_nametot	- column names size (relattnametot).
 **	attr_list	- list of columns in DMF_ATTR_ENTRY array
 **	gwchar_array	- array of gateway-specific table attributes
 **	gwattr_array	- array of gateway-specific column attributes
@@ -411,6 +415,7 @@ DB_TAB_NAME	    *table_name,
 DB_OWN_NAME	    *table_owner,
 DB_TAB_ID	    *table_id,
 i4		    attr_count,
+i4		    attr_nametot,
 DMF_ATTR_ENTRY	    **attr_list,
 DM_DATA		    *gwchar_array,
 DM_PTR		    *gwattr_array,
@@ -429,11 +434,14 @@ DB_ERROR	    *dberr)
     DMT_ATT_ENTRY	*column_array;
     DMF_ATTR_ENTRY	*attr_ptr;
     DMP_TCB		*tcb;
-    i4		mem_needed;
+    i4			dmt_mem_size;
     i4		offset;
     i4			i;
+    i4			n;
     i4		local_error;
     DML_ODCB		*open_db;
+    PTR			nextname;
+    i4			nameused = 0;
 
     CLRDBERR(dberr);
 
@@ -453,9 +461,15 @@ DB_ERROR	    *dberr)
     /*
     ** Build attribute list from DMF_ATTR_ENTRY array.  Allocate array to
     ** build list into.
+    ** Memory needed for names plus null:
+    ** attr_nametot + attr_count  OR (DB_ATT_MAXNAME + 1)*attr_count
+    ** Both are fine since the DMT_ATT_ENTRYs are deallocated before 
+    ** this function returns.
     */
-    mem_needed = attr_count * sizeof(DMT_ATT_ENTRY) + sizeof(DMP_MISC);
-    status = dm0m_allocate(mem_needed, (i4)0, (i4)MISC_CB,
+    attr_nametot += attr_count; /* for nulls */
+    dmt_mem_size  = attr_count * sizeof(DMT_ATT_ENTRY) + sizeof(DMP_MISC) +
+			attr_nametot;
+    status = dm0m_allocate(dmt_mem_size, (i4)0, (i4)MISC_CB,
 	(i4)MISC_ASCII_ID, (char *)NULL, (DM_OBJECT**)&mem_ptr, dberr);
     if (status)
     {
@@ -467,11 +481,30 @@ DB_ERROR	    *dberr)
 
     column_array = (DMT_ATT_ENTRY *)((char *)mem_ptr + sizeof(DMP_MISC));
     mem_ptr->misc_data = (char*)column_array;
+    nextname = (char *)(column_array + attr_count);
 
     for (i = 0, offset = 0; i < attr_count; i++)
     {
 	attr_ptr = attr_list[i];
-	STRUCT_ASSIGN_MACRO(attr_ptr->attr_name, column_array[i].att_name);
+
+	/* Compute blank stripped length of attribute name */
+	n = cui_trmwhite(DB_ATT_MAXNAME, attr_ptr->attr_name.db_att_name);
+
+	/* Check for attribute name overflow */
+	if (nameused + (n + 1) > attr_nametot)
+	{
+	    uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
+		(char * )NULL, (i4)0, (i4 *)NULL, &local_error, 0);
+	    SETDBERR(dberr, 0, E_DM9A05_GATEWAY_REGISTER);
+	    dm0m_deallocate((DM_OBJECT**)&mem_ptr);
+	    return (E_DB_ERROR);
+	}
+	
+	column_array[i].att_nmstr = nextname;
+	column_array[i].att_nmlen = n;
+	cui_move(n, attr_ptr->attr_name.db_att_name, '\0', n + 1, nextname);
+	nextname += (n + 1);
+	nameused += (n + 1);
 	column_array[i].att_number = i + 1;
 	column_array[i].att_offset = offset;
 	column_array[i].att_type = attr_ptr->attr_type;
@@ -528,6 +561,7 @@ DB_ERROR	    *dberr)
 	    uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
 		(char * )NULL, (i4)0, (i4 *)NULL, &local_error, 0);
 	    SETDBERR(dberr, 0, E_DM9A05_GATEWAY_REGISTER);
+	    dm0m_deallocate((DM_OBJECT**)&mem_ptr);
 	    return (E_DB_ERROR);
 	}
 	gw_rcb.gwr_gw_id = tcb->tcb_rel.relgwid;
@@ -813,6 +847,7 @@ DB_ERROR	    *dberr)
     i4		local_error;
     i4		mem_needed;
     i4			i, j;
+    PTR			nextname;
 
     CLRDBERR(dberr);
 
@@ -913,6 +948,8 @@ DB_ERROR	    *dberr)
     mem_needed += DB_ALIGN_MACRO(sizeof(DMT_TBL_ENTRY));
     mem_needed += tcb->tcb_rel.relatts * DB_ALIGN_MACRO(sizeof(DMT_ATT_ENTRY));
     mem_needed += tcb->tcb_index_count * DB_ALIGN_MACRO(sizeof(DMT_IDX_ENTRY));
+    /* add space for null terminated names */
+    mem_needed += (tcb->tcb_rel.relattnametot + tcb->tcb_rel.relatts);
 
     status = dm0m_allocate(mem_needed, (i4)0, (i4)MISC_CB,
 	(i4)MISC_ASCII_ID, (char *)NULL, (DM_OBJECT**)&mem_ptr, dberr);
@@ -927,6 +964,7 @@ DB_ERROR	    *dberr)
 	(DMT_TBL_ENTRY *)((char *)mem_ptr + DB_ALIGN_MACRO(sizeof(DMP_MISC)));
     mem_ptr->misc_data = (char*)table_entry;
 
+    /* Alloc space for DMT_ATT_ENTRYs and attribute names */
     column_array = (DMT_ATT_ENTRY *)((char *)table_entry +
 	DB_ALIGN_MACRO(sizeof(DMT_TBL_ENTRY)));
     /*
@@ -941,6 +979,9 @@ DB_ERROR	    *dberr)
     index_array = (DMT_IDX_ENTRY *)((char *)column_array +
 	(tcb->tcb_rel.relatts * DB_ALIGN_MACRO(sizeof(DMT_ATT_ENTRY))));
 
+    nextname = (char *)index_array +
+	    (tcb->tcb_index_count * DB_ALIGN_MACRO(sizeof(DMT_IDX_ENTRY)));
+
     /*
     ** Fill in table information.
     */
@@ -950,6 +991,7 @@ DB_ERROR	    *dberr)
     STRUCT_ASSIGN_MACRO(tcb->tcb_rel.reltid, table_entry->tbl_id);
     table_entry->tbl_loc_count = 0;
     table_entry->tbl_attr_count = tcb->tcb_rel.relatts;
+    table_entry->tbl_attr_nametot = tcb->tcb_rel.relattnametot + tcb->tcb_rel.relatts;
     table_entry->tbl_index_count = tcb->tcb_index_count;
     table_entry->tbl_width = tcb->tcb_rel.relwid;
     table_entry->tbl_storage_type = tcb->tcb_rel.relspec;
@@ -971,8 +1013,12 @@ DB_ERROR	    *dberr)
     for (i = 0; i < tcb->tcb_rel.relatts; i++)
     {
 	attr_ptr = &tcb->tcb_atts_ptr[i + 1];
-	MEmove(attr_ptr->attnmlen, attr_ptr->attnmstr, ' ',
-	    DB_ATT_MAXNAME, column_array[i].att_name.db_att_name);
+	
+	column_array[i].att_nmstr = nextname;
+	column_array[i].att_nmlen = attr_ptr->attnmlen;
+	cui_move(attr_ptr->attnmlen, attr_ptr->attnmstr, '\0', 
+		attr_ptr->attnmlen + 1, column_array[i].att_nmstr);
+	nextname += (attr_ptr->attnmlen + 1);
 	column_array[i].att_number = i + 1;
 	column_array[i].att_offset = attr_ptr->offset;
 	column_array[i].att_type = attr_ptr->type;

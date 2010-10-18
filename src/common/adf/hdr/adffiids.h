@@ -446,6 +446,8 @@
 **	    so that we don't have constants like "90" in (e.g.) OPF.
 **	28-Jul-2010 (kiria01) b124142
 **	    Added SINGLECHK
+**	15-Jul-2010 (smeke01) b123950
+**	    Add ADFI_1475_NORM_DATE_HASH for norm_date_hash().
 **/
 
 
@@ -1794,6 +1796,8 @@
 #define ADFI_1472_IFNULL_LBYTE_LBYTE	(ADI_FI_ID)1472 /* ifnull(lbyte, lbyte) */
 #define ADFI_1473_IFNULL_LNVCH_LNVCH	(ADI_FI_ID)1473 /* ifnull(lnvarchar,long_nvarchar) */
 #define ADFI_1474_SINGLECHK_ALL		(ADI_FI_ID)1474 /* all := singlechk(all) */
+#define ADFI_1475_NORM_DATE_HASH        (ADI_FI_ID)1475 /* norm_date_hash(date) */
+
 /* Spatial starts at 1600 */
 #define ADFI_1604_POINT_X               (ADI_FI_ID)1604 /* x(point)        */
 #define ADFI_1605_POINT_Y               (ADI_FI_ID)1605 /* y(point)        */
@@ -1880,4 +1884,3 @@
 #define ADFI_1698_GEOMC_FROM_WKB        (ADI_FI_ID)1698 /* geomcollfromwkb(bin) */
 #define ADFI_1699_GEOMC_S_FROM_TEXT     (ADI_FI_ID)1699 /* geomcollfromtext(text, int) */
 #define ADFI_1700_GEOMC_S_FROM_WKB      (ADI_FI_ID)1700 /* geomcollfromwkb(bin,int) */
-

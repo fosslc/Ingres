@@ -157,6 +157,8 @@
 **	    Remove RDF_UCB, not used anywhere.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 */
 
 /* 
@@ -1722,6 +1724,7 @@ typedef struct _RDR_INFO
 	DMT_TBL_ENTRY	*rdr_rel;	/* Pointer to table entry. */
 	DMT_ATT_ENTRY	**rdr_attr;	/* Pointer to array of pointers to the 
 					** attribute entry. */
+	PTR		rdr_attr_names;   /* memory allocated for att names */
 	DMT_IDX_ENTRY	**rdr_indx;	/* Pointer to array of pointers to index
 					** entry array. */
 	DMT_PHYS_PART	*rdr_pp_array;	/* Pointer to the physical partition
@@ -1752,6 +1755,7 @@ typedef struct _RDR_INFO
 	i4		rdr_no_attr;	/* Number of attributes in the table. */
 	i4		rdr_no_index;	/* Number of indexes on the table. */
 	i4		rdr_invalid;	/* TRUE if the block was invalidated */
+	i4		rdr_attnametot; /* relattnametot */
 	RDF_TYPES	rdr_types;	/* Type (contents) of this block */
 	RDF_TYPES	rdr_2_types;	/* Type (contents) of this block */
 	DB_TAB_TIMESTAMP rdr_timestamp;	/* Time stamp of this table information

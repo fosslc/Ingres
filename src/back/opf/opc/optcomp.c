@@ -57,6 +57,7 @@
 #define        OPT_COMP		TRUE
 #include    <opxlint.h>
 #include    <opclint.h>
+#include    <cui.h>
 
 /**
 **
@@ -185,6 +186,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **	18-Jun-2010 (kschendel) b123775
 **	    Table procs don't have valid list entries any more, remove code.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 **/
 
 /*}
@@ -2872,7 +2875,7 @@ opt_qenode(
 	{
 	    TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
 		OPT_PBLEN, "[%2d] name: %24s\n\n", attno, 
-		qn->qen_atts[attno]->att_name.db_att_name);
+		qn->qen_atts[attno]->att_nmstr);
 	}
 	else
 	{
@@ -2881,15 +2884,16 @@ opt_qenode(
 		    rdrattno +=1
 		)
 	    {
-		me_ret = MEcmp(qn->qen_atts[attno]->att_name.db_att_name, 
-		    rdrdesc->rdr_attr[rdrattno]->att_name.db_att_name,
-		    sizeof (qn->qen_atts[attno]->att_name.db_att_name));
+		me_ret = cui_compare(qn->qen_atts[attno]->att_nmlen, 
+		    qn->qen_atts[attno]->att_nmstr, 
+		    rdrdesc->rdr_attr[rdrattno]->att_nmlen,
+		    rdrdesc->rdr_attr[rdrattno]->att_nmstr);
 		if (me_ret == 0)
 		{
 		    TRformat(opt_scc, (i4*)NULL,
 			global->ops_cstate.opc_prbuf, OPT_PBLEN,
 			"[%2d] name: %24s offset: %5d\n\n", 
-			attno, qn->qen_atts[attno]->att_name.db_att_name,
+			attno, qn->qen_atts[attno]->att_nmstr,
 			rdrdesc->rdr_attr[rdrattno]->att_offset);
 		    break;
 		}
@@ -2898,7 +2902,7 @@ opt_qenode(
 	    {
 		TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
 		    OPT_PBLEN, "[%2d] name: %24s\n\n", attno, 
-		    qn->qen_atts[attno]->att_name.db_att_name);
+		    qn->qen_atts[attno]->att_nmstr);
 	    }
 	}
     }

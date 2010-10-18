@@ -1,0 +1,25 @@
+/*
+** Copyright (c) 2010 Ingres Corporation
+*/
+/*
+** Generic part file for abf
+*/
+
+/*
+** History
+**      25-Aug-2010 (hanal04) Bug 124194
+**          Created.
+**
+*/
+
+PART   abf32
+   capability CI_ABF
+
+/*
+** ingres!lib!lp32
+*/
+
+   DIRECTORY ingres!lib!lp32
+   BUILD_DIR (ING_BUILD)!lib!lp32
+      FILE abfimain.obj
+      FILE abfmain.obj

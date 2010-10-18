@@ -23,9 +23,8 @@
 	    be linked with explicitly if PSDK is used. This will not be needed
 	    when Whidbey will be used for building and on that day this file will 
 	    be replaced with utlnk.def	    
+	20-Sep-2010 (drivi01)
+	    Remove bufferoverflowu.lib from 64-bit Windows link line.
+	    Remove #ifdef for 64-bit Windows, it is not needed.
 # endif comment
-#if defined(i64_win) || defined(a64_win)
-link /NOLOGO /SUBSYSTEM:console /ENTRY:mainCRTStartup bufferoverflowu.lib @
-#else
 link /NOLOGO /SUBSYSTEM:console /ENTRY:mainCRTStartup @
-#endif

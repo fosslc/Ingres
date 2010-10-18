@@ -936,6 +936,12 @@
 **      per installation.  We will now install ODBC driver marked by
 **      installation id instead of version number.
 **      Rename Read Only driver to contain "Read Only" appended to the name.
+**  04-Oct-2010 (drivi01)
+**	Add an extra step to upgrade demodb when user unchecks "Automatically
+**	Upgrade User Databases" during upgrade.
+**	Demodb is installed under system databases section and even though
+**	is not a "system database", it is installed by Ingres and should be
+**      maintained/upgraded by us.
 **	    
 */
 /* Turn off POSIX warning for this file until Microsoft fixes this bug */
@@ -2260,6 +2266,11 @@ CInstallation::CreateDatabases()
 			if (bret && !CreateOneDatabase("-i demodb"))
 				bret = FALSE;
 		}
+	}
+	if (DatabaseExists("demodb") && !theInstall.m_upgradedatabases)
+	{
+		AppendToLog(IDS_UPGRADEDEMODB);
+		bret = (Exec("upgradedb", "demodb") == 0);
 	}
 
 	

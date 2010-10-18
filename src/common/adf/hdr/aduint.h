@@ -203,6 +203,8 @@
 **      11-Aug-2010 (hanal04) Bug 124180
 **          Added adu_2strtomny_strict() for backwards compatibility of
 **          money string constants.
+**	15-Jul-2010 (smeke01) b123950
+**	    Add function adu_norm_date_hash.
 */
 
 
@@ -715,6 +717,7 @@ FUNC_EXTERN ADU_NORM1_FUNC adu_23octetlength;	/* ANSI octet_length function */
 FUNC_EXTERN ADU_NORM1_FUNC adu_24bitlength;	/* ANSI bit_length function */
 FUNC_EXTERN ADU_NORM2_FUNC adu_25strposition;	/* ANSI position function */
 FUNC_EXTERN ADU_NORM3_FUNC adu_26positionfrom;  /* ANSI position FROM */
+FUNC_EXTERN ADU_NORM1_FUNC adu_norm_date_hash;  /* Routine to normalise Ingresdates for hash */
 FUNC_EXTERN ADU_NORM0_FUNC adu_last_id;   	/* last identity in session */
 
 /*

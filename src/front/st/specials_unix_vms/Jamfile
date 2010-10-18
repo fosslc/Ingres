@@ -51,6 +51,9 @@
 #           Add conditional compilation for ICE
 #	09-Sep-2010 (rajus01)
 #	    Add kerberos64.ccpp
+#       25-Aug-2010 (hanal04) Bug 124194
+#           Added abf32.ccp for reverse Hybrids to give users the ability
+#           to link old ABF apps in 32-bit.
 
 SubDir ING_SRC front st specials_unix_vms ;
 
@@ -94,7 +97,7 @@ IIPRT zoneinfo64.ccpp zoneinfo.ccpp wview.ccpp w4v3cats.ccpp
 	copy-unld.ccpp config64.ccpp config.ccpp collation64.ccpp
 	collation.ccpp charsets.ccpp c2audit.ccpp bridge.ccpp atk.ccpp
 	api64.ccpp api.ccpp advisor.ccpp accessdb.ccpp abfdemo.ccpp
-	abf_patch.ccpp abf.ccpp i18n.ccpp i18n64.ccpp supp32.ccpp
+	abf_patch.ccpp abf.ccpp abf32.ccpp i18n.ccpp i18n64.ccpp supp32.ccpp
 	zoneinfo32.ccpp collation32.ccpp ucharmaps32.ccpp packman.ccpp
 	demodb.ccpp logrotate.ccpp geo.ccpp geodeps.ccpp ;
 

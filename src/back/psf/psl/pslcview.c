@@ -110,6 +110,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 **/
 
 /*
@@ -818,7 +820,9 @@ psl_cv1_create_view(
 
 	    /* Look up the attribute */
 	    attribute = pst_coldesc(rngtabp,
-		&resdom->pst_right->pst_sym.pst_value.pst_s_var.pst_atname);
+	    resdom->pst_right->pst_sym.pst_value.pst_s_var.pst_atname.db_att_name,
+		DB_ATT_MAXNAME);
+	 
 
 	    /* Check for attribute not found */
 	    if (attribute == (DMT_ATT_ENTRY *) NULL)

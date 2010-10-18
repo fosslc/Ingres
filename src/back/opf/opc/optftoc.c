@@ -110,6 +110,8 @@
 **	    platforms, where sizeof(PTR) > sizeof(int).
 **	15-jan-94 (ed)
 **	    removed obsolete references to outer join structures
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 [@history_template@]...
 **/
 
@@ -876,7 +878,7 @@ opt_jatts(
 	    dmt_att = grv->opv_relation->rdr_attr[att->opz_attnm.db_att_id];
 	    TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
 		OPT_PBLEN, "  attname: %24s \t relname: %24s\n\n", 
-		dmt_att->att_name.db_att_name,
+		dmt_att->att_nmstr,
 		&grv->opv_relation->rdr_rel->tbl_name);
 	}
 	else

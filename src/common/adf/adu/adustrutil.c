@@ -125,10 +125,12 @@
 **      characters and not buffer length.
 **	12-Dec-2008 (kiria01) b121366
 **	    Protect against unaligned access on Solaris
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**      16-Jun-2009 (thich01)
+**          Treat GEOM type the same as LBYTE.
+**      20-Aug-2009 (thich01)
+**          Treat all spatial types the same as LBYTE.
+**      12-Oct-2010 (horda03) b124550
+**          Improve performance of string padding.
 **/
 
 
@@ -426,6 +428,10 @@ register    char	    **addr)
 **	    Count up any-warnings too if warning.
 **	14-Oct-2008 (gupsh01)
 **	    Pass in the type of source string to adu_movestring. 
+**      12-Oct-2010 (horda03) b124550
+**          Padding strings 1 character at a time seriosly impacts performance
+**          as the number of pad characters needed increases. From impirical
+**          testing, >4 characters is faster using MEfill.
 */
 
 DB_STATUS
@@ -451,6 +457,7 @@ register DB_DATA_VALUE	    *dest)
     UCS2                fill_ucharacter = U_BLANK;
     bool		byte_input = FALSE; 
     u_i2		si;
+    size_t              pad_chars;
 
     if ( (dest->db_datatype == DB_NVCHR_TYPE) ||
          (dest->db_datatype == DB_NCHR_TYPE) )
@@ -654,8 +661,13 @@ register DB_DATA_VALUE	    *dest)
       case DB_CHA_TYPE:
       case DB_CHR_TYPE:
       case DB_BYTE_TYPE:
-	while (outstring < endout)
+        if ( (pad_chars = (size_t)(endout - outstring)) <= 4)
+        {
+	   while (outstring < endout)
 	    *outstring++ = fill_character;
+        }
+        else
+           MEfill ( pad_chars, fill_character, outstring);
         break;
 
      case DB_NVCHR_TYPE: 
@@ -664,6 +676,10 @@ register DB_DATA_VALUE	    *dest)
       /* Fall through and execute the loop to fill out the string. */
 
      case DB_NCHR_TYPE:
+        /* This too could benefit from a global substitution (like MEfill above)
+        ** alas the fill_ucharacter is 2 bytes (UCS2) so MEfill can't be used, and
+        ** wmemset sets a word at a time and memsetw is not universal.
+        */
         while ( unistring < enduni )
             *unistring++ = fill_ucharacter;
         break;
@@ -747,6 +763,10 @@ register DB_DATA_VALUE	    *dest)
 **	    Correct calculation of output string length.
 **	23-jan-2007 (gupsh01)
 **	    Add error checking for unsupported datatype.
+**      12-Oct-2010 (horda03) b124550
+**          Padding strings 1 character at a time seriosly impacts performance
+**          as the number of pad characters needed increases. From impirical
+**          testing, >4 characters is faster using MEfill.
 */
 DB_STATUS
 adu_moveunistring(
@@ -768,6 +788,7 @@ register DB_DATA_VALUE      *dest)
     UCS2              fill_ucharacter = U_BLANK;
     u_char            fill_character = ' ';
     u_i2	      si;
+    size_t            pad_chars;
 
     if ( (dest->db_datatype == DB_NVCHR_TYPE) ||
 	 (dest->db_datatype == DB_NCHR_TYPE) )
@@ -880,12 +901,21 @@ register DB_DATA_VALUE      *dest)
       break;
 
       case DB_BYTE_TYPE:
-        while (outstring < endout)
-            *outstring++ = fill_character;
+        if ( (pad_chars = (size_t)(endout - outstring)) <= 4)
+        {
+            while (outstring < endout)
+                *outstring++ = fill_character;
+        }
+        else
+           MEfill( pad_chars, fill_character, outstring);
         break;
 
       case DB_NCHR_TYPE:
-        while (unistring < enduni)
+        /* This too could benefit from a global substitution (like MEfill above)
+        ** alas the fill_ucharacter is 2 bytes (UCS2) so MEfill can't be used, and
+        ** wmemset sets a word at a time and memsetw is not universal.
+        */
+        while ( unistring < enduni )
             *unistring++ = fill_ucharacter;
         break;
 

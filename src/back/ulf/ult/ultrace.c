@@ -349,8 +349,11 @@ STATUS
 ult_set_tracefile(char *newvalue)
 {
     STATUS status;
-    char old_dir [MAX_LOC+1];
-    LOCATION *oldtrace=tracefile;
+    LOCATION loc_copy;
+    LOCATION *saved_loc=NULL;
+    LOINFORMATION loinf;
+    char saved_dir [MAX_LOC+1];
+    i4 loflags;
 
     /* don't allow blank filename */
     if (!newvalue ||
@@ -362,22 +365,43 @@ ult_set_tracefile(char *newvalue)
 
     /* save old directory if we've got one */
     if (tracefile)
-      STcopy(trace_dir, old_dir);
+    {
+	 saved_loc=&loc_copy;
+         LOcopy(tracefile, saved_dir, saved_loc);
+    }
+	    
 
     STcopy(newvalue, trace_dir);
-
     LOfroms( PATH, trace_dir, &trace_loc);
     tracefile = &trace_loc;
-    status=LOexist(tracefile);
-    if (status!=OK)
+
+    loflags= (LO_I_TYPE |LO_I_PERMS);
+    status=LOinfo(tracefile, &loflags,&loinf);
+    /* check this new location:
+     *   - exists
+     *   - is a directory
+     *   - can be written to */
+    if ((status!=OK) ||
+        (loflags & LO_I_TYPE) == 0 || (loinf.li_type != LO_IS_DIR) || 
+        (loflags & LO_I_PERMS) == 0 || (loinf.li_perms & LO_P_WRITE) == 0 )
     {
        TRdisplay("%@ Unable to set SC930 trace directory to '%s'\n",newvalue);
-       tracefile=oldtrace;
-       if (tracefile)
+       if (saved_loc)
        {
-           STcopy(old_dir,trace_dir);
-           TRdisplay("%@ reverting to '%s'\n",tracefile->path);
+	   char            *path;
+
+           LOcopy(saved_loc, trace_dir, tracefile);
+	   LOtos(tracefile, &path);
+           TRdisplay("%@ reverting to '%s'\n",path);
        }
+       else
+       {
+           tracefile=NULL;
+           TRdisplay("%@ trace directory remains unset \n");
+       }
+
+       if (status == OK)
+	   status=E_DB_ERROR;
     }
     else
        TRdisplay("%@ SC930 trace directory set to '%s'\n",newvalue);
@@ -411,12 +435,12 @@ ult_tracefile_loc(void)
 {
 	char *tmp = NULL;
 	if (tracefile)
-		return (tracefile);
+		return ((PTR)tracefile);
 	NMgtAt("II_SC930_LOC",&tmp);
 	if (!tmp || (*tmp == EOS))
 		return (NULL);
 	if (ult_set_tracefile(tmp)==OK)
-	    return (tracefile);
+	    return ((PTR)tracefile);
 	else
 	    return(NULL);
 }
@@ -450,7 +474,7 @@ ult_open_tracefile(void *code)
 {
 	FILE *f;
 	char fname[MAX_LOC+1];
-	LOCATION *tname = ult_tracefile_loc();
+	LOCATION *tname = (LOCATION *)ult_tracefile_loc();
 	char fname_tmp[MAX_LOC+1];
 	LOCATION loc_copy;
 
