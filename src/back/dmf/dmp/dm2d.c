@@ -788,6 +788,10 @@ NO_OPTIM=dr6_us5 pym_us5
 **          Change E_DM9580_CONFIG_DBSERVICE_ERROR to be a warning.
 **      30-aug-2010 (stial01)
 **          upgrade_iirel_row() fix relstat/relstat2 initialization
+**      07-Oct-2010 (horda03) b124559
+**          When a DB was opened during Incremental Rollforward, the access_mode
+**          is forced to READONLY. Need to identify this situation so that multiple sessions
+**          can open the DB READONLY.
 */
 
 /*
@@ -3574,6 +3578,10 @@ dm2d_del_db(
 **	13-Sep-2010 (jonj) B124426
 **	    Allow MVCC lock level in read-only database, dmx_begin,
 **	    dmt_open expect it.
+**      07-Oct-2010 (horda03) b124559
+**          If the DB was opened READONLY due to Incremental Rollforward
+**          (DCB_S_RO_INCREMENTAL_RFP set), skip the access_mode check as the
+**          access will be forced to READONLY.
 */
 DB_STATUS
 dm2d_open_db(
@@ -3666,9 +3674,13 @@ dm2d_open_db(
     hcb = svcb->svcb_hcb_ptr;
     MEfill(sizeof(LK_LKID), 0, &dblkid);
 
-    /*  Check access mode and set locks. */
+    /*  Check access mode and set locks.
+    **  No need to check access_mode if the DCB_S_RO_INCREMENTAL_RFP flag set, as
+    **  the access_mode will be forced to READONLY lower down.
+    */
 
-    if (access_mode > dcb->dcb_access_mode)
+    if ( !(dcb->dcb_status & DCB_S_RO_INCREMENTAL_RFP) &&
+         (access_mode > dcb->dcb_access_mode) )
     {
 	SETDBERR(dberr, 0, E_DM003E_DB_ACCESS_CONFLICT);
 	return (E_DB_ERROR);
@@ -4064,6 +4076,7 @@ dm2d_open_db(
 #endif
 		access_mode = DCB_A_READ;
 		dcb->dcb_access_mode = DCB_A_READ;
+                dcb->dcb_status |= DCB_S_RO_INCREMENTAL_RFP;
 	    }
 	}
 

@@ -480,6 +480,8 @@
 **	    Re-document soft vs hard allocation.  Add private flag.
 **	25-Nov-2009 (kschendel) SIR 122757
 **	    Remove some common definitions to di.h to fix VMS compile problems.
+**      07-oct-2010 (joea)
+**          Merge VMS dicl.h into this file.
 */
 
 /*
@@ -500,7 +502,11 @@ typedef struct _DI_UNIQUE_ID	DI_UNIQUE_ID;
 ** size of the (aligned) zeroing buffer.
 ** Not sure what might impose a max on the Windows DI...
 */
+#if defined(VMS)
+#define DI_MAX_PAGESIZE 65536
+#else
 #define DI_MAX_PAGESIZE	(512*1024)
+#endif
 
 /* Arguments to DIinfo "operation" field */
 
@@ -512,10 +518,14 @@ typedef struct _DI_UNIQUE_ID	DI_UNIQUE_ID;
 # define		DI_INFO_SLAVE_NUM	0x006
 
 
-/* DI return status codes specific to unix/windows.
+/* DI return status codes specific to unix/windows and vms.
 ** Common return codes are in di.h.
 */
-
+#if defined(VMS)
+# define                DI_BADLRU_RELEASE       (E_CL_MASK + E_DI_MASK + 0x14)
+# define                DI_BADCAUSE_EVENT       (E_CL_MASK + E_DI_MASK + 0x15)
+# define                DI_BADSUSPEND           (E_CL_MASK + E_DI_MASK + 0x16)
+#else
 # define		DI_INPROGRESS		(E_CL_MASK + E_DI_MASK + 0x14)
 # define		DI_BADRELEASE		(E_CL_MASK + E_DI_MASK + 0x15)
 # define		DI_GENERAL_ERR		(E_CL_MASK + E_DI_MASK + 0x16)
@@ -559,6 +569,7 @@ typedef struct _DI_UNIQUE_ID	DI_UNIQUE_ID;
 # define		DILRU_VIC_NOT_OP	(E_CL_MASK + E_DI_MASK + 0x55)
 # define		DILRU_CSCND_INIT_ERR	(E_CL_MASK + E_DI_MASK + 0x56)
 # define		DILRU_CACHE_LIMIT	(E_CL_MASK + E_DI_MASK + 0X57)
+#endif /* VMS */
 
 
 /*
@@ -571,11 +582,15 @@ typedef struct _DI_UNIQUE_ID	DI_UNIQUE_ID;
 ** requirements from man pages.  I suspect that Solaris has no alignment
 ** needs now (Sol 10).  FIXME someone needs to run tests on modern Solaris,
 ** hp-ux, AIX and see what the real values are now.
+**
+** VMS doesn't have raw I/O, so no need for alignment
 */
 
 # if defined(int_w32)
 # define DI_RAWIO_ALIGN 4096
-# else
+#elif defined(VMS)
+# define DI_RAWIO_ALIGN 0
+#else
 # define DI_RAWIO_ALIGN	512
 # endif
 
@@ -617,7 +632,6 @@ struct _DI_UNIQUE_ID
 **      system dependent I/O information required for direct I/O.
 **      It is very operating system specific.  The memory for this
 **      structure is allocated by the caller of the DI routines.
-**	This is the structure used on VAX/VMS.
 **
 **	There are two different mutexes in a DI_IO, io_sem and io_fd_q_sem.
 **	Normally they are exclusive, ie if doing fd-per-thread, io_fd_q_sem
@@ -669,6 +683,7 @@ struct _DI_UNIQUE_ID
 */
 struct _DI_IO
 {
+#if !defined(VMS)
 # ifdef NT_GENERIC
     DI_IO	    *io_next;
     DI_IO	    *io_prev;
@@ -680,6 +695,7 @@ struct _DI_IO
 				** file's allocation strategy doesn't involve
 				** persistent space reservations.
 				*/
+#endif
     i4	    io_system_eof;	/* End of file information. */
     i4	    io_alloc_eof;	/* Last allocated disk block (page). */
 				/* On Unix, at least, this might be a virtual
@@ -688,12 +704,19 @@ struct _DI_IO
 				** Note: protected by io_sem.
 				*/
     i4	    io_type;            /* Control block identifier. */
+#if defined(VMS)
+    i4	    io_channel;         /* VMS channel used for this file */
+    i4 	    io_block_size;	/* File block size. */
+    i4	    io_log2_bksz;	/* Log 2 of io_block_size. */
+    i4	    io_blks_log2;	/* Log 2 of io_block_size / 512. */
+#else /* VMS */
 # if defined(NT_GENERIC)
     HANDLE  io_nt_fh;		/* NT file handle            */
     HANDLE  io_nt_gw_fh;	/* NT file handle for GatherWrite */
 # endif /* NT_GENERIC */
     CS_SYNCH	io_sem;		/* Held during IO if multiple OS calls needed
 				** Also protects _eof members, above */
+#endif /* VMS */
 # ifdef OS_THREADS_USED
     CS_SYNCH        io_fd_q_sem; /* Protects io_fd_q */
 # endif /* OS_THREADS_USED */
@@ -707,6 +730,7 @@ struct _DI_IO
 #define			DI_IO_DCREATE_INVALID	-6
 #define			DI_IO_DDELETE_INVALID	-7
 
+#if !defined(VMS)
     i4	    io_mode;            /* mode the file was opened with */
     i4 	    io_bytes_per_page;	/* File block size. */
     i4	    io_refcnt;	        /* I/O in progress count */
@@ -718,9 +742,13 @@ struct _DI_IO
 #define			DI_IO_NO_QUEUE		0
 #define			DI_IO_LRU_QUEUE		1	
     DI_UNIQUE_ID    io_uniq;		/* uniq identifier for this file */
+#endif /* VMS */
     u_i4	    io_open_flags;	/* flags passed in on open of file */
 #define			DI_O_FSYNC_MASK		0x0001
 #define			DI_O_OSYNC_MASK		0x0002
+#if defined (VMS)
+#define			DI_O_SYNC_FLAG	        0x001
+#endif
 					/* totally for debugging out of disk 
 					** space handling - see diwrite/dialloc
 					*/
@@ -737,6 +765,14 @@ struct _DI_IO
 #define			DI_O_LOG_FILE_MASK	0x0080
 					/* This file is not LRU eligible */
 #define			DI_O_NOT_LRU_MASK	0x0100
+#if defined(VMS)
+    struct
+    {
+     i4	    str_len;            /* Length of described item. */
+     char	    *str_str;	        /* Address of described item. */
+    }               io_fib_desc;        /* FIB descriptor. */
+    char	    io_fib[32];		/* VMS File Information Block. */
+#else
     u_i4	    io_l_pathname;	/* length of pathname */
     u_i4	    io_l_filename;	/* length of filename */
 
@@ -762,6 +798,7 @@ struct _DI_IO
       u_i4	    lru_close;
       u_i4	    reserved[1];
     }		io_stat;
+#endif /* VMS */
 };
 typedef struct  _DI_RESOURCE_INFO	DI_RESOURCE_INFO;
 

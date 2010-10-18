@@ -113,6 +113,8 @@
 **	    replace nat and longnat with i4
 **      24-Feb-2004 (kodse01)
 **          Removed gwxit.h inclusion which is not required.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 [@history_template@]...
 **/
 
@@ -456,8 +458,8 @@ GX_ad_to_tuple( GX_RSB *xt_rsb, STATUS *cl_stat )
 			  sizeof( gwm_att->gma_type ),
 			  (PTR)&gwm_att->gma_type,
 			  sizeof( col ), (PTR)&col,
-			  GM_dbslen( gwm_att->gma_dmt_att->att_name.db_att_name ),
-			  (PTR)&gwm_att->gma_dmt_att->att_name );
+			  gwm_att->gma_dmt_att->att_nmlen,
+			  gwm_att->gma_dmt_att->att_nmstr );
 
 		db_stat = E_DB_ERROR;
 		break;

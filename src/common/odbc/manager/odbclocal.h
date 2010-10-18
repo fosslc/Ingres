@@ -40,6 +40,9 @@
 **      Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
 **      SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
 **      platforms.
+**   08-Oct-2010 (Ralph Loen) Bug 124578
+**      Added  MAX_CONNSTR_OUTLEN for SQLBrowseConnect() and 
+**      SQLBrowseConnectW().
 */
 typedef struct
 {
@@ -67,6 +70,9 @@ typedef struct
 }  IIODBC_ERROR;
 
 #define IIODBC_MAX_ERROR_ROWS 10
+
+#define MAX_CONNSTR_OUTLEN 1024 /* Maximum output string length recommended
+                                   for SQLDriverConnect */
 
 #define SQL_HANDLE_INSTALLER -1
 #define HOSTNAME_LEN 64

@@ -100,6 +100,8 @@
 **	    pst_ldbtab_desc().
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 */
 
 /*
@@ -506,9 +508,10 @@ psl_rg1_reg_distr_tv(
 		}
 
 		/* Copy attribute info from the RDF info block */
-		MEcopy((PTR) ((*from_ddb_att_entry)->att_name.db_att_name),
-		       sizeof(DD_ATT_NAME),
-		       (PTR) ((*to_ddb_col_desc)->dd_c1_col_name));
+		cui_move((*from_ddb_att_entry)->att_nmlen,
+		    (*from_ddb_att_entry)->att_nmstr, ' ',
+		    sizeof(DD_ATT_NAME),
+		    (PTR) ((*to_ddb_col_desc)->dd_c1_col_name));
 
 		(*to_ddb_col_desc)->dd_c2_col_ord =
 		    (*from_ddb_att_entry)->att_number;

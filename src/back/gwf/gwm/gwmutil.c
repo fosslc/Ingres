@@ -169,6 +169,8 @@
 **          Removed gwxit.h inclusion which is not required.
 **	17-Jan-2007 (kibro01)
 **	    Moved GM_ATT_DESC array of IS clause values to back/hdr/gwf.h
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 [@history_template@]...
 */
 
@@ -1979,7 +1981,7 @@ void
 GM_dump_dmt_att( char *msg, DMT_ATT_ENTRY *dmt_att )
 {
     TRdisplay("    DMT_ATT_ENTRY %s %p:\n", msg, dmt_att );
-    TRdisplay("    att_name '%32s'\n", dmt_att->att_name.db_att_name );
+    TRdisplay("    att_name '%~t'\n", dmt_att->att_nmlen, dmt_att->att_nmstr);
     TRdisplay("    att_number %d, att_offset %d, att_type %d, att_width %d\n",
 	      dmt_att->att_number, 
 	      dmt_att->att_offset, 

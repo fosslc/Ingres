@@ -57,7 +57,7 @@ static DB_STATUS rdu_bldattr(   RDF_GLOBAL  *global,
 static DB_STATUS rdu_key_ary_bld(RDF_GLOBAL *global);
 
 /* rdu_getbucket - Hash an attribute name. */
-static i4  rdu_getbucket(DB_ATT_NAME *name);
+static i4  rdu_getbucket(char *name, i4 namelen);
 
 /* rdu_hash_att_bld - Build the hash table of attributes information. */
 static DB_STATUS rdu_hash_att_bld(RDF_GLOBAL *global);
@@ -164,6 +164,8 @@ static DB_STATUS rdu_default_bld(RDF_GLOBAL *global );
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 **/
 
 /*{
@@ -1681,7 +1683,9 @@ rdu_relbld( RDF_GLOBAL  *global,
 	    status = rdu_gsemaphore(global);
 	    if (DB_FAILURE_MACRO(status))
 		return (status);
+
 	    sys_infoblk->rdr_no_attr = rel_ptr->tbl_attr_count;
+	    sys_infoblk->rdr_attnametot = rel_ptr->tbl_attr_nametot;
 	    sys_infoblk->rdr_no_index = rel_ptr->tbl_index_count;
 	    sys_infoblk->rdr_invalid = FALSE;
 	    sys_infoblk->rdr_rel = rel_ptr;
@@ -1721,6 +1725,7 @@ rdu_relbld( RDF_GLOBAL  *global,
 	    RDR_INFO	*usr_infoblk;
 	    usr_infoblk = global->rdfcb->rdf_info_blk;
 	    usr_infoblk->rdr_no_attr = rel_ptr->tbl_attr_count;
+	    usr_infoblk->rdr_attnametot = rel_ptr->tbl_attr_nametot;
 	    usr_infoblk->rdr_no_index = rel_ptr->tbl_index_count;
 	    usr_infoblk->rdr_invalid = FALSE;
 	    usr_infoblk->rdr_rel = rel_ptr;
@@ -1824,6 +1829,9 @@ rdu_bldattr(	RDF_GLOBAL         *global,
     RDR_INFO	    *sys_infoblk;
     RDR_INFO	    *usr_infoblk;
     bool	    updating_master;
+    i4		    att_cnt;
+    DMT_ATT_ENTRY   *attr_entry;
+    char	    *attr_names;
 
     usr_infoblk = global->rdfcb->rdf_info_blk;
     sys_infoblk = global->rdf_ulhobject->rdf_sysinfoblk;
@@ -1851,24 +1859,35 @@ rdu_bldattr(	RDF_GLOBAL         *global,
     }
     status = rdu_malloc(global, 
 	(i4)(((usr_infoblk->rdr_no_attr + 1) * sizeof(PTR)) +
-	      (sizeof(DMT_ATT_ENTRY) * usr_infoblk->rdr_no_attr)), 
+	      (sizeof(DMT_ATT_ENTRY) * usr_infoblk->rdr_no_attr) + 
+		(usr_infoblk->rdr_attnametot + usr_infoblk->rdr_no_attr)), 
 	(PTR *)&attr);		/* allocate memory for array of pointers
 				    ** to attribute descriptors */
     if (DB_FAILURE_MACRO(status))
 	return(status);
     attr[DB_IMTID] = (DMT_ATT_ENTRY *) NULL; /* initialize the TID attribute */
 
-
     {
-	i4		    att_cnt;
-	DMT_ATT_ENTRY   *attr_entry;
+	attr_entry = (DMT_ATT_ENTRY *)(attr + (usr_infoblk->rdr_no_attr + 1));
+	attr_names = (char *)(attr_entry + usr_infoblk->rdr_no_attr);
 
-	attr_entry = (DMT_ATT_ENTRY *)((char *)attr + 
-			    ((usr_infoblk->rdr_no_attr + 1) * sizeof(PTR)));
 	for (att_cnt = 1; att_cnt <= usr_infoblk->rdr_no_attr; att_cnt++)
 	{
 	    attr[att_cnt] = &attr_entry[att_cnt - 1];
 	}
+    }
+
+    if (usr_infoblk->rdr_attnametot == 0 ||
+	usr_infoblk->rdr_rel->tbl_attr_nametot != usr_infoblk->rdr_attnametot)
+    {
+       TRdisplay("warning nametot 0 for tab %d %d\n",
+	    global->rdfcb->rdf_rb.rdr_tabid.db_tab_base,
+	    global->rdfcb->rdf_rb.rdr_tabid.db_tab_index);
+
+	TRdisplay("rdu_bldattr atts %d nametot %d attr %x attr_entry %x attr_names %x (%x %x %x %x)\n",
+	usr_infoblk->rdr_no_attr, usr_infoblk->rdr_attnametot,
+	attr, attr_entry, attr_names,
+	attr[0],attr[1],attr[2],attr[3]);
     }
 
     if (global->rdfcb->rdf_rb.rdr_r1_distrib & DB_3_DDB_SESS)
@@ -1876,6 +1895,9 @@ rdu_bldattr(	RDF_GLOBAL         *global,
 	/* this is a distributed thread */
 	global->rdf_ddrequests.rdd_types_mask = RDD_ATTRIBUTE;
 	global->rdf_ddrequests.rdd_attr = attr;
+	global->rdf_ddrequests.rdd_attr_names = attr_names;
+	global->rdf_ddrequests.rdd_attr_nametot = 
+		(usr_infoblk->rdr_attnametot + usr_infoblk->rdr_no_attr); 
 	status = rdd_getobjinfo(global);   /* get attribute information
 					   ** from CDB */	    
 	if (DB_FAILURE_MACRO(status))
@@ -1965,6 +1987,12 @@ rdu_bldattr(	RDF_GLOBAL         *global,
 	}
 	dmt_shw_cb->dmt_attr_array.ptr_in_count = usr_infoblk->rdr_no_attr + 1;
 	dmt_shw_cb->dmt_attr_array.ptr_size = sizeof(DMT_ATT_ENTRY); 
+
+	dmt_shw_cb->dmt_attr_names.ptr_address = attr_names;
+	dmt_shw_cb->dmt_attr_names.ptr_in_count = 1;
+	dmt_shw_cb->dmt_attr_names.ptr_size = 
+	    usr_infoblk->rdr_attnametot + usr_infoblk->rdr_no_attr;
+
 	status = rdu_shwdmfcall(global, show_flags,
 			    (RDF_SYVAR *) NULL, (DB_TAB_ID *) NULL,
 			    refreshed);
@@ -1983,7 +2011,10 @@ rdu_bldattr(	RDF_GLOBAL         *global,
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
     }
+
     usr_infoblk->rdr_attr = attr;
+    usr_infoblk->rdr_attr_names = attr_names;
+
     if (global->rdfcb->rdf_rb.rdr_r1_distrib & DB_3_DDB_SESS)
     {
 	if (usr_infoblk->rdr_obj_desc->dd_o9_tab_info.dd_t6_mapped_b)
@@ -2203,14 +2234,14 @@ rdu_key_ary_bld(RDF_GLOBAL *global)
 **	    prototypes
 */
 static i4
-rdu_getbucket(DB_ATT_NAME *name)
+rdu_getbucket(char *name, i4 namelen)
 {
     register i4	bucket = 0;
     register i4  	i;
     register u_char	*c;
 
-    c = (u_char *)name->db_att_name;
-    for (i=0; i < sizeof (name->db_att_name); i++)
+    c = (u_char *)name;
+    for (i=0; i < namelen; i++)
     {
 	    bucket += *c;
 	    c++;
@@ -2367,10 +2398,10 @@ rdu_hash_att_bld(RDF_GLOBAL *global)
 		if (usr_infoblk->rdr_rel->tbl_status_mask & DMT_VIEW)
 		    continue;
 
-		bucket = rdu_getbucket(&tidattp->att_name);
+		bucket = rdu_getbucket(tidattp->att_nmstr, tidattp->att_nmlen);
 	    }
 	    else
-		bucket = rdu_getbucket(&(*attrpp)->att_name);
+		bucket = rdu_getbucket((*attrpp)->att_nmstr, (*attrpp)->att_nmlen);
 
 	    /* 
 	    ** Always insert in the beginning of the bucket 

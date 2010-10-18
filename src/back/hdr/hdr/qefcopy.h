@@ -38,6 +38,8 @@
 **	    Added sequence poop to QEU_MISSING_COL.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      01-oct-2010 (stial01)
+**          cp_domname need space for null
 **/
 
 /*
@@ -75,7 +77,8 @@ typedef struct _QEU_MISSING_COL QEU_MISSING_COL;
 struct _QEU_CPDOMD
 {
     QEU_CPDOMD	*cp_next;		/* next domain descriptor */
-    char	cp_domname[DB_ATT_MAXNAME]; /* domain name */
+    char	cp_domname[DB_ATT_MAXNAME+1]; /* domain name */
+    i1		cp_pad;
     DB_DT_ID	cp_type;		/* domain type */
     i4	cp_length;		/* domain length */
     i4	cp_prec;		/* domain precision */

@@ -105,6 +105,12 @@
 **      Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
 **      SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
 **      platforms.
+**   08-Oct-2010 (Ralph Loen) Bug 124578
+**      Supply a placeholder string for the output string argument in
+**      SQLBrowseConnect() if the argument is NULL.
+**   11-Oct-2010 (Ralph Loen) Bug 124578
+**      Clean up treatment of placeholder variables outLen and outStr
+**      in SQLBrowseConnect().
 */ 
 
 #ifndef NT_GENERIC
@@ -1543,6 +1549,14 @@ RETCODE SQL_API SQLFreeEnv(
 ** History: 
 **    14-jun-04 (loera01)
 **      Created.
+**    08-Oct-2010 (Ralph Loen) Bug 124578
+**      Supply a placeholder string for the output string argument
+**      if the argument is NULL; this allows SQLBrowseConnect() to
+**      return SQL_NEED_DATA on first invocation and attempt a
+**      connection on the second invocation.
+**    11-Oct-2010 (Ralph Loen) Bug 124578
+**      Clean up treatment of placeholder variables outLen and outStr
+**      in SQLBrowseConnectW().
 */ 
 
 SQLRETURN SQL_API SQLBrowseConnect(
@@ -1553,8 +1567,12 @@ SQLRETURN SQL_API SQLBrowseConnect(
     SQLSMALLINT        cbConnStrOutMax,
     SQLSMALLINT       *pcbConnStrOut)
 {
+    SQLCHAR *outStr;
+    SQLSMALLINT outLen = MAX_CONNSTR_OUTLEN;
+    BOOL allocStr = FALSE;
     pDBC pdbc = (pDBC)hdbc;
     RETCODE rc = SQL_SUCCESS, traceRet = 1;
+    
 
     ODBC_TRACE_ENTRY(ODBC_TR_TRACE, IITraceSQLBrowseConnect(hdbc, szConnStrIn, 
          cbConnStrIn, szConnStrOut, cbConnStrOutMax, pcbConnStrOut),
@@ -1572,21 +1590,33 @@ SQLRETURN SQL_API SQLBrowseConnect(
         return SQL_INVALID_HANDLE;
     }
 
+    /*
+    ** If the application supplied no output string, supply a placeholder.
+    */
+    if (!szConnStrOut)
+    {
+        outStr = (SQLCHAR *) MEreqmem(0, outLen, TRUE, NULL);
+        allocStr = TRUE;
+    }
+    else
+    {
+        outStr = szConnStrOut;
+        outLen = cbConnStrOutMax;
+    }
+
     resetErrorBuff(hdbc, SQL_HANDLE_DBC);
 
     if (!IIBrowseConnect)
     {
         rc = IIodbc_connectPhase1(pdbc);
-        if (rc == SQL_SUCCESS)
-            rc = IIodbc_connectPhase2(pdbc);
     }
     if (rc == SQL_SUCCESS)
     {
         rc = IIBrowseConnect(pdbc->hdr.driverHandle,
             szConnStrIn,
             cbConnStrIn,
-            szConnStrOut,
-            cbConnStrOutMax,
+            outStr,
+            outLen,
             pcbConnStrOut);
 
     }
@@ -1600,6 +1630,12 @@ SQLRETURN SQL_API SQLBrowseConnect(
         pdbc->hdr.state = C4;
 
     releaseLock(SQL_HANDLE_DBC, pdbc);
+
+    if (allocStr)
+    {
+        MEfree((PTR)outStr);
+        szConnStrOut = NULL;
+    }
 
     ODBC_TRACE(ODBC_TR_TRACE, IITraceReturn(traceRet, rc));
 

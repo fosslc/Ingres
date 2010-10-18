@@ -114,6 +114,8 @@
 **	24-Feb-2010 (frima01) Bug 122490
 **	    Update return types and add header files as neccessary
 **	    to eliminate gcc 4.3 warnings.
+**      14-Oct-2010 (horda03) b124550
+**          Improved performance of a report.
 */
 
 
@@ -777,6 +779,10 @@ DB_DATA_VALUE	*chrval;
 **		31-aug-1993 (rdrane)
 **			Cast u_char db_t_text references to (char *) so
 **			prototyping in STbcompare() doesn't complain.
+**      14-Oct-2010 (horda03) b124550
+**          Only check for II_NULLSTRING if defined, and then only need to
+**          obtain a few bytes more than the null string length (not a
+**          string padded to DB_MAXSTRING)
 */
 
 i4  r_x_conv( fromvalue, tovalue)
@@ -788,6 +794,8 @@ DB_DATA_VALUE	*tovalue;
 	DB_TEXT_STRING  *text;
 	i4		nullstrlen;
 	char		ltdata[DB_MAXSTRING+DB_CNTSIZE];
+
+#define MAX_FLOAT_STR 255   /* Maximum size that a float can be converted to (see adg_outargs) */
 
  	/*
 	** Input is Nullable and null and tovalue is nullable
@@ -801,34 +809,47 @@ DB_DATA_VALUE	*tovalue;
 		return status;
 	}
 
-	ltextval.db_datatype = DB_LTXT_TYPE;
-	ltextval.db_length   = DB_MAXSTRING+DB_CNTSIZE;
-	ltextval.db_prec     = 0;
-	ltextval.db_data     = ltdata;
-	/*
-	 * Coerce fromvalue to long text--should always be ok!!
- 	 */
-	if( afe_cvinto(Adf_scb, fromvalue, &ltextval) != OK)
-	{
+        nullstrlen = Adf_scb->adf_nullstr.nlst_length;
+
+        /* If II_NULLSTRING is defined and reult type is
+        ** NULLABLE then convert enough of the fromvalue
+        ** to LTXT to see if it matches the II_NULLSTRING
+        */
+        if (AFE_NULLABLE_MACRO(tovalue->db_datatype) &&
+           (nullstrlen > 0) )
+        {
+           /* Ensure for there's enough space for the null string
+           ** and a bit more. But also try to avoid truncation of fromvalue
+           ** by allowing for largest FLOAT to text conversion.
+           */
+           i4 len = max(nullstrlen + sizeof(i4), fromvalue->db_length);
+
+	   ltextval.db_datatype = DB_LTXT_TYPE;
+	   ltextval.db_length   = min(max(len, MAX_FLOAT_STR), DB_MAXSTRING)+DB_CNTSIZE;
+	   ltextval.db_prec     = 0;
+	   ltextval.db_data     = ltdata;
+	   /*
+	    * Coerce fromvalue to long text--should always be ok!!
+ 	    */
+	   if( afe_cvinto(Adf_scb, fromvalue, &ltextval) != OK)
+	   {
 		FEafeerr(Adf_scb);
 		return (FAIL);
-	}
+	   }
 
-	/*
-	** Check for II_NULLSTRING value of ltextval
-	** If it matches, set tovalue to null and return
-	*/
-	text = (DB_TEXT_STRING *) (ltextval.db_data);
-	nullstrlen = Adf_scb->adf_nullstr.nlst_length;
-	if (AFE_NULLABLE_MACRO(tovalue->db_datatype) &&
-       text->db_t_count > 0 && nullstrlen > 0 && 
-        text->db_t_count == nullstrlen &&
-         STbcompare((char *)text->db_t_text, text->db_t_count,
-         Adf_scb->adf_nullstr.nlst_string, nullstrlen, TRUE) == 0)
-	{   /* from is null string so return null value */
+	   /*
+	   ** Check for II_NULLSTRING value of ltextval
+	   ** If it matches, set tovalue to null and return
+	   */
+	   text = (DB_TEXT_STRING *) (ltextval.db_data);
+	   if ( text->db_t_count == nullstrlen &&
+                STbcompare((char *)text->db_t_text, text->db_t_count,
+                           Adf_scb->adf_nullstr.nlst_string, nullstrlen, TRUE) == 0)
+	   {   /* from is null string so return null value */
 		status = adc_getempty(Adf_scb, tovalue);
 		return status;
-	}
+	   }
+        }
 
 	/* assign to declared variable */
 	/* if it works, that's it! */

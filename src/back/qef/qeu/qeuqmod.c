@@ -429,6 +429,8 @@
 **	    Added qeu_rename_grants to support alter table rename table/columns.
 **	21-apr-2010 (toumi01) SIR 122403
 **	    Add support for column encryption.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 **/
 
 FUNC_EXTERN char	    *STskipblank();
@@ -26273,6 +26275,8 @@ i4		*error)
     DB_TEXT_STRING	*perm_str = (DB_TEXT_STRING *) NULL;
     QEF_DATA		*qtxt_tups;
     i4		qt_count;
+    i4			dmt_mem_size;
+    char		*nextname;
 
     qtxt_qeu->qeu_tup_length = sizeof(DB_IIQRYTEXT);
 
@@ -26351,26 +26355,28 @@ i4		*error)
 	** of elements in these arays must be one greater than the
 	** tbl_entry->tbl_attr_count (TID is treated as the 0'th attribute)
 	*/
-	ulm->ulm_psize =
-	    sizeof(DMT_ATT_ENTRY *) * (tbl_entry->tbl_attr_count + 1);
+	dmt_mem_size = (sizeof(DMT_ATT_ENTRY *) * (tbl_entry->tbl_attr_count + 1))
+	 + (sizeof(DMT_ATT_ENTRY) * (tbl_entry->tbl_attr_count + 1))
+	 + tbl_entry->tbl_attr_nametot;
+	ulm->ulm_psize = dmt_mem_size;
 	if ((status = qec_malloc(ulm)) != E_DB_OK)
 	{
 	    *error = E_QE001E_NO_MEM;
 	    return(status);
 	}
+
+	att_array = (DMT_ATT_ENTRY *)((char *)(ulm->ulm_pptr) + 
+		(sizeof(DMT_ATT_ENTRY *) * (tbl_entry->tbl_attr_count + 1)));
+	nextname = (char *)att_array + 
+		(sizeof(DMT_ATT_ENTRY) * (tbl_entry->tbl_attr_count + 1));
 	
 	dmt_shw_cb.dmt_attr_array.ptr_address  = (PTR) ulm->ulm_pptr;
 	dmt_shw_cb.dmt_attr_array.ptr_in_count = tbl_entry->tbl_attr_count + 1;
 	dmt_shw_cb.dmt_attr_array.ptr_size     = sizeof(DMT_ATT_ENTRY);
 
-	ulm->ulm_psize =
-	    sizeof(DMT_ATT_ENTRY) * (tbl_entry->tbl_attr_count + 1);
-	if ((status = qec_malloc(ulm)) != E_DB_OK)
-	{
-	    *error = E_QE001E_NO_MEM;
-	    return(status);
-	}
-	att_array = (DMT_ATT_ENTRY *) ulm->ulm_pptr;
+	dmt_shw_cb.dmt_attr_names.ptr_address  =  nextname;
+	dmt_shw_cb.dmt_attr_names.ptr_in_count =  1;
+	dmt_shw_cb.dmt_attr_names.ptr_size     = tbl_entry->tbl_attr_nametot;
 
 	/*
 	** now make elements of the array of pointers to DMT_ATT_ENTRY
@@ -26785,12 +26791,11 @@ i4		*error)
 	/*
 	** compute the length of column name
 	*/
-	str_len = qec_trimwhite(sizeof(att_entry->att_name),
-	    att_entry->att_name.db_att_name);
+	str_len = att_entry->att_nmlen;
 
 	delim_ident_len = DB_MAX_DELIMID;
 
-	status = cui_idunorm((u_char *) att_entry->att_name.db_att_name, 
+	status = cui_idunorm((u_char *) att_entry->att_nmstr, 
 	    (u_i4 *) &str_len, delim_ident, &delim_ident_len, idunorm_mode,
 	    &err_blk);
 	if (DB_FAILURE_MACRO(status))

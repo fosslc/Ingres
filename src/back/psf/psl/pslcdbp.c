@@ -7,6 +7,7 @@
 #include    <cs.h>
 #include    <me.h>
 #include    <iicommon.h>
+#include    <cui.h>
 #include    <dbdbms.h>
 #include    <dmf.h>	/* needed for psfparse.h */
 #include    <adf.h>	/* needed for psfparse.h */
@@ -22,7 +23,6 @@
 #include    <pshparse.h>
 #include    <er.h>
 #include    <psftrmwh.h>
-#include    <cui.h>
 
 /*
 ** Name: PSLCDBP.C:	this file contains functions used in semantic actions
@@ -83,6 +83,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 */
 
 
@@ -97,6 +99,7 @@ static DB_STATUS    psl_init_attrs(
 				   PSS_DBPINFO	 *dbpinfo,
 				   DMT_ATT_ENTRY ***attsp,
 				   i4	 *num_atts,
+				   i4	 *attr_nametot,
 				   i4	 *tot_length,
 				   DB_ERROR	 *err_blk);
 static DB_STATUS    psl_init_rdrinfo(
@@ -111,7 +114,8 @@ static DB_STATUS    psl_build_atthsh(
 				     RDR_INFO	*rdr_info,
 				     DB_ERROR	*err_blk);
 static i4	    psl_rdf_hash(
-				 DB_ATT_NAME *colname);
+				char *colname,
+				i4 colnamelen);
 
 
 
@@ -619,6 +623,7 @@ psl_fill_proc_params(
 **	attsp		    returns array of DMT_ATT_ENTRYs, representing
 **			        the columns of the set parameter
 **	num_atts	    returns number of attributes in the set
+**	attr_nametot	    return size needed for attribute names
 **	tot_length	    returns total length of a tuple in the set
 **	err_blk		    filled in if an error occurs
 **
@@ -649,6 +654,7 @@ psl_init_attrs(
 	       PSS_DBPINFO	*dbpinfo,
 	       DMT_ATT_ENTRY	***attsp,
 	       i4		*num_atts,
+	       i4		*attr_nametot,
 	       i4		*tot_length,
 	       DB_ERROR		*err_blk)
 {
@@ -659,34 +665,40 @@ psl_init_attrs(
     i4	    array_size, i;
     i4	    offset;
     i4	    err_code;
+    char    *nextname;
+    i4      n;
     
     *num_atts  = dbpinfo->pss_setparmno;
-    
+
     /* allocate array of pointers
     ** 
     **  NOTE: allocate an extra pointer for a "tid" column, to emulate RDF
     */
     array_size = *num_atts +1;
+
+    /*
+    **  Alloc worst case DB_ATT_MAXNAME for attribute names.
+    **  We could alloc size needed if we loop twice through input dbpinfo
+    **  Since this is create procedure don't bother
+    */
+    *attr_nametot = (array_size * (DB_ATT_MAXNAME+1));
+
     status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
-			array_size * sizeof(DMT_ATT_ENTRY *), 
+			(array_size * sizeof(DMT_ATT_ENTRY *))
+			+ (array_size * sizeof(DMT_ATT_ENTRY))
+			+ *attr_nametot,
 			(PTR *) attsp, err_blk);
     if (DB_FAILURE_MACRO(status))
 	return (status);
-    
-    /* allocate array of attribute descriptors
-     */
-    status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
-			array_size * sizeof(DMT_ATT_ENTRY), 
-			(PTR *) &att_array, err_blk);
-    if (DB_FAILURE_MACRO(status))
-	return (status);
-    
+
+    atts = *attsp;
+    att_array = (DMT_ATT_ENTRY *)(atts + array_size);
     MEfill(array_size * sizeof(DMT_ATT_ENTRY), (u_char) 0, (PTR) att_array);
+    nextname = (char *)(att_array + array_size);
 
     /* set each pointer in the array of pointers
     ** to point to a descriptor in the array of descriptors
     */
-    atts = *attsp;
     for (i = 0; i < array_size; i++)
     {
 	atts[i] = &att_array[i];
@@ -712,9 +724,15 @@ psl_init_attrs(
 			     PSF_INTERR, &err_code, err_blk, 0);
 	    return (E_DB_ERROR);
 	}	    
-	
-	MEcopy((PTR) &parm->pss_varname,
-	       sizeof(DB_ATT_NAME), (PTR) &att_array[i].att_name);
+
+	/* Compute blank stripped length of attribute name */
+	n = cui_trmwhite(DB_PARM_MAXNAME, parm->pss_varname.db_parm_name);
+
+	att_array[i].att_nmlen = n;
+	att_array[i].att_nmstr = nextname;
+	cui_move(n, parm->pss_varname.db_parm_name, '\0', n + 1, nextname);
+	nextname += (n + 1);
+	attr_nametot += (n + 1);
 
 	att_array[i].att_number = i;
 	att_array[i].att_type   = parm->pss_dbdata.db_datatype;
@@ -742,10 +760,13 @@ psl_init_attrs(
 
     /* for completeness, setup "tid" column (just like RDF does)
      */
-    MEmove(3,
+    att_array[DB_IMTID].att_nmlen = 3;
+    att_array[DB_IMTID].att_nmstr = nextname;
+    cui_move(3, 
 	   ((*sess_cb->pss_dbxlate & CUI_ID_REG_U) ? ERx("TID") : ERx("tid")),
-	   ' ', sizeof(DB_ATT_NAME), 
-	   (PTR) &att_array[DB_IMTID].att_name);
+	   '\0', 4, att_array[DB_IMTID].att_nmstr);
+    nextname += 4;
+
 
     att_array[DB_IMTID].att_type   = DB_INT_TYPE;
     att_array[DB_IMTID].att_width  = 4;
@@ -763,10 +784,11 @@ psl_init_attrs(
 **                       taken from pst_coldesc function
 **
 ** Description:	    
-**	Calculates a bucket value given a column name (DB_ATT_NAME).
+**	Calculates a bucket value given a column name
 **
 ** Inputs:
 **	colname		    ptr to column name
+**      colnamelen	    length of blank trimmed column name
 **
 ** Outputs:
 **	none
@@ -785,7 +807,7 @@ psl_init_attrs(
 */
 static
 i4
-psl_rdf_hash(DB_ATT_NAME *colname)
+psl_rdf_hash(char *colname, i4 colnamelen)
 {
     register i4	bucket;
     register u_char	*p;
@@ -793,8 +815,8 @@ psl_rdf_hash(DB_ATT_NAME *colname)
 
     /* First, find the right hash bucket */
     bucket = 0;
-    p = (u_char *) colname->db_att_name;
-    for (i = 0; i < sizeof(DB_ATT_NAME); i++)
+    p = (u_char *) colname;
+    for (i = 0; i < colnamelen; i++)
     {
 	bucket += *p;
 	p++;
@@ -855,6 +877,7 @@ psl_build_atthsh(
     i4  	    bucket;
     DB_STATUS	    status;
     i4	    i;
+    DB_ATT_NAME	    hash_attname;
     
     /* allocate array of hash buckets
      */
@@ -886,9 +909,8 @@ psl_build_atthsh(
 
 	hsh_entry->attr = atts[i];
 
-	/* insert hash entry at beginning of linked list
-	 */
-	bucket = psl_rdf_hash(&(atts[i]->att_name));
+	/* insert hash entry at beginning of linked list */
+	bucket = psl_rdf_hash(atts[i]->att_nmstr, atts[i]->att_nmlen);
 
 	hsh_entry->next_attr = hsh_tbl[bucket];
 	hsh_tbl[bucket]      = hsh_entry;
@@ -946,6 +968,7 @@ psl_init_rdrinfo(
     DB_STATUS	status;
     RDR_INFO	*rdr_info;
     i4	num_atts, tot_length;
+    i4		attr_nametot;
 
 
     /* allocate and initialize the rdrinfo block
@@ -966,7 +989,7 @@ psl_init_rdrinfo(
     ** allocate and initialize the attribute descriptors
     */
     status = psl_init_attrs(sess_cb, dbpinfo, &rdr_info->rdr_attr,
-			    &num_atts, &tot_length, err_blk);
+			    &num_atts, &attr_nametot, &tot_length, err_blk);
     if (DB_FAILURE_MACRO(status))
 	return (status);
 
@@ -997,6 +1020,7 @@ psl_init_rdrinfo(
 	   sizeof(DB_TAB_NAME), (PTR) &rdr_info->rdr_rel->tbl_name);
     
     rdr_info->rdr_no_attr = num_atts;
+    rdr_info->rdr_attnametot = attr_nametot;
 
     return(E_DB_OK);
 

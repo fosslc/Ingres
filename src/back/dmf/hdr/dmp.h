@@ -539,6 +539,10 @@
 **          opposed to a database merely opened for read-only access)
 **      15-Sep-2010 (stial01) (SIR 121619 MVCC, SD 146756, B124453)
 **          Moved row_is_consistent() prototype to dmp.h
+**      07-Oct-2010 (horda03) b124559
+**          When a DB was opened during Incremental Rollforward, the access_mode
+**          is forced to READONLY. Need to identify this situation so that multiple sessions
+**          can open the DB READONLY.
 */
 
 /*
@@ -833,6 +837,9 @@ typedef struct _DMP_PINFO		DMP_PINFO;
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Add DCB_S_MVCC, DCB_S_MVCC_DISABLED
 **	    DCB_S_MVCC_TRACE, DCB_S_MVCC_JTRACE
+**      07-Oct-2010 (horda03) b124559
+**          Add DCB_S_RO_INCREMENTAL_RFP to indicate a DB which is opened in
+**          READ mode only (WRITE downgraded).
 */
 
 struct _DMP_DCB
@@ -890,12 +897,16 @@ struct _DMP_DCB
 						    ** set at DB open time,
 						    ** not at ADD time. */
 #define                 DCB_S_RODB         0x200000L /* readonly database */
+#define			DCB_S_RO_INCREMENTAL_RFP 0x400000L 
+                                                    /* DB open downgraded to READ access
+                                                    ** due to incremental rollforward.
+                                                    */
 /* String values of above bits */
 #define	DCB_STATUS	"\
 JOURNAL,EXCLUSIVE,ROLLFORWARD,ONLINE_RCP,RECOVER,FASTCOMMIT,INVALID,\
 BACKUP,SYNC,PRODUCTION,NOBACKUP,REPLICATE,DMCM,REPCATS,MLOCKED,\
 MVCC,MVCC_DISABLED,MVCC_TRACE,MVCC_JTRACE,MUST_LOG,HAS_RAW,\
-READONLYDB"
+READONLYDB,INCREMENTAL_RFP"
 
     LG_LA	    dcb_backup_addr;	    /* On-line backup starting log
 					    ** address. */

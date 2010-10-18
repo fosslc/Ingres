@@ -115,6 +115,8 @@
 **	    replace nat and longnat with i4
 **      24-Feb-2004 (kodse01)
 **          Removed gwxit.h inclusion which is not required.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 **/
 
 /* forwards */
@@ -327,8 +329,7 @@ GWX_RCB	    *gwx_rcb;
 
 		GM_1error( (GWX_RCB *)0, E_GW8341_TAB_MISSING_IS_CLAUSE,
 			  GM_ERR_USER,
-			  GM_dbslen( dmt_att->att_name.db_att_name ),
-			  (PTR)&dmt_att->att_name );
+			  dmt_att->att_nmlen, dmt_att->att_nmstr );
 		db_stat = E_DB_ERROR;
 		break;
 	    }
@@ -353,8 +354,7 @@ GWX_RCB	    *gwx_rcb;
 		    GM_2error( (GWX_RCB *)0,
 			      E_GW834B_INVALID_XTAB_IS_CLAUSE,
 			      GM_ERR_USER,
-			      GM_dbslen( dmt_att->att_name.db_att_name ),
-			      (PTR)&dmt_att->att_name,
+			      dmt_att->att_nmlen, dmt_att->att_nmstr,
 			      GM_dbslen( src ),
 			      (PTR)src );
 		    db_stat = E_DB_ERROR;
@@ -499,7 +499,7 @@ GWX_RCB	    *gwx_rcb;
     
     i4			rflags;
     char		*tblname = gwx_rcb->xrcb_tab_name->db_tab_name;
-    char		*err_att;
+    DMT_ATT_ENTRY	*err_att;
     i4		err_stat;
 
     if( GM_globals.gwm_trace_opens )
@@ -536,8 +536,7 @@ GWX_RCB	    *gwx_rcb;
 	    {
 		if( gwm_atts[1].gma_key_type != GMA_USER )
 		{
-		    err_att = 
-			gwm_atts[0].gma_key_dmt_att->att_name.db_att_name;
+		    err_att = gwm_atts[0].gma_key_dmt_att;
 		    err_stat = E_GW8348_NOT_USER;
 		}
 		if( !(rflags & GM_UNIQUE) )
@@ -547,7 +546,7 @@ GWX_RCB	    *gwx_rcb;
 	    }
 	    else
 	    {
-		err_att = gwm_atts[0].gma_key_dmt_att->att_name.db_att_name;
+		err_att = gwm_atts[0].gma_key_dmt_att;
 		err_stat = E_GW8188_NOT_PLACE;
 	    }
 	    break;
@@ -558,7 +557,7 @@ GWX_RCB	    *gwx_rcb;
 	       gwm_atts[0].gma_key_type != GMA_VNODE &&
 	       gwm_atts[0].gma_key_type != GMA_USER )
 	    {
-		err_att = gwm_atts[0].gma_key_dmt_att->att_name.db_att_name;
+		err_att = gwm_atts[0].gma_key_dmt_att;
 		err_stat = E_GW8349_NOT_PLACE_USER;
 	    }
 	    if( gwm_atts[0].gma_key_type == GMA_USER &&
@@ -597,7 +596,7 @@ GWX_RCB	    *gwx_rcb;
 	    {
 		GM_2error( gwx_rcb, err_stat, GM_ERR_USER,
 			  GM_dbslen( tblname ), (PTR)tblname,
-			  GM_dbslen( err_att ), (PTR)err_att);
+			  err_att->att_nmlen, err_att->att_nmstr);
 	    }
 	}
     }

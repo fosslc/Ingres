@@ -21,6 +21,9 @@
 ##	this will store the information whether the column has any default values
 ##	formaly stored by the parameter default_value for the column.
 ##	default_value will now store the actual value of the default.
+##    08-Oct-2010 (miket) SIR 122403 BUG 124542 SD 147137
+##      Added encrypted_columns, encryption_type, column_encrypted,
+##      column_encrypt_salt.
 ##
 -->
 <!--
@@ -56,6 +59,8 @@
                        key_compression  CDATA  #REQUIRED
                        journaling       CDATA  #REQUIRED
                        unique_keys      CDATA  #REQUIRED
+                       encrypted_columns CDATA #IMPLIED
+                       encryption_type  CDATA  #IMPLIED
                        table_structure  CDATA  #REQUIRED >
 <!ELEMENT meta_column EMPTY>
 
@@ -70,7 +75,9 @@
                         is_foreign_key CDATA  #IMPLIED
                         precision      CDATA  #IMPLIED
                         scale          CDATA  #IMPLIED
-                        column_label   CDATA  #IMPLIED >
+                        column_label   CDATA  #IMPLIED
+                        column_encrypted    CDATA #IMPLIED
+                        column_encrypt_salt CDATA #IMPLIED >
 <!ELEMENT meta_index (index_column+)>
 
 <!ATTLIST meta_index  index_name       CDATA  #IMPLIED

@@ -468,6 +468,11 @@ opc_materialize(
 **	    ansidates are pure dates with no time part, and there's nothing
 **	    to normalize.  (The ansidate-to-ansidate coercion ends up just
 **	    moving bits around and wasting CPU time, but changes nothing.)
+**	15-july-2010 (smeke01) b123950
+**	    Make sure ingresdate (DB_DTE_TYPE) key columns are normalised so
+**	    that hashing works - and works for byte compare as well as date
+**	    compare. Use same method as for varchars to make sure that the
+**	    original un-normalised date is passed up the query tree.
 */
 VOID
 opc_hash_materialize(
@@ -486,7 +491,8 @@ opc_hash_materialize(
     QEF_QP_CB		*qp = global->ops_cstate.opc_qp;
     ADE_OPERAND		ops[2];
     DB_CMP_LIST		*cmp;
-    ADI_FI_DESC		*vchfidp, *nvchfidp;
+    ADI_FI_DESC		*vchfidp, *nvchfidp, *dtefidp;
+    ADI_OP_ID		vchopid, dteopid;
     ADI_RSLV_BLK	adi_rslv_blk;
     i4			opcode;
     i4			ninstr;
@@ -508,10 +514,9 @@ opc_hash_materialize(
     }
 
     /* Bits to init. */
-    vchfidp = nvchfidp = NULL;	/* show adi_resolve calls not done */
+    vchfidp = nvchfidp = dtefidp = NULL;	/* show adi_resolve calls not done */
+    vchopid = dteopid = 0;
     adi_rslv_blk.adi_num_dts = 1;
-    adi_rslv_blk.adi_op_id = 0;
-    adi_rslv_blk.adi_fidesc = (ADI_FI_DESC *) NULL;
 
     /* Begin the adf */
     ninstr = BTcount((char *)eqcmp, (i4)subqry->ops_eclass.ope_ev) + 1;
@@ -543,7 +548,9 @@ opc_hash_materialize(
 		    &&
 		    abs(ceq[eqcno].opc_eqcdv.db_datatype) != DB_VCH_TYPE
 		    &&
-		    abs(ceq[eqcno].opc_eqcdv.db_datatype) != DB_NVCHR_TYPE)
+		    abs(ceq[eqcno].opc_eqcdv.db_datatype) != DB_NVCHR_TYPE
+		    &&
+		    abs(ceq[eqcno].opc_eqcdv.db_datatype) != DB_DTE_TYPE)
 						continue;
 	    if (BTtest((i4)eqcno, (char *)eqcmp) == FALSE)
 	    {
@@ -599,8 +606,7 @@ opc_hash_materialize(
 		if (cmp->cmp_type != ceq[eqcno].opc_eqcdv.db_datatype ||
 		    cmp->cmp_length != ceq[eqcno].opc_eqcdv.db_length ||
 		    keytype == DB_CHR_TYPE || keytype == DB_VBYTE_TYPE ||
-		    keytype == DB_DTE_TYPE || keytype == DB_TXT_TYPE ||
-		    keytype == DB_TME_TYPE ||
+		    keytype == DB_TXT_TYPE || keytype == DB_TME_TYPE ||
 		    keytype == DB_TMWO_TYPE || keytype == DB_TMW_TYPE ||
 		    keytype == DB_TSWO_TYPE || keytype == DB_TSW_TYPE ||
 		    keytype == DB_TSTMP_TYPE || keytype == DB_INYM_TYPE ||
@@ -611,9 +617,11 @@ opc_hash_materialize(
 		** may not join even though they should. */
 		if (keytype == DB_VCH_TYPE || keytype == DB_NVCHR_TYPE)
 		{
-		    if (adi_rslv_blk.adi_op_id == 0)
-			status = adi_opid(global->ops_adfcb, "trim", 
-				&adi_rslv_blk.adi_op_id);
+		    if (vchopid == 0)
+		    {
+			status = adi_opid(global->ops_adfcb, "trim", &vchopid);
+		    }
+		    adi_rslv_blk.adi_op_id = vchopid;
 		    if (keytype == DB_VCH_TYPE)
 		    {
 			if (vchfidp == NULL)
@@ -636,6 +644,23 @@ opc_hash_materialize(
 			}
 			opcode = nvchfidp->adi_finstid;
 		    }
+		}
+		else
+		if (keytype == DB_DTE_TYPE)
+		{
+		    if (dteopid == 0)
+		    {
+			status = adi_opid(global->ops_adfcb, "norm_date_hash", &dteopid);
+		    }
+		    adi_rslv_blk.adi_op_id = dteopid;
+		    if (dtefidp == NULL)
+		    {
+			adi_rslv_blk.adi_dt[0] = DB_DTE_TYPE;
+			adi_rslv_blk.adi_fidesc = NULL;
+			status = adi_resolve(global->ops_adfcb, &adi_rslv_blk, FALSE);
+			dtefidp = adi_rslv_blk.adi_fidesc;
+		    }
+		    opcode = dtefidp->adi_finstid;
 		}
 	    }
 	    else
@@ -677,7 +702,8 @@ opc_hash_materialize(
 	    if (keysdone || BTtest((i4)eqcno, (char *)eqcmp) == FALSE ||
 		coerce ||
 		(abs(ceq[eqcno].opc_eqcdv.db_datatype) != DB_VCH_TYPE &&
-		 abs(ceq[eqcno].opc_eqcdv.db_datatype) != DB_NVCHR_TYPE))
+		 abs(ceq[eqcno].opc_eqcdv.db_datatype) != DB_NVCHR_TYPE &&
+		 abs(ceq[eqcno].opc_eqcdv.db_datatype) != DB_DTE_TYPE))
 	    {
 		ceq[eqcno].opc_dshrow = rowno;
 		ceq[eqcno].opc_dshoffset = rowsz;

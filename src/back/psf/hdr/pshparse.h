@@ -563,6 +563,8 @@
 **	    Pass with-clauses to psl-ct1-create-table.
 **	2-Sep-2010 (kschendel) b124347
 **	    Add trace point PS152 to trace some cache-dynamic decisions.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 */
 
 /*
@@ -7119,7 +7121,8 @@ pst_clrrng(
 FUNC_EXTERN DMT_ATT_ENTRY *
 pst_coldesc(
 	PSS_RNGTAB         *rngentry,
-	DB_ATT_NAME        *colname);
+	char		   *colname,
+	i4		   colnamelen);
 FUNC_EXTERN DB_STATUS
 pst_prepare(
 	PSQ_CB             *psq_cb,

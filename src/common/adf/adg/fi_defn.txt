@@ -526,7 +526,9 @@
 #	04-Oct-2010 (kiria01) b124065
 #	    Expanded operator definition to encompass adgoptab.roc requirements
 #	    thereby rendering it redundant.
-#
+#       15-Jul-2010 (smeke01) b123950
+#           Add function instance ADFI_1475_NORM_DATE_HASH / adu_norm_date_hash
+#           for operator ADI_DATEHASH_OP / norm_date_hash.
 
 
 group ADI_COMPARISON
@@ -9386,6 +9388,18 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_0CXI_IGNORE
 	    result DB_ALL_TYPE
 	    operands DB_ALL_TYPE
+
+    operator ADI_DATEHASH_OP type ADI_PREFIX
+	name "norm_date_hash" support ADI_INGRES_6
+
+	fi ADFI_1475_NORM_DATE_HASH
+	    description char  :  norm_date_hash(date)
+	    lenspec ADI_FIXED 12
+	    null_preinst ADE_1CXI_SET_SKIP
+	    result DB_DTE_TYPE
+	    operands DB_DTE_TYPE
+	    routine adu_norm_date_hash
+
 
 group ADI_COPY_COERCION
 

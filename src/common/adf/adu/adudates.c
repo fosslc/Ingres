@@ -61,6 +61,8 @@
 **				time.
 **	    adu_21ansi_strtodt()-Converts a valid text input to internal
 **				storage format for ANSI datetime data type
+**	    adu_norm_date_hash() - Normalises a valid ingresdate so that hash
+**				algorithm works correctly.
 **
 **  Function prototypes defined in ADUINT.H except ad0_13tab_look(), which
 **  is defined in ADU2DATE.H
@@ -9479,3 +9481,141 @@ i4	date_id)
     return ("");
 }
 
+
+/*  
+** Name: adu_norm_date_hash() - Normalises an ingresdate so that hash join will
+**		      work correctly.
+**
+** Description:
+**	This function takes an ingresdate and makes the necessary adjustments
+**      to the data to make the ingresdate work correctly with hash. Most of
+**      the work is done by calling existing functions.
+**      Intervals are handled by retrieving the 'month days' equivalent of the
+**      interval, and storing that value in the days fields (.dn_highday and
+**      .dn_lowday). The dn_year and dn_month fields are zeroed, and the
+**      dn_status updated accordingly.  
+**      Note that the sequence of transformations deliberately mirrors that of
+**      ade_4date_cmp(), which is the function used to compare dates eg by
+**      FSM join. 
+**
+** Inputs:
+**	adf_scb				Pointer to an ADF session control block.
+**					Required by called functions.
+**	pInDv				Pointer to DB_DATA_VALUE describing date
+**					to be converted.
+**		.dn_status		A character whose bits describe the
+**					internal date format.
+**		.dn_highday		A character for large day intervals.
+**		.dn_year		The date's year.
+**		.dn_month		The date's month.
+**		.dn_lowday		If the date is absolute, this is the
+**					day of the month.  If the date is an
+**					interval, this is the low-order part
+**					of the number of days in the interval.
+**		.dn_seconds		The time in seconds from 00:00.
+**		.dn_nsecond		Fractional seconds in nanoseconds
+**	pOutDv				Pointer to the DB_DATA_VALUE structure
+**					that will contain the resulting
+**					normalised date.
+**
+** Outputs:
+**	adf_scb				Pointer to an ADF session control block.
+**					Required by called functions.
+**	pOutDv				Pointer to the DB_DATA_VALUE structure
+**					that will contain the resulting
+**					normalised date.
+**
+**	Returns:
+**
+**	    This function mostly uses existing adu functions to do the donkey
+**	    work. All return codes from this function are as passed up from
+**	    those functions, except for an initial validation on the db_data
+**	    pointer.
+**
+** History:
+**	15-july-2010 (smeke01) b123950
+**	    Initial creation.
+*/
+
+DB_STATUS
+adu_norm_date_hash(
+ADF_CB			*adf_scb,
+DB_DATA_VALUE		*pInDv,
+DB_DATA_VALUE		*pOutDv)
+{
+    DB_STATUS		db_stat;
+    AD_DATENTRNL	*pInIngresdate, *pOutIngresdate;
+    AD_NEWDTNTRNL	internalDate;
+    AD_NEWDTNTRNL	*pInternalDate;
+    i4 monthdays; 
+
+    /* 
+    ** As this is an internal function, validation is minimal.
+    ** However since we are assigning db_data to an AD_DATENTRNL pointer for
+    ** convenience, we may as well check for NULL and help avoid a sigsegv. 
+    */ 
+    if ((pInIngresdate = (AD_DATENTRNL*)(pInDv->db_data)) == NULL ||
+	(pOutIngresdate = (AD_DATENTRNL*)(pOutDv->db_data)) == NULL )
+    {
+	if (adf_scb)
+	    return (adu_error(adf_scb, (i4) E_AD9999_INTERNAL_ERROR, 0));
+	else
+	    return (E_DB_SEVERE);
+    }
+
+    /* 
+    ** Deal with 'fast path' cases. The following need no conversion, so just copy across unchanged:
+    ** 1. Absolute dates with time-spec.
+    ** 2. Intervals specified only in days, or of less than a day. These will have AD_DN_LENGTH set,
+    **    but not AD_DN_YEARSPEC or AD_DN_MONTHSPEC.
+    ** 3. The NULL date value.
+    */
+    if (((pInIngresdate->dn_status & (AD_DN_ABSOLUTE|AD_DN_TIMESPEC)) == (AD_DN_ABSOLUTE|AD_DN_TIMESPEC)) || 
+	((pInIngresdate->dn_status & AD_DN_LENGTH) && !(pInIngresdate->dn_status & (AD_DN_YEARSPEC|AD_DN_MONTHSPEC))) || 
+	(pInIngresdate->dn_status == AD_DN_NULL) )
+    {
+	MEcopy((PTR)pInIngresdate, (u_i2)sizeof(AD_DATENTRNL),(PTR)pOutIngresdate);
+	return(E_DB_OK);
+    }
+
+    pInternalDate = &internalDate;
+
+    /* The rest take the 'slow path', since we need to get them into an agreed format */
+    if (db_stat = adu_6to_dtntrnl (adf_scb, pInDv, pInternalDate))
+    {
+	return (db_stat);
+    }
+
+    if (!(pInternalDate->dn_status & AD_DN_ABSOLUTE))
+    {
+	monthdays = adu_2normldint(pInternalDate);
+	/* 
+	** Overwrite days with 'month days' and set day status flag.
+	** Zero year & months, and clear year & month status flags 
+	*/
+	pInternalDate->dn_day = monthdays;
+	pInternalDate->dn_status |= AD_DN_DAYSPEC;
+	pInternalDate->dn_year = pInternalDate->dn_month = 0;
+	pInternalDate->dn_status &= ~(AD_DN_YEARSPEC|AD_DN_MONTHSPEC);
+	return(adu_7from_dtntrnl (adf_scb, pOutDv, pInternalDate));
+    }
+
+    if (pInternalDate->dn_status2 & AD_DN2_ADTE_TZ)
+    {
+	if (db_stat = adu_dtntrnl_pend_time(adf_scb, pInternalDate))
+	    return (db_stat);
+    }
+
+    if (pInternalDate->dn_status2 & AD_DN2_NO_DATE)
+    {
+	if (db_stat = adu_dtntrnl_pend_date(adf_scb, pInternalDate))
+	    return (db_stat);
+    }
+
+    if (pInternalDate->dn_status2 & AD_DN2_NORM_PEND)
+    {
+	adu_1normldate(pInternalDate);
+    }
+
+    return(adu_7from_dtntrnl (adf_scb, pOutDv, pInternalDate));
+}

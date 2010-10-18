@@ -255,6 +255,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      02-Dec-2009 (horda03) B103150
 **          Add new flag DMT_NO_LOCK_WAIT.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 **/
 
 /*}
@@ -291,7 +293,6 @@
 */
 typedef struct
 {
-    DB_ATT_NAME     att_name;              /* Name of the attribute. */
     i4	    att_number;		   /* Attribute number. */
     i4	    att_offset;		   /* Offset to attribute. */
     i4         att_type;              /* Data type for attribute. */
@@ -324,6 +325,9 @@ typedef struct
     i2		att_geomtype;	/* Geometry data type code */
     i2		att_encflags;	/* encryption flags */
     i4		att_encwid;	/* encrypted net width */
+    i2		att_spare;	/* not used */
+    i2		att_nmlen;	/* if 0, attnmstr should point here */
+    char	*att_nmstr;
 }   DMT_ATT_ENTRY;
 
 /*}
@@ -1104,11 +1108,15 @@ typedef struct
 #define	DMT_M_LOC           0x040L	/* Want the extra locations information */
 #define	DMT_M_MULTIBUF      0x080L	/* Doing a show into multiple buffers */
 #define DMT_M_COUNT_UPD	    0x100L	/* Update row, page counts */
+#define DMT_M_NO_ATTR_NAMES 0x200L	/* Dont want the attribute names */ 
     DB_TAB_ID	    dmt_tab_id;		/* Table to show by table identifier */
     DB_TAB_NAME     dmt_name;           /* Table name. */
     DB_OWN_NAME     dmt_owner;          /* Table owner. */
     DM_DATA         dmt_table;          /* Table information. */
     DM_PTR          dmt_attr_array;     /* Attribute info (DMT_ATT_ENTRY) */
+    DM_PTR	    dmt_attr_names;	/* Memory for attribute name strings */
+				        /* blank trimmed,null terminated names*/
+					/* MIN SIZE (relattnametot + attcnt) */
     DM_PTR          dmt_index_array;    /* Index information. */
     DM_PTR          dmt_loc_array;      /* Location info (DB_LOC_NAME) */
     DM_DATA         dmt_char_array;     /* Show characteristics options. */
@@ -1237,6 +1245,7 @@ typedef struct _DMT_TBL_ENTRY
     DB_LOC_NAME     tbl_location;           /* First Table location name. */
     DB_LOC_NAME	    tbl_filename;	    /* Table file name. */
     i4         tbl_attr_count;         /* Table attribute count. */
+    i4         tbl_attr_nametot;         /* size of attribute names */
     i4         tbl_index_count;        /* Count of indexes on table. */
     i4         tbl_width;              /* Table physical record width. */
     i4         tbl_data_width;         /* Table logical data width. */

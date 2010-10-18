@@ -444,6 +444,8 @@
 **          Alloc/maintain exact size of column names (iirelation.relattnametot)
 **	25-May-2010 (kschendel)
 **	    Add missing mh include.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 **/
 
 /*
@@ -1084,7 +1086,7 @@ DB_ERROR	    *errcb)
     u_char		*dmu_enc_aeskey;
     u_i2		dmu_enc_aeskeylen;
     i4			alen;
-    i4			attnmsz;
+    i4			attr_nametot;
     char		*cp;
 
     /* List of all the system catalogs with fixed table ID numbers.
@@ -2196,12 +2198,12 @@ DB_ERROR	    *errcb)
 	    } /* ! nofile-create */
 	} /* any locations */
 
-	for (i = 0, attnmsz = 0; i < attr_count; i++)
+	for (i = 0, attr_nametot = 0; i < attr_count; i++)
 	{
 	    for (alen = DB_ATT_MAXNAME;  
 		attr_entry[i]->attr_name.db_att_name[alen-1] == ' ' 
 			&& alen >= 1; alen--);
-	    attnmsz += alen;
+	    attr_nametot += alen;
 	}
 
 	/*
@@ -2225,7 +2227,7 @@ DB_ERROR	    *errcb)
 	}
 	MEcopy((PTR)owner, sizeof(DB_OWN_NAME), (PTR)&relrecord.relowner);
 	relrecord.relatts = attr_count;
-	relrecord.relattnametot = attnmsz;
+	relrecord.relattnametot = attr_nametot;
 	relrecord.relwid = ntab_width;
 	relrecord.reltotwid = ntab_width;	        
 	relrecord.reldatawid = ntab_data_width;	        
@@ -2856,7 +2858,8 @@ DB_ERROR	    *errcb)
 	    }
 
 	    status = dmf_gwt_register(scb->scb_gw_session_id, table_name, owner,
-		&ntab_id, attr_count, attr_entry, gwchar_array, gwattr_array,
+		&ntab_id, attr_count, attr_nametot, attr_entry,
+		gwchar_array, gwattr_array,
 		xcb, gwsource, gw_id, &tup_cnt, &pg_cnt, char_array, errcb);
 	    if (status)
 		break;

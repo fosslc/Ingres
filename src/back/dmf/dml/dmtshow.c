@@ -34,6 +34,7 @@
 #include    <dm1p.h>
 #include    <dma.h>
 #include    <dmppn.h>
+#include    <cui.h>
 
 /**
 ** Name:  DMTSHOW.C - Implement the DMF show table operation.
@@ -303,6 +304,8 @@
 **	    For encryption project add encflags, encwid.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 */
 
 /*
@@ -830,6 +833,9 @@ DMT_SHW_CB  *dmt_show_cb)
     bool	    ii_encoded_forms = FALSE;
     bool	    is_utf8 = FALSE ;
     DB_ERROR	    local_dberr;
+    char	    *nextname;
+    i4		    nametot;
+    i4		    nameused;
 
     #define CFDATA_COL_POS 5
     #define TREETREE_COL_POS 8 
@@ -845,7 +851,7 @@ DMT_SHW_CB  *dmt_show_cb)
     for (;;)
     {
 	if ((dmt->dmt_flags_mask & 
-              (DMT_M_TABLE|DMT_M_ATTR|DMT_M_INDEX|DMT_M_LOC|DMT_M_COUNT_UPD|DMT_M_PHYPART)) == 0)
+              (DMT_M_TABLE|DMT_M_ATTR|DMT_M_NO_ATTR_NAMES|DMT_M_INDEX|DMT_M_LOC|DMT_M_COUNT_UPD|DMT_M_PHYPART)) == 0)
 	{
 	    SETDBERR(&dmt->error, 0, E_DM001A_BAD_FLAG);
             status = E_DB_ERROR;
@@ -924,6 +930,26 @@ DMT_SHW_CB  *dmt_show_cb)
 	    SETDBERR(&dmt->error, 0, E_DM002A_BAD_PARAMETER);
 	    status = E_DB_ERROR;
 	    break;
+	}
+
+	if ((dmt->dmt_flags_mask & DMT_M_ATTR)
+		&& (dmt->dmt_flags_mask & DMT_M_NO_ATTR_NAMES) == 0)
+	{
+	    nextname = dmt->dmt_attr_names.ptr_address;
+	    nametot = dmt->dmt_attr_names.ptr_size;
+	    nameused = 0; 
+	    if (!nextname)
+	    {
+		SETDBERR(&dmt->error, 0, E_DM002A_BAD_PARAMETER);
+		status = E_DB_ERROR;
+		break;
+	    }
+	}
+	else
+	{
+	    nextname = NULL;
+	    nametot = 0;
+	    nameused = 0; 
 	}
 
 	++dmf_svcb->svcb_stat.tbl_show;
@@ -1421,6 +1447,10 @@ DMT_SHW_CB  *dmt_show_cb)
 	    tbl->tbl_owner = tcb->tcb_rel.relowner;
 	    tbl->tbl_location = tcb->tcb_rel.relloc;
 	    tbl->tbl_attr_count = (tcb->tcb_rel.relatts - attr_drop_count);
+
+	    /* tbl_attr_nametot should be big enough for names + nulls */
+	    tbl->tbl_attr_nametot = tcb->tcb_rel.relattnametot + tcb->tcb_rel.relatts;
+
 	    tbl->tbl_attr_high_colno = tcb->tcb_rel.relatts;
 	    tbl->tbl_index_count = (i4)tcb->tcb_index_count;
 	    tbl->tbl_width = tcb->tcb_rel.relwid;
@@ -1907,9 +1937,29 @@ DMT_SHW_CB  *dmt_show_cb)
 		if (tcb->tcb_atts_ptr[i].ver_dropped)
 		   continue;
 
-		MEmove(tcb->tcb_atts_ptr[i].attnmlen,
-		    tcb->tcb_atts_ptr[i].attnmstr, ' ',
-		    DB_ATT_MAXNAME, a[j].att_name.db_att_name);
+		if (dmt->dmt_flags_mask & DMT_M_NO_ATTR_NAMES)
+		{
+		    a[j].att_nmlen = 0;
+		    a[j].att_nmstr = (char *)&a[j].att_nmlen;
+		}
+		else
+		{
+		    /* Check for attribute name overflow */
+		    if (nameused + (tcb->tcb_atts_ptr[i].attnmlen + 1) >
+			nametot)
+		    {
+			SETDBERR(&dmt->error, 0, E_DM002A_BAD_PARAMETER);
+			status = E_DB_ERROR;
+			break;
+		    }
+		    a[j].att_nmlen = tcb->tcb_atts_ptr[i].attnmlen;
+		    a[j].att_nmstr = nextname;
+		    cui_move(tcb->tcb_atts_ptr[i].attnmlen,
+			    tcb->tcb_atts_ptr[i].attnmstr, '\0', 
+			    tcb->tcb_atts_ptr[i].attnmlen + 1, nextname);
+		    nextname += (tcb->tcb_atts_ptr[i].attnmlen + 1);
+		    nameused += (tcb->tcb_atts_ptr[i].attnmlen + 1);
+		} 
 		a[j].att_number = tcb->tcb_atts_ptr[i].ordinal_id;
 		a[j].att_type = tcb->tcb_atts_ptr[i].type;
 		a[j].att_width = tcb->tcb_atts_ptr[i].length;
@@ -1963,9 +2013,31 @@ DMT_SHW_CB  *dmt_show_cb)
 
 		j++;
 		a = att[j];
-		MEmove(tcb->tcb_atts_ptr[i].attnmlen,
-		    tcb->tcb_atts_ptr[i].attnmstr, ' ',
-		    DB_ATT_MAXNAME, a->att_name.db_att_name);
+
+		if (dmt->dmt_flags_mask & DMT_M_NO_ATTR_NAMES)
+		{
+		    a->att_nmlen = 0;
+		    a->att_nmstr = (char *)&a->att_nmlen;
+		}
+		else
+		{
+		    /* Check for attribute name overflow */
+		    if (nameused + (tcb->tcb_atts_ptr[i].attnmlen + 1) >
+			nametot)
+		    {
+			SETDBERR(&dmt->error, 0, E_DM002A_BAD_PARAMETER);
+			status = E_DB_ERROR;
+			break;
+		    }
+		    a->att_nmlen = tcb->tcb_atts_ptr[i].attnmlen;
+		    a->att_nmstr = nextname;
+		    cui_move(tcb->tcb_atts_ptr[i].attnmlen,
+			    tcb->tcb_atts_ptr[i].attnmstr, '\0',
+			    tcb->tcb_atts_ptr[i].attnmlen + 1, nextname);
+		    nextname += (tcb->tcb_atts_ptr[i].attnmlen + 1);
+		    nameused += (tcb->tcb_atts_ptr[i].attnmlen + 1);
+		}
+
 		a->att_number = tcb->tcb_atts_ptr[i].ordinal_id;
 		a->att_type = tcb->tcb_atts_ptr[i].type;
 		a->att_width = tcb->tcb_atts_ptr[i].length;

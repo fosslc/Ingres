@@ -161,6 +161,8 @@
 **	    replace nat and longnat with i4
 **      24-Feb-2004 (kodse01)
 **          Removed gwxit.h inclusion which is not required.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 */
 
 /* forwards */
@@ -1101,8 +1103,7 @@ GM_ad_out_col( char *src,
 		    0, (PTR)src,
 		    GM_dbslen( gwm_att->gma_col_classid ),
 		    (PTR)gwm_att->gma_col_classid,
-		    GM_dbslen( dmt_att->att_name.db_att_name ),
-		    (PTR)&dmt_att->att_name );
+		    dmt_att->att_nmlen, dmt_att->att_nmstr );
 		GM_error( cl_stat );
 		db_stat = E_DB_ERROR;
 		break;
@@ -1123,8 +1124,7 @@ GM_ad_out_col( char *src,
 			      0, (PTR)src,
 			      GM_dbslen( gwm_att->gma_col_classid ),
 			      (PTR)gwm_att->gma_col_classid,
-			      GM_dbslen( dmt_att->att_name.db_att_name ),
-			      (PTR)&dmt_att->att_name );
+			      dmt_att->att_nmlen, dmt_att->att_nmstr );
 		    GM_error( cl_stat );
 		    db_stat = E_DB_ERROR;
 		    break;
@@ -1237,8 +1237,7 @@ GM_ad_out_col( char *src,
 	    GM_2error( (GWX_RCB *)0, cl_stat,
 		      GM_ERR_USER|GM_ERR_LOG,
 		      0, (PTR)GM_attr_type( dmt_att->att_type ),
-		      GM_dbslen( dmt_att->att_name.db_att_name ),
-		      (PTR)&dmt_att->att_name );
+		      dmt_att->att_nmlen, dmt_att->att_nmstr );
 	    db_stat = E_DB_ERROR;
 	    break;
 	}

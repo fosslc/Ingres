@@ -94,6 +94,8 @@
 **	    sit beneath opmeta annotated BOPs.
 **      22-mar-2010 (joea)
 **          Remove special handling for boolean in opcu_prconst.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 */
 typedef struct _ULD_TSTATE
 {
@@ -1464,8 +1466,7 @@ opcu_prconst(
 	    }
 	    else
 	    {
-		att_name = (char *)&opvgrv_p[vno]->opv_relation->
-		    rdr_attr[atno]->att_name.db_att_name[0];
+		att_name = opvgrv_p[vno]->opv_relation->rdr_attr[atno]->att_nmstr;
 	    }
 	    length = opt_noblanks((i4)length, (char *)att_name);
 
@@ -2237,17 +2238,20 @@ opc_gatname(
 					** to be used by FOR UPDATE lists
 					** and UPDATE CURSOR lists only */
     if ( grvp->opv_relation->rdr_obj_desc->dd_o9_tab_info.dd_t6_mapped_b )
+    {
 	att_name = (char *) &grvp->opv_relation->rdr_obj_desc->dd_o9_tab_info.
 	    dd_t8_cols_pp[ dmfattr ]->dd_c1_col_name[0];	
+	length = sizeof(DB_ATT_NAME);
+    }
     else
-	att_name = (char *)&grvp->opv_relation->
-	    rdr_attr[dmfattr]->att_name.db_att_name[0];
+    {
+	att_name = grvp->opv_relation->rdr_attr[dmfattr]->att_nmstr;
+	length = grvp->opv_relation->rdr_attr[dmfattr]->att_nmlen;
+    }
 
-    if ( sizeof(DB_ATT_NAME) >= sizeof(OPT_NAME))
+    if ( length >= sizeof(OPT_NAME))
 	length = sizeof(OPT_NAME)-1;	/* cannot use more space than
 					** available */
-    else
-	length = sizeof(DB_ATT_NAME);	/* get max length to use */
     length = opt_noblanks((i4)length, (char *)att_name);
     
     if (cap_ptr->dd_c1_ldb_caps & DD_8CAP_DELIMITED_IDS)

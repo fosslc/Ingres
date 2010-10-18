@@ -266,6 +266,8 @@
 **          Changes for Long IDs
 **	19-Apr-2010 (gupsh01) SIR 123444
 **	    Added support for rename table /columns.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 **/
 
 /*	definitions needed by the static function declarations	*/
@@ -379,8 +381,7 @@ static DB_STATUS
 qea_readAttributes(
     QEE_DSH		*dsh,
     ULM_RCB		*ulm,
-    DB_TAB_ID		*tableID,
-    i4		attributeCount,
+    DMT_TBL_ENTRY	*tableinfo,
     DMT_ATT_ENTRY	***attributeArray );
 
 static DB_STATUS
@@ -1182,9 +1183,10 @@ qea_createIntegrity(
 			&(qea_act->qhd_obj.qhd_createIntegrity);
     DB_INTEGRITY	integrityTuple;
     DB_INTEGRITY	integrityTuple2;
+    DMT_TBL_ENTRY	constrainedTableInfo;
+    DMT_TBL_ENTRY	referredTableInfo;
     DB_TAB_ID		*constraintID =
 	    ( DB_TAB_ID * ) dsh->dsh_row[ details->qci_constraintID ];
-    i4		constrainedTableAttributeCount;
     DMT_ATT_ENTRY       ***constrainedTableAttributeArray =
  ( DMT_ATT_ENTRY *** ) &( dsh->dsh_row[ details->qci_cnstrnedTabAttributeArray]);
     DB_CONSTRAINT_NAME	constraintName;
@@ -1199,7 +1201,6 @@ qea_createIntegrity(
     DB_TAB_ID		*referredTableID =
 	    ( DB_TAB_ID * ) dsh->dsh_row[ details->qci_referredTableID ];
 					 /* id of foreign table */
-    i4		referredTableAttributeCount;
     DMT_ATT_ENTRY	***referredTableAttributeArray =
 ( DMT_ATT_ENTRY ***) &(dsh->dsh_row[ details->qci_referredTableAttributeArray]);
 
@@ -1267,14 +1268,16 @@ qea_createIntegrity(
 	        break;
             }
 
-            /* fill in table id */
+            /* fill in table info */
+            status = qea_0lookupTableInfo( dsh, (bool)TRUE, 
+		    &details->qci_cons_tabname, &details->qci_cons_ownname,
+		    (DB_TAB_ID *)NULL, &constrainedTableInfo, (bool)TRUE);
 
-            status = qea_lookupTableID( dsh, &details->qci_cons_tabname,
-				&details->qci_cons_ownname,
-				constrainedTableID,
-				&constrainedTableAttributeCount,
-				( bool ) TRUE );
-            if ( DB_FAILURE_MACRO( status ) )	break;
+            if ( DB_FAILURE_MACRO( status ) )
+		break;
+	    else
+		*constrainedTableID = constrainedTableInfo.tbl_id;
+
             MEcopy( ( PTR ) constrainedTableID, sizeof( DB_TAB_ID ),
 		    ( PTR ) &integrityTuple.dbi_tabid );
 
@@ -1369,8 +1372,7 @@ qea_createIntegrity(
 
 	    /* fill in attribute array for constrained table */
 
-	    status = qea_readAttributes( dsh, ulm, constrainedTableID,
-			constrainedTableAttributeCount,
+	    status = qea_readAttributes( dsh, ulm, &constrainedTableInfo,
 			constrainedTableAttributeArray );
             if ( DB_FAILURE_MACRO( status ) )	break;
 
@@ -1381,15 +1383,16 @@ qea_createIntegrity(
 
 	    if ( details->qci_integrityTuple->dbi_consflags & CONS_REF )
 	    {
-                status = qea_lookupTableID( dsh, &details->qci_ref_tabname,
-				&details->qci_ref_ownname,
-				referredTableID,
-				&referredTableAttributeCount,
-				( bool ) TRUE );
-                if ( DB_FAILURE_MACRO( status ) )	break;
+		status = qea_0lookupTableInfo( dsh, (bool)TRUE, 
+		    &details->qci_ref_tabname, &details->qci_ref_ownname,
+		    (DB_TAB_ID *)NULL, &referredTableInfo, (bool)TRUE);
 
-		status = qea_readAttributes( dsh, ulm, referredTableID,
-			referredTableAttributeCount,
+                if ( DB_FAILURE_MACRO( status ) )
+		    break;
+		else
+		    *referredTableID = referredTableInfo.tbl_id;
+
+		status = qea_readAttributes( dsh, ulm, &referredTableInfo,
 			referredTableAttributeArray );
 		if ( DB_FAILURE_MACRO( status ) )	break;
 	    }
@@ -2508,17 +2511,20 @@ static DB_STATUS
 qea_readAttributes(
     QEE_DSH		*dsh,
     ULM_RCB		*ulm,
-    DB_TAB_ID		*tableID,
-    i4		attributeCount,
+    DMT_TBL_ENTRY	*tableinfo,
     DMT_ATT_ENTRY	***attributeArray )
 {
     DB_STATUS		status = E_DB_OK;
     QEF_CB		*qef_cb = dsh->dsh_qefcb; /* session control block */
     DMT_SHW_CB          dmt_shw_cb;
     DMT_ATT_ENTRY	**att_pptr;
+    DMT_ATT_ENTRY	*att;
     i4		error;
     i4			i;
-    i4		realNumberOfAttributes = attributeCount + 1;
+    i4		realNumberOfAttributes = tableinfo->tbl_attr_count + 1;
+    i4		nametot = tableinfo->tbl_attr_nametot;
+    i4		dmt_mem_size;
+    char	*nextname;
 
     dmt_shw_cb.length = sizeof(DMT_SHW_CB);
     dmt_shw_cb.type = DMT_SH_CB;
@@ -2528,45 +2534,47 @@ qea_readAttributes(
     dmt_shw_cb.dmt_char_array.data_address = (PTR)NULL;
     dmt_shw_cb.dmt_char_array.data_in_size = 0;
     dmt_shw_cb.dmt_char_array.data_out_size  = 0;
-    MEcopy( ( PTR ) tableID, sizeof( DB_TAB_ID ),
-	( PTR ) &dmt_shw_cb.dmt_tab_id );
+    dmt_shw_cb.dmt_tab_id = tableinfo->tbl_id;
 
     /*
-    ** we need to allocate an array of pointers to DMT_ATT_ENTRY and an
-    ** array of DMT_ATT_ENTRY's for it to point to; remember that the number
-    ** of elements in these arays must be one greater than the
-    ** attributeCount (TID is treated as the 0'th attribute)
+    ** Allocate memory for:
+    ** array of pointers to DMT_ATT_ENTRY
+    ** array of DMT_ATT_ENTRY
+    ** array of null terminated names
+    ** Remember that the number of elements in these arrays must be one greater
+    ** than the attribute count (TID is treated as the 0'th attribute)
     */
-    ulm->ulm_psize =
-	    sizeof(DMT_ATT_ENTRY *) * realNumberOfAttributes;
+    dmt_mem_size = (sizeof(DMT_ATT_ENTRY *) * realNumberOfAttributes)
+	+ (sizeof(DMT_ATT_ENTRY ) * realNumberOfAttributes)
+	+ nametot;
+
+    ulm->ulm_psize = dmt_mem_size;
     if ((status = qec_malloc(ulm)) != E_DB_OK)
     {
         error = ulm->ulm_error.err_code;
 	qef_error( error, 0L, status, &error, &dsh->dsh_error, 0 );
         return (status);
     }
+
     *attributeArray = (DMT_ATT_ENTRY **) ulm->ulm_pptr;
-	
-    dmt_shw_cb.dmt_attr_array.ptr_address  = (PTR) ulm->ulm_pptr;
+    att_pptr = (DMT_ATT_ENTRY **) ulm->ulm_pptr;
+    att = (DMT_ATT_ENTRY *) (att_pptr + realNumberOfAttributes);
+    nextname = (char *)(att + realNumberOfAttributes);
+
+    /* now fill in the array of pointers to them */
+    for (i = 0; i < realNumberOfAttributes; i++, att++)
+    {
+        att_pptr[i]  = att;
+    }
+	     
+    dmt_shw_cb.dmt_attr_array.ptr_address  = (PTR) att_pptr;
     dmt_shw_cb.dmt_attr_array.ptr_in_count = realNumberOfAttributes;
     dmt_shw_cb.dmt_attr_array.ptr_size     = sizeof(DMT_ATT_ENTRY);
 
-    /*
-    ** now allocate DMT_ATT_ENTRYs and fill in the array of pointers to them
-    */
-    att_pptr = (DMT_ATT_ENTRY **) dmt_shw_cb.dmt_attr_array.ptr_address;
-    for (i = 0; i < realNumberOfAttributes; i++ )
-    {
-        ulm->ulm_psize = sizeof(DMT_ATT_ENTRY);
-        if ((status = qec_malloc(ulm)) != E_DB_OK)
-        {
-            error = ulm->ulm_error.err_code;
-	    qef_error( error, 0L, status, &error, &dsh->dsh_error, 0 );
-            return (status);
-        }
-        att_pptr[ i ]  = (DMT_ATT_ENTRY *) ulm->ulm_pptr;
-    }
-	     
+    dmt_shw_cb.dmt_attr_names.ptr_address  = (PTR) nextname;
+    dmt_shw_cb.dmt_attr_names.ptr_in_count = 1;
+    dmt_shw_cb.dmt_attr_names.ptr_size     = nametot;
+
     /* call dmt_show() to get description of attributes */
     dmt_shw_cb.dmt_flags_mask = DMT_M_ATTR;
     if ((status = dmf_call(DMT_SHOW, &dmt_shw_cb)) != E_DB_OK)
@@ -4815,9 +4823,9 @@ stringInColumnList(
 	}
 	else
 	{
-	    columnName = currentAttribute->att_name.db_att_name;
-	    ADD_UNNORMALIZED_NAME( evolvingString, columnName, DB_ATT_MAXNAME,
-			punctuation, NO_QUOTES );
+	    columnName = currentAttribute->att_nmstr;
+	    ADD_UNNORMALIZED_NAME( evolvingString, columnName,
+			currentAttribute->att_nmlen, punctuation, NO_QUOTES );
 	}
 
 	switch ( postfix )
@@ -5134,9 +5142,10 @@ compareColumnLists(
 	{
 	    leftColumnName =
 	      (leftTableAttributeArray[ ( i4) leftColumnID->col_id.db_att_id])
-			->att_name.db_att_name;
-	    ADD_UNNORMALIZED_NAME( evolvingString, leftColumnName, DB_ATT_MAXNAME,
-			leadPeriod, NO_QUOTES );
+			->att_nmstr;
+	    ADD_UNNORMALIZED_NAME( evolvingString, leftColumnName,
+	      (leftTableAttributeArray[ ( i4) leftColumnID->col_id.db_att_id])
+			->att_nmlen, leadPeriod, NO_QUOTES );
 	}
 
 	/* = rightTableName */
@@ -5169,9 +5178,10 @@ compareColumnLists(
 	{
 	    rightColumnName =
 	      (rightTableAttributeArray[ (i4)rightColumnID->col_id.db_att_id])
-			->att_name.db_att_name;
-	    ADD_UNNORMALIZED_NAME( evolvingString, rightColumnName, DB_ATT_MAXNAME,
-			leadPeriod, NO_QUOTES );
+			->att_nmstr;
+	    ADD_UNNORMALIZED_NAME( evolvingString, rightColumnName,
+	      (rightTableAttributeArray[ (i4)rightColumnID->col_id.db_att_id])
+			->att_nmlen, leadPeriod, NO_QUOTES );
 	}
 
 	punctuation = listSeparator;
@@ -9575,6 +9585,8 @@ textOfUniqueIndex(
 ** History:
 **	1-apr-98 (inkdo01)
 **	    Written as part of support for constraint index with options.
+**      8-Oct-2010 (hanal04) Bug 124561
+**          Add handling of compression settings.
 [@history_line@]...
 */
 
@@ -9588,6 +9600,7 @@ addWithopts(
     char	*ixstruct = "BTREE";
     char	withstring[80];		/* space for assembling options */
     char	*withopt = &withstring[0];
+    char        *compression = "unsupported";
 
 
     /* Add the structure type */
@@ -9605,6 +9618,30 @@ addWithopts(
     addString( evolvingString, ixstruct, 5, NO_PUNCTUATION, NO_QUOTES);
 
     /* Now check for the various index with clause options */
+
+    if (details->qci_compress)
+    {
+        switch (details->qci_compress) {
+         case PST_INDEX_COMP:
+            compression = "KEY";
+            break;
+
+         case PST_NO_INDEX_COMP:
+            compression = "NOKEY";
+            break;
+
+         case PST_DATA_COMP:
+            compression = "DATA";
+            break;
+
+         case PST_NO_DATA_COMP:
+            compression = "NODATA";
+            break;
+        }
+        sprintf(withopt, ", COMPRESSION=(%s)", compression);
+        addString( evolvingString, withopt, STlength(withopt),
+            NO_PUNCTUATION, NO_QUOTES);
+    }
 
     if (details->qci_idx_fillfac)
     {
@@ -10387,8 +10424,7 @@ qea_cor_text(
 		*/
 		if (pass == 0)
 		{
-		    status = qea_readAttributes(dsh, ulm, &tbl_info->tbl_id,
-			tbl_info->tbl_attr_count, &att_array);
+		    status = qea_readAttributes(dsh, ulm, tbl_info, &att_array);
 		    if (DB_FAILURE_MACRO(status))
 			break;
 		}
@@ -10417,8 +10453,9 @@ qea_cor_text(
 
 		att_entry = att_array[i];
 
-		status = addUnnormalizedName(att_entry->att_name.db_att_name,
-		    DB_ATT_MAXNAME, unnormalizedName, &unnormalizedNameLength,
+		status = addUnnormalizedName(
+		    att_entry->att_nmstr, att_entry->att_nmlen,
+		    unnormalizedName, &unnormalizedNameLength,
 		    &evolvingString, NO_PUNCTUATION, NO_QUOTES, dsh);
 		if (DB_FAILURE_MACRO(status))
 		    break;
@@ -10432,7 +10469,7 @@ qea_cor_text(
 		    att_entry = att_array[i];
 
 		    status = addUnnormalizedName(
-			att_entry->att_name.db_att_name, DB_ATT_MAXNAME,
+			att_entry->att_nmstr, att_entry->att_nmlen,
 			unnormalizedName, &unnormalizedNameLength,
 			&evolvingString, LEAD_COMMA, NO_QUOTES, dsh);
 		    if (DB_FAILURE_MACRO(status))

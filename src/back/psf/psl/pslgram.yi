@@ -770,6 +770,8 @@
 **	    Fix up code that thinks pst_compress is a boolean.  It hasn't
 **	    been boolean for a while.  It has worked by accident since
 **	    the relevant flag happens to be 1, just like TRUE.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 */
 
 %{
@@ -2792,7 +2794,7 @@ updclause:	updword uplist
 		name = rsdm->pst_sym.pst_value.pst_s_rsdm.pst_rsname;
 
 		/* Get the column description */
-		coldesc = pst_coldesc(cb->pss_resrng, (DB_ATT_NAME *) name);
+		coldesc = pst_coldesc(cb->pss_resrng, name, DB_ATT_MAXNAME);
 
 		if (coldesc == (DMT_ATT_ENTRY *) NULL)
 		{
@@ -5070,7 +5072,8 @@ permtelm:          generic_ident
 
 	/* Look up the attribute number */
 	STmove($1, ' ', sizeof(DB_ATT_NAME), (char *) &attname);
-	attribute = pst_coldesc(cb->pss_resrng, &attname);
+	attribute = pst_coldesc(cb->pss_resrng, attname.db_att_name, 
+			DB_ATT_MAXNAME);
 
 	/* Check for attribute not found */
 	if (attribute == (DMT_ATT_ENTRY *) NULL)
@@ -6270,8 +6273,8 @@ retrieve:   retstmnt intoclause uniqueclause tlclause
 		    /* Look up the attribute 
 		     */
 		    attribute = pst_coldesc(rngtabp,
-					    &resdom->pst_right->pst_sym
-					       .pst_value.pst_s_var.pst_atname);
+			resdom->pst_right->pst_sym.pst_value.pst_s_var.pst_atname.db_att_name,
+			DB_ATT_MAXNAME);
 
 		    /* Check for attribute not found 
 		     */
@@ -9666,7 +9669,8 @@ tlelm:             NAME is afcn
 	    /* Set up var node for copy into tree */
 	    var.pst_vno = $1->pss_rgno;
 	    var.pst_atno.db_att_id = (*attribute)->att_number;
-	    STRUCT_ASSIGN_MACRO((*attribute)->att_name, var.pst_atname);
+	    cui_move((*attribute)->att_nmlen, (*attribute)->att_nmstr, ' ',
+		DB_ATT_MAXNAME, var.pst_atname.db_att_name);
 
 	    /* Create the PST_VAR_NODE */
 	    status = pst_node(cb, &cb->pss_ostream, (PST_QNODE *) NULL,
@@ -9680,7 +9684,7 @@ tlelm:             NAME is afcn
 	    }
 
 	    /* Create the corresponding result domain node */
-	    status = pst_adresdom((char *) &(*attribute)->att_name, rsdmnode,
+	    status = pst_adresdom(var.pst_atname.db_att_name, rsdmnode,
 		varnode, cb, psq_cb, &rsdmnode);
 	    if (status != E_DB_OK)
 	    {
@@ -10632,7 +10636,8 @@ aggtarg:	    afcn
 	/* Set up var node for copy into tree */
 	var.pst_vno = $1->pss_rgno;
 	var.pst_atno.db_att_id = (*attribute)->att_number;
-	STRUCT_ASSIGN_MACRO((*attribute)->att_name, var.pst_atname);
+	cui_move((*attribute)->att_nmlen, (*attribute)->att_nmstr, ' ',
+		DB_ATT_MAXNAME, var.pst_atname.db_att_name);
 
 	/* Create the PST_VAR_NODE */
 	status = pst_node(cb, &cb->pss_ostream, (PST_QNODE *) NULL,
@@ -10720,7 +10725,8 @@ targdom:           afcn
 	    /* Set up var node for copy into tree */
 	    var.pst_vno = $1->pss_rgno;
 	    var.pst_atno.db_att_id = (*attribute)->att_number;
-	    STRUCT_ASSIGN_MACRO((*attribute)->att_name, var.pst_atname);
+	    cui_move((*attribute)->att_nmlen, (*attribute)->att_nmstr, ' ',
+		DB_ATT_MAXNAME, var.pst_atname.db_att_name);
 
 	    /* Create the PST_VAR_NODE */
 	    status = pst_node(cb, &cb->pss_ostream, (PST_QNODE *) NULL,
@@ -10758,11 +10764,10 @@ attrib:            var PERIOD NAME
 	DB_STATUS	       status;
 
 	/* Normalize the attribute name */
-	STmove($3, ' ', sizeof(DB_ATT_NAME),
-	    (char *) &varnode.pst_atname);
+	STmove($3, ' ', sizeof(DB_ATT_NAME), (char *) &varnode.pst_atname);
 
 	/* Look up the attribute */
-	attribute = pst_coldesc($1, &varnode.pst_atname);
+	attribute = pst_coldesc($1, varnode.pst_atname.db_att_name, DB_ATT_MAXNAME);
 
 	/* Check for attribute not found */
 	if (attribute == (DMT_ATT_ENTRY *) NULL)
@@ -10807,8 +10812,8 @@ attrib:            var PERIOD NAME
 	attribute = $1->pss_attdesc[$3];
 
 	/* Normalize the attribute name */
-	STmove(attribute->att_name.db_att_name, ' ', sizeof(DB_ATT_NAME),
-	    (char *) &varnode.pst_atname);
+	cui_move(attribute->att_nmlen, attribute->att_nmstr, ' ',
+		DB_ATT_MAXNAME, varnode.pst_atname.db_att_name);
 		
 	/* Set up var node for copy into tree */
 	varnode.pst_vno = $1->pss_rgno;
@@ -11206,8 +11211,9 @@ attribfcn:         I2CONST
 	    DB_ATT_NAME		colname;
 	    DMT_ATT_ENTRY	*att_entry;
 
-	    STmove($1, ' ', sizeof(DB_ATT_NAME), (char *) &colname);
-	    att_entry = pst_coldesc(cb->pss_resrng, &colname);
+	    STmove($1, ' ', sizeof(DB_ATT_NAME), colname.db_att_name);
+	    att_entry = pst_coldesc(cb->pss_resrng, colname.db_att_name, 
+			DB_ATT_MAXNAME);
 
 	    if (att_entry != (DMT_ATT_ENTRY *) NULL)
 	    {

@@ -6,6 +6,7 @@
 #include    <gl.h>
 #include    <cs.h>
 #include    <iicommon.h>
+#include    <cui.h>
 #include    <dbdbms.h>
 #include    <ddb.h>
 #include    <ulm.h>
@@ -110,6 +111,8 @@
 **	    Added include of st.h to eliminate gcc 4.3 warnings.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 [@history_template@]...
 **/
 
@@ -1015,9 +1018,11 @@ opl_ojoin(
                          (p_att >= 0) &&
                          (gvar1->rdr_attr[att1]) &&
                          (gvar2->rdr_attr[p_att]) &&
-                         !(STxcompare(
-((*(gvar1->rdr_attr[att1])).att_name).db_att_name,DB_ATT_MAXNAME,
-((*(gvar2->rdr_attr[p_att])).att_name).db_att_name,DB_ATT_MAXNAME, FALSE, FALSE))
+                         cui_compare(
+			    (*(gvar1->rdr_attr[att1])).att_nmlen,
+			    (*(gvar1->rdr_attr[att1])).att_nmstr,
+			    (*(gvar2->rdr_attr[p_att])).att_nmlen,
+			    (*(gvar2->rdr_attr[p_att])).att_nmstr) == 0
                     );
 		else if (ijmap && parentojmap)
 		{   /* check if the relation is outer to one joinid which

@@ -6,6 +6,7 @@
 #include    <gl.h>
 #include    <cs.h>
 #include    <iicommon.h>
+#include    <cui.h>
 #include    <dbdbms.h>
 #include    <ddb.h>
 #include    <ulm.h>
@@ -69,6 +70,8 @@
 **          opv_parser() Remove code to invalidate indexes. The invalidate
 **          table that follows will do the job. Invalidate indexes by table id
 **          can get E_OP008E_RDF_INVALIDATE, E_RD0045_ULH_ACCESS
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 [@history_line@]...
 **/
 
@@ -136,7 +139,10 @@ opv_tproc(
     i4			i, j, totlen, offset;
     DB_STATUS           status;
     i4		err_code;
-
+    i4			dmt_mem_size;
+    char		*nextname;
+    i4			n;
+    i4			attr_nametot;
 
     /* First retrieve iiprocedure row using id from range table entry. */
     rdf_cb = &global->ops_rangetab.opv_rdfcb;
@@ -178,15 +184,34 @@ opv_tproc(
     STRUCT_ASSIGN_MACRO(dbp->db_owner, proc_owner);
 
     /* Allocate attr descriptors and address from ptr arrays. */
+
     i = dbp->db_parameterCount + dbp->db_rescolCount;
 
-    attarray = (DMT_ATT_ENTRY **) opu_memory(global, (sizeof(PTR) +
-		sizeof(DMT_ATT_ENTRY)) * i + sizeof(PTR));
-				/* 1 extra ptr because array is 1-origin */
+    /*
+    ** Alloc maximum name size for each parameter name
+    **
+    ** (Right now we don't have total parameter name size in iiprocedure.
+    ** In the future it would be nice to add to add iiprocedure.parmnametot, 
+    ** similar to iirelation.relattnamtot).
+    ** 
+    ** If this memory allocation is a problem... we could try allocating
+    **  (DB_OLDMAXNAME_32 + 1) * i;
+    ** and realloc/reinit parameter names if this isn't big enough
+    */
+    attr_nametot = (DB_ATT_MAXNAME + 1) * i;
+
+    /* 1 extra ptr because array is 1-origin */
+    dmt_mem_size = ((i+1) * sizeof(DMT_ATT_ENTRY *))
+	+ (i * sizeof(DMT_ATT_ENTRY))
+	+ attr_nametot;
+
+    attarray = (DMT_ATT_ENTRY **) opu_memory(global, dmt_mem_size);
+    attarray[0] = (DMT_ATT_ENTRY *)NULL;
+    attrp = (DMT_ATT_ENTRY *)&attarray[i+1];
+    nextname = (char *)(attrp + i);
 
     /* Set up attr pointer arrays for both parms and result columns. */
-    for (j = 1, attrp = (DMT_ATT_ENTRY *)&attarray[i+1],
-	attarray[0] = (DMT_ATT_ENTRY *)NULL; j <= i; j++, attrp = &attrp[1])
+    for (j = 1; j <= i; j++, attrp++)
     {
 	attarray[j] = attrp;
 	MEfill(sizeof(DMT_ATT_ENTRY), (u_char)0, (char *)attrp);
@@ -261,7 +286,13 @@ opv_tproc(
 					dbp->db_rescolCount;
 	    }
 
-	    STRUCT_ASSIGN_MACRO(param_tup->dbpp_name, attrp->att_name);
+	    /* Compute blank stripped length of attribute name */
+	    n = cui_trmwhite(DB_PARM_MAXNAME, param_tup->dbpp_name.db_att_name);
+	    attrp->att_nmstr = nextname;
+	    attrp->att_nmlen = n;
+	    cui_move(n, param_tup->dbpp_name.db_att_name, '\0', n + 1, nextname);
+	    nextname += (n + 1);
+
 	    attrp->att_type = param_tup->dbpp_datatype;
 	    attrp->att_width = param_tup->dbpp_length;
 	    attrp->att_prec = param_tup->dbpp_precision;
@@ -309,6 +340,7 @@ opv_tproc(
     STRUCT_ASSIGN_MACRO(proc_owner, tblptr->tbl_owner);
     MEfill(sizeof(DB_LOC_NAME), (u_char)' ', (char *)&tblptr->tbl_location);
     tblptr->tbl_attr_count = rescolCount + parameterCount;
+    tblptr->tbl_attr_nametot = attr_nametot;
     tblptr->tbl_width = resrowWidth;
     tblptr->tbl_date_modified.db_tab_high_time = created;
     tblptr->tbl_storage_type = DB_TPROC_STORE;
@@ -325,6 +357,7 @@ opv_tproc(
     rdrinfop->rdr_rel = tblptr;
     rdrinfop->rdr_attr = rescarray;
     rdrinfop->rdr_no_attr = tblptr->tbl_attr_count;
+    rdrinfop->rdr_attnametot = tblptr->tbl_attr_nametot;
     rdrinfop->rdr_dbp = dbp;
     grvp->opv_relation = rdrinfop;
 

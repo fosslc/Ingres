@@ -133,6 +133,11 @@
 **          of decimal precision.
 **	09-Feb-2010 (smeke01) b123226, b113797 
 **	    Added defines for max u_i8 and i8 digit width.
+**	22-Aug-2010 (drivi01)
+**	    Update the definition of SSIZE_TYPE. It wasn't
+**	    defined correctly.  typedef of SSIZE_TYPE 
+**	    to long is the same as int b/c long on 
+**	    64-bit OS is 4 bytes, we need it to be 8 bytes.
 */
 
 #ifndef	COMPAT_INCLUDE
@@ -179,7 +184,7 @@ typedef	long		i4;
 # ifdef WIN64
 typedef LONG64		i8;
 # else
-typedef long		i8;
+typedef long long	i8;
 # endif /* WIN64 */
 # else  /* LP64 */
 typedef __int64     i8;
@@ -197,7 +202,7 @@ typedef	unsigned long	u_i4;
 # ifdef WIN64
 typedef ULONG64		u_i8;
 # else
-typedef unsigned long	u_i8;
+typedef unsigned long long	u_i8;
 # endif /* WIN64 */
 # else  /* LP64 */
 typedef unsigned __int64    u_i8;
@@ -374,16 +379,20 @@ typedef u_i2 		UCS2;	/* This is the Unicode character data type
 
 /* Support for 64-bit memory access for signed type */
 # ifdef ssize_t
+# define SSIZE_TYPE	size_t
 # else
 # ifdef LP64
-# define SSIZE_TYPE 	long
+# define SSIZE_TYPE 	LONG_PTR
+# else
+# define SSIZE_TYPE	long
+# endif /* LP64 */
+# endif /* ssize_t */
+
+# ifdef LP64
 # define MAX_SSIZE_TYPE	0x7fffffffffffffffL
 # else
-# define SSIZE_TYPE	int
 # define MAX_SSIZE_TYPE	0x7fffffff
-# endif
-# endif
-
+# endif /* LP64 */
 
 /* if 64bit file access is supported */
 # ifdef LARGEFILE64

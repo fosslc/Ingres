@@ -152,6 +152,8 @@
 **          Changes for Long IDs
 **	6-Jun-2010 (kschendel) b123923
 **	    Allow alter table alter column with lob only if type doesn't change.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 */
 
 static DB_STATUS psl_atbl_alter_lob(
@@ -890,7 +892,8 @@ psl_alt_tbl_col_drop(
 
     dmu_attr = (DMF_ATTR_ENTRY **) dmu_cb->dmu_attr_array.ptr_address;
 
-    dmt_attr = pst_coldesc(sess_cb->pss_resrng, &attname);
+    dmt_attr = pst_coldesc(sess_cb->pss_resrng, 
+		attname.db_att_name, DB_ATT_MAXNAME);
 
     if (dmt_attr == (DMT_ATT_ENTRY *) NULL)
     {
@@ -1041,7 +1044,8 @@ psl_alt_tbl_col_add(
 
     dmu_attr = (DMF_ATTR_ENTRY **) dmu_cb->dmu_attr_array.ptr_address;
 
-    dmt_attr = pst_coldesc(sess_cb->pss_resrng, &attname);
+    dmt_attr = pst_coldesc(sess_cb->pss_resrng, 
+			attname.db_att_name, DB_ATT_MAXNAME);
 
     if ((psq_cb->psq_mode == PSQ_ATBL_ADD_COLUMN) &&
 	(dmt_attr != (DMT_ATT_ENTRY *) NULL))
@@ -1241,7 +1245,8 @@ psl_alt_tbl_col_rename(
     dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
     dmu_attr = (DMF_ATTR_ENTRY **) dmu_cb->dmu_attr_array.ptr_address;
 
-    dmt_attr = pst_coldesc(sess_cb->pss_resrng, &attname);
+    dmt_attr = pst_coldesc(sess_cb->pss_resrng, 
+		attname.db_att_name, DB_ATT_MAXNAME);
 
     if (dmt_attr == (DMT_ATT_ENTRY *) NULL)
     {
@@ -1262,7 +1267,8 @@ psl_alt_tbl_col_rename(
 	return (E_DB_ERROR);
     }
 
-    newdmt_attr = pst_coldesc(sess_cb->pss_resrng, newattname);
+    newdmt_attr = pst_coldesc(sess_cb->pss_resrng, 
+			newattname->db_att_name, DB_ATT_MAXNAME);
 
     if ( newdmt_attr != (DMT_ATT_ENTRY *) NULL ) 
     {
@@ -1470,8 +1476,8 @@ psl_atbl_partcheck(
 				    (char *) &rngvar->pss_ownname),
 			(char *) &rngvar->pss_ownname,
 			psf_trmwhite(sizeof(DB_ATT_NAME), 
-				(char *) &dmt_attr->att_name),
-			(char *) &dmt_attr->att_name);
+				dmt_attr->att_nmstr),
+			dmt_attr->att_nmstr);
 
 	return (E_DB_ERROR);
       }

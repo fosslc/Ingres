@@ -15,6 +15,8 @@
 ;	21-Nov-2004 (drivi01)
 ;	    Added new functions cut_read_complete and
 ;	    cut_write_complete.
+;	12-Oct-2010 (stial01)
+;	    Added new functions cui_compare, cui_move, cui_trmwhite
 ;
 EXPORTS
 ss_2_ge		@1				
@@ -48,4 +50,7 @@ ccm_PurgeUsed		@28
 cui_chk3_locname	@29
 pCM_cb		@30	DATA			
 cut_read_complete	@31
-cut_write_complete	@32<<<<
+cut_write_complete	@32
+cui_compare		@33
+cui_move		@34
+cui_trmwhite		@35

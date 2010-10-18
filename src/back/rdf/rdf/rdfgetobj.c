@@ -34,6 +34,7 @@
 #include	<rdfint.h>
 #include	<cm.h>
 #include	<rdftrace.h>
+#include	<cui.h>
 
 /*
 ** Definition of all global variables referenced by this file.
@@ -178,6 +179,8 @@ GLOBALREF DD_CAPS	      Iird_dd_caps;	    /* initial value for DD_CAPS */
 **          Changes for Long IDs
 **	14-apr-2010 (toumi01) SIR 122403
 **	    Add support for column encryption.
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 */
 
 /*{
@@ -1437,6 +1440,7 @@ rdd_tab_init(DMT_TBL_ENTRY  *tbl_p)
     tbl_p->tbl_id.db_tab_index = 0;
     tbl_p->tbl_loc_count = 0;
     tbl_p->tbl_attr_count = 0;
+    tbl_p->tbl_attr_nametot = 0;
     tbl_p->tbl_index_count = 0;
     tbl_p->tbl_width = 0;
     tbl_p->tbl_storage_type = 0;
@@ -2452,7 +2456,8 @@ column_defaults, column_sequence from iicolumns where table_name =",
 		{
 		    char attname_buf[DB_ATT_MAXNAME];
 		    char *buf_p = attname_buf;
-		    char *attname_p = star_attr->att_name.db_att_name;
+		    char *attname_p = star_attr->att_nmstr;
+		    i4    attname_l = star_attr->att_nmlen;
 		    char *last = attname_p + sizeof(DD_ATT_NAME) -1;
 
 		    if (ldb_info.dd_i2_ldb_plus.dd_p3_ldb_caps.
@@ -2479,12 +2484,11 @@ column_defaults, column_sequence from iicolumns where table_name =",
 		    }
 		    else
 		    {
-			attname_p = star_attr->att_name.db_att_name;
+			attname_p = star_attr->att_nmstr;
 		    }
 
- 		    if ( MEcmp((PTR)column.name, (PTR)attname_p,
-			        sizeof(DD_ATT_NAME))
-			)
+ 		    if ( cui_compare(sizeof(DD_ATT_NAME), (PTR)column.name, 
+				attname_l, (PTR)attname_p))
 		    {
 		    	status = E_DB_ERROR;
 		    	break;
@@ -3107,6 +3111,7 @@ rdd_getcolno(	RDF_GLOBAL         *global,
 	if (ddr_p->qer_d5_out_info.qed_o3_output_b)
 	{
 	    tbl_p->tbl_attr_count = (i4)cnt;
+	    tbl_p->tbl_attr_nametot = cnt * (DB_ATT_MAXNAME + 1);
 
 	    /* flush */
 	    status = rdd_flush(global);
@@ -3114,12 +3119,16 @@ rdd_getcolno(	RDF_GLOBAL         *global,
 		return(status);
 	}
 	else
+	{
 	    tbl_p->tbl_attr_count = (i4)0;
-
+	    tbl_p->tbl_attr_nametot = 0;
+	}
     }
     else
     {
 	tbl_p->tbl_attr_count = ldbtab_p->dd_t7_col_cnt;
+	/* sorry, right not iitables doesnt contain relattnametot */
+	tbl_p->tbl_attr_nametot = ldbtab_p->dd_t7_col_cnt * (DB_ATT_MAXNAME + 1);
     }
 
     if ((ldbtab_p->dd_t6_mapped_b)
@@ -4959,6 +4968,7 @@ rdd_gattr( RDF_GLOBAL  *global)
     QEF_DDB_REQ		*ddr_p = &qefrcb->qef_r3_ddb_req;
     DD_OBJ_DESC		*obj_p = global->rdfcb->rdf_info_blk->rdr_obj_desc;
     DMT_ATT_ENTRY       **attr = global->rdf_ddrequests.rdd_attr;
+    char		*nextname = global->rdf_ddrequests.rdd_attr_names;
     DMT_ATT_ENTRY	*col_ptr;
     ADF_CB		*adfcb;
     i4			col_cnt = 0;
@@ -4973,6 +4983,9 @@ rdd_gattr( RDF_GLOBAL  *global)
     bool                mapped;
     DD_ATT_NAME             *local_names=NULL;
     DD_ATT_NAME             local_name;
+    i4			col_nmlen;
+    i4			nametot = global->rdf_ddrequests.rdd_attr_nametot;
+    i4			nameused = 0;
 
 
     if (!obj_p)
@@ -5148,8 +5161,21 @@ iidd_columns where table_name =",
 	    }
 		
             col_ptr = (DMT_ATT_ENTRY *)attr[iicolumns.sequence];
-	    MEcopy((PTR)iicolumns.name, sizeof(DD_ATT_NAME),
-                      (PTR)&col_ptr->att_name);
+	    col_ptr->att_nmstr = nextname;
+	    col_nmlen = cui_trmwhite(sizeof(iicolumns.name), 
+				(PTR)iicolumns.name);
+
+	    /* Check for attribute name overflow */
+	    if (nameused + (col_nmlen + 1) > nametot)
+	    {
+		status = E_DB_ERROR;
+		rdu_ierror(global, E_DB_ERROR, E_RD0256_DD_COLMISMATCH);
+		break;
+	    }
+	    cui_move(col_nmlen, (PTR)iicolumns.name, '\0',
+			col_nmlen + 1, col_ptr->att_nmstr);
+	    col_ptr->att_nmlen = col_nmlen;
+	    nextname += (col_nmlen + 1);
 	    col_ptr->att_number = iicolumns.sequence;
 
 	    /* Call adf to convert data type name to data type id */

@@ -64,6 +64,8 @@
 **          Changes for Long IDs
 **	13-Jan-2010 (wanfr01) Bug 123139
 **	    Include cv.h for function defintions
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Added cui_move, cui_compare, cui_trmwhite routines
 */
 
 /*
@@ -1252,4 +1254,142 @@ register char	*cp;
     }
 
     return(OK);
+}
+
+/*
+** Name: cui_compare() - Compare two identifiers, ignore trailing blanks
+**
+**  Description: Compare two identifiers.
+**
+**
+**  Inputs:
+**      len1		- length of id1
+**      id1		- id1
+**      len2		- length of id2
+**      id2		- id2
+**
+**  Outputs:
+**      none
+**
+**  Returns:
+**      0		id1 = id2
+**      Not 0		id1 != id2
+**
+**
+**  History:
+**      01-oct-2010 (stial01)
+**	    Written
+*/
+i4
+cui_compare(len1, id1, len2, id2)
+i4	len1;
+char	*id1;
+i4	len2;
+char	*id2;
+{
+    char	*cptr;
+    i4		idlen1;
+    i4		idlen2;
+    i4		cmp;
+
+    /* Compute blank-stripped length of id1 */
+    for ( cptr = id1 + len1 - 1, idlen1 = len1;
+	  cptr >= id1 && *cptr == ' ';
+	  cptr--, idlen1-- );
+
+    /* Compute blank-stripped length of id2 */
+    for ( cptr = id2 + len2 - 1, idlen2 = len2;
+	  cptr >= id2 && *cptr == ' ';
+	  cptr--, idlen2-- );
+
+    if (idlen1 != idlen2)
+	cmp = 1;
+    else
+	cmp = (i4)MEcmp(id1,id2,idlen1);
+
+#ifdef xDEBUG
+    TRdisplay("cui_compare '%~t' '%~t' %d \n", idlen1,id1, idlen2,id2, cmp);
+#endif
+
+    return (cmp);
+}
+
+/*
+** Name: cui_move() - move id1 to id2
+**
+**  Description: move id1 to id2. Blank trim/ Blank pad as needed.
+**
+**
+**  Inputs:
+**      len1		- length of id1
+**      id1		- id1
+**      len2		- length of id2
+**      id2		- id2
+**
+**  Outputs:
+**      none
+**
+**  Returns:
+**      none
+**
+**  History:
+**      01-oct-2010 (stial01)
+**	    Written
+*/
+VOID
+cui_move(len1, id1, pad_char, len2, id2)
+i4	len1;
+char	*id1;
+char    pad_char;
+i4	len2;
+char	*id2;
+{
+
+    MEmove(len1, id1, pad_char, len2, id2);
+
+#ifdef xDEBUG
+    TRdisplay("cui_move pad '%c' %x (%d) '%~t' (%x) %d '%~t'\n", pad_char,
+		id1,len1,len1,id1,id2,len2,len2,id2);
+#endif
+
+}
+
+/*
+** Name: cui_trmwhite() - Return blank trimmed length of identifier
+**
+**  Description: Return blank trimmed length of identifier
+**
+**
+**  Inputs:
+**      len		- input length
+**      id		- identfier
+**
+**  Outputs:
+**      none
+**
+**  Returns:
+**      blank trimmed length
+**
+**  History:
+**      01-oct-2010 (stial01)
+**	    Written
+*/
+i4 
+cui_trmwhite(len, id)
+i4	len;
+char	*id;
+{
+    char	*cptr;
+    i4		i;
+
+    /* Compute blank-stripped length of id */
+    for ( cptr = id + len - 1, i = len;
+	  cptr >= id && *cptr == ' ';
+	  cptr--, i-- );
+
+#ifdef xDEBUG
+    TRdisplay("cui_trmwhite %~t %d\n", i, id, i);
+#endif
+
+    return (i);
 }

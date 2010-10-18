@@ -61,6 +61,7 @@
 #define        OPC_AHD		TRUE
 #include    <opxlint.h>
 #include    <opclint.h>
+#include    <cui.h>
 
 /*
 ** Dick Williamson guess at optimal tuples per buffer for opc_pagesize()
@@ -351,6 +352,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      01-oct-2010 (stial01) (SIR 121123 Long Ids)
+**          Store blank trimmed names in DMT_ATT_ENTRY
 [@history_template@]...
 **/
 
@@ -2241,10 +2244,12 @@ opc_saggopt(
 	    if (rdrdesc->rdr_rel->tbl_storage_type != DMT_ISAM_TYPE 
 		&& rdrdesc->rdr_rel->tbl_storage_type != DMT_BTREE_TYPE)
 		    return;	/* max/min MUST be on index structure */
-	    if (rdrdesc->rdr_keys == NULL || MEcmp((PTR)
+	    if (rdrdesc->rdr_keys == NULL || 
+		cui_compare(sizeof(DB_ATT_NAME),
 		varp->pst_sym.pst_value.pst_s_var.pst_atname.db_att_name,
-		(PTR)rdrdesc->rdr_attr[rdrdesc->rdr_keys->key_array[0]]
-		->att_name.db_att_name, DB_ATT_MAXNAME) != 0)
+		rdrdesc->rdr_attr[rdrdesc->rdr_keys->key_array[0]]->att_nmlen,
+		rdrdesc->rdr_attr[rdrdesc->rdr_keys->key_array[0]]->att_nmstr)
+		!= 0)
 		   return;	/* this checks if max/min column is 
 				** 1st column of index (comparing 
 				** name of column in PST_VAR with 
@@ -2821,6 +2826,7 @@ opc_dmuahd(
     OPC_PST_STATEMENT	*opc_pst;
     QEF_RESOURCE	*resource;
     i4			char_array_idx;
+    i4			namelen;
 
     if (structure == DB_SORT_STORE)
     {
@@ -2880,6 +2886,7 @@ opc_dmuahd(
 	STRUCT_ASSIGN_MACRO(*((DB_LOC_NAME *) qtree->
 	    pst_restab.pst_resloc.data_address), rel->rdr_rel->tbl_location);
 	rel->rdr_rel->tbl_attr_count = 0;
+	rel->rdr_rel->tbl_attr_nametot = 0;
 	for (resdom = qtree->pst_qtree->pst_left;
 		resdom != NULL && resdom->pst_sym.pst_type == PST_RESDOM;
 		resdom = resdom->pst_left
@@ -2892,7 +2899,14 @@ opc_dmuahd(
 	    {
 		continue;
 	    }
+
+	    namelen = cui_trmwhite(
+		sizeof(resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname), 
+		resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname);
+
 	    rel->rdr_rel->tbl_attr_count += 1;
+	    rel->rdr_rel->tbl_attr_nametot += (namelen+1);
+
 	    if (resdom->pst_sym.pst_value.pst_s_rsdm.pst_ttargtype ==
 		PST_HIDDEN)
 	    {
@@ -3036,13 +3050,20 @@ opc_dmuahd(
 
 	    /* First, fill in the fake RDF entry for this attribute */
 
+	    namelen = cui_trmwhite(
+		sizeof(resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname), 
+		resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname);
+
 	    rel->rdr_attr[resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsno] =
 		att = 
-		(DMT_ATT_ENTRY *) opu_memory(global, sizeof (DMT_ATT_ENTRY));
+		(DMT_ATT_ENTRY *) opu_memory(global, 
+		sizeof (DMT_ATT_ENTRY) + namelen + 1);
 
-	    MEcopy((PTR)resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname, 
-			sizeof(att->att_name.db_att_name), 
-			(PTR)att->att_name.db_att_name);
+	    att->att_nmstr = (char *)att + sizeof(DMT_ATT_ENTRY);
+	    att->att_nmlen = namelen;
+	    cui_move(namelen, resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
+			'\0', namelen + 1, att->att_nmstr);
+
 	    att->att_number = 1;
 	    att->att_type   = resdom->pst_sym.pst_dataval.db_datatype;
 	    att->att_width  = resdom->pst_sym.pst_dataval.db_length;
@@ -3619,6 +3640,8 @@ opc_dmtahd(
     OPC_TGPART		*tsoffsets;
     QEF_RESOURCE	*resource;
     PTR			nullptr = NULL;
+    i4			namelen;
+    i4			attr_nametot = 0;
 
     /* First, lets allocate and initialize an DMT_CB to create a sort temp */
     dmtcb = (DMT_CB *) opu_qsfmem(global, sizeof (DMT_CB));
@@ -3659,6 +3682,7 @@ opc_dmtahd(
 	   (PTR)&rel->rdr_rel->tbl_location);
 
     rel->rdr_rel->tbl_attr_count = tginfo.opc_nresdom;
+    rel->rdr_rel->tbl_attr_nametot = tginfo.opc_nresdom *(DB_ATT_MAXNAME+1);
     rel->rdr_rel->tbl_storage_type = DMT_HEAP_TYPE;
 
     /* Let's fill in the array of attributes to create. */
@@ -3701,18 +3725,25 @@ opc_dmtahd(
 	attr->attr_defaultTuple = NULL;
     }
 
-    /* Now let's fill in the array of attributes for our descriptor. */
     rel->rdr_attr = (DMT_ATT_ENTRY **) opu_memory(global, (i4)
 	    (sizeof (DMT_ATT_ENTRY *) * (rel->rdr_rel->tbl_attr_count + 1)));
     rel->rdr_attr[0] = NULL;
     tupsize = 0;
     for (attno = 1; attno <= rel->rdr_rel->tbl_attr_count; attno += 1)
     {
-	att = rel->rdr_attr[attno] = 
-		(DMT_ATT_ENTRY *) opu_memory(global, sizeof (DMT_ATT_ENTRY));
+	namelen = cui_trmwhite(sizeof(attr->attr_name),
+			attr->attr_name.db_att_name);
+
+	att = rel->rdr_attr[attno] = (DMT_ATT_ENTRY *) opu_memory(global, 
+			sizeof (DMT_ATT_ENTRY) + namelen + 1);
 	attr = attrs[attno - 1];
 
-	STRUCT_ASSIGN_MACRO(attr->attr_name, att->att_name);
+	att->att_nmstr = (char *)(att + 1);
+	att->att_nmlen = namelen;
+	cui_move(namelen, attr->attr_name.db_att_name, '\0', 
+		namelen + 1, att->att_nmstr);
+	attr_nametot += (namelen + 1);
+
 	att->att_number = 1;
 	att->att_offset = tupsize;
 	att->att_type = attr->attr_type;
@@ -3823,6 +3854,9 @@ opc_dmtahd(
 
     /* Finally, mark in the qp header that there is another action */
     global->ops_cstate.opc_qp->qp_ahd_cnt += 1;
+
+    /* Fix up tbl_attr_nametot */
+    rel->rdr_rel->tbl_attr_nametot = attr_nametot;
 
     return(ahd);
 }
@@ -5616,8 +5650,8 @@ opc_gtt_proc_parm(
 		    coldesc->att_width != param_tup->dbpp_length ||
 		    coldesc->att_prec != param_tup->dbpp_precision ||
 		    coldesc->att_offset != param_tup->dbpp_offset ||
-		    MEcmp((PTR)&coldesc->att_name, (PTR)&param_tup->dbpp_name,
-			sizeof(DB_ATT_NAME)))
+		    cui_compare(coldesc->att_nmlen, coldesc->att_nmstr, 
+			    DB_ATT_MAXNAME, (PTR)&param_tup->dbpp_name) != 0)
 		    {
 			opx_error_number = E_OP08AF_GTTPARM_MISMATCH; 
 			opx_error_arg1 = (PTR)&gtt_name; 
@@ -7607,6 +7641,8 @@ opc_createIntegrityAHD(
 **	28-Jul-2010 (kschendel) SIR 124104
 **	    Pass along compression setting, so that it can be maintained
 **	    if qef decides to do a modify (e.g. for autostruct).
+**       8_Oct-2010 (hanal04) Bug 124561
+**          If QCI_INDEX_WITH_OPTS pass along the idx's compression setting.
 */
 
 #define	COPY_STRUCT( a, b )	\
@@ -7770,10 +7806,13 @@ copyIntegrityDetails(
 	qefDetails->qci_idx_alloc   = psfDetails->pst_indexopts.pst_alloc;
 	qefDetails->qci_idx_extend  = psfDetails->pst_indexopts.pst_extend;
 	qefDetails->qci_idx_struct  = psfDetails->pst_indexopts.pst_struct;
+        qefDetails->qci_compress    = psfDetails->pst_indexopts.pst_compress;
     }
-
-    /* Copy the compression setting, just in case we have autostruct */
-    qefDetails->qci_compress = psfDetails->pst_compress;
+    else
+    {
+        /* Copy the compression setting, just in case we have autostruct */
+        qefDetails->qci_compress = psfDetails->pst_compress;
+    }
 
     return;
 } /* copyIntegrityDetails */
