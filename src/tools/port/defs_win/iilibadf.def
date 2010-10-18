@@ -132,6 +132,8 @@
 ;           Added adu_nvchr_embunitochar() and adu_nvchr_embchartouni()
 ;       11-Aug-2010 (hanal04) Bug 124180
 ;           Added adu_2strtomny_strict().
+;	15-Jul-2010 (smeke01) b123950
+;	    Added adu_norm_date_hash.
 
 EXPORTS
 adb_breakpoint		@1				
@@ -668,3 +670,4 @@ adu_soundex_dm		@542
 adu_nvchr_embchartouni  @543
 adu_nvchr_embunitochar  @544
 adu_2strtomny_strict	@545
+adu_norm_date_hash	@546
