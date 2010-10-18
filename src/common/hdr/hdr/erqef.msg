@@ -129,6 +129,10 @@ SQLSTATE_MAPPING_REQUIRED
 **	    Added I_QE3000_LONGRUNNING_QUERY for trace point sc925
 **	07-sep-2010 (maspa05) SIR 124363
 **	    Added I_QE3001_LONGRUNNING_QUERY for trace point sc925
+**	05-oct-2010 (gupsh01)
+**	    Added view/procedure owner name to error messages
+**	    E_QE016D_RENAME_TAB_HAS_PROC and 
+**	    E_QE016E_RENAME_TAB_HAS_VIEW.
 */
 
 
@@ -1360,12 +1364,13 @@ depend on it. Check the error log (errlog.log) for details."
 */
 E_QE016D_RENAME_TAB_HAS_PROC:SS42000_SYN_OR_ACCESS_ERR
 "Rename of table %0c owned by %1c, or its columns is not permitted as
-procedure %2c depends on it."
+procedure %2c owned by %3c depends on it."
 /*%
 ** Parameters:
 **	%0c - Table name
 **	%1c - Owner name
 **	%2c - Procedure name
+**	%3c - Procedure owner 
 **
 ** Explanation:
 **	Rename operation on a table is not allowed if it has a 
@@ -1381,12 +1386,13 @@ procedure %2c depends on it."
 */
 E_QE016E_RENAME_TAB_HAS_VIEW:SS42000_SYN_OR_ACCESS_ERR
 "Rename of table %0c owned by %1c, or its columns is not permitted as
-view %2c depends on it."
+view %2c owned by %3c depends on it."
 /*%
 ** Parameters:
 **	%0c - Table name
 **	%1c - Owner name
 **	%2c - View name
+**	%3c - View owner 
 **
 ** Explanation:
 **	Rename operation on a table is not allowed if it has a 

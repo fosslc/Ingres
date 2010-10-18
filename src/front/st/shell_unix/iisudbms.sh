@@ -693,6 +693,8 @@
 ##	    Correct sed command determining TMP_RELEASE.
 ##	07-Oct-2010 (frima01) SIR 124560
 ##	    On upgrade always upgrade demodb if existent.
+##	12-Oct-2010 (frima01) BUG 124591
+##	    Ensure 8k page cache is enabled for demodb.
 ##	    
 #----------------------------------------------------------------------------
 . iisysdep
@@ -1615,6 +1617,9 @@ ii.$.rcp.log.cp_interval:	5;
 
 	# Make sure that parameters are large enough
 	required_param_changes
+
+	## 8k cache size is needed if user chooses to install demodb
+	$DOIT iisetres ii.$CONFIG_HOST.dbms.private.*.cache.p8k_status ON
 
 	## Reset opf_stats_nostats_factor if we need to 
 	[ "$opfsav" ] && \

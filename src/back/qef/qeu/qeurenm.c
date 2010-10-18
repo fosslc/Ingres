@@ -67,6 +67,10 @@
 **
 ** 31-March-2010 (gupsh01)
 **	Created.
+** 08-Oct-2010 (gupsh01) bug 124572
+**	Added support for scanning the iipriv catalog to rule out any
+**	dependent views and procedures on the table/column being
+**	renamed.
 */
 DB_STATUS
 qeu_renameValidate(
@@ -96,6 +100,22 @@ DMF_ATTR_ENTRY  **dmf_attr)
    i4		   tree_mode = DB_VIEW;    /* To set the key value for iitree request */ 
    DB_IIDBDEPENDS  *dtuple;
    bool		   found_view = FALSE;
+
+   /* Variables used for iipriv */
+   QEU_CB          prqeu;
+   bool            priv_opened = FALSE;
+   DMR_ATTR_ENTRY  prkey_array[4];
+   DMR_ATTR_ENTRY  *prkey_ptr_array[4];
+   QEF_DATA        prqef_data;
+   DB_IIPRIV       *prtuple;
+
+   /* Variables used for iixpriv */
+   QEU_CB          xprqeu;
+   bool            xpriv_opened = FALSE;
+   DMR_ATTR_ENTRY  xprkey_array[4];
+   DMR_ATTR_ENTRY  *xprkey_ptr_array[4];
+   QEF_DATA        xprqef_data;
+   DB_IIXPRIV      *xprtuple;
 
    /* Variables used for Procedures */
    QEU_CB          xdbpqeu;                /* for iixprocedure tuples */
@@ -212,6 +232,24 @@ DMF_ATTR_ENTRY  **dmf_attr)
           break;
         }
         dtuple = (DB_IIDBDEPENDS*) ulm->ulm_pptr;
+
+        ulm->ulm_psize = sizeof(DB_IIXPRIV);
+        if ((status = qec_malloc(ulm)) != E_DB_OK)
+        {
+          ulm_closestream(ulm);
+          error = E_QE001E_NO_MEM;
+          break;
+        }
+        xprtuple = (DB_IIXPRIV *) ulm->ulm_pptr;
+
+        ulm->ulm_psize = sizeof(DB_IIPRIV);
+        if ((status = qec_malloc(ulm)) != E_DB_OK)
+        {
+          ulm_closestream(ulm);
+          error = E_QE001E_NO_MEM;
+          break;
+        }
+        prtuple = (DB_IIPRIV *) ulm->ulm_pptr;
 
         ulm->ulm_psize = sizeof(DB_IIXPROCEDURE);
         if ((status = qec_malloc(ulm)) != E_DB_OK)
@@ -361,7 +399,7 @@ DMF_ATTR_ENTRY  **dmf_attr)
 
      vqeu.qeu_getnext = QEU_REPO;
      vqeu.qeu_klen = 3;
-    
+
      if (isColumnRename)
      {
         STRUCT_ASSIGN_MACRO(vqeu, tqeu);
@@ -536,7 +574,7 @@ DMF_ATTR_ENTRY  **dmf_attr)
 		{
 	    	    found_view = TRUE;
 	            qef_error( E_QE016E_RENAME_TAB_HAS_VIEW,
-                           0L, status, &error, error_block, 3,
+                           0L, status, &error, error_block, 4,
                            qec_trimwhite(DB_TAB_MAXNAME,
                                 (char *)&table_entry->tbl_name.db_tab_name),
                            (char *)&table_entry->tbl_name.db_tab_name,
@@ -545,7 +583,10 @@ DMF_ATTR_ENTRY  **dmf_attr)
                            (char *)&table_entry->tbl_owner.db_own_name,
             		   qec_trimwhite(sizeof(dmt_tbl_entry.tbl_name),
                 		(char *) &dmt_tbl_entry.tbl_name),
-                	   (char *) &dmt_tbl_entry.tbl_name
+                	   (char *) &dmt_tbl_entry.tbl_name,
+            		   qec_trimwhite(sizeof(dmt_tbl_entry.tbl_owner),
+                		(char *) &dmt_tbl_entry.tbl_owner),
+                	   (char *) &dmt_tbl_entry.tbl_owner
 			);
 		}
 	    }
@@ -553,8 +594,8 @@ DMF_ATTR_ENTRY  **dmf_attr)
 	    {
 	        found_view = TRUE;
 	        qef_error( E_QE016E_RENAME_TAB_HAS_VIEW,
-                           0L, status, &error, error_block, 3,
-                           qec_trimwhite(DB_OWN_MAXNAME,
+                           0L, status, &error, error_block, 4,
+                           qec_trimwhite(DB_TAB_MAXNAME,
                                 (char *)&table_entry->tbl_name.db_tab_name),
                            (char *)&table_entry->tbl_name.db_tab_name,
                            qec_trimwhite(DB_OWN_MAXNAME, 
@@ -562,7 +603,10 @@ DMF_ATTR_ENTRY  **dmf_attr)
                            (char *)&table_entry->tbl_owner.db_own_name,
             		   qec_trimwhite(sizeof(dmt_tbl_entry.tbl_name),
                 		(char *) &dmt_tbl_entry.tbl_name),
-                	   (char *) &dmt_tbl_entry.tbl_name
+                	   (char *) &dmt_tbl_entry.tbl_name,
+            		   qec_trimwhite(sizeof(dmt_tbl_entry.tbl_owner),
+                		(char *) &dmt_tbl_entry.tbl_owner),
+                	   (char *) &dmt_tbl_entry.tbl_owner
 			);
 	    }
 	}
@@ -634,38 +678,283 @@ DMF_ATTR_ENTRY  **dmf_attr)
    	    {
 	      found_procedure = TRUE;
 	      qef_error( E_QE016D_RENAME_TAB_HAS_PROC,
-                           0L, status, &error, error_block, 3,
+                           0L, status, &error, error_block, 4,
                            qec_trimwhite(DB_TAB_MAXNAME,
                                (char *)&table_entry->tbl_name.db_tab_name),
                            &table_entry->tbl_name.db_tab_name,
-                           qec_trimwhite(DB_OWN_MAXNAME, (char *)&dbptuple->db_owner),
-			   &dbptuple->db_owner,
+                           qec_trimwhite(DB_OWN_MAXNAME,
+                                   (char *)&table_entry->tbl_owner.db_own_name),
+                           &table_entry->tbl_owner.db_own_name,
                            qec_trimwhite(DB_DBP_MAXNAME, (char *)&dbptuple->db_dbpname), 
-			   &dbptuple->db_dbpname);
+			   &dbptuple->db_dbpname,
+                           qec_trimwhite(DB_OWN_MAXNAME, (char *)&dbptuple->db_owner),
+			   &dbptuple->db_owner);
    	    }
         } /* End of procedure handling */
      } // Loop through iidbdepends
 
+     /* Views and procedures created by users with privileges
+     ** Will be found in iipriv catalogs. Scan iipriv to report
+     ** These 
+     */
+     
+     /* prepare to open iixpriv index */
+     xprqeu.qeu_key = xprkey_ptr_array;
+
+     xprkey_ptr_array[0] = &xprkey_array[0];
+     xprkey_ptr_array[0]->attr_number = DM_1_XPRIV_KEY;
+     xprkey_ptr_array[0]->attr_operator = DMR_OP_EQ;
+     xprkey_ptr_array[0]->attr_value = (char *) &dbtable->db_tab_base;
+
+     xprkey_ptr_array[1] = &xprkey_array[1];
+     xprkey_ptr_array[1]->attr_number = DM_2_XPRIV_KEY;
+     xprkey_ptr_array[1]->attr_operator = DMR_OP_EQ;
+     xprkey_ptr_array[1]->attr_value = (char *) &dbtable->db_tab_index;
+
+     /* prepare to open iipriv catalog */
+     prqeu.qeu_key = prkey_ptr_array;
+
+     prkey_ptr_array[0] = &prkey_array[0];
+     prkey_ptr_array[0]->attr_number = DM_1_PRIV_KEY;
+     prkey_ptr_array[0]->attr_operator = DMR_OP_EQ;
+     prkey_ptr_array[0]->attr_value = (char *) &dbtable->db_tab_base;
+
+     prkey_ptr_array[1] = &prkey_array[1];
+     prkey_ptr_array[1]->attr_number = DM_2_PRIV_KEY;
+     prkey_ptr_array[1]->attr_operator = DMR_OP_EQ;
+     prkey_ptr_array[1]->attr_value = (char *) &dbtable->db_tab_index;
+
+     /* Open iipriv */
+     STRUCT_ASSIGN_MACRO(vqeu, prqeu);
+     prqeu.qeu_tab_id.db_tab_base  = DM_B_PRIV_TAB_ID;
+     prqeu.qeu_tab_id.db_tab_index  = DM_I_PRIV_TAB_ID;
+     status = qeu_open(qef_cb, &prqeu);
+     if (status != E_DB_OK)
+     {
+	error = prqeu.error.err_code;
+	break;
+     }
+     priv_opened = TRUE;
+
+     /* Open iixpriv */
+     STRUCT_ASSIGN_MACRO(vqeu, xprqeu);
+     xprqeu.qeu_tab_id.db_tab_base  = DM_B_XPRIV_TAB_ID;
+     xprqeu.qeu_tab_id.db_tab_index  = DM_I_XPRIV_TAB_ID;
+     status = qeu_open(qef_cb, &xprqeu);
+     if (status != E_DB_OK)
+     {
+	error = xprqeu.error.err_code;
+	break;
+     }
+     xpriv_opened = TRUE;
+
+     /* set up QEU_CB for reading iixpriv tuples */
+     xprqeu.qeu_count = 1;
+     xprqeu.qeu_tup_length = sizeof(DB_IIXPRIV);
+     xprqeu.qeu_output = &xprqef_data;
+     xprqef_data.dt_next = 0;
+     xprqef_data.dt_size = sizeof(DB_IIXPRIV);
+     xprqef_data.dt_data = (PTR) xprtuple;
+
+     prqeu.qeu_count = 1;
+     prqeu.qeu_tup_length = sizeof(DB_IIPRIV);
+     prqeu.qeu_output = &prqef_data;
+     prqef_data.dt_next = 0;
+     prqef_data.dt_size = sizeof(DB_IIPRIV);
+     prqef_data.dt_data = (PTR) prtuple;
+
+     xprqeu.qeu_getnext = QEU_REPO;
+     xprqeu.qeu_klen = 2;
+
+     /* get iipriv tuple by tid */
+     prqeu.qeu_flag = QEU_BY_TID;
+     prqeu.qeu_getnext = QEU_NOREPO;
+     prqeu.qeu_klen = 0;
+
+     for (;;)
+     {
+	    status = qeu_get(qef_cb, &xprqeu);
+	    if (status != E_DB_OK)
+	    {
+		error = xprqeu.error.err_code;
+		if (xprqeu.error.err_code == E_QE0015_NO_MORE_ROWS) 
+ 		{
+ 		    status = E_DB_OK;
+ 		}
+		break;
+	    }
+	   
+	    /* Don't reposition, continue scan. */
+            xprqeu.qeu_getnext = QEU_NOREPO;
+            xprqeu.qeu_klen = 0;
+
+	    /* Now do a tid join into IIPRIV to get the actual tuple */
+	    prqeu.qeu_tid = xprtuple->dbx_tidp;
+
+            status = qeu_get(qef_cb, &prqeu);
+            if (status != E_DB_OK)
+            {
+                error = prqeu.error.err_code;
+                break;
+            }
+		
+	    /* Only looking for views/procedures but not grant tuples */
+	    if (prtuple->db_descr_no != 0)
+                    continue;
+
+	    if (prtuple->db_dep_obj_type == DB_VIEW)
+            {
+		/* Found a dependent view */
+	        DMT_CHAR_ENTRY              char_array[2];
+                DMT_SHW_CB                  dmt_show;
+	        DMT_TBL_ENTRY               dmt_tbl_entry;
+
+	        /*
+                ** initialize the control block that will be 
+		** used to look up information on views.
+                */
+                dmt_show.type                         = DMT_SH_CB;
+                dmt_show.length                       = sizeof(DMT_SHW_CB);
+                dmt_show.dmt_char_array.data_in_size  = 0;
+                dmt_show.dmt_char_array.data_out_size = 0;
+                dmt_show.dmt_flags_mask               = DMT_M_TABLE;
+                dmt_show.dmt_db_id                    = qeuq_cb->qeuq_db_id;
+                dmt_show.dmt_session_id               = qeuq_cb->qeuq_d_id;
+                dmt_show.dmt_table.data_address       = (PTR) &dmt_tbl_entry;
+                dmt_show.dmt_table.data_in_size       = sizeof(DMT_TBL_ENTRY);
+                dmt_show.dmt_char_array.data_address  = (PTR) NULL;
+                dmt_show.dmt_char_array.data_in_size  = 0;
+                dmt_show.dmt_char_array.data_out_size = 0;
+
+	        STRUCT_ASSIGN_MACRO(prtuple->db_dep_obj_id, dmt_show.dmt_tab_id);
+
+                local_status = dmf_call(DMT_SHOW, &dmt_show);
+                if (   local_status != E_DB_OK
+                    && dmt_show.error.err_code != E_DM0114_FILE_NOT_FOUND)
+                {
+                    error = dmt_show.error.err_code;
+                    (VOID) qef_error(error, 0L, local_status, &error,
+                        &qeuq_cb->error, 0);
+                    if (local_status > status)
+                        status = local_status;
+
+		    break;
+                }
+
+	        /* If Column rename check if the column is in the map */
+	        if (!(isColumnRename) ||
+                     ( (BTtest (qeuq_cb->qeuq_ano,
+                                (char *) prtuple->db_priv_attmap)))
+		   )
+	        {
+	            found_view = TRUE;
+	            qef_error( E_QE016E_RENAME_TAB_HAS_VIEW,
+                           0L, status, &error, error_block, 4,
+                           qec_trimwhite(DB_TAB_MAXNAME,
+                                (char *)&table_entry->tbl_name.db_tab_name),
+                           (char *)&table_entry->tbl_name.db_tab_name,
+                           qec_trimwhite(DB_OWN_MAXNAME, 
+				(char *)&table_entry->tbl_owner.db_own_name),
+                           (char *)&table_entry->tbl_owner.db_own_name,
+            		   qec_trimwhite(sizeof(dmt_tbl_entry.tbl_name),
+                		(char *) &dmt_tbl_entry.tbl_name),
+                	   (char *) &dmt_tbl_entry.tbl_name,
+            		   qec_trimwhite(sizeof(dmt_tbl_entry.tbl_owner),
+                		(char *) &dmt_tbl_entry.tbl_owner),
+                	   (char *) &dmt_tbl_entry.tbl_owner
+			);
+		}
+            } /* done view tuple */
+	    else if ( prtuple->db_dep_obj_type == DB_DBP )
+    	    {
+              xdbpqeu.qeu_getnext = QEU_REPO;
+              xdbpqeu.qeu_flag = 0;
+              xdbpqeu.qeu_klen = 2;
+     
+              xdbpqeu.qeu_count = 1;
+              xdbpqeu.qeu_tup_length = sizeof(DB_IIXPROCEDURE);
+              xdbpqeu.qeu_output = &xdbpqef_data;
+              xdbpqef_data.dt_next = 0;
+              xdbpqef_data.dt_size = sizeof(DB_IIXPROCEDURE);
+              xdbpqef_data.dt_data = (PTR) xdbptuple;
+    
+              xdbpqeu.qeu_key = xdbpkey_ptr_array;
+      
+              xdbpkey_ptr_array[0] = &xdbpkey_array[0];
+              xdbpkey_ptr_array[0]->attr_number = DM_1_XDBP_KEY;
+              xdbpkey_ptr_array[0]->attr_operator = DMR_OP_EQ;
+              xdbpkey_ptr_array[0]->attr_value =  (char *)&prtuple->db_dep_obj_id.db_tab_base;
+    
+              xdbpkey_ptr_array[1] = &xdbpkey_array[1];
+              xdbpkey_ptr_array[1]->attr_number = DM_2_XDBP_KEY;
+              xdbpkey_ptr_array[1]->attr_operator = DMR_OP_EQ;
+              xdbpkey_ptr_array[1]->attr_value = (char *)&prtuple->db_dep_obj_id.db_tab_index;
+    	      /*
+    	      ** look up description of the dbproc (by doing a TID
+    	      ** join from IIXPROCEDURE); 
+    	      */
+    	      status = qeu_get(qef_cb, &xdbpqeu);
+    	      if (status != E_DB_OK)
+    	      {
+    	        error = xdbpqeu.error.err_code;
+    	        break;
+    	      }
+    	      /*
+    	      ** now do a TID-join into IIPROCEDURE
+    	      */
+    
+    	      dbpqeu.qeu_flag = QEU_BY_TID;
+    	      dbpqeu.qeu_klen = 0;
+    	      dbpqeu.qeu_getnext = QEU_NOREPO;
+    	      dbpqeu.qeu_tid = xdbptuple->dbx_tidp;
+    
+    	      status = qeu_get(qef_cb, &dbpqeu);
+    	      if (status != E_DB_OK)
+    	      {
+    	          error = dbpqeu.error.err_code;
+    	          if (dbpqeu.error.err_code == E_QE0015_NO_MORE_ROWS) 
+                    status = E_DB_OK;
+		  else
+                    status = E_DB_ERROR;
+                  break;
+    	      }
+    
+    	      found_procedure = TRUE;
+    	      qef_error( E_QE016D_RENAME_TAB_HAS_PROC,
+                               0L, status, &error, error_block, 4,
+                               qec_trimwhite(DB_TAB_MAXNAME,
+                                   (char *)&table_entry->tbl_name.db_tab_name),
+                               &table_entry->tbl_name.db_tab_name,
+                               qec_trimwhite(DB_OWN_MAXNAME,
+                                   (char *)&table_entry->tbl_owner.db_own_name),
+                               &table_entry->tbl_owner.db_own_name,
+                               qec_trimwhite(DB_DBP_MAXNAME, (char *)&dbptuple->db_dbpname), 
+    			   &dbptuple->db_dbpname,
+                               qec_trimwhite(DB_OWN_MAXNAME, (char *)&dbptuple->db_owner),
+    			   &dbptuple->db_owner);
+            } /* done procedure tuple  */
+     } /* done reading iipriv */
+    
      if( table_entry->tbl_status_mask & DMT_RULE)
      {
         /* Report any user generated rules on the table */
-	STRUCT_ASSIGN_MACRO(vqeu, rulqeu);
-	rulqeu.qeu_tab_id.db_tab_base  = DM_B_RULE_TAB_ID;
-	rulqeu.qeu_tab_id.db_tab_index = DM_I_RULE_TAB_ID;
-
-	status = qeu_open(qef_cb, &rulqeu);
-	if (status != E_DB_OK)
-	{
-	    error = rulqeu.error.err_code;
-	    break;
-	}
-	rul_opened = TRUE;
-
-	/* set up a QEU_CB fro reading IIRULE tuples */
-	rulqeu.qeu_count = 1;
-	rulqeu.qeu_tup_length = sizeof(DB_IIRULE);
-	rulqeu.qeu_output = &rulqef_data;
-	rulqef_data.dt_next = 0;
+    	STRUCT_ASSIGN_MACRO(vqeu, rulqeu);
+    	rulqeu.qeu_tab_id.db_tab_base  = DM_B_RULE_TAB_ID;
+    	rulqeu.qeu_tab_id.db_tab_index = DM_I_RULE_TAB_ID;
+    
+    	status = qeu_open(qef_cb, &rulqeu);
+    	if (status != E_DB_OK)
+    	{
+    	    error = rulqeu.error.err_code;
+    	    break;
+    	}
+    	rul_opened = TRUE;
+    
+    	/* set up a QEU_CB fro reading IIRULE tuples */
+    	rulqeu.qeu_count = 1;
+    	rulqeu.qeu_tup_length = sizeof(DB_IIRULE);
+    	rulqeu.qeu_output = &rulqef_data;
+    	rulqef_data.dt_next = 0;
 	rulqef_data.dt_size = sizeof(DB_IIRULE);
 	rulqef_data.dt_data = (PTR) rultuple;
 
@@ -687,9 +976,9 @@ DMF_ATTR_ENTRY  **dmf_attr)
 
 	for (;;)
 	{
-               status = qeu_get(qef_cb, &rulqeu);
-               if (DB_FAILURE_MACRO(status))
-               {
+            status = qeu_get(qef_cb, &rulqeu);
+            if (DB_FAILURE_MACRO(status))
+            {
                  if (rulqeu.error.err_code == E_QE0015_NO_MORE_ROWS)
                  {
                     status = E_DB_OK;
@@ -700,16 +989,16 @@ DMF_ATTR_ENTRY  **dmf_attr)
                     error = rulqeu.error.err_code;
 		 }
                  break;
-               }
-               rulqeu.qeu_getnext = QEU_NOREPO;
+            }
+            rulqeu.qeu_getnext = QEU_NOREPO;
 
-	       /* It may not be of interest to users to know the names of system 
-	       ** generated rules so filter them out. Views with check option and 
-	       ** constraints for which these rules exist may already be reported.
-	       */
-	       found_rule = TRUE;
-	       if ((rultuple->dbr_flags & DBR_F_SYSTEM_GENERATED) == 0)
-	       {
+	    /* It may not be of interest to users to know the names of system 
+	    ** generated rules so filter them out. Views with check option and 
+	    ** constraints for which these rules exist may already be reported.
+	    */
+	    found_rule = TRUE;
+	    if ((rultuple->dbr_flags & DBR_F_SYSTEM_GENERATED) == 0)
+	    {
 		     qef_error (E_QE016F_RENAME_TAB_HAS_RULE,
                            0L, status, &error, error_block, 3,
                            qec_trimwhite(DB_TAB_MAXNAME,
@@ -720,10 +1009,10 @@ DMF_ATTR_ENTRY  **dmf_attr)
 			   qec_trimwhite(sizeof(rultuple->dbr_name),
                                           (char *)&rultuple->dbr_name),
                                           (char *)&rultuple->dbr_name);
-	        }
-                status = E_DB_ERROR;
+	    }
+            status = E_DB_ERROR;
 	}
-     }
+     } /* RULE */
 
      if( table_entry->tbl_status_mask & DMT_PROTECTION)
      {
@@ -1057,6 +1346,30 @@ DMF_ATTR_ENTRY  **dmf_attr)
         if (local_status != E_DB_OK)
         {
             (VOID) qef_error(vqeu.error.err_code, 0L, local_status,
+                        &error, &qeuq_cb->error, 0);
+            if (local_status > status)
+                status = local_status;
+	}
+    }
+
+    if (xpriv_opened)
+    {
+        local_status = qeu_close(qef_cb, &xprqeu);
+        if (local_status != E_DB_OK)
+        {
+            (VOID) qef_error(xprqeu.error.err_code, 0L, local_status,
+                        &error, &qeuq_cb->error, 0);
+            if (local_status > status)
+                status = local_status;
+	}
+    }
+
+    if (priv_opened)
+    {
+        local_status = qeu_close(qef_cb, &prqeu);
+        if (local_status != E_DB_OK)
+        {
+            (VOID) qef_error(prqeu.error.err_code, 0L, local_status,
                         &error, &qeuq_cb->error, 0);
             if (local_status > status)
                 status = local_status;

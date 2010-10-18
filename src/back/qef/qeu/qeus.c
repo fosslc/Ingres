@@ -1073,6 +1073,9 @@ static i4 createTblErrXlate(
 **	    Use padded copy of standard savepoint name in the QEF SCB.
 **	5-May-2010 (kschendel)
 **	    Don't dependency-check catalogs.
+**	21-Sep-2010 (gupsh01) BUG 124572
+**	    Report correct column name for rename column error message
+**	    E_QE0181_RENAME_COL_HAS_OBJS.
 **
 */
 DB_STATUS
@@ -2032,7 +2035,7 @@ ddb_refresh:
                 {
                     dmu_attr = (DMF_ATTR_ENTRY **)
                                   dmu_ptr->dmu_attr_array.ptr_address;
-                    MEcopy(dmu_attr[1]->attr_name.db_att_name, DB_ATT_MAXNAME, column_name);
+                    MEcopy(dmu_attr[0]->attr_name.db_att_name, DB_ATT_MAXNAME, column_name);
                     column_name[DB_ATT_MAXNAME] = 0;
 
                     qeuq_cb.qeuq_ano = dmu_attr[0]->attr_size;
