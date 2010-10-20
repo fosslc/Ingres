@@ -226,6 +226,9 @@ LIBRARY = IMPADFLIBDATA
 **          Added geometry and geometerycollection to the DB_GEOM_FAMILY
 **      02-Apr-2010 (thich01)
 **          Added a rtree-cmp function to the spatial types for indexing.
+**      19-Oct-2010 (thich01)
+**          Added st_ synonyms for all the geospatial types names.  This will
+**          allow better porting for existing spatial applications.
 **/
 
 
@@ -1380,6 +1383,135 @@ GLOBALCONSTDEF	 ADI_DATATYPE     Adi_1RO_datatypes[] = {
     },
 /* MultiPolygon in the geometry family */
     { { "multipolygon" },    DB_MPOLY_TYPE, DB_GEOM_TYPE,
+            (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
+                AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
+    { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,
+            /*  { embed#, (#), def len, scale, prec } */
+        {   adc_1lenchk_rti,    adu_rtree_cmp,           NULL,
+        adc_1getempty_rti,  NULL,               NULL,
+        adc_1valchk_rti,    NULL,               NULL,
+        NULL,               NULL,               NULL,
+        NULL,               NULL,               adc_lvch_xform,
+        NULL,               NULL,               NULL,
+        NULL,           NULL,       adc_1tmlen_rti,
+        adc_2tmcvt_rti,     adc_1dbtoev_ingres, NULL,
+        NULL }
+    },
+/* GeometryCollection type - to be treated the same as LBYTE */
+    { { "st_geometrycollection" },    DB_GEOMC_TYPE, DB_GEOM_TYPE,
+            (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
+                AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
+    { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,
+            /*  { embed#, (#), def len, scale, prec } */
+        {   adc_1lenchk_rti,    adu_rtree_cmp,           NULL,
+        adc_1getempty_rti,  NULL,               NULL,
+        adc_1valchk_rti,    NULL,               NULL,
+        NULL,               NULL,               NULL,
+        NULL,               NULL,               adc_lvch_xform,
+        NULL,               NULL,               NULL,
+        NULL,           NULL,       adc_1tmlen_rti,
+        adc_2tmcvt_rti,     adc_1dbtoev_ingres, NULL,
+        NULL }
+    },
+/* Geometry type - abstract container of Geometry Family 
+   To be treated the same as LBYTE */
+    { { "st_geometry" },    DB_GEOM_TYPE, DB_GEOM_TYPE,
+            (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
+                AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
+    { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,
+            /*  { embed#, (#), def len, scale, prec } */
+        {   adc_1lenchk_rti,    adu_rtree_cmp,           NULL,
+        adc_1getempty_rti,  NULL,               NULL,
+        adc_1valchk_rti,    NULL,               NULL,
+        NULL,               NULL,               NULL,
+        NULL,               NULL,               adc_lvch_xform,
+        NULL,               NULL,               NULL,
+        NULL,           NULL,       adc_1tmlen_rti,
+        adc_2tmcvt_rti,     adc_1dbtoev_ingres, NULL,
+        NULL }
+    },
+/* Point in the geometry family */
+    { { "st_point" },    DB_POINT_TYPE, DB_GEOM_TYPE,
+            (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
+                AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
+    { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,
+            /*  { embed#, (#), def len, scale, prec } */
+        {   adc_1lenchk_rti,    adu_rtree_cmp,           NULL,
+        adc_1getempty_rti,  NULL,               NULL,
+        adc_1valchk_rti,    NULL,               NULL,
+        NULL,               NULL,               NULL,
+        NULL,               NULL,               adc_lvch_xform,
+        NULL,               NULL,               NULL,
+        NULL,           NULL,       adc_1tmlen_rti,
+        adc_2tmcvt_rti,     adc_1dbtoev_ingres, NULL,
+        NULL }
+    },
+/* MultiPoint in the geometry family */
+    { { "st_multipoint" },    DB_MPOINT_TYPE, DB_GEOM_TYPE,
+            (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
+                AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
+    { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,
+            /*  { embed#, (#), def len, scale, prec } */
+        {   adc_1lenchk_rti,    adu_rtree_cmp,           NULL,
+        adc_1getempty_rti,  NULL,               NULL,
+        adc_1valchk_rti,    NULL,               NULL,
+        NULL,               NULL,               NULL,
+        NULL,               NULL,               adc_lvch_xform,
+        NULL,               NULL,               NULL,
+        NULL,           NULL,       adc_1tmlen_rti,
+        adc_2tmcvt_rti,     adc_1dbtoev_ingres, NULL,
+        NULL }
+    },
+/* LineString in the geometry family*/
+    { { "st_linestring" },    DB_LINE_TYPE, DB_GEOM_TYPE,
+            (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
+                AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
+    { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,
+            /*  { embed#, (#), def len, scale, prec } */
+        {   adc_1lenchk_rti,    adu_rtree_cmp,           NULL,
+        adc_1getempty_rti,  NULL,               NULL,
+        adc_1valchk_rti,    NULL,               NULL,
+        NULL,               NULL,               NULL,
+        NULL,               NULL,               adc_lvch_xform,
+        NULL,               NULL,               NULL,
+        NULL,           NULL,       adc_1tmlen_rti,
+        adc_2tmcvt_rti,     adc_1dbtoev_ingres, NULL,
+        NULL }
+    },
+/* MultiLineString in the geometry family*/
+    { { "st_multilinestring" },    DB_MLINE_TYPE, DB_GEOM_TYPE,
+            (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
+                AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
+    { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,
+            /*  { embed#, (#), def len, scale, prec } */
+        {   adc_1lenchk_rti,    adu_rtree_cmp,           NULL,
+        adc_1getempty_rti,  NULL,               NULL,
+        adc_1valchk_rti,    NULL,               NULL,
+        NULL,               NULL,               NULL,
+        NULL,               NULL,               adc_lvch_xform,
+        NULL,               NULL,               NULL,
+        NULL,           NULL,       adc_1tmlen_rti,
+        adc_2tmcvt_rti,     adc_1dbtoev_ingres, NULL,
+        NULL }
+    },
+/* Polygon in the geometry family */
+    { { "st_polygon" },    DB_POLY_TYPE, DB_GEOM_TYPE,
+            (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
+                AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
+    { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,
+            /*  { embed#, (#), def len, scale, prec } */
+        {   adc_1lenchk_rti,    adu_rtree_cmp,           NULL,
+        adc_1getempty_rti,  NULL,               NULL,
+        adc_1valchk_rti,    NULL,               NULL,
+        NULL,               NULL,               NULL,
+        NULL,               NULL,               adc_lvch_xform,
+        NULL,               NULL,               NULL,
+        NULL,           NULL,       adc_1tmlen_rti,
+        adc_2tmcvt_rti,     adc_1dbtoev_ingres, NULL,
+        NULL }
+    },
+/* MultiPolygon in the geometry family */
+    { { "st_multipolygon" },    DB_MPOLY_TYPE, DB_GEOM_TYPE,
             (AD_INDB | AD_PERIPHERAL | AD_CONDEXPORT |
                 AD_NOHISTOGRAM | AD_NOSORT | AD_NOKEY),  0,
     { 0, }, { 0, },     NULL,   { FALSE, TRUE, 0, 0, 0 }, DB_VBYTE_TYPE,
