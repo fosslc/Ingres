@@ -4,28 +4,12 @@
 
 #define MAXWKTLEN 1047551
 
-int cycleLayer(OGRLayerH layer)
+int cycleLayer(OGRLayerH layer, OGRGeometryH testGeo)
 {
     OGRFeatureH currentFeature = NULL;
 //    char *featWKT = NULL;
-    OGRGeometryH testGeo, currGeo, centGeo;
-    static char wkt[MAXWKTLEN];
-    FILE *input;
-    char inputfile[15] = "polygon.wkt";
-    size_t size;
-    char *wktPtr;
+    OGRGeometryH currGeo, centGeo;
 
-    input = fopen(inputfile, "r");
-    if ( ! input ) { perror("fopen"); exit(1); }
-
-    size = fread(wkt, 1, MAXWKTLEN-1, input);
-    fclose(input);
-    if ( ! size ) { perror("fread"); exit(1); }
-    if ( size == MAXWKTLEN-1 ) { perror("WKT input too big!"); exit(1); }
-    wkt[size] = '\0'; /* ensure it is null terminated */
-    wktPtr = (char *)&wkt;
-
-    OGR_G_CreateFromWkt(&wktPtr, OGR_L_GetSpatialRef(layer), &testGeo);
 /*
     OGR_G_ExportToWkt(testGeo, &featWKT);
     printf("Test wkt %s\n", featWKT);
@@ -73,12 +57,18 @@ int cycleLayer(OGRLayerH layer)
         currentFeature = NULL;
     }
 
-    OGR_G_DestroyGeometry(testGeo);
     return 0;
 }
 
-int main()
+int main(int argc, char **argv)
 {
+    char inputfile[15] = "polygon.wkt";
+    static char wkt[MAXWKTLEN];
+    FILE *input;
+    size_t size;
+    char *wktPtr;
+    int x, repeat = 1;
+    OGRGeometryH testGeo;
     OGRDataSourceH data_source = NULL;
     OGRSFDriverH read_driver = NULL;
     OGRLayerH layer = NULL;
@@ -96,8 +86,25 @@ int main()
     printf("Layer count destination: %d\n", OGR_DS_GetLayerCount(write_source));
     printf("Feature count destination: %d\n", OGR_L_GetFeatureCount(OGR_DS_GetLayer(write_source, 0), TRUE));
 */
-    cycleLayer(layer);
+    input = fopen(inputfile, "r");
+    if ( ! input ) { perror("fopen"); exit(1); }
 
+    size = fread(wkt, 1, MAXWKTLEN-1, input);
+    fclose(input);
+    if ( ! size ) { perror("fread"); exit(1); }
+    if ( size == MAXWKTLEN-1 ) { perror("WKT input too big!"); exit(1); }
+    wkt[size] = '\0'; /* ensure it is null terminated */
+    wktPtr = (char *)&wkt;
+
+    OGR_G_CreateFromWkt(&wktPtr, OGR_L_GetSpatialRef(layer), &testGeo);
+
+    if (argc > 1) repeat = atoi(argv[1]);
+    if (! repeat) repeat = 1;
+
+    for(x = 0; x < repeat; x++)
+        cycleLayer(layer, testGeo);
+
+    OGR_G_DestroyGeometry(testGeo);
     OGR_DS_Destroy(write_source);
 
     return 0;
