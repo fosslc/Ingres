@@ -238,7 +238,7 @@ void execute_query(const char *query_text, II_PTR *connHandle, II_PTR *stmtHandl
 }
 
 
-int main()
+int main(int argc, const char *argv[])
 {
     IIAPI_INITPARM  initParm;
     II_PTR connHandle, envHandle;
@@ -253,6 +253,17 @@ int main()
     envHandle = initParm.in_envHandle;
     char query[32000];
     int i;
+    int repeats;
+
+    if(argc <= 1)
+    {
+        printf("Usage: %s <repeats>\n", argv[0]);
+        return 0;
+    }
+    else
+    {
+        repeats = atoi(argv[1]);
+    }
 
     //First load the data
     load_shapefile("province.shp");
@@ -281,16 +292,22 @@ int main()
 
     wkt = load_test_wkt("polygon.wkt");
 
-    //some functions tests
-    for(i = 0; functions[i] != NULL; i++)
-    {
-        sprintf(query, "SELECT ST_%s(shape, polyfromtext('%s')) FROM province", functions[i], wkt);
-        execute_query(query, &connHandle, &stmtHandle, &tranHandle);
-    }
+    int j;
 
-    execute_query("SELECT ST_Boundary(shape) FROM province", &connHandle, &stmtHandle, &tranHandle);
-    execute_query("SELECT ST_Area(shape) FROM province", &connHandle, &stmtHandle, &tranHandle);
-    execute_query("SELECT ST_Centroid(shape) FROM province", &connHandle, &stmtHandle, &tranHandle);
+    for(j = 0; j < repeats; j++)
+    {
+        printf("Running test #%d\n", j+1);
+        //some functions tests
+        for(i = 0; functions[i] != NULL; i++)
+        {
+            sprintf(query, "SELECT ST_%s(shape, polyfromtext('%s')) FROM province", functions[i], wkt);
+            execute_query(query, &connHandle, &stmtHandle, &tranHandle);
+        }
+
+        execute_query("SELECT ST_Boundary(shape) FROM province", &connHandle, &stmtHandle, &tranHandle);
+        execute_query("SELECT ST_Area(shape) FROM province", &connHandle, &stmtHandle, &tranHandle);
+        execute_query("SELECT ST_Centroid(shape) FROM province", &connHandle, &stmtHandle, &tranHandle);
+    }
     {
         //Finish up
         IIAPI_DISCONNPARM disconnParm;
