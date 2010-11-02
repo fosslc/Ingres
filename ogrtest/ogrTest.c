@@ -4,6 +4,9 @@
 
 #define MAXWKTLEN 1047551
 
+/*
+ * Run the test operations on a layer
+ */
 int cycleLayer(OGRLayerH layer, OGRGeometryH testGeo)
 {
     OGRFeatureH currentFeature = NULL;
@@ -101,11 +104,18 @@ int main(int argc, char **argv)
     if (argc > 1) repeat = atoi(argv[1]);
     if (! repeat) repeat = 1;
 
+    /*
+     * Run the test the specified number of times
+     */
     for(x = 0; x < repeat; x++)
+    {
+        printf("Running test #%d\n", x+1);
         cycleLayer(layer, testGeo);
+    }
 
     OGR_G_DestroyGeometry(testGeo);
     OGR_DS_Destroy(write_source);
 
     return 0;
 }
+

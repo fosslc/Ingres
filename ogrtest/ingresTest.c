@@ -11,6 +11,9 @@ static void print_error(IIAPI_GENPARM *genParm);
 const char *load_test_wkt(const char *file_name);
 void load_shapefile(const char *shape_file);
 
+/*
+ * Some of the functions to run
+ */
 const char *functions[] =
 {
     "Intersects",
@@ -29,6 +32,9 @@ const char *functions[] =
 };
 
 
+/*
+ * Load the test WKT
+ */
 const char *load_test_wkt(const char *file_name)
 {
     FILE *fp;
@@ -46,6 +52,9 @@ const char *load_test_wkt(const char *file_name)
     return result;
 }
 
+/*
+ * Load the shapefile using OGR and inserting it in Ingres
+ */
 void load_shapefile(const char *shape_file)
 {
     OGRDataSourceH data_source = NULL;
@@ -61,11 +70,9 @@ void load_shapefile(const char *shape_file)
     OGR_DS_Destroy(write_source);
 }
 
-void load_ingres(OGRDataSourceH data_source)
-{
-
-}
-
+/*
+ * Print out any error from OpenAPI
+ */
 static void print_error(IIAPI_GENPARM *genParm)
 {
     IIAPI_GETEINFOPARM getInfoParm;
@@ -74,6 +81,9 @@ static void print_error(IIAPI_GENPARM *genParm)
 
     if(getInfoParm.ge_status == IIAPI_ST_SUCCESS)
     {
+        /*
+         * We have an error message
+         */
         switch(getInfoParm.ge_type)
         {
             case IIAPI_GE_ERROR:
@@ -91,6 +101,9 @@ static void print_error(IIAPI_GENPARM *genParm)
     }
     else
     {
+        /*
+         * No error message, just print status
+         */
         switch(genParm->gp_status)
         {
             case IIAPI_ST_SUCCESS:
@@ -126,7 +139,10 @@ static void print_error(IIAPI_GENPARM *genParm)
         }
     }
 }
-void execute_query(const char *query_text, II_PTR *connHandle, II_PTR *stmtHandle, II_PTR *tranHandle)
+/*
+ * Execute a query using OpenAPI
+ */
+void execute_query(const char *query_text, II_PTR *connHandle)
 {
     IIAPI_WAITPARM waitParm = { -1 };
     IIAPI_QUERYPARM queryParm;
@@ -135,6 +151,7 @@ void execute_query(const char *query_text, II_PTR *connHandle, II_PTR *stmtHandl
     IIAPI_DATAVALUE *dataValues;
     IIAPI_CLOSEPARM closeParm;
     IIAPI_COMMITPARM commitParm;
+    II_PTR stmtHandle, tranHandle;
     int i;
 
     memset(&queryParm, 0, sizeof(queryParm));
@@ -151,17 +168,17 @@ void execute_query(const char *query_text, II_PTR *connHandle, II_PTR *stmtHandl
     
     if(queryParm.qy_genParm.gp_status != IIAPI_ST_SUCCESS)
     {
-        // something went wrong again
+        // something went wrong
         print_error(&queryParm.qy_genParm);
         return;
     }
 
-    *stmtHandle = queryParm.qy_stmtHandle;
-    *tranHandle = queryParm.qy_tranHandle;
+    stmtHandle = queryParm.qy_stmtHandle;
+    tranHandle = queryParm.qy_tranHandle;
 
     memset(&getDescrParm, 0, sizeof(getDescrParm));
 
-    getDescrParm.gd_stmtHandle = *stmtHandle;
+    getDescrParm.gd_stmtHandle = stmtHandle;
 
     IIapi_getDescriptor(&getDescrParm);
 
@@ -178,7 +195,7 @@ void execute_query(const char *query_text, II_PTR *connHandle, II_PTR *stmtHandl
 
     dataValues = (IIAPI_DATAVALUE *) malloc(sizeof(IIAPI_DATAVALUE) * getDescrParm.gd_descriptorCount);
 
-    getColParm.gc_stmtHandle = *stmtHandle;
+    getColParm.gc_stmtHandle = stmtHandle;
     getColParm.gc_columnData = dataValues;
     getColParm.gc_rowCount = 1; //One at a time
     getColParm.gc_columnCount = getDescrParm.gd_descriptorCount;
@@ -212,7 +229,7 @@ void execute_query(const char *query_text, II_PTR *connHandle, II_PTR *stmtHandl
     } while(TRUE);
 
     memset(&closeParm, 0, sizeof(closeParm));
-    closeParm.cl_stmtHandle = *stmtHandle;
+    closeParm.cl_stmtHandle = stmtHandle;
     IIapi_close(&closeParm);
 
     while(closeParm.cl_genParm.gp_completed == FALSE)
@@ -224,7 +241,7 @@ void execute_query(const char *query_text, II_PTR *connHandle, II_PTR *stmtHandl
         return;
     } 
     memset(&commitParm, 0, sizeof(commitParm));
-    commitParm.cm_tranHandle = *tranHandle;
+    commitParm.cm_tranHandle = tranHandle;
 
     IIapi_commit(&commitParm);
     while(commitParm.cm_genParm.gp_completed == FALSE)
@@ -244,16 +261,13 @@ int main(int argc, const char *argv[])
     II_PTR connHandle, envHandle;
     IIAPI_CONNPARM connParm;
     IIAPI_WAITPARM waitParm = { -1 }; 
-    II_PTR stmtHandle;
-    II_PTR tranHandle;
     initParm.in_version = IIAPI_VERSION_7;
     initParm.in_timeout = -1;
     IIapi_initialize(&initParm);
     const char *wkt;
     envHandle = initParm.in_envHandle;
     char query[32000];
-    int i;
-    int repeats;
+    int i, j, repeats;
 
     if(argc <= 1)
     {
@@ -292,8 +306,9 @@ int main(int argc, const char *argv[])
 
     wkt = load_test_wkt("polygon.wkt");
 
-    int j;
-
+    /*
+     * Now let's run the test the times specified
+     */
     for(j = 0; j < repeats; j++)
     {
         printf("Running test #%d\n", j+1);
@@ -301,15 +316,20 @@ int main(int argc, const char *argv[])
         for(i = 0; functions[i] != NULL; i++)
         {
             sprintf(query, "SELECT ST_%s(shape, polyfromtext('%s')) FROM province", functions[i], wkt);
-            execute_query(query, &connHandle, &stmtHandle, &tranHandle);
+            execute_query(query, &connHandle);
         }
 
-        execute_query("SELECT ST_Boundary(shape) FROM province", &connHandle, &stmtHandle, &tranHandle);
-        execute_query("SELECT ST_Area(shape) FROM province", &connHandle, &stmtHandle, &tranHandle);
-        execute_query("SELECT ST_Centroid(shape) FROM province", &connHandle, &stmtHandle, &tranHandle);
+        /*
+         * Some other queries to run
+         */
+        execute_query("SELECT ST_Boundary(shape) FROM province", &connHandle);
+        execute_query("SELECT ST_Area(shape) FROM province", &connHandle);
+        execute_query("SELECT ST_Centroid(shape) FROM province", &connHandle);
     }
     {
-        //Finish up
+        /*
+         * Close the connection and terminate
+         */
         IIAPI_DISCONNPARM disconnParm;
         IIAPI_TERMPARM termParm;
 
@@ -330,5 +350,7 @@ int main(int argc, const char *argv[])
 
         IIapi_terminate(&termParm);
     }
+
+    return 0;
 }
 
