@@ -508,6 +508,7 @@ dmffload( DMF_JSX	*jsx,
         FUNC_EXTERN DB_STATUS   dmf_tbl_info();
         FUNC_EXTERN DB_STATUS	dmf_last_id();
         FUNC_EXTERN DB_STATUS	dmf_get_srs();
+
  
         status = adg_add_fexi(&adf_scb, ADI_01PERIPH_FEXI, dmpe_call);
         if (status != E_DB_OK)

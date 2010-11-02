@@ -185,8 +185,8 @@
 **          Change II_BOOLEAN to 38.  Add missing operators.
 **      17-Aug-2010 (thich01)
 **          Add spatial II types and spatial II ops.
-**  19-Aug-2010 (thich01)
-**      Left a space at 60 for GCA SECL TYPE.
+**	19-Aug-2010 (thich01)
+**	    Left a space at 60 for GCA SECL TYPE.
 */
 /*
 **	11-may-2006
@@ -434,7 +434,8 @@ typedef short II_DT_ID;
 #define 		II_MPOLY 	((II_DT_ID) 63)
 #define 		II_NBR 		((II_DT_ID) 64)
 #define 		II_GEOMC 	((II_DT_ID) 65)
-    /* New spatial datatypes.  These are internal types and are all LBYTE data
+    /*
+    ** New spatial datatypes.  These are internal types and are all LBYTE data
     ** under the 'covers.'
     */
 

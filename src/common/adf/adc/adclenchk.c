@@ -140,10 +140,10 @@
 **          Added support for unicode long nvarchar datatype.
 **      16-oct-2006 (stial01)
 **          Added length check for locator datatypes
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **      29-sep-2009 (joea)
 **          Add case for DB_BOO_TYPE in adc_1lenchk_rti.  Change
 **          adc_2lenchk_bool to use i1 as the underlying type.
@@ -1288,7 +1288,6 @@ DB_DATA_VALUE	*adc_rdv)
 	    }
 	    break;
 	}
-
       default:
 	db_stat = adu_error(adf_scb, E_AD9999_INTERNAL_ERROR, 0);
     }	/* end of switch stmt */

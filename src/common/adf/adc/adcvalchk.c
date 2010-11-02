@@ -102,12 +102,12 @@
 **	18-Feb-2008 (kiria01) b120004
 **	    Consolidate timezone handling. Updated adu_6to_dtntrnl
 **	    to new form adu_6to_dtntrnl for inteface change.
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
 **      13-aug-2009 (joea)
 **          Add case for DB_BOO_TYPE in adc_1valchk_rti.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **      09-mar-2010 (thich01)
 **          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
 **/

@@ -38,7 +38,7 @@
 #include    <dmppn.h>
 #include    <spatial.h>
 
-# define DMPE_NULL_TCB	"\0\0\0\0\0\0\0\0"
+#define DMPE_NULL_TCB	"\0\0\0\0\0\0\0\0"
 
 /**
 **

@@ -36,10 +36,10 @@
 **  History:
 **      04-Apr-2008 (kiria01)
 **          Initial creation.
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **       8-Mar-2010 (hanal04) Bug 122974
 **          Removed nfc_flag from adu_nvchr_fromutf8() and adu_unorm().
 **          A standard interface is expected by fcn lookup / execute

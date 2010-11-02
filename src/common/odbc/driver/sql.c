@@ -680,7 +680,7 @@
 **          GetProcParamNames() if the target db is Vectorwise.  In
 **          GetServerInfo(), set the release version to the same as Ingres 
 **          10.0 for Vectorwise servers, and disable OPT_INGRESDATE and
-**          OPT_BLANKDATEisNULL for Vectorwise servers.`
+**          OPT_BLANKDATEisNULL for Vectorwise servers.
 **    17-Aug-2010 (thich01)
 **          Make changes to treat spatial types like LBYTEs or NBR type as BYTE.
 **    12-Oct-2010 (Ralph Loen) Bug 124581

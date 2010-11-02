@@ -119,9 +119,9 @@
 **	29-jun-2005 (thaju02)
 **	    adc_2tmcvt_rti(): For nvchr, use length of coerced data to 
 **	    determine endp. (B114780)
-**  19-feb-2009 (joea)
-**      Remove #ifdefs from 5-mar-2008 fix to adc_2tmcvt_rti so that it's
-**      visible on all platforms.
+**	19-feb-2009 (joea)
+**	    Remove #ifdefs from 5-mar-2008 fix to adc_2tmcvt_rti so that it's
+**	    visible on all platforms.
 **      22-sep-2009 (joea)
 **          Add cases for DB_BOO_TYPE in adc_1tmlen_rti and adc_2tmcvt_rti.
 **      09-mar-2010 (thich01)

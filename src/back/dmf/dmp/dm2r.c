@@ -7911,7 +7911,7 @@ dm2r_load(
 			if (dberr->err_code != E_DM0065_USER_INTR
 			  && dberr->err_code != E_DM010C_TRAN_ABORTED
 			  && dberr->err_code != E_DM016B_LOCK_INTR_FA
-              && dberr->err_code != E_DM5423_SRID_MISMATCH)
+			  && dberr->err_code != E_DM5423_SRID_MISMATCH)
 			{
 			    /*
 			    ** User interrupts are now a

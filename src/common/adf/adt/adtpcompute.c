@@ -63,10 +63,10 @@
 **	    Add 8-byte int case.
 **      3-aug-2005 (stial01)
 **          Check for representation change if d1_isnull && d2_isnull (b114887)
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 */
 
 

@@ -119,10 +119,10 @@
 **	    and union resolving since they do the same thing.
 **	    Recognize a standalone NULL when case or union resolving and
 **	    just adjust the type (e.g. don't max out decimal prec/scale!).
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **/
 
 

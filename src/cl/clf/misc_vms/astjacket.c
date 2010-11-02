@@ -1,5 +1,5 @@
 /*
-**    Copyright (c) 2008 Ingres Corporation
+** Copyright (c) 2007, 2009 Ingres Corporation
 **
 */
 
@@ -15,6 +15,10 @@
 **
 ** History:
 **  18-Jun-2007 (stegr01)
+**  17-Jun-2009 (stegr01)
+**     change ui2 and ui4 to u_i2 and u_i4
+**	07-jul-2009 (joea)
+**	    Remove ii_sys$hiber, ii_sys$wake and ii_sys$schdwk.
 */
 
 #include <compat.h>
@@ -51,7 +55,7 @@
 
 extern void IICSMTget_ast_ctx();
 
-static AST_CTX* initAstCtx (ui2 ssrv, AST_RTN astadr, AST_PRM astprm, u_i4 ret_pc);
+static AST_CTX* initAstCtx (u_i2 ssrv, AST_RTN astadr, AST_PRM astprm, u_i4 ret_pc);
 static void     init_jacket(void);
 
 
@@ -118,31 +122,6 @@ static i4  use_scb           = FALSE;
 ** History:
 **    10-Dec-2008 (stegr01)   Initial Version
 */
-
-
-i4
-ii_sys$wake(ui4 *pidadr, void *prcnam)
-{
-    i4  sts;
-    sts = sys$wake(pidadr, prcnam);
-    return (sts);
-}
-
-i4
-ii_sys$hiber()
-{
-    i4  sts;
-    sts = sys$hiber();
-    return (sts);
-}
-
-i4
-ii_sys$schdwk(ui4 *pidadr, void *prcnam, GENERIC_64* daytim, GENERIC_64* reptim)
-{
-    i4  sts;
-    sts = sys$schdwk(pidadr, prcnam, daytim, reptim);
-    return (sts);
-}
 
 
 i4

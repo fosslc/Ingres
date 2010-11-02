@@ -103,10 +103,10 @@
 **	    from RMS GW code as the use is no longer allowed
 **      22-dec-2008 (stegr01)
 **          Itanium VMS port.
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **      24-nov-2009 (stegr01)
 **          Replace ALPHA and IA64 by axm_vms and i64_vms
 [@history_template@]...

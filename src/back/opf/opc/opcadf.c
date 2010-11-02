@@ -202,10 +202,10 @@ FUNC_EXTERN DB_STATUS	    adi_resolve();
 **	    Remove dead code, unused adbase parameters.
 **	04-May-2010 (kiria01) b123680
 **	    Correct the bad stack referencing code in dt_family processing
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **      08-Jun-2010 (horda03) b123878
 **          For nullable string to decimal transformation, need to increase the
 **          length of the datatype by 1, otherwise E_OP0791 gets reported.
@@ -1686,8 +1686,10 @@ opc_adtransform(
        ** the special case of non-comparison operators).
        */
 
-       /* Check if both types are in the GEOM Family */
-       /* If so, the types are effectively equal. */
+       /*
+        * Check if both types are in the GEOM Family
+        * If so, the types are effectively equal.
+       */
        if ((abs_srctype != abs_restype &&
            !(adi_dtfamily_retrieve(abs_srctype) == DB_GEOM_TYPE &&
              adi_dtfamily_retrieve(abs_restype) == DB_GEOM_TYPE))

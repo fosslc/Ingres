@@ -47,10 +47,10 @@
  **	15-Jun-2005 (thaju02)
  **	    rowformat(): for long var[char|byte], break up data into 
  **	    segments. (B114689)
- **  16-Jun-2009 (thich01)
- **      Treat GEOM type the same as LBYTE.
- **  20-Aug-2009 (thich01)
- **      Treat all spatial types the same as LBYTE.
+ **	16-Jun-2009 (thich01)
+ **	    Treat GEOM type the same as LBYTE.
+ **	20-Aug-2009 (thich01)
+ **	    Treat all spatial types the same as LBYTE.
 **	21-Sep-2009 (hanje04)
 **	   Use new include method for stream headers on OSX (DARWIN) to
 **	   quiet compiler warnings.

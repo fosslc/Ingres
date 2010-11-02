@@ -93,12 +93,12 @@
 **	08-Feb-2008 (kiria01) b119885
 **	    Change dn_time to dn_seconds to avoid the inevitable confusion with
 **	    the dn_time in AD_DATENTRNL.
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
 **      10-aug-2009 (joea)
 **          Add case for DB_BOO_TYPE in adc_1getempty_rti.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **      09-mar-2010 (thich01)
 **          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
 **/

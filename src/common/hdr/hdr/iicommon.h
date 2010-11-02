@@ -141,10 +141,10 @@
 **        the max table id.
 **      28-jan-2009 (stial01)
 **          Added DB_IITYPE_LEN, DB_IISTRUCT_LEN
-**  16-Jun-2009 (thich01)
-**      Add GEOM type for spatial.
-**  20-Aug-2009 (thich01)
-**      Add POINT, MPOINT, LINE, MLINE, POLY, and MPOLY spatial types.
+**	16-Jun-2009 (thich01)
+**	    Add GEOM type for spatial.
+**	20-Aug-2009 (thich01)
+**	    Add POINT, MPOINT, LINE, MLINE, POLY, and MPOLY spatial types.
 **      06-oct-2009 (joea)
 **          Change DB_DT_ID_MACRO to provide SQL and QUEL precedence values for
 **          BOOLEAN.  Add db_booltype member to DB_ANYTYPE union and defines
@@ -1210,7 +1210,7 @@ _DEFINE(MLINE,  61, BYTE, LV,   18, 18, 18, 18  /* MLine Long Byte */)\
 _DEFINE(POLY,   62, BYTE, LV,   18, 18, 18, 18  /* Poly Long Byte */)\
 _DEFINE(MPOLY,  63, BYTE, LV,   18, 18, 18, 18  /* MPoly Long Byte */)\
 _DEFINE(NBR,    64, BYTE, BASE,  0,  0,  0,  0  /* NBR type for Rtree */)\
-_DEFINE(GEOMC,	65,	BYTE, LV,	18,	18,	18,	18	/* GeomColl Long Byte */)\
+_DEFINE(GEOMC,	65, BYTE, LV,   18, 18, 18, 18  /* GeomColl Long Byte */)\
 _DEFINEEND
 
 /*

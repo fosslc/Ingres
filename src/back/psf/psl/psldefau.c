@@ -141,10 +141,10 @@
 **          psl_2col_ingres_default()
 **	12-Jun-2006 (kschendel)
 **	    Allow sequence defaults (next value for <seq>).
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **      04-sep-2009 (joea)
 **          Add cases for DB_BOO_TYPE in psl_2col_ingres_default and
 **          psl_col_user_default.  Add cases for DB_DEF_ID_FALSE and

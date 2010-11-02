@@ -763,7 +763,6 @@ fixtree(
 
 static DB_STATUS qeu_tr_ts_cmp(
     void *toss, QEU_QUAL_PARAMS *qparams);
-
 
 /*{
 ** Name: QEU_CREDBP	- store a DB procedure definition

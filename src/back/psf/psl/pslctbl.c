@@ -44,7 +44,7 @@
 #include    <psldef.h>
 #include    <psyaudit.h>
 #include    <uld.h>
-#include	<spatial.h>
+#include    <spatial.h>
 
 /*
 **  NO_OPTIM=dgi_us5 int_lnx int_rpl i64_aix
@@ -7052,7 +7052,7 @@ psl_ct13_newcolname(
 **          Flag qeu to call createDefaultTuples for 'alter table alter 
 **          column' from no default to default.
 **	04-Dec-2009 (troal01)
-**		Should now set the proper geometry type code.
+**	    Should now set the proper geometry type code.
 **	21-Jan-2010 (troal01)
 **	    If SRID has been specified, it is put in *len_prec with
 **	    num_len_prec_vals set to zero. If it's a geospatial type

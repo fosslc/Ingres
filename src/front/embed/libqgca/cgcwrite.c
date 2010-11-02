@@ -70,10 +70,10 @@
 **	    The embeded length in NVCHR is number of characters, not bytes.
 **      12-sep-2001 (stial01)
 **          Added DB_NVCHR_TYPE handling
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **	 1-Oct-09 (gordy)
 **	    Added GCA2_INVPROC message.
 **/

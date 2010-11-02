@@ -19,12 +19,12 @@
 --              22-apr-1994     - Added datatype code for W4GL objects. (timt)
 --              20-Mar-2002	- Updated IISQ_MAX_COLS to 1024. (toumi01)
 --              18-nov-2009     - Add IISQ_BOO_TYPE. (joea)
-
 --              29-Jul-2010     - Increase the size of sqlnamec from 34 to 
 --				  258, to match with the IISQD_NAMELEN in  
 --				  IISQLDA. (hweho01) S121123
 --              17-aug-2010     - Add IISQ spatial types skipped 60 for SECL
---                                consistency. (thic01)-
+--                                consistency. (thic01)
+--
 -- Copyright (c) 2004, 2010 Ingres Corporation
 --
 

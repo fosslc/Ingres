@@ -363,8 +363,8 @@ struct _ADP_POP_CB
     	    	    	    	    	    	** segment
     	    	    	    	    	    	*/
 #define			ADP_C_GET_MASK	    0x8 /* Indicates an ADP_GET, needed for SRID */
-#define			ADP_C_MOVE_MASK		0x10 /* Indicates a dmpe_move, do not
-                                            overwrite the SRID */
+#define			ADP_C_MOVE_MASK	    0x10 /* Indicates a dmpe_move, do
+                                                  * not overwrite the SRID */
 
     /* pop_temporary specifies what sort of target the POP should place
     ** the result value in, if it's a long object and if there is a result.

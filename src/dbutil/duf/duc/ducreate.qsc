@@ -412,10 +412,10 @@ EXEC SQL include SQLCA;
 **	    Compiler warning fixes.
 **	12-Nov-2009 (kschendel) SIR 122882
 **	    cmptlvl is now integer, fix here.
-**  15-Mar-2010 (troal01)
-**      Added -srid and -nosrid flags, -srid is the default
-**      These flags allow or restrict the pre-loading
-**      of EPSG data into spatial_ref_sys.
+**	15-Mar-2010 (troal01)
+**	    Added -srid and -nosrid flags, -srid is the default
+**	    These flags allow or restrict the pre-loading
+**	    of EPSG data into spatial_ref_sys.
 **	16-Mar-2010 (frima01) SIR 121619
 **	    Changed DU_DBIDDBDB to IIDBDB_ID, located in dmf.h.
 **      14-Apr-2010 (hanal04) SIR 123574
@@ -853,8 +853,8 @@ char	    *argv[];
 	/*
 	 * If dbdb is being created, turn off geo
 	 */
-    if(duc_modes.duc_dbdb_flag)
-        duc_dbenv.du_srid_flag = FALSE;
+	if(duc_modes.duc_dbdb_flag)
+            duc_dbenv.du_srid_flag = FALSE;
 
 	/* Issue an informative message to the user that the database is being
 	** created.  This also marks the point of no return.  At this point
@@ -4029,11 +4029,11 @@ in duc_db_evinit()
 		break;
 	
 	      case 'n':
-	      if(STncasecmp(&p[1], "nosrid", 6) == 0)
-	      {
-	          duc_dbenv->du_srid_flag = FALSE;
-	          break;
-	      }
+		if(STncasecmp(&p[1], "nosrid", 6) == 0)
+		{
+		    duc_dbenv->du_srid_flag = FALSE;
+		    break;
+		}
 	      case 'i':
 		duc_modes->duc_national_flag = TRUE;
 
@@ -4097,16 +4097,16 @@ in duc_db_evinit()
             break;
 
 	      case 's':		/* deprecated so warn but accept */
-	      if(STncasecmp(&p[1], "srid", 4) == 0)
-	      {
-	          duc_dbenv->du_srid_flag = TRUE;
-	          break;
-	      }
-	      else
-	      {
-		du_error(duc_errcb, W_DU1085_SORTFLAG_DEPRECATED, 2,
-			 0, &p[2]);
-	      }
+		if(STncasecmp(&p[1], "srid", 4) == 0)
+		{
+		    duc_dbenv->du_srid_flag = TRUE;
+		    break;
+		}
+		else
+		{
+		    du_error(duc_errcb, W_DU1085_SORTFLAG_DEPRECATED, 2,
+			0, &p[2]);
+		}
 	      case 'w':
 		    duc_modes->duc_sortloc_flag	= TRUE;
 		    STcopy(&p[2], duc_dbenv->du_sortloc.du_locname);

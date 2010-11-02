@@ -148,23 +148,23 @@
 **	    Added prototype for separated pattern compiler.
 **	05-Jan-2008 (kiria01) SIR120473
 **	    Switch eptr to esc_dv to allow for tracking datatype
-**  28-Feb-2009 (thich01)
-**      Added geo_fromText function ref for spatial
-**  06-Mar-2009 (thich01)
-**      Added type specific fromText function refs for spatial.
-**  13-Mar-2009 (thich01)
-**      Added funtion refs for asText and asBinary
-**  20-Mar-2009 (thich01)
-**      Added fromBinary function refs for spatial
+**	28-Feb-2009 (thich01)
+**	    Added geo_fromText function ref for spatial
+**	06-Mar-2009 (thich01)
+**	    Added type specific fromText function refs for spatial.
+**	13-Mar-2009 (thich01)
+**	    Added funtion refs for asText and asBinary
+**	20-Mar-2009 (thich01)
+**	    Added fromBinary function refs for spatial
 **      22-Apr-2009 (Marty Bowes) SIR 121969
 **          Add adu_strgenerate_digit() and adu_strvalidate_digit()
 **          for the generation and validation of checksum values.
 **      01-Aug-2009 (martin bowes) SIR122320
 **          Added soundex_dm (Daitch-Mokotoff soundex)
-**  20-Aug-2009 (thich01)
-**      Add generic geom from text and from wkb.
-**  25-Aug-2009 (troal01)
-**      Added iigeomname, iigeomdimensions function refs for spatial
+**	20-Aug-2009 (thich01)
+**	    Add generic geom from text and from wkb.
+**	25-Aug-2009 (troal01)
+**	    Added iigeomname, iigeomdimensions function refs for spatial
 **	aug-2009 (stephenb)
 **		Remove various protos that are called outside ADF and
 **		prototype them in a more public location.

@@ -1904,7 +1904,6 @@ ADC_KEY_BLK	    *adc_kblk)
 	** All unhandled datatypes will need a full scan */
 	switch (adc_kblk->adc_kdv.db_datatype)
 	{
-
 	case DB_MNY_TYPE:
 	case DB_FLT_TYPE:
 	case DB_DEC_TYPE:

@@ -110,10 +110,10 @@
 **	    from RMS GW code as the use is no longer allowed
 **	24-feb-2005 (abbjo03)
 **	    Remove include of obsolete gwxit.h.
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **	12-feb-2010 (abbjo03, wanfr01) Bug 123139
 **	    cv.h needs to be added for function definitions
 */

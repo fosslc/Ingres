@@ -194,28 +194,29 @@ LIBRARY = IMPADFLIBDATA
 **	    Added DB_PAT_TYPE datatype for PATCOMP support.
 **      18-dec-2008 (joea)
 **          Replace READONLY/WSCREADONLY by const.
-**  27-Feb-2009 (thich01)
-**      Add the spatial types as blob synonyms.
+**      27-Feb-2009 (thich01)
+**          Add the spatial types as blob synonyms.
 **	09-Apr-2009 (kiria01) b121903
 **	    Add boolean compare to allow tree compares to cope
 **	    with boolean nodes.
-**  16-Jun-2009 (thich01)
-**      Add a new GEOM type to be treated as an LBYTE.  Change the spatial type
-**      from blob synonyms to geom synonyms.  The GEOM type will be index-able.
-**  06-Jul-2009 (thich01)
-**      Add a generic geometry type before all the spatial synonyms.  This will
-**      make the help output more intuitive.
-**  20-Aug-2009 (thich01)
-**      Change the spatial types to distinct types and create the DB_GEOM_TYPE
-**      family.  Move Denise's type to PointNative.
+**      16-Jun-2009 (thich01)
+**         Add a new GEOM type to be treated as an LBYTE.  Change the spatial
+**         type from blob synonyms to geom synonyms.  The GEOM type will be
+**         index-able.
+**      06-Jul-2009 (thich01)
+**          Add a generic geometry type before all the spatial synonyms.  This
+**          will make the help output more intuitive.
+**      20-Aug-2009 (thich01)
+**          Change the spatial types to distinct types and create the
+**          DB_GEOM_TYPE family.
 **      05-oct-2009 (joea)
 **          Change "boolean" row of Adi_1RO_datatypes array to allow BOOLEAN
 **          to be stored in tables (AD_INDB flag), and add functions to the
 **          "boolean" adi_dt_com_vect (common datatype functions).
 **      12-Nov-2009 (coomi01) Bug 122840
 **          Add compare funtion, adu_longcmp, for long byte
-**  16-Feb-2010 (thich01)
-**      Added geometry as a DB_GEOM_TYPE synonym.
+**      16-Feb-2010 (thich01)
+**          Added geometry as a DB_GEOM_TYPE synonym.
 **      09-mar-2010 (thich01)
 **          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.  Add NOSORT
 **          and NOKEY back to GEOM types.  There is an exception in pslindx.c

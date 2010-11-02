@@ -335,8 +335,8 @@ init_encode_tables()
 **	30-MAY-2002 (gupsh01)
 **	    Added has_default attribute to meta_columns. The earlier 
 **	    default_value now holds the actual value of the attribute.
-**  19-Aug-2010 (troal01)
-**      Added srid to meta_columns for Ingres Geospatial
+**	19-Aug-2010 (troal01)
+**	    Added srid to meta_columns for Ingres Geospatial
 */
 void 
 xmldtd(bool internal_dtd, char *title_doctype) 
@@ -694,8 +694,8 @@ static	char lfmt[] = "%ld";
 **          Add test to ensure no attempt to deref a null pointer on default value.
 **      17-Aug-2010 (thich01)
 **          Add NBR and GEOMC spatial types.
-**  19-Aug-2010 (troal01)
-**      Added SRID to the schema for Ingres Geospatial
+**	19-Aug-2010 (troal01)
+**	    Added SRID to the schema for Ingres Geospatial
 */
 i4
 xmlprintcols (XF_TABINFO *tp)

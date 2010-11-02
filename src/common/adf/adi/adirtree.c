@@ -118,8 +118,10 @@ adi_dt_rtree(
     adi_rslv_blk.adi_dt[0] = (DB_DT_ID)abs(obj_dt_id);
     adi_rslv_blk.adi_dt[1] = DB_ALL_TYPE;
 
-    /*The function expects DB_GEOM_TYPE but all spatial types are valid.
-     *Therefore, check the family type to ensure it's a spatial type.*/ 
+    /*
+     * The function expects DB_GEOM_TYPE but all spatial types are valid.
+     *Therefore, check the family type to ensure it's a spatial type.
+     */ 
     status = adi_resolve(adf_scb, &adi_rslv_blk, FALSE);
     family_dt_id = adi_dtfamily_retrieve(adi_rslv_blk.adi_dt[0]);
     if ((DB_FAILURE_MACRO(status)) ||
@@ -223,7 +225,7 @@ adi_dt_rtree(
 	return(status);
 
     /*
-    ** Find the NBR(nbr, nbr)-> nbr function
+    ** Find the Union(nbr, nbr)-> 0,1 function
     */
 
     status = adi_opid(adf_scb, "UNION", &union_op_id);

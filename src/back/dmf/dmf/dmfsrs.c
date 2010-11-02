@@ -202,7 +202,7 @@ STATUS dmf_get_srs(
 	status = dmt_close(&dmt_cb);
 	if(status != E_DB_OK)
 	{
-		//close failed??
+		/* close failed?? */
 		*errcode = E_AD5601_GEOSPATIAL_INTERNAL;
 		return status;
 	}

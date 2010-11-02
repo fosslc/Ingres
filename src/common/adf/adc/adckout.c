@@ -1000,7 +1000,6 @@ i4		    *adc_width)
 **          Added byte string datatypes.
 **	12-may-04 (inkdo01)
 **	    Added support for bigint.
-[@history_template@]...
 */
 
 DB_STATUS
@@ -1346,6 +1345,7 @@ i4		    *adc_buflen)
 	break;
       }
       
+
       default:
 	db_stat = adu_error(adf_scb, E_AD2004_BAD_DTID, 0);
 	break;

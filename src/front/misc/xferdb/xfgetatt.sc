@@ -136,8 +136,8 @@ EXEC SQL INCLUDE <xf.sh>;
 **          Port previous change for use with 65 catalogs and above.
 **	21-apr-2010 (toumi01) SIR 122403
 **	    Add encryption support and With_r1000_catalogs.
-**  27-Jul-2010 (troal01)
-**      Add geospatial support
+**	27-Jul-2010 (troal01)
+**	    Add geospatial support
 **/
 
 /* # define's */

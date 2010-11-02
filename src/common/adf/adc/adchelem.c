@@ -514,9 +514,9 @@ DB_DATA_VALUE       *adc_dvhg;
 **	14-Jan-08 (kiria01) b119738
 **	    Corrected the buffer lengths for unicode and utf8 data and
 **	    eliminated the unused pair of null bytes from collation data.
-**    17-Mar-2009 (toumi01) b121809
-**        Stop treating BYTE data as CHAR, which causes problems with
-**        utf8 data.
+**	17-Mar-2009 (toumi01) b121809
+**	    Stop treating BYTE data as CHAR, which causes problems with
+**	    utf8 data.
 **       8-Mar-2010 (hanal04) Bug 122974
 **          Removed nfc_flag from adu_nvchr_fromutf8() and adu_unorm(). 
 **          A standard interface is expected by fcn lookup / execute 

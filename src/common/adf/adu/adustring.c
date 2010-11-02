@@ -202,12 +202,12 @@
 **          Add adu_strgenerate_digit() and adu_strvalidate_digit()
 **	11-May-2009 (kschendel) b122041
 **	    Compiler caught value instead of pointer being pass to adu-error.
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
 **      01-Aug-2009 (martin bowes) SIR122320
 **          Added soundex_dm (Daitch-Mokotoff soundex)
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **      03-Sep-2009 (coomi01) b122473
 **          Add adu_3alltobyte as a wrapper around adu_2alltobyte allowing a
 **          output length parameter to be specified.

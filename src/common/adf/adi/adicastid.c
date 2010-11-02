@@ -30,10 +30,10 @@
 **  History:    $Log-for RCS$
 **      10-jan-2002 (inkdo01)
 **          Initial creation.
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **      23-oct-2009 (joea)
 **          Add case for DB_BOO_TYPE in adi_castid.
 **/

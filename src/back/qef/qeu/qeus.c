@@ -7483,7 +7483,7 @@ qeu_valid_srid(
 	status = dmf_call(DMT_SHOW, &show);
 	if(status != E_DB_OK)
 	{
-		//something went wrong
+		/* something went wrong */
 		*errcode = E_QE0092_ERROR_SHOWING_TABLE;
 		return FALSE;
 	}
@@ -7531,7 +7531,7 @@ qeu_valid_srid(
 			continue;
 		}
 
-		key.attr_number = SRS_SRID_COL; //SRID column
+		key.attr_number = SRS_SRID_COL; /* SRID column */
 		key.attr_operator = DMR_OP_EQ;
 		key.attr_value = (char *) &attr->attr_srid;
 		qeu->qeu_key = &key_ptr;

@@ -33,7 +33,8 @@
 **	    cross change to main
 **	    replace nat and longnat with i4
 **      17-Aug-2010 (thich01)
-**          Make changes to treat spatial types like LBYTEs.**/
+**          Make changes to treat spatial types like LBYTEs.
+**/
 
 /*
 ** Name: OI_Query_Type()	- Determine the query type

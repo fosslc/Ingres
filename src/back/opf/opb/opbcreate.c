@@ -2670,8 +2670,10 @@ notsorted:	/* Reset constant in case list rearranged */
                 {
                     i4          dtmask = 0;
  
-                    /* Check that VAR's are NOT long types. 
-                       Unless the long type is a member of the GEOM family.*/
+                    /*
+                     *  Check that VAR's are NOT long types. 
+                     *  Unless the long type is a member of the GEOM family.
+                     */
                     status = adi_dtinfo(subquery->ops_global->ops_adfcb,
                         lvar->pst_sym.pst_dataval.db_datatype, &dtmask);
                     if (status != E_DB_OK) break;

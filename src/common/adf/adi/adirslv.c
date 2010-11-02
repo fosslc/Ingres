@@ -1479,7 +1479,7 @@ ADI_RSLV_BLK	     *adi_rslv_blk
           }
           else if (fdt == DB_GEOM_TYPE)
           {
-              // Nothing to do here.
+              /* Nothing to do here. Just allow the GEOM family. */
           }
 	  else if (family == DB_ALL_TYPE)
 	  {

@@ -34,10 +34,10 @@
 **	06-Jan-2009 (kiria01) SIR120473
 **	    Handle the escape char as a proper DBV so that Unicode endian
 **	    issues are avoided.
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **	19-Aug-2009 (drivi01)
 **	    Repalce extern ADU_pat_legacy with GLOBALDEF to fix
 **	    a bug with uninitialized extern in parser in

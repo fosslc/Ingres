@@ -122,7 +122,6 @@
 ;	    Fix previous change which used the wrong function numbers
 ;	22-Mar-2010 (troal01)
 ;	    Add all external geospatial symbols
-;
 ;	20-Apr-2010 (toumi01) SIR 122403
 ;	    Add for encryption: adu_aesdecrypt adu_aesencrypt
 ;	    adu_rijndaelSetupEncrypt adu_rijndaelSetupDecrypt

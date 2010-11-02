@@ -281,10 +281,10 @@ NO_OPTIM = nc4_us5
 **	    I like ifdef better than ifndef, flip 'em around.
 **	29-Aug-2005 (schka24)
 **	    More minor post-generation optimizations.
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 */
 
 /*

@@ -207,14 +207,14 @@
 **          Add output_flag2 parameter to xffilltable() to allow check.
 **      28-jan-2009 (stial01)
 **          Use DB_MAXNAME for database objects.
-**  16-Jun-2009 (thich01)
-**      Add GEOM type.
+**	16-Jun-2009 (thich01)
+**	    Add GEOM type.
 **      25-feb-2010 (joea)
 **          Add case for DB_BOO_TYPE in writecopy.
 **	21-apr-2010 (toumi01) SIR 122403
 **	    Add encryption support.
-**  20-Aug-2009 (thich01)
-**      Add all other spatial types.
+**	20-Aug-2009 (thich01)
+**	    Add all other spatial types.
 **	27-Jul-2010 (troal01)
 **	    Add srid/geospatial support
 **/

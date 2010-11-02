@@ -1012,7 +1012,7 @@ UTF8merge:
 	for (i = II_COUNT_ITEMS(adc_max_dvhg->db_length, UCS2); i; i--)
 	    *cpuni++ = AD_NCHR5_HMAX_VAL;
         break;
-     
+
       default:
 	db_stat = adu_error(adf_scb, E_AD9999_INTERNAL_ERROR, 0);
 	break;

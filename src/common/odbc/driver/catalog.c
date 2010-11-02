@@ -268,8 +268,8 @@
 **         In CatGetDBcapabilities(), add fetch of DBMS_TYPE and set
 **         fServerClassVECTORWISE bit in the fServerType field of the
 **         tDBC structure if the DBMS_TYPE is Vectorwise.
-**      17-Aug-2010 (thich01)
-**          Make changes to treat spatial types like LBYTEs or NBR type as BYTE.
+**     17-Aug-2010 (thich01)
+**         Make changes to treat spatial types like LBYTEs or NBR type as BYTE.
 **     24-Aug-2010 (Ralph Loen) Bug 124300
 **         Add SQL_MAX_PROCEDURE_NAME_LEN to select query in 
 **         CatGetDBCapabilities().

@@ -42,10 +42,10 @@
 **	    Compiler warning fixes.
 **	30-May-2009 (kiria01) SIR 121665
 **	    Update GCA API to LEVEL 5
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 */
 
 #include    <compat.h>

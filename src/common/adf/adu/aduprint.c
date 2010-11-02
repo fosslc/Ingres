@@ -128,14 +128,14 @@
 **      06-Jan-2009 (macde01)
 **          The type_name structure does not agree with 
 **          common/hdr/hdr/iicommon.h. TABKEY should be at location 12, not 55.
-**  16-Jun-2009 (thich01)
-**      Add GEOM to 56.
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Add other spatial types 57-62.
-**      Treat all spatial types the same as LBYTE.
-**  19-Aug-2010 (thich01)
-**      Left a space at 60 for GCA SECL TYPE.
+**	16-Jun-2009 (thich01)
+**	    Add GEOM to 56.
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Add other spatial types 57-62.
+**	    Treat all spatial types the same as LBYTE.
+**	19-Aug-2010 (thich01)
+**	    Left a space at 60 for GCA SECL TYPE.
 **/
 
 /*

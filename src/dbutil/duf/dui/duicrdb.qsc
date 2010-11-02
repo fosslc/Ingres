@@ -852,60 +852,60 @@ DU_ERROR	*duc_errcb;
 DUC_MODE_VECT   *duc_modes;
 ##DU_ENV	*duc_dbenv;
 {
-    i4  col, nchar_set;
-    i4  i;
-    DUC_DBCAPS *cap;
+	i4	col, nchar_set;
+	i4	i;
+	DUC_DBCAPS *cap;
 
-    /*
-    **  We only have entries here for capabilities in iidbcapabilities for
-    **  which the RMS Gateway has a non-standard value.  In the future,
-    **  e.g. for new Gateways with new odd capabilities, this can be 
-    **  added to.  This stuff is indexed by 'col'.
-    */
-##  static  char  *cap_ingres[]     = { "Y", "N" };
-##  static  char  *cap_savepoints[]     = { "Y", "N" };
-##  static  char  *cap_dbms_type[]      = { "INGRES", "RMS" };
-##  static  char  *cap_nchar_set[]      = { "N", "Y" };
+	/*
+	**  We only have entries here for capabilities in iidbcapabilities for
+	**  which the RMS Gateway has a non-standard value.  In the future,
+	**  e.g. for new Gateways with new odd capabilities, this can be 
+	**  added to.  This stuff is indexed by 'col'.
+	*/
+##	static  char  *cap_ingres[]		= { "Y", "N" };
+##	static  char  *cap_savepoints[]		= { "Y", "N" };
+##	static  char  *cap_dbms_type[]		= { "INGRES", "RMS" };
+##	static	char  *cap_nchar_set[]		= { "N", "Y" };
 
-    nchar_set = *duc_dbenv->du_ucollation ? 1 : 0;
+	nchar_set = *duc_dbenv->du_ucollation ? 1 : 0;
 
-    /* pick out column for whichever Gateway we're for */
-    switch (gateway)
-    {
-      case  DU_GW_NONE:
-        col = 0;
-        break;
+	/* pick out column for whichever Gateway we're for */
+	switch (gateway)
+	{
+	  case  DU_GW_NONE:
+		col = 0;
+		break;
 
-      case  DU_GW_RMS_FLAG:
-        col = 1;
-        break;
+	  case  DU_GW_RMS_FLAG:
+		col = 1;
+		break;
 
-      default:  /* "impossible" to arrive here */
-        if ((du_error(duc_errcb, E_DU2013_GW_STDCATS_INT_ERR, 0))
-            != E_DU_OK)
-                return(duc_errcb->du_status);
-        return(E_DB_ERROR);
-    }
-    
-    IIlq_Protect(TRUE);
+	  default:	/* "impossible" to arrive here */
+		if ((du_error(duc_errcb, E_DU2013_GW_STDCATS_INT_ERR, 0))
+			!= E_DU_OK)
+				return(duc_errcb->du_status);
+		return(E_DB_ERROR);
+	}
+	
+	IIlq_Protect(TRUE);
 
-    duc_create_catalog("iidbcapabilities");
+	duc_create_catalog("iidbcapabilities");
 
-    cap = &Duc_dbcaps[0];
-    i = Duc_num_dbcaps;
-    while (--i >= 0)
-    {
-        duc_ins_capabilities(cap->duc_capability, cap->duc_value);
-        ++cap;
-    }
-    /* Finish up with non-constant entries */
-    duc_ins_capabilities("INGRES", cap_ingres[col]);
-    duc_ins_capabilities("SAVEPOINTS", cap_savepoints[col]);
-    duc_ins_capabilities("DBMS_TYPE", cap_dbms_type[col]);
-    duc_ins_capabilities("DB_NAME_CASE", duc_dbenv->du_reg_id_case);
-    duc_ins_capabilities("DB_DELIMITED_CASE", duc_dbenv->du_delim_id_case);
-    duc_ins_capabilities("DB_REAL_USER_CASE", duc_dbenv->du_real_user_case);
-    duc_ins_capabilities("NATIONAL_CHARACTER_SET", cap_nchar_set[nchar_set]);
+	cap = &Duc_dbcaps[0];
+	i = Duc_num_dbcaps;
+	while (--i >= 0)
+	{
+	    duc_ins_capabilities(cap->duc_capability, cap->duc_value);
+	    ++cap;
+	}
+	/* Finish up with non-constant entries */
+	duc_ins_capabilities("INGRES", cap_ingres[col]);
+	duc_ins_capabilities("SAVEPOINTS", cap_savepoints[col]);
+	duc_ins_capabilities("DBMS_TYPE", cap_dbms_type[col]);
+	duc_ins_capabilities("DB_NAME_CASE", duc_dbenv->du_reg_id_case);
+	duc_ins_capabilities("DB_DELIMITED_CASE", duc_dbenv->du_delim_id_case);
+	duc_ins_capabilities("DB_REAL_USER_CASE", duc_dbenv->du_real_user_case);
+	duc_ins_capabilities("NATIONAL_CHARACTER_SET", cap_nchar_set[nchar_set]);
 
 	/* Create all standard catalog views */
 	duc_create_stdcat_views(duc_dbenv->du_dbname, 
@@ -1323,7 +1323,6 @@ DU_ENV		*duc_dbenv;
 		du_error(duc_errcb, E_DU2105_BAD_LOCALDISCONNECT, 0);
 		return DB_ERROR;
 	    }
-
 	    EXEC SQL connect :ddb_name identified by :dba_name
 	    options = :appl_flag;
 

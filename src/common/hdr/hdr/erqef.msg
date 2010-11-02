@@ -112,10 +112,11 @@ SQLSTATE_MAPPING_REQUIRED
 **          Add QE0310 for table procedure.
 **      21-Jan-2009 (horda03) Bug 121519
 **            Add E_QE00AA_ERROR_CREATING_TABLE.
-**  24-Feb-2010 (troal01)
-**      Add E_QE5423_SRID_MISMATCH error for propagating E_DM5423_SRID_MISMATCH.
-**  15-Mar-2010 (troal01)
-**      Add E_QE5424_INVALID_SRID and E_QE5425_SRS_NONEXISTENT errors.
+**      24-Feb-2010 (troal01)
+**          Add E_QE5423_SRID_MISMATCH error for propagating 
+**          E_DM5423_SRID_MISMATCH.
+**      15-Mar-2010 (troal01)
+**          Add E_QE5424_INVALID_SRID and E_QE5425_SRS_NONEXISTENT errors.
 **	19-Mar-2010 (gupsh01) SIR 123444
 **	    Add E_QE016C_RENAME_TAB_HAS_OBJS for rename tables.
 **	21-apr-2010 (toumi01) SIR 122403
