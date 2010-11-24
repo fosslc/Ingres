@@ -357,7 +357,7 @@ others(void)
 	    argtype);
     for (i = 0; i < Numparams; i++)
 	SIfprintf(fileptr, ",%s", Params[i].parmtype);
-    SIfprintf(fileptr, ");\nextern YY_PSLFN_PTR %sfunc[];\n", prefix);
+    SIfprintf(fileptr, ");\nGLOBALREF YY_PSLFN_PTR %sfunc[];\n", prefix);
 
     if (Filespecs[YYFUNC].filegiven)
     {
@@ -365,7 +365,7 @@ others(void)
 		argtype);
 	for (i = 0; i < Numparams; i++)
 	    SIfprintf(ftable, ",%s", Params[i].parmtype);
-	SIfprintf(ftable, ");\nextern YY_PSLFN_PTR %sfunc[];\n", prefix);
+	SIfprintf(ftable, ");\nGLOBALREF YY_PSLFN_PTR %sfunc[];\n", prefix);
     }
     c = 0;
     PLOOP(0,i)
