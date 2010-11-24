@@ -187,9 +187,16 @@ INGLOGS_VERSION="1.28"
 ##    for each file in files/memory call iimemkey file (output in memkey.out)
 ##    On Solaris collect isainfo -b output (32/64 bit mode)
 ##    Add timestamps to the iimonitor and pstack output(begin/end)
+## 20-Jan-2010 (hanje04)
+##    SIR 123296
+##    Add support for LSB builds.
 ## 14-May-2010 (hanal04) Bug 123291
 ##    Ensure LOGDIR is unique to the inglogs process to avoid conflict
 ##    with concurrent instances (and associated hang).
+## 08-Sep-2010 (hanje04)
+##    BUG 124390
+##    SD 146293
+##    Remove LSBENV tag, not supported for LSB builds yet and causes errors.
 ## 27-oct-2010   Kristoff Picard       version 1.28 
 ##    bug 124651
 ##    Corrected a problem with do_iimonitor_other: sometimes a '*' is picked

@@ -93,6 +93,9 @@
 #	10-may-2010 (stephenb)
 #	    -march=i486 becomes -march=i586. support for 64-bit atomic built-ins
 #	    only came in pentium architecture
+#	01-Nov-2010 (bonro01)
+#	    Add compile flags to "back" directory tree to show warnings for
+#	    missing prototypes.
 #
 
 # Tell Jamdefs that this include worked:
@@ -203,3 +206,6 @@ if $(OSVER) != DEBIAN
 }
 BUILD_GTK_GUI ?= TRUE ;
 PAMLIB ?= TRUE ;
+
+# Set Directory Tree compile flags
+DIRCCFLAGS_back += -Wmissing-prototypes ;
