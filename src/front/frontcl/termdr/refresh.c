@@ -190,6 +190,9 @@
 **      28-jul-2010 (huazh01)
 **          only apply the fix to b123820 if the previous display attribute
 **          is reverse video. (b124090)
+**      23-Aug-2010 (huazh01)
+**          On HP-UX, clean up display attribute if previous frame has a reverse 
+**          video field. (b124215)
 */
 u_char		TDsaveLast();
 
@@ -1615,7 +1618,11 @@ i4	wy;
 					 ((zda && !*cda && ndaval) ||
 					  (!zda && *cda && !ndaval) ||
 					  (ndaval && (IITDcda_prev != *cda) &&
-					   (ndaval != *cda)))))
+					   (ndaval != *cda))))
+                                        ||
+                                        (*cda == _RVVID && 
+                                         *cda != (ndaval & _DAMASK))
+                                       )
 				    {
 					/*
 					** Handle the case of clearing
