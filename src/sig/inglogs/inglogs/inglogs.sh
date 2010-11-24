@@ -1,13 +1,8 @@
 :
-INGLOGS_VERSION="1.27"
+INGLOGS_VERSION="1.28"
 #
 #usage: inglogs [-noparallel] [-internalthreads] ... [-h|-help] [--help] [-v|-version|--version]
 #(run "inglogs -help" or "inglogs --help to get a short or detailed description)
-#inglogs, initial version 0.9 created by Kristoff Picard, 09-July-2003
-#
-#This script could replace the various mutex scripts which
-#have become a little bit unreadable because of several changes
-#and which don't work on all Unix platforms
 #
 #The following logs and configuration are collected(if exist):
 #syscheck (-v), ulimit -a, ulimit -aH,uname -a
@@ -25,177 +20,198 @@ INGLOGS_VERSION="1.27"
 #iimonitor:show (all) sessions, show (all) sessions formatted, stack, show mutex
 #depending on the platform some additional information
 #run "inglogs --help" to get actual list of collected info
+#Comment:
+# Starting with version 1.26 you may see /bin/bash used on
+# Linux instead of /bin/sh (check the very first line). This is because
+# inglogs is now part of the distribution/patch (in sig/inglogs) and we
+# use bash as standard shell on Linux. This shouldn't be any problem unless
+# such an inglogs version is copied to a machine that doesn't have the bash,
+# in this case you would need change the first line.
 #####################################################################
-#history
-# 09-jul-2003	Kristoff Picard		initial version		0.9
-#     mutex part not tested, but should work. (based on the old mutex script)
-#     basic tests done on Solaris, Linux, AIX, OSF and HP
-#
-# 08-aug-2003   Kristoff Picard          version 0.91
-#     corrected wrong filename for lockstat -dirty output
-# 12-sep-2003   Kristoff Picard          version 0.92
-#     on Linux do an additional "ps auxm" (if the "m" flag is supported,
-#      this depends on the Linux version). With this flag we will see the
-#      threads too(depending on the Linux version the threads might be
-#      unvisible otherwise, seen in RedHat 9)
-# 12-may-2004   Kristoff Picard          version 0.92a
-#     temporary changes because of problems with 64 bit version
-#     don't call stacks in iimonitor. For the future we could
-#     distinct between 32 and 64 bit versions and also determine
-#     whether system threads are used(were the stack command isn't useful 
-#     anyway, i.e on most sytems)
-# 17-jun-2004   Kristoff Picard          version  0.93
-#     put $II_SYSTEM/ingres/bin and $II_SYSTEM/ingres/bin/utility
-#     at the beginning of PATH, to avoid conflicts with other commands
-#     (for example the Solaris lockstat command)
-# 02-dec-2004   Kristoff Picard          version  0.94
-#    added possibility to run the functions in parallel, this can be helpful
-#    when a function is hanging. A function might still hang within a single
-#    command, but the other functions can continue. To use this feature call
-#    "inglogs -parallel".
-#    Added "netstat -an" command, useful if "netstat -a" should hang because
-#    of problems with name resolution.
-#    Querying the name server is now the last command in function ingres_state
-# 22-dec-2004   Kristoff Picard          version  0.95
-#    parallel mode is now the default (use -noparallel to avoid this mode)
-#    most of the ingres commands are now done in parallel mode too,
-#    especially the iimonitor is now done for each server in parallel
-#    Some system commands are executed in parallel mode also.
-#    These changes required some additional sub function, such as do_iimonitor
-# 03-jun-2005   Kristoff Picard          version  0.96
-#    added "show server" to the iimonitor output
-#    allow to run the "stacks" command in iimonitor, for this you need to call
-#    inglogs with the "-internalthreads" command. Don't use this flag when
-#    running system threads, especially in 64 bit installations, this can
-#    crash the server. We don't rely on II_THREAD_TYPE here, since there
-#    are versions where this variable is ignored.
-#    changed the logic to get the dbms logs, the old method sometimes failed
-#    and was clumsy.
-#    on AIX print OS version using "oslevel"
-#    on TRU64 print OS version using "sizer -v"
-#    print the used command to inglogs_version.txt
-# 19-Aug-2005   Kristoff Picard          version  1.0
-#    removed os_specificics, the various commands are now executed in other 
-#    modules.
-#    When running in parallel mode(default), wait for the background processes
-#    to be completed. You may have to interrupt the script should a background 
-#    processes hang. Removed some progress messages which were not always
-#    correct and are no longer necessary.
-#    Added "-help" and "--help" flag to get a brief or detailed description
-#    Added additional flags to switch off a "module":
-#    -nosystemconfig -nosystemstate -nologfiles -noingresconfig -noingresstate
-#    This gives you some control which information will be collected.
-#    Assume that the installation owner is running the script when
-#    $II_SYSTEM/ingres is writeable, removed the check whether
-#    the script is running as "ingres".
-# 25-Jan-2006   Kristoff Picard          version  1.1 
-#    Changed the way to determine mutex numbers.
-#    Sessions in mutex are sometimes listed in a different format, 
-#    the script failed to identify the mutex numbers in this second format.
-# 16-Feb-2006   Kristoff Picard          version  1.11
-#    redirect stderr for some commands to &1
-# 13-Jul-2006   Kristoff Picard          version  1.12
-#    added /sbin and /usr/sbin to the end of the PATH
-#    on OSF run "ksh ulimit", in the standard sh we don't get all results
-#    added --version flag to print out the version of inglogs
-# 06-nov-2006   Kristoff Picard          version  1.13
-#    added support for a64_sol 
-#    check for symbol.log and if exist copy it too
-#    try to copy protect.dat only if exists
-# 10-Nov-2006   Kristoff Picard          version  1.14
-#    when the script is interrupted(^C) check $ports, if empty
-#    try to collect iimonitor output again
-#    (this is useful when ports=`csreport ....` hung).
-#    Trying to cleanup (kill background processes)
-#    To really interrupt the script it might be necessary to
-#    interrupt twice.
-# 08-dec-2006   Kristoff Picard          version  1.15
-#    All output of iimonitor is now collected twice with a 10-seconds pause
-#    between the first and secon collect. This allows to see changes happening
-#    in the system.
-# 21-may-2007   Kristoff Picard          version  1.16
-#    Changed PSCMD_2 for AIX to get the kernel thread id
-#    Added PSCMD_2 for Solaris to get the LWP id
-#    flags: allow -h (same as -help), allow -v and -version ( same as --version)
-#    exit when an invalid flag is given, show usage before
-# 21-may-2007   Kristoff Picard          version  1.17
-#    copy install.log if exists
-# 22-sep-2007   Kristoff Picard          version  1.18
-#    replaced all "cp" copy commands by "cp -p" to keep the timestamps
-#    use existing csreport output if possible, ideally we now call csreport
-#    only once.(give csreport 5 seconds to complete, assume output is okay,
-#    if it contains a string "server 31:")
-#    For AIX try to run procstack, even though it isn't so helpful as the
-#    Solaris pstack command.
-#    "-noparallel" mode didn't work on OSF
-#    todo: on OSF signal handler doesn't work for whatever reason
-# 01-oct-2007   Kristoff Picard          version  1.19
-#    On Solaris and AIX get the stacks for the other Ingres processes (not 
-#    attached to the logging system, iigcn,iigcc,iigcj,iigcd,iigcb) too.
-# 22-nov-2007   Kristoff Picard          version  1.20
-#    Add PSCMD_3 command to get the virtual size of the processes
-#    PSCMD_2 was not set on a64_lnx and usl_us5
-# 31-mar-2008   Kristoff Picard          version  1.21
-#    added a64_lnx to the linux versions (amd_lnx is outdated)
-#    iinamu is now executed in background too
-#    added some commands collected by "ingdiags": 
-#    vmstat, uptime 
-#    some additional netstat commands 
-#    top on Solaris, HP and Linux
-#    df -k (bdf on HP)
-#    ls -lR bin utility lib files
-#    infodb
-#    "show mutex x" is now executed 2x5 times in iimonitor
-#    psrinfo and prtconf on some platforms
-# 25-aug-2008   Kristoff Picard          version  1.22
-#    added pstack on Linux (doesn't exist in all Linux versions)
-#    added debug scripts to get stacktraces, using gdb on Linux and HP,
-#     ladebug on Tru64 and dbx on AIX. (executed with +stackdebug flag only)
-#    pstack, procstack and the debugscripts are now executed twice
-#    list open files for all Ingres processes(Solaris, Linux, AIX)
-#    copy all DBMS logs, not only the active ones
-#    i64_lnx and int_rpl added to the list of Linux versions
-#    wait for the background processes of "ingres_state" before returning to 
-#     main(easier to see whether the script has completed)
-# 16-sep-2008   Kristoff Picard/Daryl Monge   version 1.23 (not released)
-#    added support for Mac OS/X (thanks to Daryl)
-#    added "show smstats" to iimonitor (iimon_server...)
-#    If pstack is not found on Linux, try gstack
-#    added repstat output and rcpconfig.log
-#    added ls -l II_WORK output
-#    made get_exec and other_pids to work on HP
-#    on HP look for /opt/langtools/bin/gdb when using gdb(the official supported
-#     one by HP, have seen strange things with other versions
-#    redirect stderr was missing for some commands
-#    ps was put in background twice
-# !!!   +stackdebug may not work at the moment on osx
-# 07-nov-2008   Kristoff Picard       version 1.24
-#    redirected top output on OSX
-#    collect iicrash.log if requested (+iicrashlog)
-#    iimonitor for iigcc and iigcd (9.1 and above)
-# 18-mar-2009   Kristoff Picard       version 1.25
-#    corrected an error in get_exec(lp64 was added to the wrong place)
-#    don't call iimonitor against gcc and iigcd where it is not supported
-# 01-jul-2009   Kristoff Picard       version 1.26
-#    look for iiexcept.opt (ingresconfig) and iivdb.log (ingreslogfiles)
-#    if INGLOGSDIR is set in environment, create inglogdirectory within that 
-#     directory
-#    Look for flags defined in $INGLOGFLAGS and append to the given flags
-#    report INGLOGSDIR and INGLOGFLAGS into inglogs_version.txt
-#    for each file in files/memory call iimemkey file (output in memkey.out)
-#    On Solaris collect isainfo -b output (32/64 bit mode)
-#    Add timestamps to the iimonitor and pstack output(begin/end)
-# 20-Jan-2010 (hanje04)
-#    SIR 123296
-#    Add support for LSB builds.
-# 14-May-2010 (hanal04) Bug 123291
-#    Ensure LOGDIR is unique to the inglogs process to avoid conflict
-#    with concurrent instances (and associated hang).
-# 08-Sep-2010 (hanje04)
-#    BUG 124390
-#    SD 146293
-#    Remove LSBENV tag, not supported for LSB builds yet and causes errors.
-#
+##history
+## 09-jul-2003	Kristoff Picard		initial version		0.9
+##     mutex part not tested, but should work. (based on the old mutex script)
+##     basic tests done on Solaris, Linux, AIX, OSF and HP
+##
+## 08-aug-2003   Kristoff Picard          version 0.91
+##     corrected wrong filename for lockstat -dirty output
+## 12-sep-2003   Kristoff Picard          version 0.92
+##     on Linux do an additional "ps auxm" (if the "m" flag is supported,
+##      this depends on the Linux version). With this flag we will see the
+##      threads too(depending on the Linux version the threads might be
+##      unvisible otherwise, seen in RedHat 9)
+## 12-may-2004   Kristoff Picard          version 0.92a
+##     temporary changes because of problems with 64 bit version
+##     don't call stacks in iimonitor. For the future we could
+##     distinct between 32 and 64 bit versions and also determine
+##     whether system threads are used(were the stack command isn't useful 
+##     anyway, i.e on most sytems)
+## 17-jun-2004   Kristoff Picard          version  0.93
+##     put $II_SYSTEM/ingres/bin and $II_SYSTEM/ingres/bin/utility
+##     at the beginning of PATH, to avoid conflicts with other commands
+##     (for example the Solaris lockstat command)
+## 02-dec-2004   Kristoff Picard          version  0.94
+##    added possibility to run the functions in parallel, this can be helpful
+##    when a function is hanging. A function might still hang within a single
+##    command, but the other functions can continue. To use this feature call
+##    "inglogs -parallel".
+##    Added "netstat -an" command, useful if "netstat -a" should hang because
+##    of problems with name resolution.
+##    Querying the name server is now the last command in function ingres_state
+## 22-dec-2004   Kristoff Picard          version  0.95
+##    parallel mode is now the default (use -noparallel to avoid this mode)
+##    most of the ingres commands are now done in parallel mode too,
+##    especially the iimonitor is now done for each server in parallel
+##    Some system commands are executed in parallel mode also.
+##    These changes required some additional sub function, such as do_iimonitor
+## 03-jun-2005   Kristoff Picard          version  0.96
+##    added "show server" to the iimonitor output
+##    allow to run the "stacks" command in iimonitor, for this you need to call
+##    inglogs with the "-internalthreads" command. Don't use this flag when
+##    running system threads, especially in 64 bit installations, this can
+##    crash the server. We don't rely on II_THREAD_TYPE here, since there
+##    are versions where this variable is ignored.
+##    changed the logic to get the dbms logs, the old method sometimes failed
+##    and was clumsy.
+##    on AIX print OS version using "oslevel"
+##    on TRU64 print OS version using "sizer -v"
+##    print the used command to inglogs_version.txt
+## 19-Aug-2005   Kristoff Picard          version  1.0
+##    removed os_specificics, the various commands are now executed in other 
+##    modules.
+##    When running in parallel mode(default), wait for the background processes
+##    to be completed. You may have to interrupt the script should a background 
+##    processes hang. Removed some progress messages which were not always
+##    correct and are no longer necessary.
+##    Added "-help" and "--help" flag to get a brief or detailed description
+##    Added additional flags to switch off a "module":
+##    -nosystemconfig -nosystemstate -nologfiles -noingresconfig -noingresstate
+##    This gives you some control which information will be collected.
+##    Assume that the installation owner is running the script when
+##    $II_SYSTEM/ingres is writeable, removed the check whether
+##    the script is running as "ingres".
+## 25-Jan-2006   Kristoff Picard          version  1.1 
+##    Changed the way to determine mutex numbers.
+##    Sessions in mutex are sometimes listed in a different format, 
+##    the script failed to identify the mutex numbers in this second format.
+## 16-Feb-2006   Kristoff Picard          version  1.11
+##    redirect stderr for some commands to &1
+## 13-Jul-2006   Kristoff Picard          version  1.12
+##    added /sbin and /usr/sbin to the end of the PATH
+##    on OSF run "ksh ulimit", in the standard sh we don't get all results
+##    added --version flag to print out the version of inglogs
+## 06-nov-2006   Kristoff Picard          version  1.13
+##    added support for a64_sol 
+##    check for symbol.log and if exist copy it too
+##    try to copy protect.dat only if exists
+## 10-Nov-2006   Kristoff Picard          version  1.14
+##    when the script is interrupted(^C) check $ports, if empty
+##    try to collect iimonitor output again
+##    (this is useful when ports=`csreport ....` hung).
+##    Trying to cleanup (kill background processes)
+##    To really interrupt the script it might be necessary to
+##    interrupt twice.
+## 08-dec-2006   Kristoff Picard          version  1.15
+##    All output of iimonitor is now collected twice with a 10-seconds pause
+##    between the first and secon collect. This allows to see changes happening
+##    in the system.
+## 21-may-2007   Kristoff Picard          version  1.16
+##    Changed PSCMD_2 for AIX to get the kernel thread id
+##    Added PSCMD_2 for Solaris to get the LWP id
+##    flags: allow -h (same as -help), allow -v and -version (same as --version)
+##    exit when an invalid flag is given, show usage before
+## 21-may-2007   Kristoff Picard          version  1.17
+##    copy install.log if exists
+## 22-sep-2007   Kristoff Picard          version  1.18
+##    replaced all "cp" copy commands by "cp -p" to keep the timestamps
+##    use existing csreport output if possible, ideally we now call csreport
+##    only once.(give csreport 5 seconds to complete, assume output is okay,
+##    if it contains a string "server 31:")
+##    For AIX try to run procstack, even though it isn't so helpful as the
+##    Solaris pstack command.
+##    "-noparallel" mode didn't work on OSF
+##    todo: on OSF signal handler doesn't work for whatever reason
+## 01-oct-2007   Kristoff Picard          version  1.19
+##    On Solaris and AIX get the stacks for the other Ingres processes (not 
+##    attached to the logging system, iigcn,iigcc,iigcj,iigcd,iigcb) too.
+## 22-nov-2007   Kristoff Picard          version  1.20
+##    Add PSCMD_3 command to get the virtual size of the processes
+##    PSCMD_2 was not set on a64_lnx and usl_us5
+## 31-mar-2008   Kristoff Picard          version  1.21
+##    added a64_lnx to the linux versions (amd_lnx is outdated)
+##    iinamu is now executed in background too
+##    added some commands collected by "ingdiags": 
+##    vmstat, uptime 
+##    some additional netstat commands 
+##    top on Solaris, HP and Linux
+##    df -k (bdf on HP)
+##    ls -lR bin utility lib files
+##    infodb
+##    "show mutex x" is now executed 2x5 times in iimonitor
+##    psrinfo and prtconf on some platforms
+## 25-aug-2008   Kristoff Picard          version  1.22
+##    added pstack on Linux (doesn't exist in all Linux versions)
+##    added debug scripts to get stacktraces, using gdb on Linux and HP,
+##     ladebug on Tru64 and dbx on AIX. (executed with +stackdebug flag only)
+##    pstack, procstack and the debugscripts are now executed twice
+##    list open files for all Ingres processes(Solaris, Linux, AIX)
+##    copy all DBMS logs, not only the active ones
+##    i64_lnx and int_rpl added to the list of Linux versions
+##    wait for the background processes of "ingres_state" before returning to 
+##     main(easier to see whether the script has completed)
+## 16-sep-2008   Kristoff Picard/Daryl Monge   version 1.23 (not released)
+##    added support for Mac OS/X (thanks to Daryl)
+##    added "show smstats" to iimonitor (iimon_server...)
+##    If pstack is not found on Linux, try gstack
+##    added repstat output and rcpconfig.log
+##    added ls -l II_WORK output
+##    made get_exec and other_pids to work on HP
+##    on HP look for /opt/langtools/bin/gdb when using gdb(the official supported
+##     one by HP, have seen strange things with other versions
+##    redirect stderr was missing for some commands
+##    ps was put in background twice
+## !!!   +stackdebug may not work at the moment on osx
+## 07-nov-2008   Kristoff Picard       version 1.24
+##    redirected top output on OSX
+##    collect iicrash.log if requested (+iicrashlog)
+##    iimonitor for iigcc and iigcd (9.1 and above)
+## 18-mar-2009   Kristoff Picard       version 1.25
+##    corrected an error in get_exec(lp64 was added to the wrong place)
+##    don't call iimonitor against gcc and iigcd where it is not supported
+## 01-jul-2009   Kristoff Picard       version 1.26
+##    look for iiexcept.opt (ingresconfig) and iivdb.log (ingreslogfiles)
+##    if INGLOGSDIR is set in environment, create inglogdirectory within that 
+##     directory
+##    Look for flags defined in $INGLOGFLAGS and append to the given flags
+##    report INGLOGSDIR and INGLOGFLAGS into inglogs_version.txt
+##    for each file in files/memory call iimemkey file (output in memkey.out)
+##    On Solaris collect isainfo -b output (32/64 bit mode)
+##    Add timestamps to the iimonitor and pstack output(begin/end)
+## 14-May-2010 (hanal04) Bug 123291
+##    Ensure LOGDIR is unique to the inglogs process to avoid conflict
+##    with concurrent instances (and associated hang).
+## 27-oct-2010   Kristoff Picard       version 1.28 
+##    bug 124651
+##    Corrected a problem with do_iimonitor_other: sometimes a '*' is picked
+##    up from the iinamu output instead of the port of the gcc or gcd  which 
+##    is expanded to each existing file. This is caused by unexpected iinamu 
+##    output. Fix is to change the sed command in "other_ports()" making sure 
+##    that every "IINAMU>" is deleted (and not just the first one)
+##    On Solaris, replaced "top 50" with "prstat -n50 1 1"
+##    On Solaris, collect "prstat -L -n100000 1 3" output (shows statistics for 
+##    each light-weight process).
+##    On Solaris add another ps command, /usr/ucb/ps -auxwww (useful if the 
+##    complete command is very long)
+##    Added a description of INGLOGSDIR and INGLOGSFLAGS to the help text.
+##    (note that the history 01-jul-2009 comment wrongly says INGLOGFLAGS 
+##    instead of INGLOGSFLAGS)
+##    Wrote a timestamp to inglogs_completed.txt when inglogs completed. This
+##    allows other scripts to check whether inglogs has completed.
+##    Copy symbol.bak if exists
+##    fixed a problem with gdb on Mac OSX
+##    On Linux collect lsb_release -a output
+##    history comments are now using ##, so will no longer appear in the 
+##    compiled inglogs script, removed one obsolete comment.
 #####################################################################
 #
 show_usage()
@@ -224,6 +240,13 @@ The script waits until all processes are ready, so it might not finish.
 In this case use ^C to interupt (or kill -INT pid), you may need 
 to interupt again, since the script is trying to collect the iimonitor
 output if not collected yet.
+Output is collected in directory inglogs_yyyymmdd_hhmmss_pid$$ which is by 
+default created in the current working directory. Use INGLOGSDIR defined in the
+UNIX environment, to specify another directory where inglogs creates its output 
+directory
+Use INGLOGSFLAGS defined in the UNIX environment to specify the flags 
+(described below) to specify the flags inglogs should pickup automatically.
+
 
 The following information(at least) is collected, the exact command may differ
 from platform to platform:
@@ -352,6 +375,7 @@ inglogs_init()
     CONFIG="$F/config.dat $F/config.log" 
     [ -r $F/protect.dat ] && CONFIG="$CONFIG $F/protect.dat"
     [ -r $F/symbol.log ] && CONFIG="$CONFIG $F/symbol.log"
+    [ -r $F/symbol.bak ] && CONFIG="$CONFIG $F/symbol.bak"
     [ -r $F/symbol.tbl ] && CONFIG="$CONFIG $F/symbol.tbl"
     [ -r $F/install.log ] && CONFIG="$CONFIG $F/install.log"
     [ -r $F/iiexcept.opt ] && CONFIG="$CONFIG $F/iiexcept.opt"
@@ -384,7 +408,9 @@ inglogs_init()
          AWK=nawk
          PSCMD_2="ps -eLf"
          PSCMD_3="ps -e -opid,vsz,comm"
-         TOP="top 50 >top.out"
+         PSCMD_4="/usr/ucb/ps -auxwww"
+##         TOP="top 50 >top.out"
+         TOP="prstat -n50 1 1 >top.out"
          FILESCMD=/usr/proc/bin/pfiles
          STACKCMD=/usr/proc/bin/pstack
          [ -x "$STACKCMD" ] || unset STACKCMD
@@ -496,7 +522,7 @@ other_ports()
 {
   [ -z "$1" ] && return
   [ -f iinamu.out ] || return
-  sed -e 's/IINAMU> *//' iinamu.out | awk "/$1/ {print \$3}"
+  sed -e 's/IINAMU> *//g' iinamu.out | awk "/$1/ {print \$3}"
 }
 
 ingres_pids()
@@ -585,6 +611,7 @@ system_config()
   case "$VERS" in
     int_lnx|amd_lnx|a64_lnx)
       /lib/libc.so.6 >libc_version.txt 2>&1
+      lsb_release -a >lsb_release.txt 2>&1
       ;;
     rs4_us5|r64_us5)
       oslevel >osversion.txt 2>&1
@@ -618,6 +645,7 @@ do_ps()
   $PSCMD >> ps.out.$1 2>&1
   [ -n "$PSCMD_2" ] && $PSCMD_2 >ps2.out.$1 2>&1
   [ -n "$PSCMD_3" ] && $PSCMD_3 >ps3.out.$1 2>&1
+  [ -n "$PSCMD_4" ] && $PSCMD_4 >ps4.out.$1 2>&1
 }
 
 system_state()
@@ -645,6 +673,10 @@ system_state()
     int_lnx|amd_lnx|a64_lnx)
       echo "   netstat -ap ..."
       eval netstat -ap >netstat-ap.out 2>/dev/null $bg
+      echo $! >>.bg_systemstate
+      ;;
+    su4_us5|su9_us5|a64_sol)
+      eval prstat -L -n100000 1 3 >prstat.log 2>&1 $bg
       echo $! >>.bg_systemstate
       ;;
   esac;
@@ -766,12 +798,26 @@ get_pstack_gdb()
   xcmd=`get_exec $xpid`
   [ -z "$xcmd" ] && return 
   echo $xcmd $xpid
-  $GDB $xcmd $xpid <<GDBEND
+#on OSX gdb does not work with a here document, so we use cat and pipe to gdb
+#we do this only for OSX, since this solution doesn't work om Linux
+  case "$VERS" in
+    *_osx)
+       cat  <<GDBEND | $GDB $xcmd $xpid
 info threads
 thread apply all bt
 detach
 quit
 GDBEND
+       ;;
+    *)
+       $GDB $xcmd $xpid <<GDBEND
+info threads
+thread apply all bt
+detach
+quit
+GDBEND
+       ;;
+  esac
 }
 
 get_pstack_ladebug()
@@ -1068,3 +1114,4 @@ echo "LOGDIR: $LOGDIR"
 ####   sleep 5
 }
 echo "LOGDIR: $LOGDIR"
+date +%Y%m%d_%H%M%S >inglogs_completed.txt
