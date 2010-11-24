@@ -414,6 +414,8 @@
 **          Changes for Long IDs
 **	4-May-2010 (kschendel)
 **	    DM9026 can't take parameters, fix here.
+**	01-Nov-2010 (frima01) BUG 124670
+**	    Enforce 8 Byte alignment for dm1u_colbuf to avoid BUS errors.
 */
 
 #define MAXUI2    (2 * MAXI2 + 1)    /* Largest u_i2 */
@@ -779,7 +781,7 @@ DB_ERROR	*dberr)
 	    t->tcb_atts_ptr[i+1].precision;
 	adf->dm1u_dv[i].db_data = 
 #ifdef BYTE_ALIGN
-	    adf->dm1u_colbuf;
+	    adf->dm1u_colbuf.colbuf;
 #else
 	    (PTR) &adf->dm1u_record[t->tcb_atts_ptr[i+1].offset];
 #endif

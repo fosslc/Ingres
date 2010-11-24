@@ -148,17 +148,22 @@
 **	    max_tuple_length of 2008 which doesn't account for > 2k pages. 
 **	    max_tuple_length is in range 0 - 32767, changed buffer allocation to
 **	    size DM_MAXTUP (32767) instead of DB_MAXTUP (2008).
+**      01-Nov-2010 (frima01) BUG 124670
+**	    Enforce 8 Byte alignment for dm1u_colbuf to avoid BUS errors.
 */
 
 typedef struct _DM1U_ADF
 {
 #ifdef BYTE_ALIGN
-    char	    dm1u_colbuf[DB_MAXTUP]; /* aligned buffer into which column
+    union {
+	i8          align_enforcement; /* enforce 8 Byte alignment */
+        char	    colbuf[DB_MAXTUP]; /* aligned buffer into which column
 					    ** values are copied before they are
 					    ** passed to ADF.  Do not move this
 					    ** field; use ALIGN_RESTRICT if you
 					    ** need to otherwise.
-					    */
+					*/
+	} dm1u_colbuf;
 #endif
     i4	    dm1u_numdv; 	    /* number of DVs for this tuple */
     char	    dm1u_record[DM_MAXTUP]; /* buffer to hold a record */

@@ -397,6 +397,8 @@ pst_node_size(
 **	    algorithmn to handle the depth first needs of the original code.
 **	    The stack used is initially in the from of the caller but if needed
 **	    can expand into session heap.
+**	01-Nov-2010 (frima01) BUG 124670
+**	    Enforce nsize to be aligned to avoid BUS errors.
 */
 
 
@@ -471,6 +473,7 @@ pst_treedup(
 
 	    /* Allocate enough space */
 	    nsize += sizeof(PST_QNODE) - sizeof(PST_SYMVALUE);
+	    nsize = DB_ALIGN_MACRO(nsize);
 	    if (status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
 			    nsize + datasize, nodep, dup_rb->pss_err_blk))
 		goto cleanup_exit;
