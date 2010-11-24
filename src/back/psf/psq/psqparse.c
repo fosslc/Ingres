@@ -129,6 +129,8 @@ GLOBALREF       PSF_SERVBLK    *Psf_srvblk;
 **	    Add in role and group to session begins line.
 **      15-feb-2010 (maspa05) SIR 123293
 **          Added server_class to output
+**      19-oct-2010 (maspa05) bug 124551
+**          use adu_sc930prtdataval to output the parameter value
 **
 */
 static void
@@ -141,12 +143,6 @@ print_qry_buffer(PSQ_CB *psq_cb,
 	i2 qtype;
         if (f)
         {
-	    char val[DB_MAXSTRING + 80];
-	    char val2[DB_MAXSTRING + 1];
-	    DB_DATA_VALUE d;
-	    d.db_datatype = DB_VCH_TYPE;
-	    d.db_length = DB_MAXSTRING;
-	    d.db_data = val;
 	    if (!(sess_cb->pss_ses_flag & PSS_SESSION_STARTED))
 	    {
                 char tmp[1000];
@@ -177,10 +173,8 @@ print_qry_buffer(PSQ_CB *psq_cb,
 	    ult_print_tracefile(f, qtype, qdesc->psq_qrytext);
 	    for (i = 0; i < qdesc->psq_dnum; i++)
 	    {
-		STprintf(val,"%d:%d=%s",qdesc->psq_qrydata[i]->db_datatype,
-			i,adu_valuetomystr(val2,
-			qdesc->psq_qrydata[i],sess_cb->pss_adfcb));
-		ult_print_tracefile(f,SC930_LTYPE_PARM,val);
+		adu_sc930prtdataval(SC930_LTYPE_PARM,NULL,i,
+				qdesc->psq_qrydata[i],sess_cb->pss_adfcb,f);
 	    }
             ult_close_tracefile(f);
         }

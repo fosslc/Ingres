@@ -518,6 +518,11 @@ ult_open_tracefile(void *code)
 **
 **      02-sep-2010 (maspa05) SIR 124345, 124346
 **          Add SC930_LTYPE_ENDQRY, EQY end-query record.
+**      19-oct-2010 (maspa05) b124551
+**          PARM and PARMEXEC now don't write a new line at the end of their
+**          string. This is because adu_sc930prtdataval is now responsible
+**          for outputting parameters and it calls ult_print_tracefile to
+**          do the PARM part and then outputs the actual value.
 */
 
 void
@@ -525,7 +530,7 @@ ult_print_tracefile(void *file, i2 type, char *string)
 {
 	FILE *f = (FILE*)file;
 	char *type_str,type_str2[50];
-	bool prt_timestamp=TRUE;
+	bool prt_timestamp=TRUE,newline=TRUE;
         char last_sep = ':';
 
 	HRSYSTIME hr;
@@ -600,10 +605,12 @@ ult_print_tracefile(void *file, i2 type, char *string)
 		case SC930_LTYPE_PARMEXEC:
 				type_str="PARMEXEC";
 				prt_timestamp=FALSE;
+				newline=FALSE;
 				break;
 		case SC930_LTYPE_PARM:
 				type_str="PARM";
 				prt_timestamp=FALSE;
+				newline=FALSE;
 				break;
 		case SC930_LTYPE_QEP:      
 				type_str="QEP";
@@ -641,12 +648,17 @@ ult_print_tracefile(void *file, i2 type, char *string)
         if (prt_timestamp)
     	{
            TMhrnow(&hr);
-           SIfprintf(f,"%s:%ld/%ld%c%s\n",
+           SIfprintf(f,"%s:%ld/%ld%c%s",
 			     type_str,hr.tv_sec,hr.tv_nsec,last_sep,string);
         }
         else
 	{
-          SIfprintf(f,"%s%c%s\n",type_str,last_sep,string);
+          SIfprintf(f,"%s%c%s",type_str,last_sep,string);
+        }
+
+	if (newline)
+	{
+          SIfprintf(f,"\n");
         }
 
 }

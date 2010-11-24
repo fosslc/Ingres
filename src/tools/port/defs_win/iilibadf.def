@@ -134,6 +134,8 @@
 ;           Added adu_2strtomny_strict().
 ;	15-Jul-2010 (smeke01) b123950
 ;	    Added adu_norm_date_hash.
+;       19-oct-2010 (maspa05) b124551
+;           Removed adu_valuetomystr and added adu_sc930prtdataval
 
 EXPORTS
 adb_breakpoint		@1				
@@ -632,7 +634,7 @@ adu_like_all		@504
 adu_utf8_unorm		@505
 aduErrorFcn		@506
 adu_errorNV		@507
-adu_valuetomystr	@508
+;adu_valuetomystr	@508
 adu_0parsedate		@509
 adu_patcomp_summary	@510
 adu_decprec		@511
@@ -671,3 +673,4 @@ adu_nvchr_embchartouni  @543
 adu_nvchr_embunitochar  @544
 adu_2strtomny_strict	@545
 adu_norm_date_hash	@546
+adu_sc930prtdataval     @547

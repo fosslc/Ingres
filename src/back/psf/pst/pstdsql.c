@@ -4892,6 +4892,8 @@ pst_descinput_walk(
 **	7-oct-2010 (stephenb)
 **	    qeu_cptr needs to be aligned on a bus boudary to pervent bus
 **	    errors on some platforms
+**      19-oct-2010 (maspa05) bug 124551
+**          use adu_sc930prtdataval to output parameter values to SC930 trace
 */
 
 DB_STATUS
@@ -5158,15 +5160,11 @@ pst_cpdata(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PST_QNODE *tree, bool use_qsf)
            void *f = ult_open_tracefile((PTR)psq_cb->psq_sessid);
 	   if (f)
 	   {
-	      char val[DB_MAXSTRING + 80];
-	      char val2[DB_MAXSTRING + 1];
 
 	    for (i = 0; i < qdesc->psq_dnum; i++)
 	    {
-		STprintf(val,"%d:%d=%s",qdesc->psq_qrydata[i]->db_datatype,
-			i,adu_valuetomystr(val2,
-			qdesc->psq_qrydata[i],sess_cb->pss_adfcb));
-		ult_print_tracefile(f,SC930_LTYPE_PARM,val);
+		adu_sc930prtdataval(SC930_LTYPE_PARM,NULL,i,
+				qdesc->psq_qrydata[i],sess_cb->pss_adfcb,f);
 	    }
 	    ult_close_tracefile(f);
 	   }

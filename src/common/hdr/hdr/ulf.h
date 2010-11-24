@@ -122,6 +122,8 @@
 **          Added E_UL0400_BAD_TRACE_DIR and E_UL0401_BAD_TRACE_DIR.
 **          ult_set_tracefile() now returns STATUS
 **          ult_tracefile_loc() now extern
+**      19-oct-2010 (maspa05) Bug 124551
+**          Added SC930_DATAVAL_BUFSIZE
 **/
 #ifndef TR_HDR_INCLUDED
 #include <tr.h>
@@ -767,6 +769,9 @@ FUNC_EXTERN PTR ult_tracefile_loc(void);
 #define SC930_LTYPE_REQUEL		26
 #define SC930_LTYPE_REQUERY		27
 #define SC930_LTYPE_ENDQRY		28
+
+/* Buffer size for SC930 data values - used by adu_valuetomystr */
+#define SC930_DATAVAL_BUFSIZE         2048
 
 /* 
 ** SC925 trace functions

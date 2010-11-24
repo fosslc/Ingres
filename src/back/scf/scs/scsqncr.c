@@ -10904,6 +10904,8 @@ massive_for_exit:
 **          caller
 **          b123056 - moved call to adu_valuetomystr out of STprintf as this
 **          causes SIGSEGV on some platforms
+**      19-Oct-2010 (maspa05) b124551
+**          Use adu_sc930prtdataval to output parameter values to SC930 trace
 **
 */
 static void
@@ -10917,28 +10919,19 @@ print_sc930_info(SCD_SCB *scb,
     if (f)
     {
 	i4 namelen;
-	char tmp[DB_MAXSTRING + 80];
-	char val[DB_MAXSTRING + 1];
-
-	adu_valuetomystr(val,dbdv, scb->scb_sscb.sscb_adscb);
+	char *parm_name=NULL,tmp[DB_PARM_MAXNAME + 1];
 
 	if (gpm)
 	{
+	    parm_name=&tmp[0];
 	    MEcopy((PTR)&gpm->gca_parname.
 	        gca_l_name, sizeof(namelen),(PTR)&namelen);
-	    STprintf(tmp,"%d:%d(%*s)=%s",
-		dbdv->db_datatype,
-		pcount,namelen,
-	        gpm->gca_parname.gca_name,
-		val);
-	} else
-	{
-	    STprintf(tmp,"%d:%d=%s",
-		dbdv->db_datatype,
-		pcount,
-		val);
+	    STprintf(parm_name,"%*s",
+		namelen, gpm->gca_parname.gca_name);
 	}
-	ult_print_tracefile(f,msg_name,tmp);
+
+	adu_sc930prtdataval(msg_name,parm_name,pcount,dbdv, 
+			    scb->scb_sscb.sscb_adscb,f);
 	ult_close_tracefile(f);
     }
 }
