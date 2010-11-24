@@ -131,6 +131,11 @@
 **	07-Apr-2010 (drivi01)
 **	    update allocated_pages datatype to be SIZE_TYPE to account for
 **	    x64 port.  Add better error checking.
+**	15-Oct-2010 (drivi01)
+**	    If shared memory segment already exists and hasn't been
+**	    freed after sleep, try to free it.
+**	    Proper clean up after sep hangs implementation in proccmd.c
+**	    should minimize the amount of times we fall into this routine.
 */
 
 GLOBALREF bool batchMode;
@@ -224,8 +229,13 @@ SEPspawn(i4 argc,char **argv,bool wait_for_child,LOCATION *in_loc,LOCATION *out_
 		mem_status = IIMEget_pages(
 						ME_MZERO_MASK|ME_IO_MASK|ME_SSHARED_MASK|ME_CREATE_MASK,
 						1, shm_name, &childenv_ptr, &allocated_pages, &err_code);
+		if (mem_status == ME_ALREADY_EXISTS && childenv_ptr == NULL)
+		{
+			SIprintf("Free memory %x\r\n", &childenv_ptr);
+			MEfree_pages(&childenv_ptr, 1, &err_code);
+		}
 	}
-	if ( ((mem_status != 0) && (mem_status != ME_ALREADY_EXISTS || err_code.errnum != ME_ALREADY_EXISTS)) || (childenv_ptr == NULL) )
+	if ( ((mem_status != 0) && (mem_status != ME_ALREADY_EXISTS)) || (childenv_ptr == NULL) )
 	{
  		char	buf[MAX_PATH+64];
 		int	errnum;
