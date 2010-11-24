@@ -14,8 +14,10 @@ package	com.ingres.gcf.jdbc;
 **  Classes:
 **
 **	DrvLOB		Locator based DBMS LOB access.
-**	ByteStream	InputStream providing access to LOB.
-**	CharStream	Reader providing access to LOB.
+**	ByteStrmStream	InputStream providing stream access to LOB.
+**	ByteSegStream	InputStream providing segmented access to LOB.
+**	CharStrmStream	Reader providing stream access to LOB.
+**	CharSegStream	Reader providing segmented access to LOB.
 **
 ** History:
 **	15-Nov-06 (gordy)
@@ -38,6 +40,10 @@ package	com.ingres.gcf.jdbc;
 **	    may result in excess data bytes being returned when the 
 **	    character encoding is multi-byte.  The excess data must be
 **	    cached between requests.
+**	16-Nov-10 (gordy)
+**	    Added streaming LOB access classes ByteStrmStream & CharStrmStream
+**	    and renamed the segmented access classes ByteStream & CharStream 
+**	    to ByteSegStream & CharSegStream.
 */
 
 import	java.io.InputStream;
@@ -69,7 +75,6 @@ import	com.ingres.gcf.util.SqlExFactory;
 **	getType			Return locator type.
 **	getLocator		Return locator value.
 **	hasSameDomain		Is locator domain the same.
-**	streamClosed		Stream closure callback.
 **
 **  Protected Data:
 **
@@ -111,12 +116,18 @@ import	com.ingres.gcf.util.SqlExFactory;
 **	    method to complete result processing once stream is consumed.
 **	 4-May-07 (gordy)
 **	    Class is not exposed outside package, restrict access.
+**	16-Nov-10 (gordy)
+**	    Added streaming LOB access classes ByteStrmStream & CharStrmStream
+**	    and renamed the segmented access classes ByteStream & CharStream 
+**	    to ByteSegStream & CharSegStream.  Dropped stream listener
+**	    interface on DrvLOB class as it is now implemented in the sub-
+**	    classes.
 */
 
 class	// package access
 DrvLOB
     extends DrvObj
-    implements DbmsConst, SqlStream.StreamListener
+    implements DbmsConst
 {
 
     /*
@@ -915,9 +926,16 @@ position( Reader pattern, long start )
 **
 ** Description:
 **	Returns an InputStream capable of accessing
-**	the LOB data referenced by the locator.  
+**	a LOB data subset referenced by the locator.
+**
+**	If other operations may be issued while reading
+**	the LOB, segmented access should be requested.
+**	Otherwise, a single access request will be made
+**	and entire LOB data must be read before any
+**	other request is made.
 **
 ** Input:
+**	segmented	Use segmented or stream access.
 **	pos		Start position
 **	len		LOB data length
 **
@@ -930,13 +948,18 @@ position( Reader pattern, long start )
 ** History:
 **	17-Jun-09 (rajus01)
 **	    Created.
+**	16-Nov-10 (gordy)
+**	    Access may be segmented or streaming.
 */
+
 protected InputStream
-getByteStream( long pos, long len )
+getByteStream( boolean segmented, long pos, long len )
     throws SQLException
 {
-    return( new ByteStream( pos, len ) );
-}
+    return( segmented ? new ByteSegStream( pos, len ) 
+		      : new ByteStrmStream( pos, len ) );
+} // getByteStream
+
 
 /*
 ** Name: getByteStream
@@ -945,15 +968,11 @@ getByteStream( long pos, long len )
 **	Returns an InputStream capable of accessing
 **	the LOB data referenced by the locator.  
 **
-**	The stream can provide either immediate or 
-**	deferred access.  With immediate access, the
-**	LOB data is retrieved directly by this request
-**	and the returned stream must be read completely
-**	before any other request is permitted on the
-**	connection.  With deferred access, no connection
-**	request is made and subsequent requests to read
-**	the stream will initiate and process independent
-**	connection requests to read the LOB data.
+**	If other operations may be issued while reading
+**	the LOB, segmented access should be requested.
+**	Otherwise, a single access request will be made
+**	and entire LOB data must be read before any
+**	other request is made.
 **
 **	Whether the stream is host character-set (CHAR)
 **	or binary (BYTE) data depends on the type of 
@@ -961,7 +980,7 @@ getByteStream( long pos, long len )
 **	locators.
 **
 ** Input:
-**	immediate	Request immediate access.
+**	segmented	Use segmented or stream access.
 **
 ** Output:
 **	None.
@@ -974,72 +993,37 @@ getByteStream( long pos, long len )
 **	    Created.
 **	26-Feb-07 (gordy)
 **	    Added ability to return immediate or deferred streams.
+**	16-Nov-10 (gordy)
+**	    All access in now deferred to first request on InputStream.
+**	    Access may be segmented or streaming.  Streaming access
+**	    implementation extracted to ByteStrmStream class.
 */
 
 protected InputStream
-getByteStream( boolean immediate )
+getByteStream( boolean segmented )
     throws SQLException
 {
-    /*
-    ** For deferred access, an InputStream with the
-    ** capability of sending locator based requests
-    ** to the DBMS is returned.
-    */
-    if ( ! immediate )  return( new ByteStream() );
-
-    /*
-    ** For immediate access, the LOB data is retrieved
-    ** from the database and the active data stream is
-    ** returned.
-    **
-    ** Connection is unlocked if an exception occurs.
-    ** Otherwise, connection will be unlocked once
-    ** the result stream is read and the ...
-    */
-    msg.lock();
-    try
-    {
-	sendQuery( "select ~V " );
-
-	startDesc( (short)1 );
-	descParam();			// Locator
-	msg.done( false );
-
-	msg.begin( MSG_DATA );
-	sendParam();			// Locator
-	msg.done( true );
-
-	initResults( (loc_type == DBMS_TYPE_LCLOC) 
-		     ? DBMS_TYPE_LONG_CHAR : DBMS_TYPE_LONG_BYTE );
-	readResults();
-
-	/*
-	** Result processing has been interrupted by the
-	** LOB data stream.  Set-up callback to finish
-	** result processing once the stream has been
-	** consumed.  The active stream is then returned.
-	*/
-	((SqlStream.StreamSource)bsResult).addStreamListener( this, null );
-    }
-    catch( SQLException ex )
-    {
-	msg.unlock();
-	throw ex;
-    }
-
-    return( bsResult );
+    return( segmented ? new ByteSegStream() : new ByteStrmStream() );
 } // getByteStream
+
 
 /*
 ** Name: getCharStream
 **
 ** Description:
-**	Returns a Reader capable of accessing subset of the LOB 
-**	data referenced by the locator.
+**	Returns a Reader capable of accessing a LOB data 
+**	subset referenced by the locator.
+**
+**	If other operations may be issued while reading
+**	the LOB, segmented access should be requested.
+**	Otherwise, a single access request will be made
+**	and entire LOB data must be read before any
+**	other request is made.
 **
 ** Input:
-**      pos     Starting position.
-**      len     Length.
+**	segmented	Use segmented or stream access.
+**	pos		Starting position.
+**	len		Length.
 **
 ** Output:
 **	None.
@@ -1049,13 +1033,18 @@ getByteStream( boolean immediate )
 **
 ** History:
 **	18-Jun-09 (rajus01)
+**	16-Nov-10 (gordy)
+**	    Access may be segmented or streaming.
 */
+
 protected Reader
-getCharStream( long pos, long len )
+getCharStream( boolean segmented, long pos, long len )
     throws SQLException
 {
-    return( new CharStream( pos, len ) );
-} //getCharStream
+    return( segmented ? new CharSegStream( pos, len ) 
+		      : new CharStrmStream( pos, len ) );
+} // getCharStream
+
 
 /*
 ** Name: getCharStream
@@ -1064,20 +1053,16 @@ getCharStream( long pos, long len )
 **	Returns a Reader capable of accessing the LOB 
 **	data referenced by the locator.
 **
-**	The stream can provide either immediate or 
-**	deferred access.  With immediate access, the
-**	LOB data is retrieved directly by this request
-**	and the returned stream must be read completely
-**	before any other request is permitted on the
-**	connection.  With deferred access, no connection
-**	request is made and subsequent requests to read
-**	the stream will initiate and process independent
-**	connection requests to read the LOB data.
+**	If other operations may be issued while reading
+**	the LOB, segmented access should be requested.
+**	Otherwise, a single access request will be made
+**	and entire LOB data must be read before any
+**	other request is made.
 **
 **	Should only be called for NCHAR locators.
 **
 ** Input:
-**	immediate	Request immediate access.
+**	segmented	Use segmented or stream access.
 **
 ** Output:
 **	None.
@@ -1090,120 +1075,18 @@ getCharStream( long pos, long len )
 **	    Created.
 **	26-Feb-07 (gordy)
 **	    Added ability to return immediate or deferred streams.
+**	16-Nov-10 (gordy)
+**	    All access in now deferred to first request on InputStream.
+**	    Access may be segmented or streaming.  Streaming access
+**	    implementation extracted to ByteStrmStream class.
 */
 
 protected Reader
-getCharStream( boolean immediate )
+getCharStream( boolean segmented )
     throws SQLException
 {
-    /*
-    ** For deferred access, an InputStream with the
-    ** capability of sending locator based requests
-    ** to the DBMS is returned.
-    */
-    if ( ! immediate )  return( new CharStream() );
-
-    /*
-    ** For immediate access, the LOB data is retrieved
-    ** from the database and the active data stream is
-    ** returned.
-    **
-    ** Connection is unlocked if an exception occurs.
-    ** Otherwise, connection will be unlocked once
-    ** the result stream is read and the ...
-    */
-    msg.lock();
-    try
-    {
-	sendQuery( "select ~V " );
-
-	startDesc( (short)1 );
-	descParam();			// Locator
-	msg.done( false );
-
-	msg.begin( MSG_DATA );
-	sendParam();			// Locator
-	msg.done( true );
-
-	initResults( DBMS_TYPE_LONG_NCHAR );
-	readResults();
-
-	/*
-	** Result processing has been interrupted by the
-	** LOB data stream.  Set-up callback to finish
-	** result processing once the stream has been
-	** consumed.  The active stream is then returned.
-	*/
-	((SqlStream.StreamSource)csResult).addStreamListener( this, null );
-    }
-    catch( SQLException ex )
-    {
-	msg.unlock();
-	throw ex;
-    }
-
-    return( csResult );
+    return( segmented ? new CharSegStream() : new CharStrmStream() );
 } // getCharStream
-
-
-/*
-** Name: streamClosed
-**
-** Description:
-**      Stream closure notification method for the 
-**	StreamListener interface.
-**
-**	Result processing was interrupted by a LOB 
-**	data stream and processing is resumed to 
-**	complete the query.
-**	
-** Input:
-**	ignored		Not used.
-**
-** Output:
-**	None.
-**
-** Reurns:
-**	void.
-**
-** History:
-**	26-Feb-07 (gordy)
-**	    Created.
-*/
-
-public void
-streamClosed( SqlStream ignored )
-{
-    try
-    {
-	/*
-	** Read remaining query results.
-	*/
-	readResults();
-	closeQuery();
-    }
-    catch( SQLException ex )
-    {
-        /*
-        ** The caller of the Stream.Listener interface does
-        ** not care about errors we may hit, so we can only
-        ** trace the exception.  Errors aren't expected 
-	** except in catastrophic circumstances, so the 
-	** following should be OK.
-        */
-	if ( trace.enabled( 1 ) )
-	{
-	    trace.log( "DrvBlob: error completing result processing" );
-	    SqlExFactory.trace(ex, trace );
-	}
-    }
-    finally
-    {
-	msg.unlock();
-    }
-
-    return;
-} // streamClosed
 
 
 /*
@@ -1247,6 +1130,7 @@ sendQuery( String query )
     return;
 } // sendQuery
 
+
 /*
 ** Name: sendStmt
 **
@@ -1266,6 +1150,7 @@ sendQuery( String query )
 **	01-Sep-09 (rajus01)
 **	    Created.
 */
+
 protected void
 sendStmt( String query )
     throws SQLException
@@ -1277,6 +1162,7 @@ sendStmt( String query )
     msg.done( false );
     return;
 } // sendStmt
+
 
 /*
 ** Name: startDesc
@@ -2172,11 +2058,441 @@ isValid()
 
 
 /*
-** Name: ByteStream
+** Name: ByteStrmStream
 **
 ** Description:
-**	Class providing LOB data access as a byte stream
-**	via a DBMS LOB locator.
+**	Class providing LOB data access as a byte stream via a DBMS 
+**	LOB locator.  A single LOB read request is issued to the 
+**	server and the results must be read completely before making
+**	other requests on the connection.
+**
+**  Overriden Methods
+**
+**	close			Close stream.
+**	read			Read bytes.
+**	skip			Skip bytes.
+**
+**  Private Data
+**
+**	position		Starting position of subset.
+**	limit			Length of subset.
+**	inStream		LOB data result stream.
+**	ba			Byte buffer for read method.
+**
+** History:
+**	16-Nov-10 (gordy)
+**	    Created.
+*/
+
+private class
+ByteStrmStream
+    extends InputStream
+    implements DbmsConst, SqlStream.StreamListener
+{
+
+    /*
+    ** A closed stream is indicated by setting position = -1.
+    */
+    private int			position = 0;
+    private int			limit = 0;
+    private InputStream		inStream = null;
+    private byte		ba[] = new byte[1];
+
+
+/*
+** Name: ByteStrmStream
+**
+** Description:
+**      Class constructor to read entire data.
+**
+** Input:
+**	None.
+**
+** Output:
+**      None.
+**
+** Returns:
+**      None.
+**
+** History:
+**	16-Nov-10 (gordy)
+**          Created.
+*/
+
+public
+ByteStrmStream()
+{}
+
+
+/*
+** Name: ByteStrmStream
+**
+** Description:
+**      Class constructor to read subset of the data.
+**
+** Input:
+**      pos     Starting position.
+**      len     Length.
+**
+** Output:
+**      None.
+**
+** Returns:
+**      None.
+**
+** History:
+**	16-Nov-10 (gordy)
+**          Created.
+*/
+
+public
+ByteStrmStream( long pos, long len )
+throws SQLException
+{
+    if ( pos > Integer.MAX_VALUE  ||  len > Integer.MAX_VALUE  ||
+        (pos + len) > Integer.MAX_VALUE )
+	throw SqlExFactory.get( ERR_GC4010_PARAM_VALUE );
+
+    position = (int)pos;
+    limit = (int)len;
+
+} // ByteStrmStream
+
+
+/*
+** Name: close
+**
+** Description:
+**	Close stream and free resources.
+**
+** Input:
+**	None.
+**
+** Output:
+**	None.
+**
+** Returns:
+**	void.
+**
+** History:
+**	16-Nov-10 (gordy)
+**	    Created.
+*/
+
+public void
+close()
+    throws IOException
+{
+    if ( trace.enabled( 4 ) )  trace.write( tr_id + ".close()" );
+    if ( inStream != null )  inStream.close();
+    position = -1;
+    return;
+} // close
+
+
+/*
+** Name: init
+**
+** Description:
+**	Initiate request to server to read LOB data.
+**
+**	Request either a subset of the LOB data or the
+**	entire LOB.  Saves result stream for request
+**	processing.
+**
+** Input:
+**	None.
+**
+** Output:
+**	None.
+**
+** Returns:
+**	void.
+**
+** History:
+**	16-Nov-10 (gordy)
+**	    Created.
+*/
+
+private void
+init()
+    throws IOException
+{
+    /*
+    ** Connection is unlocked if an exception occurs.  
+    ** Otherwise, connection will be unlocked once
+    ** the result stream is read and streamClosed()
+    ** is called.
+    */
+    try { msg.lock(); }
+    catch( SQLException sqlEx )
+    { throw new IOException( sqlEx.getMessage() ); }
+	
+    try
+    {
+	if ( position > 0 )
+	{
+	    /*
+	    ** Request a subset of the LOB data.
+	    */
+	    sendQuery( "select substring( ~V from ~V for ~V )" );
+
+	    startDesc( (short)3 );
+	    descParam();			// Locator
+	    descParam( position );
+	    descParam( limit );
+	    msg.done( false );
+
+	    msg.begin( MSG_DATA );
+	    sendParam();			// Locator
+	    sendParam( position );
+	    sendParam( limit );
+	    msg.done( true );
+
+	}
+	else
+	{
+	    /*
+	    ** Request all LOB data.
+	    */
+	    sendQuery( "select ~V " );
+
+	    startDesc( (short)1 );
+	    descParam();			// Locator
+	    msg.done( false );
+
+	    msg.begin( MSG_DATA );
+	    sendParam();			// Locator
+	    msg.done( true );
+	}
+
+	/*
+	** The LOB data stream type depends on the target
+	** LOB type which can be determined by the locator
+	** type being used as a reference.
+	*/
+	initResults( (loc_type == DBMS_TYPE_LCLOC) 
+		     ? DBMS_TYPE_LONG_CHAR : DBMS_TYPE_LONG_BYTE );
+	readResults();
+
+	/*
+	** Result processing has been interrupted by the LOB 
+	** data stream.  Set-up callback to finish result 
+	** processing once the stream has been consumed. 
+	*/
+	((SqlStream.StreamSource)bsResult).addStreamListener( this, null );
+
+	/*
+	** Once the server request has been initiated, this class 
+	** primarily acts as a proxy for the result stream.  Save 
+	** the result stream for future processing.  
+	*/
+	inStream = bsResult;
+    }
+    catch( SQLException sqlEx )
+    {
+	msg.unlock();
+	throw new IOException( sqlEx.getMessage() );
+    }
+
+    return;
+} // init
+
+
+/*
+** Name: read
+**
+** Description:
+**	Reads a single byte from the stream.  Returns
+**	-1 when no data available.
+**
+** Input:
+**	None.
+**
+** Output:
+**	None.
+**
+** Returns:
+**	int	Data byte or -1.
+**
+** History:
+**	16-Nov-10 (gordy)
+**	    Created.
+*/
+
+public int
+read()
+    throws IOException
+{
+    return( (read( ba, 0, 1 ) == 1) ? (int)ba[0] & 0xff : -1 );
+} // read
+
+
+/*
+** Name: read
+**
+** Description:
+**	Read bytes into byte array from stream.  Returns
+**	the number of bytes actually read or -1 if end-
+**	of-data has been reached.
+**
+** Input:
+**	ba	Target byte array.
+**	offset	Position in target array.
+**	length	Number of bytes to read.
+**
+** Output:
+**	ba	Data bytes.
+**
+** Returns:
+**	int	Number of bytes read or -1.
+**
+** History:
+**	16-Nov-10 (gordy)
+**	    Created.
+*/
+
+public int
+read( byte ba[], int offset, int length )
+    throws IOException
+{
+    if ( trace.enabled( 4 ) )  trace.write( tr_id + ".read(" + length + ")" );
+
+    /*
+    ** Check exceptional conditions.
+    */
+    if ( ba == null )  throw new NullPointerException();
+    if ( offset < 0  ||  length < 0  ||  
+	 (offset + length) < 0  ||  (offset + length) > ba.length )
+	throw new IndexOutOfBoundsException();
+    if ( position < 0 )  throw new IOException( "Stream closed" );
+    if ( length == 0 )  return( 0 );
+
+    /*
+    ** On first request, initiate request to server.
+    */
+    if ( inStream == null )  init();
+
+    /*
+    ** Now pass request to the result stream.
+    */
+    int actual = inStream.read( ba, offset, length );
+    if ( trace.enabled( 4 ) )  trace.write( tr_id + ".read: " + actual );
+    return( actual );
+} // read
+
+
+/*
+** Name: skip
+**
+** Description:
+**	Skip over and discard bytes from stream.
+**
+** Input:
+**	bytes	Number of bytes to skip
+**
+** Output:
+**	None.
+**
+** Returns:
+**	long	Number of bytes skipped.
+**
+** History:
+**	16-Nov-10 (gordy)
+**	    Created.
+*/
+
+public long
+skip( long bytes )
+    throws IOException
+{
+    if ( trace.enabled( 4 ) )  trace.write( tr_id + ".skip(" + bytes + ")" );
+
+    /*
+    ** On first request, initiate request to server.
+    */
+    if ( inStream == null )  init();
+
+    /*
+    ** Now pass request to the result stream.
+    */
+    return( inStream.skip( bytes ) );
+} // skip
+
+
+/*
+** Name: streamClosed
+**
+** Description:
+**      Stream closure notification method for the 
+**	StreamListener interface.
+**
+**	Result processing was interrupted by a LOB 
+**	data stream and processing is resumed to 
+**	complete the query.
+**	
+** Input:
+**	ignored		Not used.
+**
+** Output:
+**	None.
+**
+** Reurns:
+**	void.
+**
+** History:
+**	16-Nov-10 (gordy)
+**	    Created.
+*/
+
+public void
+streamClosed( SqlStream ignored )
+{
+    if ( trace.enabled( 5 ) )  trace.write( tr_id + ": end-of-data" );
+
+    try
+    {
+	/*
+	** Read remaining query results.
+	*/
+	readResults();
+	closeQuery();
+    }
+    catch( SQLException ex )
+    {
+        /*
+        ** The caller of the Stream.Listener interface does
+        ** not care about errors we may hit, so we can only
+        ** trace the exception.  Errors aren't expected 
+	** except in catastrophic circumstances, so the 
+	** following should be OK.
+        */
+	if ( trace.enabled( 1 ) )
+	{
+	    trace.write( tr_id + ": error completing result processing" );
+	    SqlExFactory.trace(ex, trace );
+	}
+    }
+    finally
+    {
+	msg.unlock();
+    }
+
+    return;
+} // streamClosed
+
+
+} // class ByteStrmStream
+
+
+/*
+** Name: ByteSegStream
+**
+** Description:
+**	Class providing segmented LOB data access as a byte stream
+**	via a DBMS LOB locator.  Discrete LOB read requests are
+**	issued to the server so that other operations can occur
+**	on the connection during the LOB access.
 **
 **  Overriden Methods
 **
@@ -2209,10 +2525,13 @@ isValid()
 **	    Cache additional data resulting from substring() operations
 **	    on multi-byte character data.  Added cache and associated
 **	    begin/end trackers, readCache() and writeCache().
+**	16-Nov-10 (gordy)
+**	    Renamed to ByteSegStream to differentiate from streaming
+**	    access class ByteStrmStream.
 */
 
 private class
-ByteStream
+ByteSegStream
     extends InputStream
     implements DbmsConst
 {
@@ -2247,7 +2566,7 @@ ByteStream
 
 
 /*
-** Name: ByteStream
+** Name: ByteSegStream
 **
 ** Description:
 **      Class constructor to read entire data.
@@ -2264,15 +2583,18 @@ ByteStream
 ** History:
 **       12-Jun-09 (rajus01)
 **          Created.
+**	16-Nov-10 (gordy)
+**	    Renamed to ByteSegStream to differentiate from streaming
+**	    access class ByteStrmStream.
 */
 
 public
-ByteStream()
+ByteSegStream()
 {}
 
 
 /*
-** Name: ByteStream
+** Name: ByteSegStream
 **
 ** Description:
 **      Class constructor to read subset of the data.
@@ -2290,10 +2612,13 @@ ByteStream()
 ** History:
 **       12-Jun-09 (rajus01)
 **          Created.
+**	16-Nov-10 (gordy)
+**	    Renamed to ByteSegStream to differentiate from streaming
+**	    access class ByteStrmStream.
 */
 
 public
-ByteStream( long pos, long len )
+ByteSegStream( long pos, long len )
 throws SQLException
 {
     if ( pos > Integer.MAX_VALUE  ||  len > Integer.MAX_VALUE  ||
@@ -2301,7 +2626,7 @@ throws SQLException
 	throw SqlExFactory.get( ERR_GC4010_PARAM_VALUE );
     position = (int)pos;
     limit = position + (int)len;
-} // ByteStream
+} // ByteSegStream
 
 
 /*
@@ -2915,15 +3240,437 @@ writeCache( InputStream stream )
 } // writeCache
 
 
-} // class ByteStream
+} // class ByteSegStream
 
 
 /*
-** Name: CharStream
+** Name: CharStrmStream
 **
 ** Description:
-**	Class providing LOB data access as a character
-**	Reader via a DBMS LOB locator.
+**	Class providing LOB data access as a character reader via 
+**	a DBMS LOB locator.  A single LOB read request is issued to 
+**	the server and the results must be read completely before 
+**	making other requests on the connection.
+**
+**  Overriden Methods
+**
+**	close			Close stream.
+**	ready			Is data available.
+**	read			Read characters.
+**	skip			Skip characters.
+**
+**  Private Data
+**
+**	position		Starting position of subset.
+**	limit			Length of subset.
+**	inStream		LOB data result stream.
+**
+** History:
+**	16-Nov-10 (gordy)
+**	    Created.
+*/
+
+private class
+CharStrmStream
+    extends Reader
+    implements DbmsConst, SqlStream.StreamListener
+{
+
+    /*
+    ** A closed stream is indicated by setting position = -1.
+    */
+    private int		position = 0;
+    private int		limit = 0;
+    private Reader	inStream  = null;
+
+
+/*
+** Name: CharStrmStream
+**
+** Description:
+**      Class constructor to read entire data.
+**
+** Input:
+**      None.
+**
+** Output:
+**      None.
+**
+** Returns:
+**      None.
+**
+** History:
+**	16-Nov-10 (gordy)
+**          Created.
+*/
+
+public
+CharStrmStream()
+{}
+
+
+/*
+** Name: CharStrmStream
+**
+** Description:
+**      Class constructor to read subset of data.
+**
+** Input:
+**      pos     Starting position.
+**      len     Length.
+**
+** Output:
+**      None.
+**
+** Returns:
+**      None.
+**
+** History:
+**	16-Nov-10 (gordy)
+**          Created.
+*/
+
+public
+CharStrmStream( long pos, long len )
+throws SQLException
+{
+    if ( pos > Integer.MAX_VALUE  ||  len > Integer.MAX_VALUE  ||
+         (pos + len) > Integer.MAX_VALUE )
+        throw SqlExFactory.get( ERR_GC4010_PARAM_VALUE );
+
+    position = (int)pos;
+    limit = (int)len;
+
+} // CharStrmStream
+
+
+/*
+** Name: close
+**
+** Description:
+**	Close stream and free resources.
+**
+** Input:
+**	None.
+**
+** Output:
+**	None.
+**
+** Returns:
+**	void.
+**
+** History:
+**	16-Nov-10 (gordy)
+**	    Created.
+*/
+
+public void
+close()
+    throws IOException
+{
+    if ( trace.enabled( 4 ) )  trace.write( tr_id + ".close()" );
+    if ( inStream != null )  inStream.close();
+    position = -1;
+    return;
+} // close
+
+
+/*
+** Name: ready
+**
+** Description:
+**	Is data available.
+**
+** Input:
+**	None.
+**
+** Output:
+**	None.
+**
+** Returns:
+**	boolean	    True if data is available, false otherwise..
+**
+** History:
+**	16-Nov-10 (gordy)
+**	    Created.
+*/
+
+public boolean
+ready()
+    throws IOException
+{
+    return( (inStream != null) ? inStream.ready() : false );
+} // ready
+
+
+/*
+** Name: init
+**
+** Description:
+**	Initiate request to server to read LOB data.
+**
+**	Request either a subset of the LOB data or the
+**	entire LOB.  Saves result stream for request
+**	processing.
+**
+** Input:
+**	None.
+**
+** Output:
+**	None.
+**
+** Returns:
+**	void.
+**
+** History:
+**	16-Nov-10 (gordy)
+**	    Created.
+*/
+
+private void
+init()
+    throws IOException
+{
+    /*
+    ** Connection is unlocked if an exception occurs.  
+    ** Otherwise, connection will be unlocked once
+    ** the result stream is read and streamClosed()
+    ** is called.
+    */
+    try { msg.lock(); }
+    catch( SQLException sqlEx )
+    { throw new IOException( sqlEx.getMessage() ); }
+	
+    try
+    {
+	if ( position > 0 )
+	{
+	    /*
+	    ** Request a subset of the LOB data.
+	    */
+	    sendQuery( "select substring( ~V from ~V for ~V )" );
+
+	    startDesc( (short)3 );
+	    descParam();			// Locator
+	    descParam( position );
+	    descParam( limit );
+	    msg.done( false );
+
+	    msg.begin( MSG_DATA );
+	    sendParam();			// Locator
+	    sendParam( position );
+	    sendParam( limit );
+	    msg.done( true );
+
+	}
+	else
+	{
+	    /*
+	    ** Request all LOB data.
+	    */
+	    sendQuery( "select ~V " );
+
+	    startDesc( (short)1 );
+	    descParam();			// Locator
+	    msg.done( false );
+
+	    msg.begin( MSG_DATA );
+	    sendParam();			// Locator
+	    msg.done( true );
+	}
+
+	initResults( DBMS_TYPE_LONG_NCHAR );
+	readResults();
+
+	/*
+	** Result processing has been interrupted by the LOB 
+	** data stream.  Set-up callback to finish result 
+	** processing once the stream has been consumed. 
+	*/
+	((SqlStream.StreamSource)csResult).addStreamListener( this, null );
+
+	/*
+	** Once the server request has been initiated, this class 
+	** primarily acts as a proxy for the result stream.  Save 
+	** the result stream for future processing.  
+	*/
+	inStream = csResult;
+    }
+    catch( SQLException sqlEx )
+    {
+	msg.unlock();
+	throw new IOException( sqlEx.getMessage() );
+    }
+
+    return;
+} // init
+
+
+/*
+** Name: read
+**
+** Description:
+**	Read characters into char array from stream.  Returns
+**	the number of characters actually read or -1 if end-
+**	of-data has been reached.
+**
+** Input:
+**	ca	Target character array.
+**	offset	Position in target array.
+**	length	Number of characters to read.
+**
+** Output:
+**	ca	Characters.
+**
+** Returns:
+**	int	Number of characters read or -1.
+**
+** History:
+**	16-Nov-10 (gordy)
+**	    Created.
+*/
+
+public int
+read( char ca[], int offset, int length )
+    throws IOException
+{
+    if ( trace.enabled( 4 ) )  trace.write( tr_id + ".read(" + length + ")" );
+
+    /*
+    ** Check exceptional conditions.
+    */
+    if ( ca == null )  throw new NullPointerException();
+    if ( offset < 0  ||  length < 0  ||  
+	 (offset + length) < 0  || (offset + length) > ca.length )
+	throw new IndexOutOfBoundsException();
+    if ( position < 0 )  throw new IOException( "Stream closed" );
+    if ( length == 0 )  return( 0 );
+
+    /*
+    ** On first request, initiate request to server.
+    */
+    if ( inStream == null )  init();
+
+    /*
+    ** Check exceptional conditions.
+    */
+    int actual = inStream.read( ca, offset, length );
+    if ( trace.enabled( 4 ) )  trace.write( tr_id + ".read: " + actual );
+    return( actual );
+} // read
+
+
+/*
+** Name: skip
+**
+** Description:
+**	Skip over and discard characters from stream.
+**
+** Input:
+**	chars	Number of characters to skip
+**
+** Output:
+**	None.
+**
+** Returns:
+**	long	Number of characters skipped.
+**
+** History:
+**	16-Nov-10 (gordy)
+**	    Created.
+*/
+
+public long
+skip( long chars )
+    throws IOException
+{
+    if ( trace.enabled( 4 ) )  trace.write( tr_id + ".skip(" + chars + ")" );
+
+    /*
+    ** On first request, initiate request to server.
+    */
+    if ( inStream == null )  init();
+
+    /*
+    ** Now pass request to the result stream.
+    */
+    return( inStream.skip( chars ) );
+}
+
+
+/*
+** Name: streamClosed
+**
+** Description:
+**      Stream closure notification method for the 
+**	StreamListener interface.
+**
+**	Result processing was interrupted by a LOB 
+**	data stream and processing is resumed to 
+**	complete the query.
+**	
+** Input:
+**	ignored		Not used.
+**
+** Output:
+**	None.
+**
+** Reurns:
+**	void.
+**
+** History:
+**	16-Nov-10 (gordy)
+**	    Created.
+*/
+
+public void
+streamClosed( SqlStream ignored )
+{
+    if ( trace.enabled( 5 ) )  trace.write( tr_id + ": end-of-data" );
+
+    try
+    {
+	/*
+	** Read remaining query results.
+	*/
+	readResults();
+	closeQuery();
+    }
+    catch( SQLException ex )
+    {
+        /*
+        ** The caller of the Stream.Listener interface does
+        ** not care about errors we may hit, so we can only
+        ** trace the exception.  Errors aren't expected 
+	** except in catastrophic circumstances, so the 
+	** following should be OK.
+        */
+	if ( trace.enabled( 1 ) )
+	{
+	    trace.write( tr_id + ": error completing result processing" );
+	    SqlExFactory.trace(ex, trace );
+	}
+    }
+    finally
+    {
+	msg.unlock();
+    }
+
+    return;
+} // streamClosed
+
+
+} // class CharStrmStream
+
+
+/*
+** Name: CharSegStream
+**
+** Description:
+**	Class providing segmented LOB data access as a character
+**	Reader via a DBMS LOB locator.  Discrete LOB read requests 
+**	are issued to the server so that other operations can occur
+**	on the connection during the LOB access.
 **
 **  Overriden Methods
 **
@@ -2943,10 +3690,13 @@ writeCache( InputStream stream )
 ** History:
 **	15-Nov-06 (gordy)
 **	    Created.
+**	16-Nov-10 (gordy)
+**	    Renamed to CharSegStream to differentiate from streaming
+**	    access class CharStrmStream.
 */
 
 private class
-CharStream
+CharSegStream
     extends Reader
     implements DbmsConst
 {
@@ -2956,8 +3706,9 @@ CharStream
     private int		limit = -1;
     private boolean	end_of_data = false;
 
+
 /*
-** Name: CharStream
+** Name: CharSegStream
 **
 ** Description:
 **      Class constructor to read entire data.
@@ -2974,15 +3725,18 @@ CharStream
 ** History:
 **       18-Jun-09 (rajus01)
 **          Created.
+**	16-Nov-10 (gordy)
+**	    Renamed to CharSegStream to differentiate from streaming
+**	    access class CharStrmStream.
 */
 
 public
-CharStream()
+CharSegStream()
 {}
 
 
 /*
-** Name: CharStream
+** Name: CharSegStream
 **
 ** Description:
 **      Class constructor to read subset of data.
@@ -3000,10 +3754,13 @@ CharStream()
 ** History:
 **       18-Jun-09 (rajus01)
 **          Created.
+**	16-Nov-10 (gordy)
+**	    Renamed to CharSegStream to differentiate from streaming
+**	    access class CharStrmStream.
 */
 
 public
-CharStream( long pos, long len )
+CharSegStream( long pos, long len )
 throws SQLException
 {
     if ( pos > Integer.MAX_VALUE  ||  len > Integer.MAX_VALUE  ||
@@ -3011,7 +3768,7 @@ throws SQLException
         throw SqlExFactory.get( ERR_GC4010_PARAM_VALUE );
     position = (int)pos;
     limit = position + (int)len;
-} // CharStream
+} // CharSegStream
 
 
 /*
@@ -3318,7 +4075,7 @@ read( char ca[], int offset, int length )
 } // read
 
 
-} // class CharStream
+} // class CharSegStream
 
 
 } // class DrvLOB

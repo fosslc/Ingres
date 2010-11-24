@@ -192,6 +192,8 @@ package com.ingres.gcf.jdbc;
 **	    Bumped version to 4.0.5 for the following fixes and enhancements:
 **	    SIR 124165 - Boolean to tinyint connection property.
 **	    BUG 124214 - Fix isBeforeFirst() and isLast().
+**	16-Nov-10 (gordy)
+**	    Added configuration property for LOB locator streaming access.
 */
 
 import	com.ingres.gcf.dam.MsgConst;
@@ -223,6 +225,7 @@ import	com.ingres.gcf.dam.MsgConst;
 **	DRV_CNF_LOB_LOCATORS	LOB Locator configuration property.
 **	DRV_CNF_LOB_LOC_AUTO	LOB Locator/autocommit config property.
 **	DRV_CNF_LOB_LOC_LOOP	LOB Locator/select loop config property.
+**	DRV_CNF_LOB_LOC_STREAM	LOB Locator/stream config property.
 **	DRV_CNF_EMPTY_DATE	Empty date replacement config property.
 **	DRV_CNF_CURS_SCROLL	Scrollable cursor config property.
 **	DRV_CNF_BATCH		Batch processing config property.
@@ -354,6 +357,8 @@ import	com.ingres.gcf.dam.MsgConst;
 **	    Bumped version to 4.0.5
 **	10-Nov-10 (gordy)
 **	    Added valid values for date alias parameter.
+**	16-Nov-10 (gordy)
+**	    Added DRV_CNF_LOB_LOC_STREAM.
 */
 
 interface
@@ -384,6 +389,7 @@ DrvConst
     String	DRV_CNF_LOB_LOCATORS	= "lob.locators.enabled";
     String	DRV_CNF_LOB_LOC_AUTO	= "lob.locators.autocommit.enabled";
     String	DRV_CNF_LOB_LOC_LOOP	= "lob.locators.select_loop.enabled";
+    String	DRV_CNF_LOB_LOC_STREAM	= "lob.locators.stream.enabled";
     String	DRV_CNF_EMPTY_DATE	= "date.empty";
     String	DRV_CNF_CURS_SCROLL	= "scroll.enabled";
     String	DRV_CNF_BATCH		= "batch.enabled";
