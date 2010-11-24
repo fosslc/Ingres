@@ -2361,6 +2361,10 @@ useAltStorage( int sqlType )
 **	02-Feb-09 (rajus01) SIR 121238
 **	    Restored the lost changes as a result of my previous
 **	    code submission for JDBC 4.0 project.
+**      27-Oct-10 (rajus01) SIR 124588, SD issue 147074
+**	    Added ability to store blank date back in the DBMS.
+**	    Use the configured empty_date replacement value for
+**	    IngresDate.
 */
 
 private SqlData
@@ -2420,14 +2424,16 @@ getStorage( int sqlType, boolean alt )
     case Types.DATE :
 	sqlData = alt ? (SqlData)(new IngresDate( conn.dt_frmt, 
 						  conn.osql_dates,
-						  conn.timeValuesInGMT() ))
+						  conn.timeValuesInGMT(),
+						  conn.cnf_empty_date ))
 		      : (SqlData)(new SqlDate( conn.dt_frmt ));
 	break;
 	
     case Types.TIME :
 	sqlData = alt ? (SqlData)(new IngresDate( conn.dt_frmt,
 						  conn.osql_dates,
-						  conn.timeValuesInGMT() ))
+						  conn.timeValuesInGMT(),
+						  conn.cnf_empty_date ))
 		      : (SqlData)(new SqlTime( conn.dt_frmt,
 			conn.osql_dates ? DBMS_TYPE_TMWO : DBMS_TYPE_TMTZ ));
 	break;
@@ -2435,7 +2441,8 @@ getStorage( int sqlType, boolean alt )
     case Types.TIMESTAMP :	
 	sqlData = alt ? (SqlData)(new IngresDate( conn.dt_frmt,
 						  conn.osql_dates,
-						  conn.timeValuesInGMT() ))
+						  conn.timeValuesInGMT(),
+						  conn.cnf_empty_date ))
 		      : (SqlData)(new SqlTimestamp( conn.dt_frmt,
 			conn.osql_dates ? DBMS_TYPE_TSWO : DBMS_TYPE_TSTZ ));
 	break;
