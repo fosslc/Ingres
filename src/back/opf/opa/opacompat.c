@@ -111,6 +111,10 @@
 **          initial creation to support common table ID detection
 **	16-feb-93 (ed)
 **	    fix bug 49505 - var bit map consistency check
+**	27-oct-10 (smeke01) b124362
+**	    This function should only convert var numbers for vars that are
+**	    correlated vars and that appear in both queries being compared.
+**	    The rest it should leave unchanged, and not raise an error.
 [@history_template@]...
 */
 static bool
@@ -129,33 +133,55 @@ opa_cvar(
 	{
 	    OPV_IGVARS	    gvar;
 	    OPV_GRV	    *gvarp;
+	    i4		    vno;
 
-	    gvarp = gbase->opv_grv[treep->pst_sym.pst_value.pst_s_var.pst_vno];
+	    vno = treep->pst_sym.pst_value.pst_s_var.pst_vno;
+	    gvarp = gbase->opv_grv[vno];
 	    gvar = gvarp->opv_compare;
 	    if (gvar == OPV_NOGVAR)
-	    {	/* look for unmapped variable to use */
-		if (BTtest((i4)treep->pst_sym.pst_value.pst_s_var.pst_vno,
-		    (char *)vmap))
-		    gvar = treep->pst_sym.pst_value.pst_s_var.pst_vno;	/* this variable
-						** is the same in both queries so map it to
-						** the same variable */
-		else if (gvarp->opv_same == OPV_NOGVAR)
-		    opx_error(E_OP0286_UNEXPECTED_VAR); /* this variable should be
-						** part of a group of more than one
-						** with the same table ID */
-		else for (gvar = -1; (gvar = BTnext((i4)gvar, (char *)vmap, (i4)BITS_IN(*vmap)))>=0;)
-		{   /* need to find a compatible variable */
-		    if ((gbase->opv_grv[gvar]->opv_same == gvarp->opv_same)
-			&&
-			(gbase->opv_grv[gvar]->opv_compare == OPV_NOGVAR)
-			)
-			break;
+	    {
+		if (BTtest(vno, (char *)vmap) || gvarp->opv_same == OPV_NOGVAR)
+		{
+		    /*
+		    ** This var is either the same in both queries, or it is
+		    ** not a correlated var anyway.
+		    */
+		    gvar = vno;
 		}
-		if (gvar < 0)
-		    opx_error(E_OP0286_UNEXPECTED_VAR);
-		gbase->opv_grv[treep->pst_sym.pst_value.pst_s_var.pst_vno]->opv_compare = gvar;
-		    
+		else
+		{
+		    /*
+		    ** The varno for this var is not in the master query, but
+		    ** the var IS a correlated var. Check whether the var is
+		    ** in the master query but with a different vno...
+		    */
+		    for (gvar = -1;
+			(gvar = BTnext((i4)gvar, (char *)vmap, (i4)BITS_IN(*vmap)))>=0;)
+		    {
+			/* ..if it is, we use the vno from the master query...*/
+			if (gbase->opv_grv[gvar]->opv_same == gvarp->opv_same)
+			{
+			    /*
+			    ** Map the var from the candidate query to the
+			    ** var used in the master query. This will make it
+			    ** quicker to find if there are subsequent
+			    ** occurences of this vno in the candidate query.
+			    */
+			    gbase->opv_grv[vno]->opv_compare = gvar;
+			    break;
+			}
+		    }
+		    /*
+		    ** ...if it isn't, this is the same case as the var only
+		    ** being in the second query, so keep the original vno.
+		    */
+		    if (gvar < 0)
+		    {
+			gvar = vno;
+		    }
+		}
 	    }
+	    /* Assign the result of our processing. */
 	    treep->pst_sym.pst_value.pst_s_var.pst_vno = gvar;
 	    ret_val = TRUE;
 	}
