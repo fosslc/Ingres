@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 #include    <compat.h>
 #include    <gl.h>
@@ -56,7 +56,6 @@
 **      will be used to create an ordering available from a BTREE 
 **      in an ORIG node.
 **
-{@func_list@}...
 **
 **
 **  History:    
@@ -78,9 +77,40 @@
 **	5-jan-97 (inkdo01)
 **	    Fixed 87509 by adding OPB_SUBSEL_CNST flag in opo_pr and testing
 **	    for it in opo_kordering.
-**   25-feb-97 (rosga02) Removed NO_OPTIM for sui_us5
-[@history_template@]...
+**	25-feb-97 (rosga02) Removed NO_OPTIM for sui_us5
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+OPO_ISORT opo_gnumber(
+	OPS_SUBQUERY *subquery);
+void opo_iobase(
+	OPS_SUBQUERY *subquery);
+OPO_ISORT opo_cordering(
+	OPS_SUBQUERY *subquery,
+	OPO_EQLIST *keyp,
+	bool copykey);
+void opo_makey(
+	OPS_SUBQUERY *subquery,
+	OPB_MBF *mbfp,
+	i4 count,
+	OPO_EQLIST **keylistp,
+	bool tempmem,
+	bool noconst);
+void opo_pr(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *cop);
+void opo_orig(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *cop);
+void opo_rsort(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *cop);
+OPO_ISORT opo_kordering(
+	OPS_SUBQUERY *subquery,
+	OPV_VARS *varp,
+	OPE_BMEQCLS *eqcmap);
 
 /*{
 ** Name: opo_gnumber	- get a multi-attribute ordering number

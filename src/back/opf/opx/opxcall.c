@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -64,8 +64,16 @@
 **          make linting fix, used for parameter checking
 **	14-jul-93 (ed)
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 opx_call(
+	i4 eventid,
+	PTR opscb);
+i4 opx_init(
+	OPF_CB *opf_cb);
 
 /*{
 ** Name: opx_call - Process an OPF asynchronous interrupt

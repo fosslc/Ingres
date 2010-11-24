@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -63,8 +63,17 @@
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
 **      16-sep-93 (smc)
 **          Moved <cs.h> for CS_SID.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static bool opn_iro3(
+	OPS_SUBQUERY *subquery,
+	OPN_JTREE *nodep);
+bool opn_ro3(
+	OPS_SUBQUERY *subquery,
+	OPN_JTREE *nodep);
 
 /*{
 ** Name: opn_iro3	- apply rel order 3 hueristic

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 # include    <compat.h>
@@ -93,36 +93,41 @@
 **	15-sep-93 (swm)
 **	    Moved cs.h include above other header files which need its
 **	    definition of CS_SID.
-[@history_template@]...
-**
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
 
+/* TABLE OF CONTENTS */
+static i4 opq_instr(
+	PTR pptr,
+	char type,
+	i4 len,
+	char **bufp,
+	i4 *eof);
+static i4 opq_innum(
+	PTR *ptr,
+	char type,
+	i4 len,
+	i4 size,
+	char **bufp,
+	i4 *eof,
+	char decimal);
+static i4 opq_doscan(
+	char *buf,
+	i4 blen,
+	char decimal,
+	register char *fmt,
+	register PTR *pargp);
+i4 opq_scanf(
+	char *buf,
+	char *fmt,
+	char decimal,
+	PTR arg1,
+	PTR arg2,
+	PTR arg3,
+	PTR arg4,
+	PTR arg5);
 
-/*
-**  Static function prototypes.
-*/
-static i4	opq_instr(
-		    PTR			pptr,
-		    char	    	type,
-		    i4	    		len,
-		    char	    	**bufp,
-		    i4	    		*eof);
-static i4	opq_innum(
-		    PTR	    		*ptr,
-		    char	    	type,
-		    i4	    		len,
-		    i4	    		size,
-		    char	    	**bufp,
-		    i4	    		*eof,
-		    char		decimal);
-static i4	opq_doscan(
-		    char		*buf,
-		    i4			blen,
-		    char		decimal,
-		    register char	*fmt,
-		    register PTR	*pargp);
-
-
 # define	OPQSHORT	0
 # define	OPQREGULAR	1
 # define	OPQLONG		2

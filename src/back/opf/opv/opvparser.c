@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -72,9 +72,23 @@
 **          can get E_OP008E_RDF_INVALIDATE, E_RD0045_ULH_ACCESS
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+static i4 opv_tproc(
+	OPS_STATE *global,
+	OPV_IGVARS gvar,
+	OPV_GRV *grvp,
+	PST_RNGENTRY *rngentry);
+bool opv_parser(
+	OPS_STATE *global,
+	OPV_IGVARS gvar,
+	OPS_SQTYPE sqtype,
+	bool rdfinfo,
+	bool psf_table,
+	bool abort);
 
 /*{
 ** Name: opv_tproc	- Load RDF defs for table procedure range table entry
@@ -115,7 +129,7 @@
 **	15-dec-2008 (dougi) BUG 121381
 **	    Fix computation of result column offsets.
 */
-DB_STATUS
+static DB_STATUS
 opv_tproc(
 	OPS_STATE	*global,
 	OPV_IGVARS	gvar,
@@ -136,9 +150,8 @@ opv_tproc(
     i4			parameterCount, rescolCount, resrowWidth;
     u_i4		created;
 
-    i4			i, j, totlen, offset;
+    i4			i, j, offset;
     DB_STATUS           status;
-    i4		err_code;
     i4			dmt_mem_size;
     char		*nextname;
     i4			n;
@@ -566,7 +579,7 @@ opv_parser(
 						*/
 /* When we're ready to enable column comparison stats, uncomment the
    following statement. **
-		rdfcb->rdf_rb.rdr_2types_mask = RDR2_COLCOMPARE; /* column 
+		rdfcb->rdf_rb.rdr_2types_mask = RDR2_COLCOMPARE; */ /* column 
 						** comparison stats, too */
 		
 	    }

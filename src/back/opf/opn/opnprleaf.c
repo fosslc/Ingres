@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -63,14 +63,33 @@
 **          the outer join ID can be stored in interior CO nodes
 **      16-sep-93 (smc)
 **          Moved <cs.h> for CS_SID.
-{@history_line@}...
 **	14-jul-93 (ed)
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
 **      12-oct-2000 (stial01)
 **          opn_prleaf() get keys per page info from dmf instead of calculating
 **      16-jan-2003 (stial01)
 **          opn_prleaf() fix cost calculations for distributed tables (b109467)
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static void opn_adfsf(
+	OPO_CO *ncp,
+	OPO_CO *cp,
+	OPO_BLOCKS blocks,
+	OPO_BLOCKS pblocks,
+	OPO_TUPLES tuples);
+OPN_STATUS opn_prleaf(
+	OPS_SUBQUERY *subquery,
+	OPN_SUBTREE *jsbtp,
+	OPN_EQS *eqsp,
+	OPN_RLS *rlsp,
+	OPO_BLOCKS blocks,
+	bool selapplied,
+	OPN_PERCENT selectivity,
+	OPV_VARS *varp,
+	bool keyed_only);
 
 /*{
 ** Name: opn_adfsf	- new adjacent duplicate factor and sort factor

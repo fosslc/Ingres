@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -100,9 +100,60 @@
 **      18-Feb-1999 (hweho01)
 **          Changed EXCONTINUE to EXCONTINUES to avoid compile error of
 **          redefinition on AIX 4.3, it is used in <sys/context.h>.
-
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 opx_status(
+	OPF_CB *opf_cb,
+	OPS_CB *ops_cb);
+static i4 opx_sccerror(
+	i4 status,
+	DB_SQLSTATE *sqlstate,
+	OPX_ERROR error,
+	char *msg_buffer,
+	i4 msg_length);
+void opx_rverror(
+	OPF_CB *opfcb,
+	i4 status,
+	OPX_ERROR error,
+	OPX_FACILITY facility);
+void opx_verror(
+	i4 status,
+	OPX_ERROR error,
+	OPX_FACILITY facility);
+void opx_lerror(
+	OPX_ERROR error,
+	i4 num_parms,
+	PTR p1,
+	PTR p2,
+	PTR p3,
+	PTR p4);
+void opx_1perror(
+	OPX_ERROR error,
+	PTR p1);
+void opx_2perror(
+	OPX_ERROR error,
+	PTR p1,
+	PTR p2);
+void opx_vrecover(
+	i4 status,
+	OPX_ERROR error,
+	OPX_FACILITY facility);
+void opx_rerror(
+	OPF_CB *opfcb,
+	OPX_ERROR error);
+void opx_error(
+	OPX_ERROR error);
+i4 opx_float(
+	OPX_ERROR error,
+	bool hard);
+static i4 opx_adfexception(
+	OPS_CB *ops_cb,
+	EX_ARGS *ex_args);
+i4 opx_exception(
+	EX_ARGS *args);
 
 /*{
 ** Name: opx_status	- get user return status
@@ -498,18 +549,17 @@ opx_verror(
 **	    ule_format()
 */
 VOID
-opx_lerror(error, num_parms, p1, p2, p3, p4)
-OPX_ERROR   error;
-i4	    num_parms;
-PTR         *p1;
-PTR         *p2;
-PTR         *p3;
-PTR         *p4;
+opx_lerror(
+	OPX_ERROR   error,
+	i4	    num_parms,
+	PTR         p1,
+	PTR         p2,
+	PTR         p3,
+	PTR         p4)
 {
     i4             uletype;
     i4		ulecode;
     i4		msglen;
-    DB_STATUS		ret_val = E_DB_OK;
     char		errbuf[DB_ERR_SIZE];
 
     if (num_parms > 4)

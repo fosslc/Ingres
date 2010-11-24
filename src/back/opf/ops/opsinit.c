@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -86,7 +86,19 @@
 **	    In ops_qinit(), moved the initialization of ops_gmask before
 **	    checking for !statementp. This fixes E_OP0791_ADE_INSTRGEN when
 **	    creating a procedure after the fixes for bug 109194.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 ops_gqtree(
+	OPS_STATE *global);
+void ops_qinit(
+	OPS_STATE *global,
+	PST_STATEMENT *statementp);
+void ops_init(
+	OPF_CB *opf_cb,
+	OPS_STATE *global);
 
 /*{
 ** Name: ops_gqtree	- get query tree from QSF
@@ -535,7 +547,7 @@ ops_init(
                                         ** optimizer */
         if (DB_FAILURE_MACRO(ulmstatus))
 	{
-	    opx_lerror(E_OP0002_NOMEMORY, 0);
+	    opx_lerror(E_OP0002_NOMEMORY, 0, 0, 0, 0, 0);
 	    opx_verror( ulmstatus, E_OP0002_NOMEMORY, 
 		global->ops_mstate.ops_ulmrcb.ulm_error.err_code);
 	}

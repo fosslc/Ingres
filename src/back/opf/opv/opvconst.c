@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -65,8 +65,28 @@
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
 **      16-sep-93 (smc)
 **          Moved <cs.h> for CS_SID.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+void opv_rqinsert(
+	OPS_STATE *global,
+	OPS_PNUM parmno,
+	PST_QNODE *qnode);
+PST_QNODE *opv_constnode(
+	OPS_STATE *global,
+	DB_DATA_VALUE *datatype,
+	i4 parmno);
+PST_QNODE *opv_intconst(
+	OPS_STATE *global,
+	i4 intvalue);
+PST_QNODE *opv_i1const(
+	OPS_STATE *global,
+	i4 intvalue);
+void opv_uparameter(
+	OPS_STATE *global,
+	PST_QNODE *qnode);
 
 /*{
 ** Name: OPV_RQINSERT	- insert repeat query parameter into list

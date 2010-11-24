@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -74,8 +74,22 @@
 **      17-Aug-2010 (horda03) b124274
 **          For SET [NO]QEP [SEGMENTED] ops_qep_flag. Needed uld.h for flag
 **          values.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static i4 ops_change(
+	OPF_CB *opf_cb,
+	OPS_ALTER *altercb);
+i4 ops_exlock(
+	OPF_CB *opf_cb,
+	SCF_SEMAPHORE *semaphore);
+i4 ops_unlock(
+	OPF_CB *opf_cb,
+	SCF_SEMAPHORE *semaphore);
+i4 ops_alter(
+	OPF_CB *opf_cb);
 
 /*{
 ** Name: ops_change	- change characteristics for SET command

@@ -746,7 +746,7 @@ FUNC_EXTERN void nostackspace(
 FUNC_EXTERN PTR getspace(
 	char *utilid,
 	PTR *spaceptr,
-	unsigned int size);
+	SIZE_TYPE size);
 FUNC_EXTERN void fileinput(
 	char *utilid,
 	char ***argv,

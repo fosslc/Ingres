@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -56,14 +56,12 @@
 **      These routines are intended to be used for the allocation of 
 **      data structures that normally would be allocated off of the  
 **      stack, but can be because they are variable in size. 
-[@comment_line@]...
 **
 **          opu_Osmemory_open() - Open the stack ULM memory stream.
 **          opu_Csmemory_close() - Close the stack ULM memory stream.
 **          opu_Gsmemory_get() - Get memory from the stack ULM memory stream.
 **          opu_Msmemory_mark() - Mark a point in the stack ULM memory stream.
 **          opu_Rsmemory_reclaim() - Reclaim memory past a mark.
-[@func_list@]...
 **
 **
 **  History:    
@@ -76,28 +74,24 @@
 **	11-Aug-1997 (jenjo02)
 **	    Changed ulm_streamid from (PTR) to (PTR*) so that ulm
 **	    can destroy those handles when the memory is freed.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
-
-/*
-**  Forward and/or External typedef/struct references.
-*/
-
-/*
-**  Forward and/or External function references.
-*/
-
-
-/*
-**  Defines of other constants.
-*/
-
-
-/*
-**  Definition of static variables and forward static functions.
-*/
-
+/* TABLE OF CONTENTS */
+void opu_Osmemory_open(
+	OPS_STATE *global);
+void opu_Csmemory_close(
+	OPS_STATE *global);
+PTR opu_Gsmemory_get(
+	OPS_STATE *global,
+	i4 size);
+void opu_Msmemory_mark(
+	OPS_STATE *global,
+	ULM_SMARK *mark);
+void opu_Rsmemory_reclaim(
+	OPS_STATE *global,
+	ULM_SMARK *mark);
 
 /*{
 ** Name: OPU_OSMEMORY_OPEN	- Initialize the stack ULM memory stream
@@ -145,7 +139,7 @@ opu_Osmemory_open(
     {
 	if (global->ops_mstate.ops_ulmrcb.ulm_error.err_code == E_UL0005_NOMEM)
 	{
-	    opx_lerror(E_OP0002_NOMEMORY, 0);
+	    opx_lerror(E_OP0002_NOMEMORY, 0, 0, 0, 0, 0);
 	    opx_error( E_OP0002_NOMEMORY);  /* out of memory */
 	}
 #ifdef E_OP0093_ULM_ERROR
@@ -203,7 +197,7 @@ opu_Csmemory_close(
     {
 	if (global->ops_mstate.ops_ulmrcb.ulm_error.err_code == E_UL0005_NOMEM)
 	{
-	    opx_lerror(E_OP0002_NOMEMORY, 0);
+	    opx_lerror(E_OP0002_NOMEMORY, 0, 0, 0, 0, 0);
 	    opx_error( E_OP0002_NOMEMORY);  /* out of memory */
 	}
 #ifdef E_OP0093_ULM_ERROR
@@ -271,7 +265,7 @@ opu_Gsmemory_get(
     {
 	if (global->ops_mstate.ops_ulmrcb.ulm_error.err_code == E_UL0005_NOMEM)
 	{
-	    opx_lerror(E_OP0002_NOMEMORY, 0);
+	    opx_lerror(E_OP0002_NOMEMORY, 0, 0, 0, 0, 0);
 	    opx_error( E_OP0002_NOMEMORY);  /* out of memory */
 	}
 #ifdef E_OP0093_ULM_ERROR
@@ -344,7 +338,7 @@ opu_Msmemory_mark(
     {
 	if (global->ops_mstate.ops_ulmrcb.ulm_error.err_code == E_UL0005_NOMEM)
 	{
-	    opx_lerror(E_OP0002_NOMEMORY, 0);
+	    opx_lerror(E_OP0002_NOMEMORY, 0, 0, 0, 0, 0);
 	    opx_error( E_OP0002_NOMEMORY);  /* out of memory */
 	}
 #ifdef E_OP0093_ULM_ERROR
@@ -407,7 +401,7 @@ opu_Rsmemory_reclaim(
     {
 	if (global->ops_mstate.ops_ulmrcb.ulm_error.err_code == E_UL0005_NOMEM)
 	{
-	    opx_lerror(E_OP0002_NOMEMORY, 0);
+	    opx_lerror(E_OP0002_NOMEMORY, 0, 0, 0, 0, 0);
 	    opx_error( E_OP0002_NOMEMORY);  /* out of memory */
 	}
 #ifdef E_OP0093_ULM_ERROR

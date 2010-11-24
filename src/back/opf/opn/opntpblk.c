@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -66,8 +66,15 @@
 **          Variable Page Size - Variable Page Type support (SIR 102955)
 **      28-apr-2004 (stial01)
 **          Optimizer changes for 256K rows, rows spanning pages
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+OPO_TUPLES opn_tpblk(
+	OPG_CB *opg_cb,
+	i4 pagesize,
+	OPS_WIDTH tuplewidth);
 
 /*{
 ** Name: opn_tpblk	- estimate number of tuples per block

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -64,8 +64,12 @@
 **	10-Jan-2001 (jenjo02)
 **	    Use GET_OPS_CB macro instead of scf_call(SCU_INFORMATION)
 **	    to fetch session's OPS_CB*.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+OPS_CB *ops_getcb(void);
 
 /*{
 ** Name: ops_getcb	- routine to get session control block from SCF

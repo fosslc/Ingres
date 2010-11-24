@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 **
 */
 
@@ -92,8 +92,18 @@
 **	    Pick up cardinality_check setting.
 **	03-Dec-2009 (kiria01) b122952
 **	    Add .opf_inlist_thresh for control of eq keys on large inlists.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static i4 opg_getfunc(
+	OPF_CB *opf_cb,
+	char *func_name,
+	DB_LANG language,
+	ADI_OP_ID *op_ptr);
+i4 ops_startup(
+	OPF_CB *opf_cb);
 
 /*{
 ** Name: opg_getfunc	- init function OP id

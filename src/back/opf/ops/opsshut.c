@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -69,8 +69,13 @@
 **	    Remove semaphore before releasing memory.
 **	09-Oct-1998 (jenjo02)
 **	    Removed SCF semaphore functions, inlining the CS calls instead.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 ops_shutdown(
+	OPF_CB *opf_cb);
 
 /*{
 ** Name: ops_shutdown	- shutdown the server for the optimizer
