@@ -173,6 +173,8 @@
 **	10-Dec-2008 (jonj)
 **	    SIR 120874: Remove last vestiges of CL_SYS_ERR,
 **	    old form uleFormat.
+**	02-Nov-2010 (jonj) SIR 124685
+**	    Return int instead of VOID to agree with function prototype.
 **/
 
 /*
@@ -269,10 +271,10 @@ static STATUS ex_handler(EX_ARGS *ex_args);
 */
 
 # ifdef	II_DMF_MERGE
-VOID MAIN(argc, argv)
+int MAIN(argc, argv)
 # else
 VOID 
-main(argc, argv)
+int(argc, argv)
 # endif
 i4	argc;
 char	*argv[];
@@ -281,6 +283,9 @@ char	*argv[];
     MEadvise(ME_INGRES_ALLOC);
 # endif
     PCexit(lockstat(argc, argv));
+
+    /* NOTREACHED */
+    return(FAIL);
 }
 
 static STATUS
