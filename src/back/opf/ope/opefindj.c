@@ -640,6 +640,13 @@ ope_rqfunc(
 **      3-jun-2010 (huazh01)
 **          Modify the fix to b117793 by using pst_joinid to test if
 **          the ifnull() is in the where clause of the query. (b123744) 
+**      7-jun-2010 (huazh01)
+**          Rewrite the fix to b117793. We now don't create func attr
+**          for ifnull() if:
+**          1) ifnull() is in the where clause.
+**          2) variables on both side of the and_node, i.e., lvarmap
+**          and rvarmap, are referenced in an outer join. 
+**          (b123419)
 [@history_line@]...
 */
 static bool
@@ -809,92 +816,52 @@ ope_jnclaus(
     ** itself.". 
     */
 
-    do
     {
-       i4 		i, lattid, rattid; 
+       i4 		i; 
        bool 		found = FALSE; 
        OPL_OUTER 	*outerp; 
-       char             lojattrmap[OPZ_BITMAPATT], rojattrmap[OPZ_BITMAPATT]; 
-       PST_QNODE        *p; 
-
-       MEfill(OPZ_BITMAPATT, '\0', lojattrmap);
-       MEfill(OPZ_BITMAPATT, '\0', rojattrmap);
+       OPV_GBMVARS      fullmap; 
 
        if ( and_node->pst_left->pst_sym.pst_type == PST_BOP )
        {
 
-	  lattid = rattid = -1; 
-	 
-	  if ((l->pst_sym.pst_type == PST_BOP || l->pst_sym.pst_type == PST_MOP) &&
+	  if (((l->pst_sym.pst_type == PST_BOP || l->pst_sym.pst_type == PST_MOP) &&
 	       l->pst_sym.pst_value.pst_s_op.pst_fdesc->adi_fiflags
 			& ADI_F32768_IFNULL &&
-               l->pst_sym.pst_value.pst_s_op.pst_joinid <= OPL_NOOUTER &&
-	      (l->pst_left->pst_sym.pst_type == PST_VAR ||
-               l->pst_left->pst_sym.pst_type == PST_UOP)
+               l->pst_sym.pst_value.pst_s_op.pst_joinid <= OPL_NOOUTER)
+              ||
+              ((r->pst_sym.pst_type == PST_BOP || r->pst_sym.pst_type == PST_MOP) &&
+               r->pst_sym.pst_value.pst_s_op.pst_fdesc->adi_fiflags
+                        & ADI_F32768_IFNULL &&
+               r->pst_sym.pst_value.pst_s_op.pst_joinid <= OPL_NOOUTER)
              ) 
 	  {
-              p = l; 
-              while (p->pst_sym.pst_type != PST_VAR) p = p->pst_left; 
-              lattid = p->pst_sym.pst_value.pst_s_var.pst_atno.db_att_id;
-	  }
+              MEcopy(lvarmap, sizeof(OPV_GBMVARS), (PTR)&fullmap); 
+              BTor((i4)BITS_IN(rvarmap), (char*)rvarmap, (PTR)&fullmap); 
 
-	  if ((r->pst_sym.pst_type == PST_BOP || r->pst_sym.pst_type == PST_MOP) &&
-               r->pst_sym.pst_value.pst_s_op.pst_fdesc->adi_fiflags
-			& ADI_F32768_IFNULL &&
-               r->pst_sym.pst_value.pst_s_op.pst_joinid <= OPL_NOOUTER &&
-              (r->pst_left->pst_sym.pst_type == PST_VAR ||
-               r->pst_left->pst_sym.pst_type == PST_UOP)
-             )
-	  {
-              p = r;
-              while (p->pst_sym.pst_type != PST_VAR) p = p->pst_left; 
-              rattid = p->pst_sym.pst_value.pst_s_var.pst_atno.db_att_id;
-	  }
+              for (i = 0; i < subquery->ops_oj.opl_lv; i++)
+              {
+                  outerp = subquery->ops_oj.opl_base->opl_ojt[i];
 
-	  /* can't deal with ifnull() nested with other func aggregate */
-	  if (lattid == -1 && rattid == -1) break;
+                  if ((outerp->opl_type == OPL_LEFTJOIN ||
+                       outerp->opl_type == OPL_RIGHTJOIN) &&
+                      BTsubset((char *)&fullmap, 
+                               (char *)outerp->opl_bvmap, 
+                               (i4)BITS_IN(outerp->opl_bvmap)))
+                  {
+                      /* found an ifnull() in the where clause, and both
+                      ** var in left and right is referenced in an oj
+                      */
+                      found = TRUE; 
+                      break;
+                  }
+              }
+            }
+            if (subquery->ops_oj.opl_lv && found) return (FALSE);
+          }
+              
 
-	  if (lattid > -1) BTset(lattid, lojattrmap);
-	  if (rattid > -1) BTset(rattid, rojattrmap);
-
-          for (i = 0; i < subquery->ops_oj.opl_lv; i++) 
-          {
-              outerp = subquery->ops_oj.opl_base->opl_ojt[i]; 
-  
-	     if ((outerp->opl_type == OPL_LEFTJOIN || 
-                  outerp->opl_type == OPL_RIGHTJOIN)
-                 &&
-		 (   (lattid > -1 && (BTsubset((char *)&lvarmap,
-				               (char *)outerp->opl_ivmap, 
-					       (i4)BITS_IN(outerp->opl_ivmap))
-				      ||
-				      BTsubset((char *)&lvarmap, 
-				               (char *)outerp->opl_ovmap, 
-					       (i4)BITS_IN(outerp->opl_ovmap))
-				      )
-		     )
-		     ||
-		     (rattid > -1 && (BTsubset((char *)&rvarmap, 
-				               (char *)outerp->opl_ivmap, 
-					       (i4)BITS_IN(outerp->opl_ivmap))
-				      ||
-				      BTsubset((char *)&rvarmap, 
-					       (char *)outerp->opl_ovmap, 
-				               (i4)BITS_IN(outerp->opl_ovmap))
-				     )
-		     )
-		 )
-	       )
-	      {
-		     found = TRUE; 
-		     break; 
-	      }
-          }	        
-
-	  if (subquery->ops_oj.opl_lv && !found) return (FALSE); 
-       }
     }
-    while (FALSE);
 
     /* if oldnodep is not null then, null join was being
     ** attempted but data types do not match so
