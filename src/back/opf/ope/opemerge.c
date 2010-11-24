@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -63,8 +63,35 @@
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
 **      14-sep-93 (smc)
 **          Moved <cs.h> for CS_SID.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static bool ope_eqcmerge(
+	OPS_SUBQUERY *subquery,
+	OPE_IEQCLS eqc1,
+	OPE_IEQCLS eqc2,
+	bool nulljoin,
+	bool ignore_overlap);
+static bool ope_nexpr(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *nodep);
+static bool ope_aggregate(
+	OPS_SUBQUERY *subquery,
+	OPZ_ATTS *attrp,
+	OPV_GRV *gvarp);
+static bool ope_ojcheck(
+	OPS_SUBQUERY *subquery,
+	OPZ_ATTS *attrp,
+	OPE_IEQCLS eqc,
+	OPL_IOUTER ojid);
+bool ope_mergeatts(
+	OPS_SUBQUERY *subquery,
+	OPZ_IATTS firstattr,
+	OPZ_IATTS secondattr,
+	bool nulljoin,
+	OPL_IOUTER ojid);
 
 /*{
 ** Name: ope_eqcmerge	- merge equivalence classes
@@ -390,7 +417,6 @@ ope_ojcheck(
 
 {
     OPZ_IATTS		attno;
-    OPV_IVARS		varno;
     OPZ_ATTS		*attrp1;
     OPL_OUTER		*ojp = subquery->ops_oj.opl_base->opl_ojt[ojid];
     OPE_EQCLIST		*eqcp = subquery->ops_eclass.ope_base->

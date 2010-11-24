@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -92,8 +92,23 @@
 **          Moved <cs.h> for CS_SID.
 **      06-mar-96 (nanpr01)
 **          initialize qeq_q14_page_size field.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+void opc_dahd(
+	OPS_STATE *global,
+	QEF_AHD **daction);
+void opc_qrybld(
+	OPS_STATE *global,
+	DB_LANG *qlang,
+	bool retflag,
+	QEQ_TXT_SEG *qtext,
+	DD_LDB_DESC *qldb,
+	QEQ_D1_QRY *qryptr);
+i4 opc_tstsingle(
+	OPS_STATE *global);
 
 /*{
 ** Name: opc_dahd   	- Allocate a distributed action header

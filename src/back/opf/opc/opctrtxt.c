@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -100,32 +100,89 @@
 **          Changes for Long IDs
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
 
-/*
-**  DRHFIXME - this belongs in the UL header.  I copied it here from
-**  uldtreetext to get this to compile.
-** Name: ULD_TSTATE - state of a building a linked list of text blocks
-**
-** Description:
-**      A linked list of text blocks is created when converting a query
-**      tree into text.  This structure describes the state of the linked
-**      list and can be used to save the state of partially built linked
-**      list.
-**
-*/
-typedef struct _ULD_TSTATE
-{
-    char	    uld_tempbuf[ULD_TSIZE]; /* temp buffer used to build string
-                                        ** this should be larger than any other
-                                        ** component */
-    i4		    uld_offset;		/* location of next free byte */
-    i4		    uld_remaining;	/* number of bytes remaining in tempbuf 
-					*/
-    ULD_TSTRING     **uld_tstring;      /* linked list of text strings to return
-                                        ** to the user */
-} ULD_TSTATE;
+/* TABLE OF CONTENTS */
+void opc_addseg(
+	OPS_STATE *global,
+	char *stringval,
+	i4 stringlen,
+	i4 temp_num,
+	QEQ_TXT_SEG **seglist);
+void opc_atname(
+	OPC_TTCB *textcb,
+	OPS_SUBQUERY *subquery,
+	OPZ_IATTS attno,
+	bool forcetemp,
+	OPT_NAME *attrname);
+void opc_rdfname(
+	OPC_TTCB *textcb,
+	OPV_GRV *grv_ptr,
+	OPCUDNAME *name,
+	PSQ_MODE qmode);
+void opc_nat(
+	OPC_TTCB *textcb,
+	OPS_STATE *statevar,
+	i4 varno,
+	OPCUDNAME *name,
+	OPT_NAME *alias,
+	i4 *tempno,
+	bool *is_result,
+	PSQ_MODE qmode,
+	bool *e_att_flag);
+void opc_one_etoa(
+	OPC_TTCB *textcb,
+	OPE_IEQCLS eqcls);
+bool opc_etoa(
+	OPC_TTCB *textcb,
+	OPE_IEQCLS eqcls,
+	bool *nulljoin);
+static void opc_dstring(
+	OPS_SUBQUERY *subquery,
+	char *header_string,
+	ULD_TSTRING *tstring,
+	i4 maxline);
+static bool opc_mapfunc(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *cop,
+	OPE_IEQCLS eqcls,
+	OPE_BMEQCLS *func_eqcmap,
+	OPE_BMEQCLS *temp_eqcmap);
+static void opc_init(
+	OPC_TTCB *handle,
+	OPS_SUBQUERY *subquery,
+	OPO_CO *cop,
+	ULM_RCB *ulmrcb,
+	QEQ_TXT_SEG **wheretxt,
+	OPCQHD *qthdr,
+	bool remdup);
+void opc_funcatt(
+	OPC_TTCB *textcbp,
+	OPZ_IATTS attno,
+	OPO_CO *cop,
+	ULM_SMARK *markp);
+bool opc_fchk(
+	OPC_TTCB *textcbp,
+	OPZ_IATTS attno,
+	OPO_CO *cop);
+void opc_makename(
+	DD_OWN_NAME *ownername,
+	DD_TAB_NAME *tabname,
+	char *bufptr,
+	i2 *length,
+	DD_CAPS *cap_ptr,
+	PSQ_MODE qmode,
+	OPS_STATE *global);
+void opc_treetext(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *cop,
+	bool qualonly,
+	bool remdup,
+	QEQ_TXT_SEG **wheretxt,
+	QEQ_TXT_SEG **qrytxt,
+	OPCQHD *qthdr);
 
 /*{
 ** Name: opc_addseg	- Add a text segment to query text list
@@ -537,7 +594,7 @@ opc_rdfname(
 	OPC_TTCB	   *textcb,
 	OPV_GRV	           *grv_ptr,
 	OPCUDNAME	   *name,
-	i4		   qmode )
+	PSQ_MODE	   qmode )
 {
     DD_OWN_NAME	*ownername;
     DD_TAB_NAME	*tabname;
@@ -710,7 +767,7 @@ opc_nat(
 	OPT_NAME	   *alias,
 	i4		   *tempno,
 	bool		   *is_result,
-	i4		   qmode,
+	PSQ_MODE	   qmode,
 	bool		   *e_att_flag )
 {
     OPV_GRV	     *grv_ptr;  /* ptr to global range variable */
@@ -1440,7 +1497,7 @@ opc_funcatt(
 			            ** function attribute parse tree can be
 			            ** processed out of line */
 	status = opcu_tree_to_text((PTR) &temp_handle,
-	    (i4)PSQ_RETRIEVE, /* set up as a retrieve */
+	    PSQ_RETRIEVE, /* set up as a retrieve */
 	    NULL, /* no target relation name */
 	    subquery->ops_global->ops_adfcb, 
 	    textcbp->opt_ulmrcb, 
@@ -1538,13 +1595,12 @@ opc_makename(
 	char		*bufptr,
 	i2		*length,
 	DD_CAPS		*cap_ptr,
-	i4		qmode,
+	PSQ_MODE	qmode,
 	OPS_STATE	*global )
 {
     i4                  tabnamesize;
     i4		    	ownnamesize;
     u_i4		unorm_len = (DB_OWN_MAXNAME + DB_TAB_MAXNAME) + 2;
-    bool		quote_it;
     char		*quote_char;
     DB_STATUS	    	status;
     DB_ERROR            error;
@@ -1700,7 +1756,7 @@ opc_treetext(
     ULD_TSTRING	    *nameptr;
     PST_QNODE	    *qual;	/* first qualification to be printed */
     bool	    finish;
-    i4		    mode;
+    PSQ_MODE	    mode;
 
     global = subquery->ops_global;
     if (global->ops_cb->ops_check &&
@@ -1922,7 +1978,7 @@ opc_treetext(
 		{
 		    tstring = NULL;
 		    status = opcu_tree_to_text((PTR) &handle,
-			(i4)PSQ_RETRIEVE, /* set up as a retrieve */
+			PSQ_RETRIEVE, /* set up as a retrieve */
 			NULL, /* no target relation name */
 			global->ops_adfcb, &ulmrcb, 
 			OPC_MAXTEXT /* max number of characters in one string */, 
@@ -2048,7 +2104,7 @@ opc_treetext(
 	{
 	    tstring = NULL;
 	    status = opcu_tree_to_text((PTR) &handle, 
-		(i4)PSQ_RETRIEVE, /* set up as a retrieve */
+		PSQ_RETRIEVE, /* set up as a retrieve */
 		NULL, /* no target relation name */
 		global->ops_adfcb, &ulmrcb, 
 		OPC_MAXTEXT /* max number of characters in one string */, 
@@ -2101,7 +2157,7 @@ opc_treetext(
 	    qual = subquery->ops_bfs.opb_bfconstants;
 	    tstring = NULL;
 	    status = opcu_tree_to_text((PTR) &handle, 
-		(i4)PSQ_RETRIEVE, /* set up as a retrieve */
+		PSQ_RETRIEVE, /* set up as a retrieve */
 		NULL, /* no target relation name */
 		global->ops_adfcb, &ulmrcb, 
 		OPC_MAXTEXT /* max number of characters in one string */, 

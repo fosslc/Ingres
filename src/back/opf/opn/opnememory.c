@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -59,10 +59,15 @@
 **      24-may-86 (seputis)    
 **      16-sep-93 (smc)
 **          Moved <cs.h> for CS_SID.
-{@history_line@}...
 **	14-jul-93 (ed)
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+OPN_EQS *opn_ememory(
+	OPS_SUBQUERY *subquery);
 
 /*{
 ** Name: opn_ememory	- get new OPN_EQS structure
@@ -106,7 +111,7 @@ opn_ememory(
     }
     else
     {	/* need to allocate a new OPN_EQS element */
-	if (global->ops_mstate.ops_mlimit > global->ops_mstate.ops_memleft)
+	if (global->ops_mstate.ops_mlimit > (i4)global->ops_mstate.ops_memleft)
 	{   /* check if memory limit has been reached prior to allocating
             ** another RLS node from the stream */
 	    opn_fmemory(subquery, (PTR *)&global->ops_estate.opn_eqsfree);

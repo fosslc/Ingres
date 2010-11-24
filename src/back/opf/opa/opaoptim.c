@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -66,8 +66,31 @@
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
 **      14-sep-93 (smc)
 **          Moved <cs.h> for CS_SID.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static void opa_checkopt(
+	OPS_STATE *global,
+	PST_QNODE *bylist,
+	PST_QNODE *root,
+	OPV_GBMVARS *usedmap,
+	OPV_GBMVARS *newmap);
+static void opa_rqual(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE **previous);
+static void opa_commit(
+	OPS_STATE *global,
+	PST_QNODE *bylist,
+	PST_QNODE **root,
+	OPV_IGVARS varno);
+static void opa_obylist(
+	OPS_STATE *global,
+	OPS_SUBQUERY *inner,
+	OPS_SUBQUERY *outer);
+void opa_optimize(
+	OPS_STATE *global);
 
 /*{
 ** Name: opa_checkopt	- check for possibility of optimization

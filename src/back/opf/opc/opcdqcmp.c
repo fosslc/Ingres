@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -96,8 +96,19 @@
 **          This fixes bug 109618. INGSTR 52.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+void opc_dldbadd(
+	OPS_STATE *global,
+	DD_LDB_DESC *ldbptr,
+	DD_LDB_DESC **outldb);
+void opc_ssite(
+	OPS_STATE *global);
+void opc_dentry(
+	OPS_STATE *global);
 
 /*{
 ** Name: opc_dldbadd	- Add an ldb to the list for this query plan
@@ -450,7 +461,6 @@ VOID
 opc_dentry(
 	OPS_STATE          *global )
 {
-    DB_STATUS	    ret;
 
     /*
     **  Compile the query plan into a query text.  Deal with the

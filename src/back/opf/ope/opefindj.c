@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -66,10 +66,33 @@
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
 **      14-sep-93 (smc)
 **          Moved <cs.h> for CS_SID.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
-
+/* TABLE OF CONTENTS */
+static void ope_explicit(
+	OPS_SUBQUERY *subquery,
+	OPV_IVARS explicit);
+static bool ope_rqfunc(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *nodep);
+static bool ope_jnclaus(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *and_node,
+	OPV_GBMVARS *lvarmap,
+	OPV_GBMVARS *rvarmap,
+	PST_QNODE *oldnodep,
+	PST_QNODE *inodep,
+	bool *funcattr);
+static bool ope_noncnf_nj(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *nodep);
+static void ope_njoins(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *nodep);
+void ope_findjoins(
+	OPS_SUBQUERY *subquery);
 
 /*{
 ** Name: ope_explicit	- fix up explicit joins to secondaries

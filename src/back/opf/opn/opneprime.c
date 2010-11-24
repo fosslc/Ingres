@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
  
 #include    <compat.h>
@@ -90,8 +90,16 @@
 **          And these tests would also be applied to Solaris as 
 **          MHisnan -> _isnan() for Windows and isnan() for Solaris,
 **	    (As defined in cl/hdr/hdr/mhcl.h)
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+OPH_DOMAIN opn_eprime(
+	OPO_TUPLES rballs,
+	OPO_TUPLES mballspercell,
+	OPH_DOMAIN ncells,
+	f8 underflow);
 
 /*
 **  Defines of other constants.

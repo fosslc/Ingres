@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -71,7 +71,17 @@
 **	31-Aug-2006 (kschendel)
 **	    Watch for HFAGG as well as RFAGG, even though they shouldn't
 **	    appear yet this early in opa.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static void opa_modqual(
+	OPS_STATE *global,
+	OPS_SUBQUERY *inner,
+	OPS_SUBQUERY *outer);
+void opa_link(
+	OPS_STATE *global);
 
 /*{
 ** Name: opa_modqual	- link the inner to the outer aggregate
@@ -303,7 +313,7 @@ opa_link(
 {
     OPS_SUBQUERY           *subquery;   /* used to traverse subquery list */
     OPS_SUBQUERY           *mainSqry; 
-    PST_QNODE              *p1, *p2, *bylist; 
+    PST_QNODE              *p1, *p2; 
     bool                   found = FALSE; 
     
     {

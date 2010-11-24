@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -79,8 +79,61 @@
 **	27-Oct-09 (smeke01) b122794
 **	    Correct and improve OP147. Make all output go to the front-end. 
 **	    Display addresses in hex. Correct #define name. 
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static bool opa_cvar(
+	OPS_STATE *global,
+	OPV_GBMVARS *vmap,
+	PST_QNODE *treep);
+static void opa_dups(
+	OPS_SUBQUERY *header,
+	OPS_SUBQUERY *subquery);
+static OPS_SUBQUERY *opa_sameagg(
+	OPS_SUBQUERY *header,
+	PST_QNODE *newaop);
+static bool opa_csimple(
+	OPS_SUBQUERY *header,
+	OPS_SUBQUERY *subquery,
+	OPS_SUBQUERY **previous);
+static void opa_substitute(
+	OPS_SUBQUERY *subquery,
+	OPV_IGVARS gvarno);
+static bool opa_cfunction(
+	OPS_SUBQUERY *header,
+	OPS_SUBQUERY *subquery,
+	OPS_SUBQUERY **previous);
+static void opa_cselect(
+	OPS_SUBQUERY *header,
+	OPS_SUBQUERY *subquery,
+	OPS_SUBQUERY **previous);
+static void opa_igmap(
+	OPS_STATE *global);
+static bool opa_corrcheck(
+	OPS_STATE *global,
+	OPV_IGVARS lvar,
+	OPV_IGVARS rvar);
+static bool opa_cmaps(
+	OPS_STATE *global,
+	OPV_GBMVARS *lmap,
+	OPV_GBMVARS *rmap);
+static bool opa_together(
+	OPS_SUBQUERY *header,
+	OPS_SUBQUERY *subquery);
+static void opa_findcompat(
+	OPS_SUBQUERY *header);
+void opa_agbylist(
+	OPS_SUBQUERY *subquery,
+	bool agview,
+	bool project);
+static void opa_coagview(
+	OPS_SUBQUERY *subquery);
+void opa_gsub(
+	OPS_SUBQUERY *subquery);
+void opa_compat(
+	OPS_STATE *global);
 
 /*{
 ** Name: opa_cvar	- convert var nodes
@@ -1175,7 +1228,7 @@ OPS_STATE          *global;
 
 
 /*
-** Name: opv_corrcheck - compare correlation names for range values
+** Name: opa_corrcheck - compare correlation names for range values
 **
 ** Description:
 **	This routine compares the correlation names of two tables to
@@ -1198,8 +1251,8 @@ OPS_STATE          *global;
 **		created
 */
 
-bool
-opv_corrcheck(
+static bool
+opa_corrcheck(
 	OPS_STATE          *global,
         OPV_IGVARS 		   lvar,
         OPV_IGVARS 		   rvar)
@@ -1235,7 +1288,7 @@ opv_corrcheck(
 }
 
 /*{
-** Name: opv_cmaps	- compare range variable maps
+** Name: opa_cmaps	- compare range variable maps
 **
 ** Description:
 **      This routine compares range variable maps taking into account
@@ -1262,12 +1315,12 @@ opv_corrcheck(
 **          initial creation
 **	21-jul-00 (wanfr01)
 **	    bug 102154, INGSRV 1232
-**	    added opv_corrcheck to compare correlation names
+**	    added opa_corrcheck to compare correlation names
 [@history_template@]...
 */
 
 static bool
-opv_cmaps(
+opa_cmaps(
 	OPS_STATE          *global,
 	OPV_GBMVARS        *lmap,
 	OPV_GBMVARS        *rmap)
@@ -1310,7 +1363,7 @@ opv_cmaps(
 		&&
 		(gbase->opv_grv[rvar]->opv_same != OPV_NOGVAR)
 		&&
-		opv_corrcheck(global,lvar,rvar)
+		opa_corrcheck(global,lvar,rvar)
 	    )
 	    {
 		gbase->opv_grv[rvar]->opv_compare = lvar;
@@ -1469,7 +1522,7 @@ note that r1 and r2 are not equivalent.
         &&
 	(   !(global->ops_gmask & OPS_IDSAME)
 	    ||
-	    !opv_cmaps(global, &header->ops_correlated, &subquery->ops_correlated)
+	    !opa_cmaps(global, &header->ops_correlated, &subquery->ops_correlated)
 	)
 #endif
        )
@@ -1492,7 +1545,7 @@ note that r1 and r2 are not equivalent.
         &&
 	(   !(global->ops_gmask & OPS_IDSAME)
 	    ||
-	    !opv_cmaps(global, 
+	    !opa_cmaps(global, 
 	      (OPV_GBMVARS *)&header->ops_root->pst_sym.pst_value.pst_s_root.pst_tvrm,
 	      (OPV_GBMVARS *)&subquery->ops_root->pst_sym.pst_value.pst_s_root.pst_tvrm)
 	)
@@ -1675,7 +1728,7 @@ note that r1 and r2 are not equivalent.
 	    &&
 	    (	!(global->ops_gmask & OPS_IDSAME)
 		||
-		!opv_cmaps(global, &lmap, &rmap)
+		!opa_cmaps(global, &lmap, &rmap)
 	    ))
 	{
 	    /* note that "select count (*), min(r.a) from r" would not be

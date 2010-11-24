@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -129,7 +129,141 @@
 **	    situation.
 **      12-Aug-2010 (horda03) b124109
 **          Enable trace point OP218 to force use of EXCH nodes.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/*
+** Forward Structure Definitions:
+*/
+typedef struct _OPJ_MASTATE OPJ_MASTATE;
+typedef struct _EXCHDESC EXCHDESC;
+
+/* TABLE OF CONTENTS */
+static void opj_minop(
+	OPS_SUBQUERY *subquery);
+static void opj_incopy(
+	OPS_SUBQUERY *subquery,
+	bool boolfact);
+static void opj_outcopy(
+	OPS_SUBQUERY *subquery,
+	bool boolfact);
+static void opj_jeqc(
+	OPS_SUBQUERY *subquery);
+static bool opj_translate(
+	OPS_SUBQUERY *subquery);
+static void opa_union(
+	OPS_SUBQUERY *subquery);
+static void opj_cartprod(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *coptr,
+	OPE_IEQCLS eqcls);
+static void opj_exact(
+	OPJ_MASTATE *mastatep,
+	OPO_CO *cop,
+	OPO_ISORT psjeqc,
+	bool valid_sjeqc,
+	OPO_ISORT pordeqc,
+	bool valid_ordeqc);
+static void opj_ojeqcmaps(
+	OPS_SUBQUERY *subquery,
+	OPO_OJEQCDEF *ojdefp,
+	OPE_BMEQCLS *oeqcmap,
+	OPV_BMVARS *ivmap,
+	OPE_BMEQCLS *ieqcmap);
+static OPB_BOOLFACT *opb_bfnewget(
+	OPS_SUBQUERY *subquery);
+static void opl_findiftrue(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *cop);
+static void opl_insertiftrue(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE **qnodepp,
+	OPB_BOOLFACT *bfp);
+static void opl_bfiftrue(
+	OPS_SUBQUERY *subquery);
+static void opl_special_eqc_test(
+	OPS_SUBQUERY *subquery,
+	OPL_BMOJ *partialojp,
+	OPO_CO *cop);
+static void opj_maordering(
+	OPJ_MASTATE *mastatep,
+	OPO_CO *cop);
+static void opj_uveliminate(
+	OPS_SUBQUERY **subqpp);
+static bool opj_ckhasheqc(
+	OPS_SUBQUERY *sq,
+	OPE_IEQCLS sjeqc);
+static void opj_sortedagg(
+	OPS_SUBQUERY *sq);
+static OPS_SUBQUERY **opj_enum(
+	OPS_SUBQUERY **subqpp);
+static void opj_hintinit(
+	OPS_SUBQUERY *subquery);
+static void opj_subuvvar(
+	OPS_SUBQUERY *subquery,
+	OPS_SUBQUERY *fatherp,
+	PST_QNODE **qnodepp);
+static void opj_uvagg(
+	OPS_SUBQUERY **subquerypp,
+	OPS_SUBQUERY *terminatep);
+static OPS_SUBQUERY **opj_uvsubview(
+	OPS_SUBQUERY *subquery,
+	bool norows);
+static void opj_sq_partition(
+	OPS_SUBQUERY *sq);
+static void opj_partition(
+	OPS_STATE *global);
+static void opj_partanal(
+	OPS_SUBQUERY *sq,
+	OPO_CO *cop,
+	OPV_PCJDESC **pcjdpp,
+	i4 *gcount,
+	bool *istable);
+static void opj_partpushg(
+	OPO_CO *cop,
+	OPV_PCJDESC *pcjdp,
+	i4 gcount);
+static void opj_partagg(
+	OPS_SUBQUERY *sq,
+	OPV_PCJDESC *pcjdp,
+	i4 gcount);
+static void opj_exchange(
+	OPS_STATE *global);
+static void opj_exchupd_worker(
+	OPS_SUBQUERY *sq,
+	OPO_CO *cop,
+	i4 result_baseid);
+static void opj_exchupd_anal(
+	OPS_STATE *global);
+static bool opj_excheval(
+	OPS_SUBQUERY *sq,
+	OPO_CO *cop,
+	OPO_CO **pcopp,
+	EXCHDESC *exchp,
+	i4 *exchpixp,
+	i4 level,
+	bool force_exch);
+static void opj_exchunion(
+	OPS_STATE *global,
+	EXCHDESC *exchp,
+	OPV_VARS *varp,
+	i4 *exchpixp,
+	i4 level,
+	i4 *ucount,
+	OPO_COST *ureduction,
+	bool force_exch);
+static void opj_exchadd(
+	OPS_STATE *global,
+	EXCHDESC *exchp,
+	i4 exchcount);
+static void opj_partvarco(
+	OPS_SUBQUERY *sq,
+	OPO_CO *cop);
+static void opj_partvars(
+	OPS_STATE *global);
+void opj_joinop(
+	OPS_STATE *global);
 
 /*}
 ** Name: OPJ_MASTATE - control block used to modify CO tree
@@ -141,9 +275,8 @@
 ** History:
 **      28-apr-88 (seputis)
 **          initial creation
-[@history_template@]...
 */
-typedef struct _OPJ_MASTATE
+struct _OPJ_MASTATE
 {
     OPS_SUBQUERY    *opj_subquery;      /* current subquery */
     i4              opj_nodeid;         /* next available ID for
@@ -165,7 +298,7 @@ typedef struct _OPJ_MASTATE
     OPL_BMOJ	    opj_ojinnermap;	/* used to build map of outer joins
 					** which have at least one join
 					** node within this subtree */
-} OPJ_MASTATE;
+};
 
 /*}
 ** Name: EXCHDESC	- control block used to augment QEP with 
@@ -180,9 +313,8 @@ typedef struct _OPJ_MASTATE
 **	    Written (for parallel query processing support).
 **	24-May-2005 (schka24)
 **	    Rename index -> level.
-[@history_template@]...
 */
-typedef struct _EXCHDESC
+struct _EXCHDESC
 {
     OPO_CO	**exch_parent;	/* ptr to ptr to parent of prospective
 				** exchange node */
@@ -197,79 +329,11 @@ typedef struct _EXCHDESC
 				** FALSE - entry is for inner subtree */
     bool	exch_pr;	/* TRUE - exch is ABOVE PR node */
     bool	exch_un;	/* TRUE - exch is ABOVE a union */
-} EXCHDESC;
+};
 
 #define OPJ_TJOINPRESORT_THRESHOLD 10000
 #define OPJ_KJOINPRESORT_THRESHOLD 5000
 
-static bool
-opj_usehashjoin( OPS_SUBQUERY *subquery );
-
-static VOID
-opj_hintinit(
-	OPS_SUBQUERY	*subquery);
-
-static bool
-opj_ckhasheqc(
-	OPS_SUBQUERY	*sq,
-	OPE_IEQCLS	sjeqc);
-
-static VOID
-opj_partition(
-	OPS_STATE	*global);
-
-static VOID
-opj_partanal(
-	OPS_SUBQUERY	*sq,
-	OPO_CO		*cop,
-	OPV_PCJDESC	**pcjdpp,
-	i4		*gcount,
-	bool		*istable);
-
-static VOID
-opj_partpushg(
-	OPO_CO	*cop,
-	OPV_PCJDESC *pcjdp,
-	i4	gcount);
-
-static void opj_partagg(
-	OPS_SUBQUERY *sq,
-	OPV_PCJDESC *pcjdp,
-	i4	gcount);
-
-static VOID
-opj_exchange(
-	OPS_STATE	*global);
-
-static void opj_exchupd_anal(
-	OPS_STATE	*global);
-
-static bool
-opj_excheval(
-	OPS_SUBQUERY	*sq,
-	OPO_CO		*cop,
-	OPO_CO		**pcopp,
-	EXCHDESC	*exchp,
-	i4		*exchpixp,
-	i4		level,
-        bool            force_exch);
-
-static VOID
-opj_exchunion(
-	OPS_STATE	*global,
-	EXCHDESC	*exchp,
-	OPV_VARS	*varp,
-	i4		*exchpixp,
-	i4		level,
-	i4		*ucount,
-	OPO_COST	*ureduction,
-        bool            force_exch);
-
-static VOID
-opj_exchadd(
-	OPS_STATE	*global,
-	EXCHDESC	*exchp,
-	i4		exchcount);
 
 /*{
 ** Name: opj_minop	- optimize MIN aggregate
@@ -2140,7 +2204,6 @@ opl_findiftrue(
     bool	first_time;
     OPB_BFT	*bfbase;
     OPB_IBF	ibf;
-    OPB_BOOLFACT *bfp;
     OPB_IBF	maxbf;
     OPB_BMBF	*bfbmp;
     OPL_OJT	*lbase;
@@ -2315,7 +2378,6 @@ opl_insertiftrue(
 	if ((*qnodepp)->pst_sym.pst_type == PST_VAR)
 	{
 	    OPE_IEQCLS	    special_eqcls;
-	    OPZ_IATTS	    attr;
 
 	    special_eqcls = subquery->ops_vars.opv_base->opv_rt
 		[(*qnodepp)->pst_sym.pst_value.pst_s_var.pst_vno]->opv_ojeqc;
@@ -2698,9 +2760,6 @@ opj_maordering(
     OPO_CO	*innerp;
     OPO_CO	*outerp;
     OPD_ISITE   tempsite;	/* site upon which operation should be performed */
-    bool	corelated;	/* set TRUE if a corelated constant was found
-				** in the set of boolean factors to be evaluated
-				** at this node */
     OPL_OJT     *lbase;         /* ptr to base of outer join descriptor
                                 ** table */
     OPE_IEQCLS  maxeqcls;
@@ -3513,21 +3572,23 @@ opj_uveliminate(
 				** level */
 	}
 #if 0
-/** this ELSE is clearly "false".  I'm leaving it commented out, maybe
-*** someone can figure out what on earth was meant in the first place.
-**	else if ((subquery->ops_next->ops_union == subquery)
-**	    &&
-**	    (subquery->ops_next->ops_root->pst_sym.
-**		pst_value.pst_s_root.pst_union.pst_dups == PST_NODUPS)
-**	    &&
-**	    (subquery->ops_next->ops_root->pst_sym.
-**		pst_value.pst_s_root.pst_union.pst_dups == PST_ALLDUPS)
-**	    )
-**	    /* the remaining case is one in which the next partition has
-**	    ** duplicates to be removed but it is not isolated to exactly
-**	    ** one partition */
-**	    subquery->ops_next->ops_root->pst_sym.
-**		pst_value.pst_s_root.pst_union.pst_dups = PST_ALLDUPS;
+/*
+** this ELSE is clearly "false".  I'm leaving it commented out, maybe
+** someone can figure out what on earth was meant in the first place.
+*/
+	else if ((subquery->ops_next->ops_union == subquery)
+	    &&
+	    (subquery->ops_next->ops_root->pst_sym.
+		pst_value.pst_s_root.pst_union.pst_dups == PST_NODUPS)
+	    &&
+	    (subquery->ops_next->ops_root->pst_sym.
+		pst_value.pst_s_root.pst_union.pst_dups == PST_ALLDUPS)
+	    )
+	    /* the remaining case is one in which the next partition has
+	    ** duplicates to be removed but it is not isolated to exactly
+	    ** one partition */
+	    subquery->ops_next->ops_root->pst_sym.
+		pst_value.pst_s_root.pst_union.pst_dups = PST_ALLDUPS;
 #endif
 
     if (subquery->ops_next->ops_union == subquery)
@@ -3592,58 +3653,6 @@ opj_uveliminate(
 	subquery = subquery->ops_union; /* mark actual head
 				** of union view */
     }
-}
-
-/*{
-** Name: OPJ_USEHASHJOIN - check whether hash join is in use
-**
-** Description:
-**	This function examines the hash join startup parameter and OP162
-**	trace point to determine whether hash joins should be used.
-**	The config.dat parameter turns "opf_hash_join" ON and OFF, and
-**	the trace point toggles the run-time behavior.
-**
-** Inputs:
-**	subquery - Subquery state info.  
-**
-** Outputs:
-**
-**	Returns:
-**	    TRUE - if hash joins should be used
-**	    FALSE - if hash joins should NOT be used
-**	Exceptions:
-**	    none
-**
-** Side Effects:
-**	    none
-**
-** History:
-**	16-jul-02 (toumi01)
-**	    Created
-**	11-june-03 (inkdo01)
-**	    Add support of "set [no]hash" statement.
-**	10-sep-04 (inkdo01)
-**	    Remove op162 as hash toggle, now equivalent to
-**	    SET PARALLEL
-**	3-feb-06 (dougi)
-**	    Add support for override hints.
-[@history_template@]...
-*/
-static bool
-opj_usehashjoin( OPS_SUBQUERY *subquery )
-{
-    bool use_hash_join_config = FALSE;
-    bool use_hash_join_trace  = FALSE;
-    bool use_hash_join;
-
-    if (subquery->ops_global->ops_cb->ops_alter.ops_hash)
-	use_hash_join_config = TRUE;
-    use_hash_join = ( use_hash_join_config != use_hash_join_trace );
-    if (subquery->ops_global->ops_cb->ops_override & PST_HINT_HASH)
-	use_hash_join = TRUE;
-    else if (subquery->ops_global->ops_cb->ops_override & PST_HINT_NOHASH)
-	use_hash_join = FALSE;
-    return(use_hash_join);
 }
 
 /*{
@@ -6287,7 +6296,8 @@ opj_excheval(
 	}
 
 	/* Else, different computations depending on join type. */
-	switch (cop->opo_variant.opo_local->opo_jtype) {
+	switch (cop->opo_variant.opo_local->opo_jtype)
+	{
 	  case OPO_SJKEY:
 	  case OPO_SJTID:
 	    /* Key and TID joins effectively only have one input -
@@ -6340,6 +6350,8 @@ opj_excheval(
 		tro = 0.0;
 	    if (inner_noexch)
 		tri = 0.0;
+	    break;
+	  default:
 	    break;
 	}
 	break;

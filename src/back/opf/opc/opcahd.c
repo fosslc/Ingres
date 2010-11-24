@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -78,7 +78,6 @@
 **      QEF_AHD then opc_adf_build() and opc_qnode_build() will be called.
 **
 **          opc_ahd_build() - Entry point for building QEF_AHD structs
-[@func_list@]...
 **
 **
 **  History:
@@ -358,181 +357,232 @@
 **	    Parser now generates a DMU_CB for create as well as create table
 **	    as select (and quel retinto);  DMU characteristics are in a
 **	    sub-structure, simplifies code generation.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/*
-**  Forward and/or External function references.
-*/
 
-static VOID
-opc_build_call_deferred_proc_ahd(
-    OPS_STATE	*global,
-    QEF_AHD	*proc_insert_ahd);
-
-static QEF_AHD *	
-opc_qepahd(
-	OPS_STATE   *global,
-	QEF_AHD	    **proj_ahd );
-
-static void
-opc_keyset_build(
-	OPS_STATE   *global,
-	QEF_AHD	    *ahd,
-	OPC_NODE    *cnode);
-
-static OPO_CO *
-opc_keyset_co(
-	OPO_CO	*cop,
+/* TABLE OF CONTENTS */
+void opc_ahd_build(
+	OPS_STATE *global,
+	QEF_AHD **pahd,
+	QEF_AHD **proj_ahd);
+static QEF_AHD *opc_qepahd(
+	OPS_STATE *global,
+	QEF_AHD **proj_ahd);
+static void opc_keyset_build(
+	OPS_STATE *global,
+	QEF_AHD *ahd,
+	OPC_NODE *cnode);
+static OPO_CO *opc_keyset_co(
+	OPO_CO *cop,
 	OPS_SUBQUERY *subquery,
-	i4	resvno,
-	i4	*rowsz);
-
-static VOID
-opc_saggopt(
-        OPS_SUBQUERY *sq,
-	QEF_AHD      *ahd,
-	PST_QNODE    *root);
-
-static QEF_AHD *
-opc_dmuahd(
-	OPS_STATE   *global,
-	i4	    dmu_func,
-	PST_QTREE   *qtree,
-	OPV_IGVARS  gresvno);
-
-static QEF_AHD *
-opc_dmtahd(
-	OPS_STATE   *global,
-	PST_QNODE   *root,
-	i4	    flags_mask,
-	OPV_IGVARS  gresvno );
-
-static QEF_AHD *	
-opc_rupahd(
-	OPS_STATE   *global );
-
-static QEF_AHD *	
-opc_rdelahd(
-	OPS_STATE   *global );
-
-static i4
-opc_cposition(
-	OPS_STATE	*global,
-	OPO_CO		*co,
-	OPV_IVARS	lresno);
-
-static i4
-opc_btmleft_dmrcbno(
-	OPS_STATE   *global,
-	QEN_NODE    * qen);
-
-static VOID
-opc_addrules(
-	OPS_STATE   *global,
-	QEF_AHD	    *ahd,
-	RDR_INFO    *rel );
-
-static void
-opc_gtrowno(
-	OPS_STATE	*global,
-	QEF_QEP		*qhd,
-	QEN_NODE	*qn,
-	QEF_VALID	*valid );
-
-static VOID
-opc_gtt_proc_parm(
-    OPS_STATE	*global,
-    QEF_AHD	*ahd,
-    PST_TAB_NODE *tabnode);
-
-static void 
-opc_copy_info(
-	OPS_STATE	       *global,
-        PST_INFO               *pst_info,
-        PST_INFO               **target_info);
-
-static VOID
-copyIntegrityDetails(
-		OPS_STATE			*global,
-		PST_CREATE_INTEGRITY		*psfDetails,
-		QEF_CREATE_INTEGRITY_STATEMENT	*qefDetails );
-
-static VOID
-allocateAndCopyStruct(
-		OPS_STATE	*global,
-		PTR		source,
-		PTR		*target,
-		i4		size );
-
-static VOID
-allocateAndCopyColumnList(
-		OPS_STATE	*global,
-		PST_COL_ID	*source,
-		PST_COL_ID	**target );
-
-static VOID
-opc_alloc_and_copy_QEUQ_CB(
-	OPS_STATE       *global,
-	QEUQ_CB		*source,
-	QEUQ_CB         **target,
-	i4		action);
-
-static VOID
-allocate_and_copy_QEUCB(
-		OPS_STATE	*global,
-		QEU_CB		*source,
-		QEU_CB		**target );
-
-static VOID
-allocate_and_copy_DMUCB(
-		OPS_STATE	*global,
-		DMU_CB		*source,
-		DMU_CB		**target,
-		bool		copy_keys,
-		bool		copy_atts);
-
-static VOID
-allocate_and_copy_a_dm_data(
-		OPS_STATE	*global,
-		DM_DATA		*source,
-		DM_DATA		*target );
-static VOID
-allocate_and_copy_a_dm_ptr(
-		OPS_STATE	*global,
-		i4		flags,
-		DM_PTR		*source,
-		DM_PTR		*target );
-static VOID
-opc_updcolmap(
-		OPS_STATE	*global,
-		QEF_QEP		*upd_ahd,
-		PST_QNODE	*setlist,
-		DB_PART_DEF	*partp);
-
-/* Full partition copy including all value text, partition names */
-static VOID opc_full_partdef_copy(
-	OPS_STATE	*global,
-	DB_PART_DEF	*pdefp,
-	i4		pdefsize,
-	DB_PART_DEF	**outppp);
-
-static DB_STATUS opc_qsfmalloc(
+	i4 resvno,
+	i4 *rowsz);
+static void opc_saggopt(
+	OPS_SUBQUERY *sq,
+	QEF_AHD *ahd,
+	PST_QNODE *root);
+static i4 opc_cposition(
+	OPS_STATE *global,
+	OPO_CO *co,
+	OPV_IVARS lresno);
+static i4 opc_btmleft_dmrcbno(
+	OPS_STATE *global,
+	QEN_NODE *qen);
+static void opc_gtrowno(
+	OPS_STATE *global,
+	QEF_QEP *qhd,
+	QEN_NODE *qn,
+	QEF_VALID *valid);
+#ifdef xDEV_TEST
+static VOID opc_chktarget(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	PST_QNODE *root);
+#endif /* xDEV_TEST */
+static QEF_AHD *opc_dmuahd(
+	OPS_STATE *global,
+	i4 dmu_func,
+	PST_QTREE *qtree,
+	OPV_IGVARS gresvno);
+static QEF_AHD *opc_dmtahd(
+	OPS_STATE *global,
+	PST_QNODE *root,
+	i4 flags_mask,
+	OPV_IGVARS gresvno);
+static QEF_AHD *opc_rupahd(
+	OPS_STATE *global);
+static QEF_AHD *opc_rdelahd(
+	OPS_STATE *global);
+void opc_dvahd_build(
+	OPS_STATE *global,
+	PST_DECVAR *decvar);
+void opc_ifahd_build(
+	OPS_STATE *global,
+	QEF_AHD **pahd);
+void opc_forahd_build(
+	OPS_STATE *global,
+	QEF_AHD **pahd);
+void opc_rtnahd_build(
+	OPS_STATE *global,
+	QEF_AHD **pahd);
+void opc_msgahd_build(
+	OPS_STATE *global,
+	QEF_AHD **pahd);
+void opc_cmtahd_build(
+	OPS_STATE *global,
+	QEF_AHD **pahd);
+void opc_rollahd_build(
+	OPS_STATE *global,
+	QEF_AHD **pahd);
+void opc_emsgahd_build(
+	OPS_STATE *global,
+	QEF_AHD **new_ahd);
+void opc_cpahd_build(
+	OPS_STATE *global,
+	QEF_AHD **pahd);
+static void opc_gtt_proc_parm(
+	OPS_STATE *global,
+	QEF_AHD *ahd,
+	PST_TAB_NODE *tabnode);
+void opc_build_cp_attribute_list(
+	OPS_STATE *global,
+	DB_TAB_ID *procedureID,
+	DMF_ATTR_ENTRY **p_attr_list[],
+	i4 *p_offset_list[]);
+void opc_build_proc_insert_ahd(
+	OPS_STATE *global,
+	QEF_AHD **pahd);
+void opc_attach_ahd_to_trigger(
+	OPS_STATE *global,
+	QEF_AHD *new_ahd);
+static void opc_build_call_deferred_proc_ahd(
+	OPS_STATE *global,
+	QEF_AHD *proc_insert_ahd);
+void opc_build_closetemp_ahd(
+	OPS_STATE *global,
+	QEF_AHD *proc_insert_ahd);
+void opc_deferred_cpahd_build(
+	OPS_STATE *global,
+	QEF_AHD **pahd);
+void opc_iprocahd_build(
+	OPS_STATE *global,
+	QEF_AHD **pahd);
+void opc_rprocahd_build(
+	OPS_STATE *global,
+	QEF_AHD **pahd);
+static void opc_addrules(
+	OPS_STATE *global,
+	QEF_AHD *ahd,
+	RDR_INFO *rel);
+void opc_eventahd_build(
+	OPS_STATE *global,
+	QEF_AHD **new_ahd);
+void opc_shemaahd_build(
+	OPS_STATE *global,
+	QEF_AHD **sahd);
+void opc_eximmahd_build(
+	OPS_STATE *global,
+	QEF_AHD **new_ahd);
+static void opc_copy_info(
+	OPS_STATE *global,
+	PST_INFO *pst_info,
+	PST_INFO **target_info);
+void opc_createTableAHD(
+	OPS_STATE *global,
+	QEU_CB *createTableQEUCB,
+	i4 IDrow,
+	QEF_AHD **new_ahd);
+void opc_renameAHD(
+	OPS_STATE *global,
+	PST_STATEMENT *pst_statement,
+	i4 IDrow,
+	QEF_AHD **new_ahd);
+void opc_createIntegrityAHD(
+	OPS_STATE *global,
+	PST_STATEMENT *pst_statement,
+	i4 IDrow,
+	QEF_AHD **new_ahd);
+static void copyIntegrityDetails(
+	OPS_STATE *global,
+	PST_CREATE_INTEGRITY *psfDetails,
+	QEF_CREATE_INTEGRITY_STATEMENT *qefDetails);
+static void allocateAndCopyStruct(
+	OPS_STATE *global,
+	PTR source,
+	PTR *target,
+	i4 size);
+static void allocateAndCopyColumnList(
+	OPS_STATE *global,
+	PST_COL_ID *source,
+	PST_COL_ID **target);
+static void allocate_and_copy_QEUCB(
+	OPS_STATE *global,
+	QEU_CB *source,
+	QEU_CB **target);
+static void opc_supress_qryTxt(
+	QEF_DATA *tuplesPtr,
+	PTR targetTxt);
+void opc_crt_view_ahd(
+	OPS_STATE *global,
+	PST_STATEMENT *pst_statement,
+	i4 IDrow,
+	QEF_AHD **new_ahd);
+void opc_d_integ(
+	OPS_STATE *global,
+	PST_STATEMENT *pst_statement,
+	QEF_AHD **new_ahd);
+static void opc_alloc_and_copy_QEUQ_CB(
+	OPS_STATE *global,
+	QEUQ_CB *source,
+	QEUQ_CB **target,
+	i4 action);
+static void allocate_and_copy_DMUCB(
+	OPS_STATE *global,
+	DMU_CB *source,
+	DMU_CB **target,
+	bool copy_keys,
+	bool copy_attrs);
+static void allocate_and_copy_a_dm_data(
+	OPS_STATE *global,
+	DM_DATA *source,
+	DM_DATA *target);
+static void allocate_and_copy_a_dm_ptr(
+	OPS_STATE *global,
+	i4 flags,
+	DM_PTR *source,
+	DM_PTR *target);
+i4 opc_pagesize(
+	OPG_CB *opg_cb,
+	OPS_WIDTH width);
+static void opc_updcolmap(
+	OPS_STATE *global,
+	QEF_QEP *upd_ahd,
+	PST_QNODE *setlist,
+	DB_PART_DEF *partp);
+void opc_partdef_copy(
+	OPS_STATE *global,
+	DB_PART_DEF *pdefp,
+	PTR (*getmem)(OPS_STATE *, i4),
+	DB_PART_DEF **outppp);
+void opc_partdim_copy(
+	OPS_STATE *global,
+	DB_PART_DEF *pdefp,
+	u_i2 dimno,
+	DB_PART_DIM **outppp);
+static void opc_full_partdef_copy(
+	OPS_STATE *global,
+	DB_PART_DEF *pdefp,
+	i4 pdefsize,
+	DB_PART_DEF **outppp);
+static i4 opc_qsfmalloc(
 	OPS_STATE *global,
 	i4 psize,
 	void *pptr);
-
 static void opc_loadopt(
 	OPS_STATE *global,
 	QEF_AHD *ahd,
 	QEF_VALID *valid);
-
-#ifdef xDEV_TEST
-static VOID
-opc_chktarget(
-	OPS_STATE   *global,
-	OPC_NODE    *cnode,
-	PST_QNODE   *root );
-#endif /* xDEV_TEST */
 
 /*
 **  Defines of other constants.
@@ -608,8 +658,6 @@ opc_ahd_build(
     QEF_AHD	*ahd = NULL;
     QEF_AHD	*ahd_list = NULL;
     QEF_VALID	**retinto_alt = NULL;
-    i4		compressed;
-    i4		index_compressed;
     i4		storage_type;
     OPV_GRV	*grv;
     i4		journaled;
@@ -991,7 +1039,6 @@ opc_qepahd(
     i4			cpos_ret;
     i4			unspec_updtmode;
     i4			res_dmrcbno;
-    bool	    pcolsupd = FALSE;
 
     /* First, lets allocate the action header */
     ahd = sq->ops_compile.opc_ahd = 
@@ -1894,7 +1941,7 @@ opc_keyset_build(
     OPE_IEQCLS	eqcno;
     i4		kcnt, rcnt, memsize, evsize, rowsz, rrowsz, rowno;
     i4		*koff1, *koff2;
-    i4		off1, off2;
+    i4		off1;
     i4		i;
 
 
@@ -2976,7 +3023,7 @@ opc_dmuahd(
 	    DB_PART_DIM	*wdimp;
 	    DB_PART_LIST *part_entryp;
 	    i4 nparts;
-	    i4	i, j;
+	    i4	i;
 
 	    /* If this is "create table ... as select ...", we must 
 	    ** first fill "row_offset" values into the faked up
@@ -3530,7 +3577,6 @@ opc_rupahd(
     RDR_INFO		*rel;
     PST_QNODE		*root = global->ops_qheader->pst_qtree;
     OPC_PST_STATEMENT	*opc_pst;
-    bool		pcolsupd = FALSE;
 
     /* First, lets allocate the action header */
     ahd = global->ops_cstate.opc_subqry->ops_compile.opc_ahd = 
@@ -3767,7 +3813,6 @@ opc_rdelahd(
     QEF_VALID		*vl;
     DB_STATUS		status;
     RDR_INFO		*rel;
-    PST_QNODE		*root = global->ops_qheader->pst_qtree;
     OPC_PST_STATEMENT	*opc_pst;
 
     /* First, lets allocate the action header */
@@ -4215,9 +4260,6 @@ opc_forahd_build(
 		OPS_STATE	*global,
 		QEF_AHD		**pahd)
 {
-    i4			ninstr, nops, nconst;
-    i4			szconst;
-    i4			max_base;
     OPC_ADF		cadf;
     OPC_PST_STATEMENT	*opc_pst;
     QEF_AHD		*ahd;
@@ -5435,7 +5477,7 @@ opc_build_cp_attribute_list(
 
     tuples_to_fill = (i4) ptuple->db_parameterCount;
     /* if (tuples_to_fill == 0)
-	opx_error(E_OP0880_NOT_READY); /* To be general purpose should allow this */
+	opx_error(E_OP0880_NOT_READY); */ /* To be general purpose should allow this */
     attr_list = *p_attr_list = (DMF_ATTR_ENTRY **)
 	opu_qsfmem(global, sizeof(DMF_ATTR_ENTRY *) * tuples_to_fill);
     offset_list = *p_offset_list = (i4 *)
@@ -6417,6 +6459,8 @@ opc_addrules(
 		    global->ops_cstate.opc_bef_tid;
 	    
 		break;
+	    default:
+		break;
 	}
 
 	/* Do some bookkeeping so that OPC has enough information to	    */
@@ -6543,6 +6587,8 @@ opc_eventahd_build(
 	break;
       case PST_EVRAISE_TYPE:
 	ahd->ahd_atype = QEA_EVRAISE;
+	break;
+      default:
 	break;
     }
 
@@ -8740,7 +8786,6 @@ opc_pagesize(
         OPG_CB          *opg_cb,
         OPS_WIDTH       width)
 {
-        DB_STATUS       status;
         i4         page_sz, pagesize;
         i4             i;
         OPO_TUPLES	noofrow, prevnorow;

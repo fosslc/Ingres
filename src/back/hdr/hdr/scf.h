@@ -307,6 +307,8 @@
 **      12-Aug-2010 (horda03) b124109
 **          Added SCI_PARENT_SCB to obtain a factotum thread's (ultimate) parent
 **          SCI_SCB information.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Moved sca.h function prototypes here for exposure to DMF.
 */
 
 /*
@@ -1802,6 +1804,30 @@ typedef struct _SCF_TD_CB
 /* Function externs */
 
 FUNC_EXTERN STATUS scf_call( i4 operation, SCF_CB *cb );
+FUNC_EXTERN STATUS scs_avformat(void);
+
+FUNC_EXTERN STATUS sca_trace(
+			i4	dispose_mask,
+			i4	length,
+			char	*message );
+
+/* Moved here from sca.h for exposure to DMF */
+FUNC_EXTERN STATUS sca_add_datatypes(
+			void		*scb,
+			PTR		adf_svcb,
+			i4		adf_size,
+			i4		deallocate_flag,
+			DB_ERROR	*dberr,
+			PTR		*new_svcb,
+			i4		*new_size );
+
+FUNC_EXTERN i4 sca_check(
+			i4		major_id,
+			i4		minor_id );
+
+FUNC_EXTERN VOID sca_obtain_id(
+			i4		*major_id,
+			i4		*minor_id );
 
 /* Factotum thread entry and termination function externs: */
 

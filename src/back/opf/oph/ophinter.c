@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -74,8 +74,25 @@
 **	1-may-97 (inkdo01)
 **	    Followed through on FIXME to remove float-specific code for 
 **	    EXACTKEY match (should simply return 100%).
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static i4 oph_txtcompare(
+	char *p1,
+	char *p2,
+	DB_DATA_VALUE *datatype);
+OPN_PERCENT oph_interpolate(
+	OPS_SUBQUERY *subquery,
+	PTR minv,
+	PTR maxv,
+	PTR constant,
+	OPB_SARG operator,
+	DB_DATA_VALUE *datatype,
+	OPO_TUPLES cellcount,
+	ADI_OP_ID opno,
+	OPH_HISTOGRAM *hp);
 
 /*{
 ** Name: oph_txtcompare	- special case compare for histogram text items

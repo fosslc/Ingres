@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -162,43 +162,73 @@
 **	    to port to Visual Studio 2009.
 **      21-Sep-2010 (horda03) b124315
 **          Modified opc_resolveif to create a list of all actions.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
-static VOID
-opc_lsparms(
-	OPS_STATE	*global,
-	PST_QNODE	*root );
-
-static VOID
-opc_singleton(
-	OPS_STATE	*global,
-	i4		*status );
-
-static VOID
-opc_resolveif(
-	OPS_STATE	*global,
-	i4		for_depth,
-	PST_STATEMENT	*cur_stmt,
-	PST_STATEMENT	*last_stmt,
-        QEF_AHD         **last_ahd );
-
-static VOID
-opc_mtlist(
-	OPS_STATE   *global,
-	PST_QNODE   *root );
-
-static VOID
-opc_resdom_modifier(
-	OPS_STATE    *global,
-	PST_QNODE    *resdom,
-	i4	     *bits);
-
-VOID
-opc_deferred_cpahd_build(
-    OPS_STATE	*global,
-    QEF_AHD	**pahd);
-
+/* TABLE OF CONTENTS */
+void opc_iqp_init(
+	OPS_STATE *global);
+void opc_cqp_continue(
+	OPS_STATE *global);
+void opc_fqp_finish(
+	OPS_STATE *global);
+static void opc_singleton(
+	OPS_STATE *global,
+	i4 *status);
+PTR opu_qsfmem(
+	OPS_STATE *global,
+	i4 size);
+void opc_ptrow(
+	OPS_STATE *global,
+	i4 *rowno,
+	i4 rowsz);
+void opc_allocateIDrow(
+	OPS_STATE *global,
+	i4 *rowno);
+void opc_ptcparm(
+	OPS_STATE *global,
+	i4 *rowno,
+	i4 rowsz);
+void opc_ptcb(
+	OPS_STATE *global,
+	i4 *cbno,
+	i4 cbsz);
+void opc_pthold(
+	OPS_STATE *global,
+	i4 *holdno);
+void opc_pthash(
+	OPS_STATE *global,
+	i4 *hashno);
+void opc_tempTable(
+	OPS_STATE *global,
+	QEN_TEMP_TABLE **tempTable,
+	i4 tupleSize,
+	OPC_OBJECT_ID **tupleRow);
+void opc_ptsort(
+	OPS_STATE *global,
+	i4 *sortno);
+void opc_ptparm(
+	OPS_STATE *global,
+	PST_QNODE *qconst,
+	i4 rindex,
+	i4 roffset);
+static void opc_lsparms(
+	OPS_STATE *global,
+	PST_QNODE *root);
+static void opc_resolveif(
+	OPS_STATE *global,
+	i4 for_depth,
+	PST_STATEMENT *cur_stmt,
+	PST_STATEMENT *last_stmt,
+	QEF_AHD **last_ahd);
+static void opc_mtlist(
+	OPS_STATE *global,
+	PST_QNODE *root);
+static void opc_resdom_modifier(
+	OPS_STATE *global,
+	PST_QNODE *resdom,
+	i4 *bits);
 
 /*{
 ** Name: OPC_IQP_INIT	- Begin building an entire, complete QEF_QP_CB struct.

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -69,8 +69,80 @@
 **	    Changed 'nat' to 'i4' due to cross-integration.
 **	3-Jun-2009 (kschendel) b122118
 **	    Cleanup: remove unused CCARTPROD flag, dead ojfilter code.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static bool opn_cpartition(
+	OPS_SUBQUERY *subquery,
+	OPN_JTREE *nodep);
+static void opn_rconnected(
+	OPS_SUBQUERY *subquery,
+	OPV_MVARS *connect,
+	OPV_IVARS var,
+	OPV_IVARS *partition,
+	OPV_IVARS maxvar);
+bool opn_cartprod(
+	OPS_SUBQUERY *subquery,
+	OPV_IVARS *partition,
+	OPV_IVARS maxvar,
+	OPV_IVARS keyedvar,
+	bool *notjoinable);
+static bool opn_connected(
+	OPS_SUBQUERY *subquery,
+	OPV_IVARS *partition,
+	OPV_IVARS maxvar,
+	OPV_IVARS keyedvar,
+	bool tidjoin,
+	OPV_BMVARS *ojvarmap);
+static void opn_tjrconnected(
+	OPS_SUBQUERY *subquery,
+	OPV_MVARS *connect,
+	OPV_IVARS var,
+	OPV_IVARS *partition,
+	OPV_IVARS maxvar,
+	OPV_BMVARS *tidjoins);
+static i4 opn_bforks(
+	OPS_SUBQUERY *subquery,
+	OPV_IVARS *partition,
+	OPV_IVARS maxvar,
+	OPV_BMVARS *tidmap);
+bool opn_tjconnected(
+	OPS_SUBQUERY *subquery,
+	OPV_IVARS *partition,
+	OPV_IVARS maxvar,
+	OPV_BMVARS *tidmap,
+	OPN_JTREE *childp);
+static bool opn_ntcheck(
+	OPS_SUBQUERY *subquery,
+	OPV_IVARS *rdpartition,
+	OPV_IVARS rdmaxvar,
+	OPV_IVARS *kdpartition,
+	OPV_IVARS kdmaxvar);
+bool opl_ojverify(
+	OPS_SUBQUERY *subquery,
+	OPZ_BMATTS *attrmap,
+	OPV_BMVARS *vmap,
+	OPL_OUTER *outerp);
+static OPL_IOUTER opl_ojboolplace(
+	OPS_SUBQUERY *subquery,
+	OPV_BMVARS *vmap,
+	OPL_OUTER *outerp);
+static void opl_cartprodcheck(
+	OPS_SUBQUERY *subquery,
+	OPL_OUTER *outerp,
+	OPV_BMVARS **cartprodpp,
+	OPV_BMVARS *cartprodp);
+bool opn_jintersect(
+	OPS_SUBQUERY *subquery,
+	OPN_JTREE *nodep,
+	OPN_STATUS *sigstat);
+bool opn_arl(
+	OPS_SUBQUERY *subquery,
+	OPN_JTREE *nodep,
+	OPN_STLEAVES varset,
+	OPN_STATUS *sigstat);
 
 /*{
 ** Name: opn_cpartition	- generate next partition of set of relations
@@ -2011,8 +2083,6 @@ opn_jintersect(
 	OPL_OJT		    *lbase;	/* ptr to base of outer join descriptor
 					** table */
 	bool		    joinid_found;   /* TRUE if one outer join id found */
-	OPE_BMEQCLS	    joinmap;	/* map of equivalence classes used in join
-					** at this node */
 	OPL_IOUTER	    tidojid;	/* set to most deeply nested outer join id
 					** which still contains the base relation
 					** of the TID join as an inner */
@@ -2378,6 +2448,8 @@ opn_jintersect(
 				    ** and not a tid join so not allowed */
 		    break;
 		}
+		default:
+		    break;
 	        } /* end switch */
 
 		outerchildp = NULL;

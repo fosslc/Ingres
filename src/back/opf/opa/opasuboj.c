@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -67,73 +67,77 @@
 **	    to trawl other parts of the query tree.
 **	21-may-10 (smeke01) b123752
 **	    Change parameter bool newoj to PST_J_ID *pjoinid.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static void opa_subsel_joinid(
+	OPS_STATE *global,
+	PST_QNODE *nodep,
+	PST_J_ID joinid);
+static bool opa_subsel_viewchk(
+	OPS_STATE *global,
+	PST_QNODE *subselp);
+static bool opa_subsel_byheadchk(
+	PST_QNODE *subselp);
+static void opa_notex_transform(
+	OPS_STATE *global,
+	PST_QNODE **nodep,
+	PST_QTREE *header,
+	PST_QNODE *outer_root,
+	PST_QNODE *root,
+	PST_QNODE *inner_root,
+	bool *gotone,
+	PST_J_ID *pjoinid);
+static bool opa_notex_analyze(
+	OPS_STATE *global,
+	PST_QNODE *outer_root,
+	PST_QNODE *inner_root,
+	PST_QNODE *whnode,
+	bool *outer,
+	bool *inner,
+	bool *nested_subsel);
+static void opa_notin_transform(
+	OPS_STATE *global,
+	PST_QNODE **nodep,
+	PST_QTREE *header,
+	PST_QNODE *outer_root,
+	PST_QNODE *root,
+	PST_QNODE *bopp,
+	bool *gotone,
+	PST_J_ID *pjoinid);
+static bool opa_notin_analyze(
+	OPS_STATE *global,
+	PST_QNODE *root,
+	PST_QNODE *opp);
+static void opa_subsel_search(
+	OPS_STATE *global,
+	PST_QNODE **nodep,
+	PST_QTREE *header,
+	PST_QNODE *outer_root,
+	PST_QNODE *root,
+	bool *gotone,
+	PST_J_ID *pjoinid);
+static void opa_subsel_to_oj1(
+	OPS_STATE *global,
+	PST_QNODE *outer_root,
+	bool *gotone);
+static void opa_process_one_qnode(
+	OPS_STATE *global,
+	PST_QNODE *root,
+	bool *gotone);
+void opa_subsel_to_oj(
+	OPS_STATE *global,
+	bool *gotone);
+
+OPV_DEFINE_STK_FNS(node, PST_QNODE**);
+
 
 /* Static variables and other such stuff. */
 
 static DB_DATA_VALUE	tid_dv = {NULL, DB_TID8_LENGTH, DB_INT_TYPE, 0, -1};
 static DB_ATT_ID	tid_att = { 0 };
-static char		tid_name[] = {'t', 'i', 'd'};
-
-static void
-opa_subsel_joinid(
-	OPS_STATE	   *global,
-	PST_QNODE	   *nodep,
-	PST_J_ID	   joinid);
-
-static void
-opa_notex_transform(
-	OPS_STATE	   *global,
-	PST_QNODE	   **nodep,
-	PST_QTREE	   *header,
-	PST_QNODE	   *outer_root,
-	PST_QNODE	   *root,
-	PST_QNODE	   *inner_root,
-	bool		   *gotone,
-	PST_J_ID	   *pjoinid);
-
-static bool
-opa_notex_analyze(
-	OPS_STATE	   *global,
-	PST_QNODE	   *outer_root,
-	PST_QNODE	   *inner_root,
-	PST_QNODE	   *whnode,
-	bool		   *outer,
-	bool		   *inner,
-	bool		   *nested_subsel);
-	
-static void
-opa_notin_transform(
-	OPS_STATE	   *global,
-	PST_QNODE	   **nodep,
-	PST_QTREE	   *header,
-	PST_QNODE	   *outer_root,
-	PST_QNODE	   *root,
-	PST_QNODE	   *bopp,
-	bool		   *gotone,
-	PST_J_ID	   *pjoinid);
-
-static bool
-opa_notin_analyze(
-	OPS_STATE	   *global,
-	PST_QNODE	   *root,
-	PST_QNODE	   *opp);
-	
-static VOID
-opa_subsel_search(
-	OPS_STATE	   *global,
-	PST_QNODE	   **nodep,
-	PST_QTREE	   *header,
-	PST_QNODE	   *outer_root,
-	PST_QNODE	   *root,
-	bool		   *gotone,
-	PST_J_ID	   *pjoinid);
-
-static VOID
-opa_process_one_qnode(
-	OPS_STATE	   *global,
-	PST_QNODE	   *root,
-	bool		   *gotone);
 
 
 /*{
@@ -402,7 +406,7 @@ opa_notex_transform(
 	PST_J_ID	   *pjoinid)
 
 {
-    PST_QNODE	*andp, *varp, *opp;
+    PST_QNODE	*andp, *opp;
     OPV_IGVARS	varno;
     PST_J_ID	joinid;
     i4		ocnt = outer_root->pst_sym.pst_value.pst_s_root.pst_tvrc;
@@ -628,7 +632,7 @@ opa_notex_analyze(
     {
       case PST_AND:
       /* case PST_OR: */
-	/*	*outer = *inner = FALSE;	/* init flags for analysis */
+	/*	*outer = *inner = FALSE;	*/ /* init flags for analysis */
 	opa_notex_analyze(global, outer_root, inner_root,
 		whnode->pst_left, outer, inner, nested_subsel);
 					/* recurse down left side */
@@ -765,7 +769,7 @@ opa_notin_transform(
 	PST_J_ID	   *pjoinid)
 
 {
-    PST_QNODE	*andp, *varp, *opp;
+    PST_QNODE	*andp, *opp;
     PST_QNODE	*inner_root = bopp->pst_right;	/* PST_SUBSEL ptr */
     OPV_IGVARS	varno;
     PST_J_ID	joinid;
@@ -1202,6 +1206,8 @@ opa_subsel_search(
 	    nodep = &(*nodep)->pst_right;
 					/* iterate down right */
 	    continue;
+	default:
+	    break;
 	}    /* end of switch */
 
 	break;				/* everything else exits loop */
@@ -1247,7 +1253,7 @@ opa_subsel_search(
 **	    Make sure that the same joinid(s) is/are used for any 
 **	    repeat copies of the AGHEAD WHERE clause.
 */
-VOID
+static VOID
 opa_subsel_to_oj1(
 	OPS_STATE	*global,
 	PST_QNODE	*outer_root,
@@ -1280,18 +1286,18 @@ opa_subsel_to_oj1(
     save_joinid = joinid = header->pst_numjoins;
     if (outer_root->pst_sym.pst_value.pst_s_root.pst_qlang == DB_SQL)
     {
-	OPV_STKDECL
+	OPV_STK stk;
 	PST_QNODE *resdom;
 
-	OPV_STKINIT
+	OPV_STK_INIT(stk, global);
 	for (resdom = outer_root->pst_left;
 		resdom && resdom->pst_sym.pst_type == PST_RESDOM;
 		resdom = resdom->pst_left)
 	{
-	    PST_QNODE *node = resdom->pst_right;
+	    PST_QNODE **nodep = &resdom->pst_right, *node;
 	    bool descend = TRUE;
 
-	    while (node)
+	    while (nodep && (node = *nodep))
 	    {
                 if (descend)
                 {
@@ -1305,24 +1311,24 @@ opa_subsel_to_oj1(
                     else if (node->pst_left)
                     {
                         /* Delay node evaluation */
-                        OPV_STKPUSH(node);
+                        opv_push_node(&stk, nodep);
                         if (node->pst_right)
                         {
                             /* Delay RHS */
-                            OPV_STKPUSH(node->pst_right);
+                            opv_push_node(&stk, &node->pst_right);
                             if (node->pst_right->pst_right ||
                                         node->pst_right->pst_left)
                                 /* Mark that the top node needs descending */
-                                OPV_STKPUSH((PST_QNODE*)TRUE);
+                                opv_push_node(&stk, OPV_DESCEND_MARK);
                         }
-                        node = node->pst_left;
+                        nodep = &node->pst_left;
                         continue;
                     }
                     else if (node->pst_right)
                     {
                         /* Delay node evaluation */
-                        OPV_STKPUSH(node);
-                        node = node->pst_right;
+                        opv_push_node(&stk, nodep);
+                        nodep = &node->pst_right;
                         continue;
                     }
                 }
@@ -1338,14 +1344,16 @@ opa_subsel_to_oj1(
 		case PST_SUBSEL:
 		    opa_subsel_to_oj1(global, node, gotone);
 		    break;
-		}
-                node = (PST_QNODE*)OPV_STKPOP();
-		if (node == NULL)
+		default:
 		    break;
-                if (descend = (node == (PST_QNODE*)TRUE))
-                   node = (PST_QNODE*)OPV_STKPOP();
+		}
+                nodep = opv_pop_node(&stk);
+		if (nodep == NULL)
+		    break;
+                if (descend = (nodep == OPV_DESCEND_MARK))
+                   nodep = opv_pop_node(&stk);
 	    }
-	    OPV_STKRESET
+	    opv_pop_all(&stk);
 	}
     }
 }
@@ -1389,7 +1397,7 @@ opa_process_one_qnode(
 	PST_QNODE	   *root,
 	bool		   *gotone)
 {
-    PST_QNODE	*outer_root, *resdom;
+    PST_QNODE	*outer_root;
 
     /* This function simply loops over the union'ed selects in the query's
     ** parse tree, calling the transformation functions for each. */

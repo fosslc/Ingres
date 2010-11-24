@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -88,122 +88,116 @@
 **	18-Aug-2009 (drivi01)
 **	    Cleanup warnings and precedence warnings in efforts
 **	    to port to Visual Studio 2008.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static void opa_mapvar(
+	OPS_STATE *global,
+	OPZ_BMATTS *joinmap,
+	OPZ_BMATTS *covarmap,
+	OPZ_BMATTS *lvarmap,
+	OPV_IGVARS localvar,
+	OPV_IGVARS covar,
+	PST_QNODE *qnodep,
+	bool and_node);
+static void opa_rename(
+	OPS_SUBQUERY *subquery,
+	OPV_IGVARS localvar,
+	OPV_IGVARS covar,
+	PST_QNODE *qnodep,
+	bool and_node);
+static void opa_varsub(
+	OPS_STATE *global);
+static void opa_ptids(
+	OPS_STATE *global);
+static void opa_push(
+	OPS_STATE *global);
+static bool opa_pushandcheck(
+	OPS_STATE *global,
+	OPS_SUBQUERY *aggsq,
+	PST_QNODE *groupp,
+	PST_QNODE **nodep,
+	OPV_IGVARS aggvar,
+	OPV_GBMVARS *varmap);
+static bool opa_pushcheck(
+	OPS_STATE *global,
+	PST_QNODE *groupp,
+	PST_QNODE **nodep,
+	OPV_IGVARS aggvar,
+	OPV_GBMVARS *varmap,
+	bool *gotvar);
+static void opa_pushchange(
+	OPS_STATE *global,
+	PST_QNODE *groupp,
+	PST_QNODE **nodep);
+static void opa_noaggs(
+	OPS_STATE *global);
+static bool opa_suckdriver(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subquery,
+	OPS_SUBQUERY **mainsq,
+	bool toplevel,
+	bool *isunion);
+static void opa_suck(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subquery,
+	OPS_SUBQUERY *msq);
+static bool opa_suckandcheck(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subquery,
+	PST_QNODE **nodep,
+	PST_QNODE **vararray,
+	bool *tidyvars);
+static bool opa_suckrestrict(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *nodep,
+	PST_QNODE **vararray);
+static void opa_suckeqc(
+	OPS_STATE *global,
+	OPV_IGVARS aggvar,
+	PST_QNODE **vararray,
+	PST_QNODE *resdomp,
+	PST_QNODE **nodep,
+	bool firstcall,
+	OPS_SUBQUERY *subquery);
+static bool opa_suckcheck(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subquery,
+	PST_QNODE **nodep,
+	PST_QNODE **vararray,
+	bool *gotvar);
+static void opa_suckchange(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subquery,
+	PST_QNODE **nodep,
+	PST_QNODE **vararray);
+static void opa_sucktidyvars(
+	PST_QNODE *nodep);
+static void opa_predicate_check(
+	PST_QNODE **andp,
+	PST_QNODE **parent,
+	bool looking_left);
+static void opa_hashagg(
+	OPS_STATE *global);
+static bool opa_tproc_check(
+	OPS_STATE *global,
+	OPT_NAME *tp1,
+	OPT_NAME *tp2);
+static bool opa_tproc_parmanal(
+	OPS_STATE *global,
+	OPV_IGVARS *gvno,
+	OPV_IGVARS *cycle_gvno);
+static bool opa_tproc_nodeanal(
+	OPS_STATE *global,
+	OPV_IGVARS *cycle_gvno,
+	OPV_IGVARS *other_gvno,
+	PST_QNODE *nodep);
+void opa_aggregate(
+	OPS_STATE *global);
 
-static VOID 
-opa_push(
-	OPS_STATE	*global);
-
-static bool 
-opa_pushandcheck(
-	OPS_STATE	*global,
-	OPS_SUBQUERY	*aggsq,
-	PST_QNODE	*groupp,
-	PST_QNODE	**nodep,
-	OPV_IGVARS	aggvar,
-	OPV_GBMVARS	*varmap);
-
-static bool 
-opa_pushcheck(
-	OPS_STATE	*global,
-	PST_QNODE	*groupp,
-	PST_QNODE	**nodep,
-	OPV_IGVARS	aggvar,
-	OPV_GBMVARS	*varmap,
-	bool		*gotvar);
-
-static VOID 
-opa_pushchange(
-	OPS_STATE	*global,
-	PST_QNODE	*groupp,
-	PST_QNODE	**nodep);
- 
-static bool
-opa_suckdriver(
-	OPS_STATE	*global,
-	OPS_SUBQUERY	*subquery,
-	OPS_SUBQUERY	**mainsq,
-	bool		toplevel,
-	bool		*isunion);
-
-static VOID
-opa_suck(
-	OPS_STATE	*global,
-	OPS_SUBQUERY	*subquery,
-	OPS_SUBQUERY	*msq);
-
-static bool
-opa_suckandcheck(
-	OPS_STATE 	*global, 
-	OPS_SUBQUERY	*subquery, 
-	PST_QNODE	**nodep,
-	PST_QNODE	**vararray,
-	bool		*tidyvars);
-
-static bool
-opa_suckcheck(
-	OPS_STATE 	*global,
-	OPS_SUBQUERY	*subquery,
-	PST_QNODE	**nodep,
-	PST_QNODE	**vararray,
-	bool		*gotvar);
-
-static VOID
-opa_suckchange(
-	OPS_STATE 	*global,
-	OPS_SUBQUERY	*subquery,
-	PST_QNODE	**nodep,
-	PST_QNODE	**vararray);
-
-static bool
-opa_suckrestrict(
-	OPS_STATE 	*global,
-	OPS_SUBQUERY	*subquery,
-	PST_QNODE	*nodep,
-	PST_QNODE	**vararray);
-
-static VOID
-opa_suckeqc(OPS_STATE 	*global,
-	OPV_IGVARS	aggvar,
-	PST_QNODE	**vararray,
-	PST_QNODE	*resdomp,
-	PST_QNODE	**nodep,
-	bool		firstcall,
-	OPS_SUBQUERY	*subquery);
-
-static VOID
-opa_sucktidyvars(
-	PST_QNODE	*nodep);
-
-static void
-opa_hashagg(
-	OPS_STATE	*global);
-
-static bool
-opa_tproc_check(
-	OPS_STATE	*global,
-	OPT_NAME	*proc1,
-	OPT_NAME	*proc2);
-
-static bool
-opa_tproc_parmanal(
-	OPS_STATE	*global,
-	OPV_IGVARS	*gvno,
-	OPV_IGVARS	*cycle_gvno);
-
-static bool
-opa_tproc_nodeanal(
-	OPS_STATE	*global,
-	OPV_IGVARS	*cycle_gvno,
-	OPV_IGVARS	*other_gvno,
-	PST_QNODE	*nodep);
-
-static VOID
-opa_predicate_check(
-        PST_QNODE       **andp,
-        PST_QNODE       **parent,
-	bool		looking_left);
-
 /*{
 ** Name: opa_mapvar	- map attributes used by self join variables
 **

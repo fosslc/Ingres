@@ -70,7 +70,6 @@
 **      This file contains the main entry point for building orig QEN_NODEs,
 **      and supporting routines. For other supporting routines, please refer 
 **      to OPCQTREE.C and OPCKEY.C. 
-[@comment_line@]...
 **
 **
 **	Externally visable routines:
@@ -78,7 +77,6 @@
 **          opc_ratt() - Mark the returning eqcs in a cnode.
 **          opc_valid() - Allocate and init a QEN_VALID struct.
 **          opc_bgmkey() - Begin the AHD_MKEY CX
-[@func_list@]...
 **
 **	Internal only routines (to this file):
 **          opc_key() - Build a QEF_KEY struct for an orig node
@@ -87,7 +85,6 @@
 **          opc_qeoneand() - Build a QEF_AND struct for an exact match.
 **          opc_qerangeand - Build a QEF_AND struct for a range match.
 **          opc_parmap() - Build a parameter map from a QTREE.
-[@func_list@]...
 **
 **  History:
 **      5-aug-86 (eric)
@@ -242,8 +239,10 @@
 **	    Fix syntax error caused by last change. Fails on Windows and Solaris
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
 
 /*
 ** Name: OPC_MDIM - Local tracking info for composite partitioning dimensions
@@ -289,117 +288,134 @@ typedef struct _OPC_MDIM
 	i4 curval;			/* Generator-loop state */
 } OPC_MDIM;
 
-
-/*
-**  Forward and/or External function references.
-*/
-static QEF_RESOURCE *
-opc_procresource(OPS_STATE	*global,
-	OPV_GRV		*gvarp);
-
-static bool 
-opc_rkey(OPS_STATE	*global,
-	OPC_NODE	*cnode,
-	PST_QNODE	*orig_qual,
-	OPO_CO		*tco);
-
-static VOID
-opc_key(
-	OPS_STATE   *global,
-	OPC_NODE    *cnode,
-	PST_QNODE   *orig_qual,
-	i4	    tids_in_qual );
-
-static QEF_KEY *
-opc_qekey(
-	OPS_STATE   *global,
-	OPC_NODE    *cnode,
-	OPC_QUAL    *cqual,
-	i4	    *min_key_att );
-
-static QEF_KOR *
-opc_qeor(
-	OPS_STATE   *global,
-	OPC_NODE    *cnode,
-	OPC_QUAL    *cqual,
-	OPC_KOR	    *opkor,
-	i4	    *nkey_att,
-	bool	    another_coming );
-
-static VOID
-opc_qeoneand(
-	OPS_STATE	*global,
-	OPC_NODE	*cnode,
-	OPC_QUAL	*cqual,
-	DMT_ATT_ENTRY	*att,
-	OPC_KAND	*opkand,
-	i4		keyno,
-	QEF_KOR		*qekor,
-	QEF_KAND	**end_qekand,
-	bool		another_coming );
-
-static VOID
-opc_qerangeand(
-	OPS_STATE	*global,
-	OPC_NODE	*cnode,
-	OPC_QUAL	*cqual,
-	DMT_ATT_ENTRY	*att,
-	OPC_KAND	*opkand,
-	i4		keyno,
-	QEF_KOR		*qekor,
-	QEF_KAND	**end_qekand );
-
-static VOID
-opc_parmap(
-	OPS_STATE   *global,
-	PST_QNODE   *root,
-	u_i1	    *pmap );
-
-static QEF_MEM_CONSTTAB *
-opc_make_mcnsttab(
-	OPS_STATE   *global, 
-	OPV_GRV	    *grvp);
-
+/* TABLE OF CONTENTS */
+void opc_orig_build(
+	OPS_STATE *global,
+	OPC_NODE *cnode);
+void opc_tproc_build(
+	OPS_STATE *global,
+	OPC_NODE *cnode);
+static bool opc_rkey(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	PST_QNODE *orig_qual,
+	OPO_CO *tco);
+void opc_ratt(
+	OPS_STATE *global,
+	OPC_EQ *ceq,
+	OPO_CO *co,
+	i4 rowno,
+	i4 rowsz);
+static void opc_key(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	PST_QNODE *orig_qual,
+	i4 tids_in_qual);
+static QEF_KEY *opc_qekey(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPC_QUAL *cqual,
+	i4 *min_key_att);
+static QEF_KOR *opc_qeor(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPC_QUAL *cqual,
+	OPC_KOR *opkor,
+	i4 *nkey_att,
+	bool another_coming);
+static void opc_qeoneand(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPC_QUAL *cqual,
+	DMT_ATT_ENTRY *att,
+	OPC_KAND *opkand,
+	i4 keyno,
+	QEF_KOR *qekor,
+	QEF_KAND **end_qekand,
+	bool another_coming);
+static void opc_qerangeand(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPC_QUAL *cqual,
+	DMT_ATT_ENTRY *att,
+	OPC_KAND *opkand,
+	i4 keyno,
+	QEF_KOR *qekor,
+	QEF_KAND **end_qekand);
+QEF_VALID *opc_valid(
+	OPS_STATE *global,
+	OPV_GRV *grv,
+	i4 lock_mode,
+	i4 npage_est,
+	bool size_sensitive);
+static QEF_RESOURCE *opc_procresource(
+	OPS_STATE *global,
+	OPV_GRV *grv);
+QEF_RESOURCE *opc_get_resource(
+	OPS_STATE *global,
+	OPV_GRV *grv,
+	i4 *ptbl_type,
+	PTR *ptemp_id,
+	QEF_MEM_CONSTTAB **cnsttab_p);
+void opc_bgmkey(
+	OPS_STATE *global,
+	QEF_AHD *ahd,
+	OPC_ADF *cadf);
+static void opc_parmap(
+	OPS_STATE *global,
+	PST_QNODE *root,
+	u_i1 *pmap);
+static QEF_MEM_CONSTTAB *opc_make_mcnsttab(
+	OPS_STATE *global,
+	OPV_GRV *grvp);
+QEN_PART_QUAL *opc_pqmat(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPV_VARS *varp,
+	OPB_BMBF *bfactbm);
 static bool opc_mdim_prep(
-	OPS_STATE	*global,
-	OPB_BMBF	*bfmap,
-	OPB_PQBF	*pqbfp,
-	i4		dim,
-	DB_PART_DEF	*pdefp,
-	OPC_MDIM	**mdimbase);
-
+	OPS_STATE *global,
+	OPB_BMBF *bfmap,
+	OPB_PQBF *pqbfp,
+	i4 dim,
+	DB_PART_DEF *pdefp,
+	OPC_MDIM **mdimbase);
 static bool opc_pq_norm(
-	OPS_STATE	*global,
-	PST_QNODE	*nodep,
-	i4		*nvals);
-
+	OPS_STATE *global,
+	PST_QNODE *nodep,
+	i4 *retvals);
 static OPZ_IATTS opc_pq_inify(
-	OPS_STATE	*global,
-	OPC_NODE	*cnode,
-	OPC_ADF		*cadf,
-	PST_QNODE	*qtree,
-	ADE_OPERAND	*resop);
-
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPC_ADF *cadf,
+	PST_QNODE *qtree,
+	ADE_OPERAND *resop);
 static void opc_pq_stage(
-	OPS_STATE	*global,
-	OPC_NODE	*cnode,
-	OPC_ADF		*cadf,
-	PST_QNODE	*var,
-	PST_QNODE	*expr,
-	ADE_OPERAND	*resop);
-
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPC_ADF *cadf,
+	PST_QNODE *var,
+	PST_QNODE *expr,
+	ADE_OPERAND *resop);
 static void opc_pq_move(
-	OPS_STATE	*global,
-	OPC_ADF		*cadf,
-	DB_PART_DIM	*dimp,
-	i4		value_base,
-	ADE_OPERAND	*srcop,
-	QEN_PQ_EVAL	*pqe,
-	OPC_MDIM	*mdimbase);
-
+	OPS_STATE *global,
+	OPC_ADF *cadf,
+	DB_PART_DIM *dimp,
+	i4 value_base,
+	ADE_OPERAND *srcop,
+	QEN_PQ_EVAL *pqe,
+	OPC_MDIM *mdimbase);
+static bool opc_pq_novar(
+	PST_QNODE *nodep);
 static bool opc_pq_verify(
-	PST_QNODE	*nodep);
-
+	PST_QNODE *nodep);
+void opc_pqe_new(
+	OPS_STATE *global,
+	QEN_PQ_EVAL **pqe_base,
+	QEN_PQ_EVAL **pqe_end,
+	QEN_PQ_EVAL **pqe,
+	i4 eval_op);
+
 /*
 **  Defines of constants used in this file
 */
@@ -551,7 +567,6 @@ opc_orig_build(
     PST_QNODE		*orig_qual;
     i4			tid_qual;
     i4		lockmode;
-    i4	    atype;
     bool		gwmain;
 
 
@@ -2128,7 +2143,7 @@ opc_qeoneand(
 		adeops[3].opr_dt != DB_TSTMP_TYPE &&
 		adeops[3].opr_dt != DB_INYM_TYPE &&
 		adeops[3].opr_dt != DB_INDS_TYPE &&
-		-adeops[3].opr_dt != DB_DTE_TYPE
+		-adeops[3].opr_dt != DB_DTE_TYPE &&
 		-adeops[3].opr_dt != DB_TMWO_TYPE &&
 		-adeops[3].opr_dt != DB_TMW_TYPE &&
 		-adeops[3].opr_dt != DB_TME_TYPE &&
@@ -3906,8 +3921,6 @@ opc_make_mcnsttab(
     DMT_ATT_ENTRY *attrp;
     char	*currow;
     i4		i, j, rowsize, align;
-    f4		f4temp;
-    i2		i2temp;
 
     /* First compute aligned rowsize. */
     align = grvp->opv_relation->rdr_rel->tbl_width % sizeof (ALIGN_RESTRICT);

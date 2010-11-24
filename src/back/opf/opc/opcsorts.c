@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 #include    <compat.h>
 #include    <gl.h>
@@ -65,13 +65,11 @@
 **      sort nodes (both QEN_SORT and QEN_TSORT). Routines from files are 
 **      used that include: OPCQP.C, OPCQEN.C, OPCTUPLE.C, plus files 
 **      from other facilies and the rest of OPF. 
-[@comment_line@]...
 **
 **	Externally visable routines:
 **          opc_sort_build() - Build a QEN_SORT node
 **          opc_tsort_build() - Build a QEN_TSORT node.
 **          opc_tloffset() - Fill in OPCs target list offset info structure.
-[@func_list@]...
 **
 **	Internal only routines:
 **          opc_tscatts() - Build atts from a target list to create for sort.
@@ -83,7 +81,6 @@
 **          opc_tscresdom() - Compile a resdom for a top sort
 **          opc_tlqnatts() - Fill in a qen_atts array from a qtree target list
 **          opc_sortable() - Is datatype in question sortable?
-[@func_list@]...
 **
 **  History:
 **      20-oct-86 (eric)
@@ -157,80 +154,74 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/*
-**  Forward and/or External function references.
-*/
-static VOID
-opc_escatts(
-	OPS_STATE	*global,
-	OPE_BMEQCLS	*seqcmp,
-	OPC_EQ		*ceq,
-	DMF_ATTR_ENTRY	***patts,    /* ptr to a ptr to an array of ptrs to atts */
-	i4		*pacount );
 
-static VOID
-opc_esoatts(
-	OPS_STATE	*global,
-	OPE_BMEQCLS	*peqcmp,
-	OPC_EQ		*ceq,
-	OPE_IEQCLS	*ordeqcs,
-	i4		*nordeqcs,
-	DMT_KEY_ENTRY	***pkeys,  /* ptr to a ptr to an array of ptr's to keys */
-	DB_CMP_LIST	**pcmplist,  /* Returned compare-list ptr */
-	i4		dups );
-
-static VOID
-opc_tscatts(
-	OPS_STATE	*global,
-	i4		ntargs,
-	PST_QNODE	*target,
-	DMF_ATTR_ENTRY	***patts,    /* ptr to a ptr to an array of ptrs to atts */
-	i4		*pacount );
-
-static VOID
-opc_tsoatts(
-	OPS_STATE	*global,
-	i4		ntargs,
-	PST_QNODE	*target,
-	PST_QNODE	*sortlist,
-	DMT_KEY_ENTRY	***pkeys,    /* ptr to a ptr to an array of ptr's to keys */
-	DB_CMP_LIST	**pcmplist,  /* Returned compare-list ptr */
-	i4		*pkcount,
-	i4		dups);
-
-static VOID
-opc_tstarget(
-	OPS_STATE   *global,
-	OPC_NODE    *cnode,
-	PST_QNODE   *root,
-	QEN_ADF	    **qadf,
-	i4	    *poutrow,
-	i4	    *poutsize );
-
-static VOID
-opc_tscresdom(
-	OPS_STATE	*global,
-	OPC_NODE	*cnode,
-	PST_QNODE	*root,
-	OPC_ADF		*cadf,
-	i4		*outsize );
-
-static VOID
-opc_tlqnatts(
-	OPS_STATE	*global,
-	OPC_NODE	*cnode,
-	QEN_NODE	*qn,
-	OPC_TGINFO	*tginfo,
-	PST_QNODE	*top_resdom );
-
-static	i4
-opc_sortable(
-	OPS_STATE          *global,
-	DB_DT_ID           datatype );
-
+/* TABLE OF CONTENTS */
+void opc_sort_build(
+	OPS_STATE *global,
+	OPC_NODE *cnode);
+void opc_tsort_build(
+	OPS_STATE *global,
+	OPC_NODE *cnode);
+static void opc_tscatts(
+	OPS_STATE *global,
+	i4 ntargs,
+	PST_QNODE *target,
+	DMF_ATTR_ENTRY ***patts,
+	i4 *pacount);
+static void opc_escatts(
+	OPS_STATE *global,
+	OPE_BMEQCLS *seqcmp,
+	OPC_EQ *ceq,
+	DMF_ATTR_ENTRY ***patts,
+	i4 *pacount);
+static void opc_tsoatts(
+	OPS_STATE *global,
+	i4 ntargs,
+	PST_QNODE *target,
+	PST_QNODE *sortlist,
+	DMT_KEY_ENTRY ***pkeys,
+	DB_CMP_LIST **pcmplist,
+	i4 *pkcount,
+	i4 dups);
+static void opc_esoatts(
+	OPS_STATE *global,
+	OPE_BMEQCLS *peqcmp,
+	OPC_EQ *ceq,
+	OPE_IEQCLS *ordeqcs,
+	i4 *nordeqcs,
+	DMT_KEY_ENTRY ***pkeys,
+	DB_CMP_LIST **pcmplist,
+	i4 dups);
+static void opc_tstarget(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	PST_QNODE *root,
+	QEN_ADF **qadf,
+	i4 *poutrow,
+	i4 *poutsize);
+void opc_tloffsets(
+	OPS_STATE *global,
+	PST_QNODE *root,
+	OPC_TGINFO *tginfo,
+	i4 topsort);
+static void opc_tscresdom(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	PST_QNODE *root,
+	OPC_ADF *cadf,
+	i4 *outsize);
+static void opc_tlqnatts(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	QEN_NODE *qn,
+	OPC_TGINFO *tginfo,
+	PST_QNODE *top_resdom);
+static i4 opc_sortable(
+	OPS_STATE *global,
+	DB_DT_ID datatype);
 
 /*
 **  Defines of other constants.

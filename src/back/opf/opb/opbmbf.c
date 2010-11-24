@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -82,8 +82,20 @@
 **	    makes sense to let opb see the possibility, though.  opc
 **	    ends up being the place (opc_range) which refuses to generate
 **	    an outer range with an inner multi-equality.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static bool opb_bestbf(
+	OPB_IBF bfi,
+	OPB_BFKEYINFO *bfkeyp,
+	bool rangeOk,
+	OPB_ATBFLST *keydesc);
+bool opb_mbf(
+	OPS_SUBQUERY *subquery,
+	OPO_STORAGE storage,
+	OPB_MBF *mbf);
 
 /*{
 ** Name: opb_bestbf    - find best boolean factor for keying

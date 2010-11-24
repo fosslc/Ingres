@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -63,9 +63,7 @@
 **  Description:
 **      The routines in this file should be integrated into OPCJOINS.C 
 **      when this is integrated from the SQL path to the RPLUS path. 
-[@comment_line@]...
 **
-{@func_list@}...
 **
 **
 **  History:
@@ -123,10 +121,53 @@
 **	    Minor cleanup, delete unused adbase, gtqual parameters.
 **	27-Oct-2009 (kiria01) SIR 121883
 **	    Scalar sub-selects - pick up generic cardinality from QEN_NODE
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/*
+** Forward Structure Definitions:
+*/
+typedef struct _OPC_SEINNER OPC_SEINNER;
+
+/* TABLE OF CONTENTS */
+void opc_rsequal(
+	PST_QNODE *qual);
+void opc_sejoin_build(
+	OPS_STATE *global,
+	OPC_NODE *cnode);
+static void opc_serip(
+	OPS_STATE *global,
+	PST_QNODE **proot,
+	PST_QNODE **sequal,
+	PST_QNODE **seop,
+	i4 *junc_type);
+static void opc_jseinner(
+	OPS_STATE *global,
+	OPC_NODE *pcnode,
+	OPO_CO *co,
+	i4 level,
+	OPC_EQ *oceq,
+	struct _OPC_SEINNER *seinner);
+void opc_ccqtree(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	PST_QNODE *root,
+	QEN_ADF **qadf,
+	i4 dmf_alloc_row);
+i4 opc_eqqtree(
+	OPS_STATE *global,
+	OPE_BMEQCLS *eqcmap,
+	PST_QNODE **inroot,
+	PST_QNODE **outroot);
+void opc_sekeys(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	PST_QNODE *seop,
+	OPC_EQ *iceq,
+	OPC_EQ *oceq);
 
-typedef struct _OPC_SEINNER
+struct _OPC_SEINNER
 {
     QEN_NODE	*opc_seinner;
     OPC_EQ	*opc_ceq;
@@ -138,29 +179,8 @@ typedef struct _OPC_SEINNER
 
 	/* opc_nsejoins tells how many sejoins opc_seinner is below */
     i4		opc_nsejoins;
-} OPC_SEINNER;
-
-/*
-**  Forward and/or External function references.
-*/
-static VOID
-opc_jseinner(
-	OPS_STATE	*global,
-	OPC_NODE	*pcnode,
-	OPO_CO		*co,
-	i4		level,
-	OPC_EQ		*oceq,
-	OPC_SEINNER	*seinner );
+};
 
-static VOID
-opc_serip(
-	OPS_STATE   *global,
-	PST_QNODE   **proot,
-	PST_QNODE   **sequal,
-	PST_QNODE   **seop,
-	i4	    *junc_type );
-
-
 /*
 **  Defines of constants used in this file
 */
@@ -875,7 +895,6 @@ opc_serip(
 {
     PST_QNODE	*root = *proot;
     PST_QNODE	*q, *top_or, *p1, *p2;
-    i4		ret;
  
     /* Tree must exist */
     if (root == NULL || root->pst_sym.pst_type == PST_QLEND)
@@ -1113,7 +1132,6 @@ opc_jseinner(
 {
     OPS_SUBQUERY	*subqry = global->ops_cstate.opc_subqry;
     OPC_NODE		cnode;
-    OPV_SUBSELECT	*opvsub;
     i4			ev_size;
     OPV_VARS		*opvvar;
     OPV_SEPARM		*vparm;
@@ -1253,7 +1271,6 @@ opc_ccqtree(
 		QEN_ADF	    **qadf,
 		i4	    dmf_alloc_row)
 {
-    OPS_SUBQUERY	*subqry = global->ops_cstate.opc_subqry;
     i4			ninstr, nops, nconst;
     i4		szconst;
     i4			max_base;
@@ -1525,8 +1542,6 @@ opc_sekeys(
     OPV_VARS		*opvvar;
     OPV_SEPARM		*correlated_atts;
     OPV_SEPARM		*corratt;
-    OPZ_AT		*zbase = subqry->ops_attrs.opz_base;
-    OPZ_IATTS		jattno;
     i4			matkey_len;
     i4			parmno;
     DB_DATA_VALUE	*subsel_var;

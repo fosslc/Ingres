@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -57,10 +57,15 @@
 **
 **  History:    
 **      24-may-86 (seputis)    
-{@history_line@}...
 **	14-jul-93 (ed)
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+OPH_HISTOGRAM *oph_memory(
+	OPS_SUBQUERY *subquery);
 
 /*{
 ** Name: oph_memory	- get new histogram element

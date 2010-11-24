@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 /*
@@ -65,12 +65,10 @@ NO_OPTIM = rs4_us5
 **      This file holds routines that compile the instructions needed to 
 **      evaluate simple and function aggs, remote or not, and do projection 
 **      processing for aggs. 
-[@comment_line@]...
 **
 **	External Functions:
 **          opc_agtarget() - Do the target list processing for an agg.
 **          opc_agproject() - Do the projection processing for an agg func
-[@func_list@]...
 **
 **	Internal Functions:
 **          opc_baggtarg_begin() - Begin agg target list compilation
@@ -78,8 +76,6 @@ NO_OPTIM = rs4_us5
 **          opc_maggtarg_main() - Compile the main segment for an agg.
 **          opc_faggtarg_finit() - Compile the finit segment for an agg.
 **          opc_bycompare() - Compile code to compare byvals.
-[@func_list@]...
-**
 **
 **  History:
 **      3-oct-86 (eric)
@@ -149,101 +145,99 @@ NO_OPTIM = rs4_us5
 **	    for hash agg, and at zero for sorted aggs.
 **	30-Jul-2010 (kschendel)
 **	    Replace 8 slightly-different alignment tests with a common routine.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/*
-**  Forward and/or External function references.
-*/
 
-static void opc_agg_align(
-	DB_DT_ID	datatype,
-	i4		length,
-	i4		*what_to_align);
-
-static VOID
-opc_bycompare(
-	OPS_STATE	*global,
-	OPC_ADF		*cadf,
-	PST_QNODE	*byvals,
-	RDR_INFO	*rel,
-	i4		pout_base,
-	i4		agg_base,
-	i4		proj_src_base );
-
-static VOID
-opc_baggtarg_begin(
-	OPS_STATE   *global,
-	OPC_NODE    *cnode,
-	PST_QNODE   *aghead,
-	QEN_ADF	    **qadf,
-	QEN_ADF	    **hqadf,
-	QEN_ADF	    **oqadf,
-	OPC_ADF	    *cadf,
-	OPC_ADF	    *hcadf,
-	OPC_ADF	    *ocadf,
-	OPC_TGINFO  *tginfo,
-	i4	    *topsort,
-	QEN_NODE    **qn,
-	OPC_TGINFO  **sortinfo,
-	PST_QNODE   **byvals,
-	i4	    *workbase,
-	i4	    *hashbase,
-	i4	    *outbase,
-	i4	    *oflwbase, 
-	i4	    *oflwwork, 
-	i4	    *bycount,
-	PST_QNODE   **subexlistp);
-
-static VOID
-opc_iaggtarg_init(
-	OPS_STATE   *global,
-	OPC_NODE    *cnode,
-	PST_QNODE   *aghead,
-	OPC_ADF	    *cadf,
-	OPC_ADF	    *hcadf,
-	OPC_ADF	    *ocadf,
-	OPC_TGINFO  *tginfo,
-	i4	    topsort,
-	PST_QNODE   *byvals,
-	OPC_TGINFO  *sortinfo,
-	i4	    workbase,
-	i4	    hashbase,
-	i4	    outbase,
-	i4	    oflwbase, 
-	QEN_NODE    *qn,
+/* TABLE OF CONTENTS */
+void opc_agtarget(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	PST_QNODE *aghead,
+	QEF_QEP *ahd_qepp);
+static void opc_baggtarg_begin(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	PST_QNODE *aghead,
+	QEN_ADF **qadf,
+	QEN_ADF **hqadf,
+	QEN_ADF **oqadf,
+	OPC_ADF *cadf,
+	OPC_ADF *hcadf,
+	OPC_ADF *ocadf,
+	OPC_TGINFO *tginfo,
+	i4 *topsort,
+	QEN_NODE **qn,
+	OPC_TGINFO **sortinfo,
+	PST_QNODE **byvals,
+	i4 *workbase,
+	i4 *hashbase,
+	i4 *outbase,
+	i4 *oflwbase,
+	i4 *oflwwork,
+	i4 *bycount,
+	PST_QNODE **subexlistpp);
+static void opc_iaggtarg_init(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	PST_QNODE *aghead,
+	OPC_ADF *cadf,
+	OPC_ADF *hcadf,
+	OPC_ADF *ocadf,
+	OPC_TGINFO *tginfo,
+	i4 topsort,
+	PST_QNODE *byvals,
+	OPC_TGINFO *sortinfo,
+	i4 workbase,
+	i4 hashbase,
+	i4 outbase,
+	i4 oflwbase,
+	QEN_NODE *qn,
 	DB_CMP_LIST *hashkeys,
-	PST_QNODE   *subexlistp);
-
-static VOID
-opc_maggtarg_main(
-	OPS_STATE   *global,
-	OPC_NODE    *cnode,
-	PST_QNODE   *aghead,
-	OPC_ADF	    *cadf,
-	OPC_ADF	    *ocadf,
-	OPC_TGINFO  *tginfo,
-	i4	    topsort,
-	PST_QNODE   *byvals,
-	OPC_TGINFO  *sortinfo,
-	i4	    workbase,
-	i4	    outbase,
-	i4	    oflwbase, 
-	QEN_NODE    *qn,
-	PST_QNODE   *subexlistp);
-
-static VOID
-opc_faggtarg_finit(
-	OPS_STATE   *global,
-	QEF_QEP	    *ahd_qepp,
-	PST_QNODE   *aghead,
-	OPC_ADF	    *cadf,
-	OPC_TGINFO  *tginfo,
-	PST_QNODE   *byvals,
-	i4	    workbase,
-	i4	    outbase);
-
-
-
+	PST_QNODE *subexlistp);
+static void opc_maggtarg_main(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	PST_QNODE *aghead,
+	OPC_ADF *cadf,
+	OPC_ADF *ocadf,
+	OPC_TGINFO *tginfo,
+	i4 topsort,
+	PST_QNODE *byvals,
+	OPC_TGINFO *sortinfo,
+	i4 workbase,
+	i4 outbase,
+	i4 oflwbase,
+	QEN_NODE *qn,
+	PST_QNODE *subexlistp);
+static void opc_faggtarg_finit(
+	OPS_STATE *global,
+	QEF_QEP *ahd_qepp,
+	PST_QNODE *aghead,
+	OPC_ADF *cadf,
+	OPC_TGINFO *tginfo,
+	PST_QNODE *byvals,
+	i4 workbase,
+	i4 outbase);
+void opc_agproject(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	QEN_ADF **qadf,
+	i4 agg_row,
+	i4 prjsrc_row);
+static void opc_bycompare(
+	OPS_STATE *global,
+	OPC_ADF *cadf,
+	PST_QNODE *byvals,
+	RDR_INFO *rel,
+	i4 pout_base,
+	i4 agg_base,
+	i4 proj_src_base);
+static void opc_agg_align(
+	DB_DT_ID datatype,
+	i4 length,
+	i4 *offp);
+
 /*
 **  Defines of constants used in this file
 */
@@ -345,7 +339,6 @@ opc_agtarget(
     i4			oflwwork;
     i4			bycount;
     PST_QNODE		*byvals;
-    i4			agstruct_base;
     OPC_ADF		cadf;
     OPC_ADF		hcadf;
     OPC_ADF		ocadf;
@@ -565,7 +558,6 @@ opc_baggtarg_begin(
     i4			outsize, oflwsize;
     i4			worksize, hashsize;
     i4			outrow;
-    DB_DT_ID		resdt;
     i4			aggbufsz, worklen, align, agwslen;
     i4			rsno;
     bool		quelsagg = FALSE;
@@ -696,7 +688,7 @@ opc_baggtarg_begin(
 	}
 	else if (aop->pst_sym.pst_value.pst_s_op.pst_opno == ADI_SUM_OP 
 		&& abs(aop->pst_sym.pst_dataval.db_datatype) == DB_FLT_TYPE
-		&& aop->pst_sym.pst_dataval.db_length < sizeof(f8))
+		&& aop->pst_sym.pst_dataval.db_length < (i4)sizeof(f8))
 	{
 	    aggbufsz = DB_ALIGNTO_MACRO(aggbufsz, sizeof(f8));
 	    sumf4 = TRUE;
@@ -1063,12 +1055,10 @@ opc_iaggtarg_init(
     ADI_FI_DESC		*vchfidp, *nvchfidp;
     ADI_RSLV_BLK	adi_rslv_blk;
     i4			rsno, byvalno;
-    ADE_OPERAND		opdummy;
     i4			tidatt;
     i4			aopno;
-    i4			j;
     i4			worklen, align, offset, agwslen;
-    ADE_OPERAND		int0, flt0, other0;
+    ADE_OPERAND		int0, flt0;
     ADE_OPERAND		resop;
     DB_STATUS		status;
     DB_DT_ID		resdt, bydt;
@@ -1696,18 +1686,17 @@ opc_maggtarg_main(
 {
     OPS_SUBQUERY	*subqry = global->ops_cstate.opc_subqry;
     PST_QNODE		*byval;
-    i4			rsno, naops;
+    i4			rsno;
     ADE_OPERAND		ops[4], opov, opov2, resop;
     i4			tidatt;
     i4			byvalno;
-    i4			i;
     PST_QNODE		*aop_resdom, *aopparm;
     i4			aopno, opno;
     i4			nadfops;
     i4			oflwwork = oflwbase+1;
     i4			worklen, align, offset, agwslen;
     PST_QNODE		*aop;
-    DB_DT_ID		bydt, resdt;
+    DB_DT_ID		bydt;
     bool		avg_std_var;
     bool		quelsagg = FALSE;
     bool		binagg;
