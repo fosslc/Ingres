@@ -1420,6 +1420,12 @@ ADI_FI_ID	    *instr)
 **          Removed un-used tmp_buf buffer
 **      22-Oct-2010 (maspa05)
 **          Removed call to ult_print_tracefile
+**      26-Oct-2010 (maspa05) b124641, b124551
+**          Not all of the BYTE/NCHAR/NVARCHAR value was being output where the
+**          formatted string was < SC930_DATAVAL_BUFSIZE-10
+**          Need to use stbuf not c_tmp to write out 'remainder' of formatted
+**          output. Also reset stbuf to empty string for case where the string
+**          is an exact multiple of the segment size.
 */
 
 STATUS
@@ -1723,10 +1729,11 @@ PTR file)
 		{
 		  SIfprintf(file,stbuf);
 		  c_tmp=stbuf;
+		  stbuf[0]=EOS;
 		}
 
 	    }
-            SIfprintf(file,"%s\n",c_tmp);
+            SIfprintf(file,"%s\n",stbuf);
             break;
 
 	  case DB_NCHR_TYPE:
@@ -1743,9 +1750,10 @@ PTR file)
 		{
 		  SIfprintf(file,stbuf);
 		  c_tmp=stbuf;
+		  stbuf[0]=EOS;
 		}
 	     }
-             SIfprintf(file,"%s\n",c_tmp);
+             SIfprintf(file,"%s\n",stbuf);
              break;
 
           case DB_NVCHR_TYPE:
@@ -1763,9 +1771,10 @@ PTR file)
 		{
 		  SIfprintf(file,stbuf);
 		  c_tmp=stbuf;
+		  stbuf[0]=EOS;
 		}
              }
-             SIfprintf(file,"%s\n",c_tmp);
+             SIfprintf(file,"%s\n",stbuf);
              break;
 
 	  case DB_LVCH_TYPE:
