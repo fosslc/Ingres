@@ -114,6 +114,8 @@
 **	    Backed out above cross.
 **      17-feb-09 (wanfr01) b121543
 **	    Added parameter to qsf_attach_inst and qsf_detach_inst
+**	29-Oct-2010 (jonj) SIR 120874
+**	    qso_rmvindex err_code param changed to *DB_ERROR
 */
 
 
@@ -794,7 +796,7 @@ FUNC_EXTERN DB_STATUS	qso_lock		( QSF_RCB *qsf_rb );
 FUNC_EXTERN DB_STATUS	qso_palloc		( QSF_RCB *qsf_rb );
 FUNC_EXTERN DB_STATUS	qso_rmvobj		( QSO_OBJ_HDR **qso_obj,
 						  QSO_MASTER_HDR **master,
-						  i4 *err_code );
+						  DB_ERROR *dberr );
 FUNC_EXTERN DB_STATUS	qso_ses_commit		( QSF_RCB *qsf_rb );
 FUNC_EXTERN DB_STATUS	qso_setroot		( QSF_RCB *qsf_rb );
 FUNC_EXTERN DB_STATUS	qso_trans_or_define	( QSF_RCB *qsf_rb );

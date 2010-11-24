@@ -232,6 +232,8 @@
 **	    uncommitted session-created named objects can be accurately
 **	    rolled back if need be.  The old way depended on an object-session
 **	    that could become stale and bogus.
+**	29-Oct-2010 (jonj) SIR 120874
+**	    Set error codes using SETDBERR.
 */
 
 
@@ -241,13 +243,12 @@
 
 static DB_STATUS	qso_destroy_one(QSO_OBJ_HDR *obj,
 					QSO_MASTER_HDR **master_p,
-					QSF_RCB *qsf_rb,
-					i4 *err_code);
+					QSF_RCB *qsf_rb);
 static DB_STATUS	qso_mkindex	( QSO_OBID *qso_obid,
 					  QSO_MASTER_HDR **master, 
 					  QSF_CB *scb,
 					  QSO_HASH_BKT **hash,
-					  i4 *err_code );
+					  DB_ERROR *dberr );
 static QSO_OBJ_HDR	*qso_find	( QSO_OBID *qso_obid,
 					  QSO_MASTER_HDR **master,
 					  QSO_HASH_BKT **hash);
@@ -256,23 +257,22 @@ static i4		qso_lknext	( void );
 static DB_STATUS	qso_lkset	( QSO_OBJ_HDR *obj, i4  lock_req,
 					  i4  *lock_id, PTR *root,
 					  QSF_CB *scb,
-					  i4 *err_code );
+					  DB_ERROR *dberr );
 static DB_STATUS	qso_mkobj	( QSO_OBJ_HDR **out_obj,
 					  QSO_OBID *new_objid, i4  blksz,
 					  QSF_CB *scb,
 					  QSO_HASH_BKT **hash,
 					  QSO_MASTER_HDR **master,
-					  i4 *err_code );
+					  DB_ERROR *dberr );
 static DB_STATUS	qso_nextbyhandle( QSO_OBJ_HDR *obj, QSF_RCB *qsf_rb,
 					  QSF_CB *scb, 
-					  QSO_MASTER_HDR **master,
-					  i4 *err_code );
+					  QSO_MASTER_HDR **master );
 static DB_STATUS	qso_wait_for	( QSO_OBJ_HDR **qso_obj, 
 					  QSO_MASTER_HDR **master,
 					  QSF_CB *scb,
-					  i4 *err_code );
+					  DB_ERROR *dberr );
 static DB_STATUS	qso_rmvindex	( QSO_MASTER_HDR **index,
-					  i4 *err_code );
+					  DB_ERROR *dberr );
 
 #ifdef QSO_DBG_HOLD
 /* If QSO_DBG_HOLD defined externally, stall points are
@@ -443,7 +443,6 @@ qso_create( QSF_RCB *qsf_rb )
 {
     DB_STATUS		status = E_DB_OK;
     i4			blksz;
-    i4           	*err_code = &qsf_rb->qsf_error.err_code;
     QSO_OBJ_HDR		*obj, *nobj;
     QSO_MASTER_HDR	*master;
     QSO_OBID		*objid = &qsf_rb->qsf_obj_id;
@@ -451,6 +450,8 @@ qso_create( QSF_RCB *qsf_rb )
     QSF_CB		*scb = qsf_rb->qsf_scb;
     bool		extra_qp;
     QSO_HASH_BKT	*hash;
+
+    CLRDBERR(&qsf_rb->qsf_error);
 
     /* Now do some error checking */
 
@@ -470,25 +471,24 @@ qso_create( QSF_RCB *qsf_rb )
 	  break;
 	default :
 	DBGSTALL(qsf_rb);
-	  *err_code = E_QS0009_BAD_OBJTYPE;
+	  SETDBERR(&qsf_rb->qsf_error, 0, E_QS0009_BAD_OBJTYPE);
 	  return(E_DB_ERROR);
     }
 
     if (objid->qso_lname < 0 || objid->qso_lname > sizeof(objid->qso_name))
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS000B_BAD_OBJNAME;
+        SETDBERR(&qsf_rb->qsf_error, 0, E_QS000B_BAD_OBJNAME);
 	return(E_DB_ERROR);
     }
 
-    *err_code = E_QS0000_OK;
     master = (QSO_MASTER_HDR*)NULL;
 
     /* Faster-path for unnamed creates */
     if (objid->qso_lname == 0)
     {
 	status = qso_mkobj(&obj, objid, blksz, scb,
-				&hash, &master, err_code);
+				&hash, &master, &qsf_rb->qsf_error);
 	if (DB_SUCCESS_MACRO(status))
 	{
 	    qsf_rb->qsf_lk_id = obj->qso_lk_id;
@@ -519,7 +519,7 @@ qso_create( QSF_RCB *qsf_rb )
 		/* Non-shareable QP being accessed by a different session */
 		/* (If this is even still possible, it's a quel thing */
 		DBGSTALL(qsf_rb);
-		*err_code = E_QS000A_OBJ_ALREADY_EXISTS;
+		SETDBERR(&qsf_rb->qsf_error, 0, E_QS000A_OBJ_ALREADY_EXISTS);
 		status = E_DB_ERROR;
 		break;
 	    }
@@ -543,7 +543,7 @@ qso_create( QSF_RCB *qsf_rb )
 		    if ( obj->qso_session == scb )
 		    {
 			status = qso_lkset(obj, QSO_EXLOCK, &qsf_rb->qsf_lk_id,
-				       &qsf_rb->qsf_root, scb, err_code);
+				       &qsf_rb->qsf_root, scb, &qsf_rb->qsf_error);
 			break;
 		    }
 		}
@@ -566,7 +566,7 @@ qso_create( QSF_RCB *qsf_rb )
 	** Returns holding the master mutex.
 	*/
 	status = qso_mkobj(&obj, objid, blksz, scb, 
-				&hash, &master, err_code);
+				&hash, &master, &qsf_rb->qsf_error);
 	if (status == E_DB_INFO)
 	{
 	    /* This means that mkobj had to reclaim memory, and the
@@ -614,7 +614,7 @@ qso_create( QSF_RCB *qsf_rb )
     if (extra_qp)
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS001C_EXTRA_OBJECT;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS001C_EXTRA_OBJECT);
 	status = E_DB_ERROR;
     }
 
@@ -630,12 +630,12 @@ qso_create( QSF_RCB *qsf_rb )
 	/* Dump QSF obj queue after creating an object */
 	/* ------------------------------------------- */
 	DB_STATUS		ignore;
-	i4			save_err = *err_code;
+	DB_ERROR		save_err = qsf_rb->qsf_error;
 
 	TRdisplay("<<< Dumping QSF object queue after creating object >>>\n");
 	ignore = qsd_obq_dump(qsf_rb);
 
-	*err_code = save_err;
+	qsf_rb->qsf_error = save_err;
     }
 #endif /* xDEBUG */
 
@@ -752,9 +752,10 @@ DB_STATUS
 qso_destroy( QSF_RCB *qsf_rb )
 {
     QSO_OBJ_HDR         *obj = (QSO_OBJ_HDR *) qsf_rb->qsf_obj_id.qso_handle;
-    i4			*err_code = &qsf_rb->qsf_error.err_code;
     DB_STATUS		status;
     QSO_MASTER_HDR	*master;
+
+    CLRDBERR(&qsf_rb->qsf_error);
 
     /* Now, make sure there is an object to destroy */
 
@@ -767,17 +768,16 @@ qso_destroy( QSF_RCB *qsf_rb )
        )
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS000F_BAD_HANDLE;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS000F_BAD_HANDLE);
 	return(E_DB_ERROR);
     }
 
-    *err_code = E_QS0000_OK;
     status = E_DB_OK;
 
     /* If object is named, might be shareable, ask for named object destroy */
     if (obj->qso_obid.qso_lname > 0)
     {
-	status = qso_destroy_one(obj, NULL, qsf_rb, err_code);
+	status = qso_destroy_one(obj, NULL, qsf_rb);
 	return (status);
     }
 
@@ -796,12 +796,12 @@ qso_destroy( QSF_RCB *qsf_rb )
       && obj->qso_lk_id != qsf_rb->qsf_lk_id)
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS0013_BAD_LOCKID;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS0013_BAD_LOCKID);
 	return (E_DB_ERROR);
     }
 
     master = NULL;
-    status = qso_rmvobj(&obj, &master, err_code);
+    status = qso_rmvobj(&obj, &master, &qsf_rb->qsf_error);
     return (status);
 }
 
@@ -890,13 +890,14 @@ DB_STATUS
 qso_destroyall( QSF_RCB *qsf_rb )
 {
     DB_STATUS		status;
-    i4             	*err_code = &qsf_rb->qsf_error.err_code;
     QSO_OBID		*objid = &qsf_rb->qsf_obj_id;
     i4			objtyp = qsf_rb->qsf_obj_id.qso_type;
     QSO_OBJ_HDR         *obj;
     QSO_MASTER_HDR	*master;
     QSO_MASTER_HDR	*alias;
     QSF_CB		*scb = qsf_rb->qsf_scb;
+
+    CLRDBERR(&qsf_rb->qsf_error);
 
     /* Now do some error checking */
 
@@ -909,26 +910,25 @@ qso_destroyall( QSF_RCB *qsf_rb )
 	    break;
 	default:
 	    DBGSTALL(qsf_rb);
-	    *err_code = E_QS0009_BAD_OBJTYPE;
+	    SETDBERR(&qsf_rb->qsf_error, 0, E_QS0009_BAD_OBJTYPE);
 	    return(E_DB_ERROR);
     }
 
     if (objid->qso_lname <= 0 || objid->qso_lname > sizeof(objid->qso_name))
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS000B_BAD_OBJNAME;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS000B_BAD_OBJNAME);
 	return(E_DB_ERROR);
     }
 
     master = (QSO_MASTER_HDR*)NULL;
-    *err_code = E_QS0000_OK;
     while ( (obj = qso_find(objid, &master, (QSO_HASH_BKT **)NULL)) != NULL)
     {
 	/* Got an object, master is locked.
 	** See qso_destroy_one for a discussion of concurrency issues.
 	*/
 
-	status = qso_destroy_one(obj, &master, qsf_rb, err_code);
+	status = qso_destroy_one(obj, &master, qsf_rb);
 	if (DB_FAILURE_MACRO(status))
 	    break;
 
@@ -1036,10 +1036,12 @@ qso_destroyall( QSF_RCB *qsf_rb )
 
 static DB_STATUS
 qso_destroy_one(QSO_OBJ_HDR *obj, QSO_MASTER_HDR **master_p,
-	QSF_RCB *qsf_rb, i4 *err_code)
+	QSF_RCB *qsf_rb)
 {
     DB_STATUS status;
     QSO_MASTER_HDR *master;	/* Master index header */
+
+    CLRDBERR(&qsf_rb->qsf_error);
 
     master = NULL;
     if (master_p != NULL) master = *master_p;
@@ -1073,7 +1075,7 @@ qso_destroy_one(QSO_OBJ_HDR *obj, QSO_MASTER_HDR **master_p,
 		** and it is not the one trying to destroy it.
 		*/
 		DBGSTALL(qsf_rb);
-		*err_code = E_QS001D_NOT_OWNER;
+		SETDBERR(&qsf_rb->qsf_error, 0, E_QS001D_NOT_OWNER);
 		status = E_DB_ERROR;
 		break;
 	    }
@@ -1120,7 +1122,7 @@ qso_destroy_one(QSO_OBJ_HDR *obj, QSO_MASTER_HDR **master_p,
 		   )
 		{
 		    DBGSTALL(qsf_rb);
-		    *err_code = E_QS0013_BAD_LOCKID;
+		    SETDBERR(&qsf_rb->qsf_error, 0, E_QS0013_BAD_LOCKID);
 		    status = E_DB_ERROR;
 		    break;
 		}
@@ -1128,7 +1130,7 @@ qso_destroy_one(QSO_OBJ_HDR *obj, QSO_MASTER_HDR **master_p,
 		if (obj->qso_lk_state == QSO_FREE )
 		{
 		    DBGSTALL(qsf_rb);
-		    *err_code = E_QS0012_OBJ_NOT_LOCKED;
+		    SETDBERR(&qsf_rb->qsf_error, 0, E_QS0012_OBJ_NOT_LOCKED);
 		    status = E_DB_ERROR;
 		    break;
 		}
@@ -1154,7 +1156,7 @@ qso_destroy_one(QSO_OBJ_HDR *obj, QSO_MASTER_HDR **master_p,
 	    CSv_semaphore(&Qsr_scb->qsr_psem);
 
 	    /* Note that this call can remove the master as well */
-	    status = qso_rmvobj(&obj, &master, err_code);
+	    status = qso_rmvobj(&obj, &master, &qsf_rb->qsf_error);
 	}
     } while (0);
 
@@ -1288,9 +1290,10 @@ DB_STATUS
 qso_lock( QSF_RCB *qsf_rb )
 {
     DB_STATUS		status = E_DB_OK;
-    i4			*err_code = &qsf_rb->qsf_error.err_code;
     QSO_OBJ_HDR         *obj = (QSO_OBJ_HDR *) qsf_rb->qsf_obj_id.qso_handle;
     QSO_MASTER_HDR	*master;
+
+    CLRDBERR(&qsf_rb->qsf_error);
 
     /* Sanity check the object */
 
@@ -1303,7 +1306,7 @@ qso_lock( QSF_RCB *qsf_rb )
        )
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS000F_BAD_HANDLE;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS000F_BAD_HANDLE);
 	return(E_DB_ERROR);
     }
 
@@ -1322,7 +1325,7 @@ qso_lock( QSF_RCB *qsf_rb )
 	    {
 		DBGSTALL(qsf_rb);
 		CSv_semaphore(&master->qsmo_sem);
-		*err_code = E_QS0016_BAD_LOCKSTATE;
+		SETDBERR(&qsf_rb->qsf_error, 0, E_QS0016_BAD_LOCKSTATE);
 		return (E_DB_ERROR);
 	    }
 	}
@@ -1333,7 +1336,7 @@ qso_lock( QSF_RCB *qsf_rb )
 			&qsf_rb->qsf_lk_id,
 			&qsf_rb->qsf_root,
 			qsf_rb->qsf_scb,
-			err_code
+			&qsf_rb->qsf_error
 		      );
 
     if ( master )
@@ -1445,12 +1448,13 @@ DB_STATUS
 qso_unlock( QSF_RCB *qsf_rb )
 {
     DB_STATUS		status;
-    i4             	*err_code = &qsf_rb->qsf_error.err_code;
     QSO_OBJ_HDR         *obj = (QSO_OBJ_HDR *) qsf_rb->qsf_obj_id.qso_handle;
     i4			*lk_state;
     i4			*lk_cur;
     i4			*lk_id;
     QSO_MASTER_HDR	*master;
+
+    CLRDBERR(&qsf_rb->qsf_error);
 
     /* Now do some error checking */
 
@@ -1463,11 +1467,9 @@ qso_unlock( QSF_RCB *qsf_rb )
        )
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS000F_BAD_HANDLE;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS000F_BAD_HANDLE);
 	return(E_DB_ERROR);
     }
-
-    *err_code = E_QS0000_OK;
 
     /* If master, lock its sem */
     if ( master = obj->qso_mobject )
@@ -1481,22 +1483,22 @@ qso_unlock( QSF_RCB *qsf_rb )
 	case QSO_FREE:
 	    DBGSTALL(qsf_rb);
 	    if (*lk_cur != 0)
-		*err_code = E_QS000D_CORRUPT;
+		SETDBERR(&qsf_rb->qsf_error, 0, E_QS000D_CORRUPT);
 	    else
-		*err_code = E_QS0012_OBJ_NOT_LOCKED;
+		SETDBERR(&qsf_rb->qsf_error, 0, E_QS0012_OBJ_NOT_LOCKED);
 	    break;
 	case QSO_EXLOCK:
 	    if (*lk_cur != 1)
 	    {
 		DBGSTALL(qsf_rb);
-		*err_code = E_QS000D_CORRUPT;
+		SETDBERR(&qsf_rb->qsf_error, 0, E_QS000D_CORRUPT);
 	    }
 	    else
 	    {
 		if (qsf_rb->qsf_lk_id != *lk_id)
 		{
 		    DBGSTALL(qsf_rb);
-		    *err_code = E_QS0013_BAD_LOCKID;
+		    SETDBERR(&qsf_rb->qsf_error, 0, E_QS0013_BAD_LOCKID);
 		}
 		else
 		{
@@ -1524,7 +1526,7 @@ qso_unlock( QSF_RCB *qsf_rb )
 			    ** unlock it.
 			    */
 			    DBGSTALL(qsf_rb);
-			    *err_code = E_QS001D_NOT_OWNER;
+			    SETDBERR(&qsf_rb->qsf_error, 0, E_QS001D_NOT_OWNER);
 			    break;
 			}
 
@@ -1540,7 +1542,7 @@ qso_unlock( QSF_RCB *qsf_rb )
 	    break;
 	case QSO_SHLOCK:
 	    if (*lk_cur < 1)
-		*err_code = E_QS000D_CORRUPT;
+		SETDBERR(&qsf_rb->qsf_error, 0, E_QS000D_CORRUPT);
 	    else
 	    {
 		/* All OK ... unlock the share locked object */
@@ -1552,7 +1554,7 @@ qso_unlock( QSF_RCB *qsf_rb )
 	    break;
 	default:
 	    DBGSTALL(qsf_rb);
-	    *err_code = E_QS000D_CORRUPT;
+	    SETDBERR(&qsf_rb->qsf_error, 0, E_QS000D_CORRUPT);
 	    break;
     }
 
@@ -1560,7 +1562,7 @@ qso_unlock( QSF_RCB *qsf_rb )
     if ( master && obj->qso_waiters )
 	CScnd_broadcast(&master->qsmo_cond);
 
-    if ( *err_code == E_QS0000_OK &&
+    if ( qsf_rb->qsf_error.err_code == E_QS0000_OK &&
 	    obj->qso_status & QSO_DEFERRED_DESTROY &&
 	    obj->qso_lk_cur == 0 &&
 	    obj->qso_waiters == 0
@@ -1569,14 +1571,14 @@ qso_unlock( QSF_RCB *qsf_rb )
 	/* if the object is marked to be destroyed later and there are no
 	** more locks on it, then lets destroy it.
 	*/
-	status = qso_rmvobj(&obj, &master, err_code);
+	status = qso_rmvobj(&obj, &master, &qsf_rb->qsf_error);
     }
 
     /* If master remains, unmutex it */
     if ( master )
 	CSv_semaphore(&master->qsmo_sem);
 
-    return ( (*err_code) ? E_DB_ERROR : E_DB_OK );
+    return ( (qsf_rb->qsf_error.err_code) ? E_DB_ERROR : E_DB_OK );
 }
 
 
@@ -1661,8 +1663,8 @@ DB_STATUS
 qso_setroot( QSF_RCB *qsf_rb )
 {
     QSO_OBJ_HDR         *obj = (QSO_OBJ_HDR *) qsf_rb->qsf_obj_id.qso_handle;
-    i4			*err_code = &qsf_rb->qsf_error.err_code;
 
+    CLRDBERR(&qsf_rb->qsf_error);
 
     /* First, make sure there is an object at the given handle */
 
@@ -1675,7 +1677,7 @@ qso_setroot( QSF_RCB *qsf_rb )
        )
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS000F_BAD_HANDLE;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS000F_BAD_HANDLE);
 	return (E_DB_ERROR);
     }
 
@@ -1685,12 +1687,11 @@ qso_setroot( QSF_RCB *qsf_rb )
     if (obj->qso_lk_state != QSO_EXLOCK || obj->qso_lk_id != qsf_rb->qsf_lk_id)
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS0010_NO_EXLOCK;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS0010_NO_EXLOCK);
 	return (E_DB_ERROR);
     }
 
     obj->qso_root = qsf_rb->qsf_root;
-    *err_code = E_QS0000_OK;
     return (E_DB_OK);
 }
 
@@ -1780,7 +1781,8 @@ DB_STATUS
 qso_info( QSF_RCB *qsf_rb )
 {
     QSO_OBJ_HDR         *obj = (QSO_OBJ_HDR *) qsf_rb->qsf_obj_id.qso_handle;
-    i4		*err_code = &qsf_rb->qsf_error.err_code;
+
+    CLRDBERR(&qsf_rb->qsf_error);
 
 
     /* First, make sure there is an object at the given handle */
@@ -1794,7 +1796,7 @@ qso_info( QSF_RCB *qsf_rb )
        )
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS000F_BAD_HANDLE;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS000F_BAD_HANDLE);
 	return (E_DB_ERROR);
     }
 
@@ -1803,7 +1805,7 @@ qso_info( QSF_RCB *qsf_rb )
     if (qsf_rb->qsf_obj_id.qso_handle != obj->qso_obid.qso_handle)
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS000D_CORRUPT;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS000D_CORRUPT);
 	return (E_DB_ERROR);
     }
 
@@ -1815,8 +1817,6 @@ qso_info( QSF_RCB *qsf_rb )
     qsf_rb->qsf_lk_state = obj->qso_lk_state;
     qsf_rb->qsf_lk_cur = obj->qso_lk_cur;
 
-
-    *err_code = E_QS0000_OK;
     return (E_DB_OK);
 }
 
@@ -1910,10 +1910,10 @@ DB_STATUS
 qso_palloc( QSF_RCB *qsf_rb )
 {
     QSO_OBJ_HDR         *obj = (QSO_OBJ_HDR *) qsf_rb->qsf_obj_id.qso_handle;
-    i4			*err_code = &qsf_rb->qsf_error.err_code;
     ULM_RCB		ulm_rcb;
     QSF_CB		*scb = qsf_rb->qsf_scb;
 
+    CLRDBERR(&qsf_rb->qsf_error);
 
     /* First, make sure there is an object at the given handle */
 
@@ -1926,7 +1926,7 @@ qso_palloc( QSF_RCB *qsf_rb )
        )
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS000F_BAD_HANDLE;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS000F_BAD_HANDLE);
 	return (E_DB_ERROR);
     }
 
@@ -1935,18 +1935,16 @@ qso_palloc( QSF_RCB *qsf_rb )
     if (qsf_rb->qsf_sz_piece < 1)
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS0018_BAD_PIECE_SIZE;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS0018_BAD_PIECE_SIZE);
 	return (E_DB_ERROR);
     }
-
-    *err_code = E_QS0000_OK;
 
     /* Make sure object is locked by caller, then allocate the piece */
 
     if (obj->qso_lk_state != QSO_EXLOCK || obj->qso_lk_id != qsf_rb->qsf_lk_id)
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS0010_NO_EXLOCK;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS0010_NO_EXLOCK);
 	return (E_DB_ERROR);
     }
     ulm_rcb.ulm_facility = DB_QSF_ID;
@@ -1962,7 +1960,7 @@ qso_palloc( QSF_RCB *qsf_rb )
 	if (ulm_rcb.ulm_error.err_code != E_UL0005_NOMEM)
 	{
 	    DBGSTALL(qsf_rb);
-	    *err_code = E_QS000C_ULM_ERROR;
+	    SETDBERR(&qsf_rb->qsf_error, 0, E_QS000C_ULM_ERROR);
 	    return (E_DB_ERROR);
 	}
 	/* try to clear the obj queue */
@@ -1970,7 +1968,7 @@ qso_palloc( QSF_RCB *qsf_rb )
 	{
 	    /* Nothing left to clear */
 	    DBGSTALL(qsf_rb);
-	    *err_code = E_QS0001_NOMEM;
+	    SETDBERR(&qsf_rb->qsf_error, 0, E_QS0001_NOMEM);
 	    return (E_DB_ERROR);
 	}
     }
@@ -2121,11 +2119,12 @@ DB_STATUS
 qso_gethandle( QSF_RCB *qsf_rb )
 {
     DB_STATUS		status;
-    i4             	*err_code = &qsf_rb->qsf_error.err_code;
     QSO_OBID		*objid = &qsf_rb->qsf_obj_id;
     i4			objtyp = qsf_rb->qsf_obj_id.qso_type;
     QSO_OBJ_HDR         *obj;
     QSO_MASTER_HDR	*master = (QSO_MASTER_HDR*)NULL;
+
+    CLRDBERR(&qsf_rb->qsf_error);
 
 
     /* Now do some error checking */
@@ -2139,29 +2138,27 @@ qso_gethandle( QSF_RCB *qsf_rb )
 	    break;
 	default:
 	    DBGSTALL(qsf_rb);
-	    *err_code = E_QS0009_BAD_OBJTYPE;
+	    SETDBERR(&qsf_rb->qsf_error, 0, E_QS0009_BAD_OBJTYPE);
 	    return(E_DB_ERROR);
     }
 
     if (objid->qso_lname <= 0 || objid->qso_lname > sizeof(objid->qso_name))
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS000B_BAD_OBJNAME;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS000B_BAD_OBJNAME);
 	return(E_DB_ERROR);
     }
     if (qsf_rb->qsf_lk_state != QSO_SHLOCK && qsf_rb->qsf_lk_state != QSO_EXLOCK)
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS0016_BAD_LOCKSTATE;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS0016_BAD_LOCKSTATE);
 	return (E_DB_ERROR);
     }
-
-    *err_code = E_QS0000_OK;
 
     if ( (obj = qso_find(objid, &master, (QSO_HASH_BKT**)NULL)) == NULL)
     {
 	/*DBGSTALL(qsf_rb);*/
-	*err_code = E_QS0019_UNKNOWN_OBJ;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS0019_UNKNOWN_OBJ);
 	return (E_DB_ERROR);
     }
     /* Object found, master mutex is held */
@@ -2172,33 +2169,33 @@ qso_gethandle( QSF_RCB *qsf_rb )
 	 master->qsmo_aliasid.qso_lname > 0 )
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS0016_BAD_LOCKSTATE;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS0016_BAD_LOCKSTATE);
     }
     else if ( (status = qso_lkset( obj,
 				qsf_rb->qsf_lk_state,
 				&qsf_rb->qsf_lk_id,
 				&qsf_rb->qsf_root,
 				qsf_rb->qsf_scb,
-				err_code) ) == E_DB_OK )
+				&qsf_rb->qsf_error) ) == E_DB_OK )
     {
 	obj->qso_real_usage++;
 	obj->qso_decaying_usage++;
 	Qsr_scb->qsr_named_requests++;
     }
-    else if (*err_code == E_QS0014_EXLOCK &&
+    else if (qsf_rb->qsf_error.err_code == E_QS0014_EXLOCK &&
 	    !qsf_rb->qsf_root &&
 	    qsf_rb->qsf_scb == obj->qso_excl_owner &&
 	    qsf_rb->qsf_scb == obj->qso_session)
     {
 	/* incomplete block that belongs to us -
 	** allow handle to be returned */
-	*err_code = E_QS0000_OK;
+	CLRDBERR(&qsf_rb->qsf_error);
     }
 
     /* Release master mutex */
     CSv_semaphore(&master->qsmo_sem);
 
-    return ( (*err_code) ? E_DB_ERROR : E_DB_OK );
+    return ( (qsf_rb->qsf_error.err_code) ? E_DB_ERROR : E_DB_OK );
 }
 
 /*{
@@ -2291,18 +2288,19 @@ DB_STATUS
 qso_getnext(QSF_RCB *qsf_rb)
 {
     DB_STATUS		status = E_DB_OK;
-    i4             *err_code = &qsf_rb->qsf_error.err_code;
     QSO_OBID		*objid = &qsf_rb->qsf_obj_id;
     QSO_OBJ_HDR         *obj;
     QSF_CB		*scb = qsf_rb->qsf_scb;
     QSO_MASTER_HDR	*master;
+
+    CLRDBERR(&qsf_rb->qsf_error);
 
     if (objid->qso_handle == NULL)
     {
 	/* Same as QSO_GETHANDLE case */
 	qsf_rb->qsf_lk_state = QSO_SHLOCK;
 	status = qso_gethandle(qsf_rb);
-	if (status != E_DB_OK && *err_code == E_QS0014_EXLOCK)
+	if (status != E_DB_OK && qsf_rb->qsf_error.err_code == E_QS0014_EXLOCK)
 	    /* 
 	    ** (stephenb) we should ignore exclusively locked objects 
 	    ** (see comments at head of function).
@@ -2326,7 +2324,7 @@ qso_getnext(QSF_RCB *qsf_rb)
 	    ** cause SCF to re-try...but as Karl says... "kinda scary".
 	    ** It's an architectural problem in QSF that we should fix some time.
 	    */
-	    *err_code = E_QS0019_UNKNOWN_OBJ;
+	    SETDBERR(&qsf_rb->qsf_error, 0, E_QS0019_UNKNOWN_OBJ);
 	return (status);
     }
 
@@ -2336,7 +2334,7 @@ qso_getnext(QSF_RCB *qsf_rb)
     if ( obj->qso_lk_state != QSO_SHLOCK )
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS0016_BAD_LOCKSTATE;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS0016_BAD_LOCKSTATE);
 	return (E_DB_ERROR);
     }
 
@@ -2346,14 +2344,14 @@ qso_getnext(QSF_RCB *qsf_rb)
     /* Get next object, skip dead ones, wait-for the one we want.
     ** Next object handle set into qsf_rb's qsf_obj_id.
     */
-    status = qso_nextbyhandle(obj, qsf_rb, scb, &master, err_code);
+    status = qso_nextbyhandle(obj, qsf_rb, scb, &master);
 
     /* Unlock the current object. */
 
     if ( obj->qso_lk_cur < 1 )
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS000D_CORRUPT;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS000D_CORRUPT);
 	status = E_DB_FATAL;
     }
     else
@@ -2375,7 +2373,7 @@ qso_getnext(QSF_RCB *qsf_rb)
 	** If the object is marked to be destroyed later, and
 	** there are no more locks on it, then let's destroy it.
 	*/
-	status = qso_rmvobj(&obj, &master, err_code);
+	status = qso_rmvobj(&obj, &master, &qsf_rb->qsf_error);
     }
 
     if ( master )
@@ -2564,7 +2562,6 @@ DB_STATUS
 qso_trans_or_define( QSF_RCB *qsf_rb )
 {
     DB_STATUS		status = E_DB_OK;
-    i4             	*err_code = &qsf_rb->qsf_error.err_code;
     QSO_OBID		*alias_objid = &qsf_rb->qsf_feobj_id;
     i4			alias_objtyp = qsf_rb->qsf_feobj_id.qso_type;
     QSO_OBJ_HDR		*qp_obj;
@@ -2575,13 +2572,16 @@ qso_trans_or_define( QSF_RCB *qsf_rb )
     QSO_MASTER_HDR	*master;
     QSO_MASTER_HDR	*alias;
     QSO_HASH_BKT	*hash;
+
+    CLRDBERR(&qsf_rb->qsf_error);
+
     /* Now do some error checking */
 
     if (alias_objtyp != QSO_ALIAS_OBJ || (qp_objtyp != QSO_QP_OBJ &&
 		qp_objtyp != QSO_QTEXT_OBJ))
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS0009_BAD_OBJTYPE;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS0009_BAD_OBJTYPE);
 	return(E_DB_ERROR);
     }
 
@@ -2589,7 +2589,7 @@ qso_trans_or_define( QSF_RCB *qsf_rb )
       || qp_objid->qso_lname <= 0 || qp_objid->qso_lname > sizeof(qp_objid->qso_name))
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS000B_BAD_OBJNAME;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS000B_BAD_OBJNAME);
 	return(E_DB_ERROR);
     }
 
@@ -2599,7 +2599,6 @@ qso_trans_or_define( QSF_RCB *qsf_rb )
     for (;;)
     {
 	/* We've passed all of the initial error checks, so reset the errcode */
-	*err_code = E_QS0000_OK;
 	master = (QSO_MASTER_HDR*)NULL;
 	alias = (QSO_MASTER_HDR*)NULL;
 	hash = (QSO_HASH_BKT*)NULL;
@@ -2613,7 +2612,7 @@ qso_trans_or_define( QSF_RCB *qsf_rb )
 	    /* Wait for any QP's in the process of being built.
 	    ** If it disappears while we wait, try again.
 	    */
-	    status = qso_wait_for(&qp_obj, &master, scb, err_code);
+	    status = qso_wait_for(&qp_obj, &master, scb, &qsf_rb->qsf_error);
 	    if (qp_obj || status != E_DB_OK)
 		break;
 	}
@@ -2636,7 +2635,7 @@ qso_trans_or_define( QSF_RCB *qsf_rb )
 		   )
 		{
 		    DBGSTALL(qsf_rb);
-		    *err_code = E_QS0016_BAD_LOCKSTATE;
+		    SETDBERR(&qsf_rb->qsf_error, 0, E_QS0016_BAD_LOCKSTATE);
 		    status = E_DB_ERROR;
 		    break;
 		}
@@ -2646,7 +2645,7 @@ qso_trans_or_define( QSF_RCB *qsf_rb )
 					&qsf_rb->qsf_lk_id,
 					&qsf_rb->qsf_root,
 					scb,
-					err_code
+					&qsf_rb->qsf_error
 				      )
 		   )
 		{
@@ -2663,7 +2662,7 @@ qso_trans_or_define( QSF_RCB *qsf_rb )
 	    */
 	    /* Create master index object and QP object */
 	    status = qso_mkobj(&qp_obj, qp_objid, QSO_BQP_BLKSZ, scb, 
-				&hash, &master, err_code);
+				&hash, &master, &qsf_rb->qsf_error);
 	    if (status == E_DB_INFO)
 	    {
 		/* The object popped up while we were reclaiming memory.
@@ -2744,12 +2743,12 @@ qso_trans_or_define( QSF_RCB *qsf_rb )
 	/* Dump QSF obj queue after creating an object */
 	/* ------------------------------------------- */
 	DB_STATUS		ignore;
-	i4			save_err = *err_code;
+	DB_ERROR		save_err = qsf_rb->qsf_error;
 
 	TRdisplay("<<< Dumping QSF object queue after creating object >>>\n");
 	ignore = qsd_obq_dump(qsf_rb);
 
-	*err_code = save_err;
+	qsf_rb->qsf_error = save_err;
     }
 #endif /* xDEBUG */
 
@@ -2897,7 +2896,6 @@ DB_STATUS
 qso_just_trans( QSF_RCB *qsf_rb )
 {
     DB_STATUS           status;
-    i4      	        *err_code = &qsf_rb->qsf_error.err_code;
     QSO_OBID		*alias_objid = &qsf_rb->qsf_feobj_id;
     i4			alias_objtyp = qsf_rb->qsf_feobj_id.qso_type;
     QSO_OBJ_HDR		*qp_obj;
@@ -2907,23 +2905,24 @@ qso_just_trans( QSF_RCB *qsf_rb )
     QSO_OBJ_HDR         *obj;
     QSO_MASTER_HDR	*master = (QSO_MASTER_HDR*)NULL;
 
+    CLRDBERR(&qsf_rb->qsf_error);
+
     /* Now do some error checking */
 
     if (alias_objtyp != QSO_ALIAS_OBJ)
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS0009_BAD_OBJTYPE;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS0009_BAD_OBJTYPE);
 	return(E_DB_ERROR);
     }
 
     if (alias_objid->qso_lname <= 0 || alias_objid->qso_lname > sizeof(alias_objid->qso_name))
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS000B_BAD_OBJNAME;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS000B_BAD_OBJNAME);
 	return(E_DB_ERROR);
     }
 
-    *err_code = E_QS0000_OK;
     status = E_DB_OK;
     qsf_rb->qsf_t_or_d = -1;
 
@@ -2933,7 +2932,7 @@ qso_just_trans( QSF_RCB *qsf_rb )
 	/* Wait for any QP's in the process of being built. */
 	qp_obj = master->qsmo_obj_1st;
 
-	status = qso_wait_for(&qp_obj, &master, scb, err_code);
+	status = qso_wait_for(&qp_obj, &master, scb, &qsf_rb->qsf_error);
 	if (qp_obj || status != E_DB_OK)
 	    break;
     }
@@ -2943,7 +2942,7 @@ qso_just_trans( QSF_RCB *qsf_rb )
 	if ( obj == NULL )
 	{
 	    /*DBGSTALL(qsf_rb);*/
-	    *err_code = E_QS0019_UNKNOWN_OBJ;
+	    SETDBERR(&qsf_rb->qsf_error, 0, E_QS0019_UNKNOWN_OBJ);
 	}
 	else
 	{
@@ -2959,7 +2958,7 @@ qso_just_trans( QSF_RCB *qsf_rb )
 		     master->qsmo_aliasid.qso_lname > 0 )
 		{
 		    DBGSTALL(qsf_rb);
-		    *err_code = E_QS0016_BAD_LOCKSTATE;
+		    SETDBERR(&qsf_rb->qsf_error, 0, E_QS0016_BAD_LOCKSTATE);
 		}
 		else
 		{
@@ -2968,7 +2967,7 @@ qso_just_trans( QSF_RCB *qsf_rb )
 					&qsf_rb->qsf_lk_id,
 					&qsf_rb->qsf_root,
 					scb,
-					err_code
+					&qsf_rb->qsf_error
 				      );
 		}
 	    }
@@ -2979,7 +2978,7 @@ qso_just_trans( QSF_RCB *qsf_rb )
     if ( master )
 	CSv_semaphore(&master->qsmo_sem);
 
-    return ( (*err_code) ? E_DB_ERROR : E_DB_OK );
+    return ( (qsf_rb->qsf_error.err_code) ? E_DB_ERROR : E_DB_OK );
 }
 
 
@@ -3067,7 +3066,8 @@ qso_chtype( QSF_RCB *qsf_rb )
     QSO_OBID		*objid = &qsf_rb->qsf_obj_id;
     i4			objtyp = objid->qso_type;
     QSO_OBJ_HDR         *obj = (QSO_OBJ_HDR *) objid->qso_handle;
-    i4			*err_code = &qsf_rb->qsf_error.err_code;
+
+    CLRDBERR(&qsf_rb->qsf_error);
 
     /*
     ** First, make sure there is an object at the given handle.
@@ -3083,7 +3083,7 @@ qso_chtype( QSF_RCB *qsf_rb )
        )
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS000F_BAD_HANDLE;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS000F_BAD_HANDLE);
 	return(E_DB_ERROR);
     }
 
@@ -3099,7 +3099,7 @@ qso_chtype( QSF_RCB *qsf_rb )
 	    break;
 	default:
 	    DBGSTALL(qsf_rb);
-	    *err_code = E_QS0009_BAD_OBJTYPE;
+	    SETDBERR(&qsf_rb->qsf_error, 0, E_QS0009_BAD_OBJTYPE);
 	    return(E_DB_ERROR);
     }
 
@@ -3110,11 +3110,9 @@ qso_chtype( QSF_RCB *qsf_rb )
 	 obj->qso_lk_id != qsf_rb->qsf_lk_id )
     {
 	DBGSTALL(qsf_rb);
-	*err_code = E_QS0010_NO_EXLOCK;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS0010_NO_EXLOCK);
 	return(E_DB_ERROR);
     }
-
-    *err_code = E_QS0000_OK;
 
     obj->qso_obid.qso_type = objtyp;
 
@@ -3271,7 +3269,7 @@ DB_STATUS
 qso_rmvobj( 
 QSO_OBJ_HDR 	**qso_obj,
 QSO_MASTER_HDR	**master_p,
-i4 		*err_code )
+DB_ERROR	*dberr )
 {
     QSO_OBJ_HDR		*obj = *qso_obj;
     QSO_MASTER_HDR	*master, *alias;
@@ -3279,6 +3277,8 @@ i4 		*err_code )
     DB_STATUS		status;
     i4			obj_size;
     bool		shareable;
+
+    CLRDBERR(dberr);
 
     /* If Master passed, caller has mutexed it */
     if ( master_p )
@@ -3309,7 +3309,6 @@ i4 		*err_code )
 	}
     }
 
-    *err_code = E_QS0000_OK;
     status = E_DB_OK;
     shareable = FALSE;
 
@@ -3403,12 +3402,13 @@ i4 		*err_code )
 
 	    }
 	    /* Destroy the master */
-	    status = qso_rmvindex(&master, err_code);
+	    status = qso_rmvindex(&master, dberr);
 	    if ( master_p )
 		*master_p = (QSO_MASTER_HDR *) NULL;
 	    if (DB_FAILURE_MACRO(status))
 	    {
-		TRdisplay("@ qso_rmvindex failure(3), status %d\n", status);
+		TRdisplay("@ qso_rmvindex failure(3), status %d, err_code %x\n",
+			status, dberr->err_code);
 	    }
 	    /* Include master header in object size */
 	    obj_size += sizeof(QSO_MASTER_HDR);
@@ -3471,7 +3471,7 @@ i4 		*err_code )
     ulm_rcb.ulm_streamid_p = &obj->qso_streamid;
     ulm_rcb.ulm_memleft = &Qsr_scb->qsr_memleft;
     if ( status = ulm_closestream(&ulm_rcb) )
-	*err_code = E_QS0011_ULM_STREAM_NOT_CLOSED;
+	SETDBERR(dberr, 0, E_QS0011_ULM_STREAM_NOT_CLOSED);
 
     /*
     ** If master is still around and we mutexed it here,
@@ -3522,11 +3522,13 @@ i4 		*err_code )
 static DB_STATUS
 qso_rmvindex(
 QSO_MASTER_HDR 	**index_p,
-i4		*err_code )
+DB_ERROR	*dberr )
 {
     QSO_MASTER_HDR	*index = *index_p;
     ULM_RCB		ulm_rcb;
     QSO_HASH_BKT	*bucket;
+
+    CLRDBERR(dberr);
 
     /* Caller must hold "index" qsmo_sem */
 
@@ -3583,13 +3585,13 @@ i4		*err_code )
     ulm_rcb.ulm_streamid_p = &index->qsmo_streamid;
     ulm_rcb.ulm_memleft = &Qsr_scb->qsr_memleft;
     if ( ulm_closestream(&ulm_rcb) )
-	*err_code = E_QS0011_ULM_STREAM_NOT_CLOSED;
+	SETDBERR(dberr, 0, E_QS0011_ULM_STREAM_NOT_CLOSED);
     else
-	*err_code = E_QS0000_OK;
+	SETDBERR(dberr, 0, E_QS0000_OK);
 
     *index_p = (QSO_MASTER_HDR*)NULL;
 
-    return ( (*err_code) ? E_DB_ERROR : E_DB_OK );
+    return ( (dberr->err_code) ? E_DB_ERROR : E_DB_OK );
 }
 
 /*{
@@ -3664,13 +3666,14 @@ qso_wait_for(
 QSO_OBJ_HDR 	**obj_p,
 QSO_MASTER_HDR	**master,
 QSF_CB		*scb,
-i4		*err_code )
+DB_ERROR	*dberr )
 {
     QSO_OBJ_HDR *obj = *obj_p;
     DB_STATUS	status;
 
+    CLRDBERR(dberr);
+
     status = E_DB_OK;
-    *err_code = E_QS0000_OK;
     if (*master == NULL)
 	return (E_DB_OK);
 
@@ -3709,7 +3712,7 @@ i4		*err_code )
 	 obj->qso_lk_cur == 0 && obj->qso_waiters == 0 )
     {
 	/* Destroy the object, also, perhaps, master. */
-	status = qso_rmvobj(obj_p, master, err_code);
+	status = qso_rmvobj(obj_p, master, dberr);
     }
 
     return(status);
@@ -3769,17 +3772,18 @@ qso_nextbyhandle(
 QSO_OBJ_HDR 	*obj,
 QSF_RCB 	*qsf_rb,
 QSF_CB 		*scb,
-QSO_MASTER_HDR	**master,
-i4		*err_code )
+QSO_MASTER_HDR	**master )
 {
     QSO_OBJ_HDR		*new_obj;
     QSO_OBID		*objid = &qsf_rb->qsf_obj_id;
     DB_STATUS		status = E_DB_OK;
 
+    CLRDBERR(&qsf_rb->qsf_error);
+
     /* The current object must have a shared lock. */
     if (obj->qso_lk_state != QSO_SHLOCK)
     {
-	*err_code = E_QS0016_BAD_LOCKSTATE;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS0016_BAD_LOCKSTATE);
 	return (E_DB_ERROR);
     }
 
@@ -3792,7 +3796,7 @@ i4		*err_code )
 	    QSO_OBJ_HDR		*next_obj = new_obj->qso_monext;
 
 	    /* Wait for any QP's in the process of being built. */
-	    status = qso_wait_for(&new_obj, master, scb, err_code);
+	    status = qso_wait_for(&new_obj, master, scb, &qsf_rb->qsf_error);
 	    if (status != E_DB_OK)
 		return(status);
 	    
@@ -3810,7 +3814,7 @@ i4		*err_code )
 	    }
 
 	    status = qso_lkset(new_obj, QSO_SHLOCK, &qsf_rb->qsf_lk_id,
-			       &qsf_rb->qsf_root, scb, err_code);
+			       &qsf_rb->qsf_root, scb, &qsf_rb->qsf_error);
 	    if (status == E_DB_OK)
 		break;
 
@@ -3819,6 +3823,7 @@ i4		*err_code )
 	    ** Reset status; we won't report errors from qso_lkset()
 	    ** at this point.
 	    */
+	    CLRDBERR(&qsf_rb->qsf_error);
 	    status = E_DB_OK;
 
 	}
@@ -3831,13 +3836,12 @@ i4		*err_code )
 	new_obj->qso_real_usage++;
 	new_obj->qso_decaying_usage++;
 	Qsr_scb->qsr_named_requests++;
-	*err_code = E_QS0000_OK;
     }
     else
     {
 	/* We didn't find a usable next object. */
 	/*DBGSTALL(qsf_rb);*/
-	*err_code = E_QS0019_UNKNOWN_OBJ;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS0019_UNKNOWN_OBJ);
 	status = E_DB_ERROR;
     }
 
@@ -3931,13 +3935,16 @@ i4		blksz,
 QSF_CB		*scb,
 QSO_HASH_BKT	**hash_p,
 QSO_MASTER_HDR	**master_p,
-i4		*err_code )
+DB_ERROR	*dberr )
 {
     bool		new_master;
     ULM_RCB             ulm_rcb;
     DB_STATUS		status;
     QSO_MASTER_HDR	*master;
     QSO_OBJ_HDR		*new_obj;
+    DB_ERROR		localDBerr;
+
+    CLRDBERR(dberr);
 
     for (;;)
     {
@@ -3949,7 +3956,7 @@ i4		*err_code )
 	if (new_objid->qso_lname > 0 && *master_p == (QSO_MASTER_HDR*)NULL)
 	{
 	    new_objid->qso_handle = NULL;
-	    status = qso_mkindex(new_objid, master_p, scb, hash_p, err_code);
+	    status = qso_mkindex(new_objid, master_p, scb, hash_p, dberr);
 	    if (status != E_DB_OK)
 	    {
 		if (status == E_DB_INFO)
@@ -3989,7 +3996,7 @@ i4		*err_code )
 	    ** If new object on existing master, just un-mutex.
 	    */
 	    if (new_master)
-		(void) qso_rmvindex(master_p, err_code);
+		(void) qso_rmvindex(master_p, &localDBerr);
 	    else
 		CSv_semaphore(&master->qsmo_sem);
 	}
@@ -3998,7 +4005,7 @@ i4		*err_code )
 	if ( ulm_rcb.ulm_error.err_code != E_UL0005_NOMEM )
 	{
 	    DBGSTALL2(scb);
-	    *err_code = E_QS000C_ULM_ERROR;
+	    SETDBERR(dberr, 0, E_QS000C_ULM_ERROR);
 	    break;
 	}
 	/* try to clear the obj queue */
@@ -4006,7 +4013,7 @@ i4		*err_code )
 	{
 	    /* Nothing left to clear */
 	    DBGSTALL2(scb);
-	    *err_code = E_QS0001_NOMEM;
+	    SETDBERR(dberr, 0, E_QS0001_NOMEM);
 	    break;
 	}
 	/* Since we let go of the master, someone else might have
@@ -4240,13 +4247,15 @@ QSO_OBID	*qso_obid,
 QSO_MASTER_HDR	**index, 
 QSF_CB		*scb,
 QSO_HASH_BKT	**hash,
-i4		*err_code )
+DB_ERROR	*dberr )
 {
     char		sem_name[CS_SEM_NAME_LEN];
     QSO_HASH_BKT	*bucket;
     QSO_MASTER_HDR	*new_index;
     ULM_RCB		ulm_rcb;
     DB_STATUS		status;
+
+    CLRDBERR(dberr);
 
     *index = (QSO_MASTER_HDR*)NULL;
     
@@ -4282,7 +4291,7 @@ i4		*err_code )
 	if (ulm_rcb.ulm_error.err_code != E_UL0005_NOMEM)
 	{
 	    DBGSTALL2(scb);
-	    *err_code = E_QS000C_ULM_ERROR;
+	    SETDBERR(dberr, 0, E_QS000C_ULM_ERROR);
 	    break;
 	}
 	/* try to clear the obj queue */
@@ -4290,7 +4299,7 @@ i4		*err_code )
 	{
 	    DBGSTALL2(scb);
 	    /* Nothing left to clear */
-	    *err_code = E_QS0001_NOMEM;
+	    SETDBERR(dberr, 0, E_QS0001_NOMEM);
 	    break;
 	}
 	/* Since we let go of the hash mutex, someone else might have
@@ -4325,7 +4334,7 @@ i4		*err_code )
 	ulm_closestream(&ulm_rcb);
 	*index = NULL;
 
-	*err_code = E_QS0002_SEMINIT;
+	SETDBERR(dberr, 0, E_QS0002_SEMINIT);
 	return (E_DB_ERROR);
     }
     
@@ -4705,14 +4714,14 @@ i4		lock_req,
 i4  		*lock_id,
 PTR 		*root,
 QSF_CB		*scb,
-i4 		*err_code )
+DB_ERROR	*dberr )
 {
     i4			*lk_state = &obj->qso_lk_state;
     i4			*lk_cur = &obj->qso_lk_cur;
     i4			*lk_id = &obj->qso_lk_id;
     i4			*obj_status = &obj->qso_status;
 
-    *err_code = E_QS0000_OK;
+    CLRDBERR(dberr);
 
     switch (lock_req)	/* switch on requested lock state */
     {
@@ -4721,11 +4730,11 @@ i4 		*err_code )
 	    {			    /* actual lock state  */
 		case QSO_EXLOCK:
 		    DBGSTALL2(scb);
-		    *err_code = E_QS0014_EXLOCK;
+		    SETDBERR(dberr, 0, E_QS0014_EXLOCK);
 		    break;
 		case QSO_SHLOCK:
 		    DBGSTALL2(scb);
-		    *err_code = E_QS0015_SHLOCK;
+		    SETDBERR(dberr, 0, E_QS0015_SHLOCK);
 		    break;
 		case QSO_FREE:
 
@@ -4740,7 +4749,7 @@ i4 		*err_code )
 		    break;
 		default:
 		    DBGSTALL2(scb);
-		    *err_code = E_QS000D_CORRUPT;
+		    SETDBERR(dberr, 0, E_QS000D_CORRUPT);
 		    break;
 	    }
 	    break;
@@ -4749,7 +4758,7 @@ i4 		*err_code )
 	    {
 		case QSO_EXLOCK:
 		    /*DBGSTALL2(scb);*/
-		    *err_code = E_QS0014_EXLOCK;
+		    SETDBERR(dberr, 0, E_QS0014_EXLOCK);
 		    break;
 		case QSO_SHLOCK:
 		case QSO_FREE:
@@ -4763,17 +4772,17 @@ i4 		*err_code )
 		    break;
 		default:
 		    DBGSTALL2(scb);
-		    *err_code = E_QS000D_CORRUPT;
+		    SETDBERR(dberr, 0, E_QS000D_CORRUPT);
 		    break;
 	    }
 	    break;
 	default:
 	    DBGSTALL2(scb);
-	    *err_code = E_QS0016_BAD_LOCKSTATE;
+	    SETDBERR(dberr, 0, E_QS0016_BAD_LOCKSTATE);
 	    break;
     }
 
-    return( (*err_code) ? E_DB_ERROR : E_DB_OK );
+    return( (dberr->err_code) ? E_DB_ERROR : E_DB_OK );
 }
 
 
