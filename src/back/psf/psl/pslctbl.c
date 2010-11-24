@@ -2437,6 +2437,7 @@ psl_ct11_tname_name_name(
 {
     DB_STATUS	    status;
     i4		    dv_size;
+    i4		    left;	/* for BYTE_ALIGN sizing */
 
     /* concat the two names */
     /* determine the length of the result */
