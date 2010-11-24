@@ -187,6 +187,9 @@
 **          after finish making the change, on HP terminal (XS), output 
 **          display attribute if current display attribute is not the same as 
 **          previous on. (b123820)
+**      28-jul-2010 (huazh01)
+**          only apply the fix to b123820 if the previous display attribute
+**          is reverse video. (b124090)
 */
 u_char		TDsaveLast();
 
@@ -2212,7 +2215,8 @@ i4	wy;
 				/* output display attribute if previous
                                 ** one is not the same as the current one.
                                 */
-                                if (pda != *nda)
+                                if (pda != *nda  &&
+                                   (pda & _DAMASK) == _RVVID)
                                 {
                                    TDsmvcur(ly, lx, y, wx + invc_wx);
                                    ly = y;
