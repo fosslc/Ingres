@@ -3900,6 +3900,8 @@ adu_long_unorm(ADF_CB      	*adf_scb,
 ** History:
 **	13-Oct-2010 (thaju02) B124469
 **	    Created. 
+**	25-Oct-2010 (thaju02) B124469
+**	    Move cleanup call to prevent segv.
 */
 DB_STATUS
 adu_19lvch_chrlen(ADF_CB	*scb,
@@ -3989,7 +3991,11 @@ adu_19lvch_chrlen(ADF_CB	*scb,
 		if (done && work->adw_shared.shd_exp_action != ADW_FLUSH_SEGMENT)
 		    pop_cb_ptr->pop_continuation |= ADP_C_END_MASK;
 	    }
+	    /* clean up */
+	    local_stat = (*fcn_fexi)(ADP_CLEANUP, pop_cb_ptr);
 	}
+	if (work)
+	    MEfree((PTR)work);
 
         if (rdv->db_length == 2)
             *(i2 *)rdv->db_data = totcount;
@@ -3997,12 +4003,5 @@ adu_19lvch_chrlen(ADF_CB	*scb,
             *(i4 *)rdv->db_data = totcount;
 	break;
     }
-
-    /* clean up */
-    local_stat = (*fcn_fexi)(ADP_CLEANUP, pop_cb_ptr);
-
-    if (work)
-	MEfree((PTR)work);
-
     return(status);
 }
