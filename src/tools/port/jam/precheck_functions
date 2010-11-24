@@ -27,6 +27,10 @@
 ##    20-Sep-2010 (hanje04)
 ##	  Fix build for FC 13/ Xerces 3.x. Determine version from source
 ##	  instead of using "hard coded" xvers.
+##	25-Oct-2010 (kschendel)
+##	    Above change broke build environments without Xerces installed
+##	    as a system library.  Check for externally set XERCxxx vars
+##	    first, if not set look for source, but avoid errors.
 
 # check_for_file ENVVARIABLE string1 string2 ...
 # checks whether one of the given strings is a file
@@ -169,19 +173,54 @@ check_for_krb5_hdrs ()
 check_for_xerces ()
 {
   # Xerces code and library (hopefully)
-  # check system locations first
-  if [ -f /usr/include/xercesc/sax2/DefaultHandler.hpp ] ; then
-    XERCESCROOT=/usr
-  else
-    [ "$XERCESCROOT" ] || unset XERCESCROOT
-  fi
-  # library naming varies between versions
-  xmaj=`grep "^#[ \t]*define[ \t]*XERCES_VERSION_MAJOR" \
-	${XERCESCROOT}/include/xercesc/util/XercesVersion.hpp | cut -d' ' -f3`
-  xmin=`grep "^#[ \t]*define[ \t]*XERCES_VERSION_MINOR" \
-	${XERCESCROOT}/include/xercesc/util/XercesVersion.hpp | cut -d' ' -f3`
+  # Take externally specified root first, try system locations next.
+  # XercesVersion can show up in a couple different places depending on
+  # whether it's a source or installed Xerces.
 
-  case "$xmaj" in 
+  xvershpp1='/include/xercesc/util/XercesVersion.hpp'
+  xvershpp2='/src/xercesc/util/XercesVersion.hpp'
+  if [ -n "$XERCESCROOT" ] ; then
+    if [ -f ${XERCESCROOT}${xvershpp1} ] ; then
+	xvershpp=${XERCESCROOT}${xvershpp1}
+    elif [ -f ${XERCESCROOT}${xvershpp2} ] ; then
+	xvershpp=${XERCESCROOT}${xvershpp2}
+    else
+	unset XERCESCROOT
+    fi
+  fi
+  if [ -z "$XERCESCROOT" ] ; then
+    XERCESCROOT=/usr
+    if [ -f ${XERCESCROOT}${xvershpp1} ] ; then
+	xvershpp=${XERCESCROOT}${xvershpp1}
+    elif [ -f ${XERCESCROOT}${xvershpp2} ] ; then
+	xvershpp=${XERCESCROOT}${xvershpp2}
+    else
+	XERCESCROOT=`echo ${ING_ROOT}/xerces-c-src_[0-9]*`
+	if [ -d "$XERCESCROOT" ] ; then
+	    if [ -f ${XERCESCROOT}${xvershpp1} ] ; then
+		xvershpp=${XERCESCROOT}${xvershpp1}
+	    elif [ -f ${XERCESCROOT}${xvershpp2} ] ; then
+		xvershpp=${XERCESCROOT}${xvershpp2}
+	    else
+		unset XERCESCROOT
+	    fi
+	else
+	    unset XERCESCROOT
+	fi
+    fi
+  fi
+  if [ -z "$XERCESCROOT" ] ; then
+    unset XERCESCROOT
+  fi
+
+  # library naming varies between versions
+  if [ -n "$xvershpp" ] ; then
+    xmaj=`grep "^#[ \t]*define[ \t]*XERCES_VERSION_MAJOR" \
+	${xvershpp} | cut -d' ' -f3`
+    xmin=`grep "^#[ \t]*define[ \t]*XERCES_VERSION_MINOR" \
+	${xvershpp} | cut -d' ' -f3`
+
+    case "$xmaj" in 
     3)
 	xvers=${xmaj}.${xmin}
 	xlibvers=$xvers
@@ -194,31 +233,22 @@ check_for_xerces ()
 	;;
      *) xlibname=unknown
 	;;
-  esac
-  if $rhybrid ; then
-    if [ -f /usr/lib64/${xlibname} ] ; then
-        XERCESLOCHB=/usr/lib
-        XERCESLOC=/usr/lib64
-    fi
-  else
-    if [ -f /usr/lib/${xlibname} ] ; then
-        XERCESLOC=/usr/lib
-    fi
-    if [ -f /usr/lib64/${xlibname} ] ; then
-        XERCESLOCHB=/usr/lib64
+    esac
+    if $rhybrid ; then
+	if [ -f /usr/lib64/${xlibname} ] ; then
+	    XERCESLOCHB=/usr/lib
+	    XERCESLOC=/usr/lib64
+	fi
+    else
+	if [ -f /usr/lib/${xlibname} ] ; then
+	    XERCESLOC=/usr/lib
+	fi
+	if [ -f /usr/lib64/${xlibname} ] ; then
+	    XERCESLOCHB=/usr/lib64
+	fi
     fi
   fi
  
-  [ "$XERCESCROOT" ] && [ -d ${XERCESCROOT}/src/xercesc -o \
-    -f ${XERCESCROOT}/include/xercesc/sax2/DefaultHandler.hpp ] ||
-  {
-    if [ -d ${ING_ROOT}/xerces-c-src_2_7_0/src/xercesc ] ; then
-      XERCESCROOT=${ING_ROOT}/xerces-c-src_2_7_0
-    else
-      [ "$XERCESCROOT" ] || unset XERCESCROOT
-    fi
-  }
-  
   [ "$XERCESCROOT" ] && [ -d ${XERCESCROOT}/lib ] &&
     [ x"$XERCESLOC" = "x" ] && XERCESLOC=${XERCESCROOT}/lib
 

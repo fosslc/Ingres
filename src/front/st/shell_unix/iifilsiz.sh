@@ -42,6 +42,9 @@
 ##	15-Feb-2010 (hanje04)
 ##	        SIR 123296
 ##		Add support for LSB builds
+##	21-Oct-2010 (kschendel)
+##		Fix int_osx, ls -lo seems broken.  Don't assume file size
+##		is always $4, let iisysdep tell us.
 ##
 #  PROGRAM = (PROG1PRFX)filsiz
 #
@@ -54,16 +57,16 @@
 if [ "$1" = "-b" ]
 then
     IILSFLAGS="$LSBLOCKFLAGS"
-    IISZFIELD=1
+    IILSPOS="$LSBLOCKPOS"
     shift
 else
     IILSFLAGS="$LSSIZEFLAGS"
-    IISZFIELD=4
+    IILSPOS="$LSSIZEPOS"
 fi
 
 if [ $# != 1 ]
 then
-   ls $IILSFLAGS $1 2>/dev/null | awk '{ print $'${IISZFIELD}' }' >"$2"
+   ls $IILSFLAGS $1 2>/dev/null | awk '{ print $'${IILSPOS}' }' >"$2"
 else
-   ls $IILSFLAGS $1 2>/dev/null | awk '{ print $'${IISZFIELD}' }'
+   ls $IILSFLAGS $1 2>/dev/null | awk '{ print $'${LSSIZEPOS}' }'
 fi

@@ -693,6 +693,8 @@
 ##	    For Solaris/Sparc, check the available compiler flags,
 ##	    then specify the option accordingly. Avoid the annoying 
 ##	    'deprecated' warnings.
+##	20-Oct-2010 (kschendel)
+##	    int_osx doesn't use -l for ar, and ls -lo is broken.
 ##
 ##
 #-------------------------------------------------------------------------
@@ -1584,6 +1586,7 @@ case $vers in
    su9_us5|\
    sui_us5|\
    a64_sol|\
+   int_osx|\
    usl_us5)
       echo AR_L_OPT=
       ;;
@@ -1594,16 +1597,24 @@ esac
 
 #-------------------------------------------------------------------------
 # The LSSIZEFLAGS variable is set to force the 'ls' command to generate
-# file size as $4 for parsing by 'iifilsiz.sh'.
+# file size as $LSSIZEPOS for parsing by 'iifilsiz.sh'.
 case $vers in
    axp_osf )
       echo LSSIZEFLAGS=-o
+      echo LSSIZEPOS=4
       ;;
    *_lnx|int_rpl)
       echo LSSIZEFLAGS='"-l --no-group"'
+      echo LSSIZEPOS=4
+      ;;
+   int_osx)
+      ## ls -lo seems broken at least on 10.6.2, use ls -l and size is $5
+      echo LSSIZEFLAGS=-l
+      echo LSSIZEPOS=5
       ;;
    *) 
       echo LSSIZEFLAGS=-lo
+      echo LSSIZEPOS=4
       ;;
 esac
 
@@ -1612,10 +1623,11 @@ esac
 # file size in blocks as $1 for parsing by 'iifilsiz.sh'.
 case $vers in
    axp_osf )
-      echo LSBLOCKFLAGS=-s
+
       ;;
    *) 
       echo LSBLOCKFLAGS=-ls
+      echo LSBLOCKPOS=1
       ;;
 esac
 

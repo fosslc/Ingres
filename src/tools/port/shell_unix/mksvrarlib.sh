@@ -39,6 +39,9 @@
 #	18-Jun-2009 (kschendel) SIR 122138
 #	    Hybrid mechanisms changed, fix here.
 #	    Clean out work directories after doing each phase.
+#	20-Oct-2010 (kschendel)
+#	    int_osx insists on ranlib or the linker errors out.  (ar -s
+#	    would work too, but ranlib is simpler.)
 
 if [ -n "$ING_VERS" ] ; then
 
@@ -179,7 +182,7 @@ done
 
 if ($do_hyb && $do_reg)
 then
-        echo    "$0: 32 and 64 bit shared libraries can not be build at the same time."
+        echo    "$0: 32 and 64 bit shared libraries can not be built at the same time."
         exit
 fi
 
@@ -838,3 +841,11 @@ then
     esac
     rm -f *.o
 fi  # do_malloc
+
+# ranlib the result if necessary
+# This probably ought to checked be in iisysdep...
+
+if [ "$config" = 'int_osx' ] ; then
+    echo ranlib $INGLIB/iimerge.a
+    ranlib $INGLIB/iimerge.a
+fi
