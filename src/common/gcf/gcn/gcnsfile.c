@@ -212,12 +212,18 @@
 **	    extended if additional space is needed for an entry.
 **      09-Feb-2010 (smeke01) b123226, b113797 
 **	    MOlongout/MOulongout now take i8/u_i8 parameter.
+<<<< THEIR VERSION
+**      20-Oct-2010 (Ralph Loen) Bug 122895
+**          For gcn_nq_lock(), on VMS, open files as GCN_RACC_FILE for 
+**          optimized file access.  See bug 102423.
+====
 **     16-Feb-2010 (hanje04)
 **         SIR 123296
 **         Add LSB option, writable files are stored under ADMIN, logs under
 **         LOG and read-only under FILES location.
 **	23-Apr-2010 (wanfr01) b123139
 **	   Add cv.h for CV function definitions
+>>>> YOUR VERSION
 */
 
 static VOID	gcn_rewrite( GCN_QUE_NAME * );
@@ -657,6 +663,11 @@ gcn_nq_find( char *type )
 **	    Added hash access to Name Queues.
 **	10-Jul-98 (gordy)
 **	    Handle NULL filename in trace statement.
+<<<< THEIR VERSION
+**      20-Oct-2010 (Ralph Loen) Bug 122895
+**          On VMS, open files as GCN_RACC_FILE for optimized file access.
+**          
+====
 **	 3-Aug-09 (gordy)
 **	    Added new variable length record format.  Declare default
 **	    record buffer.  Use dynamic storage if actual record length
@@ -664,6 +675,7 @@ gcn_nq_find( char *type )
 **	8-Sep-09 (bonro01)
 **	    Fix syntax error introduced by previous change which fails
 **	    on Solaris.
+>>>> YOUR VERSION
 */
 
 STATUS
@@ -2283,7 +2295,11 @@ gcn_fopen( char *name, char *mode, FILE **file, i4  reclen )
 	goto error;
 		
     if ( reclen )
+#ifdef VMS
+	status = SIfopen( &loc, mode, GCN_RACC_FILE, reclen, file );
+#else
 	status = SIfopen( &loc, mode, SI_RACC, reclen, file );
+#endif
     else
 #ifndef hp9_mpe
 	status = SIopen( &loc, mode, file );

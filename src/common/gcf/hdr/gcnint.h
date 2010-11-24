@@ -178,8 +178,11 @@
 **	27-Aug-10 (gordy)
 **	    Added password encoding version for VNODE login passwords.
 **	    Added symbols for encoding versions.
-**       15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**      15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
 **          Changes to eliminate compiler prototype warnings.
+**      16-Nov-2010 (Ralph Loen) Bug 122895
+**          Made gcn_encode(), gcn_decode() and gcn_decrypt() public so that
+**          iicvtgcn can use these functions.
 */
 
 #define		MAXLINE			1024
@@ -869,7 +872,9 @@ FUNC_EXTERN	STATUS 		gcn_gcadm_term( VOID );
 FUNC_EXTERN	i4 		gcn_sess_info( PTR, i4  );
 FUNC_EXTERN 	i4 		gcn_verify_sid( PTR  );
 FUNC_EXTERN	i4              gcn_get_session_info( PTR, GCN_SESS_INFO ** );
-FUNC_EXTERN 	STATUS 		gcn_encrypt( char *, char *, char * );
+FUNC_EXTERN     STATUS          gcn_decrypt( char *, char *, char * );
+FUNC_EXTERN     STATUS          gcn_encode( char *, u_i1 *, char *, char * );
+FUNC_EXTERN     STATUS          gcn_decode( char *, u_i1 *, char *, char * );
 
 /*
 ** GCADM interface with GCN server and iimonitor

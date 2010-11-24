@@ -100,6 +100,9 @@ $!!         SIR 118402 - Skip running "Selective Purge" routine when the command
 $!!             terminates with errors.
 $!!	30-apr-2009 (joea)
 $!!	    Remove undocumented or incompletely implemented options.
+$!!     16-Nov-2010 (loera01)
+$!!         Invoke iicvtgcn to extract the clustered GCN database into
+$!!         a database normalized for an unclustered environment.
 $!!
 $!!  DEST = utility
 $!! ------------------------------------------------------------------------
@@ -875,6 +878,10 @@ $!#   Reset certain entries for surviving node.
 $    cfu_host = F$EDIT(CONFIG_HOST,"UPCASE")
 $    iisetres "ii.''CONFIG_HOST'.config.cluster_mode" "OFF"
 $    iisetres "ii.*.config.server_host" "''cfu_host'"
+$!
+$! Convert clustered GCN files to unclustered (node-specific) format.
+$!
+$ iicvtgcn -u
 $!
 $!  Forced DMCM to "OFF" for all classes - JIC
 $!
