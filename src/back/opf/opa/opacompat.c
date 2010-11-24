@@ -1353,6 +1353,10 @@ opv_cmaps(
 **	    Confirm that subqueries to be joined have the same distinctness
 **	    and, if eliminating distincts from a count query, have the same
 **	    column(s) in the resdom list.
+**      10-sept-2010 (huazh01)
+**          if 'header' and 'subquery' are two idential sub-select queries
+**          but under different outer join id, then they are not compatible
+**          to be run together. (b123772)
 [@history_line@]...
 */
 static bool
@@ -1726,10 +1730,11 @@ note that r1 and r2 are not equivalent.
     /* If this is a straightforward COUNT, we need to ensure that the duplicate
     ** elimination is the same (kibro01) b121869
     */
-#define ADI_CNTAL_OP	39
     if (header->ops_agg.opa_aop && subquery->ops_agg.opa_aop &&
-	header->ops_agg.opa_aop->pst_sym.pst_value.pst_s_op.pst_opno == ADI_CNTAL_OP &&
-	subquery->ops_agg.opa_aop->pst_sym.pst_value.pst_s_op.pst_opno == ADI_CNTAL_OP)
+	header->ops_agg.opa_aop->pst_sym.pst_value.pst_s_op.pst_opno == 
+            header->ops_global->ops_cb->ops_server->opg_scount &&
+	subquery->ops_agg.opa_aop->pst_sym.pst_value.pst_s_op.pst_opno == 
+            header->ops_global->ops_cb->ops_server->opg_scount)
     {
 	PST_QNODE *h, *s;
 	/* One is count(distinct) and the other just count - can't combine */
@@ -1770,6 +1775,16 @@ note that r1 and r2 are not equivalent.
 	if (h || s)
 		return (FALSE);
     }
+
+    /* b123772:
+    ** if two sub-select queries are identical but under different 
+    ** oj id, then they are not compatible to be run together. 
+    ** 'opl_aggid' gets set in opa_rnode().
+    */
+    if (header->ops_sqtype == OPS_SELECT &&
+        subquery->ops_sqtype == OPS_SELECT &&
+        header->ops_oj.opl_aggid != subquery->ops_oj.opl_aggid)
+       return (FALSE);
 
     return(TRUE); /* return TRUE if aggregates are compatible */
 
