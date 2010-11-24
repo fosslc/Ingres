@@ -6888,6 +6888,9 @@ DB_DATA_VALUE       *rdv)
 **	    Correct prior change by actually changing the return type
 **	    as it is ultimatly needed to avoid UTF8 interferance with
 **	    single characters.
+**	08-Nov-2010 (thaju02) B124713
+**	    For UTF8 to determine start position, in char_len while-loop 
+**	    CMbytecnt() of src1, not src.
 */
 
 static DB_STATUS
@@ -6958,7 +6961,7 @@ DB_DATA_VALUE	*rdv)
 	    i4 char_len = 0;
 	    char *src1 = src;
 
-	    while (src1 + CMbytecnt(src) < endsrc)
+	    while (src1 + CMbytecnt(src1) < endsrc)
 	    {
 		CMnext(src1);
 		char_len++;
