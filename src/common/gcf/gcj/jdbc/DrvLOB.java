@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2009 Ingres Corporation All Rights Reserved.
+** Copyright (c) 2010 Ingres Corporation All Rights Reserved.
 */
 
 package	com.ingres.gcf.jdbc;
@@ -33,6 +33,11 @@ package	com.ingres.gcf.jdbc;
 **          - Replaced SqlEx references with SQLException or SqlExFactory
 **            depending upon the usage of it. SqlEx becomes obsolete to support
 **            JDBC 4.0 SQLException hierarchy.
+**	 9-Nov-10 (gordy)
+**	    Using substring() to retrieve blocks of character LOB data
+**	    may result in excess data bytes being returned when the 
+**	    character encoding is multi-byte.  The excess data must be
+**	    cached between requests.
 */
 
 import	java.io.InputStream;
@@ -42,6 +47,7 @@ import	java.io.StringReader;
 import	java.io.IOException;
 import	java.sql.Types;
 import	java.sql.SQLException;
+import	java.util.Vector;
 import	com.ingres.gcf.util.DbmsConst;
 import	com.ingres.gcf.util.SqlStream;
 import	com.ingres.gcf.util.SqlLongByte;
@@ -2188,12 +2194,21 @@ isValid()
 **	mark			Marked position in LOB.
 **	end_of_data		Has end-of-data been reached?
 **	ba			Byte buffer for read method.
+**	cache			Overflow cache buffer.
+**	cache_beg_block		Vector block of start of data.
+**	cache_beg_offset	Offset in block of start of data.
+**	cache_end_block		Vector block of end of data.
+**	cache_end_offset	Offset in block of end of data.
 **
 ** History:
 **	15-Nov-06 (gordy)
 **	    Created.
 **	12-Jun-09 (rajus01)
 **	    Added limit and constructor for reading subset of the LOB data.
+**	 9-Nov-10 (gordy)
+**	    Cache additional data resulting from substring() operations
+**	    on multi-byte character data.  Added cache and associated
+**	    begin/end trackers, readCache() and writeCache().
 */
 
 private class
@@ -2202,11 +2217,33 @@ ByteStream
     implements DbmsConst
 {
 
-    private int		position = 1;
-    private int		limit = -1;
-    private int		mark = -1;
-    private boolean	end_of_data = false;
-    private byte	ba[] = new byte[1];
+    /*
+    ** A closed stream is indicated by setting position = -1.
+    */
+    private int			position = 1;
+    private int			limit = -1;
+    private int			mark = -1;
+    private boolean		end_of_data = false;
+    private byte		ba[] = new byte[1];
+
+    /*
+    ** Multi-byte character sets may return more bytes than requested
+    ** because the request is in for characters.  The excess bytes are
+    ** stored in a cache and used to fill the next request.  The cache
+    ** is designed for the simple case where data is always added to
+    ** an empty cache and then emptied before additional data is added.
+    ** the data is stored sequentially in a vector of blocks.  The
+    ** vector is expanded as needed and subsequently re-used.  End of
+    ** added data is tracked with a vector block and offset within the
+    ** block.  As data is read from the block, the current start of
+    ** data is also tracked by vector block and offset.  The cache
+    ** is empty when start and end points are the same.
+    */
+    private Vector< byte[] >	cache = null;
+    private int			cache_beg_block;
+    private int			cache_beg_offset;
+    private int			cache_end_block;
+    private int			cache_end_offset;
 
 
 /*
@@ -2388,7 +2425,7 @@ reset()
     if ( position <= 0 )  throw new IOException( "Stream closed" );
     if ( mark <= 0 )  mark = 1;
 
-    if ( trace.enabled( 5 ) )  trace.write( tr_id + ": position to " + mark );
+    if ( trace.enabled( 5 ) )  trace.write( tr_id + ": position @ " + mark );
     position = mark;
     end_of_data = false;
     return;
@@ -2434,7 +2471,7 @@ skip( long bytes )
 	return( 0 );
 
     if ( trace.enabled( 5 ) )  
-	trace.write( tr_id + ": skip " + bytes + " at " + position );
+	trace.write( tr_id + ": skipping " + bytes + " bytes @ " + position );
 
     position += bytes;
     return( bytes );
@@ -2478,6 +2515,9 @@ read()
 **	the number of bytes actually read or -1 if end-
 **	of-data has been reached.
 **
+**	Excess data associated with multi-byte character
+**	sets is cached between requests.
+**
 ** Input:
 **	ba	Target byte array.
 **	offset	Position in target array.
@@ -2492,13 +2532,17 @@ read()
 ** History:
 **	15-Nov-06 (gordy)
 **	    Created.
+**	 9-Nov-10 (gordy)
+**	    Fill request from cache if possible.  Any excess data
+**	    returned by the server requests is cached for the next
+**	    request.
 */
 
 public int
 read( byte ba[], int offset, int length )
     throws IOException
 {
-    int actual = 0;
+    int count, actual = 0;
 
     if ( trace.enabled( 4 ) )  trace.write( tr_id + ".read(" + length + ")" );
 
@@ -2507,22 +2551,37 @@ read( byte ba[], int offset, int length )
     */
     if ( ba == null )  throw new NullPointerException();
     if ( offset < 0  ||  length < 0  ||  
-	 (offset + length) < 0  || (offset + length) > ba.length )
+	 (offset + length) < 0  ||  (offset + length) > ba.length )
 	throw new IndexOutOfBoundsException();
     if ( position < 0 )  throw new IOException( "Stream closed" );
-
+    if ( length == 0 )  return( 0 );
+    if ( end_of_data )  return( -1 );
 
     /*
-    ** No data if at end-of-data.
+    ** Multi-byte character sets may result in extra data bytes
+    ** being cached.  Return cached data before requesting any
+    ** additional data.
     */
-    if ( end_of_data )  return( -1 );
-    if ( length == 0 )  return( 0 );
-
-    if( limit >= 0 )  
+    if ( (count = readCache( ba, offset, length )) > 0 )
     {
-	if ( position >= limit )  return( -1 );
+	actual += count;
+	offset += count;
+	length -= count;
+
+	/*
+	** Done if request satisfied from cache.
+	*/
+	if ( length <= 0 )  return( actual );
+    }
+
+    if ( limit >= 0 )  
+    {
+	if ( position >= limit )  return( (actual > 0) ? actual : -1 );
 	length = Math.min( length, limit - position );
     }
+
+    if ( trace.enabled( 5 ) )  
+	trace.write( tr_id + ": reading " + length + " bytes @ " + position );
 
     try { msg.lock(); }
     catch( SQLException sqlEx )
@@ -2530,6 +2589,15 @@ read( byte ba[], int offset, int length )
 	
     try
     {
+	/*
+	** Note that substring parameters are in character counts
+	** rather than in bytes.  Since our requests are in bytes,
+	** care must be taken not to confuse the values.  We request
+	** the same number of characters as has been requested in
+	** bytes.  Multi-byte character sets will return more bytes
+	** of data than characters requested, so the excess is
+	** cached will be returned on the next request.
+	*/
 	sendQuery( "select substring( ~V from ~V for ~V )" );
 
 	startDesc( (short)3 );
@@ -2554,14 +2622,69 @@ read( byte ba[], int offset, int length )
 	readResults();
 
 	/*
-	** Read LOB data, close stream to ensure data message 
-	** has been consumed, and process rest of results.
+	** Read LOB data.  If fewer bytes are returned than the
+	** number of bytes/characters requested, then we assume
+	** the end of the LOB has been reached.
 	*/
-	actual = bsResult.read( ba, offset, length );
+	if ( (count = bsResult.read( ba, offset, length )) <= 0 )
+	{
+	    if ( trace.enabled( 5 ) )  
+		trace.write( tr_id + ": end-of-data" );
+
+	    end_of_data = true;
+	}
+	else
+	{
+	    if ( trace.enabled( 5 ) )  
+		trace.write( tr_id + ": loaded " + count + 
+				     " bytes @ " + position );
+
+	    actual += count;
+
+	    /*
+	    ** If fewer bytes were received than requested, then
+	    ** the end of the LOB has been reached.  Note that
+	    ** with multi-byte character sets, more bytes than
+	    ** requested can be returned but we may still have
+	    ** reached the end of the LOB with fewer characters
+	    ** than requested being returned.  This case can
+	    ** not be determined at this point, but will be
+	    ** seen as a 0 length result for the next request.
+	    */
+	    if ( count < length )  end_of_data = true;
+
+	    /*
+	    ** Update the scan position in the LOB.  Since the
+	    ** byte count returned may not correspond to the
+	    ** number of characters read, we assume that the
+	    ** requested number of characters were read.  If
+	    ** in fact, fewer characters were read, then the
+	    ** end of the LOB has been reached and setting
+	    ** position past the end of the LOB will not have
+	    ** any bad effects - the end-of-data state will
+	    ** be detected on the next request.
+	    */
+	    position += length;
+	}
+
+	/*
+	** Multi-byte character sets will return more data bytes
+	** than the length requested when characters are longer
+	** than a single byte.  This extra data is technically
+	** a part of this request, but must be cached to be
+	** returned in the next request.  Note that the cache
+	** must be empty at this point since any data left over
+	** from a previous request was used to try and satisfy
+	** the current request.
+	*/
+	if ( ! end_of_data )  writeCache( bsResult );
 
 	try { bsResult.close(); }
 	catch( IOException ignore ) {}
 
+	/*
+	** Process remaining result info.
+	*/
 	readResults();
 	closeQuery();
     }
@@ -2580,22 +2703,216 @@ read( byte ba[], int offset, int length )
 	msg.unlock();
     }
 
-    if ( actual <= 0 )  
-    {
-	actual = -1;
-	end_of_data = true;
-    }
-    else
-    {
-	if ( trace.enabled( 5 ) )  
-	    trace.write( tr_id + ": read " + actual + " at " + position );
-	position += actual;
-	if ( actual < length )  end_of_data = true;
-    }
-
-    if ( trace.enabled( 4 ) )  trace.write( tr_id + ".read:" + actual );
+    if ( actual <= 0 )  actual = -1;
+    if ( trace.enabled( 4 ) )  trace.write( tr_id + ".read: " + actual );
     return( actual );
 } // read
+
+
+/*
+** Name: readCache
+**
+** Description:
+**	Read bytes into byte array from cache.  Returns
+**	the number of bytes actually read or 0 if cache
+**	is empty.
+**
+** Input:
+**	ba	Target byte array.
+**	offset	Position in target array.
+**	length	Number of bytes to read.
+**
+** Output:
+**	ba	Data bytes.
+**
+** Returns:
+**	int	Number of bytes read or -1.
+**
+** History:
+**	 9-Nov-10 (gordy)
+**	    Created.
+*/
+
+private int
+readCache( byte ba[], int offset, int length )
+    throws IOException
+{
+    /*
+    ** Quick exit if cache hasn't been initialized.
+    */
+    if ( cache == null )  return( 0 );
+
+    int count = 0;	// Bytes returned.
+
+    /*
+    ** Cache is an array of data blocks.  Data is copied out 
+    ** of the cache until the request has been completed or 
+    ** the cache is empty.
+    **
+    ** Loop scans through the data blocks in the cache from
+    ** the current starting offset.
+    */
+    while( length > 0  &&  
+	   ( cache_beg_block < cache_end_block  ||
+	     cache_beg_offset < cache_end_offset ) )
+    {
+	byte block[] = cache.get( cache_beg_block );
+	int  len;
+
+	/*
+	** Limit data copied to what is available
+	** in the current cache block.
+	*/
+	if ( cache_beg_block < cache_end_block )
+	    len = Math.min( length, block.length - cache_beg_offset );
+	else
+	    len = Math.min( length, cache_end_offset - cache_beg_offset );
+
+	System.arraycopy( block, cache_beg_offset, ba, offset, len );
+	cache_beg_offset += len;
+	count += len;
+	offset += len;
+	length -= len;
+
+	if ( cache_beg_block < cache_end_block )
+	{
+	    /*
+	    ** If current cache block has been consumed,
+	    ** move to start of next block.
+	    */
+	    if ( cache_beg_offset >= block.length )
+	    {
+		cache_beg_block++;
+		cache_beg_offset = 0;
+	    }
+	}
+	else  if ( cache_beg_offset >= cache_end_offset )
+	{
+	    /*
+	    ** Cache has been consumed.  Clear the cache.
+	    */
+	    cache_beg_block = 0;
+	    cache_beg_offset = 0;
+	    cache_end_block = 0;
+	    cache_end_offset = 0;
+	}
+    }    
+
+    if ( trace.enabled( 5 ) )  
+	trace.write( tr_id + ": copied " + count + " bytes from cache" );
+
+    return( count );
+} // readCache
+
+
+/*
+** Name: writeCache
+**
+** Description:
+**	Write remainder of input stream into cache.  Stream
+**	is read to end-of-data, but is not closed.
+**
+**	Cache is initialized if necessary, but will only be
+**	initialized if there is data to be cached..  
+**
+**	Data is added at current end-of-data point, effectively
+**	appending to any current data in the cache.  To ensure
+**	efficient storage usage, the cache should be emptied
+**	using readCache().
+**
+** Input:
+**	stream
+**
+** Output:
+**	None.
+**
+** Returns:
+**	void.
+**
+** History:
+**	 9-Nov-10 (gordy)
+**	    Created.
+*/
+
+private void
+writeCache( InputStream stream )
+    throws IOException
+{
+    int count = 0;	// Total loaded into cache.
+
+    if ( cache == null )
+    {
+	/*
+	** Unless a multi-byte character set is involved,
+	** the normal case will be that there is no data
+	** to cache.  Don't initialize the cashe until
+	** there is some actual data to be cached.
+	*/
+ 	int data = stream.read();
+	if ( data < 0 )  return;
+
+	/*
+	** Initialize cache with first data block
+	** and load first data byte retrieved above 
+	** into the cache.
+	*/
+	cache_beg_block = 0;
+	cache_beg_offset = 0;
+	cache_end_block = 0;
+	cache_end_offset = 0;
+
+	byte block[] = new byte[ conn.cnf_lob_segSize ];
+	block[ cache_end_offset++ ] = (byte)data;
+	count++;
+
+	cache = new Vector< byte[] >();
+	cache.add( block );
+    }
+
+    /*
+    ** Loop filling cache blocks, extending as needed,
+    ** unti end-of-data is detected.  Fill begins at
+    ** current end position in the cache.
+    */
+    for(;;)
+    {
+	byte block[] = cache.get( cache_end_block );
+
+	/*
+	** Try to fill current cache block.
+	*/
+	int len = block.length - cache_end_offset;
+	int cnt = stream.read( block, cache_end_offset, len );
+
+	if ( cnt < 0 )  break;		// end-of-data
+	cache_end_offset += cnt;
+	count += cnt;
+
+	/*
+	** If less data is returned than was requested,
+	** assume end-of-data has been reached.
+	*/
+	if ( cnt < len )  break;
+
+	/*
+	** Request filled the current cache block.
+	** Move to next cache block.
+	*/
+	cache_end_block++;
+	cache_end_offset = 0;
+
+	/*
+	** Add another cache block if last block has been filled.
+	*/
+	if ( cache_end_block >= cache.size() )  
+	    cache.add( new byte[ conn.cnf_lob_segSize ] );
+    }
+
+    if ( trace.enabled( 5 ) )  
+	trace.write( tr_id + ": stored " + count + " bytes in cache" );
+
+    return;
+} // writeCache
 
 
 } // class ByteStream
@@ -2821,7 +3138,7 @@ reset()
     if ( position <= 0 )  throw new IOException( "Stream closed" );
     if ( mark <= 0 )  mark = 1;
 
-    if ( trace.enabled( 5 ) )  trace.write( tr_id + ": position to " + mark );
+    if ( trace.enabled( 5 ) )  trace.write( tr_id + ": position @ " + mark );
     position = mark;
     end_of_data = false;
     return;
@@ -2867,7 +3184,8 @@ skip( long chars )
 	return( 0 );
 
     if ( trace.enabled( 5 ) )  
-	trace.write( tr_id + ": skip " + chars + " at " + position );
+	trace.write( tr_id + ": skipping " + chars + 
+			     " characters @ " + position );
 
     position += chars;
     return( chars );
@@ -2927,6 +3245,10 @@ read( char ca[], int offset, int length )
         length = Math.min( length, limit - position );
     }
 
+    if ( trace.enabled( 5 ) )  
+	trace.write( tr_id + ": reading " + length + 
+			     " characters @ " + position );
+
     try { msg.lock(); }
     catch( SQLException sqlEx )
     { throw new IOException( sqlEx.getMessage() ); }
@@ -2985,7 +3307,8 @@ read( char ca[], int offset, int length )
     else
     {
 	if ( trace.enabled( 5 ) )  
-	    trace.write( tr_id + ": read " + actual + " at " + position );
+	    trace.write( tr_id + ": loaded " + actual + 
+				 " characters @ " + position );
 	position += actual;
 	if ( actual < length )  end_of_data = true;
     }
