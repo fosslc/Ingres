@@ -165,6 +165,8 @@
 **	    Replace II_VMS_ITEM_LIST_3 by ILE3.
 **      03-sep-2010 (joea)
 **          In CXdlm_get_blki, if a lock has been granted, update rqmode.
+**      29-oct-2010 (joea)
+**          Initialize the request's cx_status in cx_vms_pass_dlm_req.
 */
 
 
@@ -1528,6 +1530,7 @@ cx_vms_pass_dlm_req( i4 flags, CX_REQ_CB *preq, i4 opcode )
 
     do
     {
+        preq->cx_status = OK;
 	/*
 	** Sanity check.  If caller did not set this flag, then this
 	** request should not be redirected.  This would be the case
