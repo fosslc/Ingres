@@ -1,5 +1,5 @@
 /*
-**    Copyright (c) 1988, 2007 Ingres Corporation
+**    Copyright (c) 1988, 2010 Ingres Corporation
 */
 
 # include	<compat.h>
@@ -70,6 +70,8 @@
 **       13-May-2010 (Ralph Loen) Bug 120552
 **          Add a new output argument to GC_tcp_addr() which returns the
 **          "actual" symbolic port (base port plus subport).
+**       27-Oct-2010 (Ralph Loen)
+**          Fixed documentation for GC_tcp6_set_socket().
 */
 
 u_long
@@ -411,39 +413,33 @@ char    *pout_symbolic;
 
 
 /*
-** Name: GC_tcp6_addr - translate symbolic host::port to addrinfo linked list
+** Name: GC_tcp6_set_socket - set IPv6 socket info
 **
 ** Description:
-**	Translates string representation of INET address (host::port) to
-**	an addrinfo linked list.  
-**
-**	o	Accepts "dotted quad" notation (123.119.1.103) for host
-**	o	Accepts IPv6 notation (xxxx::xxxx:xxxx:xxxx:xxxx) for host
+**	Initalizes IPv6 socket structure and sets the port number.         
 **
 ** Inputs:
-**	buf		string form of address or hostname
+**	buf		port numeric string
 **
 ** Outputs:
-**      addrinfo    	linked list of IPv6 and IPv4 addresses
-**                      Note: memory allocated by the call to getaddrinfo()
-**                      needs to be freed later by freeaddrinfo().
+**      s    	        sockaddr_in6 structure initialized with the
+**                      port number.
 **
 ** Returns:
-**	BS_NOHOST_ERR	host unknown or malformed dotted quad
 **	BS_NOPORT_ERR	port malformed
-**	BS_INTERNAL_ERR	bad "tcpip_version" specified
 **	OK
 **
 ** History:
 **  16-Jan-2007 (Ralph Loen) SIR 116548
 **      Created.    
+**  27-Oct-2010 (Ralph Loen)
+**      Fixed documentation.
 */
 
 STATUS
 GC_tcp6_set_socket( char *buf, struct sockaddr_in6 *s)
 {
     i4 port;
-
     /*
     ** Initialize socket structure.  A side-effect is that the wildcard 
     ** listen address is set to IN6ADDR_ANY_INIT.
