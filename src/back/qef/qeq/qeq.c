@@ -1197,6 +1197,8 @@ QEF_RCB		    *qef_rcb )
 **	    Don't set DONE_1STFETCH if we scrolled to BEFORE.
 **	14-May-2010 (kschendel) b123565
 **	    Split validation into two parts, fix here.
+**	20-Aug-2010 (thaju02) B123876
+**	    Initialize qef_retcurspos.
 */
 DB_STATUS
 qeq_fetch(
@@ -1279,7 +1281,10 @@ QEF_RCB		*qef_rcb )
     /* now fetch the tuple */
     qeq_rcbtodsh(qef_rcb, dsh);
     if (!(dsh->dsh_qp_status & DSH_DONE_1STFETCH))
+    {
 	qef_rcb->qef_curspos = 0;	    /* init cursor position */
+	qef_rcb->qef_retcurspos = 0; 
+    }
     status = qea_fetch(dsh->dsh_act_ptr, qef_rcb, dsh, 
 	(dsh->dsh_qp_status & DSH_DONE_1STFETCH) ? (i4) NO_FUNC : 
 					(i4) NO_FUNC | FUNC_RESET);
@@ -1993,6 +1998,8 @@ QEF_RCB		*qef_rcb )
 **	15-Jan-2010 (jonj)
 **	    In QEA_CALLPROC, check ahd_flags & QEF_CP_CONSTRAINT; not all
 **	    procedures that are constraints have parameters.
+**	15-Mar-2010 (troal01)
+**	    Propagate the E_QE5424_INVALID_SRID error to user.
 **	19-Mar-2010 (gupsh01) SIR 123444
 **	    Added support for rename table/columns.
 **	14-May-2010 (kschendel) b123565
@@ -3252,6 +3259,8 @@ i4		mode )
                 }
 		
 		if (  qef_rcb->error.err_code  == E_DM006A_TRAN_ACCESS_CONFLICT )
+			break;
+		if (  qef_rcb->error.err_code  == E_QE5424_INVALID_SRID )
 			break;
 
 		qef_rcb->error.err_code=qeu_cb->error.err_code;
