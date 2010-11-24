@@ -5293,6 +5293,9 @@ QEE_DSH	    *dsh
 **      21-Sep-2010 (horda03) b124315
 **          Check all the actions. The ahd_next list may "miss" actions
 **          due to flow changes introduced by IF statements.
+**	15-Nov-2010 (thaju02/horda03) B124715
+**	    If topmost action's ahd_list is null, revert back to 
+**	    traversing actions using ahd_next.
 */
 
 void
@@ -5302,10 +5305,13 @@ qeq_close_dsh_nodes(QEE_DSH *dsh)
     QEF_AHD	    *action;
     QEN_NODE	    *node;
     QEF_RCB	    *rcb = dsh->dsh_qefcb->qef_rcb;
+    bool	    use_ahd_list;
 
-    for (action = dsh->dsh_qp_ptr->qp_ahd; 
-	 action != NULL;
-	 action = action->ahd_list)
+    action = dsh->dsh_qp_ptr->qp_ahd;
+    use_ahd_list = (action && action->ahd_list);
+
+    for ( ; action != NULL; 
+	 action = (use_ahd_list ? action->ahd_list : action->ahd_next))
     {
 	if ( action->ahd_flags & QEA_NODEACT )
 	{
