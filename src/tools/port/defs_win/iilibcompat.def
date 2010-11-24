@@ -103,6 +103,10 @@
 ;	    Added MHtrunc.
 ;	18-May-2010 (drivi01)
 ;	    Add CSadjust_i8counter.
+;       03-nov-2010 (joea)
+;           Comment out various internal or unused MM, MO and SP functions.
+;	08-Nov-2010 (bonro01)
+;	    Comment out MO_tr_set missed in previous change.
 
 EXPORTS
 	iiBTand	@1				
@@ -950,30 +954,30 @@ EXPORTS
 	MMclear	@847				
 	MMmkpool	@848				
 	MMrmpool	@849				
-	MM_blk_alloc	@850				
-	MM_blk_free	@851				
-	MM_blk_mk	@852				
-	MM_blk_rm	@853				
-	MM_pool_block	@854				
+;	MM_blk_alloc	@850				
+;	MM_blk_free	@851				
+;	MM_blk_mk	@852				
+;	MM_blk_rm	@853				
+;	MM_pool_block	@854				
 	MM_dballoc	@855				
 	MM_dbfree	@856				
-	MM_dfl_alloc	@857				
-	MM_dfl_free	@858				
-	MM_dfl_mk	@859				
-	MM_dfl_rm	@860				
-	MM_dfl_stat	@861				
-	MM_pool_default	@862				
-	MM_mcr_alloc	@863				
-	MM_mcr_free	@864				
-	MM_mcr_mk	@865				
-	MM_mcr_rm	@866				
-	MM_pag_alloc	@867				
-	MM_pag_free	@868				
-	MM_pag_mk	@869				
-	MM_pag_rm	@870				
-	MM_pool_page	@871				
+;	MM_dfl_alloc	@857				
+;	MM_dfl_free	@858				
+;	MM_dfl_mk	@859				
+;	MM_dfl_rm	@860				
+;	MM_dfl_stat	@861				
+;	MM_pool_default	@862				
+;	MM_mcr_alloc	@863				
+;	MM_mcr_free	@864				
+;	MM_mcr_mk	@865				
+;	MM_mcr_rm	@866				
+;	MM_pag_alloc	@867				
+;	MM_pag_free	@868				
+;	MM_pag_mk	@869				
+;	MM_pag_rm	@870				
+;	MM_pool_page	@871				
 	MO_getinstance	@872				
-	MO_ipindex	@873				
+;	MO_ipindex	@873				
 	MOattach	@874				
 	MOdetach	@875				
 	MOidata_index	@876				
@@ -984,12 +988,12 @@ EXPORTS
 	MO_nxtclass	@881				
 	MOcdata_index	@882				
 	MOclassdef	@883				
-	MO_dumpinstance	@884				
+;	MO_dumpinstance	@884				
 	MO_dumpmem	@885				
-	MO_showclass	@886				
+;	MO_showclass	@886				
 	MO_showclasses	@887				
 	MO_showinstances	@888				
-	MO_tr_set	@889				
+;	MO_tr_set	@889				
 	MO_get	@890				
 	MOget	@891				
 	MO_getnext	@892				
@@ -1004,9 +1008,9 @@ EXPORTS
 	MO_oid_get	@901				
 	MO_oid_set	@902				
 	MO_oidmap_set	@903				
-	MO_delmon	@904				
+;	MO_delmon	@904				
 	MO_getmon	@905				
-	MO_igetmon	@906				
+;	MO_igetmon	@906				
 	MO_mon_class_get	@907				
 	MO_mon_id_get	@908				
 	MO_mon_index	@909				
@@ -1023,17 +1027,17 @@ EXPORTS
 	MOstrpget	@920				
 	MO_defstring	@921				
 	MO_delstring	@922				
-	MO_showstrings	@923				
+;	MO_showstrings	@923				
 	MO_strindex	@924				
-	MO_string	@925				
+;	MO_string	@925				
 	MOstrget	@926				
 	MOstrset	@927				
 	MOsptree_attach	@928				
 	MOuintget	@929				
 	MOuintset	@930				
 	MOuivget	@931				
-	MO_instance_compare	@932				
-	MO_mon_compare	@933				
+;	MO_instance_compare	@932				
+;	MO_mon_compare	@933				
 	MO_once	@934				
 	MO_str_to_uns	@935				
 	MOlongout	@936				
@@ -1092,7 +1096,7 @@ EXPORTS
 	REexec	@989				
 	SPdelete	@990				
 	SPdeq	@991				
-	SPempty	@992				
+;	SPempty	@992				
 	SPenq	@993				
 	SPfhead	@994				
 	SPfnext	@995				
