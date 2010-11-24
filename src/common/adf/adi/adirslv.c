@@ -433,6 +433,9 @@ static const char opnames[] = ADI_OPS_MACRO;
 **          Add nvl2 to "ifnull" coercion exception (Bug 123880)
 **      6-aug-2010 (stephenb)
 **          Correctly detect NVL2 from ADI_NVL2_FIND_COMMON (Bug 124211)
+**      12-oct-2010 (stephenb)
+**          NVL2 is all/all/all, just leave the input dt's as-is; adjusting
+**          them causes problems with the output (bug 124605).
 */
 
 # ifdef ADF_BUILD_WITH_PROTOS
@@ -1489,10 +1492,10 @@ ADI_RSLV_BLK	     *adi_rslv_blk
       ** have been updated with member information */
       for (i = 0; i < numdts; i++)
       {
-	if (i==0 && oldfidesc->adi_finstid == ADFI_1457_NVL2_ANY)
-	    /* leave parm1 as-is, it's just the null indicator */
-	    newfidesc->adi_dt[0] = abs(adi_rslv_blk->adi_dt[0]);
-	if ((newfidesc->adi_dt[i] == family) && (member != 0))
+	if (oldfidesc->adi_finstid == ADFI_1457_NVL2_ANY)
+	    /* NVL2 is any/any/any use rslv block dts */
+	    newfidesc->adi_dt[i] = abs(adi_rslv_blk->adi_dt[i]);
+	else if ((newfidesc->adi_dt[i] == family) && (member != 0))
 	  newfidesc->adi_dt[i]= member;
       }
 
