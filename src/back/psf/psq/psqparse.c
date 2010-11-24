@@ -106,6 +106,8 @@
 **	    in support of flattened recursion for things such as pst_treedup.
 **      02-sep-2010 (maspa05) sir 124346
 **          ult_always_trace() uses bitmask flags now
+**	21-Oct-2010 (kiria01) b124629
+**	    Use the macro symbol with ult_check_macro instead of literal.
 **/
 
 
@@ -425,7 +427,8 @@ psq_parseqry(
     {
 	(*print_qry_buffer_ptr)(psq_cb, qdesc, sess_cb);
     }
-    if (ult_check_macro(&sess_cb->pss_trace, 1, &val1, &val2))
+    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_PRINT_QRY_TRACE, &val1, &val2))
     {
 	if (psf_in_retry(sess_cb, psq_cb))
 	{

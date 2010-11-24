@@ -101,6 +101,8 @@
 **          Replace sizeof(bool) by DB_BOO_LEN when dealing with DB_BOO_TYPE.
 **	18-Mar-2010 (kiria01) b123438
 **	    Initialize the data in the node if not passed in.
+**	21-Oct-2010 (kiria01) b124629
+**	    Use the macro symbol with ult_check_macro instead of literal.
 **/
 
 /*
@@ -413,7 +415,8 @@ pst_node(
 	    /* Don't do tracing if couldn't get session control block */
 	    if (cb != (PSS_SESBLK *) NULL)
 	    {
-		if (ult_check_macro(&cb->pss_trace, 18, &val1, &val2))
+		if (ult_check_macro(&cb->pss_trace,
+				PSS_NEW_NODE_SUBTREE_TRACE, &val1, &val2))
 		{
 		    TRdisplay("Unary + on a constant node.\n");
 		    TRdisplay("Just return the sub-tree:\n\n\n");
@@ -447,7 +450,8 @@ pst_node(
 	    /* Don't do tracing if couldn't get session control block */
 	    if (cb != (PSS_SESBLK *) NULL)
 	    {
-		if (ult_check_macro(&cb->pss_trace, 18, &val1, &val2))
+		if (ult_check_macro(&cb->pss_trace,
+				PSS_NEW_NODE_SUBTREE_TRACE, &val1, &val2))
 		{
 		    TRdisplay("Unary - on a constant node.\n");
 		    TRdisplay("Just return the negated sub-tree:\n\n\n");
@@ -785,7 +789,8 @@ pst_node(
 	/* Don't do tracing if couldn't get session control block */
 	if (cb != (PSS_SESBLK *) NULL)
 	{
-	    if (ult_check_macro(&cb->pss_trace, 18, &val1, &val2))
+	    if (ult_check_macro(&cb->pss_trace,
+				PSS_NEW_NODE_SUBTREE_TRACE, &val1, &val2))
 	    {
 		TRdisplay("Just allocated top node of:\n\n\n");
 		status = pst_prmdump(*newnode, (PST_QTREE *) NULL,

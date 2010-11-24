@@ -426,6 +426,8 @@
 **	    replace dmu char array with DMU_CHARACTERISTICS;
 **	    teach quel to use pslctbl routines even for RETINTO;
 **	    teach gateway register to use pslctbl close-out routines.
+**	21-Oct-2010 (kiria01) b124629
+**	    Use the macro symbol with ult_check_macro instead of literal.
 */
 
 /* static functions and constants declaration */
@@ -637,7 +639,8 @@ psl_ct1_create_table(
 	/* if PRINT TREE trace point is set, print out DDL query tree
 	 */
 	if ((psq_cb->psq_mode == PSQ_CREATE)
-	    && (ult_check_macro(&sess_cb->pss_trace, 15, &val1, &val2)))
+	    && (ult_check_macro(&sess_cb->pss_trace, PSS_DBPROC_TREE_BY_NEXT_TRACE,
+			&val1, &val2)))
 	{
 	    /* get head of statement tree from QSF (it's root of object);
 	    ** object is still exclusively locked from when we created it.

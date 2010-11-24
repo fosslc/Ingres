@@ -61,6 +61,8 @@
 **          Changes for Long IDs
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	21-Oct-2010 (kiria01) b124629
+**	    Use the macro symbol with ult_check_macro instead of literal.
 **/
 
 /*{
@@ -449,7 +451,8 @@ psy_put(
 	tocopy = len > left ? left : len;
 	outplace = (*block)->psy_qtext + (*block)->psy_qcount;
 #ifdef xDEBUG
-	if (ult_check_macro(&sess_cb->pss_trace, 71, &val1, &val2))
+	if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_PSY_PUT_TRACE, &val1, &val2))
 	{
 	    TRdisplay("%.#s", tocopy, inbuf);
 	}

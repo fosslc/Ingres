@@ -125,6 +125,8 @@
 **	    Another of the same.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	21-Oct-2010 (kiria01) b124629
+**	    Use the macro symbol with ult_check_macro instead of literal.
 **/
 
 /* Forward references */
@@ -1035,7 +1037,8 @@ pst_header(
 	*pnode = prnode;
     }
 
-    if (ult_check_macro(&sess_cb->pss_trace, 16, &val1, &val2))
+    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_LONG_QRY_TREE_TRACE, &val1, &val2))
     {   
 	/*
 	** Print the final query tree.
@@ -1043,7 +1046,8 @@ pst_header(
 	TRdisplay("Final query tree:\n\n\n");
 	status = pst_prmdump(qtree, header, &psq_cb->psq_error, DB_PSF_ID);
     }
-    if (ult_check_macro(&sess_cb->pss_trace, 17, &val1, &val2))
+    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_SHORT_QRY_TREE_TRACE, &val1, &val2))
     {   
 	/*
 	** Print the final query tree.
@@ -1381,7 +1385,8 @@ pst_modhdr(
     }
 
 #ifdef	xDEBUG
-    if (ult_check_macro(&sess_cb->pss_trace, 16, &val1, &val2))
+    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_LONG_QRY_TREE_TRACE, &val1, &val2))
     {   
 	/*
 	** Print the final query tree.
@@ -1390,7 +1395,8 @@ pst_modhdr(
 	status = pst_prmdump(header->pst_qtree, header,
 	    &psq_cb->psq_error, DB_PSF_ID);
     }
-    if (ult_check_macro(&sess_cb->pss_trace, 17, &val1, &val2))
+    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_SHORT_QRY_TREE_TRACE, &val1, &val2))
     {   
 	/*
 	** Print the final query tree.

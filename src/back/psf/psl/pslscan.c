@@ -207,6 +207,8 @@
 **          adu_lo_filter() change parameter order.
 **	21-Jul-2010 (kschendel) SIR 124104
 **	    Add set [no]create_compression.
+**	21-Oct-2010 (kiria01) b124629
+**	    Use the macro symbol with ult_check_macro instead of literal.
 */
 
 /*
@@ -2436,7 +2438,8 @@ dv1.db_length, rdv.db_length);
 	return (token);
 	*/
     }
-    else if (ult_check_macro(&pss_cb->pss_trace, 19, &val1, &val2))
+    else if (ult_check_macro(&pss_cb->pss_trace,
+			PSS_SCANNER_UNORM, &val1, &val2))
     {
 	i4	t1 = dv1.db_datatype;
 	i4	t2 = rdv.db_datatype;

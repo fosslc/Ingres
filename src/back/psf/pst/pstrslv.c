@@ -119,6 +119,8 @@
 **	    and union resolving since they do the same thing.
 **	    Recognize a standalone NULL when case or union resolving and
 **	    just adjust the type (e.g. don't max out decimal prec/scale!).
+**	21-Oct-2010 (kiria01) b124629
+**	    Use the macro symbol with ult_check_macro instead of literal.
 **/
 
 
@@ -541,7 +543,8 @@ pst_resolve(
     /* Don't do tracing if couldn't get session control block */
     if (sess_cb != (PSS_SESBLK *) NULL)
     {
-	if (ult_check_macro(&sess_cb->pss_trace, 21, &val1, &val2))
+	if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_OPNODE_CHILDREN_TRACE, &val1, &val2))
 	{
 	    TRdisplay("Resolving operator with %d children\n\n", children);
 	}

@@ -777,6 +777,8 @@
 **	    Drag retrieve-into kicking and screaming into the amazing
 **	    modern world of DMU_CB's and suchlike data structures.
 **	    It now works pretty much the same as SQL create table as select.
+**	21-Oct-2010 (kiria01) b124629
+**	    Use the macro symbol with ult_check_macro instead of literal.
 */
 
 %{
@@ -5387,7 +5389,8 @@ query_key:         DEFQRY NAME is
 	psq_cb->psq_cursid.db_cursor_id[1] = 0;
 	STmove($2, ' ', DB_CURSOR_MAXNAME, psq_cb->psq_cursid.db_cur_name);
 
-	if (ult_check_macro(&cb->pss_trace, 4, &val1, &val2))
+	if (ult_check_macro(&cb->pss_trace,
+				PSS_REPEAT_QRY_SHARE_TRACE, &val1, &val2))
 	{
 	    psf_display(psf_scctrace, 0, trbuf, sizeof(trbuf) - 1,
 		"\n5.0-style QUEL repeat query cannot be shared.\n");
@@ -11431,7 +11434,8 @@ psl_quel_shareable(
     {
 	*shareable = FALSE;
 
-	if (ult_check_macro(&sess_cb->pss_trace, 4, &val1, &val2))
+	if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_REPEAT_QRY_SHARE_TRACE, &val1, &val2))
 	{
 	    psf_display(psf_scctrace, 0, trbuf, sizeof(trbuf) - 1,
 		"\nQUEL repeat query is not shareable\n");
@@ -11443,7 +11447,8 @@ psl_quel_shareable(
     {
 	*shareable = FALSE;
 
-	if (ult_check_macro(&sess_cb->pss_trace, 4, &val1, &val2))
+	if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_REPEAT_QRY_SHARE_TRACE, &val1, &val2))
 	{
 	    psf_display(psf_scctrace, 0, trbuf, sizeof(trbuf) - 1,
 		"\nQUEL repeat query is not shareable\n");
@@ -11455,7 +11460,8 @@ psl_quel_shareable(
     {
 	*shareable = FALSE;
 
-	if (ult_check_macro(&sess_cb->pss_trace, 4, &val1, &val2))
+	if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_REPEAT_QRY_SHARE_TRACE, &val1, &val2))
 	{
 	    psf_display(psf_scctrace, 0, trbuf, sizeof(trbuf) - 1,
 		"\nQUEL repeat query is not shareable\n");

@@ -3631,6 +3631,8 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	5-Oct-2010 (kschendel) SIR 124544
 **	    Clean up WITH-option parsing some more.  Eliminate create-dgtt
 **	    flag, create-stmt flag is plenty.
+**	21-Oct-2010 (kiria01) b124629
+**	    Use the macro symbol with ult_check_macro instead of literal.
 */
 %{
 
@@ -8956,7 +8958,7 @@ newcol:		    col_spec
 
 	/* Normalize the attribute name */
 	STmove($1, ' ', sizeof(resdom.pst_rsname),
-	    (char *) resdom.pst_rsname);
+			resdom.pst_rsname);
 
 	resdom.pst_rsno = (i4) 1;
 	resdom.pst_ntargno = (i4) 0;
@@ -12327,7 +12329,8 @@ create_dbproc:	    cdbp_kwd cdbp_procname cdbp_parmspec
 		i4 val1;
 		i4 val2;
 
-		if (ult_check_macro(&cb->pss_trace, 15, &val1, &val2))
+		if (ult_check_macro(&cb->pss_trace,
+				PSS_DBPROC_TREE_BY_NEXT_TRACE, &val1, &val2))
 		{   
 		    _VOID_ pst_dbpdump(pnode, 0);	    /* pst_next */
 		}
@@ -12344,7 +12347,8 @@ create_dbproc:	    cdbp_kwd cdbp_procname cdbp_parmspec
 		i4 val1;
 		i4 val2;
 
-		if (ult_check_macro(&cb->pss_trace, 14, &val1, &val2))
+		if (ult_check_macro(&cb->pss_trace,
+				PSS_DBPROC_TREE_BY_LINK_TRACE, &val1, &val2))
 		{   
 		    _VOID_ pst_dbpdump(pnode, 1);	    /* pst_link */
 		}
@@ -12900,13 +12904,7 @@ cdbp_varname:	    cdbp_parmmode generic_ident
 	PSS_DECVAR	*var;
 	QUEUE		*varq;
 	char		*ch1 = $2;
-# ifndef DOUBLEBYTE
 	char		*ch2 = ch1 + CMbytecnt(ch1);
-# else
-	char		*ch2;
-	
-	ch2 = ch1 + CMbytecnt(ch1);
-# endif /* ifndef DOUBLEBYTE */
 
 	STmove($2, ' ', DB_PARM_MAXNAME, (char *) &varname);
 
@@ -16269,7 +16267,8 @@ curop_ini_2:	DEFQRY OPEN CURSOR QUERYID scrollopt FOR
 	    i4	val1 = 0, val2 = 0;
 
 	    /* repeat cursors only available if user set trace point ps151 */
-	    if (!ult_check_macro(&cb->pss_trace, 23, &val1, &val2))
+	    if (!ult_check_macro(&cb->pss_trace,
+			PSS_AMBREP_64COMPAT, &val1, &val2))
 	    {
 	        psl_yerror(3, cb, psq_cb);
 		return(E_DB_ERROR);
@@ -44907,16 +44906,17 @@ reg_keywd:	    reg_tvp
 	i4 val2;
     	char		trbuf[PSF_MAX_TEXT + 1]; /* last char for `\n' */
 
-        if (ult_check_macro(&cb->pss_trace, 20, &val1, &val2))
-        {
+        if (ult_check_macro(&cb->pss_trace,
+			PSS_TRACE_REGISTER, &val1, &val2))
+	{
 	    psf_display(psf_scctrace, 0, trbuf, sizeof(trbuf) - 1,
 		"Read REGISTER keyword (value %d)\n", $1);
-        }
+	}
 
 	if (cb->pss_distrib & DB_3_DDB_SESS)
 	{
 	    /*
-	    **	Distributed
+	    **  Distributed
 	    */
 	    psq_cb->psq_mode = PSQ_REG_LINK;
 	    status = psl_rg3_reg_tvi(cb, psq_cb);
@@ -44925,16 +44925,17 @@ reg_keywd:	    reg_tvp
 	}
 	else
 	{
-	    /* 
+	    /*
 	    ** Must be GW register - GW will fail later if its wrong.
-	    ** We allow both REGISTER and REGISTER TABLE as 
+	    ** We allow both REGISTER and REGISTER TABLE as
 	    ** identical to GW. (only REGISTER VIEW fails here since GW can't
 	    ** register a view)
 	    */
 
 	    if ($1 == DD_2OBJ_TABLE || $1== -1)
 	    {
-	        if (ult_check_macro(&cb->pss_trace, 20, &val1, &val2))
+		if (ult_check_macro(&cb->pss_trace,
+				PSS_TRACE_REGISTER, &val1, &val2))
 	        {
 		    psf_display(psf_scctrace, 0, trbuf, sizeof(trbuf) - 1,
 			"Turning REGISTER [TABLE] into REGISTER IMPORT\n");
@@ -44948,7 +44949,8 @@ reg_keywd:	    reg_tvp
 	    }
 	    else
 	    {
-		if (ult_check_macro(&cb->pss_trace, 20, &val1, &val2))
+		if (ult_check_macro(&cb->pss_trace,
+				PSS_TRACE_REGISTER, &val1, &val2))
 		{
 		    psf_display(psf_scctrace, 0, trbuf, sizeof(trbuf) - 1,
 			"Generating error on REGISTER VIEW in non-distributed\n");
@@ -45403,7 +45405,8 @@ reg_file_name:	    SCONST
 	    if (from_value_size != 0)
 	    {
 	       STcopy(sconvert($1), from_path_ptr->from_buffer);
-	       if (ult_check_macro(&cb->pss_trace, 20, &val1, &val2))
+	       if (ult_check_macro(&cb->pss_trace,
+				PSS_TRACE_REGISTER, &val1, &val2))
 	       {
 			psf_display(psf_scctrace, 0, trbuf, sizeof(trbuf) - 1,
 				"Register FROM source is '%s'\n", 
@@ -45473,7 +45476,8 @@ reg_dbms_or_struct_parm:    nonkeyword EQUAL nonkey_or_sconst
 
 	if (STcompare($1, "dbms") == 0)
 	{
-            if (ult_check_macro(&cb->pss_trace, 20, &val1, &val2))
+            if (ult_check_macro(&cb->pss_trace,
+				PSS_TRACE_REGISTER, &val1, &val2))
             {
 	    	psf_display(psf_scctrace, 0, trbuf, sizeof(trbuf) - 1,
 			"Register DBMS value is '%s'\n", $3);
@@ -45576,7 +45580,8 @@ reg_dbms_or_struct_parm:    nonkeyword EQUAL nonkey_or_sconst
 	{
             DB_STATUS                   status;
 
-            if (ult_check_macro(&cb->pss_trace, 20, &val1, &val2))
+            if (ult_check_macro(&cb->pss_trace,
+				PSS_TRACE_REGISTER, &val1, &val2))
             {
 	    	psf_display(psf_scctrace, 0, trbuf, sizeof(trbuf) - 1,
 			"Register STRUCTURE value is '%s'\n", $3);
@@ -47914,7 +47919,8 @@ psl_shareable(
     {
 	i4		val1=0, val2=0;
 
-	ps132 = ult_check_macro(&cb->pss_trace, 4, &val1, &val2);
+	ps132 = ult_check_macro(&cb->pss_trace,
+			PSS_REPEAT_QRY_SHARE_TRACE, &val1, &val2);
     }
 
     /* Assume the query is shareable. */
@@ -49268,7 +49274,8 @@ psl_crsopen(
 	i4 val1;
 	i4 val2;
 
-	if (ult_check_macro(&cb->pss_trace, 13, &val1, &val2))
+	if (ult_check_macro(&cb->pss_trace,
+				PSS_CURSOR_INFO_TRACE, &val1, &val2))
 	{
 	    (VOID) pst_display("\n\nCursor `%t' characteristics for:\n\t%s\n",
 		psf_trmwhite(DB_CURSOR_MAXNAME, 
@@ -53293,7 +53300,8 @@ psl_repeat_qry_id(
 	    {
 		i4	val1=0, val2=0;
 
-		if (ult_check_macro(&sess_cb->pss_trace, 4, &val1, &val2))
+		if (ult_check_macro(&sess_cb->pss_trace,
+					PSS_REPEAT_QRY_SHARE_TRACE, &val1, &val2))
 		{
 		    psf_display(psf_scctrace, 0, trbuf, sizeof(trbuf) - 1,
 			"\nQUEL repeat query cannot use existing QEP because the QEP does not\n");
@@ -53314,7 +53322,8 @@ psl_repeat_qry_id(
 	    {
 		i4	    val1=0, val2=0;
 
-		if (ult_check_macro(&sess_cb->pss_trace, 4, &val1, &val2))
+		if (ult_check_macro(&sess_cb->pss_trace,
+					PSS_REPEAT_QRY_SHARE_TRACE, &val1, &val2))
 		{
 		    DB_TAB_ID   *qry_curid, *qep_curid;
 		    i4		qry_idno, qep_idno;
@@ -53382,7 +53391,8 @@ Table IDs associated with the QEP\n");
 	    {
 		i4	val1=0, val2=0;
 
-		if (ult_check_macro(&sess_cb->pss_trace, 4, &val1, &val2))
+		if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_REPEAT_QRY_SHARE_TRACE, &val1, &val2))
 		{
 		    psf_display(psf_scctrace, 0, trbuf, sizeof(trbuf) - 1,
 			"\nQUEL repeat query cannot use existing QEP because its text\n");
@@ -53442,7 +53452,8 @@ Table IDs associated with the QEP\n");
 	    {
 		i4	val1=0, val2=0;
 
-		if (ult_check_macro(&sess_cb->pss_trace, 4, &val1, &val2))
+		if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_REPEAT_QRY_SHARE_TRACE, &val1, &val2))
 		{
 		    psf_display(psf_scctrace, 0, trbuf, sizeof(trbuf) - 1,
 			"\nRepeat query is shareable - will use existing QEP.\n");
@@ -53484,7 +53495,8 @@ Table IDs associated with the QEP\n");
 	{
 	    i4	val1=0, val2=0;
 
-	    if (ult_check_macro(&sess_cb->pss_trace, 4, &val1, &val2))
+	    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_REPEAT_QRY_SHARE_TRACE, &val1, &val2))
 	    {
 		psf_display(psf_scctrace, 0, trbuf, sizeof(trbuf) - 1,
 			"\nRepeat query is shareable - will build a new QEP\

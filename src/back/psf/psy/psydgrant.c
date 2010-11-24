@@ -198,6 +198,8 @@
 **          Changes for Long IDs
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	21-Oct-2010 (kiria01) b124629
+**	    Use the macro symbol with ult_check_macro instead of literal.
 [@history_template@]...
 **/
 
@@ -7295,7 +7297,8 @@ psy_tbl_grant_check(
 	i4		val1, val2;
 
 	/* determine if trace point ps131 has been set */
-	ps131 = (bool) ult_check_macro(&sess_cb->pss_trace, 3, &val1, &val2);
+	ps131 = (bool) ult_check_macro(&sess_cb->pss_trace,
+				PSS_TBL_VIEW_GRANT_TRACE, &val1, &val2);
     }
 
     /* 

@@ -402,6 +402,8 @@ NO_OPTIM=nc4_us5
 **          Replace READONLY/WSCREADONLY by const.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	21-Oct-2010 (kiria01) b124629
+**	    Use the macro symbol with ult_check_macro instead of literal.
 **/
 
 /*
@@ -1018,7 +1020,8 @@ psy_protect(
     r = tree;
 
 #ifdef xDEBUG
-    if (ult_check_macro(&sess_cb->pss_trace, 50, &val1, &val2))
+    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_PRIVILEGE_CHECK_TRACE, &val1, &val2))
 	TRdisplay("\nApplying Protections\n\n");
 #endif
 
@@ -1200,7 +1203,8 @@ psy_protect(
 	}
 
 #ifdef	    xDEBUG
-	if (ult_check_macro(&sess_cb->pss_trace, 50, &val1, &val2))
+	if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_PRIVILEGE_CHECK_TRACE, &val1, &val2))
 	    TRdisplay("\nvarno = %d, relname = %#s\n", rngvar->pss_rgno,
 		sizeof (rngvar->pss_tabname.db_tab_name),
 		rngvar->pss_tabname.db_tab_name);
@@ -1346,7 +1350,8 @@ psy_protect(
 	    rngvar == sess_cb->pss_resrng)
         {
 #ifdef    xDEBUG
-	    if (ult_check_macro(&sess_cb->pss_trace, 50, &val1, &val2))
+	    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_PRIVILEGE_CHECK_TRACE, &val1, &val2))
 	    {
 		TRdisplay("\nNow doing update portion of define cursor\n");
 		TRdisplay("Table name is %#s\n",
@@ -1409,12 +1414,14 @@ exit:
 
     /* return the (authorized) tree */
 #ifdef    xDEBUG
-    if (ult_check_macro(&sess_cb->pss_trace, 50, &val1, &val2))
+    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_PRIVILEGE_CHECK_TRACE, &val1, &val2))
     {
 	TRdisplay("Protection algorithm finished\n");
     }
 
-    if (ult_check_macro(&sess_cb->pss_trace, 51, &val1, &val2))
+    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_PRINT_PERM_QUAL_TREE_TRACE, &val1, &val2))
     {
 	TRdisplay("Query tree after protection algorithm:\n");
 	pst_prmdump(r, (PST_QTREE *) NULL, err_blk, DB_PSF_ID);
@@ -2976,7 +2983,8 @@ check_permits:
     }
 
 #ifdef xDEBUG
-    if (ult_check_macro(&sess_cb->pss_trace, 50, &val1, &val2))
+    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_PRIVILEGE_CHECK_TRACE, &val1, &val2))
     {
 	TRdisplay("In dopro:\n");
 	TRdisplay("qmode %d\n", qmode);
@@ -3381,7 +3389,8 @@ check_permits:
 	}
 
 #ifdef xDEBUG
-	if (ult_check_macro(&sess_cb->pss_trace, 50, &val1, &val2))
+	if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_PRIVILEGE_CHECK_TRACE, &val1, &val2))
 	{
 	    TRdisplay("Qmaps before applypq:\n");
 	    pr_qmap(pndx, qmap);
@@ -3619,7 +3628,8 @@ saw_the_perms:
     }
 
 #ifdef    xDEBUG
-    if (ult_check_macro(&sess_cb->pss_trace, 51, &val1, &val2))
+    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_PRINT_PERM_QUAL_TREE_TRACE, &val1, &val2))
     {
 	TRdisplay("Protect qual for var %d\n", var->pss_rgno);
 	(VOID) pst_prmdump(p, (PST_QTREE *) NULL, dup_rb->pss_err_blk,
@@ -4179,7 +4189,8 @@ makedset(
     vn = var->pss_rgno;
 
 #ifdef    xDEBUG
-    if (ult_check_macro(&sess_cb->pss_trace, 50, &val1, &val2))
+    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_PRIVILEGE_CHECK_TRACE, &val1, &val2))
     {
     	TRdisplay("->makedset\n");
 	pr_set(uset, "uset");
@@ -4297,7 +4308,8 @@ makedset(
     }
 
 #ifdef    xDEBUG
-    if (ult_check_macro(&sess_cb->pss_trace, 50, &val1, &val2))
+    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_PRIVILEGE_CHECK_TRACE, &val1, &val2))
     {
     	TRdisplay("makedset->\n");
 	pr_set(uset, "uset");
@@ -4463,7 +4475,8 @@ proappl(
     wday = ((seconds / PSY_SPDAY) + PSY_JAN_1_1970) % PSY_DYPWK;
 
 #ifdef    xDEBUG
-    if (ult_check_macro(&sess_cb->pss_trace, 50, &val1, &val2))
+    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_PRIVILEGE_CHECK_TRACE, &val1, &val2))
     {
 	time_zone = TMtz_search(adf_scb->adf_tzcb, TM_TIMETYPE_GMT,
     	    	    	  secs_since_jan_1_1970);
@@ -4646,7 +4659,8 @@ prochk(
 	    DB_AGGREGATE | DB_REFERENCES)) != 0;
 
 #ifdef    xDEBUG
-    if (ult_check_macro(&sess_cb->pss_trace, 50, &val1, &val2))
+    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_PRIVILEGE_CHECK_TRACE, &val1, &val2))
     {
 	TRdisplay("->prochk, privs=0x%x, dbp_popset=0x%p\n", privs, dset);
 	if (valid_attr_map)
@@ -4669,7 +4683,8 @@ prochk(
        )
     {
 #ifdef    xDEBUG
-	if (ult_check_macro(&sess_cb->pss_trace, 50, &val1, &val2))
+	if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_PRIVILEGE_CHECK_TRACE, &val1, &val2))
 	    TRdisplay("prochk-> no op\n");
 #endif
 	return (0);
@@ -4679,7 +4694,8 @@ prochk(
     if (valid_attr_map && BTnext((i4) -1, (char *) d, DB_MAX_COLS + 1) == -1)
     {
 #ifdef    xDEBUG
-	if (ult_check_macro(&sess_cb->pss_trace, 50, &val1, &val2))
+	if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_PRIVILEGE_CHECK_TRACE, &val1, &val2))
 	    TRdisplay("prochk-> null set\n");
 #endif
 	return (0);
@@ -4728,7 +4744,8 @@ prochk(
 		{
 		    /* failure */
 #ifdef    xDEBUG
-		    if (ult_check_macro(&sess_cb->pss_trace, 50, &val1, &val2))
+		    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_PRIVILEGE_CHECK_TRACE, &val1, &val2))
 			TRdisplay("prochk-> not subset\n");
 #endif
 		    return (0);
@@ -4738,7 +4755,8 @@ prochk(
     }
     /* This is an "interesting" tuple */
 #ifdef    xDEBUG
-    if (privs && ult_check_macro(&sess_cb->pss_trace, 50, &val1, &val2))
+    if (privs && ult_check_macro(&sess_cb->pss_trace,
+				PSS_PRIVILEGE_CHECK_TRACE, &val1, &val2))
 	TRdisplay("prochk-> %d\n", privs);
 #endif
 
@@ -5938,7 +5956,8 @@ psy_check_permits(
 	    /* Set protup pointing to current permit tuple */
 	    protup = (DB_PROTECTION*) qp->dt_data;
 #ifdef xDEBUG
-	    if (ult_check_macro(&sess_cb->pss_trace, 50, &val1, &val2))
+	    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_PRIVILEGE_CHECK_TRACE, &val1, &val2))
 	    {
 		TRdisplay("Current protection tuple:\n");
 		TRdisplay("\tdbp_tabid: %d,%d\n", protup->dbp_tabid.db_tab_base,
@@ -5993,7 +6012,8 @@ psy_check_permits(
 		continue;
 
 #ifdef xDEBUG
-	    if (ult_check_macro(&sess_cb->pss_trace, 50, &val1, &val2))
+	    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_PRIVILEGE_CHECK_TRACE, &val1, &val2))
 	    {
 		TRdisplay("In dopro: proappl returned TRUE\n");
 	    }
@@ -6212,7 +6232,8 @@ psy_check_permits(
 	    }
 
 #ifdef xDEBUG
-	    if (ult_check_macro(&sess_cb->pss_trace, 50, &val1, &val2))
+	    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_PRIVILEGE_CHECK_TRACE, &val1, &val2))
 	    {
 		TRdisplay("Protection tuple permits 0x%x (0x%x WGO)\n",
 		    privs_found, privs_found_wgo);
@@ -6555,7 +6576,8 @@ psy_check_permits(
 		p = psy_trmqlnd(temp_node->pst_right);
 
 #ifdef xDEBUG
-		if (ult_check_macro(&sess_cb->pss_trace, 51, &val1, &val2))
+		if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_PRINT_PERM_QUAL_TREE_TRACE, &val1, &val2))
 		{
 		    TRdisplay("Protection Clause:\n");
 		    (VOID) pst_prmdump(p, (PST_QTREE *) NULL, dup_rb->pss_err_blk,

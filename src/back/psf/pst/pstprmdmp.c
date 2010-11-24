@@ -5,10 +5,13 @@
 #include    <compat.h>
 #include    <gl.h>
 #include    <cs.h>
+#include    <me.h>
+#include    <bt.h>
 #include    <qu.h>
 #include    <cm.h>
 #include    <cv.h>
 #include    <tr.h>
+#include    <nm.h>
 #include    <iicommon.h>
 #include    <dbdbms.h>
 #include    <ddb.h>
@@ -17,6 +20,7 @@
 #include    <dmtcb.h>
 #include    <dmucb.h>
 #include    <adf.h>
+#include    <adfops.h>
 #include    <ulf.h>
 #include    <ulm.h>
 #include    <qsf.h>
@@ -28,7 +32,6 @@
 #include    <pshparse.h>
 #include    <psftrmwh.h>
 #include    <st.h>
-#include    <me.h>
 #include    <qefmain.h>
 #include    <qefqeu.h>
 #include    <qeuqcb.h>
@@ -134,6 +137,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	21-Oct-2010 (kiria01) b124629
+**	    Move DOT trace code into here from pstnorml.c
 **/
 
 /*
@@ -3554,3 +3559,1356 @@ pst_dbpdump(
     }
 }
 #endif /* xDEBUG */
+
+#ifdef PST_DOT_DIAGS
+
+/* Node types array */
+static char *ntype_array[] = {
+#define _DEFINE(n,s,v) #n,
+#define _DEFINEEND
+    PST_TYPES_MACRO
+#undef _DEFINE
+#undef _DEFINEEND
+};
+/* Range table types array */
+static const char *rgtype_array[] = {
+#define _DEFINE(n,v) #n,
+#define _ENDDEFINE "bad"
+	PST_RGTYPES_MACRO
+#undef _DEFINE
+#undef _ENDDEFINE
+};
+/* Statement types array */
+static char *stype_array[] = {
+#define _DEFINE(n,v,s) s,
+#define _DEFINE2(n,v,s)
+#define _ENDDEFINE
+"", PST_STTYPE_MACROS
+#undef _DEFINE
+#undef _DEFINE2
+#undef _ENDDEFINE
+};
+/* DDLStatement types array */
+static char *ddltype_array[] = {
+#define _DEFINE(n,v,s)
+#define _DEFINE2(n,v,s) s,
+#define _ENDDEFINE
+PST_STTYPE_MACROS
+#undef _DEFINE
+#undef _DEFINE2
+#undef _ENDDEFINE
+};
+/* Query/statement modes array */
+static char *pqtype_array[] = {
+#define _DEFINE(n,v,s) #n,
+#define _ENDDEFINE
+"", PSQ_MODES_MACRO
+#undef _DEFINE
+#undef _ENDDEFINE
+};
+
+/*{
+** Name: pst_qnode_dot1 - DOT format dump
+**
+** Description:
+**	Dumps a parse sub-tree in DOT format to the passed file
+**	descriptor.
+**
+** History:
+**	03-Dec-2009 (kiria01) SIR 121883
+**	    Written to aid debugging parse trees
+**	18-Mar-2010 (kiria01) b123438
+**	    Added further dump information.
+**	25-Mar-2010 (kiria01) b123535
+**	    Escaped the awkward dot characters and clarified the links.
+**	09-Apr-2010 (kiria01) b123555
+**	    Output the vno with the table name incase of ambiguity.
+*/
+
+static void
+pst_qtree_rsdm_node(
+	FILE *fd,
+	PST_RSDM_NODE *r)
+{
+    char t[sizeof(r->pst_rsname)+1];
+    i4 tt = r->pst_ttargtype;
+
+    STprintf(t, "%d", tt);
+    SIfprintf(fd, "%s|",
+		  tt == PST_ATTNO	?"ATTNO"
+		: tt == PST_LOCALVARNO	?"LOCALVARNO"
+		: tt == PST_RQPARAMNO	?"RQPARAMNO"
+		: tt == PST_USER	?"USER"
+		: tt == PST_DBPARAMNO	?"DBParam"
+		: tt == PST_RSDNO	?"RSDNO"
+		: tt == PST_HIDDEN	?"HIDDEN"
+		: tt == PST_BYREF_DBPARAMNO?"BYREF_DBParam"
+		: tt == PST_TTAB_DBPARM	?"TTAB_DBPARM "
+		: tt == PST_RESROW_COL	?"RESROW_COL"
+		: tt == PST_SUBEX_RSLT	?"SUBEX_RSLT"
+		: tt == PST_OUTPUT_DBPARAMNO?"OUT DBParam"
+		: t);
+    MEcopy((PTR)&r->pst_rsname, sizeof(r->pst_rsname),t);
+    t[sizeof(r->pst_rsname)] = 0;
+    STtrmwhite(t);
+    SIfprintf(fd, "%s|{%d|%d|%d}|{%d|0x%x}",
+	    t, r->pst_rsno, r->pst_ntargno, r->pst_ttargtype,
+	    r->pst_rsupdt, r->pst_rsflags);
+}
+
+static void
+pst_qnode_dot1(
+    ADF_CB *adfcb,
+    FILE *fd,
+    PSS_SESBLK *cb,
+    PST_QNODE *node,
+    PST_QTREE *tree)
+{
+    while (node)
+    {
+	PST_SYMVALUE *v;
+	bool simple = node->pst_sym.pst_type == PST_QLEND ||
+			node->pst_sym.pst_type == PST_TREE;
+	if (node->pst_left)
+	    SIfprintf(fd, "n%p->n%p[weight=100,style=solid,label=left,tailport=sw,headport=n]\n",
+		node, node->pst_left);
+	if (node->pst_right)
+	    SIfprintf(fd, "n%p->n%p[weight=100,style=solid,label=right,tailport=se,headport=n]\n",
+		node, node->pst_right);
+	v = &node->pst_sym.pst_value;
+	SIfprintf(fd, "n%p[shape=%srecord,fillcolor=beige,style=filled,label="
+		    "\"{%s",
+		    node,
+		    ntype_array[node->pst_sym.pst_type],
+		    simple?"M":"");
+	if (!simple)
+	    SIfprintf(fd, "|%d,%d,%d,%d,%d|",
+		node->pst_sym.pst_dataval.db_datatype,
+		node->pst_sym.pst_dataval.db_length,
+		DB_P_DECODE_MACRO(node->pst_sym.pst_dataval.db_prec),
+		DB_S_DECODE_MACRO(node->pst_sym.pst_dataval.db_prec),
+		node->pst_sym.pst_dataval.db_collID);
+	switch (node->pst_sym.pst_type)
+	{
+	case PST_UOP:
+	case PST_BOP:
+	case PST_AOP:
+	case PST_COP:
+	case PST_MOP:
+	    {
+		ADI_OP_NAME adi_oname;
+		char t1[20], t2[20];
+		const char *pfx = "";
+		i4 dist = v->pst_s_op.pst_distinct-PST_BDISTINCT;
+		if (dist+PST_BDISTINCT > PST_DISTINCT-PST_BDISTINCT)
+		    dist = PST_DISTINCT-PST_BDISTINCT;
+		adi_opname(adfcb, v->pst_s_op.pst_opno, &adi_oname);
+		if (adi_oname.adi_opname[0] == '<' && adi_oname.adi_opname[1] == '>')
+		    pfx = "\\<\\>";
+		else if (adi_oname.adi_opname[0] == '<' || adi_oname.adi_opname[0] == '>')
+		    pfx = "\\"; /* Escape the '<' and '>' which special to dot */
+
+		SIfprintf(fd, "{%s%s|%d/%d|%c}|{%d",
+			pfx, adi_oname.adi_opname,
+			v->pst_s_op.pst_opno,
+			v->pst_s_op.pst_opinst,
+			"B~ND?"[dist],
+			v->pst_s_op.pst_pat_flags);
+		if (v->pst_s_op.pst_pat_flags!=2 && v->pst_s_op.pst_pat_flags != 0)
+		{
+		    if(!v->pst_s_op.pst_escape)
+			SIfprintf(fd, "|Enull");
+		    else
+			SIfprintf(fd, "|E%c", v->pst_s_op.pst_escape);
+		}
+		STprintf(t1, v->pst_s_op.pst_oplcnvrtid == ADI_NILCOERCE
+		    ? "NIL" : "%d", v->pst_s_op.pst_oplcnvrtid);
+		STprintf(t2, v->pst_s_op.pst_oprcnvrtid == ADI_NILCOERCE
+		    ? "NIL" : "%d", v->pst_s_op.pst_oprcnvrtid);
+		SIfprintf(fd, "|j%d|%x|%s}|{%s|%s}}\"]\n",
+			v->pst_s_op.pst_joinid,
+			v->pst_s_op.pst_flags,
+			v->pst_s_op.pst_opmeta == PST_NOMETA ? "nometa"
+			: v->pst_s_op.pst_opmeta == PST_CARD_01R ? "CARD 1R"
+			: v->pst_s_op.pst_opmeta == PST_CARD_ANY ? "SEL ANY"
+			: v->pst_s_op.pst_opmeta == PST_CARD_ALL ? "SEL ALL"
+			: v->pst_s_op.pst_opmeta == PST_CARD_01L ? "CARD 1L"
+			: "BAD",
+			t1,
+			t2);
+
+	    }
+	    break;
+	case PST_CONST:
+	    SIfprintf(fd, "{%d|%d|%d|%s}",
+			v->pst_s_cnst.pst_tparmtype,
+			v->pst_s_cnst.pst_parm_no,
+			v->pst_s_cnst.pst_pmspec,
+			v->pst_s_cnst.pst_cqlang==DB_QUEL
+			    ?"quel"
+			    :v->pst_s_cnst.pst_cqlang==DB_SQL
+				?"sql"
+				:"???");
+	    if (node->pst_sym.pst_dataval.db_data)
+	    {
+		u_i4 default_width, worst_width;
+		DB_DATA_VALUE *datatype = &node->pst_sym.pst_dataval;
+
+		if (adc_tmlen( adfcb, datatype, 
+			&default_width, &worst_width) == E_AD0000_OK)
+		{
+		    u_i4 outlen;
+		    DB_DATA_VALUE dest_dt;
+		    char tempbuf[36];
+
+		    if (worst_width > sizeof(tempbuf))
+			dest_dt.db_length = sizeof(tempbuf)-4;
+		    else
+			dest_dt.db_length = worst_width;
+		    dest_dt.db_data = tempbuf;
+		    if (adc_tmcvt(adfcb, datatype, &dest_dt, &outlen)
+			== E_AD0000_OK)
+		    {
+			if (worst_width > sizeof(tempbuf) &&
+			    outlen >= sizeof(tempbuf)-4)
+			{
+			    tempbuf[outlen++] = '.';
+			    tempbuf[outlen++] = '.';
+			    tempbuf[outlen++] = '.';
+			}
+			tempbuf[outlen] = 0;
+			SIfprintf(fd, "|val:%s", tempbuf);
+		    }
+		}
+	    }
+	    SIfprintf(fd, "}\"]\n");
+	    break;
+	case PST_RESDOM:
+	    {
+		pst_qtree_rsdm_node(fd, &v->pst_s_rsdm);
+		SIfprintf(fd, "}\"]\n");
+	    }
+	    break;
+	case PST_BYHEAD:
+	    SIfprintf(fd, "{%d|%d|%d}|{%d|%x}}\"]\n",
+			v->pst_s_rsdm.pst_rsno,
+			v->pst_s_rsdm.pst_ntargno,
+			v->pst_s_rsdm.pst_ttargtype,
+			v->pst_s_rsdm.pst_rsupdt,
+			v->pst_s_rsdm.pst_rsflags);
+	    break;
+	case PST_FWDVAR:
+	case PST_VAR:
+	    {
+		char t[sizeof(v->pst_s_var.pst_atname)+1];
+		i4 i;
+		PST_RNGENTRY *r = NULL;
+		PSS_RNGTAB *rngvar = NULL;
+		SIfprintf(fd, "{");
+		if (tree)
+		{
+		    if ((u_i4)v->pst_s_var.pst_vno < (u_i4)tree->pst_rngvar_count)
+		    {
+			r = tree->pst_rangetab[v->pst_s_var.pst_vno];
+			MEcopy((PTR)&r->pst_corr_name,
+			    sizeof(r->pst_corr_name),t);
+			t[sizeof(r->pst_corr_name)] = 0;
+			STtrmwhite(t);
+			SIfprintf(fd, "%s,%d", t, v->pst_s_var.pst_vno);
+		    }
+		}
+		else if (cb)
+		{   
+		    for (i = 0; i < PST_NUMVARS; i++)
+		    {
+			rngvar = &cb->pss_auxrng.pss_rngtab[i];
+			if (rngvar->pss_rgno == v->pst_s_var.pst_vno)
+			{
+			    MEcopy((PTR)rngvar->pss_rgname,
+				sizeof(rngvar->pss_rgname),t);
+			    t[sizeof(rngvar->pss_rgname)] = 0;
+			    STtrmwhite(t);
+			    SIfprintf(fd, "%s,%d", t, v->pst_s_var.pst_vno);
+			    break;
+			}
+			rngvar = NULL;
+		    }
+		}
+		if (!rngvar && !r)
+		    SIfprintf(fd, "%d", v->pst_s_var.pst_vno);
+		MEcopy((PTR)&v->pst_s_var.pst_atname,
+		    sizeof(v->pst_s_var.pst_atname),t);
+		t[sizeof(v->pst_s_var.pst_atname)] = 0;
+		STtrmwhite(t);
+		SIfprintf(fd, "|%d}|%s}\"]\n", v->pst_s_var.pst_atno.db_att_id, t);
+	    }
+	    break;
+	case PST_ROOT:
+	case PST_SUBSEL:
+	case PST_AGHEAD:
+	    SIfprintf(fd, "{%s|%d|p%d|",
+			v->pst_s_root.pst_qlang==DB_QUEL
+			    ?"quel"
+			    :v->pst_s_root.pst_qlang==DB_SQL
+				?"sql"
+				:"???",
+			v->pst_s_root.pst_rtuser,
+			v->pst_s_root.pst_project);
+	    SIfprintf(fd, 
+			v->pst_s_root.pst_dups == PST_NODUPS
+			    ?"duprm"
+			    : v->pst_s_root.pst_dups == PST_ALLDUPS
+				? "dupkp"
+				: "%d", v->pst_s_root.pst_dups);
+	    SIfprintf(fd, "}|{j%d|%d|%d|0x%x}|"
+			"F:%08x%08x%08x%08x|"
+			"T:%08x%08x%08x%08x|"
+			"W:%08x%08x%08x%08x",
+			(i4)v->pst_s_root.pst_ss_joinid,
+			v->pst_s_root.pst_tvrc,
+			v->pst_s_root.pst_lvrc,
+			v->pst_s_root.pst_mask1,
+			v->pst_s_root.pst_tvrm.pst_j_mask[3],
+			v->pst_s_root.pst_tvrm.pst_j_mask[2],
+			v->pst_s_root.pst_tvrm.pst_j_mask[1],
+			v->pst_s_root.pst_tvrm.pst_j_mask[0],
+			v->pst_s_root.pst_lvrm.pst_j_mask[3],
+			v->pst_s_root.pst_lvrm.pst_j_mask[2],
+			v->pst_s_root.pst_lvrm.pst_j_mask[1],
+			v->pst_s_root.pst_lvrm.pst_j_mask[0],
+			v->pst_s_root.pst_rvrm.pst_j_mask[3],
+			v->pst_s_root.pst_rvrm.pst_j_mask[2],
+			v->pst_s_root.pst_rvrm.pst_j_mask[1],
+			v->pst_s_root.pst_rvrm.pst_j_mask[0]);
+	    if (v->pst_s_root.pst_union.pst_next)
+	    {
+		char *utype = v->pst_s_root.pst_union.pst_setop == PST_INTERSECT_OP
+			    ? "INTERSECT"
+			    : v->pst_s_root.pst_union.pst_setop == PST_EXCEPT_OP
+			    ? "EXCEPT"
+			    : "UNION";
+		SIfprintf(fd,"|%s|%s|%d}\"]\n",
+		    utype,
+		    v->pst_s_root.pst_union.pst_dups == PST_ALLDUPS
+		    ? "ALLDUPS"
+		    : "NODUPS",
+		    (i4)v->pst_s_root.pst_union.pst_nest);
+		SIfprintf(fd, "n%p->n%p[weight=100,style=filled,label=%s,tailport=e,headport=w]",
+		    node, v->pst_s_root.pst_union.pst_next, utype);
+		pst_qnode_dot1(adfcb, fd, cb, v->pst_s_root.pst_union.pst_next, tree);
+	    }
+	    else
+		SIfprintf(fd,"}\"]\n");
+	    break;
+	case PST_CASEOP:
+	    SIfprintf(fd, "{%d}|{%d,%d,%d,%d}}\"]\n",
+			    v->pst_s_case.pst_casetype,
+			    v->pst_s_case.pst_caselen,
+			    v->pst_s_case.pst_casedt,
+			    DB_P_DECODE_MACRO(v->pst_s_case.pst_caseprec),
+			    DB_S_DECODE_MACRO(v->pst_s_case.pst_caseprec));
+	    break;
+	case PST_AND:
+	case PST_OR:
+	    SIfprintf(fd, "{j%d|%x}}\"]\n",
+			v->pst_s_op.pst_joinid,
+			v->pst_s_op.pst_flags);
+	    break;
+	case PST_SORT:
+/*	    v->pst_s_sort.pst_srvno
+	    v->pst_s_sort.pst_srasc
+*/
+	case PST_CURVAL:
+/*	    v->pst_s_curval
+*/
+	case PST_RULEVAR:
+/*	    v->pst_s_rule.pst_rltype
+	    v->pst_s_rule.pst_rltargtype
+	    v->pst_s_rule.pst_rltno
+*/
+	case PST_TAB:
+/*	    v->pst_s_tab
+*/
+	case PST_SEQOP:
+/*	    v->pst_s_seqop
+*/
+	case PST_GBCR:
+/*	    v->pst_s_group.pst_groupmask
+*/
+
+	case PST_NOT:
+	case PST_QLEND:
+	case PST_TREE:
+	case PST_OPERAND:
+	case PST_WHLIST:
+	case PST_WHOP:
+	case PST_GCL:
+	case PST_GSET:
+	    SIfprintf(fd, "}\"]\n");
+	    break;
+	}
+	if (node->pst_left)
+	{
+	    if (node->pst_right)
+		pst_qnode_dot1(adfcb, fd, cb, node->pst_right, tree);
+	    node = node->pst_left;
+	}
+	else
+	    node = node->pst_right;
+    }
+}
+
+/*{
+** Name: pst_qtree_dot1 - DOT format dump
+**
+** Description:
+**	Dump DOTTY formatted parse qtree representation.
+**
+** History:
+**	
+**	26-May-2010 (kiria01)
+**	    Created
+*/
+
+void
+pst_qtree_dot1(
+    ADF_CB *adfcb,
+    FILE *fd,
+    PSS_SESBLK *cb,
+    PST_QTREE *tree)
+{
+    STATUS rval;
+    i4 i, j;
+
+    SIfprintf(fd, "n%p[label=\"{QTREE|{%s|vsn:%d}|RNGENTRY",
+	    tree, pqtype_array[tree->pst_mode<PSQ_MODE_MAX
+			    ?tree->pst_mode:PSQ_MODE_MAX], tree->pst_vsn);
+    for (i = 0; i < tree->pst_rngvar_count; i++)
+    {
+	PST_RNGENTRY *r = tree->pst_rangetab[i];
+	i4 j;
+	char cv[sizeof(r->pst_corr_name)];
+	MEcopy((PTR)&r->pst_corr_name, sizeof(cv),cv);
+	cv[sizeof(cv)-1] = 0;
+	STtrmwhite(cv);
+	SIfprintf(fd, "|{<f%d>%d|{%.32s|{%d,%d|%d|%s}|I:",
+		i, i, cv,
+		r->pst_rngvar.db_tab_base,
+		r->pst_rngvar.db_tab_index,
+		r->pst_rgparent,
+		rgtype_array[r->pst_rgtype<PST_RGTYPE_MAX
+			    ?r->pst_rgtype:PST_RGTYPE_MAX]);
+	    for (j = 3; j > 0; j--)
+		if (r->pst_inner_rel.pst_j_mask[j])
+		    break;
+	    for (; j >= 0; j--)
+		SIfprintf(fd, "%08x", r->pst_inner_rel.pst_j_mask[j]);
+	    SIfprintf(fd, "|O:");
+	    for (j = 3; j > 0; j--)
+		if (r->pst_outer_rel.pst_j_mask[j])
+		    break;
+	    for (; j >= 0; j--)
+		SIfprintf(fd, "%08x", r->pst_outer_rel.pst_j_mask[j]);
+	    SIfprintf(fd, "}}");
+    }
+    SIfprintf(fd, "|{%s|%d|%d}|{%sAGG|%sSS}}\"]\n",
+	    pqtype_array[tree->pst_mode<PSQ_MODE_MAX
+			    ?tree->pst_mode:PSQ_MODE_MAX],
+	    tree->pst_vsn,
+	    tree->pst_rngvar_count,
+	    tree->pst_agintree?"":"no",
+	    tree->pst_subintree?"":"no");
+    for (i = 0; i < tree->pst_rngvar_count; i++)
+    {
+	PST_RNGENTRY *r = tree->pst_rangetab[i];
+	if (r->pst_rgroot)
+	{
+	    SIfprintf(fd, "n%p:f%d->n%p[style=solid,label=rgroot,"
+				"tailport=w,headport=n]\n",
+			tree, i, r->pst_rgroot);
+	    switch(r->pst_rgtype)
+	    {
+	    case PST_RTREE:
+	    case PST_DRTREE:
+	    case PST_WETREE:
+	    case PST_TPROC:
+		pst_qnode_dot1(adfcb, fd, cb, r->pst_rgroot, tree);
+	    }
+	}
+    }
+    if (tree->pst_qtree)
+    {
+	SIfprintf(fd, "n%p->n%p[weight=10,style=solid,label=\"pst_qtree\"]\n",
+	    tree, tree->pst_qtree);
+	pst_qnode_dot1(adfcb, fd, cb, tree->pst_qtree, tree);
+    }
+    if (tree->pst_offsetn)
+    {
+	SIfprintf(fd, "n%p->n%p[weight=10,style=solid,label=\"pst_offsetn\"]",
+	    tree, tree->pst_offsetn);
+	pst_qnode_dot1(adfcb, fd, cb, tree->pst_offsetn, tree);
+    }
+    if (tree->pst_stlist)
+    {
+	SIfprintf(fd, "n%p->n%p[weight=10,style=solid,label=\"pst_stlist\"]",
+	    tree, tree->pst_stlist);
+	pst_qnode_dot1(adfcb, fd, cb, tree->pst_stlist, tree);
+    }
+    if (tree->pst_firstn)
+    {
+	SIfprintf(fd, "n%p->n%p[weight=10,style=solid,label=\"pst_firstn\"]",
+	    tree, tree->pst_firstn);
+	pst_qnode_dot1(adfcb, fd, cb, tree->pst_firstn, tree);
+    }
+}
+
+static void
+pst_decvar_dot1(
+    ADF_CB *adfcb,
+    FILE *fd,
+    PST_DECVAR *d)
+{
+    i4 i;
+    for (i = 0; i < d->pst_nvars; i++)
+    {
+	SIfprintf(fd, "|{%d|%.32s}|{%s|%d,%d,%d,%d,%d}",
+		    d->pst_first_varno+i,
+		    !d->pst_varname?"-noname-":d->pst_varname[i].db_parm_name,
+		    !d->pst_parmmode?"-"
+		    :((d->pst_parmmode[i]&PST_PMIN)?"IN":
+			(d->pst_parmmode[i]&PST_PMOUT)?"OUT":
+			(d->pst_parmmode[i]&PST_PMINOUT)?"INOUT":
+			"bad"),
+			d->pst_vardef[i].db_datatype,
+			d->pst_vardef[i].db_length,
+			DB_P_DECODE_MACRO(d->pst_vardef[i].db_prec),
+			DB_S_DECODE_MACRO(d->pst_vardef[i].db_prec),
+			d->pst_vardef[i].db_collID);
+
+    }
+    if (!d->pst_nvars)
+	SIfprintf(fd, "|no vars");
+}
+/*{
+** Name: pst_stmt_dot1 - DOT format statment dump
+**
+** Description:
+**	Dumps a parser statement list in DOT format to the passed file
+**	descriptor.
+**
+** History:
+**	09-Apr-2010 (kiria01) b123555
+**	    Output the vno with the table name incase of ambiguity.
+*/
+
+static void
+pst_stmt_dot1(
+    ADF_CB *adfcb,
+    FILE *fd,
+    PSS_SESBLK *cb,
+    PST_STATEMENT *stmt)
+{
+    const char BASE_LINK3[] = "n%p->n%p[tailport=e,headport=nw,weight=10,"
+                                "style=solid,label=%s]";
+    while (stmt)
+    {
+	if (stmt->pst_next)
+	    SIfprintf(fd, "n%p->n%p[tailport=s,headport=n,weight=1000,"
+				"style=solid,label=next]",
+			stmt, stmt->pst_next);
+	SIfprintf(fd, "n%p[shape=record,fillcolor=lightskyblue,"
+				"style=filled,label=\"{{%s|%d}",
+		    stmt,
+		    pqtype_array[stmt->pst_mode<PSQ_MODE_MAX
+				?stmt->pst_mode:PSQ_MODE_MAX],
+		    stmt->pst_lineno);
+	if (PST_IS_A_DDL_STATEMENT(stmt->pst_type))
+	{
+	    if (stmt->pst_type < PST_STTYPE_DDL_MAX)
+		SIfprintf(fd, "|DDL %s", 
+		    ddltype_array[stmt->pst_type-PST_FIRST_DDL_STATEMENT_TYPE]);
+	    else
+	    {
+		SIfprintf(fd, "|BAD DDL TAG %d}\"]\n", stmt->pst_type);
+		return;
+	    }
+	}
+	else if (stmt->pst_type > 0 && stmt->pst_type < PST_STTYPE_MAX)
+	{
+	    SIfprintf(fd, "|%s", stype_array[stmt->pst_type]);
+	}
+	else
+	{
+	    SIfprintf(fd, "|BAD TAG %d}\"]\n", stmt->pst_type);
+	    return;
+	}
+	switch (stmt->pst_type)
+	{
+	case PST_DV_TYPE:
+	    {	PST_DECVAR *v = stmt->pst_specific.pst_dbpvar;
+		pst_decvar_dot1(adfcb, fd, v);
+	    }
+	    goto common_end;
+	case PST_QT_TYPE:
+	    {	PST_QTREE *v = stmt->pst_specific.pst_tree;
+		SIfprintf(fd, "}\"]\n");
+		SIfprintf(fd, BASE_LINK3, stmt, v, "pst_tree");
+		pst_qtree_dot1(adfcb, fd, cb, v);
+	    }
+	    break;
+	case PST_IF_TYPE:
+	case PST_WH_TYPE:
+	case PST_RP_TYPE:
+	    {	PST_IFSTMT *v = &stmt->pst_specific.pst_if;
+		SIfprintf(fd, "}\"]\n");
+		if (v->pst_condition)
+		{
+		    SIfprintf(fd, "n%p->n%p[tailport=ne,headport=w,weight=10,"
+				"style=solid,label=pst_condition]",
+			stmt, v->pst_condition);
+		    pst_qnode_dot1(adfcb, fd, cb, v->pst_condition, NULL);
+		}
+		if (v->pst_true)
+		{
+		    SIfprintf(fd, BASE_LINK3, stmt, v->pst_true, "pst_true");
+		    if (v->pst_true != stmt->pst_next)
+			pst_stmt_dot1(adfcb, fd, cb, v->pst_true);
+		}
+		if (v->pst_false)
+		{
+		    SIfprintf(fd, "n%p->n%p[tailport=se,headport=nw,weight=10,"
+				"style=solid,label=pst_false]",
+			stmt, v->pst_false);
+		    if (v->pst_false != stmt->pst_next)
+			pst_stmt_dot1(adfcb, fd, cb, v->pst_false);
+		}
+	    }
+	    break;
+	case PST_MSG_TYPE:
+	case PST_EMSG_TYPE:
+	    {	PST_MSGSTMT *v = &stmt->pst_specific.pst_msg;
+		SIfprintf(fd, "|{msgdest|%d}}\"]\n", v->pst_msgdest);
+		if (v->pst_msgnumber)
+		{
+		    SIfprintf(fd, BASE_LINK3, stmt, v->pst_msgnumber, "pst_msgnumber");
+		    pst_qnode_dot1(adfcb, fd, cb, v->pst_msgnumber, NULL);
+		}
+		if (v->pst_msgtext)
+		{
+		    SIfprintf(fd, BASE_LINK3, stmt, v->pst_msgtext, "pst_msgtext");
+		    pst_qnode_dot1(adfcb, fd, cb, v->pst_msgtext, NULL);
+		}
+	    }
+	    break;
+	case PST_RTN_TYPE:
+	    {	PST_RTNSTMT *v = &stmt->pst_specific.pst_rtn;
+		SIfprintf(fd, "}\"]\n");
+		if (v->pst_rtn_value)
+		{
+		    SIfprintf(fd, BASE_LINK3, stmt, v->pst_rtn_value, "pst_rtn_value");
+		    pst_qnode_dot1(adfcb, fd, cb, v->pst_rtn_value, NULL);
+		}
+	    }
+	    break;
+	case PST_RSP_TYPE:
+	    {	PST_RSPSTMT *v = &stmt->pst_specific.pst_rbsp;
+		SIfprintf(fd, "}\"]\n");
+		if (v->pst_savept)
+		{
+		    SIfprintf(fd, BASE_LINK3, stmt, v->pst_savept, "pst_savept");
+		    pst_qnode_dot1(adfcb, fd, cb, v->pst_savept, NULL);
+		}
+	    }
+	    break;
+	case PST_CP_TYPE:
+	    {	PST_CPROCSTMT *v = &stmt->pst_specific.pst_callproc;
+		SIfprintf(fd, "|%.32s|%.32s|{0x%x|nargs:%d}",
+			v->pst_rulename.db_name,
+			(char*)&v->pst_procname,
+			v->pst_pmask,
+			v->pst_argcnt);
+		if (v->pst_return_status)
+		{
+		    SIfprintf(fd, "|return_status|");
+		    pst_qtree_rsdm_node(fd, v->pst_return_status);
+		}
+		SIfprintf(fd, "}\"]\n");
+		if (v->pst_arglist)
+		{
+		    SIfprintf(fd, "n%p->n%p[weight=10,style=solid,"
+				"label=pst_arglist]",
+			stmt, v->pst_arglist);
+		    pst_qnode_dot1(adfcb, fd, cb, v->pst_arglist, NULL);
+		}
+	    }
+	    break;
+	case PST_IP_TYPE:
+	    {	PST_IPROCSTMT *v = &stmt->pst_specific.pst_iproc;
+		SIfprintf(fd, "|%.32s",
+			(char*)&v->pst_procname);
+	    }
+	    goto common_end;
+	case PST_EVREG_TYPE:
+	case PST_EVDEREG_TYPE:
+	case PST_EVRAISE_TYPE:
+	    {	PST_EVENTSTMT *v = &stmt->pst_specific.pst_eventstmt;
+		SIfprintf(fd, "|%.32s|%08x",
+			(char*)&v->pst_event, v->pst_evflags);
+		SIfprintf(fd, "}\"]\n");
+		if (v->pst_evvalue)
+		{
+		    SIfprintf(fd, BASE_LINK3, stmt, v->pst_evvalue, "pst_evvalue");
+		    pst_qnode_dot1(adfcb, fd, cb, v->pst_evvalue, NULL);
+		}
+	    }
+	    break;
+	case PST_EXEC_IMM_TYPE:
+	    {	PST_EXEC_IMM *v = &stmt->pst_specific.pst_execImm;
+		SIfprintf(fd, "|pst_qrytext?");
+	    }
+	    goto common_end;
+	case PST_REGPROC_TYPE:
+	    {	PST_REGPROC_STMT *v = &stmt->pst_specific.pst_regproc;
+		SIfprintf(fd, "|%.32s|TBS",
+			(char*)&v->pst_procname);
+	    }
+	    goto common_end;
+	case PST_FOR_TYPE:
+	    {	PST_FORSTMT *v = &stmt->pst_specific.pst_for;
+
+		SIfprintf(fd, "}\"]\n");
+		if (v->pst_forhead)
+		{
+		    SIfprintf(fd, BASE_LINK3, stmt, v->pst_forhead, "pst_forhead");
+		    if (v->pst_forhead != stmt->pst_next)
+			pst_stmt_dot1(adfcb, fd, cb, v->pst_forhead);
+		}
+	    }
+	    break;
+
+	case PST_CREATE_TABLE_TYPE:
+	case PST_CREATE_INDEX_TYPE:
+	    {	PST_CREATE_TABLE *v = &stmt->pst_specific.pst_createTable;
+		SIfprintf(fd, "|{0x%x}", v->pst_createTableFlags);
+	    }
+	    goto common_end;
+	case PST_CREATE_RULE_TYPE:
+	    {	PST_CREATE_RULE *v = &stmt->pst_specific.pst_createRule;
+		SIfprintf(fd, "|%d}\"]\n",
+			v->pst_createRuleFlags);
+		if (v->pst_ruleTree)
+		{
+		    SIfprintf(fd, BASE_LINK3, stmt, v->pst_ruleTree, "pst_ruleTree");
+		    pst_qtree_dot1(adfcb, fd, cb, v->pst_ruleTree);
+		}
+		if (v->pst_ruleTuple)
+		{
+		    DB_IIRULE *d = v->pst_ruleTuple;
+		    SIfprintf(fd, "n%p->n%p[tailport=e,headport=w,weight=10,"
+				"style=solid,label=pst_ruleTuple]",
+				stmt, d);
+		    SIfprintf(fd, "n%p[label=\"{DB_IIRULE|%.32s|{%s|0x%x}|...}\"]",
+				d,d->dbr_name,
+				d->dbr_type==DBR_T_ROW
+				? "ROW"
+				:d->dbr_type==DBR_T_TIME
+				? "TIME"
+				: "STMT",
+				d->dbr_flags);
+		}
+	    }
+	    break;
+	case PST_CREATE_PROCEDURE_TYPE:
+	    {	PST_CREATE_PROCEDURE *v = &stmt->pst_specific.pst_createProcedure;
+		SIfprintf(fd, "}\"]\n");
+		if (v->pst_procedureTuple)
+		{
+		    DB_PROCEDURE *d = v->pst_procedureTuple;
+		    SIfprintf(fd, "n%p->n%p[tailport=e,headport=w,weight=10,"
+				"style=solid,label=pst_procedureTuple]",
+				stmt, d);
+		    SIfprintf(fd, "n%p[label=\"{DB_PROCEDURE|%.32s|...}\"]",
+				d,d->db_dbpname);
+		}
+	    }
+	    break;
+	case PST_CREATE_INTEGRITY_TYPE:
+	    {	PST_CREATE_INTEGRITY *v = &stmt->pst_specific.pst_createIntegrity;
+		SIfprintf(fd, "|TBS");
+	    }
+	    goto common_end;
+	case PST_MODIFY_TABLE_TYPE:
+	    {	PST_MODIFY_TABLE *v = &stmt->pst_specific.pst_modifyTable;
+		SIfprintf(fd, "|TBS");
+	    }
+	    goto common_end;
+	case PST_DROP_INTEGRITY_TYPE:
+	    {	PST_DROP_INTEGRITY *v = &stmt->pst_specific.pst_dropIntegrity;
+		SIfprintf(fd, "|TBS");
+	    }
+	    goto common_end;
+	case PST_CREATE_SCHEMA_TYPE:
+	    {	PST_CREATE_SCHEMA *v = &stmt->pst_specific.pst_createSchema;
+		SIfprintf(fd, "|TBS");
+	    }
+	    goto common_end;
+	case PST_CREATE_VIEW_TYPE:
+	    {	PST_CREATE_VIEW *v = &stmt->pst_specific.pst_create_view;
+		i4 j;
+		SIfprintf(fd, "|{%.32s|0x%x|%d}|C:",
+			v->pst_view_name, v->pst_flags, v->pst_status);
+		for (j = 3; j > 0; j--)
+		    if (v->pst_updt_cols.db_domset[j])
+			break;
+		for (; j >= 0; j--)
+		    SIfprintf(fd, "%08x", v->pst_updt_cols.db_domset[j]);
+		SIfprintf(fd, "}\"]\n");
+		if (v->pst_view_tree)
+		{
+		    SIfprintf(fd, "n%p->n%p[tailport=e,headport=w,weight=10,"
+				"style=solid,label=pst_view_tree]",
+				stmt, v->pst_view_tree);
+		    pst_qtree_dot1(adfcb, fd, cb, v->pst_view_tree);
+		}
+	    }
+	    break;
+	case PST_RENAME_TYPE:
+	    {	PST_RENAME *v = &stmt->pst_specific.pst_rename;
+		SIfprintf(fd, "|TBS");
+	    }
+	    goto common_end;
+
+	case PST_RETROW_TYPE:
+	case PST_ENDLOOP_TYPE:
+	case PST_CMT_TYPE:
+	case PST_RBK_TYPE:
+	    /* Nothing extra to display */
+common_end:
+	default:
+	    SIfprintf(fd, "}\"]\n");
+	    break;
+	}
+
+	if (stmt->pst_after_stmt)
+	{
+	    SIfprintf(fd, "n%p->n%p[tailport=s,headport=nw,weight=100,"
+				"style=solid,label=after]",
+		stmt, stmt->pst_after_stmt);
+	    pst_stmt_dot1(adfcb, fd, cb, stmt->pst_after_stmt);
+	}
+	if (stmt->pst_before_stmt)
+	{
+	    SIfprintf(fd, "n%p->n%p[tailport=n,headport=sw,weight=100,"
+				"style=solid,label=before]",
+		stmt, stmt->pst_before_stmt);
+	    pst_stmt_dot1(adfcb, fd, cb, stmt->pst_before_stmt);
+	}
+	if (stmt->pst_statementEndRules)
+	{
+	    SIfprintf(fd, "n%p->n%p[tailport=s,headport=nw,weight=10,"
+				"style=solid,label=pst_statementEndRules]",
+		stmt, stmt->pst_statementEndRules);
+	    pst_stmt_dot1(adfcb, fd, cb, stmt->pst_statementEndRules);
+	}
+	if (stmt->pst_before_statementEndRules)
+	{
+	    SIfprintf(fd, "n%p->n%p[tailport=ne,headport=sw,weight=10,"
+				"style=solid,label=pst_before_statementEndRules]",
+		stmt, stmt->pst_before_statementEndRules);
+	    pst_stmt_dot1(adfcb, fd, cb, stmt->pst_before_statementEndRules);
+	}
+	stmt = stmt->pst_next;
+    }
+}
+
+/*{
+** Name: pst_dot - DOT format dump
+**
+** Description:
+**	Dump DOTTY formatted parse tree representation.
+**	May be called from debugger in either PSF, OPF or QSF
+**
+** Inputs:
+**	filename	Address of null terminated string
+**	cb		Address of session cb (if not NULL)
+**	node		Address of a PST_QNODE.
+**	proc		Address of a PST_PROCEDURE.
+**	relations	Bool to control generation of relationships
+**
+** History:
+**	
+**	03-Dec-2009 (kiria01) SIR 121883
+**	    Written to aid debugging parse trees
+**	18-Mar-2010 (kiria01) b123438
+**	    Add support for rngvars to be dumped & tables to be
+**	    named.
+**	21-Apr-2010 (kiria01) b123618
+**	    Avoid directly accessing location content.
+**	21-Oct-2010 (kiria01) b124629
+**	    Provide for procedure and relationship dump as well as
+**	    just query tree.
+*/
+
+static void
+pst_dot(
+    char *fname,
+    PSS_SESBLK *cb,
+    PST_QNODE *node,
+    PST_PROCEDURE *proc,
+    bool relations)
+{
+    ADI_OPINFO opinfo;
+    LOCATION loc;
+    FILE *fd = NULL;
+    STATUS rval;
+    ADF_CB adfcb;
+    i4 i, j, k;
+    DB_STATUS status = E_DB_OK;
+
+    if (!fname)
+	fname = "qtree.dot";
+
+    if (LOfroms(PATH&FILENAME, fname, &loc) != OK ||
+        (rval = SIopen(&loc, "w", &fd)) != OK)
+    {
+        TRdisplay("Can't open debugging file (%s)\n SIopen returns %p",
+                fname, rval);
+        return;
+    }
+
+    {
+	char dummy[LO_NM_LEN], name[LO_NM_LEN];
+	LOdetail(&loc, dummy, dummy, name, dummy, dummy);
+
+	SIfprintf(fd, "digraph qtree{fontname=\"Courier\";fontsize=10;"
+		"ordering=out;labelloc=t;labeljust=l;label=\"%s\";\n"
+		"node[fontname=\"Courier\",fontsize=10,shape=record,style=filled];\n"
+		"edge[fontname=\"Courier\",fontsize=10];\n", name);
+    }
+
+    MEfill(sizeof (adfcb), 0, &adfcb); 
+    adfcb.adf_outarg.ad_f4width = 11;/* min field width for f4 */
+    adfcb.adf_outarg.ad_f4prec = 5;	/* prec for f4 */
+    adfcb.adf_outarg.ad_f8width = 22;/* min field width for f8 */
+    adfcb.adf_outarg.ad_f8prec = 10;	/* prec for f8 */
+    adfcb.adf_outarg.ad_f4style = 'n'; /* e f g or n */
+    adfcb.adf_outarg.ad_f8style = 'n'; /* e f g or n */
+    if (cb && !relations)
+    {
+	SIfprintf(fd, "n%p[shape=record,style=solid,label=\"{RNGTAB",
+			&cb->pss_auxrng.pss_rngtab[0]);
+	for (i = 0; i < PST_NUMVARS; i++)
+	{
+	    PSS_RNGTAB *rngvar = &cb->pss_auxrng.pss_rngtab[i];
+	    if (rngvar->pss_used &&
+		rngvar->pss_rgno >= 0)
+	    {
+		char name[sizeof(rngvar->pss_tabname)];
+		char cv[sizeof(rngvar->pss_rgname)];
+
+		MEcopy((PTR)rngvar->pss_rgname, sizeof(cv),cv);
+		cv[sizeof(cv)-1] = 0;
+		STtrmwhite(cv);
+		MEcopy((PTR)&rngvar->pss_tabname, sizeof(name),name);
+		name[sizeof(name)-1] = 0;
+		STtrmwhite(name);
+		SIfprintf(fd, "|{{%s|%s|{<f%d>%d|%s|%d}|I:",
+		    cv, name, rngvar->pss_rgno, i,
+		    rgtype_array[rngvar->pss_rgtype<PST_RGTYPE_MAX
+			    ?rngvar->pss_rgtype:PST_RGTYPE_MAX],
+		    rngvar->pss_rgparent);
+		for (j = 3; j > 0; j--)
+		    if (rngvar->pss_inner_rel.pst_j_mask[j])
+			break;
+		for (; j >= 0; j--)
+		    SIfprintf(fd, "%08x", rngvar->pss_inner_rel.pst_j_mask[j]);
+		SIfprintf(fd, "|O:");
+		for (j = 3; j > 0; j--)
+		    if (rngvar->pss_outer_rel.pst_j_mask[j])
+			break;
+		for (; j >= 0; j--)
+		    SIfprintf(fd, "%08x", rngvar->pss_outer_rel.pst_j_mask[j]);
+		SIfprintf(fd, "}|%d}", rngvar->pss_rgno);
+	    }
+	}
+	SIfprintf(fd, "}\"]\n");
+
+	for (i = 0; i < PST_NUMVARS; i++)
+	{
+	    PSS_RNGTAB *rngvar = &cb->pss_auxrng.pss_rngtab[i];
+	    if (rngvar->pss_used &&
+		rngvar->pss_rgno >= 0)
+	    {
+		if (rngvar->pss_qtree)
+		{
+		    SIfprintf(fd, "n%p:f%d->n%p[style=solid"
+					",label=rgroot"
+					",tailport=w"
+					",headport=n"
+					"]\n",
+				&cb->pss_auxrng.pss_rngtab[0], rngvar->pss_rgno,
+				rngvar->pss_qtree);
+		    switch(rngvar->pss_rgtype)
+		    {
+		    case PST_RTREE:
+		    case PST_DRTREE:
+		    case PST_WETREE:
+		    case PST_TPROC:
+			pst_qnode_dot1(&adfcb, fd, cb, rngvar->pss_qtree, NULL);
+		    }
+		}
+	    }
+	}
+    }
+    if (node && !relations)
+	pst_qnode_dot1(&adfcb, fd, cb, node, NULL);
+
+    if (cb && node && relations)
+    {
+	i4 n = cb->pss_auxrng.pss_maxrng+1;
+	i2 *map = (i2*)MEreqmem(0, sizeof(i2)*(n+1)*n/2, TRUE, NULL);
+#define BIT_ID	0x00FF
+#define BIT_EQ	0x0100
+#define BIT_IE	0x0200
+#define BIT_CPX	0x0400
+#define BIT_LO	0x0800
+#define BIT_RO	0x1000
+	PST_STK stk;
+	PST_QNODE *p = node;
+
+	PST_STK_INIT(stk, cb);
+
+	for (i = 0; i < PST_NUMVARS; i++)
+	{
+	    PSS_RNGTAB *rngvar = &cb->pss_auxrng.pss_rngtab[i];
+	    if (rngvar->pss_used &&
+		rngvar->pss_rgno >= 0)
+	    {
+		char name[sizeof(rngvar->pss_tabname)];
+		char cv[sizeof(rngvar->pss_rgname)];
+
+		MEcopy((PTR)rngvar->pss_rgname, sizeof(cv),cv);
+		cv[sizeof(cv)-1] = 0;
+		STtrmwhite(cv);
+		MEcopy((PTR)&rngvar->pss_tabname, sizeof(name),name);
+		name[sizeof(name)-1] = 0;
+		STtrmwhite(name);
+		SIfprintf(fd, "v%d[shape=Mrecord,label=\"{%s|%s|{%d|%d|%s|%d}}\"]\n",
+		    rngvar->pss_rgno, cv, name, rngvar->pss_rgno, i,
+		    rgtype_array[rngvar->pss_rgtype<PST_RGTYPE_MAX
+			    ?rngvar->pss_rgtype:PST_RGTYPE_MAX],
+		    rngvar->pss_rgparent);
+
+		if (rngvar->pss_qtree)
+		{
+		    PST_QNODE *r = rngvar->pss_qtree;
+		    while (r && r->pst_sym.pst_type == PST_ROOT)
+		    {
+			PST_QNODE *u = r->pst_sym.pst_value.pst_s_root.pst_union.pst_next;
+			for (j = -1; (j = BTnext(j, (char*)&r->pst_sym.pst_value.pst_s_root.pst_tvrm,
+				    BITS_IN(PST_J_MASK))) >= 0;)
+			{
+			    SIfprintf(fd, "v%d->v%d[penwidth=4,color=lightblue,dir=none]\n", rngvar->pss_rgno, j);
+			    if (u)
+			    {
+				for (k = -1; (k = BTnext(k, (char*)&u->pst_sym.pst_value.pst_s_root.pst_tvrm,
+					    BITS_IN(PST_J_MASK))) >= 0;)
+				    SIfprintf(fd, "v%d->v%d[penwidth=4"
+						",style=dotted"
+						",color=green"
+						",label=union"
+						",dir=none]\n", j<k?j:k, j<k?k:j);
+			    }
+			}
+			r = u;
+		    }
+		    pst_push_item(&stk, (PTR)rngvar->pss_qtree);
+		}
+	    }
+	}
+	/* Scan tree for join relationships populating map */
+	while (p)
+	{
+	    PST_QNODE *l, *r;
+
+	    switch (p->pst_sym.pst_type)
+	    {
+	    case PST_ROOT:
+	    case PST_AGHEAD:
+	    case PST_SUBSEL:
+		if (p->pst_sym.pst_value.pst_s_root.pst_union.pst_next)
+		    pst_push_item(&stk, (PTR)p->pst_sym.pst_value.pst_s_root.pst_union.pst_next);
+	    case PST_AND:
+	    case PST_OR:
+	    case PST_NOT:
+	    case PST_RESDOM:
+	    case PST_UOP:
+	    case PST_CASEOP:
+	    case PST_WHLIST:
+		if (p->pst_left)
+		{
+		    if (p->pst_right)
+			pst_push_item(&stk, (PTR)p->pst_right);
+		    p = p->pst_left;
+		    continue;
+		}
+		else if (p->pst_right)
+		{
+		    p = p->pst_right;
+		    continue;
+		}
+		break;
+	    case PST_BOP:
+		l = r = NULL;
+		if (!(status = adi_op_info(cb->pss_adfcb,
+			    p->pst_sym.pst_value.pst_s_op.pst_opno, &opinfo)) &&
+			opinfo.adi_optype == ADI_COMPARISON &&
+			psl_find_node(p->pst_left, &l, PST_VAR) &&
+			psl_find_node(p->pst_right, &r, PST_VAR))
+		{
+		    i4 l_vno = l->pst_sym.pst_value.pst_s_var.pst_vno;
+		    i4 r_vno = r->pst_sym.pst_value.pst_s_var.pst_vno;
+		    i2 bits = p->pst_sym.pst_value.pst_s_op.pst_joinid;
+		    PST_J_MASK masks[2]; /* left, right */
+
+		    if (p->pst_sym.pst_value.pst_s_op.pst_opno == ADI_EQ_OP)
+			bits |= BIT_EQ;
+		    else
+			bits |= BIT_IE;
+		    MEfill(sizeof(masks), 0, (PTR)masks);
+		    BTset(l_vno, (char *)(masks[0].pst_j_mask));
+		    BTset(r_vno, (char *)(masks[1].pst_j_mask));
+		    while (psl_find_node(node->pst_left, &l, PST_VAR))
+		    {
+			i4 vno = l->pst_sym.pst_value.pst_s_var.pst_vno;
+			if (vno != l_vno)
+			{
+			    bits |= BIT_CPX;
+			    BTset(vno, (char *)(masks[0].pst_j_mask));
+			}
+		    }
+		    while (psl_find_node(node->pst_right, &r, PST_VAR))
+		    {
+			i4 vno = r->pst_sym.pst_value.pst_s_var.pst_vno;
+			if (vno != l_vno)
+			{
+			    bits |= BIT_CPX;
+			    BTset(vno, (char *)(masks[1].pst_j_mask));
+			}
+		    }
+		    for (j = -1; (j = BTnext(j, (char*)(masks[1].pst_j_mask),
+			    BITS_IN(PST_J_MASK))) >= 0;)
+		    {
+			for (i = -1; (i = BTnext(i, (char*)(masks[0].pst_j_mask),
+				BITS_IN(PST_J_MASK))) >= 0;)
+			{
+			    PSS_RNGTAB *rngvar;
+			    i4 ij;
+			    if (i <= j)
+			    {
+				ij = i+(j+1)*j/2;
+				if (bits & BIT_ID)
+				{
+				    rngvar = &cb->pss_auxrng.pss_rngtab[i];
+				    if (rngvar->pss_used && rngvar->pss_rgno >= 0 &&
+					BTtest(bits & BIT_ID, (char*)&rngvar->pss_outer_rel))
+					    bits |= BIT_LO;
+				    rngvar = &cb->pss_auxrng.pss_rngtab[j];
+				    if (rngvar->pss_used && rngvar->pss_rgno >= 0 &&
+					BTtest(bits & BIT_ID, (char*)&rngvar->pss_outer_rel))
+					    bits |= BIT_RO;
+				}
+			    }
+			    else
+			    {
+				ij = j+(i+1)*i/2;
+				if (bits & BIT_ID)
+				{
+				    rngvar = &cb->pss_auxrng.pss_rngtab[i];
+				    if (rngvar->pss_used && rngvar->pss_rgno >= 0 &&
+					BTtest(bits & BIT_ID, (char*)&rngvar->pss_outer_rel))
+					    bits |= BIT_RO;
+				    rngvar = &cb->pss_auxrng.pss_rngtab[j];
+				    if (rngvar->pss_used && rngvar->pss_rgno >= 0 &&
+					BTtest(bits & BIT_ID, (char*)&rngvar->pss_outer_rel))
+					    bits |= BIT_LO;
+				}
+			    }
+			    if (!map[ij])
+				map[ij] = bits;
+			    else if (map[ij] != bits)
+			    {
+				char *arr = "none";
+				if ((bits&(BIT_LO|BIT_RO)) == BIT_LO)
+				    arr = "forward";
+				else if ((bits&(BIT_LO|BIT_RO)) == BIT_LO)
+				    arr = "back";
+				else if (bits&(BIT_LO|BIT_RO))
+				    arr = "both";
+				if (bits & BIT_EQ)
+				{
+				    SIfprintf(fd, "v%d->v%d[style=solid,color=red,dir=%s", i, j, arr);
+				    if (bits & BIT_ID)
+					SIfprintf(fd, ",label=j%d", (bits & BIT_ID));
+				    SIfprintf(fd, "]\n");
+				}
+				if (bits & BIT_IE)
+				{
+				    SIfprintf(fd, "v%d->v%d[style=dashed,color=red,dir=%s", i, j, arr);
+				    if (bits & BIT_ID)
+					SIfprintf(fd, ",label=j%d", (bits & BIT_ID));
+				    SIfprintf(fd, "]\n");
+				}
+			    }
+			}
+		    }
+		}
+	    }
+	    p = (PST_QNODE*)pst_pop_item(&stk);
+	}
+	/* Process map for links*/
+	for (j = 0; j < n; j++)
+	{
+	    for (i = 0; i <= j; i++)
+	    {
+		i2 mapij = map[i+(j+1)*j/2];
+		char *arr = "none";
+		if ((mapij&(BIT_LO|BIT_RO)) == BIT_LO)
+		    arr = "forward";
+		else if ((mapij&(BIT_LO|BIT_RO)) == BIT_LO)
+		    arr = "back";
+		else if (mapij&(BIT_LO|BIT_RO))
+		    arr = "both";
+		if (mapij & BIT_EQ)
+		{
+		    SIfprintf(fd, "v%d->v%d[style=solid,dir=%s", i, j, arr);
+		    if (mapij & BIT_ID)
+			SIfprintf(fd, ",label=j%d", (mapij & BIT_ID));
+		    SIfprintf(fd, "]\n");
+		}
+		if (mapij & BIT_IE)
+		{
+		    SIfprintf(fd, "v%d->v%d[style=dashed,dir=%s", i, j, arr);
+		    if (mapij & BIT_ID)
+			SIfprintf(fd, ",label=j%d", (mapij & BIT_ID));
+		    SIfprintf(fd, "]\n");
+		}
+	    }
+	}
+	MEfree(map);
+    }
+    if (proc)
+    {
+	SIfprintf(fd, "n%p[shape=record,label=\"{{PROCEDURE|vsn:%d}",
+			    proc, proc->pst_vsn);
+	if (proc->pst_isdbp)
+	    SIfprintf(fd, "|%.32s", proc->pst_dbpid.db_cur_name);
+	if (proc->pst_parms)
+	    pst_decvar_dot1(&adfcb, fd, proc->pst_parms);
+
+	SIfprintf(fd, "}\"]");
+
+	if (proc->pst_stmts)
+	{
+	    SIfprintf(fd, "n%p->n%p[weight=10,style=solid,label=pst_stmts]",
+		proc, proc->pst_stmts);
+	    pst_stmt_dot1(&adfcb, fd, cb, proc->pst_stmts);
+	}
+
+    }
+    SIfprintf(fd, "}\n");
+    SIclose(fd);
+}
+
+/*{
+** Name: pst_qtree_dot - DOT format dump
+**
+** Description:
+**	Dump DOTTY formatted parse tree representation.
+**	May be called from debugger in either PSF, OPF or QSF
+**
+** Inputs:
+**	filename	Address of null terminated string
+**	cb		Optional address of session cb
+**	root		Address of a PST_QNODE.
+**
+** History:
+**	
+**	03-Dec-2009 (kiria01) SIR 121883
+**	    Written to aid debugging parse trees
+**	18-Mar-2010 (kiria01) b123438
+**	    Add support for rngvars to be dumped & tables to be
+**	    named.
+**	21-Apr-2010 (kiria01) b123618
+**	    Avoid directly accessing location content.
+**	21-Oct-2010 (kiria01) b124629
+**	    Use common interface.
+*/
+
+void
+pst_qtree_dot(
+    char *fname,
+    PSS_SESBLK *cb,
+    PST_QNODE *node)
+{
+    if (cb && cb->pss_ascii_id != PSSSES_ID)
+    {
+	node = (PST_QNODE*)cb;
+	cb = NULL;
+    }
+    pst_dot(fname, cb, node, NULL, FALSE);
+}
+
+/*{
+** Name: pst_relations_dot - DOT format dump of relationships
+**
+** Description:
+**	Dump DOTTY formatted relationship representation.
+**	May be called from debugger in either PSF, OPF or QSF
+**
+** Inputs:
+**	filename	Address of null terminated string
+**	cb		Address of session cb
+**	root		Address of a PST_QNODE.
+**
+** History:
+**	
+**	21-Oct-2010 (kiria01) b124629
+**	    Created.
+*/
+
+void
+pst_relations_dot(
+    char *fname,
+    PSS_SESBLK *cb,
+    PST_QNODE *node)
+{
+    pst_dot(fname, cb, node, NULL, TRUE);
+}
+
+/*{
+** Name: pst_proc_dot - DOT format dump
+**
+** Description:
+**	Dump DOTTY formatted procedure representation.
+**	May be called from debugger in either PSF, OPF or QSF
+**
+** Inputs:
+**	filename	Address of null terminated string
+**	proc		Address of a PST_PROCEDURE.
+**
+** History:
+**	
+**	21-Oct-2010 (kiria01) b124629
+**	    Created
+*/
+
+void
+pst_proc_dot(
+    char *fname,
+    PST_PROCEDURE *proc)
+{
+    if (proc)
+	pst_dot(fname, NULL, NULL, proc, FALSE);
+}
+#endif /*PST_DOT_DIAGS*/

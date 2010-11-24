@@ -138,6 +138,8 @@
 **	    psq_tmulti_out(), psq_1rptqry_out(), psq_tout().
 **	17-Jan-2001 (jenjo02)
 **	    Short-circuit calls to psy_secaudit() if not C2SECURE.
+**	21-Oct-2010 (kiria01) b124629
+**	    Use the macro symbol with ult_check_macro instead of literal.
 */
 
 /* external declarations */
@@ -399,7 +401,8 @@ psl_reorder_schema(
 	i4		val1;
 	i4		val2;
 
-	if (ult_check_macro(&sess_cb->pss_trace, 15, &val1, &val2))
+	if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_DBPROC_TREE_BY_NEXT_TRACE, &val1, &val2))
 	{
 	    (VOID) pst_display("\nCREATE SCHEMA TREE (before reordering)\n");
 	    for (current_node = stmt_list;
@@ -713,7 +716,8 @@ psl_reorder_schema(
 	** Print the list of nodes that were reordered
 	*/
 
-	if (ult_check_macro(&sess_cb->pss_trace, 15, &val1, &val2))
+	if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_DBPROC_TREE_BY_NEXT_TRACE, &val1, &val2))
 	{
 	    (VOID) pst_display("\nCREATE SCHEMA TREE (after reordering)\n");
 	    for (current_node = reordered_nodes;
@@ -743,7 +747,8 @@ psl_reorder_schema(
 	    ** Print the list of nodes that failed reordering
 	    */
 
-	    if (ult_check_macro(&sess_cb->pss_trace, 15, &val1, &val2))
+	    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_DBPROC_TREE_BY_NEXT_TRACE, &val1, &val2))
 	    {
 	        (VOID) pst_display(
 			"\nCREATE SCHEMA TREE REORDERING FAILED\n");

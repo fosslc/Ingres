@@ -516,6 +516,8 @@
 **	    Add set [no]create_compression.
 **      17-Aug-2010 (horda03) b124274
 **          Add SEGMENTED as a keyword for SET QEP SEGMENTED.
+**	21-Oct-2010 (kiria01) b124629
+**	    Use the macro symbol with ult_check_macro instead of literal.
 **/
 
 /*
@@ -4598,7 +4600,8 @@ dv1.db_length, rdv.db_length);
 	pss_cb->pss_symnext = save_symnext;
 	return (token);
     }
-    else if (ult_check_macro(&pss_cb->pss_trace, 19, &val1, &val2))
+    else if (ult_check_macro(&pss_cb->pss_trace,
+			PSS_SCANNER_UNORM, &val1, &val2))
     {
 	i4	t1 = dv1.db_datatype;
 	i4	t2 = rdv.db_datatype;
@@ -4740,7 +4743,8 @@ DB_STATUS err_status)
     adf_cb = (ADF_CB*) pss_cb->pss_adfcb;
 
     /* "set trace point ps147" to see the data causing the error */
-    if (ult_check_macro(&pss_cb->pss_trace, 19, &val1, &val2))
+    if (ult_check_macro(&pss_cb->pss_trace,
+			PSS_SCANNER_UNORM, &val1, &val2))
     {
 	TRdisplay(" UNORM ERROR:(%d) (%d,%d)\n", err_status,
 	    (i4)dv1->db_datatype, (i4)dv1->db_length);
@@ -4775,7 +4779,8 @@ DB_STATUS err_status)
 	}
     }
 
-    if (ult_check_macro(&pss_cb->pss_trace, 19, &val1, &val2))
+    if (ult_check_macro(&pss_cb->pss_trace,
+			PSS_SCANNER_UNORM, &val1, &val2))
     {
 	TRdisplay("UNORM ERROR: fix arg (%d,%d) cnt(%d) try again\n",
 	(i4)dv1->db_datatype, (i4)dv1->db_length, cnt);

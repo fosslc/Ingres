@@ -96,6 +96,8 @@
 **	    Supply session's SID to QSF in qsf_sid.
 **	17-Jan-2001 (jenjo02)
 **	    Short-circuit calls to psy_secaudit() if not C2SECURE.
+**	21-Oct-2010 (kiria01) b124629
+**	    Use the macro symbol with ult_check_macro instead of literal.
 [@history_template@]...
 **/
 
@@ -546,7 +548,8 @@ psy_dpermit(
 
 	    if (psy_cb->psy_numcols != 0 &&
 		(psy_cb->psy_opmap & DB_REPLACE ||
-		 ult_check_macro(&sess_cb->pss_trace, 3, &val1, &val2)
+		 ult_check_macro(&sess_cb->pss_trace,
+				PSS_TBL_VIEW_GRANT_TRACE, &val1, &val2)
 		)
 	       )
 	    {

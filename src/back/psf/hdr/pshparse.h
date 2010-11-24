@@ -580,8 +580,7 @@
 **    Y     0 (ps128)	-   print tracing info as YACC is shifting/reducing its
 **			    way through the query text
 **    N	    1 (ps129)	-   set printqry - print query buffer before
-**			    parsing the
-**			    query
+**			    parsing the query
 **    N	    3 (ps131)	-   print tracing info of the algorithm determining if
 **			    a user can grant permit on a given table or view
 **    N	    4 (ps132)	-   print tracing info of the algorithm determining
@@ -601,8 +600,7 @@
 **    Y	    18 (ps146)	-   print a subtree rooted in the newly allocated node
 **			    (pst_node)
 **    N     19 (ps147)  -   print psl scanner UNORM diagnostics
-**  ****    20 (ps148)	-   will never fire; used to print qualification tree as
-**			    it was being normalized (pst_norml)
+**    N	    20 (ps148)	-   Traces Register productions
 **    Y	    21 (ps149)	-   print number of children of opnode for which type
 **			    resolution is being performed; use SET TRACE
 **			    TERMINAL to get output on the screen (pst_resolve)
@@ -619,23 +617,20 @@
 **    			    for not null columns (used for testing this feature
 **    			    in 6.5; the feature has been disabled until 6.6 or
 **    			    whenever we need to implement SQL92 catalog support)
-**    N	    49 (ps177)	-   allow set-input procedures and statement-level rules
+**  ****    49 (ps177)	-   OBSOLETE? allow set-input procedures and statement-level rules
 **    			    to be created by the user (instead of only by QEF)
 **    Y	    50 (ps178)	-   print tracing info as the protection algorithm gets
 **			    applied to a query tree (psy_permit)
 **    Y	    51 (ps179)	-   print protection qualification trees as the permitsd
 **			    get applied to a query tree (psy_permit)
-**  ****    71 (ps199)	-   will never fire; used to print segments of output as
-**			    they are being stored in the buffer to be eventually
-**			    displayed as output of HELP PERMIT|INTEGRITY_VIEW
-**			    which are no longer supported in the BE (psy_print)
+**    Y     71 (ps199)	-   Traces psy_put data
 **    Y	    72 (ps200)	-   disable validation of integrity (psy_dinteg)
 **    N     73 (ps201)  -   in SQL disable error return when a duplicate key
 **			    or duplicate row error would normally be returned.
 **			    Instead just return 0 row count as is done in QUEL.
 **			    This has the benefit that in 1.1 open cursors will
 **			    not be closed as a result of the error.
-**    N	    74 (ps202)
+**    N	    74 (ps202)	-   Enable varchar bias over char for datatype resolution 
 **    Y     75 (ps203)  -   Call ulm_mappool() and ulm_print_pool() to dump
 **                          PSF memory in ULM.
 **
@@ -656,26 +651,28 @@
 ** -----------------------------------------------------------------------------
 */
 #define	    PSS_YACC_SHIFT_REDUCE_TRACE	    0	/* PS128 */
-#define	    PSS_PRINT_QRY_TRACE		    1
-#define	    PSS_TBL_VIEW_GRANT_TRACE	    3
-#define	    PSS_REPEAT_QRY_SHARE_TRACE	    4
-#define	    PSS_DBPROC_GRNTBL_ACTIVE_TRACE  5
+#define	    PSS_PRINT_QRY_TRACE		    1	/* PS129 */
+#define	    PSS_TBL_VIEW_GRANT_TRACE	    3	/* PS131 */
+#define	    PSS_REPEAT_QRY_SHARE_TRACE	    4	/* PS132 */
+#define	    PSS_DBPROC_GRNTBL_ACTIVE_TRACE  5	/* PS133 */
 #define	    PSS_CURSOR_INFO_TRACE	    13	/* PS141 */
-#define	    PSS_DBPROC_TREE_BY_LINK_TRACE   14
-#define     PSS_DBPROC_TREE_BY_NEXT_TRACE   15
-#define	    PSS_LONG_QRY_TREE_TRACE	    16
+#define	    PSS_DBPROC_TREE_BY_LINK_TRACE   14	/* PS142 */
+#define     PSS_DBPROC_TREE_BY_NEXT_TRACE   15	/* PS143 */
+#define	    PSS_LONG_QRY_TREE_TRACE	    16	/* PS144 */
 #define     PSS_SHORT_QRY_TREE_TRACE        17	/* PS145 */
-#define	    PSS_NEW_NODE_SUBTREE_TRACE	    18
+#define	    PSS_NEW_NODE_SUBTREE_TRACE	    18	/* PS146 */
 #define     PSS_SCANNER_UNORM               19  /* PS147 */
+#define	    PSS_TRACE_REGISTER		    20	/* PS148 */
 #define	    PSS_OPNODE_CHILDREN_TRACE	    21	/* PS149 */
-#define	    PSS_ENABLE_DROP_SCHEMA	    22
+#define	    PSS_ENABLE_DROP_SCHEMA	    22	/* PS150 */
 #define	    PSS_AMBREP_64COMPAT		    23  /* PS151 */
 #define	    PSS_CACHEDYN_TRACE		    24	/* PS152 */
 #define	    PSS_PRINT_PSS_CONS		    47	/* PS175 */
-#define	    PSS_GENERATE_NOT_NULL_CONS	    48
-#define	    PSS_ALLOW_SET_PROC_STMT_RULE    49	/* PS177 */
-#define	    PSS_PRIVILEGE_CHECK_TRACE	    50
-#define	    PSS_PRINT_PERM_QUAL_TREE_TRACE  51
+#define	    PSS_GENERATE_NOT_NULL_CONS	    48	/* PS176 */
+#define	    PSS_ALLOW_SET_PROC_STMT_RULE    49	/* PS177 unused? */
+#define	    PSS_PRIVILEGE_CHECK_TRACE	    50	/* PS178 */
+#define	    PSS_PRINT_PERM_QUAL_TREE_TRACE  51	/* PS179 */
+#define	    PSS_PSY_PUT_TRACE		    71	/* PS199 */
 #define	    PSS_NO_INTEG_VALIDATION_TRACE   72	/* PS200 */
 #define	    PSS_ENABLE_NOERR_ON_DUPS	    73	/* PS201 */
 #define	    PSS_VARCHAR_PRECEDENCE	    74	/* PS202 */
@@ -1113,7 +1110,7 @@ typedef struct _PSS_RNGTAB
     i4		    pss_rgno;		/* Range variable number */
     i4		    pss_permit;		/* used to mark permission to use */
     char            pss_rgname[DB_TAB_MAXNAME]; /* Name of the range variable */
-    i4		    pss_rgtype;		/* type of range var */
+    PST_RGTYPE	    pss_rgtype;		/* type of range var */
 	/*   uses the following definitions from PST_RNGENTRY in psfparse.h
 	**	PST_TABLE 1 	-- table. 
 	**	PST_RTREE 2	-- QTREE. the table id and rdrinfo block

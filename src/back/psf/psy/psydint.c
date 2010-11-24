@@ -112,6 +112,8 @@
 **	06-Jul-06 (kiria01) b116230
 **	    psl_print becomes PSL_RS_PRINT bit in new field psl_rsflags
 **	    to allow for extra flags in PST_RSDM_NODE
+**	21-Oct-2010 (kiria01) b124629
+**	    Use the macro symbol with ult_check_macro instead of literal.
 [@history_template@]...
 **/
 
@@ -634,13 +636,15 @@ psy_dinteg(
     /*
     ** Print the final query tree.
     */
-    if (ult_check_macro(&sess_cb->pss_trace, 16, &val1, &val2))
+    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_LONG_QRY_TREE_TRACE, &val1, &val2))
     {   
 	TRdisplay("Final query tree:\n\n\n");
 	status = pst_prmdump(qtree->pst_qtree, qtree,
 	    &psy_cb->psy_error, DB_PSF_ID);
     }
-    if (ult_check_macro(&sess_cb->pss_trace, 17, &val1, &val2))
+    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_SHORT_QRY_TREE_TRACE, &val1, &val2))
     {   
 	TRdisplay("Final query tree:\n\n\n");
 	status = pst_1prmdump(qtree->pst_qtree, qtree, &psy_cb->psy_error);
@@ -672,7 +676,8 @@ psy_dinteg(
     /* this call will destroy query tree */
     tree_exists = 0;
 #ifdef xDEBUG
-    if (ult_check_macro(&sess_cb->pss_trace, 72, &val1, &val2) == 0)
+    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_NO_INTEG_VALIDATION_TRACE, &val1, &val2) == 0)
     {
 #endif
 	status = opf_call(OPF_CREATE_QEP, &opf_cb);
@@ -703,7 +708,8 @@ psy_dinteg(
     qresult.dt_size = sizeof(qdata);	    /* It contains an i4 */
     qresult.dt_data = (PTR) &qdata;
 #ifdef xDEBUG
-    if (ult_check_macro(&sess_cb->pss_trace, 72, &val1, &val2) == 0)
+    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_NO_INTEG_VALIDATION_TRACE, &val1, &val2) == 0)
     {
 #endif
 	/*
