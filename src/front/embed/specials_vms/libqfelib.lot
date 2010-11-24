@@ -776,7 +776,7 @@ SYMBOL_VECTOR=(IIbreak=PROCEDURE,-
                 FEapply_money_prec=PROCEDURE,-
                 FEapply_money_format=PROCEDURE,-
                 FEapply_date_format=PROCEDURE,-
-                adu_2strtomny_strict=PROCEDURE,
+                adu_2strtomny_strict=PROCEDURE, -
 		adu_sc930prtdataval=PROCEDURE)
 INGLIB:libui/library, -
 INGLIB:libqsys/library, -
