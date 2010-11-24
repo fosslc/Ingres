@@ -153,6 +153,9 @@
 **	08-Nov-2010 (kiria01) SIR 124685
 **	    Add uleFormatFcnV to enable calling of uleFormatFcn with
 **	    direct parameter vector.
+**	10-Nov-2010 (kiria01) SIR 124685
+**	    Always generate the non-variadic macro support routines as
+**	    Windows .def files will unconditionally reference them.
 **/
 
 /*
@@ -977,7 +980,6 @@ uleFormatFcn(
 }
 
 /* Non-variadic function forms, insert __FILE__, __LINE__ manually */
-#ifndef HAS_VARIADIC_MACROS
 DB_STATUS
 uleFormatNV(
 	DB_ERROR       *dberror,
@@ -1026,4 +1028,3 @@ ule_formatNV(
     va_end(ap);
     return status;
 }
-#endif
