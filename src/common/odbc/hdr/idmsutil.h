@@ -22,6 +22,8 @@
 **          with earlier Ingres versions.
 **      07-mar-2003 (loera01) SIR 109789
 **          More clean-up.  Add getReadOnly routine.
+**     18-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Fix windows build for prototye cleanup changes.
 */
 
 #ifndef _INC_IDMSUTIL
@@ -98,7 +100,7 @@ void UtPrint (LPCSTR szFormat, ...);
 //
 //  Utility functions exported by CAIDUT32:
 //
-void UtSnap (LPCSTR, const void *, UINT);
+void UtSnap (LPCSTR, const void *, long);
 #define UtLog UtPrint
 
 //

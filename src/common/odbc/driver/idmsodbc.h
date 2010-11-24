@@ -363,6 +363,8 @@
 **          the _WIN64 macro for compatibility with MS implementation.
 **     15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
 **          Changes to eliminate compiler prototype warnings.
+**     18-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Fix windows build for prototye cleanup changes.
 */
 #ifndef _INC_IDMSODBC
 #define _INC_IDMSODBC
@@ -462,9 +464,6 @@ typedef long  (__cdecl *LONGPROC)();
 #else
 #define INSTAPI EXPORT FAR PASCAL
 #endif  /* endif WIN32 */
-
-SQLINTEGER  INSTAPI SQLGetPrivateProfileString( LPCSTR, LPCSTR, LPCSTR, 
-    LPSTR, int, LPCSTR);
 
 /*
 **  SQL STATE values returned by driver itself:
